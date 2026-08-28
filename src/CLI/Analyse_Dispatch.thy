@@ -1,5 +1,6 @@
 theory Analyse_Dispatch
   imports
+    "Voblint_VIMP.VIMP_Resolve"
     Sign_Entry
     Interval_Entry
     Int_Entry
@@ -126,7 +127,7 @@ text \<open>
   \<open>Solver_WarrowPerOrigin\<close> breaks that pattern, and is the reason this axis is not purely
   about termination. It widens each origin's own contribution and joins afterwards, where
   \<open>Solver_Warrow\<close> widens the value already joined across every origin. Both terminate;
-  they can still disagree. \<open>Example_Per_Origin_Widening_Precision\<close> is the witness: two
+  they can still disagree. The regression corpus carries the witness: two
   producers writing \<open>[1,1]\<close> and \<open>[2,2]\<close> to one global leave the joined rule at
   \<open>[1, +inf]\<close> --- the second write makes the joined upper bound grow, though neither
   producer's own contribution ever moved --- where the per-origin rule reads \<open>[1,2]\<close>.
@@ -182,8 +183,8 @@ datatype abstract_value =
   SignValue sign | IntervalValue ivl | IntDomValue int_dom | ParityValue parity
 
 definition tag_states ::
-    "('s \<Rightarrow> abstract_value) \<Rightarrow> (pp \<times> exp \<times> check_result \<times> bool \<times> 's abs_state) list
-       \<Rightarrow> (pp \<times> exp \<times> check_result \<times> bool \<times> abstract_value abs_state) list" where
+    "('s \<Rightarrow> abstract_value) \<Rightarrow> (pp \<times> texp \<times> check_result \<times> bool \<times> 's abs_state) list
+       \<Rightarrow> (pp \<times> texp \<times> check_result \<times> bool \<times> abstract_value abs_state) list" where
   "tag_states tag = map (\<lambda>(u, c, r, unreachable, s). (u, c, r, unreachable, tag \<circ> s))"
 
 text \<open>
@@ -200,7 +201,7 @@ text \<open>
 
 fun analyse_with_state ::
     "analysis_domain \<Rightarrow> solver_choice \<Rightarrow> imp_prog
-       \<Rightarrow> (pp \<times> exp \<times> check_result \<times> bool \<times> abstract_value abs_state) list option" where
+       \<Rightarrow> (pp \<times> texp \<times> check_result \<times> bool \<times> abstract_value abs_state) list option" where
   "analyse_with_state Sign_Analysis Solver_Join p = Some (tag_states SignValue (analyse_sign_report_with_state p))"
 | "analyse_with_state Sign_Analysis Solver_PerOrigin p = Some (tag_states SignValue (sign_per_origin.report_with_state p))"
 | "analyse_with_state Sign_Analysis Solver_Warrow p = None"
@@ -233,7 +234,7 @@ text \<open>
 \<close>
 
 fun analyse_with_state_default ::
-    "analysis_domain \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> exp \<times> check_result \<times> bool \<times> abstract_value abs_state) list" where
+    "analysis_domain \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> texp \<times> check_result \<times> bool \<times> abstract_value abs_state) list" where
   "analyse_with_state_default Sign_Analysis p = tag_states SignValue (analyse_sign_report_with_state p)"
 | "analyse_with_state_default Interval_Analysis p = tag_states IntervalValue (analyse_interval_td_report_with_state p)"
 | "analyse_with_state_default Int_Analysis p = tag_states IntDomValue (analyse_int_report_with_state p)"
@@ -278,7 +279,7 @@ text \<open>
 \<close>
 
 corollary analyse_interval_proved_sound:
-  fixes p :: imp_prog and v :: pp and c :: exp
+  fixes p :: imp_prog and v :: pp and c :: texp
   assumes wf: "wf_compile_input (declared_global p) (prog_table p) (prog_procs p) prog_main_name (prog_main p)"
       and solve: "Interval_Ctx_None_Sound.ictx_terminates_prog_warrow (declared_global p) prog_main_name p"
       and entry_cov: "(cfg_entry (prog_cfg prog_main_name p), ()) \<in> fst (Interval_Ctx_None_Sound.ictx_sol_prog_warrow (declared_global p) prog_main_name p)"
@@ -294,13 +295,13 @@ corollary analyse_interval_proved_sound:
            \<Longrightarrow> (cl, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg prog_main_name p)
            \<Longrightarrow> (k, c1) \<in> fst (Interval_Ctx_None_Sound.ictx_sol_prog_warrow (declared_global p) prog_main_name p)"
       and mem: "(v, c, Check_Proved) \<in> set (analyse Interval_Analysis p)"
-  shows "\<forall>s \<in> ltr_collect (declared_global p) (prog_cfg prog_main_name p) (cinit_stores (declared_global p)) v.
-           truthy (aval c s)"
+  shows "\<forall>s \<in> ltr_collect (prog_tyenv p) (declared_global p) (prog_cfg prog_main_name p) (cinit_stores (declared_global p)) v.
+           truthy (teval c s)"
   by (rule analyse_interval_td_report_sound_proved
         [OF wf solve entry_cov fwd_ok call_fwd_ok comb_fwd_ok mem[unfolded analyse.simps]])
 
 corollary analyse_interval_refuted_sound:
-  fixes p :: imp_prog and v :: pp and c :: exp
+  fixes p :: imp_prog and v :: pp and c :: texp
   assumes wf: "wf_compile_input (declared_global p) (prog_table p) (prog_procs p) prog_main_name (prog_main p)"
       and solve: "Interval_Ctx_None_Sound.ictx_terminates_prog_warrow (declared_global p) prog_main_name p"
       and entry_cov: "(cfg_entry (prog_cfg prog_main_name p), ()) \<in> fst (Interval_Ctx_None_Sound.ictx_sol_prog_warrow (declared_global p) prog_main_name p)"
@@ -316,8 +317,8 @@ corollary analyse_interval_refuted_sound:
            \<Longrightarrow> (cl, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg prog_main_name p)
            \<Longrightarrow> (k, c1) \<in> fst (Interval_Ctx_None_Sound.ictx_sol_prog_warrow (declared_global p) prog_main_name p)"
       and mem: "(v, c, Check_Refuted) \<in> set (analyse Interval_Analysis p)"
-  shows "\<forall>s \<in> ltr_collect (declared_global p) (prog_cfg prog_main_name p) (cinit_stores (declared_global p)) v.
-           \<not> truthy (aval c s)"
+  shows "\<forall>s \<in> ltr_collect (prog_tyenv p) (declared_global p) (prog_cfg prog_main_name p) (cinit_stores (declared_global p)) v.
+           \<not> truthy (teval c s)"
   by (rule analyse_interval_td_report_sound_refuted
         [OF wf solve entry_cov fwd_ok call_fwd_ok comb_fwd_ok mem[unfolded analyse.simps]])
 
@@ -334,7 +335,7 @@ text \<open>
 \<close>
 
 corollary analyse_sign_proved_sound:
-  fixes p :: imp_prog and v :: pp and c :: exp
+  fixes p :: imp_prog and v :: pp and c :: texp
   assumes wf: "wf_compile_input (declared_global p) (prog_table p) (prog_procs p) prog_main_name (prog_main p)"
       and solve: "sctx_terminates_prog (declared_global p) prog_main_name p"
       and entry_cov: "(cfg_entry (prog_cfg prog_main_name p), ()) \<in> fst (sctx_sol_prog (declared_global p) prog_main_name p)"
@@ -350,12 +351,12 @@ corollary analyse_sign_proved_sound:
            \<Longrightarrow> (cl, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg prog_main_name p)
            \<Longrightarrow> (k, c1) \<in> fst (sctx_sol_prog (declared_global p) prog_main_name p)"
       and mem: "(v, c, Check_Proved) \<in> set (analyse Sign_Analysis p)"
-  shows "\<forall>s \<in> ltr_collect (declared_global p) (prog_cfg prog_main_name p) (cinit_stores (declared_global p)) v. truthy (aval c s)"
+  shows "\<forall>s \<in> ltr_collect (prog_tyenv p) (declared_global p) (prog_cfg prog_main_name p) (cinit_stores (declared_global p)) v. truthy (teval c s)"
   by (rule analyse_sign_report_sound_proved
         [OF wf solve entry_cov fwd_ok call_fwd_ok comb_fwd_ok mem[unfolded analyse.simps]])
 
 corollary analyse_sign_refuted_sound:
-  fixes p :: imp_prog and v :: pp and c :: exp
+  fixes p :: imp_prog and v :: pp and c :: texp
   assumes wf: "wf_compile_input (declared_global p) (prog_table p) (prog_procs p) prog_main_name (prog_main p)"
       and solve: "sctx_terminates_prog (declared_global p) prog_main_name p"
       and entry_cov: "(cfg_entry (prog_cfg prog_main_name p), ()) \<in> fst (sctx_sol_prog (declared_global p) prog_main_name p)"
@@ -371,7 +372,7 @@ corollary analyse_sign_refuted_sound:
            \<Longrightarrow> (cl, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg prog_main_name p)
            \<Longrightarrow> (k, c1) \<in> fst (sctx_sol_prog (declared_global p) prog_main_name p)"
       and mem: "(v, c, Check_Refuted) \<in> set (analyse Sign_Analysis p)"
-  shows "\<forall>s \<in> ltr_collect (declared_global p) (prog_cfg prog_main_name p) (cinit_stores (declared_global p)) v. \<not> truthy (aval c s)"
+  shows "\<forall>s \<in> ltr_collect (prog_tyenv p) (declared_global p) (prog_cfg prog_main_name p) (cinit_stores (declared_global p)) v. \<not> truthy (teval c s)"
   by (rule analyse_sign_report_sound_refuted
         [OF wf solve entry_cov fwd_ok call_fwd_ok comb_fwd_ok mem[unfolded analyse.simps]])
 
@@ -392,7 +393,7 @@ text \<open>
 \<close>
 
 corollary analyse_int_proved_sound:
-  fixes p :: imp_prog and v :: pp and c :: exp
+  fixes p :: imp_prog and v :: pp and c :: texp
   assumes wf: "wf_compile_input (declared_global p) (prog_table p) (prog_procs p) prog_main_name (prog_main p)"
       and solve: "Int_Ctx_None_Sound.ictx_terminates_prog_warrow Refine_Fixpoint (declared_global p) prog_main_name p"
       and entry_cov: "(cfg_entry (prog_cfg prog_main_name p), ()) \<in> fst (Int_Ctx_None_Sound.ictx_sol_prog_warrow Refine_Fixpoint (declared_global p) prog_main_name p)"
@@ -408,13 +409,13 @@ corollary analyse_int_proved_sound:
            \<Longrightarrow> (cl, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg prog_main_name p)
            \<Longrightarrow> (k, c1) \<in> fst (Int_Ctx_None_Sound.ictx_sol_prog_warrow Refine_Fixpoint (declared_global p) prog_main_name p)"
       and mem: "(v, c, Check_Proved) \<in> set (analyse Int_Analysis p)"
-  shows "\<forall>s \<in> ltr_collect (declared_global p) (prog_cfg prog_main_name p) (cinit_stores (declared_global p)) v.
-           truthy (aval c s)"
+  shows "\<forall>s \<in> ltr_collect (prog_tyenv p) (declared_global p) (prog_cfg prog_main_name p) (cinit_stores (declared_global p)) v.
+           truthy (teval c s)"
   by (rule analyse_int_report_sound_proved
         [OF wf solve entry_cov fwd_ok call_fwd_ok comb_fwd_ok mem[unfolded analyse.simps]])
 
 corollary analyse_int_refuted_sound:
-  fixes p :: imp_prog and v :: pp and c :: exp
+  fixes p :: imp_prog and v :: pp and c :: texp
   assumes wf: "wf_compile_input (declared_global p) (prog_table p) (prog_procs p) prog_main_name (prog_main p)"
       and solve: "Int_Ctx_None_Sound.ictx_terminates_prog_warrow Refine_Fixpoint (declared_global p) prog_main_name p"
       and entry_cov: "(cfg_entry (prog_cfg prog_main_name p), ()) \<in> fst (Int_Ctx_None_Sound.ictx_sol_prog_warrow Refine_Fixpoint (declared_global p) prog_main_name p)"
@@ -430,8 +431,8 @@ corollary analyse_int_refuted_sound:
            \<Longrightarrow> (cl, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg prog_main_name p)
            \<Longrightarrow> (k, c1) \<in> fst (Int_Ctx_None_Sound.ictx_sol_prog_warrow Refine_Fixpoint (declared_global p) prog_main_name p)"
       and mem: "(v, c, Check_Refuted) \<in> set (analyse Int_Analysis p)"
-  shows "\<forall>s \<in> ltr_collect (declared_global p) (prog_cfg prog_main_name p) (cinit_stores (declared_global p)) v.
-           \<not> truthy (aval c s)"
+  shows "\<forall>s \<in> ltr_collect (prog_tyenv p) (declared_global p) (prog_cfg prog_main_name p) (cinit_stores (declared_global p)) v.
+           \<not> truthy (teval c s)"
   by (rule analyse_int_report_sound_refuted
         [OF wf solve entry_cov fwd_ok call_fwd_ok comb_fwd_ok mem[unfolded analyse.simps]])
 
@@ -486,7 +487,7 @@ text \<open>
   their report shape, rather than re-deciding legality or re-implementing
   a domain/solver/context case split of their own. None of the three
   existing report shapes below is replaced by a fourth, artificially
-  unified one: \<open>check_report_entry list\<close>, \<open>(pp \<times> exp \<times> contextual_verdict)
+  unified one: \<open>check_report_entry list\<close>, \<open>(pp \<times> texp \<times> contextual_verdict)
   list\<close>, and the \<^typ>\<open>abstract_value abs_state\<close>-carrying report genuinely
   differ, and forcing one shape on all three would either lose the
   \<^const>\<open>Dead\<close> distinction the contextual report exists for, or fabricate a
@@ -494,8 +495,9 @@ text \<open>
 \<close>
 
 definition analyse_config :: "analysis_config \<Rightarrow> imp_prog \<Rightarrow> check_report_entry list option" where
-  "analyse_config cfg p =
-     (case resolve_analysis_config cfg of
+  "analyse_config cfg p0 =
+     (let p = resolve_prog p0 in
+      case resolve_analysis_config cfg of
         None \<Rightarrow> None
       | Some (Plan_Sign s) \<Rightarrow> analyse_with_solver Sign_Analysis s p
       | Some (Plan_Interval s) \<Rightarrow> analyse_with_solver Interval_Analysis s p
@@ -518,9 +520,10 @@ text \<open>
 \<close>
 
 definition analyse_config_ctx ::
-    "analysis_config \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> exp \<times> contextual_verdict) list option" where
-  "analyse_config_ctx cfg p =
-     (case resolve_analysis_config cfg of
+    "analysis_config \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> texp \<times> contextual_verdict) list option" where
+  "analyse_config_ctx cfg p0 =
+     (let p = resolve_prog p0 in
+      case resolve_analysis_config cfg of
         None \<Rightarrow> None
       | Some (Plan_Interval_EntryState Solver_Warrow) \<Rightarrow> Some (analyse_interval_entry_state p)
       | Some (Plan_Interval_EntryState Solver_Join) \<Rightarrow> Some (analyse_interval_entry_state_join p)
@@ -561,10 +564,11 @@ text \<open>
 \<close>
 
 fun analyse_config_with_state ::
-    "analysis_config \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> exp \<times> check_result \<times> bool \<times> abstract_value abs_state) list option"
+    "analysis_config \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> texp \<times> check_result \<times> bool \<times> abstract_value abs_state) list option"
 where
-  "analyse_config_with_state cfg p =
-     (case resolve_analysis_config cfg of
+  "analyse_config_with_state cfg p0 =
+     (let p = resolve_prog p0 in
+      case resolve_analysis_config cfg of
         Some (Plan_Sign s) \<Rightarrow> analyse_with_state Sign_Analysis s p
       | Some (Plan_Interval s) \<Rightarrow> analyse_with_state Interval_Analysis s p
       | Some (Plan_Int s) \<Rightarrow> analyse_with_state Int_Analysis s p
@@ -581,20 +585,20 @@ text \<open>
 \<close>
 
 lemma analyse_config_sign_default:
-  "analyse_config (default_config Sign_Analysis Ctx_None) p = Some (analyse Sign_Analysis p)"
+  "analyse_config (default_config Sign_Analysis Ctx_None) p = Some (analyse Sign_Analysis (resolve_prog p))"
   by (simp add: analyse_config_def default_config_def mk_analysis_config_def)
 
 lemma analyse_config_interval_default:
-  "analyse_config (default_config Interval_Analysis Ctx_None) p = Some (analyse Interval_Analysis p)"
+  "analyse_config (default_config Interval_Analysis Ctx_None) p = Some (analyse Interval_Analysis (resolve_prog p))"
   by (simp add: analyse_config_def default_config_def mk_analysis_config_def)
 
 lemma analyse_config_int_default:
-  "analyse_config (default_config Int_Analysis Ctx_None) p = Some (analyse Int_Analysis p)"
+  "analyse_config (default_config Int_Analysis Ctx_None) p = Some (analyse Int_Analysis (resolve_prog p))"
   by (simp add: analyse_config_def default_config_def mk_analysis_config_def)
 
 lemma analyse_config_ctx_interval_entrystate:
   "analyse_config_ctx (default_config Interval_Analysis Ctx_EntryState) p
-     = Some (analyse_interval_entry_state p)"
+     = Some (analyse_interval_entry_state (resolve_prog p))"
   by (simp add: analyse_config_ctx_def default_config_def mk_analysis_config_def)
 
 text \<open>
@@ -605,17 +609,17 @@ text \<open>
 
 lemma analyse_config_ctx_interval_entrystate_explicit_join_valid:
   "analyse_config_ctx \<lparr> cfg_domain = Interval_Analysis, cfg_solver = Some Solver_Join, cfg_context = Ctx_EntryState \<rparr> p
-     = Some (analyse_interval_entry_state_join p)"
+     = Some (analyse_interval_entry_state_join (resolve_prog p))"
   by (simp add: analyse_config_ctx_def)
 
 lemma analyse_config_ctx_interval_entrystate_explicit_per_origin_valid:
   "analyse_config_ctx \<lparr> cfg_domain = Interval_Analysis, cfg_solver = Some Solver_PerOrigin, cfg_context = Ctx_EntryState \<rparr> p
-     = Some (analyse_interval_entry_state_per_origin p)"
+     = Some (analyse_interval_entry_state_per_origin (resolve_prog p))"
   by (simp add: analyse_config_ctx_def)
 
 lemma analyse_config_ctx_interval_entrystate_explicit_warrow_valid:
   "analyse_config_ctx \<lparr> cfg_domain = Interval_Analysis, cfg_solver = Some Solver_Warrow, cfg_context = Ctx_EntryState \<rparr> p
-     = Some (analyse_interval_entry_state p)"
+     = Some (analyse_interval_entry_state (resolve_prog p))"
   by (simp add: analyse_config_ctx_def)
 
 text \<open>
@@ -626,12 +630,12 @@ text \<open>
 
 lemma analyse_config_ctx_interval_entrystate_explicit_wpo_valid:
   "analyse_config_ctx \<lparr> cfg_domain = Interval_Analysis, cfg_solver = Some Solver_WarrowPerOrigin, cfg_context = Ctx_EntryState \<rparr> p
-     = Some (analyse_interval_entry_state_wpo p)"
+     = Some (analyse_interval_entry_state_wpo (resolve_prog p))"
   by (simp add: analyse_config_ctx_def)
 
 lemma analyse_config_ctx_interval_callstring_explicit_wpo_valid:
   "analyse_config_ctx \<lparr> cfg_domain = Interval_Analysis, cfg_solver = Some Solver_WarrowPerOrigin, cfg_context = Ctx_CallString (Suc k) \<rparr> p
-     = Some (analyse_interval_call_string_report_wpo (Suc k) p)"
+     = Some (analyse_interval_call_string_report_wpo (Suc k) (resolve_prog p))"
   by (simp add: analyse_config_ctx_def)
 
 text \<open>
@@ -642,13 +646,13 @@ text \<open>
 
 lemma analyse_config_ctx_sign_entrystate_default_valid:
   "analyse_config_ctx (default_config Sign_Analysis Ctx_EntryState) p
-     = Some (analyse_sign_entry_state_report p)"
+     = Some (analyse_sign_entry_state_report (resolve_prog p))"
   by (simp add: analyse_config_ctx_def default_config_def mk_analysis_config_def)
 
 lemma analyse_config_ctx_sign_entrystate_explicit_join_valid:
   "analyse_config_ctx
      \<lparr> cfg_domain = Sign_Analysis, cfg_solver = Some Solver_Join, cfg_context = Ctx_EntryState \<rparr> p
-   = Some (analyse_sign_entry_state_report p)"
+   = Some (analyse_sign_entry_state_report (resolve_prog p))"
   by (simp add: analyse_config_ctx_def)
 
 lemma analyse_config_ctx_sign_entrystate_per_origin_invalid:
@@ -670,13 +674,13 @@ text \<open>
 \<close>
 
 lemma analyse_config_parity_default:
-  "analyse_config (default_config Parity_Analysis Ctx_None) p = Some (analyse Parity_Analysis p)"
+  "analyse_config (default_config Parity_Analysis Ctx_None) p = Some (analyse Parity_Analysis (resolve_prog p))"
   by (simp add: analyse_config_def default_config_def mk_analysis_config_def)
 
 lemma analyse_config_parity_per_origin_valid:
   "analyse_config
      \<lparr> cfg_domain = Parity_Analysis, cfg_solver = Some Solver_PerOrigin, cfg_context = Ctx_None \<rparr> p
-   = Some (analyse_parity_report_per_origin p)"
+   = Some (analyse_parity_report_per_origin (resolve_prog p))"
   by (simp add: analyse_config_def)
 
 lemma analyse_config_parity_warrow_invalid:
@@ -701,13 +705,13 @@ text \<open>
 
 lemma analyse_config_ctx_int_entrystate_default_valid:
   "analyse_config_ctx (default_config Int_Analysis Ctx_EntryState) p
-     = Some (analyse_int_entry_state_report_warrow p)"
+     = Some (analyse_int_entry_state_report_warrow (resolve_prog p))"
   by (simp add: analyse_config_ctx_def default_config_def mk_analysis_config_def)
 
 lemma analyse_config_ctx_int_entrystate_explicit_join_valid:
   "analyse_config_ctx
      \<lparr> cfg_domain = Int_Analysis, cfg_solver = Some Solver_Join, cfg_context = Ctx_EntryState \<rparr> p
-   = Some (analyse_int_entry_state_report p)"
+   = Some (analyse_int_entry_state_report (resolve_prog p))"
   by (simp add: analyse_config_ctx_def)
 
 lemma analyse_config_ctx_int_entrystate_per_origin_invalid:
@@ -719,7 +723,7 @@ lemma analyse_config_ctx_int_entrystate_per_origin_invalid:
 lemma analyse_config_ctx_int_entrystate_warrow_valid:
   "analyse_config_ctx
      \<lparr> cfg_domain = Int_Analysis, cfg_solver = Some Solver_Warrow, cfg_context = Ctx_EntryState \<rparr> p
-   = Some (analyse_int_entry_state_report_warrow p)"
+   = Some (analyse_int_entry_state_report_warrow (resolve_prog p))"
   by (simp add: analyse_config_ctx_def)
 
 text \<open>
@@ -732,7 +736,7 @@ text \<open>
 lemma analyse_config_ctx_interval_callstring_eq_report:
   assumes "k \<noteq> 0"
   shows "analyse_config_ctx (default_config Interval_Analysis (Ctx_CallString k)) p
-           = Some (analyse_interval_call_string_report k p)"
+           = Some (analyse_interval_call_string_report k (resolve_prog p))"
   using assms by (simp add: analyse_config_ctx_def default_config_def mk_analysis_config_def)
 
 lemma analyse_config_ctx_interval_callstring_zero_invalid:
@@ -749,21 +753,21 @@ lemma analyse_config_ctx_interval_callstring_explicit_warrow_valid:
   assumes "k \<noteq> 0"
   shows "analyse_config_ctx
            \<lparr> cfg_domain = Interval_Analysis, cfg_solver = Some Solver_Warrow, cfg_context = Ctx_CallString k \<rparr> p
-         = Some (analyse_interval_call_string_report k p)"
+         = Some (analyse_interval_call_string_report k (resolve_prog p))"
   using assms by (simp add: analyse_config_ctx_def)
 
 lemma analyse_config_ctx_interval_callstring_explicit_join_valid:
   assumes "k \<noteq> 0"
   shows "analyse_config_ctx
            \<lparr> cfg_domain = Interval_Analysis, cfg_solver = Some Solver_Join, cfg_context = Ctx_CallString k \<rparr> p
-         = Some (analyse_interval_call_string_report_join k p)"
+         = Some (analyse_interval_call_string_report_join k (resolve_prog p))"
   using assms by (simp add: analyse_config_ctx_def)
 
 lemma analyse_config_ctx_interval_callstring_explicit_per_origin_valid:
   assumes "k \<noteq> 0"
   shows "analyse_config_ctx
            \<lparr> cfg_domain = Interval_Analysis, cfg_solver = Some Solver_PerOrigin, cfg_context = Ctx_CallString k \<rparr> p
-         = Some (analyse_interval_call_string_report_per_origin k p)"
+         = Some (analyse_interval_call_string_report_per_origin k (resolve_prog p))"
   using assms by (simp add: analyse_config_ctx_def)
 
 lemma analyse_config_ctx_interval_callstring_zero_explicit_solver_invalid:
@@ -781,12 +785,12 @@ text \<open>
 
 lemma analyse_config_ctx_sign_callstring_k1_valid:
   "analyse_config_ctx (default_config Sign_Analysis (Ctx_CallString 1)) p
-     = Some (analyse_sign_call_string_report 1 p)"
+     = Some (analyse_sign_call_string_report 1 (resolve_prog p))"
   by (simp add: analyse_config_ctx_def default_config_def mk_analysis_config_def)
 
 lemma analyse_config_ctx_sign_callstring_k2_valid:
   "analyse_config_ctx (default_config Sign_Analysis (Ctx_CallString 2)) p
-     = Some (analyse_sign_call_string_report 2 p)"
+     = Some (analyse_sign_call_string_report 2 (resolve_prog p))"
   by (simp add: analyse_config_ctx_def default_config_def mk_analysis_config_def)
 
 lemma analyse_config_ctx_sign_callstring_zero_invalid:
@@ -796,7 +800,7 @@ lemma analyse_config_ctx_sign_callstring_zero_invalid:
 lemma analyse_config_ctx_sign_callstring_explicit_join_valid:
   "analyse_config_ctx
      \<lparr> cfg_domain = Sign_Analysis, cfg_solver = Some Solver_Join, cfg_context = Ctx_CallString 2 \<rparr> p
-   = Some (analyse_sign_call_string_report 2 p)"
+   = Some (analyse_sign_call_string_report 2 (resolve_prog p))"
   by (simp add: analyse_config_ctx_def)
 
 lemma analyse_config_ctx_sign_callstring_per_origin_invalid:
@@ -819,12 +823,12 @@ text \<open>
 
 lemma analyse_config_ctx_int_callstring_k1_valid:
   "analyse_config_ctx (default_config Int_Analysis (Ctx_CallString 1)) p
-     = Some (analyse_int_call_string_report_warrow 1 p)"
+     = Some (analyse_int_call_string_report_warrow 1 (resolve_prog p))"
   by (simp add: analyse_config_ctx_def default_config_def mk_analysis_config_def)
 
 lemma analyse_config_ctx_int_callstring_k2_valid:
   "analyse_config_ctx (default_config Int_Analysis (Ctx_CallString 2)) p
-     = Some (analyse_int_call_string_report_warrow 2 p)"
+     = Some (analyse_int_call_string_report_warrow 2 (resolve_prog p))"
   by (simp add: analyse_config_ctx_def default_config_def mk_analysis_config_def)
 
 lemma analyse_config_ctx_int_callstring_zero_invalid:
@@ -834,7 +838,7 @@ lemma analyse_config_ctx_int_callstring_zero_invalid:
 lemma analyse_config_ctx_int_callstring_explicit_join_valid:
   "analyse_config_ctx
      \<lparr> cfg_domain = Int_Analysis, cfg_solver = Some Solver_Join, cfg_context = Ctx_CallString 2 \<rparr> p
-   = Some (analyse_int_call_string_report 2 p)"
+   = Some (analyse_int_call_string_report 2 (resolve_prog p))"
   by (simp add: analyse_config_ctx_def)
 
 lemma analyse_config_ctx_int_callstring_per_origin_invalid:
@@ -846,7 +850,7 @@ lemma analyse_config_ctx_int_callstring_per_origin_invalid:
 lemma analyse_config_ctx_int_callstring_warrow_valid:
   "analyse_config_ctx
      \<lparr> cfg_domain = Int_Analysis, cfg_solver = Some Solver_Warrow, cfg_context = Ctx_CallString 2 \<rparr> p
-   = Some (analyse_int_call_string_report_warrow 2 p)"
+   = Some (analyse_int_call_string_report_warrow 2 (resolve_prog p))"
   by (simp add: analyse_config_ctx_def)
 
 subsubsection \<open>Dispatcher-path parity with the direct generic CallString core\<close>
@@ -862,29 +866,29 @@ text \<open>
 
 lemma analyse_config_ctx_interval_callstring_k1_reaches_generic_core:
   "analyse_config_ctx (default_config Interval_Analysis (Ctx_CallString 1)) p
-     = Some (cs_call_string_verdict_report_prog 1 prog_main_name p)"
+     = Some (cs_call_string_verdict_report_prog 1 prog_main_name (resolve_prog p))"
   by (simp add: analyse_config_ctx_def default_config_def mk_analysis_config_def
                 analyse_interval_call_string_report_def)
 
 lemma analyse_config_ctx_interval_callstring_k2_reaches_generic_core:
   "analyse_config_ctx (default_config Interval_Analysis (Ctx_CallString 2)) p
-     = Some (cs_call_string_verdict_report_prog 2 prog_main_name p)"
+     = Some (cs_call_string_verdict_report_prog 2 prog_main_name (resolve_prog p))"
   by (simp add: analyse_config_ctx_def default_config_def mk_analysis_config_def
                 analyse_interval_call_string_report_def)
 
 lemma analyse_config_with_state_sign_default:
   "analyse_config_with_state (default_config Sign_Analysis Ctx_None) p
-     = Some (tag_states SignValue (analyse_sign_report_with_state p))"
+     = Some (tag_states SignValue (analyse_sign_report_with_state (resolve_prog p)))"
   by (simp add: default_config_def mk_analysis_config_def)
 
 lemma analyse_config_with_state_interval_default:
   "analyse_config_with_state (default_config Interval_Analysis Ctx_None) p
-     = Some (tag_states IntervalValue (analyse_interval_td_report_with_state p))"
+     = Some (tag_states IntervalValue (analyse_interval_td_report_with_state (resolve_prog p)))"
   by (simp add: default_config_def mk_analysis_config_def)
 
 lemma analyse_config_with_state_int_default:
   "analyse_config_with_state (default_config Int_Analysis Ctx_None) p
-     = Some (tag_states IntDomValue (analyse_int_report_with_state p))"
+     = Some (tag_states IntDomValue (analyse_int_report_with_state (resolve_prog p)))"
   by (simp add: default_config_def mk_analysis_config_def)
 
 text \<open>
@@ -897,7 +901,7 @@ text \<open>
 lemma analyse_config_with_state_interval_explicit_join:
   "analyse_config_with_state
      \<lparr> cfg_domain = Interval_Analysis, cfg_solver = Some Solver_Join, cfg_context = Ctx_None \<rparr> p
-   = Some (tag_states IntervalValue (interval_join.report_with_state p))"
+   = Some (tag_states IntervalValue (interval_join.report_with_state (resolve_prog p)))"
   by simp
 
 lemma analyse_config_with_state_entrystate_none:
@@ -963,12 +967,19 @@ text \<open>
 
 
 code_identifier
-  code_module VIMP_Notation \<rightharpoonup> (OCaml) Core
+  code_module VIMP_Ikind \<rightharpoonup> (OCaml) Core
+| code_module Bit_Operations \<rightharpoonup> (OCaml) Core
+| code_module VIMP_Typing \<rightharpoonup> (OCaml) Core
+| code_module VIMP_Elaborated \<rightharpoonup> (OCaml) Core
+| code_module VIMP_Notation \<rightharpoonup> (OCaml) Core
 | code_module VIMP_Expr \<rightharpoonup> (OCaml) Core
 | code_module VIMP_Proc \<rightharpoonup> (OCaml) Core
 | code_module VIMP_Special \<rightharpoonup> (OCaml) Core
 | code_module VIMP_Source_Print \<rightharpoonup> (OCaml) Core
 | code_module VIMP_Syntax \<rightharpoonup> (OCaml) Core
+| code_module VIMP_Var_Id \<rightharpoonup> (OCaml) Core
+| code_module VIMP_Decls \<rightharpoonup> (OCaml) Core
+| code_module VIMP_Resolve \<rightharpoonup> (OCaml) Core
 | code_module CFG_Def \<rightharpoonup> (OCaml) Core
 | code_module CFG_Enumeration \<rightharpoonup> (OCaml) Core
 | code_module CFG_Prune \<rightharpoonup> (OCaml) Core

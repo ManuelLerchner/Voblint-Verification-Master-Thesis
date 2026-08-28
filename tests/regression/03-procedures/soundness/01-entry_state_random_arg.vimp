@@ -10,10 +10,11 @@
 // it proves anything about this particular check (see
 // precision/04-two_call_sites_entry_state.vimp for the precision benefit
 // entry-state context sensitivity actually buys on a bounded argument).
-void p(a) {
+void p(int32 a) {
   __voblint_check(0 < a) // UNKNOWN
 }
 void main() {
+  int32 x;
   x := __voblint_nondet_int();
   p(x)
 }

@@ -86,9 +86,22 @@ def test_callee_role_slots_are_also_id_position(name, index):
 
 
 def test_formals_and_ids_list_items_are_id_position():
-    for name in ("formals", "ids"):
-        prod = next(p for p in GRAMMAR["productions"] if p["name"] == name)
-        assert prod["list_of"] == "IDENT"
+    # `ids` lists bare identifiers. `formals` lists `formal`, which since
+    # formals gained kinds is a production of its own -- so the identifier
+    # this test is about sits one level down, in every alternative of
+    # `formal`. Following that indirection is the point: a kind annotation
+    # in front of the name must not cost the name its source position.
+    ids = next(p for p in GRAMMAR["productions"] if p["name"] == "ids")
+    assert ids["list_of"] == "IDENT"
+
+    formals = next(p for p in GRAMMAR["productions"] if p["name"] == "formals")
+    assert formals["list_of"] == "formal"
+
+    alts = [p for p in GRAMMAR["productions"] if p.get("result") == "formal"]
+    assert alts, "no production produces a 'formal'"
+    for alt in alts:
+        assert "IDENT" in alt["rhs"], f"{alt['name']} binds no identifier"
+
     assert gen.isabelle_type("IDENT") == "id_position"
 
 

@@ -45,7 +45,7 @@ Evidence labels:
 | Update rules | Default TD-side update behavior only. | Goblint permits analysis-specific update/widening policies, including origin-sensitive behavior. | Solver interface was kept close to vendored TD. | Parameterize update policy and prove its solver obligations; begin with one origin-sensitive witness. | Open. |
 | Multi-analysis manager | One analysis stack; no manager, `ask`, `emit`, thread, or event protocol. | Goblint composes analyses and exposes inter-analysis queries through the manager. | Whole-framework composition is outside the single-analysis soundness thesis. | Product local domains, sum global namespaces, query-answer contracts, then a minimal two-analysis example. | Explicitly out of current scope. |
 | Value domains | `int_dom` is a record of four always-present components: sign, interval, parity, congruence. `Int_Refinement` reduces between them with two fan-outs (`refine_interval`, `refine_congruence`). | Goblint's `IntDomTupleImpl` is five *optional* slots -- `DefExc`, `Interval`, `Enums`, `Congruence`, `IntervalSet` -- each switched by `ana.int.<name>`, with `None` handled throughout. | The record form makes the componentwise lattice and gamma proofs direct. | Optional components, then the missing reduction edges. A general `DefExc`/exclusion-set fifth component is **not planned**; see Status for the infeasibility argument. | **Divergence in both directions.** `sign` and `parity` model nothing upstream; `DefExc`, `Enums` and `IntervalSet` are unmodelled here. Components are structurally mandatory, so `--disable ana.int.interval` has no analogue. Two reduction edges are missing: **interval -> congruence** (Goblint's `Congruence.refine_with_interval`; demonstrated absent -- a singleton interval `[4,4]` yields only `=0 (mod 2)`, never `=4`) and congruence -> sign. `refine_mode` itself is a faithful transliteration of `ana.int.refinement`. **Recorded decision not to add a general `DefExc` component** (issue #162, 2026-08-24, closed not planned): infeasible as a persistent, join-surviving `int_dom` field, not merely unproved. `int_dom_record_lattice = bounded_semilattice_sup_bot` (`Int_Domain.thy`) requires each component's `\<squnion>` to be a genuine least upper bound. For any type combining an exact-singleton constructor (`Def x`) with a finite-exclusion/cofinite constructor (`Exc s`, `gamma = UNIV \ s`) over unbounded `int`, `join (Def x) (Def y)` for `x \<noteq> y` has no least upper bound: `Exc {p}` is a valid upper bound for every `p \<notin> {x, y}`, and these are pairwise incomparable (`Exc {p1} \<le> Exc {p2}` iff `p1 = p2`), so no single value is `\<le>` all of them simultaneously. The semilattice law (`y \<le> x \<Longrightarrow> z \<le> x \<Longrightarrow> y \<squnion> z \<le> x`, instantiated at every such `x`) forces `gamma (join (Def x) (Def y)) = {x, y}` exactly -- a finite two-element set -- which no cofinite (finite-exclusion) representation can express, regardless of how the carrier datatype is shaped: bounding the tracked-literal universe to a small closed set (mirroring `sign`'s existing `\<noteq> 0` special case) sidesteps the impossibility but drops genericity, since it can only ever exclude literals fixed at type-definition time, not arbitrary source-program constants. Goblint's own `DefExc` avoids the impossibility only because `Excluded (s, r)` is bounded by the ikind's bit-range `r`, making the exclusion-supersets of `{x, y}` finite and hence possessed of a genuine maximum; even there Goblint's actual `join` (exclude `0` unless one operand is `0`) is not that least upper bound, merely sound -- OCaml's `Lattice.S` does not enforce leastness the way this project's `semilattice_sup` class does. Closing this would require either (a) reintroducing a bounded range, contradicting the locked "mathematical `int`, no width" decision (Integer width and wraparound row, below), or (b) weakening `bounded_semilattice_sup_bot` project-wide to an extensivity-and-monotonicity-only contract, which touches the sort constraint on 150+ declarations across the entire generic D/G/solver framework (`Core/Solver/Context/DG/*`, `Core/Solver/Strategy_Tree/*`, `Core/Equations/Constraint_System.thy`, `Core/Domain/Exec_St.thy`, ...) and loses the free `comp_fun_idem` derivation every `Finite_Set.fold` join currently relies on (`comp_fun_idem_sup`, cited from `Core/Domain/Abstract_Domain.thy`). Neither is proportionate to closing roughly a third of the 42 UNKNOWN Goblint-regression losses the issue targeted. A *transient* refinement -- an immediate interval-endpoint shrink or `sign`'s existing `\<noteq> 0` special case applied at the guard itself, never materialized as a persistent `int_dom` field -- remains open and does not hit this obstruction, but only closes boundary-touching cases (the excluded literal sits at an interval endpoint, or is `0`), not an interior exclusion hole (`x \<in> [-5,5]`, exclude `0`), which no non-relational, non-`Enums` component can represent regardless of persistence. |
-| Integer width and wraparound | VIMP integers are mathematical `int`. | Every Goblint `IntDomain` operation is `ikind`-parameterised and calls `norm ik`, honouring `should_wrap` / `should_ignore_overflow`. | Mathematical integers keep the domain soundness proofs free of a width parameter. | An `ikind` parameter through the domain interface, then wraparound-aware transfer and reduction. | Recorded scope boundary: **no soundness theorem in `src/Analysis/` covers a wrapping integer.** |
+| Integer width and wraparound | VIMP integers are mathematical `int`. | Every Goblint `IntDomain` operation is `ikind`-parameterised and calls `norm ik`, honouring `should_wrap` / `should_ignore_overflow`. | Mathematical integers keep the domain soundness proofs free of a width parameter. | `IKIND_MIGRATION.md`: per-variable ikinds, wraparound concrete semantics, explicit casts, ikind-parameterised transfer with an overflow-to-top default, then bitfield. | **Active migration** (2026-08-24, tracked in issue #167), superseding the scope boundary. Until it lands: no soundness theorem in `src/Analysis/` covers a wrapping integer. Planned surviving deviations (recorded in the migration's D1/D3/D4/D6/D8): stdint-style fixed widths instead of CIL platform kinds; concrete signed overflow *defined* as two's-complement wrap (C's UB and `assume_none` unmodelled); explicit-cast-only typing for genuine mismatches, but C-style integer promotion (ISO 6.3.1.8, `ik_promote`) IS modeled as of 2026-08-25 -- a Goblint-source audit found CIL promotes every narrower-than-`int` operand before an arithmetic/comparison/logical operator runs, and casts once at each assignment/call-arg/return boundary rather than at every intermediate operator, so the migration's D4 was revised to match rather than diverge; ikinds threaded statically rather than an `IntDomLifter` value pairing; undeclared locals defaulting to `int32` (a declared global or formal must carry a kind in both frontends). |
 | Configuration surface | `analysis_config` is a closed three-field record naming exactly one domain, resolved by a hand-enumerated `resolve_analysis_config` into a closed `analysis_plan` datatype. | `--set ana.activated '[...]'` takes an open list of composable analyses registered by string name, with orthogonal `ana.ctx.*` options. | One typed configuration keeps the CLI's legality decision provable in one place. | Registration rather than enumeration; needs the multi-analysis manager first. | Adding a domain here edits the plan datatype, the resolver, several dispatch functions and the `code_identifier` list; upstream it is a registration. No multi-analysis configuration is expressible. |
 | Source admissibility | `wf_source_program` is a precondition of every soundness theorem and of the CLI's own gate: procedure declarations, arity, formals, reserved variables, return behaviour, and `no_return main`. | Goblint has no admissibility predicate; it analyzes whatever CIL produces. | The compiler proofs need a well-formed input to state node ownership and matching results. | Widen the admitted subset, or discharge the conditions during compilation. | Recorded deviation. Some rejections are representational rather than semantic -- a `main` with an explicit `return` is rejected. |
 | Library calls | `EA_Special` moves a recognised library call onto `intra` **structurally, at compile time**, from a closed enumeration (`VIMP_Special.thy`). | Goblint keeps a library or unknown call as a `Proc` edge and splits `special` from a real activation per-analysis at transfer time, against an open `LibraryFunctions` table. | A closed enumeration keeps the compiler total and the CFG free of unresolved calls. | A callee designator on the call edge plus an analysis-level `special` hook. | Structural sibling of the `EA_Check` deviation below; the theory itself flags the closed-vs-open difference. |
@@ -145,6 +145,482 @@ scheduling and widening behaviour differ by construction: the proxy carries no
 equation, so contributions join there and widening applies one hop later at the
 local entry unknown.
 
+## The platform this models
+
+Every conversion rule below is stated against one fixed implementation, not
+against portable C. Naming it is what makes "conversion rank" and "the type of
+a literal" answerable at all, since C leaves both to the implementation.
+
+| Parameter | Value |
+| --- | --- |
+| `CHAR_BIT` | 8 |
+| `int` | 32 bits, two's complement |
+| Scalar types | exactly `int8`/`uint8`/`int16`/`uint16`/`int32`/`uint32`/`int64`/`uint64` |
+| Signed representation | two's complement, no padding, no trap representations |
+| Conversion rank | width, since the eight modelled types have eight distinct widths |
+| Signed conversion of an out-of-range value | wraps (GCC's documented `-fwrapv`-style choice), not implementation-defined |
+| Signed arithmetic overflow | wraps; this is Goblint's `assume_wraparound`, not C11 |
+| Literal type | first of `int32`, `int64` that represents the value; no suffixes, no unsigned literals, decimal only |
+
+Rank deserves the explicit entry. C ranks `int`, `long` and `long long`
+independently of width, so two types may share a width and differ in rank, and
+the usual arithmetic conversions consult rank rather than width. Using width is
+correct **for this platform's type set** and is not a general C rank model. Do
+not lift `usual_kind` out of this setting without replacing width by rank.
+
+The overflow policy is a single, named choice. VIMP freezes the `Wrap` policy:
+every arithmetic operation is total and wraps at its kind. C's other two
+readings -- undefined behavior, and Goblint's `assume_top`/`assume_none` -- are
+not modelled, so no theorem here says anything about a program whose C
+semantics is undefined. Adding them means adding an outcome type that can
+report undefined behavior, not weakening `ik_norm`.
+
+## What "C-compliant" does and does not mean here
+
+Three claims are routinely conflated. They are not equivalent, and this project
+stands in a different place on each.
+
+| Claim | Status |
+| --- | --- |
+| **Goblint architectural alignment** | Broadly yes, and the target. Elaborated kind-carrying expressions, the cast in the domain signature rather than the analysis spec, `norm`-then-refine at a product domain, `top_of ik` as a conversion's give-up answer. |
+| **C conversion-rule alignment** | Yes for the modelled subset. Integer promotions (6.3.1.1) and the usual arithmetic conversions (6.3.1.8) are implemented and proved commutative; conversions at every write boundary match 6.5.16.1p2, 6.5.2.2p7, 6.8.6.4p3. Literal typing (6.4.4.1) is modelled for unsuffixed decimal constants (`ik_of_lit`): the first of `int32`, `int64` that represents the value, and a value outside `int64` is rejected by the frontend rather than wrapped. Suffixes, hexadecimal and octal bases, and unsigned literal types are not modelled. |
+| **Strict C concrete semantics** | **No, deliberately.** VIMP *defines* signed overflow as two's-complement wraparound. C 6.5p5 makes an out-of-range signed arithmetic result undefined. |
+
+The accurate statement of the last row is:
+
+> VIMP implements C11 integer promotions and usual arithmetic conversions for
+> its fixed-width subset, and its evaluation agrees with C11 on executions in
+> which no signed arithmetic operation overflows. On signed overflow it
+> deliberately matches Goblint's `assume_wraparound` mode rather than C11.
+
+Two things that statement is careful about. The correspondence premise is
+**per signed arithmetic node**, not a condition on the final result -- a
+program can produce a correct-looking final value through intermediate
+overflow, and the weaker premise would not exclude that. And this is a
+statement about *concrete* semantics; it says nothing about the analyzer,
+which over-approximates whichever concrete semantics it is given.
+
+Do not write "VIMP is C11-compliant" anywhere. It is true of the conversion
+rules and false of the overflow semantics, so unqualified it is simply wrong.
+
+## C-conformance audit of the typing and casting layer (2026-08-26)
+
+Three-way comparison of this project's machine-integer typing against Goblint
+`master` and C11/C17, run after the elaboration migration landed. **No unsound
+abstract operator was found**: every `a_cast` is proved against `ik_norm`, every
+`a_in_range` against `ik_range`, `afilter`'s `TCast` clause is sound, and every
+write boundary (`pstep`'s `Assign`/`Call`/`ReturnSome`, `edge_step`'s
+`EA_Assign`/`EA_Ret`, `combine_assign_tv`) norms at the target kind, matching C
+6.5.16.1p2, 6.5.2.2p7 and 6.8.6.4p3.
+
+Where the three agree:
+
+| Topic | Ours | Goblint | C |
+| --- | --- | --- | --- |
+| Variable read | `teval (TVar ik x) s = s x` | `get_var` = `CPA.find` | 6.3.2.1p2, lvalue conversion only |
+| Integer promotion | `ik_promote`, verified pin-by-pin for all eight kinds | CIL `integralPromotion` | 6.3.1.1p2 |
+| Same-kind cast | node dropped by `elaborate_to`'s guard | identity in every domain (`IntervalDomain.norm`, `Congruence.cast_to`'s `p ikorg`, `DefExc.cast_to`) | not a conversion |
+| Narrowing cast | `ik_norm` | `Size.cast` (`erem` then re-centre) | 6.3.1.3p2 modular; p3 implementation-defined, both pick GCC's choice |
+| Comparison / logical | `esyn = Some I32`, result 0/1 | CIL types them `int` | 6.5.8p6, 6.5.9p3 |
+
+Sound but divergent from C, and recorded as such:
+
+- **Signed overflow.** `ik_norm` wraps at every arithmetic node. C 6.5p5 makes
+  out-of-range *arithmetic* undefined (distinct from 6.3.1.3p3, which makes
+  out-of-range *conversion* to a signed type implementation-defined).
+
+  **This is CompCert C's treatment, not an idiosyncrasy.** CompCert's language
+  reference states that "overflow in arithmetic over signed integer types is
+  defined as taking the mathematically-exact result and reducing it modulo
+  2^32 or 2^64 to the range of representable signed integers", and its
+  reference-interpreter section says of a signed-overflow example that "this is
+  an undefined behavior according to the C standards, but the CompCert C
+  semantics fully defines this behavior as computing the result modulo 2^32".
+  The choice is load-bearing there: `Int.add` is total and wrapping in
+  `Csem.v`, so an optimisation assuming `x + 1 > x` is unprovable against the
+  semantics, and CompCert performs none. So the right phrasing is that VIMP
+  *adopts CompCert C's treatment of signed overflow*, not that it deviates from
+  C on a whim. Goblint reaches the same behaviour under
+  `sem.int.signed_overflow=assume_wraparound`.
+
+  What CompCert keeps *undefined* is division and remainder by zero, and
+  `INT_MIN / -1`. Its architecture is total wrapping arithmetic in
+  `Integers.v` with partiality only at the operator layer in `Cop.v` -- the
+  same two-layer split VST, AutoCorres2 and Cerberus independently arrived at.
+  This project has the total half and no partial half. VIMP has no `Div` or
+  `Mod`, so the only live gap is the absent signed-overflow *warning*, recorded
+  below.
+
+  Ours is otherwise `-fwrapv`; Goblint's default is `assume_top` plus a
+  `SignedIntegerOverflowInArithmetic` warning through `add_overflow_check`. We
+  emit no overflow warning at all.
+- **Non-short-circuit `And`/`Or`.** C 6.5.13p4/6.5.14p4 mandate short-circuit
+  evaluation; `taval` evaluates both operands. Unobservable, since VIMP
+  expressions are pure and total -- there is no `Div` or `Mod`.
+
+Precision gaps found, all sound:
+
+- `afilter`'s `TCast` guard has only Goblint's *dynamic* disjunct. Upstream's
+  `is_dynamically_safe_cast` is `is_statically_safe_cast || (value fits)`; the
+  static half has no counterpart here, and `texp_kind` -- which would supply it
+  -- is cited nowhere outside `VIMP_Elaborated.thy`.
+- The abstract entry state does not seed a variable at its declared range.
+  Goblint's `Interval.top_of ik` is `Some (range ik)`; our `top` is unbounded, so
+  a guard on a narrow variable loses its refinement at the promotion cast.
+- **Closed 2026-08-26.** `ivl_cast`'s three give-up branches returned the
+  lattice `top` -- an *unbounded* interval, which is not even inside
+  `ik_range ik`, so a conversion did not satisfy its own representability
+  certificate. Upstream's `Interval.top_of ik` is `Some (range ik)`. They now
+  return `ivl_top_of ik = [ik_min ik, ik_max ik]`, and `ivl_in_range_ivl_cast`
+  states that a conversion always lands in its target kind. This was not a
+  cosmetic divergence: it collapsed every half-bounded interval, so a
+  guard-refined `[1, +inf]` or a widened `[3, +inf]` became `[-inf, +inf]` and
+  narrowing had nothing to recover from. Measured against the `main` branch on
+  the CLI fixture corpus, that accounted for roughly a third of a 19-test
+  regression. The monotonicity proof had to be reworked rather than
+  re-typechecked: it used the lattice `top` as the greatest element, and now
+  uses `ivl_top_of ik` as a *local* greatest element via `ivl_cast_le_top_of`.
+- **Closed 2026-08-26.** The `int_dom` product refined *before* normalising
+  (`plus_int_dom = refine o plus_int_dom_raw`, then `int_dom_cast`), and
+  `int_dom_cast` maps components independently -- so `sign_cast` discarded the
+  sign even when the interval component still pinned the value exactly.
+  Goblint's `IntDomTuple` order is operation, then `norm ik`, then refine, so
+  `aval_int_dom_t`'s arithmetic and `TCast` clauses now read
+  `refine mode (int_dom_cast ik ...)`. Soundness is free (`refine_exact`:
+  `gamma (refine mode d) = gamma d`); monotonicity holds only for
+  `mode \<noteq> Refine_Fixpoint`, which `aval_int_dom_t_mono` already assumed.
+- `cong_cast`'s `gcd (m, ik_mod ik)` is strictly sharper than upstream's `top`.
+  Sound, but not the exact upstream mirror its theory comment claims.
+
+## Three C-conformance defects closed (2026-08-27)
+
+The audit above compared each operator in isolation and found none unsound. It
+did not compare how an operator's *operand kind* is chosen, and that is where
+all three of these lived. Each was masking the next, so they surfaced in order.
+
+**Binary operations were evaluated at the context's kind, not their own.**
+`taval Gamma ik (Plus e1 e2) s = ik_norm ik (taval Gamma ik e1 s + taval Gamma ik e2 s)`
+pushed the surrounding kind down into the operation, and `elaborate` mirrored
+it. C 6.3.1.8 applies the usual arithmetic conversions per operation: each
+binary operator computes at the kind its own operands agree on, wraps there,
+and the *result* is then converted to whatever the context wants. CIL builds
+each `BinOp` with its own result type and inserts a `CastE` around it. `TLess`
+and `TEq` already derived their operand kind correctly; the arithmetic nodes
+did not. Both `taval` and `elaborate` now do.
+
+The witness is `22-integer-kinds/precision/01`: in `4294967295 < u32 + 1` the
+comparison agrees on a 64-bit kind, but `u32 + 1` is an unsigned 32-bit
+addition that wraps to zero before the comparison sees it. Evaluating the
+addition at the comparison's width answers that the guard is taken; C says it
+is not.
+
+**Integer literals had no type.** `esyn Gamma (N n) = None` left every constant
+to `opk`'s `I32` default, so `4294967296` elaborated as `TN I32 4294967296` and
+`ik_norm` truncated it to `0` before it could reach a 64-bit destination. C
+6.4.4.1p5 gives an unsuffixed decimal constant the first of `int`, `long int`,
+`long long int` that can represent it -- never an unsigned type -- which is
+what CIL's `kinteger64` picks. `ik_of_lit` now does the same over the two
+signed widths VIMP has. A constant that already fitted `I32` still types as
+`I32`, so nothing that previously fitted changes kind.
+
+**Procedures had no return type.** `proc_decl` carried a `ret_kind` field,
+`proc_decl_of_typed` existed to populate it, and the compiler already consumed
+it -- `proc_ret_kind` feeds `elaborate_to`, which inserts the conversion on
+`return`. But no syntax reached it: every procedure was spelled `void`, so
+`ret_kind` was universally `None` and `proc_ret_kind` defaulted to `I32`. Every
+return normalized at 32 bits and a 64-bit result was silently truncated. CIL
+carries the return type in the function's own `TFun`, and Goblint reads the
+result through a return `varinfo` typed by it. The grammar now has
+`function_decl_typed`, so `int64 f(...)` declares what it returns.
+
+None of the three is a soundness defect against the semantics as it was
+written: `taval` was the reference, and the abstract side matched it. They are
+conformance defects -- the modelled semantics was not C's.
+
+## Three precision gaps against Goblint, all sound (2026-08-27)
+
+One of the three is closed; the other two, and every case in the ledger below,
+reduce to one missing fact: **an abstract cell does not know the kind it holds,
+so nothing may assume its value is representable there.**
+
+Measured by running the regression corpus against the pre-migration binary and
+the current one, case by case. None of the three is unsound; each is a bound
+that Goblint keeps and this formalization now drops.
+
+**Widening leaves the kind's range, and the next conversion then discards what
+widening kept.** `widen_ivl_core` (`src/Analysis/Instances/Interval/Interval_Warrowing.thy`)
+sends a moved bound to `MinInf`/`PlusInf`. That result lies outside
+`ik_range ik`, so the mandatory normalization at the next arithmetic or
+conversion node reaches `ivl_cast`'s give-up branch and answers
+`ivl_top_of ik` -- destroying the bound that survived the widening.
+Goblint never holds an out-of-range interval: `IntDomain.Interval.widen ik`
+saturates at `min_int_of ik`/`max_int_of ik`, so its `norm` is the identity on
+a widened value. Closing it means giving the widening operator the kind, which
+the vendored solver's `warrowing` class signature does not currently carry --
+the same obstacle the kind-tagged carrier addresses. Observed as
+`total=[3,+inf]`, `x=[-inf,40]` and `i=[1,+inf]` all collapsing to the full
+`I32` range.
+
+**The call-return boundary converts without reducing.** *Closed.*
+`combine_assign_abs` applied `a_cast` at the destination's declared kind and
+stopped there, where `aval_int_dom_t` reduces after every cast, so the product
+kept a component the reduction could restore: `a := 9` gave
+`sign=Positive, ivl=[9,9]` while `d := id(9)` through an identity procedure
+gave `sign=Top, ivl=[9,9]`. Core is domain-generic and has no `refine`, so the
+reduction went into `int_dom_cast` itself, which now runs `refine_interval`
+over the componentwise cast.
+
+**Congruence loses exactness through an arithmetic guard.** Filtering
+`y + 1 == 3` backwards yields the class `2` modulo `ik_mod I32` rather than
+modulus `0`, so `refine_interval` has no bounded interval to meet it against
+and `y` stays unconstrained.
+
+This one is not a missing normalization. A class modulo `2^32` has exactly one
+representative *in a window of that width*, and `y`'s interval is
+`[-inf,+inf]`: nothing has told the analysis that `y` is an `int32`. Nor could
+the backward filter simply assert it -- `teval (TVar ik x) s` reads `s x`
+without normalizing, so for a store holding `2 + 2^32` the guard holds and
+`y == 2` is false. The claim is true exactly for stores whose variables hold
+values of their declared kind, which is the invariant every source-level
+theorem already assumes (`styped`) and which nothing carries into the abstract
+layer.
+
+### The corpus is green (2026-08-27)
+
+`python3 tests/run.py` is 214 passed, 0 failed; `pytest tests/` is 80 passed.
+No fixture is left asserting a verdict the analyzer does not produce, and none
+of the reclassifications hides a defect. Two closures and one correction got
+there, and each is recorded because a later change should be audited against
+them rather than against the count.
+
+**Closed: the call-return boundary now reduces.** `int_dom_cast` runs
+`refine_interval` over the componentwise cast, so a conversion no longer
+discards a component the reduction can restore.
+
+**Corrected: kind-aware widening would not have fixed the widening cases.**
+An earlier ledger listed five fixtures whose intended fix was a widening that
+saturates at the kind's own bounds rather than at a mathematical infinity.
+That was wrong, and the arithmetic says so plainly: `[0, 2147483647] + [3,4]`
+overflows exactly as `[0,+inf] + [3,4]` does, and `[-2147483648, 40] - 1`
+underflows exactly as `[-inf, 40] - 1` does. In both cases the wrapped result
+has no single-interval representation but the whole range, so the saturated
+bound is lost on the very next operation.
+
+What those fixtures actually assert is what an unbounded-integer analysis
+gives, which is what the papers they are adapted from assume and what Goblint
+reproduces only under `sem.int.signed_overflow=assume_none`. Under the frozen
+`Wrap` policy the whole range is the correct answer, and each now sits in
+`known-imprecision/` (or `soundness/`, where both a satisfying and a violating
+execution exist) with that named. The clamped widening in
+`Interval_Kind_Tagged.thy` stays proved and stays worth having -- it keeps a
+bound one operation longer -- but it is not what these cases needed.
+
+**Corrected: the composite reduction showcase needed a typed seed, not a
+domain change.** `16-composite-domain/precision/01` filters `y + 1 == 3`
+backwards to the class `2` modulo `int32`'s modulus and then has no bound to
+meet it against, because an unwritten `int32` local may hold any integer:
+VIMP's initial stores constrain globals only, and `teval` reads a variable
+without normalizing, so a store holding `2 + 2^32` satisfies the guard while
+`y == 2` is false. Seeding `y` through `__voblint_nondet_int()`, which lands
+in the kind's range by construction, supplies the bound the declaration should
+have supplied, and all four components then pin the single value.
+
+That is the shape of the remaining gap. Stating it precisely matters, because
+the short version -- "a declaration does not bound the values its variable can
+hold" -- is too strong and would read as an unsoundness. Three separate facts:
+
+**Preservation is proved.** `pstep_preserves_sstyped` and
+`psteps_preserves_sstyped` (`VIMP_Proc.thy`) show every concrete transition,
+interprocedural ones included, preserves typedness. `sstyped` is `styped`
+outside an in-flight unwind and `rstyped` -- every variable except `ret_var` --
+during one, because mid-unwind the return slot holds a value typed by the
+callee's declared return kind rather than by `Gamma ret_var`. So given a typed
+start, declarations *do* bound reachable concrete values.
+
+**Initialization is assumed, not proved.** Every source-facing theorem carries
+`styped Gamma s0` as a hypothesis, and the entry point's initial store set does
+not supply it: `cinit_stores gs = {s. ALL x. gs x --> s x = 0}` pins globals to
+zero and leaves every local unconstrained over all of `int`. The hypothesis is
+discharged onto the caller. Not an unsoundness -- the analysis
+over-approximates the larger set -- but it means "reachable from
+`cinit_stores`" genuinely includes out-of-range stores today.
+
+**The abstraction does not exploit the range.** `styped` occurs nowhere under
+`src/Core/` or in any domain instance; no concretization is intersected with a
+declared range, and the abstract seed is `[-inf,+inf]` for every local. So
+`gamma` includes unreachable out-of-range stores, and every operation must
+assume its operand may be one of them. That is a precision defect.
+
+Everything below is the third fact seen from a different side, and closing it
+means closing the second one too.
+
+### What the corpus lost, per check (2026-08-28)
+
+Generated from `git ls-tree` at `main` and at `HEAD`, matching each
+`__voblint_check` occurrence-for-occurrence through an explicit fixture
+lineage (three git-detected renames and five delete/add pairs). Counting the
+words PROVED/UNKNOWN/NOWARN in file text does not work: fixture headers
+contain them too, which inflates every total.
+
+| Checks | main | HEAD |
+| --- | --- | --- |
+| total | 388 | 503 |
+| PROVED | 268 | 346 |
+| REFUTED | 15 | 18 |
+| UNKNOWN | 72 | 107 |
+| NOWARN | 22 | 19 |
+| unannotated | 11 | 13 |
+
+27 checks changed verdict: **24 weakened**, 1 strengthened
+(`17-call-string/precision/13`, `a == 0` NOWARN to PROVED, because the wrap
+makes the chain terminate at zero), and 2 retired in favour of strictly
+sharper probes (`n < 10` replaced by a four-check pinning of `[1,2]` in both
+`15-solver-choice` fixtures).
+
+The 24 weakenings have **three** causes, not one, and they are closed by
+different things:
+
+**W -- wraparound meets a convex interval (13 checks).** `04-globals/01`
+(`0 < total`), `12-widening/04` (`!(40 < x)`), `16-composite-domain/01` (ten
+`== 3` checks), `20-nested-loops/01-hybrid` (`!(i < 0)`). A widened bound
+leaves the kind's range, the next operation wraps, and the wrapped result is
+disjunctive -- so a single interval must answer the whole kind range.
+**A6b-A9 do not close these.** Saturating the widening at the kind's own bound
+does not either: `[0,2147483647] + [3,4]` overflows exactly as
+`[0,+inf] + [3,4]` does. What would: a domain that represents the wrap
+(upstream has `intervalSetDomain.ml`), widening thresholds or a widening-point
+restart, or the `assume_none` overflow policy. These are forced under
+*wraparound plus convex intervals plus the present widening strategy*, not
+forced absolutely.
+
+**K -- the abstract value carries no kind (8 checks).**
+`07-sign-precision/02` (`0 < x`, the only REFUTED lost),
+`07-sign-precision/03` (`0 < y`), `11-graph-snapshot/known-imprecision/02`
+(two), `14-min-max/01` (two), `17-call-string/05` (two). Every one is Sign
+norming a result at a kind it cannot certify the value fits. **A7-A9 close
+these; A6b alone does not** -- the seed slice bounds Interval cells and does
+nothing for a Sign value, which needs the tagged carrier and the kind-aware
+operations.
+
+**S -- the old assertion became unsound (3 checks).**
+`20-nested-loops/soundness/01` (`!(i < 0)`: the endless counter really does
+wrap negative) and `21-context-sensitivity/known-imprecision/03` (two NOWARN:
+the "endless" recursion really does terminate by wrapping, so the checks are
+live and concretely false). Nothing to close here; the fixtures were pinning
+claims the frozen semantics no longer supports, and removing them is the
+point.
+
+13 + 8 + 3 = 24.
+
+### One mechanism behind the eight Sign cases
+
+Six fixtures moved to `known-imprecision/` rather than being fixed, and they
+share a single mechanism worth stating once. `gamma_sign SPos` is every
+positive integer, with no bound. Every arithmetic node norms its result at its
+kind, so the norm must assume the value may lie far outside that kind and
+wrap, and the only sound answer is top. The bound exists in the program --
+both operands were evaluated at the node's kind -- but the abstract value does
+not carry the kind, so nothing at the norm can use it.
+
+This costs more than it looks: it tops `0 - 5`, `min(x, y)` (which returns one
+of its operands and so cannot leave a range both operands were in), and an
+`int32`-to-`int32` conversion at a call's return. The interval domain does not
+lose them, because its concretization is bounded and the norm can check.
+
+A kind-tagged cell whose concretization is intersected with the kind's range
+closes all eight by construction. It does not close the thirteen W checks,
+whose loss is the wrap meeting a convex interval and survives any choice of
+widening bound. The `assume_none` overflow policy would close both groups,
+less soundly and for a different reason; that is a separate decision and is
+not taken here.
+
+### One earlier entry withdrawn
+
+An earlier note recorded a Sign entry-state defect: two call sites routed onto
+one callee context where Interval produced two. That is correct behaviour, not
+a defect. Entry-state keys a context by the callee's entry abstract state;
+`square(3)` and `square(4)` both enter at `Positive`, so Sign has one context,
+while `[3,3]` and `[4,4]` differ, so Interval has two. The fixture failed for
+the Sign mechanism above and nothing else.
+
+## How Goblint carries a kind on a value (source-checked, 2026-08-27)
+
+Read against `goblint/analyzer` at `b6e06be2aae6109e965af054827fdae9c320fa40`,
+because the fix for the gap above should be upstream's rather than an
+invention.
+
+**The cell carries the kind, and there is no kindless top or bottom.**
+
+```ocaml
+module IntDomLifter (I : S2) = struct
+  type t = { v : I.t; ikind : CilType.Ikind.t }
+  let bot () = failwith "bot () is not implemented for IntDomLifter."
+  let top () = failwith "top () is not implemented for IntDomLifter."
+  let bot_of ikind = { v = I.bot_of ikind; ikind }
+  let top_of ?bitfield ikind = { v = I.top_of ?bitfield ikind; ikind }
+```
+
+`intDomain0.ml:170`. The value domain's `ID` is this lifter: `valueDomain.ml`
+calls `ID.ikind i`, which only the lifter provides.
+
+**Every lattice and arithmetic operation reads the kind off the value.**
+
+```ocaml
+let lift2 op x y = check_ikinds x y; { x with v = op x.ikind x.v y.v }
+let join = lift2 I.join   let widen = lift2 I.widen
+let add  = lift2 I.add    let sub   = lift2 I.sub
+```
+
+Widening obtains its `ik` exactly the way addition does. That is the whole
+mechanism by which Goblint's widening saturates at the kind's bounds.
+
+**Mismatched kinds are excluded by invariant, not by a lattice element.**
+`check_ikinds` raises `IncompatibleIKinds`, and `leq` deliberately skips the
+check with a TODO noting it is called on arguments of different type. So the
+lifter is not a clean partial lattice: it operates under a same-kind invariant
+that the rest of the analyzer is expected to maintain, and enforces it only on
+the operations that would silently produce nonsense.
+
+Isabelle cannot copy that. `warrowing` and the lattice classes quantify over
+all values, so the operation must be total and a mismatch has to land
+somewhere in the lattice. `Kind_Tagged.thy`'s horizontal sum answers `KTop`,
+which is the faithful total encoding, and it converts upstream's implicit
+precondition into an explicit obligation: mismatched tags must be proved
+unreachable, or `KTop` becomes reachable for a valid program.
+
+**The kind reaches a cell from its declaration, at construction.**
+
+```ocaml
+let rec init_value (t: typ) = match t with
+  | TInt (ik,_) -> Int (ID.top_of ?bitfield ik)
+let rec top_value (t: typ) = match t with
+  | TInt (ik,_) -> Int (ID.(cast_to ~kind:Internal ik (top_of ik)))
+```
+
+`valueDomain.ml:202, 222`. This is the piece missing here, and it is the
+ordering lesson: a Goblint cell carries a kind because it was built from a
+`varinfo.vtype`, not because a lattice was redesigned. The carrier is second.
+
+Construction is not only the seed. A cell is also tagged when an expression
+result is stored (from the CIL result type), at an assignment (destination
+type), at a formal binding, at a return, and at a special call's result. The
+invariant is complete only when every write preserves the tag, so a seed-first
+slice is an incremental order and not the whole obligation.
+
+`ret_var` is the one identity whose kind is dynamic: during an unwind it holds
+a value at the *callee's* declared return kind, which is why concrete
+preservation already weakens to `rstyped` there. A tagged state has to allow
+the same, and must show that return slots tagged at two different callee kinds
+never meet at a solver join.
+
+**A caveat on the initial value itself.** `top_of ik` for an uninitialized
+automatic variable is Goblint's abstraction, not ISO C's concrete semantics:
+C leaves the value indeterminate and reading it can be undefined. Seeding at
+the kind's range therefore encodes a VIMP decision -- an uninitialized local
+holds an arbitrary representable value of its declared kind -- which is
+reasonable, matches the frozen total-semantics stance, and has to stay
+documented as VIMP's own rather than as C's.
+
 ## Boundary examples
 
 These are capability boundaries, not claims that every Goblint configuration
@@ -180,6 +656,7 @@ advance the target without closing an entire register row.
 | --- | --- | --- |
 | `ROUTE_A7_EXECUTABLE_DG_MIGRATION.md` | Unknown space and contexts | Highest-priority executable fidelity step: it gives the D/G semantic context model a single solver generator. |
 | `M1_CALLSTRING_CONTEXT_MIGRATION.md` | Unknown space and contexts | Adds a computed textbook context; it is breadth, not a repair of the semantic model. |
+| `IKIND_MIGRATION.md` | Integer width and wraparound; Value domains | Changes the semantic reference model: per-variable machine-integer kinds, wraparound `aval`, explicit casts, ikind-parameterised transfer; bitfield domain as the payoff stage. |
 | `M3_CONTEXT_BOUNDING_TERMINATION_MIGRATION.md` | Termination and context bounding | M3a strengthens the theorem; M3b models a real lifter; M3c is upstream-gated. |
 | `M2_DGC_RREAD_BOUNDARY_MIGRATION.md` | Context input boundary | The transport toolkit is landed; the remaining value-keyed `ENTER_MONO` closure is refuted for the current retain route. |
 | `CONTEXT_SENSITIVE_GLOBALS_MIGRATION.md` | Contexts, named globals | Umbrella status document; defer to Route A7/M2 for executable boundary details. |

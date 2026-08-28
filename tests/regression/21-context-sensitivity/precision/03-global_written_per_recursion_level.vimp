@@ -8,8 +8,8 @@
 // writes m := 0, and the combine after each call site reads that back.
 // Any bounded call string collapses the deep levels instead;
 // known-imprecision/01 pins that at depth 5.
-global m;
-void o(i) {
+global int32 m;
+int32 o(int32 i) {
   if (0 < i) { i := i - 1; m := i; o(i) } else { skip };
   return 0
 }

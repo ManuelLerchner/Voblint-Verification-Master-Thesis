@@ -157,17 +157,55 @@ qed
 
 subsection \<open>Type-class widening for TD warrowing solver\<close>
 
-text \<open>Standard interval narrowing: when the recomputed value \<open>b\<close> refines the widened value
-  \<open>a\<close> (\<open>b \<le> a\<close>), keep \<open>a\<close>'s finite bounds and only fill an infinite bound of \<open>a\<close> from \<open>b\<close>.
-  A bound moves off \<open>\<pm>inf\<close> at most once, so the narrowing descent is finite.  Combined with
-  the backward guard filters this recovers loop bounds under \<^emph>\<open>every\<close> update rule (a bounded
-  local counter reads \<open>[0, 20]\<close> under \<open>join\<close>, \<open>per_origin\<close> and \<open>warrow\<close> alike).  It does not
-  help a \<^emph>\<open>flow-insensitive global\<close>: there the guard never bounds the value written back to
-  the slot, so \<open>[0, +inf]\<close> is a genuine fixpoint and narrowing has nothing smaller to descend
-  to.\<close>
+text \<open>Interval narrowing: when the recomputed value \<open>b\<close> refines the widened value \<open>a\<close>
+  (\<open>b \<le> a\<close>), keep \<open>a\<close>'s bounds and refill from \<open>b\<close> exactly those bounds that a widening
+  step could have produced -- an infinite bound, or a bound resting on a machine-kind extreme.
+  Goblint's interval narrowing draws the same line with its \<open>min_ik = x1\<close> and \<open>max_ik = x2\<close>
+  guards; it can name the one relevant kind because every \<open>IntDomain\<close> operation there takes
+  an \<open>ikind\<close> argument, whereas \<open>narrow :: 'a \<Rightarrow> 'a \<Rightarrow> 'a\<close> is kind-agnostic, so the guard
+  below accepts any kind's extreme.  Accepting too many only refills more bounds from \<open>b\<close>,
+  which both narrowing laws permit for every \<open>b \<le> a\<close>.
+
+  The descent stays finite.  Under \<open>b \<le> a\<close> the lower bound never decreases and the upper
+  bound never increases, and either bound can only move while it sits on one of the finitely
+  many extremes, so each moves at most as often as there are extremes below (resp. above) it.\<close>
+
+definition ikinds :: "ikind list" where
+  "ikinds = [I8, U8, I16, U16, I32, U32, I64, U64]"
+
+lemma set_ikinds [simp]: "set ikinds = UNIV"
+  by (auto simp: ikinds_def) (rename_tac ik, case_tac ik, simp_all)
+
+definition ik_lo_extremes :: "int list" where
+  "ik_lo_extremes = map ik_min ikinds"
+
+definition ik_hi_extremes :: "int list" where
+  "ik_hi_extremes = map ik_max ikinds"
+
+fun narrow_lo :: "eint \<Rightarrow> eint \<Rightarrow> eint" where
+    "narrow_lo MinInf  l2 = l2"
+  | "narrow_lo (Fin v) l2 = (if v \<in> set ik_lo_extremes then l2 else Fin v)"
+  | "narrow_lo PlusInf l2 = PlusInf"
+
+fun narrow_hi :: "eint \<Rightarrow> eint \<Rightarrow> eint" where
+    "narrow_hi PlusInf u2 = u2"
+  | "narrow_hi (Fin v) u2 = (if v \<in> set ik_hi_extremes then u2 else Fin v)"
+  | "narrow_hi MinInf  u2 = MinInf"
+
+lemma narrow_lo_ge: "eint_le l1 l2 \<Longrightarrow> eint_le l1 (narrow_lo l1 l2)"
+  by (cases l1) auto
+
+lemma narrow_lo_le: "eint_le l1 l2 \<Longrightarrow> eint_le (narrow_lo l1 l2) l2"
+  by (cases l1) auto
+
+lemma narrow_hi_le: "eint_le u2 u1 \<Longrightarrow> eint_le (narrow_hi u1 u2) u1"
+  by (cases u1) auto
+
+lemma narrow_hi_ge: "eint_le u2 u1 \<Longrightarrow> eint_le u2 (narrow_hi u1 u2)"
+  by (cases u1) auto
+
 fun narrow_ivl_td :: "ivl \<Rightarrow> ivl \<Rightarrow> ivl" where
-  "narrow_ivl_td (Ivl l1 u1) (Ivl l2 u2) =
-     Ivl (if l1 = MinInf then l2 else l1) (if u1 = PlusInf then u2 else u1)"
+  "narrow_ivl_td (Ivl l1 u1) (Ivl l2 u2) = Ivl (narrow_lo l1 l2) (narrow_hi u1 u2)"
 
 instantiation ivl :: warrowing begin
   text \<open>Widening carries the standard bot-law \<open>bot \<nabla> x = x\<close>, \<open>x \<nabla> bot = x\<close>: since
@@ -193,10 +231,12 @@ instance proof intro_classes
     case False thus ?thesis
       by (cases "b = bot") (simp_all add: widen_ivl_def b_le_widen_ivl_core bot.extremum)
   qed
-  show "b \<le> a \<Longrightarrow> b \<le> narrow a b"
-    unfolding narrow_ivl_def by (cases a; cases b) (auto simp: less_eq_ivl_def eint_le_refl split: if_splits)
   show "b \<le> a \<Longrightarrow> narrow a b \<le> a"
-    unfolding narrow_ivl_def by (cases a; cases b) (auto simp: less_eq_ivl_def eint_le_refl split: if_splits)
+    unfolding narrow_ivl_def less_eq_ivl_def
+    by (cases a; cases b) (auto simp: narrow_lo_ge narrow_hi_le)
+  show "b \<le> a \<Longrightarrow> b \<le> narrow a b"
+    unfolding narrow_ivl_def less_eq_ivl_def
+    by (cases a; cases b) (auto simp: narrow_lo_le narrow_hi_ge)
 qed
 end
 

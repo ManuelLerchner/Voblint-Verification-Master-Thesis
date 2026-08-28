@@ -8,6 +8,7 @@
 // against y = [3,3] is UNKNOWN in both polarities. int agrees: none of sign,
 // parity or congruence can exclude a single point either.
 void main() {
+  int32 y, z;
   z := __voblint_nondet_int();
   y := 3;
   if (z == 3) {

@@ -238,12 +238,35 @@ breakage for whoever next runs a full build.
 Whenever a change fixes a bug, changes semantics, or introduces a feature,
 add or update a regression test that locks in the new behavior -- an
 executable witness whose assertion pins the corrected/intended result, not
-the one it replaces. Use whichever regression layer the change actually
-touches: a `by eval` lemma in `Example_Analysis_Dispatch.thy` (or the nearest
-sibling `Example_*.thy`) for solver/domain behavior, a `tests/regression/`
-`.vimp` fixture for CLI-observable behavior, or both when a fix is
-code-generated from Isabelle into `codegen/generated/` and therefore visible
-at the CLI too.
+the one it replaces.
+
+**A regression belongs in the `.vimp` corpus whenever the CLI can observe it.**
+Only what the CLI cannot observe stays in Isabelle. Every `by eval`
+lemma is a theory the batch build must re-evaluate, and re-evaluating a
+solver run is the single largest cost in `Voblint_Examples`; the same
+assertion as a `tests/regression/` fixture costs milliseconds and is a
+one-line edit when a value legitimately changes.
+
+The test is concrete: run the program through `cli/voblint` and ask whether
+the fact appears in what it prints. A check verdict, a per-node variable
+value, a context split, a node reported dead or absent, a rendered cluster or
+edge, a solver terminating under a given `--solver` -- all of these are
+fixture material, including through `// PARAM:` flags and `EXPECT-GRAPH`
+blocks. What has no CLI surface stays in Isabelle: domain arithmetic and
+backward filters applied to literal abstract values, elaboration and transfer
+primitives, compiled `EA_*`/`texp` shapes, structural invariants over a graph
+value rather than over rendered output, queries at a program point that is not
+a CFG node, and any behaviour reached only by a parameter the CLI does not
+expose.
+
+Soundness theorems always stay. A fixture asserts what the analyzer answered;
+it cannot assert that the answer is sound. Anything connecting a computed
+result to `ltr_collect` is proof content, not a pinning, however it is proved.
+
+A `by eval` fact that a later theorem consumes -- a `*_terminates_c` feeding
+`part_post_solution_of_solve_c`, a `wf_cfg` or `cfg_exit_covers` feeding
+`vars_cover` -- is a premise, not a pinning, and stays where its consumer can
+cite it.
 
 A test asserting a value that is itself the bug is worse than no test: it
 converts the bug into a locked-in regression and the batch build stays green
@@ -259,11 +282,14 @@ not by what the analyzer currently reports:
 - `precision/` -- the concrete result is fixed and decidable from the
   source alone. PROVED/REFUTED are the contract; UNKNOWN there generally
   means a regression.
-- `soundness/` -- the concrete result is genuinely not fixed (e.g. an
-  unconstrained `random()` feeds the checked condition): both a satisfying
-  and a violating execution exist. UNKNOWN is the only sound answer here,
-  not a limitation to explain -- asserting PROVED or REFUTED would itself
-  be unsound.
+- `soundness/` -- the concrete program reaches the check in both a
+  satisfying and a violating state. That covers two shapes: an unconstrained
+  `random()` feeding the condition, and a single deterministic execution
+  that visits the check more than once with different states -- an endless
+  counter whose check holds until it wraps is the second, and phrasing the
+  rule as "two different executions" would wrongly exclude it. UNKNOWN is
+  the only sound answer here, not a limitation to explain; asserting PROVED
+  or REFUTED would itself be unsound.
 - `known-imprecision/` -- the concrete result is fixed, but the abstraction
   can't establish it. The case's header comment must name the concrete
   mechanism -- which component loses the information and why -- not just

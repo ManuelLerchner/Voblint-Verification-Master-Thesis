@@ -46,6 +46,11 @@ let un_string cs = String.concat "" (List.map (fun c -> String.make 1 (un_char c
    Same program as dispatch_demo_prog in Example_Analysis_Dispatch_Regression.thy. *)
 let check_cond = Less (N (mk_int 0), V "y")
 
+(* The compiled `EA_Check` payload, and hence the report's condition column, is
+   the elaborated form: the program declares no kinds, so every node operates at
+   `I32`, and a comparison relates its operands at their joined synthesized kind. *)
+let check_cond_t = TLess (TN (I32, mk_int 0), TVar (I32, "y"))
+
 let demo_prog =
   mk_program []
     (Seq
@@ -55,13 +60,19 @@ let demo_prog =
        , Check check_cond))
     []
 
+(* Sign refutes the first check and cannot decide the second. The write is
+   `y := 0 - 1`, an arithmetic node whose result norms at I32, and gamma of a
+   Sign value is unbounded -- so the norm has to allow a value whose wraparound
+   is positive and answers top. Interval below keeps [-1,-1] and still refutes.
+   tests/regression/07-sign-precision/known-imprecision/02 pins the same
+   mechanism through the CLI. *)
 let expected_sign =
-  [ (Statement (mk_nat 1), (check_cond, Check_Proved));
-    (Statement (mk_nat 3), (check_cond, Check_Refuted)) ]
+  [ (Statement (mk_nat 1), (check_cond_t, Check_Proved));
+    (Statement (mk_nat 3), (check_cond_t, Check_Unknown)) ]
 
 let expected_interval =
-  [ (Statement (mk_nat 1), (check_cond, Check_Proved));
-    (Statement (mk_nat 3), (check_cond, Check_Refuted)) ]
+  [ (Statement (mk_nat 1), (check_cond_t, Check_Proved));
+    (Statement (mk_nat 3), (check_cond_t, Check_Refuted)) ]
 
 (* global `total`, procedure `inc` with formal `n`, two calls, two checks.
    Exercises `mk_program`'s procedure list, `proc_decl_of`'s formals, and `Call`
@@ -88,15 +99,23 @@ let proc_demo_prog =
         Check (Less (V "total", N (mk_int 100)))))
     [ "total" ]
 
+(* Neither check is decided any more, and the reason is the same for both: two
+   call sites make inc's entry state depend on its own exit, the chain ascends
+   without bound and is widened, and a widened bound is not an int32 -- so the
+   next total + n reaches the conversion's give-up branch and answers the whole
+   kind range, taking the lower bound with it. Saturating the widening at
+   int32's own maximum would not help; [0,2147483647] + [3,4] overflows just the
+   same. tests/regression/04-globals/known-imprecision/01 is this program
+   through the CLI, with the full argument. *)
 let expected_proc_demo_sign =
-  [ (Statement (mk_nat 5), (Less (N (mk_int 0), V "total"), Check_Proved));
-    (Statement (mk_nat 6), (Less (V "total", N (mk_int 100)), Check_Unknown)) ]
+  [ (Statement (mk_nat 5), (TLess (TN (I32, mk_int 0), TVar (I32, "total")), Check_Unknown));
+    (Statement (mk_nat 6), (TLess (TVar (I32, "total"), TN (I32, mk_int 100)), Check_Unknown)) ]
 
 (* Same shape as expected_proc_demo_sign, but this is the case that used to hang: a global read
    and grown across two calls, now solved via warrowing. *)
 let expected_proc_demo_interval =
-  [ (Statement (mk_nat 5), (Less (N (mk_int 0), V "total"), Check_Proved));
-    (Statement (mk_nat 6), (Less (V "total", N (mk_int 100)), Check_Unknown)) ]
+  [ (Statement (mk_nat 5), (TLess (TN (I32, mk_int 0), TVar (I32, "total")), Check_Unknown));
+    (Statement (mk_nat 6), (TLess (TVar (I32, "total"), TN (I32, mk_int 100)), Check_Unknown)) ]
 
 (* Acceptance regression A (no-call global self-feedback): no procedure, no call, just a
    global write that reads its own prior value. Same program as
@@ -113,7 +132,7 @@ let no_call_global_self_ref_prog =
     [ "total" ]
 
 let expected_no_call_global_self_ref_interval =
-  [ (Statement (mk_nat 2), (Less (N (mk_int 0), V "total"), Check_Proved)) ]
+  [ (Statement (mk_nat 2), (TLess (TN (I32, mk_int 0), TVar (I32, "total")), Check_Proved)) ]
 
 (* Acceptance regression B (interprocedural global self-feedback): a single call to a
    procedure that reads and grows the same global. Same program as
@@ -130,7 +149,7 @@ let one_call_prog =
     [ "total" ]
 
 let expected_one_call_interval =
-  [ (Statement (mk_nat 4), (Less (N (mk_int 0), V "total"), Check_Proved)) ]
+  [ (Statement (mk_nat 4), (TLess (TN (I32, mk_int 0), TVar (I32, "total")), Check_Proved)) ]
 
 let show_int i = Z.to_string (integer_of_int i)
 
@@ -162,7 +181,9 @@ let show_entry (n, (b, r)) =
      | Statement k -> "Statement " ^ show_nat k
      | FunctionEntry s -> "FunctionEntry " ^ s
      | FunctionResult s -> "FunctionResult " ^ s)
-    (show_exp b) (show_check_result r)
+    (* the report carries elaborated conditions now; erase the kinds back out
+       so the failure text stays the driver's own spaced source format *)
+    (show_exp (texp_erase b)) (show_check_result r)
 
 (* Compact renderers matching string_of_cfg_node/string_of_action/
    string_of_call_action in Analysis_GraphViz.thy exactly (no spaces around
@@ -186,24 +207,31 @@ let rec show_exp_compact = function
   | Less (a, b) -> show_exp_compact a ^ "<" ^ show_exp_compact b
   | Eq (a, b) -> show_exp_compact a ^ "==" ^ show_exp_compact b
 
+(* A compiled action's expression payload is a `texp`: the source expression with
+   every operating kind and every target conversion resolved at compile time.
+   The renderings below deliberately show the source expression, via `texp_erase`,
+   so a compiled edge reads the way the program wrote it. *)
+let show_texp_compact t = show_exp_compact (texp_erase t)
+
 let show_edge_action = function
   | EA_Nop -> "nop"
-  | EA_Assign (x, a) -> x ^ " := " ^ show_exp_compact a
-  | EA_Special (Nondet_Int, x) -> x ^ " := __voblint_nondet_int()"
-  | EA_Special (Min (a, b), x) ->
-    x ^ " := min(" ^ show_exp_compact a ^ ", " ^ show_exp_compact b ^ ")"
-  | EA_Special (Max (a, b), x) ->
-    x ^ " := max(" ^ show_exp_compact a ^ ", " ^ show_exp_compact b ^ ")"
-  | EA_Assume b -> "[" ^ show_exp_compact b ^ "]"
-  | EA_AssumeNot b -> "![" ^ show_exp_compact b ^ "]"
-  | EA_Ret (None, _) -> "return"
-  | EA_Ret (Some e, _) -> "return " ^ show_exp_compact e
-  | EA_Check b -> "check(" ^ show_exp_compact b ^ ")"
+  | EA_Assign (x, a) -> x ^ " := " ^ show_texp_compact a
+  | EA_Special (Nondet_Int _, x) -> x ^ " := __voblint_nondet_int()"
+  | EA_Special (Min (_, a, b), x) ->
+    x ^ " := min(" ^ show_texp_compact a ^ ", " ^ show_texp_compact b ^ ")"
+  | EA_Special (Max (_, a, b), x) ->
+    x ^ " := max(" ^ show_texp_compact a ^ ", " ^ show_texp_compact b ^ ")"
+  | EA_Assume b -> "[" ^ show_texp_compact b ^ "]"
+  | EA_AssumeNot b -> "![" ^ show_texp_compact b ^ "]"
+  | EA_Ret (None, _, _) -> "return"
+  | EA_Ret (Some e, _, _) -> "return " ^ show_texp_compact e
+  | EA_Check b -> "check(" ^ show_texp_compact b ^ ")"
 
 let show_call_action = function
-  | CallEdge (None, _, es) -> "call(" ^ String.concat "" (List.map show_exp_compact es) ^ ")"
-  | CallEdge (Some x, _, es) ->
-    x ^ " := call(" ^ String.concat "" (List.map show_exp_compact es) ^ ")"
+  | CallEdge (None, _, es) -> "call(" ^ String.concat "" (List.map show_texp_compact es) ^ ")"
+  | CallEdge (Some (TV (x, _)), _, es) ->
+    (* A call's destination carries its declared kind alongside its name. *)
+    x ^ " := call(" ^ String.concat "" (List.map show_texp_compact es) ^ ")"
 
 let show_intra_list es =
   String.concat "; "

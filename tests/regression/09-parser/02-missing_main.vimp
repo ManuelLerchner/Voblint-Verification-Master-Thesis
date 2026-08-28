@@ -5,5 +5,6 @@
 // consuming the final EOF sentinel, crashing with an uncaught assertion
 // instead of a clean "missing 'void main()'" parse error.
 void ain() {
+  int32 x;
   x := 0
 }

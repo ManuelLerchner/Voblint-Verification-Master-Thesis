@@ -3,6 +3,7 @@
 // The parser must reject this with a structured file:line:col error rather
 // than crash or silently misparse.
 void main() {
+  int32 x;
   x := 5
   __voblint_check(0 < x)
 }

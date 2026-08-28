@@ -14,16 +14,31 @@ lemma sign_le_STop [simp]: "x \<le> (STop::sign)"
 
 definition sign_placement_prog :: imp_prog where
   "sign_placement_prog = program {
-     global g;
+     global int32 g;
      void main() {
        x := 5;
        g := x
      }
    }"
 
+text \<open>\<open>sign_placement_ty\<close> is the program's own typing environment: the compiler
+  elaborates both assignment right-hand sides against it, so the edge shapes and
+  the abstract-value agreements below name it too.\<close>
+abbreviation sign_placement_ty :: tyenv where
+  "sign_placement_ty \<equiv> prog_tyenv sign_placement_prog"
+
+abbreviation sign_placement_rhs_x :: texp where
+  "sign_placement_rhs_x \<equiv>
+     elaborate_to sign_placement_ty (sign_placement_ty (STR ''x'')) (N 5)"
+
+abbreviation sign_placement_rhs_g :: texp where
+  "sign_placement_rhs_g \<equiv>
+     elaborate_to sign_placement_ty (sign_placement_ty (STR ''g'')) (V (STR ''x''))"
+
 definition sign_placement_cfg :: cfg where
   "sign_placement_cfg =
-    compile_prog (prog_table sign_placement_prog) (prog_procs sign_placement_prog)
+    compile_prog sign_placement_ty (prog_table sign_placement_prog)
+      (prog_procs sign_placement_prog)
       prog_main_name (prog_main sign_placement_prog)"
 
 text \<open>
@@ -174,7 +189,7 @@ proof -
   have s_in: "s \<in> \<lbrakk>dg_hook_D sigma caller \<squnion> dg_hook_G sigma\<rbrakk>"
     using sin unfolding dg_hook_gamma_def gamma_join_def by simp
   have "call_enter (declared_global sign_placement_prog) (CallEdge dst fs args) s =
-      bind_formals fs (map (\<lambda>e. aval e s) args)
+      bind_formals fs (map (\<lambda>e. teval e s) args)
         (enter_state (declared_global sign_placement_prog) s)"
     by (rule call_enter_CallEdge)
   also have "... \<in>
@@ -341,11 +356,11 @@ lemma sign_placement_hook_lists:
   "intra_predecessor_list sign_placement_cfg (Statement 0) =
      [(FunctionEntry prog_main_name, EA_Nop)]"
   "intra_predecessor_list sign_placement_cfg (Statement 1) =
-     [(Statement 0, EA_Assign (STR ''x'') (N 5))]"
+     [(Statement 0, EA_Assign (STR ''x'') sign_placement_rhs_x)]"
   "intra_predecessor_list sign_placement_cfg (Statement 2) =
-     [(Statement 1, EA_Assign (STR ''g'') (V (STR ''x'')))]"
+     [(Statement 1, EA_Assign (STR ''g'') sign_placement_rhs_g)]"
   "intra_predecessor_list sign_placement_cfg (FunctionResult prog_main_name) =
-     [(Statement 2, EA_Ret None prog_main_name)]"
+     [(Statement 2, EA_Ret None prog_main_name I32)]"
   by eval+
 
 lemma sign_placement_no_combine_edge_nodes:
@@ -593,9 +608,9 @@ qed
 lemma sign_placement_se_statement1:
   "se_constraint_holds (sign_placement_sound_dg_hooks.hook_gen sign_placement_cfg bot
       sign_placement_s0d_abs sign_placement_s0g_abs (Statement 1, ())) sign_placement_sigma_abs (Statement 1, ())"
-proof (rule sign_placement_se_edge[where v = "Statement 1" and u = "Statement 0" and a = "EA_Assign (STR ''x'') (N 5)"])
+proof (rule sign_placement_se_edge[where v = "Statement 1" and u = "Statement 0" and a = "EA_Assign (STR ''x'') sign_placement_rhs_x"])
   show "Statement 1 \<noteq> cfg_entry sign_placement_cfg" by (simp add: sign_placement_cfg_entry)
-  show "intra_predecessor_list sign_placement_cfg (Statement 1) = [(Statement 0, EA_Assign (STR ''x'') (N 5))]"
+  show "intra_predecessor_list sign_placement_cfg (Statement 1) = [(Statement 0, EA_Assign (STR ''x'') sign_placement_rhs_x)]"
     by (rule sign_placement_hook_lists)
   show "return_call_action_list sign_placement_cfg (Statement 1) = []"
     by (rule sign_placement_no_combine_edge_nodes)
@@ -606,15 +621,15 @@ proof (rule sign_placement_se_edge[where v = "Statement 1" and u = "Statement 0"
 next
   fix loc assume loc: "loc \<in> set (sign_placement_locations_of (Statement 1))"
   have val_agree:
-    "aval_sign (N 5) (fun_of_resolved_st_q_for (declared_global sign_placement_prog)
+    "aval_sign_t sign_placement_rhs_x (fun_of_resolved_st_q_for (declared_global sign_placement_prog)
         (dg_hook_D (snd sign_placement_dg_td_sol) (Statement 0))) =
-      aval_sign (N 5) (dg_hook_D sign_placement_sigma_abs (Statement 0))"
-    by simp
+      aval_sign_t sign_placement_rhs_x (dg_hook_D sign_placement_sigma_abs (Statement 0))"
+    by (simp add: elaborate_to_def elaborate_syn_def)
   show "lookup_resolved_st_q
-      (sign_tf_st_for (declared_global sign_placement_prog) (EA_Assign (STR ''x'') (N 5))
+      (sign_tf_st_for (declared_global sign_placement_prog) (EA_Assign (STR ''x'') sign_placement_rhs_x)
         (dg_hook_D (snd sign_placement_dg_td_sol) (Statement 0) \<squnion>
          dg_hook_G (snd sign_placement_dg_td_sol))) loc =
-    apply_tf (sign_tf_for (declared_global sign_placement_prog)) (EA_Assign (STR ''x'') (N 5))
+    apply_tf (sign_tf_for (declared_global sign_placement_prog)) (EA_Assign (STR ''x'') sign_placement_rhs_x)
       (dg_hook_D sign_placement_sigma_abs (Statement 0) \<squnion>
        dg_hook_G sign_placement_sigma_abs) (location_vname loc)"
     using sign_placement_dg_hook_G_exec_bot sign_placement_dg_hook_G_abs_bot
@@ -629,9 +644,9 @@ qed
 lemma sign_placement_se_statement2:
   "se_constraint_holds (sign_placement_sound_dg_hooks.hook_gen sign_placement_cfg bot
       sign_placement_s0d_abs sign_placement_s0g_abs (Statement 2, ())) sign_placement_sigma_abs (Statement 2, ())"
-proof (rule sign_placement_se_edge[where v = "Statement 2" and u = "Statement 1" and a = "EA_Assign (STR ''g'') (V (STR ''x''))"])
+proof (rule sign_placement_se_edge[where v = "Statement 2" and u = "Statement 1" and a = "EA_Assign (STR ''g'') sign_placement_rhs_g"])
   show "Statement 2 \<noteq> cfg_entry sign_placement_cfg" by (simp add: sign_placement_cfg_entry)
-  show "intra_predecessor_list sign_placement_cfg (Statement 2) = [(Statement 1, EA_Assign (STR ''g'') (V (STR ''x'')))]"
+  show "intra_predecessor_list sign_placement_cfg (Statement 2) = [(Statement 1, EA_Assign (STR ''g'') sign_placement_rhs_g)]"
     by (rule sign_placement_hook_lists)
   show "return_call_action_list sign_placement_cfg (Statement 2) = []"
     by (rule sign_placement_no_combine_edge_nodes)
@@ -645,15 +660,16 @@ next
       set (sign_placement_locations_of (Statement 1))"
     by eval
   have val_agree:
-    "aval_sign (V (STR ''x'')) (fun_of_resolved_st_q_for (declared_global sign_placement_prog)
+    "aval_sign_t sign_placement_rhs_g (fun_of_resolved_st_q_for (declared_global sign_placement_prog)
         (dg_hook_D (snd sign_placement_dg_td_sol) (Statement 1))) =
-      aval_sign (V (STR ''x'')) (dg_hook_D sign_placement_sigma_abs (Statement 1))"
-    using sign_placement_val_agree[OF mem] by simp
+      aval_sign_t sign_placement_rhs_g (dg_hook_D sign_placement_sigma_abs (Statement 1))"
+    using sign_placement_val_agree[OF mem]
+    by (simp add: elaborate_to_def elaborate_syn_def)
   show "lookup_resolved_st_q
-      (sign_tf_st_for (declared_global sign_placement_prog) (EA_Assign (STR ''g'') (V (STR ''x'')))
+      (sign_tf_st_for (declared_global sign_placement_prog) (EA_Assign (STR ''g'') sign_placement_rhs_g)
         (dg_hook_D (snd sign_placement_dg_td_sol) (Statement 1) \<squnion>
          dg_hook_G (snd sign_placement_dg_td_sol))) loc =
-    apply_tf (sign_tf_for (declared_global sign_placement_prog)) (EA_Assign (STR ''g'') (V (STR ''x'')))
+    apply_tf (sign_tf_for (declared_global sign_placement_prog)) (EA_Assign (STR ''g'') sign_placement_rhs_g)
       (dg_hook_D sign_placement_sigma_abs (Statement 1) \<squnion>
        dg_hook_G sign_placement_sigma_abs) (location_vname loc)"
     using sign_placement_dg_hook_G_exec_bot sign_placement_dg_hook_G_abs_bot
@@ -671,10 +687,10 @@ lemma sign_placement_se_function_result:
       sign_placement_s0d_abs sign_placement_s0g_abs (FunctionResult prog_main_name, ())) sign_placement_sigma_abs
       (FunctionResult prog_main_name, ())"
 proof (rule sign_placement_se_edge[where v = "FunctionResult prog_main_name" and u = "Statement 2"
-    and a = "EA_Ret None prog_main_name"])
+    and a = "EA_Ret None prog_main_name I32"])
   show "FunctionResult prog_main_name \<noteq> cfg_entry sign_placement_cfg" by (simp add: sign_placement_cfg_entry)
   show "intra_predecessor_list sign_placement_cfg (FunctionResult prog_main_name) =
-      [(Statement 2, EA_Ret None prog_main_name)]"
+      [(Statement 2, EA_Ret None prog_main_name I32)]"
     by (rule sign_placement_hook_lists)
   show "return_call_action_list sign_placement_cfg (FunctionResult prog_main_name) = []"
     by (rule sign_placement_no_combine_edge_nodes)
@@ -685,10 +701,10 @@ proof (rule sign_placement_se_edge[where v = "FunctionResult prog_main_name" and
 next
   fix loc assume loc: "loc \<in> set (sign_placement_locations_of (FunctionResult prog_main_name))"
   show "lookup_resolved_st_q
-      (sign_tf_st_for (declared_global sign_placement_prog) (EA_Ret None prog_main_name)
+      (sign_tf_st_for (declared_global sign_placement_prog) (EA_Ret None prog_main_name I32)
         (dg_hook_D (snd sign_placement_dg_td_sol) (Statement 2) \<squnion>
          dg_hook_G (snd sign_placement_dg_td_sol))) loc =
-    apply_tf (sign_tf_for (declared_global sign_placement_prog)) (EA_Ret None prog_main_name)
+    apply_tf (sign_tf_for (declared_global sign_placement_prog)) (EA_Ret None prog_main_name I32)
       (dg_hook_D sign_placement_sigma_abs (Statement 2) \<squnion>
        dg_hook_G sign_placement_sigma_abs) (location_vname loc)"
     using sign_placement_dg_hook_G_exec_bot sign_placement_dg_hook_G_abs_bot
@@ -841,7 +857,7 @@ next
         rule sign_placement_se_statement0)
   have s1_not_entry: "Statement 1 \<noteq> cfg_entry sign_placement_cfg" by (simp add: sign_placement_cfg_entry)
   have s1_pred: "intra_predecessor_list sign_placement_cfg (Statement 1) =
-      [(Statement 0, EA_Assign (STR ''x'') (N 5))]"
+      [(Statement 0, EA_Assign (STR ''x'') sign_placement_rhs_x)]"
     by (rule sign_placement_hook_lists)
   have s1_no_combine: "return_call_action_list sign_placement_cfg (Statement 1) = []"
     by (rule sign_placement_no_combine_edge_nodes)
@@ -946,7 +962,7 @@ text \<open>The final end-to-end soundness theorem: every stack-faithful local
   CFG facts above kept concrete.\<close>
 
 theorem sign_placement_dg_td_collect_sound:
-  "ltr_collect (declared_global sign_placement_prog) sign_placement_cfg
+  "ltr_collect sign_placement_ty (declared_global sign_placement_prog) sign_placement_cfg
     (cinit_stores (declared_global sign_placement_prog)) v \<subseteq>
     dg_hook_gamma gamma_join sign_placement_sigma_abs v"
   by (rule sign_placement_sound_dg_hooks_ltr.hook_post_solution_collect_sound_ltr[OF

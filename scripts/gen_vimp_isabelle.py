@@ -60,6 +60,8 @@ NONTERMINAL = {
     "stmts": "imp2_stmts",
     "stmts_opt": "imp2_stmts_opt",
     "actuals": "imp2_actuals",
+    "ty": "imp2_ty",
+    "formal": "imp2_formal",
     "formals": "imp2_formals",
     "ids": "imp2_ids",
 }
@@ -472,6 +474,14 @@ TR_CONST = {
     "If": "VIMP_Proc.com.If",
     "While": "VIMP_Proc.com.While",
     "Call": "VIMP_Proc.com.Call",
+    "I8": "VIMP_Ikind.ikind.I8",
+    "U8": "VIMP_Ikind.ikind.U8",
+    "I16": "VIMP_Ikind.ikind.I16",
+    "U16": "VIMP_Ikind.ikind.U16",
+    "I32": "VIMP_Ikind.ikind.I32",
+    "U32": "VIMP_Ikind.ikind.U32",
+    "I64": "VIMP_Ikind.ikind.I64",
+    "U64": "VIMP_Ikind.ikind.U64",
 }
 
 # lower.ctor name -> the `c_X` val bound to that same qualified constant in
@@ -485,6 +495,8 @@ CTOR_VAL = {
     "SKIP": "c_SKIP", "Seq": "c_Seq", "Assign": "c_Assign",
     "Return": "c_Return", "Check": "c_Check", "If": "c_If", "While": "c_While",
     "Call": "c_Call",
+    "I8": "c_I8", "U8": "c_U8", "I16": "c_I16", "U16": "c_U16",
+    "I32": "c_I32", "U32": "c_U32", "I64": "c_I64", "U64": "c_U64",
 }
 
 # result nonterminal -> the SML function that lowers it to a HOL term.
@@ -498,6 +510,7 @@ TR_FN = {
     "stmts": "stmts_tr",
     "stmts_opt": "stmts_opt_tr",
     "actuals": "actuals_tr",
+    "ty": "ty_tr",
 }
 
 
@@ -651,6 +664,17 @@ def gen_list_tr(prod: dict, fn_name: str = None) -> str:
             f'  | {fn} _ t = raise TERM ("Vimp_Grammar_Tr: {fn}", [t])'
         )
     cons = f'(Const ("_{name}_cons", _) $ x $ rest)'
+    if item == "formal":
+        # A formals list is an SML (name, kind-term option) pair list, not a
+        # HOL list: its consumer (VIMP_Notation's hand-written program
+        # assembly) needs the raw names for proc_decl construction and the
+        # annotated kinds for the program's declared-kind list. formal_tr is
+        # the hand-written per-item lowering (FORMAL_TR below).
+        return (
+            f'{fn} ctxt (Const ("_{name}_one", _) $ x) = [formal_tr ctxt x]\n'
+            f'  | {fn} ctxt {cons} = formal_tr ctxt x :: {fn} ctxt rest\n'
+            f'  | {fn} _ t = raise TERM ("Vimp_Grammar_Tr: {fn}", [t])'
+        )
     if item == "IDENT":
         # Item bound raw (not `Free (x, _)`): id_position wraps it in
         # `_constrain $ Free $ <markup>`, and dest_id_position -- not this
@@ -698,12 +722,35 @@ val c_Call   = "VIMP_Proc.com.Call"
 val c_Return = "VIMP_Proc.com.Return"
 val c_Check  = "VIMP_Proc.com.Check"
 
+val c_I8     = "VIMP_Ikind.ikind.I8"
+val c_U8     = "VIMP_Ikind.ikind.U8"
+val c_I16    = "VIMP_Ikind.ikind.I16"
+val c_U16    = "VIMP_Ikind.ikind.U16"
+val c_I32    = "VIMP_Ikind.ikind.I32"
+val c_U32    = "VIMP_Ikind.ikind.U32"
+val c_I64    = "VIMP_Ikind.ikind.I64"
+val c_U64    = "VIMP_Ikind.ikind.U64"
+
 val c_None   = "Option.option.None"
 val c_Some   = "Option.option.Some"
 val c_Cons   = "List.list.Cons"
 val c_Nil    = "List.list.Nil"
 
 fun K name = Const (name, dummyT)"""
+
+# A formal parameter as its assembly consumers need it: the raw SML name
+# for proc_decl construction, plus the annotated kind as a HOL term when
+# one was written. Hand-written for the same reason formals_of's pair-list
+# shape is: the pair never becomes a HOL term here; VIMP_Notation's
+# program assembly splits it.
+FORMAL_TR = """\
+fun formal_tr ctxt t =
+  (case Term.strip_comb t of
+     (Const ("_formal_untyped", _), [x]) =>
+       (dest_id_position (SOME Markup.free) ctxt x, NONE)
+   | (Const ("_formal_typed", _), [k, x]) =>
+       (dest_id_position (SOME Markup.free) ctxt x, SOME (ty_tr ctxt k))
+   | _ => raise TERM ("Vimp_Grammar_Tr: formal_tr", [t]))"""
 
 # Numeral decoding (special: integer_literal) and the compositional
 # unary-minus rule (special: unary_minus) stay hand-written -- see the
@@ -795,6 +842,7 @@ def gen_grammar_tr_structure(g: dict) -> str:
     extra_actions = gen_isabelle_extra_actions()
     exp_body = gen_tr_function(g, "exp", EXP_SPECIALS + extra_actions["exp"])
     stmt_body = gen_tr_function(g, "stmt", extra_actions["stmt"])
+    ty_body = gen_tr_function(g, "ty")
 
     list_by_name = {p["name"]: p for p in g["productions"] if p.get("list_of") or p.get("optional_list_of")}
     actuals_body = gen_list_tr(list_by_name["actuals"])
@@ -812,6 +860,8 @@ def gen_grammar_tr_structure(g: dict) -> str:
         f"fun {exp_body}",
         f"fun {actuals_body}",
         stmt_chain,
+        f"fun {ty_body}",
+        FORMAL_TR,
         f"fun {formals_body}",
         f"fun {names_body}",
     ])

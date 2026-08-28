@@ -1,0 +1,11 @@
+// PARAM: --analysis interval
+// No verdict annotations: a parse-rejection case. Every variable a body reads
+// or writes must be a declared global, one of the procedure's formals, or one
+// of its declared locals. An undeclared name is otherwise not an error at all:
+// it becomes a local at the default kind, so a misspelt variable reads as an
+// unconstrained fresh one instead of the value that was meant.
+global int32 g;
+void main() {
+  int32 a;
+  a := g + b
+}

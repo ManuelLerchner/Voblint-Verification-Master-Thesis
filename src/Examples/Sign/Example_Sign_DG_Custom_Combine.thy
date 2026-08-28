@@ -51,7 +51,7 @@ subsection \<open>The Sign specification that uses it\<close>
 definition sign_dg_spec_callee_join ::
   "(vname \<Rightarrow> bool)
    \<Rightarrow> (edge_action \<Rightarrow> sign exec_dg_st \<Rightarrow> sign exec_dg_st)
-   \<Rightarrow> (vname list \<Rightarrow> exp list \<Rightarrow> sign exec_dg_st \<Rightarrow> sign exec_dg_st)
+   \<Rightarrow> (vname list \<Rightarrow> texp list \<Rightarrow> sign exec_dg_st \<Rightarrow> sign exec_dg_st)
    \<Rightarrow> (sign exec_dg_st, sign exec_dg_st) dg_spec" where
   "sign_dg_spec_callee_join gs tf_st enter_st =
      (unit_dg_spec_st_for gs tf_st enter_st)
@@ -269,7 +269,7 @@ text \<open>
 
 definition cj_program :: imp_prog where
   "cj_program = program {
-     void mark(p) { r := 0 - 1; return p }
+     int32 mark(int32 p) { r := 0 - 1; return p }
      void main() { r := 1; z := mark(7) }
    }"
 
@@ -277,7 +277,7 @@ abbreviation cj_prog_gs :: "vname \<Rightarrow> bool" where
   "cj_prog_gs \<equiv> declared_global cj_program"
 
 definition cj_cfg :: cfg where
-  "cj_cfg = compile_prog (prog_table cj_program) (prog_procs cj_program)
+  "cj_cfg = compile_prog (prog_tyenv cj_program) (prog_table cj_program) (prog_procs cj_program)
               prog_main_name (prog_main cj_program)"
 
 abbreviation cj_lookup :: "sign exec_dg_st \<Rightarrow> vname \<Rightarrow> sign" where
@@ -315,7 +315,8 @@ text \<open>The single call site is \<open>Statement 4\<close>, resuming at \<op
 
 lemma cj_call_site:
   "cfg_calls_list cj_cfg =
-     [(Statement 4, CallEdge (Some (STR ''z'')) [STR ''p''] [VIMP_Syntax.N 7],
+     [(Statement 4, CallEdge (compile_dst (prog_tyenv cj_program) (Some (STR ''z''))) [STR ''p'']
+        (compile_actuals (prog_tyenv cj_program) [STR ''p''] [VIMP_Syntax.N 7]),
        FunctionEntry (STR ''mark''), Statement 5)]"
   by eval
 
@@ -342,9 +343,15 @@ lemma cj_callee_join_widens_after_the_call:
   "cj_lookup (locals (snd cj_custom_sol (Inl (Statement 5, ())))) (STR ''r'') = STop"
   by eval
 
+text \<open>The return assignment is unaffected by the combine choice, which is what
+  this pins. Its sign is \<^const>\<open>STop\<close> rather than \<^const>\<open>SPos\<close> because the
+  write converts to \<open>z\<close>'s kind, and a positive sign concretizes to integers a
+  32-bit kind cannot all hold -- the same for both combines, so the contrast
+  the lemma draws still holds.\<close>
+
 lemma cj_return_assignment_unaffected:
-  "cj_lookup (locals (snd cj_stock_sol (Inl (Statement 5, ())))) (STR ''z'') = SPos"
-  "cj_lookup (locals (snd cj_custom_sol (Inl (Statement 5, ())))) (STR ''z'') = SPos"
+  "cj_lookup (locals (snd cj_stock_sol (Inl (Statement 5, ())))) (STR ''z'') = STop"
+  "cj_lookup (locals (snd cj_custom_sol (Inl (Statement 5, ())))) (STR ''z'') = STop"
   by eval+
 
 end

@@ -2,6 +2,7 @@ theory Analysis_GraphViz
   imports
     "Voblint_CFG.VIMP_Proc_to_CFG"
     "Voblint_VIMP.VIMP_Source_Print"
+    "Voblint_VIMP.VIMP_Notation"
     Voblint_Core.Exec_St
     Voblint_Core.Abstract_Domain
     Voblint_Core.Abstract_Checks
@@ -15,27 +16,38 @@ text \<open>
 
 subsection \<open>CFG and DOT helpers\<close>
 
+text \<open>
+  Every payload a compiled edge carries is a \<^typ>\<open>texp\<close>, but the rendering
+  deliberately shows the source expression \<^const>\<open>texp_erase\<close> recovers, not
+  its baked kind annotations: a reader of a compiled graph wants the
+  expression the program wrote.
+\<close>
+
 fun string_of_action :: "edge_action \<Rightarrow> string" where
   "string_of_action EA_Nop = ''nop''"
-| "string_of_action (EA_Assign x a) = String.explode x @ '' := '' @ string_of_exp 0 a"
-| "string_of_action (EA_Special Nondet_Int x) =
-    String.explode x @ '' := __voblint_nondet_int()''"
-| "string_of_action (EA_Special (Min a b) x) =
-    String.explode x @ '' := min('' @ string_of_exp 0 a @ '', '' @ string_of_exp 0 b @ '')''"
-| "string_of_action (EA_Special (Max a b) x) =
-    String.explode x @ '' := max('' @ string_of_exp 0 a @ '', '' @ string_of_exp 0 b @ '')''"
-| "string_of_action (EA_Assume b) = ''['' @ string_of_exp 0 b @ '']''"
-| "string_of_action (EA_AssumeNot b) = ''!['' @ string_of_exp 0 b @ '']''"
-| "string_of_action (EA_Ret None p) = ''return''"
-| "string_of_action (EA_Ret (Some e) p) =
-    ''return '' @ string_of_exp 0 e"
-| "string_of_action (EA_Check cnd) = ''check('' @ string_of_exp 0 cnd @ '')''"
+| "string_of_action (EA_Assign x a) =
+    String.explode (display_scoped x) @ '' := '' @ string_of_exp 0 (texp_erase a)"
+| "string_of_action (EA_Special (Nondet_Int k) x) =
+    String.explode (display_scoped x) @ '' := __voblint_nondet_int()''"
+| "string_of_action (EA_Special (Min k a b) x) =
+    String.explode (display_scoped x) @ '' := min('' @ string_of_exp 0 (texp_erase a) @ '', ''
+      @ string_of_exp 0 (texp_erase b) @ '')''"
+| "string_of_action (EA_Special (Max k a b) x) =
+    String.explode (display_scoped x) @ '' := max('' @ string_of_exp 0 (texp_erase a) @ '', ''
+      @ string_of_exp 0 (texp_erase b) @ '')''"
+| "string_of_action (EA_Assume b) = ''['' @ string_of_exp 0 (texp_erase b) @ '']''"
+| "string_of_action (EA_AssumeNot b) = ''!['' @ string_of_exp 0 (texp_erase b) @ '']''"
+| "string_of_action (EA_Ret None p rk) = ''return''"
+| "string_of_action (EA_Ret (Some e) p rk) =
+    ''return '' @ string_of_exp 0 (texp_erase e)"
+| "string_of_action (EA_Check cnd) = ''check('' @ string_of_exp 0 (texp_erase cnd) @ '')''"
 
 fun string_of_call_action :: "call_action \<Rightarrow> string" where
   "string_of_call_action (CallEdge None fs es) =
-    ''call('' @ concat (map (string_of_exp 0) es) @ '')''"
-| "string_of_call_action (CallEdge (Some x) fs es) =
-    String.explode x @ '' := call('' @ concat (map (string_of_exp 0) es) @ '')''"
+    ''call('' @ concat (map (\<lambda>e. string_of_exp 0 (texp_erase e)) es) @ '')''"
+| "string_of_call_action (CallEdge (Some tv) fs es) =
+    String.explode (tv_name tv) @ '' := call(''
+      @ concat (map (\<lambda>e. string_of_exp 0 (texp_erase e)) es) @ '')''"
 
 definition dq :: string where "dq = [CHR 0x22]"
 definition nl :: string where "nl = [CHR 0x0A]"
@@ -173,20 +185,20 @@ definition annotation_style :: "graphviz_node_annotation \<Rightarrow> string" w
 text \<open>
   Shared status mapping for a compiled \<^verbatim>\<open>__voblint_check(...)\<close>
   condition, given its executable \<^typ>\<open>check_result\<close> classification.
-  Domain-independent (only \<^typ>\<open>check_result\<close> and \<^typ>\<open>exp\<close>), so every
+  Domain-independent (only \<^typ>\<open>check_result\<close> and \<^typ>\<open>texp\<close>), so every
   domain's check-discharge example renders proof status through this one
   mapping instead of restating it.
 \<close>
 
-definition check_result_annotation :: "check_result \<Rightarrow> exp \<Rightarrow> graphviz_node_annotation" where
+definition check_result_annotation :: "check_result \<Rightarrow> texp \<Rightarrow> graphviz_node_annotation" where
   "check_result_annotation res cnd =
      (case res of
         Check_Proved \<Rightarrow>
-          Node_Annotation (''check '' @ string_of_exp 0 cnd) NS_Proved
+          Node_Annotation (''check '' @ string_of_exp 0 (texp_erase cnd)) NS_Proved
       | Check_Unknown \<Rightarrow>
-          Node_Annotation (''check '' @ string_of_exp 0 cnd @ '' [unknown]'') NS_Unknown
+          Node_Annotation (''check '' @ string_of_exp 0 (texp_erase cnd) @ '' [unknown]'') NS_Unknown
       | Check_Refuted \<Rightarrow>
-          Node_Annotation (''check '' @ string_of_exp 0 cnd @ '' [REFUTED]'') NS_Refuted)"
+          Node_Annotation (''check '' @ string_of_exp 0 (texp_erase cnd) @ '' [REFUTED]'') NS_Refuted)"
 
 text \<open>
   \<open>route\<close> answers \<^const>\<open>None\<close> exactly when a call transition does not exist ---
@@ -225,24 +237,24 @@ fun graphviz_owner_of :: "(string option \<times> pp list) list \<Rightarrow> pp
     (if p \<in> set ps then region_label owner else graphviz_owner_of regions p)"
 
 fun compiled_proc_owner ::
-  "proc_table \<Rightarrow> pname list \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> pname option" where
-  "compiled_proc_owner \<Pi> [] n k = None"
-| "compiled_proc_owner \<Pi> (p # ps) n k =
+  "tyenv \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> pname option" where
+  "compiled_proc_owner \<Gamma> \<Pi> [] n k = None"
+| "compiled_proc_owner \<Gamma> \<Pi> (p # ps) n k =
     (case \<Pi> p of
-      None \<Rightarrow> compiled_proc_owner \<Pi> ps n k
+      None \<Rightarrow> compiled_proc_owner \<Gamma> \<Pi> ps n k
     | Some decl \<Rightarrow>
-        (let (n', E, K) = compile_proc \<Pi> p decl n
+        (let (n', E, K) = compile_proc \<Gamma> \<Pi> p decl n
          in if n \<le> k \<and> k < n' then Some p
-            else compiled_proc_owner \<Pi> ps n' k))"
+            else compiled_proc_owner \<Gamma> \<Pi> ps n' k))"
 
 definition compiled_owner_of ::
-  "proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com \<Rightarrow> pp \<Rightarrow> pname" where
-  "compiled_owner_of \<Pi> ps mnm main p =
+  "tyenv \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com \<Rightarrow> pp \<Rightarrow> pname" where
+  "compiled_owner_of \<Gamma> \<Pi> ps mnm main p =
     (case p of
       FunctionEntry owner \<Rightarrow> owner
     | FunctionResult owner \<Rightarrow> owner
     | Statement k \<Rightarrow>
-        (case compiled_proc_owner \<Pi> ps 0 k of Some owner \<Rightarrow> owner | None \<Rightarrow> mnm))"
+        (case compiled_proc_owner \<Gamma> \<Pi> ps 0 k of Some owner \<Rightarrow> owner | None \<Rightarrow> mnm))"
 
 definition cfg_point_list :: "cfg \<Rightarrow> pp list" where
   "cfg_point_list g =
@@ -375,7 +387,7 @@ definition cfg_assigned_vars :: "cfg \<Rightarrow> vname list" where
     remdups
       (concat (map (\<lambda>(_, a, _). graphviz_action_defs a) (cfg_intra_list g)) @
        concat (map (\<lambda>(_, ca, _, _).
-         case ca of CallEdge None _ _ \<Rightarrow> [] | CallEdge (Some x) _ _ \<Rightarrow> [x])
+         case ca of CallEdge None _ _ \<Rightarrow> [] | CallEdge (Some tv) _ _ \<Rightarrow> [tv_name tv])
          (cfg_calls_list g)))"
 
 definition compiled_global_vars :: "(vname \<Rightarrow> bool) \<Rightarrow> cfg \<Rightarrow> vname list" where
@@ -391,19 +403,20 @@ definition owner_assigned_vars ::
        concat (map (\<lambda>(call, ca, _, _).
          if point_owner call = owner then
            (case ca of CallEdge None _ _ \<Rightarrow> []
-             | CallEdge (Some x) _ _ \<Rightarrow> [x])
+             | CallEdge (Some tv) _ _ \<Rightarrow> [tv_name tv])
          else []) (cfg_calls_list g)))"
 
 definition compiled_procedure_scope ::
-  "(vname \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com \<Rightarrow> cfg \<Rightarrow> pp \<Rightarrow> procedure_scope" where
-  "compiled_procedure_scope gs \<Pi> ps mnm main g p =
-    (let owner = compiled_owner_of \<Pi> ps mnm main p;
+  "(vname \<Rightarrow> bool) \<Rightarrow> tyenv \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com \<Rightarrow> cfg \<Rightarrow> pp
+    \<Rightarrow> procedure_scope" where
+  "compiled_procedure_scope gs \<Gamma> \<Pi> ps mnm main g p =
+    (let owner = compiled_owner_of \<Gamma> \<Pi> ps mnm main p;
          decl = \<Pi> owner;
          fs = if owner = mnm then [] else
            (case decl of None \<Rightarrow> [] | Some d \<Rightarrow> formals d);
          ret = if owner = mnm then None else Some ret_var;
          ls = filter (\<lambda>x. x \<notin> set fs \<and> x \<noteq> ret_var \<and> \<not> gs x)
-           (owner_assigned_vars g (compiled_owner_of \<Pi> ps mnm main) owner)
+           (owner_assigned_vars g (compiled_owner_of \<Gamma> \<Pi> ps mnm main) owner)
      in \<lparr>scope_formals = fs, scope_locals = ls, scope_return_slot = ret\<rparr>)"
 
 
@@ -511,7 +524,7 @@ definition analysis_combine_edges ::
                     if (FunctionResult p, callee_ctx) \<in> set covered \<and>
                        (cont, snd src_ctx) \<in> set covered
                     then Some (LocalNode (FunctionResult p) callee_ctx,
-                               CombineEdge call (case ca of CallEdge dst _ _ \<Rightarrow> dst)
+                               CombineEdge call (case ca of CallEdge dst _ _ \<Rightarrow> map_option tv_name dst)
                                  (return_slot_for_pp cfg (FunctionResult p)),
                                LocalNode cont (snd src_ctx))
                     else None)
@@ -625,7 +638,7 @@ text \<open>A compiled program satisfies the side condition outright: the compil
   each call at its own freshly claimed statement index.\<close>
 
 lemma calls_source_unique_compile_prog:
-  "calls_source_unique (compile_prog \<Pi> ps mnm main)"
+  "calls_source_unique (compile_prog \<Gamma> \<Pi> ps mnm main)"
   unfolding calls_source_unique_def
   using compile_prog_calls_source_unique by blast
 
@@ -1018,18 +1031,20 @@ definition analysis_node_attrs ::
     | GlobalNode _ \<Rightarrow> ''shape=note,width=2.2,fixedsize=false''
     | SourceNode _ \<Rightarrow> ''shape=plain'')" 
 
-fun enter_bindings :: "vname list \<Rightarrow> exp list \<Rightarrow> string list" where
+fun enter_bindings :: "vname list \<Rightarrow> texp list \<Rightarrow> string list" where
   "enter_bindings [] _ = []"
 | "enter_bindings _ [] = []"
 | "enter_bindings (x # xs) (e # es) =
-    (String.explode x @ '' := '' @ string_of_exp 0 e) # enter_bindings xs es"
+    (String.explode (display_scoped x) @ '' := '' @ string_of_exp 0 (texp_erase e)) # enter_bindings xs es"
 
 definition source_action_label :: "cfg \<Rightarrow> edge_action \<Rightarrow> string" where
   "source_action_label g a =
     (case a of EA_Assign x e \<Rightarrow>
-       if x = ret_var then ''ret := '' @ string_of_exp 0 e else string_of_action a    | EA_Assume b \<Rightarrow> string_of_exp 0 b
-    | EA_AssumeNot b \<Rightarrow> ''not ('' @ string_of_exp 0 b @ '')''
-    | EA_Ret _ p \<Rightarrow> if cfg_entry g = FunctionEntry p then ''terminate'' else string_of_action a
+       if x = ret_var then ''ret := '' @ string_of_exp 0 (texp_erase e)
+       else string_of_action a
+    | EA_Assume b \<Rightarrow> string_of_exp 0 (texp_erase b)
+    | EA_AssumeNot b \<Rightarrow> ''not ('' @ string_of_exp 0 (texp_erase b) @ '')''
+    | EA_Ret _ p _ \<Rightarrow> if cfg_entry g = FunctionEntry p then ''terminate'' else string_of_action a
     | _ \<Rightarrow> string_of_action a)"
 
 definition analysis_edge_attrs :: "cfg \<Rightarrow> analysis_edge_kind \<Rightarrow> string" where
@@ -1038,11 +1053,11 @@ definition analysis_edge_attrs :: "cfg \<Rightarrow> analysis_edge_kind \<Righta
       IntraEdge a \<Rightarrow> ''label='' @ dq @ source_action_label g a @ dq
     | EnterEdge callee a \<Rightarrow> ''color=purple,penwidth=2,weight=10,label='' @ dq
         @ ''call '' @ callee @ ''('' @
-          (case a of CallEdge _ _ es \<Rightarrow> join_source '', '' (map (string_of_exp 0) es)) @ '')'' @ dq
+          (case a of CallEdge _ _ es \<Rightarrow> join_source '', '' (map (\<lambda>e. string_of_exp 0 (texp_erase e)) es)) @ '')'' @ dq
     | CombineEdge call dst ret \<Rightarrow> ''style=dashed,color=blue,constraint=false,xlabel='' @ dq
         @ (case (dst, ret) of
-             (Some x, Some r) \<Rightarrow> ''resume / '' @ String.explode x @ '' := '' @ String.explode r
-           | (Some x, None) \<Rightarrow> ''resume / '' @ String.explode x
+             (Some x, Some r) \<Rightarrow> ''resume / '' @ String.explode (display_scoped x) @ '' := '' @ String.explode (display_scoped r)
+           | (Some x, None) \<Rightarrow> ''resume / '' @ String.explode (display_scoped x)
            | (None, _) \<Rightarrow> ''resume'')
         @ dq
     | CallToReturnEdge callee \<Rightarrow> ''style=dotted,color=gray40,constraint=false,label='' @ dq
@@ -1062,11 +1077,11 @@ definition canonical_edge_kind_text :: "cfg \<Rightarrow> analysis_edge_kind \<R
     (case kind of
       IntraEdge a \<Rightarrow> source_action_label g a
     | EnterEdge callee a \<Rightarrow> ''enter '' @ callee @ ''(''
-        @ (case a of CallEdge _ _ es \<Rightarrow> join_source '', '' (map (string_of_exp 0) es)) @ '')''
+        @ (case a of CallEdge _ _ es \<Rightarrow> join_source '', '' (map (\<lambda>e. string_of_exp 0 (texp_erase e)) es)) @ '')''
     | CombineEdge call dst ret \<Rightarrow> ''combine''
         @ (case (dst, ret) of
-             (Some x, Some r) \<Rightarrow> '' '' @ String.explode x @ '' := '' @ String.explode r
-           | (Some x, None) \<Rightarrow> '' '' @ String.explode x
+             (Some x, Some r) \<Rightarrow> '' '' @ String.explode (display_scoped x) @ '' := '' @ String.explode (display_scoped r)
+           | (Some x, None) \<Rightarrow> '' '' @ String.explode (display_scoped x)
            | (None, _) \<Rightarrow> '''')
     | CallToReturnEdge callee \<Rightarrow> ''call-to-return '' @ String.explode callee
     | GlobalReadEdge \<Rightarrow> ''read global''
@@ -1279,11 +1294,11 @@ definition export_edge_label :: "cfg \<Rightarrow> analysis_edge_kind \<Rightarr
     (case kind of
       IntraEdge a \<Rightarrow> source_action_label g a
     | EnterEdge callee a \<Rightarrow> callee @ ''(''
-        @ (case a of CallEdge _ _ es \<Rightarrow> join_source '', '' (map (string_of_exp 0) es)) @ '')''
+        @ (case a of CallEdge _ _ es \<Rightarrow> join_source '', '' (map (\<lambda>e. string_of_exp 0 (texp_erase e)) es)) @ '')''
     | CombineEdge _ dst ret \<Rightarrow>
         (case (dst, ret) of
-           (Some x, Some r) \<Rightarrow> String.explode x @ '' := '' @ String.explode r
-         | (Some x, None) \<Rightarrow> String.explode x
+           (Some x, Some r) \<Rightarrow> String.explode (display_scoped x) @ '' := '' @ String.explode (display_scoped r)
+         | (Some x, None) \<Rightarrow> String.explode (display_scoped x)
          | (None, _) \<Rightarrow> '''')
     | CallToReturnEdge callee \<Rightarrow> String.explode callee
     | GlobalReadEdge \<Rightarrow> ''''
@@ -1349,10 +1364,45 @@ definition contextual_analysis_export ::
   "contextual_analysis_export cfg g domain sol =
     analysis_graph_to_export cfg g sol (build_analysis_graph cfg g domain sol)"
 
+text \<open>
+  What the source panel needs beyond the compiler's own arguments: the
+  declared globals and the procedure-scoped declarations. \<^type>\<open>tyenv\<close>
+  supplies each name's kind but not which names were declared, and a panel
+  that omits the declarations does not print a VIMP program at all -- the
+  strict syntax requires every global and every local to be declared, so the
+  rendered text would reference undeclared names and hide their kinds.
+
+  One record rather than two more arguments, because these two always travel
+  together and every renderer below would otherwise thread both. A caller that
+  genuinely has no declarations -- a \<^typ>\<open>proc_table\<close> built by hand in a
+  theory, with no source program behind it -- passes
+  \<open>no_source_decls\<close> and gets exactly the old rendering.
+\<close>
+
+record source_decls =
+  sd_globals :: "vname list"
+  sd_scoped :: "(pname \<times> typed_var) list"
+
+definition no_source_decls :: source_decls where
+  "no_source_decls = \<lparr>sd_globals = [], sd_scoped = []\<rparr>"
+
+text \<open>
+  A program supplies both directly. Every renderer whose caller has an
+  \<^typ>\<open>imp_prog\<close> reads them off it rather than reconstructing them, so the
+  panel prints the declarations the program actually carries -- and, for a
+  resolved program, the scoped list is the renamed one whose identities
+  \<^const>\<open>display_scoped\<close> turns back into source names as it prints.
+\<close>
+
+definition prog_decls_view :: "imp_prog \<Rightarrow> source_decls" where
+  "prog_decls_view p =
+     \<lparr>sd_globals = declared_global_vars p, sd_scoped = declared_scoped p\<rparr>"
+
 definition raw_cfg_graph_config ::
-  "proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com \<Rightarrow> (pp \<Rightarrow> graphviz_node_annotation option)
+  "tyenv \<Rightarrow> source_decls \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com
+    \<Rightarrow> (pp \<Rightarrow> graphviz_node_annotation option)
     \<Rightarrow> (unit, unit, unit, unit) analysis_graph_config" where
-  "raw_cfg_graph_config \<Pi> ps mnm main annotate =
+  "raw_cfg_graph_config \<Gamma> decls \<Pi> ps mnm main annotate =
     \<lparr> local_of = id,
       route = (\<lambda>_ _ _ _. Some ()),
       context_key = (\<lambda>_. STR ''''),
@@ -1366,39 +1416,42 @@ definition raw_cfg_graph_config ::
       show_global_key = (\<lambda>_. ''''),
       is_shared_global = (\<lambda>_. False),
       show_internal_globals = False,
-      owner_of = String.explode o compiled_owner_of \<Pi> ps mnm main,
+      owner_of = String.explode o compiled_owner_of \<Gamma> \<Pi> ps mnm main,
       cluster_label = (\<lambda>owner _. owner),
-      source_text = Some (pretty_string_of_program \<Pi> ps main []),
+      source_text =
+        Some (pretty_string_of_program \<Gamma> (sd_scoped decls) \<Pi> ps main (sd_globals decls)),
       node_annotation = (\<lambda>p _. annotate p)
     \<rparr>"
 
 definition raw_cfg_dot ::
-  "proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com \<Rightarrow> (pp \<Rightarrow> graphviz_node_annotation option) \<Rightarrow> string" where
-  "raw_cfg_dot \<Pi> ps mnm main annotate =
-    (let g = compile_prog \<Pi> ps mnm main;
-         cfg = raw_cfg_graph_config \<Pi> ps mnm main annotate;
+  "tyenv \<Rightarrow> source_decls \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com
+    \<Rightarrow> (pp \<Rightarrow> graphviz_node_annotation option) \<Rightarrow> string" where
+  "raw_cfg_dot \<Gamma> decls \<Pi> ps mnm main annotate =
+    (let g = compile_prog \<Gamma> \<Pi> ps mnm main;
+         cfg = raw_cfg_graph_config \<Gamma> decls \<Pi> ps mnm main annotate;
          domain = contextual_graph_domain g (\<lambda>_. [()])
      in contextual_analysis_dot cfg g domain (\<lambda>_. ()))"
 
 definition raw_cfg_dot_lit ::
-  "proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com \<Rightarrow> (pp \<Rightarrow> graphviz_node_annotation option)
-    \<Rightarrow> String.literal" where
-  "raw_cfg_dot_lit \<Pi> ps mnm main annotate =
-    String.implode (raw_cfg_dot \<Pi> ps mnm main annotate)"
+  "tyenv \<Rightarrow> source_decls \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com
+    \<Rightarrow> (pp \<Rightarrow> graphviz_node_annotation option) \<Rightarrow> String.literal" where
+  "raw_cfg_dot_lit \<Gamma> decls \<Pi> ps mnm main annotate =
+    String.implode (raw_cfg_dot \<Gamma> decls \<Pi> ps mnm main annotate)"
 
 definition raw_cfg_canonical_text ::
-  "proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com \<Rightarrow> (pp \<Rightarrow> graphviz_node_annotation option) \<Rightarrow> string" where
-  "raw_cfg_canonical_text \<Pi> ps mnm main annotate =
-    (let g = compile_prog \<Pi> ps mnm main;
-         cfg = raw_cfg_graph_config \<Pi> ps mnm main annotate;
+  "tyenv \<Rightarrow> source_decls \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com
+    \<Rightarrow> (pp \<Rightarrow> graphviz_node_annotation option) \<Rightarrow> string" where
+  "raw_cfg_canonical_text \<Gamma> decls \<Pi> ps mnm main annotate =
+    (let g = compile_prog \<Gamma> \<Pi> ps mnm main;
+         cfg = raw_cfg_graph_config \<Gamma> decls \<Pi> ps mnm main annotate;
          domain = contextual_graph_domain g (\<lambda>_. [()])
      in contextual_analysis_canonical_text cfg g domain (\<lambda>_. ()))"
 
 definition raw_cfg_canonical_text_lit ::
-  "proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com \<Rightarrow> (pp \<Rightarrow> graphviz_node_annotation option)
-    \<Rightarrow> String.literal" where
-  "raw_cfg_canonical_text_lit \<Pi> ps mnm main annotate =
-    String.implode (raw_cfg_canonical_text \<Pi> ps mnm main annotate)"
+  "tyenv \<Rightarrow> source_decls \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com
+    \<Rightarrow> (pp \<Rightarrow> graphviz_node_annotation option) \<Rightarrow> String.literal" where
+  "raw_cfg_canonical_text_lit \<Gamma> decls \<Pi> ps mnm main annotate =
+    String.implode (raw_cfg_canonical_text \<Gamma> decls \<Pi> ps mnm main annotate)"
 
 text \<open>
   The structured-export sibling of \<^const>\<open>raw_cfg_dot\<close> and
@@ -1409,11 +1462,11 @@ text \<open>
 \<close>
 
 definition raw_cfg_export ::
-  "proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com \<Rightarrow> (pp \<Rightarrow> graphviz_node_annotation option)
-    \<Rightarrow> export_graph" where
-  "raw_cfg_export \<Pi> ps mnm main annotate =
-    (let g = compile_prog \<Pi> ps mnm main;
-         cfg = raw_cfg_graph_config \<Pi> ps mnm main annotate;
+  "tyenv \<Rightarrow> source_decls \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com
+    \<Rightarrow> (pp \<Rightarrow> graphviz_node_annotation option) \<Rightarrow> export_graph" where
+  "raw_cfg_export \<Gamma> decls \<Pi> ps mnm main annotate =
+    (let g = compile_prog \<Gamma> \<Pi> ps mnm main;
+         cfg = raw_cfg_graph_config \<Gamma> decls \<Pi> ps mnm main annotate;
          domain = contextual_graph_domain g (\<lambda>_. [()])
      in contextual_analysis_export cfg g domain (\<lambda>_. ()))"
 
@@ -1435,7 +1488,8 @@ fun string_of_check_result :: "check_result \<Rightarrow> string" where
 definition string_of_check_report_entry :: "check_report_entry \<Rightarrow> string" where
   "string_of_check_report_entry entry =
      (case entry of (v, cnd, res) \<Rightarrow>
-        string_of_cfg_node v @ '': '' @ string_of_exp 0 cnd @ ''  '' @ string_of_check_result res)"
+        string_of_cfg_node v @ '': '' @ string_of_exp 0 (texp_erase cnd)
+          @ ''  '' @ string_of_check_result res)"
 
 definition string_of_check_report :: "check_report_entry list \<Rightarrow> string" where
   "string_of_check_report report =
@@ -1488,17 +1542,18 @@ definition insert_dot_cluster_before_close :: "string \<Rightarrow> string \<Rig
      take (length dot - 2) dot @ extra @ drop (length dot - 2) dot"
 
 definition raw_cfg_dot_with_report ::
-    "proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com \<Rightarrow> (pp \<Rightarrow> graphviz_node_annotation option)
+    "tyenv \<Rightarrow> source_decls \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com
+     \<Rightarrow> (pp \<Rightarrow> graphviz_node_annotation option)
      \<Rightarrow> check_report_entry list \<Rightarrow> string" where
-  "raw_cfg_dot_with_report \<Pi> ps mnm main annotate report =
+  "raw_cfg_dot_with_report \<Gamma> decls \<Pi> ps mnm main annotate report =
      insert_dot_cluster_before_close (check_report_dot_cluster report)
-       (raw_cfg_dot \<Pi> ps mnm main annotate)"
+       (raw_cfg_dot \<Gamma> decls \<Pi> ps mnm main annotate)"
 
 definition raw_cfg_dot_with_report_lit ::
-    "proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com \<Rightarrow> (pp \<Rightarrow> graphviz_node_annotation option)
+    "tyenv \<Rightarrow> source_decls \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com
+     \<Rightarrow> (pp \<Rightarrow> graphviz_node_annotation option)
      \<Rightarrow> check_report_entry list \<Rightarrow> String.literal" where
-  "raw_cfg_dot_with_report_lit \<Pi> ps mnm main annotate report =
-     String.implode (raw_cfg_dot_with_report \<Pi> ps mnm main annotate report)"
+  "raw_cfg_dot_with_report_lit \<Gamma> decls \<Pi> ps mnm main annotate report =
+     String.implode (raw_cfg_dot_with_report \<Gamma> decls \<Pi> ps mnm main annotate report)"
 
 end
-

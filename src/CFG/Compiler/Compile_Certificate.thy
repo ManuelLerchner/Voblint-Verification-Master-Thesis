@@ -7,7 +7,7 @@ section \<open>The static compiler certificate for a whole compiled program\<clo
 text \<open>The static source contract establishes the runtime return guard for the root activation.\<close>
 lemma wf_compile_input_source_wf:
   assumes "wf_compile_input source_global \<Pi> ps mnm main"
-  shows "source_wf (main, s, [])"
+  shows "source_wf (main, s, [], proc_ret_kind \<Pi> mnm)"
   using wf_compile_input_source_com[OF assms] wf_compile_input_no_return[OF assms]
   by (rule source_com_no_return_source_wf)
 
@@ -23,9 +23,9 @@ text \<open>
 text \<open>Each declared member of a \<^const>\<open>compile_procs\<close> pass contributes its own \<^const>\<open>compile_proc\<close>
   fragment as a subset of the accumulated edge and call sets.\<close>
 lemma compile_procs_member_incl:
-  assumes "compile_procs \<Pi> ps n = (n', E, K)"
+  assumes "compile_procs \<Gamma> \<Pi> ps n = (n', E, K)"
     and "p \<in> set ps" and "\<Pi> p = Some decl"
-  shows "\<exists>m m' Ep Kp. compile_proc \<Pi> p decl m = (m', Ep, Kp) \<and> Ep \<subseteq> E \<and> Kp \<subseteq> K"
+  shows "\<exists>m m' Ep Kp. compile_proc \<Gamma> \<Pi> p decl m = (m', Ep, Kp) \<and> Ep \<subseteq> E \<and> Kp \<subseteq> K"
   using assms
 proof (induction ps arbitrary: n n' E K)
   case Nil then show ?case by simp
@@ -35,13 +35,13 @@ next
   proof (cases "\<Pi> q")
     case None
     with Cons.prems(2,3) have pqs: "p \<in> set qs" by auto
-    from None Cons.prems(1) have "compile_procs \<Pi> qs n = (n', E, K)" by simp
+    from None Cons.prems(1) have "compile_procs \<Gamma> \<Pi> qs n = (n', E, K)" by simp
     from Cons.IH[OF this pqs Cons.prems(3)] show ?thesis .
   next
     case (Some declq)
-    obtain n1 Eq Kq where cq: "compile_proc \<Pi> q declq n = (n1, Eq, Kq)"
+    obtain n1 Eq Kq where cq: "compile_proc \<Gamma> \<Pi> q declq n = (n1, Eq, Kq)"
       by (metis prod_cases3)
-    obtain n2 E' K' where crest: "compile_procs \<Pi> qs n1 = (n2, E', K')"
+    obtain n2 E' K' where crest: "compile_procs \<Gamma> \<Pi> qs n1 = (n2, E', K')"
       by (metis prod_cases3)
     from Cons.prems(1) Some cq crest
     have EK: "E = Eq \<union> E'" "K = Kq \<union> K'" by (simp_all add: Let_def)
@@ -49,14 +49,14 @@ next
     proof (cases "p = q")
       case True
       with Cons.prems(3) Some have "decl = declq" by simp
-      with cq True have "compile_proc \<Pi> p decl n = (n1, Eq, Kq)" by simp
+      with cq True have "compile_proc \<Gamma> \<Pi> p decl n = (n1, Eq, Kq)" by simp
       moreover have "Eq \<subseteq> E" "Kq \<subseteq> K" using EK by auto
       ultimately show ?thesis by blast
     next
       case False
       with Cons.prems(2) have "p \<in> set qs" by simp
       from Cons.IH[OF crest this Cons.prems(3)] obtain m m' Ep Kp
-        where "compile_proc \<Pi> p decl m = (m', Ep, Kp)" "Ep \<subseteq> E'" "Kp \<subseteq> K'" by blast
+        where "compile_proc \<Gamma> \<Pi> p decl m = (m', Ep, Kp)" "Ep \<subseteq> E'" "Kp \<subseteq> K'" by blast
       moreover have "E' \<subseteq> E" "K' \<subseteq> K" using EK by auto
       ultimately show ?thesis by blast
     qed
@@ -69,15 +69,15 @@ text \<open>A well-formed compiled program satisfies the static \<^const>\<open>
   applies to the initial main activation uniformly with every other procedure.\<close>
 theorem procs_compiled_compile_prog:
   assumes wf: "wf_compile_input source_global \<Pi> ps mnm main"
-  shows "procs_compiled \<Pi> (compile_prog \<Pi> ps mnm main)"
+  shows "procs_compiled \<Gamma> \<Pi> (compile_prog \<Gamma> \<Pi> ps mnm main)"
   unfolding procs_compiled_def
 proof (intro allI impI)
   fix p decl assume pd: "\<Pi> p = Some decl"
-  let ?g = "compile_prog \<Pi> ps mnm main"
-  obtain n1 Eprocs Kprocs where procs: "compile_procs \<Pi> ps 0 = (n1, Eprocs, Kprocs)"
+  let ?g = "compile_prog \<Gamma> \<Pi> ps mnm main"
+  obtain n1 Eprocs Kprocs where procs: "compile_procs \<Gamma> \<Pi> ps 0 = (n1, Eprocs, Kprocs)"
     by (metis prod_cases3)
   obtain n2 Emain Kmain
-    where mainc: "compile_proc \<Pi> mnm (proc_decl_of [] main) n1 = (n2, Emain, Kmain)"
+    where mainc: "compile_proc \<Gamma> \<Pi> mnm (proc_decl_of [] main) n1 = (n2, Emain, Kmain)"
     by (metis prod_cases3)
   have intra_g: "intra ?g = Eprocs \<union> Emain" and calls_g: "calls ?g = Kprocs \<union> Kmain"
     unfolding compile_prog_def by (simp_all add: procs mainc Let_def)
@@ -87,45 +87,45 @@ proof (intro allI impI)
     by (rule wf_compile_input_main_exists[OF wf])
   have spi: "source_pi \<Pi>" by (rule wf_compile_input_source_pi[OF wf])
   have srccom: "source_com (body decl)" using spi pd unfolding source_pi_def by blast
-  have frag: "\<exists>m m' Ef Kf. compile_proc \<Pi> p decl m = (m', Ef, Kf)
+  have frag: "\<exists>m m' Ef Kf. compile_proc \<Gamma> \<Pi> p decl m = (m', Ef, Kf)
                 \<and> Ef \<subseteq> intra ?g \<and> Kf \<subseteq> calls ?g"
   proof (cases "p = mnm")
     case True
     with pd mnmdecl have "decl = proc_decl_of [] main" by simp
-    with mainc True have "compile_proc \<Pi> p decl n1 = (n2, Emain, Kmain)" by simp
+    with mainc True have "compile_proc \<Gamma> \<Pi> p decl n1 = (n2, Emain, Kmain)" by simp
     moreover have "Emain \<subseteq> intra ?g" "Kmain \<subseteq> calls ?g" using intra_g calls_g by auto
     ultimately show ?thesis by blast
   next
     case False
     with pd setps have pin: "p \<in> set ps" by auto
     from compile_procs_member_incl[OF procs pin pd] obtain m m' Ef Kf
-      where cp: "compile_proc \<Pi> p decl m = (m', Ef, Kf)"
+      where cp: "compile_proc \<Gamma> \<Pi> p decl m = (m', Ef, Kf)"
         and Esub: "Ef \<subseteq> Eprocs" and Ksub: "Kf \<subseteq> Kprocs" by blast
     have "Ef \<subseteq> intra ?g" "Kf \<subseteq> calls ?g" using Esub Ksub intra_g calls_g by auto
     with cp show ?thesis by blast
   qed
-  from frag obtain m m' Ef Kf where cp: "compile_proc \<Pi> p decl m = (m', Ef, Kf)"
+  from frag obtain m m' Ef Kf where cp: "compile_proc \<Gamma> \<Pi> p decl m = (m', Ef, Kf)"
     and Esub: "Ef \<subseteq> intra ?g" and Ksub: "Kf \<subseteq> calls ?g" by blast
   from cp obtain Eb where
-    cb: "compile \<Pi> p (body decl) (Statement (m + csize (body decl))) m
+    cb: "compile \<Gamma> \<Pi> p (body decl) (Statement (m + csize (body decl))) m
            = (m + csize (body decl), Statement m, Eb, Kf)"
     and Edef: "Ef = insert (FunctionEntry p, EA_Nop, Statement m)
                  (if falls_through (body decl)
-                  then insert (Statement (m + csize (body decl)), EA_Ret None p, FunctionResult p) Eb
+                  then insert (Statement (m + csize (body decl)), EA_Ret None p (proc_ret_kind \<Pi> p), FunctionResult p) Eb
                   else Eb)"
     by (rule compile_procE)
   have Ebsub: "Eb \<subseteq> intra ?g" using Edef Esub by (auto split: if_splits)
   have ent: "(FunctionEntry p, EA_Nop, Statement m) \<in> intra ?g" using Edef Esub by auto
   have ext: "falls_through (body decl) \<longrightarrow>
-               (Statement (m + csize (body decl)), EA_Ret None p, FunctionResult p) \<in> intra ?g"
+               (Statement (m + csize (body decl)), EA_Ret None p (proc_ret_kind \<Pi> p), FunctionResult p) \<in> intra ?g"
     using Edef Esub by auto
   have spNone: "special_table p = None"
     using wf_compile_input_special_table_none[OF wf pd] .
-  show "\<exists>k n n' en E K. compile \<Pi> p (body decl) k n = (n', en, E, K)
+  show "\<exists>k n n' en E K. compile \<Gamma> \<Pi> p (body decl) k n = (n', en, E, K)
           \<and> E \<subseteq> intra ?g \<and> K \<subseteq> calls ?g
           \<and> (FunctionEntry p, EA_Nop, en) \<in> intra ?g
           \<and> (falls_through (body decl) \<longrightarrow>
-               (k, EA_Ret None p, FunctionResult p) \<in> intra ?g)
+               (k, EA_Ret None p (proc_ret_kind \<Pi> p), FunctionResult p) \<in> intra ?g)
           \<and> source_com (body decl) \<and> special_table p = None"
     using cb Ebsub Ksub ent ext srccom spNone by blast
 

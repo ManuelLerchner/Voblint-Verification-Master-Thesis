@@ -9,6 +9,7 @@
 // top-level branch/assume gate (branch_lifted's own case split, exercised
 // separately by the 06-reachability fixtures).
 void main() {
+  int32 x;
   x := 0 - 1;
   __voblint_check((x < 0) == 1) // PROVED
 }

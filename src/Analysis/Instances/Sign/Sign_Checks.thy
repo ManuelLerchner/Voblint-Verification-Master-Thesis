@@ -7,6 +7,9 @@ theory Sign_Checks
 begin
 
 hide_const phase.N
+hide_const (open) \<sigma>
+  \<comment> \<open>\<open>TD_side\<close> defines a record field \<open>\<sigma>\<close>; hide the short name so
+      this theory's own \<open>\<sigma>\<close> abstract-state variables stay unambiguous.\<close>
 
 section \<open>Sign instance of the generic check-discharge interface\<close>
 
@@ -15,8 +18,8 @@ text \<open>
   (\<open>sign_less_true\<close>/\<open>sign_less_false\<close>/\<open>sign_eq_true\<close>/\<open>sign_eq_false\<close>) and their
   \<^theory>\<open>Voblint_Analysis.Sign_Numeric_Queries\<close> interpretation of
   \<open>abstract_numeric_queries\<close> live in that theory. The Sign expression
-  evaluator \<open>aval_sign\<close> lives in \<^theory>\<open>Voblint_Analysis.Sign_Arithmetic\<close>. The
-  Boolean recursion over \<^typ>\<open>exp\<close> (\<open>Not\<close>, \<open>And\<close>, \<open>Or\<close>), the three-way
+  evaluator \<open>aval_sign_t\<close> lives in \<^theory>\<open>Voblint_Analysis.Sign_Arithmetic\<close>. The
+  Boolean recursion over \<^typ>\<open>texp\<close> (\<open>Not\<close>, \<open>And\<close>, \<open>Or\<close>), the three-way
   classification, and the node-indexed bridge to \<^const>\<open>checks_proven\<close> come
   from interpreting \<open>abstract_check_domain\<close> (\<^theory>\<open>Voblint_Core.Abstract_Checks\<close>)
   once, below, reusing the numeric-query facts already proved sound in
@@ -25,20 +28,28 @@ text \<open>
   \<open>backward_domain\<close> for guard narrowing.
 \<close>
 
+text \<open>
+  The check layer evaluates the very \<^typ>\<open>texp\<close> the compiler recorded on the
+  check edge, so its soundness obligation is \<open>aval_sign_t_sound\<close> verbatim:
+  both sides speak \<^const>\<open>teval\<close>, with no pinned typing environment and no
+  residual gap between an unbounded and a wrapping interpretation.
+\<close>
+
 global_interpretation sign_check_domain:
   abstract_check_domain gamma_sign sign_less_true sign_less_false sign_eq_true sign_eq_false
-    gamma_state aval_sign
+    gamma_state aval_sign_t
   defines
     sign_check_true = sign_check_domain.check_true
     and sign_check_false = sign_check_domain.check_false
     and sign_classify_check = sign_check_domain.classify_check
     and sign_checks_proven = sign_check_domain.abstract_checks_proven
 proof unfold_locales
-  fix s :: store and e :: exp and \<sigma> :: "sign abs_state"
+  fix s :: store and e :: texp and \<sigma> :: "sign abs_state"
   assume "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
   then have "\<forall>x. s x \<in> gamma (\<sigma> x)" by (rule gamma_stateD)
-  then have "\<forall>x. s x \<in> gamma_sign (\<sigma> x)" by simp
-  then show "aval e s \<in> gamma_sign (aval_sign e \<sigma>)" using aval_sign_sound by blast
+  then have H: "\<forall>x. s x \<in> gamma_sign (\<sigma> x)" by simp
+  then show "teval e s \<in> gamma_sign (aval_sign_t e \<sigma>)"
+    by (rule aval_sign_t_sound)
 qed
 
 text \<open>
@@ -75,35 +86,35 @@ text \<open>
 \<close>
 
 context
-  fixes gs :: "vname \<Rightarrow> bool" and is_bot_pred :: "sign exec_dg_st \<Rightarrow> bool"
+  fixes gs :: "vname \<Rightarrow> bool" and \<Gamma> :: tyenv and is_bot_pred :: "sign exec_dg_st \<Rightarrow> bool"
     and Pi :: proc_table and ps :: "pname list" and mnm :: pname and main :: com
-  assumes solves: "sctx_terminates gs is_bot_pred Pi ps mnm main"
+  assumes solves: "sctx_terminates gs \<Gamma> is_bot_pred Pi ps mnm main"
     and exact: "\<And>s. is_bot_pred s = is_bot_state (fun_of_resolved_st_q_for gs s)"
-    and entry_cov: "(cfg_entry (compile_prog Pi ps mnm main), ()) \<in> fst (sctx_sol gs is_bot_pred Pi ps mnm main)"
-    and fwd_ok: "\<And>u a v ctx. (u, ctx) \<in> fst (sctx_sol gs is_bot_pred Pi ps mnm main)
-                   \<Longrightarrow> (u, a, v) \<in> intra (compile_prog Pi ps mnm main)
-                   \<Longrightarrow> (v, ctx) \<in> fst (sctx_sol gs is_bot_pred Pi ps mnm main)"
+    and entry_cov: "(cfg_entry (compile_prog \<Gamma> Pi ps mnm main), ()) \<in> fst (sctx_sol gs \<Gamma> is_bot_pred Pi ps mnm main)"
+    and fwd_ok: "\<And>u a v ctx. (u, ctx) \<in> fst (sctx_sol gs \<Gamma> is_bot_pred Pi ps mnm main)
+                   \<Longrightarrow> (u, a, v) \<in> intra (compile_prog \<Gamma> Pi ps mnm main)
+                   \<Longrightarrow> (v, ctx) \<in> fst (sctx_sol gs \<Gamma> is_bot_pred Pi ps mnm main)"
     and call_fwd_ok: "\<And>u ctx dst pars args p cont.
-        (u, ctx) \<in> fst (sctx_sol gs is_bot_pred Pi ps mnm main)
-        \<Longrightarrow> (u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps mnm main)
-        \<Longrightarrow> (FunctionEntry p, ()) \<in> fst (sctx_sol gs is_bot_pred Pi ps mnm main)"
+        (u, ctx) \<in> fst (sctx_sol gs \<Gamma> is_bot_pred Pi ps mnm main)
+        \<Longrightarrow> (u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (compile_prog \<Gamma> Pi ps mnm main)
+        \<Longrightarrow> (FunctionEntry p, ()) \<in> fst (sctx_sol gs \<Gamma> is_bot_pred Pi ps mnm main)"
     and comb_fwd_ok: "\<And>cl c1 dst pars args p cont.
-        (cl, c1) \<in> fst (sctx_sol gs is_bot_pred Pi ps mnm main)
-        \<Longrightarrow> (cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps mnm main)
-        \<Longrightarrow> (cont, c1) \<in> fst (sctx_sol gs is_bot_pred Pi ps mnm main)"
+        (cl, c1) \<in> fst (sctx_sol gs \<Gamma> is_bot_pred Pi ps mnm main)
+        \<Longrightarrow> (cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (compile_prog \<Gamma> Pi ps mnm main)
+        \<Longrightarrow> (cont, c1) \<in> fst (sctx_sol gs \<Gamma> is_bot_pred Pi ps mnm main)"
 begin
 
 interpretation sctx_dg_base: sound_dg_spec "sctx_abs_spec gs" gamma_dg_base gs
   unfolding sctx_abs_spec_def
   by (rule base_dg_spec_sound[OF sign_is_sound_transfer_for is_bot_state_gamma_state_empty])
 
-interpretation sctx_adapter: dg_analysis_adapter enterc_unit "sctx_abs_spec gs" gs
-    "compile_prog Pi ps mnm main" Global route_unit
+interpretation sctx_adapter: dg_analysis_adapter enterc_unit "sctx_abs_spec gs" gs \<Gamma>
+    "compile_prog \<Gamma> Pi ps mnm main" Global route_unit
     "map_lift (fun_of_resolved_st_q_for gs) (Bot::sign exec_dg_st lifted)"
     "map_lift (fun_of_resolved_st_q_for gs) (Lifted cinit_sign_st)"
     "map_lift (fun_of_resolved_st_q_for gs) (Bot::sign exec_dg_st lifted)"
-    "sctx_sigma_abs gs is_bot_pred Pi ps mnm main" "fst (sctx_sol gs is_bot_pred Pi ps mnm main)"
-    "(cfg_exit (compile_prog Pi ps mnm main), ())" "sctx_sg gs is_bot_pred Pi ps mnm main"
+    "sctx_sigma_abs gs \<Gamma> is_bot_pred Pi ps mnm main" "fst (sctx_sol gs \<Gamma> is_bot_pred Pi ps mnm main)"
+    "(cfg_exit (compile_prog \<Gamma> Pi ps mnm main), ())" "sctx_sg gs \<Gamma> is_bot_pred Pi ps mnm main"
     Seed sign_classify_check
 proof (unfold_locales, goal_cases FinE PP SgCov SgUncov Fwd FinC SeedKey ResolveSound
     RouteEnterc CallFwd CombFwd EnterAgree ClProved ClRefuted)
@@ -117,8 +128,8 @@ next
 next
   case (SgCov v c)
   note mem = this
-  have eq1: "sctx_sg gs is_bot_pred Pi ps mnm main (Inl (v, c))
-               = locals (sctx_sigma_abs gs is_bot_pred Pi ps mnm main (Inl (v, c)))"
+  have eq1: "sctx_sg gs \<Gamma> is_bot_pred Pi ps mnm main (Inl (v, c))
+               = locals (sctx_sigma_abs gs \<Gamma> is_bot_pred Pi ps mnm main (Inl (v, c)))"
     by (rule sctx_sg_covered[OF solves exact entry_cov fwd_ok call_fwd_ok comb_fwd_ok mem])
   show ?case
     using eq1 gamma_dg_base_def by auto
@@ -152,7 +163,7 @@ next
   case (EnterAgree cl s es dst pars args p cont)
   note ces = EnterAgree(1) and ce = EnterAgree(2)
   obtain dst' pars' args' p' cont' where
-      ce': "(cl, CallEdge dst' pars' args', FunctionEntry p', cont') \<in> calls (compile_prog Pi ps mnm main)"
+      ce': "(cl, CallEdge dst' pars' args', FunctionEntry p', cont') \<in> calls (compile_prog \<Gamma> Pi ps mnm main)"
     and es_eq: "es = call_enter gs (CallEdge dst' pars' args') s"
     using ces unfolding call_enter_store_def by blast
   have "CallEdge dst' pars' args' = CallEdge dst pars args"
@@ -167,8 +178,9 @@ next
 qed
 
 text \<open>
-  The two generic soundness corollaries \<^locale>\<open>dg_analysis_adapter\<close> derives once and for
-  all, re-exported here so a caller cites them without naming the interpretation.
+  The two generic soundness corollaries \<^locale>\<open>dg_analysis_adapter\<close> derives once
+  and for all, re-exported here so a caller cites them without naming the
+  interpretation.
 \<close>
 
 lemmas sctx_report_ctx_proved_sound = sctx_adapter.analyse_report_ctx_proved_sound
@@ -192,14 +204,14 @@ lemmas sctx_result_node_sound = sctx_adapter.analyse_result_node_sound
 
 lemma sctx_analyse_result_eq:
   "lookup_context sctx_adapter.analyse_result v ctx =
-     (if (v, ctx) \<in> fst (sctx_sol gs is_bot_pred Pi ps mnm main)
+     (if (v, ctx) \<in> fst (sctx_sol gs \<Gamma> is_bot_pred Pi ps mnm main)
       then normalize_point gs
-             (canonicalize_lift is_bot_pred (locals (snd (sctx_sol gs is_bot_pred Pi ps mnm main) (Inl (v, ctx)))))
+             (canonicalize_lift is_bot_pred (locals (snd (sctx_sol gs \<Gamma> is_bot_pred Pi ps mnm main) (Inl (v, ctx)))))
       else Unreachable)"
   unfolding sctx_adapter.lookup_context_analyse_result
   apply (simp only: sctx_sigma_abs_def[OF solves exact entry_cov fwd_ok call_fwd_ok comb_fwd_ok]
                      sctx_sigma_abs_exec_def o_apply fun_of_dg_st_gen_simps(1))
-  by (cases "locals (snd (sctx_sol gs is_bot_pred Pi ps mnm main) (Inl (v, ctx)))")
+  by (cases "locals (snd (sctx_sol gs \<Gamma> is_bot_pred Pi ps mnm main) (Inl (v, ctx)))")
      (simp_all add: exact normalize_lift_def)
 
 end
@@ -207,21 +219,28 @@ end
 subsection \<open>Executable classification tests\<close>
 
 text \<open>One state per test, built as an override of an otherwise-unconstrained
-  (\<open>STop\<close>) environment, so each test exercises exactly the comparison it names.\<close>
+  (\<open>STop\<close>) environment, so each test exercises exactly the comparison it names.
+  Each guard is written as the elaborated \<^typ>\<open>texp\<close> the compiler records on
+  a check edge, so the pin says exactly which kinds the classification reads.
+
+  A variable read performs no conversion, so a guard reads the declared
+  \<open>SPos\<close>/\<open>SNonNeg\<close> itself. Sign carries no magnitude, but none of these
+  comparisons needs one: they turn on the sign alone, which is exactly what
+  the domain tracks.\<close>
 
 definition test_env_pos :: "sign abs_state" where
   "test_env_pos = (\<lambda>_. STop)((STR ''x'') := SPos)"
 
 lemma sign_classify_less_proved:
-  "sign_classify_check (Less (N 0) (V (STR ''x''))) test_env_pos = Check_Proved"
+  "sign_classify_check (TLess (TN I32 0) (TVar I32 (STR ''x''))) test_env_pos = Check_Proved"
   unfolding test_env_pos_def by eval
 
 lemma sign_classify_less_refuted:
-  "sign_classify_check (Less (V (STR ''x'')) (N 0)) test_env_pos = Check_Refuted"
+  "sign_classify_check (TLess (TVar I32 (STR ''x'')) (TN I32 0)) test_env_pos = Check_Refuted"
   unfolding test_env_pos_def by eval
 
 lemma sign_classify_eq_unknown:
-  "sign_classify_check (Eq (V (STR ''x'')) (N 1)) test_env_pos = Check_Unknown"
+  "sign_classify_check (TEq (TVar I32 (STR ''x'')) (TN I32 1)) test_env_pos = Check_Unknown"
   unfolding test_env_pos_def by eval
 
 text \<open>Negation: \<open>!(x < 0)\<close> is provable under \<open>SNonNeg\<close>, going through
@@ -232,7 +251,8 @@ definition test_env_nonneg :: "sign abs_state" where
   "test_env_nonneg = (\<lambda>_. STop)((STR ''x'') := SNonNeg)"
 
 lemma sign_classify_not_proved:
-  "sign_classify_check (Not (Less (V (STR ''x'')) (N 0))) test_env_nonneg = Check_Proved"
+  "sign_classify_check (TNot (TLess (TVar I32 (STR ''x'')) (TN I32 0))) test_env_nonneg
+     = Check_Proved"
   unfolding test_env_nonneg_def by eval
 
 text \<open>Nested \<open>And\<close>/\<open>Or\<close>: proved through the \<open>And\<close> branch alone, and unknown
@@ -243,7 +263,9 @@ definition test_env_nested_proved :: "sign abs_state" where
 
 lemma sign_classify_nested_proved:
   "sign_classify_check
-     (Or (And (Less (N 0) (V (STR ''x''))) (Less (N 0) (V (STR ''y'')))) (Eq (V (STR ''z'')) (N 1)))
+     (TOr (TAnd (TLess (TN I32 0) (TVar I32 (STR ''x'')))
+                (TLess (TN I32 0) (TVar I32 (STR ''y''))))
+          (TEq (TVar I32 (STR ''z'')) (TN I32 1)))
      test_env_nested_proved = Check_Proved"
   unfolding test_env_nested_proved_def by eval
 
@@ -252,11 +274,12 @@ definition test_env_nested_unknown :: "sign abs_state" where
 
 lemma sign_classify_nested_unknown:
   "sign_classify_check
-     (Or (And (Less (N 0) (V (STR ''x''))) (Less (N 0) (V (STR ''y'')))) (Eq (V (STR ''z'')) (N 1)))
+     (TOr (TAnd (TLess (TN I32 0) (TVar I32 (STR ''x'')))
+                (TLess (TN I32 0) (TVar I32 (STR ''y''))))
+          (TEq (TVar I32 (STR ''z'')) (TN I32 1)))
      test_env_nested_unknown = Check_Unknown"
   unfolding test_env_nested_unknown_def by eval
 
-subsection \<open>Solved-result table\<close>
 subsection \<open>Solved-result table\<close>
 
 text \<open>
@@ -301,7 +324,8 @@ definition analyse_sign_result_per_origin_for ::
      analyse_sign_ctx_result_per_origin_for gs prog_main_name p"
 
 definition analyse_sign_result_per_origin :: "imp_prog \<Rightarrow> (unit, sign abs_state) analysis_result" where
-  "analyse_sign_result_per_origin p = analyse_sign_result_per_origin_for (declared_global p) p"
+  "analyse_sign_result_per_origin p =
+     analyse_sign_result_per_origin_for (declared_global p) p"
 
 subsection \<open>Whole-program check report: the native D/G runtime API\<close>
 
@@ -393,7 +417,7 @@ text \<open>
 \<close>
 
 definition analyse_sign_report_for_with_state ::
-    "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> exp \<times> check_result \<times> bool \<times> (vname \<Rightarrow> sign)) list" where
+    "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> texp \<times> check_result \<times> bool \<times> (vname \<Rightarrow> sign)) list" where
   "analyse_sign_report_for_with_state gs p =
      (let r = analyse_sign_result_for gs p
       in classify_checks_with_state (prog_cfg prog_main_name p)
@@ -406,8 +430,9 @@ text \<open>Convenience instance at \<^const>\<open>declared_global\<close> \<op
   \<open>analyse_sign_report\<close>'s shape.\<close>
 
 definition analyse_sign_report_with_state ::
-    "imp_prog \<Rightarrow> (pp \<times> exp \<times> check_result \<times> bool \<times> (vname \<Rightarrow> sign)) list" where
-  "analyse_sign_report_with_state p = analyse_sign_report_for_with_state (declared_global p) p"
+    "imp_prog \<Rightarrow> (pp \<times> texp \<times> check_result \<times> bool \<times> (vname \<Rightarrow> sign)) list" where
+  "analyse_sign_report_with_state p =
+     analyse_sign_report_for_with_state (declared_global p) p"
 
 end
 

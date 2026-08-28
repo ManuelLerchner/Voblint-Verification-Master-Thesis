@@ -21,9 +21,9 @@ text \<open>
 
 definition base_dg_spec_st_for_lifted ::
   "(vname \<Rightarrow> bool)
-   \<Rightarrow> ('a::bounded_semilattice_sup_bot exec_dg_st \<Rightarrow> bool)
+   \<Rightarrow> ('a::cast_domain exec_dg_st \<Rightarrow> bool)
    \<Rightarrow> (edge_action \<Rightarrow> 'a exec_dg_st \<Rightarrow> 'a exec_dg_st)
-   \<Rightarrow> (vname list \<Rightarrow> exp list \<Rightarrow> 'a exec_dg_st \<Rightarrow> 'a exec_dg_st)
+   \<Rightarrow> (vname list \<Rightarrow> texp list \<Rightarrow> 'a exec_dg_st \<Rightarrow> 'a exec_dg_st)
    \<Rightarrow> ('a exec_dg_st lifted, 'g::bounded_semilattice_sup_bot) dg_spec"
 where
   "base_dg_spec_st_for_lifted gs is_bot_pred tf_st enter_st = (|
@@ -33,7 +33,7 @@ where
     dgs_branch     = (\<lambda>b pol d g. (g, transfer_lift is_bot_pred
       (tf_st (if pol then EA_Assume b else EA_AssumeNot b)) d)),
     dgs_body       = (\<lambda>p d g. (g, transfer_lift is_bot_pred (tf_st EA_Nop) d)),
-    dgs_return     = (\<lambda>e p d g. (g, transfer_lift is_bot_pred (tf_st (EA_Ret e p)) d)),
+    dgs_return     = (\<lambda>e p d g. (g, transfer_lift is_bot_pred (tf_st (EA_Ret e p I32)) d)),
     dgs_enter      = (\<lambda>xs es d g. (g, transfer_lift is_bot_pred (enter_st xs es) d)),
     dgs_event      = (\<lambda>ev d g. (g, case ev of Check_Event bc \<Rightarrow>
                                       transfer_lift is_bot_pred (tf_st (EA_Check bc)) d)),
@@ -49,11 +49,21 @@ where
 
 subsection \<open>Basic equations\<close>
 
+text \<open>Unlike \<^const>\<open>apply_tf\<close>, \<open>tf_st\<close> is a free dispatcher parameter with no
+  registered \<open>action_reduces\<close> fact in scope here, so this is stated only for the
+  one field \<^const>\<open>base_dg_spec_st_for_lifted\<close> actually bakes a fixed \<open>rk\<close> into
+  (\<open>dgs_return\<close>, which the \<open>dg_spec\<close> record's own \<open>rk\<close>-free field type forces):
+  every other field reproduces \<open>tf_st a\<close> verbatim.\<close>
 lemma dg_spec_step_base_st_for_lifted:
-  "dg_spec_step (base_dg_spec_st_for_lifted gs is_bot_pred tf_st enter_st) a d g =
+  assumes ret_reduces: "\<And>e p rk. tf_st (EA_Ret e p rk) = tf_st (EA_Ret e p I32)"
+  shows "dg_spec_step (base_dg_spec_st_for_lifted gs is_bot_pred tf_st enter_st) a d g =
      (g, transfer_lift is_bot_pred (tf_st a) d)"
-  unfolding base_dg_spec_st_for_lifted_def
-  by (cases a) simp_all
+proof (cases a)
+  case (EA_Ret e p rk)
+  then show ?thesis
+    unfolding base_dg_spec_st_for_lifted_def
+    by (simp add: ret_reduces[of e p rk])
+qed (simp_all add: base_dg_spec_st_for_lifted_def)
 
 lemma dgs_enter_base_st_for_lifted:
   "dgs_enter (base_dg_spec_st_for_lifted gs is_bot_pred tf_st enter_st) xs es d g =
@@ -97,8 +107,8 @@ theorem base_dg_spec_st_for_lifted_dg_spec_step_commute:
            (dg_spec_step (base_dg_spec_st_for_lifted gs is_bot_pred tf_st enter_st) a d g) =
          dg_spec_step (base_dg_spec_for_lifted gs is_bot_state tf) a
            (map_lift (fun_of_exec_dg_st_for gs) d) (map_lift (fun_of_exec_dg_st_for gs) g)"
-  unfolding dg_spec_step_base_st_for_lifted dg_spec_step_base_for_lifted map_prod_def
-  by (cases d) (simp_all add: transfer_lift_def normalize_lift_def commute exact)
+  unfolding base_dg_spec_st_for_lifted_def dg_spec_step_base_for_lifted map_prod_def
+  by (cases a; cases d) (simp_all add: transfer_lift_def normalize_lift_def commute exact)
 
 theorem base_dg_spec_st_for_lifted_dgs_enter_commute:
   assumes commute: "\<And>xs es s. fun_of_exec_dg_st_for gs (enter_st xs es s) =
@@ -124,7 +134,7 @@ theorem base_dg_spec_st_for_lifted_dgs_caller_cont_commute:
   unfolding base_dg_spec_st_for_lifted_def base_dg_spec_for_lifted_def by simp
 
 theorem base_dg_spec_st_for_lifted_dgs_combine_commute:
-  assumes exact: "\<And>(s::'a::sound_domain resolved_st_q). is_bot_pred s = is_bot_state (fun_of_exec_dg_st_for gs s)"
+  assumes exact: "\<And>(s::'a::sound_cast_domain resolved_st_q). is_bot_pred s = is_bot_state (fun_of_exec_dg_st_for gs s)"
   shows "map_prod (map_lift (fun_of_exec_dg_st_for gs)) (map_lift (fun_of_exec_dg_st_for gs))
            (dgs_combine (base_dg_spec_st_for_lifted gs is_bot_pred tf_st enter_st) ci dc de g) =
          dgs_combine (base_dg_spec_for_lifted gs is_bot_state tf) ci
@@ -167,9 +177,9 @@ lemma dg_reader_commute_gen_lifted_for:
 
 locale routed_dg_domain_exec =
   fixes gs :: "vname \<Rightarrow> bool"
-    and is_bot_pred :: "'a::sound_domain exec_dg_st \<Rightarrow> bool"
+    and is_bot_pred :: "'a::sound_cast_domain exec_dg_st \<Rightarrow> bool"
     and tf_st :: "edge_action \<Rightarrow> 'a exec_dg_st \<Rightarrow> 'a exec_dg_st"
-    and enter_st :: "vname list \<Rightarrow> exp list \<Rightarrow> 'a exec_dg_st \<Rightarrow> 'a exec_dg_st"
+    and enter_st :: "vname list \<Rightarrow> texp list \<Rightarrow> 'a exec_dg_st \<Rightarrow> 'a exec_dg_st"
     and tf :: "'a domain_transfer"
   assumes tf_st_commute:
       "\<And>a s. fun_of_resolved_st_q_for gs (tf_st a s) = apply_tf tf a (fun_of_resolved_st_q_for gs s)"

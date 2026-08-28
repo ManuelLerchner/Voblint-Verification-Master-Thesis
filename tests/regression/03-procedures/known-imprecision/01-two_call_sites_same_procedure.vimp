@@ -15,10 +15,11 @@
 // call-string- or entry-state-context-sensitive analysis (see
 // Interval_Ctx_Entry_State_Sound, out of scope here) would key the entry per
 // call site instead.
-void square(n) {
+int32 square(int32 n) {
   return n * n
 }
 void main() {
+  int32 a, b;
   a := square(3);
   b := square(4);
   __voblint_check(a == 9); // UNKNOWN

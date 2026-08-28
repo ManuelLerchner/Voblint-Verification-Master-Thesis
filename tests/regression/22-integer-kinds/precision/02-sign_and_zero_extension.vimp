@@ -1,0 +1,43 @@
+// PARAM: --analysis interval
+// Adapted from Goblint tests/regression/37-congruence/05-implicitunsignedconversion-1.c
+// (its signextension-1 and signextension2-2 fragments, both taken there from
+// sv-benchmarks/c/bitvector-regression).
+//
+// VIMP has no cast syntax, so a conversion is written as an assignment into a
+// variable whose declared kind is the target: the assignment converts with
+// ik_norm of that kind, the way a C assignment converts to the left-hand
+// type. Widening from a narrower kind is then zero-extension out of an
+// unsigned source and sign-extension out of a signed one, which is what the
+// pairs below separate: allbits and signedallbits hold the same 16 bits, and
+// widening them to int32/uint32 gives 65535 and -1 respectively.
+//
+// Every value is a constant, so all eight checks are decidable from the
+// source.
+global uint16 allbits;
+global int16 signedallbits;
+global uint32 unsignedtounsigned;
+global uint32 signedtounsigned;
+global uint32 allone;
+global int64 castlong;
+void main() {
+  int32 castint, signedtosigned, unsignedtosigned;
+  allbits := -1;
+  signedallbits := allbits;
+  unsignedtosigned := allbits;
+  unsignedtounsigned := allbits;
+  signedtosigned := signedallbits;
+  signedtounsigned := signedallbits;
+  __voblint_check(allbits == 65535); // PROVED
+  __voblint_check(signedallbits == -1); // PROVED
+  __voblint_check(unsignedtosigned == 65535); // PROVED
+  __voblint_check(unsignedtounsigned == 65535); // PROVED
+  __voblint_check(signedtosigned == -1); // PROVED
+  __voblint_check(signedtounsigned == 4294967295); // PROVED
+
+  allone := 0;
+  allone := allone - 1;
+  castint := allone;
+  castlong := allone;
+  __voblint_check(castint == -1); // PROVED
+  __voblint_check(castlong == 4294967295) // PROVED
+}

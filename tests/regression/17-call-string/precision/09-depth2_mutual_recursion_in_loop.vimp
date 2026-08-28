@@ -9,17 +9,20 @@
 // --context none answers UNKNOWN for both (res1=[1,12]): f and g each have
 // one activation shared by every call site, the same mechanism as
 // 03-procedures/known-imprecision/01-two_call_sites_same_procedure.vimp.
-void g(i) {
+int32 g(int32 i) {
+  int32 r;
   if (i == 0) { return 1 } else { skip };
   if (0 < i) { r := f(i - 1); return r } else { skip };
   return 11
 }
-void f(i) {
+int32 f(int32 i) {
+  int32 r;
   if (i == 0) { return 2 } else { skip };
   if (0 < i) { r := g(i - 1); return r } else { skip };
   return 12
 }
 void main() {
+  int32 i, res1, res2;
   i := 200;
   while (0 < i) {
     res1 := f(2);

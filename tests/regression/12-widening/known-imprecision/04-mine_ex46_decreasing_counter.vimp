@@ -5,19 +5,32 @@
 // a YAML witness (26-mine-tutorial-ex4.6.yml); the post-loop x == 0 needs
 // no witness.
 //
-// Voblint proves !(40 < x) and x == 0 but not !(x < 0). Mechanism: the
-// head widens x from [40,40] against [39,40] and drops the lower bound to
-// -inf; the guard !(x == 0) is a disequality that gives intervals no
-// floor to narrow back to, so x = [-inf,40] at the head and [-inf,39]
-// after the decrement (measured). The upper bound survives because it
-// never grew, and x == 0 holds because the exit edge asserts equality.
+// Voblint proves x == 0 and neither in-loop bound. Mechanism: the head
+// widens x from [40,40] against [39,40] and drops the lower bound; the
+// guard !(x == 0) is a disequality that gives intervals no floor to narrow
+// back to. The widened lower bound is not an int32, so the decrement
+// x := x - 1 reaches the conversion's give-up branch and answers the whole
+// int32 range, taking the upper bound 40 with it -- which is why !(40 < x)
+// is undecided here too, and not only !(x < 0).
+//
+// Saturating the widening at int32's own minimum, as Goblint's interval
+// widening does, does not recover the upper bound: [-2147483648, 40] - 1
+// underflows just the same and the wrapped result has no single-interval
+// representation but the whole range. The example is Mine's, stated over
+// the mathematical integers; under sem.int.signed_overflow=assume_none the
+// decrement would keep [-2147483649, 39] and 40 would survive. VIMP freezes
+// wraparound instead.
+//
+// x == 0 holds because the exit edge asserts equality, which no widening
+// touches.
 // Solver-invariant across join, per-origin, warrow, warrow-per-origin.
 // The same program under --analysis int (16-composite-domain/precision/
 // 04-mine_ex46_sign_zero_threshold.vimp) proves all three.
 void main() {
+  int32 x;
   x := 40;
   while (!(x == 0)) {
-    __voblint_check(!(40 < x)); // PROVED
+    __voblint_check(!(40 < x)); // UNKNOWN
     x := x - 1;
     __voblint_check(!(x < 0)) // UNKNOWN
   };

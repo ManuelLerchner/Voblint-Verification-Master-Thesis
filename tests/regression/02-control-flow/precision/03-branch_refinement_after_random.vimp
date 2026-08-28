@@ -11,6 +11,7 @@
 // to refute "0<x", missing the touching-boundary case x=[-inf,0] where
 // u2=l1=0 -- sound but needlessly conservative, now u2<=l1.
 void main() {
+  int32 x;
   x := __voblint_nondet_int();
   if (0 < x) {
     __voblint_check(0 < x) // PROVED

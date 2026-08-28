@@ -528,11 +528,11 @@ proof (rule effective_support_subsetI)
 qed
 
 lemma effective_support_combine_collect_resolved_for:
-  fixes sc se :: "('a::bot) resolved_st"
+  fixes sc se :: "('a::cast_domain) resolved_st"
   shows "set (effective_support (combine_collect_resolved_for gs dst sc se)) \<subseteq>
     {loc \<in> set (effective_support sc). location_is_local loc} \<union>
     {loc \<in> set (effective_support se). location_is_global loc} \<union>
-    (case dst of None => {} | Some x => {location_of gs x})"
+    (case dst of None => {} | Some tv => {location_of gs (tv_name tv)})"
 proof (cases dst)
   case None
   have eq: "combine_collect_resolved_for gs None sc se = combine_resolved_st sc se"
@@ -548,28 +548,28 @@ proof (cases dst)
     then show "set (effective_support (combine_resolved_st sc se)) \<subseteq>
         {loc \<in> set (effective_support sc). location_is_local loc} \<union>
         {loc \<in> set (effective_support se). location_is_global loc} \<union>
-        (case None of None \<Rightarrow> {} | Some x \<Rightarrow> {location_of gs x})"
+        (case None of None \<Rightarrow> {} | Some tv \<Rightarrow> {location_of gs (tv_name tv)})"
       by auto
   qed
 next
-  case (Some x)
+  case (Some tv)
   have "set (effective_support (combine_collect_resolved_for gs dst sc se)) \<subseteq>
-      insert (location_of gs x) (set (effective_support (combine_resolved_st sc se)))"
+      insert (location_of gs (tv_name tv)) (set (effective_support (combine_resolved_st sc se)))"
     unfolding combine_collect_resolved_for_def combine_assign_resolved_def Some
     by (simp add: effective_support_update_resolved_st)
   also have "\<dots> \<subseteq>
       {loc \<in> set (effective_support sc). location_is_local loc} \<union>
       {loc \<in> set (effective_support se). location_is_global loc} \<union>
-      {location_of gs x}"
+      {location_of gs (tv_name tv)}"
   proof -
     have "set (effective_support (combine_resolved_st sc se)) \<subseteq>
         {loc \<in> set (effective_support sc). location_is_local loc} \<union>
         {loc \<in> set (effective_support se). location_is_global loc}"
       by (rule effective_support_combine_resolved_st)
-    then show "insert (location_of gs x) (set (effective_support (combine_resolved_st sc se))) \<subseteq>
+    then show "insert (location_of gs (tv_name tv)) (set (effective_support (combine_resolved_st sc se))) \<subseteq>
         {loc \<in> set (effective_support sc). location_is_local loc} \<union>
         {loc \<in> set (effective_support se). location_is_global loc} \<union>
-        {location_of gs x}"
+        {location_of gs (tv_name tv)}"
       by auto
   qed
   finally show ?thesis using Some by simp
@@ -622,7 +622,7 @@ lemma effective_support_rep_combine_collect_resolved_for_q:
       (combine_collect_resolved_for_q gs dst sc se))) \<subseteq>
     {loc \<in> set (effective_support (rep_resolved_st sc)). location_is_local loc} \<union>
     {loc \<in> set (effective_support (rep_resolved_st se)). location_is_global loc} \<union>
-    (case dst of None => {} | Some x => {location_of gs x})"
+    (case dst of None => {} | Some tv => {location_of gs (tv_name tv)})"
 proof -
   have "set (effective_support (rep_resolved_st
       (combine_collect_resolved_for_q gs dst sc se))) =
@@ -633,7 +633,7 @@ proof -
   also have "\<dots> \<subseteq>
       {loc \<in> set (effective_support (rep_resolved_st sc)). location_is_local loc} \<union>
       {loc \<in> set (effective_support (rep_resolved_st se)). location_is_global loc} \<union>
-      (case dst of None => {} | Some x => {location_of gs x})"
+      (case dst of None => {} | Some tv => {location_of gs (tv_name tv)})"
     by (rule effective_support_combine_collect_resolved_for)
   finally show ?thesis .
 qed

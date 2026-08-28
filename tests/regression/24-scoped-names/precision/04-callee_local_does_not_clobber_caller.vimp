@@ -1,0 +1,18 @@
+// PARAM: --analysis interval
+// Two procedures declare a local named tmp. They are different variables, and
+// the callee's write must not be visible in the caller's frame afterwards.
+// This holds under activation-local semantics whatever the names resolve to;
+// what resolution adds is that the two declarations may also carry different
+// kinds without either one deciding the other's.
+uint8 inner(int32 seed) {
+  uint8 tmp;
+  tmp := seed + 200;
+  return tmp
+}
+void main() {
+  int32 tmp, r;
+  tmp := 100;
+  r := inner(100);
+  __voblint_check(tmp == 100); // PROVED
+  __voblint_check(r == 44)     // PROVED
+}

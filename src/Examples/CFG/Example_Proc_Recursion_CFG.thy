@@ -12,7 +12,7 @@ text \<open>
 
 definition proc_layout_regression_prog :: imp_prog where
   "proc_layout_regression_prog = program {
-     global G;
+     global int32 G;
      void f() {
        if (G < 1) { f() } else { G := G }
      }
@@ -24,7 +24,7 @@ definition proc_layout_regression_prog :: imp_prog where
 
 definition proc_layout_regression_cfg :: cfg where
   "proc_layout_regression_cfg =
-     compile_prog (prog_table proc_layout_regression_prog)
+     compile_prog (prog_tyenv proc_layout_regression_prog) (prog_table proc_layout_regression_prog)
        (prog_procs proc_layout_regression_prog)
        (STR ''main'') (prog_main proc_layout_regression_prog)"
 
@@ -62,16 +62,16 @@ text \<open>Layout regression: statement indices are allocated procedure by proc
 
 lemma proc_layout_regression_blocks:
   "(FunctionEntry (STR ''f''), EA_Nop, Statement 0) \<in> intra proc_layout_regression_cfg \<and>
-   (Statement 3, EA_Ret None (STR ''f''), FunctionResult (STR ''f'')) \<in> intra proc_layout_regression_cfg \<and>
+   (Statement 3, EA_Ret None (STR ''f'') I32, FunctionResult (STR ''f'')) \<in> intra proc_layout_regression_cfg \<and>
    (FunctionEntry (STR ''g''), EA_Nop, Statement 4) \<in> intra proc_layout_regression_cfg \<and>
-   (Statement 5, EA_Ret None (STR ''g''), FunctionResult (STR ''g'')) \<in> intra proc_layout_regression_cfg \<and>
+   (Statement 5, EA_Ret None (STR ''g'') I32, FunctionResult (STR ''g'')) \<in> intra proc_layout_regression_cfg \<and>
    (FunctionEntry (STR ''h''), EA_Nop, Statement 6) \<in> intra proc_layout_regression_cfg \<and>
-   (Statement 7, EA_Ret None (STR ''h''), FunctionResult (STR ''h'')) \<in> intra proc_layout_regression_cfg \<and>
+   (Statement 7, EA_Ret None (STR ''h'') I32, FunctionResult (STR ''h'')) \<in> intra proc_layout_regression_cfg \<and>
    (FunctionEntry (STR ''inc''), EA_Nop, Statement 8) \<in> intra proc_layout_regression_cfg \<and>
-   (Statement 9, EA_Ret None (STR ''inc''), FunctionResult (STR ''inc''))
+   (Statement 9, EA_Ret None (STR ''inc'') I32, FunctionResult (STR ''inc''))
      \<in> intra proc_layout_regression_cfg \<and>
    (FunctionEntry (STR ''main''), EA_Nop, Statement 10) \<in> intra proc_layout_regression_cfg \<and>
-   (Statement 13, EA_Ret None (STR ''main''), FunctionResult (STR ''main''))
+   (Statement 13, EA_Ret None (STR ''main'') I32, FunctionResult (STR ''main''))
      \<in> intra proc_layout_regression_cfg"
   unfolding proc_layout_regression_cfg_def proc_layout_regression_prog_def by eval
 

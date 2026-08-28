@@ -3,6 +3,7 @@
 // widen instance, so Solver_Warrow is rejected for it at the CLI with exit
 // code 1, but join and per-origin both apply).
 void main() {
+  int32 x;
   x := 5;
   __voblint_check(0 < x) // PROVED
 }

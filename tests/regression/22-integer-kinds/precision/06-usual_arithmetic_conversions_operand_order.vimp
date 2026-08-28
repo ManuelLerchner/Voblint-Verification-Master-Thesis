@@ -1,0 +1,41 @@
+// PARAM: --analysis interval
+// Adapted from Goblint tests/regression/37-congruence/05-implicitunsignedconversion-1.c,
+// the same two mixed-kind comparisons as
+// 05-usual_arithmetic_conversions.vimp with the operands the other way round.
+//
+// C 6.3.1.8 fixes the common type of a binary operation from the two operand
+// types alone, independently of which side each appears on. int against
+// unsigned int still converts both to unsigned int, so (unsigned)(-1) =
+// 4294967295 is not less than 1 and the first guard is dead; int against
+// int64 still converts both to int64, so 0 is less than 3000000000 and the
+// second guard is taken. Both results are decidable from the source.
+//
+// The elaborator's common type is currently the left operand's kind, which
+// evaluates neg < up in int32 and small < wide in int32, and answers the
+// opposite way on both. The verdicts below state the C answer, so this case
+// fails until the common-type rule is symmetric.
+global uint32 up;
+global int64 wide;
+void main() {
+  int32 a, b, neg, small;
+  up := 1;
+  neg := -1;
+  a := 1;
+  if (neg < up) {
+    a := 0
+  } else {
+    skip
+  };
+  __voblint_check(a == 1); // PROVED
+
+  wide := 1500000000;
+  wide := wide + wide;
+  small := 0;
+  b := 0;
+  if (small < wide) {
+    b := 1
+  } else {
+    skip
+  };
+  __voblint_check(b == 1) // PROVED
+}

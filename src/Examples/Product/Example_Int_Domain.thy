@@ -273,8 +273,8 @@ definition arithmetic_env :: "vname => int_dom" where
       else top)"
 
 lemma arithmetic_evaluator_refines_each_operation:
-  "aval_int_dom Refine_Fixpoint
-    (Plus (V (STR ''x'')) (V (STR ''y'')))
+  "aval_int_dom_t Refine_Fixpoint
+    (elaborate_syn default_tyenv (Plus (V (STR ''x'')) (V (STR ''y''))))
     arithmetic_env =
    int_dom_sipc
      SZero

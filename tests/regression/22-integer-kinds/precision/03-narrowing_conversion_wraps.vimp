@@ -1,0 +1,24 @@
+// PARAM: --analysis interval
+// Adapted from Goblint tests/regression/21-casts/03-Exc-overflow.c
+// (its "unsigned char uc = (unsigned char)ul;" downcast) and
+// tests/regression/31-ikind-aware-ints/13-intervals-large.c.
+//
+// The converse direction of 02-sign_and_zero_extension.vimp: an assignment
+// whose right-hand value does not fit the left-hand kind truncates it to that
+// kind's two's-complement representative. 200 is outside int8, -1 outside
+// uint8, and 40000 outside int16, so each write lands on a different
+// representative and each check is decidable from the source.
+global int8 n8;
+global uint8 nu8;
+global int16 n16;
+global uint16 nu16;
+void main() {
+  n8 := 200;
+  __voblint_check(n8 == -56); // PROVED
+  nu8 := -1;
+  __voblint_check(nu8 == 255); // PROVED
+  n16 := 40000;
+  __voblint_check(n16 == -25536); // PROVED
+  nu16 := -25536;
+  __voblint_check(nu16 == 40000) // PROVED
+}

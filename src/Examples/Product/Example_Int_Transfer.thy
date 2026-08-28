@@ -16,6 +16,10 @@ definition test_gs :: "vname => bool" where
 definition test_env_top :: "int_dom abs_state" where
   "test_env_top = (%_. top)"
 
+text \<open>These witnesses build edge actions by hand rather than compiling a program, so
+  the payloads are elaborated against \<^const>\<open>default_tyenv\<close> -- every variable at
+  \<^const>\<open>I32\<close>, which is what an unannotated source program declares.\<close>
+
 subsection \<open>Assignment and procedure entry through the registered bundle\<close>
 
 text \<open>
@@ -26,7 +30,7 @@ text \<open>
 \<close>
 
 lemma apply_tf_once_assign:
-  "apply_tf (int_tf_once_for test_gs) (EA_Assign (STR ''x'') (N 5)) test_env_top (STR ''x'') =
+  "apply_tf (int_tf_once_for test_gs) (EA_Assign (STR ''x'') (elaborate_to default_tyenv (default_tyenv (STR ''x'')) (N 5))) test_env_top (STR ''x'') =
    int_dom_of_int 5"
   by eval
 
@@ -36,7 +40,8 @@ text \<open>
 \<close>
 
 lemma tf_enter_once_binds_formal:
-  "tf_enter (int_tf_once_for test_gs) [STR ''p''] [N 7] test_env_top (STR ''p'') =
+  "tf_enter (int_tf_once_for test_gs) [STR ''p'']
+     (compile_actuals default_tyenv [STR ''p''] [N 7]) test_env_top (STR ''p'') =
    int_dom_of_int 7"
   by eval
 
@@ -50,18 +55,33 @@ text \<open>
   sound in isolation.
 \<close>
 
-lemma apply_tf_once_assume_exact:
+text \<open>
+  \<^const>\<open>test_env_top\<close> starts \<open>x\<close> unbounded, and that is what stops the product
+  pinning it. The guard's backward filter gives congruence the exact answer --
+  \<open>x \<equiv> 2\<close> -- but modulo \<^term>\<open>4294967296::int\<close>, because the operation is an
+  \<^const>\<open>I32\<close> addition. A congruence class that wide selects a single value
+  only against a bounded interval, and the entry interval here has no bounds,
+  so nothing propagates back to sign or interval.
+
+  Seeding \<open>x\<close> at its kind's range instead of at \<^const>\<open>top\<close> would close it:
+  \<^term>\<open>ik_range I32\<close> is exactly one residue wide, so the two together pin
+  \<open>x = 2\<close>. That is a property of the entry state, not of the transfer under
+  test, which is why this witness records the components as they stand rather
+  than asserting a reduction the entry state cannot support.
+\<close>
+
+lemma apply_tf_once_assume_congruence_mod_i32:
   "apply_tf (int_tf_once_for test_gs)
-     (EA_Assume (Eq (Plus (V (STR ''x'')) (N 1)) (N 3)))
+     (EA_Assume (elaborate_syn default_tyenv (Eq (Plus (V (STR ''x'')) (N 1)) (N 3))))
      test_env_top (STR ''x'') =
-   int_dom_sipc SPos (Ivl (Fin 2) (Fin 2)) PEven (congruence_of_int 2)"
+   int_dom_sipc STop (Ivl MinInf PlusInf) PEven (mk_congruence 2 4294967296)"
   by eval
 
 lemma apply_tf_never_assume_congruence_only:
   "apply_tf (int_tf_never_for test_gs)
-     (EA_Assume (Eq (Plus (V (STR ''x'')) (N 1)) (N 3)))
+     (EA_Assume (elaborate_syn default_tyenv (Eq (Plus (V (STR ''x'')) (N 1)) (N 3))))
      test_env_top (STR ''x'') =
-   int_dom_sipc STop top PTop (congruence_of_int 2)"
+   int_dom_sipc STop top PTop (mk_congruence 2 4294967296)"
   by eval
 
 subsection \<open>Min/Max special-call dispatch through the registered bundle\<close>
@@ -75,11 +95,22 @@ text \<open>
   supplies the congruence component here -- from Parity's \<open>POdd\<close>, not from
   Interval's exact singleton, which is why the result is \<open>mk_congruence 1 2\<close>
   (\"odd\") rather than the sharper \<open>congruence_of_int 3\<close> (\"exactly 3\").
+
+  Sign answers \<^const>\<open>SPos\<close>, and it does not get there on its own. Its own
+  \<open>min\<close> primitive answers \<^const>\<open>SPos\<close>, the write site's conversion to
+  \<^const>\<open>I32\<close> then tops it -- \<^const>\<open>SPos\<close> concretizes to every positive
+  integer, so the conversion cannot rule out a value that wraps negative --
+  and \<^const>\<open>int_dom_cast\<close>'s reduction reads the sign back off the interval
+  the same conversion produced. That is the reduced-product behaviour
+  Goblint's \<open>IntDomTuple\<close> gets from refining after every operation, and it is
+  why the product carries Interval alongside a magnitude-free domain: on
+  \<open>--analysis sign\<close> alone this same program answers \<^const>\<open>STop\<close>, which
+  \<^verbatim>\<open>tests/regression/14-min-max/known-imprecision/01\<close> pins.
 \<close>
 
 lemma apply_tf_once_special_min:
   "apply_tf (int_tf_once_for test_gs)
-     (EA_Special (Min (N 3) (N 5)) (STR ''x''))
+     (EA_Special (Min (default_tyenv (STR ''x'')) (TN I32 3) (TN I32 5)) (STR ''x''))
      test_env_top (STR ''x'') =
    int_dom_sipc SPos (Ivl (Fin 3) (Fin 3)) POdd (mk_congruence 1 2)"
   by eval

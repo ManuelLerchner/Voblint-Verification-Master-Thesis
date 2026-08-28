@@ -68,7 +68,7 @@ lemma inc_comb_fwd_ok:
   using assms inc_call_fwd_ok_ball by (cases c1) fastforce
 
 lemma inc_node_sound:
-  "ltr_collect inc_gs (prog_cfg prog_main_name inc_program) (cinit_stores inc_gs) v
+  "ltr_collect (prog_tyenv inc_program) inc_gs (prog_cfg prog_main_name inc_program) (cinit_stores inc_gs) v
      \<subseteq> \<lbrakk>case lookup_context (analyse_sign_result_for inc_gs inc_program) v () of
             Unreachable \<Rightarrow> bot | Reachable st \<Rightarrow> st\<rbrakk>"
   by (rule analyse_sign_result_node_sound_for
@@ -86,15 +86,19 @@ definition inc_exit_env :: "sign abs_state" where
 
 text \<open>The global the callee increments is strictly positive at the exit ---
   computed by the solver, not asserted. \<^const>\<open>cinit_stores\<close> starts every
-  global at zero and the single call increments it once, so \<^const>\<open>SPos\<close> is
-  the exact answer; the routed table resolves it where a merged whole-state
-  environment only reaches \<^const>\<open>SNonNeg\<close>.\<close>
+  global at zero and the single call increments it once. The routing is what
+  this case pins -- a merged whole-state environment would not even reach the
+  incremented value here.
 
-lemma inc_counter_pos: "inc_exit_env (STR ''counter'') = SPos"
+  The sign is \<^const>\<open>STop\<close>: the increment's write converts to \<open>counter\<close>'s
+  kind, and a positive sign concretizes to integers a 32-bit kind cannot all
+  hold, so Sign alone cannot rule out a wrap.\<close>
+
+lemma inc_counter_top: "inc_exit_env (STR ''counter'') = STop"
   unfolding inc_exit_env_def by eval
 
 corollary inc_certified_sound:
-  "ltr_collect inc_gs (prog_cfg prog_main_name inc_program) (cinit_stores inc_gs)
+  "ltr_collect (prog_tyenv inc_program) inc_gs (prog_cfg prog_main_name inc_program) (cinit_stores inc_gs)
      (cfg_exit (prog_cfg prog_main_name inc_program))
    \<le> \<lbrakk>inc_exit_env\<rbrakk>"
   unfolding inc_exit_env_def

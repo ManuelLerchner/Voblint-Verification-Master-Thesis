@@ -12,7 +12,7 @@
 // separate flow-insensitive global summary for its write to fold back
 // into in the first place. Termination and precision now coincide -- the
 // mechanism that used to cost both is gone, not merely worked around.
-global total;
+global int32 total;
 void main() {
   total := 0;
   total := total + 3;

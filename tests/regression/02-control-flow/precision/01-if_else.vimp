@@ -2,6 +2,7 @@
 // Branch and join: y is 1 or 2 depending on the arm taken, so the check
 // holds on every path regardless of which arm the analysis takes.
 void main() {
+  int32 x, y;
   x := 0;
   if (x < 1) {
     y := 1

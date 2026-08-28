@@ -1,0 +1,22 @@
+// PARAM: --analysis interval --context call-string --context-depth 2
+// Adapted from Goblint tests/regression/32-widen-context/01-on.c
+// (ana.context.widen enabled). f(x) recurses on x + 1 whenever x is
+// nonzero. At int32 the increment wraps, so the chain runs up through
+// INT_MAX, round to INT_MIN, and back to 0, where the base case returns
+// x = 0 -- f(1) terminates and a == 0 concretely, the same answer Goblint
+// gives for the C original. The abstraction reaches it without unrolling
+// the chain: the collapsed context widens x to top and the base case's
+// x == 0 guard refines the returned value to [0,0]. The bounded call
+// string keeps the context space finite; under --context entry-state the
+// same program keys one context per x value, which
+// 21-context-sensitivity/01-unbounded_context_chain_diverges.vimp pins
+// through --timeout.
+int32 f(int32 x) {
+  int32 r;
+  if (!(x == 0)) { r := f(x + 1); return r } else { return x }
+}
+void main() {
+  int32 a;
+  a := f(1);
+  __voblint_check(a == 0) // PROVED
+}

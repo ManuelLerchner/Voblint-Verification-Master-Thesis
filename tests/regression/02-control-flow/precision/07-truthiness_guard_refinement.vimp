@@ -7,6 +7,7 @@
 // "not 0", which decides nothing about i >= 1 or x == 1; those UNKNOWNs are
 // in soundness/01-truthiness_guard_underdetermined.vimp. sign and int agree.
 void main() {
+  int32 i, x;
   i := __voblint_nondet_int();
   x := __voblint_nondet_int();
   if (i) {

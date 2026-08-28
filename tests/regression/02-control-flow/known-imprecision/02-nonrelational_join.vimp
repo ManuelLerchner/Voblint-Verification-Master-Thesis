@@ -6,6 +6,7 @@
 // b = 9. An interval domain has no way to relate two variables, so
 // !(a == b) over [8,9] x [8,9] is UNKNOWN. int agrees.
 void main() {
+  int32 a, b, z;
   z := __voblint_nondet_int();
   if (!(z == 0)) {
     a := 8;

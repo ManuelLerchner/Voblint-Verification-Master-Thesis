@@ -14,6 +14,7 @@
 // precision/05-mine_ex410_stride2_congruence.vimp) congruence 1 (mod 2)
 // cuts [51,52] down to [51,51].
 void main() {
+  int32 v;
   v := 1;
   while (v < 51) {
     __voblint_check(!(v < 1)); // PROVED

@@ -11,6 +11,7 @@
 // near sufficient for equal values. --analysis interval proves this same
 // check outright.
 void main() {
+  int32 x;
   x := 2 + 2;
   __voblint_check(x == 4) // UNKNOWN
 }

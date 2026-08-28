@@ -4,6 +4,7 @@
 // precedence, not just parse harmlessly: (a+b)*c and a+b*c differ. Values
 // are exact, so both checks are decidable under Interval.
 void main() {
+  int32 a, b, c, x, y;
   a := 1;
   b := 2;
   c := 3;

@@ -343,7 +343,7 @@ text \<open>
 \<close>
 
 global_interpretation sign_backward_domain:
-    backward_domain_refined meet_sign aval_sign sign_tobool
+    backward_domain_refined meet_sign aval_sign_t sign_tobool
                     inv_less_sign inv_eq_sign inv_conservative inv_conservative inv_conservative
   defines
     afilter_sign = sign_backward_domain.afilter
@@ -364,10 +364,10 @@ proof unfold_locales
   show "n \<in> gamma (meet_sign a b)"
     using meet_sign_sound[of n a b] H1 H2 by simp
 next
-  fix s :: store and e :: exp and \<sigma> :: "vname \<Rightarrow> sign"
+  fix s :: store and e :: texp and \<sigma> :: "vname \<Rightarrow> sign"
   assume H: "\<forall>x. s x \<in> gamma (\<sigma> x)"
-  show "aval e s \<in> gamma (aval_sign e \<sigma>)"
-    using aval_sign_sound[of s \<sigma> e] H by simp
+  show "teval e s \<in> gamma (aval_sign_t e \<sigma>)"
+    using aval_sign_t_sound[of s \<sigma> e] H by simp
 next
   fix n1 n2 :: int and a1 a2 :: sign and res :: bool
   assume H1: "n1 \<in> gamma a1" and H2: "n2 \<in> gamma a2" and H3: "(n1 < n2) = res"
@@ -379,19 +379,25 @@ next
   show "n1 \<in> gamma (fst (inv_eq_sign res a1 a2)) \<and> n2 \<in> gamma (snd (inv_eq_sign res a1 a2))"
     using inv_eq_sign_sound[of n1 a1 n2 a2 res] H1 H2 H3 by simp
 next
-  fix n1 n2 :: int and a1 a2 r :: sign
-  assume H1: "n1 \<in> gamma a1" and H2: "n2 \<in> gamma a2" and H3: "n1 + n2 \<in> gamma r"
-  show "n1 \<in> gamma (fst (inv_conservative r a1 a2)) \<and> n2 \<in> gamma (snd (inv_conservative r a1 a2))"
+  fix n1 n2 :: int and a1 a2 :: sign and ik :: ikind and r :: sign
+  assume H1: "n1 \<in> gamma a1" and H2: "n2 \<in> gamma a2" and H3: "ik_norm ik (n1 + n2) \<in> gamma r"
+  show
+    "n1 \<in> gamma (fst (inv_conservative ik r a1 a2)) \<and>
+     n2 \<in> gamma (snd (inv_conservative ik r a1 a2))"
     using inv_conservative_sound[OF H1 H2] .
 next
-  fix n1 n2 :: int and a1 a2 r :: sign
-  assume H1: "n1 \<in> gamma a1" and H2: "n2 \<in> gamma a2" and H3: "n1 - n2 \<in> gamma r"
-  show "n1 \<in> gamma (fst (inv_conservative r a1 a2)) \<and> n2 \<in> gamma (snd (inv_conservative r a1 a2))"
+  fix n1 n2 :: int and a1 a2 :: sign and ik :: ikind and r :: sign
+  assume H1: "n1 \<in> gamma a1" and H2: "n2 \<in> gamma a2" and H3: "ik_norm ik (n1 - n2) \<in> gamma r"
+  show
+    "n1 \<in> gamma (fst (inv_conservative ik r a1 a2)) \<and>
+     n2 \<in> gamma (snd (inv_conservative ik r a1 a2))"
     using inv_conservative_sound[OF H1 H2] .
 next
-  fix n1 n2 :: int and a1 a2 r :: sign
-  assume H1: "n1 \<in> gamma a1" and H2: "n2 \<in> gamma a2" and H3: "n1 * n2 \<in> gamma r"
-  show "n1 \<in> gamma (fst (inv_conservative r a1 a2)) \<and> n2 \<in> gamma (snd (inv_conservative r a1 a2))"
+  fix n1 n2 :: int and a1 a2 :: sign and ik :: ikind and r :: sign
+  assume H1: "n1 \<in> gamma a1" and H2: "n2 \<in> gamma a2" and H3: "ik_norm ik (n1 * n2) \<in> gamma r"
+  show
+    "n1 \<in> gamma (fst (inv_conservative ik r a1 a2)) \<and>
+     n2 \<in> gamma (snd (inv_conservative ik r a1 a2))"
     using inv_conservative_sound[OF H1 H2] .
 next
   fix p :: sign and b :: bool and i :: int
@@ -402,9 +408,9 @@ next
   assume "a1 \<le> a2" and "b1 \<le> b2"
   thus "meet_sign a1 b1 \<le> meet_sign a2 b2" using inf_mono[of a1 a2 b1 b2] by simp
 next
-  fix e :: exp and \<sigma>1 \<sigma>2 :: "vname \<Rightarrow> sign"
+  fix e :: texp and \<sigma>1 \<sigma>2 :: "vname \<Rightarrow> sign"
   assume "\<sigma>1 \<le> \<sigma>2"
-  thus "aval_sign e \<sigma>1 \<le> aval_sign e \<sigma>2" by (rule aval_sign_mono)
+  thus "aval_sign_t e \<sigma>1 \<le> aval_sign_t e \<sigma>2" by (rule aval_sign_t_mono)
 next
   fix x1 x2 y1 y2 :: sign and res :: bool
   assume A: "x1 \<le> x2" and B: "y1 \<le> y2"
@@ -416,9 +422,9 @@ next
   show "le_pair (inv_eq_sign res x1 y1) (inv_eq_sign res x2 y2)"
     using inv_eq_sign_mono[OF A B] by (simp add: le_pair_def)
 next
-  fix r1 r2 x1 x2 y1 y2 :: sign
-  assume A: "x1 \<le> x2" and B: "y1 \<le> y2"
-  show "le_pair (inv_conservative r1 x1 y1) (inv_conservative r2 x2 y2)"
+  fix r1 r2 x1 x2 y1 y2 :: sign and ik :: ikind
+  assume "r1 \<le> r2" and A: "x1 \<le> x2" and B: "y1 \<le> y2"
+  show "le_pair (inv_conservative ik r1 x1 y1) (inv_conservative ik r2 x2 y2)"
     using A B by (simp add: inv_conservative_def le_pair_def)
 next
   fix a b :: sign
@@ -435,8 +441,8 @@ next
   show "le_pair (inv_eq_sign res a1 a2) (a1, a2)"
     using inv_eq_sign_reductive1 inv_eq_sign_reductive2 by (simp add: le_pair_def)
 next
-  fix r a1 a2 :: sign
-  show "le_pair (inv_conservative r a1 a2) (a1, a2)"
+  fix r a1 a2 :: sign and ik :: ikind
+  show "le_pair (inv_conservative ik r a1 a2) (a1, a2)"
     by (simp add: inv_conservative_def le_pair_def)
 next
   fix p1 p2 :: sign and bv :: bool
@@ -484,7 +490,8 @@ text \<open>
 \<close>
 
 lemma bfilter_sign_sound:
-  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> truthy (aval b s) = res \<Longrightarrow> s \<in> \<lbrakk>bfilter_sign b res \<sigma>\<rbrakk>"
+  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> truthy (teval b s) = res \<Longrightarrow>
+   s \<in> \<lbrakk>bfilter_sign b res \<sigma>\<rbrakk>"
   using sign_backward_domain.bfilter_sound by simp
 
 text \<open>
@@ -495,7 +502,8 @@ text \<open>
 \<close>
 
 lemma branch_sign_sound:
-  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> truthy (aval b s) = res \<Longrightarrow> s \<in> \<lbrakk>branch_sign b res \<sigma>\<rbrakk>"
+  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> truthy (teval b s) = res \<Longrightarrow>
+   s \<in> \<lbrakk>branch_sign b res \<sigma>\<rbrakk>"
   using sign_backward_domain.branch_sound by simp
 
 
@@ -561,14 +569,25 @@ definition test_env_nonneg_eq :: "sign abs_state" where
 
 text \<open>@{text \<open>x = 0\<close>} known true meets \<open>x\<close>'s bound with @{term SZero}.\<close>
 lemma bfilter_sign_eq_true_narrows:
-  "bfilter_sign (Eq (V (STR ''x'')) (N 0)) True test_env_nonneg_eq (STR ''x'') = SZero"
-  unfolding test_env_nonneg_eq_def by eval
+  "bfilter_sign (TEq (TVar I32 (STR ''x'')) (TN I32 0)) True test_env_nonneg_eq (STR ''x'')
+     = SZero"
+  unfolding test_env_nonneg_eq_def
+  by (simp add: Let_def sign_cast_def is_bot_sign is_bottom_sign_def top_sign_def)
 
-text \<open>@{text \<open>x != 0\<close>} known true (i.e. the guard @{text \<open>x = 0\<close>} is false) on
-  @{term SNonNeg} narrows to @{term SPos}: the disequality-narrowing gain
-  \<open>bfilter\<close>'s old identity-only \<open>Eq\<close> \<open>False\<close> case could never produce.\<close>
-lemma bfilter_sign_eq_false_narrows_to_pos:
-  "bfilter_sign (Eq (V (STR ''x'')) (N 0)) False test_env_nonneg_eq (STR ''x'') = SPos"
-  unfolding test_env_nonneg_eq_def by eval
+text \<open>@{text \<open>x != 0\<close>} known true (i.e. the guard @{text \<open>x = 0\<close>} is false)
+  sharpens @{term SNonNeg} to @{term SPos}: \<open>inv_eq_sign False\<close> narrows an
+  operand against a single concrete point, and \<open>SZero\<close> is exactly that point,
+  so \<open>meet_sign SNonNeg SPos\<close> drops the one value the guard rules out.
+
+  Reading a variable performs no conversion, which is what makes this
+  reachable: the operand arrives as the declared @{term SNonNeg} rather than
+  as the \<^const>\<open>sign_cast\<close> of it, and \<open>sign_cast\<close> at a signed kind sends
+  every non-\<open>SZero\<close> value to @{term STop}, which \<open>inv_eq_sign\<close> cannot
+  sharpen at all.\<close>
+lemma bfilter_sign_eq_false_sharpens_to_pos:
+  "bfilter_sign (TEq (TVar I64 (STR ''x'')) (TN I64 0)) False test_env_nonneg_eq (STR ''x'')
+     = SPos"
+  unfolding test_env_nonneg_eq_def
+  by (simp add: Let_def sign_cast_def is_bot_sign is_bottom_sign_def top_sign_def)
 
 end

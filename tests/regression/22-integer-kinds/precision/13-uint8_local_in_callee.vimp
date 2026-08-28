@@ -1,0 +1,14 @@
+// PARAM: --analysis interval
+// The same, for a local declared inside a callee rather than in main: a
+// procedure body's own declarations must reach compilation too, not just
+// main's.
+void bump(int32 seed) {
+  uint8 acc;
+  acc := seed;
+  acc := acc + 1;
+  __voblint_check(acc == 0);  // PROVED
+  return
+}
+void main() {
+  bump(255)
+}

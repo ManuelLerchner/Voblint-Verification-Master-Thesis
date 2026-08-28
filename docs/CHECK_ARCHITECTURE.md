@@ -18,7 +18,7 @@ VIMP source
     |
     | compile_prog (VIMP_Proc_to_CFG)
     v
-CFG + checks : (pp * bexp) set     -- zero or more compiled checks per node
+CFG + checks : (pp * texp) set     -- zero or more compiled checks per node
     |
     | verified TD solver, per domain (<Domain>_Ctx_None_Sound)
     v
@@ -101,9 +101,20 @@ never added — see "Why no automatic sublocale" below.
 
 Owns `abstract_expression_domain` (adds `gamma_state`/`aval_abs` on top of
 the numeric queries) and `abstract_check_domain` (mutually recursive
-`check_true`/`check_false` over `bexp`, the three-way `classify_check`,
+`check_true`/`check_false` over `texp`, the three-way `classify_check`,
 and `abstract_checks_proven`, the node-indexed bridge to
 `Checks.thy`'s domain-independent `checks_proven`).
+
+The check path carries no typing environment. A compiled `EA_Check` holds an
+already-elaborated `texp`, so `checks_proven` states `truthy (teval c s)` and
+each domain interpretation supplies its own `aval_<domain>_t` directly. The
+soundness obligation is then that domain's own `aval_<domain>_t_sound` — the
+same evaluator on both sides of the concretization, with no `default_tyenv` or
+`I32` pinning anywhere in the path. The earlier arrangement stated the
+obligation against the unbounded `aval` while the interpretations supplied a
+wrapping evaluator, which is why `Interval_Classify`'s discharge was a `sorry`:
+that statement is false in general, and it is no longer the statement being
+made.
 
 `Check_Proved`/`Check_Refuted` are universal claims over the abstract
 value's whole concretization, not witness-based: `Check_Refuted` means
@@ -154,10 +165,10 @@ bridge above them is not.
 
 ### `Analysis_GraphViz.thy` — rendering
 
-`check_result_annotation :: check_result -> bexp -> graphviz_node_annotation`
+`check_result_annotation :: check_result -> texp -> graphviz_node_annotation`
 is the single status-to-style mapping (`Check_Proved` dark green,
 `Check_Refuted` red, `Check_Unknown` grey), shared by every domain's
-worked example. It depends only on `check_result` and `bexp` — nothing
+worked example. It depends only on `check_result` and `texp` — nothing
 Sign- or Interval-specific. The generic entry/exit/default node styling
 (`analysis_node_attrs`) uses green/light-yellow for entry and neutral
 gray for exit, so a refuted check's red never collides with an unrelated
@@ -271,7 +282,7 @@ error, not a silent fallback to collapsed.
   still generate visible `nop` edges between them — zero-width check
   compilation remains a possible, unstarted, later compiler milestone
   (`docs/NEXT_STEPS.md`). The `checks` relation already permits multiple
-  checks at one program point (`(pp * bexp) set`, not a function from
+  checks at one program point (`(pp * texp) set`, not a function from
   `pp`); the compiler currently happens to allocate one node per check,
   but the data model does not require that.
 - No domain besides Sign and Interval has a check-discharge instance.

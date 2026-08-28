@@ -56,6 +56,7 @@
 // EXPECT-GRAPH-END
 
 void main() {
+  int32 x, y;
   x := 5;
   y := 1;
   __voblint_check(0 < x)

@@ -19,17 +19,23 @@ text \<open>Regression coverage for the shape \<^const>\<open>DG_Framework.side_
   regressions in \<^const>\<open>routed_cmb_g\<close>/\<^const>\<open>side_cfg_T_eff_keyed_seed_dg\<close> generation
   itself.\<close>
 
+text \<open>The single actual argument, elaborated at the formal's declared kind, exactly as
+  \<^const>\<open>compile_prog\<close> records it on the call edge; \<open>enter_local\<close>/\<open>enter_global\<close> read the
+  same list.\<close>
+abbreviation nest_call_args :: "texp list" where
+  "nest_call_args \<equiv> compile_actuals (prog_tyenv nest_program) [(STR ''p'')] [VIMP_Syntax.V (STR ''p'')]"
+
 lemma statement3_no_intra: "intra_predecessor_list nest_cfg (Statement 3) = []"
   by eval
 
 lemma statement3_comb:
   "call_site_list nest_cfg (Statement 3)
-     = [(Statement 2, CallEdge (Some (STR ''t'')) [(STR ''p'')] [VIMP_Syntax.V (STR ''p'')])]"
+     = [(Statement 2, CallEdge (compile_dst (prog_tyenv nest_program) (Some (STR ''t''))) [(STR ''p'')] nest_call_args)]"
   by eval
 
 lemma statement3_targets:
   "static_resolve nest_cfg (Statement 3) (Statement 2)
-       (CallEdge (Some (STR ''t'')) [(STR ''p'')] [VIMP_Syntax.V (STR ''p'')]) d
+       (CallEdge (compile_dst (prog_tyenv nest_program) (Some (STR ''t''))) [(STR ''p'')] nest_call_args) d
      = [STR ''g'']"
   unfolding static_resolve_def by eval
 
@@ -42,7 +48,7 @@ text \<open>The call metadata the continuation is pinned to: built from the call
 
 abbreviation nest_ci :: call_info where
   "nest_ci \<equiv>
-     call_info_of (CallEdge (Some (STR ''t'')) [(STR ''p'')] [VIMP_Syntax.V (STR ''p'')])
+     call_info_of (CallEdge (compile_dst (prog_tyenv nest_program) (Some (STR ''t''))) [(STR ''p'')] nest_call_args)
        (STR ''g'')"
 
 lemma nest_2_eqs_statement3:
@@ -52,20 +58,20 @@ lemma nest_2_eqs_statement3:
            side_rhs_fold_dg bot
              [depend_on (Seed (FunctionEntry (STR ''g''))
                      (cs_route 2 (Statement 2) ctx
-                       (enter_local nest_S_st [(STR ''p'')] [VIMP_Syntax.V (STR ''p'')]
+                       (enter_local nest_S_st [(STR ''p'')] nest_call_args
                           (locals caller_state) (globs globals_state1))
-                       (CallEdge (Some (STR ''t'')) [(STR ''p'')] [VIMP_Syntax.V (STR ''p'')])))
-                (DG (enter_local nest_S_st [(STR ''p'')] [VIMP_Syntax.V (STR ''p'')]
+                       (CallEdge (compile_dst (prog_tyenv nest_program) (Some (STR ''t''))) [(STR ''p'')] nest_call_args)))
+                (DG (enter_local nest_S_st [(STR ''p'')] nest_call_args
                       (locals caller_state) (globs globals_state1)) Bot)
                 (read_local_cont (FunctionResult (STR ''g''),
                         cs_route 2 (Statement 2) ctx
-                          (enter_local nest_S_st [(STR ''p'')] [VIMP_Syntax.V (STR ''p'')]
+                          (enter_local nest_S_st [(STR ''p'')] nest_call_args
                              (locals caller_state) (globs globals_state1))
-                          (CallEdge (Some (STR ''t'')) [(STR ''p'')] [VIMP_Syntax.V (STR ''p'')]))
+                          (CallEdge (compile_dst (prog_tyenv nest_program) (Some (STR ''t''))) [(STR ''p'')] nest_call_args))
                     (\<lambda>callee_state.
                   read_global_cont Global (\<lambda>globals_state2.
                     depend_on Global
-                      (DG Bot (enter_global nest_S_st [(STR ''p'')] [VIMP_Syntax.V (STR ''p'')]
+                      (DG Bot (enter_global nest_S_st [(STR ''p'')] nest_call_args
                             (locals caller_state) (globs globals_state1)
                           \<squnion> combine_global nest_S_st nest_ci
                              (caller_cont nest_S_st nest_ci (locals caller_state) (globs globals_state1))
@@ -75,8 +81,8 @@ lemma nest_2_eqs_statement3:
                            (locals callee_state) (globs globals_state2)) Bot)))))]))"
   unfolding nest_2_eqs_def side_cfg_T_eff_keyed_seed_dg_def routed_extra_g_def
     routed_cmb_g_def routed_cmb_g_at_def
-  by (simp add: intra_predecessor_addr_list_def statement3_no_intra statement3_comb
-        statement3_targets statement3_no_calls nest_entry Let_def)
+  by (simp add: intra_predecessor_addr_list_def statement3_no_intra statement3_comb[simplified]
+        statement3_targets[simplified] statement3_no_calls nest_entry Let_def)
 
 lemma nest_1_eqs_statement3:
   "nest_1_eqs (Statement 3, ctx)
@@ -85,20 +91,20 @@ lemma nest_1_eqs_statement3:
            side_rhs_fold_dg bot
              [depend_on (Seed (FunctionEntry (STR ''g''))
                      (cs_route 1 (Statement 2) ctx
-                       (enter_local nest_S_st [(STR ''p'')] [VIMP_Syntax.V (STR ''p'')]
+                       (enter_local nest_S_st [(STR ''p'')] nest_call_args
                           (locals caller_state) (globs globals_state1))
-                       (CallEdge (Some (STR ''t'')) [(STR ''p'')] [VIMP_Syntax.V (STR ''p'')])))
-                (DG (enter_local nest_S_st [(STR ''p'')] [VIMP_Syntax.V (STR ''p'')]
+                       (CallEdge (compile_dst (prog_tyenv nest_program) (Some (STR ''t''))) [(STR ''p'')] nest_call_args)))
+                (DG (enter_local nest_S_st [(STR ''p'')] nest_call_args
                       (locals caller_state) (globs globals_state1)) Bot)
                 (read_local_cont (FunctionResult (STR ''g''),
                         cs_route 1 (Statement 2) ctx
-                          (enter_local nest_S_st [(STR ''p'')] [VIMP_Syntax.V (STR ''p'')]
+                          (enter_local nest_S_st [(STR ''p'')] nest_call_args
                              (locals caller_state) (globs globals_state1))
-                          (CallEdge (Some (STR ''t'')) [(STR ''p'')] [VIMP_Syntax.V (STR ''p'')]))
+                          (CallEdge (compile_dst (prog_tyenv nest_program) (Some (STR ''t''))) [(STR ''p'')] nest_call_args))
                     (\<lambda>callee_state.
                   read_global_cont Global (\<lambda>globals_state2.
                     depend_on Global
-                      (DG Bot (enter_global nest_S_st [(STR ''p'')] [VIMP_Syntax.V (STR ''p'')]
+                      (DG Bot (enter_global nest_S_st [(STR ''p'')] nest_call_args
                             (locals caller_state) (globs globals_state1)
                           \<squnion> combine_global nest_S_st nest_ci
                              (caller_cont nest_S_st nest_ci (locals caller_state) (globs globals_state1))
@@ -108,8 +114,8 @@ lemma nest_1_eqs_statement3:
                            (locals callee_state) (globs globals_state2)) Bot)))))]))"
   unfolding nest_1_eqs_def side_cfg_T_eff_keyed_seed_dg_def routed_extra_g_def
     routed_cmb_g_def routed_cmb_g_at_def
-  by (simp add: intra_predecessor_addr_list_def statement3_no_intra statement3_comb
-        statement3_targets statement3_no_calls nest_entry Let_def)
+  by (simp add: intra_predecessor_addr_list_def statement3_no_intra statement3_comb[simplified]
+        statement3_targets[simplified] statement3_no_calls nest_entry Let_def)
 
 end
 

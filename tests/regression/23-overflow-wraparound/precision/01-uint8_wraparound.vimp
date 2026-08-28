@@ -1,0 +1,21 @@
+// PARAM: --analysis interval
+// Adapted from Goblint tests/regression/21-casts/03-Exc-overflow.c
+// (its "char b = a+1; // (char)128 = -128" line) and
+// tests/regression/31-ikind-aware-ints/13-intervals-large.c
+// ("unsigned long long y = x + 4; __goblint_check(y == 3);") at uint8's width.
+//
+// Every operand here is promoted to int32 before the arithmetic, so 255 + 1
+// is 256 and 0 - 1 is -1 with no wrap at that point; the wrap happens on the
+// assignment, which converts the result back to uint8. Unsigned wraparound is
+// defined behaviour in C, so all three results are decidable from the source.
+global uint8 u8;
+void main() {
+  u8 := 255;
+  u8 := u8 + 1;
+  __voblint_check(u8 == 0); // PROVED
+  u8 := u8 - 1;
+  __voblint_check(u8 == 255); // PROVED
+  u8 := 200;
+  u8 := u8 + 100;
+  __voblint_check(u8 == 44) // PROVED
+}

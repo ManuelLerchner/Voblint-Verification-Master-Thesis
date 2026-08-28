@@ -39,10 +39,19 @@ definition dispatch_demo_prog :: imp_prog where
        }
      }"
 
+text \<open>A report entry and a check edge both carry the elaborated \<^typ>\<open>texp\<close>
+  the compiler recorded, so both name the program's own typing environment.\<close>
+
+abbreviation dispatch_demo_ty :: tyenv where
+  "dispatch_demo_ty \<equiv> prog_tyenv dispatch_demo_prog"
+
+abbreviation dispatch_demo_pos_y :: texp where
+  "dispatch_demo_pos_y \<equiv> elaborate_syn dispatch_demo_ty (Less (N 0) (V (STR ''y'')))"
+
 lemma dispatch_demo_interval_precise:
   "analyse Interval_Analysis dispatch_demo_prog =
-     [(Statement 1, Less (N 0) (V (STR ''y'')), Check_Proved),
-      (Statement 3, Less (N 0) (V (STR ''y'')), Check_Refuted)]"
+     [(Statement 1, dispatch_demo_pos_y, Check_Proved),
+      (Statement 3, dispatch_demo_pos_y, Check_Refuted)]"
   by eval
 
 text \<open>
@@ -54,11 +63,12 @@ text \<open>
 lemma dispatch_demo_intra_eval:
   "intra (prog_cfg prog_main_name dispatch_demo_prog) =
      {(FunctionEntry (STR ''main''), EA_Nop, Statement 0),
-      (Statement 0, EA_Assign (STR ''y'') (N 1), Statement 1),
-      (Statement 1, EA_Check (Less (N 0) (V (STR ''y''))), Statement 2),
-      (Statement 2, EA_Assign (STR ''y'') (Minus (N 0) (N 1)), Statement 3),
-      (Statement 3, EA_Check (Less (N 0) (V (STR ''y''))), Statement 4),
-      (Statement 4, EA_Ret None (STR ''main''), FunctionResult (STR ''main''))}"
+      (Statement 0, EA_Assign (STR ''y'') (elaborate_to dispatch_demo_ty (dispatch_demo_ty (STR ''y'')) (N 1)), Statement 1),
+      (Statement 1, EA_Check dispatch_demo_pos_y, Statement 2),
+      (Statement 2, EA_Assign (STR ''y'')
+         (elaborate_to dispatch_demo_ty (dispatch_demo_ty (STR ''y'')) (Minus (N 0) (N 1))), Statement 3),
+      (Statement 3, EA_Check dispatch_demo_pos_y, Statement 4),
+      (Statement 4, EA_Ret None (STR ''main'') I32, FunctionResult (STR ''main''))}"
   unfolding prog_cfg_def by eval
 
 lemma dispatch_demo_exit_eval:
@@ -111,10 +121,12 @@ lemma dispatch_demo_terminates:
 proof (rule Interval_Ctx_None_Sound.ictx_terminates_prog_warrow_via_solve_c)
   show "TD_side_warrowing_apinis_Interp_solve_c
           (Interval_Ctx_None_Sound.ictx_eqs (declared_global dispatch_demo_prog)
+             (prog_tyenv dispatch_demo_prog)
              (resolved_st_q_is_bot_for (declared_global_vars dispatch_demo_prog))
              (prog_table dispatch_demo_prog) (prog_procs dispatch_demo_prog)
              prog_main_name (prog_main dispatch_demo_prog))
-          (cfg_exit (compile_prog (prog_table dispatch_demo_prog) (prog_procs dispatch_demo_prog)
+          (cfg_exit (compile_prog (prog_tyenv dispatch_demo_prog) (prog_table dispatch_demo_prog)
+                       (prog_procs dispatch_demo_prog)
                        prog_main_name (prog_main dispatch_demo_prog)), ()) \<noteq> None"
     by eval
 qed
@@ -136,9 +148,9 @@ lemma dispatch_demo_entry_cov:
   by eval
 
 theorem dispatch_demo_first_check_certified:
-  "\<forall>s \<in> ltr_collect (declared_global dispatch_demo_prog) (prog_cfg prog_main_name dispatch_demo_prog)
+  "\<forall>s \<in> ltr_collect (prog_tyenv dispatch_demo_prog) (declared_global dispatch_demo_prog) (prog_cfg prog_main_name dispatch_demo_prog)
            (cinit_stores (declared_global dispatch_demo_prog)) (Statement 1).
-     truthy (aval (Less (N 0) (V (STR ''y''))) s)"
+     truthy (teval dispatch_demo_pos_y s)"
 proof (rule analyse_interval_proved_sound)
   show "wf_compile_input (declared_global dispatch_demo_prog) (prog_table dispatch_demo_prog)
           (prog_procs dispatch_demo_prog) prog_main_name (prog_main dispatch_demo_prog)"
@@ -164,19 +176,21 @@ proof (rule analyse_interval_proved_sound)
           \<Longrightarrow> (cl, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg prog_main_name dispatch_demo_prog)
           \<Longrightarrow> (k, c1) \<in> fst (Interval_Ctx_None_Sound.ictx_sol_prog_warrow (declared_global dispatch_demo_prog) prog_main_name dispatch_demo_prog)"
     by (simp add: dispatch_demo_calls_eval)
-  show "(Statement 1, Less (N 0) (V (STR ''y'')), Check_Proved) \<in> set (analyse Interval_Analysis dispatch_demo_prog)"
+  show "(Statement 1, dispatch_demo_pos_y, Check_Proved)
+          \<in> set (analyse Interval_Analysis dispatch_demo_prog)"
     unfolding dispatch_demo_interval_precise by simp
 qed
 
 text \<open>
   \<^const>\<open>string_of_exp\<close> (\<^theory>\<open>Voblint_VIMP.VIMP_Source_Print\<close>) renders the
-  \<open>exp\<close> half of a \<open>check_report_entry\<close> as a native string, so an external
-  consumer of \<open>analyse\<close>'s report can print a check's condition without decoding
-  the \<open>exp\<close> AST itself.
+  \<open>texp\<close> half of a \<open>check_report_entry\<close> as a native string, once
+  \<^const>\<open>texp_erase\<close> has dropped the kind annotations, so an external
+  consumer of \<open>analyse\<close>'s report can print a check's condition without
+  decoding the AST itself.
 \<close>
 
 lemma dispatch_demo_check_cond_rendered:
-  "string_of_exp 0 (Less (N 0) (V (STR ''y''))) = ''0<y''"
+  "string_of_exp 0 (texp_erase dispatch_demo_pos_y) = ''0<y''"
   by eval
 
 end

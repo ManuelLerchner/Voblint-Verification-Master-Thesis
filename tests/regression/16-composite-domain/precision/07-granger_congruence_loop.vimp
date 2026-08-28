@@ -18,6 +18,7 @@
 // narrowing; c := e + d inherits that as c = [-inf,8]. Recovering them
 // needs the relation c = e + d = 4 the product does not track.
 void main() {
+  int32 a, b, c, d, e;
   a := 1;
   b := 2;
   c := 3;

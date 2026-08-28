@@ -11,34 +11,49 @@
 // (--graph-snapshot: h's collapsed context enters with sign=NonNegative,
 // ivl=[0,3] and exits with ret=[3,3]). Interval alone needs
 // --context entry-state for the same result.
-void h(i) {
+//
+// The five short chains stay decided. The nine whose argument outruns the
+// depth do not, and the reason is the frozen wraparound policy rather than
+// the collapse. Past the depth the recursion's parameter is widened, the
+// widened bound is not an int32, and the next i - 1 reaches the conversion's
+// give-up branch and answers the whole int32 range -- which strips the
+// NonNegative the whole argument above depends on. Saturating the widening
+// at int32's own minimum does not help: that bound underflows on the very
+// next decrement. Under sem.int.signed_overflow=assume_none the decrement
+// would keep its bound and every check would be decided, which is what the
+// Goblint case this is adapted from measures.
+int32 h(int32 i) {
+  int32 r;
   if (i == 0) { return 3 } else { skip };
   if (0 < i) { r := h(i - 1); return r } else { skip };
   return 13
 }
-void g(i) {
+int32 g(int32 i) {
+  int32 r;
   if (i == 0) { return 2 } else { skip };
   if (0 < i) { r := h(i - 1); return r } else { skip };
   return 12
 }
-void f(i) {
+int32 f(int32 i) {
+  int32 r;
   if (i == 0) { return 1 } else { skip };
   if (0 < i) { r := g(i - 1); return r } else { skip };
   return 11
 }
 void main() {
-  a := f(10); __voblint_check(a == 3);  // PROVED
-  b := f(8); __voblint_check(b == 3);   // PROVED
-  c := h(5); __voblint_check(c == 3);   // PROVED
+  int32 a, b, c, d, e, q, s, t, u, v, w, x, y, z;
+  a := f(10); __voblint_check(a == 3);  // UNKNOWN
+  b := f(8); __voblint_check(b == 3);   // UNKNOWN
+  c := h(5); __voblint_check(c == 3);   // UNKNOWN
   d := f(0); __voblint_check(d == 1);   // PROVED
   e := f(1); __voblint_check(e == 2);   // PROVED
   x := g(0); __voblint_check(x == 2);   // PROVED
   y := g(1); __voblint_check(y == 3);   // PROVED
-  z := f(11); __voblint_check(z == 3);  // PROVED
-  u := g(12); __voblint_check(u == 3);  // PROVED
-  v := g(20); __voblint_check(v == 3);  // PROVED
-  w := f(20); __voblint_check(w == 3);  // PROVED
-  s := h(40); __voblint_check(s == 3);  // PROVED
-  t := h(300); __voblint_check(t == 3); // PROVED
-  q := f(300); __voblint_check(q == 3)  // PROVED
+  z := f(11); __voblint_check(z == 3);  // UNKNOWN
+  u := g(12); __voblint_check(u == 3);  // UNKNOWN
+  v := g(20); __voblint_check(v == 3);  // UNKNOWN
+  w := f(20); __voblint_check(w == 3);  // UNKNOWN
+  s := h(40); __voblint_check(s == 3);  // UNKNOWN
+  t := h(300); __voblint_check(t == 3); // UNKNOWN
+  q := f(300); __voblint_check(q == 3)  // UNKNOWN
 }

@@ -1,0 +1,12 @@
+// PARAM: --analysis interval
+// The local-declaration half of 01. Each procedure declares acc at its own
+// kind, so the uint8 one wraps and the int64 one does not.
+uint8 f(int32 n) { uint8 acc; acc := n + 200; return acc }
+int64 g(int32 n) { int64 acc; acc := n + 200; return acc }
+void main() {
+  int32 a, b;
+  a := f(100);
+  b := g(100);
+  __voblint_check(a == 44); // PROVED
+  __voblint_check(b == 300) // PROVED
+}

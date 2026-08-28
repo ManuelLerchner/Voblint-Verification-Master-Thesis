@@ -13,48 +13,50 @@ text \<open>
 definition test_env_top :: "int_dom abs_state" where
   "test_env_top = (%_. top)"
 
-subsection \<open>x + 1 = 3 ==> x = 2\<close>
+subsection \<open>x + 1 = 3 ==> x = 2 modulo the I32 wrap\<close>
 
 text \<open>
-  The composite analogue of \<open>Example_Congruence_Backward\<close>'s single-domain
-  \<open>x + 1 = 3 ==> x = 2\<close> witness. \<open>Refine_Once\<close> is local to each composite
-  operation, not to the whole recursive traversal: the guard's own
-  \<open>afilter\<close> recursion invokes refinement once inside \<open>inv_plus_int_dom\<close>
-  and again at the \<open>V\<close> leaf's \<open>intersect_int_dom_mode\<close>, so two refinement
-  rounds run along this single path even under \<open>Once\<close>. A caller who only
-  knows \<open>refine Refine_Once d\<close> is one round should not expect
-  \<open>bfilter_int_dom_once\<close> to match that bound -- a recursive backward
-  filter can invoke refinement at multiple nodes. Here it already reaches
-  the exact singleton, so \<open>Refine_Fixpoint\<close> finds nothing further to do.
+  Each guard is the elaborated \<^typ>\<open>texp\<close> a compiled \<open>EA_Assume\<close> edge
+  carries, so the narrowing reads its operand kinds off the tree.
+  Congruence's own inverse (\<open>Congruence_Backward.inv_plus_congruence_ik\<close>,
+  composed with \<open>cong_unwrap\<close> to reconcile the \<open>ik_norm\<close>-wrapped result
+  register) runs inside \<open>int_dom\<close>'s \<open>inv_plus\<close>/\<open>inv_minus\<close>/\<open>inv_times\<close>,
+  so the congruence component narrows even where cross-component refinement
+  is switched off.
+
+  What the sum's kind costs is the singleton. The addition is normed at
+  \<^const>\<open>I32\<close>, so the strongest statement about \<open>x\<close> is \<open>2\<close> modulo \<open>2 ^ 32\<close>,
+  not \<open>{2}\<close>; pinning it to \<open>{2}\<close> needs the range fact that \<open>x\<close> is
+  representable at \<^const>\<open>I32\<close>, which \<^const>\<open>test_env_top\<close> deliberately
+  withholds. Refinement therefore reaches Parity -- \<open>2\<close> modulo an even
+  modulus is even -- but Sign and Interval stay at top.
 \<close>
 
-lemma bfilter_int_dom_once_plus_eq_exact:
+lemma bfilter_int_dom_once_plus_eq_congruence:
   "bfilter_int_dom_once
-     (Eq (Plus (V (STR ''x'')) (N 1)) (N 3)) True
+     (elaborate_syn default_tyenv (Eq (Plus (V (STR ''x'')) (N 1)) (N 3))) True
      test_env_top (STR ''x'') =
-   int_dom_sipc SPos (Ivl (Fin 2) (Fin 2)) PEven (congruence_of_int 2)"
+   int_dom_sipc STop top PEven (mk_congruence 2 4294967296)"
   by eval
 
-lemma bfilter_int_dom_fixpoint_plus_eq_exact:
+lemma bfilter_int_dom_fixpoint_plus_eq_congruence:
   "bfilter_int_dom_fixpoint
-     (Eq (Plus (V (STR ''x'')) (N 1)) (N 3)) True
+     (elaborate_syn default_tyenv (Eq (Plus (V (STR ''x'')) (N 1)) (N 3))) True
      test_env_top (STR ''x'') =
-   int_dom_sipc SPos (Ivl (Fin 2) (Fin 2)) PEven (congruence_of_int 2)"
+   int_dom_sipc STop top PEven (mk_congruence 2 4294967296)"
   by eval
 
 text \<open>
-  \<open>Refine_Never\<close> applies no cross-component refinement at all. Congruence's
-  own real inverse (\<open>Congruence_Backward.inv_plus_congruence\<close>) still
-  narrows the congruence component directly -- that is the component's own
-  inversion, not refinement -- but Sign, Interval, and Parity never learn
-  about it.
+  \<open>Refine_Never\<close> skips cross-component refinement, so Parity stays at top
+  too; Congruence's own inverse still narrows inside \<open>inv_plus\<close>, which is
+  where this lemma's congruence component comes from.
 \<close>
 
 lemma bfilter_int_dom_never_plus_eq_congruence_only:
   "bfilter_int_dom_never
-     (Eq (Plus (V (STR ''x'')) (N 1)) (N 3)) True
+     (elaborate_syn default_tyenv (Eq (Plus (V (STR ''x'')) (N 1)) (N 3))) True
      test_env_top (STR ''x'') =
-   int_dom_sipc STop top PTop (congruence_of_int 2)"
+   int_dom_sipc STop top PTop (mk_congruence 2 4294967296)"
   by eval
 
 subsection \<open>Distributed information, exact after refinement\<close>
@@ -76,7 +78,7 @@ text \<open>
 
 lemma bfilter_int_dom_once_self_refine_exact:
   "bfilter_int_dom_once
-     (Eq (V (STR ''x'')) (V (STR ''x'')))
+     (elaborate_syn default_tyenv (Eq (V (STR ''x'')) (V (STR ''x''))))
      True
      ((%_. top)((STR ''x'') := int_dom_sipc STop (Ivl (Fin (-1)) (Fin 0)) PEven top))
      (STR ''x'') =
@@ -87,7 +89,7 @@ subsection \<open>Congruence precision unavailable from Sign/Interval alone\<clo
 
 lemma bfilter_int_dom_once_congruence_tightens_interval:
   "bfilter_int_dom_once
-     (Eq (V (STR ''x'')) (V (STR ''x'')))
+     (elaborate_syn default_tyenv (Eq (V (STR ''x'')) (V (STR ''x''))))
      True
      ((%_. top)
        ((STR ''x'') :=
@@ -104,7 +106,7 @@ text \<open>
 
 lemma bfilter_int_dom_never_congruence_unused:
   "bfilter_int_dom_never
-     (Eq (V (STR ''x'')) (V (STR ''x'')))
+     (elaborate_syn default_tyenv (Eq (V (STR ''x'')) (V (STR ''x''))))
      True
      ((%_. top)
        ((STR ''x'') :=

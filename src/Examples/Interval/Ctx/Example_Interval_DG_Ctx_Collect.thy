@@ -81,12 +81,14 @@ lemma twice_enter_local_eq_entered:
 
 lemma twice_route_abs_at_call1:
   "entry_state_route_abs_gen twice_gs (Statement 2) []
-     (enter_local (ectx_abs_spec twice_gs) [(STR ''p'')] [VIMP_Syntax.N 3]
-        (locals (entry_state_sigma_abs_exec twice_gs twice_is_bot_pred twice_pi twice_procs (STR ''main'') twice_main
+     (enter_local (ectx_abs_spec twice_gs) [(STR ''p'')]
+        (compile_actuals (prog_tyenv twice_program) [(STR ''p'')] [VIMP_Syntax.N 3])
+        (locals (entry_state_sigma_abs_exec twice_gs (prog_tyenv twice_program) twice_is_bot_pred twice_pi twice_procs (STR ''main'') twice_main
            (Inl (Statement 2, []))))
-        (globs (entry_state_sigma_abs_exec twice_gs twice_is_bot_pred twice_pi twice_procs (STR ''main'') twice_main
+        (globs (entry_state_sigma_abs_exec twice_gs (prog_tyenv twice_program) twice_is_bot_pred twice_pi twice_procs (STR ''main'') twice_main
            (Inr Global))))
-     (CallEdge (Some (STR ''x'')) [(STR ''p'')] [VIMP_Syntax.N 3])
+     (CallEdge (compile_dst (prog_tyenv twice_program) (Some (STR ''x''))) [(STR ''p'')]
+         (compile_actuals (prog_tyenv twice_program) [(STR ''p'')] [VIMP_Syntax.N 3]))
    = ctx_call1"
   unfolding entry_state_route_abs_gen_def entry_state_sigma_abs_exec_def ctx_call1_def
     twice_ctx_sol_def o_apply fun_of_dg_st_gen_simps
@@ -95,12 +97,14 @@ lemma twice_route_abs_at_call1:
 
 lemma twice_route_abs_at_call2:
   "entry_state_route_abs_gen twice_gs (Statement 3) []
-     (enter_local (ectx_abs_spec twice_gs) [(STR ''p'')] [VIMP_Syntax.N 10]
-        (locals (entry_state_sigma_abs_exec twice_gs twice_is_bot_pred twice_pi twice_procs (STR ''main'') twice_main
+     (enter_local (ectx_abs_spec twice_gs) [(STR ''p'')]
+        (compile_actuals (prog_tyenv twice_program) [(STR ''p'')] [VIMP_Syntax.N 10])
+        (locals (entry_state_sigma_abs_exec twice_gs (prog_tyenv twice_program) twice_is_bot_pred twice_pi twice_procs (STR ''main'') twice_main
            (Inl (Statement 3, []))))
-        (globs (entry_state_sigma_abs_exec twice_gs twice_is_bot_pred twice_pi twice_procs (STR ''main'') twice_main
+        (globs (entry_state_sigma_abs_exec twice_gs (prog_tyenv twice_program) twice_is_bot_pred twice_pi twice_procs (STR ''main'') twice_main
            (Inr Global))))
-     (CallEdge (Some (STR ''y'')) [(STR ''p'')] [VIMP_Syntax.N 10])
+     (CallEdge (compile_dst (prog_tyenv twice_program) (Some (STR ''y''))) [(STR ''p'')]
+         (compile_actuals (prog_tyenv twice_program) [(STR ''p'')] [VIMP_Syntax.N 10]))
    = ctx_call2"
   unfolding entry_state_route_abs_gen_def entry_state_sigma_abs_exec_def ctx_call2_def
     twice_ctx_sol_def o_apply fun_of_dg_st_gen_simps
@@ -113,18 +117,20 @@ lemma twice_call_fwd_ok:
   shows "(FunctionEntry p,
             entry_state_route_abs_gen twice_gs u ctx
               (enter_local (ectx_abs_spec twice_gs) pars args
-                 (locals (entry_state_sigma_abs_exec twice_gs twice_is_bot_pred twice_pi twice_procs (STR ''main'') twice_main
+                 (locals (entry_state_sigma_abs_exec twice_gs (prog_tyenv twice_program) twice_is_bot_pred twice_pi twice_procs (STR ''main'') twice_main
                     (Inl (u, ctx))))
-                 (globs (entry_state_sigma_abs_exec twice_gs twice_is_bot_pred twice_pi twice_procs (STR ''main'') twice_main
+                 (globs (entry_state_sigma_abs_exec twice_gs (prog_tyenv twice_program) twice_is_bot_pred twice_pi twice_procs (STR ''main'') twice_main
                     (Inr Global))))
               (CallEdge dst pars args))
          \<in> fst twice_ctx_sol"
 proof -
   from ce twice_calls_shape consider
-      (c1) "u = Statement 2" "dst = Some (STR ''x'')" "pars = [(STR ''p'')]"
-           "args = [VIMP_Syntax.N 3]" "p = (STR ''twice'')"
-    | (c2) "u = Statement 3" "dst = Some (STR ''y'')" "pars = [(STR ''p'')]"
-           "args = [VIMP_Syntax.N 10]" "p = (STR ''twice'')"
+      (c1) "u = Statement 2" "dst = compile_dst (prog_tyenv twice_program) (Some (STR ''x''))" "pars = [(STR ''p'')]"
+           "args = compile_actuals (prog_tyenv twice_program) [(STR ''p'')] [VIMP_Syntax.N 3]"
+           "p = (STR ''twice'')"
+    | (c2) "u = Statement 3" "dst = compile_dst (prog_tyenv twice_program) (Some (STR ''y''))" "pars = [(STR ''p'')]"
+           "args = compile_actuals (prog_tyenv twice_program) [(STR ''p'')] [VIMP_Syntax.N 10]"
+           "p = (STR ''twice'')"
     by fastforce
   thus ?thesis
   proof cases
@@ -156,11 +162,11 @@ lemmas twice_entry_state_hyps =
   twice_comb_fwd_ok[unfolded twice_ctx_sol_def twice_cfg_def]
 
 theorem twice_activation_collect_sound:
-  "activation_collect twice_gs
-     (admiss_exact (entry_state_context twice_gs twice_is_bot_pred twice_pi twice_procs (STR ''main'') twice_main))
-     [] (compile_prog twice_pi twice_procs (STR ''main'') twice_main) (cinit_stores twice_gs) v ctx
+  "activation_collect (prog_tyenv twice_program) twice_gs
+     (admiss_exact (entry_state_context twice_gs (prog_tyenv twice_program) twice_is_bot_pred twice_pi twice_procs (STR ''main'') twice_main))
+     [] (compile_prog (prog_tyenv twice_program) twice_pi twice_procs (STR ''main'') twice_main) (cinit_stores twice_gs) v ctx
    \<subseteq> gamma_state_lift
-       (entry_state_sg twice_gs twice_is_bot_pred twice_pi twice_procs (STR ''main'') twice_main (Inl (v, ctx)))"
+       (entry_state_sg twice_gs (prog_tyenv twice_program) twice_is_bot_pred twice_pi twice_procs (STR ''main'') twice_main (Inl (v, ctx)))"
   by (rule entry_state_activation_collect_sound[OF twice_entry_state_hyps])
 
 subsection \<open>The context each call site selects\<close>
@@ -170,40 +176,44 @@ text \<open>\<^const>\<open>entry_state_context\<close> discards its concrete-st
   the constant the flagship computed.\<close>
 
 lemma twice_call_site_action1:
-  "call_action_at_call_site (compile_prog twice_pi twice_procs (STR ''main'') twice_main) (Statement 2)
-     = CallEdge (Some (STR ''x'')) [(STR ''p'')] [VIMP_Syntax.N 3]"
+  "call_action_at_call_site (compile_prog (prog_tyenv twice_program) twice_pi twice_procs (STR ''main'') twice_main) (Statement 2)
+     = CallEdge (compile_dst (prog_tyenv twice_program) (Some (STR ''x''))) [(STR ''p'')]
+         (compile_actuals (prog_tyenv twice_program) [(STR ''p'')] [VIMP_Syntax.N 3])"
 proof (rule call_action_at_call_site_eq
     [OF twice_finC[unfolded twice_cfg_def] compile_prog_calls_source_unique])
-  show "(Statement 2, CallEdge (Some (STR ''x'')) [(STR ''p'')] [VIMP_Syntax.N 3],
+  show "(Statement 2, CallEdge (compile_dst (prog_tyenv twice_program) (Some (STR ''x''))) [(STR ''p'')]
+         (compile_actuals (prog_tyenv twice_program) [(STR ''p'')] [VIMP_Syntax.N 3]),
           FunctionEntry (STR ''twice''), Statement 3)
-          \<in> calls (compile_prog twice_pi twice_procs (STR ''main'') twice_main)"
+          \<in> calls (compile_prog (prog_tyenv twice_program) twice_pi twice_procs (STR ''main'') twice_main)"
     by eval
 qed
 
 lemma twice_call_site_action2:
-  "call_action_at_call_site (compile_prog twice_pi twice_procs (STR ''main'') twice_main) (Statement 3)
-     = CallEdge (Some (STR ''y'')) [(STR ''p'')] [VIMP_Syntax.N 10]"
+  "call_action_at_call_site (compile_prog (prog_tyenv twice_program) twice_pi twice_procs (STR ''main'') twice_main) (Statement 3)
+     = CallEdge (compile_dst (prog_tyenv twice_program) (Some (STR ''y''))) [(STR ''p'')]
+         (compile_actuals (prog_tyenv twice_program) [(STR ''p'')] [VIMP_Syntax.N 10])"
 proof (rule call_action_at_call_site_eq
     [OF twice_finC[unfolded twice_cfg_def] compile_prog_calls_source_unique])
-  show "(Statement 3, CallEdge (Some (STR ''y'')) [(STR ''p'')] [VIMP_Syntax.N 10],
+  show "(Statement 3, CallEdge (compile_dst (prog_tyenv twice_program) (Some (STR ''y''))) [(STR ''p'')]
+         (compile_actuals (prog_tyenv twice_program) [(STR ''p'')] [VIMP_Syntax.N 10]),
           FunctionEntry (STR ''twice''), Statement 4)
-          \<in> calls (compile_prog twice_pi twice_procs (STR ''main'') twice_main)"
+          \<in> calls (compile_prog (prog_tyenv twice_program) twice_pi twice_procs (STR ''main'') twice_main)"
     by eval
 qed
 
 lemma twice_context_at_call1:
-  "entry_state_context twice_gs twice_is_bot_pred twice_pi twice_procs (STR ''main'') twice_main
+  "entry_state_context twice_gs (prog_tyenv twice_program) twice_is_bot_pred twice_pi twice_procs (STR ''main'') twice_main
      (Statement 2) [] s = ctx_call1"
   by (simp add: entry_state_context_def[OF twice_entry_state_hyps]
                 entry_state_sigma_abs_def[OF twice_entry_state_hyps]
-                twice_call_site_action1 twice_route_abs_at_call1)
+                twice_call_site_action1 twice_route_abs_at_call1[simplified])
 
 lemma twice_context_at_call2:
-  "entry_state_context twice_gs twice_is_bot_pred twice_pi twice_procs (STR ''main'') twice_main
+  "entry_state_context twice_gs (prog_tyenv twice_program) twice_is_bot_pred twice_pi twice_procs (STR ''main'') twice_main
      (Statement 3) [] s = ctx_call2"
   by (simp add: entry_state_context_def[OF twice_entry_state_hyps]
                 entry_state_sigma_abs_def[OF twice_entry_state_hyps]
-                twice_call_site_action2 twice_route_abs_at_call2)
+                twice_call_site_action2 twice_route_abs_at_call2[simplified])
 
 subsection \<open>The concrete store-decoding context, and its agreement with the analysis\<close>
 
@@ -227,13 +237,25 @@ lemma twice_formals_at_call_site2: "formals_at_call_site twice_cfg (Statement 2)
 lemma twice_formals_at_call_site3: "formals_at_call_site twice_cfg (Statement 3) = [(STR ''p'')]"
   unfolding formals_at_call_site_def by eval
 
+text \<open>The two call sites' elaborated actuals: each constant argument is bound at the
+  formal's declared kind, so the compiled edge carries a typed literal rather than the
+  source \<^term>\<open>VIMP_Syntax.N\<close> node.\<close>
+
+lemma twice_actuals_call1:
+  "compile_actuals (prog_tyenv twice_program) [(STR ''p'')] [VIMP_Syntax.N 3] = [TN I32 3]"
+  by eval
+
+lemma twice_actuals_call2:
+  "compile_actuals (prog_tyenv twice_program) [(STR ''p'')] [VIMP_Syntax.N 10] = [TN I32 10]"
+  by eval
+
 lemma enter_route_exact_call1:
   assumes "u = Statement 2"
-    and "s' = call_enter twice_gs (CallEdge dst [(STR ''p'')] [VIMP_Syntax.N 3]) s"
+    and "s' = call_enter twice_gs (CallEdge dst [(STR ''p'')] (compile_actuals (prog_tyenv twice_program) [(STR ''p'')] [VIMP_Syntax.N 3])) s"
   shows "ivl_context u ctx s' = ctx_call1"
 proof -
   from assms(2) have "s' = (enter_state twice_gs s)((STR ''p'') := 3)"
-    by (simp add: call_enter_CallEdge bind_formals_def)
+    by (simp add: call_enter_CallEdge bind_formals_def twice_actuals_call1 ik_bounds_pins)
   thus ?thesis
     unfolding assms(1) ivl_context_def formals_context_sem_def
     by (simp add: twice_formals_at_call_site2 formals_context_def ivl_decode_def ctx_call1_val)
@@ -241,27 +263,27 @@ qed
 
 lemma enter_route_exact_call2:
   assumes "u = Statement 3"
-    and "s' = call_enter twice_gs (CallEdge dst [(STR ''p'')] [VIMP_Syntax.N 10]) s"
+    and "s' = call_enter twice_gs (CallEdge dst [(STR ''p'')] (compile_actuals (prog_tyenv twice_program) [(STR ''p'')] [VIMP_Syntax.N 10])) s"
   shows "ivl_context u ctx s' = ctx_call2"
 proof -
   from assms(2) have "s' = (enter_state twice_gs s)((STR ''p'') := 10)"
-    by (simp add: call_enter_CallEdge bind_formals_def)
+    by (simp add: call_enter_CallEdge bind_formals_def twice_actuals_call2 ik_bounds_pins)
   thus ?thesis
     unfolding assms(1) ivl_context_def formals_context_sem_def
     by (simp add: twice_formals_at_call_site3 formals_context_def ivl_decode_def ctx_call2_val)
 qed
 
 theorem ivl_context_eq_entry_state_context_call1:
-  assumes "s' = call_enter twice_gs (CallEdge dst [(STR ''p'')] [VIMP_Syntax.N 3]) s"
+  assumes "s' = call_enter twice_gs (CallEdge dst [(STR ''p'')] (compile_actuals (prog_tyenv twice_program) [(STR ''p'')] [VIMP_Syntax.N 3])) s"
   shows "ivl_context (Statement 2) [] s'
-           = entry_state_context twice_gs twice_is_bot_pred twice_pi twice_procs (STR ''main'') twice_main
+           = entry_state_context twice_gs (prog_tyenv twice_program) twice_is_bot_pred twice_pi twice_procs (STR ''main'') twice_main
                (Statement 2) [] s'"
   using enter_route_exact_call1[OF refl assms] by (simp add: twice_context_at_call1)
 
 theorem ivl_context_eq_entry_state_context_call2:
-  assumes "s' = call_enter twice_gs (CallEdge dst [(STR ''p'')] [VIMP_Syntax.N 10]) s"
+  assumes "s' = call_enter twice_gs (CallEdge dst [(STR ''p'')] (compile_actuals (prog_tyenv twice_program) [(STR ''p'')] [VIMP_Syntax.N 10])) s"
   shows "ivl_context (Statement 3) [] s'
-           = entry_state_context twice_gs twice_is_bot_pred twice_pi twice_procs (STR ''main'') twice_main
+           = entry_state_context twice_gs (prog_tyenv twice_program) twice_is_bot_pred twice_pi twice_procs (STR ''main'') twice_main
                (Statement 3) [] s'"
   using enter_route_exact_call2[OF refl assms] by (simp add: twice_context_at_call2)
 

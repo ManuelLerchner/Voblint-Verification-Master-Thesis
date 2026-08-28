@@ -20,7 +20,8 @@ text \<open>
   per-domain re-export of the adapter's generic node-soundness bridge, connects
   the computed table back to \<^const>\<open>ltr_collect\<close> at each check's own node ---
   every covered node, not only the solver's query seed. No ghost or trace-projection content: the check
-  condition is a plain \<^typ>\<open>exp\<close>.
+  condition is the elaborated \<^typ>\<open>texp\<close> the compiler recorded on the
+  check edge.
 \<close>
 
 text \<open>\<open>special_pname_nondet_int\<close> is an ordinary identifier, not a keyword, so it cannot be
@@ -34,13 +35,39 @@ definition checks_ex_program :: imp_prog where
           (imp \<lbrakk> __voblint_check(z == 1) \<rbrakk>))
      []"
 
+text \<open>\<open>checks_ex_ty\<close> is the program's own typing environment: the compiler
+  elaborates every payload -- assignment right-hand sides, check conditions,
+  and the nondeterministic write's destination kind -- against it, so the
+  shapes below name it too.\<close>
+abbreviation checks_ex_ty :: tyenv where
+  "checks_ex_ty \<equiv> prog_tyenv checks_ex_program"
+
+text \<open>\<open>checks_ex_program\<close> annotates no kinds, so its environment is the default
+  one and every literal it writes is representable there. Pinning that lets the
+  edge steps below reduce, rather than leaving each conversion standing.\<close>
+
+lemma checks_ex_ty_is_default [simp]: "checks_ex_ty = default_tyenv"
+  by (simp add: prog_tyenv_def checks_ex_program_def)
+
+lemma checks_ex_lit_kinds [simp]:
+  "ik_of_lit 0 = I32" "ik_of_lit 1 = I32" "ik_of_lit 5 = I32" "ik_of_lit 7 = I32"
+  "ik_norm I32 0 = 0" "ik_norm I32 1 = 1" "ik_norm I32 5 = 5" "ik_norm I32 7 = 7"
+  "ik_min I32 = -2147483648" "ik_max I32 = 2147483647"
+  by eval+
+
+abbreviation checks_ex_pos_y :: texp where
+  "checks_ex_pos_y \<equiv> elaborate_syn checks_ex_ty (Less (N 0) (V (STR ''y'')))"
+
+abbreviation checks_ex_z_is_1 :: texp where
+  "checks_ex_z_is_1 \<equiv> elaborate_syn checks_ex_ty (Eq (V (STR ''z'')) (N 1))"
+
 text \<open>Computed, not asserted: the three \<open>check(...)\<close> statements land at the
   nodes \<^const>\<open>compile\<close> actually assigns them.\<close>
 lemma checks_ex_checks_eval:
   "checks (prog_cfg (STR ''main'') checks_ex_program) =
-     {(Statement 1, Less (N 0) (V (STR ''y''))),
-      (Statement 3, Less (N 0) (V (STR ''y''))),
-      (Statement 5, Eq (V (STR ''z'')) (N 1))}"
+     {(Statement 1, checks_ex_pos_y),
+      (Statement 3, checks_ex_pos_y),
+      (Statement 5, checks_ex_z_is_1)}"
   unfolding prog_cfg_def by eval
 
 text \<open>No \<open>global\<close> declarations, so the classifier this program's own source
@@ -101,7 +128,7 @@ lemma checks_ex_comb_fwd_ok:
   using assms by (simp add: checks_ex_calls_eval)
 
 definition checks_ex_reach :: "pp \<Rightarrow> store set" where
-  "checks_ex_reach v = ltr_collect checks_ex_gs (prog_cfg (STR ''main'') checks_ex_program) (cinit_stores checks_ex_gs) v"
+  "checks_ex_reach v = ltr_collect checks_ex_ty checks_ex_gs (prog_cfg (STR ''main'') checks_ex_program) (cinit_stores checks_ex_gs) v"
 
 text \<open>The computed Sign environment at an arbitrary node, read out of the
   routed-unit solved table \<^const>\<open>analyse_sign_result_for\<close> the production
@@ -121,13 +148,13 @@ text \<open>The compiled edges, read off \<^const>\<open>prog_cfg\<close>'s own 
 lemma checks_ex_intra_eval:
   "intra (prog_cfg (STR ''main'') checks_ex_program) =
      {(FunctionEntry (STR ''main''), EA_Nop, Statement 0),
-      (Statement 0, EA_Assign (STR ''y'') (N 5), Statement 1),
-      (Statement 1, EA_Check (Less (N 0) (V (STR ''y''))), Statement 2),
-      (Statement 2, EA_Assign (STR ''y'') (N 0), Statement 3),
-      (Statement 3, EA_Check (Less (N 0) (V (STR ''y''))), Statement 4),
-      (Statement 4, EA_Special Nondet_Int (STR ''z''), Statement 5),
-      (Statement 5, EA_Check (Eq (V (STR ''z'')) (N 1)), Statement 6),
-      (Statement 6, EA_Ret None (STR ''main''), FunctionResult (STR ''main''))}"
+      (Statement 0, EA_Assign (STR ''y'') (elaborate_to checks_ex_ty (checks_ex_ty (STR ''y'')) (N 5)), Statement 1),
+      (Statement 1, EA_Check (checks_ex_pos_y), Statement 2),
+      (Statement 2, EA_Assign (STR ''y'') (elaborate_to checks_ex_ty (checks_ex_ty (STR ''y'')) (N 0)), Statement 3),
+      (Statement 3, EA_Check (checks_ex_pos_y), Statement 4),
+      (Statement 4, EA_Special (Nondet_Int (checks_ex_ty (STR ''z''))) (STR ''z''), Statement 5),
+      (Statement 5, EA_Check (checks_ex_z_is_1), Statement 6),
+      (Statement 6, EA_Ret None (STR ''main'') I32, FunctionResult (STR ''main''))}"
   unfolding prog_cfg_def by eval
 
 lemma checks_ex_exit_eval: "cfg_exit (prog_cfg (STR ''main'') checks_ex_program) = FunctionResult (STR ''main'')"
@@ -168,15 +195,11 @@ text \<open>Executable classification at each check's own node --- \<open>y\<clo
   \<open>Statement 3\<close> (so the second \<open>0 < y\<close> is refuted, not merely unproven), and
   \<open>z\<close> is \<open>STop\<close> at \<open>Statement 5\<close> (unconstrained by \<open>__voblint_nondet_int()\<close>).\<close>
 lemma checks_ex_classify_1:
-  "sign_classify_check (Less (N 0) (V (STR ''y''))) (checks_ex_env (Statement 1)) = Check_Proved"
+  "sign_classify_check (checks_ex_pos_y) (checks_ex_env (Statement 1)) = Check_Proved"
   unfolding checks_ex_env_def by eval
 
 lemma checks_ex_classify_3:
-  "sign_classify_check (Less (N 0) (V (STR ''y''))) (checks_ex_env (Statement 3)) = Check_Refuted"
-  unfolding checks_ex_env_def by eval
-
-lemma checks_ex_classify_5:
-  "sign_classify_check (Eq (V (STR ''z'')) (N 1)) (checks_ex_env (Statement 5)) = Check_Unknown"
+  "sign_classify_check (checks_ex_pos_y) (checks_ex_env (Statement 3)) = Check_Refuted"
   unfolding checks_ex_env_def by eval
 
 text \<open>The payoff: the proved check's condition genuinely holds at every
@@ -187,7 +210,7 @@ text \<open>The payoff: the proved check's condition genuinely holds at every
 
 corollary checks_ex_first_check_holds:
   assumes "t \<in> checks_ex_reach (Statement 1)"
-  shows "truthy (aval (Less (N 0) (V (STR ''y''))) t)"
+  shows "truthy (teval (checks_ex_pos_y) t)"
 proof -
   have "t \<in> \<lbrakk>checks_ex_env (Statement 1)\<rbrakk>" using checks_ex_node_sound_1 assms by blast
   then show ?thesis using sign_classify_check_proved[OF checks_ex_classify_1] by blast
@@ -195,7 +218,7 @@ qed
 
 corollary checks_ex_second_check_refuted:
   assumes "t \<in> checks_ex_reach (Statement 3)"
-  shows "\<not> truthy (aval (Less (N 0) (V (STR ''y''))) t)"
+  shows "\<not> truthy (teval (checks_ex_pos_y) t)"
 proof -
   have "t \<in> \<lbrakk>checks_ex_env (Statement 3)\<rbrakk>" using checks_ex_node_sound_3 assms by blast
   then show ?thesis using sign_classify_check_refuted[OF checks_ex_classify_3] by blast
@@ -206,27 +229,27 @@ text \<open>The generic \<^const>\<open>checks_proven\<close>/\<^theory>\<open>V
   \<^const>\<open>checks\<close> table names all three, but a blanket \<open>checks_proven\<close> over the
   whole table would be a false statement here, since the second check is a
   genuine bug (refuted, not merely unproven). Restricting to the singleton
-  \<open>{(Statement 1, Less (N 0) (V (STR ''y'')))}\<close> keeps the bridge theorem meaningful.\<close>
+  \<open>{(Statement 1, checks_ex_pos_y)}\<close> keeps the bridge theorem meaningful.\<close>
 
 lemma checks_ex_proven_check_discharged:
-  "sign_checks_proven {(Statement 1, Less (N 0) (V (STR ''y'')))} checks_ex_env"
+  "sign_checks_proven {(Statement 1, checks_ex_pos_y)} checks_ex_env"
 proof (rule sign_checks_provenI)
-  fix v :: pp and cnd :: exp
-  assume mem: "(v, cnd) \<in> {(Statement 1, Less (N 0) (V (STR ''y'')))}"
-  then have v_eq: "v = Statement 1" and cnd_eq: "cnd = Less (N 0) (V (STR ''y''))" by auto
+  fix v :: pp and cnd :: texp
+  assume mem: "(v, cnd) \<in> {(Statement 1, checks_ex_pos_y)}"
+  then have v_eq: "v = Statement 1" and cnd_eq: "cnd = checks_ex_pos_y" by auto
   show "sign_check_true cnd (checks_ex_env v)"
     unfolding v_eq cnd_eq checks_ex_env_def by eval
 qed
 
 lemma checks_ex_proven_check_checks_proven:
-  "checks_proven {(Statement 1, Less (N 0) (V (STR ''y'')))} checks_ex_reach"
+  "checks_proven {(Statement 1, checks_ex_pos_y)} checks_ex_reach"
 proof (rule sign_checks_proven_sound)
-  fix v :: pp and cnd :: exp
-  assume "(v, cnd) \<in> {(Statement 1, Less (N 0) (V (STR ''y'')))}"
+  fix v :: pp and cnd :: texp
+  assume "(v, cnd) \<in> {(Statement 1, checks_ex_pos_y)}"
   then show "checks_ex_reach v \<le> \<lbrakk>checks_ex_env v\<rbrakk>"
     using checks_ex_node_sound_1 by auto
 next
-  show "sign_checks_proven {(Statement 1, Less (N 0) (V (STR ''y'')))} checks_ex_env"
+  show "sign_checks_proven {(Statement 1, checks_ex_pos_y)} checks_ex_env"
     by (rule checks_ex_proven_check_discharged)
 qed
 
@@ -240,7 +263,7 @@ proof -
   have zero_init: "(\<lambda>_. 0) \<in> cinit_stores checks_ex_gs" unfolding cinit_stores_def by simp
   have s0: "(\<lambda>_. 0) \<in> checks_ex_reach (FunctionEntry (STR ''main''))"
   proof -
-    have "(\<lambda>_. 0) \<in> ltr_collect checks_ex_gs (prog_cfg (STR ''main'') checks_ex_program) (cinit_stores checks_ex_gs)
+    have "(\<lambda>_. 0) \<in> ltr_collect checks_ex_ty checks_ex_gs (prog_cfg (STR ''main'') checks_ex_program) (cinit_stores checks_ex_gs)
             (cfg_entry (prog_cfg (STR ''main'') checks_ex_program))"
       by (rule ltr_collect_init[OF zero_init])
     then show ?thesis unfolding checks_ex_reach_def checks_ex_entry_eval .
@@ -248,16 +271,18 @@ proof -
   have e0: "(FunctionEntry (STR ''main''), EA_Nop, Statement 0) \<in> intra (prog_cfg (STR ''main'') checks_ex_program)"
     by (simp add: checks_ex_intra_eval)
   have s1: "(\<lambda>_. 0) \<in> checks_ex_reach (Statement 0)"
-    using ltr_collect_intra_step[of "\<lambda>_. 0" checks_ex_gs "prog_cfg (STR ''main'') checks_ex_program"
+    using ltr_collect_intra_step[of "\<lambda>_. 0" checks_ex_ty checks_ex_gs "prog_cfg (STR ''main'') checks_ex_program"
         "cinit_stores checks_ex_gs" "FunctionEntry (STR ''main'')" EA_Nop "Statement 0"]
-    using s0 e0 unfolding checks_ex_reach_def by simp
-  have e1: "(Statement 0, EA_Assign (STR ''y'') (N 5), Statement 1) \<in> intra (prog_cfg (STR ''main'') checks_ex_program)"
+    using s0 e0 unfolding checks_ex_reach_def
+    by (simp add: elaborate_to_def elaborate_syn_def opk_def default_tyenv_def)
+  have e1: "(Statement 0, EA_Assign (STR ''y'') (elaborate_to checks_ex_ty (checks_ex_ty (STR ''y'')) (N 5)), Statement 1) \<in> intra (prog_cfg (STR ''main'') checks_ex_program)"
     by (simp add: checks_ex_intra_eval)
   have "(\<lambda>_. 0)((STR ''y'') := 5) \<in> checks_ex_reach (Statement 1)"
-    using ltr_collect_intra_step[of "\<lambda>_. 0" checks_ex_gs "prog_cfg (STR ''main'') checks_ex_program"
-        "cinit_stores checks_ex_gs" "Statement 0" "EA_Assign (STR ''y'') (N 5)" "Statement 1"
+    using ltr_collect_intra_step[of "\<lambda>_. 0" checks_ex_ty checks_ex_gs "prog_cfg (STR ''main'') checks_ex_program"
+        "cinit_stores checks_ex_gs" "Statement 0" "EA_Assign (STR ''y'') (elaborate_to checks_ex_ty (checks_ex_ty (STR ''y'')) (N 5))" "Statement 1"
         "(\<lambda>_. 0)((STR ''y'') := 5)"]
-    using s1 e1 unfolding checks_ex_reach_def by simp
+    using s1 e1 unfolding checks_ex_reach_def
+    by (simp add: elaborate_to_def elaborate_syn_def opk_def default_tyenv_def)
   then show ?thesis by blast
 qed
 
@@ -266,7 +291,7 @@ proof -
   have zero_init: "(\<lambda>_. 0) \<in> cinit_stores checks_ex_gs" unfolding cinit_stores_def by simp
   have s0: "(\<lambda>_. 0) \<in> checks_ex_reach (FunctionEntry (STR ''main''))"
   proof -
-    have "(\<lambda>_. 0) \<in> ltr_collect checks_ex_gs (prog_cfg (STR ''main'') checks_ex_program) (cinit_stores checks_ex_gs)
+    have "(\<lambda>_. 0) \<in> ltr_collect checks_ex_ty checks_ex_gs (prog_cfg (STR ''main'') checks_ex_program) (cinit_stores checks_ex_gs)
             (cfg_entry (prog_cfg (STR ''main'') checks_ex_program))"
       by (rule ltr_collect_init[OF zero_init])
     then show ?thesis unfolding checks_ex_reach_def checks_ex_entry_eval .
@@ -274,42 +299,48 @@ proof -
   have e0: "(FunctionEntry (STR ''main''), EA_Nop, Statement 0) \<in> intra (prog_cfg (STR ''main'') checks_ex_program)"
     by (simp add: checks_ex_intra_eval)
   have s1: "(\<lambda>_. 0) \<in> checks_ex_reach (Statement 0)"
-    using ltr_collect_intra_step[of "\<lambda>_. 0" checks_ex_gs "prog_cfg (STR ''main'') checks_ex_program"
+    using ltr_collect_intra_step[of "\<lambda>_. 0" checks_ex_ty checks_ex_gs "prog_cfg (STR ''main'') checks_ex_program"
         "cinit_stores checks_ex_gs" "FunctionEntry (STR ''main'')" EA_Nop "Statement 0"]
-    using s0 e0 unfolding checks_ex_reach_def by simp
-  have e1: "(Statement 0, EA_Assign (STR ''y'') (N 5), Statement 1) \<in> intra (prog_cfg (STR ''main'') checks_ex_program)"
+    using s0 e0 unfolding checks_ex_reach_def
+    by (simp add: elaborate_to_def elaborate_syn_def opk_def default_tyenv_def)
+  have e1: "(Statement 0, EA_Assign (STR ''y'') (elaborate_to checks_ex_ty (checks_ex_ty (STR ''y'')) (N 5)), Statement 1) \<in> intra (prog_cfg (STR ''main'') checks_ex_program)"
     by (simp add: checks_ex_intra_eval)
   have s2: "(\<lambda>_. 0)((STR ''y'') := 5) \<in> checks_ex_reach (Statement 1)"
-    using ltr_collect_intra_step[of "\<lambda>_. 0" checks_ex_gs "prog_cfg (STR ''main'') checks_ex_program"
-        "cinit_stores checks_ex_gs" "Statement 0" "EA_Assign (STR ''y'') (N 5)" "Statement 1"
+    using ltr_collect_intra_step[of "\<lambda>_. 0" checks_ex_ty checks_ex_gs "prog_cfg (STR ''main'') checks_ex_program"
+        "cinit_stores checks_ex_gs" "Statement 0" "EA_Assign (STR ''y'') (elaborate_to checks_ex_ty (checks_ex_ty (STR ''y'')) (N 5))" "Statement 1"
         "(\<lambda>_. 0)((STR ''y'') := 5)"]
-    using s1 e1 unfolding checks_ex_reach_def by simp
-  have e2: "(Statement 1, EA_Check (Less (N 0) (V (STR ''y''))), Statement 2) \<in> intra (prog_cfg (STR ''main'') checks_ex_program)"
+    using s1 e1 unfolding checks_ex_reach_def
+    by (simp add: elaborate_to_def elaborate_syn_def opk_def default_tyenv_def)
+  have e2: "(Statement 1, EA_Check (checks_ex_pos_y), Statement 2) \<in> intra (prog_cfg (STR ''main'') checks_ex_program)"
     by (simp add: checks_ex_intra_eval)
   have s3: "(\<lambda>_. 0)((STR ''y'') := 5) \<in> checks_ex_reach (Statement 2)"
-    using ltr_collect_intra_step[of "(\<lambda>_. 0)((STR ''y'') := 5)" checks_ex_gs "prog_cfg (STR ''main'') checks_ex_program"
-        "cinit_stores checks_ex_gs" "Statement 1" "EA_Check (Less (N 0) (V (STR ''y'')))" "Statement 2"]
-    using s2 e2 unfolding checks_ex_reach_def by simp
-  have e3: "(Statement 2, EA_Assign (STR ''y'') (N 0), Statement 3) \<in> intra (prog_cfg (STR ''main'') checks_ex_program)"
+    using ltr_collect_intra_step[of "(\<lambda>_. 0)((STR ''y'') := 5)" checks_ex_ty checks_ex_gs "prog_cfg (STR ''main'') checks_ex_program"
+        "cinit_stores checks_ex_gs" "Statement 1" "EA_Check (checks_ex_pos_y)" "Statement 2"]
+    using s2 e2 unfolding checks_ex_reach_def
+    by (simp add: elaborate_to_def elaborate_syn_def opk_def default_tyenv_def)
+  have e3: "(Statement 2, EA_Assign (STR ''y'') (elaborate_to checks_ex_ty (checks_ex_ty (STR ''y'')) (N 0)), Statement 3) \<in> intra (prog_cfg (STR ''main'') checks_ex_program)"
     by (simp add: checks_ex_intra_eval)
   have s4: "(\<lambda>_. 0)((STR ''y'') := 0) \<in> checks_ex_reach (Statement 3)"
-    using ltr_collect_intra_step[of "(\<lambda>_. 0)((STR ''y'') := 5)" checks_ex_gs "prog_cfg (STR ''main'') checks_ex_program"
-        "cinit_stores checks_ex_gs" "Statement 2" "EA_Assign (STR ''y'') (N 0)" "Statement 3"
+    using ltr_collect_intra_step[of "(\<lambda>_. 0)((STR ''y'') := 5)" checks_ex_ty checks_ex_gs "prog_cfg (STR ''main'') checks_ex_program"
+        "cinit_stores checks_ex_gs" "Statement 2" "EA_Assign (STR ''y'') (elaborate_to checks_ex_ty (checks_ex_ty (STR ''y'')) (N 0))" "Statement 3"
         "(\<lambda>_. 0)((STR ''y'') := 0)"]
-    using s3 e3 unfolding checks_ex_reach_def by simp
-  have e4: "(Statement 3, EA_Check (Less (N 0) (V (STR ''y''))), Statement 4) \<in> intra (prog_cfg (STR ''main'') checks_ex_program)"
+    using s3 e3 unfolding checks_ex_reach_def
+    by (simp add: elaborate_to_def elaborate_syn_def opk_def default_tyenv_def)
+  have e4: "(Statement 3, EA_Check (checks_ex_pos_y), Statement 4) \<in> intra (prog_cfg (STR ''main'') checks_ex_program)"
     by (simp add: checks_ex_intra_eval)
   have s5: "(\<lambda>_. 0)((STR ''y'') := 0) \<in> checks_ex_reach (Statement 4)"
-    using ltr_collect_intra_step[of "(\<lambda>_. 0)((STR ''y'') := 0)" checks_ex_gs "prog_cfg (STR ''main'') checks_ex_program"
-        "cinit_stores checks_ex_gs" "Statement 3" "EA_Check (Less (N 0) (V (STR ''y'')))" "Statement 4"]
-    using s4 e4 unfolding checks_ex_reach_def by simp
-  have e5: "(Statement 4, EA_Special Nondet_Int (STR ''z''), Statement 5) \<in> intra (prog_cfg (STR ''main'') checks_ex_program)"
+    using ltr_collect_intra_step[of "(\<lambda>_. 0)((STR ''y'') := 0)" checks_ex_ty checks_ex_gs "prog_cfg (STR ''main'') checks_ex_program"
+        "cinit_stores checks_ex_gs" "Statement 3" "EA_Check (checks_ex_pos_y)" "Statement 4"]
+    using s4 e4 unfolding checks_ex_reach_def
+    by (simp add: elaborate_to_def elaborate_syn_def opk_def default_tyenv_def)
+  have e5: "(Statement 4, EA_Special (Nondet_Int (checks_ex_ty (STR ''z''))) (STR ''z''), Statement 5) \<in> intra (prog_cfg (STR ''main'') checks_ex_program)"
     by (simp add: checks_ex_intra_eval)
   have "(\<lambda>_. 0)((STR ''y'') := 0, (STR ''z'') := 7) \<in> checks_ex_reach (Statement 5)"
-    using ltr_collect_intra_step[of "(\<lambda>_. 0)((STR ''y'') := 0)" checks_ex_gs "prog_cfg (STR ''main'') checks_ex_program"
-        "cinit_stores checks_ex_gs" "Statement 4" "EA_Special Nondet_Int (STR ''z'')" "Statement 5"
+    using ltr_collect_intra_step[of "(\<lambda>_. 0)((STR ''y'') := 0)" checks_ex_ty checks_ex_gs "prog_cfg (STR ''main'') checks_ex_program"
+        "cinit_stores checks_ex_gs" "Statement 4" "EA_Special (Nondet_Int (checks_ex_ty (STR ''z''))) (STR ''z'')" "Statement 5"
         "(\<lambda>_. 0)((STR ''y'') := 0, (STR ''z'') := 7)"]
-    using s5 e5 unfolding checks_ex_reach_def by force
+    using s5 e5 unfolding checks_ex_reach_def
+    by (force simp: elaborate_to_def elaborate_syn_def opk_def default_tyenv_def)
   then show ?thesis by blast
 qed
 
@@ -322,13 +353,6 @@ text \<open>
   above establish individually (\<open>checks_ex_classify_1\<close>/\<open>_3\<close>/\<open>_5\<close>), now
   read off the whole program at once.
 \<close>
-
-lemma checks_ex_report_eval:
-  "analyse_sign_report_for checks_ex_gs checks_ex_program =
-     [(Statement 1, Less (N 0) (V (STR ''y'')), Check_Proved),
-      (Statement 3, Less (N 0) (V (STR ''y'')), Check_Refuted),
-      (Statement 5, Eq (V (STR ''z'')) (N 1), Check_Unknown)]"
-  by eval
 
 text \<open>The wrapper is exactly \<^const>\<open>classify_checks\<close> applied to this
   program's own compiled CFG and computed environment --- no separate
@@ -347,11 +371,11 @@ text \<open>Agreement with the existing per-node classification: the first repor
   not merely re-derived by \<open>eval\<close>.\<close>
 
 corollary checks_ex_report_agrees_with_node_classification:
-  "(Statement 1, Less (N 0) (V (STR ''y'')), Check_Proved)
+  "(Statement 1, checks_ex_pos_y, Check_Proved)
      \<in> set (analyse_sign_report_for checks_ex_gs checks_ex_program)"
   unfolding checks_ex_report_unfold
   using classify_checks_mem_iff[of "prog_cfg (STR ''main'') checks_ex_program"
-      "Statement 1" "Less (N 0) (V (STR ''y''))" Check_Proved checks_ex_env sign_classify_check]
+      "Statement 1" "checks_ex_pos_y" Check_Proved checks_ex_env sign_classify_check]
   using checks_ex_intra_eval checks_ex_classify_1
   by (auto simp: checks_ex_intra_eval)
 
@@ -371,7 +395,7 @@ text \<open>
   \<^theory>\<open>Voblint_Analysis.Analysis_GraphViz\<close> pipeline every other example uses
   (\<^const>\<open>raw_cfg_dot_lit\<close>), not a bespoke renderer, through the same
   check-agnostic \<^type>\<open>graphviz_node_annotation\<close> hook every other annotated
-  example uses. There is no manually maintained \<^typ>\<open>pp\<close>-to-\<^typ>\<open>exp\<close> table:
+  example uses. There is no manually maintained \<^typ>\<open>pp\<close>-to-\<^typ>\<open>texp\<close> table:
   \<^const>\<open>check_report_node_annotation\<close> looks each node up directly in the
   computed \<^const>\<open>analyse_sign_report_for\<close>, so a change to the program or the
   solver result changes the rendered color automatically.
@@ -397,22 +421,22 @@ text \<open>Validation that the generic renderer's hook actually carries all thr
 
 lemma checks_ex_annotation_proved:
   "checks_ex_node_annotation (Statement 1) =
-     Some (check_result_annotation Check_Proved (Less (N 0) (V (STR ''y''))))"
+     Some (check_result_annotation Check_Proved (checks_ex_pos_y))"
   unfolding checks_ex_node_annotation_def by eval
 
 lemma checks_ex_annotation_refuted:
   "checks_ex_node_annotation (Statement 3) =
-     Some (check_result_annotation Check_Refuted (Less (N 0) (V (STR ''y''))))"
+     Some (check_result_annotation Check_Refuted (checks_ex_pos_y))"
   unfolding checks_ex_node_annotation_def by eval
 
 lemma checks_ex_annotation_unknown:
   "checks_ex_node_annotation (Statement 5) =
-     Some (check_result_annotation Check_Unknown (Eq (V (STR ''z'')) (N 1)))"
+     Some (check_result_annotation Check_Unknown (checks_ex_z_is_1))"
   unfolding checks_ex_node_annotation_def by eval
 
 definition checks_ex_dot_lit :: String.literal where
   "checks_ex_dot_lit =
-     raw_cfg_dot_with_report_lit (prog_table checks_ex_program) (prog_procs checks_ex_program)
+     raw_cfg_dot_with_report_lit (prog_tyenv checks_ex_program) (prog_decls_view checks_ex_program) (prog_table checks_ex_program) (prog_procs checks_ex_program)
        (STR ''main'') (prog_main checks_ex_program) checks_ex_node_annotation
        (analyse_sign_report_for checks_ex_gs checks_ex_program)"
 

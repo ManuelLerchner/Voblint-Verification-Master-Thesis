@@ -159,7 +159,7 @@ definition cfg_exit :: "cfg \<Rightarrow> cfg_node" where
   "cfg_exit g = (case cfg_entry g of FunctionEntry p \<Rightarrow> FunctionResult p | n \<Rightarrow> n)"
 
 lemma cfg_exit_compile_prog:
-  "cfg_exit (compile_prog \<Pi> ps mnm main) = FunctionResult mnm"
+  "cfg_exit (compile_prog \<Gamma> \<Pi> ps mnm main) = FunctionResult mnm"
   unfolding cfg_exit_def by (simp add: compile_prog_def Let_def split: prod.splits)
 
 subsection \<open>Compiled entry reaches its exit or its procedure result\<close>
@@ -170,7 +170,7 @@ text \<open>Along the derived successor relation, a compiled command's entry rea
   dependency, so no callee fragment is needed.\<close>
 lemma compile_reaches:
   fixes g :: cfg
-  shows "compile \<Pi> p c k n = (n', en, E, K)
+  shows "compile \<Gamma> \<Pi> p c k n = (n', en, E, K)
      \<Longrightarrow> E \<subseteq> intra g \<Longrightarrow> K \<subseteq> calls g
      \<Longrightarrow> cfg_reaches g en k \<or> cfg_reaches g en (FunctionResult p)"
 proof (induction c arbitrary: k n n' en E K)
@@ -181,22 +181,22 @@ proof (induction c arbitrary: k n n' en E K)
   then show ?case ..
 next
   case (Assign x a)
-  then have en: "en = Statement n" and mem: "(Statement n, EA_Assign x a, k) \<in> intra g"
+  then have en: "en = Statement n" and mem: "(Statement n, EA_Assign x (elaborate_to \<Gamma> (\<Gamma> x) a), k) \<in> intra g"
     by (auto split: prod.splits)
   from mem have "cfg_reaches g en k" unfolding en by (rule cfg_reaches_intra)
   then show ?case ..
 next
 
   case (Check b)
-  then have en: "en = Statement n" and mem: "(Statement n, EA_Check b, k) \<in> intra g"
+  then have en: "en = Statement n" and mem: "(Statement n, EA_Check (elaborate_syn \<Gamma> b), k) \<in> intra g"
     by (auto split: prod.splits)
   from mem have "cfg_reaches g en k" unfolding en by (rule cfg_reaches_intra)
   then show ?case ..
 next
   case (Seq c1 c2)
   obtain n1 en1 E1 K1 n2 en2 E2 K2 where
-      c1': "compile \<Pi> p c1 (Statement (n + csize c1)) n = (n1, en1, E1, K1)"
-    and c2': "compile \<Pi> p c2 k (n + csize c1) = (n2, en2, E2, K2)"
+      c1': "compile \<Gamma> \<Pi> p c1 (Statement (n + csize c1)) n = (n1, en1, E1, K1)"
+    and c2': "compile \<Gamma> \<Pi> p c2 k (n + csize c1) = (n2, en2, E2, K2)"
     and res: "en = en1" "E = E1 \<union> E2" "K = K1 \<union> K2"
     using Seq.prems(1) by (auto simp: Let_def split: prod.splits)
   have E1g: "E1 \<subseteq> intra g" and E2g: "E2 \<subseteq> intra g" using res Seq.prems(2) by auto
@@ -227,10 +227,10 @@ next
 next
   case (If b c1 c2)
   obtain n1 en1 E1 K1 n2 en2 E2 K2 where
-      c1': "compile \<Pi> p c1 k (Suc n) = (n1, en1, E1, K1)"
-    and c2': "compile \<Pi> p c2 k n1 = (n2, en2, E2, K2)"
+      c1': "compile \<Gamma> \<Pi> p c1 k (Suc n) = (n1, en1, E1, K1)"
+    and c2': "compile \<Gamma> \<Pi> p c2 k n1 = (n2, en2, E2, K2)"
     and res: "en = Statement n"
-             "E = {(Statement n, EA_Assume b, en1), (Statement n, EA_AssumeNot b, en2)}
+             "E = {(Statement n, EA_Assume (elaborate_syn \<Gamma> b), en1), (Statement n, EA_AssumeNot (elaborate_syn \<Gamma> b), en2)}
                     \<union> E1 \<union> E2"
              "K = K1 \<union> K2"
     using If.prems(1) by (auto split: prod.splits)
@@ -252,8 +252,8 @@ next
   qed
 next
   case (While b c)
-  have res: "en = Statement n" "(Statement n, EA_AssumeNot b, k) \<in> E"
-    using While.prems(1) by (auto split: prod.splits)  have "(Statement n, EA_AssumeNot b, k) \<in> intra g"
+  have res: "en = Statement n" "(Statement n, EA_AssumeNot (elaborate_syn \<Gamma> b), k) \<in> E"
+    using While.prems(1) by (auto split: prod.splits)  have "(Statement n, EA_AssumeNot (elaborate_syn \<Gamma> b), k) \<in> intra g"
     using res While.prems(2) by blast
   then have "cfg_reaches g en k" unfolding res(1) by (rule cfg_reaches_intra)
   then show ?case ..
@@ -265,30 +265,30 @@ next
   proof (cases "special_table q")
     case None
     with Call.prems have
-      "(Statement n, CallEdge dst (call_formals \<Pi> q) actuals, FunctionEntry q, k) \<in> calls g"
+      "(Statement n, CallEdge (compile_dst \<Gamma> dst) (call_formals \<Pi> q) (compile_actuals \<Gamma> (call_formals \<Pi> q) actuals), FunctionEntry q, k) \<in> calls g"
       by (auto simp: Let_def split: prod.splits)
     then show ?thesis by (rule cfg_reaches_comb_caller)
   next
     case (Some desc)
     note st = this
     show ?thesis
-    proof (cases "classify_special desc actuals")
+    proof (cases dst)
       case None
       with st Call.prems have "(Statement n, EA_Nop, k) \<in> intra g"
         by (auto simp: Let_def split: prod.splits)
       then show ?thesis by (rule cfg_reaches_intra)
     next
-      case (Some sc)
-      note cl = this
+      case (Some x)
+      note dx = this
       show ?thesis
-      proof (cases dst)
+      proof (cases "classify_special \<Gamma> (\<Gamma> x) desc actuals")
         case None
-        with st cl Call.prems have "(Statement n, EA_Nop, k) \<in> intra g"
+        with st dx Call.prems have "(Statement n, EA_Nop, k) \<in> intra g"
           by (auto simp: Let_def split: prod.splits)
         then show ?thesis by (rule cfg_reaches_intra)
       next
-        case (Some x)
-        with st cl Call.prems have "(Statement n, EA_Special sc x, k) \<in> intra g"
+        case (Some sc)
+        with st dx Call.prems have "(Statement n, EA_Special sc x, k) \<in> intra g"
           by (auto simp: Let_def split: prod.splits)
         then show ?thesis by (rule cfg_reaches_intra)
       qed
@@ -298,7 +298,7 @@ next
 next
   case (Return e)
   have en: "en = Statement n"
-    and mem: "(Statement n, EA_Ret e p, FunctionResult p) \<in> intra g"
+    and mem: "(Statement n, EA_Ret (map_option (elaborate_to \<Gamma> (proc_ret_kind \<Pi> p)) e) p (proc_ret_kind \<Pi> p), FunctionResult p) \<in> intra g"
     using Return.prems by (auto split: prod.splits)
   from mem have "cfg_reaches g en (FunctionResult p)" unfolding en by (rule cfg_reaches_intra)
   then show ?case ..
@@ -323,7 +323,7 @@ text \<open>\<^const>\<open>falls_through\<close> decides which disjunct of \<op
   \<open>compile_prog_entry_cfg_reaches_exit\<close>.\<close>
 lemma compile_reaches_falls_through:
   fixes g :: cfg
-  shows "compile \<Pi> p c k n = (n', en, E, K)
+  shows "compile \<Gamma> \<Pi> p c k n = (n', en, E, K)
      \<Longrightarrow> E \<subseteq> intra g \<Longrightarrow> K \<subseteq> calls g
      \<Longrightarrow> falls_through c \<Longrightarrow> cfg_reaches g en k"
 proof (induction c arbitrary: k n n' en E K)
@@ -333,20 +333,20 @@ proof (induction c arbitrary: k n n' en E K)
   from mem show ?case unfolding en by (rule cfg_reaches_intra)
 next
   case (Assign x a)
-  then have en: "en = Statement n" and mem: "(Statement n, EA_Assign x a, k) \<in> intra g"
+  then have en: "en = Statement n" and mem: "(Statement n, EA_Assign x (elaborate_to \<Gamma> (\<Gamma> x) a), k) \<in> intra g"
     by (auto split: prod.splits)
   from mem show ?case unfolding en by (rule cfg_reaches_intra)
 next
 
   case (Check b)
-  then have en: "en = Statement n" and mem: "(Statement n, EA_Check b, k) \<in> intra g"
+  then have en: "en = Statement n" and mem: "(Statement n, EA_Check (elaborate_syn \<Gamma> b), k) \<in> intra g"
     by (auto split: prod.splits)
   from mem show ?case unfolding en by (rule cfg_reaches_intra)
 next
   case (Seq c1 c2)
   obtain n1 en1 E1 K1 n2 en2 E2 K2 where
-      c1': "compile \<Pi> p c1 (Statement (n + csize c1)) n = (n1, en1, E1, K1)"
-    and c2': "compile \<Pi> p c2 k (n + csize c1) = (n2, en2, E2, K2)"
+      c1': "compile \<Gamma> \<Pi> p c1 (Statement (n + csize c1)) n = (n1, en1, E1, K1)"
+    and c2': "compile \<Gamma> \<Pi> p c2 k (n + csize c1) = (n2, en2, E2, K2)"
     and res: "en = en1" "E = E1 \<union> E2" "K = K1 \<union> K2"
     using Seq.prems(1) by (auto simp: Let_def split: prod.splits)
   have E1g: "E1 \<subseteq> intra g" and E2g: "E2 \<subseteq> intra g" using res Seq.prems(2) by auto
@@ -359,10 +359,10 @@ next
 next
   case (If b c1 c2)
   obtain n1 en1 E1 K1 n2 en2 E2 K2 where
-      c1': "compile \<Pi> p c1 k (Suc n) = (n1, en1, E1, K1)"
-    and c2': "compile \<Pi> p c2 k n1 = (n2, en2, E2, K2)"
+      c1': "compile \<Gamma> \<Pi> p c1 k (Suc n) = (n1, en1, E1, K1)"
+    and c2': "compile \<Gamma> \<Pi> p c2 k n1 = (n2, en2, E2, K2)"
     and res: "en = Statement n"
-             "E = {(Statement n, EA_Assume b, en1), (Statement n, EA_AssumeNot b, en2)}
+             "E = {(Statement n, EA_Assume (elaborate_syn \<Gamma> b), en1), (Statement n, EA_AssumeNot (elaborate_syn \<Gamma> b), en2)}
                     \<union> E1 \<union> E2"
              "K = K1 \<union> K2"
     using If.prems(1) by (auto split: prod.splits)
@@ -387,9 +387,9 @@ next
   qed
 next
   case (While b c)
-  have res: "en = Statement n" "(Statement n, EA_AssumeNot b, k) \<in> E"
+  have res: "en = Statement n" "(Statement n, EA_AssumeNot (elaborate_syn \<Gamma> b), k) \<in> E"
     using While.prems(1) by (auto split: prod.splits)
-  have "(Statement n, EA_AssumeNot b, k) \<in> intra g" using res While.prems(2) by blast
+  have "(Statement n, EA_AssumeNot (elaborate_syn \<Gamma> b), k) \<in> intra g" using res While.prems(2) by blast
   then show ?case unfolding res(1) by (rule cfg_reaches_intra)
 next
   case (Call dst q actuals)
@@ -399,30 +399,30 @@ next
   proof (cases "special_table q")
     case None
     with Call.prems have
-      "(Statement n, CallEdge dst (call_formals \<Pi> q) actuals, FunctionEntry q, k) \<in> calls g"
+      "(Statement n, CallEdge (compile_dst \<Gamma> dst) (call_formals \<Pi> q) (compile_actuals \<Gamma> (call_formals \<Pi> q) actuals), FunctionEntry q, k) \<in> calls g"
       by (auto simp: Let_def split: prod.splits)
     then show ?thesis by (rule cfg_reaches_comb_caller)
   next
     case (Some desc)
     note st = this
     show ?thesis
-    proof (cases "classify_special desc actuals")
+    proof (cases dst)
       case None
       with st Call.prems have "(Statement n, EA_Nop, k) \<in> intra g"
         by (auto simp: Let_def split: prod.splits)
       then show ?thesis by (rule cfg_reaches_intra)
     next
-      case (Some sc)
-      note cl = this
+      case (Some x)
+      note dx = this
       show ?thesis
-      proof (cases dst)
+      proof (cases "classify_special \<Gamma> (\<Gamma> x) desc actuals")
         case None
-        with st cl Call.prems have "(Statement n, EA_Nop, k) \<in> intra g"
+        with st dx Call.prems have "(Statement n, EA_Nop, k) \<in> intra g"
           by (auto simp: Let_def split: prod.splits)
         then show ?thesis by (rule cfg_reaches_intra)
       next
-        case (Some x)
-        with st cl Call.prems have "(Statement n, EA_Special sc x, k) \<in> intra g"
+        case (Some sc)
+        with st dx Call.prems have "(Statement n, EA_Special sc x, k) \<in> intra g"
           by (auto simp: Let_def split: prod.splits)
         then show ?thesis by (rule cfg_reaches_intra)
       qed
@@ -446,7 +446,7 @@ qed
 
 lemma compile_reaches_returns:
   fixes g :: cfg
-  shows "compile \<Pi> p c k n = (n', en, E, K)
+  shows "compile \<Gamma> \<Pi> p c k n = (n', en, E, K)
      \<Longrightarrow> E \<subseteq> intra g \<Longrightarrow> K \<subseteq> calls g
      \<Longrightarrow> \<not> falls_through c \<Longrightarrow> cfg_reaches g en (FunctionResult p)"
 proof (induction c arbitrary: k n n' en E K)
@@ -459,8 +459,8 @@ next
 next
   case (Seq c1 c2)
   obtain n1 en1 E1 K1 n2 en2 E2 K2 where
-      c1': "compile \<Pi> p c1 (Statement (n + csize c1)) n = (n1, en1, E1, K1)"
-    and c2': "compile \<Pi> p c2 k (n + csize c1) = (n2, en2, E2, K2)"
+      c1': "compile \<Gamma> \<Pi> p c1 (Statement (n + csize c1)) n = (n1, en1, E1, K1)"
+    and c2': "compile \<Gamma> \<Pi> p c2 k (n + csize c1) = (n2, en2, E2, K2)"
     and res: "en = en1" "E = E1 \<union> E2" "K = K1 \<union> K2"
     using Seq.prems(1) by (auto simp: Let_def split: prod.splits)
   have E1g: "E1 \<subseteq> intra g" and E2g: "E2 \<subseteq> intra g" using res Seq.prems(2) by auto
@@ -481,10 +481,10 @@ next
 next
   case (If b c1 c2)
   obtain n1 en1 E1 K1 n2 en2 E2 K2 where
-      c1': "compile \<Pi> p c1 k (Suc n) = (n1, en1, E1, K1)"
-    and c2': "compile \<Pi> p c2 k n1 = (n2, en2, E2, K2)"
+      c1': "compile \<Gamma> \<Pi> p c1 k (Suc n) = (n1, en1, E1, K1)"
+    and c2': "compile \<Gamma> \<Pi> p c2 k n1 = (n2, en2, E2, K2)"
     and res: "en = Statement n"
-             "E = {(Statement n, EA_Assume b, en1), (Statement n, EA_AssumeNot b, en2)}
+             "E = {(Statement n, EA_Assume (elaborate_syn \<Gamma> b), en1), (Statement n, EA_AssumeNot (elaborate_syn \<Gamma> b), en2)}
                     \<union> E1 \<union> E2"
              "K = K1 \<union> K2"
     using If.prems(1) by (auto split: prod.splits)
@@ -502,7 +502,7 @@ next
 next
   case (Return e)
   have en: "en = Statement n"
-    and mem: "(Statement n, EA_Ret e p, FunctionResult p) \<in> intra g"
+    and mem: "(Statement n, EA_Ret (map_option (elaborate_to \<Gamma> (proc_ret_kind \<Pi> p)) e) p (proc_ret_kind \<Pi> p), FunctionResult p) \<in> intra g"
     using Return.prems by (auto split: prod.splits)
   from mem show ?case unfolding en by (rule cfg_reaches_intra)
 next
@@ -513,16 +513,16 @@ qed
 
 lemma compile_proc_reaches_result:
   fixes g :: cfg
-  assumes "compile_proc \<Pi> p decl n = (n', E, K)"
+  assumes "compile_proc \<Gamma> \<Pi> p decl n = (n', E, K)"
       and "E \<subseteq> intra g" "K \<subseteq> calls g"
   shows "cfg_reaches g (FunctionEntry p) (FunctionResult p)"
 proof -
   let ?r = "n + csize (body decl)"
   obtain Eb where
-      body: "compile \<Pi> p (body decl) (Statement ?r) n = (?r, Statement n, Eb, K)"
+      body: "compile \<Gamma> \<Pi> p (body decl) (Statement ?r) n = (?r, Statement n, Eb, K)"
     and E_eq: "E = insert (FunctionEntry p, EA_Nop, Statement n)
                      (if falls_through (body decl)
-                      then insert (Statement ?r, EA_Ret None p, FunctionResult p) Eb
+                      then insert (Statement ?r, EA_Ret None p (proc_ret_kind \<Pi> p), FunctionResult p) Eb
                       else Eb)"
     by (rule compile_procE[OF assms(1)])
   have Ebg: "Eb \<subseteq> intra g" using E_eq assms(2) by (auto split: if_splits)
@@ -546,18 +546,18 @@ qed
 
 
 theorem compile_prog_entry_cfg_reaches_exit:
-  "cfg_reaches (compile_prog \<Pi> ps mnm main)
-     (cfg_entry (compile_prog \<Pi> ps mnm main)) (cfg_exit (compile_prog \<Pi> ps mnm main))"
+  "cfg_reaches (compile_prog \<Gamma> \<Pi> ps mnm main)
+     (cfg_entry (compile_prog \<Gamma> \<Pi> ps mnm main)) (cfg_exit (compile_prog \<Gamma> \<Pi> ps mnm main))"
 proof -
   obtain n1 Eprocs Kprocs where
-    procs: "compile_procs \<Pi> ps 0 = (n1, Eprocs, Kprocs)"
-    by (cases "compile_procs \<Pi> ps 0") auto
+    procs: "compile_procs \<Gamma> \<Pi> ps 0 = (n1, Eprocs, Kprocs)"
+    by (cases "compile_procs \<Gamma> \<Pi> ps 0") auto
   obtain n2 Emain Kmain where
-    cmain: "compile_proc \<Pi> mnm (proc_decl_of [] main) n1 = (n2, Emain, Kmain)"
-    by (cases "compile_proc \<Pi> mnm (proc_decl_of [] main) n1") auto
+    cmain: "compile_proc \<Gamma> \<Pi> mnm (proc_decl_of [] main) n1 = (n2, Emain, Kmain)"
+    by (cases "compile_proc \<Gamma> \<Pi> mnm (proc_decl_of [] main) n1") auto
   obtain Cprocs n1' where cprocs: "collect_checks_procs \<Pi> ps 0 = (Cprocs, n1')"
     by (cases "collect_checks_procs \<Pi> ps 0") auto
-  let ?g = "compile_prog \<Pi> ps mnm main"
+  let ?g = "compile_prog \<Gamma> \<Pi> ps mnm main"
   have g_intra: "intra ?g = Eprocs \<union> Emain" and g_calls: "calls ?g = Kprocs \<union> Kmain"
     and g_entry: "cfg_entry ?g = FunctionEntry mnm"
     using procs cmain cprocs by (simp_all add: compile_prog_def Let_def)

@@ -1,0 +1,10 @@
+// PARAM: --analysis interval
+// Rejection case. main is the program entry, held in its own field rather
+// than among the procedures, so it is not callable and yields no value. A
+// return kind written on it has nowhere to go, and was previously accepted
+// and silently discarded -- letting a program say something the language
+// does not mean.
+int32 main() {
+  int32 a;
+  a := 1
+}

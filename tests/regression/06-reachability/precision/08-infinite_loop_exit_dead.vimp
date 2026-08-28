@@ -8,6 +8,7 @@
 // second trailing check reads x so the suppression is seen to hold for a
 // check over a bound variable, not only for the literal sentinel.
 void main() {
+  int32 x;
   x := 0;
   while (true) {
     __voblint_check(false) // REFUTED

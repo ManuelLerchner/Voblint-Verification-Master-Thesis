@@ -27,6 +27,14 @@ rule token = parse
   | "while"             { WHILE }
   | "true"              { BOOL_TRUE }
   | "false"             { BOOL_FALSE }
+  | "int8"              { TINT8 }
+  | "uint8"             { TUINT8 }
+  | "int16"             { TINT16 }
+  | "uint16"            { TUINT16 }
+  | "int32"             { TINT32 }
+  | "uint32"            { TUINT32 }
+  | "int64"             { TINT64 }
+  | "uint64"            { TUINT64 }
   | ":="                { ASSIGN }
   | "+"                 { PLUS }
   | "-"                 { MINUS }
@@ -43,6 +51,6 @@ rule token = parse
   | ";"                 { SEMI }
   | ","                 { COMMA }
   | ident_start ident_char* as s  { IDENT s }
-  | digit+ as s                   { INT (int_of_string s) }
+  | digit+ as s                   { INT s }
   | eof                           { EOF }
   | _ as c  { error lexbuf (Printf.sprintf "unexpected character %C" c) }

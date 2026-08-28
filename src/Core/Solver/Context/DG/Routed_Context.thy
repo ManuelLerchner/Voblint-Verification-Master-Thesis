@@ -457,12 +457,13 @@ text \<open>
 \<close>
 
 locale routed_context_base_hetero =
-  dg_ctx_activation_base S gammaDG gs g gk0 route
+  dg_ctx_activation_base S gammaDG gs \<Gamma> g gk0 route
     "routed_cmb_g S gk0 seed_key resolve" "routed_extra_g seed_key gk0"
     bot0 s0d s0g sigma vars x0 sg gammaM
   for S :: "('D::bounded_semilattice_sup_bot, 'G::bounded_semilattice_sup_bot) dg_spec"
     and gammaDG :: "'D \<Rightarrow> 'G \<Rightarrow> store set"
     and gs :: "vname \<Rightarrow> bool"
+    and \<Gamma> :: tyenv
     and g gk0
     and route ("context\<^sup>#")
     and bot0 s0d s0g sigma vars x0 sg
@@ -500,7 +501,7 @@ locale routed_context_base_hetero =
        \<Longrightarrow> (cont, c1) \<in> vars"
     and call_enter_store_agree:
     "\<And>cl s es dst pars args p cont.
-       call_enter_store gs g cl s es
+       call_enter_store \<Gamma> gs g cl s es
        \<Longrightarrow> (cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g
        \<Longrightarrow> es = call_enter gs (CallEdge dst pars args) s"
 begin
@@ -794,7 +795,7 @@ theorem routed_context_comb:
   assumes ce: "(cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
     and s: "s \<in> gammaM (sg (Inl (cl, c1)))"
     and t: "t \<in> gammaM (sg (Inl (FunctionResult p, enterc cl c1 es)))"
-    and ces: "call_enter_store gs g cl s es"
+    and ces: "call_enter_store \<Gamma> gs g cl s es"
   shows "combine_collect gs dst s t \<in> gammaM (sg (Inl (cont, c1)))"
 proof (cases "(cl, c1) \<in> vars")
   case False
@@ -854,11 +855,12 @@ text \<open>
   choice of \<open>'G\<close> semantically inert.
 \<close>
 locale routed_context_hetero =
-  dg_ctx_activation_base S gamma_dg_base gs g gk0 route
+  dg_ctx_activation_base S gamma_dg_base gs \<Gamma> g gk0 route
     "routed_cmb_g S gk0 seed_key resolve" "routed_extra_g seed_key gk0"
     bot0 s0d s0g sigma vars x0 sg gamma_state_lift
   for S :: "('a::sound_domain abs_state lifted, 'G::bounded_semilattice_sup_bot) dg_spec"
     and gs :: "vname \<Rightarrow> bool"
+    and \<Gamma> :: tyenv
     and g gk0
     and route ("context\<^sup>#")
     and bot0 s0d s0g sigma vars x0 sg
@@ -896,12 +898,12 @@ locale routed_context_hetero =
        \<Longrightarrow> (cont, c1) \<in> vars"
     and call_enter_store_agree:
     "\<And>cl s es dst pars args p cont.
-       call_enter_store gs g cl s es
+       call_enter_store \<Gamma> gs g cl s es
        \<Longrightarrow> (cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g
        \<Longrightarrow> es = call_enter gs (CallEdge dst pars args) s"
 begin
 
-sublocale base: routed_context_base_hetero S gamma_dg_base gs
+sublocale base: routed_context_base_hetero S gamma_dg_base gs \<Gamma>
   g gk0 route bot0 s0d s0g sigma vars x0 sg seed_key resolve gamma_state_lift enterc
 proof unfold_locales
   show "finite (calls g)" by (rule finC)
@@ -936,7 +938,7 @@ next
   then show "(cont, c1) \<in> vars" by (rule comb_fwd)
 next
   fix cl s es dst pars args p cont
-  assume "call_enter_store gs g cl s es" "(cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
+  assume "call_enter_store \<Gamma> gs g cl s es" "(cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
   then show "es = call_enter gs (CallEdge dst pars args) s" by (rule call_enter_store_agree)
 qed
 

@@ -6,10 +6,11 @@
 // the solver visits unknowns in, and narrowing is order-sensitive -- a mode
 // that was already healthy is exactly where an ordering-induced precision
 // regression would show up unexplained.
-void f(n) {
+int32 f(int32 n) {
   return n
 }
 void main() {
+  int32 a, x;
   x := 5;
   if (x < 2) {
     a := f(1)

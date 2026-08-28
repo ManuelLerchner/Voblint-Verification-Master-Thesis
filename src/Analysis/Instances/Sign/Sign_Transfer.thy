@@ -7,27 +7,30 @@ section \<open>Sign transfer functions\<close>
 
 subsection \<open>Abstract assignment\<close>
 
+text \<open>
+  The compiler bakes the destination's declared kind into the right-hand
+  side as a \<^const>\<open>TCast\<close> node, so \<open>assign_sign\<close> performs no cast of its
+  own: evaluating the elaborated payload already lands in the target's
+  range, exactly as \<^const>\<open>teval\<close> does concretely.
+\<close>
+
 definition assign_sign ::
-    "vname => exp => (vname => sign) => (vname => sign)"
+    "vname => texp => (vname => sign) => (vname => sign)"
 where
-  "assign_sign x a \<sigma> = \<sigma>(x := aval_sign a \<sigma>)"
+  "assign_sign x a \<sigma> = \<sigma>(x := aval_sign_t a \<sigma>)"
 
 lemma assign_sign_sound:
   assumes gs: "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
-  shows "s(x := aval a s) \<in> \<lbrakk>assign_sign x a \<sigma>\<rbrakk>"
+  shows "s(x := teval a s) \<in> \<lbrakk>assign_sign x a \<sigma>\<rbrakk>"
   unfolding assign_sign_def gamma_state_def
 proof safe
   fix y
   from gs have V: "\<forall>z. s z \<in> gamma_sign (\<sigma> z)"
     using gamma_stateD[OF gs] by simp
-  show "(s(x := aval a s)) y \<in> gamma ((\<sigma>(x := aval_sign a \<sigma>)) y)"
-  proof (cases "y = x")
-    case True
-    with V show ?thesis by (simp add: aval_sign_sound)
-  next
-    case False
-    with V show ?thesis by simp
-  qed
+  have av: "teval a s \<in> gamma_sign (aval_sign_t a \<sigma>)"
+    using aval_sign_t_sound[OF V] .
+  show "(s(x := teval a s)) y \<in> gamma ((\<sigma>(x := aval_sign_t a \<sigma>)) y)"
+    using V av by (cases "y = x") simp_all
 qed
 
 text \<open>Nondeterministic and other special-call assignment (\<open>special_sign\<close>) lives
@@ -36,13 +39,15 @@ subsection \<open>Bundled transfer functions\<close>
 
 lemma assign_sign_mono:
   "sigma1 \<le> sigma2 \<Longrightarrow> assign_sign x a sigma1 \<le> assign_sign x a sigma2"
-  by (simp add: assign_sign_def aval_sign_mono le_funD le_funI)
+  by (simp add: assign_sign_def aval_sign_t_mono le_funD le_funI)
 
 subsection \<open>Skip, body-entry, and return\<close>
 
 text \<open>Sign has no lifecycle-specific abstract information: \<open>skip\<^sup>#\<close>/\<open>body\<^sup>#\<close> are
-  the identity, and \<open>return\<^sup>#\<close> reuses the same \<open>EA_Ret\<close>-publishes-to-\<open>ret_var\<close>
-  behaviour \<^const>\<open>apply_tf\<close> used to hardcode for every domain.\<close>
+  the identity. \<open>return\<^sup>#\<close> is an ordinary write to \<^const>\<open>ret_var\<close>: the owning
+  procedure's return kind is already baked into the returned payload as a
+  \<^const>\<open>TCast\<close> node, so evaluating it abstractly is both sound and as precise
+  as the domain allows -- no widening to \<^const>\<open>STop\<close> is needed.\<close>
 
 definition skip_sign :: "(vname => sign) => (vname => sign)" where
   "skip_sign \<sigma> = \<sigma>"
@@ -51,9 +56,9 @@ definition body_sign :: "pname => (vname => sign) => (vname => sign)" where
   "body_sign p \<sigma> = \<sigma>"
 
 definition return_sign ::
-    "exp option => pname => (vname => sign) => (vname => sign)"
+    "texp option => pname => (vname => sign) => (vname => sign)"
 where
-  "return_sign e p \<sigma> = (case e of None \<Rightarrow> \<sigma> | Some a \<Rightarrow> assign_sign ret_var a \<sigma>)"
+  "return_sign e p \<sigma> = (case e of None \<Rightarrow> \<sigma> | Some a \<Rightarrow> \<sigma>(ret_var := aval_sign_t a \<sigma>))"
 
 text \<open>A check observes its condition but never refines the state (that is
   \<open>abstract_check_domain\<close>'s job): Sign has no notion of that observation
@@ -72,9 +77,21 @@ lemma event_sign_sound: "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> s 
 
 lemma return_sign_sound:
   assumes gs: "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
-  shows "s(ret_var := (case e of None \<Rightarrow> s ret_var | Some a \<Rightarrow> aval a s)) \<in> \<lbrakk>return_sign e p \<sigma>\<rbrakk>"
-  using assign_sign_sound[OF gs] gs
-  by (cases e) (simp_all add: return_sign_def)
+  shows "s(ret_var := (case e of None \<Rightarrow> s ret_var | Some a \<Rightarrow> teval a s))
+           \<in> \<lbrakk>return_sign e p \<sigma>\<rbrakk>"
+proof (cases e)
+  case None
+  then show ?thesis using gs by (simp add: return_sign_def)
+next
+  case (Some a)
+  from gs have V: "\<forall>z. s z \<in> gamma_sign (\<sigma> z)"
+    using gamma_stateD[OF gs] by simp
+  have av: "teval a s \<in> gamma_sign (aval_sign_t a \<sigma>)"
+    using aval_sign_t_sound[OF V] .
+  show ?thesis
+    unfolding gamma_state_def Some
+    using V av by (auto simp: return_sign_def)
+qed
 
 lemma skip_sign_mono: "sigma1 \<le> sigma2 \<Longrightarrow> skip_sign sigma1 \<le> skip_sign sigma2"
   by (simp add: skip_sign_def)
@@ -87,7 +104,7 @@ lemma event_sign_mono: "sigma1 \<le> sigma2 \<Longrightarrow> event_sign ev sigm
 
 lemma return_sign_mono:
   "sigma1 \<le> sigma2 \<Longrightarrow> return_sign e p sigma1 \<le> return_sign e p sigma2"
-  by (cases e) (simp_all add: return_sign_def assign_sign_mono)
+  by (cases e) (simp_all add: return_sign_def aval_sign_t_mono le_fun_def)
 
 subsection \<open>Classifier-parametric transfer\<close>
 
@@ -103,9 +120,9 @@ definition enter_frame_sign_for ::
   "enter_frame_sign_for gs = enter_frame_D gs STop"
 
 definition enter_sign_for ::
-    "(vname => bool) => vname list => exp list =>
+    "(vname => bool) => vname list => texp list =>
       sign abs_state => sign abs_state" where
-  "enter_sign_for gs = enter_D gs STop aval_sign"
+  "enter_sign_for gs = enter_D gs STop aval_sign_t"
 
 lemma enter_frame_sign_for_sound:
   assumes gs: "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
@@ -117,17 +134,18 @@ qed
 
 lemma enter_sign_for_sound:
   assumes gs: "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
-  shows "bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state cls s)
+  shows "bind_formals xs (map (\<lambda>e. teval e s) es) (enter_state cls s)
            \<in> \<lbrakk>enter_sign_for cls xs es \<sigma>\<rbrakk>"
   unfolding enter_sign_for_def
 proof (rule enter_D_sound[OF gs])
   show "gamma STop = UNIV" by simp
 next
-  have V: "\<forall>z. s z \<in> gamma_sign (\<sigma> z)"
+  from gs have V: "\<forall>z. s z \<in> gamma_sign (\<sigma> z)"
     using gamma_stateD[OF gs] by simp
   show "list_all2 (\<lambda>v a. v \<in> gamma a)
-          (map (\<lambda>e. aval e s) es) (map (\<lambda>e. aval_sign e \<sigma>) es)"
-    using V by (simp add: list_all2_conv_all_nth aval_sign_sound)
+          (map (\<lambda>e. teval e s) es) (map (\<lambda>e. aval_sign_t e \<sigma>) es)"
+    using aval_sign_t_sound[OF V]
+    by (simp add: list_all2_conv_all_nth)
 qed
 
 definition sign_tf_for :: "(vname => bool) => sign domain_transfer" where
@@ -142,7 +160,14 @@ definition sign_tf_for :: "(vname => bool) => sign domain_transfer" where
                        tf_caller_cont = (\<lambda>_ \<sigma>. \<sigma>),
                        tf_combine_env = (\<lambda>_. combine_env_abs gs) |)"
 
-lemma sign_is_sound_transfer_for: "sound_transfer_for gs (sign_tf_for gs)"
+text \<open>
+  \<^const>\<open>branch_sign\<close> narrows a \<^const>\<open>TVar\<close> leaf only under the
+  domain's own \<^const>\<open>a_in_range\<close> certificate, so
+  @{thm [source] backward_domain.branch_sound} needs no premise about the
+  store and this obligation is discharged outright.
+\<close>
+lemma sign_is_sound_transfer_for:
+  "sound_transfer_for gs (sign_tf_for gs)"
   unfolding sign_tf_for_def
   apply unfold_locales
   subgoal by (simp add: assign_sign_sound)
@@ -167,13 +192,13 @@ lemma enter_sign_for_mono:
   shows "enter_sign_for gs xs es s1 \<le> enter_sign_for gs xs es s2"
   unfolding enter_sign_for_def
 proof (rule enter_D_mono[OF assms])
-  show "list_all2 (\<le>) (map (\<lambda>e. aval_sign e s1) es)
-                       (map (\<lambda>e. aval_sign e s2) es)"
-    using assms by (simp add: list_all2_conv_all_nth aval_sign_mono)
+  show "list_all2 (\<le>) (map (\<lambda>e. aval_sign_t e s1) es) (map (\<lambda>e. aval_sign_t e s2) es)"
+    using aval_sign_t_mono[OF assms] by (simp add: list_all2_conv_all_nth)
 qed
 
 lemma sign_tf_for_mono:
-  "s1 \<le> s2 \<Longrightarrow> apply_tf (sign_tf_for gs) a s1 \<le> apply_tf (sign_tf_for gs) a s2"
+  "s1 \<le> s2 \<Longrightarrow>
+   apply_tf (sign_tf_for gs) a s1 \<le> apply_tf (sign_tf_for gs) a s2"
   by (cases a)
      (auto simp: sign_tf_for_def assign_sign_mono special_sign_mono branch_sign_mono
                  skip_sign_mono body_sign_mono return_sign_mono enter_sign_for_mono

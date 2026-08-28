@@ -38,13 +38,14 @@ text \<open>
 \<close>
 
 locale entry_state_routed_context =
-  dg_ctx_activation_base S gamma_dg_base gs "compile_prog Pi ps mnm main" gk0
+  dg_ctx_activation_base S gamma_dg_base gs \<Gamma> "compile_prog \<Gamma> Pi ps mnm main" gk0
     "formals_route_lifted_gen S"
-    "routed_cmb_g S gk0 seed_key (static_resolve (compile_prog Pi ps mnm main))"
+    "routed_cmb_g S gk0 seed_key (static_resolve (compile_prog \<Gamma> Pi ps mnm main))"
     "routed_extra_g seed_key gk0"
     bot0 s0d s0g sigma vars x0 sg gamma_state_lift
   for S :: "('a::sound_domain abs_state lifted, 'G::bounded_semilattice_sup_bot) dg_spec"
     and gs :: "vname \<Rightarrow> bool"
+    and \<Gamma> :: tyenv
     and Pi :: proc_table and ps :: "pname list" and mnm :: pname and main :: com
     and gk0 :: 'k
     and bot0 s0d s0g sigma vars x0 sg
@@ -54,7 +55,7 @@ locale entry_state_routed_context =
     "\<And>u ctx dst pars args p cont.
        (u, ctx) \<in> vars
        \<Longrightarrow> (u, CallEdge dst pars args, FunctionEntry p, cont)
-             \<in> calls (compile_prog Pi ps mnm main)
+             \<in> calls (compile_prog \<Gamma> Pi ps mnm main)
        \<Longrightarrow> (FunctionEntry p,
               formals_route_lifted_gen S u ctx
                 (enter_local S pars args (locals (sigma (Inl (u, ctx))))
@@ -64,42 +65,42 @@ locale entry_state_routed_context =
     "\<And>cl c1 dst pars args p cont.
        (cl, c1) \<in> vars
        \<Longrightarrow> (cl, CallEdge dst pars args, FunctionEntry p, cont)
-             \<in> calls (compile_prog Pi ps mnm main)
+             \<in> calls (compile_prog \<Gamma> Pi ps mnm main)
        \<Longrightarrow> (cont, c1) \<in> vars"
 begin
 
-sublocale routed: routed_context_hetero S gs "compile_prog Pi ps mnm main" gk0
+sublocale routed: routed_context_hetero S gs \<Gamma> "compile_prog \<Gamma> Pi ps mnm main" gk0
   "formals_route_lifted_gen S" bot0 s0d s0g sigma vars x0 sg seed_key
-  "static_resolve (compile_prog Pi ps mnm main)"
-  "route_enterc_of_sigma S (formals_route_lifted_gen S) sigma gk0 (compile_prog Pi ps mnm main)"
+  "static_resolve (compile_prog \<Gamma> Pi ps mnm main)"
+  "route_enterc_of_sigma S (formals_route_lifted_gen S) sigma gk0 (compile_prog \<Gamma> Pi ps mnm main)"
 proof unfold_locales
-  show "finite (calls (compile_prog Pi ps mnm main))" using compile_prog_finite by simp
+  show "finite (calls (compile_prog \<Gamma> Pi ps mnm main))" using compile_prog_finite by simp
 next
   show "\<And>p ctx. seed_key p ctx \<noteq> gk0" by (rule seed_key_ne_gk0)
 next
   fix u ctx dst pars args p cont s
   assume "(u, CallEdge dst pars args, FunctionEntry p, cont)
-            \<in> calls (compile_prog Pi ps mnm main)"
-  then show "p \<in> set (static_resolve (compile_prog Pi ps mnm main) cont u
+            \<in> calls (compile_prog \<Gamma> Pi ps mnm main)"
+  then show "p \<in> set (static_resolve (compile_prog \<Gamma> Pi ps mnm main) cont u
                         (CallEdge dst pars args) (locals (sigma (Inl (u, ctx)))))"
     by (simp add: static_resolve_iff compile_prog_finite)
 next
   fix u ctx dst pars args p cont s
   assume "(u, ctx) \<in> vars"
     and ce: "(u, CallEdge dst pars args, FunctionEntry p, cont)
-           \<in> calls (compile_prog Pi ps mnm main)"
-  have fin: "finite (calls (compile_prog Pi ps mnm main))" using compile_prog_finite by blast
+           \<in> calls (compile_prog \<Gamma> Pi ps mnm main)"
+  have fin: "finite (calls (compile_prog \<Gamma> Pi ps mnm main))" using compile_prog_finite by blast
   show "formals_route_lifted_gen S u ctx
             (enter_local S pars args (locals (sigma (Inl (u, ctx)))) (globs (sigma (Inr gk0))))
             (CallEdge dst pars args)
           = route_enterc_of_sigma S (formals_route_lifted_gen S) sigma gk0
-              (compile_prog Pi ps mnm main) u ctx (call_enter gs (CallEdge dst pars args) s)"
+              (compile_prog \<Gamma> Pi ps mnm main) u ctx (call_enter gs (CallEdge dst pars args) s)"
     by (rule route_enterc_of_sigma_agree[OF fin compile_prog_calls_source_unique ce])
 next
   fix u ctx dst pars args p cont
   assume "(u, ctx) \<in> vars"
     and "(u, CallEdge dst pars args, FunctionEntry p, cont)
-           \<in> calls (compile_prog Pi ps mnm main)"
+           \<in> calls (compile_prog \<Gamma> Pi ps mnm main)"
   then show "(FunctionEntry p,
                 formals_route_lifted_gen S u ctx
                   (enter_local S pars args (locals (sigma (Inl (u, ctx))))
@@ -110,16 +111,16 @@ next
   fix cl c1 dst pars args p cont
   assume "(cl, c1) \<in> vars"
     and "(cl, CallEdge dst pars args, FunctionEntry p, cont)
-           \<in> calls (compile_prog Pi ps mnm main)"
+           \<in> calls (compile_prog \<Gamma> Pi ps mnm main)"
   then show "(cont, c1) \<in> vars" by (rule comb_fwd)
 next
   fix cl s es dst pars args p cont
-  assume ces: "call_enter_store gs (compile_prog Pi ps mnm main) cl s es"
+  assume ces: "call_enter_store \<Gamma> gs (compile_prog \<Gamma> Pi ps mnm main) cl s es"
     and ce: "(cl, CallEdge dst pars args, FunctionEntry p, cont)
-               \<in> calls (compile_prog Pi ps mnm main)"
+               \<in> calls (compile_prog \<Gamma> Pi ps mnm main)"
   obtain dst' pars' args' p' cont' where
       ce': "(cl, CallEdge dst' pars' args', FunctionEntry p', cont')
-              \<in> calls (compile_prog Pi ps mnm main)"
+              \<in> calls (compile_prog \<Gamma> Pi ps mnm main)"
     and es_eq: "es = call_enter gs (CallEdge dst' pars' args') s"
     using ces unfolding call_enter_store_def by blast
   have "CallEdge dst' pars' args' = CallEdge dst pars args"

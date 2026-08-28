@@ -152,13 +152,15 @@
 //   main_pp6_ctx0 -> main_pp7_ctx0: call-to-return bump
 // EXPECT-GRAPH-END
 
-global g;
+global int32 g;
 
-void bump(n) {
+int32 bump(int32 n) {
+  int32 m;
   m := n + 1;
   return m
 }
 void main() {
+  int32 a, b, c;
   g := 19;
   a := bump(5);
   b := bump(4);

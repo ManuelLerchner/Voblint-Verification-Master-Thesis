@@ -7,8 +7,9 @@
 // back up. The result is proved in every mode, including --context none:
 // the base case's num_iterat == 0 guard selects the `return 5` arm on any
 // state containing 0, and the recursive arm only forwards that value.
-global num_iterat;
-void rec() {
+global int32 num_iterat;
+int32 rec() {
+  int32 res;
   if (0 < num_iterat) {
     num_iterat := num_iterat - 1;
     res := rec();
@@ -19,6 +20,7 @@ void rec() {
   }
 }
 void main() {
+  int32 r;
   num_iterat := 11;
   r := rec();
   __voblint_check(r == 5) // PROVED

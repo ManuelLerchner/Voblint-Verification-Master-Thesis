@@ -1,0 +1,30 @@
+// PARAM: --analysis interval
+// Adapted from Goblint tests/regression/31-ikind-aware-ints/13-intervals-large.c
+// (equally its def_exc and enums twins, 07-defexc-large.c and
+// 14-enums-large.c): "unsigned long long x = 18446744073709551615ull;
+// if(x > 18446744073709551612ull){ a = 1; } ... y = x + 4;
+// __goblint_check(y == 3);".
+//
+// uint64's maximum is reached by wraparound instead of by a literal because
+// no literal can name it: C 6.4.4.1p5's ladder for an unsuffixed decimal
+// constant runs int32 then int64 and never an unsigned kind, so a constant
+// above int64's maximum has no type at all. uint64 has rank above int, so
+// nothing is promoted and 0 - 1 is computed in uint64 itself.
+global uint64 x;
+global uint64 y;
+global uint64 lim;
+void main() {
+  int32 a;
+  x := 0;
+  x := x - 1;
+  y := x + 4;
+  __voblint_check(y == 3); // PROVED
+  lim := x - 3;
+  a := 0;
+  if (lim < x) {
+    a := 1
+  } else {
+    skip
+  };
+  __voblint_check(a == 1) // PROVED
+}

@@ -1,0 +1,22 @@
+// PARAM: --analysis sign
+// Adapted from Goblint tests/regression/21-casts/04-neg-to-unsigned-invariant.c,
+// whose "(unsigned int)debug_value > 31U" branch is live for the same reason:
+// a conversion to an unsigned kind lands in that kind's range, which starts
+// at 0, whatever the source value was.
+//
+// t is completely unconstrained, so no magnitude reasoning applies -- Sign
+// still proves the check, because sign_cast answers an unsigned target kind
+// with SNonNeg regardless of its operand. uw's kind is uint32 rather than
+// uint8 so that the comparison's common type is uint32 too and the read of uw
+// needs no conversion of its own; a narrower kind would promote to int32
+// first, and sign_cast of a signed target kind is SNonNeg's top.
+//
+// known-imprecision/02-nondet_into_unsigned_ignores_kind.vimp is the same
+// check on a uw written directly by the nondeterministic call instead.
+global uint32 uw;
+void main() {
+  int32 t;
+  t := __voblint_nondet_int();
+  uw := t;
+  __voblint_check(!(uw < 0)) // PROVED
+}

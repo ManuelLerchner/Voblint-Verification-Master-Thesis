@@ -100,7 +100,8 @@ definition flagship_pi :: proc_table where
   "flagship_pi = prog_table flagship_prog"
 
 definition flagship_cfg :: cfg where
-  "flagship_cfg = compile_prog flagship_pi (prog_procs flagship_prog) prog_main_name (prog_main flagship_prog)"
+  "flagship_cfg = compile_prog (prog_tyenv flagship_prog) flagship_pi (prog_procs flagship_prog)
+     prog_main_name (prog_main flagship_prog)"
 
 lemma flagship_entry: "cfg_entry flagship_cfg = FunctionEntry (STR ''main'')"
   unfolding flagship_cfg_def prog_main_name_def by (rule inv16_entry_is_main)
@@ -136,7 +137,8 @@ text \<open>
 \<close>
 
 definition flagship_eqs :: "pp \<times> unit \<Rightarrow> (pp \<times> unit, unit, (ivl exec_dg_st, ivl exec_dg_st) dg_state) strategy_tree" where
-  "flagship_eqs = dg_gen_of (unit_dg_spec_st_for flagship_gs (ivl_tf_st_for flagship_gs) (ivl_enter_st_for flagship_gs))
+  "flagship_eqs = dg_gen_of (unit_dg_spec_st_for flagship_gs (ivl_tf_st_for flagship_gs)
+       (ivl_enter_st_for flagship_gs))
      flagship_cfg bot cinit_ivl_st (restrict_global_resolved_q cinit_ivl_st)"
 
 subsection \<open>Executable solve\<close>
@@ -239,27 +241,41 @@ lemma flagship_wf_reserved: "reserved_ret_var flagship_gs"
   by (auto simp: source_exp_def source_exp_def proc_decl_of_def ret_var_def reserved_ret_var_def
       split: if_splits)
 
+text \<open>
+  \<^locale>\<open>unit_dg_exec_analysis\<close>'s \<open>reduces\<close> field asks for \<open>action_reduces
+  (ivl_tf_st_for gs)\<close>: a void return and a check act as \<open>EA_Nop\<close>, and a value
+  return acts as an assignment into \<^const>\<open>ret_var\<close>. All three hold, because
+  \<^const>\<open>ivl_tf_st_for\<close>'s \<open>EA_Ret (Some a) p rk\<close> case evaluates the very
+  \<^typ>\<open>texp\<close> the edge carries, exactly as its \<open>EA_Assign\<close> case does. The
+  action's \<open>rk\<close> plays no part: the compiler already elaborated the returned
+  expression at the procedure's declared return kind, so the conversion sits
+  inside \<open>a\<close> as a \<^const>\<open>TCast\<close> node rather than being applied afterwards
+  from the edge's \<open>rk\<close> field.
+
+\<close>
 interpretation flagship_ex_reg:
   unit_dg_exec_analysis flagship_gs
-    "ivl_tf_for flagship_gs" "ivl_tf_st_for flagship_gs" "ivl_enter_st_for flagship_gs"
+    "ivl_tf_for flagship_gs"
+    "ivl_tf_st_for flagship_gs"
+    "ivl_enter_st_for flagship_gs"
     "TD_side_warrowing_apinis_Interp.solve" "TD_side_warrowing_apinis_Interp.solve_c"
 proof -
-  interpret flagship_ex_transfer: sound_transfer_for flagship_gs "ivl_tf_for flagship_gs"
+  interpret flagship_ex_transfer: sound_transfer_for flagship_gs
+    "ivl_tf_for flagship_gs"
     by (rule ivl_is_sound_transfer_for)
-  show "unit_dg_exec_analysis flagship_gs (ivl_tf_for flagship_gs) (ivl_tf_st_for flagship_gs)
+  show "unit_dg_exec_analysis flagship_gs (ivl_tf_for flagship_gs)
+          (ivl_tf_st_for flagship_gs)
           (ivl_enter_st_for flagship_gs)
           TD_side_warrowing_apinis_Interp.solve TD_side_warrowing_apinis_Interp.solve_c"
-    by unfold_locales
-       (rule flagship_wf_reserved
-             flagship_ex_transfer.tf_sound_assign_for flagship_ex_transfer.tf_sound_special_for
-             flagship_ex_transfer.tf_sound_branch_for
-             flagship_ex_transfer.tf_sound_enter_for flagship_ex_transfer.tf_sound_combine_env_for
-             ivl_tf_st_for_commute[folded fun_of_exec_dg_st_for_def]
-             ivl_enter_st_for_commute[folded fun_of_exec_dg_st_for_def]
-             action_reduces.ret_none[OF ivl_tf_st_for_reduces]
-             action_reduces.ret_some[OF ivl_tf_st_for_reduces]
-             action_reduces.check[OF ivl_tf_st_for_reduces]
-             TD_side_warrowing_apinis_Interp.part_post_solution_of_solve_c)+
+    apply unfold_locales
+       apply (rule flagship_wf_reserved)
+      apply (rule ivl_tf_st_for_commute[folded fun_of_exec_dg_st_for_def])
+     apply (rule ivl_enter_st_for_commute[folded fun_of_exec_dg_st_for_def])
+     apply (simp add: fun_eq_iff)
+    apply (simp add: fun_eq_iff)
+   apply (simp add: fun_eq_iff)
+  apply (erule TD_side_warrowing_apinis_Interp.part_post_solution_of_solve_c)
+  done
 qed
 
 text \<open>
@@ -280,9 +296,13 @@ lemma flagship_wf:
       split: if_splits)
 
 theorem flagship_source_run_sound:
-  assumes run: "star (pstep flagship_gs flagship_pi) (prog_main flagship_prog, s, []) (residual, t, frs)"
+  assumes run: "star (pstep (prog_tyenv flagship_prog) flagship_gs flagship_pi)
+                  (prog_main flagship_prog, s, [], proc_ret_kind flagship_pi prog_main_name)
+                  (residual, t, frs, rk)"
       and init: "s \<in> cinit_stores flagship_gs"
-  shows "\<exists>v stk. csim flagship_pi flagship_cfg (residual, t, frs) (v, t, stk)
+      and sty: "styped (prog_tyenv flagship_prog) s"
+  shows "\<exists>v stk. csim (prog_tyenv flagship_prog) flagship_pi flagship_cfg
+                     (residual, t, frs, rk) (v, t, stk)
                  \<and> t \<in> flagship_ex_reg.gamma (snd flagship_sol) v"
 proof -
   show ?thesis
@@ -294,7 +314,7 @@ proof -
               flagship_finE[unfolded flagship_cfg_def]
               flagship_finC[unfolded flagship_cfg_def]
               flagship_sound0[folded gamma_unit_def]
-              init run[unfolded flagship_cfg_def]])
+              init sty run[unfolded flagship_cfg_def]])
 qed
 
 
@@ -334,13 +354,18 @@ proof -
     by (simp add: fun_of_dg_st_for_simps fun_of_exec_dg_st_for_def C L)
 qed
 
+lemma flagship_sound_dg_spec_unit:
+  "sound_dg_spec (unit_dg_spec_for flagship_gs (ivl_tf_for flagship_gs))
+     (gamma_unit flagship_gs) flagship_gs"
+  by (rule sound_dg_spec_unit_for[OF ivl_is_sound_transfer_for flagship_wf_reserved])
+
 theorem flagship_head_bound_proper:
   "(\<lambda>_. 100) \<notin> sound_dg_spec.dg_gamma (gamma_unit flagship_gs)
                  (fun_of_dg_st_for flagship_gs \<circ> snd flagship_sol) (Statement (Suc 0))"
-  unfolding sound_dg_spec.dg_gamma_def[OF sound_dg_spec_unit_for[OF ivl_is_sound_transfer_for flagship_wf_reserved]]
+  unfolding sound_dg_spec.dg_gamma_def[OF flagship_sound_dg_spec_unit]
             gamma_unit_def gamma_state_def
-            sound_dg_spec.dg_D_def[OF sound_dg_spec_unit_for[OF ivl_is_sound_transfer_for flagship_wf_reserved]]
-            sound_dg_spec.dg_G_def[OF sound_dg_spec_unit_for[OF ivl_is_sound_transfer_for flagship_wf_reserved]]
+            sound_dg_spec.dg_D_def[OF flagship_sound_dg_spec_unit]
+            sound_dg_spec.dg_G_def[OF flagship_sound_dg_spec_unit]
   apply (simp only: mem_Collect_eq not_all)
   apply (rule exI[of _ "(STR ''x'')"])
   using head_x_bound apply (simp add: fun_of_dg_st_for_simps combine_env_abs_def)
@@ -363,10 +388,10 @@ definition flagship_graph_config ::
       context_key = (\<lambda>_. STR ''unit''),
       show_context = (\<lambda>_. ''unit''),
       locals_for_pp = (\<lambda>p.
-        scope_locals (compiled_procedure_scope flagship_gs Map.empty [] prog_main_name (prog_main flagship_prog)
+        scope_locals (compiled_procedure_scope flagship_gs (prog_tyenv flagship_prog) Map.empty [] prog_main_name (prog_main flagship_prog)
           flagship_cfg p)),
       return_slot_for_pp = (\<lambda>p.
-        scope_return_slot (compiled_procedure_scope flagship_gs Map.empty [] prog_main_name (prog_main flagship_prog)
+        scope_return_slot (compiled_procedure_scope flagship_gs (prog_tyenv flagship_prog) Map.empty [] prog_main_name (prog_main flagship_prog)
           flagship_cfg p)),
       globals_to_show = [],
       show_local = (\<lambda>_ _ vars d. map (\<lambda>x.
@@ -378,7 +403,9 @@ definition flagship_graph_config ::
       show_internal_globals = False,
       owner_of = (\<lambda>_. ''main''),
       cluster_label = (\<lambda>_ _. ''main / root context''),
-      source_text = Some (pretty_string_of_program Map.empty [] (prog_main flagship_prog) []),
+      source_text =
+        Some (pretty_string_of_program (prog_tyenv flagship_prog) (declared_scoped flagship_prog)
+                Map.empty [] (prog_main flagship_prog) (declared_global_vars flagship_prog)),
       node_annotation = (\<lambda>_ _. None)
     \<rparr>"
 

@@ -1,0 +1,20 @@
+// PARAM: --analysis interval
+// A declared global written twice in a row, read at a check right after the
+// second write: the second value survives exactly, the first does not
+// linger. Distinct from 04-global_written_constant.vimp (one write, so
+// there is nothing for a flow-insensitive summary to join against) and from
+// 12-widening/precision/01-global_self_feedback.vimp (a write that reads the
+// global's own prior value).
+//
+// The first write is deliberately 0, the same value cinit's zero-init
+// default gives g, so it is the second write that has to be the one the
+// check reads. A flow-insensitive global summary joins both writes into one
+// value for the whole program and cannot answer g == 1 at all; g lives in
+// the reachability-lifted local unknown instead, flow-sensitively, so pp2
+// reads back exactly [1,1].
+global int32 g;
+void main() {
+  g := 0;
+  g := 1;
+  __voblint_check(g == 1) // PROVED
+}

@@ -16,22 +16,26 @@
 // int closes it: its Sign component refines !(i == 0) on NonNegative to
 // Positive, the product lifts the interval past 0, and the arm dies (see
 // 16-composite-domain/precision/10).
-void h(i) {
+int32 h(int32 i) {
+  int32 r;
   if (i == 0) { return 3 } else { skip };
   if (0 < i) { r := h(i - 1); return r } else { skip };
   return 13
 }
-void g(i) {
+int32 g(int32 i) {
+  int32 r;
   if (i == 0) { return 2 } else { skip };
   if (0 < i) { r := h(i - 1); return r } else { skip };
   return 12
 }
-void f(i) {
+int32 f(int32 i) {
+  int32 r;
   if (i == 0) { return 1 } else { skip };
   if (0 < i) { r := g(i - 1); return r } else { skip };
   return 11
 }
 void main() {
+  int32 a, b, c, d, e, x, y;
   a := f(11); __voblint_check(a == 3);  // UNKNOWN
   b := g(12); __voblint_check(b == 3);  // UNKNOWN
   c := g(20); __voblint_check(c == 3);  // UNKNOWN

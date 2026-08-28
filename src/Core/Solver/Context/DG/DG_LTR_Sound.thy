@@ -15,12 +15,13 @@ locale sound_dg_spec_ltr_for = sound_dg_spec S gammaDG gs
   for S :: "('D::bounded_semilattice_sup_bot, 'G::bounded_semilattice_sup_bot) dg_spec"
     and gammaDG :: "'D \<Rightarrow> 'G \<Rightarrow> store set"
     and gs :: "vname \<Rightarrow> bool"
+    and \<Gamma> :: tyenv
 begin
 
 theorem dg_postfix_collect_sound_ltr_for:
   assumes pf: "dg_postfix g s0d s0g sigma"
     and sound0: "S0 \<subseteq> gammaDG s0d s0g"
-  shows "ltr_collect gs g S0 v \<subseteq> dg_gamma sigma v"
+  shows "ltr_collect \<Gamma> gs g S0 v \<subseteq> dg_gamma sigma v"
 proof (rule ltr_collect_semantic_postfix)
   show "S0 \<subseteq> dg_gamma sigma (cfg_entry g)"
     by (rule dg_postfix_gamma_entry[OF pf sound0])
@@ -53,7 +54,7 @@ corollary dg_post_solution_collect_sound_ltr_for:
     and finI: "finite (intra g)"
     and finC: "finite (calls g)"
     and sound0: "S0 \<subseteq> gammaDG s0d s0g"
-  shows "ltr_collect gs g S0 v \<subseteq> dg_gamma sigma v"
+  shows "ltr_collect \<Gamma> gs g S0 v \<subseteq> dg_gamma sigma v"
 proof -
   have pf: "dg_postfix g s0d s0g sigma"
     by (rule dg_post_solution_postfix[OF pp cover finI finC])
@@ -80,7 +81,7 @@ begin
 theorem hook_postfix_collect_sound_ltr:
   assumes pf: "hook_postfix g s0d s0g sigma"
     and sound0: "S0 \<subseteq> gammaDG s0d s0g"
-  shows "ltr_collect gs g S0 v \<subseteq> dg_hook_gamma gammaDG sigma v"
+  shows "ltr_collect \<Gamma> gs g S0 v \<subseteq> dg_hook_gamma gammaDG sigma v"
 proof (rule ltr_collect_semantic_postfix)
   show "S0 \<subseteq> dg_hook_gamma gammaDG sigma (cfg_entry g)"
   proof -
@@ -140,7 +141,7 @@ corollary hook_post_solution_collect_sound_ltr:
     and finI: "finite (intra g)"
     and finC: "finite (calls g)"
     and sound0: "S0 \<subseteq> gammaDG s0d s0g"
-  shows "ltr_collect gs g S0 v \<subseteq> dg_hook_gamma gammaDG sigma v"
+  shows "ltr_collect \<Gamma> gs g S0 v \<subseteq> dg_hook_gamma gammaDG sigma v"
 proof -
   have pf: "hook_postfix g s0d s0g sigma"
     by (rule hook_post_solution_postfix

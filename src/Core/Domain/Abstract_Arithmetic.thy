@@ -1,13 +1,27 @@
-  theory Abstract_Arithmetic
-  imports Abstract_Domain
+theory Abstract_Arithmetic
+  imports Abstract_Domain "Voblint_VIMP.VIMP_Typing"
 begin
 
-section \<open>Generic expression soundness\<close>
+section \<open>Generic typed expression soundness\<close>
+
+text \<open>
+  \<open>expression_domain_sound\<close> below takes \<open>cast\<close> as an explicit per-domain
+  locale parameter: every domain implements its own precise, Goblint-faithful
+  cast against its own concrete representation -- \<open>Interval\<close> wraps each bound
+  via modular reduction with a width check, \<open>Congruence\<close> wraps its class
+  through the wraparound modulus's \<open>gcd\<close>, \<open>Parity\<close> is the identity (its
+  modulus, \<open>2\<close>, divides every wraparound modulus this project defines), and
+  \<open>Sign\<close> is exact at \<open>SZero\<close> and sound at \<open>SNonNeg\<close> for an unsigned target
+  (\<open>ik_norm\<close> for an unsigned kind always lands in \<open>[0, ik_max ik]\<close>) -- source-
+  checked 2026-08-25 against \<open>intervalDomain.ml\<close>'s \<open>norm ~cast:true\<close> and
+  \<open>congruenceDomain.ml\<close>'s \<open>cast_to\<close> for the two domains with a genuine
+  concrete representation.
+\<close>
 
 text \<open>
   Sign, Interval, and Parity each prove an \<open>aval_<dom>_sound\<close> lemma with the
-  identical shape and proof script: structural induction on \<open>exp\<close>, discharged
-  by the same per-operator soundness facts. Arithmetic
+  identical shape and proof script: structural induction on \<open>texp\<close>,
+  discharged by the same per-operator soundness facts. Arithmetic
   (\<open>plus_sound\<close>/\<open>minus_sound\<close>/\<open>times_sound\<close>) and comparison/truthiness
   (\<open>lt\<close>/\<open>eqb\<close>/\<open>tobool\<close>) are genuinely domain-specific -- each domain's own
   case-split proof over its own representation -- so this locale does not try
@@ -17,12 +31,17 @@ text \<open>
   precision itself, so \<open>ev\<close> here only ever calls \<open>lt\<close>/\<open>eqb\<close>/\<open>tobool\<close> and
   never recomputes what a domain already knows about its own relation.
 
-  \<open>ev\<close>, \<open>lit\<close>, \<open>lt\<close>, \<open>eqb\<close>, and \<open>tobool\<close> are locale parameters, not derived:
-  interpreting this locale at a domain's own \<open>aval_<dom>\<close>, literal-embedding
-  function, and comparison/truthiness queries keeps every existing call site
-  of \<open>aval_<dom>\<close> untouched -- the shared \<open>aval_dom_sound\<close> lemma below is
-  stated over the same externally-fixed functions, not a locale-internal
-  reconstruction of them.
+  \<open>ev\<close> mirrors \<^const>\<open>teval\<close>'s own recursion exactly: it reads each
+  node's kind off the node itself and norms every arithmetic node once
+  through the domain's own \<open>cast\<close> (never at \<open>TLess\<close>/\<open>TEq\<close>/\<open>TNot\<close>/\<open>TAnd\<close>/
+  \<open>TOr\<close>'s own 0/1 result, which \<^const>\<open>teval\<close> never norms either -- 0 and 1
+  already fit every kind), and \<open>TCast\<close> is exactly one more \<open>cast\<close> at the
+  target kind. \<open>lit\<close>,
+  \<open>lt\<close>, \<open>eqb\<close>, \<open>tobool\<close>, and now \<open>cast\<close> stay locale parameters, not derived:
+  interpreting this locale at a domain's own literal-embedding function,
+  comparison/truthiness queries, and (Goblint-faithful where the domain has
+  a concrete representation to wrap) cast keeps every existing call site
+  untouched.
 \<close>
 
 text \<open>
@@ -30,57 +49,63 @@ text \<open>
   \<open>0\<close>/\<open>1\<close>. Abstractly that becomes \<open>Some True \<Rightarrow> lit 1\<close> (definitely true),
   \<open>Some False \<Rightarrow> lit 0\<close> (definitely false), \<open>None \<Rightarrow> lit 0 \<squnion> lit 1\<close> (unknown,
   soundly covering both) -- exactly Goblint's \<open>id_binary_pred\<close>/\<open>id_unary_log\<close>/
-  \<open>id_binary_log\<close> pattern. \<open>And\<close>/\<open>Or\<close> additionally exploit the annihilator
+  \<open>id_binary_log\<close> pattern. \<open>TAnd\<close>/\<open>TOr\<close> additionally exploit the annihilator
   case (a definitely-false conjunct settles the whole conjunction, a
-  definitely-true disjunct settles the whole disjunction) before falling back
-  to the fully unknown join, mirroring \<open>id_binary_log\<close>'s own short-circuit.
+  definitely-true disjunct settles the whole disjunction) before falling
+  back to the fully unknown join, mirroring \<open>id_binary_log\<close>'s own
+  short-circuit.
 
   Each operand is queried through \<open>lt\<close>/\<open>eqb\<close>/\<open>tobool\<close> only when it is not
   itself \<open>is_bot\<close>: an \<open>is_bot\<close> operand denotes an unreachable value (its
-  concretization is empty), so the whole comparison collapses to \<open>bot\<close> rather
-  than querying a value with no witness to reason about. This guard is not
-  optional bookkeeping -- \<open>bot\<close> is every domain's own least element, so a
-  comparison against it can widen to conflicting query answers as the
-  \<^emph>\<open>other\<close> operand widens; routing it through \<open>bot\<close> directly, before \<open>lt\<close>/
-  \<open>eqb\<close>/\<open>tobool\<close> ever see it, is what keeps \<open>aval_dom_mono\<close> provable without
-  demanding an impossible monotonicity obligation from those queries at their
-  own domain's bottom.
+  concretization is empty), so the whole comparison collapses to \<open>bot\<close>
+  rather than querying a value with no witness to reason about. This guard
+  is not optional bookkeeping -- \<open>bot\<close> is every domain's own least element,
+  so a comparison against it can widen to conflicting query answers as the
+  \<^emph>\<open>other\<close> operand widens; routing it through \<open>bot\<close> directly, before
+  \<open>lt\<close>/\<open>eqb\<close>/\<open>tobool\<close> ever see it, is what keeps \<open>aval_dom_mono\<close> provable
+  without demanding an impossible monotonicity obligation from those queries
+  at their own domain's bottom.
 \<close>
 
 locale expression_domain_sound =
-  fixes ev :: "exp \<Rightarrow> (vname \<Rightarrow> 'a::{sound_domain,plus,minus,times}) \<Rightarrow> 'a"
+  fixes ev :: "texp \<Rightarrow> (vname \<Rightarrow> 'a::{sound_domain,plus,minus,times}) \<Rightarrow> 'a"
+    and cast :: "ikind \<Rightarrow> 'a \<Rightarrow> 'a"
     and lit :: "int \<Rightarrow> 'a"
     and lt :: "'a \<Rightarrow> 'a \<Rightarrow> bool option"
     and eqb :: "'a \<Rightarrow> 'a \<Rightarrow> bool option"
     and tobool :: "'a \<Rightarrow> bool option"
-  assumes ev_N[simp]: "ev (N n) sigma = lit n"
-    and ev_V[simp]: "ev (V x) sigma = sigma x"
-    and ev_Plus[simp]: "ev (Plus e1 e2) sigma = ev e1 sigma + ev e2 sigma"
-    and ev_Minus[simp]: "ev (Minus e1 e2) sigma = ev e1 sigma - ev e2 sigma"
-    and ev_Times[simp]: "ev (Times e1 e2) sigma = ev e1 sigma * ev e2 sigma"
-    and ev_Less[simp]: "ev (Less e1 e2) sigma =
+  assumes ev_N[simp]: "ev (TN ik n) sigma = lit (ik_norm ik n)"
+    and ev_V[simp]: "ev (TVar ik x) sigma = sigma x"
+    and ev_Plus[simp]: "ev (TPlus ik e1 e2) sigma =
+         cast ik (ev e1 sigma + ev e2 sigma)"
+    and ev_Minus[simp]: "ev (TMinus ik e1 e2) sigma =
+         cast ik (ev e1 sigma - ev e2 sigma)"
+    and ev_Times[simp]: "ev (TTimes ik e1 e2) sigma =
+         cast ik (ev e1 sigma * ev e2 sigma)"
+    and ev_Cast[simp]: "ev (TCast ik e) sigma = cast ik (ev e sigma)"
+    and ev_Less[simp]: "ev (TLess e1 e2) sigma =
          (if is_bot (ev e1 sigma) \<or> is_bot (ev e2 sigma) then bot
           else if lt (ev e1 sigma) (ev e2 sigma) = Some True then lit 1
           else if lt (ev e1 sigma) (ev e2 sigma) = Some False then lit 0
           else lit 0 \<squnion> lit 1)"
-    and ev_Eq[simp]: "ev (exp.Eq e1 e2) sigma =
+    and ev_Eq[simp]: "ev (TEq e1 e2) sigma =
          (if is_bot (ev e1 sigma) \<or> is_bot (ev e2 sigma) then bot
           else if eqb (ev e1 sigma) (ev e2 sigma) = Some True then lit 1
           else if eqb (ev e1 sigma) (ev e2 sigma) = Some False then lit 0
           else lit 0 \<squnion> lit 1)"
-    and ev_Not[simp]: "ev (exp.Not e) sigma =
+    and ev_Not[simp]: "ev (TNot e) sigma =
          (if is_bot (ev e sigma) then bot
           else if tobool (ev e sigma) = Some True then lit 0
           else if tobool (ev e sigma) = Some False then lit 1
           else lit 0 \<squnion> lit 1)"
-    and ev_And[simp]: "ev (And e1 e2) sigma =
+    and ev_And[simp]: "ev (TAnd e1 e2) sigma =
          (if is_bot (ev e1 sigma) \<or> is_bot (ev e2 sigma) then bot
           else if tobool (ev e1 sigma) = Some False \<or> tobool (ev e2 sigma) = Some False
           then lit 0
           else if tobool (ev e1 sigma) = Some True \<and> tobool (ev e2 sigma) = Some True
           then lit 1
           else lit 0 \<squnion> lit 1)"
-    and ev_Or[simp]: "ev (Or e1 e2) sigma =
+    and ev_Or[simp]: "ev (TOr e1 e2) sigma =
          (if is_bot (ev e1 sigma) \<or> is_bot (ev e2 sigma) then bot
           else if tobool (ev e1 sigma) = Some True \<or> tobool (ev e2 sigma) = Some True
           then lit 1
@@ -105,24 +130,40 @@ locale expression_domain_sound =
        eqb p2 q2 = Some b \<Longrightarrow> eqb p1 q1 = Some b"
     and tobool_mono:
       "\<not> is_bot (p1::'a) \<Longrightarrow> p1 \<le> p2 \<Longrightarrow> tobool p2 = Some b \<Longrightarrow> tobool p1 = Some b"
+    and gamma_top: "gamma (top :: 'a) = UNIV"
+    and cast_sound: "(v::int) \<in> gamma (a::'a) \<Longrightarrow> ik_norm ik v \<in> gamma (cast ik a)"
+    and cast_mono: "a1 \<le> (a2::'a) \<Longrightarrow> cast ik a1 \<le> cast ik a2"
 begin
 
 lemma aval_dom_sound:
-  "(\<forall>x. s x \<in> gamma (sigma x)) \<Longrightarrow> aval a s \<in> gamma (ev a sigma)"
+  "(\<forall>x. s x \<in> gamma (sigma x)) \<Longrightarrow> teval a s \<in> gamma (ev a sigma)"
 proof (induction a arbitrary: s sigma)
-  case (N n) then show ?case by auto
+  case (TN ik n) then show ?case by simp
 next
-  case (V x) then show ?case by auto
+  case (TVar ik x) then show ?case by (simp add: cast_sound)
 next
-  case (Plus e1 e2) then show ?case by auto
+  case (TPlus ik e1 e2)
+  have h1: "teval e1 s \<in> gamma (ev e1 sigma)" using TPlus.IH(1) TPlus.prems by simp
+  have h2: "teval e2 s \<in> gamma (ev e2 sigma)" using TPlus.IH(2) TPlus.prems by simp
+  show ?case using cast_sound[OF plus_sound[OF h1 h2]] by simp
 next
-  case (Minus e1 e2) then show ?case by auto
+  case (TMinus ik e1 e2)
+  have h1: "teval e1 s \<in> gamma (ev e1 sigma)" using TMinus.IH(1) TMinus.prems by simp
+  have h2: "teval e2 s \<in> gamma (ev e2 sigma)" using TMinus.IH(2) TMinus.prems by simp
+  show ?case using cast_sound[OF minus_sound[OF h1 h2]] by simp
 next
-  case (Times e1 e2) then show ?case by auto
+  case (TTimes ik e1 e2)
+  have h1: "teval e1 s \<in> gamma (ev e1 sigma)" using TTimes.IH(1) TTimes.prems by simp
+  have h2: "teval e2 s \<in> gamma (ev e2 sigma)" using TTimes.IH(2) TTimes.prems by simp
+  show ?case using cast_sound[OF times_sound[OF h1 h2]] by simp
 next
-  case (Less e1 e2)
-  have h1: "aval e1 s \<in> gamma (ev e1 sigma)" using Less.IH(1) Less.prems by simp
-  have h2: "aval e2 s \<in> gamma (ev e2 sigma)" using Less.IH(2) Less.prems by simp
+  case (TCast ik e)
+  have h: "teval e s \<in> gamma (ev e sigma)" using TCast.IH TCast.prems by simp
+  show ?case using cast_sound[OF h] by simp
+next
+  case (TLess e1 e2)
+  have h1: "teval e1 s \<in> gamma (ev e1 sigma)" using TLess.IH(1) TLess.prems by simp
+  have h2: "teval e2 s \<in> gamma (ev e2 sigma)" using TLess.IH(2) TLess.prems by simp
   have nb1: "\<not> is_bot (ev e1 sigma)" using h1 is_bot_correct by auto
   have nb2: "\<not> is_bot (ev e2 sigma)" using h2 is_bot_correct by auto
   show ?case
@@ -142,9 +183,9 @@ next
     qed
   qed
 next
-  case (Eq e1 e2)
-  have h1: "aval e1 s \<in> gamma (ev e1 sigma)" using Eq.IH(1) Eq.prems by simp
-  have h2: "aval e2 s \<in> gamma (ev e2 sigma)" using Eq.IH(2) Eq.prems by simp
+  case (TEq e1 e2)
+  have h1: "teval e1 s \<in> gamma (ev e1 sigma)" using TEq.IH(1) TEq.prems by simp
+  have h2: "teval e2 s \<in> gamma (ev e2 sigma)" using TEq.IH(2) TEq.prems by simp
   have nb1: "\<not> is_bot (ev e1 sigma)" using h1 is_bot_correct by auto
   have nb2: "\<not> is_bot (ev e2 sigma)" using h2 is_bot_correct by auto
   show ?case
@@ -164,8 +205,8 @@ next
     qed
   qed
 next
-  case (Not e)
-  have h: "aval e s \<in> gamma (ev e sigma)" using Not.IH Not.prems by simp
+  case (TNot e)
+  have h: "teval e s \<in> gamma (ev e sigma)" using TNot.IH TNot.prems by simp
   have nb: "\<not> is_bot (ev e sigma)" using h is_bot_correct by auto
   show ?case
   proof (cases "tobool (ev e sigma) = Some True")
@@ -184,15 +225,15 @@ next
     qed
   qed
 next
-  case (And e1 e2)
-  have h1: "aval e1 s \<in> gamma (ev e1 sigma)" using And.IH(1) And.prems by simp
-  have h2: "aval e2 s \<in> gamma (ev e2 sigma)" using And.IH(2) And.prems by simp
+  case (TAnd e1 e2)
+  have h1: "teval e1 s \<in> gamma (ev e1 sigma)" using TAnd.IH(1) TAnd.prems by simp
+  have h2: "teval e2 s \<in> gamma (ev e2 sigma)" using TAnd.IH(2) TAnd.prems by simp
   have nb1: "\<not> is_bot (ev e1 sigma)" using h1 is_bot_correct by auto
   have nb2: "\<not> is_bot (ev e2 sigma)" using h2 is_bot_correct by auto
   show ?case
   proof (cases "tobool (ev e1 sigma) = Some False \<or> tobool (ev e2 sigma) = Some False")
     case True
-    then have "\<not> truthy (aval e1 s) \<or> \<not> truthy (aval e2 s)"
+    then have "\<not> truthy (teval e1 s) \<or> \<not> truthy (teval e2 s)"
       using tobool_sound h1 h2 by fastforce
     with True nb1 nb2 show ?thesis by auto
   next
@@ -200,7 +241,7 @@ next
     show ?thesis
     proof (cases "tobool (ev e1 sigma) = Some True \<and> tobool (ev e2 sigma) = Some True")
       case True
-      then have "truthy (aval e1 s) \<and> truthy (aval e2 s)"
+      then have "truthy (teval e1 s) \<and> truthy (teval e2 s)"
         using tobool_sound h1 h2 by auto
       with True False nb1 nb2 show ?thesis by simp
     next
@@ -211,15 +252,15 @@ next
     qed
   qed
 next
-  case (Or e1 e2)
-  have h1: "aval e1 s \<in> gamma (ev e1 sigma)" using Or.IH(1) Or.prems by simp
-  have h2: "aval e2 s \<in> gamma (ev e2 sigma)" using Or.IH(2) Or.prems by simp
+  case (TOr e1 e2)
+  have h1: "teval e1 s \<in> gamma (ev e1 sigma)" using TOr.IH(1) TOr.prems by simp
+  have h2: "teval e2 s \<in> gamma (ev e2 sigma)" using TOr.IH(2) TOr.prems by simp
   have nb1: "\<not> is_bot (ev e1 sigma)" using h1 is_bot_correct by auto
   have nb2: "\<not> is_bot (ev e2 sigma)" using h2 is_bot_correct by auto
   show ?case
   proof (cases "tobool (ev e1 sigma) = Some True \<or> tobool (ev e2 sigma) = Some True")
     case True
-    then have "truthy (aval e1 s) \<or> truthy (aval e2 s)"
+    then have "truthy (teval e1 s) \<or> truthy (teval e2 s)"
       using tobool_sound h1 h2 by fastforce
     with True nb1 nb2 show ?thesis by auto
   next
@@ -227,7 +268,7 @@ next
     show ?thesis
     proof (cases "tobool (ev e1 sigma) = Some False \<and> tobool (ev e2 sigma) = Some False")
       case True
-      then have "\<not> truthy (aval e1 s) \<and> \<not> truthy (aval e2 s)"
+      then have "\<not> truthy (teval e1 s) \<and> \<not> truthy (teval e2 s)"
         using tobool_sound h1 h2 by auto
       with True False nb1 nb2 show ?thesis by simp
     next
@@ -239,23 +280,35 @@ next
   qed
 qed
 
-
 lemma aval_dom_mono:
   "sigma1 \<le> sigma2 \<Longrightarrow> ev a sigma1 \<le> ev a sigma2"
 proof (induction a arbitrary: sigma1 sigma2)
-  case (N n) then show ?case by auto
+  case (TN ik n) then show ?case by simp
 next
-  case (V x) then show ?case by (auto simp add: le_funD)
+  case (TVar ik x) then show ?case by (simp add: cast_mono le_funD)
 next
-  case (Plus e1 e2) then show ?case by auto
+  case (TPlus ik e1 e2)
+  have "ev e1 sigma1 \<le> ev e1 sigma2" using TPlus.IH(1) TPlus.prems by simp
+  moreover have "ev e2 sigma1 \<le> ev e2 sigma2" using TPlus.IH(2) TPlus.prems by simp
+  ultimately show ?case using plus_mono by (simp add: cast_mono)
 next
-  case (Minus e1 e2) then show ?case by auto
+  case (TMinus ik e1 e2)
+  have "ev e1 sigma1 \<le> ev e1 sigma2" using TMinus.IH(1) TMinus.prems by simp
+  moreover have "ev e2 sigma1 \<le> ev e2 sigma2" using TMinus.IH(2) TMinus.prems by simp
+  ultimately show ?case using minus_mono by (simp add: cast_mono)
 next
-  case (Times e1 e2) then show ?case by auto
+  case (TTimes ik e1 e2)
+  have "ev e1 sigma1 \<le> ev e1 sigma2" using TTimes.IH(1) TTimes.prems by simp
+  moreover have "ev e2 sigma1 \<le> ev e2 sigma2" using TTimes.IH(2) TTimes.prems by simp
+  ultimately show ?case using times_mono by (simp add: cast_mono)
 next
-  case (Less e1 e2)
-  have p_mono: "ev e1 sigma1 \<le> ev e1 sigma2" using Less.IH(1) Less.prems by simp
-  have q_mono: "ev e2 sigma1 \<le> ev e2 sigma2" using Less.IH(2) Less.prems by simp
+  case (TCast ik e)
+  have "ev e sigma1 \<le> ev e sigma2" using TCast.IH TCast.prems by simp
+  then show ?case by (simp add: cast_mono)
+next
+  case (TLess e1 e2)
+  have p_mono: "ev e1 sigma1 \<le> ev e1 sigma2" using TLess.IH(1) TLess.prems by simp
+  have q_mono: "ev e2 sigma1 \<le> ev e2 sigma2" using TLess.IH(2) TLess.prems by simp
   show ?case
   proof (cases "is_bot (ev e1 sigma1) \<or> is_bot (ev e2 sigma1)")
     case True
@@ -279,9 +332,9 @@ next
     qed
   qed
 next
-  case (Eq e1 e2)
-  have p_mono: "ev e1 sigma1 \<le> ev e1 sigma2" using Eq.IH(1) Eq.prems by simp
-  have q_mono: "ev e2 sigma1 \<le> ev e2 sigma2" using Eq.IH(2) Eq.prems by simp
+  case (TEq e1 e2)
+  have p_mono: "ev e1 sigma1 \<le> ev e1 sigma2" using TEq.IH(1) TEq.prems by simp
+  have q_mono: "ev e2 sigma1 \<le> ev e2 sigma2" using TEq.IH(2) TEq.prems by simp
   show ?case
   proof (cases "is_bot (ev e1 sigma1) \<or> is_bot (ev e2 sigma1)")
     case True
@@ -305,8 +358,8 @@ next
     qed
   qed
 next
-  case (Not e)
-  have p_mono: "ev e sigma1 \<le> ev e sigma2" using Not.IH Not.prems by simp
+  case (TNot e)
+  have p_mono: "ev e sigma1 \<le> ev e sigma2" using TNot.IH TNot.prems by simp
   show ?case
   proof (cases "is_bot (ev e sigma1)")
     case True
@@ -328,9 +381,9 @@ next
     qed
   qed
 next
-  case (And e1 e2)
-  have p_mono: "ev e1 sigma1 \<le> ev e1 sigma2" using And.IH(1) And.prems by simp
-  have q_mono: "ev e2 sigma1 \<le> ev e2 sigma2" using And.IH(2) And.prems by simp
+  case (TAnd e1 e2)
+  have p_mono: "ev e1 sigma1 \<le> ev e1 sigma2" using TAnd.IH(1) TAnd.prems by simp
+  have q_mono: "ev e2 sigma1 \<le> ev e2 sigma2" using TAnd.IH(2) TAnd.prems by simp
   show ?case
   proof (cases "is_bot (ev e1 sigma1) \<or> is_bot (ev e2 sigma1)")
     case True
@@ -360,14 +413,15 @@ next
           nb1 nb2 nb1' nb2' sup_ge1 sup_ge2
         show ?thesis
           by (cases "tobool (ev e1 sigma1) = Some False \<or> tobool (ev e2 sigma1) = Some False";
-              cases "tobool (ev e1 sigma1) = Some True \<and> tobool (ev e2 sigma1) = Some True") auto
+              cases "tobool (ev e1 sigma1) = Some True \<and> tobool (ev e2 sigma1) = Some True")
+             auto
       qed
     qed
   qed
 next
-  case (Or e1 e2)
-  have p_mono: "ev e1 sigma1 \<le> ev e1 sigma2" using Or.IH(1) Or.prems by simp
-  have q_mono: "ev e2 sigma1 \<le> ev e2 sigma2" using Or.IH(2) Or.prems by simp
+  case (TOr e1 e2)
+  have p_mono: "ev e1 sigma1 \<le> ev e1 sigma2" using TOr.IH(1) TOr.prems by simp
+  have q_mono: "ev e2 sigma1 \<le> ev e2 sigma2" using TOr.IH(2) TOr.prems by simp
   show ?case
   proof (cases "is_bot (ev e1 sigma1) \<or> is_bot (ev e2 sigma1)")
     case True
@@ -397,7 +451,8 @@ next
           nb1 nb2 nb1' nb2' sup_ge1 sup_ge2
         show ?thesis
           by (cases "tobool (ev e1 sigma1) = Some True \<or> tobool (ev e2 sigma1) = Some True";
-              cases "tobool (ev e1 sigma1) = Some False \<and> tobool (ev e2 sigma1) = Some False") auto
+              cases "tobool (ev e1 sigma1) = Some False \<and> tobool (ev e2 sigma1) = Some False")
+             auto
       qed
     qed
   qed
@@ -406,4 +461,3 @@ qed
 end
 
 end
-

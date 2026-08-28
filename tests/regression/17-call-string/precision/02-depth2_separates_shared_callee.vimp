@@ -128,9 +128,10 @@
 //   main_pp6_ctx2 -> main_pp7_ctx2: call-to-return f
 // EXPECT-GRAPH-END
 
-void g(p) { return p + p }
-void f(p) { t := g(p); return t }
+int32 g(int32 p) { return p + p }
+int32 f(int32 p) { int32 t; t := g(p); return t }
 void main() {
+  int32 x, y;
   x := f(3);
   y := f(10);
   __voblint_check(x == 6); // PROVED

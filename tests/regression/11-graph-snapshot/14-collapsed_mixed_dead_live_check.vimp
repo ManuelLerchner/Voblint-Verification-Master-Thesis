@@ -1,0 +1,78 @@
+// PARAM: --analysis interval --context entry-state --context-graph collapsed
+// Collapsed counterpart of 05-expanded_mixed_dead_live_check.vimp: identical
+// program, default (collapsed) rendering. f's check node is covered under
+// both entry-state contexts, live under n=[1,1] and unreachable under
+// n=[5,5], and one physical CFG node can carry only one state -- so this
+// pins which one the join answers.
+//
+// Unreachable is the join's unit at the result boundary, so the dead
+// activation contributes nothing and the surviving one passes through
+// unchanged: the node renders live with n=[1,1], not dead, and not with the
+// dead context's empty interval widening it. The verdict follows the same
+// rule -- aggregate_verdicts combines Dead (the identity) with one Decided
+// verdict and keeps that verdict, so the report row is PROVED rather than
+// suppressed or downgraded to UNKNOWN.
+//
+// The two neighbouring cases this sits between: every covered context dead
+// (13-full-state-dot/03-entry_state_unreachable_node.vimp -- the node
+// renders unreachable and its row is suppressed), and two live contexts
+// that disagree (08-expanded_verdict_disagreement.vimp -- two Decided
+// verdicts, so the sup lands on UNKNOWN).
+// EXPECT-GRAPH-BEGIN
+// clusters:
+//   cluster_ctx_0:
+//     main_result_main_ctx0
+//     main_entry_main_ctx0
+//     main_pp4_ctx0
+//     main_pp5_ctx0
+//     main_pp6_ctx0
+//   cluster_ctx_1:
+//     f_pp1_ctx1
+//     f_pp2_ctx1
+//     f_pp3_ctx1
+//     f_pp0_ctx1
+//     f_entry_f_ctx1
+//     f_result_f_ctx1
+//
+// nodes:
+//   f_pp1_ctx1: pp1
+//       check n==1
+//       n=[1,1]
+//   f_pp2_ctx1: pp2
+//   f_pp3_ctx1: pp3
+//   main_result_main_ctx0: exit_main
+//   f_pp0_ctx1: pp0
+//   main_entry_main_ctx0: entry_main
+//   main_pp4_ctx0: pp4
+//   main_pp5_ctx0: pp5
+//   f_entry_f_ctx1: entry_f
+//   main_pp6_ctx0: pp6
+//   f_result_f_ctx1: exit_f
+//
+// edges:
+//   f_pp1_ctx1 -> f_pp3_ctx1: check(n==1)
+//   f_pp2_ctx1 -> f_pp3_ctx1: nop
+//   f_pp3_ctx1 -> f_result_f_ctx1: return
+//   f_pp0_ctx1 -> f_pp1_ctx1: n<2
+//   f_pp0_ctx1 -> f_pp2_ctx1: not (n<2)
+//   main_entry_main_ctx0 -> main_pp4_ctx0: nop
+//   f_entry_f_ctx1 -> f_pp0_ctx1: nop
+//   main_pp6_ctx0 -> main_result_main_ctx0: terminate
+//   main_pp4_ctx0 -> f_entry_f_ctx1: enter f(1)
+//   main_pp5_ctx0 -> f_entry_f_ctx1: enter f(5)
+//   f_result_f_ctx1 -> main_pp5_ctx0: combine
+//   f_result_f_ctx1 -> main_pp6_ctx0: combine
+//   main_pp4_ctx0 -> main_pp5_ctx0: call-to-return f
+//   main_pp5_ctx0 -> main_pp6_ctx0: call-to-return f
+// EXPECT-GRAPH-END
+void f(int32 n) {
+  if (n < 2) {
+    __voblint_check(n == 1) // PROVED
+  } else {
+    skip
+  }
+}
+void main() {
+  f(1);
+  f(5)
+}

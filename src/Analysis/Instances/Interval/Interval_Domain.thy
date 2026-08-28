@@ -29,8 +29,10 @@ value "string_of_eint MinInf"
 value "string_of_eint PlusInf"
 value "string_of_ivl (Ivl (Fin (-3)) PlusInf)"
 
-value "aval_ivl (Minus (V (STR ''x'')) (N 1)) ((\<lambda>_. ivl_top)((STR ''x'') := Ivl (Fin 5) (Fin 10)))"
-value "(bfilter_ivl (Less (V (STR ''x'')) (N 5)) True ((\<lambda>_. ivl_top)((STR ''x'') := Ivl (Fin 0) (Fin 10)))) (STR ''x'')"
+value "aval_ivl_t (TMinus I32 (TVar I32 (STR ''x'')) (TN I32 1))
+         ((\<lambda>_. ivl_top)((STR ''x'') := Ivl (Fin 5) (Fin 10)))"
+value "(bfilter_ivl (TLess (TVar I32 (STR ''x'')) (TN I32 5)) True
+         ((\<lambda>_. ivl_top)((STR ''x'') := Ivl (Fin 0) (Fin 10)))) (STR ''x'')"
 
 end
 

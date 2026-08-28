@@ -14,10 +14,11 @@
 //
 // x is unconstrained, so nothing here claims a value for a -- the check is on
 // the caller's own local, which the call cannot touch.
-void f(n) {
+int32 f(int32 n) {
   return n
 }
 void main() {
+  int32 a, x, y;
   x := __voblint_nondet_int();
   y := 7;
   if (x < 2) {

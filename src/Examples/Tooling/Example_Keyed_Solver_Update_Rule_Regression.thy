@@ -49,7 +49,7 @@ definition keyed_pred_sel ::
   "keyed_pred_sel g v ctx =
      (if v = Statement 1 then
         [(Inl (Statement 0, ctx), EA_Nop),
-         (Inl (Statement 0, ctx), EA_Assign (STR ''x'') (exp.N 0))]
+         (Inl (Statement 0, ctx), EA_Assign (STR ''x'') (TN I32 0))]
       else [])"
 
 text \<open>\<open>cmb\<close>/\<open>extra\<close> are never invoked: \<open>calls = {}\<close> makes
@@ -122,7 +122,7 @@ text \<open>Two real predecessors of \<open>Statement 2\<close>: \<open>Statemen
 definition merge_cfg :: cfg where
   "merge_cfg = \<lparr>
      intra = {(Statement 0, EA_Nop, Statement 2),
-              (Statement 1, EA_Assign (STR ''x'') (exp.N 0), Statement 2)},
+              (Statement 1, EA_Assign (STR ''x'') (TN I32 0), Statement 2)},
      calls = {}, cfg_entry = Statement 0, checks = {} \<rparr>"
 
 definition merge_eqs :: "(pp \<times> unit, unit, (ivl, ivl) dg_state) eqsT" where

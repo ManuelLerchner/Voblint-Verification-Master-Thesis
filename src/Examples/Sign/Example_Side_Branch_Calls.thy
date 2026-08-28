@@ -38,7 +38,7 @@ text \<open>
 
 definition branch_prog :: imp_prog where
   "branch_prog = program {
-     global input_val, result_val, out_val;
+     global int32 input_val, result_val, out_val;
 
      void compute() {
        Glocal := 1;
@@ -128,7 +128,7 @@ lemma ec_comb_fwd_ok:
   using assms ec_calls_cov_ball by (cases c1) fastforce
 
 lemma ec_node_sound:
-  "ltr_collect branch_prog_gs (prog_cfg prog_main_name branch_prog) (cinit_stores branch_prog_gs) v
+  "ltr_collect (prog_tyenv branch_prog) branch_prog_gs (prog_cfg prog_main_name branch_prog) (cinit_stores branch_prog_gs) v
      \<subseteq> \<lbrakk>case lookup_context (analyse_sign_result_for branch_prog_gs branch_prog) v () of
             Unreachable \<Rightarrow> bot | Reachable st \<Rightarrow> st\<rbrakk>"
   by (rule analyse_sign_result_node_sound_for
@@ -151,7 +151,7 @@ text \<open>
 \<close>
 
 corollary ec_certified_sound:
-  "ltr_collect branch_prog_gs (prog_cfg (STR ''main'') branch_prog) (cinit_stores branch_prog_gs) (cfg_exit (prog_cfg (STR ''main'') branch_prog))
+  "ltr_collect (prog_tyenv branch_prog) branch_prog_gs (prog_cfg (STR ''main'') branch_prog) (cinit_stores branch_prog_gs) (cfg_exit (prog_cfg (STR ''main'') branch_prog))
    \<le> \<lbrakk>branch_prog_env\<rbrakk>"
   unfolding branch_prog_env_def
   using ec_node_sound
@@ -164,12 +164,12 @@ text \<open>
 \<close>
 
 corollary ec_certified_sound_store:
-  assumes "s \<in> ltr_collect branch_prog_gs (prog_cfg (STR ''main'') branch_prog) (cinit_stores branch_prog_gs) (cfg_exit (prog_cfg (STR ''main'') branch_prog))"
+  assumes "s \<in> ltr_collect (prog_tyenv branch_prog) branch_prog_gs (prog_cfg (STR ''main'') branch_prog) (cinit_stores branch_prog_gs) (cfg_exit (prog_cfg (STR ''main'') branch_prog))"
   shows "s \<in> \<lbrakk>branch_prog_env\<rbrakk>"
   using assms ec_certified_sound by blast
 
-lemma ec_result_pos:
-  "branch_prog_env (STR ''result_val'') = SPos"
+lemma ec_result_top:
+  "branch_prog_env (STR ''result_val'') = STop"
   by (simp add: branch_prog_env_def) eval
 
 text \<open>
@@ -183,16 +183,20 @@ lemma ec_ginput_top:
   by (simp add: branch_prog_env_def) eval
 
 text \<open>
-  \<open>out_val\<close> is computed as \<open>100 * result_val\<close>.  With \<open>result_val = SPos\<close>
-  (@{thm ec_result_pos}), the product is \<open>SPos * SPos = SPos\<close>.
+  \<open>out_val\<close> is computed as \<open>100 * result_val\<close>. Sign combines the factors
+  exactly, but each write converts to its destination's kind, and a positive
+  sign concretizes to integers a 32-bit kind cannot all hold -- a product most
+  of all. So the conversion answers \<^const>\<open>STop\<close>, and the chain through
+  \<open>result_val\<close> and \<open>r\<close> carries that forward. Interval is the component that
+  can answer whether the product fits; Sign on its own cannot.
 \<close>
 
-lemma ec_gout_pos:
-  "branch_prog_env (STR ''out_val'') = SPos"
+lemma ec_gout_top:
+  "branch_prog_env (STR ''out_val'') = STop"
   by (simp add: branch_prog_env_def) eval
 
-lemma ec_r_pos:
-  "branch_prog_env (STR ''r'') = SPos"
+lemma ec_r_top:
+  "branch_prog_env (STR ''r'') = STop"
   by (simp add: branch_prog_env_def) eval
 
 text \<open>
@@ -219,7 +223,7 @@ text \<open>
   consults spelling. On the then-branch @{text "Glocal = 1 + 1 = 2"} and on the
   else-branch @{text "Glocal = 1 + 2 = 3"}; both are @{term SPos}.  In
   @{text "main"}, @{text "r"} counts procedure calls
-  (@{text "r := 0"} then two @{text "r := r + 1"}); at exit @{thm ec_r_pos}.
+  (@{text "r := 0"} then two @{text "r := r + 1"}); at exit @{thm ec_r_top}.
 \<close>
 
 end

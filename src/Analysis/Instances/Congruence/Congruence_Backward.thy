@@ -965,15 +965,136 @@ lemma inv_times_congruence_reductive:
   by (simp add: inv_times_congruence_def le_pair_def
         intersect_congruence_le1)
 
+text \<open>
+  \<open>inv_plus_congruence\<close>/\<open>inv_minus_congruence\<close>/\<open>inv_times_congruence\<close> take
+  \<open>r\<close> as an exact fact about the operation's result. In the \<open>int_dom\<close>
+  composite, the register standing for that result is itself an ikind-wrapped
+  value: what is actually known is \<open>ik_norm ik (x + y) : gamma_congruence r\<close>,
+  not \<open>x + y : gamma_congruence r\<close>. \<open>cong_unwrap\<close> bridges exactly this gap,
+  so composing it with the unchanged \<open>inv_plus_congruence\<close> family gives a
+  sound, monotone, reductive ikind-aware inverse -- uniformly for plus, minus,
+  and times, since all three share the same "\<open>r\<close> is the exact result" premise
+  shape.
+\<close>
 
+definition inv_plus_congruence_ik ::
+    "ikind => congruence => congruence => congruence =>
+     congruence * congruence"
+where
+  "inv_plus_congruence_ik ik r a b =
+     inv_plus_congruence (cong_unwrap ik r) a b"
+
+definition inv_minus_congruence_ik ::
+    "ikind => congruence => congruence => congruence =>
+     congruence * congruence"
+where
+  "inv_minus_congruence_ik ik r a b =
+     inv_minus_congruence (cong_unwrap ik r) a b"
+
+definition inv_times_congruence_ik ::
+    "ikind => congruence => congruence => congruence =>
+     congruence * congruence"
+where
+  "inv_times_congruence_ik ik r a b =
+     inv_times_congruence (cong_unwrap ik r) a b"
+
+lemma inv_plus_congruence_ik_sound:
+  assumes "x : gamma_congruence a"
+      and "y : gamma_congruence b"
+      and "ik_norm ik (x + y) : gamma_congruence r"
+  shows
+    "x : gamma_congruence
+       (fst (inv_plus_congruence_ik ik r a b)) \<and>
+     y : gamma_congruence
+       (snd (inv_plus_congruence_ik ik r a b))"
+proof -
+  have "x + y : gamma_congruence (cong_unwrap ik r)"
+    using cong_unwrap_sound[OF assms(3)] .
+  then show ?thesis
+    using inv_plus_congruence_sound[OF assms(1) assms(2)]
+    by (simp add: inv_plus_congruence_ik_def)
+qed
+
+lemma inv_minus_congruence_ik_sound:
+  assumes "x : gamma_congruence a"
+      and "y : gamma_congruence b"
+      and "ik_norm ik (x - y) : gamma_congruence r"
+  shows
+    "x : gamma_congruence
+       (fst (inv_minus_congruence_ik ik r a b)) \<and>
+     y : gamma_congruence
+       (snd (inv_minus_congruence_ik ik r a b))"
+proof -
+  have "x - y : gamma_congruence (cong_unwrap ik r)"
+    using cong_unwrap_sound[OF assms(3)] .
+  then show ?thesis
+    using inv_minus_congruence_sound[OF assms(1) assms(2)]
+    by (simp add: inv_minus_congruence_ik_def)
+qed
+
+lemma inv_times_congruence_ik_sound:
+  assumes "x : gamma_congruence a"
+      and "y : gamma_congruence b"
+      and "ik_norm ik (x * y) : gamma_congruence r"
+  shows
+    "x : gamma_congruence
+       (fst (inv_times_congruence_ik ik r a b)) \<and>
+     y : gamma_congruence
+       (snd (inv_times_congruence_ik ik r a b))"
+proof -
+  have "x * y : gamma_congruence (cong_unwrap ik r)"
+    using cong_unwrap_sound[OF assms(3)] .
+  then show ?thesis
+    using inv_times_congruence_sound[OF assms(1) assms(2)]
+    by (simp add: inv_times_congruence_ik_def)
+qed
+
+lemma inv_plus_congruence_ik_mono:
+  assumes "r1 <= r2" and "a1 <= a2" and "b1 <= b2"
+  shows
+    "le_pair
+      (inv_plus_congruence_ik ik r1 a1 b1)
+      (inv_plus_congruence_ik ik r2 a2 b2)"
+  using assms cong_unwrap_mono inv_plus_congruence_mono
+  by (simp add: inv_plus_congruence_ik_def)
+
+lemma inv_minus_congruence_ik_mono:
+  assumes "r1 <= r2" and "a1 <= a2" and "b1 <= b2"
+  shows
+    "le_pair
+      (inv_minus_congruence_ik ik r1 a1 b1)
+      (inv_minus_congruence_ik ik r2 a2 b2)"
+  using assms cong_unwrap_mono inv_minus_congruence_mono
+  by (simp add: inv_minus_congruence_ik_def)
+
+lemma inv_times_congruence_ik_mono:
+  assumes "r1 <= r2" and "a1 <= a2" and "b1 <= b2"
+  shows
+    "le_pair
+      (inv_times_congruence_ik ik r1 a1 b1)
+      (inv_times_congruence_ik ik r2 a2 b2)"
+  using assms cong_unwrap_mono inv_times_congruence_mono
+  by (simp add: inv_times_congruence_ik_def)
+
+lemma inv_plus_congruence_ik_reductive:
+  "le_pair (inv_plus_congruence_ik ik r a b) (a, b)"
+  by (simp add: inv_plus_congruence_ik_def inv_plus_congruence_reductive)
+
+lemma inv_minus_congruence_ik_reductive:
+  "le_pair (inv_minus_congruence_ik ik r a b) (a, b)"
+  by (simp add: inv_minus_congruence_ik_def inv_minus_congruence_reductive)
+
+lemma inv_times_congruence_ik_reductive:
+  "le_pair (inv_times_congruence_ik ik r a b) (a, b)"
+  by (simp add: inv_times_congruence_ik_def inv_times_congruence_reductive)
 
 
 subsection \<open>Backward-domain interpretation\<close>
 
 global_interpretation congruence_backward_domain:
-    backward_domain_refined intersect_congruence aval_congruence congruence_tobool
+    backward_domain_refined intersect_congruence aval_congruence_t congruence_tobool
       inv_less_congruence inv_eq_congruence
-      inv_plus_congruence inv_minus_congruence inv_times_congruence
+      inv_plus_congruence_ik inv_minus_congruence_ik inv_times_congruence_ik
   defines
     afilter_congruence = congruence_backward_domain.afilter
     and feasible_congruence = congruence_backward_domain.feasible
@@ -988,11 +1109,10 @@ proof unfold_locales
   show "n : gamma (intersect_congruence a b)"
     using intersect_congruence_sound[OF h1 h2] by simp
 next
-  fix s :: store and e :: exp
-    and sigma :: "vname => congruence"
+  fix s :: store and e :: texp and sigma :: "vname => congruence"
   assume H: "\<forall>x. s x : gamma (sigma x)"
-  show "aval e s : gamma (aval_congruence e sigma)"
-    by (rule congruence_arith.aval_dom_sound[OF H])
+  show "teval e s : gamma (aval_congruence_t e sigma)"
+    using aval_congruence_t_sound[of s sigma e] H by simp
 next
   fix n1 n2 :: int and a1 a2 :: congruence and result :: bool
   assume H1: "n1 : gamma a1"
@@ -1016,41 +1136,41 @@ next
      n2 : gamma (snd (inv_eq_congruence result a1 a2))"
     using inv_eq_congruence_sound[OF h1 h2 H3] by simp
 next
-  fix n1 n2 :: int and a1 a2 r :: congruence
+  fix n1 n2 :: int and a1 a2 r :: congruence and ik :: ikind
   assume H1: "n1 : gamma a1"
       and H2: "n2 : gamma a2"
-      and H3: "n1 + n2 : gamma r"
+      and H3: "ik_norm ik (n1 + n2) : gamma r"
   have h1: "n1 : gamma_congruence a1" using H1 by simp
   have h2: "n2 : gamma_congruence a2" using H2 by simp
-  have h3: "n1 + n2 : gamma_congruence r" using H3 by simp
+  have h3: "ik_norm ik (n1 + n2) : gamma_congruence r" using H3 by simp
   show
-    "n1 : gamma (fst (inv_plus_congruence r a1 a2)) \<and>
-     n2 : gamma (snd (inv_plus_congruence r a1 a2))"
-    using inv_plus_congruence_sound[OF h1 h2 h3] by simp
+    "n1 : gamma (fst (inv_plus_congruence_ik ik r a1 a2)) \<and>
+     n2 : gamma (snd (inv_plus_congruence_ik ik r a1 a2))"
+    using inv_plus_congruence_ik_sound[OF h1 h2 h3] by simp
 next
-  fix n1 n2 :: int and a1 a2 r :: congruence
+  fix n1 n2 :: int and a1 a2 r :: congruence and ik :: ikind
   assume H1: "n1 : gamma a1"
       and H2: "n2 : gamma a2"
-      and H3: "n1 - n2 : gamma r"
+      and H3: "ik_norm ik (n1 - n2) : gamma r"
   have h1: "n1 : gamma_congruence a1" using H1 by simp
   have h2: "n2 : gamma_congruence a2" using H2 by simp
-  have h3: "n1 - n2 : gamma_congruence r" using H3 by simp
+  have h3: "ik_norm ik (n1 - n2) : gamma_congruence r" using H3 by simp
   show
-    "n1 : gamma (fst (inv_minus_congruence r a1 a2)) \<and>
-     n2 : gamma (snd (inv_minus_congruence r a1 a2))"
-    using inv_minus_congruence_sound[OF h1 h2 h3] by simp
+    "n1 : gamma (fst (inv_minus_congruence_ik ik r a1 a2)) \<and>
+     n2 : gamma (snd (inv_minus_congruence_ik ik r a1 a2))"
+    using inv_minus_congruence_ik_sound[OF h1 h2 h3] by simp
 next
-  fix n1 n2 :: int and a1 a2 r :: congruence
+  fix n1 n2 :: int and a1 a2 r :: congruence and ik :: ikind
   assume H1: "n1 : gamma a1"
       and H2: "n2 : gamma a2"
-      and H3: "n1 * n2 : gamma r"
+      and H3: "ik_norm ik (n1 * n2) : gamma r"
   have h1: "n1 : gamma_congruence a1" using H1 by simp
   have h2: "n2 : gamma_congruence a2" using H2 by simp
-  have h3: "n1 * n2 : gamma_congruence r" using H3 by simp
+  have h3: "ik_norm ik (n1 * n2) : gamma_congruence r" using H3 by simp
   show
-    "n1 : gamma (fst (inv_times_congruence r a1 a2)) \<and>
-     n2 : gamma (snd (inv_times_congruence r a1 a2))"
-    using inv_times_congruence_sound[OF h1 h2 h3] by simp
+    "n1 : gamma (fst (inv_times_congruence_ik ik r a1 a2)) \<and>
+     n2 : gamma (snd (inv_times_congruence_ik ik r a1 a2))"
+    using inv_times_congruence_ik_sound[OF h1 h2 h3] by simp
 next
   fix p :: congruence and b :: bool and i :: int
   assume "congruence_tobool p = Some b" and "i : gamma p"
@@ -1063,10 +1183,10 @@ next
      intersect_congruence a2 b2"
     by (rule intersect_congruence_mono)
 next
-  fix e :: exp and sigma1 sigma2 :: "vname => congruence"
+  fix e :: texp and sigma1 sigma2 :: "vname => congruence"
   assume "sigma1 <= sigma2"
-  then show "aval_congruence e sigma1 <= aval_congruence e sigma2"
-    by (rule congruence_arith.aval_dom_mono)
+  then show "aval_congruence_t e sigma1 <= aval_congruence_t e sigma2"
+    by (rule aval_congruence_t_mono)
 next
   fix x1 x2 y1 y2 :: congruence and result :: bool
   assume "x1 <= x2" and "y1 <= y2"
@@ -1084,29 +1204,29 @@ next
       (inv_eq_congruence result x2 y2)"
     by (rule inv_eq_congruence_mono)
 next
-  fix r1 r2 x1 x2 y1 y2 :: congruence
+  fix r1 r2 x1 x2 y1 y2 :: congruence and ik :: ikind
   assume "r1 <= r2" and "x1 <= x2" and "y1 <= y2"
   then show
     "le_pair
-      (inv_plus_congruence r1 x1 y1)
-      (inv_plus_congruence r2 x2 y2)"
-    by (rule inv_plus_congruence_mono)
+      (inv_plus_congruence_ik ik r1 x1 y1)
+      (inv_plus_congruence_ik ik r2 x2 y2)"
+    by (rule inv_plus_congruence_ik_mono)
 next
-  fix r1 r2 x1 x2 y1 y2 :: congruence
+  fix r1 r2 x1 x2 y1 y2 :: congruence and ik :: ikind
   assume "r1 <= r2" and "x1 <= x2" and "y1 <= y2"
   then show
     "le_pair
-      (inv_minus_congruence r1 x1 y1)
-      (inv_minus_congruence r2 x2 y2)"
-    by (rule inv_minus_congruence_mono)
+      (inv_minus_congruence_ik ik r1 x1 y1)
+      (inv_minus_congruence_ik ik r2 x2 y2)"
+    by (rule inv_minus_congruence_ik_mono)
 next
-  fix r1 r2 x1 x2 y1 y2 :: congruence
+  fix r1 r2 x1 x2 y1 y2 :: congruence and ik :: ikind
   assume "r1 <= r2" and "x1 <= x2" and "y1 <= y2"
   then show
     "le_pair
-      (inv_times_congruence r1 x1 y1)
-      (inv_times_congruence r2 x2 y2)"
-    by (rule inv_times_congruence_mono)
+      (inv_times_congruence_ik ik r1 x1 y1)
+      (inv_times_congruence_ik ik r2 x2 y2)"
+    by (rule inv_times_congruence_ik_mono)
 next
   fix a b :: congruence
   show "intersect_congruence a b <= a"
@@ -1124,17 +1244,17 @@ next
   show "le_pair (inv_eq_congruence result a b) (a, b)"
     by (rule inv_eq_congruence_reductive)
 next
-  fix r a b :: congruence
-  show "le_pair (inv_plus_congruence r a b) (a, b)"
-    by (rule inv_plus_congruence_reductive)
+  fix r a b :: congruence and ik :: ikind
+  show "le_pair (inv_plus_congruence_ik ik r a b) (a, b)"
+    by (rule inv_plus_congruence_ik_reductive)
 next
-  fix r a b :: congruence
-  show "le_pair (inv_minus_congruence r a b) (a, b)"
-    by (rule inv_minus_congruence_reductive)
+  fix r a b :: congruence and ik :: ikind
+  show "le_pair (inv_minus_congruence_ik ik r a b) (a, b)"
+    by (rule inv_minus_congruence_ik_reductive)
 next
-  fix r a b :: congruence
-  show "le_pair (inv_times_congruence r a b) (a, b)"
-    by (rule inv_times_congruence_reductive)
+  fix r a b :: congruence and ik :: ikind
+  show "le_pair (inv_times_congruence_ik ik r a b) (a, b)"
+    by (rule inv_times_congruence_ik_reductive)
 next
   fix p1 p2 :: congruence and bv :: bool
   assume "\<not> is_bot p1" and "p1 <= p2" and "congruence_tobool p2 = Some bv"
@@ -1154,8 +1274,7 @@ lemma afilter_congruence_mono:
 
 lemma bfilter_congruence_mono:
   "sigma1 <= sigma2 \<Longrightarrow>
-   bfilter_congruence b result sigma1 <=
-   bfilter_congruence b result sigma2"
+   bfilter_congruence b result sigma1 <= bfilter_congruence b result sigma2"
   using congruence_backward_domain.bfilter_mono
   by (simp add: bfilter_congruence_def)
 end

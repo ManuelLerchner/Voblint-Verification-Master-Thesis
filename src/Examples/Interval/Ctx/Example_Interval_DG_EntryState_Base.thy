@@ -41,7 +41,7 @@ abbreviation rc_lookup :: "('a::bot) exec_dg_st \<Rightarrow> vname \<Rightarrow
   "rc_lookup s x \<equiv> lookup_resolved_st_q s (location_of rc_gs x)"
 
 definition rc_cfg :: cfg where
-  "rc_cfg = compile_prog rc_pi rc_procs (STR ''main'') rc_main"
+  "rc_cfg = compile_prog (prog_tyenv rc_program) rc_pi rc_procs (STR ''main'') rc_main"
 
 text \<open>
   The compiled CFG.  Procedure \<open>p\<close> runs between \<open>FunctionEntry (STR ''p'')\<close> and
@@ -57,7 +57,7 @@ text \<open>The one call site's shape, computed directly from \<open>rc_cfg\<clo
   on several.\<close>
 lemma rc_calls_shape:
   "\<forall>(u, ca, ce, cont) \<in> calls rc_cfg.
-     u = Statement 3 \<and> ca = CallEdge (Some (STR ''y'')) [(STR ''a'')] [V (STR ''x'')]
+     u = Statement 3 \<and> ca = CallEdge (compile_dst (prog_tyenv rc_program) (Some (STR ''y''))) [(STR ''a'')] (compile_actuals (prog_tyenv rc_program) [(STR ''a'')] [V (STR ''x'')])
        \<and> ce = FunctionEntry (STR ''p'') \<and> cont = Statement 4"
   unfolding rc_cfg_def by eval
 

@@ -1,5 +1,5 @@
 theory Checks
-  imports Abstract_Domain "Voblint_VIMP.VIMP_Expr"
+  imports Abstract_Domain "Voblint_VIMP.VIMP_Elaborated"
 begin
 
 section \<open>Ordinary assertion checks: store-only, no ghost-domain or
@@ -15,19 +15,19 @@ text \<open>
   interpretation already proves sound: this theory adds no new soundness
   anchor, only the store-level check layer on top of an existing one.
 
-  The table's shape, \<open>(pp \<times> exp) set\<close>, matches \<^const>\<open>checks\<close> --- the
+  The table's shape, \<open>(pp \<times> texp) set\<close>, matches \<^const>\<open>checks\<close> --- the
   \<^type>\<open>cfg\<close> record field the compiler populates from the \<open>EA_Check\<close> edges it
   emits --- directly: a caller instantiates \<open>ck\<close> with
   \<open>checks g\<close> for a compiled \<open>g\<close>, not with a hand-built table.
 \<close>
 
-type_synonym checks = "(pp \<times> exp) set"
+type_synonym checks = "(pp \<times> texp) set"
 
 definition checks_proven :: "checks \<Rightarrow> (pp \<Rightarrow> store set) \<Rightarrow> bool" where
-  "checks_proven ck reach \<longleftrightarrow> (\<forall>v c. (v, c) \<in> ck \<longrightarrow> (\<forall>s \<in> reach v. truthy (aval c s)))"
+  "checks_proven ck reach \<longleftrightarrow> (\<forall>v c. (v, c) \<in> ck \<longrightarrow> (\<forall>s \<in> reach v. truthy (teval c s)))"
 
 lemma checks_provenI [intro]:
-  "(\<And>v c s. (v, c) \<in> ck \<Longrightarrow> s \<in> reach v \<Longrightarrow> truthy (aval c s)) \<Longrightarrow> checks_proven ck reach"
+  "(\<And>v c s. (v, c) \<in> ck \<Longrightarrow> s \<in> reach v \<Longrightarrow> truthy (teval c s)) \<Longrightarrow> checks_proven ck reach"
   unfolding checks_proven_def by blast
 
 text \<open>\<open>checks_proven_sound\<close> is a thin extraction from \<open>checks_proven\<close> --- named
@@ -41,7 +41,7 @@ lemma checks_proven_sound [dest]:
   assumes proven: "checks_proven ck reach"
     and at_v: "(v, c) \<in> ck"
     and mem: "s \<in> reach v"
-  shows "truthy (aval c s)"
+  shows "truthy (teval c s)"
   using proven at_v mem unfolding checks_proven_def by blast
 
 end

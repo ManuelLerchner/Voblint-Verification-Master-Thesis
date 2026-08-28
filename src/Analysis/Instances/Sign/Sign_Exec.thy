@@ -63,10 +63,10 @@ text \<open>
 \<close>
 
 definition sign_ops :: "sign numeric_ops" where
-  "sign_ops = \<lparr> n_aval = aval_sign, n_bfilter = branch_sign_st, n_top = STop \<rparr>"
+  "sign_ops = \<lparr> n_aval = aval_sign_t, n_bfilter = branch_sign_st, n_top = STop \<rparr>"
 
 definition branch_sign_st_for ::
-  "(vname => bool) => exp => bool => sign resolved_st_q => sign resolved_st_q" where
+  "(vname => bool) => texp => bool => sign resolved_st_q => sign resolved_st_q" where
   "branch_sign_st_for = generic_branch_st_for sign_ops"
 
 lemma branch_sign_st_for_eq [simp]:
@@ -74,15 +74,14 @@ lemma branch_sign_st_for_eq [simp]:
   by (simp add: branch_sign_st_for_def generic_branch_st_for_def sign_ops_def)
 
 definition sign_enter_st_for ::
-  "(vname => bool) => vname list => exp list =>
+  "(vname => bool) => vname list => texp list =>
    sign resolved_st_q => sign resolved_st_q" where
   "sign_enter_st_for = generic_enter_st_for sign_ops"
 
 lemma sign_enter_st_for_eq [simp]:
   "sign_enter_st_for source_global xs es s =
     bind_formals_resolved_q source_global xs
-      (map (\<lambda>e. aval_sign e
-        (fun_of_resolved_st_q_for source_global s)) es)
+      (map (\<lambda>e. aval_sign_t e (fun_of_resolved_st_q_for source_global s)) es)
       (enter_frame_D_resolved_q STop s)"
   by (simp add: sign_enter_st_for_def generic_enter_st_for_def sign_ops_def)
 
@@ -92,23 +91,25 @@ fun sign_tf_st_for ::
     "sign_tf_st_for source_global EA_Nop s = s"
   | "sign_tf_st_for source_global (EA_Assign x a) s =
        update_resolved_st_q s (location_of source_global x)
-         (aval_sign a (fun_of_resolved_st_q_for source_global s))"
+         (aval_sign_t a (fun_of_resolved_st_q_for source_global s))"
   | "sign_tf_st_for source_global (EA_Special sc x) s =
        update_resolved_st_q s (location_of source_global x)
          (case sc of
-            Nondet_Int => STop
-          | Min a b => sign_min (aval_sign a (fun_of_resolved_st_q_for source_global s))
-                                 (aval_sign b (fun_of_resolved_st_q_for source_global s))
-          | Max a b => sign_max (aval_sign a (fun_of_resolved_st_q_for source_global s))
-                                 (aval_sign b (fun_of_resolved_st_q_for source_global s)))"
+            Nondet_Int k => sign_cast k STop
+          | Min k a b => sign_cast k
+              (sign_min (aval_sign_t a (fun_of_resolved_st_q_for source_global s))
+                        (aval_sign_t b (fun_of_resolved_st_q_for source_global s)))
+          | Max k a b => sign_cast k
+              (sign_max (aval_sign_t a (fun_of_resolved_st_q_for source_global s))
+                        (aval_sign_t b (fun_of_resolved_st_q_for source_global s))))"
   | "sign_tf_st_for source_global (EA_Assume b) s =
        branch_sign_st_for source_global b True s"
   | "sign_tf_st_for source_global (EA_AssumeNot b) s =
        branch_sign_st_for source_global b False s"
-  | "sign_tf_st_for source_global (EA_Ret None p) s = s"
-  | "sign_tf_st_for source_global (EA_Ret (Some a) p) s =
+  | "sign_tf_st_for source_global (EA_Ret None p rk) s = s"
+  | "sign_tf_st_for source_global (EA_Ret (Some a) p rk) s =
        update_resolved_st_q s (location_of source_global ret_var)
-         (aval_sign a (fun_of_resolved_st_q_for source_global s))"
+         (aval_sign_t a (fun_of_resolved_st_q_for source_global s))"
   | "sign_tf_st_for source_global (EA_Check cnd) s = s"
 
 text \<open>The Nop/Assign executable-abstract correspondence facts, mirroring
@@ -128,10 +129,11 @@ lemma sign_tf_st_for_nop_agree:
   using agree[OF location_in] by (simp add: sign_tf_for_def skip_sign_def)
 
 lemma sign_tf_st_for_assign_agree:
-  fixes y :: vname and a :: exp
+  fixes y :: vname and a :: texp
   assumes agree: "\<And>location. location \<in> universe \<Longrightarrow>
       lookup_resolved_st_q s_exec location = s_abs (location_vname location)"
-    and val_agree: "aval_sign a (fun_of_resolved_st_q_for gs s_exec) = aval_sign a s_abs"
+    and val_agree: "aval_sign_t a (fun_of_resolved_st_q_for gs s_exec) =
+                    aval_sign_t a s_abs"
     and location_in: "location \<in> universe"
     and canonical: "location = location_of gs (location_vname location)"
   shows
@@ -159,8 +161,8 @@ lemma sign_tf_st_for_ret_none_agree:
       lookup_resolved_st_q s_exec location = s_abs (location_vname location)"
     and location_in: "location \<in> universe"
   shows
-    "lookup_resolved_st_q (sign_tf_st_for gs (EA_Ret None p) s_exec) location =
-      apply_tf (sign_tf_for gs) (EA_Ret None p) s_abs (location_vname location)"
+    "lookup_resolved_st_q (sign_tf_st_for gs (EA_Ret None p rk) s_exec) location =
+      apply_tf (sign_tf_for gs) (EA_Ret None p rk) s_abs (location_vname location)"
   using sign_tf_st_for_nop_agree[OF agree location_in]
   by (simp add: sign_tf_for_def skip_sign_def return_sign_def)
 
@@ -172,12 +174,19 @@ text \<open>The classifier-parametric commutation of the executable and abstract
   declared global needs the executable transfer to commute with the abstract
   transfer at an arbitrary classifier \<open>gs\<close>.\<close>
 
-lemma sign_tf_st_for_reduces: "action_reduces (sign_tf_st_for gs)"
-  by unfold_locales (rule ext, simp)+
+text \<open>
+  \<open>sign_tf_st_for\<close> satisfies \<open>action_reduces\<close>: a void return and a check
+  behave exactly like \<open>EA_Nop\<close>, and a value return is literally the
+  \<^const>\<open>ret_var\<close> assignment it publishes, since the owning procedure's
+  return kind rides inside the returned \<^typ>\<open>texp\<close> rather than beside it.
+\<close>
+
+lemma sign_tf_st_for_action_reduces: "action_reduces (sign_tf_st_for gs)"
+  by unfold_locales (simp_all add: fun_eq_iff)
 
 theorem sign_tf_st_for_commute:
-  "fun_of_resolved_st_q_for gs (sign_tf_st_for gs a s) =
-   apply_tf (sign_tf_for gs) a (fun_of_resolved_st_q_for gs s)"
+  "fun_of_resolved_st_q_for gs (sign_tf_st_for gs ea s) =
+   apply_tf (sign_tf_for gs) ea (fun_of_resolved_st_q_for gs s)"
 proof (rule apply_tf_wrap_eqI[
     where H = "\<lambda>f. f (fun_of_resolved_st_q_for gs s)"])
   show "fun_of_resolved_st_q_for gs (sign_tf_st_for gs EA_Nop s) =
@@ -190,7 +199,7 @@ proof (rule apply_tf_wrap_eqI[
   show "\<And>sc x. fun_of_resolved_st_q_for gs
       (sign_tf_st_for gs (EA_Special sc x) s) =
     apply_tf (sign_tf_for gs) (EA_Special sc x) (fun_of_resolved_st_q_for gs s)"
-    by (auto simp: sign_tf_for_def split: special_call.splits)
+    by (auto simp: sign_tf_for_def special_sign_def top_sign_def split: special_call.splits)
   show "\<And>b. fun_of_resolved_st_q_for gs
       (sign_tf_st_for gs (EA_Assume b) s) =
     apply_tf (sign_tf_for gs) (EA_Assume b) (fun_of_resolved_st_q_for gs s)"
@@ -200,19 +209,19 @@ proof (rule apply_tf_wrap_eqI[
     apply_tf (sign_tf_for gs) (EA_AssumeNot b)
       (fun_of_resolved_st_q_for gs s)"
     by (simp add: sign_tf_for_def sign_backward_domain.branch_st_commute)
-  show "\<And>ea p. fun_of_resolved_st_q_for gs
-      (sign_tf_st_for gs (EA_Ret ea p) s) =
-    apply_tf (sign_tf_for gs) (EA_Ret ea p) (fun_of_resolved_st_q_for gs s)"
+  show "\<And>ea p rk. fun_of_resolved_st_q_for gs
+      (sign_tf_st_for gs (EA_Ret ea p rk) s) =
+    apply_tf (sign_tf_for gs) (EA_Ret ea p rk) (fun_of_resolved_st_q_for gs s)"
   proof -
-    fix ea p
-    show "fun_of_resolved_st_q_for gs (sign_tf_st_for gs (EA_Ret ea p) s) =
-      apply_tf (sign_tf_for gs) (EA_Ret ea p) (fun_of_resolved_st_q_for gs s)"
+    fix ea p rk
+    show "fun_of_resolved_st_q_for gs (sign_tf_st_for gs (EA_Ret ea p rk) s) =
+      apply_tf (sign_tf_for gs) (EA_Ret ea p rk) (fun_of_resolved_st_q_for gs s)"
     proof (cases ea)
       case None
       then show ?thesis by (simp add: sign_tf_for_def return_sign_def)
     next
       case (Some a)
-      then show ?thesis by (simp add: sign_tf_for_def return_sign_def assign_sign_def)
+      then show ?thesis by (simp add: sign_tf_for_def return_sign_def)
     qed
   qed
   show "\<And>c. fun_of_resolved_st_q_for gs

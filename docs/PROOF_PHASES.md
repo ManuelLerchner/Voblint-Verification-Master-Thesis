@@ -11,6 +11,22 @@ stable gates for assessing a change.
 - source steps are simulated by located CFG execution;
 - reached source configurations have `valid_ltr` witnesses.
 
+## Machine-integer typing
+
+- every compiled action carries an elaborated `texp`, and both the concrete and
+  the abstract semantics evaluate it with `teval` -- no evaluator inside the
+  fixpoint consults a `tyenv`;
+- `elaborate_to` emits a `TCast` only where the target kind differs from the
+  kind the expression synthesizes, so a same-kind write costs no precision;
+- `styped Gamma s` is a *public* premise of the source-facing theorems, not an
+  internal side condition: it appears in `source_run_has_ltr`,
+  `source_activation_sound`, `source_reaches_ltr_collect`,
+  `source_completes_ltr_collect_exit`, and in the executable
+  `run_source_sound` bundles;
+- each domain instantiates `sound_cast_domain`, and its `a_cast` /
+  `a_in_range` obligations are discharged against `ik_norm` / `ik_range`, not
+  assumed.
+
 ## Collecting semantics
 
 - `valid_ltr` handles root, call, local flow, procedure result, and resume;
@@ -43,7 +59,8 @@ stable gates for assessing a change.
 ## Source-facing theorem
 
 - the compiler input satisfies the static source contract;
-- the concrete initial store belongs to the abstract seed;
+- the concrete initial store belongs to the abstract seed *and* is `styped`
+  for the program's typing environment;
 - every explicit coverage premise follows from the solver domain;
 - the conclusion refers to the computed solution.
 

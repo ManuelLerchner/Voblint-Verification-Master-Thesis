@@ -89,8 +89,9 @@
 //   main_pp3_ctx0 -> main_pp4_ctx0: call-to-return f
 // EXPECT-GRAPH-END
 
-void f(p) { return p + p }
+int32 f(int32 p) { return p + p }
 void main() {
+  int32 x, y;
   x := f(3);
   y := f(10);
   __voblint_check(x == 6);  // PROVED

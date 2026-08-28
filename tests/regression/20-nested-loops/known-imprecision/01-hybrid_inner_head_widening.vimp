@@ -17,14 +17,22 @@
 // inner loop -- the same program with the checks directly in the outer
 // body -- measures i = [1,10] and PROVED x2, so the loss is the inner
 // widening point, not the outer narrowing.
+// Both checks read UNKNOWN, and i is the full int32 range rather than
+// [1,+inf], because widening leaves the kind's range and the next increment
+// then wraps: [1,+inf] is not representable at int32, so i := i + 1 must
+// answer the whole range. Goblint's interval widening saturates at the
+// active kind's min and max instead of at mathematical infinities, which
+// would give [1,2147483647] here -- and the increment still wraps at the top
+// end, so 0 <= i needs the restart the header describes either way.
 // Solver-invariant across join, per-origin, warrow, warrow-per-origin.
 void main() {
+  int32 i, j;
   i := 0;
   while (true) {
     i := i + 1;
     j := 0;
     while (j < 10) {
-      __voblint_check(!(i < 0)); // PROVED
+      __voblint_check(!(i < 0)); // UNKNOWN
       __voblint_check(!(10 < i)); // UNKNOWN
       j := j + 1
     };

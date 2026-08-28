@@ -1,0 +1,9 @@
+// PARAM: --analysis interval
+// No verdict annotations: a parse-rejection case. A `global` line may not
+// redeclare a name an earlier one already declared; the second declaration
+// would otherwise silently win on kind.
+global int32 g;
+global int32 g;
+void main() {
+  g := 1
+}

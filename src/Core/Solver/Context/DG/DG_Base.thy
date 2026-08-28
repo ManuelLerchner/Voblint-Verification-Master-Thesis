@@ -31,7 +31,7 @@ text \<open>
 
 definition base_dg_spec_for_lifted ::
   "(vname \<Rightarrow> bool)
-   \<Rightarrow> ('a::sound_domain abs_state \<Rightarrow> bool)
+   \<Rightarrow> ('a::sound_cast_domain abs_state \<Rightarrow> bool)
    \<Rightarrow> 'a domain_transfer
    \<Rightarrow> ('a abs_state lifted, 'g::bounded_semilattice_sup_bot) dg_spec"
 where
@@ -258,7 +258,8 @@ theorem base_dg_spec_sound:
   subgoal for d d' g g' by (rule gamma_dg_base_mono)
   subgoal for a d g by (rule gamma_dg_base_step_sound[OF tf_sound is_bot_pred_sound])
   subgoal premises prems using prems by simp
-  subgoal premises prems by (rule gamma_dg_base_combine_sound[OF tf_sound is_bot_pred_sound prems])
+  subgoal premises prems for s dc g t de ci
+    by (rule gamma_dg_base_combine_sound[OF tf_sound is_bot_pred_sound prems])
   subgoal premises prems by (rule gamma_dg_base_enter_sound[OF tf_sound is_bot_pred_sound prems])
   done
 

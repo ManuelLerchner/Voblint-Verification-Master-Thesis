@@ -40,10 +40,11 @@
 //   main_pp2_ctx0 -> main_pp3_ctx0: call-to-return inc
 // EXPECT-GRAPH-END
 
-void inc(n) {
+int32 inc(int32 n) {
   return n + 1
 }
 void main() {
+  int32 r;
   r := inc(5);
   __voblint_check(0 < r) // PROVED
 }

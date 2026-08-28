@@ -1,0 +1,9 @@
+// PARAM: --analysis int --solver per-origin
+// Same source as 09-int_join_routes.vimp under the per-origin update rule:
+// each contributing origin keeps its own slot entry and a read takes their
+// supremum. Sibling of 03-sign_per_origin.vimp, on the composite domain.
+void main() {
+  int32 x;
+  x := 5;
+  __voblint_check(0 < x) // PROVED
+}

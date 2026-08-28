@@ -34,10 +34,23 @@
 # present, with no formals" a proof obligation on a given `imp_prog` value;
 # the parser's checks are a UX convenience on top, not what discharges it.
 #
-# Old semantic validation that has no structural encoding (duplicate
-# procedure/global/formal names, global/formal collisions, main-formals,
-# main-return) is not preserved: it was never part of the grammar in the
-# first place, and this investigation's scope note says not to keep it.
+# Semantic validation that has no structural encoding is not expressible here,
+# so it lives in each target's own lowering step rather than in this file: the
+# Menhir generator emits it as checks in the `program` action, and
+# VIMP_Notation.thy's prog_tr does the same for the `program { ... }` notation.
+# main-return is the one rule the Menhir side leaves to
+# `wf_program_compile_input_exec` instead of diagnosing at parse time.
+#
+# Both targets reject duplicate procedure/global/formal/local names, the
+# global/formal, global/local and formal/local collisions, a formal or a
+# global declared without a kind, and a `void` procedure that returns a
+# value. The untyped `formal_untyped` and `globals_decl` productions stay in
+# the grammar so that both frontends can name what is missing rather than
+# report a bare syntax error at the following token.
+#
+# One check is still Menhir-only: that every variable resolve to a global, a
+# formal or a local. The `program { ... }` notation's own programs write
+# undeclared locals, which prog_tyenv reads at its int32 fallback.
 #
 # Every production's AST-construction is exactly one of three shapes:
 #
@@ -106,6 +119,21 @@ keywords:
   while: WHILE
   "true": BOOL_TRUE
   "false": BOOL_FALSE
+  # Machine-integer kinds (stdint-style). A declaration's type annotation
+  # is optional everywhere it may appear -- an unannotated declaration
+  # means `int32` -- so every pre-kind program still parses unchanged.
+  # Deliberately NO bare `int`/`uint` alias keywords: an Isabelle mixfix
+  # literal becomes an inner-syntax delimiter in every importing theory,
+  # so an `int` keyword would shadow HOL's own `int` type token
+  # repo-wide. The default supplies the `int` meaning instead.
+  int8: TINT8
+  uint8: TUINT8
+  int16: TINT16
+  uint16: TUINT16
+  int32: TINT32
+  uint32: TUINT32
+  int64: TINT64
+  uint64: TUINT64
 
 punctuation:
   ":=": ASSIGN
@@ -195,21 +223,72 @@ productions:
   - {name: stmt_callret,  result: stmt, rhs: [IDENT, ASSIGN, IDENT, LPAREN, actuals, RPAREN],
      lower: {ctor: Call, args: [{some: {rhs: 0}}, {rhs: 2}, {rhs: 4}]}}
 
+  # -- machine-integer kinds: keyword-led atoms lowering to `ikind`
+  # constructors (explicit widths only -- see the keyword table on why no
+  # bare `int`/`uint` aliases exist). --
+  - {name: ty_int8,   result: ty, rhs: [TINT8],   lower: {ctor: I8,  args: []}}
+  - {name: ty_uint8,  result: ty, rhs: [TUINT8],  lower: {ctor: U8,  args: []}}
+  - {name: ty_int16,  result: ty, rhs: [TINT16],  lower: {ctor: I16, args: []}}
+  - {name: ty_uint16, result: ty, rhs: [TUINT16], lower: {ctor: U16, args: []}}
+  - {name: ty_int32,  result: ty, rhs: [TINT32],  lower: {ctor: I32, args: []}}
+  - {name: ty_uint32, result: ty, rhs: [TUINT32], lower: {ctor: U32, args: []}}
+  - {name: ty_int64,  result: ty, rhs: [TINT64],  lower: {ctor: I64, args: []}}
+  - {name: ty_uint64, result: ty, rhs: [TUINT64], lower: {ctor: U64, args: []}}
+
+  # -- formal parameters: an optionally kind-annotated name. Both targets
+  # lower a formal to a (name, kind option) pair; the program assembly
+  # keeps the names for `proc_decl` and collects the annotated kinds into
+  # the program's declared-kind list. Optionality is two productions, not
+  # an empty derivation: Isabelle mixfix has no epsilon (the same
+  # constraint the header records for zero-argument calls). --
+  - {name: formal_untyped, result: formal, rhs: [IDENT], special: formal_untyped}
+  - {name: formal_typed,   result: formal, rhs: [ty, IDENT], special: formal_typed}
+
+  # -- procedure-local declarations. One line per kind, applying to every
+  # name it lists, mirroring `globals_decl_typed`. Unlike a global, a local
+  # has no untyped form: an unannotated `x;` would be a bare IDENT statement
+  # rather than a keyword-led declaration, and the whole point of declaring
+  # locals is that a local's kind stops being inferred from a program-wide
+  # default.
+  #
+  # Declarations form a prologue: `function_decl` puts `locals_star` before
+  # `stmts_opt`, so a declaration after the first statement is a parse error.
+  # Interleaving them would mean hosting a declaration inside `stmt`, which is
+  # ambiguous against an `IDENT`-led statement unless a locals list is threaded
+  # back out of `stmts`. Scoping is unaffected either way: VIMP has no block
+  # syntax, so every local is visible throughout its procedure, and "declared
+  # before use" means "present in this procedure's declaration list" rather
+  # than anything order-sensitive. --
+  - {name: local_decl, result: local, rhs: [ty, ids, SEMI], special: locals_typed}
+
   # -- statement sequences, actuals, formals, ids: standard left-recursive lists --
   - {name: stmts, result: stmts, list_of: stmt, separator: SEMI, constructor: Seq, min: 1}
   - {name: stmts_opt, result: stmts_opt, optional_list_of: stmt, separator: SEMI, constructor: Seq, empty: SKIP}
   - {name: actuals, result: actuals, list_of: exp, separator: COMMA, min: 0}
-  - {name: formals, result: formals, list_of: IDENT, separator: COMMA, min: 0}
+  - {name: formals, result: formals, list_of: formal, separator: COMMA, min: 0}
   - {name: ids,      result: ids,     list_of: IDENT, separator: COMMA, min: 1}
 
-  # -- globals, functions, program --
-  - {name: globals_decl, result: globals, rhs: [GLOBAL, ids, SEMI], passthrough: 1}
-  - {name: function_decl, result: function, rhs: [VOID, IDENT, LPAREN, formals, RPAREN, LBRACE, stmts_opt, RBRACE],
-     lower: {tuple: [1, 3, 6]}}   # (name, formals, body) -- "main" is just an IDENT here, same as every other name
+  # -- globals, functions, program. A program may carry any number of
+  # `global` lines (so differently-kinded globals are declarable); each
+  # line optionally carries one kind applying to every name it lists. --
+  - {name: globals_decl, result: globals, rhs: [GLOBAL, ids, SEMI], special: globals_untyped}
+  - {name: globals_decl_typed, result: globals, rhs: [GLOBAL, ty, ids, SEMI], special: globals_typed}
+  # -- functions. A procedure declared `void` yields no value; one declared
+  # with a kind returns that kind, and its `return e` converts to it, exactly
+  # as C's return statement converts to the function's return type. The two
+  # are separate productions rather than an optional `ty` because Isabelle
+  # mixfix has no epsilon (the same constraint this header records for
+  # zero-argument calls and for optional formal annotations). --
+  - {name: function_decl, result: function,
+     rhs: [VOID, IDENT, LPAREN, formals, RPAREN, LBRACE, locals_star, stmts_opt, RBRACE],
+     special: function_void}    # (name, formals, locals, body, None)
+  - {name: function_decl_typed, result: function,
+     rhs: [ty, IDENT, LPAREN, formals, RPAREN, LBRACE, locals_star, stmts_opt, RBRACE],
+     special: function_typed}   # (name, formals, locals, body, Some kind)
 
   # Every function parses uniformly via function_decl*; "main" is picked out
   # of the resulting list by string equality during lowering (matching both
   # existing parsers -- see this file's header), not by a grammar-level
   # main_decl production.
-  - {name: program, result: program, rhs: [globals_opt, function_decl_star, EOF],
+  - {name: program, result: program, rhs: [globals_star, function_decl_star, EOF],
      special: program_structure}

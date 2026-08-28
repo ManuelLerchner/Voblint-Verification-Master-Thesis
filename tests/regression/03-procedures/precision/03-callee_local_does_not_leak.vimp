@@ -5,11 +5,12 @@
 // name, main's x would come back as 105 instead of surviving at 1 -- this
 // is the same activation-local boundary #99's D/G combine fix protects,
 // exercised through a name COLLISION rather than an unrelated call.
-void bump(x) {
+int32 bump(int32 x) {
   x := x + 100;
   return x
 }
 void main() {
+  int32 r, x;
   x := 1;
   r := bump(5);
   __voblint_check(x == 1); // PROVED

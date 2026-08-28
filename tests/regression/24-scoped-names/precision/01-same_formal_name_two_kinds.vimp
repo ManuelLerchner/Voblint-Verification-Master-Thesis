@@ -1,0 +1,17 @@
+// PARAM: --analysis interval
+// The defect scoped identities exist to close. Two procedures take a
+// parameter named n at different kinds; a name-keyed kind environment answers
+// with whichever declaration was collected first, so both wrapped at uint8
+// and swapping the two procedure definitions swapped the verdicts.
+//
+// Resolution gives each occurrence the identity of the procedure that binds
+// it, so f's n wraps at uint8 and g's n does not.
+uint8 f(uint8 n) { return n + 200 }
+int64 g(int64 n) { return n + 200 }
+void main() {
+  int32 a, b;
+  a := f(100);
+  b := g(100);
+  __voblint_check(a == 44); // PROVED
+  __voblint_check(b == 300) // PROVED
+}

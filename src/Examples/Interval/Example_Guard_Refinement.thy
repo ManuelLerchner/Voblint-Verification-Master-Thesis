@@ -20,19 +20,34 @@ definition sigma_x :: "ivl \<Rightarrow> ivl abs_state" where
 
 abbreviation "sigma_loop_head \<equiv> sigma_x (Ivl (Fin 0) (Fin 20))"
 
+text \<open>Every guard and right-hand side below is the elaborated \<^typ>\<open>texp\<close> a
+  compiled edge carries. The abstract states are hand-picked, so there is no
+  source program to read a typing environment off: \<^const>\<open>default_tyenv\<close>
+  declares every variable at \<^const>\<open>I32\<close>, exactly as an unannotated
+  program does.\<close>
+
+abbreviation guard_x_lt_20 :: texp where
+  "guard_x_lt_20 \<equiv> elaborate_syn default_tyenv (Less (V (STR ''x'')) (N 20))"
+
+abbreviation guard_y_pos :: texp where
+  "guard_y_pos \<equiv> elaborate_syn default_tyenv (Less (N 0) (V (STR ''y'')))"
+
+abbreviation rhs_x_succ :: texp where
+  "rhs_x_succ \<equiv> elaborate_to default_tyenv I32 (Plus (V (STR ''x'')) (N 1))"
+
 text \<open>The identity baseline leaves the abstract state unchanged.\<close>
-definition assume_ivl_identity :: "exp \<Rightarrow> ivl abs_state \<Rightarrow> ivl abs_state" where
+definition assume_ivl_identity :: "texp \<Rightarrow> ivl abs_state \<Rightarrow> ivl abs_state" where
   "assume_ivl_identity _ sigma = sigma"
 
 subsection \<open>One guard: @{text "x < 20"} narrows the upper bound\<close>
 
 lemma refine_x_lt_20:
-  "bfilter_ivl (Less (V (STR ''x'')) (N 20)) True sigma_loop_head (STR ''x'') = Ivl (Fin 0) (Fin 19)"
+  "bfilter_ivl guard_x_lt_20 True sigma_loop_head (STR ''x'') = Ivl (Fin 0) (Fin 19)"
   unfolding sigma_x_def
   by eval
 
 lemma identity_x_lt_20:
-  "assume_ivl_identity (Less (V (STR ''x'')) (N 20)) sigma_loop_head (STR ''x'') =
+  "assume_ivl_identity guard_x_lt_20 sigma_loop_head (STR ''x'') =
    Ivl (Fin 0) (Fin 20)"
   by (simp add: assume_ivl_identity_def sigma_x_def)
 
@@ -49,13 +64,13 @@ subsection \<open>One body step: @{text "x := x + 1"} after the guard\<close>
 
 definition body_after_refined :: "ivl abs_state" where
   "body_after_refined =
-     assign_ivl (STR ''x'') (Plus (V (STR ''x'')) (N 1))
-       (bfilter_ivl (Less (V (STR ''x'')) (N 20)) True sigma_loop_head)"
+     assign_ivl (STR ''x'') rhs_x_succ
+       (bfilter_ivl guard_x_lt_20 True sigma_loop_head)"
 
 definition body_after_identity :: "ivl abs_state" where
   "body_after_identity =
-     assign_ivl (STR ''x'') (Plus (V (STR ''x'')) (N 1))
-       (assume_ivl_identity (Less (V (STR ''x'')) (N 20)) sigma_loop_head)"
+     assign_ivl (STR ''x'') rhs_x_succ
+       (assume_ivl_identity guard_x_lt_20 sigma_loop_head)"
 
 lemma body_step_refined:
   "body_after_refined (STR ''x'') = Ivl (Fin 1) (Fin 20)"
@@ -65,7 +80,7 @@ lemma body_step_refined:
 lemma body_step_identity:
   "body_after_identity (STR ''x'') = Ivl (Fin 1) (Fin 21)"
   unfolding body_after_identity_def sigma_x_def assume_ivl_identity_def
-  by (simp add: assign_ivl_def normalize_ivl_def)
+  by eval
 
 text \<open>
   Joining the initial @{text "[0,0]"} with the body exit is where the gap
@@ -80,7 +95,7 @@ lemma loop_join_refined:
 lemma loop_join_identity:
   "sigma_x (Ivl (Fin 0) (Fin 0)) (STR ''x'') \<squnion> body_after_identity (STR ''x'') = Ivl (Fin 0) (Fin 21)"
   unfolding body_after_identity_def sigma_x_def assume_ivl_identity_def
-  by (simp add: sup_ivl_def assign_ivl_def normalize_ivl_def)
+  by eval
 
 lemma backward_analysis_strictly_tighter:
   "Ivl (Fin 0) (Fin 20) \<le> Ivl (Fin 0) (Fin 21)"
@@ -103,7 +118,7 @@ text \<open>
 \<close>
 
 lemma guard_infeasible_canonical_bot:
-  "bfilter_ivl (Less (V (STR ''x'')) (N 0)) True (sigma_x (Ivl (Fin 5) (Fin 9))) (STR ''x'') = bot"
+  "bfilter_ivl (elaborate_syn default_tyenv (Less (V (STR ''x'')) (N 0))) True (sigma_x (Ivl (Fin 5) (Fin 9))) (STR ''x'') = bot"
   unfolding sigma_x_def by eval
 
 lemma intersect_ivl_disjoint_bot:
@@ -121,8 +136,8 @@ lemma disjoint_intersection_and_meet_agree_semantically:
 
 subsection \<open>Forward feasibility decides guards backward narrowing keeps\<close>
 
-definition guard_cmp_eq_one :: exp where
-  "guard_cmp_eq_one = Eq (Less (V (STR ''x'')) (N 0)) (N 1)"
+definition guard_cmp_eq_one :: texp where
+  "guard_cmp_eq_one = elaborate_syn default_tyenv (Eq (Less (V (STR ''x'')) (N 0)) (N 1))"
 
 text \<open>
   \<^const>\<open>branch_ivl\<close> gates \<^const>\<open>bfilter_ivl\<close> behind a forward
@@ -138,7 +153,7 @@ text \<open>
   inequality; this is a state where it is strict.
 \<close>
 lemma cmp_guard_forward_value:
-  "aval_ivl guard_cmp_eq_one (sigma_x (Ivl (Fin 5) (Fin 5))) = Ivl (Fin 0) (Fin 0)"
+  "aval_ivl_t guard_cmp_eq_one (sigma_x (Ivl (Fin 5) (Fin 5))) = Ivl (Fin 0) (Fin 0)"
   unfolding guard_cmp_eq_one_def sigma_x_def by eval
 
 lemma bfilter_keeps_infeasible_operand_guard:
@@ -157,8 +172,8 @@ definition sigma_xy :: "ivl \<Rightarrow> ivl \<Rightarrow> ivl abs_state" where
 
 abbreviation "sigma_x5_y_unknown \<equiv> sigma_xy (Ivl (Fin 5) (Fin 5)) (Ivl MinInf PlusInf)"
 
-definition guard_disj :: exp where
-  "guard_disj = Or (Less (N 0) (V (STR ''y''))) guard_cmp_eq_one"
+definition guard_disj :: texp where
+  "guard_disj = TOr guard_y_pos guard_cmp_eq_one"
 
 text \<open>
   \<^const>\<open>bfilter_ivl\<close>'s \<^const>\<open>Or\<close> case under a true polarity gates each
@@ -178,11 +193,11 @@ text \<open>
 \<close>
 
 lemma disj_guard_forward_value:
-  "aval_ivl guard_disj sigma_x5_y_unknown = Ivl (Fin 0) (Fin 1)"
+  "aval_ivl_t guard_disj sigma_x5_y_unknown = Ivl (Fin 0) (Fin 1)"
   unfolding guard_disj_def guard_cmp_eq_one_def sigma_xy_def by eval
 
 lemma feasible_disjunct_alone_refines_y:
-  "bfilter_ivl (Less (N 0) (V (STR ''y''))) True sigma_x5_y_unknown (STR ''y'')
+  "bfilter_ivl guard_y_pos True sigma_x5_y_unknown (STR ''y'')
      = Ivl (Fin 1) PlusInf"
   unfolding sigma_xy_def by eval
 
@@ -195,7 +210,7 @@ lemma branch_or_drops_infeasible_disjunct:
   unfolding guard_disj_def guard_cmp_eq_one_def sigma_xy_def by eval
 
 lemma bfilter_or_is_the_gated_join:
-  "(branch_ivl (Less (N 0) (V (STR ''y''))) True sigma_x5_y_unknown
+  "(branch_ivl guard_y_pos True sigma_x5_y_unknown
      \<squnion> branch_ivl guard_cmp_eq_one True sigma_x5_y_unknown) (STR ''y'')
      = bfilter_ivl guard_disj True sigma_x5_y_unknown (STR ''y'')"
   unfolding guard_disj_def guard_cmp_eq_one_def sigma_xy_def by eval

@@ -1,0 +1,21 @@
+// PARAM: --analysis parity
+// Parity's only REFUTED route, paired with the PROVED one it is the mirror
+// of. 01-even_odd_distinct.vimp proves !(x == y) from the same Even/Odd
+// disjointness; this file asks the equality itself, so the report has to
+// carry Check_Refuted and not merely fail to prove the negation. A one-sided
+// corpus would let a regression that answers UNKNOWN for every positive
+// equality pass unnoticed, since !(x == y) would still come back PROVED.
+//
+// n is unconstrained, so no interval or sign reasoning bounds y or z at all:
+// 2 * n is Even from the literal's own parity, y + 1 is then Odd, and
+// parity_classify_check refutes an equality exactly when the two sides'
+// parities are disjoint. It can never confirm one -- see
+// known-imprecision/01-parity_cannot_bound_value.vimp for that boundary.
+void main() {
+  int32 n, y, z;
+  n := __voblint_nondet_int();
+  y := 2 * n;
+  z := y + 1;
+  __voblint_check(!(y == z)); // PROVED
+  __voblint_check(y == z) // REFUTED
+}

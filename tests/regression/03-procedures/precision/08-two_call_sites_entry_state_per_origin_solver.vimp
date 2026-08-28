@@ -4,10 +4,11 @@
 // 07-two_call_sites_entry_state_join_solver.vimp for why the routed
 // equation system underneath accepts any solver the same way the flat one
 // does.
-void square(n) {
+int32 square(int32 n) {
   return n * n
 }
 void main() {
+  int32 a, b;
   a := square(3);
   b := square(4);
   __voblint_check(a == 9); // PROVED

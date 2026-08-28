@@ -8,6 +8,7 @@
 // checks X == N, X - N == 0 and N == 8 are in
 // known-imprecision/02-counting_loop_nonrelational_join.vimp. int agrees.
 void main() {
+  int32 N, X;
   X := 0;
   N := __voblint_nondet_int();
   if (N < 0) {

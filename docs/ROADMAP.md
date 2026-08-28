@@ -143,7 +143,88 @@ staging in #141.
 ### Numeric precision
 
 Continue improving backward guard refinement, loop precision, widening policy,
-and interval execution examples without changing the semantic reference model.
+and interval execution examples. Refinement work stays within the semantic
+reference model of its time; the one sanctioned change to that model is the
+machine-integer migration below.
+
+### Machine integers (ikinds)
+
+Give VIMP per-variable machine-integer kinds (width + signedness), wraparound
+concrete semantics, and explicit casts, then thread the kind through the
+domain interface so transfers can use `range ik` as a hard bound and
+width-dependent domains (bitfield, DefExc) become definable. Staged plan and
+locked design decisions: `docs/history/IKIND_MIGRATION.md`; register row
+"Integer width and wraparound".
+
+Closed (elaboration migration): the `tf_sound_branch_for` gap recorded here --
+each domain's `branch_*_sound` needing a `styped Gamma s` / `wt_exp` fact the
+obligation did not supply -- no longer exists. The backward analysis was pivoted
+to match Goblint's actual placement of the representability question: a variable
+*read* applies no cast (`get_var` = `CPA.find`) and `refine_lv`'s `Var` case
+applies no gate, so the gate belongs on the one node that is a conversion.
+`afilter`'s `TCast` clause now consults the domain's own `a_in_range`, and
+`tf_sound_branch_for`, `afilter_sound`, `bfilter_sound` and `branch_sound` carry
+no typedness premise at all. Nothing propagates into `Constraint_System_Sound`,
+`LTR_Abstract`, `DG_LTR_Sound` or `Run_Analysis_Sound`, and the `sorry`s that
+stood at the four domains' `*_is_sound_transfer_for` are gone. `Run_Analysis_Sound.thy`
+itself builds.
+
+Closed (elaboration migration): Congruence's evaluator is no longer the untyped,
+unbounded-int one. It is `aval_congruence_t :: texp => ...`, wrapping at each
+node's own baked kind like every other domain, and `cong_cast`/`cong_unwrap`
+carry the `gcd (m, ik_mod ik)` reasoning. `backward_domain`'s `aval_abs` takes a
+`texp`, so no domain passes an evaluator of the wrong shape.
+
+The one dynamic contract that remains, deliberately, is `styped Gamma s0` on the
+source-facing theorems -- see `docs/PROOF_PHASES.md`. It is a premise on the
+caller, not an internal side condition, and stays visible in the final theorems.
+
+Closed (2026-08-26): `kjoin` implemented the usual arithmetic conversions as
+"left operand wins", which is not C 6.3.1.8's rank-and-signedness rule. It
+disagreed on the six ordered operand pairs whose left operand is the weaker
+one, and -- worse than a wrong answer -- it made evaluation depend on operand
+order, so `u32 == i64` and `i64 == u32` could disagree. It now delegates to
+`usual_kind` (`src/VIMP/VIMP_Ikind.thy`), which writes out all six branches of
+the standard's rule, including the final "unsigned counterpart of the signed
+kind" case. That case is unreachable at the four kinds promotion can produce,
+and `promoted_signed_covers_narrower_unsigned` proves it so for arbitrary
+kinds rather than tabulating instances: whenever a promoted signed kind is
+strictly wider than a promoted unsigned one it covers that unsigned range,
+which is the standard's preceding case. `usual_kind_commute` and
+`kjoin_commute` retire the order dependence; the sixteen-pair table
+(`usual_kind_reachable_pins`) is regression evidence, not the proof.
+
+Width stands in for C's conversion rank here. That is faithful for this kind
+set because, after promotion, each rank class is represented by exactly one
+width, with the signed and unsigned counterparts of a class sharing it --
+comparing widths therefore compares ranks. It would *not* be faithful for C's
+own types, where `int` and `long` may share a width while holding different
+ranks. Introducing platform kinds is exactly the change that would invalidate
+this, and `usual_kind`'s own comment says so.
+
+Still open, in the same area:
+
+- **Literal kinds are not magnitude-derived.** `esyn (N n) = None`, so `opk`
+  defaults a bare literal to `int32`. `wide := 3000000000` with `wide : int64`
+  therefore elaborates to `TCast I64 (TN I32 3000000000)` and evaluates to
+  `-1294967296`. C 6.4.4.1 gives a decimal constant the first of
+  int/long/long long that fits. The CLI lexer additionally caps literals at
+  OCaml's 63-bit `max_int`, so `9223372036854775807` cannot be written at all
+  and raises `Failure` rather than a structured parse error. Deciding this is
+  a prerequisite for removing `opk`.
+- **`wt_exp` is not enforced.** It is cited nowhere outside `VIMP_Typing.thy`,
+  `exp` has no cast constructor, and `grammar/vimp.yaml` no cast production,
+  so the "explicit cast for genuine mismatches" discipline the comments
+  describe is neither expressible nor checked. Note that simply enforcing the
+  current judgement would be wrong: it would reject `u32 + i64`, which C
+  accepts with no cast. The replacement is a deterministic `exp_kind` plus a
+  `wf_exp` that checks internal consistency, with elaboration inserting the
+  conversions.
+- **`ret_kind` is not enforced.** `wf_proc_decl` checks only `distinct`,
+  `valid_formal` and `wf_source_com`; it does not relate a procedure's
+  declared return kind to the `Return` forms in its body, and call
+  destinations are validated through `value_providing body` rather than the
+  declared kind.
 
 ### Source language
 

@@ -8,7 +8,7 @@
 // procedure recursion, no --context flag. The recursive-factorial variant of
 // this same pattern is 06-recursive_factorial_dead_branch_no_bottom_leak.vimp,
 // which proves its results exactly under entry-state context sensitivity.
-void f(n) {
+int32 f(int32 n) {
   if (n < 2) {
     return 1
   } else {
@@ -17,6 +17,7 @@ void f(n) {
 }
 
 void main() {
+  int32 a;
   a := f(5);
   __voblint_check(a == 500) // PROVED
 }

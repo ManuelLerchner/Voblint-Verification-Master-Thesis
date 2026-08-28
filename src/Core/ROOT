@@ -12,6 +12,9 @@ session Voblint_Core in "." = "Voblint_CFG" +
     "Solver/Exec"
   theories
     Abstract_Domain
+    (* Kind-tagged abstract cells: the carrier that supplies an ikind to
+       operations whose class signature cannot take one. *)
+    Kind_Tagged
     (* Generic numeric-query interface and its derivations from a
        backward_domain instance's own narrowing operators. *)
     Abstract_Numeric_Queries

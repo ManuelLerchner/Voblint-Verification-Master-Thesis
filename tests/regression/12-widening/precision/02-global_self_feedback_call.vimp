@@ -9,8 +9,8 @@
 // lose precision (or termination) in -- this additionally exercises that
 // the fix holds across the interprocedural global-summary path, not only
 // the intraprocedural one 01-global_self_feedback.vimp isolates.
-global total;
-void inc(n) {
+global int32 total;
+void inc(int32 n) {
   total := total + n
 }
 void main() {

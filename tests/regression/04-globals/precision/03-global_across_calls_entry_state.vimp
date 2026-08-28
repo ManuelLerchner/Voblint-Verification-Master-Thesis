@@ -11,12 +11,13 @@
 // caller's real state at the call site, not a globals-bottomed one -- see
 // src/Examples/Interval/Ctx/Example_Interval_DG_Ctx_Globals_Regression.thy
 // for the same program with its per-context abstract states pinned.
-global g;
-void bump(n) {
+global int32 g;
+int32 bump(int32 n) {
   g := g + n;
   return g
 }
 void main() {
+  int32 a, b, c;
   g := 10;
   a := bump(5);
   b := bump(4);

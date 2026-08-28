@@ -1,0 +1,9 @@
+// PARAM: --analysis interval
+// No verdict annotations: a parse-rejection case. Every global declares its
+// kind. An unannotated global takes the compiler's default kind, so its
+// wraparound behaviour -- the one thing a global's kind decides -- would be
+// implicit at every read and write in the program.
+global g;
+void main() {
+  g := 1
+}

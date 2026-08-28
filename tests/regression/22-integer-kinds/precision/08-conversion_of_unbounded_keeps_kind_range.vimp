@@ -1,0 +1,21 @@
+// PARAM: --analysis interval
+// Adapted from Goblint tests/regression/21-casts/03-Exc-overflow.c
+// ("unsigned char uc = (unsigned char)ul;"), where the analyzer keeps uc
+// within unsigned char's range even though ul is not bounded.
+//
+// Both checks hold concretely and are proved: an assignment into a uint8
+// variable converts with ik_norm U8, so ub is in [0,255] on every execution
+// however unconstrained t was, and ivl_cast answers a conversion it cannot
+// sharpen with ivl_top_of ik -- the target kind's own range -- rather than
+// with the lattice top. That is Goblint's Interval.top_of ik, and it is what
+// makes the conversion's own postcondition visible to the abstraction: an
+// unbounded answer would not even satisfy ivl_in_range for the kind being
+// converted into.
+global uint8 ub;
+void main() {
+  int32 t;
+  t := __voblint_nondet_int();
+  ub := t;
+  __voblint_check(!(ub < 0)); // PROVED
+  __voblint_check(ub < 256) // PROVED
+}

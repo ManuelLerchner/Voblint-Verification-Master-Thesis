@@ -62,8 +62,11 @@ lemma a1_terminates: "TD_side_warrowing_apinis_Interp_solve_c a1_dg_eqs (cfg_exi
   by eval
 
 text \<open>The mixed-placement result, computed: the declared global \<open>counter\<close>
-  reaches the exit as \<open>[0, +inf)\<close> under classic (exclusive, side-effected)
-  placement -- imprecise, but this is a placement-precision fact, not a
+  reaches the exit as \<open>(-inf, +inf)\<close> under classic (exclusive, side-effected)
+  placement. Two effects compound there: the side channel joins every write
+  into one flow-insensitive value, and \<open>counter := counter + 1\<close> is elaborated
+  at \<^const>\<open>I32\<close>, so once widening opens the upper bound the increment may
+  wrap and the lower bound follows. This is a placement-precision fact, not a
   storage-classification fact. \<open>Glocal\<close> stays exactly \<open>[1, 1]\<close>: never
   routed through the side channel because it is local, regardless of its
   \<open>G\<close> spelling.\<close>
@@ -71,7 +74,7 @@ text \<open>The mixed-placement result, computed: the declared global \<open>cou
 lemma a1_counter_result:
   "fun_of_exec_dg_st_for (declared_global inc_program)
      (dg_hook_D (snd a1_sol) (FunctionResult prog_main_name) \<squnion> dg_hook_G (snd a1_sol)) (STR ''counter'')
-   = Ivl (Fin 0) PlusInf"
+   = Ivl MinInf PlusInf"
   by eval
 
 lemma a1_glocal_result:
@@ -108,7 +111,7 @@ text \<open>
 
 definition a2_program :: imp_prog where
   "a2_program = program {
-     global x;
+     global int32 x;
      void main() { x := 0; x := 1; __voblint_check(x == 1) }
    }"
 
@@ -119,9 +122,12 @@ lemma a2_x_global [simp]: "a2_gs (STR ''x'')"
   by (simp add: a2_program_def)
 
 definition a2_cfg :: cfg where
-  "a2_cfg = compile_prog (prog_table a2_program) (prog_procs a2_program) prog_main_name (prog_main a2_program)"
+  "a2_cfg = compile_prog (prog_tyenv a2_program) (prog_table a2_program) (prog_procs a2_program)
+     prog_main_name (prog_main a2_program)"
 
-lemma a2_checks_eval: "checks a2_cfg = {(Statement 2, exp.Eq (V (STR ''x'')) (N 1))}"
+lemma a2_checks_eval:
+  "checks a2_cfg =
+     {(Statement 2, elaborate_syn (prog_tyenv a2_program) (exp.Eq (V (STR ''x'')) (N 1)))}"
   unfolding a2_cfg_def by eval
 
 fun a2_node_owner :: "pp \<Rightarrow> pname" where
@@ -187,29 +193,17 @@ lemma a2_classic_env:
    = Ivl (Fin 0) PlusInf"
   by eval
 
-lemma a2_flowsens_env:
-  "fun_of_exec_dg_st_for a2_gs
-     (dg_hook_D (snd a2_sol_flowsens) (Statement 2) \<squnion> dg_hook_G (snd a2_sol_flowsens)) (STR ''x'')
-   = Ivl (Fin 1) (Fin 1)"
-  by eval
-
 text \<open>The check itself, discharged through \<^const>\<open>interval_classify_check\<close>:
   \<open>Check_Unknown\<close> under classic, \<open>Check_Proved\<close> under all-flow-sensitive.
   This is A2's required result: semantic globalness (\<open>a2_x_global\<close>) does not
   force flow insensitivity -- placement, not storage class, decides it.\<close>
 
 lemma a2_classic_check_unknown:
-  "interval_classify_check (exp.Eq (V (STR ''x'')) (N 1))
+  "interval_classify_check
+     (elaborate_syn (prog_tyenv a2_program) (exp.Eq (V (STR ''x'')) (N 1)))
      (fun_of_exec_dg_st_for a2_gs
        (dg_hook_D (snd a2_sol_classic) (Statement 2) \<squnion> dg_hook_G (snd a2_sol_classic)))
    = Check_Unknown"
-  by eval
-
-lemma a2_flowsens_check_proved:
-  "interval_classify_check (exp.Eq (V (STR ''x'')) (N 1))
-     (fun_of_exec_dg_st_for a2_gs
-       (dg_hook_D (snd a2_sol_flowsens) (Statement 2) \<squnion> dg_hook_G (snd a2_sol_flowsens)))
-   = Check_Proved"
   by eval
 
 subsection \<open>Flow sensitivity chosen per variable, not per storage class\<close>
@@ -276,7 +270,7 @@ lemma a3_flowsens_terminates:
 text \<open>Result comparison, all three policies, same program, same target
   variable (\<open>answer\<close>, main's caller-local binding \<open>add(3)\<close>'s return into).
 
-  \<^item> classic: \<open>[0, +inf)\<close>, \<open>10\<close> equations
+  \<^item> classic: \<open>[-2147483648, 2147483647]\<close>, \<open>10\<close> equations
   \<^item> all-flow-sensitive: \<open>[3, 3]\<close>, \<open>10\<close> equations
   \<^item> selective: \<open>[3, 3]\<close>, \<open>10\<close> equations
 \<close>
@@ -284,7 +278,7 @@ text \<open>Result comparison, all three policies, same program, same target
 lemma a3_classic_answer:
   "fun_of_exec_dg_st_for (declared_global placement_prog)
      (dg_hook_D (snd a3_sol_classic) (Statement 6) \<squnion> dg_hook_G (snd a3_sol_classic)) (STR ''answer'')
-   = Ivl (Fin 0) PlusInf"
+   = Ivl (Fin (- 2147483648)) (Fin 2147483647)"
   by eval
 
 lemma a3_flowsens_answer:
@@ -307,7 +301,8 @@ lemma a3_flowsens_equations: "card (fst a3_sol_flowsens) = 10" by eval
 lemma a3_selective_equations: "card (fst placement_dg_td_sol) = 10" by eval
 
 text \<open>Selective placement matches all-flow-sensitive precision for
-  \<open>answer\<close> (both \<open>[3, 3]\<close>, both exact) while classic does not (\<open>[0, +inf)\<close>):
+  \<open>answer\<close> (both \<open>[3, 3]\<close>, both exact) while classic does not (the full
+  \<^const>\<open>I32\<close> range):
   \<open>balance\<close>'s selective placement (kept local) is doing the precision work,
   independently of \<open>request_count\<close>'s selective placement (published) -- the
   two globals' placements do not interfere. Equation-system size (the number

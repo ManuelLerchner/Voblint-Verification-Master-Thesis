@@ -37,8 +37,8 @@ text \<open>
 
 definition sign_nest_program :: imp_prog where
   "sign_nest_program = program {
-     void g(p) { return p + p }
-     void f(p) { t := g(p); return t }
+     int32 g(int32 p) { return p + p }
+     int32 f(int32 p) { t := g(p); return t }
      void main() { x := f(3); y := f(-10) }
    }"
 
@@ -58,12 +58,12 @@ definition sign_nest_procs :: "pname list" where "sign_nest_procs = prog_procs s
 definition sign_nest_main :: "VIMP_Proc.com" where "sign_nest_main = prog_main sign_nest_program"
 
 definition sign_nest_cfg :: cfg where
-  "sign_nest_cfg = compile_prog sign_nest_pi sign_nest_procs (STR ''main'') sign_nest_main"
+  "sign_nest_cfg = compile_prog (prog_tyenv sign_nest_program) sign_nest_pi sign_nest_procs (STR ''main'') sign_nest_main"
 
 text \<open>The compiled CFG, folded back under its own name: every obligation the routed
   locale states is phrased in \<^const>\<open>compile_prog\<close>, every fact below in \<open>sign_nest_cfg\<close>.\<close>
 lemma sign_nest_cfg_compile [simp]:
-  "compile_prog sign_nest_pi sign_nest_procs (STR ''main'') sign_nest_main = sign_nest_cfg"
+  "compile_prog (prog_tyenv sign_nest_program) sign_nest_pi sign_nest_procs (STR ''main'') sign_nest_main = sign_nest_cfg"
   by (simp add: sign_nest_cfg_def)
 
 lemma sign_nest_entry: "cfg_entry sign_nest_cfg = FunctionEntry (STR ''main'')"
@@ -377,7 +377,7 @@ text \<open>The call-string routing policy instantiated at \<open>k = 1\<close>.
   before it reaches the goal, so \<open>call_fwd\<close> does not need to case-split on which one.\<close>
 
 interpretation sign_nest_1_cs: call_string_routed_context
-    sign_nest_S_abs sign_nest_gs sign_nest_pi sign_nest_procs "STR ''main''" sign_nest_main 1
+    sign_nest_S_abs sign_nest_gs "prog_tyenv sign_nest_program" sign_nest_pi sign_nest_procs "STR ''main''" sign_nest_main 1
     "map_lift (fun_of_resolved_st_q_for sign_nest_gs) (Bot::sign exec_dg_st lifted)"
     "map_lift (fun_of_resolved_st_q_for sign_nest_gs) (Lifted cinit_sign_st)"
     "map_lift (fun_of_resolved_st_q_for sign_nest_gs) (Bot::sign exec_dg_st lifted)"
@@ -447,7 +447,7 @@ lemma sign_ctx_sg_1_comb:
   assumes "(cl, CallEdge dst pars args, FunctionEntry p, v) \<in> calls sign_nest_cfg"
     and "s \<in> gamma_state_lift (sign_ctx_sg_1 (Inl (cl, c1)))"
     and "t \<in> gamma_state_lift (sign_ctx_sg_1 (Inl (FunctionResult p, cs_context 1 cl c1 es)))"
-    and "call_enter_store sign_nest_gs sign_nest_cfg cl s es"
+    and "call_enter_store (prog_tyenv sign_nest_program) sign_nest_gs sign_nest_cfg cl s es"
   shows "combine_collect sign_nest_gs dst s t \<in> gamma_state_lift (sign_ctx_sg_1 (Inl (v, c1)))"
   by (rule sign_nest_1_cs.routed_context_comb[OF assms[unfolded sign_nest_cfg_def]])
 
@@ -474,7 +474,7 @@ proof -
 qed
 
 theorem sign_nest_1_activation_collect_sound:
-  "activation_collect sign_nest_gs (admiss_exact (cs_context 1)) [] sign_nest_cfg
+  "activation_collect (prog_tyenv sign_nest_program) sign_nest_gs (admiss_exact (cs_context 1)) [] sign_nest_cfg
      (cinit_stores sign_nest_gs) v ctx
      \<subseteq> gamma_state_lift (sign_ctx_sg_1 (Inl (v, ctx)))"
 proof (rule activation_collect_sound_gen[where sg = sign_ctx_sg_1 and gammaM = gamma_state_lift
@@ -520,7 +520,7 @@ next
     and sm: "s \<in> gamma_state_lift (sign_ctx_sg_1 (Inl (cl, c1)))"
     and adm: "admiss_exact (cs_context 1) cl c1 es c2"
     and tm: "t \<in> gamma_state_lift (sign_ctx_sg_1 (Inl (FunctionResult p, c2)))"
-    and ces: "call_enter_store sign_nest_gs sign_nest_cfg cl s es"
+    and ces: "call_enter_store (prog_tyenv sign_nest_program) sign_nest_gs sign_nest_cfg cl s es"
   show "combine_collect sign_nest_gs dst s t \<in> gamma_state_lift (sign_ctx_sg_1 (Inl (cont, c1)))"
     using adm tm sign_ctx_sg_1_comb[OF ce sm _ ces] by (simp add: admiss_exact_def)
 qed

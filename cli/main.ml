@@ -174,7 +174,7 @@ let verdict_label = function
    that location), rather than shown with a vacuous PROVED verdict. *)
 let render_text_report (report :
       (Voblint_CLI.Core.cfg_node
-       * (Voblint_CLI.Core.exp
+       * (Voblint_CLI.Core.texp
           * (Voblint_CLI.Core.check_result
              * (bool * (string -> Voblint_CLI.Analyse_Dispatch.abstract_value)))))
       list)
@@ -187,16 +187,18 @@ let render_text_report (report :
   List.iter2
     (fun (node, (cond, (verdict, (unreachable, f)))) (line, col) ->
        if not unreachable then begin
-         let vars = Voblint_CLI.State_Report_GraphViz.exp_vnames_list cond in
+         (* Rendering a name is the inverse of resolving it, so both columns
+            go through State_Report_GraphViz rather than printing the stored
+            identity: check_cond_text and check_state_text disambiguate
+            against the same variable list. *)
          let state =
-           vars
-           |> List.map (fun x ->
-             x ^ "=" ^ un_string (Voblint_CLI.State_Report_GraphViz.string_of_abstract_value (f x)))
+           Voblint_CLI.State_Report_GraphViz.check_state_text cond f
+           |> List.map un_string
            |> String.concat ", "
          in
          Buffer.add_string buf
            (Printf.sprintf "%d:%-2d %-10s %-20s %-8s %s\n" line col (node_label node)
-              (un_string (Voblint_CLI.Core.string_of_exp (Voblint_CLI.Core.nat_of_integer Z.zero) cond))
+              (un_string (Voblint_CLI.State_Report_GraphViz.check_cond_text cond))
               (verdict_label verdict) state)
        end)
     report check_positions;
@@ -205,7 +207,7 @@ let render_text_report (report :
 let report_row buf (line, col) node cond verdict =
   Buffer.add_string buf
     (Printf.sprintf "%d:%-2d %-10s %-20s %-8s\n" line col (node_label node)
-       (un_string (Voblint_CLI.Core.string_of_exp (Voblint_CLI.Core.nat_of_integer Z.zero) cond))
+       (un_string (Voblint_CLI.Core.string_of_exp (Voblint_CLI.Core.nat_of_integer Z.zero) (Voblint_CLI.Core.texp_erase cond)))
        (verdict_label verdict))
 
 (* analyse_ctx's report distinguishes Dead -- every context covering the check
@@ -221,7 +223,7 @@ let report_row buf (line, col) node cond verdict =
 let render_ctx_report
     (report :
       (Voblint_CLI.Core.cfg_node
-       * (Voblint_CLI.Core.exp * Voblint_CLI.Core.contextual_verdict))
+       * (Voblint_CLI.Core.texp * Voblint_CLI.Core.contextual_verdict))
       list)
     (check_positions : (int * int) list) =
   let buf = Buffer.create 256 in
@@ -511,7 +513,31 @@ let () =
     | "--timeout" :: v :: rest ->
       (try timeout := float_of_string v with _ -> prerr_endline "--timeout expects a number"; exit 1);
       parse_args rest
-    | f :: rest when String.length f > 0 && f.[0] <> '-' -> file := Some f; parse_args rest
+    (* A second bare word is always a mistake, and silently letting the last one
+       win is the worst way to handle it: `--analysis interval context
+       entry-state F.vimp` then runs context-insensitively on F.vimp, and the
+       report looks like a precision regression rather than a typo. The common
+       shape is a flag written without its dashes, so say so when the word
+       names one. *)
+    | f :: rest when String.length f > 0 && f.[0] <> '-' ->
+      (match !file with
+       | None -> file := Some f; parse_args rest
+       | Some prev ->
+         let flags =
+           [ "analysis"; "context"; "context-depth"; "context-graph"; "solver";
+             "dot"; "dot-full"; "graph-snapshot"; "html"; "html-out";
+             "parse-only"; "timeout"; "help" ]
+         in
+         prerr_endline
+           (Printf.sprintf "voblint: unexpected argument %S after input file %S" f prev);
+         (* The word that was meant to be a flag is usually the earlier one --
+            it is what silently became the file -- so check both. *)
+         List.iter
+           (fun w -> if List.mem w flags then
+              prerr_endline (Printf.sprintf "  did you mean --%s ?" w))
+           [ prev; f ];
+         prerr_endline "  run 'voblint --help' for the full option list";
+         exit 1)
     | arg :: _ -> prerr_endline ("unrecognized argument: " ^ arg); exit 1
   in
   parse_args (List.tl (Array.to_list Sys.argv));
@@ -795,7 +821,7 @@ let () =
             verdict = verdict_label verdict;
             cond =
               un_string
-                (Voblint_CLI.Core.string_of_exp (Voblint_CLI.Core.nat_of_integer Z.zero) cond)
+                (Voblint_CLI.Core.string_of_exp (Voblint_CLI.Core.nat_of_integer Z.zero) (Voblint_CLI.Core.texp_erase cond))
           }
         in
         let checks =
@@ -807,11 +833,23 @@ let () =
               (List.combine report check_positions)
           | _ ->
             (* A context-sensitive run has no state-carrying report, but it does
-               have per-context verdicts. Pairing happens before Dead is dropped:
-               entry_state_checked_verdicts filters first, which would shorten the
-               list and misalign every position after the first dead check. *)
+               have per-context verdicts. They come from analyse_config_ctx on
+               the resolved config -- the same route the text report renders --
+               so the source view's annotations and the printed verdicts are two
+               readings of one analysis. Reading them off a fixed entry-state
+               solve instead would answer a call-string run with a different
+               abstraction's verdicts, and would re-solve under a keying the run
+               never asked for: on a program whose entry states are unbounded,
+               that alternative diverges where the requested call-string
+               configuration converges.
+
+               Pairing happens before Dead is dropped: filtering first would
+               shorten the list and misalign every position after the first dead
+               check. *)
             let verdicts =
-              Voblint_CLI.State_Report_GraphViz.entry_state_verdicts_for kind prog
+              match Voblint_CLI.Analyse_Dispatch.analyse_config_ctx cfg prog with
+              | Some report -> report
+              | None -> []
             in
             if List.length verdicts <> List.length check_positions then []
             else

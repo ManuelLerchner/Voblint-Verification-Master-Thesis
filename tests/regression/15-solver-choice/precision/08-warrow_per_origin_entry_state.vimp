@@ -5,7 +5,7 @@
 // exact. Locks in that the combination is routed at all -- the resolver
 // accepts every solver at every Interval context, and the dispatcher must
 // match every plan the resolver produces.
-void p(n) {
+void p(int32 n) {
   __voblint_check(n < 10) // PROVED
 }
 void main() {

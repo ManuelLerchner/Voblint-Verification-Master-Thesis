@@ -7,7 +7,7 @@ interprocedural abstract interpreter.
 
 ```text
 well-formed VIMP source
-  -> compiled procedure-aware CFG
+  -> compiled procedure-aware CFG            (expressions elaborated to texp)
   -> located CFG execution
   -> valid activation-local trace
   -> ltr_collect / activation_collect
@@ -26,6 +26,29 @@ only by ordinary fall-through.
 
 `wf_compile_input` adds the finite, duplicate-free procedure enumeration needed
 by executable compilation.
+
+The source contract is static. The one *dynamic* contract the source-facing
+theorems carry is `styped Gamma s0`: the initial store holds every variable
+inside its declared machine-integer kind. It stays visible in the final
+theorems rather than being discharged internally, because it is a genuine
+obligation on the caller -- a store that already violates its own declarations
+is outside the semantics the compiler was proved against. `rstyped` is its
+during-unwinding relaxation, exempting the reserved `ret_var` channel.
+
+## Elaboration
+
+`compile_prog` takes the program's typing environment and elaborates every
+expression once, at compile time, into a kind-annotated `texp`. The compiled
+action carries that tree, so `edge_step`, every domain transfer, and the check
+classifier all evaluate with `teval` and none of them takes a `tyenv`. The
+conversion a write performs is explicit in the tree as `TCast`, emitted only
+where the target kind differs from the kind the expression synthesizes.
+
+On the abstract side the corresponding operation is the `cast_domain` class
+operation `a_cast`, placed in the domain rather than in the analysis
+specification -- the same position Goblint gives `IntDomain.S.cast_to`. Both an
+ordinary assignment and a call-return write route through it, and its soundness
+obligation `a_cast_sound` is discharged per domain against `ik_norm`.
 
 ## Compiler simulation
 

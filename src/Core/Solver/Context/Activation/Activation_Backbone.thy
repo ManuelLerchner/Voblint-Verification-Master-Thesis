@@ -38,12 +38,12 @@ theorem activation_collect_sound:
     and COMB: "\<And>cl dst pars args p cont c1 c2 s t es.
         (cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g
         \<Longrightarrow> s \<in> \<lbrakk>sg (Inl (cl, c1))\<rbrakk> \<Longrightarrow> admiss cl c1 es c2 \<Longrightarrow> t \<in> \<lbrakk>sg (Inl (FunctionResult p, c2))\<rbrakk>
-        \<Longrightarrow> call_enter_store gs g cl s es
+        \<Longrightarrow> call_enter_store \<Gamma> gs g cl s es
         \<Longrightarrow> combine_collect gs dst s t \<in> \<lbrakk>sg (Inl (cont, c1))\<rbrakk>"
-  shows "activation_collect gs admiss startcontext g S v ctx \<subseteq> \<lbrakk>sg (Inl (v, ctx))\<rbrakk>"
+  shows "activation_collect \<Gamma> gs admiss startcontext g S v ctx \<subseteq> \<lbrakk>sg (Inl (v, ctx))\<rbrakk>"
 proof (rule subsetI)
-  fix st assume "st \<in> activation_collect gs admiss startcontext g S v ctx"
-  then obtain t where t: "t \<in> valid_ltr gs g S"
+  fix st assume "st \<in> activation_collect \<Gamma> gs admiss startcontext g S v ctx"
+  then obtain t where t: "t \<in> valid_ltr \<Gamma> gs g S"
     and sn: "sink_node t = v" and kc: "ctx_key admiss startcontext t ctx" and st: "sink_store t = st"
     by (rule activation_collect_E)
   have "sink_store t \<in> \<lbrakk>sg (Inl (sink_node t, ctx))\<rbrakk>"
@@ -76,12 +76,12 @@ theorem activation_collect_sound_gen:
     and COMB: "\<And>cl dst pars args p cont c1 c2 s t es.
         (cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g
         \<Longrightarrow> s \<in> gammaM (sg (Inl (cl, c1))) \<Longrightarrow> admiss cl c1 es c2 \<Longrightarrow> t \<in> gammaM (sg (Inl (FunctionResult p, c2)))
-        \<Longrightarrow> call_enter_store gs g cl s es
+        \<Longrightarrow> call_enter_store \<Gamma> gs g cl s es
         \<Longrightarrow> combine_collect gs dst s t \<in> gammaM (sg (Inl (cont, c1)))"
-  shows "activation_collect gs admiss startcontext g S v ctx \<subseteq> gammaM (sg (Inl (v, ctx)))"
+  shows "activation_collect \<Gamma> gs admiss startcontext g S v ctx \<subseteq> gammaM (sg (Inl (v, ctx)))"
 proof (rule subsetI)
-  fix st assume "st \<in> activation_collect gs admiss startcontext g S v ctx"
-  then obtain t where t: "t \<in> valid_ltr gs g S"
+  fix st assume "st \<in> activation_collect \<Gamma> gs admiss startcontext g S v ctx"
+  then obtain t where t: "t \<in> valid_ltr \<Gamma> gs g S"
     and sn: "sink_node t = v" and kc: "ctx_key admiss startcontext t ctx" and st: "sink_store t = st"
     by (rule activation_collect_E)
   have "sink_store t \<in> gammaM (sg (Inl (sink_node t, ctx)))"

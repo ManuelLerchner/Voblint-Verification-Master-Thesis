@@ -1,0 +1,178 @@
+// PARAM: --analysis interval --context entry-state --context-graph expanded
+// Same program as 04-globals/precision/03-global_across_calls_entry_state.vimp,
+// which pins its five check verdicts; this fixture pins the per-context
+// abstract states behind them. Unlike 04-expanded_three_contexts.vimp, whose
+// bump only reads its formal, this bump reads AND writes the declared global
+// g, so each activation's own entered g is what the previous activation left
+// behind: exit_bump carries ret=[15,15] (10+5), ret=[19,19] (15+4) and
+// ret=[38,38] (19+19) in its three clusters. Those three returned values are
+// the observable trace of g crossing the call boundary in the same whole-state
+// slot a local does -- the renderer never prints a global's own line, so the
+// entered g=[10,10]/[15,15]/[19,19] shows up only through what the callee
+// computed from it.
+//
+// The third call passes g itself rather than a literal, so its context is read
+// off the caller's live state at the call site ([19,19], not a bottomed
+// placeholder), and the enter edges keep the three call sites and the three
+// clusters paired the way the caller routed them -- pp4 -> ctx3 (bump(5)),
+// pp5 -> ctx2 (bump(4)), pp9 -> ctx1 (bump(g)) -- with each combine edge
+// resuming at its own call site's continuation.
+// EXPECT-GRAPH-BEGIN
+// clusters:
+//   cluster_ctx_0:
+//     main_pp7_ctx0
+//     main_pp8_ctx0
+//     main_pp11_ctx0
+//     main_pp12_ctx0
+//     main_result_main_ctx0
+//     main_entry_main_ctx0
+//     main_pp3_ctx0
+//     main_pp4_ctx0
+//     main_pp5_ctx0
+//     main_pp6_ctx0
+//     main_pp9_ctx0
+//     main_pp10_ctx0
+//   cluster_ctx_1:
+//     bump_pp1_ctx1
+//     bump_pp0_ctx1
+//     bump_entry_bump_ctx1
+//     bump_result_bump_ctx1
+//   cluster_ctx_2:
+//     bump_pp1_ctx2
+//     bump_pp0_ctx2
+//     bump_entry_bump_ctx2
+//     bump_result_bump_ctx2
+//   cluster_ctx_3:
+//     bump_pp1_ctx3
+//     bump_pp0_ctx3
+//     bump_entry_bump_ctx3
+//     bump_result_bump_ctx3
+//
+// nodes:
+//   bump_pp1_ctx1: pp1
+//       n=[19,19]
+//   bump_pp1_ctx2: pp1
+//       n=[4,4]
+//   bump_pp1_ctx3: pp1
+//       n=[5,5]
+//   main_pp7_ctx0: pp7
+//       a=[15,15]
+//       b=[19,19]
+//       c=[-inf,+inf]
+//       check b==19
+//   main_pp8_ctx0: pp8
+//       a=[15,15]
+//       b=[19,19]
+//       c=[-inf,+inf]
+//       check g==19
+//   main_pp11_ctx0: pp11
+//       a=[15,15]
+//       b=[19,19]
+//       c=[38,38]
+//       check g==38
+//   main_pp12_ctx0: pp12
+//       a=[15,15]
+//       b=[19,19]
+//       c=[38,38]
+//   main_result_main_ctx0: exit_main
+//       a=[15,15]
+//       b=[19,19]
+//       c=[38,38]
+//   bump_pp0_ctx1: pp0
+//       n=[19,19]
+//   bump_pp0_ctx2: pp0
+//       n=[4,4]
+//   bump_pp0_ctx3: pp0
+//       n=[5,5]
+//   main_entry_main_ctx0: entry_main
+//       a=[-inf,+inf]
+//       b=[-inf,+inf]
+//       c=[-inf,+inf]
+//   main_pp3_ctx0: pp3
+//       a=[-inf,+inf]
+//       b=[-inf,+inf]
+//       c=[-inf,+inf]
+//   main_pp4_ctx0: pp4
+//       a=[-inf,+inf]
+//       b=[-inf,+inf]
+//       c=[-inf,+inf]
+//   main_pp5_ctx0: pp5
+//       a=[15,15]
+//       b=[-inf,+inf]
+//       c=[-inf,+inf]
+//   main_pp6_ctx0: pp6
+//       a=[15,15]
+//       b=[19,19]
+//       c=[-inf,+inf]
+//       check a==15
+//   main_pp9_ctx0: pp9
+//       a=[15,15]
+//       b=[19,19]
+//       c=[-inf,+inf]
+//   bump_entry_bump_ctx1: entry_bump
+//       n=[19,19]
+//   bump_entry_bump_ctx2: entry_bump
+//       n=[4,4]
+//   bump_entry_bump_ctx3: entry_bump
+//       n=[5,5]
+//   main_pp10_ctx0: pp10
+//       a=[15,15]
+//       b=[19,19]
+//       c=[38,38]
+//       check c==38
+//   bump_result_bump_ctx1: exit_bump
+//       n=[19,19]
+//       ret=[38,38]
+//   bump_result_bump_ctx2: exit_bump
+//       n=[4,4]
+//       ret=[19,19]
+//   bump_result_bump_ctx3: exit_bump
+//       n=[5,5]
+//       ret=[15,15]
+//
+// edges:
+//   bump_pp1_ctx1 -> bump_result_bump_ctx1: return g
+//   bump_pp1_ctx2 -> bump_result_bump_ctx2: return g
+//   bump_pp1_ctx3 -> bump_result_bump_ctx3: return g
+//   main_pp7_ctx0 -> main_pp8_ctx0: check(b==19)
+//   main_pp8_ctx0 -> main_pp9_ctx0: check(g==19)
+//   main_pp11_ctx0 -> main_pp12_ctx0: check(g==38)
+//   main_pp12_ctx0 -> main_result_main_ctx0: terminate
+//   bump_pp0_ctx1 -> bump_pp1_ctx1: g := g+n
+//   bump_pp0_ctx2 -> bump_pp1_ctx2: g := g+n
+//   bump_pp0_ctx3 -> bump_pp1_ctx3: g := g+n
+//   main_entry_main_ctx0 -> main_pp3_ctx0: nop
+//   main_pp3_ctx0 -> main_pp4_ctx0: g := 10
+//   main_pp6_ctx0 -> main_pp7_ctx0: check(a==15)
+//   bump_entry_bump_ctx1 -> bump_pp0_ctx1: nop
+//   bump_entry_bump_ctx2 -> bump_pp0_ctx2: nop
+//   bump_entry_bump_ctx3 -> bump_pp0_ctx3: nop
+//   main_pp10_ctx0 -> main_pp11_ctx0: check(c==38)
+//   main_pp4_ctx0 -> bump_entry_bump_ctx3: enter bump(5)
+//   main_pp5_ctx0 -> bump_entry_bump_ctx2: enter bump(4)
+//   main_pp9_ctx0 -> bump_entry_bump_ctx1: enter bump(g)
+//   bump_result_bump_ctx3 -> main_pp5_ctx0: combine a := #ret
+//   bump_result_bump_ctx2 -> main_pp6_ctx0: combine b := #ret
+//   bump_result_bump_ctx1 -> main_pp10_ctx0: combine c := #ret
+//   main_pp4_ctx0 -> main_pp5_ctx0: call-to-return bump
+//   main_pp5_ctx0 -> main_pp6_ctx0: call-to-return bump
+//   main_pp9_ctx0 -> main_pp10_ctx0: call-to-return bump
+// EXPECT-GRAPH-END
+
+global int32 g;
+int32 bump(int32 n) {
+  g := g + n;
+  return g
+}
+void main() {
+  int32 a, b, c;
+  g := 10;
+  a := bump(5);
+  b := bump(4);
+  __voblint_check(a == 15); // PROVED
+  __voblint_check(b == 19); // PROVED
+  __voblint_check(g == 19); // PROVED
+  c := bump(g);
+  __voblint_check(c == 38); // PROVED
+  __voblint_check(g == 38) // PROVED
+}

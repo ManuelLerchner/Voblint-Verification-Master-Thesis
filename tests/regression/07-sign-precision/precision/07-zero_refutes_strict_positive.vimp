@@ -1,0 +1,19 @@
+// PARAM: --analysis sign
+// Sign's Zero element refuting 0 < y, and the same source condition landing
+// on two different verdicts at two nodes of one program. The refutation
+// route here is Zero, not Negative: sign_lt reaches 0 < y through a
+// different case than 02-straight_line_sign_refuted.vimp's exact negative
+// write does, and the two-element lattice gap between them (Positive proves,
+// Zero refutes) is what an over-eager "any non-Positive is undecided"
+// regression would collapse.
+//
+// The intervening y := 0 is also what keeps the two check nodes from being
+// answered by one shared reading: a report that forwarded either node's
+// store to the other would have to give both the same verdict.
+void main() {
+  int32 y;
+  y := 5;
+  __voblint_check(0 < y); // PROVED
+  y := 0;
+  __voblint_check(0 < y) // REFUTED
+}

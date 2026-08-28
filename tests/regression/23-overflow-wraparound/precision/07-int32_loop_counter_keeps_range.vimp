@@ -1,0 +1,18 @@
+// PARAM: --analysis interval
+// Adapted from Goblint tests/regression/38-int-refinements/02-strange-ulong.c,
+// which runs one bounded counting loop per integer type.
+//
+// The signed control for 08-uint8_loop_counter_keeps_range.vimp:
+// the identical loop on an unannotated counter, which is int32. Nothing here
+// is promoted, so the read of i carries no conversion, the loop exit's guard
+// refines i directly, and narrowing recovers the exact exit value the uint8
+// version loses.
+void main() {
+  int32 i;
+  i := 0;
+  while (i < 200) {
+    i := i + 1
+  };
+  __voblint_check(i == 200); // PROVED
+  __voblint_check(!(i < 0)) // PROVED
+}

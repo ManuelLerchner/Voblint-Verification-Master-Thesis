@@ -39,7 +39,7 @@
 //   fact_entry_fact_ctx1: entry_fact
 //   main_pp6_ctx0: pp6
 //       check 0<r [unknown]
-//       r=[-inf,+inf]
+//       r=[-2147483648,2147483647]
 //   fact_result_fact_ctx1: exit_fact
 //
 // edges:
@@ -59,7 +59,8 @@
 //   main_pp5_ctx0 -> main_pp6_ctx0: call-to-return fact
 // EXPECT-GRAPH-END
 
-void fact(n) {
+int32 fact(int32 n) {
+  int32 tmp;
   if (n < 2) {
     return 1
   } else {
@@ -68,6 +69,7 @@ void fact(n) {
   }
 }
 void main() {
+  int32 r;
   r := fact(3);
   __voblint_check(0 < r) // UNKNOWN
 }

@@ -16,6 +16,7 @@
 // other three domains use, with no Parity-specific result or report
 // construction anywhere in it.
 void main() {
+  int32 n, x, y;
   n := __voblint_nondet_int();
   x := 2 * n;
   y := 2 * n + 1;

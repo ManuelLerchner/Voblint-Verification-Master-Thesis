@@ -12,6 +12,7 @@
 // answer PROVED x4, and the same program with bound 100 (35-hh-ex1b.c's
 // literal shape) measures identically.
 void main() {
+  int32 i, j;
   i := 0;
   while (i < 10) {
     j := 0;

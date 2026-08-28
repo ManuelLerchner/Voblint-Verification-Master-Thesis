@@ -26,7 +26,7 @@ text \<open>
   the stack contains one entry per call.
 \<close>
 
-type_synonym cframe = "cfg_node \<times> vname option \<times> store"
+type_synonym cframe = "cfg_node \<times> typed_var option \<times> store"
 type_synonym cconf = "cfg_node \<times> store \<times> cframe list"
 
 inductive cstep :: "(vname \<Rightarrow> bool) \<Rightarrow> cfg \<Rightarrow> cconf \<Rightarrow> cconf \<Rightarrow> bool" for gs and g where
@@ -53,23 +53,23 @@ lemma cstep_nop:
 
 lemma cstep_assign:
   assumes "(u, EA_Assign x a, v) \<in> intra g"
-  shows "cstep gs g (u, s, stk) (v, s(x := aval a s), stk)"
+  shows "cstep gs g (u, s, stk) (v, s(x := teval a s), stk)"
   by (rule cstep.Intra[OF assms]) simp
 
 lemma cstep_assume:
-  assumes "(u, EA_Assume b, v) \<in> intra g" and "truthy (aval b s)"
+  assumes "(u, EA_Assume b, v) \<in> intra g" and "truthy (teval b s)"
   shows "cstep gs g (u, s, stk) (v, s, stk)"
   by (rule cstep.Intra[OF assms(1)]) (use assms(2) in simp)
 
 lemma cstep_assume_not:
-  assumes "(u, EA_AssumeNot b, v) \<in> intra g" and "\<not> truthy (aval b s)"
+  assumes "(u, EA_AssumeNot b, v) \<in> intra g" and "\<not> truthy (teval b s)"
   shows "cstep gs g (u, s, stk) (v, s, stk)"
   by (rule cstep.Intra[OF assms(1)]) (use assms(2) in simp)
 
 lemma cstep_ret:
-  assumes "(u, EA_Ret e q, v) \<in> intra g"
+  assumes "(u, EA_Ret e q rk, v) \<in> intra g"
   shows "cstep gs g (u, s, stk)
-     (v, s(ret_var := (case e of None \<Rightarrow> s ret_var | Some a \<Rightarrow> aval a s)), stk)"
+     (v, s(ret_var := (case e of None \<Rightarrow> s ret_var | Some a \<Rightarrow> teval a s)), stk)"
   by (rule cstep.Intra[OF assms]) simp
 
 lemma cstep_check:
@@ -90,10 +90,10 @@ text \<open>Both stacks record procedure activations.  \<open>act_frames\<close>
 
 fun act_frames :: "frame list \<Rightarrow> (store \<times> vname option) list" where
   "act_frames [] = []"
-| "act_frames (Frame s d # frs) = (s, d) # act_frames frs"
+| "act_frames (Frame s d rk # frs) = (s, d) # act_frames frs"
 
 definition cframe_act :: "cframe \<Rightarrow> store \<times> vname option" where
-  "cframe_act cf = (case cf of (cont, d, s) \<Rightarrow> (s, d))"
+  "cframe_act cf = (case cf of (cont, d, s) \<Rightarrow> (s, map_option tv_name d))"
 
 text \<open>\<open>frames_match\<close> ties a source frame stack to a CFG activation stack: the activation
   frames agree, in order, on caller store and destination (the continuation node is the CFG's
@@ -106,14 +106,14 @@ lemma frames_match_Nil [simp]: "frames_match [] []"
 
 text \<open>An activation frame matches the top CFG activation on caller store and destination.\<close>
 lemma frames_match_activation:
-  "frames_match (Frame s d # frs) ((cont, d, s) # stk)
+  "frames_match (Frame s (map_option tv_name td) rk # frs) ((cont, td, s) # stk)
      = frames_match frs stk"
   by (simp add: frames_match_def cframe_act_def)
 
 text \<open>Call entry creates exactly one child activation on top of the preserved caller stack.\<close>
 lemma frames_match_call:
   "frames_match frs stk \<Longrightarrow>
-   frames_match (Frame caller dst # frs) ((cont, dst, caller) # stk)"
+   frames_match (Frame caller (map_option tv_name tdst) rk # frs) ((cont, tdst, caller) # stk)"
   by (simp add: frames_match_activation)
 
 

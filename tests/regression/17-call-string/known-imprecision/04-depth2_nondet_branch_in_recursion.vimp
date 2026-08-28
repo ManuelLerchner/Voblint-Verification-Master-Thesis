@@ -9,10 +9,11 @@
 // non-relational -- and returns y=[-inf,1], which propagates back up the
 // chain to a. The nr check stays proved because nr(5, 5) and nr(6, 6) are
 // different call sites and get different keys at any depth.
-void nr(x, y) {
+void nr(int32 x, int32 y) {
   __voblint_check(x == y) // PROVED
 }
-void f(x, y) {
+int32 f(int32 x, int32 y) {
+  int32 r, top;
   if (x == 0) { return y } else { skip };
   top := __voblint_nondet_int();
   if (0 < top) { nr(5, 5) } else { nr(6, 6) };
@@ -20,6 +21,7 @@ void f(x, y) {
   return r
 }
 void main() {
+  int32 a;
   a := f(3, 3);
   __voblint_check(a == 0) // UNKNOWN
 }

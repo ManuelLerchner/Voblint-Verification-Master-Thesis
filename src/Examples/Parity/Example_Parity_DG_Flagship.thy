@@ -56,7 +56,7 @@ text \<open>
 definition parity_program :: imp_prog where
   "parity_program = program {
 
-      global total;
+      global int32 total;
 
       void main() {
         x := 0;
@@ -108,7 +108,7 @@ text \<open>
 \<close>
 
 definition parity_cfg :: cfg where
-  "parity_cfg = compile_prog parity_pi [] (STR ''main'') parity_prog"
+  "parity_cfg = compile_prog (prog_tyenv parity_program) parity_pi [] (STR ''main'') parity_prog"
 
 lemma parity_finE: "finite (intra parity_cfg)" and parity_finC: "finite (calls parity_cfg)"
   unfolding parity_cfg_def
@@ -243,9 +243,13 @@ proof -
 qed
 
 theorem parity_source_run_sound:
-  assumes run: "star (pstep parity_gs parity_pi) (parity_prog, s, []) (residual, t, frs)"
+  assumes run: "star (pstep (prog_tyenv parity_program) parity_gs parity_pi)
+                  (parity_prog, s, [], proc_ret_kind parity_pi (STR ''main''))
+                  (residual, t, frs, rk)"
       and init: "s \<in> cinit_stores parity_gs"
-  shows "\<exists>v stk. csim parity_pi parity_cfg (residual, t, frs) (v, t, stk)
+      and sty: "styped (prog_tyenv parity_program) s"
+  shows "\<exists>v stk. csim (prog_tyenv parity_program) parity_pi parity_cfg
+                     (residual, t, frs, rk) (v, t, stk)
                  \<and> t \<in> parity_ex_reg.gamma (snd parity_sol) v"
 proof -
   show ?thesis
@@ -257,7 +261,7 @@ proof -
               parity_finE[unfolded parity_cfg_def]
               parity_finC[unfolded parity_cfg_def]
               parity_sound0
-              init run[unfolded parity_cfg_def]])
+              init sty run[unfolded parity_cfg_def]])
 qed
 
 subsection \<open>9. The result is not vacuous\<close>
@@ -299,10 +303,10 @@ definition parity_graph_config ::
       context_key = (\<lambda>_. STR ''unit''),
       show_context = (\<lambda>_. ''unit''),
       locals_for_pp = (\<lambda>p.
-        scope_locals (compiled_procedure_scope parity_gs parity_pi [] (STR ''main'') parity_prog
+        scope_locals (compiled_procedure_scope parity_gs (prog_tyenv parity_program) parity_pi [] (STR ''main'') parity_prog
           parity_cfg p) @ [STR ''total'']),
       return_slot_for_pp = (\<lambda>p.
-        scope_return_slot (compiled_procedure_scope parity_gs parity_pi [] (STR ''main'') parity_prog
+        scope_return_slot (compiled_procedure_scope parity_gs (prog_tyenv parity_program) parity_pi [] (STR ''main'') parity_prog
           parity_cfg p)),
       globals_to_show = [],
       show_local = (\<lambda>_ _ vars d.
@@ -315,7 +319,8 @@ definition parity_graph_config ::
       show_internal_globals = False,
       owner_of = (\<lambda>_. ''main''),
       cluster_label = (\<lambda>_ _. ''main / root context''),
-      source_text = Some (pretty_string_of_program parity_pi [] parity_prog []),
+      source_text = Some (pretty_string_of_program (prog_tyenv parity_program) (declared_scoped parity_program)
+        parity_pi [] parity_prog (declared_global_vars parity_program)),
       node_annotation = (\<lambda>_ _. None)
     \<rparr>"
 

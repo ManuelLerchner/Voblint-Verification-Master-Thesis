@@ -3,7 +3,7 @@
 // Goblint-style zero-initialized default (cinit_sign_st), read back
 // exactly -- see also 02-global_var.vimp (Interval), which locks in a
 // declared global's value after it is actually written.
-global g;
+global int32 g;
 void main() {
   __voblint_check(g == 0) // PROVED
 }

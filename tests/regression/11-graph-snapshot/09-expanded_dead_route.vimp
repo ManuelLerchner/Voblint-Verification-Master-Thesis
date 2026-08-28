@@ -99,10 +99,11 @@
 //   main_pp6_ctx0 -> main_pp7_ctx0: call-to-return f
 // EXPECT-GRAPH-END
 
-void f(n) {
+int32 f(int32 n) {
   return n
 }
 void main() {
+  int32 a, b, x;
   x := 5;
   if (x < 2) {
     a := f(3)

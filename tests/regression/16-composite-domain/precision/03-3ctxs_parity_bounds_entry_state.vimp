@@ -13,10 +13,11 @@
 // (16-composite-domain/known-imprecision/01-3ctxs_context_insensitive_entry.vimp)
 // f's single entry state is widened and never narrowed, and the same
 // check answers UNKNOWN.
-void f(j) {
+int32 f(int32 j) {
   return j + 1
 }
 void main() {
+  int32 i, t;
   i := 0;
   while (i < 10) {
     t := f(i);

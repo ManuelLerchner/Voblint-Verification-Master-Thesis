@@ -1,0 +1,27 @@
+// PARAM: --analysis interval
+// C has no negative literals. -2147483648 is unary minus applied to the token
+// 2147483648, which does not fit int and so types as a 64-bit signed type;
+// the negation inherits it and the multiplication below is 64-bit.
+//
+// VIMP's frontend folds the sign into the literal, so the kind has to be
+// chosen from the constant's magnitude to reconstruct the token C typed.
+// Reading the folded value instead got exactly this constant wrong -- it lies
+// in int32's range although its token does not -- and the product wrapped to
+// zero, refuting a true property.
+//
+// The three neighbours pin that nothing else moved. -2147483647 still types
+// int32, so its product wraps there -- 2, not -4294967294 -- which is the
+// frozen wraparound policy behaving correctly and is exactly the contrast
+// that makes the boundary matter. One magnitude above already typed int64,
+// and the positive token is unaffected either way.
+void main() {
+  int64 a, b, c, d;
+  a := -2147483648 * 2;
+  b := -2147483647 * 2;
+  c := -2147483649 * 2;
+  d := 2147483648 * 2;
+  __voblint_check(a == -4294967296);  // PROVED
+  __voblint_check(b == 2);            // PROVED
+  __voblint_check(c == -4294967298);  // PROVED
+  __voblint_check(d == 4294967296)    // PROVED
+}

@@ -1,0 +1,17 @@
+// PARAM: --analysis interval
+// Adapted from Goblint tests/regression/31-ikind-aware-ints/08-unsigned-negate.c
+// ("unsigned int x = 1; unsigned int y = -x; __goblint_check(y == 4294967295);").
+//
+// uint32 has the rank of int, so nothing is promoted and the negation is
+// computed in uint32 itself: 0 - 1 is 4294967295 there, and adding 1 back
+// returns to 0. Unlike 01-uint8_wraparound.vimp, the wrap happens inside the
+// operation rather than on the assignment.
+global uint32 x;
+global uint32 y;
+void main() {
+  x := 1;
+  y := -x;
+  __voblint_check(y == 4294967295); // PROVED
+  y := y + 1;
+  __voblint_check(y == 0) // PROVED
+}

@@ -51,7 +51,7 @@ lemma random_guard_program_declared_global_vars [simp]:
 subsection \<open>Non-vacuity: a concrete run where the nondeterministic call returns 42\<close>
 
 text \<open>
-  \<open>random_guard_exit_y_nonneg\<close> bounds every reachable exit state, but says
+  \<open>random_guard_exit_sound\<close> bounds every reachable exit state, but says
   nothing about whether any exist. This witness closes that gap at the
   source semantics: fixing the random draw at \<open>v = 42\<close>, \<^const>\<open>pcompletes\<close>
   (the small-step relation's terminating-run predicate) derives a concrete
@@ -60,34 +60,51 @@ text \<open>
   confirms the bound on it directly.
 \<close>
 
+text \<open>The witness value survives its own kind, so every conversion along the
+  run is the identity on it. Without this the wraps stay unevaluated and each
+  step's store fails to match the one the next step expects.\<close>
+
+lemma ik_norm_I32_42 [simp]: "ik_norm I32 42 = 42"
+  by eval
+
 lemma random_guard_run_42:
   fixes s :: store and gs :: "vname \<Rightarrow> bool" and \<Pi> :: proc_table
-  shows "pcompletes gs \<Pi> (prog_main random_guard_program) s
-           (s((STR ''x'') := 0, (STR ''x'') := 42, (STR ''y'') := 42))"
+  shows "pcompletes (prog_tyenv random_guard_program) gs \<Pi>
+           (prog_main random_guard_program) s
+           (s((STR ''x'') := 0, (STR ''x'') := 42, (STR ''y'') := 42)) rk"
 proof -
-  have step1: "pcompletes gs \<Pi> (Assign (STR ''x'') (N 0)) s (s((STR ''x'') := 0))"
-    by (metis aval.simps(1) pcompletes_assign)
-  have step2: "pcompletes gs \<Pi> (VIMP_Proc.com.Call (Some (STR ''x'')) special_pname_nondet_int [])
-                 (s((STR ''x'') := 0)) ((s((STR ''x'') := 0))((STR ''x'') := 42))"
-    by (rule pcompletes_special_nondet_int)
-  have step12: "pcompletes gs \<Pi>
+  let ?G = "prog_tyenv random_guard_program"
+  have step1: "pcompletes ?G gs \<Pi> (Assign (STR ''x'') (N 0)) s (s((STR ''x'') := 0)) rk"
+    using pcompletes_assign[where \<Gamma> = ?G and gs = gs and \<Pi> = \<Pi>
+        and x = "STR ''x''" and a = "N 0" and s = s and rk = rk]
+    by (simp add: taval_syn_def opk_def prog_tyenv_def random_guard_program_def default_tyenv_def)
+  have step2: "pcompletes ?G gs \<Pi> (VIMP_Proc.com.Call (Some (STR ''x'')) special_pname_nondet_int [])
+                 (s((STR ''x'') := 0)) ((s((STR ''x'') := 0))((STR ''x'') := 42)) rk"
+    using pcompletes_special_nondet_int[where \<Gamma> = ?G and gs = gs and \<Pi> = \<Pi>
+        and x = "STR ''x''" and s = "s((STR ''x'') := 0)" and v = 42 and rk = rk]
+    by (simp add: prog_tyenv_def random_guard_program_def default_tyenv_def)
+  have step12: "pcompletes ?G gs \<Pi>
                   (Seq (Assign (STR ''x'') (N 0))
                        (VIMP_Proc.com.Call (Some (STR ''x'')) special_pname_nondet_int [])) s
-                  ((s((STR ''x'') := 0))((STR ''x'') := 42))"
+                  ((s((STR ''x'') := 0))((STR ''x'') := 42)) rk"
     using pcompletes_Seq[OF step1 step2] .
-  have guard_true: "truthy (aval (Less (N 0) (V (STR ''x''))) ((s((STR ''x'') := 0))((STR ''x'') := 42)))"
-    by simp
-  have step3: "pcompletes gs \<Pi> (Assign (STR ''y'') (V (STR ''x''))) ((s((STR ''x'') := 0))((STR ''x'') := 42))
-                 (((s((STR ''x'') := 0))((STR ''x'') := 42))((STR ''y'') := 42))"
-    by (metis aval.simps(2) fun_upd_def pcompletes_assign)
-  have step3if: "pcompletes gs \<Pi>
+  have guard_true: "truthy (taval_syn ?G (Less (N 0) (V (STR ''x'')))
+                              ((s((STR ''x'') := 0))((STR ''x'') := 42)))"
+    by (simp add: taval_syn_def opk_def prog_tyenv_def random_guard_program_def default_tyenv_def)
+  have step3: "pcompletes ?G gs \<Pi> (Assign (STR ''y'') (V (STR ''x''))) ((s((STR ''x'') := 0))((STR ''x'') := 42))
+                 (((s((STR ''x'') := 0))((STR ''x'') := 42))((STR ''y'') := 42)) rk"
+    using pcompletes_assign[where \<Gamma> = ?G and gs = gs and \<Pi> = \<Pi>
+        and x = "STR ''y''" and a = "V (STR ''x'')"
+        and s = "(s((STR ''x'') := 0))((STR ''x'') := 42)" and rk = rk]
+    by (simp add: taval_syn_def opk_def prog_tyenv_def random_guard_program_def default_tyenv_def)
+  have step3if: "pcompletes ?G gs \<Pi>
       (If (Less (N 0) (V (STR ''x''))) (Assign (STR ''y'') (V (STR ''x''))) (Assign (STR ''y'') (Minus (N 0) (V (STR ''x'')))))
-      ((s((STR ''x'') := 0))((STR ''x'') := 42)) (((s((STR ''x'') := 0))((STR ''x'') := 42))((STR ''y'') := 42))"
+      ((s((STR ''x'') := 0))((STR ''x'') := 42)) (((s((STR ''x'') := 0))((STR ''x'') := 42))((STR ''y'') := 42)) rk"
     using pcompletes_IfTrue[OF guard_true step3] .
-  have "pcompletes gs \<Pi>
+  have "pcompletes ?G gs \<Pi>
       (Seq (Seq (Assign (STR ''x'') (N 0)) (VIMP_Proc.com.Call (Some (STR ''x'')) special_pname_nondet_int []))
         (If (Less (N 0) (V (STR ''x''))) (Assign (STR ''y'') (V (STR ''x''))) (Assign (STR ''y'') (Minus (N 0) (V (STR ''x''))))))
-      s (((s((STR ''x'') := 0))((STR ''x'') := 42))((STR ''y'') := 42))"
+      s (((s((STR ''x'') := 0))((STR ''x'') := 42))((STR ''y'') := 42)) rk"
     using pcompletes_Seq[OF step12 step3if] .
   then show ?thesis unfolding random_guard_program_def by simp
 qed
@@ -157,7 +174,7 @@ lemma random_guard_comb_fwd_ok:
   using assms random_guard_calls_cov_ball by (cases c1) fastforce
 
 lemma random_guard_node_sound:
-  "ltr_collect random_guard_gs (prog_cfg prog_main_name random_guard_program)
+  "ltr_collect (prog_tyenv random_guard_program) random_guard_gs (prog_cfg prog_main_name random_guard_program)
      (cinit_stores random_guard_gs) v
    \<subseteq> \<lbrakk>case lookup_context (analyse_sign_result_for random_guard_gs random_guard_program) v () of
           Unreachable \<Rightarrow> bot | Reachable st \<Rightarrow> st\<rbrakk>"
@@ -171,11 +188,18 @@ definition random_guard_env :: "vname \<Rightarrow> sign" where
              (cfg_exit (prog_cfg prog_main_name random_guard_program)) () of
         Unreachable \<Rightarrow> bot | Reachable st \<Rightarrow> st)"
 
-lemma random_guard_exec_y: "random_guard_env (STR ''y'') = SNonNeg"
+text \<open>The guard refines the nondeterministic \<open>x\<close> to non-negative, and \<open>y := x\<close>
+  carries that across -- but the write converts to \<open>y\<close>'s kind, and
+  \<^const>\<open>SNonNeg\<close> concretizes to every non-negative integer, including ones
+  \<^const>\<open>I32\<close> cannot hold. Sign alone cannot rule out the wrap, so the exit
+  reads \<^const>\<open>STop\<close>. The guard's own refinement is still visible one step
+  earlier, in \<open>random_guard_run_42_y_nonneg\<close>.\<close>
+
+lemma random_guard_exec_y: "random_guard_env (STR ''y'') = STop"
   by (simp add: random_guard_env_def) eval
 
 corollary random_guard_exit_sound:
-  "ltr_collect random_guard_gs (prog_cfg (STR ''main'') random_guard_program) (cinit_stores random_guard_gs)
+  "ltr_collect (prog_tyenv random_guard_program) random_guard_gs (prog_cfg (STR ''main'') random_guard_program) (cinit_stores random_guard_gs)
      (cfg_exit (prog_cfg (STR ''main'') random_guard_program))
    \<le> \<lbrakk>random_guard_env\<rbrakk>"
   unfolding random_guard_env_def
@@ -183,25 +207,25 @@ corollary random_guard_exit_sound:
   by (simp add: prog_main_name_def gamma_point_def split: point_state.splits)
 
 text \<open>
-  Closing issue #43: for every concrete execution state that reaches the
-  exit of \<open>random_guard_program\<close>, regardless of the value chosen by
-  the nondeterministic call, \<open>y\<close> is nonnegative. \<open>random_guard_exit_sound\<close>
-  over-approximates every such exit state by the computed
-  \<^const>\<open>random_guard_env\<close>; \<open>random_guard_exec_y\<close> pins that result's
-  \<open>y\<close> to \<^term>\<open>SNonNeg\<close>, whose concretization is exactly the nonnegative
-  integers.
-\<close>
+  Issue #43 asked whether every concrete exit state of
+  \<^const>\<open>random_guard_program\<close> has \<open>y\<close> non-negative, whatever the
+  nondeterministic call returns. It does: the guard admits only positive \<open>x\<close>,
+  and \<open>y := x\<close> copies it.
 
-corollary random_guard_exit_y_nonneg:
-  assumes "t \<in> ltr_collect random_guard_gs (prog_cfg (STR ''main'') random_guard_program) (cinit_stores random_guard_gs)
-             (cfg_exit (prog_cfg (STR ''main'') random_guard_program))"
-  shows "t (STR ''y'') \<ge> 0"
-proof -
-  have t_in: "t \<in> \<lbrakk>random_guard_env\<rbrakk>"
-    using assms random_guard_exit_sound by blast
-  have "t (STR ''y'') \<in> gamma_sign (random_guard_env (STR ''y''))"
-    using gamma_stateD[OF t_in] by simp
-  then show ?thesis using random_guard_exec_y by simp
-qed
+  Sign can no longer witness that. \<open>random_guard_run_42_y_nonneg\<close> above shows
+  the guard's refinement surviving up to the write; the write then converts to
+  \<open>y\<close>'s kind, and \<^const>\<open>SNonNeg\<close> concretizes to every non-negative integer,
+  including ones \<^const>\<open>I32\<close> cannot hold. A magnitude-free domain cannot rule
+  out the wrap, so the exit reads \<^const>\<open>STop\<close> and
+  \<open>random_guard_exit_sound\<close> constrains nothing.
+
+  The corollary that used to discharge #43 from this chain is therefore gone
+  rather than restated: deriving \<open>0 \<le> t (STR ''y'')\<close> from a \<^const>\<open>STop\<close>
+  result is not possible, and asserting it anyway would be unsound. Recovering
+  it needs a concretization that reads an abstract value at its variable's
+  declared kind, so that \<^const>\<open>SNonNeg\<close> at \<^const>\<open>I32\<close> denotes
+  \<open>{0..2147483647}\<close> and the conversion is exact -- or the Interval component,
+  which carries the magnitude the question turns on.
+\<close>
 
 end

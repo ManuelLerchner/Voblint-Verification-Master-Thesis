@@ -1,5 +1,6 @@
 theory Sign_Arithmetic
-  imports Sign_Lattice "Voblint_VIMP.VIMP_Expr" Voblint_Core.Abstract_Arithmetic
+  imports Sign_Lattice "Voblint_VIMP.VIMP_Expr" "Voblint_VIMP.VIMP_Elaborated"
+    Voblint_Core.Abstract_Arithmetic
 begin
 
 section \<open>Sign arithmetic\<close>
@@ -195,39 +196,192 @@ lemma sign_tobool_mono:
 
 subsection \<open>Abstract expression evaluation\<close>
 
-fun aval_sign :: "exp => (vname => sign) => sign" where
-    "aval_sign (N n)        \<sigma> = sign_of_int n"
-  | "aval_sign (V x)        \<sigma> = \<sigma> x"
-  | "aval_sign (Plus  a b)  \<sigma> = aval_sign a \<sigma> + aval_sign b \<sigma>"
-  | "aval_sign (Minus a b)  \<sigma> = aval_sign a \<sigma> - aval_sign b \<sigma>"
-  | "aval_sign (Times a b)  \<sigma> = aval_sign a \<sigma> * aval_sign b \<sigma>"
-  | "aval_sign (Less a b)   \<sigma> =
-       (if is_bot (aval_sign a \<sigma>) \<or> is_bot (aval_sign b \<sigma>) then bot
-        else if sign_lt (aval_sign a \<sigma>) (aval_sign b \<sigma>) = Some True then SPos
-        else if sign_lt (aval_sign a \<sigma>) (aval_sign b \<sigma>) = Some False then SZero
+text \<open>
+  \<open>sign_cast\<close> is not a generic boundary-literal fallback cast: sign carries
+  no magnitude, so a boundary-literal test via \<^const>\<open>sign_lt\<close> can never
+  certify an unbounded value (\<open>SNeg\<close>/\<open>SNonPos\<close>/
+  \<open>SNonNeg\<close>/\<open>SPos\<close>) already fits an \<open>ikind\<close>'s range, so it always widens
+  those to \<open>STop\<close> regardless of the target kind. An unsigned target admits
+  a uniform, strictly sharper fact instead: \<^const>\<open>ik_norm\<close> for an unsigned
+  \<open>ikind\<close> always lands in \<open>[0, ik_max ik]\<close> (\<open>ik_norm_in_range\<close>, since
+  \<open>ik_min ik = 0\<close>), so casting to an unsigned kind is always sound at
+  \<open>SNonNeg\<close> -- never \<open>STop\<close> -- no matter the source value. \<open>SZero\<close> is
+  exact at every kind: zero is representable at any width. A signed target
+  genuinely admits nothing sharper than \<open>STop\<close> for any other value, since
+  the sign-only abstraction carries no bound on how far a value in, say,
+  \<open>SPos\<close> could exceed the kind's range.
+\<close>
+
+definition sign_cast :: "ikind => sign => sign" where
+  "sign_cast ik a =
+     (if is_bot a then bot
+      else if a = SZero then SZero
+      else if \<not> ik_signed ik then SNonNeg
+      else top)"
+
+text \<open>
+  Sign bounds no magnitude, so the only values it can certify as representable
+  at a machine-integer kind are \<open>bot\<close> (no value at all) and \<open>SZero\<close>
+  (the single value \<open>0\<close>, in every kind's range). Any other sign value
+  admits arbitrarily large magnitudes.
+\<close>
+
+definition sign_in_range :: "ikind => sign => bool" where
+  "sign_in_range ik a = (is_bottom_sign a \<or> a = SZero)"
+
+lemma sign_in_range_sound:
+  assumes "sign_in_range ik a"
+  shows "gamma_sign a \<subseteq> ik_range ik"
+  using assms
+  by (auto simp: sign_in_range_def is_bottom_sign_correct)
+
+lemma sign_cast_sound:
+  assumes v: "v \<in> gamma a"
+  shows "ik_norm ik v \<in> gamma (sign_cast ik a)"
+proof (cases "is_bot a")
+  case True
+  then show ?thesis using v by (simp add: is_bot_sign is_bottom_sign_correct gamma_abs_sign)
+next
+  case False
+  show ?thesis
+  proof (cases "a = SZero")
+    case True
+    with v have "v = 0" by (simp add: gamma_abs_sign)
+    then show ?thesis
+      using True by (simp add: sign_cast_def ik_norm_def is_bot_sign is_bottom_sign_correct)
+  next
+    case a_ne: False
+    show ?thesis
+    proof (cases "ik_signed ik")
+      case True
+      with False a_ne show ?thesis by (simp add: sign_cast_def gamma_abs_sign gamma_sign_top)
+    next
+      case False
+      have "0 \<le> ik_norm ik v" using ik_norm_in_range[of ik v]
+        by (simp add: ik_range_def ik_min_def False)
+      with False a_ne \<open>\<not> is_bot a\<close> show ?thesis
+        by (simp add: sign_cast_def gamma_abs_sign)
+    qed
+  qed
+qed
+
+lemma sign_in_range_mono:
+  assumes le: "a \<le> (b :: sign)" and b: "sign_in_range ik b"
+  shows "sign_in_range ik a"
+proof -
+  have sub: "gamma_sign a \<subseteq> gamma_sign b"
+    using le by (simp add: less_eq_sign_def gamma_sign_mono)
+  show ?thesis
+  proof (cases "is_bottom_sign a")
+    case True
+    then show ?thesis by (simp add: sign_in_range_def)
+  next
+    case False
+    then have ne: "gamma_sign a \<noteq> {}" by (simp add: is_bottom_sign_correct)
+    have "b = SZero"
+      using b ne sub by (auto simp: sign_in_range_def is_bottom_sign_correct)
+    then have "gamma_sign a \<subseteq> {0}" using sub by simp
+    then have "a = SZero" using ne
+      by (cases a) (auto dest: subsetD[of _ _ "- 1"] subsetD[of _ _ "1"])
+    then show ?thesis by (simp add: sign_in_range_def)
+  qed
+qed
+
+
+lemma sign_cast_mono:
+  assumes le: "a1 \<le> (a2 :: sign)"
+  shows "sign_cast ik a1 \<le> sign_cast ik a2"
+proof (cases "is_bot a1")
+  case True
+  then show ?thesis by (simp add: sign_cast_def bot_least)
+next
+  case nb1: False
+  have sub: "gamma_sign a1 \<subseteq> gamma_sign a2"
+    using le by (simp add: less_eq_sign_def gamma_sign_mono)
+  have nb2: "\<not> is_bot a2"
+  proof -
+    from nb1 obtain x where "x \<in> gamma_sign a1"
+      by (auto simp: is_bot_sign is_bottom_sign_correct)
+    with sub show ?thesis by (auto simp: is_bot_sign is_bottom_sign_correct)
+  qed
+  show ?thesis
+  proof (cases "a1 = SZero")
+    case True
+    then show ?thesis
+      using nb1 nb2
+      by (cases "a2 = SZero") (simp_all add: sign_cast_def less_eq_sign_def top_sign_def)
+  next
+    case a1_ne: False
+    have a2_ne: "a2 \<noteq> SZero"
+    proof
+      assume "a2 = SZero"
+      with sub have subz: "gamma_sign a1 \<subseteq> {0}" by simp
+      have "\<exists>x. x \<in> gamma_sign a1 \<and> x \<noteq> 0"
+        using nb1 a1_ne
+        by (cases a1)
+           (auto simp: is_bot_sign is_bottom_sign_correct
+              intro: exI[of _ "- 1"] exI[of _ "1"])
+      with subz show False by auto
+    qed
+    show ?thesis
+      using nb1 nb2 a1_ne a2_ne by (simp add: sign_cast_def)
+  qed
+qed
+
+lemma sign_cast_sound_sign:
+  "v \<in> gamma_sign a \<Longrightarrow> ik_norm ik v \<in> gamma_sign (sign_cast ik a)"
+  using sign_cast_sound[of v a ik] by (simp add: gamma_abs_sign)
+
+text \<open>
+  \<open>aval_sign_t\<close> is the sole evaluator for sign: it operates directly on
+  an already-elaborated \<^typ>\<open>texp\<close>, so it needs no \<open>\<Gamma>\<close>/\<open>ik\<close> parameter of
+  its own -- every node already carries the kind it should be cast/normed
+  at. Every arithmetic node is normed once through \<^const>\<open>sign_cast\<close> at
+  its own kind, \<open>TCast\<close> norms its operand at the target kind, and
+  \<open>TLess\<close>/\<open>TEq\<close>/\<open>TNot\<close>/\<open>TAnd\<close>/\<open>TOr\<close> never norm their own 0/1-shaped
+  result, matching \<^const>\<open>teval\<close>. Both \<open>Sign_Transfer\<close>'s forward
+  obligations and \<open>Sign_Backward\<close>'s \<open>backward_domain\<close> interpretation
+  target it directly.
+\<close>
+
+fun aval_sign_t :: "texp => (vname => sign) => sign" where
+    "aval_sign_t (TN ik n)        \<sigma> = sign_of_int (ik_norm ik n)"
+  | "aval_sign_t (TVar ik x)        \<sigma> = \<sigma> x"
+  | "aval_sign_t (TPlus  ik a b)  \<sigma> = sign_cast ik (aval_sign_t a \<sigma> + aval_sign_t b \<sigma>)"
+  | "aval_sign_t (TMinus ik a b)  \<sigma> = sign_cast ik (aval_sign_t a \<sigma> - aval_sign_t b \<sigma>)"
+  | "aval_sign_t (TTimes ik a b)  \<sigma> = sign_cast ik (aval_sign_t a \<sigma> * aval_sign_t b \<sigma>)"
+  | "aval_sign_t (TCast  ik a)    \<sigma> = sign_cast ik (aval_sign_t a \<sigma>)"
+  | "aval_sign_t (TLess a b) \<sigma> =
+       (if is_bot (aval_sign_t a \<sigma>) \<or> is_bot (aval_sign_t b \<sigma>) then bot
+        else if sign_lt (aval_sign_t a \<sigma>) (aval_sign_t b \<sigma>) = Some True then SPos
+        else if sign_lt (aval_sign_t a \<sigma>) (aval_sign_t b \<sigma>) = Some False then SZero
         else SNonNeg)"
-  | "aval_sign (exp.Eq a b) \<sigma> =
-       (if is_bot (aval_sign a \<sigma>) \<or> is_bot (aval_sign b \<sigma>) then bot
-        else if sign_eqb (aval_sign a \<sigma>) (aval_sign b \<sigma>) = Some True then SPos
-        else if sign_eqb (aval_sign a \<sigma>) (aval_sign b \<sigma>) = Some False then SZero
+  | "aval_sign_t (TEq a b) \<sigma> =
+       (if is_bot (aval_sign_t a \<sigma>) \<or> is_bot (aval_sign_t b \<sigma>) then bot
+        else if sign_eqb (aval_sign_t a \<sigma>) (aval_sign_t b \<sigma>) = Some True then SPos
+        else if sign_eqb (aval_sign_t a \<sigma>) (aval_sign_t b \<sigma>) = Some False then SZero
         else SNonNeg)"
-  | "aval_sign (exp.Not a)  \<sigma> =
-       (if is_bot (aval_sign a \<sigma>) then bot
-        else if sign_tobool (aval_sign a \<sigma>) = Some True then SZero
-        else if sign_tobool (aval_sign a \<sigma>) = Some False then SPos
+  | "aval_sign_t (TNot a) \<sigma> =
+       (if is_bot (aval_sign_t a \<sigma>) then bot
+        else if sign_tobool (aval_sign_t a \<sigma>) = Some True then SZero
+        else if sign_tobool (aval_sign_t a \<sigma>) = Some False then SPos
         else SNonNeg)"
-  | "aval_sign (And a b)    \<sigma> =
-       (if is_bot (aval_sign a \<sigma>) \<or> is_bot (aval_sign b \<sigma>) then bot
-        else if sign_tobool (aval_sign a \<sigma>) = Some False \<or> sign_tobool (aval_sign b \<sigma>) = Some False
+  | "aval_sign_t (TAnd a b) \<sigma> =
+       (if is_bot (aval_sign_t a \<sigma>) \<or> is_bot (aval_sign_t b \<sigma>) then bot
+        else if sign_tobool (aval_sign_t a \<sigma>) = Some False
+                \<or> sign_tobool (aval_sign_t b \<sigma>) = Some False
         then SZero
-        else if sign_tobool (aval_sign a \<sigma>) = Some True \<and> sign_tobool (aval_sign b \<sigma>) = Some True
+        else if sign_tobool (aval_sign_t a \<sigma>) = Some True
+                \<and> sign_tobool (aval_sign_t b \<sigma>) = Some True
         then SPos
         else SNonNeg)"
-  | "aval_sign (Or a b)     \<sigma> =
-       (if is_bot (aval_sign a \<sigma>) \<or> is_bot (aval_sign b \<sigma>) then bot
-        else if sign_tobool (aval_sign a \<sigma>) = Some True \<or> sign_tobool (aval_sign b \<sigma>) = Some True
+  | "aval_sign_t (TOr a b) \<sigma> =
+       (if is_bot (aval_sign_t a \<sigma>) \<or> is_bot (aval_sign_t b \<sigma>) then bot
+        else if sign_tobool (aval_sign_t a \<sigma>) = Some True
+                \<or> sign_tobool (aval_sign_t b \<sigma>) = Some True
         then SPos
-        else if sign_tobool (aval_sign a \<sigma>) = Some False \<and> sign_tobool (aval_sign b \<sigma>) = Some False
+        else if sign_tobool (aval_sign_t a \<sigma>) = Some False
+                \<and> sign_tobool (aval_sign_t b \<sigma>) = Some False
         then SZero
         else SNonNeg)"
 
@@ -290,19 +444,65 @@ lemma sign_times_combine_mono:
   by (meson order.trans sign_times_mono1 sign_times_mono2)
 
 interpretation sign_arith: expression_domain_sound
-    aval_sign sign_of_int sign_lt sign_eqb sign_tobool
+    aval_sign_t sign_cast sign_of_int sign_lt sign_eqb sign_tobool
   apply unfold_locales
-  apply (simp_all add: sign_of_int_gamma sign_plus_sound sign_minus_sound sign_times_sound
-                        sign_plus_combine_mono sign_minus_combine_mono sign_times_combine_mono
-                        sign_lt_sound sign_eqb_sound sign_tobool_sound[unfolded truthy_def]
-                        sup_sign_def join_sign.simps truthy_def
+  apply (simp_all add: sign_of_int_gamma sign_plus_sound sign_minus_sound
+                        sign_times_sound sign_plus_combine_mono sign_minus_combine_mono
+                        sign_times_combine_mono sign_lt_sound sign_eqb_sound
+                        sign_tobool_sound[unfolded truthy_def] sup_sign_def join_sign.simps
+                        truthy_def gamma_sign_top sign_cast_sound_sign sign_cast_mono
                     del: sign_lt.simps sign_eqb.simps sign_tobool.simps)
   apply (blast intro: sign_lt_mono[unfolded is_bot_sign])
   apply (blast intro: sign_eqb_mono[unfolded is_bot_sign])
   apply (blast intro: sign_tobool_mono[unfolded is_bot_sign])
   done
 
-lemmas aval_sign_sound = sign_arith.aval_dom_sound[unfolded gamma_abs_sign]
-lemmas aval_sign_mono = sign_arith.aval_dom_mono
+text \<open>
+  Soundness and monotonicity of the sole evaluator, stated directly at
+  \<^const>\<open>teval\<close>: both sides now speak the machine semantics, so no bridge
+  between an unbounded and a wrapping interpretation is needed anywhere
+  downstream.
+\<close>
+
+lemmas aval_sign_t_sound = sign_arith.aval_dom_sound[unfolded gamma_abs_sign]
+lemmas aval_sign_t_mono = sign_arith.aval_dom_mono
+
+
+subsection \<open>Cast-domain instance\<close>
+
+text \<open>\<^const>\<open>sign_cast\<close> realizes the class-wide \<^const>\<open>a_cast\<close>, so every
+  generic write site -- ordinary assignment and call return alike -- converts
+  through this domain's own cast without any signature carrying one.\<close>
+
+instantiation sign :: cast_domain
+begin
+
+definition a_cast_sign [simp]: "a_cast = sign_cast"
+
+definition a_in_range_sign [simp]: "a_in_range = sign_in_range"
+
+instance
+proof intro_classes
+  fix a b :: sign and ik
+  show "a \<le> b \<Longrightarrow> a_cast ik a \<le> a_cast ik b"
+    unfolding a_cast_sign by (rule sign_cast_mono)
+next
+  fix a b :: sign and ik
+  show "a \<le> b \<Longrightarrow> a_in_range ik b \<Longrightarrow> a_in_range ik a"
+    unfolding a_in_range_sign by (rule sign_in_range_mono)
+qed
+
+end
+
+instance sign :: sound_cast_domain
+proof intro_classes
+  fix v :: int and a :: sign and ik
+  show "v \<in> gamma a \<Longrightarrow> ik_norm ik v \<in> gamma (a_cast ik a)"
+    by (simp add: sign_cast_sound_sign)
+next
+  fix a :: sign and ik
+  show "a_in_range ik a \<Longrightarrow> gamma a \<subseteq> ik_range ik"
+    by (simp add: sign_in_range_sound)
+qed
 
 end

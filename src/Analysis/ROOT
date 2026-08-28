@@ -30,6 +30,9 @@ session Voblint_Analysis in "." = "Voblint_Core" +
     Interval_Warrowing
     Interval_Arithmetic
     Interval_Backward
+    (* Intervals as a kind-clampable component, so a tagged cell can cut a
+       widened bound down to the kind's own extremes. *)
+    Interval_Kind_Tagged
     Interval_Transfer
     Interval_Print
     Interval_Domain

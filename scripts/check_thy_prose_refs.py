@@ -27,6 +27,9 @@ OPEN, CLOSE = r"\<open>", r"\<close>"
 ALLOWED = {
     # Goblint's own vocabulary, cited for comparison.
     "id_binary_log", "id_binary_pred", "id_unary_log",
+    # Goblint's cast-inversion guard (baseInvariant.ml), cited where afilter's
+    # own TCast clause explains that it gates on the same test.
+    "is_dynamically_safe_cast",
     # Metavariable placeholders: X stands for a domain name.
     "bfilter_X_st", "branch_X_st_for",
     # A naming-convention prefix, cited as "the <prefix> family" -- the family
@@ -40,6 +43,10 @@ ALLOWED = {
     # that its branch transfer is the identity, so there is no such constant to
     # generalize.
     "branch_parity_st_for",
+    # Deliberately name lemmas that no longer exist -- the Interval flagship
+    # examples explain *why* they were deleted (EA_Ret's unconditional top
+    # fallback breaks action_reduces's ret_some conjunct).
+    "ivl_tf_st_for_reduces", "sign_tf_st_for_reduces",
 }
 
 PROSE_KW = re.compile(r"\b(text|txt|section|subsection|subsubsection|paragraph|chapter)\b\s*")

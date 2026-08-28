@@ -337,9 +337,10 @@ def test_a_seed_carries_the_state_pushed_into_that_callee(tmp_path):
     """
     src = tmp_path / "seeded.vimp"
     src.write_text(
-        "void bump(n) {\n  m := n + 1;\n  return m\n}\n\n"
-        "void never() {\n  return 0\n}\n\n"
-        "void main() {\n  x := 7;\n  y := bump(x);\n  __voblint_check(y == 8)\n}\n"
+        "int32 bump(int32 n) {\n  int32 m;\n  m := n + 1;\n  return m\n}\n\n"
+        "int32 never() {\n  return 0\n}\n\n"
+        "void main() {\n  int32 x, y;\n  x := 7;\n  y := bump(x);\n"
+        "  __voblint_check(y == 8)\n}\n"
     )
     out = _run(tmp_path, "--analysis", "interval", str(src))
     rows = {
@@ -415,6 +416,7 @@ def test_verdicts_pair_with_positions_before_dead_rows_are_dropped(tmp_path):
     src = tmp_path / "dead_then_live.vimp"
     src.write_text(
         "void main() {\n"
+        "  int32 x;\n"
         "  x := 5;\n"
         "  if (x < 0) {\n"
         "    __voblint_check(x == 99)\n"
@@ -427,10 +429,10 @@ def test_verdicts_pair_with_positions_before_dead_rows_are_dropped(tmp_path):
     warns = sorted((out / "warn").glob("warn*.xml"))
     assert warns, "no findings emitted"
     lines = [int(ET.parse(w).getroot().find("text").get("line")) for w in warns]
-    # The live check is on line 6; the dead one on line 4 is dropped. Reporting
-    # line 4 would mean the surviving verdict took the dropped row's position.
-    assert 6 in lines, f"the live check is not reported on its own line: {lines}"
-    assert 4 not in lines, f"a dead check was reported: {lines}"
+    # The live check is on line 7; the dead one on line 5 is dropped. Reporting
+    # line 5 would mean the surviving verdict took the dropped row's position.
+    assert 7 in lines, f"the live check is not reported on its own line: {lines}"
+    assert 5 not in lines, f"a dead check was reported: {lines}"
 
 
 def test_node_locations_are_real_spans_not_repeated_values(tmp_path):
@@ -584,6 +586,36 @@ def test_context_sensitive_report_draws_contexts_and_verdicts(tmp_path):
     contexts = re.findall(r"subgraph (cluster_ctx_\d+)", dot)
     assert len(contexts) > 1, f"contexts joined away: {contexts}"
     assert 'fillcolor="#cdebc5"' in dot, "no proved check shaded"
+
+
+def test_call_string_report_annotates_from_the_requested_keying(tmp_path):
+    """The source view's annotations must come from the configuration the run
+    asked for. This program's entry states are unbounded, so keying contexts by
+    them does not converge, while the bounded call string does -- reading the
+    annotations off an entry-state solve would hang a run whose own keying
+    answers in a moment, and would report a different abstraction's verdicts
+    even where it happens to terminate.
+    """
+    if not VOBLINT.exists():
+        pytest.skip("cli/voblint not built -- run `pixi run cli-build`")
+    out = tmp_path / "cs"
+    src = (
+        REPO_ROOT / "tests/regression/17-call-string/precision"
+        "/13-depth2_unbounded_context_chain_wraps_to_zero.vimp"
+    )
+    # A wall-clock bound rather than voblint's own --timeout: the point is that
+    # this configuration converges, so a regression must surface as a failure
+    # here instead of as a report the analyzer quietly declined to finish.
+    subprocess.run(
+        [str(VOBLINT), "--analysis", "interval", "--context", "call-string",
+         "--context-depth", "2", "--html-out", str(out), str(src)],
+        capture_output=True, text=True, check=True, timeout=60,
+    )
+    texts = [
+        w.findtext("text", "")
+        for w in (ET.parse(d).getroot() for d in (out / "warn").glob("*.xml"))
+    ]
+    assert any("will succeed" in t for t in texts), texts
 
 
 def test_rerun_clears_the_previous_programs_nodes(tmp_path):

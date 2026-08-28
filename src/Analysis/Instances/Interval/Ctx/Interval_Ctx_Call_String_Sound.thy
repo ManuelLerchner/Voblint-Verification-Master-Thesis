@@ -34,34 +34,34 @@ text \<open>
 \<close>
 
 definition cs_call_string_eqs ::
-    "nat \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> (ivl exec_dg_st \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com
+    "nat \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> tyenv \<Rightarrow> (ivl exec_dg_st \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com
        \<Rightarrow> (pp \<times> call_string, call_string_gk, (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state) eqsT" where
-  "cs_call_string_eqs k gs is_bot_pred Pi ps mnm main =
+  "cs_call_string_eqs k gs \<Gamma> is_bot_pred Pi ps mnm main =
      side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_addr_list (\<lambda>_. Call_String_Context.Global)
        (cs_route k)
        (routed_cmb_g_contribution (ectx_spec gs is_bot_pred)
           Call_String_Context.Global Call_String_Context.Seed
-          (static_resolve (compile_prog Pi ps mnm main)))
+          (static_resolve (compile_prog \<Gamma> Pi ps mnm main)))
        (routed_extra_g Call_String_Context.Seed Call_String_Context.Global)
-       (compile_prog Pi ps mnm main) (ectx_spec gs is_bot_pred) Bot (Lifted cinit_ivl_st) Bot"
+       (compile_prog \<Gamma> Pi ps mnm main) (ectx_spec gs is_bot_pred) Bot (Lifted cinit_ivl_st) Bot"
 
 definition cs_call_string_sol ::
-    "nat \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> (ivl exec_dg_st \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com
+    "nat \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> tyenv \<Rightarrow> (ivl exec_dg_st \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com
        \<Rightarrow> (pp \<times> call_string) set \<times> (pp \<times> call_string + call_string_gk \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)" where
-  "cs_call_string_sol k gs is_bot_pred Pi ps mnm main =
-     TD_side_warrowing_apinis_Interp_solve (cs_call_string_eqs k gs is_bot_pred Pi ps mnm main)
-       (cfg_exit (compile_prog Pi ps mnm main), [])"
+  "cs_call_string_sol k gs \<Gamma> is_bot_pred Pi ps mnm main =
+     TD_side_warrowing_apinis_Interp_solve (cs_call_string_eqs k gs \<Gamma> is_bot_pred Pi ps mnm main)
+       (cfg_exit (compile_prog \<Gamma> Pi ps mnm main), [])"
 
 definition cs_call_string_terminates ::
-    "nat \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> (ivl exec_dg_st \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com \<Rightarrow> bool" where
-  "cs_call_string_terminates k gs is_bot_pred Pi ps mnm main =
+    "nat \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> tyenv \<Rightarrow> (ivl exec_dg_st \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com \<Rightarrow> bool" where
+  "cs_call_string_terminates k gs \<Gamma> is_bot_pred Pi ps mnm main =
      TD_side_warrowing_apinis_Interp.solve_dom TYPE(call_string_gk) TYPE((ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)
-       (cs_call_string_eqs k gs is_bot_pred Pi ps mnm main) (cfg_exit (compile_prog Pi ps mnm main), [])"
+       (cs_call_string_eqs k gs \<Gamma> is_bot_pred Pi ps mnm main) (cfg_exit (compile_prog \<Gamma> Pi ps mnm main), [])"
 
 lemma cs_call_string_terminates_via_solve_c:
-  assumes "TD_side_warrowing_apinis_Interp_solve_c (cs_call_string_eqs k gs is_bot_pred Pi ps mnm main)
-             (cfg_exit (compile_prog Pi ps mnm main), []) \<noteq> None"
-  shows "cs_call_string_terminates k gs is_bot_pred Pi ps mnm main"
+  assumes "TD_side_warrowing_apinis_Interp_solve_c (cs_call_string_eqs k gs \<Gamma> is_bot_pred Pi ps mnm main)
+             (cfg_exit (compile_prog \<Gamma> Pi ps mnm main), []) \<noteq> None"
+  shows "cs_call_string_terminates k gs \<Gamma> is_bot_pred Pi ps mnm main"
   unfolding cs_call_string_terminates_def
   by (rule TD_side_warrowing_apinis_Interp.solve_dom_of_solve_c[OF assms])
 
@@ -71,25 +71,25 @@ definition cs_call_string_eqs_prog ::
     "nat \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> pname \<Rightarrow> imp_prog
        \<Rightarrow> (pp \<times> call_string, call_string_gk, (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state) eqsT" where
   "cs_call_string_eqs_prog k gs mnm p =
-     cs_call_string_eqs k gs (resolved_st_q_is_bot_for (declared_global_vars p))
+     cs_call_string_eqs k gs (prog_tyenv p) (resolved_st_q_is_bot_for (declared_global_vars p))
        (prog_table p) (prog_procs p) mnm (prog_main p)"
 
 definition cs_call_string_sol_prog ::
     "nat \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> pname \<Rightarrow> imp_prog
        \<Rightarrow> (pp \<times> call_string) set \<times> (pp \<times> call_string + call_string_gk \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)" where
   "cs_call_string_sol_prog k gs mnm p =
-     cs_call_string_sol k gs (resolved_st_q_is_bot_for (declared_global_vars p))
+     cs_call_string_sol k gs (prog_tyenv p) (resolved_st_q_is_bot_for (declared_global_vars p))
        (prog_table p) (prog_procs p) mnm (prog_main p)"
 
 definition cs_call_string_terminates_prog :: "nat \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> pname \<Rightarrow> imp_prog \<Rightarrow> bool" where
   "cs_call_string_terminates_prog k gs mnm p =
-     cs_call_string_terminates k gs (resolved_st_q_is_bot_for (declared_global_vars p))
+     cs_call_string_terminates k gs (prog_tyenv p) (resolved_st_q_is_bot_for (declared_global_vars p))
        (prog_table p) (prog_procs p) mnm (prog_main p)"
 
 lemma cs_call_string_terminates_prog_via_solve_c:
   assumes "TD_side_warrowing_apinis_Interp_solve_c
              (cs_call_string_eqs_prog k gs mnm p)
-             (cfg_exit (compile_prog (prog_table p) (prog_procs p) mnm (prog_main p)), []) \<noteq> None"
+             (cfg_exit (compile_prog (prog_tyenv p) (prog_table p) (prog_procs p) mnm (prog_main p)), []) \<noteq> None"
   shows "cs_call_string_terminates_prog k gs mnm p"
   using assms
   unfolding cs_call_string_terminates_prog_def cs_call_string_eqs_prog_def
@@ -147,14 +147,14 @@ text \<open>
 \<close>
 
 definition cs_call_string_check_projection ::
-    "nat \<Rightarrow> pname \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> exp \<times> (call_string \<times> contextual_verdict) set) list" where
+    "nat \<Rightarrow> pname \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> texp \<times> (call_string \<times> contextual_verdict) set) list" where
   "cs_call_string_check_projection k mnm p =
      classify_checks_ctx (prog_cfg mnm p)
        (analyse_interval_call_string_result_for k (declared_global p) mnm p)
        interval_classify_check"
 
 definition cs_call_string_verdict_report_prog ::
-    "nat \<Rightarrow> pname \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> exp \<times> contextual_verdict) list" where
+    "nat \<Rightarrow> pname \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> texp \<times> contextual_verdict) list" where
   "cs_call_string_verdict_report_prog k mnm p =
      map (\<lambda>(u, c, vs). (u, c, aggregate_verdicts (snd ` vs)))
        (cs_call_string_check_projection k mnm p)"
@@ -168,8 +168,9 @@ lemma cs_call_string_verdict_report_prog_eq:
   by (rule classify_checks_verdicts_proj)
 
 definition analyse_interval_call_string_report ::
-    "nat \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> exp \<times> contextual_verdict) list" where
-  "analyse_interval_call_string_report k p = cs_call_string_verdict_report_prog k prog_main_name p"
+    "nat \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> texp \<times> contextual_verdict) list" where
+  "analyse_interval_call_string_report k p =
+     cs_call_string_verdict_report_prog k prog_main_name p"
 
 section \<open>Solver-choice generalization\<close>
 
@@ -238,26 +239,26 @@ lemma analyse_interval_call_string_result_for_per_origin_code [code]:
   unfolding analyse_interval_call_string_result_for_per_origin_def Let_def by (rule refl)
 
 definition cs_call_string_verdict_report_prog_join ::
-    "nat \<Rightarrow> pname \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> exp \<times> contextual_verdict) list" where
+    "nat \<Rightarrow> pname \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> texp \<times> contextual_verdict) list" where
   "cs_call_string_verdict_report_prog_join k mnm p =
      classify_checks_verdicts (prog_cfg mnm p)
        (analyse_interval_call_string_result_for_join k (declared_global p) mnm p)
        interval_classify_check"
 
 definition cs_call_string_verdict_report_prog_per_origin ::
-    "nat \<Rightarrow> pname \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> exp \<times> contextual_verdict) list" where
+    "nat \<Rightarrow> pname \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> texp \<times> contextual_verdict) list" where
   "cs_call_string_verdict_report_prog_per_origin k mnm p =
      classify_checks_verdicts (prog_cfg mnm p)
        (analyse_interval_call_string_result_for_per_origin k (declared_global p) mnm p)
        interval_classify_check"
 
 definition analyse_interval_call_string_report_join ::
-    "nat \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> exp \<times> contextual_verdict) list" where
+    "nat \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> texp \<times> contextual_verdict) list" where
   "analyse_interval_call_string_report_join k p =
      cs_call_string_verdict_report_prog_join k prog_main_name p"
 
 definition analyse_interval_call_string_report_per_origin ::
-    "nat \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> exp \<times> contextual_verdict) list" where
+    "nat \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> texp \<times> contextual_verdict) list" where
   "analyse_interval_call_string_report_per_origin k p =
      cs_call_string_verdict_report_prog_per_origin k prog_main_name p"
 
@@ -289,14 +290,14 @@ lemma analyse_interval_call_string_result_for_wpo_code [code]:
   unfolding analyse_interval_call_string_result_for_wpo_def Let_def by (rule refl)
 
 definition cs_call_string_verdict_report_prog_wpo ::
-    "nat \<Rightarrow> pname \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> exp \<times> contextual_verdict) list" where
+    "nat \<Rightarrow> pname \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> texp \<times> contextual_verdict) list" where
   "cs_call_string_verdict_report_prog_wpo k mnm p =
      classify_checks_verdicts (prog_cfg mnm p)
        (analyse_interval_call_string_result_for_wpo k (declared_global p) mnm p)
        interval_classify_check"
 
 definition analyse_interval_call_string_report_wpo ::
-    "nat \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> exp \<times> contextual_verdict) list" where
+    "nat \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> texp \<times> contextual_verdict) list" where
   "analyse_interval_call_string_report_wpo k p =
      cs_call_string_verdict_report_prog_wpo k prog_main_name p"
 

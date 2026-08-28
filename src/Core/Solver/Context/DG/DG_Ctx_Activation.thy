@@ -24,7 +24,8 @@ text \<open>
 locale dg_ctx_activation_base = sound_dg_spec S gammaDG gs
   for S :: "('D::bounded_semilattice_sup_bot, 'G::bounded_semilattice_sup_bot) dg_spec"
     and gammaDG :: "'D \<Rightarrow> 'G \<Rightarrow> store set"
-    and gs :: "vname \<Rightarrow> bool" +
+    and gs :: "vname \<Rightarrow> bool"
+    and \<Gamma> :: tyenv +
   fixes g :: cfg and gk0 :: 'k
     and route :: "pp \<Rightarrow> 'c \<Rightarrow> 'D \<Rightarrow> call_action \<Rightarrow> 'c"
     and cmb :: "(pp \<Rightarrow> 'c \<Rightarrow> 'D \<Rightarrow> call_action \<Rightarrow> 'c) \<Rightarrow> 'c \<Rightarrow> call_action \<Rightarrow> pp \<Rightarrow> pp

@@ -1,0 +1,19 @@
+// PARAM: --analysis sign
+// Sign's min and max are not wholly lost to the norm at the operating kind:
+// zero is representable at every kind, so sign_cast keeps SZero exactly and
+// the selection survives.
+//
+// This is the only shape that survives, which is the point of keeping it.
+// known-imprecision/01-min_max_sign_tops.vimp is the same operations on
+// operands whose magnitude Sign cannot bound, where the norm must top --
+// without this pair, a regression that made sign_min or sign_max return top
+// unconditionally would go unnoticed.
+void main() {
+  int32 p, q, r, s;
+  p := 0;
+  q := 0;
+  r := min(p, q);
+  s := max(p, q);
+  __voblint_check(r == 0);  // PROVED
+  __voblint_check(s == 0)   // PROVED
+}

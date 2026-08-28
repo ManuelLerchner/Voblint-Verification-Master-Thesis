@@ -39,6 +39,8 @@ nonterminal imp2_stmt
 nonterminal imp2_stmts
 nonterminal imp2_stmts_opt
 nonterminal imp2_actuals
+nonterminal imp2_ty
+nonterminal imp2_formal
 nonterminal imp2_formals
 nonterminal imp2_ids
 
@@ -66,14 +68,24 @@ syntax
   "_stmt_while" :: "imp2_exp => imp2_stmts_opt => imp2_stmt" ("while '( _ ') { _ }" [0, 0] 61)
   "_stmt_call" :: "id_position => imp2_actuals => imp2_stmt" ("_'( _ ')" [1000, 0] 61)
   "_stmt_callret" :: "id_position => id_position => imp2_actuals => imp2_stmt" ("_ := _'( _ ')" [900, 1000, 0] 61)
+  "_ty_int8" :: imp2_ty ("int8")
+  "_ty_uint8" :: imp2_ty ("uint8")
+  "_ty_int16" :: imp2_ty ("int16")
+  "_ty_uint16" :: imp2_ty ("uint16")
+  "_ty_int32" :: imp2_ty ("int32")
+  "_ty_uint32" :: imp2_ty ("uint32")
+  "_ty_int64" :: imp2_ty ("int64")
+  "_ty_uint64" :: imp2_ty ("uint64")
+  "_formal_untyped" :: "id_position => imp2_formal" ("_")
+  "_formal_typed" :: "imp2_ty => id_position => imp2_formal" ("_ _")
   "_stmts_one" :: "imp2_stmt => imp2_stmts" ("_" 61)
   "_stmts_seq" :: "imp2_stmts => imp2_stmt => imp2_stmts" ("_; _" [61, 61] 61)
   "_stmts_opt_none" :: imp2_stmts_opt ("")
   "_stmts_opt_some" :: "imp2_stmts => imp2_stmts_opt" ("_")
   "_actuals_one" :: "imp2_exp => imp2_actuals" ("_")
   "_actuals_cons" :: "imp2_exp => imp2_actuals => imp2_actuals" ("_, _")
-  "_formals_one" :: "id_position => imp2_formals" ("_")
-  "_formals_cons" :: "id_position => imp2_formals => imp2_formals" ("_, _")
+  "_formals_one" :: "imp2_formal => imp2_formals" ("_")
+  "_formals_cons" :: "imp2_formal => imp2_formals => imp2_formals" ("_, _")
   "_ids_one" :: "id_position => imp2_ids" ("_")
   "_ids_cons" :: "id_position => imp2_ids => imp2_ids" ("_, _")
   "_exp_zero" :: imp2_exp ("0" 1000)
@@ -104,6 +116,15 @@ struct
   val c_Call   = "VIMP_Proc.com.Call"
   val c_Return = "VIMP_Proc.com.Return"
   val c_Check  = "VIMP_Proc.com.Check"
+
+  val c_I8     = "VIMP_Ikind.ikind.I8"
+  val c_U8     = "VIMP_Ikind.ikind.U8"
+  val c_I16    = "VIMP_Ikind.ikind.I16"
+  val c_U16    = "VIMP_Ikind.ikind.U16"
+  val c_I32    = "VIMP_Ikind.ikind.I32"
+  val c_U32    = "VIMP_Ikind.ikind.U32"
+  val c_I64    = "VIMP_Ikind.ikind.I64"
+  val c_U64    = "VIMP_Ikind.ikind.U64"
 
   val c_None   = "Option.option.None"
   val c_Some   = "Option.option.Some"
@@ -207,8 +228,28 @@ struct
          | (Const ("_stmt_callret", _), [x0, x2, a4]) => K c_Call $ ((K c_Some $ (HOLogic.mk_literal (dest_id_position (SOME Markup.free) ctxt x0)))) $ (HOLogic.mk_literal (dest_id_position (SOME Markup.skolem) ctxt x2)) $ (actuals_tr ctxt a4)
          | _ => raise TERM ("Vimp_Grammar_Tr: stmt_tr", [t]))
 
-  fun formals_of ctxt (Const ("_formals_one", _) $ x) = [dest_id_position (SOME Markup.free) ctxt x]
-    | formals_of ctxt (Const ("_formals_cons", _) $ x $ rest) = dest_id_position (SOME Markup.free) ctxt x :: formals_of ctxt rest
+  fun ty_tr ctxt t =
+        (case Term.strip_comb t of
+           (Const ("_ty_int8", _), []) => K c_I8
+         | (Const ("_ty_uint8", _), []) => K c_U8
+         | (Const ("_ty_int16", _), []) => K c_I16
+         | (Const ("_ty_uint16", _), []) => K c_U16
+         | (Const ("_ty_int32", _), []) => K c_I32
+         | (Const ("_ty_uint32", _), []) => K c_U32
+         | (Const ("_ty_int64", _), []) => K c_I64
+         | (Const ("_ty_uint64", _), []) => K c_U64
+         | _ => raise TERM ("Vimp_Grammar_Tr: ty_tr", [t]))
+
+  fun formal_tr ctxt t =
+    (case Term.strip_comb t of
+       (Const ("_formal_untyped", _), [x]) =>
+         (dest_id_position (SOME Markup.free) ctxt x, NONE)
+     | (Const ("_formal_typed", _), [k, x]) =>
+         (dest_id_position (SOME Markup.free) ctxt x, SOME (ty_tr ctxt k))
+     | _ => raise TERM ("Vimp_Grammar_Tr: formal_tr", [t]))
+
+  fun formals_of ctxt (Const ("_formals_one", _) $ x) = [formal_tr ctxt x]
+    | formals_of ctxt (Const ("_formals_cons", _) $ x $ rest) = formal_tr ctxt x :: formals_of ctxt rest
     | formals_of _ t = raise TERM ("Vimp_Grammar_Tr: formals_of", [t])
 
   fun names_of ctxt (Const ("_ids_one", _) $ x) = [dest_id_position (SOME Markup.bound) ctxt x]

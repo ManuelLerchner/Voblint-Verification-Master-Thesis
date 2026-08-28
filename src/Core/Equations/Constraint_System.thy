@@ -1,7 +1,7 @@
 theory Constraint_System
   imports CFG_Enumeration "Voblint_CFG.CFG_Transfer" Abstract_Domain
     "Voblint_VIMP.VIMP_Globals" "Voblint_VIMP.VIMP_Expr" "Voblint_VIMP.VIMP_Proc"
-    "TD.Basics_side"
+    "Voblint_VIMP.VIMP_Elaborated" "TD.Basics_side"
 begin
 
 section \<open>Equation system over a CFG\<close>
@@ -53,16 +53,16 @@ text \<open>
   constructor here instead of a new domain-transfer field.
 \<close>
 datatype analysis_event =
-  Check_Event exp
+  Check_Event texp
 
 record 'a domain_transfer =
-  tf_assign    :: "vname => exp => ('a abs_state) => ('a abs_state)" ("assign\<^sup>#")
+  tf_assign    :: "vname => texp => ('a abs_state) => ('a abs_state)" ("assign\<^sup>#")
   tf_special   :: "special_call => vname => ('a abs_state) => ('a abs_state)" ("special\<^sup>#")
-  tf_branch    :: "exp => bool => ('a abs_state) => ('a abs_state)" ("branch\<^sup>#")
+  tf_branch    :: "texp => bool => ('a abs_state) => ('a abs_state)" ("branch\<^sup>#")
   tf_skip      :: "('a abs_state) => ('a abs_state)" ("skip\<^sup>#")
   tf_body      :: "pname => ('a abs_state) => ('a abs_state)" ("body\<^sup>#")
-  tf_return    :: "exp option => pname => ('a abs_state) => ('a abs_state)" ("return\<^sup>#")
-  tf_enter     :: "vname list \<Rightarrow> exp list \<Rightarrow> ('a abs_state) \<Rightarrow> ('a abs_state)" ("enter\<^sup>#")
+  tf_return    :: "texp option => pname => ('a abs_state) => ('a abs_state)" ("return\<^sup>#")
+  tf_enter     :: "vname list \<Rightarrow> texp list \<Rightarrow> ('a abs_state) \<Rightarrow> ('a abs_state)" ("enter\<^sup>#")
   tf_event     :: "analysis_event => ('a abs_state) => ('a abs_state)" ("event\<^sup>#")
   tf_caller_cont :: "call_info => ('a abs_state) => ('a abs_state)" ("caller'_cont\<^sup>#")
   tf_combine_env :: "call_info => ('a abs_state) => ('a abs_state) => ('a abs_state)" ("combine'_env\<^sup>#")
@@ -92,7 +92,7 @@ fun apply_tf :: "'a domain_transfer
   | "apply_tf tf (EA_Special sc x)   \<sigma> = special\<^sup># tf sc x \<sigma>"
   | "apply_tf tf (EA_Assume b)       \<sigma> = branch\<^sup># tf b True \<sigma>"
   | "apply_tf tf (EA_AssumeNot b)    \<sigma> = branch\<^sup># tf b False \<sigma>"
-  | "apply_tf tf (EA_Ret e p)        \<sigma> = return\<^sup># tf e p \<sigma>"
+  | "apply_tf tf (EA_Ret e p rk)        \<sigma> = return\<^sup># tf e p \<sigma>"
   | "apply_tf tf (EA_Check c)        \<sigma> = event\<^sup># tf (Check_Event c) \<sigma>"
 
 text \<open>
@@ -122,7 +122,7 @@ lemma apply_tf_EA_AssumeNot [simp]:
   by (simp add: fun_eq_iff)
 
 lemma apply_tf_EA_Ret [simp]:
-  "apply_tf tf (EA_Ret e p) = return\<^sup># tf e p"
+  "apply_tf tf (EA_Ret e p rk) = return\<^sup># tf e p"
   by (simp add: fun_eq_iff)
 
 lemma apply_tf_EA_Check [simp]:
@@ -131,19 +131,21 @@ lemma apply_tf_EA_Check [simp]:
 
 text \<open>Some families this codebase builds over \<^typ>\<open>edge_action\<close> happen to reduce a
   void return and a check to the same value as \<^const>\<open>EA_Nop\<close>, and a value return
-  to the same value as the \<^const>\<open>EA_Assign\<close> it publishes -- true of every current
-  executable mirror (\<open>sign_tf_st_for\<close> and siblings), since their \<open>EA_Ret\<close>/\<open>EA_Check\<close>
-  cases still literally implement today's \<open>skip\<^sup>#\<close>/\<open>return\<^sup>#\<close> semantics by hand. This
-  is a fact about a concrete family \<open>F\<close>, not a structural property \<^const>\<open>apply_tf\<close>
-  itself provides any more (\<open>return\<^sup>#\<close>/\<open>skip\<^sup>#\<close> are free fields a future domain may
-  implement differently), so \<open>action_reduces\<close> is not used to discharge
-  \<^const>\<open>apply_tf\<close>'s own \<^typ>\<open>edge_action\<close> case split (see \<open>apply_tf_wrap_eqI\<close>
-  below); it only packages a mirror's own self-consistency for callers such as
-  \<open>unit_dg_exec_analysis\<close> that state it as an explicit obligation.\<close>
+  to the same value as the \<^const>\<open>EA_Assign\<close> it publishes -- true of an executable
+  mirror whose \<open>EA_Ret\<close>/\<open>EA_Check\<close> cases still literally implement today's
+  \<open>skip\<^sup>#\<close>/\<open>return\<^sup>#\<close> semantics by hand. This is a fact about a concrete family \<open>F\<close>,
+  not a structural property \<^const>\<open>apply_tf\<close> itself provides any more
+  (\<open>return\<^sup>#\<close>/\<open>skip\<^sup>#\<close> are free fields a future domain may implement differently),
+  so \<open>action_reduces\<close> is not used to discharge \<^const>\<open>apply_tf\<close>'s own
+  \<^typ>\<open>edge_action\<close> case split (see \<open>apply_tf_wrap_eqI\<close> below); it only packages a
+  mirror's own self-consistency for callers such as \<open>unit_dg_exec_analysis\<close> that
+  state it as an explicit obligation. The value-return reduction is available to a
+  mirror because the returned expression already carries its own destination
+  conversion, so publishing it is literally the assignment to \<^const>\<open>ret_var\<close>.\<close>
 locale action_reduces =
   fixes F :: "edge_action \<Rightarrow> 'y"
-  assumes ret_none[simp,intro]: "\<And>p. F (EA_Ret None p) = F EA_Nop"
-    and ret_some[simp,intro]: "\<And>a p. F (EA_Ret (Some a) p) = F (EA_Assign ret_var a)"
+  assumes ret_none[simp,intro]: "\<And>p rk. F (EA_Ret None p rk) = F EA_Nop"
+    and ret_some[simp,intro]: "\<And>a p rk. F (EA_Ret (Some a) p rk) = F (EA_Assign ret_var a)"
     and check[simp,intro]: "\<And>c. F (EA_Check c) = F EA_Nop"
 
 text \<open>Composing an \<open>action_reduces\<close> family with any outer function preserves the
@@ -173,7 +175,7 @@ lemma apply_tf_wrap_eqI:
     and special: "\<And>sc x. F (EA_Special sc x) = H (apply_tf tf (EA_Special sc x))"
     and assm: "\<And>b. F (EA_Assume b) = H (apply_tf tf (EA_Assume b))"
     and assm_not: "\<And>b. F (EA_AssumeNot b) = H (apply_tf tf (EA_AssumeNot b))"
-    and ret: "\<And>e p. F (EA_Ret e p) = H (apply_tf tf (EA_Ret e p))"
+    and ret: "\<And>e p rk. F (EA_Ret e p rk) = H (apply_tf tf (EA_Ret e p rk))"
     and check: "\<And>c. F (EA_Check c) = H (apply_tf tf (EA_Check c))"
   shows "F a = H (apply_tf tf a)"
   by (cases a) (simp_all add: nop assign special assm assm_not ret check)
@@ -561,7 +563,7 @@ proof (rule le_funI)
 qed
 
 definition enter_D ::
-  "(vname \<Rightarrow> bool) \<Rightarrow> 'a \<Rightarrow> (exp \<Rightarrow> 'a abs_state \<Rightarrow> 'a) \<Rightarrow> vname list \<Rightarrow> exp list
+  "(vname \<Rightarrow> bool) \<Rightarrow> 'a \<Rightarrow> (texp \<Rightarrow> 'a abs_state \<Rightarrow> 'a) \<Rightarrow> vname list \<Rightarrow> texp list
    \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state" where
   "enter_D gs top_val aval_abs xs es \<sigma> =
      bind_formals_abs xs (map (\<lambda>e. aval_abs e \<sigma>) es) (enter_frame_D gs top_val \<sigma>)"
@@ -570,8 +572,8 @@ lemma enter_D_sound:
   fixes top_val :: "'a::sound_domain"
   assumes sv: "s \<in> \<lbrakk>\<sigma>\<rbrakk>" and top_full: "gamma top_val = UNIV"
     and vals: "list_all2 (\<lambda>v a. v \<in> gamma a)
-                 (map (\<lambda>e. aval e s) es) (map (\<lambda>e. aval_abs e \<sigma>) es)"
-  shows "bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state gs s)
+                 (map (\<lambda>e. teval e s) es) (map (\<lambda>e. aval_abs e \<sigma>) es)"
+  shows "bind_formals xs (map (\<lambda>e. teval e s) es) (enter_state gs s)
            \<in> \<lbrakk>enter_D gs top_val aval_abs xs es \<sigma>\<rbrakk>"
 proof -
   have base: "enter_state gs s \<in> \<lbrakk>enter_frame_D gs top_val \<sigma>\<rbrakk>"
@@ -594,20 +596,20 @@ text \<open>
   discards its result.
 \<close>
 fun combine_assign_abs ::
-    "vname option \<Rightarrow> 'a \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
+    "typed_var option \<Rightarrow> 'a::cast_domain \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
     ("combine'_assign\<^sup>#") where
     "combine_assign_abs None _ \<sigma> = \<sigma>"
-  | "combine_assign_abs (Some x) v \<sigma> = \<sigma>(x := v)"
+  | "combine_assign_abs (Some tv) v \<sigma> = \<sigma>(tv_name tv := a_cast (tv_kind tv) v)"
 
 text \<open>The return-value write is a single-slot update, hence monotone in both the
   written value and the state it writes into.  Any combine built over it inherits
   monotonicity from this one fact.\<close>
 
 lemma combine_assign_abs_mono:
-  fixes s1 s2 :: "'a::order abs_state"
+  fixes s1 s2 :: "'a::cast_domain abs_state"
   assumes v: "v1 \<le> v2" and s: "s1 \<le> s2"
   shows "combine_assign\<^sup># dst v1 s1 \<le> combine_assign\<^sup># dst v2 s2"
-  using assms by (cases dst) (auto simp: le_fun_def)
+  using assms by (cases dst) (auto simp: le_fun_def a_cast_mono)
 
 text \<open>
   Return combination joins caller locals with callee globals and then assigns the
@@ -615,12 +617,14 @@ text \<open>
   state update publishes the result without domain-specific return machinery.
 \<close>
 definition combine_collect_abs ::
-    "(vname \<Rightarrow> bool) \<Rightarrow> vname option \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
+    "(vname \<Rightarrow> bool) \<Rightarrow> typed_var option
+       \<Rightarrow> ('a::cast_domain) abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
     ("combine\<^sup>#") where
-  "combine_collect_abs gs dst \<sigma>c \<sigma>e = combine_assign\<^sup># dst (\<sigma>e ret_var) (combine_env_abs gs \<sigma>c \<sigma>e)"
+  "combine_collect_abs gs dst \<sigma>c \<sigma>e =
+     combine_assign\<^sup># dst (\<sigma>e ret_var) (combine_env_abs gs \<sigma>c \<sigma>e)"
 
 lemma combine_collect_abs_mono:
-  fixes \<sigma>c1 \<sigma>c2 \<sigma>e1 \<sigma>e2 :: "'a::order abs_state"
+  fixes \<sigma>c1 \<sigma>c2 \<sigma>e1 \<sigma>e2 :: "'a::cast_domain abs_state"
   assumes c: "\<sigma>c1 \<le> \<sigma>c2" and e: "\<sigma>e1 \<le> \<sigma>e2"
   shows "combine\<^sup># gs dst \<sigma>c1 \<sigma>e1 \<le> combine\<^sup># gs dst \<sigma>c2 \<sigma>e2"
 proof (cases dst)
@@ -628,9 +632,10 @@ proof (cases dst)
   then show ?thesis
     using c e by (simp add: combine_collect_abs_def combine_env_abs_def le_fun_def)
 next
-  case (Some x)
+  case (Some tv)
   then show ?thesis
-    using c e by (simp add: combine_collect_abs_def combine_env_abs_def le_fun_def)
+    using c e
+    by (simp add: combine_collect_abs_def combine_env_abs_def le_fun_def a_cast_mono)
 qed
 
 text \<open>
@@ -687,7 +692,8 @@ text \<open>The whole return operation: \<open>combine_env\<^sup>#\<close> on th
   then the generic \<^const>\<open>combine_assign_abs\<close> writing the callee's @{const ret_var} into the
   destination.  \<open>\<sigma>cont\<close> is \<^emph>\<open>already\<close> \<^const>\<open>tf_enter_pair\<close>'s first component.\<close>
 definition tf_combine_collect_abs ::
-    "'a domain_transfer \<Rightarrow> call_info \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state" where
+    "('a::cast_domain) domain_transfer \<Rightarrow> call_info
+       \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state" where
   "tf_combine_collect_abs tf ci \<sigma>cont \<sigma>e =
      combine_assign\<^sup># (ci_dst ci) (\<sigma>e ret_var) (combine_env\<^sup># tf ci \<sigma>cont \<sigma>e)"
 
@@ -705,7 +711,7 @@ text \<open>Monotonicity of the analysis-supplied combine reduces to monotonicit
   continuation, so no \<open>caller_cont\<^sup>#\<close> monotonicity enters: that obligation belongs to
   whatever supplies the continuation.\<close>
 lemma tf_combine_collect_abs_mono:
-  fixes \<sigma>c1 \<sigma>c2 \<sigma>e1 \<sigma>e2 :: "'a::order abs_state"
+  fixes \<sigma>c1 \<sigma>c2 \<sigma>e1 \<sigma>e2 :: "'a::cast_domain abs_state"
   assumes merge: "\<And>a1 a2 b1 b2 :: 'a abs_state.
       a1 \<le> a2 \<Longrightarrow> b1 \<le> b2 \<Longrightarrow> combine_env\<^sup># tf ci a1 b1 \<le> combine_env\<^sup># tf ci a2 b2"
     and c: "\<sigma>c1 \<le> \<sigma>c2" and e: "\<sigma>e1 \<le> \<sigma>e2"
@@ -715,9 +721,11 @@ proof (cases "ci_dst ci")
   then show ?thesis
     using merge[OF c e] by (simp add: tf_combine_collect_abs_def)
 next
-  case (Some x)
-  then show ?thesis
-    using merge[OF c e] e
+  case (Some tv)
+  have "a_cast (tv_kind tv) (\<sigma>e1 ret_var) \<le> a_cast (tv_kind tv) (\<sigma>e2 ret_var)"
+    using e by (intro a_cast_mono) (simp add: le_fun_def)
+  with Some show ?thesis
+    using merge[OF c e]
     by (simp add: tf_combine_collect_abs_def le_fun_def)
 qed
 
@@ -727,8 +735,18 @@ text \<open>
   @{const ret_var} slot is, and every other slot is handled by
   @{thm combine_env_sound}.
 \<close>
+text \<open>
+  The destination conversion is now on both sides: \<^const>\<open>combine_collect\<close> truncates
+  the published value at the kind the call edge records, and the abstract combine
+  applies \<^const>\<open>a_cast\<close> at that same kind. Soundness is then the cast's own
+  contract -- unconditionally true for every domain -- in place of the earlier premise
+  that the caller's conversion never truncates, which is false at any bounded kind.
+  This is the same discipline Goblint applies: a conversion happens at every write,
+  ordinary assignment and call return alike, dispatching to the value domain's own
+  \<open>cast_to\<close>.
+\<close>
 lemma combine_collect_sound:
-  fixes \<sigma>c \<sigma>e :: "'a::sound_domain abs_state"
+  fixes \<sigma>c \<sigma>e :: "'a::sound_cast_domain abs_state"
   assumes sc: "s \<in> \<lbrakk>\<sigma>c\<rbrakk>" and se: "t \<in> \<lbrakk>\<sigma>e\<rbrakk>"
   shows "combine_collect gs dst s t \<in> \<lbrakk>combine\<^sup># gs dst \<sigma>c \<sigma>e\<rbrakk>"
 proof (cases dst)
@@ -737,13 +755,15 @@ proof (cases dst)
     using combine_env_sound[OF sc se]
     by (simp add: combine_collect_def combine_collect_abs_def)
 next
-  case (Some x)
+  case (Some tv)
   have base: "combine_env gs s t \<in> \<lbrakk>combine_env_abs gs \<sigma>c \<sigma>e\<rbrakk>"
     by (rule combine_env_sound[OF sc se])
   have ret: "t ret_var \<in> gamma (\<sigma>e ret_var)"
     using se unfolding gamma_state_def by auto
+  have cast: "ik_norm (tv_kind tv) (t ret_var) \<in> gamma (a_cast (tv_kind tv) (\<sigma>e ret_var))"
+    by (rule a_cast_sound[OF ret])
   show ?thesis
-    using base ret Some
+    using base cast Some
     unfolding gamma_state_def combine_collect_def combine_collect_abs_def
     by auto
 qed
@@ -757,7 +777,7 @@ text \<open>
   checkable against a post-solution, so no raw \<open><s|t>\<close> obligation reaches callers.
 \<close>
 lemma combine_env_abs_bound_sound:
-  fixes sc se sr :: "'a::sound_domain abs_state"
+  fixes sc se sr :: "'a::sound_cast_domain abs_state"
   assumes bound: "combine\<^sup># gs dst sc se \<le> sr"
     and sc: "s \<in> \<lbrakk>sc\<rbrakk>" and se: "t \<in> \<lbrakk>se\<rbrakk>"
   shows "combine_collect gs dst s t \<in> \<lbrakk>sr\<rbrakk>"
@@ -809,26 +829,26 @@ text \<open>
 \<close>
 locale sound_transfer_for =
   fixes gs :: "vname => bool"
-    and tf :: "'a::sound_domain domain_transfer"
+    and tf :: "'a::sound_cast_domain domain_transfer"
   assumes tf_sound_assign_for[intro]:
-    "\<forall>x (a::exp) \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>.
-       s(x := aval a s) \<in> \<lbrakk>assign\<^sup># tf x a \<sigma>\<rbrakk>"
+    "\<forall>x (a::texp) \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>.
+       s(x := teval a s) \<in> \<lbrakk>assign\<^sup># tf x a \<sigma>\<rbrakk>"
   assumes tf_sound_special_for[intro]:
     "\<forall>sc x \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. \<forall>v. special_result sc s v \<longrightarrow> s(x := v) \<in> \<lbrakk>special\<^sup># tf sc x \<sigma>\<rbrakk>"
   assumes tf_sound_branch_for[intro]:
-    "\<forall>(b::exp) (pol::bool) \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. truthy (aval b s) = pol
+    "\<forall>(b::texp) (pol::bool) \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. truthy (teval b s) = pol
        \<longrightarrow> s \<in> \<lbrakk>branch\<^sup># tf b pol \<sigma>\<rbrakk>"
   assumes tf_sound_skip_for[intro]:
     "\<forall>\<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. s \<in> \<lbrakk>skip\<^sup># tf \<sigma>\<rbrakk>"
   assumes tf_sound_body_for[intro]:
     "\<forall>p \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. s \<in> \<lbrakk>body\<^sup># tf p \<sigma>\<rbrakk>"
   assumes tf_sound_return_for[intro]:
-    "\<forall>(e::exp option) p \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>.
-       s(ret_var := (case e of None \<Rightarrow> s ret_var | Some a \<Rightarrow> aval a s))
+    "\<forall>(e::texp option) p \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>.
+       s(ret_var := (case e of None \<Rightarrow> s ret_var | Some a \<Rightarrow> teval a s))
          \<in> \<lbrakk>return\<^sup># tf e p \<sigma>\<rbrakk>"
   assumes tf_sound_enter_for[intro]:
-    "\<forall>xs (es::exp list) \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>.
-       bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state gs s)
+    "\<forall>xs (es::texp list) \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>.
+       bind_formals xs (map (\<lambda>e. teval e s) es) (enter_state gs s)
          \<in> \<lbrakk>tf_enter tf xs es \<sigma>\<rbrakk>"
   assumes tf_sound_event_for[intro]:
     "\<forall>ev \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. s \<in> \<lbrakk>event\<^sup># tf ev \<sigma>\<rbrakk>"
@@ -842,7 +862,7 @@ context sound_transfer_for
 begin
 
 lemma tf_sound_assign_forD[intro]:
-  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> s(x := aval a s) \<in> \<lbrakk>assign\<^sup># tf x a \<sigma>\<rbrakk>"
+  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> s(x := teval a s) \<in> \<lbrakk>assign\<^sup># tf x a \<sigma>\<rbrakk>"
   using tf_sound_assign_for by blast
 
 lemma tf_sound_special_forD[intro]:
@@ -850,7 +870,7 @@ lemma tf_sound_special_forD[intro]:
   using tf_sound_special_for by blast
 
 lemma tf_sound_branch_forD[intro]:
-  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> truthy (aval b s) = pol \<Longrightarrow> s \<in> \<lbrakk>branch\<^sup># tf b pol \<sigma>\<rbrakk>"
+  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> truthy (teval b s) = pol \<Longrightarrow> s \<in> \<lbrakk>branch\<^sup># tf b pol \<sigma>\<rbrakk>"
   using tf_sound_branch_for by blast
 
 lemma tf_sound_skip_forD[intro]:
@@ -863,13 +883,13 @@ lemma tf_sound_body_forD[intro]:
 
 lemma tf_sound_return_forD[intro]:
   "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow>
-     s(ret_var := (case e of None \<Rightarrow> s ret_var | Some a \<Rightarrow> aval a s))
+     s(ret_var := (case e of None \<Rightarrow> s ret_var | Some a \<Rightarrow> teval a s))
        \<in> \<lbrakk>return\<^sup># tf e p \<sigma>\<rbrakk>"
   using tf_sound_return_for by blast
 
 lemma tf_sound_enter_forD[intro]:
   "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow>
-     bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state gs s)
+     bind_formals xs (map (\<lambda>e. teval e s) es) (enter_state gs s)
        \<in> \<lbrakk>tf_enter tf xs es \<sigma>\<rbrakk>"
   using tf_sound_enter_for by blast
 
@@ -914,9 +934,11 @@ proof -
     then show ?thesis
       using base by (simp add: combine_collect_def tf_combine_collect_abs_def)
   next
-    case (Some x)
+    case (Some tv)
+    have cast: "ik_norm (tv_kind tv) (t ret_var) \<in> gamma (a_cast (tv_kind tv) (\<sigma>e ret_var))"
+      by (rule a_cast_sound[OF ret])
     then show ?thesis
-      using base ret
+      using base Some
       unfolding gamma_state_def combine_collect_def tf_combine_collect_abs_def
       by auto
   qed
@@ -934,15 +956,15 @@ end
 
 lemma sound_transferI_for:
   fixes gs :: "vname => bool"
-    and tf :: "'a::sound_domain domain_transfer"
+    and tf :: "'a::sound_cast_domain domain_transfer"
   assumes assign[intro]:
     "\<And>x a \<sigma> s. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow>
-       s(x := aval a s) \<in> \<lbrakk>assign\<^sup># tf x a \<sigma>\<rbrakk>"
+       s(x := teval a s) \<in> \<lbrakk>assign\<^sup># tf x a \<sigma>\<rbrakk>"
     and special[intro]:
     "\<And>sc x \<sigma> s v. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> special_result sc s v \<Longrightarrow>
        s(x := v) \<in> \<lbrakk>special\<^sup># tf sc x \<sigma>\<rbrakk>"
     and branch[intro]:
-    "\<And>b pol \<sigma> s. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> truthy (aval b s) = pol \<Longrightarrow>
+    "\<And>b pol \<sigma> s. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> truthy (teval b s) = pol \<Longrightarrow>
        s \<in> \<lbrakk>branch\<^sup># tf b pol \<sigma>\<rbrakk>"
     and skip[intro]:
     "\<And>\<sigma> s. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> s \<in> \<lbrakk>skip\<^sup># tf \<sigma>\<rbrakk>"
@@ -950,11 +972,11 @@ lemma sound_transferI_for:
     "\<And>p \<sigma> s. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> s \<in> \<lbrakk>body\<^sup># tf p \<sigma>\<rbrakk>"
     and return[intro]:
     "\<And>e p \<sigma> s. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow>
-       s(ret_var := (case e of None \<Rightarrow> s ret_var | Some a \<Rightarrow> aval a s))
+       s(ret_var := (case e of None \<Rightarrow> s ret_var | Some a \<Rightarrow> teval a s))
          \<in> \<lbrakk>return\<^sup># tf e p \<sigma>\<rbrakk>"
     and enter[intro]:
     "\<And>xs es \<sigma> s. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow>
-       bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state gs s)
+       bind_formals xs (map (\<lambda>e. teval e s) es) (enter_state gs s)
          \<in> \<lbrakk>tf_enter tf xs es \<sigma>\<rbrakk>"
     and event[intro]:
     "\<And>ev \<sigma> s. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> s \<in> \<lbrakk>event\<^sup># tf ev \<sigma>\<rbrakk>"
@@ -966,12 +988,12 @@ lemma sound_transferI_for:
   shows "sound_transfer_for gs tf"
 proof unfold_locales
   show "\<forall>x a \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>.
-      s(x := aval a s) \<in> \<lbrakk>assign\<^sup># tf x a \<sigma>\<rbrakk>"
+      s(x := teval a s) \<in> \<lbrakk>assign\<^sup># tf x a \<sigma>\<rbrakk>"
     using assign by blast
   show "\<forall>sc x \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. \<forall>v. special_result sc s v \<longrightarrow>
       s(x := v) \<in> \<lbrakk>special\<^sup># tf sc x \<sigma>\<rbrakk>"
     using special by blast
-  show "\<forall>b pol \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. truthy (aval b s) = pol \<longrightarrow>
+  show "\<forall>b pol \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. truthy (teval b s) = pol \<longrightarrow>
       s \<in> \<lbrakk>branch\<^sup># tf b pol \<sigma>\<rbrakk>"
     using branch by blast
   show "\<forall>\<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. s \<in> \<lbrakk>skip\<^sup># tf \<sigma>\<rbrakk>"
@@ -979,11 +1001,11 @@ proof unfold_locales
   show "\<forall>p \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. s \<in> \<lbrakk>body\<^sup># tf p \<sigma>\<rbrakk>"
     using body by blast
   show "\<forall>e p \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>.
-      s(ret_var := (case e of None \<Rightarrow> s ret_var | Some a \<Rightarrow> aval a s))
+      s(ret_var := (case e of None \<Rightarrow> s ret_var | Some a \<Rightarrow> teval a s))
         \<in> \<lbrakk>return\<^sup># tf e p \<sigma>\<rbrakk>"
     using return by blast
-  show "\<forall>xs (es::exp list) \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>.
-      bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state gs s)
+  show "\<forall>xs (es::texp list) \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>.
+      bind_formals xs (map (\<lambda>e. teval e s) es) (enter_state gs s)
         \<in> \<lbrakk>tf_enter tf xs es \<sigma>\<rbrakk>"
     using enter by blast
   show "\<forall>ev \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. s \<in> \<lbrakk>event\<^sup># tf ev \<sigma>\<rbrakk>"

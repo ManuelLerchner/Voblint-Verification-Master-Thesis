@@ -2,14 +2,22 @@
 // Two call sites write p's FunctionEntry seed from distinct origins.
 // warrow-per-origin widens each origin's own contribution and joins
 // afterwards, so each site's value stays exact and the entry slot reads
-// [1,2] -- enough to decide n < 10.
+// [1,2], which the four checks pin exactly.
 //
 // The same program under --solver warrow is the paired known-imprecision
 // case (03-warrow_joins_before_widening.vimp): widening the already-joined
 // value loses the upper bound. This is the one axis on which the update-rule
 // choice is observable as precision rather than only as termination.
-void p(n) {
-  __voblint_check(n < 10) // PROVED
+//
+// The four checks pin the slot exactly, not just loosely. `0 < n` and `n < 3`
+// fix the two bounds; `1 < n` and `n < 2` are UNKNOWN, which is what rules out
+// [2,2] and [1,1] and leaves [1,2] as the only interval consistent with all
+// four. A single `n < 10` would have been satisfied by [1,9] just as well.
+void p(int32 n) {
+  __voblint_check(0 < n);   // PROVED
+  __voblint_check(n < 3);   // PROVED
+  __voblint_check(1 < n);   // UNKNOWN
+  __voblint_check(n < 2)    // UNKNOWN
 }
 void main() {
   p(1);

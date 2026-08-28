@@ -92,10 +92,11 @@
 //   main_pp3_ctx0 -> main_pp4_ctx0: call-to-return square
 // EXPECT-GRAPH-END
 
-void square(n) {
+int32 square(int32 n) {
   return n * n
 }
 void main() {
+  int32 a, b;
   a := square(3);
   b := square(4);
   __voblint_check(a == 9); // PROVED

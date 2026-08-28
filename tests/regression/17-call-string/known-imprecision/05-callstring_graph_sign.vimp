@@ -1,0 +1,149 @@
+// PARAM: --analysis sign --context call-string --context-depth 2
+// Call-string GraphViz coverage at a non-Interval domain. Until the shared
+// contextual renderer landed, --dot/--graph-snapshot with --context
+// call-string was rejected outright at the CLI, and the only contextual
+// graph that existed was entry-state's, written for Interval alone.
+// A call-string context is a cfg_node list -- pure call history, no domain
+// content -- and every state here renders through abstract_value, so one
+// configuration (cs_ctx_graph_config, State_Report_GraphViz.thy) serves
+// Sign, Interval and Int alike. This fixture pins that shared renderer at
+// Sign specifically: g is entered under two distinct call strings (via
+// f(3) and via f(-10)), so it gets two separate clusters whose enter and
+// combine edges route to their own context rather than joining, and the
+// two clusters carry genuinely different states.
+//
+// Both checks read UNKNOWN, and that is Sign's honest answer rather than a
+// context-sensitivity failure: g computes p + p and norms it at int32, and a
+// kind-free Positive admits summands whose sum wraps negative, so the sum
+// tops in either context. 07-sign-precision/known-imprecision/02 isolates
+// the same mechanism without any call machinery.
+//
+// What the fixture still pins is the call-string graph itself: depth 2 keeps
+// f(3) and f(-10) on separate routes all the way through g, which the
+// clusters below show.
+// EXPECT-GRAPH-BEGIN
+// clusters:
+//   cluster_ctx_0:
+//     g_pp0_ctx0
+//     g_entry_g_ctx0
+//     g_result_g_ctx0
+//   cluster_ctx_1:
+//     g_pp0_ctx1
+//     g_entry_g_ctx1
+//     g_result_g_ctx1
+//   cluster_ctx_2:
+//     main_pp8_ctx2
+//     main_pp9_ctx2
+//     main_result_main_ctx2
+//     main_entry_main_ctx2
+//     main_pp5_ctx2
+//     main_pp6_ctx2
+//     main_pp7_ctx2
+//   cluster_ctx_3:
+//     f_pp2_ctx3
+//     f_pp3_ctx3
+//     f_entry_f_ctx3
+//     f_result_f_ctx3
+//   cluster_ctx_4:
+//     f_pp2_ctx4
+//     f_pp3_ctx4
+//     f_entry_f_ctx4
+//     f_result_f_ctx4
+//
+// nodes:
+//   main_pp8_ctx2: pp8
+//       x=Top
+//       y=Top
+//       check y<0 [unknown]
+//   main_pp9_ctx2: pp9
+//       x=Top
+//       y=Top
+//   main_result_main_ctx2: exit_main
+//       x=Top
+//       y=Top
+//   g_pp0_ctx0: pp0
+//       p=Positive
+//   g_pp0_ctx1: pp0
+//       p=Negative
+//   main_entry_main_ctx2: entry_main
+//       x=Top
+//       y=Top
+//   f_pp2_ctx3: pp2
+//       p=Positive
+//       t=Top
+//   f_pp2_ctx4: pp2
+//       p=Negative
+//       t=Top
+//   g_entry_g_ctx0: entry_g
+//       p=Positive
+//   g_entry_g_ctx1: entry_g
+//       p=Negative
+//   f_pp3_ctx3: pp3
+//       p=Positive
+//       t=Top
+//   f_pp3_ctx4: pp3
+//       p=Negative
+//       t=Top
+//   g_result_g_ctx0: exit_g
+//       p=Positive
+//   g_result_g_ctx1: exit_g
+//       p=Negative
+//   main_pp5_ctx2: pp5
+//       x=Top
+//       y=Top
+//   main_pp6_ctx2: pp6
+//       x=Top
+//       y=Top
+//   f_entry_f_ctx3: entry_f
+//       p=Positive
+//       t=Top
+//   f_entry_f_ctx4: entry_f
+//       p=Negative
+//       t=Top
+//   main_pp7_ctx2: pp7
+//       x=Top
+//       y=Top
+//       check 0<x [unknown]
+//   f_result_f_ctx3: exit_f
+//       p=Positive
+//       t=Top
+//   f_result_f_ctx4: exit_f
+//       p=Negative
+//       t=Top
+//
+// edges:
+//   main_pp8_ctx2 -> main_pp9_ctx2: check(y<0)
+//   main_pp9_ctx2 -> main_result_main_ctx2: terminate
+//   g_pp0_ctx0 -> g_result_g_ctx0: return p+p
+//   g_pp0_ctx1 -> g_result_g_ctx1: return p+p
+//   main_entry_main_ctx2 -> main_pp5_ctx2: nop
+//   g_entry_g_ctx0 -> g_pp0_ctx0: nop
+//   g_entry_g_ctx1 -> g_pp0_ctx1: nop
+//   f_pp3_ctx3 -> f_result_f_ctx3: return t
+//   f_pp3_ctx4 -> f_result_f_ctx4: return t
+//   f_entry_f_ctx3 -> f_pp2_ctx3: nop
+//   f_entry_f_ctx4 -> f_pp2_ctx4: nop
+//   main_pp7_ctx2 -> main_pp8_ctx2: check(0<x)
+//   f_pp2_ctx3 -> g_entry_g_ctx0: enter g(p)
+//   f_pp2_ctx4 -> g_entry_g_ctx1: enter g(p)
+//   main_pp5_ctx2 -> f_entry_f_ctx3: enter f(3)
+//   main_pp6_ctx2 -> f_entry_f_ctx4: enter f(-10)
+//   g_result_g_ctx0 -> f_pp3_ctx3: combine t := #ret
+//   g_result_g_ctx1 -> f_pp3_ctx4: combine t := #ret
+//   f_result_f_ctx3 -> main_pp6_ctx2: combine x := #ret
+//   f_result_f_ctx4 -> main_pp7_ctx2: combine y := #ret
+//   f_pp2_ctx3 -> f_pp3_ctx3: call-to-return g
+//   f_pp2_ctx4 -> f_pp3_ctx4: call-to-return g
+//   main_pp5_ctx2 -> main_pp6_ctx2: call-to-return f
+//   main_pp6_ctx2 -> main_pp7_ctx2: call-to-return f
+// EXPECT-GRAPH-END
+
+int32 g(int32 p) { return p + p }
+int32 f(int32 p) { int32 t; t := g(p); return t }
+void main() {
+  int32 x, y;
+  x := f(3);
+  y := f(-10);
+  __voblint_check(0 < x); // UNKNOWN
+  __voblint_check(y < 0) // UNKNOWN
+}

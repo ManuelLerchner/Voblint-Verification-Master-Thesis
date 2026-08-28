@@ -16,10 +16,11 @@
 // Reversing the branch polarity hides the ordering entirely, so this case pins
 // the polarity that exercised it, under --context none, where the default
 // Interval configuration reaches this shape.
-void f(n) {
+int32 f(int32 n) {
   return n
 }
 void main() {
+  int32 a, x;
   x := 5;
   if (x < 2) {
     a := f(1)

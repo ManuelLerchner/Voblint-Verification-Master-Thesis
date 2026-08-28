@@ -1,0 +1,11 @@
+// PARAM: --analysis interval
+// No verdict annotations: a parse-rejection case. A formal may not repeat a
+// declared global -- the formal's per-call binding and the global's
+// cross-call persistence are incompatible storage classes for one name.
+global int32 g;
+int32 f(int32 g) {
+  return g
+}
+void main() {
+  f(1)
+}

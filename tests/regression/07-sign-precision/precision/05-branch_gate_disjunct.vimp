@@ -7,6 +7,7 @@
 // so "(x < 0) == 1" is false in every state, the branch is taken only when
 // "0 < y" holds, and the join keeps y Positive rather than discarding it.
 void main() {
+  int32 x, y;
   x := 5;
   y := __voblint_nondet_int();
   if (0 < y || (x < 0) == 1) {

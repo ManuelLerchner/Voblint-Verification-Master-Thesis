@@ -49,12 +49,12 @@ lemma fun_of_st_cinit_int_dom_st_for:
 subsection \<open>Refine_Never\<close>
 
 definition int_dom_ops_never :: "int_dom numeric_ops" where
-  "int_dom_ops_never = (| n_aval = aval_int_dom Refine_Never,
+  "int_dom_ops_never = (| n_aval = aval_int_dom_t Refine_Never,
                           n_bfilter = branch_int_dom_never_st,
                           n_top = top |)"
 
 definition branch_int_dom_never_st_for ::
-    "(vname => bool) => exp => bool => int_dom resolved_st_q => int_dom resolved_st_q"
+    "(vname => bool) => texp => bool => int_dom resolved_st_q => int_dom resolved_st_q"
 where
   "branch_int_dom_never_st_for = generic_branch_st_for int_dom_ops_never"
 
@@ -63,7 +63,7 @@ lemma branch_int_dom_never_st_for_eq [simp]:
   by (simp add: branch_int_dom_never_st_for_def generic_branch_st_for_def int_dom_ops_never_def)
 
 definition int_dom_enter_never_st_for ::
-    "(vname => bool) => vname list => exp list =>
+    "(vname => bool) => vname list => texp list =>
       int_dom resolved_st_q => int_dom resolved_st_q"
 where
   "int_dom_enter_never_st_for = generic_enter_st_for int_dom_ops_never"
@@ -71,8 +71,7 @@ where
 lemma int_dom_enter_never_st_for_eq [simp]:
   "int_dom_enter_never_st_for source_global xs es s =
     bind_formals_resolved_q source_global xs
-      (map (%e. aval_int_dom Refine_Never e
-        (fun_of_resolved_st_q_for source_global s)) es)
+      (map (%e. aval_int_dom_t Refine_Never e (fun_of_resolved_st_q_for source_global s)) es)
       (enter_frame_D_resolved_q top s)"
   by (simp add: int_dom_enter_never_st_for_def generic_enter_st_for_def int_dom_ops_never_def)
 
@@ -82,29 +81,38 @@ fun int_tf_st_never_for ::
     "int_tf_st_never_for source_global EA_Nop s = s"
   | "int_tf_st_never_for source_global (EA_Assign x a) s =
        update_resolved_st_q s (location_of source_global x)
-         (aval_int_dom Refine_Never a (fun_of_resolved_st_q_for source_global s))"
+         (aval_int_dom_t Refine_Never a (fun_of_resolved_st_q_for source_global s))"
   | "int_tf_st_never_for source_global (EA_Special sc x) s =
        update_resolved_st_q s (location_of source_global x)
          (case sc of
-            Nondet_Int => top
-          | Min a b => int_dom_min Refine_Never
-                         (aval_int_dom Refine_Never a (fun_of_resolved_st_q_for source_global s))
-                         (aval_int_dom Refine_Never b (fun_of_resolved_st_q_for source_global s))
-          | Max a b => int_dom_max Refine_Never
-                         (aval_int_dom Refine_Never a (fun_of_resolved_st_q_for source_global s))
-                         (aval_int_dom Refine_Never b (fun_of_resolved_st_q_for source_global s)))"
+            Nondet_Int k => refine Refine_Never (int_dom_cast k top)
+          | Min k a b => int_dom_cast k
+              (int_dom_min Refine_Never
+                (aval_int_dom_t Refine_Never a (fun_of_resolved_st_q_for source_global s))
+                (aval_int_dom_t Refine_Never b (fun_of_resolved_st_q_for source_global s)))
+          | Max k a b => int_dom_cast k
+              (int_dom_max Refine_Never
+                (aval_int_dom_t Refine_Never a (fun_of_resolved_st_q_for source_global s))
+                (aval_int_dom_t Refine_Never b (fun_of_resolved_st_q_for source_global s))))"
   | "int_tf_st_never_for source_global (EA_Assume b) s =
        branch_int_dom_never_st_for source_global b True s"
   | "int_tf_st_never_for source_global (EA_AssumeNot b) s =
        branch_int_dom_never_st_for source_global b False s"
-  | "int_tf_st_never_for source_global (EA_Ret None p) s = s"
-  | "int_tf_st_never_for source_global (EA_Ret (Some a) p) s =
+  | "int_tf_st_never_for source_global (EA_Ret None p rk) s = s"
+  | "int_tf_st_never_for source_global (EA_Ret (Some a) p rk) s =
        update_resolved_st_q s (location_of source_global ret_var)
-         (aval_int_dom Refine_Never a (fun_of_resolved_st_q_for source_global s))"
+         (aval_int_dom_t Refine_Never a (fun_of_resolved_st_q_for source_global s))"
   | "int_tf_st_never_for source_global (EA_Check cnd) s = s"
 
-lemma int_tf_st_never_for_reduces: "action_reduces (int_tf_st_never_for gs)"
-  by unfold_locales (rule ext, simp)+
+text \<open>
+  \<open>int_tf_st_never_for\<close> satisfies \<open>action_reduces\<close>: a void return and a
+  check behave exactly like \<open>EA_Nop\<close>, and a value return is literally the
+  \<^const>\<open>ret_var\<close> assignment it publishes, since the owning procedure's
+  return kind rides inside the returned \<^typ>\<open>texp\<close> rather than beside it.
+\<close>
+
+lemma int_tf_st_never_for_action_reduces: "action_reduces (int_tf_st_never_for gs)"
+  by unfold_locales (simp_all add: fun_eq_iff)
 
 theorem int_tf_st_never_for_commute:
   "fun_of_resolved_st_q_for gs (int_tf_st_never_for gs a s) =
@@ -120,7 +128,7 @@ proof (rule apply_tf_wrap_eqI[where H = "%f. f (fun_of_resolved_st_q_for gs s)"]
   show "\<And>sc x. fun_of_resolved_st_q_for gs
       (int_tf_st_never_for gs (EA_Special sc x) s) =
     apply_tf (int_tf_never_for gs) (EA_Special sc x) (fun_of_resolved_st_q_for gs s)"
-    by (auto simp: int_tf_never_for_def split: special_call.splits)
+    by (auto simp: int_tf_never_for_def Let_def split: special_call.splits)
   show "\<And>b. fun_of_resolved_st_q_for gs
       (int_tf_st_never_for gs (EA_Assume b) s) =
     apply_tf (int_tf_never_for gs) (EA_Assume b) (fun_of_resolved_st_q_for gs s)"
@@ -130,19 +138,19 @@ proof (rule apply_tf_wrap_eqI[where H = "%f. f (fun_of_resolved_st_q_for gs s)"]
     apply_tf (int_tf_never_for gs) (EA_AssumeNot b)
       (fun_of_resolved_st_q_for gs s)"
     by (simp add: int_tf_never_for_def int_dom_backward_never.branch_st_commute)
-  show "\<And>ea p. fun_of_resolved_st_q_for gs
-      (int_tf_st_never_for gs (EA_Ret ea p) s) =
-    apply_tf (int_tf_never_for gs) (EA_Ret ea p) (fun_of_resolved_st_q_for gs s)"
+  show "\<And>ea p rk. fun_of_resolved_st_q_for gs
+      (int_tf_st_never_for gs (EA_Ret ea p rk) s) =
+    apply_tf (int_tf_never_for gs) (EA_Ret ea p rk) (fun_of_resolved_st_q_for gs s)"
   proof -
-    fix ea p
-    show "fun_of_resolved_st_q_for gs (int_tf_st_never_for gs (EA_Ret ea p) s) =
-      apply_tf (int_tf_never_for gs) (EA_Ret ea p) (fun_of_resolved_st_q_for gs s)"
+    fix ea p rk
+    show "fun_of_resolved_st_q_for gs (int_tf_st_never_for gs (EA_Ret ea p rk) s) =
+      apply_tf (int_tf_never_for gs) (EA_Ret ea p rk) (fun_of_resolved_st_q_for gs s)"
     proof (cases ea)
       case None
       then show ?thesis by (simp add: int_tf_never_for_def return_int_dom_def)
     next
       case (Some a)
-      then show ?thesis by (simp add: int_tf_never_for_def return_int_dom_def assign_int_dom_def)
+      then show ?thesis by (simp add: int_tf_never_for_def return_int_dom_def)
     qed
   qed
   show "\<And>c. fun_of_resolved_st_q_for gs
@@ -160,12 +168,12 @@ lemma int_dom_enter_never_st_for_commute:
 subsection \<open>Refine_Once\<close>
 
 definition int_dom_ops_once :: "int_dom numeric_ops" where
-  "int_dom_ops_once = (| n_aval = aval_int_dom Refine_Once,
-                         n_bfilter = branch_int_dom_once_st,
-                         n_top = top |)"
+  "int_dom_ops_once = (| n_aval = aval_int_dom_t Refine_Once,
+                          n_bfilter = branch_int_dom_once_st,
+                          n_top = top |)"
 
 definition branch_int_dom_once_st_for ::
-    "(vname => bool) => exp => bool => int_dom resolved_st_q => int_dom resolved_st_q"
+    "(vname => bool) => texp => bool => int_dom resolved_st_q => int_dom resolved_st_q"
 where
   "branch_int_dom_once_st_for = generic_branch_st_for int_dom_ops_once"
 
@@ -174,7 +182,7 @@ lemma branch_int_dom_once_st_for_eq [simp]:
   by (simp add: branch_int_dom_once_st_for_def generic_branch_st_for_def int_dom_ops_once_def)
 
 definition int_dom_enter_once_st_for ::
-    "(vname => bool) => vname list => exp list =>
+    "(vname => bool) => vname list => texp list =>
       int_dom resolved_st_q => int_dom resolved_st_q"
 where
   "int_dom_enter_once_st_for = generic_enter_st_for int_dom_ops_once"
@@ -182,8 +190,7 @@ where
 lemma int_dom_enter_once_st_for_eq [simp]:
   "int_dom_enter_once_st_for source_global xs es s =
     bind_formals_resolved_q source_global xs
-      (map (%e. aval_int_dom Refine_Once e
-        (fun_of_resolved_st_q_for source_global s)) es)
+      (map (%e. aval_int_dom_t Refine_Once e (fun_of_resolved_st_q_for source_global s)) es)
       (enter_frame_D_resolved_q top s)"
   by (simp add: int_dom_enter_once_st_for_def generic_enter_st_for_def int_dom_ops_once_def)
 
@@ -193,29 +200,36 @@ fun int_tf_st_once_for ::
     "int_tf_st_once_for source_global EA_Nop s = s"
   | "int_tf_st_once_for source_global (EA_Assign x a) s =
        update_resolved_st_q s (location_of source_global x)
-         (aval_int_dom Refine_Once a (fun_of_resolved_st_q_for source_global s))"
+         (aval_int_dom_t Refine_Once a (fun_of_resolved_st_q_for source_global s))"
   | "int_tf_st_once_for source_global (EA_Special sc x) s =
        update_resolved_st_q s (location_of source_global x)
          (case sc of
-            Nondet_Int => top
-          | Min a b => int_dom_min Refine_Once
-                         (aval_int_dom Refine_Once a (fun_of_resolved_st_q_for source_global s))
-                         (aval_int_dom Refine_Once b (fun_of_resolved_st_q_for source_global s))
-          | Max a b => int_dom_max Refine_Once
-                         (aval_int_dom Refine_Once a (fun_of_resolved_st_q_for source_global s))
-                         (aval_int_dom Refine_Once b (fun_of_resolved_st_q_for source_global s)))"
+            Nondet_Int k => refine Refine_Once (int_dom_cast k top)
+          | Min k a b => int_dom_cast k
+              (int_dom_min Refine_Once
+                (aval_int_dom_t Refine_Once a (fun_of_resolved_st_q_for source_global s))
+                (aval_int_dom_t Refine_Once b (fun_of_resolved_st_q_for source_global s)))
+          | Max k a b => int_dom_cast k
+              (int_dom_max Refine_Once
+                (aval_int_dom_t Refine_Once a (fun_of_resolved_st_q_for source_global s))
+                (aval_int_dom_t Refine_Once b (fun_of_resolved_st_q_for source_global s))))"
   | "int_tf_st_once_for source_global (EA_Assume b) s =
        branch_int_dom_once_st_for source_global b True s"
   | "int_tf_st_once_for source_global (EA_AssumeNot b) s =
        branch_int_dom_once_st_for source_global b False s"
-  | "int_tf_st_once_for source_global (EA_Ret None p) s = s"
-  | "int_tf_st_once_for source_global (EA_Ret (Some a) p) s =
+  | "int_tf_st_once_for source_global (EA_Ret None p rk) s = s"
+  | "int_tf_st_once_for source_global (EA_Ret (Some a) p rk) s =
        update_resolved_st_q s (location_of source_global ret_var)
-         (aval_int_dom Refine_Once a (fun_of_resolved_st_q_for source_global s))"
+         (aval_int_dom_t Refine_Once a (fun_of_resolved_st_q_for source_global s))"
   | "int_tf_st_once_for source_global (EA_Check cnd) s = s"
 
-lemma int_tf_st_once_for_reduces: "action_reduces (int_tf_st_once_for gs)"
-  by unfold_locales (rule ext, simp)+
+text \<open>
+  \<open>int_tf_st_once_for\<close> satisfies \<open>action_reduces\<close>, for the same reason
+  \<open>int_tf_st_never_for\<close> does.
+\<close>
+
+lemma int_tf_st_once_for_action_reduces: "action_reduces (int_tf_st_once_for gs)"
+  by unfold_locales (simp_all add: fun_eq_iff)
 
 theorem int_tf_st_once_for_commute:
   "fun_of_resolved_st_q_for gs (int_tf_st_once_for gs a s) =
@@ -231,7 +245,7 @@ proof (rule apply_tf_wrap_eqI[where H = "%f. f (fun_of_resolved_st_q_for gs s)"]
   show "\<And>sc x. fun_of_resolved_st_q_for gs
       (int_tf_st_once_for gs (EA_Special sc x) s) =
     apply_tf (int_tf_once_for gs) (EA_Special sc x) (fun_of_resolved_st_q_for gs s)"
-    by (auto simp: int_tf_once_for_def split: special_call.splits)
+    by (auto simp: int_tf_once_for_def Let_def split: special_call.splits)
   show "\<And>b. fun_of_resolved_st_q_for gs
       (int_tf_st_once_for gs (EA_Assume b) s) =
     apply_tf (int_tf_once_for gs) (EA_Assume b) (fun_of_resolved_st_q_for gs s)"
@@ -241,19 +255,19 @@ proof (rule apply_tf_wrap_eqI[where H = "%f. f (fun_of_resolved_st_q_for gs s)"]
     apply_tf (int_tf_once_for gs) (EA_AssumeNot b)
       (fun_of_resolved_st_q_for gs s)"
     by (simp add: int_tf_once_for_def int_dom_backward_once.branch_st_commute)
-  show "\<And>ea p. fun_of_resolved_st_q_for gs
-      (int_tf_st_once_for gs (EA_Ret ea p) s) =
-    apply_tf (int_tf_once_for gs) (EA_Ret ea p) (fun_of_resolved_st_q_for gs s)"
+  show "\<And>ea p rk. fun_of_resolved_st_q_for gs
+      (int_tf_st_once_for gs (EA_Ret ea p rk) s) =
+    apply_tf (int_tf_once_for gs) (EA_Ret ea p rk) (fun_of_resolved_st_q_for gs s)"
   proof -
-    fix ea p
-    show "fun_of_resolved_st_q_for gs (int_tf_st_once_for gs (EA_Ret ea p) s) =
-      apply_tf (int_tf_once_for gs) (EA_Ret ea p) (fun_of_resolved_st_q_for gs s)"
+    fix ea p rk
+    show "fun_of_resolved_st_q_for gs (int_tf_st_once_for gs (EA_Ret ea p rk) s) =
+      apply_tf (int_tf_once_for gs) (EA_Ret ea p rk) (fun_of_resolved_st_q_for gs s)"
     proof (cases ea)
       case None
       then show ?thesis by (simp add: int_tf_once_for_def return_int_dom_def)
     next
       case (Some a)
-      then show ?thesis by (simp add: int_tf_once_for_def return_int_dom_def assign_int_dom_def)
+      then show ?thesis by (simp add: int_tf_once_for_def return_int_dom_def)
     qed
   qed
   show "\<And>c. fun_of_resolved_st_q_for gs
@@ -271,12 +285,12 @@ lemma int_dom_enter_once_st_for_commute:
 subsection \<open>Refine_Fixpoint\<close>
 
 definition int_dom_ops_fixpoint :: "int_dom numeric_ops" where
-  "int_dom_ops_fixpoint = (| n_aval = aval_int_dom Refine_Fixpoint,
-                             n_bfilter = branch_int_dom_fixpoint_st,
-                             n_top = top |)"
+  "int_dom_ops_fixpoint = (| n_aval = aval_int_dom_t Refine_Fixpoint,
+                          n_bfilter = branch_int_dom_fixpoint_st,
+                          n_top = top |)"
 
 definition branch_int_dom_fixpoint_st_for ::
-    "(vname => bool) => exp => bool => int_dom resolved_st_q => int_dom resolved_st_q"
+    "(vname => bool) => texp => bool => int_dom resolved_st_q => int_dom resolved_st_q"
 where
   "branch_int_dom_fixpoint_st_for = generic_branch_st_for int_dom_ops_fixpoint"
 
@@ -285,7 +299,7 @@ lemma branch_int_dom_fixpoint_st_for_eq [simp]:
   by (simp add: branch_int_dom_fixpoint_st_for_def generic_branch_st_for_def int_dom_ops_fixpoint_def)
 
 definition int_dom_enter_fixpoint_st_for ::
-    "(vname => bool) => vname list => exp list =>
+    "(vname => bool) => vname list => texp list =>
       int_dom resolved_st_q => int_dom resolved_st_q"
 where
   "int_dom_enter_fixpoint_st_for = generic_enter_st_for int_dom_ops_fixpoint"
@@ -293,8 +307,7 @@ where
 lemma int_dom_enter_fixpoint_st_for_eq [simp]:
   "int_dom_enter_fixpoint_st_for source_global xs es s =
     bind_formals_resolved_q source_global xs
-      (map (%e. aval_int_dom Refine_Fixpoint e
-        (fun_of_resolved_st_q_for source_global s)) es)
+      (map (%e. aval_int_dom_t Refine_Fixpoint e (fun_of_resolved_st_q_for source_global s)) es)
       (enter_frame_D_resolved_q top s)"
   by (simp add: int_dom_enter_fixpoint_st_for_def generic_enter_st_for_def int_dom_ops_fixpoint_def)
 
@@ -304,29 +317,36 @@ fun int_tf_st_fixpoint_for ::
     "int_tf_st_fixpoint_for source_global EA_Nop s = s"
   | "int_tf_st_fixpoint_for source_global (EA_Assign x a) s =
        update_resolved_st_q s (location_of source_global x)
-         (aval_int_dom Refine_Fixpoint a (fun_of_resolved_st_q_for source_global s))"
+         (aval_int_dom_t Refine_Fixpoint a (fun_of_resolved_st_q_for source_global s))"
   | "int_tf_st_fixpoint_for source_global (EA_Special sc x) s =
        update_resolved_st_q s (location_of source_global x)
          (case sc of
-            Nondet_Int => top
-          | Min a b => int_dom_min Refine_Fixpoint
-                         (aval_int_dom Refine_Fixpoint a (fun_of_resolved_st_q_for source_global s))
-                         (aval_int_dom Refine_Fixpoint b (fun_of_resolved_st_q_for source_global s))
-          | Max a b => int_dom_max Refine_Fixpoint
-                         (aval_int_dom Refine_Fixpoint a (fun_of_resolved_st_q_for source_global s))
-                         (aval_int_dom Refine_Fixpoint b (fun_of_resolved_st_q_for source_global s)))"
+            Nondet_Int k => refine Refine_Fixpoint (int_dom_cast k top)
+          | Min k a b => int_dom_cast k
+              (int_dom_min Refine_Fixpoint
+                (aval_int_dom_t Refine_Fixpoint a (fun_of_resolved_st_q_for source_global s))
+                (aval_int_dom_t Refine_Fixpoint b (fun_of_resolved_st_q_for source_global s)))
+          | Max k a b => int_dom_cast k
+              (int_dom_max Refine_Fixpoint
+                (aval_int_dom_t Refine_Fixpoint a (fun_of_resolved_st_q_for source_global s))
+                (aval_int_dom_t Refine_Fixpoint b (fun_of_resolved_st_q_for source_global s))))"
   | "int_tf_st_fixpoint_for source_global (EA_Assume b) s =
        branch_int_dom_fixpoint_st_for source_global b True s"
   | "int_tf_st_fixpoint_for source_global (EA_AssumeNot b) s =
        branch_int_dom_fixpoint_st_for source_global b False s"
-  | "int_tf_st_fixpoint_for source_global (EA_Ret None p) s = s"
-  | "int_tf_st_fixpoint_for source_global (EA_Ret (Some a) p) s =
+  | "int_tf_st_fixpoint_for source_global (EA_Ret None p rk) s = s"
+  | "int_tf_st_fixpoint_for source_global (EA_Ret (Some a) p rk) s =
        update_resolved_st_q s (location_of source_global ret_var)
-         (aval_int_dom Refine_Fixpoint a (fun_of_resolved_st_q_for source_global s))"
+         (aval_int_dom_t Refine_Fixpoint a (fun_of_resolved_st_q_for source_global s))"
   | "int_tf_st_fixpoint_for source_global (EA_Check cnd) s = s"
 
-lemma int_tf_st_fixpoint_for_reduces: "action_reduces (int_tf_st_fixpoint_for gs)"
-  by unfold_locales (rule ext, simp)+
+text \<open>
+  \<open>int_tf_st_fixpoint_for\<close> satisfies \<open>action_reduces\<close>, for the same reason
+  \<open>int_tf_st_never_for\<close> does.
+\<close>
+
+lemma int_tf_st_fixpoint_for_action_reduces: "action_reduces (int_tf_st_fixpoint_for gs)"
+  by unfold_locales (simp_all add: fun_eq_iff)
 
 theorem int_tf_st_fixpoint_for_commute:
   "fun_of_resolved_st_q_for gs (int_tf_st_fixpoint_for gs a s) =
@@ -342,7 +362,7 @@ proof (rule apply_tf_wrap_eqI[where H = "%f. f (fun_of_resolved_st_q_for gs s)"]
   show "\<And>sc x. fun_of_resolved_st_q_for gs
       (int_tf_st_fixpoint_for gs (EA_Special sc x) s) =
     apply_tf (int_tf_fixpoint_for gs) (EA_Special sc x) (fun_of_resolved_st_q_for gs s)"
-    by (auto simp: int_tf_fixpoint_for_def split: special_call.splits)
+    by (auto simp: int_tf_fixpoint_for_def Let_def split: special_call.splits)
   show "\<And>b. fun_of_resolved_st_q_for gs
       (int_tf_st_fixpoint_for gs (EA_Assume b) s) =
     apply_tf (int_tf_fixpoint_for gs) (EA_Assume b) (fun_of_resolved_st_q_for gs s)"
@@ -352,19 +372,19 @@ proof (rule apply_tf_wrap_eqI[where H = "%f. f (fun_of_resolved_st_q_for gs s)"]
     apply_tf (int_tf_fixpoint_for gs) (EA_AssumeNot b)
       (fun_of_resolved_st_q_for gs s)"
     by (simp add: int_tf_fixpoint_for_def int_dom_backward_fixpoint.branch_st_commute)
-  show "\<And>ea p. fun_of_resolved_st_q_for gs
-      (int_tf_st_fixpoint_for gs (EA_Ret ea p) s) =
-    apply_tf (int_tf_fixpoint_for gs) (EA_Ret ea p) (fun_of_resolved_st_q_for gs s)"
+  show "\<And>ea p rk. fun_of_resolved_st_q_for gs
+      (int_tf_st_fixpoint_for gs (EA_Ret ea p rk) s) =
+    apply_tf (int_tf_fixpoint_for gs) (EA_Ret ea p rk) (fun_of_resolved_st_q_for gs s)"
   proof -
-    fix ea p
-    show "fun_of_resolved_st_q_for gs (int_tf_st_fixpoint_for gs (EA_Ret ea p) s) =
-      apply_tf (int_tf_fixpoint_for gs) (EA_Ret ea p) (fun_of_resolved_st_q_for gs s)"
+    fix ea p rk
+    show "fun_of_resolved_st_q_for gs (int_tf_st_fixpoint_for gs (EA_Ret ea p rk) s) =
+      apply_tf (int_tf_fixpoint_for gs) (EA_Ret ea p rk) (fun_of_resolved_st_q_for gs s)"
     proof (cases ea)
       case None
       then show ?thesis by (simp add: int_tf_fixpoint_for_def return_int_dom_def)
     next
       case (Some a)
-      then show ?thesis by (simp add: int_tf_fixpoint_for_def return_int_dom_def assign_int_dom_def)
+      then show ?thesis by (simp add: int_tf_fixpoint_for_def return_int_dom_def)
     qed
   qed
   show "\<And>c. fun_of_resolved_st_q_for gs

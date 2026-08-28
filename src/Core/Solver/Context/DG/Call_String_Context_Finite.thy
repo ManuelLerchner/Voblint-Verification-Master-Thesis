@@ -34,7 +34,7 @@ lemma call_strings_bounded_finite:
   using assms by (rule finite_lists_length_le)
 
 theorem compiled_call_strings_finite:
-  "finite {cs::call_string. set cs \<subseteq> cfg_nodes (compile_prog Pi ps mnm main) \<and> length cs \<le> k}"
+  "finite {cs::call_string. set cs \<subseteq> cfg_nodes (compile_prog \<Gamma> Pi ps mnm main) \<and> length cs \<le> k}"
   using cfg_nodes_finite[OF compile_prog_finite[THEN conjunct1] compile_prog_finite[THEN conjunct2]]
   by (rule call_strings_bounded_finite)
 
@@ -47,14 +47,14 @@ text \<open>
 \<close>
 
 theorem compiled_call_string_vars_finite:
-  assumes "vars \<subseteq> cfg_nodes (compile_prog Pi ps mnm main)
-             \<times> {cs::call_string. set cs \<subseteq> cfg_nodes (compile_prog Pi ps mnm main) \<and> length cs \<le> k}"
+  assumes "vars \<subseteq> cfg_nodes (compile_prog \<Gamma> Pi ps mnm main)
+             \<times> {cs::call_string. set cs \<subseteq> cfg_nodes (compile_prog \<Gamma> Pi ps mnm main) \<and> length cs \<le> k}"
   shows "finite vars"
 proof (rule finite_subset[OF assms])
-  have fn: "finite (cfg_nodes (compile_prog Pi ps mnm main))"
+  have fn: "finite (cfg_nodes (compile_prog \<Gamma> Pi ps mnm main))"
     using cfg_nodes_finite compile_prog_finite by blast
-  show "finite (cfg_nodes (compile_prog Pi ps mnm main)
-          \<times> {cs::call_string. set cs \<subseteq> cfg_nodes (compile_prog Pi ps mnm main) \<and> length cs \<le> k})"
+  show "finite (cfg_nodes (compile_prog \<Gamma> Pi ps mnm main)
+          \<times> {cs::call_string. set cs \<subseteq> cfg_nodes (compile_prog \<Gamma> Pi ps mnm main) \<and> length cs \<le> k})"
     using fn compiled_call_strings_finite by (rule finite_cartesian_product)
 qed
 
@@ -67,8 +67,8 @@ text \<open>
 \<close>
 
 theorem compiled_call_string_gk_finite:
-  "finite ({Global} \<union> (\<Union>p \<in> cfg_nodes (compile_prog Pi ps mnm main). Seed p `
-        {cs::call_string. set cs \<subseteq> cfg_nodes (compile_prog Pi ps mnm main) \<and> length cs \<le> k}))"
+  "finite ({Global} \<union> (\<Union>p \<in> cfg_nodes (compile_prog \<Gamma> Pi ps mnm main). Seed p `
+        {cs::call_string. set cs \<subseteq> cfg_nodes (compile_prog \<Gamma> Pi ps mnm main) \<and> length cs \<le> k}))"
   using compiled_call_strings_finite
     cfg_nodes_finite[OF compile_prog_finite[THEN conjunct1] compile_prog_finite[THEN conjunct2]]
   by auto

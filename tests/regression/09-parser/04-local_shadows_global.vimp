@@ -1,0 +1,13 @@
+// PARAM: --analysis interval
+// No verdict annotations: a parse-rejection case. A procedure-local
+// declaration may not repeat a declared global: the global's cross-call
+// persistence and the local's procedure scope are incompatible storage
+// classes for one name. Accepting it is worse than a shadowing rule
+// disagreement -- declared_global classifies the name as global, so the
+// local declaration and its kind are silently dropped and every read and
+// write here reaches global storage at the global's kind.
+global uint8 counter;
+void main() {
+  int32 counter;
+  counter := 1
+}

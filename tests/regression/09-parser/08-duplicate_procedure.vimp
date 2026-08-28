@@ -1,0 +1,13 @@
+// PARAM: --analysis interval
+// No verdict annotations: a parse-rejection case. Two procedures may not
+// share a name: proc_rep is keyed by name, so the second definition would
+// silently displace the first at every call site.
+int32 f(int32 n) {
+  return n
+}
+int32 f(int32 n) {
+  return n + 1
+}
+void main() {
+  f(1)
+}

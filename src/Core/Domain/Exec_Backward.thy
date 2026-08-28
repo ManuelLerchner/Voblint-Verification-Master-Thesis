@@ -22,17 +22,18 @@ text \<open>
   finite probe instead of a whole-state scan.
 \<close>
 
-fun footprint_exp :: "exp => vname list" where
-    "footprint_exp (N n) = []"
-  | "footprint_exp (V x) = [x]"
-  | "footprint_exp (Plus e1 e2) = footprint_exp e1 @ footprint_exp e2"
-  | "footprint_exp (Minus e1 e2) = footprint_exp e1 @ footprint_exp e2"
-  | "footprint_exp (Times e1 e2) = footprint_exp e1 @ footprint_exp e2"
-  | "footprint_exp (Less e1 e2) = footprint_exp e1 @ footprint_exp e2"
-  | "footprint_exp (Eq e1 e2) = footprint_exp e1 @ footprint_exp e2"
-  | "footprint_exp (Not b) = footprint_exp b"
-  | "footprint_exp (And b1 b2) = footprint_exp b1 @ footprint_exp b2"
-  | "footprint_exp (Or b1 b2) = footprint_exp b1 @ footprint_exp b2"
+fun footprint_exp :: "texp => vname list" where
+    "footprint_exp (TN _ n) = []"
+  | "footprint_exp (TVar _ x) = [x]"
+  | "footprint_exp (TPlus _ e1 e2) = footprint_exp e1 @ footprint_exp e2"
+  | "footprint_exp (TMinus _ e1 e2) = footprint_exp e1 @ footprint_exp e2"
+  | "footprint_exp (TTimes _ e1 e2) = footprint_exp e1 @ footprint_exp e2"
+  | "footprint_exp (TCast _ e) = footprint_exp e"
+  | "footprint_exp (TLess e1 e2) = footprint_exp e1 @ footprint_exp e2"
+  | "footprint_exp (TEq e1 e2) = footprint_exp e1 @ footprint_exp e2"
+  | "footprint_exp (TNot b) = footprint_exp b"
+  | "footprint_exp (TAnd b1 b2) = footprint_exp b1 @ footprint_exp b2"
+  | "footprint_exp (TOr b1 b2) = footprint_exp b1 @ footprint_exp b2"
 
 text \<open>
   \<open>probe_exp\<close> is what the lifted layer actually tests for witness-bottom: the
@@ -45,55 +46,58 @@ text \<open>
   case, since a live state is bottom at no location.
 \<close>
 
-definition probe_exp :: "exp => vname list" where
+definition probe_exp :: "texp => vname list" where
   "probe_exp e = STR '''' # footprint_exp e"
 
 context backward_domain
 begin
 
 fun afilter_st ::
-  "(vname => bool) => exp => 'a => 'a resolved_st_q => 'a resolved_st_q"
+  "(vname => bool) => texp => 'a => 'a resolved_st_q => 'a resolved_st_q"
 where
-    "afilter_st gs (V x) a s =
+    "afilter_st gs (TVar ik x) a s =
        update_resolved_st_q s (location_of gs x)
          (intersect a (fun_of_resolved_st_q_for gs s x))"
-  | "afilter_st gs (Plus e1 e2) a s =
-       (let (a1, a2) = inv_plus a
+    | "afilter_st gs (TPlus ik e1 e2) a s =
+       (let (a1, a2) = inv_plus ik a
               (aval_abs e1 (fun_of_resolved_st_q_for gs s))
               (aval_abs e2 (fun_of_resolved_st_q_for gs s))
         in afilter_st gs e1 a1 (afilter_st gs e2 a2 s))"
-  | "afilter_st gs (Minus e1 e2) a s =
-       (let (a1, a2) = inv_minus a
+  | "afilter_st gs (TMinus ik e1 e2) a s =
+       (let (a1, a2) = inv_minus ik a
               (aval_abs e1 (fun_of_resolved_st_q_for gs s))
               (aval_abs e2 (fun_of_resolved_st_q_for gs s))
         in afilter_st gs e1 a1 (afilter_st gs e2 a2 s))"
-  | "afilter_st gs (Times e1 e2) a s =
-       (let (a1, a2) = inv_times a
+  | "afilter_st gs (TTimes ik e1 e2) a s =
+       (let (a1, a2) = inv_times ik a
               (aval_abs e1 (fun_of_resolved_st_q_for gs s))
               (aval_abs e2 (fun_of_resolved_st_q_for gs s))
         in afilter_st gs e1 a1 (afilter_st gs e2 a2 s))"
+    | "afilter_st gs (TCast ik e) a s =
+       (if a_in_range ik (aval_abs e (fun_of_resolved_st_q_for gs s))
+        then afilter_st gs e a s else s)"
   | "afilter_st gs _ a s = s"
 
 fun bfilter_st ::
-  "(vname => bool) => exp => bool => 'a resolved_st_q => 'a resolved_st_q"
+  "(vname => bool) => texp => bool => 'a resolved_st_q => 'a resolved_st_q"
 where
-    "bfilter_st gs (Less e1 e2) res s =
+    "bfilter_st gs (TLess e1 e2) res s =
        (let (a1, a2) = inv_less res
               (aval_abs e1 (fun_of_resolved_st_q_for gs s))
               (aval_abs e2 (fun_of_resolved_st_q_for gs s))
         in afilter_st gs e1 a1 (afilter_st gs e2 a2 s))"
-  | "bfilter_st gs (Not b) res s = bfilter_st gs b (\<not> res) s"
-  | "bfilter_st gs (And b1 b2) True s =
+  | "bfilter_st gs (TNot b) res s = bfilter_st gs b (\<not> res) s"
+  | "bfilter_st gs (TAnd b1 b2) True s =
        bfilter_st gs b1 True (bfilter_st gs b2 True s)"
-  | "bfilter_st gs (And b1 b2) False s =
+  | "bfilter_st gs (TAnd b1 b2) False s =
        (if feasible b1 False (fun_of_resolved_st_q_for gs s) then bfilter_st gs b1 False s else bot)
        \<squnion> (if feasible b2 False (fun_of_resolved_st_q_for gs s) then bfilter_st gs b2 False s else bot)"
-  | "bfilter_st gs (Or b1 b2) True s =
+  | "bfilter_st gs (TOr b1 b2) True s =
        (if feasible b1 True (fun_of_resolved_st_q_for gs s) then bfilter_st gs b1 True s else bot)
        \<squnion> (if feasible b2 True (fun_of_resolved_st_q_for gs s) then bfilter_st gs b2 True s else bot)"
-  | "bfilter_st gs (Or b1 b2) False s =
+  | "bfilter_st gs (TOr b1 b2) False s =
        bfilter_st gs b1 False (bfilter_st gs b2 False s)"
-  | "bfilter_st gs (Eq e1 e2) res s =
+  | "bfilter_st gs (TEq e1 e2) res s =
        (let (a1, a2) = inv_eq res
               (aval_abs e1 (fun_of_resolved_st_q_for gs s))
               (aval_abs e2 (fun_of_resolved_st_q_for gs s))
@@ -101,7 +105,7 @@ where
   | "bfilter_st gs e res s =
        (let (a1, a2) = inv_eq (\<not> res)
               (aval_abs e (fun_of_resolved_st_q_for gs s))
-              (aval_abs (N 0) (fun_of_resolved_st_q_for gs s))
+              (aval_abs (TN I32 0) (fun_of_resolved_st_q_for gs s))
         in afilter_st gs e a1 s)"
 
 text \<open>
@@ -121,33 +125,39 @@ text \<open>
 \<close>
 
 fun afilter_st_lift ::
-  "(vname => bool) => exp => 'a => 'a resolved_st_q lifted => 'a resolved_st_q lifted"
+  "(vname => bool) => texp => 'a => 'a resolved_st_q lifted => 'a resolved_st_q lifted"
 where
-    "afilter_st_lift gs (V x) a x_lift = do {
+    "afilter_st_lift gs (TVar ik x) a x_lift = do {
        s <- x_lift;
        update_resolved_st_q_lift (Lifted s) (location_of gs x)
          (intersect a (fun_of_resolved_st_q_for gs s x))
      }"
-  | "afilter_st_lift gs (Plus e1 e2) a x_lift = do {
+    | "afilter_st_lift gs (TPlus ik e1 e2) a x_lift = do {
        s <- x_lift;
-       let (a1, a2) = inv_plus a
+       let (a1, a2) = inv_plus ik a
              (aval_abs e1 (fun_of_resolved_st_q_for gs s))
              (aval_abs e2 (fun_of_resolved_st_q_for gs s));
        afilter_st_lift gs e1 a1 (afilter_st_lift gs e2 a2 (Lifted s))
      }"
-  | "afilter_st_lift gs (Minus e1 e2) a x_lift = do {
+  | "afilter_st_lift gs (TMinus ik e1 e2) a x_lift = do {
        s <- x_lift;
-       let (a1, a2) = inv_minus a
+       let (a1, a2) = inv_minus ik a
              (aval_abs e1 (fun_of_resolved_st_q_for gs s))
              (aval_abs e2 (fun_of_resolved_st_q_for gs s));
        afilter_st_lift gs e1 a1 (afilter_st_lift gs e2 a2 (Lifted s))
      }"
-  | "afilter_st_lift gs (Times e1 e2) a x_lift = do {
+  | "afilter_st_lift gs (TTimes ik e1 e2) a x_lift = do {
        s <- x_lift;
-       let (a1, a2) = inv_times a
+       let (a1, a2) = inv_times ik a
              (aval_abs e1 (fun_of_resolved_st_q_for gs s))
              (aval_abs e2 (fun_of_resolved_st_q_for gs s));
        afilter_st_lift gs e1 a1 (afilter_st_lift gs e2 a2 (Lifted s))
+     }"
+    | "afilter_st_lift gs (TCast ik e) a x_lift = do {
+       s <- x_lift;
+       if a_in_range ik (aval_abs e (fun_of_resolved_st_q_for gs s))
+       then afilter_st_lift gs e a (Lifted s)
+       else Lifted s
      }"
     | "afilter_st_lift gs _ a x_lift = x_lift"
 
@@ -158,84 +168,90 @@ lemma afilter_st_commute:
   "fun_of_resolved_st_q_for gs (afilter_st gs e a s) =
      afilter e a (fun_of_resolved_st_q_for gs s)"
 proof (induction e arbitrary: a s)
-  case (N n)
+  case (TN ik n)
   then show ?case by simp
 next
-  case (V x)
-  then show ?case by simp
+  case (TVar ik x)
+  then show ?case by (simp add: fun_upd_def)
 next
-  case (Plus e1 e2)
-  show ?case by (simp add: Plus.IH split: prod.splits)
+  case (TPlus ik e1 e2)
+  show ?case by (simp add: TPlus.IH split: prod.splits)
 next
-  case (Minus e1 e2)
-  show ?case by (simp add: Minus.IH split: prod.splits)
+  case (TMinus ik e1 e2)
+  show ?case by (simp add: TMinus.IH split: prod.splits)
 next
-  case (Times e1 e2)
-  show ?case by (simp add: Times.IH split: prod.splits)
+  case (TTimes ik e1 e2)
+  show ?case by (simp add: TTimes.IH split: prod.splits)
 next
-  case (Less e1 e2) then show ?case by simp
+  case (TCast ik e) then show ?case by simp
 next
-  case (Eq e1 e2) then show ?case by simp
+  case (TLess e1 e2) then show ?case by simp
 next
-  case (Not e) then show ?case by simp
+  case (TEq e1 e2) then show ?case by simp
 next
-  case (And e1 e2) then show ?case by simp
+  case (TNot e) then show ?case by simp
 next
-  case (Or e1 e2) then show ?case by simp
+  case (TAnd e1 e2) then show ?case by simp
+next
+  case (TOr e1 e2) then show ?case by simp
 qed
 
 lemma bfilter_st_commute:
   "fun_of_resolved_st_q_for gs (bfilter_st gs b res s) =
      bfilter b res (fun_of_resolved_st_q_for gs s)"
 proof (induction b arbitrary: res s)
-  case (N n)
+  case (TN ik n)
   then show ?case unfolding bfilter_st.simps bfilter.simps Let_def case_prod_beta
     using afilter_st_commute by simp
 next
-  case (V x)
+  case (TVar ik x)
   then show ?case unfolding bfilter_st.simps bfilter.simps Let_def case_prod_beta
-    using afilter_st_commute by simp
+    using afilter_st_commute by (simp add: fun_upd_def)
 next
-  case (Plus e1 e2)
+  case (TPlus ik e1 e2)
   then show ?case
     by (simp add: bfilter_st.simps bfilter.simps Let_def case_prod_beta afilter_st_commute)
 next
-  case (Minus e1 e2)
+  case (TMinus ik e1 e2)
   then show ?case
     by (simp add: bfilter_st.simps bfilter.simps Let_def case_prod_beta afilter_st_commute)
 next
-  case (Times e1 e2)
+  case (TTimes ik e1 e2)
   then show ?case
     by (simp add: bfilter_st.simps bfilter.simps Let_def case_prod_beta afilter_st_commute)
 next
-  case (Not b)
+  case (TCast ik e)
+  then show ?case
+    by (simp add: bfilter_st.simps bfilter.simps Let_def case_prod_beta afilter_st_commute)
+next
+  case (TNot b)
   then show ?case by simp
 next
-  case (And b1 b2)
+  case (TAnd b1 b2)
   show ?case
   proof (cases res)
     case True
-    then show ?thesis by (simp add: And.IH)
+    then show ?thesis by (simp add: TAnd.IH)
   next
     case False
-    then show ?thesis by (simp add: And.IH bot_fun_def)
+    then show ?thesis by (simp add: TAnd.IH bot_fun_def)
   qed
 next
-  case (Or b1 b2)
+  case (TOr b1 b2)
   show ?case
   proof (cases res)
     case True
-    then show ?thesis by (simp add: Or.IH bot_fun_def)
+    then show ?thesis by (simp add: TOr.IH bot_fun_def)
   next
     case False
-    then show ?thesis by (simp add: Or.IH)
+    then show ?thesis by (simp add: TOr.IH)
   qed
 next
-  case (Less e1 e2)
-  then show ?case by (simp add: afilter_st_commute split: prod.splits)
+  case (TLess e1 e2)
+  then show ?case by (simp add: Let_def afilter_st_commute split: prod.splits)
 next
-  case (Eq e1 e2)
-  then show ?case by (simp add: afilter_st_commute split: prod.splits)
+  case (TEq e1 e2)
+  then show ?case by (simp add: Let_def afilter_st_commute split: prod.splits)
 qed
 
 text \<open>
@@ -255,7 +271,7 @@ text \<open>
 \<close>
 
 definition branch_st ::
-  "(vname => bool) => exp => bool => 'a resolved_st_q => 'a resolved_st_q"
+  "(vname => bool) => texp => bool => 'a resolved_st_q => 'a resolved_st_q"
 where
   "branch_st gs e pol s =
      (if feasible e pol (fun_of_resolved_st_q_for gs s) then bfilter_st gs e pol s else bot)"
@@ -267,11 +283,11 @@ lemma branch_st_commute:
   by (simp add: bfilter_st_commute fun_of_resolved_st_q_for_bot)
 
 lemma bfilter_st_And_False_branch:
-  "bfilter_st gs (And b1 b2) False s = branch_st gs b1 False s \<squnion> branch_st gs b2 False s"
+  "bfilter_st gs (TAnd b1 b2) False s = branch_st gs b1 False s \<squnion> branch_st gs b2 False s"
   by (simp add: branch_st_def)
 
 lemma bfilter_st_Or_True_branch:
-  "bfilter_st gs (Or b1 b2) True s = branch_st gs b1 True s \<squnion> branch_st gs b2 True s"
+  "bfilter_st gs (TOr b1 b2) True s = branch_st gs b1 True s \<squnion> branch_st gs b2 True s"
   by (simp add: branch_st_def)
 
 text \<open>
@@ -286,46 +302,48 @@ lemma afilter_st_locality:
   "x \<notin> set (footprint_exp e) \<Longrightarrow>
      fun_of_resolved_st_q_for gs (afilter_st gs e a s) x = fun_of_resolved_st_q_for gs s x"
 proof (induction e arbitrary: a s)
-  case (N n)
+  case (TN ik n)
   then show ?case by simp
 next
-  case (V y)
+  case (TVar ik y)
   then show ?case by simp
 next
-  case (Plus e1 e2)
+  case (TPlus ik e1 e2)
   then have x1: "x \<notin> set (footprint_exp e1)" and x2: "x \<notin> set (footprint_exp e2)" by simp_all
   show ?case
     unfolding afilter_st.simps Let_def case_prod_beta
-    using Plus.IH(1)[OF x1] Plus.IH(2)[OF x2] by simp
+    using TPlus.IH(1)[OF x1] TPlus.IH(2)[OF x2] by simp
 next
-  case (Minus e1 e2)
+  case (TMinus ik e1 e2)
   then have x1: "x \<notin> set (footprint_exp e1)" and x2: "x \<notin> set (footprint_exp e2)" by simp_all
   show ?case
     unfolding afilter_st.simps Let_def case_prod_beta
-    using Minus.IH(1)[OF x1] Minus.IH(2)[OF x2] by simp
+    using TMinus.IH(1)[OF x1] TMinus.IH(2)[OF x2] by simp
 next
-  case (Times e1 e2)
+  case (TTimes ik e1 e2)
   then have x1: "x \<notin> set (footprint_exp e1)" and x2: "x \<notin> set (footprint_exp e2)" by simp_all
   show ?case
     unfolding afilter_st.simps Let_def case_prod_beta
-    using Times.IH(1)[OF x1] Times.IH(2)[OF x2] by simp
+    using TTimes.IH(1)[OF x1] TTimes.IH(2)[OF x2] by simp
 next
-  case (Less e1 e2) then show ?case by simp
+  case (TCast ik e) then show ?case by simp
 next
-  case (Eq e1 e2) then show ?case by simp
+  case (TLess e1 e2) then show ?case by simp
 next
-  case (Not e) then show ?case by simp
+  case (TEq e1 e2) then show ?case by simp
 next
-  case (And e1 e2) then show ?case by simp
+  case (TNot e) then show ?case by simp
 next
-  case (Or e1 e2) then show ?case by simp
+  case (TAnd e1 e2) then show ?case by simp
+next
+  case (TOr e1 e2) then show ?case by simp
 qed
 
 
 text \<open>
   \<open>bfilter_st_lift\<close> mirrors \<open>bfilter_st\<close>'s recursion for the sequential cases
-  (\<open>Not\<close>/\<open>And True\<close>/\<open>Or False\<close>/\<open>Less\<close>/\<open>Eq\<close>) exactly like \<open>afilter_st_lift\<close>.
-  The compound-join cases (\<open>And False\<close>/\<open>Or True\<close>) cannot be built the same
+  (\<open>TNot\<close>/\<open>TAnd True\<close>/\<open>TOr False\<close>/\<open>TLess\<close>/\<open>TEq\<close>) exactly like \<open>afilter_st_lift\<close>.
+  The compound-join cases (\<open>TAnd False\<close>/\<open>TOr True\<close>) cannot be built the same
   way: spec-level \<open>bfilter\<close> joins its two gated branch results with plain
   pointwise \<open>\<squnion>\<close> (needed so \<open>bfilter_sign\<close>/\<open>bfilter_ivl\<close> stay
   code-generatable -- \<open>is_bot_state\<close> is not executable, since \<open>vname\<close> is not a
@@ -339,37 +357,37 @@ text \<open>
 \<close>
 
 fun bfilter_st_lift ::
-  "(vname => bool) => exp => bool => 'a resolved_st_q lifted => 'a resolved_st_q lifted"
+  "(vname => bool) => texp => bool => 'a resolved_st_q lifted => 'a resolved_st_q lifted"
 where
-    "bfilter_st_lift gs (Less e1 e2) res x_lift = do {
+    "bfilter_st_lift gs (TLess e1 e2) res x_lift = do {
        s <- x_lift;
        let (a1, a2) = inv_less res
              (aval_abs e1 (fun_of_resolved_st_q_for gs s))
              (aval_abs e2 (fun_of_resolved_st_q_for gs s));
        afilter_st_lift gs e1 a1 (afilter_st_lift gs e2 a2 (Lifted s))
      }"
-  | "bfilter_st_lift gs (Not b) res x_lift = bfilter_st_lift gs b (\<not> res) x_lift"
-  | "bfilter_st_lift gs (And b1 b2) True x_lift =
+  | "bfilter_st_lift gs (TNot b) res x_lift = bfilter_st_lift gs b (\<not> res) x_lift"
+  | "bfilter_st_lift gs (TAnd b1 b2) True x_lift =
        bfilter_st_lift gs b1 True (bfilter_st_lift gs b2 True x_lift)"
-  | "bfilter_st_lift gs (And b1 b2) False x_lift = do {
+  | "bfilter_st_lift gs (TAnd b1 b2) False x_lift = do {
        s <- x_lift;
        if list_ex (%x. is_bot (fun_of_resolved_st_q_for gs
-              (bfilter_st gs (And b1 b2) False s) x))
-            (probe_exp (And b1 b2))
+              (bfilter_st gs (TAnd b1 b2) False s) x))
+            (probe_exp (TAnd b1 b2))
        then Bot
-       else Lifted (bfilter_st gs (And b1 b2) False s)
+       else Lifted (bfilter_st gs (TAnd b1 b2) False s)
      }"
-  | "bfilter_st_lift gs (Or b1 b2) True x_lift = do {
+  | "bfilter_st_lift gs (TOr b1 b2) True x_lift = do {
        s <- x_lift;
        if list_ex (%x. is_bot (fun_of_resolved_st_q_for gs
-              (bfilter_st gs (Or b1 b2) True s) x))
-            (probe_exp (Or b1 b2))
+              (bfilter_st gs (TOr b1 b2) True s) x))
+            (probe_exp (TOr b1 b2))
        then Bot
-       else Lifted (bfilter_st gs (Or b1 b2) True s)
+       else Lifted (bfilter_st gs (TOr b1 b2) True s)
      }"
-  | "bfilter_st_lift gs (Or b1 b2) False x_lift =
+  | "bfilter_st_lift gs (TOr b1 b2) False x_lift =
        bfilter_st_lift gs b1 False (bfilter_st_lift gs b2 False x_lift)"
-  | "bfilter_st_lift gs (Eq e1 e2) res x_lift = do {
+  | "bfilter_st_lift gs (TEq e1 e2) res x_lift = do {
        s <- x_lift;
        let (a1, a2) = inv_eq res
              (aval_abs e1 (fun_of_resolved_st_q_for gs s))
@@ -380,54 +398,57 @@ where
        s <- x_lift;
        let (a1, a2) = inv_eq (\<not> res)
              (aval_abs e (fun_of_resolved_st_q_for gs s))
-             (aval_abs (N 0) (fun_of_resolved_st_q_for gs s));
+             (aval_abs (TN I32 0) (fun_of_resolved_st_q_for gs s));
        afilter_st_lift gs e a1 (Lifted s)
      }"
 
 lemma bfilter_st_lift_Bot [simp]: "bfilter_st_lift gs b res Bot = Bot"
 proof (induction b arbitrary: res)
-  case (N n)
+  case (TN ik n)
   then show ?case by simp
 next
-  case (V x)
+  case (TVar ik x)
   then show ?case by simp
 next
-  case (Plus e1 e2)
+  case (TPlus ik e1 e2)
   then show ?case by simp
 next
-  case (Minus e1 e2)
+  case (TMinus ik e1 e2)
   then show ?case by simp
 next
-  case (Times e1 e2)
+  case (TTimes ik e1 e2)
   then show ?case by simp
 next
-  case (Not b)
+  case (TCast ik e)
   then show ?case by simp
 next
-  case (And b1 b2)
+  case (TNot b)
+  then show ?case by simp
+next
+  case (TAnd b1 b2)
   show ?case
   proof (cases res)
     case True
-    then show ?thesis by (simp add: And.IH)
+    then show ?thesis by (simp add: TAnd.IH)
   next
     case False
-    then show ?thesis by (simp add: And.IH)
+    then show ?thesis by (simp add: TAnd.IH)
   qed
 next
-  case (Or b1 b2)
+  case (TOr b1 b2)
   show ?case
   proof (cases res)
     case True
-    then show ?thesis by (simp add: Or.IH)
+    then show ?thesis by (simp add: TOr.IH)
   next
     case False
-    then show ?thesis by (simp add: Or.IH)
+    then show ?thesis by (simp add: TOr.IH)
   qed
 next
-  case (Less e1 e2)
+  case (TLess e1 e2)
   then show ?case by simp
 next
-  case (Eq e1 e2)
+  case (TEq e1 e2)
   then show ?case by simp
 qed
 
@@ -442,13 +463,13 @@ text \<open>
   spec-level transfer normalized to canonical bottom. Two composition shapes
   recur through the induction:
 
-    - Sequential (\<open>Plus\<close>/\<open>Minus\<close>/\<open>Times\<close>, \<open>Not\<close>, \<open>And True\<close>, \<open>Or False\<close>,
-      \<open>Less\<close>/\<open>Eq\<close>'s two-narrow chain): \<open>afilter_reductive\<close> /
+    - Sequential (\<open>TPlus\<close>/\<open>TMinus\<close>/\<open>TTimes\<close>, \<open>TNot\<close>, \<open>TAnd True\<close>,
+      \<open>TOr False\<close>, \<open>TLess\<close>/\<open>TEq\<close>'s two-narrow chain): \<open>afilter_reductive\<close> /
       \<open>bfilter_reductive\<close> guarantee a later step can never revive a
       location an earlier step already narrowed to \<open>is_bot\<close>, so once the
       inner step goes \<open>Bot\<close> the outer step does too, without recomputation.
 
-    - Compound join (\<open>And False\<close>/\<open>Or True\<close>): handled directly by
+    - Compound join (\<open>TAnd False\<close>/\<open>TOr True\<close>): handled directly by
       @{const bfilter_st_lift}'s own footprint-scoped definition, not by a
       recursive sub-lift, since spec's join is plain pointwise \<open>\<squnion>\<close> (kept
       executable) rather than a canonicalizing one.
@@ -480,45 +501,49 @@ lemma bfilter_st_locality:
      fun_of_resolved_st_q_for gs (bfilter_st gs b res s) x = fun_of_resolved_st_q_for gs s x
      \<or> fun_of_resolved_st_q_for gs (bfilter_st gs b res s) = \<bottom>"
 proof (induction b arbitrary: res s)
-  case (N n)
+  case (TN ik n)
   then show ?case
     unfolding bfilter_st.simps Let_def case_prod_beta using afilter_st_locality by simp
 next
-  case (V y)
+  case (TVar ik y)
   then show ?case
     unfolding bfilter_st.simps Let_def case_prod_beta using afilter_st_locality by simp
 next
-  case (Plus e1 e2)
+  case (TPlus ik e1 e2)
   then have x1: "x \<notin> set (footprint_exp e1)" and x2: "x \<notin> set (footprint_exp e2)" by simp_all
   then show ?case
     by (simp add: bfilter_st.simps Let_def case_prod_beta
                   afilter_st_locality[OF x1] afilter_st_locality[OF x2])
 next
-  case (Minus e1 e2)
+  case (TMinus ik e1 e2)
   then have x1: "x \<notin> set (footprint_exp e1)" and x2: "x \<notin> set (footprint_exp e2)" by simp_all
   then show ?case
     by (simp add: bfilter_st.simps Let_def case_prod_beta
                   afilter_st_locality[OF x1] afilter_st_locality[OF x2])
 next
-  case (Times e1 e2)
+  case (TTimes ik e1 e2)
   then have x1: "x \<notin> set (footprint_exp e1)" and x2: "x \<notin> set (footprint_exp e2)" by simp_all
   then show ?case
     by (simp add: bfilter_st.simps Let_def case_prod_beta
                   afilter_st_locality[OF x1] afilter_st_locality[OF x2])
 next
-  case (Not b)
-  then show ?case by (simp add: Not.IH)
+  case (TCast ik e)
+  then show ?case
+    unfolding bfilter_st.simps Let_def case_prod_beta using afilter_st_locality by simp
 next
-  case (And b1 b2)
+  case (TNot b)
+  then show ?case by (simp add: TNot.IH)
+next
+  case (TAnd b1 b2)
   then have x1: "x \<notin> set (footprint_exp b1)" and x2: "x \<notin> set (footprint_exp b2)" by simp_all
   show ?case
   proof (cases res)
     case True
-    from And.IH(2)[OF x2, where res = True and s = s] show ?thesis
+    from TAnd.IH(2)[OF x2, where res = True and s = s] show ?thesis
     proof
       assume h2: "fun_of_resolved_st_q_for gs (bfilter_st gs b2 True s) x
                     = fun_of_resolved_st_q_for gs s x"
-      from And.IH(1)[OF x1, where res = True and s = "bfilter_st gs b2 True s"]
+      from TAnd.IH(1)[OF x1, where res = True and s = "bfilter_st gs b2 True s"]
       show ?thesis using h2 True by auto
     next
       assume h2: "fun_of_resolved_st_q_for gs (bfilter_st gs b2 True s) = \<bottom>"
@@ -535,7 +560,7 @@ next
               \<or> fun_of_resolved_st_q_for gs
                 (if feasible b1 False (fun_of_resolved_st_q_for gs s)
                  then bfilter_st gs b1 False s else bot) = \<bottom>"
-      using And.IH(1)[OF x1, where res = False and s = s]
+      using TAnd.IH(1)[OF x1, where res = False and s = s]
       by (cases "feasible b1 False (fun_of_resolved_st_q_for gs s)")
          (simp_all add: fun_of_resolved_st_q_for_bot bot_fun_def)
     have g2: "fun_of_resolved_st_q_for gs
@@ -545,13 +570,13 @@ next
               \<or> fun_of_resolved_st_q_for gs
                 (if feasible b2 False (fun_of_resolved_st_q_for gs s)
                  then bfilter_st gs b2 False s else bot) = \<bottom>"
-      using And.IH(2)[OF x2, where res = False and s = s]
+      using TAnd.IH(2)[OF x2, where res = False and s = s]
       by (cases "feasible b2 False (fun_of_resolved_st_q_for gs s)")
          (simp_all add: fun_of_resolved_st_q_for_bot bot_fun_def)
     show ?thesis using False g1 g2 by (auto simp: sup_fun_def)
   qed
 next
-  case (Or b1 b2)
+  case (TOr b1 b2)
   then have x1: "x \<notin> set (footprint_exp b1)" and x2: "x \<notin> set (footprint_exp b2)" by simp_all
   show ?case
   proof (cases res)
@@ -563,7 +588,7 @@ next
               \<or> fun_of_resolved_st_q_for gs
                 (if feasible b1 True (fun_of_resolved_st_q_for gs s)
                  then bfilter_st gs b1 True s else bot) = \<bottom>"
-      using Or.IH(1)[OF x1, where res = True and s = s]
+      using TOr.IH(1)[OF x1, where res = True and s = s]
       by (cases "feasible b1 True (fun_of_resolved_st_q_for gs s)")
          (simp_all add: fun_of_resolved_st_q_for_bot bot_fun_def)
     have g2: "fun_of_resolved_st_q_for gs
@@ -573,17 +598,17 @@ next
               \<or> fun_of_resolved_st_q_for gs
                 (if feasible b2 True (fun_of_resolved_st_q_for gs s)
                  then bfilter_st gs b2 True s else bot) = \<bottom>"
-      using Or.IH(2)[OF x2, where res = True and s = s]
+      using TOr.IH(2)[OF x2, where res = True and s = s]
       by (cases "feasible b2 True (fun_of_resolved_st_q_for gs s)")
          (simp_all add: fun_of_resolved_st_q_for_bot bot_fun_def)
     show ?thesis using True g1 g2 by (auto simp: sup_fun_def)
   next
     case False
-    from Or.IH(2)[OF x2, where res = False and s = s] show ?thesis
+    from TOr.IH(2)[OF x2, where res = False and s = s] show ?thesis
     proof
       assume h2: "fun_of_resolved_st_q_for gs (bfilter_st gs b2 False s) x
                     = fun_of_resolved_st_q_for gs s x"
-      from Or.IH(1)[OF x1, where res = False and s = "bfilter_st gs b2 False s"]
+      from TOr.IH(1)[OF x1, where res = False and s = "bfilter_st gs b2 False s"]
       show ?thesis using h2 False by auto
     next
       assume h2: "fun_of_resolved_st_q_for gs (bfilter_st gs b2 False s) = \<bottom>"
@@ -593,13 +618,13 @@ next
     qed
   qed
 next
-  case (Less e1 e2)
+  case (TLess e1 e2)
   then have x1: "x \<notin> set (footprint_exp e1)" and x2: "x \<notin> set (footprint_exp e2)" by simp_all
   show ?case
     unfolding bfilter_st.simps Let_def case_prod_beta
     using afilter_st_locality[OF x1] afilter_st_locality[OF x2] by simp
 next
-  case (Eq e1 e2)
+  case (TEq e1 e2)
   then have x1: "x \<notin> set (footprint_exp e1)" and x2: "x \<notin> set (footprint_exp e2)" by simp_all
   show ?case
     unfolding bfilter_st.simps Let_def case_prod_beta
@@ -722,41 +747,43 @@ lemma afilter_st_lift_correct:
   shows "map_lift (fun_of_resolved_st_q_for gs) (afilter_st_lift gs e a (Lifted s)) =
          normalize_lift is_bot_state (afilter e a (fun_of_resolved_st_q_for gs s))"
 using assms proof (induction e arbitrary: a s)
-  case (N n)
+  case (TN ik n)
   then show ?case by (simp add: live_resolved_st_q_def)
 next
-    case (V x)
+    case (TVar ik x)
   show ?case
     unfolding afilter_st_lift.simps bind_lift_Lifted afilter.simps
-    by (rule update_resolved_st_q_lift_correct[OF V.prems])
+    by (rule update_resolved_st_q_lift_correct[OF TVar.prems])
 next
-  case (Plus e1 e2)
+  case (TPlus ik e1 e2)
   show ?case
     unfolding afilter_st_lift.simps afilter_Plus_unfold bind_lift_Lifted Let_def case_prod_beta
-    using afilter_lift_step[OF Plus.prems Plus.IH(1) Plus.IH(2)[OF Plus.prems]]
+    using afilter_lift_step[OF TPlus.prems TPlus.IH(1) TPlus.IH(2)[OF TPlus.prems]]
     by simp
 next
-  case (Minus e1 e2)
+  case (TMinus ik e1 e2)
   show ?case
     unfolding afilter_st_lift.simps afilter_Minus_unfold bind_lift_Lifted Let_def case_prod_beta
-    using afilter_lift_step[OF Minus.prems Minus.IH(1) Minus.IH(2)[OF Minus.prems]]
+    using afilter_lift_step[OF TMinus.prems TMinus.IH(1) TMinus.IH(2)[OF TMinus.prems]]
     by simp
 next
-  case (Times e1 e2)
+  case (TTimes ik e1 e2)
   show ?case
     unfolding afilter_st_lift.simps afilter_Times_unfold bind_lift_Lifted Let_def case_prod_beta
-    using afilter_lift_step[OF Times.prems Times.IH(1) Times.IH(2)[OF Times.prems]]
+    using afilter_lift_step[OF TTimes.prems TTimes.IH(1) TTimes.IH(2)[OF TTimes.prems]]
     by simp
 next
-  case (Less e1 e2) then show ?case by (simp add: live_resolved_st_q_def)
+  case (TCast ik e) then show ?case by (simp add: live_resolved_st_q_def)
 next
-  case (Eq e1 e2) then show ?case by (simp add: live_resolved_st_q_def)
+  case (TLess e1 e2) then show ?case by (simp add: live_resolved_st_q_def)
 next
-  case (Not e) then show ?case by (simp add: live_resolved_st_q_def)
+  case (TEq e1 e2) then show ?case by (simp add: live_resolved_st_q_def)
 next
-  case (And e1 e2) then show ?case by (simp add: live_resolved_st_q_def)
+  case (TNot e) then show ?case by (simp add: live_resolved_st_q_def)
 next
-  case (Or e1 e2) then show ?case by (simp add: live_resolved_st_q_def)
+  case (TAnd e1 e2) then show ?case by (simp add: live_resolved_st_q_def)
+next
+  case (TOr e1 e2) then show ?case by (simp add: live_resolved_st_q_def)
 qed
 
 lemma bfilter_st_lift_correct:
@@ -765,75 +792,81 @@ lemma bfilter_st_lift_correct:
   shows "map_lift (fun_of_resolved_st_q_for gs) (bfilter_st_lift gs b res (Lifted s)) =
          normalize_lift is_bot_state (bfilter b res (fun_of_resolved_st_q_for gs s))"
 using assms proof (induction b arbitrary: res s)
-  case (N n)
+  case (TN ik n)
   show ?case
-    using N.prems
+    using TN.prems
     by (simp add: bfilter_st_lift.simps bfilter.simps Let_def case_prod_beta bind_lift_Lifted
-        afilter_st_lift_correct[OF N.prems] live_resolved_st_q_def)
+        afilter_st_lift_correct[OF TN.prems] live_resolved_st_q_def)
 next
-  case (V x)
-  show ?case
-    by (simp add: bfilter_st_lift.simps bfilter.simps Let_def case_prod_beta bind_lift_Lifted
-        update_resolved_st_q_lift_correct[OF V.prems] fun_upd_def)
-next
-  case (Plus e1 e2)
+  case (TVar ik x)
   show ?case
     by (simp add: bfilter_st_lift.simps bfilter.simps Let_def case_prod_beta bind_lift_Lifted
-        afilter_lift_step[OF Plus.prems afilter_st_lift_correct afilter_st_lift_correct[OF Plus.prems]])
+        update_resolved_st_q_lift_correct[OF TVar.prems] fun_upd_def)
 next
-  case (Minus e1 e2)
+  case (TPlus ik e1 e2)
   show ?case
     by (simp add: bfilter_st_lift.simps bfilter.simps Let_def case_prod_beta bind_lift_Lifted
-        afilter_lift_step[OF Minus.prems afilter_st_lift_correct afilter_st_lift_correct[OF Minus.prems]])
+        afilter_lift_step[OF TPlus.prems afilter_st_lift_correct afilter_st_lift_correct[OF TPlus.prems]])
 next
-  case (Times e1 e2)
+  case (TMinus ik e1 e2)
   show ?case
     by (simp add: bfilter_st_lift.simps bfilter.simps Let_def case_prod_beta bind_lift_Lifted
-        afilter_lift_step[OF Times.prems afilter_st_lift_correct afilter_st_lift_correct[OF Times.prems]])
+        afilter_lift_step[OF TMinus.prems afilter_st_lift_correct afilter_st_lift_correct[OF TMinus.prems]])
 next
-  case (Not b)
-  then show ?case by (simp add: Not.IH)
+  case (TTimes ik e1 e2)
+  show ?case
+    by (simp add: bfilter_st_lift.simps bfilter.simps Let_def case_prod_beta bind_lift_Lifted
+        afilter_lift_step[OF TTimes.prems afilter_st_lift_correct afilter_st_lift_correct[OF TTimes.prems]])
 next
-  case (And b1 b2)
+  case (TCast ik e)
+  show ?case
+    using TCast.prems
+    by (simp add: bfilter_st_lift.simps bfilter.simps Let_def case_prod_beta bind_lift_Lifted
+        afilter_st_lift_correct[OF TCast.prems] live_resolved_st_q_def)
+next
+  case (TNot b)
+  then show ?case by (simp add: TNot.IH)
+next
+  case (TAnd b1 b2)
   show ?case
   proof (cases res)
     case True
     then show ?thesis
-      using bfilter_lift_step[OF And.prems And.IH(1) And.IH(2)[OF And.prems]]
+      using bfilter_lift_step[OF TAnd.prems TAnd.IH(1) TAnd.IH(2)[OF TAnd.prems]]
       by simp
   next
     case False
     have r: "res = False" using False by simp
     show ?thesis
       unfolding r bfilter_st_lift.simps bind_lift_Lifted
-      by (rule lift_probe_step[OF And.prems])
+      by (rule lift_probe_step[OF TAnd.prems])
   qed
 next
-  case (Or b1 b2)
+  case (TOr b1 b2)
   show ?case
   proof (cases res)
     case True
     have r: "res = True" using True by simp
     show ?thesis
       unfolding r bfilter_st_lift.simps bind_lift_Lifted
-      by (rule lift_probe_step[OF Or.prems])
+      by (rule lift_probe_step[OF TOr.prems])
   next
     case False
     then show ?thesis
-      using bfilter_lift_step[OF Or.prems Or.IH(1) Or.IH(2)[OF Or.prems]]
+      using bfilter_lift_step[OF TOr.prems TOr.IH(1) TOr.IH(2)[OF TOr.prems]]
       by simp
   qed
 next
-  case (Less e1 e2)
+  case (TLess e1 e2)
   show ?case
     unfolding bfilter_st_lift.simps bfilter_Less_unfold bind_lift_Lifted Let_def case_prod_beta
-    using afilter_lift_step[OF Less.prems afilter_st_lift_correct afilter_st_lift_correct[OF Less.prems]]
+    using afilter_lift_step[OF TLess.prems afilter_st_lift_correct afilter_st_lift_correct[OF TLess.prems]]
     by simp
 next
-  case (Eq e1 e2)
+  case (TEq e1 e2)
   show ?case
     unfolding bfilter_st_lift.simps bfilter_Eq_unfold bind_lift_Lifted Let_def case_prod_beta
-    using afilter_lift_step[OF Eq.prems afilter_st_lift_correct afilter_st_lift_correct[OF Eq.prems]]
+    using afilter_lift_step[OF TEq.prems afilter_st_lift_correct afilter_st_lift_correct[OF TEq.prems]]
     by simp
 qed
 

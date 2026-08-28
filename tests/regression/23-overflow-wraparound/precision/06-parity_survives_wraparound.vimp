@@ -1,0 +1,20 @@
+// PARAM: --analysis parity
+// Adapted from Goblint tests/regression/37-congruence/08-mod-16-unsigned-overflow.c,
+// which keeps "a % 16 == 0" across repeated unsigned overflow. VIMP has no
+// remainder operator, so the expressible slice of that fact is congruence
+// modulo 2 -- parity -- checked the way 18-parity/precision/01-even_odd_distinct
+// .vimp checks it, by refuting an equality between disjoint parities.
+//
+// n is unconstrained, so no magnitude reasoning applies; 2 * n is even and
+// 2 * n + 1 is odd in int32 whatever n is, and converting the even one to
+// uint8 keeps it even, because every kind's modulus 2^w is itself even and
+// so wraparound is a parity-preserving map. even8 and odd therefore never
+// hold the same value.
+global uint8 even8;
+void main() {
+  int32 n, odd;
+  n := __voblint_nondet_int();
+  even8 := 2 * n;
+  odd := 2 * n + 1;
+  __voblint_check(!(even8 == odd)) // PROVED
+}

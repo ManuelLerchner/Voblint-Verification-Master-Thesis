@@ -78,7 +78,7 @@ definition cfg_report :: "cfg \<Rightarrow> nat \<times> nat \<times> nat \<time
 subsection \<open>Uniform program builder\<close>
 
 definition prog_cfg :: "imp_prog \<Rightarrow> cfg" where
-  "prog_cfg P = compile_prog (prog_table P) (prog_procs P) (STR ''main'') (prog_main P)"
+  "prog_cfg P = compile_prog (prog_tyenv P) (prog_table P) (prog_procs P) (STR ''main'') (prog_main P)"
 
 subsection \<open>Programs 1--8: intraprocedural shapes\<close>
 
@@ -92,22 +92,22 @@ definition p02_assign :: imp_prog where
   "p02_assign = program { void f() { x := 1 } void main() { f() } }"
 
 definition p03_return :: imp_prog where
-  "p03_return = program { void f() { return 1 } void main() { f() } }"
+  "p03_return = program { int32 f() { return 1 } void main() { f() } }"
 
 definition p04_return_then_dead :: imp_prog where
-  "p04_return_then_dead = program { void f() { return 1; x := 2 } void main() { f() } }"
+  "p04_return_then_dead = program { int32 f() { return 1; x := 2 } void main() { f() } }"
 
 definition p05_if_both_return :: imp_prog where
   "p05_if_both_return =
-     program { void f() { if (x < 1) { return 1 } else { return 2 } } void main() { f() } }"
+     program { int32 f() { if (x < 1) { return 1 } else { return 2 } } void main() { f() } }"
 
 definition p06_if_one_returns :: imp_prog where
   "p06_if_one_returns =
-     program { void f() { if (x < 1) { return 1 } else { y := 2 } } void main() { f() } }"
+     program { int32 f() { if (x < 1) { return 1 } else { y := 2 } } void main() { f() } }"
 
 definition p07_while_body_returns :: imp_prog where
   "p07_while_body_returns =
-     program { void f() { while (x < 1) { return 1 } } void main() { f() } }"
+     program { int32 f() { while (x < 1) { return 1 } } void main() { f() } }"
 
 definition p08_nested_if :: imp_prog where
   "p08_nested_if =
@@ -119,7 +119,7 @@ subsection \<open>Program 10: recursive factorial\<close>
 definition factorial_program :: imp_prog where
   "factorial_program = program {
 
-     void fac(n) {
+     int32 fac(int32 n) {
        if (n < 2) {
          return 1
        } else {
@@ -137,6 +137,7 @@ definition factorial_program :: imp_prog where
 definition factorial_cfg :: cfg where
   "factorial_cfg =
      compile_prog
+       (prog_tyenv factorial_program)
        (prog_table factorial_program)
        (prog_procs factorial_program)
        (STR ''main'')
@@ -157,7 +158,7 @@ definition p12_two_call_sites :: imp_prog where
 
 definition p13_after_guaranteed_return :: imp_prog where
   "p13_after_guaranteed_return =
-     program { void f() { if (x < 1) { return 1 } else { return 2 }; z := 9 }
+     program { int32 f() { if (x < 1) { return 1 } else { return 2 }; z := 9 }
                void main() { f() } }"
 
 definition p14_main_only :: imp_prog where

@@ -293,7 +293,7 @@ where
      side_rhs_fold_dg bot (map (dg_cmb_at ctx ca cc) (static_targets g v cc ca))"
 
 definition dg_enter ::
-  "unit \<Rightarrow> vname list \<Rightarrow> exp list \<Rightarrow> pp
+  "unit \<Rightarrow> vname list \<Rightarrow> texp list \<Rightarrow> pp
    \<Rightarrow> (pp \<times> unit, unit, ('D, 'G) dg_state) strategy_tree"
 where
   "dg_enter ctx fs as cl =
@@ -1757,8 +1757,8 @@ text \<open>
 
 definition indep_dg_spec ::
   "(vname \<Rightarrow> bool)
-   \<Rightarrow> 'd::sound_domain domain_transfer
-   \<Rightarrow> 'g::sound_domain domain_transfer
+   \<Rightarrow> 'd::sound_cast_domain domain_transfer
+   \<Rightarrow> 'g::sound_cast_domain domain_transfer
    \<Rightarrow> ('d abs_state, 'g abs_state) dg_spec"
 where
   "indep_dg_spec gs tfD tfG = \<lparr>
@@ -1792,7 +1792,8 @@ lemma dg_spec_step_indep [simp]:
 
 lemma dgs_combine_indep [simp]:
   "dgs_combine (indep_dg_spec gs tfD tfG) dst dc de g
-   = (combine\<^sup># gs (ci_dst dst) g g, combine\<^sup># gs (ci_dst dst) dc de)"
+   = (combine\<^sup># gs (ci_dst dst) g g,
+      combine\<^sup># gs (ci_dst dst) dc de)"
   unfolding dgs_combine_def indep_dg_spec_def combine_collect_abs_def by simp
 
 text \<open>The combine obligation of @{locale sound_dg_spec} for the independent
@@ -1807,9 +1808,11 @@ proof -
   have tc': "t \<in> \<lbrakk>de\<rbrakk>" using gamma_dgD1[OF tc] .
   have sg: "s \<in> \<lbrakk>g\<rbrakk>" using gamma_dgD2[OF sc] .
   have tg: "t \<in> \<lbrakk>g\<rbrakk>" using gamma_dgD2[OF tc] .
-  have d_sound: "combine_collect gs (ci_dst dst) s t \<in> \<lbrakk>combine\<^sup># gs (ci_dst dst) dc de\<rbrakk>"
+  have d_sound: "combine_collect gs (ci_dst dst) s t
+                   \<in> \<lbrakk>combine\<^sup># gs (ci_dst dst) dc de\<rbrakk>"
     by (rule combine_collect_sound[OF sc' tc'])
-  have g_sound: "combine_collect gs (ci_dst dst) s t \<in> \<lbrakk>combine\<^sup># gs (ci_dst dst) g g\<rbrakk>"
+  have g_sound: "combine_collect gs (ci_dst dst) s t
+                   \<in> \<lbrakk>combine\<^sup># gs (ci_dst dst) g g\<rbrakk>"
     by (rule combine_collect_sound[OF sg tg])
   show ?thesis
     using d_sound g_sound unfolding gamma_dg_def by simp
@@ -1864,7 +1867,8 @@ lemma sound_dg_spec_indep:
       unfolding gamma_dg_def by auto
   qed
   subgoal premises prems using prems by (simp add: indep_dg_spec_def)
-  subgoal premises prems by (rule gamma_dg_combine_sound[OF prems])
+  subgoal premises prems for s dc g t de dst
+    by (rule gamma_dg_combine_sound[OF prems])
   subgoal premises prems by (rule gamma_dg_enter_sound[OF soundD soundG prems])
   done
 subsection \<open>The homogeneous analysis as a diagonal interpretation\<close>
@@ -1932,7 +1936,8 @@ proof -
   have sc': "s \<in> \<lbrakk>combine_env_abs gs dc g\<rbrakk>" using gamma_unitD[OF sc] .
   have tc': "t \<in> \<lbrakk>combine_env_abs gs de g\<rbrakk>" using gamma_unitD[OF tc] .
   have "combine_collect gs (ci_dst dst) s t \<in>
-          \<lbrakk>combine\<^sup># gs (ci_dst dst) (combine_env_abs gs dc g) (combine_env_abs gs de g)\<rbrakk>"
+          \<lbrakk>combine\<^sup># gs (ci_dst dst)
+             (combine_env_abs gs dc g) (combine_env_abs gs de g)\<rbrakk>"
     by (rule combine_collect_sound[OF sc' tc'])
   then show ?thesis
     using reserved
@@ -1970,7 +1975,7 @@ lemma sound_dg_spec_unit_for:
       sound_transfer_for.edge_collect_check_sound_for[OF sound, where \<sigma> = "combine_env_abs gs d g"]
     by (auto simp add: Let_def restrict_local_for_global_join)
   subgoal premises prems using prems by (simp add: unit_dg_spec_for_def)
-  subgoal premises prems
+  subgoal premises prems for s dc g t de dst
     by (rule gamma_unit_combine_sound_for[OF reserved prems])
   subgoal premises prems
     by (rule gamma_unit_enter_sound_for[OF sound prems])
@@ -2098,20 +2103,24 @@ proof -
                (case dgs_combine (unit_dg_spec_for gs tf) dst dc0 de0 g0 of (g', d') \<Rightarrow> gamma_unit gs d' g')"
     by (rule gamma_unit_combine_sound_for[OF reserved sc' tc'])
   have raw_eq: "dgs_combine (unit_dg_spec_for gs tf) dst dc0 de0 g0
-                  = (let res = combine_assign\<^sup># (ci_dst dst) (de0 ret_var) (combine_env_abs gs dc0 g0)
+                  = (let res = combine_assign\<^sup># (ci_dst dst) (de0 ret_var)
+                                 (combine_env_abs gs dc0 g0)
                      in (restrict_global_for gs res, restrict_local_for gs res))"
     unfolding dgs_combine_unit_dg_spec_for by simp
   have target: "dgs_combine (unit_dg_spec_for_lifted gs is_bot_pred tf) dst dc de g
-                  = (let res = combine_assign\<^sup># (ci_dst dst) (de0 ret_var) (combine_env_abs gs dc0 g0)
+                  = (let res = combine_assign\<^sup># (ci_dst dst) (de0 ret_var)
+                                 (combine_env_abs gs dc0 g0)
                      in (map_lift (restrict_global_for gs) (normalize_lift is_bot_pred res),
                          map_lift (restrict_local_for gs) (normalize_lift is_bot_pred res)))"
     unfolding dgs_combine_unit_dg_spec_for_lifted
     unfolding unit_combine_step_assign_for_lifted_def unit_combine_step_env_for_lifted_def
     by (simp add: dc0 de0 g0_def Let_def transfer_lift2_def restrict_global_for_local_join)
   show ?thesis
-  proof (cases "is_bot_pred (combine_assign\<^sup># (ci_dst dst) (de0 ret_var) (combine_env_abs gs dc0 g0))")
+  proof (cases "is_bot_pred (combine_assign\<^sup># (ci_dst dst) (de0 ret_var)
+                               (combine_env_abs gs dc0 g0))")
     case True
-    have empty: "\<lbrakk>combine_assign\<^sup># (ci_dst dst) (de0 ret_var) (combine_env_abs gs dc0 g0)\<rbrakk> = {}"
+    have empty: "\<lbrakk>combine_assign\<^sup># (ci_dst dst) (de0 ret_var)
+                     (combine_env_abs gs dc0 g0)\<rbrakk> = {}"
       using exact True is_bot_state_iff_gamma_state_empty by blast
     with raw raw_eq have "combine_collect gs (ci_dst dst) s t \<in> {}"
       by (simp add: Let_def gamma_unit_def combine_env_abs_restrict_id)
@@ -2120,7 +2129,8 @@ proof -
   next
     case False
     with raw raw_eq have "combine_collect gs (ci_dst dst) s t \<in>
-        \<lbrakk>combine_assign\<^sup># (ci_dst dst) (de0 ret_var) (combine_env_abs gs dc0 g0)\<rbrakk>"
+        \<lbrakk>combine_assign\<^sup># (ci_dst dst) (de0 ret_var)
+             (combine_env_abs gs dc0 g0)\<rbrakk>"
       by (simp add: Let_def gamma_unit_def combine_env_abs_restrict_id)
     with target False show ?thesis
       by (simp add: Let_def gamma_unit_def normalize_lift_def combine_env_abs_restrict_id)
@@ -2173,7 +2183,7 @@ theorem sound_dg_spec_unit_for_lifted:
   subgoal for a d g
     by (rule gamma_unit_step_sound_for_lifted[OF sound exact])
   subgoal premises prems using prems by (simp add: unit_dg_spec_for_lifted_def)
-  subgoal premises prems
+  subgoal premises prems for s dc g t de dst
     by (rule gamma_unit_combine_sound_for_lifted[OF reserved exact prems])
   subgoal premises prems
     by (rule gamma_unit_enter_sound_for_lifted[OF sound exact prems])
@@ -2304,7 +2314,7 @@ theorem sound_dg_spec_unit_placed:
       sound_transfer_for.edge_collect_check_sound_for[OF sound, where \<sigma> = "d \<squnion> g"]
     by (auto simp add: Let_def project_component_cover_sup2[OF cover])
   subgoal premises prems using prems by (simp add: unit_dg_spec_placed_def)
-  subgoal premises prems
+  subgoal premises prems for s dc g t de dst
     by (rule gamma_join_combine_sound_placed[OF cover prems])
   subgoal premises prems
     by (rule gamma_join_enter_sound_placed[OF cover sound prems])

@@ -130,7 +130,7 @@ text \<open>
 \<close>
 
 definition analyse_interval_td_report_for_with_state ::
-    "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> exp \<times> check_result \<times> bool \<times> ivl abs_state) list" where
+    "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> texp \<times> check_result \<times> bool \<times> ivl abs_state) list" where
   "analyse_interval_td_report_for_with_state gs p =
      (let r = analyse_interval_td_result_for gs p
       in classify_checks_with_state (prog_cfg prog_main_name p)
@@ -143,7 +143,7 @@ text \<open>Convenience instance at \<^const>\<open>declared_global\<close> \<op
   \<open>analyse_interval_td_report\<close>'s shape.\<close>
 
 definition analyse_interval_td_report_with_state ::
-    "imp_prog \<Rightarrow> (pp \<times> exp \<times> check_result \<times> bool \<times> ivl abs_state) list" where
+    "imp_prog \<Rightarrow> (pp \<times> texp \<times> check_result \<times> bool \<times> ivl abs_state) list" where
   "analyse_interval_td_report_with_state p = analyse_interval_td_report_for_with_state (declared_global p) p"
 
 subsection \<open>Solver-choice variant report: always-join update rule\<close>

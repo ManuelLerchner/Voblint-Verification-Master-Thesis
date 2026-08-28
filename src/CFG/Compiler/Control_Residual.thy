@@ -159,7 +159,7 @@ text \<open>
 \<close>
 
 lemma compile_control_at_SKIP_exit_path:
-  "control_at \<Pi> p c0 k n SKIP v \<Longrightarrow> compile \<Pi> p c0 k n = (n', en, E, K)
+  "control_at \<Pi> p c0 k n SKIP v \<Longrightarrow> compile \<Gamma> \<Pi> p c0 k n = (n', en, E, K)
    \<Longrightarrow> E \<subseteq> intra g \<Longrightarrow> intra_path g (v, s) (k, s)"
 proof (induction c0 k n "SKIP :: com" v arbitrary: n' en E K rule: control_at.induct)
   case (Skip k n)
@@ -182,24 +182,24 @@ next
   then show ?case by (simp add: star.refl)
 next
   case (SeqRight c1 c2 k n v)
-  obtain n2 en2 E2 K2 where c2: "compile \<Pi> p c2 k (n + csize c1) = (n2, en2, E2, K2)"
-    by (cases "compile \<Pi> p c2 k (n + csize c1)") auto
+  obtain n2 en2 E2 K2 where c2: "compile \<Gamma> \<Pi> p c2 k (n + csize c1) = (n2, en2, E2, K2)"
+    by (cases "compile \<Gamma> \<Pi> p c2 k (n + csize c1)") auto
   from SeqRight.prems(1) c2 have Esub: "E2 \<subseteq> E" by (auto simp: Let_def split: prod.splits)
   show ?case by (rule SeqRight.hyps(3)[OF c2]) (use Esub SeqRight.prems(2) in blast)
 
 next
   case (IfLeft c1 k n v b c2)
-  obtain n1 en1 E1 K1 where c1: "compile \<Pi> p c1 k (Suc n) = (n1, en1, E1, K1)"
-    by (cases "compile \<Pi> p c1 k (Suc n)") auto
+  obtain n1 en1 E1 K1 where c1: "compile \<Gamma> \<Pi> p c1 k (Suc n) = (n1, en1, E1, K1)"
+    by (cases "compile \<Gamma> \<Pi> p c1 k (Suc n)") auto
   from IfLeft.prems(1) c1 have Esub: "E1 \<subseteq> E" by (auto simp: Let_def split: prod.splits)
   show ?case by (rule IfLeft.hyps(2)[OF c1]) (use Esub IfLeft.prems(2) in blast)
 next
   case (IfRight c2 k n c1 v b)
-  obtain n1 en1 E1 K1 where c1: "compile \<Pi> p c1 k (Suc n) = (n1, en1, E1, K1)"
-    by (cases "compile \<Pi> p c1 k (Suc n)") auto
+  obtain n1 en1 E1 K1 where c1: "compile \<Gamma> \<Pi> p c1 k (Suc n) = (n1, en1, E1, K1)"
+    by (cases "compile \<Gamma> \<Pi> p c1 k (Suc n)") auto
   have n1: "n1 = Suc n + csize c1" using compile_next_id[OF c1] by simp
-  obtain n2 en2 E2 K2 where c2: "compile \<Pi> p c2 k (Suc n + csize c1) = (n2, en2, E2, K2)"
-    by (cases "compile \<Pi> p c2 k (Suc n + csize c1)") auto
+  obtain n2 en2 E2 K2 where c2: "compile \<Gamma> \<Pi> p c2 k (Suc n + csize c1) = (n2, en2, E2, K2)"
+    by (cases "compile \<Gamma> \<Pi> p c2 k (Suc n + csize c1)") auto
   from IfRight.prems(1) c1 c2 n1 have Esub: "E2 \<subseteq> E"
     by (auto simp: Let_def split: prod.splits)
   show ?case by (rule IfRight.hyps(2)[OF c2]) (use Esub IfRight.prems(2) in blast)

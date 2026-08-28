@@ -92,7 +92,7 @@
 //   main_pp6_ctx0 -> main_pp7_ctx0: call-to-return f
 // EXPECT-GRAPH-END
 
-global g, h;
+global int32 g, h;
 void f() {
   h := h + 1;
   g := 42

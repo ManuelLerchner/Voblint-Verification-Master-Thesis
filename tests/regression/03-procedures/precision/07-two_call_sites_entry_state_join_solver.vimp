@@ -6,10 +6,11 @@
 // solver-independent as the flat Ctx_None equation system already is, and
 // this program crosses no loop under either context, so join needs no
 // widening to terminate and reproduces the exact per-context result.
-void square(n) {
+int32 square(int32 n) {
   return n * n
 }
 void main() {
+  int32 a, b;
   a := square(3);
   b := square(4);
   __voblint_check(a == 9); // PROVED

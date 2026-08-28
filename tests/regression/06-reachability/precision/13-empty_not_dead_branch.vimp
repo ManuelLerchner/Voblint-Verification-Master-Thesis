@@ -5,7 +5,7 @@
 // is the only variable, read nondeterministically so both arms are live. The
 // join keeps g = [1,2], so 0 < g is PROVED, and the following write is still
 // reached: g == 3 is PROVED, not absent.
-global g;
+global int32 g;
 void main() {
   g := __voblint_nondet_int();
   if (g) {

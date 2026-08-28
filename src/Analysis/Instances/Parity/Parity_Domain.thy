@@ -1,6 +1,6 @@
 theory Parity_Domain
-  imports Voblint_Core.Abstract_Domain "Voblint_VIMP.VIMP_Expr" "TD.Update_rules"
-    Voblint_Core.Abstract_Arithmetic
+  imports Voblint_Core.Abstract_Domain "Voblint_VIMP.VIMP_Expr" "Voblint_VIMP.VIMP_Elaborated"
+    "TD.Update_rules" Voblint_Core.Abstract_Arithmetic
 begin
 
 section \<open>Parity domain: finite even/odd abstraction\<close>
@@ -322,56 +322,180 @@ lemma parity_tobool_mono:
 
 subsection \<open>Abstract expression evaluation\<close>
 
-fun aval_parity :: "exp => (vname => parity) => parity" where
-    "aval_parity (N n)       \<sigma> = parity_of_int n"
-  | "aval_parity (V v)       \<sigma> = \<sigma> v"
-  | "aval_parity (Plus  a b) \<sigma> = aval_parity a \<sigma> + aval_parity b \<sigma>"
-  | "aval_parity (Minus a b) \<sigma> = aval_parity a \<sigma> - aval_parity b \<sigma>"
-  | "aval_parity (Times a b) \<sigma> = aval_parity a \<sigma> * aval_parity b \<sigma>"
-  | "aval_parity (Less a b)  \<sigma> =
-       (if is_bot (aval_parity a \<sigma>) \<or> is_bot (aval_parity b \<sigma>) then bot
-        else if parity_lt (aval_parity a \<sigma>) (aval_parity b \<sigma>) = Some True then POdd
-        else if parity_lt (aval_parity a \<sigma>) (aval_parity b \<sigma>) = Some False then PEven
+text \<open>
+  \<open>parity_cast\<close> is the identity, not a generic boundary-literal fallback
+  cast: every \<open>ikind\<close> this project defines has \<open>ik_bits ik \<ge> 1\<close>, so
+  \<^const>\<open>ik_norm\<close> only ever adjusts its argument by a multiple of
+  \<open>2 ^ (ik_bits ik - 1)\<close> or \<open>2 ^ ik_bits ik\<close> -- both even -- and evenness is
+  therefore invariant under \<^const>\<open>ik_norm\<close> for every kind, unlike a domain
+  whose modulus does not divide every wraparound modulus (Congruence). A
+  boundary-literal fallback would be unconditionally maximally imprecise
+  here anyway, since \<^const>\<open>parity_lt\<close> is always \<open>None\<close> and can never
+  certify a value already in range.
+\<close>
+
+definition parity_cast :: "ikind => parity => parity" where
+  "parity_cast ik a = a"
+
+lemma even_mod_iff:
+  fixes a c :: int
+  assumes "even c"
+  shows "even (a mod c) \<longleftrightarrow> even a"
+  using assms by (simp add: even_iff_mod_2_eq_zero mod_mod_cancel)
+
+lemma even_ik_norm [simp]: "even (ik_norm ik v) \<longleftrightarrow> even v"
+  unfolding ik_norm_def
+  by (cases ik) (simp_all add: take_bit_eq_mod signed_take_bit_eq_take_bit_shift even_mod_iff)
+
+text \<open>
+  Parity bounds no magnitude either: every non-bottom parity value admits
+  arbitrarily large values of that parity, so only \<open>bot\<close> certifies
+  representability. Parity's guard transfer is the identity, so nothing in
+  this domain consults the certificate; it exists to complete the
+  \<^locale>\<open>backward_domain\<close> signature wherever parity appears as a product
+  component.
+\<close>
+
+definition parity_in_range :: "ikind => parity => bool" where
+  "parity_in_range ik a = is_bottom_parity a"
+
+lemma parity_in_range_sound:
+  assumes "parity_in_range ik a"
+  shows "gamma_parity a \<subseteq> ik_range ik"
+  using assms by (simp add: parity_in_range_def is_bottom_parity_correct)
+
+lemma parity_in_range_mono:
+  assumes le: "a \<le> (b :: parity)" and b: "parity_in_range ik b"
+  shows "parity_in_range ik a"
+proof -
+  have "gamma_parity a \<subseteq> gamma_parity b"
+    using le by (simp add: less_eq_parity_def gamma_parity_mono)
+  with b show ?thesis
+    by (simp add: parity_in_range_def is_bottom_parity_correct)
+qed
+
+
+lemma parity_cast_sound:
+  assumes v: "v \<in> gamma a"
+  shows "ik_norm ik v \<in> gamma (parity_cast ik a)"
+  unfolding parity_cast_def gamma_abs_parity
+  using v unfolding gamma_abs_parity by (cases a) auto
+
+lemma parity_cast_sound_parity:
+  "v \<in> gamma_parity a \<Longrightarrow> ik_norm ik v \<in> gamma_parity (parity_cast ik a)"
+  using parity_cast_sound[of v a ik] by (simp add: gamma_abs_parity)
+
+lemma parity_cast_mono:
+  assumes le: "a1 \<le> (a2 :: parity)"
+  shows "parity_cast ik a1 \<le> parity_cast ik a2"
+  using le by (simp add: parity_cast_def)
+
+text \<open>
+  \<open>aval_parity_t\<close> is the sole evaluator for parity: it operates directly on
+  an already-elaborated \<^typ>\<open>texp\<close>, so it needs no \<open>\<Gamma>\<close>/\<open>ik\<close> parameter of
+  its own -- every node already carries the kind it should be cast at. Every
+  arithmetic node is normed once through \<^const>\<open>parity_cast\<close> at its own
+  kind, and \<open>TLess\<close>/\<open>TEq\<close>/\<open>TNot\<close>/\<open>TAnd\<close>/\<open>TOr\<close> never norm their own 0/1-shaped
+  result, matching \<^const>\<open>teval\<close>. \<open>TCast\<close> norms its operand at the target
+  kind, the conversion a write site performs. Both \<open>Parity_Transfer\<close>'s
+  forward obligations and the domain's special-call dispatch target it
+  directly.
+\<close>
+
+fun aval_parity_t :: "texp => (vname => parity) => parity" where
+    "aval_parity_t (TN ik n)        \<sigma> = parity_of_int (ik_norm ik n)"
+  | "aval_parity_t (TVar ik x)        \<sigma> = \<sigma> x"
+  | "aval_parity_t (TPlus  ik a b)  \<sigma> = parity_cast ik (aval_parity_t a \<sigma> + aval_parity_t b \<sigma>)"
+  | "aval_parity_t (TMinus ik a b)  \<sigma> = parity_cast ik (aval_parity_t a \<sigma> - aval_parity_t b \<sigma>)"
+  | "aval_parity_t (TTimes ik a b)  \<sigma> = parity_cast ik (aval_parity_t a \<sigma> * aval_parity_t b \<sigma>)"
+  | "aval_parity_t (TCast  ik a)    \<sigma> = parity_cast ik (aval_parity_t a \<sigma>)"
+  | "aval_parity_t (TLess a b) \<sigma> =
+       (if is_bot (aval_parity_t a \<sigma>) \<or> is_bot (aval_parity_t b \<sigma>) then bot
+        else if parity_lt (aval_parity_t a \<sigma>) (aval_parity_t b \<sigma>) = Some True then POdd
+        else if parity_lt (aval_parity_t a \<sigma>) (aval_parity_t b \<sigma>) = Some False then PEven
         else PTop)"
-  | "aval_parity (exp.Eq a b) \<sigma> =
-       (if is_bot (aval_parity a \<sigma>) \<or> is_bot (aval_parity b \<sigma>) then bot
-        else if parity_eqb (aval_parity a \<sigma>) (aval_parity b \<sigma>) = Some True then POdd
-        else if parity_eqb (aval_parity a \<sigma>) (aval_parity b \<sigma>) = Some False then PEven
+  | "aval_parity_t (TEq a b) \<sigma> =
+       (if is_bot (aval_parity_t a \<sigma>) \<or> is_bot (aval_parity_t b \<sigma>) then bot
+        else if parity_eqb (aval_parity_t a \<sigma>) (aval_parity_t b \<sigma>) = Some True then POdd
+        else if parity_eqb (aval_parity_t a \<sigma>) (aval_parity_t b \<sigma>) = Some False then PEven
         else PTop)"
-  | "aval_parity (exp.Not a)  \<sigma> =
-       (if is_bot (aval_parity a \<sigma>) then bot
-        else if parity_tobool (aval_parity a \<sigma>) = Some True then PEven
-        else if parity_tobool (aval_parity a \<sigma>) = Some False then POdd
+  | "aval_parity_t (TNot a) \<sigma> =
+       (if is_bot (aval_parity_t a \<sigma>) then bot
+        else if parity_tobool (aval_parity_t a \<sigma>) = Some True then PEven
+        else if parity_tobool (aval_parity_t a \<sigma>) = Some False then POdd
         else PTop)"
-  | "aval_parity (And a b)    \<sigma> =
-       (if is_bot (aval_parity a \<sigma>) \<or> is_bot (aval_parity b \<sigma>) then bot
-        else if parity_tobool (aval_parity a \<sigma>) = Some False \<or> parity_tobool (aval_parity b \<sigma>) = Some False
+  | "aval_parity_t (TAnd a b) \<sigma> =
+       (if is_bot (aval_parity_t a \<sigma>) \<or> is_bot (aval_parity_t b \<sigma>) then bot
+        else if parity_tobool (aval_parity_t a \<sigma>) = Some False
+                \<or> parity_tobool (aval_parity_t b \<sigma>) = Some False
         then PEven
-        else if parity_tobool (aval_parity a \<sigma>) = Some True \<and> parity_tobool (aval_parity b \<sigma>) = Some True
+        else if parity_tobool (aval_parity_t a \<sigma>) = Some True
+                \<and> parity_tobool (aval_parity_t b \<sigma>) = Some True
         then POdd
         else PTop)"
-  | "aval_parity (Or a b)     \<sigma> =
-       (if is_bot (aval_parity a \<sigma>) \<or> is_bot (aval_parity b \<sigma>) then bot
-        else if parity_tobool (aval_parity a \<sigma>) = Some True \<or> parity_tobool (aval_parity b \<sigma>) = Some True
+  | "aval_parity_t (TOr a b) \<sigma> =
+       (if is_bot (aval_parity_t a \<sigma>) \<or> is_bot (aval_parity_t b \<sigma>) then bot
+        else if parity_tobool (aval_parity_t a \<sigma>) = Some True
+                \<or> parity_tobool (aval_parity_t b \<sigma>) = Some True
         then POdd
-        else if parity_tobool (aval_parity a \<sigma>) = Some False \<and> parity_tobool (aval_parity b \<sigma>) = Some False
+        else if parity_tobool (aval_parity_t a \<sigma>) = Some False
+                \<and> parity_tobool (aval_parity_t b \<sigma>) = Some False
         then PEven
         else PTop)"
 
 interpretation parity_arith: expression_domain_sound
-    aval_parity parity_of_int parity_lt parity_eqb parity_tobool
+    aval_parity_t parity_cast parity_of_int parity_lt parity_eqb parity_tobool
   apply unfold_locales
-  apply (simp_all add: parity_of_int_gamma parity_plus_sound parity_minus_sound parity_times_sound
-                        parity_plus_combine_mono parity_minus_combine_mono parity_times_combine_mono
-                        parity_lt_sound parity_eqb_sound parity_tobool_sound[unfolded truthy_def]
-                        sup_parity_def join_parity.simps truthy_def
+  apply (simp_all add: parity_of_int_gamma parity_plus_sound parity_minus_sound
+                        parity_times_sound parity_plus_combine_mono parity_minus_combine_mono
+                        parity_times_combine_mono parity_lt_sound parity_eqb_sound
+                        parity_tobool_sound[unfolded truthy_def] sup_parity_def join_parity.simps
+                        truthy_def gamma_parity_top parity_cast_sound_parity parity_cast_mono
                     del: parity_lt.simps parity_eqb.simps parity_tobool.simps)
   apply (blast intro: parity_lt_mono[unfolded is_bot_parity])
   apply (blast intro: parity_eqb_mono[unfolded is_bot_parity])
   apply (blast intro: parity_tobool_mono[unfolded is_bot_parity])
   done
 
-lemmas aval_parity_sound = parity_arith.aval_dom_sound[unfolded gamma_abs_parity]
-lemmas aval_parity_mono = parity_arith.aval_dom_mono
+lemmas aval_parity_t_sound = parity_arith.aval_dom_sound[unfolded gamma_abs_parity]
+lemmas aval_parity_t_mono = parity_arith.aval_dom_mono
+
+
+subsection \<open>Cast-domain instance\<close>
+
+text \<open>\<^const>\<open>parity_cast\<close> realizes the class-wide \<^const>\<open>a_cast\<close>, so every
+  generic write site -- ordinary assignment and call return alike -- converts
+  through this domain's own cast without any signature carrying one.\<close>
+
+instantiation parity :: cast_domain
+begin
+
+definition a_cast_parity [simp]: "a_cast = parity_cast"
+
+definition a_in_range_parity [simp]: "a_in_range = parity_in_range"
+
+instance
+proof intro_classes
+  fix a b :: parity and ik
+  show "a \<le> b \<Longrightarrow> a_cast ik a \<le> a_cast ik b"
+    unfolding a_cast_parity by (rule parity_cast_mono)
+next
+  fix a b :: parity and ik
+  show "a \<le> b \<Longrightarrow> a_in_range ik b \<Longrightarrow> a_in_range ik a"
+    unfolding a_in_range_parity by (rule parity_in_range_mono)
+qed
+
+end
+
+instance parity :: sound_cast_domain
+proof intro_classes
+  fix v :: int and a :: parity and ik
+  show "v \<in> gamma a \<Longrightarrow> ik_norm ik v \<in> gamma (a_cast ik a)"
+    by (simp add: parity_cast_sound_parity)
+next
+  fix a :: parity and ik
+  show "a_in_range ik a \<Longrightarrow> gamma a \<subseteq> ik_range ik"
+    by (simp add: parity_in_range_sound)
+qed
 
 end

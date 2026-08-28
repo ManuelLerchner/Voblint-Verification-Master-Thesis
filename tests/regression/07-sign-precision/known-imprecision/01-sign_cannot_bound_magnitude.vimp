@@ -2,17 +2,22 @@
 // The concrete value of total is fixed at 7, so total < 100 genuinely holds.
 // Sign cannot establish it, and unlike the Interval sibling
 // (04-globals/known-imprecision/01-repeated_call_site_widening.vimp) the
-// reason is not widening: the sign lattice has no magnitude at all. total is
-// Positive here, exactly and without loss, and sign_lt has no
+// reason is not widening: the sign lattice has no magnitude at all. Even at
+// the sign total actually carries, sign_lt has no
 // comparison-against-a-nonzero-constant case -- Positive < 100 is undecidable
 // in a lattice whose only facts are Neg/Zero/Pos. Adding contexts, a finer
 // solver, or no widening at all would not change this answer.
 //
+// A second, independent loss applies to the same program: total + n norms at
+// int32, and a kind-free Positive admits values past int32's maximum, so the
+// sum tops. That one is known-imprecision/02's subject and would go away with
+// a kind-tagged cell; this one would not.
+//
 // Kept next to the PROVED cases so they are not mistaken for general-purpose
 // numeric precision.
 
-global total;
-void inc(n) {
+global int32 total;
+void inc(int32 n) {
   total := total + n
 }
 void main() {

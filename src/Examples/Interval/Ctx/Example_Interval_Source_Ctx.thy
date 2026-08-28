@@ -19,19 +19,23 @@ text \<open>The analysis' own context function and solved reader, abbreviated fo
   statements below.\<close>
 
 abbreviation twice_ctx :: "cfg_node \<Rightarrow> ivl list \<Rightarrow> store \<Rightarrow> ivl list" where
-  "twice_ctx \<equiv> entry_state_context twice_gs twice_is_bot_pred twice_pi twice_procs (STR ''main'') twice_main"
+  "twice_ctx \<equiv> entry_state_context twice_gs (prog_tyenv twice_program) twice_is_bot_pred twice_pi twice_procs (STR ''main'') twice_main"
 
 abbreviation twice_ctx_sg :: "pp \<times> ivl list + gk \<Rightarrow> ivl abs_state lifted" where
-  "twice_ctx_sg \<equiv> entry_state_sg twice_gs twice_is_bot_pred twice_pi twice_procs (STR ''main'') twice_main"
+  "twice_ctx_sg \<equiv> entry_state_sg twice_gs (prog_tyenv twice_program) twice_is_bot_pred twice_pi twice_procs (STR ''main'') twice_main"
 
 text \<open>Context-sensitive source soundness.  Any \<open>twice\<close> run reaches a store bounded at the interval
   slot indexed by the stable context of the activation that produced it.\<close>
 theorem twice_source_ctx_run_sound:
-  assumes run: "star (pstep twice_gs twice_pi) (twice_main, s0, []) (residual, s, frs)"
+  assumes run: "star (pstep (prog_tyenv twice_program) twice_gs twice_pi)
+                  (twice_main, s0, [], proc_ret_kind twice_pi (STR ''main''))
+                  (residual, s, frs, rk)"
     and init: "s0 \<in> cinit_stores twice_gs"
+    and sty: "styped (prog_tyenv twice_program) s0"
   shows "\<exists>v stk t c.
-           csim twice_pi (compile_prog twice_pi twice_procs (STR ''main'') twice_main)
-             (residual, s, frs) (v, s, stk)
+           csim (prog_tyenv twice_program) twice_pi
+             (compile_prog (prog_tyenv twice_program) twice_pi twice_procs (STR ''main'') twice_main)
+             (residual, s, frs, rk) (v, s, stk)
            \<and> ctx_key (admiss_exact twice_ctx) [] t c
            \<and> s \<in> gamma_state_lift (twice_ctx_sg (Inl (v, c)))"
 proof -
@@ -40,7 +44,7 @@ proof -
   show ?thesis
     by (rule source_sound_from_collecting_cap[where admiss = "admiss_exact twice_ctx"
             and gammaM = gamma_state_lift,
-          OF twice_wf init run tot twice_activation_collect_sound])
+          OF twice_wf init sty run tot twice_activation_collect_sound])
 qed
 
 text \<open>The witness-free specialisation: a \<open>twice\<close> store reached at the top level (empty source frame
@@ -48,14 +52,18 @@ text \<open>The witness-free specialisation: a \<open>twice\<close> store reache
   no \<^typ>\<open>ltr\<close> witness, no context existential.  This is the clean user-facing statement for
   main-level program points.\<close>
 theorem twice_source_toplevel_at_bot:
-  assumes run: "star (pstep twice_gs twice_pi) (twice_main, s0, []) (residual, s, [])"
+  assumes run: "star (pstep (prog_tyenv twice_program) twice_gs twice_pi)
+                  (twice_main, s0, [], proc_ret_kind twice_pi (STR ''main''))
+                  (residual, s, [], rk)"
     and init: "s0 \<in> cinit_stores twice_gs"
-  shows "\<exists>v. csim twice_pi (compile_prog twice_pi twice_procs (STR ''main'') twice_main)
-               (residual, s, []) (v, s, [])
+    and sty: "styped (prog_tyenv twice_program) s0"
+  shows "\<exists>v. csim (prog_tyenv twice_program) twice_pi
+                 (compile_prog (prog_tyenv twice_program) twice_pi twice_procs (STR ''main'') twice_main)
+                 (residual, s, [], rk) (v, s, [])
              \<and> s \<in> gamma_state_lift (twice_ctx_sg (Inl (v, [])))"
   by (rule source_sound_toplevel_from_collecting_cap
             [where admiss = "admiss_exact twice_ctx" and gammaM = gamma_state_lift,
-             OF twice_wf init run twice_activation_collect_sound])
+             OF twice_wf init sty run twice_activation_collect_sound])
 
 end
 

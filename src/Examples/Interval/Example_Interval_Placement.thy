@@ -34,8 +34,8 @@ text \<open>
 
 definition placement_prog :: imp_prog where
   "placement_prog = program {
-     global balance, request_count;
-     void add(x) {
+     global int32 balance, request_count;
+     int32 add(int32 x) {
        tmp := balance + x;
        balance := tmp;
        request_count := request_count + 1;
@@ -44,9 +44,50 @@ definition placement_prog :: imp_prog where
      void main() { answer := add(3) }
    }"
 
+text \<open>\<open>placement_ty\<close> is the program's own typing environment: the compiler
+  elaborates every assignment right-hand side, the returned value, and the call's
+  actual argument against it, so the edge shapes below name it too.\<close>
+abbreviation placement_ty :: tyenv where
+  "placement_ty \<equiv> prog_tyenv placement_prog"
+
+abbreviation placement_rhs_tmp :: texp where
+  "placement_rhs_tmp \<equiv>
+     elaborate_to placement_ty (placement_ty (STR ''tmp''))
+       (Plus (V (STR ''balance'')) (V (STR ''x'')))"
+
+abbreviation placement_rhs_balance :: texp where
+  "placement_rhs_balance \<equiv>
+     elaborate_to placement_ty (placement_ty (STR ''balance'')) (V (STR ''tmp''))"
+
+abbreviation placement_rhs_count :: texp where
+  "placement_rhs_count \<equiv>
+     elaborate_to placement_ty (placement_ty (STR ''request_count''))
+       (Plus (V (STR ''request_count'')) (N 1))"
+
+abbreviation placement_ret_balance :: texp where
+  "placement_ret_balance \<equiv>
+     elaborate_to placement_ty (proc_ret_kind (prog_table placement_prog) (STR ''add''))
+       (V (STR ''balance''))"
+
+abbreviation placement_call_args :: "texp list" where
+  "placement_call_args \<equiv> compile_actuals placement_ty [(STR ''x'')] [N 3]"
+
+text \<open>The elaborated shapes, computed once. Every variable here is declared at
+  \<^const>\<open>I32\<close>, so each payload is its syntactic skeleton with that kind
+  attached; naming them lets the value-agreement proofs below rewrite through
+  \<^const>\<open>aval_ivl_t\<close>'s own equations instead of re-running elaboration.\<close>
+
+lemma placement_elaborated_shapes [simp]:
+  "placement_rhs_tmp = TPlus I32 (TVar I32 (STR ''balance'')) (TVar I32 (STR ''x''))"
+  "placement_rhs_balance = TVar I32 (STR ''tmp'')"
+  "placement_rhs_count = TPlus I32 (TVar I32 (STR ''request_count'')) (TN I32 1)"
+  "placement_ret_balance = TVar I32 (STR ''balance'')"
+  "placement_call_args = [TN I32 3]"
+  by eval+
+
 definition placement_cfg :: cfg where
   "placement_cfg =
-    compile_prog (prog_table placement_prog) (prog_procs placement_prog)
+    compile_prog placement_ty (prog_table placement_prog) (prog_procs placement_prog)
       prog_main_name (prog_main placement_prog)"
 
 definition placement_owner :: pname where
@@ -83,17 +124,17 @@ definition placement_locations_of :: "pp => location list" where
 
 lemma placement_cfg_edges:
   "(FunctionEntry (STR ''add''), EA_Nop, Statement 0) \<in> intra placement_cfg"
-  "(Statement 0, EA_Assign (STR ''tmp'') (Plus (V (STR ''balance'')) (V (STR ''x''))), Statement 1) \<in>
+  "(Statement 0, EA_Assign (STR ''tmp'') placement_rhs_tmp, Statement 1) \<in>
     intra placement_cfg"
-  "(Statement 1, EA_Assign (STR ''balance'') (V (STR ''tmp'')), Statement 2) \<in> intra placement_cfg"
-  "(Statement 2, EA_Assign (STR ''request_count'')
-    (Plus (V (STR ''request_count'')) (N 1)), Statement 3) \<in> intra placement_cfg"
-  "(Statement 3, EA_Ret (Some (V (STR ''balance''))) (STR ''add''), FunctionResult (STR ''add'')) \<in>
+  "(Statement 1, EA_Assign (STR ''balance'') placement_rhs_balance, Statement 2) \<in> intra placement_cfg"
+  "(Statement 2, EA_Assign (STR ''request_count'') placement_rhs_count, Statement 3)
+     \<in> intra placement_cfg"
+  "(Statement 3, EA_Ret (Some placement_ret_balance) (STR ''add'') (proc_ret_kind (prog_table placement_prog) (STR ''add'')), FunctionResult (STR ''add'')) \<in>
     intra placement_cfg"
   "(FunctionEntry prog_main_name, EA_Nop, Statement 5) \<in> intra placement_cfg"
-  "(Statement 5, CallEdge (Some (STR ''answer'')) [(STR ''x'')] [N 3],
+  "(Statement 5, CallEdge (compile_dst placement_ty (Some (STR ''answer''))) [(STR ''x'')] placement_call_args,
     FunctionEntry (STR ''add''), Statement 6) \<in> calls placement_cfg"
-  "(Statement 6, EA_Ret None prog_main_name, FunctionResult prog_main_name) \<in>
+  "(Statement 6, EA_Ret None prog_main_name I32, FunctionResult prog_main_name) \<in>
     intra placement_cfg"
   by eval+
 
@@ -278,7 +319,7 @@ lemma placement_dg_td_values:
     (Global_Location (STR ''balance'')) = Ivl (Fin 3) (Fin 3)"
   "lookup_resolved_st_q
     (globs (snd placement_dg_td_sol (Inr ())))
-    (Global_Location (STR ''request_count'')) = Ivl (Fin 0) PlusInf"
+    (Global_Location (STR ''request_count'')) = Ivl MinInf PlusInf"
   "lookup_resolved_st_q
     (locals (snd placement_dg_td_sol (Inl (Statement 6, ()))))
     (Local_Location (STR ''answer'')) = Ivl (Fin 3) (Fin 3)"
@@ -476,7 +517,7 @@ proof -
   have s_in: "s \<in> \<lbrakk>dg_hook_D sigma caller \<squnion> dg_hook_G sigma\<rbrakk>"
     using sin unfolding dg_hook_gamma_def gamma_join_def by simp
   have "call_enter (declared_global placement_prog) (CallEdge dst fs args) s =
-      bind_formals fs (map (\<lambda>e. aval e s) args)
+      bind_formals fs (map (\<lambda>e. teval e s) args)
         (enter_state (declared_global placement_prog) s)"
     by (rule call_enter_CallEdge)
   also have "... \<in>
@@ -731,26 +772,25 @@ lemma placement_hook_lists:
   "intra_predecessor_list placement_cfg (FunctionEntry (STR ''add'')) = []"
   "return_call_action_list placement_cfg (FunctionEntry (STR ''add'')) = []"
   "entry_call_list placement_cfg (FunctionEntry (STR ''add'')) =
-     [(Statement 5, CallEdge (Some (STR ''answer'')) [(STR ''x'')] [N 3])]"
+     [(Statement 5, CallEdge (compile_dst placement_ty (Some (STR ''answer''))) [(STR ''x'')] placement_call_args)]"
   "intra_predecessor_list placement_cfg (Statement 0) =
      [(FunctionEntry (STR ''add''), EA_Nop)]"
   "intra_predecessor_list placement_cfg (Statement 1) =
-     [(Statement 0, EA_Assign (STR ''tmp'') (Plus (V (STR ''balance'')) (V (STR ''x''))))]"
+     [(Statement 0, EA_Assign (STR ''tmp'') placement_rhs_tmp)]"
   "intra_predecessor_list placement_cfg (Statement 2) =
-     [(Statement 1, EA_Assign (STR ''balance'') (V (STR ''tmp'')))]"
+     [(Statement 1, EA_Assign (STR ''balance'') placement_rhs_balance)]"
   "intra_predecessor_list placement_cfg (Statement 3) =
-     [(Statement 2, EA_Assign (STR ''request_count'')
-        (Plus (V (STR ''request_count'')) (N 1)))]"
+     [(Statement 2, EA_Assign (STR ''request_count'') placement_rhs_count)]"
   "intra_predecessor_list placement_cfg (FunctionResult (STR ''add'')) =
-     [(Statement 3, EA_Ret (Some (V (STR ''balance''))) (STR ''add''))]"
+     [(Statement 3, EA_Ret (Some placement_ret_balance) (STR ''add'') (proc_ret_kind (prog_table placement_prog) (STR ''add'')))]"
   "intra_predecessor_list placement_cfg (Statement 5) =
      [(FunctionEntry prog_main_name, EA_Nop)]"
   "return_call_action_list placement_cfg (Statement 6) =
-     [(Statement 5, CallEdge (Some (STR ''answer'')) [(STR ''x'')] [N 3], FunctionResult (STR ''add''))]"
+     [(Statement 5, CallEdge (compile_dst placement_ty (Some (STR ''answer''))) [(STR ''x'')] placement_call_args, FunctionResult (STR ''add''))]"
   "intra_predecessor_list placement_cfg (Statement 6) = []"
   "entry_call_list placement_cfg (Statement 6) = []"
   "intra_predecessor_list placement_cfg (FunctionResult prog_main_name) =
-     [(Statement 6, EA_Ret None prog_main_name)]"
+     [(Statement 6, EA_Ret None prog_main_name I32)]"
   by eval+
 
 lemma placement_no_combine_edge_nodes:
@@ -826,13 +866,13 @@ proof -
 qed
 
 lemma placement_edge_raw_assign:
-  fixes y :: vname and a :: exp
+  fixes y :: vname and a :: texp
   assumes scope_eq: "set (placement_locations_of dest) = set (placement_locations_of source)"
     and val_agree:
-      "aval_ivl a (fun_of_resolved_st_q_for (declared_global placement_prog)
+      "aval_ivl_t a (fun_of_resolved_st_q_for (declared_global placement_prog)
           (locals (snd placement_dg_td_sol (Inl (source, ()))) \<squnion>
            globs (snd placement_dg_td_sol (Inr ())))) =
-        aval_ivl a (locals (placement_sigma_abs (Inl (source, ()))) \<squnion>
+        aval_ivl_t a (locals (placement_sigma_abs (Inl (source, ()))) \<squnion>
           globs (placement_sigma_abs (Inr ())))"
     and location_in: "location \<in> set (placement_locations_of dest)"
     and canonical: "location = location_of (declared_global placement_prog) (location_vname location)"
@@ -842,13 +882,13 @@ lemma placement_edge_raw_assign:
           (locals (snd placement_dg_td_sol (Inl (source, ()))) \<squnion>
            globs (snd placement_dg_td_sol (Inr ())))
           (location_of (declared_global placement_prog) y)
-          (aval_ivl a (fun_of_resolved_st_q_for (declared_global placement_prog)
+          (aval_ivl_t a (fun_of_resolved_st_q_for (declared_global placement_prog)
             (locals (snd placement_dg_td_sol (Inl (source, ()))) \<squnion>
              globs (snd placement_dg_td_sol (Inr ()))))))
         location =
       ((locals (placement_sigma_abs (Inl (source, ()))) \<squnion>
         globs (placement_sigma_abs (Inr ())))
-        (y := aval_ivl a (locals (placement_sigma_abs (Inl (source, ()))) \<squnion>
+        (y := aval_ivl_t a (locals (placement_sigma_abs (Inl (source, ()))) \<squnion>
           globs (placement_sigma_abs (Inr ())))))
         (location_vname location)"
 proof (cases "location_vname location = y")
@@ -1332,15 +1372,15 @@ proof (rule placement_dg_refines_edge[OF not_entry pred no_combine no_enter refl
 qed
 
 lemma placement_dg_refines_edge_assign:
-  fixes y :: vname and a :: exp
+  fixes y :: vname and a :: texp
   assumes not_entry: "v \<noteq> cfg_entry placement_cfg"
     and pred: "intra_predecessor_list placement_cfg v = [(u, EA_Assign y a)]"
     and no_combine: "return_call_action_list placement_cfg v = []"
     and no_enter: "entry_call_list placement_cfg v = []"
     and scope_eq: "set (placement_locations_of v) = set (placement_locations_of u)"
-    and val_agree: "aval_ivl a (fun_of_resolved_st_q_for (declared_global placement_prog)
+    and val_agree: "aval_ivl_t a (fun_of_resolved_st_q_for (declared_global placement_prog)
         (dg_hook_D (snd placement_dg_td_sol) u \<squnion> dg_hook_G (snd placement_dg_td_sol))) =
-      aval_ivl a (dg_hook_D placement_sigma_abs u \<squnion> dg_hook_G placement_sigma_abs)"
+      aval_ivl_t a (dg_hook_D placement_sigma_abs u \<squnion> dg_hook_G placement_sigma_abs)"
   shows
     "dg_refines_on (set (placement_locations_of v))
       (DG (locals (eq placement_dg_eqs (v, ()) (snd placement_dg_td_sol)))
@@ -1353,10 +1393,10 @@ lemma placement_dg_refines_edge_assign:
 proof (rule placement_dg_refines_edge[OF not_entry pred no_combine no_enter refl])
   fix location assume loc: "location \<in> set (placement_locations_of v)"
   have val_agree':
-    "aval_ivl a (fun_of_resolved_st_q_for (declared_global placement_prog)
+    "aval_ivl_t a (fun_of_resolved_st_q_for (declared_global placement_prog)
         (locals (snd placement_dg_td_sol (Inl (u, ()))) \<squnion>
          globs (snd placement_dg_td_sol (Inr ())))) =
-      aval_ivl a (locals (placement_sigma_abs (Inl (u, ()))) \<squnion>
+      aval_ivl_t a (locals (placement_sigma_abs (Inl (u, ()))) \<squnion>
         globs (placement_sigma_abs (Inr ())))"
     using val_agree by (simp add: dg_hook_D_def dg_hook_G_def)
   show "lookup_resolved_st_q
@@ -1377,7 +1417,7 @@ text \<open>Two more shapes for the procedure-return edges: \<open>EA_Ret None\<
 lemma placement_dg_refines_edge_ret_none:
   fixes p :: pname
   assumes not_entry: "v \<noteq> cfg_entry placement_cfg"
-    and pred: "intra_predecessor_list placement_cfg v = [(u, EA_Ret None p)]"
+    and pred: "intra_predecessor_list placement_cfg v = [(u, EA_Ret None p rk)]"
     and no_combine: "return_call_action_list placement_cfg v = []"
     and no_enter: "entry_call_list placement_cfg v = []"
     and scope_eq: "set (placement_locations_of v) = set (placement_locations_of u)"
@@ -1393,9 +1433,9 @@ lemma placement_dg_refines_edge_ret_none:
 proof (rule placement_dg_refines_edge[OF not_entry pred no_combine no_enter refl])
   fix location assume loc: "location \<in> set (placement_locations_of v)"
   show "lookup_resolved_st_q
-      (ivl_tf_st_for (declared_global placement_prog) (EA_Ret None p)
+      (ivl_tf_st_for (declared_global placement_prog) (EA_Ret None p rk)
         (dg_hook_D (snd placement_dg_td_sol) u \<squnion> dg_hook_G (snd placement_dg_td_sol))) location =
-    apply_tf (ivl_tf_for (declared_global placement_prog)) (EA_Ret None p)
+    apply_tf (ivl_tf_for (declared_global placement_prog)) (EA_Ret None p rk)
       (dg_hook_D placement_sigma_abs u \<squnion> dg_hook_G placement_sigma_abs)
       (location_vname location)"
     using placement_edge_raw_nop[OF scope_eq loc placement_locations_of_canonical[OF loc]]
@@ -1403,15 +1443,15 @@ proof (rule placement_dg_refines_edge[OF not_entry pred no_combine no_enter refl
 qed
 
 lemma placement_dg_refines_edge_ret_some:
-  fixes a :: exp and p :: pname
+  fixes a :: texp and p :: pname
   assumes not_entry: "v \<noteq> cfg_entry placement_cfg"
-    and pred: "intra_predecessor_list placement_cfg v = [(u, EA_Ret (Some a) p)]"
+    and pred: "intra_predecessor_list placement_cfg v = [(u, EA_Ret (Some a) p rk)]"
     and no_combine: "return_call_action_list placement_cfg v = []"
     and no_enter: "entry_call_list placement_cfg v = []"
     and scope_eq: "set (placement_locations_of v) = set (placement_locations_of u)"
-    and val_agree: "aval_ivl a (fun_of_resolved_st_q_for (declared_global placement_prog)
+    and val_agree: "aval_ivl_t a (fun_of_resolved_st_q_for (declared_global placement_prog)
         (dg_hook_D (snd placement_dg_td_sol) u \<squnion> dg_hook_G (snd placement_dg_td_sol))) =
-      aval_ivl a (dg_hook_D placement_sigma_abs u \<squnion> dg_hook_G placement_sigma_abs)"
+      aval_ivl_t a (dg_hook_D placement_sigma_abs u \<squnion> dg_hook_G placement_sigma_abs)"
   shows
     "dg_refines_on (set (placement_locations_of v))
       (DG (locals (eq placement_dg_eqs (v, ()) (snd placement_dg_td_sol)))
@@ -1424,16 +1464,16 @@ lemma placement_dg_refines_edge_ret_some:
 proof (rule placement_dg_refines_edge[OF not_entry pred no_combine no_enter refl])
   fix location assume loc: "location \<in> set (placement_locations_of v)"
   have val_agree':
-    "aval_ivl a (fun_of_resolved_st_q_for (declared_global placement_prog)
+    "aval_ivl_t a (fun_of_resolved_st_q_for (declared_global placement_prog)
         (locals (snd placement_dg_td_sol (Inl (u, ()))) \<squnion>
          globs (snd placement_dg_td_sol (Inr ())))) =
-      aval_ivl a (locals (placement_sigma_abs (Inl (u, ()))) \<squnion>
+      aval_ivl_t a (locals (placement_sigma_abs (Inl (u, ()))) \<squnion>
         globs (placement_sigma_abs (Inr ())))"
     using val_agree by (simp add: dg_hook_D_def dg_hook_G_def)
   show "lookup_resolved_st_q
-      (ivl_tf_st_for (declared_global placement_prog) (EA_Ret (Some a) p)
+      (ivl_tf_st_for (declared_global placement_prog) (EA_Ret (Some a) p rk)
         (dg_hook_D (snd placement_dg_td_sol) u \<squnion> dg_hook_G (snd placement_dg_td_sol))) location =
-    apply_tf (ivl_tf_for (declared_global placement_prog)) (EA_Ret (Some a) p)
+    apply_tf (ivl_tf_for (declared_global placement_prog)) (EA_Ret (Some a) p rk)
       (dg_hook_D placement_sigma_abs u \<squnion> dg_hook_G placement_sigma_abs)
       (location_vname location)"
     using placement_edge_raw_assign[where y = ret_var, OF scope_eq val_agree' loc
@@ -1506,7 +1546,7 @@ proof (rule placement_dg_refines_edge_ret_none[where v = "FunctionResult prog_ma
     and u = "Statement 6"])
   show "FunctionResult prog_main_name \<noteq> cfg_entry placement_cfg" by (simp add: placement_cfg_entry)
   show "intra_predecessor_list placement_cfg (FunctionResult prog_main_name) =
-      [(Statement 6, EA_Ret None prog_main_name)]"
+      [(Statement 6, EA_Ret None prog_main_name I32)]"
     by (rule placement_hook_lists)
   show "return_call_action_list placement_cfg (FunctionResult prog_main_name) = []"
     by (rule placement_no_combine_edge_nodes)
@@ -1532,10 +1572,10 @@ lemma placement_dg_refines_statement1:
         (placement_sound_dg_hooks.hook_gen placement_cfg bot s0d s0g (Statement 1, ()))
         placement_sigma_abs (Inr ()))))"
 proof (rule placement_dg_refines_edge_assign[where v = "Statement 1" and u = "Statement 0"
-    and y = "(STR ''tmp'')" and a = "Plus (V (STR ''balance'')) (V (STR ''x''))"])
+    and y = "(STR ''tmp'')" and a = placement_rhs_tmp])
   show "Statement 1 \<noteq> cfg_entry placement_cfg" by (simp add: placement_cfg_entry)
   show "intra_predecessor_list placement_cfg (Statement 1) =
-      [(Statement 0, EA_Assign (STR ''tmp'') (Plus (V (STR ''balance'')) (V (STR ''x''))))]"
+      [(Statement 0, EA_Assign (STR ''tmp'') placement_rhs_tmp)]"
     by (rule placement_hook_lists)
   show "return_call_action_list placement_cfg (Statement 1) = []"
     by (rule placement_no_combine_edge_nodes)
@@ -1569,11 +1609,11 @@ proof (rule placement_dg_refines_edge_assign[where v = "Statement 1" and u = "St
       by eval
     show ?thesis using placement_val_agree[OF mem] by simp
   qed
-  show "aval_ivl (Plus (V (STR ''balance'')) (V (STR ''x'')))
+  show "aval_ivl_t placement_rhs_tmp
       (fun_of_resolved_st_q_for (declared_global placement_prog)
         (dg_hook_D (snd placement_dg_td_sol) (Statement 0) \<squnion>
          dg_hook_G (snd placement_dg_td_sol))) =
-    aval_ivl (Plus (V (STR ''balance'')) (V (STR ''x'')))
+    aval_ivl_t placement_rhs_tmp
       (dg_hook_D placement_sigma_abs (Statement 0) \<squnion> dg_hook_G placement_sigma_abs)"
     by (simp add: dg_hook_D_def dg_hook_G_def balance x)
 qed
@@ -1588,10 +1628,10 @@ lemma placement_dg_refines_statement2:
         (placement_sound_dg_hooks.hook_gen placement_cfg bot s0d s0g (Statement 2, ()))
         placement_sigma_abs (Inr ()))))"
 proof (rule placement_dg_refines_edge_assign[where v = "Statement 2" and u = "Statement 1"
-    and y = "(STR ''balance'')" and a = "V (STR ''tmp'')"])
+    and y = "(STR ''balance'')" and a = placement_rhs_balance])
   show "Statement 2 \<noteq> cfg_entry placement_cfg" by (simp add: placement_cfg_entry)
   show "intra_predecessor_list placement_cfg (Statement 2) =
-      [(Statement 1, EA_Assign (STR ''balance'') (V (STR ''tmp'')))]"
+      [(Statement 1, EA_Assign (STR ''balance'') placement_rhs_balance)]"
     by (rule placement_hook_lists)
   show "return_call_action_list placement_cfg (Statement 2) = []"
     by (rule placement_no_combine_edge_nodes)
@@ -1612,14 +1652,14 @@ proof (rule placement_dg_refines_edge_assign[where v = "Statement 2" and u = "St
       by eval
     show ?thesis using placement_val_agree[OF mem] by simp
   qed
-  show "aval_ivl (V (STR ''tmp''))
+  show "aval_ivl_t placement_rhs_balance
       (fun_of_resolved_st_q_for (declared_global placement_prog)
         (dg_hook_D (snd placement_dg_td_sol) (Statement 1) \<squnion>
          dg_hook_G (snd placement_dg_td_sol))) =
-    aval_ivl (V (STR ''tmp''))
+    aval_ivl_t placement_rhs_balance
       (dg_hook_D placement_sigma_abs (Statement 1) \<squnion> dg_hook_G placement_sigma_abs)"
-    unfolding dg_hook_D_def dg_hook_G_def aval_ivl.simps sup_fun_def
-      fun_of_resolved_st_q_for_sup
+    unfolding placement_elaborated_shapes dg_hook_D_def dg_hook_G_def
+      aval_ivl_t.simps sup_fun_def fun_of_resolved_st_q_for_sup
     by (rule tmp)
 qed
 
@@ -1633,10 +1673,10 @@ lemma placement_dg_refines_statement3:
         (placement_sound_dg_hooks.hook_gen placement_cfg bot s0d s0g (Statement 3, ()))
         placement_sigma_abs (Inr ()))))"
 proof (rule placement_dg_refines_edge_assign[where v = "Statement 3" and u = "Statement 2"
-    and y = "(STR ''request_count'')" and a = "Plus (V (STR ''request_count'')) (N 1)"])
+    and y = "(STR ''request_count'')" and a = placement_rhs_count])
   show "Statement 3 \<noteq> cfg_entry placement_cfg" by (simp add: placement_cfg_entry)
   show "intra_predecessor_list placement_cfg (Statement 3) =
-      [(Statement 2, EA_Assign (STR ''request_count'') (Plus (V (STR ''request_count'')) (N 1)))]"
+      [(Statement 2, EA_Assign (STR ''request_count'') placement_rhs_count)]"
     by (rule placement_hook_lists)
   show "return_call_action_list placement_cfg (Statement 3) = []"
     by (rule placement_no_combine_edge_nodes)
@@ -1657,11 +1697,11 @@ proof (rule placement_dg_refines_edge_assign[where v = "Statement 3" and u = "St
       by eval
     show ?thesis using placement_val_agree[OF mem] by simp
   qed
-  show "aval_ivl (Plus (V (STR ''request_count'')) (N 1))
+  show "aval_ivl_t placement_rhs_count
       (fun_of_resolved_st_q_for (declared_global placement_prog)
         (dg_hook_D (snd placement_dg_td_sol) (Statement 2) \<squnion>
          dg_hook_G (snd placement_dg_td_sol))) =
-    aval_ivl (Plus (V (STR ''request_count'')) (N 1))
+    aval_ivl_t placement_rhs_count
       (dg_hook_D placement_sigma_abs (Statement 2) \<squnion> dg_hook_G placement_sigma_abs)"
     by (simp add: dg_hook_D_def dg_hook_G_def request_count)
 qed
@@ -1677,10 +1717,10 @@ lemma placement_dg_refines_function_result_add:
         (placement_sound_dg_hooks.hook_gen placement_cfg bot s0d s0g (FunctionResult (STR ''add''), ()))
         placement_sigma_abs (Inr ()))))"
 proof (rule placement_dg_refines_edge_ret_some[where v = "FunctionResult (STR ''add'')"
-    and u = "Statement 3" and a = "V (STR ''balance'')"])
+    and u = "Statement 3" and a = placement_ret_balance])
   show "FunctionResult (STR ''add'') \<noteq> cfg_entry placement_cfg" by (simp add: placement_cfg_entry)
   show "intra_predecessor_list placement_cfg (FunctionResult (STR ''add'')) =
-      [(Statement 3, EA_Ret (Some (V (STR ''balance''))) (STR ''add''))]"
+      [(Statement 3, EA_Ret (Some placement_ret_balance) (STR ''add'') (proc_ret_kind (prog_table placement_prog) (STR ''add'')))]"
     by (rule placement_hook_lists)
   show "return_call_action_list placement_cfg (FunctionResult (STR ''add'')) = []"
     by (rule placement_no_combine_edge_nodes)
@@ -1701,12 +1741,13 @@ proof (rule placement_dg_refines_edge_ret_some[where v = "FunctionResult (STR ''
       by eval
     show ?thesis using placement_val_agree[OF mem] by simp
   qed
-  show "aval_ivl (V (STR ''balance''))
+  show "aval_ivl_t placement_ret_balance
       (fun_of_resolved_st_q_for (declared_global placement_prog)
         (dg_hook_D (snd placement_dg_td_sol) (Statement 3) \<squnion>
          dg_hook_G (snd placement_dg_td_sol))) =
-    aval_ivl (V (STR ''balance''))
+    aval_ivl_t placement_ret_balance
       (dg_hook_D placement_sigma_abs (Statement 3) \<squnion> dg_hook_G placement_sigma_abs)"
+    unfolding placement_elaborated_shapes
     by (simp add: dg_hook_D_def dg_hook_G_def balance)
 qed
 
@@ -1726,10 +1767,10 @@ lemma placement_enter_raw:
   assumes loc: "location \<in> set (placement_locations_of (FunctionEntry (STR ''add'')))"
   shows
     "lookup_resolved_st_q
-        (ivl_enter_st_for (declared_global placement_prog) [(STR ''x'')] [N 3]
+        (ivl_enter_st_for (declared_global placement_prog) [(STR ''x'')] placement_call_args
           (dg_hook_D (snd placement_dg_td_sol) (Statement 5) \<squnion>
            dg_hook_G (snd placement_dg_td_sol))) location =
-      enter_ivl_for (declared_global placement_prog) [(STR ''x'')] [N 3]
+      enter_ivl_for (declared_global placement_prog) [(STR ''x'')] placement_call_args
         (dg_hook_D placement_sigma_abs (Statement 5) \<squnion> dg_hook_G placement_sigma_abs)
         (location_vname location)"
 proof (cases location)
@@ -1801,7 +1842,7 @@ lemma placement_dg_refines_function_entry_add:
         (placement_sound_dg_hooks.hook_gen placement_cfg bot s0d s0g (FunctionEntry (STR ''add''), ()))
         placement_sigma_abs (Inr ()))))"
 proof (rule placement_dg_refines_enter[where v = "FunctionEntry (STR ''add'')"
-    and caller = "Statement 5" and dst = "Some (STR ''answer'')" and fs = "[(STR ''x'')]" and args = "[N 3]"])
+    and caller = "Statement 5" and dst = "compile_dst placement_ty (Some (STR ''answer''))" and fs = "[(STR ''x'')]" and args = "placement_call_args"])
   show "FunctionEntry (STR ''add'') \<noteq> cfg_entry placement_cfg"
     by (simp add: placement_cfg_entry prog_main_name_def)
   show "intra_predecessor_list placement_cfg (FunctionEntry (STR ''add'')) = []"
@@ -1809,16 +1850,16 @@ proof (rule placement_dg_refines_enter[where v = "FunctionEntry (STR ''add'')"
   show "return_call_action_list placement_cfg (FunctionEntry (STR ''add'')) = []"
     by (rule placement_hook_lists)
   show "entry_call_list placement_cfg (FunctionEntry (STR ''add'')) =
-      [(Statement 5, CallEdge (Some (STR ''answer'')) [(STR ''x'')] [N 3])]"
+      [(Statement 5, CallEdge (compile_dst placement_ty (Some (STR ''answer''))) [(STR ''x'')] placement_call_args)]"
     by (rule placement_hook_lists)
   show "(bot :: ivl abs_state) = bot" by (rule refl)
 next
   fix location assume loc: "location \<in> set (placement_locations_of (FunctionEntry (STR ''add'')))"
   show "lookup_resolved_st_q
-      (ivl_enter_st_for (declared_global placement_prog) [(STR ''x'')] [N 3]
+      (ivl_enter_st_for (declared_global placement_prog) [(STR ''x'')] placement_call_args
         (dg_hook_D (snd placement_dg_td_sol) (Statement 5) \<squnion>
          dg_hook_G (snd placement_dg_td_sol))) location =
-    enter_ivl_for (declared_global placement_prog) [(STR ''x'')] [N 3]
+    enter_ivl_for (declared_global placement_prog) [(STR ''x'')] placement_call_args
       (dg_hook_D placement_sigma_abs (Statement 5) \<squnion> dg_hook_G placement_sigma_abs)
       (location_vname location)"
     by (rule placement_enter_raw[OF loc])
@@ -1842,12 +1883,14 @@ lemma placement_combine_raw:
   assumes loc: "location \<in> set (placement_locations_of (Statement 6))"
   shows
     "lookup_resolved_st_q
-        (combine_collect_resolved_for_q (declared_global placement_prog) (Some (STR ''answer''))
+        (combine_collect_resolved_for_q (declared_global placement_prog)
+           (compile_dst placement_ty (Some (STR ''answer'')))
           (dg_hook_D (snd placement_dg_td_sol) (Statement 5) \<squnion>
            dg_hook_G (snd placement_dg_td_sol))
           (dg_hook_D (snd placement_dg_td_sol) (FunctionResult (STR ''add'')) \<squnion>
            dg_hook_G (snd placement_dg_td_sol))) location =
-      combine\<^sup># (declared_global placement_prog) (Some (STR ''answer''))
+      combine\<^sup># (declared_global placement_prog)
+      (compile_dst placement_ty (Some (STR ''answer'')))
         (dg_hook_D placement_sigma_abs (Statement 5) \<squnion> dg_hook_G placement_sigma_abs)
         (dg_hook_D placement_sigma_abs (FunctionResult (STR ''add'')) \<squnion> dg_hook_G placement_sigma_abs)
         (location_vname location)"
@@ -1957,12 +2000,12 @@ lemma placement_dg_refines_statement6:
         placement_sigma_abs (Inr ()))))"
 proof (rule placement_dg_refines_combine[where v = "Statement 6"
     and caller = "Statement 5" and callee_exit = "FunctionResult (STR ''add'')"
-    and destination = "Some (STR ''answer'')" and parameters = "[(STR ''x'')]" and arguments = "[N 3]"])
+    and destination = "compile_dst placement_ty (Some (STR ''answer''))" and parameters = "[(STR ''x'')]" and arguments = "placement_call_args"])
   show "Statement 6 \<noteq> cfg_entry placement_cfg" by (simp add: placement_cfg_entry)
   show "intra_predecessor_list placement_cfg (Statement 6) = []"
     by (rule placement_hook_lists)
   show "return_call_action_list placement_cfg (Statement 6) =
-      [(Statement 5, CallEdge (Some (STR ''answer'')) [(STR ''x'')] [N 3], FunctionResult (STR ''add''))]"
+      [(Statement 5, CallEdge (compile_dst placement_ty (Some (STR ''answer''))) [(STR ''x'')] placement_call_args, FunctionResult (STR ''add''))]"
     by (rule placement_hook_lists)
   show "entry_call_list placement_cfg (Statement 6) = []"
     by (rule placement_hook_lists)
@@ -1970,12 +2013,14 @@ proof (rule placement_dg_refines_combine[where v = "Statement 6"
 next
   fix location assume loc: "location \<in> set (placement_locations_of (Statement 6))"
   show "lookup_resolved_st_q
-      (combine_collect_resolved_for_q (declared_global placement_prog) (Some (STR ''answer''))
+      (combine_collect_resolved_for_q (declared_global placement_prog)
+           (compile_dst placement_ty (Some (STR ''answer'')))
         (dg_hook_D (snd placement_dg_td_sol) (Statement 5) \<squnion>
          dg_hook_G (snd placement_dg_td_sol))
         (dg_hook_D (snd placement_dg_td_sol) (FunctionResult (STR ''add'')) \<squnion>
          dg_hook_G (snd placement_dg_td_sol))) location =
-    combine\<^sup># (declared_global placement_prog) (Some (STR ''answer''))
+    combine\<^sup># (declared_global placement_prog)
+      (compile_dst placement_ty (Some (STR ''answer'')))
       (dg_hook_D placement_sigma_abs (Statement 5) \<squnion> dg_hook_G placement_sigma_abs)
       (dg_hook_D placement_sigma_abs (FunctionResult (STR ''add'')) \<squnion> dg_hook_G placement_sigma_abs)
       (location_vname location)"
@@ -2422,7 +2467,7 @@ proof -
   proof (rule placement_se_edge[OF _ _ _ _ mem placement_dg_refines_statement1])
     show "Statement 1 \<noteq> cfg_entry placement_cfg" by (simp add: placement_cfg_entry)
     show "intra_predecessor_list placement_cfg (Statement 1) =
-        [(Statement 0, EA_Assign (STR ''tmp'') (Plus (V (STR ''balance'')) (V (STR ''x''))))]"
+        [(Statement 0, EA_Assign (STR ''tmp'') placement_rhs_tmp)]"
       by (rule placement_hook_lists)
     show "return_call_action_list placement_cfg (Statement 1) = []"
       by (rule placement_no_combine_edge_nodes)
@@ -2440,7 +2485,7 @@ proof -
   proof (rule placement_se_edge[OF _ _ _ _ mem placement_dg_refines_statement2])
     show "Statement 2 \<noteq> cfg_entry placement_cfg" by (simp add: placement_cfg_entry)
     show "intra_predecessor_list placement_cfg (Statement 2) =
-        [(Statement 1, EA_Assign (STR ''balance'') (V (STR ''tmp'')))]"
+        [(Statement 1, EA_Assign (STR ''balance'') placement_rhs_balance)]"
       by (rule placement_hook_lists)
     show "return_call_action_list placement_cfg (Statement 2) = []"
       by (rule placement_no_combine_edge_nodes)
@@ -2458,7 +2503,7 @@ proof -
   proof (rule placement_se_edge[OF _ _ _ _ mem placement_dg_refines_statement3])
     show "Statement 3 \<noteq> cfg_entry placement_cfg" by (simp add: placement_cfg_entry)
     show "intra_predecessor_list placement_cfg (Statement 3) =
-        [(Statement 2, EA_Assign (STR ''request_count'') (Plus (V (STR ''request_count'')) (N 1)))]"
+        [(Statement 2, EA_Assign (STR ''request_count'') placement_rhs_count)]"
       by (rule placement_hook_lists)
     show "return_call_action_list placement_cfg (Statement 3) = []"
       by (rule placement_no_combine_edge_nodes)
@@ -2495,7 +2540,7 @@ proof -
   proof (rule placement_se_edge[OF _ _ _ _ mem placement_dg_refines_function_result_add])
     show "FunctionResult (STR ''add'') \<noteq> cfg_entry placement_cfg" by (simp add: placement_cfg_entry)
     show "intra_predecessor_list placement_cfg (FunctionResult (STR ''add'')) =
-        [(Statement 3, EA_Ret (Some (V (STR ''balance''))) (STR ''add''))]"
+        [(Statement 3, EA_Ret (Some placement_ret_balance) (STR ''add'') (proc_ret_kind (prog_table placement_prog) (STR ''add'')))]"
       by (rule placement_hook_lists)
     show "return_call_action_list placement_cfg (FunctionResult (STR ''add'')) = []"
       by (rule placement_no_combine_edge_nodes)
@@ -2515,7 +2560,7 @@ proof -
     show "FunctionResult prog_main_name \<noteq> cfg_entry placement_cfg"
       by (simp add: placement_cfg_entry)
     show "intra_predecessor_list placement_cfg (FunctionResult prog_main_name) =
-        [(Statement 6, EA_Ret None prog_main_name)]"
+        [(Statement 6, EA_Ret None prog_main_name I32)]"
       by (rule placement_hook_lists)
     show "return_call_action_list placement_cfg (FunctionResult prog_main_name) = []"
       by (rule placement_no_combine_edge_nodes)
@@ -2525,8 +2570,8 @@ proof -
 qed
 
 lemma placement_se_enter:
-  fixes v caller :: pp and dst :: "vname option"
-    and fs :: "vname list" and args :: "exp list"
+  fixes v caller :: pp and dst :: "typed_var option"
+    and fs :: "vname list" and args :: "texp list"
   assumes not_entry: "v \<noteq> cfg_entry placement_cfg"
     and no_edge: "intra_predecessor_list placement_cfg v = []"
     and no_combine: "return_call_action_list placement_cfg v = []"
@@ -2562,8 +2607,8 @@ proof -
 qed
 
 lemma placement_se_combine:
-  fixes v caller callee_exit :: pp and destination :: "vname option"
-    and parameters :: "vname list" and arguments :: "exp list"
+  fixes v caller callee_exit :: pp and destination :: "typed_var option"
+    and parameters :: "vname list" and arguments :: "texp list"
   assumes not_entry: "v \<noteq> cfg_entry placement_cfg"
     and no_edge: "intra_predecessor_list placement_cfg v = []"
     and pred: "return_call_action_list placement_cfg v =
@@ -2615,7 +2660,7 @@ proof -
     show "return_call_action_list placement_cfg (FunctionEntry (STR ''add'')) = []"
       by (rule placement_hook_lists)
     show "entry_call_list placement_cfg (FunctionEntry (STR ''add'')) =
-        [(Statement 5, CallEdge (Some (STR ''answer'')) [(STR ''x'')] [N 3])]"
+        [(Statement 5, CallEdge (compile_dst placement_ty (Some (STR ''answer''))) [(STR ''x'')] placement_call_args)]"
       by (rule placement_hook_lists)
   qed
 qed
@@ -2631,7 +2676,7 @@ proof -
     show "intra_predecessor_list placement_cfg (Statement 6) = []"
       by (rule placement_hook_lists)
     show "return_call_action_list placement_cfg (Statement 6) =
-        [(Statement 5, CallEdge (Some (STR ''answer'')) [(STR ''x'')] [N 3], FunctionResult (STR ''add''))]"
+        [(Statement 5, CallEdge (compile_dst placement_ty (Some (STR ''answer''))) [(STR ''x'')] placement_call_args, FunctionResult (STR ''add''))]"
       by (rule placement_hook_lists)
     show "entry_call_list placement_cfg (Statement 6) = []"
       by (rule placement_hook_lists)
@@ -2727,7 +2772,7 @@ next
         rule placement_se_statement0)
   have s1_not_entry: "Statement 1 \<noteq> cfg_entry placement_cfg" by (simp add: placement_cfg_entry)
   have s1_pred: "intra_predecessor_list placement_cfg (Statement 1) =
-      [(Statement 0, EA_Assign (STR ''tmp'') (Plus (V (STR ''balance'')) (V (STR ''x''))))]"
+      [(Statement 0, EA_Assign (STR ''tmp'') placement_rhs_tmp)]"
     by (rule placement_hook_lists)
   have s1_no_combine: "return_call_action_list placement_cfg (Statement 1) = []"
     by (rule placement_no_combine_edge_nodes)
@@ -2893,7 +2938,7 @@ text \<open>The trace-native collecting soundness endpoint: every stack-faithful
   abstract post-solution at every program point, over the D/G hook route.\<close>
 
 theorem placement_dg_td_collect_sound:
-  "ltr_collect (declared_global placement_prog) placement_cfg
+  "ltr_collect placement_ty (declared_global placement_prog) placement_cfg
     (cinit_stores (declared_global placement_prog)) v \<subseteq>
     dg_hook_gamma gamma_join placement_sigma_abs v"
   by (rule placement_sound_dg_hooks_ltr.hook_post_solution_collect_sound_ltr[OF

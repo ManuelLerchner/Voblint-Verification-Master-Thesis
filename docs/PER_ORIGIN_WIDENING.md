@@ -54,10 +54,10 @@ three contributions to `g` arriving in the paper's order:
 Apinis warrowing reaches `[-inf,+inf]`, the paper's Example 2 result. Per origin
 each cell holds one constant, nothing widens, and the join is `[-17,42]` --
 the paper's Sect. 5.3 figure. Both are machine-checked at the CLI by
-`tests/regression/19-paper-examples/`, whose 02/03 pair pins both bounds, and at
-the solver level by `two_writer_slot_across_update_rules` in
-`src/Examples/Tooling/Example_Per_Origin_Widening_Precision.thy`, which evaluates
-one slot under all four update rules at once.
+`tests/regression/19-paper-examples/`, whose 02/03 pair pins both bounds, and the
+four update rules are compared one slot at a time by the `15-solver-choice/`
+group, whose join, per-origin and two warrowing cases read the same two-producer
+global.
 
 Voblint answers the paper's Fig. 1 itself exactly -- `g == 42`, `h == 1` --
 because it never widens a global. That beats both the paper's Example 2 result

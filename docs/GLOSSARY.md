@@ -23,6 +23,30 @@ layer without embedding line numbers that drift.
 | `enter_state` | Callee store with caller globals and fresh local variables. | `src/VIMP/VIMP_Globals.thy` |
 | `combine_env` | Restored caller locals combined with callee globals; Goblint's `combine_env`, split from the separate destination write (`combine_assign`). | `src/VIMP/VIMP_Globals.thy` |
 
+## Machine-integer typing and elaboration
+
+Every VIMP variable has a declared machine-integer kind, and every expression
+is elaborated to a kind-annotated tree once, at compile time. The concrete and
+abstract semantics then both run on that tree, so no evaluator consults a typing
+environment inside the fixpoint.
+
+| Term | Meaning | Source |
+| --- | --- | --- |
+| `ikind` | Machine-integer kind: `I8`/`U8`/`I16`/`U16`/`I32`/`U32`/`I64`/`U64`. | `src/VIMP/VIMP_Ikind.thy` |
+| `ik_range` / `ik_min` / `ik_max` | The representable values of a kind. | `src/VIMP/VIMP_Ikind.thy` |
+| `ik_norm` | Wrap an integer into a kind's range; the identity on values already in range (`ik_norm_id`). | `src/VIMP/VIMP_Ikind.thy` |
+| `ik_promote` | Integer promotion: kinds narrower than `I32` widen to `I32`, others stay. | `src/VIMP/VIMP_Ikind.thy` |
+| `tyenv` | Total map from variable name to declared kind; `prog_tyenv p` reads a program's declarations, defaulting to `I32`. | `src/VIMP/VIMP_Typing.thy` |
+| `esyn` / `opk` | The kind an untyped expression synthesizes, and its defaulting to `I32`. | `src/VIMP/VIMP_Typing.thy` |
+| `taval` / `taval_syn` | Kind-aware evaluation of untyped `exp`, at a given kind and at the synthesized one. | `src/VIMP/VIMP_Typing.thy` |
+| `styped` / `rstyped` | Every store slot lies in its declared kind's range; `rstyped` exempts `ret_var` during unwinding. | `src/VIMP/VIMP_Typing.thy`, `src/VIMP/VIMP_Proc.thy` |
+| `texp` | Elaborated expression: every arithmetic and literal node carries its own `ikind`, plus a `TCast` node with no `exp` counterpart. | `src/VIMP/VIMP_Elaborated.thy` |
+| `teval` | Evaluation of `texp`, with the kind bookkeeping already done -- no typing environment. | `src/VIMP/VIMP_Elaborated.thy` |
+| `elaborate` / `elaborate_syn` / `elaborate_to` | Compile-time elaboration at a given kind, at the synthesized kind, and to a write target's kind. `elaborate_to` emits `TCast` only where the target kind differs from the synthesized one. | `src/VIMP/VIMP_Elaborated.thy` |
+| `typed_var` | A name paired with the kind it was declared at; what a `CallEdge` destination and an `EA_Ret` carry so the return conversion needs no typing environment. | `src/VIMP/VIMP_Typing.thy`, `src/CFG/CFG_Def.thy` |
+| `cast_domain` | Type class fixing a domain's own conversion `a_cast` and its representability certificate `a_in_range`, with monotonicity. Mirrors Goblint placing `cast_to` in the integer-domain signature rather than in the analysis spec. | `src/Core/Domain/Abstract_Domain.thy` |
+| `sound_cast_domain` | `cast_domain` plus `a_cast_sound` (`a_cast` over-approximates `ik_norm`) and `a_in_range_sound` (a certificate implies the concretization fits the kind). | `src/Core/Domain/Abstract_Domain.thy` |
+
 ## Procedure-aware CFG
 
 | Term | Meaning | Source |

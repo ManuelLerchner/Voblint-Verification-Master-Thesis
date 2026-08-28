@@ -1,5 +1,5 @@
 """Hypothesis strategies for VIMP ASTs, and their S-expression serialization
-for ast_driver.ml's build_program/build_com/build_exp (see ast_driver.ml).
+for ast_driver.ml's build_skeleton/build_com/build_exp (see ast_driver.ml).
 
 VIMP has one unified `exp` type -- arithmetic, comparison, and logical
 operators are ordinary exp constructors, not a separate aexp/bexp split
@@ -22,13 +22,34 @@ Variable/procedure names are drawn from small fixed, keyword-disjoint pools
 rather than random identifiers: this sidesteps keyword collisions entirely
 (by construction, not by filtering/assume rejection) while still exercising
 name reuse, shadowing-shaped programs, and multi-procedure call graphs.
+
+Declarations are absent from these strategies on purpose. VIMP_Source_Print
+.thy's pretty_string_of_program prints no kind on a global or a formal, no
+procedure return kind, and no local declaration at all, so what it emits is a
+declaration skeleton rather than source the frontend accepts. ast_driver fills
+that skeleton in -- one fixed kind throughout, the locals a body's own variable
+uses imply, a return kind for a value-returning procedure -- and builds the
+AST from the same derivation, so a generated program still round-trips
+exactly. `programs` therefore describes the shape being tested (expressions,
+statement nesting, call graphs) and nothing about which kind a name carries.
+
+`programs_with_locals`/`source_with_locals` add an extra, freely-shaped
+prologue on top of that completed source, for the properties that only need
+parse acceptance: several names per line, varied kinds. Those names avoid
+every name ast_driver already declares, so the two prologues never collide.
 """
+
+import re
 
 from hypothesis import strategies as st
 
 VAR_POOL = ["x", "y", "z", "n", "acc"]
 GLOBAL_POOL = ["g1", "g2"]
 PROC_POOL = ["f", "g", "helper"]
+MAIN_NAME = "main"
+LOCAL_KIND_POOL = [
+    "int8", "uint8", "int16", "uint16", "int32", "uint32", "int64", "uint64",
+]
 
 
 def sexp(x) -> str:
@@ -43,9 +64,29 @@ def sexp(x) -> str:
 
 # -- exp: arbitrary nesting over all ten constructors (see module docstring) -
 
+# Every kind's two extremes, and one step either side of each, plus the two
+# widths' unsigned maxima. These are where the literal reader and its kind
+# ladder actually branch, and a range of +/-1000 never reaches any of them.
+#
+# int64's minimum is absent on purpose: it cannot be written as a decimal
+# literal, because the magnitude passes the frontend's bound before the
+# negation applies. That is C's own wart and the frontend reproduces it, so a
+# generator that emitted it would be generating a program the language does
+# not have.
+_BOUNDARIES = sorted({
+    0, 1, -1,
+    127, 128, -128, -129, 255, 256,
+    32767, 32768, -32768, -32769, 65535, 65536,
+    2147483647, 2147483648, -2147483648, -2147483649,
+    4294967295, 4294967296,
+    9223372036854775807,
+})
+
+
 def exps(max_leaves=5):
     leaves = st.one_of(
         st.integers(min_value=-1000, max_value=1000).map(lambda n: ("N", str(n))),
+        st.sampled_from(_BOUNDARIES).map(lambda n: ("N", str(n))),
         st.sampled_from(VAR_POOL).map(lambda x: ("V", x)),
     )
     return st.recursive(
@@ -67,7 +108,7 @@ def exps(max_leaves=5):
 # -- com -----------------------------------------------------------------
 
 @st.composite
-def atomic_com(draw, depth):
+def atomic_com(draw, depth, value_procs=(), allow_value_return=False):
     assignable = VAR_POOL + GLOBAL_POOL
     leaf_kinds = ["skip", "assign", "random", "check", "call", "return"]
     kinds = leaf_kinds + (["if", "while"] if depth > 0 else [])
@@ -82,24 +123,41 @@ def atomic_com(draw, depth):
     if kind == "check":
         return ("Check", draw(exps()))
     if kind == "call":
-        dst = draw(st.one_of(st.none(), st.sampled_from(VAR_POOL).map(lambda x: ("Some", x))))
-        proc = draw(st.sampled_from(PROC_POOL))
+        # A destination may only bind a result from a callee that delivers one
+        # on every path, which is the contract the frontend enforces and
+        # ast_driver's d_ret mirrors. `value_procs` is decided once per
+        # program, before any body is drawn, precisely so a call can know it.
         actuals = draw(st.lists(exps(), max_size=2))
-        return ("Call", dst, proc, actuals)
+        if value_procs and draw(st.booleans()):
+            return ("Call",
+                    ("Some", draw(st.sampled_from(VAR_POOL))),
+                    draw(st.sampled_from(sorted(value_procs))),
+                    actuals)
+        return ("Call", None, draw(st.sampled_from(PROC_POOL)), actuals)
     if kind == "return":
-        return ("Return", draw(st.one_of(st.none(), exps().map(lambda a: ("Some", a)))))
+        # Only a procedure that declares a return kind may deliver a value, and
+        # it is `programs` that decides which ones do. Everywhere else -- a
+        # void procedure's body, main's -- a return is the bare form, because
+        # the frontend rejects a value returned from something declared void.
+        if allow_value_return:
+            return ("Return", draw(st.one_of(st.none(), exps().map(lambda a: ("Some", a)))))
+        return ("Return", None)
     if kind == "if":
-        return ("If", draw(exps()), draw(coms(depth - 1)), draw(coms(depth - 1)))
+        return ("If", draw(exps()), draw(coms(depth - 1, value_procs=value_procs, allow_value_return=allow_value_return)),
+                draw(coms(depth - 1, value_procs=value_procs, allow_value_return=allow_value_return)))
     if kind == "while":
-        return ("While", draw(exps()), draw(coms(depth - 1)))
+        return ("While", draw(exps()),
+                draw(coms(depth - 1, value_procs=value_procs, allow_value_return=allow_value_return)))
     raise AssertionError(kind)
 
 
 @st.composite
-def coms(draw, depth=3, max_stmts=3):
-    node = draw(atomic_com(depth))
+def coms(draw, depth=3, max_stmts=3, value_procs=(), allow_value_return=False):
+    node = draw(atomic_com(depth, value_procs=value_procs,
+                           allow_value_return=allow_value_return))
     for _ in range(draw(st.integers(min_value=0, max_value=max_stmts - 1))):
-        node = ("Seq", node, draw(atomic_com(depth)))
+        node = ("Seq", node, draw(atomic_com(depth, value_procs=value_procs,
+                                             allow_value_return=allow_value_return)))
     return node
 
 
@@ -114,11 +172,175 @@ def coms(draw, depth=3, max_stmts=3):
 @st.composite
 def programs(draw, max_procs=len(PROC_POOL), body_depth=3):
     proc_names = draw(st.lists(st.sampled_from(PROC_POOL), max_size=max_procs, unique=True))
+    # Which procedures return a value is settled before any body is drawn, so
+    # that a call inside a body can bind a destination only from one that
+    # does. A value procedure's body ends in `return e`, which is what makes
+    # "returns on every path" true of it whatever the statements before it do.
+    value_procs = set(
+        draw(st.lists(st.sampled_from(proc_names), max_size=len(proc_names), unique=True))
+    ) if proc_names else set()
     procs = []
     for name in proc_names:
         formals = draw(st.lists(st.sampled_from(VAR_POOL), max_size=2, unique=True))
-        body = draw(coms(depth=body_depth - 1))
+        body = draw(coms(depth=body_depth - 1, value_procs=value_procs,
+                         allow_value_return=(name in value_procs)))
+        if name in value_procs:
+            body = ("Seq", body, ("Return", ("Some", draw(exps()))))
         procs.append((name, formals, body))
-    main_body = draw(coms(depth=body_depth))
+    main_body = draw(coms(depth=body_depth, value_procs=value_procs))
     globals_ = draw(st.lists(st.sampled_from(GLOBAL_POOL), max_size=len(GLOBAL_POOL), unique=True))
     return (procs, main_body, globals_)
+
+
+# -- variables a body touches ----------------------------------------------
+#
+# Mirrors ast_driver's com_vars: every variable a body reads or writes that is
+# neither a global nor one of the procedure's formals becomes a declared local
+# in the printed source, so an extra prologue spliced on top must avoid those
+# names or the frontend rejects the result as a duplicate declaration. A call's
+# callee is a Call field, never a ("V", _) leaf, so a procedure name never
+# counts as a variable here.
+
+
+def _exp_vars(e, acc):
+    tag = e[0]
+    if tag == "V":
+        acc.add(e[1])
+    elif tag == "N":
+        pass
+    elif tag == "Not":
+        _exp_vars(e[1], acc)
+    else:
+        _exp_vars(e[1], acc)
+        _exp_vars(e[2], acc)
+
+
+def used_vars(com, acc=None):
+    acc = set() if acc is None else acc
+    if com == "Skip":
+        return acc
+    tag = com[0]
+    if tag == "Assign":
+        acc.add(com[1])
+        _exp_vars(com[2], acc)
+    elif tag == "Random":
+        acc.add(com[1])
+    elif tag == "Check":
+        _exp_vars(com[1], acc)
+    elif tag == "Seq":
+        used_vars(com[1], acc)
+        used_vars(com[2], acc)
+    elif tag == "If":
+        _exp_vars(com[1], acc)
+        used_vars(com[2], acc)
+        used_vars(com[3], acc)
+    elif tag == "While":
+        _exp_vars(com[1], acc)
+        used_vars(com[2], acc)
+    elif tag == "Call":
+        if com[1] is not None:
+            acc.add(com[1][1])
+        for actual in com[3]:
+            _exp_vars(actual, acc)
+    elif tag == "Return":
+        if com[1] is not None:
+            _exp_vars(com[1][1], acc)
+    else:
+        raise AssertionError(f"unrecognized com tag: {tag}")
+    return acc
+
+
+# -- procedure-local declarations ------------------------------------------
+#
+# A declaration is `<kind> name1, name2, ...;` with an explicit kind: unlike
+# a global, a local has no untyped form. All of a procedure's declarations
+# form a prologue between the body's `{` and its first statement --
+# grammar/vimp.yaml's function_decl puts `locals_star` before `stmts_opt`,
+# and a declaration after a statement is a parse error. Both the placement
+# and the name-collision rules below are respected by construction, so no
+# generated program is ever one the frontend must reject.
+
+@st.composite
+def locals_prologue(draw, available=(), kind_of=None):
+    """Extra declaration groups for one procedure, as [(kind, [name, ...]), ...].
+
+    `available` is the set of names the caller has cleared for prologue use
+    program-wide, and `kind_of` fixes each name's kind. Both are decided once
+    per program rather than per procedure, because compilation resolves a name
+    through one flat kind environment: the same name declared at two kinds
+    anywhere in the program is rejected by the frontend, so a generator that
+    drew kinds per procedure would produce programs the language does not
+    have. VAR_POOL is disjoint from GLOBAL_POOL, so a local can never shadow a
+    declared global either. The empty prologue stays the common case -- almost
+    every program in the regression corpus has none.
+    """
+    available = list(available)
+    if not available:
+        return []
+    names = draw(st.lists(st.sampled_from(available), max_size=len(available), unique=True))
+    groups = []
+    while names:
+        take = draw(st.integers(min_value=1, max_value=len(names)))
+        head, names = names[:take], names[take:]
+        # One group per kind, since a group carries a single kind keyword.
+        by_kind = {}
+        for n in head:
+            by_kind.setdefault(kind_of[n], []).append(n)
+        groups.extend(by_kind.items())
+    return groups
+
+
+@st.composite
+def programs_with_locals(draw, max_procs=len(PROC_POOL), body_depth=3):
+    """A program paired with one locals prologue per procedure, main included.
+
+    The AST half is an ordinary `programs()` value: locals are carried
+    separately because they do not survive printing (see the module
+    docstring), so this pair is for parse-level properties, not round-trip.
+    """
+    procs, main_body, globals_ = draw(programs(max_procs=max_procs, body_depth=body_depth))
+
+    # Every name ast_driver itself declares -- any procedure's formals, any
+    # body's variables -- is off limits to the extra prologue, and off limits
+    # program-wide rather than per procedure. ast_driver declares those at its
+    # own fixed kind, so a prologue re-declaring one elsewhere at a different
+    # kind would be the same flat-environment conflict.
+    taken = set(used_vars(main_body))
+    for _name, formals, body in procs:
+        taken |= set(formals) | set(used_vars(body))
+
+    available = [x for x in VAR_POOL if x not in taken]
+    kind_of = {x: draw(st.sampled_from(LOCAL_KIND_POOL)) for x in available}
+
+    prologues = {}
+    for name, _formals, _body in procs:
+        prologues[name] = draw(locals_prologue(available=available, kind_of=kind_of))
+    prologues[MAIN_NAME] = draw(locals_prologue(available=available, kind_of=kind_of))
+    return (procs, main_body, globals_), prologues
+
+
+# A definition header sits at column zero and opens with its return kind --
+# `void` for a procedure that yields no value, a kind keyword otherwise.
+PROC_HEADER = re.compile(r"^(?:void|" + "|".join(LOCAL_KIND_POOL) + r") (\w+)\(")
+
+
+def source_with_locals(source: str, prologues: dict) -> str:
+    """Splice each procedure's locals prologue into printed VIMP source.
+
+    ast_driver's completed source puts a procedure's own forced local
+    declarations directly after its header, so inserting these lines right
+    after that header keeps them inside the prologue the grammar requires;
+    the four-space indent matches the printer's own body indent. Body lines
+    are indented, headers are not, so the header regex cannot match inside a
+    body.
+    """
+    out = []
+    for line in source.split("\n"):
+        out.append(line)
+        header = PROC_HEADER.match(line)
+        if header:
+            out.extend(
+                f"    {kind} {', '.join(names)};"
+                for kind, names in prologues.get(header.group(1), [])
+            )
+    return "\n".join(out)

@@ -1,5 +1,5 @@
 theory VIMP_Source_Print
-  imports VIMP_Proc "HOL-Library.Char_ord"
+  imports VIMP_Var_Id "HOL-Library.Char_ord"
 begin
 
 text \<open>Executable source rendering for VIMP commands and procedure tables.\<close>
@@ -45,7 +45,7 @@ fun string_of_exp :: "nat \<Rightarrow> exp \<Rightarrow> string" where
      (let body =
         (case e of
            N n \<Rightarrow> string_of_int n
-         | V x \<Rightarrow> String.explode x
+         | V x \<Rightarrow> String.explode (display_scoped x)
          | Plus a b \<Rightarrow> string_of_exp 60 a @ ''+'' @ string_of_exp 61 b
          | Minus a b \<Rightarrow> string_of_exp 60 a @ ''-'' @ string_of_exp 61 b
          | Times a b \<Rightarrow> string_of_exp 70 a @ ''*'' @ string_of_exp 71 b
@@ -65,7 +65,8 @@ fun join_source :: "string \<Rightarrow> string list \<Rightarrow> string" where
 
 fun string_of_com :: "com \<Rightarrow> string" where
   "string_of_com SKIP = ''skip''"
-| "string_of_com (Assign x e) = String.explode x @ '' := '' @ string_of_exp 0 e"
+| "string_of_com (Assign x e) =
+    String.explode (display_scoped x) @ '' := '' @ string_of_exp 0 e"
 | "string_of_com (VIMP_Proc.com.Check c) = ''__voblint_check('' @ string_of_exp 0 c @ '')''"
 | "string_of_com (Seq c1 c2) =
     string_of_com c1 @ '';'' @ source_nl @ string_of_com c2"
@@ -77,7 +78,7 @@ fun string_of_com :: "com \<Rightarrow> string" where
 | "string_of_com (Call dst p es) =
     (case dst of
       None \<Rightarrow> String.explode p @ ''('' @ join_source '', '' (map (string_of_exp 0) es) @ '')''
-    | Some x \<Rightarrow> String.explode x @ '' := '' @ String.explode p @ ''(''
+    | Some x \<Rightarrow> String.explode (display_scoped x) @ '' := '' @ String.explode p @ ''(''
         @ join_source '', '' (map (string_of_exp 0) es) @ '')'')"
 | "string_of_com (Return (Some e)) = ''return '' @ string_of_exp 0 e"
 | "string_of_com (Return None) = ''return''"
@@ -104,7 +105,7 @@ fun append_last :: "string \<Rightarrow> string list \<Rightarrow> string list" 
 fun pretty_source_lines_com :: "nat \<Rightarrow> com \<Rightarrow> string list" where
   "pretty_source_lines_com n SKIP = [source_indent n @ ''skip'']"
 | "pretty_source_lines_com n (Assign x e) =
-    [source_indent n @ String.explode x @ '' := '' @ string_of_exp 0 e]"
+    [source_indent n @ String.explode (display_scoped x) @ '' := '' @ string_of_exp 0 e]"
 | "pretty_source_lines_com n (VIMP_Proc.com.Check c) =
     [source_indent n @ ''__voblint_check('' @ string_of_exp 0 c @ '')'']"
 | "pretty_source_lines_com n (Seq c1 c2) =
@@ -126,10 +127,71 @@ fun pretty_source_lines_com :: "nat \<Rightarrow> com \<Rightarrow> string list"
 | "pretty_source_lines_com n Restore = [source_indent n @ ''restore'']"
 | "pretty_source_lines_com n Unwind = [source_indent n @ ''<unwind>'']"
 
-definition pretty_source_lines_proc :: "nat \<Rightarrow> pname \<Rightarrow> proc_decl \<Rightarrow> string list" where
-  "pretty_source_lines_proc n p decl =
-    (source_indent n @ ''void '' @ String.explode p @ ''('' @ join_source '', '' (map String.explode (formals decl)) @ '') {'')
-    # pretty_source_lines_com (n + 2) (body decl)
+subsection \<open>Printing declarations\<close>
+
+text \<open>
+  The printed form is the strict syntax the frontend accepts, which means
+  every declaration carries its kind: a global, a formal, a procedure's return
+  and each procedure-local. Printing any of them bare produced source the
+  parser rejects, so what came out was not a program the language has.
+\<close>
+
+fun string_of_ikind :: "ikind \<Rightarrow> string" where
+    "string_of_ikind I8 = ''int8''"   | "string_of_ikind U8 = ''uint8''"
+  | "string_of_ikind I16 = ''int16''" | "string_of_ikind U16 = ''uint16''"
+  | "string_of_ikind I32 = ''int32''" | "string_of_ikind U32 = ''uint32''"
+  | "string_of_ikind I64 = ''int64''" | "string_of_ikind U64 = ''uint64''"
+
+definition string_of_ret_kind :: "ikind option \<Rightarrow> string" where
+  "string_of_ret_kind rk = (case rk of None \<Rightarrow> ''void'' | Some k \<Rightarrow> string_of_ikind k)"
+
+text \<open>
+  A name is looked up as it is stored and printed as \<^const>\<open>display_scoped\<close>
+  shows it. The two differ once the program has been resolved: the kind belongs
+  to the identity, while the source wrote the bare name.
+\<close>
+
+definition string_of_typed_name :: "tyenv \<Rightarrow> vname \<Rightarrow> string" where
+  "string_of_typed_name \<Gamma> x =
+     string_of_ikind (\<Gamma> x) @ '' '' @ String.explode (display_scoped x)"
+
+text \<open>
+  One declaration line per name rather than one line listing several. A line
+  carries a single kind, so grouping would have to partition by kind first;
+  one name per line says the same thing and reads the same after a reparse.
+\<close>
+
+text \<open>
+  A procedure's scoped declarations cover its annotated formals as well as its
+  locals. The formals are already printed in the signature, so the declaration
+  prologue drops them: printing a formal a second time as a local would give a
+  program the parser rejects for declaring a formal as a local.
+\<close>
+
+text \<open>
+  Every name printed here goes through \<^const>\<open>display_scoped\<close>, so a resolved
+  program prints as the source that produced it. On a name no resolver
+  produced this is the identity, so an unresolved program prints exactly as it
+  always did.
+\<close>
+
+definition pretty_local_lines ::
+  "nat \<Rightarrow> (pname \<times> typed_var) list \<Rightarrow> vname list \<Rightarrow> pname \<Rightarrow> string list" where
+  "pretty_local_lines n scoped fs p =
+    map (\<lambda>tv. source_indent n @ string_of_ikind (tv_kind tv) @ '' ''
+                @ String.explode (display_scoped (tv_name tv)) @ '';'')
+        (filter (\<lambda>tv. tv_name tv \<notin> set fs)
+          (map snd (filter (\<lambda>e. fst e = p) scoped)))"
+
+definition pretty_source_lines_proc ::
+  "tyenv \<Rightarrow> (pname \<times> typed_var) list \<Rightarrow> nat \<Rightarrow> pname \<Rightarrow> proc_decl \<Rightarrow> string list" where
+  "pretty_source_lines_proc \<Gamma> scoped n p decl =
+    (source_indent n @ string_of_ret_kind (ret_kind decl) @ '' '' @ String.explode p
+       @ ''(''
+       @ join_source '', '' (map (string_of_typed_name \<Gamma>) (formals decl))
+       @ '') {'')
+    # pretty_local_lines (n + 2) scoped (formals decl) p
+    @ pretty_source_lines_com (n + 2) (body decl)
     @ [source_indent n @ ''}'']"
 
 text \<open>
@@ -142,14 +204,16 @@ text \<open>
 \<close>
 
 definition pretty_string_of_program ::
-  "proc_table \<Rightarrow> pname list \<Rightarrow> com \<Rightarrow> vname list \<Rightarrow> string" where
-  "pretty_string_of_program \<Pi> ps main globals =
+  "tyenv \<Rightarrow> (pname \<times> typed_var) list \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> com
+    \<Rightarrow> vname list \<Rightarrow> string" where
+  "pretty_string_of_program \<Gamma> locals \<Pi> ps main globals =
     join_source source_nl
-      ((if globals = [] then []
-        else [''global '' @ join_source '', '' (map String.explode globals) @ '';''])
+      (map (\<lambda>g. ''global '' @ string_of_typed_name \<Gamma> g @ '';'') globals
       @ concat (map (\<lambda>p. case \<Pi> p of
           None \<Rightarrow> [''procedure '' @ String.explode p @ '' <missing>'']
-        | Some decl \<Rightarrow> pretty_source_lines_proc 0 p decl) ps)
-      @ [''void main() {''] @ pretty_source_lines_com 2 main @ [''}''])"
+        | Some decl \<Rightarrow> pretty_source_lines_proc \<Gamma> locals 0 p decl) ps)
+      @ [''void main() {'']
+      @ pretty_local_lines 2 locals [] (STR ''main'')
+      @ pretty_source_lines_com 2 main @ [''}''])"
 
 end

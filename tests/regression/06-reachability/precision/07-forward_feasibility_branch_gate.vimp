@@ -10,6 +10,7 @@
 // Example_Guard_Refinement.thy pins both halves of that comparison directly on
 // the abstract state.
 void main() {
+  int32 x;
   x := 5;
   if ((x < 0) == 1) {
     __voblint_check(false) // NOWARN (unreachable)

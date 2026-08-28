@@ -30,13 +30,13 @@ text \<open>A compiled body reaches a result node only through a return action f
   procedure --- provided the fragment's continuation is not itself a result node, which holds
   for every procedure body (its continuation is the epilogue).\<close>
 lemma compile_result_target:
-  "compile \<Pi> p c k n = (n', en, E, K) \<Longrightarrow> (u, a, FunctionResult q) \<in> E
-   \<Longrightarrow> \<forall>r. k \<noteq> FunctionResult r \<Longrightarrow> q = p \<and> (\<exists>e. a = EA_Ret e p)"
+  "compile \<Gamma> \<Pi> p c k n = (n', en, E, K) \<Longrightarrow> (u, a, FunctionResult q) \<in> E
+   \<Longrightarrow> \<forall>r. k \<noteq> FunctionResult r \<Longrightarrow> q = p \<and> (\<exists>e rk. a = EA_Ret e p rk)"
 proof (induction c arbitrary: k n n' en E K)
   case (Seq c1 c2)
   from Seq.prems(1) obtain n1 E1 K1 n2 E2 K2 where
-    c1: "compile \<Pi> p c1 (Statement (n + csize c1)) n = (n1, Statement n, E1, K1)"
-    and c2: "compile \<Pi> p c2 k (n + csize c1) = (n2, Statement (n + csize c1), E2, K2)"
+    c1: "compile \<Gamma> \<Pi> p c1 (Statement (n + csize c1)) n = (n1, Statement n, E1, K1)"
+    and c2: "compile \<Gamma> \<Pi> p c2 k (n + csize c1) = (n2, Statement (n + csize c1), E2, K2)"
     and E: "E = E1 \<union> E2"
     by (rule compile_SeqE)
   from Seq.prems(2) E consider "(u, a, FunctionResult q) \<in> E1"
@@ -50,11 +50,11 @@ proof (induction c arbitrary: k n n' en E K)
 next
   case (If b c1 c2)
   from If.prems(1) obtain n1 E1 K1 n2 E2 K2 where
-    c1: "compile \<Pi> p c1 k (Suc n) = (n1, Statement (Suc n), E1, K1)"
-    and c2: "compile \<Pi> p c2 k (Suc n + csize c1)
+    c1: "compile \<Gamma> \<Pi> p c1 k (Suc n) = (n1, Statement (Suc n), E1, K1)"
+    and c2: "compile \<Gamma> \<Pi> p c2 k (Suc n + csize c1)
                = (n2, Statement (Suc n + csize c1), E2, K2)"
-    and E: "E = {(Statement n, EA_Assume b, Statement (Suc n)),
-                 (Statement n, EA_AssumeNot b, Statement (Suc n + csize c1))} \<union> E1 \<union> E2"
+    and E: "E = {(Statement n, EA_Assume (elaborate_syn \<Gamma> b), Statement (Suc n)),
+                 (Statement n, EA_AssumeNot (elaborate_syn \<Gamma> b), Statement (Suc n + csize c1))} \<union> E1 \<union> E2"
     by (rule compile_IfE)
   from If.prems(2) E consider "(u, a, FunctionResult q) \<in> E1"
     | "(u, a, FunctionResult q) \<in> E2" by auto
@@ -67,9 +67,9 @@ next
 next
   case (While b c)
   from While.prems(1) obtain n1 E1 K1 where
-    c1: "compile \<Pi> p c (Statement n) (Suc n) = (n1, Statement (Suc n), E1, K1)"
-    and E: "E = {(Statement n, EA_Assume b, Statement (Suc n)),
-                 (Statement n, EA_AssumeNot b, k)} \<union> E1"
+    c1: "compile \<Gamma> \<Pi> p c (Statement n) (Suc n) = (n1, Statement (Suc n), E1, K1)"
+    and E: "E = {(Statement n, EA_Assume (elaborate_syn \<Gamma> b), Statement (Suc n)),
+                 (Statement n, EA_AssumeNot (elaborate_syn \<Gamma> b), k)} \<union> E1"
     by (rule compile_WhileE)
   from While.prems(2,3) E have "(u, a, FunctionResult q) \<in> E1" by auto
   then show ?case using While.IH[OF c1] by simp
@@ -78,22 +78,22 @@ qed (auto split: option.splits)
 text \<open>A call edge sources at a \<^term>\<open>Statement\<close>, targets a \<^term>\<open>FunctionEntry\<close>, and continues
   at a \<^term>\<open>Statement\<close> or at the fragment's continuation.\<close>
 lemma compile_K_shape:
-  "compile \<Pi> p c k n = (n', en, E, K) \<Longrightarrow> (u, ce, tgt, af) \<in> K
+  "compile \<Gamma> \<Pi> p c k n = (n', en, E, K) \<Longrightarrow> (u, ce, tgt, af) \<in> K
    \<Longrightarrow> (\<exists>j. u = Statement j) \<and> (\<exists>q. tgt = FunctionEntry q)
        \<and> (af = k \<or> (\<exists>j. af = Statement j))"
 proof (induction c arbitrary: k n n' en E K)
   case (Seq c1 c2)
   from Seq.prems(1) obtain n1 E1 K1 n2 E2 K2 where
-    c1: "compile \<Pi> p c1 (Statement (n + csize c1)) n = (n1, Statement n, E1, K1)"
-    and c2: "compile \<Pi> p c2 k (n + csize c1) = (n2, Statement (n + csize c1), E2, K2)"
+    c1: "compile \<Gamma> \<Pi> p c1 (Statement (n + csize c1)) n = (n1, Statement n, E1, K1)"
+    and c2: "compile \<Gamma> \<Pi> p c2 k (n + csize c1) = (n2, Statement (n + csize c1), E2, K2)"
     and K: "K = K1 \<union> K2"
     by (rule compile_SeqE)
   from Seq.prems(2) K show ?case using Seq.IH(1)[OF c1] Seq.IH(2)[OF c2] by auto
 next
   case (If b c1 c2)
   from If.prems(1) obtain n1 E1 K1 n2 E2 K2 where
-    c1: "compile \<Pi> p c1 k (Suc n) = (n1, Statement (Suc n), E1, K1)"
-    and c2: "compile \<Pi> p c2 k (Suc n + csize c1)
+    c1: "compile \<Gamma> \<Pi> p c1 k (Suc n) = (n1, Statement (Suc n), E1, K1)"
+    and c2: "compile \<Gamma> \<Pi> p c2 k (Suc n + csize c1)
                = (n2, Statement (Suc n + csize c1), E2, K2)"
     and K: "K = K1 \<union> K2"
     by (rule compile_IfE)
@@ -101,7 +101,7 @@ next
 next
   case (While b c)
   from While.prems(1) obtain n1 E1 K1 where
-    c1: "compile \<Pi> p c (Statement n) (Suc n) = (n1, Statement (Suc n), E1, K1)"
+    c1: "compile \<Gamma> \<Pi> p c (Statement n) (Suc n) = (n1, Statement (Suc n), E1, K1)"
     and K: "K = K1"
     by (rule compile_WhileE)
   from While.prems(2) K show ?case using While.IH[OF c1] by auto
@@ -109,7 +109,7 @@ qed (auto split: if_splits option.splits)
 
 text \<open>Source well-formedness ensures that every compiled call enters a declared procedure.\<close>
 lemma compile_call_target_declared:
-  assumes comp: "compile \<Pi> p c k n = (n', en, E, K)"
+  assumes comp: "compile \<Gamma> \<Pi> p c k n = (n', en, E, K)"
     and wf: "wf_source_com \<Pi> c"
     and edge: "(u, ce, FunctionEntry q, af) \<in> K"
   shows "\<Pi> q \<noteq> None"
@@ -125,7 +125,7 @@ text \<open>Command level: both endpoints lie in the fragment's own node set or 
   statements are exactly the fragment-locality ones the activation proofs use.\<close>
 
 lemma compile_intra_pfn:
-  assumes cp: "compile \<Pi> p c k n = (n', en, E, K)" and e: "(u, a, v) \<in> E"
+  assumes cp: "compile \<Gamma> \<Pi> p c k n = (n', en, E, K)" and e: "(u, a, v) \<in> E"
   shows "u \<in> insert k (pfn p n n') \<and> v \<in> insert k (pfn p n n')"
 proof -
   have rng: "frag_stmts E K \<subseteq> {n..<n'} \<union> kstmt k" using compile_frag_stmts_range[OF cp] .
@@ -146,7 +146,7 @@ proof -
 qed
 
 lemma compile_calls_pfn:
-  assumes cp: "compile \<Pi> p c k n = (n', en, E, K)" and e: "(u, ce, tgt, af) \<in> K"
+  assumes cp: "compile \<Gamma> \<Pi> p c k n = (n', en, E, K)" and e: "(u, ce, tgt, af) \<in> K"
   shows "u \<in> insert k (pfn p n n') \<and> af \<in> insert k (pfn p n n')"
 proof -
   have rng: "frag_stmts E K \<subseteq> {n..<n'} \<union> kstmt k" using compile_frag_stmts_range[OF cp] .
@@ -169,16 +169,16 @@ qed
 text \<open>The procedure wrapper keeps its wiring edges (entry \<^term>\<open>EA_Nop\<close>, fall-through
   \<^term>\<open>EA_Ret None\<close>) and body edges in the procedure fragment.\<close>
 lemma compile_proc_entry_target:
-  assumes cp: "compile_proc \<Pi> p decl n = (n', E, K)"
+  assumes cp: "compile_proc \<Gamma> \<Pi> p decl n = (n', E, K)"
     and e: "(FunctionEntry p, EA_Nop, en) \<in> E"
   shows "en = Statement n"
 proof -
   from cp obtain Eb where
-    cb: "compile \<Pi> p (body decl) (Statement (n + csize (body decl))) n
+    cb: "compile \<Gamma> \<Pi> p (body decl) (Statement (n + csize (body decl))) n
            = (n + csize (body decl), Statement n, Eb, K)"
     and E: "E = insert (FunctionEntry p, EA_Nop, Statement n)
               (if falls_through (body decl)
-               then insert (Statement (n + csize (body decl)), EA_Ret None p, FunctionResult p) Eb
+               then insert (Statement (n + csize (body decl)), EA_Ret None p (proc_ret_kind \<Pi> p), FunctionResult p) Eb
                else Eb)"
 
     by (rule compile_procE)
@@ -191,13 +191,13 @@ qed
 text \<open>The entry wiring edge of a compiled procedure targets the first statement index of its
   fragment.  This is the shape that identifies a fragment by its start counter alone.\<close>
 lemma compile_proc_entry_edge:
-  assumes cp: "compile_proc \<Pi> p decl n = (n', E, K)"
+  assumes cp: "compile_proc \<Gamma> \<Pi> p decl n = (n', E, K)"
   shows "(FunctionEntry p, EA_Nop, Statement n) \<in> E"
 proof -
   from cp obtain Eb where
     E: "E = insert (FunctionEntry p, EA_Nop, Statement n)
               (if falls_through (body decl)
-               then insert (Statement (n + csize (body decl)), EA_Ret None p, FunctionResult p) Eb
+               then insert (Statement (n + csize (body decl)), EA_Ret None p (proc_ret_kind \<Pi> p), FunctionResult p) Eb
                else Eb)"
 
     by (rule compile_procE)
@@ -205,15 +205,15 @@ proof -
 qed
 
 lemma compile_proc_intra_pfn:
-  assumes cp: "compile_proc \<Pi> r decl n = (n', E, K)" and e: "(u, a, v) \<in> E"
+  assumes cp: "compile_proc \<Gamma> \<Pi> r decl n = (n', E, K)" and e: "(u, a, v) \<in> E"
   shows "u \<in> pfn r n n' \<and> v \<in> pfn r n n'"
 proof -
   from cp obtain Eb where
-    cb: "compile \<Pi> r (body decl) (Statement (n + csize (body decl))) n
+    cb: "compile \<Gamma> \<Pi> r (body decl) (Statement (n + csize (body decl))) n
            = (n + csize (body decl), Statement n, Eb, K)"
     and E: "E = insert (FunctionEntry r, EA_Nop, Statement n)
               (if falls_through (body decl)
-               then insert (Statement (n + csize (body decl)), EA_Ret None r, FunctionResult r) Eb
+               then insert (Statement (n + csize (body decl)), EA_Ret None r (proc_ret_kind \<Pi> r), FunctionResult r) Eb
                else Eb)"
     and n': "n' = Suc (n + csize (body decl))"
 
@@ -226,7 +226,7 @@ proof -
                  (pfn r n (n + csize (body decl))) \<subseteq> pfn r n n'"
     using n' by (auto simp: pfn_def)
   consider "(u, a, v) = (FunctionEntry r, EA_Nop, Statement n)"
-    | "(u, a, v) = (Statement (n + csize (body decl)), EA_Ret None r, FunctionResult r)"
+    | "(u, a, v) = (Statement (n + csize (body decl)), EA_Ret None r (proc_ret_kind \<Pi> r), FunctionResult r)"
     | "(u, a, v) \<in> Eb"
     using e E by (auto split: if_splits)
 
@@ -243,30 +243,30 @@ qed
 text \<open>The procedure wrapper preserves the body's result discipline and adds the matching
   fall-through return.\<close>
 lemma compile_proc_result_target:
-  assumes comp: "compile_proc \<Pi> p decl n = (n', E, K)"
+  assumes comp: "compile_proc \<Gamma> \<Pi> p decl n = (n', E, K)"
     and edge: "(u, a, FunctionResult q) \<in> E"
-  shows "q = p \<and> (\<exists>e. a = EA_Ret e p)"
+  shows "q = p \<and> (\<exists>e rk. a = EA_Ret e p rk)"
 proof -
   from comp obtain Eb where
-    cb: "compile \<Pi> p (body decl) (Statement (n + csize (body decl))) n
+    cb: "compile \<Gamma> \<Pi> p (body decl) (Statement (n + csize (body decl))) n
            = (n + csize (body decl), Statement n, Eb, K)"
     and E: "E = insert (FunctionEntry p, EA_Nop, Statement n)
               (if falls_through (body decl)
-               then insert (Statement (n + csize (body decl)), EA_Ret None p, FunctionResult p) Eb
+               then insert (Statement (n + csize (body decl)), EA_Ret None p (proc_ret_kind \<Pi> p), FunctionResult p) Eb
                else Eb)"
     by (rule compile_procE)
-  show ?thesis using edge E compile_result_target[OF cb] by (auto split: if_splits)
+  show ?thesis using edge E by (auto split: if_splits dest: compile_result_target[OF cb])
 
 qed
 
 lemma compile_proc_call_target_declared:
-  assumes comp: "compile_proc \<Pi> p decl n = (n', E, K)"
+  assumes comp: "compile_proc \<Gamma> \<Pi> p decl n = (n', E, K)"
     and wf: "wf_proc_decl source_global \<Pi> decl"
     and edge: "(u, ce, FunctionEntry q, af) \<in> K"
   shows "\<Pi> q \<noteq> None"
 proof -
   from comp obtain Eb where
-    cb: "compile \<Pi> p (body decl) (Statement (n + csize (body decl))) n
+    cb: "compile \<Gamma> \<Pi> p (body decl) (Statement (n + csize (body decl))) n
            = (n + csize (body decl), Statement n, Eb, K)"
     by (rule compile_procE)
   show ?thesis
@@ -274,11 +274,11 @@ proof -
 qed
 
 lemma compile_proc_calls_pfn:
-  assumes cp: "compile_proc \<Pi> r decl n = (n', E, K)" and e: "(u, ce, tgt, af) \<in> K"
+  assumes cp: "compile_proc \<Gamma> \<Pi> r decl n = (n', E, K)" and e: "(u, ce, tgt, af) \<in> K"
   shows "u \<in> pfn r n n' \<and> af \<in> pfn r n n'"
 proof -
   from cp obtain Eb where
-    cb: "compile \<Pi> r (body decl) (Statement (n + csize (body decl))) n
+    cb: "compile \<Gamma> \<Pi> r (body decl) (Statement (n + csize (body decl))) n
            = (n + csize (body decl), Statement n, Eb, K)"
     and n': "n' = Suc (n + csize (body decl))"
     by (rule compile_procE)
@@ -288,7 +288,7 @@ proof -
   show ?thesis using compile_calls_pfn[OF cb e] inner by blast
 qed
 
-lemma compile_proc_counter_mono: "compile_proc \<Pi> p decl n = (n', E, K) \<Longrightarrow> n \<le> n'"
+lemma compile_proc_counter_mono: "compile_proc \<Gamma> \<Pi> p decl n = (n', E, K) \<Longrightarrow> n \<le> n'"
   by (auto simp: compile_proc_def Let_def split: prod.splits dest: compile_counter_mono)
 
 subsection \<open>Each declared procedure occupies a sub-range\<close>
@@ -296,8 +296,8 @@ subsection \<open>Each declared procedure occupies a sub-range\<close>
 text \<open>A declared member of a \<^const>\<open>compile_procs\<close> pass is compiled at some offset inside the
   pass's counter range \<open>[n, n')\<close>, with its edges included.\<close>
 lemma compile_procs_member:
-  "compile_procs \<Pi> ps n = (n', E, K) \<Longrightarrow> p \<in> set ps \<Longrightarrow> \<Pi> p = Some decl
-   \<Longrightarrow> \<exists>m m' Ep Kp. compile_proc \<Pi> p decl m = (m', Ep, Kp)
+  "compile_procs \<Gamma> \<Pi> ps n = (n', E, K) \<Longrightarrow> p \<in> set ps \<Longrightarrow> \<Pi> p = Some decl
+   \<Longrightarrow> \<exists>m m' Ep Kp. compile_proc \<Gamma> \<Pi> p decl m = (m', Ep, Kp)
         \<and> n \<le> m \<and> m' \<le> n' \<and> Ep \<subseteq> E \<and> Kp \<subseteq> K"
 proof (induction ps arbitrary: n n' E K)
   case Nil then show ?case by simp
@@ -307,13 +307,13 @@ next
   proof (cases "\<Pi> q")
     case None
     with Cons.prems(2,3) have pqs: "p \<in> set qs" by auto
-    from None Cons.prems(1) have "compile_procs \<Pi> qs n = (n', E, K)" by simp
+    from None Cons.prems(1) have "compile_procs \<Gamma> \<Pi> qs n = (n', E, K)" by simp
     from Cons.IH[OF this pqs Cons.prems(3)] show ?thesis .
   next
     case (Some declq)
-    obtain n1 Eq Kq where cq: "compile_proc \<Pi> q declq n = (n1, Eq, Kq)"
+    obtain n1 Eq Kq where cq: "compile_proc \<Gamma> \<Pi> q declq n = (n1, Eq, Kq)"
       by (metis prod_cases3)
-    obtain n2 E' K' where crest: "compile_procs \<Pi> qs n1 = (n2, E', K')"
+    obtain n2 E' K' where crest: "compile_procs \<Gamma> \<Pi> qs n1 = (n2, E', K')"
       by (metis prod_cases3)
     from Cons.prems(1) Some cq crest
     have EK: "n' = n2" "E = Eq \<union> E'" "K = Kq \<union> K'" by (simp_all add: Let_def)
@@ -323,14 +323,14 @@ next
     proof (cases "p = q")
       case True
       with Cons.prems(3) Some have "decl = declq" by simp
-      with cq True have "compile_proc \<Pi> p decl n = (n1, Eq, Kq)" by simp
+      with cq True have "compile_proc \<Gamma> \<Pi> p decl n = (n1, Eq, Kq)" by simp
       moreover have "n \<le> n" "n1 \<le> n'" "Eq \<subseteq> E" "Kq \<subseteq> K" using EK n1_n2 by auto
       ultimately show ?thesis by blast
     next
       case False
       with Cons.prems(2) have "p \<in> set qs" by simp
       from Cons.IH[OF crest this Cons.prems(3)] obtain m m' Ep Kp
-        where cpm: "compile_proc \<Pi> p decl m = (m', Ep, Kp)"
+        where cpm: "compile_proc \<Gamma> \<Pi> p decl m = (m', Ep, Kp)"
           and bnds: "n1 \<le> m" "m' \<le> n2" and sub: "Ep \<subseteq> E'" "Kp \<subseteq> K'" by blast
       have "n \<le> m" using n_n1 bnds(1) by simp
       moreover have "m' \<le> n'" using bnds(2) EK by simp
@@ -346,15 +346,15 @@ text \<open>Within a compiled procedure only the entry wiring edge sources from 
   (bodies source from \<^term>\<open>Statement\<close> nodes by \<open>compile_E_shape\<close>, the exit wiring from the exit
   \<^term>\<open>Statement\<close>), so the source name is the procedure and the target is unique.\<close>
 lemma compile_proc_entry_mem:
-  assumes cp: "compile_proc \<Pi> q decl n = (n', E, K)" and e: "(FunctionEntry r, a, v) \<in> E"
+  assumes cp: "compile_proc \<Gamma> \<Pi> q decl n = (n', E, K)" and e: "(FunctionEntry r, a, v) \<in> E"
   shows "r = q"
 proof -
   from cp obtain Eb where
-    cb: "compile \<Pi> q (body decl) (Statement (n + csize (body decl))) n
+    cb: "compile \<Gamma> \<Pi> q (body decl) (Statement (n + csize (body decl))) n
            = (n + csize (body decl), Statement n, Eb, K)"
     and E: "E = insert (FunctionEntry q, EA_Nop, Statement n)
               (if falls_through (body decl)
-               then insert (Statement (n + csize (body decl)), EA_Ret None q, FunctionResult q) Eb
+               then insert (Statement (n + csize (body decl)), EA_Ret None q (proc_ret_kind \<Pi> q), FunctionResult q) Eb
                else Eb)"
     by (rule compile_procE)
   have "\<And>aa vv. (FunctionEntry r, aa, vv) \<notin> Eb" using compile_E_shape[OF cb] by blast
@@ -363,16 +363,16 @@ proof -
 qed
 
 lemma compile_proc_entry_unique:
-  assumes cp: "compile_proc \<Pi> q decl n = (n', E, K)"
+  assumes cp: "compile_proc \<Gamma> \<Pi> q decl n = (n', E, K)"
     and e1: "(FunctionEntry r, a1, v1) \<in> E" and e2: "(FunctionEntry r, a2, v2) \<in> E"
   shows "v1 = v2"
 proof -
   from cp obtain Eb where
-    cb: "compile \<Pi> q (body decl) (Statement (n + csize (body decl))) n
+    cb: "compile \<Gamma> \<Pi> q (body decl) (Statement (n + csize (body decl))) n
            = (n + csize (body decl), Statement n, Eb, K)"
     and E: "E = insert (FunctionEntry q, EA_Nop, Statement n)
               (if falls_through (body decl)
-               then insert (Statement (n + csize (body decl)), EA_Ret None q, FunctionResult q) Eb
+               then insert (Statement (n + csize (body decl)), EA_Ret None q (proc_ret_kind \<Pi> q), FunctionResult q) Eb
                else Eb)"
     by (rule compile_procE)
   have nb: "\<And>aa vv. (FunctionEntry r, aa, vv) \<notin> Eb" using compile_E_shape[OF cb] by blast
@@ -384,7 +384,7 @@ qed
 
 text \<open>A \<^const>\<open>compile_procs\<close> pass sources a \<^term>\<open>FunctionEntry r\<close> edge only for a member \<open>r\<close>.\<close>
 lemma compile_procs_entry_mem:
-  "compile_procs \<Pi> ps n = (n', E, K) \<Longrightarrow> (FunctionEntry r, a, v) \<in> E \<Longrightarrow> r \<in> set ps"
+  "compile_procs \<Gamma> \<Pi> ps n = (n', E, K) \<Longrightarrow> (FunctionEntry r, a, v) \<in> E \<Longrightarrow> r \<in> set ps"
 proof (induction ps arbitrary: n n' E K)
   case Nil then show ?case by simp
 next
@@ -392,12 +392,12 @@ next
   show ?case
   proof (cases "\<Pi> q")
     case None
-    with Cons.prems(1) have "compile_procs \<Pi> qs n = (n', E, K)" by simp
+    with Cons.prems(1) have "compile_procs \<Gamma> \<Pi> qs n = (n', E, K)" by simp
     from Cons.IH[OF this Cons.prems(2)] show ?thesis by simp
   next
     case (Some d)
-    obtain n1 Eq Kq where cq: "compile_proc \<Pi> q d n = (n1, Eq, Kq)" by (metis prod_cases3)
-    obtain n2 E' K' where cr: "compile_procs \<Pi> qs n1 = (n2, E', K')" by (metis prod_cases3)
+    obtain n1 Eq Kq where cq: "compile_proc \<Gamma> \<Pi> q d n = (n1, Eq, Kq)" by (metis prod_cases3)
+    obtain n2 E' K' where cr: "compile_procs \<Gamma> \<Pi> qs n1 = (n2, E', K')" by (metis prod_cases3)
     from Cons.prems(1) Some cq cr have E: "E = Eq \<union> E'" by (simp add: Let_def)
     from Cons.prems(2) E consider "(FunctionEntry r, a, v) \<in> Eq" | "(FunctionEntry r, a, v) \<in> E'"
       by auto
@@ -412,7 +412,7 @@ qed
 
 text \<open>Under \<open>distinct ps\<close> each \<^term>\<open>FunctionEntry r\<close> has a unique out-target in the pass.\<close>
 lemma compile_procs_entry_unique:
-  "compile_procs \<Pi> ps n = (n', E, K) \<Longrightarrow> distinct ps
+  "compile_procs \<Gamma> \<Pi> ps n = (n', E, K) \<Longrightarrow> distinct ps
    \<Longrightarrow> (FunctionEntry r, a1, v1) \<in> E \<Longrightarrow> (FunctionEntry r, a2, v2) \<in> E \<Longrightarrow> v1 = v2"
 proof (induction ps arbitrary: n n' E K)
   case Nil then show ?case by simp
@@ -421,12 +421,12 @@ next
   show ?case
   proof (cases "\<Pi> q")
     case None
-    with Cons.prems(1) have "compile_procs \<Pi> qs n = (n', E, K)" by simp
+    with Cons.prems(1) have "compile_procs \<Gamma> \<Pi> qs n = (n', E, K)" by simp
     from Cons.IH[OF this _ Cons.prems(3,4)] Cons.prems(2) show ?thesis by simp
   next
     case (Some d)
-    obtain n1 Eq Kq where cq: "compile_proc \<Pi> q d n = (n1, Eq, Kq)" by (metis prod_cases3)
-    obtain n2 E' K' where cr: "compile_procs \<Pi> qs n1 = (n2, E', K')" by (metis prod_cases3)
+    obtain n1 Eq Kq where cq: "compile_proc \<Gamma> \<Pi> q d n = (n1, Eq, Kq)" by (metis prod_cases3)
+    obtain n2 E' K' where cr: "compile_procs \<Gamma> \<Pi> qs n1 = (n2, E', K')" by (metis prod_cases3)
     from Cons.prems(1) Some cq cr have E: "E = Eq \<union> E'" by (simp add: Let_def)
     have qnotin: "q \<notin> set qs" using Cons.prems(2) by simp
     have inEq_mem: "\<And>b w. (FunctionEntry r, b, w) \<in> Eq \<Longrightarrow> r = q"
@@ -458,18 +458,18 @@ qed
 text \<open>Decomposition of a whole compiled program into the callee pass and the \<open>main\<close> fragment.\<close>
 lemma compile_prog_intra_split:
   obtains n1 Eprocs Kprocs n2 Emain Kmain where
-    "compile_procs \<Pi> ps 0 = (n1, Eprocs, Kprocs)"
-    "compile_proc \<Pi> mnm (proc_decl_of [] main) n1 = (n2, Emain, Kmain)"
-    "intra (compile_prog \<Pi> ps mnm main) = Eprocs \<union> Emain"
-    "calls (compile_prog \<Pi> ps mnm main) = Kprocs \<union> Kmain"
+    "compile_procs \<Gamma> \<Pi> ps 0 = (n1, Eprocs, Kprocs)"
+    "compile_proc \<Gamma> \<Pi> mnm (proc_decl_of [] main) n1 = (n2, Emain, Kmain)"
+    "intra (compile_prog \<Gamma> \<Pi> ps mnm main) = Eprocs \<union> Emain"
+    "calls (compile_prog \<Gamma> \<Pi> ps mnm main) = Kprocs \<union> Kmain"
 proof -
-  obtain n1 Eprocs Kprocs where procs: "compile_procs \<Pi> ps 0 = (n1, Eprocs, Kprocs)"
+  obtain n1 Eprocs Kprocs where procs: "compile_procs \<Gamma> \<Pi> ps 0 = (n1, Eprocs, Kprocs)"
     by (metis prod_cases3)
   obtain n2 Emain Kmain
-    where mainc: "compile_proc \<Pi> mnm (proc_decl_of [] main) n1 = (n2, Emain, Kmain)"
+    where mainc: "compile_proc \<Gamma> \<Pi> mnm (proc_decl_of [] main) n1 = (n2, Emain, Kmain)"
     by (metis prod_cases3)
-  have "intra (compile_prog \<Pi> ps mnm main) = Eprocs \<union> Emain
-      \<and> calls (compile_prog \<Pi> ps mnm main) = Kprocs \<union> Kmain"
+  have "intra (compile_prog \<Gamma> \<Pi> ps mnm main) = Eprocs \<union> Emain
+      \<and> calls (compile_prog \<Gamma> \<Pi> ps mnm main) = Kprocs \<union> Kmain"
     unfolding compile_prog_def by (simp add: procs mainc Let_def)
   with procs mainc show ?thesis using that by blast
 qed
@@ -478,14 +478,14 @@ text \<open>In a whole compiled program \<^term>\<open>FunctionEntry r\<close> h
   callees are node-disjoint (\<open>mnm \<notin> set ps\<close>), and each contributes a single entry edge.\<close>
 lemma compile_prog_entry_out_unique:
   assumes wf: "wf_compile_input source_global \<Pi> ps mnm main"
-    and e1: "(FunctionEntry r, a1, v1) \<in> intra (compile_prog \<Pi> ps mnm main)"
-    and e2: "(FunctionEntry r, a2, v2) \<in> intra (compile_prog \<Pi> ps mnm main)"
+    and e1: "(FunctionEntry r, a1, v1) \<in> intra (compile_prog \<Gamma> \<Pi> ps mnm main)"
+    and e2: "(FunctionEntry r, a2, v2) \<in> intra (compile_prog \<Gamma> \<Pi> ps mnm main)"
   shows "v1 = v2"
 proof -
   obtain n1 Eprocs Kprocs n2 Emain Kmain where
-    procs: "compile_procs \<Pi> ps 0 = (n1, Eprocs, Kprocs)"
-    and mainc: "compile_proc \<Pi> mnm (proc_decl_of [] main) n1 = (n2, Emain, Kmain)"
-    and gi: "intra (compile_prog \<Pi> ps mnm main) = Eprocs \<union> Emain"
+    procs: "compile_procs \<Gamma> \<Pi> ps 0 = (n1, Eprocs, Kprocs)"
+    and mainc: "compile_proc \<Gamma> \<Pi> mnm (proc_decl_of [] main) n1 = (n2, Emain, Kmain)"
+    and gi: "intra (compile_prog \<Gamma> \<Pi> ps mnm main) = Eprocs \<union> Emain"
     by (rule compile_prog_intra_split)
   have distinct: "distinct ps" and mnmnotin: "mnm \<notin> set ps"
     using wf unfolding wf_compile_input_def by auto
@@ -512,16 +512,16 @@ subsection \<open>Whole-program edge shapes\<close>
 text \<open>No intra edge sources from a \<^term>\<open>FunctionResult\<close>, a call sources from a \<^term>\<open>Statement\<close>,
   and a \<^term>\<open>FunctionEntry\<close> out-edge belongs to a declared procedure.\<close>
 lemma compile_proc_no_result_source:
-  assumes cp: "compile_proc \<Pi> p decl n = (n', E, K)"
+  assumes cp: "compile_proc \<Gamma> \<Pi> p decl n = (n', E, K)"
     and e: "(FunctionResult r, a, v) \<in> E"
   shows False
 proof -
   from cp obtain Eb where
-    cb: "compile \<Pi> p (body decl) (Statement (n + csize (body decl))) n
+    cb: "compile \<Gamma> \<Pi> p (body decl) (Statement (n + csize (body decl))) n
            = (n + csize (body decl), Statement n, Eb, K)"
     and E: "E = insert (FunctionEntry p, EA_Nop, Statement n)
               (if falls_through (body decl)
-               then insert (Statement (n + csize (body decl)), EA_Ret None p, FunctionResult p) Eb
+               then insert (Statement (n + csize (body decl)), EA_Ret None p (proc_ret_kind \<Pi> p), FunctionResult p) Eb
                else Eb)"
     by (rule compile_procE)
   have body: "\<And>b w. (FunctionResult r, b, w) \<notin> Eb"
@@ -531,7 +531,7 @@ proof -
 qed
 
 lemma compile_procs_no_result_source:
-  assumes cp: "compile_procs \<Pi> ps n = (n', E, K)"
+  assumes cp: "compile_procs \<Gamma> \<Pi> ps n = (n', E, K)"
     and e: "(FunctionResult r, a, v) \<in> E"
   shows False
   using cp e
@@ -542,12 +542,12 @@ next
   show ?case
   proof (cases "\<Pi> p")
     case None
-    with Cons.prems have "compile_procs \<Pi> ps n = (n', E, K)" by simp
+    with Cons.prems have "compile_procs \<Gamma> \<Pi> ps n = (n', E, K)" by simp
     then show ?thesis using Cons.IH Cons.prems(2) by blast
   next
     case (Some decl)
-    obtain n1 E0 K0 n2 E' K' where cp0: "compile_proc \<Pi> p decl n = (n1, E0, K0)"
-      and rest: "compile_procs \<Pi> ps n1 = (n2, E', K')"
+    obtain n1 E0 K0 n2 E' K' where cp0: "compile_proc \<Gamma> \<Pi> p decl n = (n1, E0, K0)"
+      and rest: "compile_procs \<Gamma> \<Pi> ps n1 = (n2, E', K')"
       and E: "E = E0 \<union> E'"
       using Cons.prems(1) Some by (auto split: prod.splits)
     from Cons.prems(2) E consider "(FunctionResult r, a, v) \<in> E0"
@@ -562,21 +562,21 @@ next
 qed
 
 lemma compile_procs_result_target:
-  assumes comp: "compile_procs \<Pi> ps n = (n', E, K)"
+  assumes comp: "compile_procs \<Gamma> \<Pi> ps n = (n', E, K)"
     and edge: "(u, a, FunctionResult q) \<in> E"
-  shows "\<exists>e. a = EA_Ret e q"
+  shows "\<exists>e rk. a = EA_Ret e q rk"
   using comp edge
   by (induction ps arbitrary: n n' E K)
      (auto split: option.splits prod.splits dest: compile_proc_result_target)
 
 lemma compile_prog_result_target:
-  assumes edge: "(u, a, FunctionResult q) \<in> intra (compile_prog \<Pi> ps mnm main)"
-  shows "\<exists>e. a = EA_Ret e q"
+  assumes edge: "(u, a, FunctionResult q) \<in> intra (compile_prog \<Gamma> \<Pi> ps mnm main)"
+  shows "\<exists>e rk. a = EA_Ret e q rk"
 proof -
   obtain n1 Eprocs Kprocs n2 Emain Kmain where
-    procs: "compile_procs \<Pi> ps 0 = (n1, Eprocs, Kprocs)"
-    and mainc: "compile_proc \<Pi> mnm (proc_decl_of [] main) n1 = (n2, Emain, Kmain)"
-    and E: "intra (compile_prog \<Pi> ps mnm main) = Eprocs \<union> Emain"
+    procs: "compile_procs \<Gamma> \<Pi> ps 0 = (n1, Eprocs, Kprocs)"
+    and mainc: "compile_proc \<Gamma> \<Pi> mnm (proc_decl_of [] main) n1 = (n2, Emain, Kmain)"
+    and E: "intra (compile_prog \<Gamma> \<Pi> ps mnm main) = Eprocs \<union> Emain"
     by (rule compile_prog_intra_split)
   from edge E consider "(u, a, FunctionResult q) \<in> Eprocs"
     | "(u, a, FunctionResult q) \<in> Emain" by auto
@@ -591,13 +591,13 @@ proof -
 qed
 
 lemma compile_prog_no_result_source:
-  "(FunctionResult r, a, v) \<notin> intra (compile_prog \<Pi> ps mnm main)"
+  "(FunctionResult r, a, v) \<notin> intra (compile_prog \<Gamma> \<Pi> ps mnm main)"
 proof (rule notI)
-  assume e: "(FunctionResult r, a, v) \<in> intra (compile_prog \<Pi> ps mnm main)"
+  assume e: "(FunctionResult r, a, v) \<in> intra (compile_prog \<Gamma> \<Pi> ps mnm main)"
   obtain n1 Eprocs Kprocs n2 Emain Kmain where
-    procs: "compile_procs \<Pi> ps 0 = (n1, Eprocs, Kprocs)"
-    and mainc: "compile_proc \<Pi> mnm (proc_decl_of [] main) n1 = (n2, Emain, Kmain)"
-    and E: "intra (compile_prog \<Pi> ps mnm main) = Eprocs \<union> Emain"
+    procs: "compile_procs \<Gamma> \<Pi> ps 0 = (n1, Eprocs, Kprocs)"
+    and mainc: "compile_proc \<Gamma> \<Pi> mnm (proc_decl_of [] main) n1 = (n2, Emain, Kmain)"
+    and E: "intra (compile_prog \<Gamma> \<Pi> ps mnm main) = Eprocs \<union> Emain"
     by (rule compile_prog_intra_split)
   from e E consider "(FunctionResult r, a, v) \<in> Eprocs"
     | "(FunctionResult r, a, v) \<in> Emain" by auto
@@ -612,12 +612,12 @@ proof (rule notI)
 qed
 
 lemma compile_proc_calls_source_stmt:
-  assumes cp: "compile_proc \<Pi> p decl n = (n', E, K)"
+  assumes cp: "compile_proc \<Gamma> \<Pi> p decl n = (n', E, K)"
     and e: "(u, ce, tgt, af) \<in> K"
   shows "\<exists>k. u = Statement k"
 proof -
   from cp obtain Eb where
-    cb: "compile \<Pi> p (body decl) (Statement (n + csize (body decl))) n
+    cb: "compile \<Gamma> \<Pi> p (body decl) (Statement (n + csize (body decl))) n
            = (n + csize (body decl), Statement n, Eb, K)"
     by (rule compile_procE)
   show ?thesis using compile_K_shape[OF cb e] by blast
@@ -627,13 +627,13 @@ qed
    proofs obtain the witness directly instead of case-splitting on u and reproving the
    two dead cases false each time. *)
 lemma compile_proc_calls_source_stmtE:
-  assumes cp: "compile_proc \<Pi> p decl n = (n', E, K)"
+  assumes cp: "compile_proc \<Gamma> \<Pi> p decl n = (n', E, K)"
     and e: "(u, ce, tgt, af) \<in> K"
   obtains k where "u = Statement k"
   using compile_proc_calls_source_stmt[OF cp e] by blast
 
 lemma compile_procs_calls_source_stmt:
-  assumes cp: "compile_procs \<Pi> ps n = (n', E, K)"
+  assumes cp: "compile_procs \<Gamma> \<Pi> ps n = (n', E, K)"
     and e: "(u, ce, tgt, af) \<in> K"
   shows "\<exists>k. u = Statement k"
   using cp e
@@ -644,12 +644,12 @@ next
   show ?case
   proof (cases "\<Pi> p")
     case None
-    with Cons.prems have "compile_procs \<Pi> ps n = (n', E, K)" by simp
+    with Cons.prems have "compile_procs \<Gamma> \<Pi> ps n = (n', E, K)" by simp
     then show ?thesis using Cons.IH Cons.prems(2) by blast
   next
     case (Some decl)
-    obtain n1 E0 K0 n2 E' K' where cp0: "compile_proc \<Pi> p decl n = (n1, E0, K0)"
-      and rest: "compile_procs \<Pi> ps n1 = (n2, E', K')"
+    obtain n1 E0 K0 n2 E' K' where cp0: "compile_proc \<Gamma> \<Pi> p decl n = (n1, E0, K0)"
+      and rest: "compile_procs \<Gamma> \<Pi> ps n1 = (n2, E', K')"
       and K: "K = K0 \<union> K'"
       using Cons.prems(1) Some by (auto split: prod.splits)
     from Cons.prems(2) K consider "(u, ce, tgt, af) \<in> K0" | "(u, ce, tgt, af) \<in> K'" by auto
@@ -663,13 +663,13 @@ next
 qed
 
 lemma compile_procs_calls_source_stmtE:
-  assumes cp: "compile_procs \<Pi> ps n = (n', E, K)"
+  assumes cp: "compile_procs \<Gamma> \<Pi> ps n = (n', E, K)"
     and e: "(u, ce, tgt, af) \<in> K"
   obtains k where "u = Statement k"
   using compile_procs_calls_source_stmt[OF cp e] by blast
 
 lemma compile_procs_call_target_declared:
-  assumes comp: "compile_procs \<Pi> ps n = (n', E, K)"
+  assumes comp: "compile_procs \<Gamma> \<Pi> ps n = (n', E, K)"
     and decls: "!!p decl. \<Pi> p = Some decl ==> wf_proc_decl source_global \<Pi> decl"
     and edge: "(u, ce, FunctionEntry q, af) \<in> K"
   shows "\<Pi> q \<noteq> None"
@@ -680,13 +680,13 @@ lemma compile_procs_call_target_declared:
 
 lemma compile_prog_call_target_declared:
   assumes wf: "wf_compile_input source_global \<Pi> ps mnm main"
-    and edge: "(u, ce, FunctionEntry q, af) \<in> calls (compile_prog \<Pi> ps mnm main)"
+    and edge: "(u, ce, FunctionEntry q, af) \<in> calls (compile_prog \<Gamma> \<Pi> ps mnm main)"
   shows "\<Pi> q \<noteq> None"
 proof -
   obtain n1 Eprocs Kprocs n2 Emain Kmain where
-    procs: "compile_procs \<Pi> ps 0 = (n1, Eprocs, Kprocs)"
-    and mainc: "compile_proc \<Pi> mnm (proc_decl_of [] main) n1 = (n2, Emain, Kmain)"
-    and K: "calls (compile_prog \<Pi> ps mnm main) = Kprocs \<union> Kmain"
+    procs: "compile_procs \<Gamma> \<Pi> ps 0 = (n1, Eprocs, Kprocs)"
+    and mainc: "compile_proc \<Gamma> \<Pi> mnm (proc_decl_of [] main) n1 = (n2, Emain, Kmain)"
+    and K: "calls (compile_prog \<Gamma> \<Pi> ps mnm main) = Kprocs \<union> Kmain"
     by (rule compile_prog_intra_split)
   have decls: "\<And>p decl. \<Pi> p = Some decl \<Longrightarrow> wf_proc_decl source_global \<Pi> decl"
     by (rule wf_compile_input_decl[OF wf])
@@ -706,13 +706,13 @@ proof -
 qed
 
 lemma compile_prog_calls_source_stmt:
-  "(u, ce, tgt, af) \<in> calls (compile_prog \<Pi> ps mnm main) \<Longrightarrow> \<exists>k. u = Statement k"
+  "(u, ce, tgt, af) \<in> calls (compile_prog \<Gamma> \<Pi> ps mnm main) \<Longrightarrow> \<exists>k. u = Statement k"
 proof -
-  assume e: "(u, ce, tgt, af) \<in> calls (compile_prog \<Pi> ps mnm main)"
+  assume e: "(u, ce, tgt, af) \<in> calls (compile_prog \<Gamma> \<Pi> ps mnm main)"
   obtain n1 Eprocs Kprocs n2 Emain Kmain where
-    procs: "compile_procs \<Pi> ps 0 = (n1, Eprocs, Kprocs)"
-    and mainc: "compile_proc \<Pi> mnm (proc_decl_of [] main) n1 = (n2, Emain, Kmain)"
-    and K: "calls (compile_prog \<Pi> ps mnm main) = Kprocs \<union> Kmain"
+    procs: "compile_procs \<Gamma> \<Pi> ps 0 = (n1, Eprocs, Kprocs)"
+    and mainc: "compile_proc \<Gamma> \<Pi> mnm (proc_decl_of [] main) n1 = (n2, Emain, Kmain)"
+    and K: "calls (compile_prog \<Gamma> \<Pi> ps mnm main) = Kprocs \<union> Kmain"
     by (rule compile_prog_intra_split)
   from e K consider "(u, ce, tgt, af) \<in> Kprocs" | "(u, ce, tgt, af) \<in> Kmain" by auto
   then show "\<exists>k. u = Statement k"
@@ -727,13 +727,13 @@ qed
 
 lemma compile_prog_entry_declared:
   assumes wf: "wf_compile_input source_global \<Pi> ps mnm main"
-    and e: "(FunctionEntry p, a, v) \<in> intra (compile_prog \<Pi> ps mnm main)"
+    and e: "(FunctionEntry p, a, v) \<in> intra (compile_prog \<Gamma> \<Pi> ps mnm main)"
   shows "\<exists>d. \<Pi> p = Some d"
 proof -
   obtain n1 Eprocs Kprocs n2 Emain Kmain where
-    procs: "compile_procs \<Pi> ps 0 = (n1, Eprocs, Kprocs)"
-    and mainc: "compile_proc \<Pi> mnm (proc_decl_of [] main) n1 = (n2, Emain, Kmain)"
-    and E: "intra (compile_prog \<Pi> ps mnm main) = Eprocs \<union> Emain"
+    procs: "compile_procs \<Gamma> \<Pi> ps 0 = (n1, Eprocs, Kprocs)"
+    and mainc: "compile_proc \<Gamma> \<Pi> mnm (proc_decl_of [] main) n1 = (n2, Emain, Kmain)"
+    and E: "intra (compile_prog \<Gamma> \<Pi> ps mnm main) = Eprocs \<union> Emain"
     by (rule compile_prog_intra_split)
   have setps: "set ps = {p. \<Pi> p \<noteq> None} - {mnm}"
     using wf unfolding wf_compile_input_def by auto
@@ -757,7 +757,7 @@ qed
 subsection \<open>Edges stay in the activation fragment\<close>
 
 lemma compile_proc_intra_source_range:
-  assumes cp: "compile_proc \<Pi> p decl n = (n', E, K)"
+  assumes cp: "compile_proc \<Gamma> \<Pi> p decl n = (n', E, K)"
     and e: "(Statement k, a, v) \<in> E"
   shows "k \<in> {n..<n'}"
 proof -
@@ -766,7 +766,7 @@ proof -
 qed
 
 lemma compile_proc_calls_source_range:
-  assumes cp: "compile_proc \<Pi> p decl n = (n', E, K)"
+  assumes cp: "compile_proc \<Gamma> \<Pi> p decl n = (n', E, K)"
     and e: "(Statement k, ce, tgt, af) \<in> K"
   shows "k \<in> {n..<n'}"
 proof -
@@ -775,7 +775,7 @@ proof -
 qed
 
 lemma compile_procs_intra_source_range:
-  assumes cp: "compile_procs \<Pi> ps n = (n', E, K)"
+  assumes cp: "compile_procs \<Gamma> \<Pi> ps n = (n', E, K)"
     and e: "(Statement k, a, v) \<in> E"
   shows "k \<in> {n..<n'}"
 proof -
@@ -784,7 +784,7 @@ proof -
 qed
 
 lemma compile_procs_calls_source_range:
-  assumes cp: "compile_procs \<Pi> ps n = (n', E, K)"
+  assumes cp: "compile_procs \<Gamma> \<Pi> ps n = (n', E, K)"
     and e: "(Statement k, ce, tgt, af) \<in> K"
   shows "k \<in> {n..<n'}"
 proof -
@@ -832,8 +832,8 @@ next
 qed
 
 lemma compile_procs_tail_intra_not_head_pfn:
-  assumes cp: "compile_proc \<Pi> p decl n = (n1, E0, K0)"
-    and rest: "compile_procs \<Pi> ps n1 = (n2, E', K')"
+  assumes cp: "compile_proc \<Gamma> \<Pi> p decl n = (n1, E0, K0)"
+    and rest: "compile_procs \<Gamma> \<Pi> ps n1 = (n2, E', K')"
     and distinct: "distinct (p # ps)"
     and e: "(u, a, v) \<in> E'"
     and uin: "u \<in> pfn p n n1"
@@ -846,8 +846,8 @@ proof (rule compile_frag_no_edge_into_other_pfn
 qed
 
 lemma compile_procs_tail_calls_not_head_pfn:
-  assumes cp: "compile_proc \<Pi> p decl n = (n1, E0, K0)"
-    and rest: "compile_procs \<Pi> ps n1 = (n2, E', K')"
+  assumes cp: "compile_proc \<Gamma> \<Pi> p decl n = (n1, E0, K0)"
+    and rest: "compile_procs \<Gamma> \<Pi> ps n1 = (n2, E', K')"
     and distinct: "distinct (p # ps)"
     and e: "(u, ce, tgt, af) \<in> K'"
     and uin: "u \<in> pfn p n n1"
@@ -861,7 +861,7 @@ proof -
 qed
 
 lemma compile_proc_head_intra_not_tail_pfn:
-  assumes cp: "compile_proc \<Pi> p decl n = (n1, E0, K0)"
+  assumes cp: "compile_proc \<Gamma> \<Pi> p decl n = (n1, E0, K0)"
     and e: "(u, a, v) \<in> E0"
     and neq: "p \<noteq> r"
     and lower: "n1 \<le> m"
@@ -875,7 +875,7 @@ proof (rule compile_frag_no_edge_into_other_pfn
 qed
 
 lemma compile_proc_head_calls_not_tail_pfn:
-  assumes cp: "compile_proc \<Pi> p decl n = (n1, E0, K0)"
+  assumes cp: "compile_proc \<Gamma> \<Pi> p decl n = (n1, E0, K0)"
     and e: "(u, ce, tgt, af) \<in> K0"
     and lower: "n1 \<le> m"
     and uin: "u \<in> pfn r m m'"
@@ -890,10 +890,10 @@ qed
 
 
 lemma compile_procs_intra_owner:
-  assumes cps: "compile_procs \<Pi> ps n = (n', E, K)"
+  assumes cps: "compile_procs \<Gamma> \<Pi> ps n = (n', E, K)"
     and distinct: "distinct ps"
     and decl: "\<Pi> r = Some d"
-    and cb: "compile_proc \<Pi> r d m = (m', Ep, Kp)"
+    and cb: "compile_proc \<Gamma> \<Pi> r d m = (m', Ep, Kp)"
     and ent: "(FunctionEntry r, EA_Nop, Statement m) \<in> E"
     and uin: "u \<in> pfn r m m'"
     and edge: "(u, a, v) \<in> E"
@@ -906,12 +906,12 @@ next
   show ?case
   proof (cases "\<Pi> q")
     case None
-    with Cons.prems have cps': "compile_procs \<Pi> qs n = (n', E, K)" by simp
+    with Cons.prems have cps': "compile_procs \<Gamma> \<Pi> qs n = (n', E, K)" by simp
     show ?thesis using Cons.IH[OF cps'] Cons.prems None by simp
   next
     case (Some dq)
-    obtain n1 E0 K0 n2 E' K' where cp0: "compile_proc \<Pi> q dq n = (n1, E0, K0)"
-      and rest: "compile_procs \<Pi> qs n1 = (n2, E', K')"
+    obtain n1 E0 K0 n2 E' K' where cp0: "compile_proc \<Gamma> \<Pi> q dq n = (n1, E0, K0)"
+      and rest: "compile_procs \<Gamma> \<Pi> qs n1 = (n2, E', K')"
       and E: "E = E0 \<union> E'"
       using Cons.prems(1) Some by (auto split: prod.splits)
     show ?thesis
@@ -975,10 +975,10 @@ next
 qed
 
 lemma compile_procs_calls_owner:
-  assumes cps: "compile_procs \<Pi> ps n = (n', E, K)"
+  assumes cps: "compile_procs \<Gamma> \<Pi> ps n = (n', E, K)"
     and distinct: "distinct ps"
     and decl: "\<Pi> r = Some d"
-    and cb: "compile_proc \<Pi> r d m = (m', Ep, Kp)"
+    and cb: "compile_proc \<Gamma> \<Pi> r d m = (m', Ep, Kp)"
     and ent: "(FunctionEntry r, EA_Nop, Statement m) \<in> E"
     and uin: "u \<in> pfn r m m'"
     and edge: "(u, ce, tgt, af) \<in> K"
@@ -991,12 +991,12 @@ next
   show ?case
   proof (cases "\<Pi> q")
     case None
-    with Cons.prems have cps': "compile_procs \<Pi> qs n = (n', E, K)" by simp
+    with Cons.prems have cps': "compile_procs \<Gamma> \<Pi> qs n = (n', E, K)" by simp
     show ?thesis using Cons.IH[OF cps'] Cons.prems None by simp
   next
     case (Some dq)
-    obtain n1 E0 K0 n2 E' K' where cp0: "compile_proc \<Pi> q dq n = (n1, E0, K0)"
-      and rest: "compile_procs \<Pi> qs n1 = (n2, E', K')"
+    obtain n1 E0 K0 n2 E' K' where cp0: "compile_proc \<Gamma> \<Pi> q dq n = (n1, E0, K0)"
+      and rest: "compile_procs \<Gamma> \<Pi> qs n1 = (n2, E', K')"
       and E: "E = E0 \<union> E'" and K: "K = K0 \<union> K'"
       using Cons.prems(1) Some by (auto split: prod.splits)
     show ?thesis
@@ -1059,7 +1059,7 @@ next
 qed
 
 lemma compile_procs_head_intra_not_tail_pfn:
-  assumes procs: "compile_procs \<Pi> ps n = (n1, E0, K0)"
+  assumes procs: "compile_procs \<Gamma> \<Pi> ps n = (n1, E0, K0)"
     and e: "(u, a, v) \<in> E0"
     and absent: "r \<notin> set ps"
     and lower: "n1 \<le> m"
@@ -1073,7 +1073,7 @@ proof (rule compile_frag_no_edge_into_other_pfn
 qed
 
 lemma compile_proc_tail_intra_not_head_pfn:
-  assumes cp: "compile_proc \<Pi> mnm decl n1 = (n2, E0, K0)"
+  assumes cp: "compile_proc \<Gamma> \<Pi> mnm decl n1 = (n2, E0, K0)"
     and e: "(u, a, v) \<in> E0"
     and neq: "mnm \<noteq> r"
     and upper: "m' \<le> n1"
@@ -1087,7 +1087,7 @@ proof (rule compile_frag_no_edge_into_other_pfn
 qed
 
 lemma compile_procs_head_calls_not_tail_pfn:
-  assumes procs: "compile_procs \<Pi> ps n = (n1, E0, K0)"
+  assumes procs: "compile_procs \<Gamma> \<Pi> ps n = (n1, E0, K0)"
     and e: "(u, ce, tgt, af) \<in> K0"
     and lower: "n1 \<le> m"
     and uin: "u \<in> pfn r m m'"
@@ -1101,7 +1101,7 @@ proof -
 qed
 
 lemma compile_proc_tail_calls_not_head_pfn:
-  assumes cp: "compile_proc \<Pi> mnm decl n1 = (n2, E0, K0)"
+  assumes cp: "compile_proc \<Gamma> \<Pi> mnm decl n1 = (n2, E0, K0)"
     and e: "(u, ce, tgt, af) \<in> K0"
     and upper: "m' \<le> n1"
     and uin: "u \<in> pfn r m m'"
@@ -1115,15 +1115,15 @@ proof -
 qed
 
 lemma compile_procs_fragment_bounds_from_entry:
-  assumes procs: "compile_procs \<Pi> ps n = (n', E, K)"
+  assumes procs: "compile_procs \<Gamma> \<Pi> ps n = (n', E, K)"
     and distinct: "distinct ps"
     and decl: "\<Pi> r = Some d"
-    and cb: "compile_proc \<Pi> r d m = (m', Ep, Kp)"
+    and cb: "compile_proc \<Gamma> \<Pi> r d m = (m', Ep, Kp)"
     and ent: "(FunctionEntry r, EA_Nop, Statement m) \<in> E"
     and rin: "r \<in> set ps"
   shows "m' \<le> n'"
 proof -
-  obtain m0 m0' Ep0 Kp0 where cp0: "compile_proc \<Pi> r d m0 = (m0', Ep0, Kp0)"
+  obtain m0 m0' Ep0 Kp0 where cp0: "compile_proc \<Gamma> \<Pi> r d m0 = (m0', Ep0, Kp0)"
     and bnds: "n \<le> m0" "m0' \<le> n'" and sub: "Ep0 \<subseteq> E" "Kp0 \<subseteq> K"
     using compile_procs_member[OF procs rin decl] by blast
   have ent0: "(FunctionEntry r, EA_Nop, Statement m0) \<in> E"
@@ -1141,17 +1141,17 @@ text \<open>Given a genuine procedure fragment (declared body, included edges, e
 lemma frag_edge_intra:
   assumes wf: "wf_compile_input source_global \<Pi> ps mnm main"
     and decl: "\<Pi> r = Some d"
-    and cb: "compile_proc \<Pi> r d m = (m', Ep, Kp)"
-    and ent: "(FunctionEntry r, EA_Nop, Statement m) \<in> intra (compile_prog \<Pi> ps mnm main)"
+    and cb: "compile_proc \<Gamma> \<Pi> r d m = (m', Ep, Kp)"
+    and ent: "(FunctionEntry r, EA_Nop, Statement m) \<in> intra (compile_prog \<Gamma> \<Pi> ps mnm main)"
     and uin: "u \<in> pfn r m m'"
-    and e: "(u, a, v) \<in> intra (compile_prog \<Pi> ps mnm main)"
+    and e: "(u, a, v) \<in> intra (compile_prog \<Gamma> \<Pi> ps mnm main)"
   shows "v \<in> pfn r m m'"
 proof -
   obtain n1 Eprocs Kprocs n2 Emain Kmain where
-      procs: "compile_procs \<Pi> ps 0 = (n1, Eprocs, Kprocs)"
-    and mainc: "compile_proc \<Pi> mnm (proc_decl_of [] main) n1 = (n2, Emain, Kmain)"
-    and EI: "intra (compile_prog \<Pi> ps mnm main) = Eprocs \<union> Emain"
-    and KC: "calls (compile_prog \<Pi> ps mnm main) = Kprocs \<union> Kmain"
+      procs: "compile_procs \<Gamma> \<Pi> ps 0 = (n1, Eprocs, Kprocs)"
+    and mainc: "compile_proc \<Gamma> \<Pi> mnm (proc_decl_of [] main) n1 = (n2, Emain, Kmain)"
+    and EI: "intra (compile_prog \<Gamma> \<Pi> ps mnm main) = Eprocs \<union> Emain"
+    and KC: "calls (compile_prog \<Gamma> \<Pi> ps mnm main) = Kprocs \<union> Kmain"
     by (rule compile_prog_intra_split)
   have distinct: "distinct ps" and mnmnotin: "mnm \<notin> set ps"
     and setps: "set ps = {p. \<Pi> p \<noteq> None} - {mnm}"
@@ -1159,11 +1159,11 @@ proof -
   show ?thesis
   proof (cases "r = mnm")
     case True
-    have entmain': "(FunctionEntry mnm, EA_Nop, Statement n1) \<in> intra (compile_prog \<Pi> ps mnm main)"
+    have entmain': "(FunctionEntry mnm, EA_Nop, Statement n1) \<in> intra (compile_prog \<Gamma> \<Pi> ps mnm main)"
       using EI compile_proc_entry_edge[OF mainc] by auto
     have dd: "d = proc_decl_of [] main"
       using decl True wf_compile_input_main_exists[OF wf] by simp
-    have entr: "(FunctionEntry mnm, EA_Nop, Statement m) \<in> intra (compile_prog \<Pi> ps mnm main)"
+    have entr: "(FunctionEntry mnm, EA_Nop, Statement m) \<in> intra (compile_prog \<Gamma> \<Pi> ps mnm main)"
       using ent True by simp
     have mn: "m = n1"
       using compile_prog_entry_out_unique[OF wf entr entmain'] by simp
@@ -1216,17 +1216,17 @@ qed
 lemma frag_edge_calls:
   assumes wf: "wf_compile_input source_global \<Pi> ps mnm main"
     and decl: "\<Pi> r = Some d"
-    and cb: "compile_proc \<Pi> r d m = (m', Ep, Kp)"
-    and ent: "(FunctionEntry r, EA_Nop, Statement m) \<in> intra (compile_prog \<Pi> ps mnm main)"
+    and cb: "compile_proc \<Gamma> \<Pi> r d m = (m', Ep, Kp)"
+    and ent: "(FunctionEntry r, EA_Nop, Statement m) \<in> intra (compile_prog \<Gamma> \<Pi> ps mnm main)"
     and uin: "u \<in> pfn r m m'"
-    and e: "(u, ce, tgt, af) \<in> calls (compile_prog \<Pi> ps mnm main)"
+    and e: "(u, ce, tgt, af) \<in> calls (compile_prog \<Gamma> \<Pi> ps mnm main)"
   shows "af \<in> pfn r m m'"
 proof -
   obtain n1 Eprocs Kprocs n2 Emain Kmain where
-      procs: "compile_procs \<Pi> ps 0 = (n1, Eprocs, Kprocs)"
-    and mainc: "compile_proc \<Pi> mnm (proc_decl_of [] main) n1 = (n2, Emain, Kmain)"
-    and EI: "intra (compile_prog \<Pi> ps mnm main) = Eprocs \<union> Emain"
-    and KC: "calls (compile_prog \<Pi> ps mnm main) = Kprocs \<union> Kmain"
+      procs: "compile_procs \<Gamma> \<Pi> ps 0 = (n1, Eprocs, Kprocs)"
+    and mainc: "compile_proc \<Gamma> \<Pi> mnm (proc_decl_of [] main) n1 = (n2, Emain, Kmain)"
+    and EI: "intra (compile_prog \<Gamma> \<Pi> ps mnm main) = Eprocs \<union> Emain"
+    and KC: "calls (compile_prog \<Gamma> \<Pi> ps mnm main) = Kprocs \<union> Kmain"
     by (rule compile_prog_intra_split)
   have distinct: "distinct ps" and mnmnotin: "mnm \<notin> set ps"
     and setps: "set ps = {p. \<Pi> p \<noteq> None} - {mnm}"
@@ -1234,11 +1234,11 @@ proof -
   show ?thesis
   proof (cases "r = mnm")
     case True
-    have entmain': "(FunctionEntry mnm, EA_Nop, Statement n1) \<in> intra (compile_prog \<Pi> ps mnm main)"
+    have entmain': "(FunctionEntry mnm, EA_Nop, Statement n1) \<in> intra (compile_prog \<Gamma> \<Pi> ps mnm main)"
       using EI compile_proc_entry_edge[OF mainc] by auto
     have dd: "d = proc_decl_of [] main"
       using decl True wf_compile_input_main_exists[OF wf] by simp
-    have entr: "(FunctionEntry mnm, EA_Nop, Statement m) \<in> intra (compile_prog \<Pi> ps mnm main)"
+    have entr: "(FunctionEntry mnm, EA_Nop, Statement m) \<in> intra (compile_prog \<Gamma> \<Pi> ps mnm main)"
       using ent True by simp
     have mn: "m = n1"
       using compile_prog_entry_out_unique[OF wf entr entmain'] by simp
@@ -1295,21 +1295,21 @@ lemma compile_prog_proc_frag:
   assumes wf: "wf_compile_input source_global \<Pi> ps mnm main"
     and decl: "\<Pi> q = Some d"
   obtains m m' Ep Kp where
-    "compile_proc \<Pi> q d m = (m', Ep, Kp)"
-    "(FunctionEntry q, EA_Nop, Statement m) \<in> intra (compile_prog \<Pi> ps mnm main)"
+    "compile_proc \<Gamma> \<Pi> q d m = (m', Ep, Kp)"
+    "(FunctionEntry q, EA_Nop, Statement m) \<in> intra (compile_prog \<Gamma> \<Pi> ps mnm main)"
 proof -
   obtain n1 Eprocs Kprocs n2 Emain Kmain where
-      procs: "compile_procs \<Pi> ps 0 = (n1, Eprocs, Kprocs)"
-    and mainc: "compile_proc \<Pi> mnm (proc_decl_of [] main) n1 = (n2, Emain, Kmain)"
-    and EI: "intra (compile_prog \<Pi> ps mnm main) = Eprocs \<union> Emain"
-    and KC: "calls (compile_prog \<Pi> ps mnm main) = Kprocs \<union> Kmain"
+      procs: "compile_procs \<Gamma> \<Pi> ps 0 = (n1, Eprocs, Kprocs)"
+    and mainc: "compile_proc \<Gamma> \<Pi> mnm (proc_decl_of [] main) n1 = (n2, Emain, Kmain)"
+    and EI: "intra (compile_prog \<Gamma> \<Pi> ps mnm main) = Eprocs \<union> Emain"
+    and KC: "calls (compile_prog \<Gamma> \<Pi> ps mnm main) = Kprocs \<union> Kmain"
     by (rule compile_prog_intra_split)
   show thesis
   proof (cases "q = mnm")
     case True
     have dd: "d = proc_decl_of [] main"
       using decl True wf_compile_input_main_exists[OF wf] by simp
-    have "(FunctionEntry q, EA_Nop, Statement n1) \<in> intra (compile_prog \<Pi> ps mnm main)"
+    have "(FunctionEntry q, EA_Nop, Statement n1) \<in> intra (compile_prog \<Gamma> \<Pi> ps mnm main)"
       using EI compile_proc_entry_edge[OF mainc] True by auto
     then show ?thesis using that[of n1 n2 Emain Kmain] mainc True dd by simp
   next
@@ -1317,9 +1317,9 @@ proof -
     have setps: "set ps = {p. \<Pi> p \<noteq> None} - {mnm}"
       using wf unfolding wf_compile_input_def by auto
     have rin: "q \<in> set ps" using decl setps False by auto
-    obtain m m' Ep Kp where cp0: "compile_proc \<Pi> q d m = (m', Ep, Kp)" and sub: "Ep \<subseteq> Eprocs"
+    obtain m m' Ep Kp where cp0: "compile_proc \<Gamma> \<Pi> q d m = (m', Ep, Kp)" and sub: "Ep \<subseteq> Eprocs"
       using compile_procs_member[OF procs rin decl] by blast
-    have "(FunctionEntry q, EA_Nop, Statement m) \<in> intra (compile_prog \<Pi> ps mnm main)"
+    have "(FunctionEntry q, EA_Nop, Statement m) \<in> intra (compile_prog \<Gamma> \<Pi> ps mnm main)"
       using EI sub compile_proc_entry_edge[OF cp0] by auto
     then show ?thesis using that cp0 by blast
   qed
@@ -1329,26 +1329,26 @@ text \<open>\<open>frag_ok u\<close>: the activation \<open>u\<close> either lie
   (declared body, entry wiring, all path nodes in the fragment) or is a single-node activation
   stuck at an undeclared \<^term>\<open>FunctionEntry\<close> --- which can never advance and never reaches a
   \<^term>\<open>FunctionResult\<close>.\<close>
-definition frag_ok :: "proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com \<Rightarrow> ltr \<Rightarrow> bool" where
-  "frag_ok \<Pi> ps mnm main u \<longleftrightarrow>
+definition frag_ok :: "tyenv \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com \<Rightarrow> ltr \<Rightarrow> bool" where
+  "frag_ok \<Gamma> \<Pi> ps mnm main u \<longleftrightarrow>
      (\<exists>r d m m' Ep Kp. \<Pi> r = Some d
-        \<and> compile_proc \<Pi> r d m = (m', Ep, Kp)
-        \<and> (FunctionEntry r, EA_Nop, Statement m) \<in> intra (compile_prog \<Pi> ps mnm main)
+        \<and> compile_proc \<Gamma> \<Pi> r d m = (m', Ep, Kp)
+        \<and> (FunctionEntry r, EA_Nop, Statement m) \<in> intra (compile_prog \<Gamma> \<Pi> ps mnm main)
         \<and> fst (hd (path u)) = FunctionEntry r
         \<and> (\<forall>nd \<in> fst ` set (path u). nd \<in> pfn r m m'))
    \<or> (\<exists>p s. path u = [(FunctionEntry p, s)] \<and> \<Pi> p = None)"
 
 lemma frag_okI_frag:
-  assumes "\<Pi> r = Some d" "compile_proc \<Pi> r d m = (m', Ep, Kp)"
-    "(FunctionEntry r, EA_Nop, Statement m) \<in> intra (compile_prog \<Pi> ps mnm main)"
+  assumes "\<Pi> r = Some d" "compile_proc \<Gamma> \<Pi> r d m = (m', Ep, Kp)"
+    "(FunctionEntry r, EA_Nop, Statement m) \<in> intra (compile_prog \<Gamma> \<Pi> ps mnm main)"
     "fst (hd (path u)) = FunctionEntry r"
     "\<And>nd. nd \<in> fst ` set (path u) \<Longrightarrow> nd \<in> pfn r m m'"
-  shows "frag_ok \<Pi> ps mnm main u"
+  shows "frag_ok \<Gamma> \<Pi> ps mnm main u"
   unfolding frag_ok_def using assms by blast
 
 
 lemma sink_in_path_nodes:
-  "t \<in> valid_ltr gs g S \<Longrightarrow> sink_node t \<in> fst ` set (path t)"
+  "t \<in> valid_ltr \<Gamma> gs g S \<Longrightarrow> sink_node t \<in> fst ` set (path t)"
   using valid_ltr_path_nonempty by (auto simp: sink_node_def)
 
 text \<open>Every activation in the caller chain of a valid trace is fragment-local.  The property is
@@ -1356,31 +1356,31 @@ text \<open>Every activation in the caller chain of a valid trace is fragment-lo
   can read the caller's own fragment (\<open>caller \<in> callers callee\<close>).\<close>
 lemma valid_ltr_frag_callers:
   assumes wf: "wf_compile_input source_global \<Pi> ps mnm main"
-    and t: "t \<in> valid_ltr gs (compile_prog \<Pi> ps mnm main) S"
-  shows "\<forall>u \<in> callers t. frag_ok \<Pi> ps mnm main u"
+    and t: "t \<in> valid_ltr \<Gamma> gs (compile_prog \<Gamma> \<Pi> ps mnm main) S"
+  shows "\<forall>u \<in> callers t. frag_ok \<Gamma> \<Pi> ps mnm main u"
 proof -
-  let ?g = "compile_prog \<Pi> ps mnm main"
+  let ?g = "compile_prog \<Gamma> \<Pi> ps mnm main"
   show ?thesis
   proof (rule caller_chain_closure)
     fix s assume "s \<in> S"
     have mnmdecl: "\<Pi> mnm = Some (proc_decl_of [] main)"
       by (rule wf_compile_input_main_exists[OF wf])
     obtain m m' Ep Kp where
-      cb: "compile_proc \<Pi> mnm (proc_decl_of [] main) m = (m', Ep, Kp)"
+      cb: "compile_proc \<Gamma> \<Pi> mnm (proc_decl_of [] main) m = (m', Ep, Kp)"
       and ent: "(FunctionEntry mnm, EA_Nop, Statement m) \<in> intra ?g"
       by (rule compile_prog_proc_frag[OF wf mnmdecl])
-    show "frag_ok \<Pi> ps mnm main (Root [(cfg_entry ?g, s)])"
+    show "frag_ok \<Gamma> \<Pi> ps mnm main (Root [(cfg_entry ?g, s)])"
       by (rule frag_okI_frag[OF mnmdecl cb ent])
          (simp_all add: inv16_entry_is_main pfn_def)
   next
-    fix t a v s' assume ht: "t \<in> valid_ltr gs ?g S" and ch: "\<forall>u \<in> callers t. frag_ok \<Pi> ps mnm main u"
+    fix t a v s' assume ht: "t \<in> valid_ltr \<Gamma> gs ?g S" and ch: "\<forall>u \<in> callers t. frag_ok \<Gamma> \<Pi> ps mnm main u"
       and e: "(sink_node t, a, v) \<in> intra ?g"
-    have ft: "frag_ok \<Pi> ps mnm main t" using ch callers_refl by blast
-    from ft[unfolded frag_ok_def] show "frag_ok \<Pi> ps mnm main (extend t (v, s'))"
+    have ft: "frag_ok \<Gamma> \<Pi> ps mnm main t" using ch callers_refl by blast
+    from ft[unfolded frag_ok_def] show "frag_ok \<Gamma> \<Pi> ps mnm main (extend t (v, s'))"
     proof (elim disjE exE conjE)
       fix r d mm mm' Ep Kp
       assume decl: "\<Pi> r = Some d"
-        and cb: "compile_proc \<Pi> r d mm = (mm', Ep, Kp)"
+        and cb: "compile_proc \<Gamma> \<Pi> r d mm = (mm', Ep, Kp)"
         and ent: "(FunctionEntry r, EA_Nop, Statement mm) \<in> intra ?g"
         and hd_r: "fst (hd (path t)) = FunctionEntry r"
         and nodes_t: "\<forall>nd \<in> fst ` set (path t). nd \<in> pfn r mm mm'"
@@ -1389,7 +1389,7 @@ proof -
       have v_in: "v \<in> pfn r mm mm'"
         using frag_edge_intra[OF wf decl cb ent snk e] .
       have pne: "path t \<noteq> []" using valid_ltr_path_nonempty[OF ht] .
-      show "frag_ok \<Pi> ps mnm main (extend t (v, s'))"
+      show "frag_ok \<Gamma> \<Pi> ps mnm main (extend t (v, s'))"
         by (rule frag_okI_frag[OF decl cb ent])
            (use hd_r pne nodes_t v_in in \<open>auto simp: hd_append\<close>)
     next
@@ -1397,12 +1397,12 @@ proof -
       have "sink_node t = FunctionEntry q" using stub by (simp add: sink_node_def)
       then have edge: "(FunctionEntry q, a, v) \<in> intra ?g" using e by simp
       have "\<exists>d. \<Pi> q = Some d" using compile_prog_entry_declared[OF wf edge] .
-      then show "frag_ok \<Pi> ps mnm main (extend t (v, s'))" using qnone by simp
+      then show "frag_ok \<Gamma> \<Pi> ps mnm main (extend t (v, s'))" using qnone by simp
     qed
   next
     fix caller dst pars args p cont
     assume e: "(sink_node caller, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls ?g"
-    show "frag_ok \<Pi> ps mnm main
+    show "frag_ok \<Gamma> \<Pi> ps mnm main
             (Call caller [(FunctionEntry p, call_enter gs (CallEdge dst pars args) (sink_store caller))])"
     proof (cases "\<Pi> p")
       case None
@@ -1410,7 +1410,7 @@ proof -
     next
       case (Some d)
       obtain m m' Ep Kp where
-        cb: "compile_proc \<Pi> p d m = (m', Ep, Kp)"
+        cb: "compile_proc \<Gamma> \<Pi> p d m = (m', Ep, Kp)"
         and ent: "(FunctionEntry p, EA_Nop, Statement m) \<in> intra ?g"
         by (rule compile_prog_proc_frag[OF wf Some])
       show ?thesis
@@ -1418,19 +1418,19 @@ proof -
     qed
   next
     fix callee caller p dst pars args cont
-    assume cvcallee: "callee \<in> valid_ltr gs ?g S" and ch: "\<forall>u \<in> callers callee. frag_ok \<Pi> ps mnm main u"
+    assume cvcallee: "callee \<in> valid_ltr \<Gamma> gs ?g S" and ch: "\<forall>u \<in> callers callee. frag_ok \<Gamma> \<Pi> ps mnm main u"
       and cof: "caller_of callee = Some caller" and res: "sink_node callee = FunctionResult p"
       and e: "(sink_node caller, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls ?g"
     have cin: "caller \<in> callers callee" using cof callers_caller_subset callers_refl by blast
-    have cv: "caller \<in> valid_ltr gs ?g S" using valid_ltr_caller_valid[OF cvcallee cof] .
-    have fc: "frag_ok \<Pi> ps mnm main caller" using ch cin by blast
+    have cv: "caller \<in> valid_ltr \<Gamma> gs ?g S" using valid_ltr_caller_valid[OF cvcallee cof] .
+    have fc: "frag_ok \<Gamma> \<Pi> ps mnm main caller" using ch cin by blast
     from fc[unfolded frag_ok_def]
-    show "frag_ok \<Pi> ps mnm main (Resume caller callee
+    show "frag_ok \<Gamma> \<Pi> ps mnm main (Resume caller callee
             (path caller @ [(cont, combine_collect gs dst (sink_store caller) (sink_store callee))]))"
     proof (elim disjE exE conjE)
       fix r d mm mm' Ep Kp
       assume decl: "\<Pi> r = Some d"
-        and cb: "compile_proc \<Pi> r d mm = (mm', Ep, Kp)"
+        and cb: "compile_proc \<Gamma> \<Pi> r d mm = (mm', Ep, Kp)"
         and ent: "(FunctionEntry r, EA_Nop, Statement mm) \<in> intra ?g"
         and hd_r: "fst (hd (path caller)) = FunctionEntry r"
         and nodes_c: "\<forall>nd \<in> fst ` set (path caller). nd \<in> pfn r mm mm'"
@@ -1439,7 +1439,7 @@ proof -
       have cont_in: "cont \<in> pfn r mm mm'"
         using frag_edge_calls[OF wf decl cb ent snk e] .
       have pne: "path caller \<noteq> []" using valid_ltr_path_nonempty[OF cv] .
-      show "frag_ok \<Pi> ps mnm main (Resume caller callee
+      show "frag_ok \<Gamma> \<Pi> ps mnm main (Resume caller callee
               (path caller @ [(cont, combine_collect gs dst (sink_store caller) (sink_store callee))]))"
         by (rule frag_okI_frag[OF decl cb ent])
            (use hd_r pne nodes_c cont_in in \<open>auto simp: hd_append\<close>)
@@ -1449,12 +1449,12 @@ proof -
       then have "(FunctionEntry q, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls ?g"
         using e by simp
       with compile_prog_calls_source_stmt
-      show "frag_ok \<Pi> ps mnm main (Resume caller callee
+      show "frag_ok \<Gamma> \<Pi> ps mnm main (Resume caller callee
               (path caller @ [(cont, combine_collect gs dst (sink_store caller) (sink_store callee))]))"
         by blast
     qed
   next
-    show "t \<in> valid_ltr gs ?g S" by (rule t)
+    show "t \<in> valid_ltr \<Gamma> gs ?g S" by (rule t)
   qed
 qed
 
@@ -1462,12 +1462,12 @@ text \<open>An activation entered at \<^term>\<open>FunctionEntry p\<close> reac
   \<open>p = q\<close>.\<close>
 lemma valid_ltr_entry_result_eq:
   assumes wf: "wf_compile_input source_global \<Pi> ps mnm main"
-    and t: "t \<in> valid_ltr gs (compile_prog \<Pi> ps mnm main) S"
+    and t: "t \<in> valid_ltr \<Gamma> gs (compile_prog \<Gamma> \<Pi> ps mnm main) S"
     and en: "fst (hd (path t)) = FunctionEntry p"
     and sk: "sink_node t = FunctionResult q"
   shows "p = q"
 proof -
-  have "frag_ok \<Pi> ps mnm main t"
+  have "frag_ok \<Gamma> \<Pi> ps mnm main t"
     using valid_ltr_frag_callers[OF wf t] callers_refl by blast
   then show ?thesis unfolding frag_ok_def
   proof (elim disjE exE conjE)

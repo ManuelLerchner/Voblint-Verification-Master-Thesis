@@ -1,28 +1,40 @@
 // PARAM: --analysis interval
-// The concrete value of total here is fixed at 7, so total < 100 genuinely
-// holds -- but the analysis cannot establish it. Mechanism: the loss is on
-// total, not on the entered formal. inc's body writes total := total + n,
-// so total's own value re-enters its next contribution and the chain
-// 0, [0,3], [0,7], ... ascends without bound; Apinis warrowing must cut the
-// upper bound to +inf to terminate. The following narrowing phase recovers
-// the lower bound (total is [3,+inf], not [-inf,+inf]) but not the upper
-// one, so a bound like < 100 stays undecided. n itself is exact at [3,4].
+// The concrete value of total here is fixed at 7, so both checks genuinely
+// hold -- and the context-insensitive analysis establishes neither.
+//
+// Mechanism: the loss is on total, not on the entered formal. inc's body
+// writes total := total + n, so total's own value re-enters its next
+// contribution and the chain 0, [0,3], [0,7], ... ascends without bound;
+// Apinis warrowing must cut the upper bound to terminate. n itself is exact
+// at [3,4].
+//
+// The cut is where the kind enters. +inf is not an int32, so the next
+// total + n reaches the conversion's give-up branch and answers the whole
+// int32 range, taking the lower bound with it -- which is why 0 < total is
+// undecided here and not merely total < 100. Saturating the widening at
+// int32's own maximum, as Goblint's interval widening does, would not
+// recover it either: [0,2147483647] + [3,4] overflows just the same, and the
+// wrapped result has no single-interval representation but the whole range.
+// Under sem.int.signed_overflow=assume_none the addition would keep
+// [3,2147483651] and the lower bound would survive; VIMP freezes wraparound
+// instead, so the whole range is the correct answer.
 //
 // The chain has a single write origin, so the per-origin update rules do
 // not recover it either: they separate contributions from distinct origins
 // before widening, and there is only one origin here to separate.
 //
-// 04-globals/precision/02-global_var.vimp is the same program's decidable
-// half (0 < total, PROVED from the recovered lower bound); only the check
-// that the widening actually costs lives here.
+// Context sensitivity does: under --context entry-state the two call sites
+// keep separate entry states, nothing feeds back into itself, and both
+// checks are decided. 03-global_across_calls_entry_state.vimp is that half.
 
-global total;
-void inc(n) {
+global int32 total;
+void inc(int32 n) {
   total := total + n
 }
 void main() {
   total := 0;
   inc(3);
   inc(4);
-  __voblint_check(total < 100) // UNKNOWN
+  __voblint_check(0 < total);   // UNKNOWN
+  __voblint_check(total < 100)  // UNKNOWN
 }

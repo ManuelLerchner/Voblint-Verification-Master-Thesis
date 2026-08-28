@@ -693,13 +693,17 @@ where
      (case s of (dl, dg, ps) =>
        (top_val, dg, filter (%p. location_is_global (fst p)) ps))"
 
+text \<open>The published return value is converted at the destination's own declared kind,
+  which the call edge records, exactly as the abstract mirror \<^const>\<open>combine_assign_abs\<close>
+  does.\<close>
 definition combine_assign_resolved ::
-  "(vname => bool) => vname option => 'a => ('a::bot) resolved_st
+  "(vname => bool) => typed_var option => 'a => ('a::cast_domain) resolved_st
    => 'a resolved_st"
 where
   "combine_assign_resolved gs dst v s =
      (case dst of None => s
-      | Some x => update_resolved_st s (location_of gs x) v)"
+      | Some tv =>
+          update_resolved_st s (location_of gs (tv_name tv)) (a_cast (tv_kind tv) v))"
 
 lemma eq_resolved_st_combine_assign:
   assumes "eq_resolved_st s t"
@@ -709,8 +713,8 @@ lemma eq_resolved_st_combine_assign:
       simp_all add: assms eq_resolved_st_update)
 
 lift_definition combine_assign_resolved_q ::
-  "(vname => bool) => vname option => 'a => ('a::bot) resolved_st_q
-   => 'a resolved_st_q"
+  "(vname => bool) => typed_var option => 'a
+   => ('a::cast_domain) resolved_st_q => 'a resolved_st_q"
   is combine_assign_resolved
   by (rule eq_resolved_st_combine_assign)
 
@@ -718,8 +722,8 @@ lemma lookup_combine_assign_resolved_q [simp]:
   "lookup_resolved_st_q (combine_assign_resolved_q gs dst v s) loc =
      (case dst of
         None => lookup_resolved_st_q s loc
-      | Some x =>
-          if location_of gs x = loc then v
+      | Some tv =>
+          if location_of gs (tv_name tv) = loc then a_cast (tv_kind tv) v
           else lookup_resolved_st_q s loc)"
   by transfer (auto simp add:combine_assign_resolved_def split:option.splits)
  
@@ -768,8 +772,8 @@ lemma bind_formals_resolved_q_singleton:
   by transfer (simp add: bind_formals_resolved_def eq_resolved_st_def)
 
 definition enter_resolved_for ::
-  "(vname => bool) => 'a => (exp => 'a abs_state => 'a)
-   => vname list => exp list => ('a::bot) resolved_st => 'a resolved_st"
+  "(vname => bool) => 'a => (texp => 'a abs_state => 'a)
+   => vname list => texp list => ('a::bot) resolved_st => 'a resolved_st"
 where
   "enter_resolved_for gs top_val aval_abs xs es s =
      bind_formals_resolved gs xs
@@ -777,7 +781,7 @@ where
        (enter_frame_D_resolved top_val s)"
 
 definition combine_collect_resolved_for ::
-  "(vname => bool) => vname option => ('a::bot) resolved_st
+  "(vname => bool) => typed_var option => ('a::cast_domain) resolved_st
    => 'a resolved_st => 'a resolved_st"
 where
   "combine_collect_resolved_for gs dst sc se =
@@ -875,7 +879,7 @@ lemma eq_resolved_st_combine_collect:
       eq_resolved_st_def)
 
 lift_definition combine_collect_resolved_for_q ::
-  "(vname => bool) => vname option => ('a::bot) resolved_st_q
+  "(vname => bool) => typed_var option => ('a::cast_domain) resolved_st_q
    => 'a resolved_st_q => 'a resolved_st_q"
   is combine_collect_resolved_for
   by (rule eq_resolved_st_combine_collect)
@@ -1228,8 +1232,8 @@ proof -
 qed
 
 lift_definition enter_resolved_for_q ::
-  "(vname => bool) => 'a => (exp => 'a abs_state => 'a)
-   => vname list => exp list => ('a::bot) resolved_st_q
+  "(vname => bool) => 'a => (texp => 'a abs_state => 'a)
+   => vname list => texp list => ('a::bot) resolved_st_q
    => 'a resolved_st_q"
   is enter_resolved_for
   by (rule eq_resolved_st_enter_resolved_for)

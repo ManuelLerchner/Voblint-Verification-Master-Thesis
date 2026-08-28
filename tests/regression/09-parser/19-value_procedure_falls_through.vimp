@@ -1,0 +1,13 @@
+// PARAM: --analysis interval
+// Rejection case, the converse of 13-void_procedure_returns_value.vimp. A
+// procedure declaring a return kind must deliver a value on every path that
+// can leave it, because its callers may bind the result; the else arm here
+// falls off the end with nothing to assign. A loop never counts as returning
+// either, since it may not be entered.
+int32 f(int32 n) {
+  if (n < 1) { return n } else { skip }
+}
+void main() {
+  int32 a;
+  a := f(1)
+}

@@ -1,0 +1,12 @@
+// PARAM: --analysis interval
+// A non-int32 local in main. The declared kind has to reach compilation:
+// 255 + 1 wraps to 0 at uint8, and only at uint8. Before locals joined the
+// kind environment this analysed as int32 and answered REFUTED with
+// x=[256,256] -- a wrong verdict on a concretely true property, not an
+// imprecise one.
+void main() {
+  uint8 x;
+  x := 255;
+  x := x + 1;
+  __voblint_check(x == 0)  // PROVED
+}
