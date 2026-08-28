@@ -276,101 +276,127 @@ just underdetermined), and it makes precision improvements look like they
 "fixed" a case that was never wrong. See `tests/run.py`'s module docstring
 for the full convention.
 
-## Proof development
+## Style
 
-Before each proof, decide whether it is short and simple.
+Baseline: the Isabelle Community Conventions
+(<https://isabelle.systems/conventions/>) and Gerwin Klein's style notes
+(<https://proofcraft.org/blog/isabelle-style.html>, `-part2`). The rules
+below restate the parts that matter here and record where this project
+deviates. When a rule here conflicts with the baseline, this file wins.
 
-- Short proofs: use `by ...` or apply-style Isar, one or two tactics at a time.
-- Longer proofs: sketch structured Isar top-down, isolate hard obligations, and
-  fill placeholders individually.
+### Layout
+
+- Lines <= 100 symbols. Two-space indent. One blank line between top-level
+  declarations. `proof`, `next`, `qed` flush left within their block.
+- Theories <= 1500 lines. Split along a concern boundary (a domain, a proof
+  layer, a generator), never by line count alone. One concern per theory;
+  a theory that exists only to fix import order is merged into its consumer.
+- Function equations one per line; `|` consistently at line start.
+- A definition or `fun` header and its name share a line; the body is
+  indented under it.
+
+### Statements
+
+- `fixes`/`assumes`/`shows` over object-logic `\<forall>x. P x \<longrightarrow> Q x`, so
+  callers can instantiate with `[where ...]` and `[OF ...]`. A theorem with
+  `assumes` puts a line break after its name.
+- `obtains` for existential conclusions and case distinctions.
+- Do not mix object and meta logic in one statement.
+- Decide a normal form per concept and state every lemma in it (e.g. always
+  `le_fun_def`-unfolded pointwise order, or never).
+- Drop quantifiers, parentheses, and type annotations the reader and Isabelle
+  infer.
+
+### Naming
+
+- Constants, lemmas, locales: `lower_snake_case`. Datatype constructors and
+  theories: `Capitalized_Snake_Case`. Sessions: `Voblint_<Session>`.
+- A lemma name reads its conclusion left to right in the library vocabulary:
+  `_eq_`, `_le_`, `_iff_`, `_mono`, `_sound`, `_left`/`_right`, `_self`.
+  Hypotheses follow `_if_` (`le_if_lt`). Introduction, elimination and
+  destruction rules end in `I`, `E`, `D`.
+- Locale interpretations and `lemmas` re-exports name the concrete instance
+  (`ivl_exec_sound`, not `sound_1`).
+- Variables follow the library: `xs` for lists, `S`/`A` for sets, `P`/`Q` for
+  predicates, `f`/`g` for functions. Avoid `c`, `inv`, and other names that
+  resolve to imported constants.
+
+### Attributes
+
+- Only named lemmas carry attributes.
+- A lemma is `[simp]` when its LHS is already in simp normal form and the
+  RHS is clearly simpler. A one-step destruct or introduction off a
+  definition is `[dest]` or `[intro]`. Tag by default when the shape fits;
+  leave bare when two rewrite directions compete, the rule can loop, or the
+  step is conceptually non-trivial and should stay visible in proofs.
+- Before tagging `[simp]`, check for an existing simp rule with an
+  overlapping LHS that stops at a different normal form. Fix a
+  non-confluent pair at the algebra level with a bridging lemma; once
+  confluent, delete any lemma that only restated a special case.
+- Keep attribute changes local with `context`/`bundle`; avoid
+  `[simplified]`, `[rule_format]`, and global `declare ... [simp del]`.
+- Never check in `sorry`, `back`, or an unattributed `sledgehammer` call.
+
+### Proofs
+
+- Decide the shape first. One-step goals: `by ...`. Otherwise structured
+  Isar, sketched top-down with named subgoals, hard obligations hoisted
+  into helper lemmas. Do not switch from `apply` to `proof` mid-proof.
+- Target `by (induction ...) (auto simp: ...)` for structural inductions.
+  When cases need hand-picked rule sets, promote the recurring rules to
+  global `[simp]`/`[intro]`/`[dest]` lemmas instead of repeating them per
+  case. A case that still resists one line becomes a helper lemma; do not
+  widen `auto` or `simp` to force it.
+- Unrestricted `auto` only terminally. Prefer `simp only:` and `auto simp:`
+  with an explicit rule set over unbounded automation on large imported
+  sets.
+- Prefer named case-split or decomposition lemmas with `by (rule ...)` or
+  `cases rule:` over `auto elim!:` on inductive predicates.
+- Prefer structured Isar with explicit `show` subgoals over long
+  `[OF ...]` chains when facts must align exactly.
+- Sledgehammer on every non-trivial subgoal, timeout <= 15 s. Paste back
+  `blast`, `auto`, `meson`. Keep `metis` and `smt` only after the batch
+  build confirms fast reconstruction.
+- `unfolding` over `simp add: foo_def` to unfold a definition.
+- Comment any step that takes longer than about a minute.
 - If a valid obligation is difficult, repair the proof or strengthen its
   invariant. Before changing the architecture, establish that the intended
-  theorem is false and try to produce a small `nitpick [timeout=5]`
-  counterexample.
+  theorem is false with a small `nitpick [timeout=5]` counterexample.
 
-Comments explain the current theory and why a choice matters. Do not preserve
-project history in source comments: avoid references to removed theories,
-retired paths, former names, or migration alternatives. Use Isabelle document
-structure (`section`, `subsection`, and `text`) for exposition.
+### Locales
 
-- Comparisons to a still-existing sibling definition or lemma are valid.
-- Temporal language that describes the mathematics is valid (e.g. a compiler
-  phase, an activation's returning phase). Remove only project-history framing.
-- No links to files in comments: no raw or relative paths, no `\<^file>`
-  antiquotations, no `docs/*.md` citations. Reference another theory by name
-  via `@{theory Qualified.Name}` if needed; state everything else inline.
-- No development-stage or migration-plan language: no "Stage 0/1/2", "TODO",
-  "still needs", "so far only", or similar staged/future-work framing. A
-  comment describes the theory as it stands, not the plan to get there.
+- Theorems inside locales use locale-qualified constants; callers outside
+  need the fully applied global shape. Before `callee[OF ...]`, compare
+  interpretation-local premises with fully applied global premises.
+- Surface concrete corollaries through global definitions, small expansion
+  lemmas, or an `interpretation` block, not repeated unfolds.
+- A parameter threaded through many definitions and lemmas of one layer is
+  a locale parameter, not an explicit argument, unless the layer is
+  interpreted at many distinct values.
 
-## Batch-friendly proof habits
+### Comments
 
-These rules keep interactive development fast and make the final batch build a
-reliable one-shot gate.
+- Comment only what the definition or statement does not already say: a
+  non-obvious design decision, a Goblint-alignment rationale, a proof step
+  that surprises. A `text` block that restates the lemma it precedes is
+  deleted.
+- Explain why, not what. Timeless: describe the theory as it stands, not
+  project history, removed theories, former names, migration plans, or
+  staged/future work ("TODO", "still needs", "Stage 1").
+- No file links: no paths, no `\<^file>`, no `docs/*.md` citations. Name
+  another theory with `@{theory Qualified.Name}`; state everything else
+  inline. Comparisons to a still-existing sibling definition are fine.
+- Exposition uses `section`/`subsection`/`text`, one short `text` per
+  section at most; `(* *)` only inside proofs.
 
 ### Workflow
 
 - **I/Q inner loop, batch outer gate.** Debug one failing command through
-  `get_diagnostics` and `explore`. Run the batch build once the complete task or
-  migration is file-clean, when the user requests it, or at the commit gate.
-  Do not build between stages or tactic changes.
-- **I/Q is not completion.** Interactive checking can finish a step while
-  subgoals remain or accept an invalid intro rule. Empty file diagnostics mean
-  ready for batch, not proved.
-- **Batch is completion.** Show the green verbose build log before calling proof
-  work done.
-
-### Automation that batch tolerates
-
-- Prefer small, named case-split or decomposition lemmas with
-  `by (rule ...)` or `cases rule: ...` over `auto elim!:` on inductive
-  predicates.
-- Prefer bounded tactics such as `simp only:` and `auto simp:` with an explicit
-  lemma set over unbounded automation on large imported rule sets. This governs
-  proof-site tactic calls, not whether a lemma itself carries an attribute.
-- Default to attributing a new lemma `[simp]`, `[dest]`, `[intro]`, or `[elim]`
-  when its shape naturally fits that role: a rewrite whose RHS is no more
-  complex than its LHS is `[simp]`; a one-step destruct or introduction off a
-  definition's unfolding is `[dest]` or `[intro]`. Tagging lets later call
-  sites cite the lemma by name or let `blast`/`auto` find it, instead of
-  re-unfolding the definition at each site. Leave a lemma bare only when
-  tagging it would be ambiguous or ill-suited: multiple competing rewrite
-  directions, a rule that risks looping with existing simp rules, or a fact
-  whose applicability is genuinely context-dependent.
-- Prefer structured Isar with explicit `show` subgoals over long `[OF ...]`
-  chains when facts must align exactly.
-- When a subgoal resists one line of automation, hoist a helper lemma. Do not
-  widen `auto` or `simp` to force it.
-- Before tagging a lemma `[simp]`, check whether its LHS pattern overlaps with
-  an existing lemma's LHS that serves a different normal form (a general
-  distributive/homomorphism law competing with a specific combine lemma over
-  the same redex is the classic case). Two rules that both match the same
-  term but stop at different points are non-confluent even when each is
-  individually true. When a batch build surfaces a real regression from such
-  a conflict, fix it at the algebra level: add the missing bridging lemma(s)
-  so every rewrite path reaches the same normal form, rather than reverting
-  the new tag. Once confluent, the general laws can carry `[simp]` again, and
-  any lemma that only restated a special case of that confluent set is dead
-  weight — delete it and its citations rather than keep it as an inert
-  corollary.
-
-### Locale and constant shapes
-
-- Theorems inside locales use locale-qualified constants. Callers outside often
-  need the same fully applied global shape as the target lemma.
-- Before `theorem_callee[OF ...]`, compare interpretation-local premises with
-  fully applied global premises. A shape mismatch fails even when the
-  mathematics agrees.
-- Surface concrete corollaries through global definitions, small expansion
-  lemmas, or an `interpretation` block instead of repeating fragile unfolds.
-
-### Sledgehammer in batch
-
-- Try Sledgehammer first on every non-trivial subgoal with a timeout of at most
-  15 seconds.
-- Prefer paste-backs using `blast`, `auto`, or `meson`.
-- Keep `metis` and `smt` only after the batch build confirms they reconstruct
-  quickly; they are a leading source of build hangs.
+  `get_diagnostics` and `explore`. Run the batch build once the complete
+  task is file-clean, when the user requests it, or at the commit gate.
+- **I/Q is not completion.** Empty diagnostics mean ready for batch, not
+  proved. **Batch is completion.** Show the green build log before calling
+  proof work done.
 
 ## ASCII-only `.thy` sources
 
