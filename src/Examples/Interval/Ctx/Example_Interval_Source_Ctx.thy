@@ -34,7 +34,7 @@ theorem twice_source_ctx_run_sound:
              (residual, s, frs) (v, s, stk)
            \<and> key twice_ctx [] t = c
            \<and> s \<in> gamma_state_lift (twice_ctx_sg (Inl (v, c)))"
-  by (rule source_sound_from_collecting_cap[where enterc = twice_ctx and startcontext = "[]"
+  by (rule source_sound_from_collecting_cap[where enterc = twice_ctx and initial_ctx = "[]"
           and gammaM = gamma_state_lift,
         OF twice_wf init run twice_activation_collect_sound])
 

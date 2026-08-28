@@ -22,9 +22,9 @@ text \<open>Local obligations connect the abstract solution to the trace rules. 
 
 theorem activation_collect_sound:
   fixes sg :: "pp \<times> 'c + 'g \<Rightarrow> 'a::sound_domain abs_state"
-    and enterc :: "cfg_node \<Rightarrow> 'c \<Rightarrow> store \<Rightarrow> 'c" and startcontext :: 'c
+    and enterc :: "cfg_node \<Rightarrow> 'c \<Rightarrow> store \<Rightarrow> 'c" and initial_ctx :: 'c
     and gs :: "vname \<Rightarrow> bool"
-  assumes ENTRY_G: "\<And>s. s \<in> S \<Longrightarrow> s \<in> \<lbrakk>sg (Inl (cfg_entry g, startcontext))\<rbrakk>"
+  assumes ENTRY_G: "\<And>s. s \<in> S \<Longrightarrow> s \<in> \<lbrakk>sg (Inl (cfg_entry g, initial_ctx))\<rbrakk>"
     and EDGE: "\<And>u a v c s s'. (u, a, v) \<in> intra g
         \<Longrightarrow> s \<in> \<lbrakk>sg (Inl (u, c))\<rbrakk> \<Longrightarrow> s' \<in> edge_step a s
         \<Longrightarrow> s' \<in> \<lbrakk>sg (Inl (v, c))\<rbrakk>"
@@ -38,11 +38,11 @@ theorem activation_collect_sound:
         \<Longrightarrow> s \<in> \<lbrakk>sg (Inl (cl, c1))\<rbrakk> \<Longrightarrow> t \<in> \<lbrakk>sg (Inl (FunctionResult p, enterc cl c1 es))\<rbrakk>
         \<Longrightarrow> call_enter_store gs g cl s es
         \<Longrightarrow> combine_collect gs dst s t \<in> \<lbrakk>sg (Inl (cont, c1))\<rbrakk>"
-  shows "activation_collect gs enterc startcontext g S v ctx \<subseteq> \<lbrakk>sg (Inl (v, ctx))\<rbrakk>"
+  shows "activation_collect gs enterc initial_ctx g S v ctx \<subseteq> \<lbrakk>sg (Inl (v, ctx))\<rbrakk>"
 proof (rule subsetI)
-  fix st assume "st \<in> activation_collect gs enterc startcontext g S v ctx"
+  fix st assume "st \<in> activation_collect gs enterc initial_ctx g S v ctx"
   then obtain t where t: "t \<in> valid_ltr gs g S"
-    and sn: "sink_node t = v" and kc: "key enterc startcontext t = ctx" and st: "sink_store t = st"
+    and sn: "sink_node t = v" and kc: "key enterc initial_ctx t = ctx" and st: "sink_store t = st"
     by (rule activation_collect_E)
   have "sink_store t \<in> \<lbrakk>sg (Inl (sink_node t, ctx))\<rbrakk>"
     using ENTRY_G EDGE CALL COMB t kc by (rule valid_ltr_ctx_sound)
@@ -59,9 +59,9 @@ text \<open>
 theorem activation_collect_sound_gen:
   fixes sg :: "pp \<times> 'c + 'g \<Rightarrow> 'M"
     and gammaM :: "'M \<Rightarrow> store set"
-    and enterc :: "cfg_node \<Rightarrow> 'c \<Rightarrow> store \<Rightarrow> 'c" and startcontext :: 'c
+    and enterc :: "cfg_node \<Rightarrow> 'c \<Rightarrow> store \<Rightarrow> 'c" and initial_ctx :: 'c
     and gs :: "vname \<Rightarrow> bool"
-  assumes ENTRY_G: "\<And>s. s \<in> S \<Longrightarrow> s \<in> gammaM (sg (Inl (cfg_entry g, startcontext)))"
+  assumes ENTRY_G: "\<And>s. s \<in> S \<Longrightarrow> s \<in> gammaM (sg (Inl (cfg_entry g, initial_ctx)))"
     and EDGE: "\<And>u a v c s s'. (u, a, v) \<in> intra g
         \<Longrightarrow> s \<in> gammaM (sg (Inl (u, c))) \<Longrightarrow> s' \<in> edge_step a s
         \<Longrightarrow> s' \<in> gammaM (sg (Inl (v, c)))"
@@ -75,11 +75,11 @@ theorem activation_collect_sound_gen:
         \<Longrightarrow> s \<in> gammaM (sg (Inl (cl, c1))) \<Longrightarrow> t \<in> gammaM (sg (Inl (FunctionResult p, enterc cl c1 es)))
         \<Longrightarrow> call_enter_store gs g cl s es
         \<Longrightarrow> combine_collect gs dst s t \<in> gammaM (sg (Inl (cont, c1)))"
-  shows "activation_collect gs enterc startcontext g S v ctx \<subseteq> gammaM (sg (Inl (v, ctx)))"
+  shows "activation_collect gs enterc initial_ctx g S v ctx \<subseteq> gammaM (sg (Inl (v, ctx)))"
 proof (rule subsetI)
-  fix st assume "st \<in> activation_collect gs enterc startcontext g S v ctx"
+  fix st assume "st \<in> activation_collect gs enterc initial_ctx g S v ctx"
   then obtain t where t: "t \<in> valid_ltr gs g S"
-    and sn: "sink_node t = v" and kc: "key enterc startcontext t = ctx" and st: "sink_store t = st"
+    and sn: "sink_node t = v" and kc: "key enterc initial_ctx t = ctx" and st: "sink_store t = st"
     by (rule activation_collect_E)
   have "sink_store t \<in> gammaM (sg (Inl (sink_node t, ctx)))"
     using ENTRY_G EDGE CALL COMB t kc by (rule valid_ltr_ctx_sound_gen)

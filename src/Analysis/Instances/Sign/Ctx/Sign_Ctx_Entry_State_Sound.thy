@@ -377,7 +377,7 @@ theorem sctx_entry_activation_collect_sound:
      \<subseteq> gamma_state_lift (sctx_entry_sg (Inl (v, ctx)))"
 proof (rule activation_collect_sound_gen[where sg = sctx_entry_sg and gammaM = gamma_state_lift
         and enterc = "sctx_entry_enterc"
-        and startcontext = "[]" and S = "cinit_stores gs" and g = "compile_prog Pi ps mnm main" and gs = gs])
+        and initial_ctx = "[]" and S = "cinit_stores gs" and g = "compile_prog Pi ps mnm main" and gs = gs])
   fix s assume "s \<in> cinit_stores gs"
   hence "s \<in> gamma_state_lift (map_lift (fun_of_resolved_st_q_for gs) (Lifted cinit_sign_st))"
     using sctx_entry_cinit_le_cinit_sign_st by blast

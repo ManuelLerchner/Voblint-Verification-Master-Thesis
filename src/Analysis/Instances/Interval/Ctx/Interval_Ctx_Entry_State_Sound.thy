@@ -864,7 +864,7 @@ theorem entry_state_activation_collect_sound:
      \<subseteq> gamma_state_lift (entry_state_sg (Inl (v, ctx)))"
 proof (rule activation_collect_sound_gen[where sg = entry_state_sg and gammaM = gamma_state_lift
         and enterc = "entry_state_context"
-        and startcontext = "[]" and S = "cinit_stores gs" and g = "compile_prog Pi ps mnm main" and gs = gs])
+        and initial_ctx = "[]" and S = "cinit_stores gs" and g = "compile_prog Pi ps mnm main" and gs = gs])
   \<comment> \<open>ENTRY_G\<close>
   fix s assume "s \<in> cinit_stores gs"
   hence "s \<in> gamma_state_lift (map_lift (fun_of_resolved_st_q_for gs) (Lifted cinit_ivl_st))"

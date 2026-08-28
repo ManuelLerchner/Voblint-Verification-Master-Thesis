@@ -5,7 +5,7 @@ begin
 section \<open>Soundness of the activation-local context collecting\<close>
 
 text \<open>
-  The \<^locale>\<open>ltr_gamma\<close> interface turns four local closure obligations into
+  The \<^locale>\<open>ltr_coverage\<close> interface turns four local closure obligations into
   context-sensitive trace soundness.  A resumed activation keeps its creation context, so
   combine closure checks the caller at that context and reads the callee result at the context
   selected by \<open>enterc\<close>.
@@ -21,19 +21,19 @@ text \<open>
       caller through \<^const>\<open>caller_of\<close>, never by independent choice;
     \<bullet> \<^const>\<open>key\<close> threads each matched trace's context through the SAME recursive shape, so
       a callee's context is derived from its caller's own, not rediscovered independently;
-    \<bullet> the concretization \<open>acc v c = \<lbrakk>sg (Inl (v, c))\<rbrakk>\<close> over-approximates the stores in that
+    \<bullet> the concretization \<open>cover v c = \<lbrakk>sg (Inl (v, c))\<rbrakk>\<close> over-approximates the stores in that
       bucket.
 
   The semantic obligations \<open>ENTRY_G\<close> / \<open>EDGE\<close> / \<open>CALL\<close> / \<open>COMB\<close> are exactly the locale's
-  \<open>ROOT\<close> / \<open>EDGE\<close> / \<open>CALL\<close> / \<open>COMB\<close> at that concretization, so the engine follows from
-  \<open>ltr_gamma.valid_ltr_subset_gamma_ltr\<close>.
+  \<open>INIT\<close> / \<open>INTRA\<close> / \<open>CALL\<close> / \<open>RETURN\<close> at that concretization, so the engine follows from
+  \<open>ltr_coverage.valid_ltr_covered\<close>.
 \<close>
 
 theorem valid_ltr_ctx_sound:
   fixes sg :: "pp \<times> 'c + 'g \<Rightarrow> 'a::sound_domain abs_state"
-    and enterc :: "cfg_node \<Rightarrow> 'c \<Rightarrow> store \<Rightarrow> 'c" and startcontext :: 'c
+    and enterc :: "cfg_node \<Rightarrow> 'c \<Rightarrow> store \<Rightarrow> 'c" and initial_ctx :: 'c
     and gs :: "vname \<Rightarrow> bool"
-  assumes ENTRY_G: "\<And>s. s \<in> S \<Longrightarrow> s \<in> \<lbrakk>sg (Inl (cfg_entry g, startcontext))\<rbrakk>"
+  assumes ENTRY_G: "\<And>s. s \<in> S \<Longrightarrow> s \<in> \<lbrakk>sg (Inl (cfg_entry g, initial_ctx))\<rbrakk>"
     and EDGE: "\<And>u a v c s s'. (u, a, v) \<in> intra g
         \<Longrightarrow> s \<in> \<lbrakk>sg (Inl (u, c))\<rbrakk> \<Longrightarrow> s' \<in> edge_step a s
         \<Longrightarrow> s' \<in> \<lbrakk>sg (Inl (v, c))\<rbrakk>"
@@ -48,24 +48,23 @@ theorem valid_ltr_ctx_sound:
         \<Longrightarrow> call_enter_store gs g cl s es
         \<Longrightarrow> combine_collect gs dst s t \<in> \<lbrakk>sg (Inl (cont, c1))\<rbrakk>"
     and t: "t \<in> valid_ltr gs g S"
-    and ck: "key enterc startcontext t = c"
+    and ck: "key enterc initial_ctx t = c"
   shows "sink_store t \<in> \<lbrakk>sg (Inl (sink_node t, c))\<rbrakk>"
 proof -
-  interpret G: ltr_gamma g S "\<lambda>v c. \<lbrakk>sg (Inl (v, c))\<rbrakk>" enterc startcontext gs
+  interpret G: ltr_coverage g S "\<lambda>v c. \<lbrakk>sg (Inl (v, c))\<rbrakk>" enterc initial_ctx gs
     apply unfold_locales
     apply (blast intro: ENTRY_G)
     apply (blast intro: EDGE)
     apply (blast intro: CALL)
     apply (blast intro: COMB)
     done
-  from t have "t \<in> G.gamma_ltr" using G.valid_ltr_subset_gamma_ltr by blast
-  then have "G.bnd t" by (simp add: G.gamma_ltr_def)
+  have "G.trace_covered t" using G.valid_ltr_covered[OF t] .
   then show ?thesis using ck by simp
 qed
 
 text \<open>
   \<open>valid_ltr_ctx_sound\<close> only ever reads its concretization through the interpreted
-  \<open>ltr_gamma\<close> locale, which is already generic over an arbitrary
+  \<open>ltr_coverage\<close> locale, which is already generic over an arbitrary
   \<open>cfg_node \<Rightarrow> 'c \<Rightarrow> store set\<close> reader -- the \<open>'a::sound_domain abs_state\<close>/\<open>\<lbrakk>_\<rbrakk>\<close> carrier
   above is an accidental specialization, not something the proof needs. \<open>_gen\<close> below
   makes that reader (\<open>gammaM\<close>) an explicit parameter instead, so a reachability-lifted
@@ -75,9 +74,9 @@ text \<open>
 theorem valid_ltr_ctx_sound_gen:
   fixes sg :: "pp \<times> 'c + 'g \<Rightarrow> 'M"
     and gammaM :: "'M \<Rightarrow> store set"
-    and enterc :: "cfg_node \<Rightarrow> 'c \<Rightarrow> store \<Rightarrow> 'c" and startcontext :: 'c
+    and enterc :: "cfg_node \<Rightarrow> 'c \<Rightarrow> store \<Rightarrow> 'c" and initial_ctx :: 'c
     and gs :: "vname \<Rightarrow> bool"
-  assumes ENTRY_G: "\<And>s. s \<in> S \<Longrightarrow> s \<in> gammaM (sg (Inl (cfg_entry g, startcontext)))"
+  assumes ENTRY_G: "\<And>s. s \<in> S \<Longrightarrow> s \<in> gammaM (sg (Inl (cfg_entry g, initial_ctx)))"
     and EDGE: "\<And>u a v c s s'. (u, a, v) \<in> intra g
         \<Longrightarrow> s \<in> gammaM (sg (Inl (u, c))) \<Longrightarrow> s' \<in> edge_step a s
         \<Longrightarrow> s' \<in> gammaM (sg (Inl (v, c)))"
@@ -92,18 +91,17 @@ theorem valid_ltr_ctx_sound_gen:
         \<Longrightarrow> call_enter_store gs g cl s es
         \<Longrightarrow> combine_collect gs dst s t \<in> gammaM (sg (Inl (cont, c1)))"
     and t: "t \<in> valid_ltr gs g S"
-    and ck: "key enterc startcontext t = c"
+    and ck: "key enterc initial_ctx t = c"
   shows "sink_store t \<in> gammaM (sg (Inl (sink_node t, c)))"
 proof -
-  interpret G: ltr_gamma g S "\<lambda>v c. gammaM (sg (Inl (v, c)))" enterc startcontext gs
+  interpret G: ltr_coverage g S "\<lambda>v c. gammaM (sg (Inl (v, c)))" enterc initial_ctx gs
     apply unfold_locales
     apply (blast intro: ENTRY_G)
     apply (blast intro: EDGE)
     apply (blast intro: CALL)
     apply (blast intro: COMB)
     done
-  from t have "t \<in> G.gamma_ltr" using G.valid_ltr_subset_gamma_ltr by blast
-  then have "G.bnd t" by (simp add: G.gamma_ltr_def)
+  have "G.trace_covered t" using G.valid_ltr_covered[OF t] .
   then show ?thesis using ck by simp
 qed
 

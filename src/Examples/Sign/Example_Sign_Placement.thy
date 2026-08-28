@@ -5,7 +5,7 @@ theory Example_Sign_Placement
 begin
 
 hide_const phase.N
-hide_const CFG_Local_Trace.key
+hide_const Activation_Context.key
 
 section \<open>Minimal sign placement validation\<close>
 

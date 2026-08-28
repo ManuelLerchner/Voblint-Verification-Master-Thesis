@@ -468,7 +468,7 @@ theorem nest_1_activation_collect_sound:
   "activation_collect nest_gs (cs_context 1) [] nest_cfg (cinit_stores nest_gs) v ctx
      \<subseteq> gamma_state_lift (nest_1_sg (Inl (v, ctx)))"
 proof (rule activation_collect_sound_gen[where sg = nest_1_sg and gammaM = gamma_state_lift
-        and enterc = "cs_context 1" and startcontext = "[]"
+        and enterc = "cs_context 1" and initial_ctx = "[]"
         and S = "cinit_stores nest_gs" and g = nest_cfg and gs = nest_gs])
   \<comment> \<open>ENTRY_G\<close>
   fix s assume "s \<in> cinit_stores nest_gs"

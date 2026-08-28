@@ -42,13 +42,13 @@ text \<open>
 nonterminal imp2_funcs
 
 syntax
-  "_IMP2"        :: "imp2_stmts_opt \<Rightarrow> VIMP_Proc.com"        ("imp \<lbrakk> _ \<rbrakk>")
+  "_IMP2"        :: "imp2_stmts_opt \<Rightarrow> VIMP_Proc.com"        ("imp \<lbrakk> _ \<rbrakk>" [0] 1000)
 
-  "_PROGKW0"    :: "imp2_funcs \<Rightarrow> imp_prog"                ("program { _ }")
-  "_PROGKW"     :: "imp2_ids \<Rightarrow> imp2_funcs \<Rightarrow> imp_prog"      ("program { global _ ; _ }")
+  "_PROGKW0"    :: "imp2_funcs \<Rightarrow> imp_prog"                ("program { _ }" [0] 1000)
+  "_PROGKW"     :: "imp2_ids \<Rightarrow> imp2_funcs \<Rightarrow> imp_prog"      ("program { global _ ; _ }" [0, 0] 1000)
   "_funcs_nil"   :: imp2_funcs                                    ("")
-  "_funcs_cons0" :: "id_position \<Rightarrow> imp2_stmts_opt \<Rightarrow> imp2_funcs \<Rightarrow> imp2_funcs"  ("void _'(') { _ } _")
-  "_funcs_cons"  :: "id_position \<Rightarrow> imp2_formals \<Rightarrow> imp2_stmts_opt \<Rightarrow> imp2_funcs \<Rightarrow> imp2_funcs"  ("void _'( _ ') { _ } _")
+  "_funcs_cons0" :: "id_position \<Rightarrow> imp2_stmts_opt \<Rightarrow> imp2_funcs \<Rightarrow> imp2_funcs"  ("void _'(') { _ } _" [1000, 0, 0] 1000)
+  "_funcs_cons"  :: "id_position \<Rightarrow> imp2_formals \<Rightarrow> imp2_stmts_opt \<Rightarrow> imp2_funcs \<Rightarrow> imp2_funcs"  ("void _'( _ ') { _ } _" [1000, 0, 0, 0] 1000)
 
 parse_translation \<open>
   let

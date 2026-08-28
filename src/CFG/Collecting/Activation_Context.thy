@@ -15,10 +15,10 @@ text \<open>
   what makes a call-site-keyed context (a k-call-string) expressible as an instance rather
   than only as a generator-side hook.\<close>
 fun key :: "(cfg_node \<Rightarrow> 'c \<Rightarrow> store \<Rightarrow> 'c) \<Rightarrow> 'c \<Rightarrow> ltr \<Rightarrow> 'c" where
-  "key enterc startcontext (Root _)                  = startcontext"
-| "key enterc startcontext (Call parent p)           =
-     enterc (sink_node parent) (key enterc startcontext parent) (snd (hd p))"
-| "key enterc startcontext (Resume current callee _) = key enterc startcontext current"
+  "key enterc initial_ctx (Root _)                  = initial_ctx"
+| "key enterc initial_ctx (Call parent p)           =
+     enterc (sink_node parent) (key enterc initial_ctx parent) (snd (hd p))"
+| "key enterc initial_ctx (Resume current callee _) = key enterc initial_ctx current"
 
 text \<open>\<open>key\<close> fixes one context per trace by decoding the entered store exactly: a
   \<^const>\<open>Call\<close> activation's context is derived from its caller's OWN selected context,
@@ -34,23 +34,23 @@ text \<open>\<open>key\<close> fixes one context per trace by decoding the enter
   more general admissibility relation.\<close>
 
 lemma key_extend_nonempty:
-  "path t \<noteq> [] \<Longrightarrow> key enterc startcontext (extend t x) = key enterc startcontext t"
+  "path t \<noteq> [] \<Longrightarrow> key enterc initial_ctx (extend t x) = key enterc initial_ctx t"
   by (cases t) (auto simp: hd_append)
 
 subsection \<open>Context entry invariant\<close>
 
 text \<open>The context of an activation is exactly what \<open>enterc\<close> computes from its immediate
-  caller's own context and the callee-entry store.  This is what lets a COMB argument
+  caller's own context and the callee-entry store.  This is what lets a RETURN argument
   construct the callee's context directly from the caller's chosen one, rather than
   rediscovering it after the fact.\<close>
 lemma key_entry_invariant:
   assumes "callee \<in> valid_ltr gs g S"
   shows "\<forall>u \<in> callers callee. \<forall>c. caller_of u = Some c \<longrightarrow>
-       key enterc startcontext u = enterc (sink_node c) (key enterc startcontext c) (entry_store u)
+       key enterc initial_ctx u = enterc (sink_node c) (key enterc initial_ctx c) (entry_store u)
        \<and> call_enter_store gs g (sink_node c) (sink_store c) (entry_store u)"
 proof -
   define P where "P u \<longleftrightarrow> (\<forall>c. caller_of u = Some c \<longrightarrow>
-       key enterc startcontext u = enterc (sink_node c) (key enterc startcontext c) (entry_store u)
+       key enterc initial_ctx u = enterc (sink_node c) (key enterc initial_ctx c) (entry_store u)
        \<and> call_enter_store gs g (sink_node c) (sink_store c) (entry_store u))" for u
   have "\<forall>u \<in> callers callee. P u"
   proof (rule caller_chain_closure[OF _ _ _ _ assms])
@@ -82,8 +82,8 @@ qed
 
 lemma key_entry_invariant_eq:
   assumes "callee \<in> valid_ltr gs g S" and "caller_of callee = Some caller"
-  shows "key enterc startcontext callee
-         = enterc (sink_node caller) (key enterc startcontext caller) (entry_store callee)"
+  shows "key enterc initial_ctx callee
+         = enterc (sink_node caller) (key enterc initial_ctx caller) (entry_store callee)"
   using key_entry_invariant[OF assms(1), THEN bspec, OF callers_refl, rule_format, OF assms(2),
       THEN conjunct1] .
 
@@ -101,18 +101,18 @@ text \<open>The activation-sensitive collecting is the sink stores of valid trac
 definition activation_collect ::
   "(vname \<Rightarrow> bool) \<Rightarrow> (cfg_node \<Rightarrow> 'c \<Rightarrow> store \<Rightarrow> 'c) \<Rightarrow> 'c
      \<Rightarrow> cfg \<Rightarrow> store set \<Rightarrow> cfg_node \<Rightarrow> 'c \<Rightarrow> store set" where
-  "activation_collect gs enterc startcontext g S v c =
-     {sink_store t | t. t \<in> valid_ltr gs g S \<and> sink_node t = v \<and> key enterc startcontext t = c}"
+  "activation_collect gs enterc initial_ctx g S v c =
+     {sink_store t | t. t \<in> valid_ltr gs g S \<and> sink_node t = v \<and> key enterc initial_ctx t = c}"
 
 lemma activation_collect_I [intro]:
-  "t \<in> valid_ltr gs g S \<Longrightarrow> sink_node t = v \<Longrightarrow> key enterc startcontext t = c
-   \<Longrightarrow> sink_store t \<in> activation_collect gs enterc startcontext g S v c"
+  "t \<in> valid_ltr gs g S \<Longrightarrow> sink_node t = v \<Longrightarrow> key enterc initial_ctx t = c
+   \<Longrightarrow> sink_store t \<in> activation_collect gs enterc initial_ctx g S v c"
   unfolding activation_collect_def by blast
 
 text \<open>Every collected state has a valid trace witness whose activation key is the queried \<open>c\<close>.\<close>
 lemma activation_collect_E [elim]:
-  assumes "s \<in> activation_collect gs enterc startcontext g S v c"
-  obtains t where "t \<in> valid_ltr gs g S" "sink_node t = v" "key enterc startcontext t = c"
+  assumes "s \<in> activation_collect gs enterc initial_ctx g S v c"
+  obtains t where "t \<in> valid_ltr gs g S" "sink_node t = v" "key enterc initial_ctx t = c"
     "sink_store t = s"
   using assms unfolding activation_collect_def by blast
 

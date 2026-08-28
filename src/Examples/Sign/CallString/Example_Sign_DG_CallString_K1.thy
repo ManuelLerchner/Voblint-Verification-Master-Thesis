@@ -478,7 +478,7 @@ theorem sign_nest_1_activation_collect_sound:
      (cinit_stores sign_nest_gs) v ctx
      \<subseteq> gamma_state_lift (sign_ctx_sg_1 (Inl (v, ctx)))"
 proof (rule activation_collect_sound_gen[where sg = sign_ctx_sg_1 and gammaM = gamma_state_lift
-        and enterc = "cs_context 1" and startcontext = "[]"
+        and enterc = "cs_context 1" and initial_ctx = "[]"
         and S = "cinit_stores sign_nest_gs" and g = sign_nest_cfg and gs = sign_nest_gs])
   \<comment> \<open>ENTRY_G\<close>
   fix s assume "s \<in> cinit_stores sign_nest_gs"

@@ -244,7 +244,7 @@ text \<open>A callerless activation's \<^const>\<open>key\<close> is the seed, r
   \<open>Root\<close> case never consults \<open>enterc\<close>, and the \<open>Resume\<close> case only forwards to the same
   callerless ancestor.\<close>
 lemma key_caller_of_None:
-  "caller_of t = None \<Longrightarrow> key enterc startcontext t = startcontext"
+  "caller_of t = None \<Longrightarrow> key enterc initial_ctx t = initial_ctx"
   by (induction t) auto
 
 subsection \<open>The source bridge\<close>
@@ -291,8 +291,8 @@ theorem source_store_in_activation_collect:
     and s0: "s0 \<in> S"
     and run: "star (pstep source_global \<Pi>) (main, s0, []) (residual, s, frs)"
   shows "\<exists>v stk t c. csim \<Pi> (compile_prog \<Pi> ps mnm main) (residual, s, frs) (v, s, stk)
-                   \<and> key enterc startcontext t = c
-                   \<and> s \<in> activation_collect source_global enterc startcontext
+                   \<and> key enterc initial_ctx t = c
+                   \<and> s \<in> activation_collect source_global enterc initial_ctx
                             (compile_prog \<Pi> ps mnm main) S v c"
 proof -
   let ?g = "compile_prog \<Pi> ps mnm main"
@@ -302,7 +302,7 @@ proof -
   from rep have tv: "t \<in> valid_ltr source_global ?g S" and sn: "sink_node t = v"
     and ss: "sink_store t = s"
     by (auto simp: ltr_repr_def)
-  have "s \<in> activation_collect source_global enterc startcontext ?g S v (key enterc startcontext t)"
+  have "s \<in> activation_collect source_global enterc initial_ctx ?g S v (key enterc initial_ctx t)"
     using activation_collect_I[OF tv sn refl] ss by simp
   then show ?thesis using sim by blast
 qed
@@ -315,8 +315,8 @@ theorem source_toplevel_in_activation_collect:
     and s0: "s0 \<in> S"
     and run: "star (pstep source_global \<Pi>) (main, s0, []) (residual, s, [])"
   shows "\<exists>v. csim \<Pi> (compile_prog \<Pi> ps mnm main) (residual, s, []) (v, s, [])
-             \<and> s \<in> activation_collect source_global enterc startcontext
-                      (compile_prog \<Pi> ps mnm main) S v startcontext"
+             \<and> s \<in> activation_collect source_global enterc initial_ctx
+                      (compile_prog \<Pi> ps mnm main) S v initial_ctx"
 proof -
   let ?g = "compile_prog \<Pi> ps mnm main"
   from source_run_has_ltr[OF wf s0 run] obtain v stk t
@@ -327,9 +327,9 @@ proof -
     and ss: "sink_store t = s" and sr: "stack_repr ?g [] t"
     by (auto simp: ltr_repr_def)
   have cof: "caller_of t = None" using stack_repr_Nil_iff[OF sr] by simp
-  have covered: "key enterc startcontext t = startcontext"
+  have covered: "key enterc initial_ctx t = initial_ctx"
     using key_caller_of_None[OF cof] .
-  have "s \<in> activation_collect source_global enterc startcontext ?g S v startcontext"
+  have "s \<in> activation_collect source_global enterc initial_ctx ?g S v initial_ctx"
     using activation_collect_I[OF tv sn covered] ss by simp
   then show ?thesis using sim stk0 by blast
 qed

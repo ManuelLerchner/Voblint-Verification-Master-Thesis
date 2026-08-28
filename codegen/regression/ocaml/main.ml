@@ -64,7 +64,7 @@ let expected_interval =
     (Statement (mk_nat 3), (check_cond, Check_Refuted)) ]
 
 (* global `total`, procedure `inc` with formal `n`, two calls, two checks.
-   Exercises `mk_program`'s procedure list, `proc_decl_of`'s formals, and `Call`
+   Exercises `mk_program`'s procedure list, a procedure's formals, and `Call`
    together -- not just straight-line assignment/check.
    Same program as tests/regression/04-globals/precision/02-global_var.vimp and its
    known-imprecision sibling 01-repeated_call_site_widening.vimp; the CFG-shape
@@ -78,7 +78,7 @@ let expected_interval =
    widens the entered parameter's upper bound on the second visit. *)
 let proc_demo_prog =
   mk_program
-    [ ("inc", proc_decl_of ["n"] (Assign ("total", Plus (V "total", V "n")))) ]
+    [ ("inc", Proc_decl_ext (["n"], Assign ("total", Plus (V "total", V "n")), ())) ]
     (Seq
        (Seq
           (Seq
@@ -123,7 +123,7 @@ let expected_no_call_global_self_ref_interval =
    repeated-visit widening applies, and total's exact value survives the combine step. *)
 let one_call_prog =
   mk_program
-    [ ("inc", proc_decl_of ["n"] (Assign ("total", Plus (V "total", V "n")))) ]
+    [ ("inc", Proc_decl_ext (["n"], Assign ("total", Plus (V "total", V "n")), ())) ]
     (Seq
        (Seq (Assign ("total", N (mk_int 0)), Call (None, "inc", [ N (mk_int 3) ])),
         Check (Less (N (mk_int 0), V "total"))))

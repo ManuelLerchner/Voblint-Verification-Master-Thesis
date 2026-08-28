@@ -1,5 +1,6 @@
 theory Sign_Entry
   imports Voblint_Analysis.Sign_Checks "Voblint_Soundness.Run_Analysis_Sound"
+    "Voblint_VIMP.VIMP_Notation"
 begin
 
 hide_const phase.N

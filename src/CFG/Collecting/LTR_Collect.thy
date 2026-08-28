@@ -253,24 +253,24 @@ subsection \<open>Context-sensitive / context-insensitive bridge\<close>
 text \<open>Bridge (1): context-sensitive collection is included in context-insensitive
   collection.\<close>
 theorem activation_collect_le_ltr_collect:
-  "activation_collect gs enterc startcontext g S v c \<subseteq> ltr_collect gs g S v"
+  "activation_collect gs enterc initial_ctx g S v c \<subseteq> ltr_collect gs g S v"
   unfolding activation_collect_def ltr_collect_def by blast
 
 text \<open>Bridge (2): context-insensitive collection is the union over contexts --- every trace
   has exactly one context, since \<^const>\<open>key\<close> is a total function.  No finiteness assumption.\<close>
 theorem ltr_collect_eq_Union_activation:
-  "ltr_collect gs g S v = (\<Union>c. activation_collect gs enterc startcontext g S v c)"
+  "ltr_collect gs g S v = (\<Union>c. activation_collect gs enterc initial_ctx g S v c)"
 proof
-  show "ltr_collect gs g S v \<subseteq> (\<Union>c. activation_collect gs enterc startcontext g S v c)"
+  show "ltr_collect gs g S v \<subseteq> (\<Union>c. activation_collect gs enterc initial_ctx g S v c)"
   proof
     fix x assume "x \<in> ltr_collect gs g S v"
     then obtain t where t: "t \<in> valid_ltr gs g S" "sink_node t = v" "sink_store t = x"
       by (rule ltr_collect_E)
-    then show "x \<in> (\<Union>c. activation_collect gs enterc startcontext g S v c)"
+    then show "x \<in> (\<Union>c. activation_collect gs enterc initial_ctx g S v c)"
       unfolding activation_collect_def by blast
   qed
 next
-  show "(\<Union>c. activation_collect gs enterc startcontext g S v c) \<subseteq> ltr_collect gs g S v"
+  show "(\<Union>c. activation_collect gs enterc initial_ctx g S v c) \<subseteq> ltr_collect gs g S v"
     unfolding activation_collect_def ltr_collect_def by blast
 qed
 
