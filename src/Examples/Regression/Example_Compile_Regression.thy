@@ -15,9 +15,9 @@ lemma ex_return_before_dead:
   shows "\<exists>j. (Statement j, EA_Ret (Some e) p, FunctionResult p) \<in> E"
   using compile_return_edge[OF assms] by simp
 
-lemmas ex_return_ignores_continuation = inv11_return_ignores_continuation
+lemmas ex_return_ignores_continuation = compile_Return_ignores_continuation
 
-lemmas ex_multi_return = inv13_multi_return_converge
+lemmas ex_multi_return = compile_multi_return_converge
 
 lemma ex_fallthrough:
   assumes "compile_proc \<Pi> p (\<lparr>formals = [], body = SKIP\<rparr>) n = (n', E, K)"
@@ -36,7 +36,7 @@ lemma ex_nested_calls:
    \<and> Statement n \<noteq> Statement (Suc (Suc (Suc n)))"
   using assms by (simp add: Let_def)
 
-lemmas ex_recursion = inv14_recursion_edge
+lemmas ex_recursion = compile_self_call_edge
 
 lemma compile_seq_call_edge:
   assumes "\<Pi> pin = Some decl" and "special_table pin = None"
@@ -82,7 +82,7 @@ proof -
   have "(Statement n, CallEdge (Some rin) (formals decl) actuals, FunctionEntry pin,
          Statement (Suc n)) \<in> calls g"
     using compile_seq_call_edge[OF p spNone comp] sub by blast
-  from cstep_call[OF this] show ?thesis .
+  from cstep.Call[OF this] show ?thesis .
 qed
 
 lemma example_nested_call_frames:

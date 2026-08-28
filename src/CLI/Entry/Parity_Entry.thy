@@ -70,7 +70,7 @@ proof -
       \<Longrightarrow> (k, c1) \<in> fst (pctx_sol pgs is_bot_pred (prog_table p) (prog_procs p) prog_main_name (prog_main p))"
     using comb_fwd_ok unfolding sol_eq[symmetric] cfg_eq[symmetric] .
   have ltr_eq: "ltr_collect pgs (prog_cfg prog_main_name p) (cinit_stores pgs) v
-      = activation_collect pgs (admiss_exact enterc_unit) ()
+      = activation_collect pgs enterc_unit ()
           (compile_prog (prog_table p) (prog_procs p) prog_main_name (prog_main p)) (cinit_stores pgs) v ()"
     unfolding cfg_eq by (rule activation_collect_unit_eq_ltr_collect[symmetric])
   have s0_sound: "cinit_stores pgs \<subseteq> gamma_dg_base
@@ -78,7 +78,7 @@ proof -
         (map_lift (fun_of_resolved_st_q_for pgs) (Bot::parity exec_dg_st lifted))"
     using pctx_cinit_le_cinit_parity_st[OF solves' exact entry_cov' fwd_ok' call_fwd_ok' comb_fwd_ok']
     by (simp add: gamma_dg_base_def)
-  have node_sound: "activation_collect pgs (admiss_exact enterc_unit) ()
+  have node_sound: "activation_collect pgs enterc_unit ()
         (compile_prog (prog_table p) (prog_procs p) prog_main_name (prog_main p)) (cinit_stores pgs) v ()
       \<subseteq> \<lbrakk>case lookup_context
               (dg_analysis_adapter.analyse_result

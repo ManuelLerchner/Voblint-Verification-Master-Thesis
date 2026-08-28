@@ -33,9 +33,9 @@ proof -
     by (rule cstep.Call[OF edge])
   show "call_enter is_global (CallEdge dst (formals decl) actuals) s
            = bind_formals (formals decl) (map (\<lambda>e. aval e s) actuals) (enter_state is_global s)"
-    by (rule call_enter_eq_source_call_store)
+    by (rule call_enter_CallEdge)
   show "frames_match (Frame s dst # frs) ((cont, dst, s) # stk)"
-    using fm by (simp add: frames_match_Cons_iff)
+    using fm by (simp add: frames_match_activation)
 qed
 
 lemma return_initiation:
@@ -70,7 +70,7 @@ proof -
   show "cstep is_global g (FunctionResult p, callee, (cont, dst, caller) # stk)
            (cont, combine_collect is_global dst caller callee, stk)"
     by (rule cstep.Return)
-  show "frames_match frs stk" using fm by (simp add: frames_match_Cons_iff)
+  show "frames_match frs stk" using fm by (simp add: frames_match_activation)
 qed
 
 lemma return_completion_unwind:
@@ -87,7 +87,7 @@ proof -
   show "cstep is_global g (FunctionResult p, callee, (cont, dst,caller) # stk)
            (cont, combine_collect is_global dst caller callee, stk)"
     by (rule cstep.Return)
-  show "frames_match frs stk" using fm by (simp add: frames_match_Cons_iff)
+  show "frames_match frs stk" using fm by (simp add: frames_match_activation)
 qed
 
 lemma Unwind_not_pcompletes: "\<not> pcompletes is_global \<Pi> Unwind s t"

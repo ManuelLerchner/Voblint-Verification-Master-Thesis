@@ -97,7 +97,7 @@ proof -
         (map_lift (fun_of_resolved_st_q_for pgs) (Bot::int_dom exec_dg_st lifted))"
     using ictx_cinit_le_cinit_int_dom_st_warrow[OF solves' exact entry_cov' fwd_ok' call_fwd_ok' comb_fwd_ok']
     by (simp add: gamma_dg_base_def)
-  have node_sound: "activation_collect pgs (admiss_exact enterc_unit) ()
+  have node_sound: "activation_collect pgs enterc_unit ()
         (compile_prog (prog_table p) (prog_procs p) prog_main_name (prog_main p)) (cinit_stores pgs) v ()
       \<subseteq> \<lbrakk>case lookup_context
               (dg_analysis_adapter.analyse_result
@@ -108,7 +108,7 @@ proof -
     by (rule ictx_result_node_sound_warrow
           [OF solves' exact entry_cov' fwd_ok' call_fwd_ok' comb_fwd_ok' entry_cov' s0_sound])
   have ltr_eq: "ltr_collect pgs (prog_cfg prog_main_name p) (cinit_stores pgs) v
-      = activation_collect pgs (admiss_exact enterc_unit) ()
+      = activation_collect pgs enterc_unit ()
           (compile_prog (prog_table p) (prog_procs p) prog_main_name (prog_main p)) (cinit_stores pgs) v ()"
     unfolding cfg_eq by (rule activation_collect_unit_eq_ltr_collect[symmetric])
   have result_eq: "lookup_context (analyse_int_ctx_result_warrow_for mode pgs prog_main_name p) v ()

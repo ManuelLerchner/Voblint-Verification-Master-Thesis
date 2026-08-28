@@ -719,7 +719,7 @@ lemma placement_hook_gen_entry:
   by simp_all
 
 lemma placement_cfg_entry: "cfg_entry placement_cfg = FunctionEntry prog_main_name"
-  unfolding placement_cfg_def by (rule inv16_entry_is_main)
+  unfolding placement_cfg_def by (rule cfg_entry_compile_prog)
 
 lemma placement_hook_lists:
   "intra_predecessor_list placement_cfg (FunctionEntry prog_main_name) = []"

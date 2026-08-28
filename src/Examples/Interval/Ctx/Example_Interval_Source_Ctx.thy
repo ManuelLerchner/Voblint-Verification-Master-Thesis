@@ -32,16 +32,11 @@ theorem twice_source_ctx_run_sound:
   shows "\<exists>v stk t c.
            csim twice_pi (compile_prog twice_pi twice_procs (STR ''main'') twice_main)
              (residual, s, frs) (v, s, stk)
-           \<and> ctx_key (admiss_exact twice_ctx) [] t c
+           \<and> key twice_ctx [] t = c
            \<and> s \<in> gamma_state_lift (twice_ctx_sg (Inl (v, c)))"
-proof -
-  have tot: "\<And>u c s. \<exists>c'. admiss_exact twice_ctx u c s c'"
-    by (simp add: admiss_exact_def)
-  show ?thesis
-    by (rule source_sound_from_collecting_cap[where admiss = "admiss_exact twice_ctx"
-            and gammaM = gamma_state_lift,
-          OF twice_wf init run tot twice_activation_collect_sound])
-qed
+  by (rule source_sound_from_collecting_cap[where enterc = twice_ctx and startcontext = "[]"
+          and gammaM = gamma_state_lift,
+        OF twice_wf init run twice_activation_collect_sound])
 
 text \<open>The witness-free specialisation: a \<open>twice\<close> store reached at the top level (empty source frame
   stack) is certified at the concrete seed context \<open>[]\<close> (no formal binds the root activation) ---
@@ -54,7 +49,7 @@ theorem twice_source_toplevel_at_bot:
                (residual, s, []) (v, s, [])
              \<and> s \<in> gamma_state_lift (twice_ctx_sg (Inl (v, [])))"
   by (rule source_sound_toplevel_from_collecting_cap
-            [where admiss = "admiss_exact twice_ctx" and gammaM = gamma_state_lift,
+            [where enterc = twice_ctx and gammaM = gamma_state_lift,
              OF twice_wf init run twice_activation_collect_sound])
 
 end

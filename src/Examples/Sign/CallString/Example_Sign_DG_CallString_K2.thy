@@ -266,11 +266,11 @@ proof -
 qed
 
 theorem sign_nest_2_activation_collect_sound:
-  "activation_collect sign_nest_gs (admiss_exact (cs_context 2)) [] sign_nest_cfg
+  "activation_collect sign_nest_gs (cs_context 2) [] sign_nest_cfg
      (cinit_stores sign_nest_gs) v ctx
      \<subseteq> gamma_state_lift (sign_ctx_sg_2 (Inl (v, ctx)))"
 proof (rule activation_collect_sound_gen[where sg = sign_ctx_sg_2 and gammaM = gamma_state_lift
-        and admiss = "admiss_exact (cs_context 2)" and startcontext = "[]"
+        and enterc = "cs_context 2" and startcontext = "[]"
         and S = "cinit_stores sign_nest_gs" and g = sign_nest_cfg and gs = sign_nest_gs])
   \<comment> \<open>ENTRY_G\<close>
   fix s assume "s \<in> cinit_stores sign_nest_gs"
@@ -294,27 +294,22 @@ next
         \<Longrightarrow> s' \<in> gamma_state_lift (sign_ctx_sg_2 (Inl (v, c)))"
     by (rule sign_nest_2_cs.dg_ctx_act_edge[unfolded sign_nest_cfg_compile])
 next
-  \<comment> \<open>ADMISS_TOTAL --- trivial, \<open>cs_context 2\<close> is a total function.\<close>
-  show "\<And>u c s. \<exists>c'. admiss_exact (cs_context 2) u c s c'" by (simp add: admiss_exact_def)
-next
   \<comment> \<open>CALL --- enter routed to the truncated call string.\<close>
-  fix u dst pars args p cont c s c'
+  fix u dst pars args p cont c s
   assume ce: "(u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls sign_nest_cfg"
     and sm: "s \<in> gamma_state_lift (sign_ctx_sg_2 (Inl (u, c)))"
-    and adm: "admiss_exact (cs_context 2) u c (call_enter sign_nest_gs (CallEdge dst pars args) s) c'"
   show "call_enter sign_nest_gs (CallEdge dst pars args) s
-          \<in> gamma_state_lift (sign_ctx_sg_2 (Inl (FunctionEntry p, c')))"
-    using adm sign_ctx_sg_2_seed[OF ce sm] by (simp add: admiss_exact_def)
+          \<in> gamma_state_lift (sign_ctx_sg_2 (Inl (FunctionEntry p, cs_context 2 u c (call_enter sign_nest_gs (CallEdge dst pars args) s))))"
+    using sign_ctx_sg_2_seed[OF ce sm] .
 next
   \<comment> \<open>COMB --- return combine at the caller's own truncated context.\<close>
-  fix cl dst pars args p cont c1 c2 s t es
+  fix cl dst pars args p cont c1 s t es
   assume ce: "(cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls sign_nest_cfg"
     and sm: "s \<in> gamma_state_lift (sign_ctx_sg_2 (Inl (cl, c1)))"
-    and adm: "admiss_exact (cs_context 2) cl c1 es c2"
-    and tm: "t \<in> gamma_state_lift (sign_ctx_sg_2 (Inl (FunctionResult p, c2)))"
+    and tm: "t \<in> gamma_state_lift (sign_ctx_sg_2 (Inl (FunctionResult p, cs_context 2 cl c1 es)))"
     and ces: "call_enter_store sign_nest_gs sign_nest_cfg cl s es"
   show "combine_collect sign_nest_gs dst s t \<in> gamma_state_lift (sign_ctx_sg_2 (Inl (cont, c1)))"
-    using adm tm sign_ctx_sg_2_comb[OF ce sm _ ces] by (simp add: admiss_exact_def)
+    using tm sign_ctx_sg_2_comb[OF ce sm _ ces] by blast
 qed
 
 

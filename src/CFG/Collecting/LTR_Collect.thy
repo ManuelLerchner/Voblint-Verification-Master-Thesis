@@ -1,5 +1,5 @@
 theory LTR_Collect
-  imports CFG_Local_Trace
+  imports CFG_Local_Trace Activation_Context
 begin
 
 section \<open>Local-trace collecting semantics\<close>
@@ -87,8 +87,8 @@ proof (rule subsetI)
     then show ?case by (rule ltr_F_lfp_fold)
   next
     case (call caller dst pars args p cont)
-    have "Call caller [(FunctionEntry p, call_enter gs (CallEdge dst pars args) (sink_store caller))]
-            \<in> ltr_F gs g S (lfp (ltr_F gs g S))"
+    have "Call caller [(FunctionEntry p, call_enter gs (CallEdge dst pars args)
+                        (sink_store caller))] \<in> ltr_F gs g S (lfp (ltr_F gs g S))"
       unfolding ltr_F_def[of gs g S "lfp (ltr_F gs g S)"] using call.hyps call.IH by blast
     then show ?case by (rule ltr_F_lfp_fold)
   next
@@ -171,25 +171,20 @@ definition ltr_collect :: "(vname \<Rightarrow> bool) \<Rightarrow> cfg \<Righta
   "ltr_collect gs g S v =
      {sink_store t | t. t \<in> valid_ltr gs g S \<and> sink_node t = v}"
 
-text \<open>\<open>collect_result\<close> is a convenience view --- collection at a procedure result --- not a
-  distinct mechanism.  Whole-program completion is \<open>collect_result gs g S main\<close>.\<close>
-definition collect_result :: "(vname \<Rightarrow> bool) \<Rightarrow> cfg \<Rightarrow> store set \<Rightarrow> pname \<Rightarrow> store set" where
-  "collect_result gs g S p = ltr_collect gs g S (FunctionResult p)"
-
-lemma ltr_collect_I:
+lemma ltr_collect_I [intro]:
   "t \<in> valid_ltr gs g S \<Longrightarrow> sink_store t \<in> ltr_collect gs g S (sink_node t)"
   unfolding ltr_collect_def by blast
 
 text \<open>Every collected state has a valid trace witness.\<close>
-lemma ltr_collect_E:
+lemma ltr_collect_E [elim]:
   assumes "s \<in> ltr_collect gs g S v"
   obtains t where "t \<in> valid_ltr gs g S" "sink_node t = v" "sink_store t = s"
   using assms unfolding ltr_collect_def by blast
 
 text \<open>
   \<^const>\<open>ltr_collect\<close> is closed under intra flow: extending a witness trace by one
-  \<^const>\<open>intra\<close> edge is \<open>valid_ltr.intra\<close>.  Closure under \<^emph>\<open>call\<close> and \<^emph>\<open>return\<close> steps is
-  deliberately absent here --- \<open>valid_ltr.ret\<close> requires the popped activation to be the
+  \<^const>\<open>intra\<close> edge is \<open>valid_ltr.intra\<close>.  Closure under \<^emph>\<open>call\<close> and \<^emph>\<open>return\<close>
+  steps is deliberately absent here --- \<open>valid_ltr.ret\<close> requires the popped activation to be the
   witness trace's own caller, which a bare CFG step does not supply.
 \<close>
 
@@ -206,35 +201,11 @@ proof -
   from ltr_collect_I[OF this] show ?thesis by simp
 qed
 
-text \<open>The whole-path form: an \<^const>\<open>intra_path\<close> transports a collected store to its endpoint.\<close>
-
-lemma ltr_collect_intra_path_pair:
-  "intra_path g x y \<Longrightarrow> snd x \<in> ltr_collect gs g S (fst x) \<Longrightarrow> snd y \<in> ltr_collect gs g S (fst y)"
-proof (induction rule: star.induct)
-  case (refl x)
-  then show ?case by simp
-next
-  case (step x y z)
-  obtain u s where x: "x = (u, s)" by (cases x)
-  obtain w s1 where y: "y = (w, s1)" by (cases y)
-  from step.hyps(1) x y obtain a where
-    e: "(u, a, w) \<in> intra g" and st: "s1 \<in> edge_step a s"
-    by (auto elim: cfg_intra_stepE)
-  have "s1 \<in> ltr_collect gs g S w"
-    using step.prems x by (auto intro: ltr_collect_intra_step[OF _ e st])
-  then show ?case using step.IH y by simp
-qed
-
-lemma ltr_collect_intra_path:
-  assumes "intra_path g (u, s) (v, s')" and "s \<in> ltr_collect gs g S u"
-  shows "s' \<in> ltr_collect gs g S v"
-  using ltr_collect_intra_path_pair[OF assms(1)] assms(2) by simp
-
 text \<open>
   The activation-preserving form.  Following an \<^const>\<open>intra_path\<close> only \<open>extend\<close>s the trace, so
   the resulting witness is the \<^emph>\<open>same\<close> activation: same caller and same entry node.  Callers
-  that must know \<^emph>\<open>which\<close> activation reached a node need this, not \<open>ltr_collect_intra_path\<close> ---
-  the collection at a node merges every activation that reaches it.
+  that must know \<^emph>\<open>which\<close> activation reached a node need this: the collection at a node
+  merges every activation that reaches it.
 \<close>
 
 lemma valid_ltr_intra_path_extend_pair:
@@ -250,7 +221,7 @@ next
   obtain w s1 where y: "y = (w, s1)" by (cases y)
   from step.hyps(1) x y obtain a where
     e: "(u, a, w) \<in> intra g" and st: "s1 \<in> edge_step a s"
-    by (auto elim: cfg_intra_stepE)
+    by auto
   have ext: "extend t (w, s1) \<in> valid_ltr gs g S"
     by (rule valid_ltr.intra[OF step.prems(1)])
        (use e st step.prems(2,3) x in simp_all)
@@ -270,10 +241,6 @@ lemma valid_ltr_intra_path_extend:
     "caller_of t' = caller_of t" "fst (hd (path t')) = fst (hd (path t))"
   using valid_ltr_intra_path_extend_pair[OF p t] by auto
 
-lemma collect_result_eq:
-  "collect_result gs g S p = ltr_collect gs g S (FunctionResult p)"
-  by (simp add: collect_result_def)
-
 subsection \<open>Collecting equations\<close>
 
 text \<open>(1) Initial stores are collected at \<^const>\<open>cfg_entry\<close>.\<close>
@@ -281,146 +248,31 @@ lemma ltr_collect_init:
   "s \<in> S \<Longrightarrow> s \<in> ltr_collect gs g S (cfg_entry g)"
   using ltr_collect_I[OF valid_ltr.init] by simp
 
-text \<open>(2) Intra propagation: a collected source state and a successful \<^const>\<open>edge_step\<close>
-  produce a collected target state.\<close>
-lemma ltr_collect_intra:
-  assumes "s \<in> ltr_collect gs g S u" and "(u, a, v) \<in> intra g"
-    and "s' \<in> edge_step a s"
-  shows "s' \<in> ltr_collect gs g S v"
-proof -
-  from assms(1) obtain t where t: "t \<in> valid_ltr gs g S" "sink_node t = u" "sink_store t = s"
-    by (rule ltr_collect_E)
-  have "extend t (v, s') \<in> valid_ltr gs g S"
-    by (rule valid_ltr.intra[OF t(1)]) (use assms(2,3) t(2,3) in simp_all)
-  from ltr_collect_I[OF this] show ?thesis by simp
-qed
-
-text \<open>(3) Call entry: a collected call-site state produces the entered state at the
-  callee's \<^const>\<open>FunctionEntry\<close>.\<close>
-lemma ltr_collect_call:
-  assumes "s \<in> ltr_collect gs g S u"
-    and "(u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
-  shows "call_enter gs (CallEdge dst pars args) s \<in> ltr_collect gs g S (FunctionEntry p)"
-proof -
-  from assms(1) obtain t where t: "t \<in> valid_ltr gs g S" "sink_node t = u" "sink_store t = s"
-    by (rule ltr_collect_E)
-  have "Call t [(FunctionEntry p, call_enter gs (CallEdge dst pars args) (sink_store t))] \<in> valid_ltr gs g S"
-    by (rule valid_ltr.call[OF t(1)]) (use assms(2) t(2) in simp)
-  from ltr_collect_I[OF this] show ?thesis using t(3) by simp
-qed
-
-text \<open>(4) Procedure result: \<^const>\<open>EA_Ret\<close> propagation collects the resulting state at
-  \<^const>\<open>FunctionResult\<close> through the ordinary intra rule --- a specialisation of (2).\<close>
-lemma ltr_collect_result_via_ret:
-  assumes "s \<in> ltr_collect gs g S u" and "(u, EA_Ret e p, FunctionResult p) \<in> intra g"
-    and "s' \<in> edge_step (EA_Ret e p) s"
-  shows "s' \<in> ltr_collect gs g S (FunctionResult p)"
-  by (rule ltr_collect_intra[OF assms])
-
-text \<open>(5) Resume: a collected completed callee activation produces the combined state at the
-  exact continuation of its originating call edge.\<close>
-lemma ltr_collect_resume:
-  assumes "callee \<in> valid_ltr gs g S" and "caller_of callee = Some caller"
-    and "sink_node callee = FunctionResult p"
-    and "(sink_node caller, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
-  shows "combine_collect gs dst (sink_store caller) (sink_store callee) \<in> ltr_collect gs g S cont"
-proof -
-  have "Resume caller callee
-          (path caller @ [(cont, combine_collect gs dst (sink_store caller) (sink_store callee))])
-        \<in> valid_ltr gs g S"
-    by (rule valid_ltr.ret[OF assms])
-  from ltr_collect_I[OF this] show ?thesis by (simp add: sink_node_def sink_store_def)
-qed
-
-text \<open>(6) Context preservation under intra: an intra extension does not change the
-  activation key.\<close>
-lemma ltr_collect_ctx_intra_pres:
-  "path t \<noteq> [] \<Longrightarrow> key enterc startcontext (extend t (v, s')) = key enterc startcontext t"
-  by (rule key_extend_nonempty)
-
-text \<open>(7) Context transition under call: the child activation receives exactly the context
-  produced by the configured enter function.\<close>
-lemma ltr_collect_ctx_call:
-  "key enterc startcontext (Call caller [(FunctionEntry p, call_enter gs (CallEdge dst pars args) (sink_store caller))])
-     = enterc (sink_node caller) (key enterc startcontext caller)
-         (call_enter gs (CallEdge dst pars args) (sink_store caller))"
-  by simp
-
-text \<open>(8) Context restoration under resume: a resumed trace has the caller's activation
-  context, not the callee's.\<close>
-lemma ltr_collect_ctx_resume:
-  "key enterc startcontext (Resume caller callee p) = key enterc startcontext caller"
-  by simp
-
-text \<open>(9) Flat reduction: for \<open>calls g = {}\<close>, no call-derived activation exists, so
-  collection is exactly the sink stores of root/intra traces.\<close>
-lemma valid_ltr_flat_no_call:
-  "flat_cfg g \<Longrightarrow> Call caller p \<notin> valid_ltr gs g S"
-  using valid_ltr_flat_root by blast
-
-lemma valid_ltr_flat_no_resume:
-  "flat_cfg g \<Longrightarrow> Resume caller callee p \<notin> valid_ltr gs g S"
-  using valid_ltr_flat_root by blast
-
-lemma ltr_collect_flat:
-  assumes "flat_cfg g"
-  shows "ltr_collect gs g S v = {sink_store t | t. t \<in> valid_ltr gs g S \<and> (\<exists>q. t = Root q) \<and> sink_node t = v}"
-  using assms valid_ltr_flat_root unfolding ltr_collect_def by blast
-
-text \<open>(10) Node domain: collection outside \<^const>\<open>cfg_nodes\<close> is empty.\<close>
-lemma ltr_collect_outside_nodes:
-  "v \<notin> cfg_nodes g \<Longrightarrow> ltr_collect gs g S v = {}"
-  using valid_ltr_sink_in_nodes unfolding ltr_collect_def by blast
-
-text \<open>(11) Monotonicity in the initial stores.\<close>
-lemma ltr_collect_mono_S:
-  "S \<subseteq> S' \<Longrightarrow> ltr_collect gs g S v \<subseteq> ltr_collect gs g S' v"
-  using valid_ltr_mono_S unfolding ltr_collect_def by blast
-
-text \<open>(12) Union in the initial stores.\<close>
-lemma ltr_collect_Un_S:
-  "ltr_collect gs g (S \<union> S') v = ltr_collect gs g S v \<union> ltr_collect gs g S' v"
-  using valid_ltr_Un_S unfolding ltr_collect_def by blast
-
 subsection \<open>Context-sensitive / context-insensitive bridge\<close>
 
 text \<open>Bridge (1): context-sensitive collection is included in context-insensitive
   collection.\<close>
 theorem activation_collect_le_ltr_collect:
-  "activation_collect gs admiss startcontext g S v c \<subseteq> ltr_collect gs g S v"
+  "activation_collect gs enterc startcontext g S v c \<subseteq> ltr_collect gs g S v"
   unfolding activation_collect_def ltr_collect_def by blast
 
 text \<open>Bridge (2): context-insensitive collection is the union over contexts --- every trace
-  has SOME admissible context, PROVIDED \<open>admiss\<close> can always continue (\<open>ADMISS_TOTAL\<close>,
-  \<open>ctx_key_exists\<close>); an \<open>admiss\<close> that never continues at some point could leave a trace out
-  of every slot. No finiteness assumption.\<close>
+  has exactly one context, since \<^const>\<open>key\<close> is a total function.  No finiteness assumption.\<close>
 theorem ltr_collect_eq_Union_activation:
-  assumes tot: "\<And>u c s. \<exists>c'. admiss u c s c'"
-  shows "ltr_collect gs g S v = (\<Union>c. activation_collect gs admiss startcontext g S v c)"
+  "ltr_collect gs g S v = (\<Union>c. activation_collect gs enterc startcontext g S v c)"
 proof
-  show "ltr_collect gs g S v \<subseteq> (\<Union>c. activation_collect gs admiss startcontext g S v c)"
+  show "ltr_collect gs g S v \<subseteq> (\<Union>c. activation_collect gs enterc startcontext g S v c)"
   proof
     fix x assume "x \<in> ltr_collect gs g S v"
     then obtain t where t: "t \<in> valid_ltr gs g S" "sink_node t = v" "sink_store t = x"
       by (rule ltr_collect_E)
-    obtain c where "ctx_key admiss startcontext t c"
-      using ctx_key_exists[where admiss = admiss, OF tot] by blast
-    with t show "x \<in> (\<Union>c. activation_collect gs admiss startcontext g S v c)"
+    then show "x \<in> (\<Union>c. activation_collect gs enterc startcontext g S v c)"
       unfolding activation_collect_def by blast
   qed
 next
-  show "(\<Union>c. activation_collect gs admiss startcontext g S v c) \<subseteq> ltr_collect gs g S v"
+  show "(\<Union>c. activation_collect gs enterc startcontext g S v c) \<subseteq> ltr_collect gs g S v"
     unfolding activation_collect_def ltr_collect_def by blast
 qed
-
-subsection \<open>Matched returns\<close>
-
-text \<open>Every reachable \<^const>\<open>Resume\<close> preserves the caller recovered from its completed
-  callee.\<close>
-theorem valid_ltr_Resume_caller_matched:
-  "Resume caller callee p \<in> valid_ltr gs g S \<Longrightarrow> caller_of callee = Some caller"
-  using valid_ltr_Resume_fields by blast
-
 
 end
 

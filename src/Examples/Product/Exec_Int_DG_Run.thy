@@ -5,6 +5,7 @@ theory Exec_Int_DG_Run
     "Voblint_Analysis.Int_Exec"
     "Voblint_VIMP.VIMP_Notation"
     "Voblint_Soundness.Run_Analysis_Sound"
+    Example_Compile_Call_Free
 begin
 
 hide_const phase.N
@@ -36,7 +37,7 @@ lemma gExI_calls: "calls gExI = {}"
   unfolding gExI_def int_ex_pi_def
   by (rule compile_prog_calls_empty) (simp_all add: int_ex_prog_def)
 lemma gExI_entry: "cfg_entry gExI = FunctionEntry (STR ''main'')"
-  unfolding gExI_def prog_main_name_def by (rule inv16_entry_is_main)
+  unfolding gExI_def prog_main_name_def by (rule cfg_entry_compile_prog)
 lemma gExI_finE: "finite (intra gExI)" unfolding gExI_def using compile_prog_finite by simp
 lemma gExI_finC: "finite (calls gExI)" unfolding gExI_def using compile_prog_finite by simp
 

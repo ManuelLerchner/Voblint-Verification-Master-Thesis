@@ -62,7 +62,7 @@ text \<open>
 \<close>
 
 lemma twice_entry: "cfg_entry twice_cfg = FunctionEntry (STR ''main'')"
-  unfolding twice_cfg_def by (rule inv16_entry_is_main)
+  unfolding twice_cfg_def by (rule cfg_entry_compile_prog)
 
 text \<open>The two call edges' shape, computed directly from \<open>twice_cfg\<close>: each call site \<open>u\<close>
   pins down its destination variable, callee, arguments, and continuation. Exported for the

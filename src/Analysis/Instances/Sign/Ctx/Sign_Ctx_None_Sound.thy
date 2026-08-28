@@ -13,7 +13,7 @@ theory Sign_Ctx_None_Sound
     "Voblint_Core.Routed_Context"
     "Voblint_Core.Routed_Context_Unit"
     "Voblint_Core.Solver_Menu"
-    "Voblint_VIMP.VIMP_Notation"
+    "Voblint_VIMP.VIMP_Program"
     "Voblint_Core.Activation_Backbone"
     "Voblint_Core.Analysis_Result"
 begin

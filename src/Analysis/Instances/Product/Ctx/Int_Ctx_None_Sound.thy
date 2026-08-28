@@ -8,7 +8,7 @@ theory Int_Ctx_None_Sound
     "Voblint_Core.Routed_Context"
     "Voblint_Core.Routed_Context_Unit"
     "Voblint_Core.Solver_Menu"
-    "Voblint_VIMP.VIMP_Notation"
+    "Voblint_VIMP.VIMP_Program"
     "Voblint_Core.Activation_Backbone"
 begin
 
@@ -440,10 +440,10 @@ proof -
 qed
 
 theorem ictx_activation_collect_sound:
-  "activation_collect gs (admiss_exact enterc_unit) () (compile_prog Pi ps mnm main) (cinit_stores gs) v ctx
+  "activation_collect gs enterc_unit () (compile_prog Pi ps mnm main) (cinit_stores gs) v ctx
      \<subseteq> gamma_state_lift (ictx_sg (Inl (v, ctx)))"
 proof (rule activation_collect_sound_gen[where sg = ictx_sg and gammaM = gamma_state_lift
-        and admiss = "admiss_exact enterc_unit"
+        and enterc = "enterc_unit"
         and startcontext = "()" and S = "cinit_stores gs" and g = "compile_prog Pi ps mnm main" and gs = gs])
   \<comment> \<open>ENTRY_G\<close>
   fix s assume "s \<in> cinit_stores gs"
@@ -466,27 +466,23 @@ next
         \<Longrightarrow> s' \<in> gamma_state_lift (ictx_sg (Inl (v, c)))"
     by (rule ictx_dg.dg_ctx_act_edge)
 next
-  \<comment> \<open>ADMISS_TOTAL\<close>
-  show "\<And>u c s. \<exists>c'. admiss_exact enterc_unit u c s c'"
-    by (simp add: admiss_exact_def)
-next
   \<comment> \<open>CALL\<close>
-  fix u dst pars args p cont c s c'
+  fix u dst pars args p cont c s
   assume ce: "(u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps mnm main)"
     and sm: "s \<in> gamma_state_lift (ictx_sg (Inl (u, c)))"
-    and adm: "admiss_exact enterc_unit u c (call_enter gs (CallEdge dst pars args) s) c'"
-  show "call_enter gs (CallEdge dst pars args) s \<in> gamma_state_lift (ictx_sg (Inl (FunctionEntry p, c')))"
-    using adm ictx_sg_seed[OF ce sm] by (simp add: admiss_exact_def)
+  show "call_enter gs (CallEdge dst pars args) s
+          \<in> gamma_state_lift
+              (ictx_sg (Inl (FunctionEntry p, enterc_unit u c (call_enter gs (CallEdge dst pars args) s))))"
+    using ictx_sg_seed[OF ce sm] by simp
 next
   \<comment> \<open>COMB\<close>
-  fix cl dst pars args p cont c1 c2 s t es
+  fix cl dst pars args p cont c1 s t es
   assume ce: "(cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps mnm main)"
     and sm: "s \<in> gamma_state_lift (ictx_sg (Inl (cl, c1)))"
-    and adm: "admiss_exact enterc_unit cl c1 es c2"
-    and tm: "t \<in> gamma_state_lift (ictx_sg (Inl (FunctionResult p, c2)))"
+    and tm: "t \<in> gamma_state_lift (ictx_sg (Inl (FunctionResult p, enterc_unit cl c1 es)))"
     and ces: "call_enter_store gs (compile_prog Pi ps mnm main) cl s es"
   show "combine_collect gs dst s t \<in> gamma_state_lift (ictx_sg (Inl (cont, c1)))"
-    using adm tm ictx_sg_comb[OF ce sm _ ces] by (simp add: admiss_exact_def)
+    using tm ictx_sg_comb[OF ce sm _ ces] by simp
 qed
 
 subsection \<open>The public result/report table, via the generic adapter locale\<close>

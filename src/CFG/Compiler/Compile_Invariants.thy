@@ -28,24 +28,40 @@ definition wf_compile_input ::
 
 declare wf_compile_input_def [wf_compile_input_simps]
 
+text \<open>The leaf definitions an executable instance unfolds to decide the contract.  No
+  abstract proof unfolds them, so they only ever fire under \<open>unfolding wf_compile_input_simps\<close>.\<close>
+declare
+  reserved_ret_var_def [wf_compile_input_simps]
+  source_exp_def [wf_compile_input_simps]
+  valid_formal_def [wf_compile_input_simps]
+  value_providing_def [wf_compile_input_simps]
+  special_table_def [wf_compile_input_simps]
+  special_pname_nondet_int_def [wf_compile_input_simps]
+  special_pname_min_def [wf_compile_input_simps]
+  special_pname_max_def [wf_compile_input_simps]
+  ret_var_def [wf_compile_input_simps]
+  prog_main_name_def [wf_compile_input_simps]
+
 lemma wf_compile_input_source_program:
   "wf_compile_input gs \<Pi> ps mnm main \<Longrightarrow> wf_source_program gs \<Pi> mnm main"
   by (simp add: wf_compile_input_def)
 
-lemmas wf_compile_inputD = wf_source_programD[OF wf_compile_input_source_program]
+lemma wf_compile_inputD:
+  assumes "wf_compile_input gs \<Pi> ps mnm main"
+  shows "reserved_ret_var gs" and "\<Pi> mnm = Some \<lparr>formals = [], body = main\<rparr>"
+    and "wf_source_com \<Pi> main" and "no_return main"
+    and "\<Pi> p = Some decl \<Longrightarrow> wf_proc_decl gs \<Pi> decl"
+    and "\<Pi> p = Some decl \<Longrightarrow> special_table p = None"
+    and "source_pi \<Pi>" and "source_com main"
+    and "distinct ps" and "set ps = {p. \<Pi> p \<noteq> None} - {mnm}" and "mnm \<notin> set ps"
+  using wf_source_programD[OF wf_compile_input_source_program[OF assms]]
+    assms[unfolded wf_compile_input_def] by blast+
+
 lemmas wf_compile_input_reserved_ret_var [dest] = wf_compile_inputD(1)
 
-
-definition wf_program_compile_input :: "imp_prog => bool" where
-  "wf_program_compile_input p \<longleftrightarrow>
-    wf_compile_input (declared_global p) (prog_table p)
-      (prog_procs p) prog_main_name (prog_main p)"
-
-lemma wf_program_compile_inputD:
-  "wf_program_compile_input p \<Longrightarrow>
-    wf_compile_input (declared_global p) (prog_table p)
-      (prog_procs p) prog_main_name (prog_main p)"
-  by (simp add: wf_program_compile_input_def)
+abbreviation wf_program_compile_input :: "imp_prog \<Rightarrow> bool" where
+  "wf_program_compile_input p \<equiv>
+    wf_compile_input (declared_global p) (prog_table p) (prog_procs p) prog_main_name (prog_main p)"
 
 subsection \<open>An executable, sufficient reformulation\<close>
 
@@ -124,12 +140,8 @@ proof -
     using h(2) h(3) h(4) wf_source_program
     using domain by blast
   show ?thesis
-    unfolding wf_program_compile_input_def gs_def[symmetric] pi_eq[symmetric]
-    using wf_compile_input .
+    unfolding gs_def[symmetric] pi_eq[symmetric] using wf_compile_input .
 qed
-
-lemmas wf_program_compile_input_exec_declared_global =
-  wf_program_compile_inputD[OF wf_program_compile_input_exec_sound]
 
 definition compile_program :: "imp_prog => cfg" where
   "compile_program p =
@@ -151,10 +163,7 @@ text \<open>
 definition prog_cfg :: "pname => imp_prog => cfg" where
   "prog_cfg mnm p = compile_prog (prog_table p) (prog_procs p) mnm (prog_main p)"
 
-lemma compile_program_is_prog_cfg: "compile_program p = prog_cfg prog_main_name p"
-  by (simp add: compile_program_def prog_cfg_def)
 subsection \<open>Syntactic occurrence predicates\<close>
-
 
 fun returns_in :: "exp option \<Rightarrow> com \<Rightarrow> bool" where
   "returns_in e (Return e') = (e = e')"
@@ -201,7 +210,6 @@ next
   case (Return e') then show ?case by (auto split: if_splits)
 qed auto
 
-
 subsection \<open>Statement-range disjointness of distinct procedures\<close>
 
 lemma compile_proc_frag_range:
@@ -238,28 +246,6 @@ proof -
 
 qed
 
-lemma compile_procs_counter_mono:
-  "compile_procs \<Pi> ps n = (n', E, K) \<Longrightarrow> n \<le> n'"
-proof (induction ps arbitrary: n n' E K)
-  case Nil then show ?case by simp
-next
-  case (Cons p ps)
-  show ?case
-  proof (cases "\<Pi> p")
-    case None with Cons show ?thesis by simp
-  next
-    case (Some decl)
-    with Cons.prems obtain n1 E0 K0 n2 E' K' where
-      cp: "compile_proc \<Pi> p decl n = (n1, E0, K0)"
-      and rest: "compile_procs \<Pi> ps n1 = (n2, E', K')" and n': "n' = n2"
-      by (auto split: prod.splits)
-    have "n \<le> n1"
-      using cp by (auto simp: compile_proc_def Let_def split: prod.splits
-                        dest: compile_counter_mono)
-    with Cons.IH[OF rest] n' show ?thesis by simp
-  qed
-qed
-
 lemma compile_procs_frag_range:
   "compile_procs \<Pi> ps n = (n', E, K) \<Longrightarrow> frag_stmts E K \<subseteq> {n..<n'}"
 proof (induction ps arbitrary: n n' E K)
@@ -276,9 +262,7 @@ next
       and rest: "compile_procs \<Pi> ps n1 = (n2, E', K')"
       and n': "n' = n2" and E: "E = E0 \<union> E'" and K: "K = K0 \<union> K'"
       by (auto split: prod.splits)
-    have m1: "n \<le> n1"
-      using cp by (auto simp: compile_proc_def Let_def split: prod.splits
-                        dest: compile_counter_mono)
+    have m1: "n \<le> n1" using compile_proc_counter_mono[OF cp] .
     have m2: "n1 \<le> n2" using compile_procs_counter_mono[OF rest] .
     have r0: "frag_stmts E0 K0 \<subseteq> {n..<n1}" using compile_proc_frag_range[OF cp] .
     have r': "frag_stmts E' K' \<subseteq> {n1..<n2}" using Cons.IH[OF rest] .
@@ -289,30 +273,15 @@ next
   qed
 qed
 
-text \<open>Statement ranges of distinct procedures are disjoint: one fragment ends at the
-  counter from which the next fragment allocates its statements.\<close>
-theorem compile_procs_head_disjoint:
-  assumes "compile_proc \<Pi> p decl n = (n1, E0, K0)"
-    and "compile_procs \<Pi> ps n1 = (n2, E', K')"
-  shows "frag_stmts E0 K0 \<inter> frag_stmts E' K' = {}"
-proof -
-  have "frag_stmts E0 K0 \<subseteq> {n..<n1}" using compile_proc_frag_range[OF assms(1)] .
-  moreover have "frag_stmts E' K' \<subseteq> {n1..<n2}" using compile_procs_frag_range[OF assms(2)] .
-  ultimately show ?thesis by fastforce
-qed
-
 subsection \<open>Public compiler invariants\<close>
-
 
 text \<open>A \<open>Return\<close> fragment ignores its continuation: it emits its result edge and nothing
   else, so no node exists to carry a control flow the source does not have.\<close>
-theorem inv11_return_ignores_continuation:
+theorem compile_Return_ignores_continuation:
   "compile \<Pi> p (Return e) k n = compile \<Pi> p (Return e) k' n"
   by simp
 
-
-text \<open>Return branches of the same procedure converge at \<open>FunctionResult p\<close>.\<close>
-theorem inv13_multi_return_converge:
+theorem compile_multi_return_converge:
   assumes "compile \<Pi> p (If b (Return e1) (Return e2)) k n = (n', en, E, K)"
   shows "(\<exists>j. (Statement j, EA_Ret e1 p, FunctionResult p) \<in> E)
        \<and> (\<exists>j. (Statement j, EA_Ret e2 p, FunctionResult p) \<in> E)"
@@ -322,18 +291,11 @@ text \<open>A self-call targets the procedure's own entry node; its call site is
   statement node and its continuation is the caller's own next program point.  Restricted to
   \<open>p\<close> classified as an ordinary procedure: a self-call \<^const>\<open>special_table\<close> classifies
   instead sits on an intra edge, not a \<^const>\<open>CallEdge\<close>.\<close>
-theorem inv14_recursion_edge:
+theorem compile_self_call_edge:
   assumes "special_table p = None"
-  shows "(Statement n, CallEdge None (call_formals \<Pi> p) [],
-    FunctionEntry p, k)
-     \<in> snd (snd (snd (compile \<Pi> p (Call None p []) k n)))"
+  shows "(Statement n, CallEdge None (call_formals \<Pi> p) [], FunctionEntry p, k)
+           \<in> snd (snd (snd (compile \<Pi> p (Call None p []) k n)))"
   using assms by simp
-
-text \<open>The program entry is the entry node of the distinguished root procedure.\<close>
-theorem inv16_entry_is_main:
-  "cfg_entry (compile_prog \<Pi> ps mnm main) = FunctionEntry mnm"
-  unfolding compile_prog_def by (simp add: Let_def split: prod.splits)
-
 
 section \<open>Where each statement index came from in the source\<close>
 
@@ -411,14 +373,6 @@ definition prog_stmt_post_order :: "imp_prog \<Rightarrow> (pname \<times> cfg_n
        @ [(prog_main_name,
            com_stmt_post_order (procs_stmt_next (prog_table p) (prog_procs p) 0)
              (prog_main p))]"
-
-text \<open>Every definition contributes as many indices as its body has commands, so a
-  caller can pair position lists against these without a length check per entry.\<close>
-
-lemma length_defs_stmt_post_order:
-  "(q, vs) \<in> set (defs_stmt_post_order \<Pi> ps n)
-     \<Longrightarrow> \<exists>decl. \<Pi> q = Some decl \<and> length vs = csize (body decl)"
-  by (induction ps arbitrary: n) (auto split: option.splits)
 
 end
 

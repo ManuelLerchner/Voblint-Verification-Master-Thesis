@@ -4,6 +4,7 @@ theory Example_Interval_Checks_Store_Only
   imports "Voblint_Core.Checks" "Voblint_CLI.Interval_Entry" "Voblint_Analysis.Interval_Checks"
           "Voblint_Analysis.Sign_Checks" "Voblint_Analysis.Analysis_GraphViz"
           "Voblint_VIMP.VIMP_Notation"
+          Example_Compile_Call_Free
 begin
 
 (* Disambiguate our N constructor from the phase datatype constructor. *)
@@ -139,7 +140,7 @@ lemma checks_ivl_ex_exit_eval: "cfg_exit (prog_cfg (STR ''main'') checks_ivl_ex_
   unfolding prog_cfg_def by (rule cfg_exit_compile_prog)
 
 lemma checks_ivl_ex_entry_eval: "cfg_entry (prog_cfg (STR ''main'') checks_ivl_ex_program) = FunctionEntry (STR ''main'')"
-  unfolding prog_cfg_def by (rule inv16_entry_is_main)
+  unfolding prog_cfg_def by (rule cfg_entry_compile_prog)
 
 text \<open>Node-local collecting soundness at each check node, from the routed D/G
   node-soundness bridge and the four computed coverage facts --- no store is

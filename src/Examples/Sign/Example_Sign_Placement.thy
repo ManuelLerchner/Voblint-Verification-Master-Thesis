@@ -332,7 +332,7 @@ lemma sign_placement_dg_td_value:
 subsection \<open>CFG structure facts\<close>
 
 lemma sign_placement_cfg_entry: "cfg_entry sign_placement_cfg = FunctionEntry prog_main_name"
-  unfolding sign_placement_cfg_def by (rule inv16_entry_is_main)
+  unfolding sign_placement_cfg_def by (rule cfg_entry_compile_prog)
 
 lemma sign_placement_hook_lists:
   "intra_predecessor_list sign_placement_cfg (FunctionEntry prog_main_name) = []"

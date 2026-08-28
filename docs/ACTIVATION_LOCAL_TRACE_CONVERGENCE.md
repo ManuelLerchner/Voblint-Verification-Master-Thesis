@@ -84,8 +84,11 @@ than at a locals-zeroed store with `p = 0`.
 
 ## Relationship to Schwarz et al
 
-This redesign follows the semantic philosophy of Schwarz et al.: analyses are defined over a
-concrete local-trace semantics rather than over reconstructed global executions.
+This redesign follows the semantic philosophy of Schwarz and Erhard, *Data Race Detection by
+Digest-Driven Abstract Interpretation* ([arXiv:2511.11055](https://arxiv.org/abs/2511.11055),
+2025), and its precursor Schwarz et al., *Improving Thread-Modular Abstract Interpretation*
+(SAS 2021): analyses are defined over a concrete local-trace semantics rather than over
+reconstructed global executions.
 
 The difference is what “local” denotes:
 

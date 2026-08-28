@@ -1,7 +1,12 @@
 # Activation-local collecting semantics
 
 The CFG collecting layer uses call-structured local traces as its concrete
-interprocedural semantics.
+interprocedural semantics. The shape adapts the thread-modular local-trace
+semantics of Schwarz and Erhard, *Data Race Detection by Digest-Driven
+Abstract Interpretation* ([arXiv:2511.11055](https://arxiv.org/abs/2511.11055)),
+itself built on Schwarz et al., *Improving Thread-Modular Abstract
+Interpretation* (SAS 2021): a local trace is one procedure activation instead
+of one thread.
 
 | File | Role |
 | --- | --- |

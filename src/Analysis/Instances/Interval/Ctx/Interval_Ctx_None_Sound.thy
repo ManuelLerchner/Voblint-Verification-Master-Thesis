@@ -10,7 +10,7 @@ theory Interval_Ctx_None_Sound
     "Voblint_Core.Routed_Context_Unit"
     "Voblint_Core.DG_Analysis_Adapter"
     "Voblint_Core.Solver_Menu"
-    "Voblint_VIMP.VIMP_Notation"
+    "Voblint_VIMP.VIMP_Program"
 begin
 
 section \<open>Interval at the routed spine, instantiated at the unit context\<close>

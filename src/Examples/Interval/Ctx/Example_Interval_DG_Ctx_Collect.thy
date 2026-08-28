@@ -157,7 +157,7 @@ lemmas twice_entry_state_hyps =
 
 theorem twice_activation_collect_sound:
   "activation_collect twice_gs
-     (admiss_exact (entry_state_context twice_gs twice_is_bot_pred twice_pi twice_procs (STR ''main'') twice_main))
+     (entry_state_context twice_gs twice_is_bot_pred twice_pi twice_procs (STR ''main'') twice_main)
      [] (compile_prog twice_pi twice_procs (STR ''main'') twice_main) (cinit_stores twice_gs) v ctx
    \<subseteq> gamma_state_lift
        (entry_state_sg twice_gs twice_is_bot_pred twice_pi twice_procs (STR ''main'') twice_main (Inl (v, ctx)))"

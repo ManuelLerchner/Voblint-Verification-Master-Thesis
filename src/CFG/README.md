@@ -26,6 +26,7 @@ procedure boundaries.
 | `Compiler/Compile_Invariants.thy` | Static compiler-input contract and generated-CFG invariants |
 | `Compiler/Located_Exec.thy` | Source configurations located at CFG nodes |
 | `Compiler/Control_Residual.thy` | Source residuals associated with compiled nodes |
+| `Compiler/Control_Emit.thy` | Compiled edges of located residuals and the intra-step simulation |
 | `Compiler/Control_Simulation.thy` | Forward simulation from source steps to located CFG execution |
 
 ## Collecting semantics

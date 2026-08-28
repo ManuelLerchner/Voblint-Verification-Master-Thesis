@@ -16,10 +16,11 @@ text \<open>
     \<^item> intra flow follows an \<^const>\<open>intra\<close> edge and applies \<^const>\<open>edge_step\<close> (covering
       \<^term>\<open>EA_Nop\<close>, assignment, both assume forms, and \<^term>\<open>EA_Ret\<close> into
       \<^term>\<open>FunctionResult\<close>); the stack is unchanged;
-    \<^item> a call follows a \<^const>\<open>calls\<close> edge, applies the caller-side \<^const>\<open>call_enter\<close>, moves to
-      the callee \<^term>\<open>FunctionEntry\<close>, and pushes one activation carrying the continuation;
-    \<^item> a return/resume fires at \<^term>\<open>FunctionResult\<close>, pops the top activation, and lands at its
-      recorded continuation with the combined store \<^const>\<open>combine_collect\<close>.
+    \<^item> a call follows a \<^const>\<open>calls\<close> edge, applies the caller-side \<^const>\<open>call_enter\<close>,
+      moves to the callee \<^term>\<open>FunctionEntry\<close>, and pushes one activation carrying the
+      continuation;
+    \<^item> a return/resume fires at \<^term>\<open>FunctionResult\<close>, pops the top activation, and lands
+      at its recorded continuation with the combined store \<^const>\<open>combine_collect\<close>.
 
   A return does not use a \<open>FunctionResult p --> cont\<close> intra edge.  The activation stack
   supplies the continuation, so one \<^term>\<open>FunctionResult\<close> node serves every caller and
@@ -42,9 +43,6 @@ inductive cstep :: "(vname \<Rightarrow> bool) \<Rightarrow> cfg \<Rightarrow> c
        (cont, combine_collect gs dst caller t, stk)"
 
 subsection \<open>Single-step and small-step lemmas\<close>
-
-lemma cstep_star_single: "cstep gs g cf cf' \<Longrightarrow> star (cstep gs g) cf cf'"
-  by (rule star.step[OF _ star.refl])
 
 lemma cstep_nop:
   assumes "(u, EA_Nop, v) \<in> intra g"
@@ -76,12 +74,6 @@ lemma cstep_check:
   assumes "(u, EA_Check c, v) \<in> intra g"
   shows "cstep gs g (u, s, stk) (v, s, stk)"
   by (rule cstep.Intra[OF assms]) simp
-
-lemma cstep_call:
-  "(u, CallEdge dst pars actuals, FunctionEntry q, cont) \<in> calls g \<Longrightarrow>
-   cstep gs g (u, s, stk)
-     (FunctionEntry q, call_enter gs (CallEdge dst pars actuals) s, (cont, dst, s) # stk)"
-  by (rule cstep.Call)
 
 subsection \<open>Activation-stack matching\<close>
 

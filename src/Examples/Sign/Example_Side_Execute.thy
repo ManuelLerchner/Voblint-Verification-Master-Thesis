@@ -112,7 +112,7 @@ definition x1_s0 :: store where
 lemma x1_completed:
   "pcompletes x1_gs (prog_table x1_prog) (prog_main x1_prog) x1_s0
      (x1_s0((STR ''x'') := 1))"
-  apply (simp only: x1_prog_def x1_s0_def prog_table_make prog_main_make)
+  apply (simp only: x1_prog_def x1_s0_def mk_program_simps)
   apply (rule star.step)
    apply (rule pstep.Assign)
   by simp

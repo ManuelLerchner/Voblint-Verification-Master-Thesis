@@ -64,7 +64,7 @@ lemma nest_cfg_compile [simp]:
   by (simp add: nest_cfg_def)
 
 lemma nest_entry: "cfg_entry nest_cfg = FunctionEntry (STR ''main'')"
-  unfolding nest_cfg_def by (rule inv16_entry_is_main)
+  unfolding nest_cfg_def by (rule cfg_entry_compile_prog)
 
 text \<open>\<open>main\<close> calls \<open>f\<close> at two sites (\<open>Statement 5\<close>, args \<open>3\<close>; \<open>Statement 6\<close>, args \<open>10\<close>).
   \<open>f\<close> calls \<open>g\<close> at one site inside its own body (\<open>Statement 2\<close>), passing through its own
@@ -465,10 +465,10 @@ proof -
 qed
 
 theorem nest_1_activation_collect_sound:
-  "activation_collect nest_gs (admiss_exact (cs_context 1)) [] nest_cfg (cinit_stores nest_gs) v ctx
+  "activation_collect nest_gs (cs_context 1) [] nest_cfg (cinit_stores nest_gs) v ctx
      \<subseteq> gamma_state_lift (nest_1_sg (Inl (v, ctx)))"
 proof (rule activation_collect_sound_gen[where sg = nest_1_sg and gammaM = gamma_state_lift
-        and admiss = "admiss_exact (cs_context 1)" and startcontext = "[]"
+        and enterc = "cs_context 1" and startcontext = "[]"
         and S = "cinit_stores nest_gs" and g = nest_cfg and gs = nest_gs])
   \<comment> \<open>ENTRY_G\<close>
   fix s assume "s \<in> cinit_stores nest_gs"
@@ -492,27 +492,22 @@ next
         \<Longrightarrow> s' \<in> gamma_state_lift (nest_1_sg (Inl (v, c)))"
     by (rule nest_1_cs.dg_ctx_act_edge[unfolded nest_cfg_compile])
 next
-  \<comment> \<open>ADMISS_TOTAL --- trivial, \<open>cs_context 1\<close> is a total function.\<close>
-  show "\<And>u c s. \<exists>c'. admiss_exact (cs_context 1) u c s c'" by (simp add: admiss_exact_def)
-next
   \<comment> \<open>CALL --- enter routed to the truncated call string.\<close>
-  fix u dst pars args p cont c s c'
+  fix u dst pars args p cont c s
   assume ce: "(u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls nest_cfg"
     and sm: "s \<in> gamma_state_lift (nest_1_sg (Inl (u, c)))"
-    and adm: "admiss_exact (cs_context 1) u c (call_enter nest_gs (CallEdge dst pars args) s) c'"
   show "call_enter nest_gs (CallEdge dst pars args) s
-          \<in> gamma_state_lift (nest_1_sg (Inl (FunctionEntry p, c')))"
-    using adm nest_1_sg_seed[OF ce sm] by (simp add: admiss_exact_def)
+          \<in> gamma_state_lift (nest_1_sg (Inl (FunctionEntry p, cs_context 1 u c (call_enter nest_gs (CallEdge dst pars args) s))))"
+    using nest_1_sg_seed[OF ce sm] .
 next
   \<comment> \<open>COMB --- return combine at the caller's own truncated context.\<close>
-  fix cl dst pars args p cont c1 c2 s t es
+  fix cl dst pars args p cont c1 s t es
   assume ce: "(cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls nest_cfg"
     and sm: "s \<in> gamma_state_lift (nest_1_sg (Inl (cl, c1)))"
-    and adm: "admiss_exact (cs_context 1) cl c1 es c2"
-    and tm: "t \<in> gamma_state_lift (nest_1_sg (Inl (FunctionResult p, c2)))"
+    and tm: "t \<in> gamma_state_lift (nest_1_sg (Inl (FunctionResult p, cs_context 1 cl c1 es)))"
     and ces: "call_enter_store nest_gs nest_cfg cl s es"
   show "combine_collect nest_gs dst s t \<in> gamma_state_lift (nest_1_sg (Inl (cont, c1)))"
-    using adm tm nest_1_sg_comb[OF ce sm _ ces] by (simp add: admiss_exact_def)
+    using tm nest_1_sg_comb[OF ce sm _ ces] by blast
 qed
 
 

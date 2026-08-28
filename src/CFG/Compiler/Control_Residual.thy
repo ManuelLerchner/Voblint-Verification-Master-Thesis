@@ -1,5 +1,5 @@
 theory Control_Residual
-  imports VIMP_Proc_to_CFG
+  imports VIMP_Proc_to_CFG CFG_Transfer
 begin
 
 section \<open>Located control inside a compiled procedure fragment\<close>
@@ -18,12 +18,6 @@ text \<open>
   \<open>cstep\<close> connects both locations.
 \<close>
 
-subsection \<open>The compiled entry node is the base counter\<close>
-
-text \<open>Every fragment enters at \<open>Statement n\<close>: base commands emit it directly, and \<^const>\<open>Seq\<close>
-  inherits the entry of its left operand.\<close>
-lemmas compile_entry_node = compile_entry
-
 subsection \<open>Located residuals\<close>
 
 text \<open>
@@ -32,8 +26,8 @@ text \<open>
     \<^item> \<^const>\<open>SKIP\<close>, assignment, sequence (before and after left completion), conditionals,
       loops, call site, entered continuation, and explicit \<^const>\<open>Return\<close> all map to a
       compiled node or to the continuation.
-    \<^item> \<^const>\<open>Restore\<close> and \<^const>\<open>Unwind\<close> are runtime-only activation markers, not located
-      here: once a \<^const>\<open>Return\<close> fires the CFG control is already at \<^term>\<open>FunctionResult p\<close>
+    \<^item> \<^const>\<open>Restore\<close> and \<^const>\<open>Unwind\<close> are runtime-only activation markers, not
+      located here: once a \<^const>\<open>Return\<close> fires the CFG control is already at \<^term>\<open>FunctionResult p\<close>
       (through the \<^term>\<open>EA_Ret\<close> edge) and the remaining activation return is discharged by the
       located executor \<open>cstep\<close>, not by a fragment node.
 \<close>
@@ -102,7 +96,6 @@ lemma control_at_SKIP_imp_falls_through:
   shows "falls_through c"
   using assms by (induction c k n "SKIP :: com" v rule: control_at.induct) auto
 
-
 subsection \<open>Initial location\<close>
 
 text \<open>A source command is initially located at its entry node \<open>Statement n\<close>.\<close>
@@ -133,31 +126,12 @@ next
   case Unwind then show ?case by simp
 qed
 
-subsection \<open>Located nodes are statement nodes\<close>
-
-text \<open>Every located node is a \<^term>\<open>Statement\<close> node, provided the continuation is one.  Located
-  control never sits on a \<^term>\<open>FunctionEntry\<close> or \<^term>\<open>FunctionResult\<close> node --- crossing
-  those is the job of the located executor \<open>cstep\<close>, not of within-fragment location.  At
-  procedure level the continuation is the epilogue node, so the hypothesis is immediate.\<close>
-lemma control_at_node_stmt:
-  "control_at \<Pi> p c k n r v \<Longrightarrow> \<exists>j. k = Statement j \<Longrightarrow> \<exists>j. v = Statement j"
-  by (induction rule: control_at.induct) auto
-
 subsection \<open>Normal completion is located at the continuation\<close>
 
-text \<open>A falling-through assignment reduced to \<^const>\<open>SKIP\<close> is located at the continuation
-  itself.\<close>
-lemma control_at_done_Assign:
-  "control_at \<Pi> p (Assign x a) k n SKIP k"
-  by (rule control_at.AssignDone)
-
-text \<open>
-  A completed residual is at the continuation already, except for a source \<^const>\<open>SKIP\<close>,
-  whose own node still carries one store-preserving \<^const>\<open>EA_Nop\<close> edge to it.  The
-  branch-join hops of the previous layout are gone: both branches of a conditional are
-  compiled with the same continuation, so a completed branch is at \<open>k\<close> directly.
-\<close>
-
+text \<open>A completed residual is at the continuation already, except for a source \<^const>\<open>SKIP\<close>,
+  whose own node still carries one store-preserving \<^const>\<open>EA_Nop\<close> edge to it: both
+  branches of a conditional are compiled with the same continuation, so a completed branch
+  is at \<open>k\<close> directly.\<close>
 lemma compile_control_at_SKIP_exit_path:
   "control_at \<Pi> p c0 k n SKIP v \<Longrightarrow> compile \<Pi> p c0 k n = (n', en, E, K)
    \<Longrightarrow> E \<subseteq> intra g \<Longrightarrow> intra_path g (v, s) (k, s)"
@@ -166,44 +140,26 @@ proof (induction c0 k n "SKIP :: com" v arbitrary: n' en E K rule: control_at.in
   then have "(Statement n, EA_Nop, k) \<in> intra g" by auto
   then show ?case by (rule intra_path_nop)
 next
-  case (AssignDone x a k n)
-  then show ?case by (simp add: star.refl)
-next
-  case (CheckDone c k n)
-  then show ?case by (simp add: star.refl)
-next
-  case (CallDone dst q actuals k n)
-  then show ?case by (simp add: star.refl)
-next
-  case (IfDone b c1 c2 k n)
-  then show ?case by (simp add: star.refl)
-next
-  case (WhileDone b c k n)
-  then show ?case by (simp add: star.refl)
-next
   case (SeqRight c1 c2 k n v)
-  obtain n2 en2 E2 K2 where c2: "compile \<Pi> p c2 k (n + csize c1) = (n2, en2, E2, K2)"
-    by (cases "compile \<Pi> p c2 k (n + csize c1)") auto
-  from SeqRight.prems(1) c2 have Esub: "E2 \<subseteq> E" by (auto simp: Let_def split: prod.splits)
-  show ?case by (rule SeqRight.hyps(3)[OF c2]) (use Esub SeqRight.prems(2) in blast)
-
+  from SeqRight.prems(1) obtain n2 E2 K2 where
+    c2: "compile \<Pi> p c2 k (n + csize c1) = (n2, Statement (n + csize c1), E2, K2)"
+    and "E2 \<subseteq> E"
+    by (rule compile_SeqE) blast
+  with SeqRight.prems(2) show ?case by (intro SeqRight.hyps(3)[OF c2]) blast
 next
   case (IfLeft c1 k n v b c2)
-  obtain n1 en1 E1 K1 where c1: "compile \<Pi> p c1 k (Suc n) = (n1, en1, E1, K1)"
-    by (cases "compile \<Pi> p c1 k (Suc n)") auto
-  from IfLeft.prems(1) c1 have Esub: "E1 \<subseteq> E" by (auto simp: Let_def split: prod.splits)
-  show ?case by (rule IfLeft.hyps(2)[OF c1]) (use Esub IfLeft.prems(2) in blast)
+  from IfLeft.prems(1) obtain n1 E1 K1 where
+    c1: "compile \<Pi> p c1 k (Suc n) = (n1, Statement (Suc n), E1, K1)" and "E1 \<subseteq> E"
+    by (rule compile_IfE) blast
+  with IfLeft.prems(2) show ?case by (intro IfLeft.hyps(2)[OF c1]) blast
 next
   case (IfRight c2 k n c1 v b)
-  obtain n1 en1 E1 K1 where c1: "compile \<Pi> p c1 k (Suc n) = (n1, en1, E1, K1)"
-    by (cases "compile \<Pi> p c1 k (Suc n)") auto
-  have n1: "n1 = Suc n + csize c1" using compile_next_id[OF c1] by simp
-  obtain n2 en2 E2 K2 where c2: "compile \<Pi> p c2 k (Suc n + csize c1) = (n2, en2, E2, K2)"
-    by (cases "compile \<Pi> p c2 k (Suc n + csize c1)") auto
-  from IfRight.prems(1) c1 c2 n1 have Esub: "E2 \<subseteq> E"
-    by (auto simp: Let_def split: prod.splits)
-  show ?case by (rule IfRight.hyps(2)[OF c2]) (use Esub IfRight.prems(2) in blast)
-qed
+  from IfRight.prems(1) obtain n2 E2 K2 where
+    c2: "compile \<Pi> p c2 k (Suc n + csize c1) = (n2, Statement (Suc n + csize c1), E2, K2)"
+    and "E2 \<subseteq> E"
+    by (rule compile_IfE) blast
+  with IfRight.prems(2) show ?case by (intro IfRight.hyps(2)[OF c2]) blast
+qed simp_all
 subsection \<open>Located residuals remain source commands\<close>
 
 lemma control_at_source_com:
@@ -213,10 +169,6 @@ lemma control_at_source_com:
 
 lemma source_com_no_Restore:
   "source_com c \<Longrightarrow> c \<noteq> Restore"
-  by (cases c) auto
-
-lemma source_com_no_Unwind:
-  "source_com c \<Longrightarrow> c \<noteq> Unwind"
   by (cases c) auto
 
 end

@@ -9,7 +9,7 @@ theory Interval_Ctx_Entry_State_Sound
     "Voblint_Core.Entry_State_Routed_Context"
     "Voblint_Core.Solver_Menu"
     "Voblint_CFG.CFG_Prune"
-    "Voblint_VIMP.VIMP_Notation"
+    "Voblint_VIMP.VIMP_Program"
 begin
 
 section \<open>Generic executable entry-state context analysis for Interval\<close>
@@ -684,9 +684,9 @@ text \<open>
   The trace-semantic context function: ignores its store argument entirely and
   recomputes the routed value from the caller's own solved abstract state, using
   \<^const>\<open>call_action_at_call_site\<close> for the one call at \<open>u\<close>.  This is
-  \<open>admiss_exact\<close>'s functional shape, specialized so coverage of infinitely many
-  concrete stores comes from the caller's own value being imprecise, not from
-  \<open>entry_state_context\<close> being multi-valued.
+  a total context function, so coverage of infinitely many concrete stores comes
+  from the caller's own value being imprecise, not from \<open>entry_state_context\<close>
+  being multi-valued.
 \<close>
 
 definition entry_state_context :: "cfg_node \<Rightarrow> ivl list \<Rightarrow> store \<Rightarrow> ivl list" where
@@ -860,10 +860,10 @@ proof -
 qed
 
 theorem entry_state_activation_collect_sound:
-  "activation_collect gs (admiss_exact entry_state_context) [] (compile_prog Pi ps mnm main) (cinit_stores gs) v ctx
+  "activation_collect gs entry_state_context [] (compile_prog Pi ps mnm main) (cinit_stores gs) v ctx
      \<subseteq> gamma_state_lift (entry_state_sg (Inl (v, ctx)))"
 proof (rule activation_collect_sound_gen[where sg = entry_state_sg and gammaM = gamma_state_lift
-        and admiss = "admiss_exact entry_state_context"
+        and enterc = "entry_state_context"
         and startcontext = "[]" and S = "cinit_stores gs" and g = "compile_prog Pi ps mnm main" and gs = gs])
   \<comment> \<open>ENTRY_G\<close>
   fix s assume "s \<in> cinit_stores gs"
@@ -887,27 +887,23 @@ next
         \<Longrightarrow> s' \<in> gamma_state_lift (entry_state_sg (Inl (v, c)))"
     by (rule entry_state_routed.dg_ctx_act_edge)
 next
-  \<comment> \<open>ADMISS_TOTAL\<close>
-  show "\<And>u c s. \<exists>c'. admiss_exact entry_state_context u c s c'"
-    by (simp add: admiss_exact_def)
-next
   \<comment> \<open>CALL\<close>
-  fix u dst pars args p cont c s c'
+  fix u dst pars args p cont c s
   assume ce: "(u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps mnm main)"
     and sm: "s \<in> gamma_state_lift (entry_state_sg (Inl (u, c)))"
-    and adm: "admiss_exact entry_state_context u c (call_enter gs (CallEdge dst pars args) s) c'"
-  show "call_enter gs (CallEdge dst pars args) s \<in> gamma_state_lift (entry_state_sg (Inl (FunctionEntry p, c')))"
-    using adm entry_state_sg_seed[OF ce sm] by (simp add: admiss_exact_def)
+  show "call_enter gs (CallEdge dst pars args) s
+          \<in> gamma_state_lift
+              (entry_state_sg (Inl (FunctionEntry p, entry_state_context u c (call_enter gs (CallEdge dst pars args) s))))"
+    using entry_state_sg_seed[OF ce sm] .
 next
   \<comment> \<open>COMB\<close>
-  fix cl dst pars args p cont c1 c2 s t es
+  fix cl dst pars args p cont c1 s t es
   assume ce: "(cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps mnm main)"
     and sm: "s \<in> gamma_state_lift (entry_state_sg (Inl (cl, c1)))"
-    and adm: "admiss_exact entry_state_context cl c1 es c2"
-    and tm: "t \<in> gamma_state_lift (entry_state_sg (Inl (FunctionResult p, c2)))"
+    and tm: "t \<in> gamma_state_lift (entry_state_sg (Inl (FunctionResult p, entry_state_context cl c1 es)))"
     and ces: "call_enter_store gs (compile_prog Pi ps mnm main) cl s es"
   show "combine_collect gs dst s t \<in> gamma_state_lift (entry_state_sg (Inl (cont, c1)))"
-    using adm tm entry_state_sg_comb[OF ce sm _ ces] by (simp add: admiss_exact_def)
+    using tm entry_state_sg_comb[OF ce sm _ ces] by blast
 qed
 
 end

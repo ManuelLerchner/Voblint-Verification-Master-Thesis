@@ -131,7 +131,7 @@ lemmas rc_entry_state_hyps =
 
 theorem rc_activation_collect_sound:
   "activation_collect rc_gs
-     (admiss_exact (entry_state_context rc_gs rc_is_bot_pred rc_pi rc_procs (STR ''main'') rc_main))
+     (entry_state_context rc_gs rc_is_bot_pred rc_pi rc_procs (STR ''main'') rc_main)
      [] (compile_prog rc_pi rc_procs (STR ''main'') rc_main) (cinit_stores rc_gs) v ctx
    \<subseteq> gamma_state_lift
        (entry_state_sg rc_gs rc_is_bot_pred rc_pi rc_procs (STR ''main'') rc_main (Inl (v, ctx)))"
@@ -186,23 +186,22 @@ proof -
     by (simp add: rc_context_at_call)
 qed
 
-text \<open>Unfolding \<^const>\<open>activation_collect\<close> at \<^const>\<open>ctx_call\<close> makes the \<^const>\<open>ctx_key\<close>
+text \<open>Unfolding \<^const>\<open>activation_collect\<close> at \<^const>\<open>ctx_call\<close> makes the \<^const>\<open>key\<close>
   side of the same fact syntactically manifest: every concrete callee-entry trace this
   set counts --- one per \<open>__voblint_nondet_int()\<close> outcome that actually occurs --- is one whose
-  \<^const>\<open>ctx_key\<close> equals the single context \<^const>\<open>ctx_call\<close>.
+  \<^const>\<open>key\<close> equals the single context \<^const>\<open>ctx_call\<close>.
   \<open>rc_activation_collect_sound\<close> then bounds this whole set, every context alike.\<close>
 
 corollary rc_activation_ctx_key:
   "activation_collect rc_gs
-     (admiss_exact (entry_state_context rc_gs rc_is_bot_pred rc_pi rc_procs (STR ''main'') rc_main))
+     (entry_state_context rc_gs rc_is_bot_pred rc_pi rc_procs (STR ''main'') rc_main)
      [] (compile_prog rc_pi rc_procs (STR ''main'') rc_main) (cinit_stores rc_gs)
      (FunctionEntry (STR ''p'')) ctx_call
    = {sink_store t | t.
         t \<in> valid_ltr rc_gs (compile_prog rc_pi rc_procs (STR ''main'') rc_main) (cinit_stores rc_gs)
         \<and> sink_node t = FunctionEntry (STR ''p'')
-        \<and> ctx_key (admiss_exact
-              (entry_state_context rc_gs rc_is_bot_pred rc_pi rc_procs (STR ''main'') rc_main))
-            [] t ctx_call}"
+        \<and> key (entry_state_context rc_gs rc_is_bot_pred rc_pi rc_procs (STR ''main'') rc_main)
+            [] t = ctx_call}"
   unfolding activation_collect_def by (rule refl)
 
 end

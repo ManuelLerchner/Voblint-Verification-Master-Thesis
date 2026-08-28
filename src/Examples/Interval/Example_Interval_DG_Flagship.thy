@@ -52,6 +52,7 @@ theory Example_Interval_DG_Flagship
     "Voblint_Analysis.Analysis_GraphViz"
     "Voblint_VIMP.VIMP_Notation"
     "Voblint_Soundness.Run_Analysis_Sound"
+    Example_Compile_Call_Free
 begin
 
 (* Disambiguate our N constructor from the phase datatype constructor. *)
@@ -103,7 +104,7 @@ definition flagship_cfg :: cfg where
   "flagship_cfg = compile_prog flagship_pi (prog_procs flagship_prog) prog_main_name (prog_main flagship_prog)"
 
 lemma flagship_entry: "cfg_entry flagship_cfg = FunctionEntry (STR ''main'')"
-  unfolding flagship_cfg_def prog_main_name_def by (rule inv16_entry_is_main)
+  unfolding flagship_cfg_def prog_main_name_def by (rule cfg_entry_compile_prog)
 lemma flagship_calls: "calls flagship_cfg = {}"
   unfolding flagship_cfg_def flagship_pi_def
   by (rule compile_prog_calls_empty) (simp_all add: flagship_prog_def)

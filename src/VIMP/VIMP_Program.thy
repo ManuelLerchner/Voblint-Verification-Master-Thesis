@@ -43,19 +43,13 @@ text \<open>\<open>mk_program\<close> conses the entry onto \<open>proc_rep\<clo
 definition mk_program :: "(pname * proc_decl) list \<Rightarrow> com \<Rightarrow> vname list \<Rightarrow> imp_prog" where
   "mk_program ps m gv = imp_prog.make ((prog_main_name, \<lparr>formals = [], body = m\<rparr>) # ps) gv"
 
-lemma prog_procs_make [simp]:
-  "prog_main_name \<notin> set (map fst ps) \<Longrightarrow> prog_procs (mk_program ps m gv) = map fst ps"
-  by (force simp: prog_procs_def mk_program_def imp_prog.make_def filter_id_conv)
-
-lemma prog_table_make [simp]:
+lemma mk_program_simps [simp]:
   "prog_table (mk_program ps m gv) = (map_of ps)(prog_main_name \<mapsto> \<lparr>formals = [], body = m\<rparr>)"
-  by (simp add: prog_table_def mk_program_def imp_prog.make_def)
-
-lemma prog_main_make [simp]: "prog_main (mk_program ps m gv) = m"
-  by (simp add: prog_main_def)
-
-lemma declared_global_vars_make [simp]: "declared_global_vars (mk_program ps m gv) = gv"
-  by (simp add: mk_program_def imp_prog.make_def)
+  "prog_main (mk_program ps m gv) = m"
+  "declared_global_vars (mk_program ps m gv) = gv"
+  "prog_main_name \<notin> set (map fst ps) \<Longrightarrow> prog_procs (mk_program ps m gv) = map fst ps"
+  by (force simp: prog_table_def prog_main_def prog_procs_def mk_program_def imp_prog.make_def
+      filter_id_conv)+
 
 text \<open>The finite variable scope of an activation: every declared global, the
   activation's formals and body occurrences, and the reserved return location.\<close>

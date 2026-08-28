@@ -128,13 +128,13 @@ text \<open>
   \<^const>\<open>wf_program_compile_input_exec\<close> resolves the global classifier at
   \<^const>\<open>prog_main_name\<close>, while every soundness statement downstream is stated
   at \<^const>\<open>declared_global\<close>. Composing the evaluated gate above with
-  \<open>wf_program_compile_input_exec_declared_global\<close> pins that step on a
+  \<open>wf_program_compile_input_exec_sound\<close> pins that step on a
   concrete program.
 \<close>
 
 lemma min_max_demo_prog_wf_compile_input:
   "wf_compile_input (declared_global min_max_demo_prog) (prog_table min_max_demo_prog)
      (prog_procs min_max_demo_prog) prog_main_name (prog_main min_max_demo_prog)"
-  by (rule wf_program_compile_input_exec_declared_global[OF min_max_demo_prog_wf])
+  by (rule wf_program_compile_input_exec_sound[OF min_max_demo_prog_wf])
 
 end

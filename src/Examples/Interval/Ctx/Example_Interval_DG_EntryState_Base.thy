@@ -50,7 +50,7 @@ text \<open>
   continues at \<open>3\<close>, the single call site, continuing at \<open>4\<close>.\<close>
 
 lemma rc_entry: "cfg_entry rc_cfg = FunctionEntry (STR ''main'')"
-  unfolding rc_cfg_def by (rule inv16_entry_is_main)
+  unfolding rc_cfg_def by (rule cfg_entry_compile_prog)
 
 text \<open>The one call site's shape, computed directly from \<open>rc_cfg\<close>. Exported for the
   routed-context siblings, which key off this single call rather than case-splitting

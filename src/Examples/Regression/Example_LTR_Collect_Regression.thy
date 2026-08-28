@@ -359,6 +359,33 @@ text \<open>Flat CFG: for a \<open>calls = {}\<close> graph the collector agrees
   reachability.  \<open>flat_demo\<close> is a two-edge straight line; both edge targets are collected
   exactly as intra propagation yields, and no call-derived activation exists.\<close>
 
+definition flat_cfg :: "cfg \<Rightarrow> bool" where
+  "flat_cfg g \<longleftrightarrow> calls g = {}"
+
+text \<open>When \<open>calls g = {}\<close>, every valid trace is a \<^const>\<open>Root\<close>: no \<^const>\<open>Call\<close> or
+  \<^const>\<open>Resume\<close> can arise.\<close>
+lemma valid_ltr_flat_root:
+  assumes "flat_cfg g" and "t \<in> valid_ltr gs g S"
+  shows "\<exists>p. t = Root p"
+  using assms(2)
+proof (induction rule: valid_ltr.induct)
+  case (intra t a v s')
+  then obtain p where "t = Root p" by blast
+  then show ?case by (cases t) auto
+next
+  case (call caller dst pars args p cont)
+  then show ?case using assms(1) by (simp add: flat_cfg_def)
+next
+  case (ret callee caller p dst pars args cont)
+  then show ?case using assms(1) by (simp add: flat_cfg_def)
+qed simp
+
+text \<open>Flat reduction: for \<open>calls g = {}\<close>, no call-derived activation exists, so
+  collection is exactly the sink stores of root/intra traces.\<close>
+lemma valid_ltr_flat_no_call:
+  "flat_cfg g \<Longrightarrow> Call caller p \<notin> valid_ltr gs g S"
+  using valid_ltr_flat_root by blast
+
 definition flat_demo :: cfg where
   "flat_demo =
      \<lparr> intra = { (Statement 0, EA_Nop, Statement 1), (Statement 1, EA_Nop, Statement 2) },
@@ -379,10 +406,10 @@ proof -
     using ltr_collect_init[of s0 "{s0}" demo_gs flat_demo] by (simp add: flat_demo_def)
   have e0: "(Statement 0, EA_Nop, Statement 1) \<in> intra flat_demo" by (simp add: flat_demo_def)
   show c1: "s0 \<in> ltr_collect demo_gs flat_demo {s0} (Statement 1)"
-    using ltr_collect_intra[OF c0 e0] by simp
+    using ltr_collect_intra_step[OF c0 e0] by simp
   have e1: "(Statement 1, EA_Nop, Statement 2) \<in> intra flat_demo" by (simp add: flat_demo_def)
   show "s0 \<in> ltr_collect demo_gs flat_demo {s0} (Statement 2)"
-    using ltr_collect_intra[OF c1 e1] by simp
+    using ltr_collect_intra_step[OF c1 e1] by simp
 qed
 
 lemma ltr_collect_flat_demo_no_call:

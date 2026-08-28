@@ -31,6 +31,7 @@ theory Exec_Sign_DG_Run
     "Voblint_CFG.Compile_Invariants"
     "Voblint_VIMP.VIMP_Notation"
     "Voblint_Soundness.Run_Analysis_Sound"
+    Example_Compile_Call_Free
 begin
 
 (* Disambiguate our N constructor from the phase datatype constructor. *)
@@ -70,7 +71,7 @@ lemma gEx_calls: "calls gEx = {}"
   unfolding gEx_def sign_ex_pi_def
   by (rule compile_prog_calls_empty) (simp_all add: sign_ex_prog_def)
 lemma gEx_entry: "cfg_entry gEx = FunctionEntry (STR ''main'')"
-  unfolding gEx_def prog_main_name_def by (rule inv16_entry_is_main)
+  unfolding gEx_def prog_main_name_def by (rule cfg_entry_compile_prog)
 lemma gEx_wf_cfg: "wf_cfg gEx" unfolding gEx_def by (rule compile_prog_wf)
 lemma gEx_finE: "finite (intra gEx)" unfolding gEx_def using compile_prog_finite by simp
 lemma gEx_finC: "finite (calls gEx)" unfolding gEx_def using compile_prog_finite by simp

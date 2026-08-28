@@ -3,6 +3,7 @@ section \<open>Example: checks_proven/checks_proven_sound alone, store-only\<clo
 theory Example_Checks_Store_Only
   imports "Voblint_Core.Checks" "Voblint_CLI.Sign_Entry" "Voblint_Analysis.Sign_Checks"
           "Voblint_Analysis.Analysis_GraphViz" "Voblint_VIMP.VIMP_Notation"
+          Example_Compile_Call_Free
 begin
 
 text \<open>
@@ -134,7 +135,7 @@ lemma checks_ex_exit_eval: "cfg_exit (prog_cfg (STR ''main'') checks_ex_program)
   unfolding prog_cfg_def by (rule cfg_exit_compile_prog)
 
 lemma checks_ex_entry_eval: "cfg_entry (prog_cfg (STR ''main'') checks_ex_program) = FunctionEntry (STR ''main'')"
-  unfolding prog_cfg_def by (rule inv16_entry_is_main)
+  unfolding prog_cfg_def by (rule cfg_entry_compile_prog)
 
 text \<open>Node-local collecting soundness at each check node, from the routed D/G
   node-soundness bridge and the four computed coverage facts --- no store is

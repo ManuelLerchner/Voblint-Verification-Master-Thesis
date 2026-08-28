@@ -1705,11 +1705,11 @@ stubs. That reading is wrong: the old clauses returned *entry = exit*, i.e. the
 fragment was transparent and control flowed through it. Under continuation
 passing, transparency is `Statement n --EA_Nop--> k`; emitting nothing makes the
 node a dead end instead. The difference is observable in `compile_reaches`, and
-through it in `compile_prog_entry_cfg_reaches_exit`, which is consumed
-unconditionally by the analysis layer (`LTR_TD_Side_Eff_Exit`,
-`Sign_Exec_Sound`). Emitting nothing would force a `source_com` hypothesis onto
-that theorem and ripple into the analysis — the outcome the plan exists to
-avoid. Both clauses remain unreachable for source programs, so this is a choice
+through it in `compile_prog_entry_cfg_reaches_exit`. That theorem has no proof
+consumer (the exit-cone coverage the D/G layer needs is discharged per node by
+`DG_Coverage`, not by whole-program connectivity), but it is the connectivity
+witness that pins the transparent encoding: emitting nothing would force a
+`source_com` hypothesis onto it. Both clauses remain unreachable for source programs, so this is a choice
 between two vacuous translations; the transparent one is the one that keeps the
 downstream statements intact.
 

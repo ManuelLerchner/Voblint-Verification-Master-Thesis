@@ -1,24 +1,19 @@
 theory Located_LTR
-  imports Compile_Certificate Compile_Locality CFG_Local_Trace LTR_Collect
+  imports Compile_Locality LTR_Collect
 begin
 
 section \<open>Source execution as activation-local traces\<close>
 
 text \<open>
-  The stack-faithful bridge from compiled source execution to the canonical activation-local
-  semantics \<^const>\<open>valid_ltr\<close>.  A CFG-located configuration \<^type>\<open>cconf\<close> (advanced one edge at a
-  time by \<^const>\<open>cstep\<close>) is related to a valid activation-local trace: the current activation is
-  the trace, and the runtime \<^type>\<open>cframe\<close> stack is its \<^const>\<open>caller_of\<close> chain.  Each \<^const>\<open>cstep\<close>
-  rule maps one-to-one onto a \<^const>\<open>valid_ltr\<close> constructor (\<open>intra\<close> / \<open>call\<close> / \<open>ret\<close>), so a source
-  run --- simulated into a \<^const>\<open>cstep\<close> run by \<^const>\<open>csim\<close> --- extends the accumulated trace.
+  The stack-faithful bridge from compiled source execution to the canonical
+  activation-local semantics \<^const>\<open>valid_ltr\<close>.  A CFG-located configuration
+  \<^type>\<open>cconf\<close> (advanced one edge at a time by \<^const>\<open>cstep\<close>) is related to a valid
+  activation-local trace: the current activation is the trace, and the runtime
+  \<^type>\<open>cframe\<close> stack is its \<^const>\<open>caller_of\<close> chain.  Each \<^const>\<open>cstep\<close> rule maps
+  one-to-one onto a \<^const>\<open>valid_ltr\<close> constructor (\<open>intra\<close> / \<open>call\<close> / \<open>ret\<close>), so a
+  source run --- simulated into a \<^const>\<open>cstep\<close> run by \<^const>\<open>csim\<close> --- extends the
+  accumulated trace.
 \<close>
-
-subsection \<open>Procedure locality of a valid activation\<close>
-
-text \<open>The imported theorem \<open>valid_ltr_entry_result_eq\<close> establishes that an activation's
-  local \<^const>\<open>path\<close> stays inside one compiled procedure fragment: an entry
-  \<^term>\<open>FunctionEntry p\<close> and a sink \<^term>\<open>FunctionResult q\<close> have \<open>p = q\<close>.\<close>
-
 
 subsection \<open>The representation invariant\<close>
 
@@ -43,9 +38,10 @@ definition ltr_repr :: "(vname \<Rightarrow> bool) \<Rightarrow> cfg \<Rightarro
 definition located_ltr :: "(vname \<Rightarrow> bool) \<Rightarrow> cfg \<Rightarrow> store set \<Rightarrow> cconf \<Rightarrow> bool" where
   "located_ltr gs g S cf = (\<exists>t. ltr_repr gs g S cf t)"
 
-text \<open>\<open>stack_repr\<close> reads only the top \<^const>\<open>caller_of\<close> and the path-invariant entry node, so it
-  transfers across activations sharing both (an \<^const>\<open>extend\<close> appends --- entry unchanged --- and a
-  \<^const>\<open>Resume\<close> prepends the same activation's path --- entry unchanged).\<close>
+text \<open>\<open>stack_repr\<close> reads only the top \<^const>\<open>caller_of\<close> and the path-invariant entry node,
+  so it transfers across activations sharing both (an \<^const>\<open>extend\<close> appends --- entry
+  unchanged --- and a \<^const>\<open>Resume\<close> prepends the same activation's path --- entry
+  unchanged).\<close>
 lemma stack_repr_cong:
   "stack_repr g stk t1 \<Longrightarrow> caller_of t2 = caller_of t1
    \<Longrightarrow> fst (hd (path t2)) = fst (hd (path t1)) \<Longrightarrow> stack_repr g stk t2"
@@ -53,9 +49,9 @@ lemma stack_repr_cong:
 
 subsection \<open>The return step\<close>
 
-text \<open>The load-bearing case.  A \<^const>\<open>cstep\<close> return pops the top frame; \<open>stack_repr\<close> identifies the
-  caller \<open>c\<close> (\<^const>\<open>caller_of\<close> recovers it) and its spawning \<^const>\<open>calls\<close> edge, whose callee
-  \<^term>\<open>FunctionEntry q\<close> matches the returning \<^term>\<open>FunctionResult q\<close> by
+text \<open>The load-bearing case.  A \<^const>\<open>cstep\<close> return pops the top frame; \<open>stack_repr\<close>
+  identifies the caller \<open>c\<close> (\<^const>\<open>caller_of\<close> recovers it) and its spawning \<^const>\<open>calls\<close>
+  edge, whose callee \<^term>\<open>FunctionEntry q\<close> matches the returning \<^term>\<open>FunctionResult q\<close> by
   \<open>valid_ltr_entry_result_eq\<close> --- so the trace composes by \<open>valid_ltr.ret\<close>, and the combined
   store equals the \<^const>\<open>cstep\<close> store.\<close>
 lemma ltr_repr_Return:
@@ -109,7 +105,8 @@ lemma cstep_preserves_ltr_repr:
 proof (cases rule: cstep.cases)
   case (Intra u a v s' s stk')
   let ?g = "compile_prog \<Pi> ps mnm main"
-  from rep have tv: "t \<in> valid_ltr source_global ?g S" and sn: "sink_node t = u" and ss: "sink_store t = s"
+  from rep have tv: "t \<in> valid_ltr source_global ?g S" and sn: "sink_node t = u"
+    and ss: "sink_store t = s"
     and str: "stack_repr ?g stk' t"
     using Intra by (auto simp: ltr_repr_def)
   have e1: "(sink_node t, a, v) \<in> intra ?g" using Intra sn by simp
@@ -123,7 +120,8 @@ proof (cases rule: cstep.cases)
 next
   case (Call u dst pars actuals q cont s stk')
   let ?g = "compile_prog \<Pi> ps mnm main"
-  from rep have tv: "t \<in> valid_ltr source_global ?g S" and sn: "sink_node t = u" and ss: "sink_store t = s"
+  from rep have tv: "t \<in> valid_ltr source_global ?g S" and sn: "sink_node t = u"
+    and ss: "sink_store t = s"
     and str: "stack_repr ?g stk' t"
     using Call by (auto simp: ltr_repr_def)
   have edge: "(sink_node t, CallEdge dst pars actuals, FunctionEntry q, cont) \<in> calls ?g"
@@ -141,7 +139,8 @@ next
     show "stack_repr ?g stk' t" using str .
   qed
   with child_valid have "ltr_repr source_global ?g S
-      (FunctionEntry q, call_enter source_global (CallEdge dst pars actuals) s, (cont, dst, s) # stk') ?child"
+      (FunctionEntry q, call_enter source_global (CallEdge dst pars actuals) s,
+       (cont, dst, s) # stk') ?child"
     by (simp add: ltr_repr_def sink_node_def sink_store_def)
   then show ?thesis using Call by auto
 next
@@ -196,9 +195,9 @@ subsection \<open>The initial main activation\<close>
 
 text \<open>The program entry \<^term>\<open>FunctionEntry mnm\<close> is an ordinary \<open>csim.Base\<close> activation: the
   distinguished main procedure is declared in \<open>\<Pi>\<close> (\<open>wf_compile_input\<close>), so its body-fragment is
-  certified by \<open>procs_compiled_compile_prog\<close> and \<^const>\<open>proc_activation\<close> holds.  One \<^term>\<open>EA_Nop\<close>
-  edge crosses from \<^term>\<open>FunctionEntry mnm\<close> to the body entry \<open>en\<close>, where the \<open>Base\<close> activation
-  simulates the source \<open>main\<close>.\<close>
+  certified by \<open>procs_compiled_compile_prog\<close> and \<^const>\<open>proc_activation\<close> holds.  One
+  \<^term>\<open>EA_Nop\<close> edge crosses from \<^term>\<open>FunctionEntry mnm\<close> to the body entry \<open>en\<close>, where
+  the \<open>Base\<close> activation simulates the source \<open>main\<close>.\<close>
 lemma compile_prog_main_base:
   assumes wf: "wf_compile_input source_global \<Pi> ps mnm main"
   obtains en where
@@ -229,7 +228,7 @@ proof -
     using mnmdecl bodyeq unfolding proc_activation_def by auto
   have base: "csim \<Pi> ?g (main, s, []) (en, s, [])"
     by (rule csim.Base[OF control_at_initial[OF srcmain, of \<Pi> mnm k m,
-                          folded compile_entry_node[OF cbody']] cacc pa])
+                          folded compile_entry[OF cbody']] cacc pa])
 
   from entry base show ?thesis ..
 qed
@@ -241,27 +240,12 @@ lemma stack_repr_Nil_iff:
   "stack_repr g stk t \<Longrightarrow> (stk = []) = (caller_of t = None)"
   by (cases rule: stack_repr.cases) auto
 
-text \<open>The context \<^const>\<open>key\<close> of a callerless activation is the seed --- descending the
-  \<^const>\<open>caller_of\<close> chain (a \<^const>\<open>Resume\<close> of \<^const>\<open>Root\<close> is still callerless).\<close>
+text \<open>A callerless activation's \<^const>\<open>key\<close> is the seed, regardless of \<open>enterc\<close> --- the
+  \<open>Root\<close> case never consults \<open>enterc\<close>, and the \<open>Resume\<close> case only forwards to the same
+  callerless ancestor.\<close>
 lemma key_caller_of_None:
   "caller_of t = None \<Longrightarrow> key enterc startcontext t = startcontext"
   by (induction t) auto
-
-text \<open>The \<^const>\<open>ctx_key\<close> analogue: a callerless activation's only admissible context is
-  the seed, regardless of \<open>admiss\<close> --- the \<open>ctx_key_Root\<close> case never consults \<open>admiss\<close>, and
-  \<open>ctx_key_Resume\<close> only forwards to the same callerless ancestor.\<close>
-lemma ctx_key_caller_of_None:
-  "caller_of t = None \<Longrightarrow> ctx_key admiss startcontext t c \<longleftrightarrow> c = startcontext"
-proof (induction t)
-  case (Root p)
-  then show ?case by (auto elim: ctx_key_RootE intro: ctx_key_Root)
-next
-  case (Call caller p)
-  then show ?case by simp
-next
-  case (Resume current callee p)
-  then show ?case by (auto elim: ctx_key_ResumeE intro: ctx_key_Resume)
-qed
 
 subsection \<open>The source bridge\<close>
 
@@ -282,19 +266,21 @@ proof -
     and base: "csim \<Pi> ?g (main, s0, []) (en, s0, [])"
     by (rule compile_prog_main_base[OF wf])
   have loc0: "located_ltr source_global (compile_prog \<Pi> ps mnm main) S (FunctionEntry mnm, s0, [])"
-    using located_ltr_entry[where source_global=source_global and g="compile_prog \<Pi> ps mnm main", OF s0]
-    by (simp add: inv16_entry_is_main)
-  have step0: "cstep source_global ?g (FunctionEntry mnm, s0, []) (en, s0, [])" by (rule cstep_nop[OF entry])
+    using located_ltr_entry[where g = "compile_prog \<Pi> ps mnm main", OF s0] by simp
+  have step0: "cstep source_global ?g (FunctionEntry mnm, s0, []) (en, s0, [])"
+    by (rule cstep_nop[OF entry])
   have loc_en: "located_ltr source_global ?g S (en, s0, [])"
     by (rule cstep_preserves_located_ltr[OF wf loc0 step0])
   from csim_star[OF base pc swf run] obtain cf'
-    where run_c: "star (cstep source_global ?g) (en, s0, []) cf'" and sim': "csim \<Pi> ?g (residual, s, frs) cf'"
+    where run_c: "star (cstep source_global ?g) (en, s0, []) cf'"
+      and sim': "csim \<Pi> ?g (residual, s, frs) cf'"
     by blast
   obtain v s' stk where cf': "cf' = (v, s', stk)" by (cases cf')
   have store: "s' = s" using csim_store_eq[OF sim'[unfolded cf']] by simp
   have loc_v: "located_ltr source_global ?g S (v, s, stk)"
     using csteps_preserve_located_ltr[OF wf loc_en run_c] cf' store by simp
-  from loc_v obtain t where "ltr_repr source_global ?g S (v, s, stk) t" by (auto simp: located_ltr_def)
+  from loc_v obtain t where "ltr_repr source_global ?g S (v, s, stk) t"
+    by (auto simp: located_ltr_def)
   then show ?thesis using sim' cf' store by blast
 qed
 
@@ -304,22 +290,21 @@ theorem source_store_in_activation_collect:
   assumes wf: "wf_compile_input source_global \<Pi> ps mnm main"
     and s0: "s0 \<in> S"
     and run: "star (pstep source_global \<Pi>) (main, s0, []) (residual, s, frs)"
-    and tot: "\<And>u c s. \<exists>c'. admiss u c s c'"
   shows "\<exists>v stk t c. csim \<Pi> (compile_prog \<Pi> ps mnm main) (residual, s, frs) (v, s, stk)
-                   \<and> ctx_key admiss startcontext t c
-                   \<and> s \<in> activation_collect source_global admiss startcontext (compile_prog \<Pi> ps mnm main) S v c"
+                   \<and> key enterc startcontext t = c
+                   \<and> s \<in> activation_collect source_global enterc startcontext
+                            (compile_prog \<Pi> ps mnm main) S v c"
 proof -
   let ?g = "compile_prog \<Pi> ps mnm main"
   from source_run_has_ltr[OF wf s0 run] obtain v stk t
     where sim: "csim \<Pi> ?g (residual, s, frs) (v, s, stk)"
       and rep: "ltr_repr source_global ?g S (v, s, stk) t" by blast
-  from rep have tv: "t \<in> valid_ltr source_global ?g S" and sn: "sink_node t = v" and ss: "sink_store t = s"
+  from rep have tv: "t \<in> valid_ltr source_global ?g S" and sn: "sink_node t = v"
+    and ss: "sink_store t = s"
     by (auto simp: ltr_repr_def)
-  obtain c where ck: "ctx_key admiss startcontext t c"
-    using ctx_key_exists[where admiss = admiss, OF tot] by blast
-  have "s \<in> activation_collect source_global admiss startcontext ?g S v c"
-    using activation_collect_I[OF tv sn ck] ss by simp
-  then show ?thesis using sim ck by blast
+  have "s \<in> activation_collect source_global enterc startcontext ?g S v (key enterc startcontext t)"
+    using activation_collect_I[OF tv sn refl] ss by simp
+  then show ?thesis using sim by blast
 qed
 
 text \<open>The witness-free top-level result: a store reached with an empty source frame stack lies in
@@ -330,19 +315,21 @@ theorem source_toplevel_in_activation_collect:
     and s0: "s0 \<in> S"
     and run: "star (pstep source_global \<Pi>) (main, s0, []) (residual, s, [])"
   shows "\<exists>v. csim \<Pi> (compile_prog \<Pi> ps mnm main) (residual, s, []) (v, s, [])
-             \<and> s \<in> activation_collect source_global admiss startcontext (compile_prog \<Pi> ps mnm main) S v startcontext"
+             \<and> s \<in> activation_collect source_global enterc startcontext
+                      (compile_prog \<Pi> ps mnm main) S v startcontext"
 proof -
   let ?g = "compile_prog \<Pi> ps mnm main"
   from source_run_has_ltr[OF wf s0 run] obtain v stk t
     where sim: "csim \<Pi> ?g (residual, s, []) (v, s, stk)"
       and rep: "ltr_repr source_global ?g S (v, s, stk) t" by blast
   have stk0: "stk = []" using csim_Nil_baseD[OF sim] by simp
-  from rep stk0 have tv: "t \<in> valid_ltr source_global ?g S" and sn: "sink_node t = v" and ss: "sink_store t = s"
-    and sr: "stack_repr ?g [] t" by (auto simp: ltr_repr_def)
+  from rep stk0 have tv: "t \<in> valid_ltr source_global ?g S" and sn: "sink_node t = v"
+    and ss: "sink_store t = s" and sr: "stack_repr ?g [] t"
+    by (auto simp: ltr_repr_def)
   have cof: "caller_of t = None" using stack_repr_Nil_iff[OF sr] by simp
-  have covered: "ctx_key admiss startcontext t startcontext"
-    using ctx_key_caller_of_None[where admiss = admiss, OF cof] by simp
-  have "s \<in> activation_collect source_global admiss startcontext ?g S v startcontext"
+  have covered: "key enterc startcontext t = startcontext"
+    using key_caller_of_None[OF cof] .
+  have "s \<in> activation_collect source_global enterc startcontext ?g S v startcontext"
     using activation_collect_I[OF tv sn covered] ss by simp
   then show ?thesis using sim stk0 by blast
 qed

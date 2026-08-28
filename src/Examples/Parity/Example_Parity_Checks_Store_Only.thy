@@ -3,6 +3,7 @@ section \<open>Example: Parity check-discharge, node-local, store-only\<close>
 theory Example_Parity_Checks_Store_Only
   imports "Voblint_Core.Checks" "Voblint_CLI.Parity_Entry"
           "Voblint_Analysis.Analysis_GraphViz" "Voblint_VIMP.VIMP_Notation"
+          Example_Compile_Call_Free
 begin
 
 text \<open>
@@ -140,7 +141,7 @@ lemma parity_ex_exit_eval: "cfg_exit (prog_cfg (STR ''main'') parity_ex_program)
   unfolding prog_cfg_def by (simp add: cfg_exit_compile_prog)
 
 lemma parity_ex_entry_eval: "cfg_entry (prog_cfg (STR ''main'') parity_ex_program) = FunctionEntry (STR ''main'')"
-  unfolding prog_cfg_def by (simp add: inv16_entry_is_main)
+  unfolding prog_cfg_def by simp
 
 text \<open>Node-local collecting soundness at each check node, from the routed D/G
   node-soundness bridge and the four computed coverage facts --- no store is

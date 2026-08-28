@@ -466,10 +466,10 @@ lemmas ictx_entry_routed_context_comb =
   ictx_entry_routed.routed_context_comb[folded ictx_entry_enterc_def]
 
 theorem ictx_entry_activation_collect_sound:
-  "activation_collect gs (admiss_exact ictx_entry_enterc) [] (compile_prog Pi ps mnm main) (cinit_stores gs) v ctx
+  "activation_collect gs ictx_entry_enterc [] (compile_prog Pi ps mnm main) (cinit_stores gs) v ctx
      \<subseteq> gamma_state_lift (ictx_entry_sg (Inl (v, ctx)))"
 proof (rule activation_collect_sound_gen[where sg = ictx_entry_sg and gammaM = gamma_state_lift
-        and admiss = "admiss_exact ictx_entry_enterc"
+        and enterc = "ictx_entry_enterc"
         and startcontext = "[]" and S = "cinit_stores gs" and g = "compile_prog Pi ps mnm main" and gs = gs])
   fix s assume "s \<in> cinit_stores gs"
   hence "s \<in> gamma_state_lift (map_lift (fun_of_resolved_st_q_for gs) (Lifted cinit_int_dom_st))"
@@ -490,24 +490,21 @@ next
         \<Longrightarrow> s' \<in> gamma_state_lift (ictx_entry_sg (Inl (v, c)))"
     by (rule ictx_entry_routed.dg_ctx_act_edge)
 next
-  show "\<And>u c s. \<exists>c'. admiss_exact ictx_entry_enterc u c s c'"
-    by (simp add: admiss_exact_def)
-next
-  fix u dst pars args p cont c s c'
+  fix u dst pars args p cont c s
   assume ce: "(u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps mnm main)"
     and sm: "s \<in> gamma_state_lift (ictx_entry_sg (Inl (u, c)))"
-    and adm: "admiss_exact ictx_entry_enterc u c (call_enter gs (CallEdge dst pars args) s) c'"
-  show "call_enter gs (CallEdge dst pars args) s \<in> gamma_state_lift (ictx_entry_sg (Inl (FunctionEntry p, c')))"
-    using adm ictx_entry_routed_context_call[OF ce sm] by (simp add: admiss_exact_def)
+  show "call_enter gs (CallEdge dst pars args) s
+          \<in> gamma_state_lift
+              (ictx_entry_sg (Inl (FunctionEntry p, ictx_entry_enterc u c (call_enter gs (CallEdge dst pars args) s))))"
+    using ictx_entry_routed_context_call[OF ce sm] .
 next
-  fix cl dst pars args p cont c1 c2 s t es
+  fix cl dst pars args p cont c1 s t es
   assume ce: "(cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps mnm main)"
     and sm: "s \<in> gamma_state_lift (ictx_entry_sg (Inl (cl, c1)))"
-    and adm: "admiss_exact ictx_entry_enterc cl c1 es c2"
-    and tm: "t \<in> gamma_state_lift (ictx_entry_sg (Inl (FunctionResult p, c2)))"
+    and tm: "t \<in> gamma_state_lift (ictx_entry_sg (Inl (FunctionResult p, ictx_entry_enterc cl c1 es)))"
     and ces: "call_enter_store gs (compile_prog Pi ps mnm main) cl s es"
   show "combine_collect gs dst s t \<in> gamma_state_lift (ictx_entry_sg (Inl (cont, c1)))"
-    using adm tm ictx_entry_routed_context_comb[OF ce sm _ ces] by (simp add: admiss_exact_def)
+    using tm ictx_entry_routed_context_comb[OF ce sm _ ces] by blast
 qed
 
 end

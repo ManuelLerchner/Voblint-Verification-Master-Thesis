@@ -6,6 +6,7 @@ session Voblint_CFG in "." = "Voblint_VIMP" +
   theories
     CFG_Def
     CFG_Local_Trace
+    Activation_Context
     LTR_Collect
     LTR_Abstract
     VIMP_Proc_to_CFG
@@ -13,7 +14,9 @@ session Voblint_CFG in "." = "Voblint_VIMP" +
     Compile_Invariants
     Control_Residual
     Located_Exec
+    Control_Emit
     Control_Simulation
+    Control_Simulation_Forward
     Compile_Certificate
     CFG_Prune
     (* Per-procedure node classification and edge locality; carries
