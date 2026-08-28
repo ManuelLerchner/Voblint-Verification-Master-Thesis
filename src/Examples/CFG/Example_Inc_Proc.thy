@@ -18,7 +18,7 @@ text \<open>
 
 definition inc_program :: imp_prog where
   "inc_program = program {
-     global counter;
+     global int32 counter;
      void p() { counter := counter + 1 }
      void main() { Glocal := 1; p() }
    }"
@@ -77,7 +77,7 @@ text \<open>The increment reads its operand kinds off the elaborated tree and wr
   are both representable at \<^const>\<open>I32\<close>, which is exactly when the machine
   increment agrees with the unbounded one.\<close>
 lemma inc_ty_is_default [simp]: "inc_ty = default_tyenv"
-  by (simp add: prog_tyenv_def inc_program_def)
+  by (simp add: prog_tyenv_def inc_program_def default_tyenv_def fun_eq_iff)
 
 lemma taval_plus_counter_on_enter_declared:
   assumes ty: "s (STR ''counter'') \<in> ik_range I32"

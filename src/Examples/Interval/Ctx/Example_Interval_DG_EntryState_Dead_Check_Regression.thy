@@ -54,7 +54,7 @@ definition dead_check_prog :: imp_prog where
 
 definition mixed_ctx_prog :: imp_prog where
   "mixed_ctx_prog = program {
-     void f(n) {
+     int32 f(int32 n) {
        if (n < 2) {
          __voblint_check(n == 1);
          return 1
@@ -71,7 +71,7 @@ definition mixed_ctx_prog :: imp_prog where
 
 definition disagree_prog :: imp_prog where
   "disagree_prog = program {
-     void g(n) {
+     int32 g(int32 n) {
        __voblint_check(n < 3);
        return n
      }

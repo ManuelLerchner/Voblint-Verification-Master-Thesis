@@ -269,7 +269,7 @@ text \<open>
 
 definition cj_program :: imp_prog where
   "cj_program = program {
-     void mark(p) { r := 0 - 1; return p }
+     int32 mark(int32 p) { r := 0 - 1; return p }
      void main() { r := 1; z := mark(7) }
    }"
 

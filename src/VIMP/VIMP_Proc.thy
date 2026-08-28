@@ -114,8 +114,9 @@ text \<open>
   presently-executing activation -- in the role of CIL's
   \<open>currentReturnType\<close>, which is scoped to whichever function is
   currently being compiled. \<open>Call\<close> sets it to the callee's declared
-  kind (\<open>I32\<close> for \<open>void\<close>, D8's untyped-defaults-to-\<open>int32\<close>
-  convention) and saves the caller's own value on the pushed \<open>Frame\<close>;
+  kind -- \<open>I32\<close> for \<open>void\<close>, which no \<open>return e\<close> can reach, since a
+  \<open>void\<close> procedure delivering a value is not a program the language
+  has -- and saves the caller's own value on the pushed \<open>Frame\<close>;
   \<open>RestoreStep\<close>/\<open>UnwindAct\<close> read it back off the popped frame. Every
   other rule threads it through unchanged. Carrying it in the
   configuration rather than deriving it from the frame stack's head

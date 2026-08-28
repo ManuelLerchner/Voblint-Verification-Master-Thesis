@@ -20,7 +20,7 @@ text \<open>
 
 definition fact_prog :: imp_prog where
   "fact_prog = program {
-     void factorial(n) {
+     int32 factorial(int32 n) {
        __voblint_check(0 < n);
        if (n < 2) {
          return 1

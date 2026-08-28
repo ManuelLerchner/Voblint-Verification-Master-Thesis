@@ -111,7 +111,7 @@ text \<open>
 
 definition a2_program :: imp_prog where
   "a2_program = program {
-     global x;
+     global int32 x;
      void main() { x := 0; x := 1; __voblint_check(x == 1) }
    }"
 

@@ -56,7 +56,7 @@ text \<open>
 definition parity_program :: imp_prog where
   "parity_program = program {
 
-      global total;
+      global int32 total;
 
       void main() {
         x := 0;

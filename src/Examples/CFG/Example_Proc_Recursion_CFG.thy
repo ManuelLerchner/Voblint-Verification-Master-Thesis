@@ -12,7 +12,7 @@ text \<open>
 
 definition proc_layout_regression_prog :: imp_prog where
   "proc_layout_regression_prog = program {
-     global G;
+     global int32 G;
      void f() {
        if (G < 1) { f() } else { G := G }
      }

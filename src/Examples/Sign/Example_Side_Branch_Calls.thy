@@ -38,7 +38,7 @@ text \<open>
 
 definition branch_prog :: imp_prog where
   "branch_prog = program {
-     global input_val, result_val, out_val;
+     global int32 input_val, result_val, out_val;
 
      void compute() {
        Glocal := 1;

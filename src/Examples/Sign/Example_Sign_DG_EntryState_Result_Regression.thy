@@ -20,7 +20,7 @@ text \<open>
 
 definition sign_es_program :: imp_prog where
   "sign_es_program = program {
-     void f(p) { t := p + p; return t }
+     int32 f(int32 p) { t := p + p; return t }
      void main() { x := f(3); y := f(-10) }
    }"
 

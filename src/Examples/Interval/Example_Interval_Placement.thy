@@ -34,8 +34,8 @@ text \<open>
 
 definition placement_prog :: imp_prog where
   "placement_prog = program {
-     global balance, request_count;
-     void add(x) {
+     global int32 balance, request_count;
+     int32 add(int32 x) {
        tmp := balance + x;
        balance := tmp;
        request_count := request_count + 1;

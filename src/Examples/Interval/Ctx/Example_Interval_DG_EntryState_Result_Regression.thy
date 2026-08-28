@@ -161,7 +161,7 @@ text \<open>
 
 definition twin_prog :: imp_prog where
   "twin_prog = program {
-     void idf(n) {
+     int32 idf(int32 n) {
        return n + 1
      }
      void main() {

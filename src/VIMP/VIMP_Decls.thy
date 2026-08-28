@@ -134,8 +134,8 @@ text \<open>
 
 abbreviation two_kinds_prog :: imp_prog where
   "two_kinds_prog \<equiv> program {
-     void f(n) { uint8 acc; acc := n; return acc }
-     void g(n) { int64 acc; acc := n; return acc }
+     int32 f(int32 n) { uint8 acc; acc := n; return acc }
+     int32 g(int32 n) { int64 acc; acc := n; return acc }
      void main() { int32 a, b; a := f(1); b := g(2) }
    }"
 
@@ -144,7 +144,8 @@ lemma prog_decls_scoped_locals_disagree [simp]:
   "kind_of_var (prog_decls two_kinds_prog) (ScopedId (STR ''g'') (STR ''acc'')) = Some I64"
   by (simp_all add: prog_decls_def kind_of_var_def global_entries_def
                     formal_entries_def scoped_entries_def prog_tyenv_def tv_env_def
-                    mk_program_typed_def imp_prog.make_def proc_decl_of_def)
+                    mk_program_typed_def imp_prog.make_def proc_decl_of_def
+                    proc_decl_of_typed_def)
 
 lemma prog_tyenv_cannot_tell_them_apart:
   "prog_tyenv two_kinds_prog (STR ''acc'') = I32"

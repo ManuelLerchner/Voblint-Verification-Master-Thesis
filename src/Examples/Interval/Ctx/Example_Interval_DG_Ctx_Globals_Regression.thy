@@ -20,8 +20,8 @@ text \<open>
 
 definition gcall_prog :: imp_prog where
   "gcall_prog = program {
-     global g;
-     void bump(n) {
+     global int32 g;
+     int32 bump(int32 n) {
        g := g + n;
        return g
      }

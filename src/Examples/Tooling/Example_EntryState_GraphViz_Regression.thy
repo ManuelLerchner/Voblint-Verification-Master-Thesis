@@ -230,7 +230,7 @@ text \<open>
 
 definition dead_route_prog :: imp_prog where
   "dead_route_prog = program {
-     void f(n) { return n }
+     int32 f(int32 n) { return n }
      void main() {
        x := 5;
        if (x < 2) {

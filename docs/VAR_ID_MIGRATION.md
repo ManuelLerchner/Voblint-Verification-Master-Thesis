@@ -412,17 +412,22 @@ Enforcing first rejects 146 fixtures at once with nothing to bisect against.
 
 ### Frontend asymmetry, and what closes it
 
-Enforcement lands on the Menhir frontend first, because that is where the
-migrated corpus lives. The Isabelle `program { ... }` notation keeps accepting
-the untyped forms for now: `prog_tr` rejecting them would break every
-`void f(n)` in `src/Examples`, and those 34 program-constructing theories are
-migrated separately.
+Enforcement landed on the Menhir frontend first, because that is where the
+migrated corpus lives. Annotating the 22 program-constructing theories in
+`src/` then let the same two checks move into `prog_tr`: a formal or global
+declared without a kind, and a `void` procedure that returns a value. Both
+frontends now reject them, so the same source text means the same program
+whichever one reads it.
 
-This is a deliberate, temporary divergence between the two frontends. It closes
-when the Example theories are annotated, at which point the same checks move
-into `prog_tr` and the untyped `formal_untyped` and `globals_decl` productions
-can leave `grammar/vimp.yaml` entirely -- at which point the grammar, rather
-than a check, is the contract.
+The untyped `formal_untyped` and `globals_decl` productions stay in
+`grammar/vimp.yaml`. Dropping them would make a missing kind a bare syntax
+error at the following token; keeping them lets both frontends name the
+declaration that is missing one.
+
+One check remains Menhir-only: that every variable resolve to a global, a
+formal or a local. The notation's own programs write undeclared locals, and
+`prog_tyenv` reads those at its `int32` fallback -- the last reachable
+untyped default, and the one A6b's typed seeds close.
 
 ## Slices
 

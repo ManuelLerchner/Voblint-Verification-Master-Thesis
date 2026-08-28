@@ -21,7 +21,7 @@ subsection \<open>1-3. A mixed program: non-\<open>G\<close> global, \<open>G\<c
 
 definition storage_program :: imp_prog where
   "storage_program = program {
-     global total;
+     global int32 total;
      void main() { Glocal := 1; total := total + Glocal }
    }"
 

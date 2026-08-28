@@ -41,17 +41,16 @@
 # main-return is the one rule the Menhir side leaves to
 # `wf_program_compile_input_exec` instead of diagnosing at parse time.
 #
-# The two targets do NOT currently check the same set. Both reject duplicate
-# procedure/global/formal/local names and the global/formal, global/local and
-# formal/local collisions. Only the Menhir side additionally requires that
-# every formal and every global declare a kind, that a `void` procedure not
-# return a value, and that every variable resolve to a global, formal or
-# local. That asymmetry is deliberate and temporary: prog_tr enforcing those
-# four would reject every `void f(n)` in src/Examples, whose program-building
-# theories are annotated separately. It closes when they are, at which point
-# the checks move into prog_tr and the untyped `formal_untyped` and
-# `globals_decl` productions can leave this file entirely -- so that the
-# grammar, rather than a check, is what makes a kind mandatory.
+# Both targets reject duplicate procedure/global/formal/local names, the
+# global/formal, global/local and formal/local collisions, a formal or a
+# global declared without a kind, and a `void` procedure that returns a
+# value. The untyped `formal_untyped` and `globals_decl` productions stay in
+# the grammar so that both frontends can name what is missing rather than
+# report a bare syntax error at the following token.
+#
+# One check is still Menhir-only: that every variable resolve to a global, a
+# formal or a local. The `program { ... }` notation's own programs write
+# undeclared locals, which prog_tyenv reads at its int32 fallback.
 #
 # Every production's AST-construction is exactly one of three shapes:
 #

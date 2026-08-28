@@ -37,8 +37,8 @@ text \<open>
 
 definition sign_nest_program :: imp_prog where
   "sign_nest_program = program {
-     void g(p) { return p + p }
-     void f(p) { t := g(p); return t }
+     int32 g(int32 p) { return p + p }
+     int32 f(int32 p) { t := g(p); return t }
      void main() { x := f(3); y := f(-10) }
    }"
 

@@ -345,7 +345,7 @@ text \<open>
 \<close>
 
 definition sign_flow_sensitive_global_prog :: imp_prog where
-  "sign_flow_sensitive_global_prog = program { global Gx;
+  "sign_flow_sensitive_global_prog = program { global int32 Gx;
      void f() { Gx := 1 }
      void main() { Gx := 0; f(); __voblint_check(0 < Gx) } }"
 
@@ -362,8 +362,8 @@ lemma sign_flow_sensitive_global_result:
   by eval
 
 definition sign_dead_branch_bot_prog :: imp_prog where
-  "sign_dead_branch_bot_prog = program { global Gx;
-     void f(n) { if (n < 0) { Gx := -1 } else { Gx := 1 } }
+  "sign_dead_branch_bot_prog = program { global int32 Gx;
+     void f(int32 n) { if (n < 0) { Gx := -1 } else { Gx := 1 } }
      void main() { Gx := 0; f(5); __voblint_check(0 < Gx) } }"
 
 text \<open>
@@ -399,7 +399,7 @@ text \<open>
 definition sign_factorial_prog :: imp_prog where
   "sign_factorial_prog =
      program {
-       void factorial(n) {
+       int32 factorial(int32 n) {
          __voblint_check(0 < n);
          if (n < 2) {
            return 1
@@ -458,7 +458,7 @@ text \<open>
 definition sign_two_call_sites_prog :: imp_prog where
   "sign_two_call_sites_prog =
      program {
-       void square(n) {
+       int32 square(int32 n) {
          return n * n
        }
        void main() {

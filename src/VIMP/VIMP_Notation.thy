@@ -450,6 +450,49 @@ parse_translation \<open>
          [] => ()
        | ds => error ("VIMP program: duplicate " ^ kind ^ ": " ^ commas_quote ds))
 
+    (* A declaration without a kind used to mean int32, supplied by tv_env's
+       fallback rather than by anything the source wrote. That default is what
+       let `uint8 x` in one procedure and a bare `x` in another agree by
+       accident, and it is why an undeclared name could acquire a kind at all.
+       The Menhir frontend already rejects both shapes; rejecting them here too
+       is what makes the two frontends accept the same language, so a program
+       that analyses through the CLI and the same program written in this
+       notation cannot disagree about a kind. *)
+    fun unkinded pairs = map fst (filter (fn (_, k) => is_none k) pairs)
+
+    fun check_formal_kinds funcs =
+      List.app (fn (n, formals, _, _, _) =>
+        case unkinded formals of
+          [] => ()
+        | bad => error ("VIMP program: " ^ quote n
+                         ^ " declares formal parameter(s) without a kind: "
+                         ^ commas_quote bad)) funcs
+
+    fun check_global_kinds decls =
+      (case unkinded decls of
+         [] => ()
+       | bad => error ("VIMP program: global(s) declared without a kind: "
+                        ^ commas_quote bad))
+
+    (* A `void` procedure yields no value, so `return e` in its body has
+       nowhere to deliver e: the call site that invoked it carries no
+       destination. A bare `return` is the void form and stays legal. Left
+       unchecked the returned value normalizes at the same I32 fallback and is
+       then dropped, which reads as a kind the source never wrote. *)
+    fun has_value_return (Const ("_stmt_return", _) $ _) = true
+      | has_value_return (t $ u) = has_value_return t orelse has_value_return u
+      | has_value_return (Abs (_, _, b)) = has_value_return b
+      | has_value_return _ = false
+
+    fun check_void_returns funcs =
+      List.app (fn (n, _, _, body, rk) =>
+        case (rk, body) of
+          (NONE, SOME b) =>
+            if n <> "main" andalso has_value_return b then
+              error ("VIMP program: " ^ quote n ^ " is declared void but returns a value")
+            else ()
+        | _ => ()) funcs
+
     (* A name cannot be both declared global and a procedure formal: the
        formal's per-call binding and the global's cross-call persistence are
        incompatible storage classes for one name. *)
@@ -523,6 +566,9 @@ parse_translation \<open>
         val decl_names = map fst decls
         val _ = check_distinct "procedure" (map (fn (n, _, _, _, _) => n) funcs)
         val _ = check_distinct "declared global" decl_names
+        val _ = check_global_kinds decls
+        val _ = check_formal_kinds funcs
+        val _ = check_void_returns funcs
         val _ = List.app (fn (n, formals, _, _, _) =>
                   check_distinct ("formal parameter of " ^ quote n) (map fst formals)) funcs
         val _ = check_no_global_formal_collision decl_names funcs
@@ -574,14 +620,14 @@ value "imp \<lbrakk> if (x < 10) { x := 0 } else { x := 1 } \<rbrakk>"
 value "imp \<lbrakk> while (x < 10) { x := x + 1 } \<rbrakk>"
 value "imp \<lbrakk> return 7 \<rbrakk>"
 value "(program {
-  global Gx;
-  void f() { if (Gx < 0) { return 1 } else { skip } }
-  void main() { f() }
+  global int32 Gx;
+  int32 f() { if (Gx < 0) { return 1 } else { return 0 } }
+  void main() { int32 r; r := f() }
 } :: imp_prog)"
 
 (* zero-arg baseline *)
 value "(program { void main() { skip } } :: imp_prog)"
-value "(program { global Gx; void ping() { Gx := Gx + 1 } void main() { ping() } } :: imp_prog)"
+value "(program { global int32 Gx; void ping() { Gx := Gx + 1 } void main() { ping() } } :: imp_prog)"
 
 text \<open>
   \<open>declared_global_vars\<close> is preserved from the source declaration, not
@@ -590,12 +636,12 @@ text \<open>
 \<close>
 
 lemma declared_global_vars_ping_example [simp]:
-  "declared_global_vars (program { global Gx; void ping() { Gx := Gx + 1 } void main() { ping() } })
+  "declared_global_vars (program { global int32 Gx; void ping() { Gx := Gx + 1 } void main() { ping() } })
      = [STR ''Gx'']"
   by simp
 
 lemma declared_global_vars_two_names [simp]:
-  "declared_global_vars (program { global total, x; void main() { total := x } })
+  "declared_global_vars (program { global int32 total, x; void main() { total := x } })
      = [STR ''total'', STR ''x'']"
   by simp
 
@@ -606,31 +652,33 @@ text \<open>   \<open>declared_global \<close> checkpoint: a declared non- \<ope
 \<close>
 
 lemma declared_global_two_names_examples:
-  "declared_global (program { global total, x; void main() { total := x } }) (STR ''total'')"
-  "declared_global (program { global total, x; void main() { total := x } }) (STR ''x'')"
-  "\<not> declared_global (program { global total, x; void main() { total := x } }) (STR ''y'')"
-  "\<not> declared_global (program { global total, x; void main() { total := x } }) (STR ''Gy'')"
+  "declared_global (program { global int32 total, x; void main() { total := x } }) (STR ''total'')"
+  "declared_global (program { global int32 total, x; void main() { total := x } }) (STR ''x'')"
+  "\<not> declared_global (program { global int32 total, x; void main() { total := x } }) (STR ''y'')"
+  "\<not> declared_global (program { global int32 total, x; void main() { total := x } }) (STR ''Gy'')"
   by simp_all
 
 value "declared_global_vars (program { void main() { skip } } :: imp_prog)"
 
 (* parameter passing, no return *)
-value "(program { void ping(x) { skip } void main() { ping(3) } } :: imp_prog)"
-value "(program { void ping(a, b) { skip } void main() { ping(1, 2) } } :: imp_prog)"
+value "(program { void ping(int32 x) { skip } void main() { ping(3) } } :: imp_prog)"
+value "(program { void ping(int32 a, int32 b) { skip } void main() { ping(1, 2) } } :: imp_prog)"
 
 (* parameter + return value, called with return assignment *)
-value "(program { void inc(x) { return x + 1 } void main() { r := inc(5) } } :: imp_prog)"
-value "(program { void add(a, b) { skip; return a + b } void main() { r := add(1, 2) } } :: imp_prog)"
+value "(program { int32 inc(int32 x) { return x + 1 } void main() { int32 r; r := inc(5) } } :: imp_prog)"
+value "(program { int32 add(int32 a, int32 b) { skip; return a + b } void main() { int32 r; r := add(1, 2) } } :: imp_prog)"
 
 (* zero-arg callee returning a value *)
-value "(program { void get() { return 42 } void main() { r := get() } } :: imp_prog)"
+value "(program { int32 get() { return 42 } void main() { int32 r; r := get() } } :: imp_prog)"
 
 text \<open>
-  A typed program: a declared global, a formal, and a local all carry an
-  explicit kind. Untyped declarations coexist on the same lines/programs
-  and default to \<open>I32\<close> (\<open>declared_kinds\<close> records only the
-  annotated entries; \<open>prog_tyenv\<close> falls back to \<open>I32\<close> for
-  everything else).
+  Every declaration carries a kind, and the notation rejects one that does not:
+  a global, a formal, a procedure-local, and a procedure's result all say which
+  machine integer they are. A missing kind used to read as \<open>I32\<close> supplied by
+  \<open>prog_tyenv\<close>'s fallback rather than by the source, which is how one name could
+  be \<open>uint8\<close> in one place and silently \<open>int32\<close> in another.
+  \<open>declared_kinds\<close> records the flat global-and-formal entries;
+  \<open>declared_scoped\<close> pairs every formal and local with the procedure binding it.
 \<close>
 
 value "(program {
@@ -649,23 +697,26 @@ text \<open>
 
 lemma scoped_locals_keep_two_kinds_for_one_name [simp]:
   "declared_scoped (program {
-     void f(n) { uint8 acc; acc := n; return acc }
-     void g(n) { int64 acc; acc := n; return acc }
-     void main() { a := f(1); b := g(2) }
-   }) = [(STR ''f'', TV (STR ''acc'') U8), (STR ''g'', TV (STR ''acc'') I64)]"
+     uint8 f() { uint8 acc; acc := 1; return acc }
+     int64 g() { int64 acc; acc := 2; return acc }
+     void main() { uint8 a; int64 b; a := f(); b := g() }
+   }) = [(STR ''f'', TV (STR ''acc'') U8), (STR ''g'', TV (STR ''acc'') I64),
+         (STR ''main'', TV (STR ''a'') U8), (STR ''main'', TV (STR ''b'') I64)]"
   by simp
 
 text \<open>
   An annotated formal is scoped the same way, so two procedures may take a
-  parameter of one name at two kinds.
+  parameter of one name at two kinds. A formal precedes its procedure's locals
+  in the list, matching the order the declarations are written.
 \<close>
 
 lemma scoped_formals_keep_two_kinds_for_one_name [simp]:
   "declared_scoped (program {
      uint8 f(uint8 n) { return n }
      int64 g(int64 n) { return n }
-     void main() { a := f(1); b := g(2) }
-   }) = [(STR ''f'', TV (STR ''n'') U8), (STR ''g'', TV (STR ''n'') I64)]"
+     void main() { uint8 a; int64 b; a := f(1); b := g(2) }
+   }) = [(STR ''f'', TV (STR ''n'') U8), (STR ''g'', TV (STR ''n'') I64),
+         (STR ''main'', TV (STR ''a'') U8), (STR ''main'', TV (STR ''b'') I64)]"
   by simp
 
 text \<open>
@@ -683,17 +734,20 @@ lemma scoped_locals_multi_name_and_main [simp]:
 text \<open>
   A procedure declared with a kind records it as its \<open>ret_kind\<close>, which is what
   \<open>proc_ret_kind\<close> reads and what a \<open>return e\<close> converts to. A \<open>void\<close> procedure
-  records none, and every return in it then normalizes at the \<open>I32\<close> default.
+  records none, and delivering a value out of one is rejected rather than
+  normalized at a default: there is no declared kind to convert to, and the
+  call site that reached it carries no destination to receive the value.
 \<close>
 
 lemma ret_kind_declared [simp]:
   "ret_kind (the (prog_table (program {
-     int64 wide(n) { return n }
+     int64 wide(int64 n) { return n }
      void main() { int64 w; w := wide(1) }
    }) (STR ''wide''))) = Some I64"
   "ret_kind (the (prog_table (program {
-     void plain(n) { return n }
-     void main() { int32 v; v := plain(1) }
+     global int32 seen;
+     void plain(int32 n) { seen := n }
+     void main() { plain(1) }
    }) (STR ''plain''))) = None"
   by (eval, eval)
 
@@ -713,9 +767,41 @@ lemma typed_example_prog_tyenv [simp]:
   by (simp add: prog_tyenv_def default_tyenv_def fun_eq_iff)
 
 (* proc-table entry: formals + result wired through *)
-value "the (prog_table (program { void inc(x) { return x + 1 } void main() { r := inc(5) } }) (STR ''inc''))"
+value "the (prog_table (program { int32 inc(int32 x) { return x + 1 } void main() { int32 r; r := inc(5) } }) (STR ''inc''))"
 
 (* boolean negation*)
 value "imp \<lbrakk> __voblint_check(!(x == 0)) \<rbrakk>"
 
+subsection \<open>What the notation refuses\<close>
+
+text \<open>
+  The two lists below hold the same three programs, differing by a single
+  kind each: on a global, on a formal, on a procedure's result. Reading them
+  is the check. A default that silently supplied a missing kind would make
+  the first list read as well, and nothing else here would notice.
+\<close>
+
+ML \<open>
+  let
+    fun reads s = is_some (try (Syntax.read_term \<^context>) s)
+    val accepted_without_a_kind =
+      filter reads
+        ["program { global g; void main() { g := 1 } } :: imp_prog",
+         "program { void f(n) { skip } void main() { f(1) } } :: imp_prog",
+         "program { void f() { return 1 } void main() { f() } } :: imp_prog"]
+    val rejected_with_one =
+      filter_out reads
+        ["program { global int32 g; void main() { g := 1 } } :: imp_prog",
+         "program { void f(int32 n) { skip } void main() { f(1) } } :: imp_prog",
+         "program { int32 f() { return 1 } void main() { int32 r; r := f() } } :: imp_prog"]
+  in
+    if null accepted_without_a_kind andalso null rejected_with_one then ()
+    else
+      error ("VIMP program(s) wrongly accepted: "
+              ^ commas_quote accepted_without_a_kind
+              ^ "; wrongly rejected: " ^ commas_quote rejected_with_one)
+  end
+\<close>
+
 end
+

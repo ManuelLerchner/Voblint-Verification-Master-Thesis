@@ -14,7 +14,7 @@ lemma sign_le_STop [simp]: "x \<le> (STop::sign)"
 
 definition sign_placement_prog :: imp_prog where
   "sign_placement_prog = program {
-     global g;
+     global int32 g;
      void main() {
        x := 5;
        g := x

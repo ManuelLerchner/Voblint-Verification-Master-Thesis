@@ -34,8 +34,8 @@ text \<open>
 
 definition nest_program :: imp_prog where
   "nest_program = program {
-     void g(p) { return p + p }
-     void f(p) { t := g(p); return t }
+     int32 g(int32 p) { return p + p }
+     int32 f(int32 p) { t := g(p); return t }
      void main() { x := f(3); y := f(10) }
    }"
 
@@ -531,8 +531,8 @@ text \<open>
 
 definition nestg_program :: imp_prog where
   "nestg_program = program {
-     global g;
-     void bump(n) {
+     global int32 g;
+     int32 bump(int32 n) {
        g := g + n;
        return g
      }
