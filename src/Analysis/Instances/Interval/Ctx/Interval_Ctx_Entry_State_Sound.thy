@@ -141,7 +141,7 @@ lemma entered_is_bot_for_correct:
            = is_bot_state (enter\<^sup># (ivl_tf_for gs) pars args st)"
 proof -
   define frame where "frame = enter_frame_D gs ivl_top st"
-  define entered where "entered = bind_formals_abs pars (map (\<lambda>e. aval_ivl e st) args) frame"
+  define entered where "entered = bind_formals pars (map (\<lambda>e. aval_ivl e st) args) frame"
   have unfold: "enter\<^sup># (ivl_tf_for gs) pars args st = entered"
     by (simp add: ivl_tf_for_def enter_ivl_for_def enter_D_def entered_def frame_def)
   have frame_not_bot: "\<not> is_bot (frame x)" for x
@@ -181,7 +181,7 @@ proof -
     qed
   qed
   have off_pars: "x \<notin> set pars \<Longrightarrow> entered x = frame x" for x
-    unfolding entered_def bind_formals_abs_def
+    unfolding entered_def
     using off_pars_generic by blast
   have "is_bot_state entered \<longleftrightarrow> (\<exists>x. is_bot (entered x))"
     by (simp add: is_bot_state_def)

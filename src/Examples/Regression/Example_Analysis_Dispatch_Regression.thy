@@ -1,6 +1,6 @@
 theory Example_Analysis_Dispatch_Regression
   imports
-    "Voblint_CLI.Analyse_Dispatch"
+    "Voblint_VIMP.VIMP_Notation" "Voblint_CLI.Analyse_Dispatch"
     "Voblint_VIMP.VIMP_Source_Print"
 begin
 
@@ -143,7 +143,7 @@ proof (rule analyse_interval_proved_sound)
   show "wf_compile_input (declared_global dispatch_demo_prog) (prog_table dispatch_demo_prog)
           (prog_procs dispatch_demo_prog) prog_main_name (prog_main dispatch_demo_prog)"
     unfolding wf_compile_input_simps dispatch_demo_prog_def
-    by (auto simp: source_exp_def proc_decl_of_def ret_var_def reserved_ret_var_def
+    by (auto simp: source_exp_def ret_var_def reserved_ret_var_def
         prog_main_name_def special_table_def special_pname_nondet_int_def
         special_pname_min_def special_pname_max_def
         split: if_splits)

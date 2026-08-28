@@ -553,8 +553,8 @@ proof -
     procs: "compile_procs \<Pi> ps 0 = (n1, Eprocs, Kprocs)"
     by (cases "compile_procs \<Pi> ps 0") auto
   obtain n2 Emain Kmain where
-    cmain: "compile_proc \<Pi> mnm (proc_decl_of [] main) n1 = (n2, Emain, Kmain)"
-    by (cases "compile_proc \<Pi> mnm (proc_decl_of [] main) n1") auto
+    cmain: "compile_proc \<Pi> mnm (\<lparr>formals = [], body = main\<rparr>) n1 = (n2, Emain, Kmain)"
+    by (cases "compile_proc \<Pi> mnm (\<lparr>formals = [], body = main\<rparr>) n1") auto
   obtain Cprocs n1' where cprocs: "collect_checks_procs \<Pi> ps 0 = (Cprocs, n1')"
     by (cases "collect_checks_procs \<Pi> ps 0") auto
   let ?g = "compile_prog \<Pi> ps mnm main"

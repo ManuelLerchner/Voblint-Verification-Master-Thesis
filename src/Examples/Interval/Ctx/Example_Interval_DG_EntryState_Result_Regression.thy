@@ -1,6 +1,6 @@
 theory Example_Interval_DG_EntryState_Result_Regression
   imports
-    Example_Interval_DG_Ctx_Globals_Regression
+    "Voblint_VIMP.VIMP_Notation" Example_Interval_DG_Ctx_Globals_Regression
     Example_Interval_DG_Ctx_Factorial_Regression
 begin
 

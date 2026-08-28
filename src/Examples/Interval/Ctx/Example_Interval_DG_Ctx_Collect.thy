@@ -233,7 +233,7 @@ lemma enter_route_exact_call1:
   shows "ivl_context u ctx s' = ctx_call1"
 proof -
   from assms(2) have "s' = (enter_state twice_gs s)((STR ''p'') := 3)"
-    by (simp add: call_enter_CallEdge bind_formals_def)
+    by (simp add: call_enter_CallEdge)
   thus ?thesis
     unfolding assms(1) ivl_context_def formals_context_sem_def
     by (simp add: twice_formals_at_call_site2 formals_context_def ivl_decode_def ctx_call1_val)
@@ -245,7 +245,7 @@ lemma enter_route_exact_call2:
   shows "ivl_context u ctx s' = ctx_call2"
 proof -
   from assms(2) have "s' = (enter_state twice_gs s)((STR ''p'') := 10)"
-    by (simp add: call_enter_CallEdge bind_formals_def)
+    by (simp add: call_enter_CallEdge)
   thus ?thesis
     unfolding assms(1) ivl_context_def formals_context_sem_def
     by (simp add: twice_formals_at_call_site3 formals_context_def ivl_decode_def ctx_call2_val)

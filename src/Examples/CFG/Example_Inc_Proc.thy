@@ -29,8 +29,8 @@ definition inc_pi :: proc_table where
 lemma inc_program_parts:
   shows "prog_procs inc_program = [(STR ''p'')]"
     and "prog_table inc_program =
-           [(STR ''p'') \<mapsto> proc_decl_of [] (imp \<lbrakk> counter := counter + 1 \<rbrakk>),
-            prog_main_name \<mapsto> proc_decl_of [] (imp \<lbrakk> Glocal := 1 ; p() \<rbrakk>)]"
+           [(STR ''p'') \<mapsto> \<lparr>formals = [], body = imp \<lbrakk> counter := counter + 1 \<rbrakk>\<rparr>,
+            prog_main_name \<mapsto> \<lparr>formals = [], body = imp \<lbrakk> Glocal := 1 ; p() \<rbrakk>\<rparr>]"
     and "prog_main inc_program = imp \<lbrakk> Glocal := 1 ; p() \<rbrakk>"
   by (simp_all add: inc_program_def prog_main_name_def)
 
@@ -91,7 +91,7 @@ proof -
                 (combine_env (declared_global inc_program) s
                   ((enter_state (declared_global inc_program) s)((STR ''counter'') := s (STR ''counter'') + 1)))"
   proof (rule pcompletes_Call_parameterless[where c = ?body])
-    show "inc_pi (STR ''p'') = Some (proc_decl_of [] ?body)"
+    show "inc_pi (STR ''p'') = Some (\<lparr>formals = [], body = ?body\<rparr>)"
       by (simp add: inc_pi_def inc_program_parts prog_main_name_def)
     show "pcompletes (declared_global inc_program) inc_pi ?body
              (enter_state (declared_global inc_program) s)
@@ -115,16 +115,9 @@ qed
 
 lemma prog_pcompletes_inc_pcall:
   fixes s :: store
-  shows "prog_pcompletes inc_program (imp \<lbrakk> p() \<rbrakk>) s
+  shows "pcompletes (declared_global inc_program) (prog_table inc_program) (imp \<lbrakk> p() \<rbrakk>) s
           (s((STR ''counter'') := s (STR ''counter'') + 1))"
-proof -
-  have storage:
-    "storage_global inc_program prog_main_name = declared_global inc_program"
-    by (rule ext) simp
-  show ?thesis
-    using pcompletes_inc_pcall_declared
-    unfolding prog_pcompletes_def inc_pi_def storage by simp
-qed
+  using pcompletes_inc_pcall_declared unfolding inc_pi_def .
 
 text \<open>
   The same regression one layer down, at the compiled CFG: \<^const>\<open>cstep\<close> takes

@@ -155,7 +155,7 @@ module Core : sig
     If of exp * com * com | While of exp * com |
     Call of string option * string * exp list | Return of exp option | Restore |
     Unwind
-  type 'a proc_decl_ext
+  type 'a proc_decl_ext = Proc_decl_ext of string list * com * 'a
   type ('a, 'b) analysis_cluster
   type call_string_gk
   val equal_call_string_gk : call_string_gk equal
@@ -206,24 +206,22 @@ module Core : sig
   val sup_seta : 'a equal -> 'a set set -> 'a set
   val exp_vnames : exp -> string set
   val explode : string -> char list
-  val proc_decl_of : string list -> com -> unit proc_decl_ext
-  val char_0x6E : char
   val prog_main_name : string
   val prog_table : unit imp_prog_ext -> string -> unit proc_decl_ext option
   val prog_main : unit imp_prog_ext -> com
-  val map_option : ('a -> 'b) -> 'a option -> 'b option
+  val char_0x6E : char
   val mk_program :
     (string * unit proc_decl_ext) list ->
       com -> string list -> unit imp_prog_ext
   val prog_procs : unit imp_prog_ext -> string list
-  val declared_global_vars : 'a imp_prog_ext -> string list
-  val declared_global : unit imp_prog_ext -> string -> bool
+  val map_option : ('a -> 'b) -> 'a option -> 'b option
   val char_0x74 : char
   val char_0x72 : char
   val char_0x6F : char
   val char_0x65 : char
   val char_0x61 : char
   val string_of_sign : sign -> char list
+  val declared_global_vars : 'a imp_prog_ext -> string list
   val contexts_at : ('a, 'b) analysis_result -> cfg_node -> 'a set
   val ea_check_cond : edge_action -> exp
   val is_EA_Check : edge_action -> bool
@@ -253,6 +251,7 @@ module Core : sig
   val char_0x6B : char
   val char_0x78 : char
   val bot_fun : 'b bot -> 'a -> 'b
+  val declared_global : unit imp_prog_ext -> string -> bool
   val lookup_context :
     'a equal -> ('a, 'b) analysis_result -> cfg_node -> 'a -> 'b point_state
   val int_classify_check : exp -> (string -> unit int_dom_ext) -> check_result
@@ -265,12 +264,12 @@ module Core : sig
   val decided_report :
     (cfg_node * (exp * check_result)) list ->
       (cfg_node * (exp * contextual_verdict)) list
+  val scope_vnames_list : unit imp_prog_ext -> string -> string list
   val sign_classify_check : exp -> (string -> sign) -> check_result
   val analyse_sign_report :
     unit imp_prog_ext -> (cfg_node * (exp * check_result)) list
   val analyse_sign_result :
     unit imp_prog_ext -> (unit, (string -> sign)) analysis_result
-  val scope_vnames_list : unit imp_prog_ext -> string -> string list
   val string_of_exp : nat -> exp -> char list
   val cs_show_context : cfg_node list -> char list
   val cs_context_key : cfg_node list -> string
@@ -3421,8 +3420,6 @@ type ('a, 'b, 'c) strategy_tree = Answer of 'c |
   QueryG of 'b * ('c -> ('a, 'b, 'c) strategy_tree) |
   Side of 'b * 'c * ('a, 'b, 'c) strategy_tree;;
 
-type source_location = LocalVar of string | GlobalVar;;
-
 type special_desc = SD_Nondet_Int | SD_Min | SD_Max;;
 
 type refine_mode = Refine_Never | Refine_Once | Refine_Fixpoint;;
@@ -4499,8 +4496,7 @@ let rec com_vnames
           (match dst with None -> bot_set
             | Some x -> insert equal_literal x bot_set)
           (sup_seta equal_literal (Set (map exp_vnames actuals)))
-    | Return None -> bot_set
-    | Return (Some a) -> exp_vnames a
+    | Return e -> (match e with None -> bot_set | Some a -> exp_vnames a)
     | Restore -> bot_set
     | Unwind -> bot_set;;
 
@@ -4515,21 +4511,7 @@ let rec source_com = function SKIP -> true
                      | Restore -> false
                      | Unwind -> false;;
 
-let rec exp_mentions_where
-  p x1 = match p, x1 with p, N uu -> false
-    | p, V x -> p x
-    | p, Plus (a, b) -> exp_mentions_where p a || exp_mentions_where p b
-    | p, Minus (a, b) -> exp_mentions_where p a || exp_mentions_where p b
-    | p, Times (a, b) -> exp_mentions_where p a || exp_mentions_where p b
-    | p, Less (a, b) -> exp_mentions_where p a || exp_mentions_where p b
-    | p, Eq (a, b) -> exp_mentions_where p a || exp_mentions_where p b
-    | p, Not b -> exp_mentions_where p b
-    | p, And (b1, b2) -> exp_mentions_where p b1 || exp_mentions_where p b2
-    | p, Or (b1, b2) -> exp_mentions_where p b1 || exp_mentions_where p b2;;
-
-let rec exp_mentions x = exp_mentions_where (fun a -> ((x : string) = a));;
-
-let rec source_exp a = not (exp_mentions ret_var a);;
+let rec source_exp a = not (member equal_literal ret_var (exp_vnames a));;
 
 let rec apply_reduction_steps
   x0 d = match x0, d with [], d -> d
@@ -4994,8 +4976,6 @@ let rec c_update
   ca (State_ext (c, infl, stabl, sigma, more)) =
     State_ext (ca c, infl, stabl, sigma, more);;
 
-let rec proc_decl_of xs bdy = Proc_decl_ext (xs, bdy, ());;
-
 let rec valid_formal gs x = not (gs x) && not ((x : string) = ret_var);;
 
 let rec formals (Proc_decl_ext (formals, body, more)) = formals;;
@@ -5121,14 +5101,6 @@ let rec csize
     | Restore -> one_nat
     | Unwind -> one_nat;;
 
-let char_0x6E : char = Chr (Z.of_int 110);;
-
-let char_0x5C : char = Chr (Z.of_int 92);;
-
-let gv_nl : char list = [char_0x5C; char_0x6E];;
-
-let cinit_sign_st : sign resolved_st_q = Abs_resolved_st (STop, (SZero, []));;
-
 let prog_main_name : string = "main";;
 
 let rec proc_rep
@@ -5137,6 +5109,25 @@ let rec proc_rep
 let rec prog_table p = map_of equal_literal (proc_rep p);;
 
 let rec prog_main p = body (the (prog_table p prog_main_name));;
+
+let char_0x6E : char = Chr (Z.of_int 110);;
+
+let char_0x5C : char = Chr (Z.of_int 92);;
+
+let gv_nl : char list = [char_0x5C; char_0x6E];;
+
+let cinit_sign_st : sign resolved_st_q = Abs_resolved_st (STop, (SZero, []));;
+
+let rec make
+  proc_rep declared_global_vars =
+    Imp_prog_ext (proc_rep, declared_global_vars, ());;
+
+let rec mk_program
+  ps m gv = make ((prog_main_name, Proc_decl_ext ([], m, ())) :: ps) gv;;
+
+let rec prog_procs
+  p = filtera (fun n -> not ((n : string) = prog_main_name))
+        (map fst (proc_rep p));;
 
 let char_0x2D : char = Chr (Z.of_int 45);;
 
@@ -5287,25 +5278,6 @@ let rec sign_tf_st_for
         update_resolved_st_q bot_sign s (location_of source_global ret_var)
           (aval_sign a (fun_of_resolved_st_q_for bot_sign source_global s))
     | source_global, EA_Check cnd, s -> s;;
-
-let rec make
-  proc_rep declared_global_vars =
-    Imp_prog_ext (proc_rep, declared_global_vars, ());;
-
-let rec mk_program
-  ps m gv = make ((prog_main_name, proc_decl_of [] m) :: ps) gv;;
-
-let rec prog_procs
-  p = filtera (fun n -> not ((n : string) = prog_main_name))
-        (map fst (proc_rep p));;
-
-let rec declared_global_vars
-  (Imp_prog_ext (proc_rep, declared_global_vars, more)) = declared_global_vars;;
-
-let rec declared_global p x = membera equal_literal (declared_global_vars p) x;;
-
-let rec storage_of
-  p owner x = (if declared_global p x then GlobalVar else LocalVar owner);;
 
 let rec call_formals pi q = (match pi q with None -> [] | Some a -> formals a);;
 
@@ -5459,16 +5431,13 @@ let rec compile
 let rec bind_lift x0 f = match x0, f with Bot, f -> Bot
                     | Lifted a, f -> f a;;
 
-let rec bind_formals_abs
-  xs avs sigma =
-    fold (fun (x, a) tau -> fun_upd equal_literal tau x a) (zip xs avs) sigma;;
-
 let rec enter_frame_D
   gs top_val sigma = (fun x -> (if gs x then sigma x else top_val));;
 
 let rec enter_D
   gs top_val aval_abs xs es sigma =
-    bind_formals_abs xs (map (fun e -> aval_abs e sigma) es)
+    fold (fun (x, v) st -> fun_upd equal_literal st x v)
+      (zip xs (map (fun e -> aval_abs e sigma) es))
       (enter_frame_D gs top_val sigma);;
 
 let rec dgs_special
@@ -6252,6 +6221,18 @@ let rec infl_update
   infla (State_ext (c, infl, stabl, sigma, more)) =
     State_ext (c, infla infl, stabl, sigma, more);;
 
+let rec declared_global_vars
+  (Imp_prog_ext (proc_rep, declared_global_vars, more)) = declared_global_vars;;
+
+let rec scope_vnames
+  p owner =
+    sup_set equal_literal
+      (sup_set equal_literal (Set (declared_global_vars p))
+        (insert equal_literal ret_var bot_set))
+      (match prog_table p owner with None -> bot_set
+        | Some decl ->
+          sup_set equal_literal (Set (formals decl)) (com_vnames (body decl)));;
+
 let rec location_vname = function Local_Location x1 -> x1
                          | Global_Location x2 -> x2;;
 
@@ -6474,15 +6455,6 @@ let rec stabl_update
   stabla (State_ext (c, infl, stabl, sigma, more)) =
     State_ext (c, infl, stabla stabl, sigma, more);;
 
-let rec scope_vnames
-  p owner =
-    sup_set equal_literal
-      (sup_set equal_literal (Set (declared_global_vars p))
-        (insert equal_literal ret_var bot_set))
-      (match prog_table p owner with None -> bot_set
-        | Some decl ->
-          sup_set equal_literal (Set (formals decl)) (com_vnames (body decl)));;
-
 let rec reserved_ret_var gs = not (gs ret_var);;
 
 let rec exp_prio = function N uu -> nat_of_integer (Z.of_int 1000)
@@ -6561,7 +6533,8 @@ let rec compile_procs
 let rec compile_prog
   pi ps mnm main =
     (let (n1, (eprocs, kprocs)) = compile_procs pi ps zero_nat in
-     let (_, (emain, kmain)) = compile_proc pi mnm (proc_decl_of [] main) n1 in
+     let (_, (emain, kmain)) =
+       compile_proc pi mnm (Proc_decl_ext ([], main, ())) n1 in
       Cfg_ext
         (sup_set
            (equal_prod equal_cfg_node
@@ -7712,9 +7685,7 @@ let rec point
 
 let rec rho (Ug_state_ext (rho, more)) = rho;;
 
-let rec storage_global
-  p owner x =
-    (match storage_of p owner x with LocalVar _ -> false | GlobalVar -> true);;
+let rec declared_global p x = membera equal_literal (declared_global_vars p) x;;
 
 let rec split_gv_nl_acc
   acc x1 = match acc, x1 with acc, [] -> [rev acc]
@@ -8091,6 +8062,11 @@ let rec pctx_eqs
 
 let rec formals_context pars d = map d pars;;
 
+let rec scope_vnames_list
+  p owner =
+    sorted_list_of_set (equal_literal, linorder_literal)
+      (scope_vnames p owner);;
+
 let rec graphviz_exit
   g = (match cfg_entry g with Statement a -> Statement a
         | FunctionEntry a -> FunctionResult a
@@ -8354,11 +8330,6 @@ let rec analyse_sign_report_for
 let rec analyse_sign_report p = analyse_sign_report_for (declared_global p) p;;
 
 let rec analyse_sign_result p = analyse_sign_result_for (declared_global p) p;;
-
-let rec scope_vnames_list
-  p owner =
-    sorted_list_of_set (equal_literal, linorder_literal)
-      (scope_vnames p owner);;
 
 let rec source_indent
   n = (if equal_nata n zero_nat then []
@@ -10992,7 +10963,7 @@ let rec analyse_sign_ctx_solved_for
 
 let rec wf_program_compile_input_exec
   p = (let procs = proc_rep p in
-       let gs = storage_global p prog_main_name in
+       let gs = declared_global p in
        let pi = map_of equal_literal procs in
         reserved_ret_var gs &&
           (distinct equal_literal (prog_procs p) &&
@@ -11000,7 +10971,8 @@ let rec wf_program_compile_input_exec
                (remove equal_literal prog_main_name (Set (map fst procs))) &&
               (not (membera equal_literal (prog_procs p) prog_main_name) &&
                 (equal_option (equal_proc_decl_ext equal_unit)
-                   (pi prog_main_name) (Some (proc_decl_of [] (prog_main p))) &&
+                   (pi prog_main_name)
+                   (Some (Proc_decl_ext ([], prog_main p, ()))) &&
                   (wf_source_com pi (prog_main p) &&
                     (no_return (prog_main p) &&
                       (list_all (fun (_, a) -> wf_proc_decl gs pi a) procs &&

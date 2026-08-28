@@ -1,5 +1,5 @@
 theory Compile_Invariants
-  imports VIMP_Proc_to_CFG "Voblint_VIMP.VIMP_Notation"
+  imports VIMP_Proc_to_CFG "Voblint_VIMP.VIMP_Program"
 begin
 
 section \<open>Structural invariants of the procedure-aware compiler\<close>
@@ -28,19 +28,22 @@ definition wf_compile_input ::
 
 declare wf_compile_input_def [wf_compile_input_simps]
 
-lemma wf_compile_input_reserved_ret_var [dest]:
-  "wf_compile_input gs \<Pi> ps mnm main \<Longrightarrow> reserved_ret_var gs"
-  unfolding wf_compile_input_simps by simp
+lemma wf_compile_input_source_program:
+  "wf_compile_input gs \<Pi> ps mnm main \<Longrightarrow> wf_source_program gs \<Pi> mnm main"
+  by (simp add: wf_compile_input_def)
+
+lemmas wf_compile_inputD = wf_source_programD[OF wf_compile_input_source_program]
+lemmas wf_compile_input_reserved_ret_var [dest] = wf_compile_inputD(1)
 
 
 definition wf_program_compile_input :: "imp_prog => bool" where
   "wf_program_compile_input p \<longleftrightarrow>
-    wf_compile_input (storage_global p prog_main_name) (prog_table p)
+    wf_compile_input (declared_global p) (prog_table p)
       (prog_procs p) prog_main_name (prog_main p)"
 
 lemma wf_program_compile_inputD:
   "wf_program_compile_input p \<Longrightarrow>
-    wf_compile_input (storage_global p prog_main_name) (prog_table p)
+    wf_compile_input (declared_global p) (prog_table p)
       (prog_procs p) prog_main_name (prog_main p)"
   by (simp add: wf_program_compile_input_def)
 
@@ -67,12 +70,12 @@ text \<open>
 
 definition wf_program_compile_input_exec :: "imp_prog => bool" where
   "wf_program_compile_input_exec p \<longleftrightarrow>
-     (let procs = proc_rep p; gs = storage_global p prog_main_name; pi = map_of procs
+     (let procs = proc_rep p; gs = declared_global p; pi = map_of procs
       in reserved_ret_var gs \<and>
          distinct (prog_procs p) \<and>
          set (prog_procs p) = set (map fst procs) - {prog_main_name} \<and>
          prog_main_name \<notin> set (prog_procs p) \<and>
-         pi prog_main_name = Some (proc_decl_of [] (prog_main p)) \<and>
+         pi prog_main_name = Some (\<lparr>formals = [], body = prog_main p\<rparr>) \<and>
          wf_source_com pi (prog_main p) \<and> no_return (prog_main p) \<and>
          list_all (\<lambda>(_, decl). wf_proc_decl gs pi decl) procs \<and>
          list_all (\<lambda>(q, _). special_table q = None) procs)"
@@ -82,7 +85,7 @@ lemma wf_program_compile_input_exec_sound:
   shows "wf_program_compile_input p"
 proof -
   define procs where "procs = proc_rep p"
-  define gs where "gs = storage_global p prog_main_name"
+  define gs where "gs = declared_global p"
   define pi where "pi = map_of procs"
   have pi_eq: "pi = prog_table p"
     unfolding pi_def procs_def prog_table_def ..
@@ -91,7 +94,7 @@ proof -
     "distinct (prog_procs p)"
     "set (prog_procs p) = set (map fst procs) - {prog_main_name}"
     "prog_main_name \<notin> set (prog_procs p)"
-    "pi prog_main_name = Some (proc_decl_of [] (prog_main p))"
+    "pi prog_main_name = Some (\<lparr>formals = [], body = prog_main p\<rparr>)"
     "wf_source_com pi (prog_main p)"
     "no_return (prog_main p)"
     "list_all (\<lambda>(_, decl). wf_proc_decl gs pi decl) procs"
@@ -125,27 +128,8 @@ proof -
     using wf_compile_input .
 qed
 
-text \<open>
-  The executable gate resolves the global classifier at \<^const>\<open>prog_main_name\<close>,
-  while every downstream soundness theorem states its hypothesis at
-  \<^const>\<open>declared_global\<close>.  \<^const>\<open>storage_global\<close> and
-  \<^const>\<open>declared_global\<close> agree pointwise, so the gate delivers exactly the
-  premise those theorems take.
-\<close>
-
-lemma wf_program_compile_input_exec_declared_global:
-  assumes "wf_program_compile_input_exec p"
-  shows "wf_compile_input (declared_global p) (prog_table p)
-           (prog_procs p) prog_main_name (prog_main p)"
-proof -
-  have gs_eq: "storage_global p prog_main_name = declared_global p"
-    by (rule ext) simp
-  from wf_program_compile_input_exec_sound[OF assms]
-  have "wf_compile_input (storage_global p prog_main_name) (prog_table p)
-           (prog_procs p) prog_main_name (prog_main p)"
-    by (rule wf_program_compile_inputD)
-  then show ?thesis unfolding gs_eq .
-qed
+lemmas wf_program_compile_input_exec_declared_global =
+  wf_program_compile_inputD[OF wf_program_compile_input_exec_sound]
 
 definition compile_program :: "imp_prog => cfg" where
   "compile_program p =
@@ -169,40 +153,6 @@ definition prog_cfg :: "pname => imp_prog => cfg" where
 
 lemma compile_program_is_prog_cfg: "compile_program p = prog_cfg prog_main_name p"
   by (simp add: compile_program_def prog_cfg_def)
-lemma wf_compile_input_source_program:
-  "wf_compile_input gs \<Pi> ps mnm main \<Longrightarrow> wf_source_program gs \<Pi> mnm main"
-  by (simp add: wf_compile_input_def)
-
-
-lemma wf_program_compile_input_source:
-  "wf_program_compile_input p \<Longrightarrow> wf_program_source p"
-  by (simp add: wf_program_compile_input_def wf_program_source_def
-      wf_compile_input_def)
-lemma wf_compile_input_main_exists:
-  "wf_compile_input gs \<Pi> ps mnm main \<Longrightarrow> \<Pi> mnm = Some (proc_decl_of [] main)"
-  using wf_compile_input_source_program wf_source_program_main_exists by blast
-
-lemma wf_compile_input_source_pi:
-  "wf_compile_input gs \<Pi> ps mnm main \<Longrightarrow> source_pi \<Pi>"
-  using wf_compile_input_source_program wf_source_program_source_pi by blast
-
-lemma wf_compile_input_source_com:
-  "wf_compile_input gs \<Pi> ps mnm main \<Longrightarrow> source_com main"
-  using wf_compile_input_source_program wf_source_program_source_com by blast
-
-lemma wf_compile_input_special_table_none:
-  "wf_compile_input gs \<Pi> ps mnm main \<Longrightarrow> \<Pi> p = Some decl \<Longrightarrow> special_table p = None"
-  using wf_compile_input_source_program wf_source_program_special_table_none by blast
-
-lemma wf_compile_input_no_return:
-  "wf_compile_input gs \<Pi> ps mnm main \<Longrightarrow> no_return main"
-  using wf_compile_input_source_program wf_source_program_no_return by blast
-
-lemma wf_compile_input_decl:
-  "wf_compile_input gs \<Pi> ps mnm main \<Longrightarrow> \<Pi> p = Some decl
-   \<Longrightarrow> wf_proc_decl gs \<Pi> decl"
-  using wf_compile_input_source_program wf_source_program_decl by blast
-
 subsection \<open>Syntactic occurrence predicates\<close>
 
 

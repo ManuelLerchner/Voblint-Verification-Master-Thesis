@@ -8,7 +8,7 @@ text \<open>The static source contract establishes the runtime return guard for 
 lemma wf_compile_input_source_wf:
   assumes "wf_compile_input source_global \<Pi> ps mnm main"
   shows "source_wf (main, s, [])"
-  using wf_compile_input_source_com[OF assms] wf_compile_input_no_return[OF assms]
+  using wf_compile_inputD(8)[OF assms] wf_compile_inputD(4)[OF assms]
   by (rule source_com_no_return_source_wf)
 
 text \<open>
@@ -64,7 +64,7 @@ next
 qed
 
 text \<open>A well-formed compiled program satisfies the static \<^const>\<open>procs_compiled\<close> certificate,
-  \<^emph>\<open>including\<close> the distinguished entry procedure \<open>mnm\<close>: because \<open>\<Pi> mnm = Some (proc_decl_of [] main)\<close>
+  \<^emph>\<open>including\<close> the distinguished entry procedure \<open>mnm\<close>: because \<open>\<Pi> mnm = Some (\<lparr>formals = [], body = main\<rparr>)\<close>
   the entry node \<open>FunctionEntry mnm\<close> is an ordinary \<^const>\<open>proc_activation\<close>, so \<open>csim.Base\<close>
   applies to the initial main activation uniformly with every other procedure.\<close>
 theorem procs_compiled_compile_prog:
@@ -77,21 +77,21 @@ proof (intro allI impI)
   obtain n1 Eprocs Kprocs where procs: "compile_procs \<Pi> ps 0 = (n1, Eprocs, Kprocs)"
     by (metis prod_cases3)
   obtain n2 Emain Kmain
-    where mainc: "compile_proc \<Pi> mnm (proc_decl_of [] main) n1 = (n2, Emain, Kmain)"
+    where mainc: "compile_proc \<Pi> mnm (\<lparr>formals = [], body = main\<rparr>) n1 = (n2, Emain, Kmain)"
     by (metis prod_cases3)
   have intra_g: "intra ?g = Eprocs \<union> Emain" and calls_g: "calls ?g = Kprocs \<union> Kmain"
     unfolding compile_prog_def by (simp_all add: procs mainc Let_def)
   from wf have setps: "set ps = {p. \<Pi> p \<noteq> None} - {mnm}"
     unfolding wf_compile_input_def by auto
-  have mnmdecl: "\<Pi> mnm = Some (proc_decl_of [] main)"
-    by (rule wf_compile_input_main_exists[OF wf])
-  have spi: "source_pi \<Pi>" by (rule wf_compile_input_source_pi[OF wf])
+  have mnmdecl: "\<Pi> mnm = Some (\<lparr>formals = [], body = main\<rparr>)"
+    by (rule wf_compile_inputD(2)[OF wf])
+  have spi: "source_pi \<Pi>" by (rule wf_compile_inputD(7)[OF wf])
   have srccom: "source_com (body decl)" using spi pd unfolding source_pi_def by blast
   have frag: "\<exists>m m' Ef Kf. compile_proc \<Pi> p decl m = (m', Ef, Kf)
                 \<and> Ef \<subseteq> intra ?g \<and> Kf \<subseteq> calls ?g"
   proof (cases "p = mnm")
     case True
-    with pd mnmdecl have "decl = proc_decl_of [] main" by simp
+    with pd mnmdecl have "decl = \<lparr>formals = [], body = main\<rparr>" by simp
     with mainc True have "compile_proc \<Pi> p decl n1 = (n2, Emain, Kmain)" by simp
     moreover have "Emain \<subseteq> intra ?g" "Kmain \<subseteq> calls ?g" using intra_g calls_g by auto
     ultimately show ?thesis by blast
@@ -120,7 +120,7 @@ proof (intro allI impI)
                (Statement (m + csize (body decl)), EA_Ret None p, FunctionResult p) \<in> intra ?g"
     using Edef Esub by auto
   have spNone: "special_table p = None"
-    using wf_compile_input_special_table_none[OF wf pd] .
+    using wf_compile_inputD(6)[OF wf pd] .
   show "\<exists>k n n' en E K. compile \<Pi> p (body decl) k n = (n', en, E, K)
           \<and> E \<subseteq> intra ?g \<and> K \<subseteq> calls ?g
           \<and> (FunctionEntry p, EA_Nop, en) \<in> intra ?g

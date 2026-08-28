@@ -1,5 +1,5 @@
 theory Example_Min_Max_Regression
-  imports "Voblint_CLI.Analyse_Dispatch"
+  imports "Voblint_VIMP.VIMP_Notation" "Voblint_CLI.Analyse_Dispatch"
 begin
 
 section \<open>Regression: Min/Max special calls across Sign, Interval, and Parity\<close>

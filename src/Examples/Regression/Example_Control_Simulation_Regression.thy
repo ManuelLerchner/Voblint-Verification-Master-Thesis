@@ -91,7 +91,6 @@ proof -
 qed
 
 lemma Unwind_not_pcompletes: "\<not> pcompletes is_global \<Pi> Unwind s t"
-  unfolding pcompletes_def
 proof (rule notI)
   assume "star (pstep is_global \<Pi>) (Unwind, s, []) (SKIP, t, [])"
   then show False
@@ -99,7 +98,6 @@ proof (rule notI)
 qed
 
 lemma Return_empty_not_pcompletes: "\<not> pcompletes is_global \<Pi> (Return e) s t"
-  unfolding pcompletes_def
 proof (rule notI)
   assume "star (pstep is_global \<Pi>) (Return e, s, []) (SKIP, t, [])"
   then obtain y where step: "pstep is_global \<Pi> (Return e, s, []) y"

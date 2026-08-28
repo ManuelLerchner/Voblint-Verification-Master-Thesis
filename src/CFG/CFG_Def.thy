@@ -231,7 +231,7 @@ text \<open>A parameterless call is exactly \<^const>\<open>enter_state\<close>:
   formals to bind.\<close>
 lemma call_enter_Nil [simp]:
   "call_enter gs (CallEdge dst [] []) s = enter_state gs s"
-  by (simp add: call_enter_CallEdge bind_formals_def)
+  by (simp add: call_enter_CallEdge)
 
 subsection \<open>Structural selectors\<close>
 

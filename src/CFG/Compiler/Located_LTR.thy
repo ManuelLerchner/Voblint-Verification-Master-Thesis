@@ -207,17 +207,17 @@ lemma compile_prog_main_base:
 proof -
   let ?g = "compile_prog \<Pi> ps mnm main"
   have pc: "procs_compiled \<Pi> ?g" by (rule procs_compiled_compile_prog[OF wf])
-  have mnmdecl: "\<Pi> mnm = Some (proc_decl_of [] main)"
-    by (rule wf_compile_input_main_exists[OF wf])
+  have mnmdecl: "\<Pi> mnm = Some (\<lparr>formals = [], body = main\<rparr>)"
+    by (rule wf_compile_inputD(2)[OF wf])
   obtain k m m' en E K where
-    cbody: "compile \<Pi> mnm (body (proc_decl_of [] main)) k m = (m', en, E, K)"
+    cbody: "compile \<Pi> mnm (body (\<lparr>formals = [], body = main\<rparr>)) k m = (m', en, E, K)"
       and Esub: "E \<subseteq> intra ?g" and Ksub: "K \<subseteq> calls ?g"
       and entry: "(FunctionEntry mnm, EA_Nop, en) \<in> intra ?g"
-      and exitm: "falls_through (body (proc_decl_of [] main)) \<longrightarrow>
+      and exitm: "falls_through (body (\<lparr>formals = [], body = main\<rparr>)) \<longrightarrow>
                     (k, EA_Ret None mnm, FunctionResult mnm) \<in> intra ?g"
-      and srcbody: "source_com (body (proc_decl_of [] main))"
+      and srcbody: "source_com (body (\<lparr>formals = [], body = main\<rparr>))"
     by (rule procs_compiled_proc[OF pc mnmdecl])
-  have bodyeq: "body (proc_decl_of [] main) = main" by (simp add: proc_decl_of_def)
+  have bodyeq: "body (\<lparr>formals = [], body = main\<rparr>) = main" by simp
   have cbody': "compile \<Pi> mnm main k m = (m', en, E, K)" using cbody bodyeq by simp
   have srcmain: "source_com main" using srcbody bodyeq by simp
   have exitm': "falls_through main \<longrightarrow> (k, EA_Ret None mnm, FunctionResult mnm) \<in> intra ?g"

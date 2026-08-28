@@ -209,7 +209,7 @@ text \<open>
 lemma parity_wf: "wf_compile_input parity_gs parity_pi [] (STR ''main'') parity_prog"
   unfolding wf_compile_input_simps
     parity_pi_def parity_prog_def parity_program_def
-  by (auto simp: source_exp_def source_exp_def proc_decl_of_def ret_var_def reserved_ret_var_def
+  by (auto simp: source_exp_def source_exp_def ret_var_def reserved_ret_var_def
       prog_main_name_def special_table_def special_pname_nondet_int_def
       special_pname_min_def special_pname_max_def split: if_splits)
 

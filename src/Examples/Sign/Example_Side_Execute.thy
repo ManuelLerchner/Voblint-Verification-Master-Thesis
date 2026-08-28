@@ -112,7 +112,6 @@ definition x1_s0 :: store where
 lemma x1_completed:
   "pcompletes x1_gs (prog_table x1_prog) (prog_main x1_prog) x1_s0
      (x1_s0((STR ''x'') := 1))"
-  unfolding pcompletes_def
   apply (simp only: x1_prog_def x1_s0_def prog_table_make prog_main_make)
   apply (rule star.step)
    apply (rule pstep.Assign)
@@ -127,7 +126,7 @@ proof -
   have wf: "wf_compile_input x1_gs (prog_table x1_prog) (prog_procs x1_prog) (STR ''main'') (prog_main x1_prog)"
     unfolding wf_compile_input_def x1_prog_def
     by (auto simp: wf_source_program_def wf_proc_decl_def source_exp_def
-          proc_decl_of_def prog_main_name_def ret_var_def reserved_ret_var_def
+ prog_main_name_def ret_var_def reserved_ret_var_def
           declared_global_def special_table_def special_pname_nondet_int_def
           special_pname_min_def special_pname_max_def
           split: if_splits)
@@ -135,7 +134,7 @@ proof -
   have run:
     "star (pstep x1_gs (prog_table x1_prog)) (prog_main x1_prog, x1_s0, [])
       (VIMP_Proc.com.SKIP, x1_s0((STR ''x'') := 1), [])"
-    using x1_completed unfolding pcompletes_def .
+    using x1_completed .
   from source_completes_ltr_collect_exit[OF wf init run]
   show ?thesis unfolding prog_cfg_def .
 qed

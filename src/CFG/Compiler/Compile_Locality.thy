@@ -459,14 +459,14 @@ text \<open>Decomposition of a whole compiled program into the callee pass and t
 lemma compile_prog_intra_split:
   obtains n1 Eprocs Kprocs n2 Emain Kmain where
     "compile_procs \<Pi> ps 0 = (n1, Eprocs, Kprocs)"
-    "compile_proc \<Pi> mnm (proc_decl_of [] main) n1 = (n2, Emain, Kmain)"
+    "compile_proc \<Pi> mnm (\<lparr>formals = [], body = main\<rparr>) n1 = (n2, Emain, Kmain)"
     "intra (compile_prog \<Pi> ps mnm main) = Eprocs \<union> Emain"
     "calls (compile_prog \<Pi> ps mnm main) = Kprocs \<union> Kmain"
 proof -
   obtain n1 Eprocs Kprocs where procs: "compile_procs \<Pi> ps 0 = (n1, Eprocs, Kprocs)"
     by (metis prod_cases3)
   obtain n2 Emain Kmain
-    where mainc: "compile_proc \<Pi> mnm (proc_decl_of [] main) n1 = (n2, Emain, Kmain)"
+    where mainc: "compile_proc \<Pi> mnm (\<lparr>formals = [], body = main\<rparr>) n1 = (n2, Emain, Kmain)"
     by (metis prod_cases3)
   have "intra (compile_prog \<Pi> ps mnm main) = Eprocs \<union> Emain
       \<and> calls (compile_prog \<Pi> ps mnm main) = Kprocs \<union> Kmain"
@@ -484,7 +484,7 @@ lemma compile_prog_entry_out_unique:
 proof -
   obtain n1 Eprocs Kprocs n2 Emain Kmain where
     procs: "compile_procs \<Pi> ps 0 = (n1, Eprocs, Kprocs)"
-    and mainc: "compile_proc \<Pi> mnm (proc_decl_of [] main) n1 = (n2, Emain, Kmain)"
+    and mainc: "compile_proc \<Pi> mnm (\<lparr>formals = [], body = main\<rparr>) n1 = (n2, Emain, Kmain)"
     and gi: "intra (compile_prog \<Pi> ps mnm main) = Eprocs \<union> Emain"
     by (rule compile_prog_intra_split)
   have distinct: "distinct ps" and mnmnotin: "mnm \<notin> set ps"
@@ -575,7 +575,7 @@ lemma compile_prog_result_target:
 proof -
   obtain n1 Eprocs Kprocs n2 Emain Kmain where
     procs: "compile_procs \<Pi> ps 0 = (n1, Eprocs, Kprocs)"
-    and mainc: "compile_proc \<Pi> mnm (proc_decl_of [] main) n1 = (n2, Emain, Kmain)"
+    and mainc: "compile_proc \<Pi> mnm (\<lparr>formals = [], body = main\<rparr>) n1 = (n2, Emain, Kmain)"
     and E: "intra (compile_prog \<Pi> ps mnm main) = Eprocs \<union> Emain"
     by (rule compile_prog_intra_split)
   from edge E consider "(u, a, FunctionResult q) \<in> Eprocs"
@@ -596,7 +596,7 @@ proof (rule notI)
   assume e: "(FunctionResult r, a, v) \<in> intra (compile_prog \<Pi> ps mnm main)"
   obtain n1 Eprocs Kprocs n2 Emain Kmain where
     procs: "compile_procs \<Pi> ps 0 = (n1, Eprocs, Kprocs)"
-    and mainc: "compile_proc \<Pi> mnm (proc_decl_of [] main) n1 = (n2, Emain, Kmain)"
+    and mainc: "compile_proc \<Pi> mnm (\<lparr>formals = [], body = main\<rparr>) n1 = (n2, Emain, Kmain)"
     and E: "intra (compile_prog \<Pi> ps mnm main) = Eprocs \<union> Emain"
     by (rule compile_prog_intra_split)
   from e E consider "(FunctionResult r, a, v) \<in> Eprocs"
@@ -685,13 +685,13 @@ lemma compile_prog_call_target_declared:
 proof -
   obtain n1 Eprocs Kprocs n2 Emain Kmain where
     procs: "compile_procs \<Pi> ps 0 = (n1, Eprocs, Kprocs)"
-    and mainc: "compile_proc \<Pi> mnm (proc_decl_of [] main) n1 = (n2, Emain, Kmain)"
+    and mainc: "compile_proc \<Pi> mnm (\<lparr>formals = [], body = main\<rparr>) n1 = (n2, Emain, Kmain)"
     and K: "calls (compile_prog \<Pi> ps mnm main) = Kprocs \<union> Kmain"
     by (rule compile_prog_intra_split)
   have decls: "\<And>p decl. \<Pi> p = Some decl \<Longrightarrow> wf_proc_decl source_global \<Pi> decl"
-    by (rule wf_compile_input_decl[OF wf])
-  have main_decl: "\<Pi> mnm = Some (proc_decl_of [] main)"
-    by (rule wf_compile_input_main_exists[OF wf])
+    by (rule wf_compile_inputD(5)[OF wf])
+  have main_decl: "\<Pi> mnm = Some (\<lparr>formals = [], body = main\<rparr>)"
+    by (rule wf_compile_inputD(2)[OF wf])
   from edge K consider "(u, ce, FunctionEntry q, af) \<in> Kprocs"
     | "(u, ce, FunctionEntry q, af) \<in> Kmain" by auto
   then show ?thesis
@@ -711,7 +711,7 @@ proof -
   assume e: "(u, ce, tgt, af) \<in> calls (compile_prog \<Pi> ps mnm main)"
   obtain n1 Eprocs Kprocs n2 Emain Kmain where
     procs: "compile_procs \<Pi> ps 0 = (n1, Eprocs, Kprocs)"
-    and mainc: "compile_proc \<Pi> mnm (proc_decl_of [] main) n1 = (n2, Emain, Kmain)"
+    and mainc: "compile_proc \<Pi> mnm (\<lparr>formals = [], body = main\<rparr>) n1 = (n2, Emain, Kmain)"
     and K: "calls (compile_prog \<Pi> ps mnm main) = Kprocs \<union> Kmain"
     by (rule compile_prog_intra_split)
   from e K consider "(u, ce, tgt, af) \<in> Kprocs" | "(u, ce, tgt, af) \<in> Kmain" by auto
@@ -732,13 +732,13 @@ lemma compile_prog_entry_declared:
 proof -
   obtain n1 Eprocs Kprocs n2 Emain Kmain where
     procs: "compile_procs \<Pi> ps 0 = (n1, Eprocs, Kprocs)"
-    and mainc: "compile_proc \<Pi> mnm (proc_decl_of [] main) n1 = (n2, Emain, Kmain)"
+    and mainc: "compile_proc \<Pi> mnm (\<lparr>formals = [], body = main\<rparr>) n1 = (n2, Emain, Kmain)"
     and E: "intra (compile_prog \<Pi> ps mnm main) = Eprocs \<union> Emain"
     by (rule compile_prog_intra_split)
   have setps: "set ps = {p. \<Pi> p \<noteq> None} - {mnm}"
     using wf unfolding wf_compile_input_def by auto
-  have main: "\<Pi> mnm = Some (proc_decl_of [] main)"
-    by (rule wf_compile_input_main_exists[OF wf])
+  have main: "\<Pi> mnm = Some (\<lparr>formals = [], body = main\<rparr>)"
+    by (rule wf_compile_inputD(2)[OF wf])
   from e E consider "(FunctionEntry p, a, v) \<in> Eprocs" | "(FunctionEntry p, a, v) \<in> Emain" by auto
   then show ?thesis
   proof cases
@@ -1149,7 +1149,7 @@ lemma frag_edge_intra:
 proof -
   obtain n1 Eprocs Kprocs n2 Emain Kmain where
       procs: "compile_procs \<Pi> ps 0 = (n1, Eprocs, Kprocs)"
-    and mainc: "compile_proc \<Pi> mnm (proc_decl_of [] main) n1 = (n2, Emain, Kmain)"
+    and mainc: "compile_proc \<Pi> mnm (\<lparr>formals = [], body = main\<rparr>) n1 = (n2, Emain, Kmain)"
     and EI: "intra (compile_prog \<Pi> ps mnm main) = Eprocs \<union> Emain"
     and KC: "calls (compile_prog \<Pi> ps mnm main) = Kprocs \<union> Kmain"
     by (rule compile_prog_intra_split)
@@ -1161,8 +1161,8 @@ proof -
     case True
     have entmain': "(FunctionEntry mnm, EA_Nop, Statement n1) \<in> intra (compile_prog \<Pi> ps mnm main)"
       using EI compile_proc_entry_edge[OF mainc] by auto
-    have dd: "d = proc_decl_of [] main"
-      using decl True wf_compile_input_main_exists[OF wf] by simp
+    have dd: "d = \<lparr>formals = [], body = main\<rparr>"
+      using decl True wf_compile_inputD(2)[OF wf] by simp
     have entr: "(FunctionEntry mnm, EA_Nop, Statement m) \<in> intra (compile_prog \<Pi> ps mnm main)"
       using ent True by simp
     have mn: "m = n1"
@@ -1224,7 +1224,7 @@ lemma frag_edge_calls:
 proof -
   obtain n1 Eprocs Kprocs n2 Emain Kmain where
       procs: "compile_procs \<Pi> ps 0 = (n1, Eprocs, Kprocs)"
-    and mainc: "compile_proc \<Pi> mnm (proc_decl_of [] main) n1 = (n2, Emain, Kmain)"
+    and mainc: "compile_proc \<Pi> mnm (\<lparr>formals = [], body = main\<rparr>) n1 = (n2, Emain, Kmain)"
     and EI: "intra (compile_prog \<Pi> ps mnm main) = Eprocs \<union> Emain"
     and KC: "calls (compile_prog \<Pi> ps mnm main) = Kprocs \<union> Kmain"
     by (rule compile_prog_intra_split)
@@ -1236,8 +1236,8 @@ proof -
     case True
     have entmain': "(FunctionEntry mnm, EA_Nop, Statement n1) \<in> intra (compile_prog \<Pi> ps mnm main)"
       using EI compile_proc_entry_edge[OF mainc] by auto
-    have dd: "d = proc_decl_of [] main"
-      using decl True wf_compile_input_main_exists[OF wf] by simp
+    have dd: "d = \<lparr>formals = [], body = main\<rparr>"
+      using decl True wf_compile_inputD(2)[OF wf] by simp
     have entr: "(FunctionEntry mnm, EA_Nop, Statement m) \<in> intra (compile_prog \<Pi> ps mnm main)"
       using ent True by simp
     have mn: "m = n1"
@@ -1300,15 +1300,15 @@ lemma compile_prog_proc_frag:
 proof -
   obtain n1 Eprocs Kprocs n2 Emain Kmain where
       procs: "compile_procs \<Pi> ps 0 = (n1, Eprocs, Kprocs)"
-    and mainc: "compile_proc \<Pi> mnm (proc_decl_of [] main) n1 = (n2, Emain, Kmain)"
+    and mainc: "compile_proc \<Pi> mnm (\<lparr>formals = [], body = main\<rparr>) n1 = (n2, Emain, Kmain)"
     and EI: "intra (compile_prog \<Pi> ps mnm main) = Eprocs \<union> Emain"
     and KC: "calls (compile_prog \<Pi> ps mnm main) = Kprocs \<union> Kmain"
     by (rule compile_prog_intra_split)
   show thesis
   proof (cases "q = mnm")
     case True
-    have dd: "d = proc_decl_of [] main"
-      using decl True wf_compile_input_main_exists[OF wf] by simp
+    have dd: "d = \<lparr>formals = [], body = main\<rparr>"
+      using decl True wf_compile_inputD(2)[OF wf] by simp
     have "(FunctionEntry q, EA_Nop, Statement n1) \<in> intra (compile_prog \<Pi> ps mnm main)"
       using EI compile_proc_entry_edge[OF mainc] True by auto
     then show ?thesis using that[of n1 n2 Emain Kmain] mainc True dd by simp
@@ -1363,10 +1363,10 @@ proof -
   show ?thesis
   proof (rule caller_chain_closure)
     fix s assume "s \<in> S"
-    have mnmdecl: "\<Pi> mnm = Some (proc_decl_of [] main)"
-      by (rule wf_compile_input_main_exists[OF wf])
+    have mnmdecl: "\<Pi> mnm = Some (\<lparr>formals = [], body = main\<rparr>)"
+      by (rule wf_compile_inputD(2)[OF wf])
     obtain m m' Ep Kp where
-      cb: "compile_proc \<Pi> mnm (proc_decl_of [] main) m = (m', Ep, Kp)"
+      cb: "compile_proc \<Pi> mnm (\<lparr>formals = [], body = main\<rparr>) m = (m', Ep, Kp)"
       and ent: "(FunctionEntry mnm, EA_Nop, Statement m) \<in> intra ?g"
       by (rule compile_prog_proc_frag[OF wf mnmdecl])
     show "frag_ok \<Pi> ps mnm main (Root [(cfg_entry ?g, s)])"

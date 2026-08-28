@@ -115,7 +115,7 @@ let build_names = function
   | s -> failwith ("ast_driver: bad name list sexp: " ^ show_sexp s)
 
 let build_proc = function
-  | Slist [ Atom name; formals; body ] -> (name, proc_decl_of (build_names formals) (build_com body))
+  | Slist [ Atom name; formals; body ] -> (name, Proc_decl_ext (build_names formals, build_com body, ()))
   | s -> failwith ("ast_driver: bad proc sexp: " ^ show_sexp s)
 
 let build_program = function

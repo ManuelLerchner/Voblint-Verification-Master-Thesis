@@ -364,7 +364,7 @@ definition compile_prog ::
 where
   "compile_prog \<Pi> ps mnm main =
      (let (n1, Eprocs, Kprocs) = compile_procs \<Pi> ps 0;
-          (n2, Emain, Kmain) = compile_proc \<Pi> mnm (proc_decl_of [] main) n1
+          (n2, Emain, Kmain) = compile_proc \<Pi> mnm (\<lparr>formals = [], body = main\<rparr>) n1
       in \<lparr> intra = Eprocs \<union> Emain, calls = Kprocs \<union> Kmain, cfg_entry = FunctionEntry mnm,
            checks = (\<lambda>(u, a, v). (u, ea_check_cond a))
              ` Set.filter (\<lambda>(u, a, v). is_EA_Check a) (Eprocs \<union> Emain) \<rparr>)"
@@ -793,7 +793,7 @@ proof -
   obtain n1 Eprocs Kprocs where
     procs: "compile_procs \<Pi> ps 0 = (n1, Eprocs, Kprocs)" by (metis prod_cases3)
   obtain n2 Emain Kmain where
-    mainc: "compile_proc \<Pi> mnm (proc_decl_of [] main) n1 = (n2, Emain, Kmain)"
+    mainc: "compile_proc \<Pi> mnm (\<lparr>formals = [], body = main\<rparr>) n1 = (n2, Emain, Kmain)"
     by (metis prod_cases3)
   have g: "calls (compile_prog \<Pi> ps mnm main) = Kprocs \<union> Kmain"
     unfolding compile_prog_def by (simp add: procs mainc Let_def)
@@ -914,12 +914,12 @@ proof -
   obtain n1 Eprocs Kprocs where procs: "compile_procs \<Pi> ps 0 = (n1, Eprocs, Kprocs)"
     by (metis prod_cases3)
   obtain n2 Emain Kmain where
-    mainc: "compile_proc \<Pi> mnm (proc_decl_of [] main) n1 = (n2, Emain, Kmain)"
+    mainc: "compile_proc \<Pi> mnm (\<lparr>formals = [], body = main\<rparr>) n1 = (n2, Emain, Kmain)"
     by (metis prod_cases3)
   have "Kprocs = {}"
     using compile_procs_no_proc_call_K_empty[OF procs] procs_free by blast
   moreover have "Kmain = {}"
-    using compile_proc_no_proc_call_K_empty[OF mainc] main_free by (simp add: proc_decl_of_def)
+    using compile_proc_no_proc_call_K_empty[OF mainc] main_free by simp
   ultimately show ?thesis
     unfolding compile_prog_def by (simp add: procs mainc Let_def)
 qed
@@ -1339,7 +1339,7 @@ proof -
   obtain n1 Eprocs Kprocs where
     procs: "compile_procs \<Pi> ps 0 = (n1, Eprocs, Kprocs)" by (metis prod_cases3)
   obtain n2 Emain Kmain where
-    mainc: "compile_proc \<Pi> mnm (proc_decl_of [] main) n1 = (n2, Emain, Kmain)"
+    mainc: "compile_proc \<Pi> mnm (\<lparr>formals = [], body = main\<rparr>) n1 = (n2, Emain, Kmain)"
     by (metis prod_cases3)
   have g: "compile_prog \<Pi> ps mnm main =
              \<lparr> intra = Eprocs \<union> Emain, calls = Kprocs \<union> Kmain, cfg_entry = FunctionEntry mnm,

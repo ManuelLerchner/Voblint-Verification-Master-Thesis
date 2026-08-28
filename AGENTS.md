@@ -23,6 +23,9 @@ task at hand:
   decisions already recorded there and mistake them for findings.
 - For scope and priorities, read `docs/ROADMAP.md`, `docs/NEXT_STEPS.md`, and
   `docs/NON_GOALS.md`.
+- Before auditing or cleaning up a session, read
+  `docs/SESSION_CLEANUP_PLAYBOOK.md`: the procedure, the patterns that paid
+  off, and the traps that each cost a rebuild.
 - For an area-specific task, read the nearest `README.md`.
 - Use `.thy` files as the source of truth for definitions, theorem statements,
   and proof status. Do not copy drifting lemma inventories into this file.

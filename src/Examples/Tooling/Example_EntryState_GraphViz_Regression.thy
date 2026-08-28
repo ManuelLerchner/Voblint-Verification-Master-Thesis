@@ -1,6 +1,6 @@
 theory Example_EntryState_GraphViz_Regression
   imports
-    "Voblint_CLI.State_Report_GraphViz"
+    "Voblint_VIMP.VIMP_Notation" "Voblint_CLI.State_Report_GraphViz"
     "Voblint_Examples.Example_Interval_DG_EntryState_Result_Regression"
     "Voblint_Examples.Example_Interval_DG_EntryState_Dead_Check_Regression"
 begin

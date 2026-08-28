@@ -6,13 +6,15 @@ separation, and a frame-stack small-step semantics.
 
 | File | Role |
 | --- | --- |
-| `VIMP_Syntax.thy` | Arithmetic and Boolean expressions plus structured base commands |
+| `VIMP_Syntax.thy` | Expression datatype, variable and store types, executable orders |
+| `VIMP_Globals.thy` | Locals/globals classifier: fresh callee stores and caller/callee store combination |
 | `VIMP_Expr.thy` | Expression evaluation |
-| `HOL_IMP_Countable.thy` | Countability instances for wrapped HOL-IMP expression types |
-| `VIMP_Globals.thy` | Global-variable convention, fresh callee stores, caller/callee state combination |
-| `VIMP_Proc.thy` | Procedural commands, declarations, frames, small-step execution, and source syntax predicates |
-| `VIMP_Notation.thy` | Concrete command syntax used by theories and examples |
+| `VIMP_Special.thy` | Special-call vocabulary (`nondet_int`, `min`, `max`) |
+| `VIMP_Proc.thy` | Procedural commands, declarations, frames, small-step execution, well-formedness |
+| `VIMP_Program.thy` | The `imp_prog` record and program-level lookups |
 | `VIMP_Source_Print.thy` | Executable source pretty-printer |
+| `VIMP_Grammar_Generated.thy` | Generated from `grammar/vimp.yaml`; never edited by hand |
+| `VIMP_Notation.thy` | The `imp` and `program` quotations |
 
 ## Procedure behavior
 
@@ -38,8 +40,9 @@ return. Calls without a destination may ignore either kind of completion.
 
 ## Store convention
 
-`declared_global_vars` determines which variables have global storage. Every
-other identifier is implicitly local to the active procedure. `storage_of`
-resolves this source location; its result is independent of abstract D/G
-placement. `enter_state` keeps globals and clears locals. `combine_env
-caller callee` restores caller locals and keeps callee globals.
+`declared_global_vars` determines which variables have global storage; every
+other identifier is implicitly local to the active procedure, and
+`declared_global` is the derived classifier. This source-level split is
+independent of abstract D/G placement. `enter_state` keeps globals and clears
+locals. `combine_env caller callee` restores caller locals and keeps callee
+globals.

@@ -1,5 +1,5 @@
 theory Example_Interval_Placement
-  imports "Voblint_Analysis.Ivl_Exec" "Voblint_Core.Exec_DG_Bridge"
+  imports "Voblint_VIMP.VIMP_Notation" "Voblint_Analysis.Ivl_Exec" "Voblint_Core.Exec_DG_Bridge"
     "Voblint_Core.Solver_Menu" "Voblint_CFG.CFG_Prune" "Voblint_Core.DG_LTR_Sound"
     "Voblint_CFG.Compile_Invariants"
 begin
@@ -171,11 +171,11 @@ definition placement_side_state :: "ivl resolved_st_q" where
 subsection \<open>Source storage and finite call scope\<close>
 
 lemma placement_storage:
-  "storage_of placement_prog (STR ''add'') (STR ''balance'') = GlobalVar"
-  "storage_of placement_prog (STR ''add'') (STR ''request_count'') = GlobalVar"
-  "storage_of placement_prog (STR ''add'') (STR ''x'') = LocalVar (STR ''add'')"
-  "storage_of placement_prog (STR ''add'') (STR ''tmp'') = LocalVar (STR ''add'')"
-  "storage_of placement_prog prog_main_name (STR ''answer'') = LocalVar prog_main_name"
+  "declared_global placement_prog (STR ''balance'')"
+  "declared_global placement_prog (STR ''request_count'')"
+  "\<not> declared_global placement_prog (STR ''x'')"
+  "\<not> declared_global placement_prog (STR ''tmp'')"
+  "\<not> declared_global placement_prog (STR ''answer'')"
   by eval+
 
 lemma placement_add_scope:
@@ -574,11 +574,8 @@ lemma placement_locations_of_canonical:
   assumes "location \<in> set (placement_locations_of v)"
   shows "location = location_of (declared_global placement_prog) (location_vname location)"
 proof -
-  have owner_eq: "storage_global placement_prog (placement_node_owner v) =
-      declared_global placement_prog"
-    by (rule ext) (simp add: storage_global_iff)
   obtain x where x: "location = location_of (declared_global placement_prog) x"
-    using assms unfolding placement_locations_of_def set_scope_locations owner_eq
+    using assms unfolding placement_locations_of_def set_scope_locations
     by auto
   then show ?thesis by simp
 qed
@@ -1759,7 +1756,7 @@ proof (cases location)
        globs (placement_sigma_abs (Inr ()))) y"
     by (rule placement_val_agree[OF memy])
   show ?thesis
-    unfolding ivl_enter_st_for_eq enter_ivl_for_def enter_D_def bind_formals_abs_def
+    unfolding ivl_enter_st_for_eq enter_ivl_for_def enter_D_def
       enter_frame_D_def
     using not_x agree yneqx vg
     by (simp add: placement_bind_formals_resolved_q_singleton Global_Location
@@ -1775,7 +1772,7 @@ next
     have loc_x: "location = location_of (declared_global placement_prog) (STR ''x'')"
       using Local_Location True not_g by (simp add: location_of_def)
     show ?thesis
-      unfolding ivl_enter_st_for_eq enter_ivl_for_def enter_D_def bind_formals_abs_def
+      unfolding ivl_enter_st_for_eq enter_ivl_for_def enter_D_def
       using Local_Location
       by (simp add: placement_bind_formals_resolved_q_singleton loc_x True)
   next
@@ -1783,7 +1780,7 @@ next
     have not_x: "location \<noteq> location_of (declared_global placement_prog) (STR ''x'')"
       using Local_Location False by (simp add: location_of_def)
     show ?thesis
-      unfolding ivl_enter_st_for_eq enter_ivl_for_def enter_D_def bind_formals_abs_def
+      unfolding ivl_enter_st_for_eq enter_ivl_for_def enter_D_def
         enter_frame_D_def
       using Local_Location not_x False not_g
       by (simp add: placement_bind_formals_resolved_q_singleton)

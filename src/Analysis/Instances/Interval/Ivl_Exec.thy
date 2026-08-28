@@ -411,7 +411,7 @@ proof (cases location)
   have agree: "fun_of_resolved_st_q_for gs s_exec y = s_abs y"
     by (rule agree_global[OF vg mem])
   show ?thesis
-    unfolding ivl_enter_st_for_eq enter_ivl_for_def enter_D_def bind_formals_abs_def
+    unfolding ivl_enter_st_for_eq enter_ivl_for_def enter_D_def
       enter_frame_D_def
     using not_x agree yneqx vg
     by (simp add: bind_formals_resolved_q_singleton Global_Location
@@ -426,7 +426,7 @@ next
     have loc_x: "location = location_of gs x"
       using Local_Location True formal_not_global by (simp add: location_of_def)
     show ?thesis
-      unfolding ivl_enter_st_for_eq enter_ivl_for_def enter_D_def bind_formals_abs_def
+      unfolding ivl_enter_st_for_eq enter_ivl_for_def enter_D_def
       using Local_Location val_agree
       by (simp add: bind_formals_resolved_q_singleton loc_x True)
   next
@@ -434,7 +434,7 @@ next
     have not_x: "location \<noteq> location_of gs x"
       using Local_Location False formal_not_global by (simp add: location_of_def)
     show ?thesis
-      unfolding ivl_enter_st_for_eq enter_ivl_for_def enter_D_def bind_formals_abs_def
+      unfolding ivl_enter_st_for_eq enter_ivl_for_def enter_D_def
         enter_frame_D_def
       using Local_Location not_x False not_g
       by (simp add: bind_formals_resolved_q_singleton)

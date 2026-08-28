@@ -18,8 +18,6 @@ layer without embedding line numbers that drift.
 | `value_providing` | Conservative syntactic predicate: no fall-through or void return and at least one value return. | `src/VIMP/VIMP_Proc.thy` |
 | `wf_source_program` | Source contract for declarations, calls, returns, reserved variables, and a fall-through-only main. | `src/VIMP/VIMP_Proc.thy` |
 | `ret_var` | Reserved internal channel carrying an explicit return value during unwinding. | `src/VIMP/VIMP_Proc.thy` |
-| `source_location` | Resolved source storage location: `GlobalVar` or an implicitly procedure-local `LocalVar`. | `src/VIMP/VIMP_Proc.thy` |
-| `storage_of` | Program declaration-driven source-location resolver. A non-declared identifier is implicitly local to the supplied procedure. | `src/VIMP/VIMP_Notation.thy` |
 | `enter_state` | Callee store with caller globals and fresh local variables. | `src/VIMP/VIMP_Globals.thy` |
 | `combine_env` | Restored caller locals combined with callee globals; Goblint's `combine_env`, split from the separate destination write (`combine_assign`). | `src/VIMP/VIMP_Globals.thy` |
 

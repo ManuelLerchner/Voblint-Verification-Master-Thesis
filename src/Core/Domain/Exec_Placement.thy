@@ -1,5 +1,5 @@
 theory Exec_Placement
-  imports Exec_St "Voblint_VIMP.VIMP_Notation"
+  imports Exec_St "Voblint_VIMP.VIMP_Program"
 begin
 
 section \<open>Finite executable placement scopes\<close>
@@ -32,12 +32,12 @@ lemma classic_publish_side_global_invariant:
 
 definition scope_locations :: "imp_prog => pname => location list" where
   "scope_locations p owner =
-    remdups (map (location_of (storage_global p owner))
+    remdups (map (location_of (declared_global p))
       (scope_vnames_list p owner))"
 
 lemma set_scope_locations [simp]:
   "set (scope_locations p owner) =
-    image (location_of (storage_global p owner)) (scope_vnames p owner)"
+    image (location_of (declared_global p)) (scope_vnames p owner)"
   unfolding scope_locations_def
   by simp
 
@@ -48,11 +48,11 @@ proof -
   have x_scope: "x \<in> scope_vnames p owner"
     using assms unfolding scope_vnames_def by simp
   have location:
-    "location_of (storage_global p owner) x = Global_Location x"
+    "location_of (declared_global p) x = Global_Location x"
     using assms by (simp add: location_of_def)
   have member:
-    "location_of (storage_global p owner) x \<in>
-      image (location_of (storage_global p owner)) (scope_vnames p owner)"
+    "location_of (declared_global p) x \<in>
+      image (location_of (declared_global p)) (scope_vnames p owner)"
     by (rule imageI[OF x_scope])
   show ?thesis
     using member location by simp
@@ -64,20 +64,8 @@ lemma global_location_in_scope_locations:
   using assms
   by (auto simp: location_of_def)
 
-text \<open>\<open>storage_global p owner\<close> never actually depends on \<open>owner\<close>
-  (\<open>storage_global_iff\<close>): source-declared globals are program-global facts,
-  not owner-relative ones.\<close>
-
-lemma storage_global_eq_declared_global:
-  "storage_global p owner = declared_global p"
-  by (rule ext) (simp add: storage_global_iff)
-
-text \<open>Every location a scope lists already resolves back to itself under
-  \<^const>\<open>declared_global\<close>: \<^const>\<open>scope_locations\<close> is built as an image of
-  \<^const>\<open>location_of\<close>, so this holds for any program and owner, with no
-  further side condition. A placement instance cites this directly instead of
-  re-deriving the \<^const>\<open>storage_global\<close>/\<^const>\<open>declared_global\<close> bridge
-  itself.\<close>
+text \<open>Every location a scope lists resolves back to itself under
+  \<^const>\<open>declared_global\<close>, for any program and owner.\<close>
 
 lemma scope_locations_canonical:
   assumes "location \<in> set (scope_locations p owner)"
@@ -85,8 +73,7 @@ lemma scope_locations_canonical:
 proof -
   obtain x where x: "location = location_of (declared_global p) x"
     using assms
-    unfolding set_scope_locations storage_global_eq_declared_global
-    by auto
+    unfolding set_scope_locations by auto
   then show ?thesis by (simp add: location_of_def)
 qed
 
@@ -95,11 +82,11 @@ lemma implicit_local_in_scope_locations:
   shows "Local_Location x \<in> set (scope_locations p owner)"
 proof -
   have location:
-    "location_of (storage_global p owner) x = Local_Location x"
+    "location_of (declared_global p) x = Local_Location x"
     using assms by (simp add: location_of_def)
   have member:
-    "location_of (storage_global p owner) x \<in>
-      image (location_of (storage_global p owner)) (scope_vnames p owner)"
+    "location_of (declared_global p) x \<in>
+      image (location_of (declared_global p)) (scope_vnames p owner)"
     by (rule imageI[OF assms(1)])
   show ?thesis
     using member location by simp

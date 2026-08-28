@@ -440,7 +440,7 @@ subsection \<open>Executable code generation\<close>
 text \<open>
   \<open>analyse\<close> genuinely takes the domain choice and the program as runtime
   arguments, not constants baked in at export time. The raw AST constructors,
-  \<open>imp_prog.make\<close>, and \<open>proc_decl_of\<close> are exported alongside it so external
+  \<open>imp_prog.make\<close>, and \<open>proc_decl_ext\<close> are exported alongside it so external
   OCaml code can build a fresh \<open>imp_prog\<close> and hand it to \<open>analyse\<close>.
 
   \<^typ>\<open>vname\<close>/\<^typ>\<open>pname\<close> are \<^typ>\<open>String.literal\<close>
@@ -448,7 +448,7 @@ text \<open>
   the target language's native string (\<^verbatim>\<open>string\<close> in OCaml
   --- \<^theory>\<open>HOL.String\<close> ships that mapping
   unconditionally), so \<open>V\<close>/\<open>Assign\<close>/\<open>com.Call\<close>/\<open>FunctionEntry\<close>/
-  \<open>FunctionResult\<close>/\<open>proc_decl_of\<close>/\<open>imp_prog.make\<close> below already take and
+  \<open>FunctionResult\<close>/\<open>proc_decl_ext\<close>/\<open>imp_prog.make\<close> below already take and
   return native strings directly --- no separate construction facade needed.
 
   \<^theory>\<open>HOL-Library.Code_Target_Numeral\<close> makes \<open>int\<close>/\<open>nat\<close> abstract types
@@ -964,6 +964,7 @@ text \<open>
 
 code_identifier
   code_module VIMP_Notation \<rightharpoonup> (OCaml) Core
+| code_module VIMP_Program \<rightharpoonup> (OCaml) Core
 | code_module VIMP_Expr \<rightharpoonup> (OCaml) Core
 | code_module VIMP_Proc \<rightharpoonup> (OCaml) Core
 | code_module VIMP_Special \<rightharpoonup> (OCaml) Core
