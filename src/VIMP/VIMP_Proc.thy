@@ -100,7 +100,6 @@ abbreviation
 where "psteps gs \<Pi> x y \<equiv> star (pstep gs \<Pi>) x y"
 
 declare pstep.intros [simp, intro]
-declare pstep.Seq2 [simp del]
 
 inductive_cases SkipSE[elim!]:
   "pstep gs \<Pi> (SKIP, s, frs) cfg"

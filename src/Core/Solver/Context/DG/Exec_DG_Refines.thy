@@ -119,13 +119,13 @@ definition project_abs_on ::
   "pname => (vname => bool) => (scoped_location => bool) =>
    'a::bot abs_state => 'a abs_state"
 where
-  "project_abs_on owner source_global placed state =
-    project_component (\<lambda>x. placed (owner, location_of source_global x)) state"
+  "project_abs_on owner gs placed state =
+    project_component (\<lambda>x. placed (owner, location_of gs x)) state"
 
 lemma project_abs_on_lookup:
-  assumes resolved: "location = location_of source_global (location_vname location)"
+  assumes resolved: "location = location_of gs (location_vname location)"
   shows
-    "project_abs_on owner source_global placed state (location_vname location) =
+    "project_abs_on owner gs placed state (location_vname location) =
       (if placed (owner, location) then state (location_vname location) else bot)"
   using resolved
   unfolding project_abs_on_def project_component_def by simp
@@ -140,33 +140,33 @@ definition placed_abs_dg_edge_tree ::
    ('a::bounded_semilattice_sup_bot abs_state => 'a abs_state) =>
    pp => pp => (pp, unit, ('a abs_state, 'a abs_state) dg_state) strategy_tree"
 where
-  "placed_abs_dg_edge_tree source_global owner_of keep_local publish_side
+  "placed_abs_dg_edge_tree gs owner_of keep_local publish_side
       transfer read_node write_node = do {
      local \<leftarrow> read_local read_node;
      side \<leftarrow> read_global ();
      let result = transfer (locals local \<squnion> globs side);
      depend_on () (DG bot
-         (project_abs_on (owner_of write_node) source_global publish_side result))
+         (project_abs_on (owner_of write_node) gs publish_side result))
        (answer (DG
-         (project_abs_on (owner_of write_node) source_global keep_local result)
+         (project_abs_on (owner_of write_node) gs keep_local result)
          bot))
    }"
 
 lemma traverse_placed_abs_dg_edge_tree:
   "traverse_rhs
-    (placed_abs_dg_edge_tree source_global owner_of keep_local publish_side
+    (placed_abs_dg_edge_tree gs owner_of keep_local publish_side
       transfer read_node write_node) sigma =
-    DG (project_abs_on (owner_of write_node) source_global keep_local
+    DG (project_abs_on (owner_of write_node) gs keep_local
           (transfer (locals (sigma (Inl read_node)) \<squnion>
             globs (sigma (Inr ()))))) bot"
   unfolding placed_abs_dg_edge_tree_def by (simp add: Let_def)
 
 lemma sides_placed_abs_dg_edge_tree_Inr:
   "sides_of_rhs
-    (placed_abs_dg_edge_tree source_global owner_of keep_local publish_side
+    (placed_abs_dg_edge_tree gs owner_of keep_local publish_side
       transfer read_node write_node) sigma (Inr ()) =
     DG bot
-      (project_abs_on (owner_of write_node) source_global publish_side
+      (project_abs_on (owner_of write_node) gs publish_side
         (transfer (locals (sigma (Inl read_node)) \<squnion>
           globs (sigma (Inr ())))))"
   unfolding placed_abs_dg_edge_tree_def by (simp add: Let_def)
@@ -179,9 +179,9 @@ definition placed_abs_dg_enter_tree ::
    vname list => exp list => pp => pp =>
    (pp, unit, ('a abs_state, 'a abs_state) dg_state) strategy_tree"
 where
-  "placed_abs_dg_enter_tree source_global owner_of keep_local publish_side
+  "placed_abs_dg_enter_tree gs owner_of keep_local publish_side
       enter parameters arguments caller callee =
-    placed_abs_dg_edge_tree source_global owner_of keep_local publish_side
+    placed_abs_dg_edge_tree gs owner_of keep_local publish_side
       (enter parameters arguments) caller callee"
 
 definition placed_abs_dg_combine_tree ::
@@ -192,7 +192,7 @@ definition placed_abs_dg_combine_tree ::
    vname option => pp => pp => pp =>
    (pp, unit, ('a abs_state, 'a abs_state) dg_state) strategy_tree"
 where
-  "placed_abs_dg_combine_tree source_global owner_of keep_local publish_side
+  "placed_abs_dg_combine_tree gs owner_of keep_local publish_side
       combine destination caller callee write_node = do {
      caller_state \<leftarrow> read_local caller;
      callee_state \<leftarrow> read_local callee;
@@ -200,27 +200,27 @@ where
      let result = combine destination (locals caller_state)
        (locals callee_state) (globs side);
      depend_on () (DG bot
-         (project_abs_on (owner_of write_node) source_global publish_side result))
+         (project_abs_on (owner_of write_node) gs publish_side result))
        (answer (DG
-         (project_abs_on (owner_of write_node) source_global keep_local result)
+         (project_abs_on (owner_of write_node) gs keep_local result)
          bot))
    }"
 
 lemma traverse_placed_abs_dg_combine_tree:
   "traverse_rhs
-    (placed_abs_dg_combine_tree source_global owner_of keep_local publish_side
+    (placed_abs_dg_combine_tree gs owner_of keep_local publish_side
       combine destination caller callee write_node) sigma =
-    DG (project_abs_on (owner_of write_node) source_global keep_local
+    DG (project_abs_on (owner_of write_node) gs keep_local
       (combine destination (locals (sigma (Inl caller)))
         (locals (sigma (Inl callee))) (globs (sigma (Inr ()))))) bot"
   unfolding placed_abs_dg_combine_tree_def by (simp add: Let_def)
 
 lemma sides_placed_abs_dg_combine_tree_Inr:
   "sides_of_rhs
-    (placed_abs_dg_combine_tree source_global owner_of keep_local publish_side
+    (placed_abs_dg_combine_tree gs owner_of keep_local publish_side
       combine destination caller callee write_node) sigma (Inr ()) =
     DG bot
-      (project_abs_on (owner_of write_node) source_global publish_side
+      (project_abs_on (owner_of write_node) gs publish_side
         (combine destination (locals (sigma (Inl caller)))
           (locals (sigma (Inl callee))) (globs (sigma (Inr ())))))"
   unfolding placed_abs_dg_combine_tree_def by (simp add: Let_def)
@@ -233,13 +233,13 @@ lemma dg_refines_on_project:
         abstract_result (location_vname location)"
     and resolved:
       "\<And>location. location \<in> set universe \<Longrightarrow>
-        location = location_of source_global (location_vname location)"
+        location = location_of gs (location_vname location)"
   shows
     "dg_refines_on (set universe)
       (DG (project_resolved_on owner universe keep_local executable_result)
         (project_resolved_on owner universe publish_side executable_result))
-      (DG (project_abs_on owner source_global keep_local abstract_result)
-        (project_abs_on owner source_global publish_side abstract_result))"
+      (DG (project_abs_on owner gs keep_local abstract_result)
+        (project_abs_on owner gs publish_side abstract_result))"
 proof (rule dg_refines_onI)
   fix location
   assume location: "location \<in> set universe"
@@ -248,7 +248,7 @@ proof (rule dg_refines_onI)
       abstract_result (location_vname location)"
     by (rule raw[OF location])
   have resolved_location:
-    "location = location_of source_global (location_vname location)"
+    "location = location_of gs (location_vname location)"
     by (rule resolved[OF location])
   show
     "lookup_resolved_st_q
@@ -257,8 +257,8 @@ proof (rule dg_refines_onI)
           (project_resolved_on owner universe publish_side executable_result)))
       location =
       locals
-        (DG (project_abs_on owner source_global keep_local abstract_result)
-          (project_abs_on owner source_global publish_side abstract_result))
+        (DG (project_abs_on owner gs keep_local abstract_result)
+          (project_abs_on owner gs publish_side abstract_result))
         (location_vname location)"
     by (simp add: lookup_project_resolved_on
       project_abs_on_lookup[OF resolved_location] raw_location location)
@@ -270,7 +270,7 @@ next
       abstract_result (location_vname location)"
     by (rule raw[OF location])
   have resolved_location:
-    "location = location_of source_global (location_vname location)"
+    "location = location_of gs (location_vname location)"
     by (rule resolved[OF location])
   show
     "lookup_resolved_st_q
@@ -279,8 +279,8 @@ next
           (project_resolved_on owner universe publish_side executable_result)))
       location =
       globs
-        (DG (project_abs_on owner source_global keep_local abstract_result)
-          (project_abs_on owner source_global publish_side abstract_result))
+        (DG (project_abs_on owner gs keep_local abstract_result)
+          (project_abs_on owner gs publish_side abstract_result))
         (location_vname location)"
     by (simp add: lookup_project_resolved_on
       project_abs_on_lookup[OF resolved_location] raw_location location)
@@ -294,13 +294,13 @@ lemma dg_refines_on_project_strict:
         abstract_result (location_vname location)"
     and resolved:
       "\<And>location. location \<in> set universe \<Longrightarrow>
-        location = location_of source_global (location_vname location)"
+        location = location_of gs (location_vname location)"
   shows
     "dg_refines_on (set universe)
       (DG (project_resolved_on_strict owner universe keep_local executable_result)
         (project_resolved_on_strict owner universe publish_side executable_result))
-      (DG (project_abs_on owner source_global keep_local abstract_result)
-        (project_abs_on owner source_global publish_side abstract_result))"
+      (DG (project_abs_on owner gs keep_local abstract_result)
+        (project_abs_on owner gs publish_side abstract_result))"
 proof (rule dg_refines_onI)
   fix location
   assume location: "location \<in> set universe"
@@ -309,7 +309,7 @@ proof (rule dg_refines_onI)
       abstract_result (location_vname location)"
     by (rule raw[OF location])
   have resolved_location:
-    "location = location_of source_global (location_vname location)"
+    "location = location_of gs (location_vname location)"
     by (rule resolved[OF location])
   show
     "lookup_resolved_st_q
@@ -318,8 +318,8 @@ proof (rule dg_refines_onI)
           (project_resolved_on_strict owner universe publish_side executable_result)))
       location =
       locals
-        (DG (project_abs_on owner source_global keep_local abstract_result)
-          (project_abs_on owner source_global publish_side abstract_result))
+        (DG (project_abs_on owner gs keep_local abstract_result)
+          (project_abs_on owner gs publish_side abstract_result))
         (location_vname location)"
     by (simp add: lookup_project_resolved_on_strict
       project_abs_on_lookup[OF resolved_location] raw_location location)
@@ -331,7 +331,7 @@ next
       abstract_result (location_vname location)"
     by (rule raw[OF location])
   have resolved_location:
-    "location = location_of source_global (location_vname location)"
+    "location = location_of gs (location_vname location)"
     by (rule resolved[OF location])
   show
     "lookup_resolved_st_q
@@ -340,8 +340,8 @@ next
           (project_resolved_on_strict owner universe publish_side executable_result)))
       location =
       globs
-        (DG (project_abs_on owner source_global keep_local abstract_result)
-          (project_abs_on owner source_global publish_side abstract_result))
+        (DG (project_abs_on owner gs keep_local abstract_result)
+          (project_abs_on owner gs publish_side abstract_result))
         (location_vname location)"
     by (simp add: lookup_project_resolved_on_strict
       project_abs_on_lookup[OF resolved_location] raw_location location)

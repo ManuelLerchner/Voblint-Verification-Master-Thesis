@@ -9,6 +9,27 @@ Comparison target: Goblint-CIL `src/cfg.ml` at
 `src/common/framework/cfgTools.ml` at
 `aab8d97333fb93922cb9f06bd4604b1aab623db7`.
 
+> **Names in this document are those of `aa0f9d4d` and have since changed.**
+> The redesign was implemented and the compiler then moved out of `Voblint_CFG`
+> into its own `Voblint_Compile` session, with every theory renamed after what
+> it states:
+>
+> | here | now |
+> | --- | --- |
+> | `src/CFG/Compiler/Control_Residual.thy` | `src/Compile/Simulation/Residual_Location.thy` |
+> | `src/CFG/Compiler/Control_Emit.thy` | `src/Compile/Simulation/Residual_Edges.thy` |
+> | `src/CFG/Compiler/Control_Simulation.thy` | `src/Compile/Simulation/Simulation_Relation.thy` |
+> | `src/CFG/Compiler/Control_Simulation_Forward.thy` | `src/Compile/Simulation/Simulation_Preservation.thy` |
+> | `src/CFG/Compiler/Compile_Locality.thy` | `src/Compile/Procedure_Ownership.thy` |
+> | `src/CFG/Compiler/Located_LTR.thy` | `src/Compile/Source_To_Trace.thy` |
+> | `src/CFG/Compiler/Located_Exec.thy` | `src/CFG/CFG_Exec.thy` |
+> | `Compile_Certificate` | folded into `Simulation_Preservation` |
+> | `Compile_Reaches` | folded into `Compile_Invariants` |
+> | `procs_compiled` | `procs_embedded` |
+> | `proc_activation` | folded into `compiled_at` |
+> | `source_wf` | `return_safe :: com => bool` |
+> | `source_global` | `gs` |
+
 ---
 
 ## 1. Current architecture summary

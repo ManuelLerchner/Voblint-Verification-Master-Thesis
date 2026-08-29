@@ -206,7 +206,7 @@ text \<open>A located \<^const>\<open>SKIP\<close> --- a completed sub-command -
 lemma control_at_skip_to_exit:
   assumes "control_at \<Pi> p c0 k n r v" and "r = SKIP"
       and "compile \<Pi> p c0 k n = (n', en, E, K)" and "E \<subseteq> intra g"
-  shows "star (cstep source_global g) (v, s, stk) (k, s, stk)"
+  shows "star (cstep gs g) (v, s, stk) (k, s, stk)"
   using intra_path_imp_cstep_star[
           OF compile_control_at_SKIP_exit_path[OF assms(1)[unfolded assms(2)] assms(3,4)],
           where stk = stk]
@@ -220,7 +220,7 @@ text \<open>Under continuation passing the head's own last edge already targets 
 lemma control_at_seq_skip_reloc:
   "control_at \<Pi> p c0 k n r v \<Longrightarrow> r = Seq SKIP c2 \<Longrightarrow>
    compile \<Pi> p c0 k n = (n', en, E, K) \<Longrightarrow> E \<subseteq> intra g \<Longrightarrow> source_com c0 \<Longrightarrow>
-   \<exists>v'. control_at \<Pi> p c0 k n c2 v' \<and> star (cstep source_global g) (v, s, stk) (v', s, stk)"
+   \<exists>v'. control_at \<Pi> p c0 k n c2 v' \<and> star (cstep gs g) (v, s, stk) (v', s, stk)"
 proof (induction arbitrary: n' en E K rule: control_at.induct)
   case (SeqLeft c1 n0 r_in v c2r k)
   from SeqLeft.prems(1) have ri: "r_in = SKIP" and c2eq: "c2r = c2" by auto
@@ -232,7 +232,7 @@ proof (induction arbitrary: n' en E K rule: control_at.induct)
   have skipc1: "control_at \<Pi> p c1 (Statement (n0 + csize c1)) n0 SKIP v"
     using SeqLeft.hyps ri by simp
   from control_at_skip_to_exit[OF skipc1 refl c1c subset_trans[OF sub SeqLeft.prems(3)]]
-  have sk: "star (cstep source_global g) (v, s, stk) (Statement (n0 + csize c1), s, stk)" .
+  have sk: "star (cstep gs g) (v, s, stk) (Statement (n0 + csize c1), s, stk)" .
   have ft: "falls_through c1" by (rule control_at_SKIP_imp_falls_through[OF skipc1])
   have "control_at \<Pi> p (Seq c1 c2r) k n0 c2r (Statement (n0 + csize c1))"
     by (rule control_at.SeqRight[OF ft control_at_initial[OF src2]])
@@ -247,7 +247,7 @@ next
     by (rule compile_While_bodyE)
   have "control_at \<Pi> p c (Statement n0) (Suc n0) SKIP v" using WhileBody.hyps ri by simp
   from control_at_skip_to_exit[OF this refl cc subset_trans[OF sub WhileBody.prems(3)]]
-  have sk: "star (cstep source_global g) (v, s, stk) (Statement n0, s, stk)" .
+  have sk: "star (cstep gs g) (v, s, stk) (Statement n0, s, stk)" .
   have "control_at \<Pi> p (While b c) k n0 (While b c) (Statement n0)" by (rule control_at.WhileHead)
   then have "control_at \<Pi> p (While b c) k n0 c2 (Statement n0)" using c2eq by simp
   with sk show ?case by blast
@@ -260,7 +260,7 @@ next
   have src2: "source_com c2'" using SeqRight.prems(4) by simp
   from SeqRight.IH[OF SeqRight.prems(1) c2c subset_trans[OF sub SeqRight.prems(3)] src2]
   obtain v' where v': "control_at \<Pi> p c2' k (n0 + csize c1) c2 v'"
-    "star (cstep source_global g) (v, s, stk) (v', s, stk)" by blast
+    "star (cstep gs g) (v, s, stk) (v', s, stk)" by blast
   have "control_at \<Pi> p (Seq c1 c2') k n0 c2 v'"
     using control_at.SeqRight[OF SeqRight.hyps(1) v'(1)] .
   with v'(2) show ?case by blast
@@ -273,7 +273,7 @@ next
   have src1: "source_com c1" using IfLeft.prems(4) by simp
   from IfLeft.IH[OF IfLeft.prems(1) c1c subset_trans[OF sub IfLeft.prems(3)] src1]
   obtain v' where v': "control_at \<Pi> p c1 k (Suc n0) c2 v'"
-    "star (cstep source_global g) (v, s, stk) (v', s, stk)" by blast
+    "star (cstep gs g) (v, s, stk) (v', s, stk)" by blast
   have "control_at \<Pi> p (If b c1 c2') k n0 c2 v'" using control_at.IfLeft[OF v'(1)] .
   with v'(2) show ?case by blast
 next
@@ -286,7 +286,7 @@ next
   have src2: "source_com c2'" using IfRight.prems(4) by simp
   from IfRight.IH[OF IfRight.prems(1) c2c subset_trans[OF sub IfRight.prems(3)] src2]
   obtain v' where v': "control_at \<Pi> p c2' k (Suc n0 + csize c1) c2 v'"
-    "star (cstep source_global g) (v, s, stk) (v', s, stk)" by blast
+    "star (cstep gs g) (v, s, stk) (v', s, stk)" by blast
   have "control_at \<Pi> p (If b c1 c2') k n0 c2 v'" using control_at.IfRight[OF v'(1)] .
   with v'(2) show ?case by blast
 qed simp_all
@@ -576,7 +576,7 @@ theorem intra_step_simulation:
    compile \<Pi> p c0 k n = (n', en, E, K) \<Longrightarrow> E \<subseteq> intra g \<Longrightarrow> source_com c0 \<Longrightarrow>
    frs' = frs
    \<and> (\<exists>v'. control_at \<Pi> p c0 k n c' v'
-        \<and> star (cstep source_global g) (v, s, stk) (v', s', stk))"
+        \<and> star (cstep gs g) (v, s, stk) (v', s', stk))"
 proof (induction arbitrary: c' s' frs' n' en E K rule: control_at.induct)
   case (Skip k n0) then show ?case by blast
 next
@@ -591,8 +591,8 @@ next
   have "(Statement j, EA_Assign x a, w) \<in> intra g"
     using jw(2) Assign.prems(3) by blast
   from cstep_assign[OF this]
-  have "cstep source_global g (Statement j, s, stk) (w, s(x := aval a s), stk)" by simp
-  then have "star (cstep source_global g) (Statement n0, s, stk) (w, s', stk)"
+  have "cstep gs g (Statement j, s, stk) (w, s(x := aval a s), stk)" by simp
+  then have "star (cstep gs g) (Statement n0, s, stk) (w, s', stk)"
     using jw(1) out(2) by simp
   then show ?case using out(1,3) jw(3) by auto
 next
@@ -609,8 +609,8 @@ next
   have "(Statement j, EA_Check b, w) \<in> intra g"
     using jw(2) Check.prems(3) by blast
   from cstep_check[OF this]
-  have "cstep source_global g (Statement j, s, stk) (w, s, stk)" .
-  then have "star (cstep source_global g) (Statement n0, s, stk) (w, s', stk)"
+  have "cstep gs g (Statement j, s, stk) (w, s, stk)" .
+  then have "star (cstep gs g) (Statement n0, s, stk) (w, s', stk)"
     using jw(1) out(2) by simp
   then show ?case using out(1,3) jw(3) by auto
 next
@@ -628,7 +628,7 @@ next
       using control_at.SeqLeft[OF SeqLeft.hyps] s1(1) by simp
     from control_at_seq_skip_reloc[OF loc refl SeqLeft.prems(2,3,4)]
     obtain v' where "control_at \<Pi> p (Seq c1 c2) k n0 c2 v'"
-      "star (cstep source_global g) (v, s, stk) (v', s, stk)" by blast
+      "star (cstep gs g) (v, s, stk) (v', s, stk)" by blast
     then show ?thesis using s1 by auto
   next
     case s2
@@ -639,7 +639,7 @@ next
     have src1: "source_com c1" using SeqLeft.prems(4) by simp
     from SeqLeft.IH[OF s2(3) c1c subset_trans[OF sub SeqLeft.prems(3)] src1]
     obtain v' where v': "control_at \<Pi> p c1 (Statement (n0 + csize c1)) n0 r' v'"
-      "star (cstep source_global g) (v, s, stk) (v', s', stk)" by auto
+      "star (cstep gs g) (v, s, stk) (v', s', stk)" by auto
     have "control_at \<Pi> p (Seq c1 c2) k n0 (Seq r' c2) v'"
       using control_at.SeqLeft[OF v'(1)] .
     then show ?thesis using s2 v'(2) by auto
@@ -654,9 +654,9 @@ next
   from SeqRight.IH[OF SeqRight.prems(1) c2c subset_trans[OF sub SeqRight.prems(3)] src2]
   have fr: "frs' = frs" and
     "\<exists>v'. control_at \<Pi> p c2 k (n0 + csize c1) c' v'
-          \<and> star (cstep source_global g) (v, s, stk) (v', s', stk)" by auto
+          \<and> star (cstep gs g) (v, s, stk) (v', s', stk)" by auto
   then obtain v' where v': "control_at \<Pi> p c2 k (n0 + csize c1) c' v'"
-    "star (cstep source_global g) (v, s, stk) (v', s', stk)" by blast
+    "star (cstep gs g) (v, s, stk) (v', s', stk)" by blast
   have "control_at \<Pi> p (Seq c1 c2) k n0 c' v'"
     using control_at.SeqRight[OF SeqRight.hyps(1) v'(1)] .
   with fr v'(2) show ?case by blast
@@ -676,14 +676,14 @@ next
     case t
     have "(Statement j, EA_Assume b, en1) \<in> intra g" using jj(2) IfHead.prems(3) by blast
     from cstep_assume[OF this] t(1)
-    have "star (cstep source_global g) (Statement n0, s, stk) (en1, s, stk)"
+    have "star (cstep gs g) (Statement n0, s, stk) (en1, s, stk)"
       using jj(1) by simp
     then show ?thesis using t jj(4) by auto
   next
     case f
     have "(Statement j, EA_AssumeNot b, en2) \<in> intra g" using jj(3) IfHead.prems(3) by blast
     from cstep_assume_not[OF this] f(1)
-    have "star (cstep source_global g) (Statement n0, s, stk) (en2, s, stk)"
+    have "star (cstep gs g) (Statement n0, s, stk) (en2, s, stk)"
       using jj(1) by simp
     then show ?thesis using f jj(5) by auto
   qed
@@ -697,9 +697,9 @@ next
   from IfLeft.IH[OF IfLeft.prems(1) c1c subset_trans[OF sub1 IfLeft.prems(3)] src1]
   have fr: "frs' = frs" and
     "\<exists>v'. control_at \<Pi> p c1 k (Suc n0) c' v'
-          \<and> star (cstep source_global g) (v, s, stk) (v', s', stk)" by auto
+          \<and> star (cstep gs g) (v, s, stk) (v', s', stk)" by auto
   then obtain v' where v': "control_at \<Pi> p c1 k (Suc n0) c' v'"
-    "star (cstep source_global g) (v, s, stk) (v', s', stk)" by blast
+    "star (cstep gs g) (v, s, stk) (v', s', stk)" by blast
   have "control_at \<Pi> p (If b c1 c2) k n0 c' v'" using control_at.IfLeft[OF v'(1)] .
   with fr v'(2) show ?case by blast
 next
@@ -713,9 +713,9 @@ next
   from IfRight.IH[OF IfRight.prems(1) c2c subset_trans[OF sub2 IfRight.prems(3)] src2]
   have fr: "frs' = frs" and
     "\<exists>v'. control_at \<Pi> p c2 k (Suc n0 + csize c1) c' v'
-          \<and> star (cstep source_global g) (v, s, stk) (v', s', stk)" by auto
+          \<and> star (cstep gs g) (v, s, stk) (v', s', stk)" by auto
   then obtain v' where v': "control_at \<Pi> p c2 k (Suc n0 + csize c1) c' v'"
-    "star (cstep source_global g) (v, s, stk) (v', s', stk)" by blast
+    "star (cstep gs g) (v, s, stk) (v', s', stk)" by blast
   have "control_at \<Pi> p (If b c1 c2) k n0 c' v'" using control_at.IfRight[OF v'(1)] .
   with fr v'(2) show ?case by blast
 next
@@ -746,14 +746,14 @@ next
     case t
     have "(Statement j, EA_Assume b, en1) \<in> intra g" using jj(2) WhileUnfolded.prems(3) by blast
     from cstep_assume[OF this] t(1)
-    have "star (cstep source_global g) (Statement n0, s, stk) (en1, s, stk)"
+    have "star (cstep gs g) (Statement n0, s, stk) (en1, s, stk)"
       using jj(1) by simp
     then show ?thesis using t jj(4) by auto
   next
     case f
     have "(Statement j, EA_AssumeNot b, en2) \<in> intra g" using jj(3) WhileUnfolded.prems(3) by blast
     from cstep_assume_not[OF this] f(1)
-    have "star (cstep source_global g) (Statement n0, s, stk) (en2, s, stk)"
+    have "star (cstep gs g) (Statement n0, s, stk) (en2, s, stk)"
       using jj(1) by simp
     then show ?thesis using f jj(5) by auto
   qed
@@ -770,7 +770,7 @@ next
       using control_at.WhileBody[OF WhileBody.hyps] s1(1) by simp
     from control_at_seq_skip_reloc[OF loc refl WhileBody.prems(2,3,4)]
     obtain v' where "control_at \<Pi> p (While b cW) k n0 (While b cW) v'"
-      "star (cstep source_global g) (v, s, stk) (v', s, stk)" by blast
+      "star (cstep gs g) (v, s, stk) (v', s, stk)" by blast
     then show ?thesis using s1 by auto
   next
     case s2
@@ -781,7 +781,7 @@ next
     have srcW: "source_com cW" using WhileBody.prems(4) by simp
     from WhileBody.IH[OF s2(3) cc subset_trans[OF sub WhileBody.prems(3)] srcW]
     obtain v' where v': "control_at \<Pi> p cW (Statement n0) (Suc n0) r' v'"
-      "star (cstep source_global g) (v, s, stk) (v', s', stk)" by auto
+      "star (cstep gs g) (v, s, stk) (v', s', stk)" by auto
     have "control_at \<Pi> p (While b cW) k n0 (Seq r' (While b cW)) v'"
       using control_at.WhileBody[OF v'(1)] .
     then show ?thesis using s2 v'(2) by auto
@@ -803,9 +803,9 @@ next
   have edgeg: "(Statement j, EA_Special sc x, w) \<in> intra g"
     using jw(2) CallHead.prems(3) by blast
   have mem: "s(x := v) \<in> edge_step (EA_Special sc x) s" using out(4) by auto
-  have "cstep source_global g (Statement j, s, stk) (w, s(x := v), stk)"
+  have "cstep gs g (Statement j, s, stk) (w, s(x := v), stk)"
     using cstep.Intra[OF edgeg mem] by simp
-  then have "star (cstep source_global g) (Statement n0, s, stk) (w, s', stk)"
+  then have "star (cstep gs g) (Statement n0, s, stk) (w, s', stk)"
     using jw(1) out(6) by simp
   then show ?case using out(1,5,7) jw(3) by auto
 next

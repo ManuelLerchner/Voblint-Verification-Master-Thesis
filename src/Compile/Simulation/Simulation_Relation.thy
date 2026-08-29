@@ -47,7 +47,7 @@ subsection \<open>Bare Unwind is stuck\<close>
 
 text \<open>A lone \<^const>\<open>Unwind\<close> has no source step: only the \<^const>\<open>Seq\<close> rules propagate it, and
   the frame pop it is heading for fires on \<^term>\<open>Seq Unwind Restore\<close>.\<close>
-lemma pstep_Unwind_stuck: "\<not> pstep source_global \<Pi> (Unwind, s, frs) x"
+lemma pstep_Unwind_stuck: "\<not> pstep gs \<Pi> (Unwind, s, frs) x"
   by auto
 
 subsection \<open>The returning (frame-pop) source shapes\<close>
@@ -296,7 +296,7 @@ lemma ret_guarded_False_source_not_head_return:
 
 lemma ret_guarded_pstep:
   assumes bodies: "\<And>p decl. \<Pi> p = Some decl \<Longrightarrow> source_com (body decl)"
-      and step: "pstep source_global \<Pi> (c, s, frs) (c', s', frs')"
+      and step: "pstep gs \<Pi> (c, s, frs) (c', s', frs')"
       and "ret_guarded allow_return c"
   shows "ret_guarded allow_return c'"
   using step assms(3)
@@ -329,7 +329,7 @@ lemma return_safe_not_head_return:
 
 lemma return_safe_pstep:
   assumes bodies: "\<And>p decl. \<Pi> p = Some decl \<Longrightarrow> source_com (body decl)"
-      and step: "pstep source_global \<Pi> (c, s, frs) (c', s', frs')"
+      and step: "pstep gs \<Pi> (c, s, frs) (c', s', frs')"
       and wf: "return_safe c"
   shows "return_safe c'"
   using ret_guarded_pstep[OF bodies step] wf by (simp add: return_safe_def)
@@ -351,7 +351,7 @@ text \<open>A declared procedure's name is never one \<^const>\<open>special_tab
   \<open>c\<close> also matching \<open>pstep.Special\<close>, which \<^const>\<open>head_call\<close> excludes.\<close>
 lemma pstep_intra_classify:
   assumes disj: "\<And>p decl. \<Pi> p = Some decl \<Longrightarrow> special_table p = None"
-  shows "pstep source_global \<Pi> (c, s, frs) (c', s', frs') \<Longrightarrow> \<not> head_call c \<Longrightarrow> \<not> head_return c \<Longrightarrow>
+  shows "pstep gs \<Pi> (c, s, frs) (c', s', frs') \<Longrightarrow> \<not> head_call c \<Longrightarrow> \<not> head_return c \<Longrightarrow>
    \<not> is_returning c \<Longrightarrow> intra_step \<Pi> (c, s, frs) (c', s', frs')"
 proof (induction "(c, s, frs)" "(c', s', frs')"
        arbitrary: c s frs c' s' frs' rule: pstep.induct)
@@ -384,7 +384,7 @@ lemma pop_ready_is_returning: "pop_ready w \<Longrightarrow> is_returning w"
 subsection \<open>Stepping the frame-pop phase\<close>
 
 lemma pstep_unwinding:
-  assumes "unwinding u" and "pstep source_global \<Pi> (u, s, frs) (u', s', frs')"
+  assumes "unwinding u" and "pstep gs \<Pi> (u, s, frs) (u', s', frs')"
   shows "s' = s \<and> frs' = frs \<and> unwinding u'"
   using assms
 proof (induction u arbitrary: u' s' frs')
@@ -392,7 +392,7 @@ proof (induction u arbitrary: u' s' frs')
   from Seq.prems(1) have u1w: "unwinding u1" and c2R: "c2 \<noteq> Restore" by auto
   from Seq.prems(2) consider
       (dead) "u' = Unwind" "s' = s" "frs' = frs"
-    | (step) c1' where "u' = Seq c1' c2" "pstep source_global \<Pi> (u1, s, frs) (c1', s', frs')"
+    | (step) c1' where "u' = Seq c1' c2" "pstep gs \<Pi> (u1, s, frs) (c1', s', frs')"
     using c2R unwinding_not_SKIP[OF u1w] by auto
   then show ?case
   proof cases
@@ -424,8 +424,8 @@ next
 qed
 
 lemma pstep_pop_ready_head:
-  assumes "pop_ready w" and "pstep source_global \<Pi> (w, s, Frame fr dst # frs) x"
-  shows "x = (SKIP, combine_assign dst (s ret_var) (combine_env source_global fr s), frs)
+  assumes "pop_ready w" and "pstep gs \<Pi> (w, s, Frame fr dst # frs) x"
+  shows "x = (SKIP, combine_assign dst (s ret_var) (combine_env gs fr s), frs)
        \<or> (\<exists>w'. x = (w', s, Frame fr dst # frs) \<and> pop_ready w')"
   using assms
 proof (cases w rule: pop_ready.cases)
@@ -445,31 +445,31 @@ text \<open>A step of a \<^const>\<open>seq_after\<close> spine is a step of its
   continuations carried along untouched.  \<^const>\<open>SKIP\<close> and \<^const>\<open>Unwind\<close> heads are excluded
   because those relocate into the spine instead of stepping in place.\<close>
 lemma pstep_seq_after_headE [elim]:
-  assumes step: "pstep source_global \<Pi> (seq_after w afters, s, frs) src'"
+  assumes step: "pstep gs \<Pi> (seq_after w afters, s, frs) src'"
       and wsk: "w \<noteq> SKIP" and wunw: "w \<noteq> Unwind"
   obtains h' s' fz where
     "src' = (seq_after h' afters, s', fz)"
-    "pstep source_global \<Pi> (w, s, frs) (h', s', fz)"
+    "pstep gs \<Pi> (w, s, frs) (h', s', fz)"
 proof -
   have "\<exists>h' s' fz. src' = (seq_after h' afters, s', fz)
-          \<and> pstep source_global \<Pi> (w, s, frs) (h', s', fz)"
+          \<and> pstep gs \<Pi> (w, s, frs) (h', s', fz)"
     using step
   proof (induction afters arbitrary: src' rule: rev_induct)
     case Nil
     then obtain h' s' fz where "src' = (h', s', fz)"
-      "pstep source_global \<Pi> (w, s, frs) (h', s', fz)"
+      "pstep gs \<Pi> (w, s, frs) (h', s', fz)"
       by (cases src') auto
     then show ?case by auto
   next
     case (snoc a xs)
-    from snoc.prems have "pstep source_global \<Pi> (Seq (seq_after w xs) a, s, frs) src'"
+    from snoc.prems have "pstep gs \<Pi> (Seq (seq_after w xs) a, s, frs) src'"
       by (simp add: seq_after_snoc)
     then obtain B' s' fz where
       A: "src' = (Seq B' a, s', fz)"
-        and B: "pstep source_global \<Pi> (seq_after w xs, s, frs) (B', s', fz)"
+        and B: "pstep gs \<Pi> (seq_after w xs, s, frs) (B', s', fz)"
       using wsk wunw by auto
     from snoc.IH[OF B] obtain h' where
-      "B' = seq_after h' xs" "pstep source_global \<Pi> (w, s, frs) (h', s', fz)" by auto
+      "B' = seq_after h' xs" "pstep gs \<Pi> (w, s, frs) (h', s', fz)" by auto
     then show ?case using A by (auto simp: seq_after_snoc)
   qed
   then show ?thesis using that by blast

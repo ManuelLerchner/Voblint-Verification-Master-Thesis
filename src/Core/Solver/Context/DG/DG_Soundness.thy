@@ -2242,14 +2242,14 @@ lemma project_component_cover_sup2:
 
 lemma dgs_combine_unit_dg_spec_placed:
   assumes cover: "\<forall>x. publish_side x \<or> keep_local x"
-  shows "dgs_combine (unit_dg_spec_placed source_global keep_local publish_side tf) dst dc de g =
-     (let res = combine\<^sup># source_global (ci_dst dst) (dc \<squnion> g) (de \<squnion> g)
+  shows "dgs_combine (unit_dg_spec_placed gs keep_local publish_side tf) dst dc de g =
+     (let res = combine\<^sup># gs (ci_dst dst) (dc \<squnion> g) (de \<squnion> g)
       in (project_component publish_side res, project_component keep_local res))"
 proof -
   have env_join:
-    "fst (unit_combine_step_env_placed source_global keep_local publish_side dst dc de g) \<squnion>
-       snd (unit_combine_step_env_placed source_global keep_local publish_side dst dc de g) =
-     combine_env_abs source_global (dc \<squnion> g) (de \<squnion> g)"
+    "fst (unit_combine_step_env_placed gs keep_local publish_side dst dc de g) \<squnion>
+       snd (unit_combine_step_env_placed gs keep_local publish_side dst dc de g) =
+     combine_env_abs gs (dc \<squnion> g) (de \<squnion> g)"
     unfolding unit_combine_step_env_placed_def
     by (simp add: Let_def project_component_cover_sup[OF cover])
   show ?thesis
@@ -2261,12 +2261,12 @@ qed
 lemma gamma_join_combine_sound_placed:
   assumes cover: "\<forall>x. publish_side x \<or> keep_local x"
     and sc: "s \<in> gamma_join dc g" and tc: "t \<in> gamma_join de g"
-  shows "combine_collect source_global (ci_dst dst) s t \<in>
-           (case dgs_combine (unit_dg_spec_placed source_global keep_local publish_side tf) dst dc de g of (g', d') \<Rightarrow> gamma_join d' g')"
+  shows "combine_collect gs (ci_dst dst) s t \<in>
+           (case dgs_combine (unit_dg_spec_placed gs keep_local publish_side tf) dst dc de g of (g', d') \<Rightarrow> gamma_join d' g')"
 proof -
   have sc': "s \<in> \<lbrakk>dc \<squnion> g\<rbrakk>" using gamma_joinD[OF sc] .
   have tc': "t \<in> \<lbrakk>de \<squnion> g\<rbrakk>" using gamma_joinD[OF tc] .
-  have "combine_collect source_global (ci_dst dst) s t \<in> \<lbrakk>combine\<^sup># source_global (ci_dst dst) (dc \<squnion> g) (de \<squnion> g)\<rbrakk>"
+  have "combine_collect gs (ci_dst dst) s t \<in> \<lbrakk>combine\<^sup># gs (ci_dst dst) (dc \<squnion> g) (de \<squnion> g)\<rbrakk>"
     by (rule combine_collect_sound[OF sc' tc'])
   then show ?thesis
     unfolding dgs_combine_unit_dg_spec_placed[OF cover] gamma_join_def

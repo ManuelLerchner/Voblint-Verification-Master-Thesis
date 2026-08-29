@@ -59,7 +59,7 @@ where
   "branch_int_dom_never_st_for = generic_branch_st_for int_dom_ops_never"
 
 lemma branch_int_dom_never_st_for_eq [simp]:
-  "branch_int_dom_never_st_for source_global b pol s = branch_int_dom_never_st source_global b pol s"
+  "branch_int_dom_never_st_for gs b pol s = branch_int_dom_never_st gs b pol s"
   by (simp add: branch_int_dom_never_st_for_def generic_branch_st_for_def int_dom_ops_never_def)
 
 definition int_dom_enter_never_st_for ::
@@ -69,39 +69,39 @@ where
   "int_dom_enter_never_st_for = generic_enter_st_for int_dom_ops_never"
 
 lemma int_dom_enter_never_st_for_eq [simp]:
-  "int_dom_enter_never_st_for source_global xs es s =
-    bind_formals_resolved_q source_global xs
+  "int_dom_enter_never_st_for gs xs es s =
+    bind_formals_resolved_q gs xs
       (map (%e. aval_int_dom Refine_Never e
-        (fun_of_resolved_st_q_for source_global s)) es)
+        (fun_of_resolved_st_q_for gs s)) es)
       (enter_frame_D_resolved_q top s)"
   by (simp add: int_dom_enter_never_st_for_def generic_enter_st_for_def int_dom_ops_never_def)
 
 fun int_tf_st_never_for ::
   "(vname => bool) => edge_action =>
    int_dom resolved_st_q => int_dom resolved_st_q" where
-    "int_tf_st_never_for source_global EA_Nop s = s"
-  | "int_tf_st_never_for source_global (EA_Assign x a) s =
-       update_resolved_st_q s (location_of source_global x)
-         (aval_int_dom Refine_Never a (fun_of_resolved_st_q_for source_global s))"
-  | "int_tf_st_never_for source_global (EA_Special sc x) s =
-       update_resolved_st_q s (location_of source_global x)
+    "int_tf_st_never_for gs EA_Nop s = s"
+  | "int_tf_st_never_for gs (EA_Assign x a) s =
+       update_resolved_st_q s (location_of gs x)
+         (aval_int_dom Refine_Never a (fun_of_resolved_st_q_for gs s))"
+  | "int_tf_st_never_for gs (EA_Special sc x) s =
+       update_resolved_st_q s (location_of gs x)
          (case sc of
             Nondet_Int => top
           | Min a b => int_dom_min Refine_Never
-                         (aval_int_dom Refine_Never a (fun_of_resolved_st_q_for source_global s))
-                         (aval_int_dom Refine_Never b (fun_of_resolved_st_q_for source_global s))
+                         (aval_int_dom Refine_Never a (fun_of_resolved_st_q_for gs s))
+                         (aval_int_dom Refine_Never b (fun_of_resolved_st_q_for gs s))
           | Max a b => int_dom_max Refine_Never
-                         (aval_int_dom Refine_Never a (fun_of_resolved_st_q_for source_global s))
-                         (aval_int_dom Refine_Never b (fun_of_resolved_st_q_for source_global s)))"
-  | "int_tf_st_never_for source_global (EA_Assume b) s =
-       branch_int_dom_never_st_for source_global b True s"
-  | "int_tf_st_never_for source_global (EA_AssumeNot b) s =
-       branch_int_dom_never_st_for source_global b False s"
-  | "int_tf_st_never_for source_global (EA_Ret None p) s = s"
-  | "int_tf_st_never_for source_global (EA_Ret (Some a) p) s =
-       update_resolved_st_q s (location_of source_global ret_var)
-         (aval_int_dom Refine_Never a (fun_of_resolved_st_q_for source_global s))"
-  | "int_tf_st_never_for source_global (EA_Check cnd) s = s"
+                         (aval_int_dom Refine_Never a (fun_of_resolved_st_q_for gs s))
+                         (aval_int_dom Refine_Never b (fun_of_resolved_st_q_for gs s)))"
+  | "int_tf_st_never_for gs (EA_Assume b) s =
+       branch_int_dom_never_st_for gs b True s"
+  | "int_tf_st_never_for gs (EA_AssumeNot b) s =
+       branch_int_dom_never_st_for gs b False s"
+  | "int_tf_st_never_for gs (EA_Ret None p) s = s"
+  | "int_tf_st_never_for gs (EA_Ret (Some a) p) s =
+       update_resolved_st_q s (location_of gs ret_var)
+         (aval_int_dom Refine_Never a (fun_of_resolved_st_q_for gs s))"
+  | "int_tf_st_never_for gs (EA_Check cnd) s = s"
 
 lemma int_tf_st_never_for_reduces: "action_reduces (int_tf_st_never_for gs)"
   by unfold_locales (rule ext, simp)+
@@ -170,7 +170,7 @@ where
   "branch_int_dom_once_st_for = generic_branch_st_for int_dom_ops_once"
 
 lemma branch_int_dom_once_st_for_eq [simp]:
-  "branch_int_dom_once_st_for source_global b pol s = branch_int_dom_once_st source_global b pol s"
+  "branch_int_dom_once_st_for gs b pol s = branch_int_dom_once_st gs b pol s"
   by (simp add: branch_int_dom_once_st_for_def generic_branch_st_for_def int_dom_ops_once_def)
 
 definition int_dom_enter_once_st_for ::
@@ -180,39 +180,39 @@ where
   "int_dom_enter_once_st_for = generic_enter_st_for int_dom_ops_once"
 
 lemma int_dom_enter_once_st_for_eq [simp]:
-  "int_dom_enter_once_st_for source_global xs es s =
-    bind_formals_resolved_q source_global xs
+  "int_dom_enter_once_st_for gs xs es s =
+    bind_formals_resolved_q gs xs
       (map (%e. aval_int_dom Refine_Once e
-        (fun_of_resolved_st_q_for source_global s)) es)
+        (fun_of_resolved_st_q_for gs s)) es)
       (enter_frame_D_resolved_q top s)"
   by (simp add: int_dom_enter_once_st_for_def generic_enter_st_for_def int_dom_ops_once_def)
 
 fun int_tf_st_once_for ::
   "(vname => bool) => edge_action =>
    int_dom resolved_st_q => int_dom resolved_st_q" where
-    "int_tf_st_once_for source_global EA_Nop s = s"
-  | "int_tf_st_once_for source_global (EA_Assign x a) s =
-       update_resolved_st_q s (location_of source_global x)
-         (aval_int_dom Refine_Once a (fun_of_resolved_st_q_for source_global s))"
-  | "int_tf_st_once_for source_global (EA_Special sc x) s =
-       update_resolved_st_q s (location_of source_global x)
+    "int_tf_st_once_for gs EA_Nop s = s"
+  | "int_tf_st_once_for gs (EA_Assign x a) s =
+       update_resolved_st_q s (location_of gs x)
+         (aval_int_dom Refine_Once a (fun_of_resolved_st_q_for gs s))"
+  | "int_tf_st_once_for gs (EA_Special sc x) s =
+       update_resolved_st_q s (location_of gs x)
          (case sc of
             Nondet_Int => top
           | Min a b => int_dom_min Refine_Once
-                         (aval_int_dom Refine_Once a (fun_of_resolved_st_q_for source_global s))
-                         (aval_int_dom Refine_Once b (fun_of_resolved_st_q_for source_global s))
+                         (aval_int_dom Refine_Once a (fun_of_resolved_st_q_for gs s))
+                         (aval_int_dom Refine_Once b (fun_of_resolved_st_q_for gs s))
           | Max a b => int_dom_max Refine_Once
-                         (aval_int_dom Refine_Once a (fun_of_resolved_st_q_for source_global s))
-                         (aval_int_dom Refine_Once b (fun_of_resolved_st_q_for source_global s)))"
-  | "int_tf_st_once_for source_global (EA_Assume b) s =
-       branch_int_dom_once_st_for source_global b True s"
-  | "int_tf_st_once_for source_global (EA_AssumeNot b) s =
-       branch_int_dom_once_st_for source_global b False s"
-  | "int_tf_st_once_for source_global (EA_Ret None p) s = s"
-  | "int_tf_st_once_for source_global (EA_Ret (Some a) p) s =
-       update_resolved_st_q s (location_of source_global ret_var)
-         (aval_int_dom Refine_Once a (fun_of_resolved_st_q_for source_global s))"
-  | "int_tf_st_once_for source_global (EA_Check cnd) s = s"
+                         (aval_int_dom Refine_Once a (fun_of_resolved_st_q_for gs s))
+                         (aval_int_dom Refine_Once b (fun_of_resolved_st_q_for gs s)))"
+  | "int_tf_st_once_for gs (EA_Assume b) s =
+       branch_int_dom_once_st_for gs b True s"
+  | "int_tf_st_once_for gs (EA_AssumeNot b) s =
+       branch_int_dom_once_st_for gs b False s"
+  | "int_tf_st_once_for gs (EA_Ret None p) s = s"
+  | "int_tf_st_once_for gs (EA_Ret (Some a) p) s =
+       update_resolved_st_q s (location_of gs ret_var)
+         (aval_int_dom Refine_Once a (fun_of_resolved_st_q_for gs s))"
+  | "int_tf_st_once_for gs (EA_Check cnd) s = s"
 
 lemma int_tf_st_once_for_reduces: "action_reduces (int_tf_st_once_for gs)"
   by unfold_locales (rule ext, simp)+
@@ -281,7 +281,7 @@ where
   "branch_int_dom_fixpoint_st_for = generic_branch_st_for int_dom_ops_fixpoint"
 
 lemma branch_int_dom_fixpoint_st_for_eq [simp]:
-  "branch_int_dom_fixpoint_st_for source_global b pol s = branch_int_dom_fixpoint_st source_global b pol s"
+  "branch_int_dom_fixpoint_st_for gs b pol s = branch_int_dom_fixpoint_st gs b pol s"
   by (simp add: branch_int_dom_fixpoint_st_for_def generic_branch_st_for_def int_dom_ops_fixpoint_def)
 
 definition int_dom_enter_fixpoint_st_for ::
@@ -291,39 +291,39 @@ where
   "int_dom_enter_fixpoint_st_for = generic_enter_st_for int_dom_ops_fixpoint"
 
 lemma int_dom_enter_fixpoint_st_for_eq [simp]:
-  "int_dom_enter_fixpoint_st_for source_global xs es s =
-    bind_formals_resolved_q source_global xs
+  "int_dom_enter_fixpoint_st_for gs xs es s =
+    bind_formals_resolved_q gs xs
       (map (%e. aval_int_dom Refine_Fixpoint e
-        (fun_of_resolved_st_q_for source_global s)) es)
+        (fun_of_resolved_st_q_for gs s)) es)
       (enter_frame_D_resolved_q top s)"
   by (simp add: int_dom_enter_fixpoint_st_for_def generic_enter_st_for_def int_dom_ops_fixpoint_def)
 
 fun int_tf_st_fixpoint_for ::
   "(vname => bool) => edge_action =>
    int_dom resolved_st_q => int_dom resolved_st_q" where
-    "int_tf_st_fixpoint_for source_global EA_Nop s = s"
-  | "int_tf_st_fixpoint_for source_global (EA_Assign x a) s =
-       update_resolved_st_q s (location_of source_global x)
-         (aval_int_dom Refine_Fixpoint a (fun_of_resolved_st_q_for source_global s))"
-  | "int_tf_st_fixpoint_for source_global (EA_Special sc x) s =
-       update_resolved_st_q s (location_of source_global x)
+    "int_tf_st_fixpoint_for gs EA_Nop s = s"
+  | "int_tf_st_fixpoint_for gs (EA_Assign x a) s =
+       update_resolved_st_q s (location_of gs x)
+         (aval_int_dom Refine_Fixpoint a (fun_of_resolved_st_q_for gs s))"
+  | "int_tf_st_fixpoint_for gs (EA_Special sc x) s =
+       update_resolved_st_q s (location_of gs x)
          (case sc of
             Nondet_Int => top
           | Min a b => int_dom_min Refine_Fixpoint
-                         (aval_int_dom Refine_Fixpoint a (fun_of_resolved_st_q_for source_global s))
-                         (aval_int_dom Refine_Fixpoint b (fun_of_resolved_st_q_for source_global s))
+                         (aval_int_dom Refine_Fixpoint a (fun_of_resolved_st_q_for gs s))
+                         (aval_int_dom Refine_Fixpoint b (fun_of_resolved_st_q_for gs s))
           | Max a b => int_dom_max Refine_Fixpoint
-                         (aval_int_dom Refine_Fixpoint a (fun_of_resolved_st_q_for source_global s))
-                         (aval_int_dom Refine_Fixpoint b (fun_of_resolved_st_q_for source_global s)))"
-  | "int_tf_st_fixpoint_for source_global (EA_Assume b) s =
-       branch_int_dom_fixpoint_st_for source_global b True s"
-  | "int_tf_st_fixpoint_for source_global (EA_AssumeNot b) s =
-       branch_int_dom_fixpoint_st_for source_global b False s"
-  | "int_tf_st_fixpoint_for source_global (EA_Ret None p) s = s"
-  | "int_tf_st_fixpoint_for source_global (EA_Ret (Some a) p) s =
-       update_resolved_st_q s (location_of source_global ret_var)
-         (aval_int_dom Refine_Fixpoint a (fun_of_resolved_st_q_for source_global s))"
-  | "int_tf_st_fixpoint_for source_global (EA_Check cnd) s = s"
+                         (aval_int_dom Refine_Fixpoint a (fun_of_resolved_st_q_for gs s))
+                         (aval_int_dom Refine_Fixpoint b (fun_of_resolved_st_q_for gs s)))"
+  | "int_tf_st_fixpoint_for gs (EA_Assume b) s =
+       branch_int_dom_fixpoint_st_for gs b True s"
+  | "int_tf_st_fixpoint_for gs (EA_AssumeNot b) s =
+       branch_int_dom_fixpoint_st_for gs b False s"
+  | "int_tf_st_fixpoint_for gs (EA_Ret None p) s = s"
+  | "int_tf_st_fixpoint_for gs (EA_Ret (Some a) p) s =
+       update_resolved_st_q s (location_of gs ret_var)
+         (aval_int_dom Refine_Fixpoint a (fun_of_resolved_st_q_for gs s))"
+  | "int_tf_st_fixpoint_for gs (EA_Check cnd) s = s"
 
 lemma int_tf_st_fixpoint_for_reduces: "action_reduces (int_tf_st_fixpoint_for gs)"
   by unfold_locales (rule ext, simp)+

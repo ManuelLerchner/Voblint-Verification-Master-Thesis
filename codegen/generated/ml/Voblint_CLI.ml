@@ -4789,36 +4789,31 @@ let rec ivl_max
 let rec n_bfilter _A
   (Numeric_ops_ext (n_aval, n_bfilter, n_top, more)) = n_bfilter;;
 
-let rec generic_branch_st_for _A
-  ops source_global b pol s = n_bfilter _A ops source_global b pol s;;
+let rec generic_branch_st_for _A ops gs b pol s = n_bfilter _A ops gs b pol s;;
 
 let rec branch_ivl_st_for x = generic_branch_st_for bot_ivl ivl_ops x;;
 
 let rec ivl_tf_st_for
-  source_global x1 s = match source_global, x1, s with
-    source_global, EA_Nop, s -> s
-    | source_global, EA_Assign (x, a), s ->
-        update_resolved_st_q bot_ivl s (location_of source_global x)
-          (aval_ivl a (fun_of_resolved_st_q_for bot_ivl source_global s))
-    | source_global, EA_Special (sc, x), s ->
-        update_resolved_st_q bot_ivl s (location_of source_global x)
+  gs x1 s = match gs, x1, s with gs, EA_Nop, s -> s
+    | gs, EA_Assign (x, a), s ->
+        update_resolved_st_q bot_ivl s (location_of gs x)
+          (aval_ivl a (fun_of_resolved_st_q_for bot_ivl gs s))
+    | gs, EA_Special (sc, x), s ->
+        update_resolved_st_q bot_ivl s (location_of gs x)
           (match sc with Nondet_Int -> ivl_top
             | Min (a, b) ->
-              ivl_min
-                (aval_ivl a (fun_of_resolved_st_q_for bot_ivl source_global s))
-                (aval_ivl b (fun_of_resolved_st_q_for bot_ivl source_global s))
+              ivl_min (aval_ivl a (fun_of_resolved_st_q_for bot_ivl gs s))
+                (aval_ivl b (fun_of_resolved_st_q_for bot_ivl gs s))
             | Max (a, b) ->
-              ivl_max
-                (aval_ivl a (fun_of_resolved_st_q_for bot_ivl source_global s))
-                (aval_ivl b (fun_of_resolved_st_q_for bot_ivl source_global s)))
-    | source_global, EA_Assume b, s -> branch_ivl_st_for source_global b true s
-    | source_global, EA_AssumeNot b, s ->
-        branch_ivl_st_for source_global b false s
-    | source_global, EA_Ret (None, p), s -> s
-    | source_global, EA_Ret (Some a, p), s ->
-        update_resolved_st_q bot_ivl s (location_of source_global ret_var)
-          (aval_ivl a (fun_of_resolved_st_q_for bot_ivl source_global s))
-    | source_global, EA_Check cnd, s -> s;;
+              ivl_max (aval_ivl a (fun_of_resolved_st_q_for bot_ivl gs s))
+                (aval_ivl b (fun_of_resolved_st_q_for bot_ivl gs s)))
+    | gs, EA_Assume b, s -> branch_ivl_st_for gs b true s
+    | gs, EA_AssumeNot b, s -> branch_ivl_st_for gs b false s
+    | gs, EA_Ret (None, p), s -> s
+    | gs, EA_Ret (Some a, p), s ->
+        update_resolved_st_q bot_ivl s (location_of gs ret_var)
+          (aval_ivl a (fun_of_resolved_st_q_for bot_ivl gs s))
+    | gs, EA_Check cnd, s -> s;;
 
 let rec times_parity x0 uu = match x0, uu with PBot, uu -> PBot
                        | PEven, PBot -> PBot
@@ -5255,34 +5250,26 @@ let rec map_option f x1 = match f, x1 with f, None -> None
 let rec branch_sign_st_for x = generic_branch_st_for bot_sign sign_ops x;;
 
 let rec sign_tf_st_for
-  source_global x1 s = match source_global, x1, s with
-    source_global, EA_Nop, s -> s
-    | source_global, EA_Assign (x, a), s ->
-        update_resolved_st_q bot_sign s (location_of source_global x)
-          (aval_sign a (fun_of_resolved_st_q_for bot_sign source_global s))
-    | source_global, EA_Special (sc, x), s ->
-        update_resolved_st_q bot_sign s (location_of source_global x)
+  gs x1 s = match gs, x1, s with gs, EA_Nop, s -> s
+    | gs, EA_Assign (x, a), s ->
+        update_resolved_st_q bot_sign s (location_of gs x)
+          (aval_sign a (fun_of_resolved_st_q_for bot_sign gs s))
+    | gs, EA_Special (sc, x), s ->
+        update_resolved_st_q bot_sign s (location_of gs x)
           (match sc with Nondet_Int -> STop
             | Min (a, b) ->
-              sign_min
-                (aval_sign a
-                  (fun_of_resolved_st_q_for bot_sign source_global s))
-                (aval_sign b
-                  (fun_of_resolved_st_q_for bot_sign source_global s))
+              sign_min (aval_sign a (fun_of_resolved_st_q_for bot_sign gs s))
+                (aval_sign b (fun_of_resolved_st_q_for bot_sign gs s))
             | Max (a, b) ->
-              sign_max
-                (aval_sign a
-                  (fun_of_resolved_st_q_for bot_sign source_global s))
-                (aval_sign b
-                  (fun_of_resolved_st_q_for bot_sign source_global s)))
-    | source_global, EA_Assume b, s -> branch_sign_st_for source_global b true s
-    | source_global, EA_AssumeNot b, s ->
-        branch_sign_st_for source_global b false s
-    | source_global, EA_Ret (None, p), s -> s
-    | source_global, EA_Ret (Some a, p), s ->
-        update_resolved_st_q bot_sign s (location_of source_global ret_var)
-          (aval_sign a (fun_of_resolved_st_q_for bot_sign source_global s))
-    | source_global, EA_Check cnd, s -> s;;
+              sign_max (aval_sign a (fun_of_resolved_st_q_for bot_sign gs s))
+                (aval_sign b (fun_of_resolved_st_q_for bot_sign gs s)))
+    | gs, EA_Assume b, s -> branch_sign_st_for gs b true s
+    | gs, EA_AssumeNot b, s -> branch_sign_st_for gs b false s
+    | gs, EA_Ret (None, p), s -> s
+    | gs, EA_Ret (Some a, p), s ->
+        update_resolved_st_q bot_sign s (location_of gs ret_var)
+          (aval_sign a (fun_of_resolved_st_q_for bot_sign gs s))
+    | gs, EA_Check cnd, s -> s;;
 
 let rec call_formals
   pi q =
@@ -6158,11 +6145,9 @@ let rec n_aval _A (Numeric_ops_ext (n_aval, n_bfilter, n_top, more)) = n_aval;;
 let rec n_top _A (Numeric_ops_ext (n_aval, n_bfilter, n_top, more)) = n_top;;
 
 let rec generic_enter_st_for _A
-  ops source_global xs es s =
-    bind_formals_resolved_q _A source_global xs
-      (map (fun e ->
-             n_aval _A ops e (fun_of_resolved_st_q_for _A source_global s))
-        es)
+  ops gs xs es s =
+    bind_formals_resolved_q _A gs xs
+      (map (fun e -> n_aval _A ops e (fun_of_resolved_st_q_for _A gs s)) es)
       (enter_frame_D_resolved_q _A (n_top _A ops) s);;
 
 let rec ivl_enter_st_for x = generic_enter_st_for bot_ivl ivl_ops x;;
@@ -7119,153 +7104,132 @@ let rec branch_int_dom_fixpoint_st_for
         int_dom_ops_fixpoint x;;
 
 let rec int_tf_st_fixpoint_for
-  source_global x1 s = match source_global, x1, s with
-    source_global, EA_Nop, s -> s
-    | source_global, EA_Assign (x, a), s ->
+  gs x1 s = match gs, x1, s with gs, EA_Nop, s -> s
+    | gs, EA_Assign (x, a), s ->
         update_resolved_st_q (bot_int_dom_ext int_dom_record_lattice_unit) s
-          (location_of source_global x)
+          (location_of gs x)
           (aval_int_dom Refine_Fixpoint a
             (fun_of_resolved_st_q_for
-              (bot_int_dom_ext int_dom_record_lattice_unit) source_global s))
-    | source_global, EA_Special (sc, x), s ->
+              (bot_int_dom_ext int_dom_record_lattice_unit) gs s))
+    | gs, EA_Special (sc, x), s ->
         update_resolved_st_q (bot_int_dom_ext int_dom_record_lattice_unit) s
-          (location_of source_global x)
+          (location_of gs x)
           (match sc
             with Nondet_Int -> top_int_dom_exta int_dom_record_lattice_unit
             | Min (a, b) ->
               int_dom_min Refine_Fixpoint
                 (aval_int_dom Refine_Fixpoint a
                   (fun_of_resolved_st_q_for
-                    (bot_int_dom_ext int_dom_record_lattice_unit) source_global
-                    s))
+                    (bot_int_dom_ext int_dom_record_lattice_unit) gs s))
                 (aval_int_dom Refine_Fixpoint b
                   (fun_of_resolved_st_q_for
-                    (bot_int_dom_ext int_dom_record_lattice_unit) source_global
-                    s))
+                    (bot_int_dom_ext int_dom_record_lattice_unit) gs s))
             | Max (a, b) ->
               int_dom_max Refine_Fixpoint
                 (aval_int_dom Refine_Fixpoint a
                   (fun_of_resolved_st_q_for
-                    (bot_int_dom_ext int_dom_record_lattice_unit) source_global
-                    s))
+                    (bot_int_dom_ext int_dom_record_lattice_unit) gs s))
                 (aval_int_dom Refine_Fixpoint b
                   (fun_of_resolved_st_q_for
-                    (bot_int_dom_ext int_dom_record_lattice_unit) source_global
-                    s)))
-    | source_global, EA_Assume b, s ->
-        branch_int_dom_fixpoint_st_for source_global b true s
-    | source_global, EA_AssumeNot b, s ->
-        branch_int_dom_fixpoint_st_for source_global b false s
-    | source_global, EA_Ret (None, p), s -> s
-    | source_global, EA_Ret (Some a, p), s ->
+                    (bot_int_dom_ext int_dom_record_lattice_unit) gs s)))
+    | gs, EA_Assume b, s -> branch_int_dom_fixpoint_st_for gs b true s
+    | gs, EA_AssumeNot b, s -> branch_int_dom_fixpoint_st_for gs b false s
+    | gs, EA_Ret (None, p), s -> s
+    | gs, EA_Ret (Some a, p), s ->
         update_resolved_st_q (bot_int_dom_ext int_dom_record_lattice_unit) s
-          (location_of source_global ret_var)
+          (location_of gs ret_var)
           (aval_int_dom Refine_Fixpoint a
             (fun_of_resolved_st_q_for
-              (bot_int_dom_ext int_dom_record_lattice_unit) source_global s))
-    | source_global, EA_Check cnd, s -> s;;
+              (bot_int_dom_ext int_dom_record_lattice_unit) gs s))
+    | gs, EA_Check cnd, s -> s;;
 
 let rec branch_int_dom_never_st_for
   x = generic_branch_st_for (bot_int_dom_ext int_dom_record_lattice_unit)
         int_dom_ops_never x;;
 
 let rec int_tf_st_never_for
-  source_global x1 s = match source_global, x1, s with
-    source_global, EA_Nop, s -> s
-    | source_global, EA_Assign (x, a), s ->
+  gs x1 s = match gs, x1, s with gs, EA_Nop, s -> s
+    | gs, EA_Assign (x, a), s ->
         update_resolved_st_q (bot_int_dom_ext int_dom_record_lattice_unit) s
-          (location_of source_global x)
+          (location_of gs x)
           (aval_int_dom Refine_Never a
             (fun_of_resolved_st_q_for
-              (bot_int_dom_ext int_dom_record_lattice_unit) source_global s))
-    | source_global, EA_Special (sc, x), s ->
+              (bot_int_dom_ext int_dom_record_lattice_unit) gs s))
+    | gs, EA_Special (sc, x), s ->
         update_resolved_st_q (bot_int_dom_ext int_dom_record_lattice_unit) s
-          (location_of source_global x)
+          (location_of gs x)
           (match sc
             with Nondet_Int -> top_int_dom_exta int_dom_record_lattice_unit
             | Min (a, b) ->
               int_dom_min Refine_Never
                 (aval_int_dom Refine_Never a
                   (fun_of_resolved_st_q_for
-                    (bot_int_dom_ext int_dom_record_lattice_unit) source_global
-                    s))
+                    (bot_int_dom_ext int_dom_record_lattice_unit) gs s))
                 (aval_int_dom Refine_Never b
                   (fun_of_resolved_st_q_for
-                    (bot_int_dom_ext int_dom_record_lattice_unit) source_global
-                    s))
+                    (bot_int_dom_ext int_dom_record_lattice_unit) gs s))
             | Max (a, b) ->
               int_dom_max Refine_Never
                 (aval_int_dom Refine_Never a
                   (fun_of_resolved_st_q_for
-                    (bot_int_dom_ext int_dom_record_lattice_unit) source_global
-                    s))
+                    (bot_int_dom_ext int_dom_record_lattice_unit) gs s))
                 (aval_int_dom Refine_Never b
                   (fun_of_resolved_st_q_for
-                    (bot_int_dom_ext int_dom_record_lattice_unit) source_global
-                    s)))
-    | source_global, EA_Assume b, s ->
-        branch_int_dom_never_st_for source_global b true s
-    | source_global, EA_AssumeNot b, s ->
-        branch_int_dom_never_st_for source_global b false s
-    | source_global, EA_Ret (None, p), s -> s
-    | source_global, EA_Ret (Some a, p), s ->
+                    (bot_int_dom_ext int_dom_record_lattice_unit) gs s)))
+    | gs, EA_Assume b, s -> branch_int_dom_never_st_for gs b true s
+    | gs, EA_AssumeNot b, s -> branch_int_dom_never_st_for gs b false s
+    | gs, EA_Ret (None, p), s -> s
+    | gs, EA_Ret (Some a, p), s ->
         update_resolved_st_q (bot_int_dom_ext int_dom_record_lattice_unit) s
-          (location_of source_global ret_var)
+          (location_of gs ret_var)
           (aval_int_dom Refine_Never a
             (fun_of_resolved_st_q_for
-              (bot_int_dom_ext int_dom_record_lattice_unit) source_global s))
-    | source_global, EA_Check cnd, s -> s;;
+              (bot_int_dom_ext int_dom_record_lattice_unit) gs s))
+    | gs, EA_Check cnd, s -> s;;
 
 let rec branch_int_dom_once_st_for
   x = generic_branch_st_for (bot_int_dom_ext int_dom_record_lattice_unit)
         int_dom_ops_once x;;
 
 let rec int_tf_st_once_for
-  source_global x1 s = match source_global, x1, s with
-    source_global, EA_Nop, s -> s
-    | source_global, EA_Assign (x, a), s ->
+  gs x1 s = match gs, x1, s with gs, EA_Nop, s -> s
+    | gs, EA_Assign (x, a), s ->
         update_resolved_st_q (bot_int_dom_ext int_dom_record_lattice_unit) s
-          (location_of source_global x)
+          (location_of gs x)
           (aval_int_dom Refine_Once a
             (fun_of_resolved_st_q_for
-              (bot_int_dom_ext int_dom_record_lattice_unit) source_global s))
-    | source_global, EA_Special (sc, x), s ->
+              (bot_int_dom_ext int_dom_record_lattice_unit) gs s))
+    | gs, EA_Special (sc, x), s ->
         update_resolved_st_q (bot_int_dom_ext int_dom_record_lattice_unit) s
-          (location_of source_global x)
+          (location_of gs x)
           (match sc
             with Nondet_Int -> top_int_dom_exta int_dom_record_lattice_unit
             | Min (a, b) ->
               int_dom_min Refine_Once
                 (aval_int_dom Refine_Once a
                   (fun_of_resolved_st_q_for
-                    (bot_int_dom_ext int_dom_record_lattice_unit) source_global
-                    s))
+                    (bot_int_dom_ext int_dom_record_lattice_unit) gs s))
                 (aval_int_dom Refine_Once b
                   (fun_of_resolved_st_q_for
-                    (bot_int_dom_ext int_dom_record_lattice_unit) source_global
-                    s))
+                    (bot_int_dom_ext int_dom_record_lattice_unit) gs s))
             | Max (a, b) ->
               int_dom_max Refine_Once
                 (aval_int_dom Refine_Once a
                   (fun_of_resolved_st_q_for
-                    (bot_int_dom_ext int_dom_record_lattice_unit) source_global
-                    s))
+                    (bot_int_dom_ext int_dom_record_lattice_unit) gs s))
                 (aval_int_dom Refine_Once b
                   (fun_of_resolved_st_q_for
-                    (bot_int_dom_ext int_dom_record_lattice_unit) source_global
-                    s)))
-    | source_global, EA_Assume b, s ->
-        branch_int_dom_once_st_for source_global b true s
-    | source_global, EA_AssumeNot b, s ->
-        branch_int_dom_once_st_for source_global b false s
-    | source_global, EA_Ret (None, p), s -> s
-    | source_global, EA_Ret (Some a, p), s ->
+                    (bot_int_dom_ext int_dom_record_lattice_unit) gs s)))
+    | gs, EA_Assume b, s -> branch_int_dom_once_st_for gs b true s
+    | gs, EA_AssumeNot b, s -> branch_int_dom_once_st_for gs b false s
+    | gs, EA_Ret (None, p), s -> s
+    | gs, EA_Ret (Some a, p), s ->
         update_resolved_st_q (bot_int_dom_ext int_dom_record_lattice_unit) s
-          (location_of source_global ret_var)
+          (location_of gs ret_var)
           (aval_int_dom Refine_Once a
             (fun_of_resolved_st_q_for
-              (bot_int_dom_ext int_dom_record_lattice_unit) source_global s))
-    | source_global, EA_Check cnd, s -> s;;
+              (bot_int_dom_ext int_dom_record_lattice_unit) gs s))
+    | gs, EA_Check cnd, s -> s;;
 
 let rec int_tf_st_for
   x0 gs = match x0, gs with Refine_Never, gs -> int_tf_st_never_for gs
@@ -7624,33 +7588,28 @@ let rec ivl_tf_for
            (fun _ -> combine_env_abs gs), ());;
 
 let rec parity_tf_st_for
-  source_global x1 s = match source_global, x1, s with
-    source_global, EA_Nop, s -> s
-    | source_global, EA_Assign (x, a), s ->
-        update_resolved_st_q bot_parity s (location_of source_global x)
-          (aval_parity a (fun_of_resolved_st_q_for bot_parity source_global s))
-    | source_global, EA_Special (sc, x), s ->
-        update_resolved_st_q bot_parity s (location_of source_global x)
+  gs x1 s = match gs, x1, s with gs, EA_Nop, s -> s
+    | gs, EA_Assign (x, a), s ->
+        update_resolved_st_q bot_parity s (location_of gs x)
+          (aval_parity a (fun_of_resolved_st_q_for bot_parity gs s))
+    | gs, EA_Special (sc, x), s ->
+        update_resolved_st_q bot_parity s (location_of gs x)
           (match sc with Nondet_Int -> PTop
             | Min (a, b) ->
               parity_min
-                (aval_parity a
-                  (fun_of_resolved_st_q_for bot_parity source_global s))
-                (aval_parity b
-                  (fun_of_resolved_st_q_for bot_parity source_global s))
+                (aval_parity a (fun_of_resolved_st_q_for bot_parity gs s))
+                (aval_parity b (fun_of_resolved_st_q_for bot_parity gs s))
             | Max (a, b) ->
               parity_max
-                (aval_parity a
-                  (fun_of_resolved_st_q_for bot_parity source_global s))
-                (aval_parity b
-                  (fun_of_resolved_st_q_for bot_parity source_global s)))
-    | source_global, EA_Assume b, s -> s
-    | source_global, EA_AssumeNot b, s -> s
-    | source_global, EA_Ret (None, p), s -> s
-    | source_global, EA_Ret (Some a, p), s ->
-        update_resolved_st_q bot_parity s (location_of source_global ret_var)
-          (aval_parity a (fun_of_resolved_st_q_for bot_parity source_global s))
-    | source_global, EA_Check cnd, s -> s;;
+                (aval_parity a (fun_of_resolved_st_q_for bot_parity gs s))
+                (aval_parity b (fun_of_resolved_st_q_for bot_parity gs s)))
+    | gs, EA_Assume b, s -> s
+    | gs, EA_AssumeNot b, s -> s
+    | gs, EA_Ret (None, p), s -> s
+    | gs, EA_Ret (Some a, p), s ->
+        update_resolved_st_q bot_parity s (location_of gs ret_var)
+          (aval_parity a (fun_of_resolved_st_q_for bot_parity gs s))
+    | gs, EA_Check cnd, s -> s;;
 
 let rec less_eq_set _A
   a b = match a, b with Set xs, b -> list_all (fun x -> member _A x b) xs

@@ -328,7 +328,7 @@ qed
 text \<open>In a whole compiled program \<^term>\<open>FunctionEntry r\<close> has a unique out-target: \<open>main\<close> and the
   callees are node-disjoint (\<open>mnm \<notin> set ps\<close>), and each contributes a single entry edge.\<close>
 lemma compile_prog_entry_out_unique:
-  assumes wf: "wf_compile_input source_global \<Pi> ps mnm main"
+  assumes wf: "wf_compile_input gs \<Pi> ps mnm main"
     and e1: "(FunctionEntry r, a1, v1) \<in> intra (compile_prog \<Pi> ps mnm main)"
     and e2: "(FunctionEntry r, a2, v2) \<in> intra (compile_prog \<Pi> ps mnm main)"
   shows "v1 = v2"
@@ -374,7 +374,7 @@ proof -
 qed
 
 lemma compile_prog_entry_declared:
-  assumes wf: "wf_compile_input source_global \<Pi> ps mnm main"
+  assumes wf: "wf_compile_input gs \<Pi> ps mnm main"
     and e: "(FunctionEntry p, a, v) \<in> intra (compile_prog \<Pi> ps mnm main)"
   shows "\<exists>d. \<Pi> p = Some d"
 proof -
@@ -404,7 +404,7 @@ text \<open>The fragment a procedure's entry wiring identifies owns every edge o
   the pass \<open>compile_procs_member_frag\<close> settles ownership; the entry edge pins the start counter
   through \<open>compile_prog_entry_out_unique\<close>.\<close>
 lemma compile_prog_entry_frag:
-  assumes wf: "wf_compile_input source_global \<Pi> ps mnm main"
+  assumes wf: "wf_compile_input gs \<Pi> ps mnm main"
     and decl: "\<Pi> r = Some d"
     and cb: "compile_proc \<Pi> r d m = (m', Ep, Kp)"
     and ent: "(FunctionEntry r, EA_Nop, Statement m) \<in> intra (compile_prog \<Pi> ps mnm main)"
@@ -458,7 +458,7 @@ text \<open>Given a genuine procedure fragment (declared body, entry wiring) and
   intra edge leaving that node, and every call leaving it, lands its same-activation successor
   back in the fragment.\<close>
 lemma frag_edge_intra:
-  assumes wf: "wf_compile_input source_global \<Pi> ps mnm main"
+  assumes wf: "wf_compile_input gs \<Pi> ps mnm main"
     and decl: "\<Pi> r = Some d"
     and cb: "compile_proc \<Pi> r d m = (m', Ep, Kp)"
     and ent: "(FunctionEntry r, EA_Nop, Statement m) \<in> intra (compile_prog \<Pi> ps mnm main)"
@@ -468,7 +468,7 @@ lemma frag_edge_intra:
   using compile_prog_entry_frag[OF wf decl cb ent] compile_proc_intra_pfn[OF cb] uin e by blast
 
 lemma frag_edge_calls:
-  assumes wf: "wf_compile_input source_global \<Pi> ps mnm main"
+  assumes wf: "wf_compile_input gs \<Pi> ps mnm main"
     and decl: "\<Pi> r = Some d"
     and cb: "compile_proc \<Pi> r d m = (m', Ep, Kp)"
     and ent: "(FunctionEntry r, EA_Nop, Statement m) \<in> intra (compile_prog \<Pi> ps mnm main)"
@@ -482,7 +482,7 @@ subsection \<open>Procedure locality of a valid activation\<close>
 text \<open>Every declared procedure of a compiled program owns a fragment, identified by the start
   counter its entry wiring edge points at.\<close>
 lemma compile_prog_proc_frag:
-  assumes wf: "wf_compile_input source_global \<Pi> ps mnm main"
+  assumes wf: "wf_compile_input gs \<Pi> ps mnm main"
     and decl: "\<Pi> q = Some d"
   obtains m m' Ep Kp where
     "compile_proc \<Pi> q d m = (m', Ep, Kp)"
@@ -549,7 +549,7 @@ text \<open>Every activation in the caller chain of a valid trace is fragment-lo
   carried over the whole \<^const>\<open>callers\<close> chain so that the return case, which resumes the caller,
   can read the caller's own fragment (\<open>caller \<in> callers callee\<close>).\<close>
 lemma valid_ltr_frag_callers:
-  assumes wf: "wf_compile_input source_global \<Pi> ps mnm main"
+  assumes wf: "wf_compile_input gs \<Pi> ps mnm main"
     and t: "t \<in> valid_ltr gs (compile_prog \<Pi> ps mnm main) S"
   shows "\<forall>u \<in> callers t. frag_ok \<Pi> ps mnm main u"
 proof -
@@ -637,7 +637,7 @@ qed
 text \<open>An activation entered at \<^term>\<open>FunctionEntry p\<close> reaches \<^term>\<open>FunctionResult q\<close> only for
   \<open>p = q\<close>.\<close>
 lemma valid_ltr_entry_result_eq:
-  assumes wf: "wf_compile_input source_global \<Pi> ps mnm main"
+  assumes wf: "wf_compile_input gs \<Pi> ps mnm main"
     and t: "t \<in> valid_ltr gs (compile_prog \<Pi> ps mnm main) S"
     and en: "fst (hd (path t)) = FunctionEntry p"
     and sk: "sink_node t = FunctionResult q"
