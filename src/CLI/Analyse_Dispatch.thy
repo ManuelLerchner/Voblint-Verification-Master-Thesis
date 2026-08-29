@@ -975,6 +975,7 @@ code_identifier
 | code_module CFG_Prune \<rightharpoonup> (OCaml) Core
 | code_module Compile_Invariants \<rightharpoonup> (OCaml) Core
 | code_module VIMP_Proc_to_CFG \<rightharpoonup> (OCaml) Core
+| code_module Compile_Wellformed \<rightharpoonup> (OCaml) Core
 | code_module Abstract_Domain \<rightharpoonup> (OCaml) Core
 | code_module Numeric_Ops \<rightharpoonup> (OCaml) Core
 | code_module Exec_St \<rightharpoonup> (OCaml) Core

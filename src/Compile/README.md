@@ -62,7 +62,8 @@ over-approximate.
 | File | Question it answers |
 | --- | --- |
 | `VIMP_Proc_to_CFG.thy` | How is a command turned into nodes and edges, and is the result a well-formed graph? |
-| `Compile_Invariants.thy` | Which programs may be compiled, and what holds of the graph that comes out? |
+| `Compile_Wellformed.thy` | What is true of the graph that comes out: unique call sources, finiteness, `wf_cfg`? |
+| `Compile_Invariants.thy` | Which programs may be compiled, and where did each statement index come from? |
 | `Simulation/Residual_Location.thy` | After some steps, which node is the program counter at? |
 | `Simulation/Residual_Edges.thy` | Is the edge the compiler emitted for that command really in the graph? |
 | `Simulation/Simulation_Relation.thy` | What does it mean for a source state and a graph state to agree? (`csim`) |
@@ -77,7 +78,7 @@ Two branches that meet only at the end. `Simulation/` never mentions traces;
 only theory needing both.
 
 ```text
-VIMP_Proc_to_CFG
+VIMP_Proc_to_CFG ──► Compile_Wellformed
  ├─► Compile_Invariants ──► Procedure_Ownership ─────────────┐
  └─► Simulation/Residual_Location ──► …Residual_Edges        │
         └─► …Simulation_Relation ──► …Simulation_Preservation ┤

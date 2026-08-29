@@ -1,5 +1,5 @@
 theory Compile_Invariants
-  imports VIMP_Proc_to_CFG "Voblint_VIMP.VIMP_Program" "Voblint_CFG.CFG_Prune"
+  imports Compile_Wellformed "Voblint_VIMP.VIMP_Program" "Voblint_CFG.CFG_Prune"
 begin
 
 section \<open>What a program must satisfy, and what its graph then satisfies\<close>
@@ -243,6 +243,66 @@ theorem compile_self_call_edge:
   using assms by simp
 
 section \<open>Where each statement index came from in the source\<close>
+
+subsection \<open>Statement order in the source\<close>
+
+text \<open>
+  Which \<^const>\<open>Statement\<close> index \<^const>\<open>compile\<close> gives each command of a fragment, listed in
+  the order a bottom-up parser completes the commands: a reduction finishes only once its
+  whole right-hand side has been read, so an \<open>if\<close> is listed after both its branches and a
+  loop after its body.  Every clause allocates the same index its \<^const>\<open>compile\<close>
+  counterpart does: a leaf takes \<open>n\<close>; \<^const>\<open>Seq\<close> hands \<open>c2\<close> the counter \<open>c1\<close> ends at;
+  \<^const>\<open>If\<close> and \<^const>\<open>While\<close> take \<open>n\<close> for the guard and start the body at \<open>Suc n\<close>.
+  A front end that records one position per reduction can pair its \<open>k\<close>th position with
+  this list's \<open>k\<close>th index without reproducing \<^const>\<open>compile\<close>'s counter arithmetic;
+  stating the order here keeps the two from drifting.
+\<close>
+
+fun com_stmt_post_order :: "nat \<Rightarrow> com \<Rightarrow> cfg_node list" where
+  "com_stmt_post_order n SKIP = [Statement n]"
+| "com_stmt_post_order n (Assign x a) = [Statement n]"
+| "com_stmt_post_order n (Check c) = [Statement n]"
+| "com_stmt_post_order n (Seq c1 c2) =
+     com_stmt_post_order n c1 @ com_stmt_post_order (n + csize c1) c2"
+| "com_stmt_post_order n (If b c1 c2) =
+     com_stmt_post_order (Suc n) c1 @ com_stmt_post_order (Suc n + csize c1) c2
+       @ [Statement n]"
+| "com_stmt_post_order n (While b c) = com_stmt_post_order (Suc n) c @ [Statement n]"
+| "com_stmt_post_order n (Call dst q actuals) = [Statement n]"
+| "com_stmt_post_order n (Return e) = [Statement n]"
+| "com_stmt_post_order n Restore = [Statement n]"
+| "com_stmt_post_order n Unwind = [Statement n]"
+
+text \<open>The enumeration names exactly the indices the fragment allocates, each once: a
+  shorter or longer list, or a repeated index, would silently misalign every position
+  after it.\<close>
+
+lemma length_com_stmt_post_order [simp]: "length (com_stmt_post_order n c) = csize c"
+  by (induction c arbitrary: n) auto
+
+lemma set_com_stmt_post_order:
+  "set (com_stmt_post_order n c) = Statement ` {n ..< n + csize c}"
+proof (induction c arbitrary: n)
+  case (Seq c1 c2)
+  have "{n ..< n + csize c1} \<union> {n + csize c1 ..< n + csize c1 + csize c2}
+          = {n ..< n + (csize c1 + csize c2)}"
+    by auto
+  then show ?case using Seq by (simp flip: image_Un add: add.assoc)
+next
+  case (If b c1 c2)
+  have "insert n ({Suc n ..< Suc (n + csize c1)}
+          \<union> {Suc (n + csize c1) ..< Suc (n + csize c1 + csize c2)})
+          = {n ..< Suc (n + (csize c1 + csize c2))}"
+    by auto
+  then show ?case using If by (auto simp flip: image_Un image_insert)
+next
+  case (While b c)
+  have "insert n {Suc n ..< Suc (n + csize c)} = {n ..< Suc (n + csize c)}" by auto
+  then show ?case using While by (auto simp flip: image_insert)
+qed auto
+
+lemma distinct_com_stmt_post_order: "distinct (com_stmt_post_order n c)"
+  by (induction c arbitrary: n) (auto simp: set_com_stmt_post_order)
 
 text \<open>
   \<^const>\<open>com_stmt_post_order\<close> answers this for one fragment given the counter it

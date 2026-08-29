@@ -4,6 +4,9 @@ session Voblint_Compile in "." = "Voblint_CFG" +
     "Simulation"
   theories
     VIMP_Proc_to_CFG
+    (* What holds of the graph the compiler produced: call sites have unique
+       sources, the graph is finite, and it satisfies wf_cfg. *)
+    Compile_Wellformed
     (* The static contract on an accepted source program, the invariants of the
        graph it compiles to, and that graph's connectivity. *)
     Compile_Invariants

@@ -94,6 +94,12 @@ Scripts that helped (recreate under the scratchpad as needed):
   buffer, including ones whose disk copy changed underneath (it recreated
   a deleted theory twice and reverted an import). Save by path. Files
   opened with `view = false` reject `write_file`; open them in view.
+- **A wedged I/Q buffer will overwrite host edits later.** When `save_file`
+  or `open_file` hangs and is killed, the buffer still holds its old text; a
+  later flush writes that over whatever the host wrote in the meantime. It
+  silently reverted a 28-site rename in one theory. If I/Q stops responding,
+  do not fall back to host edits on a file it still has open --- restart I/Q
+  first, or verify with `git diff` before building.
 - **Edits landing mid-build** abort the build with "Incoherent digest";
   finish the edit batch, then build.
 - **Style measured in symbols, not bytes.** `\<Rightarrow>` is one column
@@ -101,8 +107,9 @@ Scripts that helped (recreate under the scratchpad as needed):
 
 ## VIMP status after the pass
 
-1894 -> ~990 lines across eight theories (`VIMP_Settings` deleted,
-`VIMP_Program` added). No `metis`/`smt`/`sorry`. Explicit `gs`/`\<Pi>`
+1894 -> 1019 lines across eight hand-written theories (`VIMP_Settings`
+deleted, `VIMP_Program` added), plus the 220-line `VIMP_Grammar_Generated`
+the generator owns. No `metis`/`smt`/`sorry`. Explicit `gs`/`\<Pi>`
 threading kept: the CFG/Core locales already take `gs` as a parameter and
 a VIMP-level locale would need ~20 interpretations to save two words in
 ~30 statements.
@@ -213,6 +220,34 @@ import `VIMP_Program`.
   explicit proofs already wrote `by (rule compiled_atI ...)`. Tag structural,
   terminating rewrites; leave evidence-unpacking rules bare.
 
+## Patterns from the naming and structure pass
+
+- **A free variable named like a constant.** `source_global` was used 469 times
+  across four sessions and defined nowhere -- every theorem mentioning it was
+  universally quantified over an arbitrary globals predicate, which is sound and
+  more general than it reads. VIMP and CFG already called the same parameter
+  `gs`. Before renaming, split each file into top-level command blocks and check
+  none contains both names: two did, and merging them there removed generality
+  no caller used. A grep for a definition is the cheap test --- if a name that
+  looks like a constant has none, it is a variable.
+- **Test a `[simp del]` exception by deleting it.** `declare pstep.Seq2
+  [simp del]`, three lines under the blanket `pstep.intros [simp, intro]`, had no
+  comment saying why. The build is green without it, so the exception was stale.
+  An undocumented attribute exception is worth one build to check.
+- **Split a long theory where the dependency graph already cuts.** `VIMP_Proc_to_CFG`
+  was 1272 lines over five concerns. Listing what each half declares and grepping
+  who consumes it showed one clean cut: everything from call-source uniqueness
+  onward is *what is true of the compiled graph*, consumed by 38 files but almost
+  all of them transitively through `Compile_Invariants`. Only five direct
+  importers needed repointing. `Compile_Wellformed` is that half (690 lines) and
+  the compiler theory drops to 544.
+- **Statement order was in the wrong theory.** `com_stmt_post_order` and its
+  three characterization lemmas sat in the compiler theory but are consumed only
+  by `Compile_Invariants`'s `prog_stmt_post_order`, the CLI's source-position
+  map. Moving them puts the whole statement-order story in one place. Watch the
+  order when moving into an existing section: a `text` block referring to
+  \<^const> a definition must come after it, not before.
+
 ## Style-guide compliance, measured
 
 The baselines are the Isabelle Community Conventions
@@ -233,16 +268,15 @@ passes:
 
 | | Core | Analysis | CLI | Examples |
 | --- | --- | --- | --- | --- |
-| theories / lines | 52 / 25407 | 62 / 25490 | 6 / 4128 | 64 / 18198 |
-| `metis` | 48 | 17 | - | - |
+| theories / lines | 52 / 25407 | 62 / 25490 | 6 / 4129 | 64 / 18198 |
+| `metis` | 45 | 14 | - | 5 |
 | `smt` | - | 4 | - | - |
-| `apply` lines | 60 | 41 | - | 9 |
-| multi-`apply` blocks | 10 | 9 | - | 2 |
+| `apply` lines | 61 | 41 | - | 9 |
 | `[rule_format]` | 4 | 1 | - | - |
 | `apply (auto; ...)` | - | 4 | - | - |
 | implicit `by rule` | 2 | - | - | - |
 | theories over 1500 lines | 5 | 3 | - | 1 |
-| lines over 100 symbols | 382 | 461 | 470 | 486 |
+| lines over 100 symbols | 381 | 458 | 470 | 486 |
 | theories with no orientation block | 3 | 6 | 2 | 6 |
 
 The largest theories are `Example_Interval_Placement` (2901),
@@ -250,24 +284,33 @@ The largest theories are `Example_Interval_Placement` (2901),
 `Abstract_Domain` (2110). Splitting those is the structural half of the Core
 pass; retiring `metis` and the apply scripts is the proof half.
 
-## CFG status after the pass
+## CFG and Compile status after the pass
 
-`Voblint_CFG` 6573 -> 1409 lines (graph model, `CFG_Exec`, and `Collecting/`);
-`Voblint_Compile` is the new session holding the compiler, the forward
-simulation, and the two bridge theories. The 2507-line `Control_Simulation`
-(over the 1500 cap) became three theories, and every theory then took its name
-from what it states rather than from the pass that produced it:
+The 6573-line `Voblint_CFG` became two sessions: `Voblint_CFG` at 1559 lines
+across 8 theories (graph model, `CFG_Exec`, `Collecting/`) and the new
+`Voblint_Compile` at 5086 across 9 (compiler, forward simulation, the two
+bridge theories). Every theory took its name from what it states rather than
+from the pass that produced it, and the two over-long ones were split along a
+concern boundary:
 
 ```text
 Control_Residual            -> Simulation/Residual_Location
 Control_Emit                -> Simulation/Residual_Edges
-Control_Simulation          -> Simulation/Simulation_Relation
+Control_Simulation          -> Simulation/Simulation_Relation   (2507 -> three theories)
 Control_Simulation_Forward  -> Simulation/Simulation_Preservation
-Compile_Locality            -> Procedure_Ownership          (1490 -> 660)
+Compile_Locality            -> Procedure_Ownership              (1490 -> 660)
 Located_LTR                 -> Source_To_Trace
 Located_Exec                -> Voblint_CFG.CFG_Exec
+VIMP_Proc_to_CFG            -> VIMP_Proc_to_CFG (544) + Compile_Wellformed (690)
 ```
 
 `Compile_Certificate` (75 lines) folded into `Simulation_Preservation` and
 `Compile_Reaches` (159) into `Compile_Invariants`; `CFG_Prune` kept only its
-graph-generic half. No `metis`, no `smt`, no `sorry` in either session.
+graph-generic half. Constants were renamed for the same reason as the theories:
+`procs_compiled` -> `procs_embedded`, `source_wf` -> `return_safe`,
+`source_global` -> `gs`, and `proc_activation` folded into `compiled_at`.
+
+Largest theory in either session is now 852 lines. No `metis`, no `smt`, no
+`sorry`, no apply scripts, and each session ends with a non-vacuity witness
+(`pcompletes_witness`, `ltr_collect_witness`, `procs_embedded_witness` /
+`csim_witness` / `source_run_has_ltr_witness`).

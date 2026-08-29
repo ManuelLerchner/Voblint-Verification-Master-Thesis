@@ -567,6 +567,26 @@ lemma intra_step_frame_eq:
 
 subsection \<open>Intra-step simulation\<close>
 
+text \<open>The base cases of that simulation, once: a located residual with an emitted action moves
+  along its own edge in one \<open>cstep\<close> and re-locates as a completed sub-command.  Which action it
+  is only decides the store, which the caller supplies as \<open>s' \<in> edge_step a s\<close>.\<close>
+lemma control_at_base_step:
+  assumes loc: "control_at \<Pi> p c0 k n r v"
+      and act: "emitted_action r = Some a"
+      and cmp: "compile \<Pi> p c0 k n = (n', en, E, K)"
+      and sub: "E \<subseteq> intra g"
+      and stp: "s' \<in> edge_step a s"
+  obtains w where
+    "control_at \<Pi> p c0 k n SKIP w"
+    "star (cstep gs g) (v, s, stk) (w, s', stk)"
+proof -
+  from control_at_emitted_edge[OF loc act cmp] obtain j w where
+    jw: "v = Statement j" "(Statement j, a, w) \<in> E" "control_at \<Pi> p c0 k n SKIP w" by blast
+  have "(Statement j, a, w) \<in> intra g" using jw(2) sub by blast
+  from cstep.Intra[OF this stp] have "cstep gs g (Statement j, s, stk) (w, s', stk)" .
+  with jw(1) jw(3) show ?thesis by (auto intro: that star_step1)
+qed
+
 text \<open>The theory's conclusion: an \<^const>\<open>intra_step\<close> of a located residual leaves the frame
   stack alone, and the graph follows it to a node at which the successor residual is located
   again.  This is the fact the simulation relation is preserved by.\<close>
@@ -583,36 +603,26 @@ next
   case (Assign x a k n0)
   from Assign.prems(1) have out: "c' = SKIP" "s' = s(x := aval a s)" "frs' = frs"
     by auto
-  have ca: "control_at \<Pi> p (Assign x a) k n0 (Assign x a) (Statement n0)"
-    by (rule control_at.Assign)
-  from control_at_assign_edge[OF ca refl Assign.prems(2)] obtain j w where
-    jw: "Statement n0 = Statement j" "(Statement j, EA_Assign x a, w) \<in> E"
-        "control_at \<Pi> p (Assign x a) k n0 SKIP w" by blast
-  have "(Statement j, EA_Assign x a, w) \<in> intra g"
-    using jw(2) Assign.prems(3) by blast
-  from cstep_assign[OF this]
-  have "cstep gs g (Statement j, s, stk) (w, s(x := aval a s), stk)" by simp
-  then have "star (cstep gs g) (Statement n0, s, stk) (w, s', stk)"
-    using jw(1) out(2) by simp
-  then show ?case using out(1,3) jw(3) by auto
+  have act: "emitted_action (Assign x a) = Some (EA_Assign x a)" by simp
+  have mem: "s' \<in> edge_step (EA_Assign x a) s" using out(2) by simp
+  obtain w where "control_at \<Pi> p (Assign x a) k n0 SKIP w"
+      and "star (cstep gs g) (Statement n0, s, stk) (w, s', stk)"
+    by (rule control_at_base_step[OF control_at.Assign act Assign.prems(2)
+                                     Assign.prems(3) mem])
+  then show ?case using out(1,3) by auto
 next
   case (AssignDone x a k n0) then show ?case by blast
 next
   case (Check b k n0)
   from Check.prems(1) have out: "c' = SKIP" "s' = s" "frs' = frs"
     by auto
-  have ca: "control_at \<Pi> p (VIMP_Proc.com.Check b) k n0 (VIMP_Proc.com.Check b) (Statement n0)"
-    by (rule control_at.Check)
-  from control_at_check_edge[OF ca refl Check.prems(2)] obtain j w where
-    jw: "Statement n0 = Statement j" "(Statement j, EA_Check b, w) \<in> E"
-        "control_at \<Pi> p (VIMP_Proc.com.Check b) k n0 SKIP w" by blast
-  have "(Statement j, EA_Check b, w) \<in> intra g"
-    using jw(2) Check.prems(3) by blast
-  from cstep_check[OF this]
-  have "cstep gs g (Statement j, s, stk) (w, s, stk)" .
-  then have "star (cstep gs g) (Statement n0, s, stk) (w, s', stk)"
-    using jw(1) out(2) by simp
-  then show ?case using out(1,3) jw(3) by auto
+  have act: "emitted_action (VIMP_Proc.com.Check b) = Some (EA_Check b)" by simp
+  have mem: "s' \<in> edge_step (EA_Check b) s" using out(2) by simp
+  obtain w where "control_at \<Pi> p (VIMP_Proc.com.Check b) k n0 SKIP w"
+      and "star (cstep gs g) (Statement n0, s, stk) (w, s', stk)"
+    by (rule control_at_base_step[OF control_at.Check act Check.prems(2)
+                                     Check.prems(3) mem])
+  then show ?case using out(1,3) by auto
 next
   case (CheckDone b k n0) then show ?case by blast
 next
@@ -794,20 +804,14 @@ next
     out: "dst = Some x" "special_table q = Some desc" "classify_special desc actuals = Some sc"
          "special_result sc s v" "c' = SKIP" "s' = s(x := v)" "frs' = frs"
     by auto
-  have ca: "control_at \<Pi> p (Call (Some x) q actuals) k n0 (Call (Some x) q actuals) (Statement n0)"
-    by (rule control_at.CallHead)
-  from control_at_special_edge[OF ca refl out(2) out(3) CallHead.prems(2)[unfolded out(1)]]
-  obtain j w where
-    jw: "Statement n0 = Statement j" "(Statement j, EA_Special sc x, w) \<in> E"
-        "control_at \<Pi> p (Call (Some x) q actuals) k n0 SKIP w" by blast
-  have edgeg: "(Statement j, EA_Special sc x, w) \<in> intra g"
-    using jw(2) CallHead.prems(3) by blast
-  have mem: "s(x := v) \<in> edge_step (EA_Special sc x) s" using out(4) by auto
-  have "cstep gs g (Statement j, s, stk) (w, s(x := v), stk)"
-    using cstep.Intra[OF edgeg mem] by simp
-  then have "star (cstep gs g) (Statement n0, s, stk) (w, s', stk)"
-    using jw(1) out(6) by simp
-  then show ?case using out(1,5,7) jw(3) by auto
+  have act: "emitted_action (Call (Some x) q actuals) = Some (EA_Special sc x)"
+    using out(2,3) by simp
+  have mem: "s' \<in> edge_step (EA_Special sc x) s" using out(4,6) by auto
+  obtain w where "control_at \<Pi> p (Call (Some x) q actuals) k n0 SKIP w"
+      and "star (cstep gs g) (Statement n0, s, stk) (w, s', stk)"
+    by (rule control_at_base_step[OF control_at.CallHead act
+              CallHead.prems(2)[unfolded out(1)] CallHead.prems(3) mem])
+  then show ?case using out(1,5,7) by auto
 next
   case (CallDone dst q actuals k n0) then show ?case by blast
 next
