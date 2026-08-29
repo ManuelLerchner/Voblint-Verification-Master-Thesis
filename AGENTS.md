@@ -109,8 +109,9 @@ restore/unwind commands. CFGs separate local `intra` edges from the `calls`
 relation and use `FunctionEntry` and `FunctionResult` nodes. Concrete transfer
 primitives live in `src/CFG/CFG_Transfer.thy`; activation-local semantics live
 under `src/CFG/Collecting/`. The compiler that produces such a graph from a
-VIMP program lives in `src/Compile/`; only `Compile_Locality` and
-`Located_LTR` there mention both the compiler and the collecting semantics.
+VIMP program lives in `src/Compile/`; only `Procedure_Ownership` and
+`Source_To_Trace` there mention both the compiler and the collecting
+semantics.
 
 ## VIMP grammar pipeline
 
@@ -299,7 +300,8 @@ deviates. When a rule here conflicts with the baseline, this file wins.
 
 ### Layout
 
-- Lines <= 100 symbols. Two-space indent. One blank line between top-level
+- Lines <= 100 symbols; generated theories (`VIMP_Grammar_Generated`) are
+  exempt, since the generator owns their layout. Two-space indent. One blank line between top-level
   declarations. `proof`, `next`, `qed` flush left within their block.
 - Theories <= 1500 lines. Split along a concern boundary (a domain, a proof
   layer, a generator), never by line count alone. One concern per theory;
@@ -336,16 +338,55 @@ deviates. When a rule here conflicts with the baseline, this file wins.
 
 ### Attributes
 
+Baseline: <https://isabelle.systems/conventions/theorem_attributes.html>.
+Its governing rule is *do not declare something `simp`/`intro`/etc. unless you
+are sure it is a good idea*: a declared rule must take an obvious step that
+does not surprise the reader, and classical rules matter less than `simp`
+rules because conceptually non-trivial reasoning reads better applied
+explicitly. Everything below refines that; the two deviations are marked.
+
 - Only named lemmas carry attributes.
 - A lemma is `[simp]` when its LHS is already in simp normal form and the
-  RHS is clearly simpler. A one-step destruct or introduction off a
-  definition is `[dest]` or `[intro]`. Tag by default when the shape fits;
-  leave bare when two rewrite directions compete, the rule can loop, or the
-  step is conceptually non-trivial and should stay visible in proofs.
+  RHS is clearly simpler. Prefer unconditional equations; a conditional one is
+  worth tagging only when its precondition is cheap relative to how often the
+  rule fires. A one-step destruct or introduction off a definition is `[dest]`
+  or `[intro]`. Tag by default when the shape fits; leave bare when two rewrite
+  directions compete, the rule can loop, or the step is conceptually
+  non-trivial and should stay visible in proofs.
+- When a new constant is introduced, prove its simple `simp` rules with it.
+  When a family of rules recurs across theories, give it a named collection or
+  `lemmas` bundle (`call_info_of_simps`, `mk_program_simps`,
+  `wf_compile_input_simps`) rather than repeating the list per call site.
 - Before tagging `[simp]`, check for an existing simp rule with an
   overlapping LHS that stops at a different normal form. Fix a
   non-confluent pair at the algebra level with a bridging lemma; once
   confluent, delete any lemma that only restated a special case.
+- **A rule named as a rule carries its attribute** (deviation: the baseline
+  would leave this to judgement). The naming convention below
+  ends introduction, elimination and destruction rules in `I`, `E`, `D`; a
+  lemma with one of those names and no `[intro]` / `[elim]` / `[dest]` is
+  either mis-named or withheld from the automation it was written for. Tag it,
+  or rename it to say what it really is. The one standing exception is a
+  multi-conclusion `D` bundle cited by index (`wf_compile_inputD(8)`): tagging
+  it `[dest]` would spawn every conclusion from every occurrence of its
+  premise, so those stay bare and stay explicitly cited.
+- **Every `inductive` predicate carries its inversion rules** (deviation: the
+  baseline states no such requirement). Give it one
+  `inductive_cases` per constructor shape the proofs case on, named
+  `<pred>_<Shape>E`, and tag it: `[elim!]` when inverting that shape is
+  deterministic, plain `[elim]` when a case recurses into a subterm (`Seq`,
+  `If`, `While`, `Call`) so the classical reasoner does not chase the nesting
+  eagerly. A predicate without them forces every consumer to hand-roll
+  `cases rule: <pred>.cases`, and turns proofs that should be one `auto` into
+  a case-per-constructor `proof` block --- `control_at_initial` was 25 lines
+  of exactly that before `control_at` had its rules.
+- **Declare `<pred>.intros [intro]` when the clauses are cheap to search** ---
+  their premises are memberships, equations, or smaller instances of the same
+  predicate (`pstep`, `intra_step`, `cstep`, `control_at`, `stack_repr`).
+  Leave them undeclared when picking the clause is the substance of the proof
+  rather than bookkeeping: `csim` and `valid_ltr` keep their introduction rules
+  explicit, because which constructor applies is what their theorems are
+  about.
 - Keep attribute changes local with `context`/`bundle`; avoid
   `[simplified]`, `[rule_format]`, and global `declare ... [simp del]`.
 - Never check in `sorry`, `back`, or an unattributed `sledgehammer` call.

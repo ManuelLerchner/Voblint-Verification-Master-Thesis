@@ -87,7 +87,7 @@ lemma key_entry_invariant_eq:
   using key_entry_invariant[OF assms(1), THEN bspec, OF callers_refl, rule_format, OF assms(2),
       THEN conjunct1] .
 
-lemma key_entry_invariant_call_enterD:
+lemma key_entry_invariant_call_enterD [dest]:
   assumes "callee \<in> valid_ltr gs g S" and "caller_of callee = Some caller"
   shows "call_enter_store gs g (sink_node caller) (sink_store caller) (entry_store callee)"
   using key_entry_invariant[OF assms(1), THEN bspec, OF callers_refl, rule_format, OF assms(2)]

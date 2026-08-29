@@ -30,6 +30,13 @@ inductive stack_repr :: "cfg \<Rightarrow> cframe list \<Rightarrow> ltr \<Right
           \<Longrightarrow> stack_repr g stk c
           \<Longrightarrow> stack_repr g ((cont, dst, caller) # stk) t"
 
+declare stack_repr.intros [intro]
+
+text \<open>Inversion by the shape of the runtime stack.  A frame's clause recurses on the shorter
+  stack, so it stays plain \<open>[elim]\<close>; an empty stack has only one clause and is \<open>[elim!]\<close>.\<close>
+inductive_cases stack_repr_NilE [elim!]: "stack_repr g [] t"
+inductive_cases stack_repr_ConsE [elim]: "stack_repr g (cf # stk) t"
+
 text \<open>\<open>ltr_repr\<close> pins a valid trace to a located configuration: the trace's sink is the current
   node/store, and its caller chain is the runtime stack.\<close>
 definition ltr_repr :: "(vname \<Rightarrow> bool) \<Rightarrow> cfg \<Rightarrow> store set \<Rightarrow> cconf \<Rightarrow> ltr \<Rightarrow> bool" where
@@ -46,7 +53,7 @@ text \<open>\<open>stack_repr\<close> reads only the top \<^const>\<open>caller_
 lemma stack_repr_cong:
   "stack_repr g stk t1 \<Longrightarrow> caller_of t2 = caller_of t1
    \<Longrightarrow> fst (hd (path t2)) = fst (hd (path t1)) \<Longrightarrow> stack_repr g stk t2"
-  by (cases rule: stack_repr.cases) (auto intro: stack_repr.intros)
+  by (cases rule: stack_repr.cases) auto
 
 subsection \<open>The return step\<close>
 
@@ -158,8 +165,7 @@ lemma located_ltr_entry:
 proof -
   have "ltr_repr source_global g S (cfg_entry g, s, []) (Root [(cfg_entry g, s)])"
     using assms
-    by (auto simp: ltr_repr_def sink_node_def sink_store_def valid_ltr.init
-             intro: stack_repr.empty)
+    by (auto simp: ltr_repr_def sink_node_def sink_store_def valid_ltr.init)
   then show ?thesis by (auto simp: located_ltr_def)
 qed
 
@@ -195,10 +201,10 @@ qed
 subsection \<open>The initial main activation\<close>
 
 text \<open>The program entry \<^term>\<open>FunctionEntry mnm\<close> is an ordinary \<open>csim.Base\<close> activation: the
-  distinguished main procedure is declared in \<open>\<Pi>\<close> (\<open>wf_compile_input\<close>), so its body-fragment is
-  certified by \<open>procs_compiled_compile_prog\<close> and \<^const>\<open>proc_activation\<close> holds.  One
-  \<^term>\<open>EA_Nop\<close> edge crosses from \<^term>\<open>FunctionEntry mnm\<close> to the body entry \<open>en\<close>, where
-  the \<open>Base\<close> activation simulates the source \<open>main\<close>.\<close>
+  distinguished main procedure is declared in \<open>\<Pi>\<close> (\<open>wf_compile_input\<close>), so its body fragment is
+  certified by \<open>procs_embedded_compile_prog\<close>.  One \<^term>\<open>EA_Nop\<close> edge crosses from
+  \<^term>\<open>FunctionEntry mnm\<close> to the body entry \<open>en\<close>, where the \<open>Base\<close> activation simulates the
+  source \<open>main\<close>.\<close>
 lemma compile_prog_main_base:
   assumes wf: "wf_compile_input source_global \<Pi> ps mnm main"
   obtains en where
@@ -206,31 +212,18 @@ lemma compile_prog_main_base:
     "csim \<Pi> (compile_prog \<Pi> ps mnm main) (main, s, []) (en, s, [])"
 proof -
   let ?g = "compile_prog \<Pi> ps mnm main"
-  have pc: "procs_compiled \<Pi> ?g" by (rule procs_compiled_compile_prog[OF wf])
+  have pc: "procs_embedded \<Pi> ?g" by (rule procs_embedded_compile_prog[OF wf])
   have mnmdecl: "\<Pi> mnm = Some (\<lparr>formals = [], body = main\<rparr>)"
     by (rule wf_compile_inputD(2)[OF wf])
-  obtain k m m' en E K where
-    cbody: "compile \<Pi> mnm (body (\<lparr>formals = [], body = main\<rparr>)) k m = (m', en, E, K)"
-      and Esub: "E \<subseteq> intra ?g" and Ksub: "K \<subseteq> calls ?g"
+  obtain k m en where
+    cacc: "compiled_at \<Pi> ?g mnm (body (\<lparr>formals = [], body = main\<rparr>)) k m"
+      and ctrl: "control_at \<Pi> mnm (body (\<lparr>formals = [], body = main\<rparr>)) k m
+                   (body (\<lparr>formals = [], body = main\<rparr>)) en"
       and entry: "(FunctionEntry mnm, EA_Nop, en) \<in> intra ?g"
-      and exitm: "falls_through (body (\<lparr>formals = [], body = main\<rparr>)) \<longrightarrow>
-                    (k, EA_Ret None mnm, FunctionResult mnm) \<in> intra ?g"
-      and srcbody: "source_com (body (\<lparr>formals = [], body = main\<rparr>))"
-    by (rule procs_compiled_proc[OF pc mnmdecl])
+    by (rule procs_embedded_activation[OF pc mnmdecl])
   have bodyeq: "body (\<lparr>formals = [], body = main\<rparr>) = main" by simp
-  have cbody': "compile \<Pi> mnm main k m = (m', en, E, K)" using cbody bodyeq by simp
-  have srcmain: "source_com main" using srcbody bodyeq by simp
-  have exitm': "falls_through main \<longrightarrow> (k, EA_Ret None mnm, FunctionResult mnm) \<in> intra ?g"
-    using exitm bodyeq by simp
-  have cacc: "compiled_at \<Pi> ?g mnm main k m"
-    by (rule compiled_atI[OF cbody' Esub Ksub exitm'])
-
-  have pa: "proc_activation \<Pi> mnm main"
-    using mnmdecl bodyeq unfolding proc_activation_def by auto
   have base: "csim \<Pi> ?g (main, s, []) (en, s, [])"
-    by (rule csim.Base[OF control_at_initial[OF srcmain, of \<Pi> mnm k m,
-                          folded compile_entry[OF cbody']] cacc pa])
-
+    by (rule csim.Base[OF ctrl[unfolded bodyeq] cacc[unfolded bodyeq]])
   from entry base show ?thesis ..
 qed
 
@@ -261,8 +254,8 @@ theorem source_run_has_ltr:
                    \<and> ltr_repr source_global (compile_prog \<Pi> ps mnm main) S (v, s, stk) t"
 proof -
   let ?g = "compile_prog \<Pi> ps mnm main"
-  have pc: "procs_compiled \<Pi> ?g" by (rule procs_compiled_compile_prog[OF wf])
-  have swf: "source_wf (main, s0, [])" by (rule wf_compile_input_source_wf[OF wf])
+  have pc: "procs_embedded \<Pi> ?g" by (rule procs_embedded_compile_prog[OF wf])
+  have swf: "return_safe main" by (rule wf_compile_input_return_safe[OF wf])
   obtain en where entry: "(FunctionEntry mnm, EA_Nop, en) \<in> intra ?g"
     and base: "csim \<Pi> ?g (main, s0, []) (en, s0, [])"
     by (rule compile_prog_main_base[OF wf])
@@ -323,7 +316,7 @@ proof -
   from source_run_has_ltr[OF wf s0 run] obtain v stk t
     where sim: "csim \<Pi> ?g (residual, s, []) (v, s, stk)"
       and rep: "ltr_repr source_global ?g S (v, s, stk) t" by blast
-  have stk0: "stk = []" using csim_Nil_baseD[OF sim] by simp
+  have stk0: "stk = []" using sim by blast
   from rep stk0 have tv: "t \<in> valid_ltr source_global ?g S" and sn: "sink_node t = v"
     and ss: "sink_store t = s" and sr: "stack_repr ?g [] t"
     by (auto simp: ltr_repr_def)

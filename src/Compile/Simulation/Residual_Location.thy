@@ -6,31 +6,28 @@ section \<open>Where a partly executed command sits in the graph\<close>
 
 text \<open>
   Running a command part way leaves a \<^emph>\<open>residual\<close>: the piece still to execute.
-  \<open>control_at\<close> relates a residual to the node the graph's program counter has reached.
-  It describes control only --- store agreement is stated separately, by the simulation
-  relation.
+  \<open>control_at \<Pi> p c0 k n r v\<close> states that residual \<open>r\<close> of the fragment \<open>c0\<close> --- compiled at
+  offset \<open>n\<close> with continuation \<open>k\<close> --- corresponds to CFG node \<open>v\<close>.  It tracks control only;
+  store agreement is the simulation relation's business.
 
-  A residual that has run down to \<^const>\<open>SKIP\<close> sits at the continuation the compiler was
-  handed, not at an exit node of its own, because \<^const>\<open>compile\<close> takes the continuation
-  as an input rather than allocating one.  The \<^const>\<open>falls_through\<close> premises below are
-  semantic rather than proof conveniences: control reaches the second half of a
-  \<^const>\<open>Seq\<close> only if the first half can complete normally, and without them the relation
-  would admit positions no execution can occupy.
+  A command that \<^emph>\<open>reduces to\<close> \<^const>\<open>SKIP\<close> is located at the continuation \<open>k\<close>, because
+  \<^const>\<open>compile\<close> takes the continuation as an input rather than allocating an exit node of
+  its own.  A literal source \<^const>\<open>SKIP\<close> is the exception: it keeps its own statement node
+  until its \<^term>\<open>EA_Nop\<close> edge is taken.
+
+  \<open>SeqRight\<close> and \<open>IfDone\<close> require \<^const>\<open>falls_through\<close>, so that \<open>control_at\<close> describes only
+  positions a normal completion can reach: control enters the second half of a
+  \<^const>\<open>Seq\<close> only if the first half can complete, and a conditional completes only through
+  a branch that can.  Without the guard a conditional whose branches both \<^const>\<open>Return\<close>
+  would still be allowed a \<^const>\<open>SKIP\<close> residual at its continuation.
 \<close>
 
 subsection \<open>Located residuals\<close>
 
-text \<open>
-  Residual coverage.  For each source form the located clauses fix which node the residual
-  occupies; runtime-only forms are handled as follows.
-    \<^item> \<^const>\<open>SKIP\<close>, assignment, sequence (before and after left completion), conditionals,
-      loops, call site, entered continuation, and explicit \<^const>\<open>Return\<close> all map to a
-      compiled node or to the continuation.
-    \<^item> \<^const>\<open>Restore\<close> and \<^const>\<open>Unwind\<close> are runtime-only activation markers, not
-      located here: once a \<^const>\<open>Return\<close> fires the CFG control is already at \<^term>\<open>FunctionResult p\<close>
-      (through the \<^term>\<open>EA_Ret\<close> edge) and the remaining activation return is discharged by the
-      located executor \<open>cstep\<close>, not by a fragment node.
-\<close>
+text \<open>\<^const>\<open>Restore\<close> and \<^const>\<open>Unwind\<close> have no clause: they are runtime-only activation
+  markers rather than compiled commands.  Once a \<^const>\<open>Return\<close> fires the CFG is already at
+  \<^term>\<open>FunctionResult p\<close> through the \<^term>\<open>EA_Ret\<close> edge, and the activation return that
+  remains is performed by \<open>cstep\<close> popping a frame, not by any fragment node.\<close>
 
 inductive control_at ::
   "proc_table \<Rightarrow> pname \<Rightarrow> com \<Rightarrow> cfg_node \<Rightarrow> nat \<Rightarrow> com \<Rightarrow> cfg_node \<Rightarrow> bool"
@@ -81,16 +78,29 @@ where
 | ReturnHead:
     "control_at \<Pi> p (Return e) k n (Return e) (Statement n)"
 
-text \<open>The two \<^const>\<open>falls_through\<close> premises above are semantic side conditions on normal
-  completion, not proof conveniences.  Control enters \<open>c2\<close> of a \<^const>\<open>Seq\<close> only after \<open>c1\<close> has
-  completed normally, and a conditional completes normally only through a branch that can.
-  Without them the predicate admits residual locations no execution can occupy --- a conditional
-  whose branches both \<^const>\<open>Return\<close> would still be allowed a \<^const>\<open>SKIP\<close> residual at its
-  continuation.
+declare control_at.intros [intro]
 
-  The pay-off is the converse below: a located \<^const>\<open>SKIP\<close> witnesses that its command can
-  complete normally.  This is what lets \<open>compile_proc\<close> allocate the epilogue lazily, since the
-  \<^term>\<open>EA_Ret None p\<close> edge is then needed exactly when some execution can reach it.\<close>
+text \<open>Inversion by the shape of the fragment \<open>c0\<close>, which is what every consumer knows and
+  cases on.  \<^const>\<open>Seq\<close>, \<^const>\<open>If\<close> and \<^const>\<open>While\<close> stay plain \<open>[elim]\<close> because their
+  clauses recurse into a sub-fragment, and an eager rule would chase the nesting; the rest
+  are \<open>[elim!]\<close>.  \<^const>\<open>Restore\<close> and \<^const>\<open>Unwind\<close> have no clause at all, so inverting
+  them is outright refutation --- that is what makes \<open>control_at_not_unwind\<close> a one-liner.\<close>
+inductive_cases control_at_SkipE [elim!]:    "control_at \<Pi> p SKIP k n r v"
+inductive_cases control_at_AssignE [elim!]:  "control_at \<Pi> p (Assign x a) k n r v"
+inductive_cases control_at_CheckE [elim!]:
+  "control_at \<Pi> p (VIMP_Proc.com.Check b) k n r v"
+inductive_cases control_at_SeqE [elim]:      "control_at \<Pi> p (Seq c1 c2) k n r v"
+inductive_cases control_at_IfE [elim]:       "control_at \<Pi> p (If b c1 c2) k n r v"
+inductive_cases control_at_WhileE [elim]:    "control_at \<Pi> p (While b c) k n r v"
+inductive_cases control_at_CallE [elim!]:
+  "control_at \<Pi> p (Call dst q actuals) k n r v"
+inductive_cases control_at_ReturnE [elim!]:  "control_at \<Pi> p (Return e) k n r v"
+inductive_cases control_at_RestoreE [elim!]: "control_at \<Pi> p Restore k n r v"
+inductive_cases control_at_UnwindE [elim!]:  "control_at \<Pi> p Unwind k n r v"
+
+text \<open>The converse of the \<^const>\<open>falls_through\<close> guards: a located \<^const>\<open>SKIP\<close> witnesses that
+  its command can complete normally.  This is what lets \<open>compile_proc\<close> allocate the epilogue
+  lazily --- the \<^term>\<open>EA_Ret None p\<close> edge is needed exactly when some execution can reach it.\<close>
 lemma control_at_SKIP_imp_falls_through:
   assumes "control_at \<Pi> p c k n SKIP v"
   shows "falls_through c"
@@ -101,30 +111,7 @@ subsection \<open>Initial location\<close>
 text \<open>A source command is initially located at its entry node \<open>Statement n\<close>.\<close>
 lemma control_at_initial:
   "source_com c \<Longrightarrow> control_at \<Pi> p c k n c (Statement n)"
-proof (induction c arbitrary: k n)
-  case SKIP show ?case by (rule control_at.Skip)
-next
-  case (Assign x a) show ?case by (rule control_at.Assign)
-next
-  case (Check b) show ?case by (rule control_at.Check)
-next
-  case (Seq c1 c2)
-  have "control_at \<Pi> p c1 (Statement (n + csize c1)) n c1 (Statement n)"
-    by (rule Seq.IH(1)) (use Seq.prems in simp)
-  from control_at.SeqLeft[OF this] show ?case .
-next
-  case (If b c1 c2) show ?case by (rule control_at.IfHead)
-next
-  case (While b c) show ?case by (rule control_at.WhileHead)
-next
-  case (Call dst q actuals) show ?case by (rule control_at.CallHead)
-next
-  case (Return e) show ?case by (rule control_at.ReturnHead)
-next
-  case Restore then show ?case by simp
-next
-  case Unwind then show ?case by simp
-qed
+  by (induction c arbitrary: k n) auto
 
 subsection \<open>Normal completion is located at the continuation\<close>
 
@@ -169,7 +156,7 @@ lemma control_at_source_com:
 
 lemma source_com_no_Restore:
   "source_com c \<Longrightarrow> c \<noteq> Restore"
-  by (cases c) auto
+  by auto
 
 end
 

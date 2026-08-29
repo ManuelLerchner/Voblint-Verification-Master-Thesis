@@ -448,6 +448,129 @@ proof -
   with c1 e1 show ?thesis by (auto intro: that)
 qed
 
+text \<open>
+  The sub-fragment projections.  Descending into one branch needs only that branch's compile
+  tuple and the fact that its edges are among the enclosing fragment's; the full rules above
+  additionally hand back the sibling's counter and edge sets, which such a proof binds and
+  never uses --- leaving their types unconstrained --- and the exact \<open>E = ...\<close> equation, which
+  it then has to weaken to a subset by hand.  These state the weaker fact directly.
+\<close>
+
+lemma compile_Seq_leftE [elim]:
+  assumes "compile \<Pi> p (Seq c1 c2) k n = (n', en, E, K)"
+  obtains m F L where
+    "compile \<Pi> p c1 (Statement (n + csize c1)) n = (m, Statement n, F, L)"
+    "F \<subseteq> E" "L \<subseteq> K"
+proof -
+  from assms obtain n1 E1 K1 n2 E2 K2 where
+    "compile \<Pi> p c1 (Statement (n + csize c1)) n = (n1, Statement n, E1, K1)"
+    "compile \<Pi> p c2 k (n + csize c1) = (n2, Statement (n + csize c1), E2, K2)"
+    "en = Statement n" "E = E1 \<union> E2" "K = K1 \<union> K2"
+    by (rule compile_SeqE)
+  then show ?thesis by (intro that) auto
+qed
+
+lemma compile_Seq_rightE [elim]:
+  assumes "compile \<Pi> p (Seq c1 c2) k n = (n', en, E, K)"
+  obtains m F L where
+    "compile \<Pi> p c2 k (n + csize c1) = (m, Statement (n + csize c1), F, L)"
+    "F \<subseteq> E" "L \<subseteq> K"
+proof -
+  from assms obtain n1 E1 K1 n2 E2 K2 where
+    "compile \<Pi> p c1 (Statement (n + csize c1)) n = (n1, Statement n, E1, K1)"
+    "compile \<Pi> p c2 k (n + csize c1) = (n2, Statement (n + csize c1), E2, K2)"
+    "en = Statement n" "E = E1 \<union> E2" "K = K1 \<union> K2"
+    by (rule compile_SeqE)
+  then show ?thesis by (intro that) auto
+qed
+
+lemma compile_If_leftE [elim]:
+  assumes "compile \<Pi> p (If b c1 c2) k n = (n', en, E, K)"
+  obtains m F L where
+    "compile \<Pi> p c1 k (Suc n) = (m, Statement (Suc n), F, L)"
+    "F \<subseteq> E" "L \<subseteq> K"
+proof -
+  from assms obtain n1 E1 K1 n2 E2 K2 where
+    "compile \<Pi> p c1 k (Suc n) = (n1, Statement (Suc n), E1, K1)"
+    "compile \<Pi> p c2 k (Suc n + csize c1) = (n2, Statement (Suc n + csize c1), E2, K2)"
+    "en = Statement n"
+    "E = {(Statement n, EA_Assume b, Statement (Suc n)),
+          (Statement n, EA_AssumeNot b, Statement (Suc n + csize c1))} \<union> E1 \<union> E2"
+    "K = K1 \<union> K2"
+    by (rule compile_IfE)
+  then show ?thesis by (intro that) auto
+qed
+
+lemma compile_If_rightE [elim]:
+  assumes "compile \<Pi> p (If b c1 c2) k n = (n', en, E, K)"
+  obtains m F L where
+    "compile \<Pi> p c2 k (Suc n + csize c1) = (m, Statement (Suc n + csize c1), F, L)"
+    "F \<subseteq> E" "L \<subseteq> K"
+proof -
+  from assms obtain n1 E1 K1 n2 E2 K2 where
+    "compile \<Pi> p c1 k (Suc n) = (n1, Statement (Suc n), E1, K1)"
+    "compile \<Pi> p c2 k (Suc n + csize c1) = (n2, Statement (Suc n + csize c1), E2, K2)"
+    "en = Statement n"
+    "E = {(Statement n, EA_Assume b, Statement (Suc n)),
+          (Statement n, EA_AssumeNot b, Statement (Suc n + csize c1))} \<union> E1 \<union> E2"
+    "K = K1 \<union> K2"
+    by (rule compile_IfE)
+  then show ?thesis by (intro that) auto
+qed
+
+lemma compile_While_bodyE [elim]:
+  assumes "compile \<Pi> p (While b c) k n = (n', en, E, K)"
+  obtains m F L where
+    "compile \<Pi> p c (Statement n) (Suc n) = (m, Statement (Suc n), F, L)"
+    "F \<subseteq> E" "L \<subseteq> K"
+proof -
+  from assms obtain n1 E1 K1 where
+    "compile \<Pi> p c (Statement n) (Suc n) = (n1, Statement (Suc n), E1, K1)"
+    "en = Statement n"
+    "E = {(Statement n, EA_Assume b, Statement (Suc n)),
+          (Statement n, EA_AssumeNot b, k)} \<union> E1"
+    "K = K1"
+    by (rule compile_WhileE)
+  then show ?thesis by (intro that) auto
+qed
+
+text \<open>A branching fragment's own two edges, for the callers that want them rather than a
+  sub-fragment: the guard edges out of \<^term>\<open>Statement n\<close>, which are all the fragment adds
+  beyond its branches.\<close>
+
+lemma compile_If_assume_edges:
+  assumes "compile \<Pi> p (If b c1 c2) k n = (n', en, E, K)"
+  shows "(Statement n, EA_Assume b, Statement (Suc n)) \<in> E"
+        "(Statement n, EA_AssumeNot b, Statement (Suc n + csize c1)) \<in> E"
+proof -
+  from assms obtain n1 E1 K1 n2 E2 K2 where
+    "compile \<Pi> p c1 k (Suc n) = (n1, Statement (Suc n), E1, K1)"
+    "compile \<Pi> p c2 k (Suc n + csize c1) = (n2, Statement (Suc n + csize c1), E2, K2)"
+    "en = Statement n"
+    and E: "E = {(Statement n, EA_Assume b, Statement (Suc n)),
+                 (Statement n, EA_AssumeNot b, Statement (Suc n + csize c1))} \<union> E1 \<union> E2"
+    "K = K1 \<union> K2"
+    by (rule compile_IfE)
+  show "(Statement n, EA_Assume b, Statement (Suc n)) \<in> E" using E by blast
+  show "(Statement n, EA_AssumeNot b, Statement (Suc n + csize c1)) \<in> E" using E by blast
+qed
+
+lemma compile_While_assume_edges:
+  assumes "compile \<Pi> p (While b c) k n = (n', en, E, K)"
+  shows "(Statement n, EA_Assume b, Statement (Suc n)) \<in> E"
+        "(Statement n, EA_AssumeNot b, k) \<in> E"
+proof -
+  from assms obtain n1 E1 K1 where
+    "compile \<Pi> p c (Statement n) (Suc n) = (n1, Statement (Suc n), E1, K1)"
+    "en = Statement n"
+    and E: "E = {(Statement n, EA_Assume b, Statement (Suc n)),
+                 (Statement n, EA_AssumeNot b, k)} \<union> E1"
+    "K = K1"
+    by (rule compile_WhileE)
+  show "(Statement n, EA_Assume b, Statement (Suc n)) \<in> E" using E by blast
+  show "(Statement n, EA_AssumeNot b, k) \<in> E" using E by blast
+qed
+
 text \<open>The procedure layout, packaged the same way: the body is compiled at \<open>n\<close> with the
   epilogue as its continuation, the entry bracket points at the body entry \<^term>\<open>Statement n\<close>,
   and the epilogue \<^term>\<open>Statement (n + csize (body decl))\<close> carries the implicit return.\<close>
@@ -897,10 +1020,6 @@ lemma frag_stmts_empty [simp]: "frag_stmts {} {} = {}"
 
 lemma frag_stmts_Un:
   "frag_stmts (E1 \<union> E2) (K1 \<union> K2) = frag_stmts E1 K1 \<union> frag_stmts E2 K2"
-  by (auto simp: frag_stmts_def)
-
-lemma frag_stmts_mono:
-  "E \<subseteq> E' \<Longrightarrow> K \<subseteq> K' \<Longrightarrow> frag_stmts E K \<subseteq> frag_stmts E' K'"
   by (auto simp: frag_stmts_def)
 
 lemma frag_stmts_E_srcI [intro]:

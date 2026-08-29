@@ -32,6 +32,13 @@ inductive cstep :: "(vname \<Rightarrow> bool) \<Rightarrow> cfg \<Rightarrow> c
     "cstep gs g (FunctionResult q, t, (cont, dst, caller) # stk)
        (cont, combine_collect gs dst caller t, stk)"
 
+declare cstep.intros [intro]
+
+text \<open>One inversion rule, because the three clauses are told apart by the edge taken rather
+  than by the shape of the configuration.  It stays plain \<open>[elim]\<close> so the classical reasoner
+  does not split every \<open>cstep\<close> hypothesis three ways before trying anything else.\<close>
+inductive_cases cstep_E [elim]: "cstep gs g (u, s, stk) y"
+
 subsection \<open>Single-step and small-step lemmas\<close>
 
 lemma cstep_nop:
@@ -64,6 +71,24 @@ lemma cstep_check:
   assumes "(u, EA_Check c, v) \<in> intra g"
   shows "cstep gs g (u, s, stk) (v, s, stk)"
   by (rule cstep.Intra[OF assms]) simp
+
+subsection \<open>Intra-only paths as stack-preserving runs\<close>
+
+text \<open>An \<^const>\<open>intra_path\<close> is a \<open>cstep\<close> run at any stack: every \<^const>\<open>cfg_intra_step\<close> is a
+  \<open>cstep.Intra\<close>, which passes the stack through untouched.  Callers that only need to move
+  along local edges can therefore reason on \<open>(node, store)\<close> pairs and lift the result here.\<close>
+lemma intra_path_imp_cstep_star:
+  "intra_path g x y \<Longrightarrow> star (cstep gs g) (fst x, snd x, stk) (fst y, snd y, stk)"
+proof (induction rule: star.induct)
+  case (refl a) show ?case by simp
+next
+  case (step a b c)
+  obtain ua sa where a: "a = (ua, sa)" by (cases a)
+  obtain ub sb where b: "b = (ub, sb)" by (cases b)
+  from step.hyps(1) a b obtain e where "(ua, e, ub) \<in> intra g" "sb \<in> edge_step e sa" by auto
+  hence "cstep gs g (ua, sa, stk) (ub, sb, stk)" by (rule cstep.Intra)
+  with step.IH a b show ?case by (auto intro: star.step)
+qed
 
 subsection \<open>Activation-stack matching\<close>
 

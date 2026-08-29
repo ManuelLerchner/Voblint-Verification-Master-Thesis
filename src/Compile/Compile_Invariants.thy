@@ -24,8 +24,8 @@ subsection \<open>Compiler input well-formedness\<close>
 text \<open>\<open>mnm\<close> names the distinguished entry procedure, declared in \<open>\<Pi>\<close> with an empty
   formal list and body \<open>main\<close>.  The callee list \<open>ps\<close> enumerates the other declared
   procedures (\<open>dom \<Pi>\<close> minus \<open>mnm\<close>), so \<open>FunctionEntry mnm\<close> / \<open>FunctionResult mnm\<close>
-  never collide with a callee's nodes, yet \<open>FunctionEntry mnm\<close> is an ordinary
-  \<open>proc_activation \<Pi> mnm main\<close> activation.\<close>
+  never collide with a callee's nodes, yet \<open>FunctionEntry mnm\<close> is an ordinary activation of
+  a declared procedure like any other.\<close>
 definition wf_compile_input ::
   "(vname => bool) => proc_table => pname list => pname => com => bool" where
   "wf_compile_input gs \<Pi> ps mnm main \<longleftrightarrow>
@@ -217,69 +217,6 @@ next
 next
   case (Return e') then show ?case by (auto split: if_splits)
 qed auto
-
-subsection \<open>Statement-range disjointness of distinct procedures\<close>
-
-lemma compile_proc_frag_range:
-  "compile_proc \<Pi> p decl n = (n', E, K) \<Longrightarrow> frag_stmts E K \<subseteq> {n..<n'}"
-proof -
-  assume A: "compile_proc \<Pi> p decl n = (n', E, K)"
-  define r where "r = n + csize (body decl)"
-  from A obtain Eb where
-    cb: "compile \<Pi> p (body decl) (Statement r) n = (r, Statement n, Eb, K)"
-    and E: "E = insert (FunctionEntry p, EA_Nop, Statement n)
-                  (if falls_through (body decl)
-                   then insert (Statement r, EA_Ret None p, FunctionResult p) Eb
-                   else Eb)"
-    and n': "n' = Suc r"
-    unfolding r_def by (rule compile_procE)
-  have body: "frag_stmts Eb K \<subseteq> {n..<n'}"
-    using compile_frag_stmts_range[OF cb] n' compile_counter_mono[OF cb] by auto
-  have lit: "frag_stmts {(FunctionEntry p, EA_Nop, Statement n),
-                (Statement r, EA_Ret None p, FunctionResult p)} {} \<subseteq> {n..<n'}"
-    using n' r_def compile_counter_mono[OF cb] by (auto simp: frag_stmts_def)
-  \<comment> \<open>the epilogue edge may be absent, so bound \<open>E\<close> by the set that always contains it\<close>
-  have Esub: "E \<subseteq> {(FunctionEntry p, EA_Nop, Statement n),
-                      (Statement r, EA_Ret None p, FunctionResult p)} \<union> Eb"
-    using E by (auto split: if_splits)
-  have "frag_stmts E K
-          \<subseteq> frag_stmts ({(FunctionEntry p, EA_Nop, Statement n),
-              (Statement r, EA_Ret None p, FunctionResult p)} \<union> Eb) ({} \<union> K)"
-    by (rule frag_stmts_mono[OF Esub]) simp
-  also have "... = frag_stmts {(FunctionEntry p, EA_Nop, Statement n),
-                (Statement r, EA_Ret None p, FunctionResult p)} {} \<union> frag_stmts Eb K"
-    by (rule frag_stmts_Un)
-  also have "... \<subseteq> {n..<n'}" using lit body by fastforce
-  finally show ?thesis .
-
-qed
-
-lemma compile_procs_frag_range:
-  "compile_procs \<Pi> ps n = (n', E, K) \<Longrightarrow> frag_stmts E K \<subseteq> {n..<n'}"
-proof (induction ps arbitrary: n n' E K)
-  case Nil then show ?case by (simp add: frag_stmts_def)
-next
-  case (Cons p ps)
-  show ?case
-  proof (cases "\<Pi> p")
-    case None with Cons show ?thesis by simp
-  next
-    case (Some decl)
-    with Cons.prems obtain n1 E0 K0 n2 E' K' where
-      cp: "compile_proc \<Pi> p decl n = (n1, E0, K0)"
-      and rest: "compile_procs \<Pi> ps n1 = (n2, E', K')"
-      and n': "n' = n2" and E: "E = E0 \<union> E'" and K: "K = K0 \<union> K'"
-      by (auto split: prod.splits)
-    have m1: "n \<le> n1" using compile_proc_counter_mono[OF cp] .
-    have m2: "n1 \<le> n2" using compile_procs_counter_mono[OF rest] .
-    have r0: "frag_stmts E0 K0 \<subseteq> {n..<n1}" using compile_proc_frag_range[OF cp] .
-    have r': "frag_stmts E' K' \<subseteq> {n1..<n2}" using Cons.IH[OF rest] .
-    have "frag_stmts E K = frag_stmts E0 K0 \<union> frag_stmts E' K'"
-      unfolding E K by (rule frag_stmts_Un)
-    also have "... \<subseteq> {n..<n2}" using r0 r' m1 m2 by fastforce
-    finally show ?thesis unfolding n' .
-  qed
-qed
 
 subsection \<open>Public compiler invariants\<close>
 

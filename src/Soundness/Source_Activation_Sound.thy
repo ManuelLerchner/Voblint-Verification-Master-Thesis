@@ -192,7 +192,7 @@ proof -
   from source_run_has_ltr[OF wf s0 run]
   obtain v stk t where sim: "csim Pi ?g (SKIP, s, []) (v, s, stk)"
     and rep: "ltr_repr source_global ?g S (v, s, stk) t" by blast
-  have stk0: "stk = []" using csim_Nil_baseD[OF sim] by simp
+  have stk0: "stk = []" using sim by blast
   from rep stk0 have tv: "t \<in> valid_ltr source_global ?g S" and sn: "sink_node t = v"
     and ss: "sink_store t = s" and sr: "stack_repr ?g [] t"
     by (auto simp: ltr_repr_def)
@@ -201,14 +201,14 @@ proof -
   \<comment> \<open>the located node of a completed activation is its procedure's result\<close>
   from sim obtain p c0 k n where
     ca: "control_at Pi p c0 k n SKIP v" and cat: "compiled_at Pi ?g p c0 k n"
-    by (blast elim: csim_NilE)
+    by blast
   \<comment> \<open>a completed activation witnesses that its fragment can fall through, which is exactly
       when the epilogue return edge exists\<close>
   have ft: "falls_through c0" by (rule control_at_SKIP_imp_falls_through[OF ca])
   from cat obtain n' en E K where
     cc: "compile Pi p c0 k n = (n', en, E, K)" and Esub: "E \<subseteq> intra ?g"
     and ret: "(k, EA_Ret None p, FunctionResult p) \<in> intra ?g"
-    using ft by (auto simp: compiled_at_def)
+    using ft by blast
   \<comment> \<open>the whole extension is intra flow, so it stays inside this same (root) activation\<close>
   have path_to_ret: "intra_path ?g (sink_node t, sink_store t) (FunctionResult p, s)"
   proof -

@@ -168,13 +168,106 @@ import `VIMP_Program`.
   fail to terminate.** Build the witness explicitly (`have "P a \<and> ..."`
   then `by blast`) rather than reaching for `smt`, which the style rules ban.
 
+## Patterns from the Compile review pass
+
+- **Two predicates that always travel together are one predicate.** Every
+  `csim` constructor carried `compiled_at` (this fragment is in the graph at
+  this offset) next to `proc_activation` (this fragment is procedure `p`'s
+  body), and every construction site proved both. Folding the second into the
+  first removed a premise from three constructor rules, deleted a definition
+  and its destruction lemma, and shortened every `[OF ...]` chain through
+  `csim.induct`. Check for the pattern by grepping the weaker predicate: if it
+  has no site where it appears alone, it is not a separate concept.
+- **A second structural induction over the same case tree is a missing
+  bridge lemma.** `compile_control_at_SKIP_exit_path` proved "a located `SKIP`
+  reaches its continuation" as an `intra_path`; `control_at_skip_to_exit`
+  re-proved it, case for case, as a `star cstep`. The real content is
+  `intra_path g x y ==> star (cstep gs g) (fst x, snd x, stk) (fst y, snd y, stk)`
+  --- graph-generic, eight lines, and it belongs in `CFG_Exec` next to `cstep`.
+  The second induction then collapses to one `using ... by simp`. Cost: 40
+  lines and one duplicated case analysis.
+- **Derive the specialized inversion lemma from the general one.**
+  `pstep_seq_after_seq_restore` (stepping `Seq inner Restore` down a
+  `seq_after` spine) repeated the whole `rev_induct` of
+  `pstep_seq_after_headD`. It is that lemma at `w = Seq inner Restore` plus one
+  `Seq` inversion --- six lines instead of thirty.
+- **A configuration-shaped predicate that reads one component.**
+  `source_wf :: com * store * frame list => bool` case-split its argument and
+  looked only at the command. `return_safe :: com => bool` says the same thing,
+  states the exported `csim_step` premise honestly, and stops callers from
+  building a dummy store and frame list to ask the question.
+- **Unused `assumes` survive because nothing type-checks them away.**
+  `csim_call_base` took `length actuals = length (formals decl)` and
+  `distinct (formals decl)`; neither appeared in the proof body, and both were
+  threaded in by every caller. A third, `special_table q = None`, was derivable
+  from two other premises. Read the proof body against the assumption list
+  before adding one more.
+- **Theory boundaries drift at the last lemma, not the first.**
+  `Simulation_Relation` had grown a preservation theorem
+  (`csim_returning_completion`) and its frame-stack plumbing; the symptom was a
+  header in `Simulation_Preservation` promising three completion theorems when
+  `csim_step` dispatches four ways. When a header miscounts what the file
+  holds, check whether the file is still holding it.
+- **Global `[intro]` / `[elim]` on a predicate that unpacks existential
+  compiler evidence** makes proof search unpredictable for no gain: the
+  explicit proofs already wrote `by (rule compiled_atI ...)`. Tag structural,
+  terminating rewrites; leave evidence-unpacking rules bare.
+
+## Style-guide compliance, measured
+
+The baselines are the Isabelle Community Conventions
+(<https://isabelle.systems/conventions/>) and Gerwin Klein's two style posts
+(<https://proofcraft.org/blog/isabelle-style.html>, `-part2`). Both reduce to
+rules a script can check; run these before declaring a session clean.
+
+VIMP, CFG and Compile pass all of them: no `sorry`, no `axiomatization`, no
+unnamed global attributes, no `[simplified]` / `[rule_format]`, no implicit
+`apply rule`, no `apply (auto; ...)`, no apply scripts at all, no
+`sledgehammer`, no `metis`, no `smt`, and no theory over the 1500-line cap.
+Every `inductive` predicate carries tagged inversion rules, and every lemma
+named `...I` / `...E` / `...D` carries its attribute apart from the two
+multi-conclusion `D` bundles cited by index.
+
+The sessions after them do not, and this is the measured scope of their
+passes:
+
+| | Core | Analysis | CLI | Examples |
+| --- | --- | --- | --- | --- |
+| theories / lines | 52 / 25407 | 62 / 25490 | 6 / 4128 | 64 / 18198 |
+| `metis` | 48 | 17 | - | - |
+| `smt` | - | 4 | - | - |
+| `apply` lines | 60 | 41 | - | 9 |
+| multi-`apply` blocks | 10 | 9 | - | 2 |
+| `[rule_format]` | 4 | 1 | - | - |
+| `apply (auto; ...)` | - | 4 | - | - |
+| implicit `by rule` | 2 | - | - | - |
+| theories over 1500 lines | 5 | 3 | - | 1 |
+| lines over 100 symbols | 382 | 461 | 470 | 486 |
+| theories with no orientation block | 3 | 6 | 2 | 6 |
+
+The largest theories are `Example_Interval_Placement` (2901),
+`DG_Framework` (2472), `DG_Soundness` (2317), `Exec_St` (2231) and
+`Abstract_Domain` (2110). Splitting those is the structural half of the Core
+pass; retiring `metis` and the apply scripts is the proof half.
+
 ## CFG status after the pass
 
-`Voblint_CFG` 6573 -> 1288 lines (graph model plus `Collecting/`);
-`Voblint_Compile` is the new 5285-line session holding the compiler, the
-forward simulation, and the two bridge theories. `Control_Simulation` (2507
-lines, over the 1500 cap) became `Control_Emit` / `Control_Simulation` /
-`Control_Simulation_Forward`; `Compile_Locality` 1490 -> 660;
-`Compile_Certificate` 134 -> 71; `CFG_Prune` split into its graph-generic half
-(stays in `Voblint_CFG`) and `Compile_Reaches`. No `metis`, no `smt`, no
-`sorry` in either session.
+`Voblint_CFG` 6573 -> 1409 lines (graph model, `CFG_Exec`, and `Collecting/`);
+`Voblint_Compile` is the new session holding the compiler, the forward
+simulation, and the two bridge theories. The 2507-line `Control_Simulation`
+(over the 1500 cap) became three theories, and every theory then took its name
+from what it states rather than from the pass that produced it:
+
+```text
+Control_Residual            -> Simulation/Residual_Location
+Control_Emit                -> Simulation/Residual_Edges
+Control_Simulation          -> Simulation/Simulation_Relation
+Control_Simulation_Forward  -> Simulation/Simulation_Preservation
+Compile_Locality            -> Procedure_Ownership          (1490 -> 660)
+Located_LTR                 -> Source_To_Trace
+Located_Exec                -> Voblint_CFG.CFG_Exec
+```
+
+`Compile_Certificate` (75 lines) folded into `Simulation_Preservation` and
+`Compile_Reaches` (159) into `Compile_Invariants`; `CFG_Prune` kept only its
+graph-generic half. No `metis`, no `smt`, no `sorry` in either session.

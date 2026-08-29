@@ -15,6 +15,7 @@ These five words appear throughout and are worth having straight first.
 | **fragment** | the block of nodes the compiler allocated for one command. A fragment of procedure `p` over `[m, m')` is `FunctionEntry p`, `FunctionResult p`, and `Statement m … Statement (m'-1)`. |
 | **located** | "the graph's program counter is at node `v`". `control_at` relates a residual to the node it is located at. |
 | **activation** | one live call of a procedure: its own store and its own position. Recursion means several activations of the same procedure. |
+| **certificate** | `compiled_at \Pi g p c0 k n`: `c0` is procedure `p`'s body, and that body compiled at offset `n` with continuation `k` sits in graph `g`. Every live activation in the simulation relation carries one. |
 | **local trace** | the history of *one* activation — its path through its own fragment, plus a link to the caller that spawned it. Defined in `Voblint_CFG`, not here. |
 
 The one design choice that explains most of the code: **`compile` takes the
