@@ -300,8 +300,9 @@ deviates. When a rule here conflicts with the baseline, this file wins.
 
 ### Layout
 
-- Lines <= 100 symbols; generated theories (`VIMP_Grammar_Generated`) are
-  exempt, since the generator owns their layout. Two-space indent. One blank line between top-level
+- Lines <= 100 symbols. Three things are exempt because they cannot be broken:
+  generated theories (`VIMP_Grammar_Generated`), whose layout the generator
+  owns; URLs in comments; and `mixfix` annotation strings. Two-space indent. One blank line between top-level
   declarations. `proof`, `next`, `qed` flush left within their block.
 - Theories <= 1500 lines. Split along a concern boundary (a domain, a proof
   layer, a generator), never by line count alone. One concern per theory;

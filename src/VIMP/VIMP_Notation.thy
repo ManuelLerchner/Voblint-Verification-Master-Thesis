@@ -71,9 +71,12 @@ parse_translation \<open>
        Markup.skolem, the same category a call site to it reports. *)
     fun funcs_tr ctxt (Const ("_funcs_nil", _)) = []
       | funcs_tr ctxt (Const ("_funcs_cons0", _) $ f $ pbody $ rest) =
-          (Vimp_Grammar_Tr.dest_id_position (SOME Markup.skolem) ctxt f, [], SOME pbody, NONE) :: funcs_tr ctxt rest
+          (Vimp_Grammar_Tr.dest_id_position (SOME Markup.skolem) ctxt f,
+           [], SOME pbody, NONE) :: funcs_tr ctxt rest
       | funcs_tr ctxt (Const ("_funcs_cons", _) $ f $ formals $ pbody $ rest) =
-          (Vimp_Grammar_Tr.dest_id_position (SOME Markup.skolem) ctxt f, Vimp_Grammar_Tr.formals_of ctxt formals, SOME pbody, NONE) :: funcs_tr ctxt rest
+          (Vimp_Grammar_Tr.dest_id_position (SOME Markup.skolem) ctxt f,
+           Vimp_Grammar_Tr.formals_of ctxt formals, SOME pbody, NONE)
+          :: funcs_tr ctxt rest
       | funcs_tr _ t = raise TERM ("VIMP_Notation: funcs_tr", [t])
 
     (* A bare "return;" is a Const without argument, matched by neither the
@@ -106,7 +109,8 @@ parse_translation \<open>
       | mk_body_ret ctxt (SOME c) NONE = Vimp_Grammar_Tr.stmts_opt_tr ctxt c
       | mk_body_ret ctxt NONE (SOME e) = K c_Return $ (K c_Some $ Vimp_Grammar_Tr.exp_tr ctxt e)
       | mk_body_ret ctxt (SOME c) (SOME e) =
-          K c_Seq $ Vimp_Grammar_Tr.stmts_opt_tr ctxt c $ (K c_Return $ (K c_Some $ Vimp_Grammar_Tr.exp_tr ctxt e))
+          K c_Seq $ Vimp_Grammar_Tr.stmts_opt_tr ctxt c
+                  $ (K c_Return $ (K c_Some $ Vimp_Grammar_Tr.exp_tr ctxt e))
 
     fun mk_proc_rep ctxt [] = K c_Nil
       | mk_proc_rep ctxt ((p, formals, body, result) :: rest) =
@@ -141,7 +145,9 @@ parse_translation \<open>
   in
     [("_IMP2", fn ctxt => fn [t] => Vimp_Grammar_Tr.stmts_opt_tr ctxt t | _ => raise Match),
      ("_PROGKW0", fn ctxt => fn [fs] => prog_tr ctxt [] fs | _ => raise Match),
-     ("_PROGKW", fn ctxt => fn [g, fs] => prog_tr ctxt (Vimp_Grammar_Tr.names_of ctxt g) fs | _ => raise Match)]
+     ("_PROGKW",
+      fn ctxt => fn [g, fs] => prog_tr ctxt (Vimp_Grammar_Tr.names_of ctxt g) fs
+                | _ => raise Match)]
   end
 \<close>
 

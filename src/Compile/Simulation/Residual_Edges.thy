@@ -13,6 +13,16 @@ text \<open>
   \<open>intra_step\<close> collects the source steps that stay inside one activation, and
   \<open>intra_step_simulation\<close> assembles the facts below into the statement that any such step
   is matched by a run of \<^const>\<open>cstep\<close>.
+
+  Six proofs here induct on \<^const>\<open>control_at\<close> and repeat the same descent: project the
+  sub-fragment's compile tuple, apply the induction hypothesis, lift the result back through
+  \<open>control_at.SeqRight\<close> / \<open>IfLeft\<close> / \<open>IfRight\<close>.  It looks factorable and is not.  A shared
+  \<^emph>\<open>descend to a base clause\<close> lemma would have to carry the residual down unchanged, and
+  \<open>SeqLeft\<close> and \<open>WhileBody\<close> rebuild it --- they relate the outer residual \<^term>\<open>Seq r c2\<close> to
+  the inner \<open>r\<close>.  So the descent survives only in the three clauses that pass the residual
+  through, which is half the cases in two of the six proofs and none of the rest.  What was
+  removable has been removed: \<open>emitted_action\<close> merged three of these inductions into one, and
+  the \<open>compile_Seq_rightE\<close> family cut each remaining descent from eight lines to four.
 \<close>
 
 subsection \<open>Located base residuals emit their compiled edge\<close>
