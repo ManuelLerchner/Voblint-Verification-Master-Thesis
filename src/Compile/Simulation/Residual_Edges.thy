@@ -594,7 +594,7 @@ proof -
     jw: "v = Statement j" "(Statement j, a, w) \<in> E" "control_at \<Pi> p c0 k n SKIP w" by blast
   have "(Statement j, a, w) \<in> intra g" using jw(2) sub by blast
   from cstep.Intra[OF this stp] have "cstep gs g (Statement j, s, stk) (w, s', stk)" .
-  with jw(1) jw(3) show ?thesis by (auto intro: that star_step1)
+  then show ?thesis using jw(1) jw(3) that by auto
 qed
 
 text \<open>The theory's conclusion: an \<^const>\<open>intra_step\<close> of a located residual leaves the frame

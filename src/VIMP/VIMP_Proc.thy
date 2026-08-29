@@ -394,11 +394,34 @@ definition wf_proc_decl :: "(vname \<Rightarrow> bool) \<Rightarrow> proc_table 
 definition reserved_ret_var :: "(vname \<Rightarrow> bool) \<Rightarrow> bool" where
   "reserved_ret_var gs \<longleftrightarrow> \<not> gs ret_var"
 
-definition wf_source_program :: "(vname \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname \<Rightarrow> com \<Rightarrow> bool" where
-  "wf_source_program gs \<Pi> main_name main \<longleftrightarrow>
+text \<open>The entry procedure is fixed: a program has exactly one, it is called \<open>main\<close>, and the
+  parser rejects formals on it.  Naming it here rather than threading it as a parameter means
+  the compiler and its contract take a table and a callee list and nothing else.\<close>
+definition prog_main_name :: pname where
+  "prog_main_name = STR ''main''"
+
+text \<open>The entry body, looked up rather than passed alongside the table.  The lookup cannot
+  fail where \<open>wf_source_program\<close> holds --- its second conjunct is exactly that the entry is
+  declared --- so an undeclared entry is an invariant violation, and aborts in generated code
+  rather than compiling to a plausible empty program.\<close>
+definition main_body :: "proc_table \<Rightarrow> com" where
+  "main_body \<Pi> =
+     (case \<Pi> prog_main_name of
+        Some decl \<Rightarrow> body decl
+      | None \<Rightarrow> Code.abort (STR ''main_body: entry procedure not declared'') (\<lambda>_. SKIP))"
+
+text \<open>Deliberately not \<open>[simp]\<close>: \<open>wf_source_program\<close>'s entry conjunct has the shape
+  \<open>\<Pi> prog_main_name = Some \<lparr>formals = [], body = main_body \<Pi>\<rparr>\<close>, against which
+  this rule would rewrite \<open>main_body \<Pi>\<close> to itself.\<close>
+lemma main_body_Some:
+  "\<Pi> prog_main_name = Some decl \<Longrightarrow> main_body \<Pi> = body decl"
+  by (simp add: main_body_def)
+
+definition wf_source_program :: "(vname \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> bool" where
+  "wf_source_program gs \<Pi> \<longleftrightarrow>
      reserved_ret_var gs \<and>
-     \<Pi> main_name = Some (\<lparr>formals = [], body = main\<rparr>) \<and>
-     wf_source_com \<Pi> main \<and> no_return main \<and>
+     \<Pi> prog_main_name = Some (\<lparr>formals = [], body = main_body \<Pi>\<rparr>) \<and>
+     wf_source_com \<Pi> (main_body \<Pi>) \<and> no_return (main_body \<Pi>) \<and>
      (\<forall>p decl. \<Pi> p = Some decl \<longrightarrow> wf_proc_decl gs \<Pi> decl) \<and>
      (\<forall>p. \<Pi> p \<noteq> None \<longrightarrow> special_table p = None)"
 
@@ -417,15 +440,15 @@ lemma wf_source_com_source_com:
   by (induction c) (auto split: option.splits)
 
 lemma wf_source_programD:
-  assumes "wf_source_program gs \<Pi> main_name main"
+  assumes "wf_source_program gs \<Pi>"
   shows "reserved_ret_var gs"
-    and "\<Pi> main_name = Some \<lparr>formals = [], body = main\<rparr>"
-    and "wf_source_com \<Pi> main"
-    and "no_return main"
+    and "\<Pi> prog_main_name = Some \<lparr>formals = [], body = main_body \<Pi>\<rparr>"
+    and "wf_source_com \<Pi> (main_body \<Pi>)"
+    and "no_return (main_body \<Pi>)"
     and "\<Pi> p = Some decl \<Longrightarrow> wf_proc_decl gs \<Pi> decl"
     and "\<Pi> p = Some decl \<Longrightarrow> special_table p = None"
     and "source_pi \<Pi>"
-    and "source_com main"
+    and "source_com (main_body \<Pi>)"
   using assms wf_source_com_source_com
   unfolding wf_source_program_def source_pi_def wf_proc_decl_def by blast+
 

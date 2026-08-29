@@ -26,9 +26,6 @@ text \<open>The \<open>program\<close> parser fixes the entry name and rejects f
   \<open>main\<close> is an ordinary \<open>proc_rep\<close> entry. \<open>prog_main\<close> is total through \<open>the\<close>;
   \<open>wf_source_program\<close>'s entry conjunct is what makes the lookup meaningful.\<close>
 
-definition prog_main_name :: pname where
-  "prog_main_name = STR ''main''"
-
 definition prog_table :: "imp_prog \<Rightarrow> proc_table" where
   "prog_table p = map_of (proc_rep p)"
 
@@ -36,7 +33,10 @@ definition prog_procs :: "imp_prog \<Rightarrow> pname list" where
   "prog_procs p = filter (\<lambda>n. n \<noteq> prog_main_name) (map fst (proc_rep p))"
 
 definition prog_main :: "imp_prog \<Rightarrow> com" where
-  "prog_main p = body (the (prog_table p prog_main_name))"
+  "prog_main p = main_body (prog_table p)"
+
+lemma prog_main_eq_main_body [simp]: "main_body (prog_table p) = prog_main p"
+  by (simp add: prog_main_def)
 
 text \<open>\<open>mk_program\<close> conses the entry onto \<open>proc_rep\<close>, so a program built through
   it satisfies \<open>wf_source_program\<close>'s entry conjunct by construction.\<close>
@@ -48,8 +48,8 @@ lemma mk_program_simps [simp]:
   "prog_main (mk_program ps m gv) = m"
   "declared_global_vars (mk_program ps m gv) = gv"
   "prog_main_name \<notin> set (map fst ps) \<Longrightarrow> prog_procs (mk_program ps m gv) = map fst ps"
-  by (force simp: prog_table_def prog_main_def prog_procs_def mk_program_def imp_prog.make_def
-      filter_id_conv)+
+  by (force simp: prog_table_def prog_main_def main_body_def prog_procs_def mk_program_def
+      imp_prog.make_def filter_id_conv)+
 
 text \<open>The finite variable scope of an activation: every declared global, the
   activation's formals and body occurrences, and the reserved return location.\<close>

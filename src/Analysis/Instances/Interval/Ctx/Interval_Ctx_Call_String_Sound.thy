@@ -34,63 +34,61 @@ text \<open>
 \<close>
 
 definition cs_call_string_eqs ::
-    "nat \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> (ivl exec_dg_st \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com
-       \<Rightarrow> (pp \<times> call_string, call_string_gk, (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state) eqsT" where
-  "cs_call_string_eqs k gs is_bot_pred Pi ps main_name main =
+    "nat \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> (ivl exec_dg_st \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> (pp \<times> call_string, call_string_gk, (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state) eqsT" where
+  "cs_call_string_eqs k gs is_bot_pred Pi ps =
      side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_addr_list (\<lambda>_. Call_String_Context.Global)
        (cs_route k)
        (routed_cmb_g_contribution (ectx_spec gs is_bot_pred)
           Call_String_Context.Global Call_String_Context.Seed
-          (static_resolve (compile_prog Pi ps main_name main)))
+          (static_resolve (compile_prog Pi ps)))
        (routed_extra_g Call_String_Context.Seed Call_String_Context.Global)
-       (compile_prog Pi ps main_name main) (ectx_spec gs is_bot_pred) Bot (Lifted cinit_ivl_st) Bot"
+       (compile_prog Pi ps) (ectx_spec gs is_bot_pred) Bot (Lifted cinit_ivl_st) Bot"
 
 definition cs_call_string_sol ::
-    "nat \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> (ivl exec_dg_st \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com
-       \<Rightarrow> (pp \<times> call_string) set \<times> (pp \<times> call_string + call_string_gk \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)" where
-  "cs_call_string_sol k gs is_bot_pred Pi ps main_name main =
-     TD_side_warrowing_apinis_Interp_solve (cs_call_string_eqs k gs is_bot_pred Pi ps main_name main)
-       (cfg_exit (compile_prog Pi ps main_name main), [])"
+    "nat \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> (ivl exec_dg_st \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> (pp \<times> call_string) set \<times> (pp \<times> call_string + call_string_gk \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)" where
+  "cs_call_string_sol k gs is_bot_pred Pi ps =
+     TD_side_warrowing_apinis_Interp_solve (cs_call_string_eqs k gs is_bot_pred Pi ps)
+       (cfg_exit (compile_prog Pi ps), [])"
 
 definition cs_call_string_terminates ::
-    "nat \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> (ivl exec_dg_st \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com \<Rightarrow> bool" where
-  "cs_call_string_terminates k gs is_bot_pred Pi ps main_name main =
+    "nat \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> (ivl exec_dg_st \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> bool" where
+  "cs_call_string_terminates k gs is_bot_pred Pi ps =
      TD_side_warrowing_apinis_Interp.solve_dom TYPE(call_string_gk) TYPE((ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)
-       (cs_call_string_eqs k gs is_bot_pred Pi ps main_name main) (cfg_exit (compile_prog Pi ps main_name main), [])"
+       (cs_call_string_eqs k gs is_bot_pred Pi ps) (cfg_exit (compile_prog Pi ps), [])"
 
 lemma cs_call_string_terminates_via_solve_c:
-  assumes "TD_side_warrowing_apinis_Interp_solve_c (cs_call_string_eqs k gs is_bot_pred Pi ps main_name main)
-             (cfg_exit (compile_prog Pi ps main_name main), []) \<noteq> None"
-  shows "cs_call_string_terminates k gs is_bot_pred Pi ps main_name main"
+  assumes "TD_side_warrowing_apinis_Interp_solve_c (cs_call_string_eqs k gs is_bot_pred Pi ps)
+             (cfg_exit (compile_prog Pi ps), []) \<noteq> None"
+  shows "cs_call_string_terminates k gs is_bot_pred Pi ps"
   unfolding cs_call_string_terminates_def
   by (rule TD_side_warrowing_apinis_Interp.solve_dom_of_solve_c[OF assms])
 
 subsection \<open>Whole-program convenience layer\<close>
 
 definition cs_call_string_eqs_prog ::
-    "nat \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> pname \<Rightarrow> imp_prog
+    "nat \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog
        \<Rightarrow> (pp \<times> call_string, call_string_gk, (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state) eqsT" where
-  "cs_call_string_eqs_prog k gs main_name p =
+  "cs_call_string_eqs_prog k gs p =
      cs_call_string_eqs k gs (resolved_st_q_is_bot_for (declared_global_vars p))
-       (prog_table p) (prog_procs p) main_name (prog_main p)"
+       (prog_table p) (prog_procs p)"
 
 definition cs_call_string_sol_prog ::
-    "nat \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> pname \<Rightarrow> imp_prog
+    "nat \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog
        \<Rightarrow> (pp \<times> call_string) set \<times> (pp \<times> call_string + call_string_gk \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)" where
-  "cs_call_string_sol_prog k gs main_name p =
+  "cs_call_string_sol_prog k gs p =
      cs_call_string_sol k gs (resolved_st_q_is_bot_for (declared_global_vars p))
-       (prog_table p) (prog_procs p) main_name (prog_main p)"
+       (prog_table p) (prog_procs p)"
 
-definition cs_call_string_terminates_prog :: "nat \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> pname \<Rightarrow> imp_prog \<Rightarrow> bool" where
-  "cs_call_string_terminates_prog k gs main_name p =
+definition cs_call_string_terminates_prog :: "nat \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> bool" where
+  "cs_call_string_terminates_prog k gs p =
      cs_call_string_terminates k gs (resolved_st_q_is_bot_for (declared_global_vars p))
-       (prog_table p) (prog_procs p) main_name (prog_main p)"
+       (prog_table p) (prog_procs p)"
 
 lemma cs_call_string_terminates_prog_via_solve_c:
   assumes "TD_side_warrowing_apinis_Interp_solve_c
-             (cs_call_string_eqs_prog k gs main_name p)
-             (cfg_exit (compile_prog (prog_table p) (prog_procs p) main_name (prog_main p)), []) \<noteq> None"
-  shows "cs_call_string_terminates_prog k gs main_name p"
+             (cs_call_string_eqs_prog k gs p)
+             (cfg_exit (compile_prog (prog_table p) (prog_procs p)), []) \<noteq> None"
+  shows "cs_call_string_terminates_prog k gs p"
   using assms
   unfolding cs_call_string_terminates_prog_def cs_call_string_eqs_prog_def
   by (rule cs_call_string_terminates_via_solve_c)
@@ -109,19 +107,19 @@ text \<open>
 \<close>
 
 definition analyse_interval_call_string_result_for ::
-    "nat \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> pname \<Rightarrow> imp_prog \<Rightarrow> (call_string, ivl abs_state) analysis_result" where
-  "analyse_interval_call_string_result_for k gs main_name p =
+    "nat \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> (call_string, ivl abs_state) analysis_result" where
+  "analyse_interval_call_string_result_for k gs p =
      Analysis_Result
-       (fst (cs_call_string_sol_prog k gs main_name p))
+       (fst (cs_call_string_sol_prog k gs p))
        (\<lambda>v ctx. normalize_point gs
                   (canonicalize_lift (resolved_st_q_is_bot_for (declared_global_vars p))
-                    (locals (snd (cs_call_string_sol_prog k gs main_name p) (Inl (v, ctx))))))"
+                    (locals (snd (cs_call_string_sol_prog k gs p) (Inl (v, ctx))))))"
 
 declare analyse_interval_call_string_result_for_def [code del]
 
 lemma analyse_interval_call_string_result_for_code [code]:
-  "analyse_interval_call_string_result_for k gs main_name p =
-     (let sol = cs_call_string_sol_prog k gs main_name p; gl = declared_global_vars p
+  "analyse_interval_call_string_result_for k gs p =
+     (let sol = cs_call_string_sol_prog k gs p; gl = declared_global_vars p
       in Analysis_Result (fst sol)
            (\<lambda>v ctx. normalize_point gs
                       (canonicalize_lift (resolved_st_q_is_bot_for gl)
@@ -135,7 +133,7 @@ text \<open>Convenience instance at \<^const>\<open>declared_global\<close> \<op
 definition analyse_interval_call_string_result ::
     "nat \<Rightarrow> imp_prog \<Rightarrow> (call_string, ivl abs_state) analysis_result" where
   "analyse_interval_call_string_result k p =
-     analyse_interval_call_string_result_for k (declared_global p) prog_main_name p"
+     analyse_interval_call_string_result_for k (declared_global p) p"
 
 section \<open>Contextual check report\<close>
 
@@ -147,29 +145,29 @@ text \<open>
 \<close>
 
 definition cs_call_string_check_projection ::
-    "nat \<Rightarrow> pname \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> exp \<times> (call_string \<times> contextual_verdict) set) list" where
-  "cs_call_string_check_projection k main_name p =
-     classify_checks_ctx (prog_cfg main_name p)
-       (analyse_interval_call_string_result_for k (declared_global p) main_name p)
+    "nat \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> exp \<times> (call_string \<times> contextual_verdict) set) list" where
+  "cs_call_string_check_projection k p =
+     classify_checks_ctx (prog_cfg p)
+       (analyse_interval_call_string_result_for k (declared_global p) p)
        interval_classify_check"
 
 definition cs_call_string_verdict_report_prog ::
-    "nat \<Rightarrow> pname \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> exp \<times> contextual_verdict) list" where
-  "cs_call_string_verdict_report_prog k main_name p =
+    "nat \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> exp \<times> contextual_verdict) list" where
+  "cs_call_string_verdict_report_prog k p =
      map (\<lambda>(u, c, vs). (u, c, aggregate_verdicts (snd ` vs)))
-       (cs_call_string_check_projection k main_name p)"
+       (cs_call_string_check_projection k p)"
 
 lemma cs_call_string_verdict_report_prog_eq:
-  "cs_call_string_verdict_report_prog k main_name p =
-     classify_checks_verdicts (prog_cfg main_name p)
-       (analyse_interval_call_string_result_for k (declared_global p) main_name p)
+  "cs_call_string_verdict_report_prog k p =
+     classify_checks_verdicts (prog_cfg p)
+       (analyse_interval_call_string_result_for k (declared_global p) p)
        interval_classify_check"
   unfolding cs_call_string_verdict_report_prog_def cs_call_string_check_projection_def
   by (rule classify_checks_verdicts_proj)
 
 definition analyse_interval_call_string_report ::
     "nat \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> exp \<times> contextual_verdict) list" where
-  "analyse_interval_call_string_report k p = cs_call_string_verdict_report_prog k prog_main_name p"
+  "analyse_interval_call_string_report k p = cs_call_string_verdict_report_prog k p"
 
 section \<open>Solver-choice generalization\<close>
 
@@ -184,33 +182,33 @@ text \<open>
 \<close>
 
 definition cs_call_string_sol_prog_join ::
-    "nat \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> pname \<Rightarrow> imp_prog
+    "nat \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog
        \<Rightarrow> (pp \<times> call_string) set \<times> (pp \<times> call_string + call_string_gk \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)" where
-  "cs_call_string_sol_prog_join k gs main_name p =
-     TD_side_always_join_Interp_solve (cs_call_string_eqs_prog k gs main_name p)
-       (cfg_exit (prog_cfg main_name p), [])"
+  "cs_call_string_sol_prog_join k gs p =
+     TD_side_always_join_Interp_solve (cs_call_string_eqs_prog k gs p)
+       (cfg_exit (prog_cfg p), [])"
 
 definition cs_call_string_sol_prog_per_origin ::
-    "nat \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> pname \<Rightarrow> imp_prog
+    "nat \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog
        \<Rightarrow> (pp \<times> call_string) set \<times> (pp \<times> call_string + call_string_gk \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)" where
-  "cs_call_string_sol_prog_per_origin k gs main_name p =
-     TD_side_per_origin_Interp_solve (cs_call_string_eqs_prog k gs main_name p)
-       (cfg_exit (prog_cfg main_name p), [])"
+  "cs_call_string_sol_prog_per_origin k gs p =
+     TD_side_per_origin_Interp_solve (cs_call_string_eqs_prog k gs p)
+       (cfg_exit (prog_cfg p), [])"
 
 definition analyse_interval_call_string_result_for_join ::
-    "nat \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> pname \<Rightarrow> imp_prog \<Rightarrow> (call_string, ivl abs_state) analysis_result" where
-  "analyse_interval_call_string_result_for_join k gs main_name p =
+    "nat \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> (call_string, ivl abs_state) analysis_result" where
+  "analyse_interval_call_string_result_for_join k gs p =
      Analysis_Result
-       (fst (cs_call_string_sol_prog_join k gs main_name p))
+       (fst (cs_call_string_sol_prog_join k gs p))
        (\<lambda>v ctx. normalize_point gs
                   (canonicalize_lift (resolved_st_q_is_bot_for (declared_global_vars p))
-                    (locals (snd (cs_call_string_sol_prog_join k gs main_name p) (Inl (v, ctx))))))"
+                    (locals (snd (cs_call_string_sol_prog_join k gs p) (Inl (v, ctx))))))"
 
 declare analyse_interval_call_string_result_for_join_def [code del]
 
 lemma analyse_interval_call_string_result_for_join_code [code]:
-  "analyse_interval_call_string_result_for_join k gs main_name p =
-     (let sol = cs_call_string_sol_prog_join k gs main_name p; gl = declared_global_vars p
+  "analyse_interval_call_string_result_for_join k gs p =
+     (let sol = cs_call_string_sol_prog_join k gs p; gl = declared_global_vars p
       in Analysis_Result (fst sol)
            (\<lambda>v ctx. normalize_point gs
                       (canonicalize_lift (resolved_st_q_is_bot_for gl)
@@ -218,19 +216,19 @@ lemma analyse_interval_call_string_result_for_join_code [code]:
   unfolding analyse_interval_call_string_result_for_join_def Let_def by (rule refl)
 
 definition analyse_interval_call_string_result_for_per_origin ::
-    "nat \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> pname \<Rightarrow> imp_prog \<Rightarrow> (call_string, ivl abs_state) analysis_result" where
-  "analyse_interval_call_string_result_for_per_origin k gs main_name p =
+    "nat \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> (call_string, ivl abs_state) analysis_result" where
+  "analyse_interval_call_string_result_for_per_origin k gs p =
      Analysis_Result
-       (fst (cs_call_string_sol_prog_per_origin k gs main_name p))
+       (fst (cs_call_string_sol_prog_per_origin k gs p))
        (\<lambda>v ctx. normalize_point gs
                   (canonicalize_lift (resolved_st_q_is_bot_for (declared_global_vars p))
-                    (locals (snd (cs_call_string_sol_prog_per_origin k gs main_name p) (Inl (v, ctx))))))"
+                    (locals (snd (cs_call_string_sol_prog_per_origin k gs p) (Inl (v, ctx))))))"
 
 declare analyse_interval_call_string_result_for_per_origin_def [code del]
 
 lemma analyse_interval_call_string_result_for_per_origin_code [code]:
-  "analyse_interval_call_string_result_for_per_origin k gs main_name p =
-     (let sol = cs_call_string_sol_prog_per_origin k gs main_name p; gl = declared_global_vars p
+  "analyse_interval_call_string_result_for_per_origin k gs p =
+     (let sol = cs_call_string_sol_prog_per_origin k gs p; gl = declared_global_vars p
       in Analysis_Result (fst sol)
            (\<lambda>v ctx. normalize_point gs
                       (canonicalize_lift (resolved_st_q_is_bot_for gl)
@@ -238,50 +236,50 @@ lemma analyse_interval_call_string_result_for_per_origin_code [code]:
   unfolding analyse_interval_call_string_result_for_per_origin_def Let_def by (rule refl)
 
 definition cs_call_string_verdict_report_prog_join ::
-    "nat \<Rightarrow> pname \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> exp \<times> contextual_verdict) list" where
-  "cs_call_string_verdict_report_prog_join k main_name p =
-     classify_checks_verdicts (prog_cfg main_name p)
-       (analyse_interval_call_string_result_for_join k (declared_global p) main_name p)
+    "nat \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> exp \<times> contextual_verdict) list" where
+  "cs_call_string_verdict_report_prog_join k p =
+     classify_checks_verdicts (prog_cfg p)
+       (analyse_interval_call_string_result_for_join k (declared_global p) p)
        interval_classify_check"
 
 definition cs_call_string_verdict_report_prog_per_origin ::
-    "nat \<Rightarrow> pname \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> exp \<times> contextual_verdict) list" where
-  "cs_call_string_verdict_report_prog_per_origin k main_name p =
-     classify_checks_verdicts (prog_cfg main_name p)
-       (analyse_interval_call_string_result_for_per_origin k (declared_global p) main_name p)
+    "nat \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> exp \<times> contextual_verdict) list" where
+  "cs_call_string_verdict_report_prog_per_origin k p =
+     classify_checks_verdicts (prog_cfg p)
+       (analyse_interval_call_string_result_for_per_origin k (declared_global p) p)
        interval_classify_check"
 
 definition analyse_interval_call_string_report_join ::
     "nat \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> exp \<times> contextual_verdict) list" where
   "analyse_interval_call_string_report_join k p =
-     cs_call_string_verdict_report_prog_join k prog_main_name p"
+     cs_call_string_verdict_report_prog_join k p"
 
 definition analyse_interval_call_string_report_per_origin ::
     "nat \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> exp \<times> contextual_verdict) list" where
   "analyse_interval_call_string_report_per_origin k p =
-     cs_call_string_verdict_report_prog_per_origin k prog_main_name p"
+     cs_call_string_verdict_report_prog_per_origin k p"
 
 definition cs_call_string_sol_prog_wpo ::
-    "nat \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> pname \<Rightarrow> imp_prog
+    "nat \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog
        \<Rightarrow> (pp \<times> call_string) set \<times> (pp \<times> call_string + call_string_gk \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)" where
-  "cs_call_string_sol_prog_wpo k gs main_name p =
-     TD_side_warrowing_per_origin_Interp_solve (cs_call_string_eqs_prog k gs main_name p)
-       (cfg_exit (prog_cfg main_name p), [])"
+  "cs_call_string_sol_prog_wpo k gs p =
+     TD_side_warrowing_per_origin_Interp_solve (cs_call_string_eqs_prog k gs p)
+       (cfg_exit (prog_cfg p), [])"
 
 definition analyse_interval_call_string_result_for_wpo ::
-    "nat \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> pname \<Rightarrow> imp_prog \<Rightarrow> (call_string, ivl abs_state) analysis_result" where
-  "analyse_interval_call_string_result_for_wpo k gs main_name p =
+    "nat \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> (call_string, ivl abs_state) analysis_result" where
+  "analyse_interval_call_string_result_for_wpo k gs p =
      Analysis_Result
-       (fst (cs_call_string_sol_prog_wpo k gs main_name p))
+       (fst (cs_call_string_sol_prog_wpo k gs p))
        (\<lambda>v ctx. normalize_point gs
                   (canonicalize_lift (resolved_st_q_is_bot_for (declared_global_vars p))
-                    (locals (snd (cs_call_string_sol_prog_wpo k gs main_name p) (Inl (v, ctx))))))"
+                    (locals (snd (cs_call_string_sol_prog_wpo k gs p) (Inl (v, ctx))))))"
 
 declare analyse_interval_call_string_result_for_wpo_def [code del]
 
 lemma analyse_interval_call_string_result_for_wpo_code [code]:
-  "analyse_interval_call_string_result_for_wpo k gs main_name p =
-     (let sol = cs_call_string_sol_prog_wpo k gs main_name p; gl = declared_global_vars p
+  "analyse_interval_call_string_result_for_wpo k gs p =
+     (let sol = cs_call_string_sol_prog_wpo k gs p; gl = declared_global_vars p
       in Analysis_Result (fst sol)
            (\<lambda>v ctx. normalize_point gs
                       (canonicalize_lift (resolved_st_q_is_bot_for gl)
@@ -289,15 +287,15 @@ lemma analyse_interval_call_string_result_for_wpo_code [code]:
   unfolding analyse_interval_call_string_result_for_wpo_def Let_def by (rule refl)
 
 definition cs_call_string_verdict_report_prog_wpo ::
-    "nat \<Rightarrow> pname \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> exp \<times> contextual_verdict) list" where
-  "cs_call_string_verdict_report_prog_wpo k main_name p =
-     classify_checks_verdicts (prog_cfg main_name p)
-       (analyse_interval_call_string_result_for_wpo k (declared_global p) main_name p)
+    "nat \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> exp \<times> contextual_verdict) list" where
+  "cs_call_string_verdict_report_prog_wpo k p =
+     classify_checks_verdicts (prog_cfg p)
+       (analyse_interval_call_string_result_for_wpo k (declared_global p) p)
        interval_classify_check"
 
 definition analyse_interval_call_string_report_wpo ::
     "nat \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> exp \<times> contextual_verdict) list" where
   "analyse_interval_call_string_report_wpo k p =
-     cs_call_string_verdict_report_prog_wpo k prog_main_name p"
+     cs_call_string_verdict_report_prog_wpo k p"
 
 end

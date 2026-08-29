@@ -40,13 +40,13 @@ definition analyse_interval_dg_eqs_for ::
   "analyse_interval_dg_eqs_for is_bot_pred gs p =
      dg_gen_of
        (base_dg_spec_st_for_lifted gs is_bot_pred (ivl_tf_st_for gs) (ivl_enter_st_for gs))
-       (prog_cfg prog_main_name p) bot (Lifted cinit_ivl_st) (Lifted cinit_ivl_st)"
+       (prog_cfg p) bot (Lifted cinit_ivl_st) (Lifted cinit_ivl_st)"
 
 definition analyse_interval_dg_for :: "(ivl exec_dg_st \<Rightarrow> bool) \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow>
     (pp \<times> unit) set \<times> (pp \<times> unit + unit \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)" where
   "analyse_interval_dg_for is_bot_pred gs p =
      TD_side_warrowing_apinis_Interp_solve (analyse_interval_dg_eqs_for is_bot_pred gs p)
-       (cfg_exit (prog_cfg prog_main_name p), ())"
+       (cfg_exit (prog_cfg p), ())"
 
 text \<open>
   \<open>analyse_interval_dg_env_for\<close> reads the local unknown at \<open>v\<close> (\<open>Inl (v, ())\<close>) straight
@@ -113,12 +113,12 @@ definition analyse_interval_dg_join_for :: "(ivl exec_dg_st \<Rightarrow> bool) 
     (pp \<times> unit) set \<times> (pp \<times> unit + unit \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)" where
   "analyse_interval_dg_join_for is_bot_pred gs p =
      TD_side_always_join_Interp_solve (analyse_interval_dg_eqs_for is_bot_pred gs p)
-       (cfg_exit (prog_cfg prog_main_name p), ())"
+       (cfg_exit (prog_cfg p), ())"
 
 definition analyse_interval_dg_per_origin_for :: "(ivl exec_dg_st \<Rightarrow> bool) \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow>
     (pp \<times> unit) set \<times> (pp \<times> unit + unit \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)" where
   "analyse_interval_dg_per_origin_for is_bot_pred gs p =
      TD_side_per_origin_Interp_solve (analyse_interval_dg_eqs_for is_bot_pred gs p)
-       (cfg_exit (prog_cfg prog_main_name p), ())"
+       (cfg_exit (prog_cfg p), ())"
 
 end

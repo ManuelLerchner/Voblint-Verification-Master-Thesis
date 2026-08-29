@@ -20,7 +20,7 @@ definition int_ex_pi :: proc_table where
   "int_ex_pi = prog_table int_ex_prog"
 
 definition gExI :: cfg where
-  "gExI = compile_prog int_ex_pi (prog_procs int_ex_prog) prog_main_name (prog_main int_ex_prog)"
+  "gExI = compile_prog int_ex_pi (prog_procs int_ex_prog)"
 
 text \<open>
   The Base construction routes the whole abstract state through the local
@@ -35,9 +35,11 @@ abbreviation int_ex_read :: "int_dom exec_dg_st lifted => vname => int_dom" wher
 
 lemma gExI_calls: "calls gExI = {}"
   unfolding gExI_def int_ex_pi_def
-  by (rule compile_prog_calls_empty) (simp_all add: int_ex_prog_def)
+  by (rule compile_prog_calls_empty)
+     (simp_all add: int_ex_prog_def main_body_def prog_main_name_def)
+
 lemma gExI_entry: "cfg_entry gExI = FunctionEntry (STR ''main'')"
-  unfolding gExI_def prog_main_name_def by (rule cfg_entry_compile_prog)
+  unfolding gExI_def by (simp add: cfg_entry_compile_prog prog_main_name_def)
 lemma gExI_finE: "finite (intra gExI)" unfolding gExI_def using compile_prog_finite by simp
 lemma gExI_finC: "finite (calls gExI)" unfolding gExI_def using compile_prog_finite by simp
 

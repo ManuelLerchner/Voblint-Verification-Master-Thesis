@@ -62,33 +62,31 @@ definition sctx_entry_route_gen ::
 subsection \<open>The routed equation system and its executable solution\<close>
 
 definition sctx_entry_eqs ::
-    "(vname \<Rightarrow> bool) \<Rightarrow> (sign exec_dg_st \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com
-       \<Rightarrow> (pp \<times> sign list, gk, (sign exec_dg_st lifted, sign exec_dg_st lifted) dg_state) eqsT" where
-  "sctx_entry_eqs gs is_bot_pred Pi ps main_name main =
+    "(vname \<Rightarrow> bool) \<Rightarrow> (sign exec_dg_st \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> (pp \<times> sign list, gk, (sign exec_dg_st lifted, sign exec_dg_st lifted) dg_state) eqsT" where
+  "sctx_entry_eqs gs is_bot_pred Pi ps =
      side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_addr_list (\<lambda>_. Global)
        (sctx_entry_route_gen gs is_bot_pred)
        (routed_cmb_g_contribution (sctx_spec gs is_bot_pred) Global Seed
-          (static_resolve (compile_prog Pi ps main_name main)))
+          (static_resolve (compile_prog Pi ps)))
        (routed_extra_g Seed Global)
-       (compile_prog Pi ps main_name main) (sctx_spec gs is_bot_pred) Bot (Lifted cinit_sign_st) Bot"
+       (compile_prog Pi ps) (sctx_spec gs is_bot_pred) Bot (Lifted cinit_sign_st) Bot"
 
 definition sctx_entry_sol ::
-    "(vname \<Rightarrow> bool) \<Rightarrow> (sign exec_dg_st \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com
-       \<Rightarrow> (pp \<times> sign list) set \<times> (pp \<times> sign list + gk \<Rightarrow> (sign exec_dg_st lifted, sign exec_dg_st lifted) dg_state)" where
-  "sctx_entry_sol gs is_bot_pred Pi ps main_name main =
-     TD_side_always_join_Interp_solve (sctx_entry_eqs gs is_bot_pred Pi ps main_name main)
-       (cfg_exit (compile_prog Pi ps main_name main), [])"
+    "(vname \<Rightarrow> bool) \<Rightarrow> (sign exec_dg_st \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> (pp \<times> sign list) set \<times> (pp \<times> sign list + gk \<Rightarrow> (sign exec_dg_st lifted, sign exec_dg_st lifted) dg_state)" where
+  "sctx_entry_sol gs is_bot_pred Pi ps =
+     TD_side_always_join_Interp_solve (sctx_entry_eqs gs is_bot_pred Pi ps)
+       (cfg_exit (compile_prog Pi ps), [])"
 
 definition sctx_entry_terminates ::
-    "(vname \<Rightarrow> bool) \<Rightarrow> (sign exec_dg_st \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com \<Rightarrow> bool" where
-  "sctx_entry_terminates gs is_bot_pred Pi ps main_name main =
+    "(vname \<Rightarrow> bool) \<Rightarrow> (sign exec_dg_st \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> bool" where
+  "sctx_entry_terminates gs is_bot_pred Pi ps =
      TD_side_always_join_Interp.solve_dom TYPE(gk) TYPE((sign exec_dg_st lifted, sign exec_dg_st lifted) dg_state)
-       (sctx_entry_eqs gs is_bot_pred Pi ps main_name main) (cfg_exit (compile_prog Pi ps main_name main), [])"
+       (sctx_entry_eqs gs is_bot_pred Pi ps) (cfg_exit (compile_prog Pi ps), [])"
 
 lemma sctx_entry_terminates_via_solve_c:
-  assumes "TD_side_always_join_Interp_solve_c (sctx_entry_eqs gs is_bot_pred Pi ps main_name main)
-             (cfg_exit (compile_prog Pi ps main_name main), []) \<noteq> None"
-  shows "sctx_entry_terminates gs is_bot_pred Pi ps main_name main"
+  assumes "TD_side_always_join_Interp_solve_c (sctx_entry_eqs gs is_bot_pred Pi ps)
+             (cfg_exit (compile_prog Pi ps), []) \<noteq> None"
+  shows "sctx_entry_terminates gs is_bot_pred Pi ps"
   unfolding sctx_entry_terminates_def
   by (rule TD_side_always_join_Interp.solve_dom_of_solve_c[OF assms])
 
@@ -150,22 +148,22 @@ subsection \<open>The certified executable post-solution, generic per compiled p
 
 context
   fixes gs :: "vname \<Rightarrow> bool" and is_bot_pred :: "sign exec_dg_st \<Rightarrow> bool"
-    and Pi :: proc_table and ps :: "pname list" and main_name :: pname and main :: com
-  assumes solves: "sctx_entry_terminates gs is_bot_pred Pi ps main_name main"
+    and Pi :: proc_table and ps :: "pname list"
+  assumes solves: "sctx_entry_terminates gs is_bot_pred Pi ps"
     and exact: "\<And>s. is_bot_pred s = is_bot_state (fun_of_resolved_st_q_for gs s)"
 begin
 
 lemma sctx_entry_solve_dom:
   "TD_side_always_join_Interp.solve_dom TYPE(gk) TYPE((sign exec_dg_st lifted, sign exec_dg_st lifted) dg_state)
-     (sctx_entry_eqs gs is_bot_pred Pi ps main_name main) (cfg_exit (compile_prog Pi ps main_name main), [])"
+     (sctx_entry_eqs gs is_bot_pred Pi ps) (cfg_exit (compile_prog Pi ps), [])"
   using solves[unfolded sctx_entry_terminates_def] .
 
 lemma sctx_entry_pp_st:
-  "part_post_solution (sctx_entry_eqs gs is_bot_pred Pi ps main_name main) (cfg_exit (compile_prog Pi ps main_name main), [])
-     (snd (sctx_entry_sol gs is_bot_pred Pi ps main_name main)) (fst (sctx_entry_sol gs is_bot_pred Pi ps main_name main))"
+  "part_post_solution (sctx_entry_eqs gs is_bot_pred Pi ps) (cfg_exit (compile_prog Pi ps), [])
+     (snd (sctx_entry_sol gs is_bot_pred Pi ps)) (fst (sctx_entry_sol gs is_bot_pred Pi ps))"
   using TD_side_always_join_Interp.partial_post_solution
-          [OF sctx_entry_solve_dom, of "fst (sctx_entry_sol gs is_bot_pred Pi ps main_name main)"
-             "snd (sctx_entry_sol gs is_bot_pred Pi ps main_name main)"]
+          [OF sctx_entry_solve_dom, of "fst (sctx_entry_sol gs is_bot_pred Pi ps)"
+             "snd (sctx_entry_sol gs is_bot_pred Pi ps)"]
   unfolding sctx_entry_sol_def by simp
 
 theorem sctx_entry_pp_abs:
@@ -173,27 +171,27 @@ theorem sctx_entry_pp_abs:
      (side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. Global)
         (formals_route_lifted_gen (sctx_abs_spec gs))
         (routed_cmb_g (sctx_abs_spec gs) Global Seed
-           (static_resolve (compile_prog Pi ps main_name main)))
+           (static_resolve (compile_prog Pi ps)))
         (routed_extra_g Seed Global)
-        (compile_prog Pi ps main_name main) (sctx_abs_spec gs)
+        (compile_prog Pi ps) (sctx_abs_spec gs)
         (map_lift (fun_of_resolved_st_q_for gs) (Bot::sign exec_dg_st lifted))
         (map_lift (fun_of_resolved_st_q_for gs) (Lifted cinit_sign_st))
         (map_lift (fun_of_resolved_st_q_for gs) (Bot::sign exec_dg_st lifted)))
-     (cfg_exit (compile_prog Pi ps main_name main), [])
+     (cfg_exit (compile_prog Pi ps), [])
      (fun_of_dg_st_gen (map_lift (fun_of_resolved_st_q_for gs)) (map_lift (fun_of_resolved_st_q_for gs))
-        \<circ> snd (sctx_entry_sol gs is_bot_pred Pi ps main_name main))
-     (fst (sctx_entry_sol gs is_bot_pred Pi ps main_name main))"
+        \<circ> snd (sctx_entry_sol gs is_bot_pred Pi ps))
+     (fst (sctx_entry_sol gs is_bot_pred Pi ps))"
 proof -
   have pp_buf: "part_post_solution
        (side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_addr_list (\<lambda>_. Global)
           (sctx_entry_route_gen gs is_bot_pred)
           (routed_cmb_g_contribution (sctx_spec gs is_bot_pred) Global Seed
-             (static_resolve (compile_prog Pi ps main_name main)))
+             (static_resolve (compile_prog Pi ps)))
           (routed_extra_g Seed Global)
-          (compile_prog Pi ps main_name main) (sctx_spec gs is_bot_pred) Bot (Lifted cinit_sign_st) Bot)
-       (cfg_exit (compile_prog Pi ps main_name main), [])
-       (snd (sctx_entry_sol gs is_bot_pred Pi ps main_name main))
-       (fst (sctx_entry_sol gs is_bot_pred Pi ps main_name main))"
+          (compile_prog Pi ps) (sctx_spec gs is_bot_pred) Bot (Lifted cinit_sign_st) Bot)
+       (cfg_exit (compile_prog Pi ps), [])
+       (snd (sctx_entry_sol gs is_bot_pred Pi ps))
+       (fst (sctx_entry_sol gs is_bot_pred Pi ps))"
     using sctx_entry_pp_st unfolding sctx_entry_eqs_def by simp
   show ?thesis
     using pp_buf unfolding sctx_spec_def
@@ -211,69 +209,67 @@ text \<open>
 \<close>
 
 definition sctx_entry_sigma_abs_exec ::
-    "(vname \<Rightarrow> bool) \<Rightarrow> (sign exec_dg_st \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com
-       \<Rightarrow> pp \<times> sign list + gk \<Rightarrow> (sign abs_state lifted, sign abs_state lifted) dg_state" where
-  "sctx_entry_sigma_abs_exec gs is_bot_pred Pi ps main_name main =
+    "(vname \<Rightarrow> bool) \<Rightarrow> (sign exec_dg_st \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> pp \<times> sign list + gk \<Rightarrow> (sign abs_state lifted, sign abs_state lifted) dg_state" where
+  "sctx_entry_sigma_abs_exec gs is_bot_pred Pi ps =
      fun_of_dg_st_gen (map_lift (fun_of_resolved_st_q_for gs)) (map_lift (fun_of_resolved_st_q_for gs))
-       \<circ> snd (sctx_entry_sol gs is_bot_pred Pi ps main_name main)"
+       \<circ> snd (sctx_entry_sol gs is_bot_pred Pi ps)"
 
 definition sctx_entry_sg_exec ::
-    "(vname \<Rightarrow> bool) \<Rightarrow> (sign exec_dg_st \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com
-       \<Rightarrow> pp \<times> sign list + gk \<Rightarrow> sign abs_state lifted" where
-  "sctx_entry_sg_exec gs is_bot_pred Pi ps main_name main k =
+    "(vname \<Rightarrow> bool) \<Rightarrow> (sign exec_dg_st \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> pp \<times> sign list + gk \<Rightarrow> sign abs_state lifted" where
+  "sctx_entry_sg_exec gs is_bot_pred Pi ps k =
      (case k of
         Inl (v, ctx) \<Rightarrow>
-          (if (v, ctx) \<in> fst (sctx_entry_sol gs is_bot_pred Pi ps main_name main)
-           then locals (sctx_entry_sigma_abs_exec gs is_bot_pred Pi ps main_name main (Inl (v, ctx)))
+          (if (v, ctx) \<in> fst (sctx_entry_sol gs is_bot_pred Pi ps)
+           then locals (sctx_entry_sigma_abs_exec gs is_bot_pred Pi ps (Inl (v, ctx)))
            else Bot)
       | Inr _ \<Rightarrow> Bot)"
 
 context
   fixes gs :: "vname \<Rightarrow> bool" and is_bot_pred :: "sign exec_dg_st \<Rightarrow> bool"
-    and Pi :: proc_table and ps :: "pname list" and main_name :: pname and main :: com
-  assumes solves: "sctx_entry_terminates gs is_bot_pred Pi ps main_name main"
+    and Pi :: proc_table and ps :: "pname list"
+  assumes solves: "sctx_entry_terminates gs is_bot_pred Pi ps"
     and exact: "\<And>s. is_bot_pred s = is_bot_state (fun_of_resolved_st_q_for gs s)"
-    and entry_cov: "(cfg_entry (compile_prog Pi ps main_name main), []) \<in> fst (sctx_entry_sol gs is_bot_pred Pi ps main_name main)"
-    and fwd_ok: "\<And>u a v ctx. (u, ctx) \<in> fst (sctx_entry_sol gs is_bot_pred Pi ps main_name main)
-                   \<Longrightarrow> (u, a, v) \<in> intra (compile_prog Pi ps main_name main)
-                   \<Longrightarrow> (v, ctx) \<in> fst (sctx_entry_sol gs is_bot_pred Pi ps main_name main)"
+    and entry_cov: "(cfg_entry (compile_prog Pi ps), []) \<in> fst (sctx_entry_sol gs is_bot_pred Pi ps)"
+    and fwd_ok: "\<And>u a v ctx. (u, ctx) \<in> fst (sctx_entry_sol gs is_bot_pred Pi ps)
+                   \<Longrightarrow> (u, a, v) \<in> intra (compile_prog Pi ps)
+                   \<Longrightarrow> (v, ctx) \<in> fst (sctx_entry_sol gs is_bot_pred Pi ps)"
     and call_fwd_ok: "\<And>u ctx dst pars args p cont.
-        (u, ctx) \<in> fst (sctx_entry_sol gs is_bot_pred Pi ps main_name main)
-        \<Longrightarrow> (u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps main_name main)
+        (u, ctx) \<in> fst (sctx_entry_sol gs is_bot_pred Pi ps)
+        \<Longrightarrow> (u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps)
         \<Longrightarrow> (FunctionEntry p,
                formals_route_lifted_gen (sctx_abs_spec gs) u ctx
                  (enter_local (sctx_abs_spec gs) pars args
-                    (locals (sctx_entry_sigma_abs_exec gs is_bot_pred Pi ps main_name main (Inl (u, ctx))))
-                    (globs (sctx_entry_sigma_abs_exec gs is_bot_pred Pi ps main_name main (Inr Global))))
+                    (locals (sctx_entry_sigma_abs_exec gs is_bot_pred Pi ps (Inl (u, ctx))))
+                    (globs (sctx_entry_sigma_abs_exec gs is_bot_pred Pi ps (Inr Global))))
                  (CallEdge dst pars args))
-             \<in> fst (sctx_entry_sol gs is_bot_pred Pi ps main_name main)"
+             \<in> fst (sctx_entry_sol gs is_bot_pred Pi ps)"
     and comb_fwd_ok: "\<And>cl c1 dst pars args p cont.
-        (cl, c1) \<in> fst (sctx_entry_sol gs is_bot_pred Pi ps main_name main)
-        \<Longrightarrow> (cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps main_name main)
-        \<Longrightarrow> (cont, c1) \<in> fst (sctx_entry_sol gs is_bot_pred Pi ps main_name main)"
+        (cl, c1) \<in> fst (sctx_entry_sol gs is_bot_pred Pi ps)
+        \<Longrightarrow> (cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps)
+        \<Longrightarrow> (cont, c1) \<in> fst (sctx_entry_sol gs is_bot_pred Pi ps)"
 begin
 
 subsection \<open>The semantic solution projection\<close>
 
 definition sctx_entry_sigma_abs :: "pp \<times> sign list + gk \<Rightarrow> (sign abs_state lifted, sign abs_state lifted) dg_state" where
-  "sctx_entry_sigma_abs = sctx_entry_sigma_abs_exec gs is_bot_pred Pi ps main_name main"
+  "sctx_entry_sigma_abs = sctx_entry_sigma_abs_exec gs is_bot_pred Pi ps"
 
 definition sctx_entry_sg :: "pp \<times> sign list + gk \<Rightarrow> sign abs_state lifted" where
-  "sctx_entry_sg = sctx_entry_sg_exec gs is_bot_pred Pi ps main_name main"
+  "sctx_entry_sg = sctx_entry_sg_exec gs is_bot_pred Pi ps"
 
-lemma sctx_entry_fin: "finite (intra (compile_prog Pi ps main_name main))"
+lemma sctx_entry_fin: "finite (intra (compile_prog Pi ps))"
   using compile_prog_finite by blast
 
-lemma sctx_entry_finC: "finite (calls (compile_prog Pi ps main_name main))"
+lemma sctx_entry_finC: "finite (calls (compile_prog Pi ps))"
   using compile_prog_finite by blast
 
 lemma sctx_entry_sg_covered:
-  "(v, ctx) \<in> fst (sctx_entry_sol gs is_bot_pred Pi ps main_name main)
+  "(v, ctx) \<in> fst (sctx_entry_sol gs is_bot_pred Pi ps)
    \<Longrightarrow> sctx_entry_sg (Inl (v, ctx)) = locals (sctx_entry_sigma_abs (Inl (v, ctx)))"
   by (simp add: sctx_entry_sg_def sctx_entry_sg_exec_def sctx_entry_sigma_abs_def sctx_entry_sigma_abs_exec_def)
 
 lemma sctx_entry_sg_uncovered_empty:
-  "(v, ctx) \<notin> fst (sctx_entry_sol gs is_bot_pred Pi ps main_name main)
+  "(v, ctx) \<notin> fst (sctx_entry_sol gs is_bot_pred Pi ps)
      \<Longrightarrow> gamma_state_lift (sctx_entry_sg (Inl (v, ctx))) = {}"
   by (simp add: sctx_entry_sg_def sctx_entry_sg_exec_def)
 
@@ -284,61 +280,61 @@ interpretation sctx_entry_dg_base: sound_dg_spec "sctx_abs_spec gs" gamma_dg_bas
   by (rule base_dg_spec_sound[OF sign_is_sound_transfer_for is_bot_state_gamma_state_empty])
 
 interpretation sctx_entry_routed: entry_state_routed_context "sctx_abs_spec gs" gs
-    Pi ps main_name main Global
+    Pi ps Global
     "map_lift (fun_of_resolved_st_q_for gs) (Bot::sign exec_dg_st lifted)"
     "map_lift (fun_of_resolved_st_q_for gs) (Lifted cinit_sign_st)"
     "map_lift (fun_of_resolved_st_q_for gs) (Bot::sign exec_dg_st lifted)"
-    sctx_entry_sigma_abs "fst (sctx_entry_sol gs is_bot_pred Pi ps main_name main)"
-    "(cfg_exit (compile_prog Pi ps main_name main), [])" sctx_entry_sg
+    sctx_entry_sigma_abs "fst (sctx_entry_sol gs is_bot_pred Pi ps)"
+    "(cfg_exit (compile_prog Pi ps), [])" sctx_entry_sg
     Seed
 proof unfold_locales
-  show "finite (intra (compile_prog Pi ps main_name main))" by (rule sctx_entry_fin)
+  show "finite (intra (compile_prog Pi ps))" by (rule sctx_entry_fin)
 next
   show "part_post_solution
           (side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. Global)
              (formals_route_lifted_gen (sctx_abs_spec gs))
              (routed_cmb_g (sctx_abs_spec gs) Global Seed
-                (static_resolve (compile_prog Pi ps main_name main)))
+                (static_resolve (compile_prog Pi ps)))
              (routed_extra_g Seed Global)
-             (compile_prog Pi ps main_name main) (sctx_abs_spec gs)
+             (compile_prog Pi ps) (sctx_abs_spec gs)
              (map_lift (fun_of_resolved_st_q_for gs) (Bot::sign exec_dg_st lifted))
              (map_lift (fun_of_resolved_st_q_for gs) (Lifted cinit_sign_st))
              (map_lift (fun_of_resolved_st_q_for gs) (Bot::sign exec_dg_st lifted)))
-          (cfg_exit (compile_prog Pi ps main_name main), []) sctx_entry_sigma_abs
-          (fst (sctx_entry_sol gs is_bot_pred Pi ps main_name main))"
+          (cfg_exit (compile_prog Pi ps), []) sctx_entry_sigma_abs
+          (fst (sctx_entry_sol gs is_bot_pred Pi ps))"
     unfolding sctx_entry_sigma_abs_def sctx_entry_sigma_abs_exec_def
     by (rule sctx_entry_pp_abs[OF solves exact])
 next
-  fix v ctx assume "(v, ctx) \<in> fst (sctx_entry_sol gs is_bot_pred Pi ps main_name main)"
+  fix v ctx assume "(v, ctx) \<in> fst (sctx_entry_sol gs is_bot_pred Pi ps)"
   thus "gamma_state_lift (sctx_entry_sg (Inl (v, ctx)))
           = gamma_dg_base (locals (sctx_entry_sigma_abs (Inl (v, ctx)))) (globs (sctx_entry_sigma_abs (Inr Global)))"
     by (simp add: sctx_entry_sg_covered gamma_dg_base_def)
 next
-  fix v ctx assume "(v, ctx) \<notin> fst (sctx_entry_sol gs is_bot_pred Pi ps main_name main)"
+  fix v ctx assume "(v, ctx) \<notin> fst (sctx_entry_sol gs is_bot_pred Pi ps)"
   thus "gamma_state_lift (sctx_entry_sg (Inl (v, ctx))) = {}"
     by (rule sctx_entry_sg_uncovered_empty)
 next
-  fix u a v ctx assume "(u, ctx) \<in> fst (sctx_entry_sol gs is_bot_pred Pi ps main_name main)" "(u, a, v) \<in> intra (compile_prog Pi ps main_name main)"
-  thus "(v, ctx) \<in> fst (sctx_entry_sol gs is_bot_pred Pi ps main_name main)" by (rule fwd_ok)
+  fix u a v ctx assume "(u, ctx) \<in> fst (sctx_entry_sol gs is_bot_pred Pi ps)" "(u, a, v) \<in> intra (compile_prog Pi ps)"
+  thus "(v, ctx) \<in> fst (sctx_entry_sol gs is_bot_pred Pi ps)" by (rule fwd_ok)
 next
   show "\<And>p ctx. Seed p ctx \<noteq> Global" by simp
 next
   fix u ctx dst pars args p cont
-  assume mem: "(u, ctx) \<in> fst (sctx_entry_sol gs is_bot_pred Pi ps main_name main)"
-    and ce: "(u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps main_name main)"
+  assume mem: "(u, ctx) \<in> fst (sctx_entry_sol gs is_bot_pred Pi ps)"
+    and ce: "(u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps)"
   show "(FunctionEntry p,
            formals_route_lifted_gen (sctx_abs_spec gs) u ctx
              (enter_local (sctx_abs_spec gs) pars args
                 (locals (sctx_entry_sigma_abs (Inl (u, ctx))))
                 (globs (sctx_entry_sigma_abs (Inr Global)))) (CallEdge dst pars args))
-          \<in> fst (sctx_entry_sol gs is_bot_pred Pi ps main_name main)"
+          \<in> fst (sctx_entry_sol gs is_bot_pred Pi ps)"
     unfolding sctx_entry_sigma_abs_def
     using mem ce call_fwd_ok by blast
 next
   fix cl c1 dst pars args p cont
-  assume mem: "(cl, c1) \<in> fst (sctx_entry_sol gs is_bot_pred Pi ps main_name main)"
-    and ce: "(cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps main_name main)"
-  show "(cont, c1) \<in> fst (sctx_entry_sol gs is_bot_pred Pi ps main_name main)"
+  assume mem: "(cl, c1) \<in> fst (sctx_entry_sol gs is_bot_pred Pi ps)"
+    and ce: "(cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps)"
+  show "(cont, c1) \<in> fst (sctx_entry_sol gs is_bot_pred Pi ps)"
     using mem ce by (rule comb_fwd_ok)
 qed
 
@@ -350,13 +346,13 @@ lemma sctx_entry_cinit_le_cinit_sign_st:
 
 lemma sctx_entry_locals_ge_s0d:
   "map_lift (fun_of_resolved_st_q_for gs) (Lifted cinit_sign_st)
-     \<le> locals (sctx_entry_sigma_abs (Inl (cfg_entry (compile_prog Pi ps main_name main), [])))"
+     \<le> locals (sctx_entry_sigma_abs (Inl (cfg_entry (compile_prog Pi ps), [])))"
 proof -
   have "map_lift (fun_of_resolved_st_q_for gs) (Lifted cinit_sign_st)
-      \<le> locals (eq sctx_entry_routed.Gen (cfg_entry (compile_prog Pi ps main_name main), []) sctx_entry_sigma_abs)"
+      \<le> locals (eq sctx_entry_routed.Gen (cfg_entry (compile_prog Pi ps), []) sctx_entry_sigma_abs)"
     by (simp add: eq_side_cfg_T_eff_keyed_seed_dg)
        (rule order_trans[OF _ side_acc_dg_ge_acc], simp add: le_supI2)
-  also have "\<dots> \<le> locals (sctx_entry_sigma_abs (Inl (cfg_entry (compile_prog Pi ps main_name main), [])))"
+  also have "\<dots> \<le> locals (sctx_entry_sigma_abs (Inl (cfg_entry (compile_prog Pi ps), [])))"
     using sctx_entry_routed.pp_eq_bound[OF entry_cov] by (simp add: less_eq_dg_state_def)
   finally show ?thesis .
 qed
@@ -365,7 +361,7 @@ definition sctx_entry_enterc ::
     "cfg_node \<Rightarrow> sign list \<Rightarrow> store \<Rightarrow> sign list" where
   "sctx_entry_enterc = route_enterc_of_sigma (sctx_abs_spec gs)
      (formals_route_lifted_gen (sctx_abs_spec gs)) sctx_entry_sigma_abs Global
-     (compile_prog Pi ps main_name main)"
+     (compile_prog Pi ps)"
 
 lemmas sctx_entry_routed_context_call =
   sctx_entry_routed.routed_context_call[folded sctx_entry_enterc_def]
@@ -373,11 +369,11 @@ lemmas sctx_entry_routed_context_comb =
   sctx_entry_routed.routed_context_comb[folded sctx_entry_enterc_def]
 
 theorem sctx_entry_activation_collect_sound:
-  "activation_collect gs sctx_entry_enterc [] (compile_prog Pi ps main_name main) (cinit_stores gs) v ctx
+  "activation_collect gs sctx_entry_enterc [] (compile_prog Pi ps) (cinit_stores gs) v ctx
      \<subseteq> gamma_state_lift (sctx_entry_sg (Inl (v, ctx)))"
 proof (rule activation_collect_sound_gen[where sg = sctx_entry_sg and gammaM = gamma_state_lift
         and enterc = "sctx_entry_enterc"
-        and initial_ctx = "[]" and S = "cinit_stores gs" and g = "compile_prog Pi ps main_name main" and gs = gs])
+        and initial_ctx = "[]" and S = "cinit_stores gs" and g = "compile_prog Pi ps" and gs = gs])
   fix s assume "s \<in> cinit_stores gs"
   hence "s \<in> gamma_state_lift (map_lift (fun_of_resolved_st_q_for gs) (Lifted cinit_sign_st))"
     using sctx_entry_cinit_le_cinit_sign_st by blast
@@ -385,20 +381,20 @@ proof (rule activation_collect_sound_gen[where sg = sctx_entry_sg and gammaM = g
         = gamma_dg_base (map_lift (fun_of_resolved_st_q_for gs) (Lifted cinit_sign_st))
             (map_lift (fun_of_resolved_st_q_for gs) (Bot::sign exec_dg_st lifted))"
     by (simp add: gamma_dg_base_def)
-  also have "\<dots> \<subseteq> gamma_dg_base (locals (sctx_entry_sigma_abs (Inl (cfg_entry (compile_prog Pi ps main_name main), []))))
+  also have "\<dots> \<subseteq> gamma_dg_base (locals (sctx_entry_sigma_abs (Inl (cfg_entry (compile_prog Pi ps), []))))
                    (globs (sctx_entry_sigma_abs (Inr Global)))"
     by (rule gamma_dg_base_mono[OF sctx_entry_locals_ge_s0d sctx_entry_routed.pp_entry_s0g_bound[OF entry_cov]])
-  also have "\<dots> = gamma_state_lift (sctx_entry_sg (Inl (cfg_entry (compile_prog Pi ps main_name main), [])))"
+  also have "\<dots> = gamma_state_lift (sctx_entry_sg (Inl (cfg_entry (compile_prog Pi ps), [])))"
     unfolding sctx_entry_sg_covered[OF entry_cov] gamma_dg_base_def by (rule refl)
-  finally show "s \<in> gamma_state_lift (sctx_entry_sg (Inl (cfg_entry (compile_prog Pi ps main_name main), [])))" .
+  finally show "s \<in> gamma_state_lift (sctx_entry_sg (Inl (cfg_entry (compile_prog Pi ps), [])))" .
 next
-  show "\<And>u a v c s s'. (u, a, v) \<in> intra (compile_prog Pi ps main_name main)
+  show "\<And>u a v c s s'. (u, a, v) \<in> intra (compile_prog Pi ps)
         \<Longrightarrow> s \<in> gamma_state_lift (sctx_entry_sg (Inl (u, c))) \<Longrightarrow> s' \<in> edge_step a s
         \<Longrightarrow> s' \<in> gamma_state_lift (sctx_entry_sg (Inl (v, c)))"
     by (rule sctx_entry_routed.dg_ctx_act_edge)
 next
   fix u dst pars args p cont c s
-  assume ce: "(u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps main_name main)"
+  assume ce: "(u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps)"
     and sm: "s \<in> gamma_state_lift (sctx_entry_sg (Inl (u, c)))"
   show "call_enter gs (CallEdge dst pars args) s
           \<in> gamma_state_lift
@@ -406,10 +402,10 @@ next
     using sctx_entry_routed_context_call[OF ce sm] .
 next
   fix cl dst pars args p cont c1 s t es
-  assume ce: "(cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps main_name main)"
+  assume ce: "(cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps)"
     and sm: "s \<in> gamma_state_lift (sctx_entry_sg (Inl (cl, c1)))"
     and tm: "t \<in> gamma_state_lift (sctx_entry_sg (Inl (FunctionResult p, sctx_entry_enterc cl c1 es)))"
-    and ces: "call_enter_store gs (compile_prog Pi ps main_name main) cl s es"
+    and ces: "call_enter_store gs (compile_prog Pi ps) cl s es"
   show "combine_collect gs dst s t \<in> gamma_state_lift (sctx_entry_sg (Inl (cont, c1)))"
     using tm sctx_entry_routed_context_comb[OF ce sm _ ces] by blast
 qed
@@ -420,29 +416,29 @@ end
 subsection \<open>Whole-program convenience layer\<close>
 
 definition sctx_entry_eqs_prog ::
-    "(vname \<Rightarrow> bool) \<Rightarrow> pname \<Rightarrow> imp_prog
+    "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog
        \<Rightarrow> (pp \<times> sign list, gk, (sign exec_dg_st lifted, sign exec_dg_st lifted) dg_state) eqsT" where
-  "sctx_entry_eqs_prog gs main_name p =
+  "sctx_entry_eqs_prog gs p =
      sctx_entry_eqs gs (resolved_st_q_is_bot_for (declared_global_vars p))
-       (prog_table p) (prog_procs p) main_name (prog_main p)"
+       (prog_table p) (prog_procs p)"
 
 definition sctx_entry_sol_prog ::
-    "(vname \<Rightarrow> bool) \<Rightarrow> pname \<Rightarrow> imp_prog
+    "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog
        \<Rightarrow> (pp \<times> sign list) set \<times> (pp \<times> sign list + gk \<Rightarrow> (sign exec_dg_st lifted, sign exec_dg_st lifted) dg_state)" where
-  "sctx_entry_sol_prog gs main_name p =
+  "sctx_entry_sol_prog gs p =
      sctx_entry_sol gs (resolved_st_q_is_bot_for (declared_global_vars p))
-       (prog_table p) (prog_procs p) main_name (prog_main p)"
+       (prog_table p) (prog_procs p)"
 
-definition sctx_entry_terminates_prog :: "(vname \<Rightarrow> bool) \<Rightarrow> pname \<Rightarrow> imp_prog \<Rightarrow> bool" where
-  "sctx_entry_terminates_prog gs main_name p =
+definition sctx_entry_terminates_prog :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> bool" where
+  "sctx_entry_terminates_prog gs p =
      sctx_entry_terminates gs (resolved_st_q_is_bot_for (declared_global_vars p))
-       (prog_table p) (prog_procs p) main_name (prog_main p)"
+       (prog_table p) (prog_procs p)"
 
 lemma sctx_entry_terminates_prog_via_solve_c:
   assumes "TD_side_always_join_Interp_solve_c
-             (sctx_entry_eqs_prog gs main_name p)
-             (cfg_exit (compile_prog (prog_table p) (prog_procs p) main_name (prog_main p)), []) \<noteq> None"
-  shows "sctx_entry_terminates_prog gs main_name p"
+             (sctx_entry_eqs_prog gs p)
+             (cfg_exit (compile_prog (prog_table p) (prog_procs p)), []) \<noteq> None"
+  shows "sctx_entry_terminates_prog gs p"
   using assms
   unfolding sctx_entry_terminates_prog_def sctx_entry_eqs_prog_def
   by (rule sctx_entry_terminates_via_solve_c)
@@ -458,19 +454,19 @@ text \<open>
 \<close>
 
 definition analyse_sign_entry_state_result_for ::
-    "(vname \<Rightarrow> bool) \<Rightarrow> pname \<Rightarrow> imp_prog \<Rightarrow> (sign list, sign abs_state) analysis_result" where
-  "analyse_sign_entry_state_result_for gs main_name p =
+    "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> (sign list, sign abs_state) analysis_result" where
+  "analyse_sign_entry_state_result_for gs p =
      Analysis_Result
-       (fst (sctx_entry_sol_prog gs main_name p))
+       (fst (sctx_entry_sol_prog gs p))
        (\<lambda>v ctx. normalize_point gs
                   (canonicalize_lift (resolved_st_q_is_bot_for (declared_global_vars p))
-                    (locals (snd (sctx_entry_sol_prog gs main_name p) (Inl (v, ctx))))))"
+                    (locals (snd (sctx_entry_sol_prog gs p) (Inl (v, ctx))))))"
 
 declare analyse_sign_entry_state_result_for_def [code del]
 
 lemma analyse_sign_entry_state_result_for_code [code]:
-  "analyse_sign_entry_state_result_for gs main_name p =
-     (let sol = sctx_entry_sol_prog gs main_name p; gl = declared_global_vars p
+  "analyse_sign_entry_state_result_for gs p =
+     (let sol = sctx_entry_sol_prog gs p; gl = declared_global_vars p
       in Analysis_Result (fst sol)
            (\<lambda>v ctx. normalize_point gs
                       (canonicalize_lift (resolved_st_q_is_bot_for gl)
@@ -482,7 +478,7 @@ text \<open>Convenience instance at \<^const>\<open>declared_global\<close> \<op
 
 definition analyse_sign_entry_state_result :: "imp_prog \<Rightarrow> (sign list, sign abs_state) analysis_result" where
   "analyse_sign_entry_state_result p =
-     analyse_sign_entry_state_result_for (declared_global p) prog_main_name p"
+     analyse_sign_entry_state_result_for (declared_global p) p"
 
 section \<open>Contextual check report\<close>
 
@@ -494,28 +490,28 @@ text \<open>
 \<close>
 
 definition sctx_entry_check_projection ::
-    "pname \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> exp \<times> (sign list \<times> contextual_verdict) set) list" where
-  "sctx_entry_check_projection main_name p =
-     classify_checks_ctx (prog_cfg main_name p)
-       (analyse_sign_entry_state_result_for (declared_global p) main_name p)
+    "imp_prog \<Rightarrow> (pp \<times> exp \<times> (sign list \<times> contextual_verdict) set) list" where
+  "sctx_entry_check_projection p =
+     classify_checks_ctx (prog_cfg p)
+       (analyse_sign_entry_state_result_for (declared_global p) p)
        sign_classify_check"
 
 definition sctx_entry_verdict_report_prog ::
-    "pname \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> exp \<times> contextual_verdict) list" where
-  "sctx_entry_verdict_report_prog main_name p =
+    "imp_prog \<Rightarrow> (pp \<times> exp \<times> contextual_verdict) list" where
+  "sctx_entry_verdict_report_prog p =
      map (\<lambda>(u, c, vs). (u, c, aggregate_verdicts (snd ` vs)))
-       (sctx_entry_check_projection main_name p)"
+       (sctx_entry_check_projection p)"
 
 lemma sctx_entry_verdict_report_prog_eq:
-  "sctx_entry_verdict_report_prog main_name p =
-     classify_checks_verdicts (prog_cfg main_name p)
-       (analyse_sign_entry_state_result_for (declared_global p) main_name p)
+  "sctx_entry_verdict_report_prog p =
+     classify_checks_verdicts (prog_cfg p)
+       (analyse_sign_entry_state_result_for (declared_global p) p)
        sign_classify_check"
   unfolding sctx_entry_verdict_report_prog_def sctx_entry_check_projection_def
   by (rule classify_checks_verdicts_proj)
 
 definition analyse_sign_entry_state_report :: "imp_prog \<Rightarrow> (pp \<times> exp \<times> contextual_verdict) list" where
-  "analyse_sign_entry_state_report p = sctx_entry_verdict_report_prog prog_main_name p"
+  "analyse_sign_entry_state_report p = sctx_entry_verdict_report_prog p"
 
 end
 

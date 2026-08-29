@@ -58,16 +58,16 @@ definition sign_nest_procs :: "pname list" where "sign_nest_procs = prog_procs s
 definition sign_nest_main :: "VIMP_Proc.com" where "sign_nest_main = prog_main sign_nest_program"
 
 definition sign_nest_cfg :: cfg where
-  "sign_nest_cfg = compile_prog sign_nest_pi sign_nest_procs (STR ''main'') sign_nest_main"
+  "sign_nest_cfg = compile_prog sign_nest_pi sign_nest_procs"
 
 text \<open>The compiled CFG, folded back under its own name: every obligation the routed
   locale states is phrased in \<^const>\<open>compile_prog\<close>, every fact below in \<open>sign_nest_cfg\<close>.\<close>
 lemma sign_nest_cfg_compile [simp]:
-  "compile_prog sign_nest_pi sign_nest_procs (STR ''main'') sign_nest_main = sign_nest_cfg"
+  "compile_prog sign_nest_pi sign_nest_procs = sign_nest_cfg"
   by (simp add: sign_nest_cfg_def)
 
 lemma sign_nest_entry: "cfg_entry sign_nest_cfg = FunctionEntry (STR ''main'')"
-  unfolding sign_nest_cfg_def by (rule cfg_entry_compile_prog)
+  by (simp only: sign_nest_cfg_def cfg_entry_compile_prog prog_main_name_def)
 
 lemma sign_nest_finE: "finite (intra sign_nest_cfg)"
   unfolding sign_nest_cfg_def using compile_prog_finite by blast
@@ -377,7 +377,7 @@ text \<open>The call-string routing policy instantiated at \<open>k = 1\<close>.
   before it reaches the goal, so \<open>call_fwd\<close> does not need to case-split on which one.\<close>
 
 interpretation sign_nest_1_cs: call_string_routed_context
-    sign_nest_S_abs sign_nest_gs sign_nest_pi sign_nest_procs "STR ''main''" sign_nest_main 1
+    sign_nest_S_abs sign_nest_gs sign_nest_pi sign_nest_procs 1
     "map_lift (fun_of_resolved_st_q_for sign_nest_gs) (Bot::sign exec_dg_st lifted)"
     "map_lift (fun_of_resolved_st_q_for sign_nest_gs) (Lifted cinit_sign_st)"
     "map_lift (fun_of_resolved_st_q_for sign_nest_gs) (Bot::sign exec_dg_st lifted)"

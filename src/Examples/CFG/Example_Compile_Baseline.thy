@@ -78,7 +78,7 @@ definition cfg_report :: "cfg \<Rightarrow> nat \<times> nat \<times> nat \<time
 subsection \<open>Uniform program builder\<close>
 
 definition prog_cfg :: "imp_prog \<Rightarrow> cfg" where
-  "prog_cfg P = compile_prog (prog_table P) (prog_procs P) (STR ''main'') (prog_main P)"
+  "prog_cfg P = compile_prog (prog_table P) (prog_procs P)"
 
 subsection \<open>Programs 1--8: intraprocedural shapes\<close>
 
@@ -138,9 +138,7 @@ definition factorial_cfg :: cfg where
   "factorial_cfg =
      compile_prog
        (prog_table factorial_program)
-       (prog_procs factorial_program)
-       (STR ''main'')
-       (prog_main factorial_program)"
+       (prog_procs factorial_program)"
 
 subsection \<open>Programs 9, 11--14: interprocedural shapes\<close>
 
@@ -176,11 +174,13 @@ lemma p15_unwind_not_source: "\<not> source_com Unwind"
   by simp
 
 lemma p15_restore_body_rejected:
-  "~ wf_compile_input is_global \<Pi> ps main_name Restore"
-  by (simp add: wf_compile_input_def wf_source_program_def)
+  "\<Pi> prog_main_name = Some \<lparr>formals = [], body = Restore\<rparr>
+     \<Longrightarrow> ~ wf_compile_input is_global \<Pi> ps"
+  by (simp add: wf_compile_input_def wf_source_program_def main_body_def)
 
 lemma p15_unwind_body_rejected:
-  "~ wf_compile_input is_global \<Pi> ps main_name Unwind"
-  by (simp add: wf_compile_input_def wf_source_program_def)
+  "\<Pi> prog_main_name = Some \<lparr>formals = [], body = Unwind\<rparr>
+     \<Longrightarrow> ~ wf_compile_input is_global \<Pi> ps"
+  by (simp add: wf_compile_input_def wf_source_program_def main_body_def)
 
 end

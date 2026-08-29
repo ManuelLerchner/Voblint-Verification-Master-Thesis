@@ -169,7 +169,7 @@ text \<open>Unlike \<open>k = 1\<close>, \<open>call_fwd\<close>'s \<open>Statem
   for is discharged generically at \<^const>\<open>cs_route\<close>, exactly as at \<open>k = 1\<close>.\<close>
 
 interpretation sign_nest_2_cs: call_string_routed_context
-    sign_nest_S_abs sign_nest_gs sign_nest_pi sign_nest_procs "STR ''main''" sign_nest_main 2
+    sign_nest_S_abs sign_nest_gs sign_nest_pi sign_nest_procs 2
     "map_lift (fun_of_resolved_st_q_for sign_nest_gs) (Bot::sign exec_dg_st lifted)"
     "map_lift (fun_of_resolved_st_q_for sign_nest_gs) (Lifted cinit_sign_st)"
     "map_lift (fun_of_resolved_st_q_for sign_nest_gs) (Bot::sign exec_dg_st lifted)"

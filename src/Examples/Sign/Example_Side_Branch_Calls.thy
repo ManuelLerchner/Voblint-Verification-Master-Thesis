@@ -87,48 +87,48 @@ text \<open>Termination is proved, not assumed: the executable routed solver ret
 lemma ec_reserved: "reserved_ret_var branch_prog_gs"
   unfolding reserved_ret_var_def branch_prog_def by (simp add: ret_var_def)
 
-lemma ec_terminates: "sctx_terminates_prog branch_prog_gs prog_main_name branch_prog"
+lemma ec_terminates: "sctx_terminates_prog branch_prog_gs branch_prog"
   by (rule sctx_terminates_prog_via_solve_c) eval
 
 lemma ec_entry_cov:
-  "(cfg_entry (prog_cfg prog_main_name branch_prog), ())
-     \<in> fst (sctx_sol_prog branch_prog_gs prog_main_name branch_prog)"
+  "(cfg_entry (prog_cfg branch_prog), ())
+     \<in> fst (sctx_sol_prog branch_prog_gs branch_prog)"
   by eval
 
 lemma ec_fwd_ok_ball:
-  "\<forall>(u, a, w) \<in> intra (prog_cfg prog_main_name branch_prog).
-     (u, ()) \<in> fst (sctx_sol_prog branch_prog_gs prog_main_name branch_prog) \<longrightarrow>
-     (w, ()) \<in> fst (sctx_sol_prog branch_prog_gs prog_main_name branch_prog)"
+  "\<forall>(u, a, w) \<in> intra (prog_cfg branch_prog).
+     (u, ()) \<in> fst (sctx_sol_prog branch_prog_gs branch_prog) \<longrightarrow>
+     (w, ()) \<in> fst (sctx_sol_prog branch_prog_gs branch_prog)"
   by eval
 
 lemma ec_fwd_ok:
-  assumes "(u, ctx) \<in> fst (sctx_sol_prog branch_prog_gs prog_main_name branch_prog)"
-    and "(u, a, w) \<in> intra (prog_cfg prog_main_name branch_prog)"
-  shows "(w, ctx) \<in> fst (sctx_sol_prog branch_prog_gs prog_main_name branch_prog)"
+  assumes "(u, ctx) \<in> fst (sctx_sol_prog branch_prog_gs branch_prog)"
+    and "(u, a, w) \<in> intra (prog_cfg branch_prog)"
+  shows "(w, ctx) \<in> fst (sctx_sol_prog branch_prog_gs branch_prog)"
   using assms ec_fwd_ok_ball by (cases ctx) auto
 
 lemma ec_calls_cov_ball:
-  "\<forall>(u, ca, ce, k) \<in> calls (prog_cfg prog_main_name branch_prog).
+  "\<forall>(u, ca, ce, k) \<in> calls (prog_cfg branch_prog).
      (case ce of FunctionEntry q \<Rightarrow>
-        (FunctionEntry q, ()) \<in> fst (sctx_sol_prog branch_prog_gs prog_main_name branch_prog)
+        (FunctionEntry q, ()) \<in> fst (sctx_sol_prog branch_prog_gs branch_prog)
       | _ \<Rightarrow> True)
-     \<and> ((k, ()) \<in> fst (sctx_sol_prog branch_prog_gs prog_main_name branch_prog))"
+     \<and> ((k, ()) \<in> fst (sctx_sol_prog branch_prog_gs branch_prog))"
   by eval
 
 lemma ec_call_fwd_ok:
-  assumes "(u, ctx) \<in> fst (sctx_sol_prog branch_prog_gs prog_main_name branch_prog)"
-    and "(u, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg prog_main_name branch_prog)"
-  shows "(FunctionEntry q, ()) \<in> fst (sctx_sol_prog branch_prog_gs prog_main_name branch_prog)"
+  assumes "(u, ctx) \<in> fst (sctx_sol_prog branch_prog_gs branch_prog)"
+    and "(u, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg branch_prog)"
+  shows "(FunctionEntry q, ()) \<in> fst (sctx_sol_prog branch_prog_gs branch_prog)"
   using assms ec_calls_cov_ball by fastforce
 
 lemma ec_comb_fwd_ok:
-  assumes "(cl, c1) \<in> fst (sctx_sol_prog branch_prog_gs prog_main_name branch_prog)"
-    and "(cl, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg prog_main_name branch_prog)"
-  shows "(k, c1) \<in> fst (sctx_sol_prog branch_prog_gs prog_main_name branch_prog)"
+  assumes "(cl, c1) \<in> fst (sctx_sol_prog branch_prog_gs branch_prog)"
+    and "(cl, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg branch_prog)"
+  shows "(k, c1) \<in> fst (sctx_sol_prog branch_prog_gs branch_prog)"
   using assms ec_calls_cov_ball by (cases c1) fastforce
 
 lemma ec_node_sound:
-  "ltr_collect branch_prog_gs (prog_cfg prog_main_name branch_prog) (cinit_stores branch_prog_gs) v
+  "ltr_collect branch_prog_gs (prog_cfg branch_prog) (cinit_stores branch_prog_gs) v
      \<subseteq> \<lbrakk>case lookup_context (analyse_sign_result_for branch_prog_gs branch_prog) v () of
             Unreachable \<Rightarrow> bot | Reachable st \<Rightarrow> st\<rbrakk>"
   by (rule analyse_sign_result_node_sound_for
@@ -141,7 +141,7 @@ text \<open>The computed environment at the exit, read out of the routed solved
 definition branch_prog_env :: "vname \<Rightarrow> sign" where
   "branch_prog_env =
      (case lookup_context (analyse_sign_result_for branch_prog_gs branch_prog)
-             (cfg_exit (prog_cfg prog_main_name branch_prog)) () of
+             (cfg_exit (prog_cfg branch_prog)) () of
         Unreachable \<Rightarrow> bot | Reachable st \<Rightarrow> st)"
 
 text \<open>
@@ -151,7 +151,7 @@ text \<open>
 \<close>
 
 corollary ec_certified_sound:
-  "ltr_collect branch_prog_gs (prog_cfg (STR ''main'') branch_prog) (cinit_stores branch_prog_gs) (cfg_exit (prog_cfg (STR ''main'') branch_prog))
+  "ltr_collect branch_prog_gs (prog_cfg branch_prog) (cinit_stores branch_prog_gs) (cfg_exit (prog_cfg branch_prog))
    \<le> \<lbrakk>branch_prog_env\<rbrakk>"
   unfolding branch_prog_env_def
   using ec_node_sound
@@ -164,7 +164,7 @@ text \<open>
 \<close>
 
 corollary ec_certified_sound_store:
-  assumes "s \<in> ltr_collect branch_prog_gs (prog_cfg (STR ''main'') branch_prog) (cinit_stores branch_prog_gs) (cfg_exit (prog_cfg (STR ''main'') branch_prog))"
+  assumes "s \<in> ltr_collect branch_prog_gs (prog_cfg branch_prog) (cinit_stores branch_prog_gs) (cfg_exit (prog_cfg branch_prog))"
   shows "s \<in> \<lbrakk>branch_prog_env\<rbrakk>"
   using assms ec_certified_sound by blast
 

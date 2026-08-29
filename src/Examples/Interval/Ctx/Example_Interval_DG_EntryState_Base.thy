@@ -41,7 +41,7 @@ abbreviation rc_lookup :: "('a::bot) exec_dg_st \<Rightarrow> vname \<Rightarrow
   "rc_lookup s x \<equiv> lookup_resolved_st_q s (location_of rc_gs x)"
 
 definition rc_cfg :: cfg where
-  "rc_cfg = compile_prog rc_pi rc_procs (STR ''main'') rc_main"
+  "rc_cfg = compile_prog rc_pi rc_procs"
 
 text \<open>
   The compiled CFG.  Procedure \<open>p\<close> runs between \<open>FunctionEntry (STR ''p'')\<close> and
@@ -50,7 +50,7 @@ text \<open>
   continues at \<open>3\<close>, the single call site, continuing at \<open>4\<close>.\<close>
 
 lemma rc_entry: "cfg_entry rc_cfg = FunctionEntry (STR ''main'')"
-  unfolding rc_cfg_def by (rule cfg_entry_compile_prog)
+  unfolding rc_cfg_def by (simp add: cfg_entry_compile_prog prog_main_name_def)
 
 text \<open>The one call site's shape, computed directly from \<open>rc_cfg\<close>. Exported for the
   routed-context siblings, which key off this single call rather than case-splitting
@@ -72,7 +72,7 @@ lemma rc_finC: "finite (calls rc_cfg)" unfolding rc_cfg_def using compile_prog_f
 
 subsection \<open>Source-level well-formedness\<close>
 
-lemma rc_wf: "wf_compile_input rc_gs rc_pi rc_procs (STR ''main'') rc_main"
+lemma rc_wf: "wf_compile_input rc_gs rc_pi rc_procs"
   by (auto simp: wf_compile_input_simps rc_pi_def rc_procs_def rc_main_def rc_program_def
       split: if_splits option.splits)
 

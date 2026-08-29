@@ -139,8 +139,9 @@ lemma reserved_read_rejected:
   by (simp add: source_exp_def)
 
 lemma root_return_rejected:
-  "~ wf_compile_input cr_gs \<Pi> ps main_name (Return e)"
-  by (simp add: wf_compile_input_def wf_source_program_def)
+  "\<Pi> prog_main_name = Some \<lparr>formals = [], body = Return e\<rparr>
+     \<Longrightarrow> ~ wf_compile_input cr_gs \<Pi> ps"
+  by (simp add: wf_compile_input_def wf_source_program_def main_body_def)
 
 lemma value_call_requires_value_provider:
   assumes "\<Pi> p = Some (\<lparr>formals = [], body = SKIP\<rparr>)" and "special_table p = None"
@@ -171,19 +172,17 @@ definition fallthrough_pi :: proc_table where
 lemma explode_ret_hd [simp]: "hd (String.explode (STR ''#ret'')) \<noteq> CHR ''G''" by eval
 
 lemma main_fallthrough_accepted:
-  "wf_compile_input cr_gs fallthrough_pi [] (STR ''main'') SKIP"
-  by (auto simp: wf_compile_input_def wf_source_program_def fallthrough_pi_def
-        wf_proc_decl_def reserved_ret_var_def ret_var_def
-        special_table_def special_pname_nondet_int_def
-        special_pname_min_def special_pname_max_def)
+  "wf_compile_input cr_gs fallthrough_pi []"
+  by (auto simp: wf_compile_input_simps wf_source_program_def fallthrough_pi_def
+        wf_proc_decl_def)
 
 lemma missing_main_rejected:
-  assumes "\<Pi> main_name = None"
-  shows "~ wf_compile_input cr_gs \<Pi> ps main_name main"
+  assumes "\<Pi> prog_main_name = None"
+  shows "~ wf_compile_input cr_gs \<Pi> ps"
   using assms
   by (auto simp: wf_compile_input_def wf_source_program_def)
 
 lemma duplicate_procedure_names_rejected:
-  "~ wf_compile_input cr_gs \<Pi> [p, p] main_name main"
+  "~ wf_compile_input cr_gs \<Pi> [p, p]"
   by (simp add: wf_compile_input_def)
 end

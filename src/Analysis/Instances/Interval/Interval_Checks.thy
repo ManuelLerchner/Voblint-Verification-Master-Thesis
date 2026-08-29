@@ -32,7 +32,7 @@ text \<open>
 
 definition analyse_interval_td_result_for ::
     "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> (unit, ivl abs_state) analysis_result" where
-  "analyse_interval_td_result_for gs p = analyse_interval_ctx_result_warrow_for gs prog_main_name p"
+  "analyse_interval_td_result_for gs p = analyse_interval_ctx_result_warrow_for gs p"
 
 text \<open>Convenience instance at \<^const>\<open>declared_global\<close> \<open>p\<close>, matching
   \<open>analyse_interval_td_report\<close>'s shape.\<close>
@@ -54,7 +54,7 @@ text \<open>
 
 definition analyse_interval_join_result_for ::
     "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> (unit, ivl abs_state) analysis_result" where
-  "analyse_interval_join_result_for gs p = analyse_interval_ctx_result_for gs prog_main_name p"
+  "analyse_interval_join_result_for gs p = analyse_interval_ctx_result_for gs p"
 
 definition analyse_interval_join_result ::
     "imp_prog \<Rightarrow> (unit, ivl abs_state) analysis_result" where
@@ -73,7 +73,7 @@ text \<open>
 
 definition analyse_interval_per_origin_result_for ::
     "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> (unit, ivl abs_state) analysis_result" where
-  "analyse_interval_per_origin_result_for gs p = analyse_interval_ctx_result_per_origin_for gs prog_main_name p"
+  "analyse_interval_per_origin_result_for gs p = analyse_interval_ctx_result_per_origin_for gs p"
 
 definition analyse_interval_per_origin_result ::
     "imp_prog \<Rightarrow> (unit, ivl abs_state) analysis_result" where
@@ -133,7 +133,7 @@ definition analyse_interval_td_report_for_with_state ::
     "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> exp \<times> check_result \<times> bool \<times> ivl abs_state) list" where
   "analyse_interval_td_report_for_with_state gs p =
      (let r = analyse_interval_td_result_for gs p
-      in classify_checks_with_state (prog_cfg prog_main_name p)
+      in classify_checks_with_state (prog_cfg p)
            (\<lambda>v. case lookup_context r v () of
                   Unreachable \<Rightarrow> (True, bot)
                 | Reachable st \<Rightarrow> (False, st))
@@ -207,7 +207,7 @@ text \<open>
 
 definition analyse_interval_wpo_result_for ::
     "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> (unit, ivl abs_state) analysis_result" where
-  "analyse_interval_wpo_result_for gs p = analyse_interval_ctx_result_wpo_for gs prog_main_name p"
+  "analyse_interval_wpo_result_for gs p = analyse_interval_ctx_result_wpo_for gs p"
 
 definition analyse_interval_report_wpo_for :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> check_report_entry list" where
   "analyse_interval_report_wpo_for gs p =

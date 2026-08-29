@@ -41,14 +41,14 @@ definition fact_prog :: imp_prog where
 abbreviation fact_gs :: "vname \<Rightarrow> bool" where "fact_gs \<equiv> declared_global fact_prog"
 
 definition fact_cfg :: cfg where
-  "fact_cfg = compile_prog (prog_table fact_prog) (prog_procs fact_prog) prog_main_name (prog_main fact_prog)"
+  "fact_cfg = compile_prog (prog_table fact_prog) (prog_procs fact_prog)"
 
 definition fact_is_bot_pred :: "ivl resolved_st_q \<Rightarrow> bool" where
   "fact_is_bot_pred = resolved_st_q_is_bot_for (declared_global_vars fact_prog)"
 
 definition fact_sol ::
   "(pp \<times> ivl list) set \<times> (pp \<times> ivl list + gk \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)" where
-  "fact_sol = entry_state_sol_prog fact_gs prog_main_name fact_prog"
+  "fact_sol = entry_state_sol_prog fact_gs fact_prog"
 
 text \<open>The same solution read through the public result table rather than the solver's
   own unknown space: \<^const>\<open>lookup_context\<close> answers \<^const>\<open>Unreachable\<close> off the
@@ -56,11 +56,11 @@ text \<open>The same solution read through the public result table rather than t
   neither \<^const>\<open>Inl\<close> nor \<^const>\<open>locals\<close> nor the resolved-store representation.\<close>
 
 definition fact_result :: "(ivl list, ivl abs_state) analysis_result" where
-  "fact_result = analyse_interval_entry_state_result_for fact_gs prog_main_name fact_prog"
+  "fact_result = analyse_interval_entry_state_result_for fact_gs fact_prog"
 
 lemma fact_terminates:
   "TD_side_warrowing_apinis_Interp_solve_c
-     (entry_state_eqs_prog fact_gs prog_main_name fact_prog)
+     (entry_state_eqs_prog fact_gs fact_prog)
      (cfg_exit fact_cfg, []) \<noteq> None"
   by eval
 

@@ -101,13 +101,14 @@ definition flagship_pi :: proc_table where
   "flagship_pi = prog_table flagship_prog"
 
 definition flagship_cfg :: cfg where
-  "flagship_cfg = compile_prog flagship_pi (prog_procs flagship_prog) prog_main_name (prog_main flagship_prog)"
+  "flagship_cfg = compile_prog flagship_pi (prog_procs flagship_prog)"
 
 lemma flagship_entry: "cfg_entry flagship_cfg = FunctionEntry (STR ''main'')"
-  unfolding flagship_cfg_def prog_main_name_def by (rule cfg_entry_compile_prog)
+  by (simp only: flagship_cfg_def cfg_entry_compile_prog prog_main_name_def)
 lemma flagship_calls: "calls flagship_cfg = {}"
   unfolding flagship_cfg_def flagship_pi_def
-  by (rule compile_prog_calls_empty) (simp_all add: flagship_prog_def)
+  by (rule compile_prog_calls_empty)
+     (simp_all add: flagship_prog_def main_body_def prog_main_name_def)
 
 lemma flagship_finE: "finite (intra flagship_cfg)"
   unfolding flagship_cfg_def using compile_prog_finite by simp
@@ -269,7 +270,7 @@ text \<open>
 \<close>
 
 lemma flagship_wf:
-  "wf_compile_input flagship_gs flagship_pi (prog_procs flagship_prog) prog_main_name (prog_main flagship_prog)"
+  "wf_compile_input flagship_gs flagship_pi (prog_procs flagship_prog)"
   by (auto simp: wf_compile_input_simps flagship_pi_def flagship_prog_def split: if_splits)
 
 theorem flagship_source_run_sound:
@@ -278,6 +279,8 @@ theorem flagship_source_run_sound:
   shows "\<exists>v stk. csim flagship_pi flagship_cfg (residual, t, frs) (v, t, stk)
                  \<and> t \<in> flagship_ex_reg.gamma (snd flagship_sol) v"
 proof -
+  have run': "star (pstep flagship_gs flagship_pi) (main_body flagship_pi, s, []) (residual, t, frs)"
+    using run by (simp add: flagship_pi_def)
   show ?thesis
     unfolding flagship_sol_def flagship_eqs_def flagship_cfg_def
     by (rule flagship_ex_reg.run_source_sound
@@ -287,7 +290,7 @@ proof -
               flagship_finE[unfolded flagship_cfg_def]
               flagship_finC[unfolded flagship_cfg_def]
               flagship_sound0[folded gamma_unit_def]
-              init run[unfolded flagship_cfg_def]])
+              init run'])
 qed
 
 
@@ -356,10 +359,10 @@ definition flagship_graph_config ::
       context_key = (\<lambda>_. STR ''unit''),
       show_context = (\<lambda>_. ''unit''),
       locals_for_pp = (\<lambda>p.
-        scope_locals (compiled_procedure_scope flagship_gs Map.empty [] prog_main_name (prog_main flagship_prog)
+        scope_locals (compiled_procedure_scope flagship_gs Map.empty []
           flagship_cfg p)),
       return_slot_for_pp = (\<lambda>p.
-        scope_return_slot (compiled_procedure_scope flagship_gs Map.empty [] prog_main_name (prog_main flagship_prog)
+        scope_return_slot (compiled_procedure_scope flagship_gs Map.empty []
           flagship_cfg p)),
       globals_to_show = [],
       show_local = (\<lambda>_ _ vars d. map (\<lambda>x.

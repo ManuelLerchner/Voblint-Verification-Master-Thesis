@@ -109,7 +109,7 @@ text \<open>
 \<close>
 
 definition parity_cfg :: cfg where
-  "parity_cfg = compile_prog parity_pi [] (STR ''main'') parity_prog"
+  "parity_cfg = compile_prog parity_pi []"
 
 lemma parity_finE: "finite (intra parity_cfg)" and parity_finC: "finite (calls parity_cfg)"
   unfolding parity_cfg_def
@@ -117,7 +117,8 @@ lemma parity_finE: "finite (intra parity_cfg)" and parity_finC: "finite (calls p
 
 lemma parity_calls: "calls parity_cfg = {}"
   unfolding parity_cfg_def parity_pi_def
-  by (rule compile_prog_calls_empty) (simp_all add: parity_prog_def parity_program_def)
+  by (rule compile_prog_calls_empty)
+     (simp_all add: parity_prog_def parity_program_def main_body_def prog_main_name_def)
 
 subsection \<open>3. Executable parity D/G specification\<close>
 
@@ -207,7 +208,11 @@ text \<open>
   \<^const>\<open>part_post_solution\<close>, \<open>solve_dom\<close>, or \<open>fun_of_dg_st_for\<close> appears in this proof.
 \<close>
 
-lemma parity_wf: "wf_compile_input parity_gs parity_pi [] (STR ''main'') parity_prog"
+lemma parity_main_body [simp]: "main_body parity_pi = parity_prog"
+  by (simp add: main_body_def prog_main_name_def parity_pi_def parity_program_def
+        parity_prog_def)
+
+lemma parity_wf: "wf_compile_input parity_gs parity_pi []"
   by (auto simp: wf_compile_input_simps parity_pi_def parity_prog_def parity_program_def
       split: if_splits)
 
@@ -246,6 +251,8 @@ theorem parity_source_run_sound:
   shows "\<exists>v stk. csim parity_pi parity_cfg (residual, t, frs) (v, t, stk)
                  \<and> t \<in> parity_ex_reg.gamma (snd parity_sol) v"
 proof -
+  have run': "star (pstep parity_gs parity_pi) (main_body parity_pi, s, []) (residual, t, frs)"
+    using run by simp
   show ?thesis
     unfolding parity_sol_def parity_eqs_def parity_cfg_def
     by (rule parity_ex_reg.run_source_sound
@@ -255,7 +262,7 @@ proof -
               parity_finE[unfolded parity_cfg_def]
               parity_finC[unfolded parity_cfg_def]
               parity_sound0
-              init run[unfolded parity_cfg_def]])
+              init run'])
 qed
 
 subsection \<open>9. The result is not vacuous\<close>
@@ -297,10 +304,10 @@ definition parity_graph_config ::
       context_key = (\<lambda>_. STR ''unit''),
       show_context = (\<lambda>_. ''unit''),
       locals_for_pp = (\<lambda>p.
-        scope_locals (compiled_procedure_scope parity_gs parity_pi [] (STR ''main'') parity_prog
+        scope_locals (compiled_procedure_scope parity_gs parity_pi []
           parity_cfg p) @ [STR ''total'']),
       return_slot_for_pp = (\<lambda>p.
-        scope_return_slot (compiled_procedure_scope parity_gs parity_pi [] (STR ''main'') parity_prog
+        scope_return_slot (compiled_procedure_scope parity_gs parity_pi []
           parity_cfg p)),
       globals_to_show = [],
       show_local = (\<lambda>_ _ vars d.

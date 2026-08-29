@@ -51,7 +51,7 @@ lemma loop_cfg_exit [simp]: "cfg_exit loop_cfg = FunctionResult (STR ''main'')"
 
 definition loop_ivl_eqs ::
     "(pp \<times> unit, gk, (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state) eqsT" where
-  "loop_ivl_eqs = ictx_eqs_prog loop_gs prog_main_name loop_prog"
+  "loop_ivl_eqs = ictx_eqs_prog loop_gs loop_prog"
 
 text \<open>One projection, reused by every engine below: take a solved D/G slot's local
   component and read \<open>x\<close> out of it.\<close>
@@ -95,7 +95,7 @@ lemma loop_body_ivl:
 definition loop_ivl_td_sol ::
     "(pp \<times> unit) set
        \<times> (pp \<times> unit + gk \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)" where
-  "loop_ivl_td_sol = ictx_sol_prog_warrow loop_gs prog_main_name loop_prog"
+  "loop_ivl_td_sol = ictx_sol_prog_warrow loop_gs loop_prog"
 
 definition loop_ivl_td_at :: "pp \<Rightarrow> ivl" where
   "loop_ivl_td_at pp = loop_read_x (snd loop_ivl_td_sol (Inl (pp, ())))"
@@ -140,7 +140,7 @@ definition analyse_interval_demo2_prog :: imp_prog where
   "analyse_interval_demo2_prog = program { void main() { a := 3; b := a + 1 } }"
 
 lemma analyse_interval_demo2_terminates:
-  "ictx_terminates_prog (declared_global analyse_interval_demo2_prog) prog_main_name
+  "ictx_terminates_prog (declared_global analyse_interval_demo2_prog)
      analyse_interval_demo2_prog"
   by (rule ictx_terminates_prog_via_solve_c) eval
 
@@ -148,7 +148,7 @@ definition analyse_interval_demo2_env :: "vname \<Rightarrow> ivl" where
   "analyse_interval_demo2_env =
      (case lookup_context
              (analyse_interval_join_result analyse_interval_demo2_prog)
-             (cfg_exit (prog_cfg prog_main_name analyse_interval_demo2_prog)) () of
+             (cfg_exit (prog_cfg analyse_interval_demo2_prog)) () of
         Unreachable \<Rightarrow> bot | Reachable st \<Rightarrow> st)"
 
 lemma analyse_interval_demo2_result:
@@ -165,7 +165,7 @@ definition analyse_interval_td_demo2_env :: "vname \<Rightarrow> ivl" where
   "analyse_interval_td_demo2_env =
      (case lookup_context
              (analyse_interval_td_result analyse_interval_demo2_prog)
-             (cfg_exit (prog_cfg prog_main_name analyse_interval_demo2_prog)) () of
+             (cfg_exit (prog_cfg analyse_interval_demo2_prog)) () of
         Unreachable \<Rightarrow> bot | Reachable st \<Rightarrow> st)"
 
 lemma analyse_interval_td_demo2_result:

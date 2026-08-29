@@ -46,8 +46,7 @@ definition placement_prog :: imp_prog where
 
 definition placement_cfg :: cfg where
   "placement_cfg =
-    compile_prog (prog_table placement_prog) (prog_procs placement_prog)
-      prog_main_name (prog_main placement_prog)"
+    compile_prog (prog_table placement_prog) (prog_procs placement_prog)"
 
 definition placement_owner :: pname where
   "placement_owner = (STR ''add'')"
@@ -719,7 +718,7 @@ lemma placement_hook_gen_entry:
   by simp_all
 
 lemma placement_cfg_entry: "cfg_entry placement_cfg = FunctionEntry prog_main_name"
-  unfolding placement_cfg_def by (rule cfg_entry_compile_prog)
+  by (simp only: placement_cfg_def cfg_entry_compile_prog prog_main_name_def)
 
 lemma placement_hook_lists:
   "intra_predecessor_list placement_cfg (FunctionEntry prog_main_name) = []"

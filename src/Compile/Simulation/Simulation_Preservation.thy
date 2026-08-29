@@ -741,38 +741,41 @@ section \<open>The static certificate for a whole compiled program\<close>
 
 text \<open>The static source contract establishes the runtime return guard for the root activation.\<close>
 lemma wf_compile_input_return_safe:
-  assumes "wf_compile_input gs \<Pi> ps main_name main"
-  shows "return_safe main"
+  assumes "wf_compile_input gs \<Pi> ps"
+  shows "return_safe (main_body \<Pi>)"
   using wf_compile_inputD(8)[OF assms] wf_compile_inputD(4)[OF assms]
   by (rule return_safe_if_no_return)
 
 text \<open>
   \<^const>\<open>procs_embedded\<close> is the static certificate \<^const>\<open>csim\<close> reads: every procedure declared
   in \<open>\<Pi>\<close> has its body fragment, entry \<open>EA_Nop\<close> wiring and \<open>EA_Ret None\<close> exit wiring in the
-  target graph.  It covers the entry procedure \<open>main_name\<close> too, since
-  \<open>\<Pi> main_name = Some \<lparr>formals = [], body = main\<rparr>\<close> makes \<^term>\<open>FunctionEntry main_name\<close> an ordinary
+  target graph.  It covers the entry procedure too, since
+  \<open>\<Pi> prog_main_name = Some \<lparr>formals = [], body = main_body \<Pi>\<rparr>\<close> makes
+  \<^term>\<open>FunctionEntry prog_main_name\<close> an ordinary
   activation.  Discharging it from actual \<^const>\<open>compile_prog\<close> output, rather than assuming it
   forever, is what closes the static side of the simulation.
 \<close>
 theorem procs_embedded_compile_prog:
-  assumes wf: "wf_compile_input gs \<Pi> ps main_name main"
-  shows "procs_embedded \<Pi> (compile_prog \<Pi> ps main_name main)"
+  assumes wf: "wf_compile_input gs \<Pi> ps"
+  shows "procs_embedded \<Pi> (compile_prog \<Pi> ps)"
   unfolding procs_embedded_def
 proof (intro allI impI)
   fix p decl assume pd: "\<Pi> p = Some decl"
-  let ?g = "compile_prog \<Pi> ps main_name main"
+  let ?g = "compile_prog \<Pi> ps"
   obtain n1 Eprocs Kprocs n2 Emain Kmain where
       procs: "compile_procs \<Pi> ps 0 = (n1, Eprocs, Kprocs)"
-    and mainc: "compile_proc \<Pi> main_name \<lparr>formals = [], body = main\<rparr> n1 = (n2, Emain, Kmain)"
+    and mainc: "compile_proc \<Pi> prog_main_name \<lparr>formals = [], body = main_body \<Pi>\<rparr> n1
+                  = (n2, Emain, Kmain)"
     and intra_g: "intra ?g = Eprocs \<union> Emain" and calls_g: "calls ?g = Kprocs \<union> Kmain"
     by (rule compile_prog_intra_split)
   have srccom: "source_com (body decl)"
     using wf_compile_inputD(7)[OF wf] pd unfolding source_pi_def by blast
   have "\<exists>m m' Ef Kf. compile_proc \<Pi> p decl m = (m', Ef, Kf)
           \<and> Ef \<subseteq> intra ?g \<and> Kf \<subseteq> calls ?g"
-  proof (cases "p = main_name")
+  proof (cases "p = prog_main_name")
     case True
-    with pd wf_compile_inputD(2)[OF wf] have "decl = \<lparr>formals = [], body = main\<rparr>" by simp
+    with pd wf_compile_inputD(2)[OF wf]
+    have "decl = \<lparr>formals = [], body = main_body \<Pi>\<rparr>" by simp
     then show ?thesis using mainc True intra_g calls_g by blast
   next
     case False
@@ -822,10 +825,14 @@ definition witness_pi :: proc_table where
   "witness_pi p = (if p = STR ''main'' then Some \<lparr>formals = [], body = SKIP\<rparr> else None)"
 
 abbreviation witness_cfg :: cfg where
-  "witness_cfg \<equiv> compile_prog witness_pi [] (STR ''main'') SKIP"
+  "witness_cfg \<equiv> compile_prog witness_pi []"
 
-lemma witness_wf: "wf_compile_input (\<lambda>_. False) witness_pi [] (STR ''main'') SKIP"
+lemma main_body_witness [simp]: "main_body witness_pi = SKIP"
+  by (simp add: main_body_def witness_pi_def prog_main_name_def)
+
+lemma witness_wf: "wf_compile_input (\<lambda>_. False) witness_pi []"
   by (auto simp: wf_compile_input_def wf_source_program_def witness_pi_def
+        main_body_def prog_main_name_def
         wf_proc_decl_def reserved_ret_var_def ret_var_def
         special_table_def special_pname_nondet_int_def
         special_pname_min_def special_pname_max_def)

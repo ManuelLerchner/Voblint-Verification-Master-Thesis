@@ -25,20 +25,20 @@ text \<open>
 \<close>
 
 locale call_string_routed_context =
-  dg_ctx_activation_base S gamma_dg_base gs "compile_prog Pi ps main_name main" Global "cs_route k"
-    "routed_cmb_g S Global Seed (static_resolve (compile_prog Pi ps main_name main))"
+  dg_ctx_activation_base S gamma_dg_base gs "compile_prog Pi ps" Global "cs_route k"
+    "routed_cmb_g S Global Seed (static_resolve (compile_prog Pi ps))"
     "routed_extra_g Seed Global"
     bot0 s0d s0g sigma vars x0 sg gamma_state_lift
   for S :: "('a::sound_domain abs_state lifted, 'G::bounded_semilattice_sup_bot) dg_spec"
     and gs :: "vname \<Rightarrow> bool"
-    and Pi :: proc_table and ps :: "pname list" and main_name :: pname and main :: com
+    and Pi :: proc_table and ps :: "pname list"
     and k :: nat
     and bot0 s0d s0g sigma vars x0 sg +
   assumes call_fwd:
     "\<And>u ctx dst pars args p cont.
        (u, ctx) \<in> vars
        \<Longrightarrow> (u, CallEdge dst pars args, FunctionEntry p, cont)
-             \<in> calls (compile_prog Pi ps main_name main)
+             \<in> calls (compile_prog Pi ps)
        \<Longrightarrow> (FunctionEntry p,
               cs_route k u ctx (locals (sigma (Inl (u, ctx)))) (CallEdge dst pars args))
              \<in> vars"
@@ -46,22 +46,22 @@ locale call_string_routed_context =
     "\<And>cl c1 dst pars args p cont.
        (cl, c1) \<in> vars
        \<Longrightarrow> (cl, CallEdge dst pars args, FunctionEntry p, cont)
-             \<in> calls (compile_prog Pi ps main_name main)
+             \<in> calls (compile_prog Pi ps)
        \<Longrightarrow> (cont, c1) \<in> vars"
 begin
 
-sublocale routed: routed_context_hetero S gs "compile_prog Pi ps main_name main" Global
+sublocale routed: routed_context_hetero S gs "compile_prog Pi ps" Global
   "cs_route k" bot0 s0d s0g sigma vars x0 sg Seed
-  "static_resolve (compile_prog Pi ps main_name main)" "cs_context k"
+  "static_resolve (compile_prog Pi ps)" "cs_context k"
 proof unfold_locales
-  show "finite (calls (compile_prog Pi ps main_name main))" using compile_prog_finite by simp
+  show "finite (calls (compile_prog Pi ps))" using compile_prog_finite by simp
 next
   show "\<And>p ctx. Seed p ctx \<noteq> Global" by simp
 next
   fix u ctx dst pars args p cont s
   assume "(u, CallEdge dst pars args, FunctionEntry p, cont)
-            \<in> calls (compile_prog Pi ps main_name main)"
-  then show "p \<in> set (static_resolve (compile_prog Pi ps main_name main) cont u
+            \<in> calls (compile_prog Pi ps)"
+  then show "p \<in> set (static_resolve (compile_prog Pi ps) cont u
                         (CallEdge dst pars args) (locals (sigma (Inl (u, ctx)))))"
     by (simp add: static_resolve_iff compile_prog_finite)
 next
@@ -74,7 +74,7 @@ next
   fix u ctx dst pars args p cont
   assume "(u, ctx) \<in> vars"
     and "(u, CallEdge dst pars args, FunctionEntry p, cont)
-           \<in> calls (compile_prog Pi ps main_name main)"
+           \<in> calls (compile_prog Pi ps)"
   then have "(FunctionEntry p,
                 cs_route k u ctx (locals (sigma (Inl (u, ctx)))) (CallEdge dst pars args))
                \<in> vars"
@@ -88,16 +88,16 @@ next
   fix cl c1 dst pars args p cont
   assume "(cl, c1) \<in> vars"
     and "(cl, CallEdge dst pars args, FunctionEntry p, cont)
-           \<in> calls (compile_prog Pi ps main_name main)"
+           \<in> calls (compile_prog Pi ps)"
   then show "(cont, c1) \<in> vars" by (rule comb_fwd)
 next
   fix cl s es dst pars args p cont
-  assume ces: "call_enter_store gs (compile_prog Pi ps main_name main) cl s es"
+  assume ces: "call_enter_store gs (compile_prog Pi ps) cl s es"
     and ce: "(cl, CallEdge dst pars args, FunctionEntry p, cont)
-               \<in> calls (compile_prog Pi ps main_name main)"
+               \<in> calls (compile_prog Pi ps)"
   obtain dst' pars' args' p' cont' where
       ce': "(cl, CallEdge dst' pars' args', FunctionEntry p', cont')
-              \<in> calls (compile_prog Pi ps main_name main)"
+              \<in> calls (compile_prog Pi ps)"
     and es_eq: "es = call_enter gs (CallEdge dst' pars' args') s"
     using ces unfolding call_enter_store_def by blast
   have "CallEdge dst' pars' args' = CallEdge dst pars args"

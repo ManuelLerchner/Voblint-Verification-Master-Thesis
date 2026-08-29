@@ -196,11 +196,11 @@ text \<open>
 \<close>
 
 lemma result_demo_interval_stmt2_cfg_node:
-  "Statement 2 \<in> set (cfg_node_list (prog_cfg prog_main_name result_demo_prog))"
+  "Statement 2 \<in> set (cfg_node_list (prog_cfg result_demo_prog))"
   by eval
 
 lemma result_demo_interval_absent_not_cfg_node:
-  "Statement 99 \<notin> set (cfg_node_list (prog_cfg prog_main_name result_demo_prog))"
+  "Statement 99 \<notin> set (cfg_node_list (prog_cfg result_demo_prog))"
   by eval
 
 subsection \<open>Two contexts at one node\<close>

@@ -166,7 +166,7 @@ text \<open>Unlike \<open>k = 1\<close>, \<open>call_fwd\<close>'s \<open>Statem
   for is discharged generically at \<^const>\<open>cs_route\<close>, exactly as at \<open>k = 1\<close>.\<close>
 
 interpretation nest_2_cs: call_string_routed_context
-    nest_S_abs nest_gs nest_pi nest_procs "STR ''main''" nest_main 2
+    nest_S_abs nest_gs nest_pi nest_procs 2
     "map_lift (fun_of_resolved_st_q_for nest_gs) (Bot::ivl exec_dg_st lifted)"
     "map_lift (fun_of_resolved_st_q_for nest_gs) (Lifted cinit_ivl_st)"
     "map_lift (fun_of_resolved_st_q_for nest_gs) (Bot::ivl exec_dg_st lifted)"
@@ -380,11 +380,11 @@ definition nest_2_graph_config ::
         (\<lambda>ctx. ''['' @ join_source '', '' (map string_of_cfg_node ctx) @ '']''),
       show_context = (\<lambda>ctx. ''['' @ join_source '', '' (map string_of_cfg_node ctx) @ '']''),
       locals_for_pp = (\<lambda>p.
-        let sc = compiled_procedure_scope nest_gs nest_pi nest_procs (STR ''main'') nest_main
+        let sc = compiled_procedure_scope nest_gs nest_pi nest_procs
           nest_cfg p
         in scope_formals sc @ scope_locals sc),
       return_slot_for_pp = (\<lambda>p.
-        scope_return_slot (compiled_procedure_scope nest_gs nest_pi nest_procs (STR ''main'') nest_main
+        scope_return_slot (compiled_procedure_scope nest_gs nest_pi nest_procs
           nest_cfg p)),
       globals_to_show = [],
       show_local = (\<lambda>p ctx vars d. map (\<lambda>x.
@@ -396,7 +396,7 @@ definition nest_2_graph_config ::
       show_global_key = (\<lambda>k. case k of Global \<Rightarrow> ''Global'' | Seed p ctx \<Rightarrow> ''Seed''),
       is_shared_global = (\<lambda>k. case k of Global \<Rightarrow> True | Seed _ _ \<Rightarrow> False),
       show_internal_globals = False,
-      owner_of = String.explode o compiled_owner_of nest_pi nest_procs (STR ''main'') nest_main,
+      owner_of = String.explode o compiled_owner_of nest_pi nest_procs,
       cluster_label = (\<lambda>owner ctx.
         if owner = ''main'' \<and> ctx = [] then ''main / root context''
         else owner @ '' / call string='' @ ''['' @ join_source '', '' (map string_of_cfg_node ctx) @ '']''),
@@ -406,7 +406,7 @@ definition nest_2_graph_config ::
 
 definition nest_2_contexts_for_pp :: "pp \<Rightarrow> cfg_node list list" where
   "nest_2_contexts_for_pp p =
-    (let owner = compiled_owner_of nest_pi nest_procs (STR ''main'') nest_main p
+    (let owner = compiled_owner_of nest_pi nest_procs p
      in if owner = (STR ''main'') then [[]]
         else if owner = (STR ''f'') then [[Statement 5], [Statement 6]]
         else [[Statement 2, Statement 5], [Statement 2, Statement 6]])"

@@ -62,7 +62,7 @@ definition min_max_demo_parity_env :: "vname \<Rightarrow> parity" where
   "min_max_demo_parity_env =
      (case lookup_context
              (analyse_parity_result_for (declared_global min_max_demo_prog) min_max_demo_prog)
-             (cfg_exit (prog_cfg prog_main_name min_max_demo_prog)) () of
+             (cfg_exit (prog_cfg min_max_demo_prog)) () of
         Unreachable \<Rightarrow> bot | Reachable st \<Rightarrow> st)"
 
 lemma min_max_demo_parity_z_odd:
@@ -134,7 +134,7 @@ text \<open>
 
 lemma min_max_demo_prog_wf_compile_input:
   "wf_compile_input (declared_global min_max_demo_prog) (prog_table min_max_demo_prog)
-     (prog_procs min_max_demo_prog) prog_main_name (prog_main min_max_demo_prog)"
+     (prog_procs min_max_demo_prog)"
   by (rule wf_program_compile_input_exec_sound[OF min_max_demo_prog_wf])
 
 end

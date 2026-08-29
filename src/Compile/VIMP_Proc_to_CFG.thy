@@ -221,10 +221,10 @@ where
                (n2, E', K') = compile_procs \<Pi> ps n1
            in (n2, E \<union> E', K \<union> K')))"
 
-text \<open>The whole program: every declared procedure, plus \<open>main\<close> compiled under the
-  designated main name \<open>main_name\<close> (which the well-formedness predicate keeps disjoint from
-  \<open>ps\<close>).  There is no global exit: whole-program completion is \<open>FunctionResult main_name\<close>, and the
-  entry is \<open>FunctionEntry main_name\<close>.\<close>
+text \<open>The whole program: every declared procedure, plus \<open>main_body \<Pi>\<close> compiled under
+  \<open>prog_main_name\<close> (which the well-formedness predicate keeps disjoint from \<open>ps\<close>).  There is
+  no global exit: whole-program completion is \<open>FunctionResult prog_main_name\<close>, and the entry is
+  \<open>FunctionEntry prog_main_name\<close>.\<close>
 
 text \<open>\<open>checks\<close> is not collected by a separate counter-threading pass: it is read
   directly off the compiled edges, exactly the \<^const>\<open>EA_Check\<close> edges
@@ -233,12 +233,14 @@ text \<open>\<open>checks\<close> is not collected by a separate counter-threadi
   itself --- so this field cannot drift from it by construction, not merely by
   a separately proved agreement lemma.\<close>
 definition compile_prog ::
-  "proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com \<Rightarrow> cfg"
+  "proc_table \<Rightarrow> pname list \<Rightarrow> cfg"
 where
-  "compile_prog \<Pi> ps main_name main =
+  "compile_prog \<Pi> ps =
      (let (n1, Eprocs, Kprocs) = compile_procs \<Pi> ps 0;
-          (n2, Emain, Kmain) = compile_proc \<Pi> main_name (\<lparr>formals = [], body = main\<rparr>) n1
-      in \<lparr> intra = Eprocs \<union> Emain, calls = Kprocs \<union> Kmain, cfg_entry = FunctionEntry main_name,
+          (n2, Emain, Kmain) =
+            compile_proc \<Pi> prog_main_name \<lparr>formals = [], body = main_body \<Pi>\<rparr> n1
+      in \<lparr> intra = Eprocs \<union> Emain, calls = Kprocs \<union> Kmain,
+           cfg_entry = FunctionEntry prog_main_name,
            checks = (\<lambda>(u, a, v). (u, ea_check_cond a))
              ` Set.filter (\<lambda>(u, a, v). is_EA_Check a) (Eprocs \<union> Emain) \<rparr>)"
 
@@ -247,25 +249,25 @@ text \<open>Decomposition of a whole compiled program into the callee pass and t
 lemma compile_prog_intra_split:
   obtains n1 Eprocs Kprocs n2 Emain Kmain where
     "compile_procs \<Pi> ps 0 = (n1, Eprocs, Kprocs)"
-    "compile_proc \<Pi> main_name \<lparr>formals = [], body = main\<rparr> n1 = (n2, Emain, Kmain)"
-    "intra (compile_prog \<Pi> ps main_name main) = Eprocs \<union> Emain"
-    "calls (compile_prog \<Pi> ps main_name main) = Kprocs \<union> Kmain"
+    "compile_proc \<Pi> prog_main_name \<lparr>formals = [], body = (main_body \<Pi>)\<rparr> n1 = (n2, Emain, Kmain)"
+    "intra (compile_prog \<Pi> ps) = Eprocs \<union> Emain"
+    "calls (compile_prog \<Pi> ps) = Kprocs \<union> Kmain"
 proof -
   obtain n1 Eprocs Kprocs where procs: "compile_procs \<Pi> ps 0 = (n1, Eprocs, Kprocs)"
     by (rule prod_cases3)
   obtain n2 Emain Kmain
-    where mainc: "compile_proc \<Pi> main_name \<lparr>formals = [], body = main\<rparr> n1 = (n2, Emain, Kmain)"
+    where mainc: "compile_proc \<Pi> prog_main_name \<lparr>formals = [], body = (main_body \<Pi>)\<rparr> n1 = (n2, Emain, Kmain)"
     by (rule prod_cases3)
   show ?thesis
     by (rule that[OF procs mainc]) (simp_all add: compile_prog_def procs mainc Let_def)
 qed
 
 lemma cfg_entry_compile_prog [simp]:
-  "cfg_entry (compile_prog \<Pi> ps main_name main) = FunctionEntry main_name"
+  "cfg_entry (compile_prog \<Pi> ps) = FunctionEntry prog_main_name"
   by (simp add: compile_prog_def Let_def split: prod.splits)
 
 lemma cfg_exit_compile_prog [simp]:
-  "cfg_exit (compile_prog \<Pi> ps main_name main) = FunctionResult main_name"
+  "cfg_exit (compile_prog \<Pi> ps) = FunctionResult prog_main_name"
   by (simp add: cfg_exit_def)
 
 subsection \<open>Allocation arithmetic and statement ranges\<close>

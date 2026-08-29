@@ -27,7 +27,7 @@ text \<open>
 
 definition analyse_int_result_for ::
     "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> (unit, int_dom abs_state) analysis_result" where
-  "analyse_int_result_for gs p = analyse_int_ctx_result_warrow_for Refine_Fixpoint gs prog_main_name p"
+  "analyse_int_result_for gs p = analyse_int_ctx_result_warrow_for Refine_Fixpoint gs p"
 
 text \<open>Convenience instance at \<^const>\<open>declared_global\<close> \<open>p\<close>, matching
   \<open>analyse_int_report\<close>'s shape.\<close>
@@ -50,7 +50,7 @@ text \<open>
 
 definition analyse_int_join_result_for ::
     "refine_mode \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> (unit, int_dom abs_state) analysis_result" where
-  "analyse_int_join_result_for mode gs p = analyse_int_ctx_result_for mode gs prog_main_name p"
+  "analyse_int_join_result_for mode gs p = analyse_int_ctx_result_for mode gs p"
 
 definition analyse_int_join_result ::
     "imp_prog \<Rightarrow> (unit, int_dom abs_state) analysis_result" where
@@ -67,7 +67,7 @@ text \<open>
 
 definition analyse_int_per_origin_result_for ::
     "refine_mode \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> (unit, int_dom abs_state) analysis_result" where
-  "analyse_int_per_origin_result_for mode gs p = analyse_int_ctx_result_per_origin_for mode gs prog_main_name p"
+  "analyse_int_per_origin_result_for mode gs p = analyse_int_ctx_result_per_origin_for mode gs p"
 
 definition analyse_int_per_origin_result ::
     "imp_prog \<Rightarrow> (unit, int_dom abs_state) analysis_result" where
@@ -92,7 +92,7 @@ text \<open>
 
 definition analyse_int_report_for :: "refine_mode \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> check_report_entry list" where
   "analyse_int_report_for mode gs p =
-     analysis_surface.report (analyse_int_ctx_result_warrow_for mode gs prog_main_name) bot
+     analysis_surface.report (analyse_int_ctx_result_warrow_for mode gs) bot
        int_classify_check p"
 
 text \<open>
@@ -124,7 +124,7 @@ definition analyse_int_report_for_with_state ::
     "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> exp \<times> check_result \<times> bool \<times> int_dom abs_state) list" where
   "analyse_int_report_for_with_state gs p =
      (let r = analyse_int_result_for gs p
-      in classify_checks_with_state (prog_cfg prog_main_name p)
+      in classify_checks_with_state (prog_cfg p)
            (\<lambda>v. case lookup_context r v () of
                   Unreachable \<Rightarrow> (True, bot)
                 | Reachable st \<Rightarrow> (False, st))
@@ -184,7 +184,7 @@ text \<open>
 
 definition analyse_int_wpo_result_for ::
     "refine_mode \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> (unit, int_dom abs_state) analysis_result" where
-  "analyse_int_wpo_result_for mode gs p = analyse_int_ctx_result_wpo_for mode gs prog_main_name p"
+  "analyse_int_wpo_result_for mode gs p = analyse_int_ctx_result_wpo_for mode gs p"
 
 definition analyse_int_report_wpo_for :: "refine_mode \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> check_report_entry list" where
   "analyse_int_report_wpo_for mode gs p =

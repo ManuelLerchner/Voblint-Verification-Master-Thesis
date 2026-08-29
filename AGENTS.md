@@ -168,10 +168,11 @@ When changing VIMP syntax:
 7. Run the Isabelle batch build (`AFP=/path/to/afp/thys pixi run build`) if
    generated syntax changed.
 
-`prog_main`'s separate HOL representation (`imp_prog`'s dedicated
-`prog_main :: com` field, instead of folding `main` into `proc_rep` as an
-ordinary entry) is a settled representation choice documented inline in
-`grammar/vimp.yaml`'s comments, not part of this grammar migration.
+The entry procedure is an ordinary `proc_rep` entry, not a separate field:
+`imp_prog` carries only `proc_rep` and `declared_global_vars`, `mk_program`
+conses `(prog_main_name, formals = [], body = m)` onto `proc_rep`, and
+`prog_main` is the lookup `main_body (prog_table p)`. This is a settled
+representation choice, not part of this grammar migration.
 
 ## Theory-file boundary
 

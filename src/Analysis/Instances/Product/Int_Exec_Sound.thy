@@ -76,13 +76,13 @@ definition analyse_int_dg_eqs_for ::
   "analyse_int_dg_eqs_for mode is_bot_pred gs p =
      dg_gen_of
        (base_dg_spec_st_for_lifted gs is_bot_pred (int_tf_st_for mode gs) (int_dom_enter_st_for mode gs))
-       (prog_cfg prog_main_name p) bot (Lifted cinit_int_dom_st) (Lifted cinit_int_dom_st)"
+       (prog_cfg p) bot (Lifted cinit_int_dom_st) (Lifted cinit_int_dom_st)"
 
 definition analyse_int_dg_for :: "refine_mode \<Rightarrow> (int_dom exec_dg_st \<Rightarrow> bool) \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow>
     (pp \<times> unit) set \<times> (pp \<times> unit + unit \<Rightarrow> (int_dom exec_dg_st lifted, int_dom exec_dg_st lifted) dg_state)" where
   "analyse_int_dg_for mode is_bot_pred gs p =
      TD_side_warrowing_apinis_Interp_solve (analyse_int_dg_eqs_for mode is_bot_pred gs p)
-       (cfg_exit (prog_cfg prog_main_name p), ())"
+       (cfg_exit (prog_cfg p), ())"
 
 text \<open>
   \<open>analyse_int_dg_env_for\<close> reads the local unknown at \<open>v\<close> (\<open>Inl (v, ())\<close>) straight back
@@ -149,7 +149,7 @@ definition analyse_int_dg_join_for :: "refine_mode \<Rightarrow> (int_dom exec_d
     (pp \<times> unit) set \<times> (pp \<times> unit + unit \<Rightarrow> (int_dom exec_dg_st lifted, int_dom exec_dg_st lifted) dg_state)" where
   "analyse_int_dg_join_for mode is_bot_pred gs p =
      TD_side_always_join_Interp_solve (analyse_int_dg_eqs_for mode is_bot_pred gs p)
-       (cfg_exit (prog_cfg prog_main_name p), ())"
+       (cfg_exit (prog_cfg p), ())"
 
 definition analyse_int_dg_join_env_for ::
     "refine_mode \<Rightarrow> (int_dom exec_dg_st \<Rightarrow> bool) \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> pp \<Rightarrow> int_dom abs_state" where
@@ -170,7 +170,7 @@ definition analyse_int_dg_per_origin_for :: "refine_mode \<Rightarrow> (int_dom 
     (pp \<times> unit) set \<times> (pp \<times> unit + unit \<Rightarrow> (int_dom exec_dg_st lifted, int_dom exec_dg_st lifted) dg_state)" where
   "analyse_int_dg_per_origin_for mode is_bot_pred gs p =
      TD_side_per_origin_Interp_solve (analyse_int_dg_eqs_for mode is_bot_pred gs p)
-       (cfg_exit (prog_cfg prog_main_name p), ())"
+       (cfg_exit (prog_cfg p), ())"
 
 definition analyse_int_dg_per_origin_env_for ::
     "refine_mode \<Rightarrow> (int_dom exec_dg_st \<Rightarrow> bool) \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> pp \<Rightarrow> int_dom abs_state" where

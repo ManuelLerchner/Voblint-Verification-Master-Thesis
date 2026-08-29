@@ -66,36 +66,33 @@ definition pctx_abs_spec ::
 subsection \<open>The routed equation system and its executable solution\<close>
 
 definition pctx_eqs ::
-    "(vname \<Rightarrow> bool) \<Rightarrow> (parity exec_dg_st \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com
-       \<Rightarrow> (pp \<times> unit, gk, (parity exec_dg_st lifted, parity exec_dg_st lifted) dg_state) eqsT" where
-  "pctx_eqs gs is_bot_pred Pi ps main_name main =
+    "(vname \<Rightarrow> bool) \<Rightarrow> (parity exec_dg_st \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> (pp \<times> unit, gk, (parity exec_dg_st lifted, parity exec_dg_st lifted) dg_state) eqsT" where
+  "pctx_eqs gs is_bot_pred Pi ps =
      side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_addr_list (\<lambda>_. Global)
        route_unit
        (routed_cmb_g_contribution (pctx_spec gs is_bot_pred) Global Seed
-          (static_resolve (compile_prog Pi ps main_name main)))
+          (static_resolve (compile_prog Pi ps)))
        (routed_extra_g Seed Global)
-       (compile_prog Pi ps main_name main) (pctx_spec gs is_bot_pred) Bot (Lifted cinit_parity_st) Bot"
+       (compile_prog Pi ps) (pctx_spec gs is_bot_pred) Bot (Lifted cinit_parity_st) Bot"
 
 definition pctx_sol ::
-    "(vname \<Rightarrow> bool) \<Rightarrow> (parity exec_dg_st \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com
-       \<Rightarrow> (pp \<times> unit) set
+    "(vname \<Rightarrow> bool) \<Rightarrow> (parity exec_dg_st \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> (pp \<times> unit) set
           \<times> (pp \<times> unit + gk \<Rightarrow> (parity exec_dg_st lifted, parity exec_dg_st lifted) dg_state)" where
-  "pctx_sol gs is_bot_pred Pi ps main_name main =
-     TD_side_always_join_Interp_solve (pctx_eqs gs is_bot_pred Pi ps main_name main)
-       (cfg_exit (compile_prog Pi ps main_name main), ())"
+  "pctx_sol gs is_bot_pred Pi ps =
+     TD_side_always_join_Interp_solve (pctx_eqs gs is_bot_pred Pi ps)
+       (cfg_exit (compile_prog Pi ps), ())"
 
 definition pctx_terminates ::
-    "(vname \<Rightarrow> bool) \<Rightarrow> (parity exec_dg_st \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com
-       \<Rightarrow> bool" where
-  "pctx_terminates gs is_bot_pred Pi ps main_name main =
+    "(vname \<Rightarrow> bool) \<Rightarrow> (parity exec_dg_st \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> bool" where
+  "pctx_terminates gs is_bot_pred Pi ps =
      TD_side_always_join_Interp.solve_dom TYPE(gk)
        TYPE((parity exec_dg_st lifted, parity exec_dg_st lifted) dg_state)
-       (pctx_eqs gs is_bot_pred Pi ps main_name main) (cfg_exit (compile_prog Pi ps main_name main), ())"
+       (pctx_eqs gs is_bot_pred Pi ps) (cfg_exit (compile_prog Pi ps), ())"
 
 lemma pctx_terminates_via_solve_c:
-  assumes "TD_side_always_join_Interp_solve_c (pctx_eqs gs is_bot_pred Pi ps main_name main)
-             (cfg_exit (compile_prog Pi ps main_name main), ()) \<noteq> None"
-  shows "pctx_terminates gs is_bot_pred Pi ps main_name main"
+  assumes "TD_side_always_join_Interp_solve_c (pctx_eqs gs is_bot_pred Pi ps)
+             (cfg_exit (compile_prog Pi ps), ()) \<noteq> None"
+  shows "pctx_terminates gs is_bot_pred Pi ps"
   unfolding pctx_terminates_def
   by (rule TD_side_always_join_Interp.solve_dom_of_solve_c[OF assms])
 
@@ -131,50 +128,50 @@ subsection \<open>The certified executable post-solution, generic per compiled p
 
 context
   fixes gs :: "vname \<Rightarrow> bool" and is_bot_pred :: "parity exec_dg_st \<Rightarrow> bool"
-    and Pi :: proc_table and ps :: "pname list" and main_name :: pname and main :: com
-  assumes solves: "pctx_terminates gs is_bot_pred Pi ps main_name main"
+    and Pi :: proc_table and ps :: "pname list"
+  assumes solves: "pctx_terminates gs is_bot_pred Pi ps"
     and exact: "\<And>s. is_bot_pred s = is_bot_state (fun_of_resolved_st_q_for gs s)"
 begin
 
 lemma pctx_solve_dom:
   "TD_side_always_join_Interp.solve_dom TYPE(gk)
      TYPE((parity exec_dg_st lifted, parity exec_dg_st lifted) dg_state)
-     (pctx_eqs gs is_bot_pred Pi ps main_name main) (cfg_exit (compile_prog Pi ps main_name main), ())"
+     (pctx_eqs gs is_bot_pred Pi ps) (cfg_exit (compile_prog Pi ps), ())"
   using solves[unfolded pctx_terminates_def] .
 
 lemma pctx_pp_st:
-  "part_post_solution (pctx_eqs gs is_bot_pred Pi ps main_name main)
-     (cfg_exit (compile_prog Pi ps main_name main), ())
-     (snd (pctx_sol gs is_bot_pred Pi ps main_name main)) (fst (pctx_sol gs is_bot_pred Pi ps main_name main))"
+  "part_post_solution (pctx_eqs gs is_bot_pred Pi ps)
+     (cfg_exit (compile_prog Pi ps), ())
+     (snd (pctx_sol gs is_bot_pred Pi ps)) (fst (pctx_sol gs is_bot_pred Pi ps))"
   using TD_side_always_join_Interp.partial_post_solution
-          [OF pctx_solve_dom, of "fst (pctx_sol gs is_bot_pred Pi ps main_name main)"
-             "snd (pctx_sol gs is_bot_pred Pi ps main_name main)"]
+          [OF pctx_solve_dom, of "fst (pctx_sol gs is_bot_pred Pi ps)"
+             "snd (pctx_sol gs is_bot_pred Pi ps)"]
   unfolding pctx_sol_def by simp
 
 theorem pctx_pp_abs:
   "part_post_solution
      (side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. Global) route_unit
         (routed_cmb_g (pctx_abs_spec gs) Global Seed
-           (static_resolve (compile_prog Pi ps main_name main)))
+           (static_resolve (compile_prog Pi ps)))
         (routed_extra_g Seed Global)
-        (compile_prog Pi ps main_name main) (pctx_abs_spec gs)
+        (compile_prog Pi ps) (pctx_abs_spec gs)
         (map_lift (fun_of_resolved_st_q_for gs) (Bot::parity exec_dg_st lifted))
         (map_lift (fun_of_resolved_st_q_for gs) (Lifted cinit_parity_st))
         (map_lift (fun_of_resolved_st_q_for gs) (Bot::parity exec_dg_st lifted)))
-     (cfg_exit (compile_prog Pi ps main_name main), ())
+     (cfg_exit (compile_prog Pi ps), ())
      (fun_of_dg_st_gen (map_lift (fun_of_resolved_st_q_for gs)) (map_lift (fun_of_resolved_st_q_for gs))
-        \<circ> snd (pctx_sol gs is_bot_pred Pi ps main_name main))
-     (fst (pctx_sol gs is_bot_pred Pi ps main_name main))"
+        \<circ> snd (pctx_sol gs is_bot_pred Pi ps))
+     (fst (pctx_sol gs is_bot_pred Pi ps))"
 proof -
   have pp_buf: "part_post_solution
        (side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_addr_list (\<lambda>_. Global)
           route_unit
           (routed_cmb_g_contribution (pctx_spec gs is_bot_pred) Global Seed
-             (static_resolve (compile_prog Pi ps main_name main)))
+             (static_resolve (compile_prog Pi ps)))
           (routed_extra_g Seed Global)
-          (compile_prog Pi ps main_name main) (pctx_spec gs is_bot_pred) Bot (Lifted cinit_parity_st) Bot)
-       (cfg_exit (compile_prog Pi ps main_name main), ())
-       (snd (pctx_sol gs is_bot_pred Pi ps main_name main)) (fst (pctx_sol gs is_bot_pred Pi ps main_name main))"
+          (compile_prog Pi ps) (pctx_spec gs is_bot_pred) Bot (Lifted cinit_parity_st) Bot)
+       (cfg_exit (compile_prog Pi ps), ())
+       (snd (pctx_sol gs is_bot_pred Pi ps)) (fst (pctx_sol gs is_bot_pred Pi ps))"
     using pctx_pp_st unfolding pctx_eqs_def by simp
   show ?thesis
     unfolding pctx_abs_spec_def
@@ -186,65 +183,63 @@ end
 section \<open>Activation-indexed collecting soundness, generic per compiled program\<close>
 
 definition pctx_sigma_abs_exec ::
-    "(vname \<Rightarrow> bool) \<Rightarrow> (parity exec_dg_st \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com
-       \<Rightarrow> pp \<times> unit + gk \<Rightarrow> (parity abs_state lifted, parity abs_state lifted) dg_state" where
-  "pctx_sigma_abs_exec gs is_bot_pred Pi ps main_name main =
+    "(vname \<Rightarrow> bool) \<Rightarrow> (parity exec_dg_st \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> pp \<times> unit + gk \<Rightarrow> (parity abs_state lifted, parity abs_state lifted) dg_state" where
+  "pctx_sigma_abs_exec gs is_bot_pred Pi ps =
      fun_of_dg_st_gen (map_lift (fun_of_resolved_st_q_for gs)) (map_lift (fun_of_resolved_st_q_for gs))
-       \<circ> snd (pctx_sol gs is_bot_pred Pi ps main_name main)"
+       \<circ> snd (pctx_sol gs is_bot_pred Pi ps)"
 
 definition pctx_sg_exec ::
-    "(vname \<Rightarrow> bool) \<Rightarrow> (parity exec_dg_st \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com
-       \<Rightarrow> pp \<times> unit + gk \<Rightarrow> parity abs_state lifted" where
-  "pctx_sg_exec gs is_bot_pred Pi ps main_name main k =
+    "(vname \<Rightarrow> bool) \<Rightarrow> (parity exec_dg_st \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> pp \<times> unit + gk \<Rightarrow> parity abs_state lifted" where
+  "pctx_sg_exec gs is_bot_pred Pi ps k =
      (case k of
         Inl (v, ctx) \<Rightarrow>
-          (if (v, ctx) \<in> fst (pctx_sol gs is_bot_pred Pi ps main_name main)
-           then locals (pctx_sigma_abs_exec gs is_bot_pred Pi ps main_name main (Inl (v, ctx)))
+          (if (v, ctx) \<in> fst (pctx_sol gs is_bot_pred Pi ps)
+           then locals (pctx_sigma_abs_exec gs is_bot_pred Pi ps (Inl (v, ctx)))
            else Bot)
       | Inr _ \<Rightarrow> Bot)"
 
 context
   fixes gs :: "vname \<Rightarrow> bool" and is_bot_pred :: "parity exec_dg_st \<Rightarrow> bool"
-    and Pi :: proc_table and ps :: "pname list" and main_name :: pname and main :: com
-  assumes solves: "pctx_terminates gs is_bot_pred Pi ps main_name main"
+    and Pi :: proc_table and ps :: "pname list"
+  assumes solves: "pctx_terminates gs is_bot_pred Pi ps"
     and exact: "\<And>s. is_bot_pred s = is_bot_state (fun_of_resolved_st_q_for gs s)"
-    and entry_cov: "(cfg_entry (compile_prog Pi ps main_name main), ())
-                      \<in> fst (pctx_sol gs is_bot_pred Pi ps main_name main)"
-    and fwd_ok: "\<And>u a v ctx. (u, ctx) \<in> fst (pctx_sol gs is_bot_pred Pi ps main_name main)
-                   \<Longrightarrow> (u, a, v) \<in> intra (compile_prog Pi ps main_name main)
-                   \<Longrightarrow> (v, ctx) \<in> fst (pctx_sol gs is_bot_pred Pi ps main_name main)"
+    and entry_cov: "(cfg_entry (compile_prog Pi ps), ())
+                      \<in> fst (pctx_sol gs is_bot_pred Pi ps)"
+    and fwd_ok: "\<And>u a v ctx. (u, ctx) \<in> fst (pctx_sol gs is_bot_pred Pi ps)
+                   \<Longrightarrow> (u, a, v) \<in> intra (compile_prog Pi ps)
+                   \<Longrightarrow> (v, ctx) \<in> fst (pctx_sol gs is_bot_pred Pi ps)"
     and call_fwd_ok: "\<And>u ctx dst pars args p cont.
-        (u, ctx) \<in> fst (pctx_sol gs is_bot_pred Pi ps main_name main)
-        \<Longrightarrow> (u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps main_name main)
-        \<Longrightarrow> (FunctionEntry p, ()) \<in> fst (pctx_sol gs is_bot_pred Pi ps main_name main)"
+        (u, ctx) \<in> fst (pctx_sol gs is_bot_pred Pi ps)
+        \<Longrightarrow> (u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps)
+        \<Longrightarrow> (FunctionEntry p, ()) \<in> fst (pctx_sol gs is_bot_pred Pi ps)"
     and comb_fwd_ok: "\<And>cl c1 dst pars args p cont.
-        (cl, c1) \<in> fst (pctx_sol gs is_bot_pred Pi ps main_name main)
-        \<Longrightarrow> (cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps main_name main)
-        \<Longrightarrow> (cont, c1) \<in> fst (pctx_sol gs is_bot_pred Pi ps main_name main)"
+        (cl, c1) \<in> fst (pctx_sol gs is_bot_pred Pi ps)
+        \<Longrightarrow> (cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps)
+        \<Longrightarrow> (cont, c1) \<in> fst (pctx_sol gs is_bot_pred Pi ps)"
 begin
 
 subsection \<open>The semantic solution projection\<close>
 
 definition pctx_sigma_abs ::
     "pp \<times> unit + gk \<Rightarrow> (parity abs_state lifted, parity abs_state lifted) dg_state" where
-  "pctx_sigma_abs = pctx_sigma_abs_exec gs is_bot_pred Pi ps main_name main"
+  "pctx_sigma_abs = pctx_sigma_abs_exec gs is_bot_pred Pi ps"
 
 definition pctx_sg :: "pp \<times> unit + gk \<Rightarrow> parity abs_state lifted" where
-  "pctx_sg = pctx_sg_exec gs is_bot_pred Pi ps main_name main"
+  "pctx_sg = pctx_sg_exec gs is_bot_pred Pi ps"
 
-lemma pctx_fin: "finite (intra (compile_prog Pi ps main_name main))"
+lemma pctx_fin: "finite (intra (compile_prog Pi ps))"
   using compile_prog_finite by blast
 
-lemma pctx_finC: "finite (calls (compile_prog Pi ps main_name main))"
+lemma pctx_finC: "finite (calls (compile_prog Pi ps))"
   using compile_prog_finite by blast
 
 lemma pctx_sg_covered:
-  "(v, ctx) \<in> fst (pctx_sol gs is_bot_pred Pi ps main_name main)
+  "(v, ctx) \<in> fst (pctx_sol gs is_bot_pred Pi ps)
    \<Longrightarrow> pctx_sg (Inl (v, ctx)) = locals (pctx_sigma_abs (Inl (v, ctx)))"
   by (simp add: pctx_sg_def pctx_sg_exec_def pctx_sigma_abs_def pctx_sigma_abs_exec_def)
 
 lemma pctx_sg_uncovered_empty:
-  "(v, ctx) \<notin> fst (pctx_sol gs is_bot_pred Pi ps main_name main)
+  "(v, ctx) \<notin> fst (pctx_sol gs is_bot_pred Pi ps)
      \<Longrightarrow> gamma_state_lift (pctx_sg (Inl (v, ctx))) = {}"
   by (simp add: pctx_sg_def pctx_sg_exec_def)
 
@@ -255,55 +250,55 @@ interpretation pctx_dg_base: sound_dg_spec "pctx_abs_spec gs" gamma_dg_base gs
   by (rule base_dg_spec_sound[OF parity_is_sound_transfer_for is_bot_state_gamma_state_empty])
 
 interpretation pctx_dg: dg_ctx_activation_base "pctx_abs_spec gs" gamma_dg_base gs
-    "compile_prog Pi ps main_name main" Global route_unit
+    "compile_prog Pi ps" Global route_unit
     "routed_cmb_g (pctx_abs_spec gs) Global Seed
-       (static_resolve (compile_prog Pi ps main_name main))"
+       (static_resolve (compile_prog Pi ps))"
     "routed_extra_g Seed Global"
     "map_lift (fun_of_resolved_st_q_for gs) (Bot::parity exec_dg_st lifted)"
     "map_lift (fun_of_resolved_st_q_for gs) (Lifted cinit_parity_st)"
     "map_lift (fun_of_resolved_st_q_for gs) (Bot::parity exec_dg_st lifted)"
-    pctx_sigma_abs "fst (pctx_sol gs is_bot_pred Pi ps main_name main)"
-    "(cfg_exit (compile_prog Pi ps main_name main), ())" pctx_sg gamma_state_lift
+    pctx_sigma_abs "fst (pctx_sol gs is_bot_pred Pi ps)"
+    "(cfg_exit (compile_prog Pi ps), ())" pctx_sg gamma_state_lift
 proof unfold_locales
-  show "finite (intra (compile_prog Pi ps main_name main))" by (rule pctx_fin)
+  show "finite (intra (compile_prog Pi ps))" by (rule pctx_fin)
 next
   show "part_post_solution
           (side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. Global) route_unit
              (routed_cmb_g (pctx_abs_spec gs) Global Seed
-                (static_resolve (compile_prog Pi ps main_name main)))
+                (static_resolve (compile_prog Pi ps)))
              (routed_extra_g Seed Global)
-             (compile_prog Pi ps main_name main) (pctx_abs_spec gs)
+             (compile_prog Pi ps) (pctx_abs_spec gs)
              (map_lift (fun_of_resolved_st_q_for gs) (Bot::parity exec_dg_st lifted))
              (map_lift (fun_of_resolved_st_q_for gs) (Lifted cinit_parity_st))
              (map_lift (fun_of_resolved_st_q_for gs) (Bot::parity exec_dg_st lifted)))
-          (cfg_exit (compile_prog Pi ps main_name main), ()) pctx_sigma_abs
-          (fst (pctx_sol gs is_bot_pred Pi ps main_name main))"
+          (cfg_exit (compile_prog Pi ps), ()) pctx_sigma_abs
+          (fst (pctx_sol gs is_bot_pred Pi ps))"
     unfolding pctx_sigma_abs_def pctx_sigma_abs_exec_def
     by (rule pctx_pp_abs[OF solves exact])
 next
-  fix v ctx assume "(v, ctx) \<in> fst (pctx_sol gs is_bot_pred Pi ps main_name main)"
+  fix v ctx assume "(v, ctx) \<in> fst (pctx_sol gs is_bot_pred Pi ps)"
   thus "gamma_state_lift (pctx_sg (Inl (v, ctx)))
           = gamma_dg_base (locals (pctx_sigma_abs (Inl (v, ctx)))) (globs (pctx_sigma_abs (Inr Global)))"
     by (simp add: pctx_sg_covered gamma_dg_base_def)
 next
-  fix v ctx assume "(v, ctx) \<notin> fst (pctx_sol gs is_bot_pred Pi ps main_name main)"
+  fix v ctx assume "(v, ctx) \<notin> fst (pctx_sol gs is_bot_pred Pi ps)"
   thus "gamma_state_lift (pctx_sg (Inl (v, ctx))) = {}"
     by (rule pctx_sg_uncovered_empty)
 next
-  fix u a v ctx assume "(u, ctx) \<in> fst (pctx_sol gs is_bot_pred Pi ps main_name main)"
-    "(u, a, v) \<in> intra (compile_prog Pi ps main_name main)"
-  thus "(v, ctx) \<in> fst (pctx_sol gs is_bot_pred Pi ps main_name main)" by (rule fwd_ok)
+  fix u a v ctx assume "(u, ctx) \<in> fst (pctx_sol gs is_bot_pred Pi ps)"
+    "(u, a, v) \<in> intra (compile_prog Pi ps)"
+  thus "(v, ctx) \<in> fst (pctx_sol gs is_bot_pred Pi ps)" by (rule fwd_ok)
 qed
 
 subsection \<open>The routed interpretation and its CALL/COMB corollaries\<close>
 
 interpretation pctx_routed: unit_routed_context "pctx_abs_spec gs" gamma_dg_base gs
-    "compile_prog Pi ps main_name main" Global
+    "compile_prog Pi ps" Global
     "map_lift (fun_of_resolved_st_q_for gs) (Bot::parity exec_dg_st lifted)"
     "map_lift (fun_of_resolved_st_q_for gs) (Lifted cinit_parity_st)"
     "map_lift (fun_of_resolved_st_q_for gs) (Bot::parity exec_dg_st lifted)"
-    pctx_sigma_abs "fst (pctx_sol gs is_bot_pred Pi ps main_name main)"
-    "(cfg_exit (compile_prog Pi ps main_name main), ())" pctx_sg
+    pctx_sigma_abs "fst (pctx_sol gs is_bot_pred Pi ps)"
+    "(cfg_exit (compile_prog Pi ps), ())" pctx_sg
     Seed gamma_state_lift
 proof (unfold_locales, goal_cases FinC SeedKey CallFwd CombFwd EnterAgree)
   case FinC show ?case by (rule pctx_finC)
@@ -321,7 +316,7 @@ next
   note ces = EnterAgree(1) and ce = EnterAgree(2)
   obtain dst' pars' args' p' cont' where
       ce': "(cl, CallEdge dst' pars' args', FunctionEntry p', cont')
-              \<in> calls (compile_prog Pi ps main_name main)"
+              \<in> calls (compile_prog Pi ps)"
     and es_eq: "es = call_enter gs (CallEdge dst' pars' args') s"
     using ces unfolding call_enter_store_def by blast
   have "CallEdge dst' pars' args' = CallEdge dst pars args"
@@ -348,69 +343,69 @@ text \<open>
 \<close>
 
 definition pctx_eqs_prog ::
-    "(vname \<Rightarrow> bool) \<Rightarrow> pname \<Rightarrow> imp_prog
+    "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog
        \<Rightarrow> (pp \<times> unit, gk, (parity exec_dg_st lifted, parity exec_dg_st lifted) dg_state) eqsT" where
-  "pctx_eqs_prog gs main_name p =
+  "pctx_eqs_prog gs p =
      pctx_eqs gs (resolved_st_q_is_bot_for (declared_global_vars p))
-       (prog_table p) (prog_procs p) main_name (prog_main p)"
+       (prog_table p) (prog_procs p)"
 
 definition pctx_sol_prog ::
-    "(vname \<Rightarrow> bool) \<Rightarrow> pname \<Rightarrow> imp_prog
+    "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog
        \<Rightarrow> (pp \<times> unit) set
           \<times> (pp \<times> unit + gk \<Rightarrow> (parity exec_dg_st lifted, parity exec_dg_st lifted) dg_state)" where
-  "pctx_sol_prog gs main_name p =
-     TD_side_always_join_Interp_solve (pctx_eqs_prog gs main_name p) (cfg_exit (prog_cfg main_name p), ())"
+  "pctx_sol_prog gs p =
+     TD_side_always_join_Interp_solve (pctx_eqs_prog gs p) (cfg_exit (prog_cfg p), ())"
 
 definition pctx_sol_prog_per_origin ::
-    "(vname \<Rightarrow> bool) \<Rightarrow> pname \<Rightarrow> imp_prog
+    "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog
        \<Rightarrow> (pp \<times> unit) set
           \<times> (pp \<times> unit + gk \<Rightarrow> (parity exec_dg_st lifted, parity exec_dg_st lifted) dg_state)" where
-  "pctx_sol_prog_per_origin gs main_name p =
-     TD_side_per_origin_Interp_solve (pctx_eqs_prog gs main_name p) (cfg_exit (prog_cfg main_name p), ())"
+  "pctx_sol_prog_per_origin gs p =
+     TD_side_per_origin_Interp_solve (pctx_eqs_prog gs p) (cfg_exit (prog_cfg p), ())"
 
-definition pctx_terminates_prog :: "(vname \<Rightarrow> bool) \<Rightarrow> pname \<Rightarrow> imp_prog \<Rightarrow> bool" where
-  "pctx_terminates_prog gs main_name p =
+definition pctx_terminates_prog :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> bool" where
+  "pctx_terminates_prog gs p =
      pctx_terminates gs (resolved_st_q_is_bot_for (declared_global_vars p))
-       (prog_table p) (prog_procs p) main_name (prog_main p)"
+       (prog_table p) (prog_procs p)"
 
 lemma pctx_terminates_prog_via_solve_c:
   assumes "TD_side_always_join_Interp_solve_c
              (pctx_eqs gs (resolved_st_q_is_bot_for (declared_global_vars p))
-                (prog_table p) (prog_procs p) main_name (prog_main p))
-             (cfg_exit (compile_prog (prog_table p) (prog_procs p) main_name (prog_main p)), ()) \<noteq> None"
-  shows "pctx_terminates_prog gs main_name p"
+                (prog_table p) (prog_procs p))
+             (cfg_exit (compile_prog (prog_table p) (prog_procs p)), ()) \<noteq> None"
+  shows "pctx_terminates_prog gs p"
   unfolding pctx_terminates_prog_def
   using assms by (rule pctx_terminates_via_solve_c)
 
 definition analyse_parity_ctx_result_for ::
-    "(vname \<Rightarrow> bool) \<Rightarrow> pname \<Rightarrow> imp_prog \<Rightarrow> (unit, parity abs_state) analysis_result" where
-  "analyse_parity_ctx_result_for gs main_name p =
+    "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> (unit, parity abs_state) analysis_result" where
+  "analyse_parity_ctx_result_for gs p =
      Analysis_Result
-       (fst (pctx_sol_prog gs main_name p))
+       (fst (pctx_sol_prog gs p))
        (\<lambda>v ctx. normalize_point gs
                   (canonicalize_lift (resolved_st_q_is_bot_for (declared_global_vars p))
-                    (locals (snd (pctx_sol_prog gs main_name p) (Inl (v, ctx))))))"
+                    (locals (snd (pctx_sol_prog gs p) (Inl (v, ctx))))))"
 
 text \<open>\<^const>\<open>ctx_solved_for\<close> at this domain's solve, with \<^const>\<open>Global\<close> and
   \<^const>\<open>Seed\<close> handed to \<^const>\<open>seed_global_keys\<close> the way \<^const>\<open>routed_extra_g\<close>
   already takes them.\<close>
 
 definition analyse_parity_ctx_solved_for ::
-    "(vname \<Rightarrow> bool) \<Rightarrow> pname \<Rightarrow> imp_prog
+    "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog
      \<Rightarrow> (unit, parity abs_state) analysis_result
           \<times> (String.literal \<times> parity abs_state point_state) list" where
   "analyse_parity_ctx_solved_for = ctx_solved_for pctx_sol_prog (unit_seed_global_keys Global Seed)"
 
 lemma fst_analyse_parity_ctx_solved_for:
-  "fst (analyse_parity_ctx_solved_for gs main_name p) = analyse_parity_ctx_result_for gs main_name p"
+  "fst (analyse_parity_ctx_solved_for gs p) = analyse_parity_ctx_result_for gs p"
   by (simp add: analyse_parity_ctx_solved_for_def fst_ctx_solved_for
       analyse_parity_ctx_result_for_def Let_def)
 
 declare analyse_parity_ctx_result_for_def [code del]
 
 lemma analyse_parity_ctx_result_for_code [code]:
-  "analyse_parity_ctx_result_for gs main_name p =
-     (let sol = pctx_sol_prog gs main_name p; gl = declared_global_vars p
+  "analyse_parity_ctx_result_for gs p =
+     (let sol = pctx_sol_prog gs p; gl = declared_global_vars p
       in Analysis_Result (fst sol)
            (\<lambda>v ctx. normalize_point gs
                       (canonicalize_lift (resolved_st_q_is_bot_for gl)
@@ -419,24 +414,24 @@ lemma analyse_parity_ctx_result_for_code [code]:
 
 definition analyse_parity_ctx_result :: "imp_prog \<Rightarrow> (unit, parity abs_state) analysis_result" where
   "analyse_parity_ctx_result p =
-     analyse_parity_ctx_result_for (declared_global p) prog_main_name p"
+     analyse_parity_ctx_result_for (declared_global p) p"
 
 text \<open>Per-origin sibling, reading \<^const>\<open>pctx_sol_prog_per_origin\<close>.\<close>
 
 definition analyse_parity_ctx_result_per_origin_for ::
-    "(vname \<Rightarrow> bool) \<Rightarrow> pname \<Rightarrow> imp_prog \<Rightarrow> (unit, parity abs_state) analysis_result" where
-  "analyse_parity_ctx_result_per_origin_for gs main_name p =
+    "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> (unit, parity abs_state) analysis_result" where
+  "analyse_parity_ctx_result_per_origin_for gs p =
      Analysis_Result
-       (fst (pctx_sol_prog_per_origin gs main_name p))
+       (fst (pctx_sol_prog_per_origin gs p))
        (\<lambda>v ctx. normalize_point gs
                   (canonicalize_lift (resolved_st_q_is_bot_for (declared_global_vars p))
-                    (locals (snd (pctx_sol_prog_per_origin gs main_name p) (Inl (v, ctx))))))"
+                    (locals (snd (pctx_sol_prog_per_origin gs p) (Inl (v, ctx))))))"
 
 declare analyse_parity_ctx_result_per_origin_for_def [code del]
 
 lemma analyse_parity_ctx_result_per_origin_for_code [code]:
-  "analyse_parity_ctx_result_per_origin_for gs main_name p =
-     (let sol = pctx_sol_prog_per_origin gs main_name p; gl = declared_global_vars p
+  "analyse_parity_ctx_result_per_origin_for gs p =
+     (let sol = pctx_sol_prog_per_origin gs p; gl = declared_global_vars p
       in Analysis_Result (fst sol)
            (\<lambda>v ctx. normalize_point gs
                       (canonicalize_lift (resolved_st_q_is_bot_for gl)
@@ -446,6 +441,6 @@ lemma analyse_parity_ctx_result_per_origin_for_code [code]:
 definition analyse_parity_ctx_result_per_origin ::
     "imp_prog \<Rightarrow> (unit, parity abs_state) analysis_result" where
   "analyse_parity_ctx_result_per_origin p =
-     analyse_parity_ctx_result_per_origin_for (declared_global p) prog_main_name p"
+     analyse_parity_ctx_result_per_origin_for (declared_global p) p"
 
 end

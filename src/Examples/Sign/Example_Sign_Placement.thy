@@ -23,8 +23,7 @@ definition sign_placement_prog :: imp_prog where
 
 definition sign_placement_cfg :: cfg where
   "sign_placement_cfg =
-    compile_prog (prog_table sign_placement_prog) (prog_procs sign_placement_prog)
-      prog_main_name (prog_main sign_placement_prog)"
+    compile_prog (prog_table sign_placement_prog) (prog_procs sign_placement_prog)"
 
 text \<open>
   The placement policy is the simplest non-classic instance possible: every
@@ -332,7 +331,7 @@ lemma sign_placement_dg_td_value:
 subsection \<open>CFG structure facts\<close>
 
 lemma sign_placement_cfg_entry: "cfg_entry sign_placement_cfg = FunctionEntry prog_main_name"
-  unfolding sign_placement_cfg_def by (rule cfg_entry_compile_prog)
+  by (simp only: sign_placement_cfg_def cfg_entry_compile_prog prog_main_name_def)
 
 lemma sign_placement_hook_lists:
   "intra_predecessor_list sign_placement_cfg (FunctionEntry prog_main_name) = []"

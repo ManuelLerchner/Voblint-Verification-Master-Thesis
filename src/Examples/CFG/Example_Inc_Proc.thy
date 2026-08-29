@@ -49,10 +49,10 @@ lemma inc_program_glocal_not_global [simp]: "\<not> declared_global inc_program 
   by simp
 
 definition inc_g :: cfg where
-  "inc_g = compile_prog (prog_table inc_program) (prog_procs inc_program) (STR ''main'') (prog_main inc_program)"
+  "inc_g = compile_prog (prog_table inc_program) (prog_procs inc_program)"
 
 lemma inc_g_eq_compile:
-  "inc_g = compile_prog inc_pi [(STR ''p'')] (STR ''main'') (imp \<lbrakk> Glocal := 1 ; p() \<rbrakk>)"
+  "inc_g = compile_prog inc_pi [(STR ''p'')]"
   by (simp add: inc_g_def inc_pi_def inc_program_parts)
 
 lemma edge_collect_assign_enter_state:
