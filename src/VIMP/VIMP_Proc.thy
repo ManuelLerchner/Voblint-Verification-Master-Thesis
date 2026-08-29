@@ -395,9 +395,9 @@ definition reserved_ret_var :: "(vname \<Rightarrow> bool) \<Rightarrow> bool" w
   "reserved_ret_var gs \<longleftrightarrow> \<not> gs ret_var"
 
 definition wf_source_program :: "(vname \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname \<Rightarrow> com \<Rightarrow> bool" where
-  "wf_source_program gs \<Pi> mnm main \<longleftrightarrow>
+  "wf_source_program gs \<Pi> main_name main \<longleftrightarrow>
      reserved_ret_var gs \<and>
-     \<Pi> mnm = Some (\<lparr>formals = [], body = main\<rparr>) \<and>
+     \<Pi> main_name = Some (\<lparr>formals = [], body = main\<rparr>) \<and>
      wf_source_com \<Pi> main \<and> no_return main \<and>
      (\<forall>p decl. \<Pi> p = Some decl \<longrightarrow> wf_proc_decl gs \<Pi> decl) \<and>
      (\<forall>p. \<Pi> p \<noteq> None \<longrightarrow> special_table p = None)"
@@ -417,9 +417,9 @@ lemma wf_source_com_source_com:
   by (induction c) (auto split: option.splits)
 
 lemma wf_source_programD:
-  assumes "wf_source_program gs \<Pi> mnm main"
+  assumes "wf_source_program gs \<Pi> main_name main"
   shows "reserved_ret_var gs"
-    and "\<Pi> mnm = Some \<lparr>formals = [], body = main\<rparr>"
+    and "\<Pi> main_name = Some \<lparr>formals = [], body = main\<rparr>"
     and "wf_source_com \<Pi> main"
     and "no_return main"
     and "\<Pi> p = Some decl \<Longrightarrow> wf_proc_decl gs \<Pi> decl"

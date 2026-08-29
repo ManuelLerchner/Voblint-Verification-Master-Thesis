@@ -1,4 +1,4 @@
-theory CFG_Local_Trace
+theory LTR_Def
   imports CFG_Def CFG_Transfer
 begin
 

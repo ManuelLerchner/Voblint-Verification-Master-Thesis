@@ -132,7 +132,7 @@ import `VIMP_Program`.
 - **A session boundary is the only thing that enforces a layering claim.** The
   soundness endpoints are stated for an arbitrary CFG, not only compiled ones.
   Nothing but the `Voblint_CFG` boundary stops a later edit from importing
-  `compile` into `CFG_Local_Trace` and quietly narrowing every one of them.
+  `compile` into `LTR_Def` and quietly narrowing every one of them.
 - **One named simp bundle instead of N selector lemmas.** `call_info_of_simps`
   (four `ci_*` projections) and `mk_program_simps` (four `prog_*_make`
   projections) each collapse to one `[simp]` lemma with N conclusions, proved

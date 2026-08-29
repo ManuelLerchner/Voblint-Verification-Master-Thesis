@@ -1,6 +1,6 @@
 theory Routed_Context
   imports DG_Ctx_Activation DG_Base Strategy_Tree_Combinators DG_Transfer_Combinators
-    Strategy_Tree_Do "Voblint_CFG.CFG_Local_Trace"
+    Strategy_Tree_Do "Voblint_CFG.LTR_Def"
 begin
 
 section \<open>One route, CALL and COMB discharged once\<close>

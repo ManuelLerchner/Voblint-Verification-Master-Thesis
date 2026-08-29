@@ -1,5 +1,5 @@
 theory LTR_Collect
-  imports CFG_Local_Trace Activation_Context
+  imports LTR_Def Activation_Context
 begin
 
 section \<open>Which stores can occur at each node\<close>
@@ -163,7 +163,7 @@ lemma valid_ltr_Un_S:
 subsection \<open>Forgetful projections\<close>
 
 text \<open>\<open>ltr_collect\<close> is the concrete collecting view: the sink stores of valid traces
-  reaching node \<open>v\<close>.  \<^const>\<open>activation_collect\<close> (\<open>CFG_Local_Trace\<close>) is the context-indexed
+  reaching node \<open>v\<close>.  \<^const>\<open>activation_collect\<close> (\<open>LTR_Def\<close>) is the context-indexed
   collector, filtering those by the structural activation key; the key type is not
   required finite, so a keyed bucket is not claimed to be an exact activation identity.\<close>
 

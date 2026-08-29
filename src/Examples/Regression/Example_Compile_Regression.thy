@@ -139,7 +139,7 @@ lemma reserved_read_rejected:
   by (simp add: source_exp_def)
 
 lemma root_return_rejected:
-  "~ wf_compile_input cr_gs \<Pi> ps mnm (Return e)"
+  "~ wf_compile_input cr_gs \<Pi> ps main_name (Return e)"
   by (simp add: wf_compile_input_def wf_source_program_def)
 
 lemma value_call_requires_value_provider:
@@ -178,12 +178,12 @@ lemma main_fallthrough_accepted:
         special_pname_min_def special_pname_max_def)
 
 lemma missing_main_rejected:
-  assumes "\<Pi> mnm = None"
-  shows "~ wf_compile_input cr_gs \<Pi> ps mnm main"
+  assumes "\<Pi> main_name = None"
+  shows "~ wf_compile_input cr_gs \<Pi> ps main_name main"
   using assms
   by (auto simp: wf_compile_input_def wf_source_program_def)
 
 lemma duplicate_procedure_names_rejected:
-  "~ wf_compile_input cr_gs \<Pi> [p, p] mnm main"
+  "~ wf_compile_input cr_gs \<Pi> [p, p] main_name main"
   by (simp add: wf_compile_input_def)
 end

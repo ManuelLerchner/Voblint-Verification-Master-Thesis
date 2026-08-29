@@ -10,7 +10,7 @@ of one thread.
 
 | File | Role |
 | --- | --- |
-| `CFG_Local_Trace.thy` | `ltr`, `valid_ltr`, caller and ancestor structure |
+| `LTR_Def.thy` | `ltr`, `valid_ltr`, caller and ancestor structure |
 | `Activation_Context.thy` | `key`, the context entry invariant, and `activation_collect` |
 | `LTR_Collect.thy` | `ltr_collect`, introduction rules, and least-fixpoint characterization |
 | `LTR_Abstract.thy` | The `ltr_coverage` locale and its generic postfix soundness theorem |

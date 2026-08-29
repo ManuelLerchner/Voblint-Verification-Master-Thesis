@@ -47,7 +47,7 @@ avoids needing it at all.
 ## 1. Existing architecture mapping
 
 Read `Routed_Context.thy`, `DG_Ctx_Activation.thy`, `DG_Soundness.thy`,
-`CFG_Local_Trace.thy`, and `Example_Interval_DG_CallString.thy` directly.
+`LTR_Def.thy`, and `Example_Interval_DG_CallString.thy` directly.
 
 **Where the call string should live: `'c`, the context-key type parameter
 `dg_ctx_activation`/`routed_context` are already generic over.**
@@ -102,7 +102,7 @@ locale routed_context =
 `route` is the *equation-level* context transformer (what the solver
 computes with, over the abstract domain); `enterc` is the *trace-semantic*
 context function (what the soundness proof is stated against, over concrete
-traces, via `key` in `CFG_Local_Trace.thy`). `route_enterc_agree` is the one
+traces, via `key` in `LTR_Def.thy`). `route_enterc_agree` is the one
 obligation tying them together — everything else (`CALL`, `COMB`, `EDGE`)
 is already proved generically inside `dg_ctx_activation`'s `begin...end`
 block, for *any* `route`/`enterc` pair satisfying that agreement. This is
@@ -111,7 +111,7 @@ k-call-string or a partial-tabulation context becomes an interpretation of
 this locale, not a second proof development."*
 
 **`enterc` can already express a call string.** `key`'s recursive case
-(`CFG_Local_Trace.thy:82-84`):
+(`LTR_Def.thy:82-84`):
 
 ```isabelle
 fun key :: "(cfg_node => 'c => store => 'c) => 'c => ltr => 'c" where
@@ -120,7 +120,7 @@ fun key :: "(cfg_node => 'c => store => 'c) => 'c => ltr => 'c" where
 
 `enterc`'s second argument is the *parent activation's own already-computed
 context* — the full history is available, recursively, at every call. The
-file's own comment (`CFG_Local_Trace.thy:76-78`) says this outright:
+file's own comment (`LTR_Def.thy:76-78`) says this outright:
 *"Exposing the call site to `enterc` is what makes a call-site-keyed context
 (a k-call-string) expressible as an instance rather than only as a
 generator-side hook."* This was deliberately widened for exactly this
@@ -357,7 +357,7 @@ pop lemma.
 
 | Goblint | This formalization |
 | --- | --- |
-| `context()`/`control_context()` on `man`, backed by `S.C.t` | `enterc`/`key` (`CFG_Local_Trace.thy`) computing `'c` from the trace, read back via `dg_ctx_activation`'s `sigma (Inl (v,ctx))` |
+| `context()`/`control_context()` on `man`, backed by `S.C.t` | `enterc`/`key` (`LTR_Def.thy`) computing `'c` from the trace, read back via `dg_ctx_activation`'s `sigma (Inl (v,ctx))` |
 | `C.t` fixed per-`Spec` at the OCaml type level | `'c` fixed per-`interpretation`, at the value level (`route_k k`/`enterc_k k` for a chosen `nat` `k`) |
 | Loopfree Callstring / Context Gas lifters bound an otherwise-unbounded `C.t` | not needed here: `take k` bounds by construction, and `part_post_solution` never required a static finiteness bound in the first place (section 1) |
 | Default context also hashes `D.t` (the abstract *value*) into `C.t` | intentionally out of scope — `route_k`/`enterc_k` only look at the call site, matching M1's own stated scope ("the syntactic-history axis, not the whole Goblint context menu") |

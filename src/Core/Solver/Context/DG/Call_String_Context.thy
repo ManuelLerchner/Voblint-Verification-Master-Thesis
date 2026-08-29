@@ -31,7 +31,7 @@ definition cs_route :: "nat \<Rightarrow> pp \<Rightarrow> call_string \<Rightar
   "cs_route k u ctx d ca = take k (u # ctx)"
 
 text \<open>The trace-semantic context function \<open>routed_context_hetero\<close>'s \<open>enterc\<close> parameter needs
-  (\<open>CFG_Local_Trace\<close>'s \<open>key\<close>): same closed term as \<^const>\<open>cs_route\<close>, over the concrete
+  (\<open>LTR_Def\<close>'s \<open>key\<close>): same closed term as \<^const>\<open>cs_route\<close>, over the concrete
   \<^typ>\<open>store\<close> \<open>key\<close> supplies instead of an abstract/executable \<open>'d\<close>.\<close>
 
 definition cs_context :: "nat \<Rightarrow> cfg_node \<Rightarrow> call_string \<Rightarrow> store \<Rightarrow> call_string" where

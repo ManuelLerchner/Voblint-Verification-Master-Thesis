@@ -65,13 +65,13 @@ high. Confidence in effort estimate: medium (backbone re-induction is the risk).
 ```text
    flat trace_witness                         call-structured valid_ltr
    (store list)                               (ltr = Root|Call|Resume)
-   CFG_Collect_Trace.thy:86                   CFG_Local_Trace.thy:73
+   CFG_Collect_Trace.thy:86                   LTR_Def.thy:73
         │                                              │
         │ cfg_collect_trace {tr. trace_witness…}       │ sink_store / key
         │ CFG_Collect_Trace.thy:102                    │
         ▼                                              ▼
    cfg_collect_trace                            cfg_collect_ctx_act
-        │                                       CFG_Local_Trace.thy:627
+        │                                       LTR_Def.thy:627
         │ alpha_ctx dg cmp  (digest context)           │
         ▼                                              │
    cfg_collect_ctx  (dg :: trace ⇒ 'c, cmp)            │
@@ -95,13 +95,13 @@ the trace worlds.
 
 ## 2. Semantic comparison: `trace_witness` vs `valid_ltr`
 
-| Aspect | `trace_witness` (`CFG_Collect_Trace.thy:86`) | `valid_ltr` (`CFG_Local_Trace.thy:73`) |
+| Aspect | `trace_witness` (`CFG_Collect_Trace.thy:86`) | `valid_ltr` (`LTR_Def.thy:73`) |
 | --- | --- | --- |
 | Carrier | `trace = store list` (flat) | `ltr = Root p \| Call caller p \| Resume caller callee p` |
 | Constructors | `entry`, `proc_entry`, `edge`, `combine` | `start` (Root), `intra` (extend), `call` (Call), `ret` (Resume) |
 | Call/return info | **flattened**: combine splices `tau @ tl rho @ [r]` into one store list; caller/callee identities lost | **explicit**: `Call` keeps the caller subtree; `Resume` keeps both caller and callee subtrees |
 | Recursion | implicit (just a longer list) | explicit (nested `Call`/`Resume` tree) |
-| Activation identity | **not recoverable** | recoverable via `caller_of` chain (`CFG_Local_Trace.thy:84`) |
+| Activation identity | **not recoverable** | recoverable via `caller_of` chain (`LTR_Def.thy:84`) |
 | Context computation | external digest `dg :: trace ⇒ 'c` + compatibility `cmp` (`alpha_ctx`, `:499`) | fixed fold `key enterc seedc` over the call tree (`:110`); `Resume` keeps caller's context |
 | Retained store path | full store list | full local `path` per activation, plus retained subtrees |
 | Generality of context | **high** — any `dg`/`cmp` | **fixed shape** — one two-op activation fold |
@@ -163,9 +163,9 @@ Counts are files under `src/` mentioning the name (grep `-l | wc -l`).
 | `cfg_collect` | `CFG_Collect.thy:169` | 46 | domain soundness, eqsys, both trace bridges, examples — the universal target |
 | `cfg_collect_ctx` | `CFG_Collect_Trace.thy:502` | 11 | DG read spine: `Ctx_Collect_Backbone`, `Clean_RRead_Sound`, `Digest_Global_Read`, `Value_Digest_Reader`, `TD_Side_Eff_Cmp_*`, `DG_Route_Soundness`, `Trace_Analysis_Sound` |
 | `cfg_collect_trace` | `CFG_Collect_Trace.thy:102` | 14 | `Trace_Analysis_Sound`, `Mixed_Flow_Sound`, `Sign_Exec_Sound`, many trace/digest examples |
-| `cfg_collect_ctx_act` | `CFG_Local_Trace.thy:627` | 8 | activation spine: `Activation_Backbone`, `Source_Activation_Sound`, interval flagship, `Located_LTR` source bridge |
+| `cfg_collect_ctx_act` | `LTR_Def.thy:627` | 8 | activation spine: `Activation_Backbone`, `Source_Activation_Sound`, interval flagship, `Located_LTR` source bridge |
 | `trace_witness` | `CFG_Collect_Trace.thy:86` | 5 | flat-trace backbone (`Ctx_Collect_Backbone`), its own lemmas |
-| `valid_ltr` | `CFG_Local_Trace.thy:73` | (CFG_Local_Trace + Activation spine) | `activation_collect_sound`, `valid_ltr_ctx_sound`, `Located_LTR` |
+| `valid_ltr` | `LTR_Def.thy:73` | (LTR_Def + Activation spine) | `activation_collect_sound`, `valid_ltr_ctx_sound`, `Located_LTR` |
 
 **Duplicated inductions (the review's smoking gun, question 3):**
 

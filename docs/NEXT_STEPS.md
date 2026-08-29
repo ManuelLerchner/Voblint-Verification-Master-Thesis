@@ -78,7 +78,7 @@ side rather than the termination side. #108's G1-G5 plan (in the issue):
    deterministic `enterc :: cfg_node => 'c => store => 'c` with a
    relational `admiss :: cfg_node => 'c => store => 'c => bool`, and key
    traces through it via a new inductive `ctx_key` (mirroring `key`'s own
-   recursion, `CFG_Local_Trace.thy`) instead of the old deterministic
+   recursion, `LTR_Def.thy`) instead of the old deterministic
    `key`. This is the paper's own soundness argument (Erhard, Schinabeck,
    Schwarz, Seidl, "Context Gas and friends," IJSTTT 2025, Section 10's
    description function `beta`, rules D1-D3, Theorem 1/Theorem 2), not an
@@ -88,7 +88,7 @@ side rather than the termination side. #108's G1-G5 plan (in the issue):
 
    `ltr_gamma` (`LTR_Abstract.thy`) is restated over `admiss`/`seedc` with
    a new `ADMISS_TOTAL` assumption and `admiss`-relaxed CALL/COMB;
-   `activation_collect` (`CFG_Local_Trace.thy`) is redefined directly via
+   `activation_collect` (`LTR_Def.thy`) is redefined directly via
    `ctx_key`, dropping G2a's `ctx_rep`/`MONO` machinery entirely (`ctx_key`
    itself now does what `MONO` patched around). `admiss_exact enterc`
    (`admiss_exact_def`: `c' = enterc u c s`) is the functional special case

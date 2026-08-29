@@ -21,18 +21,18 @@ text \<open>
 
 subsection \<open>Compiler input well-formedness\<close>
 
-text \<open>\<open>mnm\<close> names the distinguished entry procedure, declared in \<open>\<Pi>\<close> with an empty
+text \<open>\<open>main_name\<close> names the distinguished entry procedure, declared in \<open>\<Pi>\<close> with an empty
   formal list and body \<open>main\<close>.  The callee list \<open>ps\<close> enumerates the other declared
-  procedures (\<open>dom \<Pi>\<close> minus \<open>mnm\<close>), so \<open>FunctionEntry mnm\<close> / \<open>FunctionResult mnm\<close>
-  never collide with a callee's nodes, yet \<open>FunctionEntry mnm\<close> is an ordinary activation of
+  procedures (\<open>dom \<Pi>\<close> minus \<open>main_name\<close>), so \<open>FunctionEntry main_name\<close> / \<open>FunctionResult main_name\<close>
+  never collide with a callee's nodes, yet \<open>FunctionEntry main_name\<close> is an ordinary activation of
   a declared procedure like any other.\<close>
 definition wf_compile_input ::
   "(vname => bool) => proc_table => pname list => pname => com => bool" where
-  "wf_compile_input gs \<Pi> ps mnm main \<longleftrightarrow>
+  "wf_compile_input gs \<Pi> ps main_name main \<longleftrightarrow>
      distinct ps \<and>
-     set ps = {p. \<Pi> p ~= None} - {mnm} \<and>
-     mnm \<notin> set ps \<and>
-     wf_source_program gs \<Pi> mnm main"
+     set ps = {p. \<Pi> p ~= None} - {main_name} \<and>
+     main_name \<notin> set ps \<and>
+     wf_source_program gs \<Pi> main_name main"
 
 declare wf_compile_input_def [wf_compile_input_simps]
 
@@ -51,17 +51,17 @@ declare
   prog_main_name_def [wf_compile_input_simps]
 
 lemma wf_compile_input_source_program:
-  "wf_compile_input gs \<Pi> ps mnm main \<Longrightarrow> wf_source_program gs \<Pi> mnm main"
+  "wf_compile_input gs \<Pi> ps main_name main \<Longrightarrow> wf_source_program gs \<Pi> main_name main"
   by (simp add: wf_compile_input_def)
 
 lemma wf_compile_inputD:
-  assumes "wf_compile_input gs \<Pi> ps mnm main"
-  shows "reserved_ret_var gs" and "\<Pi> mnm = Some \<lparr>formals = [], body = main\<rparr>"
+  assumes "wf_compile_input gs \<Pi> ps main_name main"
+  shows "reserved_ret_var gs" and "\<Pi> main_name = Some \<lparr>formals = [], body = main\<rparr>"
     and "wf_source_com \<Pi> main" and "no_return main"
     and "\<Pi> p = Some decl \<Longrightarrow> wf_proc_decl gs \<Pi> decl"
     and "\<Pi> p = Some decl \<Longrightarrow> special_table p = None"
     and "source_pi \<Pi>" and "source_com main"
-    and "distinct ps" and "set ps = {p. \<Pi> p \<noteq> None} - {mnm}" and "mnm \<notin> set ps"
+    and "distinct ps" and "set ps = {p. \<Pi> p \<noteq> None} - {main_name}" and "main_name \<notin> set ps"
   using wf_source_programD[OF wf_compile_input_source_program[OF assms]]
     assms[unfolded wf_compile_input_def] by blast+
 
@@ -163,13 +163,13 @@ text \<open>
   general form below (an arbitrary entry-procedure name, not just
   \<^const>\<open>prog_main_name\<close>) is the constant every check-report/executable
   layer (Sign, Interval, Parity) actually calls; every call site in this
-  project instantiates \<open>mnm\<close> at \<^const>\<open>prog_main_name\<close> in practice, but the
+  project instantiates \<open>main_name\<close> at \<^const>\<open>prog_main_name\<close> in practice, but the
   parameter still matches \<^const>\<open>compile_prog\<close>'s own shape rather than
   hard-coding that choice into the compilation step itself.
 \<close>
 
 definition prog_cfg :: "pname => imp_prog => cfg" where
-  "prog_cfg mnm p = compile_prog (prog_table p) (prog_procs p) mnm (prog_main p)"
+  "prog_cfg main_name p = compile_prog (prog_table p) (prog_procs p) main_name (prog_main p)"
 
 subsection \<open>Syntactic occurrence predicates\<close>
 
@@ -520,15 +520,15 @@ proof -
 qed
 
 theorem compile_prog_entry_cfg_reaches_exit:
-  "cfg_reaches (compile_prog \<Pi> ps mnm main)
-     (cfg_entry (compile_prog \<Pi> ps mnm main)) (cfg_exit (compile_prog \<Pi> ps mnm main))"
+  "cfg_reaches (compile_prog \<Pi> ps main_name main)
+     (cfg_entry (compile_prog \<Pi> ps main_name main)) (cfg_exit (compile_prog \<Pi> ps main_name main))"
 proof -
   obtain n1 Eprocs Kprocs n2 Emain Kmain where
-      cmain: "compile_proc \<Pi> mnm \<lparr>formals = [], body = main\<rparr> n1 = (n2, Emain, Kmain)"
-    and g: "intra (compile_prog \<Pi> ps mnm main) = Eprocs \<union> Emain"
-           "calls (compile_prog \<Pi> ps mnm main) = Kprocs \<union> Kmain"
+      cmain: "compile_proc \<Pi> main_name \<lparr>formals = [], body = main\<rparr> n1 = (n2, Emain, Kmain)"
+    and g: "intra (compile_prog \<Pi> ps main_name main) = Eprocs \<union> Emain"
+           "calls (compile_prog \<Pi> ps main_name main) = Kprocs \<union> Kmain"
     by (rule compile_prog_intra_split)
-  have "cfg_reaches (compile_prog \<Pi> ps mnm main) (FunctionEntry mnm) (FunctionResult mnm)"
+  have "cfg_reaches (compile_prog \<Pi> ps main_name main) (FunctionEntry main_name) (FunctionResult main_name)"
     using g by (intro compile_proc_reaches_result[OF cmain]) auto
   then show ?thesis by simp
 qed

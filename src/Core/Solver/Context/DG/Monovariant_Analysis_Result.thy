@@ -146,8 +146,8 @@ definition ctx_solved_for ::
      \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> pname \<Rightarrow> imp_prog
      \<Rightarrow> (unit, 'a abs_state) analysis_result
           \<times> (String.literal \<times> 'a abs_state point_state) list" where
-  "ctx_solved_for solve keys gs mnm p =
-     (let sol = solve gs mnm p; gl = declared_global_vars p
+  "ctx_solved_for solve keys gs main_name p =
+     (let sol = solve gs main_name p; gl = declared_global_vars p
       in (Analysis_Result (fst sol)
             (\<lambda>v ctx. normalize_point gs
                        (canonicalize_lift (resolved_st_q_is_bot_for gl)
@@ -159,8 +159,8 @@ text \<open>The locals half is exactly what every domain's own result constructo
   verdict. Each domain's \<open>fst_\<close> corollary is this equation at its own solver.\<close>
 
 lemma fst_ctx_solved_for:
-  "fst (ctx_solved_for solve keys gs mnm p)
-     = (let sol = solve gs mnm p
+  "fst (ctx_solved_for solve keys gs main_name p)
+     = (let sol = solve gs main_name p
         in Analysis_Result (fst sol)
              (\<lambda>v ctx. normalize_point gs
                         (canonicalize_lift (resolved_st_q_is_bot_for (declared_global_vars p))

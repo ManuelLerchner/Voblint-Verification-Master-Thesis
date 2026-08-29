@@ -392,14 +392,14 @@ text \<open>Whole-program call-source uniqueness: the fact a routed-context anal
   pass the same way the well-formedness theorem combines its own two passes.\<close>
 
 theorem compile_prog_calls_source_unique:
-  assumes "(u, ca1, ce1, af1) \<in> calls (compile_prog \<Pi> ps mnm main)"
-    and "(u, ca2, ce2, af2) \<in> calls (compile_prog \<Pi> ps mnm main)"
+  assumes "(u, ca1, ce1, af1) \<in> calls (compile_prog \<Pi> ps main_name main)"
+    and "(u, ca2, ce2, af2) \<in> calls (compile_prog \<Pi> ps main_name main)"
   shows "ca1 = ca2 \<and> ce1 = ce2 \<and> af1 = af2"
 proof -
   obtain n1 Eprocs Kprocs n2 Emain Kmain where
       procs: "compile_procs \<Pi> ps 0 = (n1, Eprocs, Kprocs)"
-    and mainc: "compile_proc \<Pi> mnm \<lparr>formals = [], body = main\<rparr> n1 = (n2, Emain, Kmain)"
-    and g: "calls (compile_prog \<Pi> ps mnm main) = Kprocs \<union> Kmain"
+    and mainc: "compile_proc \<Pi> main_name \<lparr>formals = [], body = main\<rparr> n1 = (n2, Emain, Kmain)"
+    and g: "calls (compile_prog \<Pi> ps main_name main) = Kprocs \<union> Kmain"
     by (rule compile_prog_intra_split)
   have not_both: "\<And>u' act1' ce1' af1' act2' ce2' af2'.
       (u', act1', ce1', af1') \<in> Kprocs \<Longrightarrow> (u', act2', ce2', af2') \<in> Kmain \<Longrightarrow> False"
@@ -552,8 +552,8 @@ next
 qed
 
 lemma compile_prog_finite:
-  "finite (intra (compile_prog \<Pi> ps mnm main))
-   \<and> finite (calls (compile_prog \<Pi> ps mnm main))"
+  "finite (intra (compile_prog \<Pi> ps main_name main))
+   \<and> finite (calls (compile_prog \<Pi> ps main_name main))"
   unfolding compile_prog_def
   by (auto simp: Let_def split: prod.splits
        dest: compile_procs_finite compile_proc_finite)
@@ -671,13 +671,13 @@ lemma compile_procs_ret_wf:
 
 subsection \<open>The compiled program is well-formed\<close>
 
-theorem compile_prog_wf: "wf_cfg (compile_prog \<Pi> ps mnm main)"
+theorem compile_prog_wf: "wf_cfg (compile_prog \<Pi> ps main_name main)"
 proof -
   obtain n1 Eprocs Kprocs n2 Emain Kmain where
       procs: "compile_procs \<Pi> ps 0 = (n1, Eprocs, Kprocs)"
-    and mainc: "compile_proc \<Pi> mnm \<lparr>formals = [], body = main\<rparr> n1 = (n2, Emain, Kmain)"
-    and g: "intra (compile_prog \<Pi> ps mnm main) = Eprocs \<union> Emain"
-           "calls (compile_prog \<Pi> ps mnm main) = Kprocs \<union> Kmain"
+    and mainc: "compile_proc \<Pi> main_name \<lparr>formals = [], body = main\<rparr> n1 = (n2, Emain, Kmain)"
+    and g: "intra (compile_prog \<Pi> ps main_name main) = Eprocs \<union> Emain"
+           "calls (compile_prog \<Pi> ps main_name main) = Kprocs \<union> Kmain"
     by (rule compile_prog_intra_split)
   show ?thesis
     unfolding wf_cfg_def g

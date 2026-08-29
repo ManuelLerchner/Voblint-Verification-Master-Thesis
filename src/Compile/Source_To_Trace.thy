@@ -63,15 +63,15 @@ text \<open>The load-bearing case.  A \<^const>\<open>cstep\<close> return pops 
   \<open>valid_ltr_entry_result_eq\<close> --- so the trace composes by \<open>valid_ltr.ret\<close>, and the combined
   store equals the \<^const>\<open>cstep\<close> store.\<close>
 lemma ltr_repr_Return:
-  assumes wf: "wf_compile_input gs \<Pi> ps mnm main"
-    and rep: "ltr_repr gs (compile_prog \<Pi> ps mnm main) S
+  assumes wf: "wf_compile_input gs \<Pi> ps main_name main"
+    and rep: "ltr_repr gs (compile_prog \<Pi> ps main_name main) S
                   (FunctionResult q, tst, (cont, dst, caller) # stk) t0"
-  shows "ltr_repr gs (compile_prog \<Pi> ps mnm main) S
+  shows "ltr_repr gs (compile_prog \<Pi> ps main_name main) S
            (cont, combine_collect gs dst caller tst, stk)
            (Resume (the (caller_of t0)) t0
               (path (the (caller_of t0)) @ [(cont, combine_collect gs dst caller tst)]))"
 proof -
-  let ?g = "compile_prog \<Pi> ps mnm main"
+  let ?g = "compile_prog \<Pi> ps main_name main"
   from rep have t0v: "t0 \<in> valid_ltr gs ?g S" and sn0: "sink_node t0 = FunctionResult q"
     and ss0: "sink_store t0 = tst"
     and stk0: "stack_repr ?g ((cont, dst, caller) # stk) t0"
@@ -105,14 +105,14 @@ subsection \<open>The invariant is preserved by located CFG steps\<close>
 text \<open>Each \<^const>\<open>cstep\<close> rule maps to one \<^const>\<open>valid_ltr\<close> constructor: intra \<open>\<mapsto>\<close>
   \<^const>\<open>extend\<close>, call \<open>\<mapsto>\<close> \<^const>\<open>Call\<close>, return \<open>\<mapsto>\<close> \<^const>\<open>Resume\<close> (\<open>ltr_repr_Return\<close>).\<close>
 lemma cstep_preserves_ltr_repr:
-  assumes wf: "wf_compile_input gs \<Pi> ps mnm main"
-    and step: "cstep gs (compile_prog \<Pi> ps mnm main) cf cf'"
-    and rep: "ltr_repr gs (compile_prog \<Pi> ps mnm main) S cf t"
-  shows "\<exists>t'. ltr_repr gs (compile_prog \<Pi> ps mnm main) S cf' t'"
+  assumes wf: "wf_compile_input gs \<Pi> ps main_name main"
+    and step: "cstep gs (compile_prog \<Pi> ps main_name main) cf cf'"
+    and rep: "ltr_repr gs (compile_prog \<Pi> ps main_name main) S cf t"
+  shows "\<exists>t'. ltr_repr gs (compile_prog \<Pi> ps main_name main) S cf' t'"
   using step rep
 proof (cases rule: cstep.cases)
   case (Intra u a v s' s stk')
-  let ?g = "compile_prog \<Pi> ps mnm main"
+  let ?g = "compile_prog \<Pi> ps main_name main"
   from rep have tv: "t \<in> valid_ltr gs ?g S" and sn: "sink_node t = u"
     and ss: "sink_store t = s"
     and str: "stack_repr ?g stk' t"
@@ -127,7 +127,7 @@ proof (cases rule: cstep.cases)
   then show ?thesis using Intra by auto
 next
   case (Call u dst pars actuals q cont s stk')
-  let ?g = "compile_prog \<Pi> ps mnm main"
+  let ?g = "compile_prog \<Pi> ps main_name main"
   from rep have tv: "t \<in> valid_ltr gs ?g S" and sn: "sink_node t = u"
     and ss: "sink_store t = s"
     and str: "stack_repr ?g stk' t"
@@ -154,7 +154,7 @@ next
 next
   case (Return q tst cont dst caller stk')
   from rep Return(1)
-  have rep': "ltr_repr gs (compile_prog \<Pi> ps mnm main) S
+  have rep': "ltr_repr gs (compile_prog \<Pi> ps main_name main) S
                 (FunctionResult q, tst, (cont, dst, caller) # stk') t" by simp
   from ltr_repr_Return[OF wf rep'] show ?thesis using Return(2) by auto
 qed
@@ -170,57 +170,57 @@ proof -
 qed
 
 lemma cstep_preserves_located_ltr:
-  assumes wf: "wf_compile_input gs \<Pi> ps mnm main"
-    and "located_ltr gs (compile_prog \<Pi> ps mnm main) S cf"
-    and "cstep gs (compile_prog \<Pi> ps mnm main) cf cf'"
-  shows "located_ltr gs (compile_prog \<Pi> ps mnm main) S cf'"
+  assumes wf: "wf_compile_input gs \<Pi> ps main_name main"
+    and "located_ltr gs (compile_prog \<Pi> ps main_name main) S cf"
+    and "cstep gs (compile_prog \<Pi> ps main_name main) cf cf'"
+  shows "located_ltr gs (compile_prog \<Pi> ps main_name main) S cf'"
 proof -
-  from assms(2) obtain t where "ltr_repr gs (compile_prog \<Pi> ps mnm main) S cf t"
+  from assms(2) obtain t where "ltr_repr gs (compile_prog \<Pi> ps main_name main) S cf t"
     by (auto simp: located_ltr_def)
-  then obtain t' where "ltr_repr gs (compile_prog \<Pi> ps mnm main) S cf' t'"
+  then obtain t' where "ltr_repr gs (compile_prog \<Pi> ps main_name main) S cf' t'"
     using cstep_preserves_ltr_repr[OF wf assms(3)] by blast
   then show ?thesis by (auto simp: located_ltr_def)
 qed
 
 lemma csteps_preserve_located_ltr:
-  assumes wf: "wf_compile_input gs \<Pi> ps mnm main"
-    and "located_ltr gs (compile_prog \<Pi> ps mnm main) S cf"
-    and "star (cstep gs (compile_prog \<Pi> ps mnm main)) cf cf'"
-  shows "located_ltr gs (compile_prog \<Pi> ps mnm main) S cf'"
+  assumes wf: "wf_compile_input gs \<Pi> ps main_name main"
+    and "located_ltr gs (compile_prog \<Pi> ps main_name main) S cf"
+    and "star (cstep gs (compile_prog \<Pi> ps main_name main)) cf cf'"
+  shows "located_ltr gs (compile_prog \<Pi> ps main_name main) S cf'"
   using assms(3) assms(2)
 proof (induction rule: star.induct)
   case (refl a)
   then show ?case .
 next
   case (step a b c)
-  have "located_ltr gs (compile_prog \<Pi> ps mnm main) S b"
+  have "located_ltr gs (compile_prog \<Pi> ps main_name main) S b"
     by (rule cstep_preserves_located_ltr[OF wf step.prems step.hyps(1)])
   then show ?case by (rule step.IH)
 qed
 
 subsection \<open>The initial main activation\<close>
 
-text \<open>The program entry \<^term>\<open>FunctionEntry mnm\<close> is an ordinary \<open>csim.Base\<close> activation: the
+text \<open>The program entry \<^term>\<open>FunctionEntry main_name\<close> is an ordinary \<open>csim.Base\<close> activation: the
   distinguished main procedure is declared in \<open>\<Pi>\<close> (\<open>wf_compile_input\<close>), so its body fragment is
   certified by \<open>procs_embedded_compile_prog\<close>.  One \<^term>\<open>EA_Nop\<close> edge crosses from
-  \<^term>\<open>FunctionEntry mnm\<close> to the body entry \<open>en\<close>, where the \<open>Base\<close> activation simulates the
+  \<^term>\<open>FunctionEntry main_name\<close> to the body entry \<open>en\<close>, where the \<open>Base\<close> activation simulates the
   source \<open>main\<close>.\<close>
 lemma compile_prog_main_base:
-  assumes wf: "wf_compile_input gs \<Pi> ps mnm main"
+  assumes wf: "wf_compile_input gs \<Pi> ps main_name main"
   obtains en where
-    "(FunctionEntry mnm, EA_Nop, en) \<in> intra (compile_prog \<Pi> ps mnm main)"
-    "csim \<Pi> (compile_prog \<Pi> ps mnm main) (main, s, []) (en, s, [])"
+    "(FunctionEntry main_name, EA_Nop, en) \<in> intra (compile_prog \<Pi> ps main_name main)"
+    "csim \<Pi> (compile_prog \<Pi> ps main_name main) (main, s, []) (en, s, [])"
 proof -
-  let ?g = "compile_prog \<Pi> ps mnm main"
+  let ?g = "compile_prog \<Pi> ps main_name main"
   have pc: "procs_embedded \<Pi> ?g" by (rule procs_embedded_compile_prog[OF wf])
-  have mnmdecl: "\<Pi> mnm = Some (\<lparr>formals = [], body = main\<rparr>)"
+  have main_name_decl: "\<Pi> main_name = Some (\<lparr>formals = [], body = main\<rparr>)"
     by (rule wf_compile_inputD(2)[OF wf])
   obtain k m en where
-    cacc: "compiled_at \<Pi> ?g mnm (body (\<lparr>formals = [], body = main\<rparr>)) k m"
-      and ctrl: "control_at \<Pi> mnm (body (\<lparr>formals = [], body = main\<rparr>)) k m
+    cacc: "compiled_at \<Pi> ?g main_name (body (\<lparr>formals = [], body = main\<rparr>)) k m"
+      and ctrl: "control_at \<Pi> main_name (body (\<lparr>formals = [], body = main\<rparr>)) k m
                    (body (\<lparr>formals = [], body = main\<rparr>)) en"
-      and entry: "(FunctionEntry mnm, EA_Nop, en) \<in> intra ?g"
-    by (rule procs_embedded_activation[OF pc mnmdecl])
+      and entry: "(FunctionEntry main_name, EA_Nop, en) \<in> intra ?g"
+    by (rule procs_embedded_activation[OF pc main_name_decl])
   have bodyeq: "body (\<lparr>formals = [], body = main\<rparr>) = main" by simp
   have base: "csim \<Pi> ?g (main, s, []) (en, s, [])"
     by (rule csim.Base[OF ctrl[unfolded bodyeq] cacc[unfolded bodyeq]])
@@ -247,21 +247,21 @@ text \<open>Composing the initial \<open>csim.Base\<close> with \<open>csim_star
   simulation) and the located invariant: every source run produces a matching valid
   activation-local trace at the simulated node.\<close>
 theorem source_run_has_ltr:
-  assumes wf: "wf_compile_input gs \<Pi> ps mnm main"
+  assumes wf: "wf_compile_input gs \<Pi> ps main_name main"
     and s0: "s0 \<in> S"
     and run: "star (pstep gs \<Pi>) (main, s0, []) (residual, s, frs)"
-  shows "\<exists>v stk t. csim \<Pi> (compile_prog \<Pi> ps mnm main) (residual, s, frs) (v, s, stk)
-                   \<and> ltr_repr gs (compile_prog \<Pi> ps mnm main) S (v, s, stk) t"
+  shows "\<exists>v stk t. csim \<Pi> (compile_prog \<Pi> ps main_name main) (residual, s, frs) (v, s, stk)
+                   \<and> ltr_repr gs (compile_prog \<Pi> ps main_name main) S (v, s, stk) t"
 proof -
-  let ?g = "compile_prog \<Pi> ps mnm main"
+  let ?g = "compile_prog \<Pi> ps main_name main"
   have pc: "procs_embedded \<Pi> ?g" by (rule procs_embedded_compile_prog[OF wf])
   have swf: "return_safe main" by (rule wf_compile_input_return_safe[OF wf])
-  obtain en where entry: "(FunctionEntry mnm, EA_Nop, en) \<in> intra ?g"
+  obtain en where entry: "(FunctionEntry main_name, EA_Nop, en) \<in> intra ?g"
     and base: "csim \<Pi> ?g (main, s0, []) (en, s0, [])"
     by (rule compile_prog_main_base[OF wf])
-  have loc0: "located_ltr gs (compile_prog \<Pi> ps mnm main) S (FunctionEntry mnm, s0, [])"
-    using located_ltr_entry[where g = "compile_prog \<Pi> ps mnm main", OF s0] by simp
-  have step0: "cstep gs ?g (FunctionEntry mnm, s0, []) (en, s0, [])"
+  have loc0: "located_ltr gs (compile_prog \<Pi> ps main_name main) S (FunctionEntry main_name, s0, [])"
+    using located_ltr_entry[where g = "compile_prog \<Pi> ps main_name main", OF s0] by simp
+  have step0: "cstep gs ?g (FunctionEntry main_name, s0, []) (en, s0, [])"
     by (rule cstep_nop[OF entry])
   have loc_en: "located_ltr gs ?g S (en, s0, [])"
     by (rule cstep_preserves_located_ltr[OF wf loc0 step0])
@@ -281,15 +281,15 @@ qed
 text \<open>The plain projected source bridge: a reachable source store lies in the local-trace
   collecting \<^const>\<open>activation_collect\<close> at the simulated node, keyed by the witness trace.\<close>
 theorem source_store_in_activation_collect:
-  assumes wf: "wf_compile_input gs \<Pi> ps mnm main"
+  assumes wf: "wf_compile_input gs \<Pi> ps main_name main"
     and s0: "s0 \<in> S"
     and run: "star (pstep gs \<Pi>) (main, s0, []) (residual, s, frs)"
-  shows "\<exists>v stk t c. csim \<Pi> (compile_prog \<Pi> ps mnm main) (residual, s, frs) (v, s, stk)
+  shows "\<exists>v stk t c. csim \<Pi> (compile_prog \<Pi> ps main_name main) (residual, s, frs) (v, s, stk)
                    \<and> key enterc initial_ctx t = c
                    \<and> s \<in> activation_collect gs enterc initial_ctx
-                            (compile_prog \<Pi> ps mnm main) S v c"
+                            (compile_prog \<Pi> ps main_name main) S v c"
 proof -
-  let ?g = "compile_prog \<Pi> ps mnm main"
+  let ?g = "compile_prog \<Pi> ps main_name main"
   from source_run_has_ltr[OF wf s0 run] obtain v stk t
     where sim: "csim \<Pi> ?g (residual, s, frs) (v, s, stk)"
       and rep: "ltr_repr gs ?g S (v, s, stk) t" by blast
@@ -305,14 +305,14 @@ text \<open>The witness-free top-level result: a store reached with an empty sou
   the activation collecting at the fixed seed context --- no \<^typ>\<open>ltr\<close> witness and no context
   existential.  This is the shape a user reads for main-level program points.\<close>
 theorem source_toplevel_in_activation_collect:
-  assumes wf: "wf_compile_input gs \<Pi> ps mnm main"
+  assumes wf: "wf_compile_input gs \<Pi> ps main_name main"
     and s0: "s0 \<in> S"
     and run: "star (pstep gs \<Pi>) (main, s0, []) (residual, s, [])"
-  shows "\<exists>v. csim \<Pi> (compile_prog \<Pi> ps mnm main) (residual, s, []) (v, s, [])
+  shows "\<exists>v. csim \<Pi> (compile_prog \<Pi> ps main_name main) (residual, s, []) (v, s, [])
              \<and> s \<in> activation_collect gs enterc initial_ctx
-                      (compile_prog \<Pi> ps mnm main) S v initial_ctx"
+                      (compile_prog \<Pi> ps main_name main) S v initial_ctx"
 proof -
-  let ?g = "compile_prog \<Pi> ps mnm main"
+  let ?g = "compile_prog \<Pi> ps main_name main"
   from source_run_has_ltr[OF wf s0 run] obtain v stk t
     where sim: "csim \<Pi> ?g (residual, s, []) (v, s, stk)"
       and rep: "ltr_repr gs ?g S (v, s, stk) t" by blast

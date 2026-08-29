@@ -39,14 +39,14 @@ layer without embedding line numbers that drift.
 
 | Term | Meaning | Source |
 | --- | --- | --- |
-| `ltr` | Activation-local trace: root, called activation, or resumed caller. | `src/CFG/Collecting/CFG_Local_Trace.thy` |
-| `valid_ltr` | Inductive concrete semantics over activation-local traces. | `src/CFG/Collecting/CFG_Local_Trace.thy` |
-| `caller_of` | Immediate caller stored structurally in a called or resumed trace. | `src/CFG/Collecting/CFG_Local_Trace.thy` |
+| `ltr` | Activation-local trace: root, called activation, or resumed caller. | `src/CFG/Collecting/LTR_Def.thy` |
+| `valid_ltr` | Inductive concrete semantics over activation-local traces. | `src/CFG/Collecting/LTR_Def.thy` |
+| `caller_of` | Immediate caller stored structurally in a called or resumed trace. | `src/CFG/Collecting/LTR_Def.thy` |
 | `ltr_collect` | Reachable sink stores at each CFG node, forgetting trace structure. | `src/CFG/Collecting/LTR_Collect.thy` |
-| `activation_collect` | Reachable sink stores indexed by activation context (the key-grouped view of `ltr_collect`). | `src/CFG/Collecting/CFG_Local_Trace.thy` |
+| `activation_collect` | Reachable sink stores indexed by activation context (the key-grouped view of `ltr_collect`). | `src/CFG/Collecting/LTR_Def.thy` |
 | `ltr_gamma` | Concretization interface relating abstract states to local-trace collecting semantics. | `src/CFG/Collecting/LTR_Abstract.thy` |
-| `key` | Functional describing-function reading a trace's admissible context, one context per position -- the paper's `beta` one-for-one. | `src/CFG/Collecting/CFG_Local_Trace.thy` |
-| `admiss` / `ctx_key` | `admiss` is a locale-fixed relation admitting possibly several target contexts per step; `ctx_key` lifts it over a trace. The *relational* generalization of `beta`, not `beta` itself -- needed where an instance may pick a context nondeterministically. `admiss_exact` is the functional (single-admissible-target) instance. | `src/CFG/Collecting/CFG_Local_Trace.thy` |
+| `key` | Functional describing-function reading a trace's admissible context, one context per position -- the paper's `beta` one-for-one. | `src/CFG/Collecting/LTR_Def.thy` |
+| `admiss` / `ctx_key` | `admiss` is a locale-fixed relation admitting possibly several target contexts per step; `ctx_key` lifts it over a trace. The *relational* generalization of `beta`, not `beta` itself -- needed where an instance may pick a context nondeterministically. `admiss_exact` is the functional (single-admissible-target) instance. | `src/CFG/Collecting/LTR_Def.thy` |
 
 ## Abstract interpretation
 

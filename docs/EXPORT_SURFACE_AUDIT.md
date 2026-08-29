@@ -1011,7 +1011,7 @@ checker does not resolve:
   how it drifted unnoticed.
 - **`LTR_Abstract.thy:220-224`** names three deleted lemmas and describes a migration
   ("once `activation_collect` itself is redefined against `ctx_key`") that already landed —
-  and misplaces the definition, which is in the same session at `CFG_Local_Trace.thy:990`.
+  and misplaces the definition, which is in the same session at `LTR_Def.thy:990`.
 
 ## 11. `src/VIMP`, `src/CLI`, `src/Soundness`, `src/Codegen`
 

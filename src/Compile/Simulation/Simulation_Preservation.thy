@@ -741,7 +741,7 @@ section \<open>The static certificate for a whole compiled program\<close>
 
 text \<open>The static source contract establishes the runtime return guard for the root activation.\<close>
 lemma wf_compile_input_return_safe:
-  assumes "wf_compile_input gs \<Pi> ps mnm main"
+  assumes "wf_compile_input gs \<Pi> ps main_name main"
   shows "return_safe main"
   using wf_compile_inputD(8)[OF assms] wf_compile_inputD(4)[OF assms]
   by (rule return_safe_if_no_return)
@@ -749,28 +749,28 @@ lemma wf_compile_input_return_safe:
 text \<open>
   \<^const>\<open>procs_embedded\<close> is the static certificate \<^const>\<open>csim\<close> reads: every procedure declared
   in \<open>\<Pi>\<close> has its body fragment, entry \<open>EA_Nop\<close> wiring and \<open>EA_Ret None\<close> exit wiring in the
-  target graph.  It covers the entry procedure \<open>mnm\<close> too, since
-  \<open>\<Pi> mnm = Some \<lparr>formals = [], body = main\<rparr>\<close> makes \<^term>\<open>FunctionEntry mnm\<close> an ordinary
+  target graph.  It covers the entry procedure \<open>main_name\<close> too, since
+  \<open>\<Pi> main_name = Some \<lparr>formals = [], body = main\<rparr>\<close> makes \<^term>\<open>FunctionEntry main_name\<close> an ordinary
   activation.  Discharging it from actual \<^const>\<open>compile_prog\<close> output, rather than assuming it
   forever, is what closes the static side of the simulation.
 \<close>
 theorem procs_embedded_compile_prog:
-  assumes wf: "wf_compile_input gs \<Pi> ps mnm main"
-  shows "procs_embedded \<Pi> (compile_prog \<Pi> ps mnm main)"
+  assumes wf: "wf_compile_input gs \<Pi> ps main_name main"
+  shows "procs_embedded \<Pi> (compile_prog \<Pi> ps main_name main)"
   unfolding procs_embedded_def
 proof (intro allI impI)
   fix p decl assume pd: "\<Pi> p = Some decl"
-  let ?g = "compile_prog \<Pi> ps mnm main"
+  let ?g = "compile_prog \<Pi> ps main_name main"
   obtain n1 Eprocs Kprocs n2 Emain Kmain where
       procs: "compile_procs \<Pi> ps 0 = (n1, Eprocs, Kprocs)"
-    and mainc: "compile_proc \<Pi> mnm \<lparr>formals = [], body = main\<rparr> n1 = (n2, Emain, Kmain)"
+    and mainc: "compile_proc \<Pi> main_name \<lparr>formals = [], body = main\<rparr> n1 = (n2, Emain, Kmain)"
     and intra_g: "intra ?g = Eprocs \<union> Emain" and calls_g: "calls ?g = Kprocs \<union> Kmain"
     by (rule compile_prog_intra_split)
   have srccom: "source_com (body decl)"
     using wf_compile_inputD(7)[OF wf] pd unfolding source_pi_def by blast
   have "\<exists>m m' Ef Kf. compile_proc \<Pi> p decl m = (m', Ef, Kf)
           \<and> Ef \<subseteq> intra ?g \<and> Kf \<subseteq> calls ?g"
-  proof (cases "p = mnm")
+  proof (cases "p = main_name")
     case True
     with pd wf_compile_inputD(2)[OF wf] have "decl = \<lparr>formals = [], body = main\<rparr>" by simp
     then show ?thesis using mainc True intra_g calls_g by blast

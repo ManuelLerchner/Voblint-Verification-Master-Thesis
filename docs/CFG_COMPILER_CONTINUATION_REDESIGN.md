@@ -23,12 +23,14 @@ Comparison target: Goblint-CIL `src/cfg.ml` at
 > | `src/CFG/Compiler/Compile_Locality.thy` | `src/Compile/Procedure_Ownership.thy` |
 > | `src/CFG/Compiler/Located_LTR.thy` | `src/Compile/Source_To_Trace.thy` |
 > | `src/CFG/Compiler/Located_Exec.thy` | `src/CFG/CFG_Exec.thy` |
+> | `src/CFG/Collecting/CFG_Local_Trace.thy` | `src/CFG/Collecting/LTR_Def.thy` |
 > | `Compile_Certificate` | folded into `Simulation_Preservation` |
 > | `Compile_Reaches` | folded into `Compile_Invariants` |
 > | `procs_compiled` | `procs_embedded` |
 > | `proc_activation` | folded into `compiled_at` |
 > | `source_wf` | `return_safe :: com => bool` |
 > | `source_global` | `gs` |
+> | `mnm` | `main_name` |
 
 ---
 

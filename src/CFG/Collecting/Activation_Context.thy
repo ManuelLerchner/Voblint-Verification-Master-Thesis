@@ -1,5 +1,5 @@
 theory Activation_Context
-  imports CFG_Local_Trace
+  imports LTR_Def
 begin
 
 section \<open>Activation context selection and context-indexed collecting\<close>

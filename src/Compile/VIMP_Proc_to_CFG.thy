@@ -222,9 +222,9 @@ where
            in (n2, E \<union> E', K \<union> K')))"
 
 text \<open>The whole program: every declared procedure, plus \<open>main\<close> compiled under the
-  designated main name \<open>mnm\<close> (which the well-formedness predicate keeps disjoint from
-  \<open>ps\<close>).  There is no global exit: whole-program completion is \<open>FunctionResult mnm\<close>, and the
-  entry is \<open>FunctionEntry mnm\<close>.\<close>
+  designated main name \<open>main_name\<close> (which the well-formedness predicate keeps disjoint from
+  \<open>ps\<close>).  There is no global exit: whole-program completion is \<open>FunctionResult main_name\<close>, and the
+  entry is \<open>FunctionEntry main_name\<close>.\<close>
 
 text \<open>\<open>checks\<close> is not collected by a separate counter-threading pass: it is read
   directly off the compiled edges, exactly the \<^const>\<open>EA_Check\<close> edges
@@ -235,10 +235,10 @@ text \<open>\<open>checks\<close> is not collected by a separate counter-threadi
 definition compile_prog ::
   "proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com \<Rightarrow> cfg"
 where
-  "compile_prog \<Pi> ps mnm main =
+  "compile_prog \<Pi> ps main_name main =
      (let (n1, Eprocs, Kprocs) = compile_procs \<Pi> ps 0;
-          (n2, Emain, Kmain) = compile_proc \<Pi> mnm (\<lparr>formals = [], body = main\<rparr>) n1
-      in \<lparr> intra = Eprocs \<union> Emain, calls = Kprocs \<union> Kmain, cfg_entry = FunctionEntry mnm,
+          (n2, Emain, Kmain) = compile_proc \<Pi> main_name (\<lparr>formals = [], body = main\<rparr>) n1
+      in \<lparr> intra = Eprocs \<union> Emain, calls = Kprocs \<union> Kmain, cfg_entry = FunctionEntry main_name,
            checks = (\<lambda>(u, a, v). (u, ea_check_cond a))
              ` Set.filter (\<lambda>(u, a, v). is_EA_Check a) (Eprocs \<union> Emain) \<rparr>)"
 
@@ -247,25 +247,25 @@ text \<open>Decomposition of a whole compiled program into the callee pass and t
 lemma compile_prog_intra_split:
   obtains n1 Eprocs Kprocs n2 Emain Kmain where
     "compile_procs \<Pi> ps 0 = (n1, Eprocs, Kprocs)"
-    "compile_proc \<Pi> mnm \<lparr>formals = [], body = main\<rparr> n1 = (n2, Emain, Kmain)"
-    "intra (compile_prog \<Pi> ps mnm main) = Eprocs \<union> Emain"
-    "calls (compile_prog \<Pi> ps mnm main) = Kprocs \<union> Kmain"
+    "compile_proc \<Pi> main_name \<lparr>formals = [], body = main\<rparr> n1 = (n2, Emain, Kmain)"
+    "intra (compile_prog \<Pi> ps main_name main) = Eprocs \<union> Emain"
+    "calls (compile_prog \<Pi> ps main_name main) = Kprocs \<union> Kmain"
 proof -
   obtain n1 Eprocs Kprocs where procs: "compile_procs \<Pi> ps 0 = (n1, Eprocs, Kprocs)"
     by (rule prod_cases3)
   obtain n2 Emain Kmain
-    where mainc: "compile_proc \<Pi> mnm \<lparr>formals = [], body = main\<rparr> n1 = (n2, Emain, Kmain)"
+    where mainc: "compile_proc \<Pi> main_name \<lparr>formals = [], body = main\<rparr> n1 = (n2, Emain, Kmain)"
     by (rule prod_cases3)
   show ?thesis
     by (rule that[OF procs mainc]) (simp_all add: compile_prog_def procs mainc Let_def)
 qed
 
 lemma cfg_entry_compile_prog [simp]:
-  "cfg_entry (compile_prog \<Pi> ps mnm main) = FunctionEntry mnm"
+  "cfg_entry (compile_prog \<Pi> ps main_name main) = FunctionEntry main_name"
   by (simp add: compile_prog_def Let_def split: prod.splits)
 
 lemma cfg_exit_compile_prog [simp]:
-  "cfg_exit (compile_prog \<Pi> ps mnm main) = FunctionResult mnm"
+  "cfg_exit (compile_prog \<Pi> ps main_name main) = FunctionResult main_name"
   by (simp add: cfg_exit_def)
 
 subsection \<open>Allocation arithmetic and statement ranges\<close>

@@ -69,12 +69,12 @@ lemma compile_procs_no_proc_call_K_empty:
 theorem compile_prog_calls_empty:
   assumes main_free: "no_proc_call main"
       and procs_free: "\<And>q decl. q \<in> set ps \<Longrightarrow> \<Pi> q = Some decl \<Longrightarrow> no_proc_call (body decl)"
-  shows "calls (compile_prog \<Pi> ps mnm main) = {}"
+  shows "calls (compile_prog \<Pi> ps main_name main) = {}"
 proof -
   obtain n1 Eprocs Kprocs n2 Emain Kmain where
       procs: "compile_procs \<Pi> ps 0 = (n1, Eprocs, Kprocs)"
-    and mainc: "compile_proc \<Pi> mnm \<lparr>formals = [], body = main\<rparr> n1 = (n2, Emain, Kmain)"
-    and g: "calls (compile_prog \<Pi> ps mnm main) = Kprocs \<union> Kmain"
+    and mainc: "compile_proc \<Pi> main_name \<lparr>formals = [], body = main\<rparr> n1 = (n2, Emain, Kmain)"
+    and g: "calls (compile_prog \<Pi> ps main_name main) = Kprocs \<union> Kmain"
     by (rule compile_prog_intra_split)
   show ?thesis unfolding g
     using compile_procs_no_proc_call_K_empty[OF procs procs_free]
