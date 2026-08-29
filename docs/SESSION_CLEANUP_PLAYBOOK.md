@@ -105,6 +105,40 @@ Scripts that helped (recreate under the scratchpad as needed):
 - **Style measured in symbols, not bytes.** `\<Rightarrow>` is one column
   in jEdit; measure line length after collapsing `\<...>`.
 
+## Traps from the parameter-deletion pass
+
+- **Deleting a parameter is an arity change, so check arity, not spelling.**
+  After removing `main_name`/`main`, a repo-wide "no bare `main_name`
+  remains" grep returned zero while four call-string `interpretation`s still
+  supplied the pair, spelled `"STR ''main''" nest_main`. The oracle is
+  Isabelle's *More arguments than parameters in instantiation of locale*,
+  not a token search. Enumerate the constant's call sites by head name and
+  compare each site's argument count against the definition.
+- **An unused `fixes` is legal, so the build will not find dead parameters.**
+  Both routed-context locales kept `main_name :: pname and main :: com` in
+  their `fixes` long after nothing read them, and every session stayed
+  green. This is audit item 3 (false abstraction); only reading the locale
+  header finds it.
+- **Anchor a deletion script on the head constant, never on the argument.**
+  A pass keyed on the *name* `main_name` stripped the second argument from
+  twenty `scope_locations p owner` calls, which take a genuine owner. The
+  line-count and line-length assertions passed straight through the damage.
+  Assert on the head's expected arity, and diff every changed line.
+- **`str.split(lit)` then `lit.join(parts[1:])` loses one separator.** It
+  rewrote `by (rule compile_prog_calls_empty)` to `by ()` in seven files.
+  Prefer `str.replace` for literal substitution; if a split is unavoidable,
+  assert the rejoined text still contains the literal N times.
+- **A `<cfg>_compile [simp]` folding rule defeats `unfolding <cfg>_def`.**
+  Several examples declare `compile_prog ... = <x>_cfg` as `[simp]`; a proof
+  that opens the definition and then calls `simp` has it folded straight
+  back, leaving the goal untouched. Use `simp only:` with the definition and
+  the rules you want.
+- **A green build does not mean the migration is finished.** The build
+  abandons a session at its first failing theory, so each fix exposes only
+  the next layer. Error counts fell 40 -> 40 -> 15 -> 2 over five passes on
+  the same session; budget for the tail rather than reading the first clean
+  prefix as done.
+
 ## VIMP status after the pass
 
 1894 -> 1019 lines across eight hand-written theories (`VIMP_Settings`

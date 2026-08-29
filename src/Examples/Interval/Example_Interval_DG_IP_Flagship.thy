@@ -61,8 +61,8 @@ text \<open>
   \<open>FunctionEntry (STR ''twice'')\<close> --- this is the monovariant (single-context) view.
 \<close>
 
-lemma twice_entry: "cfg_entry twice_cfg = FunctionEntry (STR ''main'')"
-  unfolding twice_cfg_def by (simp add: cfg_entry_compile_prog prog_main_name_def)
+interpretation twice: compiled_cfg twice_pi twice_procs twice_cfg
+  by unfold_locales (rule twice_cfg_def)
 
 text \<open>The two call edges' shape, computed directly from \<open>twice_cfg\<close>: each call site \<open>u\<close>
   pins down its destination variable, callee, arguments, and continuation. Exported for the
@@ -85,8 +85,8 @@ lemma twice_calls_unique_site:
       u1 = u2 \<longrightarrow> ca1 = ca2 \<and> ce1 = ce2 \<and> k1 = k2"
   unfolding twice_cfg_def by eval
 
-lemma twice_finE: "finite (intra twice_cfg)" unfolding twice_cfg_def using compile_prog_finite by simp
-lemma twice_finC: "finite (calls twice_cfg)" unfolding twice_cfg_def using compile_prog_finite by simp
+lemmas twice_finE = twice.finite_intra
+lemmas twice_finC = twice.finite_calls
 
 subsection \<open>The analysis specification (interval, as an executable D/G analysis)\<close>
 
@@ -172,8 +172,7 @@ text \<open>Coverage is not read off the solved key set. Every node of \<open>tw
   \<^const>\<open>cfg_exit_covers\<close>, and \<^const>\<open>vars_cover\<close> follows from that together with
   the post-solution the solver already returns.\<close>
 
-lemma twice_wf_cfg: "wf_cfg twice_cfg"
-  unfolding twice_cfg_def by (rule compile_prog_wf)
+lemmas twice_wf_cfg = twice.wf
 
 lemma twice_exit_covers: "cfg_exit_covers twice_cfg" by eval
 

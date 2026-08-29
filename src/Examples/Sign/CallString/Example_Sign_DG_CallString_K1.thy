@@ -66,11 +66,11 @@ lemma sign_nest_cfg_compile [simp]:
   "compile_prog sign_nest_pi sign_nest_procs = sign_nest_cfg"
   by (simp add: sign_nest_cfg_def)
 
-lemma sign_nest_entry: "cfg_entry sign_nest_cfg = FunctionEntry (STR ''main'')"
-  by (simp only: sign_nest_cfg_def cfg_entry_compile_prog prog_main_name_def)
+interpretation sign_nest: compiled_cfg sign_nest_pi sign_nest_procs sign_nest_cfg
+  by unfold_locales (rule sign_nest_cfg_def)
 
-lemma sign_nest_finE: "finite (intra sign_nest_cfg)"
-  unfolding sign_nest_cfg_def using compile_prog_finite by blast
+lemmas sign_nest_entry = sign_nest.entry[unfolded prog_main_name_def]
+lemmas sign_nest_finE = sign_nest.finite_intra
 
 text \<open>The three call edges' shape, computed directly from \<open>sign_nest_cfg\<close>: each call site
   \<open>u\<close> pins down its callee \<open>p\<close> and continuation \<open>cont\<close>. \<open>g\<close> is called once, from inside

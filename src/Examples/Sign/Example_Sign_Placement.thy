@@ -330,8 +330,11 @@ lemma sign_placement_dg_td_value:
 
 subsection \<open>CFG structure facts\<close>
 
-lemma sign_placement_cfg_entry: "cfg_entry sign_placement_cfg = FunctionEntry prog_main_name"
-  by (simp only: sign_placement_cfg_def cfg_entry_compile_prog prog_main_name_def)
+interpretation sign_placement: compiled_cfg "prog_table sign_placement_prog"
+    "prog_procs sign_placement_prog" sign_placement_cfg
+  by unfold_locales (rule sign_placement_cfg_def)
+
+lemmas sign_placement_cfg_entry = sign_placement.entry
 
 lemma sign_placement_hook_lists:
   "intra_predecessor_list sign_placement_cfg (FunctionEntry prog_main_name) = []"
@@ -897,11 +900,8 @@ interpretation sign_placement_sound_dg_hooks_ltr:
     sign_placement_abs_enter_tree
   by unfold_locales
 
-lemma sign_placement_finI: "finite (intra sign_placement_cfg)"
-  unfolding sign_placement_cfg_def by (rule compile_prog_finite[THEN conjunct1])
-
-lemma sign_placement_finC: "finite (calls sign_placement_cfg)"
-  unfolding sign_placement_cfg_def by (rule compile_prog_finite[THEN conjunct2])
+lemmas sign_placement_finI = sign_placement.finite_intra
+lemmas sign_placement_finC = sign_placement.finite_calls
 
 lemma sign_placement_cover_entry: "(cfg_entry sign_placement_cfg, ()) \<in> sign_placement_nodes"
   unfolding sign_placement_nodes_def sign_placement_cfg_entry by simp

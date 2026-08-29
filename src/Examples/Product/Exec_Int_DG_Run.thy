@@ -38,10 +38,12 @@ lemma gExI_calls: "calls gExI = {}"
   by (rule compile_prog_calls_empty)
      (simp_all add: int_ex_prog_def main_body_def prog_main_name_def)
 
-lemma gExI_entry: "cfg_entry gExI = FunctionEntry (STR ''main'')"
-  unfolding gExI_def by (simp add: cfg_entry_compile_prog prog_main_name_def)
-lemma gExI_finE: "finite (intra gExI)" unfolding gExI_def using compile_prog_finite by simp
-lemma gExI_finC: "finite (calls gExI)" unfolding gExI_def using compile_prog_finite by simp
+interpretation gExI: compiled_cfg int_ex_pi "prog_procs int_ex_prog" gExI
+  by unfold_locales (rule gExI_def)
+
+lemmas gExI_entry = gExI.entry[unfolded prog_main_name_def]
+lemmas gExI_finE = gExI.finite_intra
+lemmas gExI_finC = gExI.finite_calls
 
 subsection \<open>Computed post-solution, one per refinement mode\<close>
 

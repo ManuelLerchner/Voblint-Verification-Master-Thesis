@@ -71,11 +71,13 @@ lemma gEx_calls: "calls gEx = {}"
   unfolding gEx_def sign_ex_pi_def
   by (rule compile_prog_calls_empty)
      (simp_all add: sign_ex_prog_def main_body_def prog_main_name_def)
-lemma gEx_entry: "cfg_entry gEx = FunctionEntry (STR ''main'')"
-  by (simp only: gEx_def cfg_entry_compile_prog prog_main_name_def)
-lemma gEx_wf_cfg: "wf_cfg gEx" unfolding gEx_def by (rule compile_prog_wf)
-lemma gEx_finE: "finite (intra gEx)" unfolding gEx_def using compile_prog_finite by simp
-lemma gEx_finC: "finite (calls gEx)" unfolding gEx_def using compile_prog_finite by simp
+interpretation gEx: compiled_cfg sign_ex_pi "prog_procs sign_ex_prog" gEx
+  by unfold_locales (rule gEx_def)
+
+lemmas gEx_entry = gEx.entry[unfolded prog_main_name_def]
+lemmas gEx_wf_cfg = gEx.wf
+lemmas gEx_finE = gEx.finite_intra
+lemmas gEx_finC = gEx.finite_calls
 
 definition dgEx_eqs :: "pp \<times> unit \<Rightarrow> (pp \<times> unit, unit, (sign exec_dg_st lifted, sign exec_dg_st lifted) dg_state) strategy_tree" where
   "dgEx_eqs = dg_gen_of

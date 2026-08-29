@@ -717,8 +717,11 @@ lemma placement_hook_gen_entry:
   using placement_sound_dg_hooks.hook_gen_entry[OF no_edge no_combine no_enter bot0]
   by simp_all
 
-lemma placement_cfg_entry: "cfg_entry placement_cfg = FunctionEntry prog_main_name"
-  by (simp only: placement_cfg_def cfg_entry_compile_prog prog_main_name_def)
+interpretation placement: compiled_cfg "prog_table placement_prog" "prog_procs placement_prog"
+    placement_cfg
+  by unfold_locales (rule placement_cfg_def)
+
+lemmas placement_cfg_entry = placement.entry
 
 lemma placement_hook_lists:
   "intra_predecessor_list placement_cfg (FunctionEntry prog_main_name) = []"
@@ -2843,11 +2846,8 @@ text \<open>Coverage, finiteness, and the seed-soundness premises of
   \<open>hook_post_solution_collect_sound_ltr\<close>, discharged directly against
   \<open>placement_nodes\<close> and \<open>placement_cfg\<close>'s own executable edge/call sets.\<close>
 
-lemma placement_finI: "finite (intra placement_cfg)"
-  unfolding placement_cfg_def by (rule compile_prog_finite[THEN conjunct1])
-
-lemma placement_finC: "finite (calls placement_cfg)"
-  unfolding placement_cfg_def by (rule compile_prog_finite[THEN conjunct2])
+lemmas placement_finI = placement.finite_intra
+lemmas placement_finC = placement.finite_calls
 
 lemma placement_cover_entry: "(cfg_entry placement_cfg, ()) \<in> placement_nodes"
   unfolding placement_nodes_def placement_cfg_entry by simp

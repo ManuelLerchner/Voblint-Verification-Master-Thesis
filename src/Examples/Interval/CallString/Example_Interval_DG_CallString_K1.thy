@@ -63,17 +63,16 @@ lemma nest_cfg_compile [simp]:
   "compile_prog nest_pi nest_procs = nest_cfg"
   by (simp add: nest_cfg_def)
 
-lemma nest_entry: "cfg_entry nest_cfg = FunctionEntry (STR ''main'')"
-  by (simp only: nest_cfg_def cfg_entry_compile_prog prog_main_name_def)
+interpretation nest: compiled_cfg nest_pi nest_procs nest_cfg
+  by unfold_locales (rule nest_cfg_def)
+
+lemmas nest_entry = nest.entry[unfolded prog_main_name_def]
 
 text \<open>\<open>main\<close> calls \<open>f\<close> at two sites (\<open>Statement 5\<close>, args \<open>3\<close>; \<open>Statement 6\<close>, args \<open>10\<close>).
   \<open>f\<close> calls \<open>g\<close> at one site inside its own body (\<open>Statement 2\<close>), passing through its own
   parameter --- the same source location regardless of which \<open>f\<close> activation runs it.\<close>
 
-lemma nest_finE: "finite (intra nest_cfg)"
-  unfolding nest_cfg_def using compile_prog_finite by blast
-lemma nest_finC: "finite (calls nest_cfg)"
-  unfolding nest_cfg_def using compile_prog_finite by blast
+lemmas nest_finE = nest.finite_intra
 
 text \<open>The three call edges' shape, computed directly from \<open>nest_cfg\<close>: each call site \<open>u\<close>
   pins down its callee \<open>p\<close> and continuation \<open>cont\<close>.\<close>

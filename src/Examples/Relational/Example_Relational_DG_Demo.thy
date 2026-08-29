@@ -67,8 +67,8 @@ definition demo_pi :: proc_table where
 definition demo_cfg :: cfg where
   "demo_cfg = compile_prog demo_pi (prog_procs demo_program)"
 
-lemma demo_finE: "finite (intra demo_cfg)" unfolding demo_cfg_def using compile_prog_finite by simp
-lemma demo_finC: "finite (calls demo_cfg)" unfolding demo_cfg_def using compile_prog_finite by simp
+interpretation demo: compiled_cfg demo_pi "prog_procs demo_program" demo_cfg
+  by unfold_locales (rule demo_cfg_def)
 
 text \<open>\<open>Statement 1\<close> is the true branch of the guard, right after the
   \<open>assume\<close> and before \<open>z := 1\<close> -- exactly where \<open>x < y\<close> is freshly known

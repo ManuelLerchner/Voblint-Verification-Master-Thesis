@@ -26,6 +26,9 @@ task at hand:
 - Before auditing or cleaning up a session, read
   `docs/SESSION_CLEANUP_PLAYBOOK.md`: the procedure, the patterns that paid
   off, and the traps that each cost a rebuild.
+- Before moving, splitting, or deleting anything in `src/Core`, read
+  `docs/CORE_REFACTOR_PLAN.md` and work its step table in order; record
+  what the build contradicts in its "Decisions and corrections" section.
 - For an area-specific task, read the nearest `README.md`.
 - Use `.thy` files as the source of truth for definitions, theorem statements,
   and proof status. Do not copy drifting lemma inventories into this file.

@@ -49,8 +49,8 @@ text \<open>
   statement \<open>0\<close>.  \<open>main\<close> occupies statements \<open>2..4\<close>: \<open>2\<close> draws \<open>x\<close> from \<open>__voblint_nondet_int()\<close> and
   continues at \<open>3\<close>, the single call site, continuing at \<open>4\<close>.\<close>
 
-lemma rc_entry: "cfg_entry rc_cfg = FunctionEntry (STR ''main'')"
-  unfolding rc_cfg_def by (simp add: cfg_entry_compile_prog prog_main_name_def)
+interpretation rc: compiled_cfg rc_pi rc_procs rc_cfg
+  by unfold_locales (rule rc_cfg_def)
 
 text \<open>The one call site's shape, computed directly from \<open>rc_cfg\<close>. Exported for the
   routed-context siblings, which key off this single call rather than case-splitting
@@ -67,8 +67,7 @@ lemma rc_calls_unique_site:
       u1 = u2 \<longrightarrow> ca1 = ca2 \<and> ce1 = ce2 \<and> k1 = k2"
   unfolding rc_cfg_def by eval
 
-lemma rc_finE: "finite (intra rc_cfg)" unfolding rc_cfg_def using compile_prog_finite by simp
-lemma rc_finC: "finite (calls rc_cfg)" unfolding rc_cfg_def using compile_prog_finite by simp
+lemmas rc_finC = rc.finite_calls
 
 subsection \<open>Source-level well-formedness\<close>
 

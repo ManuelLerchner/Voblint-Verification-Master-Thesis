@@ -324,6 +324,35 @@ precision gap documented in-theory (`Interval_Backward.thy`). This is
 separate from the boolean `eq_true`/`eq_false` query interface used for check
 classification (`Abstract_Numeric_Queries.thy`).
 
+## Per-domain Ctx duplication in the Analysis session
+
+Deferred until the Analysis cleanup pass; recorded here while the evidence is
+fresh. `Sign_Ctx_*`, `Interval_Ctx_*`, `Parity_Ctx_*` and the `entry_state_*`
+family mirror each other across 23 suffixes -- `_eqs_prog`, `_sol_prog`,
+`_sol_prog_per_origin`, `_terminates_prog`, `_sg`, `_sg_covered`,
+`_sg_uncovered_empty`, `_sigma_abs`, `_fin`, `_finC` and the rest -- for a
+combined 245 constants and lemmas across the four prefixes.
+
+These are not four instantiations of a shared abstraction; they are four
+copies. The bodies are character-identical modulo the domain type and the
+`_eqs_prog` they call:
+
+```
+sctx_sol_prog gs p = TD_side_always_join_Interp_solve (sctx_eqs_prog gs p) (cfg_exit (prog_cfg p), ())
+ictx_sol_prog gs p = TD_side_always_join_Interp_solve (ictx_eqs_prog gs p) (cfg_exit (prog_cfg p), ())
+pctx_sol_prog gs p = TD_side_always_join_Interp_solve (pctx_eqs_prog gs p) (cfg_exit (prog_cfg p), ())
+```
+
+A locale fixing `eqs_prog` and polymorphic in the domain would derive the
+whole family once, the way `compiled_cfg` (`Compile_Wellformed`) now derives
+`cfg_entry`/`cfg_exit`/finiteness/`wf_cfg` for a named compiled graph.
+
+Size this as a session-scale change, not a cleanup pass: this layer feeds
+`Voblint_CLI` and the code export, so it wants its own branch and its own
+gate run. `_wf` and most of `_reserved` are *not* part of it --- those
+discharge the same obligation for different concrete programs, and a locale
+would only rename the work.
+
 ## Source extensions
 
 Arrays and richer types require syntax, operational semantics, compiler,

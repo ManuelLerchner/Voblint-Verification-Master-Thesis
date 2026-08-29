@@ -103,17 +103,15 @@ definition flagship_pi :: proc_table where
 definition flagship_cfg :: cfg where
   "flagship_cfg = compile_prog flagship_pi (prog_procs flagship_prog)"
 
-lemma flagship_entry: "cfg_entry flagship_cfg = FunctionEntry (STR ''main'')"
-  by (simp only: flagship_cfg_def cfg_entry_compile_prog prog_main_name_def)
+interpretation flagship: compiled_cfg flagship_pi "prog_procs flagship_prog" flagship_cfg
+  by unfold_locales (rule flagship_cfg_def)
+
+lemmas flagship_entry = flagship.entry[unfolded prog_main_name_def]
+
 lemma flagship_calls: "calls flagship_cfg = {}"
   unfolding flagship_cfg_def flagship_pi_def
   by (rule compile_prog_calls_empty)
      (simp_all add: flagship_prog_def main_body_def prog_main_name_def)
-
-lemma flagship_finE: "finite (intra flagship_cfg)"
-  unfolding flagship_cfg_def using compile_prog_finite by simp
-lemma flagship_finC: "finite (calls flagship_cfg)"
-  unfolding flagship_cfg_def using compile_prog_finite by simp
 
 subsection \<open>Executable interval D/G specification\<close>
 
@@ -183,14 +181,11 @@ lemma flagship_pp_st:
           [OF flagship_solve_dom, of "fst flagship_sol" "snd flagship_sol"]
   unfolding flagship_sol_def by simp
 
-lemma flagship_wf_cfg: "wf_cfg flagship_cfg"
-  unfolding flagship_cfg_def by (rule compile_prog_wf)
-
 lemma flagship_exit_covers: "cfg_exit_covers flagship_cfg" by eval
 
 lemma flagship_vars_cover: "vars_cover flagship_cfg (fst flagship_sol)"
   by (rule vars_cover_of_dg_gen_of_covers
-        [OF flagship_finE flagship_finC flagship_wf_cfg flagship_exit_covers
+        [OF flagship.finite_intra flagship.finite_calls flagship.wf flagship_exit_covers
             flagship_pp_st[unfolded flagship_eqs_def]])
 
 lemma flagship_sound0:
@@ -287,8 +282,8 @@ proof -
           [OF flagship_terminates_c[unfolded flagship_eqs_def flagship_cfg_def]
               flagship_wf
               flagship_vars_cover[unfolded flagship_sol_def flagship_eqs_def flagship_cfg_def]
-              flagship_finE[unfolded flagship_cfg_def]
-              flagship_finC[unfolded flagship_cfg_def]
+              flagship.finite_intra[unfolded flagship_cfg_def]
+              flagship.finite_calls[unfolded flagship_cfg_def]
               flagship_sound0[folded gamma_unit_def]
               init run'])
 qed
