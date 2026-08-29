@@ -209,7 +209,8 @@ lemma pstep_Call_parameterless [intro]:
 proof -
   have "pstep gs \<Pi> (Call dst p [], s, frs)
           (Seq (body (\<lparr>formals = [], body = c\<rparr>)) Restore,
-           bind_formals (formals (\<lparr>formals = [], body = c\<rparr>)) (map (\<lambda>e. aval e s) []) (enter_state gs s),
+           bind_formals (formals (\<lparr>formals = [], body = c\<rparr>))
+             (map (\<lambda>e. aval e s) []) (enter_state gs s),
            Frame s dst # frs)"
     using assms by (rule pstep_Call) simp_all
   then show ?thesis by simp
@@ -429,5 +430,45 @@ lemma wf_source_programD:
   using assms wf_source_com_source_com
   unfolding wf_source_program_def source_pi_def wf_proc_decl_def by blast+
 
-end
 
+section \<open>The semantics is inhabited\<close>
+
+text \<open>
+  Every theorem above is conditional on a step or a run existing, so the session ends by
+  exhibiting one that exercises the parts most easily got wrong: a procedure call that pushes
+  a frame, returns a value, and pops the frame again.  Globals are empty here, so nothing the
+  callee wrote survives except the returned value --- which is what has to reach \<open>x\<close>.
+\<close>
+
+definition witness_ret1_pi :: proc_table where
+  "witness_ret1_pi p =
+     (if p = STR ''ret1'' then Some \<lparr>formals = [], body = Return (Some (N 1))\<rparr> else None)"
+
+theorem pcompletes_witness:
+  "\<exists>t. pcompletes (\<lambda>_. False) witness_ret1_pi
+         (Call (Some (STR ''x'')) (STR ''ret1'') []) s t
+     \<and> t (STR ''x'') = 1"
+proof -
+  let ?gs = "\<lambda>_ :: vname. False"
+  let ?fr = "[Frame s (Some (STR ''x''))]"
+  let ?en = "enter_state ?gs s"
+  let ?s' = "?en(ret_var := aval (N 1) ?en)"
+  let ?t  = "(combine_env ?gs s ?s')(STR ''x'' := aval (N 1) ?en)"
+  have q: "witness_ret1_pi (STR ''ret1'') = Some \<lparr>formals = [], body = Return (Some (N 1))\<rparr>"
+    by (simp add: witness_ret1_pi_def)
+  have s1: "pstep ?gs witness_ret1_pi (Call (Some (STR ''x'')) (STR ''ret1'') [], s, [])
+              (Seq (Return (Some (N 1))) Restore, ?en, ?fr)"
+    using q by (rule pstep_Call_parameterless)
+  have s2: "pstep ?gs witness_ret1_pi (Seq (Return (Some (N 1))) Restore, ?en, ?fr)
+              (Seq Unwind Restore, ?s', ?fr)"
+    by (intro Seq2 ReturnSome)
+  have s3: "pstep ?gs witness_ret1_pi (Seq Unwind Restore, ?s', ?fr) (SKIP, ?t, [])"
+    using UnwindAct[of ?gs witness_ret1_pi ?s' s "Some (STR ''x'')" "[]"] by simp
+  from s1 s2 s3
+  have "pcompletes ?gs witness_ret1_pi (Call (Some (STR ''x'')) (STR ''ret1'') []) s ?t"
+    by (meson star.refl star.step)
+  moreover have "?t (STR ''x'') = 1" by simp
+  ultimately show ?thesis by blast
+qed
+
+end

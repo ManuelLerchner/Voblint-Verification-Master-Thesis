@@ -121,7 +121,8 @@ fun pretty_source_lines_com :: "nat \<Rightarrow> com \<Rightarrow> string list"
 
 definition pretty_source_lines_proc :: "nat \<Rightarrow> pname \<Rightarrow> proc_decl \<Rightarrow> string list" where
   "pretty_source_lines_proc n p decl =
-    (source_indent n @ ''void '' @ String.explode p @ ''('' @ join_source '', '' (map String.explode (formals decl)) @ '') {'')
+    (source_indent n @ ''void '' @ String.explode p @ ''(''
+       @ join_source '', '' (map String.explode (formals decl)) @ '') {'')
     # pretty_source_lines_com (n + 2) (body decl)
     @ [source_indent n @ ''}'']"
 

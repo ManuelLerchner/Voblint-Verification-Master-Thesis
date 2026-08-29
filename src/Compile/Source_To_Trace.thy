@@ -328,7 +328,16 @@ proof -
   then show ?thesis using sim stk0 by blast
 qed
 
+section \<open>The bridge is inhabited\<close>
+
+text \<open>\<open>source_run_has_ltr\<close> and the collecting corollaries all assume a well-formed compiler
+  input, so the session ends by exhibiting one and running the bridge on it.  The zero-step
+  run of the empty \<open>main\<close> is enough: it yields an actual node of an actual compiled graph and
+  an actual \<^const>\<open>valid_ltr\<close> witness, so none of the above is vacuously true.\<close>
+
+theorem source_run_has_ltr_witness:
+  "\<exists>v stk t. csim witness_pi witness_cfg (SKIP, s0, []) (v, s0, stk)
+           \<and> ltr_repr (\<lambda>_. False) witness_cfg {s0} (v, s0, stk) t"
+  by (rule source_run_has_ltr[OF witness_wf singletonI star.refl])
+
 end
-
-
-

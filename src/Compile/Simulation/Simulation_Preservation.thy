@@ -808,4 +808,45 @@ proof (intro allI impI)
     using cb Ebsub Ksub ent ext srccom wf_compile_inputD(6)[OF wf pd] by blast
 qed
 
+section \<open>The certificate is inhabited\<close>
+
+text \<open>
+  Everything above is stated under \<^const>\<open>procs_embedded\<close>, and \<open>csim\<close> relates configurations
+  only where that certificate holds; a reader is owed one graph that satisfies it, or the
+  theorems could all be vacuous.  The smallest program --- \<open>main\<close> with an empty body and no
+  callees --- is that witness, and it carries through to a \<open>csim\<close> relating a real source
+  configuration to a real node of a real compiled graph.
+\<close>
+
+definition witness_pi :: proc_table where
+  "witness_pi p = (if p = STR ''main'' then Some \<lparr>formals = [], body = SKIP\<rparr> else None)"
+
+abbreviation witness_cfg :: cfg where
+  "witness_cfg \<equiv> compile_prog witness_pi [] (STR ''main'') SKIP"
+
+lemma witness_wf: "wf_compile_input (\<lambda>_. False) witness_pi [] (STR ''main'') SKIP"
+  by (auto simp: wf_compile_input_def wf_source_program_def witness_pi_def
+        wf_proc_decl_def reserved_ret_var_def ret_var_def
+        special_table_def special_pname_nondet_int_def
+        special_pname_min_def special_pname_max_def)
+
+theorem procs_embedded_witness: "procs_embedded witness_pi witness_cfg"
+  by (rule procs_embedded_compile_prog[OF witness_wf])
+
+theorem csim_witness:
+  obtains v where "csim witness_pi witness_cfg (SKIP, s, []) (v, s, [])"
+proof -
+  have decl: "witness_pi (STR ''main'') = Some \<lparr>formals = [], body = SKIP\<rparr>"
+    by (simp add: witness_pi_def)
+  obtain k n en where
+    cacc: "compiled_at witness_pi witness_cfg (STR ''main'')
+             (body \<lparr>formals = [], body = SKIP\<rparr>) k n"
+      and ctrl: "control_at witness_pi (STR ''main'')
+             (body \<lparr>formals = [], body = SKIP\<rparr>) k n (body \<lparr>formals = [], body = SKIP\<rparr>) en"
+    by (rule procs_embedded_activation[OF procs_embedded_witness decl])
+  have "csim witness_pi witness_cfg (SKIP, s, []) (en, s, [])"
+    by (rule csim.Base[OF ctrl[simplified] cacc[simplified]])
+  then show ?thesis ..
+qed
+
 end

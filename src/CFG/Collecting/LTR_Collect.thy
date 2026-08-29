@@ -274,5 +274,55 @@ next
     unfolding activation_collect_def ltr_collect_def by blast
 qed
 
-end
 
+section \<open>The collecting semantics is inhabited\<close>
+
+text \<open>
+  \<^const>\<open>valid_ltr\<close> and \<^const>\<open>ltr_collect\<close> are defined over an arbitrary graph, and every
+  soundness statement downstream is an over-approximation claim about them; if they were
+  empty, all of it would hold vacuously.  A two-node graph with one assignment edge settles
+  that inside this session, without borrowing a graph from the compiler: the entry store is
+  collected at the entry, and the assigned store is collected one edge later.
+\<close>
+
+definition ltr_witness_cfg :: cfg where
+  "ltr_witness_cfg =
+     \<lparr> intra = {(Statement 0, EA_Assign (STR ''x'') (N 1), Statement 1)},
+       calls = {},
+       cfg_entry = Statement 0,
+       checks = {} \<rparr>"
+
+lemma ltr_witness_entry [simp]: "cfg_entry ltr_witness_cfg = Statement 0"
+  by (simp add: ltr_witness_cfg_def)
+
+lemma ltr_witness_edge [simp]:
+  "(Statement 0, EA_Assign (STR ''x'') (N 1), Statement 1) \<in> intra ltr_witness_cfg"
+  by (simp add: ltr_witness_cfg_def)
+
+lemma ltr_witness_root:
+  "Root [(Statement 0, s)] \<in> valid_ltr gs ltr_witness_cfg {s}"
+proof -
+  have "Root [(cfg_entry ltr_witness_cfg, s)] \<in> valid_ltr gs ltr_witness_cfg {s}"
+    by (rule valid_ltr.init) simp
+  then show ?thesis by simp
+qed
+
+theorem ltr_collect_witness:
+  "s \<in> ltr_collect gs ltr_witness_cfg {s} (Statement 0)"
+  "s(STR ''x'' := 1) \<in> ltr_collect gs ltr_witness_cfg {s} (Statement 1)"
+proof -
+  have root: "Root [(Statement 0, s)] \<in> valid_ltr gs ltr_witness_cfg {s}"
+    by (rule ltr_witness_root)
+  show "s \<in> ltr_collect gs ltr_witness_cfg {s} (Statement 0)"
+    using ltr_collect_I[OF root] by (simp add: sink_node_def sink_store_def)
+  have "extend (Root [(Statement 0, s)]) (Statement 1, s(STR ''x'' := 1))
+          \<in> valid_ltr gs ltr_witness_cfg {s}"
+    by (rule valid_ltr.intra[OF root, where a = "EA_Assign (STR ''x'') (N 1)"
+                                        and v = "Statement 1"])
+       (simp_all add: ltr_witness_cfg_def sink_node_def sink_store_def)
+  from ltr_collect_I[OF this]
+  show "s(STR ''x'' := 1) \<in> ltr_collect gs ltr_witness_cfg {s} (Statement 1)"
+    by (simp add: sink_node_def sink_store_def)
+qed
+
+end
