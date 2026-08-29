@@ -1,6 +1,6 @@
 theory Analysis_GraphViz
   imports
-    "Voblint_CFG.VIMP_Proc_to_CFG"
+    "Voblint_Compile.Compile_Wellformed"
     "Voblint_VIMP.VIMP_Source_Print"
     Voblint_Core.Exec_St
     Voblint_Core.Abstract_Domain
@@ -236,13 +236,13 @@ fun compiled_proc_owner ::
             else compiled_proc_owner \<Pi> ps n' k))"
 
 definition compiled_owner_of ::
-  "proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com \<Rightarrow> pp \<Rightarrow> pname" where
-  "compiled_owner_of \<Pi> ps mnm main p =
+  "proc_table \<Rightarrow> pname list \<Rightarrow> pp \<Rightarrow> pname" where
+  "compiled_owner_of \<Pi> ps p =
     (case p of
       FunctionEntry owner \<Rightarrow> owner
     | FunctionResult owner \<Rightarrow> owner
     | Statement k \<Rightarrow>
-        (case compiled_proc_owner \<Pi> ps 0 k of Some owner \<Rightarrow> owner | None \<Rightarrow> mnm))"
+        (case compiled_proc_owner \<Pi> ps 0 k of Some owner \<Rightarrow> owner | None \<Rightarrow> prog_main_name))"
 
 definition cfg_point_list :: "cfg \<Rightarrow> pp list" where
   "cfg_point_list g =
@@ -395,15 +395,15 @@ definition owner_assigned_vars ::
          else []) (cfg_calls_list g)))"
 
 definition compiled_procedure_scope ::
-  "(vname \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com \<Rightarrow> cfg \<Rightarrow> pp \<Rightarrow> procedure_scope" where
-  "compiled_procedure_scope gs \<Pi> ps mnm main g p =
-    (let owner = compiled_owner_of \<Pi> ps mnm main p;
+  "(vname \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> cfg \<Rightarrow> pp \<Rightarrow> procedure_scope" where
+  "compiled_procedure_scope gs \<Pi> ps g p =
+    (let owner = compiled_owner_of \<Pi> ps p;
          decl = \<Pi> owner;
-         fs = if owner = mnm then [] else
+         fs = if owner = prog_main_name then [] else
            (case decl of None \<Rightarrow> [] | Some d \<Rightarrow> formals d);
-         ret = if owner = mnm then None else Some ret_var;
+         ret = if owner = prog_main_name then None else Some ret_var;
          ls = filter (\<lambda>x. x \<notin> set fs \<and> x \<noteq> ret_var \<and> \<not> gs x)
-           (owner_assigned_vars g (compiled_owner_of \<Pi> ps mnm main) owner)
+           (owner_assigned_vars g (compiled_owner_of \<Pi> ps) owner)
      in \<lparr>scope_formals = fs, scope_locals = ls, scope_return_slot = ret\<rparr>)"
 
 
@@ -625,7 +625,7 @@ text \<open>A compiled program satisfies the side condition outright: the compil
   each call at its own freshly claimed statement index.\<close>
 
 lemma calls_source_unique_compile_prog:
-  "calls_source_unique (compile_prog \<Pi> ps mnm main)"
+  "calls_source_unique (compile_prog \<Pi> ps)"
   unfolding calls_source_unique_def
   using compile_prog_calls_source_unique by blast
 
@@ -1350,9 +1350,9 @@ definition contextual_analysis_export ::
     analysis_graph_to_export cfg g sol (build_analysis_graph cfg g domain sol)"
 
 definition raw_cfg_graph_config ::
-  "proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com \<Rightarrow> (pp \<Rightarrow> graphviz_node_annotation option)
+  "proc_table \<Rightarrow> pname list \<Rightarrow> (pp \<Rightarrow> graphviz_node_annotation option)
     \<Rightarrow> (unit, unit, unit, unit) analysis_graph_config" where
-  "raw_cfg_graph_config \<Pi> ps mnm main annotate =
+  "raw_cfg_graph_config \<Pi> ps annotate =
     \<lparr> local_of = id,
       route = (\<lambda>_ _ _ _. Some ()),
       context_key = (\<lambda>_. STR ''''),
@@ -1366,39 +1366,39 @@ definition raw_cfg_graph_config ::
       show_global_key = (\<lambda>_. ''''),
       is_shared_global = (\<lambda>_. False),
       show_internal_globals = False,
-      owner_of = String.explode o compiled_owner_of \<Pi> ps mnm main,
+      owner_of = String.explode o compiled_owner_of \<Pi> ps,
       cluster_label = (\<lambda>owner _. owner),
-      source_text = Some (pretty_string_of_program \<Pi> ps main []),
+      source_text = Some (pretty_string_of_program \<Pi> ps (main_body \<Pi>) []),
       node_annotation = (\<lambda>p _. annotate p)
     \<rparr>"
 
 definition raw_cfg_dot ::
-  "proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com \<Rightarrow> (pp \<Rightarrow> graphviz_node_annotation option) \<Rightarrow> string" where
-  "raw_cfg_dot \<Pi> ps mnm main annotate =
-    (let g = compile_prog \<Pi> ps mnm main;
-         cfg = raw_cfg_graph_config \<Pi> ps mnm main annotate;
+  "proc_table \<Rightarrow> pname list \<Rightarrow> (pp \<Rightarrow> graphviz_node_annotation option) \<Rightarrow> string" where
+  "raw_cfg_dot \<Pi> ps annotate =
+    (let g = compile_prog \<Pi> ps;
+         cfg = raw_cfg_graph_config \<Pi> ps annotate;
          domain = contextual_graph_domain g (\<lambda>_. [()])
      in contextual_analysis_dot cfg g domain (\<lambda>_. ()))"
 
 definition raw_cfg_dot_lit ::
-  "proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com \<Rightarrow> (pp \<Rightarrow> graphviz_node_annotation option)
+  "proc_table \<Rightarrow> pname list \<Rightarrow> (pp \<Rightarrow> graphviz_node_annotation option)
     \<Rightarrow> String.literal" where
-  "raw_cfg_dot_lit \<Pi> ps mnm main annotate =
-    String.implode (raw_cfg_dot \<Pi> ps mnm main annotate)"
+  "raw_cfg_dot_lit \<Pi> ps annotate =
+    String.implode (raw_cfg_dot \<Pi> ps annotate)"
 
 definition raw_cfg_canonical_text ::
-  "proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com \<Rightarrow> (pp \<Rightarrow> graphviz_node_annotation option) \<Rightarrow> string" where
-  "raw_cfg_canonical_text \<Pi> ps mnm main annotate =
-    (let g = compile_prog \<Pi> ps mnm main;
-         cfg = raw_cfg_graph_config \<Pi> ps mnm main annotate;
+  "proc_table \<Rightarrow> pname list \<Rightarrow> (pp \<Rightarrow> graphviz_node_annotation option) \<Rightarrow> string" where
+  "raw_cfg_canonical_text \<Pi> ps annotate =
+    (let g = compile_prog \<Pi> ps;
+         cfg = raw_cfg_graph_config \<Pi> ps annotate;
          domain = contextual_graph_domain g (\<lambda>_. [()])
      in contextual_analysis_canonical_text cfg g domain (\<lambda>_. ()))"
 
 definition raw_cfg_canonical_text_lit ::
-  "proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com \<Rightarrow> (pp \<Rightarrow> graphviz_node_annotation option)
+  "proc_table \<Rightarrow> pname list \<Rightarrow> (pp \<Rightarrow> graphviz_node_annotation option)
     \<Rightarrow> String.literal" where
-  "raw_cfg_canonical_text_lit \<Pi> ps mnm main annotate =
-    String.implode (raw_cfg_canonical_text \<Pi> ps mnm main annotate)"
+  "raw_cfg_canonical_text_lit \<Pi> ps annotate =
+    String.implode (raw_cfg_canonical_text \<Pi> ps annotate)"
 
 text \<open>
   The structured-export sibling of \<^const>\<open>raw_cfg_dot\<close> and
@@ -1409,11 +1409,11 @@ text \<open>
 \<close>
 
 definition raw_cfg_export ::
-  "proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com \<Rightarrow> (pp \<Rightarrow> graphviz_node_annotation option)
+  "proc_table \<Rightarrow> pname list \<Rightarrow> (pp \<Rightarrow> graphviz_node_annotation option)
     \<Rightarrow> export_graph" where
-  "raw_cfg_export \<Pi> ps mnm main annotate =
-    (let g = compile_prog \<Pi> ps mnm main;
-         cfg = raw_cfg_graph_config \<Pi> ps mnm main annotate;
+  "raw_cfg_export \<Pi> ps annotate =
+    (let g = compile_prog \<Pi> ps;
+         cfg = raw_cfg_graph_config \<Pi> ps annotate;
          domain = contextual_graph_domain g (\<lambda>_. [()])
      in contextual_analysis_export cfg g domain (\<lambda>_. ()))"
 
@@ -1488,17 +1488,17 @@ definition insert_dot_cluster_before_close :: "string \<Rightarrow> string \<Rig
      take (length dot - 2) dot @ extra @ drop (length dot - 2) dot"
 
 definition raw_cfg_dot_with_report ::
-    "proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com \<Rightarrow> (pp \<Rightarrow> graphviz_node_annotation option)
+    "proc_table \<Rightarrow> pname list \<Rightarrow> (pp \<Rightarrow> graphviz_node_annotation option)
      \<Rightarrow> check_report_entry list \<Rightarrow> string" where
-  "raw_cfg_dot_with_report \<Pi> ps mnm main annotate report =
+  "raw_cfg_dot_with_report \<Pi> ps annotate report =
      insert_dot_cluster_before_close (check_report_dot_cluster report)
-       (raw_cfg_dot \<Pi> ps mnm main annotate)"
+       (raw_cfg_dot \<Pi> ps annotate)"
 
 definition raw_cfg_dot_with_report_lit ::
-    "proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com \<Rightarrow> (pp \<Rightarrow> graphviz_node_annotation option)
+    "proc_table \<Rightarrow> pname list \<Rightarrow> (pp \<Rightarrow> graphviz_node_annotation option)
      \<Rightarrow> check_report_entry list \<Rightarrow> String.literal" where
-  "raw_cfg_dot_with_report_lit \<Pi> ps mnm main annotate report =
-     String.implode (raw_cfg_dot_with_report \<Pi> ps mnm main annotate report)"
+  "raw_cfg_dot_with_report_lit \<Pi> ps annotate report =
+     String.implode (raw_cfg_dot_with_report \<Pi> ps annotate report)"
 
 end
 

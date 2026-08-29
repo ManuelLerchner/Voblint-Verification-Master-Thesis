@@ -3,6 +3,7 @@ section \<open>Example: checks_proven/checks_proven_sound alone, store-only\<clo
 theory Example_Checks_Store_Only
   imports "Voblint_Core.Checks" "Voblint_CLI.Sign_Entry" "Voblint_Analysis.Sign_Checks"
           "Voblint_Analysis.Analysis_GraphViz" "Voblint_VIMP.VIMP_Notation"
+          Example_Compile_Call_Free
 begin
 
 text \<open>
@@ -37,7 +38,7 @@ definition checks_ex_program :: imp_prog where
 text \<open>Computed, not asserted: the three \<open>check(...)\<close> statements land at the
   nodes \<^const>\<open>compile\<close> actually assigns them.\<close>
 lemma checks_ex_checks_eval:
-  "checks (prog_cfg (STR ''main'') checks_ex_program) =
+  "checks (prog_cfg checks_ex_program) =
      {(Statement 1, Less (N 0) (V (STR ''y''))),
       (Statement 3, Less (N 0) (V (STR ''y''))),
       (Statement 5, Eq (V (STR ''z'')) (N 1))}"
@@ -58,50 +59,51 @@ lemma checks_ex_reserved: "reserved_ret_var checks_ex_gs"
 text \<open>The compiled graph has no call edges: the nondeterministic read compiles
   to an \<^const>\<open>EA_Special\<close> intra edge, not a \<^const>\<open>CallEdge\<close>.\<close>
 
-lemma checks_ex_calls_eval: "calls (prog_cfg prog_main_name checks_ex_program) = {}"
+lemma checks_ex_calls_eval: "calls (prog_cfg checks_ex_program) = {}"
   unfolding prog_cfg_def
   by (rule compile_prog_calls_empty)
-     (simp_all add: checks_ex_program_def special_table_def special_pname_nondet_int_def)
+     (simp_all add: checks_ex_program_def main_body_def prog_main_name_def
+        special_table_def special_pname_nondet_int_def)
 
 text \<open>The routed-unit solve terminates, and its solved key set is closed under
   the compiled graph -- the four coverage facts the D/G node-soundness bridge
   turns on, each computed rather than argued.\<close>
 
 lemma checks_ex_solver_terminates:
-  "sctx_terminates_prog checks_ex_gs prog_main_name checks_ex_program"
+  "sctx_terminates_prog checks_ex_gs checks_ex_program"
   by (rule sctx_terminates_prog_via_solve_c) eval
 
 lemma checks_ex_entry_cov:
-  "(cfg_entry (prog_cfg prog_main_name checks_ex_program), ())
-     \<in> fst (sctx_sol_prog checks_ex_gs prog_main_name checks_ex_program)"
+  "(cfg_entry (prog_cfg checks_ex_program), ())
+     \<in> fst (sctx_sol_prog checks_ex_gs checks_ex_program)"
   by eval
 
 lemma checks_ex_fwd_ok_ball:
-  "\<forall>(u, a, w) \<in> intra (prog_cfg prog_main_name checks_ex_program).
-     (u, ()) \<in> fst (sctx_sol_prog checks_ex_gs prog_main_name checks_ex_program) \<longrightarrow>
-     (w, ()) \<in> fst (sctx_sol_prog checks_ex_gs prog_main_name checks_ex_program)"
+  "\<forall>(u, a, w) \<in> intra (prog_cfg checks_ex_program).
+     (u, ()) \<in> fst (sctx_sol_prog checks_ex_gs checks_ex_program) \<longrightarrow>
+     (w, ()) \<in> fst (sctx_sol_prog checks_ex_gs checks_ex_program)"
   by eval
 
 lemma checks_ex_fwd_ok:
-  assumes "(u, ctx) \<in> fst (sctx_sol_prog checks_ex_gs prog_main_name checks_ex_program)"
-    and "(u, a, w) \<in> intra (prog_cfg prog_main_name checks_ex_program)"
-  shows "(w, ctx) \<in> fst (sctx_sol_prog checks_ex_gs prog_main_name checks_ex_program)"
+  assumes "(u, ctx) \<in> fst (sctx_sol_prog checks_ex_gs checks_ex_program)"
+    and "(u, a, w) \<in> intra (prog_cfg checks_ex_program)"
+  shows "(w, ctx) \<in> fst (sctx_sol_prog checks_ex_gs checks_ex_program)"
   using assms checks_ex_fwd_ok_ball by (cases ctx) auto
 
 lemma checks_ex_call_fwd_ok:
-  assumes "(u, ctx) \<in> fst (sctx_sol_prog checks_ex_gs prog_main_name checks_ex_program)"
-    and "(u, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg prog_main_name checks_ex_program)"
-  shows "(FunctionEntry q, ()) \<in> fst (sctx_sol_prog checks_ex_gs prog_main_name checks_ex_program)"
+  assumes "(u, ctx) \<in> fst (sctx_sol_prog checks_ex_gs checks_ex_program)"
+    and "(u, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg checks_ex_program)"
+  shows "(FunctionEntry q, ()) \<in> fst (sctx_sol_prog checks_ex_gs checks_ex_program)"
   using assms by (simp add: checks_ex_calls_eval)
 
 lemma checks_ex_comb_fwd_ok:
-  assumes "(cl, c1) \<in> fst (sctx_sol_prog checks_ex_gs prog_main_name checks_ex_program)"
-    and "(cl, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg prog_main_name checks_ex_program)"
-  shows "(k, c1) \<in> fst (sctx_sol_prog checks_ex_gs prog_main_name checks_ex_program)"
+  assumes "(cl, c1) \<in> fst (sctx_sol_prog checks_ex_gs checks_ex_program)"
+    and "(cl, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg checks_ex_program)"
+  shows "(k, c1) \<in> fst (sctx_sol_prog checks_ex_gs checks_ex_program)"
   using assms by (simp add: checks_ex_calls_eval)
 
 definition checks_ex_reach :: "pp \<Rightarrow> store set" where
-  "checks_ex_reach v = ltr_collect checks_ex_gs (prog_cfg (STR ''main'') checks_ex_program) (cinit_stores checks_ex_gs) v"
+  "checks_ex_reach v = ltr_collect checks_ex_gs (prog_cfg checks_ex_program) (cinit_stores checks_ex_gs) v"
 
 text \<open>The computed Sign environment at an arbitrary node, read out of the
   routed-unit solved table \<^const>\<open>analyse_sign_result_for\<close> the production
@@ -119,7 +121,7 @@ text \<open>The compiled edges, read off \<^const>\<open>prog_cfg\<close>'s own 
   (\<open>__voblint_check(z == 1)\<close>, unknown --- \<open>z\<close> is unconstrained) reaches the epilogue
   \<open>Statement 6\<close> reaches \<open>cfg_exit\<close>.\<close>
 lemma checks_ex_intra_eval:
-  "intra (prog_cfg (STR ''main'') checks_ex_program) =
+  "intra (prog_cfg checks_ex_program) =
      {(FunctionEntry (STR ''main''), EA_Nop, Statement 0),
       (Statement 0, EA_Assign (STR ''y'') (N 5), Statement 1),
       (Statement 1, EA_Check (Less (N 0) (V (STR ''y''))), Statement 2),
@@ -130,11 +132,11 @@ lemma checks_ex_intra_eval:
       (Statement 6, EA_Ret None (STR ''main''), FunctionResult (STR ''main''))}"
   unfolding prog_cfg_def by eval
 
-lemma checks_ex_exit_eval: "cfg_exit (prog_cfg (STR ''main'') checks_ex_program) = FunctionResult (STR ''main'')"
-  unfolding prog_cfg_def by (rule cfg_exit_compile_prog)
+lemma checks_ex_exit_eval: "cfg_exit (prog_cfg checks_ex_program) = FunctionResult (STR ''main'')"
+  by (simp only: prog_cfg_def cfg_exit_compile_prog prog_main_name_def)
 
-lemma checks_ex_entry_eval: "cfg_entry (prog_cfg (STR ''main'') checks_ex_program) = FunctionEntry (STR ''main'')"
-  unfolding prog_cfg_def by (rule inv16_entry_is_main)
+lemma checks_ex_entry_eval: "cfg_entry (prog_cfg checks_ex_program) = FunctionEntry (STR ''main'')"
+  by (simp only: prog_cfg_def cfg_entry_compile_prog prog_main_name_def)
 
 text \<open>Node-local collecting soundness at each check node, from the routed D/G
   node-soundness bridge and the four computed coverage facts --- no store is
@@ -240,21 +242,21 @@ proof -
   have zero_init: "(\<lambda>_. 0) \<in> cinit_stores checks_ex_gs" unfolding cinit_stores_def by simp
   have s0: "(\<lambda>_. 0) \<in> checks_ex_reach (FunctionEntry (STR ''main''))"
   proof -
-    have "(\<lambda>_. 0) \<in> ltr_collect checks_ex_gs (prog_cfg (STR ''main'') checks_ex_program) (cinit_stores checks_ex_gs)
-            (cfg_entry (prog_cfg (STR ''main'') checks_ex_program))"
+    have "(\<lambda>_. 0) \<in> ltr_collect checks_ex_gs (prog_cfg checks_ex_program) (cinit_stores checks_ex_gs)
+            (cfg_entry (prog_cfg checks_ex_program))"
       by (rule ltr_collect_init[OF zero_init])
     then show ?thesis unfolding checks_ex_reach_def checks_ex_entry_eval .
   qed
-  have e0: "(FunctionEntry (STR ''main''), EA_Nop, Statement 0) \<in> intra (prog_cfg (STR ''main'') checks_ex_program)"
+  have e0: "(FunctionEntry (STR ''main''), EA_Nop, Statement 0) \<in> intra (prog_cfg checks_ex_program)"
     by (simp add: checks_ex_intra_eval)
   have s1: "(\<lambda>_. 0) \<in> checks_ex_reach (Statement 0)"
-    using ltr_collect_intra_step[of "\<lambda>_. 0" checks_ex_gs "prog_cfg (STR ''main'') checks_ex_program"
+    using ltr_collect_intra_step[of "\<lambda>_. 0" checks_ex_gs "prog_cfg checks_ex_program"
         "cinit_stores checks_ex_gs" "FunctionEntry (STR ''main'')" EA_Nop "Statement 0"]
     using s0 e0 unfolding checks_ex_reach_def by simp
-  have e1: "(Statement 0, EA_Assign (STR ''y'') (N 5), Statement 1) \<in> intra (prog_cfg (STR ''main'') checks_ex_program)"
+  have e1: "(Statement 0, EA_Assign (STR ''y'') (N 5), Statement 1) \<in> intra (prog_cfg checks_ex_program)"
     by (simp add: checks_ex_intra_eval)
   have "(\<lambda>_. 0)((STR ''y'') := 5) \<in> checks_ex_reach (Statement 1)"
-    using ltr_collect_intra_step[of "\<lambda>_. 0" checks_ex_gs "prog_cfg (STR ''main'') checks_ex_program"
+    using ltr_collect_intra_step[of "\<lambda>_. 0" checks_ex_gs "prog_cfg checks_ex_program"
         "cinit_stores checks_ex_gs" "Statement 0" "EA_Assign (STR ''y'') (N 5)" "Statement 1"
         "(\<lambda>_. 0)((STR ''y'') := 5)"]
     using s1 e1 unfolding checks_ex_reach_def by simp
@@ -266,47 +268,47 @@ proof -
   have zero_init: "(\<lambda>_. 0) \<in> cinit_stores checks_ex_gs" unfolding cinit_stores_def by simp
   have s0: "(\<lambda>_. 0) \<in> checks_ex_reach (FunctionEntry (STR ''main''))"
   proof -
-    have "(\<lambda>_. 0) \<in> ltr_collect checks_ex_gs (prog_cfg (STR ''main'') checks_ex_program) (cinit_stores checks_ex_gs)
-            (cfg_entry (prog_cfg (STR ''main'') checks_ex_program))"
+    have "(\<lambda>_. 0) \<in> ltr_collect checks_ex_gs (prog_cfg checks_ex_program) (cinit_stores checks_ex_gs)
+            (cfg_entry (prog_cfg checks_ex_program))"
       by (rule ltr_collect_init[OF zero_init])
     then show ?thesis unfolding checks_ex_reach_def checks_ex_entry_eval .
   qed
-  have e0: "(FunctionEntry (STR ''main''), EA_Nop, Statement 0) \<in> intra (prog_cfg (STR ''main'') checks_ex_program)"
+  have e0: "(FunctionEntry (STR ''main''), EA_Nop, Statement 0) \<in> intra (prog_cfg checks_ex_program)"
     by (simp add: checks_ex_intra_eval)
   have s1: "(\<lambda>_. 0) \<in> checks_ex_reach (Statement 0)"
-    using ltr_collect_intra_step[of "\<lambda>_. 0" checks_ex_gs "prog_cfg (STR ''main'') checks_ex_program"
+    using ltr_collect_intra_step[of "\<lambda>_. 0" checks_ex_gs "prog_cfg checks_ex_program"
         "cinit_stores checks_ex_gs" "FunctionEntry (STR ''main'')" EA_Nop "Statement 0"]
     using s0 e0 unfolding checks_ex_reach_def by simp
-  have e1: "(Statement 0, EA_Assign (STR ''y'') (N 5), Statement 1) \<in> intra (prog_cfg (STR ''main'') checks_ex_program)"
+  have e1: "(Statement 0, EA_Assign (STR ''y'') (N 5), Statement 1) \<in> intra (prog_cfg checks_ex_program)"
     by (simp add: checks_ex_intra_eval)
   have s2: "(\<lambda>_. 0)((STR ''y'') := 5) \<in> checks_ex_reach (Statement 1)"
-    using ltr_collect_intra_step[of "\<lambda>_. 0" checks_ex_gs "prog_cfg (STR ''main'') checks_ex_program"
+    using ltr_collect_intra_step[of "\<lambda>_. 0" checks_ex_gs "prog_cfg checks_ex_program"
         "cinit_stores checks_ex_gs" "Statement 0" "EA_Assign (STR ''y'') (N 5)" "Statement 1"
         "(\<lambda>_. 0)((STR ''y'') := 5)"]
     using s1 e1 unfolding checks_ex_reach_def by simp
-  have e2: "(Statement 1, EA_Check (Less (N 0) (V (STR ''y''))), Statement 2) \<in> intra (prog_cfg (STR ''main'') checks_ex_program)"
+  have e2: "(Statement 1, EA_Check (Less (N 0) (V (STR ''y''))), Statement 2) \<in> intra (prog_cfg checks_ex_program)"
     by (simp add: checks_ex_intra_eval)
   have s3: "(\<lambda>_. 0)((STR ''y'') := 5) \<in> checks_ex_reach (Statement 2)"
-    using ltr_collect_intra_step[of "(\<lambda>_. 0)((STR ''y'') := 5)" checks_ex_gs "prog_cfg (STR ''main'') checks_ex_program"
+    using ltr_collect_intra_step[of "(\<lambda>_. 0)((STR ''y'') := 5)" checks_ex_gs "prog_cfg checks_ex_program"
         "cinit_stores checks_ex_gs" "Statement 1" "EA_Check (Less (N 0) (V (STR ''y'')))" "Statement 2"]
     using s2 e2 unfolding checks_ex_reach_def by simp
-  have e3: "(Statement 2, EA_Assign (STR ''y'') (N 0), Statement 3) \<in> intra (prog_cfg (STR ''main'') checks_ex_program)"
+  have e3: "(Statement 2, EA_Assign (STR ''y'') (N 0), Statement 3) \<in> intra (prog_cfg checks_ex_program)"
     by (simp add: checks_ex_intra_eval)
   have s4: "(\<lambda>_. 0)((STR ''y'') := 0) \<in> checks_ex_reach (Statement 3)"
-    using ltr_collect_intra_step[of "(\<lambda>_. 0)((STR ''y'') := 5)" checks_ex_gs "prog_cfg (STR ''main'') checks_ex_program"
+    using ltr_collect_intra_step[of "(\<lambda>_. 0)((STR ''y'') := 5)" checks_ex_gs "prog_cfg checks_ex_program"
         "cinit_stores checks_ex_gs" "Statement 2" "EA_Assign (STR ''y'') (N 0)" "Statement 3"
         "(\<lambda>_. 0)((STR ''y'') := 0)"]
     using s3 e3 unfolding checks_ex_reach_def by simp
-  have e4: "(Statement 3, EA_Check (Less (N 0) (V (STR ''y''))), Statement 4) \<in> intra (prog_cfg (STR ''main'') checks_ex_program)"
+  have e4: "(Statement 3, EA_Check (Less (N 0) (V (STR ''y''))), Statement 4) \<in> intra (prog_cfg checks_ex_program)"
     by (simp add: checks_ex_intra_eval)
   have s5: "(\<lambda>_. 0)((STR ''y'') := 0) \<in> checks_ex_reach (Statement 4)"
-    using ltr_collect_intra_step[of "(\<lambda>_. 0)((STR ''y'') := 0)" checks_ex_gs "prog_cfg (STR ''main'') checks_ex_program"
+    using ltr_collect_intra_step[of "(\<lambda>_. 0)((STR ''y'') := 0)" checks_ex_gs "prog_cfg checks_ex_program"
         "cinit_stores checks_ex_gs" "Statement 3" "EA_Check (Less (N 0) (V (STR ''y'')))" "Statement 4"]
     using s4 e4 unfolding checks_ex_reach_def by simp
-  have e5: "(Statement 4, EA_Special Nondet_Int (STR ''z''), Statement 5) \<in> intra (prog_cfg (STR ''main'') checks_ex_program)"
+  have e5: "(Statement 4, EA_Special Nondet_Int (STR ''z''), Statement 5) \<in> intra (prog_cfg checks_ex_program)"
     by (simp add: checks_ex_intra_eval)
   have "(\<lambda>_. 0)((STR ''y'') := 0, (STR ''z'') := 7) \<in> checks_ex_reach (Statement 5)"
-    using ltr_collect_intra_step[of "(\<lambda>_. 0)((STR ''y'') := 0)" checks_ex_gs "prog_cfg (STR ''main'') checks_ex_program"
+    using ltr_collect_intra_step[of "(\<lambda>_. 0)((STR ''y'') := 0)" checks_ex_gs "prog_cfg checks_ex_program"
         "cinit_stores checks_ex_gs" "Statement 4" "EA_Special Nondet_Int (STR ''z'')" "Statement 5"
         "(\<lambda>_. 0)((STR ''y'') := 0, (STR ''z'') := 7)"]
     using s5 e5 unfolding checks_ex_reach_def by force
@@ -336,7 +338,7 @@ text \<open>The wrapper is exactly \<^const>\<open>classify_checks\<close> appli
 
 lemma checks_ex_report_unfold:
   "analyse_sign_report_for checks_ex_gs checks_ex_program
-     = classify_checks (prog_cfg (STR ''main'') checks_ex_program) checks_ex_env sign_classify_check"
+     = classify_checks (prog_cfg checks_ex_program) checks_ex_env sign_classify_check"
   unfolding analyse_sign_report_for_def surface_unfold checks_ex_env_def
   by (simp add: prog_main_name_def)
 
@@ -350,7 +352,7 @@ corollary checks_ex_report_agrees_with_node_classification:
   "(Statement 1, Less (N 0) (V (STR ''y'')), Check_Proved)
      \<in> set (analyse_sign_report_for checks_ex_gs checks_ex_program)"
   unfolding checks_ex_report_unfold
-  using classify_checks_mem_iff[of "prog_cfg (STR ''main'') checks_ex_program"
+  using classify_checks_mem_iff[of "prog_cfg checks_ex_program"
       "Statement 1" "Less (N 0) (V (STR ''y''))" Check_Proved checks_ex_env sign_classify_check]
   using checks_ex_intra_eval checks_ex_classify_1
   by (auto simp: checks_ex_intra_eval)
@@ -413,7 +415,7 @@ lemma checks_ex_annotation_unknown:
 definition checks_ex_dot_lit :: String.literal where
   "checks_ex_dot_lit =
      raw_cfg_dot_with_report_lit (prog_table checks_ex_program) (prog_procs checks_ex_program)
-       (STR ''main'') (prog_main checks_ex_program) checks_ex_node_annotation
+       checks_ex_node_annotation
        (analyse_sign_report_for checks_ex_gs checks_ex_program)"
 
 end

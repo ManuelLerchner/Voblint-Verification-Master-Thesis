@@ -58,16 +58,16 @@ definition sign_nest_procs :: "pname list" where "sign_nest_procs = prog_procs s
 definition sign_nest_main :: "VIMP_Proc.com" where "sign_nest_main = prog_main sign_nest_program"
 
 definition sign_nest_cfg :: cfg where
-  "sign_nest_cfg = compile_prog sign_nest_pi sign_nest_procs (STR ''main'') sign_nest_main"
+  "sign_nest_cfg = compile_prog sign_nest_pi sign_nest_procs"
 
 text \<open>The compiled CFG, folded back under its own name: every obligation the routed
   locale states is phrased in \<^const>\<open>compile_prog\<close>, every fact below in \<open>sign_nest_cfg\<close>.\<close>
 lemma sign_nest_cfg_compile [simp]:
-  "compile_prog sign_nest_pi sign_nest_procs (STR ''main'') sign_nest_main = sign_nest_cfg"
+  "compile_prog sign_nest_pi sign_nest_procs = sign_nest_cfg"
   by (simp add: sign_nest_cfg_def)
 
 lemma sign_nest_entry: "cfg_entry sign_nest_cfg = FunctionEntry (STR ''main'')"
-  unfolding sign_nest_cfg_def by (rule inv16_entry_is_main)
+  by (simp only: sign_nest_cfg_def cfg_entry_compile_prog prog_main_name_def)
 
 lemma sign_nest_finE: "finite (intra sign_nest_cfg)"
   unfolding sign_nest_cfg_def using compile_prog_finite by blast
@@ -377,7 +377,7 @@ text \<open>The call-string routing policy instantiated at \<open>k = 1\<close>.
   before it reaches the goal, so \<open>call_fwd\<close> does not need to case-split on which one.\<close>
 
 interpretation sign_nest_1_cs: call_string_routed_context
-    sign_nest_S_abs sign_nest_gs sign_nest_pi sign_nest_procs "STR ''main''" sign_nest_main 1
+    sign_nest_S_abs sign_nest_gs sign_nest_pi sign_nest_procs 1
     "map_lift (fun_of_resolved_st_q_for sign_nest_gs) (Bot::sign exec_dg_st lifted)"
     "map_lift (fun_of_resolved_st_q_for sign_nest_gs) (Lifted cinit_sign_st)"
     "map_lift (fun_of_resolved_st_q_for sign_nest_gs) (Bot::sign exec_dg_st lifted)"
@@ -474,11 +474,11 @@ proof -
 qed
 
 theorem sign_nest_1_activation_collect_sound:
-  "activation_collect sign_nest_gs (admiss_exact (cs_context 1)) [] sign_nest_cfg
+  "activation_collect sign_nest_gs (cs_context 1) [] sign_nest_cfg
      (cinit_stores sign_nest_gs) v ctx
      \<subseteq> gamma_state_lift (sign_ctx_sg_1 (Inl (v, ctx)))"
 proof (rule activation_collect_sound_gen[where sg = sign_ctx_sg_1 and gammaM = gamma_state_lift
-        and admiss = "admiss_exact (cs_context 1)" and startcontext = "[]"
+        and enterc = "cs_context 1" and initial_ctx = "[]"
         and S = "cinit_stores sign_nest_gs" and g = sign_nest_cfg and gs = sign_nest_gs])
   \<comment> \<open>ENTRY_G\<close>
   fix s assume "s \<in> cinit_stores sign_nest_gs"
@@ -502,27 +502,22 @@ next
         \<Longrightarrow> s' \<in> gamma_state_lift (sign_ctx_sg_1 (Inl (v, c)))"
     by (rule sign_nest_1_cs.dg_ctx_act_edge[unfolded sign_nest_cfg_compile])
 next
-  \<comment> \<open>ADMISS_TOTAL --- trivial, \<open>cs_context 1\<close> is a total function.\<close>
-  show "\<And>u c s. \<exists>c'. admiss_exact (cs_context 1) u c s c'" by (simp add: admiss_exact_def)
-next
   \<comment> \<open>CALL --- enter routed to the truncated call string.\<close>
-  fix u dst pars args p cont c s c'
+  fix u dst pars args p cont c s
   assume ce: "(u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls sign_nest_cfg"
     and sm: "s \<in> gamma_state_lift (sign_ctx_sg_1 (Inl (u, c)))"
-    and adm: "admiss_exact (cs_context 1) u c (call_enter sign_nest_gs (CallEdge dst pars args) s) c'"
   show "call_enter sign_nest_gs (CallEdge dst pars args) s
-          \<in> gamma_state_lift (sign_ctx_sg_1 (Inl (FunctionEntry p, c')))"
-    using adm sign_ctx_sg_1_seed[OF ce sm] by (simp add: admiss_exact_def)
+          \<in> gamma_state_lift (sign_ctx_sg_1 (Inl (FunctionEntry p, cs_context 1 u c (call_enter sign_nest_gs (CallEdge dst pars args) s))))"
+    using sign_ctx_sg_1_seed[OF ce sm] .
 next
   \<comment> \<open>COMB --- return combine at the caller's own truncated context.\<close>
-  fix cl dst pars args p cont c1 c2 s t es
+  fix cl dst pars args p cont c1 s t es
   assume ce: "(cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls sign_nest_cfg"
     and sm: "s \<in> gamma_state_lift (sign_ctx_sg_1 (Inl (cl, c1)))"
-    and adm: "admiss_exact (cs_context 1) cl c1 es c2"
-    and tm: "t \<in> gamma_state_lift (sign_ctx_sg_1 (Inl (FunctionResult p, c2)))"
+    and tm: "t \<in> gamma_state_lift (sign_ctx_sg_1 (Inl (FunctionResult p, cs_context 1 cl c1 es)))"
     and ces: "call_enter_store sign_nest_gs sign_nest_cfg cl s es"
   show "combine_collect sign_nest_gs dst s t \<in> gamma_state_lift (sign_ctx_sg_1 (Inl (cont, c1)))"
-    using adm tm sign_ctx_sg_1_comb[OF ce sm _ ces] by (simp add: admiss_exact_def)
+    using tm sign_ctx_sg_1_comb[OF ce sm _ ces] by blast
 qed
 
 

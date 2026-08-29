@@ -119,7 +119,7 @@ lemma a2_x_global [simp]: "a2_gs (STR ''x'')"
   by (simp add: a2_program_def)
 
 definition a2_cfg :: cfg where
-  "a2_cfg = compile_prog (prog_table a2_program) (prog_procs a2_program) prog_main_name (prog_main a2_program)"
+  "a2_cfg = compile_prog (prog_table a2_program) (prog_procs a2_program)"
 
 lemma a2_checks_eval: "checks a2_cfg = {(Statement 2, exp.Eq (V (STR ''x'')) (N 1))}"
   unfolding a2_cfg_def by eval

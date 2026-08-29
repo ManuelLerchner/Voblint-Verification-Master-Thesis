@@ -1,5 +1,5 @@
 theory Example_Compile_Regression
-  imports "Voblint_CFG.Control_Simulation" "Voblint_CFG.Compile_Invariants"
+  imports "Voblint_Compile.Simulation_Relation" "Voblint_Compile.Compile_Invariants"
 begin
 
 section \<open>Examples: procedure-aware CFG compilation\<close>
@@ -15,14 +15,14 @@ lemma ex_return_before_dead:
   shows "\<exists>j. (Statement j, EA_Ret (Some e) p, FunctionResult p) \<in> E"
   using compile_return_edge[OF assms] by simp
 
-lemmas ex_return_ignores_continuation = inv11_return_ignores_continuation
+lemmas ex_return_ignores_continuation = compile_Return_ignores_continuation
 
-lemmas ex_multi_return = inv13_multi_return_converge
+lemmas ex_multi_return = compile_multi_return_converge
 
 lemma ex_fallthrough:
-  assumes "compile_proc \<Pi> p (proc_decl_of [] SKIP) n = (n', E, K)"
+  assumes "compile_proc \<Pi> p (\<lparr>formals = [], body = SKIP\<rparr>) n = (n', E, K)"
   shows "\<exists>bex. (bex, EA_Ret None p, FunctionResult p) \<in> E"
-  using assms by (auto simp: compile_proc_def proc_decl_of_def Let_def split: prod.splits)
+  using assms by (auto simp: compile_proc_def Let_def split: prod.splits)
 
 lemma ex_nested_calls:
   assumes "special_table p1 = None" and "special_table p2 = None"
@@ -36,7 +36,7 @@ lemma ex_nested_calls:
    \<and> Statement n \<noteq> Statement (Suc (Suc (Suc n)))"
   using assms by (simp add: Let_def)
 
-lemmas ex_recursion = inv14_recursion_edge
+lemmas ex_recursion = compile_self_call_edge
 
 lemma compile_seq_call_edge:
   assumes "\<Pi> pin = Some decl" and "special_table pin = None"
@@ -82,7 +82,7 @@ proof -
   have "(Statement n, CallEdge (Some rin) (formals decl) actuals, FunctionEntry pin,
          Statement (Suc n)) \<in> calls g"
     using compile_seq_call_edge[OF p spNone comp] sub by blast
-  from cstep_call[OF this] show ?thesis .
+  from cstep.Call[OF this] show ?thesis .
 qed
 
 lemma example_nested_call_frames:
@@ -118,17 +118,17 @@ lemma wrong_call_arity_rejected:
   using assms by simp
 
 lemma reserved_formal_rejected:
-  "~ wf_proc_decl cr_gs \<Pi> (proc_decl_of [ret_var] SKIP)"
-  by (simp add: wf_proc_decl_def proc_decl_of_def valid_formal_def)
+  "~ wf_proc_decl cr_gs \<Pi> (\<lparr>formals = [ret_var], body = SKIP\<rparr>)"
+  by (simp add: wf_proc_decl_def valid_formal_def)
 
 lemma duplicate_formals_rejected:
-  "~ wf_proc_decl cr_gs \<Pi> (proc_decl_of [x, x] SKIP)"
-  by (simp add: wf_proc_decl_def proc_decl_of_def)
+  "~ wf_proc_decl cr_gs \<Pi> (\<lparr>formals = [x, x], body = SKIP\<rparr>)"
+  by (simp add: wf_proc_decl_def)
 
 lemma global_formal_rejected:
   assumes "cr_gs x"
-  shows "~ wf_proc_decl cr_gs \<Pi> (proc_decl_of [x] SKIP)"
-  using assms by (simp add: wf_proc_decl_def proc_decl_of_def valid_formal_def)
+  shows "~ wf_proc_decl cr_gs \<Pi> (\<lparr>formals = [x], body = SKIP\<rparr>)"
+  using assms by (simp add: wf_proc_decl_def valid_formal_def)
 
 lemma reserved_assignment_rejected:
   "\<not> wf_source_com \<Pi> (Assign ret_var a)"
@@ -139,51 +139,50 @@ lemma reserved_read_rejected:
   by (simp add: source_exp_def)
 
 lemma root_return_rejected:
-  "~ wf_compile_input cr_gs \<Pi> ps mnm (Return e)"
-  by (simp add: wf_compile_input_def wf_source_program_def)
+  "\<Pi> prog_main_name = Some \<lparr>formals = [], body = Return e\<rparr>
+     \<Longrightarrow> ~ wf_compile_input cr_gs \<Pi> ps"
+  by (simp add: wf_compile_input_def wf_source_program_def main_body_def)
 
 lemma value_call_requires_value_provider:
-  assumes "\<Pi> p = Some (proc_decl_of [] SKIP)" and "special_table p = None"
+  assumes "\<Pi> p = Some (\<lparr>formals = [], body = SKIP\<rparr>)" and "special_table p = None"
   shows "\<not> wf_source_com \<Pi> (Call (Some x) p [])"
-  using assms by (simp add: proc_decl_of_def value_providing_def)
+  using assms by (simp add: value_providing_def)
 
 lemma void_call_accepted:
-  assumes "\<Pi> p = Some (proc_decl_of [] SKIP)" and "special_table p = None"
+  assumes "\<Pi> p = Some (\<lparr>formals = [], body = SKIP\<rparr>)" and "special_table p = None"
   shows "wf_source_com \<Pi> (Call None p [])"
-  using assms by (simp add: proc_decl_of_def)
+  using assms by simp
 
 lemma value_call_accepted:
-  assumes "\<Pi> p = Some (proc_decl_of [] (Return (Some (N 0))))"
+  assumes "\<Pi> p = Some (\<lparr>formals = [], body = Return (Some (N 0))\<rparr>)"
       and "x \<noteq> ret_var" and "special_table p = None"
   shows "wf_source_com \<Pi> (Call (Some x) p [])"
   using assms
-  by (simp add: proc_decl_of_def value_providing_def source_exp_def)
+  by (simp add: value_providing_def source_exp_def)
 
 lemma ignored_value_call_accepted:
-  assumes "\<Pi> p = Some (proc_decl_of [] (Return (Some (N 0))))" and "special_table p = None"
+  assumes "\<Pi> p = Some (\<lparr>formals = [], body = Return (Some (N 0))\<rparr>)" and "special_table p = None"
   shows "wf_source_com \<Pi> (Call None p [])"
-  using assms by (simp add: proc_decl_of_def)
+  using assms by simp
 
 definition fallthrough_pi :: proc_table where
   "fallthrough_pi p =
-     (if p = (STR ''main'') then Some (proc_decl_of [] SKIP) else None)"
+     (if p = (STR ''main'') then Some (\<lparr>formals = [], body = SKIP\<rparr>) else None)"
 
 lemma explode_ret_hd [simp]: "hd (String.explode (STR ''#ret'')) \<noteq> CHR ''G''" by eval
 
 lemma main_fallthrough_accepted:
-  "wf_compile_input cr_gs fallthrough_pi [] (STR ''main'') SKIP"
-  by (auto simp: wf_compile_input_def wf_source_program_def fallthrough_pi_def
-        wf_proc_decl_def proc_decl_of_def reserved_ret_var_def ret_var_def
-        special_table_def special_pname_nondet_int_def
-        special_pname_min_def special_pname_max_def)
+  "wf_compile_input cr_gs fallthrough_pi []"
+  by (auto simp: wf_compile_input_simps wf_source_program_def fallthrough_pi_def
+        wf_proc_decl_def)
 
 lemma missing_main_rejected:
-  assumes "\<Pi> mnm = None"
-  shows "~ wf_compile_input cr_gs \<Pi> ps mnm main"
+  assumes "\<Pi> prog_main_name = None"
+  shows "~ wf_compile_input cr_gs \<Pi> ps"
   using assms
   by (auto simp: wf_compile_input_def wf_source_program_def)
 
 lemma duplicate_procedure_names_rejected:
-  "~ wf_compile_input cr_gs \<Pi> [p, p] mnm main"
+  "~ wf_compile_input cr_gs \<Pi> [p, p]"
   by (simp add: wf_compile_input_def)
 end

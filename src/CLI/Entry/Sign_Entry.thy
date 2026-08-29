@@ -1,5 +1,6 @@
 theory Sign_Entry
   imports Voblint_Analysis.Sign_Checks "Voblint_Soundness.Run_Analysis_Sound"
+    "Voblint_VIMP.VIMP_Notation"
 begin
 
 hide_const phase.N
@@ -42,20 +43,20 @@ text \<open>
 \<close>
 
 lemma analyse_sign_result_node_sound_for:
-  assumes solve: "sctx_terminates_prog pgs prog_main_name p"
-      and entry_cov: "(cfg_entry (prog_cfg prog_main_name p), ()) \<in> fst (sctx_sol_prog pgs prog_main_name p)"
+  assumes solve: "sctx_terminates_prog pgs p"
+      and entry_cov: "(cfg_entry (prog_cfg p), ()) \<in> fst (sctx_sol_prog pgs p)"
       and fwd_ok:
-        "\<And>u a w ctx. (u, ctx) \<in> fst (sctx_sol_prog pgs prog_main_name p)
-           \<Longrightarrow> (u, a, w) \<in> intra (prog_cfg prog_main_name p) \<Longrightarrow> (w, ctx) \<in> fst (sctx_sol_prog pgs prog_main_name p)"
+        "\<And>u a w ctx. (u, ctx) \<in> fst (sctx_sol_prog pgs p)
+           \<Longrightarrow> (u, a, w) \<in> intra (prog_cfg p) \<Longrightarrow> (w, ctx) \<in> fst (sctx_sol_prog pgs p)"
       and call_fwd_ok:
-        "\<And>u ctx dst fs as q k. (u, ctx) \<in> fst (sctx_sol_prog pgs prog_main_name p)
-           \<Longrightarrow> (u, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg prog_main_name p)
-           \<Longrightarrow> (FunctionEntry q, ()) \<in> fst (sctx_sol_prog pgs prog_main_name p)"
+        "\<And>u ctx dst fs as q k. (u, ctx) \<in> fst (sctx_sol_prog pgs p)
+           \<Longrightarrow> (u, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg p)
+           \<Longrightarrow> (FunctionEntry q, ()) \<in> fst (sctx_sol_prog pgs p)"
       and comb_fwd_ok:
-        "\<And>cl c1 dst fs as q k. (cl, c1) \<in> fst (sctx_sol_prog pgs prog_main_name p)
-           \<Longrightarrow> (cl, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg prog_main_name p)
-           \<Longrightarrow> (k, c1) \<in> fst (sctx_sol_prog pgs prog_main_name p)"
-  shows "ltr_collect pgs (prog_cfg prog_main_name p) (cinit_stores pgs) v
+        "\<And>cl c1 dst fs as q k. (cl, c1) \<in> fst (sctx_sol_prog pgs p)
+           \<Longrightarrow> (cl, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg p)
+           \<Longrightarrow> (k, c1) \<in> fst (sctx_sol_prog pgs p)"
+  shows "ltr_collect pgs (prog_cfg p) (cinit_stores pgs) v
            \<subseteq> gamma_state (case lookup_context (analyse_sign_result_for pgs p) v () of
                              Unreachable \<Rightarrow> bot | Reachable st \<Rightarrow> st)"
 proof -
@@ -63,71 +64,71 @@ proof -
     where "is_bot_pred = resolved_st_q_is_bot_for (declared_global_vars p)"
   have exact: "\<And>s. is_bot_pred s = is_bot_state (fun_of_resolved_st_q_for pgs s)"
     unfolding is_bot_pred_def by (rule resolved_st_q_is_bot_for_iff[OF declared_global_iff])
-  have sol_eq: "sctx_sol_prog pgs prog_main_name p
-      = sctx_sol pgs is_bot_pred (prog_table p) (prog_procs p) prog_main_name (prog_main p)"
+  have sol_eq: "sctx_sol_prog pgs p
+      = sctx_sol pgs is_bot_pred (prog_table p) (prog_procs p)"
     unfolding sctx_sol_prog_def sctx_eqs_prog_def sctx_sol_def is_bot_pred_def prog_cfg_def by simp
-  have cfg_eq: "prog_cfg prog_main_name p = compile_prog (prog_table p) (prog_procs p) prog_main_name (prog_main p)"
+  have cfg_eq: "prog_cfg p = compile_prog (prog_table p) (prog_procs p)"
     by (rule prog_cfg_def)
-  have solves': "sctx_terminates pgs is_bot_pred (prog_table p) (prog_procs p) prog_main_name (prog_main p)"
+  have solves': "sctx_terminates pgs is_bot_pred (prog_table p) (prog_procs p)"
     using solve unfolding sctx_terminates_prog_def is_bot_pred_def .
-  have entry_cov': "(cfg_entry (compile_prog (prog_table p) (prog_procs p) prog_main_name (prog_main p)), ())
-      \<in> fst (sctx_sol pgs is_bot_pred (prog_table p) (prog_procs p) prog_main_name (prog_main p))"
+  have entry_cov': "(cfg_entry (compile_prog (prog_table p) (prog_procs p)), ())
+      \<in> fst (sctx_sol pgs is_bot_pred (prog_table p) (prog_procs p))"
     using entry_cov unfolding sol_eq[symmetric] cfg_eq[symmetric] .
-  have fwd_ok': "\<And>u a w ctx. (u, ctx) \<in> fst (sctx_sol pgs is_bot_pred (prog_table p) (prog_procs p) prog_main_name (prog_main p))
-      \<Longrightarrow> (u, a, w) \<in> intra (compile_prog (prog_table p) (prog_procs p) prog_main_name (prog_main p))
-      \<Longrightarrow> (w, ctx) \<in> fst (sctx_sol pgs is_bot_pred (prog_table p) (prog_procs p) prog_main_name (prog_main p))"
+  have fwd_ok': "\<And>u a w ctx. (u, ctx) \<in> fst (sctx_sol pgs is_bot_pred (prog_table p) (prog_procs p))
+      \<Longrightarrow> (u, a, w) \<in> intra (compile_prog (prog_table p) (prog_procs p))
+      \<Longrightarrow> (w, ctx) \<in> fst (sctx_sol pgs is_bot_pred (prog_table p) (prog_procs p))"
     using fwd_ok unfolding sol_eq[symmetric] cfg_eq[symmetric] .
   have call_fwd_ok': "\<And>u ctx dst fs as q k.
-      (u, ctx) \<in> fst (sctx_sol pgs is_bot_pred (prog_table p) (prog_procs p) prog_main_name (prog_main p))
-      \<Longrightarrow> (u, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (compile_prog (prog_table p) (prog_procs p) prog_main_name (prog_main p))
-      \<Longrightarrow> (FunctionEntry q, ()) \<in> fst (sctx_sol pgs is_bot_pred (prog_table p) (prog_procs p) prog_main_name (prog_main p))"
+      (u, ctx) \<in> fst (sctx_sol pgs is_bot_pred (prog_table p) (prog_procs p))
+      \<Longrightarrow> (u, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (compile_prog (prog_table p) (prog_procs p))
+      \<Longrightarrow> (FunctionEntry q, ()) \<in> fst (sctx_sol pgs is_bot_pred (prog_table p) (prog_procs p))"
     using call_fwd_ok unfolding sol_eq[symmetric] cfg_eq[symmetric] .
   have comb_fwd_ok': "\<And>cl c1 dst fs as q k.
-      (cl, c1) \<in> fst (sctx_sol pgs is_bot_pred (prog_table p) (prog_procs p) prog_main_name (prog_main p))
-      \<Longrightarrow> (cl, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (compile_prog (prog_table p) (prog_procs p) prog_main_name (prog_main p))
-      \<Longrightarrow> (k, c1) \<in> fst (sctx_sol pgs is_bot_pred (prog_table p) (prog_procs p) prog_main_name (prog_main p))"
+      (cl, c1) \<in> fst (sctx_sol pgs is_bot_pred (prog_table p) (prog_procs p))
+      \<Longrightarrow> (cl, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (compile_prog (prog_table p) (prog_procs p))
+      \<Longrightarrow> (k, c1) \<in> fst (sctx_sol pgs is_bot_pred (prog_table p) (prog_procs p))"
     using comb_fwd_ok unfolding sol_eq[symmetric] cfg_eq[symmetric] .
-  have ltr_eq: "ltr_collect pgs (prog_cfg prog_main_name p) (cinit_stores pgs) v
-      = activation_collect pgs (admiss_exact enterc_unit) ()
-          (compile_prog (prog_table p) (prog_procs p) prog_main_name (prog_main p)) (cinit_stores pgs) v ()"
+  have ltr_eq: "ltr_collect pgs (prog_cfg p) (cinit_stores pgs) v
+      = activation_collect pgs enterc_unit ()
+          (compile_prog (prog_table p) (prog_procs p)) (cinit_stores pgs) v ()"
     unfolding cfg_eq by (rule activation_collect_unit_eq_ltr_collect[symmetric])
   have s0_sound: "cinit_stores pgs \<subseteq> gamma_dg_base
         (map_lift (fun_of_resolved_st_q_for pgs) (Lifted cinit_sign_st))
         (map_lift (fun_of_resolved_st_q_for pgs) (Bot::sign exec_dg_st lifted))"
     using sctx_cinit_le_cinit_sign_st[OF solves' exact entry_cov' fwd_ok' call_fwd_ok' comb_fwd_ok']
     by (simp add: gamma_dg_base_def)
-  have node_sound: "activation_collect pgs (admiss_exact enterc_unit) ()
-        (compile_prog (prog_table p) (prog_procs p) prog_main_name (prog_main p)) (cinit_stores pgs) v ()
+  have node_sound: "activation_collect pgs enterc_unit ()
+        (compile_prog (prog_table p) (prog_procs p)) (cinit_stores pgs) v ()
       \<subseteq> \<lbrakk>case lookup_context
               (dg_analysis_adapter.analyse_result
-                 (sctx_sigma_abs pgs is_bot_pred (prog_table p) (prog_procs p) prog_main_name (prog_main p))
-                 (fst (sctx_sol pgs is_bot_pred (prog_table p) (prog_procs p) prog_main_name (prog_main p))))
+                 (sctx_sigma_abs pgs is_bot_pred (prog_table p) (prog_procs p))
+                 (fst (sctx_sol pgs is_bot_pred (prog_table p) (prog_procs p))))
               v () of
             Unreachable \<Rightarrow> bot | Reachable st \<Rightarrow> st\<rbrakk>"
   proof (rule sctx_result_node_sound)
-    show "sctx_terminates pgs is_bot_pred (prog_table p) (prog_procs p) prog_main_name (prog_main p)"
+    show "sctx_terminates pgs is_bot_pred (prog_table p) (prog_procs p)"
       by (rule solves')
     show "\<And>s. is_bot_pred s = is_bot_state (fun_of_resolved_st_q_for pgs s)"
       by (rule exact)
-    show "(cfg_entry (compile_prog (prog_table p) (prog_procs p) prog_main_name (prog_main p)), ())
-        \<in> fst (sctx_sol pgs is_bot_pred (prog_table p) (prog_procs p) prog_main_name (prog_main p))"
+    show "(cfg_entry (compile_prog (prog_table p) (prog_procs p)), ())
+        \<in> fst (sctx_sol pgs is_bot_pred (prog_table p) (prog_procs p))"
       by (rule entry_cov')
-    show "\<And>u a v ctx. (u, ctx) \<in> fst (sctx_sol pgs is_bot_pred (prog_table p) (prog_procs p) prog_main_name (prog_main p))
-        \<Longrightarrow> (u, a, v) \<in> intra (compile_prog (prog_table p) (prog_procs p) prog_main_name (prog_main p))
-        \<Longrightarrow> (v, ctx) \<in> fst (sctx_sol pgs is_bot_pred (prog_table p) (prog_procs p) prog_main_name (prog_main p))"
+    show "\<And>u a v ctx. (u, ctx) \<in> fst (sctx_sol pgs is_bot_pred (prog_table p) (prog_procs p))
+        \<Longrightarrow> (u, a, v) \<in> intra (compile_prog (prog_table p) (prog_procs p))
+        \<Longrightarrow> (v, ctx) \<in> fst (sctx_sol pgs is_bot_pred (prog_table p) (prog_procs p))"
       by (rule fwd_ok')
     show "\<And>u ctx dst pars args pa cont.
-        (u, ctx) \<in> fst (sctx_sol pgs is_bot_pred (prog_table p) (prog_procs p) prog_main_name (prog_main p))
-        \<Longrightarrow> (u, CallEdge dst pars args, FunctionEntry pa, cont) \<in> calls (compile_prog (prog_table p) (prog_procs p) prog_main_name (prog_main p))
-        \<Longrightarrow> (FunctionEntry pa, ()) \<in> fst (sctx_sol pgs is_bot_pred (prog_table p) (prog_procs p) prog_main_name (prog_main p))"
+        (u, ctx) \<in> fst (sctx_sol pgs is_bot_pred (prog_table p) (prog_procs p))
+        \<Longrightarrow> (u, CallEdge dst pars args, FunctionEntry pa, cont) \<in> calls (compile_prog (prog_table p) (prog_procs p))
+        \<Longrightarrow> (FunctionEntry pa, ()) \<in> fst (sctx_sol pgs is_bot_pred (prog_table p) (prog_procs p))"
       by (rule call_fwd_ok')
     show "\<And>cl c1 dst pars args pa cont.
-        (cl, c1) \<in> fst (sctx_sol pgs is_bot_pred (prog_table p) (prog_procs p) prog_main_name (prog_main p))
-        \<Longrightarrow> (cl, CallEdge dst pars args, FunctionEntry pa, cont) \<in> calls (compile_prog (prog_table p) (prog_procs p) prog_main_name (prog_main p))
-        \<Longrightarrow> (cont, c1) \<in> fst (sctx_sol pgs is_bot_pred (prog_table p) (prog_procs p) prog_main_name (prog_main p))"
+        (cl, c1) \<in> fst (sctx_sol pgs is_bot_pred (prog_table p) (prog_procs p))
+        \<Longrightarrow> (cl, CallEdge dst pars args, FunctionEntry pa, cont) \<in> calls (compile_prog (prog_table p) (prog_procs p))
+        \<Longrightarrow> (cont, c1) \<in> fst (sctx_sol pgs is_bot_pred (prog_table p) (prog_procs p))"
       by (rule comb_fwd_ok')
-    show "(cfg_entry (compile_prog (prog_table p) (prog_procs p) prog_main_name (prog_main p)), ())
-        \<in> fst (sctx_sol pgs is_bot_pred (prog_table p) (prog_procs p) prog_main_name (prog_main p))"
+    show "(cfg_entry (compile_prog (prog_table p) (prog_procs p)), ())
+        \<in> fst (sctx_sol pgs is_bot_pred (prog_table p) (prog_procs p))"
       by (rule entry_cov')
     show "cinit_stores pgs \<subseteq> gamma_dg_base
         (map_lift (fun_of_resolved_st_q_for pgs) (Lifted cinit_sign_st))
@@ -135,54 +136,54 @@ proof -
       by (rule s0_sound)
   qed
   have result_eq: "lookup_context (analyse_sign_result_for pgs p) v ()
-      = (if (v, ()) \<in> fst (sctx_sol_prog pgs prog_main_name p)
+      = (if (v, ()) \<in> fst (sctx_sol_prog pgs p)
          then normalize_point pgs
-                (canonicalize_lift is_bot_pred (locals (snd (sctx_sol_prog pgs prog_main_name p) (Inl (v, ())))))
+                (canonicalize_lift is_bot_pred (locals (snd (sctx_sol_prog pgs p) (Inl (v, ())))))
          else Unreachable)"
     unfolding analyse_sign_result_for_def analyse_sign_ctx_result_for_def lookup_context_def is_bot_pred_def
     by simp
   have adapter_eq0: "lookup_context
           (dg_analysis_adapter.analyse_result
-             (sctx_sigma_abs pgs is_bot_pred (prog_table p) (prog_procs p) prog_main_name (prog_main p))
-             (fst (sctx_sol pgs is_bot_pred (prog_table p) (prog_procs p) prog_main_name (prog_main p))))
+             (sctx_sigma_abs pgs is_bot_pred (prog_table p) (prog_procs p))
+             (fst (sctx_sol pgs is_bot_pred (prog_table p) (prog_procs p))))
           v ()
-      = (if (v, ()) \<in> fst (sctx_sol pgs is_bot_pred (prog_table p) (prog_procs p) prog_main_name (prog_main p))
+      = (if (v, ()) \<in> fst (sctx_sol pgs is_bot_pred (prog_table p) (prog_procs p))
          then normalize_point pgs
                 (canonicalize_lift is_bot_pred
-                  (locals (snd (sctx_sol pgs is_bot_pred (prog_table p) (prog_procs p) prog_main_name (prog_main p))
+                  (locals (snd (sctx_sol pgs is_bot_pred (prog_table p) (prog_procs p))
                     (Inl (v, ())))))
          else Unreachable)"
   proof (rule sctx_analyse_result_eq)
-    show "sctx_terminates pgs is_bot_pred (prog_table p) (prog_procs p) prog_main_name (prog_main p)"
+    show "sctx_terminates pgs is_bot_pred (prog_table p) (prog_procs p)"
       by (rule solves')
     show "\<And>s. is_bot_pred s = is_bot_state (fun_of_resolved_st_q_for pgs s)"
       by (rule exact)
-    show "(cfg_entry (compile_prog (prog_table p) (prog_procs p) prog_main_name (prog_main p)), ())
-        \<in> fst (sctx_sol pgs is_bot_pred (prog_table p) (prog_procs p) prog_main_name (prog_main p))"
+    show "(cfg_entry (compile_prog (prog_table p) (prog_procs p)), ())
+        \<in> fst (sctx_sol pgs is_bot_pred (prog_table p) (prog_procs p))"
       by (rule entry_cov')
-    show "\<And>u a v ctx. (u, ctx) \<in> fst (sctx_sol pgs is_bot_pred (prog_table p) (prog_procs p) prog_main_name (prog_main p))
-        \<Longrightarrow> (u, a, v) \<in> intra (compile_prog (prog_table p) (prog_procs p) prog_main_name (prog_main p))
-        \<Longrightarrow> (v, ctx) \<in> fst (sctx_sol pgs is_bot_pred (prog_table p) (prog_procs p) prog_main_name (prog_main p))"
+    show "\<And>u a v ctx. (u, ctx) \<in> fst (sctx_sol pgs is_bot_pred (prog_table p) (prog_procs p))
+        \<Longrightarrow> (u, a, v) \<in> intra (compile_prog (prog_table p) (prog_procs p))
+        \<Longrightarrow> (v, ctx) \<in> fst (sctx_sol pgs is_bot_pred (prog_table p) (prog_procs p))"
       by (rule fwd_ok')
     show "\<And>u ctx dst pars args pa cont.
-        (u, ctx) \<in> fst (sctx_sol pgs is_bot_pred (prog_table p) (prog_procs p) prog_main_name (prog_main p))
-        \<Longrightarrow> (u, CallEdge dst pars args, FunctionEntry pa, cont) \<in> calls (compile_prog (prog_table p) (prog_procs p) prog_main_name (prog_main p))
-        \<Longrightarrow> (FunctionEntry pa, ()) \<in> fst (sctx_sol pgs is_bot_pred (prog_table p) (prog_procs p) prog_main_name (prog_main p))"
+        (u, ctx) \<in> fst (sctx_sol pgs is_bot_pred (prog_table p) (prog_procs p))
+        \<Longrightarrow> (u, CallEdge dst pars args, FunctionEntry pa, cont) \<in> calls (compile_prog (prog_table p) (prog_procs p))
+        \<Longrightarrow> (FunctionEntry pa, ()) \<in> fst (sctx_sol pgs is_bot_pred (prog_table p) (prog_procs p))"
       by (rule call_fwd_ok')
     show "\<And>cl c1 dst pars args pa cont.
-        (cl, c1) \<in> fst (sctx_sol pgs is_bot_pred (prog_table p) (prog_procs p) prog_main_name (prog_main p))
-        \<Longrightarrow> (cl, CallEdge dst pars args, FunctionEntry pa, cont) \<in> calls (compile_prog (prog_table p) (prog_procs p) prog_main_name (prog_main p))
-        \<Longrightarrow> (cont, c1) \<in> fst (sctx_sol pgs is_bot_pred (prog_table p) (prog_procs p) prog_main_name (prog_main p))"
+        (cl, c1) \<in> fst (sctx_sol pgs is_bot_pred (prog_table p) (prog_procs p))
+        \<Longrightarrow> (cl, CallEdge dst pars args, FunctionEntry pa, cont) \<in> calls (compile_prog (prog_table p) (prog_procs p))
+        \<Longrightarrow> (cont, c1) \<in> fst (sctx_sol pgs is_bot_pred (prog_table p) (prog_procs p))"
       by (rule comb_fwd_ok')
   qed
-  have adapter_eq: "(if (v, ()) \<in> fst (sctx_sol_prog pgs prog_main_name p)
+  have adapter_eq: "(if (v, ()) \<in> fst (sctx_sol_prog pgs p)
          then normalize_point pgs
-                (canonicalize_lift is_bot_pred (locals (snd (sctx_sol_prog pgs prog_main_name p) (Inl (v, ())))))
+                (canonicalize_lift is_bot_pred (locals (snd (sctx_sol_prog pgs p) (Inl (v, ())))))
          else Unreachable)
       = lookup_context
           (dg_analysis_adapter.analyse_result
-             (sctx_sigma_abs pgs is_bot_pred (prog_table p) (prog_procs p) prog_main_name (prog_main p))
-             (fst (sctx_sol_prog pgs prog_main_name p)))
+             (sctx_sigma_abs pgs is_bot_pred (prog_table p) (prog_procs p))
+             (fst (sctx_sol_prog pgs p)))
           v ()"
     using adapter_eq0[unfolded sol_eq[symmetric]]
     by (rule sym)
@@ -193,78 +194,78 @@ qed
 
 theorem analyse_sign_report_sound_proved_for:
   fixes v :: pp and c :: exp
-  assumes solve: "sctx_terminates_prog pgs prog_main_name p"
-      and entry_cov: "(cfg_entry (prog_cfg prog_main_name p), ()) \<in> fst (sctx_sol_prog pgs prog_main_name p)"
+  assumes solve: "sctx_terminates_prog pgs p"
+      and entry_cov: "(cfg_entry (prog_cfg p), ()) \<in> fst (sctx_sol_prog pgs p)"
       and fwd_ok:
-        "\<And>u a w ctx. (u, ctx) \<in> fst (sctx_sol_prog pgs prog_main_name p)
-           \<Longrightarrow> (u, a, w) \<in> intra (prog_cfg prog_main_name p) \<Longrightarrow> (w, ctx) \<in> fst (sctx_sol_prog pgs prog_main_name p)"
+        "\<And>u a w ctx. (u, ctx) \<in> fst (sctx_sol_prog pgs p)
+           \<Longrightarrow> (u, a, w) \<in> intra (prog_cfg p) \<Longrightarrow> (w, ctx) \<in> fst (sctx_sol_prog pgs p)"
       and call_fwd_ok:
-        "\<And>u ctx dst fs as q k. (u, ctx) \<in> fst (sctx_sol_prog pgs prog_main_name p)
-           \<Longrightarrow> (u, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg prog_main_name p)
-           \<Longrightarrow> (FunctionEntry q, ()) \<in> fst (sctx_sol_prog pgs prog_main_name p)"
+        "\<And>u ctx dst fs as q k. (u, ctx) \<in> fst (sctx_sol_prog pgs p)
+           \<Longrightarrow> (u, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg p)
+           \<Longrightarrow> (FunctionEntry q, ()) \<in> fst (sctx_sol_prog pgs p)"
       and comb_fwd_ok:
-        "\<And>cl c1 dst fs as q k. (cl, c1) \<in> fst (sctx_sol_prog pgs prog_main_name p)
-           \<Longrightarrow> (cl, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg prog_main_name p)
-           \<Longrightarrow> (k, c1) \<in> fst (sctx_sol_prog pgs prog_main_name p)"
+        "\<And>cl c1 dst fs as q k. (cl, c1) \<in> fst (sctx_sol_prog pgs p)
+           \<Longrightarrow> (cl, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg p)
+           \<Longrightarrow> (k, c1) \<in> fst (sctx_sol_prog pgs p)"
       and mem: "(v, c, Check_Proved) \<in> set (analyse_sign_report_for pgs p)"
-  shows "\<forall>s \<in> ltr_collect pgs (prog_cfg prog_main_name p) (cinit_stores pgs) v. truthy (aval c s)"
+  shows "\<forall>s \<in> ltr_collect pgs (prog_cfg p) (cinit_stores pgs) v. truthy (aval c s)"
 proof -
-  have finI: "finite (intra (prog_cfg prog_main_name p))"
+  have finI: "finite (intra (prog_cfg p))"
     unfolding prog_cfg_def using compile_prog_finite by simp
-  obtain tgt where edge: "(v, EA_Check c, tgt) \<in> intra (prog_cfg prog_main_name p)"
+  obtain tgt where edge: "(v, EA_Check c, tgt) \<in> intra (prog_cfg p)"
     using mem[unfolded analyse_sign_report_for_def surface_unfold]
           classify_checks_mem_iff[OF finI, of v c Check_Proved
             "\<lambda>v. case lookup_context (analyse_sign_result_for pgs p) v () of Unreachable \<Rightarrow> bot | Reachable st \<Rightarrow> st"
             sign_classify_check]
     by auto
-  have node_sound: "ltr_collect pgs (prog_cfg prog_main_name p) (cinit_stores pgs) v
+  have node_sound: "ltr_collect pgs (prog_cfg p) (cinit_stores pgs) v
       \<subseteq> gamma_state (case lookup_context (analyse_sign_result_for pgs p) v () of Unreachable \<Rightarrow> bot | Reachable st \<Rightarrow> st)"
     by (rule analyse_sign_result_node_sound_for[OF solve entry_cov fwd_ok call_fwd_ok comb_fwd_ok])
   show ?thesis
     by (rule classify_checks_proved_sound
-          [where g = "prog_cfg prog_main_name p"
+          [where g = "prog_cfg p"
              and env = "\<lambda>v. case lookup_context (analyse_sign_result_for pgs p) v () of Unreachable \<Rightarrow> bot | Reachable st \<Rightarrow> st"
              and classify = sign_classify_check
-             and reach = "ltr_collect pgs (prog_cfg prog_main_name p) (cinit_stores pgs)"
+             and reach = "ltr_collect pgs (prog_cfg p) (cinit_stores pgs)"
              and v = v and gamma_state = "gamma_state :: sign abs_state \<Rightarrow> store set",
            OF finI mem[unfolded analyse_sign_report_for_def surface_unfold] sign_classify_check_proved node_sound])
 qed
 
 theorem analyse_sign_report_sound_refuted_for:
   fixes v :: pp and c :: exp
-  assumes solve: "sctx_terminates_prog pgs prog_main_name p"
-      and entry_cov: "(cfg_entry (prog_cfg prog_main_name p), ()) \<in> fst (sctx_sol_prog pgs prog_main_name p)"
+  assumes solve: "sctx_terminates_prog pgs p"
+      and entry_cov: "(cfg_entry (prog_cfg p), ()) \<in> fst (sctx_sol_prog pgs p)"
       and fwd_ok:
-        "\<And>u a w ctx. (u, ctx) \<in> fst (sctx_sol_prog pgs prog_main_name p)
-           \<Longrightarrow> (u, a, w) \<in> intra (prog_cfg prog_main_name p) \<Longrightarrow> (w, ctx) \<in> fst (sctx_sol_prog pgs prog_main_name p)"
+        "\<And>u a w ctx. (u, ctx) \<in> fst (sctx_sol_prog pgs p)
+           \<Longrightarrow> (u, a, w) \<in> intra (prog_cfg p) \<Longrightarrow> (w, ctx) \<in> fst (sctx_sol_prog pgs p)"
       and call_fwd_ok:
-        "\<And>u ctx dst fs as q k. (u, ctx) \<in> fst (sctx_sol_prog pgs prog_main_name p)
-           \<Longrightarrow> (u, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg prog_main_name p)
-           \<Longrightarrow> (FunctionEntry q, ()) \<in> fst (sctx_sol_prog pgs prog_main_name p)"
+        "\<And>u ctx dst fs as q k. (u, ctx) \<in> fst (sctx_sol_prog pgs p)
+           \<Longrightarrow> (u, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg p)
+           \<Longrightarrow> (FunctionEntry q, ()) \<in> fst (sctx_sol_prog pgs p)"
       and comb_fwd_ok:
-        "\<And>cl c1 dst fs as q k. (cl, c1) \<in> fst (sctx_sol_prog pgs prog_main_name p)
-           \<Longrightarrow> (cl, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg prog_main_name p)
-           \<Longrightarrow> (k, c1) \<in> fst (sctx_sol_prog pgs prog_main_name p)"
+        "\<And>cl c1 dst fs as q k. (cl, c1) \<in> fst (sctx_sol_prog pgs p)
+           \<Longrightarrow> (cl, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg p)
+           \<Longrightarrow> (k, c1) \<in> fst (sctx_sol_prog pgs p)"
       and mem: "(v, c, Check_Refuted) \<in> set (analyse_sign_report_for pgs p)"
-  shows "\<forall>s \<in> ltr_collect pgs (prog_cfg prog_main_name p) (cinit_stores pgs) v. \<not> truthy (aval c s)"
+  shows "\<forall>s \<in> ltr_collect pgs (prog_cfg p) (cinit_stores pgs) v. \<not> truthy (aval c s)"
 proof -
-  have finI: "finite (intra (prog_cfg prog_main_name p))"
+  have finI: "finite (intra (prog_cfg p))"
     unfolding prog_cfg_def using compile_prog_finite by simp
-  obtain tgt where edge: "(v, EA_Check c, tgt) \<in> intra (prog_cfg prog_main_name p)"
+  obtain tgt where edge: "(v, EA_Check c, tgt) \<in> intra (prog_cfg p)"
     using mem[unfolded analyse_sign_report_for_def surface_unfold]
           classify_checks_mem_iff[OF finI, of v c Check_Refuted
             "\<lambda>v. case lookup_context (analyse_sign_result_for pgs p) v () of Unreachable \<Rightarrow> bot | Reachable st \<Rightarrow> st"
             sign_classify_check]
     by auto
-  have node_sound: "ltr_collect pgs (prog_cfg prog_main_name p) (cinit_stores pgs) v
+  have node_sound: "ltr_collect pgs (prog_cfg p) (cinit_stores pgs) v
       \<subseteq> gamma_state (case lookup_context (analyse_sign_result_for pgs p) v () of Unreachable \<Rightarrow> bot | Reachable st \<Rightarrow> st)"
     by (rule analyse_sign_result_node_sound_for[OF solve entry_cov fwd_ok call_fwd_ok comb_fwd_ok])
   show ?thesis
     by (rule classify_checks_refuted_sound
-          [where g = "prog_cfg prog_main_name p"
+          [where g = "prog_cfg p"
              and env = "\<lambda>v. case lookup_context (analyse_sign_result_for pgs p) v () of Unreachable \<Rightarrow> bot | Reachable st \<Rightarrow> st"
              and classify = sign_classify_check
-             and reach = "ltr_collect pgs (prog_cfg prog_main_name p) (cinit_stores pgs)"
+             and reach = "ltr_collect pgs (prog_cfg p) (cinit_stores pgs)"
              and v = v and gamma_state = "gamma_state :: sign abs_state \<Rightarrow> store set",
            OF finI mem[unfolded analyse_sign_report_for_def surface_unfold] sign_classify_check_refuted node_sound])
 qed
@@ -281,44 +282,44 @@ text \<open>
 
 corollary analyse_sign_report_sound_proved:
   fixes p :: imp_prog and v :: pp and c :: exp
-  assumes wf: "wf_compile_input (declared_global p) (prog_table p) (prog_procs p) prog_main_name (prog_main p)"
-      and solve: "sctx_terminates_prog (declared_global p) prog_main_name p"
-      and entry_cov: "(cfg_entry (prog_cfg prog_main_name p), ()) \<in> fst (sctx_sol_prog (declared_global p) prog_main_name p)"
+  assumes wf: "wf_compile_input (declared_global p) (prog_table p) (prog_procs p)"
+      and solve: "sctx_terminates_prog (declared_global p) p"
+      and entry_cov: "(cfg_entry (prog_cfg p), ()) \<in> fst (sctx_sol_prog (declared_global p) p)"
       and fwd_ok:
-        "\<And>u a w ctx. (u, ctx) \<in> fst (sctx_sol_prog (declared_global p) prog_main_name p)
-           \<Longrightarrow> (u, a, w) \<in> intra (prog_cfg prog_main_name p) \<Longrightarrow> (w, ctx) \<in> fst (sctx_sol_prog (declared_global p) prog_main_name p)"
+        "\<And>u a w ctx. (u, ctx) \<in> fst (sctx_sol_prog (declared_global p) p)
+           \<Longrightarrow> (u, a, w) \<in> intra (prog_cfg p) \<Longrightarrow> (w, ctx) \<in> fst (sctx_sol_prog (declared_global p) p)"
       and call_fwd_ok:
-        "\<And>u ctx dst fs as q k. (u, ctx) \<in> fst (sctx_sol_prog (declared_global p) prog_main_name p)
-           \<Longrightarrow> (u, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg prog_main_name p)
-           \<Longrightarrow> (FunctionEntry q, ()) \<in> fst (sctx_sol_prog (declared_global p) prog_main_name p)"
+        "\<And>u ctx dst fs as q k. (u, ctx) \<in> fst (sctx_sol_prog (declared_global p) p)
+           \<Longrightarrow> (u, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg p)
+           \<Longrightarrow> (FunctionEntry q, ()) \<in> fst (sctx_sol_prog (declared_global p) p)"
       and comb_fwd_ok:
-        "\<And>cl c1 dst fs as q k. (cl, c1) \<in> fst (sctx_sol_prog (declared_global p) prog_main_name p)
-           \<Longrightarrow> (cl, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg prog_main_name p)
-           \<Longrightarrow> (k, c1) \<in> fst (sctx_sol_prog (declared_global p) prog_main_name p)"
+        "\<And>cl c1 dst fs as q k. (cl, c1) \<in> fst (sctx_sol_prog (declared_global p) p)
+           \<Longrightarrow> (cl, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg p)
+           \<Longrightarrow> (k, c1) \<in> fst (sctx_sol_prog (declared_global p) p)"
       and mem: "(v, c, Check_Proved) \<in> set (analyse_sign_report p)"
-  shows "\<forall>s \<in> ltr_collect (declared_global p) (prog_cfg prog_main_name p) (cinit_stores (declared_global p)) v. truthy (aval c s)"
+  shows "\<forall>s \<in> ltr_collect (declared_global p) (prog_cfg p) (cinit_stores (declared_global p)) v. truthy (aval c s)"
   by (rule analyse_sign_report_sound_proved_for
         [OF wf[THEN wf_compile_input_reserved_ret_var]
             solve entry_cov fwd_ok call_fwd_ok comb_fwd_ok mem[unfolded analyse_sign_report_def]])
 
 corollary analyse_sign_report_sound_refuted:
   fixes p :: imp_prog and v :: pp and c :: exp
-  assumes wf: "wf_compile_input (declared_global p) (prog_table p) (prog_procs p) prog_main_name (prog_main p)"
-      and solve: "sctx_terminates_prog (declared_global p) prog_main_name p"
-      and entry_cov: "(cfg_entry (prog_cfg prog_main_name p), ()) \<in> fst (sctx_sol_prog (declared_global p) prog_main_name p)"
+  assumes wf: "wf_compile_input (declared_global p) (prog_table p) (prog_procs p)"
+      and solve: "sctx_terminates_prog (declared_global p) p"
+      and entry_cov: "(cfg_entry (prog_cfg p), ()) \<in> fst (sctx_sol_prog (declared_global p) p)"
       and fwd_ok:
-        "\<And>u a w ctx. (u, ctx) \<in> fst (sctx_sol_prog (declared_global p) prog_main_name p)
-           \<Longrightarrow> (u, a, w) \<in> intra (prog_cfg prog_main_name p) \<Longrightarrow> (w, ctx) \<in> fst (sctx_sol_prog (declared_global p) prog_main_name p)"
+        "\<And>u a w ctx. (u, ctx) \<in> fst (sctx_sol_prog (declared_global p) p)
+           \<Longrightarrow> (u, a, w) \<in> intra (prog_cfg p) \<Longrightarrow> (w, ctx) \<in> fst (sctx_sol_prog (declared_global p) p)"
       and call_fwd_ok:
-        "\<And>u ctx dst fs as q k. (u, ctx) \<in> fst (sctx_sol_prog (declared_global p) prog_main_name p)
-           \<Longrightarrow> (u, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg prog_main_name p)
-           \<Longrightarrow> (FunctionEntry q, ()) \<in> fst (sctx_sol_prog (declared_global p) prog_main_name p)"
+        "\<And>u ctx dst fs as q k. (u, ctx) \<in> fst (sctx_sol_prog (declared_global p) p)
+           \<Longrightarrow> (u, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg p)
+           \<Longrightarrow> (FunctionEntry q, ()) \<in> fst (sctx_sol_prog (declared_global p) p)"
       and comb_fwd_ok:
-        "\<And>cl c1 dst fs as q k. (cl, c1) \<in> fst (sctx_sol_prog (declared_global p) prog_main_name p)
-           \<Longrightarrow> (cl, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg prog_main_name p)
-           \<Longrightarrow> (k, c1) \<in> fst (sctx_sol_prog (declared_global p) prog_main_name p)"
+        "\<And>cl c1 dst fs as q k. (cl, c1) \<in> fst (sctx_sol_prog (declared_global p) p)
+           \<Longrightarrow> (cl, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg p)
+           \<Longrightarrow> (k, c1) \<in> fst (sctx_sol_prog (declared_global p) p)"
       and mem: "(v, c, Check_Refuted) \<in> set (analyse_sign_report p)"
-  shows "\<forall>s \<in> ltr_collect (declared_global p) (prog_cfg prog_main_name p) (cinit_stores (declared_global p)) v. \<not> truthy (aval c s)"
+  shows "\<forall>s \<in> ltr_collect (declared_global p) (prog_cfg p) (cinit_stores (declared_global p)) v. \<not> truthy (aval c s)"
   by (rule analyse_sign_report_sound_refuted_for
         [OF wf[THEN wf_compile_input_reserved_ret_var]
             solve entry_cov fwd_ok call_fwd_ok comb_fwd_ok mem[unfolded analyse_sign_report_def]])

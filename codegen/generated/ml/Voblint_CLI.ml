@@ -155,7 +155,7 @@ module Core : sig
     If of exp * com * com | While of exp * com |
     Call of string option * string * exp list | Return of exp option | Restore |
     Unwind
-  type 'a proc_decl_ext
+  type 'a proc_decl_ext = Proc_decl_ext of string list * com * 'a
   type ('a, 'b) analysis_cluster
   type call_string_gk
   val equal_call_string_gk : call_string_gk equal
@@ -203,31 +203,29 @@ module Core : sig
   val is_none : 'a option -> bool
   val implode : char list -> string
   val map_filter : ('a -> 'b option) -> 'a list -> 'b list
+  val prog_main_name : string
   val sup_seta : 'a equal -> 'a set set -> 'a set
   val exp_vnames : exp -> string set
   val explode : string -> char list
-  val proc_decl_of : string list -> com -> unit proc_decl_ext
-  val char_0x6E : char
-  val prog_main_name : string
   val prog_table : unit imp_prog_ext -> string -> unit proc_decl_ext option
   val prog_main : unit imp_prog_ext -> com
-  val map_option : ('a -> 'b) -> 'a option -> 'b option
+  val char_0x6E : char
   val mk_program :
     (string * unit proc_decl_ext) list ->
       com -> string list -> unit imp_prog_ext
   val prog_procs : unit imp_prog_ext -> string list
-  val declared_global_vars : 'a imp_prog_ext -> string list
-  val declared_global : unit imp_prog_ext -> string -> bool
+  val map_option : ('a -> 'b) -> 'a option -> 'b option
   val char_0x74 : char
   val char_0x72 : char
   val char_0x6F : char
   val char_0x65 : char
   val char_0x61 : char
   val string_of_sign : sign -> char list
+  val declared_global_vars : 'a imp_prog_ext -> string list
   val contexts_at : ('a, 'b) analysis_result -> cfg_node -> 'a set
   val ea_check_cond : edge_action -> exp
   val is_EA_Check : edge_action -> bool
-  val prog_cfg : string -> unit imp_prog_ext -> unit cfg_ext
+  val prog_cfg : unit imp_prog_ext -> unit cfg_ext
   val sorted_list_of_set : 'a equal * 'a linorder -> 'a set -> 'a list
   val cfg_calls_list :
     unit cfg_ext -> (cfg_node * (call_action * (cfg_node * cfg_node))) list
@@ -253,6 +251,7 @@ module Core : sig
   val char_0x6B : char
   val char_0x78 : char
   val bot_fun : 'b bot -> 'a -> 'b
+  val declared_global : unit imp_prog_ext -> string -> bool
   val lookup_context :
     'a equal -> ('a, 'b) analysis_result -> cfg_node -> 'a -> 'b point_state
   val int_classify_check : exp -> (string -> unit int_dom_ext) -> check_result
@@ -265,12 +264,12 @@ module Core : sig
   val decided_report :
     (cfg_node * (exp * check_result)) list ->
       (cfg_node * (exp * contextual_verdict)) list
+  val scope_vnames_list : unit imp_prog_ext -> string -> string list
   val sign_classify_check : exp -> (string -> sign) -> check_result
   val analyse_sign_report :
     unit imp_prog_ext -> (cfg_node * (exp * check_result)) list
   val analyse_sign_result :
     unit imp_prog_ext -> (unit, (string -> sign)) analysis_result
-  val scope_vnames_list : unit imp_prog_ext -> string -> string list
   val string_of_exp : nat -> exp -> char list
   val cs_show_context : cfg_node list -> char list
   val cs_context_key : cfg_node list -> string
@@ -302,15 +301,11 @@ module Core : sig
     (string -> unit proc_decl_ext option) ->
       string list -> com -> string list -> char list
   val compiled_owner_of :
-    (string -> unit proc_decl_ext option) ->
-      string list -> string -> com -> cfg_node -> string
+    (string -> unit proc_decl_ext option) -> string list -> cfg_node -> string
   val raw_cfg_export :
     (string -> unit proc_decl_ext option) ->
       string list ->
-        string ->
-          com ->
-            (cfg_node -> graphviz_node_annotation option) ->
-              unit export_graph_ext
+        (cfg_node -> graphviz_node_annotation option) -> unit export_graph_ext
   val analyse_int_report_wpo :
     unit imp_prog_ext -> (cfg_node * (exp * check_result)) list
   val analyse_int_wpo_result :
@@ -375,8 +370,7 @@ module Core : sig
   val compiled_procedure_scope :
     (string -> bool) ->
       (string -> unit proc_decl_ext option) ->
-        string list ->
-          string -> com -> unit cfg_ext -> cfg_node -> unit procedure_scope_ext
+        string list -> unit cfg_ext -> cfg_node -> unit procedure_scope_ext
   val contextual_result_domain :
     ('a, 'b, 'c, 'd, unit) analysis_graph_config_ext ->
       unit cfg_ext -> ('a, 'e) analysis_result -> ((cfg_node * 'a), 'b) sum list
@@ -399,8 +393,7 @@ module Core : sig
     unit imp_prog_ext -> (unit, (string -> ivl)) analysis_result
   val raw_cfg_canonical_text_lit :
     (string -> unit proc_decl_ext option) ->
-      string list ->
-        string -> com -> (cfg_node -> graphviz_node_annotation option) -> string
+      string list -> (cfg_node -> graphviz_node_annotation option) -> string
   val analyse_interval_join_result :
     unit imp_prog_ext -> (unit, (string -> ivl)) analysis_result
   val scope_locals : 'a procedure_scope_ext -> string list
@@ -414,10 +407,9 @@ module Core : sig
   val scope_formals : 'a procedure_scope_ext -> string list
   val analyse_sign_ctx_solved_for :
     (string -> bool) ->
-      string ->
-        unit imp_prog_ext ->
-          (unit, (string -> sign)) analysis_result *
-            (string * (string -> sign) point_state) list
+      unit imp_prog_ext ->
+        (unit, (string -> sign)) analysis_result *
+          (string * (string -> sign) point_state) list
   val wf_program_compile_input_exec : unit imp_prog_ext -> bool
   val analyse_interval_per_origin_result :
     unit imp_prog_ext -> (unit, (string -> ivl)) analysis_result
@@ -426,17 +418,15 @@ module Core : sig
   val scope_return_slot : 'a procedure_scope_ext -> string option
   val analyse_parity_ctx_solved_for :
     (string -> bool) ->
-      string ->
-        unit imp_prog_ext ->
-          (unit, (string -> parity)) analysis_result *
-            (string * (string -> parity) point_state) list
+      unit imp_prog_ext ->
+        (unit, (string -> parity)) analysis_result *
+          (string * (string -> parity) point_state) list
   val analyse_int_ctx_solved_warrow_for :
     refine_mode ->
       (string -> bool) ->
-        string ->
-          unit imp_prog_ext ->
-            (unit, (string -> unit int_dom_ext)) analysis_result *
-              (string * (string -> unit int_dom_ext) point_state) list
+        unit imp_prog_ext ->
+          (unit, (string -> unit int_dom_ext)) analysis_result *
+            (string * (string -> unit int_dom_ext) point_state) list
   val analyse_interval_td_report_with_state :
     unit imp_prog_ext ->
       (cfg_node * (exp * (check_result * (bool * (string -> ivl))))) list
@@ -468,10 +458,9 @@ module Core : sig
         ('a, 'b, 'c, 'd, 'e) analysis_graph_config_ext
   val analyse_interval_ctx_solved_warrow_for :
     (string -> bool) ->
-      string ->
-        unit imp_prog_ext ->
-          (unit, (string -> ivl)) analysis_result *
-            (string * (string -> ivl) point_state) list
+      unit imp_prog_ext ->
+        (unit, (string -> ivl)) analysis_result *
+          (string * (string -> ivl) point_state) list
   val report_with_state :
     (unit imp_prog_ext -> (unit, 'a) analysis_result) ->
       'a -> (exp -> 'a -> check_result) ->
@@ -3421,8 +3410,6 @@ type ('a, 'b, 'c) strategy_tree = Answer of 'c |
   QueryG of 'b * ('c -> ('a, 'b, 'c) strategy_tree) |
   Side of 'b * 'c * ('a, 'b, 'c) strategy_tree;;
 
-type source_location = LocalVar of string | GlobalVar;;
-
 type special_desc = SD_Nondet_Int | SD_Min | SD_Max;;
 
 type refine_mode = Refine_Never | Refine_Once | Refine_Fixpoint;;
@@ -3657,6 +3644,19 @@ let rec map_filter
           | Some y -> y :: map_filter f xs);;
 
 let rec c (State_ext (c, infl, stabl, sigma, more)) = c;;
+
+let rec cfg_entry
+  (Cfg_ext (intra, calls, cfg_entry, checks, more)) = cfg_entry;;
+
+let rec cfg_exit
+  g = (match cfg_entry g
+        with Statement nat ->
+          failwith "cfg_exit: entry is not a procedure entry"
+            (fun _ -> Statement nat)
+        | FunctionEntry a -> FunctionResult a
+        | FunctionResult literal ->
+          failwith "cfg_exit: entry is not a procedure entry"
+            (fun _ -> FunctionResult literal));;
 
 let rec fmadd _A
   (Fmap_of_list m) (Fmap_of_list n) = Fmap_of_list (merge _A m n);;
@@ -3993,17 +3993,7 @@ let rec fmfilter
 
 let rec fmdrop _A a = fmfilter (fun aa -> not (eq _A aa a));;
 
-let rec the (Some x2) = x2;;
-
 let ret_var : string = "#ret";;
-
-let rec cfg_entry
-  (Cfg_ext (intra, calls, cfg_entry, checks, more)) = cfg_entry;;
-
-let rec cfg_exit
-  g = (match cfg_entry g with Statement a -> Statement a
-        | FunctionEntry a -> FunctionResult a
-        | FunctionResult a -> FunctionResult a);;
 
 let fmempty : ('a, 'b) fmap = Fmap_of_list [];;
 
@@ -4431,6 +4421,16 @@ let rec length_tailrec x0 n = match x0, n with [], n -> n
 
 let rec stabl (State_ext (c, infl, stabl, sigma, more)) = stabl;;
 
+let prog_main_name : string = "main";;
+
+let rec body (Proc_decl_ext (formals, body, more)) = body;;
+
+let rec main_body
+  pi = (match pi prog_main_name
+         with None ->
+           failwith "main_body: entry procedure not declared" (fun _ -> SKIP)
+         | Some a -> body a);;
+
 let rec no_return = function Seq (c1, c2) -> no_return c1 && no_return c2
                     | If (uu, c1, c2) -> no_return c1 && no_return c2
                     | While (uv, c) -> no_return c
@@ -4499,8 +4499,7 @@ let rec com_vnames
           (match dst with None -> bot_set
             | Some x -> insert equal_literal x bot_set)
           (sup_seta equal_literal (Set (map exp_vnames actuals)))
-    | Return None -> bot_set
-    | Return (Some a) -> exp_vnames a
+    | Return e -> (match e with None -> bot_set | Some a -> exp_vnames a)
     | Restore -> bot_set
     | Unwind -> bot_set;;
 
@@ -4515,21 +4514,7 @@ let rec source_com = function SKIP -> true
                      | Restore -> false
                      | Unwind -> false;;
 
-let rec exp_mentions_where
-  p x1 = match p, x1 with p, N uu -> false
-    | p, V x -> p x
-    | p, Plus (a, b) -> exp_mentions_where p a || exp_mentions_where p b
-    | p, Minus (a, b) -> exp_mentions_where p a || exp_mentions_where p b
-    | p, Times (a, b) -> exp_mentions_where p a || exp_mentions_where p b
-    | p, Less (a, b) -> exp_mentions_where p a || exp_mentions_where p b
-    | p, Eq (a, b) -> exp_mentions_where p a || exp_mentions_where p b
-    | p, Not b -> exp_mentions_where p b
-    | p, And (b1, b2) -> exp_mentions_where p b1 || exp_mentions_where p b2
-    | p, Or (b1, b2) -> exp_mentions_where p b1 || exp_mentions_where p b2;;
-
-let rec exp_mentions x = exp_mentions_where (fun a -> ((x : string) = a));;
-
-let rec source_exp a = not (exp_mentions ret_var a);;
+let rec source_exp a = not (member equal_literal ret_var (exp_vnames a));;
 
 let rec apply_reduction_steps
   x0 d = match x0, d with [], d -> d
@@ -4802,36 +4787,31 @@ let rec ivl_max
 let rec n_bfilter _A
   (Numeric_ops_ext (n_aval, n_bfilter, n_top, more)) = n_bfilter;;
 
-let rec generic_branch_st_for _A
-  ops source_global b pol s = n_bfilter _A ops source_global b pol s;;
+let rec generic_branch_st_for _A ops gs b pol s = n_bfilter _A ops gs b pol s;;
 
 let rec branch_ivl_st_for x = generic_branch_st_for bot_ivl ivl_ops x;;
 
 let rec ivl_tf_st_for
-  source_global x1 s = match source_global, x1, s with
-    source_global, EA_Nop, s -> s
-    | source_global, EA_Assign (x, a), s ->
-        update_resolved_st_q bot_ivl s (location_of source_global x)
-          (aval_ivl a (fun_of_resolved_st_q_for bot_ivl source_global s))
-    | source_global, EA_Special (sc, x), s ->
-        update_resolved_st_q bot_ivl s (location_of source_global x)
+  gs x1 s = match gs, x1, s with gs, EA_Nop, s -> s
+    | gs, EA_Assign (x, a), s ->
+        update_resolved_st_q bot_ivl s (location_of gs x)
+          (aval_ivl a (fun_of_resolved_st_q_for bot_ivl gs s))
+    | gs, EA_Special (sc, x), s ->
+        update_resolved_st_q bot_ivl s (location_of gs x)
           (match sc with Nondet_Int -> ivl_top
             | Min (a, b) ->
-              ivl_min
-                (aval_ivl a (fun_of_resolved_st_q_for bot_ivl source_global s))
-                (aval_ivl b (fun_of_resolved_st_q_for bot_ivl source_global s))
+              ivl_min (aval_ivl a (fun_of_resolved_st_q_for bot_ivl gs s))
+                (aval_ivl b (fun_of_resolved_st_q_for bot_ivl gs s))
             | Max (a, b) ->
-              ivl_max
-                (aval_ivl a (fun_of_resolved_st_q_for bot_ivl source_global s))
-                (aval_ivl b (fun_of_resolved_st_q_for bot_ivl source_global s)))
-    | source_global, EA_Assume b, s -> branch_ivl_st_for source_global b true s
-    | source_global, EA_AssumeNot b, s ->
-        branch_ivl_st_for source_global b false s
-    | source_global, EA_Ret (None, p), s -> s
-    | source_global, EA_Ret (Some a, p), s ->
-        update_resolved_st_q bot_ivl s (location_of source_global ret_var)
-          (aval_ivl a (fun_of_resolved_st_q_for bot_ivl source_global s))
-    | source_global, EA_Check cnd, s -> s;;
+              ivl_max (aval_ivl a (fun_of_resolved_st_q_for bot_ivl gs s))
+                (aval_ivl b (fun_of_resolved_st_q_for bot_ivl gs s)))
+    | gs, EA_Assume b, s -> branch_ivl_st_for gs b true s
+    | gs, EA_AssumeNot b, s -> branch_ivl_st_for gs b false s
+    | gs, EA_Ret (None, p), s -> s
+    | gs, EA_Ret (Some a, p), s ->
+        update_resolved_st_q bot_ivl s (location_of gs ret_var)
+          (aval_ivl a (fun_of_resolved_st_q_for bot_ivl gs s))
+    | gs, EA_Check cnd, s -> s;;
 
 let rec times_parity x0 uu = match x0, uu with PBot, uu -> PBot
                        | PEven, PBot -> PBot
@@ -4994,13 +4974,9 @@ let rec c_update
   ca (State_ext (c, infl, stabl, sigma, more)) =
     State_ext (ca c, infl, stabl, sigma, more);;
 
-let rec proc_decl_of xs bdy = Proc_decl_ext (xs, bdy, ());;
-
 let rec valid_formal gs x = not (gs x) && not ((x : string) = ret_var);;
 
 let rec formals (Proc_decl_ext (formals, body, more)) = formals;;
-
-let rec body (Proc_decl_ext (formals, body, more)) = body;;
 
 let rec classify_special
   uu x1 = match uu, x1 with SD_Nondet_Int, [] -> Some Nondet_Int
@@ -5121,6 +5097,13 @@ let rec csize
     | Restore -> one_nat
     | Unwind -> one_nat;;
 
+let rec proc_rep
+  (Imp_prog_ext (proc_rep, declared_global_vars, more)) = proc_rep;;
+
+let rec prog_table p = map_of equal_literal (proc_rep p);;
+
+let rec prog_main p = main_body (prog_table p);;
+
 let char_0x6E : char = Chr (Z.of_int 110);;
 
 let char_0x5C : char = Chr (Z.of_int 92);;
@@ -5129,14 +5112,16 @@ let gv_nl : char list = [char_0x5C; char_0x6E];;
 
 let cinit_sign_st : sign resolved_st_q = Abs_resolved_st (STop, (SZero, []));;
 
-let prog_main_name : string = "main";;
+let rec make
+  proc_rep declared_global_vars =
+    Imp_prog_ext (proc_rep, declared_global_vars, ());;
 
-let rec proc_rep
-  (Imp_prog_ext (proc_rep, declared_global_vars, more)) = proc_rep;;
+let rec mk_program
+  ps m gv = make ((prog_main_name, Proc_decl_ext ([], m, ())) :: ps) gv;;
 
-let rec prog_table p = map_of equal_literal (proc_rep p);;
-
-let rec prog_main p = body (the (prog_table p prog_main_name));;
+let rec prog_procs
+  p = filtera (fun n -> not ((n : string) = prog_main_name))
+        (map fst (proc_rep p));;
 
 let char_0x2D : char = Chr (Z.of_int 45);;
 
@@ -5259,55 +5244,33 @@ let rec map_option f x1 = match f, x1 with f, None -> None
 let rec branch_sign_st_for x = generic_branch_st_for bot_sign sign_ops x;;
 
 let rec sign_tf_st_for
-  source_global x1 s = match source_global, x1, s with
-    source_global, EA_Nop, s -> s
-    | source_global, EA_Assign (x, a), s ->
-        update_resolved_st_q bot_sign s (location_of source_global x)
-          (aval_sign a (fun_of_resolved_st_q_for bot_sign source_global s))
-    | source_global, EA_Special (sc, x), s ->
-        update_resolved_st_q bot_sign s (location_of source_global x)
+  gs x1 s = match gs, x1, s with gs, EA_Nop, s -> s
+    | gs, EA_Assign (x, a), s ->
+        update_resolved_st_q bot_sign s (location_of gs x)
+          (aval_sign a (fun_of_resolved_st_q_for bot_sign gs s))
+    | gs, EA_Special (sc, x), s ->
+        update_resolved_st_q bot_sign s (location_of gs x)
           (match sc with Nondet_Int -> STop
             | Min (a, b) ->
-              sign_min
-                (aval_sign a
-                  (fun_of_resolved_st_q_for bot_sign source_global s))
-                (aval_sign b
-                  (fun_of_resolved_st_q_for bot_sign source_global s))
+              sign_min (aval_sign a (fun_of_resolved_st_q_for bot_sign gs s))
+                (aval_sign b (fun_of_resolved_st_q_for bot_sign gs s))
             | Max (a, b) ->
-              sign_max
-                (aval_sign a
-                  (fun_of_resolved_st_q_for bot_sign source_global s))
-                (aval_sign b
-                  (fun_of_resolved_st_q_for bot_sign source_global s)))
-    | source_global, EA_Assume b, s -> branch_sign_st_for source_global b true s
-    | source_global, EA_AssumeNot b, s ->
-        branch_sign_st_for source_global b false s
-    | source_global, EA_Ret (None, p), s -> s
-    | source_global, EA_Ret (Some a, p), s ->
-        update_resolved_st_q bot_sign s (location_of source_global ret_var)
-          (aval_sign a (fun_of_resolved_st_q_for bot_sign source_global s))
-    | source_global, EA_Check cnd, s -> s;;
+              sign_max (aval_sign a (fun_of_resolved_st_q_for bot_sign gs s))
+                (aval_sign b (fun_of_resolved_st_q_for bot_sign gs s)))
+    | gs, EA_Assume b, s -> branch_sign_st_for gs b true s
+    | gs, EA_AssumeNot b, s -> branch_sign_st_for gs b false s
+    | gs, EA_Ret (None, p), s -> s
+    | gs, EA_Ret (Some a, p), s ->
+        update_resolved_st_q bot_sign s (location_of gs ret_var)
+          (aval_sign a (fun_of_resolved_st_q_for bot_sign gs s))
+    | gs, EA_Check cnd, s -> s;;
 
-let rec make
-  proc_rep declared_global_vars =
-    Imp_prog_ext (proc_rep, declared_global_vars, ());;
-
-let rec mk_program
-  ps m gv = make ((prog_main_name, proc_decl_of [] m) :: ps) gv;;
-
-let rec prog_procs
-  p = filtera (fun n -> not ((n : string) = prog_main_name))
-        (map fst (proc_rep p));;
-
-let rec declared_global_vars
-  (Imp_prog_ext (proc_rep, declared_global_vars, more)) = declared_global_vars;;
-
-let rec declared_global p x = membera equal_literal (declared_global_vars p) x;;
-
-let rec storage_of
-  p owner x = (if declared_global p x then GlobalVar else LocalVar owner);;
-
-let rec call_formals pi q = (match pi q with None -> [] | Some a -> formals a);;
+let rec call_formals
+  pi q =
+    (match pi q
+      with None ->
+        failwith "call_formals: call to an undeclared procedure" (fun _ -> [])
+      | Some a -> formals a);;
 
 let rec compile
   pi p x2 k n = match pi, p, x2, k, n with
@@ -5459,16 +5422,13 @@ let rec compile
 let rec bind_lift x0 f = match x0, f with Bot, f -> Bot
                     | Lifted a, f -> f a;;
 
-let rec bind_formals_abs
-  xs avs sigma =
-    fold (fun (x, a) tau -> fun_upd equal_literal tau x a) (zip xs avs) sigma;;
-
 let rec enter_frame_D
   gs top_val sigma = (fun x -> (if gs x then sigma x else top_val));;
 
 let rec enter_D
   gs top_val aval_abs xs es sigma =
-    bind_formals_abs xs (map (fun e -> aval_abs e sigma) es)
+    fold (fun (x, v) st -> fun_upd equal_literal st x v)
+      (zip xs (map (fun e -> aval_abs e sigma) es))
       (enter_frame_D gs top_val sigma);;
 
 let rec dgs_special
@@ -6179,11 +6139,9 @@ let rec n_aval _A (Numeric_ops_ext (n_aval, n_bfilter, n_top, more)) = n_aval;;
 let rec n_top _A (Numeric_ops_ext (n_aval, n_bfilter, n_top, more)) = n_top;;
 
 let rec generic_enter_st_for _A
-  ops source_global xs es s =
-    bind_formals_resolved_q _A source_global xs
-      (map (fun e ->
-             n_aval _A ops e (fun_of_resolved_st_q_for _A source_global s))
-        es)
+  ops gs xs es s =
+    bind_formals_resolved_q _A gs xs
+      (map (fun e -> n_aval _A ops e (fun_of_resolved_st_q_for _A gs s)) es)
       (enter_frame_D_resolved_q _A (n_top _A ops) s);;
 
 let rec ivl_enter_st_for x = generic_enter_st_for bot_ivl ivl_ops x;;
@@ -6251,6 +6209,18 @@ let rec string_of_sign
 let rec infl_update
   infla (State_ext (c, infl, stabl, sigma, more)) =
     State_ext (c, infla infl, stabl, sigma, more);;
+
+let rec declared_global_vars
+  (Imp_prog_ext (proc_rep, declared_global_vars, more)) = declared_global_vars;;
+
+let rec scope_vnames
+  p owner =
+    sup_set equal_literal
+      (sup_set equal_literal (Set (declared_global_vars p))
+        (insert equal_literal ret_var bot_set))
+      (match prog_table p owner with None -> bot_set
+        | Some decl ->
+          sup_set equal_literal (Set (formals decl)) (com_vnames (body decl)));;
 
 let rec location_vname = function Local_Location x1 -> x1
                          | Global_Location x2 -> x2;;
@@ -6474,15 +6444,6 @@ let rec stabl_update
   stabla (State_ext (c, infl, stabl, sigma, more)) =
     State_ext (c, infl, stabla stabl, sigma, more);;
 
-let rec scope_vnames
-  p owner =
-    sup_set equal_literal
-      (sup_set equal_literal (Set (declared_global_vars p))
-        (insert equal_literal ret_var bot_set))
-      (match prog_table p owner with None -> bot_set
-        | Some decl ->
-          sup_set equal_literal (Set (formals decl)) (com_vnames (body decl)));;
-
 let rec reserved_ret_var gs = not (gs ret_var);;
 
 let rec exp_prio = function N uu -> nat_of_integer (Z.of_int 1000)
@@ -6559,9 +6520,11 @@ let rec compile_procs
                        k ka))));;
 
 let rec compile_prog
-  pi ps mnm main =
+  pi ps =
     (let (n1, (eprocs, kprocs)) = compile_procs pi ps zero_nat in
-     let (_, (emain, kmain)) = compile_proc pi mnm (proc_decl_of [] main) n1 in
+     let (_, (emain, kmain)) =
+       compile_proc pi prog_main_name (Proc_decl_ext ([], main_body pi, ())) n1
+       in
       Cfg_ext
         (sup_set
            (equal_prod equal_cfg_node
@@ -6572,7 +6535,7 @@ let rec compile_prog
               (equal_prod equal_call_action
                 (equal_prod equal_cfg_node equal_cfg_node)))
             kprocs kmain,
-          FunctionEntry mnm,
+          FunctionEntry prog_main_name,
           image (fun (u, (a, _)) -> (u, ea_check_cond a))
             (filter (fun (_, (a, _)) -> is_EA_Check a)
               (sup_set
@@ -6581,8 +6544,7 @@ let rec compile_prog
                 eprocs emain)),
           ()));;
 
-let rec prog_cfg
-  mnm p = compile_prog (prog_table p) (prog_procs p) mnm (prog_main p);;
+let rec prog_cfg p = compile_prog (prog_table p) (prog_procs p);;
 
 let rec combine_resolved_st _A
   sc se =
@@ -7136,153 +7098,132 @@ let rec branch_int_dom_fixpoint_st_for
         int_dom_ops_fixpoint x;;
 
 let rec int_tf_st_fixpoint_for
-  source_global x1 s = match source_global, x1, s with
-    source_global, EA_Nop, s -> s
-    | source_global, EA_Assign (x, a), s ->
+  gs x1 s = match gs, x1, s with gs, EA_Nop, s -> s
+    | gs, EA_Assign (x, a), s ->
         update_resolved_st_q (bot_int_dom_ext int_dom_record_lattice_unit) s
-          (location_of source_global x)
+          (location_of gs x)
           (aval_int_dom Refine_Fixpoint a
             (fun_of_resolved_st_q_for
-              (bot_int_dom_ext int_dom_record_lattice_unit) source_global s))
-    | source_global, EA_Special (sc, x), s ->
+              (bot_int_dom_ext int_dom_record_lattice_unit) gs s))
+    | gs, EA_Special (sc, x), s ->
         update_resolved_st_q (bot_int_dom_ext int_dom_record_lattice_unit) s
-          (location_of source_global x)
+          (location_of gs x)
           (match sc
             with Nondet_Int -> top_int_dom_exta int_dom_record_lattice_unit
             | Min (a, b) ->
               int_dom_min Refine_Fixpoint
                 (aval_int_dom Refine_Fixpoint a
                   (fun_of_resolved_st_q_for
-                    (bot_int_dom_ext int_dom_record_lattice_unit) source_global
-                    s))
+                    (bot_int_dom_ext int_dom_record_lattice_unit) gs s))
                 (aval_int_dom Refine_Fixpoint b
                   (fun_of_resolved_st_q_for
-                    (bot_int_dom_ext int_dom_record_lattice_unit) source_global
-                    s))
+                    (bot_int_dom_ext int_dom_record_lattice_unit) gs s))
             | Max (a, b) ->
               int_dom_max Refine_Fixpoint
                 (aval_int_dom Refine_Fixpoint a
                   (fun_of_resolved_st_q_for
-                    (bot_int_dom_ext int_dom_record_lattice_unit) source_global
-                    s))
+                    (bot_int_dom_ext int_dom_record_lattice_unit) gs s))
                 (aval_int_dom Refine_Fixpoint b
                   (fun_of_resolved_st_q_for
-                    (bot_int_dom_ext int_dom_record_lattice_unit) source_global
-                    s)))
-    | source_global, EA_Assume b, s ->
-        branch_int_dom_fixpoint_st_for source_global b true s
-    | source_global, EA_AssumeNot b, s ->
-        branch_int_dom_fixpoint_st_for source_global b false s
-    | source_global, EA_Ret (None, p), s -> s
-    | source_global, EA_Ret (Some a, p), s ->
+                    (bot_int_dom_ext int_dom_record_lattice_unit) gs s)))
+    | gs, EA_Assume b, s -> branch_int_dom_fixpoint_st_for gs b true s
+    | gs, EA_AssumeNot b, s -> branch_int_dom_fixpoint_st_for gs b false s
+    | gs, EA_Ret (None, p), s -> s
+    | gs, EA_Ret (Some a, p), s ->
         update_resolved_st_q (bot_int_dom_ext int_dom_record_lattice_unit) s
-          (location_of source_global ret_var)
+          (location_of gs ret_var)
           (aval_int_dom Refine_Fixpoint a
             (fun_of_resolved_st_q_for
-              (bot_int_dom_ext int_dom_record_lattice_unit) source_global s))
-    | source_global, EA_Check cnd, s -> s;;
+              (bot_int_dom_ext int_dom_record_lattice_unit) gs s))
+    | gs, EA_Check cnd, s -> s;;
 
 let rec branch_int_dom_never_st_for
   x = generic_branch_st_for (bot_int_dom_ext int_dom_record_lattice_unit)
         int_dom_ops_never x;;
 
 let rec int_tf_st_never_for
-  source_global x1 s = match source_global, x1, s with
-    source_global, EA_Nop, s -> s
-    | source_global, EA_Assign (x, a), s ->
+  gs x1 s = match gs, x1, s with gs, EA_Nop, s -> s
+    | gs, EA_Assign (x, a), s ->
         update_resolved_st_q (bot_int_dom_ext int_dom_record_lattice_unit) s
-          (location_of source_global x)
+          (location_of gs x)
           (aval_int_dom Refine_Never a
             (fun_of_resolved_st_q_for
-              (bot_int_dom_ext int_dom_record_lattice_unit) source_global s))
-    | source_global, EA_Special (sc, x), s ->
+              (bot_int_dom_ext int_dom_record_lattice_unit) gs s))
+    | gs, EA_Special (sc, x), s ->
         update_resolved_st_q (bot_int_dom_ext int_dom_record_lattice_unit) s
-          (location_of source_global x)
+          (location_of gs x)
           (match sc
             with Nondet_Int -> top_int_dom_exta int_dom_record_lattice_unit
             | Min (a, b) ->
               int_dom_min Refine_Never
                 (aval_int_dom Refine_Never a
                   (fun_of_resolved_st_q_for
-                    (bot_int_dom_ext int_dom_record_lattice_unit) source_global
-                    s))
+                    (bot_int_dom_ext int_dom_record_lattice_unit) gs s))
                 (aval_int_dom Refine_Never b
                   (fun_of_resolved_st_q_for
-                    (bot_int_dom_ext int_dom_record_lattice_unit) source_global
-                    s))
+                    (bot_int_dom_ext int_dom_record_lattice_unit) gs s))
             | Max (a, b) ->
               int_dom_max Refine_Never
                 (aval_int_dom Refine_Never a
                   (fun_of_resolved_st_q_for
-                    (bot_int_dom_ext int_dom_record_lattice_unit) source_global
-                    s))
+                    (bot_int_dom_ext int_dom_record_lattice_unit) gs s))
                 (aval_int_dom Refine_Never b
                   (fun_of_resolved_st_q_for
-                    (bot_int_dom_ext int_dom_record_lattice_unit) source_global
-                    s)))
-    | source_global, EA_Assume b, s ->
-        branch_int_dom_never_st_for source_global b true s
-    | source_global, EA_AssumeNot b, s ->
-        branch_int_dom_never_st_for source_global b false s
-    | source_global, EA_Ret (None, p), s -> s
-    | source_global, EA_Ret (Some a, p), s ->
+                    (bot_int_dom_ext int_dom_record_lattice_unit) gs s)))
+    | gs, EA_Assume b, s -> branch_int_dom_never_st_for gs b true s
+    | gs, EA_AssumeNot b, s -> branch_int_dom_never_st_for gs b false s
+    | gs, EA_Ret (None, p), s -> s
+    | gs, EA_Ret (Some a, p), s ->
         update_resolved_st_q (bot_int_dom_ext int_dom_record_lattice_unit) s
-          (location_of source_global ret_var)
+          (location_of gs ret_var)
           (aval_int_dom Refine_Never a
             (fun_of_resolved_st_q_for
-              (bot_int_dom_ext int_dom_record_lattice_unit) source_global s))
-    | source_global, EA_Check cnd, s -> s;;
+              (bot_int_dom_ext int_dom_record_lattice_unit) gs s))
+    | gs, EA_Check cnd, s -> s;;
 
 let rec branch_int_dom_once_st_for
   x = generic_branch_st_for (bot_int_dom_ext int_dom_record_lattice_unit)
         int_dom_ops_once x;;
 
 let rec int_tf_st_once_for
-  source_global x1 s = match source_global, x1, s with
-    source_global, EA_Nop, s -> s
-    | source_global, EA_Assign (x, a), s ->
+  gs x1 s = match gs, x1, s with gs, EA_Nop, s -> s
+    | gs, EA_Assign (x, a), s ->
         update_resolved_st_q (bot_int_dom_ext int_dom_record_lattice_unit) s
-          (location_of source_global x)
+          (location_of gs x)
           (aval_int_dom Refine_Once a
             (fun_of_resolved_st_q_for
-              (bot_int_dom_ext int_dom_record_lattice_unit) source_global s))
-    | source_global, EA_Special (sc, x), s ->
+              (bot_int_dom_ext int_dom_record_lattice_unit) gs s))
+    | gs, EA_Special (sc, x), s ->
         update_resolved_st_q (bot_int_dom_ext int_dom_record_lattice_unit) s
-          (location_of source_global x)
+          (location_of gs x)
           (match sc
             with Nondet_Int -> top_int_dom_exta int_dom_record_lattice_unit
             | Min (a, b) ->
               int_dom_min Refine_Once
                 (aval_int_dom Refine_Once a
                   (fun_of_resolved_st_q_for
-                    (bot_int_dom_ext int_dom_record_lattice_unit) source_global
-                    s))
+                    (bot_int_dom_ext int_dom_record_lattice_unit) gs s))
                 (aval_int_dom Refine_Once b
                   (fun_of_resolved_st_q_for
-                    (bot_int_dom_ext int_dom_record_lattice_unit) source_global
-                    s))
+                    (bot_int_dom_ext int_dom_record_lattice_unit) gs s))
             | Max (a, b) ->
               int_dom_max Refine_Once
                 (aval_int_dom Refine_Once a
                   (fun_of_resolved_st_q_for
-                    (bot_int_dom_ext int_dom_record_lattice_unit) source_global
-                    s))
+                    (bot_int_dom_ext int_dom_record_lattice_unit) gs s))
                 (aval_int_dom Refine_Once b
                   (fun_of_resolved_st_q_for
-                    (bot_int_dom_ext int_dom_record_lattice_unit) source_global
-                    s)))
-    | source_global, EA_Assume b, s ->
-        branch_int_dom_once_st_for source_global b true s
-    | source_global, EA_AssumeNot b, s ->
-        branch_int_dom_once_st_for source_global b false s
-    | source_global, EA_Ret (None, p), s -> s
-    | source_global, EA_Ret (Some a, p), s ->
+                    (bot_int_dom_ext int_dom_record_lattice_unit) gs s)))
+    | gs, EA_Assume b, s -> branch_int_dom_once_st_for gs b true s
+    | gs, EA_AssumeNot b, s -> branch_int_dom_once_st_for gs b false s
+    | gs, EA_Ret (None, p), s -> s
+    | gs, EA_Ret (Some a, p), s ->
         update_resolved_st_q (bot_int_dom_ext int_dom_record_lattice_unit) s
-          (location_of source_global ret_var)
+          (location_of gs ret_var)
           (aval_int_dom Refine_Once a
             (fun_of_resolved_st_q_for
-              (bot_int_dom_ext int_dom_record_lattice_unit) source_global s))
-    | source_global, EA_Check cnd, s -> s;;
+              (bot_int_dom_ext int_dom_record_lattice_unit) gs s))
+    | gs, EA_Check cnd, s -> s;;
 
 let rec int_tf_st_for
   x0 gs = match x0, gs with Refine_Never, gs -> int_tf_st_never_for gs
@@ -7300,7 +7241,7 @@ let rec ictx_spec
       gs is_bot_pred (int_tf_st_for mode gs) (int_dom_enter_st_for mode gs);;
 
 let rec ictx_eqs
-  mode is_bot_pred gs pi ps mnm main =
+  mode is_bot_pred gs pi ps =
     side_cfg_T_eff_keyed_seed_dg_buffered equal_gk
       (bounded_semilattice_sup_bot_lifted
         (semilattice_sup_resolved_st_q
@@ -7321,7 +7262,7 @@ let rec ictx_eqs
             (bounded_semilattice_sup_bot_int_dom_ext
               int_dom_record_lattice_unit)))
         (ictx_spec mode is_bot_pred gs) Global (fun a b -> Seed (a, b))
-        (static_resolve (compile_prog pi ps mnm main)))
+        (static_resolve (compile_prog pi ps)))
       (routed_extra_g
         (bounded_semilattice_sup_bot_lifted
           (semilattice_sup_resolved_st_q
@@ -7332,7 +7273,7 @@ let rec ictx_eqs
             (bounded_semilattice_sup_bot_int_dom_ext
               int_dom_record_lattice_unit)))
         (fun a b -> Seed (a, b)) Global)
-      (compile_prog pi ps mnm main) (ictx_spec mode is_bot_pred gs) Bot
+      (compile_prog pi ps) (ictx_spec mode is_bot_pred gs) Bot
       (Lifted cinit_int_dom_st) Bot;;
 
 let char_0x64 : char = Chr (Z.of_int 100);;
@@ -7641,33 +7582,28 @@ let rec ivl_tf_for
            (fun _ -> combine_env_abs gs), ());;
 
 let rec parity_tf_st_for
-  source_global x1 s = match source_global, x1, s with
-    source_global, EA_Nop, s -> s
-    | source_global, EA_Assign (x, a), s ->
-        update_resolved_st_q bot_parity s (location_of source_global x)
-          (aval_parity a (fun_of_resolved_st_q_for bot_parity source_global s))
-    | source_global, EA_Special (sc, x), s ->
-        update_resolved_st_q bot_parity s (location_of source_global x)
+  gs x1 s = match gs, x1, s with gs, EA_Nop, s -> s
+    | gs, EA_Assign (x, a), s ->
+        update_resolved_st_q bot_parity s (location_of gs x)
+          (aval_parity a (fun_of_resolved_st_q_for bot_parity gs s))
+    | gs, EA_Special (sc, x), s ->
+        update_resolved_st_q bot_parity s (location_of gs x)
           (match sc with Nondet_Int -> PTop
             | Min (a, b) ->
               parity_min
-                (aval_parity a
-                  (fun_of_resolved_st_q_for bot_parity source_global s))
-                (aval_parity b
-                  (fun_of_resolved_st_q_for bot_parity source_global s))
+                (aval_parity a (fun_of_resolved_st_q_for bot_parity gs s))
+                (aval_parity b (fun_of_resolved_st_q_for bot_parity gs s))
             | Max (a, b) ->
               parity_max
-                (aval_parity a
-                  (fun_of_resolved_st_q_for bot_parity source_global s))
-                (aval_parity b
-                  (fun_of_resolved_st_q_for bot_parity source_global s)))
-    | source_global, EA_Assume b, s -> s
-    | source_global, EA_AssumeNot b, s -> s
-    | source_global, EA_Ret (None, p), s -> s
-    | source_global, EA_Ret (Some a, p), s ->
-        update_resolved_st_q bot_parity s (location_of source_global ret_var)
-          (aval_parity a (fun_of_resolved_st_q_for bot_parity source_global s))
-    | source_global, EA_Check cnd, s -> s;;
+                (aval_parity a (fun_of_resolved_st_q_for bot_parity gs s))
+                (aval_parity b (fun_of_resolved_st_q_for bot_parity gs s)))
+    | gs, EA_Assume b, s -> s
+    | gs, EA_AssumeNot b, s -> s
+    | gs, EA_Ret (None, p), s -> s
+    | gs, EA_Ret (Some a, p), s ->
+        update_resolved_st_q bot_parity s (location_of gs ret_var)
+          (aval_parity a (fun_of_resolved_st_q_for bot_parity gs s))
+    | gs, EA_Check cnd, s -> s;;
 
 let rec less_eq_set _A
   a b = match a, b with Set xs, b -> list_all (fun x -> member _A x b) xs
@@ -7684,7 +7620,7 @@ let rec sctx_spec
       gs is_bot_pred (sign_tf_st_for gs) (sign_enter_st_for gs);;
 
 let rec sctx_eqs
-  gs is_bot_pred pi ps mnm main =
+  gs is_bot_pred pi ps =
     side_cfg_T_eff_keyed_seed_dg_buffered equal_gka
       (bounded_semilattice_sup_bot_lifted
         (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_sign))
@@ -7697,24 +7633,22 @@ let rec sctx_eqs
         (bounded_semilattice_sup_bot_lifted
           (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_sign))
         (sctx_spec gs is_bot_pred) Globala (fun a b -> Seeda (a, b))
-        (static_resolve (compile_prog pi ps mnm main)))
+        (static_resolve (compile_prog pi ps)))
       (routed_extra_g
         (bounded_semilattice_sup_bot_lifted
           (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_sign))
         (bounded_semilattice_sup_bot_lifted
           (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_sign))
         (fun a b -> Seeda (a, b)) Globala)
-      (compile_prog pi ps mnm main) (sctx_spec gs is_bot_pred) Bot
-      (Lifted cinit_sign_st) Bot;;
+      (compile_prog pi ps) (sctx_spec gs is_bot_pred) Bot (Lifted cinit_sign_st)
+      Bot;;
 
 let rec point
   (State_ext (c, infl, stabl, sigma, State_exta (point, more))) = point;;
 
 let rec rho (Ug_state_ext (rho, more)) = rho;;
 
-let rec storage_global
-  p owner x =
-    (match storage_of p owner x with LocalVar _ -> false | GlobalVar -> true);;
+let rec declared_global p x = membera equal_literal (declared_global_vars p) x;;
 
 let rec split_gv_nl_acc
   acc x1 = match acc, x1 with acc, [] -> [rev acc]
@@ -7932,16 +7866,16 @@ let rec resolved_st_q_is_bot_for _A
     resolved_st_is_bot_for _A xb (membera equal_literal xb) xa;;
 
 let rec ictx_eqs_prog
-  mode gs mnm p =
+  mode gs p =
     ictx_eqs mode
       (resolved_st_q_is_bot_for
         (computable_domain_int_dom_ext
           (equal_unit, int_dom_record_lattice_unit))
         (declared_global_vars p))
-      gs (prog_table p) (prog_procs p) mnm (prog_main p);;
+      gs (prog_table p) (prog_procs p);;
 
 let rec ictx_sol_prog_warrow
-  mode gs mnm p =
+  mode gs p =
     tD_side_warrowing_apinis_Interp_solve (equal_prod equal_cfg_node equal_unit)
       equal_gk
       ((equal_dg_state
@@ -7971,7 +7905,7 @@ let rec ictx_sol_prog_warrow
           (bounded_warrowing_lifted
             (bounded_warrowing_resolved_st_q
               (bounded_warrowing_int_dom_ext int_dom_record_warrowing_unit)))))
-      (ictx_eqs_prog mode gs mnm p) (cfg_exit (prog_cfg mnm p), ());;
+      (ictx_eqs_prog mode gs p) (cfg_exit (prog_cfg p), ());;
 
 let rec canonicalize_lift is_bot_pred = transfer_lift is_bot_pred id;;
 
@@ -7980,8 +7914,8 @@ let rec normalize_point _A
     | gs, Lifted s -> Reachable (fun_of_resolved_st_q_for _A gs s);;
 
 let rec analyse_int_ctx_result_warrow_for
-  mode gs mnm p =
-    (let sol = ictx_sol_prog_warrow mode gs mnm p in
+  mode gs p =
+    (let sol = ictx_sol_prog_warrow mode gs p in
      let gl = declared_global_vars p in
       Analysis_Result
         (fst sol,
@@ -8019,8 +7953,7 @@ let rec classify_checks
 
 let rec report
   table bot_state classify p =
-    classify_checks (prog_cfg prog_main_name p) (state_at table bot_state p)
-      classify;;
+    classify_checks (prog_cfg p) (state_at table bot_state p) classify;;
 
 let rec int_classify_check
   c d = (if int_check_true c d then Check_Proved
@@ -8028,7 +7961,7 @@ let rec int_classify_check
 
 let rec analyse_int_report_for
   mode gs p =
-    report (analyse_int_ctx_result_warrow_for mode gs prog_main_name)
+    report (analyse_int_ctx_result_warrow_for mode gs)
       (bot_fun (bot_int_dom_ext int_dom_record_lattice_unit)) int_classify_check
       p;;
 
@@ -8036,7 +7969,7 @@ let rec analyse_int_report
   p = analyse_int_report_for Refine_Fixpoint (declared_global p) p;;
 
 let rec analyse_int_result_for
-  gs p = analyse_int_ctx_result_warrow_for Refine_Fixpoint gs prog_main_name p;;
+  gs p = analyse_int_ctx_result_warrow_for Refine_Fixpoint gs p;;
 
 let rec analyse_int_result p = analyse_int_result_for (declared_global p) p;;
 
@@ -8066,7 +7999,7 @@ let rec pctx_spec
       gs is_bot_pred (parity_tf_st_for gs) (parity_enter_st_for gs);;
 
 let rec pctx_eqs
-  gs is_bot_pred pi ps mnm main =
+  gs is_bot_pred pi ps =
     side_cfg_T_eff_keyed_seed_dg_buffered equal_gkb
       (bounded_semilattice_sup_bot_lifted
         (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_parity))
@@ -8079,17 +8012,22 @@ let rec pctx_eqs
         (bounded_semilattice_sup_bot_lifted
           (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_parity))
         (pctx_spec gs is_bot_pred) Globalb (fun a b -> Seedb (a, b))
-        (static_resolve (compile_prog pi ps mnm main)))
+        (static_resolve (compile_prog pi ps)))
       (routed_extra_g
         (bounded_semilattice_sup_bot_lifted
           (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_parity))
         (bounded_semilattice_sup_bot_lifted
           (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_parity))
         (fun a b -> Seedb (a, b)) Globalb)
-      (compile_prog pi ps mnm main) (pctx_spec gs is_bot_pred) Bot
+      (compile_prog pi ps) (pctx_spec gs is_bot_pred) Bot
       (Lifted cinit_parity_st) Bot;;
 
 let rec formals_context pars d = map d pars;;
+
+let rec scope_vnames_list
+  p owner =
+    sorted_list_of_set (equal_literal, linorder_literal)
+      (scope_vnames p owner);;
 
 let rec graphviz_exit
   g = (match cfg_entry g with Statement a -> Statement a
@@ -8294,13 +8232,13 @@ let rec tD_side_always_join_Interp_solve _A _B (_C1, _C2, _C3)
           | Some r -> r);;
 
 let rec sctx_eqs_prog
-  gs mnm p =
+  gs p =
     sctx_eqs gs
       (resolved_st_q_is_bot_for computable_domain_sign (declared_global_vars p))
-      (prog_table p) (prog_procs p) mnm (prog_main p);;
+      (prog_table p) (prog_procs p);;
 
 let rec sctx_sol_prog
-  gs mnm p =
+  gs p =
     tD_side_always_join_Interp_solve (equal_prod equal_cfg_node equal_unit)
       equal_gka
       ((equal_dg_state
@@ -8324,11 +8262,11 @@ let rec sctx_sol_prog
             (bounded_warrowing_resolved_st_q bounded_warrowing_sign))
           (bounded_warrowing_lifted
             (bounded_warrowing_resolved_st_q bounded_warrowing_sign))))
-      (sctx_eqs_prog gs mnm p) (cfg_exit (prog_cfg mnm p), ());;
+      (sctx_eqs_prog gs p) (cfg_exit (prog_cfg p), ());;
 
 let rec analyse_sign_ctx_result_for
-  gs mnm p =
-    (let sol = sctx_sol_prog gs mnm p in
+  gs p =
+    (let sol = sctx_sol_prog gs p in
      let gl = declared_global_vars p in
       Analysis_Result
         (fst sol,
@@ -8338,8 +8276,7 @@ let rec analyse_sign_ctx_result_for
                 (resolved_st_q_is_bot_for computable_domain_sign gl)
                 (locals (snd sol (Inl (v, ctx))))))));;
 
-let rec analyse_sign_result_for
-  gs p = analyse_sign_ctx_result_for gs prog_main_name p;;
+let rec analyse_sign_result_for gs p = analyse_sign_ctx_result_for gs p;;
 
 let rec sign_classify_check
   c d = (if sign_check_true c d then Check_Proved
@@ -8354,11 +8291,6 @@ let rec analyse_sign_report_for
 let rec analyse_sign_report p = analyse_sign_report_for (declared_global p) p;;
 
 let rec analyse_sign_result p = analyse_sign_result_for (declared_global p) p;;
-
-let rec scope_vnames_list
-  p owner =
-    sorted_list_of_set (equal_literal, linorder_literal)
-      (scope_vnames p owner);;
 
 let rec source_indent
   n = (if equal_nata n zero_nat then []
@@ -9156,27 +9088,27 @@ let rec compiled_proc_owner
                 else compiled_proc_owner pi ps na k)));;
 
 let rec compiled_owner_of
-  pi ps mnm main p =
+  pi ps p =
     (match p
       with Statement k ->
-        (match compiled_proc_owner pi ps zero_nat k with None -> mnm
+        (match compiled_proc_owner pi ps zero_nat k with None -> prog_main_name
           | Some owner -> owner)
       | FunctionEntry owner -> owner | FunctionResult owner -> owner);;
 
 let rec raw_cfg_graph_config
-  pi ps mnm main annotate =
+  pi ps annotate =
     Analysis_graph_config_ext
       (id, (fun _ _ _ _ -> Some ()), (fun _ -> ""), (fun _ -> []),
         (fun _ -> []), (fun _ -> None), [], (fun _ _ _ _ -> []),
         (fun _ _ _ _ -> []), (fun _ _ _ -> []), (fun _ -> []), (fun _ -> false),
-        false, comp explode (compiled_owner_of pi ps mnm main),
-        (fun owner _ -> owner), Some (pretty_string_of_program pi ps main []),
+        false, comp explode (compiled_owner_of pi ps), (fun owner _ -> owner),
+        Some (pretty_string_of_program pi ps (main_body pi) []),
         (fun p _ -> annotate p), ());;
 
 let rec raw_cfg_export
-  pi ps mnm main annotate =
-    (let g = compile_prog pi ps mnm main in
-     let cfg = raw_cfg_graph_config pi ps mnm main annotate in
+  pi ps annotate =
+    (let g = compile_prog pi ps in
+     let cfg = raw_cfg_graph_config pi ps annotate in
      let domain = contextual_graph_domain g (fun _ -> [()]) in
       contextual_analysis_export equal_unit equal_unit cfg g domain
         (fun _ -> ()));;
@@ -9191,7 +9123,7 @@ let rec join_states_over _B
       cs Unreachable;;
 
 let rec ictx_sol_prog
-  mode gs mnm p =
+  mode gs p =
     tD_side_always_join_Interp_solve (equal_prod equal_cfg_node equal_unit)
       equal_gk
       ((equal_dg_state
@@ -9221,7 +9153,7 @@ let rec ictx_sol_prog
           (bounded_warrowing_lifted
             (bounded_warrowing_resolved_st_q
               (bounded_warrowing_int_dom_ext int_dom_record_warrowing_unit)))))
-      (ictx_eqs_prog mode gs mnm p) (cfg_exit (prog_cfg mnm p), ());;
+      (ictx_eqs_prog mode gs p) (cfg_exit (prog_cfg p), ());;
 
 let rec ictx_speca
   gs is_bot_pred =
@@ -9231,7 +9163,7 @@ let rec ictx_speca
       gs is_bot_pred (ivl_tf_st_for gs) (ivl_enter_st_for gs);;
 
 let rec ictx_eqsa
-  gs is_bot_pred pi ps mnm main =
+  gs is_bot_pred pi ps =
     side_cfg_T_eff_keyed_seed_dg_buffered equal_gkc
       (bounded_semilattice_sup_bot_lifted
         (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_ivl))
@@ -9244,15 +9176,15 @@ let rec ictx_eqsa
         (bounded_semilattice_sup_bot_lifted
           (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_ivl))
         (ictx_speca gs is_bot_pred) Globalc (fun a b -> Seedc (a, b))
-        (static_resolve (compile_prog pi ps mnm main)))
+        (static_resolve (compile_prog pi ps)))
       (routed_extra_g
         (bounded_semilattice_sup_bot_lifted
           (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_ivl))
         (bounded_semilattice_sup_bot_lifted
           (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_ivl))
         (fun a b -> Seedc (a, b)) Globalc)
-      (compile_prog pi ps mnm main) (ictx_speca gs is_bot_pred) Bot
-      (Lifted cinit_ivl_st) Bot;;
+      (compile_prog pi ps) (ictx_speca gs is_bot_pred) Bot (Lifted cinit_ivl_st)
+      Bot;;
 
 let rec update_global_warrowing_per_origin (_A1, _A2, _A3) _B _C
   da orig g d state =
@@ -9410,7 +9342,7 @@ let rec tD_side_warrowing_per_origin_Interp_solve _A _B (_C1, _C2, _C3)
           | Some r -> r);;
 
 let rec ictx_sol_prog_wpo
-  mode gs mnm p =
+  mode gs p =
     tD_side_warrowing_per_origin_Interp_solve
       (equal_prod equal_cfg_node equal_unit) equal_gk
       ((equal_dg_state
@@ -9440,11 +9372,11 @@ let rec ictx_sol_prog_wpo
           (bounded_warrowing_lifted
             (bounded_warrowing_resolved_st_q
               (bounded_warrowing_int_dom_ext int_dom_record_warrowing_unit)))))
-      (ictx_eqs_prog mode gs mnm p) (cfg_exit (prog_cfg mnm p), ());;
+      (ictx_eqs_prog mode gs p) (cfg_exit (prog_cfg p), ());;
 
 let rec analyse_int_ctx_result_wpo_for
-  mode gs mnm p =
-    (let sol = ictx_sol_prog_wpo mode gs mnm p in
+  mode gs p =
+    (let sol = ictx_sol_prog_wpo mode gs p in
      let gl = declared_global_vars p in
       Analysis_Result
         (fst sol,
@@ -9458,7 +9390,7 @@ let rec analyse_int_ctx_result_wpo_for
                 (locals (snd sol (Inl (v, ctx))))))));;
 
 let rec analyse_int_wpo_result_for
-  mode gs p = analyse_int_ctx_result_wpo_for mode gs prog_main_name p;;
+  mode gs p = analyse_int_ctx_result_wpo_for mode gs p;;
 
 let rec analyse_int_report_wpo_for
   mode gs p =
@@ -9473,7 +9405,7 @@ let rec analyse_int_wpo_result
   p = analyse_int_wpo_result_for Refine_Fixpoint (declared_global p) p;;
 
 let rec ics_eqs
-  k mode gs is_bot_pred pi ps mnm main =
+  k mode gs is_bot_pred pi ps =
     side_cfg_T_eff_keyed_seed_dg_buffered equal_call_string_gk
       (bounded_semilattice_sup_bot_lifted
         (semilattice_sup_resolved_st_q
@@ -9494,7 +9426,7 @@ let rec ics_eqs
             (bounded_semilattice_sup_bot_int_dom_ext
               int_dom_record_lattice_unit)))
         (ictx_spec mode is_bot_pred gs) Globalg (fun a b -> Seedg (a, b))
-        (static_resolve (compile_prog pi ps mnm main)))
+        (static_resolve (compile_prog pi ps)))
       (routed_extra_g
         (bounded_semilattice_sup_bot_lifted
           (semilattice_sup_resolved_st_q
@@ -9505,11 +9437,11 @@ let rec ics_eqs
             (bounded_semilattice_sup_bot_int_dom_ext
               int_dom_record_lattice_unit)))
         (fun a b -> Seedg (a, b)) Globalg)
-      (compile_prog pi ps mnm main) (ictx_spec mode is_bot_pred gs) Bot
+      (compile_prog pi ps) (ictx_spec mode is_bot_pred gs) Bot
       (Lifted cinit_int_dom_st) Bot;;
 
 let rec ics_sol
-  k mode gs is_bot_pred pi ps mnm main =
+  k mode gs is_bot_pred pi ps =
     tD_side_always_join_Interp_solve
       (equal_prod equal_cfg_node (equal_list equal_cfg_node))
       equal_call_string_gk
@@ -9540,8 +9472,8 @@ let rec ics_sol
           (bounded_warrowing_lifted
             (bounded_warrowing_resolved_st_q
               (bounded_warrowing_int_dom_ext int_dom_record_warrowing_unit)))))
-      (ics_eqs k mode gs is_bot_pred pi ps mnm main)
-      (cfg_exit (compile_prog pi ps mnm main), []);;
+      (ics_eqs k mode gs is_bot_pred pi ps)
+      (cfg_exit (compile_prog pi ps), []);;
 
 let rec equal_check_result
   x0 x1 = match x0, x1 with Check_Refuted, Check_Unknown -> false
@@ -9577,8 +9509,7 @@ let rec cs_cluster_label
                char_0x6E; char_0x67; char_0x3D] @
                cs_show_context ctx);;
 
-let rec compile_program
-  p = compile_prog (prog_table p) (prog_procs p) prog_main_name (prog_main p);;
+let rec compile_program p = compile_prog (prog_table p) (prog_procs p);;
 
 let rec procs_stmt_next
   pi x1 n = match pi, x1, n with pi, [], n -> n
@@ -9588,8 +9519,8 @@ let rec procs_stmt_next
             procs_stmt_next pi ps (suc (plus_nat n (csize (body decl)))));;
 
 let rec analyse_int_ctx_result_for
-  mode gs mnm p =
-    (let sol = ictx_sol_prog mode gs mnm p in
+  mode gs p =
+    (let sol = ictx_sol_prog mode gs p in
      let gl = declared_global_vars p in
       Analysis_Result
         (fst sol,
@@ -9603,7 +9534,7 @@ let rec analyse_int_ctx_result_for
                 (locals (snd sol (Inl (v, ctx))))))));;
 
 let rec analyse_int_join_result_for
-  mode gs p = analyse_int_ctx_result_for mode gs prog_main_name p;;
+  mode gs p = analyse_int_ctx_result_for mode gs p;;
 
 let rec analyse_int_join_result
   p = analyse_int_join_result_for Refine_Fixpoint (declared_global p) p;;
@@ -9618,7 +9549,7 @@ let rec analyse_int_report_join
   p = analyse_int_report_join_for Refine_Fixpoint (declared_global p) p;;
 
 let rec scs_eqs
-  k gs is_bot_pred pi ps mnm main =
+  k gs is_bot_pred pi ps =
     side_cfg_T_eff_keyed_seed_dg_buffered equal_call_string_gk
       (bounded_semilattice_sup_bot_lifted
         (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_sign))
@@ -9631,18 +9562,18 @@ let rec scs_eqs
         (bounded_semilattice_sup_bot_lifted
           (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_sign))
         (sctx_spec gs is_bot_pred) Globalg (fun a b -> Seedg (a, b))
-        (static_resolve (compile_prog pi ps mnm main)))
+        (static_resolve (compile_prog pi ps)))
       (routed_extra_g
         (bounded_semilattice_sup_bot_lifted
           (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_sign))
         (bounded_semilattice_sup_bot_lifted
           (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_sign))
         (fun a b -> Seedg (a, b)) Globalg)
-      (compile_prog pi ps mnm main) (sctx_spec gs is_bot_pred) Bot
-      (Lifted cinit_sign_st) Bot;;
+      (compile_prog pi ps) (sctx_spec gs is_bot_pred) Bot (Lifted cinit_sign_st)
+      Bot;;
 
 let rec scs_sol
-  k gs is_bot_pred pi ps mnm main =
+  k gs is_bot_pred pi ps =
     tD_side_always_join_Interp_solve
       (equal_prod equal_cfg_node (equal_list equal_cfg_node))
       equal_call_string_gk
@@ -9667,8 +9598,7 @@ let rec scs_sol
             (bounded_warrowing_resolved_st_q bounded_warrowing_sign))
           (bounded_warrowing_lifted
             (bounded_warrowing_resolved_st_q bounded_warrowing_sign))))
-      (scs_eqs k gs is_bot_pred pi ps mnm main)
-      (cfg_exit (compile_prog pi ps mnm main), []);;
+      (scs_eqs k gs is_bot_pred pi ps) (cfg_exit (compile_prog pi ps), []);;
 
 let rec classify_checks_ctx _A
   g r classify =
@@ -9692,14 +9622,14 @@ let rec lookup_joined_state _A _B
   r v = join_states_over _B (lookup_context _A r v) (contexts_at r v);;
 
 let rec pctx_eqs_prog
-  gs mnm p =
+  gs p =
     pctx_eqs gs
       (resolved_st_q_is_bot_for computable_domain_parity
         (declared_global_vars p))
-      (prog_table p) (prog_procs p) mnm (prog_main p);;
+      (prog_table p) (prog_procs p);;
 
 let rec pctx_sol_prog
-  gs mnm p =
+  gs p =
     tD_side_always_join_Interp_solve (equal_prod equal_cfg_node equal_unit)
       equal_gkb
       ((equal_dg_state
@@ -9723,11 +9653,11 @@ let rec pctx_sol_prog
             (bounded_warrowing_resolved_st_q bounded_warrowing_parity))
           (bounded_warrowing_lifted
             (bounded_warrowing_resolved_st_q bounded_warrowing_parity))))
-      (pctx_eqs_prog gs mnm p) (cfg_exit (prog_cfg mnm p), ());;
+      (pctx_eqs_prog gs p) (cfg_exit (prog_cfg p), ());;
 
 let rec analyse_parity_ctx_result_for
-  gs mnm p =
-    (let sol = pctx_sol_prog gs mnm p in
+  gs p =
+    (let sol = pctx_sol_prog gs p in
      let gl = declared_global_vars p in
       Analysis_Result
         (fst sol,
@@ -9737,8 +9667,7 @@ let rec analyse_parity_ctx_result_for
                 (resolved_st_q_is_bot_for computable_domain_parity gl)
                 (locals (snd sol (Inl (v, ctx))))))));;
 
-let rec analyse_parity_result_for
-  gs p = analyse_parity_ctx_result_for gs prog_main_name p;;
+let rec analyse_parity_result_for gs p = analyse_parity_ctx_result_for gs p;;
 
 let rec parity_classify_check
   c d = (if parity_check_true c d then Check_Proved
@@ -9772,22 +9701,6 @@ let rec context_key
 
 let rec result_contexts_at
   cfg r p = ordered_by_key (context_key cfg) (contexts_at r p);;
-
-let rec com_stmt_post_order
-  n x1 = match n, x1 with n, SKIP -> [Statement n]
-    | n, Assign (x, a) -> [Statement n]
-    | n, Check c -> [Statement n]
-    | n, Seq (c1, c2) ->
-        com_stmt_post_order n c1 @
-          com_stmt_post_order (plus_nat n (csize c1)) c2
-    | n, If (b, c1, c2) ->
-        com_stmt_post_order (suc n) c1 @
-          com_stmt_post_order (plus_nat (suc n) (csize c1)) c2 @ [Statement n]
-    | n, While (b, c) -> com_stmt_post_order (suc n) c @ [Statement n]
-    | n, Call (dst, q, actuals) -> [Statement n]
-    | n, Return e -> [Statement n]
-    | n, Restore -> [Statement n]
-    | n, Unwind -> [Statement n];;
 
 let rec xe_kind
   (Export_edge_ext (xe_src, xe_dst, xe_kind, xe_label, more)) = xe_kind;;
@@ -9851,13 +9764,13 @@ and interval_check_false
           (aval_ivl (N zero_inta) d);;
 
 let rec ictx_eqs_proga
-  gs mnm p =
+  gs p =
     ictx_eqsa gs
       (resolved_st_q_is_bot_for computable_domain_ivl (declared_global_vars p))
-      (prog_table p) (prog_procs p) mnm (prog_main p);;
+      (prog_table p) (prog_procs p);;
 
 let rec ictx_sol_proga
-  gs mnm p =
+  gs p =
     tD_side_always_join_Interp_solve (equal_prod equal_cfg_node equal_unit)
       equal_gkc
       ((equal_dg_state
@@ -9881,7 +9794,7 @@ let rec ictx_sol_proga
             (bounded_warrowing_resolved_st_q bounded_warrowing_ivl))
           (bounded_warrowing_lifted
             (bounded_warrowing_resolved_st_q bounded_warrowing_ivl))))
-      (ictx_eqs_proga gs mnm p) (cfg_exit (prog_cfg mnm p), ());;
+      (ictx_eqs_proga gs p) (cfg_exit (prog_cfg p), ());;
 
 let rec update_global_per_origin (_A1, _A2) _B _C
   da orig g d state =
@@ -9923,14 +9836,30 @@ let rec xn_lines
   (Export_node_ext (xn_id, xn_label, xn_kind, xn_status, xn_lines, more)) =
     xn_lines;;
 
+let rec com_stmt_post_order
+  n x1 = match n, x1 with n, SKIP -> [Statement n]
+    | n, Assign (x, a) -> [Statement n]
+    | n, Check c -> [Statement n]
+    | n, Seq (c1, c2) ->
+        com_stmt_post_order n c1 @
+          com_stmt_post_order (plus_nat n (csize c1)) c2
+    | n, If (b, c1, c2) ->
+        com_stmt_post_order (suc n) c1 @
+          com_stmt_post_order (plus_nat (suc n) (csize c1)) c2 @ [Statement n]
+    | n, While (b, c) -> com_stmt_post_order (suc n) c @ [Statement n]
+    | n, Call (dst, q, actuals) -> [Statement n]
+    | n, Return e -> [Statement n]
+    | n, Restore -> [Statement n]
+    | n, Unwind -> [Statement n];;
+
 let rec ics_sol_prog
-  k gs mnm p =
+  k gs p =
     ics_sol k Refine_Fixpoint gs
       (resolved_st_q_is_bot_for
         (computable_domain_int_dom_ext
           (equal_unit, int_dom_record_lattice_unit))
         (declared_global_vars p))
-      (prog_table p) (prog_procs p) mnm (prog_main p);;
+      (prog_table p) (prog_procs p);;
 
 let rec xg_edges
   (Export_graph_ext (xg_clusters, xg_nodes, xg_edges, more)) = xg_edges;;
@@ -9959,8 +9888,8 @@ let rec prog_stmt_post_order
              (prog_main p))];;
 
 let rec analyse_interval_ctx_result_for
-  gs mnm p =
-    (let sol = ictx_sol_proga gs mnm p in
+  gs p =
+    (let sol = ictx_sol_proga gs p in
      let gl = declared_global_vars p in
       Analysis_Result
         (fst sol,
@@ -9971,7 +9900,7 @@ let rec analyse_interval_ctx_result_for
                 (locals (snd sol (Inl (v, ctx))))))));;
 
 let rec analyse_interval_join_result_for
-  gs p = analyse_interval_ctx_result_for gs prog_main_name p;;
+  gs p = analyse_interval_ctx_result_for gs p;;
 
 let rec interval_classify_check
   c d = (if interval_check_true c d then Check_Proved
@@ -9987,10 +9916,10 @@ let rec analyse_interval_report
   p = analyse_interval_report_for (declared_global p) p;;
 
 let rec scs_sol_prog
-  k gs mnm p =
+  k gs p =
     scs_sol k gs
       (resolved_st_q_is_bot_for computable_domain_sign (declared_global_vars p))
-      (prog_table p) (prog_procs p) mnm (prog_main p);;
+      (prog_table p) (prog_procs p);;
 
 let rec classify_checks_verdicts _A
   g r classify =
@@ -10075,9 +10004,9 @@ let rec contextual_analysis_canonical_text _A _B
       (build_analysis_graph _A _B cfg g domain sol);;
 
 let rec raw_cfg_canonical_text
-  pi ps mnm main annotate =
-    (let g = compile_prog pi ps mnm main in
-     let cfg = raw_cfg_graph_config pi ps mnm main annotate in
+  pi ps annotate =
+    (let g = compile_prog pi ps in
+     let cfg = raw_cfg_graph_config pi ps annotate in
      let domain = contextual_graph_domain g (fun _ -> [()]) in
       contextual_analysis_canonical_text equal_unit equal_unit cfg g domain
         (fun _ -> ()));;
@@ -10204,7 +10133,7 @@ let rec tD_side_per_origin_Interp_solve _A _B (_C1, _C2, _C3)
           | Some r -> r);;
 
 let rec ictx_sol_prog_per_origin
-  mode gs mnm p =
+  mode gs p =
     tD_side_per_origin_Interp_solve (equal_prod equal_cfg_node equal_unit)
       equal_gk
       ((equal_dg_state
@@ -10234,11 +10163,11 @@ let rec ictx_sol_prog_per_origin
           (bounded_warrowing_lifted
             (bounded_warrowing_resolved_st_q
               (bounded_warrowing_int_dom_ext int_dom_record_warrowing_unit)))))
-      (ictx_eqs_prog mode gs mnm p) (cfg_exit (prog_cfg mnm p), ());;
+      (ictx_eqs_prog mode gs p) (cfg_exit (prog_cfg p), ());;
 
 let rec analyse_int_ctx_result_per_origin_for
-  mode gs mnm p =
-    (let sol = ictx_sol_prog_per_origin mode gs mnm p in
+  mode gs p =
+    (let sol = ictx_sol_prog_per_origin mode gs p in
      let gl = declared_global_vars p in
       Analysis_Result
         (fst sol,
@@ -10252,7 +10181,7 @@ let rec analyse_int_ctx_result_per_origin_for
                 (locals (snd sol (Inl (v, ctx))))))));;
 
 let rec analyse_int_per_origin_result_for
-  mode gs p = analyse_int_ctx_result_per_origin_for mode gs prog_main_name p;;
+  mode gs p = analyse_int_ctx_result_per_origin_for mode gs p;;
 
 let rec analyse_int_per_origin_result
   p = analyse_int_per_origin_result_for Refine_Fixpoint (declared_global p) p;;
@@ -10274,7 +10203,7 @@ let rec classify_checks_with_state
 let rec analyse_int_report_for_with_state
   gs p =
     (let r = analyse_int_result_for gs p in
-      classify_checks_with_state (prog_cfg prog_main_name p)
+      classify_checks_with_state (prog_cfg p)
         (fun v ->
           (match lookup_context equal_unit r v ()
             with Unreachable ->
@@ -10286,7 +10215,7 @@ let rec analyse_int_report_with_state
   p = analyse_int_report_for_with_state (declared_global p) p;;
 
 let rec ics_sol_warrow
-  k mode gs is_bot_pred pi ps mnm main =
+  k mode gs is_bot_pred pi ps =
     tD_side_warrowing_apinis_Interp_solve
       (equal_prod equal_cfg_node (equal_list equal_cfg_node))
       equal_call_string_gk
@@ -10317,8 +10246,8 @@ let rec ics_sol_warrow
           (bounded_warrowing_lifted
             (bounded_warrowing_resolved_st_q
               (bounded_warrowing_int_dom_ext int_dom_record_warrowing_unit)))))
-      (ics_eqs k mode gs is_bot_pred pi ps mnm main)
-      (cfg_exit (compile_prog pi ps mnm main), []);;
+      (ics_eqs k mode gs is_bot_pred pi ps)
+      (cfg_exit (compile_prog pi ps), []);;
 
 let rec ictx_entry_route
   mode gs is_bot_pred d ca =
@@ -10335,7 +10264,7 @@ let rec ictx_entry_route_gen
   mode gs is_bot_pred u ctx d ca = ictx_entry_route mode gs is_bot_pred d ca;;
 
 let rec ictx_entry_eqs
-  mode gs is_bot_pred pi ps mnm main =
+  mode gs is_bot_pred pi ps =
     side_cfg_T_eff_keyed_seed_dg_buffered equal_gkd
       (bounded_semilattice_sup_bot_lifted
         (semilattice_sup_resolved_st_q
@@ -10357,7 +10286,7 @@ let rec ictx_entry_eqs
             (bounded_semilattice_sup_bot_int_dom_ext
               int_dom_record_lattice_unit)))
         (ictx_spec mode is_bot_pred gs) Globald (fun a b -> Seedd (a, b))
-        (static_resolve (compile_prog pi ps mnm main)))
+        (static_resolve (compile_prog pi ps)))
       (routed_extra_g
         (bounded_semilattice_sup_bot_lifted
           (semilattice_sup_resolved_st_q
@@ -10368,11 +10297,11 @@ let rec ictx_entry_eqs
             (bounded_semilattice_sup_bot_int_dom_ext
               int_dom_record_lattice_unit)))
         (fun a b -> Seedd (a, b)) Globald)
-      (compile_prog pi ps mnm main) (ictx_spec mode is_bot_pred gs) Bot
+      (compile_prog pi ps) (ictx_spec mode is_bot_pred gs) Bot
       (Lifted cinit_int_dom_st) Bot;;
 
 let rec ictx_entry_sol
-  mode gs is_bot_pred pi ps mnm main =
+  mode gs is_bot_pred pi ps =
     tD_side_always_join_Interp_solve
       (equal_prod equal_cfg_node (equal_list (equal_int_dom_ext equal_unit)))
       equal_gkd
@@ -10403,8 +10332,8 @@ let rec ictx_entry_sol
           (bounded_warrowing_lifted
             (bounded_warrowing_resolved_st_q
               (bounded_warrowing_int_dom_ext int_dom_record_warrowing_unit)))))
-      (ictx_entry_eqs mode gs is_bot_pred pi ps mnm main)
-      (cfg_exit (compile_prog pi ps mnm main), []);;
+      (ictx_entry_eqs mode gs is_bot_pred pi ps)
+      (cfg_exit (compile_prog pi ps), []);;
 
 let rec ectx_spec
   gs is_bot_pred =
@@ -10443,7 +10372,7 @@ let rec xc_nodes
   (Export_cluster_ext (xc_id, xc_label, xc_nodes, more)) = xc_nodes;;
 
 let rec ictx_sol_prog_wpoa
-  gs mnm p =
+  gs p =
     tD_side_warrowing_per_origin_Interp_solve
       (equal_prod equal_cfg_node equal_unit) equal_gkc
       ((equal_dg_state
@@ -10467,7 +10396,7 @@ let rec ictx_sol_prog_wpoa
             (bounded_warrowing_resolved_st_q bounded_warrowing_ivl))
           (bounded_warrowing_lifted
             (bounded_warrowing_resolved_st_q bounded_warrowing_ivl))))
-      (ictx_eqs_proga gs mnm p) (cfg_exit (prog_cfg mnm p), ());;
+      (ictx_eqs_proga gs p) (cfg_exit (prog_cfg p), ());;
 
 let rec sctx_entry_route
   gs is_bot_pred d ca =
@@ -10481,7 +10410,7 @@ let rec sctx_entry_route_gen
   gs is_bot_pred u ctx d ca = sctx_entry_route gs is_bot_pred d ca;;
 
 let rec sctx_entry_eqs
-  gs is_bot_pred pi ps mnm main =
+  gs is_bot_pred pi ps =
     side_cfg_T_eff_keyed_seed_dg_buffered equal_gke
       (bounded_semilattice_sup_bot_lifted
         (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_sign))
@@ -10495,18 +10424,18 @@ let rec sctx_entry_eqs
         (bounded_semilattice_sup_bot_lifted
           (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_sign))
         (sctx_spec gs is_bot_pred) Globale (fun a b -> Seede (a, b))
-        (static_resolve (compile_prog pi ps mnm main)))
+        (static_resolve (compile_prog pi ps)))
       (routed_extra_g
         (bounded_semilattice_sup_bot_lifted
           (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_sign))
         (bounded_semilattice_sup_bot_lifted
           (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_sign))
         (fun a b -> Seede (a, b)) Globale)
-      (compile_prog pi ps mnm main) (sctx_spec gs is_bot_pred) Bot
-      (Lifted cinit_sign_st) Bot;;
+      (compile_prog pi ps) (sctx_spec gs is_bot_pred) Bot (Lifted cinit_sign_st)
+      Bot;;
 
 let rec sctx_entry_sol
-  gs is_bot_pred pi ps mnm main =
+  gs is_bot_pred pi ps =
     tD_side_always_join_Interp_solve
       (equal_prod equal_cfg_node (equal_list equal_sign)) equal_gke
       ((equal_dg_state
@@ -10530,24 +10459,25 @@ let rec sctx_entry_sol
             (bounded_warrowing_resolved_st_q bounded_warrowing_sign))
           (bounded_warrowing_lifted
             (bounded_warrowing_resolved_st_q bounded_warrowing_sign))))
-      (sctx_entry_eqs gs is_bot_pred pi ps mnm main)
-      (cfg_exit (compile_prog pi ps mnm main), []);;
+      (sctx_entry_eqs gs is_bot_pred pi ps)
+      (cfg_exit (compile_prog pi ps), []);;
 
 let rec compiled_procedure_scope
-  gs pi ps mnm main g p =
-    (let owner = compiled_owner_of pi ps mnm main p in
+  gs pi ps g p =
+    (let owner = compiled_owner_of pi ps p in
      let decl = pi owner in
      let fs =
-       (if ((owner : string) = mnm) then []
+       (if ((owner : string) = prog_main_name) then []
          else (match decl with None -> [] | Some a -> formals a))
        in
-     let ret = (if ((owner : string) = mnm) then None else Some ret_var) in
+     let ret =
+       (if ((owner : string) = prog_main_name) then None else Some ret_var) in
      let ls =
        filtera
          (fun x ->
            not (membera equal_literal fs x) &&
              (not ((x : string) = ret_var) && not (gs x)))
-         (owner_assigned_vars g (compiled_owner_of pi ps mnm main) owner)
+         (owner_assigned_vars g (compiled_owner_of pi ps) owner)
        in
       Procedure_scope_ext (fs, ls, ret, ()));;
 
@@ -10564,7 +10494,7 @@ let rec tf_enter
     = tf_enter;;
 
 let rec ictx_sol_prog_warrowa
-  gs mnm p =
+  gs p =
     tD_side_warrowing_apinis_Interp_solve (equal_prod equal_cfg_node equal_unit)
       equal_gkc
       ((equal_dg_state
@@ -10588,11 +10518,11 @@ let rec ictx_sol_prog_warrowa
             (bounded_warrowing_resolved_st_q bounded_warrowing_ivl))
           (bounded_warrowing_lifted
             (bounded_warrowing_resolved_st_q bounded_warrowing_ivl))))
-      (ictx_eqs_proga gs mnm p) (cfg_exit (prog_cfg mnm p), ());;
+      (ictx_eqs_proga gs p) (cfg_exit (prog_cfg p), ());;
 
 let rec analyse_interval_ctx_result_warrow_for
-  gs mnm p =
-    (let sol = ictx_sol_prog_warrowa gs mnm p in
+  gs p =
+    (let sol = ictx_sol_prog_warrowa gs p in
      let gl = declared_global_vars p in
       Analysis_Result
         (fst sol,
@@ -10603,7 +10533,7 @@ let rec analyse_interval_ctx_result_warrow_for
                 (locals (snd sol (Inl (v, ctx))))))));;
 
 let rec analyse_interval_td_result_for
-  gs p = analyse_interval_ctx_result_warrow_for gs prog_main_name p;;
+  gs p = analyse_interval_ctx_result_warrow_for gs p;;
 
 let rec analyse_interval_td_report_for
   gs p =
@@ -10627,8 +10557,8 @@ let rec dg_globals_for _C
       keys;;
 
 let rec ctx_solved_for _B
-  solve keys gs mnm p =
-    (let sol = solve gs mnm p in
+  solve keys gs p =
+    (let sol = solve gs p in
      let gl = declared_global_vars p in
       (Analysis_Result
          (fst sol,
@@ -10640,7 +10570,7 @@ let rec ctx_solved_for _B
         dg_globals_for _B gs gl (snd sol) (keys p)));;
 
 let rec sctx_sol_prog_per_origin
-  gs mnm p =
+  gs p =
     tD_side_per_origin_Interp_solve (equal_prod equal_cfg_node equal_unit)
       equal_gka
       ((equal_dg_state
@@ -10664,11 +10594,11 @@ let rec sctx_sol_prog_per_origin
             (bounded_warrowing_resolved_st_q bounded_warrowing_sign))
           (bounded_warrowing_lifted
             (bounded_warrowing_resolved_st_q bounded_warrowing_sign))))
-      (sctx_eqs_prog gs mnm p) (cfg_exit (prog_cfg mnm p), ());;
+      (sctx_eqs_prog gs p) (cfg_exit (prog_cfg p), ());;
 
 let rec analyse_sign_ctx_result_per_origin_for
-  gs mnm p =
-    (let sol = sctx_sol_prog_per_origin gs mnm p in
+  gs p =
+    (let sol = sctx_sol_prog_per_origin gs p in
      let gl = declared_global_vars p in
       Analysis_Result
         (fst sol,
@@ -10679,7 +10609,7 @@ let rec analyse_sign_ctx_result_per_origin_for
                 (locals (snd sol (Inl (v, ctx))))))));;
 
 let rec analyse_sign_result_per_origin_for
-  gs p = analyse_sign_ctx_result_per_origin_for gs prog_main_name p;;
+  gs p = analyse_sign_ctx_result_per_origin_for gs p;;
 
 let rec analyse_sign_result_per_origin
   p = analyse_sign_result_per_origin_for (declared_global p) p;;
@@ -10691,7 +10621,7 @@ let rec analyse_sign_report_per_origin
 let rec analyse_sign_report_for_with_state
   gs p =
     (let r = analyse_sign_result_for gs p in
-      classify_checks_with_state (prog_cfg prog_main_name p)
+      classify_checks_with_state (prog_cfg p)
         (fun v ->
           (match lookup_context equal_unit r v ()
             with Unreachable -> (true, bot_fun bot_sign)
@@ -10705,8 +10635,8 @@ let rec map_point_state f x1 = match f, x1 with f, Unreachable -> Unreachable
                           | f, Reachable x2 -> Reachable (f x2);;
 
 let rec analyse_interval_ctx_result_wpo_for
-  gs mnm p =
-    (let sol = ictx_sol_prog_wpoa gs mnm p in
+  gs p =
+    (let sol = ictx_sol_prog_wpoa gs p in
      let gl = declared_global_vars p in
       Analysis_Result
         (fst sol,
@@ -10717,7 +10647,7 @@ let rec analyse_interval_ctx_result_wpo_for
                 (locals (snd sol (Inl (v, ctx))))))));;
 
 let rec analyse_interval_wpo_result_for
-  gs p = analyse_interval_ctx_result_wpo_for gs prog_main_name p;;
+  gs p = analyse_interval_ctx_result_wpo_for gs p;;
 
 let rec analyse_interval_report_wpo_for
   gs p =
@@ -10731,8 +10661,7 @@ let rec analyse_interval_wpo_result
   p = analyse_interval_wpo_result_for (declared_global p) p;;
 
 let rec raw_cfg_canonical_text_lit
-  pi ps mnm main annotate =
-    implode (raw_cfg_canonical_text pi ps mnm main annotate);;
+  pi ps annotate = implode (raw_cfg_canonical_text pi ps annotate);;
 
 let rec analyse_interval_join_result
   p = analyse_interval_join_result_for (declared_global p) p;;
@@ -10746,30 +10675,30 @@ let rec seed_global_keys
         (prog_main_name :: prog_procs p);;
 
 let rec ics_sol_prog_warrow
-  k gs mnm p =
+  k gs p =
     ics_sol_warrow k Refine_Fixpoint gs
       (resolved_st_q_is_bot_for
         (computable_domain_int_dom_ext
           (equal_unit, int_dom_record_lattice_unit))
         (declared_global_vars p))
-      (prog_table p) (prog_procs p) mnm (prog_main p);;
+      (prog_table p) (prog_procs p);;
 
 let rec ictx_entry_sol_prog
-  gs mnm p =
+  gs p =
     ictx_entry_sol Refine_Fixpoint gs
       (resolved_st_q_is_bot_for
         (computable_domain_int_dom_ext
           (equal_unit, int_dom_record_lattice_unit))
         (declared_global_vars p))
-      (prog_table p) (prog_procs p) mnm (prog_main p);;
+      (prog_table p) (prog_procs p);;
 
 let rec scope_locals
   (Procedure_scope_ext (scope_formals, scope_locals, scope_return_slot, more)) =
     scope_locals;;
 
 let rec analyse_int_call_string_result_for
-  k gs mnm p =
-    (let sol = ics_sol_prog k gs mnm p in
+  k gs p =
+    (let sol = ics_sol_prog k gs p in
      let gl = declared_global_vars p in
       Analysis_Result
         (fst sol,
@@ -10783,10 +10712,9 @@ let rec analyse_int_call_string_result_for
                 (locals (snd sol (Inl (v, ctx))))))));;
 
 let rec ics_check_projection
-  k mnm p =
-    classify_checks_ctx (equal_list equal_cfg_node) (prog_cfg mnm p)
-      (analyse_int_call_string_result_for k (declared_global p) mnm p)
-      int_classify_check;;
+  k p = classify_checks_ctx (equal_list equal_cfg_node) (prog_cfg p)
+          (analyse_int_call_string_result_for k (declared_global p) p)
+          int_classify_check;;
 
 let rec entry_state_route
   gs is_bot_pred d ca =
@@ -10801,7 +10729,7 @@ let rec entry_state_route_gen
   gs is_bot_pred u ctx d ca = entry_state_route gs is_bot_pred d ca;;
 
 let rec entry_state_eqs
-  gs is_bot_pred pi ps mnm main =
+  gs is_bot_pred pi ps =
     side_cfg_T_eff_keyed_seed_dg_buffered equal_gkf
       (bounded_semilattice_sup_bot_lifted
         (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_ivl))
@@ -10815,18 +10743,18 @@ let rec entry_state_eqs
         (bounded_semilattice_sup_bot_lifted
           (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_ivl))
         (ectx_spec gs is_bot_pred) Globalf (fun a b -> Seedf (a, b))
-        (static_resolve (compile_prog pi ps mnm main)))
+        (static_resolve (compile_prog pi ps)))
       (routed_extra_g
         (bounded_semilattice_sup_bot_lifted
           (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_ivl))
         (bounded_semilattice_sup_bot_lifted
           (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_ivl))
         (fun a b -> Seedf (a, b)) Globalf)
-      (compile_prog pi ps mnm main) (ectx_spec gs is_bot_pred) Bot
-      (Lifted cinit_ivl_st) Bot;;
+      (compile_prog pi ps) (ectx_spec gs is_bot_pred) Bot (Lifted cinit_ivl_st)
+      Bot;;
 
 let rec entry_state_sol
-  gs is_bot_pred pi ps mnm main =
+  gs is_bot_pred pi ps =
     tD_side_warrowing_apinis_Interp_solve
       (equal_prod equal_cfg_node (equal_list equal_ivl)) equal_gkf
       ((equal_dg_state
@@ -10850,11 +10778,11 @@ let rec entry_state_sol
             (bounded_warrowing_resolved_st_q bounded_warrowing_ivl))
           (bounded_warrowing_lifted
             (bounded_warrowing_resolved_st_q bounded_warrowing_ivl))))
-      (entry_state_eqs gs is_bot_pred pi ps mnm main)
-      (cfg_exit (compile_prog pi ps mnm main), []);;
+      (entry_state_eqs gs is_bot_pred pi ps)
+      (cfg_exit (compile_prog pi ps), []);;
 
 let rec pctx_sol_prog_per_origin
-  gs mnm p =
+  gs p =
     tD_side_per_origin_Interp_solve (equal_prod equal_cfg_node equal_unit)
       equal_gkb
       ((equal_dg_state
@@ -10878,11 +10806,11 @@ let rec pctx_sol_prog_per_origin
             (bounded_warrowing_resolved_st_q bounded_warrowing_parity))
           (bounded_warrowing_lifted
             (bounded_warrowing_resolved_st_q bounded_warrowing_parity))))
-      (pctx_eqs_prog gs mnm p) (cfg_exit (prog_cfg mnm p), ());;
+      (pctx_eqs_prog gs p) (cfg_exit (prog_cfg p), ());;
 
 let rec analyse_parity_ctx_result_per_origin_for
-  gs mnm p =
-    (let sol = pctx_sol_prog_per_origin gs mnm p in
+  gs p =
+    (let sol = pctx_sol_prog_per_origin gs p in
      let gl = declared_global_vars p in
       Analysis_Result
         (fst sol,
@@ -10893,7 +10821,7 @@ let rec analyse_parity_ctx_result_per_origin_for
                 (locals (snd sol (Inl (v, ctx))))))));;
 
 let rec analyse_parity_result_per_origin_for
-  gs p = analyse_parity_ctx_result_per_origin_for gs prog_main_name p;;
+  gs p = analyse_parity_ctx_result_per_origin_for gs p;;
 
 let rec analyse_parity_report_per_origin_for
   gs p =
@@ -10906,7 +10834,7 @@ let rec analyse_parity_report_per_origin
 let rec analyse_parity_report_for_with_state
   gs p =
     (let r = analyse_parity_result_for gs p in
-      classify_checks_with_state (prog_cfg prog_main_name p)
+      classify_checks_with_state (prog_cfg p)
         (fun v ->
           (match lookup_context equal_unit r v ()
             with Unreachable -> (true, bot_fun bot_parity)
@@ -10920,17 +10848,17 @@ let rec analyse_parity_result_per_origin
   p = analyse_parity_result_per_origin_for (declared_global p) p;;
 
 let rec sctx_entry_sol_prog
-  gs mnm p =
+  gs p =
     sctx_entry_sol gs
       (resolved_st_q_is_bot_for computable_domain_sign (declared_global_vars p))
-      (prog_table p) (prog_procs p) mnm (prog_main p);;
+      (prog_table p) (prog_procs p);;
 
 let rec scope_formals
   (Procedure_scope_ext (scope_formals, scope_locals, scope_return_slot, more)) =
     scope_formals;;
 
 let rec ictx_entry_sol_warrow
-  mode gs is_bot_pred pi ps mnm main =
+  mode gs is_bot_pred pi ps =
     tD_side_warrowing_apinis_Interp_solve
       (equal_prod equal_cfg_node (equal_list (equal_int_dom_ext equal_unit)))
       equal_gkd
@@ -10961,12 +10889,12 @@ let rec ictx_entry_sol_warrow
           (bounded_warrowing_lifted
             (bounded_warrowing_resolved_st_q
               (bounded_warrowing_int_dom_ext int_dom_record_warrowing_unit)))))
-      (ictx_entry_eqs mode gs is_bot_pred pi ps mnm main)
-      (cfg_exit (compile_prog pi ps mnm main), []);;
+      (ictx_entry_eqs mode gs is_bot_pred pi ps)
+      (cfg_exit (compile_prog pi ps), []);;
 
 let rec analyse_sign_call_string_result_for
-  k gs mnm p =
-    (let sol = scs_sol_prog k gs mnm p in
+  k gs p =
+    (let sol = scs_sol_prog k gs p in
      let gl = declared_global_vars p in
       Analysis_Result
         (fst sol,
@@ -10977,10 +10905,9 @@ let rec analyse_sign_call_string_result_for
                 (locals (snd sol (Inl (v, ctx))))))));;
 
 let rec scs_check_projection
-  k mnm p =
-    classify_checks_ctx (equal_list equal_cfg_node) (prog_cfg mnm p)
-      (analyse_sign_call_string_result_for k (declared_global p) mnm p)
-      sign_classify_check;;
+  k p = classify_checks_ctx (equal_list equal_cfg_node) (prog_cfg p)
+          (analyse_sign_call_string_result_for k (declared_global p) p)
+          sign_classify_check;;
 
 let rec unit_seed_global_keys
   gk0 seed =
@@ -10992,7 +10919,7 @@ let rec analyse_sign_ctx_solved_for
 
 let rec wf_program_compile_input_exec
   p = (let procs = proc_rep p in
-       let gs = storage_global p prog_main_name in
+       let gs = declared_global p in
        let pi = map_of equal_literal procs in
         reserved_ret_var gs &&
           (distinct equal_literal (prog_procs p) &&
@@ -11000,7 +10927,8 @@ let rec wf_program_compile_input_exec
                (remove equal_literal prog_main_name (Set (map fst procs))) &&
               (not (membera equal_literal (prog_procs p) prog_main_name) &&
                 (equal_option (equal_proc_decl_ext equal_unit)
-                   (pi prog_main_name) (Some (proc_decl_of [] (prog_main p))) &&
+                   (pi prog_main_name)
+                   (Some (Proc_decl_ext ([], prog_main p, ()))) &&
                   (wf_source_com pi (prog_main p) &&
                     (no_return (prog_main p) &&
                       (list_all (fun (_, a) -> wf_proc_decl gs pi a) procs &&
@@ -11008,7 +10936,7 @@ let rec wf_program_compile_input_exec
                           procs))))))));;
 
 let rec ictx_sol_prog_per_origina
-  gs mnm p =
+  gs p =
     tD_side_per_origin_Interp_solve (equal_prod equal_cfg_node equal_unit)
       equal_gkc
       ((equal_dg_state
@@ -11032,15 +10960,14 @@ let rec ictx_sol_prog_per_origina
             (bounded_warrowing_resolved_st_q bounded_warrowing_ivl))
           (bounded_warrowing_lifted
             (bounded_warrowing_resolved_st_q bounded_warrowing_ivl))))
-      (ictx_eqs_proga gs mnm p) (cfg_exit (prog_cfg mnm p), ());;
+      (ictx_eqs_proga gs p) (cfg_exit (prog_cfg p), ());;
 
 let rec ics_verdict_report_prog
-  k mnm p =
-    map (fun (u, (c, vs)) -> (u, (c, aggregate_verdicts (image snd vs))))
-      (ics_check_projection k mnm p);;
+  k p = map (fun (u, (c, vs)) -> (u, (c, aggregate_verdicts (image snd vs))))
+          (ics_check_projection k p);;
 
 let rec cs_call_string_eqs
-  k gs is_bot_pred pi ps mnm main =
+  k gs is_bot_pred pi ps =
     side_cfg_T_eff_keyed_seed_dg_buffered equal_call_string_gk
       (bounded_semilattice_sup_bot_lifted
         (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_ivl))
@@ -11053,18 +10980,18 @@ let rec cs_call_string_eqs
         (bounded_semilattice_sup_bot_lifted
           (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_ivl))
         (ectx_spec gs is_bot_pred) Globalg (fun a b -> Seedg (a, b))
-        (static_resolve (compile_prog pi ps mnm main)))
+        (static_resolve (compile_prog pi ps)))
       (routed_extra_g
         (bounded_semilattice_sup_bot_lifted
           (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_ivl))
         (bounded_semilattice_sup_bot_lifted
           (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_ivl))
         (fun a b -> Seedg (a, b)) Globalg)
-      (compile_prog pi ps mnm main) (ectx_spec gs is_bot_pred) Bot
-      (Lifted cinit_ivl_st) Bot;;
+      (compile_prog pi ps) (ectx_spec gs is_bot_pred) Bot (Lifted cinit_ivl_st)
+      Bot;;
 
 let rec cs_call_string_sol
-  k gs is_bot_pred pi ps mnm main =
+  k gs is_bot_pred pi ps =
     tD_side_warrowing_apinis_Interp_solve
       (equal_prod equal_cfg_node (equal_list equal_cfg_node))
       equal_call_string_gk
@@ -11089,15 +11016,15 @@ let rec cs_call_string_sol
             (bounded_warrowing_resolved_st_q bounded_warrowing_ivl))
           (bounded_warrowing_lifted
             (bounded_warrowing_resolved_st_q bounded_warrowing_ivl))))
-      (cs_call_string_eqs k gs is_bot_pred pi ps mnm main)
-      (cfg_exit (compile_prog pi ps mnm main), []);;
+      (cs_call_string_eqs k gs is_bot_pred pi ps)
+      (cfg_exit (compile_prog pi ps), []);;
 
 let rec entered_is_bot_for
   pars entered = list_ex (fun x -> is_bot_ivl (entered x)) pars;;
 
 let rec analyse_interval_ctx_result_per_origin_for
-  gs mnm p =
-    (let sol = ictx_sol_prog_per_origina gs mnm p in
+  gs p =
+    (let sol = ictx_sol_prog_per_origina gs p in
      let gl = declared_global_vars p in
       Analysis_Result
         (fst sol,
@@ -11108,7 +11035,7 @@ let rec analyse_interval_ctx_result_per_origin_for
                 (locals (snd sol (Inl (v, ctx))))))));;
 
 let rec analyse_interval_per_origin_result_for
-  gs p = analyse_interval_ctx_result_per_origin_for gs prog_main_name p;;
+  gs p = analyse_interval_ctx_result_per_origin_for gs p;;
 
 let rec analyse_interval_per_origin_result
   p = analyse_interval_per_origin_result_for (declared_global p) p;;
@@ -11122,38 +11049,37 @@ let rec analyse_interval_report_per_origin
   p = analyse_interval_report_per_origin_for (declared_global p) p;;
 
 let rec scs_verdict_report_prog
-  k mnm p =
-    map (fun (u, (c, vs)) -> (u, (c, aggregate_verdicts (image snd vs))))
-      (scs_check_projection k mnm p);;
+  k p = map (fun (u, (c, vs)) -> (u, (c, aggregate_verdicts (image snd vs))))
+          (scs_check_projection k p);;
 
 let rec scope_return_slot
   (Procedure_scope_ext (scope_formals, scope_locals, scope_return_slot, more)) =
     scope_return_slot;;
 
 let rec entry_state_eqs_prog
-  gs mnm p =
+  gs p =
     entry_state_eqs gs
       (resolved_st_q_is_bot_for computable_domain_ivl (declared_global_vars p))
-      (prog_table p) (prog_procs p) mnm (prog_main p);;
+      (prog_table p) (prog_procs p);;
 
 let rec entry_state_sol_prog
-  gs mnm p =
+  gs p =
     entry_state_sol gs
       (resolved_st_q_is_bot_for computable_domain_ivl (declared_global_vars p))
-      (prog_table p) (prog_procs p) mnm (prog_main p);;
+      (prog_table p) (prog_procs p);;
 
 let rec analyse_parity_ctx_solved_for
   x = ctx_solved_for computable_domain_parity pctx_sol_prog
         (unit_seed_global_keys Globalb (fun a b -> Seedb (a, b))) x;;
 
 let rec ictx_entry_sol_prog_warrow
-  gs mnm p =
+  gs p =
     ictx_entry_sol_warrow Refine_Fixpoint gs
       (resolved_st_q_is_bot_for
         (computable_domain_int_dom_ext
           (equal_unit, int_dom_record_lattice_unit))
         (declared_global_vars p))
-      (prog_table p) (prog_procs p) mnm (prog_main p);;
+      (prog_table p) (prog_procs p);;
 
 let rec analyse_int_ctx_solved_warrow_for
   mode =
@@ -11163,8 +11089,8 @@ let rec analyse_int_ctx_solved_warrow_for
       (unit_seed_global_keys Global (fun a b -> Seed (a, b)));;
 
 let rec analyse_int_entry_state_result_for
-  gs mnm p =
-    (let sol = ictx_entry_sol_prog gs mnm p in
+  gs p =
+    (let sol = ictx_entry_sol_prog gs p in
      let gl = declared_global_vars p in
       Analysis_Result
         (fst sol,
@@ -11178,16 +11104,14 @@ let rec analyse_int_entry_state_result_for
                 (locals (snd sol (Inl (v, ctx))))))));;
 
 let rec ictx_entry_check_projection
-  mnm p =
-    classify_checks_ctx (equal_list (equal_int_dom_ext equal_unit))
-      (prog_cfg mnm p)
-      (analyse_int_entry_state_result_for (declared_global p) mnm p)
-      int_classify_check;;
+  p = classify_checks_ctx (equal_list (equal_int_dom_ext equal_unit))
+        (prog_cfg p) (analyse_int_entry_state_result_for (declared_global p) p)
+        int_classify_check;;
 
 let rec analyse_interval_td_report_for_with_state
   gs p =
     (let r = analyse_interval_td_result_for gs p in
-      classify_checks_with_state (prog_cfg prog_main_name p)
+      classify_checks_with_state (prog_cfg p)
         (fun v ->
           (match lookup_context equal_unit r v ()
             with Unreachable -> (true, bot_fun bot_ivl)
@@ -11205,20 +11129,20 @@ let rec entry_state_callee_ctx
         else Some (formals_context pars entered)));;
 
 let rec cs_call_string_eqs_prog
-  k gs mnm p =
+  k gs p =
     cs_call_string_eqs k gs
       (resolved_st_q_is_bot_for computable_domain_ivl (declared_global_vars p))
-      (prog_table p) (prog_procs p) mnm (prog_main p);;
+      (prog_table p) (prog_procs p);;
 
 let rec cs_call_string_sol_prog
-  k gs mnm p =
+  k gs p =
     cs_call_string_sol k gs
       (resolved_st_q_is_bot_for computable_domain_ivl (declared_global_vars p))
-      (prog_table p) (prog_procs p) mnm (prog_main p);;
+      (prog_table p) (prog_procs p);;
 
 let rec analyse_sign_entry_state_result_for
-  gs mnm p =
-    (let sol = sctx_entry_sol_prog gs mnm p in
+  gs p =
+    (let sol = sctx_entry_sol_prog gs p in
      let gl = declared_global_vars p in
       Analysis_Result
         (fst sol,
@@ -11229,13 +11153,12 @@ let rec analyse_sign_entry_state_result_for
                 (locals (snd sol (Inl (v, ctx))))))));;
 
 let rec sctx_entry_check_projection
-  mnm p =
-    classify_checks_ctx (equal_list equal_sign) (prog_cfg mnm p)
-      (analyse_sign_entry_state_result_for (declared_global p) mnm p)
-      sign_classify_check;;
+  p = classify_checks_ctx (equal_list equal_sign) (prog_cfg p)
+        (analyse_sign_entry_state_result_for (declared_global p) p)
+        sign_classify_check;;
 
 let rec entry_state_sol_prog_wpo
-  gs mnm p =
+  gs p =
     tD_side_warrowing_per_origin_Interp_solve
       (equal_prod equal_cfg_node (equal_list equal_ivl)) equal_gkf
       ((equal_dg_state
@@ -11259,18 +11182,16 @@ let rec entry_state_sol_prog_wpo
             (bounded_warrowing_resolved_st_q bounded_warrowing_ivl))
           (bounded_warrowing_lifted
             (bounded_warrowing_resolved_st_q bounded_warrowing_ivl))))
-      (entry_state_eqs_prog gs mnm p) (cfg_exit (prog_cfg mnm p), []);;
+      (entry_state_eqs_prog gs p) (cfg_exit (prog_cfg p), []);;
 
-let rec analyse_int_call_string_report
-  k p = ics_verdict_report_prog k prog_main_name p;;
+let rec analyse_int_call_string_report k p = ics_verdict_report_prog k p;;
 
 let rec analyse_int_call_string_result
-  k p = analyse_int_call_string_result_for k (declared_global p) prog_main_name
-          p;;
+  k p = analyse_int_call_string_result_for k (declared_global p) p;;
 
 let rec analyse_int_call_string_result_for_warrow
-  k gs mnm p =
-    (let sol = ics_sol_prog_warrow k gs mnm p in
+  k gs p =
+    (let sol = ics_sol_prog_warrow k gs p in
      let gl = declared_global_vars p in
       Analysis_Result
         (fst sol,
@@ -11284,21 +11205,18 @@ let rec analyse_int_call_string_result_for_warrow
                 (locals (snd sol (Inl (v, ctx))))))));;
 
 let rec ics_verdict_report_prog_warrow
-  k mnm p =
-    classify_checks_verdicts (equal_list equal_cfg_node) (prog_cfg mnm p)
-      (analyse_int_call_string_result_for_warrow k (declared_global p) mnm p)
-      int_classify_check;;
+  k p = classify_checks_verdicts (equal_list equal_cfg_node) (prog_cfg p)
+          (analyse_int_call_string_result_for_warrow k (declared_global p) p)
+          int_classify_check;;
 
 let rec ictx_entry_verdict_report_prog
-  mnm p =
-    map (fun (u, (c, vs)) -> (u, (c, aggregate_verdicts (image snd vs))))
-      (ictx_entry_check_projection mnm p);;
+  p = map (fun (u, (c, vs)) -> (u, (c, aggregate_verdicts (image snd vs))))
+        (ictx_entry_check_projection p);;
 
-let rec analyse_int_entry_state_report
-  p = ictx_entry_verdict_report_prog prog_main_name p;;
+let rec analyse_int_entry_state_report p = ictx_entry_verdict_report_prog p;;
 
 let rec entry_state_sol_prog_join
-  gs mnm p =
+  gs p =
     tD_side_always_join_Interp_solve
       (equal_prod equal_cfg_node (equal_list equal_ivl)) equal_gkf
       ((equal_dg_state
@@ -11322,15 +11240,14 @@ let rec entry_state_sol_prog_join
             (bounded_warrowing_resolved_st_q bounded_warrowing_ivl))
           (bounded_warrowing_lifted
             (bounded_warrowing_resolved_st_q bounded_warrowing_ivl))))
-      (entry_state_eqs_prog gs mnm p) (cfg_exit (prog_cfg mnm p), []);;
+      (entry_state_eqs_prog gs p) (cfg_exit (prog_cfg p), []);;
 
 let rec sctx_entry_verdict_report_prog
-  mnm p =
-    map (fun (u, (c, vs)) -> (u, (c, aggregate_verdicts (image snd vs))))
-      (sctx_entry_check_projection mnm p);;
+  p = map (fun (u, (c, vs)) -> (u, (c, aggregate_verdicts (image snd vs))))
+        (sctx_entry_check_projection p);;
 
 let rec cs_call_string_sol_prog_wpo
-  k gs mnm p =
+  k gs p =
     tD_side_warrowing_per_origin_Interp_solve
       (equal_prod equal_cfg_node (equal_list equal_cfg_node))
       equal_call_string_gk
@@ -11355,23 +11272,20 @@ let rec cs_call_string_sol_prog_wpo
             (bounded_warrowing_resolved_st_q bounded_warrowing_ivl))
           (bounded_warrowing_lifted
             (bounded_warrowing_resolved_st_q bounded_warrowing_ivl))))
-      (cs_call_string_eqs_prog k gs mnm p) (cfg_exit (prog_cfg mnm p), []);;
+      (cs_call_string_eqs_prog k gs p) (cfg_exit (prog_cfg p), []);;
 
-let rec analyse_sign_call_string_report
-  k p = scs_verdict_report_prog k prog_main_name p;;
+let rec analyse_sign_call_string_report k p = scs_verdict_report_prog k p;;
 
 let rec analyse_sign_call_string_result
-  k p = analyse_sign_call_string_result_for k (declared_global p) prog_main_name
-          p;;
+  k p = analyse_sign_call_string_result_for k (declared_global p) p;;
 
-let rec analyse_sign_entry_state_report
-  p = sctx_entry_verdict_report_prog prog_main_name p;;
+let rec analyse_sign_entry_state_report p = sctx_entry_verdict_report_prog p;;
 
 let rec analyse_sign_entry_state_result
-  p = analyse_sign_entry_state_result_for (declared_global p) prog_main_name p;;
+  p = analyse_sign_entry_state_result_for (declared_global p) p;;
 
 let rec cs_call_string_sol_prog_join
-  k gs mnm p =
+  k gs p =
     tD_side_always_join_Interp_solve
       (equal_prod equal_cfg_node (equal_list equal_cfg_node))
       equal_call_string_gk
@@ -11396,11 +11310,11 @@ let rec cs_call_string_sol_prog_join
             (bounded_warrowing_resolved_st_q bounded_warrowing_ivl))
           (bounded_warrowing_lifted
             (bounded_warrowing_resolved_st_q bounded_warrowing_ivl))))
-      (cs_call_string_eqs_prog k gs mnm p) (cfg_exit (prog_cfg mnm p), []);;
+      (cs_call_string_eqs_prog k gs p) (cfg_exit (prog_cfg p), []);;
 
 let rec analyse_interval_entry_state_result_for
-  gs mnm p =
-    (let sol = entry_state_sol_prog gs mnm p in
+  gs p =
+    (let sol = entry_state_sol_prog gs p in
      let gl = declared_global_vars p in
       Analysis_Result
         (fst sol,
@@ -11411,18 +11325,15 @@ let rec analyse_interval_entry_state_result_for
                 (locals (snd sol (Inl (v, ctx))))))));;
 
 let rec entry_state_check_projection
-  mnm p =
-    classify_checks_ctx (equal_list equal_ivl) (prog_cfg mnm p)
-      (analyse_interval_entry_state_result_for (declared_global p) mnm p)
-      interval_classify_check;;
+  p = classify_checks_ctx (equal_list equal_ivl) (prog_cfg p)
+        (analyse_interval_entry_state_result_for (declared_global p) p)
+        interval_classify_check;;
 
 let rec entry_state_verdict_report_prog
-  mnm p =
-    map (fun (u, (c, vs)) -> (u, (c, aggregate_verdicts (image snd vs))))
-      (entry_state_check_projection mnm p);;
+  p = map (fun (u, (c, vs)) -> (u, (c, aggregate_verdicts (image snd vs))))
+        (entry_state_check_projection p);;
 
-let rec analyse_interval_entry_state
-  p = entry_state_verdict_report_prog prog_main_name p;;
+let rec analyse_interval_entry_state p = entry_state_verdict_report_prog p;;
 
 let rec reach_state_at
   table bot_state p v =
@@ -11444,8 +11355,8 @@ let rec node_annotation_update
           node_annotationa node_annotation, more);;
 
 let rec analyse_interval_call_string_result_for
-  k gs mnm p =
-    (let sol = cs_call_string_sol_prog k gs mnm p in
+  k gs p =
+    (let sol = cs_call_string_sol_prog k gs p in
      let gl = declared_global_vars p in
       Analysis_Result
         (fst sol,
@@ -11456,13 +11367,12 @@ let rec analyse_interval_call_string_result_for
                 (locals (snd sol (Inl (v, ctx))))))));;
 
 let rec cs_call_string_check_projection
-  k mnm p =
-    classify_checks_ctx (equal_list equal_cfg_node) (prog_cfg mnm p)
-      (analyse_interval_call_string_result_for k (declared_global p) mnm p)
-      interval_classify_check;;
+  k p = classify_checks_ctx (equal_list equal_cfg_node) (prog_cfg p)
+          (analyse_interval_call_string_result_for k (declared_global p) p)
+          interval_classify_check;;
 
 let rec entry_state_sol_prog_per_origin
-  gs mnm p =
+  gs p =
     tD_side_per_origin_Interp_solve
       (equal_prod equal_cfg_node (equal_list equal_ivl)) equal_gkf
       ((equal_dg_state
@@ -11486,7 +11396,7 @@ let rec entry_state_sol_prog_per_origin
             (bounded_warrowing_resolved_st_q bounded_warrowing_ivl))
           (bounded_warrowing_lifted
             (bounded_warrowing_resolved_st_q bounded_warrowing_ivl))))
-      (entry_state_eqs_prog gs mnm p) (cfg_exit (prog_cfg mnm p), []);;
+      (entry_state_eqs_prog gs p) (cfg_exit (prog_cfg p), []);;
 
 let rec analyse_interval_ctx_solved_warrow_for
   x = ctx_solved_for computable_domain_ivl ictx_sol_prog_warrowa
@@ -11494,15 +11404,15 @@ let rec analyse_interval_ctx_solved_warrow_for
 
 let rec report_with_state
   table bot_state classify p =
-    classify_checks_with_state (prog_cfg prog_main_name p)
-      (reach_state_at table bot_state p) (fun c (_, a) -> classify c a);;
+    classify_checks_with_state (prog_cfg p) (reach_state_at table bot_state p)
+      (fun c (_, a) -> classify c a);;
 
 let rec analyse_int_call_string_report_warrow
-  k p = ics_verdict_report_prog_warrow k prog_main_name p;;
+  k p = ics_verdict_report_prog_warrow k p;;
 
 let rec analyse_int_entry_state_result_for_warrow
-  gs mnm p =
-    (let sol = ictx_entry_sol_prog_warrow gs mnm p in
+  gs p =
+    (let sol = ictx_entry_sol_prog_warrow gs p in
      let gl = declared_global_vars p in
       Analysis_Result
         (fst sol,
@@ -11516,22 +11426,20 @@ let rec analyse_int_entry_state_result_for_warrow
                 (locals (snd sol (Inl (v, ctx))))))));;
 
 let rec ictx_entry_verdict_report_prog_warrow
-  mnm p =
-    classify_checks_verdicts (equal_list (equal_int_dom_ext equal_unit))
-      (prog_cfg mnm p)
-      (analyse_int_entry_state_result_for_warrow (declared_global p) mnm p)
-      int_classify_check;;
+  p = classify_checks_verdicts (equal_list (equal_int_dom_ext equal_unit))
+        (prog_cfg p)
+        (analyse_int_entry_state_result_for_warrow (declared_global p) p)
+        int_classify_check;;
 
 let rec analyse_int_entry_state_report_warrow
-  p = ictx_entry_verdict_report_prog_warrow prog_main_name p;;
+  p = ictx_entry_verdict_report_prog_warrow p;;
 
 let rec analyse_int_entry_state_result_warrow
-  p = analyse_int_entry_state_result_for_warrow (declared_global p)
-        prog_main_name p;;
+  p = analyse_int_entry_state_result_for_warrow (declared_global p) p;;
 
 let rec analyse_interval_entry_state_result_for_wpo
-  gs mnm p =
-    (let sol = entry_state_sol_prog_wpo gs mnm p in
+  gs p =
+    (let sol = entry_state_sol_prog_wpo gs p in
      let gl = declared_global_vars p in
       Analysis_Result
         (fst sol,
@@ -11542,17 +11450,16 @@ let rec analyse_interval_entry_state_result_for_wpo
                 (locals (snd sol (Inl (v, ctx))))))));;
 
 let rec entry_state_verdict_report_prog_wpo
-  mnm p =
-    classify_checks_verdicts (equal_list equal_ivl) (prog_cfg mnm p)
-      (analyse_interval_entry_state_result_for_wpo (declared_global p) mnm p)
-      interval_classify_check;;
+  p = classify_checks_verdicts (equal_list equal_ivl) (prog_cfg p)
+        (analyse_interval_entry_state_result_for_wpo (declared_global p) p)
+        interval_classify_check;;
 
 let rec analyse_interval_entry_state_wpo
-  p = entry_state_verdict_report_prog_wpo prog_main_name p;;
+  p = entry_state_verdict_report_prog_wpo p;;
 
 let rec analyse_interval_entry_state_result_for_join
-  gs mnm p =
-    (let sol = entry_state_sol_prog_join gs mnm p in
+  gs p =
+    (let sol = entry_state_sol_prog_join gs p in
      let gl = declared_global_vars p in
       Analysis_Result
         (fst sol,
@@ -11563,16 +11470,15 @@ let rec analyse_interval_entry_state_result_for_join
                 (locals (snd sol (Inl (v, ctx))))))));;
 
 let rec entry_state_verdict_report_prog_join
-  mnm p =
-    classify_checks_verdicts (equal_list equal_ivl) (prog_cfg mnm p)
-      (analyse_interval_entry_state_result_for_join (declared_global p) mnm p)
-      interval_classify_check;;
+  p = classify_checks_verdicts (equal_list equal_ivl) (prog_cfg p)
+        (analyse_interval_entry_state_result_for_join (declared_global p) p)
+        interval_classify_check;;
 
 let rec analyse_interval_entry_state_join
-  p = entry_state_verdict_report_prog_join prog_main_name p;;
+  p = entry_state_verdict_report_prog_join p;;
 
 let rec cs_call_string_sol_prog_per_origin
-  k gs mnm p =
+  k gs p =
     tD_side_per_origin_Interp_solve
       (equal_prod equal_cfg_node (equal_list equal_cfg_node))
       equal_call_string_gk
@@ -11597,27 +11503,24 @@ let rec cs_call_string_sol_prog_per_origin
             (bounded_warrowing_resolved_st_q bounded_warrowing_ivl))
           (bounded_warrowing_lifted
             (bounded_warrowing_resolved_st_q bounded_warrowing_ivl))))
-      (cs_call_string_eqs_prog k gs mnm p) (cfg_exit (prog_cfg mnm p), []);;
+      (cs_call_string_eqs_prog k gs p) (cfg_exit (prog_cfg p), []);;
 
 let rec cs_call_string_verdict_report_prog
-  k mnm p =
-    map (fun (u, (c, vs)) -> (u, (c, aggregate_verdicts (image snd vs))))
-      (cs_call_string_check_projection k mnm p);;
+  k p = map (fun (u, (c, vs)) -> (u, (c, aggregate_verdicts (image snd vs))))
+          (cs_call_string_check_projection k p);;
 
 let rec analyse_interval_call_string_report
-  k p = cs_call_string_verdict_report_prog k prog_main_name p;;
+  k p = cs_call_string_verdict_report_prog k p;;
 
 let rec analyse_interval_call_string_result
-  k p = analyse_interval_call_string_result_for k (declared_global p)
-          prog_main_name p;;
+  k p = analyse_interval_call_string_result_for k (declared_global p) p;;
 
 let rec analyse_interval_entry_state_result
-  p = analyse_interval_entry_state_result_for (declared_global p) prog_main_name
-        p;;
+  p = analyse_interval_entry_state_result_for (declared_global p) p;;
 
 let rec analyse_interval_call_string_result_for_wpo
-  k gs mnm p =
-    (let sol = cs_call_string_sol_prog_wpo k gs mnm p in
+  k gs p =
+    (let sol = cs_call_string_sol_prog_wpo k gs p in
      let gl = declared_global_vars p in
       Analysis_Result
         (fst sol,
@@ -11628,17 +11531,16 @@ let rec analyse_interval_call_string_result_for_wpo
                 (locals (snd sol (Inl (v, ctx))))))));;
 
 let rec cs_call_string_verdict_report_prog_wpo
-  k mnm p =
-    classify_checks_verdicts (equal_list equal_cfg_node) (prog_cfg mnm p)
-      (analyse_interval_call_string_result_for_wpo k (declared_global p) mnm p)
-      interval_classify_check;;
+  k p = classify_checks_verdicts (equal_list equal_cfg_node) (prog_cfg p)
+          (analyse_interval_call_string_result_for_wpo k (declared_global p) p)
+          interval_classify_check;;
 
 let rec analyse_interval_call_string_report_wpo
-  k p = cs_call_string_verdict_report_prog_wpo k prog_main_name p;;
+  k p = cs_call_string_verdict_report_prog_wpo k p;;
 
 let rec analyse_interval_call_string_result_for_join
-  k gs mnm p =
-    (let sol = cs_call_string_sol_prog_join k gs mnm p in
+  k gs p =
+    (let sol = cs_call_string_sol_prog_join k gs p in
      let gl = declared_global_vars p in
       Analysis_Result
         (fst sol,
@@ -11649,14 +11551,13 @@ let rec analyse_interval_call_string_result_for_join
                 (locals (snd sol (Inl (v, ctx))))))));;
 
 let rec cs_call_string_verdict_report_prog_join
-  k mnm p =
-    classify_checks_verdicts (equal_list equal_cfg_node) (prog_cfg mnm p)
-      (analyse_interval_call_string_result_for_join k (declared_global p) mnm p)
-      interval_classify_check;;
+  k p = classify_checks_verdicts (equal_list equal_cfg_node) (prog_cfg p)
+          (analyse_interval_call_string_result_for_join k (declared_global p) p)
+          interval_classify_check;;
 
 let rec analyse_interval_entry_state_result_for_per_origin
-  gs mnm p =
-    (let sol = entry_state_sol_prog_per_origin gs mnm p in
+  gs p =
+    (let sol = entry_state_sol_prog_per_origin gs p in
      let gl = declared_global_vars p in
       Analysis_Result
         (fst sol,
@@ -11667,21 +11568,20 @@ let rec analyse_interval_entry_state_result_for_per_origin
                 (locals (snd sol (Inl (v, ctx))))))));;
 
 let rec entry_state_verdict_report_prog_per_origin
-  mnm p =
-    classify_checks_verdicts (equal_list equal_ivl) (prog_cfg mnm p)
-      (analyse_interval_entry_state_result_for_per_origin (declared_global p)
-        mnm p)
-      interval_classify_check;;
+  p = classify_checks_verdicts (equal_list equal_ivl) (prog_cfg p)
+        (analyse_interval_entry_state_result_for_per_origin (declared_global p)
+          p)
+        interval_classify_check;;
 
 let rec analyse_interval_entry_state_per_origin
-  p = entry_state_verdict_report_prog_per_origin prog_main_name p;;
+  p = entry_state_verdict_report_prog_per_origin p;;
 
 let rec analyse_interval_call_string_report_join
-  k p = cs_call_string_verdict_report_prog_join k prog_main_name p;;
+  k p = cs_call_string_verdict_report_prog_join k p;;
 
 let rec analyse_interval_call_string_result_for_per_origin
-  k gs mnm p =
-    (let sol = cs_call_string_sol_prog_per_origin k gs mnm p in
+  k gs p =
+    (let sol = cs_call_string_sol_prog_per_origin k gs p in
      let gl = declared_global_vars p in
       Analysis_Result
         (fst sol,
@@ -11692,14 +11592,13 @@ let rec analyse_interval_call_string_result_for_per_origin
                 (locals (snd sol (Inl (v, ctx))))))));;
 
 let rec cs_call_string_verdict_report_prog_per_origin
-  k mnm p =
-    classify_checks_verdicts (equal_list equal_cfg_node) (prog_cfg mnm p)
-      (analyse_interval_call_string_result_for_per_origin k (declared_global p)
-        mnm p)
-      interval_classify_check;;
+  k p = classify_checks_verdicts (equal_list equal_cfg_node) (prog_cfg p)
+          (analyse_interval_call_string_result_for_per_origin k
+            (declared_global p) p)
+          interval_classify_check;;
 
 let rec analyse_interval_call_string_report_per_origin
-  k p = cs_call_string_verdict_report_prog_per_origin k prog_main_name p;;
+  k p = cs_call_string_verdict_report_prog_per_origin k p;;
 
 end;; (*struct Core*)
 
@@ -12339,13 +12238,13 @@ let rec cs_ctx_domain_for
   kind k p base =
     (match kind
       with Analysis_Config.Sign_Analysis ->
-        Core.contextual_result_domain base (Core.prog_cfg Core.prog_main_name p)
+        Core.contextual_result_domain base (Core.prog_cfg p)
           (Core.analyse_sign_call_string_result k p)
       | Analysis_Config.Interval_Analysis ->
-        Core.contextual_result_domain base (Core.prog_cfg Core.prog_main_name p)
+        Core.contextual_result_domain base (Core.prog_cfg p)
           (Core.analyse_interval_call_string_result k p)
       | Analysis_Config.Int_Analysis ->
-        Core.contextual_result_domain base (Core.prog_cfg Core.prog_main_name p)
+        Core.contextual_result_domain base (Core.prog_cfg p)
           (Core.analyse_int_call_string_result k p)
       | Analysis_Config.Parity_Analysis -> []);;
 
@@ -12383,7 +12282,7 @@ let rec full_state_checked_node_annotation
 let rec checked_payload_of
   into classify bot_state r globals p =
     (let full =
-       Core.classify_checks_with_state (Core.prog_cfg Core.prog_main_name p)
+       Core.classify_checks_with_state (Core.prog_cfg p)
          (fun v ->
            (match Core.lookup_context Core.equal_unit r v ()
              with Core.Unreachable -> (true, bot_state)
@@ -12391,7 +12290,6 @@ let rec checked_payload_of
          (fun c (_, a) -> classify c a)
        in
       (Core.raw_cfg_export (Core.prog_table p) (Core.prog_procs p)
-         Core.prog_main_name (Core.prog_main p)
          (full_state_checked_node_annotation (program_vars p)
            (project_env into r)
            (Core.map (fun (u, (c, (res, (_, _)))) -> (u, (c, res))) full)),
@@ -12451,15 +12349,13 @@ let rec cs_ctx_graph_config
             (fun v ->
               (let sc =
                  Core.compiled_procedure_scope (Core.declared_global p)
-                   (Core.prog_table p) (Core.prog_procs p) Core.prog_main_name
-                   (Core.prog_main p) (Core.prog_cfg Core.prog_main_name p) v
+                   (Core.prog_table p) (Core.prog_procs p) (Core.prog_cfg p) v
                  in
                 Core.scope_formals sc @ Core.scope_locals sc)),
             (fun v ->
               Core.scope_return_slot
                 (Core.compiled_procedure_scope (Core.declared_global p)
-                  (Core.prog_table p) (Core.prog_procs p) Core.prog_main_name
-                  (Core.prog_main p) (Core.prog_cfg Core.prog_main_name p) v)),
+                  (Core.prog_table p) (Core.prog_procs p) (Core.prog_cfg p) v)),
             [], (fun _ _ vars a ->
                   (match a
                     with Core.Unreachable ->
@@ -12486,8 +12382,7 @@ let rec cs_ctx_graph_config
                 Core.char_0x61; Core.char_0x6C]),
             (fun _ -> false), false,
             Core.comp Core.explode
-              (Core.compiled_owner_of (Core.prog_table p) (Core.prog_procs p)
-                Core.prog_main_name (Core.prog_main p)),
+              (Core.compiled_owner_of (Core.prog_table p) (Core.prog_procs p)),
             Core.cs_cluster_label,
             Some (Core.pretty_string_of_program (Core.prog_table p)
                    (Core.prog_procs p) (Core.prog_main p) []),
@@ -12496,13 +12391,12 @@ let rec cs_ctx_graph_config
 let rec cs_ctx_annotated_config
   kind k p =
     Core.node_annotation_update
-      (fun _ ->
-        cs_ctx_check_annotation kind k p (Core.prog_cfg Core.prog_main_name p))
+      (fun _ -> cs_ctx_check_annotation kind k p (Core.prog_cfg p))
       (cs_ctx_graph_config p k);;
 
 let rec cs_ctx_export_auto
   kind k p =
-    (let g = Core.prog_cfg Core.prog_main_name p in
+    (let g = Core.prog_cfg p in
      let base = cs_ctx_graph_config p k in
      let cfg = cs_ctx_annotated_config kind k p in
      let sol = cs_ctx_sol_for kind k p in
@@ -12618,7 +12512,6 @@ let rec point_state_node_annotation
 let rec full_state_export_auto
   kind p =
     Core.raw_cfg_export (Core.prog_table p) (Core.prog_procs p)
-      Core.prog_main_name (Core.prog_main p)
       (point_state_node_annotation (program_vars p)
         (analyse_point_env_for kind p));;
 
@@ -12678,7 +12571,6 @@ let rec state_report_export_auto
          (Analyse_Dispatch.analyse_with_state_default kind p)
        in
       Core.raw_cfg_export (Core.prog_table p) (Core.prog_procs p)
-        Core.prog_main_name (Core.prog_main p)
         (state_report_node_annotation (report_vars report) report));;
 
 let rec entry_state_point_env_for
@@ -12704,7 +12596,7 @@ let rec entry_state_point_env_for
 
 let rec cs_ctx_graph_snapshot_auto
   kind k p =
-    (let g = Core.prog_cfg Core.prog_main_name p in
+    (let g = Core.prog_cfg p in
      let base = cs_ctx_graph_config p k in
      let cfg = cs_ctx_annotated_config kind k p in
      let sol = cs_ctx_sol_for kind k p in
@@ -12734,15 +12626,13 @@ let rec entry_state_ctx_graph_config
           (fun v ->
             (let sc =
                Core.compiled_procedure_scope (Core.declared_global p)
-                 (Core.prog_table p) (Core.prog_procs p) Core.prog_main_name
-                 (Core.prog_main p) (Core.prog_cfg Core.prog_main_name p) v
+                 (Core.prog_table p) (Core.prog_procs p) (Core.prog_cfg p) v
                in
               Core.scope_formals sc @ Core.scope_locals sc)),
           (fun v ->
             Core.scope_return_slot
               (Core.compiled_procedure_scope (Core.declared_global p)
-                (Core.prog_table p) (Core.prog_procs p) Core.prog_main_name
-                (Core.prog_main p) (Core.prog_cfg Core.prog_main_name p) v)),
+                (Core.prog_table p) (Core.prog_procs p) (Core.prog_cfg p) v)),
           [], (fun _ _ vars a ->
                 (match a
                   with Core.Unreachable ->
@@ -12769,8 +12659,7 @@ let rec entry_state_ctx_graph_config
               Core.char_0x61; Core.char_0x6C]),
           (fun _ -> false), false,
           Core.comp Core.explode
-            (Core.compiled_owner_of (Core.prog_table p) (Core.prog_procs p)
-              Core.prog_main_name (Core.prog_main p)),
+            (Core.compiled_owner_of (Core.prog_table p) (Core.prog_procs p)),
           (fun owner ctx ->
             (if Core.null ctx
               then owner @
@@ -12793,7 +12682,7 @@ let rec entry_state_ctx_graph_config
 
 let rec entry_state_ctx_export_auto
   p = (let r = Core.analyse_interval_entry_state_result p in
-       let g = Core.prog_cfg Core.prog_main_name p in
+       let g = Core.prog_cfg p in
        let base = entry_state_ctx_graph_config p in
        let cfg =
          Core.node_annotation_update
@@ -12908,13 +12797,11 @@ let rec entry_state_report_export_auto
   kind p =
     (let report = entry_state_report_for_annotation kind p in
       Core.raw_cfg_export (Core.prog_table p) (Core.prog_procs p)
-        Core.prog_main_name (Core.prog_main p)
         (verdict_state_report_node_annotation (report_vars report) report));;
 
 let rec full_state_graph_snapshot_auto
   kind p =
     Core.raw_cfg_canonical_text_lit (Core.prog_table p) (Core.prog_procs p)
-      Core.prog_main_name (Core.prog_main p)
       (point_state_node_annotation (program_vars p)
         (analyse_point_env_for kind p));;
 
@@ -12923,22 +12810,20 @@ let rec full_state_checked_payload_auto
     (match kind
       with Analysis_Config.Sign_Analysis ->
         (let (r, gvs) =
-           Core.analyse_sign_ctx_solved_for (Core.declared_global p)
-             Core.prog_main_name p
-           in
+           Core.analyse_sign_ctx_solved_for (Core.declared_global p) p in
           checked_payload_of (fun a -> Analyse_Dispatch.SignValue a)
             Core.sign_classify_check (Core.bot_fun Core.bot_sign) r gvs p)
       | Analysis_Config.Interval_Analysis ->
         (let (r, gvs) =
            Core.analyse_interval_ctx_solved_warrow_for (Core.declared_global p)
-             Core.prog_main_name p
+             p
            in
           checked_payload_of (fun a -> Analyse_Dispatch.IntervalValue a)
             Core.interval_classify_check (Core.bot_fun Core.bot_ivl) r gvs p)
       | Analysis_Config.Int_Analysis ->
         (let (r, gvs) =
            Core.analyse_int_ctx_solved_warrow_for Core.Refine_Fixpoint
-             (Core.declared_global p) Core.prog_main_name p
+             (Core.declared_global p) p
            in
           checked_payload_of (fun a -> Analyse_Dispatch.IntDomValue a)
             Core.int_classify_check
@@ -12947,9 +12832,7 @@ let rec full_state_checked_payload_auto
             r gvs p)
       | Analysis_Config.Parity_Analysis ->
         (let (r, gvs) =
-           Core.analyse_parity_ctx_solved_for (Core.declared_global p)
-             Core.prog_main_name p
-           in
+           Core.analyse_parity_ctx_solved_for (Core.declared_global p) p in
           checked_payload_of (fun a -> Analyse_Dispatch.ParityValue a)
             Core.parity_classify_check (Core.bot_fun Core.bot_parity) r gvs
             p));;
@@ -12961,19 +12844,17 @@ let rec state_report_graph_snapshot_auto
          (Analyse_Dispatch.analyse_with_state_default kind p)
        in
       Core.raw_cfg_canonical_text_lit (Core.prog_table p) (Core.prog_procs p)
-        Core.prog_main_name (Core.prog_main p)
         (state_report_node_annotation (report_vars report) report));;
 
 let rec entry_state_full_state_export_auto
   kind p =
     Core.raw_cfg_export (Core.prog_table p) (Core.prog_procs p)
-      Core.prog_main_name (Core.prog_main p)
       (point_state_node_annotation (program_vars p)
         (entry_state_point_env_for kind p));;
 
 let rec entry_state_ctx_graph_snapshot_auto
   p = (let r = Core.analyse_interval_entry_state_result p in
-       let g = Core.prog_cfg Core.prog_main_name p in
+       let g = Core.prog_cfg p in
        let base = entry_state_ctx_graph_config p in
        let cfg =
          Core.node_annotation_update
@@ -12991,13 +12872,11 @@ let rec entry_state_report_graph_snapshot_auto
   kind p =
     (let report = entry_state_report_for_annotation kind p in
       Core.raw_cfg_canonical_text_lit (Core.prog_table p) (Core.prog_procs p)
-        Core.prog_main_name (Core.prog_main p)
         (verdict_state_report_node_annotation (report_vars report) report));;
 
 let rec entry_state_full_state_checked_export_auto
   kind p =
     Core.raw_cfg_export (Core.prog_table p) (Core.prog_procs p)
-      Core.prog_main_name (Core.prog_main p)
       (full_state_checked_node_annotation (program_vars p)
         (entry_state_point_env_for kind p)
         (entry_state_checked_verdicts kind p));;
@@ -13005,7 +12884,6 @@ let rec entry_state_full_state_checked_export_auto
 let rec entry_state_full_state_graph_snapshot_auto
   kind p =
     Core.raw_cfg_canonical_text_lit (Core.prog_table p) (Core.prog_procs p)
-      Core.prog_main_name (Core.prog_main p)
       (point_state_node_annotation (program_vars p)
         (entry_state_point_env_for kind p));;
 

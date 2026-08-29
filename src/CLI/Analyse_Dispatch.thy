@@ -279,44 +279,44 @@ text \<open>
 
 corollary analyse_interval_proved_sound:
   fixes p :: imp_prog and v :: pp and c :: exp
-  assumes wf: "wf_compile_input (declared_global p) (prog_table p) (prog_procs p) prog_main_name (prog_main p)"
-      and solve: "Interval_Ctx_None_Sound.ictx_terminates_prog_warrow (declared_global p) prog_main_name p"
-      and entry_cov: "(cfg_entry (prog_cfg prog_main_name p), ()) \<in> fst (Interval_Ctx_None_Sound.ictx_sol_prog_warrow (declared_global p) prog_main_name p)"
+  assumes wf: "wf_compile_input (declared_global p) (prog_table p) (prog_procs p)"
+      and solve: "Interval_Ctx_None_Sound.ictx_terminates_prog_warrow (declared_global p) p"
+      and entry_cov: "(cfg_entry (prog_cfg p), ()) \<in> fst (Interval_Ctx_None_Sound.ictx_sol_prog_warrow (declared_global p) p)"
       and fwd_ok:
-        "\<And>u a w ctx. (u, ctx) \<in> fst (Interval_Ctx_None_Sound.ictx_sol_prog_warrow (declared_global p) prog_main_name p)
-           \<Longrightarrow> (u, a, w) \<in> intra (prog_cfg prog_main_name p) \<Longrightarrow> (w, ctx) \<in> fst (Interval_Ctx_None_Sound.ictx_sol_prog_warrow (declared_global p) prog_main_name p)"
+        "\<And>u a w ctx. (u, ctx) \<in> fst (Interval_Ctx_None_Sound.ictx_sol_prog_warrow (declared_global p) p)
+           \<Longrightarrow> (u, a, w) \<in> intra (prog_cfg p) \<Longrightarrow> (w, ctx) \<in> fst (Interval_Ctx_None_Sound.ictx_sol_prog_warrow (declared_global p) p)"
       and call_fwd_ok:
-        "\<And>u ctx dst fs as q k. (u, ctx) \<in> fst (Interval_Ctx_None_Sound.ictx_sol_prog_warrow (declared_global p) prog_main_name p)
-           \<Longrightarrow> (u, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg prog_main_name p)
-           \<Longrightarrow> (FunctionEntry q, ()) \<in> fst (Interval_Ctx_None_Sound.ictx_sol_prog_warrow (declared_global p) prog_main_name p)"
+        "\<And>u ctx dst fs as q k. (u, ctx) \<in> fst (Interval_Ctx_None_Sound.ictx_sol_prog_warrow (declared_global p) p)
+           \<Longrightarrow> (u, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg p)
+           \<Longrightarrow> (FunctionEntry q, ()) \<in> fst (Interval_Ctx_None_Sound.ictx_sol_prog_warrow (declared_global p) p)"
       and comb_fwd_ok:
-        "\<And>cl c1 dst fs as q k. (cl, c1) \<in> fst (Interval_Ctx_None_Sound.ictx_sol_prog_warrow (declared_global p) prog_main_name p)
-           \<Longrightarrow> (cl, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg prog_main_name p)
-           \<Longrightarrow> (k, c1) \<in> fst (Interval_Ctx_None_Sound.ictx_sol_prog_warrow (declared_global p) prog_main_name p)"
+        "\<And>cl c1 dst fs as q k. (cl, c1) \<in> fst (Interval_Ctx_None_Sound.ictx_sol_prog_warrow (declared_global p) p)
+           \<Longrightarrow> (cl, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg p)
+           \<Longrightarrow> (k, c1) \<in> fst (Interval_Ctx_None_Sound.ictx_sol_prog_warrow (declared_global p) p)"
       and mem: "(v, c, Check_Proved) \<in> set (analyse Interval_Analysis p)"
-  shows "\<forall>s \<in> ltr_collect (declared_global p) (prog_cfg prog_main_name p) (cinit_stores (declared_global p)) v.
+  shows "\<forall>s \<in> ltr_collect (declared_global p) (prog_cfg p) (cinit_stores (declared_global p)) v.
            truthy (aval c s)"
   by (rule analyse_interval_td_report_sound_proved
         [OF wf solve entry_cov fwd_ok call_fwd_ok comb_fwd_ok mem[unfolded analyse.simps]])
 
 corollary analyse_interval_refuted_sound:
   fixes p :: imp_prog and v :: pp and c :: exp
-  assumes wf: "wf_compile_input (declared_global p) (prog_table p) (prog_procs p) prog_main_name (prog_main p)"
-      and solve: "Interval_Ctx_None_Sound.ictx_terminates_prog_warrow (declared_global p) prog_main_name p"
-      and entry_cov: "(cfg_entry (prog_cfg prog_main_name p), ()) \<in> fst (Interval_Ctx_None_Sound.ictx_sol_prog_warrow (declared_global p) prog_main_name p)"
+  assumes wf: "wf_compile_input (declared_global p) (prog_table p) (prog_procs p)"
+      and solve: "Interval_Ctx_None_Sound.ictx_terminates_prog_warrow (declared_global p) p"
+      and entry_cov: "(cfg_entry (prog_cfg p), ()) \<in> fst (Interval_Ctx_None_Sound.ictx_sol_prog_warrow (declared_global p) p)"
       and fwd_ok:
-        "\<And>u a w ctx. (u, ctx) \<in> fst (Interval_Ctx_None_Sound.ictx_sol_prog_warrow (declared_global p) prog_main_name p)
-           \<Longrightarrow> (u, a, w) \<in> intra (prog_cfg prog_main_name p) \<Longrightarrow> (w, ctx) \<in> fst (Interval_Ctx_None_Sound.ictx_sol_prog_warrow (declared_global p) prog_main_name p)"
+        "\<And>u a w ctx. (u, ctx) \<in> fst (Interval_Ctx_None_Sound.ictx_sol_prog_warrow (declared_global p) p)
+           \<Longrightarrow> (u, a, w) \<in> intra (prog_cfg p) \<Longrightarrow> (w, ctx) \<in> fst (Interval_Ctx_None_Sound.ictx_sol_prog_warrow (declared_global p) p)"
       and call_fwd_ok:
-        "\<And>u ctx dst fs as q k. (u, ctx) \<in> fst (Interval_Ctx_None_Sound.ictx_sol_prog_warrow (declared_global p) prog_main_name p)
-           \<Longrightarrow> (u, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg prog_main_name p)
-           \<Longrightarrow> (FunctionEntry q, ()) \<in> fst (Interval_Ctx_None_Sound.ictx_sol_prog_warrow (declared_global p) prog_main_name p)"
+        "\<And>u ctx dst fs as q k. (u, ctx) \<in> fst (Interval_Ctx_None_Sound.ictx_sol_prog_warrow (declared_global p) p)
+           \<Longrightarrow> (u, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg p)
+           \<Longrightarrow> (FunctionEntry q, ()) \<in> fst (Interval_Ctx_None_Sound.ictx_sol_prog_warrow (declared_global p) p)"
       and comb_fwd_ok:
-        "\<And>cl c1 dst fs as q k. (cl, c1) \<in> fst (Interval_Ctx_None_Sound.ictx_sol_prog_warrow (declared_global p) prog_main_name p)
-           \<Longrightarrow> (cl, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg prog_main_name p)
-           \<Longrightarrow> (k, c1) \<in> fst (Interval_Ctx_None_Sound.ictx_sol_prog_warrow (declared_global p) prog_main_name p)"
+        "\<And>cl c1 dst fs as q k. (cl, c1) \<in> fst (Interval_Ctx_None_Sound.ictx_sol_prog_warrow (declared_global p) p)
+           \<Longrightarrow> (cl, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg p)
+           \<Longrightarrow> (k, c1) \<in> fst (Interval_Ctx_None_Sound.ictx_sol_prog_warrow (declared_global p) p)"
       and mem: "(v, c, Check_Refuted) \<in> set (analyse Interval_Analysis p)"
-  shows "\<forall>s \<in> ltr_collect (declared_global p) (prog_cfg prog_main_name p) (cinit_stores (declared_global p)) v.
+  shows "\<forall>s \<in> ltr_collect (declared_global p) (prog_cfg p) (cinit_stores (declared_global p)) v.
            \<not> truthy (aval c s)"
   by (rule analyse_interval_td_report_sound_refuted
         [OF wf solve entry_cov fwd_ok call_fwd_ok comb_fwd_ok mem[unfolded analyse.simps]])
@@ -335,43 +335,43 @@ text \<open>
 
 corollary analyse_sign_proved_sound:
   fixes p :: imp_prog and v :: pp and c :: exp
-  assumes wf: "wf_compile_input (declared_global p) (prog_table p) (prog_procs p) prog_main_name (prog_main p)"
-      and solve: "sctx_terminates_prog (declared_global p) prog_main_name p"
-      and entry_cov: "(cfg_entry (prog_cfg prog_main_name p), ()) \<in> fst (sctx_sol_prog (declared_global p) prog_main_name p)"
+  assumes wf: "wf_compile_input (declared_global p) (prog_table p) (prog_procs p)"
+      and solve: "sctx_terminates_prog (declared_global p) p"
+      and entry_cov: "(cfg_entry (prog_cfg p), ()) \<in> fst (sctx_sol_prog (declared_global p) p)"
       and fwd_ok:
-        "\<And>u a w ctx. (u, ctx) \<in> fst (sctx_sol_prog (declared_global p) prog_main_name p)
-           \<Longrightarrow> (u, a, w) \<in> intra (prog_cfg prog_main_name p) \<Longrightarrow> (w, ctx) \<in> fst (sctx_sol_prog (declared_global p) prog_main_name p)"
+        "\<And>u a w ctx. (u, ctx) \<in> fst (sctx_sol_prog (declared_global p) p)
+           \<Longrightarrow> (u, a, w) \<in> intra (prog_cfg p) \<Longrightarrow> (w, ctx) \<in> fst (sctx_sol_prog (declared_global p) p)"
       and call_fwd_ok:
-        "\<And>u ctx dst fs as q k. (u, ctx) \<in> fst (sctx_sol_prog (declared_global p) prog_main_name p)
-           \<Longrightarrow> (u, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg prog_main_name p)
-           \<Longrightarrow> (FunctionEntry q, ()) \<in> fst (sctx_sol_prog (declared_global p) prog_main_name p)"
+        "\<And>u ctx dst fs as q k. (u, ctx) \<in> fst (sctx_sol_prog (declared_global p) p)
+           \<Longrightarrow> (u, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg p)
+           \<Longrightarrow> (FunctionEntry q, ()) \<in> fst (sctx_sol_prog (declared_global p) p)"
       and comb_fwd_ok:
-        "\<And>cl c1 dst fs as q k. (cl, c1) \<in> fst (sctx_sol_prog (declared_global p) prog_main_name p)
-           \<Longrightarrow> (cl, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg prog_main_name p)
-           \<Longrightarrow> (k, c1) \<in> fst (sctx_sol_prog (declared_global p) prog_main_name p)"
+        "\<And>cl c1 dst fs as q k. (cl, c1) \<in> fst (sctx_sol_prog (declared_global p) p)
+           \<Longrightarrow> (cl, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg p)
+           \<Longrightarrow> (k, c1) \<in> fst (sctx_sol_prog (declared_global p) p)"
       and mem: "(v, c, Check_Proved) \<in> set (analyse Sign_Analysis p)"
-  shows "\<forall>s \<in> ltr_collect (declared_global p) (prog_cfg prog_main_name p) (cinit_stores (declared_global p)) v. truthy (aval c s)"
+  shows "\<forall>s \<in> ltr_collect (declared_global p) (prog_cfg p) (cinit_stores (declared_global p)) v. truthy (aval c s)"
   by (rule analyse_sign_report_sound_proved
         [OF wf solve entry_cov fwd_ok call_fwd_ok comb_fwd_ok mem[unfolded analyse.simps]])
 
 corollary analyse_sign_refuted_sound:
   fixes p :: imp_prog and v :: pp and c :: exp
-  assumes wf: "wf_compile_input (declared_global p) (prog_table p) (prog_procs p) prog_main_name (prog_main p)"
-      and solve: "sctx_terminates_prog (declared_global p) prog_main_name p"
-      and entry_cov: "(cfg_entry (prog_cfg prog_main_name p), ()) \<in> fst (sctx_sol_prog (declared_global p) prog_main_name p)"
+  assumes wf: "wf_compile_input (declared_global p) (prog_table p) (prog_procs p)"
+      and solve: "sctx_terminates_prog (declared_global p) p"
+      and entry_cov: "(cfg_entry (prog_cfg p), ()) \<in> fst (sctx_sol_prog (declared_global p) p)"
       and fwd_ok:
-        "\<And>u a w ctx. (u, ctx) \<in> fst (sctx_sol_prog (declared_global p) prog_main_name p)
-           \<Longrightarrow> (u, a, w) \<in> intra (prog_cfg prog_main_name p) \<Longrightarrow> (w, ctx) \<in> fst (sctx_sol_prog (declared_global p) prog_main_name p)"
+        "\<And>u a w ctx. (u, ctx) \<in> fst (sctx_sol_prog (declared_global p) p)
+           \<Longrightarrow> (u, a, w) \<in> intra (prog_cfg p) \<Longrightarrow> (w, ctx) \<in> fst (sctx_sol_prog (declared_global p) p)"
       and call_fwd_ok:
-        "\<And>u ctx dst fs as q k. (u, ctx) \<in> fst (sctx_sol_prog (declared_global p) prog_main_name p)
-           \<Longrightarrow> (u, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg prog_main_name p)
-           \<Longrightarrow> (FunctionEntry q, ()) \<in> fst (sctx_sol_prog (declared_global p) prog_main_name p)"
+        "\<And>u ctx dst fs as q k. (u, ctx) \<in> fst (sctx_sol_prog (declared_global p) p)
+           \<Longrightarrow> (u, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg p)
+           \<Longrightarrow> (FunctionEntry q, ()) \<in> fst (sctx_sol_prog (declared_global p) p)"
       and comb_fwd_ok:
-        "\<And>cl c1 dst fs as q k. (cl, c1) \<in> fst (sctx_sol_prog (declared_global p) prog_main_name p)
-           \<Longrightarrow> (cl, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg prog_main_name p)
-           \<Longrightarrow> (k, c1) \<in> fst (sctx_sol_prog (declared_global p) prog_main_name p)"
+        "\<And>cl c1 dst fs as q k. (cl, c1) \<in> fst (sctx_sol_prog (declared_global p) p)
+           \<Longrightarrow> (cl, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg p)
+           \<Longrightarrow> (k, c1) \<in> fst (sctx_sol_prog (declared_global p) p)"
       and mem: "(v, c, Check_Refuted) \<in> set (analyse Sign_Analysis p)"
-  shows "\<forall>s \<in> ltr_collect (declared_global p) (prog_cfg prog_main_name p) (cinit_stores (declared_global p)) v. \<not> truthy (aval c s)"
+  shows "\<forall>s \<in> ltr_collect (declared_global p) (prog_cfg p) (cinit_stores (declared_global p)) v. \<not> truthy (aval c s)"
   by (rule analyse_sign_report_sound_refuted
         [OF wf solve entry_cov fwd_ok call_fwd_ok comb_fwd_ok mem[unfolded analyse.simps]])
 
@@ -393,44 +393,44 @@ text \<open>
 
 corollary analyse_int_proved_sound:
   fixes p :: imp_prog and v :: pp and c :: exp
-  assumes wf: "wf_compile_input (declared_global p) (prog_table p) (prog_procs p) prog_main_name (prog_main p)"
-      and solve: "Int_Ctx_None_Sound.ictx_terminates_prog_warrow Refine_Fixpoint (declared_global p) prog_main_name p"
-      and entry_cov: "(cfg_entry (prog_cfg prog_main_name p), ()) \<in> fst (Int_Ctx_None_Sound.ictx_sol_prog_warrow Refine_Fixpoint (declared_global p) prog_main_name p)"
+  assumes wf: "wf_compile_input (declared_global p) (prog_table p) (prog_procs p)"
+      and solve: "Int_Ctx_None_Sound.ictx_terminates_prog_warrow Refine_Fixpoint (declared_global p) p"
+      and entry_cov: "(cfg_entry (prog_cfg p), ()) \<in> fst (Int_Ctx_None_Sound.ictx_sol_prog_warrow Refine_Fixpoint (declared_global p) p)"
       and fwd_ok:
-        "\<And>u a w ctx. (u, ctx) \<in> fst (Int_Ctx_None_Sound.ictx_sol_prog_warrow Refine_Fixpoint (declared_global p) prog_main_name p)
-           \<Longrightarrow> (u, a, w) \<in> intra (prog_cfg prog_main_name p) \<Longrightarrow> (w, ctx) \<in> fst (Int_Ctx_None_Sound.ictx_sol_prog_warrow Refine_Fixpoint (declared_global p) prog_main_name p)"
+        "\<And>u a w ctx. (u, ctx) \<in> fst (Int_Ctx_None_Sound.ictx_sol_prog_warrow Refine_Fixpoint (declared_global p) p)
+           \<Longrightarrow> (u, a, w) \<in> intra (prog_cfg p) \<Longrightarrow> (w, ctx) \<in> fst (Int_Ctx_None_Sound.ictx_sol_prog_warrow Refine_Fixpoint (declared_global p) p)"
       and call_fwd_ok:
-        "\<And>u ctx dst fs as q k. (u, ctx) \<in> fst (Int_Ctx_None_Sound.ictx_sol_prog_warrow Refine_Fixpoint (declared_global p) prog_main_name p)
-           \<Longrightarrow> (u, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg prog_main_name p)
-           \<Longrightarrow> (FunctionEntry q, ()) \<in> fst (Int_Ctx_None_Sound.ictx_sol_prog_warrow Refine_Fixpoint (declared_global p) prog_main_name p)"
+        "\<And>u ctx dst fs as q k. (u, ctx) \<in> fst (Int_Ctx_None_Sound.ictx_sol_prog_warrow Refine_Fixpoint (declared_global p) p)
+           \<Longrightarrow> (u, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg p)
+           \<Longrightarrow> (FunctionEntry q, ()) \<in> fst (Int_Ctx_None_Sound.ictx_sol_prog_warrow Refine_Fixpoint (declared_global p) p)"
       and comb_fwd_ok:
-        "\<And>cl c1 dst fs as q k. (cl, c1) \<in> fst (Int_Ctx_None_Sound.ictx_sol_prog_warrow Refine_Fixpoint (declared_global p) prog_main_name p)
-           \<Longrightarrow> (cl, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg prog_main_name p)
-           \<Longrightarrow> (k, c1) \<in> fst (Int_Ctx_None_Sound.ictx_sol_prog_warrow Refine_Fixpoint (declared_global p) prog_main_name p)"
+        "\<And>cl c1 dst fs as q k. (cl, c1) \<in> fst (Int_Ctx_None_Sound.ictx_sol_prog_warrow Refine_Fixpoint (declared_global p) p)
+           \<Longrightarrow> (cl, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg p)
+           \<Longrightarrow> (k, c1) \<in> fst (Int_Ctx_None_Sound.ictx_sol_prog_warrow Refine_Fixpoint (declared_global p) p)"
       and mem: "(v, c, Check_Proved) \<in> set (analyse Int_Analysis p)"
-  shows "\<forall>s \<in> ltr_collect (declared_global p) (prog_cfg prog_main_name p) (cinit_stores (declared_global p)) v.
+  shows "\<forall>s \<in> ltr_collect (declared_global p) (prog_cfg p) (cinit_stores (declared_global p)) v.
            truthy (aval c s)"
   by (rule analyse_int_report_sound_proved
         [OF wf solve entry_cov fwd_ok call_fwd_ok comb_fwd_ok mem[unfolded analyse.simps]])
 
 corollary analyse_int_refuted_sound:
   fixes p :: imp_prog and v :: pp and c :: exp
-  assumes wf: "wf_compile_input (declared_global p) (prog_table p) (prog_procs p) prog_main_name (prog_main p)"
-      and solve: "Int_Ctx_None_Sound.ictx_terminates_prog_warrow Refine_Fixpoint (declared_global p) prog_main_name p"
-      and entry_cov: "(cfg_entry (prog_cfg prog_main_name p), ()) \<in> fst (Int_Ctx_None_Sound.ictx_sol_prog_warrow Refine_Fixpoint (declared_global p) prog_main_name p)"
+  assumes wf: "wf_compile_input (declared_global p) (prog_table p) (prog_procs p)"
+      and solve: "Int_Ctx_None_Sound.ictx_terminates_prog_warrow Refine_Fixpoint (declared_global p) p"
+      and entry_cov: "(cfg_entry (prog_cfg p), ()) \<in> fst (Int_Ctx_None_Sound.ictx_sol_prog_warrow Refine_Fixpoint (declared_global p) p)"
       and fwd_ok:
-        "\<And>u a w ctx. (u, ctx) \<in> fst (Int_Ctx_None_Sound.ictx_sol_prog_warrow Refine_Fixpoint (declared_global p) prog_main_name p)
-           \<Longrightarrow> (u, a, w) \<in> intra (prog_cfg prog_main_name p) \<Longrightarrow> (w, ctx) \<in> fst (Int_Ctx_None_Sound.ictx_sol_prog_warrow Refine_Fixpoint (declared_global p) prog_main_name p)"
+        "\<And>u a w ctx. (u, ctx) \<in> fst (Int_Ctx_None_Sound.ictx_sol_prog_warrow Refine_Fixpoint (declared_global p) p)
+           \<Longrightarrow> (u, a, w) \<in> intra (prog_cfg p) \<Longrightarrow> (w, ctx) \<in> fst (Int_Ctx_None_Sound.ictx_sol_prog_warrow Refine_Fixpoint (declared_global p) p)"
       and call_fwd_ok:
-        "\<And>u ctx dst fs as q k. (u, ctx) \<in> fst (Int_Ctx_None_Sound.ictx_sol_prog_warrow Refine_Fixpoint (declared_global p) prog_main_name p)
-           \<Longrightarrow> (u, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg prog_main_name p)
-           \<Longrightarrow> (FunctionEntry q, ()) \<in> fst (Int_Ctx_None_Sound.ictx_sol_prog_warrow Refine_Fixpoint (declared_global p) prog_main_name p)"
+        "\<And>u ctx dst fs as q k. (u, ctx) \<in> fst (Int_Ctx_None_Sound.ictx_sol_prog_warrow Refine_Fixpoint (declared_global p) p)
+           \<Longrightarrow> (u, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg p)
+           \<Longrightarrow> (FunctionEntry q, ()) \<in> fst (Int_Ctx_None_Sound.ictx_sol_prog_warrow Refine_Fixpoint (declared_global p) p)"
       and comb_fwd_ok:
-        "\<And>cl c1 dst fs as q k. (cl, c1) \<in> fst (Int_Ctx_None_Sound.ictx_sol_prog_warrow Refine_Fixpoint (declared_global p) prog_main_name p)
-           \<Longrightarrow> (cl, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg prog_main_name p)
-           \<Longrightarrow> (k, c1) \<in> fst (Int_Ctx_None_Sound.ictx_sol_prog_warrow Refine_Fixpoint (declared_global p) prog_main_name p)"
+        "\<And>cl c1 dst fs as q k. (cl, c1) \<in> fst (Int_Ctx_None_Sound.ictx_sol_prog_warrow Refine_Fixpoint (declared_global p) p)
+           \<Longrightarrow> (cl, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg p)
+           \<Longrightarrow> (k, c1) \<in> fst (Int_Ctx_None_Sound.ictx_sol_prog_warrow Refine_Fixpoint (declared_global p) p)"
       and mem: "(v, c, Check_Refuted) \<in> set (analyse Int_Analysis p)"
-  shows "\<forall>s \<in> ltr_collect (declared_global p) (prog_cfg prog_main_name p) (cinit_stores (declared_global p)) v.
+  shows "\<forall>s \<in> ltr_collect (declared_global p) (prog_cfg p) (cinit_stores (declared_global p)) v.
            \<not> truthy (aval c s)"
   by (rule analyse_int_report_sound_refuted
         [OF wf solve entry_cov fwd_ok call_fwd_ok comb_fwd_ok mem[unfolded analyse.simps]])
@@ -440,7 +440,7 @@ subsection \<open>Executable code generation\<close>
 text \<open>
   \<open>analyse\<close> genuinely takes the domain choice and the program as runtime
   arguments, not constants baked in at export time. The raw AST constructors,
-  \<open>imp_prog.make\<close>, and \<open>proc_decl_of\<close> are exported alongside it so external
+  \<open>imp_prog.make\<close>, and \<open>proc_decl_ext\<close> are exported alongside it so external
   OCaml code can build a fresh \<open>imp_prog\<close> and hand it to \<open>analyse\<close>.
 
   \<^typ>\<open>vname\<close>/\<^typ>\<open>pname\<close> are \<^typ>\<open>String.literal\<close>
@@ -448,7 +448,7 @@ text \<open>
   the target language's native string (\<^verbatim>\<open>string\<close> in OCaml
   --- \<^theory>\<open>HOL.String\<close> ships that mapping
   unconditionally), so \<open>V\<close>/\<open>Assign\<close>/\<open>com.Call\<close>/\<open>FunctionEntry\<close>/
-  \<open>FunctionResult\<close>/\<open>proc_decl_of\<close>/\<open>imp_prog.make\<close> below already take and
+  \<open>FunctionResult\<close>/\<open>proc_decl_ext\<close>/\<open>imp_prog.make\<close> below already take and
   return native strings directly --- no separate construction facade needed.
 
   \<^theory>\<open>HOL-Library.Code_Target_Numeral\<close> makes \<open>int\<close>/\<open>nat\<close> abstract types
@@ -862,13 +862,13 @@ text \<open>
 
 lemma analyse_config_ctx_interval_callstring_k1_reaches_generic_core:
   "analyse_config_ctx (default_config Interval_Analysis (Ctx_CallString 1)) p
-     = Some (cs_call_string_verdict_report_prog 1 prog_main_name p)"
+     = Some (cs_call_string_verdict_report_prog 1 p)"
   by (simp add: analyse_config_ctx_def default_config_def mk_analysis_config_def
                 analyse_interval_call_string_report_def)
 
 lemma analyse_config_ctx_interval_callstring_k2_reaches_generic_core:
   "analyse_config_ctx (default_config Interval_Analysis (Ctx_CallString 2)) p
-     = Some (cs_call_string_verdict_report_prog 2 prog_main_name p)"
+     = Some (cs_call_string_verdict_report_prog 2 p)"
   by (simp add: analyse_config_ctx_def default_config_def mk_analysis_config_def
                 analyse_interval_call_string_report_def)
 
@@ -964,6 +964,7 @@ text \<open>
 
 code_identifier
   code_module VIMP_Notation \<rightharpoonup> (OCaml) Core
+| code_module VIMP_Program \<rightharpoonup> (OCaml) Core
 | code_module VIMP_Expr \<rightharpoonup> (OCaml) Core
 | code_module VIMP_Proc \<rightharpoonup> (OCaml) Core
 | code_module VIMP_Special \<rightharpoonup> (OCaml) Core
@@ -974,6 +975,7 @@ code_identifier
 | code_module CFG_Prune \<rightharpoonup> (OCaml) Core
 | code_module Compile_Invariants \<rightharpoonup> (OCaml) Core
 | code_module VIMP_Proc_to_CFG \<rightharpoonup> (OCaml) Core
+| code_module Compile_Wellformed \<rightharpoonup> (OCaml) Core
 | code_module Abstract_Domain \<rightharpoonup> (OCaml) Core
 | code_module Numeric_Ops \<rightharpoonup> (OCaml) Core
 | code_module Exec_St \<rightharpoonup> (OCaml) Core

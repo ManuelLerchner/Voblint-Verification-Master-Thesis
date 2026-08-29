@@ -217,19 +217,19 @@ abbreviation int_ex_is_bot_pred :: "int_dom exec_dg_st => bool" where
 lemma prod_int_ex_never_terminates:
   "TD_side_warrowing_apinis_Interp_solve_c
      (analyse_int_dg_eqs_for Refine_Never int_ex_is_bot_pred int_ex_gs int_ex_prog)
-     (cfg_exit (prog_cfg prog_main_name int_ex_prog), ()) ~= None"
+     (cfg_exit (prog_cfg int_ex_prog), ()) ~= None"
   by eval
 
 lemma prod_int_ex_once_terminates:
   "TD_side_warrowing_apinis_Interp_solve_c
      (analyse_int_dg_eqs_for Refine_Once int_ex_is_bot_pred int_ex_gs int_ex_prog)
-     (cfg_exit (prog_cfg prog_main_name int_ex_prog), ()) ~= None"
+     (cfg_exit (prog_cfg int_ex_prog), ()) ~= None"
   by eval
 
 lemma prod_int_ex_fixpoint_terminates:
   "TD_side_warrowing_apinis_Interp_solve_c
      (analyse_int_dg_eqs_for Refine_Fixpoint int_ex_is_bot_pred int_ex_gs int_ex_prog)
-     (cfg_exit (prog_cfg prog_main_name int_ex_prog), ()) ~= None"
+     (cfg_exit (prog_cfg int_ex_prog), ()) ~= None"
   by eval
 
 lemma prod_int_ex_never_y_at_Statement_1:
@@ -274,19 +274,19 @@ text \<open>
 lemma prod_int_ex_join_never_terminates:
   "TD_side_always_join_Interp_solve_c
      (analyse_int_dg_eqs_for Refine_Never int_ex_is_bot_pred int_ex_gs int_ex_prog)
-     (cfg_exit (prog_cfg prog_main_name int_ex_prog), ()) ~= None"
+     (cfg_exit (prog_cfg int_ex_prog), ()) ~= None"
   by eval
 
 lemma prod_int_ex_join_once_terminates:
   "TD_side_always_join_Interp_solve_c
      (analyse_int_dg_eqs_for Refine_Once int_ex_is_bot_pred int_ex_gs int_ex_prog)
-     (cfg_exit (prog_cfg prog_main_name int_ex_prog), ()) ~= None"
+     (cfg_exit (prog_cfg int_ex_prog), ()) ~= None"
   by eval
 
 lemma prod_int_ex_join_fixpoint_terminates:
   "TD_side_always_join_Interp_solve_c
      (analyse_int_dg_eqs_for Refine_Fixpoint int_ex_is_bot_pred int_ex_gs int_ex_prog)
-     (cfg_exit (prog_cfg prog_main_name int_ex_prog), ()) ~= None"
+     (cfg_exit (prog_cfg int_ex_prog), ()) ~= None"
   by eval
 
 lemma prod_int_ex_join_never_y_at_Statement_1:
@@ -340,19 +340,19 @@ lemma prod_int_ex_join_agrees_with_warrow_at_fixpoint:
 lemma prod_int_ex_per_origin_never_terminates:
   "TD_side_per_origin_Interp_solve_c
      (analyse_int_dg_eqs_for Refine_Never int_ex_is_bot_pred int_ex_gs int_ex_prog)
-     (cfg_exit (prog_cfg prog_main_name int_ex_prog), ()) ~= None"
+     (cfg_exit (prog_cfg int_ex_prog), ()) ~= None"
   by eval
 
 lemma prod_int_ex_per_origin_once_terminates:
   "TD_side_per_origin_Interp_solve_c
      (analyse_int_dg_eqs_for Refine_Once int_ex_is_bot_pred int_ex_gs int_ex_prog)
-     (cfg_exit (prog_cfg prog_main_name int_ex_prog), ()) ~= None"
+     (cfg_exit (prog_cfg int_ex_prog), ()) ~= None"
   by eval
 
 lemma prod_int_ex_per_origin_fixpoint_terminates:
   "TD_side_per_origin_Interp_solve_c
      (analyse_int_dg_eqs_for Refine_Fixpoint int_ex_is_bot_pred int_ex_gs int_ex_prog)
-     (cfg_exit (prog_cfg prog_main_name int_ex_prog), ()) ~= None"
+     (cfg_exit (prog_cfg int_ex_prog), ()) ~= None"
   by eval
 
 lemma prod_int_ex_per_origin_never_y_at_Statement_1:

@@ -2,7 +2,14 @@ theory VIMP_Source_Print
   imports VIMP_Proc "HOL-Library.Char_ord"
 begin
 
-text \<open>Executable source rendering for VIMP commands and procedure tables.\<close>
+section \<open>Printing a program back as source text\<close>
+
+text \<open>
+  Turns an \<^type>\<open>com\<close> back into the concrete syntax it was parsed from, executably, so a
+  check report can quote the line it is talking about.  Nothing is proved about the result
+  --- it is a display function, not the inverse of parsing, and no soundness statement
+  depends on it.
+\<close>
 
 fun string_of_nat :: "nat \<Rightarrow> string" where
   "string_of_nat n =
@@ -14,19 +21,11 @@ definition string_of_int :: "int \<Rightarrow> string" where
      (if i < 0 then ''-'' @ string_of_nat (nat (- i))
       else string_of_nat (nat i))"
 
-text \<open>
-  \<open>exp_prio\<close> mirrors \<open>VIMP_Grammar_Generated\<close>'s own generated mixfix
-  priorities level for level (\<open>Or\<close> loosest, \<open>Times\<close>/\<open>Not\<close>
-  tightest), so \<open>string_of_exp\<close> parenthesizes a suexpression exactly when
-  its own constructor binds looser than the calling position requires. The
-  printed text reparses to the same tree for any \<open>exp\<close> actually reachable
-  by parsing source text -- arithmetic, comparison, and logical operators
-  alike, sharing the one grammar. A tree built some other way (e.g.
-  \<open>Times (Plus a b) c\<close>, not obtainable from concrete VIMP source, since
-  nothing can demote a \<open>Plus\<close> back under a \<open>*\<close> without parens) still prints
-  as *some* string, just not necessarily the tightest one -- an inherent
-  limit of the source grammar itself, not a printer defect.
-\<close>
+text \<open>\<open>exp_prio\<close> mirrors the grammar's mixfix priorities level for level, so
+  \<open>string_of_exp\<close> parenthesizes a subexpression exactly when its constructor
+  binds looser than the calling position requires. Every tree obtainable from
+  source text reparses to itself; a tree built another way still prints, just
+  not necessarily tightest.\<close>
 
 fun exp_prio :: "exp \<Rightarrow> nat" where
   "exp_prio (N _) = 1000"
@@ -84,18 +83,12 @@ fun string_of_com :: "com \<Rightarrow> string" where
 | "string_of_com Restore = ''restore''"
 | "string_of_com Unwind = ''<unwind>''"
 
-
-
 fun source_indent :: "nat \<Rightarrow> string" where
   "source_indent 0 = []"
 | "source_indent (Suc n) = ''  '' @ source_indent n"
 
-text \<open>\<open>append_last\<close> puts the \<open>;\<close> VIMP's grammar requires between sequential
-  statements onto the final rendered line of the first, rather than between
-  every line unconditionally -- a multi-line \<open>if\<close>/\<open>while\<close> block's closing
-  \<open>}\<close> is one rendered "statement" spanning several list entries, and only
-  its last line is where the following statement's separator belongs.\<close>
-
+text \<open>The \<open>;\<close> separator goes on the last rendered line of the first statement,
+  since a block statement spans several lines.\<close>
 fun append_last :: "string \<Rightarrow> string list \<Rightarrow> string list" where
   "append_last suffix [] = []"
 | "append_last suffix [s] = [s @ suffix]"
@@ -128,19 +121,13 @@ fun pretty_source_lines_com :: "nat \<Rightarrow> com \<Rightarrow> string list"
 
 definition pretty_source_lines_proc :: "nat \<Rightarrow> pname \<Rightarrow> proc_decl \<Rightarrow> string list" where
   "pretty_source_lines_proc n p decl =
-    (source_indent n @ ''void '' @ String.explode p @ ''('' @ join_source '', '' (map String.explode (formals decl)) @ '') {'')
+    (source_indent n @ ''void '' @ String.explode p @ ''(''
+       @ join_source '', '' (map String.explode (formals decl)) @ '') {'')
     # pretty_source_lines_com (n + 2) (body decl)
     @ [source_indent n @ ''}'']"
 
-text \<open>
-  Matches VIMP's canonical concrete syntax exactly: no \<open>program { ... }\<close>
-  wrapper (a standalone source file is delimited by its own end, not by an
-  enclosing keyword -- see grammar/vimp.yaml), procedures rendered as
-  \<open>void NAME(args) { ... }\<close>. \<open>globals\<close> is the program's declared-global
-  list; passing \<open>[]\<close> omits the \<open>global ...;\<close> line entirely, matching how
-  an unwrapped program with no globals reads.
-\<close>
-
+text \<open>Canonical concrete syntax: no \<open>program { ... }\<close> wrapper, and no
+  \<open>global\<close> line when \<open>globals\<close> is empty.\<close>
 definition pretty_string_of_program ::
   "proc_table \<Rightarrow> pname list \<Rightarrow> com \<Rightarrow> vname list \<Rightarrow> string" where
   "pretty_string_of_program \<Pi> ps main globals =
@@ -153,3 +140,4 @@ definition pretty_string_of_program ::
       @ [''void main() {''] @ pretty_source_lines_com 2 main @ [''}''])"
 
 end
+

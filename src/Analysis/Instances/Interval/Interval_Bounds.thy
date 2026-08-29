@@ -1,5 +1,5 @@
 theory Interval_Bounds
-  imports Voblint_VIMP.VIMP_Settings
+  imports Main
 begin
 
 section \<open>Interval bounds\<close>

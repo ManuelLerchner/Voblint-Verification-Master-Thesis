@@ -44,7 +44,7 @@ text \<open>Case 3: the mixed program computes a real, non-trivial result, read 
 definition storage_total_env :: "vname \<Rightarrow> sign" where
   "storage_total_env =
      (case lookup_context (analyse_sign_result_for storage_gs storage_program)
-             (cfg_exit (prog_cfg prog_main_name storage_program)) () of
+             (cfg_exit (prog_cfg storage_program)) () of
         Unreachable \<Rightarrow> bot | Reachable st \<Rightarrow> st)"
 
 lemma storage_total_result:

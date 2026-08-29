@@ -35,16 +35,16 @@ text \<open>The main context is \<open>[]\<close> (\<open>main\<close> is the ro
 
 definition rc_ctx_sol ::
   "(pp \<times> ivl list) set \<times> (pp \<times> ivl list + gk \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)" where
-  "rc_ctx_sol = entry_state_sol rc_gs rc_is_bot_pred rc_pi rc_procs (STR ''main'') rc_main"
+  "rc_ctx_sol = entry_state_sol rc_gs rc_is_bot_pred rc_pi rc_procs"
 
 lemma rc_ctx_terminates_c:
   "TD_side_warrowing_apinis_Interp_solve_c
-     (entry_state_eqs rc_gs rc_is_bot_pred rc_pi rc_procs (STR ''main'') rc_main)
+     (entry_state_eqs rc_gs rc_is_bot_pred rc_pi rc_procs)
      (cfg_exit rc_cfg, []) \<noteq> None"
   unfolding rc_cfg_def by eval
 
 lemma rc_ctx_terminates:
-  "entry_state_terminates rc_gs rc_is_bot_pred rc_pi rc_procs (STR ''main'') rc_main"
+  "entry_state_terminates rc_gs rc_is_bot_pred rc_pi rc_procs"
   using rc_ctx_terminates_c[unfolded rc_cfg_def]
   by (rule entry_state_terminates_via_solve_c)
 

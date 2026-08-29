@@ -70,7 +70,7 @@ definition branch_sign_st_for ::
   "branch_sign_st_for = generic_branch_st_for sign_ops"
 
 lemma branch_sign_st_for_eq [simp]:
-  "branch_sign_st_for source_global b pol s = branch_sign_st source_global b pol s"
+  "branch_sign_st_for gs b pol s = branch_sign_st gs b pol s"
   by (simp add: branch_sign_st_for_def generic_branch_st_for_def sign_ops_def)
 
 definition sign_enter_st_for ::
@@ -79,37 +79,37 @@ definition sign_enter_st_for ::
   "sign_enter_st_for = generic_enter_st_for sign_ops"
 
 lemma sign_enter_st_for_eq [simp]:
-  "sign_enter_st_for source_global xs es s =
-    bind_formals_resolved_q source_global xs
+  "sign_enter_st_for gs xs es s =
+    bind_formals_resolved_q gs xs
       (map (\<lambda>e. aval_sign e
-        (fun_of_resolved_st_q_for source_global s)) es)
+        (fun_of_resolved_st_q_for gs s)) es)
       (enter_frame_D_resolved_q STop s)"
   by (simp add: sign_enter_st_for_def generic_enter_st_for_def sign_ops_def)
 
 fun sign_tf_st_for ::
   "(vname => bool) => edge_action =>
    sign resolved_st_q => sign resolved_st_q" where
-    "sign_tf_st_for source_global EA_Nop s = s"
-  | "sign_tf_st_for source_global (EA_Assign x a) s =
-       update_resolved_st_q s (location_of source_global x)
-         (aval_sign a (fun_of_resolved_st_q_for source_global s))"
-  | "sign_tf_st_for source_global (EA_Special sc x) s =
-       update_resolved_st_q s (location_of source_global x)
+    "sign_tf_st_for gs EA_Nop s = s"
+  | "sign_tf_st_for gs (EA_Assign x a) s =
+       update_resolved_st_q s (location_of gs x)
+         (aval_sign a (fun_of_resolved_st_q_for gs s))"
+  | "sign_tf_st_for gs (EA_Special sc x) s =
+       update_resolved_st_q s (location_of gs x)
          (case sc of
             Nondet_Int => STop
-          | Min a b => sign_min (aval_sign a (fun_of_resolved_st_q_for source_global s))
-                                 (aval_sign b (fun_of_resolved_st_q_for source_global s))
-          | Max a b => sign_max (aval_sign a (fun_of_resolved_st_q_for source_global s))
-                                 (aval_sign b (fun_of_resolved_st_q_for source_global s)))"
-  | "sign_tf_st_for source_global (EA_Assume b) s =
-       branch_sign_st_for source_global b True s"
-  | "sign_tf_st_for source_global (EA_AssumeNot b) s =
-       branch_sign_st_for source_global b False s"
-  | "sign_tf_st_for source_global (EA_Ret None p) s = s"
-  | "sign_tf_st_for source_global (EA_Ret (Some a) p) s =
-       update_resolved_st_q s (location_of source_global ret_var)
-         (aval_sign a (fun_of_resolved_st_q_for source_global s))"
-  | "sign_tf_st_for source_global (EA_Check cnd) s = s"
+          | Min a b => sign_min (aval_sign a (fun_of_resolved_st_q_for gs s))
+                                 (aval_sign b (fun_of_resolved_st_q_for gs s))
+          | Max a b => sign_max (aval_sign a (fun_of_resolved_st_q_for gs s))
+                                 (aval_sign b (fun_of_resolved_st_q_for gs s)))"
+  | "sign_tf_st_for gs (EA_Assume b) s =
+       branch_sign_st_for gs b True s"
+  | "sign_tf_st_for gs (EA_AssumeNot b) s =
+       branch_sign_st_for gs b False s"
+  | "sign_tf_st_for gs (EA_Ret None p) s = s"
+  | "sign_tf_st_for gs (EA_Ret (Some a) p) s =
+       update_resolved_st_q s (location_of gs ret_var)
+         (aval_sign a (fun_of_resolved_st_q_for gs s))"
+  | "sign_tf_st_for gs (EA_Check cnd) s = s"
 
 text \<open>The Nop/Assign executable-abstract correspondence facts, mirroring
   \<open>ivl_tf_st_for_nop_agree\<close>/\<open>ivl_tf_st_for_assign_agree\<close> for the interval

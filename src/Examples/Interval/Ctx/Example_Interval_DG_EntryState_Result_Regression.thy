@@ -1,6 +1,6 @@
 theory Example_Interval_DG_EntryState_Result_Regression
   imports
-    Example_Interval_DG_Ctx_Globals_Regression
+    "Voblint_VIMP.VIMP_Notation" Example_Interval_DG_Ctx_Globals_Regression
     Example_Interval_DG_Ctx_Factorial_Regression
 begin
 
@@ -302,7 +302,7 @@ definition twin_call_contexts :: "(pp \<times> pp \<times> ivl list option) list
                Unreachable \<Rightarrow> None
              | Reachable st \<Rightarrow>
                  entry_state_callee_ctx (declared_global twin_prog) ca st))
-       (cfg_calls_list (prog_cfg prog_main_name twin_prog))"
+       (cfg_calls_list (prog_cfg twin_prog))"
 
 lemma twin_call_contexts_shared:
   "twin_call_contexts =

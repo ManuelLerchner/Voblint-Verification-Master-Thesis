@@ -41,7 +41,7 @@ definition loop_prog :: imp_prog where
 subsection \<open>The compiled CFG\<close>
 
 abbreviation "loop_cfg \<equiv>
-  compile_prog (prog_table loop_prog) (prog_procs loop_prog) prog_main_name (prog_main loop_prog)"
+  compile_prog (prog_table loop_prog) (prog_procs loop_prog)"
 
 lemma loop_cfg_full:
   "loop_cfg =

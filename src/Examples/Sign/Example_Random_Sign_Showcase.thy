@@ -116,48 +116,48 @@ lemma random_guard_reserved: "reserved_ret_var random_guard_gs"
   unfolding reserved_ret_var_def by simp
 
 lemma random_guard_solver_terminates:
-  "sctx_terminates_prog random_guard_gs prog_main_name random_guard_program"
+  "sctx_terminates_prog random_guard_gs random_guard_program"
   by (rule sctx_terminates_prog_via_solve_c) eval
 
 lemma random_guard_entry_cov:
-  "(cfg_entry (prog_cfg prog_main_name random_guard_program), ())
-     \<in> fst (sctx_sol_prog random_guard_gs prog_main_name random_guard_program)"
+  "(cfg_entry (prog_cfg random_guard_program), ())
+     \<in> fst (sctx_sol_prog random_guard_gs random_guard_program)"
   by eval
 
 lemma random_guard_fwd_ok_ball:
-  "\<forall>(u, a, w) \<in> intra (prog_cfg prog_main_name random_guard_program).
-     (u, ()) \<in> fst (sctx_sol_prog random_guard_gs prog_main_name random_guard_program) \<longrightarrow>
-     (w, ()) \<in> fst (sctx_sol_prog random_guard_gs prog_main_name random_guard_program)"
+  "\<forall>(u, a, w) \<in> intra (prog_cfg random_guard_program).
+     (u, ()) \<in> fst (sctx_sol_prog random_guard_gs random_guard_program) \<longrightarrow>
+     (w, ()) \<in> fst (sctx_sol_prog random_guard_gs random_guard_program)"
   by eval
 
 lemma random_guard_fwd_ok:
-  assumes "(u, ctx) \<in> fst (sctx_sol_prog random_guard_gs prog_main_name random_guard_program)"
-    and "(u, a, w) \<in> intra (prog_cfg prog_main_name random_guard_program)"
-  shows "(w, ctx) \<in> fst (sctx_sol_prog random_guard_gs prog_main_name random_guard_program)"
+  assumes "(u, ctx) \<in> fst (sctx_sol_prog random_guard_gs random_guard_program)"
+    and "(u, a, w) \<in> intra (prog_cfg random_guard_program)"
+  shows "(w, ctx) \<in> fst (sctx_sol_prog random_guard_gs random_guard_program)"
   using assms random_guard_fwd_ok_ball by (cases ctx) auto
 
 lemma random_guard_calls_cov_ball:
-  "\<forall>(u, ca, ce, k) \<in> calls (prog_cfg prog_main_name random_guard_program).
+  "\<forall>(u, ca, ce, k) \<in> calls (prog_cfg random_guard_program).
      (case ce of FunctionEntry q \<Rightarrow>
-        (FunctionEntry q, ()) \<in> fst (sctx_sol_prog random_guard_gs prog_main_name random_guard_program)
+        (FunctionEntry q, ()) \<in> fst (sctx_sol_prog random_guard_gs random_guard_program)
       | _ \<Rightarrow> True)
-     \<and> ((k, ()) \<in> fst (sctx_sol_prog random_guard_gs prog_main_name random_guard_program))"
+     \<and> ((k, ()) \<in> fst (sctx_sol_prog random_guard_gs random_guard_program))"
   by eval
 
 lemma random_guard_call_fwd_ok:
-  assumes "(u, ctx) \<in> fst (sctx_sol_prog random_guard_gs prog_main_name random_guard_program)"
-    and "(u, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg prog_main_name random_guard_program)"
-  shows "(FunctionEntry q, ()) \<in> fst (sctx_sol_prog random_guard_gs prog_main_name random_guard_program)"
+  assumes "(u, ctx) \<in> fst (sctx_sol_prog random_guard_gs random_guard_program)"
+    and "(u, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg random_guard_program)"
+  shows "(FunctionEntry q, ()) \<in> fst (sctx_sol_prog random_guard_gs random_guard_program)"
   using assms random_guard_calls_cov_ball by fastforce
 
 lemma random_guard_comb_fwd_ok:
-  assumes "(cl, c1) \<in> fst (sctx_sol_prog random_guard_gs prog_main_name random_guard_program)"
-    and "(cl, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg prog_main_name random_guard_program)"
-  shows "(k, c1) \<in> fst (sctx_sol_prog random_guard_gs prog_main_name random_guard_program)"
+  assumes "(cl, c1) \<in> fst (sctx_sol_prog random_guard_gs random_guard_program)"
+    and "(cl, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg random_guard_program)"
+  shows "(k, c1) \<in> fst (sctx_sol_prog random_guard_gs random_guard_program)"
   using assms random_guard_calls_cov_ball by (cases c1) fastforce
 
 lemma random_guard_node_sound:
-  "ltr_collect random_guard_gs (prog_cfg prog_main_name random_guard_program)
+  "ltr_collect random_guard_gs (prog_cfg random_guard_program)
      (cinit_stores random_guard_gs) v
    \<subseteq> \<lbrakk>case lookup_context (analyse_sign_result_for random_guard_gs random_guard_program) v () of
           Unreachable \<Rightarrow> bot | Reachable st \<Rightarrow> st\<rbrakk>"
@@ -168,15 +168,15 @@ lemma random_guard_node_sound:
 definition random_guard_env :: "vname \<Rightarrow> sign" where
   "random_guard_env =
      (case lookup_context (analyse_sign_result_for random_guard_gs random_guard_program)
-             (cfg_exit (prog_cfg prog_main_name random_guard_program)) () of
+             (cfg_exit (prog_cfg random_guard_program)) () of
         Unreachable \<Rightarrow> bot | Reachable st \<Rightarrow> st)"
 
 lemma random_guard_exec_y: "random_guard_env (STR ''y'') = SNonNeg"
   by (simp add: random_guard_env_def) eval
 
 corollary random_guard_exit_sound:
-  "ltr_collect random_guard_gs (prog_cfg (STR ''main'') random_guard_program) (cinit_stores random_guard_gs)
-     (cfg_exit (prog_cfg (STR ''main'') random_guard_program))
+  "ltr_collect random_guard_gs (prog_cfg random_guard_program) (cinit_stores random_guard_gs)
+     (cfg_exit (prog_cfg random_guard_program))
    \<le> \<lbrakk>random_guard_env\<rbrakk>"
   unfolding random_guard_env_def
   using random_guard_node_sound
@@ -193,8 +193,8 @@ text \<open>
 \<close>
 
 corollary random_guard_exit_y_nonneg:
-  assumes "t \<in> ltr_collect random_guard_gs (prog_cfg (STR ''main'') random_guard_program) (cinit_stores random_guard_gs)
-             (cfg_exit (prog_cfg (STR ''main'') random_guard_program))"
+  assumes "t \<in> ltr_collect random_guard_gs (prog_cfg random_guard_program) (cinit_stores random_guard_gs)
+             (cfg_exit (prog_cfg random_guard_program))"
   shows "t (STR ''y'') \<ge> 0"
 proof -
   have t_in: "t \<in> \<lbrakk>random_guard_env\<rbrakk>"

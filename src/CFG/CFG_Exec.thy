@@ -1,31 +1,22 @@
-theory Located_Exec
-  imports Control_Residual
+theory CFG_Exec
+  imports CFG_Transfer
 begin
 
-section \<open>Located CFG execution\<close>
+section \<open>How a control-flow graph runs\<close>
 
 text \<open>
-  \<open>cstep\<close> is the concrete execution of the two-relation procedure-aware CFG, in the
-  activation-stack shape that mirrors the source \<^const>\<open>pstep\<close> and drives the located
-  simulation.  A \<open>cconf\<close> pairs the current node with a store and a stack of pending
-  activations; each \<open>cframe\<close> records the continuation node, the caller destination, and the
-  saved caller store --- exactly the payload the resume transfer \<^const>\<open>combine_collect\<close>
-  needs.
+  \<open>cstep\<close> executes an arbitrary CFG over a node, a store, and a stack of suspended
+  activations.  Each \<open>cframe\<close> records where to resume, which variable receives the
+  result, and the caller's store.  There are three rules, one per graph phenomenon:
+  follow an \<open>intra\<close> edge and apply its transfer; follow a \<open>calls\<close> edge, enter the callee
+  and push a frame; at a \<^term>\<open>FunctionResult\<close>, pop the top frame and combine the
+  callee's store into the caller's.
 
-  There are three transitions, one per graph phenomenon:
-    \<^item> intra flow follows an \<^const>\<open>intra\<close> edge and applies \<^const>\<open>edge_step\<close> (covering
-      \<^term>\<open>EA_Nop\<close>, assignment, both assume forms, and \<^term>\<open>EA_Ret\<close> into
-      \<^term>\<open>FunctionResult\<close>); the stack is unchanged;
-    \<^item> a call follows a \<^const>\<open>calls\<close> edge, applies the caller-side \<^const>\<open>call_enter\<close>, moves to
-      the callee \<^term>\<open>FunctionEntry\<close>, and pushes one activation carrying the continuation;
-    \<^item> a return/resume fires at \<^term>\<open>FunctionResult\<close>, pops the top activation, and lands at its
-      recorded continuation with the combined store \<^const>\<open>combine_collect\<close>.
-
-  A return does not use a \<open>FunctionResult p --> cont\<close> intra edge.  The activation stack
-  supplies the continuation, so one \<^term>\<open>FunctionResult\<close> node serves every caller and
-  the stack contains one entry per call.
+  A return follows no edge.  The stack supplies the continuation, so one
+  \<^term>\<open>FunctionResult\<close> node serves every caller of a procedure and recursion needs no
+  duplicated nodes.  Nothing here mentions the compiler: this is the execution of any
+  graph, just as \<open>valid_ltr\<close> is the trace semantics of any graph.
 \<close>
-
 type_synonym cframe = "cfg_node \<times> vname option \<times> store"
 type_synonym cconf = "cfg_node \<times> store \<times> cframe list"
 
@@ -41,10 +32,14 @@ inductive cstep :: "(vname \<Rightarrow> bool) \<Rightarrow> cfg \<Rightarrow> c
     "cstep gs g (FunctionResult q, t, (cont, dst, caller) # stk)
        (cont, combine_collect gs dst caller t, stk)"
 
-subsection \<open>Single-step and small-step lemmas\<close>
+declare cstep.intros [intro]
 
-lemma cstep_star_single: "cstep gs g cf cf' \<Longrightarrow> star (cstep gs g) cf cf'"
-  by (rule star.step[OF _ star.refl])
+text \<open>One inversion rule, because the three clauses are told apart by the edge taken rather
+  than by the shape of the configuration.  It stays plain \<open>[elim]\<close> so the classical reasoner
+  does not split every \<open>cstep\<close> hypothesis three ways before trying anything else.\<close>
+inductive_cases cstep_E [elim]: "cstep gs g (u, s, stk) y"
+
+subsection \<open>Single-step and small-step lemmas\<close>
 
 lemma cstep_nop:
   assumes "(u, EA_Nop, v) \<in> intra g"
@@ -77,11 +72,23 @@ lemma cstep_check:
   shows "cstep gs g (u, s, stk) (v, s, stk)"
   by (rule cstep.Intra[OF assms]) simp
 
-lemma cstep_call:
-  "(u, CallEdge dst pars actuals, FunctionEntry q, cont) \<in> calls g \<Longrightarrow>
-   cstep gs g (u, s, stk)
-     (FunctionEntry q, call_enter gs (CallEdge dst pars actuals) s, (cont, dst, s) # stk)"
-  by (rule cstep.Call)
+subsection \<open>Intra-only paths as stack-preserving runs\<close>
+
+text \<open>An \<^const>\<open>intra_path\<close> is a \<open>cstep\<close> run at any stack: every \<^const>\<open>cfg_intra_step\<close> is a
+  \<open>cstep.Intra\<close>, which passes the stack through untouched.  Callers that only need to move
+  along local edges can therefore reason on \<open>(node, store)\<close> pairs and lift the result here.\<close>
+lemma intra_path_imp_cstep_star:
+  "intra_path g x y \<Longrightarrow> star (cstep gs g) (fst x, snd x, stk) (fst y, snd y, stk)"
+proof (induction rule: star.induct)
+  case (refl a) show ?case by simp
+next
+  case (step a b c)
+  obtain ua sa where a: "a = (ua, sa)" by (cases a)
+  obtain ub sb where b: "b = (ub, sb)" by (cases b)
+  from step.hyps(1) a b obtain e where "(ua, e, ub) \<in> intra g" "sb \<in> edge_step e sa" by auto
+  hence "cstep gs g (ua, sa, stk) (ub, sb, stk)" by (rule cstep.Intra)
+  with step.IH a b show ?case by (auto intro: star.step)
+qed
 
 subsection \<open>Activation-stack matching\<close>
 

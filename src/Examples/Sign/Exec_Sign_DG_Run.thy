@@ -28,9 +28,10 @@ theory Exec_Sign_DG_Run
     "Voblint_Core.Solver_Side_RG"
     "TD.TD_side_upd_rule"
     "Voblint_CFG.CFG_Prune"
-    "Voblint_CFG.Compile_Invariants"
+    "Voblint_Compile.Compile_Invariants"
     "Voblint_VIMP.VIMP_Notation"
     "Voblint_Soundness.Run_Analysis_Sound"
+    Example_Compile_Call_Free
 begin
 
 (* Disambiguate our N constructor from the phase datatype constructor. *)
@@ -64,13 +65,14 @@ definition sign_ex_pi :: proc_table where
   "sign_ex_pi = prog_table sign_ex_prog"
 
 definition gEx :: cfg where
-  "gEx = compile_prog sign_ex_pi (prog_procs sign_ex_prog) prog_main_name (prog_main sign_ex_prog)"
+  "gEx = compile_prog sign_ex_pi (prog_procs sign_ex_prog)"
 
 lemma gEx_calls: "calls gEx = {}"
   unfolding gEx_def sign_ex_pi_def
-  by (rule compile_prog_calls_empty) (simp_all add: sign_ex_prog_def)
+  by (rule compile_prog_calls_empty)
+     (simp_all add: sign_ex_prog_def main_body_def prog_main_name_def)
 lemma gEx_entry: "cfg_entry gEx = FunctionEntry (STR ''main'')"
-  unfolding gEx_def prog_main_name_def by (rule inv16_entry_is_main)
+  by (simp only: gEx_def cfg_entry_compile_prog prog_main_name_def)
 lemma gEx_wf_cfg: "wf_cfg gEx" unfolding gEx_def by (rule compile_prog_wf)
 lemma gEx_finE: "finite (intra gEx)" unfolding gEx_def using compile_prog_finite by simp
 lemma gEx_finC: "finite (calls gEx)" unfolding gEx_def using compile_prog_finite by simp
@@ -107,13 +109,8 @@ lemma dgEx_pp_st:
 subsection \<open>Well-formedness of the compiled input\<close>
 
 lemma dgEx_wf:
-  "wf_compile_input sign_ex_gs sign_ex_pi (prog_procs sign_ex_prog) prog_main_name (prog_main sign_ex_prog)"
-  unfolding wf_compile_input_simps
-    sign_ex_pi_def sign_ex_prog_def
-  by (auto simp: source_exp_def source_exp_def proc_decl_of_def ret_var_def
-      reserved_ret_var_def prog_main_name_def special_table_def special_pname_nondet_int_def
-      special_pname_min_def special_pname_max_def
-      split: if_splits)
+  "wf_compile_input sign_ex_gs sign_ex_pi (prog_procs sign_ex_prog)"
+  by (auto simp: wf_compile_input_simps sign_ex_pi_def sign_ex_prog_def split: if_splits)
 
 subsection \<open>Collecting-semantics over-approximation from the computed result\<close>
 
@@ -129,9 +126,7 @@ lemma dgEx_vars_cover: "vars_cover gEx (fst dgEx_sol)"
         [OF gEx_finE gEx_finC gEx_wf_cfg dgEx_exit_covers
             dgEx_pp_st[unfolded dgEx_eqs_def]])
 lemma dgEx_reserved: "reserved_ret_var sign_ex_gs"
-  unfolding wf_compile_input_simps sign_ex_pi_def sign_ex_prog_def
-  by (auto simp: source_exp_def source_exp_def proc_decl_of_def ret_var_def
-      reserved_ret_var_def split: if_splits)
+  by (auto simp: wf_compile_input_simps sign_ex_pi_def sign_ex_prog_def split: if_splits)
 
 lemma dgEx_is_bot_exact:
   "\<And>s. resolved_st_q_is_bot_for (declared_global_vars sign_ex_prog) s = is_bot_state (fun_of_exec_dg_st_for sign_ex_gs s)"
@@ -181,6 +176,8 @@ theorem dgEx_source_run_sound:
   shows "\<exists>v stk. csim sign_ex_pi gEx (residual, t, frs) (v, t, stk)
                  \<and> t \<in> sign_ex_reg.gamma (snd dgEx_sol) v"
 proof -
+  have run': "star (pstep sign_ex_gs sign_ex_pi) (main_body sign_ex_pi, s, []) (residual, t, frs)"
+    using run by (simp add: sign_ex_pi_def)
   show ?thesis
     unfolding dgEx_sol_def dgEx_eqs_def gEx_def
     by (rule sign_ex_reg.run_source_sound
@@ -190,7 +187,7 @@ proof -
               gEx_finE[unfolded gEx_def]
               gEx_finC[unfolded gEx_def]
               dgEx_sound0
-              init run[unfolded gEx_def]])
+              init run'])
 qed
 
 subsection \<open>Inspecting the computed result\<close>

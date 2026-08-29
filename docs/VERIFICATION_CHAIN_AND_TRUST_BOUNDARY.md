@@ -341,7 +341,7 @@ genuinely no concrete execution reaches `v`, not merely a witness-bottom
 encoding. The CLI's suppression of unreachable check rows is therefore
 backed by a real theorem end to end, not a probe-and-prose heuristic.
 
-`wf_program_compile_input_exec` (`CFG/Compiler/Compile_Invariants.thy:68`) is
+`wf_program_compile_input_exec` (`Compile/Compile_Invariants.thy:68`) is
 the exported gate the CLI runs before analysis; its soundness theorem
 `wf_program_compile_input_exec_sound` (`:80-82`) is one-directional by
 design (`wf_program_compile_input_exec p ==> wf_program_compile_input p`) --

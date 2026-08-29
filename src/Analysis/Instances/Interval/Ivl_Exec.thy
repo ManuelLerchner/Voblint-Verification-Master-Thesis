@@ -42,7 +42,7 @@ definition branch_ivl_st_for ::
   "branch_ivl_st_for = generic_branch_st_for ivl_ops"
 
 lemma branch_ivl_st_for_eq [simp]:
-  "branch_ivl_st_for source_global b pol s = branch_ivl_st source_global b pol s"
+  "branch_ivl_st_for gs b pol s = branch_ivl_st gs b pol s"
   by (simp add: branch_ivl_st_for_def generic_branch_st_for_def ivl_ops_def)
 
 definition ivl_enter_st_for ::
@@ -51,37 +51,37 @@ definition ivl_enter_st_for ::
   "ivl_enter_st_for = generic_enter_st_for ivl_ops"
 
 lemma ivl_enter_st_for_eq [simp]:
-  "ivl_enter_st_for source_global xs es s =
-    bind_formals_resolved_q source_global xs
+  "ivl_enter_st_for gs xs es s =
+    bind_formals_resolved_q gs xs
       (map (\<lambda>e. aval_ivl e
-        (fun_of_resolved_st_q_for source_global s)) es)
+        (fun_of_resolved_st_q_for gs s)) es)
       (enter_frame_D_resolved_q ivl_top s)"
   by (simp add: ivl_enter_st_for_def generic_enter_st_for_def ivl_ops_def)
 
 fun ivl_tf_st_for ::
   "(vname => bool) => edge_action =>
    ivl resolved_st_q => ivl resolved_st_q" where
-    "ivl_tf_st_for source_global EA_Nop s = s"
-  | "ivl_tf_st_for source_global (EA_Assign x a) s =
-       update_resolved_st_q s (location_of source_global x)
-         (aval_ivl a (fun_of_resolved_st_q_for source_global s))"
-  | "ivl_tf_st_for source_global (EA_Special sc x) s =
-       update_resolved_st_q s (location_of source_global x)
+    "ivl_tf_st_for gs EA_Nop s = s"
+  | "ivl_tf_st_for gs (EA_Assign x a) s =
+       update_resolved_st_q s (location_of gs x)
+         (aval_ivl a (fun_of_resolved_st_q_for gs s))"
+  | "ivl_tf_st_for gs (EA_Special sc x) s =
+       update_resolved_st_q s (location_of gs x)
          (case sc of
             Nondet_Int => ivl_top
-          | Min a b => ivl_min (aval_ivl a (fun_of_resolved_st_q_for source_global s))
-                                (aval_ivl b (fun_of_resolved_st_q_for source_global s))
-          | Max a b => ivl_max (aval_ivl a (fun_of_resolved_st_q_for source_global s))
-                                (aval_ivl b (fun_of_resolved_st_q_for source_global s)))"
-  | "ivl_tf_st_for source_global (EA_Assume b) s =
-       branch_ivl_st_for source_global b True s"
-  | "ivl_tf_st_for source_global (EA_AssumeNot b) s =
-       branch_ivl_st_for source_global b False s"
-  | "ivl_tf_st_for source_global (EA_Ret None p) s = s"
-  | "ivl_tf_st_for source_global (EA_Ret (Some a) p) s =
-       update_resolved_st_q s (location_of source_global ret_var)
-         (aval_ivl a (fun_of_resolved_st_q_for source_global s))"
-  | "ivl_tf_st_for source_global (EA_Check cnd) s = s"
+          | Min a b => ivl_min (aval_ivl a (fun_of_resolved_st_q_for gs s))
+                                (aval_ivl b (fun_of_resolved_st_q_for gs s))
+          | Max a b => ivl_max (aval_ivl a (fun_of_resolved_st_q_for gs s))
+                                (aval_ivl b (fun_of_resolved_st_q_for gs s)))"
+  | "ivl_tf_st_for gs (EA_Assume b) s =
+       branch_ivl_st_for gs b True s"
+  | "ivl_tf_st_for gs (EA_AssumeNot b) s =
+       branch_ivl_st_for gs b False s"
+  | "ivl_tf_st_for gs (EA_Ret None p) s = s"
+  | "ivl_tf_st_for gs (EA_Ret (Some a) p) s =
+       update_resolved_st_q s (location_of gs ret_var)
+         (aval_ivl a (fun_of_resolved_st_q_for gs s))"
+  | "ivl_tf_st_for gs (EA_Check cnd) s = s"
 
 lift_definition top_ivl_st :: "ivl resolved_st_q"
   is "(Ivl MinInf PlusInf, Ivl MinInf PlusInf, [])" .
@@ -411,7 +411,7 @@ proof (cases location)
   have agree: "fun_of_resolved_st_q_for gs s_exec y = s_abs y"
     by (rule agree_global[OF vg mem])
   show ?thesis
-    unfolding ivl_enter_st_for_eq enter_ivl_for_def enter_D_def bind_formals_abs_def
+    unfolding ivl_enter_st_for_eq enter_ivl_for_def enter_D_def
       enter_frame_D_def
     using not_x agree yneqx vg
     by (simp add: bind_formals_resolved_q_singleton Global_Location
@@ -426,7 +426,7 @@ next
     have loc_x: "location = location_of gs x"
       using Local_Location True formal_not_global by (simp add: location_of_def)
     show ?thesis
-      unfolding ivl_enter_st_for_eq enter_ivl_for_def enter_D_def bind_formals_abs_def
+      unfolding ivl_enter_st_for_eq enter_ivl_for_def enter_D_def
       using Local_Location val_agree
       by (simp add: bind_formals_resolved_q_singleton loc_x True)
   next
@@ -434,7 +434,7 @@ next
     have not_x: "location \<noteq> location_of gs x"
       using Local_Location False formal_not_global by (simp add: location_of_def)
     show ?thesis
-      unfolding ivl_enter_st_for_eq enter_ivl_for_def enter_D_def bind_formals_abs_def
+      unfolding ivl_enter_st_for_eq enter_ivl_for_def enter_D_def
         enter_frame_D_def
       using Local_Location not_x False not_g
       by (simp add: bind_formals_resolved_q_singleton)

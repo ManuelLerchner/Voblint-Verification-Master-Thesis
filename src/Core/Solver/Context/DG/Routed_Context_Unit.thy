@@ -243,17 +243,15 @@ lemmas routed_context_comb_hetero = hetero.routed_context_comb
 end
 
 text \<open>
-  The unit context never filters a trace: \<open>admiss_exact enterc_unit\<close> is deterministic and
-  \<open>key\<close> at a \<^typ>\<open>unit\<close> result is trivially the one context \<^term>\<open>()\<close> (\<open>ctx_key_exact_iff\<close>),
-  so \<^const>\<open>activation_collect\<close>'s \<open>ctx_key\<close> conjunct holds for every trace reaching \<open>v\<close> and
-  the two collectors coincide. Domain-generic: no domain-specific fact is used, so every
-  \<^typ>\<open>unit\<close>-context routed producer (Sign, Interval, ...) cites this one lemma rather than
-  re-deriving it.
+  The unit context never filters a trace: \<open>key\<close> at a \<^typ>\<open>unit\<close> result is trivially the one
+  context \<^term>\<open>()\<close>, so \<^const>\<open>activation_collect\<close>'s key conjunct holds for every trace
+  reaching \<open>v\<close> and the two collectors coincide. Domain-generic: no domain-specific fact is
+  used, so every \<^typ>\<open>unit\<close>-context routed producer (Sign, Interval, ...) cites this one
+  lemma rather than re-deriving it.
 \<close>
 
 lemma activation_collect_unit_eq_ltr_collect:
-  "activation_collect gs (admiss_exact enterc_unit) () g S v () = ltr_collect gs g S v"
-  unfolding activation_collect_def ltr_collect_def
-  by (auto simp: ctx_key_exact_iff)
+  "activation_collect gs enterc_unit () g S v () = ltr_collect gs g S v"
+  unfolding activation_collect_def ltr_collect_def by auto
 
 end

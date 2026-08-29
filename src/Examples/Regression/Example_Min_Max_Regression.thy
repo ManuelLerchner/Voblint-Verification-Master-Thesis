@@ -1,5 +1,5 @@
 theory Example_Min_Max_Regression
-  imports "Voblint_CLI.Analyse_Dispatch"
+  imports "Voblint_VIMP.VIMP_Notation" "Voblint_CLI.Analyse_Dispatch"
 begin
 
 section \<open>Regression: Min/Max special calls across Sign, Interval, and Parity\<close>
@@ -62,7 +62,7 @@ definition min_max_demo_parity_env :: "vname \<Rightarrow> parity" where
   "min_max_demo_parity_env =
      (case lookup_context
              (analyse_parity_result_for (declared_global min_max_demo_prog) min_max_demo_prog)
-             (cfg_exit (prog_cfg prog_main_name min_max_demo_prog)) () of
+             (cfg_exit (prog_cfg min_max_demo_prog)) () of
         Unreachable \<Rightarrow> bot | Reachable st \<Rightarrow> st)"
 
 lemma min_max_demo_parity_z_odd:
@@ -99,7 +99,7 @@ lemma min_wrong_arity_call_not_wf:
 
 text \<open>
   End-to-end witness for the same fact through \<^const>\<open>wf_program_compile_input_exec\<close>
-  (\<^theory>\<open>Voblint_CFG.Compile_Invariants\<close>), the executable reformulation the CLI's
+  (\<^theory>\<open>Voblint_Compile.Compile_Invariants\<close>), the executable reformulation the CLI's
   well-formedness gate actually calls: a whole program, not just one bare
   \<open>com\<close> value, confirming the gate itself would reject this program (issue
   tracked for the CLI \<open>wf_source_program\<close> enforcement gate). Contrasted with
@@ -128,13 +128,13 @@ text \<open>
   \<^const>\<open>wf_program_compile_input_exec\<close> resolves the global classifier at
   \<^const>\<open>prog_main_name\<close>, while every soundness statement downstream is stated
   at \<^const>\<open>declared_global\<close>. Composing the evaluated gate above with
-  \<open>wf_program_compile_input_exec_declared_global\<close> pins that step on a
+  \<open>wf_program_compile_input_exec_sound\<close> pins that step on a
   concrete program.
 \<close>
 
 lemma min_max_demo_prog_wf_compile_input:
   "wf_compile_input (declared_global min_max_demo_prog) (prog_table min_max_demo_prog)
-     (prog_procs min_max_demo_prog) prog_main_name (prog_main min_max_demo_prog)"
-  by (rule wf_program_compile_input_exec_declared_global[OF min_max_demo_prog_wf])
+     (prog_procs min_max_demo_prog)"
+  by (rule wf_program_compile_input_exec_sound[OF min_max_demo_prog_wf])
 
 end

@@ -44,14 +44,14 @@ record 'a::bot numeric_ops =
 definition generic_branch_st_for ::
     "'a::bot numeric_ops => (vname => bool) => exp => bool =>
        'a resolved_st_q => 'a resolved_st_q" where
-  "generic_branch_st_for ops source_global b pol s = n_bfilter ops source_global b pol s"
+  "generic_branch_st_for ops gs b pol s = n_bfilter ops gs b pol s"
 
 definition generic_enter_st_for ::
     "'a::bot numeric_ops => (vname => bool) => vname list => exp list =>
        'a resolved_st_q => 'a resolved_st_q" where
-  "generic_enter_st_for ops source_global xs es s =
-     bind_formals_resolved_q source_global xs
-       (map (\<lambda>e. n_aval ops e (fun_of_resolved_st_q_for source_global s)) es)
+  "generic_enter_st_for ops gs xs es s =
+     bind_formals_resolved_q gs xs
+       (map (\<lambda>e. n_aval ops e (fun_of_resolved_st_q_for gs s)) es)
        (enter_frame_D_resolved_q (n_top ops) s)"
 
 end

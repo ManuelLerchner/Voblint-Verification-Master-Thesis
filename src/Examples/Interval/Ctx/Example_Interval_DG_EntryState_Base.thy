@@ -23,7 +23,7 @@ text \<open>\<open>special_pname_nondet_int\<close> is an ordinary identifier, n
   lexer reserves leading-underscore tokens for translation-internal nonterminals, rejecting any
   user identifier that begins with one.  The call is spliced in directly instead.\<close>
 definition rc_program :: imp_prog where
-  "rc_program = mk_program [(STR ''p'', proc_decl_of [STR ''a''] (imp \<lbrakk> return a \<rbrakk>))]
+  "rc_program = mk_program [(STR ''p'', \<lparr>formals = [STR ''a''], body = imp \<lbrakk> return a \<rbrakk>\<rparr>)]
      (Seq (VIMP_Proc.com.Call (Some (STR ''x'')) special_pname_nondet_int [])
           (imp \<lbrakk> y := p(x) \<rbrakk>))
      []"
@@ -41,7 +41,7 @@ abbreviation rc_lookup :: "('a::bot) exec_dg_st \<Rightarrow> vname \<Rightarrow
   "rc_lookup s x \<equiv> lookup_resolved_st_q s (location_of rc_gs x)"
 
 definition rc_cfg :: cfg where
-  "rc_cfg = compile_prog rc_pi rc_procs (STR ''main'') rc_main"
+  "rc_cfg = compile_prog rc_pi rc_procs"
 
 text \<open>
   The compiled CFG.  Procedure \<open>p\<close> runs between \<open>FunctionEntry (STR ''p'')\<close> and
@@ -50,7 +50,7 @@ text \<open>
   continues at \<open>3\<close>, the single call site, continuing at \<open>4\<close>.\<close>
 
 lemma rc_entry: "cfg_entry rc_cfg = FunctionEntry (STR ''main'')"
-  unfolding rc_cfg_def by (rule inv16_entry_is_main)
+  unfolding rc_cfg_def by (simp add: cfg_entry_compile_prog prog_main_name_def)
 
 text \<open>The one call site's shape, computed directly from \<open>rc_cfg\<close>. Exported for the
   routed-context siblings, which key off this single call rather than case-splitting
@@ -72,13 +72,8 @@ lemma rc_finC: "finite (calls rc_cfg)" unfolding rc_cfg_def using compile_prog_f
 
 subsection \<open>Source-level well-formedness\<close>
 
-lemma rc_wf: "wf_compile_input rc_gs rc_pi rc_procs (STR ''main'') rc_main"
-  unfolding wf_compile_input_simps
-    rc_pi_def rc_procs_def rc_main_def rc_program_def
-  by (auto simp: proc_decl_of_def prog_main_name_def valid_formal_def reserved_ret_var_def
-      value_providing_def source_exp_def ret_var_def
-      special_table_def special_pname_nondet_int_def
-      special_pname_min_def special_pname_max_def
+lemma rc_wf: "wf_compile_input rc_gs rc_pi rc_procs"
+  by (auto simp: wf_compile_input_simps rc_pi_def rc_procs_def rc_main_def rc_program_def
       split: if_splits option.splits)
 
 end

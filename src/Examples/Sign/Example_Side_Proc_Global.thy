@@ -28,47 +28,47 @@ text \<open>The routed-unit solve terminates, and its solved key set is closed u
   closures are genuine \<open>eval\<close> facts rather than vacuous.\<close>
 
 lemma inc_solver_terminates:
-  "sctx_terminates_prog inc_gs prog_main_name inc_program"
+  "sctx_terminates_prog inc_gs inc_program"
   by (rule sctx_terminates_prog_via_solve_c) eval
 
 lemma inc_entry_cov:
-  "(cfg_entry (prog_cfg prog_main_name inc_program), ())
-     \<in> fst (sctx_sol_prog inc_gs prog_main_name inc_program)"
+  "(cfg_entry (prog_cfg inc_program), ())
+     \<in> fst (sctx_sol_prog inc_gs inc_program)"
   by eval
 
 lemma inc_fwd_ok_ball:
-  "\<forall>(u, a, w) \<in> intra (prog_cfg prog_main_name inc_program).
-     (u, ()) \<in> fst (sctx_sol_prog inc_gs prog_main_name inc_program) \<longrightarrow>
-     (w, ()) \<in> fst (sctx_sol_prog inc_gs prog_main_name inc_program)"
+  "\<forall>(u, a, w) \<in> intra (prog_cfg inc_program).
+     (u, ()) \<in> fst (sctx_sol_prog inc_gs inc_program) \<longrightarrow>
+     (w, ()) \<in> fst (sctx_sol_prog inc_gs inc_program)"
   by eval
 
 lemma inc_fwd_ok:
-  assumes "(u, ctx) \<in> fst (sctx_sol_prog inc_gs prog_main_name inc_program)"
-    and "(u, a, w) \<in> intra (prog_cfg prog_main_name inc_program)"
-  shows "(w, ctx) \<in> fst (sctx_sol_prog inc_gs prog_main_name inc_program)"
+  assumes "(u, ctx) \<in> fst (sctx_sol_prog inc_gs inc_program)"
+    and "(u, a, w) \<in> intra (prog_cfg inc_program)"
+  shows "(w, ctx) \<in> fst (sctx_sol_prog inc_gs inc_program)"
   using assms inc_fwd_ok_ball by (cases ctx) auto
 
 lemma inc_call_fwd_ok_ball:
-  "\<forall>(u, ca, ce, k) \<in> calls (prog_cfg prog_main_name inc_program).
-     (case ce of FunctionEntry q \<Rightarrow> (FunctionEntry q, ()) \<in> fst (sctx_sol_prog inc_gs prog_main_name inc_program)
+  "\<forall>(u, ca, ce, k) \<in> calls (prog_cfg inc_program).
+     (case ce of FunctionEntry q \<Rightarrow> (FunctionEntry q, ()) \<in> fst (sctx_sol_prog inc_gs inc_program)
       | _ \<Rightarrow> True)
-     \<and> ((k, ()) \<in> fst (sctx_sol_prog inc_gs prog_main_name inc_program))"
+     \<and> ((k, ()) \<in> fst (sctx_sol_prog inc_gs inc_program))"
   by eval
 
 lemma inc_call_fwd_ok:
-  assumes "(u, ctx) \<in> fst (sctx_sol_prog inc_gs prog_main_name inc_program)"
-    and "(u, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg prog_main_name inc_program)"
-  shows "(FunctionEntry q, ()) \<in> fst (sctx_sol_prog inc_gs prog_main_name inc_program)"
+  assumes "(u, ctx) \<in> fst (sctx_sol_prog inc_gs inc_program)"
+    and "(u, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg inc_program)"
+  shows "(FunctionEntry q, ()) \<in> fst (sctx_sol_prog inc_gs inc_program)"
   using assms inc_call_fwd_ok_ball by fastforce
 
 lemma inc_comb_fwd_ok:
-  assumes "(cl, c1) \<in> fst (sctx_sol_prog inc_gs prog_main_name inc_program)"
-    and "(cl, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg prog_main_name inc_program)"
-  shows "(k, c1) \<in> fst (sctx_sol_prog inc_gs prog_main_name inc_program)"
+  assumes "(cl, c1) \<in> fst (sctx_sol_prog inc_gs inc_program)"
+    and "(cl, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg inc_program)"
+  shows "(k, c1) \<in> fst (sctx_sol_prog inc_gs inc_program)"
   using assms inc_call_fwd_ok_ball by (cases c1) fastforce
 
 lemma inc_node_sound:
-  "ltr_collect inc_gs (prog_cfg prog_main_name inc_program) (cinit_stores inc_gs) v
+  "ltr_collect inc_gs (prog_cfg inc_program) (cinit_stores inc_gs) v
      \<subseteq> \<lbrakk>case lookup_context (analyse_sign_result_for inc_gs inc_program) v () of
             Unreachable \<Rightarrow> bot | Reachable st \<Rightarrow> st\<rbrakk>"
   by (rule analyse_sign_result_node_sound_for
@@ -81,7 +81,7 @@ text \<open>The computed environment at the program exit, read out of the same
 definition inc_exit_env :: "sign abs_state" where
   "inc_exit_env =
      (case lookup_context (analyse_sign_result_for inc_gs inc_program)
-             (cfg_exit (prog_cfg prog_main_name inc_program)) () of
+             (cfg_exit (prog_cfg inc_program)) () of
         Unreachable \<Rightarrow> bot | Reachable st \<Rightarrow> st)"
 
 text \<open>The global the callee increments is strictly positive at the exit ---
@@ -94,8 +94,8 @@ lemma inc_counter_pos: "inc_exit_env (STR ''counter'') = SPos"
   unfolding inc_exit_env_def by eval
 
 corollary inc_certified_sound:
-  "ltr_collect inc_gs (prog_cfg prog_main_name inc_program) (cinit_stores inc_gs)
-     (cfg_exit (prog_cfg prog_main_name inc_program))
+  "ltr_collect inc_gs (prog_cfg inc_program) (cinit_stores inc_gs)
+     (cfg_exit (prog_cfg inc_program))
    \<le> \<lbrakk>inc_exit_env\<rbrakk>"
   unfolding inc_exit_env_def
   using inc_node_sound

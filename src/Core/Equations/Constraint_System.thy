@@ -440,14 +440,6 @@ proof -
     using Vc Ve by auto
 qed
 
-text \<open>
-  Formal binding evaluates actual arguments in the caller state and assigns each
-  abstract value to the matching callee formal.
-\<close>
-definition bind_formals_abs ::
-    "vname list \<Rightarrow> 'a list \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state" where
-  "bind_formals_abs xs avs \<sigma> = fold (\<lambda>(x, a) \<tau>. \<tau>(x := a)) (zip xs avs) \<sigma>"
-
 lemma gamma_state_upd:
   fixes \<sigma> :: "'a::sound_domain abs_state"
   assumes s: "s \<in> \<lbrakk>\<sigma>\<rbrakk>" and v: "v \<in> gamma a"
@@ -458,16 +450,16 @@ text \<open>
   Binding formals preserves soundness: pointwise-sound actual values bound to the
   same formals yield a sound entry state.
 \<close>
-lemma bind_formals_abs_sound:
+lemma bind_formals_sound:
   fixes \<sigma> :: "'a::sound_domain abs_state"
   assumes s: "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
     and vals: "list_all2 (\<lambda>v a. v \<in> gamma a) vs avs"
-  shows "bind_formals xs vs s \<in> \<lbrakk>bind_formals_abs xs avs \<sigma>\<rbrakk>"
+  shows "bind_formals xs vs s \<in> \<lbrakk>bind_formals xs avs \<sigma>\<rbrakk>"
   using vals s
 proof (induction xs arbitrary: vs avs s \<sigma>)
   case Nil
   then show ?case
-    by (simp add: bind_formals_def bind_formals_abs_def)
+    by simp
 next
   case (Cons x xs)
   show ?case
@@ -475,7 +467,7 @@ next
     case Nil
     then show ?thesis
       using Cons.prems
-      by (simp add: bind_formals_def bind_formals_abs_def)
+      by simp
   next
     case (Cons v vs')
     then obtain a avs' where avs: "avs = a # avs'"
@@ -487,29 +479,29 @@ next
     have upd: "s(x := v) \<in> \<lbrakk>\<sigma>(x := a)\<rbrakk>"
       by (rule gamma_state_upd[OF Cons.prems(2) v_a])
     have "bind_formals xs vs' (s(x := v))
-            \<in> \<lbrakk>bind_formals_abs xs avs' (\<sigma>(x := a))\<rbrakk>"
+            \<in> \<lbrakk>bind_formals xs avs' (\<sigma>(x := a))\<rbrakk>"
       by (rule Cons.IH[OF rest upd])
     then show ?thesis
-      unfolding Cons avs bind_formals_def bind_formals_abs_def by simp
+      unfolding Cons avs zip_Cons_Cons fold.simps comp_apply prod.case .
   qed
 qed
 
-lemma bind_formals_abs_mono:
+lemma bind_formals_mono:
   fixes \<sigma>1 \<sigma>2 :: "'a::order abs_state"
   assumes base: "\<sigma>1 \<le> \<sigma>2"
     and vals: "list_all2 (\<le>) avs1 avs2"
-  shows "bind_formals_abs xs avs1 \<sigma>1 \<le> bind_formals_abs xs avs2 \<sigma>2"
+  shows "bind_formals xs avs1 \<sigma>1 \<le> bind_formals xs avs2 \<sigma>2"
   using vals base
 proof (induction xs arbitrary: avs1 avs2 \<sigma>1 \<sigma>2)
   case Nil
-  then show ?case by (simp add: bind_formals_abs_def)
+  then show ?case by simp
 next
   case (Cons x xs)
   show ?case
   proof (cases avs1)
     case Nil
     then show ?thesis
-      using Cons.prems by (simp add: bind_formals_abs_def)
+      using Cons.prems by simp
   next
     case (Cons a avs1')
     then obtain b avs2' where avs2: "avs2 = b # avs2'"
@@ -522,13 +514,13 @@ next
     show ?thesis
       unfolding Cons avs2
       using Cons.IH[OF rest upd]
-      by (simp add: bind_formals_abs_def fun_upd_def)
+      by (simp add: fun_upd_def)
   qed
 qed
 
 text \<open>
   Generic procedure-entry frame: reset locals to a fixed, fully-imprecise
-  \<open>top_val\<close>, keep globals, then bind the formals via @{const bind_formals_abs}.
+  \<open>top_val\<close>, keep globals, then bind the formals via @{const bind_formals}.
   Every domain's own enter-frame construction (Sign's @{text enter_frame_sign},
   Interval's @{text enter_frame_ivl}) is this same shape, differing only in
   which value stands for "unknown" -- so this is parameterised over that one
@@ -564,7 +556,7 @@ definition enter_D ::
   "(vname \<Rightarrow> bool) \<Rightarrow> 'a \<Rightarrow> (exp \<Rightarrow> 'a abs_state \<Rightarrow> 'a) \<Rightarrow> vname list \<Rightarrow> exp list
    \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state" where
   "enter_D gs top_val aval_abs xs es \<sigma> =
-     bind_formals_abs xs (map (\<lambda>e. aval_abs e \<sigma>) es) (enter_frame_D gs top_val \<sigma>)"
+     bind_formals xs (map (\<lambda>e. aval_abs e \<sigma>) es) (enter_frame_D gs top_val \<sigma>)"
 
 lemma enter_D_sound:
   fixes top_val :: "'a::sound_domain"
@@ -576,7 +568,7 @@ lemma enter_D_sound:
 proof -
   have base: "enter_state gs s \<in> \<lbrakk>enter_frame_D gs top_val \<sigma>\<rbrakk>"
     by (rule enter_frame_D_sound[OF sv top_full])
-  from bind_formals_abs_sound[OF base vals]
+  from bind_formals_sound[OF base vals]
   show ?thesis unfolding enter_D_def .
 qed
 
@@ -586,7 +578,7 @@ lemma enter_D_mono:
     and vals: "list_all2 (\<le>) (map (\<lambda>e. aval_abs e \<sigma>1) es) (map (\<lambda>e. aval_abs e \<sigma>2) es)"
   shows "enter_D gs top_val aval_abs xs es \<sigma>1 \<le> enter_D gs top_val aval_abs xs es \<sigma>2"
   unfolding enter_D_def
-  by (rule bind_formals_abs_mono[OF enter_frame_D_mono[OF base] vals])
+  by (rule bind_formals_mono[OF enter_frame_D_mono[OF base] vals])
 
 text \<open>
   Abstract counterpart of @{const combine_assign}: write the callee's return slot

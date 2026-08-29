@@ -1,5 +1,5 @@
 theory Example_Control_Simulation_Regression
-  imports "Voblint_CFG.Control_Simulation"
+  imports "Voblint_Compile.Simulation_Relation"
 begin
 
 section \<open>Examples: source-to-CFG simulation\<close>
@@ -33,9 +33,9 @@ proof -
     by (rule cstep.Call[OF edge])
   show "call_enter is_global (CallEdge dst (formals decl) actuals) s
            = bind_formals (formals decl) (map (\<lambda>e. aval e s) actuals) (enter_state is_global s)"
-    by (rule call_enter_eq_source_call_store)
+    by (rule call_enter_CallEdge)
   show "frames_match (Frame s dst # frs) ((cont, dst, s) # stk)"
-    using fm by (simp add: frames_match_Cons_iff)
+    using fm by (simp add: frames_match_activation)
 qed
 
 lemma return_initiation:
@@ -70,7 +70,7 @@ proof -
   show "cstep is_global g (FunctionResult p, callee, (cont, dst, caller) # stk)
            (cont, combine_collect is_global dst caller callee, stk)"
     by (rule cstep.Return)
-  show "frames_match frs stk" using fm by (simp add: frames_match_Cons_iff)
+  show "frames_match frs stk" using fm by (simp add: frames_match_activation)
 qed
 
 lemma return_completion_unwind:
@@ -87,11 +87,10 @@ proof -
   show "cstep is_global g (FunctionResult p, callee, (cont, dst,caller) # stk)
            (cont, combine_collect is_global dst caller callee, stk)"
     by (rule cstep.Return)
-  show "frames_match frs stk" using fm by (simp add: frames_match_Cons_iff)
+  show "frames_match frs stk" using fm by (simp add: frames_match_activation)
 qed
 
 lemma Unwind_not_pcompletes: "\<not> pcompletes is_global \<Pi> Unwind s t"
-  unfolding pcompletes_def
 proof (rule notI)
   assume "star (pstep is_global \<Pi>) (Unwind, s, []) (SKIP, t, [])"
   then show False
@@ -99,7 +98,6 @@ proof (rule notI)
 qed
 
 lemma Return_empty_not_pcompletes: "\<not> pcompletes is_global \<Pi> (Return e) s t"
-  unfolding pcompletes_def
 proof (rule notI)
   assume "star (pstep is_global \<Pi>) (Return e, s, []) (SKIP, t, [])"
   then obtain y where step: "pstep is_global \<Pi> (Return e, s, []) y"
@@ -112,60 +110,53 @@ proof (rule notI)
     by (cases rule: star.cases) (auto simp: pstep_Unwind_stuck)
 qed
 
-lemma ret_guarded_False_no_return:
-  "no_return c \<Longrightarrow> source_com c \<Longrightarrow> ret_guarded False c"
-  by (induction c) (auto split: if_splits)
+lemma return_safe_main:
+  "no_return c \<Longrightarrow> source_com c \<Longrightarrow> return_safe c"
+  by (rule return_safe_if_no_return)
 
-lemma source_wf_main:
-  "no_return c \<Longrightarrow> source_com c \<Longrightarrow> source_wf (c, s, [])"
-  by (simp add: source_wf_def ret_guarded_False_no_return)
+lemma return_safe_return_main_rejected: "\<not> return_safe (Return e)"
+  by (simp add: return_safe_def)
 
-lemma source_wf_return_main_rejected: "\<not> source_wf (Return e, s, [])"
-  by (simp add: source_wf_def)
-
-lemma source_wf_seq_return_main_rejected: "\<not> source_wf (Seq SKIP (Return e), s, [])"
-  by (simp add: source_wf_def)
+lemma return_safe_seq_return_main_rejected: "\<not> return_safe (Seq SKIP (Return e))"
+  by (simp add: return_safe_def)
 
 lemma return_main_stuck_but_rejected:
-  "pstep is_global \<Pi> (Return e, s, []) (Unwind, ret_store e s, []) \<and> \<not> source_wf (Return e, s, [])"
-  by (cases e) (auto simp: source_wf_def ret_store_def)
+  "pstep is_global \<Pi> (Return e, s, []) (Unwind, ret_store e s, []) \<and> \<not> return_safe (Return e)"
+  by (cases e) (auto simp: return_safe_def ret_store_def)
 
-lemma source_wf_return_in_callee:
-  "source_wf (Seq (Return e) Restore, s, [Frame caller dst])"
-  by (simp add: source_wf_def)
+lemma return_safe_return_in_callee:
+  "return_safe (Seq (Return e) Restore)"
+  by (simp add: return_safe_def)
 
-lemma source_wf_psteps:
+lemma return_safe_psteps:
   assumes "\<And>p decl. \<Pi> p = Some decl \<Longrightarrow> source_com (body decl)"
-      and "star (pstep is_global \<Pi>) sc sc'" and "source_wf sc"
-  shows "source_wf sc'"
+      and "star (pstep is_global \<Pi>) sc sc'" and "return_safe (fst sc)"
+  shows "return_safe (fst sc')"
   using assms(2,3)
 proof (induction rule: star.induct)
   case (step a b c)
   obtain c0 s0 f0 where a: "a = (c0, s0, f0)" by (cases a)
   obtain c1 s1 f1 where b: "b = (c1, s1, f1)" by (cases b)
-  from step.prems a have "source_wf (c0, s0, f0)" by simp
-  from source_wf_pstep[OF assms(1) _ this] step.hyps(1) a b
-  have "source_wf (c1, s1, f1)" by simp
+  from step.prems a have "return_safe c0" by simp
+  from return_safe_pstep[OF assms(1) _ this] step.hyps(1) a b
+  have "return_safe c1" by simp
   with step.IH b show ?case by simp
 qed simp
 
 lemma csim_tailcall_callee_entry:
   assumes callee: "control_at \<Pi> p c0 k n SKIP v"
       and calleecacc: "compiled_at \<Pi> g p c0 k n"
-      and calleepa: "proc_activation \<Pi> p c0"
       and caller: "control_at \<Pi> pc c0c kc nc SKIP cont"
       and callercacc: "compiled_at \<Pi> g pc c0c kc nc"
-      and callerpa: "proc_activation \<Pi> pc c0c"
   shows "csim \<Pi> g (Seq SKIP Restore, callee, [Frame caller dst])
                   (v, callee, [(cont, dst, caller)])"
 proof -
   have base: "csim \<Pi> g (SKIP, callee, []) (v, callee, [])"
-    by (rule csim.Base[OF callee calleecacc calleepa])
+    by (rule csim.Base[OF callee calleecacc])
   have caller': "control_at \<Pi> pc c0c kc nc (seq_after SKIP []) cont" using caller by simp
   have "csim \<Pi> g (seq_after (Seq SKIP Restore) [], callee, [] @ [Frame caller dst])
                  (v, callee, [] @ [(cont, dst, caller)])"
-    by (rule csim.Nested[OF base caller' callercacc callerpa])
+    by (rule csim.Nested[OF base caller' callercacc])
   thus ?thesis by simp
 qed
-
 end

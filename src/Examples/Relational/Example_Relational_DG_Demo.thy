@@ -65,7 +65,7 @@ definition demo_pi :: proc_table where
   "demo_pi = prog_table demo_program"
 
 definition demo_cfg :: cfg where
-  "demo_cfg = compile_prog demo_pi (prog_procs demo_program) prog_main_name (prog_main demo_program)"
+  "demo_cfg = compile_prog demo_pi (prog_procs demo_program)"
 
 lemma demo_finE: "finite (intra demo_cfg)" unfolding demo_cfg_def using compile_prog_finite by simp
 lemma demo_finC: "finite (calls demo_cfg)" unfolding demo_cfg_def using compile_prog_finite by simp
@@ -150,7 +150,7 @@ text \<open>The plain compiled CFG, rendered through the same GraphViz backend t
   the two assignments, and the merge into \<open>main\<close>'s exit.\<close>
 
 definition demo_dot :: String.literal where
-  "demo_dot = raw_cfg_dot_lit demo_pi (prog_procs demo_program) prog_main_name (prog_main demo_program)
+  "demo_dot = raw_cfg_dot_lit demo_pi (prog_procs demo_program)
     (\<lambda>_. None)"
 
 subsection \<open>Rendering the CFG annotated with the computed relational result\<close>
@@ -168,11 +168,9 @@ definition demo_rel_graph_config ::
       context_key = (\<lambda>_. STR ''unit''),
       show_context = (\<lambda>_. ''unit''),
       locals_for_pp = (\<lambda>p.
-        scope_locals (compiled_procedure_scope demo_gs demo_pi (prog_procs demo_program)
-          prog_main_name (prog_main demo_program) demo_cfg p)),
+        scope_locals (compiled_procedure_scope demo_gs demo_pi (prog_procs demo_program) demo_cfg p)),
       return_slot_for_pp = (\<lambda>p.
-        scope_return_slot (compiled_procedure_scope demo_gs demo_pi (prog_procs demo_program)
-          prog_main_name (prog_main demo_program) demo_cfg p)),
+        scope_return_slot (compiled_procedure_scope demo_gs demo_pi (prog_procs demo_program) demo_cfg p)),
       globals_to_show = [],
       show_local = (\<lambda>_ _ _ d. [string_of_relc d]),
       format_return = (\<lambda>_ _ _ _. []),

@@ -157,47 +157,44 @@ text \<open>
 \<close>
 
 lemma activation_collect_dg_sound:
-  fixes S0 :: "store set" and startcontext :: 'c
-  assumes entry_cov: "(cfg_entry g, startcontext) \<in> vars"
+  fixes S0 :: "store set" and initial_ctx :: 'c
+  assumes entry_cov: "(cfg_entry g, initial_ctx) \<in> vars"
     and s0_sound: "S0 \<subseteq> gamma_dg_base s0d s0g"
-  shows "activation_collect gs (admiss_exact enterc) startcontext g S0 v ctx
+  shows "activation_collect gs enterc initial_ctx g S0 v ctx
            \<subseteq> gamma_state_lift (sg (Inl (v, ctx)))"
 proof (rule activation_collect_sound_gen)
   fix s0 assume s0mem: "s0 \<in> S0"
-  have le_local: "s0d \<le> locals (sigma (Inl (cfg_entry g, startcontext)))"
+  have le_local: "s0d \<le> locals (sigma (Inl (cfg_entry g, initial_ctx)))"
     by (rule locals_ge_s0d[OF entry_cov])
   have le_global: "s0g \<le> globs (sigma (Inr gk0))"
     by (rule pp_entry_s0g_bound[OF entry_cov])
   have "gamma_dg_base s0d s0g
-        \<subseteq> gamma_dg_base (locals (sigma (Inl (cfg_entry g, startcontext)))) (globs (sigma (Inr gk0)))"
+        \<subseteq> gamma_dg_base (locals (sigma (Inl (cfg_entry g, initial_ctx)))) (globs (sigma (Inr gk0)))"
     by (rule gamma_dg_base_mono[OF le_local le_global])
-  with s0mem s0_sound have "s0 \<in> gamma_dg_base (locals (sigma (Inl (cfg_entry g, startcontext))))
+  with s0mem s0_sound have "s0 \<in> gamma_dg_base (locals (sigma (Inl (cfg_entry g, initial_ctx))))
                                    (globs (sigma (Inr gk0)))" by blast
-  thus "s0 \<in> gamma_state_lift (sg (Inl (cfg_entry g, startcontext)))"
+  thus "s0 \<in> gamma_state_lift (sg (Inl (cfg_entry g, initial_ctx)))"
     using entry_cov by (simp add: sg_cov)
 next
   fix u a v' c' s' s''
   assume "(u, a, v') \<in> intra g" "s' \<in> gamma_state_lift (sg (Inl (u, c')))" "s'' \<in> edge_step a s'"
   thus "s'' \<in> gamma_state_lift (sg (Inl (v', c')))" by (rule dg_ctx_act_edge)
 next
-  fix u c' s'
-  show "\<exists>c''. admiss_exact enterc u c' s' c''" by (simp add: admiss_exact_def)
-next
-  fix u dst pars args p cont c' s' c''
+  fix u dst pars args p cont c' s'
   assume ce: "(u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
     and sm: "s' \<in> gamma_state_lift (sg (Inl (u, c')))"
-    and adm: "admiss_exact enterc u c' (call_enter gs (CallEdge dst pars args) s') c''"
-  show "call_enter gs (CallEdge dst pars args) s' \<in> gamma_state_lift (sg (Inl (FunctionEntry p, c'')))"
-    using adm routed_context_call[OF ce sm] by (simp add: admiss_exact_def)
+  show "call_enter gs (CallEdge dst pars args) s'
+          \<in> gamma_state_lift
+              (sg (Inl (FunctionEntry p, enterc u c' (call_enter gs (CallEdge dst pars args) s'))))"
+    using routed_context_call[OF ce sm] .
 next
-  fix cl dst pars args p cont c1 c2 s' t es
+  fix cl dst pars args p cont c1 s' t es
   assume ce: "(cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
     and sm: "s' \<in> gamma_state_lift (sg (Inl (cl, c1)))"
-    and adm: "admiss_exact enterc cl c1 es c2"
-    and tm: "t \<in> gamma_state_lift (sg (Inl (FunctionResult p, c2)))"
+    and tm: "t \<in> gamma_state_lift (sg (Inl (FunctionResult p, enterc cl c1 es)))"
     and ces: "call_enter_store gs g cl s' es"
   show "combine_collect gs dst s' t \<in> gamma_state_lift (sg (Inl (cont, c1)))"
-    using adm tm routed_context_comb[OF ce sm _ ces] by (simp add: admiss_exact_def)
+    using tm routed_context_comb[OF ce sm _ ces] by blast
 qed
 
 text \<open>
@@ -214,14 +211,14 @@ text \<open>
 \<close>
 
 lemma analyse_result_node_sound:
-  fixes S0 :: "store set" and startcontext :: 'c
-  assumes entry_cov: "(cfg_entry g, startcontext) \<in> vars"
+  fixes S0 :: "store set" and initial_ctx :: 'c
+  assumes entry_cov: "(cfg_entry g, initial_ctx) \<in> vars"
     and s0_sound: "S0 \<subseteq> gamma_dg_base s0d s0g"
-  shows "activation_collect gs (admiss_exact enterc) startcontext g S0 v ctx
+  shows "activation_collect gs enterc initial_ctx g S0 v ctx
            \<subseteq> gamma_state (case lookup_context analyse_result v ctx of
                              Unreachable \<Rightarrow> bot | Reachable st \<Rightarrow> st)"
 proof -
-  have "activation_collect gs (admiss_exact enterc) startcontext g S0 v ctx
+  have "activation_collect gs enterc initial_ctx g S0 v ctx
           \<subseteq> gamma_state_lift (sg (Inl (v, ctx)))"
     by (rule activation_collect_dg_sound[OF entry_cov s0_sound])
   also have "\<dots> = gamma_point (lookup_context analyse_result v ctx)"
@@ -250,7 +247,7 @@ definition analyse_report :: "check_report_entry list" where
 subsection \<open>Report soundness\<close>
 
 text \<open>
-  \<open>S0\<close> and \<open>startcontext\<close> are the two facts genuinely external to this
+  \<open>S0\<close> and \<open>initial_ctx\<close> are the two facts genuinely external to this
   locale: which concrete stores the analysis actually starts from, and which
   context the solved system covers the entry point under. Every existing
   concrete instance (e.g. Interval's entry-state and call-string contexts)
@@ -263,16 +260,16 @@ text \<open>
 \<close>
 
 theorem analyse_report_ctx_proved_sound:
-  fixes S0 :: "store set" and startcontext :: 'c and v :: cfg_node and c :: exp
+  fixes S0 :: "store set" and initial_ctx :: 'c and v :: cfg_node and c :: exp
   assumes mem: "(v, c, Decided Check_Proved) \<in> set analyse_report_ctx"
-    and entry_cov: "(cfg_entry g, startcontext) \<in> vars"
+    and entry_cov: "(cfg_entry g, initial_ctx) \<in> vars"
     and s0_sound: "S0 \<subseteq> gamma_dg_base s0d s0g"
-  shows "\<And>ctx s. s \<in> activation_collect gs (admiss_exact enterc) startcontext g S0 v ctx
+  shows "\<And>ctx s. s \<in> activation_collect gs enterc initial_ctx g S0 v ctx
            \<Longrightarrow> truthy (aval c s)"
 proof -
   fix ctx s
-  assume smem: "s \<in> activation_collect gs (admiss_exact enterc) startcontext g S0 v ctx"
-  have node_sound: "activation_collect gs (admiss_exact enterc) startcontext g S0 v ctx
+  assume smem: "s \<in> activation_collect gs enterc initial_ctx g S0 v ctx"
+  have node_sound: "activation_collect gs enterc initial_ctx g S0 v ctx
       \<subseteq> gamma_state (case lookup_context analyse_result v ctx of Unreachable \<Rightarrow> bot | Reachable st \<Rightarrow> st)"
     by (rule analyse_result_node_sound[OF entry_cov s0_sound])
   obtain st where reach: "lookup_context analyse_result v ctx = Reachable st"
@@ -286,16 +283,16 @@ proof -
 qed
 
 theorem analyse_report_ctx_refuted_sound:
-  fixes S0 :: "store set" and startcontext :: 'c and v :: cfg_node and c :: exp
+  fixes S0 :: "store set" and initial_ctx :: 'c and v :: cfg_node and c :: exp
   assumes mem: "(v, c, Decided Check_Refuted) \<in> set analyse_report_ctx"
-    and entry_cov: "(cfg_entry g, startcontext) \<in> vars"
+    and entry_cov: "(cfg_entry g, initial_ctx) \<in> vars"
     and s0_sound: "S0 \<subseteq> gamma_dg_base s0d s0g"
-  shows "\<And>ctx s. s \<in> activation_collect gs (admiss_exact enterc) startcontext g S0 v ctx
+  shows "\<And>ctx s. s \<in> activation_collect gs enterc initial_ctx g S0 v ctx
            \<Longrightarrow> \<not> truthy (aval c s)"
 proof -
   fix ctx s
-  assume smem: "s \<in> activation_collect gs (admiss_exact enterc) startcontext g S0 v ctx"
-  have node_sound: "activation_collect gs (admiss_exact enterc) startcontext g S0 v ctx
+  assume smem: "s \<in> activation_collect gs enterc initial_ctx g S0 v ctx"
+  have node_sound: "activation_collect gs enterc initial_ctx g S0 v ctx
       \<subseteq> gamma_state (case lookup_context analyse_result v ctx of Unreachable \<Rightarrow> bot | Reachable st \<Rightarrow> st)"
     by (rule analyse_result_node_sound[OF entry_cov s0_sound])
   obtain st where reach: "lookup_context analyse_result v ctx = Reachable st"

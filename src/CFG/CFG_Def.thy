@@ -53,7 +53,7 @@ datatype edge_action =
     EA_Nop
   | EA_Assign   (ea_var: vname) (ea_rhs: exp)
   | EA_Special  (ea_special_op: special_call) (ea_special_dst: vname)
-  | EA_Assume   (ea_cond: exp)
+  | EA_Assume    (ea_cond: exp)
   | EA_AssumeNot (ea_cond: exp)
   | EA_Ret      (ea_ret_val: "exp option") (ea_ret_proc: pname)
   | EA_Check    (ea_check_cond: exp)
@@ -92,17 +92,12 @@ definition call_info_of :: "call_action \<Rightarrow> pname \<Rightarrow> call_i
      \<lparr> ci_dst = ce_dst ca, ci_callee = p,
        ci_formals = ce_formals ca, ci_args = ce_args ca \<rparr>"
 
-lemma ci_dst_call_info_of [simp]: "ci_dst (call_info_of ca p) = ce_dst ca"
-  by (simp add: call_info_of_def)
-
-lemma ci_callee_call_info_of [simp]: "ci_callee (call_info_of ca p) = p"
-  by (simp add: call_info_of_def)
-
-lemma ci_formals_call_info_of [simp]: "ci_formals (call_info_of ca p) = ce_formals ca"
-  by (simp add: call_info_of_def)
-
-lemma ci_args_call_info_of [simp]: "ci_args (call_info_of ca p) = ce_args ca"
-  by (simp add: call_info_of_def)
+lemma call_info_of_simps [simp]:
+  "ci_dst (call_info_of ca p) = ce_dst ca"
+  "ci_callee (call_info_of ca p) = p"
+  "ci_formals (call_info_of ca p) = ce_formals ca"
+  "ci_args (call_info_of ca p) = ce_args ca"
+  by (simp_all add: call_info_of_def)
 
 subsection \<open>CFG record: two relations\<close>
 
@@ -171,11 +166,11 @@ definition cfg_intra_step :: "cfg \<Rightarrow> cfg_node \<times> store \<Righta
 abbreviation intra_path :: "cfg \<Rightarrow> cfg_node \<times> store \<Rightarrow> cfg_node \<times> store \<Rightarrow> bool" where
   "intra_path g \<equiv> star (cfg_intra_step g)"
 
-lemma cfg_intra_stepI:
+lemma cfg_intra_stepI [intro]:
   "(u, a, v) \<in> intra g \<Longrightarrow> s' \<in> edge_step a s \<Longrightarrow> cfg_intra_step g (u, s) (v, s')"
   by (auto simp: cfg_intra_step_def)
 
-lemma cfg_intra_stepE:
+lemma cfg_intra_stepE [elim]:
   assumes "cfg_intra_step g (u, s) (v, s')"
   obtains a where "(u, a, v) \<in> intra g" "s' \<in> edge_step a s"
   using assms by (auto simp: cfg_intra_step_def)
@@ -187,57 +182,6 @@ lemma intra_path_single:
 lemma intra_path_nop:
   "(u, EA_Nop, v) \<in> intra g \<Longrightarrow> intra_path g (u, s) (v, s)"
   by (rule intra_path_single[where a = EA_Nop]) simp_all
-
-text \<open>Widening the graph preserves intra paths: only membership in \<^const>\<open>intra\<close> is used.\<close>
-lemma cfg_intra_step_mono:
-  "cfg_intra_step g1 x y \<Longrightarrow> intra g1 \<subseteq> intra g2 \<Longrightarrow> cfg_intra_step g2 x y"
-  by (auto simp: cfg_intra_step_def)
-
-lemma intra_path_mono:
-  "intra_path g1 x y \<Longrightarrow> intra g1 \<subseteq> intra g2 \<Longrightarrow> intra_path g2 x y"
-  by (induction rule: star.induct) (auto intro: star.step cfg_intra_step_mono)
-
-subsection \<open>Return-value transfer\<close>
-
-text \<open>Return-value rehydration at the caller: write the callee's \<open>ret_var\<close> into the
-  destination over the combined store (callee globals, caller locals).  It is fixed by the
-  call's destination \<open>dst\<close>, which the \<open>CallEdge\<close> already records --- no side lookup.\<close>
-
-definition combine_collect :: "(vname \<Rightarrow> bool) \<Rightarrow> vname option \<Rightarrow> store \<Rightarrow> store \<Rightarrow> store" where
-  "combine_collect gs dst s t = combine_assign dst (t ret_var) (combine_env gs s t)"
-
-lemma combine_collect_None: "combine_collect gs None s t = combine_env gs s t"
-  by (simp add: combine_collect_def)
-
-subsection \<open>Call-entry transfer\<close>
-
-text \<open>Caller-side entry transfer at a call.  The actuals are evaluated in the caller store,
-  the callee locals are reset (\<^const>\<open>enter_state\<close>, globals preserved), and the resulting
-  values are bound to the callee formals.  All payload comes from the \<open>CallEdge\<close>, so the
-  transfer needs no procedure table.  This is exactly the callee-entry store produced by the
-  source \<^const>\<open>pstep\<close> \<open>Call\<close> rule (see \<open>call_enter_eq_source_call_store\<close>).\<close>
-
-definition call_enter :: "(vname \<Rightarrow> bool) \<Rightarrow> call_action \<Rightarrow> store \<Rightarrow> store" where
-  "call_enter gs ca s =
-     (case ca of CallEdge dst pars actuals \<Rightarrow>
-        bind_formals pars (map (\<lambda>e. aval e s) actuals) (enter_state gs s))"
-
-lemma call_enter_CallEdge:
-  "call_enter gs (CallEdge dst pars actuals) s
-     = bind_formals pars (map (\<lambda>e. aval e s) actuals) (enter_state gs s)"
-  by (simp add: call_enter_def)
-
-text \<open>A parameterless call is exactly \<^const>\<open>enter_state\<close>: no actuals to evaluate and no
-  formals to bind.\<close>
-lemma call_enter_Nil [simp]:
-  "call_enter gs (CallEdge dst [] []) s = enter_state gs s"
-  by (simp add: call_enter_CallEdge bind_formals_def)
-
-subsection \<open>Structural selectors\<close>
-
-definition intra_successors :: "cfg \<Rightarrow> cfg_node \<Rightarrow> cfg_node set" where
-  "intra_successors g u = {v. \<exists>a. (u, a, v) \<in> intra g}"
-
 
 
 subsection \<open>Node set (derived, not stored)\<close>
@@ -254,10 +198,16 @@ definition cfg_nodes :: "cfg \<Rightarrow> cfg_node set" where
      \<union> {after. \<exists>u act ce. (u, act, ce, after) \<in> calls g}
      \<union> {cfg_entry g}"
 
-subsection \<open>Flatness and well-formedness\<close>
+text \<open>Whole-program completion is the entry procedure's \<open>FunctionResult\<close>.  A graph whose
+  entry is not a procedure entry is never compiled; the fallback keeps the function total
+  and aborts in generated code.\<close>
+definition cfg_exit :: "cfg \<Rightarrow> cfg_node" where
+  "cfg_exit g =
+    (case cfg_entry g of
+       FunctionEntry p \<Rightarrow> FunctionResult p
+     | n \<Rightarrow> Code.abort (STR ''cfg_exit: entry is not a procedure entry'') (\<lambda>_. n))"
 
-definition flat_cfg :: "cfg \<Rightarrow> bool" where
-  "flat_cfg g \<longleftrightarrow> calls g = {}"
+subsection \<open>Well-formedness\<close>
 
 text \<open>\<open>wf_cfg\<close> is structural only: call edges enter procedure-entry nodes; no intra edge
   enters a procedure-entry node (so a callee is reached only across a call); and a return
@@ -272,25 +222,21 @@ definition wf_cfg :: "cfg \<Rightarrow> bool" where
 
 subsection \<open>Structural invariants\<close>
 
-text \<open>Every local-edge endpoint is part of the derived node set.\<close>
 lemma intra_endpoints_in_nodes:
   assumes "(u, a, v) \<in> intra g"
   shows "u \<in> cfg_nodes g" and "v \<in> cfg_nodes g"
   using assms by (auto simp: cfg_nodes_def)
 
-text \<open>Every call site, callee entry, and continuation is part of the derived node set.\<close>
 lemma call_endpoints_in_nodes:
   assumes "(u, act, ce, after) \<in> calls g"
   shows "u \<in> cfg_nodes g" and "ce \<in> cfg_nodes g" and "after \<in> cfg_nodes g"
   using assms by (auto simp: cfg_nodes_def)
 
-text \<open>The distinguished graph entry is always part of the derived node set.\<close>
 lemma cfg_entry_in_nodes: "cfg_entry g \<in> cfg_nodes g"
   by (simp add: cfg_nodes_def)
 
-text \<open>A finite edge relation gives a finite node set: each of the five \<open>cfg_nodes\<close>
-  disjuncts is a projection of \<open>intra g\<close> or \<open>calls g\<close>, so it inherits their finiteness as a
-  finite image; the sixth is the singleton \<open>cfg_entry g\<close>.\<close>
+text \<open>Each of the five \<open>cfg_nodes\<close> disjuncts is a projection of \<open>intra g\<close> or \<open>calls g\<close>,
+  so it inherits their finiteness as a finite image; the sixth is a singleton.\<close>
 lemma cfg_nodes_finite:
   assumes "finite (intra g)" and "finite (calls g)"
   shows "finite (cfg_nodes g)"
@@ -301,53 +247,12 @@ proof -
   moreover
   have "{u. \<exists>act ce after. (u, act, ce, after) \<in> calls g} = (\<lambda>(u, act, ce, after). u) ` calls g"
     and "{ce. \<exists>u act after. (u, act, ce, after) \<in> calls g} = (\<lambda>(u, act, ce, after). ce) ` calls g"
-    and "{after. \<exists>u act ce. (u, act, ce, after) \<in> calls g} = (\<lambda>(u, act, ce, after). after) ` calls g"
+    and "{after. \<exists>u act ce. (u, act, ce, after) \<in> calls g}
+           = (\<lambda>(u, act, ce, after). after) ` calls g"
     by force+
   ultimately show ?thesis
     unfolding cfg_nodes_def using assms by simp
 qed
-
-text \<open>A flat CFG has only local-edge endpoints and the distinguished entry.\<close>
-lemma flat_cfg_iff: "flat_cfg g \<longleftrightarrow> calls g = {}"
-  by (simp add: flat_cfg_def)
-
-lemma cfg_nodes_flat:
-  assumes "flat_cfg g"
-  shows "cfg_nodes g =
-           {u. \<exists>a v. (u, a, v) \<in> intra g} \<union> {v. \<exists>u a. (u, a, v) \<in> intra g} \<union> {cfg_entry g}"
-  using assms by (auto simp: cfg_nodes_def flat_cfg_def)
-
-
-
-text \<open>A well-formed call targets a procedure-entry node.\<close>
-lemma wf_call_targets_entry:
-  assumes "wf_cfg g" and "(u, act, ce, after) \<in> calls g"
-  shows "\<exists>p. ce = FunctionEntry p"
-  using assms by (fastforce simp: wf_cfg_def)
-
-text \<open>A well-formed local edge cannot enter a procedure.  Callee entry occurs only across a call.\<close>
-lemma wf_intra_not_into_entry:
-  assumes "wf_cfg g" and "(u, a, v) \<in> intra g"
-  shows "v \<noteq> FunctionEntry p"
-  using assms by (auto simp: wf_cfg_def)
-
-lemma wf_no_intra_call:
-  assumes "wf_cfg g"
-  shows "FunctionEntry p \<notin> intra_successors g u"
-  using assms wf_intra_not_into_entry by (fastforce simp: intra_successors_def)
-
-text \<open>Every edge action has a transfer; only an unsatisfied guard returns \<open>None\<close>.\<close>
-lemma edge_step_fail_iff:
-  "edge_step a s = {} \<longleftrightarrow>
-     (\<exists>b. a = EA_Assume b \<and> \<not> truthy (aval b s)) \<or> (\<exists>b. a = EA_AssumeNot b \<and> truthy (aval b s))"
-  by (cases a) auto
-
-lemma edge_step_ret_target:
-  assumes "wf_cfg g" and "(u, EA_Ret e p, v) \<in> intra g"
-  shows "v = FunctionResult p"
-  using assms by (auto simp: wf_cfg_def)
-
-
 
 end
 

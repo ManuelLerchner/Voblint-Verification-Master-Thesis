@@ -68,35 +68,35 @@ definition parity_enter_st_for ::
   "parity_enter_st_for = generic_enter_st_for parity_ops"
 
 lemma parity_enter_st_for_eq [simp]:
-  "parity_enter_st_for source_global xs es s =
-    bind_formals_resolved_q source_global xs
+  "parity_enter_st_for gs xs es s =
+    bind_formals_resolved_q gs xs
       (map (\<lambda>e. aval_parity e
-        (fun_of_resolved_st_q_for source_global s)) es)
+        (fun_of_resolved_st_q_for gs s)) es)
       (enter_frame_D_resolved_q PTop s)"
   by (simp add: parity_enter_st_for_def generic_enter_st_for_def parity_ops_def)
 
 fun parity_tf_st_for ::
   "(vname => bool) => edge_action =>
    parity resolved_st_q => parity resolved_st_q" where
-    "parity_tf_st_for source_global EA_Nop s = s"
-  | "parity_tf_st_for source_global (EA_Assign x a) s =
-       update_resolved_st_q s (location_of source_global x)
-         (aval_parity a (fun_of_resolved_st_q_for source_global s))"
-  | "parity_tf_st_for source_global (EA_Special sc x) s =
-       update_resolved_st_q s (location_of source_global x)
+    "parity_tf_st_for gs EA_Nop s = s"
+  | "parity_tf_st_for gs (EA_Assign x a) s =
+       update_resolved_st_q s (location_of gs x)
+         (aval_parity a (fun_of_resolved_st_q_for gs s))"
+  | "parity_tf_st_for gs (EA_Special sc x) s =
+       update_resolved_st_q s (location_of gs x)
          (case sc of
             Nondet_Int => PTop
-          | Min a b => parity_min (aval_parity a (fun_of_resolved_st_q_for source_global s))
-                                   (aval_parity b (fun_of_resolved_st_q_for source_global s))
-          | Max a b => parity_max (aval_parity a (fun_of_resolved_st_q_for source_global s))
-                                   (aval_parity b (fun_of_resolved_st_q_for source_global s)))"
-  | "parity_tf_st_for source_global (EA_Assume b) s = s"
-  | "parity_tf_st_for source_global (EA_AssumeNot b) s = s"
-  | "parity_tf_st_for source_global (EA_Ret None p) s = s"
-  | "parity_tf_st_for source_global (EA_Ret (Some a) p) s =
-       update_resolved_st_q s (location_of source_global ret_var)
-         (aval_parity a (fun_of_resolved_st_q_for source_global s))"
-  | "parity_tf_st_for source_global (EA_Check cnd) s = s"
+          | Min a b => parity_min (aval_parity a (fun_of_resolved_st_q_for gs s))
+                                   (aval_parity b (fun_of_resolved_st_q_for gs s))
+          | Max a b => parity_max (aval_parity a (fun_of_resolved_st_q_for gs s))
+                                   (aval_parity b (fun_of_resolved_st_q_for gs s)))"
+  | "parity_tf_st_for gs (EA_Assume b) s = s"
+  | "parity_tf_st_for gs (EA_AssumeNot b) s = s"
+  | "parity_tf_st_for gs (EA_Ret None p) s = s"
+  | "parity_tf_st_for gs (EA_Ret (Some a) p) s =
+       update_resolved_st_q s (location_of gs ret_var)
+         (aval_parity a (fun_of_resolved_st_q_for gs s))"
+  | "parity_tf_st_for gs (EA_Check cnd) s = s"
 
 lemma parity_tf_st_for_reduces: "action_reduces (parity_tf_st_for gs)"
   by unfold_locales (rule ext, simp)+

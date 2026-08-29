@@ -83,7 +83,7 @@ definition disagree_prog :: imp_prog where
 
 abbreviation dead_check_projection ::
     "(pp \<times> exp \<times> (ivl list \<times> contextual_verdict) set) list" where
-  "dead_check_projection \<equiv> entry_state_check_projection prog_main_name dead_check_prog"
+  "dead_check_projection \<equiv> entry_state_check_projection dead_check_prog"
 
 text \<open>The unreachable branch's check is covered -- the solver reached the node
   under the caller's own context -- and dead there. Both facts matter: this is
@@ -126,7 +126,7 @@ text \<open>
 
 abbreviation mixed_ctx_projection ::
     "(pp \<times> exp \<times> (ivl list \<times> contextual_verdict) set) list" where
-  "mixed_ctx_projection \<equiv> entry_state_check_projection prog_main_name mixed_ctx_prog"
+  "mixed_ctx_projection \<equiv> entry_state_check_projection mixed_ctx_prog"
 
 text \<open>Four contexts reach the base-case check: the two outer activations
   (\<open>n = 3\<close>, \<open>n = 2\<close>) where the branch is dead, the innermost one (\<open>n = 1\<close>)
@@ -170,7 +170,7 @@ text \<open>\<open>g\<close> is called at \<open>1\<close> and at \<open>5\<clos
 
 abbreviation disagree_projection ::
     "(pp \<times> exp \<times> (ivl list \<times> contextual_verdict) set) list" where
-  "disagree_projection \<equiv> entry_state_check_projection prog_main_name disagree_prog"
+  "disagree_projection \<equiv> entry_state_check_projection disagree_prog"
 
 lemma disagree_observations_retained:
   "observations_at disagree_projection (Statement 0) =

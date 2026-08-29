@@ -853,8 +853,8 @@ definition unit_combine_step_env_placed ::
    'a::bounded_semilattice_sup_bot abs_state => 'a abs_state =>
    'a abs_state => 'a abs_state \<times> 'a abs_state"
 where
-  "unit_combine_step_env_placed source_global keep_local publish_side ci dc de g =
-     (let res = combine_env_abs source_global (dc \<squnion> g) (de \<squnion> g) in
+  "unit_combine_step_env_placed gs keep_local publish_side ci dc de g =
+     (let res = combine_env_abs gs (dc \<squnion> g) (de \<squnion> g) in
       (project_component publish_side res, project_component keep_local res))"
 
 
@@ -873,7 +873,7 @@ definition unit_dg_spec_placed ::
   "(vname => bool) => (vname => bool) => (vname => bool) =>
    'a::sound_domain domain_transfer => ('a abs_state, 'a abs_state) dg_spec"
 where
-  "unit_dg_spec_placed source_global keep_local publish_side tf = \<lparr>
+  "unit_dg_spec_placed gs keep_local publish_side tf = \<lparr>
     dgs_skip       = unit_step_placed keep_local publish_side (apply_tf tf EA_Nop),
     dgs_assign     = (\<lambda>x e. unit_step_placed keep_local publish_side
       (apply_tf tf (EA_Assign x e))),
@@ -890,17 +890,17 @@ where
     dgs_event      = (\<lambda>ev. unit_step_placed keep_local publish_side
       (event\<^sup># tf ev)),
     dgs_caller_cont = (\<lambda>_ d _. d),
-    dgs_combine_env = unit_combine_step_env_placed source_global keep_local publish_side,
+    dgs_combine_env = unit_combine_step_env_placed gs keep_local publish_side,
     dgs_combine_assign = unit_combine_step_assign_placed keep_local publish_side
   \<rparr>"
 lemma dg_spec_step_unit_placed:
-  "dg_spec_step (unit_dg_spec_placed source_global keep_local publish_side tf) a =
+  "dg_spec_step (unit_dg_spec_placed gs keep_local publish_side tf) a =
     unit_step_placed keep_local publish_side (apply_tf tf a)"
   unfolding unit_dg_spec_placed_def
   by (cases a) simp_all
 
 lemma dgs_enter_unit_dg_spec_placed:
-  "dgs_enter (unit_dg_spec_placed source_global keep_local publish_side tf) fs as =
+  "dgs_enter (unit_dg_spec_placed gs keep_local publish_side tf) fs as =
     unit_step_placed keep_local publish_side (enter\<^sup># tf fs as)"
   unfolding unit_dg_spec_placed_def
   by simp

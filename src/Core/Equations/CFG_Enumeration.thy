@@ -1,5 +1,5 @@
 theory CFG_Enumeration
-  imports "Voblint_CFG.VIMP_Proc_to_CFG"
+  imports "Voblint_Compile.VIMP_Proc_to_CFG"
 begin
 
 section \<open>Solver-facing CFG enumeration\<close>

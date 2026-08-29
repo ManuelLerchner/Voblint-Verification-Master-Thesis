@@ -19,7 +19,7 @@ lemma explode_Gg_hd [simp]: "hd (String.explode (STR ''Gg'')) = CHR ''G''" by ev
 lemma explode_Gx_hd [simp]: "hd (String.explode (STR ''Gx'')) = CHR ''G''" by eval
 
 theorem caller_local_isolated:
-  assumes p: "\<Pi> pf = Some (proc_decl_of [] (imp \<lbrakk> x := 9 \<rbrakk>))"
+  assumes p: "\<Pi> pf = Some (\<lparr>formals = [], body = imp \<lbrakk> x := 9 \<rbrakk>\<rparr>)"
   shows "\<exists>t. pcompletes vpr_gs \<Pi> (Seq (Assign (STR ''x'') (N 5)) (Call None pf [])) s0 t
              \<and> t (STR ''x'') = 5"
 proof -
@@ -50,7 +50,7 @@ proof -
 qed
 
 theorem global_propagated:
-  assumes p: "\<Pi> pf = Some (proc_decl_of [] (imp \<lbrakk> Gg := 9 \<rbrakk>))"
+  assumes p: "\<Pi> pf = Some (\<lparr>formals = [], body = imp \<lbrakk> Gg := 9 \<rbrakk>\<rparr>)"
   shows "\<exists>t. pcompletes vpr_gs \<Pi> (Call None pf []) s0 t \<and> t (STR ''Gg'') = 9"
 proof -
   have body: "pcompletes vpr_gs \<Pi> (imp \<lbrakk> Gg := 9 \<rbrakk>)
@@ -69,8 +69,82 @@ proof -
   with call show ?thesis by blast
 qed
 
+text \<open>A parameterless call whose body returns a value completes with the value at
+  the destination and the surrounding stack untouched: a return unwinds only to
+  its own activation.\<close>
+lemma call_return_completes:
+  assumes q: "\<Pi> p = Some (\<lparr>formals = [], body = Return (Some e)\<rparr>)"
+  shows "psteps gs \<Pi> (Call (Some x) p [], s, frs)
+           (SKIP,
+            (combine_env gs s
+              ((enter_state gs s)(ret_var := aval e (enter_state gs s))))
+              (x := aval e (enter_state gs s)),
+            frs)"
+proof -
+  let ?s' = "(enter_state gs s)(ret_var := aval e (enter_state gs s))"
+  have "pstep gs \<Pi> (Call (Some x) p [], s, frs)
+          (Seq (Return (Some e)) Restore, enter_state gs s, Frame s (Some x) # frs)"
+    using q by (rule pstep_Call_parameterless)
+  moreover have "pstep gs \<Pi> (Seq (Return (Some e)) Restore, enter_state gs s, Frame s (Some x) # frs)
+                   (Seq Unwind Restore, ?s', Frame s (Some x) # frs)"
+    by (intro Seq2 ReturnSome)
+  moreover have "pstep gs \<Pi> (Seq Unwind Restore, ?s', Frame s (Some x) # frs)
+                   (SKIP, (combine_env gs s ?s')(x := aval e (enter_state gs s)), frs)"
+    using UnwindAct[of gs \<Pi> ?s' s "Some x" frs] by simp
+  ultimately show ?thesis by (meson star.refl star.step)
+qed
+
+lemma call_return_none_completes:
+  assumes q: "\<Pi> p = Some (\<lparr>formals = [], body = Return None\<rparr>)"
+  shows "psteps gs \<Pi> (Call None p [], s, frs)
+           (SKIP, combine_env gs s (enter_state gs s), frs)"
+proof -
+  have "pstep gs \<Pi> (Call None p [], s, frs)
+          (Seq (Return None) Restore, enter_state gs s, Frame s None # frs)"
+    using q by (rule pstep_Call_parameterless)
+  moreover have "pstep gs \<Pi> (Seq (Return None) Restore, enter_state gs s, Frame s None # frs)
+                   (Seq Unwind Restore, enter_state gs s, Frame s None # frs)"
+    by (intro Seq2 ReturnNone)
+  moreover have "pstep gs \<Pi> (Seq Unwind Restore, enter_state gs s, Frame s None # frs)
+                   (SKIP, combine_env gs s (enter_state gs s), frs)"
+    using UnwindAct[of gs \<Pi> "enter_state gs s" s None frs] by simp
+  ultimately show ?thesis by (meson star.refl star.step)
+qed
+
+text \<open>The inner return is caught by the inner activation, so the outer frame
+  survives and execution resumes at the outer continuation.\<close>
+theorem nested_call_return_trace:
+  assumes qin: "\<Pi> pin = Some (\<lparr>formals = [], body = Return (Some e)\<rparr>)"
+      and qout: "\<Pi> pout = Some (\<lparr>formals = [], body = Seq (Call (Some rin) pin []) after\<rparr>)"
+  shows "psteps gs \<Pi> (Call (Some rout) pout [], s0, [])
+           (Seq after Restore,
+            (combine_env gs (enter_state gs s0)
+              ((enter_state gs (enter_state gs s0))
+                (ret_var := aval e (enter_state gs (enter_state gs s0)))))
+                (rin := aval e (enter_state gs (enter_state gs s0))),
+            [Frame s0 (Some rout)])"
+proof -
+  let ?s1 = "enter_state gs s0"
+  let ?Fout = "Frame s0 (Some rout)"
+  let ?inner = "(combine_env gs ?s1
+                    ((enter_state gs ?s1)(ret_var := aval e (enter_state gs ?s1))))
+                  (rin := aval e (enter_state gs ?s1))"
+  have outer: "pstep gs \<Pi> (Call (Some rout) pout [], s0, [])
+      (Seq (Seq (Call (Some rin) pin []) after) Restore, ?s1, [?Fout])"
+    using qout by (rule pstep_Call_parameterless)
+  have inner: "psteps gs \<Pi>
+      (Seq (Seq (Call (Some rin) pin []) after) Restore, ?s1, [?Fout])
+      (Seq (Seq SKIP after) Restore, ?inner, [?Fout])"
+    by (intro psteps_Seq2 call_return_completes[where \<Pi> = \<Pi> and p = pin, OF qin])
+  have resume: "pstep gs \<Pi>
+      (Seq (Seq SKIP after) Restore, ?inner, [?Fout])
+      (Seq after Restore, ?inner, [?Fout])"
+    by (intro Seq2 Seq1)
+  from outer inner resume show ?thesis by (meson star.refl star.step star_trans)
+qed
+
 theorem return_value_propagated:
-  assumes p: "\<Pi> pf = Some (proc_decl_of [] (imp \<lbrakk> return 7 \<rbrakk>))"
+  assumes p: "\<Pi> pf = Some (\<lparr>formals = [], body = imp \<lbrakk> return 7 \<rbrakk>\<rparr>)"
   shows "\<exists>t. pcompletes vpr_gs \<Pi> (Call (Some (STR ''x'')) pf []) s0 t \<and> t (STR ''x'') = 7"
 proof -
   let ?e = "N 7"
@@ -80,12 +154,8 @@ proof -
   have call: "psteps vpr_gs \<Pi> (Call (Some (STR ''x'')) pf [], s0, []) (imp \<lbrakk> skip \<rbrakk>, ?t, [])"
     using p by (rule call_return_completes[where x = "(STR ''x'')" and s = s0 and frs = "[]"])
   have "?t (STR ''x'') = 7" by simp
-  with call show ?thesis unfolding pcompletes_def by blast
+  with call show ?thesis by blast
 qed
-
-lemmas early_return_skips_dead = call_return_completes
-lemmas normal_fallthrough = call_return_none_completes
-lemmas nested_calls_resume_caller = nested_call_return_trace
 
 definition rec_body :: com where
   "rec_body = imp \<lbrakk>
@@ -98,7 +168,7 @@ definition rec_body :: com where
    \<rbrakk>"
 
 theorem bounded_recursion_completes:
-  assumes p: "\<Pi> (STR ''r'') = Some (proc_decl_of [] rec_body)"
+  assumes p: "\<Pi> (STR ''r'') = Some (\<lparr>formals = [], body = rec_body\<rparr>)"
   shows "\<exists>t. pcompletes vpr_gs \<Pi> (imp \<lbrakk> r() \<rbrakk>) ((\<lambda>_. 0)((STR ''Gx'') := 1)) t \<and> t (STR ''Gx'') = 0"
 proof -
   let ?s0 = "(\<lambda>_. 0)((STR ''Gx'') := 1)"

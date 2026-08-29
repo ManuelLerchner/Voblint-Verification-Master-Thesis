@@ -1,7 +1,7 @@
 section \<open>Example: recursive procedure CFG layout\<close>
 
 theory Example_Proc_Recursion_CFG
-  imports "Voblint_CFG.VIMP_Proc_to_CFG" "Voblint_VIMP.VIMP_Notation"
+  imports "Voblint_Compile.VIMP_Proc_to_CFG" "Voblint_VIMP.VIMP_Notation"
 begin
 
 text \<open>
@@ -25,8 +25,7 @@ definition proc_layout_regression_prog :: imp_prog where
 definition proc_layout_regression_cfg :: cfg where
   "proc_layout_regression_cfg =
      compile_prog (prog_table proc_layout_regression_prog)
-       (prog_procs proc_layout_regression_prog)
-       (STR ''main'') (prog_main proc_layout_regression_prog)"
+       (prog_procs proc_layout_regression_prog)"
 
 text \<open>A call edge names its callee entry and its continuation directly, so each case below
   reads the callee off the edge instead of off a separate matching relation.\<close>

@@ -90,14 +90,14 @@ property of comparing *any* two context granularities.
 ## 4. The same shape exists on the retained architecture
 
 This session's architecture ( `valid_ltr` / `key` / `activation_collect`,
-`CFG_Local_Trace.thy`) has the analogous structure, arguably simpler than
+`LTR_Def.thy`) has the analogous structure, arguably simpler than
 the deleted one: `valid_ltr gs g S` is a single trace set that does **not**
 depend on `enterc` at all — `enterc` only enters via the `key` projection
 `activation_collect` applies on top. Concretely:
 
 - `activation_collect gs enterc seedc g S v ctx` selects traces
   `t \<in> valid_ltr gs g S` with `sink_node t = v` and `key enterc seedc t = ctx`
-  (`activation_collect_I`/`_E`, `CFG_Local_Trace.thy`).
+  (`activation_collect_I`/`_E`, `LTR_Def.thy`).
 - The candidate semantic inclusion, for a `cs_enterc`-based k1/k2 pair on the
   *same* program and the *same* `valid_ltr` set (concretely available now as
   `nest_1_dg`/`nest_2_dg` in `Example_Interval_DG_CallString_K1.thy`/`_K2.thy`,
@@ -108,7 +108,7 @@ depend on `enterc` at all — `enterc` only enters via the `key` projection
   ```
 
   for every `t`, provable by induction on `t`'s constructor (`Root`/`Call`/
-  `Resume`, `CFG_Local_Trace.thy:82-84`), using `cs_enterc_k_mono` at each
+  `Resume`, `LTR_Def.thy:82-84`), using `cs_enterc_k_mono` at each
   `Call` step (where `key`'s recursion calls `enterc` on the parent's
   already-computed context — exactly `cs_enterc_k_mono`'s hypothesis shape).
   `Resume`'s case is immediate (`key` is unchanged across a return, per its

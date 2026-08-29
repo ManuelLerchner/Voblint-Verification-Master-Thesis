@@ -1,6 +1,6 @@
 theory Example_EntryState_GraphViz_Regression
   imports
-    "Voblint_CLI.State_Report_GraphViz"
+    "Voblint_VIMP.VIMP_Notation" "Voblint_CLI.State_Report_GraphViz"
     "Voblint_Examples.Example_Interval_DG_EntryState_Result_Regression"
     "Voblint_Examples.Example_Interval_DG_EntryState_Dead_Check_Regression"
 begin
@@ -232,7 +232,7 @@ text \<open>And the domain the graph is built over never names a key the solver 
 lemma gcall_ctx_graph_domain_is_covered:
   "list_all (\<lambda>x. case x of Inl pc \<Rightarrow> pc \<in> result_keys gcall_result | Inr _ \<Rightarrow> True)
      (contextual_result_domain (entry_state_ctx_graph_config gcall_prog)
-        (prog_cfg prog_main_name gcall_prog) gcall_result)"
+        (prog_cfg gcall_prog) gcall_result)"
   by eval
 
 subsection \<open>One node per activation of the callee\<close>
@@ -374,10 +374,10 @@ lemma mixed_ctx_graph_wf: "analysis_graph_wf mixed_ctx_graph"
   unfolding mixed_ctx_graph_def by (rule entry_state_ctx_graph_wf)
 
 lemma mixed_ctx_graph_check_live_and_dead:
-  "entry_state_ctx_check_annotation (prog_cfg prog_main_name mixed_ctx_prog)
+  "entry_state_ctx_check_annotation (prog_cfg mixed_ctx_prog)
      (analyse_interval_entry_state_result mixed_ctx_prog) (Statement 1) [Ivl (Fin 1) (Fin 1)]
    = Some (check_result_annotation Check_Proved (exp.Eq (V (STR ''n'')) (exp.N 1)))"
-  "entry_state_ctx_check_annotation (prog_cfg prog_main_name mixed_ctx_prog)
+  "entry_state_ctx_check_annotation (prog_cfg mixed_ctx_prog)
      (analyse_interval_entry_state_result mixed_ctx_prog) (Statement 1) [Ivl (Fin 3) (Fin 3)]
    = Some (dead_check_annotation (exp.Eq (V (STR ''n'')) (exp.N 1)))"
   by eval+
@@ -468,7 +468,7 @@ text \<open>
 definition dead_route_calls :: "(pp \<times> call_action \<times> pp \<times> pp) list" where
   "dead_route_calls =
      filter (\<lambda>(call, ca, entry, cont). \<not> is_reachable_point (lookup_context dead_route_result call []))
-       (cfg_calls_list (prog_cfg prog_main_name dead_route_prog))"
+       (cfg_calls_list (prog_cfg dead_route_prog))"
 
 lemma dead_route_has_exactly_one_dead_call:
   "length dead_route_calls = 1"
@@ -519,7 +519,7 @@ lemma dead_route_live_call_has_enter_and_combine_edge:
        list_ex (\<lambda>(src, kind, dst).
            dst = LocalNode cont [] \<and> (case kind of CombineEdge _ _ _ \<Rightarrow> True | _ \<Rightarrow> False))
          (analysis_graph_edges dead_route_graph))
-     (cfg_calls_list (prog_cfg prog_main_name dead_route_prog))"
+     (cfg_calls_list (prog_cfg dead_route_prog))"
   by eval
 
 text \<open>

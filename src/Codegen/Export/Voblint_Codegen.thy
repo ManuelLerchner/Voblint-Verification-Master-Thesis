@@ -61,7 +61,7 @@ export_code
   XE_Intra XE_Enter XE_Combine XE_CallToReturn XE_GlobalRead XE_GlobalWrite
   NS_Plain NS_Proved NS_Refuted NS_Unknown NS_Unreachable NS_Exit
   exp_vnames_list string_of_abstract_value
-  mk_program proc_decl_of declared_global_vars pretty_string_of_program
+  mk_program proc_decl_ext declared_global_vars pretty_string_of_program
   SKIP com.Call com.If Assign Seq While Return Check
   N V Plus Minus Times
   exp.Not And Or Less exp.Eq

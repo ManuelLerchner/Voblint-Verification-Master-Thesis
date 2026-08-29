@@ -55,16 +55,16 @@ definition nest_procs :: "pname list" where "nest_procs = prog_procs nest_progra
 definition nest_main :: "VIMP_Proc.com" where "nest_main = prog_main nest_program"
 
 definition nest_cfg :: cfg where
-  "nest_cfg = compile_prog nest_pi nest_procs (STR ''main'') nest_main"
+  "nest_cfg = compile_prog nest_pi nest_procs"
 
 text \<open>The compiled CFG, folded back under its own name: every obligation the routed
   locale states is phrased in \<^const>\<open>compile_prog\<close>, every fact below in \<open>nest_cfg\<close>.\<close>
 lemma nest_cfg_compile [simp]:
-  "compile_prog nest_pi nest_procs (STR ''main'') nest_main = nest_cfg"
+  "compile_prog nest_pi nest_procs = nest_cfg"
   by (simp add: nest_cfg_def)
 
 lemma nest_entry: "cfg_entry nest_cfg = FunctionEntry (STR ''main'')"
-  unfolding nest_cfg_def by (rule inv16_entry_is_main)
+  by (simp only: nest_cfg_def cfg_entry_compile_prog prog_main_name_def)
 
 text \<open>\<open>main\<close> calls \<open>f\<close> at two sites (\<open>Statement 5\<close>, args \<open>3\<close>; \<open>Statement 6\<close>, args \<open>10\<close>).
   \<open>f\<close> calls \<open>g\<close> at one site inside its own body (\<open>Statement 2\<close>), passing through its own
@@ -368,7 +368,7 @@ text \<open>The call-string routing policy instantiated at \<open>k = 1\<close>.
   before it reaches the goal, so \<open>call_fwd\<close> does not need to case-split on which one.\<close>
 
 interpretation nest_1_cs: call_string_routed_context
-    nest_S_abs nest_gs nest_pi nest_procs "STR ''main''" nest_main 1
+    nest_S_abs nest_gs nest_pi nest_procs 1
     "map_lift (fun_of_resolved_st_q_for nest_gs) (Bot::ivl exec_dg_st lifted)"
     "map_lift (fun_of_resolved_st_q_for nest_gs) (Lifted cinit_ivl_st)"
     "map_lift (fun_of_resolved_st_q_for nest_gs) (Bot::ivl exec_dg_st lifted)"
@@ -465,10 +465,10 @@ proof -
 qed
 
 theorem nest_1_activation_collect_sound:
-  "activation_collect nest_gs (admiss_exact (cs_context 1)) [] nest_cfg (cinit_stores nest_gs) v ctx
+  "activation_collect nest_gs (cs_context 1) [] nest_cfg (cinit_stores nest_gs) v ctx
      \<subseteq> gamma_state_lift (nest_1_sg (Inl (v, ctx)))"
 proof (rule activation_collect_sound_gen[where sg = nest_1_sg and gammaM = gamma_state_lift
-        and admiss = "admiss_exact (cs_context 1)" and startcontext = "[]"
+        and enterc = "cs_context 1" and initial_ctx = "[]"
         and S = "cinit_stores nest_gs" and g = nest_cfg and gs = nest_gs])
   \<comment> \<open>ENTRY_G\<close>
   fix s assume "s \<in> cinit_stores nest_gs"
@@ -492,27 +492,22 @@ next
         \<Longrightarrow> s' \<in> gamma_state_lift (nest_1_sg (Inl (v, c)))"
     by (rule nest_1_cs.dg_ctx_act_edge[unfolded nest_cfg_compile])
 next
-  \<comment> \<open>ADMISS_TOTAL --- trivial, \<open>cs_context 1\<close> is a total function.\<close>
-  show "\<And>u c s. \<exists>c'. admiss_exact (cs_context 1) u c s c'" by (simp add: admiss_exact_def)
-next
   \<comment> \<open>CALL --- enter routed to the truncated call string.\<close>
-  fix u dst pars args p cont c s c'
+  fix u dst pars args p cont c s
   assume ce: "(u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls nest_cfg"
     and sm: "s \<in> gamma_state_lift (nest_1_sg (Inl (u, c)))"
-    and adm: "admiss_exact (cs_context 1) u c (call_enter nest_gs (CallEdge dst pars args) s) c'"
   show "call_enter nest_gs (CallEdge dst pars args) s
-          \<in> gamma_state_lift (nest_1_sg (Inl (FunctionEntry p, c')))"
-    using adm nest_1_sg_seed[OF ce sm] by (simp add: admiss_exact_def)
+          \<in> gamma_state_lift (nest_1_sg (Inl (FunctionEntry p, cs_context 1 u c (call_enter nest_gs (CallEdge dst pars args) s))))"
+    using nest_1_sg_seed[OF ce sm] .
 next
   \<comment> \<open>COMB --- return combine at the caller's own truncated context.\<close>
-  fix cl dst pars args p cont c1 c2 s t es
+  fix cl dst pars args p cont c1 s t es
   assume ce: "(cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls nest_cfg"
     and sm: "s \<in> gamma_state_lift (nest_1_sg (Inl (cl, c1)))"
-    and adm: "admiss_exact (cs_context 1) cl c1 es c2"
-    and tm: "t \<in> gamma_state_lift (nest_1_sg (Inl (FunctionResult p, c2)))"
+    and tm: "t \<in> gamma_state_lift (nest_1_sg (Inl (FunctionResult p, cs_context 1 cl c1 es)))"
     and ces: "call_enter_store nest_gs nest_cfg cl s es"
   show "combine_collect nest_gs dst s t \<in> gamma_state_lift (nest_1_sg (Inl (cont, c1)))"
-    using adm tm nest_1_sg_comb[OF ce sm _ ces] by (simp add: admiss_exact_def)
+    using tm nest_1_sg_comb[OF ce sm _ ces] by blast
 qed
 
 
@@ -612,8 +607,7 @@ abbreviation nestg_lookup :: "ivl exec_dg_st lifted \<Rightarrow> vname \<Righta
      (case d of Bot \<Rightarrow> bot | Lifted d0 \<Rightarrow> lookup_resolved_st_q d0 (location_of nestg_gs x))"
 
 definition nestg_cfg :: cfg where
-  "nestg_cfg = compile_prog (prog_table nestg_program) (prog_procs nestg_program)
-                 (STR ''main'') (prog_main nestg_program)"
+  "nestg_cfg = compile_prog (prog_table nestg_program) (prog_procs nestg_program)"
 
 definition nestg_is_bot_pred :: "ivl resolved_st_q \<Rightarrow> bool" where
   "nestg_is_bot_pred = resolved_st_q_is_bot_for (declared_global_vars nestg_program)"
@@ -711,11 +705,11 @@ definition nest_1_graph_config ::
         (\<lambda>ctx. ''['' @ join_source '', '' (map string_of_cfg_node ctx) @ '']''),
       show_context = (\<lambda>ctx. ''['' @ join_source '', '' (map string_of_cfg_node ctx) @ '']''),
       locals_for_pp = (\<lambda>p.
-        let sc = compiled_procedure_scope nest_gs nest_pi nest_procs (STR ''main'') nest_main
+        let sc = compiled_procedure_scope nest_gs nest_pi nest_procs
           nest_cfg p
         in scope_formals sc @ scope_locals sc),
       return_slot_for_pp = (\<lambda>p.
-        scope_return_slot (compiled_procedure_scope nest_gs nest_pi nest_procs (STR ''main'') nest_main
+        scope_return_slot (compiled_procedure_scope nest_gs nest_pi nest_procs
           nest_cfg p)),
       globals_to_show = [],
       show_local = (\<lambda>p ctx vars d. map (\<lambda>x.
@@ -727,7 +721,7 @@ definition nest_1_graph_config ::
       show_global_key = (\<lambda>k. case k of Global \<Rightarrow> ''Global'' | Seed p ctx \<Rightarrow> ''Seed''),
       is_shared_global = (\<lambda>k. case k of Global \<Rightarrow> True | Seed _ _ \<Rightarrow> False),
       show_internal_globals = False,
-      owner_of = String.explode o compiled_owner_of nest_pi nest_procs (STR ''main'') nest_main,
+      owner_of = String.explode o compiled_owner_of nest_pi nest_procs,
       cluster_label = (\<lambda>owner ctx.
         if owner = ''main'' \<and> ctx = [] then ''main / root context''
         else owner @ '' / call string='' @ ''['' @ join_source '', '' (map string_of_cfg_node ctx) @ '']''),
@@ -737,7 +731,7 @@ definition nest_1_graph_config ::
 
 definition nest_1_contexts_for_pp :: "pp \<Rightarrow> cfg_node list list" where
   "nest_1_contexts_for_pp p =
-    (let owner = compiled_owner_of nest_pi nest_procs (STR ''main'') nest_main p
+    (let owner = compiled_owner_of nest_pi nest_procs p
      in if owner = (STR ''main'') then [[]]
         else if owner = (STR ''f'') then [[Statement 5], [Statement 6]]
         else [[Statement 2]])"

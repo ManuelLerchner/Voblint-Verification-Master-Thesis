@@ -18,8 +18,6 @@ layer without embedding line numbers that drift.
 | `value_providing` | Conservative syntactic predicate: no fall-through or void return and at least one value return. | `src/VIMP/VIMP_Proc.thy` |
 | `wf_source_program` | Source contract for declarations, calls, returns, reserved variables, and a fall-through-only main. | `src/VIMP/VIMP_Proc.thy` |
 | `ret_var` | Reserved internal channel carrying an explicit return value during unwinding. | `src/VIMP/VIMP_Proc.thy` |
-| `source_location` | Resolved source storage location: `GlobalVar` or an implicitly procedure-local `LocalVar`. | `src/VIMP/VIMP_Proc.thy` |
-| `storage_of` | Program declaration-driven source-location resolver. A non-declared identifier is implicitly local to the supplied procedure. | `src/VIMP/VIMP_Notation.thy` |
 | `enter_state` | Callee store with caller globals and fresh local variables. | `src/VIMP/VIMP_Globals.thy` |
 | `combine_env` | Restored caller locals combined with callee globals; Goblint's `combine_env`, split from the separate destination write (`combine_assign`). | `src/VIMP/VIMP_Globals.thy` |
 
@@ -32,23 +30,23 @@ layer without embedding line numbers that drift.
 | `intra` | Ordinary procedure-local CFG edges. | `src/CFG/CFG_Def.thy` |
 | `calls` | Call-site relation containing the call action, callee entry, and continuation. | `src/CFG/CFG_Def.thy` |
 | `wf_cfg` | Generic structural well-formedness conditions for a CFG. | `src/CFG/CFG_Def.thy` |
-| `compile` | Compiles one source command into local edges and calls over a node interval. | `src/CFG/VIMP_Proc_to_CFG.thy` |
-| `compile_proc` | Adds a procedure entry, result boundary, and fall-through return to a compiled body. | `src/CFG/VIMP_Proc_to_CFG.thy` |
-| `compile_prog` | Compiles the procedure table and distinguished main command into one CFG. | `src/CFG/VIMP_Proc_to_CFG.thy` |
-| `wf_compile_input` | Canonical static contract for accepted source programs. | `src/CFG/Compiler/Compile_Invariants.thy` |
+| `compile` | Compiles one source command into local edges and calls over a node interval. | `src/Compile/VIMP_Proc_to_CFG.thy` |
+| `compile_proc` | Adds a procedure entry, result boundary, and fall-through return to a compiled body. | `src/Compile/VIMP_Proc_to_CFG.thy` |
+| `compile_prog` | Compiles the procedure table and distinguished main command into one CFG. | `src/Compile/VIMP_Proc_to_CFG.thy` |
+| `wf_compile_input` | Canonical static contract for accepted source programs. | `src/Compile/Compile_Invariants.thy` |
 
 ## Activation-local semantics
 
 | Term | Meaning | Source |
 | --- | --- | --- |
-| `ltr` | Activation-local trace: root, called activation, or resumed caller. | `src/CFG/Collecting/CFG_Local_Trace.thy` |
-| `valid_ltr` | Inductive concrete semantics over activation-local traces. | `src/CFG/Collecting/CFG_Local_Trace.thy` |
-| `caller_of` | Immediate caller stored structurally in a called or resumed trace. | `src/CFG/Collecting/CFG_Local_Trace.thy` |
+| `ltr` | Activation-local trace: root, called activation, or resumed caller. | `src/CFG/Collecting/LTR_Def.thy` |
+| `valid_ltr` | Inductive concrete semantics over activation-local traces. | `src/CFG/Collecting/LTR_Def.thy` |
+| `caller_of` | Immediate caller stored structurally in a called or resumed trace. | `src/CFG/Collecting/LTR_Def.thy` |
 | `ltr_collect` | Reachable sink stores at each CFG node, forgetting trace structure. | `src/CFG/Collecting/LTR_Collect.thy` |
-| `activation_collect` | Reachable sink stores indexed by activation context (the key-grouped view of `ltr_collect`). | `src/CFG/Collecting/CFG_Local_Trace.thy` |
+| `activation_collect` | Reachable sink stores indexed by activation context (the key-grouped view of `ltr_collect`). | `src/CFG/Collecting/LTR_Def.thy` |
 | `ltr_gamma` | Concretization interface relating abstract states to local-trace collecting semantics. | `src/CFG/Collecting/LTR_Abstract.thy` |
-| `key` | Functional describing-function reading a trace's admissible context, one context per position -- the paper's `beta` one-for-one. | `src/CFG/Collecting/CFG_Local_Trace.thy` |
-| `admiss` / `ctx_key` | `admiss` is a locale-fixed relation admitting possibly several target contexts per step; `ctx_key` lifts it over a trace. The *relational* generalization of `beta`, not `beta` itself -- needed where an instance may pick a context nondeterministically. `admiss_exact` is the functional (single-admissible-target) instance. | `src/CFG/Collecting/CFG_Local_Trace.thy` |
+| `key` | Functional describing-function reading a trace's admissible context, one context per position -- the paper's `beta` one-for-one. | `src/CFG/Collecting/LTR_Def.thy` |
+| `admiss` / `ctx_key` | `admiss` is a locale-fixed relation admitting possibly several target contexts per step; `ctx_key` lifts it over a trace. The *relational* generalization of `beta`, not `beta` itself -- needed where an instance may pick a context nondeterministically. `admiss_exact` is the functional (single-admissible-target) instance. | `src/CFG/Collecting/LTR_Def.thy` |
 
 ## Abstract interpretation
 

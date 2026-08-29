@@ -84,8 +84,11 @@ than at a locals-zeroed store with `p = 0`.
 
 ## Relationship to Schwarz et al
 
-This redesign follows the semantic philosophy of Schwarz et al.: analyses are defined over a
-concrete local-trace semantics rather than over reconstructed global executions.
+This redesign follows the semantic philosophy of Schwarz and Erhard, *Data Race Detection by
+Digest-Driven Abstract Interpretation* ([arXiv:2511.11055](https://arxiv.org/abs/2511.11055),
+2025), and its precursor Schwarz et al., *Improving Thread-Modular Abstract Interpretation*
+(SAS 2021): analyses are defined over a concrete local-trace semantics rather than over
+reconstructed global executions.
 
 The difference is what “local” denotes:
 
@@ -455,7 +458,7 @@ these theories:
 
 | theory | role |
 | --- | --- |
-| `CFG_Local_Trace` | defines `valid_ltr`, `key`, and the sole public projection `cfg_collect_ctx_act` |
+| `LTR_Def` | defines `valid_ltr`, `key`, and the sole public projection `cfg_collect_ctx_act` |
 | `Activation_Local_Sound` | the domain-level engine `valid_ltr_ctx_sound` (internal) |
 | `Activation_Backbone` | the public `activation_collect_sound`, one line from the engine |
 | `DG_Ctx_Activation` | consumes the backbone theorem |
@@ -485,7 +488,7 @@ The Stage-4 deletion was safe because an audit confirmed every consumer of the o
 committed theorem asserted membership or non-emptiness of the old witness collecting, so no
 downstream result depended on behaviour present only in the old semantics. See the Stage-4 note.
 
-### Stage 1 landed (`CFG_Local_Trace.thy`)
+### Stage 1 landed (`LTR_Def.thy`)
 
 Stage 1 is implemented and builds green through `Voblint_Soundness`. The design
 invariants are theorems of `valid_ltr`, not comments:
@@ -505,7 +508,7 @@ with `valid_ltr_caller_valid`. Note that `caller_of_unique`
 **only functional uniqueness** — `caller_of` is a function — and carries no semantic weight; it
 is not the source of the non-invention property.
 
-### Stage 2 landed (`CFG_Local_Trace.thy`)
+### Stage 2 landed (`LTR_Def.thy`)
 
 The internal projection `ltr_ctx_collect` and its inclusion in the broad graph collecting
 semantics are proved:
@@ -518,7 +521,7 @@ semantics are proved:
 - `ltr_ctx_collect_le_cfg_collect` — the `key` filter is a trivial outer restriction of that
   key-free inclusion.
 
-### Stage 3 landed (`CFG_Local_Trace.thy`, `Activation_Local_Sound.thy`)
+### Stage 3 landed (`LTR_Def.thy`, `Activation_Local_Sound.thy`)
 
 The context-sensitive soundness backbone is reproved over `valid_ltr` with the stable `key`,
 using exactly the four obligations `ENTRY_G`, `EDGE`, `SEED_G`, `COMB` (with the `COMB` output
@@ -563,7 +566,7 @@ not, and need not, prove semantic equivalence.
 
 **What changed.**
 
-- `cfg_collect_ctx_act` is now defined in `CFG_Local_Trace` as the sink/key projection of
+- `cfg_collect_ctx_act` is now defined in `LTR_Def` as the sink/key projection of
   `valid_ltr` (the Stage-2/3 `ltr_ctx_collect`, renamed to the public name; `combc` dropped). Single
   public collecting API; `cfg_collect_ctx_act_le_collect` retained.
 - `activation_collect_sound` (public, `Activation_Backbone`) keeps its name; its statement now uses
@@ -598,7 +601,7 @@ This is the authoritative architectural document.
 
 Start from this document, not from the historical design records. The first implementation task is small and isolated:
 
-1. Create `src/CFG/Collecting/CFG_Local_Trace.thy` in the CFG session. It defines only `ltr`, observers (`sink_node`, `sink_store`, `entry_store`, `path`, `caller_of`), `extend`, `key`, and `valid_ltr`; it does not change any existing collecting definition.
+1. Create `src/CFG/Collecting/LTR_Def.thy` in the CFG session. It defines only `ltr`, observers (`sink_node`, `sink_store`, `entry_store`, `path`, `caller_of`), `extend`, `key`, and `valid_ltr`; it does not change any existing collecting definition.
 2. Use I/Q to check the four constructor goals individually: nonempty paths, `Call` entry equals the `edge_step` result, `extend` preserves entry/ancestry/`caller_of`, `caller_of` recovers the caller through a `Resume` (nested case), and `Resume` computes the concrete combine store.
 3. Add the new theory to the session ROOT and batch-build `Voblint_CFG`. Do not touch `trace_witness_act`, `Activation_Backbone`, or any solver theory in this first commit.
 4. Only after that green commit, prove the local-trace soundness induction against the existing four obligations. Keep it internal until it has exactly the public statement of `activation_collect_sound`.

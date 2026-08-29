@@ -141,6 +141,7 @@ Voblint is inspired by several complementary lines of work:
 * **Abstract Interpretation of Annotated Commands** ([ITP 2012](https://doi.org/10.1007/978-3-642-32347-8_9)) – reusable abstract interpretation in Isabelle/HOL.
 * **The Top-Down Solver Verified: Building Confidence in Static Analyzers** ([CAV 2024](https://doi.org/10.1007/978-3-031-65627-9_15)) – executable verified fixpoint solving.
 * **Mixed Flow-Sensitive Static Analysis: Engineering Modularity** ([FM 2026](https://doi.org/10.1007/978-3-032-26220-2_22)) – engineering modular heterogeneous analyses.
+* **Data Race Detection by Digest-Driven Abstract Interpretation** ([arXiv:2511.11055](https://arxiv.org/abs/2511.11055)) – thread-modular local-trace semantics; Voblint's activation-local traces (`CFG_Local_Trace.thy`) adapt it to procedure activations.
 
 ## The Certified Execution Pipeline
 

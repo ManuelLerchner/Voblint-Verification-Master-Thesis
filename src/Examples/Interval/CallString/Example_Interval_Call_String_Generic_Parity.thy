@@ -21,7 +21,7 @@ subsection \<open>\<open>k = 1\<close>: the merged-context widening witness\<clo
 
 lemma cs_generic_k1_g_entry_merged:
   "nest_lookup
-     (locals (snd (cs_call_string_sol_prog 1 nest_gs (STR ''main'') nest_program)
+     (locals (snd (cs_call_string_sol_prog 1 nest_gs nest_program)
                 (Inl (FunctionEntry (STR ''g''), [Statement 2])))) (STR ''p'')
    = Ivl (Fin 3) PlusInf"
   unfolding cs_call_string_sol_prog_def cs_call_string_sol_def cs_call_string_eqs_def
@@ -29,7 +29,7 @@ lemma cs_generic_k1_g_entry_merged:
 
 lemma cs_generic_k1_g_result_merged:
   "nest_lookup
-     (locals (snd (cs_call_string_sol_prog 1 nest_gs (STR ''main'') nest_program)
+     (locals (snd (cs_call_string_sol_prog 1 nest_gs nest_program)
                 (Inl (FunctionResult (STR ''g''), [Statement 2])))) (STR ''#ret'')
    = Ivl (Fin 6) PlusInf"
   unfolding cs_call_string_sol_prog_def cs_call_string_sol_def cs_call_string_eqs_def
@@ -37,7 +37,7 @@ lemma cs_generic_k1_g_result_merged:
 
 lemma cs_generic_k1_x_after_first_return:
   "nest_lookup
-     (locals (snd (cs_call_string_sol_prog 1 nest_gs (STR ''main'') nest_program)
+     (locals (snd (cs_call_string_sol_prog 1 nest_gs nest_program)
                 (Inl (Statement 6, [])))) (STR ''x'')
    = Ivl (Fin 6) PlusInf"
   unfolding cs_call_string_sol_prog_def cs_call_string_sol_def cs_call_string_eqs_def
@@ -45,7 +45,7 @@ lemma cs_generic_k1_x_after_first_return:
 
 lemma cs_generic_k1_y_after_second_return:
   "nest_lookup
-     (locals (snd (cs_call_string_sol_prog 1 nest_gs (STR ''main'') nest_program)
+     (locals (snd (cs_call_string_sol_prog 1 nest_gs nest_program)
                 (Inl (Statement 7, [])))) (STR ''y'')
    = Ivl (Fin 6) PlusInf"
   unfolding cs_call_string_sol_prog_def cs_call_string_sol_def cs_call_string_eqs_def
@@ -55,7 +55,7 @@ subsection \<open>\<open>k = 2\<close>: the two activations of \<open>g\<close> 
 
 lemma cs_generic_k2_g_entry_first:
   "nest_lookup
-     (locals (snd (cs_call_string_sol_prog 2 nest_gs (STR ''main'') nest_program)
+     (locals (snd (cs_call_string_sol_prog 2 nest_gs nest_program)
                 (Inl (FunctionEntry (STR ''g''), [Statement 2, Statement 5])))) (STR ''p'')
    = Ivl (Fin 3) (Fin 3)"
   unfolding cs_call_string_sol_prog_def cs_call_string_sol_def cs_call_string_eqs_def
@@ -63,7 +63,7 @@ lemma cs_generic_k2_g_entry_first:
 
 lemma cs_generic_k2_g_entry_second:
   "nest_lookup
-     (locals (snd (cs_call_string_sol_prog 2 nest_gs (STR ''main'') nest_program)
+     (locals (snd (cs_call_string_sol_prog 2 nest_gs nest_program)
                 (Inl (FunctionEntry (STR ''g''), [Statement 2, Statement 6])))) (STR ''p'')
    = Ivl (Fin 10) (Fin 10)"
   unfolding cs_call_string_sol_prog_def cs_call_string_sol_def cs_call_string_eqs_def
@@ -71,7 +71,7 @@ lemma cs_generic_k2_g_entry_second:
 
 lemma cs_generic_k2_g_result_first:
   "nest_lookup
-     (locals (snd (cs_call_string_sol_prog 2 nest_gs (STR ''main'') nest_program)
+     (locals (snd (cs_call_string_sol_prog 2 nest_gs nest_program)
                 (Inl (FunctionResult (STR ''g''), [Statement 2, Statement 5])))) (STR ''#ret'')
    = Ivl (Fin 6) (Fin 6)"
   unfolding cs_call_string_sol_prog_def cs_call_string_sol_def cs_call_string_eqs_def
@@ -79,7 +79,7 @@ lemma cs_generic_k2_g_result_first:
 
 lemma cs_generic_k2_g_result_second:
   "nest_lookup
-     (locals (snd (cs_call_string_sol_prog 2 nest_gs (STR ''main'') nest_program)
+     (locals (snd (cs_call_string_sol_prog 2 nest_gs nest_program)
                 (Inl (FunctionResult (STR ''g''), [Statement 2, Statement 6])))) (STR ''#ret'')
    = Ivl (Fin 20) (Fin 20)"
   unfolding cs_call_string_sol_prog_def cs_call_string_sol_def cs_call_string_eqs_def
@@ -87,7 +87,7 @@ lemma cs_generic_k2_g_result_second:
 
 lemma cs_generic_k2_x_after_first_return:
   "nest_lookup
-     (locals (snd (cs_call_string_sol_prog 2 nest_gs (STR ''main'') nest_program)
+     (locals (snd (cs_call_string_sol_prog 2 nest_gs nest_program)
                 (Inl (Statement 6, [])))) (STR ''x'')
    = Ivl (Fin 6) (Fin 6)"
   unfolding cs_call_string_sol_prog_def cs_call_string_sol_def cs_call_string_eqs_def
@@ -95,7 +95,7 @@ lemma cs_generic_k2_x_after_first_return:
 
 lemma cs_generic_k2_y_after_second_return:
   "nest_lookup
-     (locals (snd (cs_call_string_sol_prog 2 nest_gs (STR ''main'') nest_program)
+     (locals (snd (cs_call_string_sol_prog 2 nest_gs nest_program)
                 (Inl (Statement 7, [])))) (STR ''y'')
    = Ivl (Fin 20) (Fin 20)"
   unfolding cs_call_string_sol_prog_def cs_call_string_sol_def cs_call_string_eqs_def
@@ -111,28 +111,28 @@ text \<open>
 
 theorem cs_generic_k2_strictly_more_precise_than_k1:
   "nest_lookup
-     (locals (snd (cs_call_string_sol_prog 2 nest_gs (STR ''main'') nest_program)
+     (locals (snd (cs_call_string_sol_prog 2 nest_gs nest_program)
                 (Inl (FunctionEntry (STR ''g''), [Statement 2, Statement 5])))) (STR ''p'')
      < nest_lookup
-         (locals (snd (cs_call_string_sol_prog 1 nest_gs (STR ''main'') nest_program)
+         (locals (snd (cs_call_string_sol_prog 1 nest_gs nest_program)
                     (Inl (FunctionEntry (STR ''g''), [Statement 2])))) (STR ''p'')"
   "nest_lookup
-     (locals (snd (cs_call_string_sol_prog 2 nest_gs (STR ''main'') nest_program)
+     (locals (snd (cs_call_string_sol_prog 2 nest_gs nest_program)
                 (Inl (FunctionEntry (STR ''g''), [Statement 2, Statement 6])))) (STR ''p'')
      < nest_lookup
-         (locals (snd (cs_call_string_sol_prog 1 nest_gs (STR ''main'') nest_program)
+         (locals (snd (cs_call_string_sol_prog 1 nest_gs nest_program)
                     (Inl (FunctionEntry (STR ''g''), [Statement 2])))) (STR ''p'')"
   "nest_lookup
-     (locals (snd (cs_call_string_sol_prog 2 nest_gs (STR ''main'') nest_program)
+     (locals (snd (cs_call_string_sol_prog 2 nest_gs nest_program)
                 (Inl (Statement 6, [])))) (STR ''x'')
      < nest_lookup
-         (locals (snd (cs_call_string_sol_prog 1 nest_gs (STR ''main'') nest_program)
+         (locals (snd (cs_call_string_sol_prog 1 nest_gs nest_program)
                     (Inl (Statement 6, [])))) (STR ''x'')"
   "nest_lookup
-     (locals (snd (cs_call_string_sol_prog 2 nest_gs (STR ''main'') nest_program)
+     (locals (snd (cs_call_string_sol_prog 2 nest_gs nest_program)
                 (Inl (Statement 7, [])))) (STR ''y'')
      < nest_lookup
-         (locals (snd (cs_call_string_sol_prog 1 nest_gs (STR ''main'') nest_program)
+         (locals (snd (cs_call_string_sol_prog 1 nest_gs nest_program)
                     (Inl (Statement 7, [])))) (STR ''y'')"
   unfolding cs_call_string_sol_prog_def cs_call_string_sol_def cs_call_string_eqs_def
   by eval+
@@ -151,7 +151,7 @@ text \<open>
 
 lemma cs_generic_k3_g_entry_first:
   "nest_lookup
-     (locals (snd (cs_call_string_sol_prog 3 nest_gs (STR ''main'') nest_program)
+     (locals (snd (cs_call_string_sol_prog 3 nest_gs nest_program)
                 (Inl (FunctionEntry (STR ''g''), [Statement 2, Statement 5])))) (STR ''p'')
    = Ivl (Fin 3) (Fin 3)"
   unfolding cs_call_string_sol_prog_def cs_call_string_sol_def cs_call_string_eqs_def
@@ -159,7 +159,7 @@ lemma cs_generic_k3_g_entry_first:
 
 lemma cs_generic_k3_g_entry_second:
   "nest_lookup
-     (locals (snd (cs_call_string_sol_prog 3 nest_gs (STR ''main'') nest_program)
+     (locals (snd (cs_call_string_sol_prog 3 nest_gs nest_program)
                 (Inl (FunctionEntry (STR ''g''), [Statement 2, Statement 6])))) (STR ''p'')
    = Ivl (Fin 10) (Fin 10)"
   unfolding cs_call_string_sol_prog_def cs_call_string_sol_def cs_call_string_eqs_def

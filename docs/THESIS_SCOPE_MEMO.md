@@ -50,7 +50,7 @@ theories in this pass, so treat as a pointer to verify, not a citable claim
 on its own):
 
 - **AD-43/45 (2026-07-13…19).** Activation-local trace semantics `valid_ltr`
-  (proved `= lfp(ltr_F)`, `CFG_Local_Trace.thy`); `ltr_collect`/
+  (proved `= lfp(ltr_F)`, `LTR_Def.thy`); `ltr_collect`/
   `ltr_collect_keyed` are now the canonical compiled-program soundness
   target, not `cfg_collect` directly. Reflected in the current
   `docs/PROOF_OVERVIEW.md`/`docs/PROOF_PHASES.md` — those two read as

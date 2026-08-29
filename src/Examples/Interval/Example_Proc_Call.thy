@@ -34,15 +34,17 @@ definition inc_body :: "VIMP_Proc.com" where
 definition sqr_body :: "VIMP_Proc.com" where
   "sqr_body = imp \<lbrakk> Gx := Gx * Gx \<rbrakk>"
 
-definition proc_pi :: proc_table where
-  "proc_pi = (\<lambda>_. None)((STR ''inc'') := Some (proc_decl_of [] inc_body), (STR ''sqr'') := Some (proc_decl_of [] sqr_body))"
-
 definition main_prog :: "VIMP_Proc.com" where
   "main_prog = imp \<lbrakk>
      Gx := 4;
      inc();
      sqr()
    \<rbrakk>"
+
+definition proc_pi :: proc_table where
+  "proc_pi = (\<lambda>_. None)((STR ''inc'') := Some (\<lparr>formals = [], body = inc_body\<rparr>),
+                          (STR ''sqr'') := Some (\<lparr>formals = [], body = sqr_body\<rparr>),
+                          prog_main_name := Some (\<lparr>formals = [], body = main_prog\<rparr>))"
 
 definition main_procs :: "pname list" where
   "main_procs = [(STR ''inc''), (STR ''sqr'')]"
@@ -61,8 +63,8 @@ proof -
                 (VIMP_Globals.combine_env proc_call_gs s
                   ((enter_state proc_call_gs s)((STR ''Gx'') := s (STR ''Gx'') + 1)))"
   proof (rule pcompletes_Call_parameterless[where c = inc_body])
-    show "proc_pi (STR ''inc'') = Some (proc_decl_of [] inc_body)"
-      by (simp add: proc_pi_def)
+    show "proc_pi (STR ''inc'') = Some (\<lparr>formals = [], body = inc_body\<rparr>)"
+      by (simp add: proc_pi_def prog_main_name_def)
     show "pcompletes proc_call_gs proc_pi inc_body (enter_state proc_call_gs s)
              ((enter_state proc_call_gs s)((STR ''Gx'') := s (STR ''Gx'') + 1))"
     proof -
@@ -90,8 +92,8 @@ proof -
                 (VIMP_Globals.combine_env proc_call_gs s
                   ((enter_state proc_call_gs s)((STR ''Gx'') := s (STR ''Gx'') * s (STR ''Gx''))))"
   proof (rule pcompletes_Call_parameterless[where c = sqr_body])
-    show "proc_pi (STR ''sqr'') = Some (proc_decl_of [] sqr_body)"
-      by (simp add: proc_pi_def)
+    show "proc_pi (STR ''sqr'') = Some (\<lparr>formals = [], body = sqr_body\<rparr>)"
+      by (simp add: proc_pi_def prog_main_name_def)
     show "pcompletes proc_call_gs proc_pi sqr_body (enter_state proc_call_gs s)
              ((enter_state proc_call_gs s)((STR ''Gx'') := s (STR ''Gx'') * s (STR ''Gx'')))"
     proof -
@@ -122,7 +124,7 @@ theorem main_prog_result:
 proof -
   have step1: "pcompletes proc_call_gs proc_pi (imp \<lbrakk> Gx := 4 \<rbrakk>) s (s((STR ''Gx'') := 4))"
     using pcompletes_assign[where gs = proc_call_gs and \<Pi> = proc_pi and x = "(STR ''Gx'')" and a = "N 4" and s = s]
-    by (simp add: pcompletes_def)
+    by simp
   have step2: "pcompletes proc_call_gs proc_pi (imp \<lbrakk> inc() \<rbrakk>) (s((STR ''Gx'') := 4)) (s((STR ''Gx'') := 5))"
     using call_inc_result[where s = "s((STR ''Gx'') := 4)"]
     by simp
@@ -146,7 +148,7 @@ text \<open>
   @{text "5 -> inc, continue at 6"} and @{text "6 -> sqr, continue at 7"}.
 \<close>
 
-abbreviation "main_cfg \<equiv> compile_prog proc_pi [(STR ''inc''), (STR ''sqr'')] main_cfg_name main_prog"
+abbreviation "main_cfg \<equiv> compile_prog proc_pi [(STR ''inc''), (STR ''sqr'')]"
 
 lemma main_cfg_full:
   "main_cfg =
@@ -165,7 +167,7 @@ lemma main_cfg_full:
           (Statement 6, CallEdge None [] [], FunctionEntry (STR ''sqr''), Statement 7)},
        cfg_entry = FunctionEntry (STR ''main''),
        checks = {} \<rparr>"
-  by (simp add: main_cfg_name_def) eval
+  by eval
 
 lemma main_cfg_entry: "cfg_entry main_cfg = FunctionEntry (STR ''main'')"
   by (simp add: main_cfg_full)

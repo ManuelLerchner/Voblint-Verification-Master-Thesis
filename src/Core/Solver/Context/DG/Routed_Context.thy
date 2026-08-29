@@ -1,6 +1,6 @@
 theory Routed_Context
   imports DG_Ctx_Activation DG_Base Strategy_Tree_Combinators DG_Transfer_Combinators
-    Strategy_Tree_Do "Voblint_CFG.CFG_Local_Trace"
+    Strategy_Tree_Do "Voblint_CFG.LTR_Def"
 begin
 
 section \<open>One route, CALL and COMB discharged once\<close>
@@ -983,7 +983,7 @@ where
   "formals_route_gen S u ctx d ca = formals_route S d ca"
 
 text \<open>The formals of the call originating at \<open>u\<close>: at most one, by the compiler's
-  own invariant (\<^theory>\<open>Voblint_CFG.VIMP_Proc_to_CFG\<close> emits a single \<^const>\<open>CallEdge\<close>
+  own invariant (\<^theory>\<open>Voblint_Compile.VIMP_Proc_to_CFG\<close> emits a single \<^const>\<open>CallEdge\<close>
   per \<^const>\<open>Call\<close>); \<open>[]\<close> if \<open>u\<close> has none.\<close>
 definition formals_at_call_site :: "cfg \<Rightarrow> pp \<Rightarrow> vname list" where
   "formals_at_call_site g u =
@@ -1014,7 +1014,7 @@ definition call_action_at_call_site :: "cfg \<Rightarrow> pp \<Rightarrow> call_
 text \<open>
   Not a locale theorem, same as \<open>route_enterc_agree\<close> itself: whether a node has at
   most one outgoing call is a per-instance fact about \<open>g\<close>, true for
-  \<^const>\<open>compile_prog\<close> output (\<^theory>\<open>Voblint_CFG.VIMP_Proc_to_CFG\<close>'s
+  \<^const>\<open>compile_prog\<close> output (\<^theory>\<open>Voblint_Compile.VIMP_Proc_to_CFG\<close>'s
   \<open>compile_prog_calls_source_unique\<close>) but not for an arbitrary hand-built CFG.
 \<close>
 

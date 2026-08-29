@@ -44,7 +44,7 @@ unfolds to `wf_compile_input (storage_global p prog_main_name) ...`; every
 soundness theorem assumes `wf_compile_input (declared_global p) ...`. No
 corollary connects them.
 
-- Where: `src/CFG/Compiler/Compile_Invariants.thy`, beside
+- Where: `src/Compile/Compile_Invariants.thy`, beside
   `wf_program_compile_input_exec_sound`.
 - Shape: one corollary discharged by `storage_global_iff [simp]`
   (`VIMP_Notation.thy:90`), which already proves the two classifiers equal.

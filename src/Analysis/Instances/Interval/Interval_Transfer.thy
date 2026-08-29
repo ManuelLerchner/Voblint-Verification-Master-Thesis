@@ -197,7 +197,7 @@ text \<open>
   @{thm [source] ivl_times_core.simps}, @{thm [source] ivl_nonempty.simps};
   examples with branch edges also need @{thm [source] ivl_backward_domain.bfilter.simps};
   examples with procedure calls also need @{thm [source] enter_ivl_for_def},
-  @{thm [source] enter_frame_ivl_for_def}, @{thm [source] bind_formals_abs_def},
+  @{thm [source] enter_frame_ivl_for_def}, @{thm [source]},
   @{thm [source] combine_env_abs_def}.
 \<close>
 lemmas ivl_eval_simps =

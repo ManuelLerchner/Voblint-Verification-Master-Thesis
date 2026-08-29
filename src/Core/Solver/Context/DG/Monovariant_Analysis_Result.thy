@@ -3,7 +3,7 @@ theory Monovariant_Analysis_Result
     "Voblint_Core.Analysis_Result"
     "Voblint_Core.CFG_Enumeration"
     "Voblint_Core.Abstract_Checks"
-    "Voblint_CFG.Compile_Invariants"
+    "Voblint_Compile.Compile_Invariants"
     Exec_DG_Bridge
 begin
 
@@ -135,7 +135,7 @@ text \<open>
 \<close>
 
 definition ctx_solved_for ::
-    "((vname \<Rightarrow> bool) \<Rightarrow> pname \<Rightarrow> imp_prog
+    "((vname \<Rightarrow> bool) \<Rightarrow> imp_prog
         \<Rightarrow> (pp \<times> unit) set
              \<times> (pp \<times> unit + 'k
                   \<Rightarrow> ('a::computable_domain exec_dg_st lifted, 'a exec_dg_st lifted) dg_state))
@@ -143,11 +143,11 @@ definition ctx_solved_for ::
           \<Rightarrow> ('k \<times> String.literal
                 \<times> (('a exec_dg_st lifted, 'a exec_dg_st lifted) dg_state
                      \<Rightarrow> 'a exec_dg_st lifted)) list)
-     \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> pname \<Rightarrow> imp_prog
+     \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog
      \<Rightarrow> (unit, 'a abs_state) analysis_result
           \<times> (String.literal \<times> 'a abs_state point_state) list" where
-  "ctx_solved_for solve keys gs mnm p =
-     (let sol = solve gs mnm p; gl = declared_global_vars p
+  "ctx_solved_for solve keys gs p =
+     (let sol = solve gs p; gl = declared_global_vars p
       in (Analysis_Result (fst sol)
             (\<lambda>v ctx. normalize_point gs
                        (canonicalize_lift (resolved_st_q_is_bot_for gl)
@@ -159,8 +159,8 @@ text \<open>The locals half is exactly what every domain's own result constructo
   verdict. Each domain's \<open>fst_\<close> corollary is this equation at its own solver.\<close>
 
 lemma fst_ctx_solved_for:
-  "fst (ctx_solved_for solve keys gs mnm p)
-     = (let sol = solve gs mnm p
+  "fst (ctx_solved_for solve keys gs p)
+     = (let sol = solve gs p
         in Analysis_Result (fst sol)
              (\<lambda>v ctx. normalize_point gs
                         (canonicalize_lift (resolved_st_q_is_bot_for (declared_global_vars p))
@@ -173,7 +173,7 @@ definition monovariant_analysis_result_for ::
      \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> (unit, 'a abs_state) analysis_result" where
   "monovariant_analysis_result_for solve gs p =
      (let sol = solve gs p; gl = declared_global_vars p;
-          g = prog_cfg prog_main_name p
+          g = prog_cfg p
       in Analysis_Result (set (map (\<lambda>v. (v, ())) (cfg_node_list g)))
            (\<lambda>v ctx. normalize_point gs
                       (canonicalize_lift (resolved_st_q_is_bot_for gl)
@@ -197,7 +197,7 @@ text \<open>
 
 lemma lookup_context_monovariant_analysis_result_for:
   "lookup_context (monovariant_analysis_result_for solve gs p) v ctx =
-     (if v \<in> set (cfg_node_list (prog_cfg prog_main_name p))
+     (if v \<in> set (cfg_node_list (prog_cfg p))
       then normalize_point gs
              (canonicalize_lift (resolved_st_q_is_bot_for (declared_global_vars p))
                (locals (snd (solve gs p) (Inl (v, ctx)))))
@@ -206,7 +206,7 @@ lemma lookup_context_monovariant_analysis_result_for:
 
 lemma contexts_at_monovariant_analysis_result_for:
   "contexts_at (monovariant_analysis_result_for solve gs p) v =
-     (if v \<in> set (cfg_node_list (prog_cfg prog_main_name p)) then {()} else {})"
+     (if v \<in> set (cfg_node_list (prog_cfg p)) then {()} else {})"
   by (auto simp: monovariant_analysis_result_for_def contexts_at_def Let_def)
 
 
@@ -253,7 +253,7 @@ definition state_at :: "imp_prog \<Rightarrow> pp \<Rightarrow> 'a" where
      (case lookup_context (table p) v () of Unreachable \<Rightarrow> bot_state | Reachable st \<Rightarrow> st)"
 
 definition report :: "imp_prog \<Rightarrow> check_report_entry list" where
-  "report p = classify_checks (prog_cfg prog_main_name p) (state_at p) classify"
+  "report p = classify_checks (prog_cfg p) (state_at p) classify"
 
 text \<open>
   The same table read with its reachability kept: \<open>True\<close> marks a node the solve never
@@ -268,7 +268,7 @@ definition reach_state_at :: "imp_prog \<Rightarrow> pp \<Rightarrow> bool \<tim
 
 definition report_with_state :: "imp_prog \<Rightarrow> (pp \<times> exp \<times> check_result \<times> bool \<times> 'a) list" where
   "report_with_state p =
-     classify_checks_with_state (prog_cfg prog_main_name p) (reach_state_at p)
+     classify_checks_with_state (prog_cfg p) (reach_state_at p)
        (\<lambda>c (_, s). classify c s)"
 
 end

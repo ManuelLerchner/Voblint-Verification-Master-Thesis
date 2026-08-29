@@ -76,21 +76,21 @@ text \<open>
 
 context
   fixes gs :: "vname \<Rightarrow> bool" and is_bot_pred :: "sign exec_dg_st \<Rightarrow> bool"
-    and Pi :: proc_table and ps :: "pname list" and mnm :: pname and main :: com
-  assumes solves: "sctx_terminates gs is_bot_pred Pi ps mnm main"
+    and Pi :: proc_table and ps :: "pname list"
+  assumes solves: "sctx_terminates gs is_bot_pred Pi ps"
     and exact: "\<And>s. is_bot_pred s = is_bot_state (fun_of_resolved_st_q_for gs s)"
-    and entry_cov: "(cfg_entry (compile_prog Pi ps mnm main), ()) \<in> fst (sctx_sol gs is_bot_pred Pi ps mnm main)"
-    and fwd_ok: "\<And>u a v ctx. (u, ctx) \<in> fst (sctx_sol gs is_bot_pred Pi ps mnm main)
-                   \<Longrightarrow> (u, a, v) \<in> intra (compile_prog Pi ps mnm main)
-                   \<Longrightarrow> (v, ctx) \<in> fst (sctx_sol gs is_bot_pred Pi ps mnm main)"
+    and entry_cov: "(cfg_entry (compile_prog Pi ps), ()) \<in> fst (sctx_sol gs is_bot_pred Pi ps)"
+    and fwd_ok: "\<And>u a v ctx. (u, ctx) \<in> fst (sctx_sol gs is_bot_pred Pi ps)
+                   \<Longrightarrow> (u, a, v) \<in> intra (compile_prog Pi ps)
+                   \<Longrightarrow> (v, ctx) \<in> fst (sctx_sol gs is_bot_pred Pi ps)"
     and call_fwd_ok: "\<And>u ctx dst pars args p cont.
-        (u, ctx) \<in> fst (sctx_sol gs is_bot_pred Pi ps mnm main)
-        \<Longrightarrow> (u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps mnm main)
-        \<Longrightarrow> (FunctionEntry p, ()) \<in> fst (sctx_sol gs is_bot_pred Pi ps mnm main)"
+        (u, ctx) \<in> fst (sctx_sol gs is_bot_pred Pi ps)
+        \<Longrightarrow> (u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps)
+        \<Longrightarrow> (FunctionEntry p, ()) \<in> fst (sctx_sol gs is_bot_pred Pi ps)"
     and comb_fwd_ok: "\<And>cl c1 dst pars args p cont.
-        (cl, c1) \<in> fst (sctx_sol gs is_bot_pred Pi ps mnm main)
-        \<Longrightarrow> (cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps mnm main)
-        \<Longrightarrow> (cont, c1) \<in> fst (sctx_sol gs is_bot_pred Pi ps mnm main)"
+        (cl, c1) \<in> fst (sctx_sol gs is_bot_pred Pi ps)
+        \<Longrightarrow> (cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps)
+        \<Longrightarrow> (cont, c1) \<in> fst (sctx_sol gs is_bot_pred Pi ps)"
 begin
 
 interpretation sctx_dg_base: sound_dg_spec "sctx_abs_spec gs" gamma_dg_base gs
@@ -98,12 +98,12 @@ interpretation sctx_dg_base: sound_dg_spec "sctx_abs_spec gs" gamma_dg_base gs
   by (rule base_dg_spec_sound[OF sign_is_sound_transfer_for is_bot_state_gamma_state_empty])
 
 interpretation sctx_adapter: dg_analysis_adapter enterc_unit "sctx_abs_spec gs" gs
-    "compile_prog Pi ps mnm main" Global route_unit
+    "compile_prog Pi ps" Global route_unit
     "map_lift (fun_of_resolved_st_q_for gs) (Bot::sign exec_dg_st lifted)"
     "map_lift (fun_of_resolved_st_q_for gs) (Lifted cinit_sign_st)"
     "map_lift (fun_of_resolved_st_q_for gs) (Bot::sign exec_dg_st lifted)"
-    "sctx_sigma_abs gs is_bot_pred Pi ps mnm main" "fst (sctx_sol gs is_bot_pred Pi ps mnm main)"
-    "(cfg_exit (compile_prog Pi ps mnm main), ())" "sctx_sg gs is_bot_pred Pi ps mnm main"
+    "sctx_sigma_abs gs is_bot_pred Pi ps" "fst (sctx_sol gs is_bot_pred Pi ps)"
+    "(cfg_exit (compile_prog Pi ps), ())" "sctx_sg gs is_bot_pred Pi ps"
     Seed sign_classify_check
 proof (unfold_locales, goal_cases FinE PP SgCov SgUncov Fwd FinC SeedKey ResolveSound
     RouteEnterc CallFwd CombFwd EnterAgree ClProved ClRefuted)
@@ -117,8 +117,8 @@ next
 next
   case (SgCov v c)
   note mem = this
-  have eq1: "sctx_sg gs is_bot_pred Pi ps mnm main (Inl (v, c))
-               = locals (sctx_sigma_abs gs is_bot_pred Pi ps mnm main (Inl (v, c)))"
+  have eq1: "sctx_sg gs is_bot_pred Pi ps (Inl (v, c))
+               = locals (sctx_sigma_abs gs is_bot_pred Pi ps (Inl (v, c)))"
     by (rule sctx_sg_covered[OF solves exact entry_cov fwd_ok call_fwd_ok comb_fwd_ok mem])
   show ?case
     using eq1 gamma_dg_base_def by auto
@@ -152,7 +152,7 @@ next
   case (EnterAgree cl s es dst pars args p cont)
   note ces = EnterAgree(1) and ce = EnterAgree(2)
   obtain dst' pars' args' p' cont' where
-      ce': "(cl, CallEdge dst' pars' args', FunctionEntry p', cont') \<in> calls (compile_prog Pi ps mnm main)"
+      ce': "(cl, CallEdge dst' pars' args', FunctionEntry p', cont') \<in> calls (compile_prog Pi ps)"
     and es_eq: "es = call_enter gs (CallEdge dst' pars' args') s"
     using ces unfolding call_enter_store_def by blast
   have "CallEdge dst' pars' args' = CallEdge dst pars args"
@@ -192,14 +192,14 @@ lemmas sctx_result_node_sound = sctx_adapter.analyse_result_node_sound
 
 lemma sctx_analyse_result_eq:
   "lookup_context sctx_adapter.analyse_result v ctx =
-     (if (v, ctx) \<in> fst (sctx_sol gs is_bot_pred Pi ps mnm main)
+     (if (v, ctx) \<in> fst (sctx_sol gs is_bot_pred Pi ps)
       then normalize_point gs
-             (canonicalize_lift is_bot_pred (locals (snd (sctx_sol gs is_bot_pred Pi ps mnm main) (Inl (v, ctx)))))
+             (canonicalize_lift is_bot_pred (locals (snd (sctx_sol gs is_bot_pred Pi ps) (Inl (v, ctx)))))
       else Unreachable)"
   unfolding sctx_adapter.lookup_context_analyse_result
   apply (simp only: sctx_sigma_abs_def[OF solves exact entry_cov fwd_ok call_fwd_ok comb_fwd_ok]
                      sctx_sigma_abs_exec_def o_apply fun_of_dg_st_gen_simps(1))
-  by (cases "locals (snd (sctx_sol gs is_bot_pred Pi ps mnm main) (Inl (v, ctx)))")
+  by (cases "locals (snd (sctx_sol gs is_bot_pred Pi ps) (Inl (v, ctx)))")
      (simp_all add: exact normalize_lift_def)
 
 end
@@ -272,7 +272,7 @@ text \<open>
 
 definition analyse_sign_result_for ::
     "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> (unit, sign abs_state) analysis_result" where
-  "analyse_sign_result_for gs p = analyse_sign_ctx_result_for gs prog_main_name p"
+  "analyse_sign_result_for gs p = analyse_sign_ctx_result_for gs p"
 
 text \<open>Convenience instance at \<^const>\<open>declared_global\<close> \<open>p\<close>, matching
   \<open>analyse_sign_report\<close>'s shape.\<close>
@@ -298,7 +298,7 @@ text \<open>
 definition analyse_sign_result_per_origin_for ::
     "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> (unit, sign abs_state) analysis_result" where
   "analyse_sign_result_per_origin_for gs p =
-     analyse_sign_ctx_result_per_origin_for gs prog_main_name p"
+     analyse_sign_ctx_result_per_origin_for gs p"
 
 definition analyse_sign_result_per_origin :: "imp_prog \<Rightarrow> (unit, sign abs_state) analysis_result" where
   "analyse_sign_result_per_origin p = analyse_sign_result_per_origin_for (declared_global p) p"
@@ -396,7 +396,7 @@ definition analyse_sign_report_for_with_state ::
     "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> exp \<times> check_result \<times> bool \<times> (vname \<Rightarrow> sign)) list" where
   "analyse_sign_report_for_with_state gs p =
      (let r = analyse_sign_result_for gs p
-      in classify_checks_with_state (prog_cfg prog_main_name p)
+      in classify_checks_with_state (prog_cfg p)
            (\<lambda>v. case lookup_context r v () of
                   Unreachable \<Rightarrow> (True, bot)
                 | Reachable st \<Rightarrow> (False, st))

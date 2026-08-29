@@ -48,7 +48,7 @@ abbreviation twice_lookup :: "('a::bot) exec_dg_st \<Rightarrow> vname \<Rightar
   "twice_lookup s x \<equiv> lookup_resolved_st_q s (location_of twice_gs x)"
 
 definition twice_cfg :: cfg where
-  "twice_cfg = compile_prog twice_pi twice_procs (STR ''main'') twice_main"
+  "twice_cfg = compile_prog twice_pi twice_procs"
 
 text \<open>
   The compiled CFG.  Procedure \<open>twice\<close> runs between
@@ -62,7 +62,7 @@ text \<open>
 \<close>
 
 lemma twice_entry: "cfg_entry twice_cfg = FunctionEntry (STR ''main'')"
-  unfolding twice_cfg_def by (rule inv16_entry_is_main)
+  unfolding twice_cfg_def by (simp add: cfg_entry_compile_prog prog_main_name_def)
 
 text \<open>The two call edges' shape, computed directly from \<open>twice_cfg\<close>: each call site \<open>u\<close>
   pins down its destination variable, callee, arguments, and continuation. Exported for the
@@ -107,10 +107,8 @@ text \<open>The abstract D/G soundness interpretation at \<open>twice_gs\<close>
   storage classifier: gives access to this instantiation's own \<open>dg_gen\<close>/\<open>dg_gamma\<close>
   accessors and the \<open>dg_post_solution_collect_sound_ltr_for\<close> endpoint below.\<close>
 lemma twice_reserved: "reserved_ret_var twice_gs"
-  unfolding wf_compile_input_simps
-    twice_pi_def twice_procs_def twice_main_def twice_program_def
-  by (auto simp: proc_decl_of_def prog_main_name_def valid_formal_def reserved_ret_var_def
-      value_providing_def source_exp_def ret_var_def
+  by (auto simp: wf_compile_input_simps
+      twice_pi_def twice_procs_def twice_main_def twice_program_def
       split: if_splits option.splits)
 
 interpretation twice_sds:
@@ -263,13 +261,13 @@ qed
 
 subsection \<open>Source-level soundness\<close>
 
-lemma twice_wf: "wf_compile_input twice_gs twice_pi twice_procs (STR ''main'') twice_main"
-  unfolding wf_compile_input_simps
-    twice_pi_def twice_procs_def twice_main_def twice_program_def
-  by (auto simp: proc_decl_of_def prog_main_name_def valid_formal_def reserved_ret_var_def
-      value_providing_def source_exp_def ret_var_def
-      special_table_def special_pname_nondet_int_def
-      special_pname_min_def special_pname_max_def
+lemma twice_main_body [simp]: "main_body twice_pi = twice_main"
+  by (simp add: main_body_def prog_main_name_def twice_pi_def twice_program_def
+        twice_main_def)
+
+lemma twice_wf: "wf_compile_input twice_gs twice_pi twice_procs"
+  by (auto simp: wf_compile_input_simps
+      twice_pi_def twice_procs_def twice_main_def twice_program_def
       split: if_splits option.splits)
 
 theorem twice_source_run_sound:
@@ -279,6 +277,8 @@ theorem twice_source_run_sound:
                    \<and> t \<in> twice_ex_reg.gamma (snd twice_sol) v"
 proof -
   obtain residual t frs where src': "src' = (residual, t, frs)" by (cases src')
+  have run': "star (pstep twice_gs twice_pi) (main_body twice_pi, s, []) (residual, t, frs)"
+    using run[unfolded src'] by simp
   have cert:
     "\<exists>v stk. csim twice_pi twice_cfg (residual, t, frs) (v, t, stk)
        \<and> t \<in> twice_ex_reg.gamma (snd twice_sol) v"
@@ -286,10 +286,11 @@ proof -
     by (rule twice_ex_reg.run_source_sound
           [OF twice_terminates_c[unfolded twice_eqs_def twice_cfg_def]
               twice_wf
-              twice_vars_cover[unfolded twice_sol_def twice_eqs_def twice_cfg_def]              twice_finE[unfolded twice_cfg_def]
+              twice_vars_cover[unfolded twice_sol_def twice_eqs_def twice_cfg_def]
+              twice_finE[unfolded twice_cfg_def]
               twice_finC[unfolded twice_cfg_def]
               twice_sound0[folded gamma_unit_def]
-              init run[unfolded src']])
+              init run'])
   show ?thesis using cert src' by blast
 qed
 
@@ -313,11 +314,11 @@ definition twice_graph_config ::
       context_key = (\<lambda>_. STR ''unit''),
       show_context = (\<lambda>_. ''unit''),
       locals_for_pp = (\<lambda>p.
-        let sc = compiled_procedure_scope twice_gs twice_pi twice_procs (STR ''main'') twice_main
+        let sc = compiled_procedure_scope twice_gs twice_pi twice_procs
           twice_cfg p
         in scope_formals sc @ scope_locals sc),
       return_slot_for_pp = (\<lambda>p.
-        scope_return_slot (compiled_procedure_scope twice_gs twice_pi twice_procs (STR ''main'') twice_main
+        scope_return_slot (compiled_procedure_scope twice_gs twice_pi twice_procs
           twice_cfg p)),
       globals_to_show = [],
       show_local = (\<lambda>p ctx vars d. map (\<lambda>x.
@@ -329,7 +330,7 @@ definition twice_graph_config ::
       show_global_key = (\<lambda>_. ''Global''),
       is_shared_global = (\<lambda>_. True),
       show_internal_globals = False,
-      owner_of = String.explode o compiled_owner_of twice_pi twice_procs (STR ''main'') twice_main,
+      owner_of = String.explode o compiled_owner_of twice_pi twice_procs,
       cluster_label = (\<lambda>owner _. owner @ '' / context=unit''),
       source_text = Some (pretty_string_of_program twice_pi twice_procs twice_main []),
       node_annotation = (\<lambda>_ _. None)

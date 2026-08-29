@@ -1,23 +1,16 @@
 theory VIMP_Proc
-  imports VIMP_Expr VIMP_Globals VIMP_Special
+  imports VIMP_Special "HOL-IMP.Star"
 begin
 
 section \<open>Procedure commands and activation frames\<close>
 
 text \<open>
-  A call evaluates actual arguments in the caller store, binds them in a fresh
-  callee activation, and saves the caller store with the optional destination.
-  The runtime marker \<open>Restore\<close> identifies the activation boundary inside
-  sequential syntax. An explicit \<open>Return\<close> publishes its value through
-  \<open>ret_var\<close> and replaces pending callee commands with \<open>Unwind\<close>.
-  Restoration keeps callee globals, restores caller locals, and writes the
-  published value when the call has a destination.
-
-  \<open>Return\<close> is the source-level early return. It publishes an optional
-  value into \<open>ret_var\<close> and unwinds the current activation.
-  \<open>Unwind\<close> is a runtime-only marker (like \<open>Restore\<close>, never in source
-  programs): once a \<open>Return\<close> has fired, the computation is in \<open>Unwind\<close>
-  state, discarding pending statements up to the nearest enclosing activation frame.
+  A call evaluates its actuals in the caller store, binds them in a fresh
+  activation, and pushes a frame holding the caller store and the optional
+  destination. \<open>Restore\<close> and \<open>Unwind\<close> never occur in source programs:
+  \<open>Restore\<close> marks the activation boundary inside sequential syntax, and
+  \<open>Unwind\<close> is the state after a \<open>Return\<close> has published its value through
+  \<open>ret_var\<close>, discarding pending commands up to the nearest \<open>Restore\<close>.
 \<close>
 
 datatype com =
@@ -32,48 +25,32 @@ datatype com =
   | Restore
   | Unwind
 
-text \<open>A procedure's declared formals and body -- deliberately thin: activation
-  (fresh locals, formal argument binding) happens at the call site via
-  \<^const>\<open>enter_state\<close> plus argument evaluation, not as a field here.
-  \<open>proc_decl\<close> only records what a call site looks up by name.\<close>
+text \<open>Activation -- fresh locals and formal binding -- happens at the call site,
+  so a declaration records only what a call site looks up by name.\<close>
 record proc_decl =
   formals :: "vname list"
   body    :: com
 
-definition proc_decl_of :: "vname list => com => proc_decl" where
-  "proc_decl_of xs bdy = \<lparr>formals = xs, body = bdy\<rparr>"
-
-text \<open>
-  The reserved local \<open>ret_var\<close> carries a published result to the restore
-  boundary. It is absent from source programs and local to the callee activation.
-  A value-less fall-through therefore leaves it at the initial value zero.
-\<close>
+text \<open>The reserved local \<open>ret_var\<close> carries a published result to the restore
+  boundary. It is absent from source programs, so a value-less completion
+  leaves it at \<open>enter_state\<close>'s zero.\<close>
 definition ret_var :: vname where
   "ret_var = STR ''#ret''"
 
-datatype source_location =
-    LocalVar pname
-  | GlobalVar
-
-(* Procedure table: names to declarations. *)
 type_synonym proc_table = "pname \<Rightarrow> proc_decl option"
 
-(* Runtime frame: the caller's store and the optional destination variable. *)
 datatype frame = Frame (frame_store: store) (frame_dest: "vname option")
 
-definition bind_formals :: "vname list \<Rightarrow> int list \<Rightarrow> store \<Rightarrow> store" where
-  "bind_formals xs vs s =
-     fold (\<lambda>(x, v) st. st(x := v)) (zip xs vs) s"
+text \<open>Formal binding is the same fold over the concrete store and over every
+  abstract state, so it is one polymorphic abbreviation.\<close>
+abbreviation bind_formals :: "vname list \<Rightarrow> 'v list \<Rightarrow> (vname \<Rightarrow> 'v) \<Rightarrow> vname \<Rightarrow> 'v" where
+  "bind_formals xs vs s \<equiv> fold (\<lambda>(x, v) st. st(x := v)) (zip xs vs) s"
 
-text \<open>
-  \<open>combine_assign\<close> writes the published value when a destination exists.
-  A destination-less call discards the value and leaves the caller store unchanged.
-\<close>
 fun combine_assign :: "vname option \<Rightarrow> int \<Rightarrow> store \<Rightarrow> store" where
   "combine_assign None _ s = s"
 | "combine_assign (Some x) v s = s(x := v)"
 
-(* -- Frame-stack small-step ----------------------------------------- *)
+subsection \<open>Frame-stack small-step semantics\<close>
 
 inductive
   pstep :: "(vname \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> com \<times> store \<times> frame list
@@ -123,7 +100,6 @@ abbreviation
 where "psteps gs \<Pi> x y \<equiv> star (pstep gs \<Pi>) x y"
 
 declare pstep.intros [simp, intro]
-declare pstep.Seq2[simp del]
 
 inductive_cases SkipSE[elim!]:
   "pstep gs \<Pi> (SKIP, s, frs) cfg"
@@ -146,128 +122,57 @@ inductive_cases ReturnSE[elim!]:
 inductive_cases UnwindSE[elim!]:
   "pstep gs \<Pi> (Unwind, s, frs) cfg"
 
-(* Structured induction over pstep-runs: split_format states each case on the
-   (c, s, frs) components rather than an anonymous configuration product. *)
 lemmas star_pstep_induct =
   star.induct[of "pstep gs \<Pi>", split_format(complete), case_names refl step]
 
-lemma bind_formals_nonformal:
-  assumes "x \<notin> set xs"
-  shows "bind_formals xs vs s x = s x"
-  using assms
-proof (induction xs arbitrary: vs s)
-  case Nil
-  then show ?case
-    by (simp add: bind_formals_def)
-next
-  case (Cons y ys)
-  then show ?case
-    by (cases vs) (auto simp: bind_formals_def)
-qed
+subsection \<open>Completing runs\<close>
 
-(* -- Successful termination ----------------------------------------- *)
-
-text \<open>
-  Concrete Semantics calls a configuration final when no small step applies; for
-  IMP that coincides with SKIP. Here configurations carry a frame stack, so
-  stuckness at SKIP with a non-empty stack is not a successful end.
-  \<^term>\<open>pfinal\<close> is the good exit: command finished and frames balanced.
-\<close>
-
-fun pfinal :: "com \<times> store \<times> frame list \<Rightarrow> bool" where
-  "pfinal (c, s, frs) = (c = SKIP \<and> frs = [])"
-
-definition pcompletes :: "(vname \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> com \<Rightarrow> store \<Rightarrow> store \<Rightarrow> bool" where
-  "pcompletes gs \<Pi> c s t = psteps gs \<Pi> (c, s, []) (SKIP, t, [])"
-
-lemma pcompletes_iff_small_termination[simp]:
-  "pcompletes gs \<Pi> c s t \<longleftrightarrow>
-     (\<exists>cfg. psteps gs \<Pi> (c, s, []) cfg \<and> pfinal cfg \<and> fst (snd cfg) = t)"
-  unfolding pcompletes_def by auto
+text \<open>A run completes when it reaches \<open>SKIP\<close> with the frame stack it started
+  with; \<open>SKIP\<close> under a non-empty stack is stuck, not finished.\<close>
+abbreviation pcompletes :: "(vname \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> com \<Rightarrow> store \<Rightarrow> store \<Rightarrow> bool" where
+  "pcompletes gs \<Pi> c s t \<equiv> psteps gs \<Pi> (c, s, []) (SKIP, t, [])"
 
 lemma pcompletes_skip: "pcompletes gs \<Pi> SKIP s s"
-  unfolding pcompletes_def by (rule star.refl)
+  by (rule star.refl)
 
 lemma pcompletes_assign: "pcompletes gs \<Pi> (Assign x a) s (s(x := aval a s))"
-  by (simp add: pcompletes_def)
+  by simp
 
 lemma pcompletes_special_nondet_int:
   "pcompletes gs \<Pi> (Call (Some x) special_pname_nondet_int []) s (s(x := v))"
-  by (simp add: pcompletes_def special_table_def)
-
-lemma pcompletes_check: "pcompletes gs \<Pi> (Check c) s s"
-  by (simp add: pcompletes_def)
-
-(* -- Sequencing lifts through the small-step --------------------------- *)
+  by (simp add: special_table_def)
 
 lemma psteps_Seq2:
-  "star (pstep gs \<Pi>) (c1, s, frs) (c1', s', frs')
-   \<Longrightarrow> star (pstep gs \<Pi>) (Seq c1 c2, s, frs) (Seq c1' c2, s', frs')"
-proof (induction rule: star_pstep_induct)
-  case refl show ?case by (rule star.refl)
-next
-  case step then show ?case by (meson Seq2 star.step)
-qed
-
-(* -- Structural composition of terminating runs ---------------------- *)
+  "psteps gs \<Pi> (c1, s, frs) (c1', s', frs')
+   \<Longrightarrow> psteps gs \<Pi> (Seq c1 c2, s, frs) (Seq c1' c2, s', frs')"
+  by (induction rule: star_pstep_induct) (auto intro: star.step)
 
 lemma pcompletes_Seq:
   assumes "pcompletes gs \<Pi> c1 s s2" and "pcompletes gs \<Pi> c2 s2 t"
   shows "pcompletes gs \<Pi> (Seq c1 c2) s t"
-proof -
-  from assms(1) have a: "star (pstep gs \<Pi>) (Seq c1 c2, s, []) (Seq SKIP c2, s2, [])"
-    unfolding pcompletes_def by (rule psteps_Seq2)
-  have b: "pstep gs \<Pi> (Seq SKIP c2, s2, []) (c2, s2, [])" by (rule Seq1)
-  from a b assms(2) show ?thesis
-    unfolding pcompletes_def by (meson star.step star_trans)
-qed
+  using psteps_Seq2[OF assms(1)] assms(2) by (meson Seq1 star.step star_trans)
 
 lemma pcompletes_IfTrue:
   "truthy (aval b s) \<Longrightarrow> pcompletes gs \<Pi> c1 s t \<Longrightarrow> pcompletes gs \<Pi> (If b c1 c2) s t"
-  unfolding pcompletes_def by (meson IfTrue star.step)
+  by (meson IfTrue star.step)
 
 lemma pcompletes_IfFalse:
   "\<not> truthy (aval b s) \<Longrightarrow> pcompletes gs \<Pi> c2 s t \<Longrightarrow> pcompletes gs \<Pi> (If b c1 c2) s t"
-  unfolding pcompletes_def by (meson IfFalse star.step)
+  by (meson IfFalse star.step)
 
-lemma pcompletes_WhileFalse:
-  "\<not> truthy (aval b s) \<Longrightarrow> pcompletes gs \<Pi> (While b c) s s"
-  unfolding pcompletes_def by (meson While IfFalse star.refl star.step)
-
-lemma pcompletes_WhileTrue:
-  assumes b:    "truthy (aval b s)"
-      and body: "pcompletes gs \<Pi> c s s2"
-      and rest: "pcompletes gs \<Pi> (While b c) s2 t"
-  shows "pcompletes gs \<Pi> (While b c) s t"
-proof -
-  have seq: "pcompletes gs \<Pi> (Seq c (While b c)) s t"
-    using body rest by (rule pcompletes_Seq)
-  have w: "pstep gs \<Pi> (While b c, s, [])
-                    (If b (Seq c (While b c)) SKIP, s, [])"
-    by (rule While)
-  have i: "pstep gs \<Pi> (If b (Seq c (While b c)) SKIP, s, [])
-                    (Seq c (While b c), s, [])"
-    using b by (rule IfTrue)
-  from w i seq show ?thesis unfolding pcompletes_def by (meson star.step)
-qed
-
-(* -- Frame-stack extension ------------------------------------------ *)
+subsection \<open>Frame-stack extension\<close>
 
 lemma pstep_frame_extend:
   "pstep gs \<Pi> (c, s, frs) (c', s', frs') \<Longrightarrow>
    pstep gs \<Pi> (c, s, frs @ extra) (c', s', frs' @ extra)"
   by (induction "(c, s, frs)" "(c', s', frs')"
         arbitrary: c s frs c' s' frs' rule: pstep.induct)
-     (auto intro: pstep.intros)
+     auto
 
 lemma psteps_frame_extend:
   "psteps gs \<Pi> (c, s, frs) (c', s', frs') \<Longrightarrow>
    psteps gs \<Pi> (c, s, frs @ extra) (c', s', frs' @ extra)"
-proof (induction rule: star_pstep_induct)
-  case refl show ?case by (rule star.refl)
-next
-  case step then show ?case by (meson pstep_frame_extend star.step)
-qed
+  by (induction rule: star_pstep_induct) (auto intro: pstep_frame_extend star.step)
 
 lemma psteps_frame_mono:
   "psteps gs \<Pi> (c, s, []) (SKIP, t, []) \<Longrightarrow>
@@ -275,236 +180,61 @@ lemma psteps_frame_mono:
   using psteps_frame_extend[where frs = "[]" and frs' = "[]" and extra = extra]
   by simp
 
-(* -- Call termination ------------------------------------- *)
-
-(* The restore rule pops a call frame: the destination
-   rides in the frame and the value in ret_var. *)
-lemma psteps_Seq_Restore_body:
-  assumes "psteps gs \<Pi> (c, s0, [Frame fr dst]) (SKIP, t', [Frame fr dst])"
-  shows "psteps gs \<Pi> (Seq c Restore, s0, [Frame fr dst])
-           (SKIP, combine_assign dst (t' ret_var) (combine_env gs fr t'), [])"
-proof -
-  have body_seq:
-    "psteps gs \<Pi> (Seq c Restore, s0, [Frame fr dst])
-       (Seq SKIP Restore, t', [Frame fr dst])"
-    using psteps_Seq2[OF assms] .
-  have step_seq1:
-    "pstep gs \<Pi> (Seq SKIP Restore, t', [Frame fr dst])
-       (Restore, t', [Frame fr dst])"
-    by (rule Seq1)
-  have step_restore:
-    "pstep gs \<Pi> (Restore, t', [Frame fr dst])
-       (SKIP, combine_assign dst (t' ret_var) (combine_env gs fr t'), [])"
-    by (rule RestoreStep)
-  have tail:
-    "psteps gs \<Pi> (Seq SKIP Restore, t', [Frame fr dst])
-       (SKIP, combine_assign dst (t' ret_var) (combine_env gs fr t'), [])"
-    using step_seq1 step_restore by (meson star.refl star.step)
-  show ?thesis using body_seq tail by (rule star_trans)
-qed
+subsection \<open>Call completion\<close>
 
 lemma combine_env_ret_var_irrelevant [simp]:
   "\<not> gs ret_var \<Longrightarrow> combine_env gs fr (t(ret_var := v)) = combine_env gs fr t"
   by (rule ext) simp
 
+lemma psteps_Seq_Restore_body:
+  assumes "psteps gs \<Pi> (c, s0, [Frame fr dst]) (SKIP, t', [Frame fr dst])"
+  shows "psteps gs \<Pi> (Seq c Restore, s0, [Frame fr dst])
+           (SKIP, combine_assign dst (t' ret_var) (combine_env gs fr t'), [])"
+  using psteps_Seq2[OF assms] by (meson Seq1 RestoreStep star.refl star.step star_trans)
 
-text \<open>A completing body drives a call to completion: the callee body runs on the fresh activation,
-  then the \<^const>\<open>Restore\<close> pops the frame, keeping callee globals and restoring caller locals, and
-  \<^const>\<open>combine_assign\<close> writes the callee's \<^const>\<open>ret_var\<close> to the destination (or discards it for a
-  value-less call).  A value is published only if an explicit \<^const>\<open>Return\<close> wrote \<^const>\<open>ret_var\<close>;
-  otherwise the destination receives its \<^const>\<open>enter_state\<close> initial 0.\<close>
+lemma pstep_Call:
+  assumes "\<Pi> p = Some decl"
+      and "length actuals = length (formals decl)"
+      and "distinct (formals decl)"
+  shows "pstep gs \<Pi> (Call dst p actuals, s, frs)
+           (Seq (body decl) Restore,
+            bind_formals (formals decl) (map (\<lambda>e. aval e s) actuals) (enter_state gs s),
+            Frame s dst # frs)"
+  using assms by (rule Call) (rule refl)+
+
+lemma pstep_Call_parameterless [intro]:
+  assumes "\<Pi> p = Some (\<lparr>formals = [], body = c\<rparr>)"
+  shows "pstep gs \<Pi> (Call dst p [], s, frs) (Seq c Restore, enter_state gs s, Frame s dst # frs)"
+proof -
+  have "pstep gs \<Pi> (Call dst p [], s, frs)
+          (Seq (body (\<lparr>formals = [], body = c\<rparr>)) Restore,
+           bind_formals (formals (\<lparr>formals = [], body = c\<rparr>))
+             (map (\<lambda>e. aval e s) []) (enter_state gs s),
+           Frame s dst # frs)"
+    using assms by (rule pstep_Call) simp_all
+  then show ?thesis by simp
+qed
+
+text \<open>A value reaches the destination only through an explicit \<open>Return\<close>;
+  otherwise the destination receives \<open>ret_var\<close>'s \<open>enter_state\<close> value \<open>0\<close>.\<close>
 lemma pcompletes_Call:
   assumes p: "\<Pi> p = Some decl"
       and arity: "length actuals = length (formals decl)"
       and distinct_formals: "distinct (formals decl)"
       and body: "pcompletes gs \<Pi> (body decl)
-                   (bind_formals (formals decl) (map (\<lambda>e. aval e s) actuals)
-                     (enter_state gs s)) t'"
+                   (bind_formals (formals decl) (map (\<lambda>e. aval e s) actuals) (enter_state gs s)) t'"
   shows "pcompletes gs \<Pi> (Call dst p actuals) s
            (combine_assign dst (t' ret_var) (combine_env gs s t'))"
-  unfolding pcompletes_def
-proof (rule star.step)
-  let ?vals = "map (\<lambda>e. aval e s) actuals"
-  let ?callee = "bind_formals (formals decl) ?vals (enter_state gs s)"
-  show "pstep gs \<Pi> (Call dst p actuals, s, [])
-          (Seq (body decl) Restore, ?callee, [Frame s dst])"
-    using p arity distinct_formals
-    by (intro Call[where vals = ?vals and callee = ?callee]) auto
-  have framed:
-    "psteps gs \<Pi> (body decl, ?callee, [Frame s dst]) (SKIP, t', [Frame s dst])"
-    using psteps_frame_mono[OF body[unfolded pcompletes_def], where extra = "[Frame s dst]"] by simp
-  show "psteps gs \<Pi> (Seq (body decl) Restore, ?callee, [Frame s dst])
-          (SKIP, combine_assign dst (t' ret_var) (combine_env gs s t'), [])"
-    using psteps_Seq_Restore_body[OF framed] by simp
-qed
-
-text \<open>A value-less fall-through with a destination reads the callee's \<open>ret_var\<close>, which
-  \<^const>\<open>enter_state\<close> initialises to 0 and the body never wrote: the destination gets 0, never a
-  stale caller or callee value.\<close>
-lemma pcompletes_Call_dst_fallthrough_zero:
-  assumes p: "\<Pi> p = Some decl"
-      and arity: "length actuals = length (formals decl)"
-      and distinct_formals: "distinct (formals decl)"
-      and body: "pcompletes gs \<Pi> (body decl)
-                   (bind_formals (formals decl) (map (\<lambda>e. aval e s) actuals)
-                     (enter_state gs s)) t'"
-      and fallthrough: "t' ret_var = 0"
-  shows "pcompletes gs \<Pi> (Call (Some x) p actuals) s ((combine_env gs s t')(x := 0))"
-  using pcompletes_Call[OF p arity distinct_formals body, where dst = "Some x"] fallthrough by simp
+  by (rule star.step, rule pstep_Call[where \<Pi> = \<Pi> and p = p, OF p arity distinct_formals])
+     (rule psteps_Seq_Restore_body[OF psteps_frame_mono[OF body]])
 
 lemma pcompletes_Call_parameterless:
-  assumes p: "\<Pi> p = Some (proc_decl_of [] c)"
+  assumes p: "\<Pi> p = Some (\<lparr>formals = [], body = c\<rparr>)"
       and body: "pcompletes gs \<Pi> c (enter_state gs s) t'"
   shows "pcompletes gs \<Pi> (Call None p []) s (combine_env gs s t')"
-proof -
-  have "pcompletes gs \<Pi> (Call None p []) s
-          (combine_assign None (t' ret_var) (combine_env gs s t'))"
-  proof (rule pcompletes_Call)
-    show "\<Pi> p = Some (proc_decl_of [] c)" by (rule p)
-    show "length [] = length (formals (proc_decl_of [] c))"
-      by (simp add: proc_decl_of_def)
-    show "distinct (formals (proc_decl_of [] c))"
-      by (simp add: proc_decl_of_def)
-    show "pcompletes gs \<Pi> (body (proc_decl_of [] c))
-            (bind_formals (formals (proc_decl_of [] c)) (map (\<lambda>e. aval e s) [])
-              (enter_state gs s)) t'"
-      using body by (simp add: proc_decl_of_def bind_formals_def)
-  qed
-  thus ?thesis by simp
-qed
-
-text \<open>
-  A frame-generic building block: a parameterless call whose body returns a value completes,
-  writing the value to dst and leaving the surrounding stack \<^term>\<open>frs\<close> exactly as it was.  The
-  Return unwinds only to the call's own -- the run is frame-balanced -- so this
-  is the witness that a return never escapes its nearest activation.
-\<close>
-
-lemma call_return_completes:
-  assumes q: "\<Pi> p = Some (proc_decl_of [] (Return (Some e)))"
-  shows "psteps gs \<Pi> (Call (Some x) p [], s, frs)
-           (SKIP,
-            (combine_env gs s
-              ((enter_state gs s)(ret_var := aval e (enter_state gs s))))
-              (x := aval e (enter_state gs s)),
-            frs)"
-proof -
-  let ?se = "enter_state gs s"
-  let ?s' = "?se(ret_var := aval e ?se)"
-  let ?F = "Frame s (Some x)"
-  have c1: "pstep gs \<Pi> (Call (Some x) p [], s, frs)
-              (Seq (Return (Some e)) Restore, ?se, ?F # frs)"
-  proof -
-    have "pstep gs \<Pi> (Call (Some x) p [], s, frs)
-            (Seq (body (proc_decl_of [] (Return (Some e)))) Restore,
-             bind_formals (formals (proc_decl_of [] (Return (Some e))))
-               (map (\<lambda>a. aval a s) []) (enter_state gs s), ?F # frs)"
-      using q by (intro Call) (auto simp: proc_decl_of_def)
-    thus ?thesis by (simp add: proc_decl_of_def bind_formals_def)
-  qed
-  have c2: "pstep gs \<Pi> (Seq (Return (Some e)) Restore, ?se, ?F # frs)
-              (Seq Unwind Restore, ?s', ?F # frs)"
-    by (intro pstep.Seq2 pstep.ReturnSome)
-  have c4: "pstep gs \<Pi> (Seq Unwind Restore, ?s', ?F # frs)
-              (SKIP, (combine_env gs s ?s')(x := aval e ?se), frs)"
-  proof -
-    have "pstep gs \<Pi> (Seq Unwind Restore, ?s', ?F # frs)
-            (SKIP, combine_assign (Some x) (?s' ret_var) (combine_env gs s ?s'), frs)"
-      by (rule UnwindAct)
-    thus ?thesis by simp
-  qed
-  from c1 c2 c4 show ?thesis by (meson star.refl star.step)
-qed
-
-text \<open>
-  The same control path without a destination: \<^term>\<open>Return None\<close> under a \<^term>\<open>Call None\<close>
-  reaches the good exit with no assignment (combine_assign drops the value).
-\<close>
-
-lemma call_return_none_completes:
-  assumes q: "\<Pi> p = Some (proc_decl_of [] (Return None))"
-  shows "psteps gs \<Pi> (Call None p [], s, frs)
-           (SKIP, combine_env gs s (enter_state gs s), frs)"
-proof -
-  let ?se = "enter_state gs s"
-  let ?F = "Frame s None"
-  have c1: "pstep gs \<Pi> (Call None p [], s, frs) (Seq (Return None) Restore, ?se, ?F # frs)"
-  proof -
-    have "pstep gs \<Pi> (Call None p [], s, frs)
-            (Seq (body (proc_decl_of [] (Return None))) Restore,
-             bind_formals (formals (proc_decl_of [] (Return None)))
-               (map (\<lambda>a. aval a s) []) (enter_state gs s), ?F # frs)"
-      using q by (intro Call) (auto simp: proc_decl_of_def)
-    thus ?thesis by (simp add: proc_decl_of_def bind_formals_def)
-  qed
-  have c2: "pstep gs \<Pi> (Seq (Return None) Restore, ?se, ?F # frs) (Seq Unwind Restore, ?se, ?F # frs)"
-    by (intro pstep.Seq2 pstep.ReturnNone)
-  have c3: "pstep gs \<Pi> (Seq Unwind Restore, ?se, ?F # frs)
-              (SKIP, combine_env gs s ?se, frs)"
-  proof -
-    have "pstep gs \<Pi> (Seq Unwind Restore, ?se, ?F # frs)
-            (SKIP, combine_assign None (?se ret_var) (combine_env gs s ?se), frs)"
-      by (rule UnwindAct)
-    thus ?thesis by simp
-  qed
-  from c1 c2 c3 show ?thesis by (meson star.refl star.step)
-qed
-
-text \<open>
-  Nested calls: an outer procedure calls an inner procedure that returns, then continues.  The
-  inner return is caught by the inner (\<^term>\<open>call_return_completes\<close> under stack
-  \<^term>\<open>[Fout]\<close>): the run is frame-balanced, so the outer \<^term>\<open>Fout\<close> stays on the
-  stack, the residual command is \<^term>\<open>SKIP\<close> (no unwind crosses the outer boundary), and execution
-  resumes at the outer continuation \<^term>\<open>after\<close>.
-\<close>
-
-theorem nested_call_return_trace:
-  assumes qin: "\<Pi> pin = Some (proc_decl_of [] (Return (Some e)))"
-      and qout: "\<Pi> pout = Some (proc_decl_of []
-                   (Seq (Call (Some rin) pin []) after))"
-  shows "psteps gs \<Pi> (Call (Some rout) pout [], s0, [])
-           (Seq after Restore,
-            (combine_env gs (enter_state gs s0)
-              ((enter_state gs (enter_state gs s0))
-                (ret_var := aval e (enter_state gs (enter_state gs s0)))))
-                (rin := aval e (enter_state gs (enter_state gs s0))),
-            [Frame s0 (Some rout)])"
-proof -
-  let ?s1 = "enter_state gs s0"
-  let ?Fout = "Frame s0 (Some rout)"
-  let ?inner = "(combine_env gs ?s1
-                    ((enter_state gs ?s1)(ret_var := aval e (enter_state gs ?s1))))
-                  (rin := aval e (enter_state gs ?s1))"
-  \<comment> \<open>outer call pushes the outer\<close>
-  have K01: "pstep gs \<Pi> (Call (Some rout) pout [], s0, [])
-      (Seq (Seq (Call (Some rin) pin []) after) Restore, ?s1, [?Fout])"
-  proof -
-    have "pstep gs \<Pi> (Call (Some rout) pout [], s0, [])
-            (Seq (body (proc_decl_of [] (Seq (Call (Some rin) pin []) after))) Restore,
-             bind_formals (formals (proc_decl_of []
-                 (Seq (Call (Some rin) pin []) after)))
-               (map (\<lambda>a. aval a s0) []) (enter_state gs s0),
-             Frame s0 (Some rout) # [])"
-      using qout by (intro Call) (auto simp: proc_decl_of_def)
-    thus "pstep gs \<Pi> (Call (Some rout) pout [], s0, [])
-            (Seq (Seq (Call (Some rin) pin []) after) Restore, ?s1, [?Fout])"
-      by (simp add: proc_decl_of_def bind_formals_def)
-  qed
-  \<comment> \<open>inner call runs to completion, caught by the inner; ?Fout survives\<close>
-  have inner: "psteps gs \<Pi> (Call (Some rin) pin [], ?s1, [?Fout]) (SKIP, ?inner, [?Fout])"
-    by (rule call_return_completes[where \<Pi> = \<Pi> and p = pin, OF qin])
-  have K15: "psteps gs \<Pi>
-      (Seq (Seq (Call (Some rin) pin []) after) Restore, ?s1, [?Fout])
-      (Seq (Seq SKIP after) Restore, ?inner, [?Fout])"
-    by (intro psteps_Seq2 inner)
-  \<comment> \<open>the outer continuation is exposed: execution resumes in the outer procedure\<close>
-  have K56: "pstep gs \<Pi>
-      (Seq (Seq SKIP after) Restore, ?inner, [?Fout])
-      (Seq after Restore, ?inner, [?Fout])"
-    by (intro pstep.Seq2 pstep.Seq1)
-  from K01 K15 K56 show ?thesis by (meson star.refl star.step star_trans)
-qed
-
+  using pcompletes_Call[where \<Pi> = \<Pi> and p = p and gs = gs and actuals = "[]" and dst = None
+                          and s = s and t' = t', OF p] body
+  by simp
 
 section \<open>Source-program well-formedness\<close>
 
@@ -517,7 +247,7 @@ text \<open>
 
 subsection \<open>Finite syntactic variable sets\<close>
 
-fun exp_vnames :: "exp => vname set" where
+fun exp_vnames :: "exp \<Rightarrow> vname set" where
   "exp_vnames (N _) = {}"
 | "exp_vnames (V x) = {x}"
 | "exp_vnames (Plus a b) = exp_vnames a \<union> exp_vnames b"
@@ -529,7 +259,7 @@ fun exp_vnames :: "exp => vname set" where
 | "exp_vnames (And b1 b2) = exp_vnames b1 \<union> exp_vnames b2"
 | "exp_vnames (Or b1 b2) = exp_vnames b1 \<union> exp_vnames b2"
 
-fun com_vnames :: "com => vname set" where
+fun com_vnames :: "com \<Rightarrow> vname set" where
   "com_vnames SKIP = {}"
 | "com_vnames (Assign x a) = insert x (exp_vnames a)"
 | "com_vnames (Check c) = exp_vnames c"
@@ -538,10 +268,9 @@ fun com_vnames :: "com => vname set" where
     exp_vnames b \<union> com_vnames c1 \<union> com_vnames c2"
 | "com_vnames (While b c) = exp_vnames b \<union> com_vnames c"
 | "com_vnames (Call dst _ actuals) =
-    (case dst of None => {} | Some x => {x}) \<union>
+    (case dst of None \<Rightarrow> {} | Some x \<Rightarrow> {x}) \<union>
     \<Union> (set (map exp_vnames actuals))"
-| "com_vnames (Return None) = {}"
-| "com_vnames (Return (Some a)) = exp_vnames a"
+| "com_vnames (Return e) = (case e of None \<Rightarrow> {} | Some a \<Rightarrow> exp_vnames a)"
 | "com_vnames Restore = {}"
 | "com_vnames Unwind = {}"
 
@@ -549,46 +278,9 @@ lemma finite_exp_vnames [simp]: "finite (exp_vnames a)"
   by (induction a) auto
 
 lemma finite_com_vnames [simp]: "finite (com_vnames c)"
-proof (induction c)
-  case SKIP
-  then show ?case by simp
-next
-  case Assign
-  then show ?case by simp
-next
-  case Check
-  then show ?case by simp
-next
-  case Seq
-  then show ?case by simp
-next
-  case If
-  then show ?case by simp
-next
-  case While
-  then show ?case by simp
-next
-  case Call
-  then show ?case by (auto split: option.splits)
-next
-  case (Return opt)
-  show ?case
-  proof (cases opt)
-    case None
-    then show ?thesis by simp
-  next
-    case (Some a)
-    then show ?thesis by simp
-  qed
-next
-  case Restore
-  then show ?case by simp
-next
-  case Unwind
-  then show ?case by simp
-qed
+  by (induction c) (auto split: option.splits)
 
-fun source_com :: "com => bool" where
+fun source_com :: "com \<Rightarrow> bool" where
   "source_com SKIP = True"
 | "source_com (Assign x a) = True"
 | "source_com (Check c) = True"
@@ -600,26 +292,14 @@ fun source_com :: "com => bool" where
 | "source_com Restore = False"
 | "source_com Unwind = False"
 
-definition source_pi :: "proc_table => bool" where
+definition source_pi :: "proc_table \<Rightarrow> bool" where
   "source_pi \<Pi> = (\<forall>p decl. \<Pi> p = Some decl \<longrightarrow> source_com (body decl))"
 
-text \<open>
-  Occurrence of one specific variable is the same syntax-directed walk as
-  @{const exp_mentions_global} (\<open>VIMP_Expr\<close>), with the leaf predicate
-  specialised to an equality test instead of an arbitrary classifier.
-\<close>
+definition source_exp :: "exp \<Rightarrow> bool" where
+  "source_exp a \<longleftrightarrow> ret_var \<notin> exp_vnames a"
 
-definition exp_mentions :: "vname => exp => bool" where
-  "exp_mentions x = exp_mentions_where ((=) x)"
-
-lemmas mentions_defs [simp] =
-  exp_mentions_def
-
-definition source_exp :: "exp => bool" where
-  "source_exp a \<longleftrightarrow> \<not> exp_mentions ret_var a"
-
-definition valid_formal :: "(vname => bool) => vname => bool" where
-  "valid_formal gs x \<longleftrightarrow> \<not> gs x \<and> x ~= ret_var"
+definition valid_formal :: "(vname \<Rightarrow> bool) \<Rightarrow> vname \<Rightarrow> bool" where
+  "valid_formal gs x \<longleftrightarrow> \<not> gs x \<and> x \<noteq> ret_var"
 
 subsection \<open>Procedure result contract\<close>
 
@@ -630,7 +310,7 @@ text \<open>
   false, and a call resumes normally after its callee completes.
 \<close>
 
-fun may_fallthrough :: "com => bool" where
+fun may_fallthrough :: "com \<Rightarrow> bool" where
   "may_fallthrough SKIP = True"
 | "may_fallthrough (Assign _ _) = True"
 | "may_fallthrough (Check _) = True"
@@ -642,7 +322,7 @@ fun may_fallthrough :: "com => bool" where
 | "may_fallthrough Restore = False"
 | "may_fallthrough Unwind = False"
 
-fun may_return_none :: "com => bool" where
+fun may_return_none :: "com \<Rightarrow> bool" where
   "may_return_none (Seq c1 c2) =
      (may_return_none c1 \<or> (may_fallthrough c1 \<and> may_return_none c2))"
 | "may_return_none (If _ c1 c2) = (may_return_none c1 \<or> may_return_none c2)"
@@ -650,7 +330,7 @@ fun may_return_none :: "com => bool" where
 | "may_return_none (Return e) = (e = None)"
 | "may_return_none _ = False"
 
-fun may_return_value :: "com => bool" where
+fun may_return_value :: "com \<Rightarrow> bool" where
   "may_return_value (Seq c1 c2) =
      (may_return_value c1 \<or> (may_fallthrough c1 \<and> may_return_value c2))"
 | "may_return_value (If _ c1 c2) = (may_return_value c1 \<or> may_return_value c2)"
@@ -658,7 +338,7 @@ fun may_return_value :: "com => bool" where
 | "may_return_value (Return e) = (e \<noteq> None)"
 | "may_return_value _ = False"
 
-definition value_providing :: "com => bool" where
+definition value_providing :: "com \<Rightarrow> bool" where
   "value_providing c \<longleftrightarrow>
      source_com c \<and> \<not> may_fallthrough c \<and>
      \<not> may_return_none c \<and> may_return_value c"
@@ -672,7 +352,7 @@ text \<open>
   distinguished root command contains no return.
 \<close>
 
-fun wf_source_com :: "proc_table => com => bool" where
+fun wf_source_com :: "proc_table \<Rightarrow> com \<Rightarrow> bool" where
   "wf_source_com \<Pi> SKIP = True"
 | "wf_source_com \<Pi> (Assign x a) = (x \<noteq> ret_var \<and> source_exp a)"
 | "wf_source_com \<Pi> (Check c) = source_exp c"
@@ -698,37 +378,57 @@ fun wf_source_com :: "proc_table => com => bool" where
 | "wf_source_com \<Pi> Restore = False"
 | "wf_source_com \<Pi> Unwind = False"
 
-fun no_return :: "com => bool" where
+fun no_return :: "com \<Rightarrow> bool" where
   "no_return (Seq c1 c2) = (no_return c1 \<and> no_return c2)"
 | "no_return (If _ c1 c2) = (no_return c1 \<and> no_return c2)"
 | "no_return (While _ c) = no_return c"
 | "no_return (Return _) = False"
 | "no_return _ = True"
 
-definition wf_proc_decl :: "(vname => bool) => proc_table => proc_decl => bool" where
+definition wf_proc_decl :: "(vname \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> proc_decl \<Rightarrow> bool" where
   "wf_proc_decl gs \<Pi> decl \<longleftrightarrow>
      distinct (formals decl) \<and>
      list_all (valid_formal gs) (formals decl) \<and>
      wf_source_com \<Pi> (body decl)"
 
-definition reserved_ret_var :: "(vname => bool) => bool" where
+definition reserved_ret_var :: "(vname \<Rightarrow> bool) \<Rightarrow> bool" where
   "reserved_ret_var gs \<longleftrightarrow> \<not> gs ret_var"
 
-definition wf_source_program :: "(vname => bool) => proc_table => pname => com => bool" where
-  "wf_source_program gs \<Pi> mnm main \<longleftrightarrow>
+text \<open>The entry procedure is fixed: a program has exactly one, it is called \<open>main\<close>, and the
+  parser rejects formals on it.  Naming it here rather than threading it as a parameter means
+  the compiler and its contract take a table and a callee list and nothing else.\<close>
+definition prog_main_name :: pname where
+  "prog_main_name = STR ''main''"
+
+text \<open>The entry body, looked up rather than passed alongside the table.  The lookup cannot
+  fail where \<open>wf_source_program\<close> holds --- its second conjunct is exactly that the entry is
+  declared --- so an undeclared entry is an invariant violation, and aborts in generated code
+  rather than compiling to a plausible empty program.\<close>
+definition main_body :: "proc_table \<Rightarrow> com" where
+  "main_body \<Pi> =
+     (case \<Pi> prog_main_name of
+        Some decl \<Rightarrow> body decl
+      | None \<Rightarrow> Code.abort (STR ''main_body: entry procedure not declared'') (\<lambda>_. SKIP))"
+
+text \<open>Deliberately not \<open>[simp]\<close>: \<open>wf_source_program\<close>'s entry conjunct has the shape
+  \<open>\<Pi> prog_main_name = Some \<lparr>formals = [], body = main_body \<Pi>\<rparr>\<close>, against which
+  this rule would rewrite \<open>main_body \<Pi>\<close> to itself.\<close>
+lemma main_body_Some:
+  "\<Pi> prog_main_name = Some decl \<Longrightarrow> main_body \<Pi> = body decl"
+  by (simp add: main_body_def)
+
+definition wf_source_program :: "(vname \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> bool" where
+  "wf_source_program gs \<Pi> \<longleftrightarrow>
      reserved_ret_var gs \<and>
-     \<Pi> mnm = Some (proc_decl_of [] main) \<and>
-     wf_source_com \<Pi> main \<and> no_return main \<and>
+     \<Pi> prog_main_name = Some (\<lparr>formals = [], body = main_body \<Pi>\<rparr>) \<and>
+     wf_source_com \<Pi> (main_body \<Pi>) \<and> no_return (main_body \<Pi>) \<and>
      (\<forall>p decl. \<Pi> p = Some decl \<longrightarrow> wf_proc_decl gs \<Pi> decl) \<and>
      (\<forall>p. \<Pi> p \<noteq> None \<longrightarrow> special_table p = None)"
 
-text \<open>
-  Compiler-input well-formedness, defined downstream in the CFG session, unfolds
-  through this pair before reaching \<^const>\<open>wf_source_com\<close> and
-  \<^const>\<open>valid_formal\<close>. Call sites that discharge that obligation share this
-  unfold skeleton verbatim, so it is collected here rather than repeated per site;
-  the downstream definition adds itself to the same collection.
-\<close>
+text \<open>The compiler-input well-formedness defined in the CFG session unfolds
+  through this pair before reaching \<^const>\<open>wf_source_com\<close>; every site
+  discharging that obligation shares the unfold skeleton, so it is collected
+  here and the downstream definition adds itself to the same collection.\<close>
 named_theorems wf_compile_input_simps
 
 declare
@@ -739,34 +439,58 @@ lemma wf_source_com_source_com:
   "wf_source_com \<Pi> c \<Longrightarrow> source_com c"
   by (induction c) (auto split: option.splits)
 
-lemma wf_source_program_main_exists:
-  "wf_source_program gs \<Pi> mnm main \<Longrightarrow> \<Pi> mnm = Some (proc_decl_of [] main)"
-  by (simp add: wf_source_program_def)
+lemma wf_source_programD:
+  assumes "wf_source_program gs \<Pi>"
+  shows "reserved_ret_var gs"
+    and "\<Pi> prog_main_name = Some \<lparr>formals = [], body = main_body \<Pi>\<rparr>"
+    and "wf_source_com \<Pi> (main_body \<Pi>)"
+    and "no_return (main_body \<Pi>)"
+    and "\<Pi> p = Some decl \<Longrightarrow> wf_proc_decl gs \<Pi> decl"
+    and "\<Pi> p = Some decl \<Longrightarrow> special_table p = None"
+    and "source_pi \<Pi>"
+    and "source_com (main_body \<Pi>)"
+  using assms wf_source_com_source_com
+  unfolding wf_source_program_def source_pi_def wf_proc_decl_def by blast+
 
-lemma wf_source_program_main:
-  "wf_source_program gs \<Pi> mnm main \<Longrightarrow> wf_source_com \<Pi> main"
-  by (simp add: wf_source_program_def)
 
-lemma wf_source_program_no_return:
-  "wf_source_program gs \<Pi> mnm main \<Longrightarrow> no_return main"
-  by (simp add: wf_source_program_def)
+section \<open>The semantics is inhabited\<close>
 
-lemma wf_source_program_decl:
-  "wf_source_program gs \<Pi> mnm main \<Longrightarrow> \<Pi> p = Some decl
-   \<Longrightarrow> wf_proc_decl gs \<Pi> decl"
-  by (simp add: wf_source_program_def)
+text \<open>
+  Every theorem above is conditional on a step or a run existing, so the session ends by
+  exhibiting one that exercises the parts most easily got wrong: a procedure call that pushes
+  a frame, returns a value, and pops the frame again.  Globals are empty here, so nothing the
+  callee wrote survives except the returned value --- which is what has to reach \<open>x\<close>.
+\<close>
 
-lemma wf_source_program_source_pi:
-  "wf_source_program gs \<Pi> mnm main \<Longrightarrow> source_pi \<Pi>"
-  unfolding wf_source_program_def source_pi_def wf_proc_decl_def
-  using wf_source_com_source_com by blast
+definition witness_ret1_pi :: proc_table where
+  "witness_ret1_pi p =
+     (if p = STR ''ret1'' then Some \<lparr>formals = [], body = Return (Some (N 1))\<rparr> else None)"
 
-lemma wf_source_program_source_com:
-  "wf_source_program gs \<Pi> mnm main \<Longrightarrow> source_com main"
-  using wf_source_program_main wf_source_com_source_com by blast
-
-lemma wf_source_program_special_table_none:
-  "wf_source_program gs \<Pi> mnm main \<Longrightarrow> \<Pi> p = Some decl \<Longrightarrow> special_table p = None"
-  by (simp add: wf_source_program_def)
+theorem pcompletes_witness:
+  "\<exists>t. pcompletes (\<lambda>_. False) witness_ret1_pi
+         (Call (Some (STR ''x'')) (STR ''ret1'') []) s t
+     \<and> t (STR ''x'') = 1"
+proof -
+  let ?gs = "\<lambda>_ :: vname. False"
+  let ?fr = "[Frame s (Some (STR ''x''))]"
+  let ?en = "enter_state ?gs s"
+  let ?s' = "?en(ret_var := aval (N 1) ?en)"
+  let ?t  = "(combine_env ?gs s ?s')(STR ''x'' := aval (N 1) ?en)"
+  have q: "witness_ret1_pi (STR ''ret1'') = Some \<lparr>formals = [], body = Return (Some (N 1))\<rparr>"
+    by (simp add: witness_ret1_pi_def)
+  have s1: "pstep ?gs witness_ret1_pi (Call (Some (STR ''x'')) (STR ''ret1'') [], s, [])
+              (Seq (Return (Some (N 1))) Restore, ?en, ?fr)"
+    using q by (rule pstep_Call_parameterless)
+  have s2: "pstep ?gs witness_ret1_pi (Seq (Return (Some (N 1))) Restore, ?en, ?fr)
+              (Seq Unwind Restore, ?s', ?fr)"
+    by (intro Seq2 ReturnSome)
+  have s3: "pstep ?gs witness_ret1_pi (Seq Unwind Restore, ?s', ?fr) (SKIP, ?t, [])"
+    using UnwindAct[of ?gs witness_ret1_pi ?s' s "Some (STR ''x'')" "[]"] by simp
+  from s1 s2 s3
+  have "pcompletes ?gs witness_ret1_pi (Call (Some (STR ''x'')) (STR ''ret1'') []) s ?t"
+    by (meson star.refl star.step)
+  moreover have "?t (STR ''x'') = 1" by simp
+  ultimately show ?thesis by blast
+qed
 
 end

@@ -41,19 +41,18 @@ definition gcall_prog :: imp_prog where
 abbreviation gcall_gs :: "vname \<Rightarrow> bool" where "gcall_gs \<equiv> declared_global gcall_prog"
 
 definition gcall_cfg :: cfg where
-  "gcall_cfg = compile_prog (prog_table gcall_prog) (prog_procs gcall_prog)
-                 prog_main_name (prog_main gcall_prog)"
+  "gcall_cfg = compile_prog (prog_table gcall_prog) (prog_procs gcall_prog)"
 
 definition gcall_is_bot_pred :: "ivl resolved_st_q \<Rightarrow> bool" where
   "gcall_is_bot_pred = resolved_st_q_is_bot_for (declared_global_vars gcall_prog)"
 
 definition gcall_sol ::
   "(pp \<times> ivl list) set \<times> (pp \<times> ivl list + gk \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)" where
-  "gcall_sol = entry_state_sol_prog gcall_gs prog_main_name gcall_prog"
+  "gcall_sol = entry_state_sol_prog gcall_gs gcall_prog"
 
 lemma gcall_terminates:
   "TD_side_warrowing_apinis_Interp_solve_c
-     (entry_state_eqs_prog gcall_gs prog_main_name gcall_prog)
+     (entry_state_eqs_prog gcall_gs gcall_prog)
      (cfg_exit gcall_cfg, []) \<noteq> None"
   by eval
 

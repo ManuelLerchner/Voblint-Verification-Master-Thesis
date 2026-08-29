@@ -277,8 +277,7 @@ abbreviation cj_prog_gs :: "vname \<Rightarrow> bool" where
   "cj_prog_gs \<equiv> declared_global cj_program"
 
 definition cj_cfg :: cfg where
-  "cj_cfg = compile_prog (prog_table cj_program) (prog_procs cj_program)
-              prog_main_name (prog_main cj_program)"
+  "cj_cfg = compile_prog (prog_table cj_program) (prog_procs cj_program)"
 
 abbreviation cj_lookup :: "sign exec_dg_st \<Rightarrow> vname \<Rightarrow> sign" where
   "cj_lookup s x \<equiv> lookup_resolved_st_q s (location_of cj_prog_gs x)"

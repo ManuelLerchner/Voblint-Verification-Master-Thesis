@@ -59,7 +59,7 @@ lemma dep_aux_placed_dg_edge_tree_with:
   by (simp add: placed_dg_edge_tree_with_def dep_aux_def Let_def)
 
 lemma dep_aux_placed_abs_dg_edge_tree:
-  "dep_aux sigma (placed_abs_dg_edge_tree source_global owner_of keep_local
+  "dep_aux sigma (placed_abs_dg_edge_tree gs owner_of keep_local
       publish_side transfer read_node write_node) = {Inl read_node, Inr ()}"
   by (simp add: placed_abs_dg_edge_tree_def dep_aux_def Let_def)
 
@@ -151,7 +151,7 @@ lemma dg_refines_on_placed_edge_strict:
         (location_vname location)"
     and resolved:
       "\<And>location. location \<in> set (locations_of write_node) \<Longrightarrow>
-        location = location_of source_global (location_vname location)"
+        location = location_of gs (location_vname location)"
   shows
     "dg_refines_on (set (locations_of write_node))
       (DG
@@ -163,10 +163,10 @@ lemma dg_refines_on_placed_edge_strict:
             executable_transfer read_node write_node) executable_sigma (Inr ()))))
       (DG
         (locals (traverse_rhs
-          (placed_abs_dg_edge_tree source_global owner_of keep_local publish_side
+          (placed_abs_dg_edge_tree gs owner_of keep_local publish_side
             abstract_transfer read_node write_node) abstract_sigma))
         (globs (sides_of_rhs
-          (placed_abs_dg_edge_tree source_global owner_of keep_local publish_side
+          (placed_abs_dg_edge_tree gs owner_of keep_local publish_side
             abstract_transfer read_node write_node) abstract_sigma (Inr ()))))"
   unfolding traverse_placed_dg_edge_tree_strict sides_placed_dg_edge_tree_strict_Inr
     traverse_placed_abs_dg_edge_tree sides_placed_abs_dg_edge_tree_Inr
@@ -235,7 +235,7 @@ lemma dep_aux_placed_dg_enter_tree_strict:
   by (rule dep_aux_placed_dg_edge_tree_with)
 
 lemma dep_aux_placed_abs_dg_enter_tree:
-  "dep_aux sigma (placed_abs_dg_enter_tree source_global owner_of keep_local
+  "dep_aux sigma (placed_abs_dg_enter_tree gs owner_of keep_local
       publish_side enter parameters arguments caller callee) =
     {Inl caller, Inr ()}"
   unfolding placed_abs_dg_enter_tree_def
@@ -260,7 +260,7 @@ lemma dg_refines_on_placed_entry_strict:
         (location_vname location)"
     and resolved:
       "\<And>location. location \<in> set (locations_of callee) \<Longrightarrow>
-        location = location_of source_global (location_vname location)"
+        location = location_of gs (location_vname location)"
   shows
     "dg_refines_on (set (locations_of callee))
       (DG
@@ -274,11 +274,11 @@ lemma dg_refines_on_placed_entry_strict:
           executable_sigma (Inr ()))))
       (DG
         (locals (traverse_rhs
-          (placed_abs_dg_enter_tree source_global owner_of keep_local publish_side
+          (placed_abs_dg_enter_tree gs owner_of keep_local publish_side
             abstract_enter parameters arguments caller callee)
           abstract_sigma))
         (globs (sides_of_rhs
-          (placed_abs_dg_enter_tree source_global owner_of keep_local publish_side
+          (placed_abs_dg_enter_tree gs owner_of keep_local publish_side
             abstract_enter parameters arguments caller callee)
           abstract_sigma (Inr ()))))"
 proof -
@@ -295,11 +295,11 @@ proof -
           executable_sigma (Inr ()))))
       (DG
         (locals (traverse_rhs
-          (placed_abs_dg_edge_tree source_global owner_of keep_local publish_side
+          (placed_abs_dg_edge_tree gs owner_of keep_local publish_side
             (abstract_enter parameters arguments) caller callee)
           abstract_sigma))
         (globs (sides_of_rhs
-          (placed_abs_dg_edge_tree source_global owner_of keep_local publish_side
+          (placed_abs_dg_edge_tree gs owner_of keep_local publish_side
             (abstract_enter parameters arguments) caller callee)
           abstract_sigma (Inr ()))))"
     by (rule dg_refines_on_placed_edge_strict[
@@ -307,7 +307,7 @@ proof -
         and abstract_transfer = "abstract_enter parameters arguments"
         and executable_sigma = executable_sigma and abstract_sigma = abstract_sigma
         and read_node = caller and write_node = callee
-        and source_global = source_global and owner_of = owner_of
+        and gs = gs and owner_of = owner_of
         and locations_of = locations_of and keep_local = keep_local
         and publish_side = publish_side, OF raw resolved])
   show ?thesis
@@ -349,7 +349,7 @@ lemma dep_aux_placed_dg_combine_tree_with:
   by (simp add: placed_dg_combine_tree_with_def dep_aux_def Let_def)
 
 lemma dep_aux_placed_abs_dg_combine_tree:
-  "dep_aux sigma (placed_abs_dg_combine_tree source_global owner_of keep_local
+  "dep_aux sigma (placed_abs_dg_combine_tree gs owner_of keep_local
       publish_side combine destination caller callee write_node) =
     {Inl caller, Inl callee, Inr ()}"
   by (simp add: placed_abs_dg_combine_tree_def dep_aux_def Let_def)
@@ -450,7 +450,7 @@ lemma dg_refines_on_placed_combine_strict:
         (location_vname location)"
     and resolved:
       "\<And>location. location \<in> set (locations_of write_node) \<Longrightarrow>
-        location = location_of source_global (location_vname location)"
+        location = location_of gs (location_vname location)"
   shows
     "dg_refines_on (set (locations_of write_node))
       (DG
@@ -464,11 +464,11 @@ lemma dg_refines_on_placed_combine_strict:
           executable_sigma (Inr ()))))
       (DG
         (locals (traverse_rhs
-          (placed_abs_dg_combine_tree source_global owner_of keep_local publish_side
+          (placed_abs_dg_combine_tree gs owner_of keep_local publish_side
             abstract_combine destination caller callee write_node)
           abstract_sigma))
         (globs (sides_of_rhs
-          (placed_abs_dg_combine_tree source_global owner_of keep_local publish_side
+          (placed_abs_dg_combine_tree gs owner_of keep_local publish_side
             abstract_combine destination caller callee write_node)
           abstract_sigma (Inr ()))))"
   unfolding traverse_placed_dg_combine_tree_strict sides_placed_dg_combine_tree_strict_Inr
@@ -533,13 +533,13 @@ definition placed_dg_combine_of_strict ::
    (pp \<times> unit, unit, ('a::bounded_semilattice_sup_bot exec_dg_st,
      'a exec_dg_st) dg_state) strategy_tree"
 where
-  "placed_dg_combine_of_strict source_global owner_of locations_of keep_local publish_side
+  "placed_dg_combine_of_strict gs owner_of locations_of keep_local publish_side
       ctx caller action callee continuation =
     (case action of CallEdge destination parameters arguments =>
       map_gtree (\<lambda>_. ()) (map_ltree (\<lambda>node. (node, ctx))
         (placed_dg_combine_tree_strict owner_of locations_of keep_local publish_side
           (\<lambda>destination caller_state callee_state side_state.
-            combine_collect_resolved_for_q source_global destination
+            combine_collect_resolved_for_q gs destination
               (caller_state \<squnion> side_state) (callee_state \<squnion> side_state))
           destination caller callee continuation)))"
 
@@ -618,11 +618,11 @@ lemma sides_of_rhs_placed_dg_enter_of_strict:
 
 lemma traverse_rhs_placed_dg_combine_of_strict:
   "traverse_rhs
-    (placed_dg_combine_of_strict source_global owner_of locations_of keep_local publish_side
+    (placed_dg_combine_of_strict gs owner_of locations_of keep_local publish_side
       ctx caller (CallEdge destination parameters arguments) callee continuation) sigma =
     DG (project_resolved_on_strict (owner_of continuation) (locations_of continuation)
           keep_local
-          (combine_collect_resolved_for_q source_global destination
+          (combine_collect_resolved_for_q gs destination
             (locals (sigma (Inl (caller, ctx))) \<squnion> globs (sigma (Inr ())))
             (locals (sigma (Inl (callee, ctx))) \<squnion> globs (sigma (Inr ()))))) bot"
   unfolding placed_dg_combine_of_strict_def
@@ -631,11 +631,11 @@ lemma traverse_rhs_placed_dg_combine_of_strict:
 
 lemma sides_of_rhs_placed_dg_combine_of_strict:
   "sides_of_rhs
-    (placed_dg_combine_of_strict source_global owner_of locations_of keep_local publish_side
+    (placed_dg_combine_of_strict gs owner_of locations_of keep_local publish_side
       ctx caller (CallEdge destination parameters arguments) callee continuation) sigma (Inr ()) =
     DG bot (project_resolved_on_strict (owner_of continuation) (locations_of continuation)
           publish_side
-          (combine_collect_resolved_for_q source_global destination
+          (combine_collect_resolved_for_q gs destination
             (locals (sigma (Inl (caller, ctx))) \<squnion> globs (sigma (Inr ())))
             (locals (sigma (Inl (callee, ctx))) \<squnion> globs (sigma (Inr ())))))"
   unfolding placed_dg_combine_of_strict_def
@@ -650,11 +650,11 @@ definition placed_dg_gen_of_strict ::
    cfg => 'a exec_dg_st => 'a exec_dg_st => 'a exec_dg_st =>
    (pp \<times> unit, unit, ('a exec_dg_st, 'a exec_dg_st) dg_state) eqsT"
 where
-  "placed_dg_gen_of_strict source_global owner_of locations_of keep_local publish_side
+  "placed_dg_gen_of_strict gs owner_of locations_of keep_local publish_side
       transfer enter graph bot0 s0d s0g =
     side_cfg_T_eff_keyed_seed_trees intra_predecessor_list (\<lambda>_. ())
       (placed_dg_edge_of_strict owner_of locations_of keep_local publish_side transfer)
-      (placed_dg_combine_of_strict source_global owner_of locations_of keep_local publish_side)
+      (placed_dg_combine_of_strict gs owner_of locations_of keep_local publish_side)
       (placed_dg_enter_of_strict owner_of locations_of keep_local publish_side enter)
       graph bot0 s0d s0g"
 
@@ -667,10 +667,10 @@ definition placed_abs_dg_edge_of ::
    unit \<Rightarrow> pp \<Rightarrow> edge_action \<Rightarrow> pp \<Rightarrow>
    (pp \<times> unit, unit, ('a abs_state, 'a abs_state) dg_state) strategy_tree"
 where
-  "placed_abs_dg_edge_of source_global owner_of keep_local publish_side
+  "placed_abs_dg_edge_of gs owner_of keep_local publish_side
       transfer ctx read_node action write_node =
     map_gtree (\<lambda>_. ()) (map_ltree (\<lambda>node. (node, ctx))
-      (placed_abs_dg_edge_tree source_global owner_of keep_local publish_side
+      (placed_abs_dg_edge_tree gs owner_of keep_local publish_side
         (transfer action) read_node write_node))"
 
 definition placed_abs_dg_combine_of ::
@@ -681,14 +681,14 @@ definition placed_abs_dg_combine_of ::
      ('a::bounded_semilattice_sup_bot abs_state, 'a abs_state) dg_state)
        strategy_tree"
 where
-  "placed_abs_dg_combine_of source_global owner_of keep_local publish_side
+  "placed_abs_dg_combine_of gs owner_of keep_local publish_side
       ctx caller action callee continuation =
     (case action of CallEdge destination parameters arguments \<Rightarrow>
       map_gtree (\<lambda>_. ()) (map_ltree (\<lambda>node. (node, ctx))
-        (placed_abs_dg_combine_tree source_global owner_of
+        (placed_abs_dg_combine_tree gs owner_of
           keep_local publish_side
           (\<lambda>destination caller_state callee_state side_state.
-            combine\<^sup># source_global destination
+            combine\<^sup># gs destination
               (caller_state \<squnion> side_state)
               (callee_state \<squnion> side_state))
           destination caller callee continuation)))"
@@ -701,11 +701,11 @@ definition placed_abs_dg_enter_of ::
    unit \<Rightarrow> pp \<Rightarrow> call_action \<Rightarrow> pp \<Rightarrow>
    (pp \<times> unit, unit, ('a abs_state, 'a abs_state) dg_state) strategy_tree"
 where
-  "placed_abs_dg_enter_of source_global owner_of keep_local publish_side
+  "placed_abs_dg_enter_of gs owner_of keep_local publish_side
       enter ctx caller action callee =
     (case action of CallEdge destination parameters arguments \<Rightarrow>
       map_gtree (\<lambda>_. ()) (map_ltree (\<lambda>node. (node, ctx))
-        (placed_abs_dg_enter_tree source_global owner_of
+        (placed_abs_dg_enter_tree gs owner_of
           keep_local publish_side enter parameters arguments caller callee)))"
 
 text \<open>
@@ -721,9 +721,9 @@ text \<open>
 
 lemma traverse_rhs_placed_abs_dg_edge_of:
   "traverse_rhs
-    (placed_abs_dg_edge_of source_global owner_of keep_local publish_side
+    (placed_abs_dg_edge_of gs owner_of keep_local publish_side
       transfer ctx read_node action write_node) sigma =
-    DG (project_abs_on (owner_of write_node) source_global keep_local
+    DG (project_abs_on (owner_of write_node) gs keep_local
           (transfer action (locals (sigma (Inl (read_node, ctx))) \<squnion>
             globs (sigma (Inr ()))))) bot"
   unfolding placed_abs_dg_edge_of_def
@@ -732,9 +732,9 @@ lemma traverse_rhs_placed_abs_dg_edge_of:
 
 lemma sides_of_rhs_placed_abs_dg_edge_of:
   "sides_of_rhs
-    (placed_abs_dg_edge_of source_global owner_of keep_local publish_side
+    (placed_abs_dg_edge_of gs owner_of keep_local publish_side
       transfer ctx read_node action write_node) sigma (Inr ()) =
-    DG bot (project_abs_on (owner_of write_node) source_global publish_side
+    DG bot (project_abs_on (owner_of write_node) gs publish_side
           (transfer action (locals (sigma (Inl (read_node, ctx))) \<squnion>
             globs (sigma (Inr ())))))"
   unfolding placed_abs_dg_edge_of_def
@@ -743,9 +743,9 @@ lemma sides_of_rhs_placed_abs_dg_edge_of:
 
 lemma traverse_rhs_placed_abs_dg_enter_of:
   "traverse_rhs
-    (placed_abs_dg_enter_of source_global owner_of keep_local publish_side
+    (placed_abs_dg_enter_of gs owner_of keep_local publish_side
       enter ctx caller (CallEdge destination parameters arguments) callee) sigma =
-    DG (project_abs_on (owner_of callee) source_global keep_local
+    DG (project_abs_on (owner_of callee) gs keep_local
           (enter parameters arguments (locals (sigma (Inl (caller, ctx))) \<squnion>
             globs (sigma (Inr ()))))) bot"
   unfolding placed_abs_dg_enter_of_def placed_abs_dg_enter_tree_def
@@ -754,9 +754,9 @@ lemma traverse_rhs_placed_abs_dg_enter_of:
 
 lemma sides_of_rhs_placed_abs_dg_enter_of:
   "sides_of_rhs
-    (placed_abs_dg_enter_of source_global owner_of keep_local publish_side
+    (placed_abs_dg_enter_of gs owner_of keep_local publish_side
       enter ctx caller (CallEdge destination parameters arguments) callee) sigma (Inr ()) =
-    DG bot (project_abs_on (owner_of callee) source_global publish_side
+    DG bot (project_abs_on (owner_of callee) gs publish_side
           (enter parameters arguments (locals (sigma (Inl (caller, ctx))) \<squnion>
             globs (sigma (Inr ())))))"
   unfolding placed_abs_dg_enter_of_def placed_abs_dg_enter_tree_def
@@ -765,10 +765,10 @@ lemma sides_of_rhs_placed_abs_dg_enter_of:
 
 lemma traverse_rhs_placed_abs_dg_combine_of:
   "traverse_rhs
-    (placed_abs_dg_combine_of source_global owner_of keep_local publish_side
+    (placed_abs_dg_combine_of gs owner_of keep_local publish_side
       ctx caller (CallEdge destination parameters arguments) callee continuation) sigma =
-    DG (project_abs_on (owner_of continuation) source_global keep_local
-          (combine\<^sup># source_global destination
+    DG (project_abs_on (owner_of continuation) gs keep_local
+          (combine\<^sup># gs destination
             (locals (sigma (Inl (caller, ctx))) \<squnion> globs (sigma (Inr ())))
             (locals (sigma (Inl (callee, ctx))) \<squnion> globs (sigma (Inr ()))))) bot"
   unfolding placed_abs_dg_combine_of_def
@@ -777,10 +777,10 @@ lemma traverse_rhs_placed_abs_dg_combine_of:
 
 lemma sides_of_rhs_placed_abs_dg_combine_of:
   "sides_of_rhs
-    (placed_abs_dg_combine_of source_global owner_of keep_local publish_side
+    (placed_abs_dg_combine_of gs owner_of keep_local publish_side
       ctx caller (CallEdge destination parameters arguments) callee continuation) sigma (Inr ()) =
-    DG bot (project_abs_on (owner_of continuation) source_global publish_side
-          (combine\<^sup># source_global destination
+    DG bot (project_abs_on (owner_of continuation) gs publish_side
+          (combine\<^sup># gs destination
             (locals (sigma (Inl (caller, ctx))) \<squnion> globs (sigma (Inr ())))
             (locals (sigma (Inl (callee, ctx))) \<squnion> globs (sigma (Inr ())))))"
   unfolding placed_abs_dg_combine_of_def
@@ -796,14 +796,14 @@ definition placed_abs_dg_gen_of ::
    cfg \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state \<Rightarrow>
    (pp \<times> unit, unit, ('a abs_state, 'a abs_state) dg_state) eqsT"
 where
-  "placed_abs_dg_gen_of source_global owner_of keep_local publish_side
+  "placed_abs_dg_gen_of gs owner_of keep_local publish_side
       transfer enter graph bot0 s0d s0g =
     side_cfg_T_eff_keyed_seed_trees intra_predecessor_list (\<lambda>_. ())
-      (placed_abs_dg_edge_of source_global owner_of
+      (placed_abs_dg_edge_of gs owner_of
         keep_local publish_side transfer)
-      (placed_abs_dg_combine_of source_global owner_of
+      (placed_abs_dg_combine_of gs owner_of
         keep_local publish_side)
-      (placed_abs_dg_enter_of source_global owner_of
+      (placed_abs_dg_enter_of gs owner_of
         keep_local publish_side enter)
       graph bot0 s0d s0g"
 
