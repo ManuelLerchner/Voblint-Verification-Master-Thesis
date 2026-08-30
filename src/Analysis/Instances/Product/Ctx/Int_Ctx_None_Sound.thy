@@ -150,41 +150,10 @@ text \<open>
   inside the locale rather than an Int obligation at all.
 \<close>
 
-context
-  fixes gs :: "vname \<Rightarrow> bool" and is_bot_pred :: "int_dom exec_dg_st \<Rightarrow> bool" and mode :: refine_mode
-  assumes exact: "\<And>s. is_bot_pred s = is_bot_state (fun_of_resolved_st_q_for gs s)"
-begin
-
-interpretation int_unit: routed_domain_exec
-  gs is_bot_pred "int_tf_st_for mode gs" "int_dom_enter_st_for mode gs" "int_tf_for mode gs"
-  Global Seed route_unit route_unit static_resolve static_resolve
-  by unfold_locales
-     (rule int_tf_st_for_commute, rule int_dom_enter_st_for_commute, rule exact, simp, simp,
-      simp add: static_resolve_def)
-
-lemmas int_pp_abs_gen = int_unit.pp_abs
-
-end
-
-
-lemma seed_ne_global [simp]: "Seed p ctx \<noteq> Global"
-  by simp
-
-section \<open>The solver-generic instantiation\<close>
-
 text \<open>
-  Everything downstream of the executable post-solution reaches the solver through exactly one
-  fact: that the solved pair is a \<^const>\<open>part_post_solution\<close> of \<^const>\<open>ictx_eqs\<close>.  The update
-  rule itself never appears again.  \<open>ictx_solved\<close> therefore fixes the solved pair and its
-  termination predicate and assumes that single fact, so each update rule contributes an
-  interpretation rather than a copy of the development.
-\<close>
-
-text \<open>
-  The abstract-carrier soundness interpretation the \<open>dg_base\<close> analogue needs, generic in
-  \<open>mode\<close>: a three-way case split citing Int's own per-mode \<^locale>\<open>sound_dg_spec\<close>
-  registration.  Independent of the update rule, so it sits outside the locale below and
-  serves the contextual siblings too.
+  The abstract-carrier soundness of the spec, generic in \<open>mode\<close>: a three-way case split
+  citing Int's own per-mode transfer-soundness facts.  The executable-carrier soundness
+  \<open>ictx_sound_exec\<close> below pulls it back along the readback.
 \<close>
 
 lemma ictx_abs_spec_sound: "sound_dg_spec (ictx_abs_spec mode gs) gamma_dg_base gs"
@@ -205,6 +174,53 @@ next
     by (simp add: base_dg_spec_sound[OF int_fixpoint_is_sound_transfer_for is_bot_state_gamma_state_empty])
 qed
 
+text \<open>The concretization the executable-carrier interpretations below use: a local
+  unknown means \<^const>\<open>gamma_state_lift\<close> of its readback, the global slot is ignored as
+  in \<^const>\<open>gamma_dg_base\<close>. Named at top level so a downstream theory can state it.\<close>
+
+definition ictx_gamma ::
+    "(vname \<Rightarrow> bool) \<Rightarrow> int_dom exec_dg_st lifted \<Rightarrow> int_dom exec_dg_st lifted \<Rightarrow> store set" where
+  "ictx_gamma gs d g = gamma_state_lift (map_lift (fun_of_resolved_st_q_for gs) d)"
+
+lemma ictx_gamma_Bot [simp]: "ictx_gamma gs Bot g = {}"
+  by (simp add: ictx_gamma_def)
+
+context
+  fixes gs :: "vname \<Rightarrow> bool" and is_bot_pred :: "int_dom exec_dg_st \<Rightarrow> bool" and mode :: refine_mode
+  assumes exact: "\<And>s. is_bot_pred s = is_bot_state (fun_of_resolved_st_q_for gs s)"
+begin
+
+interpretation int_unit: routed_domain_exec
+  gs is_bot_pred "int_tf_st_for mode gs" "int_dom_enter_st_for mode gs" "int_tf_for mode gs"
+  Global Seed route_unit route_unit static_resolve static_resolve
+  by unfold_locales
+     (rule int_tf_st_for_commute, rule int_dom_enter_st_for_commute, rule exact, simp, simp,
+      simp add: static_resolve_def)
+
+lemmas int_pp_st_gen = int_unit.pp_st
+
+lemma ictx_gamma_eq: "ictx_gamma gs = int_unit.gamma_exec"
+  by (intro ext) (simp add: ictx_gamma_def int_unit.gamma_exec_def gamma_dg_base_def)
+
+theorem ictx_sound_exec: "sound_dg_spec (ictx_spec mode is_bot_pred gs) (ictx_gamma gs) gs"
+  unfolding ictx_gamma_eq ictx_spec_def
+  by (rule int_unit.sound_dg_spec_st) (rule ictx_abs_spec_sound[unfolded ictx_abs_spec_def])
+
+end
+
+lemma seed_ne_global [simp]: "Seed p ctx \<noteq> Global"
+  by simp
+
+section \<open>The solver-generic instantiation\<close>
+
+text \<open>
+  Everything downstream of the executable post-solution reaches the solver through exactly one
+  fact: that the solved pair is a \<^const>\<open>part_post_solution\<close> of \<^const>\<open>ictx_eqs\<close>.  The update
+  rule itself never appears again.  \<open>ictx_solved\<close> therefore fixes the solved pair and its
+  termination predicate and assumes that single fact, so each update rule contributes an
+  interpretation rather than a copy of the development.
+\<close>
+
 locale ictx_solved =
   fixes ictx_sol :: "refine_mode \<Rightarrow> (int_dom exec_dg_st \<Rightarrow> bool) \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> proc_table
                   \<Rightarrow> pname list \<Rightarrow> (pp \<times> unit) set
@@ -219,64 +235,40 @@ locale ictx_solved =
              (fst (ictx_sol mode is_bot_pred gs Pi ps))"
 begin
 
-theorem ictx_pp_abs:
+text \<open>The solver's post-solution, for the unbuffered routed generator at the executable
+  spec: the shape \<^locale>\<open>dg_ctx_activation_base\<close> consumes directly.\<close>
+
+theorem ictx_pp_routed:
   assumes solves: "ictx_terminates mode is_bot_pred gs Pi ps"
     and exact: "\<And>s. is_bot_pred s = is_bot_state (fun_of_resolved_st_q_for gs s)"
   shows
   "part_post_solution
      (side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. Global) route_unit
-        (routed_cmb_g (ictx_abs_spec mode gs) Global Seed
+        (routed_cmb_g (ictx_spec mode is_bot_pred gs) Global Seed
            (static_resolve (compile_prog Pi ps)))
         (routed_extra_g Seed Global)
-        (compile_prog Pi ps) (ictx_abs_spec mode gs)
-        (map_lift (fun_of_resolved_st_q_for gs) (Bot::int_dom exec_dg_st lifted))
-        (map_lift (fun_of_resolved_st_q_for gs) (Lifted cinit_int_dom_st))
-        (map_lift (fun_of_resolved_st_q_for gs) (Bot::int_dom exec_dg_st lifted)))
+        (compile_prog Pi ps) (ictx_spec mode is_bot_pred gs) Bot (Lifted cinit_int_dom_st) Bot)
      (cfg_exit (compile_prog Pi ps), ())
-     (fun_of_dg_st_gen (map_lift (fun_of_resolved_st_q_for gs)) (map_lift (fun_of_resolved_st_q_for gs))
-        \<circ> snd (ictx_sol mode is_bot_pred gs Pi ps))
-     (fst (ictx_sol mode is_bot_pred gs Pi ps))"
-proof -
-  have pp_buf: "part_post_solution
-       (side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_addr_list (\<lambda>_. Global)
-          route_unit
-          (routed_cmb_g_contribution (ictx_spec mode is_bot_pred gs) Global Seed
-             (static_resolve (compile_prog Pi ps)))
-          (routed_extra_g Seed Global)
-          (compile_prog Pi ps) (ictx_spec mode is_bot_pred gs)
-          Bot (Lifted cinit_int_dom_st) Bot)
-       (cfg_exit (compile_prog Pi ps), ())
-       (snd (ictx_sol mode is_bot_pred gs Pi ps))
-       (fst (ictx_sol mode is_bot_pred gs Pi ps))"
-    using pp_st[OF solves] unfolding ictx_eqs_def by simp
-  show ?thesis
-    unfolding ictx_abs_spec_def
-    using pp_buf unfolding ictx_spec_def by (rule int_pp_abs_gen[OF exact])
-qed
+     (snd (ictx_sol mode is_bot_pred gs Pi ps)) (fst (ictx_sol mode is_bot_pred gs Pi ps))"
+  using pp_st[OF solves] unfolding ictx_eqs_def ictx_spec_def by (rule int_pp_st_gen[OF exact])
 
+text \<open>
+  The routed spine is interpreted at Int's executable carrier and fed the solver's own
+  table: a local unknown concretizes to \<^const>\<open>gamma_state_lift\<close> of its readback, the
+  covered reader \<open>ictx_sg_st\<close> hands the table's local slot through unchanged, and no
+  solved system is transported between carriers.
+\<close>
 
-definition ictx_sigma_abs_exec ::
-    "refine_mode \<Rightarrow> (int_dom exec_dg_st \<Rightarrow> bool) \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> pp \<times> unit + gk \<Rightarrow> (int_dom abs_state lifted, int_dom abs_state lifted) dg_state" where
-  "ictx_sigma_abs_exec mode is_bot_pred gs Pi ps =
-     fun_of_dg_st_gen (map_lift (fun_of_resolved_st_q_for gs)) (map_lift (fun_of_resolved_st_q_for gs))
-       \<circ> snd (ictx_sol mode is_bot_pred gs Pi ps)"
-
-definition ictx_sg_exec ::
-    "refine_mode \<Rightarrow> (int_dom exec_dg_st \<Rightarrow> bool) \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> pp \<times> unit + gk \<Rightarrow> int_dom abs_state lifted" where
-  "ictx_sg_exec mode is_bot_pred gs Pi ps k =
+definition ictx_sg_st ::
+    "refine_mode \<Rightarrow> (int_dom exec_dg_st \<Rightarrow> bool) \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> proc_table
+       \<Rightarrow> pname list \<Rightarrow> pp \<times> unit + gk \<Rightarrow> int_dom exec_dg_st lifted" where
+  "ictx_sg_st mode is_bot_pred gs Pi ps k =
      (case k of
         Inl (v, ctx) \<Rightarrow>
           (if (v, ctx) \<in> fst (ictx_sol mode is_bot_pred gs Pi ps)
-           then locals (ictx_sigma_abs_exec mode is_bot_pred gs Pi ps (Inl (v, ctx)))
+           then locals (snd (ictx_sol mode is_bot_pred gs Pi ps) (Inl (v, ctx)))
            else Bot)
       | Inr _ \<Rightarrow> Bot)"
-
-text \<open>
-  The abstract-carrier soundness interpretation, generic in \<open>mode\<close>: a three-way
-  case split citing Int's own per-mode transfer-soundness facts
-  (\<open>int_never_is_sound_transfer_for\<close> and its siblings), one per branch.
-\<close>
-
 
 context
   fixes mode :: refine_mode and is_bot_pred :: "int_dom exec_dg_st \<Rightarrow> bool" and gs :: "vname \<Rightarrow> bool"
@@ -297,13 +289,7 @@ context
         \<Longrightarrow> (cont, c1) \<in> fst (ictx_sol mode is_bot_pred gs Pi ps)"
 begin
 
-subsection \<open>The semantic solution projection\<close>
-
-definition ictx_sigma_abs :: "pp \<times> unit + gk \<Rightarrow> (int_dom abs_state lifted, int_dom abs_state lifted) dg_state" where
-  "ictx_sigma_abs = ictx_sigma_abs_exec mode is_bot_pred gs Pi ps"
-
-definition ictx_sg :: "pp \<times> unit + gk \<Rightarrow> int_dom abs_state lifted" where
-  "ictx_sg = ictx_sg_exec mode is_bot_pred gs Pi ps"
+subsection \<open>The solver's table as the solved system\<close>
 
 lemma ictx_fin: "finite (intra (compile_prog Pi ps))"
   using compile_prog_finite by blast
@@ -311,80 +297,46 @@ lemma ictx_fin: "finite (intra (compile_prog Pi ps))"
 lemma ictx_finC: "finite (calls (compile_prog Pi ps))"
   using compile_prog_finite by blast
 
-lemma ictx_sg_covered:
+lemma ictx_sg_st_covered:
   "(v, ctx) \<in> fst (ictx_sol mode is_bot_pred gs Pi ps)
-   \<Longrightarrow> ictx_sg (Inl (v, ctx)) = locals (ictx_sigma_abs (Inl (v, ctx)))"
-  by (simp add: ictx_sg_def ictx_sg_exec_def ictx_sigma_abs_def ictx_sigma_abs_exec_def)
+   \<Longrightarrow> ictx_sg_st mode is_bot_pred gs Pi ps (Inl (v, ctx))
+         = locals (snd (ictx_sol mode is_bot_pred gs Pi ps) (Inl (v, ctx)))"
+  by (simp add: ictx_sg_st_def)
 
-lemma ictx_sg_uncovered_empty:
+lemma ictx_sg_st_uncovered_empty:
   "(v, ctx) \<notin> fst (ictx_sol mode is_bot_pred gs Pi ps)
-     \<Longrightarrow> gamma_state_lift (ictx_sg (Inl (v, ctx))) = {}"
-  by (simp add: ictx_sg_def ictx_sg_exec_def)
+     \<Longrightarrow> gamma_state_lift (map_lift (fun_of_resolved_st_q_for gs)
+           (ictx_sg_st mode is_bot_pred gs Pi ps (Inl (v, ctx)))) = {}"
+  by (simp add: ictx_sg_st_def)
 
 subsection \<open>Instantiating the generic DG-native activation discharge\<close>
 
-interpretation ictx_dg_base: sound_dg_spec "ictx_abs_spec mode gs" gamma_dg_base gs
-  by (rule ictx_abs_spec_sound)
+interpretation ictx_dg_base: sound_dg_spec "ictx_spec mode is_bot_pred gs" "ictx_gamma gs" gs
+  by (rule ictx_sound_exec[OF exact])
 
-interpretation ictx_dg: dg_ctx_activation_base "ictx_abs_spec mode gs" gamma_dg_base gs
-    "compile_prog Pi ps" Global route_unit
-    "routed_cmb_g (ictx_abs_spec mode gs) Global Seed
-       (static_resolve (compile_prog Pi ps))"
-    "routed_extra_g Seed Global"
-    "map_lift (fun_of_resolved_st_q_for gs) (Bot::int_dom exec_dg_st lifted)"
-    "map_lift (fun_of_resolved_st_q_for gs) (Lifted cinit_int_dom_st)"
-    "map_lift (fun_of_resolved_st_q_for gs) (Bot::int_dom exec_dg_st lifted)"
-    ictx_sigma_abs "fst (ictx_sol mode is_bot_pred gs Pi ps)"
-    "(cfg_exit (compile_prog Pi ps), ())" ictx_sg gamma_state_lift
-proof unfold_locales
-  show "finite (intra (compile_prog Pi ps))" by (rule ictx_fin)
+interpretation ictx_routed: unit_routed_context "ictx_spec mode is_bot_pred gs" "ictx_gamma gs" gs
+    "compile_prog Pi ps" Global Bot "Lifted cinit_int_dom_st" Bot
+    "snd (ictx_sol mode is_bot_pred gs Pi ps)" "fst (ictx_sol mode is_bot_pred gs Pi ps)"
+    "(cfg_exit (compile_prog Pi ps), ())" "ictx_sg_st mode is_bot_pred gs Pi ps" Seed
+    "\<lambda>m. gamma_state_lift (map_lift (fun_of_resolved_st_q_for gs) m)"
+proof (unfold_locales, goal_cases FinE PP SgCov SgUncov Fwd FinC SeedKey CallFwd CombFwd EnterAgree)
+  case FinE show ?case by (rule ictx_fin)
 next
-  show "part_post_solution
-          (side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. Global) route_unit
-             (routed_cmb_g (ictx_abs_spec mode gs) Global Seed
-                (static_resolve (compile_prog Pi ps)))
-             (routed_extra_g Seed Global)
-             (compile_prog Pi ps) (ictx_abs_spec mode gs)
-             (map_lift (fun_of_resolved_st_q_for gs) (Bot::int_dom exec_dg_st lifted))
-             (map_lift (fun_of_resolved_st_q_for gs) (Lifted cinit_int_dom_st))
-             (map_lift (fun_of_resolved_st_q_for gs) (Bot::int_dom exec_dg_st lifted)))
-          (cfg_exit (compile_prog Pi ps), ()) ictx_sigma_abs
-          (fst (ictx_sol mode is_bot_pred gs Pi ps))"
-    unfolding ictx_sigma_abs_def ictx_sigma_abs_exec_def
-    by (rule ictx_pp_abs[OF solves exact])
+  case PP show ?case by (rule ictx_pp_routed[OF solves exact])
 next
-  fix v ctx assume "(v, ctx) \<in> fst (ictx_sol mode is_bot_pred gs Pi ps)"
-  thus "gamma_state_lift (ictx_sg (Inl (v, ctx)))
-          = gamma_dg_base (locals (ictx_sigma_abs (Inl (v, ctx)))) (globs (ictx_sigma_abs (Inr Global)))"
-    by (simp add: ictx_sg_covered gamma_dg_base_def)
+  case (SgCov v ctx) then show ?case
+    by (simp add: ictx_sg_st_def ictx_gamma_def)
 next
-  fix v ctx assume "(v, ctx) \<notin> fst (ictx_sol mode is_bot_pred gs Pi ps)"
-  thus "gamma_state_lift (ictx_sg (Inl (v, ctx))) = {}"
-    by (rule ictx_sg_uncovered_empty)
+  case (SgUncov v ctx) then show ?case by (rule ictx_sg_st_uncovered_empty)
 next
-  fix u a v ctx assume "(u, ctx) \<in> fst (ictx_sol mode is_bot_pred gs Pi ps)"
-    "(u, a, v) \<in> intra (compile_prog Pi ps)"
-  thus "(v, ctx) \<in> fst (ictx_sol mode is_bot_pred gs Pi ps)" by (rule fwd_ok)
-qed
-
-subsection \<open>The routed interpretation and its CALL/COMB corollaries\<close>
-
-interpretation ictx_routed: unit_routed_context "ictx_abs_spec mode gs" gamma_dg_base gs
-    "compile_prog Pi ps" Global
-    "map_lift (fun_of_resolved_st_q_for gs) (Bot::int_dom exec_dg_st lifted)"
-    "map_lift (fun_of_resolved_st_q_for gs) (Lifted cinit_int_dom_st)"
-    "map_lift (fun_of_resolved_st_q_for gs) (Bot::int_dom exec_dg_st lifted)"
-    ictx_sigma_abs "fst (ictx_sol mode is_bot_pred gs Pi ps)"
-    "(cfg_exit (compile_prog Pi ps), ())" ictx_sg
-    Seed gamma_state_lift
-proof (unfold_locales, goal_cases FinC SeedKey CallFwd CombFwd EnterAgree)
+  case (Fwd u a v ctx) then show ?case by (rule fwd_ok)
+next
   case FinC show ?case by (rule ictx_finC)
 next
   case (SeedKey p ctx) show ?case by simp
 next
   case (CallFwd u ctx dst pars args p cont)
-  show ?case
-    using CallFwd(1,2) call_fwd_ok unfolding route_unit_def by blast
+  show ?case using CallFwd(1,2) call_fwd_ok unfolding route_unit_def by blast
 next
   case (CombFwd cl c1 dst pars args p cont)
   show ?case using CombFwd(1,2) comb_fwd_ok by blast
@@ -400,121 +352,42 @@ next
   thus ?case using es_eq by simp
 qed
 
-lemma ictx_sg_seed:
-  assumes "(u, CallEdge dst xs es, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps)"
-    and "s \<in> gamma_state_lift (ictx_sg (Inl (u, ctx)))"
-  shows "call_enter gs (CallEdge dst xs es) s
-           \<in> gamma_state_lift (ictx_sg (Inl (FunctionEntry p, ())))"
-  using ictx_routed.routed_context_call[OF assms] by simp
-
-lemma ictx_sg_comb:
-  assumes "(cl, CallEdge dst pars args, FunctionEntry p, v) \<in> calls (compile_prog Pi ps)"
-    and "s \<in> gamma_state_lift (ictx_sg (Inl (cl, c1)))"
-    and "t \<in> gamma_state_lift (ictx_sg (Inl (FunctionResult p, ())))"
-    and "call_enter_store gs (compile_prog Pi ps) cl s es"
-  shows "combine_collect gs dst s t \<in> gamma_state_lift (ictx_sg (Inl (v, c1)))"
-  using ictx_routed.routed_context_comb[OF assms(1,2) _ assms(4)] assms(3) by simp
-
 subsection \<open>Activation-indexed collecting soundness\<close>
 
 lemma ictx_cinit_le_cinit_int_dom_st:
-  "cinit_stores gs \<subseteq> gamma_state_lift (map_lift (fun_of_resolved_st_q_for gs) (Lifted cinit_int_dom_st))"
-  by (auto simp: cinit_stores_def gamma_state_def fun_of_resolved_st_q_for_def fun_of_st_cinit_int_dom_st_for
-                 gamma_int_dom_top)
-
-lemma ictx_locals_ge_s0d:
-  "map_lift (fun_of_resolved_st_q_for gs) (Lifted cinit_int_dom_st)
-     \<le> locals (ictx_sigma_abs (Inl (cfg_entry (compile_prog Pi ps), ())))"
-proof -
-  have "map_lift (fun_of_resolved_st_q_for gs) (Lifted cinit_int_dom_st)
-      \<le> locals (eq ictx_dg.Gen (cfg_entry (compile_prog Pi ps), ()) ictx_sigma_abs)"
-    by (simp add: eq_side_cfg_T_eff_keyed_seed_dg)
-       (rule order_trans[OF _ side_acc_dg_ge_acc], simp add: le_supI2)
-  also have "\<dots> \<le> locals (ictx_sigma_abs (Inl (cfg_entry (compile_prog Pi ps), ())))"
-    using ictx_dg.pp_eq_bound[OF entry_cov] by (simp add: less_eq_dg_state_def)
-  finally show ?thesis .
-qed
-
-theorem ictx_activation_collect_sound:
-  "activation_collect gs enterc_unit () (compile_prog Pi ps) (cinit_stores gs) v ctx
-     \<subseteq> gamma_state_lift (ictx_sg (Inl (v, ctx)))"
-proof (rule activation_collect_sound_gen[where sg = ictx_sg and gammaM = gamma_state_lift
-        and enterc = "enterc_unit"
-        and initial_ctx = "()" and S = "cinit_stores gs" and g = "compile_prog Pi ps" and gs = gs])
-  \<comment> \<open>ENTRY_G\<close>
-  fix s assume "s \<in> cinit_stores gs"
-  hence "s \<in> gamma_state_lift (map_lift (fun_of_resolved_st_q_for gs) (Lifted cinit_int_dom_st))"
-    using ictx_cinit_le_cinit_int_dom_st by blast
-  also have "gamma_state_lift (map_lift (fun_of_resolved_st_q_for gs) (Lifted cinit_int_dom_st))
-        = gamma_dg_base (map_lift (fun_of_resolved_st_q_for gs) (Lifted cinit_int_dom_st))
-            (map_lift (fun_of_resolved_st_q_for gs) (Bot::int_dom exec_dg_st lifted))"
-    by (simp add: gamma_dg_base_def)
-  also have "\<dots> \<subseteq> gamma_dg_base (locals (ictx_sigma_abs (Inl (cfg_entry (compile_prog Pi ps), ()))))
-                   (globs (ictx_sigma_abs (Inr Global)))"
-    by (rule gamma_dg_base_mono[OF ictx_locals_ge_s0d ictx_dg.pp_entry_s0g_bound[OF entry_cov]])
-  also have "\<dots> = gamma_state_lift (ictx_sg (Inl (cfg_entry (compile_prog Pi ps), ())))"
-    unfolding ictx_sg_covered[OF entry_cov] gamma_dg_base_def by (rule refl)
-  finally show "s \<in> gamma_state_lift (ictx_sg (Inl (cfg_entry (compile_prog Pi ps), ())))" .
-next
-  \<comment> \<open>EDGE\<close>
-  show "\<And>u a v c s s'. (u, a, v) \<in> intra (compile_prog Pi ps)
-        \<Longrightarrow> s \<in> gamma_state_lift (ictx_sg (Inl (u, c))) \<Longrightarrow> s' \<in> edge_step a s
-        \<Longrightarrow> s' \<in> gamma_state_lift (ictx_sg (Inl (v, c)))"
-    by (rule ictx_dg.dg_ctx_act_edge)
-next
-  \<comment> \<open>CALL\<close>
-  fix u dst pars args p cont c s
-  assume ce: "(u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps)"
-    and sm: "s \<in> gamma_state_lift (ictx_sg (Inl (u, c)))"
-  show "call_enter gs (CallEdge dst pars args) s
-          \<in> gamma_state_lift
-              (ictx_sg (Inl (FunctionEntry p, enterc_unit u c (call_enter gs (CallEdge dst pars args) s))))"
-    using ictx_sg_seed[OF ce sm] by simp
-next
-  \<comment> \<open>COMB\<close>
-  fix cl dst pars args p cont c1 s t es
-  assume ce: "(cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps)"
-    and sm: "s \<in> gamma_state_lift (ictx_sg (Inl (cl, c1)))"
-    and tm: "t \<in> gamma_state_lift (ictx_sg (Inl (FunctionResult p, enterc_unit cl c1 es)))"
-    and ces: "call_enter_store gs (compile_prog Pi ps) cl s es"
-  show "combine_collect gs dst s t \<in> gamma_state_lift (ictx_sg (Inl (cont, c1)))"
-    using tm ictx_sg_comb[OF ce sm _ ces] by simp
-qed
-
+  "cinit_stores gs \<subseteq> ictx_gamma gs (Lifted cinit_int_dom_st) Bot"
+  by (auto simp: ictx_gamma_def cinit_stores_def gamma_state_def fun_of_resolved_st_q_for_def
+                 fun_of_st_cinit_int_dom_st_for gamma_int_dom_top)
 subsection \<open>The public result/report table, via the generic adapter locale\<close>
 
 text \<open>
-  \<^locale>\<open>dg_analysis_adapter\<close> (\<^theory>\<open>Voblint_Core.DG_Analysis_Adapter\<close>) extends
-  \<^locale>\<open>routed_context_hetero\<close> with one classifier obligation. Its own parameter
-  list matches \<open>ictx_routed\<close>'s \<^locale>\<open>unit_routed_context\<close> instantiation above
-  (same \<open>S\<close>/\<open>g\<close>/\<open>gk0\<close>/\<open>route\<close>/\<open>bot0\<close>/\<open>s0d\<close>/\<open>s0g\<close>/\<open>sigma\<close>/\<open>vars\<close>/\<open>x0\<close>/\<open>sg\<close>/\<open>seed_key\<close>),
-  plus \<open>enterc\<close> (pinned at \<^const>\<open>enterc_unit\<close>, matching \<open>ictx_routed\<close>'s own sublocale)
-  and \<open>classify\<close> (\<^const>\<open>int_classify_check\<close>). \<^locale>\<open>unit_routed_context\<close> only proves
-  the weaker \<^locale>\<open>routed_context_base_hetero\<close> (generic in \<open>gammaDG\<close>/\<open>gammaM\<close>), not
-  \<^locale>\<open>routed_context_hetero\<close> itself (fixed at \<^const>\<open>gamma_dg_base\<close>/
-  \<^const>\<open>gamma_state_lift\<close>) even though the two predicates have the same assumption
-  list once specialized: Isabelle does not identify the two locale predicates for
-  free, so this second interpretation repeats \<open>ictx_routed\<close>'s five non-trivial
-  obligations once more (\<open>route_enterc_agree\<close> collapses to plain \<open>simp\<close> on
-  \<^const>\<open>route_unit\<close>/\<^const>\<open>enterc_unit\<close>, both already \<open>[simp]\<close>), plus the two
-  classifier obligations \<open>int_classify_check_proved\<close>/
-  \<open>int_classify_check_refuted\<close> (\<^theory>\<open>Voblint_Analysis.Int_Classify\<close>) discharge
-  directly.
+  \<^locale>\<open>dg_analysis_adapter\<close> at the same executable solved system as
+  \<open>ictx_routed\<close> above, handed the readback as \<open>rd\<close>; the classifier obligations are
+  \<open>int_classify_check_proved\<close>/\<open>int_classify_check_refuted\<close>
+  (\<^theory>\<open>Voblint_Analysis.Int_Classify\<close>).
 \<close>
 
-interpretation ictx_adapter: dg_analysis_adapter
-  where S = "ictx_abs_spec mode gs" and gs = gs
-    and g = "compile_prog Pi ps" and gk0 = Global and route = route_unit
-    and bot0 = "map_lift (fun_of_resolved_st_q_for gs) (Bot::int_dom exec_dg_st lifted)"
-    and s0d = "map_lift (fun_of_resolved_st_q_for gs) (Lifted cinit_int_dom_st)"
-    and s0g = "map_lift (fun_of_resolved_st_q_for gs) (Bot::int_dom exec_dg_st lifted)"
-    and sigma = ictx_sigma_abs and vars = "fst (ictx_sol mode is_bot_pred gs Pi ps)"
-    and x0 = "(cfg_exit (compile_prog Pi ps), ())" and sg = ictx_sg
-    and seed_key = Seed and enterc = enterc_unit and gammaDG = gamma_dg_base
-    and gammaM = gamma_state_lift and rd = id and classify = int_classify_check
-proof (unfold_locales, goal_cases
-    FinC SeedKey ResolveSound RouteEnterAgree CallFwd CombFwd CallEnterStoreAgree
-    GammaRd ClassifyProved ClassifyRefuted)
+interpretation ictx_adapter: dg_analysis_adapter "ictx_spec mode is_bot_pred gs" "ictx_gamma gs" gs
+    "compile_prog Pi ps" Global route_unit Bot "Lifted cinit_int_dom_st" Bot
+    "snd (ictx_sol mode is_bot_pred gs Pi ps)" "fst (ictx_sol mode is_bot_pred gs Pi ps)"
+    "(cfg_exit (compile_prog Pi ps), ())" "ictx_sg_st mode is_bot_pred gs Pi ps"
+    Seed "\<lambda>m. gamma_state_lift (map_lift (fun_of_resolved_st_q_for gs) m)" enterc_unit
+    "map_lift (fun_of_resolved_st_q_for gs)" int_classify_check
+proof (unfold_locales, goal_cases FinE PP SgCov SgUncov Fwd FinC SeedKey ResolveSound
+    RouteEnterc CallFwd CombFwd EnterAgree GammaRd ClProved ClRefuted)
+  case FinE show ?case by (rule ictx_fin)
+next
+  case PP show ?case by (rule ictx_pp_routed[OF solves exact])
+next
+  case (SgCov v c)
+  thus ?case by (simp add: ictx_sg_st_def ictx_gamma_def)
+next
+  case (SgUncov v c)
+  thus ?case by (simp add: ictx_sg_st_def)
+next
+  case (Fwd u a v c)
+  thus ?case by (rule fwd_ok)
+next
   case FinC show ?case by (rule ictx_finC)
 next
   case (SeedKey p ctx) show ?case by simp
@@ -522,7 +395,7 @@ next
   case (ResolveSound u ctx dst pars args p cont s)
   thus ?case by (simp add: static_resolve_iff[OF ictx_finC])
 next
-  case (RouteEnterAgree u ctx dst pars args p cont s)
+  case (RouteEnterc u ctx dst pars args p cont s)
   show ?case by simp
 next
   case (CallFwd u ctx dst pars args p cont)
@@ -532,10 +405,11 @@ next
   case (CombFwd cl c1 dst pars args p cont)
   show ?case using CombFwd(1,2) comb_fwd_ok by blast
 next
-  case (CallEnterStoreAgree cl s es dst pars args p cont)
-  note ces = CallEnterStoreAgree(1) and ce = CallEnterStoreAgree(2)
+  case (EnterAgree cl s es dst pars args p cont)
+  note ces = EnterAgree(1) and ce = EnterAgree(2)
   obtain dst' pars' args' p' cont' where
-      ce': "(cl, CallEdge dst' pars' args', FunctionEntry p', cont') \<in> calls (compile_prog Pi ps)"
+      ce': "(cl, CallEdge dst' pars' args', FunctionEntry p', cont')
+              \<in> calls (compile_prog Pi ps)"
     and es_eq: "es = call_enter gs (CallEdge dst' pars' args') s"
     using ces unfolding call_enter_store_def by blast
   have "CallEdge dst' pars' args' = CallEdge dst pars args"
@@ -543,13 +417,13 @@ next
   thus ?case using es_eq by simp
 next
   case (GammaRd d g')
-  show ?case by (simp add: gamma_dg_base_def)
+  show ?case by (simp add: ictx_gamma_def)
 next
-  case (ClassifyProved c d s)
-  show ?case using ClassifyProved(1,2) by (rule int_classify_check_proved)
+  case (ClProved c d s)
+  thus ?case by (rule int_classify_check_proved)
 next
-  case (ClassifyRefuted c d s)
-  show ?case using ClassifyRefuted(1,2) by (rule int_classify_check_refuted)
+  case (ClRefuted c d s)
+  thus ?case by (rule int_classify_check_refuted)
 qed
 
 lemmas ictx_analyse_result_def = ictx_adapter.analyse_result_def
@@ -566,6 +440,7 @@ text \<open>
 \<close>
 
 lemmas ictx_result_node_sound = ictx_adapter.analyse_result_node_sound
+lemmas ictx_activation_collect_sound = ictx_adapter.activation_collect_dg_sound
 
 lemma ictx_analyse_result_eq:
   "lookup_context ictx_adapter.analyse_result v ctx =
@@ -574,7 +449,6 @@ lemma ictx_analyse_result_eq:
              (canonicalize_lift is_bot_pred (locals (snd (ictx_sol mode is_bot_pred gs Pi ps) (Inl (v, ctx)))))
       else Unreachable)"
   unfolding ictx_adapter.lookup_context_analyse_result
-  apply (simp only: ictx_sigma_abs_def ictx_sigma_abs_exec_def o_apply fun_of_dg_st_gen_simps(1))
   by (cases "locals (snd (ictx_sol mode is_bot_pred gs Pi ps) (Inl (v, ctx)))")
      (simp_all add: exact normalize_lift_def)
 
@@ -597,10 +471,6 @@ lemma ictx_join_pp_st:
   by (rule TD_side_always_join_Interp.partial_post_solution[OF _ surjective_pairing])
 
 global_interpretation ictx_join: ictx_solved ictx_sol ictx_terminates
-  defines ictx_sigma_abs_exec = ictx_join.ictx_sigma_abs_exec
-      and ictx_sg_exec = ictx_join.ictx_sg_exec
-      and ictx_sigma_abs = ictx_join.ictx_sigma_abs
-      and ictx_sg = ictx_join.ictx_sg
   by unfold_locales (rule ictx_join_pp_st)
 
 lemmas ictx_result_node_sound = ictx_join.ictx_result_node_sound
@@ -659,10 +529,6 @@ lemma ictx_per_origin_pp_st:
   by (rule TD_side_per_origin_Interp.partial_post_solution[OF _ surjective_pairing])
 
 global_interpretation ictx_po: ictx_solved ictx_sol_per_origin ictx_terminates_per_origin
-  defines ictx_sigma_abs_exec_per_origin = ictx_po.ictx_sigma_abs_exec
-      and ictx_sg_exec_per_origin = ictx_po.ictx_sg_exec
-      and ictx_sigma_abs_per_origin = ictx_po.ictx_sigma_abs
-      and ictx_sg_per_origin = ictx_po.ictx_sg
   by unfold_locales (rule ictx_per_origin_pp_st)
 
 lemmas ictx_result_node_sound_per_origin = ictx_po.ictx_result_node_sound
@@ -722,10 +588,6 @@ lemma ictx_warrow_pp_st:
   by (rule TD_side_warrowing_apinis_Interp.partial_post_solution[OF _ surjective_pairing])
 
 global_interpretation ictx_wa: ictx_solved ictx_sol_warrow ictx_terminates_warrow
-  defines ictx_sigma_abs_exec_warrow = ictx_wa.ictx_sigma_abs_exec
-      and ictx_sg_exec_warrow = ictx_wa.ictx_sg_exec
-      and ictx_sigma_abs_warrow = ictx_wa.ictx_sigma_abs
-      and ictx_sg_warrow = ictx_wa.ictx_sg
   by unfold_locales (rule ictx_warrow_pp_st)
 
 lemmas ictx_result_node_sound_warrow = ictx_wa.ictx_result_node_sound
@@ -776,10 +638,6 @@ lemma ictx_wpo_pp_st:
   by (rule TD_side_warrowing_per_origin_Interp.partial_post_solution[OF _ surjective_pairing])
 
 global_interpretation ictx_wpo: ictx_solved ictx_sol_wpo ictx_terminates_wpo
-  defines ictx_sigma_abs_exec_wpo = ictx_wpo.ictx_sigma_abs_exec
-      and ictx_sg_exec_wpo = ictx_wpo.ictx_sg_exec
-      and ictx_sigma_abs_wpo = ictx_wpo.ictx_sigma_abs
-      and ictx_sg_wpo = ictx_wpo.ictx_sg
   by unfold_locales (rule ictx_wpo_pp_st)
 
 lemmas ictx_result_node_sound_wpo = ictx_wpo.ictx_result_node_sound

@@ -193,7 +193,7 @@ Spike before committing to it.
 | 2.3 | Delete `Exec_DG_Trees`, `Exec_DG_Generator`, `Exec_DG_Bridge`; the transport half of `DG_Base_Exec` (keep `routed_dg_domain_exec` and the `base_dg_spec_st_for_lifted` commute lemmas it cites); `Routed_Domain_Exec`; the owner-aware trees and classifier-parametric readback in `Exec_DG_Refines` (keep the `exec_dg_st` lattice instances and `fun_of_dg_st_for`). | open |
 | 2.4 | `routed_context_hetero` becomes `routed_context_base_hetero` at whichever carrier the instance chooses; delete the restated assumptions. Same for `unit_routed_context_hetero`. | open |
 | 2.5 | `Analysis_Result` holds the quotient; `normalize_point` becomes the single readback at publication, in `DG_Analysis_Adapter`. `Abstract_Checks` reads the published table. | landed in the generic form: `dg_analysis_adapter` extends `routed_context_base_hetero` and takes a readback `rd` with `gammaDG d g = gamma_state_lift (rd d)`; the four abstract-carrier sites pass `rd = id` |
-| 2.6 | Rewrite the twelve `*_Ctx_*_Sound` theories and the four CLI `*_Entry` theories to interpret at the quotient carrier. Expect the transport boilerplate that NEXT_STEPS records as the 23-suffix duplication to shrink. | in progress: Sign at unit context migrated (`Sign_Ctx_None_Sound`, `Sign_Checks`, `Sign_Entry`); the other nine instances follow the same three edits |
+| 2.6 | Rewrite the twelve `*_Ctx_*_Sound` theories and the four CLI `*_Entry` theories to interpret at the quotient carrier. Expect the transport boilerplate that NEXT_STEPS records as the 23-suffix duplication to shrink. | in progress: the four unit-context instances are migrated (Sign, Parity, Interval, Int, with their `*_Checks`/`*_Entry` consumers); the six contextual instances wait on 2.4, because `entry_state_routed_context` and `call_string_routed_context` still fix the carrier |
 | 2.7 | Move `routed_dg_domain_exec`, `Solver_Side_RG`, `Solver_Menu`, `Monovariant_Analysis_Result`, `DG_Coverage` to their final homes (`DG_Base`, Solver, Core); retire `Voblint_Exec` from `ROOTS`. | open |
 
 ### Phase 3 -- inside the theories
@@ -297,6 +297,26 @@ and mark it `superseded (see below)`.
   `*_sigma_abs`/`*_sg` section with `*_gamma`/`*_sg_st`, replace `*_pp_abs`
   with `*_pp_routed`, re-interpret `sound_dg_spec` and the routed locale at
   the executable spec, and hand the adapter `rd := map_lift readback`.
+- 2026-08-30: Parity, Interval and Int at unit context follow the recipe
+  unchanged. Interval and Int keep their solver-generic `ictx_solved`
+  locale; `pp_routed` and `sg_st` live in the locale, the four update-rule
+  `global_interpretation`s lose their `sigma_abs`/`sg` `defines`, and the
+  `*_Entry` theories read `snd (ictx_sol_* ...)` directly. Int's hand-rolled
+  `ictx_activation_collect_sound`, `ictx_sg_seed`, `ictx_sg_comb` and
+  `ictx_locals_ge_s0d` are deleted; the theorem name survives as a
+  re-export of the adapter's `activation_collect_dg_sound`, which is the
+  same statement at the executable carrier. Int's per-mode
+  `ictx_abs_spec_sound` moves above the `int_unit` context so
+  `ictx_sound_exec` can pull it back along the readback.
+- 2026-08-30: the six contextual instances cannot follow the recipe yet.
+  `entry_state_routed_context` and `call_string_routed_context` are stated
+  over `'a abs_state lifted` with `gamma_dg_base`/`gamma_state_lift` baked
+  in and sublocale `routed_context_hetero`; step 2.4 generalizes both to
+  `routed_context_base_hetero` at a carrier parameter first. Their Examples
+  consumers (`Example_Sign_DG_EntryState_Result_Regression`,
+  `Example_Interval_DG_EntryState_Collect`, `Example_Interval_Source_Ctx`,
+  `Example_Interval_DG_Ctx_Collect`, the four CallString examples) cite the
+  `*_sigma_abs`/`*_sg` names and move with them.
 - 2026-08-30: Core's layout inside `src/Core/` is `Equations/`, `DG/`,
   `Context/`, `Result/`; Domain, Solver and Exec are flat. Phase 0 steps
   0.1--0.6 and Phase 1 steps 1.4--1.7 are landed (I/Q-clean per theory for
@@ -322,3 +342,9 @@ and mark it `superseded (see below)`.
   framework.
 - The build abandons a session at its first failing theory. After each
   phase's first build, budget for the tail.
+- I/Q `write_file` with a line range uses the buffer's current numbering.
+  After any earlier edit in the same file, re-read the target lines before
+  the next range edit; a stale range silently replaces the wrong block
+  (an off-by-two dropped a `lemmas` re-export in `Interval_Ctx_None_Sound`
+  and surfaced two theories later as an undefined fact). Anchor on a unique
+  string with `str_replace` wherever one exists.

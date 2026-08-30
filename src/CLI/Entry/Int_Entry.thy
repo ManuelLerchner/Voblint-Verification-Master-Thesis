@@ -92,17 +92,16 @@ proof -
       \<Longrightarrow> (cl, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (compile_prog (prog_table p) (prog_procs p))
       \<Longrightarrow> (k, c1) \<in> fst (ictx_sol_warrow mode is_bot_pred pgs (prog_table p) (prog_procs p))"
     using comb_fwd_ok unfolding sol_eq[symmetric] cfg_eq[symmetric] .
-  have s0_sound: "cinit_stores pgs \<subseteq> gamma_dg_base
-        (map_lift (fun_of_resolved_st_q_for pgs) (Lifted cinit_int_dom_st))
-        (map_lift (fun_of_resolved_st_q_for pgs) (Bot::int_dom exec_dg_st lifted))"
-    using ictx_cinit_le_cinit_int_dom_st_warrow[OF solves' exact entry_cov' fwd_ok' call_fwd_ok' comb_fwd_ok']
-    by (simp add: gamma_dg_base_def)
+  have s0_sound: "cinit_stores pgs \<subseteq> ictx_gamma pgs (Lifted cinit_int_dom_st) Bot"
+    by (rule ictx_cinit_le_cinit_int_dom_st_warrow[OF solves' exact entry_cov' fwd_ok' call_fwd_ok'
+                                                     comb_fwd_ok'])
   have node_sound: "activation_collect pgs enterc_unit ()
         (compile_prog (prog_table p) (prog_procs p)) (cinit_stores pgs) v ()
       \<subseteq> \<lbrakk>case lookup_context
               (dg_analysis_adapter.analyse_result
-                 (ictx_sigma_abs_warrow mode is_bot_pred pgs (prog_table p) (prog_procs p))
-                 (fst (ictx_sol_warrow mode is_bot_pred pgs (prog_table p) (prog_procs p))) id)
+                 (snd (ictx_sol_warrow mode is_bot_pred pgs (prog_table p) (prog_procs p)))
+                 (fst (ictx_sol_warrow mode is_bot_pred pgs (prog_table p) (prog_procs p)))
+                 (map_lift (fun_of_resolved_st_q_for pgs)))
               v () of
             Unreachable \<Rightarrow> bot | Reachable st \<Rightarrow> st\<rbrakk>"
     by (rule ictx_result_node_sound_warrow
@@ -121,8 +120,9 @@ proof -
     by simp
   have adapter_eq0: "lookup_context
           (dg_analysis_adapter.analyse_result
-             (ictx_sigma_abs_warrow mode is_bot_pred pgs (prog_table p) (prog_procs p))
-             (fst (ictx_sol_warrow mode is_bot_pred pgs (prog_table p) (prog_procs p))) id)
+             (snd (ictx_sol_warrow mode is_bot_pred pgs (prog_table p) (prog_procs p)))
+             (fst (ictx_sol_warrow mode is_bot_pred pgs (prog_table p) (prog_procs p)))
+             (map_lift (fun_of_resolved_st_q_for pgs)))
           v ()
       = (if (v, ()) \<in> fst (ictx_sol_warrow mode is_bot_pred pgs (prog_table p) (prog_procs p))
          then normalize_point pgs
@@ -138,8 +138,8 @@ proof -
          else Unreachable)
       = lookup_context
           (dg_analysis_adapter.analyse_result
-             (ictx_sigma_abs_warrow mode is_bot_pred pgs (prog_table p) (prog_procs p))
-             (fst (ictx_sol_prog_warrow mode pgs p)) id)
+             (snd (ictx_sol_prog_warrow mode pgs p))
+             (fst (ictx_sol_prog_warrow mode pgs p)) (map_lift (fun_of_resolved_st_q_for pgs)))
           v ()"
     using adapter_eq0[unfolded sol_eq[symmetric]]
     by (rule sym)
