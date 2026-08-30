@@ -98,9 +98,6 @@ fun parity_tf_st_for ::
          (aval_parity a (fun_of_resolved_st_q_for gs s))"
   | "parity_tf_st_for gs (EA_Check cnd) s = s"
 
-lemma parity_tf_st_for_reduces: "action_reduces (parity_tf_st_for gs)"
-  by unfold_locales (rule ext, simp)+
-
 theorem parity_tf_st_for_commute:
   "fun_of_resolved_st_q_for gs (parity_tf_st_for gs a s) =
    apply_tf (parity_tf_for gs) a (fun_of_resolved_st_q_for gs s)"

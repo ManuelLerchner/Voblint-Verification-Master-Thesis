@@ -31,7 +31,7 @@ definition unit_combine_step_env_placed ::
    'a abs_state => 'a abs_state \<times> 'a abs_state"
 where
   "unit_combine_step_env_placed gs keep_local publish_side ci dc de g =
-     (let res = combine_env_abs gs (dc \<squnion> g) (de \<squnion> g) in
+     (let res = combine_env gs (dc \<squnion> g) (de \<squnion> g) in
       (project_component publish_side res, project_component keep_local res))"
 
 
@@ -41,7 +41,7 @@ definition unit_combine_step_assign_placed ::
    'a abs_state \<times> 'a abs_state => 'a abs_state \<times> 'a abs_state"
 where
   "unit_combine_step_assign_placed keep_local publish_side ci de g merged =
-     (let res = combine_assign\<^sup># (ci_dst ci) ((de \<squnion> g) ret_var)
+     (let res = combine_assign (ci_dst ci) ((de \<squnion> g) ret_var)
          (fst merged \<squnion> snd merged)
       in (project_component publish_side res, project_component keep_local res))"
 
@@ -86,7 +86,7 @@ subsection \<open>The homogeneous analysis under an independent placement policy
 
 text \<open>
   \<open>unit_dg_spec_placed\<close> packages every D/G step through the raw lattice join
-  (\<open>d \<squnion> g\<close>) rather than \<^const>\<open>combine_env_abs\<close>'s ownership routing: with a
+  (\<open>d \<squnion> g\<close>) rather than \<^const>\<open>combine_env\<close>'s ownership routing: with a
   non-exclusive covering, a name can legitimately be tracked by both
   \<open>keep_local\<close> and \<open>publish_side\<close>, so there is no single owning component to
   route to, and the join is the only combinator that stays sound for every
@@ -124,12 +124,12 @@ text \<open>\<open>gamma_unit\<close> refines \<open>gamma_join\<close>: routing
   chain fixes described), so this is a one-way refinement, not an equivalence --
   \<open>gamma_join\<close> stays the sound target for \<^const>\<open>unit_dg_spec_placed\<close>'s non-exclusive
   covering, where no single component owns every name.\<close>
-lemma combine_env_abs_le_sup: "combine_env_abs gs sc se \<le> sc \<squnion> se"
-  by (auto simp: combine_env_abs_def le_fun_def)
+lemma combine_env_le_sup: "combine_env gs sc se \<le> sc \<squnion> se"
+  by (auto simp: combine_env_def le_fun_def)
 
 lemma gamma_unit_subset_gamma_join: "gamma_unit gs d g \<subseteq> gamma_join d g"
   unfolding gamma_unit_def gamma_join_def
-  by (rule gamma_state_mono[OF combine_env_abs_le_sup])
+  by (rule gamma_state_mono[OF combine_env_le_sup])
 
 lemma project_component_cover_sup:
   fixes sigma :: "'a::bounded_semilattice_sup_bot abs_state"
@@ -152,7 +152,7 @@ proof -
   have env_join:
     "fst (unit_combine_step_env_placed gs keep_local publish_side dst dc de g) \<squnion>
        snd (unit_combine_step_env_placed gs keep_local publish_side dst dc de g) =
-     combine_env_abs gs (dc \<squnion> g) (de \<squnion> g)"
+     combine_env gs (dc \<squnion> g) (de \<squnion> g)"
     unfolding unit_combine_step_env_placed_def
     by (simp add: Let_def project_component_cover_sup[OF cover])
   show ?thesis
@@ -185,7 +185,7 @@ lemma gamma_join_enter_sound_placed:
 proof -
   have sc': "s \<in> \<lbrakk>dc \<squnion> g\<rbrakk>" using gamma_joinD[OF sc] .
   have "call_enter gs (CallEdge dst pars args) s \<in> \<lbrakk>enter\<^sup># tf pars args (dc \<squnion> g)\<rbrakk>"
-    using sound_transfer_for.tf_sound_enter_forD[OF sound sc']
+    using sound_transfer_for.tf_sound_enter_for[OF sound sc']
     by (simp add: call_enter_CallEdge)
   then show ?thesis
     unfolding dgs_enter_unit_dg_spec_placed unit_step_placed_def gamma_join_def

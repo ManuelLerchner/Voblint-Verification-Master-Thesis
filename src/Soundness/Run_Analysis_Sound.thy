@@ -201,11 +201,10 @@ text \<open>Classifier-parametric transport, generic in \<open>gs\<close> throug
 
 lemma unit_dg_Hstep_for:
   assumes commute: "\<And>a s. fun_of_exec_dg_st_for gs (tf_st a s) = apply_tf tf a (fun_of_exec_dg_st_for gs s)"
-    and reduces: "action_reduces tf_st"
   shows "map_prod (fun_of_exec_dg_st_for gs) (fun_of_exec_dg_st_for gs)
              (dg_spec_step (unit_dg_spec_st_for gs tf_st enter_st) a d g)
            = dg_spec_step (unit_dg_spec_for gs tf) a (fun_of_exec_dg_st_for gs d) (fun_of_exec_dg_st_for gs g)"
-  unfolding dg_spec_step_unit_st_for[OF reduces] dg_spec_step_unit_for
+  unfolding dg_spec_step_unit_st_for dg_spec_step_unit_for
   by (rule unit_step_st_commute_for
         [where f_st = "tf_st a" and f_abs = "apply_tf tf a", OF commute])
 
@@ -273,8 +272,6 @@ locale unit_dg_exec_analysis =
       "\<And>xs es s.
         fun_of_exec_dg_st_for gs (enter_st xs es s) =
         enter\<^sup># tf xs es (fun_of_exec_dg_st_for gs s)"
-    and reduces:
-      "action_reduces tf_st"
     and solver_pps:
       "\<And>eqs x. solve_c eqs x \<noteq> None \<Longrightarrow>
         part_post_solution eqs x
@@ -315,7 +312,7 @@ proof -
   show ?thesis
     unfolding gamma_def eqs_def
     by (rule dg_exec_run_source_sound_for
-          [OF sds unit_dg_Hstep_for[OF tf_commute reduces]
+          [OF sds unit_dg_Hstep_for[OF tf_commute]
               unit_dg_Henter_for[OF enter_commute] unit_dg_Hcomb_for unit_dg_Hcont_for
               pp_st[unfolded eqs_def] wf cover[unfolded eqs_def]
               finI finC sound0 s0mem run])
@@ -344,7 +341,7 @@ proof -
   show ?thesis
     unfolding gamma_def eqs_def
     by (rule dg_exec_collect_sound_for
-          [OF sds unit_dg_Hstep_for[OF tf_commute reduces]
+          [OF sds unit_dg_Hstep_for[OF tf_commute]
               unit_dg_Henter_for[OF enter_commute] unit_dg_Hcomb_for unit_dg_Hcont_for
               pp_st[unfolded eqs_def] wf cover[unfolded eqs_def]
               finI finC sound0])

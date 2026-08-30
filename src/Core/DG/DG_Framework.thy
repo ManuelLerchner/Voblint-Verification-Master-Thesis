@@ -22,7 +22,7 @@ definition unit_step_for ::
    => 'a abs_state => 'a abs_state => 'a abs_state \<times> 'a abs_state"
 where
   "unit_step_for gs f d g =
-     (let res = f (combine_env_abs gs d g) in
+     (let res = f (combine_env gs d g) in
       (restrict_global_for gs res, restrict_local_for gs res))"
 
 subsection \<open>A structural-reachability unary step, alongside \<^const>\<open>unit_step_for\<close>\<close>
@@ -33,7 +33,7 @@ text \<open>
   analogue of the gap \<^theory>\<open>Voblint_Core.State_Restriction\<close>'s \<^const>\<open>res_edge\<close> closes
   for a single reassembled environment. \<^const>\<open>assemble_local_global\<close> itself is not the right reconstruction
   primitive here: its \<open>Lifted d, Lifted g\<close> case joins with \<open>\<squnion>\<close>, but \<^const>\<open>unit_step_for\<close>
-  reconstructs with \<^const>\<open>combine_env_abs\<close>, a per-variable selector (\<open>\<lambda>x. if gs x then g x
+  reconstructs with \<^const>\<open>combine_env\<close>, a per-variable selector (\<open>\<lambda>x. if gs x then g x
   else d x\<close>), not a join. \<open>assemble_env_abs\<close> below keeps \<^const>\<open>assemble_local_global\<close>'s
   reachability rule (local \<^const>\<open>Bot\<close> dominates, global \<^const>\<open>Bot\<close> is neutral) while
   reconstructing content the way \<^const>\<open>unit_step_for\<close> actually does. Staged standalone ahead
@@ -42,11 +42,11 @@ text \<open>
 \<close>
 
 text \<open>
-  No separate \<open>g = Bot\<close> shortcut clause: \<^const>\<open>combine_env_abs\<close>'s neutral element at an
-  unpublished global is \<open>bot\<close>, not an unconditional identity on \<open>d\<close> -- \<open>combine_env_abs gs d
+  No separate \<open>g = Bot\<close> shortcut clause: \<^const>\<open>combine_env\<close>'s neutral element at an
+  unpublished global is \<open>bot\<close>, not an unconditional identity on \<open>d\<close> -- \<open>combine_env gs d
   bot = d\<close> only when \<open>d\<close> is already \<open>gs\<close>-local-canonical (\<open>restrict_local_for gs d = d\<close>),
   which \<^const>\<open>restrict_local_for\<close>'s own definition (\<open>\<lambda>x. if gs x then bot else \<sigma> x\<close>) shows
-  equals \<open>combine_env_abs gs d bot\<close> unconditionally. Always routing through \<^const>\<open>combine_env_abs\<close>
+  equals \<open>combine_env gs d bot\<close> unconditionally. Always routing through \<^const>\<open>combine_env\<close>
   keeps this function correct for every \<open>d\<close>, canonical or not, rather than silently assuming
   canonicality.
 \<close>
@@ -57,7 +57,7 @@ fun assemble_env_abs ::
 where
   "assemble_env_abs gs Bot g = Bot"
 | "assemble_env_abs gs (Lifted d) g =
-     Lifted (combine_env_abs gs d (case g of Bot \<Rightarrow> bot | Lifted g0 \<Rightarrow> g0))"
+     Lifted (combine_env gs d (case g of Bot \<Rightarrow> bot | Lifted g0 \<Rightarrow> g0))"
 
 definition unit_step_for_lifted ::
   "(vname => bool)
@@ -76,12 +76,12 @@ lemma unit_step_for_lifted_Bot_dominates_local [simp]:
 
 lemma unit_step_for_lifted_global_bot:
   "unit_step_for_lifted gs is_bot_pred f (Lifted d) Bot =
-     (let res = transfer_lift is_bot_pred f (Lifted (combine_env_abs gs d bot))
+     (let res = transfer_lift is_bot_pred f (Lifted (combine_env gs d bot))
       in (map_lift (restrict_global_for gs) res, map_lift (restrict_local_for gs) res))"
   unfolding unit_step_for_lifted_def by simp
 
 lemma unit_step_for_lifted_agrees:
-  assumes "\<not> is_bot_pred (f (combine_env_abs gs d g))"
+  assumes "\<not> is_bot_pred (f (combine_env gs d g))"
   shows "unit_step_for_lifted gs is_bot_pred f (Lifted d) (Lifted g) =
            (Lifted (fst (unit_step_for gs f d g)), Lifted (snd (unit_step_for gs f d g)))"
   using assms
@@ -89,7 +89,7 @@ lemma unit_step_for_lifted_agrees:
   by (simp add: Let_def)
 
 lemma unit_step_for_lifted_collapses_bot:
-  assumes "is_bot_pred (f (combine_env_abs gs d g))"
+  assumes "is_bot_pred (f (combine_env gs d g))"
   shows "unit_step_for_lifted gs is_bot_pred f (Lifted d) (Lifted g) = (Bot, Bot)"
   using assms
   unfolding unit_step_for_lifted_def
@@ -283,7 +283,7 @@ theorem dg_edge_tree_side_pure_G:
   "locals (sides_of_rhs (dg_edge_tree step u) \<tau> (Inr ())) = bot"
   by (simp add: sides_dg_edge_tree_Inr)
 
-subsection \<open>Side-free edge contribution, for buffered keyed generation (issue #121, keyed)\<close>
+subsection \<open>Side-free edge contribution, for buffered keyed generation\<close>
 
 text \<open>
   \<open>dg_edge_tree\<close> publishes its \<open>G\<close> contribution as soon as it is evaluated
@@ -292,7 +292,7 @@ text \<open>
   each one's \<open>Side\<close> is published at a different moment within the same RHS evaluation:
   the vendored solver's warrowing/APINIS update rule gates convergence per \<^emph>\<open>origin\<close>, so
   repeated writes to the same key from the same origin can destabilize the equation's own
-  dependency and never converge (Voblint issue #121).
+  dependency and never converge.
 
   \<open>dg_edge_contribution_tree\<close> is the Side-free analogue: it answers the \<^emph>\<open>unsplit\<close>
   \<open>(G, D)\<close> result as one \<open>dg_state\<close>, publishing nothing. A caller folds several
@@ -550,7 +550,7 @@ text \<open>
   destination, and packages the two-typed \<open>('dg, 'dl)\<close> answer).  \<open>'dl\<close>/\<open>'dg\<close>
   stay fully opaque -- the framework does not assume either field can share
   a generic assign the way the flat layer's \<open>abs_state\<close>-typed
-  \<open>combine_assign\<^sup>#\<close> can, so both halves are analysis-supplied.\<close>
+  \<open>combine_assign\<close> can, so both halves are analysis-supplied.\<close>
 
 record ('dl, 'dg) dg_spec =
   dgs_skip       :: "'dl \<Rightarrow> 'dg \<Rightarrow> 'dg \<times> 'dl"
@@ -690,7 +690,7 @@ definition unit_combine_step_assign_for ::
    => 'a abs_state \<times> 'a abs_state"
 where
   "unit_combine_step_assign_for gs ci de g merged =
-     (let res = combine_assign\<^sup># (ci_dst ci) (de ret_var)
+     (let res = combine_assign (ci_dst ci) (de ret_var)
          (fst merged \<squnion> snd merged)
       in (restrict_global_for gs res, restrict_local_for gs res))"
 
@@ -700,7 +700,7 @@ definition unit_combine_step_env_for ::
    'a::bounded_semilattice_sup_bot abs_state => 'a abs_state
    => 'a abs_state => 'a abs_state \<times> 'a abs_state" where
   "unit_combine_step_env_for gs ci dc de g =
-     (let m = combine_env_abs gs dc g
+     (let m = combine_env gs dc g
       in (restrict_global_for gs m, restrict_local_for gs m))"
 
 text \<open>
@@ -715,7 +715,7 @@ text \<open>
 lemma unit_combine_step_env_for_join:
   "fst (unit_combine_step_env_for gs ci dc de g)
      \<squnion> snd (unit_combine_step_env_for gs ci dc de g)
-   = combine_env_abs gs dc g"
+   = combine_env gs dc g"
   unfolding unit_combine_step_env_for_def
   by (simp add: Let_def restrict_global_for_local_join)
 
@@ -728,9 +728,9 @@ lemma unit_combine_step_assign_for_mono:
     and "snd (unit_combine_step_assign_for gs ci de1 g m1)
            \<le> snd (unit_combine_step_assign_for gs ci de2 g m2)"
 proof -
-  have res: "combine_assign\<^sup># (ci_dst ci) (de1 ret_var) (fst m1 \<squnion> snd m1)
-               \<le> combine_assign\<^sup># (ci_dst ci) (de2 ret_var) (fst m2 \<squnion> snd m2)"
-    by (rule combine_assign_abs_mono[OF le_funD[OF de] m])
+  have res: "combine_assign (ci_dst ci) (de1 ret_var) (fst m1 \<squnion> snd m1)
+               \<le> combine_assign (ci_dst ci) (de2 ret_var) (fst m2 \<squnion> snd m2)"
+    by (rule combine_assign_mono[OF le_funD[OF de] m])
   show "fst (unit_combine_step_assign_for gs ci de1 g m1)
           \<le> fst (unit_combine_step_assign_for gs ci de2 g m2)"
     unfolding unit_combine_step_assign_for_def Let_def fst_conv
@@ -783,8 +783,8 @@ lemma unit_combine_step_env_for_lifted_Bot_dominates_local [simp]:
 
 lemma unit_combine_step_env_for_lifted_global_bot:
   "unit_combine_step_env_for_lifted gs ci (Lifted d) Bot =
-     (Lifted (restrict_global_for gs (combine_env_abs gs d bot)),
-      Lifted (restrict_local_for gs (combine_env_abs gs d bot)))"
+     (Lifted (restrict_global_for gs (combine_env gs d bot)),
+      Lifted (restrict_local_for gs (combine_env gs d bot)))"
   unfolding unit_combine_step_env_for_lifted_def by simp
 
 lemma unit_combine_step_env_for_lifted_agrees:
@@ -805,7 +805,7 @@ where
   "unit_combine_step_assign_for_lifted gs ci is_bot_pred de merged =
      (let joined = fst merged \<squnion> snd merged;
           res = transfer_lift2 is_bot_pred
-                  (\<lambda>de0 env0. combine_assign\<^sup># (ci_dst ci) (de0 ret_var) env0) de joined
+                  (\<lambda>de0 env0. combine_assign (ci_dst ci) (de0 ret_var) env0) de joined
       in (map_lift (restrict_global_for gs) res, map_lift (restrict_local_for gs) res))"
 
 lemma unit_combine_step_assign_for_lifted_de_bot [simp]:
@@ -817,7 +817,7 @@ lemma unit_combine_step_assign_for_lifted_merged_bot [simp]:
   unfolding unit_combine_step_assign_for_lifted_def by simp
 
 lemma unit_combine_step_assign_for_lifted_agrees:
-  assumes "\<not> is_bot_pred (combine_assign\<^sup># (ci_dst ci) (de0 ret_var) (env0a \<squnion> env0b))"
+  assumes "\<not> is_bot_pred (combine_assign (ci_dst ci) (de0 ret_var) (env0a \<squnion> env0b))"
   shows "unit_combine_step_assign_for_lifted gs ci is_bot_pred (Lifted de0) (Lifted env0a, Lifted env0b) =
            (Lifted (fst (unit_combine_step_assign_for gs ci de0 g (env0a, env0b))),
             Lifted (snd (unit_combine_step_assign_for gs ci de0 g (env0a, env0b))))"
@@ -826,7 +826,7 @@ lemma unit_combine_step_assign_for_lifted_agrees:
   by (simp add: Let_def)
 
 lemma unit_combine_step_assign_for_lifted_collapses_bot:
-  assumes "is_bot_pred (combine_assign\<^sup># (ci_dst ci) (de0 ret_var) (env0a \<squnion> env0b))"
+  assumes "is_bot_pred (combine_assign (ci_dst ci) (de0 ret_var) (env0a \<squnion> env0b))"
   shows "unit_combine_step_assign_for_lifted gs ci is_bot_pred (Lifted de0) (Lifted env0a, Lifted env0b) = (Bot, Bot)"
   using assms
   unfolding unit_combine_step_assign_for_lifted_def
@@ -854,12 +854,12 @@ text \<open>Unlike the plain collecting semantics' \<^const>\<open>combine_colle
   D/G-split combine cannot read the return value and the global effects from the
   same argument: the return slot is a local name owned by the callee's exit
   state \<open>de\<close>, while every global name is owned by the freshly-queried \<open>g\<close>, not
-  by \<open>de\<close>'s own (locally-restricted) copy of it. \<^const>\<open>combine_env_abs\<close> still
+  by \<open>de\<close>'s own (locally-restricted) copy of it. \<^const>\<open>combine_env\<close> still
   supplies the ownership routing for the non-return names; \<open>de ret_var\<close> is
   read directly instead of routing it through that same combine.\<close>
 lemma dgs_combine_unit_dg_spec_for:
   "dgs_combine (unit_dg_spec_for gs tf) ci dcont de g =
-     (let res = combine_assign\<^sup># (ci_dst ci) (de ret_var) (combine_env_abs gs dcont g)
+     (let res = combine_assign (ci_dst ci) (de ret_var) (combine_env gs dcont g)
       in (restrict_global_for gs res, restrict_local_for gs res))"
   unfolding dgs_combine_def unit_dg_spec_for_def
     unit_combine_step_assign_for_def Let_def
@@ -933,7 +933,7 @@ text \<open>Gate 2 -- whole-record agreement on reachable inputs whose transfer 
   wrapped in \<^const>\<open>Lifted\<close>.\<close>
 
 lemma dg_spec_step_unit_for_lifted_agrees:
-  assumes "\<not> is_bot_pred (apply_tf tf a (combine_env_abs gs d g))"
+  assumes "\<not> is_bot_pred (apply_tf tf a (combine_env gs d g))"
   shows "dg_spec_step (unit_dg_spec_for_lifted gs is_bot_pred tf) a (Lifted d) (Lifted g) =
            (Lifted (fst (dg_spec_step (unit_dg_spec_for gs tf) a d g)),
             Lifted (snd (dg_spec_step (unit_dg_spec_for gs tf) a d g)))"
@@ -942,13 +942,13 @@ lemma dg_spec_step_unit_for_lifted_agrees:
   by (rule unit_step_for_lifted_agrees)
 
 lemma dgs_combine_unit_dg_spec_for_lifted_agrees:
-  assumes "\<not> is_bot_pred (combine_assign\<^sup># (ci_dst ci) (de ret_var) (combine_env_abs gs dc g))"
+  assumes "\<not> is_bot_pred (combine_assign (ci_dst ci) (de ret_var) (combine_env gs dc g))"
   shows "dgs_combine (unit_dg_spec_for_lifted gs is_bot_pred tf) ci (Lifted dc) (Lifted de) (Lifted g) =
            (Lifted (fst (dgs_combine (unit_dg_spec_for gs tf) ci dc de g)),
             Lifted (snd (dgs_combine (unit_dg_spec_for gs tf) ci dc de g)))"
 proof -
-  have joined: "restrict_global_for gs (combine_env_abs gs dc g) \<squnion> restrict_local_for gs (combine_env_abs gs dc g)
-                  = combine_env_abs gs dc g"
+  have joined: "restrict_global_for gs (combine_env gs dc g) \<squnion> restrict_local_for gs (combine_env gs dc g)
+                  = combine_env gs dc g"
     by (rule restrict_global_for_local_join)
   show ?thesis
     unfolding dgs_combine_unit_dg_spec_for_lifted dgs_combine_unit_dg_spec_for
@@ -964,7 +964,7 @@ text \<open>Gate 3 -- whole-record strictness: both the unary and the return/com
   construction never inspects \<open>de\<close>).\<close>
 
 lemma dg_spec_step_unit_for_lifted_collapses_bot:
-  assumes "is_bot_pred (apply_tf tf a (combine_env_abs gs d g))"
+  assumes "is_bot_pred (apply_tf tf a (combine_env gs d g))"
   shows "dg_spec_step (unit_dg_spec_for_lifted gs is_bot_pred tf) a (Lifted d) (Lifted g) = (Bot, Bot)"
   using assms
   unfolding dg_spec_step_unit_for_lifted

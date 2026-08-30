@@ -443,9 +443,6 @@ qed
 
 subsection \<open>Unscoped executable/abstract correspondence, generic in the classifier\<close>
 
-lemma ivl_tf_st_for_reduces: "action_reduces (ivl_tf_st_for gs)"
-  by unfold_locales (rule ext, simp)+
-
 lemma ivl_tf_st_for_commute:
   "fun_of_resolved_st_q_for gs (ivl_tf_st_for gs a s) =
    apply_tf (ivl_tf_for gs) a (fun_of_resolved_st_q_for gs s)"

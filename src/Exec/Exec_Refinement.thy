@@ -28,18 +28,6 @@ lemma fun_of_resolved_st_q_for_restrict_global_abs [simp]:
   unfolding restrict_global_for_def
   by (rule ext) simp
 
-lemma fun_of_resolved_st_q_for_combine_env_abs [simp]:
-  "fun_of_resolved_st_q_for gs (combine_resolved_st_q sc se) =
-     combine_env_abs gs (fun_of_resolved_st_q_for gs sc)
-       (fun_of_resolved_st_q_for gs se)"
-proof (rule ext)
-  fix x
-  show "fun_of_resolved_st_q_for gs (combine_resolved_st_q sc se) x =
-      combine_env_abs gs (fun_of_resolved_st_q_for gs sc)
-        (fun_of_resolved_st_q_for gs se) x"
-    by (cases "gs x"; simp add: combine_env_abs_def)
-qed
-
 text \<open>The converse recombination: a local projection joined with a disjoint global
   projection is exactly the routed combine. Left bare (not \<open>[simp]\<close>) since it would
   compete with \<open>restrict_local_resolved_q_split\<close>/\<open>restrict_global_resolved_q_split\<close>

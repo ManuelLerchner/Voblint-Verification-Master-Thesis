@@ -13,9 +13,9 @@ text \<open>
   it and never reads from it. \<open>gs\<close> appears only inside \<open>tf\<close>'s own
   \<open>tf_enter\<close>/\<open>tf_combine_env\<close> fields, i.e. only for the VIMP call-boundary
   scoping rule (globals persist, locals reset/bind formals) that
-  \<^const>\<open>combine_env_abs\<close> and \<^const>\<open>enter_frame_D\<close> already implement; no
+  \<^const>\<open>combine_env\<close> and \<^const>\<open>enter_frame_D\<close> already implement; no
   \<^const>\<open>restrict_local_for\<close>, \<^const>\<open>restrict_global_for\<close>, or
-  \<^const>\<open>combine_env_abs\<close>-style reconstruction against \<open>'g\<close> occurs anywhere
+  \<^const>\<open>combine_env\<close>-style reconstruction against \<open>'g\<close> occurs anywhere
   in this record.
 
   \<open>dgs_caller_cont\<close> is the identity: the Base carrier holds no relation between
@@ -88,7 +88,7 @@ subsection \<open>Bot propagation\<close>
 text \<open>
   A dead local unknown dominates every ordinary field before \<open>tf\<close> ever runs --
   \<^const>\<open>transfer_lift\<close>'s own \<^const>\<open>bind_lift\<close> short-circuit, with no
-  \<^const>\<open>combine_env_abs\<close>/\<^const>\<open>assemble_env_abs\<close> reconstruction step to reason
+  \<^const>\<open>combine_env\<close>/\<^const>\<open>assemble_env_abs\<close> reconstruction step to reason
   about first.
 \<close>
 
@@ -226,7 +226,7 @@ proof -
   obtain sigma_c where dc_eq: "dc = Lifted sigma_c" and sc': "s \<in> \<lbrakk>sigma_c\<rbrakk>"
     using sc unfolding gamma_dg_base_def by (cases dc) auto
   have base: "call_enter gs (CallEdge dst pars args) s \<in> \<lbrakk>enter\<^sup># tf pars args sigma_c\<rbrakk>"
-    using sound_transfer_for.tf_sound_enter_forD[OF tf_sound sc']
+    using sound_transfer_for.tf_sound_enter_for[OF tf_sound sc']
     by (simp add: call_enter_CallEdge)
   show ?thesis
   proof (cases "is_bot_pred (enter\<^sup># tf pars args sigma_c)")

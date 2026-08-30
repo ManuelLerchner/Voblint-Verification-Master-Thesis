@@ -103,9 +103,6 @@ fun int_tf_st_never_for ::
          (aval_int_dom Refine_Never a (fun_of_resolved_st_q_for gs s))"
   | "int_tf_st_never_for gs (EA_Check cnd) s = s"
 
-lemma int_tf_st_never_for_reduces: "action_reduces (int_tf_st_never_for gs)"
-  by unfold_locales (rule ext, simp)+
-
 theorem int_tf_st_never_for_commute:
   "fun_of_resolved_st_q_for gs (int_tf_st_never_for gs a s) =
    apply_tf (int_tf_never_for gs) a (fun_of_resolved_st_q_for gs s)"
@@ -214,9 +211,6 @@ fun int_tf_st_once_for ::
          (aval_int_dom Refine_Once a (fun_of_resolved_st_q_for gs s))"
   | "int_tf_st_once_for gs (EA_Check cnd) s = s"
 
-lemma int_tf_st_once_for_reduces: "action_reduces (int_tf_st_once_for gs)"
-  by unfold_locales (rule ext, simp)+
-
 theorem int_tf_st_once_for_commute:
   "fun_of_resolved_st_q_for gs (int_tf_st_once_for gs a s) =
    apply_tf (int_tf_once_for gs) a (fun_of_resolved_st_q_for gs s)"
@@ -324,9 +318,6 @@ fun int_tf_st_fixpoint_for ::
        update_resolved_st_q s (location_of gs ret_var)
          (aval_int_dom Refine_Fixpoint a (fun_of_resolved_st_q_for gs s))"
   | "int_tf_st_fixpoint_for gs (EA_Check cnd) s = s"
-
-lemma int_tf_st_fixpoint_for_reduces: "action_reduces (int_tf_st_fixpoint_for gs)"
-  by unfold_locales (rule ext, simp)+
 
 theorem int_tf_st_fixpoint_for_commute:
   "fun_of_resolved_st_q_for gs (int_tf_st_fixpoint_for gs a s) =

@@ -14,7 +14,7 @@ text \<open>
   \<^const>\<open>combine_assign_resolved_q\<close> (unlike \<^const>\<open>combine_collect_abs\<close> on the
   mathematical side) does not itself select locals-from-caller/globals-from-callee
   -- that selection is exactly what \<^const>\<open>combine_resolved_st_q\<close> already computes
-  (\<open>fun_of_resolved_st_q_for_combine\<close>: it agrees with \<^const>\<open>combine_env_abs\<close> under
+  (\<open>fun_of_resolved_st_q_for_combine\<close>: it agrees with \<^const>\<open>combine_env\<close> under
   the executable/mathematical correspondence), so the env stage must compute it
   explicitly here before the assign stage writes the return value.
 \<close>

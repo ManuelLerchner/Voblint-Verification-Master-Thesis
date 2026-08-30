@@ -24,11 +24,11 @@ text \<open>The ordinary incoming transitions of a node: an intra edge is a tota
 definition intra_predecessors :: "cfg \<Rightarrow> cfg_node \<Rightarrow> (cfg_node \<times> edge_action) set" where
   "intra_predecessors g v = {(u, a). (u, a, v) \<in> intra g}"
 
-lemma intra_predecessors_iff:
+lemma intra_predecessors_iff [simp]:
   "(u, a) \<in> intra_predecessors g v \<longleftrightarrow> (u, a, v) \<in> intra g"
   by (simp add: intra_predecessors_def)
 
-lemma finite_intra_predecessors:
+lemma finite_intra_predecessors [intro]:
   assumes "finite (intra g)"
   shows "finite (intra_predecessors g v)"
 proof -
@@ -48,11 +48,11 @@ text \<open>The call tuples whose callee entry is the queried node \<open>v\<clo
 definition entry_calls :: "cfg \<Rightarrow> cfg_node \<Rightarrow> (cfg_node \<times> call_action) set" where
   "entry_calls g v = {(c, ca). \<exists>k. (c, ca, v, k) \<in> calls g}"
 
-lemma entry_calls_iff:
+lemma entry_calls_iff [simp]:
   "(c, ca) \<in> entry_calls g v \<longleftrightarrow> (\<exists>k. (c, ca, v, k) \<in> calls g)"
   by (simp add: entry_calls_def)
 
-lemma finite_entry_calls:
+lemma finite_entry_calls [intro]:
   assumes "finite (calls g)"
   shows "finite (entry_calls g v)"
 proof -
@@ -83,13 +83,13 @@ definition return_calls ::
      {(c, call_info_of ca p, FunctionResult p) | c ca p.
         (c, ca, FunctionEntry p, v) \<in> calls g}"
 
-lemma return_calls_iff:
+lemma return_calls_iff [simp]:
   "(c, ci, r) \<in> return_calls g v
      \<longleftrightarrow> (\<exists>ca p. r = FunctionResult p \<and> ci = call_info_of ca p
              \<and> (c, ca, FunctionEntry p, v) \<in> calls g)"
   by (auto simp: return_calls_def)
 
-lemma finite_return_calls:
+lemma finite_return_calls [intro]:
   assumes "finite (calls g)"
   shows "finite (return_calls g v)"
 proof -
@@ -160,12 +160,12 @@ definition return_call_actions ::
   "return_call_actions g v =
      {(c, ca, FunctionResult p) | c ca p. (c, ca, FunctionEntry p, v) \<in> calls g}"
 
-lemma return_call_actions_iff:
+lemma return_call_actions_iff [simp]:
   "(c, ca, r) \<in> return_call_actions g v
      \<longleftrightarrow> (\<exists>p. r = FunctionResult p \<and> (c, ca, FunctionEntry p, v) \<in> calls g)"
   by (auto simp: return_call_actions_def)
 
-lemma finite_return_call_actions:
+lemma finite_return_call_actions [intro]:
   assumes "finite (calls g)"
   shows "finite (return_call_actions g v)"
 proof -
@@ -342,11 +342,11 @@ definition call_successors ::
     "cfg \<Rightarrow> cfg_node \<Rightarrow> (cfg_node \<times> call_action \<times> cfg_node) set" where
   "call_successors g v = {(ce, ca, k). (v, ca, ce, k) \<in> calls g}"
 
-lemma call_successors_iff:
+lemma call_successors_iff [simp]:
   "(ce, ca, k) \<in> call_successors g v \<longleftrightarrow> (v, ca, ce, k) \<in> calls g"
   by (simp add: call_successors_def)
 
-lemma finite_call_successors:
+lemma finite_call_successors [intro]:
   assumes "finite (calls g)"
   shows "finite (call_successors g v)"
 proof -

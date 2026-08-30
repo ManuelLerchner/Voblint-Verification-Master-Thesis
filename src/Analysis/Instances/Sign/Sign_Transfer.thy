@@ -93,7 +93,7 @@ subsection \<open>Classifier-parametric transfer\<close>
 
 text \<open>
   Entry and combine are the only fields that consult a classifier (inside
-  \<^const>\<open>enter_frame_D\<close> and \<^const>\<open>combine_env_abs\<close>); assignment and guard
+  \<^const>\<open>enter_frame_D\<close> and \<^const>\<open>combine_env\<close>); assignment and guard
   transfer never do, so the bundled transfer function is parametric in the
   classifier throughout (mirroring \<open>ivl_tf_for\<close> for the interval domain).
 \<close>
@@ -140,7 +140,7 @@ definition sign_tf_for :: "(vname => bool) => sign domain_transfer" where
                        tf_enter   = enter_sign_for gs,
                        tf_event   = event_sign,
                        tf_caller_cont = (\<lambda>_ \<sigma>. \<sigma>),
-                       tf_combine_env = (\<lambda>_. combine_env_abs gs) |)"
+                       tf_combine_env = (\<lambda>_. combine_env gs) |)"
 
 lemma sign_is_sound_transfer_for: "sound_transfer_for gs (sign_tf_for gs)"
   unfolding sign_tf_for_def

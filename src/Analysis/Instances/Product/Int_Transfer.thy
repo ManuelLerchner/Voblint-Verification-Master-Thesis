@@ -377,7 +377,7 @@ definition int_tf_never_for :: "(vname => bool) => int_dom domain_transfer" wher
                             tf_enter   = enter_int_dom_for Refine_Never gs,
                             tf_event   = event_int_dom,
                             tf_caller_cont = (\<lambda>_ \<sigma>. \<sigma>),
-                            tf_combine_env = (\<lambda>_. combine_env_abs gs) |)"
+                            tf_combine_env = (\<lambda>_. combine_env gs) |)"
 
 definition int_tf_once_for :: "(vname => bool) => int_dom domain_transfer" where
   "int_tf_once_for gs = (| tf_assign  = assign_int_dom Refine_Once,
@@ -389,7 +389,7 @@ definition int_tf_once_for :: "(vname => bool) => int_dom domain_transfer" where
                            tf_enter   = enter_int_dom_for Refine_Once gs,
                            tf_event   = event_int_dom,
                            tf_caller_cont = (\<lambda>_ \<sigma>. \<sigma>),
-                           tf_combine_env = (\<lambda>_. combine_env_abs gs) |)"
+                           tf_combine_env = (\<lambda>_. combine_env gs) |)"
 
 definition int_tf_fixpoint_for :: "(vname => bool) => int_dom domain_transfer" where
   "int_tf_fixpoint_for gs = (| tf_assign  = assign_int_dom Refine_Fixpoint,
@@ -401,7 +401,7 @@ definition int_tf_fixpoint_for :: "(vname => bool) => int_dom domain_transfer" w
                                tf_enter   = enter_int_dom_for Refine_Fixpoint gs,
                                tf_event   = event_int_dom,
                                tf_caller_cont = (\<lambda>_ \<sigma>. \<sigma>),
-                               tf_combine_env = (\<lambda>_. combine_env_abs gs) |)"
+                               tf_combine_env = (\<lambda>_. combine_env gs) |)"
 
 lemma int_never_is_sound_transfer_for: "sound_transfer_for gs (int_tf_never_for gs)"
   unfolding int_tf_never_for_def

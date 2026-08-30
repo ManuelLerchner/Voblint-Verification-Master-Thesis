@@ -94,8 +94,7 @@ text \<open>Classifier-parametric commutation mirrors, generic in \<open>gs\<clo
   this file, generic in the classifier rather than fixed to a name-based convention.\<close>
 
 lemmas ivl_Hstep_for =
-  unit_dg_Hstep_for[OF ivl_tf_st_for_commute[folded fun_of_exec_dg_st_for_def]
-    ivl_tf_st_for_reduces]
+  unit_dg_Hstep_for[OF ivl_tf_st_for_commute[folded fun_of_exec_dg_st_for_def]]
 
 lemmas ivl_Henter_for =
   unit_dg_Henter_for[OF ivl_enter_st_for_commute[folded fun_of_exec_dg_st_for_def]]
@@ -182,13 +181,13 @@ lemma twice_vars_cover: "vars_cover twice_cfg (fst twice_sol)"
             twice_pp_st[unfolded twice_eqs_def]])
 lemma twice_sound0:
   "cinit_stores twice_gs \<subseteq>
-     \<lbrakk>combine_env_abs twice_gs (fun_of_exec_dg_st_for twice_gs cinit_ivl_st)
+     \<lbrakk>combine_env twice_gs (fun_of_exec_dg_st_for twice_gs cinit_ivl_st)
         (fun_of_exec_dg_st_for twice_gs (restrict_global_resolved_q cinit_ivl_st))\<rbrakk>"
 proof -
-  have "combine_env_abs twice_gs (fun_of_exec_dg_st_for twice_gs cinit_ivl_st)
+  have "combine_env twice_gs (fun_of_exec_dg_st_for twice_gs cinit_ivl_st)
           (fun_of_exec_dg_st_for twice_gs (restrict_global_resolved_q cinit_ivl_st))
         = fun_of_exec_dg_st_for twice_gs cinit_ivl_st"
-    by (simp add: combine_env_abs_def fun_of_exec_dg_st_for_def fun_of_st_cinit_ivl_st_for
+    by (simp add: combine_env_def fun_of_exec_dg_st_for_def fun_of_st_cinit_ivl_st_for
                   restrict_global_for_def declared_global_def fun_eq_iff)
   thus ?thesis
     by (auto simp: cinit_stores_def gamma_state_def fun_of_exec_dg_st_for_def fun_of_st_cinit_ivl_st_for)
@@ -252,9 +251,6 @@ proof -
              twice_transfer.tf_sound_enter_for twice_transfer.tf_sound_combine_env_for
              ivl_tf_st_for_commute[folded fun_of_exec_dg_st_for_def]
              ivl_enter_st_for_commute[folded fun_of_exec_dg_st_for_def]
-             action_reduces.ret_none[OF ivl_tf_st_for_reduces]
-             action_reduces.ret_some[OF ivl_tf_st_for_reduces]
-             action_reduces.check[OF ivl_tf_st_for_reduces]
              TD_side_warrowing_apinis_Interp.part_post_solution_of_solve_c)+
 qed
 

@@ -108,7 +108,7 @@ subsection \<open>Classifier-parametric transfer\<close>
 
 text \<open>
   Entry and combine are the only fields that consult a classifier (inside
-  \<^const>\<open>enter_frame_D\<close> and \<^const>\<open>combine_env_abs\<close>); assignment and guard
+  \<^const>\<open>enter_frame_D\<close> and \<^const>\<open>combine_env\<close>); assignment and guard
   transfer never do, so the bundled transfer function is parametric in the
   classifier throughout (mirroring \<open>sign_tf_for\<close> for the sign domain).
 \<close>
@@ -155,7 +155,7 @@ definition parity_tf_for :: "(vname => bool) => parity domain_transfer" where
                          tf_enter   = enter_parity_for gs,
                          tf_event   = event_parity,
                          tf_caller_cont = (\<lambda>_ \<sigma>. \<sigma>),
-                         tf_combine_env = (\<lambda>_. combine_env_abs gs) |)"
+                         tf_combine_env = (\<lambda>_. combine_env gs) |)"
 
 lemma parity_is_sound_transfer_for: "sound_transfer_for gs (parity_tf_for gs)"
   unfolding parity_tf_for_def

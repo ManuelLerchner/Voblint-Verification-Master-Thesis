@@ -190,7 +190,7 @@ lemma dgs_combine_sign_dg_spec_env_join_shape:
 lemma combine_env_callee_join_abs_join:
   "fst (combine_env_callee_join_abs gs ci dc de g)
      \<squnion> snd (combine_env_callee_join_abs gs ci dc de g)
-   = combine_env_abs gs (dc \<squnion> restrict_local_for gs de) g"
+   = combine_env gs (dc \<squnion> restrict_local_for gs de) g"
   unfolding combine_env_callee_join_abs_def
   by (rule unit_combine_step_env_for_join)
 
@@ -200,7 +200,7 @@ lemma combine_env_callee_join_abs_ge:
    \<le> fst (combine_env_callee_join_abs gs ci dc de g)
      \<squnion> snd (combine_env_callee_join_abs gs ci dc de g)"
   unfolding unit_combine_step_env_for_join combine_env_callee_join_abs_join
-  by (rule combine_env_abs_mono1[OF sup_ge1])
+  by (rule combine_env_mono1[OF sup_ge1])
 
 lemma dgs_combine_sign_dg_spec_env_join_ge:
   "fst (dgs_combine (unit_dg_spec_for gs (sign_tf_for gs)) ci dc de g)

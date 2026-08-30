@@ -27,12 +27,6 @@ type_synonym 'a abs_state = "vname => 'a"
    weaker pointwise instance; abs_state needs it for TD_side part_post_solution. *)
 instance "fun" :: (type, bounded_semilattice_sup_bot) bounded_semilattice_sup_bot ..
 
-(* Helper exposed globally: sup over any semilattice_sup is comp_fun_commute.
-   Available to downstream proofs that thread mem_image_le_fold etc. *)
-lemma comp_fun_commute_sup:
-  "comp_fun_commute ((\<squnion>) :: 'a::semilattice_sup \<Rightarrow> 'a \<Rightarrow> 'a)"
-  by unfold_locales (simp add: fun_eq_iff sup_left_commute)
-
 text \<open>Pointwise join on abstract states is idempotent because the value-domain
   semilattice structure lifts pointwise.  Finite folds can therefore use the
   standard idempotent-join laws without a separate state-level assumption.\<close>

@@ -1084,14 +1084,14 @@ instance resolved_st_q :: (bounded_warrowing) bounded_warrowing ..
 
 lemma fun_of_resolved_st_for_combine_resolved [simp]:
   "fun_of_resolved_st_for gs (combine_resolved_st sc se) =
-   combine_env_abs gs (fun_of_resolved_st_for gs sc)
+   combine_env gs (fun_of_resolved_st_for gs sc)
      (fun_of_resolved_st_for gs se)"
 proof (rule ext)
   fix x
   show "fun_of_resolved_st_for gs (combine_resolved_st sc se) x =
-      combine_env_abs gs (fun_of_resolved_st_for gs sc)
+      combine_env gs (fun_of_resolved_st_for gs sc)
         (fun_of_resolved_st_for gs se) x"
-    unfolding fun_of_resolved_st_for_def combine_env_abs_def location_of_def
+    unfolding fun_of_resolved_st_for_def combine_env_def location_of_def
     by (cases "gs x") simp_all
 qed
 
@@ -1184,7 +1184,7 @@ qed
 lemma fun_of_resolved_st_for_combine_assign [simp]:
   "fun_of_resolved_st_for gs
       (combine_assign_resolved gs dst v s) =
-   combine_assign\<^sup># dst v (fun_of_resolved_st_for gs s)"
+   combine_assign dst v (fun_of_resolved_st_for gs s)"
 by (cases dst)
    (simp_all add: combine_assign_resolved_def)
 
@@ -1364,7 +1364,7 @@ lemma refines_combine:
   assumes sc: "resolved_st_refines_for gs sc sigma_c"
     and se: "resolved_st_refines_for gs se sigma_e"
   shows "resolved_st_refines_for gs (combine_resolved_st sc se)
-      (combine_env_abs gs sigma_c sigma_e)"
+      (combine_env gs sigma_c sigma_e)"
   using sc se
   unfolding resolved_st_refines_for_def
   by simp
@@ -1676,7 +1676,7 @@ where
 lemma fun_of_resolved_st_q_for_combine_assign [simp]:
   "fun_of_resolved_st_q_for gs
       (combine_assign_resolved_q gs dst v s) =
-   combine_assign\<^sup># dst v (fun_of_resolved_st_q_for gs s)"
+   combine_assign dst v (fun_of_resolved_st_q_for gs s)"
   unfolding fun_of_resolved_st_q_for_def
   apply transfer
   by (metis (no_types, lifting) ext fun_of_resolved_st_for_def
@@ -2013,19 +2013,19 @@ lemma fun_of_resolved_st_q_for_restrict_global [simp]:
 
 lemma fun_of_resolved_st_q_for_combine [simp]:
   "fun_of_resolved_st_q_for gs (combine_resolved_st_q sc se) =
-   combine_env_abs gs (fun_of_resolved_st_q_for gs sc)
+   combine_env gs (fun_of_resolved_st_q_for gs sc)
      (fun_of_resolved_st_q_for gs se)"
 proof (rule ext)
   fix x
   show "fun_of_resolved_st_q_for gs (combine_resolved_st_q sc se) x =
-      combine_env_abs gs (fun_of_resolved_st_q_for gs sc)
+      combine_env gs (fun_of_resolved_st_q_for gs sc)
         (fun_of_resolved_st_q_for gs se) x"
-    unfolding fun_of_resolved_st_q_for_def combine_env_abs_def location_of_def
+    unfolding fun_of_resolved_st_q_for_def combine_env_def location_of_def
     by (cases "gs x") simp_all
 qed
 
 text \<open>
-  \<open>combine_env_abs\<close> is a pointwise selector (@{thm combine_env_abs_def}), not a join:
+  \<open>combine_env\<close> is a pointwise selector (@{thm combine_env_def}), not a join:
   every location's result is exactly the caller's or the callee-exit's own value, so
   two live operands can never combine into a witness-bottom result.  The combine
   lift is therefore purely input-strict, with no output-side check at all.
@@ -2059,15 +2059,15 @@ lemma combine_resolved_st_q_lift_correct:
   shows "~ is_bot_state (fun_of_resolved_st_q_for gs (combine_resolved_st_q sc se))"
   unfolding fun_of_resolved_st_q_for_combine
 proof (rule notI)
-  assume "is_bot_state (combine_env_abs gs (fun_of_resolved_st_q_for gs sc)
+  assume "is_bot_state (combine_env gs (fun_of_resolved_st_q_for gs sc)
                                         (fun_of_resolved_st_q_for gs se))"
   then obtain y where y:
-    "is_bot (combine_env_abs gs (fun_of_resolved_st_q_for gs sc)
+    "is_bot (combine_env gs (fun_of_resolved_st_q_for gs sc)
                               (fun_of_resolved_st_q_for gs se) y)"
     by (rule is_bot_stateE)
   show False
     using y live_c live_e
-    unfolding combine_env_abs_def
+    unfolding combine_env_def
     by (cases "gs y") (auto simp: live_resolved_st_qE)
 qed
 
@@ -2130,7 +2130,7 @@ lemma refines_combine_q:
   assumes sc: "resolved_st_q_refines_for gs sc sigma_c"
     and se: "resolved_st_q_refines_for gs se sigma_e"
   shows "resolved_st_q_refines_for gs (combine_resolved_st_q sc se)
-      (combine_env_abs gs sigma_c sigma_e)"
+      (combine_env gs sigma_c sigma_e)"
   using sc se
   unfolding resolved_st_q_refines_for_def
   by simp

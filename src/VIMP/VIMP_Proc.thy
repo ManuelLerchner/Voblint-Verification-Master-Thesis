@@ -46,7 +46,11 @@ text \<open>Formal binding is the same fold over the concrete store and over eve
 abbreviation bind_formals :: "vname list \<Rightarrow> 'v list \<Rightarrow> (vname \<Rightarrow> 'v) \<Rightarrow> vname \<Rightarrow> 'v" where
   "bind_formals xs vs s \<equiv> fold (\<lambda>(x, v) st. st(x := v)) (zip xs vs) s"
 
-fun combine_assign :: "vname option \<Rightarrow> int \<Rightarrow> store \<Rightarrow> store" where
+text \<open>The return-slot write is a pure per-variable update, generic in the codomain:
+  the concrete VIMP semantics uses it at \<open>store = vname \<Rightarrow> int\<close>, and every abstract
+  domain's own \<open>vname \<Rightarrow> 'a\<close> state reuses the same definition rather than restating
+  an \<open>_abs\<close> copy of it.\<close>
+fun combine_assign :: "vname option \<Rightarrow> 'a \<Rightarrow> (vname \<Rightarrow> 'a) \<Rightarrow> (vname \<Rightarrow> 'a)" where
   "combine_assign None _ s = s"
 | "combine_assign (Some x) v s = s(x := v)"
 

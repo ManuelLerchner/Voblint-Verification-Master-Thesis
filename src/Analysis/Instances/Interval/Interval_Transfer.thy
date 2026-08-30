@@ -151,7 +151,7 @@ definition ivl_tf_for :: "(vname => bool) => ivl domain_transfer" where
                        tf_enter   = enter_ivl_for gs,
                        tf_event   = event_ivl,
                        tf_caller_cont = (\<lambda>_ \<sigma>. \<sigma>),
-                       tf_combine_env = (\<lambda>_. combine_env_abs gs) |)"
+                       tf_combine_env = (\<lambda>_. combine_env gs) |)"
 
 lemma ivl_is_sound_transfer_for: "sound_transfer_for gs (ivl_tf_for gs)"
   unfolding ivl_tf_for_def
@@ -198,7 +198,7 @@ text \<open>
   examples with branch edges also need @{thm [source] ivl_backward_domain.bfilter.simps};
   examples with procedure calls also need @{thm [source] enter_ivl_for_def},
   @{thm [source] enter_frame_ivl_for_def}, @{thm [source]},
-  @{thm [source] combine_env_abs_def}.
+  @{thm [source] combine_env_def}.
 \<close>
 lemmas ivl_eval_simps =
   ivl_tf_for_def assign_ivl_def

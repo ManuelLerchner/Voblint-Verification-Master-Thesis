@@ -190,13 +190,13 @@ lemma flagship_vars_cover: "vars_cover flagship_cfg (fst flagship_sol)"
 
 lemma flagship_sound0:
   "cinit_stores flagship_gs \<subseteq>
-     \<lbrakk>combine_env_abs flagship_gs (fun_of_exec_dg_st_for flagship_gs cinit_ivl_st)
+     \<lbrakk>combine_env flagship_gs (fun_of_exec_dg_st_for flagship_gs cinit_ivl_st)
         (fun_of_exec_dg_st_for flagship_gs (restrict_global_resolved_q cinit_ivl_st))\<rbrakk>"
 proof -
-  have "combine_env_abs flagship_gs (fun_of_exec_dg_st_for flagship_gs cinit_ivl_st)
+  have "combine_env flagship_gs (fun_of_exec_dg_st_for flagship_gs cinit_ivl_st)
           (fun_of_exec_dg_st_for flagship_gs (restrict_global_resolved_q cinit_ivl_st))
         = fun_of_exec_dg_st_for flagship_gs cinit_ivl_st"
-    by (simp add: combine_env_abs_def fun_of_exec_dg_st_for_def fun_of_st_cinit_ivl_st_for
+    by (simp add: combine_env_def fun_of_exec_dg_st_for_def fun_of_st_cinit_ivl_st_for
                   restrict_global_for_def declared_global_def fun_eq_iff)
   thus ?thesis
     by (auto simp: cinit_stores_def gamma_state_def fun_of_exec_dg_st_for_def fun_of_st_cinit_ivl_st_for)
@@ -250,9 +250,6 @@ proof -
              flagship_ex_transfer.tf_sound_enter_for flagship_ex_transfer.tf_sound_combine_env_for
              ivl_tf_st_for_commute[folded fun_of_exec_dg_st_for_def]
              ivl_enter_st_for_commute[folded fun_of_exec_dg_st_for_def]
-             action_reduces.ret_none[OF ivl_tf_st_for_reduces]
-             action_reduces.ret_some[OF ivl_tf_st_for_reduces]
-             action_reduces.check[OF ivl_tf_st_for_reduces]
              TD_side_warrowing_apinis_Interp.part_post_solution_of_solve_c)+
 qed
 
@@ -292,7 +289,7 @@ qed
 
 text \<open>
   \<^bold>\<open>The bound is proper.\<close>  \<open>x\<close> is a local name (\<open>flagship_x_not_global\<close>), so
-  \<^const>\<open>combine_env_abs\<close> routes it to the local answer directly, never through
+  \<^const>\<open>combine_env\<close> routes it to the local answer directly, never through
   the global/side slot; the loop-head concretization therefore constrains
   \<open>x\<close> to exactly \<open>[0,20]\<close> and rejects, e.g., a store with \<open>x = 100\<close>.  The
   guarantee therefore says something --- it is not the trivial
@@ -308,21 +305,22 @@ lemma flagship_x_not_global: "\<not> flagship_gs (STR ''x'')"
   unfolding flagship_pi_def flagship_prog_def by (simp add: declared_global_def)
 
 lemma head_x_bound:
-  "combine_env_abs flagship_gs
+  "combine_env flagship_gs
      (locals ((fun_of_dg_st_for flagship_gs \<circ> snd flagship_sol) (Inl (Statement (Suc 0), ()))))
      (globs ((fun_of_dg_st_for flagship_gs \<circ> snd flagship_sol) (Inr ()))) (STR ''x'') = Ivl (Fin 0) (Fin 20)"
 proof -
   have L: "flagship_fun_of (locals (snd flagship_sol (Inl (Statement (Suc 0), ())))) (STR ''x'') = Ivl (Fin 0) (Fin 20)"
     using flagship_head_computed
     by (simp add: fun_of_resolved_st_q_for_def)
-  have C: "combine_env_abs flagship_gs
+  have C: "combine_env flagship_gs
              (flagship_fun_of (locals (snd flagship_sol (Inl (Statement (Suc 0), ())))))
              (flagship_fun_of (globs (snd flagship_sol (Inr ())))) (STR ''x'')
            = flagship_fun_of (locals (snd flagship_sol (Inl (Statement (Suc 0), ())))) (STR ''x'')"
-    by (rule combine_env_abs_local_eq[where gs = flagship_gs and x = "STR ''x''",
+    by (rule combine_env_local_eq[where gs = flagship_gs and x = "STR ''x''",
           OF flagship_x_not_global])
   show ?thesis
-    by (simp add: fun_of_dg_st_for_simps fun_of_exec_dg_st_for_def C L)
+    by (metis (no_types, opaque_lifting) C L comp_apply fun_of_dg_st_for_simps(1,2)
+        fun_of_exec_dg_st_for_def)
 qed
 
 theorem flagship_head_bound_proper:
@@ -334,7 +332,7 @@ theorem flagship_head_bound_proper:
             sound_dg_spec.dg_G_def[OF sound_dg_spec_unit_for[OF ivl_is_sound_transfer_for flagship_wf_reserved]]
   apply (simp only: mem_Collect_eq not_all)
   apply (rule exI[of _ "(STR ''x'')"])
-  using head_x_bound apply (simp add: fun_of_dg_st_for_simps combine_env_abs_def)
+  using head_x_bound apply (simp add: fun_of_dg_st_for_simps combine_env_def)
   done
 
 subsection \<open>Annotated GraphViz of the computed result\<close>

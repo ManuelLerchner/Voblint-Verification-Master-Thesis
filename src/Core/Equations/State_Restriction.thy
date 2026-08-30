@@ -10,7 +10,7 @@ text \<open>
   \<open>bot\<close>, so their join recovers the original state. They are join
   homomorphisms, idempotent, and annihilate each other, which makes the algebra
   confluent: a split-state combine closes by plain \<open>simp\<close> without a dedicated
-  lemma. \<^const>\<open>combine_env_abs\<close> reduces to that algebra, and the paired
+  lemma. \<^const>\<open>combine_env\<close> reduces to that algebra, and the paired
   representation of @{theory Voblint_Domain.Split_State} is exactly this
   decomposition.
 
@@ -20,8 +20,6 @@ text \<open>
   repeating it.
 \<close>
 
-(* Keep only the local (resp. global) component of an abstract state; the other
-   component is set to bot, so the join of the two recovers the original. *)
 definition restrict_local_for ::
   "(vname => bool) => 'a::bounded_semilattice_sup_bot abs_state => 'a abs_state" where
   "restrict_local_for gs \<sigma> = (%x. if gs x then bot else \<sigma> x)"
@@ -92,6 +90,7 @@ lemma restrict_global_for_local_join:
   "restrict_global_for gs \<sigma> \<squnion> restrict_local_for gs \<sigma> = \<sigma>"
   unfolding restrict_local_for_def restrict_global_for_def sup_fun_def
   by (rule ext) simp
+
 lemma restrict_global_for_sup [simp]:
   "restrict_global_for gs
       (restrict_local_for gs A \<squnion> restrict_global_for gs B) =
@@ -107,8 +106,6 @@ lemma restrict_local_for_sup [simp]:
   by (rule ext) simp
 
 
-
-(* Monotonicity in the queried assignment (join = \<squnion>). *)
 
 lemma join_abs_state_left_mono:
   fixes join :: "'a::bounded_semilattice_sup_bot abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
@@ -131,18 +128,14 @@ lemma join_abs_state_right_mono:
   by (rule join_mono[OF order_refl acc_le])
 
 
-(* restrict_local / restrict_global are join-homomorphisms, idempotent, and
-   annihilate each other; together these make the algebra confluent, so a
-   split-state combine such as restrict_local (restrict_local A \<squnion> restrict_global B)
-   = restrict_local A closes by plain simp without a dedicated lemma. *)
-(* combine_env_abs's primitive definition is a single if-then-else lambda; this
-   reduces it to the confluent restrict_local_for/restrict_global_for algebra so
-   proofs never need to unfold combine_env_abs_def and re-derive the split by
-   hand. *)
-lemma combine_env_abs_for_eq_restrict:
-  "combine_env_abs gs sc se =
+text \<open>\<^const>\<open>combine_env\<close>'s primitive definition is a single if-then-else lambda;
+  this reduces it to the confluent \<^const>\<open>restrict_local_for\<close>/\<^const>\<open>restrict_global_for\<close>
+  algebra so proofs never need to unfold \<open>combine_env_def\<close> and re-derive the split by
+  hand.\<close>
+lemma combine_env_for_eq_restrict:
+  "combine_env gs sc se =
      restrict_local_for gs sc \<squnion> restrict_global_for gs se"
-  unfolding combine_env_abs_def restrict_local_for_def restrict_global_for_def
+  unfolding combine_env_def restrict_local_for_def restrict_global_for_def
     sup_fun_def
   by (rule ext) simp
 
@@ -151,11 +144,11 @@ text \<open>Monotonicity in the caller half follows from the restriction algebra
   caller's contribution enters only through \<^const>\<open>restrict_local_for\<close>, which is
   monotone, and the callee half is untouched.\<close>
 
-lemma combine_env_abs_mono1:
+lemma combine_env_mono1:
   fixes sc1 sc2 :: "'a::bounded_semilattice_sup_bot abs_state"
   assumes "sc1 \<le> sc2"
-  shows "combine_env_abs gs sc1 se \<le> combine_env_abs gs sc2 se"
-  unfolding combine_env_abs_for_eq_restrict
+  shows "combine_env gs sc1 se \<le> combine_env gs sc2 se"
+  unfolding combine_env_for_eq_restrict
   by (rule sup_mono[OF restrict_local_for_mono[OF assms] order_refl])
 
 
@@ -196,10 +189,8 @@ lemma map_lift_restrict_global_for_join [simp]:
 
 subsection \<open>Reassembled transfer results\<close>
 
-(* res_edge names the reconstructed input's transfer result -- Bot when either the
-   reconstructed input or f's own result is witness-bottom, Lifted f's result
-   otherwise -- so the three reassembly lemmas below state the same value instead
-   of repeating it. *)
+text \<open>\<open>res_edge\<close> is \<open>Bot\<close> when either the reconstructed input or \<open>f\<close>'s own
+  result is witness-bottom, \<open>Lifted (f ...)\<close> otherwise.\<close>
 definition res_edge ::
   "('a::sound_domain abs_state \<Rightarrow> 'a abs_state) \<Rightarrow> pp
    \<Rightarrow> (pp + unit \<Rightarrow> 'a abs_state lifted) \<Rightarrow> 'a abs_state lifted" where
@@ -224,10 +215,8 @@ proof -
     unfolding res_edge_def by (rule transfer_lift_mono[OF f_mono is_bot_state_mono inp_le])
 qed
 
-(* res_combine mirrors res_edge for the two-input combine tree: Bot when either
-   reconstructed operand is Bot or the combine itself lands on witness-bottom,
-   the supplied combine's result otherwise -- via transfer_lift2 rather than a
-   separate is_bot_state test, same as res_edge. *)
+text \<open>\<open>res_combine\<close> mirrors \<open>res_edge\<close> for the two-input combine tree, via
+  \<open>transfer_lift2\<close> rather than a separate \<open>is_bot_state\<close> test.\<close>
 definition res_combine ::
   "('a::sound_domain abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state) \<Rightarrow> pp \<Rightarrow> pp
    \<Rightarrow> (pp + unit \<Rightarrow> 'a abs_state lifted) \<Rightarrow> 'a abs_state lifted" where

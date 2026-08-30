@@ -179,7 +179,7 @@ proof -
   also have "... \<in>
       \<lbrakk>enter\<^sup># (sign_tf_for (declared_global sign_placement_prog)) fs args
         (dg_hook_D sigma caller \<squnion> dg_hook_G sigma)\<rbrakk>"
-    using sound_transfer_for.tf_sound_enter_forD
+    using sound_transfer_for.tf_sound_enter_for
       [OF sign_is_sound_transfer_for s_in]
     by simp
   finally show ?thesis

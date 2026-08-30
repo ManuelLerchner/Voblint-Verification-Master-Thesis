@@ -755,14 +755,13 @@ lemma unit_combine_step_st_commute_for:
   by (simp add: Let_def combine_collect_abs_def fun_of_resolved_st_q_for_def
                 fun_of_resolved_st_q_for_sup fun_of_resolved_st_q_for_restrict_local
                 fun_of_resolved_st_q_for_restrict_global fun_of_resolved_st_q_for_combine
-                fun_of_resolved_st_q_for_combine_assign combine_env_abs_for_eq_restrict
+                fun_of_resolved_st_q_for_combine_assign combine_env_for_eq_restrict
                 fun_of_resolved_st_q_for_restrict_local_for
                 fun_of_resolved_st_q_for_restrict_global_for ac_simps)
 
 
 lemma dg_spec_step_unit_st_for:
-  assumes reduces: "action_reduces tf_st"
-  shows "dg_spec_step (unit_dg_spec_st_for gs tf_st enter_st) a = unit_step_st (tf_st a)"
+  "dg_spec_step (unit_dg_spec_st_for gs tf_st enter_st) a = unit_step_st (tf_st a)"
   unfolding unit_dg_spec_st_for_def
   by (cases a) simp_all
 
