@@ -3,7 +3,7 @@ theory Sign_Ctx_Call_String_Sound
     "Voblint_Analysis.Sign_Ctx_None_Sound"
     "Voblint_Analysis.Sign_Checks"
     "Voblint_Core.Call_String_Context"
-    "Voblint_Core.Call_String_Routed_Context"
+    Call_String_Routed_Context
 begin
 
 section \<open>Sign at the routed spine, instantiated at the call-string context\<close>
@@ -12,12 +12,12 @@ text \<open>
   The call-string sibling of \<^theory>\<open>Voblint_Analysis.Sign_Ctx_None_Sound\<close>'s own
   routed-unit-context instance: same \<^const>\<open>sctx_spec\<close>/\<^const>\<open>sctx_abs_spec\<close> D/G
   specification and the same domain-commute facts it already interprets
-  (\<^locale>\<open>routed_dg_domain_exec\<close>, \<^theory>\<open>Voblint_Core.DG_Base_Exec\<close>) --
+  (\<^locale>\<open>routed_dg_domain_exec\<close>, \<^theory>\<open>Voblint_Exec.DG_Base_Exec\<close>) --
   nothing here re-derives them. Only the routing policy changes, from
   \<^const>\<open>route_unit\<close> to \<^const>\<open>Call_String_Context.cs_route\<close> at a runtime bound
   \<open>k\<close>, and the routed-context locale interpreted changes from
   \<^locale>\<open>unit_routed_context\<close> to \<^locale>\<open>call_string_routed_context\<close>
-  (\<^theory>\<open>Voblint_Core.Call_String_Routed_Context\<close>), which is itself already
+  (\<^theory>\<open>Voblint_Analysis.Call_String_Routed_Context\<close>), which is itself already
   generic in the domain and discharges four of its six routing obligations
   for any compiled program, leaving only \<open>call_fwd\<close>/\<open>comb_fwd\<close> as genuine
   per-instance premises -- exactly as Sign's own \<open>call_fwd_ok\<close>/\<open>comb_fwd_ok\<close>

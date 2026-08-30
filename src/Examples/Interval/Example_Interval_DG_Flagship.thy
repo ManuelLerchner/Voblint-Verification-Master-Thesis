@@ -42,12 +42,12 @@ text \<open>
 
 theory Example_Interval_DG_Flagship
   imports
-    "Voblint_Core.Exec_DG_Bridge"
+    "Voblint_Exec.Exec_DG_Bridge"
     "Voblint_Core.DG_LTR_Sound"
     "Voblint_Analysis.Interval_Transfer"
     "Voblint_Analysis.Ivl_Exec"
-    "Voblint_Core.Solver_Menu"
-    "Voblint_Core.DG_Coverage"
+    "Voblint_Exec.Solver_Menu"
+    "Voblint_Exec.DG_Coverage"
     "Voblint_CFG.CFG_Prune"
     "Voblint_Analysis.Analysis_GraphViz"
     "Voblint_VIMP.VIMP_Notation"

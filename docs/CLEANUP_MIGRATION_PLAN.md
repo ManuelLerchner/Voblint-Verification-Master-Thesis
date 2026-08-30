@@ -71,7 +71,7 @@ newly emitted file passes silently.
 
 **1.3 Make `codegen-modules` non-vacuous.** Audit §8.4. It reads the *checked-in*
 export, so it is green on a stale one. Live example, found while writing this
-plan: `a79862f3` added `src/Core/Solver/Context/DG/DG_Coverage.thy` with no
+plan: `a79862f3` added `src/Exec/DG_Coverage.thy` with no
 `code_identifier` entry, and `codegen-modules` passes because the checked-in
 export predates it by three commits. **Benign today** — verified that
 `DG_Coverage`'s constants are reached only from the Examples session, which no

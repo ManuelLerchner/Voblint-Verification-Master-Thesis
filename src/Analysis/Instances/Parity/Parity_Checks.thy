@@ -2,7 +2,7 @@ theory Parity_Checks
   imports Parity_Numeric_Queries "Voblint_Core.Abstract_Checks" Parity_Exec
     "Voblint_Core.Analysis_Result"
     "Voblint_Core.DG_Analysis_Adapter"
-    "Voblint_Core.Monovariant_Analysis_Result"
+    "Voblint_Exec.Monovariant_Analysis_Result"
     Parity_Ctx_None_Sound
 begin
 

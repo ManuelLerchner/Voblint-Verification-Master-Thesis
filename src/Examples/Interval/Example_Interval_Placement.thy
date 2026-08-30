@@ -1,6 +1,6 @@
 theory Example_Interval_Placement
-  imports "Voblint_VIMP.VIMP_Notation" "Voblint_Analysis.Ivl_Exec" "Voblint_Core.Exec_DG_Bridge"
-    "Voblint_Core.Solver_Menu" "Voblint_CFG.CFG_Prune" "Voblint_Core.DG_LTR_Sound"
+  imports "Voblint_VIMP.VIMP_Notation" "Voblint_Analysis.Ivl_Exec" "Voblint_Exec.Exec_DG_Bridge"
+    "Voblint_Exec.Solver_Menu" "Voblint_CFG.CFG_Prune" "Voblint_Core.DG_LTR_Sound"
     "Voblint_Compile.Compile_Invariants"
 begin
 

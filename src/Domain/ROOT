@@ -1,0 +1,8 @@
+session Voblint_Domain in "." = "Voblint_VIMP" +
+  description "Abstract values and states: the sound-domain classes, the dead-code lift, split states"
+  sessions
+    TD
+  theories
+    Abstract_Domain
+    Split_State
+    Abstract_Numeric_Queries

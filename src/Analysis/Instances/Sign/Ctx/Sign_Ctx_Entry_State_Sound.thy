@@ -2,7 +2,7 @@ theory Sign_Ctx_Entry_State_Sound
   imports
     "Voblint_Analysis.Sign_Ctx_None_Sound"
     "Voblint_Analysis.Sign_Checks"
-    "Voblint_Core.Entry_State_Routed_Context"
+    Entry_State_Routed_Context
 begin
 
 section \<open>Sign at the routed spine, instantiated at the entry-state context\<close>
@@ -11,16 +11,16 @@ text \<open>
   The entry-state sibling of \<^theory>\<open>Voblint_Analysis.Sign_Ctx_None_Sound\<close>'s own
   routed-unit-context instance, and the second architecture-milestone acceptance test
   after \<open>Sign_Ctx_Call_String_Sound\<close>: same \<^const>\<open>sctx_spec\<close>/\<^const>\<open>sctx_abs_spec\<close>  D/G specification and the same domain-commute facts Sign already interprets
-  (\<^locale>\<open>routed_dg_domain_exec\<close>, \<^theory>\<open>Voblint_Core.DG_Base_Exec\<close>) -- nothing here
+  (\<^locale>\<open>routed_dg_domain_exec\<close>, \<^theory>\<open>Voblint_Exec.DG_Base_Exec\<close>) -- nothing here
   re-derives them. The routing policy is Interval's own entry-state construction
   (\<open>entry_exec_route_gen\<close>/\<^const>\<open>formals_route_lifted_gen\<close>,
-  \<^theory>\<open>Voblint_Core.DG_Base_Exec\<close>/\<^theory>\<open>Voblint_Core.Routed_Context\<close>), already
+  \<^theory>\<open>Voblint_Exec.DG_Base_Exec\<close>/\<^theory>\<open>Voblint_Core.Routed_Context\<close>), already
   generalized in a domain -- unlike \<open>cs_route\<close>, this route genuinely depends on
   its caller-state argument (the entered callee frame), which is exactly the "small
   additional domain capability" the routed-domain milestone anticipated for EntryState;
   it needed only \<open>routed_dg_domain_exec\<close>'s own three primitive commute facts, no new
   Sign-domain mathematics. \<^locale>\<open>entry_state_routed_context\<close>
-  (\<^theory>\<open>Voblint_Core.Entry_State_Routed_Context\<close>) is the generic context-side counterpart,
+  (\<^theory>\<open>Voblint_Analysis.Entry_State_Routed_Context\<close>) is the generic context-side counterpart,
   discharging \<open>FinC\<close>/\<open>RouteAgree\<close>/\<open>EnterAgree\<close> once and for all instances.
 
   Unlike Sign's own routed-unit-context and call-string instances, this development goes
@@ -40,7 +40,7 @@ text \<open>
   \<open>entry_state_route_gen\<close> (\<open>Interval_Ctx_Entry_State_Sound\<close>) exactly, at
   Sign's own \<open>sign_enter_st_for\<close> instead of Interval's \<open>ivl_enter_st_for\<close> -- this is
   precisely \<^locale>\<open>routed_dg_domain_exec\<close>'s own \<open>entry_exec_route\<close>/
-  \<open>entry_exec_route_gen\<close> (\<^theory>\<open>Voblint_Core.DG_Base_Exec\<close>), restated here as
+  \<open>entry_exec_route_gen\<close> (\<^theory>\<open>Voblint_Exec.DG_Base_Exec\<close>), restated here as
   unconditional top-level definitions (rather than reached through an interpretation) so
   the equation-system definitions below need no \<open>exact\<close> premise to be stated, matching
   every other routed instance's convention. The routed generator enters the callee

@@ -7660,6 +7660,10 @@ let rec split_gv_nl_acc
 
 let rec split_gv_nl s = split_gv_nl_acc [] s;;
 
+let rec normalize_point _A
+  gs x1 = match gs, x1 with gs, Bot -> Unreachable
+    | gs, Lifted s -> Reachable (fun_of_resolved_st_q_for _A gs s);;
+
 let rec warrow _A
   a b = (if less_eq
               _A.widening_warrowing.order_widening.preorder_order.ord_preorder b
@@ -7908,10 +7912,6 @@ let rec ictx_sol_prog_warrow
       (ictx_eqs_prog mode gs p) (cfg_exit (prog_cfg p), ());;
 
 let rec canonicalize_lift is_bot_pred = transfer_lift is_bot_pred id;;
-
-let rec normalize_point _A
-  gs x1 = match gs, x1 with gs, Bot -> Unreachable
-    | gs, Lifted s -> Reachable (fun_of_resolved_st_q_for _A gs s);;
 
 let rec analyse_int_ctx_result_warrow_for
   mode gs p =

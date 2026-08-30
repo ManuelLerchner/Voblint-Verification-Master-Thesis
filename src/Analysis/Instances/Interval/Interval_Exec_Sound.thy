@@ -1,12 +1,12 @@
 theory Interval_Exec_Sound
   imports Ivl_Exec
-          "Voblint_Core.Solver_Side_RG"
+          "Voblint_Exec.Solver_Side_RG"
           "TD.TD_side_upd_rule"
           "Voblint_CFG.CFG_Prune"
           "Voblint_VIMP.VIMP_Program"
           "Voblint_Compile.Compile_Invariants"
-          "Voblint_Core.Exec_DG_Bridge"
-          "Voblint_Core.DG_Base_Exec"
+          "Voblint_Exec.Exec_DG_Bridge"
+          "Voblint_Exec.DG_Base_Exec"
 begin
 
 section \<open>Native D/G runtime API: an arbitrary VIMP program\<close>

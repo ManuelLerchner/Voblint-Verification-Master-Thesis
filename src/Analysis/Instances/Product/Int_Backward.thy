@@ -4,7 +4,7 @@ theory Int_Backward
     Sign_Backward
     Interval_Backward
     Congruence_Backward
-    Voblint_Core.Exec_Backward
+    Exec_Backward
 begin
 
 section \<open>Composite integer-domain backward filtering\<close>

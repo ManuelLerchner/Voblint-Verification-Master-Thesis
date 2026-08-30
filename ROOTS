@@ -1,7 +1,10 @@
 src/VIMP
+src/Domain
+src/Solver
 src/CFG
 src/Compile
 src/Core
+src/Exec
 src/Analysis
 src/Soundness
 src/CLI

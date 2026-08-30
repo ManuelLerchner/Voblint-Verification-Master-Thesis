@@ -190,7 +190,7 @@ lemma result_demo_interval_absent_not_live:
 text \<open>
   Case C's dead node is covered because it is a structural CFG node, not
   because the solver happened to reach it: \<^const>\<open>cfg_node_list\<close> is
-  \<open>monovariant_analysis_result_for\<close>'s key domain (\<^theory>\<open>Voblint_Core.Monovariant_Analysis_Result\<close>),
+  \<open>monovariant_analysis_result_for\<close>'s key domain (\<^theory>\<open>Voblint_Exec.Monovariant_Analysis_Result\<close>),
   independent of solver support. \<^const>\<open>Statement\<close> \<open>99\<close> (Case D) has no such
   membership, which is exactly why it alone stays outside \<^const>\<open>result_keys\<close>.
 \<close>

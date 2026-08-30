@@ -53,7 +53,7 @@ layer without embedding line numbers that drift.
 | Term | Meaning | Source |
 | --- | --- | --- |
 | `abs_state` | Pointwise abstract variable environment. | `src/Core/Equations/Constraint_System.thy` |
-| `sound_domain` | Abstract carrier, order, and concretization obligations. | `src/Core/Domain/Abstract_Domain.thy` |
+| `sound_domain` | Abstract carrier, order, and concretization obligations. | `src/Domain/Abstract_Domain.thy` |
 | `domain_transfer` | Pure abstract transfers for CFG actions, entry, and return combination. | `src/Core/Equations/Constraint_System.thy` |
 | `effectful_domain_transfer` | Strategy-tree-producing transfers used by the side-effecting solver. | `src/Core/Equations/Constraint_System.thy` |
 | `part_post_solution` | Two-part certificate (local-result bound plus every side contribution) an equation-system valuation must satisfy; generic over the unknown/value types, so it is the shared interface between solver correctness and D/G collecting soundness, not tied to any one solver. | `vendor/td-verification/Basics_side.thy` |
@@ -63,12 +63,12 @@ layer without embedding line numbers that drift.
 
 | Term | Meaning | Source |
 | --- | --- | --- |
-| `D` | Analysis-chosen flow-sensitive fact associated with a local unknown. | `src/Core/Solver/Context/DG/DG_Framework.thy` |
-| `G` | Analysis-chosen shared fact routed through global side effects. | `src/Core/Solver/Context/DG/DG_Framework.thy` |
-| `dg_spec` | D/G transfer, entry, combine, read, and publication interface. | `src/Core/Solver/Context/DG/DG_Framework.thy` |
-| `sound_dg_spec` | Concrete-soundness obligations for a D/G instance. | `src/Core/Solver/Context/DG/DG_Soundness.thy` |
-| `dg_gen_of` | Executable D/G equation generator. | `src/Analysis/Instances/Product/Exec_DG_Bridge.thy` |
-| `dg_postfix` | Mathematical post-solution property for D/G equations. | `src/Core/Solver/Context/DG/DG_Soundness.thy` |
+| `D` | Analysis-chosen flow-sensitive fact associated with a local unknown. | `src/Core/DG/DG_Framework.thy` |
+| `G` | Analysis-chosen shared fact routed through global side effects. | `src/Core/DG/DG_Framework.thy` |
+| `dg_spec` | D/G transfer, entry, combine, read, and publication interface. | `src/Core/DG/DG_Framework.thy` |
+| `sound_dg_spec` | Concrete-soundness obligations for a D/G instance. | `src/Core/DG/DG_Soundness.thy` |
+| `dg_gen_of` | Executable D/G equation generator. | `src/Exec/Exec_DG_Bridge.thy` |
+| `dg_postfix` | Mathematical post-solution property for D/G equations. | `src/Core/DG/DG_Soundness.thy` |
 
 ### Correspondence to Goblint's `Spec` interface
 
@@ -145,16 +145,16 @@ Named, zero-cost (`abbreviation`) readings of the verified solver's four
 
 | Term | Meaning | Source |
 | --- | --- | --- |
-| `read_local` | Read a local unknown, continue with its value. | `src/Core/Solver/Strategy_Tree/Strategy_Tree_Combinators.thy` |
-| `read_global` | Read a global unknown, continue with its value. | `src/Core/Solver/Strategy_Tree/Strategy_Tree_Combinators.thy` |
-| `depend_on` | Publish a side value under a global key, continue. | `src/Core/Solver/Strategy_Tree/Strategy_Tree_Combinators.thy` |
-| `answer` | Yield the equation's local result. | `src/Core/Solver/Strategy_Tree/Strategy_Tree_Combinators.thy` |
-| `enter_global` / `enter_local` | The global side effect / local answer half of `dgs_enter`. | `src/Core/Solver/Context/DG/DG_Transfer_Combinators.thy` |
-| `combine_global` / `combine_local` | The global side effect / local answer half of `dgs_combine`. | `src/Core/Solver/Context/DG/DG_Transfer_Combinators.thy` |
-| `publish_global` | `depend_on` to the one shared global slot, wrapping the payload as `DG bot x`. | `src/Core/Solver/Context/DG/DG_Transfer_Combinators.thy` |
-| `publish_seed` | `depend_on` to a routed per-context seed slot -- same primitive as `publish_global`, named for the role. | `src/Core/Solver/Context/DG/DG_Transfer_Combinators.thy` |
-| `return_local` | Yield the equation's own local contribution, wrapping it as `DG x bot`. | `src/Core/Solver/Context/DG/DG_Transfer_Combinators.thy` |
-| `with_call` | Destructure a `call_action`'s single constructor once per call site instead of once per `dgs_enter`/`dgs_combine` call. | `src/Core/Solver/Context/DG/DG_Transfer_Combinators.thy` |
+| `read_local` | Read a local unknown, continue with its value. | `src/Solver/Strategy_Tree_Combinators.thy` |
+| `read_global` | Read a global unknown, continue with its value. | `src/Solver/Strategy_Tree_Combinators.thy` |
+| `depend_on` | Publish a side value under a global key, continue. | `src/Solver/Strategy_Tree_Combinators.thy` |
+| `answer` | Yield the equation's local result. | `src/Solver/Strategy_Tree_Combinators.thy` |
+| `enter_global` / `enter_local` | The global side effect / local answer half of `dgs_enter`. | `src/Core/DG/DG_Transfer_Combinators.thy` |
+| `combine_global` / `combine_local` | The global side effect / local answer half of `dgs_combine`. | `src/Core/DG/DG_Transfer_Combinators.thy` |
+| `publish_global` | `depend_on` to the one shared global slot, wrapping the payload as `DG bot x`. | `src/Core/DG/DG_Transfer_Combinators.thy` |
+| `publish_seed` | `depend_on` to a routed per-context seed slot -- same primitive as `publish_global`, named for the role. | `src/Core/DG/DG_Transfer_Combinators.thy` |
+| `return_local` | Yield the equation's own local contribution, wrapping it as `DG x bot`. | `src/Core/DG/DG_Transfer_Combinators.thy` |
+| `with_call` | Destructure a `call_action`'s single constructor once per call site instead of once per `dgs_enter`/`dgs_combine` call. | `src/Core/DG/DG_Transfer_Combinators.thy` |
 
 ## Source-facing endpoints
 

@@ -32,6 +32,11 @@ datatype cfg_node =
 instance cfg_node :: countable
   by countable_datatype
 
+text \<open>The solver unknown for a program point is a CFG node.  Analysis-facing code keeps the
+  short name \<open>pp\<close> for it; a return node is \<^term>\<open>FunctionResult p\<close>, a callee entry
+  \<^term>\<open>FunctionEntry p\<close>, an ordinary location \<^term>\<open>Statement n\<close>.\<close>
+type_synonym pp = cfg_node
+
 subsection \<open>Edge actions and call actions\<close>
 
 text \<open>

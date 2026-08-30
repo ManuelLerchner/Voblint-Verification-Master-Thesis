@@ -68,7 +68,7 @@ the identical `sidel (FunctionEntry fd, c) d` shape for thread entry.
 
 ## 2. What Voblint does — correspondence, not identity
 
-`routed_cmb_g` (`src/Core/Solver/Context/DG/Routed_Context.thy:63`):
+`routed_cmb_g` (`src/Core/DG/Routed_Context.thy:63`):
 
 | Goblint | `routed_cmb_g` | Same? |
 | --- | --- | --- |

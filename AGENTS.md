@@ -75,11 +75,15 @@ component of `int_dom`, alongside sign, interval and parity.
 The session dependency graph is:
 
 ```text
-VIMP -> CFG -> Compile -> Core -> Analysis -+-> Formalization -+
-                                            |                  v
-                                            +----------------> CLI -> Codegen
-                                                                +---> Examples
+VIMP -> Domain -+
+                +-> CFG -> Core -> Compile -> Exec -> Analysis -+-> Soundness -+
+TD   -> Solver -+                                               |              v
+                                                                +------------> CLI -> Codegen
+                                                                                +---> Examples
 ```
+
+(`CFG` depends on `VIMP` only; `Core` on `CFG`, `Domain` and `Solver`;
+`Compile` on `CFG`; `Exec` on `Core` and `Compile`.)
 
 `Voblint_CFG` is the graph model and its activation-local collecting
 semantics: what a soundness claim is stated *about*. It never mentions the
@@ -89,9 +93,20 @@ only for compiled ones, and the session boundary is what keeps that true.
 invariants, forward simulation, and the bridge from a source run to a valid
 local trace).
 
-`Voblint_Core` is the abstract framework: domains, constraint systems, and the
-TD solver bridge, with no domain-specific content. `Voblint_Analysis` threads
-each concrete domain instance (Sign, Interval, ...) through it.
+`Voblint_Domain` is what an abstract value and an abstract state are: the
+sound-domain classes with their concretization, the dead-code lift, and split
+local/global states. `Voblint_Solver` is the strategy-tree equation language
+of the vendored side-effecting solver and its monotonicity and post-solution
+vocabulary; it never sees a CFG. `Voblint_Core` is the D/G analysis framework:
+the transfer contract, the equation generator, and collecting soundness for
+an arbitrary CFG, with no domain-specific content and no compiler.
+`Voblint_Exec` is the executable carrier and the transport of a solved
+system from the solver's association-list states to the function-valued
+states the framework is stated over. `Voblint_Analysis` threads each
+concrete domain instance (Sign, Interval, ...) through them, and also holds
+the Base-level reuse locales and the compile-dependent routed contexts.
+`docs/CORE_REFACTOR_PLAN.md` records why the split runs along these lines
+and what remains to move.
 
 Cross-session theory imports use qualified names.
 `Voblint_Soundness` contains the reusable soundness endpoints and the
@@ -100,7 +115,7 @@ leaf: `Voblint_CLI` imports it, and the export in `Voblint_Codegen` reaches
 through it. `Voblint_Examples` contains executable runs, regressions, GraphViz
 output, and the `Voblint` capstone.
 
-`ROOTS` lists nine session directories, one per session in the graph above.
+`ROOTS` lists twelve session directories, one per session in the graph above.
 
 The generated OCaml is compile-checked by actually compiling it: both
 `codegen-regression` and `cli-build` run `ocamlfind ocamlopt` over

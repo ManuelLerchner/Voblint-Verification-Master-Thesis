@@ -1,5 +1,5 @@
 theory Parity_Exec
-  imports Voblint_Core.Exec_Refinement Voblint_Core.Numeric_Ops Parity_Transfer
+  imports "Voblint_Exec.Exec_Refinement" Numeric_Ops Parity_Transfer
 begin
 
 section \<open>Parity executable seam: transfer mirror and commutation\<close>
@@ -51,7 +51,7 @@ text \<open>The executable mirror of \<open>parity_tf_for\<close>/\<open>enter_p
 
 text \<open>
   \<open>parity_ops\<close> bundles Parity's own primitives for the generic
-  \<open>generic_enter_st_for\<close> construction (\<^theory>\<open>Voblint_Core.Numeric_Ops\<close>), the
+  \<open>generic_enter_st_for\<close> construction (\<^theory>\<open>Voblint_Analysis.Numeric_Ops\<close>), the
   same way \<open>sign_ops\<close>/\<open>ivl_ops\<close> do for Sign/Interval. Parity's branch
   transfer is the identity, so unlike Sign/Interval there is no
   \<open>branch_parity_st_for\<close> to generalize -- only \<open>n_bfilter\<close>'s VALUE would be

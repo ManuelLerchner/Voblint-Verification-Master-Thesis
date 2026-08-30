@@ -21,11 +21,11 @@ text \<open>
 
 theory Exec_Sign_DG_Run
   imports
-    "Voblint_Core.Exec_DG_Bridge"
-    "Voblint_Core.DG_Base_Exec"
-    "Voblint_Core.DG_Coverage"
+    "Voblint_Exec.Exec_DG_Bridge"
+    "Voblint_Exec.DG_Base_Exec"
+    "Voblint_Exec.DG_Coverage"
     "Voblint_Analysis.Sign_Exec"
-    "Voblint_Core.Solver_Side_RG"
+    "Voblint_Exec.Solver_Side_RG"
     "TD.TD_side_upd_rule"
     "Voblint_CFG.CFG_Prune"
     "Voblint_Compile.Compile_Invariants"

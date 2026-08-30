@@ -1,0 +1,21 @@
+session Voblint_Exec in "." = "Voblint_Core" +
+  description "Executable carrier and transport: the solver runs on association lists, soundness is stated over functions"
+  sessions
+    TD
+    "Voblint_Compile"
+  theories
+    Exec_St
+    Exec_Refinement
+    Exec_Placement
+    Exec_DG_Refines
+    Exec_DG_Trees
+    Exec_DG_Generator
+    Exec_DG_Bridge
+    DG_Base_Exec
+    Routed_Domain_Exec
+    (* Solved-key coverage as a graph property: vars_cover from reachability to
+       the exit, instead of evaluating the solver's own key set. *)
+    DG_Coverage
+    Solver_Side_RG
+    Solver_Menu
+    Monovariant_Analysis_Result

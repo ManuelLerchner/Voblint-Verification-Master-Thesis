@@ -1,7 +1,7 @@
 theory Interval_Ctx_None_Sound
   imports
-    "Voblint_Core.Exec_DG_Bridge"
-    "Voblint_Core.Routed_Domain_Exec"
+    "Voblint_Exec.Exec_DG_Bridge"
+    "Voblint_Exec.Routed_Domain_Exec"
     "Voblint_Core.DG_LTR_Sound"
     "Voblint_Analysis.Interval_Transfer"
     "Voblint_Analysis.Interval_Exec_Sound"
@@ -9,7 +9,7 @@ theory Interval_Ctx_None_Sound
     "Voblint_Core.Routed_Context"
     "Voblint_Core.Routed_Context_Unit"
     "Voblint_Core.DG_Analysis_Adapter"
-    "Voblint_Core.Solver_Menu"
+    "Voblint_Exec.Solver_Menu"
     "Voblint_VIMP.VIMP_Program"
 begin
 

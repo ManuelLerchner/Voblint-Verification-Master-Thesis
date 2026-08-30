@@ -1,5 +1,5 @@
 theory Congruence_Warrowing
-  imports Congruence_Lattice Voblint_Core.Exec_St
+  imports Congruence_Lattice "Voblint_Exec.Exec_St"
 begin
 
 section \<open>Type-class warrowing for the TD warrowing solver\<close>

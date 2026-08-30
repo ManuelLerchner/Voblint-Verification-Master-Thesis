@@ -1,7 +1,7 @@
 theory Congruence_Backward
   imports
     Congruence_Arithmetic
-    Voblint_Core.Exec_Backward
+    Exec_Backward
     "HOL-Computational_Algebra.Euclidean_Algorithm"
 begin
 

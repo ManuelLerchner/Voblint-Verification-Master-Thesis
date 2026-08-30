@@ -28,12 +28,12 @@ text \<open>
 
 theory Example_Parity_DG_Flagship
   imports
-    "Voblint_Core.Exec_DG_Bridge"
-    "Voblint_Core.DG_Base_Exec"
+    "Voblint_Exec.Exec_DG_Bridge"
+    "Voblint_Exec.DG_Base_Exec"
     "Voblint_Analysis.Parity_Exec"
     "Voblint_Analysis.Parity_Print"
-    "Voblint_Core.Solver_Menu"
-    "Voblint_Core.DG_Coverage"
+    "Voblint_Exec.Solver_Menu"
+    "Voblint_Exec.DG_Coverage"
     "Voblint_CFG.CFG_Prune"
     "Voblint_Analysis.Analysis_GraphViz"
     "Voblint_VIMP.VIMP_Notation"

@@ -1,7 +1,7 @@
 theory Interval_Classify
   imports Interval_Numeric_Queries Interval_Backward "Voblint_Core.Abstract_Checks"
     "Voblint_Core.Analysis_Result" Interval_Exec_Sound
-    "Voblint_Core.Monovariant_Analysis_Result"
+    "Voblint_Exec.Monovariant_Analysis_Result"
 begin
 
 hide_const phase.N

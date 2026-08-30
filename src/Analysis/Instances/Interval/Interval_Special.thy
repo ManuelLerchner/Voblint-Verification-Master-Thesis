@@ -1,5 +1,5 @@
 theory Interval_Special
-  imports Interval_Backward Voblint_Core.Special_Ops
+  imports Interval_Backward Special_Ops
 begin
 
 section \<open>Interval: special-call semantics\<close>

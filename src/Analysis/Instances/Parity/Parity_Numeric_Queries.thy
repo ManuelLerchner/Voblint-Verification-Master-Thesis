@@ -1,12 +1,12 @@
 theory Parity_Numeric_Queries
-  imports Parity_Domain "Voblint_Core.Abstract_Numeric_Queries"
+  imports Parity_Domain "Voblint_Domain.Abstract_Numeric_Queries"
 begin
 
 section \<open>Parity interpretation of the generic numeric-query interface\<close>
 
 text \<open>
   Third-domain validation for \<open>abstract_numeric_queries\<close>
-  (\<^theory>\<open>Voblint_Core.Abstract_Numeric_Queries\<close>), hand-tuned like
+  (\<^theory>\<open>Voblint_Domain.Abstract_Numeric_Queries\<close>), hand-tuned like
   Voblint_Analysis.Interval_Numeric_Queries rather than derived through
   \<open>backward_domain\<close>: parity has no \<open>inv_less\<close>/\<open>meet\<close> instance (guards do not
   refine parity, \<^theory>\<open>Voblint_Analysis.Parity_Domain\<close>), so there is nothing for

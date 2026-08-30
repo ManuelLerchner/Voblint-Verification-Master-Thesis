@@ -1,8 +1,10 @@
-session Voblint_Analysis in "." = "Voblint_Core" +
+session Voblint_Analysis in "." = "Voblint_Exec" +
   description "Concrete domain instances over the abstract Voblint_Core framework"
   sessions
     TD
   directories
+    "Instances/Common"
+    "Instances/Ctx"
     "Instances/Sign"
     "Instances/Sign/Ctx"
     "Instances/Interval"
@@ -16,6 +18,13 @@ session Voblint_Analysis in "." = "Voblint_Core" +
     "Instances/Tooling"
     "Instances/Dispatch"
   theories
+    Abstract_Arithmetic
+    Special_Ops
+    Numeric_Ops
+    Exec_Backward
+    Call_String_Context_Finite
+    Call_String_Routed_Context
+    Entry_State_Routed_Context
     Sign_Lattice
     Sign_Arithmetic
     Sign_Numeric_Queries

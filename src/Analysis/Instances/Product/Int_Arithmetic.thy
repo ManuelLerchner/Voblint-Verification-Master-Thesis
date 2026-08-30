@@ -239,7 +239,7 @@ text \<open>
   arithmetic is parameterized by \<open>refine_mode\<close> (\<open>plus_int_dom
   Refine_Never\<close> and \<open>plus_int_dom Refine_Fixpoint\<close> are genuinely
   different operations) -- so \<open>int_dom\<close> cannot literally interpret
-  \<open>Voblint_Core.Abstract_Arithmetic\<close>'s \<open>expression_domain_sound\<close> locale,
+  \<open>Voblint_Analysis.Abstract_Arithmetic\<close>'s \<open>expression_domain_sound\<close> locale,
   which fixes those as type-class operations. \<open>int_dom_lt\<close>/\<open>int_dom_eqb\<close>/
   \<open>int_dom_tobool\<close> below still follow that locale's query shape exactly
   (\<open>bool option\<close>, \<open>Some True\<close>/\<open>Some False\<close>/\<open>None\<close>), and \<open>aval_int_dom\<close>'s
@@ -705,7 +705,7 @@ subsection \<open>Arithmetic-expression evaluation\<close>
 
 text \<open>
   \<open>Less\<close>/\<open>Eq\<close>/\<open>Not\<close>/\<open>And\<close>/\<open>Or\<close> mirror the shape
-  \<open>Voblint_Core.Abstract_Arithmetic.expression_domain_sound\<close> would assume
+  \<open>Voblint_Analysis.Abstract_Arithmetic.expression_domain_sound\<close> would assume
   were \<open>int_dom\<close> able to interpret it (see the comment above
   \<open>int_dom_lt\<close>): each operand is recursively evaluated to a whole
   \<open>int_dom\<close> value first, and only the composite-level \<open>int_dom_lt\<close>/

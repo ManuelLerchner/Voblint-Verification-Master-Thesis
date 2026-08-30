@@ -1,5 +1,5 @@
 theory Sign_Lattice
-  imports Voblint_Core.Abstract_Domain "TD.Update_rules"
+  imports "Voblint_Domain.Abstract_Domain" "TD.Update_rules"
 begin
 
 section \<open>Sign domain: instantiation of abstract_domain\<close>

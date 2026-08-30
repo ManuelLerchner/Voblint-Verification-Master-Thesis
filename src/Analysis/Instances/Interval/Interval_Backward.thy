@@ -1,6 +1,6 @@
 theory Interval_Backward
-  imports Interval_Arithmetic Voblint_Core.Exec_Backward "Voblint_VIMP.VIMP_Expr"
-    Voblint_Core.Abstract_Arithmetic Interval_Numeric_Queries
+  imports Interval_Arithmetic Exec_Backward "Voblint_VIMP.VIMP_Expr"
+    Abstract_Arithmetic Interval_Numeric_Queries
 begin
 
 section \<open>Interval backward filtering\<close>
@@ -11,7 +11,7 @@ text \<open>
   \<open>interval_lt\<close>/\<open>interval_eqb\<close>/\<open>interval_tobool\<close> restate
   \<open>Interval_Numeric_Queries\<close>'s \<open>interval_less_true\<close>/\<open>interval_less_false\<close>/
   \<open>interval_eq_true\<close>/\<open>interval_eq_false\<close> as the three-valued \<open>bool option\<close>
-  queries \<open>Voblint_Core.Abstract_Arithmetic\<close>'s \<open>expression_domain_sound\<close>
+  queries \<open>Voblint_Analysis.Abstract_Arithmetic\<close>'s \<open>expression_domain_sound\<close>
   locale expects: \<open>Some True\<close>/\<open>Some False\<close> when the bound-based table decides
   it, \<open>None\<close> otherwise. \<open>interval_tobool\<close> is truthiness against the point
   interval \<open>[0,0]\<close>.

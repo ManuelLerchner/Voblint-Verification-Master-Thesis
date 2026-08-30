@@ -2,10 +2,10 @@ theory Analysis_GraphViz
   imports
     "Voblint_Compile.Compile_Wellformed"
     "Voblint_VIMP.VIMP_Source_Print"
-    Voblint_Core.Exec_St
-    Voblint_Core.Abstract_Domain
-    Voblint_Core.Abstract_Checks
-    Voblint_Core.Call_String_Context
+    "Voblint_Exec.Exec_St"
+    "Voblint_Domain.Abstract_Domain"
+    "Voblint_Core.Abstract_Checks"
+    "Voblint_Core.Call_String_Context"
 begin
 
 text \<open>

@@ -3,7 +3,7 @@ theory Int_Ctx_Call_String_Sound
     "Voblint_Analysis.Int_Ctx_None_Sound"
     "Voblint_Analysis.Int_Classify"
     "Voblint_Core.Call_String_Context"
-    "Voblint_Core.Call_String_Routed_Context"
+    Call_String_Routed_Context
 begin
 
 section \<open>Int at the routed spine, instantiated at the call-string context\<close>
@@ -14,13 +14,13 @@ text \<open>
   derivation for a second domain: same \<^const>\<open>ictx_spec\<close>/\<^const>\<open>ictx_abs_spec\<close>
   D/G specification and the same domain-commute facts Int's own routed-unit
   instance already interprets (\<^locale>\<open>routed_dg_domain_exec\<close>,
-  \<^theory>\<open>Voblint_Core.DG_Base_Exec\<close>) -- nothing here re-derives them, and the
+  \<^theory>\<open>Voblint_Exec.DG_Base_Exec\<close>) -- nothing here re-derives them, and the
   \<^typ>\<open>refine_mode\<close> parameter Int threads throughout stays a genuine fixed
   argument exactly as it already is at Int's own \<^const>\<open>ictx_spec\<close>. Only the
   routing policy changes, from \<^const>\<open>route_unit\<close> to
   \<^const>\<open>Call_String_Context.cs_route\<close> at a runtime bound \<open>k\<close>, and the routed-context
   locale interpreted changes from \<^locale>\<open>unit_routed_context\<close> to
-  \<^locale>\<open>call_string_routed_context\<close> (\<^theory>\<open>Voblint_Core.Call_String_Routed_Context\<close>),
+  \<^locale>\<open>call_string_routed_context\<close> (\<^theory>\<open>Voblint_Analysis.Call_String_Routed_Context\<close>),
   exactly as Sign's own call-string derivation already uses.
 
   This is the mission's stretch-goal acceptance test at a third domain: a second

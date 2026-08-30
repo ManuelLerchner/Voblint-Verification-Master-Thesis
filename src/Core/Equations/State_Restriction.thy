@@ -1,5 +1,5 @@
 theory State_Restriction
-  imports Constraint_System_Sound Split_State
+  imports Constraint_System_Sound "Voblint_Domain.Split_State"
 begin
 
 section \<open>Local/global restriction of abstract states\<close>
@@ -11,7 +11,7 @@ text \<open>
   homomorphisms, idempotent, and annihilate each other, which makes the algebra
   confluent: a split-state combine closes by plain \<open>simp\<close> without a dedicated
   lemma. \<^const>\<open>combine_env_abs\<close> reduces to that algebra, and the paired
-  representation of @{theory Voblint_Core.Split_State} is exactly this
+  representation of @{theory Voblint_Domain.Split_State} is exactly this
   decomposition.
 
   \<open>res_edge\<close> and \<open>res_combine\<close> name the value a reassembled

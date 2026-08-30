@@ -1,5 +1,5 @@
 theory Congruence_Domain
-  imports Voblint_Core.Abstract_Domain
+  imports "Voblint_Domain.Abstract_Domain"
 begin
 
 section \<open>Normalized congruence carrier\<close>

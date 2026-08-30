@@ -1,5 +1,5 @@
 theory Sign_Backward
-  imports Sign_Arithmetic Voblint_Core.Exec_Backward Voblint_Core.Abstract_Numeric_Queries
+  imports Sign_Arithmetic Exec_Backward "Voblint_Domain.Abstract_Numeric_Queries"
 begin
 
 section \<open>Sign backward filtering\<close>

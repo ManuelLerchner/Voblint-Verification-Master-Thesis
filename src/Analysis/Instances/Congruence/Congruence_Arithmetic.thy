@@ -1,6 +1,6 @@
 theory Congruence_Arithmetic
   imports Congruence_Lattice "Voblint_VIMP.VIMP_Expr"
-    Voblint_Core.Abstract_Arithmetic
+    Abstract_Arithmetic
 begin
 
 section \<open>Congruence arithmetic\<close>

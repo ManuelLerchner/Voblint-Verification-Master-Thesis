@@ -1,8 +1,8 @@
 theory Example_Int_Refinement_Mode_Regression
   imports
     Example_Int_Domain
-    "Voblint_Core.Exec_DG_Bridge"
-    "Voblint_Core.DG_Base_Exec"
+    "Voblint_Exec.Exec_DG_Bridge"
+    "Voblint_Exec.DG_Base_Exec"
     "Voblint_Analysis.Int_Exec"
     "Voblint_Analysis.Int_Exec_Sound"
     "Voblint_VIMP.VIMP_Notation"

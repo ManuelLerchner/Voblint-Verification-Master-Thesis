@@ -1,5 +1,5 @@
 theory Sign_Exec
-  imports Voblint_Core.Exec_Refinement Voblint_Core.Numeric_Ops Sign_Domain
+  imports "Voblint_Exec.Exec_Refinement" Numeric_Ops Sign_Domain
 begin
 
 section \<open>Sign per-domain seam: executable transfer mirror and commutation\<close>
@@ -56,7 +56,7 @@ text \<open>The executable mirror of \<open>sign_tf_for\<close>/\<open>enter_sig
 text \<open>
   \<open>sign_ops\<close> bundles Sign's own primitives for the generic
   \<open>generic_branch_st_for\<close>/\<open>generic_enter_st_for\<close> construction
-  (\<^theory>\<open>Voblint_Core.Numeric_Ops\<close>): \<open>branch_sign_st_for\<close>/\<open>sign_enter_st_for\<close>
+  (\<^theory>\<open>Voblint_Analysis.Numeric_Ops\<close>): \<open>branch_sign_st_for\<close>/\<open>sign_enter_st_for\<close>
   below are exactly those generic constructions instantiated at \<open>sign_ops\<close>,
   not independent definitions -- Interval and Parity instantiate the same
   generic pair at their own primitives.

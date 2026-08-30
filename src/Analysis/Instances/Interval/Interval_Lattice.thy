@@ -1,5 +1,5 @@
 theory Interval_Lattice
-  imports Voblint_Core.Abstract_Domain Interval_Bounds
+  imports "Voblint_Domain.Abstract_Domain" Interval_Bounds
 begin
 
 section \<open>Interval lattice\<close>

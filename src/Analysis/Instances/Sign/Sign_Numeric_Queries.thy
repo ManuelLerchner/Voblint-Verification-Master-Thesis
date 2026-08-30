@@ -1,11 +1,11 @@
 theory Sign_Numeric_Queries
-  imports Sign_Arithmetic Sign_Backward "Voblint_Core.Abstract_Numeric_Queries"
+  imports Sign_Arithmetic Sign_Backward "Voblint_Domain.Abstract_Numeric_Queries"
 begin
 
 section \<open>Sign interpretation of the generic numeric-query interface\<close>
 
 text \<open>
-  \<open>abstract_numeric_queries\<close> (\<^theory>\<open>Voblint_Core.Abstract_Numeric_Queries\<close>) is
+  \<open>abstract_numeric_queries\<close> (\<^theory>\<open>Voblint_Domain.Abstract_Numeric_Queries\<close>) is
   the reusable interface; this theory supplies its Sign instance. None of the
   four query functions is a hand-built table any more: all four are Sign's
   instance of generic derivations in the same theory --- \<open>sign_less_true\<close>/
@@ -83,7 +83,7 @@ text \<open>Only \<open>SZero\<close> concretizes to a singleton, so equality is
   there; two abstractions are provably unequal exactly when their
   concretizations are disjoint. Neither table is hand-built: \<open>sign_eq_true\<close>
   is Sign's instance of \<open>derived_eq_true_from_less\<close>
-  (\<^theory>\<open>Voblint_Core.Abstract_Numeric_Queries\<close>),
+  (\<^theory>\<open>Voblint_Domain.Abstract_Numeric_Queries\<close>),
   read off \<open>sign_less_false\<close> in both directions (integer trichotomy);
   \<open>sign_eq_false\<close> is Sign's instance of \<open>derived_eq_false_from_intersection\<close>, read off
   \<open>meet_sign\<close> collapsing to \<open>SBot\<close> (disjoint concretizations). Both sublocale

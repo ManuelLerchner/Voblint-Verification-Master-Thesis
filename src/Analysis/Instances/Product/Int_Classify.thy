@@ -1,7 +1,7 @@
 theory Int_Classify
   imports Int_Exec_Sound "Voblint_Core.Abstract_Checks"
     "Voblint_Core.Analysis_Result"
-    "Voblint_Core.Monovariant_Analysis_Result"
+    "Voblint_Exec.Monovariant_Analysis_Result"
 begin
 
 hide_const phase.N
@@ -14,7 +14,7 @@ text \<open>
   (\<^theory>\<open>Voblint_Analysis.Int_Backward\<close>). Unlike Sign and Interval, which each hand-roll their own
   sharper \<open>less_true\<close>/\<open>less_false\<close>/\<open>eq_true\<close>/\<open>eq_false\<close> comparison tables
   (\<open>Sign_Numeric_Queries\<close>, \<open>Interval_Numeric_Queries\<close>), \<open>int_dom\<close> reuses the generic derivation
-  \<^theory>\<open>Voblint_Core.Abstract_Numeric_Queries\<close> already proves for free off any
+  \<^theory>\<open>Voblint_Domain.Abstract_Numeric_Queries\<close> already proves for free off any
   \<^locale>\<open>backward_domain\<close> instance: \<open>int_dom_backward_fixpoint.less_true\<close>/\<open>less_false\<close> come from
   \<open>inv_less_int_dom_fixpoint\<close> via \<^locale>\<open>derived_less_queries\<close>, and
   \<open>int_dom_backward_fixpoint.eq_true\<close>/\<open>eq_false\<close> come from \<open>less_false\<close>/

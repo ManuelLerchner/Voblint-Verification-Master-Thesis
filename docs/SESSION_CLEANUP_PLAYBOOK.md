@@ -139,6 +139,30 @@ Scripts that helped (recreate under the scratchpad as needed):
   the same session; budget for the tail rather than reading the first clean
   prefix as done.
 
+## Traps from the Core split
+
+- **Measure an import edge against every theory that reaches it, not the
+  one that writes it.** `DG_Framework imports Exec_Placement` used zero
+  names from it, so the survey called `Exec_Placement` example-only. Three
+  theories *behind* `DG_Framework` used 70 of its names through that same
+  import. Before dropping an import, grep the imported theory's definitions
+  against the whole downstream closure of the importer.
+- **A `\<^theory>`/`\<^const>` antiquotation in prose is a dependency.**
+  `Routed_Context` cited `Voblint_Compile.VIMP_Proc_to_CFG` in two `text`
+  blocks; the session was compiler-free by import list and failed to build.
+  Grep antiquotations when a session boundary moves.
+- **`type_synonym` riding on an import.** `pp = cfg_node` sat in
+  `Abstract_Domain` and reached `Checks` and `Call_String_Context` through it;
+  moving it broke both. Compute, per theory, whether it *uses* a name and
+  whether its own import closure *reaches* the defining theory.
+- **Theories with `section` before `theory` break line-anchored scripts.**
+  Four `Exec_DG_*` files have their `imports` on line 15, spread over several
+  lines; a `sed` on `^  imports .*` silently missed one. Edit the block with a
+  regex over `imports ... begin`, not a line.
+- **`git mv` refuses an untracked file.** A theory created during the pass
+  must be `git add`ed before the move script runs, or the script dies half
+  way through and leaves a partially moved tree.
+
 ## VIMP status after the pass
 
 1894 -> 1019 lines across eight hand-written theories (`VIMP_Settings`

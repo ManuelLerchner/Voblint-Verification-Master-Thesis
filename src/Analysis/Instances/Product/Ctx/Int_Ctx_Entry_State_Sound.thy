@@ -2,7 +2,7 @@ theory Int_Ctx_Entry_State_Sound
   imports
     "Voblint_Analysis.Int_Ctx_None_Sound"
     "Voblint_Analysis.Int_Classify"
-    "Voblint_Core.Entry_State_Routed_Context"
+    Entry_State_Routed_Context
 begin
 
 section \<open>Int at the routed spine, instantiated at the entry-state context\<close>
@@ -13,16 +13,16 @@ text \<open>
   acceptance test, after Sign's own call-string and entry-state derivations and Int's
   own call-string derivation: same \<^const>\<open>ictx_spec\<close>/\<^const>\<open>ictx_abs_spec\<close> D/G
   specification and the same domain-commute facts Int already interprets
-  (\<^locale>\<open>routed_dg_domain_exec\<close>, \<^theory>\<open>Voblint_Core.DG_Base_Exec\<close>) -- nothing here
+  (\<^locale>\<open>routed_dg_domain_exec\<close>, \<^theory>\<open>Voblint_Exec.DG_Base_Exec\<close>) -- nothing here
   re-derives them, and the \<^typ>\<open>refine_mode\<close> parameter Int threads throughout stays a
   genuine fixed argument exactly as it already is at Int's own \<^const>\<open>ictx_spec\<close>. The
   routing policy is the same generic entry-state construction
   (\<open>entry_exec_route_gen\<close>/\<^const>\<open>formals_route_lifted_gen\<close>,
-  \<^theory>\<open>Voblint_Core.DG_Base_Exec\<close>/\<^theory>\<open>Voblint_Core.Routed_Context\<close>) Sign's own
+  \<^theory>\<open>Voblint_Exec.DG_Base_Exec\<close>/\<^theory>\<open>Voblint_Core.Routed_Context\<close>) Sign's own
   entry-state instance already uses: it needed only \<^locale>\<open>routed_dg_domain_exec\<close>'s
   own three primitive commute facts, which Int's own routed-unit instance has already
   established, so no new Int-domain mathematics is needed here either.
-  \<^locale>\<open>entry_state_routed_context\<close> (\<^theory>\<open>Voblint_Core.Entry_State_Routed_Context\<close>) is
+  \<^locale>\<open>entry_state_routed_context\<close> (\<^theory>\<open>Voblint_Analysis.Entry_State_Routed_Context\<close>) is
   the generic context-side counterpart, discharging \<open>FinC\<close>/\<open>RouteAgree\<close>/\<open>EnterAgree\<close>
   once and for all instances.
 
@@ -42,7 +42,7 @@ text \<open>
   \<open>sctx_entry_route\<close>/\<open>sctx_entry_route_gen\<close> exactly, at Int's own
   \<open>int_dom_enter_st_for mode gs\<close> instead of Sign's \<open>sign_enter_st_for gs\<close> -- this is
   precisely \<^locale>\<open>routed_dg_domain_exec\<close>'s own \<open>entry_exec_route\<close>/
-  \<open>entry_exec_route_gen\<close> (\<^theory>\<open>Voblint_Core.DG_Base_Exec\<close>), restated here as
+  \<open>entry_exec_route_gen\<close> (\<^theory>\<open>Voblint_Exec.DG_Base_Exec\<close>), restated here as
   unconditional top-level definitions so the equation-system definitions below need no
   \<open>exact\<close> premise to be stated, matching every other routed instance's convention. The
   routed generator enters the callee frame before it routes, so the route itself only

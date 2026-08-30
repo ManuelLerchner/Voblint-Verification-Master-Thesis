@@ -96,7 +96,11 @@ Usage counts (`rg -w` over `src/`):
   `unit_dg_spec_placed`: reached only from `Example_Sign_Placement` and
   `Example_Interval_Placement`. The spec route (`sound_dg_spec`, interpreted
   12 times) is what Analysis and Soundness use.
-- `Exec_Placement` (1134 lines): three Example consumers, zero in Core.
+- `Exec_Placement` (1134 lines): imported by `DG_Framework`, which uses nothing
+  from it, and reached through that import by `Exec_DG_Refines`,
+  `Exec_DG_Trees` and `Exec_DG_Generator`, which use 70 of its names (see
+  "Decisions and corrections"). It is the executable transport's support
+  algebra.
 - Fourteen of `DG_Framework`'s 45 definitions and nine of `DG_Soundness`'s
   27 have no use outside their file.
 - `routed_context_hetero` restates all six assumptions of
@@ -126,7 +130,7 @@ until Phase 2 deletes what it holds.
 | `Voblint_Core` | `Analyses`, `Constraints`, `Control`, `AnalysisResult` | `CFG_Enumeration`, `Constraint_System` (absorbing `Constraint_System_Sound`), `State_Restriction`, `DG_Framework`, `DG_Soundness`, `DG_LTR_Sound`, `Activation_Local_Sound`, `Activation_Backbone`, `DG_Ctx_Activation`, `DG_Transfer_Combinators`, `Routed_Context`, `Routed_Context_Unit`, `DG_Base`, `Call_String_Context`, `Call_String_Collecting_Refinement`, `Call_String_Solver_Projection`, `Analysis_Result`, `Checks`, `Abstract_Checks`, `DG_Analysis_Adapter`, `DG_Coverage` | `Voblint_CFG`, `Voblint_Domain`, `Voblint_Solver` -- never `Voblint_Compile` |
 | `Voblint_Exec` (quarantine) | none | `Exec_DG_Refines`, `Exec_DG_Trees`, `Exec_DG_Generator`, `Exec_DG_Bridge`, `DG_Base_Exec`, `Routed_Domain_Exec`, `Solver_Side_RG`, `Solver_Menu`, `Monovariant_Analysis_Result` | `Voblint_Core`, `Voblint_Compile` |
 | into `Voblint_Analysis` | `analyses/base.ml`, `lifters/` | `Abstract_Arithmetic`, `Special_Ops`, `Numeric_Ops`, `Exec_Backward`; `Call_String_Context_Finite`, `Call_String_Routed_Context`, `Entry_State_Routed_Context` | |
-| into `Voblint_Examples` | none | `Exec_Placement` and the hooks route: `sound_dg_hooks` and the hook-parametric section (`DG_Soundness` 968-1508), `sound_dg_hooks_ltr`, `gamma_join`, `unit_dg_spec_placed`, as a `Placement/` group next to the two examples that use them | |
+| into `Voblint_Examples` | none | the hooks route: `sound_dg_hooks` and the hook-parametric section (`DG_Soundness` 968-1508), `sound_dg_hooks_ltr`, `gamma_join`, `unit_dg_spec_placed`, as a `Placement/` group next to the two examples that use them | |
 
 The session graph after Phase 1:
 
@@ -150,14 +154,14 @@ what a later phase deletes.
 
 | # | Step | Status |
 | --- | --- | --- |
-| 0.1 | Move `type_synonym pp = cfg_node` from `Abstract_Domain` to `CFG_Def`; drop `Abstract_Domain`'s `CFG_Def` import. | open |
-| 0.2 | Move `bounded_widening`, `bounded_narrowing`, `bounded_warrowing` and `instance lifted :: bounded_warrowing` from `Exec_St`'s preamble into `Abstract_Domain`. Drop `DG_Framework`'s `Exec_St` and `Exec_Placement` imports. | open |
-| 0.3 | Move the `se_constraint_holds` block (`Constraint_System` 1008-1053: definition, two `[dest]` halves, `part_post_solution_imp_se_constraint_holds`, `part_post_solution_iff_se_constraint_holds`) to a new `Solver/Strategy_Tree/Post_Solution.thy` importing `Strategy_Tree_Rhs`. Repoint `Context_Refinement`. | open |
-| 0.4 | `CFG_Enumeration`: import `Voblint_CFG.CFG_Transfer` instead of `Voblint_Compile.VIMP_Proc_to_CFG`. The build shows whether a VIMP name rode on the transitive import. | open |
-| 0.5 | Move `normalize_point` and its lemmas (`Analysis_Result` 133-250) into `Monovariant_Analysis_Result`. `Abstract_Checks` cites `normalize_point` once; repoint its import for now and resolve in Phase 2. | open |
-| 0.6 | Delete `td_cfg_side_solver_dg`, `cfg_pkg_dg`, `stabl_at`, `nu_at`, `solve_prod`, `part_post_at`, `least_part_post_at` (`DG_Framework` 2365-2470). Then check `threefold_mono` (one remaining user, `Voblint.thy`). | open |
-| 0.7 | Delete the other zero-use definitions in `DG_Framework` and `DG_Soundness` one at a time; keep any the build wants (grep cannot see simp-set uses). | open |
-| 0.8 | Run `partition_check.py` with the target assignment: zero violating edges is the exit criterion. | open |
+| 0.1 | Move `type_synonym pp = cfg_node` from `Abstract_Domain` to `CFG_Def`; drop `Abstract_Domain`'s `CFG_Def` import. | landed |
+| 0.2 | Move `bounded_widening`, `bounded_narrowing`, `bounded_warrowing` and `instance lifted :: bounded_warrowing` from `Exec_St`'s preamble into `Abstract_Domain`. Drop `DG_Framework`'s `Exec_St` and `Exec_Placement` imports. | landed |
+| 0.3 | Move the `se_constraint_holds` block (`Constraint_System` 1008-1053: definition, two `[dest]` halves, `part_post_solution_imp_se_constraint_holds`, `part_post_solution_iff_se_constraint_holds`) to a new `Solver/Strategy_Tree/Post_Solution.thy` importing `Strategy_Tree_Rhs`. Repoint `Context_Refinement`. | landed |
+| 0.4 | `CFG_Enumeration`: import `Voblint_CFG.CFG_Transfer` instead of `Voblint_Compile.VIMP_Proc_to_CFG`. The build shows whether a VIMP name rode on the transitive import. | landed |
+| 0.5 | Move `normalize_point` and its lemmas (`Analysis_Result` 133-250) into `Monovariant_Analysis_Result`. `Abstract_Checks` cites `normalize_point` once; repoint its import for now and resolve in Phase 2. | landed |
+| 0.6 | Delete `td_cfg_side_solver_dg`, `cfg_pkg_dg`, `stabl_at`, `nu_at`, `solve_prod`, `part_post_at`, `least_part_post_at` (`DG_Framework` 2365-2470). Then check `threefold_mono` (one remaining user, `Voblint.thy`). | landed |
+| 0.7 | Delete the other zero-use definitions in `DG_Framework` and `DG_Soundness` one at a time; keep any the build wants (grep cannot see simp-set uses). | open (build decides; none deleted yet) |
+| 0.8 | Run `partition_check.py` with the target assignment: zero violating edges is the exit criterion. | landed |
 
 Gate: `AFP=$HOME/afp/thys pixi run build`, `pixi run codegen`,
 `pixi run codegen-modules`, `pixi run cli-test`, `pixi run codegen-regression`,
@@ -169,14 +173,14 @@ Mechanical once Phase 0 is green.
 
 | # | Step | Status |
 | --- | --- | --- |
-| 1.1 | Split `Abstract_Domain` at line 919: `Backward_Domain.thy` takes `semantic_intersection`, `backward_domain`, `backward_domain_refined`, the inverse-operator sections, `show_val`. | open |
-| 1.2 | Rename `Exec_St` to `Abstract_State` (it is the quotient state, the counterpart of HOL-IMP's `Abs_State`; nothing about it is specific to execution). Keep the constant names for now. | open |
-| 1.3 | Extract the hooks route from `DG_Soundness` (968-1508) and `DG_LTR_Sound` (`sound_dg_hooks_ltr`), plus `gamma_join` and `unit_dg_spec_placed`, into `Examples/Placement/Placement_Hooks.thy`. Move `Exec_Placement` beside it. | open |
-| 1.4 | Create `src/Domain/ROOT`, `src/Solver/ROOT`, `src/Exec/ROOT`; rewrite `src/Core/ROOT`; add the four directories to `ROOTS`. | open |
-| 1.5 | Move the seven Base-level and compile-dependent theories into `src/Analysis/` (`Instances/Common/` for the four reuse locales, `Instances/Ctx/` for the three routed contexts, or wherever the Analysis README's layout puts them). | open |
-| 1.6 | Repoint every qualified import across Analysis, Soundness, CLI, Codegen, Examples. Check by arity where a locale header changed, not by grep. | open |
-| 1.7 | Extend the `code_identifier` block in `Analyse_Dispatch.thy` for every new session whose constants reach an export root; run `pixi run codegen-modules`. | open |
-| 1.8 | Rewrite the READMEs from the final tree: `src/Domain`, `src/Solver`, `src/Core`, `src/Exec`; delete `Solver/Context/Activation/README.md` and `Solver/Context/DG/README.md` (both list theories that do not exist). Fix `GLOSSARY.md`'s `dg_gen_of` path and the session graph in `AGENTS.md`. | open |
+| 1.1 | Split `Abstract_Domain` at line 919: `Backward_Domain.thy` takes `semantic_intersection`, `backward_domain`, `backward_domain_refined`, the inverse-operator sections, `show_val`. | deferred to first green build |
+| 1.2 | Rename `Exec_St` to `Abstract_State` (it is the quotient state, the counterpart of HOL-IMP's `Abs_State`; nothing about it is specific to execution). Keep the constant names for now. | deferred with 1.1 |
+| 1.3 | Extract the hooks route from `DG_Soundness` (968-1508) and `DG_LTR_Sound` (`sound_dg_hooks_ltr`), plus `gamma_join` and `unit_dg_spec_placed`, into `Examples/Placement/Placement_Hooks.thy`. Move `Exec_Placement` beside it. | reduced to the hooks route; deferred to first green build |
+| 1.4 | Create `src/Domain/ROOT`, `src/Solver/ROOT`, `src/Exec/ROOT`; rewrite `src/Core/ROOT`; add the four directories to `ROOTS`. | landed |
+| 1.5 | Move the seven Base-level and compile-dependent theories into `src/Analysis/` (`Instances/Common/` for the four reuse locales, `Instances/Ctx/` for the three routed contexts, or wherever the Analysis README's layout puts them). | landed |
+| 1.6 | Repoint every qualified import across Analysis, Soundness, CLI, Codegen, Examples. Check by arity where a locale header changed, not by grep. | landed |
+| 1.7 | Extend the `code_identifier` block in `Analyse_Dispatch.thy` for every new session whose constants reach an export root; run `pixi run codegen-modules`. | landed |
+| 1.8 | Rewrite the READMEs from the final tree: `src/Domain`, `src/Solver`, `src/Core`, `src/Exec`; delete `Solver/Context/Activation/README.md` and `Solver/Context/DG/README.md` (both list theories that do not exist). Fix `GLOSSARY.md`'s `dg_gen_of` path and the session graph in `AGENTS.md`. | landed |
 
 ### Phase 2 -- one carrier
 
@@ -211,6 +215,43 @@ step deliberately changed. Keep the original step text in the table above
 and mark it `superseded (see below)`.
 
 - 2026-08-30: plan written from the survey. No step executed yet.
+- 2026-08-30: `Exec_St` cannot sit in `Voblint_Domain` yet: it uses
+  `enter_frame_D`, `enter_D` and `combine_env_abs` from `Constraint_System`
+  (20, 4 and 9 mentions). Those abstract-state call-boundary operations
+  are Domain-level in nature, but their soundness lemmas cite the concrete
+  `call_enter`/`combine_collect` from `Voblint_CFG`, so separating them is
+  proof work, not a move. Until Phase 2 does it, `Exec_St` and
+  `Exec_Refinement` live in `Voblint_Exec`, and `Voblint_Domain` holds only
+  `Abstract_Domain`, `Split_State`, `Abstract_Numeric_Queries`. Step 1.2 is
+  deferred to the same point.
+- 2026-08-30: `DG_Coverage` imports `Exec_DG_Generator`, so it is in
+  `Voblint_Exec`, not `Voblint_Core` (the target table said Core).
+- 2026-08-30: `Checks` and `Call_String_Context` reached `pp` only through
+  `Abstract_Domain`'s `CFG_Def` import; both now import `Voblint_CFG.CFG_Def`
+  themselves. `Strategy_Tree_Relabel` mentions `pp` in prose only.
+- 2026-08-30: Steps 1.1 (`Backward_Domain` split) and 1.3 (hooks route to
+  Examples) are content surgery on theories that I/Q must see in their new
+  session, so they follow the first green build of the moved tree rather
+  than precede it. `Exec_Placement` itself moved to `Examples/Placement/`.
+- 2026-08-30: **`Exec_Placement` is not example-only.** The survey measured
+  it only against `DG_Framework` (zero names) and counted three Example
+  importers; but `Exec_DG_Refines`, `Exec_DG_Trees` and `Exec_DG_Generator`
+  reached it transitively and use `scoped_location`, `effective_support`,
+  `resolved_default` and the projection algebra (28, 20 and 20 mentions).
+  It is the support algebra of the executable transport and lives in
+  `Voblint_Exec`, imported explicitly by `Exec_DG_Refines`. Step 1.3 shrinks
+  to the hooks route alone. Lesson for the playbook: measure an edge
+  against every theory that *reaches* the import, not only the one that
+  writes it.
+- 2026-08-30: `Routed_Context` cited `Voblint_Compile.VIMP_Proc_to_CFG` and
+  `compile_prog` in two checked antiquotations inside prose; they are
+  unchecked `\<open>...\<close>` now. Core is compiler-free in fact, not only
+  in its import list.
+- 2026-08-30: Core's layout inside `src/Core/` is `Equations/`, `DG/`,
+  `Context/`, `Result/`; Domain, Solver and Exec are flat. Phase 0 steps
+  0.1--0.6 and Phase 1 steps 1.4--1.7 are landed (I/Q-clean per theory for
+  Phase 0, `isabelle build -n` clean for the session structure); the batch
+  build is the gate.
 
 ## Traps specific to Core
 

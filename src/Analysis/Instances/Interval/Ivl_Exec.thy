@@ -1,5 +1,5 @@
 theory Ivl_Exec
-  imports Voblint_Core.Exec_Refinement Voblint_Core.Numeric_Ops Interval_Domain
+  imports "Voblint_Exec.Exec_Refinement" Numeric_Ops Interval_Domain
 begin
 
 section \<open>Interval executable transfer mirror\<close>
@@ -10,7 +10,7 @@ instance ivl :: bounded_warrowing ..
 text \<open>
   Executable mirror of @{const ivl_tf_for} on @{typ "ivl resolved_st_q"}, following
   the sign-domain pattern in \<open>Sign_Exec\<close>. Commutation lemmas hook
-  into the generic @{theory Voblint_Core.Exec_Refinement} transport; the certified
+  into the generic @{theory Voblint_Exec.Exec_Refinement} transport; the certified
   end-to-end soundness theory built on this mirror lives in
   \<open>Interval_Ctx_None_Sound\<close>, mirroring \<open>Sign_Ctx_None_Sound\<close>.
 \<close>
@@ -29,7 +29,7 @@ subsection \<open>Executable transfer function and seeds, generic in the classif
 text \<open>
   \<open>ivl_ops\<close> bundles Interval's own primitives for the generic
   \<open>generic_branch_st_for\<close>/\<open>generic_enter_st_for\<close> construction
-  (\<^theory>\<open>Voblint_Core.Numeric_Ops\<close>), the same way \<open>sign_ops\<close> does for Sign:
+  (\<^theory>\<open>Voblint_Analysis.Numeric_Ops\<close>), the same way \<open>sign_ops\<close> does for Sign:
   \<open>branch_ivl_st_for\<close>/\<open>ivl_enter_st_for\<close>
   below are exactly those generic constructions instantiated at \<open>ivl_ops\<close>.
 \<close>
@@ -244,7 +244,7 @@ text \<open>
   A per-location specialization of the two lemmas above for the single-
   variable guard shape \<open>Less (V x) (N n)\<close>: \<^const>\<open>bfilter_ivl_st\<close>/
   \<^const>\<open>bfilter_ivl\<close> for this shape reduce (via \<open>afilter_st\<close>'s own
-  recursive equations, \<^theory>\<open>Voblint_Core.Exec_Backward\<close>) to a single
+  recursive equations, \<^theory>\<open>Voblint_Analysis.Exec_Backward\<close>) to a single
   \<^const>\<open>update_resolved_st_q\<close> at \<open>location_of gs x\<close> computed purely from
   \<open>x\<close>'s own value -- \<open>N n\<close> is a literal, so its own \<open>afilter_st\<close> case is the
   identity, and every location other than \<open>x\<close> is left untouched. This lets a

@@ -1,13 +1,13 @@
 theory Int_Ctx_None_Sound
   imports
-    "Voblint_Core.Monovariant_Analysis_Result"
-    "Voblint_Core.Exec_DG_Bridge"
-    "Voblint_Core.Routed_Domain_Exec"
+    "Voblint_Exec.Monovariant_Analysis_Result"
+    "Voblint_Exec.Exec_DG_Bridge"
+    "Voblint_Exec.Routed_Domain_Exec"
     "Voblint_Analysis.Int_Classify"
     "Voblint_Core.DG_Analysis_Adapter"
     "Voblint_Core.Routed_Context"
     "Voblint_Core.Routed_Context_Unit"
-    "Voblint_Core.Solver_Menu"
+    "Voblint_Exec.Solver_Menu"
     "Voblint_VIMP.VIMP_Program"
     "Voblint_Core.Activation_Backbone"
 begin

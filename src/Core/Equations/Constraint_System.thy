@@ -1,5 +1,5 @@
 theory Constraint_System
-  imports CFG_Enumeration "Voblint_CFG.CFG_Transfer" Abstract_Domain
+  imports CFG_Enumeration "Voblint_CFG.CFG_Transfer" "Voblint_Domain.Abstract_Domain"
     "Voblint_VIMP.VIMP_Globals" "Voblint_VIMP.VIMP_Expr" "Voblint_VIMP.VIMP_Proc"
     "TD.Basics_side"
 begin
@@ -1004,50 +1004,6 @@ lemma sound_transfer_combine_env_absI:
   unfolding eq by (rule combine_env_sound[OF sc se])
 
 
-
-subsection \<open>Side-effecting constraint for a strategy tree\<close>
-
-text \<open>
-  A valuation covers a strategy tree when it bounds both the tree's local answer
-  and every side contribution produced during the same traversal.  The local
-  unknown bounds @{const traverse_rhs}; the complete valuation bounds
-  @{const sides_of_rhs} pointwise.
-\<close>
-
-definition se_constraint_holds ::
-  "('x,'g,'d::bounded_semilattice_sup_bot) strategy_tree \<Rightarrow> ('x + 'g \<Rightarrow> 'd) \<Rightarrow> 'x \<Rightarrow> bool"
-where
-  "se_constraint_holds t \<sigma> u \<equiv>
-     traverse_rhs t \<sigma> \<le> \<sigma> (Inl u) \<and> sides_of_rhs t \<sigma> \<le> \<sigma>"
-
-(* The two halves of se_constraint_holds, split out so call sites can cite
-   the half they need instead of re-unfolding the conjunction. *)
-lemma se_constraint_holds_local [dest]:
-  "se_constraint_holds t \<sigma> u \<Longrightarrow> traverse_rhs t \<sigma> \<le> \<sigma> (Inl u)"
-  unfolding se_constraint_holds_def by simp
-
-lemma se_constraint_holds_sides [dest]:
-  "se_constraint_holds t \<sigma> u \<Longrightarrow> sides_of_rhs t \<sigma> \<le> \<sigma>"
-  unfolding se_constraint_holds_def by simp
-
-text \<open>
-  A post-solution covers the local answer and subsumes every emitted side
-  contribution.
-\<close>
-lemma part_post_solution_imp_se_constraint_holds:
-  assumes "part_post_solution T x \<sigma> vars" and "u \<in> vars"
-  shows "se_constraint_holds (T u) \<sigma> u"
-  using assms unfolding se_constraint_holds_def by auto
-
-text \<open>
-  @{const part_post_solution} decomposes into well-founded local dependencies and
-  the side-effecting constraint at every unknown.  @{const se_constraint_holds}
-  isolates the per-unknown post-fixpoint obligation.
-\<close>
-lemma part_post_solution_iff_se_constraint_holds:
-  "part_post_solution T x \<sigma> vars \<longleftrightarrow>
-     x \<in> vars \<and> (\<forall>u \<in> vars. dep\<^sub>L T \<sigma> u \<subseteq> vars \<and> se_constraint_holds (T u) \<sigma> u)"
-  unfolding se_constraint_holds_def by auto
 
 end
 

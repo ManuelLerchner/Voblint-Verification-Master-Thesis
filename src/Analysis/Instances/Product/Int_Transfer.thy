@@ -1,6 +1,6 @@
 theory Int_Transfer
   imports Int_Backward Int_Warrowing Sign_Special Parity_Special
-    Voblint_Core.Constraint_System "Voblint_VIMP.VIMP_Globals"
+    "Voblint_Core.Constraint_System" "Voblint_VIMP.VIMP_Globals"
 begin
 
 section \<open>Composite integer-domain transfer functions\<close>

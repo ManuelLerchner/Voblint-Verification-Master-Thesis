@@ -1,5 +1,5 @@
 theory Sign_Arithmetic
-  imports Sign_Lattice "Voblint_VIMP.VIMP_Expr" Voblint_Core.Abstract_Arithmetic
+  imports Sign_Lattice "Voblint_VIMP.VIMP_Expr" Abstract_Arithmetic
 begin
 
 section \<open>Sign arithmetic\<close>
@@ -83,7 +83,7 @@ subsection \<open>Comparison and truthiness queries\<close>
 
 text \<open>
   \<open>sign_lt\<close>/\<open>sign_eqb\<close>/\<open>sign_tobool\<close> are Sign's three-valued \<open>bool option\<close>
-  queries for \<open>Voblint_Core.Abstract_Arithmetic\<close>'s \<open>expression_domain_sound\<close>
+  queries for \<open>Voblint_Analysis.Abstract_Arithmetic\<close>'s \<open>expression_domain_sound\<close>
   locale: \<open>Some True\<close>/\<open>Some False\<close> when the two operands' sign bounds alone
   decide it, \<open>None\<close> otherwise. Every guard here is a \<open>sign_le\<close> test against a
   fixed threshold, so downward-closedness under \<open>\<le>\<close> (needed for

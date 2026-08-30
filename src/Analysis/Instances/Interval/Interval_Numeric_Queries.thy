@@ -1,12 +1,12 @@
 theory Interval_Numeric_Queries
-  imports Interval_Lattice "Voblint_Core.Abstract_Numeric_Queries"
+  imports Interval_Lattice "Voblint_Domain.Abstract_Numeric_Queries"
 begin
 
 section \<open>Interval interpretation of the generic numeric-query interface\<close>
 
 text \<open>
   Second-domain validation for \<open>abstract_numeric_queries\<close>
-  (\<^theory>\<open>Voblint_Core.Abstract_Numeric_Queries\<close>): a real, minimal Interval instance,
+  (\<^theory>\<open>Voblint_Domain.Abstract_Numeric_Queries\<close>): a real, minimal Interval instance,
   interpreted without touching that generic theory. Entailment/refutation of
   \<open><\<close>/\<open>=\<close> reduces to comparing bounds: two intervals' \<open><\<close> relation is
   provable exactly when one interval's upper bound is strictly below the

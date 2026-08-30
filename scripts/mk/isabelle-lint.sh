@@ -11,7 +11,7 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/require-afp.sh"
 
 LINTER_DIR="${LINTER_DIR:-/tmp/isabelle-linter}"
 LINTER_TAG="Isabelle2025-2-v1.0.0"
-SESSIONS="Voblint_VIMP Voblint_CFG Voblint_Core Voblint_Analysis Voblint_Soundness Voblint_Examples"
+SESSIONS="Voblint_VIMP Voblint_Domain Voblint_Solver Voblint_CFG Voblint_Core Voblint_Compile Voblint_Exec Voblint_Analysis Voblint_Soundness Voblint_Examples"
 
 test -d "$LINTER_DIR" || git clone --depth 1 --branch "$LINTER_TAG" https://github.com/isabelle-prover/isabelle-linter "$LINTER_DIR"
 "$ISABELLE" components -u "$LINTER_DIR/linter_base"

@@ -13,10 +13,10 @@ theory Voblint
     "Voblint_Compile.VIMP_Proc_to_CFG"
     "Voblint_CFG.LTR_Def"
     "Voblint_CFG.CFG_Prune"
-    "Voblint_Core.Abstract_Domain"
+    "Voblint_Domain.Abstract_Domain"
     "Voblint_Core.Constraint_System"
     "Voblint_Core.Constraint_System_Sound"
-    "Voblint_Core.Abstract_Numeric_Queries"
+    "Voblint_Domain.Abstract_Numeric_Queries"
     "Voblint_Core.Abstract_Checks"
     "Voblint_Analysis.Sign_Domain"
     "Voblint_Analysis.Sign_Ctx_None_Sound"
@@ -31,8 +31,8 @@ theory Voblint
     "Voblint_Analysis.Interval_Transfer"
     "Voblint_Core.Activation_Backbone"
     "Voblint_Core.DG_Ctx_Activation"
-    "Voblint_Core.Exec_St"
-    "Voblint_Core.Exec_DG_Bridge"
+    "Voblint_Exec.Exec_St"
+    "Voblint_Exec.Exec_DG_Bridge"
     "Voblint_Analysis.Sign_Exec"
     Exec_Sign_DG_Run
     Example_Checks_Store_Only
@@ -230,18 +230,18 @@ text \<open>
 
   \<^bold>\<open>3. Analysis spine.\<close> Abstract domains, equation systems, and the TD_side solver bridge; every
   generic endpoint concludes over the trace projections.
-    \<^item> @{theory Voblint_Core.Abstract_Domain} --- \<^verbatim>\<open>sound_domain\<close>, lifted state concretization, display support.
+    \<^item> @{theory Voblint_Domain.Abstract_Domain} --- \<^verbatim>\<open>sound_domain\<close>, lifted state concretization, display support.
     \<^item> @{theory Voblint_Core.Constraint_System} --- the transfer interface \<^verbatim>\<open>domain_transfer\<close>, its soundness locale \<^verbatim>\<open>sound_transfer\<close>, and the per-unknown side-effecting constraint \<^verbatim>\<open>se_constraint_holds\<close>.
     \<^item> @{theory Voblint_Core.Constraint_System_Sound} --- per-edge transfer soundness (\<^verbatim>\<open>edge_collect a \<lbrakk>\<sigma>\<rbrakk> \<subseteq> \<lbrakk>apply_tf tf a \<sigma>\<rbrakk>\<close>) and its \<^verbatim>\<open>EA_Check\<close> companion, the dispatch-point facts \<^theory>\<open>Voblint_Core.DG_Soundness\<close>'s \<^verbatim>\<open>step_sound\<close>/\<^verbatim>\<open>combine_sound\<close> obligations are discharged against.
     \<^item> @{theory Voblint_Core.State_Restriction} --- the local/global restriction algebra the routed spine reassembles states with.
-    \<^item> @{theory Voblint_Core.Solver_Mono} --- \<^verbatim>\<open>threefold_mono\<close>: the monotonicity obligation the vendored solver's post-solution theorem takes.
+    \<^item> @{theory Voblint_Solver.Solver_Mono} --- \<^verbatim>\<open>threefold_mono\<close>: the monotonicity obligation the vendored solver's post-solution theorem takes.
 
   \<^bold>\<open>3b. Check discharge.\<close> A domain-generic, sound (incomplete) decision
     procedure for compiled \<^verbatim>\<open>__voblint_check(...)\<close> conditions, discharged
     against the computed abstract solver environment at each check's own
     node --- no store is forwarded between check nodes or to the procedure
     exit.
-    \<^item> @{theory Voblint_Core.Abstract_Numeric_Queries} --- the generic
+    \<^item> @{theory Voblint_Domain.Abstract_Numeric_Queries} --- the generic
       \<^locale>\<open>abstract_numeric_queries\<close> interface (entailment/refutation of
       \<open><\<close>/\<open>=\<close> over an abstract numeric value) and its derivation from any
       \<^locale>\<open>backward_domain\<close> instance's own narrowing operators
@@ -285,9 +285,9 @@ text \<open>
     \<^item> @{theory Voblint_Core.DG_Ctx_Activation} --- DG-native discharge of those four obligations from a \<^verbatim>\<open>sound_dg_spec\<close> post-solution, so a computed D/G solution certifies the activation collecting.
 
   \<^bold>\<open>5. Executable frontend.\<close> Finite-map state representation and certified execution.
-    \<^item> @{theory Voblint_Core.Exec_St} --- executable abstract-state maps for code generation.
-    \<^item> @{theory Voblint_Core.Exec_Refinement} --- commutation bridge from executable states to function states.
-    \<^item> @{theory Voblint_Core.Exec_DG_Bridge} --- executable transport for the D/G spine (\<^const>\<open>fun_of_dg_st_gen\<close>, \<^const>\<open>dg_gen_of\<close>, \<^verbatim>\<open>part_post_solution_seed_dg_st_to_abs\<close>): the verified solver \<^emph>\<open>runs\<close> on D/G equations.
+    \<^item> @{theory Voblint_Exec.Exec_St} --- executable abstract-state maps for code generation.
+    \<^item> @{theory Voblint_Exec.Exec_Refinement} --- commutation bridge from executable states to function states.
+    \<^item> @{theory Voblint_Exec.Exec_DG_Bridge} --- executable transport for the D/G spine (\<^const>\<open>fun_of_dg_st_gen\<close>, \<^const>\<open>dg_gen_of\<close>, \<^verbatim>\<open>part_post_solution_seed_dg_st_to_abs\<close>): the verified solver \<^emph>\<open>runs\<close> on D/G equations.
     \<^item> @{theory Voblint_Analysis.Sign_Exec} --- executable Sign transfer functions.
     \<^item> @{theory Voblint_Analysis.Sign_Ctx_None_Sound} --- the routed D/G runtime for Sign: the equation system, its solved table, and the termination hypothesis each solver discipline turns on.
     \<^item> @{theory Voblint_Analysis.Interval_Ctx_None_Sound} --- the Interval counterpart, with the join, per-origin and warrowing solver-choice siblings.

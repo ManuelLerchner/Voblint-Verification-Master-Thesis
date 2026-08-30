@@ -1,13 +1,13 @@
 theory Interval_Ctx_Entry_State_Sound
   imports
-    "Voblint_Core.Exec_DG_Bridge"
+    "Voblint_Exec.Exec_DG_Bridge"
     "Voblint_Core.DG_LTR_Sound"
     "Voblint_Analysis.Interval_Transfer"
     "Voblint_Analysis.Interval_Exec_Sound"
     "Voblint_Analysis.Interval_Checks"
     "Voblint_Core.Routed_Context"
-    "Voblint_Core.Entry_State_Routed_Context"
-    "Voblint_Core.Solver_Menu"
+    Entry_State_Routed_Context
+    "Voblint_Exec.Solver_Menu"
     "Voblint_CFG.CFG_Prune"
     "Voblint_VIMP.VIMP_Program"
 begin
@@ -306,12 +306,12 @@ text \<open>
   discharged only once a concrete program supplies \<open>resolved_st_q_is_bot_for\<close>.
   The whole-CFG commute obligations (\<open>Hcmb\<close>/\<open>Hextra\<close> below) are discharged
   through \<open>dg_reader_commute_gen\<close>, the carrier-generic
-  engine \<open>Voblint_Core.Exec_DG_Bridge\<close> proves once and instantiates here at
+  engine \<open>Voblint_Exec.Exec_DG_Bridge\<close> proves once and instantiates here at
   the lifted reader \<open>map_lift (fun_of_resolved_st_q_for gs)\<close>.
 \<close>
 
 text \<open>
-  The three primitive packaging commutes, at the Base-style record: \<^theory>\<open>Voblint_Core.DG_Base_Exec\<close>
+  The three primitive packaging commutes, at the Base-style record: \<^theory>\<open>Voblint_Exec.DG_Base_Exec\<close>
   proves them once generically from \<^theory>\<open>Voblint_Core.DG_Base\<close>'s \<open>transfer_lift_commute\<close>/
   \<open>transfer_lift2_commute\<close>, so only Interval's own primitive facts
   \<open>ivl_tf_st_for_commute\<close>/\<open>ivl_enter_st_for_commute\<close> are supplied here. They are restated at
@@ -356,7 +356,7 @@ lemma ivl_Hcont_lifted_for:
         [where tf = "ivl_tf_for gs", unfolded fun_of_exec_dg_st_for_def])
 
 text \<open>
-  Registers \<open>dg_reader_commute_gen\<close> (\<^theory>\<open>Voblint_Core.Exec_DG_Bridge\<close>)
+  Registers \<open>dg_reader_commute_gen\<close> (\<^theory>\<open>Voblint_Exec.Exec_DG_Bridge\<close>)
   at the one reader this whole section needs --
   the lifted executable-to-abstract readback \<open>map_lift (fun_of_resolved_st_q_for gs)\<close> used
   identically for both the local and global carrier -- so every locale fact below
@@ -725,7 +725,7 @@ lemma entry_state_sg_uncovered_empty:
 subsection \<open>Instantiating the generic routed-context locale\<close>
 
 text \<open>
-  \<^locale>\<open>entry_state_routed_context\<close> (\<^theory>\<open>Voblint_Core.Entry_State_Routed_Context\<close>)
+  \<^locale>\<open>entry_state_routed_context\<close> (\<^theory>\<open>Voblint_Analysis.Entry_State_Routed_Context\<close>)
   packages the two interpretations this section previously proved separately
   (\<^locale>\<open>dg_ctx_activation_base\<close>, then \<^locale>\<open>routed_context_hetero\<close>) into one: \<open>FinC\<close>,
   \<open>RouteAgree\<close>, and \<open>EnterAgree\<close> -- previously reproved here from \<open>compile_prog_finite\<close>/
