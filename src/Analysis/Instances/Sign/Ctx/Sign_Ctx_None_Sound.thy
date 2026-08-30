@@ -119,7 +119,7 @@ interpretation sign_unit: routed_domain_exec
      (rule sign_tf_st_for_commute, rule sign_enter_st_for_commute, rule exact,
       simp, simp, simp add: static_resolve_def)
 
-lemmas sign_pp_abs_gen = sign_unit.pp_abs
+lemmas sign_pp_st_gen = sign_unit.pp_st
 
 end
 
@@ -149,60 +149,69 @@ lemma sctx_pp_st:
              "snd (sctx_sol gs is_bot_pred Pi ps)"]
   unfolding sctx_sol_def by simp
 
-theorem sctx_pp_abs:
+text \<open>The solver's post-solution, for the unbuffered routed generator at the executable
+  spec: the shape \<^locale>\<open>dg_ctx_activation_base\<close> consumes directly.\<close>
+
+theorem sctx_pp_routed:
   "part_post_solution
      (side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. Global) route_unit
-        (routed_cmb_g (sctx_abs_spec gs) Global Seed
-           (static_resolve (compile_prog Pi ps)))
+        (routed_cmb_g (sctx_spec gs is_bot_pred) Global Seed (static_resolve (compile_prog Pi ps)))
         (routed_extra_g Seed Global)
-        (compile_prog Pi ps) (sctx_abs_spec gs)
-        (map_lift (fun_of_resolved_st_q_for gs) (Bot::sign exec_dg_st lifted))
-        (map_lift (fun_of_resolved_st_q_for gs) (Lifted cinit_sign_st))
-        (map_lift (fun_of_resolved_st_q_for gs) (Bot::sign exec_dg_st lifted)))
+        (compile_prog Pi ps) (sctx_spec gs is_bot_pred) Bot (Lifted cinit_sign_st) Bot)
      (cfg_exit (compile_prog Pi ps), ())
-     (fun_of_dg_st_gen (map_lift (fun_of_resolved_st_q_for gs)) (map_lift (fun_of_resolved_st_q_for gs))
-        \<circ> snd (sctx_sol gs is_bot_pred Pi ps))
-     (fst (sctx_sol gs is_bot_pred Pi ps))"
-proof -
-  have pp_buf: "part_post_solution
-       (side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_addr_list (\<lambda>_. Global)
-          route_unit
-          (routed_cmb_g_contribution (sctx_spec gs is_bot_pred) Global Seed
-             (static_resolve (compile_prog Pi ps)))
-          (routed_extra_g Seed Global)
-          (compile_prog Pi ps) (sctx_spec gs is_bot_pred) Bot (Lifted cinit_sign_st) Bot)
-       (cfg_exit (compile_prog Pi ps), ())
-       (snd (sctx_sol gs is_bot_pred Pi ps)) (fst (sctx_sol gs is_bot_pred Pi ps))"
-    using sctx_pp_st unfolding sctx_eqs_def by simp
-  show ?thesis
-    unfolding sctx_abs_spec_def
-    using pp_buf unfolding sctx_spec_def by (rule sign_pp_abs_gen[OF exact])
-qed
+     (snd (sctx_sol gs is_bot_pred Pi ps)) (fst (sctx_sol gs is_bot_pred Pi ps))"
+  using sctx_pp_st unfolding sctx_eqs_def sctx_spec_def by (rule sign_pp_st_gen[OF exact])
 end
 
 section \<open>Activation-indexed collecting soundness, generic per compiled program\<close>
 
 text \<open>
-  Executable twins of the context's own \<open>sctx_sigma_abs\<close>/\<open>sctx_sg\<close> (below), defined
-  before that context so their equations are unconditional -- mirrors Interval's
-  \<open>entry_state_sigma_abs_exec\<close>/\<open>entry_state_sg_exec\<close> convention exactly.
+  The routed spine is interpreted at Sign's executable carrier and fed the solver's own
+  table: a local unknown concretizes to \<^const>\<open>gamma_state_lift\<close> of its readback, the
+  covered reader \<open>sctx_sg_st\<close> hands the table's local slot through unchanged, and no
+  solved system is transported between carriers. \<open>sctx_gamma\<close> names that
+  concretization outside the interpretation so a downstream theory can state it.
 \<close>
 
-definition sctx_sigma_abs_exec ::
-    "(vname \<Rightarrow> bool) \<Rightarrow> (sign exec_dg_st \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> pp \<times> unit + gk \<Rightarrow> (sign abs_state lifted, sign abs_state lifted) dg_state" where
-  "sctx_sigma_abs_exec gs is_bot_pred Pi ps =
-     fun_of_dg_st_gen (map_lift (fun_of_resolved_st_q_for gs)) (map_lift (fun_of_resolved_st_q_for gs))
-       \<circ> snd (sctx_sol gs is_bot_pred Pi ps)"
+definition sctx_gamma ::
+    "(vname \<Rightarrow> bool) \<Rightarrow> sign exec_dg_st lifted \<Rightarrow> sign exec_dg_st lifted \<Rightarrow> store set" where
+  "sctx_gamma gs d g = gamma_state_lift (map_lift (fun_of_resolved_st_q_for gs) d)"
 
-definition sctx_sg_exec ::
-    "(vname \<Rightarrow> bool) \<Rightarrow> (sign exec_dg_st \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> pp \<times> unit + gk \<Rightarrow> sign abs_state lifted" where
-  "sctx_sg_exec gs is_bot_pred Pi ps k =
+lemma sctx_gamma_Bot [simp]: "sctx_gamma gs Bot g = {}"
+  by (simp add: sctx_gamma_def)
+
+definition sctx_sg_st ::
+    "(vname \<Rightarrow> bool) \<Rightarrow> (sign exec_dg_st \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list
+       \<Rightarrow> pp \<times> unit + gk \<Rightarrow> sign exec_dg_st lifted" where
+  "sctx_sg_st gs is_bot_pred Pi ps k =
      (case k of
         Inl (v, ctx) \<Rightarrow>
           (if (v, ctx) \<in> fst (sctx_sol gs is_bot_pred Pi ps)
-           then locals (sctx_sigma_abs_exec gs is_bot_pred Pi ps (Inl (v, ctx)))
+           then locals (snd (sctx_sol gs is_bot_pred Pi ps) (Inl (v, ctx)))
            else Bot)
       | Inr _ \<Rightarrow> Bot)"
+
+context
+  fixes gs :: "vname \<Rightarrow> bool" and is_bot_pred :: "sign exec_dg_st \<Rightarrow> bool"
+  assumes exact: "\<And>s. is_bot_pred s = is_bot_state (fun_of_resolved_st_q_for gs s)"
+begin
+
+interpretation sign_unit: routed_domain_exec
+  gs is_bot_pred "sign_tf_st_for gs" "sign_enter_st_for gs" "sign_tf_for gs"
+  Global Seed route_unit route_unit static_resolve static_resolve
+  by unfold_locales
+     (rule sign_tf_st_for_commute, rule sign_enter_st_for_commute, rule exact,
+      simp, simp, simp add: static_resolve_def)
+
+lemma sctx_gamma_eq: "sctx_gamma gs = sign_unit.gamma_exec"
+  by (intro ext) (simp add: sctx_gamma_def sign_unit.gamma_exec_def gamma_dg_base_def)
+
+theorem sctx_sound_exec: "sound_dg_spec (sctx_spec gs is_bot_pred) (sctx_gamma gs) gs"
+  unfolding sctx_gamma_eq sctx_spec_def
+  by (rule sign_unit.sound_dg_spec_st)
+     (rule base_dg_spec_sound[OF sign_is_sound_transfer_for is_bot_state_gamma_state_empty])
+
+end
 
 context
   fixes gs :: "vname \<Rightarrow> bool" and is_bot_pred :: "sign exec_dg_st \<Rightarrow> bool"
@@ -223,95 +232,52 @@ context
         \<Longrightarrow> (cont, c1) \<in> fst (sctx_sol gs is_bot_pred Pi ps)"
 begin
 
-subsection \<open>The semantic solution projection\<close>
-
-definition sctx_sigma_abs :: "pp \<times> unit + gk \<Rightarrow> (sign abs_state lifted, sign abs_state lifted) dg_state" where
-  "sctx_sigma_abs = sctx_sigma_abs_exec gs is_bot_pred Pi ps"
-
-definition sctx_sg :: "pp \<times> unit + gk \<Rightarrow> sign abs_state lifted" where
-  "sctx_sg = sctx_sg_exec gs is_bot_pred Pi ps"
-
 lemma sctx_fin: "finite (intra (compile_prog Pi ps))"
   using compile_prog_finite by blast
 
 lemma sctx_finC: "finite (calls (compile_prog Pi ps))"
   using compile_prog_finite by blast
 
-lemma sctx_sg_covered:
+lemma sctx_sg_st_covered:
   "(v, ctx) \<in> fst (sctx_sol gs is_bot_pred Pi ps)
-   \<Longrightarrow> sctx_sg (Inl (v, ctx)) = locals (sctx_sigma_abs (Inl (v, ctx)))"
-  by (simp add: sctx_sg_def sctx_sg_exec_def sctx_sigma_abs_def sctx_sigma_abs_exec_def)
+   \<Longrightarrow> sctx_sg_st gs is_bot_pred Pi ps (Inl (v, ctx))
+         = locals (snd (sctx_sol gs is_bot_pred Pi ps) (Inl (v, ctx)))"
+  by (simp add: sctx_sg_st_def)
 
-lemma sctx_sg_uncovered_empty:
+lemma sctx_sg_st_uncovered_empty:
   "(v, ctx) \<notin> fst (sctx_sol gs is_bot_pred Pi ps)
-     \<Longrightarrow> gamma_state_lift (sctx_sg (Inl (v, ctx))) = {}"
-  by (simp add: sctx_sg_def sctx_sg_exec_def)
+     \<Longrightarrow> gamma_state_lift (map_lift (fun_of_resolved_st_q_for gs)
+           (sctx_sg_st gs is_bot_pred Pi ps (Inl (v, ctx)))) = {}"
+  by (simp add: sctx_sg_st_def)
 
 subsection \<open>Instantiating the generic DG-native activation discharge\<close>
 
-interpretation sctx_dg_base: sound_dg_spec "sctx_abs_spec gs" gamma_dg_base gs
-  unfolding sctx_abs_spec_def
-  by (rule base_dg_spec_sound[OF sign_is_sound_transfer_for is_bot_state_gamma_state_empty])
+interpretation sctx_dg_base: sound_dg_spec "sctx_spec gs is_bot_pred" "sctx_gamma gs" gs
+  by (rule sctx_sound_exec[OF exact])
 
-interpretation sctx_dg: dg_ctx_activation_base "sctx_abs_spec gs" gamma_dg_base gs
-    "compile_prog Pi ps" Global route_unit
-    "routed_cmb_g (sctx_abs_spec gs) Global Seed
-       (static_resolve (compile_prog Pi ps))"
-    "routed_extra_g Seed Global"
-    "map_lift (fun_of_resolved_st_q_for gs) (Bot::sign exec_dg_st lifted)"
-    "map_lift (fun_of_resolved_st_q_for gs) (Lifted cinit_sign_st)"
-    "map_lift (fun_of_resolved_st_q_for gs) (Bot::sign exec_dg_st lifted)"
-    sctx_sigma_abs "fst (sctx_sol gs is_bot_pred Pi ps)"
-    "(cfg_exit (compile_prog Pi ps), ())" sctx_sg gamma_state_lift
-proof unfold_locales
-  show "finite (intra (compile_prog Pi ps))" by (rule sctx_fin)
+interpretation sctx_routed: unit_routed_context "sctx_spec gs is_bot_pred" "sctx_gamma gs" gs
+    "compile_prog Pi ps" Global Bot "Lifted cinit_sign_st" Bot
+    "snd (sctx_sol gs is_bot_pred Pi ps)" "fst (sctx_sol gs is_bot_pred Pi ps)"
+    "(cfg_exit (compile_prog Pi ps), ())" "sctx_sg_st gs is_bot_pred Pi ps" Seed
+    "\<lambda>m. gamma_state_lift (map_lift (fun_of_resolved_st_q_for gs) m)"
+proof (unfold_locales, goal_cases FinE PP SgCov SgUncov Fwd FinC SeedKey CallFwd CombFwd EnterAgree)
+  case FinE show ?case by (rule sctx_fin)
 next
-  show "part_post_solution
-          (side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. Global) route_unit
-             (routed_cmb_g (sctx_abs_spec gs) Global Seed
-                (static_resolve (compile_prog Pi ps)))
-             (routed_extra_g Seed Global)
-             (compile_prog Pi ps) (sctx_abs_spec gs)
-             (map_lift (fun_of_resolved_st_q_for gs) (Bot::sign exec_dg_st lifted))
-             (map_lift (fun_of_resolved_st_q_for gs) (Lifted cinit_sign_st))
-             (map_lift (fun_of_resolved_st_q_for gs) (Bot::sign exec_dg_st lifted)))
-          (cfg_exit (compile_prog Pi ps), ()) sctx_sigma_abs
-          (fst (sctx_sol gs is_bot_pred Pi ps))"
-    unfolding sctx_sigma_abs_def sctx_sigma_abs_exec_def
-    by (rule sctx_pp_abs[OF solves exact])
+  case PP show ?case by (rule sctx_pp_routed[OF solves exact])
 next
-  fix v ctx assume "(v, ctx) \<in> fst (sctx_sol gs is_bot_pred Pi ps)"
-  thus "gamma_state_lift (sctx_sg (Inl (v, ctx)))
-          = gamma_dg_base (locals (sctx_sigma_abs (Inl (v, ctx)))) (globs (sctx_sigma_abs (Inr Global)))"
-    by (simp add: sctx_sg_covered gamma_dg_base_def)
+  case (SgCov v ctx) then show ?case
+    by (simp add: sctx_sg_st_def sctx_gamma_def)
 next
-  fix v ctx assume "(v, ctx) \<notin> fst (sctx_sol gs is_bot_pred Pi ps)"
-  thus "gamma_state_lift (sctx_sg (Inl (v, ctx))) = {}"
-    by (rule sctx_sg_uncovered_empty)
+  case (SgUncov v ctx) then show ?case by (rule sctx_sg_st_uncovered_empty)
 next
-  fix u a v ctx assume "(u, ctx) \<in> fst (sctx_sol gs is_bot_pred Pi ps)"
-    "(u, a, v) \<in> intra (compile_prog Pi ps)"
-  thus "(v, ctx) \<in> fst (sctx_sol gs is_bot_pred Pi ps)" by (rule fwd_ok)
-qed
-
-subsection \<open>The routed interpretation and its CALL/COMB corollaries\<close>
-
-interpretation sctx_routed: unit_routed_context "sctx_abs_spec gs" gamma_dg_base gs
-    "compile_prog Pi ps" Global
-    "map_lift (fun_of_resolved_st_q_for gs) (Bot::sign exec_dg_st lifted)"
-    "map_lift (fun_of_resolved_st_q_for gs) (Lifted cinit_sign_st)"
-    "map_lift (fun_of_resolved_st_q_for gs) (Bot::sign exec_dg_st lifted)"
-    sctx_sigma_abs "fst (sctx_sol gs is_bot_pred Pi ps)"
-    "(cfg_exit (compile_prog Pi ps), ())" sctx_sg
-    Seed gamma_state_lift
-proof (unfold_locales, goal_cases FinC SeedKey CallFwd CombFwd EnterAgree)
+  case (Fwd u a v ctx) then show ?case by (rule fwd_ok)
+next
   case FinC show ?case by (rule sctx_finC)
 next
   case (SeedKey p ctx) show ?case by simp
 next
   case (CallFwd u ctx dst pars args p cont)
-  show ?case
-    using CallFwd(1,2) call_fwd_ok unfolding route_unit_def by blast
+  show ?case using CallFwd(1,2) call_fwd_ok unfolding route_unit_def by blast
 next
   case (CombFwd cl c1 dst pars args p cont)
   show ?case using CombFwd(1,2) comb_fwd_ok by blast
@@ -330,8 +296,9 @@ qed
 subsection \<open>Activation-indexed collecting soundness\<close>
 
 lemma sctx_cinit_le_cinit_sign_st:
-  "cinit_stores gs \<subseteq> gamma_state_lift (map_lift (fun_of_resolved_st_q_for gs) (Lifted cinit_sign_st))"
-  by (auto simp: cinit_stores_def gamma_state_def fun_of_resolved_st_q_for_def fun_of_st_cinit_sign_st_for)
+  "cinit_stores gs \<subseteq> sctx_gamma gs (Lifted cinit_sign_st) Bot"
+  by (auto simp: sctx_gamma_def cinit_stores_def gamma_state_def fun_of_resolved_st_q_for_def
+                 fun_of_st_cinit_sign_st_for)
 
 end
 
@@ -344,7 +311,7 @@ text \<open>
   boundary the mixed-analysis \<open>monovariant_analysis_result_for\<close> and Interval's own
   \<open>analyse_interval_entry_state_result_for\<close> already use, and are the tables Sign's public
   API (\<open>Sign_Checks\<close>) redirects onto in production. Their soundness is established there
-  through a \<open>dg_analysis_adapter\<close> interpretation of this file's own \<open>sctx_dg\<close>/\<open>sctx_routed\<close>
+  through a \<open>dg_analysis_adapter\<close> interpretation of this file's own \<open>sctx_routed\<close>
   context, bridged to these executable tables via \<open>normalize_point_canonicalize_lift_eq_old\<close>
   (\<^theory>\<open>Voblint_Core.Analysis_Result\<close>).
 \<close>

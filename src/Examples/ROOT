@@ -93,9 +93,6 @@ session Voblint_Examples in "." = "Voblint_CLI" +
 
     (* Solver, domain-independent *)
     Example_Strategy_Tree_Demo
-    (* Phase 2 spike of docs/CORE_REFACTOR_PLAN.md: the routed spine at Sign's
-       executable carrier, fed by the solver's own post-solution. *)
-    Spike_Sign_Quotient
 
     (* Tooling *)
     Example_EntryState_GraphViz_Regression

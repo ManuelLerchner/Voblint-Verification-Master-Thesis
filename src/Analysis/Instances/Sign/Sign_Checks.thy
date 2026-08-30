@@ -61,10 +61,10 @@ subsection \<open>The generic report adapter, at the routed-unit context\<close>
 
 text \<open>
   Interpreting \<^locale>\<open>dg_analysis_adapter\<close> at \<open>Sign_Ctx_None_Sound\<close>'s own routed-unit
-  solved system reuses every obligation that theory's own \<open>sctx_dg\<close>/\<open>sctx_routed\<close>
-  interpretations already discharge: the five \<^locale>\<open>dg_ctx_activation_base\<close> obligations
-  are exactly \<open>sctx_dg\<close>'s own (cited here via the exported \<open>sctx_pp_abs\<close>/\<open>sctx_sg_covered\<close>/
-  \<open>sctx_sg_uncovered_empty\<close>/\<open>sctx_fin\<close>), and the routed obligations collapse the same way
+  solved system reuses every obligation that theory's own \<open>sctx_routed\<close>
+  interpretation already discharges, at the executable carrier: the five
+  \<^locale>\<open>dg_ctx_activation_base\<close> obligations are exactly its own (cited here via the exported
+  \<open>sctx_pp_routed\<close>/\<open>sctx_sg_st_uncovered_empty\<close>), and the routed obligations collapse the same way
   \<^locale>\<open>unit_routed_context\<close>'s did, at \<^const>\<open>route_unit\<close>/\<^const>\<open>enterc_unit\<close>. Only
   \<open>classify_proved\<close>/\<open>classify_refuted\<close> are genuinely new here, discharged by
   \<open>sign_classify_check_proved\<close>/\<open>sign_classify_check_refuted\<close> above. This context re-opens
@@ -93,40 +93,27 @@ context
         \<Longrightarrow> (cont, c1) \<in> fst (sctx_sol gs is_bot_pred Pi ps)"
 begin
 
-interpretation sctx_dg_base: sound_dg_spec "sctx_abs_spec gs" gamma_dg_base gs
-  unfolding sctx_abs_spec_def
-  by (rule base_dg_spec_sound[OF sign_is_sound_transfer_for is_bot_state_gamma_state_empty])
+interpretation sctx_dg_base: sound_dg_spec "sctx_spec gs is_bot_pred" "sctx_gamma gs" gs
+  by (rule sctx_sound_exec[OF exact])
 
-interpretation sctx_adapter: dg_analysis_adapter "sctx_abs_spec gs" gamma_dg_base gs
-    "compile_prog Pi ps" Global route_unit
-    "map_lift (fun_of_resolved_st_q_for gs) (Bot::sign exec_dg_st lifted)"
-    "map_lift (fun_of_resolved_st_q_for gs) (Lifted cinit_sign_st)"
-    "map_lift (fun_of_resolved_st_q_for gs) (Bot::sign exec_dg_st lifted)"
-    "sctx_sigma_abs gs is_bot_pred Pi ps" "fst (sctx_sol gs is_bot_pred Pi ps)"
-    "(cfg_exit (compile_prog Pi ps), ())" "sctx_sg gs is_bot_pred Pi ps"
-    Seed gamma_state_lift enterc_unit id sign_classify_check
+interpretation sctx_adapter: dg_analysis_adapter "sctx_spec gs is_bot_pred" "sctx_gamma gs" gs
+    "compile_prog Pi ps" Global route_unit Bot "Lifted cinit_sign_st" Bot
+    "snd (sctx_sol gs is_bot_pred Pi ps)" "fst (sctx_sol gs is_bot_pred Pi ps)"
+    "(cfg_exit (compile_prog Pi ps), ())" "sctx_sg_st gs is_bot_pred Pi ps"
+    Seed "\<lambda>m. gamma_state_lift (map_lift (fun_of_resolved_st_q_for gs) m)" enterc_unit
+    "map_lift (fun_of_resolved_st_q_for gs)" sign_classify_check
 proof (unfold_locales, goal_cases FinE PP SgCov SgUncov Fwd FinC SeedKey ResolveSound
     RouteEnterc CallFwd CombFwd EnterAgree GammaRd ClProved ClRefuted)
   case FinE show ?case
     using compile_prog_finite by auto
 next
-  case PP show ?case
-    by (simp only: sctx_sigma_abs_def[OF solves exact entry_cov fwd_ok call_fwd_ok comb_fwd_ok]
-        sctx_sigma_abs_exec_def)
-      (rule sctx_pp_abs[OF solves exact])
+  case PP show ?case by (rule sctx_pp_routed[OF solves exact])
 next
   case (SgCov v c)
-  note mem = this
-  have eq1: "sctx_sg gs is_bot_pred Pi ps (Inl (v, c))
-               = locals (sctx_sigma_abs gs is_bot_pred Pi ps (Inl (v, c)))"
-    by (rule sctx_sg_covered[OF solves exact entry_cov fwd_ok call_fwd_ok comb_fwd_ok mem])
-  show ?case
-    using eq1 gamma_dg_base_def by auto
+  thus ?case by (simp add: sctx_sg_st_def sctx_gamma_def)
 next
   case (SgUncov v c)
-  note nmem = this
-  show ?case
-    by (rule sctx_sg_uncovered_empty[OF solves exact entry_cov fwd_ok call_fwd_ok comb_fwd_ok nmem])
+  thus ?case by (simp add: sctx_sg_st_def)
 next
   case (Fwd u a v c)
   thus ?case by (rule fwd_ok)
@@ -160,7 +147,7 @@ next
   thus ?case using es_eq by simp
 next
   case (GammaRd d g')
-  show ?case by (simp add: gamma_dg_base_def)
+  show ?case by (simp add: sctx_gamma_def)
 next
   case (ClProved c d s)
   thus ?case by (rule sign_classify_check_proved)
@@ -188,7 +175,7 @@ text \<open>
   projecting (\<open>analyse_sign_ctx_result_for\<close>) --- \<open>exact\<close> is exactly what identifies the
   two orders. A caller composing \<open>sctx_result_node_sound\<close> with \<open>sctx_analyse_result_eq\<close>
   gets \<^const>\<open>analyse_sign_ctx_result_for\<close>'s own node-soundness bridge without
-  re-deriving \<open>routed_context_hetero\<close>'s coverage/sigma-projection argument by hand.
+  re-deriving \<open>routed_context_base_hetero\<close>'s coverage argument by hand.
 \<close>
 
 lemmas sctx_result_node_sound = sctx_adapter.analyse_result_node_sound
@@ -200,8 +187,6 @@ lemma sctx_analyse_result_eq:
              (canonicalize_lift is_bot_pred (locals (snd (sctx_sol gs is_bot_pred Pi ps) (Inl (v, ctx)))))
       else Unreachable)"
   unfolding sctx_adapter.lookup_context_analyse_result
-  apply (simp only: sctx_sigma_abs_def[OF solves exact entry_cov fwd_ok call_fwd_ok comb_fwd_ok]
-                     sctx_sigma_abs_exec_def o_apply fun_of_dg_st_gen_simps(1))
   by (cases "locals (snd (sctx_sol gs is_bot_pred Pi ps) (Inl (v, ctx)))")
      (simp_all add: exact normalize_lift_def)
 

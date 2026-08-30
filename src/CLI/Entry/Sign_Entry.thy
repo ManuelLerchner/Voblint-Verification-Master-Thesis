@@ -92,17 +92,15 @@ proof -
       = activation_collect pgs enterc_unit ()
           (compile_prog (prog_table p) (prog_procs p)) (cinit_stores pgs) v ()"
     unfolding cfg_eq by (rule activation_collect_unit_eq_ltr_collect[symmetric])
-  have s0_sound: "cinit_stores pgs \<subseteq> gamma_dg_base
-        (map_lift (fun_of_resolved_st_q_for pgs) (Lifted cinit_sign_st))
-        (map_lift (fun_of_resolved_st_q_for pgs) (Bot::sign exec_dg_st lifted))"
-    using sctx_cinit_le_cinit_sign_st[OF solves' exact entry_cov' fwd_ok' call_fwd_ok' comb_fwd_ok']
-    by (simp add: gamma_dg_base_def)
+  have s0_sound: "cinit_stores pgs \<subseteq> sctx_gamma pgs (Lifted cinit_sign_st) Bot"
+    by (rule sctx_cinit_le_cinit_sign_st[OF solves' exact entry_cov' fwd_ok' call_fwd_ok' comb_fwd_ok'])
   have node_sound: "activation_collect pgs enterc_unit ()
         (compile_prog (prog_table p) (prog_procs p)) (cinit_stores pgs) v ()
       \<subseteq> \<lbrakk>case lookup_context
               (dg_analysis_adapter.analyse_result
-                 (sctx_sigma_abs pgs is_bot_pred (prog_table p) (prog_procs p))
-                 (fst (sctx_sol pgs is_bot_pred (prog_table p) (prog_procs p))) id)
+                 (snd (sctx_sol pgs is_bot_pred (prog_table p) (prog_procs p)))
+                 (fst (sctx_sol pgs is_bot_pred (prog_table p) (prog_procs p)))
+                 (map_lift (fun_of_resolved_st_q_for pgs)))
               v () of
             Unreachable \<Rightarrow> bot | Reachable st \<Rightarrow> st\<rbrakk>"
   proof (rule sctx_result_node_sound)
@@ -130,9 +128,7 @@ proof -
     show "(cfg_entry (compile_prog (prog_table p) (prog_procs p)), ())
         \<in> fst (sctx_sol pgs is_bot_pred (prog_table p) (prog_procs p))"
       by (rule entry_cov')
-    show "cinit_stores pgs \<subseteq> gamma_dg_base
-        (map_lift (fun_of_resolved_st_q_for pgs) (Lifted cinit_sign_st))
-        (map_lift (fun_of_resolved_st_q_for pgs) (Bot::sign exec_dg_st lifted))"
+    show "cinit_stores pgs \<subseteq> sctx_gamma pgs (Lifted cinit_sign_st) Bot"
       by (rule s0_sound)
   qed
   have result_eq: "lookup_context (analyse_sign_result_for pgs p) v ()
@@ -144,8 +140,9 @@ proof -
     by simp
   have adapter_eq0: "lookup_context
           (dg_analysis_adapter.analyse_result
-             (sctx_sigma_abs pgs is_bot_pred (prog_table p) (prog_procs p))
-             (fst (sctx_sol pgs is_bot_pred (prog_table p) (prog_procs p))) id)
+             (snd (sctx_sol pgs is_bot_pred (prog_table p) (prog_procs p)))
+             (fst (sctx_sol pgs is_bot_pred (prog_table p) (prog_procs p)))
+             (map_lift (fun_of_resolved_st_q_for pgs)))
           v ()
       = (if (v, ()) \<in> fst (sctx_sol pgs is_bot_pred (prog_table p) (prog_procs p))
          then normalize_point pgs
@@ -182,8 +179,8 @@ proof -
          else Unreachable)
       = lookup_context
           (dg_analysis_adapter.analyse_result
-             (sctx_sigma_abs pgs is_bot_pred (prog_table p) (prog_procs p))
-             (fst (sctx_sol_prog pgs p)) id)
+             (snd (sctx_sol_prog pgs p))
+             (fst (sctx_sol_prog pgs p)) (map_lift (fun_of_resolved_st_q_for pgs)))
           v ()"
     using adapter_eq0[unfolded sol_eq[symmetric]]
     by (rule sym)
