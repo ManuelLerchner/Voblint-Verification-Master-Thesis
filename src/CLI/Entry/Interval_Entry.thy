@@ -79,17 +79,15 @@ proof -
       \<Longrightarrow> (cl, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (compile_prog (prog_table p) (prog_procs p))
       \<Longrightarrow> (k, c1) \<in> fst (ictx_sol_warrow pgs is_bot_pred (prog_table p) (prog_procs p))"
     using comb_fwd_ok unfolding sol_eq[symmetric] cfg_eq[symmetric] .
-  have s0_sound: "cinit_stores pgs \<subseteq> gamma_dg_base
-        (map_lift (fun_of_resolved_st_q_for pgs) (Lifted cinit_ivl_st))
-        (map_lift (fun_of_resolved_st_q_for pgs) (Bot::ivl exec_dg_st lifted))"
-    using ictx_cinit_le_cinit_ivl_st_warrow[OF solves' exact entry_cov' fwd_ok' call_fwd_ok' comb_fwd_ok']
-    by (simp add: gamma_dg_base_def)
+  have s0_sound: "cinit_stores pgs \<subseteq> ictx_gamma pgs (Lifted cinit_ivl_st) Bot"
+    by (rule ictx_cinit_le_cinit_ivl_st_warrow[OF solves' exact entry_cov' fwd_ok' call_fwd_ok' comb_fwd_ok'])
   have node_sound: "activation_collect pgs enterc_unit ()
         (compile_prog (prog_table p) (prog_procs p)) (cinit_stores pgs) v ()
       \<subseteq> \<lbrakk>case lookup_context
               (dg_analysis_adapter.analyse_result
-                 (ictx_sigma_abs_warrow pgs is_bot_pred (prog_table p) (prog_procs p))
-                 (fst (ictx_sol_warrow pgs is_bot_pred (prog_table p) (prog_procs p))) id)
+                 (snd (ictx_sol_warrow pgs is_bot_pred (prog_table p) (prog_procs p)))
+                 (fst (ictx_sol_warrow pgs is_bot_pred (prog_table p) (prog_procs p)))
+                 (map_lift (fun_of_resolved_st_q_for pgs)))
               v () of
             Unreachable \<Rightarrow> bot | Reachable st \<Rightarrow> st\<rbrakk>"
     by (rule ictx_result_node_sound_warrow
@@ -108,8 +106,9 @@ proof -
     by simp
   have adapter_eq0: "lookup_context
           (dg_analysis_adapter.analyse_result
-             (ictx_sigma_abs_warrow pgs is_bot_pred (prog_table p) (prog_procs p))
-             (fst (ictx_sol_warrow pgs is_bot_pred (prog_table p) (prog_procs p))) id)
+             (snd (ictx_sol_warrow pgs is_bot_pred (prog_table p) (prog_procs p)))
+             (fst (ictx_sol_warrow pgs is_bot_pred (prog_table p) (prog_procs p)))
+             (map_lift (fun_of_resolved_st_q_for pgs)))
           v ()
       = (if (v, ()) \<in> fst (ictx_sol_warrow pgs is_bot_pred (prog_table p) (prog_procs p))
          then normalize_point pgs
@@ -125,8 +124,8 @@ proof -
          else Unreachable)
       = lookup_context
           (dg_analysis_adapter.analyse_result
-             (ictx_sigma_abs_warrow pgs is_bot_pred (prog_table p) (prog_procs p))
-             (fst (ictx_sol_prog_warrow pgs p)) id)
+             (snd (ictx_sol_prog_warrow pgs p))
+             (fst (ictx_sol_prog_warrow pgs p)) (map_lift (fun_of_resolved_st_q_for pgs)))
           v ()"
     using adapter_eq0[unfolded sol_eq[symmetric]]
     by (rule sym)
@@ -348,17 +347,16 @@ proof -
       \<Longrightarrow> (cl, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (compile_prog (prog_table p) (prog_procs p))
       \<Longrightarrow> (k, c1) \<in> fst (ictx_sol (declared_global p) is_bot_pred (prog_table p) (prog_procs p))"
     using comb_fwd_ok unfolding sol_eq[symmetric] cfg_eq[symmetric] .
-  have s0_sound: "cinit_stores (declared_global p) \<subseteq> gamma_dg_base
-        (map_lift (fun_of_resolved_st_q_for (declared_global p)) (Lifted cinit_ivl_st))
-        (map_lift (fun_of_resolved_st_q_for (declared_global p)) (Bot::ivl exec_dg_st lifted))"
-    using ictx_cinit_le_cinit_ivl_st[OF solves' exact entry_cov' fwd_ok' call_fwd_ok' comb_fwd_ok']
-    by (simp add: gamma_dg_base_def)
+  have s0_sound: "cinit_stores (declared_global p)
+        \<subseteq> ictx_gamma (declared_global p) (Lifted cinit_ivl_st) Bot"
+    by (rule ictx_cinit_le_cinit_ivl_st[OF solves' exact entry_cov' fwd_ok' call_fwd_ok' comb_fwd_ok'])
   have node_sound: "activation_collect (declared_global p) enterc_unit ()
         (compile_prog (prog_table p) (prog_procs p)) (cinit_stores (declared_global p)) v ()
       \<subseteq> \<lbrakk>case lookup_context
               (dg_analysis_adapter.analyse_result
-                 (ictx_sigma_abs (declared_global p) is_bot_pred (prog_table p) (prog_procs p))
-                 (fst (ictx_sol (declared_global p) is_bot_pred (prog_table p) (prog_procs p))) id)
+                 (snd (ictx_sol (declared_global p) is_bot_pred (prog_table p) (prog_procs p)))
+                 (fst (ictx_sol (declared_global p) is_bot_pred (prog_table p) (prog_procs p)))
+                 (map_lift (fun_of_resolved_st_q_for (declared_global p))))
               v () of
             Unreachable \<Rightarrow> bot | Reachable st \<Rightarrow> st\<rbrakk>"
     by (rule ictx_result_node_sound
@@ -378,8 +376,9 @@ proof -
     by simp
   have adapter_eq0: "lookup_context
           (dg_analysis_adapter.analyse_result
-             (ictx_sigma_abs (declared_global p) is_bot_pred (prog_table p) (prog_procs p))
-             (fst (ictx_sol (declared_global p) is_bot_pred (prog_table p) (prog_procs p))) id)
+             (snd (ictx_sol (declared_global p) is_bot_pred (prog_table p) (prog_procs p)))
+             (fst (ictx_sol (declared_global p) is_bot_pred (prog_table p) (prog_procs p)))
+             (map_lift (fun_of_resolved_st_q_for (declared_global p))))
           v ()
       = (if (v, ()) \<in> fst (ictx_sol (declared_global p) is_bot_pred (prog_table p) (prog_procs p))
          then normalize_point (declared_global p)
@@ -395,8 +394,9 @@ proof -
          else Unreachable)
       = lookup_context
           (dg_analysis_adapter.analyse_result
-             (ictx_sigma_abs (declared_global p) is_bot_pred (prog_table p) (prog_procs p))
-             (fst (ictx_sol_prog (declared_global p) p)) id)
+             (snd (ictx_sol_prog (declared_global p) p))
+             (fst (ictx_sol_prog (declared_global p) p))
+             (map_lift (fun_of_resolved_st_q_for (declared_global p))))
           v ()"
     using adapter_eq0[unfolded sol_eq[symmetric]]
     by (rule sym)
@@ -600,17 +600,17 @@ proof -
       \<Longrightarrow> (cl, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (compile_prog (prog_table p) (prog_procs p))
       \<Longrightarrow> (k, c1) \<in> fst (ictx_sol_per_origin (declared_global p) is_bot_pred (prog_table p) (prog_procs p))"
     using comb_fwd_ok unfolding sol_eq[symmetric] cfg_eq[symmetric] .
-  have s0_sound: "cinit_stores (declared_global p) \<subseteq> gamma_dg_base
-        (map_lift (fun_of_resolved_st_q_for (declared_global p)) (Lifted cinit_ivl_st))
-        (map_lift (fun_of_resolved_st_q_for (declared_global p)) (Bot::ivl exec_dg_st lifted))"
-    using ictx_cinit_le_cinit_ivl_st_per_origin[OF solves' exact entry_cov' fwd_ok' call_fwd_ok' comb_fwd_ok']
-    by (simp add: gamma_dg_base_def)
+  have s0_sound: "cinit_stores (declared_global p)
+        \<subseteq> ictx_gamma (declared_global p) (Lifted cinit_ivl_st) Bot"
+    by (rule ictx_cinit_le_cinit_ivl_st_per_origin[OF solves' exact entry_cov' fwd_ok' call_fwd_ok'
+                                                     comb_fwd_ok'])
   have node_sound: "activation_collect (declared_global p) enterc_unit ()
         (compile_prog (prog_table p) (prog_procs p)) (cinit_stores (declared_global p)) v ()
       \<subseteq> \<lbrakk>case lookup_context
               (dg_analysis_adapter.analyse_result
-                 (ictx_sigma_abs_per_origin (declared_global p) is_bot_pred (prog_table p) (prog_procs p))
-                 (fst (ictx_sol_per_origin (declared_global p) is_bot_pred (prog_table p) (prog_procs p))) id)
+                 (snd (ictx_sol_per_origin (declared_global p) is_bot_pred (prog_table p) (prog_procs p)))
+                 (fst (ictx_sol_per_origin (declared_global p) is_bot_pred (prog_table p) (prog_procs p)))
+                 (map_lift (fun_of_resolved_st_q_for (declared_global p))))
               v () of
             Unreachable \<Rightarrow> bot | Reachable st \<Rightarrow> st\<rbrakk>"
     by (rule ictx_result_node_sound_per_origin
@@ -630,8 +630,9 @@ proof -
     by simp
   have adapter_eq0: "lookup_context
           (dg_analysis_adapter.analyse_result
-             (ictx_sigma_abs_per_origin (declared_global p) is_bot_pred (prog_table p) (prog_procs p))
-             (fst (ictx_sol_per_origin (declared_global p) is_bot_pred (prog_table p) (prog_procs p))) id)
+             (snd (ictx_sol_per_origin (declared_global p) is_bot_pred (prog_table p) (prog_procs p)))
+             (fst (ictx_sol_per_origin (declared_global p) is_bot_pred (prog_table p) (prog_procs p)))
+             (map_lift (fun_of_resolved_st_q_for (declared_global p))))
           v ()
       = (if (v, ()) \<in> fst (ictx_sol_per_origin (declared_global p) is_bot_pred (prog_table p) (prog_procs p))
          then normalize_point (declared_global p)
@@ -647,8 +648,9 @@ proof -
          else Unreachable)
       = lookup_context
           (dg_analysis_adapter.analyse_result
-             (ictx_sigma_abs_per_origin (declared_global p) is_bot_pred (prog_table p) (prog_procs p))
-             (fst (ictx_sol_prog_per_origin (declared_global p) p)) id)
+             (snd (ictx_sol_prog_per_origin (declared_global p) p))
+             (fst (ictx_sol_prog_per_origin (declared_global p) p))
+             (map_lift (fun_of_resolved_st_q_for (declared_global p))))
           v ()"
     using adapter_eq0[unfolded sol_eq[symmetric]]
     by (rule sym)
