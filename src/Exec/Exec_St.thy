@@ -1,6 +1,6 @@
 theory Exec_St
   imports "Voblint_Domain.Abstract_Domain" "TD.Update_rules"
-    "Voblint_Core.Constraint_System" "HOL-Library.AList"
+    "Voblint_Core.Transfer_Interface" "HOL-Library.AList"
 begin
 
 text \<open>

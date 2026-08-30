@@ -660,11 +660,11 @@ definition entry_state_context :: "cfg_node \<Rightarrow> ivl list \<Rightarrow>
              (locals (snd (entry_state_sol gs is_bot_pred Pi ps) (Inl (u, ctx))))
              (globs (snd (entry_state_sol gs is_bot_pred Pi ps) (Inr Global)))) ca)"
 
-lemma entry_state_fin: "finite (intra (compile_prog Pi ps))"
-  using compile_prog_finite by blast
+interpretation entry_state_compiled: compiled_cfg Pi ps "compile_prog Pi ps"
+  by (unfold_locales; simp add: compile_prog_finite)
 
-lemma entry_state_finC: "finite (calls (compile_prog Pi ps))"
-  using compile_prog_finite by blast
+lemmas entry_state_fin = entry_state_compiled.finite_intra
+lemmas entry_state_finC = entry_state_compiled.finite_calls
 
 lemma entry_state_sg_st_covered:
   "(v, ctx) \<in> fst (entry_state_sol gs is_bot_pred Pi ps)

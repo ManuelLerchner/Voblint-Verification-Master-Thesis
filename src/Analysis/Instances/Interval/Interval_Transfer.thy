@@ -1,5 +1,5 @@
 theory Interval_Transfer
-  imports Interval_Backward Interval_Special "Voblint_Core.Constraint_System"
+  imports Interval_Backward Interval_Special "Voblint_Core.Transfer_Interface"
     "Voblint_VIMP.VIMP_Globals"
 begin
 
@@ -104,7 +104,7 @@ subsection \<open>Classifier-parametric procedure entry and bundled transfer fun
 
 text \<open>Procedure entry: keep globals, reset locals to the full interval, then bind
   the formals to the abstract values of the actuals evaluated in the caller.
-  Generic via enter_frame_D/enter_D (Constraint_System.thy), parameterised by
+  Generic via enter_frame_D/enter_D (Transfer_Interface.thy), parameterised by
   ivl_top as the domain's fully-imprecise reset value.  Entry and combine are
   the only fields that consult a classifier, so the bundled transfer function
   is parametric in the classifier throughout.\<close>

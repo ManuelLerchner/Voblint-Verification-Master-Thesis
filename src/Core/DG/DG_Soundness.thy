@@ -1,5 +1,5 @@
 theory DG_Soundness
-  imports DG_Framework Constraint_System_Sound
+  imports DG_Framework Transfer_Interface_Sound
 begin
 
 section \<open>Native heterogeneous soundness\<close>

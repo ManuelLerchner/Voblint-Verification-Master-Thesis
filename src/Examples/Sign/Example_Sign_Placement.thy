@@ -332,7 +332,7 @@ subsection \<open>CFG structure facts\<close>
 
 interpretation sign_placement: compiled_cfg "prog_table sign_placement_prog"
     "prog_procs sign_placement_prog" sign_placement_cfg
-  by unfold_locales (rule sign_placement_cfg_def)
+  by (unfold_locales; unfold sign_placement_cfg_def; simp add: compile_prog_finite)
 
 lemmas sign_placement_cfg_entry = sign_placement.entry
 

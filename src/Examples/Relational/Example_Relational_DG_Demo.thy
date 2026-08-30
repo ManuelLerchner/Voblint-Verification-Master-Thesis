@@ -68,7 +68,7 @@ definition demo_cfg :: cfg where
   "demo_cfg = compile_prog demo_pi (prog_procs demo_program)"
 
 interpretation demo: compiled_cfg demo_pi "prog_procs demo_program" demo_cfg
-  by unfold_locales (rule demo_cfg_def)
+  by (unfold_locales; unfold demo_cfg_def; simp add: compile_prog_finite)
 
 text \<open>\<open>Statement 1\<close> is the true branch of the guard, right after the
   \<open>assume\<close> and before \<open>z := 1\<close> -- exactly where \<open>x < y\<close> is freshly known

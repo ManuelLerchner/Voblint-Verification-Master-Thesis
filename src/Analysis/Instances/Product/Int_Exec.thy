@@ -109,7 +109,7 @@ lemma int_tf_st_never_for_reduces: "action_reduces (int_tf_st_never_for gs)"
 theorem int_tf_st_never_for_commute:
   "fun_of_resolved_st_q_for gs (int_tf_st_never_for gs a s) =
    apply_tf (int_tf_never_for gs) a (fun_of_resolved_st_q_for gs s)"
-proof (rule apply_tf_wrap_eqI[where H = "%f. f (fun_of_resolved_st_q_for gs s)"])
+proof (rule apply_tf_eqI[where H = "%f. f (fun_of_resolved_st_q_for gs s)"])
   show "fun_of_resolved_st_q_for gs (int_tf_st_never_for gs EA_Nop s) =
       apply_tf (int_tf_never_for gs) EA_Nop (fun_of_resolved_st_q_for gs s)"
     by (simp add: int_tf_never_for_def skip_int_dom_def)
@@ -220,7 +220,7 @@ lemma int_tf_st_once_for_reduces: "action_reduces (int_tf_st_once_for gs)"
 theorem int_tf_st_once_for_commute:
   "fun_of_resolved_st_q_for gs (int_tf_st_once_for gs a s) =
    apply_tf (int_tf_once_for gs) a (fun_of_resolved_st_q_for gs s)"
-proof (rule apply_tf_wrap_eqI[where H = "%f. f (fun_of_resolved_st_q_for gs s)"])
+proof (rule apply_tf_eqI[where H = "%f. f (fun_of_resolved_st_q_for gs s)"])
   show "fun_of_resolved_st_q_for gs (int_tf_st_once_for gs EA_Nop s) =
       apply_tf (int_tf_once_for gs) EA_Nop (fun_of_resolved_st_q_for gs s)"
     by (simp add: int_tf_once_for_def skip_int_dom_def)
@@ -331,7 +331,7 @@ lemma int_tf_st_fixpoint_for_reduces: "action_reduces (int_tf_st_fixpoint_for gs
 theorem int_tf_st_fixpoint_for_commute:
   "fun_of_resolved_st_q_for gs (int_tf_st_fixpoint_for gs a s) =
    apply_tf (int_tf_fixpoint_for gs) a (fun_of_resolved_st_q_for gs s)"
-proof (rule apply_tf_wrap_eqI[where H = "%f. f (fun_of_resolved_st_q_for gs s)"])
+proof (rule apply_tf_eqI[where H = "%f. f (fun_of_resolved_st_q_for gs s)"])
   show "fun_of_resolved_st_q_for gs (int_tf_st_fixpoint_for gs EA_Nop s) =
       apply_tf (int_tf_fixpoint_for gs) EA_Nop (fun_of_resolved_st_q_for gs s)"
     by (simp add: int_tf_fixpoint_for_def skip_int_dom_def)

@@ -237,11 +237,11 @@ begin
 
 subsubsection \<open>The solver's table as the solved system\<close>
 
-lemma fin: "finite (intra (compile_prog Pi ps))"
-  using compile_prog_finite by blast
+interpretation ivl_compiled: compiled_cfg Pi ps "compile_prog Pi ps"
+  by (unfold_locales; simp add: compile_prog_finite)
 
-lemma finC: "finite (calls (compile_prog Pi ps))"
-  using compile_prog_finite by blast
+lemmas fin = ivl_compiled.finite_intra
+lemmas finC = ivl_compiled.finite_calls
 
 lemma sg_st_covered:
   "(v, ctx) \<in> fst (sol gs is_bot_pred Pi ps)

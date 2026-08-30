@@ -104,7 +104,7 @@ definition flagship_cfg :: cfg where
   "flagship_cfg = compile_prog flagship_pi (prog_procs flagship_prog)"
 
 interpretation flagship: compiled_cfg flagship_pi "prog_procs flagship_prog" flagship_cfg
-  by unfold_locales (rule flagship_cfg_def)
+  by (unfold_locales; unfold flagship_cfg_def; simp add: compile_prog_finite)
 
 lemmas flagship_entry = flagship.entry[unfolded prog_main_name_def]
 

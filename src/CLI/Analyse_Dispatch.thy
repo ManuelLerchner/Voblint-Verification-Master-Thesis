@@ -1029,7 +1029,7 @@ code_identifier
 | code_module Strategy_Tree_Rhs \<rightharpoonup> (OCaml) Core
 | code_module Strategy_Tree_Relabel \<rightharpoonup> (OCaml) Core
 | code_module Solver_Mono \<rightharpoonup> (OCaml) Core
-| code_module Constraint_System \<rightharpoonup> (OCaml) Core
+| code_module Transfer_Interface \<rightharpoonup> (OCaml) Core
 | code_module DG_Framework \<rightharpoonup> (OCaml) Core
 | code_module Abstract_Checks \<rightharpoonup> (OCaml) Core
 | code_module Analysis_Result \<rightharpoonup> (OCaml) Core

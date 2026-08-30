@@ -67,7 +67,14 @@ lemma sign_nest_cfg_compile [simp]:
   by (simp add: sign_nest_cfg_def)
 
 interpretation sign_nest: compiled_cfg sign_nest_pi sign_nest_procs sign_nest_cfg
-  by unfold_locales (rule sign_nest_cfg_def)
+proof unfold_locales
+  show "finite (intra sign_nest_cfg)"
+    unfolding sign_nest_cfg_def using compile_prog_finite by blast
+  show "finite (calls sign_nest_cfg)"
+    unfolding sign_nest_cfg_def using compile_prog_finite by blast
+  show "sign_nest_cfg = compile_prog sign_nest_pi sign_nest_procs"
+    by (rule sign_nest_cfg_def)
+qed
 
 lemmas sign_nest_entry = sign_nest.entry[unfolded prog_main_name_def]
 lemmas sign_nest_finE = sign_nest.finite_intra

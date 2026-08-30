@@ -39,7 +39,7 @@ lemma gExI_calls: "calls gExI = {}"
      (simp_all add: int_ex_prog_def main_body_def prog_main_name_def)
 
 interpretation gExI: compiled_cfg int_ex_pi "prog_procs int_ex_prog" gExI
-  by unfold_locales (rule gExI_def)
+  by (unfold_locales; unfold gExI_def; simp add: compile_prog_finite)
 
 lemmas gExI_entry = gExI.entry[unfolded prog_main_name_def]
 lemmas gExI_finE = gExI.finite_intra

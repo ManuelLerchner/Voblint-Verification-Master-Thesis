@@ -64,7 +64,14 @@ lemma nest_cfg_compile [simp]:
   by (simp add: nest_cfg_def)
 
 interpretation nest: compiled_cfg nest_pi nest_procs nest_cfg
-  by unfold_locales (rule nest_cfg_def)
+proof unfold_locales
+  show "finite (intra nest_cfg)"
+    unfolding nest_cfg_def using compile_prog_finite by blast
+  show "finite (calls nest_cfg)"
+    unfolding nest_cfg_def using compile_prog_finite by blast
+  show "nest_cfg = compile_prog nest_pi nest_procs"
+    by (rule nest_cfg_def)
+qed
 
 lemmas nest_entry = nest.entry[unfolded prog_main_name_def]
 

@@ -1,10 +1,12 @@
-theory Constraint_System_Sound
-  imports Constraint_System "Voblint_CFG.CFG_Transfer"
+theory Transfer_Interface_Sound
+  imports Transfer_Interface "Voblint_CFG.CFG_Transfer"
 begin
 
-section \<open>Constraint system: soundness theorem\<close>
+section \<open>Transfer interface: soundness theorem\<close>
 text \<open>
-  Generic transfer facts for the constraint-system interface.
+  Generic transfer facts for \<^theory>\<open>Voblint_Core.Transfer_Interface\<close>'s
+  \<^locale>\<open>sound_transfer_for\<close>: the D/G equation-system soundness proof cites these to
+  discharge its per-step obligations from a domain's transfer soundness alone.
 \<close>
 
 subsection \<open>Per-step soundness and the main theorem\<close>

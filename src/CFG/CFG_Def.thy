@@ -259,5 +259,86 @@ proof -
     unfolding cfg_nodes_def using assms by simp
 qed
 
+subsection \<open>Executable orders\<close>
+
+text \<open>Structural orders make @{const sorted_list_of_set} a deterministic executable
+  enumeration of intra and call relations. They affect only solver representation, not
+  CFG semantics. \<open>exp\<close> already derives \<open>linorder\<close> in \<^theory>\<open>Voblint_VIMP.VIMP_Syntax\<close>.\<close>
+derive linorder special_call
+derive linorder edge_action
+derive linorder call_action
+derive linorder cfg_node
+
+subsection \<open>Executable enumeration\<close>
+
+text \<open>Stable list views for the TD bridge: the intra and call edge sets sorted by their
+  structural order. Both guard on \<^term>\<open>finite (intra g)\<close>/\<^term>\<open>finite (calls g)\<close>:
+  every compiled graph satisfies it, so the \<^const>\<open>Code.abort\<close> branch never fires in
+  practice, and names the violation instead of failing on an uninformative
+  \<^const>\<open>sorted_list_of_set\<close> pattern-match error. Placed here rather than in the Core
+  session's own equation-generation enumerations, so any consumer of this session alone
+  --- a compiled graph's \<open>finite_cfg\<close> interpretation among them --- gets them for free.\<close>
+
+definition cfg_intra_list :: "cfg \<Rightarrow> (cfg_node \<times> edge_action \<times> cfg_node) list" where
+  "cfg_intra_list g =
+     (if finite (intra g) then sorted_list_of_set (intra g)
+      else Code.abort (STR ''cfg_intra_list: infinite intra edge set'') (\<lambda>_. []))"
+
+lemma cfg_intra_list_code [code]:
+  "cfg_intra_list g = sorted_list_of_set (intra g)"
+  unfolding cfg_intra_list_def by (cases "finite (intra g)") auto
+
+definition cfg_calls_list ::
+    "cfg \<Rightarrow> (cfg_node \<times> call_action \<times> cfg_node \<times> cfg_node) list" where
+  "cfg_calls_list g =
+     (if finite (calls g) then sorted_list_of_set (calls g)
+      else Code.abort (STR ''cfg_calls_list: infinite calls edge set'') (\<lambda>_. []))"
+
+lemma cfg_calls_list_code [code]:
+  "cfg_calls_list g = sorted_list_of_set (calls g)"
+  unfolding cfg_calls_list_def by (cases "finite (calls g)") auto
+
+lemma set_cfg_intra_list [simp]:
+  "finite (intra g) \<Longrightarrow> set (cfg_intra_list g) = intra g"
+  unfolding cfg_intra_list_def by simp
+
+lemma set_cfg_calls_list [simp]:
+  "finite (calls g) \<Longrightarrow> set (cfg_calls_list g) = calls g"
+  unfolding cfg_calls_list_def by simp
+
+text \<open>Every \<^const>\<open>cfg_nodes\<close> element, listed once: the intra endpoints, the call-site/
+  callee-entry/continuation triples, and the distinguished entry, deduplicated. This is the
+  canonical finite node enumeration a public per-node result table draws its key domain from,
+  distinct from \<^const>\<open>cfg_intra_list\<close>'s edge-indexed view.\<close>
+
+definition cfg_node_list :: "cfg \<Rightarrow> cfg_node list" where
+  "cfg_node_list g =
+     remdups
+       (concat (map (\<lambda>(u, a, v). [u, v]) (cfg_intra_list g)) @
+        concat (map (\<lambda>(u, act, ce, after). [u, ce, after]) (cfg_calls_list g)) @
+        [cfg_entry g])"
+
+lemma set_cfg_node_list [simp]:
+  assumes "finite (intra g)" and "finite (calls g)"
+  shows "set (cfg_node_list g) = cfg_nodes g"
+  unfolding cfg_node_list_def cfg_nodes_def
+  using set_cfg_intra_list[OF assms(1)] set_cfg_calls_list[OF assms(2)]
+  by force
+
+text \<open>A \<open>cfg\<close> whose two transition relations are finite.  Bundles the two
+  finiteness facts every enumeration and every compiled-graph interpretation
+  needs, so a caller states one assumption instead of two, and \<open>finite_nodes\<close>
+  becomes derivable rather than re-proved at each instance.\<close>
+locale finite_cfg =
+  fixes g :: cfg
+  assumes finite_intra [intro, simp]: "finite (intra g)"
+    and finite_calls [intro, simp]: "finite (calls g)"
+begin
+
+lemma finite_nodes [simp]: "finite (cfg_nodes g)"
+  by (rule cfg_nodes_finite) simp_all
+
+end
+
 end
 

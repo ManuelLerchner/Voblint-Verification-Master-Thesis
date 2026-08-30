@@ -14,16 +14,6 @@ text \<open>
   return is recovered from the same \<^const>\<open>calls\<close> tuple that created the activation.
 \<close>
 
-subsection \<open>Executable orders\<close>
-
-text \<open>Structural orders make @{const sorted_list_of_set} a deterministic executable
-  enumeration of intra and call relations. They affect only solver representation, not
-  CFG semantics. \<open>exp\<close> already derives \<open>linorder\<close> in \<^theory>\<open>Voblint_VIMP.VIMP_Syntax\<close>.\<close>
-derive linorder special_call
-derive linorder edge_action
-derive linorder call_action
-derive linorder cfg_node
-
 subsection \<open>Intra predecessors\<close>
 
 text \<open>The ordinary incoming transitions of a node: an intra edge is a total store
@@ -111,35 +101,8 @@ proof -
   then show ?thesis using assms finite_subset finite_imageI by blast
 qed
 
-subsection \<open>Executable enumeration\<close>
-
-text \<open>Stable list views for the TD bridge: the intra and call edge sets sorted by their
-  structural order, and the queried-node projections built by filtering.\<close>
-
-definition cfg_intra_list :: "cfg \<Rightarrow> (cfg_node \<times> edge_action \<times> cfg_node) list" where
-  "cfg_intra_list g =
-     (if finite (intra g) then sorted_list_of_set (intra g) else [])"
-
-lemma cfg_intra_list_code [code]:
-  "cfg_intra_list g = sorted_list_of_set (intra g)"
-  unfolding cfg_intra_list_def by (cases "finite (intra g)") auto
-
-definition cfg_calls_list ::
-    "cfg \<Rightarrow> (cfg_node \<times> call_action \<times> cfg_node \<times> cfg_node) list" where
-  "cfg_calls_list g =
-     (if finite (calls g) then sorted_list_of_set (calls g) else [])"
-
-lemma cfg_calls_list_code [code]:
-  "cfg_calls_list g = sorted_list_of_set (calls g)"
-  unfolding cfg_calls_list_def by (cases "finite (calls g)") auto
-
-lemma set_cfg_intra_list [simp]:
-  "finite (intra g) \<Longrightarrow> set (cfg_intra_list g) = intra g"
-  unfolding cfg_intra_list_def by simp
-
-lemma set_cfg_calls_list [simp]:
-  "finite (calls g) \<Longrightarrow> set (cfg_calls_list g) = calls g"
-  unfolding cfg_calls_list_def by simp
+text \<open>Stable list views for the TD bridge: the queried-node projections built by
+  filtering \<^const>\<open>cfg_intra_list\<close>/\<^const>\<open>cfg_calls_list\<close> (\<^theory>\<open>Voblint_CFG.CFG_Def\<close>).\<close>
 
 definition intra_predecessor_list ::
     "cfg \<Rightarrow> cfg_node \<Rightarrow> (cfg_node \<times> edge_action) list" where
@@ -183,7 +146,7 @@ subsection \<open>Return enumeration with the triggering call action\<close>
 
 text \<open>\<^const>\<open>return_call_list\<close> keeps only the caller destination projected from the
   triggering \<^typ>\<open>call_action\<close>, which is all the flat/context-insensitive combine
-  (\<open>combine\<^sup>#\<close>, via \<open>Constraint_System.rhs_combine_sources\<close>) needs.
+  (\<open>combine_collect_abs\<close>, \<open>combine\<^sup>#\<close>) needs.
   The context-sensitive DG generator needs more: it must route both the callee-entry seed
   publication and the return-side context read from the \<^emph>\<open>same\<close> call action, and
   \<^const>\<open>entry_call_list\<close> already keeps \<open>ca\<close> whole on the entry side.  This is the return-side
@@ -365,27 +328,6 @@ proof -
   thus ?thesis by auto
 qed
 
-
-subsection \<open>Full node enumeration\<close>
-
-text \<open>Every \<^const>\<open>cfg_nodes\<close> element, listed once: the intra endpoints, the call-site/
-  callee-entry/continuation triples, and the distinguished entry, deduplicated. This is the
-  canonical finite node enumeration a public per-node result table draws its key domain from,
-  distinct from \<^const>\<open>cfg_intra_list\<close>'s edge-indexed view.\<close>
-
-definition cfg_node_list :: "cfg \<Rightarrow> cfg_node list" where
-  "cfg_node_list g =
-     remdups
-       (concat (map (\<lambda>(u, a, v). [u, v]) (cfg_intra_list g)) @
-        concat (map (\<lambda>(u, act, ce, after). [u, ce, after]) (cfg_calls_list g)) @
-        [cfg_entry g])"
-
-lemma set_cfg_node_list [simp]:
-  assumes "finite (intra g)" and "finite (calls g)"
-  shows "set (cfg_node_list g) = cfg_nodes g"
-  unfolding cfg_node_list_def cfg_nodes_def
-  using set_cfg_intra_list[OF assms(1)] set_cfg_calls_list[OF assms(2)]
-  by force
 
 subsection \<open>Outgoing call enumeration (caller perspective)\<close>
 

@@ -231,11 +231,11 @@ begin
 
 subsection \<open>The solver's table as the solved system\<close>
 
-lemma sctx_entry_fin: "finite (intra (compile_prog Pi ps))"
-  using compile_prog_finite by blast
+interpretation sctx_entry_compiled: compiled_cfg Pi ps "compile_prog Pi ps"
+  by (unfold_locales; simp add: compile_prog_finite)
 
-lemma sctx_entry_finC: "finite (calls (compile_prog Pi ps))"
-  using compile_prog_finite by blast
+lemmas sctx_entry_fin = sctx_entry_compiled.finite_intra
+lemmas sctx_entry_finC = sctx_entry_compiled.finite_calls
 
 lemma sctx_entry_sg_st_covered:
   "(v, ctx) \<in> fst (sctx_entry_sol gs is_bot_pred Pi ps)

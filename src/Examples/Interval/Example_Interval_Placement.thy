@@ -719,7 +719,7 @@ lemma placement_hook_gen_entry:
 
 interpretation placement: compiled_cfg "prog_table placement_prog" "prog_procs placement_prog"
     placement_cfg
-  by unfold_locales (rule placement_cfg_def)
+  by (unfold_locales; unfold placement_cfg_def; simp add: compile_prog_finite)
 
 lemmas placement_cfg_entry = placement.entry
 

@@ -695,26 +695,21 @@ text \<open>A worked example names its graph with a definition and then wants th
   well-formedness hypothesis.  Interpreting this locale at the defining equation supplies all
   five at once, already phrased in the example's own name.\<close>
 
-locale compiled_cfg =
-  fixes \<Pi> :: proc_table and ps :: "pname list" and g :: cfg
+locale compiled_cfg = finite_cfg g
+  for \<Pi> :: proc_table and ps :: "pname list" and g :: cfg +
   assumes cfg_eq: "g = compile_prog \<Pi> ps"
 begin
 
 text \<open>\<open>entry\<close> and \<open>exit\<close> are deliberately not \<open>[simp]\<close>: an interpretation would make them
   global rewrites that unfold \<open>cfg_entry g\<close> under the example's own graph name, which the
-  placement examples reason about symbolically. The finiteness facts carry no such risk.\<close>
+  placement examples reason about symbolically. The finiteness facts (\<open>finite_intra\<close>,
+  \<open>finite_calls\<close>) come from the \<open>finite_cfg\<close> sublocale and carry no such risk.\<close>
 
 lemma entry: "cfg_entry g = FunctionEntry prog_main_name"
   unfolding cfg_eq by (rule cfg_entry_compile_prog)
 
 lemma exit: "cfg_exit g = FunctionResult prog_main_name"
   unfolding cfg_eq by (rule cfg_exit_compile_prog)
-
-lemma finite_intra [simp]: "finite (intra g)"
-  unfolding cfg_eq using compile_prog_finite by blast
-
-lemma finite_calls [simp]: "finite (calls g)"
-  unfolding cfg_eq using compile_prog_finite by blast
 
 lemma wf: "wf_cfg g"
   unfolding cfg_eq by (rule compile_prog_wf)

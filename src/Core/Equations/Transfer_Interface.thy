@@ -1,10 +1,10 @@
-theory Constraint_System
+theory Transfer_Interface
   imports CFG_Enumeration "Voblint_CFG.CFG_Transfer" "Voblint_Domain.Abstract_Domain"
     "Voblint_VIMP.VIMP_Globals" "Voblint_VIMP.VIMP_Expr" "Voblint_VIMP.VIMP_Proc"
     "TD.Basics_side"
 begin
 
-section \<open>Equation system over a CFG\<close>
+section \<open>CFG transfer interface\<close>
 
 text \<open>
   Given:
@@ -14,7 +14,7 @@ text \<open>
 
   this theory fixes the per-edge/per-domain transfer interface
   (\<open>domain_transfer\<close>, \<open>apply_tf\<close>) and its soundness contract
-  (\<open>sound_transfer\<close>) that every concrete
+  (\<open>sound_transfer_for\<close>) that every concrete
   equation-system generator is built from. The generators themselves --
   the side-effecting D/G equation system (\<open>DG_Framework\<close>'s \<open>dg_gen\<close>)
   solved by the verified top-down solver -- live downstream, in
@@ -27,7 +27,8 @@ text \<open>
 subsection \<open>Abstract transfer function record\<close>
 
 text \<open>
-  A domain_transfer bundles the per-action abstract transformers.
+  A domain_transfer bundles ordinary CFG-action transformers together with the
+  interprocedural call-entry and return-combination operations.
   Parameterised by the abstract value type 'a.
 \<close>
 
@@ -49,8 +50,10 @@ text \<open>
   handles \<open>Events.Assert\<close> and similar occurrences outside the ordinary transfer
   vocabulary. Voblint's sole current event is a check's condition; the vocabulary is
   deliberately left open rather than pre-populated, so that a future VIMP source
-  construct with no current counterpart (e.g. an eventual assume/assert pair) adds a
-  constructor here instead of a new domain-transfer field.
+  construct with no current counterpart (e.g. a diagnostic-only annotation) adds a
+  constructor here instead of a new domain-transfer field. A construct that narrows
+  feasible execution, such as \<open>assume\<close>, is not a candidate: it belongs on \<open>tf_branch\<close>
+  or a new refining field, not here.
 \<close>
 datatype analysis_event =
   Check_Event exp
@@ -71,8 +74,8 @@ subsection \<open>Apply transfer function to one edge\<close>
 
 text \<open>
   \<open>EA_Nop\<close>, \<open>EA_Ret\<close>, and (via \<^const>\<open>tf_body\<close>, at procedure entry rather than
-  through this dispatcher) function-body entry are each a real lifecycle event with
-  its own transfer field, matching Goblint's \<open>skip\<close>/\<open>return\<close>/entry-then-body split,
+  through this dispatcher) function-body entry are each a distinct transfer operation
+  with its own transfer field, matching Goblint's \<open>skip\<close>/\<open>return\<close>/entry-then-body split,
   even though every current domain implements \<open>skip\<^sup>#\<close> and \<open>body\<^sup>#\<close> as the identity
   and \<open>return\<^sup>#\<close> as the assignment it publishes. \<open>EA_Check\<close> routes through
   \<^const>\<open>tf_event\<close> rather than \<^const>\<open>tf_skip\<close>: a check is an analysis event
@@ -137,14 +140,14 @@ text \<open>Some families this codebase builds over \<^typ>\<open>edge_action\<c
   is a fact about a concrete family \<open>F\<close>, not a structural property \<^const>\<open>apply_tf\<close>
   itself provides any more (\<open>return\<^sup>#\<close>/\<open>skip\<^sup>#\<close> are free fields a future domain may
   implement differently), so \<open>action_reduces\<close> is not used to discharge
-  \<^const>\<open>apply_tf\<close>'s own \<^typ>\<open>edge_action\<close> case split (see \<open>apply_tf_wrap_eqI\<close>
+  \<^const>\<open>apply_tf\<close>'s own \<^typ>\<open>edge_action\<close> case split (see \<open>apply_tf_eqI\<close>
   below); it only packages a mirror's own self-consistency for callers such as
   \<open>unit_dg_exec_analysis\<close> that state it as an explicit obligation.\<close>
 locale action_reduces =
   fixes F :: "edge_action \<Rightarrow> 'y"
-  assumes ret_none[simp,intro]: "\<And>p. F (EA_Ret None p) = F EA_Nop"
-    and ret_some[simp,intro]: "\<And>a p. F (EA_Ret (Some a) p) = F (EA_Assign ret_var a)"
-    and check[simp,intro]: "\<And>c. F (EA_Check c) = F EA_Nop"
+  assumes ret_none[simp]: "\<And>p. F (EA_Ret None p) = F EA_Nop"
+    and ret_some[simp]: "\<And>a p. F (EA_Ret (Some a) p) = F (EA_Assign ret_var a)"
+    and check[simp]: "\<And>c. F (EA_Check c) = F EA_Nop"
 
 text \<open>Composing an \<open>action_reduces\<close> family with any outer function preserves the
   reduction: this is what lets every \<open>_commute\<close>-style theorem below derive
@@ -164,7 +167,7 @@ text \<open>Closure principle for any family built by applying a single transfer
   and post-processing the result the same way at every action. Deliberately left
   untagged: F and H are schematic, so tagging this \<open>[simp]\<close>/\<open>[dest]\<close>/\<open>[intro]\<close>
   would let it fire against any equality of this shape.\<close>
-lemma apply_tf_wrap_eqI:
+lemma apply_tf_eqI:
   fixes tf :: "'a domain_transfer"
     and F :: "edge_action \<Rightarrow> 'y"
     and H :: "('a abs_state \<Rightarrow> 'a abs_state) \<Rightarrow> 'y"
@@ -188,7 +191,7 @@ text \<open>
 
 text \<open>
   Generic in the folded payload type -- \<open>'a abs_state\<close> is one instance, and
-  \<open>'a abs_state lifted\<close> (AD-52's role-aware reconstruction) another, since
+  \<open>'a abs_state lifted\<close> (the role-aware dead-code reconstruction) another, since
   \<^const>\<open>Finite_Set.fold\<close> and \<^const>\<open>Sup_fin\<close> never depend on the payload being a
   function type. Same-role accumulation (folding several global-slot or several
   local-alternative contributions together) always uses ordinary \<open>\<squnion>\<close> regardless
@@ -326,17 +329,27 @@ lemma fold_join_image_mono:
     and ub1: "\<And>a b. a \<le> j a b"
     and ub2: "\<And>a b. b \<le> j a b"
     and least: "\<And>x y z. x \<le> z \<Longrightarrow> y \<le> z \<Longrightarrow> j x y \<le> z"
-    and mono: "\<And>x1 y1 x2 y2. x1 \<le> y1 \<Longrightarrow> x2 \<le> y2 \<Longrightarrow> j x1 x2 \<le> j y1 y2"
     and le: "\<And>p. f1 p \<le> f2 p"
   shows "Finite_Set.fold j z (f1 ` P) \<le> Finite_Set.fold j z (f2 ` P)"
-  using fin
-proof (induct P rule: finite_induct)
-  case empty
-  then show ?case by simp
-next
-  case (insert p F)
-  interpret jc: comp_fun_commute j
-    by (rule cfu)
+proof -
+  have mono: "\<And>x1 y1 x2 y2. x1 \<le> y1 \<Longrightarrow> x2 \<le> y2 \<Longrightarrow> j x1 x2 \<le> j y1 y2"
+  proof -
+    fix x1 y1 x2 y2 :: 'a
+    assume "x1 \<le> y1" and "x2 \<le> y2"
+    then have "x1 \<le> j y1 y2" and "x2 \<le> j y1 y2"
+      using ub1 ub2 order_trans by blast+
+    then show "j x1 x2 \<le> j y1 y2"
+      by (rule least)
+  qed
+  show ?thesis
+    using fin
+  proof (induct P rule: finite_induct)
+    case empty
+    then show ?case by simp
+  next
+    case (insert p F)
+    interpret jc: comp_fun_commute j
+      by (rule cfu)
   have finF: "finite F" and pF: "p \<notin> F"
     using insert.hyps by simp_all
   have IH: "Finite_Set.fold j z (f1 ` F) \<le> Finite_Set.fold j z (f2 ` F)"
@@ -404,9 +417,10 @@ next
         by (rule lej)
     qed
   qed
+  qed
 qed
 
-subsection \<open>Right-hand side of the equation system\<close>
+subsection \<open>Generic interprocedural transfer operations\<close>
 
 definition combine_env_abs ::
   "(vname \<Rightarrow> bool) \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
@@ -640,17 +654,20 @@ text \<open>
   sound over-approximation of \<^const>\<open>combine_env\<close> instead of the structural
   local/global split.  The return-value write stays \<^const>\<open>combine_assign_abs\<close>: it is
   already domain-agnostic under the function-based \<^typ>\<open>'a abs_state\<close> representation,
-  so only the merge step is a per-analysis choice.  This mirrors Goblint's own
-  \<open>Spec.combine_env\<close>/\<open>Spec.combine_assign\<close> split: there is no primitive whole
-  \<open>combine\<close>, only the domain-supplied \<open>combine_env\<^sup>#\<close> followed by the generic
-  \<open>combine_assign\<^sup>#\<close>.
+  so only the merge step is a per-analysis choice.  In Goblint both \<open>Spec.combine_env\<close>
+  and \<open>Spec.combine_assign\<close> are analysis-supplied; here the split is nominal, not a
+  faithful reproduction of that pair -- the field names match Goblint's, but only
+  \<open>combine_env\<^sup>#\<close> is actually per-analysis, because this representation already makes
+  the return-value write generic.
 \<close>
 text \<open>
   \<open>caller_cont\<^sup>#\<close> is logically an \<^emph>\<open>output of enter\<close>, not a step of the combine:
   Goblint's \<open>Spec.enter\<close> returns \<open>(D.t * D.t) list\<close> and \<open>constraints.ml\<close> hands the first
   component -- the caller continuation -- to \<open>combine_env\<close> as \<open>cd\<close>, while the second seeds
-  the callee entry.  \<open>tf_enter_pair\<close> below is that protocol, stated as one function
-  from the call-site state to the pair.  The combine operations accordingly take the
+  the callee entry.  \<open>tf_enter_pair\<close> below models that same caller/callee pair, but as one
+  function returning exactly one pair rather than a list: no domain in this tree needs more
+  than one entry state, so the list is not carried (a recorded, deferred simplification, not
+  an oversight).  The combine operations accordingly take the
   \<^emph>\<open>continuation\<close> as their caller operand, never the raw call-site state: nothing in
   \<open>combine_env\<^sup>#\<close> or \<open>tf_combine_collect_abs\<close> reapplies \<open>caller_cont\<^sup>#\<close>.
 
@@ -748,7 +765,7 @@ text \<open>
   @{thm gamma_state_mono}.  The order-theoretic \<open>combine_bound\<close> shape is
   checkable against a post-solution, so no raw \<open><s|t>\<close> obligation reaches callers.
 \<close>
-lemma combine_env_abs_bound_sound:
+lemma combine_collect_abs_bound_sound:
   fixes sc se sr :: "'a::sound_domain abs_state"
   assumes bound: "combine\<^sup># gs dst sc se \<le> sr"
     and sc: "s \<in> \<lbrakk>sc\<rbrakk>" and se: "t \<in> \<lbrakk>se\<rbrakk>"
@@ -771,18 +788,17 @@ proof -
 qed
 
 
-text \<open>
-  A valuation that bounds every equation right-hand side is a post-fixpoint.
-  Such valuations overapproximate the corresponding CFG collecting semantics.
-\<close>
-
 subsection \<open>C-faithful initial store set\<close>
 
 text \<open>
-  In C, global variables are zero-initialised before \<open>main\<close> starts
-  (ISO C 6.7.9p10); local variables are uninitialized and may hold any
-  integer value.  \<open>cinit_stores\<close> is the corresponding set of concrete stores:
-  those where every global is 0 and locals are unconstrained.
+  VIMP approximates C startup by initializing every global with no explicit
+  initializer to 0 and treating every local integer slot as unconstrained.
+  \<open>cinit_stores\<close> is the corresponding set of concrete stores: those where every
+  global is 0 and locals are unconstrained. This matches VIMP's total-store
+  semantics, where every declared variable already has some value on entry; it
+  is not a model of C's indeterminate-value or undefined-behaviour rules, and
+  VIMP has no global initializer syntax for a declaration such as \<open>int x = 42;\<close>
+  to diverge from.
 
   Any analysis that uses a domain-specific abstract seed \<open>s0\<close> satisfying
   \<open>cinit_stores \<subseteq> gamma_state s0\<close> may state its soundness theorem against
@@ -795,8 +811,8 @@ definition cinit_stores :: "(vname \<Rightarrow> bool) \<Rightarrow> store set" 
 text \<open>
   Sound transfer function: a domain_transfer tf that soundly over-approximates
   the concrete edge actions w.r.t. a sound_domain's concretization, relative to
-  an explicit classifier gs.  Bundles the five per-action soundness obligations
-  (assign / assume / assume-not / enter / combine) as locale assumptions.
+  an explicit classifier gs.  Bundles one soundness obligation per
+  \<^typ>\<open>'a domain_transfer\<close> field as a locale assumption.
   Concrete domains discharge these once via `interpretation`.
 \<close>
 locale sound_transfer_for =
@@ -924,71 +940,8 @@ lemma tf_sound_combine_collect_at_call_forD[intro]:
 
 end
 
-lemma sound_transferI_for:
-  fixes gs :: "vname => bool"
-    and tf :: "'a::sound_domain domain_transfer"
-  assumes assign[intro]:
-    "\<And>x a \<sigma> s. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow>
-       s(x := aval a s) \<in> \<lbrakk>assign\<^sup># tf x a \<sigma>\<rbrakk>"
-    and special[intro]:
-    "\<And>sc x \<sigma> s v. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> special_result sc s v \<Longrightarrow>
-       s(x := v) \<in> \<lbrakk>special\<^sup># tf sc x \<sigma>\<rbrakk>"
-    and branch[intro]:
-    "\<And>b pol \<sigma> s. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> truthy (aval b s) = pol \<Longrightarrow>
-       s \<in> \<lbrakk>branch\<^sup># tf b pol \<sigma>\<rbrakk>"
-    and skip[intro]:
-    "\<And>\<sigma> s. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> s \<in> \<lbrakk>skip\<^sup># tf \<sigma>\<rbrakk>"
-    and body[intro]:
-    "\<And>p \<sigma> s. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> s \<in> \<lbrakk>body\<^sup># tf p \<sigma>\<rbrakk>"
-    and return[intro]:
-    "\<And>e p \<sigma> s. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow>
-       s(ret_var := (case e of None \<Rightarrow> s ret_var | Some a \<Rightarrow> aval a s))
-         \<in> \<lbrakk>return\<^sup># tf e p \<sigma>\<rbrakk>"
-    and enter[intro]:
-    "\<And>xs es \<sigma> s. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow>
-       bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state gs s)
-         \<in> \<lbrakk>tf_enter tf xs es \<sigma>\<rbrakk>"
-    and event[intro]:
-    "\<And>ev \<sigma> s. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> s \<in> \<lbrakk>event\<^sup># tf ev \<sigma>\<rbrakk>"
-    and caller_cont[intro]:
-    "\<And>ci \<sigma> s. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> s \<in> \<lbrakk>caller_cont\<^sup># tf ci \<sigma>\<rbrakk>"
-    and combine[intro]:
-    "\<And>ci \<sigma>cont \<sigma>e s t. s \<in> \<lbrakk>\<sigma>cont\<rbrakk> \<Longrightarrow> t \<in> \<lbrakk>\<sigma>e\<rbrakk> \<Longrightarrow>
-       combine_env gs s t \<in> \<lbrakk>combine_env\<^sup># tf ci \<sigma>cont \<sigma>e\<rbrakk>"
-  shows "sound_transfer_for gs tf"
-proof unfold_locales
-  show "\<forall>x a \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>.
-      s(x := aval a s) \<in> \<lbrakk>assign\<^sup># tf x a \<sigma>\<rbrakk>"
-    using assign by blast
-  show "\<forall>sc x \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. \<forall>v. special_result sc s v \<longrightarrow>
-      s(x := v) \<in> \<lbrakk>special\<^sup># tf sc x \<sigma>\<rbrakk>"
-    using special by blast
-  show "\<forall>b pol \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. truthy (aval b s) = pol \<longrightarrow>
-      s \<in> \<lbrakk>branch\<^sup># tf b pol \<sigma>\<rbrakk>"
-    using branch by blast
-  show "\<forall>\<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. s \<in> \<lbrakk>skip\<^sup># tf \<sigma>\<rbrakk>"
-    using skip by blast
-  show "\<forall>p \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. s \<in> \<lbrakk>body\<^sup># tf p \<sigma>\<rbrakk>"
-    using body by blast
-  show "\<forall>e p \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>.
-      s(ret_var := (case e of None \<Rightarrow> s ret_var | Some a \<Rightarrow> aval a s))
-        \<in> \<lbrakk>return\<^sup># tf e p \<sigma>\<rbrakk>"
-    using return by blast
-  show "\<forall>xs (es::exp list) \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>.
-      bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state gs s)
-        \<in> \<lbrakk>tf_enter tf xs es \<sigma>\<rbrakk>"
-    using enter by blast
-  show "\<forall>ev \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. s \<in> \<lbrakk>event\<^sup># tf ev \<sigma>\<rbrakk>"
-    using event by blast
-  show "\<forall>ci \<sigma> . \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. s \<in> \<lbrakk>caller_cont\<^sup># tf ci \<sigma>\<rbrakk>"
-    using caller_cont by blast
-  show "\<forall>ci \<sigma>cont \<sigma>e. \<forall>s \<in> \<lbrakk>\<sigma>cont\<rbrakk>. \<forall>t \<in> \<lbrakk>\<sigma>e\<rbrakk>.
-      combine_env gs s t \<in> \<lbrakk>combine_env\<^sup># tf ci \<sigma>cont \<sigma>e\<rbrakk>"
-    using combine by blast
-qed
-
 text \<open>The structural instance discharges both call-boundary obligations of
-  @{thm [source] sound_transferI_for} outright: an identity continuation keeps the caller
+  \<^locale>\<open>sound_transfer_for\<close> outright: an identity continuation keeps the caller
   state, and \<^const>\<open>combine_env_abs\<close> is sound by @{thm [source] combine_env_sound}.\<close>
 lemma sound_transfer_caller_cont_idI:
   fixes \<sigma> :: "'a::sound_domain abs_state"

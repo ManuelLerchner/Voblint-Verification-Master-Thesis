@@ -231,11 +231,11 @@ context
         \<Longrightarrow> (cont, c1) \<in> fst (pctx_sol gs is_bot_pred Pi ps)"
 begin
 
-lemma pctx_fin: "finite (intra (compile_prog Pi ps))"
-  using compile_prog_finite by blast
+interpretation pctx_compiled: compiled_cfg Pi ps "compile_prog Pi ps"
+  by (unfold_locales; simp add: compile_prog_finite)
 
-lemma pctx_finC: "finite (calls (compile_prog Pi ps))"
-  using compile_prog_finite by blast
+lemmas pctx_fin = pctx_compiled.finite_intra
+lemmas pctx_finC = pctx_compiled.finite_calls
 
 lemma pctx_sg_st_covered:
   "(v, ctx) \<in> fst (pctx_sol gs is_bot_pred Pi ps)

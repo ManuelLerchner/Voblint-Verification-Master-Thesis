@@ -72,7 +72,7 @@ lemma gEx_calls: "calls gEx = {}"
   by (rule compile_prog_calls_empty)
      (simp_all add: sign_ex_prog_def main_body_def prog_main_name_def)
 interpretation gEx: compiled_cfg sign_ex_pi "prog_procs sign_ex_prog" gEx
-  by unfold_locales (rule gEx_def)
+  by (unfold_locales; unfold gEx_def; simp add: compile_prog_finite)
 
 lemmas gEx_entry = gEx.entry[unfolded prog_main_name_def]
 lemmas gEx_wf_cfg = gEx.wf

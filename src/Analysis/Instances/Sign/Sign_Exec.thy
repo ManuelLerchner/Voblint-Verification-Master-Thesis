@@ -178,7 +178,7 @@ lemma sign_tf_st_for_reduces: "action_reduces (sign_tf_st_for gs)"
 theorem sign_tf_st_for_commute:
   "fun_of_resolved_st_q_for gs (sign_tf_st_for gs a s) =
    apply_tf (sign_tf_for gs) a (fun_of_resolved_st_q_for gs s)"
-proof (rule apply_tf_wrap_eqI[
+proof (rule apply_tf_eqI[
     where H = "\<lambda>f. f (fun_of_resolved_st_q_for gs s)"])
   show "fun_of_resolved_st_q_for gs (sign_tf_st_for gs EA_Nop s) =
       apply_tf (sign_tf_for gs) EA_Nop (fun_of_resolved_st_q_for gs s)"

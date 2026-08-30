@@ -1,5 +1,5 @@
 theory State_Restriction
-  imports Constraint_System_Sound "Voblint_Domain.Split_State"
+  imports Transfer_Interface_Sound "Voblint_Domain.Split_State"
 begin
 
 section \<open>Local/global restriction of abstract states\<close>

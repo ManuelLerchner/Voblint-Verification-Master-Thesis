@@ -50,7 +50,7 @@ text \<open>
   continues at \<open>3\<close>, the single call site, continuing at \<open>4\<close>.\<close>
 
 interpretation rc: compiled_cfg rc_pi rc_procs rc_cfg
-  by unfold_locales (rule rc_cfg_def)
+  by (unfold_locales; unfold rc_cfg_def; simp add: compile_prog_finite)
 
 text \<open>The one call site's shape, computed directly from \<open>rc_cfg\<close>. Exported for the
   routed-context siblings, which key off this single call rather than case-splitting

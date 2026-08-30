@@ -62,7 +62,7 @@ text \<open>
 \<close>
 
 interpretation twice: compiled_cfg twice_pi twice_procs twice_cfg
-  by unfold_locales (rule twice_cfg_def)
+  by (unfold_locales; unfold twice_cfg_def; simp add: compile_prog_finite)
 
 text \<open>The two call edges' shape, computed directly from \<open>twice_cfg\<close>: each call site \<open>u\<close>
   pins down its destination variable, callee, arguments, and continuation. Exported for the
