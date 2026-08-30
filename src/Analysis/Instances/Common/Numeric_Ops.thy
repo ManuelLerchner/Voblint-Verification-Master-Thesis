@@ -47,11 +47,11 @@ definition generic_branch_st_for ::
   "generic_branch_st_for ops gs b pol s = n_bfilter ops gs b pol s"
 
 definition generic_enter_st_for ::
-    "'a::bot numeric_ops => (vname => bool) => vname list => exp list =>
+    "'a::bot numeric_ops => (vname => bool) => call_info =>
        'a resolved_st_q => 'a resolved_st_q" where
-  "generic_enter_st_for ops gs xs es s =
-     bind_formals_resolved_q gs xs
-       (map (\<lambda>e. n_aval ops e (fun_of_resolved_st_q_for gs s)) es)
+  "generic_enter_st_for ops gs ci s =
+     bind_formals_resolved_q gs (ci_formals ci)
+       (map (\<lambda>e. n_aval ops e (fun_of_resolved_st_q_for gs s)) (ci_args ci))
        (enter_frame_D_resolved_q (n_top ops) s)"
 
 end

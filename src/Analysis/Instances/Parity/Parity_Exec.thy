@@ -63,15 +63,15 @@ definition parity_ops :: "parity numeric_ops" where
   "parity_ops = \<lparr> n_aval = aval_parity, n_bfilter = (\<lambda>_ _ _ s. s), n_top = PTop \<rparr>"
 
 definition parity_enter_st_for ::
-  "(vname => bool) => vname list => exp list =>
+  "(vname => bool) => call_info =>
    parity resolved_st_q => parity resolved_st_q" where
   "parity_enter_st_for = generic_enter_st_for parity_ops"
 
 lemma parity_enter_st_for_eq [simp]:
-  "parity_enter_st_for gs xs es s =
-    bind_formals_resolved_q gs xs
+  "parity_enter_st_for gs ci s =
+    bind_formals_resolved_q gs (ci_formals ci)
       (map (\<lambda>e. aval_parity e
-        (fun_of_resolved_st_q_for gs s)) es)
+        (fun_of_resolved_st_q_for gs s)) (ci_args ci))
       (enter_frame_D_resolved_q PTop s)"
   by (simp add: parity_enter_st_for_def generic_enter_st_for_def parity_ops_def)
 
@@ -101,47 +101,36 @@ fun parity_tf_st_for ::
 theorem parity_tf_st_for_commute:
   "fun_of_resolved_st_q_for gs (parity_tf_st_for gs a s) =
    apply_tf (parity_tf_for gs) a (fun_of_resolved_st_q_for gs s)"
-proof (rule apply_tf_eqI[
-    where H = "\<lambda>f. f (fun_of_resolved_st_q_for gs s)"])
-  show "fun_of_resolved_st_q_for gs (parity_tf_st_for gs EA_Nop s) =
-      apply_tf (parity_tf_for gs) EA_Nop (fun_of_resolved_st_q_for gs s)"
-    by (simp add: parity_tf_for_def skip_parity_def)
-  show "\<And>x e. fun_of_resolved_st_q_for gs
-      (parity_tf_st_for gs (EA_Assign x e) s) =
-    apply_tf (parity_tf_for gs) (EA_Assign x e) (fun_of_resolved_st_q_for gs s)"
-    by (simp add: parity_tf_for_def assign_parity_def)
-  show "\<And>sc x. fun_of_resolved_st_q_for gs
-      (parity_tf_st_for gs (EA_Special sc x) s) =
-    apply_tf (parity_tf_for gs) (EA_Special sc x) (fun_of_resolved_st_q_for gs s)"
-    by (auto simp: parity_tf_for_def split: special_call.splits)
-  show "\<And>b. fun_of_resolved_st_q_for gs
-      (parity_tf_st_for gs (EA_Assume b) s) =
-    apply_tf (parity_tf_for gs) (EA_Assume b) (fun_of_resolved_st_q_for gs s)"
-    by (simp add: parity_tf_for_def branch_parity_def)
-  show "\<And>b. fun_of_resolved_st_q_for gs
-      (parity_tf_st_for gs (EA_AssumeNot b) s) =
-    apply_tf (parity_tf_for gs) (EA_AssumeNot b)
-      (fun_of_resolved_st_q_for gs s)"
-    by (simp add: parity_tf_for_def branch_parity_def)
-  show "\<And>ea p. fun_of_resolved_st_q_for gs
-      (parity_tf_st_for gs (EA_Ret ea p) s) =
-    apply_tf (parity_tf_for gs) (EA_Ret ea p) (fun_of_resolved_st_q_for gs s)"
-  proof -
-    fix ea p
-    show "fun_of_resolved_st_q_for gs (parity_tf_st_for gs (EA_Ret ea p) s) =
-      apply_tf (parity_tf_for gs) (EA_Ret ea p) (fun_of_resolved_st_q_for gs s)"
-    proof (cases ea)
-      case None
-      then show ?thesis by (simp add: parity_tf_for_def skip_parity_def return_parity_def)
-    next
-      case (Some a)
-      then show ?thesis by (simp add: parity_tf_for_def return_parity_def assign_parity_def)
-    qed
+proof (cases a)
+  case EA_Nop
+  then show ?thesis by (simp add: parity_tf_for_def skip_parity_def)
+next
+  case (EA_Assign x e)
+  then show ?thesis by (simp add: parity_tf_for_def assign_parity_def)
+next
+  case (EA_Special sc x)
+  then show ?thesis by (auto simp: parity_tf_for_def split: special_call.splits)
+next
+  case (EA_Assume b)
+  then show ?thesis by (simp add: parity_tf_for_def branch_parity_def)
+next
+  case (EA_AssumeNot b)
+  then show ?thesis by (simp add: parity_tf_for_def branch_parity_def)
+next
+  case (EA_Ret ea p)
+  then show ?thesis
+  proof (cases ea)
+    case None
+    then show ?thesis using \<open>a = EA_Ret ea p\<close>
+      by (simp add: parity_tf_for_def skip_parity_def return_parity_def)
+  next
+    case (Some av)
+    then show ?thesis using \<open>a = EA_Ret ea p\<close>
+      by (simp add: parity_tf_for_def return_parity_def assign_parity_def)
   qed
-  show "\<And>c. fun_of_resolved_st_q_for gs
-      (parity_tf_st_for gs (EA_Check c) s) =
-    apply_tf (parity_tf_for gs) (EA_Check c) (fun_of_resolved_st_q_for gs s)"
-    by (simp add: parity_tf_for_def event_parity_def)
+next
+  case (EA_Check c)
+  then show ?thesis by (simp add: parity_tf_for_def event_parity_def)
 qed
 
 lemma enter_frame_parity_st_for_commute:
@@ -150,10 +139,12 @@ lemma enter_frame_parity_st_for_commute:
   by (simp add: enter_frame_parity_for_def)
 
 lemma parity_enter_st_for_commute:
-  "fun_of_resolved_st_q_for gs (parity_enter_st_for gs xs es s) =
-   enter\<^sup># (parity_tf_for gs) xs es (fun_of_resolved_st_q_for gs s)"
-  by (simp add: parity_tf_for_def enter_parity_for_def enter_D_def
-                enter_frame_parity_for_def enter_frame_parity_st_for_commute)
+  "fun_of_resolved_st_q_for gs (parity_enter_st_for gs ci s) =
+   snd (enter\<^sup># (parity_tf_for gs) ci (fun_of_resolved_st_q_for gs s))"
+  by (simp add: parity_tf_for_def enter_parity_for_def enter_D_def enter_frame_def
+                enter_pair_parity_for_def enter_pair_D_def
+                enter_frame_parity_for_def enter_frame_parity_st_for_commute
+                fun_of_resolved_st_q_for_enter_frame)
 
 text \<open>The Nop/Assign executable-abstract correspondence facts, mirroring
   \<open>sign_tf_st_for_nop_agree\<close>/\<open>sign_tf_st_for_assign_agree\<close> for the sign

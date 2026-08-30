@@ -439,8 +439,9 @@ proof -
           (FunctionEntry callee)) sigma =
       DG (project_abs_on callee
             (declared_global placement_prog) placement_keep_local
-            (enter_ivl_for (declared_global placement_prog) fs args
-              (dg_hook_D sigma caller \<squnion> dg_hook_G sigma))) bot"
+            (snd (enter_pair_ivl_for (declared_global placement_prog)
+                   (call_info_of (CallEdge dst fs args) callee)
+                   (dg_hook_D sigma caller \<squnion> dg_hook_G sigma)))) bot"
     unfolding placement_abs_enter_tree_def placed_abs_dg_enter_of_def
       placed_abs_dg_enter_tree_def
     by (simp add: traverse_rhs_map_gtree traverse_rhs_map_ltree
@@ -452,8 +453,9 @@ proof -
           (FunctionEntry callee)) sigma (Inr ()) =
       DG bot (project_abs_on callee
             (declared_global placement_prog) placement_publish_side
-            (enter_ivl_for (declared_global placement_prog) fs args
-              (dg_hook_D sigma caller \<squnion> dg_hook_G sigma)))"
+            (snd (enter_pair_ivl_for (declared_global placement_prog)
+                   (call_info_of (CallEdge dst fs args) callee)
+                   (dg_hook_D sigma caller \<squnion> dg_hook_G sigma))))"
     unfolding placement_abs_enter_tree_def placed_abs_dg_enter_of_def
       placed_abs_dg_enter_tree_def
     by (simp add: sides_map_gtree_unit_gen sides_map_ltree_Inr
@@ -463,14 +465,17 @@ proof -
     "gamma_join
         (project_abs_on callee
           (declared_global placement_prog) placement_keep_local
-          (enter_ivl_for (declared_global placement_prog) fs args
-            (dg_hook_D sigma caller \<squnion> dg_hook_G sigma)))
+          (snd (enter_pair_ivl_for (declared_global placement_prog)
+                 (call_info_of (CallEdge dst fs args) callee)
+                 (dg_hook_D sigma caller \<squnion> dg_hook_G sigma))))
         (project_abs_on callee
           (declared_global placement_prog) placement_publish_side
-          (enter_ivl_for (declared_global placement_prog) fs args
-            (dg_hook_D sigma caller \<squnion> dg_hook_G sigma)))
-      = \<lbrakk>enter_ivl_for (declared_global placement_prog) fs args
-          (dg_hook_D sigma caller \<squnion> dg_hook_G sigma)\<rbrakk>"
+          (snd (enter_pair_ivl_for (declared_global placement_prog)
+                 (call_info_of (CallEdge dst fs args) callee)
+                 (dg_hook_D sigma caller \<squnion> dg_hook_G sigma))))
+      = \<lbrakk>snd (enter_pair_ivl_for (declared_global placement_prog)
+              (call_info_of (CallEdge dst fs args) callee)
+              (dg_hook_D sigma caller \<squnion> dg_hook_G sigma))\<rbrakk>"
     unfolding gamma_join_def by (simp add: placement_project_split_join)
   have s_in: "s \<in> \<lbrakk>dg_hook_D sigma caller \<squnion> dg_hook_G sigma\<rbrakk>"
     using sin unfolding dg_hook_gamma_def gamma_join_def by simp
@@ -479,10 +484,11 @@ proof -
         (enter_state (declared_global placement_prog) s)"
     by (rule call_enter_CallEdge)
   also have "... \<in>
-      \<lbrakk>enter_ivl_for (declared_global placement_prog) fs args
-        (dg_hook_D sigma caller \<squnion> dg_hook_G sigma)\<rbrakk>"
-    using sound_transfer_for.tf_sound_enter_for
-      [OF ivl_is_sound_transfer_for s_in]
+      \<lbrakk>snd (enter_pair_ivl_for (declared_global placement_prog)
+             (call_info_of (CallEdge dst fs args) callee)
+             (dg_hook_D sigma caller \<squnion> dg_hook_G sigma))\<rbrakk>"
+    using sound_transfer_for.tf_sound_enter_entry_for
+      [where ci = "call_info_of (CallEdge dst fs args) callee", OF ivl_is_sound_transfer_for s_in]
     by (simp add: ivl_tf_for_def)
   finally show ?thesis
     by (simp add: traverse sides recombine)
@@ -1068,12 +1074,14 @@ lemma placement_dg_eqs_single_enter:
     "eq placement_dg_eqs (v, ()) sigma =
        DG (project_resolved_on_strict (placement_node_owner v) (placement_locations_of v)
              placement_keep_local
-             (ivl_enter_st_for (declared_global placement_prog) fs args
+             (ivl_enter_st_for (declared_global placement_prog)
+               (call_info_of (CallEdge dst fs args) (case v of FunctionEntry p \<Rightarrow> p | _ \<Rightarrow> undefined))
                (dg_hook_D sigma caller \<squnion> dg_hook_G sigma))) bot"
     "sides_of_rhs (placement_dg_eqs (v, ())) sigma (Inr ()) =
        DG bot (project_resolved_on_strict (placement_node_owner v) (placement_locations_of v)
              placement_publish_side
-             (ivl_enter_st_for (declared_global placement_prog) fs args
+             (ivl_enter_st_for (declared_global placement_prog)
+               (call_info_of (CallEdge dst fs args) (case v of FunctionEntry p \<Rightarrow> p | _ \<Rightarrow> undefined))
                (dg_hook_D sigma caller \<squnion> dg_hook_G sigma)))"
   unfolding placement_dg_eqs_def placed_dg_gen_of_strict_def placed_dg_enter_of_strict_def
   by (simp_all add: not_entry no_edge no_combine pred
@@ -1094,14 +1102,16 @@ lemma placement_hook_gen_single_enter_reduced:
     "eq (placement_sound_dg_hooks.hook_gen placement_cfg bot0 s0d s0g) (v, ()) sigma =
        DG (project_abs_on (placement_node_owner v) (declared_global placement_prog)
              placement_keep_local
-             (enter_ivl_for (declared_global placement_prog) fs args
-               (dg_hook_D sigma caller \<squnion> dg_hook_G sigma))) bot"
+             (snd (enter_pair_ivl_for (declared_global placement_prog)
+                    (call_info_of (CallEdge dst fs args) (case v of FunctionEntry p \<Rightarrow> p | _ \<Rightarrow> undefined))
+                    (dg_hook_D sigma caller \<squnion> dg_hook_G sigma)))) bot"
     "sides_of_rhs
        (placement_sound_dg_hooks.hook_gen placement_cfg bot0 s0d s0g (v, ())) sigma (Inr ()) =
        DG bot (project_abs_on (placement_node_owner v) (declared_global placement_prog)
              placement_publish_side
-             (enter_ivl_for (declared_global placement_prog) fs args
-               (dg_hook_D sigma caller \<squnion> dg_hook_G sigma)))"
+             (snd (enter_pair_ivl_for (declared_global placement_prog)
+                    (call_info_of (CallEdge dst fs args) (case v of FunctionEntry p \<Rightarrow> p | _ \<Rightarrow> undefined))
+                    (dg_hook_D sigma caller \<squnion> dg_hook_G sigma))))"
   unfolding placement_sound_dg_hooks.hook_gen_def
   by (simp_all add: not_entry no_edge no_combine pred bot0
     side_cfg_T_eff_keyed_seed_trees_def Let_def sides_of_rhs_seqcomp traverse_seqcomp
@@ -1119,10 +1129,12 @@ lemma placement_dg_refines_enter:
     and bot0: "bot0 = bot"
     and raw: "\<And>location. location \<in> set (placement_locations_of v) \<Longrightarrow>
       lookup_resolved_st_q
-        (ivl_enter_st_for (declared_global placement_prog) fs args
+        (ivl_enter_st_for (declared_global placement_prog)
+          (call_info_of (CallEdge dst fs args) (case v of FunctionEntry p \<Rightarrow> p | _ \<Rightarrow> undefined))
           (dg_hook_D sigma_exec caller \<squnion> dg_hook_G sigma_exec)) location =
-      enter_ivl_for (declared_global placement_prog) fs args
-        (dg_hook_D sigma_abs caller \<squnion> dg_hook_G sigma_abs)
+      snd (enter_pair_ivl_for (declared_global placement_prog)
+        (call_info_of (CallEdge dst fs args) (case v of FunctionEntry p \<Rightarrow> p | _ \<Rightarrow> undefined))
+        (dg_hook_D sigma_abs caller \<squnion> dg_hook_G sigma_abs))
         (location_vname location)"
   shows
     "dg_refines_on (set (placement_locations_of v))
@@ -1139,20 +1151,24 @@ proof -
     "dg_refines_on (set (placement_locations_of v))
       (DG (project_resolved_on_strict (placement_node_owner v) (placement_locations_of v)
             placement_keep_local
-            (ivl_enter_st_for (declared_global placement_prog) fs args
+            (ivl_enter_st_for (declared_global placement_prog)
+              (call_info_of (CallEdge dst fs args) (case v of FunctionEntry p \<Rightarrow> p | _ \<Rightarrow> undefined))
               (dg_hook_D sigma_exec caller \<squnion> dg_hook_G sigma_exec)))
           (project_resolved_on_strict (placement_node_owner v) (placement_locations_of v)
             placement_publish_side
-            (ivl_enter_st_for (declared_global placement_prog) fs args
+            (ivl_enter_st_for (declared_global placement_prog)
+              (call_info_of (CallEdge dst fs args) (case v of FunctionEntry p \<Rightarrow> p | _ \<Rightarrow> undefined))
               (dg_hook_D sigma_exec caller \<squnion> dg_hook_G sigma_exec))))
       (DG (project_abs_on (placement_node_owner v) (declared_global placement_prog)
             placement_keep_local
-            (enter_ivl_for (declared_global placement_prog) fs args
-              (dg_hook_D sigma_abs caller \<squnion> dg_hook_G sigma_abs)))
+            (snd (enter_pair_ivl_for (declared_global placement_prog)
+                   (call_info_of (CallEdge dst fs args) (case v of FunctionEntry p \<Rightarrow> p | _ \<Rightarrow> undefined))
+                   (dg_hook_D sigma_abs caller \<squnion> dg_hook_G sigma_abs))))
           (project_abs_on (placement_node_owner v) (declared_global placement_prog)
             placement_publish_side
-            (enter_ivl_for (declared_global placement_prog) fs args
-              (dg_hook_D sigma_abs caller \<squnion> dg_hook_G sigma_abs))))"
+            (snd (enter_pair_ivl_for (declared_global placement_prog)
+                   (call_info_of (CallEdge dst fs args) (case v of FunctionEntry p \<Rightarrow> p | _ \<Rightarrow> undefined))
+                   (dg_hook_D sigma_abs caller \<squnion> dg_hook_G sigma_abs)))))"
     by (rule dg_refines_on_project_strict[OF raw resolved])
   show ?thesis
     using bridge
@@ -1725,11 +1741,13 @@ lemma placement_enter_raw:
   assumes loc: "location \<in> set (placement_locations_of (FunctionEntry (STR ''add'')))"
   shows
     "lookup_resolved_st_q
-        (ivl_enter_st_for (declared_global placement_prog) [(STR ''x'')] [N 3]
+        (ivl_enter_st_for (declared_global placement_prog)
+          (call_info_of (CallEdge (Some (STR ''answer'')) [(STR ''x'')] [N 3]) (STR ''add''))
           (dg_hook_D (snd placement_dg_td_sol) (Statement 5) \<squnion>
            dg_hook_G (snd placement_dg_td_sol))) location =
-      enter_ivl_for (declared_global placement_prog) [(STR ''x'')] [N 3]
-        (dg_hook_D placement_sigma_abs (Statement 5) \<squnion> dg_hook_G placement_sigma_abs)
+      snd (enter_pair_ivl_for (declared_global placement_prog)
+            (call_info_of (CallEdge (Some (STR ''answer'')) [(STR ''x'')] [N 3]) (STR ''add''))
+            (dg_hook_D placement_sigma_abs (Statement 5) \<squnion> dg_hook_G placement_sigma_abs))
         (location_vname location)"
 proof (cases location)
   case (Global_Location y)
@@ -1759,7 +1777,7 @@ proof (cases location)
     by (rule placement_val_agree[OF memy])
   show ?thesis
     unfolding ivl_enter_st_for_eq enter_ivl_for_def enter_D_def
-      enter_frame_D_def
+      enter_frame_def enter_pair_ivl_for_def enter_pair_D_def
     using not_x agree yneqx vg
     by (simp add: placement_bind_formals_resolved_q_singleton Global_Location
       fun_of_resolved_st_q_for_def loy dg_hook_D_def dg_hook_G_def)
@@ -1775,6 +1793,7 @@ next
       using Local_Location True not_g by (simp add: location_of_def)
     show ?thesis
       unfolding ivl_enter_st_for_eq enter_ivl_for_def enter_D_def
+        enter_pair_ivl_for_def enter_pair_D_def
       using Local_Location
       by (simp add: placement_bind_formals_resolved_q_singleton loc_x True)
   next
@@ -1783,7 +1802,7 @@ next
       using Local_Location False by (simp add: location_of_def)
     show ?thesis
       unfolding ivl_enter_st_for_eq enter_ivl_for_def enter_D_def
-        enter_frame_D_def
+        enter_frame_def enter_pair_ivl_for_def enter_pair_D_def
       using Local_Location not_x False not_g
       by (simp add: placement_bind_formals_resolved_q_singleton)
   qed
@@ -1814,13 +1833,17 @@ proof (rule placement_dg_refines_enter[where v = "FunctionEntry (STR ''add'')"
 next
   fix location assume loc: "location \<in> set (placement_locations_of (FunctionEntry (STR ''add'')))"
   show "lookup_resolved_st_q
-      (ivl_enter_st_for (declared_global placement_prog) [(STR ''x'')] [N 3]
+      (ivl_enter_st_for (declared_global placement_prog)
+        (call_info_of (CallEdge (Some (STR ''answer'')) [(STR ''x'')] [N 3])
+          (case FunctionEntry (STR ''add'') of FunctionEntry p \<Rightarrow> p | _ \<Rightarrow> undefined))
         (dg_hook_D (snd placement_dg_td_sol) (Statement 5) \<squnion>
          dg_hook_G (snd placement_dg_td_sol))) location =
-    enter_ivl_for (declared_global placement_prog) [(STR ''x'')] [N 3]
-      (dg_hook_D placement_sigma_abs (Statement 5) \<squnion> dg_hook_G placement_sigma_abs)
+    snd (enter_pair_ivl_for (declared_global placement_prog)
+          (call_info_of (CallEdge (Some (STR ''answer'')) [(STR ''x'')] [N 3])
+            (case FunctionEntry (STR ''add'') of FunctionEntry p \<Rightarrow> p | _ \<Rightarrow> undefined))
+          (dg_hook_D placement_sigma_abs (Statement 5) \<squnion> dg_hook_G placement_sigma_abs))
       (location_vname location)"
-    by (rule placement_enter_raw[OF loc])
+    using placement_enter_raw[OF loc] by simp
 qed
 
 text \<open>The combine node's raw agreement, in the same \<open>cases location\<close> shape as
@@ -2554,8 +2577,9 @@ proof -
     show "globs (sides_of_rhs (placement_sound_dg_hooks.hook_gen placement_cfg bot
         placement_s0d_abs placement_s0g_abs (v, ())) placement_sigma_abs (Inr ())) x \<le> bot"
       using placement_side_outside_bot[where node = v and
-          result = "enter_ivl_for (declared_global placement_prog) fs args
-            (dg_hook_D placement_sigma_abs caller \<squnion> dg_hook_G placement_sigma_abs)", OF out]
+          result = "snd (enter_pair_ivl_for (declared_global placement_prog)
+            (call_info_of (CallEdge dst fs args) (case v of FunctionEntry p \<Rightarrow> p | _ \<Rightarrow> undefined))
+            (dg_hook_D placement_sigma_abs caller \<squnion> dg_hook_G placement_sigma_abs))", OF out]
       by (simp add: reduced)
   qed
 qed

@@ -238,7 +238,7 @@ proof -
        (rule parity_wf[THEN wf_compile_input_reserved_ret_var]
              parity_ex_transfer.tf_sound_assign_for parity_ex_transfer.tf_sound_special_for
              parity_ex_transfer.tf_sound_branch_for
-             parity_ex_transfer.tf_sound_enter_for parity_ex_transfer.tf_sound_combine_env_for
+             parity_ex_transfer.tf_sound_enter_entry_for parity_ex_transfer.tf_sound_combine_env_for
              parity_tf_st_for_commute[folded fun_of_exec_dg_st_for_def]
              parity_enter_st_for_commute[folded fun_of_exec_dg_st_for_def]
              parity_is_bot_exact

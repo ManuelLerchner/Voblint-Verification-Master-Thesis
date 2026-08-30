@@ -74,10 +74,39 @@ text \<open>
   global's own abstract value rather than at \<open>bot\<close>.
 \<close>
 
+definition entry_state_enter_exec ::
+    "(vname \<Rightarrow> bool) \<Rightarrow> call_action \<Rightarrow> ivl exec_dg_st \<Rightarrow> ivl exec_dg_st" where
+  "entry_state_enter_exec gs ca s =
+     bind_formals_resolved_q gs (ce_formals ca)
+       (map (\<lambda>e. aval_ivl e (fun_of_resolved_st_q_for gs s)) (ce_args ca))
+       (enter_frame_D_resolved_q ivl_top s)"
+
+lemma ivl_enter_st_for_call_info_of_eq_entry_state_enter_exec:
+  "ivl_enter_st_for gs (call_info_of ca p) s = entry_state_enter_exec gs ca s"
+  unfolding entry_state_enter_exec_def by simp
+
+definition entry_state_enter_abs ::
+    "(vname \<Rightarrow> bool) \<Rightarrow> call_action \<Rightarrow> ivl abs_state \<Rightarrow> ivl abs_state" where
+  "entry_state_enter_abs gs ca s =
+     enter_ivl_for gs (ce_formals ca) (ce_args ca) s"
+
+lemma tf_enter_ivl_for_call_info_of_eq_entry_state_enter_abs:
+  "snd (tf_enter (ivl_tf_for gs) (call_info_of ca p) s) =
+   entry_state_enter_abs gs ca s"
+  unfolding entry_state_enter_abs_def ivl_tf_for_def
+    enter_pair_ivl_for_def enter_pair_D_def enter_ivl_for_def
+  by simp
+
 definition entry_state_entered ::
     "(vname \<Rightarrow> bool) \<Rightarrow> (ivl exec_dg_st \<Rightarrow> bool) \<Rightarrow> ivl exec_dg_st lifted \<Rightarrow> call_action \<Rightarrow> ivl exec_dg_st lifted" where
   "entry_state_entered gs is_bot_pred d ca =
-     (case ca of CallEdge dst fs as \<Rightarrow> transfer_lift is_bot_pred (ivl_enter_st_for gs fs as) d)"
+     transfer_lift is_bot_pred (entry_state_enter_exec gs ca) d"
+
+lemma enter_local_ectx_spec_eq_entry_state_entered:
+  "enter_local (ectx_spec gs is_bot_pred) (call_info_of ca p) d g =
+   entry_state_entered gs is_bot_pred d ca"
+  unfolding ectx_spec_def dgs_enter_base_st_for_lifted entry_state_entered_def
+  by (cases d) (simp_all add: transfer_lift_def normalize_lift_def entry_state_enter_exec_def)
 
 definition entry_state_route ::
     "(vname \<Rightarrow> bool) \<Rightarrow> (ivl exec_dg_st \<Rightarrow> bool) \<Rightarrow> ivl exec_dg_st lifted \<Rightarrow> call_action \<Rightarrow> ivl list" where
@@ -128,7 +157,7 @@ definition entered_is_bot_for :: "vname list \<Rightarrow> ivl abs_state \<Right
 
 text \<open>
   Restricting \<^const>\<open>is_bot_state\<close>'s witness search to the formals is exact,
-  not merely a heuristic: \<^const>\<open>enter_frame_D\<close> resets every non-global
+  not merely a heuristic: \<^const>\<open>enter_frame\<close> resets every non-global
   variable to \<^const>\<open>ivl_top\<close> and leaves every global at the caller's own
   value, so no name outside the formals can ever witness bottomness once the
   caller itself is not \<^const>\<open>is_bot_state\<close> -- \<open>entered_is_bot_for_correct\<close>
@@ -137,21 +166,22 @@ text \<open>
 
 lemma entered_is_bot_for_correct:
   assumes not_bot: "\<not> is_bot_state st"
-  shows "entered_is_bot_for pars (enter\<^sup># (ivl_tf_for gs) pars args st)
-           = is_bot_state (enter\<^sup># (ivl_tf_for gs) pars args st)"
+  shows "entered_is_bot_for pars (entry_state_enter_abs gs (CallEdge dst pars args) st) =
+         is_bot_state (entry_state_enter_abs gs (CallEdge dst pars args) st)"
 proof -
-  define frame where "frame = enter_frame_D gs ivl_top st"
+  define frame where "frame = enter_frame gs ivl_top st"
   define entered where "entered = bind_formals pars (map (\<lambda>e. aval_ivl e st) args) frame"
-  have unfold: "enter\<^sup># (ivl_tf_for gs) pars args st = entered"
-    by (simp add: ivl_tf_for_def enter_ivl_for_def enter_D_def entered_def frame_def)
+  have unfold: "entry_state_enter_abs gs (CallEdge dst pars args) st = entered"
+    unfolding entry_state_enter_abs_def
+    by (simp add: enter_ivl_for_def enter_D_def entered_def frame_def)
   have frame_not_bot: "\<not> is_bot (frame x)" for x
   proof (cases "gs x")
     case True
-    then have "frame x = st x" by (simp add: frame_def enter_frame_D_def)
+    then have "frame x = st x" by (simp add: frame_def enter_frame_def)
     with not_bot show ?thesis by (auto simp: is_bot_state_def)
   next
     case False
-    then have "frame x = ivl_top" by (simp add: frame_def enter_frame_D_def)
+    then have "frame x = ivl_top" by (simp add: frame_def enter_frame_def)
     then show ?thesis by (simp add: ivl_top_def is_bottom_ivl_def)
   qed
 
@@ -197,7 +227,7 @@ definition entry_state_callee_ctx ::
     "(vname \<Rightarrow> bool) \<Rightarrow> call_action \<Rightarrow> ivl abs_state \<Rightarrow> ivl list option" where
   "entry_state_callee_ctx gs ca st =
      (case ca of CallEdge dst pars args \<Rightarrow>
-        (let entered = enter\<^sup># (ivl_tf_for gs) pars args st
+        (let entered = entry_state_enter_abs gs ca st
          in if entered_is_bot_for pars entered then None
             else Some (formals_context pars entered)))"
 
@@ -331,8 +361,8 @@ lemma ivl_Hstep_lifted_for:
 lemma ivl_Henter_lifted_for:
   assumes exact: "\<And>s. is_bot_pred s = is_bot_state (fun_of_resolved_st_q_for gs s)"
   shows "map_prod (map_lift (fun_of_resolved_st_q_for gs)) (map_lift (fun_of_resolved_st_q_for gs))
-           (dgs_enter (base_dg_spec_st_for_lifted gs is_bot_pred (ivl_tf_st_for gs) (ivl_enter_st_for gs)) xs es d g)
-         = dgs_enter (base_dg_spec_for_lifted gs is_bot_state (ivl_tf_for gs)) xs es
+           (dgs_enter (base_dg_spec_st_for_lifted gs is_bot_pred (ivl_tf_st_for gs) (ivl_enter_st_for gs)) ci d g)
+         = dgs_enter (base_dg_spec_for_lifted gs is_bot_state (ivl_tf_for gs)) ci
              (map_lift (fun_of_resolved_st_q_for gs) d) (map_lift (fun_of_resolved_st_q_for gs) g)"
   by (rule base_dg_spec_st_for_lifted_dgs_enter_commute
         [unfolded fun_of_exec_dg_st_for_def, OF ivl_enter_st_for_commute exact])
@@ -375,7 +405,7 @@ definition ectx_abs_spec :: "(vname \<Rightarrow> bool) \<Rightarrow> (ivl abs_s
 definition entered_state_abs ::
     "(vname \<Rightarrow> bool) \<Rightarrow> ivl abs_state lifted \<Rightarrow> call_action \<Rightarrow> ivl abs_state lifted" where
   "entered_state_abs gs d ca =
-     (case ca of CallEdge dst fs as \<Rightarrow> transfer_lift is_bot_state (enter\<^sup># (ivl_tf_for gs) fs as) d)"
+     transfer_lift is_bot_state (entry_state_enter_abs gs ca) d"
 
 definition entry_state_route_abs ::
     "(vname \<Rightarrow> bool) \<Rightarrow> ivl abs_state lifted \<Rightarrow> call_action \<Rightarrow> ivl list" where
@@ -392,8 +422,8 @@ text \<open>
   \<^theory>\<open>Voblint_Core.Routed_Context\<close>'s \<open>formals_route_lifted\<close>/\<open>formals_route_lifted_gen\<close>,
   generalized so any domain interprets them instead of restating them: both case-split
   the same \<^const>\<open>CallEdge\<close> and read the same entered-frame Bot/Lifted collapse, and
-  \<^const>\<open>entered_state_abs\<close>'s own \<open>enter#\<close> application is exactly \<open>enter_local\<close> applied
-  to \<^const>\<open>ectx_abs_spec\<close> (\<open>dgs_enter_base_for_lifted\<close>). Kept as their own named
+  the action-only entry primitive used by entered_state_abs agrees with enter_local applied
+  to ectx_abs_spec (dgs_enter_base_for_lifted). Kept as their own named
   definitions -- rather than replaced outright -- because both are cited by name from the
   regression examples
   (\<open>Example_Interval_DG_Ctx_Collect\<close>, \<open>Example_Interval_DG_EntryState_Collect\<close>); this
@@ -417,17 +447,30 @@ lemma entry_state_entered_commute:
   assumes exact: "\<And>s. is_bot_pred s = is_bot_state (fun_of_resolved_st_q_for gs s)"
   shows "map_lift (fun_of_resolved_st_q_for gs) (entry_state_entered gs is_bot_pred s ca)
      = entered_state_abs gs (map_lift (fun_of_resolved_st_q_for gs) s) ca"
-proof (cases ca)
-  case (CallEdge dst fs as)
-  have step: "map_lift (fun_of_resolved_st_q_for gs) (transfer_lift is_bot_pred (ivl_enter_st_for gs fs as) s)
-      = transfer_lift is_bot_state (enter\<^sup># (ivl_tf_for gs) fs as) (map_lift (fun_of_resolved_st_q_for gs) s)"
-    by (rule transfer_lift_commute
-          [where phi = "fun_of_resolved_st_q_for gs" and f = "ivl_enter_st_for gs fs as"
-             and F = "enter\<^sup># (ivl_tf_for gs) fs as" and is_bot_pred = is_bot_pred
-             and is_bot_pred' = is_bot_state, OF ivl_enter_st_for_commute exact])
+proof -
+  fix p :: pname
+  have commute: "\<And>d. fun_of_resolved_st_q_for gs (entry_state_enter_exec gs ca d) =
+      entry_state_enter_abs gs ca (fun_of_resolved_st_q_for gs d)"
+  proof -
+    fix d
+    have "fun_of_resolved_st_q_for gs
+        (ivl_enter_st_for gs (call_info_of ca p) d) =
+        snd (tf_enter (ivl_tf_for gs) (call_info_of ca p)
+          (fun_of_resolved_st_q_for gs d))"
+      by (rule ivl_enter_st_for_commute)
+    then show "fun_of_resolved_st_q_for gs (entry_state_enter_exec gs ca d) =
+        entry_state_enter_abs gs ca (fun_of_resolved_st_q_for gs d)"
+      by (simp only: ivl_enter_st_for_call_info_of_eq_entry_state_enter_exec
+          tf_enter_ivl_for_call_info_of_eq_entry_state_enter_abs)
+  qed
   show ?thesis
-    unfolding entry_state_entered_def entered_state_abs_def CallEdge
-    by (simp add: step)
+    unfolding entry_state_entered_def entered_state_abs_def
+    by (rule transfer_lift_commute
+          [where phi = "fun_of_resolved_st_q_for gs"
+             and f = "entry_state_enter_exec gs ca"
+             and F = "entry_state_enter_abs gs ca"
+             and is_bot_pred = is_bot_pred
+             and is_bot_pred' = is_bot_state, OF commute exact])
 qed
 
 lemma entry_state_route_commute:
@@ -474,7 +517,7 @@ theorem entry_state_callee_ctx_eq_route_partial:
      else Some (entry_state_route gs is_bot_pred (entry_state_entered gs is_bot_pred d ca) ca))"
 proof (cases ca)
   case (CallEdge dst pars args)
-  define entered where "entered = enter\<^sup># (ivl_tf_for gs) pars args st"
+  define entered where "entered = entry_state_enter_abs gs ca st"
   have entered_state_eq: "entered_state_abs gs (Lifted st) ca =
       (if entered_is_bot_for pars entered then Bot else Lifted entered)"
     unfolding entered_state_abs_def CallEdge entered_def
@@ -631,7 +674,7 @@ context
         \<Longrightarrow> (u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps)
         \<Longrightarrow> (FunctionEntry p,
               entry_state_route_gen gs is_bot_pred u ctx
-                (enter_local (ectx_spec gs is_bot_pred) pars args
+                (enter_local (ectx_spec gs is_bot_pred) (call_info_of (CallEdge dst pars args) p)
                    (locals (snd (entry_state_sol gs is_bot_pred Pi ps) (Inl (u, ctx))))
                    (globs (snd (entry_state_sol gs is_bot_pred Pi ps) (Inr Global))))
                 (CallEdge dst pars args))
@@ -654,9 +697,10 @@ text \<open>
 
 definition entry_state_context :: "cfg_node \<Rightarrow> ivl list \<Rightarrow> store \<Rightarrow> ivl list" where
   "entry_state_context u ctx s =
-     (let ca = call_action_at_call_site (compile_prog Pi ps) u in
-        entry_state_route_gen gs is_bot_pred u ctx
-          (enter_local (ectx_spec gs is_bot_pred) (ce_formals ca) (ce_args ca)
+     (let ca = call_action_at_call_site (compile_prog Pi ps) u;
+          p = (case callee_entry_at_call_site (compile_prog Pi ps) u of FunctionEntry q \<Rightarrow> q | _ \<Rightarrow> undefined)
+      in entry_state_route_gen gs is_bot_pred u ctx
+          (enter_local (ectx_spec gs is_bot_pred) (call_info_of ca p)
              (locals (snd (entry_state_sol gs is_bot_pred Pi ps) (Inl (u, ctx))))
              (globs (snd (entry_state_sol gs is_bot_pred Pi ps) (Inr Global)))) ca)"
 

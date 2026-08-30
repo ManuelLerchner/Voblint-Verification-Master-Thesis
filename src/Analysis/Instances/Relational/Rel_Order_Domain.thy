@@ -299,8 +299,8 @@ definition branch_step_rel :: "exp \<Rightarrow> bool \<Rightarrow> relc \<Right
 definition dgs_branch_rel :: "exp \<Rightarrow> bool \<Rightarrow> relc \<Rightarrow> relc \<Rightarrow> relc \<times> relc" where
   "dgs_branch_rel b pol d g = (g, branch_step_rel b pol d)"
 
-definition dgs_enter_rel :: "vname list \<Rightarrow> exp list \<Rightarrow> relc \<Rightarrow> relc \<Rightarrow> relc \<times> relc" where
-  "dgs_enter_rel xs es dc g = (top_relc, top_relc)"
+definition dgs_enter_rel :: "call_info \<Rightarrow> relc \<Rightarrow> relc \<Rightarrow> relc \<times> relc" where
+  "dgs_enter_rel ci dc g = (top_relc, top_relc)"
 
 text \<open>
   The caller continuation is the identity.  This carrier discards every caller
@@ -438,8 +438,8 @@ subsection \<open>Call-entry and combine soundness -- havoc-based, both trivial 
 
 lemma dgs_enter_rel_sound:
   "s \<in> gammaDG_rel dc g \<Longrightarrow>
-     call_enter is_global (CallEdge dst pars args) s \<in>
-       (case dgs_enter rel_order_spec pars args dc g of (g', d') \<Rightarrow> gammaDG_rel d' g')"
+     call_enter is_global (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci)) s \<in>
+       (case dgs_enter rel_order_spec ci dc g of (g', d') \<Rightarrow> gammaDG_rel d' g')"
   unfolding rel_order_spec_def dgs_enter_rel_def by simp
 
 lemma dgs_caller_cont_rel_sound:
@@ -479,10 +479,10 @@ next
             (case dgs_combine rel_order_spec ci dcont de g of (g', d') \<Rightarrow> gammaDG_rel d' g')"
     by (rule dgs_combine_rel_sound)
 next
-  fix dst pars args dc g s
+  fix ci dc g s
   show "s \<in> gammaDG_rel dc g \<Longrightarrow>
-          call_enter is_global (CallEdge dst pars args) s \<in>
-            (case dgs_enter rel_order_spec pars args dc g of (g', d') \<Rightarrow> gammaDG_rel d' g')"
+          call_enter is_global (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci)) s \<in>
+            (case dgs_enter rel_order_spec ci dc g of (g', d') \<Rightarrow> gammaDG_rel d' g')"
     by (rule dgs_enter_rel_sound)
 qed
 

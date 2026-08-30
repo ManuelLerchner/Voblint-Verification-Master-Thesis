@@ -12,8 +12,8 @@ session Voblint_Core in "." = "Voblint_CFG" +
   theories
     CFG_Enumeration
     Transfer_Interface
-    Transfer_Interface_Sound
     State_Restriction
+    DG_State_Reconstruction
     DG_Framework
     DG_Soundness
     DG_LTR_Sound

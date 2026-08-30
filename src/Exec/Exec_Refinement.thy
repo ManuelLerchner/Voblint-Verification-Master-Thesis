@@ -1,5 +1,5 @@
 theory Exec_Refinement
-  imports Exec_St "Voblint_Core.State_Restriction"
+  imports Exec_St "Voblint_Core.DG_State_Reconstruction"
 begin
 
 section \<open>Refinement between executable and abstract split states\<close>

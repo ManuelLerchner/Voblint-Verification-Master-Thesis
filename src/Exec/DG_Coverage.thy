@@ -127,12 +127,13 @@ proof -
   have site: "(cs, ca) \<in> set (entry_call_list g ce)"
     using fin e by (auto simp: entry_calls_def)
   obtain dst fs as where ca_eq: "ca = CallEdge dst fs as" by (cases ca) auto
+  let ?p = "case ce of FunctionEntry p \<Rightarrow> p | _ \<Rightarrow> undefined"
   have mem: "map_gtree (\<lambda>_. ())
-               (map_ltree (\<lambda>w. (w, ())) (dg_edge_tree (dgs_enter S fs as) cs))
+               (map_ltree (\<lambda>w. (w, ())) (dg_edge_tree (dgs_enter S (call_info_of ca ?p)) cs))
              \<in> set (dg_extra_of S g (\<lambda>_ _ _ _. ()) () ce)"
-    unfolding dg_extra_of_def using site ca_eq by force
+    unfolding dg_extra_of_def using site by force
   have "Inl (cs, ()) \<in> dep_aux \<sigma>
-       (map_gtree (\<lambda>_. ()) (map_ltree (\<lambda>w. (w, ())) (dg_edge_tree (dgs_enter S fs as) cs)))"
+       (map_gtree (\<lambda>_. ()) (map_ltree (\<lambda>w. (w, ())) (dg_edge_tree (dgs_enter S (call_info_of ca ?p)) cs)))"
     by (simp add: dep_aux_dg_edge_tree_relabelled)
   with dep_aux_dg_gen_of_extra_mem[OF mem] show ?thesis by blast
 qed

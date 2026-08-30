@@ -1,5 +1,5 @@
 theory DG_Soundness
-  imports DG_Framework Transfer_Interface_Sound
+  imports DG_Framework
 begin
 
 section \<open>Native heterogeneous soundness\<close>
@@ -201,8 +201,8 @@ locale sound_dg_spec =
              (g', d') \<Rightarrow> gammaDG d' g')"
     and enter_sound:
       "s \<in> gammaDG dc g \<Longrightarrow>
-        call_enter gs (CallEdge dst pars args) s \<in>
-          (case dgs_enter S pars args dc g of
+        call_enter gs (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci)) s \<in>
+          (case dgs_enter S ci dc g of
              (g', d') \<Rightarrow> gammaDG d' g')"
 begin
 
@@ -260,8 +260,8 @@ lemma combine_sound_at_call_fs:
 
 lemma enter_sound_fs:
   assumes "s \<in> gammaDG dc g"
-  shows "call_enter gs (CallEdge dst pars args) s \<in>
-           gammaDG (snd (dgs_enter S pars args dc g)) (fst (dgs_enter S pars args dc g))"
+  shows "call_enter gs (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci)) s \<in>
+           gammaDG (snd (dgs_enter S ci dc g)) (fst (dgs_enter S ci dc g))"
   using enter_sound[OF assms] by (simp add: case_prod_beta)
 
 lemma combine_sound_fs:
@@ -292,21 +292,28 @@ where
   "dg_cmb g route ctx ca cc v =
      side_rhs_fold_dg bot (map (dg_cmb_at ctx ca cc) (static_targets g v cc ca))"
 
+text \<open>The callee name is not otherwise available at an entry-indexed enumeration
+  site, and \<^const>\<open>dgs_enter\<close> never reads \<open>ci_callee\<close> (only \<open>ci_formals\<close>/\<open>ci_args\<close>),
+  so \<open>v\<close>'s own procedure -- when \<open>v\<close> is the \<open>FunctionEntry\<close> \<^const>\<open>entry_call_list\<close>
+  indexes by -- is as good a witness as any; the \<open>undefined\<close> branch is unreachable
+  since \<^const>\<open>entry_call_list\<close> is only ever nonempty at a \<open>FunctionEntry\<close> node.\<close>
+
 definition dg_enter ::
-  "unit \<Rightarrow> vname list \<Rightarrow> exp list \<Rightarrow> pp
+  "unit \<Rightarrow> call_info \<Rightarrow> pp
    \<Rightarrow> (pp \<times> unit, unit, ('D, 'G) dg_state) strategy_tree"
 where
-  "dg_enter ctx fs as cl =
+  "dg_enter ctx ci cl =
      map_gtree (\<lambda>_. ())
        (map_ltree (\<lambda>w. (w, ctx))
-         (dg_edge_tree (dgs_enter S fs as) cl))"
+         (dg_edge_tree (dgs_enter S ci) cl))"
 
 definition dg_extra ::
   "cfg \<Rightarrow> (pp \<Rightarrow> unit \<Rightarrow> 'D \<Rightarrow> call_action \<Rightarrow> unit) \<Rightarrow> unit \<Rightarrow> pp
    \<Rightarrow> (pp \<times> unit, unit, ('D, 'G) dg_state) strategy_tree list"
 where
   "dg_extra g route ctx v =
-     map (\<lambda>(cl, ca). case ca of CallEdge dst fs as \<Rightarrow> dg_enter ctx fs as cl)
+     map (\<lambda>(cl, ca). dg_enter ctx
+            (call_info_of ca (case v of FunctionEntry p \<Rightarrow> p | _ \<Rightarrow> undefined)) cl)
          (entry_call_list g v)"
 
 definition dg_gen ::
@@ -408,10 +415,10 @@ where
         fst (dg_spec_step S a (dg_D sigma u) (dg_G sigma))
           \<le> dg_G sigma) \<and>
      (\<forall>c dst fs as p k. (c, CallEdge dst fs as, FunctionEntry p, k) \<in> calls g \<longrightarrow>
-        snd (dgs_enter S fs as (dg_D sigma c) (dg_G sigma))
+        snd (dgs_enter S (call_info_of (CallEdge dst fs as) p) (dg_D sigma c) (dg_G sigma))
           \<le> dg_D sigma (FunctionEntry p)) \<and>
      (\<forall>c dst fs as p k. (c, CallEdge dst fs as, FunctionEntry p, k) \<in> calls g \<longrightarrow>
-        fst (dgs_enter S fs as (dg_D sigma c) (dg_G sigma))
+        fst (dgs_enter S (call_info_of (CallEdge dst fs as) p) (dg_D sigma c) (dg_G sigma))
           \<le> dg_G sigma) \<and>
      (\<forall>c dst fs as p k. (c, CallEdge dst fs as, FunctionEntry p, k) \<in> calls g \<longrightarrow>
         snd (dgs_combine S (call_info_of (CallEdge dst fs as) p) (dgs_caller_cont S (call_info_of (CallEdge dst fs as) p) (dg_D sigma c) (dg_G sigma)) (dg_D sigma (FunctionResult p))
@@ -449,13 +456,15 @@ lemma dg_postfix_edgeG:
 lemma dg_postfix_enterD:
   assumes pf: "dg_postfix g s0d s0g sigma"
     and ce: "(cc, CallEdge dst fs as, FunctionEntry p, k) \<in> calls g"
-  shows "snd (dgs_enter S fs as (dg_D sigma cc) (dg_G sigma)) \<le> dg_D sigma (FunctionEntry p)"
+  shows "snd (dgs_enter S (call_info_of (CallEdge dst fs as) p) (dg_D sigma cc) (dg_G sigma))
+           \<le> dg_D sigma (FunctionEntry p)"
   using pf ce unfolding dg_postfix_def by fastforce
 
 lemma dg_postfix_enterG:
   assumes pf: "dg_postfix g s0d s0g sigma"
     and ce: "(cc, CallEdge dst fs as, FunctionEntry p, k) \<in> calls g"
-  shows "fst (dgs_enter S fs as (dg_D sigma cc) (dg_G sigma)) \<le> dg_G sigma"
+  shows "fst (dgs_enter S (call_info_of (CallEdge dst fs as) p) (dg_D sigma cc) (dg_G sigma))
+           \<le> dg_G sigma"
   using pf ce unfolding dg_postfix_def by blast
 
 lemma dg_postfix_combineD:
@@ -512,15 +521,15 @@ lemma dg_combine_tree_global:
       sum.map_comp o_def)
 
 lemma dg_enter_tree_local:
-  "locals (traverse_rhs (dg_enter () fs as cl) sigma)
-   = snd (dgs_enter S fs as (dg_D sigma cl) (dg_G sigma))"
+  "locals (traverse_rhs (dg_enter () ci cl) sigma)
+   = snd (dgs_enter S ci (dg_D sigma cl) (dg_G sigma))"
   unfolding dg_enter_def dg_D_def dg_G_def
   by (subst traverse_intra_keyed)
     (simp add: traverse_dg_edge_tree)
 
 lemma dg_enter_tree_global:
-  "globs (sides_of_rhs (dg_enter () fs as cl) sigma (Inr ()))
-   = fst (dgs_enter S fs as (dg_D sigma cl) (dg_G sigma))"
+  "globs (sides_of_rhs (dg_enter () ci cl) sigma (Inr ()))
+   = fst (dgs_enter S ci (dg_D sigma cl) (dg_G sigma))"
   unfolding dg_enter_def dg_D_def dg_G_def
   by (simp add: sides_map_gtree_unit_gen sides_map_ltree_Inr sides_dg_edge_tree_Inr
       sum.map_comp o_def)
@@ -650,24 +659,25 @@ proof -
 
   have enter_tree_mem:
     "\<And>c dst fs as p k. (c, CallEdge dst fs as, FunctionEntry p, k) \<in> calls g \<Longrightarrow>
-      dg_enter () fs as c \<in> set (dg_trees g (FunctionEntry p))"
+      dg_enter () (call_info_of (CallEdge dst fs as) p) c \<in> set (dg_trees g (FunctionEntry p))"
   proof -
     fix c dst fs as p k
     assume ce: "(c, CallEdge dst fs as, FunctionEntry p, k) \<in> calls g"
     have "(c, CallEdge dst fs as) \<in> set (entry_call_list g (FunctionEntry p))"
       using ce by (auto simp: set_entry_call_list[OF finC] entry_calls_iff)
-    then show "dg_enter () fs as c \<in> set (dg_trees g (FunctionEntry p))"
+    then show "dg_enter () (call_info_of (CallEdge dst fs as) p) c
+        \<in> set (dg_trees g (FunctionEntry p))"
       by (force simp: dg_trees_def dg_extra_def image_iff)
   qed
 
   have enterD:
     "\<And>c dst fs as p k. (c, CallEdge dst fs as, FunctionEntry p, k) \<in> calls g \<Longrightarrow>
-      snd (dgs_enter S fs as (dg_D sigma c) (dg_G sigma))
+      snd (dgs_enter S (call_info_of (CallEdge dst fs as) p) (dg_D sigma c) (dg_G sigma))
         \<le> dg_D sigma (FunctionEntry p)"
   proof -
     fix c dst fs as p k
     assume ce: "(c, CallEdge dst fs as, FunctionEntry p, k) \<in> calls g"
-    have "snd (dgs_enter S fs as (dg_D sigma c) (dg_G sigma))
+    have "snd (dgs_enter S (call_info_of (CallEdge dst fs as) p) (dg_D sigma c) (dg_G sigma))
         \<le> side_acc_dg (dg_acc g bot0 s0d (FunctionEntry p))
           sigma (dg_trees g (FunctionEntry p))"
       using locals_traverse_le_side_acc_dg[OF enter_tree_mem[OF ce]]
@@ -678,18 +688,18 @@ proof -
     also have "... \<le> dg_D sigma (FunctionEntry p)"
       using eq_le[OF cover_enter[OF ce]]
       by (simp add: dg_D_def less_eq_dg_state_def)
-    finally show "snd (dgs_enter S fs as (dg_D sigma c) (dg_G sigma))
+    finally show "snd (dgs_enter S (call_info_of (CallEdge dst fs as) p) (dg_D sigma c) (dg_G sigma))
         \<le> dg_D sigma (FunctionEntry p)" .
   qed
 
   have enterG:
     "\<And>c dst fs as p k. (c, CallEdge dst fs as, FunctionEntry p, k) \<in> calls g \<Longrightarrow>
-      fst (dgs_enter S fs as (dg_D sigma c) (dg_G sigma))
+      fst (dgs_enter S (call_info_of (CallEdge dst fs as) p) (dg_D sigma c) (dg_G sigma))
         \<le> dg_G sigma"
   proof -
     fix c dst fs as p k
     assume ce: "(c, CallEdge dst fs as, FunctionEntry p, k) \<in> calls g"
-    have "fst (dgs_enter S fs as (dg_D sigma c) (dg_G sigma))
+    have "fst (dgs_enter S (call_info_of (CallEdge dst fs as) p) (dg_D sigma c) (dg_G sigma))
         \<le> globs (sides_of_rhs
           (side_rhs_fold_dg (dg_acc g bot0 s0d (FunctionEntry p))
             (dg_trees g (FunctionEntry p))) sigma (Inr ()))"
@@ -703,7 +713,7 @@ proof -
     also have "... \<le> dg_G sigma"
       using sides_le[OF cover_enter[OF ce], THEN le_funD, of "Inr ()"]
       by (simp add: dg_G_def less_eq_dg_state_def)
-    finally show "fst (dgs_enter S fs as (dg_D sigma c) (dg_G sigma))
+    finally show "fst (dgs_enter S (call_info_of (CallEdge dst fs as) p) (dg_D sigma c) (dg_G sigma))
         \<le> dg_G sigma" .
   qed
 
@@ -848,16 +858,16 @@ proof -
   have sin': "s \<in> gammaDG (dg_D sigma u) (dg_G sigma)"
     using dg_gammaD[OF sin] .
   have out: "call_enter gs (CallEdge dst pars args) s \<in>
-               gammaDG (snd (dgs_enter S pars args (dg_D sigma u) (dg_G sigma)))
-                       (fst (dgs_enter S pars args (dg_D sigma u) (dg_G sigma)))"
-    using enter_sound_fs[OF sin'] .
-  have d_le: "snd (dgs_enter S pars args (dg_D sigma u) (dg_G sigma))
+               gammaDG (snd (dgs_enter S (call_info_of (CallEdge dst pars args) p) (dg_D sigma u) (dg_G sigma)))
+                       (fst (dgs_enter S (call_info_of (CallEdge dst pars args) p) (dg_D sigma u) (dg_G sigma)))"
+    using enter_sound_fs[where ci = "call_info_of (CallEdge dst pars args) p", OF sin'] by simp
+  have d_le: "snd (dgs_enter S (call_info_of (CallEdge dst pars args) p) (dg_D sigma u) (dg_G sigma))
                 \<le> dg_D sigma (FunctionEntry p)"
     using dg_postfix_enterD[OF pf ce] .
-  have g_le: "fst (dgs_enter S pars args (dg_D sigma u) (dg_G sigma)) \<le> dg_G sigma"
+  have g_le: "fst (dgs_enter S (call_info_of (CallEdge dst pars args) p) (dg_D sigma u) (dg_G sigma)) \<le> dg_G sigma"
     using dg_postfix_enterG[OF pf ce] .
-  have "gammaDG (snd (dgs_enter S pars args (dg_D sigma u) (dg_G sigma)))
-                (fst (dgs_enter S pars args (dg_D sigma u) (dg_G sigma)))
+  have "gammaDG (snd (dgs_enter S (call_info_of (CallEdge dst pars args) p) (dg_D sigma u) (dg_G sigma)))
+                (fst (dgs_enter S (call_info_of (CallEdge dst pars args) p) (dg_D sigma u) (dg_G sigma)))
       \<subseteq> gammaDG (dg_D sigma (FunctionEntry p)) (dg_G sigma)"
     by (rule gammaDG_mono[OF d_le g_le])
   then show "call_enter gs (CallEdge dst pars args) s \<in> dg_gamma sigma (FunctionEntry p)"
@@ -924,7 +934,7 @@ definition dg_enter_tree_hook ::
   "pp \<Rightarrow> call_action \<Rightarrow> pp \<Rightarrow> (pp \<times> unit, unit, ('D, 'G) dg_state) strategy_tree"
 where
   "dg_enter_tree_hook cc ca p =
-     (case ca of CallEdge dst fs as \<Rightarrow> dg_enter () fs as cc)"
+     dg_enter () (call_info_of ca (case p of FunctionEntry proc \<Rightarrow> proc | _ \<Rightarrow> undefined)) cc"
 
 lemma dg_edge_tree_hook_local:
   "locals (traverse_rhs (dg_edge_tree_hook u a v) sigma)
@@ -953,13 +963,15 @@ lemma dg_combine_tree_hook_global:
   unfolding dg_combine_tree_hook_def by (simp add: dg_combine_tree_global)
 
 lemma dg_enter_tree_hook_local:
-  "locals (traverse_rhs (dg_enter_tree_hook cc (CallEdge dst fs as) p) sigma)
-     = snd (dgs_enter S fs as (dg_D sigma cc) (dg_G sigma))"
+  "locals (traverse_rhs (dg_enter_tree_hook cc ca p) sigma)
+     = snd (dgs_enter S (call_info_of ca (case p of FunctionEntry proc \<Rightarrow> proc | _ \<Rightarrow> undefined))
+              (dg_D sigma cc) (dg_G sigma))"
   unfolding dg_enter_tree_hook_def by (simp add: dg_enter_tree_local)
 
 lemma dg_enter_tree_hook_global:
-  "globs (sides_of_rhs (dg_enter_tree_hook cc (CallEdge dst fs as) p) sigma (Inr ()))
-     = fst (dgs_enter S fs as (dg_D sigma cc) (dg_G sigma))"
+  "globs (sides_of_rhs (dg_enter_tree_hook cc ca p) sigma (Inr ()))
+     = fst (dgs_enter S (call_info_of ca (case p of FunctionEntry proc \<Rightarrow> proc | _ \<Rightarrow> undefined))
+              (dg_D sigma cc) (dg_G sigma))"
   unfolding dg_enter_tree_hook_def by (simp add: dg_enter_tree_global)
 
 end
@@ -1617,7 +1629,8 @@ next
         (globs (sides_of_rhs
           (dg_enter_tree_hook caller (CallEdge dst fs args) (FunctionEntry callee)) sigma (Inr ())))"
     unfolding dg_enter_tree_hook_local dg_enter_tree_hook_global
-    by (rule enter_sound_fs[OF sin'])
+    using enter_sound_fs[where ci = "call_info_of (CallEdge dst fs args) callee", OF sin']
+    by simp
 next
   fix sigma caller dst fs args callee continuation s t
   assume sin: "s \<in> dg_hook_gamma gammaDG sigma caller"
@@ -1771,8 +1784,8 @@ where
                                    branch\<^sup># tfD b pol d)),
     dgs_body       = (\<lambda>p d g. (body\<^sup># tfG p g, body\<^sup># tfD p d)),
     dgs_return     = (\<lambda>e p d g. (return\<^sup># tfG e p g, return\<^sup># tfD e p d)),
-    dgs_enter      = (\<lambda>xs es d g. (enter\<^sup># tfG xs es g,
-                                   enter\<^sup># tfD xs es d)),
+    dgs_enter      = (\<lambda>ci d g. (snd (enter\<^sup># tfG ci g),
+                                snd (enter\<^sup># tfD ci d))),
     dgs_event      = (\<lambda>ev d g. (event\<^sup># tfG ev g, event\<^sup># tfD ev d)),
     dgs_caller_cont    = (\<lambda>_ d _. d),
     dgs_combine_env    = (\<lambda>_ dc de g. (combine_env gs g g, combine_env gs dc de)),
@@ -1820,16 +1833,18 @@ text \<open>The enter obligation of @{locale sound_dg_spec} for the independent 
 lemma gamma_dg_enter_sound:
   assumes soundD: "sound_transfer_for gs tfD" and soundG: "sound_transfer_for gs tfG"
     and sc: "s \<in> gamma_dg dc g"
-  shows "call_enter gs (CallEdge dst pars args) s \<in>
-           (case dgs_enter (indep_dg_spec gs tfD tfG) pars args dc g of (g', d') \<Rightarrow> gamma_dg d' g')"
+  shows "call_enter gs (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci)) s \<in>
+           (case dgs_enter (indep_dg_spec gs tfD tfG) ci dc g of (g', d') \<Rightarrow> gamma_dg d' g')"
 proof -
   have sc': "s \<in> \<lbrakk>dc\<rbrakk>" using gamma_dgD1[OF sc] .
   have sg: "s \<in> \<lbrakk>g\<rbrakk>" using gamma_dgD2[OF sc] .
-  have d_sound: "call_enter gs (CallEdge dst pars args) s \<in> \<lbrakk>enter\<^sup># tfD pars args dc\<rbrakk>"
-    using sound_transfer_for.tf_sound_enter_for[OF soundD sc']
+  have d_sound: "call_enter gs (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci)) s
+      \<in> \<lbrakk>snd (enter\<^sup># tfD ci dc)\<rbrakk>"
+    using sound_transfer_for.tf_sound_enter_entry_for[OF soundD sc']
     by (simp add: call_enter_CallEdge)
-  have g_sound: "call_enter gs (CallEdge dst pars args) s \<in> \<lbrakk>enter\<^sup># tfG pars args g\<rbrakk>"
-    using sound_transfer_for.tf_sound_enter_for[OF soundG sg]
+  have g_sound: "call_enter gs (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci)) s
+      \<in> \<lbrakk>snd (enter\<^sup># tfG ci g)\<rbrakk>"
+    using sound_transfer_for.tf_sound_enter_entry_for[OF soundG sg]
     by (simp add: call_enter_CallEdge)
   show ?thesis
     unfolding indep_dg_spec_def gamma_dg_def by (simp add: d_sound g_sound)
@@ -1943,13 +1958,13 @@ qed
 lemma gamma_unit_enter_sound_for:
   assumes sound: "sound_transfer_for gs tf"
     and sc: "s \<in> gamma_unit gs dc g"
-  shows "call_enter gs (CallEdge dst pars args) s \<in>
-           (case dgs_enter (unit_dg_spec_for gs tf) pars args dc g of (g', d') \<Rightarrow> gamma_unit gs d' g')"
+  shows "call_enter gs (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci)) s \<in>
+           (case dgs_enter (unit_dg_spec_for gs tf) ci dc g of (g', d') \<Rightarrow> gamma_unit gs d' g')"
 proof -
   have sc': "s \<in> \<lbrakk>combine_env gs dc g\<rbrakk>" using gamma_unitD[OF sc] .
-  have "call_enter gs (CallEdge dst pars args) s \<in>
-      \<lbrakk>enter\<^sup># tf pars args (combine_env gs dc g)\<rbrakk>"
-    using sound_transfer_for.tf_sound_enter_for[OF sound sc']
+  have "call_enter gs (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci)) s \<in>
+      \<lbrakk>snd (enter\<^sup># tf ci (combine_env gs dc g))\<rbrakk>"
+    using sound_transfer_for.tf_sound_enter_entry_for[OF sound sc']
     by (simp add: call_enter_CallEdge)
   then show ?thesis
     unfolding dgs_enter_unit_dg_spec_for unit_step_for_def gamma_unit_def
@@ -2130,26 +2145,27 @@ lemma gamma_unit_enter_sound_for_lifted:
   assumes sound: "sound_transfer_for gs tf"
     and exact: "\<And>s. is_bot_pred s = is_bot_state s"
     and sc: "s \<in> gamma_unit_lifted gs dc g"
-  shows "call_enter gs (CallEdge dst pars args) s \<in>
-           (case dgs_enter (unit_dg_spec_for_lifted gs is_bot_pred tf) pars args dc g of (g', d') \<Rightarrow>
+  shows "call_enter gs (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci)) s \<in>
+           (case dgs_enter (unit_dg_spec_for_lifted gs is_bot_pred tf) ci dc g of (g', d') \<Rightarrow>
               gamma_unit_lifted gs d' g')"
 proof -
   obtain dc0 where dc0: "dc = Lifted dc0" using sc by (cases dc) auto
   define g0 where "g0 = (case g of Bot \<Rightarrow> bot | Lifted x \<Rightarrow> x)"
   have sc': "s \<in> \<lbrakk>combine_env gs dc0 g0\<rbrakk>"
     using sc unfolding dc0 g0_def gamma_unit_lifted_def gamma_unit_def by (cases g) auto
-  have base: "call_enter gs (CallEdge dst pars args) s \<in> \<lbrakk>enter\<^sup># tf pars args (combine_env gs dc0 g0)\<rbrakk>"
-    using sound_transfer_for.tf_sound_enter_for[OF sound sc']
+  have base: "call_enter gs (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci)) s
+      \<in> \<lbrakk>snd (enter\<^sup># tf ci (combine_env gs dc0 g0))\<rbrakk>"
+    using sound_transfer_for.tf_sound_enter_entry_for[OF sound sc']
     by (simp add: call_enter_CallEdge)
-  have enter: "dgs_enter (unit_dg_spec_for_lifted gs is_bot_pred tf) pars args dc g
-                 = (map_lift (restrict_global_for gs) (normalize_lift is_bot_pred (enter\<^sup># tf pars args (combine_env gs dc0 g0))),
-                    map_lift (restrict_local_for gs) (normalize_lift is_bot_pred (enter\<^sup># tf pars args (combine_env gs dc0 g0))))"
+  have enter: "dgs_enter (unit_dg_spec_for_lifted gs is_bot_pred tf) ci dc g
+                 = (map_lift (restrict_global_for gs) (normalize_lift is_bot_pred (snd (enter\<^sup># tf ci (combine_env gs dc0 g0)))),
+                    map_lift (restrict_local_for gs) (normalize_lift is_bot_pred (snd (enter\<^sup># tf ci (combine_env gs dc0 g0)))))"
     unfolding dgs_enter_unit_dg_spec_for_lifted unit_step_for_lifted_def
     by (simp add: dc0 g0_def Let_def transfer_lift_def)
   show ?thesis
-  proof (cases "is_bot_pred (enter\<^sup># tf pars args (combine_env gs dc0 g0))")
+  proof (cases "is_bot_pred (snd (enter\<^sup># tf ci (combine_env gs dc0 g0)))")
     case True
-    with exact base have "\<lbrakk>enter\<^sup># tf pars args (combine_env gs dc0 g0)\<rbrakk> = {}"
+    with exact base have "\<lbrakk>snd (enter\<^sup># tf ci (combine_env gs dc0 g0))\<rbrakk> = {}"
       using is_bot_state_iff_gamma_state_empty by blast
     with base show ?thesis using enter True by simp
   next

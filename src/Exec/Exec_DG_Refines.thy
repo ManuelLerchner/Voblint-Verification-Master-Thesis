@@ -174,15 +174,15 @@ lemma sides_placed_abs_dg_edge_tree_Inr:
 definition placed_abs_dg_enter_tree ::
   "(vname => bool) => (pp => pname) =>
    (scoped_location => bool) => (scoped_location => bool) =>
-   (vname list => exp list =>
-     ('a::bounded_semilattice_sup_bot) abs_state => 'a abs_state) =>
-   vname list => exp list => pp => pp =>
+   (call_info =>
+     ('a::bounded_semilattice_sup_bot) abs_state => 'a abs_state \<times> 'a abs_state) =>
+   call_info => pp => pp =>
    (pp, unit, ('a abs_state, 'a abs_state) dg_state) strategy_tree"
 where
   "placed_abs_dg_enter_tree gs owner_of keep_local publish_side
-      enter parameters arguments caller callee =
+      enter ci caller callee =
     placed_abs_dg_edge_tree gs owner_of keep_local publish_side
-      (enter parameters arguments) caller callee"
+      (\<lambda>s. snd (enter ci s)) caller callee"
 
 definition placed_abs_dg_combine_tree ::
   "(vname => bool) => (pp => pname) =>
@@ -636,7 +636,7 @@ text \<open>Generic diagonal executable D/G specification: the only classifier-d
 definition unit_dg_spec_st_for ::
   "(vname \<Rightarrow> bool)
    \<Rightarrow> (edge_action \<Rightarrow> ('a::bounded_semilattice_sup_bot) exec_dg_st \<Rightarrow> 'a exec_dg_st)
-   \<Rightarrow> (vname list \<Rightarrow> exp list \<Rightarrow> 'a exec_dg_st \<Rightarrow> 'a exec_dg_st)
+   \<Rightarrow> (call_info \<Rightarrow> 'a exec_dg_st \<Rightarrow> 'a exec_dg_st)
    \<Rightarrow> ('a exec_dg_st, 'a exec_dg_st) dg_spec"
 where
   "unit_dg_spec_st_for gs tf_st enter_st = \<lparr>
@@ -646,7 +646,7 @@ where
     dgs_branch     = (\<lambda>b pol. unit_step_st (tf_st (if pol then EA_Assume b else EA_AssumeNot b))),
     dgs_body       = (\<lambda>p. unit_step_st (tf_st EA_Nop)),
     dgs_return     = (\<lambda>e p. unit_step_st (tf_st (EA_Ret e p))),
-    dgs_enter      = (\<lambda>xs es. unit_step_st (enter_st xs es)),
+    dgs_enter      = (\<lambda>ci. unit_step_st (enter_st ci)),
     dgs_event      = (\<lambda>ev. case ev of Check_Event bc \<Rightarrow> unit_step_st (tf_st (EA_Check bc))),
     dgs_caller_cont    = (\<lambda>ci d g. d),
     dgs_combine_env    = (\<lambda>ci. unit_combine_step_st_env),
@@ -690,13 +690,13 @@ lemma snd_dgs_assign_for:
   unfolding unit_dg_spec_st_for_def by simp
 
 lemma fst_dgs_enter_for:
-  "fst (dgs_enter (unit_dg_spec_st_for gs tf_st enter_st) xs es d g)
-     = restrict_global_resolved_q (enter_st xs es (combine_resolved_st_q d g))"
+  "fst (dgs_enter (unit_dg_spec_st_for gs tf_st enter_st) ci d g)
+     = restrict_global_resolved_q (enter_st ci (combine_resolved_st_q d g))"
   unfolding unit_dg_spec_st_for_def by simp
 
 lemma snd_dgs_enter_for:
-  "snd (dgs_enter (unit_dg_spec_st_for gs tf_st enter_st) xs es d g)
-     = restrict_local_resolved_q (enter_st xs es (combine_resolved_st_q d g))"
+  "snd (dgs_enter (unit_dg_spec_st_for gs tf_st enter_st) ci d g)
+     = restrict_local_resolved_q (enter_st ci (combine_resolved_st_q d g))"
   unfolding unit_dg_spec_st_for_def by simp
 
 text \<open>The caller half of \<open>enter\<close> is the identity on a diagonal executable carrier:

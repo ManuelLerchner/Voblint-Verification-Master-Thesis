@@ -1172,12 +1172,12 @@ lift_definition enter_resolved_for_q ::
 
 lemma fun_of_st_enter_frame_D_resolved [simp]:
   "fun_of_resolved_st_for gs (enter_frame_D_resolved top_val s) =
-   enter_frame_D gs top_val (fun_of_resolved_st_for gs s)"
+   enter_frame gs top_val (fun_of_resolved_st_for gs s)"
 proof (rule ext)
   fix x
   show "fun_of_resolved_st_for gs (enter_frame_D_resolved top_val s) x =
-      enter_frame_D gs top_val (fun_of_resolved_st_for gs s) x"
-    unfolding enter_frame_D_def fun_of_resolved_st_for_def location_of_def
+      enter_frame gs top_val (fun_of_resolved_st_for gs s) x"
+    unfolding enter_frame_def fun_of_resolved_st_for_def location_of_def
     by (cases "gs x") simp_all
 qed
 
@@ -1653,7 +1653,7 @@ lemma fun_of_resolved_st_q_for_mono:
 lemma fun_of_resolved_st_q_for_enter_frame [simp]:
   "fun_of_resolved_st_q_for gs
       (enter_frame_D_resolved_q top_val s) =
-   enter_frame_D gs top_val (fun_of_resolved_st_q_for gs s)"
+   enter_frame gs top_val (fun_of_resolved_st_q_for gs s)"
   unfolding fun_of_resolved_st_q_for_def
   apply transfer
   by (metis (no_types, lifting) ext fun_of_resolved_st_for_def
@@ -1850,37 +1850,37 @@ text \<open>
   is the same premise \<open>resolved_st_is_bot_sound\<close> relies on, needed here to
   obtain a local vname the formals list does not shadow.
 \<close>
-lemma is_bot_state_bind_formals_abs_enter_frame_D:
+lemma is_bot_state_bind_formals_abs_enter_frame:
   fixes top_val :: "'a::sound_domain" and sigma :: "'a abs_state"
   assumes live: "~ is_bot_state sigma"
     and top_ok: "~ is_bot top_val"
     and dist: "distinct xs"
     and len: "length xs = length avs"
     and infinite_local: "infinite {x. ~ gs x}"
-  shows "is_bot_state (bind_formals xs avs (enter_frame_D gs top_val sigma))
+  shows "is_bot_state (bind_formals xs avs (enter_frame gs top_val sigma))
        \<longleftrightarrow> is_bot top_val \<or> (\<exists>v \<in> set avs. is_bot v)"
 proof -
   have dist': "distinct (map fst (zip xs avs))"
     using dist len by (simp add: map_fst_zip)
   show ?thesis
   proof
-    assume "is_bot_state (bind_formals xs avs (enter_frame_D gs top_val sigma))"
+    assume "is_bot_state (bind_formals xs avs (enter_frame gs top_val sigma))"
     then obtain y where y:
-      "is_bot (bind_formals xs avs (enter_frame_D gs top_val sigma) y)"
+      "is_bot (bind_formals xs avs (enter_frame gs top_val sigma) y)"
       by (rule is_bot_stateE)
     show "is_bot top_val \<or> (\<exists>v \<in> set avs. is_bot v)"
     proof (cases "map_of (zip xs avs) y")
       case None
-      then have "bind_formals xs avs (enter_frame_D gs top_val sigma) y =
-                   enter_frame_D gs top_val sigma y"
+      then have "bind_formals xs avs (enter_frame gs top_val sigma) y =
+                   enter_frame gs top_val sigma y"
         unfolding fold_fun_upd_apply[OF dist'] by simp
-      with y have "is_bot (enter_frame_D gs top_val sigma y)" by simp
+      with y have "is_bot (enter_frame gs top_val sigma y)" by simp
       then have "is_bot top_val \<or> is_bot (sigma y)"
-        unfolding enter_frame_D_def by (cases "gs y") simp_all
+        unfolding enter_frame_def by (cases "gs y") simp_all
       with live show ?thesis by (auto simp: is_bot_state_def)
     next
       case (Some v)
-      then have "bind_formals xs avs (enter_frame_D gs top_val sigma) y = v"
+      then have "bind_formals xs avs (enter_frame gs top_val sigma) y = v"
         unfolding fold_fun_upd_apply[OF dist'] by simp
       with y have "is_bot v" by simp
       moreover have "v \<in> set avs" using Some by (rule map_of_SomeD[THEN set_zip_rightD])
@@ -1888,7 +1888,7 @@ proof -
     qed
   next
     assume disj: "is_bot top_val \<or> (\<exists>v \<in> set avs. is_bot v)"
-    show "is_bot_state (bind_formals xs avs (enter_frame_D gs top_val sigma))"
+    show "is_bot_state (bind_formals xs avs (enter_frame gs top_val sigma))"
     proof (cases "\<exists>v \<in> set avs. is_bot v")
       case True
       then obtain v where v: "v \<in> set avs" "is_bot v" by blast
@@ -1899,7 +1899,7 @@ proof -
         using nth_mem[OF len_zip] nth_zip[OF i' i(1)] by simp
       have "map_of (zip xs avs) (xs ! i) = Some v"
         using dist' mem i by (simp add: map_of_eq_Some_iff)
-      then have "bind_formals xs avs (enter_frame_D gs top_val sigma) (xs ! i) = v"
+      then have "bind_formals xs avs (enter_frame gs top_val sigma) (xs ! i) = v"
         unfolding fold_fun_upd_apply[OF dist'] by simp
       then show ?thesis using v by (metis is_bot_stateI)
     next
@@ -1915,10 +1915,10 @@ proof -
       with z(2) have "z \<notin> fst ` set (zip xs avs)" by blast
       then have "map_of (zip xs avs) z = None"
         by (simp add: map_of_eq_None_iff)
-      then have "bind_formals xs avs (enter_frame_D gs top_val sigma) z =
-                   enter_frame_D gs top_val sigma z"
+      then have "bind_formals xs avs (enter_frame gs top_val sigma) z =
+                   enter_frame gs top_val sigma z"
         unfolding fold_fun_upd_apply[OF dist'] by simp
-      also have "... = top_val" using z unfolding enter_frame_D_def by simp
+      also have "... = top_val" using z unfolding enter_frame_def by simp
       finally show ?thesis using top_bot by (metis is_bot_stateI)
     qed
   qed
@@ -1951,11 +1951,11 @@ lemma enter_resolved_st_q_lift_correct:
     and infinite_local: "infinite {x. ~ gs x}"
   shows "map_lift (fun_of_resolved_st_q_for gs)
            (enter_resolved_st_q_lift gs (Lifted s) top_val xs avs) =
-         normalize_lift is_bot_state
-           (bind_formals xs avs (enter_frame_D gs top_val (fun_of_resolved_st_q_for gs s)))"
+        normalize_lift is_bot_state
+          (bind_formals xs avs (enter_frame gs top_val (fun_of_resolved_st_q_for gs s)))"
 proof -
   have key: "is_bot_state
-      (bind_formals xs avs (enter_frame_D gs top_val (fun_of_resolved_st_q_for gs s)))
+      (bind_formals xs avs (enter_frame gs top_val (fun_of_resolved_st_q_for gs s)))
     \<longleftrightarrow> is_bot top_val \<or> list_ex is_bot avs"
   proof (cases "is_bot top_val")
     case True
@@ -1973,21 +1973,21 @@ proof -
     then have "map_of (zip xs avs) z = None"
       by (simp add: map_of_eq_None_iff)
     then have "bind_formals xs avs
-                 (enter_frame_D gs top_val (fun_of_resolved_st_q_for gs s)) z =
-               enter_frame_D gs top_val (fun_of_resolved_st_q_for gs s) z"
+                 (enter_frame gs top_val (fun_of_resolved_st_q_for gs s)) z =
+               enter_frame gs top_val (fun_of_resolved_st_q_for gs s) z"
       unfolding fold_fun_upd_apply[OF dist'] by simp
-    also have "... = top_val" using z unfolding enter_frame_D_def by simp
+    also have "... = top_val" using z unfolding enter_frame_def by simp
     finally have "is_bot (bind_formals xs avs
-                    (enter_frame_D gs top_val (fun_of_resolved_st_q_for gs s)) z)"
+                    (enter_frame gs top_val (fun_of_resolved_st_q_for gs s)) z)"
       using True by simp
     then have "is_bot_state
-        (bind_formals xs avs (enter_frame_D gs top_val (fun_of_resolved_st_q_for gs s)))"
+        (bind_formals xs avs (enter_frame gs top_val (fun_of_resolved_st_q_for gs s)))"
       by (rule is_bot_stateI)
     with True show ?thesis by simp
   next
     case False
     show ?thesis
-      using is_bot_state_bind_formals_abs_enter_frame_D
+      using is_bot_state_bind_formals_abs_enter_frame
               [OF live[unfolded live_resolved_st_q_def] False dist len infinite_local]
       by (simp add: list_ex_iff)
   qed

@@ -124,8 +124,8 @@ lemma int_tf_st_for_commute:
      (simp_all add: int_tf_st_never_for_commute int_tf_st_once_for_commute int_tf_st_fixpoint_for_commute)
 
 lemma int_dom_enter_st_for_commute:
-  "fun_of_resolved_st_q_for gs (int_dom_enter_st_for mode gs xs es s) =
-     tf_enter (int_tf_for mode gs) xs es (fun_of_resolved_st_q_for gs s)"
+  "fun_of_resolved_st_q_for gs (int_dom_enter_st_for mode gs ci s) =
+     snd (tf_enter (int_tf_for mode gs) ci (fun_of_resolved_st_q_for gs s))"
 proof (cases mode)
   case Refine_Never
   then show ?thesis

@@ -218,7 +218,7 @@ context
         \<Longrightarrow> (u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps)
         \<Longrightarrow> (FunctionEntry p,
                sctx_entry_route_gen gs is_bot_pred u ctx
-                 (enter_local (sctx_spec gs is_bot_pred) pars args
+                 (enter_local (sctx_spec gs is_bot_pred) (call_info_of (CallEdge dst pars args) p)
                     (locals (snd (sctx_entry_sol gs is_bot_pred Pi ps) (Inl (u, ctx))))
                     (globs (snd (sctx_entry_sol gs is_bot_pred Pi ps) (Inr Global))))
                  (CallEdge dst pars args))
@@ -292,9 +292,10 @@ text \<open>The trace-semantic context function the routed table induces: at a c
   routes the entered store's abstraction, read from the solver's own table.\<close>
 
 definition sctx_entry_enterc :: "cfg_node \<Rightarrow> sign list \<Rightarrow> store \<Rightarrow> sign list" where
-  "sctx_entry_enterc = route_enterc_of_sigma (sctx_spec gs is_bot_pred)
-     (sctx_entry_route_gen gs is_bot_pred) (snd (sctx_entry_sol gs is_bot_pred Pi ps)) Global
-     (compile_prog Pi ps)"
+  "sctx_entry_enterc u ctx s =
+     route_enterc_of_sigma (sctx_spec gs is_bot_pred)
+       (sctx_entry_route_gen gs is_bot_pred) (snd (sctx_entry_sol gs is_bot_pred Pi ps)) Global
+       (compile_prog Pi ps) u ctx s"
 
 lemmas sctx_entry_routed_context_call =
   sctx_entry_routed.routed_context_call[folded sctx_entry_enterc_def]

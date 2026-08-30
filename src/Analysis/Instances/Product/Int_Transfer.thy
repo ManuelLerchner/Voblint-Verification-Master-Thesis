@@ -321,7 +321,7 @@ subsection \<open>Classifier-parametric procedure entry\<close>
 
 definition enter_frame_int_dom_for ::
     "(vname => bool) => int_dom abs_state => int_dom abs_state" where
-  "enter_frame_int_dom_for gs = enter_frame_D gs (top :: int_dom)"
+  "enter_frame_int_dom_for gs = enter_frame gs (top :: int_dom)"
 
 definition enter_int_dom_for ::
     "refine_mode => (vname => bool) => vname list => exp list =>
@@ -332,7 +332,7 @@ lemma enter_frame_int_dom_for_sound:
   assumes gs: "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
   shows "enter_state cls s \<in> \<lbrakk>enter_frame_int_dom_for cls \<sigma>\<rbrakk>"
   unfolding enter_frame_int_dom_for_def
-proof (rule enter_frame_D_sound[OF gs])
+proof (rule enter_frame_sound[OF gs])
   show "gamma (top :: int_dom) = UNIV" by (simp add: gamma_int_dom_top)
 qed
 
@@ -354,7 +354,7 @@ qed
 lemma enter_frame_int_dom_for_mono:
   assumes "s1 <= s2"
   shows "enter_frame_int_dom_for gs s1 <= enter_frame_int_dom_for gs s2"
-  unfolding enter_frame_int_dom_for_def by (rule enter_frame_D_mono[OF assms])
+  unfolding enter_frame_int_dom_for_def by (rule enter_frame_mono[OF assms])
 
 lemma enter_int_dom_for_mono:
   assumes "mode ~= Refine_Fixpoint" and "s1 <= s2"
@@ -363,6 +363,28 @@ lemma enter_int_dom_for_mono:
 proof (rule enter_D_mono[OF assms(2)])
   show "list_all2 (<=) (map (\<lambda>e. aval_int_dom mode e s1) es) (map (\<lambda>e. aval_int_dom mode e s2) es)"
     using assms by (simp add: list_all2_conv_all_nth aval_int_dom_mono)
+qed
+
+definition enter_pair_int_dom_for ::
+    "refine_mode => (vname => bool) => call_info => int_dom abs_state
+     => int_dom abs_state \<times> int_dom abs_state" where
+  "enter_pair_int_dom_for mode gs = enter_pair_D gs (top :: int_dom) (aval_int_dom mode)"
+
+lemma enter_pair_int_dom_for_sound:
+  assumes gs: "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
+  shows "s \<in> \<lbrakk>fst (enter_pair_int_dom_for mode cls ci \<sigma>)\<rbrakk>"
+    and "bind_formals (ci_formals ci) (map (\<lambda>e. aval e s) (ci_args ci)) (enter_state cls s)
+           \<in> \<lbrakk>snd (enter_pair_int_dom_for mode cls ci \<sigma>)\<rbrakk>"
+  unfolding enter_pair_int_dom_for_def
+proof -
+  show "s \<in> \<lbrakk>fst (enter_pair_D cls (top :: int_dom) (aval_int_dom mode) ci \<sigma>)\<rbrakk>"
+    using gs by (simp add: enter_pair_D_def)
+next
+  show "bind_formals (ci_formals ci) (map (\<lambda>e. aval e s) (ci_args ci)) (enter_state cls s)
+          \<in> \<lbrakk>snd (enter_pair_D cls (top :: int_dom) (aval_int_dom mode) ci \<sigma>)\<rbrakk>"
+    unfolding enter_pair_D_def snd_conv
+    apply (fold enter_int_dom_for_def)
+    by (rule enter_int_dom_for_sound[OF gs])
 qed
 
 subsection \<open>Registered transfer bundles, one per refinement mode\<close>
@@ -374,9 +396,8 @@ definition int_tf_never_for :: "(vname => bool) => int_dom domain_transfer" wher
                             tf_skip    = skip_int_dom,
                             tf_body    = body_int_dom,
                             tf_return  = return_int_dom Refine_Never,
-                            tf_enter   = enter_int_dom_for Refine_Never gs,
+                            tf_enter   = enter_pair_int_dom_for Refine_Never gs,
                             tf_event   = event_int_dom,
-                            tf_caller_cont = (\<lambda>_ \<sigma>. \<sigma>),
                             tf_combine_env = (\<lambda>_. combine_env gs) |)"
 
 definition int_tf_once_for :: "(vname => bool) => int_dom domain_transfer" where
@@ -386,9 +407,8 @@ definition int_tf_once_for :: "(vname => bool) => int_dom domain_transfer" where
                            tf_skip    = skip_int_dom,
                            tf_body    = body_int_dom,
                            tf_return  = return_int_dom Refine_Once,
-                           tf_enter   = enter_int_dom_for Refine_Once gs,
+                           tf_enter   = enter_pair_int_dom_for Refine_Once gs,
                            tf_event   = event_int_dom,
-                           tf_caller_cont = (\<lambda>_ \<sigma>. \<sigma>),
                            tf_combine_env = (\<lambda>_. combine_env gs) |)"
 
 definition int_tf_fixpoint_for :: "(vname => bool) => int_dom domain_transfer" where
@@ -398,9 +418,8 @@ definition int_tf_fixpoint_for :: "(vname => bool) => int_dom domain_transfer" w
                                tf_skip    = skip_int_dom,
                                tf_body    = body_int_dom,
                                tf_return  = return_int_dom Refine_Fixpoint,
-                               tf_enter   = enter_int_dom_for Refine_Fixpoint gs,
+                               tf_enter   = enter_pair_int_dom_for Refine_Fixpoint gs,
                                tf_event   = event_int_dom,
-                               tf_caller_cont = (\<lambda>_ \<sigma>. \<sigma>),
                                tf_combine_env = (\<lambda>_. combine_env gs) |)"
 
 lemma int_never_is_sound_transfer_for: "sound_transfer_for gs (int_tf_never_for gs)"
@@ -412,9 +431,9 @@ lemma int_never_is_sound_transfer_for: "sound_transfer_for gs (int_tf_never_for 
   subgoal by (simp add: skip_int_dom_sound)
   subgoal by (simp add: body_int_dom_sound)
   subgoal by (simp add: return_int_dom_sound)
-  subgoal by (simp add: enter_int_dom_for_sound)
+  subgoal by (simp add: enter_pair_int_dom_for_sound)
   subgoal by (simp add: event_int_dom_sound)
-  subgoal by simp
+  subgoal by (simp add: enter_pair_int_dom_for_sound)
   subgoal by (simp add: combine_env_sound)
   done
 
@@ -427,9 +446,9 @@ lemma int_once_is_sound_transfer_for: "sound_transfer_for gs (int_tf_once_for gs
   subgoal by (simp add: skip_int_dom_sound)
   subgoal by (simp add: body_int_dom_sound)
   subgoal by (simp add: return_int_dom_sound)
-  subgoal by (simp add: enter_int_dom_for_sound)
+  subgoal by (simp add: enter_pair_int_dom_for_sound)
   subgoal by (simp add: event_int_dom_sound)
-  subgoal by simp
+  subgoal by (simp add: enter_pair_int_dom_for_sound)
   subgoal by (simp add: combine_env_sound)
   done
 
@@ -442,9 +461,9 @@ lemma int_fixpoint_is_sound_transfer_for: "sound_transfer_for gs (int_tf_fixpoin
   subgoal by (simp add: skip_int_dom_sound)
   subgoal by (simp add: body_int_dom_sound)
   subgoal by (simp add: return_int_dom_sound)
-  subgoal by (simp add: enter_int_dom_for_sound)
+  subgoal by (simp add: enter_pair_int_dom_for_sound)
   subgoal by (simp add: event_int_dom_sound)
-  subgoal by simp
+  subgoal by (simp add: enter_pair_int_dom_for_sound)
   subgoal by (simp add: combine_env_sound)
   done
 

@@ -968,6 +968,7 @@ code_identifier
 | code_module VIMP_Expr \<rightharpoonup> (OCaml) Core
 | code_module VIMP_Proc \<rightharpoonup> (OCaml) Core
 | code_module VIMP_Special \<rightharpoonup> (OCaml) Core
+| code_module VIMP_Globals \<rightharpoonup> (OCaml) Core
 | code_module VIMP_Source_Print \<rightharpoonup> (OCaml) Core
 | code_module VIMP_Syntax \<rightharpoonup> (OCaml) Core
 | code_module CFG_Def \<rightharpoonup> (OCaml) Core

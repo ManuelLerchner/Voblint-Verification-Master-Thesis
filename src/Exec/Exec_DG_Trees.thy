@@ -176,28 +176,28 @@ lemma dg_refines_on_placed_edge_strict:
 definition placed_dg_enter_tree_strict ::
   "(pp => pname) => (pp => location list) =>
    (scoped_location => bool) => (scoped_location => bool) =>
-   (vname list => exp list =>
+   (call_info =>
      ('a::bounded_semilattice_sup_bot) exec_dg_st => 'a exec_dg_st) =>
-   vname list => exp list => pp => pp =>
+   call_info => pp => pp =>
    (pp, unit, ('a exec_dg_st, 'a exec_dg_st) dg_state) strategy_tree"
 where
   "placed_dg_enter_tree_strict owner_of locations_of keep_local publish_side
-      enter parameters arguments caller callee =
+      enter ci caller callee =
     placed_dg_edge_tree_strict owner_of locations_of keep_local publish_side
-      (enter parameters arguments) caller callee"
+      (enter ci) caller callee"
 
 lemma placed_dg_enter_tree_strict_eq:
   "placed_dg_enter_tree_strict owner_of locations_of keep_local publish_side
-      enter parameters arguments caller callee =
+      enter ci caller callee =
     placed_dg_edge_tree_strict owner_of locations_of keep_local publish_side
-      (enter parameters arguments) caller callee"
+      (enter ci) caller callee"
   unfolding placed_dg_enter_tree_strict_def by rule
 
 lemma placed_dg_enter_tree_strict_local_support_bounded:
   "set (effective_support (rep_resolved_st
     (locals (traverse_rhs
       (placed_dg_enter_tree_strict owner_of locations_of keep_local publish_side
-        enter parameters arguments caller callee) sigma)))) \<subseteq>
+        enter ci caller callee) sigma)))) \<subseteq>
     set (locations_of callee)"
   unfolding placed_dg_enter_tree_strict_eq
   by (rule placed_dg_edge_tree_strict_local_support_bounded)
@@ -206,7 +206,7 @@ lemma placed_dg_enter_tree_strict_side_support_bounded:
   "set (effective_support (rep_resolved_st
     (globs (sides_of_rhs
       (placed_dg_enter_tree_strict owner_of locations_of keep_local publish_side
-        enter parameters arguments caller callee) sigma (Inr ()))))) \<subseteq>
+        enter ci caller callee) sigma (Inr ()))))) \<subseteq>
     set (locations_of callee)"
   unfolding placed_dg_enter_tree_strict_eq
   by (rule placed_dg_edge_tree_strict_side_support_bounded)
@@ -215,7 +215,7 @@ lemma placed_dg_enter_tree_strict_local_default_bot:
   "resolved_default (rep_resolved_st
     (locals (traverse_rhs
       (placed_dg_enter_tree_strict owner_of locations_of keep_local publish_side
-        enter parameters arguments caller callee) sigma))) = (\<lambda>_. bot)"
+        enter ci caller callee) sigma))) = (\<lambda>_. bot)"
   unfolding placed_dg_enter_tree_strict_eq
   by (rule placed_dg_edge_tree_strict_local_default_bot)
 
@@ -223,20 +223,20 @@ lemma placed_dg_enter_tree_strict_side_default_bot:
   "resolved_default (rep_resolved_st
     (globs (sides_of_rhs
       (placed_dg_enter_tree_strict owner_of locations_of keep_local publish_side
-        enter parameters arguments caller callee) sigma (Inr ())))) = (\<lambda>_. bot)"
+        enter ci caller callee) sigma (Inr ())))) = (\<lambda>_. bot)"
   unfolding placed_dg_enter_tree_strict_eq
   by (rule placed_dg_edge_tree_strict_side_default_bot)
 
 lemma dep_aux_placed_dg_enter_tree_strict:
   "dep_aux sigma (placed_dg_enter_tree_strict owner_of locations_of keep_local
-      publish_side enter parameters arguments caller callee) =
+      publish_side enter ci caller callee) =
     {Inl caller, Inr ()}"
   unfolding placed_dg_enter_tree_strict_eq placed_dg_edge_tree_strict_def
   by (rule dep_aux_placed_dg_edge_tree_with)
 
 lemma dep_aux_placed_abs_dg_enter_tree:
   "dep_aux sigma (placed_abs_dg_enter_tree gs owner_of keep_local
-      publish_side enter parameters arguments caller callee) =
+      publish_side enter ci caller callee) =
     {Inl caller, Inr ()}"
   unfolding placed_abs_dg_enter_tree_def
   by (rule dep_aux_placed_abs_dg_edge_tree)
@@ -244,19 +244,19 @@ lemma dep_aux_placed_abs_dg_enter_tree:
 
 lemma dg_refines_on_placed_entry_strict:
   fixes executable_enter ::
-    "vname list => exp list =>
+    "call_info =>
       ('a::bounded_semilattice_sup_bot) exec_dg_st => 'a exec_dg_st"
     and abstract_enter ::
-      "vname list => exp list => 'a abs_state => 'a abs_state"
+      "call_info => 'a abs_state => 'a abs_state \<times> 'a abs_state"
   assumes raw:
     "\<And>location. location \<in> set (locations_of callee) \<Longrightarrow>
       lookup_resolved_st_q
-        (executable_enter parameters arguments
+        (executable_enter ci
           (locals (executable_sigma (Inl caller)) \<squnion>
            globs (executable_sigma (Inr ())))) location =
-      abstract_enter parameters arguments
+      snd (abstract_enter ci
         (locals (abstract_sigma (Inl caller)) \<squnion>
-         globs (abstract_sigma (Inr ())))
+         globs (abstract_sigma (Inr ()))))
         (location_vname location)"
     and resolved:
       "\<And>location. location \<in> set (locations_of callee) \<Longrightarrow>
@@ -266,20 +266,20 @@ lemma dg_refines_on_placed_entry_strict:
       (DG
         (locals (traverse_rhs
           (placed_dg_enter_tree_strict owner_of locations_of keep_local publish_side
-            executable_enter parameters arguments caller callee)
+            executable_enter ci caller callee)
           executable_sigma))
         (globs (sides_of_rhs
           (placed_dg_enter_tree_strict owner_of locations_of keep_local publish_side
-            executable_enter parameters arguments caller callee)
+            executable_enter ci caller callee)
           executable_sigma (Inr ()))))
       (DG
         (locals (traverse_rhs
           (placed_abs_dg_enter_tree gs owner_of keep_local publish_side
-            abstract_enter parameters arguments caller callee)
+            abstract_enter ci caller callee)
           abstract_sigma))
         (globs (sides_of_rhs
           (placed_abs_dg_enter_tree gs owner_of keep_local publish_side
-            abstract_enter parameters arguments caller callee)
+            abstract_enter ci caller callee)
           abstract_sigma (Inr ()))))"
 proof -
   have bridge:
@@ -287,31 +287,31 @@ proof -
       (DG
         (locals (traverse_rhs
           (placed_dg_edge_tree_strict owner_of locations_of keep_local publish_side
-            (executable_enter parameters arguments) caller callee)
+            (executable_enter ci) caller callee)
           executable_sigma))
         (globs (sides_of_rhs
           (placed_dg_edge_tree_strict owner_of locations_of keep_local publish_side
-            (executable_enter parameters arguments) caller callee)
+            (executable_enter ci) caller callee)
           executable_sigma (Inr ()))))
       (DG
         (locals (traverse_rhs
           (placed_abs_dg_edge_tree gs owner_of keep_local publish_side
-            (abstract_enter parameters arguments) caller callee)
+            (\<lambda>s. snd (abstract_enter ci s)) caller callee)
           abstract_sigma))
         (globs (sides_of_rhs
           (placed_abs_dg_edge_tree gs owner_of keep_local publish_side
-            (abstract_enter parameters arguments) caller callee)
+            (\<lambda>s. snd (abstract_enter ci s)) caller callee)
           abstract_sigma (Inr ()))))"
     by (rule dg_refines_on_placed_edge_strict[
-      where executable_transfer = "executable_enter parameters arguments"
-        and abstract_transfer = "abstract_enter parameters arguments"
+      where executable_transfer = "executable_enter ci"
+        and abstract_transfer = "\<lambda>s. snd (abstract_enter ci s)"
         and executable_sigma = executable_sigma and abstract_sigma = abstract_sigma
         and read_node = caller and write_node = callee
         and gs = gs and owner_of = owner_of
         and locations_of = locations_of and keep_local = keep_local
         and publish_side = publish_side, OF raw resolved])
   show ?thesis
-    unfolding placed_dg_enter_tree_strict_def placed_abs_dg_enter_tree_def
+    unfolding placed_dg_enter_tree_strict_def placed_abs_dg_enter_tree_def comp_def
     by (rule bridge)
 qed
 
@@ -546,17 +546,17 @@ where
 definition placed_dg_enter_of_strict ::
   "(pp => pname) => (pp => location list) =>
    (scoped_location => bool) => (scoped_location => bool) =>
-   (vname list => exp list =>
+   (call_info =>
      ('a::bounded_semilattice_sup_bot) exec_dg_st => 'a exec_dg_st) =>
    unit => pp => call_action => pp =>
    (pp \<times> unit, unit, ('a exec_dg_st, 'a exec_dg_st) dg_state) strategy_tree"
 where
   "placed_dg_enter_of_strict owner_of locations_of keep_local publish_side enter ctx
       caller action callee =
-    (case action of CallEdge destination parameters arguments =>
-      map_gtree (\<lambda>_. ()) (map_ltree (\<lambda>node. (node, ctx))
-        (placed_dg_enter_tree_strict owner_of locations_of keep_local publish_side
-          enter parameters arguments caller callee)))"
+    map_gtree (\<lambda>_. ()) (map_ltree (\<lambda>node. (node, ctx))
+      (placed_dg_enter_tree_strict owner_of locations_of keep_local publish_side
+        enter (call_info_of action (case callee of FunctionEntry p => p | _ => undefined))
+        caller callee))"
 
 text \<open>
   The executable hook-wrapper equations: \<open>placed_dg_edge_of_strict\<close>,
@@ -598,8 +598,10 @@ lemma traverse_rhs_placed_dg_enter_of_strict:
       enter ctx caller (CallEdge destination parameters arguments) callee) sigma =
     DG (project_resolved_on_strict (owner_of callee) (locations_of callee)
           keep_local
-          (enter parameters arguments (locals (sigma (Inl (caller, ctx))) \<squnion>
-            globs (sigma (Inr ()))))) bot"
+          (enter (call_info_of (CallEdge destination parameters arguments)
+                   (case callee of FunctionEntry p \<Rightarrow> p | _ \<Rightarrow> undefined))
+             (locals (sigma (Inl (caller, ctx))) \<squnion>
+               globs (sigma (Inr ()))))) bot"
   unfolding placed_dg_enter_of_strict_def placed_dg_enter_tree_strict_eq
   by (simp add: traverse_rhs_map_gtree traverse_rhs_map_ltree
     traverse_placed_dg_edge_tree_strict sum.map_comp o_def)
@@ -610,8 +612,10 @@ lemma sides_of_rhs_placed_dg_enter_of_strict:
       enter ctx caller (CallEdge destination parameters arguments) callee) sigma (Inr ()) =
     DG bot (project_resolved_on_strict (owner_of callee) (locations_of callee)
           publish_side
-          (enter parameters arguments (locals (sigma (Inl (caller, ctx))) \<squnion>
-            globs (sigma (Inr ())))))"
+          (enter (call_info_of (CallEdge destination parameters arguments)
+                   (case callee of FunctionEntry p \<Rightarrow> p | _ \<Rightarrow> undefined))
+             (locals (sigma (Inl (caller, ctx))) \<squnion>
+               globs (sigma (Inr ())))))"
   unfolding placed_dg_enter_of_strict_def placed_dg_enter_tree_strict_eq
   by (simp add: sides_map_gtree_unit_gen sides_map_ltree_Inr
     sides_placed_dg_edge_tree_strict_Inr sum.map_comp o_def)
@@ -646,7 +650,7 @@ definition placed_dg_gen_of_strict ::
   "(vname => bool) => (pp => pname) => (pp => location list) =>
    (scoped_location => bool) => (scoped_location => bool) =>
    (edge_action => ('a::bounded_semilattice_sup_bot) exec_dg_st => 'a exec_dg_st) =>
-   (vname list => exp list => 'a exec_dg_st => 'a exec_dg_st) =>
+   (call_info => 'a exec_dg_st => 'a exec_dg_st) =>
    cfg => 'a exec_dg_st => 'a exec_dg_st => 'a exec_dg_st =>
    (pp \<times> unit, unit, ('a exec_dg_st, 'a exec_dg_st) dg_state) eqsT"
 where
@@ -696,17 +700,18 @@ where
 definition placed_abs_dg_enter_of ::
   "(vname \<Rightarrow> bool) \<Rightarrow> (pp \<Rightarrow> pname) \<Rightarrow>
    (scoped_location \<Rightarrow> bool) \<Rightarrow> (scoped_location \<Rightarrow> bool) \<Rightarrow>
-   (vname list \<Rightarrow> exp list \<Rightarrow>
-     ('a::bounded_semilattice_sup_bot) abs_state \<Rightarrow> 'a abs_state) \<Rightarrow>
+   (call_info \<Rightarrow>
+     ('a::bounded_semilattice_sup_bot) abs_state \<Rightarrow> 'a abs_state \<times> 'a abs_state) \<Rightarrow>
    unit \<Rightarrow> pp \<Rightarrow> call_action \<Rightarrow> pp \<Rightarrow>
    (pp \<times> unit, unit, ('a abs_state, 'a abs_state) dg_state) strategy_tree"
 where
   "placed_abs_dg_enter_of gs owner_of keep_local publish_side
       enter ctx caller action callee =
-    (case action of CallEdge destination parameters arguments \<Rightarrow>
-      map_gtree (\<lambda>_. ()) (map_ltree (\<lambda>node. (node, ctx))
-        (placed_abs_dg_enter_tree gs owner_of
-          keep_local publish_side enter parameters arguments caller callee)))"
+    map_gtree (\<lambda>_. ()) (map_ltree (\<lambda>node. (node, ctx))
+      (placed_abs_dg_enter_tree gs owner_of
+        keep_local publish_side enter
+        (call_info_of action (case callee of FunctionEntry p \<Rightarrow> p | _ \<Rightarrow> undefined))
+        caller callee))"
 
 text \<open>
   The abstract hook-wrapper equations, mirroring the executable ones above:
@@ -746,8 +751,10 @@ lemma traverse_rhs_placed_abs_dg_enter_of:
     (placed_abs_dg_enter_of gs owner_of keep_local publish_side
       enter ctx caller (CallEdge destination parameters arguments) callee) sigma =
     DG (project_abs_on (owner_of callee) gs keep_local
-          (enter parameters arguments (locals (sigma (Inl (caller, ctx))) \<squnion>
-            globs (sigma (Inr ()))))) bot"
+          (snd (enter (call_info_of (CallEdge destination parameters arguments)
+                        (case callee of FunctionEntry p \<Rightarrow> p | _ \<Rightarrow> undefined))
+                 (locals (sigma (Inl (caller, ctx))) \<squnion>
+                   globs (sigma (Inr ())))))) bot"
   unfolding placed_abs_dg_enter_of_def placed_abs_dg_enter_tree_def
   by (simp add: traverse_rhs_map_gtree traverse_rhs_map_ltree
     traverse_placed_abs_dg_edge_tree sum.map_comp o_def)
@@ -757,8 +764,10 @@ lemma sides_of_rhs_placed_abs_dg_enter_of:
     (placed_abs_dg_enter_of gs owner_of keep_local publish_side
       enter ctx caller (CallEdge destination parameters arguments) callee) sigma (Inr ()) =
     DG bot (project_abs_on (owner_of callee) gs publish_side
-          (enter parameters arguments (locals (sigma (Inl (caller, ctx))) \<squnion>
-            globs (sigma (Inr ())))))"
+          (snd (enter (call_info_of (CallEdge destination parameters arguments)
+                        (case callee of FunctionEntry p \<Rightarrow> p | _ \<Rightarrow> undefined))
+                 (locals (sigma (Inl (caller, ctx))) \<squnion>
+                   globs (sigma (Inr ()))))))"
   unfolding placed_abs_dg_enter_of_def placed_abs_dg_enter_tree_def
   by (simp add: sides_map_gtree_unit_gen sides_map_ltree_Inr
     sides_placed_abs_dg_edge_tree_Inr sum.map_comp o_def)
@@ -792,7 +801,7 @@ definition placed_abs_dg_gen_of ::
    (scoped_location \<Rightarrow> bool) \<Rightarrow> (scoped_location \<Rightarrow> bool) \<Rightarrow>
    (edge_action \<Rightarrow>
      ('a::bounded_semilattice_sup_bot) abs_state \<Rightarrow> 'a abs_state) \<Rightarrow>
-   (vname list \<Rightarrow> exp list \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state) \<Rightarrow>
+   (call_info \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state \<times> 'a abs_state) \<Rightarrow>
    cfg \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state \<Rightarrow>
    (pp \<times> unit, unit, ('a abs_state, 'a abs_state) dg_state) eqsT"
 where

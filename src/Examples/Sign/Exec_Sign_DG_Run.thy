@@ -165,7 +165,7 @@ proof -
        (rule dgEx_reserved
              sign_ex_transfer.tf_sound_assign_for sign_ex_transfer.tf_sound_special_for
              sign_ex_transfer.tf_sound_branch_for
-             sign_ex_transfer.tf_sound_enter_for sign_ex_transfer.tf_sound_combine_env_for
+             sign_ex_transfer.tf_sound_enter_entry_for sign_ex_transfer.tf_sound_combine_env_for
              sign_tf_st_for_commute[folded fun_of_exec_dg_st_for_def]
              sign_enter_st_for_commute[folded fun_of_exec_dg_st_for_def]
              dgEx_is_bot_exact

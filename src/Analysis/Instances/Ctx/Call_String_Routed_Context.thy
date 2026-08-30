@@ -68,8 +68,8 @@ next
     by (simp add: static_resolve_iff compile_prog_finite)
 next
   fix u ctx dst pars args p cont s
-  show "cs_route k u ctx (enter_local S pars args (locals (sigma (Inl (u, ctx))))
-            (globs (sigma (Inr Global)))) (CallEdge dst pars args)
+  show "cs_route k u ctx (enter_local S (call_info_of (CallEdge dst pars args) p)
+            (locals (sigma (Inl (u, ctx)))) (globs (sigma (Inr Global)))) (CallEdge dst pars args)
           = cs_context k u ctx (call_enter gs (CallEdge dst pars args) s)"
     by (rule cs_route_context_agree)
 next
@@ -82,8 +82,8 @@ next
                \<in> vars"
     by (rule call_fwd)
   then show "(FunctionEntry p,
-                cs_route k u ctx (enter_local S pars args (locals (sigma (Inl (u, ctx))))
-                    (globs (sigma (Inr Global)))) (CallEdge dst pars args))
+                cs_route k u ctx (enter_local S (call_info_of (CallEdge dst pars args) p)
+                    (locals (sigma (Inl (u, ctx)))) (globs (sigma (Inr Global)))) (CallEdge dst pars args))
                \<in> vars"
     by (simp add: cs_route_def)
 next

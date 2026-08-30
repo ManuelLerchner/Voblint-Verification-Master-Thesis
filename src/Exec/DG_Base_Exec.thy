@@ -23,7 +23,7 @@ definition base_dg_spec_st_for_lifted ::
   "(vname \<Rightarrow> bool)
    \<Rightarrow> ('a::bounded_semilattice_sup_bot exec_dg_st \<Rightarrow> bool)
    \<Rightarrow> (edge_action \<Rightarrow> 'a exec_dg_st \<Rightarrow> 'a exec_dg_st)
-   \<Rightarrow> (vname list \<Rightarrow> exp list \<Rightarrow> 'a exec_dg_st \<Rightarrow> 'a exec_dg_st)
+   \<Rightarrow> (call_info \<Rightarrow> 'a exec_dg_st \<Rightarrow> 'a exec_dg_st)
    \<Rightarrow> ('a exec_dg_st lifted, 'g::bounded_semilattice_sup_bot) dg_spec"
 where
   "base_dg_spec_st_for_lifted gs is_bot_pred tf_st enter_st = (|
@@ -34,7 +34,7 @@ where
       (tf_st (if pol then EA_Assume b else EA_AssumeNot b)) d)),
     dgs_body       = (\<lambda>p d g. (g, transfer_lift is_bot_pred (tf_st EA_Nop) d)),
     dgs_return     = (\<lambda>e p d g. (g, transfer_lift is_bot_pred (tf_st (EA_Ret e p)) d)),
-    dgs_enter      = (\<lambda>xs es d g. (g, transfer_lift is_bot_pred (enter_st xs es) d)),
+    dgs_enter      = (\<lambda>ci d g. (g, transfer_lift is_bot_pred (enter_st ci) d)),
     dgs_event      = (\<lambda>ev d g. (g, case ev of Check_Event bc \<Rightarrow>
                                       transfer_lift is_bot_pred (tf_st (EA_Check bc)) d)),
     dgs_caller_cont    = (\<lambda>ci dc g. dc),
@@ -56,8 +56,8 @@ lemma dg_spec_step_base_st_for_lifted:
   by (cases a) simp_all
 
 lemma dgs_enter_base_st_for_lifted:
-  "dgs_enter (base_dg_spec_st_for_lifted gs is_bot_pred tf_st enter_st) xs es d g =
-     (g, transfer_lift is_bot_pred (enter_st xs es) d)"
+  "dgs_enter (base_dg_spec_st_for_lifted gs is_bot_pred tf_st enter_st) ci d g =
+     (g, transfer_lift is_bot_pred (enter_st ci) d)"
   unfolding base_dg_spec_st_for_lifted_def by simp
 
 text \<open>The caller half of \<open>enter\<close> is the identity here for the same reason as in the
@@ -101,12 +101,12 @@ theorem base_dg_spec_st_for_lifted_dg_spec_step_commute:
   by (cases d) (simp_all add: transfer_lift_def normalize_lift_def commute exact)
 
 theorem base_dg_spec_st_for_lifted_dgs_enter_commute:
-  assumes commute: "\<And>xs es s. fun_of_exec_dg_st_for gs (enter_st xs es s) =
-                       enter\<^sup># tf xs es (fun_of_exec_dg_st_for gs s)"
+  assumes commute: "\<And>ci s. fun_of_exec_dg_st_for gs (enter_st ci s) =
+                       snd (enter\<^sup># tf ci (fun_of_exec_dg_st_for gs s))"
     and exact: "\<And>s. is_bot_pred s = is_bot_state (fun_of_exec_dg_st_for gs s)"
   shows "map_prod (map_lift (fun_of_exec_dg_st_for gs)) (map_lift (fun_of_exec_dg_st_for gs))
-           (dgs_enter (base_dg_spec_st_for_lifted gs is_bot_pred tf_st enter_st) xs es d g) =
-         dgs_enter (base_dg_spec_for_lifted gs is_bot_state tf) xs es
+           (dgs_enter (base_dg_spec_st_for_lifted gs is_bot_pred tf_st enter_st) ci d g) =
+         dgs_enter (base_dg_spec_for_lifted gs is_bot_state tf) ci
            (map_lift (fun_of_exec_dg_st_for gs) d) (map_lift (fun_of_exec_dg_st_for gs) g)"
   unfolding dgs_enter_base_st_for_lifted dgs_enter_base_for_lifted map_prod_def
   by (cases d) (simp_all add: transfer_lift_def normalize_lift_def commute exact)
@@ -169,13 +169,13 @@ locale routed_dg_domain_exec =
   fixes gs :: "vname \<Rightarrow> bool"
     and is_bot_pred :: "'a::sound_domain exec_dg_st \<Rightarrow> bool"
     and tf_st :: "edge_action \<Rightarrow> 'a exec_dg_st \<Rightarrow> 'a exec_dg_st"
-    and enter_st :: "vname list \<Rightarrow> exp list \<Rightarrow> 'a exec_dg_st \<Rightarrow> 'a exec_dg_st"
+    and enter_st :: "call_info \<Rightarrow> 'a exec_dg_st \<Rightarrow> 'a exec_dg_st"
     and tf :: "'a domain_transfer"
   assumes tf_st_commute:
       "\<And>a s. fun_of_resolved_st_q_for gs (tf_st a s) = apply_tf tf a (fun_of_resolved_st_q_for gs s)"
     and enter_st_commute:
-      "\<And>xs es s. fun_of_resolved_st_q_for gs (enter_st xs es s)
-                   = enter\<^sup># tf xs es (fun_of_resolved_st_q_for gs s)"
+      "\<And>ci s. fun_of_resolved_st_q_for gs (enter_st ci s)
+                   = snd (enter\<^sup># tf ci (fun_of_resolved_st_q_for gs s))"
     and is_bot_pred_exact:
       "\<And>s. is_bot_pred s = is_bot_state (fun_of_resolved_st_q_for gs s)"
 begin
@@ -190,8 +190,8 @@ lemma Hstep_lifted_for:
 
 lemma Henter_lifted_for:
   "map_prod (map_lift (fun_of_resolved_st_q_for gs)) (map_lift (fun_of_resolved_st_q_for gs))
-     (dgs_enter (base_dg_spec_st_for_lifted gs is_bot_pred tf_st enter_st) xs es d g)
-   = dgs_enter (base_dg_spec_for_lifted gs is_bot_state tf) xs es
+     (dgs_enter (base_dg_spec_st_for_lifted gs is_bot_pred tf_st enter_st) ci d g)
+   = dgs_enter (base_dg_spec_for_lifted gs is_bot_state tf) ci
        (map_lift (fun_of_resolved_st_q_for gs) d) (map_lift (fun_of_resolved_st_q_for gs) g)"
   by (rule base_dg_spec_st_for_lifted_dgs_enter_commute
         [unfolded fun_of_exec_dg_st_for_def, OF enter_st_commute is_bot_pred_exact])
@@ -290,16 +290,15 @@ next
   let ?f = "map_lift (fun_of_resolved_st_q_for gs)"
   let ?S = "base_dg_spec_st_for_lifted gs is_bot_pred tf_st enter_st"
   let ?A = "base_dg_spec_for_lifted gs is_bot_state tf"
-  fix s :: store and dc g :: "'a exec_dg_st lifted"
-    and dst :: "vname option" and pars :: "vname list" and args :: "exp list"
+  fix s :: store and dc g :: "'a exec_dg_st lifted" and ci :: call_info
   assume s: "s \<in> gamma_exec dc g"
-  obtain g1 d1 where en: "dgs_enter ?S pars args dc g = (g1, d1)"
-    by (cases "dgs_enter ?S pars args dc g")
-  have "dgs_enter ?A pars args (?f dc) (?f g) = (?f g1, ?f d1)"
-    using Henter_lifted_for[of pars args dc g] en by simp
-  with sound_dg_spec.enter_sound[OF abs, of s "?f dc" "?f g" dst pars args] s
-  show "call_enter gs (CallEdge dst pars args) s
-          \<in> (case dgs_enter ?S pars args dc g of (g', d') \<Rightarrow> gamma_exec d' g')"
+  obtain g1 d1 where en: "dgs_enter ?S ci dc g = (g1, d1)"
+    by (cases "dgs_enter ?S ci dc g")
+  have "dgs_enter ?A ci (?f dc) (?f g) = (?f g1, ?f d1)"
+    using Henter_lifted_for[of ci dc g] en by simp
+  with sound_dg_spec.enter_sound[OF abs, of s "?f dc" "?f g" ci] s
+  show "call_enter gs (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci)) s
+          \<in> (case dgs_enter ?S ci dc g of (g', d') \<Rightarrow> gamma_exec d' g')"
     unfolding gamma_exec_def en by simp
 qed
 

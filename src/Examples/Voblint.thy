@@ -15,7 +15,6 @@ theory Voblint
     "Voblint_CFG.CFG_Prune"
     "Voblint_Domain.Abstract_Domain"
     "Voblint_Core.Transfer_Interface"
-    "Voblint_Core.Transfer_Interface_Sound"
     "Voblint_Domain.Abstract_Numeric_Queries"
     "Voblint_Core.Abstract_Checks"
     "Voblint_Analysis.Sign_Domain"
@@ -231,8 +230,7 @@ text \<open>
   \<^bold>\<open>3. Analysis spine.\<close> Abstract domains, equation systems, and the TD_side solver bridge; every
   generic endpoint concludes over the trace projections.
     \<^item> @{theory Voblint_Domain.Abstract_Domain} --- \<^verbatim>\<open>sound_domain\<close>, lifted state concretization, display support.
-    \<^item> @{theory Voblint_Core.Transfer_Interface} --- the transfer interface \<^verbatim>\<open>domain_transfer\<close>, \<^verbatim>\<open>apply_tf\<close>, and its soundness locale \<^verbatim>\<open>sound_transfer_for\<close>.
-    \<^item> @{theory Voblint_Core.Transfer_Interface_Sound} --- per-edge transfer soundness (\<^verbatim>\<open>edge_collect a \<lbrakk>\<sigma>\<rbrakk> \<subseteq> \<lbrakk>apply_tf tf a \<sigma>\<rbrakk>\<close>) and its \<^verbatim>\<open>EA_Check\<close> companion, the dispatch-point facts \<^theory>\<open>Voblint_Core.DG_Soundness\<close>'s \<^verbatim>\<open>step_sound\<close>/\<^verbatim>\<open>combine_sound\<close> obligations are discharged against.
+    \<^item> @{theory Voblint_Core.Transfer_Interface} --- the transfer interface \<^verbatim>\<open>domain_transfer\<close>, \<^verbatim>\<open>apply_tf\<close>, its soundness locale \<^verbatim>\<open>sound_transfer_for\<close>, and per-edge transfer soundness (\<^verbatim>\<open>edge_collect a \<lbrakk>\<sigma>\<rbrakk> \<subseteq> \<lbrakk>apply_tf tf a \<sigma>\<rbrakk>\<close>) with its \<^verbatim>\<open>EA_Check\<close> companion, the dispatch-point facts \<^theory>\<open>Voblint_Core.DG_Soundness\<close>'s \<^verbatim>\<open>step_sound\<close>/\<^verbatim>\<open>combine_sound\<close> obligations are discharged against.
     \<^item> @{theory Voblint_Core.State_Restriction} --- the local/global restriction algebra the routed spine reassembles states with.
     \<^item> @{theory Voblint_Solver.Solver_Mono} --- \<^verbatim>\<open>threefold_mono\<close>: the monotonicity obligation the vendored solver's post-solution theorem takes.
 

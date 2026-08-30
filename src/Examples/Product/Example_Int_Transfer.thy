@@ -36,7 +36,9 @@ text \<open>
 \<close>
 
 lemma tf_enter_once_binds_formal:
-  "tf_enter (int_tf_once_for test_gs) [STR ''p''] [N 7] test_env_top (STR ''p'') =
+  "snd (tf_enter (int_tf_once_for test_gs)
+     (call_info_of (CallEdge None [STR ''p''] [N 7]) (STR ''f''))
+     test_env_top) (STR ''p'') =
    int_dom_of_int 7"
   by eval
 

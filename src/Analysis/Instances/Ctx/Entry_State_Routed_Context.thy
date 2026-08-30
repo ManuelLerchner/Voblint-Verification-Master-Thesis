@@ -48,8 +48,8 @@ locale entry_state_routed_context =
              \<in> calls (compile_prog Pi ps)
        \<Longrightarrow> (FunctionEntry p,
               route u ctx
-                (enter_local S pars args (locals (sigma (Inl (u, ctx))))
-                    (globs (sigma (Inr gk0)))) (CallEdge dst pars args))
+                (enter_local S (call_info_of (CallEdge dst pars args) p)
+                    (locals (sigma (Inl (u, ctx)))) (globs (sigma (Inr gk0)))) (CallEdge dst pars args))
              \<in> vars"
     and comb_fwd:
     "\<And>cl c1 dst pars args p cont.
@@ -81,7 +81,8 @@ next
            \<in> calls (compile_prog Pi ps)"
   have fin: "finite (calls (compile_prog Pi ps))" using compile_prog_finite by blast
   show "route u ctx
-            (enter_local S pars args (locals (sigma (Inl (u, ctx)))) (globs (sigma (Inr gk0))))
+            (enter_local S (call_info_of (CallEdge dst pars args) p)
+                (locals (sigma (Inl (u, ctx)))) (globs (sigma (Inr gk0))))
             (CallEdge dst pars args)
           = route_enterc_of_sigma S route sigma gk0
               (compile_prog Pi ps) u ctx (call_enter gs (CallEdge dst pars args) s)"
@@ -93,8 +94,8 @@ next
            \<in> calls (compile_prog Pi ps)"
   then show "(FunctionEntry p,
                 route u ctx
-                  (enter_local S pars args (locals (sigma (Inl (u, ctx))))
-                      (globs (sigma (Inr gk0)))) (CallEdge dst pars args))
+                  (enter_local S (call_info_of (CallEdge dst pars args) p)
+                      (locals (sigma (Inl (u, ctx)))) (globs (sigma (Inr gk0)))) (CallEdge dst pars args))
                \<in> vars"
     by (rule call_fwd)
 next

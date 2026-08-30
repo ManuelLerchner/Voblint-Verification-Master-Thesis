@@ -93,14 +93,14 @@ subsection \<open>Classifier-parametric transfer\<close>
 
 text \<open>
   Entry and combine are the only fields that consult a classifier (inside
-  \<^const>\<open>enter_frame_D\<close> and \<^const>\<open>combine_env\<close>); assignment and guard
+  \<^const>\<open>enter_frame\<close> and \<^const>\<open>combine_env\<close>); assignment and guard
   transfer never do, so the bundled transfer function is parametric in the
   classifier throughout (mirroring \<open>ivl_tf_for\<close> for the interval domain).
 \<close>
 
 definition enter_frame_sign_for ::
     "(vname => bool) => sign abs_state => sign abs_state" where
-  "enter_frame_sign_for gs = enter_frame_D gs STop"
+  "enter_frame_sign_for gs = enter_frame gs STop"
 
 definition enter_sign_for ::
     "(vname => bool) => vname list => exp list =>
@@ -111,7 +111,7 @@ lemma enter_frame_sign_for_sound:
   assumes gs: "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
   shows "enter_state cls s \<in> \<lbrakk>enter_frame_sign_for cls \<sigma>\<rbrakk>"
   unfolding enter_frame_sign_for_def
-proof (rule enter_frame_D_sound[OF gs])
+proof (rule enter_frame_sound[OF gs])
   show "gamma STop = UNIV" by simp
 qed
 
@@ -130,6 +130,26 @@ next
     using V by (simp add: list_all2_conv_all_nth aval_sign_sound)
 qed
 
+definition enter_pair_sign_for ::
+    "(vname => bool) => call_info => sign abs_state => sign abs_state \<times> sign abs_state" where
+  "enter_pair_sign_for gs = enter_pair_D gs STop aval_sign"
+
+lemma enter_pair_sign_for_sound:
+  assumes gs: "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
+  shows "s \<in> \<lbrakk>fst (enter_pair_sign_for cls ci \<sigma>)\<rbrakk>"
+    and "bind_formals (ci_formals ci) (map (\<lambda>e. aval e s) (ci_args ci)) (enter_state cls s)
+           \<in> \<lbrakk>snd (enter_pair_sign_for cls ci \<sigma>)\<rbrakk>"
+  unfolding enter_pair_sign_for_def
+proof -
+  show "s \<in> \<lbrakk>fst (enter_pair_D cls STop aval_sign ci \<sigma>)\<rbrakk>"
+    using gs by (simp add: enter_pair_D_def)
+next
+  show "bind_formals (ci_formals ci) (map (\<lambda>e. aval e s) (ci_args ci)) (enter_state cls s)
+          \<in> \<lbrakk>snd (enter_pair_D cls STop aval_sign ci \<sigma>)\<rbrakk>"
+    using enter_sign_for_sound[OF gs, of "ci_formals ci" "ci_args ci"]
+    by (simp add: enter_pair_D_def enter_sign_for_def)
+qed
+
 definition sign_tf_for :: "(vname => bool) => sign domain_transfer" where
   "sign_tf_for gs = (| tf_assign  = assign_sign,
                        tf_special = special_sign,
@@ -137,9 +157,8 @@ definition sign_tf_for :: "(vname => bool) => sign domain_transfer" where
                        tf_skip    = skip_sign,
                        tf_body    = body_sign,
                        tf_return  = return_sign,
-                       tf_enter   = enter_sign_for gs,
+                       tf_enter   = enter_pair_sign_for gs,
                        tf_event   = event_sign,
-                       tf_caller_cont = (\<lambda>_ \<sigma>. \<sigma>),
                        tf_combine_env = (\<lambda>_. combine_env gs) |)"
 
 lemma sign_is_sound_transfer_for: "sound_transfer_for gs (sign_tf_for gs)"
@@ -151,16 +170,16 @@ lemma sign_is_sound_transfer_for: "sound_transfer_for gs (sign_tf_for gs)"
   subgoal by (simp add: skip_sign_sound)
   subgoal by (simp add: body_sign_sound)
   subgoal by (simp add: return_sign_sound)
-  subgoal by (simp add: enter_sign_for_sound)
+  subgoal by (simp add: enter_pair_sign_for_sound)
   subgoal by (simp add: event_sign_sound)
-  subgoal by simp
+  subgoal by (simp add: enter_pair_sign_for_sound)
   subgoal by (simp add: combine_env_sound)
   done
 
 lemma enter_frame_sign_for_mono:
   assumes "s1 \<le> s2"
   shows "enter_frame_sign_for gs s1 \<le> enter_frame_sign_for gs s2"
-  unfolding enter_frame_sign_for_def by (rule enter_frame_D_mono[OF assms])
+  unfolding enter_frame_sign_for_def by (rule enter_frame_mono[OF assms])
 
 lemma enter_sign_for_mono:
   assumes "s1 \<le> s2"

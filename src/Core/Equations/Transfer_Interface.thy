@@ -1,7 +1,6 @@
 theory Transfer_Interface
   imports CFG_Enumeration "Voblint_CFG.CFG_Transfer" "Voblint_Domain.Abstract_Domain"
     "Voblint_VIMP.VIMP_Globals" "Voblint_VIMP.VIMP_Expr" "Voblint_VIMP.VIMP_Proc"
-    "TD.Basics_side"
 begin
 
 section \<open>CFG transfer interface\<close>
@@ -20,8 +19,10 @@ text \<open>
   solved by the verified top-down solver -- live downstream, in
   \<open>Solver/Context/DG\<close>.
 
-  All transfer functions are parameterised over the domain via a locale
-  so the same interface works for Sign, Interval, etc.
+  The transfer interface is parameterised by the abstract value type \<open>'a\<close>, so
+  the same \<open>domain_transfer\<close> record and \<open>apply_tf\<close> dispatcher work for Sign,
+  Interval, etc.; its soundness properties are packaged separately in the
+  \<open>sound_transfer_for\<close> locale.
 \<close>
 
 subsection \<open>Abstract transfer function record\<close>
@@ -63,11 +64,9 @@ record 'a domain_transfer =
   tf_skip      :: "('a abs_state) => ('a abs_state)" ("skip\<^sup>#")
   tf_body      :: "pname => ('a abs_state) => ('a abs_state)" ("body\<^sup>#")
   tf_return    :: "exp option => pname => ('a abs_state) => ('a abs_state)" ("return\<^sup>#")
-  tf_enter     :: "vname list \<Rightarrow> exp list \<Rightarrow> ('a abs_state) \<Rightarrow> ('a abs_state)" ("enter\<^sup>#")
+  tf_enter     :: "call_info \<Rightarrow> ('a abs_state) \<Rightarrow> ('a abs_state) \<times> ('a abs_state)" ("enter\<^sup>#")
   tf_event     :: "analysis_event => ('a abs_state) => ('a abs_state)" ("event\<^sup>#")
-  tf_caller_cont :: "call_info => ('a abs_state) => ('a abs_state)" ("caller'_cont\<^sup>#")
-  tf_combine_env ::
-    "call_info => ('a abs_state) => ('a abs_state) => ('a abs_state)" ("combine'_env\<^sup>#")
+  tf_combine_env :: "call_info => ('a abs_state) => ('a abs_state) => ('a abs_state)" ("combine'_env\<^sup>#")
 
 subsection \<open>Apply transfer function to one edge\<close>
 
@@ -102,24 +101,6 @@ fun apply_tf :: "'a domain_transfer
   | "apply_tf tf (EA_Ret e p)        = return\<^sup># tf e p"
   | "apply_tf tf (EA_Check c)        = event\<^sup># tf (Check_Event c)"
 
-text \<open>Closure principle for any family built by applying a single transfer function
-  and post-processing the result the same way at every action. Deliberately left
-  untagged: F and H are schematic, so tagging this \<open>[simp]\<close>/\<open>[dest]\<close>/\<open>[intro]\<close>
-  would let it fire against any equality of this shape.\<close>
-lemma apply_tf_eqI:
-  fixes tf :: "'a domain_transfer"
-    and F :: "edge_action \<Rightarrow> 'y"
-    and H :: "('a abs_state \<Rightarrow> 'a abs_state) \<Rightarrow> 'y"
-  assumes nop: "F EA_Nop = H (apply_tf tf EA_Nop)"
-    and assign: "\<And>x e. F (EA_Assign x e) = H (apply_tf tf (EA_Assign x e))"
-    and special: "\<And>sc x. F (EA_Special sc x) = H (apply_tf tf (EA_Special sc x))"
-    and assm: "\<And>b. F (EA_Assume b) = H (apply_tf tf (EA_Assume b))"
-    and assm_not: "\<And>b. F (EA_AssumeNot b) = H (apply_tf tf (EA_AssumeNot b))"
-    and ret: "\<And>e p. F (EA_Ret e p) = H (apply_tf tf (EA_Ret e p))"
-    and check: "\<And>c. F (EA_Check c) = H (apply_tf tf (EA_Check c))"
-  shows "F a = H (apply_tf tf a)"
-  by (cases a) (simp_all add: nop assign special assm assm_not ret check)
-
 subsection \<open>The structural environment combine\<close>
 
 lemma combine_env_mono:
@@ -141,6 +122,8 @@ lemma combine_env_sound:
   assumes sc: "s \<in> \<lbrakk>\<sigma>c\<rbrakk>" and se: "t \<in> \<lbrakk>\<sigma>e\<rbrakk>"
   shows "combine_env gs s t \<in> \<lbrakk>combine_env gs \<sigma>c \<sigma>e\<rbrakk>"
   using assms by (auto simp: gamma_state_def le_fun_def)
+
+subsection \<open>Generic soundness and monotonicity helpers\<close>
 
 lemma gamma_state_upd:
   fixes \<sigma> :: "'a::sound_domain abs_state"
@@ -180,32 +163,29 @@ text \<open>
   Every domain's own enter-frame construction (Sign's @{text enter_frame_sign},
   Interval's @{text enter_frame_ivl}) is this same shape, differing only in
   which value stands for "unknown" -- so this is parameterised over that one
-  value rather than duplicated per domain. \<open>enter_frame_D\<close> is the D/G-facing
-  name for \<^const>\<open>enter_frame\<close>, the structural selector \<open>enter_state\<close> already
-  reuses at the concrete reset value \<open>0\<close>; the two never diverge because both
-  read the same definition.
+  value rather than duplicated per domain. \<^const>\<open>enter_frame\<close> is the same
+  structural selector \<open>enter_state\<close> already reuses at the concrete reset
+  value \<open>0\<close>; the two never diverge because both read the same definition.
 \<close>
-definition enter_frame_D :: "(vname \<Rightarrow> bool) \<Rightarrow> 'a \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state" where
-  "enter_frame_D gs top_val \<sigma> = enter_frame gs top_val \<sigma>"
 
-lemma enter_frame_D_sound:
+lemma enter_frame_sound:
   fixes top_val :: "'a::sound_domain"
   assumes sv: "s \<in> \<lbrakk>\<sigma>\<rbrakk>" and top_full: "gamma top_val = UNIV"
-  shows "enter_state gs s \<in> \<lbrakk>enter_frame_D gs top_val \<sigma>\<rbrakk>"
-  unfolding gamma_state_def enter_frame_D_def enter_state_def
+  shows "enter_state gs s \<in> \<lbrakk>enter_frame gs top_val \<sigma>\<rbrakk>"
+  unfolding gamma_state_def enter_state_def
   using gamma_stateD[OF sv] top_full by auto
 
-lemma enter_frame_D_mono:
+lemma enter_frame_mono:
   fixes top_val :: "'a::order"
   assumes "\<sigma>1 \<le> \<sigma>2"
-  shows "enter_frame_D gs top_val \<sigma>1 \<le> enter_frame_D gs top_val \<sigma>2"
-  by (simp add: assms enter_frame_D_def le_funD le_funI)
+  shows "enter_frame gs top_val \<sigma>1 \<le> enter_frame gs top_val \<sigma>2"
+  by (simp add: assms le_funD le_funI)
 
 definition enter_D ::
   "(vname \<Rightarrow> bool) \<Rightarrow> 'a \<Rightarrow> (exp \<Rightarrow> 'a abs_state \<Rightarrow> 'a) \<Rightarrow> vname list \<Rightarrow> exp list
    \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state" where
   "enter_D gs top_val aval_abs xs es \<sigma> =
-     bind_formals xs (map (\<lambda>e. aval_abs e \<sigma>) es) (enter_frame_D gs top_val \<sigma>)"
+     bind_formals xs (map (\<lambda>e. aval_abs e \<sigma>) es) (enter_frame gs top_val \<sigma>)"
 
 lemma enter_D_sound:
   fixes top_val :: "'a::sound_domain"
@@ -214,14 +194,47 @@ lemma enter_D_sound:
                  (map (\<lambda>e. aval e s) es) (map (\<lambda>e. aval_abs e \<sigma>) es)"
   shows "bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state gs s)
            \<in> \<lbrakk>enter_D gs top_val aval_abs xs es \<sigma>\<rbrakk>"
-  by (simp add: bind_formals_sound enter_D_def enter_frame_D_sound sv top_full vals)
+  by (simp add: bind_formals_sound enter_D_def enter_frame_sound sv top_full vals)
 
 lemma enter_D_mono:
   fixes top_val :: "'a::order"
   assumes base: "\<sigma>1 \<le> \<sigma>2"
     and vals: "list_all2 (\<le>) (map (\<lambda>e. aval_abs e \<sigma>1) es) (map (\<lambda>e. aval_abs e \<sigma>2) es)"
   shows "enter_D gs top_val aval_abs xs es \<sigma>1 \<le> enter_D gs top_val aval_abs xs es \<sigma>2"
-  by (simp add: bind_formals_mono enter_D_def enter_frame_D_mono local.base vals)
+  by (simp add: bind_formals_mono enter_D_def enter_frame_mono local.base vals)
+
+text \<open>
+  The whole call-boundary answer a domain_transfer's \<open>tf_enter\<close> field supplies: the
+  caller continuation (first component, identity here -- the caller's own store is kept
+  verbatim) paired with the callee entry (second component, \<^const>\<open>enter_D\<close>'s frame
+  reset and formal binding read off \<^typ>\<open>call_info\<close> instead of separate formals/args
+  arguments). Every current domain instantiates \<open>tf_enter\<close> with this combinator
+  directly; a domain that ever needs a non-identity continuation would supply its own
+  first component instead of reusing it.
+\<close>
+definition enter_pair_D ::
+  "(vname \<Rightarrow> bool) \<Rightarrow> 'a \<Rightarrow> (exp \<Rightarrow> 'a abs_state \<Rightarrow> 'a) \<Rightarrow> call_info \<Rightarrow> 'a abs_state
+   \<Rightarrow> 'a abs_state \<times> 'a abs_state" where
+  "enter_pair_D gs top_val aval_abs ci \<sigma> =
+     (\<sigma>, enter_D gs top_val aval_abs (ci_formals ci) (ci_args ci) \<sigma>)"
+
+lemma enter_pair_D_sound:
+  fixes top_val :: "'a::sound_domain"
+  assumes sv: "s \<in> \<lbrakk>\<sigma>\<rbrakk>" and top_full: "gamma top_val = UNIV"
+    and vals: "list_all2 (\<lambda>v a. v \<in> gamma a)
+                 (map (\<lambda>e. aval e s) (ci_args ci)) (map (\<lambda>e. aval_abs e \<sigma>) (ci_args ci))"
+  shows "s \<in> \<lbrakk>fst (enter_pair_D gs top_val aval_abs ci \<sigma>)\<rbrakk>"
+    and "bind_formals (ci_formals ci) (map (\<lambda>e. aval e s) (ci_args ci)) (enter_state gs s)
+           \<in> \<lbrakk>snd (enter_pair_D gs top_val aval_abs ci \<sigma>)\<rbrakk>"
+  using assms unfolding enter_D_def enter_pair_D_def by (auto simp add: bind_formals_sound enter_frame_sound top_full)
+
+lemma enter_pair_D_mono:
+  fixes top_val :: "'a::order"
+  assumes base: "\<sigma>1 \<le> \<sigma>2"
+    and vals: "list_all2 (\<le>) (map (\<lambda>e. aval_abs e \<sigma>1) (ci_args ci)) (map (\<lambda>e. aval_abs e \<sigma>2) (ci_args ci))"
+  shows "fst (enter_pair_D gs top_val aval_abs ci \<sigma>1) \<le> fst (enter_pair_D gs top_val aval_abs ci \<sigma>2)"
+    and "snd (enter_pair_D gs top_val aval_abs ci \<sigma>1) \<le> snd (enter_pair_D gs top_val aval_abs ci \<sigma>2)"
+  using assms unfolding enter_pair_D_def by (auto simp add: enter_D_mono) 
 
 subsection \<open>The structural return combine\<close>
 
@@ -250,8 +263,8 @@ lemma combine_collect_abs_mono:
   fixes \<sigma>c1 \<sigma>c2 \<sigma>e1 \<sigma>e2 :: "'a::order abs_state"
   assumes c: "\<sigma>c1 \<le> \<sigma>c2" and e: "\<sigma>e1 \<le> \<sigma>e2"
   shows "combine\<^sup># gs dst \<sigma>c1 \<sigma>e1 \<le> combine\<^sup># gs dst \<sigma>c2 \<sigma>e2"
-  using assms apply(cases dst)
-  by (auto simp add: combine_collect_abs_def combine_env_def le_fun_def)
+  unfolding combine_collect_abs_def
+  by (rule combine_assign_mono[OF le_funD[OF e] combine_env_mono[OF c e]])
 
 text \<open>
   The binary env-combine is the destination-free instance of the
@@ -260,6 +273,8 @@ text \<open>
 lemma combine_collect_abs_None[simp]:
   "combine\<^sup># gs None a b = combine_env gs a b"
   by (simp add: combine_collect_abs_def)
+
+subsection \<open>The analysis-supplied call boundary\<close>
 
 text \<open>
   Per-analysis return combine.  \<^const>\<open>combine_collect_abs\<close> fixes the environment
@@ -275,17 +290,17 @@ text \<open>
   the return-value write generic.
 \<close>
 text \<open>
-  \<open>caller_cont\<^sup>#\<close> is logically an \<^emph>\<open>output of enter\<close>, not a step of the combine:
-  Goblint's \<open>Spec.enter\<close> returns \<open>(D.t * D.t) list\<close> and \<open>constraints.ml\<close> hands the first
-  component -- the caller continuation -- to \<open>combine_env\<close> as \<open>cd\<close>, while the second seeds
-  the callee entry.  \<open>tf_enter_pair\<close> below models that same caller/callee pair, but as one
-  function returning exactly one pair rather than a list: no domain in this tree needs more
-  than one entry state, so the list is not carried (a recorded, deferred simplification, not
-  an oversight).  The combine operations accordingly take the
+  \<^const>\<open>fst\<close> \<open>(enter\<^sup># tf ci \<sigma>)\<close> is Goblint's \<open>Spec.enter\<close>'s caller-continuation half:
+  Goblint's \<open>enter\<close> returns \<open>(D.t * D.t) list\<close> and \<open>constraints.ml\<close> hands the first
+  component of the (here, single) pair -- the caller continuation -- to \<open>combine_env\<close> as
+  \<open>cd\<close>, while the second seeds the callee entry.  \<open>enter\<^sup>#\<close> models that same caller/callee
+  pair directly, as one field returning exactly one pair rather than a list: no domain in
+  this tree needs more than one entry state, so the list is not carried (a recorded,
+  deferred simplification, not an oversight).  The combine operations accordingly take the
   \<^emph>\<open>continuation\<close> as their caller operand, never the raw call-site state: nothing in
-  \<open>combine_env\<^sup>#\<close> or \<open>tf_combine_collect_abs\<close> reapplies \<open>caller_cont\<^sup>#\<close>.
+  \<open>combine_env\<^sup>#\<close> or \<open>tf_combine_collect_abs\<close> reapplies \<open>fst (enter\<^sup># tf ci \<sigma>)\<close>.
 
-  Its contract is continuation-specific rather than a preservation law: \<open>caller_cont\<^sup># ci\<close>
+  Its contract is continuation-specific rather than a preservation law: the first component
   over-approximates the pre-call concrete caller store, retaining only the information meant
   to stay usable once the call returns, and may forget abstract facts a callee could
   invalidate -- exactly Goblint's \<open>varEq\<close>, whose \<open>combine_env\<close> meets the callee exit with a
@@ -294,23 +309,11 @@ text \<open>
   VIMP has no concrete caller-side transition at a call; a language that gained one would
   generalize the obligation's concrete side, not this field's role.
 \<close>
-subsection \<open>The analysis-supplied call boundary\<close>
-
-definition tf_enter_pair ::
-    "'a domain_transfer \<Rightarrow> call_info \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state \<times> 'a abs_state" where
-  "tf_enter_pair tf ci \<sigma> =
-     (caller_cont\<^sup># tf ci \<sigma>, enter\<^sup># tf (ci_formals ci) (ci_args ci) \<sigma>)"
-
-lemma fst_tf_enter_pair [simp]: "fst (tf_enter_pair tf ci \<sigma>) = caller_cont\<^sup># tf ci \<sigma>"
-  by (simp add: tf_enter_pair_def)
-
-lemma snd_tf_enter_pair [simp]:
-  "snd (tf_enter_pair tf ci \<sigma>) = enter\<^sup># tf (ci_formals ci) (ci_args ci) \<sigma>"
-  by (simp add: tf_enter_pair_def)
 
 text \<open>The whole return operation: \<open>combine_env\<^sup>#\<close> on the continuation and the callee exit,
   then the generic \<^const>\<open>combine_assign\<close> writing the callee's @{const ret_var} into the
-  destination.  \<open>\<sigma>cont\<close> is \<^emph>\<open>already\<close> \<^const>\<open>tf_enter_pair\<close>'s first component.\<close>
+  destination.  \<open>\<sigma>cont\<close> is \<^emph>\<open>already\<close> the first component \<^const>\<open>fst\<close> \<open>(enter\<^sup># tf ci \<sigma>)\<close>
+  would produce.\<close>
 definition tf_combine_collect_abs ::
     "'a domain_transfer \<Rightarrow> call_info \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state" where
   "tf_combine_collect_abs tf ci \<sigma>cont \<sigma>e =
@@ -327,16 +330,16 @@ lemma tf_combine_collect_abs_combine_env:
 text \<open>Monotonicity of the analysis-supplied combine reduces to monotonicity of its
   merge: the return-value write is \<^const>\<open>combine_assign\<close>, monotone in both the
   written value and the state it updates.  The caller operand here is already the
-  continuation, so no \<open>caller_cont\<^sup>#\<close> monotonicity enters: that obligation belongs to
-  whatever supplies the continuation.\<close>
+  continuation, so no monotonicity of \<open>fst (enter\<^sup># tf ci \<sigma>)\<close> enters: that obligation
+  belongs to whatever supplies the continuation.\<close>
 lemma tf_combine_collect_abs_mono:
   fixes \<sigma>c1 \<sigma>c2 \<sigma>e1 \<sigma>e2 :: "'a::order abs_state"
   assumes merge: "\<And>a1 a2 b1 b2 :: 'a abs_state.
       a1 \<le> a2 \<Longrightarrow> b1 \<le> b2 \<Longrightarrow> combine_env\<^sup># tf ci a1 b1 \<le> combine_env\<^sup># tf ci a2 b2"
     and c: "\<sigma>c1 \<le> \<sigma>c2" and e: "\<sigma>e1 \<le> \<sigma>e2"
   shows "tf_combine_collect_abs tf ci \<sigma>c1 \<sigma>e1 \<le> tf_combine_collect_abs tf ci \<sigma>c2 \<sigma>e2"
-  using assms apply (cases "ci_dst ci")
-  unfolding tf_combine_collect_abs_def tf_combine_collect_abs_def le_fun_def by auto
+  unfolding tf_combine_collect_abs_def
+  by (rule combine_assign_mono[OF le_funD[OF e] merge[OF c e]])
 
 text \<open>
   Soundness of the abstract combine including result publication.  A pure
@@ -348,8 +351,9 @@ lemma combine_collect_sound:
   fixes \<sigma>c \<sigma>e :: "'a::sound_domain abs_state"
   assumes sc: "s \<in> \<lbrakk>\<sigma>c\<rbrakk>" and se: "t \<in> \<lbrakk>\<sigma>e\<rbrakk>"
   shows "combine_collect gs dst s t \<in> \<lbrakk>combine\<^sup># gs dst \<sigma>c \<sigma>e\<rbrakk>"
-  using assms apply (cases dst)
-  unfolding gamma_state_def combine_collect_def combine_collect_abs_def by auto
+  unfolding combine_collect_def combine_collect_abs_def
+  using combine_env_sound[OF sc se] gamma_stateD[OF se]
+  by (cases dst) (auto simp add: gamma_state_upd)
 
 text \<open>
   Discharge the concrete return combine from an abstract bound: given
@@ -372,8 +376,8 @@ text \<open>
   \<^const>\<open>cinit_stores\<close> (\<^theory>\<open>Voblint_VIMP.VIMP_Globals\<close>) is the C-faithful initial
   store set. Any analysis that uses a domain-specific abstract seed \<open>s0\<close>
   satisfying \<open>cinit_stores gs \<subseteq> gamma_state s0\<close> may state its soundness
-  theorem against \<open>cinit_stores gs\<close> rather than \<open>UNIV\<close>, matching C program
-  semantics.
+  theorem against \<open>cinit_stores gs\<close> rather than \<open>UNIV\<close>, matching VIMP's
+  C-like initialization semantics.
 \<close>
 
 subsection \<open>The sound-transfer contract\<close>
@@ -381,8 +385,9 @@ subsection \<open>The sound-transfer contract\<close>
 text \<open>
   Sound transfer function: a domain_transfer tf that soundly over-approximates
   the concrete edge actions w.r.t. a sound_domain's concretization, relative to
-  an explicit classifier gs.  Bundles one soundness obligation per
-  \<^typ>\<open>'a domain_transfer\<close> field as a locale assumption.
+  an explicit classifier gs.  Bundles the soundness obligations for each
+  transfer operation as locale assumptions; \<open>tf_enter\<close>'s two components
+  (caller continuation, callee entry) each get their own obligation.
   Concrete domains discharge these once via `interpretation`.
 \<close>
 locale sound_transfer_for =
@@ -402,41 +407,39 @@ locale sound_transfer_for =
     "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow>
        s(ret_var := (case e of None \<Rightarrow> s ret_var | Some a \<Rightarrow> aval a s))
          \<in> \<lbrakk>return\<^sup># tf e p \<sigma>\<rbrakk>"
-  assumes tf_sound_enter_for[intro]:
+  assumes tf_sound_enter_entry_for[intro]:
     "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow>
-       bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state gs s)
-         \<in> \<lbrakk>tf_enter tf xs es \<sigma>\<rbrakk>"
+       bind_formals (ci_formals ci) (map (\<lambda>e. aval e s) (ci_args ci)) (enter_state gs s)
+         \<in> \<lbrakk>snd (enter\<^sup># tf ci \<sigma>)\<rbrakk>"
   assumes tf_sound_event_for[intro]:
     "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> s \<in> \<lbrakk>event\<^sup># tf ev \<sigma>\<rbrakk>"
-  assumes tf_sound_caller_cont_for[intro]:
-    "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> s \<in> \<lbrakk>caller_cont\<^sup># tf ci \<sigma>\<rbrakk>"
+  assumes tf_sound_enter_cont_for[intro]:
+    "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> s \<in> \<lbrakk>fst (enter\<^sup># tf ci \<sigma>)\<rbrakk>"
   assumes tf_sound_combine_env_for[intro]:
     "s \<in> \<lbrakk>\<sigma>cont\<rbrakk> \<Longrightarrow> t \<in> \<lbrakk>\<sigma>e\<rbrakk> \<Longrightarrow>
        combine_env gs s t \<in> \<lbrakk>combine_env\<^sup># tf ci \<sigma>cont \<sigma>e\<rbrakk>"
 
-text \<open>Every field obligation above is already Horn-clause shaped (free, locale-generalized
-  variables rather than an explicit \<open>\<forall>\<close>/\<open>Ball\<close> prefix), so it is directly \<open>[OF ...]\<close>-composable
-  and needs no separate \<open>_forD\<close> restatement: unlike a genuinely quantified fact, nothing here
-  is lost by dropping the quantifier, since each free variable is generalized per assumption
-  the same way a lemma's own free variables are.\<close>
+text \<open>Each obligation above is stated directly as an inference rule (\<open>P\<^sub>1 \<Longrightarrow> \<dots> \<Longrightarrow> P\<^sub>n \<Longrightarrow> Q\<close>).
+  Variables not fixed by the locale are implicitly generalized, so the assumptions compose
+  directly with \<open>rule\<close>, \<open>OF\<close>, and \<open>auto\<close>; no separate Horn-clause restatement is needed.\<close>
 
 context sound_transfer_for
 begin
 
 text \<open>The two halves composed at a call site: the caller's own state goes through
-  \<open>caller_cont\<^sup>#\<close> first, exactly as \<^const>\<open>tf_enter_pair\<close> produces it, and the merge is
-  then sound at that continuation.  This is the form a combine tree needs, since the tree
+  \<open>fst (enter\<^sup># tf ci \<sigma>c)\<close> first, exactly as \<^const>\<open>tf_enter\<close> produces it, and the merge
+  is then sound at that continuation.  This is the form a combine tree needs, since the tree
   reconstructs the raw call-site state rather than a stored continuation.\<close>
-lemma tf_sound_combine_env_at_call_forD[intro]:
+lemma tf_sound_combine_env_at_call_for[intro]:
   "s \<in> \<lbrakk>\<sigma>c\<rbrakk> \<Longrightarrow> t \<in> \<lbrakk>\<sigma>e\<rbrakk> \<Longrightarrow>
-     combine_env gs s t \<in> \<lbrakk>combine_env\<^sup># tf ci (caller_cont\<^sup># tf ci \<sigma>c) \<sigma>e\<rbrakk>"
-  by (rule tf_sound_combine_env_for[OF tf_sound_caller_cont_for])
+     combine_env gs s t \<in> \<lbrakk>combine_env\<^sup># tf ci (fst (enter\<^sup># tf ci \<sigma>c)) \<sigma>e\<rbrakk>"
+  by auto
 
 text \<open>Soundness of the analysis-supplied whole combine.  The merge obligation is the
   locale's own \<open>tf_sound_combine_env_for\<close>; the destination slot is sound because the
   callee's @{const ret_var} slot is.  No extra assumption on the analysis is needed:
   a sound \<open>combine_env\<^sup>#\<close> already makes \<^const>\<open>tf_combine_collect_abs\<close> sound.\<close>
-lemma tf_sound_combine_collect_forD[intro]:
+lemma tf_sound_combine_collect_for[intro]:
   assumes sc: "s \<in> \<lbrakk>\<sigma>cont\<rbrakk>" and se: "t \<in> \<lbrakk>\<sigma>e\<rbrakk>"
   shows "combine_collect gs (ci_dst ci) s t
            \<in> \<lbrakk>tf_combine_collect_abs tf ci \<sigma>cont \<sigma>e\<rbrakk>"
@@ -444,22 +447,22 @@ lemma tf_sound_combine_collect_forD[intro]:
   by (auto simp add: combine_collect_None tf_sound_combine_env_for combine_collect_def gamma_stateD gamma_state_upd tf_combine_collect_abs_def)
 
 text \<open>The same statement at a call site, where the caller operand is the raw call-site
-  state and the continuation is produced on the spot by \<open>caller_cont\<^sup>#\<close>.\<close>
-lemma tf_sound_combine_collect_at_call_forD[intro]:
+  state and the continuation is produced on the spot by \<open>fst (enter\<^sup># tf ci \<sigma>c)\<close>.\<close>
+lemma tf_sound_combine_collect_at_call_for[intro]:
   assumes sc: "s \<in> \<lbrakk>\<sigma>c\<rbrakk>" and se: "t \<in> \<lbrakk>\<sigma>e\<rbrakk>"
   shows "combine_collect gs (ci_dst ci) s t
-           \<in> \<lbrakk>tf_combine_collect_abs tf ci (caller_cont\<^sup># tf ci \<sigma>c) \<sigma>e\<rbrakk>"
+           \<in> \<lbrakk>tf_combine_collect_abs tf ci (fst (enter\<^sup># tf ci \<sigma>c)) \<sigma>e\<rbrakk>"
   using sc se by auto
 
 end
 
-text \<open>The structural instance discharges both call-boundary obligations of
-  \<^locale>\<open>sound_transfer_for\<close> outright: an identity continuation keeps the caller
-  state, and \<^const>\<open>combine_env\<close> is sound by @{thm [source] combine_env_sound}.\<close>
-lemma sound_transfer_caller_cont_idI[intro]:
+text \<open>The structural instance discharges the continuation and environment-combine
+  obligations of \<^locale>\<open>sound_transfer_for\<close> outright: an identity continuation keeps
+  the caller state, and \<^const>\<open>combine_env\<close> is sound by @{thm [source] combine_env_sound}.\<close>
+lemma sound_transfer_enter_cont_idI[intro]:
   fixes \<sigma> :: "'a::sound_domain abs_state"
-  assumes eq: "tf_caller_cont tf = (\<lambda>_ \<sigma>. \<sigma>)" and sv: "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
-  shows "s \<in> \<lbrakk>caller_cont\<^sup># tf ci \<sigma>\<rbrakk>"
+  assumes eq: "\<And>ci \<sigma>. fst (tf_enter tf ci \<sigma>) = \<sigma>" and sv: "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
+  shows "s \<in> \<lbrakk>fst (enter\<^sup># tf ci \<sigma>)\<rbrakk>"
   unfolding eq using sv by simp
 
 lemma sound_transfer_combine_envI[intro]:
@@ -468,6 +471,34 @@ lemma sound_transfer_combine_envI[intro]:
     and sc: "s \<in> \<lbrakk>\<sigma>cont\<rbrakk>" and se: "t \<in> \<lbrakk>\<sigma>e\<rbrakk>"
   shows "combine_env gs s t \<in> \<lbrakk>combine_env\<^sup># tf ci \<sigma>cont \<sigma>e\<rbrakk>"
   unfolding eq by (rule combine_env_sound[OF sc se])
+
+subsection \<open>Per-edge transfer soundness\<close>
+
+text \<open>
+  Generic transfer facts for \<^locale>\<open>sound_transfer_for\<close>: the D/G equation-system
+  soundness proof cites these to discharge its per-step obligations from a domain's
+  transfer soundness alone.
+\<close>
+
+context sound_transfer_for
+begin
+
+lemma edge_collect_apply_tf_sound_for[intro]:
+  "edge_collect a \<lbrakk>\<sigma>\<rbrakk> \<subseteq> \<lbrakk>apply_tf tf a \<sigma>\<rbrakk>"
+proof (cases a)
+  case (EA_Special sc x)
+  then show ?thesis by (cases sc) auto
+qed auto
+
+text \<open>A \<open>dg_spec\<close> instance dispatches its own \<open>EA_Check\<close> case through its own
+  \<open>dgs_event\<close> field, matching \<^const>\<open>apply_tf\<close>'s own \<open>event\<^sup>#\<close>
+  dispatch: this is the per-domain soundness bound each such instance needs at
+  that dispatch point.\<close>
+lemma edge_collect_check_sound_for[intro]:
+  "edge_collect (EA_Check c) \<lbrakk>\<sigma>\<rbrakk> \<subseteq> \<lbrakk>event\<^sup># tf (Check_Event c) \<sigma>\<rbrakk>"
+  by auto
+
+end
 
 
 

@@ -127,8 +127,8 @@ next
     by (simp add: static_resolve_iff[OF finC])
 next
   fix u ctx dst pars args p cont s
-  show "route_unit u ctx (enter_local S pars args (locals (sigma (Inl (u, ctx))))
-            (globs (sigma (Inr gk0)))) (CallEdge dst pars args)
+  show "route_unit u ctx (enter_local S (call_info_of (CallEdge dst pars args) p)
+            (locals (sigma (Inl (u, ctx)))) (globs (sigma (Inr gk0)))) (CallEdge dst pars args)
           = enterc_unit u ctx (call_enter gs (CallEdge dst pars args) s)"
     by (rule route_unit_enterc_unit_agree)
 next
@@ -140,8 +140,8 @@ next
                \<in> vars"
     by (rule call_fwd)
   then show "(FunctionEntry p,
-                route_unit u ctx (enter_local S pars args (locals (sigma (Inl (u, ctx))))
-                    (globs (sigma (Inr gk0)))) (CallEdge dst pars args))
+                route_unit u ctx (enter_local S (call_info_of (CallEdge dst pars args) p)
+                    (locals (sigma (Inl (u, ctx)))) (globs (sigma (Inr gk0)))) (CallEdge dst pars args))
                \<in> vars"
     by simp
 next

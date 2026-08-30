@@ -71,28 +71,37 @@ text \<open>The routed callee entry the solved system selects is the executable 
 
 lemma twice_route_at_call1:
   "entry_state_route_gen twice_gs twice_is_bot_pred (Statement 2) []
-     (enter_local (ectx_spec twice_gs twice_is_bot_pred) [(STR ''p'')] [VIMP_Syntax.N 3]
+     (enter_local (ectx_spec twice_gs twice_is_bot_pred)
+        (call_info_of
+          (CallEdge (Some (STR ''x'')) [(STR ''p'')] [VIMP_Syntax.N 3])
+          (STR ''twice''))
         (locals (snd twice_ctx_sol (Inl (Statement 2, []))))
         (globs (snd twice_ctx_sol (Inr Global))))
      (CallEdge (Some (STR ''x'')) [(STR ''p'')] [VIMP_Syntax.N 3])
    = ctx_call1"
-  unfolding twice_ctx_sol_def twice_is_bot_pred_def ctx_call1_def by eval
+  unfolding twice_ctx_sol_def twice_is_bot_pred_def ctx_call1_def entry_state_route_gen_def
+  by (simp add: enter_local_ectx_spec_eq_entry_state_entered)
 
 lemma twice_route_at_call2:
   "entry_state_route_gen twice_gs twice_is_bot_pred (Statement 3) []
-     (enter_local (ectx_spec twice_gs twice_is_bot_pred) [(STR ''p'')] [VIMP_Syntax.N 10]
+     (enter_local (ectx_spec twice_gs twice_is_bot_pred)
+        (call_info_of
+          (CallEdge (Some (STR ''y'')) [(STR ''p'')] [VIMP_Syntax.N 10])
+          (STR ''twice''))
         (locals (snd twice_ctx_sol (Inl (Statement 3, []))))
         (globs (snd twice_ctx_sol (Inr Global))))
      (CallEdge (Some (STR ''y'')) [(STR ''p'')] [VIMP_Syntax.N 10])
    = ctx_call2"
-  unfolding twice_ctx_sol_def twice_is_bot_pred_def ctx_call2_def by eval
+  unfolding twice_ctx_sol_def twice_is_bot_pred_def ctx_call2_def entry_state_route_gen_def
+  by (simp add: enter_local_ectx_spec_eq_entry_state_entered)
 
 lemma twice_call_fwd_ok:
   assumes cov: "(u, ctx) \<in> fst twice_ctx_sol"
     and ce: "(u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls twice_cfg"
   shows "(FunctionEntry p,
             entry_state_route_gen twice_gs twice_is_bot_pred u ctx
-              (enter_local (ectx_spec twice_gs twice_is_bot_pred) pars args
+              (enter_local (ectx_spec twice_gs twice_is_bot_pred)
+                 (call_info_of (CallEdge dst pars args) p)
                  (locals (snd twice_ctx_sol (Inl (u, ctx))))
                  (globs (snd twice_ctx_sol (Inr Global))))
               (CallEdge dst pars args))
@@ -173,13 +182,15 @@ lemma twice_context_at_call1:
   "entry_state_context twice_gs twice_is_bot_pred twice_pi twice_procs
      (Statement 2) [] s = ctx_call1"
   by (simp add: entry_state_context_def[OF twice_entry_state_hyps]
-                twice_call_site_action1 twice_route_at_call1[unfolded twice_ctx_sol_def])
+        twice_call_site_action1 twice_ctx_sol_def ctx_call1_def Let_def
+        enter_local_ectx_spec_eq_entry_state_entered entry_state_route_gen_def)
 
 lemma twice_context_at_call2:
   "entry_state_context twice_gs twice_is_bot_pred twice_pi twice_procs
      (Statement 3) [] s = ctx_call2"
   by (simp add: entry_state_context_def[OF twice_entry_state_hyps]
-                twice_call_site_action2 twice_route_at_call2[unfolded twice_ctx_sol_def])
+        twice_call_site_action2 twice_ctx_sol_def ctx_call2_def Let_def
+        enter_local_ectx_spec_eq_entry_state_entered entry_state_route_gen_def)
 
 subsection \<open>The concrete store-decoding context, and its agreement with the analysis\<close>
 
@@ -251,7 +262,7 @@ text \<open>The local unknown carries the whole abstract state, so a variable th
 lemma global_slot_shared:
   "twice_ctx_lookup (locals (snd twice_ctx_sol (Inl (FunctionEntry (STR ''twice''), ctx_call1)))) (STR ''Gx'')
      = twice_ctx_lookup (locals (snd twice_ctx_sol (Inl (FunctionEntry (STR ''twice''), ctx_call2)))) (STR ''Gx'')"
-  unfolding twice_ctx_sol_def twice_is_bot_pred_def ctx_call1_def ctx_call2_def by eval
+  unfolding ctx_call1_val ctx_call2_val twice_ctx_sol_def twice_is_bot_pred_def by eval
 
 text \<open>The solver-global carrier stays inert: every field of the Base-style specification
   threads its incoming \<open>g\<close> through unchanged, so the shared \<^const>\<open>Global\<close> unknown is

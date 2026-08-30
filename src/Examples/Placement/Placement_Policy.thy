@@ -62,8 +62,8 @@ where
       (body\<^sup># tf p)),
     dgs_return     = (\<lambda>e p. unit_step_placed keep_local publish_side
       (return\<^sup># tf e p)),
-    dgs_enter      = (\<lambda>xs es. unit_step_placed keep_local publish_side
-      (enter\<^sup># tf xs es)),
+    dgs_enter      = (\<lambda>ci. unit_step_placed keep_local publish_side
+      (snd o enter\<^sup># tf ci)),
     dgs_event      = (\<lambda>ev. unit_step_placed keep_local publish_side
       (event\<^sup># tf ev)),
     dgs_caller_cont = (\<lambda>_ d _. d),
@@ -77,8 +77,8 @@ lemma dg_spec_step_unit_placed:
   by (cases a) simp_all
 
 lemma dgs_enter_unit_dg_spec_placed:
-  "dgs_enter (unit_dg_spec_placed gs keep_local publish_side tf) fs as =
-    unit_step_placed keep_local publish_side (enter\<^sup># tf fs as)"
+  "dgs_enter (unit_dg_spec_placed gs keep_local publish_side tf) ci =
+    unit_step_placed keep_local publish_side (snd o enter\<^sup># tf ci)"
   unfolding unit_dg_spec_placed_def
   by simp
 
@@ -180,12 +180,12 @@ lemma gamma_join_enter_sound_placed:
   assumes cover: "\<forall>x. publish_side x \<or> keep_local x"
     and sound: "sound_transfer_for gs tf"
     and sc: "s \<in> gamma_join dc g"
-  shows "call_enter gs (CallEdge dst pars args) s \<in>
-           (case dgs_enter (unit_dg_spec_placed gs keep_local publish_side tf) pars args dc g of (g', d') \<Rightarrow> gamma_join d' g')"
+  shows "call_enter gs (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci)) s \<in>
+           (case dgs_enter (unit_dg_spec_placed gs keep_local publish_side tf) ci dc g of (g', d') \<Rightarrow> gamma_join d' g')"
 proof -
   have sc': "s \<in> \<lbrakk>dc \<squnion> g\<rbrakk>" using gamma_joinD[OF sc] .
-  have "call_enter gs (CallEdge dst pars args) s \<in> \<lbrakk>enter\<^sup># tf pars args (dc \<squnion> g)\<rbrakk>"
-    using sound_transfer_for.tf_sound_enter_for[OF sound sc']
+  have "call_enter gs (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci)) s \<in> \<lbrakk>snd (enter\<^sup># tf ci (dc \<squnion> g))\<rbrakk>"
+    using sound_transfer_for.tf_sound_enter_entry_for[OF sound sc']
     by (simp add: call_enter_CallEdge)
   then show ?thesis
     unfolding dgs_enter_unit_dg_spec_placed unit_step_placed_def gamma_join_def

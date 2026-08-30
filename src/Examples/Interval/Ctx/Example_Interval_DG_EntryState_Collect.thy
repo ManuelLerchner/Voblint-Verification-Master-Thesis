@@ -72,12 +72,15 @@ text \<open>The routed callee entry the solved system selects is the executable
 
 lemma rc_route_at_call:
   "entry_state_route_gen rc_gs rc_is_bot_pred (Statement 3) []
-     (enter_local (ectx_spec rc_gs rc_is_bot_pred) [(STR ''a'')] [V (STR ''x'')]
+     (enter_local (ectx_spec rc_gs rc_is_bot_pred)
+        (call_info_of (CallEdge (Some (STR ''y'')) [(STR ''a'')] [V (STR ''x'')])
+          (STR ''p''))
         (locals (snd (entry_state_sol rc_gs rc_is_bot_pred rc_pi rc_procs) (Inl (Statement 3, []))))
         (globs (snd (entry_state_sol rc_gs rc_is_bot_pred rc_pi rc_procs) (Inr Global))))
      (CallEdge (Some (STR ''y'')) [(STR ''a'')] [V (STR ''x'')])
    = ctx_call"
-  unfolding rc_is_bot_pred_def ctx_call_def rc_ctx_sol_def by eval
+  unfolding rc_is_bot_pred_def ctx_call_def rc_ctx_sol_def entry_state_route_gen_def
+  by (simp add: enter_local_ectx_spec_eq_entry_state_entered)
 
 lemma rc_call_fwd_ok:
   assumes cov: "(u, ctx) \<in> fst (entry_state_sol rc_gs rc_is_bot_pred rc_pi rc_procs)"
@@ -85,7 +88,8 @@ lemma rc_call_fwd_ok:
                \<in> calls (compile_prog rc_pi rc_procs)"
   shows "(FunctionEntry p,
             entry_state_route_gen rc_gs rc_is_bot_pred u ctx
-              (enter_local (ectx_spec rc_gs rc_is_bot_pred) pars args
+              (enter_local (ectx_spec rc_gs rc_is_bot_pred)
+                 (call_info_of (CallEdge dst pars args) p)
                  (locals (snd (entry_state_sol rc_gs rc_is_bot_pred rc_pi rc_procs) (Inl (u, ctx))))
                  (globs (snd (entry_state_sol rc_gs rc_is_bot_pred rc_pi rc_procs) (Inr Global))))
               (CallEdge dst pars args))
@@ -141,7 +145,8 @@ lemma rc_context_at_call:
   "entry_state_context rc_gs rc_is_bot_pred rc_pi rc_procs
      (Statement 3) [] s = ctx_call"
   by (simp add: entry_state_context_def[OF rc_entry_state_hyps]
-                rc_call_site_action rc_route_at_call)
+        rc_call_site_action rc_ctx_sol_def ctx_call_def Let_def
+        enter_local_ectx_spec_eq_entry_state_entered entry_state_route_gen_def)
 
 text \<open>The crux corollary: for \<^emph>\<open>every\<close> concrete store \<open>s\<close> that reaches the call site
   --- in particular every store obtained by any \<open>__voblint_nondet_int()\<close> outcome, since \<open>x\<close>'s

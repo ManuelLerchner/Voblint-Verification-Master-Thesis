@@ -30,7 +30,7 @@ subsection \<open>A structural-reachability unary step, alongside \<^const>\<ope
 text \<open>
   \<^const>\<open>unit_step_for\<close> reconstructs a complete state, applies the raw transfer, and splits
   -- with no notion of an unreachable input or a semantically-bottom result. This is the DG
-  analogue of the gap \<^theory>\<open>Voblint_Core.State_Restriction\<close>'s \<^const>\<open>res_edge\<close> closes
+  analogue of the gap \<open>DG_State_Reconstruction\<close>'s \<open>res_edge\<close> closes
   for a single reassembled environment. \<^const>\<open>assemble_local_global\<close> itself is not the right reconstruction
   primitive here: its \<open>Lifted d, Lifted g\<close> case joins with \<open>\<squnion>\<close>, but \<^const>\<open>unit_step_for\<close>
   reconstructs with \<^const>\<open>combine_env\<close>, a per-variable selector (\<open>\<lambda>x. if gs x then g x
@@ -559,7 +559,7 @@ record ('dl, 'dg) dg_spec =
   dgs_branch     :: "exp \<Rightarrow> bool \<Rightarrow> 'dl \<Rightarrow> 'dg \<Rightarrow> 'dg \<times> 'dl"
   dgs_body       :: "pname \<Rightarrow> 'dl \<Rightarrow> 'dg \<Rightarrow> 'dg \<times> 'dl"
   dgs_return     :: "exp option \<Rightarrow> pname \<Rightarrow> 'dl \<Rightarrow> 'dg \<Rightarrow> 'dg \<times> 'dl"
-  dgs_enter      :: "vname list \<Rightarrow> exp list \<Rightarrow> 'dl \<Rightarrow> 'dg \<Rightarrow> 'dg \<times> 'dl"
+  dgs_enter      :: "call_info \<Rightarrow> 'dl \<Rightarrow> 'dg \<Rightarrow> 'dg \<times> 'dl"
   dgs_event      :: "analysis_event \<Rightarrow> 'dl \<Rightarrow> 'dg \<Rightarrow> 'dg \<times> 'dl"
   dgs_caller_cont    :: "call_info \<Rightarrow> 'dl \<Rightarrow> 'dg \<Rightarrow> 'dl"
   dgs_combine_env    :: "call_info \<Rightarrow> 'dl \<Rightarrow> 'dl \<Rightarrow> 'dg \<Rightarrow> 'dg \<times> 'dl"
@@ -589,14 +589,14 @@ definition dgs_enter_pair ::
 where
   "dgs_enter_pair S ci dc g =
      (dgs_caller_cont S ci dc g,
-      dgs_enter S (ci_formals ci) (ci_args ci) dc g)"
+      dgs_enter S ci dc g)"
 
 lemma fst_dgs_enter_pair [simp]:
   "fst (dgs_enter_pair S ci dc g) = dgs_caller_cont S ci dc g"
   by (simp add: dgs_enter_pair_def)
 
 lemma snd_dgs_enter_pair [simp]:
-  "snd (dgs_enter_pair S ci dc g) = dgs_enter S (ci_formals ci) (ci_args ci) dc g"
+  "snd (dgs_enter_pair S ci dc g) = dgs_enter S ci dc g"
   by (simp add: dgs_enter_pair_def)
 
 text \<open>
@@ -843,7 +843,7 @@ where
     dgs_branch     = (\<lambda>b pol. unit_step_for gs (branch\<^sup># tf b pol)),
     dgs_body       = (\<lambda>p. unit_step_for gs (body\<^sup># tf p)),
     dgs_return     = (\<lambda>e p. unit_step_for gs (return\<^sup># tf e p)),
-    dgs_enter      = (\<lambda>xs es. unit_step_for gs (enter\<^sup># tf xs es)),
+    dgs_enter      = (\<lambda>ci. unit_step_for gs (snd o enter\<^sup># tf ci)),
     dgs_event      = (\<lambda>ev. unit_step_for gs (event\<^sup># tf ev)),
     dgs_caller_cont    = (\<lambda>_ d _. d),
     dgs_combine_env    = unit_combine_step_env_for gs,
@@ -871,8 +871,8 @@ lemma dg_spec_step_unit_for:
   by (cases a) simp_all
 
 lemma dgs_enter_unit_dg_spec_for:
-  "dgs_enter (unit_dg_spec_for gs tf) fs as =
-     unit_step_for gs (enter\<^sup># tf fs as)"
+  "dgs_enter (unit_dg_spec_for gs tf) ci =
+     unit_step_for gs (snd o enter\<^sup># tf ci)"
   unfolding unit_dg_spec_for_def
   by simp
 
@@ -900,7 +900,7 @@ where
     dgs_branch     = (\<lambda>b pol. unit_step_for_lifted gs is_bot_pred (branch\<^sup># tf b pol)),
     dgs_body       = (\<lambda>p. unit_step_for_lifted gs is_bot_pred (body\<^sup># tf p)),
     dgs_return     = (\<lambda>e p. unit_step_for_lifted gs is_bot_pred (return\<^sup># tf e p)),
-    dgs_enter      = (\<lambda>xs es. unit_step_for_lifted gs is_bot_pred (enter\<^sup># tf xs es)),
+    dgs_enter      = (\<lambda>ci. unit_step_for_lifted gs is_bot_pred (snd o enter\<^sup># tf ci)),
     dgs_event      = (\<lambda>ev. unit_step_for_lifted gs is_bot_pred (event\<^sup># tf ev)),
     dgs_caller_cont    = (\<lambda>_ d _. d),
     dgs_combine_env    = (\<lambda>ci dc de g. unit_combine_step_env_for_lifted gs ci dc g),
@@ -918,8 +918,8 @@ lemma dg_spec_step_unit_for_lifted:
   by (cases a) simp_all
 
 lemma dgs_enter_unit_dg_spec_for_lifted:
-  "dgs_enter (unit_dg_spec_for_lifted gs is_bot_pred tf) fs as =
-     unit_step_for_lifted gs is_bot_pred (enter\<^sup># tf fs as)"
+  "dgs_enter (unit_dg_spec_for_lifted gs is_bot_pred tf) ci =
+     unit_step_for_lifted gs is_bot_pred (snd o enter\<^sup># tf ci)"
   unfolding unit_dg_spec_for_lifted_def by simp
 
 lemma dgs_combine_unit_dg_spec_for_lifted:

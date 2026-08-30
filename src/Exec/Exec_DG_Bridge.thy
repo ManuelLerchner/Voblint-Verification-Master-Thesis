@@ -203,8 +203,8 @@ qed
 
 lemma dg_extra_of_commute_for:
   assumes Henter:
-    "\<And>xs es d g. map_prod (fun_of_exec_dg_st_for gs) (fun_of_exec_dg_st_for gs) (dgs_enter S_st xs es d g)
-      = dgs_enter S_abs xs es (fun_of_exec_dg_st_for gs d) (fun_of_exec_dg_st_for gs g)"
+    "\<And>ci d g. map_prod (fun_of_exec_dg_st_for gs) (fun_of_exec_dg_st_for gs) (dgs_enter S_st ci d g)
+      = dgs_enter S_abs ci (fun_of_exec_dg_st_for gs d) (fun_of_exec_dg_st_for gs g)"
   shows "list_all2 (dg_tree_st_commute_for gs \<sigma>_st)
       (dg_extra_of S_st g (\<lambda>_ _ _ _. ()) c' w) (dg_extra_of S_abs g (\<lambda>_ _ _ _. ()) c' w)"
   unfolding dg_extra_of_def
@@ -215,8 +215,8 @@ lemma dg_extra_of_commute_for:
 theorem part_post_solution_dg_st_to_abs_for:
   assumes Hstep: "\<And>a d g. map_prod (fun_of_exec_dg_st_for gs) (fun_of_exec_dg_st_for gs) (dg_spec_step S_st a d g)
                           = dg_spec_step S_abs a (fun_of_exec_dg_st_for gs d) (fun_of_exec_dg_st_for gs g)"
-      and Henter: "\<And>xs es d g. map_prod (fun_of_exec_dg_st_for gs) (fun_of_exec_dg_st_for gs) (dgs_enter S_st xs es d g)
-                            = dgs_enter S_abs xs es (fun_of_exec_dg_st_for gs d) (fun_of_exec_dg_st_for gs g)"
+      and Henter: "\<And>ci d g. map_prod (fun_of_exec_dg_st_for gs) (fun_of_exec_dg_st_for gs) (dgs_enter S_st ci d g)
+                            = dgs_enter S_abs ci (fun_of_exec_dg_st_for gs d) (fun_of_exec_dg_st_for gs g)"
       and Hcomb: "\<And>ci dc de g. map_prod (fun_of_exec_dg_st_for gs) (fun_of_exec_dg_st_for gs) (dgs_combine S_st ci dc de g)
                             = dgs_combine S_abs ci (fun_of_exec_dg_st_for gs dc) (fun_of_exec_dg_st_for gs de) (fun_of_exec_dg_st_for gs g)"
       and Hcont: "\<And>ci d g. fun_of_exec_dg_st_for gs (caller_cont S_st ci d g)
@@ -312,8 +312,8 @@ qed
 
 lemma dg_extra_of_commute_lifted_for:
   assumes Henter:
-    "\<And>xs es d g. map_prod (map_lift (fun_of_resolved_st_q_for gs)) (map_lift (fun_of_resolved_st_q_for gs)) (dgs_enter S_st xs es d g)
-      = dgs_enter S_abs xs es (map_lift (fun_of_resolved_st_q_for gs) d) (map_lift (fun_of_resolved_st_q_for gs) g)"
+    "\<And>ci d g. map_prod (map_lift (fun_of_resolved_st_q_for gs)) (map_lift (fun_of_resolved_st_q_for gs)) (dgs_enter S_st ci d g)
+      = dgs_enter S_abs ci (map_lift (fun_of_resolved_st_q_for gs) d) (map_lift (fun_of_resolved_st_q_for gs) g)"
   shows "list_all2 (dg_reader_commute_gen.dg_tree_st_commute
              (map_lift (fun_of_resolved_st_q_for gs)) (map_lift (fun_of_resolved_st_q_for gs)) \<sigma>_st)
       (dg_extra_of S_st g (\<lambda>_ _ _ _. ()) c' w) (dg_extra_of S_abs g (\<lambda>_ _ _ _. ()) c' w)"
@@ -332,9 +332,9 @@ theorem part_post_solution_dg_st_to_abs_lifted_for:
   assumes Hstep: "\<And>a d g. map_prod (map_lift (fun_of_resolved_st_q_for gs)) (map_lift (fun_of_resolved_st_q_for gs))
                           (dg_spec_step S_st a d g)
                         = dg_spec_step S_abs a (map_lift (fun_of_resolved_st_q_for gs) d) (map_lift (fun_of_resolved_st_q_for gs) g)"
-      and Henter: "\<And>xs es d g. map_prod (map_lift (fun_of_resolved_st_q_for gs)) (map_lift (fun_of_resolved_st_q_for gs))
-                            (dgs_enter S_st xs es d g)
-                          = dgs_enter S_abs xs es (map_lift (fun_of_resolved_st_q_for gs) d) (map_lift (fun_of_resolved_st_q_for gs) g)"
+      and Henter: "\<And>ci d g. map_prod (map_lift (fun_of_resolved_st_q_for gs)) (map_lift (fun_of_resolved_st_q_for gs))
+                            (dgs_enter S_st ci d g)
+                          = dgs_enter S_abs ci (map_lift (fun_of_resolved_st_q_for gs) d) (map_lift (fun_of_resolved_st_q_for gs) g)"
       and Hcomb: "\<And>ci dc de g. map_prod (map_lift (fun_of_resolved_st_q_for gs)) (map_lift (fun_of_resolved_st_q_for gs))
                             (dgs_combine S_st ci dc de g)
                           = dgs_combine S_abs ci (map_lift (fun_of_resolved_st_q_for gs) dc)

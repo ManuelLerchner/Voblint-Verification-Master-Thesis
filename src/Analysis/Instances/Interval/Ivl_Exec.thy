@@ -46,15 +46,15 @@ lemma branch_ivl_st_for_eq [simp]:
   by (simp add: branch_ivl_st_for_def generic_branch_st_for_def ivl_ops_def)
 
 definition ivl_enter_st_for ::
-  "(vname => bool) => vname list => exp list =>
+  "(vname => bool) => call_info =>
    ivl resolved_st_q => ivl resolved_st_q" where
   "ivl_enter_st_for = generic_enter_st_for ivl_ops"
 
 lemma ivl_enter_st_for_eq [simp]:
-  "ivl_enter_st_for gs xs es s =
-    bind_formals_resolved_q gs xs
+  "ivl_enter_st_for gs ci s =
+    bind_formals_resolved_q gs (ci_formals ci)
       (map (\<lambda>e. aval_ivl e
-        (fun_of_resolved_st_q_for gs s)) es)
+        (fun_of_resolved_st_q_for gs s)) (ci_args ci))
       (enter_frame_D_resolved_q ivl_top s)"
   by (simp add: ivl_enter_st_for_def generic_enter_st_for_def ivl_ops_def)
 
@@ -394,7 +394,7 @@ lemma ivl_enter_st_for_singleton_agree:
     and location_in: "location \<in> universe"
     and canonical: "location = location_of gs (location_vname location)"
   shows
-    "lookup_resolved_st_q (ivl_enter_st_for gs [x] [e] s_exec) location =
+    "lookup_resolved_st_q (ivl_enter_st_for gs (call_info_of (CallEdge None [x] [e]) undefined) s_exec) location =
       enter_ivl_for gs [x] [e] s_abs (location_vname location)"
 proof (cases location)
   case (Global_Location y)
@@ -412,7 +412,7 @@ proof (cases location)
     by (rule agree_global[OF vg mem])
   show ?thesis
     unfolding ivl_enter_st_for_eq enter_ivl_for_def enter_D_def
-      enter_frame_D_def
+      enter_frame_def
     using not_x agree yneqx vg
     by (simp add: bind_formals_resolved_q_singleton Global_Location
       fun_of_resolved_st_q_for_def loy)
@@ -435,7 +435,7 @@ next
       using Local_Location False formal_not_global by (simp add: location_of_def)
     show ?thesis
       unfolding ivl_enter_st_for_eq enter_ivl_for_def enter_D_def
-        enter_frame_D_def
+        enter_frame_def
       using Local_Location not_x False not_g
       by (simp add: bind_formals_resolved_q_singleton)
   qed
@@ -446,54 +446,44 @@ subsection \<open>Unscoped executable/abstract correspondence, generic in the cl
 lemma ivl_tf_st_for_commute:
   "fun_of_resolved_st_q_for gs (ivl_tf_st_for gs a s) =
    apply_tf (ivl_tf_for gs) a (fun_of_resolved_st_q_for gs s)"
-proof (rule apply_tf_eqI[
-    where H = "\<lambda>f. f (fun_of_resolved_st_q_for gs s)"])
-  show "fun_of_resolved_st_q_for gs (ivl_tf_st_for gs EA_Nop s) =
-      apply_tf (ivl_tf_for gs) EA_Nop (fun_of_resolved_st_q_for gs s)"
-    by (simp add: ivl_tf_for_def skip_ivl_def)
-  show "\<And>x e. fun_of_resolved_st_q_for gs
-      (ivl_tf_st_for gs (EA_Assign x e) s) =
-    apply_tf (ivl_tf_for gs) (EA_Assign x e) (fun_of_resolved_st_q_for gs s)"
-    by (simp add: ivl_tf_for_def assign_ivl_def)
-  show "\<And>sc x. fun_of_resolved_st_q_for gs
-      (ivl_tf_st_for gs (EA_Special sc x) s) =
-    apply_tf (ivl_tf_for gs) (EA_Special sc x) (fun_of_resolved_st_q_for gs s)"
-    by (auto simp: ivl_tf_for_def split: special_call.splits)
-  show "\<And>b. fun_of_resolved_st_q_for gs
-      (ivl_tf_st_for gs (EA_Assume b) s) =
-    apply_tf (ivl_tf_for gs) (EA_Assume b) (fun_of_resolved_st_q_for gs s)"
-    by (rule ivl_tf_st_for_assume_agree[OF refl])
-  show "\<And>b. fun_of_resolved_st_q_for gs
-      (ivl_tf_st_for gs (EA_AssumeNot b) s) =
-    apply_tf (ivl_tf_for gs) (EA_AssumeNot b)
-      (fun_of_resolved_st_q_for gs s)"
-    by (rule ivl_tf_st_for_assume_not_agree[OF refl])
-  show "\<And>ea p. fun_of_resolved_st_q_for gs
-      (ivl_tf_st_for gs (EA_Ret ea p) s) =
-    apply_tf (ivl_tf_for gs) (EA_Ret ea p) (fun_of_resolved_st_q_for gs s)"
-  proof -
-    fix ea p
-    show "fun_of_resolved_st_q_for gs (ivl_tf_st_for gs (EA_Ret ea p) s) =
-      apply_tf (ivl_tf_for gs) (EA_Ret ea p) (fun_of_resolved_st_q_for gs s)"
-    proof (cases ea)
-      case None
-      then show ?thesis by (simp add: ivl_tf_for_def skip_ivl_def return_ivl_def)
-    next
-      case (Some a)
-      then show ?thesis by (simp add: ivl_tf_for_def return_ivl_def assign_ivl_def)
-    qed
+proof (cases a)
+  case EA_Nop
+  then show ?thesis by (simp add: ivl_tf_for_def skip_ivl_def)
+next
+  case (EA_Assign x e)
+  then show ?thesis by (simp add: ivl_tf_for_def assign_ivl_def)
+next
+  case (EA_Special sc x)
+  then show ?thesis by (auto simp: ivl_tf_for_def split: special_call.splits)
+next
+  case (EA_Assume b)
+  then show ?thesis unfolding \<open>a = EA_Assume b\<close> by (metis ivl_tf_st_for_assume_agree)
+next
+  case (EA_AssumeNot b)
+  then show ?thesis unfolding \<open>a = EA_AssumeNot b\<close>
+    by (metis ivl_tf_st_for_assume_not_agree)
+next
+  case (EA_Ret ea p)
+  then show ?thesis
+  proof (cases ea)
+    case None
+    then show ?thesis using \<open>a = EA_Ret ea p\<close>
+      by (simp add: ivl_tf_for_def skip_ivl_def return_ivl_def)
+  next
+    case (Some av)
+    then show ?thesis using \<open>a = EA_Ret ea p\<close>
+      by (simp add: ivl_tf_for_def return_ivl_def assign_ivl_def)
   qed
-  show "\<And>c. fun_of_resolved_st_q_for gs
-      (ivl_tf_st_for gs (EA_Check c) s) =
-    apply_tf (ivl_tf_for gs) (EA_Check c) (fun_of_resolved_st_q_for gs s)"
-    by (simp add: ivl_tf_for_def event_ivl_def)
+next
+  case (EA_Check c)
+  then show ?thesis by (simp add: ivl_tf_for_def event_ivl_def)
 qed
 
 lemma ivl_enter_st_for_commute:
-  "fun_of_resolved_st_q_for gs (ivl_enter_st_for gs xs es s) =
-   enter\<^sup># (ivl_tf_for gs) xs es (fun_of_resolved_st_q_for gs s)"
-  by (simp add: enter_D_def enter_ivl_for_def
-      ivl_tf_for_def)
+  "fun_of_resolved_st_q_for gs (ivl_enter_st_for gs ci s) =
+   snd (enter\<^sup># (ivl_tf_for gs) ci (fun_of_resolved_st_q_for gs s))"
+  by (simp add: enter_D_def enter_frame_def enter_pair_ivl_for_def enter_pair_D_def
+      ivl_tf_for_def fun_of_resolved_st_q_for_enter_frame)
 
 
 end

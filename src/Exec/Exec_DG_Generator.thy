@@ -44,9 +44,10 @@ definition dg_extra_of ::
      \<Rightarrow> (pp \<times> unit, unit, ('d, 'h) dg_state) strategy_tree list"
 where
   "dg_extra_of S g route ctx v =
-     map (\<lambda>(cl, ca). case ca of CallEdge dst fs as \<Rightarrow>
+     map (\<lambda>(cl, ca).
        map_gtree (\<lambda>_. ()) (map_ltree (\<lambda>w. (w, ctx))
-         (dg_edge_tree (dgs_enter S fs as) cl))) (entry_call_list g v)"
+         (dg_edge_tree (dgs_enter S (call_info_of ca (case v of FunctionEntry p \<Rightarrow> p | _ \<Rightarrow> undefined)))
+            cl))) (entry_call_list g v)"
 
 definition dg_gen_of ::
   "(('d::bounded_semilattice_sup_bot), ('h::bounded_semilattice_sup_bot)) dg_spec \<Rightarrow> cfg \<Rightarrow> 'd \<Rightarrow> 'd \<Rightarrow> 'h
@@ -171,8 +172,8 @@ lemma placed_hook_se_edge:
     and keep_local publish_side :: "scoped_location => bool"
     and transfer_st :: "edge_action => ('a::bounded_semilattice_sup_bot) exec_dg_st => 'a exec_dg_st"
     and transfer_abs :: "edge_action => 'a abs_state => 'a abs_state"
-    and enter_st :: "vname list => exp list => 'a exec_dg_st => 'a exec_dg_st"
-    and enter_abs :: "vname list => exp list => 'a abs_state => 'a abs_state"
+    and enter_st :: "call_info => 'a exec_dg_st => 'a exec_dg_st"
+    and enter_abs :: "call_info => 'a abs_state => 'a abs_state \<times> 'a abs_state"
     and g :: cfg and bot0 :: "'a exec_dg_st" and s0d s0g :: "'a exec_dg_st"
     and bot0_abs :: "'a abs_state" and s0d_abs s0g_abs :: "'a abs_state" and top_val :: 'a
     and sigma_exec :: "pp \<times> unit + unit => ('a exec_dg_st, 'a exec_dg_st) dg_state"
@@ -330,8 +331,8 @@ lemma placed_hook_se_entry:
     and keep_local publish_side :: "scoped_location => bool"
     and transfer_st :: "edge_action => ('a::bounded_semilattice_sup_bot) exec_dg_st => 'a exec_dg_st"
     and transfer_abs :: "edge_action => 'a abs_state => 'a abs_state"
-    and enter_st :: "vname list => exp list => 'a exec_dg_st => 'a exec_dg_st"
-    and enter_abs :: "vname list => exp list => 'a abs_state => 'a abs_state"
+    and enter_st :: "call_info => 'a exec_dg_st => 'a exec_dg_st"
+    and enter_abs :: "call_info => 'a abs_state => 'a abs_state \<times> 'a abs_state"
     and g :: cfg and bot0 :: "'a exec_dg_st" and s0d s0g :: "'a exec_dg_st"
     and bot0_abs :: "'a abs_state" and s0d_abs s0g_abs :: "'a abs_state" and top_val :: 'a
     and sigma_exec :: "pp \<times> unit + unit => ('a exec_dg_st, 'a exec_dg_st) dg_state"
@@ -1566,8 +1567,8 @@ qed
 
 lemma dg_tree_st_commute_routed_cmb_g_at:
   assumes seed_ne: "\<And>p c. seed_key p c \<noteq> gk0"
-    and Henter: "\<And>xs es d g'. map_prod Fglob Floc (dgs_enter S_st xs es d g')
-                      = dgs_enter S_abs xs es (Floc d) (Fglob g')"
+    and Henter: "\<And>ci d g'. map_prod Fglob Floc (dgs_enter S_st ci d g')
+                      = dgs_enter S_abs ci (Floc d) (Fglob g')"
     and Hcomb:  "\<And>ci dc de g'. map_prod Fglob Floc (dgs_combine S_st ci dc de g')
                       = dgs_combine S_abs ci (Floc dc) (Floc de) (Fglob g')"
     and Hcont:  "\<And>ci d g'. Floc (caller_cont S_st ci d g')
@@ -1579,19 +1580,19 @@ lemma dg_tree_st_commute_routed_cmb_g_at:
               (Floc caller) (Fglob globals1) p)"
 proof -
   obtain dst fs as where ca_eq: "ca = CallEdge dst fs as" by (cases ca) auto
-  let ?entry = "enter_local S_st fs as caller globals1"
-  let ?ctx' = "route_st cc ctx ?entry (CallEdge dst fs as)"
-  let ?eg = "enter_global S_st fs as caller globals1"
-  let ?callee = "locals (\<sigma>_st (Inl (FunctionResult p, ?ctx')))"
   let ?ci = "call_info_of (CallEdge dst fs as) p"
+  let ?entry = "enter_local S_st ?ci caller globals1"
+  let ?ctx' = "route_st cc ctx ?entry (CallEdge dst fs as)"
+  let ?eg = "enter_global S_st ?ci caller globals1"
+  let ?callee = "locals (\<sigma>_st (Inl (FunctionResult p, ?ctx')))"
   let ?dcont = "caller_cont S_st ?ci caller globals1"
   let ?globals2 = "globs (\<sigma>_st (Inr gk0))"
   let ?cg = "combine_global S_st ?ci ?dcont ?callee ?globals2"
-  have Henter_g: "\<And>xs es d g'. Fglob (enter_global S_st xs es d g')
-                    = enter_global S_abs xs es (Floc d) (Fglob g')"
+  have Henter_g: "\<And>ci d g'. Fglob (enter_global S_st ci d g')
+                    = enter_global S_abs ci (Floc d) (Fglob g')"
     using Henter by (metis map_prod_simp fst_conv surj_pair)
-  have Henter_l: "\<And>xs es d g'. Floc (enter_local S_st xs es d g')
-                    = enter_local S_abs xs es (Floc d) (Fglob g')"
+  have Henter_l: "\<And>ci d g'. Floc (enter_local S_st ci d g')
+                    = enter_local S_abs ci (Floc d) (Fglob g')"
     using Henter by (metis map_prod_simp snd_conv surj_pair)
   have Hcomb_g: "\<And>ci dc de g'. Fglob (combine_global S_st ci dc de g')
                     = combine_global S_abs ci (Floc dc) (Floc de) (Fglob g')"
@@ -1599,7 +1600,7 @@ proof -
   have Hcomb_l: "\<And>ci dc de g'. Floc (combine_local S_st ci dc de g')
                     = combine_local S_abs ci (Floc dc) (Floc de) (Fglob g')"
     using Hcomb by (metis map_prod_simp snd_conv surj_pair)
-  have route_eq: "route_abs cc ctx (enter_local S_abs fs as (Floc caller) (Fglob globals1))
+  have route_eq: "route_abs cc ctx (enter_local S_abs ?ci (Floc caller) (Fglob globals1))
         (CallEdge dst fs as) = ?ctx'"
     using Hroute[of cc ctx ?entry "CallEdge dst fs as"] by (simp add: Henter_l)
   have trav: "traverse_rhs
@@ -1667,8 +1668,8 @@ text \<open>The call site itself: the resolver must answer the same targets on b
 
 lemma dg_tree_st_commute_routed_cmb_g:
   assumes seed_ne: "\<And>p c. seed_key p c \<noteq> gk0"
-    and Henter: "\<And>xs es d g'. map_prod Fglob Floc (dgs_enter S_st xs es d g')
-                      = dgs_enter S_abs xs es (Floc d) (Fglob g')"
+    and Henter: "\<And>ci d g'. map_prod Fglob Floc (dgs_enter S_st ci d g')
+                      = dgs_enter S_abs ci (Floc d) (Fglob g')"
     and Hcomb:  "\<And>ci dc de g'. map_prod Fglob Floc (dgs_combine S_st ci dc de g')
                       = dgs_combine S_abs ci (Floc dc) (Floc de) (Fglob g')"
     and Hcont:  "\<And>ci d g'. Floc (caller_cont S_st ci d g')

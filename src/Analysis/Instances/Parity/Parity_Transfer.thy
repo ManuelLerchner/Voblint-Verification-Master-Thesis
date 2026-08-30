@@ -108,14 +108,14 @@ subsection \<open>Classifier-parametric transfer\<close>
 
 text \<open>
   Entry and combine are the only fields that consult a classifier (inside
-  \<^const>\<open>enter_frame_D\<close> and \<^const>\<open>combine_env\<close>); assignment and guard
+  \<^const>\<open>enter_frame\<close> and \<^const>\<open>combine_env\<close>); assignment and guard
   transfer never do, so the bundled transfer function is parametric in the
   classifier throughout (mirroring \<open>sign_tf_for\<close> for the sign domain).
 \<close>
 
 definition enter_frame_parity_for ::
     "(vname => bool) => parity abs_state => parity abs_state" where
-  "enter_frame_parity_for gs = enter_frame_D gs PTop"
+  "enter_frame_parity_for gs = enter_frame gs PTop"
 
 definition enter_parity_for ::
     "(vname => bool) => vname list => exp list =>
@@ -126,7 +126,7 @@ lemma enter_frame_parity_for_sound:
   assumes gs: "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
   shows "enter_state cls s \<in> \<lbrakk>enter_frame_parity_for cls \<sigma>\<rbrakk>"
   unfolding enter_frame_parity_for_def
-proof (rule enter_frame_D_sound[OF gs])
+proof (rule enter_frame_sound[OF gs])
   show "gamma PTop = UNIV" by simp
 qed
 
@@ -145,6 +145,26 @@ next
     using V by (simp add: list_all2_conv_all_nth aval_parity_sound)
 qed
 
+definition enter_pair_parity_for ::
+    "(vname => bool) => call_info => parity abs_state => parity abs_state \<times> parity abs_state" where
+  "enter_pair_parity_for gs = enter_pair_D gs PTop aval_parity"
+
+lemma enter_pair_parity_for_sound:
+  assumes gs: "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
+  shows "s \<in> \<lbrakk>fst (enter_pair_parity_for cls ci \<sigma>)\<rbrakk>"
+    and "bind_formals (ci_formals ci) (map (\<lambda>e. aval e s) (ci_args ci)) (enter_state cls s)
+           \<in> \<lbrakk>snd (enter_pair_parity_for cls ci \<sigma>)\<rbrakk>"
+  unfolding enter_pair_parity_for_def
+proof -
+  show "s \<in> \<lbrakk>fst (enter_pair_D cls PTop aval_parity ci \<sigma>)\<rbrakk>"
+    using gs by (simp add: enter_pair_D_def)
+next
+  show "bind_formals (ci_formals ci) (map (\<lambda>e. aval e s) (ci_args ci)) (enter_state cls s)
+          \<in> \<lbrakk>snd (enter_pair_D cls PTop aval_parity ci \<sigma>)\<rbrakk>"
+    using enter_parity_for_sound[OF gs, of "ci_formals ci" "ci_args ci"]
+    by (simp add: enter_pair_D_def enter_parity_for_def)
+qed
+
 definition parity_tf_for :: "(vname => bool) => parity domain_transfer" where
   "parity_tf_for gs = (| tf_assign  = assign_parity,
                          tf_special = special_parity,
@@ -152,9 +172,8 @@ definition parity_tf_for :: "(vname => bool) => parity domain_transfer" where
                          tf_skip    = skip_parity,
                          tf_body    = body_parity,
                          tf_return  = return_parity,
-                         tf_enter   = enter_parity_for gs,
+                         tf_enter   = enter_pair_parity_for gs,
                          tf_event   = event_parity,
-                         tf_caller_cont = (\<lambda>_ \<sigma>. \<sigma>),
                          tf_combine_env = (\<lambda>_. combine_env gs) |)"
 
 lemma parity_is_sound_transfer_for: "sound_transfer_for gs (parity_tf_for gs)"
@@ -166,16 +185,16 @@ lemma parity_is_sound_transfer_for: "sound_transfer_for gs (parity_tf_for gs)"
   subgoal by (simp add: skip_parity_sound)
   subgoal by (simp add: body_parity_sound)
   subgoal by (simp add: return_parity_sound)
-  subgoal by (simp add: enter_parity_for_sound)
+  subgoal by (simp add: enter_pair_parity_for_sound)
   subgoal by (simp add: event_parity_sound)
-  subgoal by simp
+  subgoal by (simp add: enter_pair_parity_for_sound)
   subgoal by (simp add: combine_env_sound)
   done
 
 lemma enter_frame_parity_for_mono:
   assumes "s1 \<le> s2"
   shows "enter_frame_parity_for gs s1 \<le> enter_frame_parity_for gs s2"
-  unfolding enter_frame_parity_for_def by (rule enter_frame_D_mono[OF assms])
+  unfolding enter_frame_parity_for_def by (rule enter_frame_mono[OF assms])
 
 lemma enter_parity_for_mono:
   assumes "s1 \<le> s2"

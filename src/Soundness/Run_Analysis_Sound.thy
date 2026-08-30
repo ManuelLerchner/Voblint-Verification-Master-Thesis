@@ -99,8 +99,8 @@ theorem dg_exec_run_source_sound_for:
   assumes sds: "sound_dg_spec_ltr_for S_abs gammaDG gs"
     and Hstep: "\<And>a d g. map_prod (fun_of_exec_dg_st_for gs) (fun_of_exec_dg_st_for gs) (dg_spec_step S_st a d g)
                         = dg_spec_step S_abs a (fun_of_exec_dg_st_for gs d) (fun_of_exec_dg_st_for gs g)"
-    and Henter: "\<And>xs es d g. map_prod (fun_of_exec_dg_st_for gs) (fun_of_exec_dg_st_for gs) (dgs_enter S_st xs es d g)
-                        = dgs_enter S_abs xs es (fun_of_exec_dg_st_for gs d) (fun_of_exec_dg_st_for gs g)"
+    and Henter: "\<And>ci d g. map_prod (fun_of_exec_dg_st_for gs) (fun_of_exec_dg_st_for gs) (dgs_enter S_st ci d g)
+                        = dgs_enter S_abs ci (fun_of_exec_dg_st_for gs d) (fun_of_exec_dg_st_for gs g)"
     and Hcomb: "\<And>ci dc de g. map_prod (fun_of_exec_dg_st_for gs) (fun_of_exec_dg_st_for gs) (dgs_combine S_st ci dc de g)
                         = dgs_combine S_abs ci (fun_of_exec_dg_st_for gs dc) (fun_of_exec_dg_st_for gs de) (fun_of_exec_dg_st_for gs g)"
     and Hcont: "\<And>ci d g. fun_of_exec_dg_st_for gs (caller_cont S_st ci d g)
@@ -152,8 +152,8 @@ theorem dg_exec_collect_sound_for:
   assumes sds: "sound_dg_spec_ltr_for S_abs gammaDG gs"
     and Hstep: "\<And>a d g. map_prod (fun_of_exec_dg_st_for gs) (fun_of_exec_dg_st_for gs) (dg_spec_step S_st a d g)
                         = dg_spec_step S_abs a (fun_of_exec_dg_st_for gs d) (fun_of_exec_dg_st_for gs g)"
-    and Henter: "\<And>xs es d g. map_prod (fun_of_exec_dg_st_for gs) (fun_of_exec_dg_st_for gs) (dgs_enter S_st xs es d g)
-                        = dgs_enter S_abs xs es (fun_of_exec_dg_st_for gs d) (fun_of_exec_dg_st_for gs g)"
+    and Henter: "\<And>ci d g. map_prod (fun_of_exec_dg_st_for gs) (fun_of_exec_dg_st_for gs) (dgs_enter S_st ci d g)
+                        = dgs_enter S_abs ci (fun_of_exec_dg_st_for gs d) (fun_of_exec_dg_st_for gs g)"
     and Hcomb: "\<And>ci dc de g. map_prod (fun_of_exec_dg_st_for gs) (fun_of_exec_dg_st_for gs) (dgs_combine S_st ci dc de g)
                         = dgs_combine S_abs ci (fun_of_exec_dg_st_for gs dc) (fun_of_exec_dg_st_for gs de) (fun_of_exec_dg_st_for gs g)"
     and Hcont: "\<And>ci d g. fun_of_exec_dg_st_for gs (caller_cont S_st ci d g)
@@ -209,11 +209,11 @@ lemma unit_dg_Hstep_for:
         [where f_st = "tf_st a" and f_abs = "apply_tf tf a", OF commute])
 
 lemma unit_dg_Henter_for:
-  assumes enter_commute: "\<And>xs es s. fun_of_exec_dg_st_for gs (enter_st xs es s) = enter\<^sup># tf xs es (fun_of_exec_dg_st_for gs s)"
+  assumes enter_commute: "\<And>ci s. fun_of_exec_dg_st_for gs (enter_st ci s) = snd (enter\<^sup># tf ci (fun_of_exec_dg_st_for gs s))"
   shows "map_prod (fun_of_exec_dg_st_for gs) (fun_of_exec_dg_st_for gs)
-             (dgs_enter (unit_dg_spec_st_for gs tf_st enter_st) xs es d g)
-           = dgs_enter (unit_dg_spec_for gs tf) xs es (fun_of_exec_dg_st_for gs d) (fun_of_exec_dg_st_for gs g)"
-  by (simp add: unit_dg_spec_st_for_def dgs_enter_unit_dg_spec_for unit_step_st_commute_for enter_commute)
+             (dgs_enter (unit_dg_spec_st_for gs tf_st enter_st) ci d g)
+           = dgs_enter (unit_dg_spec_for gs tf) ci (fun_of_exec_dg_st_for gs d) (fun_of_exec_dg_st_for gs g)"
+  by (simp add: unit_dg_spec_st_for_def dgs_enter_unit_dg_spec_for unit_step_st_commute_for enter_commute comp_def)
 
 lemma unit_dg_Hcomb_for:
   "map_prod (fun_of_exec_dg_st_for gs) (fun_of_exec_dg_st_for gs)
@@ -249,7 +249,7 @@ locale unit_dg_exec_analysis =
   fixes gs :: "vname \<Rightarrow> bool"
     and tf :: "'a::sound_domain domain_transfer"
     and tf_st :: "edge_action \<Rightarrow> 'a exec_dg_st \<Rightarrow> 'a exec_dg_st"
-    and enter_st :: "vname list \<Rightarrow> exp list \<Rightarrow> 'a exec_dg_st \<Rightarrow> 'a exec_dg_st"
+    and enter_st :: "call_info \<Rightarrow> 'a exec_dg_st \<Rightarrow> 'a exec_dg_st"
     and solve :: "(pp \<times> unit, unit, ('a exec_dg_st, 'a exec_dg_st) dg_state) eqsT
                    \<Rightarrow> pp \<times> unit
                    \<Rightarrow> (pp \<times> unit) set \<times>
@@ -269,9 +269,9 @@ locale unit_dg_exec_analysis =
         fun_of_exec_dg_st_for gs (tf_st a s) =
         apply_tf tf a (fun_of_exec_dg_st_for gs s)"
     and enter_commute[simp]:
-      "\<And>xs es s.
-        fun_of_exec_dg_st_for gs (enter_st xs es s) =
-        enter\<^sup># tf xs es (fun_of_exec_dg_st_for gs s)"
+      "\<And>ci s.
+        fun_of_exec_dg_st_for gs (enter_st ci s) =
+        snd (enter\<^sup># tf ci (fun_of_exec_dg_st_for gs s))"
     and solver_pps:
       "\<And>eqs x. solve_c eqs x \<noteq> None \<Longrightarrow>
         part_post_solution eqs x
@@ -377,9 +377,9 @@ theorem dg_exec_run_source_sound_lifted_for:
     and Hstep: "\<And>a d g. map_prod (map_lift (fun_of_exec_dg_st_for gs)) (map_lift (fun_of_exec_dg_st_for gs))
                         (dg_spec_step S_st a d g)
                       = dg_spec_step S_abs a (map_lift (fun_of_exec_dg_st_for gs) d) (map_lift (fun_of_exec_dg_st_for gs) g)"
-    and Henter: "\<And>xs es d g. map_prod (map_lift (fun_of_exec_dg_st_for gs)) (map_lift (fun_of_exec_dg_st_for gs))
-                        (dgs_enter S_st xs es d g)
-                      = dgs_enter S_abs xs es (map_lift (fun_of_exec_dg_st_for gs) d) (map_lift (fun_of_exec_dg_st_for gs) g)"
+    and Henter: "\<And>ci d g. map_prod (map_lift (fun_of_exec_dg_st_for gs)) (map_lift (fun_of_exec_dg_st_for gs))
+                        (dgs_enter S_st ci d g)
+                      = dgs_enter S_abs ci (map_lift (fun_of_exec_dg_st_for gs) d) (map_lift (fun_of_exec_dg_st_for gs) g)"
     and Hcomb: "\<And>ci dc de g. map_prod (map_lift (fun_of_exec_dg_st_for gs)) (map_lift (fun_of_exec_dg_st_for gs))
                         (dgs_combine S_st ci dc de g)
                       = dgs_combine S_abs ci (map_lift (fun_of_exec_dg_st_for gs) dc)
@@ -429,9 +429,9 @@ theorem dg_exec_collect_sound_lifted_for:
     and Hstep: "\<And>a d g. map_prod (map_lift (fun_of_exec_dg_st_for gs)) (map_lift (fun_of_exec_dg_st_for gs))
                         (dg_spec_step S_st a d g)
                       = dg_spec_step S_abs a (map_lift (fun_of_exec_dg_st_for gs) d) (map_lift (fun_of_exec_dg_st_for gs) g)"
-    and Henter: "\<And>xs es d g. map_prod (map_lift (fun_of_exec_dg_st_for gs)) (map_lift (fun_of_exec_dg_st_for gs))
-                        (dgs_enter S_st xs es d g)
-                      = dgs_enter S_abs xs es (map_lift (fun_of_exec_dg_st_for gs) d) (map_lift (fun_of_exec_dg_st_for gs) g)"
+    and Henter: "\<And>ci d g. map_prod (map_lift (fun_of_exec_dg_st_for gs)) (map_lift (fun_of_exec_dg_st_for gs))
+                        (dgs_enter S_st ci d g)
+                      = dgs_enter S_abs ci (map_lift (fun_of_exec_dg_st_for gs) d) (map_lift (fun_of_exec_dg_st_for gs) g)"
     and Hcomb: "\<And>ci dc de g. map_prod (map_lift (fun_of_exec_dg_st_for gs)) (map_lift (fun_of_exec_dg_st_for gs))
                         (dgs_combine S_st ci dc de g)
                       = dgs_combine S_abs ci (map_lift (fun_of_exec_dg_st_for gs) dc)
@@ -487,7 +487,7 @@ locale base_dg_exec_analysis =
   fixes gs :: "vname \<Rightarrow> bool"
     and tf :: "'a::sound_domain domain_transfer"
     and tf_st :: "edge_action \<Rightarrow> 'a exec_dg_st \<Rightarrow> 'a exec_dg_st"
-    and enter_st :: "vname list \<Rightarrow> exp list \<Rightarrow> 'a exec_dg_st \<Rightarrow> 'a exec_dg_st"
+    and enter_st :: "call_info \<Rightarrow> 'a exec_dg_st \<Rightarrow> 'a exec_dg_st"
     and is_bot_pred :: "'a exec_dg_st \<Rightarrow> bool"
     and solve :: "(pp \<times> unit, unit,
                     ('a exec_dg_st lifted, 'g::bounded_semilattice_sup_bot exec_dg_st lifted) dg_state) eqsT
@@ -509,9 +509,9 @@ locale base_dg_exec_analysis =
         fun_of_exec_dg_st_for gs (tf_st a s) =
         apply_tf tf a (fun_of_exec_dg_st_for gs s)"
     and enter_commute[simp]:
-      "\<And>xs es s.
-        fun_of_exec_dg_st_for gs (enter_st xs es s) =
-        enter\<^sup># tf xs es (fun_of_exec_dg_st_for gs s)"
+      "\<And>ci s.
+        fun_of_exec_dg_st_for gs (enter_st ci s) =
+        snd (enter\<^sup># tf ci (fun_of_exec_dg_st_for gs s))"
     and is_bot_exact[simp]:
       "\<And>s. is_bot_pred s = is_bot_state (fun_of_exec_dg_st_for gs s)"
     and solver_pps:

@@ -13,7 +13,7 @@ text \<open>
   it and never reads from it. \<open>gs\<close> appears only inside \<open>tf\<close>'s own
   \<open>tf_enter\<close>/\<open>tf_combine_env\<close> fields, i.e. only for the VIMP call-boundary
   scoping rule (globals persist, locals reset/bind formals) that
-  \<^const>\<open>combine_env\<close> and \<^const>\<open>enter_frame_D\<close> already implement; no
+  \<^const>\<open>combine_env\<close> and \<^const>\<open>enter_frame\<close> already implement; no
   \<^const>\<open>restrict_local_for\<close>, \<^const>\<open>restrict_global_for\<close>, or
   \<^const>\<open>combine_env\<close>-style reconstruction against \<open>'g\<close> occurs anywhere
   in this record.
@@ -42,7 +42,7 @@ where
     dgs_branch     = (\<lambda>b pol d g. (g, transfer_lift is_bot_pred (branch\<^sup># tf b pol) d)),
     dgs_body       = (\<lambda>p d g. (g, transfer_lift is_bot_pred (body\<^sup># tf p) d)),
     dgs_return     = (\<lambda>e p d g. (g, transfer_lift is_bot_pred (return\<^sup># tf e p) d)),
-    dgs_enter      = (\<lambda>xs es d g. (g, transfer_lift is_bot_pred (enter\<^sup># tf xs es) d)),
+    dgs_enter      = (\<lambda>ci d g. (g, transfer_lift is_bot_pred (snd o enter\<^sup># tf ci) d)),
     dgs_event      = (\<lambda>ev d g. (g, transfer_lift is_bot_pred (event\<^sup># tf ev) d)),
     dgs_caller_cont    = (\<lambda>ci dc g. dc),
     dgs_combine_env    = (\<lambda>ci dc de g. (g, dc)),
@@ -66,8 +66,8 @@ lemma dg_spec_step_base_for_lifted:
   by (cases a) simp_all
 
 lemma dgs_enter_base_for_lifted:
-  "dgs_enter (base_dg_spec_for_lifted gs is_bot_pred tf) xs es d g =
-     (g, transfer_lift is_bot_pred (enter\<^sup># tf xs es) d)"
+  "dgs_enter (base_dg_spec_for_lifted gs is_bot_pred tf) ci d g =
+     (g, transfer_lift is_bot_pred (snd o enter\<^sup># tf ci) d)"
   unfolding base_dg_spec_for_lifted_def by simp
 
 text \<open>The caller half of \<open>enter\<close> hands \<open>combine\<close> the raw call-site value, so
@@ -97,7 +97,7 @@ lemma dg_spec_step_base_for_lifted_Bot:
   unfolding dg_spec_step_base_for_lifted by simp
 
 lemma dgs_enter_base_for_lifted_Bot:
-  "dgs_enter (base_dg_spec_for_lifted gs is_bot_pred tf) xs es Bot g = (g, Bot)"
+  "dgs_enter (base_dg_spec_for_lifted gs is_bot_pred tf) ci Bot g = (g, Bot)"
   unfolding dgs_enter_base_for_lifted by simp
 
 lemma dgs_combine_base_for_lifted_dc_bot:
@@ -219,19 +219,20 @@ lemma gamma_dg_base_enter_sound:
   assumes tf_sound: "sound_transfer_for gs tf"
     and is_bot_pred_sound: "\<And>sigma. is_bot_pred sigma \<Longrightarrow> \<lbrakk>sigma\<rbrakk> = {}"
     and sc: "s \<in> gamma_dg_base dc g"
-  shows "call_enter gs (CallEdge dst pars args) s \<in>
-           (case dgs_enter (base_dg_spec_for_lifted gs is_bot_pred tf) pars args dc g of
+  shows "call_enter gs (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci)) s \<in>
+           (case dgs_enter (base_dg_spec_for_lifted gs is_bot_pred tf) ci dc g of
               (g', d') \<Rightarrow> gamma_dg_base d' g')"
 proof -
   obtain sigma_c where dc_eq: "dc = Lifted sigma_c" and sc': "s \<in> \<lbrakk>sigma_c\<rbrakk>"
     using sc unfolding gamma_dg_base_def by (cases dc) auto
-  have base: "call_enter gs (CallEdge dst pars args) s \<in> \<lbrakk>enter\<^sup># tf pars args sigma_c\<rbrakk>"
-    using sound_transfer_for.tf_sound_enter_for[OF tf_sound sc']
+  have base: "call_enter gs (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci)) s
+      \<in> \<lbrakk>snd (enter\<^sup># tf ci sigma_c)\<rbrakk>"
+    using sound_transfer_for.tf_sound_enter_entry_for[OF tf_sound sc']
     by (simp add: call_enter_CallEdge)
   show ?thesis
-  proof (cases "is_bot_pred (enter\<^sup># tf pars args sigma_c)")
+  proof (cases "is_bot_pred (snd (enter\<^sup># tf ci sigma_c))")
     case True
-    then have "\<lbrakk>enter\<^sup># tf pars args sigma_c\<rbrakk> = {}"
+    then have "\<lbrakk>snd (enter\<^sup># tf ci sigma_c)\<rbrakk> = {}"
       by (rule is_bot_pred_sound)
     with base show ?thesis by simp
   next

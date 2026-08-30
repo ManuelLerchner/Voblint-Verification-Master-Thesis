@@ -152,24 +152,21 @@ proof -
     "traverse_rhs
         (sign_placement_abs_enter_tree caller (CallEdge dst fs args)
           (FunctionEntry callee)) sigma =
-      DG (enter\<^sup># (sign_tf_for (declared_global sign_placement_prog)) fs args
-            (dg_hook_D sigma caller \<squnion> dg_hook_G sigma)) bot"
-    unfolding sign_placement_abs_enter_tree_def placed_abs_dg_enter_of_def
-      placed_abs_dg_enter_tree_def
-    by (simp add: traverse_rhs_map_gtree traverse_rhs_map_ltree
-      traverse_placed_abs_dg_edge_tree dg_hook_D_def dg_hook_G_def
-      sum.map_comp o_def project_abs_on_def project_component_def
-      sign_placement_keep_local.simps)
+      DG (snd (enter\<^sup># (sign_tf_for (declared_global sign_placement_prog))
+                (call_info_of (CallEdge dst fs args) callee)
+                (dg_hook_D sigma caller \<squnion> dg_hook_G sigma))) bot"
+    unfolding sign_placement_abs_enter_tree_def
+    by (simp add: traverse_rhs_placed_abs_dg_enter_of dg_hook_D_def dg_hook_G_def
+      project_abs_on_def project_component_def sign_placement_keep_local.simps
+      sign_placement_node_owner.simps)
   have sides:
     "sides_of_rhs
         (sign_placement_abs_enter_tree caller (CallEdge dst fs args)
           (FunctionEntry callee)) sigma (Inr ()) = DG bot bot"
-    unfolding sign_placement_abs_enter_tree_def placed_abs_dg_enter_of_def
-      placed_abs_dg_enter_tree_def
-    by (simp add: sides_map_gtree_unit_gen sides_map_ltree_Inr
-      sides_placed_abs_dg_edge_tree_Inr dg_hook_D_def dg_hook_G_def
-      sum.map_comp o_def project_abs_on_def project_component_def
-      sign_placement_publish_side.simps bot_fun_def)
+    unfolding sign_placement_abs_enter_tree_def
+    by (simp add: sides_of_rhs_placed_abs_dg_enter_of dg_hook_D_def dg_hook_G_def
+      project_abs_on_def project_component_def sign_placement_publish_side.simps
+      sign_placement_node_owner.simps bot_fun_def)
   have s_in: "s \<in> \<lbrakk>dg_hook_D sigma caller \<squnion> dg_hook_G sigma\<rbrakk>"
     using sin unfolding dg_hook_gamma_def gamma_join_def by simp
   have "call_enter (declared_global sign_placement_prog) (CallEdge dst fs args) s =
@@ -177,10 +174,12 @@ proof -
         (enter_state (declared_global sign_placement_prog) s)"
     by (rule call_enter_CallEdge)
   also have "... \<in>
-      \<lbrakk>enter\<^sup># (sign_tf_for (declared_global sign_placement_prog)) fs args
-        (dg_hook_D sigma caller \<squnion> dg_hook_G sigma)\<rbrakk>"
-    using sound_transfer_for.tf_sound_enter_for
-      [OF sign_is_sound_transfer_for s_in]
+      \<lbrakk>snd (enter\<^sup># (sign_tf_for (declared_global sign_placement_prog))
+        (call_info_of (CallEdge dst fs args) callee)
+        (dg_hook_D sigma caller \<squnion> dg_hook_G sigma))\<rbrakk>"
+    using sound_transfer_for.tf_sound_enter_entry_for
+      [where ci = "call_info_of (CallEdge dst fs args) callee",
+        OF sign_is_sound_transfer_for s_in]
     by simp
   finally show ?thesis
     by (simp add: traverse sides gamma_join_def)

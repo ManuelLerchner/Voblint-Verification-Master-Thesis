@@ -8,7 +8,7 @@ text \<open>
   \<^const>\<open>dgs_enter\<close> and \<^const>\<open>dgs_combine\<close> already return the
   \<open>'dg \<times> 'dl\<close> pair the framework's split demands: the global side effect
   and the local answer. Equations that call them read as
-  \<open>fst (dgs_enter S fs as d g)\<close> / \<open>snd (dgs_enter S fs as d g)\<close> at every
+  \<open>fst (dgs_enter S ci d g)\<close> / \<open>snd (dgs_enter S ci d g)\<close> at every
   call site, which names the projection instead of the role. These
   abbreviations name the role; like the generic \<open>Strategy_Tree_Combinators\<close>,
   each is a plain syntax translation, so unfolding an equation's \<open>_def\<close>
@@ -16,14 +16,14 @@ text \<open>
 \<close>
 
 abbreviation enter_global ::
-  "('dl, 'dg) dg_spec \<Rightarrow> vname list \<Rightarrow> exp list \<Rightarrow> 'dl \<Rightarrow> 'dg \<Rightarrow> 'dg"
+  "('dl, 'dg) dg_spec \<Rightarrow> call_info \<Rightarrow> 'dl \<Rightarrow> 'dg \<Rightarrow> 'dg"
 where
-  "enter_global S fs as d g \<equiv> fst (dgs_enter S fs as d g)"
+  "enter_global S ci d g \<equiv> fst (dgs_enter S ci d g)"
 
 abbreviation enter_local ::
-  "('dl, 'dg) dg_spec \<Rightarrow> vname list \<Rightarrow> exp list \<Rightarrow> 'dl \<Rightarrow> 'dg \<Rightarrow> 'dl"
+  "('dl, 'dg) dg_spec \<Rightarrow> call_info \<Rightarrow> 'dl \<Rightarrow> 'dg \<Rightarrow> 'dl"
 where
-  "enter_local S fs as d g \<equiv> snd (dgs_enter S fs as d g)"
+  "enter_local S ci d g \<equiv> snd (dgs_enter S ci d g)"
 
 abbreviation combine_global ::
   "('dl, 'dg) dg_spec \<Rightarrow> call_info \<Rightarrow> 'dl \<Rightarrow> 'dl \<Rightarrow> 'dg \<Rightarrow> 'dg"
@@ -78,8 +78,8 @@ text \<open>
   \<^typ>\<open>call_action\<close> (\<open>CFG_Def\<close>) has one constructor, so matching it
   is a total destructure, not a partial case split. \<open>with_call\<close> names that
   destructure once per call site instead of repeating \<open>case ca of CallEdge
-  dst fs as \<Rightarrow> ...\<close> at every \<^const>\<open>dgs_enter\<close>/\<^const>\<open>dgs_combine\<close> call
-  the site makes.
+  dst fs as \<Rightarrow> ...\<close> at every call site that still needs the raw formals/args
+  rather than a bundled \<^typ>\<open>call_info\<close>.
 \<close>
 
 abbreviation with_call ::

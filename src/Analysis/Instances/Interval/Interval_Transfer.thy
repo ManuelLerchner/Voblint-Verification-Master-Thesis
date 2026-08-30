@@ -104,14 +104,14 @@ subsection \<open>Classifier-parametric procedure entry and bundled transfer fun
 
 text \<open>Procedure entry: keep globals, reset locals to the full interval, then bind
   the formals to the abstract values of the actuals evaluated in the caller.
-  Generic via enter_frame_D/enter_D (Transfer_Interface.thy), parameterised by
+  Generic via enter_frame/enter_D (Transfer_Interface.thy), parameterised by
   ivl_top as the domain's fully-imprecise reset value.  Entry and combine are
   the only fields that consult a classifier, so the bundled transfer function
   is parametric in the classifier throughout.\<close>
 
 definition enter_frame_ivl_for ::
     "(vname => bool) => ivl abs_state => ivl abs_state" where
-  "enter_frame_ivl_for gs = enter_frame_D gs ivl_top"
+  "enter_frame_ivl_for gs = enter_frame gs ivl_top"
 
 definition enter_ivl_for ::
     "(vname => bool) => vname list => exp list =>
@@ -122,7 +122,7 @@ lemma enter_frame_ivl_for_sound:
   assumes gs: "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
   shows "enter_state cls s \<in> \<lbrakk>enter_frame_ivl_for cls \<sigma>\<rbrakk>"
   unfolding enter_frame_ivl_for_def
-proof (rule enter_frame_D_sound[OF gs])
+proof (rule enter_frame_sound[OF gs])
   show "gamma ivl_top = UNIV" by (simp add: gamma_ivl_top)
 qed
 
@@ -141,6 +141,26 @@ next
     using V by (simp add: list_all2_conv_all_nth aval_ivl_sound)
 qed
 
+definition enter_pair_ivl_for ::
+    "(vname => bool) => call_info => ivl abs_state => ivl abs_state \<times> ivl abs_state" where
+  "enter_pair_ivl_for gs = enter_pair_D gs ivl_top aval_ivl"
+
+lemma enter_pair_ivl_for_sound:
+  assumes gs: "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
+  shows "s \<in> \<lbrakk>fst (enter_pair_ivl_for cls ci \<sigma>)\<rbrakk>"
+    and "bind_formals (ci_formals ci) (map (\<lambda>e. aval e s) (ci_args ci)) (enter_state cls s)
+           \<in> \<lbrakk>snd (enter_pair_ivl_for cls ci \<sigma>)\<rbrakk>"
+  unfolding enter_pair_ivl_for_def
+proof -
+  show "s \<in> \<lbrakk>fst (enter_pair_D cls ivl_top aval_ivl ci \<sigma>)\<rbrakk>"
+    using gs by (simp add: enter_pair_D_def)
+next
+  show "bind_formals (ci_formals ci) (map (\<lambda>e. aval e s) (ci_args ci)) (enter_state cls s)
+          \<in> \<lbrakk>snd (enter_pair_D cls ivl_top aval_ivl ci \<sigma>)\<rbrakk>"
+    using enter_ivl_for_sound[OF gs, of "ci_formals ci" "ci_args ci"]
+    by (simp add: enter_pair_D_def enter_ivl_for_def)
+qed
+
 definition ivl_tf_for :: "(vname => bool) => ivl domain_transfer" where
   "ivl_tf_for gs = (| tf_assign  = assign_ivl,
                        tf_special = special_ivl,
@@ -148,9 +168,8 @@ definition ivl_tf_for :: "(vname => bool) => ivl domain_transfer" where
                        tf_skip    = skip_ivl,
                        tf_body    = body_ivl,
                        tf_return  = return_ivl,
-                       tf_enter   = enter_ivl_for gs,
+                       tf_enter   = enter_pair_ivl_for gs,
                        tf_event   = event_ivl,
-                       tf_caller_cont = (\<lambda>_ \<sigma>. \<sigma>),
                        tf_combine_env = (\<lambda>_. combine_env gs) |)"
 
 lemma ivl_is_sound_transfer_for: "sound_transfer_for gs (ivl_tf_for gs)"
@@ -162,16 +181,16 @@ lemma ivl_is_sound_transfer_for: "sound_transfer_for gs (ivl_tf_for gs)"
   subgoal by (simp add: skip_ivl_sound)
   subgoal by (simp add: body_ivl_sound)
   subgoal by (simp add: return_ivl_sound)
-  subgoal by (simp add: enter_ivl_for_sound)
+  subgoal by (simp add: enter_pair_ivl_for_sound)
   subgoal by (simp add: event_ivl_sound)
-  subgoal by simp
+  subgoal by (simp add: enter_pair_ivl_for_sound)
   subgoal by (simp add: combine_env_sound)
   done
 
 lemma enter_frame_ivl_for_mono:
   assumes "s1 \<le> s2"
   shows "enter_frame_ivl_for gs s1 \<le> enter_frame_ivl_for gs s2"
-  unfolding enter_frame_ivl_for_def by (rule enter_frame_D_mono[OF assms])
+  unfolding enter_frame_ivl_for_def by (rule enter_frame_mono[OF assms])
 
 lemma enter_ivl_for_mono:
   assumes "s1 \<le> s2"
