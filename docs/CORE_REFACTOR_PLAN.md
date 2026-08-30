@@ -192,7 +192,7 @@ Spike before committing to it.
 | 2.2 | If 2.1 fails, record why under "Decisions and corrections", keep `Voblint_Exec` as a permanent session named for what it is, and skip to Phase 3. | open |
 | 2.3 | Delete `Exec_DG_Trees`, `Exec_DG_Generator`, `Exec_DG_Bridge`; the transport half of `DG_Base_Exec` (keep `routed_dg_domain_exec` and the `base_dg_spec_st_for_lifted` commute lemmas it cites); `Routed_Domain_Exec`; the owner-aware trees and classifier-parametric readback in `Exec_DG_Refines` (keep the `exec_dg_st` lattice instances and `fun_of_dg_st_for`). | open |
 | 2.4 | `routed_context_hetero` becomes `routed_context_base_hetero` at whichever carrier the instance chooses; delete the restated assumptions. Same for `unit_routed_context_hetero`. | open |
-| 2.5 | `Analysis_Result` holds the quotient; `normalize_point` becomes the single readback at publication, in `DG_Analysis_Adapter`. `Abstract_Checks` reads the published table. | open |
+| 2.5 | `Analysis_Result` holds the quotient; `normalize_point` becomes the single readback at publication, in `DG_Analysis_Adapter`. `Abstract_Checks` reads the published table. | landed in the generic form: `dg_analysis_adapter` extends `routed_context_base_hetero` and takes a readback `rd` with `gammaDG d g = gamma_state_lift (rd d)`; the four abstract-carrier sites pass `rd = id` |
 | 2.6 | Rewrite the twelve `*_Ctx_*_Sound` theories and the four CLI `*_Entry` theories to interpret at the quotient carrier. Expect the transport boilerplate that NEXT_STEPS records as the 23-suffix duplication to shrink. | open |
 | 2.7 | Move `routed_dg_domain_exec`, `Solver_Side_RG`, `Solver_Menu`, `Monovariant_Analysis_Result`, `DG_Coverage` to their final homes (`DG_Base`, Solver, Core); retire `Voblint_Exec` from `ROOTS`. | open |
 
@@ -274,6 +274,16 @@ and mark it `superseded (see below)`.
   `dg_ctx_activation_base` the solver's table with `pp_st`, and needs nothing
   from `Exec_DG_Trees`/`Generator`/`Bridge`. The spike is 123 lines and is
   the template for step 2.6.
+- 2026-08-30: `dg_analysis_adapter` is carrier-generic (step 2.5, done
+  before 2.3/2.4 because it is what every migrated instance publishes
+  through): it extends `routed_context_base_hetero` with a readback
+  `rd :: 'D => 'a abs_state lifted` and the one assumption
+  `gammaDG d g = gamma_state_lift (rd d)`; `analyse_result` reads the table
+  through `rd`. The four existing interpretations (Sign, Parity, Interval and
+  Int at `unit` context) pass `gamma_dg_base`, `gamma_state_lift` and `id`;
+  the CLI entry theories that apply `dg_analysis_adapter.analyse_result`
+  positionally gained the `id` argument. `routed_context_hetero` itself is
+  untouched so far; step 2.4 removes it once no instance interprets it.
 - 2026-08-30: Core's layout inside `src/Core/` is `Equations/`, `DG/`,
   `Context/`, `Result/`; Domain, Solver and Exec are flat. Phase 0 steps
   0.1--0.6 and Phase 1 steps 1.4--1.7 are landed (I/Q-clean per theory for

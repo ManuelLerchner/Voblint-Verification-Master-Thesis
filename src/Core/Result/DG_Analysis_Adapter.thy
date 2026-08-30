@@ -13,10 +13,12 @@ text \<open>
   every compiled check against it via \<^const>\<open>classify_checks_verdicts\<close>, and
   discharge that report's own soundness from the activation-indexed
   collecting semantics (\<^theory>\<open>Voblint_Core.Activation_Backbone\<close>) already
-  available once EDGE/CALL/COMB are in hand from \<^locale>\<open>routed_context_hetero\<close>.
+  available once EDGE/CALL/COMB are in hand from \<^locale>\<open>routed_context_base_hetero\<close>.
   \<open>dg_analysis_adapter\<close> derives that whole triple once, generic in a domain
-  instance (a \<open>classify\<close> function with its own soundness obligations) and a
-  context instance (an interpretation of \<^locale>\<open>routed_context_hetero\<close>),
+  instance (a \<open>classify\<close> function with its own soundness obligations), a
+  context instance (an interpretation of \<^locale>\<open>routed_context_base_hetero\<close>),
+  and the carrier the solved table is stored at (a readback \<open>rd\<close> into the abstract
+  state, the identity when the table already holds abstract states),
   leaving solver choice orthogonal: which concrete solver produced
   \<open>sigma\<close>/\<open>sg\<close> is an interpretation-site argument, never a locale parameter,
   matching how Interval's own Warrow/join/per-origin solver choice is already
@@ -24,20 +26,25 @@ text \<open>
 \<close>
 
 locale dg_analysis_adapter =
-  routed_context_hetero S gs g gk0 route bot0 s0d s0g sigma vars x0 sg seed_key
-    "static_resolve g"
-  for S :: "('a::sound_domain abs_state lifted, 'G::bounded_semilattice_sup_bot) dg_spec"
+  routed_context_base_hetero S gammaDG gs g gk0 route bot0 s0d s0g sigma vars x0 sg seed_key
+    "static_resolve g" gammaM enterc
+  for S :: "('D::bounded_semilattice_sup_bot, 'G::bounded_semilattice_sup_bot) dg_spec"
+    and gammaDG :: "'D \<Rightarrow> 'G \<Rightarrow> store set"
     and gs :: "vname \<Rightarrow> bool"
     and g gk0
-    and route :: "pp \<Rightarrow> 'c \<Rightarrow> 'a abs_state lifted \<Rightarrow> call_action \<Rightarrow> 'c"
-    and bot0 s0d s0g
-    and sigma :: "pp \<times> 'c + 'k \<Rightarrow> ('a abs_state lifted, 'G) dg_state"
+    and route :: "pp \<Rightarrow> 'c \<Rightarrow> 'D \<Rightarrow> call_action \<Rightarrow> 'c"
+    and bot0 s0d :: 'D and s0g :: 'G
+    and sigma :: "pp \<times> 'c + 'k \<Rightarrow> ('D, 'G) dg_state"
     and vars :: "(pp \<times> 'c) set"
     and x0 :: "pp \<times> 'c"
-    and sg :: "pp \<times> 'c + 'k \<Rightarrow> 'a abs_state lifted"
-    and seed_key :: "pp \<Rightarrow> 'c \<Rightarrow> 'k" +
-  fixes classify :: "exp \<Rightarrow> 'a abs_state \<Rightarrow> check_result"
-  assumes classify_proved:
+    and sg :: "pp \<times> 'c + 'k \<Rightarrow> 'M"
+    and seed_key :: "pp \<Rightarrow> 'c \<Rightarrow> 'k"
+    and gammaM :: "'M \<Rightarrow> store set"
+    and enterc :: "cfg_node \<Rightarrow> 'c \<Rightarrow> store \<Rightarrow> 'c" +
+  fixes rd :: "'D \<Rightarrow> 'a::sound_domain abs_state lifted"
+    and classify :: "exp \<Rightarrow> 'a abs_state \<Rightarrow> check_result"
+  assumes gammaDG_rd: "\<And>d g'. gammaDG d g' = gamma_state_lift (rd d)"
+    and classify_proved:
     "\<And>c d s. classify c d = Check_Proved \<Longrightarrow> s \<in> gamma_state d \<Longrightarrow> truthy (aval c s)"
     and classify_refuted:
     "\<And>c d s. classify c d = Check_Refuted \<Longrightarrow> s \<in> gamma_state d \<Longrightarrow> \<not> truthy (aval c s)"
@@ -73,11 +80,10 @@ text \<open>
   Built from the locale's own solved \<open>vars\<close>/\<open>sigma\<close> pair, mirroring how
   \<open>monovariant_analysis_result_for\<close> and \<open>analyse_interval_entry_state_result_for\<close>
   build an \<^type>\<open>analysis_result\<close> from an already-solved key set and reader.
-  \<^locale>\<open>routed_context_hetero\<close>'s own local unknown is already the abstract
-  \<^typ>\<open>'a abs_state lifted\<close> carrier, not an executable substrate, so no
-  \<open>is_bot_pred\<close>/\<open>resolved_st_q\<close> projection applies here (unlike
-  \<open>normalize_point\<close>, which reads that executable representation): the one
-  collapse this table needs is \<^const>\<open>canonicalize_lift\<close> against
+  The solved local unknown is read back into \<^typ>\<open>'a abs_state lifted\<close> by \<open>rd\<close> ---
+  the identity when the framework was instantiated at that carrier, the executable
+  readback when it was instantiated at the solver's own --- and the one
+  collapse this table then needs is \<^const>\<open>canonicalize_lift\<close> against
   \<^const>\<open>is_bot_state\<close>, so a witness-bottom \<^const>\<open>Lifted\<close> payload --- a solved
   value that is pointwise \<^const>\<open>bot\<close> without the solver's own \<^const>\<open>Bot\<close> tag
   --- reads as \<^const>\<open>Unreachable\<close> here, matching \<^const>\<open>classify_point\<close>'s
@@ -87,13 +93,13 @@ text \<open>
 
 definition analyse_result :: "('c, 'a abs_state) analysis_result" where
   "analyse_result = Analysis_Result vars
-     (\<lambda>v ctx. case canonicalize_lift is_bot_state (locals (sigma (Inl (v, ctx)))) of
+     (\<lambda>v ctx. case canonicalize_lift is_bot_state (rd (locals (sigma (Inl (v, ctx))))) of
                 Bot \<Rightarrow> Unreachable | Lifted a \<Rightarrow> Reachable a)"
 
 lemma lookup_context_analyse_result:
   "lookup_context analyse_result v ctx =
      (if (v, ctx) \<in> vars
-      then (case canonicalize_lift is_bot_state (locals (sigma (Inl (v, ctx)))) of
+      then (case canonicalize_lift is_bot_state (rd (locals (sigma (Inl (v, ctx))))) of
               Bot \<Rightarrow> Unreachable | Lifted a \<Rightarrow> Reachable a)
       else Unreachable)"
   unfolding lookup_context_def analyse_result_def by simp
@@ -113,18 +119,18 @@ text \<open>
 
 lemma gammaM_sg_eq_lookup_context:
   assumes cov: "(v, ctx) \<in> vars"
-  shows "gamma_state_lift (sg (Inl (v, ctx))) =
+  shows "gammaM (sg (Inl (v, ctx))) =
            (case lookup_context analyse_result v ctx of
               Unreachable \<Rightarrow> {} | Reachable st \<Rightarrow> gamma_state st)"
 proof -
-  have "gamma_state_lift (sg (Inl (v, ctx))) = gamma_dg_base (locals (sigma (Inl (v, ctx))))
+  have "gammaM (sg (Inl (v, ctx))) = gammaDG (locals (sigma (Inl (v, ctx))))
           (globs (sigma (Inr gk0)))"
     using cov by (simp add: sg_cov)
-  also have "\<dots> = gamma_state_lift (locals (sigma (Inl (v, ctx))))"
-    by (simp add: gamma_dg_base_def)
-  also have "\<dots> = (case canonicalize_lift is_bot_state (locals (sigma (Inl (v, ctx)))) of
+  also have "\<dots> = gamma_state_lift (rd (locals (sigma (Inl (v, ctx)))))"
+    by (rule gammaDG_rd)
+  also have "\<dots> = (case canonicalize_lift is_bot_state (rd (locals (sigma (Inl (v, ctx))))) of
                       Bot \<Rightarrow> {} | Lifted a \<Rightarrow> gamma_state a)"
-  proof (cases "locals (sigma (Inl (v, ctx)))")
+  proof (cases "rd (locals (sigma (Inl (v, ctx))))")
     case Bot
     then show ?thesis by simp
   next
@@ -159,41 +165,41 @@ text \<open>
 lemma activation_collect_dg_sound:
   fixes S0 :: "store set" and initial_ctx :: 'c
   assumes entry_cov: "(cfg_entry g, initial_ctx) \<in> vars"
-    and s0_sound: "S0 \<subseteq> gamma_dg_base s0d s0g"
+    and s0_sound: "S0 \<subseteq> gammaDG s0d s0g"
   shows "activation_collect gs enterc initial_ctx g S0 v ctx
-           \<subseteq> gamma_state_lift (sg (Inl (v, ctx)))"
+           \<subseteq> gammaM (sg (Inl (v, ctx)))"
 proof (rule activation_collect_sound_gen)
   fix s0 assume s0mem: "s0 \<in> S0"
   have le_local: "s0d \<le> locals (sigma (Inl (cfg_entry g, initial_ctx)))"
     by (rule locals_ge_s0d[OF entry_cov])
   have le_global: "s0g \<le> globs (sigma (Inr gk0))"
     by (rule pp_entry_s0g_bound[OF entry_cov])
-  have "gamma_dg_base s0d s0g
-        \<subseteq> gamma_dg_base (locals (sigma (Inl (cfg_entry g, initial_ctx)))) (globs (sigma (Inr gk0)))"
-    by (rule gamma_dg_base_mono[OF le_local le_global])
-  with s0mem s0_sound have "s0 \<in> gamma_dg_base (locals (sigma (Inl (cfg_entry g, initial_ctx))))
+  have "gammaDG s0d s0g
+        \<subseteq> gammaDG (locals (sigma (Inl (cfg_entry g, initial_ctx)))) (globs (sigma (Inr gk0)))"
+    by (rule gammaDG_mono[OF le_local le_global])
+  with s0mem s0_sound have "s0 \<in> gammaDG (locals (sigma (Inl (cfg_entry g, initial_ctx))))
                                    (globs (sigma (Inr gk0)))" by blast
-  thus "s0 \<in> gamma_state_lift (sg (Inl (cfg_entry g, initial_ctx)))"
+  thus "s0 \<in> gammaM (sg (Inl (cfg_entry g, initial_ctx)))"
     using entry_cov by (simp add: sg_cov)
 next
   fix u a v' c' s' s''
-  assume "(u, a, v') \<in> intra g" "s' \<in> gamma_state_lift (sg (Inl (u, c')))" "s'' \<in> edge_step a s'"
-  thus "s'' \<in> gamma_state_lift (sg (Inl (v', c')))" by (rule dg_ctx_act_edge)
+  assume "(u, a, v') \<in> intra g" "s' \<in> gammaM (sg (Inl (u, c')))" "s'' \<in> edge_step a s'"
+  thus "s'' \<in> gammaM (sg (Inl (v', c')))" by (rule dg_ctx_act_edge)
 next
   fix u dst pars args p cont c' s'
   assume ce: "(u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
-    and sm: "s' \<in> gamma_state_lift (sg (Inl (u, c')))"
+    and sm: "s' \<in> gammaM (sg (Inl (u, c')))"
   show "call_enter gs (CallEdge dst pars args) s'
-          \<in> gamma_state_lift
+          \<in> gammaM
               (sg (Inl (FunctionEntry p, enterc u c' (call_enter gs (CallEdge dst pars args) s'))))"
     using routed_context_call[OF ce sm] .
 next
   fix cl dst pars args p cont c1 s' t es
   assume ce: "(cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
-    and sm: "s' \<in> gamma_state_lift (sg (Inl (cl, c1)))"
-    and tm: "t \<in> gamma_state_lift (sg (Inl (FunctionResult p, enterc cl c1 es)))"
+    and sm: "s' \<in> gammaM (sg (Inl (cl, c1)))"
+    and tm: "t \<in> gammaM (sg (Inl (FunctionResult p, enterc cl c1 es)))"
     and ces: "call_enter_store gs g cl s' es"
-  show "combine_collect gs dst s' t \<in> gamma_state_lift (sg (Inl (cont, c1)))"
+  show "combine_collect gs dst s' t \<in> gammaM (sg (Inl (cont, c1)))"
     using tm routed_context_comb[OF ce sm _ ces] by blast
 qed
 
@@ -207,19 +213,19 @@ text \<open>
   case-split on coverage. A concrete instance whose own public result reads
   through this same \<open>analyse_result\<close> (up to a proved value equality) gets its
   own node-soundness bridge from this lemma directly, instead of re-deriving
-  it from \<open>routed_context_hetero\<close>'s primitives by hand.
+  it from \<open>routed_context_base_hetero\<close>'s primitives by hand.
 \<close>
 
 lemma analyse_result_node_sound:
   fixes S0 :: "store set" and initial_ctx :: 'c
   assumes entry_cov: "(cfg_entry g, initial_ctx) \<in> vars"
-    and s0_sound: "S0 \<subseteq> gamma_dg_base s0d s0g"
+    and s0_sound: "S0 \<subseteq> gammaDG s0d s0g"
   shows "activation_collect gs enterc initial_ctx g S0 v ctx
            \<subseteq> gamma_state (case lookup_context analyse_result v ctx of
                              Unreachable \<Rightarrow> bot | Reachable st \<Rightarrow> st)"
 proof -
   have "activation_collect gs enterc initial_ctx g S0 v ctx
-          \<subseteq> gamma_state_lift (sg (Inl (v, ctx)))"
+          \<subseteq> gammaM (sg (Inl (v, ctx)))"
     by (rule activation_collect_dg_sound[OF entry_cov s0_sound])
   also have "\<dots> = gamma_point (lookup_context analyse_result v ctx)"
   proof (cases "(v, ctx) \<in> vars")
@@ -228,7 +234,7 @@ proof -
       unfolding gamma_point_def by (rule gammaM_sg_eq_lookup_context[OF True])
   next
     case False
-    hence "gamma_state_lift (sg (Inl (v, ctx))) = {}" by (simp add: sg_uncov)
+    hence "gammaM (sg (Inl (v, ctx))) = {}" by (simp add: sg_uncov)
     moreover from False have "lookup_context analyse_result v ctx = Unreachable"
       unfolding lookup_context_analyse_result by simp
     ultimately show ?thesis by simp
@@ -263,7 +269,7 @@ theorem analyse_report_ctx_proved_sound:
   fixes S0 :: "store set" and initial_ctx :: 'c and v :: cfg_node and c :: exp
   assumes mem: "(v, c, Decided Check_Proved) \<in> set analyse_report_ctx"
     and entry_cov: "(cfg_entry g, initial_ctx) \<in> vars"
-    and s0_sound: "S0 \<subseteq> gamma_dg_base s0d s0g"
+    and s0_sound: "S0 \<subseteq> gammaDG s0d s0g"
   shows "\<And>ctx s. s \<in> activation_collect gs enterc initial_ctx g S0 v ctx
            \<Longrightarrow> truthy (aval c s)"
 proof -
@@ -286,7 +292,7 @@ theorem analyse_report_ctx_refuted_sound:
   fixes S0 :: "store set" and initial_ctx :: 'c and v :: cfg_node and c :: exp
   assumes mem: "(v, c, Decided Check_Refuted) \<in> set analyse_report_ctx"
     and entry_cov: "(cfg_entry g, initial_ctx) \<in> vars"
-    and s0_sound: "S0 \<subseteq> gamma_dg_base s0d s0g"
+    and s0_sound: "S0 \<subseteq> gammaDG s0d s0g"
   shows "\<And>ctx s. s \<in> activation_collect gs enterc initial_ctx g S0 v ctx
            \<Longrightarrow> \<not> truthy (aval c s)"
 proof -

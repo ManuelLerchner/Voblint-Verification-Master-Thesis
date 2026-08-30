@@ -361,16 +361,16 @@ text \<open>
   (\<^theory>\<open>Voblint_Analysis.Interval_Classify\<close>).
 \<close>
 
-interpretation adapter: dg_analysis_adapter enterc_unit "ictx_abs_spec gs" gs
+interpretation adapter: dg_analysis_adapter "ictx_abs_spec gs" gamma_dg_base gs
     "compile_prog Pi ps" Global route_unit
     "map_lift (fun_of_resolved_st_q_for gs) (Bot::ivl exec_dg_st lifted)"
     "map_lift (fun_of_resolved_st_q_for gs) (Lifted cinit_ivl_st)"
     "map_lift (fun_of_resolved_st_q_for gs) (Bot::ivl exec_dg_st lifted)"
     sigma_abs "fst (sol gs is_bot_pred Pi ps)"
     "(cfg_exit (compile_prog Pi ps), ())" sg
-    Seed interval_classify_check
+    Seed gamma_state_lift enterc_unit id interval_classify_check
 proof (unfold_locales, goal_cases FinE PP SgCov SgUncov Fwd FinC SeedKey ResolveSound
-    RouteEnterc CallFwd CombFwd EnterAgree ClProved ClRefuted)
+    RouteEnterc CallFwd CombFwd EnterAgree GammaRd ClProved ClRefuted)
   case FinE show ?case by (rule fin)
 next
   case PP show ?case
@@ -412,6 +412,9 @@ next
   have "CallEdge dst' pars' args' = CallEdge dst pars args"
     using compile_prog_calls_source_unique[OF ce' ce] by simp
   thus ?case using es_eq by simp
+next
+  case (GammaRd d g')
+  show ?case by (simp add: gamma_dg_base_def)
 next
   case (ClProved c d s)
   thus ?case by (rule interval_classify_check_proved)

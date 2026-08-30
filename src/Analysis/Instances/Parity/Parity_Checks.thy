@@ -146,16 +146,16 @@ interpretation pctx_dg_base: sound_dg_spec "pctx_abs_spec gs" gamma_dg_base gs
   unfolding pctx_abs_spec_def
   by (rule base_dg_spec_sound[OF parity_is_sound_transfer_for is_bot_state_gamma_state_empty])
 
-interpretation pctx_adapter: dg_analysis_adapter enterc_unit "pctx_abs_spec gs" gs
+interpretation pctx_adapter: dg_analysis_adapter "pctx_abs_spec gs" gamma_dg_base gs
     "compile_prog Pi ps" Global route_unit
     "map_lift (fun_of_resolved_st_q_for gs) (Bot::parity exec_dg_st lifted)"
     "map_lift (fun_of_resolved_st_q_for gs) (Lifted cinit_parity_st)"
     "map_lift (fun_of_resolved_st_q_for gs) (Bot::parity exec_dg_st lifted)"
     "pctx_sigma_abs gs is_bot_pred Pi ps" "fst (pctx_sol gs is_bot_pred Pi ps)"
     "(cfg_exit (compile_prog Pi ps), ())" "pctx_sg gs is_bot_pred Pi ps"
-    Seed parity_classify_check
+    Seed gamma_state_lift enterc_unit id parity_classify_check
 proof (unfold_locales, goal_cases FinE PP SgCov SgUncov Fwd FinC SeedKey ResolveSound
-    RouteEnterc CallFwd CombFwd EnterAgree ClProved ClRefuted)
+    RouteEnterc CallFwd CombFwd EnterAgree GammaRd ClProved ClRefuted)
   case FinE show ?case
     using compile_prog_finite by auto
 next
@@ -208,6 +208,9 @@ next
   have "CallEdge dst' pars' args' = CallEdge dst pars args"
     using compile_prog_calls_source_unique[OF ce' ce] by simp
   thus ?case using es_eq by simp
+next
+  case (GammaRd d g')
+  show ?case by (simp add: gamma_dg_base_def)
 next
   case (ClProved c d s)
   thus ?case by (rule parity_classify_check_proved)

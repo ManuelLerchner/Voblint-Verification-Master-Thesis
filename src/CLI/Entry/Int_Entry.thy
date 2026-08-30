@@ -102,7 +102,7 @@ proof -
       \<subseteq> \<lbrakk>case lookup_context
               (dg_analysis_adapter.analyse_result
                  (ictx_sigma_abs_warrow mode is_bot_pred pgs (prog_table p) (prog_procs p))
-                 (fst (ictx_sol_warrow mode is_bot_pred pgs (prog_table p) (prog_procs p))))
+                 (fst (ictx_sol_warrow mode is_bot_pred pgs (prog_table p) (prog_procs p))) id)
               v () of
             Unreachable \<Rightarrow> bot | Reachable st \<Rightarrow> st\<rbrakk>"
     by (rule ictx_result_node_sound_warrow
@@ -122,7 +122,7 @@ proof -
   have adapter_eq0: "lookup_context
           (dg_analysis_adapter.analyse_result
              (ictx_sigma_abs_warrow mode is_bot_pred pgs (prog_table p) (prog_procs p))
-             (fst (ictx_sol_warrow mode is_bot_pred pgs (prog_table p) (prog_procs p))))
+             (fst (ictx_sol_warrow mode is_bot_pred pgs (prog_table p) (prog_procs p))) id)
           v ()
       = (if (v, ()) \<in> fst (ictx_sol_warrow mode is_bot_pred pgs (prog_table p) (prog_procs p))
          then normalize_point pgs
@@ -139,7 +139,7 @@ proof -
       = lookup_context
           (dg_analysis_adapter.analyse_result
              (ictx_sigma_abs_warrow mode is_bot_pred pgs (prog_table p) (prog_procs p))
-             (fst (ictx_sol_prog_warrow mode pgs p)))
+             (fst (ictx_sol_prog_warrow mode pgs p)) id)
           v ()"
     using adapter_eq0[unfolded sol_eq[symmetric]]
     by (rule sym)

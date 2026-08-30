@@ -89,7 +89,7 @@ proof -
       \<subseteq> \<lbrakk>case lookup_context
               (dg_analysis_adapter.analyse_result
                  (ictx_sigma_abs_warrow pgs is_bot_pred (prog_table p) (prog_procs p))
-                 (fst (ictx_sol_warrow pgs is_bot_pred (prog_table p) (prog_procs p))))
+                 (fst (ictx_sol_warrow pgs is_bot_pred (prog_table p) (prog_procs p))) id)
               v () of
             Unreachable \<Rightarrow> bot | Reachable st \<Rightarrow> st\<rbrakk>"
     by (rule ictx_result_node_sound_warrow
@@ -109,7 +109,7 @@ proof -
   have adapter_eq0: "lookup_context
           (dg_analysis_adapter.analyse_result
              (ictx_sigma_abs_warrow pgs is_bot_pred (prog_table p) (prog_procs p))
-             (fst (ictx_sol_warrow pgs is_bot_pred (prog_table p) (prog_procs p))))
+             (fst (ictx_sol_warrow pgs is_bot_pred (prog_table p) (prog_procs p))) id)
           v ()
       = (if (v, ()) \<in> fst (ictx_sol_warrow pgs is_bot_pred (prog_table p) (prog_procs p))
          then normalize_point pgs
@@ -126,7 +126,7 @@ proof -
       = lookup_context
           (dg_analysis_adapter.analyse_result
              (ictx_sigma_abs_warrow pgs is_bot_pred (prog_table p) (prog_procs p))
-             (fst (ictx_sol_prog_warrow pgs p)))
+             (fst (ictx_sol_prog_warrow pgs p)) id)
           v ()"
     using adapter_eq0[unfolded sol_eq[symmetric]]
     by (rule sym)
@@ -358,7 +358,7 @@ proof -
       \<subseteq> \<lbrakk>case lookup_context
               (dg_analysis_adapter.analyse_result
                  (ictx_sigma_abs (declared_global p) is_bot_pred (prog_table p) (prog_procs p))
-                 (fst (ictx_sol (declared_global p) is_bot_pred (prog_table p) (prog_procs p))))
+                 (fst (ictx_sol (declared_global p) is_bot_pred (prog_table p) (prog_procs p))) id)
               v () of
             Unreachable \<Rightarrow> bot | Reachable st \<Rightarrow> st\<rbrakk>"
     by (rule ictx_result_node_sound
@@ -379,7 +379,7 @@ proof -
   have adapter_eq0: "lookup_context
           (dg_analysis_adapter.analyse_result
              (ictx_sigma_abs (declared_global p) is_bot_pred (prog_table p) (prog_procs p))
-             (fst (ictx_sol (declared_global p) is_bot_pred (prog_table p) (prog_procs p))))
+             (fst (ictx_sol (declared_global p) is_bot_pred (prog_table p) (prog_procs p))) id)
           v ()
       = (if (v, ()) \<in> fst (ictx_sol (declared_global p) is_bot_pred (prog_table p) (prog_procs p))
          then normalize_point (declared_global p)
@@ -396,7 +396,7 @@ proof -
       = lookup_context
           (dg_analysis_adapter.analyse_result
              (ictx_sigma_abs (declared_global p) is_bot_pred (prog_table p) (prog_procs p))
-             (fst (ictx_sol_prog (declared_global p) p)))
+             (fst (ictx_sol_prog (declared_global p) p)) id)
           v ()"
     using adapter_eq0[unfolded sol_eq[symmetric]]
     by (rule sym)
@@ -610,7 +610,7 @@ proof -
       \<subseteq> \<lbrakk>case lookup_context
               (dg_analysis_adapter.analyse_result
                  (ictx_sigma_abs_per_origin (declared_global p) is_bot_pred (prog_table p) (prog_procs p))
-                 (fst (ictx_sol_per_origin (declared_global p) is_bot_pred (prog_table p) (prog_procs p))))
+                 (fst (ictx_sol_per_origin (declared_global p) is_bot_pred (prog_table p) (prog_procs p))) id)
               v () of
             Unreachable \<Rightarrow> bot | Reachable st \<Rightarrow> st\<rbrakk>"
     by (rule ictx_result_node_sound_per_origin
@@ -631,7 +631,7 @@ proof -
   have adapter_eq0: "lookup_context
           (dg_analysis_adapter.analyse_result
              (ictx_sigma_abs_per_origin (declared_global p) is_bot_pred (prog_table p) (prog_procs p))
-             (fst (ictx_sol_per_origin (declared_global p) is_bot_pred (prog_table p) (prog_procs p))))
+             (fst (ictx_sol_per_origin (declared_global p) is_bot_pred (prog_table p) (prog_procs p))) id)
           v ()
       = (if (v, ()) \<in> fst (ictx_sol_per_origin (declared_global p) is_bot_pred (prog_table p) (prog_procs p))
          then normalize_point (declared_global p)
@@ -648,7 +648,7 @@ proof -
       = lookup_context
           (dg_analysis_adapter.analyse_result
              (ictx_sigma_abs_per_origin (declared_global p) is_bot_pred (prog_table p) (prog_procs p))
-             (fst (ictx_sol_prog_per_origin (declared_global p) p)))
+             (fst (ictx_sol_prog_per_origin (declared_global p) p)) id)
           v ()"
     using adapter_eq0[unfolded sol_eq[symmetric]]
     by (rule sym)

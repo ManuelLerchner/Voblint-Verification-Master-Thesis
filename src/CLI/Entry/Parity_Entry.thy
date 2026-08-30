@@ -83,7 +83,7 @@ proof -
       \<subseteq> \<lbrakk>case lookup_context
               (dg_analysis_adapter.analyse_result
                  (pctx_sigma_abs pgs is_bot_pred (prog_table p) (prog_procs p))
-                 (fst (pctx_sol pgs is_bot_pred (prog_table p) (prog_procs p))))
+                 (fst (pctx_sol pgs is_bot_pred (prog_table p) (prog_procs p))) id)
               v () of
             Unreachable \<Rightarrow> bot | Reachable st \<Rightarrow> st\<rbrakk>"
     by (rule pctx_result_node_sound
@@ -99,7 +99,7 @@ proof -
   have adapter_eq0: "lookup_context
           (dg_analysis_adapter.analyse_result
              (pctx_sigma_abs pgs is_bot_pred (prog_table p) (prog_procs p))
-             (fst (pctx_sol pgs is_bot_pred (prog_table p) (prog_procs p))))
+             (fst (pctx_sol pgs is_bot_pred (prog_table p) (prog_procs p))) id)
           v ()
       = (if (v, ()) \<in> fst (pctx_sol pgs is_bot_pred (prog_table p) (prog_procs p))
          then normalize_point pgs
@@ -116,7 +116,7 @@ proof -
       = lookup_context
           (dg_analysis_adapter.analyse_result
              (pctx_sigma_abs pgs is_bot_pred (prog_table p) (prog_procs p))
-             (fst (pctx_sol_prog pgs p)))
+             (fst (pctx_sol_prog pgs p)) id)
           v ()"
     using adapter_eq0[unfolded sol_eq[symmetric]]
     by (rule sym)

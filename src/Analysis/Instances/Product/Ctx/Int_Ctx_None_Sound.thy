@@ -510,10 +510,11 @@ interpretation ictx_adapter: dg_analysis_adapter
     and s0g = "map_lift (fun_of_resolved_st_q_for gs) (Bot::int_dom exec_dg_st lifted)"
     and sigma = ictx_sigma_abs and vars = "fst (ictx_sol mode is_bot_pred gs Pi ps)"
     and x0 = "(cfg_exit (compile_prog Pi ps), ())" and sg = ictx_sg
-    and seed_key = Seed and enterc = enterc_unit and classify = int_classify_check
+    and seed_key = Seed and enterc = enterc_unit and gammaDG = gamma_dg_base
+    and gammaM = gamma_state_lift and rd = id and classify = int_classify_check
 proof (unfold_locales, goal_cases
     FinC SeedKey ResolveSound RouteEnterAgree CallFwd CombFwd CallEnterStoreAgree
-    ClassifyProved ClassifyRefuted)
+    GammaRd ClassifyProved ClassifyRefuted)
   case FinC show ?case by (rule ictx_finC)
 next
   case (SeedKey p ctx) show ?case by simp
@@ -540,6 +541,9 @@ next
   have "CallEdge dst' pars' args' = CallEdge dst pars args"
     using compile_prog_calls_source_unique[OF ce' ce] by simp
   thus ?case using es_eq by simp
+next
+  case (GammaRd d g')
+  show ?case by (simp add: gamma_dg_base_def)
 next
   case (ClassifyProved c d s)
   show ?case using ClassifyProved(1,2) by (rule int_classify_check_proved)
