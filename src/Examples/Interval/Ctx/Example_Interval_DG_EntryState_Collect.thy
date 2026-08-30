@@ -66,45 +66,28 @@ lemma rc_comb_fwd_ok:
   using assms rc_calls_shape[unfolded rc_cfg_def] rc_call_caller_only_root rc_covered_cont
   by fastforce
 
-text \<open>The routed callee entry the abstract side selects is the executable
-  \<^const>\<open>ctx_call\<close>: the abstract route reads the caller's solved state through the
-  same readback the transport uses, so \<open>entry_state_route_commute\<close> turns it back
-  into the executable route \<^const>\<open>ctx_call\<close> is defined by.\<close>
+text \<open>The routed callee entry the solved system selects is the executable
+  \<^const>\<open>ctx_call\<close>: the route reads the caller's solved state from the solver's own
+  table, which is exactly how \<^const>\<open>ctx_call\<close> is defined.\<close>
 
-lemma rc_enter_local_eq_entered:
-  "enter_local (ectx_abs_spec rc_gs) pars args
-      (map_lift (fun_of_resolved_st_q_for rc_gs) d) g
-   = map_lift (fun_of_resolved_st_q_for rc_gs)
-       (transfer_lift rc_is_bot_pred (ivl_enter_st_for rc_gs pars args) d)"
-  using entry_state_entered_commute[OF rc_exact, of d "CallEdge None pars args"]
-  by (simp add: entry_state_entered_def entered_state_abs_def ectx_abs_spec_def
-                dgs_enter_base_for_lifted)
-
-lemma rc_route_abs_at_call:
-  "entry_state_route_abs_gen rc_gs (Statement 3) []
-     (enter_local (ectx_abs_spec rc_gs) [(STR ''a'')] [V (STR ''x'')]
-        (locals (entry_state_sigma_abs_exec rc_gs rc_is_bot_pred rc_pi rc_procs
-           (Inl (Statement 3, []))))
-        (globs (entry_state_sigma_abs_exec rc_gs rc_is_bot_pred rc_pi rc_procs
-           (Inr Global))))
+lemma rc_route_at_call:
+  "entry_state_route_gen rc_gs rc_is_bot_pred (Statement 3) []
+     (enter_local (ectx_spec rc_gs rc_is_bot_pred) [(STR ''a'')] [V (STR ''x'')]
+        (locals (snd (entry_state_sol rc_gs rc_is_bot_pred rc_pi rc_procs) (Inl (Statement 3, []))))
+        (globs (snd (entry_state_sol rc_gs rc_is_bot_pred rc_pi rc_procs) (Inr Global))))
      (CallEdge (Some (STR ''y'')) [(STR ''a'')] [V (STR ''x'')])
    = ctx_call"
-  unfolding entry_state_route_abs_gen_def entry_state_sigma_abs_exec_def ctx_call_def
-    rc_ctx_sol_def o_apply fun_of_dg_st_gen_simps
-  by (simp add: rc_enter_local_eq_entered entry_state_entered_def
-                entry_state_route_commute[OF rc_exact])
+  unfolding rc_is_bot_pred_def ctx_call_def rc_ctx_sol_def by eval
 
 lemma rc_call_fwd_ok:
   assumes cov: "(u, ctx) \<in> fst (entry_state_sol rc_gs rc_is_bot_pred rc_pi rc_procs)"
     and ce: "(u, CallEdge dst pars args, FunctionEntry p, cont)
                \<in> calls (compile_prog rc_pi rc_procs)"
   shows "(FunctionEntry p,
-            entry_state_route_abs_gen rc_gs u ctx
-              (enter_local (ectx_abs_spec rc_gs) pars args
-                 (locals (entry_state_sigma_abs_exec rc_gs rc_is_bot_pred rc_pi rc_procs
-                    (Inl (u, ctx))))
-                 (globs (entry_state_sigma_abs_exec rc_gs rc_is_bot_pred rc_pi rc_procs
-                    (Inr Global))))
+            entry_state_route_gen rc_gs rc_is_bot_pred u ctx
+              (enter_local (ectx_spec rc_gs rc_is_bot_pred) pars args
+                 (locals (snd (entry_state_sol rc_gs rc_is_bot_pred rc_pi rc_procs) (Inl (u, ctx))))
+                 (globs (snd (entry_state_sol rc_gs rc_is_bot_pred rc_pi rc_procs) (Inr Global))))
               (CallEdge dst pars args))
          \<in> fst (entry_state_sol rc_gs rc_is_bot_pred rc_pi rc_procs)"
 proof -
@@ -114,7 +97,7 @@ proof -
     by fastforce+
   have root: "ctx = []" using cov shape rc_call_caller_only_root by fastforce
   show ?thesis
-    unfolding shape root rc_route_abs_at_call
+    unfolding shape root rc_route_at_call
     using callee_covered_call unfolding rc_ctx_sol_def .
 qed
 
@@ -127,16 +110,15 @@ text \<open>The seven hypotheses \<open>entry_state_activation_collect_sound\<cl
   them unconditional below.\<close>
 
 lemmas rc_entry_state_hyps =
-  rc_wf rc_ctx_terminates rc_exact rc_entry_covered rc_fwd_ok rc_call_fwd_ok rc_comb_fwd_ok
+  rc_ctx_terminates rc_exact rc_entry_covered rc_fwd_ok rc_call_fwd_ok rc_comb_fwd_ok
 
 theorem rc_activation_collect_sound:
   "activation_collect rc_gs
      (entry_state_context rc_gs rc_is_bot_pred rc_pi rc_procs)
      [] (compile_prog rc_pi rc_procs) (cinit_stores rc_gs) v ctx
-   \<subseteq> gamma_state_lift
-       (entry_state_sg rc_gs rc_is_bot_pred rc_pi rc_procs (Inl (v, ctx)))"
-  by (rule entry_state_activation_collect_sound
-        [OF rc_wf rc_ctx_terminates rc_exact rc_entry_covered rc_fwd_ok rc_call_fwd_ok rc_comb_fwd_ok])
+   \<subseteq> gamma_state_lift (map_lift (fun_of_resolved_st_q_for rc_gs)
+       (entry_state_sg_st rc_gs rc_is_bot_pred rc_pi rc_procs (Inl (v, ctx))))"
+  by (rule entry_state_activation_collect_sound[OF rc_entry_state_hyps])
 
 subsection \<open>Acceptance witness: one context covers every \<open>__voblint_nondet_int()\<close> draw\<close>
 
@@ -159,8 +141,7 @@ lemma rc_context_at_call:
   "entry_state_context rc_gs rc_is_bot_pred rc_pi rc_procs
      (Statement 3) [] s = ctx_call"
   by (simp add: entry_state_context_def[OF rc_entry_state_hyps]
-                entry_state_sigma_abs_def[OF rc_entry_state_hyps]
-                rc_call_site_action rc_route_abs_at_call)
+                rc_call_site_action rc_route_at_call)
 
 text \<open>The crux corollary: for \<^emph>\<open>every\<close> concrete store \<open>s\<close> that reaches the call site
   --- in particular every store obtained by any \<open>__voblint_nondet_int()\<close> outcome, since \<open>x\<close>'s
@@ -171,11 +152,12 @@ text \<open>The crux corollary: for \<^emph>\<open>every\<close> concrete store 
   argument occurred.\<close>
 
 corollary rc_entry_state_coverage:
-  assumes sm: "s \<in> gamma_state_lift
-    (entry_state_sg rc_gs rc_is_bot_pred rc_pi rc_procs (Inl (Statement 3, [])))"
+  assumes sm: "s \<in> gamma_state_lift (map_lift (fun_of_resolved_st_q_for rc_gs)
+    (entry_state_sg_st rc_gs rc_is_bot_pred rc_pi rc_procs (Inl (Statement 3, []))))"
   shows "call_enter rc_gs (CallEdge (Some (STR ''y'')) [(STR ''a'')] [V (STR ''x'')]) s
-           \<in> gamma_state_lift (entry_state_sg rc_gs rc_is_bot_pred rc_pi rc_procs
-                (Inl (FunctionEntry (STR ''p''), ctx_call)))"
+           \<in> gamma_state_lift (map_lift (fun_of_resolved_st_q_for rc_gs)
+                (entry_state_sg_st rc_gs rc_is_bot_pred rc_pi rc_procs
+                  (Inl (FunctionEntry (STR ''p''), ctx_call))))"
 proof -
   have ce: "(Statement 3, CallEdge (Some (STR ''y'')) [(STR ''a'')] [V (STR ''x'')],
               FunctionEntry (STR ''p''), Statement 4)
