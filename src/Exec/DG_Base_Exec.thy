@@ -308,7 +308,7 @@ subsection \<open>A generic exec-level formal-entry route, and its commute to th
 text \<open>
   \<open>formals_route_lifted\<close>/\<open>formals_route_lifted_gen\<close> (\<^theory>\<open>Voblint_Core.Routed_Context\<close>)
   are already domain-generic at the abstract carrier \<open>'a abs_state lifted\<close> -- the shape
-  \<^locale>\<open>routed_context_hetero\<close>'s own \<open>route\<close> parameter needs. The executable equation
+  \<^locale>\<open>routed_context_base_hetero\<close>'s own \<open>route\<close> parameter needs. The executable equation
   system a solver actually runs needs the same construction at the exec carrier
   \<open>'a exec_dg_st lifted\<close> instead, built from this locale's own \<open>enter_st\<close>/\<open>is_bot_pred\<close>
   rather than the mathematical \<open>enter#\<close>/\<open>tf\<close>: every current EntryState-style routed

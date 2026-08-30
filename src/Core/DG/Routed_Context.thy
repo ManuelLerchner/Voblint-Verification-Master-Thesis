@@ -914,108 +914,6 @@ qed
 
 end
 
-text \<open>
-  \<open>routed_context_hetero\<close> is exactly \<open>routed_context_base_hetero\<close> at
-  \<open>gammaDG := gamma_dg_base\<close>, \<open>gammaM := gamma_state_lift\<close>. The specialization
-  does not re-derive \<open>routed_context_call\<close>/\<open>routed_context_comb\<close> from scratch:
-  \<^const>\<open>gamma_dg_base\<close> never reads its \<open>'G\<close> argument, so nothing about a
-  Base-style seed publication needs a fresh proof the sublocale interpretation does not
-  already give verbatim, once \<open>gammaDG\<close>/\<open>gammaM\<close> are substituted. \<open>'G\<close> itself
-  stays free (\<open>routed_context_base_hetero\<close>'s own genericity), so a caller fixes it at
-  instantiation -- typically \<open>unit\<close>, since \<^const>\<open>gamma_dg_base\<close> makes any
-  choice of \<open>'G\<close> semantically inert.
-\<close>
-locale routed_context_hetero =
-  dg_ctx_activation_base S gamma_dg_base gs g gk0 route
-    "routed_cmb_g S gk0 seed_key resolve" "routed_extra_g seed_key gk0"
-    bot0 s0d s0g sigma vars x0 sg gamma_state_lift
-  for S :: "('a::sound_domain abs_state lifted, 'G::bounded_semilattice_sup_bot) dg_spec"
-    and gs :: "vname \<Rightarrow> bool"
-    and g gk0
-    and route ("context\<^sup>#")
-    and bot0 s0d s0g sigma vars x0 sg
-    and seed_key :: "pp \<Rightarrow> 'c \<Rightarrow> 'k"
-    and resolve :: "pp \<Rightarrow> pp \<Rightarrow> call_action \<Rightarrow>
-      'a abs_state lifted \<Rightarrow> pname list" +
-  fixes enterc :: "cfg_node \<Rightarrow> 'c \<Rightarrow> store \<Rightarrow> 'c"
-  assumes finC[intro,simp]: "finite (calls g)"
-    and seed_key_ne_gk0[simp]: "\<And>p ctx. seed_key p ctx \<noteq> gk0"
-    and resolve_sound:
-    "\<And>u ctx dst pars args p cont s.
-       (u, ctx) \<in> vars
-       \<Longrightarrow> (u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g
-       \<Longrightarrow> s \<in> gamma_dg_base (locals (sigma (Inl (u, ctx)))) (globs (sigma (Inr gk0)))
-       \<Longrightarrow> p \<in> set (resolve cont u (CallEdge dst pars args)
-                       (locals (sigma (Inl (u, ctx)))))"
-    and route_enterc_agree:
-    "\<And>u ctx dst pars args p cont s.
-       (u, ctx) \<in> vars
-       \<Longrightarrow> (u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g
-       \<Longrightarrow>       s \<in> gamma_dg_base (locals (sigma (Inl (u, ctx)))) (globs (sigma (Inr gk0)))
-       \<Longrightarrow> route u ctx (enter_local S pars args (locals (sigma (Inl (u, ctx))))
-                            (globs (sigma (Inr gk0)))) (CallEdge dst pars args)
-            = enterc u ctx (call_enter gs (CallEdge dst pars args) s)"
-    and call_fwd:
-    "\<And>u ctx dst pars args p cont.
-       (u, ctx) \<in> vars \<Longrightarrow> (u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g
-       \<Longrightarrow> (FunctionEntry p,
-              route u ctx (enter_local S pars args (locals (sigma (Inl (u, ctx))))
-                              (globs (sigma (Inr gk0)))) (CallEdge dst pars args))
-             \<in> vars"
-    and comb_fwd:
-    "\<And>cl c1 dst pars args p cont.
-       (cl, c1) \<in> vars \<Longrightarrow> (cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g
-       \<Longrightarrow> (cont, c1) \<in> vars"
-    and call_enter_store_agree:
-    "\<And>cl s es dst pars args p cont.
-       call_enter_store gs g cl s es
-       \<Longrightarrow> (cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g
-       \<Longrightarrow> es = call_enter gs (CallEdge dst pars args) s"
-begin
-
-sublocale base: routed_context_base_hetero S gamma_dg_base gs
-  g gk0 route bot0 s0d s0g sigma vars x0 sg seed_key resolve gamma_state_lift enterc
-proof unfold_locales
-  show "finite (calls g)" by (rule finC)
-next
-  show "\<And>p ctx. seed_key p ctx \<noteq> gk0" by (rule seed_key_ne_gk0)
-next
-  fix u ctx dst pars args p cont s
-  assume "(u, ctx) \<in> vars" "(u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
-    "s \<in> gamma_dg_base (locals (sigma (Inl (u, ctx)))) (globs (sigma (Inr gk0)))"
-  then show "p \<in> set (resolve cont u (CallEdge dst pars args)
-                        (locals (sigma (Inl (u, ctx)))))"
-    by (rule resolve_sound)
-next
-  fix u ctx dst pars args p cont s
-  assume "(u, ctx) \<in> vars" "(u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
-    "s \<in> gamma_dg_base (locals (sigma (Inl (u, ctx)))) (globs (sigma (Inr gk0)))"
-  then show "route u ctx (enter_local S pars args (locals (sigma (Inl (u, ctx))))
-                 (globs (sigma (Inr gk0)))) (CallEdge dst pars args)
-      = enterc u ctx (call_enter gs (CallEdge dst pars args) s)"
-    by (rule route_enterc_agree)
-next
-  fix u ctx dst pars args p cont
-  assume "(u, ctx) \<in> vars" "(u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
-  then show "(FunctionEntry p,
-                route u ctx (enter_local S pars args (locals (sigma (Inl (u, ctx))))
-                    (globs (sigma (Inr gk0)))) (CallEdge dst pars args))
-        \<in> vars"
-    by (rule call_fwd)
-next
-  fix cl c1 dst pars args p cont
-  assume "(cl, c1) \<in> vars" "(cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
-  then show "(cont, c1) \<in> vars" by (rule comb_fwd)
-next
-  fix cl s es dst pars args p cont
-  assume "call_enter_store gs g cl s es" "(cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
-  then show "es = call_enter gs (CallEdge dst pars args) s" by (rule call_enter_store_agree)
-qed
-
-lemmas routed_context_call = base.routed_context_call
-lemmas routed_context_comb = base.routed_context_comb
-
-end
 
 subsection \<open>Formal-entry contexts: routing on the callee's declared formals\<close>
 
@@ -1032,7 +930,7 @@ text \<open>
   abstraction \<open>decode\<close> a domain provides for a concrete value and the CFG needed
   to look up a call site's own formal list. Neither definition mentions a
   domain-specific accessor beyond \<open>decode\<close> itself, so any domain reusing
-  \<^locale>\<open>routed_context_hetero\<close> instantiates this pair once instead of
+  \<^locale>\<open>routed_context_base_hetero\<close> instantiates this pair once instead of
   hand-writing a per-formal projection.
 \<close>
 
@@ -1126,7 +1024,7 @@ subsection \<open>Formal-entry contexts at the routed spine's lifted carrier\<cl
 
 text \<open>
   \<^const>\<open>formals_route\<close>/\<^const>\<open>formals_route_gen\<close> above operate on the unlifted
-  \<^typ>\<open>'a abs_state\<close>, the shape a plain \<^locale>\<open>routed_context_hetero\<close> caller state
+  \<^typ>\<open>'a abs_state\<close>, the shape an abstract-carrier \<^locale>\<open>routed_context_base_hetero\<close> caller state
   has. The routed executable spine (\<^locale>\<open>dg_ctx_activation_base\<close>, every current
   instance) instead carries \<^typ>\<open>'a abs_state lifted\<close> throughout, to represent an
   activation the solver has not yet covered. \<open>formals_route_lifted\<close>/
@@ -1154,7 +1052,7 @@ where
 subsection \<open>A solved-table \<open>enterc\<close> agrees with any \<open>route\<close> reading the same table\<close>
 
 text \<open>
-  \<open>route_enterc_agree\<close> (\<^locale>\<open>routed_context_hetero\<close>) asks for a trace-semantic
+  \<open>route_enterc_agree\<close> (\<^locale>\<open>routed_context_base_hetero\<close>) asks for a trace-semantic
   \<open>enterc\<close> agreeing with the executable \<open>route\<close> on every matched call. When \<open>route\<close>
   is state-dependent (unlike \<open>route_unit\<close> or \<open>cs_route\<close>, both of which ignore their
   state argument outright and so satisfy this for any \<open>enterc\<close> built the

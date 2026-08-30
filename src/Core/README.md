@@ -20,7 +20,7 @@ in the session derives from, transports, or instantiates one of them.
 | `dg_spec` | the analysis: transfer per edge action, `enter`, `combine_env`/`combine_assign`, `caller_cont` -- Goblint's `Spec` | `DG/DG_Framework.thy` |
 | `sound_dg_spec` | a joint concretization `gammaDG d g` each field over-approximates | `DG/DG_Soundness.thy` |
 | `dg_ctx_activation_base` | a solved system: `part_post_solution`, the covered keys, a reader; derives EDGE and COMB | `DG/DG_Ctx_Activation.thy` |
-| `routed_context_hetero` | a routing policy `route`/`enterc`/`seed_key`/`resolve`; fixes the call trees and derives CALL | `DG/Routed_Context.thy` |
+| `routed_context_base_hetero` | a routing policy `route`/`enterc`/`seed_key`/`resolve` at any carrier and concretization; fixes the call trees and derives CALL, COMB and activation-collect soundness | `DG/Routed_Context.thy` |
 | `dg_analysis_adapter` | the published result table and check report, with their soundness | `Result/DG_Analysis_Adapter.thy` |
 
 ## Folders

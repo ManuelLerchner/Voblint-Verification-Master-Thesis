@@ -36,7 +36,7 @@ text \<open>
   \<^const>\<open>ltr_collect\<close>) and \<open>Sign_Checks.sctx_analyse_result_eq\<close> (identifying the
   adapter's own result reading with \<^const>\<open>analyse_sign_ctx_result_for\<close>'s
   \<open>normalize_point\<close>/\<open>canonicalize_lift\<close> construction) rather than re-deriving
-  \<open>routed_context_hetero\<close>'s coverage/sigma-projection argument by hand --- the
+  \<open>routed_context_base_hetero\<close>'s coverage argument by hand --- the
   routed spine needs no \<open>wf_compile_input\<close>/finiteness/node-membership premise,
   so this bridge only takes the four coverage-and-termination facts the
   routed solve genuinely turns on.
