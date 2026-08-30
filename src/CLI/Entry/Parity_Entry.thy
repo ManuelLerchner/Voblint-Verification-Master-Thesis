@@ -73,17 +73,15 @@ proof -
       = activation_collect pgs enterc_unit ()
           (compile_prog (prog_table p) (prog_procs p)) (cinit_stores pgs) v ()"
     unfolding cfg_eq by (rule activation_collect_unit_eq_ltr_collect[symmetric])
-  have s0_sound: "cinit_stores pgs \<subseteq> gamma_dg_base
-        (map_lift (fun_of_resolved_st_q_for pgs) (Lifted cinit_parity_st))
-        (map_lift (fun_of_resolved_st_q_for pgs) (Bot::parity exec_dg_st lifted))"
-    using pctx_cinit_le_cinit_parity_st[OF solves' exact entry_cov' fwd_ok' call_fwd_ok' comb_fwd_ok']
-    by (simp add: gamma_dg_base_def)
+  have s0_sound: "cinit_stores pgs \<subseteq> pctx_gamma pgs (Lifted cinit_parity_st) Bot"
+    by (rule pctx_cinit_le_cinit_parity_st[OF solves' exact entry_cov' fwd_ok' call_fwd_ok' comb_fwd_ok'])
   have node_sound: "activation_collect pgs enterc_unit ()
         (compile_prog (prog_table p) (prog_procs p)) (cinit_stores pgs) v ()
       \<subseteq> \<lbrakk>case lookup_context
               (dg_analysis_adapter.analyse_result
-                 (pctx_sigma_abs pgs is_bot_pred (prog_table p) (prog_procs p))
-                 (fst (pctx_sol pgs is_bot_pred (prog_table p) (prog_procs p))) id)
+                 (snd (pctx_sol pgs is_bot_pred (prog_table p) (prog_procs p)))
+                 (fst (pctx_sol pgs is_bot_pred (prog_table p) (prog_procs p)))
+                 (map_lift (fun_of_resolved_st_q_for pgs)))
               v () of
             Unreachable \<Rightarrow> bot | Reachable st \<Rightarrow> st\<rbrakk>"
     by (rule pctx_result_node_sound
@@ -98,8 +96,9 @@ proof -
     by simp
   have adapter_eq0: "lookup_context
           (dg_analysis_adapter.analyse_result
-             (pctx_sigma_abs pgs is_bot_pred (prog_table p) (prog_procs p))
-             (fst (pctx_sol pgs is_bot_pred (prog_table p) (prog_procs p))) id)
+             (snd (pctx_sol pgs is_bot_pred (prog_table p) (prog_procs p)))
+             (fst (pctx_sol pgs is_bot_pred (prog_table p) (prog_procs p)))
+             (map_lift (fun_of_resolved_st_q_for pgs)))
           v ()
       = (if (v, ()) \<in> fst (pctx_sol pgs is_bot_pred (prog_table p) (prog_procs p))
          then normalize_point pgs
@@ -115,8 +114,8 @@ proof -
          else Unreachable)
       = lookup_context
           (dg_analysis_adapter.analyse_result
-             (pctx_sigma_abs pgs is_bot_pred (prog_table p) (prog_procs p))
-             (fst (pctx_sol_prog pgs p)) id)
+             (snd (pctx_sol_prog pgs p))
+             (fst (pctx_sol_prog pgs p)) (map_lift (fun_of_resolved_st_q_for pgs)))
           v ()"
     using adapter_eq0[unfolded sol_eq[symmetric]]
     by (rule sym)

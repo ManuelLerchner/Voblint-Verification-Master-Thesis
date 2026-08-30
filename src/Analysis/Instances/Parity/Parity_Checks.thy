@@ -114,7 +114,7 @@ section \<open>The generic report adapter, at the routed-unit context\<close>
 text \<open>
   Interpreting \<^locale>\<open>dg_analysis_adapter\<close> at \<open>Parity_Ctx_None_Sound\<close>'s own routed-unit
   solved system, mirroring \<open>Sign_Checks\<close>'s own interpretation exactly. Every obligation is
-  either one that theory's \<open>pctx_dg\<close>/\<open>pctx_routed\<close> interpretations already discharge, or
+  either one that theory's \<open>pctx_routed\<close> interpretation already discharges, or
   one that collapses at \<^const>\<open>route_unit\<close>/\<^const>\<open>enterc_unit\<close>; only
   \<open>classify_proved\<close>/\<open>classify_refuted\<close> are Parity's own, and both are the pre-existing
   \<^const>\<open>parity_classify_check\<close> soundness facts above. No Parity-specific result, report,
@@ -142,40 +142,27 @@ context
         \<Longrightarrow> (cont, c1) \<in> fst (pctx_sol gs is_bot_pred Pi ps)"
 begin
 
-interpretation pctx_dg_base: sound_dg_spec "pctx_abs_spec gs" gamma_dg_base gs
-  unfolding pctx_abs_spec_def
-  by (rule base_dg_spec_sound[OF parity_is_sound_transfer_for is_bot_state_gamma_state_empty])
+interpretation pctx_dg_base: sound_dg_spec "pctx_spec gs is_bot_pred" "pctx_gamma gs" gs
+  by (rule pctx_sound_exec[OF exact])
 
-interpretation pctx_adapter: dg_analysis_adapter "pctx_abs_spec gs" gamma_dg_base gs
-    "compile_prog Pi ps" Global route_unit
-    "map_lift (fun_of_resolved_st_q_for gs) (Bot::parity exec_dg_st lifted)"
-    "map_lift (fun_of_resolved_st_q_for gs) (Lifted cinit_parity_st)"
-    "map_lift (fun_of_resolved_st_q_for gs) (Bot::parity exec_dg_st lifted)"
-    "pctx_sigma_abs gs is_bot_pred Pi ps" "fst (pctx_sol gs is_bot_pred Pi ps)"
-    "(cfg_exit (compile_prog Pi ps), ())" "pctx_sg gs is_bot_pred Pi ps"
-    Seed gamma_state_lift enterc_unit id parity_classify_check
+interpretation pctx_adapter: dg_analysis_adapter "pctx_spec gs is_bot_pred" "pctx_gamma gs" gs
+    "compile_prog Pi ps" Global route_unit Bot "Lifted cinit_parity_st" Bot
+    "snd (pctx_sol gs is_bot_pred Pi ps)" "fst (pctx_sol gs is_bot_pred Pi ps)"
+    "(cfg_exit (compile_prog Pi ps), ())" "pctx_sg_st gs is_bot_pred Pi ps"
+    Seed "\<lambda>m. gamma_state_lift (map_lift (fun_of_resolved_st_q_for gs) m)" enterc_unit
+    "map_lift (fun_of_resolved_st_q_for gs)" parity_classify_check
 proof (unfold_locales, goal_cases FinE PP SgCov SgUncov Fwd FinC SeedKey ResolveSound
     RouteEnterc CallFwd CombFwd EnterAgree GammaRd ClProved ClRefuted)
   case FinE show ?case
     using compile_prog_finite by auto
 next
-  case PP show ?case
-    by (simp only: pctx_sigma_abs_def[OF solves exact entry_cov fwd_ok call_fwd_ok comb_fwd_ok]
-        pctx_sigma_abs_exec_def)
-      (rule pctx_pp_abs[OF solves exact])
+  case PP show ?case by (rule pctx_pp_routed[OF solves exact])
 next
   case (SgCov v c)
-  note mem = this
-  have eq1: "pctx_sg gs is_bot_pred Pi ps (Inl (v, c))
-               = locals (pctx_sigma_abs gs is_bot_pred Pi ps (Inl (v, c)))"
-    by (rule pctx_sg_covered[OF solves exact entry_cov fwd_ok call_fwd_ok comb_fwd_ok mem])
-  show ?case
-    using eq1 gamma_dg_base_def by auto
+  thus ?case by (simp add: pctx_sg_st_def pctx_gamma_def)
 next
   case (SgUncov v c)
-  note nmem = this
-  show ?case
-    by (rule pctx_sg_uncovered_empty[OF solves exact entry_cov fwd_ok call_fwd_ok comb_fwd_ok nmem])
+  thus ?case by (simp add: pctx_sg_st_def)
 next
   case (Fwd u a v c)
   thus ?case by (rule fwd_ok)
@@ -210,7 +197,7 @@ next
   thus ?case using es_eq by simp
 next
   case (GammaRd d g')
-  show ?case by (simp add: gamma_dg_base_def)
+  show ?case by (simp add: pctx_gamma_def)
 next
   case (ClProved c d s)
   thus ?case by (rule parity_classify_check_proved)
@@ -237,7 +224,7 @@ text \<open>
   \<open>is_bot_pred\<close> before projecting -- \<open>exact\<close> is what identifies the two orders.
   Composing it with \<open>pctx_result_node_sound\<close> gives
   \<^const>\<open>analyse_parity_ctx_result_for\<close>'s node-soundness bridge without
-  re-deriving \<open>routed_context_hetero\<close>'s coverage/sigma-projection argument.
+  re-deriving \<open>routed_context_base_hetero\<close>'s coverage argument.
 \<close>
 
 lemma pctx_analyse_result_eq:
@@ -247,8 +234,6 @@ lemma pctx_analyse_result_eq:
              (canonicalize_lift is_bot_pred (locals (snd (pctx_sol gs is_bot_pred Pi ps) (Inl (v, ctx)))))
       else Unreachable)"
   unfolding pctx_adapter.lookup_context_analyse_result
-  apply (simp only: pctx_sigma_abs_def[OF solves exact entry_cov fwd_ok call_fwd_ok comb_fwd_ok]
-                     pctx_sigma_abs_exec_def o_apply fun_of_dg_st_gen_simps(1))
   by (cases "locals (snd (pctx_sol gs is_bot_pred Pi ps) (Inl (v, ctx)))")
      (simp_all add: exact normalize_lift_def)
 

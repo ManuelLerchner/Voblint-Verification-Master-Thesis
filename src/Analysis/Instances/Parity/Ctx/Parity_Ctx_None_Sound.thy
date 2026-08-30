@@ -120,7 +120,7 @@ interpretation parity_unit: routed_domain_exec
      (rule parity_tf_st_for_commute, rule parity_enter_st_for_commute, rule exact, simp, simp,
       simp add: static_resolve_def)
 
-lemmas parity_pp_abs_gen = parity_unit.pp_abs
+lemmas parity_pp_st_gen = parity_unit.pp_st
 
 end
 
@@ -148,63 +148,76 @@ lemma pctx_pp_st:
              "snd (pctx_sol gs is_bot_pred Pi ps)"]
   unfolding pctx_sol_def by simp
 
-theorem pctx_pp_abs:
+text \<open>The solver's post-solution, for the unbuffered routed generator at the executable
+  spec: the shape \<^locale>\<open>dg_ctx_activation_base\<close> consumes directly.\<close>
+
+theorem pctx_pp_routed:
   "part_post_solution
      (side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. Global) route_unit
-        (routed_cmb_g (pctx_abs_spec gs) Global Seed
-           (static_resolve (compile_prog Pi ps)))
+        (routed_cmb_g (pctx_spec gs is_bot_pred) Global Seed (static_resolve (compile_prog Pi ps)))
         (routed_extra_g Seed Global)
-        (compile_prog Pi ps) (pctx_abs_spec gs)
-        (map_lift (fun_of_resolved_st_q_for gs) (Bot::parity exec_dg_st lifted))
-        (map_lift (fun_of_resolved_st_q_for gs) (Lifted cinit_parity_st))
-        (map_lift (fun_of_resolved_st_q_for gs) (Bot::parity exec_dg_st lifted)))
+        (compile_prog Pi ps) (pctx_spec gs is_bot_pred) Bot (Lifted cinit_parity_st) Bot)
      (cfg_exit (compile_prog Pi ps), ())
-     (fun_of_dg_st_gen (map_lift (fun_of_resolved_st_q_for gs)) (map_lift (fun_of_resolved_st_q_for gs))
-        \<circ> snd (pctx_sol gs is_bot_pred Pi ps))
-     (fst (pctx_sol gs is_bot_pred Pi ps))"
-proof -
-  have pp_buf: "part_post_solution
-       (side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_addr_list (\<lambda>_. Global)
-          route_unit
-          (routed_cmb_g_contribution (pctx_spec gs is_bot_pred) Global Seed
-             (static_resolve (compile_prog Pi ps)))
-          (routed_extra_g Seed Global)
-          (compile_prog Pi ps) (pctx_spec gs is_bot_pred) Bot (Lifted cinit_parity_st) Bot)
-       (cfg_exit (compile_prog Pi ps), ())
-       (snd (pctx_sol gs is_bot_pred Pi ps)) (fst (pctx_sol gs is_bot_pred Pi ps))"
-    using pctx_pp_st unfolding pctx_eqs_def by simp
-  show ?thesis
-    unfolding pctx_abs_spec_def
-    using pp_buf unfolding pctx_spec_def by (rule parity_pp_abs_gen[OF exact])
-qed
-
+     (snd (pctx_sol gs is_bot_pred Pi ps)) (fst (pctx_sol gs is_bot_pred Pi ps))"
+  using pctx_pp_st unfolding pctx_eqs_def pctx_spec_def by (rule parity_pp_st_gen[OF exact])
 end
 
 section \<open>Activation-indexed collecting soundness, generic per compiled program\<close>
 
-definition pctx_sigma_abs_exec ::
-    "(vname \<Rightarrow> bool) \<Rightarrow> (parity exec_dg_st \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> pp \<times> unit + gk \<Rightarrow> (parity abs_state lifted, parity abs_state lifted) dg_state" where
-  "pctx_sigma_abs_exec gs is_bot_pred Pi ps =
-     fun_of_dg_st_gen (map_lift (fun_of_resolved_st_q_for gs)) (map_lift (fun_of_resolved_st_q_for gs))
-       \<circ> snd (pctx_sol gs is_bot_pred Pi ps)"
+text \<open>
+  The routed spine is interpreted at Parity's executable carrier and fed the solver's own
+  table: a local unknown concretizes to \<^const>\<open>gamma_state_lift\<close> of its readback, the
+  covered reader \<open>pctx_sg_st\<close> hands the table's local slot through unchanged, and no
+  solved system is transported between carriers. \<open>pctx_gamma\<close> names that
+  concretization outside the interpretation so a downstream theory can state it.
+\<close>
 
-definition pctx_sg_exec ::
-    "(vname \<Rightarrow> bool) \<Rightarrow> (parity exec_dg_st \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> pp \<times> unit + gk \<Rightarrow> parity abs_state lifted" where
-  "pctx_sg_exec gs is_bot_pred Pi ps k =
+definition pctx_gamma ::
+    "(vname \<Rightarrow> bool) \<Rightarrow> parity exec_dg_st lifted \<Rightarrow> parity exec_dg_st lifted \<Rightarrow> store set" where
+  "pctx_gamma gs d g = gamma_state_lift (map_lift (fun_of_resolved_st_q_for gs) d)"
+
+lemma pctx_gamma_Bot [simp]: "pctx_gamma gs Bot g = {}"
+  by (simp add: pctx_gamma_def)
+
+definition pctx_sg_st ::
+    "(vname \<Rightarrow> bool) \<Rightarrow> (parity exec_dg_st \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list
+       \<Rightarrow> pp \<times> unit + gk \<Rightarrow> parity exec_dg_st lifted" where
+  "pctx_sg_st gs is_bot_pred Pi ps k =
      (case k of
         Inl (v, ctx) \<Rightarrow>
           (if (v, ctx) \<in> fst (pctx_sol gs is_bot_pred Pi ps)
-           then locals (pctx_sigma_abs_exec gs is_bot_pred Pi ps (Inl (v, ctx)))
+           then locals (snd (pctx_sol gs is_bot_pred Pi ps) (Inl (v, ctx)))
            else Bot)
       | Inr _ \<Rightarrow> Bot)"
+
+context
+  fixes gs :: "vname \<Rightarrow> bool" and is_bot_pred :: "parity exec_dg_st \<Rightarrow> bool"
+  assumes exact: "\<And>s. is_bot_pred s = is_bot_state (fun_of_resolved_st_q_for gs s)"
+begin
+
+interpretation parity_unit: routed_domain_exec
+  gs is_bot_pred "parity_tf_st_for gs" "parity_enter_st_for gs" "parity_tf_for gs"
+  Global Seed route_unit route_unit static_resolve static_resolve
+  by unfold_locales
+     (rule parity_tf_st_for_commute, rule parity_enter_st_for_commute, rule exact, simp, simp,
+      simp add: static_resolve_def)
+
+lemma pctx_gamma_eq: "pctx_gamma gs = parity_unit.gamma_exec"
+  by (intro ext) (simp add: pctx_gamma_def parity_unit.gamma_exec_def gamma_dg_base_def)
+
+theorem pctx_sound_exec: "sound_dg_spec (pctx_spec gs is_bot_pred) (pctx_gamma gs) gs"
+  unfolding pctx_gamma_eq pctx_spec_def
+  by (rule parity_unit.sound_dg_spec_st)
+     (rule base_dg_spec_sound[OF parity_is_sound_transfer_for is_bot_state_gamma_state_empty])
+
+end
 
 context
   fixes gs :: "vname \<Rightarrow> bool" and is_bot_pred :: "parity exec_dg_st \<Rightarrow> bool"
     and Pi :: proc_table and ps :: "pname list"
   assumes solves: "pctx_terminates gs is_bot_pred Pi ps"
     and exact: "\<And>s. is_bot_pred s = is_bot_state (fun_of_resolved_st_q_for gs s)"
-    and entry_cov: "(cfg_entry (compile_prog Pi ps), ())
-                      \<in> fst (pctx_sol gs is_bot_pred Pi ps)"
+    and entry_cov: "(cfg_entry (compile_prog Pi ps), ()) \<in> fst (pctx_sol gs is_bot_pred Pi ps)"
     and fwd_ok: "\<And>u a v ctx. (u, ctx) \<in> fst (pctx_sol gs is_bot_pred Pi ps)
                    \<Longrightarrow> (u, a, v) \<in> intra (compile_prog Pi ps)
                    \<Longrightarrow> (v, ctx) \<in> fst (pctx_sol gs is_bot_pred Pi ps)"
@@ -218,96 +231,52 @@ context
         \<Longrightarrow> (cont, c1) \<in> fst (pctx_sol gs is_bot_pred Pi ps)"
 begin
 
-subsection \<open>The semantic solution projection\<close>
-
-definition pctx_sigma_abs ::
-    "pp \<times> unit + gk \<Rightarrow> (parity abs_state lifted, parity abs_state lifted) dg_state" where
-  "pctx_sigma_abs = pctx_sigma_abs_exec gs is_bot_pred Pi ps"
-
-definition pctx_sg :: "pp \<times> unit + gk \<Rightarrow> parity abs_state lifted" where
-  "pctx_sg = pctx_sg_exec gs is_bot_pred Pi ps"
-
 lemma pctx_fin: "finite (intra (compile_prog Pi ps))"
   using compile_prog_finite by blast
 
 lemma pctx_finC: "finite (calls (compile_prog Pi ps))"
   using compile_prog_finite by blast
 
-lemma pctx_sg_covered:
+lemma pctx_sg_st_covered:
   "(v, ctx) \<in> fst (pctx_sol gs is_bot_pred Pi ps)
-   \<Longrightarrow> pctx_sg (Inl (v, ctx)) = locals (pctx_sigma_abs (Inl (v, ctx)))"
-  by (simp add: pctx_sg_def pctx_sg_exec_def pctx_sigma_abs_def pctx_sigma_abs_exec_def)
+   \<Longrightarrow> pctx_sg_st gs is_bot_pred Pi ps (Inl (v, ctx))
+         = locals (snd (pctx_sol gs is_bot_pred Pi ps) (Inl (v, ctx)))"
+  by (simp add: pctx_sg_st_def)
 
-lemma pctx_sg_uncovered_empty:
+lemma pctx_sg_st_uncovered_empty:
   "(v, ctx) \<notin> fst (pctx_sol gs is_bot_pred Pi ps)
-     \<Longrightarrow> gamma_state_lift (pctx_sg (Inl (v, ctx))) = {}"
-  by (simp add: pctx_sg_def pctx_sg_exec_def)
+     \<Longrightarrow> gamma_state_lift (map_lift (fun_of_resolved_st_q_for gs)
+           (pctx_sg_st gs is_bot_pred Pi ps (Inl (v, ctx)))) = {}"
+  by (simp add: pctx_sg_st_def)
 
 subsection \<open>Instantiating the generic DG-native activation discharge\<close>
 
-interpretation pctx_dg_base: sound_dg_spec "pctx_abs_spec gs" gamma_dg_base gs
-  unfolding pctx_abs_spec_def
-  by (rule base_dg_spec_sound[OF parity_is_sound_transfer_for is_bot_state_gamma_state_empty])
+interpretation pctx_dg_base: sound_dg_spec "pctx_spec gs is_bot_pred" "pctx_gamma gs" gs
+  by (rule pctx_sound_exec[OF exact])
 
-interpretation pctx_dg: dg_ctx_activation_base "pctx_abs_spec gs" gamma_dg_base gs
-    "compile_prog Pi ps" Global route_unit
-    "routed_cmb_g (pctx_abs_spec gs) Global Seed
-       (static_resolve (compile_prog Pi ps))"
-    "routed_extra_g Seed Global"
-    "map_lift (fun_of_resolved_st_q_for gs) (Bot::parity exec_dg_st lifted)"
-    "map_lift (fun_of_resolved_st_q_for gs) (Lifted cinit_parity_st)"
-    "map_lift (fun_of_resolved_st_q_for gs) (Bot::parity exec_dg_st lifted)"
-    pctx_sigma_abs "fst (pctx_sol gs is_bot_pred Pi ps)"
-    "(cfg_exit (compile_prog Pi ps), ())" pctx_sg gamma_state_lift
-proof unfold_locales
-  show "finite (intra (compile_prog Pi ps))" by (rule pctx_fin)
+interpretation pctx_routed: unit_routed_context "pctx_spec gs is_bot_pred" "pctx_gamma gs" gs
+    "compile_prog Pi ps" Global Bot "Lifted cinit_parity_st" Bot
+    "snd (pctx_sol gs is_bot_pred Pi ps)" "fst (pctx_sol gs is_bot_pred Pi ps)"
+    "(cfg_exit (compile_prog Pi ps), ())" "pctx_sg_st gs is_bot_pred Pi ps" Seed
+    "\<lambda>m. gamma_state_lift (map_lift (fun_of_resolved_st_q_for gs) m)"
+proof (unfold_locales, goal_cases FinE PP SgCov SgUncov Fwd FinC SeedKey CallFwd CombFwd EnterAgree)
+  case FinE show ?case by (rule pctx_fin)
 next
-  show "part_post_solution
-          (side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. Global) route_unit
-             (routed_cmb_g (pctx_abs_spec gs) Global Seed
-                (static_resolve (compile_prog Pi ps)))
-             (routed_extra_g Seed Global)
-             (compile_prog Pi ps) (pctx_abs_spec gs)
-             (map_lift (fun_of_resolved_st_q_for gs) (Bot::parity exec_dg_st lifted))
-             (map_lift (fun_of_resolved_st_q_for gs) (Lifted cinit_parity_st))
-             (map_lift (fun_of_resolved_st_q_for gs) (Bot::parity exec_dg_st lifted)))
-          (cfg_exit (compile_prog Pi ps), ()) pctx_sigma_abs
-          (fst (pctx_sol gs is_bot_pred Pi ps))"
-    unfolding pctx_sigma_abs_def pctx_sigma_abs_exec_def
-    by (rule pctx_pp_abs[OF solves exact])
+  case PP show ?case by (rule pctx_pp_routed[OF solves exact])
 next
-  fix v ctx assume "(v, ctx) \<in> fst (pctx_sol gs is_bot_pred Pi ps)"
-  thus "gamma_state_lift (pctx_sg (Inl (v, ctx)))
-          = gamma_dg_base (locals (pctx_sigma_abs (Inl (v, ctx)))) (globs (pctx_sigma_abs (Inr Global)))"
-    by (simp add: pctx_sg_covered gamma_dg_base_def)
+  case (SgCov v ctx) then show ?case
+    by (simp add: pctx_sg_st_def pctx_gamma_def)
 next
-  fix v ctx assume "(v, ctx) \<notin> fst (pctx_sol gs is_bot_pred Pi ps)"
-  thus "gamma_state_lift (pctx_sg (Inl (v, ctx))) = {}"
-    by (rule pctx_sg_uncovered_empty)
+  case (SgUncov v ctx) then show ?case by (rule pctx_sg_st_uncovered_empty)
 next
-  fix u a v ctx assume "(u, ctx) \<in> fst (pctx_sol gs is_bot_pred Pi ps)"
-    "(u, a, v) \<in> intra (compile_prog Pi ps)"
-  thus "(v, ctx) \<in> fst (pctx_sol gs is_bot_pred Pi ps)" by (rule fwd_ok)
-qed
-
-subsection \<open>The routed interpretation and its CALL/COMB corollaries\<close>
-
-interpretation pctx_routed: unit_routed_context "pctx_abs_spec gs" gamma_dg_base gs
-    "compile_prog Pi ps" Global
-    "map_lift (fun_of_resolved_st_q_for gs) (Bot::parity exec_dg_st lifted)"
-    "map_lift (fun_of_resolved_st_q_for gs) (Lifted cinit_parity_st)"
-    "map_lift (fun_of_resolved_st_q_for gs) (Bot::parity exec_dg_st lifted)"
-    pctx_sigma_abs "fst (pctx_sol gs is_bot_pred Pi ps)"
-    "(cfg_exit (compile_prog Pi ps), ())" pctx_sg
-    Seed gamma_state_lift
-proof (unfold_locales, goal_cases FinC SeedKey CallFwd CombFwd EnterAgree)
+  case (Fwd u a v ctx) then show ?case by (rule fwd_ok)
+next
   case FinC show ?case by (rule pctx_finC)
 next
   case (SeedKey p ctx) show ?case by simp
 next
   case (CallFwd u ctx dst pars args p cont)
-  show ?case
-    using CallFwd(1,2) call_fwd_ok unfolding route_unit_def by blast
+  show ?case using CallFwd(1,2) call_fwd_ok unfolding route_unit_def by blast
 next
   case (CombFwd cl c1 dst pars args p cont)
   show ?case using CombFwd(1,2) comb_fwd_ok by blast
@@ -315,8 +284,7 @@ next
   case (EnterAgree cl s es dst pars args p cont)
   note ces = EnterAgree(1) and ce = EnterAgree(2)
   obtain dst' pars' args' p' cont' where
-      ce': "(cl, CallEdge dst' pars' args', FunctionEntry p', cont')
-              \<in> calls (compile_prog Pi ps)"
+      ce': "(cl, CallEdge dst' pars' args', FunctionEntry p', cont') \<in> calls (compile_prog Pi ps)"
     and es_eq: "es = call_enter gs (CallEdge dst' pars' args') s"
     using ces unfolding call_enter_store_def by blast
   have "CallEdge dst' pars' args' = CallEdge dst pars args"
@@ -327,8 +295,8 @@ qed
 subsection \<open>Activation-indexed collecting soundness\<close>
 
 lemma pctx_cinit_le_cinit_parity_st:
-  "cinit_stores gs \<subseteq> gamma_state_lift (map_lift (fun_of_resolved_st_q_for gs) (Lifted cinit_parity_st))"
-  by (auto simp: cinit_stores_def gamma_state_def fun_of_resolved_st_q_for_def
+  "cinit_stores gs \<subseteq> pctx_gamma gs (Lifted cinit_parity_st) Bot"
+  by (auto simp: pctx_gamma_def cinit_stores_def gamma_state_def fun_of_resolved_st_q_for_def
                  fun_of_st_cinit_parity_st_for)
 
 end
