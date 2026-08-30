@@ -1,5 +1,5 @@
 theory Abstract_Numeric_Queries
-  imports Abstract_Domain
+  imports Backward_Domain
 begin
 
 section \<open>Derived less-queries from backward inversion\<close>

@@ -16,6 +16,7 @@ session Voblint_Examples in "." = "Voblint_CLI" +
     "CFG"
     "Tooling"
     "Regression"
+    "Placement"
   theories
     (* CFG: cross-cutting compiler/collecting-semantics support and regressions *)
     Example_Inc_Proc
@@ -34,6 +35,7 @@ session Voblint_Examples in "." = "Voblint_CLI" +
     Example_Side_Execute
     Example_Side_Proc_Global
     Example_Side_Branch_Calls
+    Placement_Policy
     Example_Sign_Placement
     Example_Placement_Regression
     Example_Sign_DG_Custom_Combine

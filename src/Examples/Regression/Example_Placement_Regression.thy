@@ -3,6 +3,7 @@ section \<open>Placement and storage are independent axes\<close>
 theory Example_Placement_Regression
   imports
     "Voblint_Core.DG_LTR_Sound"
+    Placement_Policy
     "Voblint_Analysis.Sign_Transfer"
     "Voblint_CLI.Sign_Entry"
     "Voblint_VIMP.VIMP_Notation"

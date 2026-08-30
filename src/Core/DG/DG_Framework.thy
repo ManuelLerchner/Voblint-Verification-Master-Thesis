@@ -95,21 +95,7 @@ lemma unit_step_for_lifted_collapses_bot:
   unfolding unit_step_for_lifted_def
   by simp
 
-
-
-definition unit_step_placed ::
-  "(vname => bool) => (vname => bool) =>
-   ('a::bounded_semilattice_sup_bot abs_state => 'a abs_state)
-   => 'a abs_state => 'a abs_state => 'a abs_state \<times> 'a abs_state"
-where
-  "unit_step_placed keep_local publish_side f d g =
-     (let res = f (d \<squnion> g) in
-      (project_component publish_side res, project_component keep_local res))"
-
-
-
 subsection \<open>A lattice copy type for D-times-G unknown values\<close>
-
 text \<open>
   The solver's single value type must order local and global halves
   componentwise.  Raw pairs cannot: \<open>CFG_Def\<close> imports
@@ -845,69 +831,6 @@ lemma unit_combine_step_assign_for_lifted_collapses_bot:
   using assms
   unfolding unit_combine_step_assign_for_lifted_def
   by simp
-
-
-
-definition unit_combine_step_env_placed ::
-  "(vname => bool) => (vname => bool) => (vname => bool) => call_info =>
-   'a::bounded_semilattice_sup_bot abs_state => 'a abs_state =>
-   'a abs_state => 'a abs_state \<times> 'a abs_state"
-where
-  "unit_combine_step_env_placed gs keep_local publish_side ci dc de g =
-     (let res = combine_env_abs gs (dc \<squnion> g) (de \<squnion> g) in
-      (project_component publish_side res, project_component keep_local res))"
-
-
-definition unit_combine_step_assign_placed ::
-  "(vname => bool) => (vname => bool) => call_info =>
-   'a::bounded_semilattice_sup_bot abs_state => 'a abs_state =>
-   'a abs_state \<times> 'a abs_state => 'a abs_state \<times> 'a abs_state"
-where
-  "unit_combine_step_assign_placed keep_local publish_side ci de g merged =
-     (let res = combine_assign\<^sup># (ci_dst ci) ((de \<squnion> g) ret_var)
-         (fst merged \<squnion> snd merged)
-      in (project_component publish_side res, project_component keep_local res))"
-
-
-definition unit_dg_spec_placed ::
-  "(vname => bool) => (vname => bool) => (vname => bool) =>
-   'a::sound_domain domain_transfer => ('a abs_state, 'a abs_state) dg_spec"
-where
-  "unit_dg_spec_placed gs keep_local publish_side tf = \<lparr>
-    dgs_skip       = unit_step_placed keep_local publish_side (apply_tf tf EA_Nop),
-    dgs_assign     = (\<lambda>x e. unit_step_placed keep_local publish_side
-      (apply_tf tf (EA_Assign x e))),
-    dgs_special    = (\<lambda>sc x. unit_step_placed keep_local publish_side
-      (apply_tf tf (EA_Special sc x))),
-    dgs_branch     = (\<lambda>b pol. unit_step_placed keep_local publish_side
-      (branch\<^sup># tf b pol)),
-    dgs_body       = (\<lambda>p. unit_step_placed keep_local publish_side
-      (body\<^sup># tf p)),
-    dgs_return     = (\<lambda>e p. unit_step_placed keep_local publish_side
-      (return\<^sup># tf e p)),
-    dgs_enter      = (\<lambda>xs es. unit_step_placed keep_local publish_side
-      (enter\<^sup># tf xs es)),
-    dgs_event      = (\<lambda>ev. unit_step_placed keep_local publish_side
-      (event\<^sup># tf ev)),
-    dgs_caller_cont = (\<lambda>_ d _. d),
-    dgs_combine_env = unit_combine_step_env_placed gs keep_local publish_side,
-    dgs_combine_assign = unit_combine_step_assign_placed keep_local publish_side
-  \<rparr>"
-lemma dg_spec_step_unit_placed:
-  "dg_spec_step (unit_dg_spec_placed gs keep_local publish_side tf) a =
-    unit_step_placed keep_local publish_side (apply_tf tf a)"
-  unfolding unit_dg_spec_placed_def
-  by (cases a) simp_all
-
-lemma dgs_enter_unit_dg_spec_placed:
-  "dgs_enter (unit_dg_spec_placed gs keep_local publish_side tf) fs as =
-    unit_step_placed keep_local publish_side (enter\<^sup># tf fs as)"
-  unfolding unit_dg_spec_placed_def
-  by simp
-
-
-
-
 
 definition unit_dg_spec_for ::
   "(vname => bool) => 'a::sound_domain domain_transfer

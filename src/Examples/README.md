@@ -23,6 +23,7 @@ procedure call.
 | `Product/` | Sign x Interval x Parity x Congruence | composite-domain regressions and refinement-mode witnesses |
 | `Relational/` | relational | the generic pipeline and solver run against a non-`abs_state` order carrier |
 | `CFG/` | domain-agnostic | compiler and collecting-semantics regressions; shared example programs |
+| `Placement/` | domain-agnostic | `Placement_Policy`: the non-exclusive local/global covering (`unit_dg_spec_placed`, `gamma_join`, `sound_dg_hooks_ltr`) the two Placement examples interpret; kept out of the framework because nothing in the pipeline uses it |
 | `Regression/` | domain-agnostic | dispatcher, result-table, compile and min/max acceptance witnesses. A regression that names a domain belongs with that domain, not here. |
 | `Tooling/` | domain-agnostic | contextual GraphViz regression, solver buffering regressions, the strategy-tree demo |
 

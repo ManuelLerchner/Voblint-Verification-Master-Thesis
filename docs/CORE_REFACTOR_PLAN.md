@@ -160,7 +160,7 @@ what a later phase deletes.
 | 0.4 | `CFG_Enumeration`: import `Voblint_CFG.CFG_Transfer` instead of `Voblint_Compile.VIMP_Proc_to_CFG`. The build shows whether a VIMP name rode on the transitive import. | landed |
 | 0.5 | Move `normalize_point` and its lemmas (`Analysis_Result` 133-250) into `Monovariant_Analysis_Result`. `Abstract_Checks` cites `normalize_point` once; repoint its import for now and resolve in Phase 2. | landed |
 | 0.6 | Delete `td_cfg_side_solver_dg`, `cfg_pkg_dg`, `stabl_at`, `nu_at`, `solve_prod`, `part_post_at`, `least_part_post_at` (`DG_Framework` 2365-2470). Then check `threefold_mono` (one remaining user, `Voblint.thy`). | landed |
-| 0.7 | Delete the other zero-use definitions in `DG_Framework` and `DG_Soundness` one at a time; keep any the build wants (grep cannot see simp-set uses). | open (build decides; none deleted yet) |
+| 0.7 | Delete the other zero-use definitions in `DG_Framework` and `DG_Soundness` one at a time; keep any the build wants (grep cannot see simp-set uses). | open -- every candidate has internal users (it is a self-contained cluster with no external consumer, e.g. `pair_of_dg`/`dg_of_pair`/`merge_dg`/`split_dg`, `dgs_enter_pair`, `apply_dg_spec_contribution_at`, `indep_dg_spec`, `gamma_dg`, `dg_trees`/`dg_acc`, `hook_trees`/`hook_acc`, `gamma_unit_lifted`); deciding per cluster is Phase 3 work |
 | 0.8 | Run `partition_check.py` with the target assignment: zero violating edges is the exit criterion. | landed |
 
 Gate: `AFP=$HOME/afp/thys pixi run build`, `pixi run codegen`,
@@ -173,9 +173,9 @@ Mechanical once Phase 0 is green.
 
 | # | Step | Status |
 | --- | --- | --- |
-| 1.1 | Split `Abstract_Domain` at line 919: `Backward_Domain.thy` takes `semantic_intersection`, `backward_domain`, `backward_domain_refined`, the inverse-operator sections, `show_val`. | deferred to first green build |
+| 1.1 | Split `Abstract_Domain` at line 919: `Backward_Domain.thy` takes `semantic_intersection`, `backward_domain`, `backward_domain_refined`, the inverse-operator sections, `show_val`. | landed (`Backward_Domain.thy`, 1180 lines; `Abstract_Domain` 1013) |
 | 1.2 | Rename `Exec_St` to `Abstract_State` (it is the quotient state, the counterpart of HOL-IMP's `Abs_State`; nothing about it is specific to execution). Keep the constant names for now. | deferred with 1.1 |
-| 1.3 | Extract the hooks route from `DG_Soundness` (968-1508) and `DG_LTR_Sound` (`sound_dg_hooks_ltr`), plus `gamma_join` and `unit_dg_spec_placed`, into `Examples/Placement/Placement_Hooks.thy`. Move `Exec_Placement` beside it. | reduced to the hooks route; deferred to first green build |
+| 1.3 | Extract the hooks route from `DG_Soundness` (968-1508) and `DG_LTR_Sound` (`sound_dg_hooks_ltr`), plus `gamma_join` and `unit_dg_spec_placed`, into `Examples/Placement/Placement_Hooks.thy`. Move `Exec_Placement` beside it. | landed as `Examples/Placement/Placement_Policy.thy`: the `*_placed` specification, `gamma_join` and its section, and `sound_dg_hooks_ltr`; `sound_dg_hooks` itself stays, it is the engine `sound_dg_spec` reduces to |
 | 1.4 | Create `src/Domain/ROOT`, `src/Solver/ROOT`, `src/Exec/ROOT`; rewrite `src/Core/ROOT`; add the four directories to `ROOTS`. | landed |
 | 1.5 | Move the seven Base-level and compile-dependent theories into `src/Analysis/` (`Instances/Common/` for the four reuse locales, `Instances/Ctx/` for the three routed contexts, or wherever the Analysis README's layout puts them). | landed |
 | 1.6 | Repoint every qualified import across Analysis, Soundness, CLI, Codegen, Examples. Check by arity where a locale header changed, not by grep. | landed |
@@ -247,6 +247,13 @@ and mark it `superseded (see below)`.
   `compile_prog` in two checked antiquotations inside prose; they are
   unchecked `\<open>...\<close>` now. Core is compiler-free in fact, not only
   in its import list.
+- 2026-08-30: The hooks route is not example-only either: `sound_dg_spec`
+  is proved by reduction to `sound_dg_hooks` (`sublocale sound_dg_spec
+  \<subseteq> hooks`, DG_Soundness), so the locale stays in Core. What was
+  placement-only is the `*_placed` specification, `gamma_join` with its
+  policy section, and the `sound_dg_hooks_ltr` re-packaging whose
+  `hooks_ltr.` sublocale nothing cited. Those are `Placement_Policy.thy` in
+  Examples now; `DG_Soundness` is 2182 lines, `DG_LTR_Sound` 68.
 - 2026-08-30: Core's layout inside `src/Core/` is `Equations/`, `DG/`,
   `Context/`, `Result/`; Domain, Solver and Exec are flat. Phase 0 steps
   0.1--0.6 and Phase 1 steps 1.4--1.7 are landed (I/Q-clean per theory for
