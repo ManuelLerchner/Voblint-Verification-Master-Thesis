@@ -377,11 +377,12 @@ text \<open>The call-string routing policy instantiated at \<open>k = 1\<close>.
   before it reaches the goal, so \<open>call_fwd\<close> does not need to case-split on which one.\<close>
 
 interpretation sign_nest_1_cs: call_string_routed_context
-    sign_nest_S_abs sign_nest_gs sign_nest_pi sign_nest_procs 1
+    sign_nest_S_abs gamma_dg_base sign_nest_gs sign_nest_pi sign_nest_procs 1
     "map_lift (fun_of_resolved_st_q_for sign_nest_gs) (Bot::sign exec_dg_st lifted)"
     "map_lift (fun_of_resolved_st_q_for sign_nest_gs) (Lifted cinit_sign_st)"
     "map_lift (fun_of_resolved_st_q_for sign_nest_gs) (Bot::sign exec_dg_st lifted)"
     sigma_1 "fst sign_nest_1_sol" "(cfg_exit sign_nest_cfg, [])" sign_ctx_sg_1
+    gamma_state_lift
 proof (unfold_locales, unfold sign_nest_cfg_compile,
        goal_cases FinE PP SgCov SgUncov Fwd CallFwd CombFwd)
   case FinE

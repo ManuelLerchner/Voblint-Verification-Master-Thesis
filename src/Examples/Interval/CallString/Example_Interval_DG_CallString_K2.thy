@@ -166,11 +166,11 @@ text \<open>Unlike \<open>k = 1\<close>, \<open>call_fwd\<close>'s \<open>Statem
   for is discharged generically at \<^const>\<open>cs_route\<close>, exactly as at \<open>k = 1\<close>.\<close>
 
 interpretation nest_2_cs: call_string_routed_context
-    nest_S_abs nest_gs nest_pi nest_procs 2
+    nest_S_abs gamma_dg_base nest_gs nest_pi nest_procs 2
     "map_lift (fun_of_resolved_st_q_for nest_gs) (Bot::ivl exec_dg_st lifted)"
     "map_lift (fun_of_resolved_st_q_for nest_gs) (Lifted cinit_ivl_st)"
     "map_lift (fun_of_resolved_st_q_for nest_gs) (Bot::ivl exec_dg_st lifted)"
-    nest_2_sigma_abs "fst nest_2_sol" "(cfg_exit nest_cfg, [])" nest_2_sg
+    nest_2_sigma_abs "fst nest_2_sol" "(cfg_exit nest_cfg, [])" nest_2_sg gamma_state_lift
 proof (unfold_locales, unfold nest_cfg_compile,
        goal_cases FinE PP SgCov SgUncov Fwd CallFwd CombFwd)
   case FinE

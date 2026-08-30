@@ -89,7 +89,7 @@ interpretation sign_cs: routed_domain_exec
      (rule sign_tf_st_for_commute, rule sign_enter_st_for_commute, rule exact, simp,
       rule cs_route_commute, simp add: static_resolve_def)
 
-lemmas sign_cs_pp_abs_gen = sign_cs.pp_abs
+lemmas sign_cs_pp_st_gen = sign_cs.pp_st
 
 end
 
@@ -115,38 +115,20 @@ lemma scs_pp_st:
              "snd (scs_sol k gs is_bot_pred Pi ps)"]
   unfolding scs_sol_def by simp
 
-theorem scs_pp_abs:
-  "part_post_solution
-     (side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. Call_String_Context.Global) (cs_route k)
-        (routed_cmb_g (sctx_abs_spec gs) Call_String_Context.Global Call_String_Context.Seed
-           (static_resolve (compile_prog Pi ps)))
-        (routed_extra_g Call_String_Context.Seed Call_String_Context.Global)
-        (compile_prog Pi ps) (sctx_abs_spec gs)
-        (map_lift (fun_of_resolved_st_q_for gs) (Bot::sign exec_dg_st lifted))
-        (map_lift (fun_of_resolved_st_q_for gs) (Lifted cinit_sign_st))
-        (map_lift (fun_of_resolved_st_q_for gs) (Bot::sign exec_dg_st lifted)))
-     (cfg_exit (compile_prog Pi ps), [])
-     (fun_of_dg_st_gen (map_lift (fun_of_resolved_st_q_for gs)) (map_lift (fun_of_resolved_st_q_for gs))
-        \<circ> snd (scs_sol k gs is_bot_pred Pi ps))
-     (fst (scs_sol k gs is_bot_pred Pi ps))"
-proof -
-  have pp_buf: "part_post_solution
-       (side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_addr_list
-          (\<lambda>_. Call_String_Context.Global) (cs_route k)
-          (routed_cmb_g_contribution (sctx_spec gs is_bot_pred)
-             Call_String_Context.Global Call_String_Context.Seed
-             (static_resolve (compile_prog Pi ps)))
-          (routed_extra_g Call_String_Context.Seed Call_String_Context.Global)
-          (compile_prog Pi ps) (sctx_spec gs is_bot_pred) Bot (Lifted cinit_sign_st) Bot)
-       (cfg_exit (compile_prog Pi ps), [])
-       (snd (scs_sol k gs is_bot_pred Pi ps))
-       (fst (scs_sol k gs is_bot_pred Pi ps))"
-    using scs_pp_st unfolding scs_eqs_def by simp
-  show ?thesis
-    unfolding sctx_abs_spec_def
-    using pp_buf unfolding sctx_spec_def by (rule sign_cs_pp_abs_gen[OF exact])
-qed
+text \<open>The solver's post-solution, for the unbuffered routed generator at the executable
+  spec: the shape \<^locale>\<open>call_string_routed_context\<close> consumes directly.\<close>
 
+theorem scs_pp_routed:
+  "part_post_solution
+     (side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. Call_String_Context.Global)
+        (cs_route k)
+        (routed_cmb_g (sctx_spec gs is_bot_pred) Call_String_Context.Global
+           Call_String_Context.Seed (static_resolve (compile_prog Pi ps)))
+        (routed_extra_g Call_String_Context.Seed Call_String_Context.Global)
+        (compile_prog Pi ps) (sctx_spec gs is_bot_pred) Bot (Lifted cinit_sign_st) Bot)
+     (cfg_exit (compile_prog Pi ps), [])
+     (snd (scs_sol k gs is_bot_pred Pi ps)) (fst (scs_sol k gs is_bot_pred Pi ps))"
+  using scs_pp_st unfolding scs_eqs_def sctx_spec_def by (rule sign_cs_pp_st_gen[OF exact])
 end
 
 subsection \<open>Whole-program convenience layer\<close>

@@ -5,50 +5,41 @@ begin
 section \<open>Entry-state routing as a routed-context instance\<close>
 
 text \<open>
-  \<^locale>\<open>routed_context_hetero\<close> at \<open>route := formals_route_lifted_gen S\<close>,
-  \<open>enterc := route_enterc_of_sigma (formals_route_lifted_gen S) sigma g\<close>, over the CFG
-  of a compiled program. Unlike \<open>Call_String_Routed_Context\<close>'s own
-  \<open>call_string_routed_context\<close> -- which hardcodes \<open>Call_String_Context\<close>'s
-  one canonical \<open>call_string_gk\<close> seed-key datatype, shared by every CallString instance --
-  no single seed-key datatype is shared across EntryState instances: each domain's own
-  routed context is keyed by \<open>that domain's own abstract carrier\<close> (\<open>ivl list\<close>, \<open>sign list\<close>,
-  ...), so \<open>gk0\<close>/\<open>seed_key\<close> stay genuine locale parameters here, mirroring
-  \<open>Routed_Context_Unit\<close>'s own \<open>unit_routed_context\<close>'s posture on that same axis
-  rather than \<open>call_string_routed_context\<close>'s.
+  \<^locale>\<open>routed_context_base_hetero\<close> at a route that reads the entered callee state,
+  with \<open>enterc := route_enterc_of_sigma S route sigma gk0 g\<close>, over the CFG of a compiled
+  program and at whichever carrier \<open>S\<close> is stated over. The route is a parameter because
+  one policy is spelled differently per carrier: \<^const>\<open>formals_route_lifted_gen\<close>
+  projects the formals out of an abstract state, an executable instance projects them out
+  of its own quotient state. Unlike \<open>Call_String_Routed_Context\<close>'s
+  \<open>call_string_routed_context\<close>, no single seed-key datatype is shared across
+  entry-state instances: each is keyed by its own carrier's value list, so \<open>gk0\<close> and
+  \<open>seed_key\<close> stay genuine locale parameters.
 
-  Three of the five obligations \<^locale>\<open>routed_context_hetero\<close> leaves are then facts about
-  the routing policy or about \<^const>\<open>compile_prog\<close> alone -- nothing about which domain,
-  program, or seed-key type -- and are discharged here once and for all \<open>S\<close>:
-
-    \<bullet> \<open>finC\<close> holds for every \<^const>\<open>compile_prog\<close> output (\<open>compile_prog_finite\<close>);
-    \<bullet> \<open>call_enter_store_agree\<close> is call-source uniqueness for every
-      \<^const>\<open>compile_prog\<close> output (\<open>compile_prog_calls_source_unique\<close>);
-    \<bullet> \<open>route_enterc_agree\<close> is \<open>route_enterc_of_sigma_agree\<close>
-      (\<^theory>\<open>Voblint_Core.Routed_Context\<close>), generic in \<^emph>\<open>any\<close> \<open>route\<close> reading its
-      caller state from \<open>sigma\<close> -- unlike \<open>call_string_routed_context\<close>'s own
-      \<open>cs_route_context_agree\<close>, this does not depend on \<open>route\<close> ignoring its state
-      argument, since \<^const>\<open>formals_route_lifted_gen\<close> genuinely does not.
-
-  \<open>seed_key_ne_gk0\<close> stays a genuine per-instance assumption (a fact about the concrete
-  seed-key datatype an instance supplies, matching \<open>unit_routed_context\<close>'s own choice),
-  and so do \<open>call_fwd\<close>/\<open>comb_fwd\<close>: each says the solved variable set covers a
-  particular routed callee entry or return continuation, a property of the program
-  together with what the solver actually explored. An instance supplies them; no
-  generic argument can.
+  Three of the obligations \<^locale>\<open>routed_context_base_hetero\<close> leaves are facts about
+  the routing policy or about \<^const>\<open>compile_prog\<close> alone and are discharged here once:
+  \<open>finC\<close> (\<open>compile_prog_finite\<close>), \<open>call_enter_store_agree\<close> (call-source uniqueness,
+  \<open>compile_prog_calls_source_unique\<close>) and \<open>route_enterc_agree\<close>
+  (\<open>route_enterc_of_sigma_agree\<close>, generic in any \<open>route\<close> reading its caller state from
+  \<open>sigma\<close>). \<open>seed_key_ne_gk0\<close>, \<open>call_fwd\<close> and \<open>comb_fwd\<close> remain per-instance
+  assumptions: the first is datatype distinctness of the instance's seed key, the other
+  two say the solved variable set covers a routed callee entry or return continuation, a
+  property of the program together with what the solver explored.
 \<close>
 
 locale entry_state_routed_context =
-  dg_ctx_activation_base S gamma_dg_base gs "compile_prog Pi ps" gk0
-    "formals_route_lifted_gen S"
+  dg_ctx_activation_base S gammaDG gs "compile_prog Pi ps" gk0 route
     "routed_cmb_g S gk0 seed_key (static_resolve (compile_prog Pi ps))"
     "routed_extra_g seed_key gk0"
-    bot0 s0d s0g sigma vars x0 sg gamma_state_lift
-  for S :: "('a::sound_domain abs_state lifted, 'G::bounded_semilattice_sup_bot) dg_spec"
+    bot0 s0d s0g sigma vars x0 sg gammaM
+  for S :: "('D::bounded_semilattice_sup_bot, 'G::bounded_semilattice_sup_bot) dg_spec"
+    and gammaDG :: "'D \<Rightarrow> 'G \<Rightarrow> store set"
     and gs :: "vname \<Rightarrow> bool"
     and Pi :: proc_table and ps :: "pname list"
     and gk0 :: 'k
+    and route :: "pp \<Rightarrow> 'c \<Rightarrow> 'D \<Rightarrow> call_action \<Rightarrow> 'c"
     and bot0 s0d s0g sigma vars x0 sg
-    and seed_key :: "pp \<Rightarrow> 'a list \<Rightarrow> 'k" +
+    and seed_key :: "pp \<Rightarrow> 'c \<Rightarrow> 'k"
+    and gammaM :: "'M \<Rightarrow> store set" +
   assumes seed_key_ne_gk0[simp]: "\<And>p ctx. seed_key p ctx \<noteq> gk0"
     and call_fwd:
     "\<And>u ctx dst pars args p cont.
@@ -56,7 +47,7 @@ locale entry_state_routed_context =
        \<Longrightarrow> (u, CallEdge dst pars args, FunctionEntry p, cont)
              \<in> calls (compile_prog Pi ps)
        \<Longrightarrow> (FunctionEntry p,
-              formals_route_lifted_gen S u ctx
+              route u ctx
                 (enter_local S pars args (locals (sigma (Inl (u, ctx))))
                     (globs (sigma (Inr gk0)))) (CallEdge dst pars args))
              \<in> vars"
@@ -68,10 +59,10 @@ locale entry_state_routed_context =
        \<Longrightarrow> (cont, c1) \<in> vars"
 begin
 
-sublocale routed: routed_context_hetero S gs "compile_prog Pi ps" gk0
-  "formals_route_lifted_gen S" bot0 s0d s0g sigma vars x0 sg seed_key
-  "static_resolve (compile_prog Pi ps)"
-  "route_enterc_of_sigma S (formals_route_lifted_gen S) sigma gk0 (compile_prog Pi ps)"
+sublocale routed: routed_context_base_hetero S gammaDG gs "compile_prog Pi ps" gk0
+  route bot0 s0d s0g sigma vars x0 sg seed_key
+  "static_resolve (compile_prog Pi ps)" gammaM
+  "route_enterc_of_sigma S route sigma gk0 (compile_prog Pi ps)"
 proof unfold_locales
   show "finite (calls (compile_prog Pi ps))" using compile_prog_finite by simp
 next
@@ -89,10 +80,10 @@ next
     and ce: "(u, CallEdge dst pars args, FunctionEntry p, cont)
            \<in> calls (compile_prog Pi ps)"
   have fin: "finite (calls (compile_prog Pi ps))" using compile_prog_finite by blast
-  show "formals_route_lifted_gen S u ctx
+  show "route u ctx
             (enter_local S pars args (locals (sigma (Inl (u, ctx)))) (globs (sigma (Inr gk0))))
             (CallEdge dst pars args)
-          = route_enterc_of_sigma S (formals_route_lifted_gen S) sigma gk0
+          = route_enterc_of_sigma S route sigma gk0
               (compile_prog Pi ps) u ctx (call_enter gs (CallEdge dst pars args) s)"
     by (rule route_enterc_of_sigma_agree[OF fin compile_prog_calls_source_unique ce])
 next
@@ -101,7 +92,7 @@ next
     and "(u, CallEdge dst pars args, FunctionEntry p, cont)
            \<in> calls (compile_prog Pi ps)"
   then show "(FunctionEntry p,
-                formals_route_lifted_gen S u ctx
+                route u ctx
                   (enter_local S pars args (locals (sigma (Inl (u, ctx))))
                       (globs (sigma (Inr gk0)))) (CallEdge dst pars args))
                \<in> vars"
@@ -129,8 +120,8 @@ qed
 
 text \<open>CALL and COMB, at the entry-state instance: the callee entry state published under
   the routed context is sound, and a return combine at the caller's own context is sound.
-  Both are \<^locale>\<open>routed_context_hetero\<close>'s theorems, re-exported here so a concrete
-  instance cites them without naming the sublocale.\<close>
+  Both are \<^locale>\<open>routed_context_base_hetero\<close>'s theorems, re-exported here so a
+  concrete instance cites them without naming the sublocale.\<close>
 
 lemmas routed_context_call = routed.routed_context_call
 lemmas routed_context_comb = routed.routed_context_comb
@@ -138,4 +129,3 @@ lemmas routed_context_comb = routed.routed_context_comb
 end
 
 end
-

@@ -123,7 +123,7 @@ interpretation int_cs: routed_domain_exec
      (rule int_tf_st_for_commute, rule int_dom_enter_st_for_commute, rule exact, simp,
       rule ics_route_commute, simp add: static_resolve_def)
 
-lemmas int_cs_pp_abs_gen = int_cs.pp_abs
+lemmas int_cs_pp_st_gen = int_cs.pp_st
 
 end
 
@@ -149,39 +149,20 @@ lemma ics_pp_st:
              "snd (ics_sol k mode gs is_bot_pred Pi ps)"]
   unfolding ics_sol_def by simp
 
-theorem ics_pp_abs:
-  "part_post_solution
-     (side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. Call_String_Context.Global) (cs_route k)
-        (routed_cmb_g (ictx_abs_spec mode gs) Call_String_Context.Global Call_String_Context.Seed
-           (static_resolve (compile_prog Pi ps)))
-        (routed_extra_g Call_String_Context.Seed Call_String_Context.Global)
-        (compile_prog Pi ps) (ictx_abs_spec mode gs)
-        (map_lift (fun_of_resolved_st_q_for gs) (Bot::int_dom exec_dg_st lifted))
-        (map_lift (fun_of_resolved_st_q_for gs) (Lifted cinit_int_dom_st))
-        (map_lift (fun_of_resolved_st_q_for gs) (Bot::int_dom exec_dg_st lifted)))
-     (cfg_exit (compile_prog Pi ps), [])
-     (fun_of_dg_st_gen (map_lift (fun_of_resolved_st_q_for gs)) (map_lift (fun_of_resolved_st_q_for gs))
-        \<circ> snd (ics_sol k mode gs is_bot_pred Pi ps))
-     (fst (ics_sol k mode gs is_bot_pred Pi ps))"
-proof -
-  have pp_buf: "part_post_solution
-       (side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_addr_list
-          (\<lambda>_. Call_String_Context.Global) (cs_route k)
-          (routed_cmb_g_contribution (ictx_spec mode is_bot_pred gs)
-             Call_String_Context.Global Call_String_Context.Seed
-             (static_resolve (compile_prog Pi ps)))
-          (routed_extra_g Call_String_Context.Seed Call_String_Context.Global)
-          (compile_prog Pi ps) (ictx_spec mode is_bot_pred gs)
-          Bot (Lifted cinit_int_dom_st) Bot)
-       (cfg_exit (compile_prog Pi ps), [])
-       (snd (ics_sol k mode gs is_bot_pred Pi ps))
-       (fst (ics_sol k mode gs is_bot_pred Pi ps))"
-    using ics_pp_st unfolding ics_eqs_def by simp
-  show ?thesis
-    unfolding ictx_abs_spec_def
-    using pp_buf unfolding ictx_spec_def by (rule int_cs_pp_abs_gen[OF exact])
-qed
+text \<open>The solver's post-solution, for the unbuffered routed generator at the executable
+  spec: the shape \<^locale>\<open>call_string_routed_context\<close> consumes directly.\<close>
 
+theorem ics_pp_routed:
+  "part_post_solution
+     (side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. Call_String_Context.Global)
+        (cs_route k)
+        (routed_cmb_g (ictx_spec mode is_bot_pred gs) Call_String_Context.Global
+           Call_String_Context.Seed (static_resolve (compile_prog Pi ps)))
+        (routed_extra_g Call_String_Context.Seed Call_String_Context.Global)
+        (compile_prog Pi ps) (ictx_spec mode is_bot_pred gs) Bot (Lifted cinit_int_dom_st) Bot)
+     (cfg_exit (compile_prog Pi ps), [])
+     (snd (ics_sol k mode gs is_bot_pred Pi ps)) (fst (ics_sol k mode gs is_bot_pred Pi ps))"
+  using ics_pp_st unfolding ics_eqs_def ictx_spec_def by (rule int_cs_pp_st_gen[OF exact])
 end
 
 subsection \<open>The certified executable post-solution under warrowing\<close>
@@ -206,39 +187,18 @@ lemma ics_pp_st_warrow:
              "snd (ics_sol_warrow k mode gs is_bot_pred Pi ps)"]
   unfolding ics_sol_warrow_def by simp
 
-theorem ics_pp_abs_warrow:
+theorem ics_pp_routed_warrow:
   "part_post_solution
-     (side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. Call_String_Context.Global) (cs_route k)
-        (routed_cmb_g (ictx_abs_spec mode gs) Call_String_Context.Global Call_String_Context.Seed
-           (static_resolve (compile_prog Pi ps)))
+     (side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. Call_String_Context.Global)
+        (cs_route k)
+        (routed_cmb_g (ictx_spec mode is_bot_pred gs) Call_String_Context.Global
+           Call_String_Context.Seed (static_resolve (compile_prog Pi ps)))
         (routed_extra_g Call_String_Context.Seed Call_String_Context.Global)
-        (compile_prog Pi ps) (ictx_abs_spec mode gs)
-        (map_lift (fun_of_resolved_st_q_for gs) (Bot::int_dom exec_dg_st lifted))
-        (map_lift (fun_of_resolved_st_q_for gs) (Lifted cinit_int_dom_st))
-        (map_lift (fun_of_resolved_st_q_for gs) (Bot::int_dom exec_dg_st lifted)))
+        (compile_prog Pi ps) (ictx_spec mode is_bot_pred gs) Bot (Lifted cinit_int_dom_st) Bot)
      (cfg_exit (compile_prog Pi ps), [])
-     (fun_of_dg_st_gen (map_lift (fun_of_resolved_st_q_for gs)) (map_lift (fun_of_resolved_st_q_for gs))
-        \<circ> snd (ics_sol_warrow k mode gs is_bot_pred Pi ps))
+     (snd (ics_sol_warrow k mode gs is_bot_pred Pi ps))
      (fst (ics_sol_warrow k mode gs is_bot_pred Pi ps))"
-proof -
-  have pp_buf: "part_post_solution
-       (side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_addr_list
-          (\<lambda>_. Call_String_Context.Global) (cs_route k)
-          (routed_cmb_g_contribution (ictx_spec mode is_bot_pred gs)
-             Call_String_Context.Global Call_String_Context.Seed
-             (static_resolve (compile_prog Pi ps)))
-          (routed_extra_g Call_String_Context.Seed Call_String_Context.Global)
-          (compile_prog Pi ps) (ictx_spec mode is_bot_pred gs)
-          Bot (Lifted cinit_int_dom_st) Bot)
-       (cfg_exit (compile_prog Pi ps), [])
-       (snd (ics_sol_warrow k mode gs is_bot_pred Pi ps))
-       (fst (ics_sol_warrow k mode gs is_bot_pred Pi ps))"
-    using ics_pp_st_warrow unfolding ics_eqs_def by simp
-  show ?thesis
-    unfolding ictx_abs_spec_def
-    using pp_buf unfolding ictx_spec_def by (rule int_cs_pp_abs_gen[OF exact])
-qed
-
+  using ics_pp_st_warrow unfolding ics_eqs_def ictx_spec_def by (rule int_cs_pp_st_gen[OF exact])
 end
 
 subsection \<open>Whole-program convenience layer\<close>

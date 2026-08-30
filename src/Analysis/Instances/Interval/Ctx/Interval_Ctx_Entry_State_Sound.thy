@@ -739,14 +739,14 @@ text \<open>
   can still be stated against \<^const>\<open>entry_state_context\<close> while citing the generic \<open>routed_context_call\<close>/\<open>_comb\<close>.
 \<close>
 
-interpretation entry_state_routed: entry_state_routed_context "ectx_abs_spec gs" gs
-    Pi ps Global
+interpretation entry_state_routed: entry_state_routed_context "ectx_abs_spec gs" gamma_dg_base gs
+    Pi ps Global "formals_route_lifted_gen (ectx_abs_spec gs)"
     "map_lift (fun_of_resolved_st_q_for gs) (Bot::ivl exec_dg_st lifted)"
     "map_lift (fun_of_resolved_st_q_for gs) (Lifted cinit_ivl_st)"
     "map_lift (fun_of_resolved_st_q_for gs) (Bot::ivl exec_dg_st lifted)"
     entry_state_sigma_abs "fst (entry_state_sol gs is_bot_pred Pi ps)"
     "(cfg_exit (compile_prog Pi ps), [])" entry_state_sg
-    Seed
+    Seed gamma_state_lift
 proof unfold_locales
   show "finite (intra (compile_prog Pi ps))" by (rule entry_state_fin)
 next

@@ -5,11 +5,11 @@ begin
 section \<open>Call-string routing as a routed-context instance\<close>
 
 text \<open>
-  \<^locale>\<open>routed_context_hetero\<close> at \<open>route := cs_route k\<close>, \<open>enterc := cs_context k\<close>,
-  \<open>gk0 := Global\<close> and \<open>seed_key := Seed\<close>, over the CFG of a compiled program. Four of the
-  six obligations that specialization leaves are then facts about the routing policy or
-  about \<^const>\<open>compile_prog\<close> alone --- nothing about which program was compiled --- and
-  are discharged here once and for all \<open>k\<close>:
+  \<^locale>\<open>routed_context_base_hetero\<close> at \<open>route := cs_route k\<close>, \<open>enterc := cs_context k\<close>,
+  \<open>gk0 := Global\<close> and \<open>seed_key := Seed\<close>, over the CFG of a compiled program and at
+  whichever carrier \<open>S\<close> is stated over. Four of the obligations that specialization
+  leaves are facts about the routing policy or about \<^const>\<open>compile_prog\<close> alone and are
+  discharged here once and for all \<open>k\<close>:
 
     \<^item> \<open>finC\<close> holds for every \<^const>\<open>compile_prog\<close> output (\<open>compile_prog_finite\<close>);
     \<^item> \<open>call_enter_store_agree\<close> is call-source uniqueness for every
@@ -25,15 +25,17 @@ text \<open>
 \<close>
 
 locale call_string_routed_context =
-  dg_ctx_activation_base S gamma_dg_base gs "compile_prog Pi ps" Global "cs_route k"
+  dg_ctx_activation_base S gammaDG gs "compile_prog Pi ps" Global "cs_route k"
     "routed_cmb_g S Global Seed (static_resolve (compile_prog Pi ps))"
     "routed_extra_g Seed Global"
-    bot0 s0d s0g sigma vars x0 sg gamma_state_lift
-  for S :: "('a::sound_domain abs_state lifted, 'G::bounded_semilattice_sup_bot) dg_spec"
+    bot0 s0d s0g sigma vars x0 sg gammaM
+  for S :: "('D::bounded_semilattice_sup_bot, 'G::bounded_semilattice_sup_bot) dg_spec"
+    and gammaDG :: "'D \<Rightarrow> 'G \<Rightarrow> store set"
     and gs :: "vname \<Rightarrow> bool"
     and Pi :: proc_table and ps :: "pname list"
     and k :: nat
-    and bot0 s0d s0g sigma vars x0 sg +
+    and bot0 s0d s0g sigma vars x0 sg
+    and gammaM :: "'M \<Rightarrow> store set" +
   assumes call_fwd:
     "\<And>u ctx dst pars args p cont.
        (u, ctx) \<in> vars
@@ -50,9 +52,9 @@ locale call_string_routed_context =
        \<Longrightarrow> (cont, c1) \<in> vars"
 begin
 
-sublocale routed: routed_context_hetero S gs "compile_prog Pi ps" Global
+sublocale routed: routed_context_base_hetero S gammaDG gs "compile_prog Pi ps" Global
   "cs_route k" bot0 s0d s0g sigma vars x0 sg Seed
-  "static_resolve (compile_prog Pi ps)" "cs_context k"
+  "static_resolve (compile_prog Pi ps)" gammaM "cs_context k"
 proof unfold_locales
   show "finite (calls (compile_prog Pi ps))" using compile_prog_finite by simp
 next
@@ -107,8 +109,8 @@ qed
 
 text \<open>CALL and COMB, at the call-string instance: the callee entry state published under
   the routed context is sound, and a return combine at the caller's own context is sound.
-  Both are \<^locale>\<open>routed_context_hetero\<close>'s theorems, re-exported here so a concrete
-  instance cites them without naming the sublocale.\<close>
+  Both are \<^locale>\<open>routed_context_base_hetero\<close>'s theorems, re-exported here so a
+  concrete instance cites them without naming the sublocale.\<close>
 
 lemmas routed_context_call = routed.routed_context_call
 lemmas routed_context_comb = routed.routed_context_comb

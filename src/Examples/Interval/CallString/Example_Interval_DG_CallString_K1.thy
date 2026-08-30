@@ -367,11 +367,11 @@ text \<open>The call-string routing policy instantiated at \<open>k = 1\<close>.
   before it reaches the goal, so \<open>call_fwd\<close> does not need to case-split on which one.\<close>
 
 interpretation nest_1_cs: call_string_routed_context
-    nest_S_abs nest_gs nest_pi nest_procs 1
+    nest_S_abs gamma_dg_base nest_gs nest_pi nest_procs 1
     "map_lift (fun_of_resolved_st_q_for nest_gs) (Bot::ivl exec_dg_st lifted)"
     "map_lift (fun_of_resolved_st_q_for nest_gs) (Lifted cinit_ivl_st)"
     "map_lift (fun_of_resolved_st_q_for nest_gs) (Bot::ivl exec_dg_st lifted)"
-    nest_1_sigma_abs "fst nest_1_sol" "(cfg_exit nest_cfg, [])" nest_1_sg
+    nest_1_sigma_abs "fst nest_1_sol" "(cfg_exit nest_cfg, [])" nest_1_sg gamma_state_lift
 proof (unfold_locales, unfold nest_cfg_compile,
        goal_cases FinE PP SgCov SgUncov Fwd CallFwd CombFwd)
   case FinE
