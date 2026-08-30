@@ -114,6 +114,7 @@ text \<open>CALL and COMB, at the call-string instance: the callee entry state p
 
 lemmas routed_context_call = routed.routed_context_call
 lemmas routed_context_comb = routed.routed_context_comb
+lemmas activation_collect_sound = routed.activation_collect_dg_sound
 
 end
 

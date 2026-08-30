@@ -193,7 +193,7 @@ Spike before committing to it.
 | 2.3 | Delete `Exec_DG_Trees`, `Exec_DG_Generator`, `Exec_DG_Bridge`; the transport half of `DG_Base_Exec` (keep `routed_dg_domain_exec` and the `base_dg_spec_st_for_lifted` commute lemmas it cites); `Routed_Domain_Exec`; the owner-aware trees and classifier-parametric readback in `Exec_DG_Refines` (keep the `exec_dg_st` lattice instances and `fun_of_dg_st_for`). | open |
 | 2.4 | `routed_context_hetero` becomes `routed_context_base_hetero` at whichever carrier the instance chooses; delete the restated assumptions. Same for `unit_routed_context_hetero`. | in progress: `entry_state_routed_context` and `call_string_routed_context` (Analysis) are stated at a carrier parameter with `gammaDG`/`gammaM` and sublocale `routed_context_base_hetero`; `routed_context_hetero` itself in Core is still defined and waits for its last interpreters |
 | 2.5 | `Analysis_Result` holds the quotient; `normalize_point` becomes the single readback at publication, in `DG_Analysis_Adapter`. `Abstract_Checks` reads the published table. | landed in the generic form: `dg_analysis_adapter` extends `routed_context_base_hetero` and takes a readback `rd` with `gammaDG d g = gamma_state_lift (rd d)`; the four abstract-carrier sites pass `rd = id` |
-| 2.6 | Rewrite the twelve `*_Ctx_*_Sound` theories and the four CLI `*_Entry` theories to interpret at the quotient carrier. Expect the transport boilerplate that NEXT_STEPS records as the 23-suffix duplication to shrink. | in progress: the four unit-context instances (Sign, Parity, Interval, Int, with their `*_Checks`/`*_Entry` consumers), the three entry-state instances and the two call-string instances are on the executable carrier; the two Interval entry-state examples and `Example_Interval_Source_Ctx` follow the theory. Still on the transport: `Run_Analysis_Sound` (the monovariant `dg_gen_of_eq_for` route through `fun_of_dg_st_gen`), the four CallString examples (their own `dg_reader_commute_gen` interpretations), and the abstract-transport section of `Interval_Ctx_Entry_State_Sound` (`dg_reader_commute_gen_ivl_lifted`, `entry_state_route_abs_gen`); these gate 2.3 |
+| 2.6 | Rewrite the twelve `*_Ctx_*_Sound` theories and the four CLI `*_Entry` theories to interpret at the quotient carrier. Expect the transport boilerplate that NEXT_STEPS records as the 23-suffix duplication to shrink. | in progress: the four unit-context instances (Sign, Parity, Interval, Int, with their `*_Checks`/`*_Entry` consumers), the three entry-state instances and the two call-string instances are on the executable carrier; the two Interval entry-state examples and `Example_Interval_Source_Ctx` follow the theory; the four CallString examples interpret `call_string_routed_context` at their executable spec and get their headline theorem from `activation_collect_sound`. Still on the transport, gating 2.3: `Run_Analysis_Sound`'s flat bundles (`dg_exec_run_source_sound_for`, `dg_exec_collect_sound_for`, their `_lifted` twins and the registration locales `unit_dg_exec_analysis`/`base_dg_exec_analysis`, interpreted by `Exec_Sign_DG_Run`, `Example_Parity_DG_Flagship`, `Example_Interval_DG_Flagship`, `Example_Interval_DG_IP_Flagship`), and the abstract-transport section of `Interval_Ctx_Entry_State_Sound` (`dg_reader_commute_gen_ivl_lifted`, `entry_state_route_abs_gen`, `ectx_abs_spec`) |
 | 2.7 | Move `routed_dg_domain_exec`, `Solver_Side_RG`, `Solver_Menu`, `Monovariant_Analysis_Result`, `DG_Coverage` to their final homes (`DG_Base`, Solver, Core); retire `Voblint_Exec` from `ROOTS`. | open |
 
 ### Phase 3 -- inside the theories
@@ -324,6 +324,30 @@ and mark it `superseded (see below)`.
   their routed-callee-entry facts by `eval` on the executable route instead of
   by the abstract-route commute lemmas. The call-string instances have no
   soundness section; for them the recipe is only `*_pp_abs` -> `*_pp_routed`.
+- 2026-08-30: `locals_ge_s0d` and `activation_collect_dg_sound` move from
+  `dg_analysis_adapter` into `routed_context_base_hetero`. Both use only the
+  routed locale's own facts (`pp_eq_bound`, `pp_entry_s0g_bound`,
+  `gammaDG_mono`, `sg_cov`, `dg_ctx_act_edge`, the CALL/COMB theorems), so the
+  adapter's classifier was never a premise; a routed instance without a check
+  layer -- the four CallString examples -- now gets its activation-indexed
+  soundness theorem from the interpretation alone. `Routed_Context` imports
+  `Activation_Backbone` for `activation_collect_sound_gen`; the two policy
+  locales re-export the fact as `activation_collect_sound`.
+- 2026-08-30: the four CallString examples solve the unbuffered
+  `side_cfg_T_eff_keyed_seed_dg` at the executable spec already, so their
+  migration is only the interpretation: `sound_dg_spec` at `*_S_st` via
+  `routed_dg_domain_exec.sound_dg_spec_st`, `sigma := snd *_sol`, the covered
+  reader typed at the executable carrier, and the hand-rolled
+  `dg_reader_commute_gen`/`part_post_solution_seed_dg_st_to_abs_lifted_for`
+  transport deleted. The examples were the last interpreters of
+  `dg_reader_commute_gen` outside `Voblint_Exec`.
+- 2026-08-30: what still keeps the transport theories alive is the flat
+  (unrouted, `dg_gen_of`) executable bundle in `Run_Analysis_Sound` and its
+  two registration locales, interpreted by four flagship examples. Step 2.3
+  either restates those bundles at the executable carrier the same way
+  (`sound_dg_spec_st` for the flat spec, the collecting endpoint fed by the
+  solver's own table) or retires the flat registration API in favour of the
+  routed adapter; decide there, not here.
 - 2026-08-30 (superseded by the entry above): the six contextual instances cannot follow the recipe yet.
   `entry_state_routed_context` and `call_string_routed_context` are stated
   over `'a abs_state lifted` with `gamma_dg_base`/`gamma_state_lift` baked
@@ -358,6 +382,22 @@ and mark it `superseded (see below)`.
   framework.
 - The build abandons a session at its first failing theory. After each
   phase's first build, budget for the tail.
+- A change in `Voblint_Core` rebuilds every session above it, which is longer
+  than the ten minutes an agent harness allows one background command. If the
+  command is killed mid-session, the finished sessions keep their heaps and a
+  rerun resumes from the first unfinished one; only a build killed while
+  writing a session database, or two builds at once, corrupts it. Start such
+  a build early and let it run alone.
+- Two interpretations in one context whose locale hierarchies share an
+  instance at syntactically identical parameters register that instance's
+  facts once, under the first qualifier. `Int_Ctx_None_Sound` interprets
+  `unit_routed_context` and then `dg_analysis_adapter` at the same
+  `routed_context_base_hetero` instance, so the hoisted
+  `activation_collect_dg_sound` is `ictx_routed.routed.…`, not
+  `ictx_adapter.…`; the entry-state instances escape this only because their
+  adapter names `enterc` by a definition the routed locale spells out. I/Q
+  does not re-check a dependent theory after an edit to its Core ancestor
+  until that theory is touched; the batch build does.
 - I/Q `write_file` with a line range uses the buffer's current numbering.
   After any earlier edit in the same file, re-read the target lines before
   the next range edit; a stale range silently replaces the wrong block

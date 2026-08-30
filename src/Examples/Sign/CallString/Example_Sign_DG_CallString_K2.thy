@@ -109,7 +109,7 @@ lemma covered_ret3_fneg_2: "(Statement 3, [Statement 6]) \<in> fst sign_nest_2_s
   unfolding sign_nest_2_nodes_eq sign_nest_2_nodes_def by simp
 
 
-section \<open>Abstract transport of the routed solution\<close>
+section \<open>The solver's post-solution\<close>
 
 lemma sign_nest_2_solve_dom:
   "TD_side_always_join_Interp.solve_dom TYPE(call_string_gk)
@@ -126,28 +126,13 @@ lemma sign_nest_2_pp_st:
 
 abbreviation sigma_2 ::
   "pp \<times> cfg_node list + call_string_gk
-     \<Rightarrow> (sign abs_state lifted, sign abs_state lifted) dg_state" where
-  "sigma_2 \<equiv>
-     fun_of_dg_st_gen (map_lift (fun_of_resolved_st_q_for sign_nest_gs))
-       (map_lift (fun_of_resolved_st_q_for sign_nest_gs)) \<circ> snd sign_nest_2_sol"
-
-theorem sign_nest_2_pp_abs:
-  "part_post_solution
-     (side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. Global) (cs_route 2)
-       (routed_cmb_g sign_nest_S_abs Global Seed (static_resolve sign_nest_cfg))
-       (routed_extra_g Seed Global)
-        sign_nest_cfg sign_nest_S_abs
-        (map_lift (fun_of_resolved_st_q_for sign_nest_gs) (Bot::sign exec_dg_st lifted))
-        (map_lift (fun_of_resolved_st_q_for sign_nest_gs) (Lifted cinit_sign_st))
-        (map_lift (fun_of_resolved_st_q_for sign_nest_gs) (Bot::sign exec_dg_st lifted)))
-     (cfg_exit sign_nest_cfg, []) sigma_2 (fst sign_nest_2_sol)"
-  by (rule sign_nest_pp_abs_of_st[OF sign_nest_2_pp_st[unfolded sign_nest_2_eqs_def]])
-
+     \<Rightarrow> (sign exec_dg_st lifted, sign exec_dg_st lifted) dg_state" where
+  "sigma_2 \<equiv> snd sign_nest_2_sol"
 
 section \<open>Activation-indexed collecting soundness for the 2-call-string-routed solution\<close>
 
 definition sign_ctx_sg_2 ::
-  "pp \<times> cfg_node list + call_string_gk \<Rightarrow> sign abs_state lifted" where
+  "pp \<times> cfg_node list + call_string_gk \<Rightarrow> sign exec_dg_st lifted" where
   "sign_ctx_sg_2 z =
      (case z of
         Inl (v, ctx) \<Rightarrow>
@@ -160,7 +145,9 @@ lemma sign_ctx_sg_2_covered:
   by (simp add: sign_ctx_sg_2_def)
 
 lemma sign_ctx_sg_2_uncovered_empty:
-  "(v, ctx) \<notin> fst sign_nest_2_sol \<Longrightarrow> gamma_state_lift (sign_ctx_sg_2 (Inl (v, ctx))) = {}"
+  "(v, ctx) \<notin> fst sign_nest_2_sol
+     \<Longrightarrow> gamma_state_lift (map_lift (fun_of_resolved_st_q_for sign_nest_gs)
+           (sign_ctx_sg_2 (Inl (v, ctx)))) = {}"
   by (simp add: sign_ctx_sg_2_def)
 
 text \<open>Unlike \<open>k = 1\<close>, \<open>call_fwd\<close>'s \<open>Statement 2\<close> case now genuinely splits: \<open>g\<close>'s call site
@@ -169,22 +156,20 @@ text \<open>Unlike \<open>k = 1\<close>, \<open>call_fwd\<close>'s \<open>Statem
   for is discharged generically at \<^const>\<open>cs_route\<close>, exactly as at \<open>k = 1\<close>.\<close>
 
 interpretation sign_nest_2_cs: call_string_routed_context
-    sign_nest_S_abs gamma_dg_base sign_nest_gs sign_nest_pi sign_nest_procs 2
-    "map_lift (fun_of_resolved_st_q_for sign_nest_gs) (Bot::sign exec_dg_st lifted)"
-    "map_lift (fun_of_resolved_st_q_for sign_nest_gs) (Lifted cinit_sign_st)"
-    "map_lift (fun_of_resolved_st_q_for sign_nest_gs) (Bot::sign exec_dg_st lifted)"
+    sign_nest_S_st sign_nest_gamma sign_nest_gs sign_nest_pi sign_nest_procs 2
+    Bot "Lifted cinit_sign_st" Bot
     sigma_2 "fst sign_nest_2_sol" "(cfg_exit sign_nest_cfg, [])" sign_ctx_sg_2
-    gamma_state_lift
+    "\<lambda>m. gamma_state_lift (map_lift (fun_of_resolved_st_q_for sign_nest_gs) m)"
 proof (unfold_locales, unfold sign_nest_cfg_compile,
        goal_cases FinE PP SgCov SgUncov Fwd CallFwd CombFwd)
   case FinE
   show ?case by (rule sign_nest_finE)
 next
   case PP
-  show ?case by (rule sign_nest_2_pp_abs)
+  show ?case by (rule sign_nest_2_pp_st[unfolded sign_nest_2_eqs_def])
 next
   case (SgCov v c)
-  show ?case using SgCov by (simp add: sign_ctx_sg_2_covered gamma_dg_base_def)
+  show ?case using SgCov by (simp add: sign_ctx_sg_2_covered sign_nest_gamma_def)
 next
   case (SgUncov v c)
   show ?case using SgUncov by (rule sign_ctx_sg_2_uncovered_empty)
@@ -236,82 +221,35 @@ qed
 
 lemma sign_ctx_sg_2_seed:
   assumes "(u, CallEdge dst xs es, FunctionEntry p, cont) \<in> calls sign_nest_cfg"
-    and "s \<in> gamma_state_lift (sign_ctx_sg_2 (Inl (u, ctx)))"
+    and "s \<in> gamma_state_lift (map_lift (fun_of_resolved_st_q_for sign_nest_gs)
+               (sign_ctx_sg_2 (Inl (u, ctx))))"
   shows "call_enter sign_nest_gs (CallEdge dst xs es) s
-           \<in> gamma_state_lift (sign_ctx_sg_2 (Inl (FunctionEntry p,
-                 cs_context 2 u ctx (call_enter sign_nest_gs (CallEdge dst xs es) s))))"
+           \<in> gamma_state_lift (map_lift (fun_of_resolved_st_q_for sign_nest_gs)
+               (sign_ctx_sg_2 (Inl (FunctionEntry p,
+                 cs_context 2 u ctx (call_enter sign_nest_gs (CallEdge dst xs es) s)))))"
   by (rule sign_nest_2_cs.routed_context_call[OF assms[unfolded sign_nest_cfg_def]])
 
 lemma sign_ctx_sg_2_comb:
   assumes "(cl, CallEdge dst pars args, FunctionEntry p, v) \<in> calls sign_nest_cfg"
-    and "s \<in> gamma_state_lift (sign_ctx_sg_2 (Inl (cl, c1)))"
-    and "t \<in> gamma_state_lift (sign_ctx_sg_2 (Inl (FunctionResult p, cs_context 2 cl c1 es)))"
+    and "s \<in> gamma_state_lift (map_lift (fun_of_resolved_st_q_for sign_nest_gs)
+               (sign_ctx_sg_2 (Inl (cl, c1))))"
+    and "t \<in> gamma_state_lift (map_lift (fun_of_resolved_st_q_for sign_nest_gs)
+               (sign_ctx_sg_2 (Inl (FunctionResult p, cs_context 2 cl c1 es))))"
     and "call_enter_store sign_nest_gs sign_nest_cfg cl s es"
-  shows "combine_collect sign_nest_gs dst s t \<in> gamma_state_lift (sign_ctx_sg_2 (Inl (v, c1)))"
+  shows "combine_collect sign_nest_gs dst s t
+           \<in> gamma_state_lift (map_lift (fun_of_resolved_st_q_for sign_nest_gs)
+               (sign_ctx_sg_2 (Inl (v, c1))))"
   by (rule sign_nest_2_cs.routed_context_comb[OF assms[unfolded sign_nest_cfg_def]])
 
-
 section \<open>The headline theorem: 2-call-string activation collecting soundness\<close>
-
-lemma sign_nest_2_entry_locals_ge_s0d:
-  "map_lift (fun_of_resolved_st_q_for sign_nest_gs) (Lifted cinit_sign_st)
-     \<le> locals (sigma_2 (Inl (cfg_entry sign_nest_cfg, [])))"
-proof -
-  have "map_lift (fun_of_resolved_st_q_for sign_nest_gs) (Lifted cinit_sign_st)
-      \<le> locals (eq sign_nest_2_cs.Gen (cfg_entry sign_nest_cfg, []) sigma_2)"
-    by (simp add: eq_side_cfg_T_eff_keyed_seed_dg)
-       (rule order_trans[OF _ side_acc_dg_ge_acc], simp add: le_supI2)
-  also have "\<dots> \<le> locals (sigma_2 (Inl (cfg_entry sign_nest_cfg, [])))"
-    using sign_nest_2_cs.pp_eq_bound[OF entry_covered_2] by (simp add: less_eq_dg_state_def)
-  finally show ?thesis .
-qed
 
 theorem sign_nest_2_activation_collect_sound:
   "activation_collect sign_nest_gs (cs_context 2) [] sign_nest_cfg
      (cinit_stores sign_nest_gs) v ctx
-     \<subseteq> gamma_state_lift (sign_ctx_sg_2 (Inl (v, ctx)))"
-proof (rule activation_collect_sound_gen[where sg = sign_ctx_sg_2 and gammaM = gamma_state_lift
-        and enterc = "cs_context 2" and initial_ctx = "[]"
-        and S = "cinit_stores sign_nest_gs" and g = sign_nest_cfg and gs = sign_nest_gs])
-  \<comment> \<open>ENTRY_G\<close>
-  fix s assume "s \<in> cinit_stores sign_nest_gs"
-  hence "s \<in> gamma_state_lift (map_lift (fun_of_resolved_st_q_for sign_nest_gs) (Lifted cinit_sign_st))"
-    using sign_nest_cinit_le_cinit_sign_st by blast
-  also have "gamma_state_lift (map_lift (fun_of_resolved_st_q_for sign_nest_gs) (Lifted cinit_sign_st))
-        = gamma_dg_base (map_lift (fun_of_resolved_st_q_for sign_nest_gs) (Lifted cinit_sign_st))
-            (map_lift (fun_of_resolved_st_q_for sign_nest_gs) (Bot::sign exec_dg_st lifted))"
-    by (simp add: gamma_dg_base_def)
-  also have "\<dots> \<subseteq> gamma_dg_base (locals (sigma_2 (Inl (cfg_entry sign_nest_cfg, []))))
-                   (globs (sigma_2 (Inr Global)))"
-    by (rule gamma_dg_base_mono[OF sign_nest_2_entry_locals_ge_s0d
-          sign_nest_2_cs.pp_entry_s0g_bound[unfolded sign_nest_cfg_compile, OF entry_covered_2]])
-  also have "\<dots> = gamma_state_lift (sign_ctx_sg_2 (Inl (cfg_entry sign_nest_cfg, [])))"
-    unfolding sign_ctx_sg_2_covered[OF entry_covered_2] gamma_dg_base_def by (rule refl)
-  finally show "s \<in> gamma_state_lift (sign_ctx_sg_2 (Inl (cfg_entry sign_nest_cfg, [])))" .
-next
-  \<comment> \<open>EDGE --- discharged generically off the post-solution by \<open>dg_ctx_activation_base\<close>.\<close>
-  show "\<And>u a v c s s'. (u, a, v) \<in> intra sign_nest_cfg
-        \<Longrightarrow> s \<in> gamma_state_lift (sign_ctx_sg_2 (Inl (u, c))) \<Longrightarrow> s' \<in> edge_step a s
-        \<Longrightarrow> s' \<in> gamma_state_lift (sign_ctx_sg_2 (Inl (v, c)))"
-    by (rule sign_nest_2_cs.dg_ctx_act_edge[unfolded sign_nest_cfg_compile])
-next
-  \<comment> \<open>CALL --- enter routed to the truncated call string.\<close>
-  fix u dst pars args p cont c s
-  assume ce: "(u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls sign_nest_cfg"
-    and sm: "s \<in> gamma_state_lift (sign_ctx_sg_2 (Inl (u, c)))"
-  show "call_enter sign_nest_gs (CallEdge dst pars args) s
-          \<in> gamma_state_lift (sign_ctx_sg_2 (Inl (FunctionEntry p, cs_context 2 u c (call_enter sign_nest_gs (CallEdge dst pars args) s))))"
-    using sign_ctx_sg_2_seed[OF ce sm] .
-next
-  \<comment> \<open>COMB --- return combine at the caller's own truncated context.\<close>
-  fix cl dst pars args p cont c1 s t es
-  assume ce: "(cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls sign_nest_cfg"
-    and sm: "s \<in> gamma_state_lift (sign_ctx_sg_2 (Inl (cl, c1)))"
-    and tm: "t \<in> gamma_state_lift (sign_ctx_sg_2 (Inl (FunctionResult p, cs_context 2 cl c1 es)))"
-    and ces: "call_enter_store sign_nest_gs sign_nest_cfg cl s es"
-  show "combine_collect sign_nest_gs dst s t \<in> gamma_state_lift (sign_ctx_sg_2 (Inl (cont, c1)))"
-    using tm sign_ctx_sg_2_comb[OF ce sm _ ces] by blast
-qed
+     \<subseteq> gamma_state_lift (map_lift (fun_of_resolved_st_q_for sign_nest_gs)
+           (sign_ctx_sg_2 (Inl (v, ctx))))"
+  by (rule sign_nest_2_cs.activation_collect_sound[unfolded sign_nest_cfg_compile,
+            OF entry_covered_2 sign_nest_cinit_le_cinit_sign_st])
 
 
 section \<open>The precision comparison: k=2 keeps \<open>g\<close>'s two activations separated where k=1 merges them\<close>

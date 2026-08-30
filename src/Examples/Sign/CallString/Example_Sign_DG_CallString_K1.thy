@@ -106,124 +106,29 @@ definition sign_nest_S_st :: "(sign exec_dg_st lifted, sign exec_dg_st lifted) d
   "sign_nest_S_st = base_dg_spec_st_for_lifted sign_nest_gs sign_nest_is_bot_pred
                       (sign_tf_st_for sign_nest_gs) (sign_enter_st_for sign_nest_gs)"
 
-definition sign_nest_S_abs :: "(sign abs_state lifted, sign abs_state lifted) dg_spec" where
-  "sign_nest_S_abs = base_dg_spec_for_lifted sign_nest_gs is_bot_state (sign_tf_for sign_nest_gs)"
+subsection \<open>Soundness of the executable specification, once for every bound\<close>
 
-subsection \<open>Executable-to-abstract transport, once for every bound\<close>
+text \<open>The executable spec is sound for the concretization that reads a local unknown back
+  through \<^const>\<open>fun_of_resolved_st_q_for\<close> and ignores the inert global slot; Sign's own
+  primitive commute facts are all the generic engine needs.\<close>
 
-text \<open>The readback is the lifted \<^const>\<open>fun_of_resolved_st_q_for\<close>, used identically for the
-  local and the (inert) global carrier. Every commute below is an instance of the generic
-  Base-style engine; only Sign's own primitive facts are supplied.\<close>
+definition sign_nest_gamma ::
+    "sign exec_dg_st lifted \<Rightarrow> sign exec_dg_st lifted \<Rightarrow> store set" where
+  "sign_nest_gamma d g = gamma_state_lift (map_lift (fun_of_resolved_st_q_for sign_nest_gs) d)"
 
-lemma sign_nest_dg_reader:
-  "dg_reader_commute_gen (map_lift (fun_of_resolved_st_q_for sign_nest_gs))
-     (map_lift (fun_of_resolved_st_q_for sign_nest_gs))"
-  by unfold_locales (simp_all add: map_lift_sup fun_of_resolved_st_q_for_sup)
+interpretation sign_nest_domain: routed_dg_domain_exec
+  sign_nest_gs sign_nest_is_bot_pred "sign_tf_st_for sign_nest_gs"
+  "sign_enter_st_for sign_nest_gs" "sign_tf_for sign_nest_gs"
+  by unfold_locales
+     (rule sign_tf_st_for_commute, rule sign_enter_st_for_commute, rule sign_nest_exact)
 
-lemma sign_nest_Hstep:
-  "map_prod (map_lift (fun_of_resolved_st_q_for sign_nest_gs))
-      (map_lift (fun_of_resolved_st_q_for sign_nest_gs))
-     (dg_spec_step sign_nest_S_st a d g)
-   = dg_spec_step sign_nest_S_abs a (map_lift (fun_of_resolved_st_q_for sign_nest_gs) d)
-       (map_lift (fun_of_resolved_st_q_for sign_nest_gs) g)"
-  unfolding sign_nest_S_st_def sign_nest_S_abs_def
-  by (rule base_dg_spec_st_for_lifted_dg_spec_step_commute
-        [unfolded fun_of_exec_dg_st_for_def, OF sign_tf_st_for_commute sign_nest_exact])
+lemma sign_nest_gamma_eq: "sign_nest_gamma = sign_nest_domain.gamma_exec"
+  by (intro ext) (simp add: sign_nest_gamma_def sign_nest_domain.gamma_exec_def gamma_dg_base_def)
 
-lemma sign_nest_Henter:
-  "map_prod (map_lift (fun_of_resolved_st_q_for sign_nest_gs))
-      (map_lift (fun_of_resolved_st_q_for sign_nest_gs))
-     (dgs_enter sign_nest_S_st xs es d g)
-   = dgs_enter sign_nest_S_abs xs es (map_lift (fun_of_resolved_st_q_for sign_nest_gs) d)
-       (map_lift (fun_of_resolved_st_q_for sign_nest_gs) g)"
-  unfolding sign_nest_S_st_def sign_nest_S_abs_def
-  by (rule base_dg_spec_st_for_lifted_dgs_enter_commute
-        [unfolded fun_of_exec_dg_st_for_def, OF sign_enter_st_for_commute sign_nest_exact])
-
-lemma sign_nest_Hcomb:
-  "map_prod (map_lift (fun_of_resolved_st_q_for sign_nest_gs))
-      (map_lift (fun_of_resolved_st_q_for sign_nest_gs))
-     (dgs_combine sign_nest_S_st dst dc de g)
-   = dgs_combine sign_nest_S_abs dst (map_lift (fun_of_resolved_st_q_for sign_nest_gs) dc)
-       (map_lift (fun_of_resolved_st_q_for sign_nest_gs) de)
-       (map_lift (fun_of_resolved_st_q_for sign_nest_gs) g)"
-  unfolding sign_nest_S_st_def sign_nest_S_abs_def
-  by (rule base_dg_spec_st_for_lifted_dgs_combine_commute
-        [where tf = "sign_tf_for sign_nest_gs", unfolded fun_of_exec_dg_st_for_def,
-         OF sign_nest_exact])
-
-lemma sign_nest_Hcont:
-  "map_lift (fun_of_resolved_st_q_for sign_nest_gs) (caller_cont sign_nest_S_st ci dc g)
-   = caller_cont sign_nest_S_abs ci (map_lift (fun_of_resolved_st_q_for sign_nest_gs) dc)
-       (map_lift (fun_of_resolved_st_q_for sign_nest_gs) g)"
-  unfolding sign_nest_S_st_def sign_nest_S_abs_def
-  by (rule base_dg_spec_st_for_lifted_dgs_caller_cont_commute
-        [where tf = "sign_tf_for sign_nest_gs", unfolded fun_of_exec_dg_st_for_def])
-
-lemma sign_nest_seed_ne_global: "Seed p ctx \<noteq> Global" by simp
-
-text \<open>\<^const>\<open>cs_route\<close> never reads its data argument, so the routed combine and the routed
-  entry-seed read transport for ``any'' bound \<open>k\<close> at once: \<open>cs_route_indep_of_data\<close> is the
-  whole route-agreement obligation, with no per-domain commute lemma.\<close>
-
-lemma sign_nest_Hcmb_routed:
-  "dg_reader_commute_gen.dg_tree_st_commute
-     (map_lift (fun_of_resolved_st_q_for sign_nest_gs))
-     (map_lift (fun_of_resolved_st_q_for sign_nest_gs)) sigma_st
-     (routed_cmb_g sign_nest_S_st Global Seed (static_resolve sign_nest_cfg)
-        (cs_route k) ctx ca cc ex)
-     (routed_cmb_g sign_nest_S_abs Global Seed (static_resolve sign_nest_cfg)
-        (cs_route k) ctx ca cc ex)"
-  by (rule dg_reader_commute_gen.dg_tree_st_commute_routed_cmb_g
-        [OF sign_nest_dg_reader sign_nest_seed_ne_global sign_nest_Henter sign_nest_Hcomb
-            sign_nest_Hcont
-            cs_route_indep_of_data])
-     (simp add: static_resolve_def)
-lemma sign_nest_Hextra_routed:
-  "list_all2 (dg_reader_commute_gen.dg_tree_st_commute
-                (map_lift (fun_of_resolved_st_q_for sign_nest_gs))
-                (map_lift (fun_of_resolved_st_q_for sign_nest_gs)) sigma_st)
-     (routed_extra_g Seed Global route_st ctx w)
-     (routed_extra_g Seed Global route_abs ctx w)"
-  by (rule dg_reader_commute_gen.dg_tree_st_commute_routed_extra_g[OF sign_nest_dg_reader])
-
-text \<open>The whole post-solution transport, stated once for a free bound \<open>k\<close>: both the \<open>k = 1\<close>
-  system here and its \<open>k = 2\<close> sibling instantiate this single lemma.\<close>
-
-lemma sign_nest_pp_abs_of_st:
-  assumes pp: "part_post_solution
-       (side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. Global) (cs_route k)
-          (routed_cmb_g sign_nest_S_st Global Seed (static_resolve sign_nest_cfg))
-          (routed_extra_g Seed Global)
-          sign_nest_cfg sign_nest_S_st Bot (Lifted cinit_sign_st) Bot)
-       x sigma_st vars"
-  shows "part_post_solution
-       (side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. Global) (cs_route k)
-          (routed_cmb_g sign_nest_S_abs Global Seed (static_resolve sign_nest_cfg))
-          (routed_extra_g Seed Global)
-          sign_nest_cfg sign_nest_S_abs
-          (map_lift (fun_of_resolved_st_q_for sign_nest_gs) (Bot::sign exec_dg_st lifted))
-          (map_lift (fun_of_resolved_st_q_for sign_nest_gs) (Lifted cinit_sign_st))
-          (map_lift (fun_of_resolved_st_q_for sign_nest_gs) (Bot::sign exec_dg_st lifted)))
-       x (fun_of_dg_st_gen (map_lift (fun_of_resolved_st_q_for sign_nest_gs))
-            (map_lift (fun_of_resolved_st_q_for sign_nest_gs)) \<circ> sigma_st) vars"
-  by (rule part_post_solution_seed_dg_st_to_abs_lifted_for
-        [where gs = sign_nest_gs and pred_sel = intra_predecessor_addr_list and gkey = "\<lambda>_. Global"
-           and route_st = "cs_route k" and route_abs = "cs_route k"
-           and cmb_st = "routed_cmb_g sign_nest_S_st Global Seed (static_resolve sign_nest_cfg)"
-           and cmb_abs = "routed_cmb_g sign_nest_S_abs Global Seed (static_resolve sign_nest_cfg)"
-           and extra_st = "routed_extra_g Seed Global"
-           and extra_abs = "routed_extra_g Seed Global"
-           and g = sign_nest_cfg and S_st = sign_nest_S_st and S_abs = sign_nest_S_abs,
-         OF sign_nest_Hstep cs_route_indep_of_data sign_nest_Hcmb_routed
-            sign_nest_Hextra_routed pp])
-
-text \<open>The abstract specification is sound for the Base-style concretization
-  \<^const>\<open>gamma_dg_base\<close>, which discards its inert \<open>'G\<close> argument outright.\<close>
-
-interpretation sign_nest_dg_sound: sound_dg_spec sign_nest_S_abs gamma_dg_base sign_nest_gs
-  unfolding sign_nest_S_abs_def
-  by (rule base_dg_spec_sound[OF sign_is_sound_transfer_for is_bot_state_gamma_state_empty])
+interpretation sign_nest_dg_sound: sound_dg_spec sign_nest_S_st sign_nest_gamma sign_nest_gs
+  unfolding sign_nest_gamma_eq sign_nest_S_st_def
+  by (rule sign_nest_domain.sound_dg_spec_st)
+     (rule base_dg_spec_sound[OF sign_is_sound_transfer_for is_bot_state_gamma_state_empty])
 
 subsection \<open>The routed equation system and its computed solution\<close>
 
@@ -314,7 +219,7 @@ lemma covered_ret3_fneg_1: "(Statement 3, [Statement 6]) \<in> fst sign_nest_1_s
   unfolding sign_nest_1_nodes_eq sign_nest_1_nodes_def by simp
 
 
-section \<open>Abstract transport of the routed solution\<close>
+section \<open>The solver's post-solution\<close>
 
 lemma sign_nest_1_solve_dom:
   "TD_side_always_join_Interp.solve_dom TYPE(call_string_gk)
@@ -329,30 +234,18 @@ lemma sign_nest_1_pp_st:
           [OF sign_nest_1_solve_dom, of "fst sign_nest_1_sol" "snd sign_nest_1_sol"]
   unfolding sign_nest_1_sol_def by simp
 
+text \<open>The solver's own table is the solved system the routed spine is interpreted at;
+  nothing is transported to another carrier.\<close>
+
 abbreviation sigma_1 ::
   "pp \<times> cfg_node list + call_string_gk
-     \<Rightarrow> (sign abs_state lifted, sign abs_state lifted) dg_state" where
-  "sigma_1 \<equiv>
-     fun_of_dg_st_gen (map_lift (fun_of_resolved_st_q_for sign_nest_gs))
-       (map_lift (fun_of_resolved_st_q_for sign_nest_gs)) \<circ> snd sign_nest_1_sol"
-
-theorem sign_nest_1_pp_abs:
-  "part_post_solution
-     (side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. Global) (cs_route 1)
-       (routed_cmb_g sign_nest_S_abs Global Seed (static_resolve sign_nest_cfg))
-       (routed_extra_g Seed Global)
-        sign_nest_cfg sign_nest_S_abs
-        (map_lift (fun_of_resolved_st_q_for sign_nest_gs) (Bot::sign exec_dg_st lifted))
-        (map_lift (fun_of_resolved_st_q_for sign_nest_gs) (Lifted cinit_sign_st))
-        (map_lift (fun_of_resolved_st_q_for sign_nest_gs) (Bot::sign exec_dg_st lifted)))
-     (cfg_exit sign_nest_cfg, []) sigma_1 (fst sign_nest_1_sol)"
-  by (rule sign_nest_pp_abs_of_st[OF sign_nest_1_pp_st[unfolded sign_nest_1_eqs_def]])
-
+     \<Rightarrow> (sign exec_dg_st lifted, sign exec_dg_st lifted) dg_state" where
+  "sigma_1 \<equiv> snd sign_nest_1_sol"
 
 section \<open>Activation-indexed collecting soundness for the 1-call-string-routed solution\<close>
 
 definition sign_ctx_sg_1 ::
-  "pp \<times> cfg_node list + call_string_gk \<Rightarrow> sign abs_state lifted" where
+  "pp \<times> cfg_node list + call_string_gk \<Rightarrow> sign exec_dg_st lifted" where
   "sign_ctx_sg_1 z =
      (case z of
         Inl (v, ctx) \<Rightarrow>
@@ -365,7 +258,9 @@ lemma sign_ctx_sg_1_covered:
   by (simp add: sign_ctx_sg_1_def)
 
 lemma sign_ctx_sg_1_uncovered_empty:
-  "(v, ctx) \<notin> fst sign_nest_1_sol \<Longrightarrow> gamma_state_lift (sign_ctx_sg_1 (Inl (v, ctx))) = {}"
+  "(v, ctx) \<notin> fst sign_nest_1_sol
+     \<Longrightarrow> gamma_state_lift (map_lift (fun_of_resolved_st_q_for sign_nest_gs)
+           (sign_ctx_sg_1 (Inl (v, ctx)))) = {}"
   by (simp add: sign_ctx_sg_1_def)
 
 text \<open>The call-string routing policy instantiated at \<open>k = 1\<close>. The generic locale
@@ -377,22 +272,20 @@ text \<open>The call-string routing policy instantiated at \<open>k = 1\<close>.
   before it reaches the goal, so \<open>call_fwd\<close> does not need to case-split on which one.\<close>
 
 interpretation sign_nest_1_cs: call_string_routed_context
-    sign_nest_S_abs gamma_dg_base sign_nest_gs sign_nest_pi sign_nest_procs 1
-    "map_lift (fun_of_resolved_st_q_for sign_nest_gs) (Bot::sign exec_dg_st lifted)"
-    "map_lift (fun_of_resolved_st_q_for sign_nest_gs) (Lifted cinit_sign_st)"
-    "map_lift (fun_of_resolved_st_q_for sign_nest_gs) (Bot::sign exec_dg_st lifted)"
+    sign_nest_S_st sign_nest_gamma sign_nest_gs sign_nest_pi sign_nest_procs 1
+    Bot "Lifted cinit_sign_st" Bot
     sigma_1 "fst sign_nest_1_sol" "(cfg_exit sign_nest_cfg, [])" sign_ctx_sg_1
-    gamma_state_lift
+    "\<lambda>m. gamma_state_lift (map_lift (fun_of_resolved_st_q_for sign_nest_gs) m)"
 proof (unfold_locales, unfold sign_nest_cfg_compile,
        goal_cases FinE PP SgCov SgUncov Fwd CallFwd CombFwd)
   case FinE
   show ?case by (rule sign_nest_finE)
 next
   case PP
-  show ?case by (rule sign_nest_1_pp_abs)
+  show ?case by (rule sign_nest_1_pp_st[unfolded sign_nest_1_eqs_def])
 next
   case (SgCov v c)
-  show ?case using SgCov by (simp add: sign_ctx_sg_1_covered gamma_dg_base_def)
+  show ?case using SgCov by (simp add: sign_ctx_sg_1_covered sign_nest_gamma_def)
 next
   case (SgUncov v c)
   show ?case using SgUncov by (rule sign_ctx_sg_1_uncovered_empty)
@@ -438,89 +331,44 @@ text \<open>CALL and COMB at this program, re-exported from the routed interpret
 
 lemma sign_ctx_sg_1_seed:
   assumes "(u, CallEdge dst xs es, FunctionEntry p, cont) \<in> calls sign_nest_cfg"
-    and "s \<in> gamma_state_lift (sign_ctx_sg_1 (Inl (u, ctx)))"
+    and "s \<in> gamma_state_lift (map_lift (fun_of_resolved_st_q_for sign_nest_gs)
+               (sign_ctx_sg_1 (Inl (u, ctx))))"
   shows "call_enter sign_nest_gs (CallEdge dst xs es) s
-           \<in> gamma_state_lift (sign_ctx_sg_1 (Inl (FunctionEntry p,
-                 cs_context 1 u ctx (call_enter sign_nest_gs (CallEdge dst xs es) s))))"
+           \<in> gamma_state_lift (map_lift (fun_of_resolved_st_q_for sign_nest_gs)
+               (sign_ctx_sg_1 (Inl (FunctionEntry p,
+                 cs_context 1 u ctx (call_enter sign_nest_gs (CallEdge dst xs es) s)))))"
   by (rule sign_nest_1_cs.routed_context_call[OF assms[unfolded sign_nest_cfg_def]])
 
 lemma sign_ctx_sg_1_comb:
   assumes "(cl, CallEdge dst pars args, FunctionEntry p, v) \<in> calls sign_nest_cfg"
-    and "s \<in> gamma_state_lift (sign_ctx_sg_1 (Inl (cl, c1)))"
-    and "t \<in> gamma_state_lift (sign_ctx_sg_1 (Inl (FunctionResult p, cs_context 1 cl c1 es)))"
+    and "s \<in> gamma_state_lift (map_lift (fun_of_resolved_st_q_for sign_nest_gs)
+               (sign_ctx_sg_1 (Inl (cl, c1))))"
+    and "t \<in> gamma_state_lift (map_lift (fun_of_resolved_st_q_for sign_nest_gs)
+               (sign_ctx_sg_1 (Inl (FunctionResult p, cs_context 1 cl c1 es))))"
     and "call_enter_store sign_nest_gs sign_nest_cfg cl s es"
-  shows "combine_collect sign_nest_gs dst s t \<in> gamma_state_lift (sign_ctx_sg_1 (Inl (v, c1)))"
+  shows "combine_collect sign_nest_gs dst s t
+           \<in> gamma_state_lift (map_lift (fun_of_resolved_st_q_for sign_nest_gs)
+               (sign_ctx_sg_1 (Inl (v, c1))))"
   by (rule sign_nest_1_cs.routed_context_comb[OF assms[unfolded sign_nest_cfg_def]])
-
 
 section \<open>The headline theorem: 1-call-string activation collecting soundness\<close>
 
 lemma sign_nest_cinit_le_cinit_sign_st:
-  "cinit_stores sign_nest_gs
-     \<subseteq> gamma_state_lift (map_lift (fun_of_resolved_st_q_for sign_nest_gs) (Lifted cinit_sign_st))"
-  by (auto simp: cinit_stores_def gamma_state_def fun_of_resolved_st_q_for_def
+  "cinit_stores sign_nest_gs \<subseteq> sign_nest_gamma (Lifted cinit_sign_st) Bot"
+  by (auto simp: sign_nest_gamma_def cinit_stores_def gamma_state_def fun_of_resolved_st_q_for_def
                  fun_of_st_cinit_sign_st_for)
 
-lemma sign_nest_1_entry_locals_ge_s0d:
-  "map_lift (fun_of_resolved_st_q_for sign_nest_gs) (Lifted cinit_sign_st)
-     \<le> locals (sigma_1 (Inl (cfg_entry sign_nest_cfg, [])))"
-proof -
-  have "map_lift (fun_of_resolved_st_q_for sign_nest_gs) (Lifted cinit_sign_st)
-      \<le> locals (eq sign_nest_1_cs.Gen (cfg_entry sign_nest_cfg, []) sigma_1)"
-    by (simp add: eq_side_cfg_T_eff_keyed_seed_dg)
-       (rule order_trans[OF _ side_acc_dg_ge_acc], simp add: le_supI2)
-  also have "\<dots> \<le> locals (sigma_1 (Inl (cfg_entry sign_nest_cfg, [])))"
-    using sign_nest_1_cs.pp_eq_bound[OF entry_covered_1] by (simp add: less_eq_dg_state_def)
-  finally show ?thesis .
-qed
+text \<open>The routed interpretation carries the theorem: every store the 1-call-string
+  activation-local collecting semantics reaches at \<open>(v, ctx)\<close> is concretized by the solved
+  local unknown at that key, read back into an abstract state.\<close>
 
 theorem sign_nest_1_activation_collect_sound:
   "activation_collect sign_nest_gs (cs_context 1) [] sign_nest_cfg
      (cinit_stores sign_nest_gs) v ctx
-     \<subseteq> gamma_state_lift (sign_ctx_sg_1 (Inl (v, ctx)))"
-proof (rule activation_collect_sound_gen[where sg = sign_ctx_sg_1 and gammaM = gamma_state_lift
-        and enterc = "cs_context 1" and initial_ctx = "[]"
-        and S = "cinit_stores sign_nest_gs" and g = sign_nest_cfg and gs = sign_nest_gs])
-  \<comment> \<open>ENTRY_G\<close>
-  fix s assume "s \<in> cinit_stores sign_nest_gs"
-  hence "s \<in> gamma_state_lift (map_lift (fun_of_resolved_st_q_for sign_nest_gs) (Lifted cinit_sign_st))"
-    using sign_nest_cinit_le_cinit_sign_st by blast
-  also have "gamma_state_lift (map_lift (fun_of_resolved_st_q_for sign_nest_gs) (Lifted cinit_sign_st))
-        = gamma_dg_base (map_lift (fun_of_resolved_st_q_for sign_nest_gs) (Lifted cinit_sign_st))
-            (map_lift (fun_of_resolved_st_q_for sign_nest_gs) (Bot::sign exec_dg_st lifted))"
-    by (simp add: gamma_dg_base_def)
-  also have "\<dots> \<subseteq> gamma_dg_base (locals (sigma_1 (Inl (cfg_entry sign_nest_cfg, []))))
-                   (globs (sigma_1 (Inr Global)))"
-    by (rule gamma_dg_base_mono[OF sign_nest_1_entry_locals_ge_s0d
-          sign_nest_1_cs.pp_entry_s0g_bound[unfolded sign_nest_cfg_compile, OF entry_covered_1]])
-  also have "\<dots> = gamma_state_lift (sign_ctx_sg_1 (Inl (cfg_entry sign_nest_cfg, [])))"
-    unfolding sign_ctx_sg_1_covered[OF entry_covered_1] gamma_dg_base_def by (rule refl)
-  finally show "s \<in> gamma_state_lift (sign_ctx_sg_1 (Inl (cfg_entry sign_nest_cfg, [])))" .
-next
-  \<comment> \<open>EDGE --- discharged generically off the post-solution by \<open>dg_ctx_activation_base\<close>.\<close>
-  show "\<And>u a v c s s'. (u, a, v) \<in> intra sign_nest_cfg
-        \<Longrightarrow> s \<in> gamma_state_lift (sign_ctx_sg_1 (Inl (u, c))) \<Longrightarrow> s' \<in> edge_step a s
-        \<Longrightarrow> s' \<in> gamma_state_lift (sign_ctx_sg_1 (Inl (v, c)))"
-    by (rule sign_nest_1_cs.dg_ctx_act_edge[unfolded sign_nest_cfg_compile])
-next
-  \<comment> \<open>CALL --- enter routed to the truncated call string.\<close>
-  fix u dst pars args p cont c s
-  assume ce: "(u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls sign_nest_cfg"
-    and sm: "s \<in> gamma_state_lift (sign_ctx_sg_1 (Inl (u, c)))"
-  show "call_enter sign_nest_gs (CallEdge dst pars args) s
-          \<in> gamma_state_lift (sign_ctx_sg_1 (Inl (FunctionEntry p, cs_context 1 u c (call_enter sign_nest_gs (CallEdge dst pars args) s))))"
-    using sign_ctx_sg_1_seed[OF ce sm] .
-next
-  \<comment> \<open>COMB --- return combine at the caller's own truncated context.\<close>
-  fix cl dst pars args p cont c1 s t es
-  assume ce: "(cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls sign_nest_cfg"
-    and sm: "s \<in> gamma_state_lift (sign_ctx_sg_1 (Inl (cl, c1)))"
-    and tm: "t \<in> gamma_state_lift (sign_ctx_sg_1 (Inl (FunctionResult p, cs_context 1 cl c1 es)))"
-    and ces: "call_enter_store sign_nest_gs sign_nest_cfg cl s es"
-  show "combine_collect sign_nest_gs dst s t \<in> gamma_state_lift (sign_ctx_sg_1 (Inl (cont, c1)))"
-    using tm sign_ctx_sg_1_comb[OF ce sm _ ces] by blast
-qed
-
+     \<subseteq> gamma_state_lift (map_lift (fun_of_resolved_st_q_for sign_nest_gs)
+           (sign_ctx_sg_1 (Inl (v, ctx))))"
+  by (rule sign_nest_1_cs.activation_collect_sound[unfolded sign_nest_cfg_compile,
+            OF entry_covered_1 sign_nest_cinit_le_cinit_sign_st])
 
 section \<open>What the 1-call-string context actually computes\<close>
 

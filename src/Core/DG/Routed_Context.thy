@@ -1,6 +1,6 @@
 theory Routed_Context
   imports DG_Ctx_Activation DG_Base "Voblint_Solver.Strategy_Tree_Combinators" DG_Transfer_Combinators
-    "Voblint_Solver.Strategy_Tree_Do" "Voblint_CFG.LTR_Def"
+    "Voblint_Solver.Strategy_Tree_Do" "Voblint_CFG.LTR_Def" Activation_Backbone
 begin
 
 section \<open>One route, CALL and COMB discharged once\<close>
@@ -839,6 +839,78 @@ next
   qed
 qed
 
+
+subsection \<open>An entry-local bound in the shape \<open>pp_entry_s0g_bound\<close> gives for globals\<close>
+
+text \<open>
+  The local-carrier twin of \<open>pp_entry_s0g_bound\<close> (\<^theory>\<open>Voblint_Core.DG_Ctx_Activation\<close>),
+  proved the same way: \<open>Gen\<close>'s own entry accumulator starts at \<open>bot0 \<squnion> s0d\<close>,
+  \<open>side_acc_dg_ge_acc\<close> only grows it, and \<open>pp_eq_bound\<close> transports the
+  bound across a covered point's post-solution equation.
+\<close>
+
+lemma locals_ge_s0d:
+  assumes cov: "(cfg_entry g, ctx) \<in> vars"
+  shows "s0d \<le> locals (sigma (Inl (cfg_entry g, ctx)))"
+proof -
+  have "s0d \<le> locals (eq Gen (cfg_entry g, ctx) sigma)"
+    by (simp add: eq_side_cfg_T_eff_keyed_seed_dg)
+       (rule order_trans[OF _ side_acc_dg_ge_acc], simp add: le_supI2)
+  also have "\<dots> \<le> locals (sigma (Inl (cfg_entry g, ctx)))"
+    using pp_eq_bound[OF cov] by (simp add: less_eq_dg_state_def)
+  finally show ?thesis .
+qed
+
+subsection \<open>Activation-collect soundness against the routed local unknown\<close>
+
+text \<open>
+  Every activation-collected store at any \<open>(v, ctx)\<close> pair is concretized by the routed
+  local unknown's own \<open>gammaM\<close> reading. The six obligations of
+  \<open>activation_collect_sound_gen\<close> are this locale's own facts: the two entry bounds,
+  \<open>dg_ctx_act_edge\<close>, and the CALL and COMB theorems above. An instance therefore
+  gets its activation-indexed soundness theorem by interpretation alone.
+\<close>
+
+lemma activation_collect_dg_sound:
+  fixes S0 :: "store set" and initial_ctx :: 'c
+  assumes entry_cov: "(cfg_entry g, initial_ctx) \<in> vars"
+    and s0_sound: "S0 \<subseteq> gammaDG s0d s0g"
+  shows "activation_collect gs enterc initial_ctx g S0 v ctx
+           \<subseteq> gammaM (sg (Inl (v, ctx)))"
+proof (rule activation_collect_sound_gen)
+  fix s0 assume s0mem: "s0 \<in> S0"
+  have le_local: "s0d \<le> locals (sigma (Inl (cfg_entry g, initial_ctx)))"
+    by (rule locals_ge_s0d[OF entry_cov])
+  have le_global: "s0g \<le> globs (sigma (Inr gk0))"
+    by (rule pp_entry_s0g_bound[OF entry_cov])
+  have "gammaDG s0d s0g
+        \<subseteq> gammaDG (locals (sigma (Inl (cfg_entry g, initial_ctx)))) (globs (sigma (Inr gk0)))"
+    by (rule gammaDG_mono[OF le_local le_global])
+  with s0mem s0_sound have "s0 \<in> gammaDG (locals (sigma (Inl (cfg_entry g, initial_ctx))))
+                                   (globs (sigma (Inr gk0)))" by blast
+  thus "s0 \<in> gammaM (sg (Inl (cfg_entry g, initial_ctx)))"
+    using entry_cov by (simp add: sg_cov)
+next
+  fix u a v' c' s' s''
+  assume "(u, a, v') \<in> intra g" "s' \<in> gammaM (sg (Inl (u, c')))" "s'' \<in> edge_step a s'"
+  thus "s'' \<in> gammaM (sg (Inl (v', c')))" by (rule dg_ctx_act_edge)
+next
+  fix u dst pars args p cont c' s'
+  assume ce: "(u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
+    and sm: "s' \<in> gammaM (sg (Inl (u, c')))"
+  show "call_enter gs (CallEdge dst pars args) s'
+          \<in> gammaM
+              (sg (Inl (FunctionEntry p, enterc u c' (call_enter gs (CallEdge dst pars args) s'))))"
+    using routed_context_call[OF ce sm] .
+next
+  fix cl dst pars args p cont c1 s' t es
+  assume ce: "(cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
+    and sm: "s' \<in> gammaM (sg (Inl (cl, c1)))"
+    and tm: "t \<in> gammaM (sg (Inl (FunctionResult p, enterc cl c1 es)))"
+    and ces: "call_enter_store gs g cl s' es"
+  show "combine_collect gs dst s' t \<in> gammaM (sg (Inl (cont, c1)))"
+    using tm routed_context_comb[OF ce sm _ ces] by blast
+qed
 
 end
 

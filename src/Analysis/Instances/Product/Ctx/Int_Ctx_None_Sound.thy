@@ -440,7 +440,7 @@ text \<open>
 \<close>
 
 lemmas ictx_result_node_sound = ictx_adapter.analyse_result_node_sound
-lemmas ictx_activation_collect_sound = ictx_adapter.activation_collect_dg_sound
+lemmas ictx_activation_collect_sound = ictx_routed.routed.activation_collect_dg_sound
 
 lemma ictx_analyse_result_eq:
   "lookup_context ictx_adapter.analyse_result v ctx =
