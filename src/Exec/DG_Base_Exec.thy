@@ -218,6 +218,91 @@ lemma dg_reader_commute_gen_lifted:
      (map_lift (fun_of_resolved_st_q_for gs)) (map_lift (fun_of_resolved_st_q_for gs))"
   by unfold_locales (simp_all add: map_lift_sup fun_of_resolved_st_q_for_sup)
 
+subsection \<open>Soundness at the executable carrier, pulled back along the readback\<close>
+
+text \<open>
+  The framework is carrier-agnostic, so nothing forces it to be instantiated at
+  \<open>'a abs_state lifted\<close>: with the concretization read through
+  \<^const>\<open>fun_of_resolved_st_q_for\<close>, the executable Base-style spec is itself a
+  \<^locale>\<open>sound_dg_spec\<close>, and the three commute facts above are all that the proof
+  needs. An instance that interprets the routed spine at \<open>spec_st\<close> with this
+  concretization feeds it the solver's own table and never transports a solved
+  system between carriers.
+\<close>
+
+definition gamma_exec :: "'a exec_dg_st lifted \<Rightarrow> 'a exec_dg_st lifted \<Rightarrow> store set" where
+  "gamma_exec d g =
+     gamma_dg_base (map_lift (fun_of_resolved_st_q_for gs) d)
+                   (map_lift (fun_of_resolved_st_q_for gs) g)"
+
+lemma gamma_exec_Bot [simp]: "gamma_exec Bot g = {}"
+  by (simp add: gamma_exec_def gamma_dg_base_def)
+
+theorem sound_dg_spec_st:
+  assumes abs: "sound_dg_spec
+     (base_dg_spec_for_lifted gs is_bot_state tf :: ('a abs_state lifted, 'a abs_state lifted) dg_spec)
+     gamma_dg_base gs"
+  shows "sound_dg_spec (base_dg_spec_st_for_lifted gs is_bot_pred tf_st enter_st) gamma_exec gs"
+proof unfold_locales
+  let ?f = "map_lift (fun_of_resolved_st_q_for gs)"
+  fix d d' g g' :: "'a exec_dg_st lifted"
+  assume "d \<le> d'" "g \<le> g'"
+  then show "gamma_exec d g \<subseteq> gamma_exec d' g'"
+    unfolding gamma_exec_def
+    by (intro sound_dg_spec.gammaDG_mono[OF abs] map_lift_fun_of_resolved_st_q_for_mono)
+next
+  let ?f = "map_lift (fun_of_resolved_st_q_for gs)"
+  let ?S = "base_dg_spec_st_for_lifted gs is_bot_pred tf_st enter_st"
+  let ?A = "base_dg_spec_for_lifted gs is_bot_state tf"
+  fix a :: edge_action and d g :: "'a exec_dg_st lifted"
+  obtain g1 d1 where st: "dg_spec_step ?S a d g = (g1, d1)"
+    by (cases "dg_spec_step ?S a d g")
+  have "dg_spec_step ?A a (?f d) (?f g) = (?f g1, ?f d1)"
+    using Hstep_lifted_for[of a d g] st by simp
+  with sound_dg_spec.step_sound[OF abs, of a "?f d" "?f g"]
+  show "edge_collect a (gamma_exec d g)
+          \<subseteq> (case dg_spec_step ?S a d g of (g', d') \<Rightarrow> gamma_exec d' g')"
+    unfolding gamma_exec_def st by simp
+next
+  let ?f = "map_lift (fun_of_resolved_st_q_for gs)"
+  let ?S = "base_dg_spec_st_for_lifted gs is_bot_pred tf_st enter_st"
+  fix s :: store and dc g :: "'a exec_dg_st lifted" and ci :: call_info
+  assume "s \<in> gamma_exec dc g"
+  then show "s \<in> gamma_exec (dgs_caller_cont ?S ci dc g) g"
+    unfolding gamma_exec_def
+    using sound_dg_spec.caller_cont_sound[OF abs, of s "?f dc" "?f g" ci]
+      Hcont_lifted_for[of ci dc g] by simp
+next
+  let ?f = "map_lift (fun_of_resolved_st_q_for gs)"
+  let ?S = "base_dg_spec_st_for_lifted gs is_bot_pred tf_st enter_st"
+  let ?A = "base_dg_spec_for_lifted gs is_bot_state tf"
+  fix s t :: store and dcont de g :: "'a exec_dg_st lifted" and ci :: call_info
+  assume s: "s \<in> gamma_exec dcont g" and t: "t \<in> gamma_exec de g"
+  obtain g1 d1 where cmb: "dgs_combine ?S ci dcont de g = (g1, d1)"
+    by (cases "dgs_combine ?S ci dcont de g")
+  have "dgs_combine ?A ci (?f dcont) (?f de) (?f g) = (?f g1, ?f d1)"
+    using Hcomb_lifted_for[of ci dcont de g] cmb by simp
+  with sound_dg_spec.combine_sound[OF abs, of s "?f dcont" "?f g" t "?f de" ci] s t
+  show "combine_collect gs (ci_dst ci) s t
+          \<in> (case dgs_combine ?S ci dcont de g of (g', d') \<Rightarrow> gamma_exec d' g')"
+    unfolding gamma_exec_def cmb by simp
+next
+  let ?f = "map_lift (fun_of_resolved_st_q_for gs)"
+  let ?S = "base_dg_spec_st_for_lifted gs is_bot_pred tf_st enter_st"
+  let ?A = "base_dg_spec_for_lifted gs is_bot_state tf"
+  fix s :: store and dc g :: "'a exec_dg_st lifted"
+    and dst :: "vname option" and pars :: "vname list" and args :: "exp list"
+  assume s: "s \<in> gamma_exec dc g"
+  obtain g1 d1 where en: "dgs_enter ?S pars args dc g = (g1, d1)"
+    by (cases "dgs_enter ?S pars args dc g")
+  have "dgs_enter ?A pars args (?f dc) (?f g) = (?f g1, ?f d1)"
+    using Henter_lifted_for[of pars args dc g] en by simp
+  with sound_dg_spec.enter_sound[OF abs, of s "?f dc" "?f g" dst pars args] s
+  show "call_enter gs (CallEdge dst pars args) s
+          \<in> (case dgs_enter ?S pars args dc g of (g', d') \<Rightarrow> gamma_exec d' g')"
+    unfolding gamma_exec_def en by simp
+qed
+
 subsection \<open>A generic exec-level formal-entry route, and its commute to the abstract one\<close>
 
 text \<open>

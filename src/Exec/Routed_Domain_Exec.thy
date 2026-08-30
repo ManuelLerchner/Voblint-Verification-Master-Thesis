@@ -100,6 +100,69 @@ lemma hextra_commute_routed:
         [OF dg_reader_commute_gen_lifted_for])
 
 text \<open>
+  The buffered generator a domain actually solves, reconciled with the unbuffered one
+  the framework is stated over --- at the executable spec, before any readback. Every
+  obligation is a \<^const>\<open>routed_cmb_g\<close> fact needing only \<open>seed_key_ne_gk0\<close>. An
+  instance that interprets the spine at \<open>spec_st\<close> hands this post-solution to
+  \<^locale>\<open>dg_ctx_activation_base\<close> directly.
+\<close>
+theorem pp_st:
+  assumes pp: "part_post_solution
+     (side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_addr_list (\<lambda>_. gk0) route_st
+        (routed_cmb_g_contribution spec_st gk0 seed_key (resolve_st g))
+        (routed_extra_g seed_key gk0)
+        g spec_st bot0 s0d s0g)
+     x0 sigma_st vars"
+  shows "part_post_solution
+     (side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. gk0) route_st
+        (routed_cmb_g spec_st gk0 seed_key (resolve_st g)) (routed_extra_g seed_key gk0)
+        g spec_st bot0 s0d s0g)
+     x0 sigma_st vars"
+proof (rule part_post_solution_seed_dg_buffered_to_old
+    [where cmb_c = "routed_cmb_g_contribution spec_st gk0 seed_key (resolve_st g)"])
+  show "\<And>c' ca cc ex \<tau>. locals (traverse_rhs
+           (routed_cmb_g_contribution spec_st gk0 seed_key (resolve_st g)
+              route_st c' ca cc ex) \<tau>)
+         = locals (traverse_rhs
+           (routed_cmb_g spec_st gk0 seed_key (resolve_st g) route_st c' ca cc ex) \<tau>)"
+    by (rule routed_cmb_g_contribution_matches_local)
+  show "\<And>c' ca cc ex \<tau>. locals (sides_of_rhs
+           (routed_cmb_g spec_st gk0 seed_key (resolve_st g) route_st c' ca cc ex) \<tau>
+           (Inr ((\<lambda>_. gk0) c'))) = bot"
+    by (rule routed_cmb_g_side_pure[of seed_key gk0, OF seed_key_ne_gk0])
+  show "\<And>c' ca cc ex \<tau>. globs (traverse_rhs
+           (routed_cmb_g_contribution spec_st gk0 seed_key (resolve_st g)
+              route_st c' ca cc ex) \<tau>)
+         = globs (sides_of_rhs
+           (routed_cmb_g spec_st gk0 seed_key (resolve_st g) route_st c' ca cc ex) \<tau>
+           (Inr ((\<lambda>_. gk0) c')))"
+    by (rule routed_cmb_g_contribution_matches_global[of seed_key gk0, OF seed_key_ne_gk0])
+  show "\<And>c' ca cc ex \<tau>. sides_of_rhs
+           (routed_cmb_g_contribution spec_st gk0 seed_key (resolve_st g)
+              route_st c' ca cc ex) \<tau>
+           (Inr ((\<lambda>_. gk0) c')) = bot"
+    by (rule routed_cmb_g_contribution_free_at_key[of seed_key gk0, OF seed_key_ne_gk0])
+  show "\<And>c' ca cc ex \<tau> z. z \<noteq> Inr ((\<lambda>_. gk0) c') \<Longrightarrow> sides_of_rhs
+           (routed_cmb_g_contribution spec_st gk0 seed_key (resolve_st g)
+              route_st c' ca cc ex) \<tau> z
+         = sides_of_rhs
+           (routed_cmb_g spec_st gk0 seed_key (resolve_st g) route_st c' ca cc ex) \<tau> z"
+    by (rule routed_cmb_g_contribution_sides_off_key[of seed_key gk0, OF seed_key_ne_gk0])
+  show "\<And>c' ca cc ex \<tau>. dep_aux \<tau>
+           (routed_cmb_g_contribution spec_st gk0 seed_key (resolve_st g)
+              route_st c' ca cc ex)
+         = dep_aux \<tau>
+           (routed_cmb_g spec_st gk0 seed_key (resolve_st g) route_st c' ca cc ex)"
+    by (rule routed_cmb_g_contribution_dep)
+  show "\<And>c' w \<tau> z x. x \<in> set (routed_extra_g seed_key gk0 route_st c' w)
+         \<Longrightarrow> sides_of_rhs x \<tau> z = bot"
+    by (rule routed_extra_g_free)
+  show "\<And>c' w \<tau> x. x \<in> set (routed_extra_g seed_key gk0 route_st c' w)
+         \<Longrightarrow> globs (traverse_rhs x \<tau>) = bot"
+    by (rule routed_extra_g_local_only)
+qed (rule pp)
+
+text \<open>
   Executable-to-abstract transport of a routed unit post-solution, in one step. The
   buffered generator a domain actually solves is first reconciled with the unbuffered
   one --- every obligation there is a \<^const>\<open>routed_cmb_g\<close> fact needing only
@@ -131,61 +194,7 @@ theorem pp_abs:
         (map_lift (fun_of_resolved_st_q_for gs)) \<circ> sigma_st)
      vars"
 proof -
-  have pp': "part_post_solution
-       (side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. gk0) route_st
-          (routed_cmb_g spec_st gk0 seed_key (resolve_st g)) (routed_extra_g seed_key gk0)
-          g spec_st bot0 s0d s0g)
-       x0 sigma_st vars"
-  proof (rule part_post_solution_seed_dg_buffered_to_old
-      [where cmb_c = "routed_cmb_g_contribution spec_st gk0 seed_key (resolve_st g)"])
-    show "\<And>c' ca cc ex \<tau>. locals (traverse_rhs
-             (routed_cmb_g_contribution spec_st gk0 seed_key (resolve_st g)
-                route_st c' ca cc ex) \<tau>)
-           = locals (traverse_rhs
-             (routed_cmb_g spec_st gk0 seed_key (resolve_st g) route_st c' ca cc ex) \<tau>)"
-      by (rule routed_cmb_g_contribution_matches_local)
-    show "\<And>c' ca cc ex \<tau>. locals (sides_of_rhs
-             (routed_cmb_g spec_st gk0 seed_key (resolve_st g) route_st c' ca cc ex) \<tau>
-             (Inr ((\<lambda>_. gk0) c'))) = bot"
-      by (rule routed_cmb_g_side_pure[of seed_key gk0, OF seed_key_ne_gk0])
-    show "\<And>c' ca cc ex \<tau>. globs (traverse_rhs
-             (routed_cmb_g_contribution spec_st gk0 seed_key (resolve_st g)
-                route_st c' ca cc ex) \<tau>)
-           = globs (sides_of_rhs
-             (routed_cmb_g spec_st gk0 seed_key (resolve_st g) route_st c' ca cc ex) \<tau>
-             (Inr ((\<lambda>_. gk0) c')))"
-      by (rule routed_cmb_g_contribution_matches_global[of seed_key gk0, OF seed_key_ne_gk0])
-    show "\<And>c' ca cc ex \<tau>. sides_of_rhs
-             (routed_cmb_g_contribution spec_st gk0 seed_key (resolve_st g)
-                route_st c' ca cc ex) \<tau>
-             (Inr ((\<lambda>_. gk0) c')) = bot"
-      by (rule routed_cmb_g_contribution_free_at_key[of seed_key gk0, OF seed_key_ne_gk0])
-    show "\<And>c' ca cc ex \<tau> z. z \<noteq> Inr ((\<lambda>_. gk0) c') \<Longrightarrow> sides_of_rhs
-             (routed_cmb_g_contribution spec_st gk0 seed_key (resolve_st g)
-                route_st c' ca cc ex) \<tau> z
-           = sides_of_rhs
-             (routed_cmb_g spec_st gk0 seed_key (resolve_st g) route_st c' ca cc ex) \<tau> z"
-      by (rule routed_cmb_g_contribution_sides_off_key[of seed_key gk0, OF seed_key_ne_gk0])
-    show "\<And>c' ca cc ex \<tau>. dep_aux \<tau>
-             (routed_cmb_g_contribution spec_st gk0 seed_key (resolve_st g)
-                route_st c' ca cc ex)
-           = dep_aux \<tau>
-             (routed_cmb_g spec_st gk0 seed_key (resolve_st g) route_st c' ca cc ex)"
-      by (rule routed_cmb_g_contribution_dep)
-    show "\<And>c' w \<tau> z x. x \<in> set (routed_extra_g seed_key gk0 route_st c' w)
-           \<Longrightarrow> sides_of_rhs x \<tau> z = bot"
-      by (rule routed_extra_g_free)
-    show "\<And>c' w \<tau> x. x \<in> set (routed_extra_g seed_key gk0 route_st c' w)
-           \<Longrightarrow> globs (traverse_rhs x \<tau>) = bot"
-      by (rule routed_extra_g_local_only)
-    show "part_post_solution
-       (side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_addr_list (\<lambda>_. gk0) route_st
-          (routed_cmb_g_contribution spec_st gk0 seed_key (resolve_st g))
-          (routed_extra_g seed_key gk0)
-          g spec_st bot0 s0d s0g)
-       x0 sigma_st vars"
-      by (rule pp)
-  qed
+  note pp' = pp_st[OF pp]
   show ?thesis
     apply (rule part_post_solution_seed_dg_st_to_abs_lifted_for
           [where gs = gs and pred_sel = intra_predecessor_addr_list and gkey = "\<lambda>_. gk0"

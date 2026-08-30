@@ -188,7 +188,7 @@ Spike before committing to it.
 
 | # | Step | Status |
 | --- | --- | --- |
-| 2.1 | Spike on Sign, in a scratch theory: interpret `sound_dg_spec` at `base_dg_spec_st_for_lifted gs is_bot_pred tf_st enter_st` with `gammaDG d g = gamma_state (fun_of_resolved_st_q_for gs (unlift d)) ...` using only `routed_dg_domain_exec`'s three commute facts and Sign's `sound_transfer_for`. Then `dg_ctx_activation_base` and `routed_context_base_hetero` at that carrier. Exit criterion: no citation of anything in `Voblint_Exec` except `Exec_DG_Refines`'s lattice instances for `exec_dg_st`, and `cli-test` green with Sign routed through the new interpretation. | open |
+| 2.1 | Spike on Sign, in a scratch theory: interpret `sound_dg_spec` at `base_dg_spec_st_for_lifted gs is_bot_pred tf_st enter_st` with `gammaDG d g = gamma_state (fun_of_resolved_st_q_for gs (unlift d)) ...` using only `routed_dg_domain_exec`'s three commute facts and Sign's `sound_transfer_for`. Then `dg_ctx_activation_base` and `routed_context_base_hetero` at that carrier. Exit criterion: no citation of anything in `Voblint_Exec` except `Exec_DG_Refines`'s lattice instances for `exec_dg_st`, and `cli-test` green with Sign routed through the new interpretation. | landed: `Examples/Tooling/Spike_Sign_Quotient.thy` |
 | 2.2 | If 2.1 fails, record why under "Decisions and corrections", keep `Voblint_Exec` as a permanent session named for what it is, and skip to Phase 3. | open |
 | 2.3 | Delete `Exec_DG_Trees`, `Exec_DG_Generator`, `Exec_DG_Bridge`; the transport half of `DG_Base_Exec` (keep `routed_dg_domain_exec` and the `base_dg_spec_st_for_lifted` commute lemmas it cites); `Routed_Domain_Exec`; the owner-aware trees and classifier-parametric readback in `Exec_DG_Refines` (keep the `exec_dg_st` lattice instances and `fun_of_dg_st_for`). | open |
 | 2.4 | `routed_context_hetero` becomes `routed_context_base_hetero` at whichever carrier the instance chooses; delete the restated assumptions. Same for `unit_routed_context_hetero`. | open |
@@ -254,6 +254,26 @@ and mark it `superseded (see below)`.
   policy section, and the `sound_dg_hooks_ltr` re-packaging whose
   `hooks_ltr.` sublocale nothing cited. Those are `Placement_Policy.thy` in
   Examples now; `DG_Soundness` is 2182 lines, `DG_LTR_Sound` 68.
+- 2026-08-30: **Spike 2.1 succeeds.** `Spike_Sign_Quotient.thy` proves a
+  generic pullback inside `routed_dg_domain_exec` -- `sound_dg_spec` at the
+  abstract Base spec gives `sound_dg_spec` at the executable Base spec with
+  `gamma_exec d g = gamma_dg_base (readback d) (readback g)`, from the three
+  commute facts alone -- and then interprets `sound_dg_spec`,
+  `dg_ctx_activation_base` and `unit_routed_context` at
+  `sctx_spec gs is_bot_pred` with `sigma := snd (sctx_sol ...)`, the solver's
+  own table. The post-solution of the unbuffered generator is the first half
+  of `routed_domain_exec.pp_abs` (`part_post_solution_seed_dg_buffered_to_old`
+  plus the `routed_cmb_g_contribution_*` facts); the second half, the
+  transport, is not needed. Nothing in `Exec_DG_Trees`, `Exec_DG_Generator`
+  or `Exec_DG_Bridge` is cited. Phase 2 proceeds.
+- 2026-08-30: The two generic halves of the spike are now framework facts:
+  `routed_dg_domain_exec.sound_dg_spec_st` with `gamma_exec` (DG_Base_Exec)
+  and `routed_domain_exec.pp_st` (Routed_Domain_Exec, factored out of
+  `pp_abs`, which now cites it). An instance migrating to the executable
+  carrier interprets `sound_dg_spec` by `sound_dg_spec_st`, feeds
+  `dg_ctx_activation_base` the solver's table with `pp_st`, and needs nothing
+  from `Exec_DG_Trees`/`Generator`/`Bridge`. The spike is 123 lines and is
+  the template for step 2.6.
 - 2026-08-30: Core's layout inside `src/Core/` is `Equations/`, `DG/`,
   `Context/`, `Result/`; Domain, Solver and Exec are flat. Phase 0 steps
   0.1--0.6 and Phase 1 steps 1.4--1.7 are landed (I/Q-clean per theory for
