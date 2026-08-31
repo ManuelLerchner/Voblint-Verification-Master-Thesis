@@ -193,14 +193,14 @@ Spike before committing to it.
 | 2.3 | Delete `Exec_DG_Trees`, `Exec_DG_Generator`, `Exec_DG_Bridge`; the transport half of `DG_Base_Exec` (keep `routed_dg_domain_exec` and the `base_dg_spec_st_for_lifted` commute lemmas it cites); the owner-aware trees and classifier-parametric readback in `Exec_DG_Refines` (keep the `exec_dg_st` lattice instances and `fun_of_dg_st_for`). `Routed_Domain_Exec` stays -- superseded, see decision below. | partly landed (2026-08-31) -- `Exec_DG_Bridge` itself is deleted, zero remaining importers. `Exec_DG_Trees`, `Exec_DG_Generator`, and `Routed_Domain_Exec` are load-bearing and stay (see "Decisions and corrections"); the owner-aware half of `Exec_DG_Refines`/`Exec_DG_Trees` the step's last clause names is unstarted |
 | 2.4 | `routed_context_hetero` becomes `routed_context_base_hetero` at whichever carrier the instance chooses; delete the restated assumptions. Same for `unit_routed_context_hetero`. | landed: `entry_state_routed_context` and `call_string_routed_context` (Analysis) are stated at a carrier parameter with `gammaDG`/`gammaM` and sublocale `routed_context_base_hetero`; `routed_context_hetero` and `unit_routed_context_hetero` are deleted, having no interpreter left |
 | 2.5 | `Analysis_Result` holds the quotient; `normalize_point` becomes the single readback at publication, in `DG_Analysis_Adapter`. `Abstract_Checks` reads the published table. | landed in the generic form: `dg_analysis_adapter` extends `routed_context_base_hetero` and takes a readback `rd` with `gammaDG d g = gamma_state_lift (rd d)`; the four abstract-carrier sites pass `rd = id` |
-| 2.6 | Rewrite the twelve `*_Ctx_*_Sound` theories and the four CLI `*_Entry` theories to interpret at the quotient carrier. Expect the transport boilerplate that NEXT_STEPS records as the 23-suffix duplication to shrink. | in progress: the four unit-context instances (Sign, Parity, Interval, Int, with their `*_Checks`/`*_Entry` consumers), the three entry-state instances and the two call-string instances are on the executable carrier; the two Interval entry-state examples and `Example_Interval_Source_Ctx` follow the theory; the four CallString examples interpret `call_string_routed_context` at their executable spec and get their headline theorem from `activation_collect_sound`. Still on the transport, gating 2.3: `Run_Analysis_Sound`'s flat bundles (`dg_exec_run_source_sound_for`, `dg_exec_collect_sound_for`, their `_lifted` twins and the registration locales `unit_dg_exec_analysis`/`base_dg_exec_analysis`, interpreted by `Exec_Sign_DG_Run`, `Example_Parity_DG_Flagship`, `Example_Interval_DG_Flagship`, `Example_Interval_DG_IP_Flagship`), and the abstract-transport section of `Interval_Ctx_Entry_State_Sound` (`dg_reader_commute_gen_ivl_lifted`, `entry_state_route_abs_gen`, `ectx_abs_spec`) |
+| 2.6 | Rewrite the twelve `*_Ctx_*_Sound` theories and the four CLI `*_Entry` theories to interpret at the quotient carrier. Expect the transport boilerplate that NEXT_STEPS records as the 23-suffix duplication to shrink. | landed: the four unit-context instances (Sign, Parity, Interval, Int, with their `*_Checks`/`*_Entry` consumers), the three entry-state instances and the two call-string instances are on the executable carrier; the two Interval entry-state examples and `Example_Interval_Source_Ctx` follow the theory; the four CallString examples interpret `call_string_routed_context` at their executable spec and get their headline theorem from `activation_collect_sound`. `Run_Analysis_Sound`'s flat bundles and `Interval_Ctx_Entry_State_Sound`'s hand-rolled Hstep/Henter/Hcomb/Hcont transport lemmas are migrated too (2026-08-31 decision entry); `ectx_abs_spec`/`entry_state_route_abs_gen` stay by design, being the genuine abstract-carrier route witness. What is left on the transport now is only `Example_Sign_Placement`, `Example_Interval_Placement`, and `Monovariant_Analysis_Result` -- tracked under 2.3, not 2.6 |
 | 2.7 | Move `routed_dg_domain_exec`, `Solver_Side_RG`, `Solver_Menu`, `Monovariant_Analysis_Result`, `DG_Coverage` to their final homes (`DG_Base`, Solver, Core); retire `Voblint_Exec` from `ROOTS`. | open |
 
 ### Phase 3 -- inside the theories
 
 | # | Step | Status |
 | --- | --- | --- |
-| 3.1 | One `dead_code_lift :: ('dl, 'dg) dg_spec => ('dl lifted, 'dg) dg_spec` with `sound_dg_spec S ==> sound_dg_spec (dead_code_lift S)`; `base_dg_spec_for_lifted`, `unit_step_for_lifted`, `unit_dg_spec_for_lifted` and `base_dg_spec_st_for_lifted` become instances. This is Goblint's `DeadCodeLifter`, stated once. Design the seam so widening delay and context gas can use it. | open |
+| 3.1 | One `dead_code_lift :: ('dl, 'dg) dg_spec => ('dl lifted, 'dg) dg_spec` with `sound_dg_spec S ==> sound_dg_spec (dead_code_lift S)`; `base_dg_spec_for_lifted`, `unit_step_for_lifted`, `unit_dg_spec_for_lifted` and `base_dg_spec_st_for_lifted` become instances. This is Goblint's `DeadCodeLifter`, stated once. Design the seam so widening delay and context gas can use it. | open -- not Phase-3-only polish: the 2026-09-01 decision entry found this is also the precondition for finishing 2.3's owner-aware half (the Placement examples' `keep_local`/`publish_side` policy needs to become an instance of the general spec shape before their `sound_dg_spec_st`-style pullback can be proved). New proof design, not a mechanical step; needs its own scoping pass before starting, not blind execution. |
 | 3.2 | Split `DG_Framework`: the homogeneous unit analysis (685-956) and the keyed generators (1393-end) are separate concerns from the `dg_spec` record and edge trees. Split the domain foundation at the reachability lift. | in progress: `Abstract_Domain`, `Reachability_Lift`, `Nonrelational_State`, and `Nonrelational_Reachability` separate value semantics, generic reachability, pointwise stores, and their composition; `combine_env` is the sole pointwise selector and `State_Restriction` derives projections from it; the `DG_Framework` split remains open |
 | 3.3 | Retire `metis`: after Phase 2 the count is 26; `Abstract_State` holds 13. Retire the 61 `apply` lines; `Activation_Local_Sound`'s 10 and `Routed_Domain_Exec`'s 14 first. | open |
 | 3.4 | Hoist `dg_post_solution_postfix` (272 lines) and `side_cfg_T_eff_keyed_seed_dg_buffered_correspondence` (249) into helper lemmas with named subgoals. | open |
@@ -478,6 +478,30 @@ and mark it `superseded (see below)`.
   *import*; a direct citation of one of Bridge's twelve own names inside a
   file that imports something else entirely (here, `DG_Base_Exec`) still
   needs checking name-by-name before the file it names is deleted.
+- 2026-09-01: scoped what step 2.3's last blocker -- migrating
+  `Example_Sign_Placement`, `Example_Interval_Placement`, and
+  `Monovariant_Analysis_Result` off the owner-aware transport -- actually
+  requires, before attempting it. Both Placement examples are not ad hoc:
+  their top-level readback already goes through one generic lemma
+  (`dg_refines_on_completed_sigma_abs`, citing `completed_sigma_abs`), and
+  their per-node work already cites the generic owner-aware commute lemmas
+  `Exec_DG_Trees` provides (`dg_refines_on_placed_edge_strict` and its
+  enter/combine counterparts, per the file's own comments). What the
+  flagship migration doesn't hand them for free is the *policy* itself: the
+  flagships interpret `sound_dg_spec` and get `routed_dg_domain_exec`'s
+  generic `sound_dg_spec_st` pullback; the Placement examples interpret
+  `sound_dg_hooks` with a custom `keep_local`/`publish_side` split threaded
+  through `placed_abs_dg_gen_of`, and no spike has proved the analogous
+  pullback for that generator. That pullback is exactly what step 3.1
+  ("One `dead_code_lift` ... `sound_dg_spec S ==> sound_dg_spec
+  (dead_code_lift S)`, design the seam so widening delay and context gas
+  can use it") would need to produce as a byproduct of making the placement
+  policy an instance of the general spec shape -- 3.1 is a precondition
+  for finishing 2.3's owner-aware half, not independent Phase 3 polish.
+  Until 3.1 lands, this is genuine proof design (a new pullback lemma, or a
+  new generic spec shape), not a mechanical port; it does not belong in an
+  unsupervised pass. 2.3 stays partly landed; work continues on Phase 3
+  items that are actually mechanical.
 
 ## Traps specific to Core
 
