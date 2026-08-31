@@ -648,7 +648,7 @@ next
      snd (inv_eq_congruence False (int_congruence d1) (int_congruence e1)) \<le>
      snd (inv_eq_congruence False (int_congruence d2) (int_congruence e2))"
     using inv_eq_congruence_mono[OF hd(4) he(4), where result=False]
-    by (simp add: le_pair_def)
+    by simp
   show ?thesis
     unfolding inv_eq_int_dom_raw_def Let_def case_prod_beta less_eq_int_dom_ext_def
     using False s i c hd(3) he(3) by (simp del: inv_eq_sign.simps)
@@ -691,7 +691,7 @@ proof -
      fst (inv_plus_congruence (int_congruence r2) (int_congruence d2) (int_congruence e2)) \<and>
      snd (inv_plus_congruence (int_congruence r1) (int_congruence d1) (int_congruence e1)) \<le>
      snd (inv_plus_congruence (int_congruence r2) (int_congruence d2) (int_congruence e2))"
-    using inv_plus_congruence_mono[OF hr hd(4) he(4)] by (simp add: le_pair_def)
+    using inv_plus_congruence_mono[OF hr hd(4) he(4)] by simp
   show ?thesis
     unfolding inv_plus_int_dom_raw_def Let_def case_prod_beta less_eq_int_dom_ext_def
     using s i p c by simp
@@ -734,7 +734,7 @@ proof -
      fst (inv_minus_congruence (int_congruence r2) (int_congruence d2) (int_congruence e2)) \<and>
      snd (inv_minus_congruence (int_congruence r1) (int_congruence d1) (int_congruence e1)) \<le>
      snd (inv_minus_congruence (int_congruence r2) (int_congruence d2) (int_congruence e2))"
-    using inv_minus_congruence_mono[OF hr hd(4) he(4)] by (simp add: le_pair_def)
+    using inv_minus_congruence_mono[OF hr hd(4) he(4)] by simp
   show ?thesis
     unfolding inv_minus_int_dom_raw_def Let_def case_prod_beta less_eq_int_dom_ext_def
     using s i p c by simp
@@ -777,7 +777,7 @@ proof -
      fst (inv_times_congruence (int_congruence r2) (int_congruence d2) (int_congruence e2)) \<and>
      snd (inv_times_congruence (int_congruence r1) (int_congruence d1) (int_congruence e1)) \<le>
      snd (inv_times_congruence (int_congruence r2) (int_congruence d2) (int_congruence e2))"
-    using inv_times_congruence_mono[OF hr hd(4) he(4)] by (simp add: le_pair_def)
+    using inv_times_congruence_mono[OF hr hd(4) he(4)] by simp
   show ?thesis
     unfolding inv_times_int_dom_raw_def Let_def case_prod_beta less_eq_int_dom_ext_def
     using s i p c by simp
@@ -1074,7 +1074,8 @@ proof unfold_locales
     using intersect_int_dom_mode_sound by simp
 next
   fix s :: store and e :: exp and sigma :: "vname => int_dom"
-  assume "\<forall>x. s x \<in> gamma (sigma x)"
+  assume "s \<in> \<lbrakk>sigma\<rbrakk>"
+  then have H': "\<forall>x. s x \<in> gamma (sigma x)" using gamma_stateD by blast
   then show "aval e s \<in> gamma (aval_int_dom Refine_Never e sigma)"
     using aval_int_dom_sound by simp
 next
@@ -1137,7 +1138,7 @@ next
   show
     "le_pair (inv_less_int_dom Refine_Never res x1 y1)
        (inv_less_int_dom Refine_Never res x2 y2)"
-    using inv_less_int_dom_mono[OF ne A B] by (simp add: le_pair_def)
+    using inv_less_int_dom_mono[OF ne A B] by simp
 next
   fix x1 x2 y1 y2 :: int_dom and res :: bool
   assume A: "x1 \<le> x2" and B: "y1 \<le> y2"
@@ -1145,7 +1146,7 @@ next
   show
     "le_pair (inv_eq_int_dom Refine_Never res x1 y1)
        (inv_eq_int_dom Refine_Never res x2 y2)"
-    using inv_eq_int_dom_mono[OF ne A B] by (simp add: le_pair_def)
+    using inv_eq_int_dom_mono[OF ne A B] by simp
 next
   fix r1 r2 x1 x2 y1 y2 :: int_dom
   assume RR: "r1 \<le> r2" and A: "x1 \<le> x2" and B: "y1 \<le> y2"
@@ -1153,7 +1154,7 @@ next
   show
     "le_pair (inv_plus_int_dom Refine_Never r1 x1 y1)
        (inv_plus_int_dom Refine_Never r2 x2 y2)"
-    using inv_plus_int_dom_mono[OF ne RR A B] by (simp add: le_pair_def)
+    using inv_plus_int_dom_mono[OF ne RR A B] by simp
 next
   fix r1 r2 x1 x2 y1 y2 :: int_dom
   assume RR: "r1 \<le> r2" and A: "x1 \<le> x2" and B: "y1 \<le> y2"
@@ -1161,7 +1162,7 @@ next
   show
     "le_pair (inv_minus_int_dom Refine_Never r1 x1 y1)
        (inv_minus_int_dom Refine_Never r2 x2 y2)"
-    using inv_minus_int_dom_mono[OF ne RR A B] by (simp add: le_pair_def)
+    using inv_minus_int_dom_mono[OF ne RR A B] by simp
 next
   fix r1 r2 x1 x2 y1 y2 :: int_dom
   assume RR: "r1 \<le> r2" and A: "x1 \<le> x2" and B: "y1 \<le> y2"
@@ -1169,7 +1170,7 @@ next
   show
     "le_pair (inv_times_int_dom Refine_Never r1 x1 y1)
        (inv_times_int_dom Refine_Never r2 x2 y2)"
-    using inv_times_int_dom_mono[OF ne RR A B] by (simp add: le_pair_def)
+    using inv_times_int_dom_mono[OF ne RR A B] by simp
 next
   fix a b :: int_dom
   show "intersect_int_dom_mode Refine_Never a b \<le> a"
@@ -1179,33 +1180,8 @@ next
   show "intersect_int_dom_mode Refine_Never a b \<le> b"
     by (rule intersect_int_dom_mode_reductive2)
 next
-  fix res :: bool and a1 a2 :: int_dom
-  show "le_pair (inv_less_int_dom Refine_Never res a1 a2) (a1, a2)"
-    using inv_less_int_dom_reductive1 inv_less_int_dom_reductive2
-    by (simp add: le_pair_def)
-next
-  fix res :: bool and a1 a2 :: int_dom
-  show "le_pair (inv_eq_int_dom Refine_Never res a1 a2) (a1, a2)"
-    using inv_eq_int_dom_reductive1 inv_eq_int_dom_reductive2
-    by (simp add: le_pair_def)
-next
-  fix r a1 a2 :: int_dom
-  show "le_pair (inv_plus_int_dom Refine_Never r a1 a2) (a1, a2)"
-    using inv_plus_int_dom_reductive1 inv_plus_int_dom_reductive2
-    by (simp add: le_pair_def)
-next
-  fix r a1 a2 :: int_dom
-  show "le_pair (inv_minus_int_dom Refine_Never r a1 a2) (a1, a2)"
-    using inv_minus_int_dom_reductive1 inv_minus_int_dom_reductive2
-    by (simp add: le_pair_def)
-next
-  fix r a1 a2 :: int_dom
-  show "le_pair (inv_times_int_dom Refine_Never r a1 a2) (a1, a2)"
-    using inv_times_int_dom_reductive1 inv_times_int_dom_reductive2
-    by (simp add: le_pair_def)
-next
   fix p1 p2 :: int_dom and bv :: bool
-  assume "\<not> is_bot p1" and "p1 \<le> p2" and "tobool_int_dom_never p2 = Some bv"
+  assume "\<not> is_empty p1" and "p1 \<le> p2" and "tobool_int_dom_never p2 = Some bv"
   then show "tobool_int_dom_never p1 = Some bv" using int_dom_tobool_mono by simp
 qed
 
@@ -1264,7 +1240,8 @@ proof unfold_locales
     using intersect_int_dom_mode_sound by simp
 next
   fix s :: store and e :: exp and sigma :: "vname => int_dom"
-  assume "\<forall>x. s x \<in> gamma (sigma x)"
+  assume "s \<in> \<lbrakk>sigma\<rbrakk>"
+  then have H': "\<forall>x. s x \<in> gamma (sigma x)" using gamma_stateD by blast
   then show "aval e s \<in> gamma (aval_int_dom Refine_Once e sigma)"
     using aval_int_dom_sound by simp
 next
@@ -1327,7 +1304,7 @@ next
   show
     "le_pair (inv_less_int_dom Refine_Once res x1 y1)
        (inv_less_int_dom Refine_Once res x2 y2)"
-    using inv_less_int_dom_mono[OF ne A B] by (simp add: le_pair_def)
+    using inv_less_int_dom_mono[OF ne A B] by simp
 next
   fix x1 x2 y1 y2 :: int_dom and res :: bool
   assume A: "x1 \<le> x2" and B: "y1 \<le> y2"
@@ -1335,7 +1312,7 @@ next
   show
     "le_pair (inv_eq_int_dom Refine_Once res x1 y1)
        (inv_eq_int_dom Refine_Once res x2 y2)"
-    using inv_eq_int_dom_mono[OF ne A B] by (simp add: le_pair_def)
+    using inv_eq_int_dom_mono[OF ne A B] by simp
 next
   fix r1 r2 x1 x2 y1 y2 :: int_dom
   assume RR: "r1 \<le> r2" and A: "x1 \<le> x2" and B: "y1 \<le> y2"
@@ -1343,7 +1320,7 @@ next
   show
     "le_pair (inv_plus_int_dom Refine_Once r1 x1 y1)
        (inv_plus_int_dom Refine_Once r2 x2 y2)"
-    using inv_plus_int_dom_mono[OF ne RR A B] by (simp add: le_pair_def)
+    using inv_plus_int_dom_mono[OF ne RR A B] by simp
 next
   fix r1 r2 x1 x2 y1 y2 :: int_dom
   assume RR: "r1 \<le> r2" and A: "x1 \<le> x2" and B: "y1 \<le> y2"
@@ -1351,7 +1328,7 @@ next
   show
     "le_pair (inv_minus_int_dom Refine_Once r1 x1 y1)
        (inv_minus_int_dom Refine_Once r2 x2 y2)"
-    using inv_minus_int_dom_mono[OF ne RR A B] by (simp add: le_pair_def)
+    using inv_minus_int_dom_mono[OF ne RR A B] by simp
 next
   fix r1 r2 x1 x2 y1 y2 :: int_dom
   assume RR: "r1 \<le> r2" and A: "x1 \<le> x2" and B: "y1 \<le> y2"
@@ -1359,7 +1336,7 @@ next
   show
     "le_pair (inv_times_int_dom Refine_Once r1 x1 y1)
        (inv_times_int_dom Refine_Once r2 x2 y2)"
-    using inv_times_int_dom_mono[OF ne RR A B] by (simp add: le_pair_def)
+    using inv_times_int_dom_mono[OF ne RR A B] by simp
 next
   fix a b :: int_dom
   show "intersect_int_dom_mode Refine_Once a b \<le> a"
@@ -1369,33 +1346,8 @@ next
   show "intersect_int_dom_mode Refine_Once a b \<le> b"
     by (rule intersect_int_dom_mode_reductive2)
 next
-  fix res :: bool and a1 a2 :: int_dom
-  show "le_pair (inv_less_int_dom Refine_Once res a1 a2) (a1, a2)"
-    using inv_less_int_dom_reductive1 inv_less_int_dom_reductive2
-    by (simp add: le_pair_def)
-next
-  fix res :: bool and a1 a2 :: int_dom
-  show "le_pair (inv_eq_int_dom Refine_Once res a1 a2) (a1, a2)"
-    using inv_eq_int_dom_reductive1 inv_eq_int_dom_reductive2
-    by (simp add: le_pair_def)
-next
-  fix r a1 a2 :: int_dom
-  show "le_pair (inv_plus_int_dom Refine_Once r a1 a2) (a1, a2)"
-    using inv_plus_int_dom_reductive1 inv_plus_int_dom_reductive2
-    by (simp add: le_pair_def)
-next
-  fix r a1 a2 :: int_dom
-  show "le_pair (inv_minus_int_dom Refine_Once r a1 a2) (a1, a2)"
-    using inv_minus_int_dom_reductive1 inv_minus_int_dom_reductive2
-    by (simp add: le_pair_def)
-next
-  fix r a1 a2 :: int_dom
-  show "le_pair (inv_times_int_dom Refine_Once r a1 a2) (a1, a2)"
-    using inv_times_int_dom_reductive1 inv_times_int_dom_reductive2
-    by (simp add: le_pair_def)
-next
   fix p1 p2 :: int_dom and bv :: bool
-  assume "\<not> is_bot p1" and "p1 \<le> p2" and "tobool_int_dom_once p2 = Some bv"
+  assume "\<not> is_empty p1" and "p1 \<le> p2" and "tobool_int_dom_once p2 = Some bv"
   then show "tobool_int_dom_once p1 = Some bv" using int_dom_tobool_mono by simp
 qed
 
@@ -1454,7 +1406,8 @@ proof unfold_locales
     using intersect_int_dom_mode_sound by simp
 next
   fix s :: store and e :: exp and sigma :: "vname => int_dom"
-  assume "\<forall>x. s x \<in> gamma (sigma x)"
+  assume "s \<in> \<lbrakk>sigma\<rbrakk>"
+  then have H': "\<forall>x. s x \<in> gamma (sigma x)" using gamma_stateD by blast
   then show "aval e s \<in> gamma (aval_int_dom Refine_Fixpoint e sigma)"
     using aval_int_dom_sound by simp
 next

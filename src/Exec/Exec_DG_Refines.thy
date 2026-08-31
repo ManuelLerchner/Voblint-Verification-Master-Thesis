@@ -120,7 +120,7 @@ definition project_abs_on ::
    'a::bot abs_state => 'a abs_state"
 where
   "project_abs_on owner gs placed state =
-    project_component (\<lambda>x. placed (owner, location_of gs x)) state"
+    combine_env (\<lambda>x. placed (owner, location_of gs x)) bot state"
 
 lemma project_abs_on_lookup:
   assumes resolved: "location = location_of gs (location_vname location)"
@@ -128,7 +128,7 @@ lemma project_abs_on_lookup:
     "project_abs_on owner gs placed state (location_vname location) =
       (if placed (owner, location) then state (location_vname location) else bot)"
   using resolved
-  unfolding project_abs_on_def project_component_def by simp
+  unfolding project_abs_on_def by simp
 
 subsection \<open>Owner-aware abstract D/G trees\<close>
 
@@ -755,7 +755,7 @@ lemma unit_combine_step_st_commute_for:
   by (simp add: Let_def combine_collect_abs_def fun_of_resolved_st_q_for_def
                 fun_of_resolved_st_q_for_sup fun_of_resolved_st_q_for_restrict_local
                 fun_of_resolved_st_q_for_restrict_global fun_of_resolved_st_q_for_combine
-                fun_of_resolved_st_q_for_combine_assign combine_env_for_eq_restrict
+                fun_of_resolved_st_q_for_combine_assign combine_env_for_eq_restrictions
                 fun_of_resolved_st_q_for_restrict_local_for
                 fun_of_resolved_st_q_for_restrict_global_for ac_simps)
 

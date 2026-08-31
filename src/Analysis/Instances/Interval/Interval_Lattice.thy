@@ -1,5 +1,5 @@
 theory Interval_Lattice
-  imports "Voblint_Domain.Abstract_Domain" Interval_Bounds
+  imports "Voblint_Domain.Abstract_Domain" Interval_Bounds "Voblint_VIMP.VIMP_Source_Print"
 begin
 
 section \<open>Interval lattice\<close>
@@ -94,6 +94,9 @@ definition is_top_ivl :: "ivl \<Rightarrow> bool" where
 
 lemma is_top_ivl_correct: "is_top_ivl i \<longleftrightarrow> i = top"
   unfolding is_top_ivl_def top_ivl_def ..
+
+lemma is_top_ivl_correct_gamma: "is_top_ivl i \<longleftrightarrow> gamma_ivl i = UNIV"
+  by(cases i; case_tac x1; case_tac x2) (auto simp add:is_top_ivl_def ivl_top_def set_eq_iff; presburger)+
 
 text \<open>
   \<open>bot\<close> is one fixed empty interval (\<^term>\<open>Ivl PlusInf MinInf\<close>), but the
@@ -257,13 +260,25 @@ instance ivl :: bounded_lattice_bot ..
 
 subsection \<open>Abstract domain instantiation\<close>
 
+fun string_of_eint :: "eint \<Rightarrow> string" where
+    "string_of_eint MinInf  = ''-inf''"
+  | "string_of_eint PlusInf = ''+inf''"
+  | "string_of_eint (Fin n) = string_of_int n"
+
+fun string_of_ivl :: "ivl \<Rightarrow> string" where
+  "string_of_ivl (Ivl l u) = ''['' @ string_of_eint l @ '','' @ string_of_eint u @ '']''"
+
 instantiation ivl :: sound_domain begin
 definition gamma_abs_ivl [simp]: "gamma (a :: ivl) = gamma_ivl a"
-definition is_bot_ivl [simp]: "is_bot (a :: ivl) = is_bottom_ivl a"
-definition is_top_ivl' [simp]: "is_top (a :: ivl) = is_top_ivl a"
+definition is_empty_ivl [simp]: "is_empty (a :: ivl) = is_bottom_ivl a"
+definition is_full_ivl [simp]: "is_full (a :: ivl) = is_top_ivl a"
+definition to_string_ivl [simp]: "to_string (a :: ivl) = string_of_ivl a"
 instance proof intro_classes
   show "gamma (bot :: ivl) = {}"
     by (simp add: gamma_ivl_bot)
+next
+  show "gamma (top :: ivl) = UNIV"
+    by (simp add: gamma_ivl_top top_ivl_def)
 next
   fix a b :: ivl
   assume H: "a \<le> b"
@@ -274,12 +289,12 @@ next
   qed
 next
   fix a :: ivl
-  show "is_bot a \<longleftrightarrow> gamma a = {}"
+  show "is_empty a \<longleftrightarrow> gamma a = {}"
     by (simp add: is_bottom_ivl_correct)
 next
   fix a :: ivl
-  show "is_top a \<longleftrightarrow> a = top"
-    by (simp add: is_top_ivl_correct)
+  show "is_full a \<longleftrightarrow> gamma a = UNIV"
+    by (simp add: is_top_ivl_correct_gamma)
 qed
 end
 

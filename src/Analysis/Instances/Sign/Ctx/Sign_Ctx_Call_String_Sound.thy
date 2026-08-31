@@ -33,31 +33,31 @@ subsection \<open>The routed equation system and its executable solution\<close>
 
 definition scs_eqs ::
     "nat \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> (sign exec_dg_st \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> (pp \<times> call_string, call_string_gk, (sign exec_dg_st lifted, sign exec_dg_st lifted) dg_state) eqsT" where
-  "scs_eqs k gs is_bot_pred Pi ps =
+  "scs_eqs k gs empty_pred Pi ps =
      side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_addr_list (\<lambda>_. Call_String_Context.Global)
        (cs_route k)
-       (routed_cmb_g_contribution (sctx_spec gs is_bot_pred)
+       (routed_cmb_g_contribution (sctx_spec gs empty_pred)
           Call_String_Context.Global Call_String_Context.Seed
           (static_resolve (compile_prog Pi ps)))
        (routed_extra_g Call_String_Context.Seed Call_String_Context.Global)
-       (compile_prog Pi ps) (sctx_spec gs is_bot_pred) Bot (Lifted cinit_sign_st) Bot"
+       (compile_prog Pi ps) (sctx_spec gs empty_pred) Bot (Lifted cinit_sign_st) Bot"
 
 definition scs_sol ::
     "nat \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> (sign exec_dg_st \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> (pp \<times> call_string) set \<times> (pp \<times> call_string + call_string_gk \<Rightarrow> (sign exec_dg_st lifted, sign exec_dg_st lifted) dg_state)" where
-  "scs_sol k gs is_bot_pred Pi ps =
-     TD_side_always_join_Interp_solve (scs_eqs k gs is_bot_pred Pi ps)
+  "scs_sol k gs empty_pred Pi ps =
+     TD_side_always_join_Interp_solve (scs_eqs k gs empty_pred Pi ps)
        (cfg_exit (compile_prog Pi ps), [])"
 
 definition scs_terminates ::
     "nat \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> (sign exec_dg_st \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> bool" where
-  "scs_terminates k gs is_bot_pred Pi ps =
+  "scs_terminates k gs empty_pred Pi ps =
      TD_side_always_join_Interp.solve_dom TYPE(call_string_gk) TYPE((sign exec_dg_st lifted, sign exec_dg_st lifted) dg_state)
-       (scs_eqs k gs is_bot_pred Pi ps) (cfg_exit (compile_prog Pi ps), [])"
+       (scs_eqs k gs empty_pred Pi ps) (cfg_exit (compile_prog Pi ps), [])"
 
 lemma scs_terminates_via_solve_c:
-  assumes "TD_side_always_join_Interp_solve_c (scs_eqs k gs is_bot_pred Pi ps)
+  assumes "TD_side_always_join_Interp_solve_c (scs_eqs k gs empty_pred Pi ps)
              (cfg_exit (compile_prog Pi ps), []) \<noteq> None"
-  shows "scs_terminates k gs is_bot_pred Pi ps"
+  shows "scs_terminates k gs empty_pred Pi ps"
   unfolding scs_terminates_def
   by (rule TD_side_always_join_Interp.solve_dom_of_solve_c[OF assms])
 
@@ -77,12 +77,12 @@ lemma cs_route_commute: "cs_route k u c' d ca = cs_route k u c' (f d) ca"
   by (simp add: cs_route_def)
 
 context
-  fixes gs :: "vname \<Rightarrow> bool" and is_bot_pred :: "sign exec_dg_st \<Rightarrow> bool" and k :: nat
-  assumes exact: "\<And>s. is_bot_pred s = is_bot_state (fun_of_resolved_st_q_for gs s)"
+  fixes gs :: "vname \<Rightarrow> bool" and empty_pred :: "sign exec_dg_st \<Rightarrow> bool" and k :: nat
+  assumes exact: "\<And>s. empty_pred s = is_empty_state (fun_of_resolved_st_q_for gs s)"
 begin
 
 interpretation sign_cs: routed_domain_exec
-  gs is_bot_pred "sign_tf_st_for gs" "sign_enter_st_for gs" "sign_tf_for gs"
+  gs empty_pred "sign_tf_st_for gs" "sign_enter_st_for gs" "sign_tf_for gs"
   Call_String_Context.Global Call_String_Context.Seed "cs_route k" "cs_route k"
   static_resolve static_resolve
   by unfold_locales
@@ -96,23 +96,23 @@ end
 subsection \<open>The certified executable post-solution, generic per compiled program\<close>
 
 context
-  fixes gs :: "vname \<Rightarrow> bool" and is_bot_pred :: "sign exec_dg_st \<Rightarrow> bool"
+  fixes gs :: "vname \<Rightarrow> bool" and empty_pred :: "sign exec_dg_st \<Rightarrow> bool"
     and Pi :: proc_table and ps :: "pname list" and k :: nat
-  assumes solves: "scs_terminates k gs is_bot_pred Pi ps"
-    and exact: "\<And>s. is_bot_pred s = is_bot_state (fun_of_resolved_st_q_for gs s)"
+  assumes solves: "scs_terminates k gs empty_pred Pi ps"
+    and exact: "\<And>s. empty_pred s = is_empty_state (fun_of_resolved_st_q_for gs s)"
 begin
 
 lemma scs_solve_dom:
   "TD_side_always_join_Interp.solve_dom TYPE(call_string_gk) TYPE((sign exec_dg_st lifted, sign exec_dg_st lifted) dg_state)
-     (scs_eqs k gs is_bot_pred Pi ps) (cfg_exit (compile_prog Pi ps), [])"
+     (scs_eqs k gs empty_pred Pi ps) (cfg_exit (compile_prog Pi ps), [])"
   using solves[unfolded scs_terminates_def] .
 
 lemma scs_pp_st:
-  "part_post_solution (scs_eqs k gs is_bot_pred Pi ps) (cfg_exit (compile_prog Pi ps), [])
-     (snd (scs_sol k gs is_bot_pred Pi ps)) (fst (scs_sol k gs is_bot_pred Pi ps))"
+  "part_post_solution (scs_eqs k gs empty_pred Pi ps) (cfg_exit (compile_prog Pi ps), [])
+     (snd (scs_sol k gs empty_pred Pi ps)) (fst (scs_sol k gs empty_pred Pi ps))"
   using TD_side_always_join_Interp.partial_post_solution
-          [OF scs_solve_dom, of "fst (scs_sol k gs is_bot_pred Pi ps)"
-             "snd (scs_sol k gs is_bot_pred Pi ps)"]
+          [OF scs_solve_dom, of "fst (scs_sol k gs empty_pred Pi ps)"
+             "snd (scs_sol k gs empty_pred Pi ps)"]
   unfolding scs_sol_def by simp
 
 text \<open>The solver's post-solution, for the unbuffered routed generator at the executable
@@ -122,12 +122,12 @@ theorem scs_pp_routed:
   "part_post_solution
      (side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. Call_String_Context.Global)
         (cs_route k)
-        (routed_cmb_g (sctx_spec gs is_bot_pred) Call_String_Context.Global
+        (routed_cmb_g (sctx_spec gs empty_pred) Call_String_Context.Global
            Call_String_Context.Seed (static_resolve (compile_prog Pi ps)))
         (routed_extra_g Call_String_Context.Seed Call_String_Context.Global)
-        (compile_prog Pi ps) (sctx_spec gs is_bot_pred) Bot (Lifted cinit_sign_st) Bot)
+        (compile_prog Pi ps) (sctx_spec gs empty_pred) Bot (Lifted cinit_sign_st) Bot)
      (cfg_exit (compile_prog Pi ps), [])
-     (snd (scs_sol k gs is_bot_pred Pi ps)) (fst (scs_sol k gs is_bot_pred Pi ps))"
+     (snd (scs_sol k gs empty_pred Pi ps)) (fst (scs_sol k gs empty_pred Pi ps))"
   using scs_pp_st unfolding scs_eqs_def sctx_spec_def by (rule sign_cs_pp_st_gen[OF exact])
 end
 

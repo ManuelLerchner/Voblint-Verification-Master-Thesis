@@ -200,7 +200,7 @@ instance proof intro_classes
 qed
 end
 
-instance ivl :: abstract_domain ..
+instance ivl :: widening_domain ..
 
 text \<open>
   \<open>bot \<nabla> bot = bot\<close> and \<open>bot \<Delta> bot = bot\<close>: the two hypotheses \<open>Solver_Side_RG\<close>'s

@@ -35,19 +35,19 @@ definition base_dg_spec_for_lifted ::
    \<Rightarrow> 'a domain_transfer
    \<Rightarrow> ('a abs_state lifted, 'g::bounded_semilattice_sup_bot) dg_spec"
 where
-  "base_dg_spec_for_lifted gs is_bot_pred tf = (|
-    dgs_skip       = (\<lambda>d g. (g, transfer_lift is_bot_pred (skip\<^sup># tf) d)),
-    dgs_assign     = (\<lambda>x e d g. (g, transfer_lift is_bot_pred (assign\<^sup># tf x e) d)),
-    dgs_special    = (\<lambda>sc x d g. (g, transfer_lift is_bot_pred (special\<^sup># tf sc x) d)),
-    dgs_branch     = (\<lambda>b pol d g. (g, transfer_lift is_bot_pred (branch\<^sup># tf b pol) d)),
-    dgs_body       = (\<lambda>p d g. (g, transfer_lift is_bot_pred (body\<^sup># tf p) d)),
-    dgs_return     = (\<lambda>e p d g. (g, transfer_lift is_bot_pred (return\<^sup># tf e p) d)),
-    dgs_enter      = (\<lambda>ci d g. (g, transfer_lift is_bot_pred (snd o enter\<^sup># tf ci) d)),
-    dgs_event      = (\<lambda>ev d g. (g, transfer_lift is_bot_pred (event\<^sup># tf ev) d)),
+  "base_dg_spec_for_lifted gs empty_pred tf = (|
+    dgs_skip       = (\<lambda>d g. (g, transfer_lift empty_pred (skip\<^sup># tf) d)),
+    dgs_assign     = (\<lambda>x e d g. (g, transfer_lift empty_pred (assign\<^sup># tf x e) d)),
+    dgs_special    = (\<lambda>sc x d g. (g, transfer_lift empty_pred (special\<^sup># tf sc x) d)),
+    dgs_branch     = (\<lambda>b pol d g. (g, transfer_lift empty_pred (branch\<^sup># tf b pol) d)),
+    dgs_body       = (\<lambda>p d g. (g, transfer_lift empty_pred (body\<^sup># tf p) d)),
+    dgs_return     = (\<lambda>e p d g. (g, transfer_lift empty_pred (return\<^sup># tf e p) d)),
+    dgs_enter      = (\<lambda>ci d g. (g, transfer_lift empty_pred (snd o enter\<^sup># tf ci) d)),
+    dgs_event      = (\<lambda>ev d g. (g, transfer_lift empty_pred (event\<^sup># tf ev) d)),
     dgs_caller_cont    = (\<lambda>ci dc g. dc),
     dgs_combine_env    = (\<lambda>ci dc de g. (g, dc)),
     dgs_combine_assign = (\<lambda>ci de g merged.
-      (g, transfer_lift2 is_bot_pred (combine\<^sup># gs (ci_dst ci)) (snd merged) de))
+      (g, transfer_lift2 empty_pred (combine\<^sup># gs (ci_dst ci)) (snd merged) de))
   |)"
 
 subsection \<open>Basic equations\<close>
@@ -60,14 +60,14 @@ text \<open>
 \<close>
 
 lemma dg_spec_step_base_for_lifted:
-  "dg_spec_step (base_dg_spec_for_lifted gs is_bot_pred tf) a d g =
-     (g, transfer_lift is_bot_pred (apply_tf tf a) d)"
+  "dg_spec_step (base_dg_spec_for_lifted gs empty_pred tf) a d g =
+     (g, transfer_lift empty_pred (apply_tf tf a) d)"
   unfolding base_dg_spec_for_lifted_def
   by (cases a) simp_all
 
 lemma dgs_enter_base_for_lifted:
-  "dgs_enter (base_dg_spec_for_lifted gs is_bot_pred tf) ci d g =
-     (g, transfer_lift is_bot_pred (snd o enter\<^sup># tf ci) d)"
+  "dgs_enter (base_dg_spec_for_lifted gs empty_pred tf) ci d g =
+     (g, transfer_lift empty_pred (snd o enter\<^sup># tf ci) d)"
   unfolding base_dg_spec_for_lifted_def by simp
 
 text \<open>The caller half of \<open>enter\<close> hands \<open>combine\<close> the raw call-site value, so
@@ -75,12 +75,12 @@ text \<open>The caller half of \<open>enter\<close> hands \<open>combine\<close>
   protocol split the two halves apart.\<close>
 
 lemma dgs_caller_cont_base_for_lifted [simp]:
-  "dgs_caller_cont (base_dg_spec_for_lifted gs is_bot_pred tf) ci dc g = dc"
+  "dgs_caller_cont (base_dg_spec_for_lifted gs empty_pred tf) ci dc g = dc"
   unfolding base_dg_spec_for_lifted_def by simp
 
 lemma dgs_combine_base_for_lifted:
-  "dgs_combine (base_dg_spec_for_lifted gs is_bot_pred tf) ci dc de g =
-     (g, transfer_lift2 is_bot_pred (combine\<^sup># gs (ci_dst ci)) dc de)"
+  "dgs_combine (base_dg_spec_for_lifted gs empty_pred tf) ci dc de g =
+     (g, transfer_lift2 empty_pred (combine\<^sup># gs (ci_dst ci)) dc de)"
   unfolding dgs_combine_def base_dg_spec_for_lifted_def by simp
 
 subsection \<open>Bot propagation\<close>
@@ -93,19 +93,19 @@ text \<open>
 \<close>
 
 lemma dg_spec_step_base_for_lifted_Bot:
-  "dg_spec_step (base_dg_spec_for_lifted gs is_bot_pred tf) a Bot g = (g, Bot)"
+  "dg_spec_step (base_dg_spec_for_lifted gs empty_pred tf) a Bot g = (g, Bot)"
   unfolding dg_spec_step_base_for_lifted by simp
 
 lemma dgs_enter_base_for_lifted_Bot:
-  "dgs_enter (base_dg_spec_for_lifted gs is_bot_pred tf) ci Bot g = (g, Bot)"
+  "dgs_enter (base_dg_spec_for_lifted gs empty_pred tf) ci Bot g = (g, Bot)"
   unfolding dgs_enter_base_for_lifted by simp
 
 lemma dgs_combine_base_for_lifted_dc_bot:
-  "dgs_combine (base_dg_spec_for_lifted gs is_bot_pred tf) dst Bot de g = (g, Bot)"
+  "dgs_combine (base_dg_spec_for_lifted gs empty_pred tf) dst Bot de g = (g, Bot)"
   unfolding dgs_combine_base_for_lifted by (cases de) (simp_all add: transfer_lift2_def)
 
 lemma dgs_combine_base_for_lifted_de_bot:
-  "dgs_combine (base_dg_spec_for_lifted gs is_bot_pred tf) dst dc Bot g = (g, Bot)"
+  "dgs_combine (base_dg_spec_for_lifted gs empty_pred tf) dst dc Bot g = (g, Bot)"
   unfolding dgs_combine_base_for_lifted by (cases dc) (simp_all add: transfer_lift2_def)
 
 subsection \<open>Packaging correspondence\<close>
@@ -119,15 +119,15 @@ text \<open>
 
 lemma transfer_lift_commute:
   assumes commute: "\<And>s. phi (f s) = F (phi s)"
-    and exact: "\<And>s. is_bot_pred s = is_bot_pred' (phi s)"
-  shows "map_lift phi (transfer_lift is_bot_pred f d) = transfer_lift is_bot_pred' F (map_lift phi d)"
+    and exact: "\<And>s. empty_pred s = empty_pred' (phi s)"
+  shows "map_lift phi (transfer_lift empty_pred f d) = transfer_lift empty_pred' F (map_lift phi d)"
   by (cases d) (simp_all add: transfer_lift_def normalize_lift_def commute exact)
 
 lemma transfer_lift2_commute:
   assumes commute: "\<And>s t. phi (f s t) = F (phi s) (phi t)"
-    and exact: "\<And>s. is_bot_pred s = is_bot_pred' (phi s)"
-  shows "map_lift phi (transfer_lift2 is_bot_pred f d1 d2) =
-           transfer_lift2 is_bot_pred' F (map_lift phi d1) (map_lift phi d2)"
+    and exact: "\<And>s. empty_pred s = empty_pred' (phi s)"
+  shows "map_lift phi (transfer_lift2 empty_pred f d1 d2) =
+           transfer_lift2 empty_pred' F (map_lift phi d1) (map_lift phi d2)"
   by (cases d1; cases d2) (simp_all add: transfer_lift2_def normalize_lift_def commute exact)
 
 subsection \<open>Soundness\<close>
@@ -159,22 +159,22 @@ qed
 
 lemma gamma_dg_base_step_sound:
   assumes tf_sound: "sound_transfer_for gs tf"
-    and is_bot_pred_sound: "\<And>sigma. is_bot_pred sigma \<Longrightarrow> \<lbrakk>sigma\<rbrakk> = {}"
+    and empty_pred_sound: "\<And>sigma. empty_pred sigma \<Longrightarrow> \<lbrakk>sigma\<rbrakk> = {}"
   shows "edge_collect a (gamma_dg_base d g) \<subseteq>
-           (case dg_spec_step (base_dg_spec_for_lifted gs is_bot_pred tf) a d g of
+           (case dg_spec_step (base_dg_spec_for_lifted gs empty_pred tf) a d g of
               (g', d') \<Rightarrow> gamma_dg_base d' g')"
 proof (cases d)
   case Bot
   then show ?thesis by (simp add: gamma_dg_base_def)
 next
   case (Lifted sigma)
-  have base: "edge_collect a (gamma_state sigma) \<subseteq> \<lbrakk>apply_tf tf a sigma\<rbrakk>"
+  have base: "edge_collect a \<lbrakk>sigma\<rbrakk> \<subseteq> \<lbrakk>apply_tf tf a sigma\<rbrakk>"
     by (rule sound_transfer_for.edge_collect_apply_tf_sound_for[OF tf_sound])
   show ?thesis
-  proof (cases "is_bot_pred (apply_tf tf a sigma)")
+  proof (cases "empty_pred (apply_tf tf a sigma)")
     case True
     then have "\<lbrakk>apply_tf tf a sigma\<rbrakk> = {}"
-      by (rule is_bot_pred_sound)
+      by (rule empty_pred_sound)
     with base Lifted show ?thesis by (simp add: gamma_dg_base_def)
   next
     case False
@@ -187,10 +187,10 @@ qed
 
 lemma gamma_dg_base_combine_sound:
   assumes tf_sound: "sound_transfer_for gs tf"
-    and is_bot_pred_sound: "\<And>sigma. is_bot_pred sigma \<Longrightarrow> \<lbrakk>sigma\<rbrakk> = {}"
+    and empty_pred_sound: "\<And>sigma. empty_pred sigma \<Longrightarrow> \<lbrakk>sigma\<rbrakk> = {}"
     and sc: "s \<in> gamma_dg_base dc g" and tc: "t \<in> gamma_dg_base de g"
   shows "combine_collect gs (ci_dst ci) s t \<in>
-           (case dgs_combine (base_dg_spec_for_lifted gs is_bot_pred tf) ci dc de g of
+           (case dgs_combine (base_dg_spec_for_lifted gs empty_pred tf) ci dc de g of
               (g', d') \<Rightarrow> gamma_dg_base d' g')"
 proof -
   obtain sigma_c where dc_eq: "dc = Lifted sigma_c" and sc': "s \<in> \<lbrakk>sigma_c\<rbrakk>"
@@ -201,10 +201,10 @@ proof -
                 \<in> \<lbrakk>combine\<^sup># gs (ci_dst ci) sigma_c sigma_e\<rbrakk>"
     by (rule combine_collect_sound[OF sc' tc'])
   show ?thesis
-  proof (cases "is_bot_pred (combine\<^sup># gs (ci_dst ci) sigma_c sigma_e)")
+  proof (cases "empty_pred (combine\<^sup># gs (ci_dst ci) sigma_c sigma_e)")
     case True
     then have "\<lbrakk>combine\<^sup># gs (ci_dst ci) sigma_c sigma_e\<rbrakk> = {}"
-      by (rule is_bot_pred_sound)
+      by (rule empty_pred_sound)
     with base show ?thesis by simp
   next
     case False
@@ -217,10 +217,10 @@ qed
 
 lemma gamma_dg_base_enter_sound:
   assumes tf_sound: "sound_transfer_for gs tf"
-    and is_bot_pred_sound: "\<And>sigma. is_bot_pred sigma \<Longrightarrow> \<lbrakk>sigma\<rbrakk> = {}"
+    and empty_pred_sound: "\<And>sigma. empty_pred sigma \<Longrightarrow> \<lbrakk>sigma\<rbrakk> = {}"
     and sc: "s \<in> gamma_dg_base dc g"
   shows "call_enter gs (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci)) s \<in>
-           (case dgs_enter (base_dg_spec_for_lifted gs is_bot_pred tf) ci dc g of
+           (case dgs_enter (base_dg_spec_for_lifted gs empty_pred tf) ci dc g of
               (g', d') \<Rightarrow> gamma_dg_base d' g')"
 proof -
   obtain sigma_c where dc_eq: "dc = Lifted sigma_c" and sc': "s \<in> \<lbrakk>sigma_c\<rbrakk>"
@@ -230,10 +230,10 @@ proof -
     using sound_transfer_for.tf_sound_enter_entry_for[OF tf_sound sc']
     by (simp add: call_enter_CallEdge)
   show ?thesis
-  proof (cases "is_bot_pred (snd (enter\<^sup># tf ci sigma_c))")
+  proof (cases "empty_pred (snd (enter\<^sup># tf ci sigma_c))")
     case True
     then have "\<lbrakk>snd (enter\<^sup># tf ci sigma_c)\<rbrakk> = {}"
-      by (rule is_bot_pred_sound)
+      by (rule empty_pred_sound)
     with base show ?thesis by simp
   next
     case False
@@ -246,21 +246,22 @@ qed
 
 text \<open>
   No reference to any concrete domain: instantiating \<open>tf\<close> with a domain's own
-  \<^const>\<open>sound_transfer_for\<close> interpretation and \<open>is_bot_pred\<close> with its
-  \<^const>\<open>is_bot_state\<close> (via \<open>is_bot_state_gamma_state_empty\<close>) is the entire
+  \<^const>\<open>sound_transfer_for\<close> interpretation and \<open>empty_pred\<close> with its
+  \<^const>\<open>is_empty_state\<close> (via \<open>is_empty_state_gamma_state_empty\<close>) is the entire
   per-domain obligation.
 \<close>
 
 theorem base_dg_spec_sound:
   assumes tf_sound: "sound_transfer_for gs tf"
-    and is_bot_pred_sound: "\<And>sigma. is_bot_pred sigma \<Longrightarrow> \<lbrakk>sigma\<rbrakk> = {}"
-  shows "sound_dg_spec (base_dg_spec_for_lifted gs is_bot_pred tf) gamma_dg_base gs"
+    and empty_pred_sound: "\<And>sigma. empty_pred sigma \<Longrightarrow> \<lbrakk>sigma\<rbrakk> = {}"
+  shows "sound_dg_spec (base_dg_spec_for_lifted gs empty_pred tf) gamma_dg_base gs"
   apply unfold_locales
   subgoal for d d' g g' by (rule gamma_dg_base_mono)
-  subgoal for a d g by (rule gamma_dg_base_step_sound[OF tf_sound is_bot_pred_sound])
+  subgoal for a d g by (rule gamma_dg_base_step_sound[OF tf_sound empty_pred_sound])
   subgoal premises prems using prems by simp
-  subgoal premises prems by (rule gamma_dg_base_combine_sound[OF tf_sound is_bot_pred_sound prems])
-  subgoal premises prems by (rule gamma_dg_base_enter_sound[OF tf_sound is_bot_pred_sound prems])
+  subgoal premises prems by (rule gamma_dg_base_combine_sound[OF tf_sound empty_pred_sound prems])
+  subgoal premises prems by (rule gamma_dg_base_enter_sound[OF tf_sound empty_pred_sound prems])
   done
 
 end
+

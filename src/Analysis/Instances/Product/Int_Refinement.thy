@@ -1451,7 +1451,7 @@ datatype refine_mode =
 definition canonical_refine_step :: "int_dom => int_dom" where
   "canonical_refine_step d =
      (let d' = refine_round d
-      in if is_bot d' then bot else d')"
+      in if is_empty d' then bot else d')"
 
 definition refine_fix_option :: "int_dom => int_dom option" where
   "refine_fix_option d =
@@ -1482,7 +1482,7 @@ definition refine :: "refine_mode => int_dom => int_dom" where
 
 lemma canonical_refine_step_exact:
   "gamma_int_dom (canonical_refine_step d) = gamma_int_dom d"
-proof (cases "is_bot (refine_round d)")
+proof (cases "is_empty (refine_round d)")
   case True
   have round_empty:
     "gamma_int_dom (refine_round d) = {}"
@@ -1513,7 +1513,7 @@ qed
 
 
 lemma canonical_refine_step_collapses_bottom:
-  assumes "is_bot (refine_round d)"
+  assumes "is_empty (refine_round d)"
   shows "canonical_refine_step d = bot"
   using assms
   unfolding canonical_refine_step_def Let_def
@@ -1594,7 +1594,7 @@ proof -
   have stable: "canonical_refine_step r = r"
     by (rule refine_fix_option_stable[OF result])
   show ?thesis
-  proof (cases "is_bot (refine_round r)")
+  proof (cases "is_empty (refine_round r)")
     case True
     have "r = bot"
       using stable True
@@ -1699,7 +1699,7 @@ qed
 
 lemma canonical_refine_step_reductive:
   "canonical_refine_step d <= d"
-proof (cases "is_bot (refine_round d)")
+proof (cases "is_empty (refine_round d)")
   case True
   then show ?thesis
     unfolding canonical_refine_step_def Let_def

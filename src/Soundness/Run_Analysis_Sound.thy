@@ -476,7 +476,7 @@ text \<open>
   itself claim any particular \<open>G\<close> shape is fundamental -- only that the executable
   solver route \<open>dg_gen_of\<close> needs a common \<open>exec_dg_st lifted\<close> wrapper for both sides,
   the same plumbing constraint \<open>unit_dg_exec_analysis\<close> already carries.  A registered
-  domain supplies only \<open>tf\<close>/\<open>tf_st\<close>/\<open>enter_st\<close>/\<open>is_bot_pred\<close> and their three primitive
+  domain supplies only \<open>tf\<close>/\<open>tf_st\<close>/\<open>enter_st\<close>/\<open>empty_pred\<close> and their three primitive
   commute facts; the packaging-correspondence proof itself is \<^theory>\<open>Voblint_Exec.DG_Base_Exec\<close>'s
   \<open>base_dg_spec_st_for_lifted_dg_spec_step_commute\<close>/\<open>_dgs_enter_commute\<close>/\<open>_dgs_combine_commute\<close>,
   cited directly -- unlike \<open>unit_dg_exec_analysis\<close>, no intermediate \<open>unit_dg_H*_for\<close>
@@ -488,7 +488,7 @@ locale base_dg_exec_analysis =
     and tf :: "'a::sound_domain domain_transfer"
     and tf_st :: "edge_action \<Rightarrow> 'a exec_dg_st \<Rightarrow> 'a exec_dg_st"
     and enter_st :: "call_info \<Rightarrow> 'a exec_dg_st \<Rightarrow> 'a exec_dg_st"
-    and is_bot_pred :: "'a exec_dg_st \<Rightarrow> bool"
+    and empty_pred :: "'a exec_dg_st \<Rightarrow> bool"
     and solve :: "(pp \<times> unit, unit,
                     ('a exec_dg_st lifted, 'g::bounded_semilattice_sup_bot exec_dg_st lifted) dg_state) eqsT
                    \<Rightarrow> pp \<times> unit
@@ -513,7 +513,7 @@ locale base_dg_exec_analysis =
         fun_of_exec_dg_st_for gs (enter_st ci s) =
         snd (enter\<^sup># tf ci (fun_of_exec_dg_st_for gs s))"
     and is_bot_exact[simp]:
-      "\<And>s. is_bot_pred s = is_bot_state (fun_of_exec_dg_st_for gs s)"
+      "\<And>s. empty_pred s = is_empty_state (fun_of_exec_dg_st_for gs s)"
     and solver_pps:
       "\<And>eqs x. solve_c eqs x \<noteq> None \<Longrightarrow>
         part_post_solution eqs x
@@ -532,14 +532,14 @@ definition gamma ::
   where "gamma sigma_st v = sound_dg_spec.dg_gamma gamma_dg_base
            (fun_of_dg_st_gen (map_lift (fun_of_exec_dg_st_for gs)) (map_lift (fun_of_exec_dg_st_for gs)) \<circ> sigma_st) v"
 
-lemma sds: "sound_dg_spec_ltr_for (base_dg_spec_for_lifted gs is_bot_state tf) gamma_dg_base gs"
+lemma sds: "sound_dg_spec_ltr_for (base_dg_spec_for_lifted gs is_empty_state tf) gamma_dg_base gs"
   unfolding sound_dg_spec_ltr_for_def
-  by (rule base_dg_spec_sound[OF tf_sound is_bot_state_gamma_state_empty])
+  by (rule base_dg_spec_sound[OF tf_sound is_empty_state_gamma_state_empty])
 
 theorem run_source_sound:
   fixes Pi :: proc_table and ps and s0 t :: store
     and bot0 s0d :: "'a exec_dg_st lifted" and s0g :: "'g exec_dg_st lifted"
-  defines "eqs \<equiv> dg_gen_of (base_dg_spec_st_for_lifted gs is_bot_pred tf_st enter_st)
+  defines "eqs \<equiv> dg_gen_of (base_dg_spec_st_for_lifted gs empty_pred tf_st enter_st)
                    (compile_prog Pi ps) bot0 s0d s0g"
   assumes SOLVE: "solve_c eqs x \<noteq> None"
     and wf: "wf_compile_input gs Pi ps"
@@ -575,7 +575,7 @@ text \<open>
 theorem collect_sound:
   fixes Pi :: proc_table and ps and v :: pp
     and bot0 s0d :: "'a exec_dg_st lifted" and s0g :: "'g exec_dg_st lifted"
-  defines "eqs \<equiv> dg_gen_of (base_dg_spec_st_for_lifted gs is_bot_pred tf_st enter_st)
+  defines "eqs \<equiv> dg_gen_of (base_dg_spec_st_for_lifted gs empty_pred tf_st enter_st)
                    (compile_prog Pi ps) bot0 s0d s0g"
   assumes SOLVE: "solve_c eqs x \<noteq> None"
     and wf: "wf_compile_input gs Pi ps"

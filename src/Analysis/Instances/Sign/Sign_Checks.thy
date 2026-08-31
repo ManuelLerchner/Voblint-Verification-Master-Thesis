@@ -1,5 +1,5 @@
 theory Sign_Checks
-  imports Sign_Numeric_Queries "Voblint_Core.Abstract_Checks"
+  imports Sign_Numeric_Queries "Voblint_Core.Abstract_Checks" "Voblint_Core.Check_Report"
     "Voblint_Core.Analysis_Result" Sign_Exec
     "Voblint_Exec.Monovariant_Analysis_Result"
     "Voblint_Core.DG_Analysis_Adapter"
@@ -26,30 +26,28 @@ text \<open>
 \<close>
 
 global_interpretation sign_check_domain:
-  abstract_check_domain gamma_sign sign_less_true sign_less_false sign_eq_true sign_eq_false
-    gamma_state aval_sign
+  abstract_check_domain sign_less sign_eq gamma_state aval_sign
   defines
-    sign_check_true = sign_check_domain.check_true
-    and sign_check_false = sign_check_domain.check_false
+    sign_truthy_query = sign_check_domain.truthy_query
+    and sign_check_query = sign_check_domain.check_query
     and sign_classify_check = sign_check_domain.classify_check
     and sign_checks_proven = sign_check_domain.abstract_checks_proven
 proof unfold_locales
   fix s :: store and e :: exp and \<sigma> :: "sign abs_state"
   assume "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
-  then have "\<forall>x. s x \<in> gamma (\<sigma> x)" by (rule gamma_stateD)
+  then have "\<forall>x. s x \<in> gamma (\<sigma> x)" by blast
   then have "\<forall>x. s x \<in> gamma_sign (\<sigma> x)" by simp
-  then show "aval e s \<in> gamma_sign (aval_sign e \<sigma>)" using aval_sign_sound by blast
+  then show "aval e s \<in> gamma (aval_sign e \<sigma>)" using aval_sign_sound by fastforce
 qed
 
 text \<open>
   Only the consumer-facing aliases get a short Sign-prefixed name:
   \<open>classify_check\<close>'s two directions and the \<open>checks_proven\<close> bridge, both
   exercised below and by \<open>Example_Checks_Store_Only\<close>.
-  \<open>sign_check_domain.check_true_sound\<close>/\<open>check_false_sound\<close>/
-  \<open>check_true_false_vacuous\<close> are the lower-level facts \<open>classify_check\<close>'s
-  own soundness is built from; no caller needs them directly, so they stay
-  reachable under the qualified \<open>sign_check_domain.\<close> name instead of a
-  dedicated alias here.
+  \<open>sign_check_domain.check_query_sound\<close> is the lower-level fact
+  \<open>classify_check\<close>'s own soundness is built from; no caller needs it
+  directly, so it stays reachable under the qualified \<open>sign_check_domain.\<close>
+  name instead of a dedicated alias here.
 \<close>
 
 lemmas sign_classify_check_proved = sign_check_domain.classify_check_proved
@@ -75,31 +73,31 @@ text \<open>
 \<close>
 
 context
-  fixes gs :: "vname \<Rightarrow> bool" and is_bot_pred :: "sign exec_dg_st \<Rightarrow> bool"
+  fixes gs :: "vname \<Rightarrow> bool" and empty_pred :: "sign exec_dg_st \<Rightarrow> bool"
     and Pi :: proc_table and ps :: "pname list"
-  assumes solves: "sctx_terminates gs is_bot_pred Pi ps"
-    and exact: "\<And>s. is_bot_pred s = is_bot_state (fun_of_resolved_st_q_for gs s)"
-    and entry_cov: "(cfg_entry (compile_prog Pi ps), ()) \<in> fst (sctx_sol gs is_bot_pred Pi ps)"
-    and fwd_ok: "\<And>u a v ctx. (u, ctx) \<in> fst (sctx_sol gs is_bot_pred Pi ps)
+  assumes solves: "sctx_terminates gs empty_pred Pi ps"
+    and exact: "\<And>s. empty_pred s = is_empty_state (fun_of_resolved_st_q_for gs s)"
+    and entry_cov: "(cfg_entry (compile_prog Pi ps), ()) \<in> fst (sctx_sol gs empty_pred Pi ps)"
+    and fwd_ok: "\<And>u a v ctx. (u, ctx) \<in> fst (sctx_sol gs empty_pred Pi ps)
                    \<Longrightarrow> (u, a, v) \<in> intra (compile_prog Pi ps)
-                   \<Longrightarrow> (v, ctx) \<in> fst (sctx_sol gs is_bot_pred Pi ps)"
+                   \<Longrightarrow> (v, ctx) \<in> fst (sctx_sol gs empty_pred Pi ps)"
     and call_fwd_ok: "\<And>u ctx dst pars args p cont.
-        (u, ctx) \<in> fst (sctx_sol gs is_bot_pred Pi ps)
+        (u, ctx) \<in> fst (sctx_sol gs empty_pred Pi ps)
         \<Longrightarrow> (u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps)
-        \<Longrightarrow> (FunctionEntry p, ()) \<in> fst (sctx_sol gs is_bot_pred Pi ps)"
+        \<Longrightarrow> (FunctionEntry p, ()) \<in> fst (sctx_sol gs empty_pred Pi ps)"
     and comb_fwd_ok: "\<And>cl c1 dst pars args p cont.
-        (cl, c1) \<in> fst (sctx_sol gs is_bot_pred Pi ps)
+        (cl, c1) \<in> fst (sctx_sol gs empty_pred Pi ps)
         \<Longrightarrow> (cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps)
-        \<Longrightarrow> (cont, c1) \<in> fst (sctx_sol gs is_bot_pred Pi ps)"
+        \<Longrightarrow> (cont, c1) \<in> fst (sctx_sol gs empty_pred Pi ps)"
 begin
 
-interpretation sctx_dg_base: sound_dg_spec "sctx_spec gs is_bot_pred" "sctx_gamma gs" gs
+interpretation sctx_dg_base: sound_dg_spec "sctx_spec gs empty_pred" "sctx_gamma gs" gs
   by (rule sctx_sound_exec[OF exact])
 
-interpretation sctx_adapter: dg_analysis_adapter "sctx_spec gs is_bot_pred" "sctx_gamma gs" gs
+interpretation sctx_adapter: dg_analysis_adapter "sctx_spec gs empty_pred" "sctx_gamma gs" gs
     "compile_prog Pi ps" Global route_unit Bot "Lifted cinit_sign_st" Bot
-    "snd (sctx_sol gs is_bot_pred Pi ps)" "fst (sctx_sol gs is_bot_pred Pi ps)"
-    "(cfg_exit (compile_prog Pi ps), ())" "sctx_sg_st gs is_bot_pred Pi ps"
+    "snd (sctx_sol gs empty_pred Pi ps)" "fst (sctx_sol gs empty_pred Pi ps)"
+    "(cfg_exit (compile_prog Pi ps), ())" "sctx_sg_st gs empty_pred Pi ps"
     Seed "\<lambda>m. gamma_state_lift (map_lift (fun_of_resolved_st_q_for gs) m)" enterc_unit
     "map_lift (fun_of_resolved_st_q_for gs)" sign_classify_check
 proof (unfold_locales, goal_cases FinE PP SgCov SgUncov Fwd FinC SeedKey ResolveSound
@@ -171,7 +169,7 @@ text \<open>
   \<^const>\<open>analyse_sign_ctx_result_for\<close> (\<open>Sign_Ctx_None_Sound\<close>) already builds by hand from
   \<^const>\<open>normalize_point\<close>/\<^const>\<open>canonicalize_lift\<close> directly: both collapse the same
   \<^const>\<open>Bot\<close>/\<^const>\<open>Lifted\<close> case split on the same projected local unknown, one via
-  \<open>is_bot_state\<close> after projecting (the adapter), the other via \<open>is_bot_pred\<close> before
+  \<open>is_empty_state\<close> after projecting (the adapter), the other via \<open>empty_pred\<close> before
   projecting (\<open>analyse_sign_ctx_result_for\<close>) --- \<open>exact\<close> is exactly what identifies the
   two orders. A caller composing \<open>sctx_result_node_sound\<close> with \<open>sctx_analyse_result_eq\<close>
   gets \<^const>\<open>analyse_sign_ctx_result_for\<close>'s own node-soundness bridge without
@@ -182,12 +180,12 @@ lemmas sctx_result_node_sound = sctx_adapter.analyse_result_node_sound
 
 lemma sctx_analyse_result_eq:
   "lookup_context sctx_adapter.analyse_result v ctx =
-     (if (v, ctx) \<in> fst (sctx_sol gs is_bot_pred Pi ps)
+     (if (v, ctx) \<in> fst (sctx_sol gs empty_pred Pi ps)
       then normalize_point gs
-             (canonicalize_lift is_bot_pred (locals (snd (sctx_sol gs is_bot_pred Pi ps) (Inl (v, ctx)))))
-      else Unreachable)"
+             (canonicalize_lift empty_pred (locals (snd (sctx_sol gs empty_pred Pi ps) (Inl (v, ctx)))))
+      else Bot)"
   unfolding sctx_adapter.lookup_context_analyse_result
-  by (cases "locals (snd (sctx_sol gs is_bot_pred Pi ps) (Inl (v, ctx)))")
+  by (cases "locals (snd (sctx_sol gs empty_pred Pi ps) (Inl (v, ctx)))")
      (simp_all add: exact normalize_lift_def)
 
 end
@@ -213,8 +211,8 @@ lemma sign_classify_eq_unknown:
   unfolding test_env_pos_def by eval
 
 text \<open>Negation: \<open>!(x < 0)\<close> is provable under \<open>SNonNeg\<close>, going through
-  \<open>check_false\<close> on the un-negated \<open>x < 0\<close> rather than a one-sided
-  negation of \<open>check_true\<close>.\<close>
+  \<open>check_query\<close>'s \<open>Not\<close> case (\<open>map_option HOL.Not\<close> on the un-negated
+  \<open>x < 0\<close> query) rather than a one-sided reading of the positive answer.\<close>
 
 definition test_env_nonneg :: "sign abs_state" where
   "test_env_nonneg = (\<lambda>_. STop)((STR ''x'') := SNonNeg)"
@@ -300,8 +298,8 @@ text \<open>
   already is. It reads its per-node state through
   \<^const>\<open>analyse_sign_result_for\<close>'s \<^type>\<open>analysis_result\<close> table --
   \<^const>\<open>lookup_context\<close>, not a raw solver-environment lookup -- so a
-  \<^const>\<open>Reachable\<close> point classifies at its projected state exactly as
-  before, and an \<^const>\<open>Unreachable\<close> one (dead or never covered; the two are
+  \<^const>\<open>Lifted\<close> point classifies at its projected state exactly as
+  before, and an \<^const>\<open>Bot\<close> one (dead or never covered; the two are
   no longer distinguishable, matching \<^const>\<open>classify_checks\<close>'s original
   \<^const>\<open>Bot\<close>-collapsing \<open>env\<close> reads) classifies at \<^const>\<open>bot\<close>, the same
   value \<^const>\<open>classify_checks\<close> always fed it for such a node: this
@@ -373,7 +371,7 @@ text \<open>
   via \<^const>\<open>classify_checks_with_state\<close>: same result table, with the
   per-check Sign environment attached to each report entry instead of
   discarded, and an exact \<open>unreachable\<close> flag read straight off
-  \<^const>\<open>lookup_context\<close>'s \<^const>\<open>Unreachable\<close>/\<^const>\<open>Reachable\<close> case split --
+  \<^const>\<open>lookup_context\<close>'s \<^const>\<open>Bot\<close>/\<^const>\<open>Lifted\<close> case split --
   exact because \<open>normalize_point_canonicalize_lift_eq_old\<close>
   (\<^theory>\<open>Voblint_Core.Analysis_Result\<close>) is precisely the fact that this
   reading agrees with the older \<^const>\<open>resolved_st_q_lifted_is_bot_for\<close>
@@ -386,8 +384,8 @@ definition analyse_sign_report_for_with_state ::
      (let r = analyse_sign_result_for gs p
       in classify_checks_with_state (prog_cfg p)
            (\<lambda>v. case lookup_context r v () of
-                  Unreachable \<Rightarrow> (True, bot)
-                | Reachable st \<Rightarrow> (False, st))
+                  Bot \<Rightarrow> (True, bot)
+                | Lifted st \<Rightarrow> (False, st))
            (\<lambda>c (_, s). sign_classify_check c s))"
 
 text \<open>Convenience instance at \<^const>\<open>declared_global\<close> \<open>p\<close>, matching

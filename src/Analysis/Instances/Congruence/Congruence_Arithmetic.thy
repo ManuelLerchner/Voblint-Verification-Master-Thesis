@@ -548,7 +548,7 @@ lemma congruence_singleton_sound:
   by (cases "Rep_congruence a" rule: option.exhaust) (auto split: if_splits)
 
 lemma congruence_singleton_le:
-  assumes "\<not> is_bot (a1::congruence)" and "a1 \<le> a2"
+  assumes "\<not> is_empty (a1::congruence)" and "a1 \<le> a2"
       and "congruence_singleton a2 = Some c"
   shows "congruence_singleton a1 = Some c"
 proof -
@@ -563,7 +563,7 @@ proof -
     then have "a1 = bottom_congruence"
       by (simp only: Rep_congruence_inject[symmetric] Rep_bottom_congruence)
     with assms(1) show ?thesis
-      by (simp add: is_bot_congruence is_bottom_congruence_def bot_congruence_def)
+      by (simp add: is_empty_congruence is_bottom_congruence_def bot_congruence_def)
   next
     case (Some p)
     obtain c1 m1 where p: "p = (c1, m1)" by (cases p)
@@ -612,12 +612,12 @@ proof -
 qed
 
 lemma congruence_lt_mono:
-  "\<not> is_bot (a1::congruence) \<Longrightarrow> \<not> is_bot b1 \<Longrightarrow> a1 \<le> a2 \<Longrightarrow> b1 \<le> b2 \<Longrightarrow>
+  "\<not> is_empty (a1::congruence) \<Longrightarrow> \<not> is_empty b1 \<Longrightarrow> a1 \<le> a2 \<Longrightarrow> b1 \<le> b2 \<Longrightarrow>
    congruence_lt a2 b2 = Some c \<Longrightarrow> congruence_lt a1 b1 = Some c"
   by simp
 
 lemma congruence_eqb_mono:
-  assumes "\<not> is_bot (a1::congruence)" and "\<not> is_bot b1" and "a1 \<le> a2" and "b1 \<le> b2"
+  assumes "\<not> is_empty (a1::congruence)" and "\<not> is_empty b1" and "a1 \<le> a2" and "b1 \<le> b2"
       and "congruence_eqb a2 b2 = Some c"
   shows "congruence_eqb a1 b1 = Some c"
 proof -
@@ -632,7 +632,7 @@ proof -
 qed
 
 lemma congruence_tobool_mono:
-  assumes "\<not> is_bot (a1::congruence)" and "a1 \<le> a2" and "congruence_tobool a2 = Some c"
+  assumes "\<not> is_empty (a1::congruence)" and "a1 \<le> a2" and "congruence_tobool a2 = Some c"
   shows "congruence_tobool a1 = Some c"
 proof -
   obtain c1 where s1: "congruence_singleton a2 = Some c1" and c_def: "c = (c1 \<noteq> 0)"
@@ -656,26 +656,26 @@ where
 | "aval_congruence (Times e1 e2) sigma =
      aval_congruence e1 sigma * aval_congruence e2 sigma"
 | "aval_congruence (Less e1 e2) sigma =
-     (if is_bot (aval_congruence e1 sigma) \<or> is_bot (aval_congruence e2 sigma) then bot
+     (if is_empty (aval_congruence e1 sigma) \<or> is_empty (aval_congruence e2 sigma) then bot
       else if congruence_lt (aval_congruence e1 sigma) (aval_congruence e2 sigma) = Some True
       then congruence_of_int 1
       else if congruence_lt (aval_congruence e1 sigma) (aval_congruence e2 sigma) = Some False
       then congruence_of_int 0
       else congruence_of_int 0 \<squnion> congruence_of_int 1)"
 | "aval_congruence (exp.Eq e1 e2) sigma =
-     (if is_bot (aval_congruence e1 sigma) \<or> is_bot (aval_congruence e2 sigma) then bot
+     (if is_empty (aval_congruence e1 sigma) \<or> is_empty (aval_congruence e2 sigma) then bot
       else if congruence_eqb (aval_congruence e1 sigma) (aval_congruence e2 sigma) = Some True
       then congruence_of_int 1
       else if congruence_eqb (aval_congruence e1 sigma) (aval_congruence e2 sigma) = Some False
       then congruence_of_int 0
       else congruence_of_int 0 \<squnion> congruence_of_int 1)"
 | "aval_congruence (exp.Not e) sigma =
-     (if is_bot (aval_congruence e sigma) then bot
+     (if is_empty (aval_congruence e sigma) then bot
       else if congruence_tobool (aval_congruence e sigma) = Some True then congruence_of_int 0
       else if congruence_tobool (aval_congruence e sigma) = Some False then congruence_of_int 1
       else congruence_of_int 0 \<squnion> congruence_of_int 1)"
 | "aval_congruence (And e1 e2) sigma =
-     (if is_bot (aval_congruence e1 sigma) \<or> is_bot (aval_congruence e2 sigma) then bot
+     (if is_empty (aval_congruence e1 sigma) \<or> is_empty (aval_congruence e2 sigma) then bot
       else if congruence_tobool (aval_congruence e1 sigma) = Some False
            \<or> congruence_tobool (aval_congruence e2 sigma) = Some False
       then congruence_of_int 0
@@ -684,7 +684,7 @@ where
       then congruence_of_int 1
       else congruence_of_int 0 \<squnion> congruence_of_int 1)"
 | "aval_congruence (Or e1 e2) sigma =
-     (if is_bot (aval_congruence e1 sigma) \<or> is_bot (aval_congruence e2 sigma) then bot
+     (if is_empty (aval_congruence e1 sigma) \<or> is_empty (aval_congruence e2 sigma) then bot
       else if congruence_tobool (aval_congruence e1 sigma) = Some True
            \<or> congruence_tobool (aval_congruence e2 sigma) = Some True
       then congruence_of_int 1
@@ -701,9 +701,9 @@ interpretation congruence_arith: expression_domain_sound
                         congruence_lt_sound congruence_eqb_sound
                         congruence_tobool_sound[unfolded truthy_def]
                     del: congruence_lt.simps)
-  apply (blast intro: congruence_lt_mono[unfolded is_bot_congruence])
-  apply (blast intro: congruence_eqb_mono[unfolded is_bot_congruence])
-  apply (blast intro: congruence_tobool_mono[unfolded is_bot_congruence])
+  apply (blast intro: congruence_lt_mono[unfolded is_empty_congruence])
+  apply (blast intro: congruence_eqb_mono[unfolded is_empty_congruence])
+  apply (blast intro: congruence_tobool_mono[unfolded is_empty_congruence])
   done
 
 lemmas aval_congruence_sound = congruence_arith.aval_dom_sound

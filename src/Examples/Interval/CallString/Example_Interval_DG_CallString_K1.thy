@@ -99,18 +99,18 @@ text \<open>The executable bottom predicate the lifted carrier needs, at this pr
   declared globals; \<open>nest_exact\<close> is the exactness fact every transport step below
   consumes.\<close>
 
-definition nest_is_bot_pred :: "ivl resolved_st_q \<Rightarrow> bool" where
-  "nest_is_bot_pred = resolved_st_q_is_bot_for (declared_global_vars nest_program)"
+definition nest_empty_pred :: "ivl resolved_st_q \<Rightarrow> bool" where
+  "nest_empty_pred = resolved_st_q_is_bot_for (declared_global_vars nest_program)"
 
-lemma nest_exact: "nest_is_bot_pred s = is_bot_state (fun_of_resolved_st_q_for nest_gs s)"
-  unfolding nest_is_bot_pred_def by (rule resolved_st_q_is_bot_for_iff) simp
+lemma nest_exact: "nest_empty_pred s = is_empty_state (fun_of_resolved_st_q_for nest_gs s)"
+  unfolding nest_empty_pred_def by (rule resolved_st_q_is_bot_for_iff) simp
 
 text \<open>The same Base-style pair the context-insensitive and entry-state-keyed interval
   analyses solve over, at the same \<^const>\<open>ivl_tf_st_for\<close>/\<^const>\<open>ivl_enter_st_for\<close>
   primitives: nothing call-string specific enters the specification.\<close>
 
 definition nest_S_st :: "(ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_spec" where
-  "nest_S_st = base_dg_spec_st_for_lifted nest_gs nest_is_bot_pred
+  "nest_S_st = base_dg_spec_st_for_lifted nest_gs nest_empty_pred
                  (ivl_tf_st_for nest_gs) (ivl_enter_st_for nest_gs)"
 
 subsection \<open>Soundness of the executable specification, once for every bound\<close>
@@ -123,7 +123,7 @@ definition nest_gamma :: "ivl exec_dg_st lifted \<Rightarrow> ivl exec_dg_st lif
   "nest_gamma d g = gamma_state_lift (map_lift (fun_of_resolved_st_q_for nest_gs) d)"
 
 interpretation nest_domain: routed_dg_domain_exec
-  nest_gs nest_is_bot_pred "ivl_tf_st_for nest_gs" "ivl_enter_st_for nest_gs" "ivl_tf_for nest_gs"
+  nest_gs nest_empty_pred "ivl_tf_st_for nest_gs" "ivl_enter_st_for nest_gs" "ivl_tf_for nest_gs"
   by unfold_locales (rule ivl_tf_st_for_commute, rule ivl_enter_st_for_commute, rule nest_exact)
 
 lemma nest_gamma_eq: "nest_gamma = nest_domain.gamma_exec"
@@ -132,7 +132,7 @@ lemma nest_gamma_eq: "nest_gamma = nest_domain.gamma_exec"
 interpretation nest_dg_sound: sound_dg_spec nest_S_st nest_gamma nest_gs
   unfolding nest_gamma_eq nest_S_st_def
   by (rule nest_domain.sound_dg_spec_st)
-     (rule base_dg_spec_sound[OF ivl_is_sound_transfer_for is_bot_state_gamma_state_empty])
+     (rule base_dg_spec_sound[OF ivl_is_sound_transfer_for is_empty_state_gamma_state_empty])
 
 subsection \<open>The routed equation system and its computed solution\<close>
 
@@ -460,20 +460,20 @@ abbreviation nestg_lookup :: "ivl exec_dg_st lifted \<Rightarrow> vname \<Righta
 definition nestg_cfg :: cfg where
   "nestg_cfg = compile_prog (prog_table nestg_program) (prog_procs nestg_program)"
 
-definition nestg_is_bot_pred :: "ivl resolved_st_q \<Rightarrow> bool" where
-  "nestg_is_bot_pred = resolved_st_q_is_bot_for (declared_global_vars nestg_program)"
+definition nestg_empty_pred :: "ivl resolved_st_q \<Rightarrow> bool" where
+  "nestg_empty_pred = resolved_st_q_is_bot_for (declared_global_vars nestg_program)"
 
 definition nestg_1_eqs ::
   "(pp \<times> cfg_node list, call_string_gk,
      (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state) eqsT" where
   "nestg_1_eqs =
      side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. Global) (cs_route 1)
-      (routed_cmb_g (base_dg_spec_st_for_lifted nestg_gs nestg_is_bot_pred
+      (routed_cmb_g (base_dg_spec_st_for_lifted nestg_gs nestg_empty_pred
                        (ivl_tf_st_for nestg_gs) (ivl_enter_st_for nestg_gs)) Global Seed
          (static_resolve nestg_cfg))
       (routed_extra_g Seed Global)
        nestg_cfg
-       (base_dg_spec_st_for_lifted nestg_gs nestg_is_bot_pred
+       (base_dg_spec_st_for_lifted nestg_gs nestg_empty_pred
           (ivl_tf_st_for nestg_gs) (ivl_enter_st_for nestg_gs))
        Bot (Lifted cinit_ivl_st) Bot"
 

@@ -86,7 +86,7 @@ text \<open>
   (\<open>Int_Entry\<close> exercises both refinement modes through this same report function).
   \<open>r\<close> is bound once, outside \<^const>\<open>classify_checks\<close>'s per-check closure, so the single
   D/G solve performs is shared across every check in the report, classifying an
-  \<^const>\<open>Unreachable\<close> point at \<^const>\<open>bot\<close> -- the same value \<^const>\<open>classify_checks\<close> always
+  \<^const>\<open>Bot\<close> point at \<^const>\<open>bot\<close> -- the same value \<^const>\<open>classify_checks\<close> always
   fed such a node -- rather than a fourth, \<open>Dead\<close> outcome \<open>check_result\<close> does not carry.
 \<close>
 
@@ -112,7 +112,7 @@ text \<open>
   environment attached to each report entry instead of discarded -- needed so
   \<open>Analyse_Dispatch.analyse_with_state\<close> can stay total once \<open>Int_Analysis\<close> joins
   \<open>analysis_domain\<close>. An exact \<open>unreachable\<close> flag is read straight off
-  \<^const>\<open>lookup_context\<close>'s \<^const>\<open>Unreachable\<close>/\<^const>\<open>Reachable\<close> case split -- exact because
+  \<^const>\<open>lookup_context\<close>'s \<^const>\<open>Bot\<close>/\<^const>\<open>Lifted\<close> case split -- exact because
   \<open>normalize_point_canonicalize_lift_eq_old\<close> (\<^theory>\<open>Voblint_Core.Analysis_Result\<close>) is
   precisely the fact that this reading agrees with the older
   \<^const>\<open>resolved_st_q_lifted_is_bot_for\<close> test on the same raw local unknown, the same
@@ -126,8 +126,8 @@ definition analyse_int_report_for_with_state ::
      (let r = analyse_int_result_for gs p
       in classify_checks_with_state (prog_cfg p)
            (\<lambda>v. case lookup_context r v () of
-                  Unreachable \<Rightarrow> (True, bot)
-                | Reachable st \<Rightarrow> (False, st))
+                  Bot \<Rightarrow> (True, bot)
+                | Lifted st \<Rightarrow> (False, st))
            (\<lambda>c (_, s). int_classify_check c s))"
 
 text \<open>Convenience instance at \<^const>\<open>declared_global\<close> \<open>p\<close>, matching

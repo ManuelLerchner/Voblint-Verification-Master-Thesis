@@ -43,20 +43,20 @@ lemma sign_es_result_f_context_count:
 subsection \<open>Each context carries its own entry value for the formal\<close>
 
 lemma sign_es_result_f_entry_pos:
-  "map_point_state (\<lambda>st. st (STR ''p'')) (lookup_context sign_es_result f_entry [SPos])
-     = Reachable SPos"
+  "map_lift (\<lambda>st. st (STR ''p'')) (lookup_context sign_es_result f_entry [SPos])
+     = Lifted SPos"
   by eval
 
 lemma sign_es_result_f_entry_neg:
-  "map_point_state (\<lambda>st. st (STR ''p'')) (lookup_context sign_es_result f_entry [SNeg])
-     = Reachable SNeg"
+  "map_lift (\<lambda>st. st (STR ''p'')) (lookup_context sign_es_result f_entry [SNeg])
+     = Lifted SNeg"
   by eval
 
 text \<open>The two contexts' own states are not one shared unknown collapsed to a name.\<close>
 
 lemma sign_es_result_f_entry_contexts_distinct:
-  "map_point_state (\<lambda>st. st (STR ''p'')) (lookup_context sign_es_result f_entry [SPos])
-     \<noteq> map_point_state (\<lambda>st. st (STR ''p'')) (lookup_context sign_es_result f_entry [SNeg])"
+  "map_lift (\<lambda>st. st (STR ''p'')) (lookup_context sign_es_result f_entry [SPos])
+     \<noteq> map_lift (\<lambda>st. st (STR ''p'')) (lookup_context sign_es_result f_entry [SNeg])"
   by eval
 
 subsection \<open>Each returned value propagates back to the caller, per call site\<close>
@@ -68,9 +68,9 @@ text \<open>
 \<close>
 
 lemma sign_es_result_after_both_calls:
-  "map_point_state (\<lambda>st. (st (STR ''x''), st (STR ''y'')))
+  "map_lift (\<lambda>st. (st (STR ''x''), st (STR ''y'')))
      (lookup_context sign_es_result (Statement 5) [])
-   = Reachable (SPos, SNeg)"
+   = Lifted (SPos, SNeg)"
   by eval
 
 end

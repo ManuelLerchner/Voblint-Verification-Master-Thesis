@@ -19,10 +19,10 @@ text \<open>The analysis' own context function and solved reader, abbreviated fo
   statements below.\<close>
 
 abbreviation twice_ctx :: "cfg_node \<Rightarrow> ivl list \<Rightarrow> store \<Rightarrow> ivl list" where
-  "twice_ctx \<equiv> entry_state_context twice_gs twice_is_bot_pred twice_pi twice_procs"
+  "twice_ctx \<equiv> entry_state_context twice_gs twice_empty_pred twice_pi twice_procs"
 
 abbreviation twice_ctx_sg :: "pp \<times> ivl list + gk \<Rightarrow> ivl exec_dg_st lifted" where
-  "twice_ctx_sg \<equiv> entry_state_sg_st twice_gs twice_is_bot_pred twice_pi twice_procs"
+  "twice_ctx_sg \<equiv> entry_state_sg_st twice_gs twice_empty_pred twice_pi twice_procs"
 
 abbreviation twice_ctx_gamma :: "ivl exec_dg_st lifted \<Rightarrow> store set" where
   "twice_ctx_gamma m \<equiv> gamma_state_lift (map_lift (fun_of_resolved_st_q_for twice_gs) m)"

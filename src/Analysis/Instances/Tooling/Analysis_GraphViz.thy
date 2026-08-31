@@ -4,7 +4,8 @@ theory Analysis_GraphViz
     "Voblint_VIMP.VIMP_Source_Print"
     "Voblint_Exec.Exec_St"
     "Voblint_Domain.Abstract_Domain"
-    "Voblint_Core.Abstract_Checks"
+    "Voblint_Core.Check_Report"
+    "Voblint_Core.Analysis_Result"
     "Voblint_Core.Call_String_Context"
 begin
 

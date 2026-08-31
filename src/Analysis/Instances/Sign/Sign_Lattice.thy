@@ -2,7 +2,7 @@ theory Sign_Lattice
   imports "Voblint_Domain.Abstract_Domain" "TD.Update_rules"
 begin
 
-section \<open>Sign domain: instantiation of abstract_domain\<close>
+section \<open>Sign domain: instantiation of sound_domain\<close>
 
 text \<open>
   sign abstracts integers by their sign:
@@ -151,7 +151,7 @@ subsection \<open>Abstract arithmetic operations\<close>
 subsection \<open>Typeclass instances\<close>
 
 text \<open>
-  Hoisted above the abstract_domain interpretation because the
+  Hoisted above the sound_domain instance because the
   sound_domain locale's class constraint is bounded_semilattice_sup_bot.
 \<close>
 
@@ -196,6 +196,9 @@ lemma is_top_sign_correct: "is_top_sign s \<longleftrightarrow> s = top"
 lemma gamma_sign_top: "gamma_sign top = UNIV"
   unfolding top_sign_def by simp
 
+lemma is_top_sign_correct_gamma: "is_top_sign s \<longleftrightarrow> gamma_sign s = UNIV"
+  by(cases s) (auto simp: is_top_sign_def set_eq_iff; presburger)+
+
 instantiation sign :: sup begin
 definition sup_sign :: "sign => sign => sign" where
   "sup_sign = join_sign"
@@ -238,15 +241,30 @@ instance proof intro_classes
 qed
 end
 
+subsection \<open>Printing\<close>
+
+fun string_of_sign :: "sign \<Rightarrow> string" where
+    "string_of_sign SBot    = ''Bottom''"
+  | "string_of_sign SNeg    = ''Negative''"
+  | "string_of_sign SNonPos = ''NonPositive''"
+  | "string_of_sign SZero   = ''Zero''"
+  | "string_of_sign SNonNeg = ''NonNegative''"
+  | "string_of_sign SPos    = ''Positive''"
+  | "string_of_sign STop    = ''Top''"
+
 subsection \<open>Abstract domain instantiation\<close>
 
 instantiation sign :: sound_domain begin
 definition gamma_abs_sign [simp]: "gamma (a :: sign) = gamma_sign a"
-definition is_bot_sign [simp]: "is_bot (a :: sign) = is_bottom_sign a"
-definition is_top_sign' [simp]: "is_top (a :: sign) = is_top_sign a"
+definition is_empty_sign [simp]: "is_empty (a :: sign) = is_bottom_sign a"
+definition is_full_sign [simp]: "is_full (a :: sign) = is_top_sign a"
+definition to_string_sign [simp]: "to_string (a :: sign) = string_of_sign a"
 instance proof intro_classes
   show "gamma (bot :: sign) = {}"
     unfolding bot_sign_def by simp
+next
+  show "gamma (top :: sign) = UNIV"
+    by (simp add: gamma_sign_top)
 next
   fix a b :: sign
   assume H: "a \<le> b"
@@ -258,15 +276,15 @@ next
   qed
 next
   fix a :: sign
-  show "is_bot a \<longleftrightarrow> gamma a = {}"
+  show "is_empty a \<longleftrightarrow> gamma a = {}"
     by (simp add: is_bottom_sign_correct)
 next
   fix a :: sign
-  show "is_top a \<longleftrightarrow> a = top"
-    by (simp add: is_top_sign_correct)
+  show "is_full a \<longleftrightarrow> gamma a = UNIV"
+    by (simp add: is_top_sign_correct_gamma)
 qed
 end
 
-instance sign :: abstract_domain ..
+instance sign :: widening_domain ..
 
 end

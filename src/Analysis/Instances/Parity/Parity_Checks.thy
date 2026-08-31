@@ -1,5 +1,5 @@
 theory Parity_Checks
-  imports Parity_Numeric_Queries "Voblint_Core.Abstract_Checks" Parity_Exec
+  imports Parity_Numeric_Queries "Voblint_Core.Abstract_Checks" "Voblint_Core.Check_Report" Parity_Exec
     "Voblint_Core.Analysis_Result"
     "Voblint_Core.DG_Analysis_Adapter"
     "Voblint_Exec.Monovariant_Analysis_Result"
@@ -27,19 +27,18 @@ text \<open>
 \<close>
 
 global_interpretation parity_check_domain:
-  abstract_check_domain gamma_parity parity_less_true parity_less_false
-    parity_eq_true parity_eq_false gamma_state aval_parity
+  abstract_check_domain parity_less parity_eq gamma_state aval_parity
   defines
-    parity_check_true = parity_check_domain.check_true
-    and parity_check_false = parity_check_domain.check_false
+    parity_truthy_query = parity_check_domain.truthy_query
+    and parity_check_query = parity_check_domain.check_query
     and parity_classify_check = parity_check_domain.classify_check
     and parity_checks_proven = parity_check_domain.abstract_checks_proven
 proof unfold_locales
   fix s :: store and e :: exp and \<sigma> :: "parity abs_state"
   assume "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
-  then have "\<forall>x. s x \<in> gamma (\<sigma> x)" by (rule gamma_stateD)
+  then have "\<forall>x. s x \<in> gamma (\<sigma> x)" by blast
   then have "\<forall>x. s x \<in> gamma_parity (\<sigma> x)" by simp
-  then show "aval e s \<in> gamma_parity (aval_parity e \<sigma>)" using aval_parity_sound by blast
+  then show "aval e s \<in> gamma (aval_parity e \<sigma>)" using aval_parity_sound by fastforce
 qed
 
 text \<open>
@@ -66,8 +65,8 @@ definition test_env_eo :: "parity abs_state" where
   "test_env_eo = (\<lambda>_. PTop)((STR ''x'') := PEven, (STR ''y'') := POdd)"
 
 text \<open>Disjoint parity classes: the direct equality is refuted, and its
-  negation is proved --- going through \<open>check_false\<close> on the un-negated
-  equality, not a one-sided negation of \<open>check_true\<close>.\<close>
+  negation is proved --- going through \<open>check_query\<close>'s \<open>Not\<close> case on the
+  un-negated equality, not a one-sided reading of the positive answer.\<close>
 
 lemma parity_classify_eq_refuted:
   "parity_classify_check (Eq (V (STR ''x'')) (V (STR ''y''))) test_env_eo = Check_Refuted"
@@ -123,32 +122,32 @@ text \<open>
 \<close>
 
 context
-  fixes gs :: "vname \<Rightarrow> bool" and is_bot_pred :: "parity exec_dg_st \<Rightarrow> bool"
+  fixes gs :: "vname \<Rightarrow> bool" and empty_pred :: "parity exec_dg_st \<Rightarrow> bool"
     and Pi :: proc_table and ps :: "pname list"
-  assumes solves: "pctx_terminates gs is_bot_pred Pi ps"
-    and exact: "\<And>s. is_bot_pred s = is_bot_state (fun_of_resolved_st_q_for gs s)"
+  assumes solves: "pctx_terminates gs empty_pred Pi ps"
+    and exact: "\<And>s. empty_pred s = is_empty_state (fun_of_resolved_st_q_for gs s)"
     and entry_cov: "(cfg_entry (compile_prog Pi ps), ())
-                      \<in> fst (pctx_sol gs is_bot_pred Pi ps)"
-    and fwd_ok: "\<And>u a v ctx. (u, ctx) \<in> fst (pctx_sol gs is_bot_pred Pi ps)
+                      \<in> fst (pctx_sol gs empty_pred Pi ps)"
+    and fwd_ok: "\<And>u a v ctx. (u, ctx) \<in> fst (pctx_sol gs empty_pred Pi ps)
                    \<Longrightarrow> (u, a, v) \<in> intra (compile_prog Pi ps)
-                   \<Longrightarrow> (v, ctx) \<in> fst (pctx_sol gs is_bot_pred Pi ps)"
+                   \<Longrightarrow> (v, ctx) \<in> fst (pctx_sol gs empty_pred Pi ps)"
     and call_fwd_ok: "\<And>u ctx dst pars args p cont.
-        (u, ctx) \<in> fst (pctx_sol gs is_bot_pred Pi ps)
+        (u, ctx) \<in> fst (pctx_sol gs empty_pred Pi ps)
         \<Longrightarrow> (u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps)
-        \<Longrightarrow> (FunctionEntry p, ()) \<in> fst (pctx_sol gs is_bot_pred Pi ps)"
+        \<Longrightarrow> (FunctionEntry p, ()) \<in> fst (pctx_sol gs empty_pred Pi ps)"
     and comb_fwd_ok: "\<And>cl c1 dst pars args p cont.
-        (cl, c1) \<in> fst (pctx_sol gs is_bot_pred Pi ps)
+        (cl, c1) \<in> fst (pctx_sol gs empty_pred Pi ps)
         \<Longrightarrow> (cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps)
-        \<Longrightarrow> (cont, c1) \<in> fst (pctx_sol gs is_bot_pred Pi ps)"
+        \<Longrightarrow> (cont, c1) \<in> fst (pctx_sol gs empty_pred Pi ps)"
 begin
 
-interpretation pctx_dg_base: sound_dg_spec "pctx_spec gs is_bot_pred" "pctx_gamma gs" gs
+interpretation pctx_dg_base: sound_dg_spec "pctx_spec gs empty_pred" "pctx_gamma gs" gs
   by (rule pctx_sound_exec[OF exact])
 
-interpretation pctx_adapter: dg_analysis_adapter "pctx_spec gs is_bot_pred" "pctx_gamma gs" gs
+interpretation pctx_adapter: dg_analysis_adapter "pctx_spec gs empty_pred" "pctx_gamma gs" gs
     "compile_prog Pi ps" Global route_unit Bot "Lifted cinit_parity_st" Bot
-    "snd (pctx_sol gs is_bot_pred Pi ps)" "fst (pctx_sol gs is_bot_pred Pi ps)"
-    "(cfg_exit (compile_prog Pi ps), ())" "pctx_sg_st gs is_bot_pred Pi ps"
+    "snd (pctx_sol gs empty_pred Pi ps)" "fst (pctx_sol gs empty_pred Pi ps)"
+    "(cfg_exit (compile_prog Pi ps), ())" "pctx_sg_st gs empty_pred Pi ps"
     Seed "\<lambda>m. gamma_state_lift (map_lift (fun_of_resolved_st_q_for gs) m)" enterc_unit
     "map_lift (fun_of_resolved_st_q_for gs)" parity_classify_check
 proof (unfold_locales, goal_cases FinE PP SgCov SgUncov Fwd FinC SeedKey ResolveSound
@@ -220,8 +219,8 @@ text \<open>
   raw-tuple shape \<^const>\<open>analyse_parity_ctx_result_for\<close> (\<open>Parity_Ctx_None_Sound\<close>)
   builds directly from \<^const>\<open>normalize_point\<close>/\<^const>\<open>canonicalize_lift\<close>: both
   collapse the same \<^const>\<open>Bot\<close>/\<^const>\<open>Lifted\<close> case split on the same projected
-  local unknown, one via \<open>is_bot_state\<close> after projecting, the other via
-  \<open>is_bot_pred\<close> before projecting -- \<open>exact\<close> is what identifies the two orders.
+  local unknown, one via \<open>is_empty_state\<close> after projecting, the other via
+  \<open>empty_pred\<close> before projecting -- \<open>exact\<close> is what identifies the two orders.
   Composing it with \<open>pctx_result_node_sound\<close> gives
   \<^const>\<open>analyse_parity_ctx_result_for\<close>'s node-soundness bridge without
   re-deriving \<open>routed_context_base_hetero\<close>'s coverage argument.
@@ -229,12 +228,12 @@ text \<open>
 
 lemma pctx_analyse_result_eq:
   "lookup_context pctx_adapter.analyse_result v ctx =
-     (if (v, ctx) \<in> fst (pctx_sol gs is_bot_pred Pi ps)
+     (if (v, ctx) \<in> fst (pctx_sol gs empty_pred Pi ps)
       then normalize_point gs
-             (canonicalize_lift is_bot_pred (locals (snd (pctx_sol gs is_bot_pred Pi ps) (Inl (v, ctx)))))
-      else Unreachable)"
+             (canonicalize_lift empty_pred (locals (snd (pctx_sol gs empty_pred Pi ps) (Inl (v, ctx)))))
+      else Bot)"
   unfolding pctx_adapter.lookup_context_analyse_result
-  by (cases "locals (snd (pctx_sol gs is_bot_pred Pi ps) (Inl (v, ctx)))")
+  by (cases "locals (snd (pctx_sol gs empty_pred Pi ps) (Inl (v, ctx)))")
      (simp_all add: exact normalize_lift_def)
 
 end
@@ -246,7 +245,7 @@ text \<open>
   \<open>analyse_sign_result_for\<close>/\<open>analyse_sign_report_for\<close> take: one-line partial
   applications of \<open>Parity_Ctx_None_Sound\<close>'s tables at \<^const>\<open>prog_main_name\<close>, and a report
   reading per-node state through \<^const>\<open>lookup_context\<close> rather than a raw
-  solver-environment lookup. An \<^const>\<open>Unreachable\<close> point classifies at \<^const>\<open>bot\<close>, the
+  solver-environment lookup. An \<^const>\<open>Bot\<close> point classifies at \<^const>\<open>bot\<close>, the
   same value \<^const>\<open>classify_checks\<close> always fed such a node, so \<open>check_result\<close>'s existing
   three-way verdict is preserved rather than gaining a fourth outcome.
 \<close>
@@ -318,7 +317,7 @@ text \<open>
   State-carrying sibling, via \<^const>\<open>classify_checks_with_state\<close>: the same result table,
   with the per-check Parity environment attached to each entry instead of discarded, and
   an exact \<open>unreachable\<close> flag read straight off \<^const>\<open>lookup_context\<close>'s
-  \<^const>\<open>Unreachable\<close>/\<^const>\<open>Reachable\<close> case split. Mirrors
+  \<^const>\<open>Bot\<close>/\<^const>\<open>Lifted\<close> case split. Mirrors
   \<open>analyse_sign_report_for_with_state\<close> exactly.
 \<close>
 
@@ -328,8 +327,8 @@ definition analyse_parity_report_for_with_state ::
      (let r = analyse_parity_result_for gs p
       in classify_checks_with_state (prog_cfg p)
            (\<lambda>v. case lookup_context r v () of
-                  Unreachable \<Rightarrow> (True, bot)
-                | Reachable st \<Rightarrow> (False, st))
+                  Bot \<Rightarrow> (True, bot)
+                | Lifted st \<Rightarrow> (False, st))
            (\<lambda>c (_, s). parity_classify_check c s))"
 
 definition analyse_parity_report_with_state ::

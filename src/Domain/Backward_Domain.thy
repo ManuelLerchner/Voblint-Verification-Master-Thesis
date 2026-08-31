@@ -1,5 +1,5 @@
 theory Backward_Domain
-  imports Abstract_Domain
+  imports Nonrelational_Reachability "Voblint_VIMP.VIMP_Expr"
 begin
 
 section \<open>Refining an abstract state against a guard\<close>
@@ -14,7 +14,9 @@ text \<open>
   and \<open>bfilter\<close> -- the expression- and boolean-level filters -- are derived once with
   their soundness and monotonicity. \<open>backward_domain_refined\<close> adds the reductive
   and monotone inverse operators a domain with a conservative inverse can provide.
-  This is the counterpart of Goblint's \<open>BaseInvariant\<close>: analysis-level, not framework.
+  This abstracts the backward-refinement operations Goblint's \<open>BaseInvariant\<close> implements
+  concretely for its Base analysis; Goblint has no generic module signature this locale
+  is a formalization of.
 \<close>
 
 subsection \<open>Backward-analysis locale\<close>
@@ -54,8 +56,8 @@ locale backward_domain =
     and inv_minus :: "'a => 'a => 'a => 'a * 'a"
     and inv_times :: "'a => 'a => 'a => 'a * 'a"
   assumes
-    aval_abs_sound[intro]:
-      "(\<forall>x. s x \<in> gamma (\<sigma> x)) \<Longrightarrow> aval e s \<in> gamma (aval_abs e \<sigma>)"
+      aval_abs_sound[intro]:
+      "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> aval e s \<in> gamma (aval_abs e \<sigma>)"
   and inv_less_sound[intro]:
       "n1 \<in> gamma a1 \<Longrightarrow> n2 \<in> gamma a2 \<Longrightarrow> (n1 < n2) = res
        \<Longrightarrow> n1 \<in> gamma (fst (inv_less res a1 a2)) \<and> n2 \<in> gamma (snd (inv_less res a1 a2))"
@@ -99,18 +101,18 @@ text \<open>
   so the target is dropped and the state survives unrefined even where no state
   satisfies the condition.
 
-  The leading \<open>is_bot\<close> test is not redundant with the \<open>tobool\<close> one. An
+  The leading \<open>is_empty\<close> test is not redundant with the \<open>tobool\<close> one. An
   author's \<open>tobool\<close> is free to answer arbitrarily at its own domain's bottom
   (every answer is vacuously sound there, since \<open>gamma bot = {}\<close>), so it need
   not, and generally does not, agree across a bottom/non-bottom pair
-  \<open>\<sigma>1 \<le> \<sigma>2\<close> the way \<open>tobool_mono\<close> requires. Answering \<open>is_bot\<close> directly,
+  \<open>\<sigma>1 \<le> \<sigma>2\<close> the way \<open>tobool_mono\<close> requires. Answering \<open>is_empty\<close> directly,
   ahead of \<open>tobool\<close>, sidesteps that disagreement instead of relying on it, and
   is what makes \<open>feasible_mono\<close> hold.
 \<close>
 
 definition feasible :: "exp => bool => 'a abs_state => bool" where
   "feasible e pol \<sigma> =
-     (\<not> is_bot (aval_abs e \<sigma>) \<and> tobool (aval_abs e \<sigma>) \<noteq> Some (\<not> pol))"
+     (\<not> is_empty (aval_abs e \<sigma>) \<and> tobool (aval_abs e \<sigma>) \<noteq> Some (\<not> pol))"
 
 text \<open>
   Every state a concrete store witnesses is feasible for the polarity that
@@ -123,9 +125,8 @@ lemma feasible_of_concrete:
   assumes "s \<in> \<lbrakk>\<sigma>\<rbrakk>" and "truthy (aval e s) = pol"
   shows "feasible e pol \<sigma>"
 proof -
-  have gs: "\<forall>x. s x \<in> gamma (\<sigma> x)" using gamma_stateD[OF assms(1)] .
-  have ea: "aval e s \<in> gamma (aval_abs e \<sigma>)" using aval_abs_sound[OF gs] by simp
-  have nb: "\<not> is_bot (aval_abs e \<sigma>)" using ea is_bot_correct by auto
+  have ea: "aval e s \<in> gamma (aval_abs e \<sigma>)" using aval_abs_sound[OF assms(1)] by simp
+  have nb: "\<not> is_empty (aval_abs e \<sigma>)" using ea is_empty_correct by auto
   have "tobool (aval_abs e \<sigma>) \<noteq> Some (\<not> pol)"
   proof
     assume "tobool (aval_abs e \<sigma>) = Some (\<not> pol)"
@@ -177,7 +178,8 @@ fun bfilter :: "exp => bool => 'a abs_state => 'a abs_state" where
   | "bfilter e res \<sigma> =
        (let (a1, a2) = inv_eq (\<not> res) (aval_abs e \<sigma>) (aval_abs (N 0) \<sigma>)
         in afilter e a1 \<sigma>)"
-lemma afilter_sound:
+
+lemma afilter_sound [intro]:
   assumes "s \<in> \<lbrakk>\<sigma>\<rbrakk>" "aval e s \<in> gamma a"
   shows "s \<in> \<lbrakk>afilter e a \<sigma>\<rbrakk>"
 using assms proof (induction e arbitrary: a \<sigma>)
@@ -200,9 +202,8 @@ next
   case (Plus e1 e2)
   obtain a1 a2 where pair: "(a1, a2) = inv_plus a (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>)"
     by (cases "inv_plus a (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>)") auto
-  have gs: "\<forall>x. s x \<in> gamma (\<sigma> x)" using gamma_stateD[OF Plus.prems(1)] .
-  have e1a: "aval e1 s \<in> gamma (aval_abs e1 \<sigma>)" using aval_abs_sound[OF gs] by simp
-  have e2a: "aval e2 s \<in> gamma (aval_abs e2 \<sigma>)" using aval_abs_sound[OF gs] by simp
+  have e1a: "aval e1 s \<in> gamma (aval_abs e1 \<sigma>)" using aval_abs_sound[OF Plus.prems(1)] by simp
+  have e2a: "aval e2 s \<in> gamma (aval_abs e2 \<sigma>)" using aval_abs_sound[OF Plus.prems(1)] by simp
   have asum: "aval e1 s + aval e2 s \<in> gamma a" using Plus.prems(2) by simp
   have inv12: "aval e1 s \<in> gamma a1 \<and> aval e2 s \<in> gamma a2"
     using inv_plus_sound[OF e1a e2a asum] pair[symmetric] by simp
@@ -215,9 +216,8 @@ next
   case (Minus e1 e2)
   obtain a1 a2 where pair: "(a1, a2) = inv_minus a (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>)"
     by (cases "inv_minus a (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>)") auto
-  have gs: "\<forall>x. s x \<in> gamma (\<sigma> x)" using gamma_stateD[OF Minus.prems(1)] .
-  have e1a: "aval e1 s \<in> gamma (aval_abs e1 \<sigma>)" using aval_abs_sound[OF gs] by simp
-  have e2a: "aval e2 s \<in> gamma (aval_abs e2 \<sigma>)" using aval_abs_sound[OF gs] by simp
+  have e1a: "aval e1 s \<in> gamma (aval_abs e1 \<sigma>)" using aval_abs_sound[OF Minus.prems(1)] by simp
+  have e2a: "aval e2 s \<in> gamma (aval_abs e2 \<sigma>)" using aval_abs_sound[OF Minus.prems(1)] by simp
   have adiff: "aval e1 s - aval e2 s \<in> gamma a" using Minus.prems(2) by simp
   have inv12: "aval e1 s \<in> gamma a1 \<and> aval e2 s \<in> gamma a2"
     using inv_minus_sound[OF e1a e2a adiff] pair[symmetric] by simp
@@ -230,9 +230,8 @@ next
   case (Times e1 e2)
   obtain a1 a2 where pair: "(a1, a2) = inv_times a (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>)"
     by (cases "inv_times a (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>)") auto
-  have gs: "\<forall>x. s x \<in> gamma (\<sigma> x)" using gamma_stateD[OF Times.prems(1)] .
-  have e1a: "aval e1 s \<in> gamma (aval_abs e1 \<sigma>)" using aval_abs_sound[OF gs] by simp
-  have e2a: "aval e2 s \<in> gamma (aval_abs e2 \<sigma>)" using aval_abs_sound[OF gs] by simp
+  have e1a: "aval e1 s \<in> gamma (aval_abs e1 \<sigma>)" using aval_abs_sound[OF Times.prems(1)] by simp
+  have e2a: "aval e2 s \<in> gamma (aval_abs e2 \<sigma>)" using aval_abs_sound[OF Times.prems(1)] by simp
   have aprod: "aval e1 s * aval e2 s \<in> gamma a" using Times.prems(2) by simp
   have inv12: "aval e1 s \<in> gamma a1 \<and> aval e2 s \<in> gamma a2"
     using inv_times_sound[OF e1a e2a aprod] pair[symmetric] by simp
@@ -266,16 +265,15 @@ lemma bfilter_default_sound:
   assumes "s \<in> \<lbrakk>\<sigma>\<rbrakk>" "truthy (aval e s) = res"
   shows "s \<in> \<lbrakk>afilter e (fst (inv_eq (\<not> res) (aval_abs e \<sigma>) (aval_abs (N 0) \<sigma>))) \<sigma>\<rbrakk>"
 proof -
-  have gs: "\<forall>x. s x \<in> gamma (\<sigma> x)" using gamma_stateD[OF assms(1)] .
-  have ea: "aval e s \<in> gamma (aval_abs e \<sigma>)" using aval_abs_sound[OF gs] by simp
-  have e0: "aval (N 0) s \<in> gamma (aval_abs (N 0) \<sigma>)" by (rule aval_abs_sound[of s \<sigma> "N 0", OF gs])
+  have ea: "aval e s \<in> gamma (aval_abs e \<sigma>)" using aval_abs_sound[OF assms(1)] by simp
+  have e0: "aval (N 0) s \<in> gamma (aval_abs (N 0) \<sigma>)" by (rule aval_abs_sound[of s \<sigma> "N 0", OF assms(1)])
   have eq0: "(aval e s = aval (N 0) s) = (\<not> res)" using assms(2) by auto
   have "aval e s \<in> gamma (fst (inv_eq (\<not> res) (aval_abs e \<sigma>) (aval_abs (N 0) \<sigma>)))"
     using inv_eq_sound[OF ea e0 eq0] by simp
   then show ?thesis using afilter_sound[OF assms(1)] by simp
 qed
 
-lemma bfilter_sound:
+lemma bfilter_sound [intro]:
   assumes "s \<in> \<lbrakk>\<sigma>\<rbrakk>" "truthy (aval e s) = res"
   shows "s \<in> \<lbrakk>bfilter e res \<sigma>\<rbrakk>"
 using assms proof (induction e arbitrary: res \<sigma>)
@@ -283,7 +281,7 @@ using assms proof (induction e arbitrary: res \<sigma>)
 next
   case (V x) show ?case
     using bfilter_default_sound[OF V.prems(1) V.prems(2)]
-    by (simp add: bfilter.simps Let_def case_prod_beta fun_upd_def)
+    by (simp add: Let_def case_prod_beta fun_upd_def)
 next
   case (Plus e1 e2) show ?case
     using bfilter_default_sound[OF Plus.prems(1) Plus.prems(2)] by (simp add: Let_def case_prod_beta)
@@ -385,9 +383,8 @@ next
   case (Less e1 e2)
   obtain a1 a2 where pair: "(a1, a2) = inv_less res (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>)"
     by (cases "inv_less res (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>)") auto
-  have gs: "\<forall>x. s x \<in> gamma (\<sigma> x)" using gamma_stateD[OF Less.prems(1)] .
-  have e1a: "aval e1 s \<in> gamma (aval_abs e1 \<sigma>)" using aval_abs_sound[OF gs] by simp
-  have e2a: "aval e2 s \<in> gamma (aval_abs e2 \<sigma>)" using aval_abs_sound[OF gs] by simp
+  have e1a: "aval e1 s \<in> gamma (aval_abs e1 \<sigma>)" using aval_abs_sound[OF Less.prems(1)] by simp
+  have e2a: "aval e2 s \<in> gamma (aval_abs e2 \<sigma>)" using aval_abs_sound[OF Less.prems(1)] by simp
   have less: "(aval e1 s < aval e2 s) = res" using Less.prems(2) by (auto split: if_splits)
   have inv12: "aval e1 s \<in> gamma a1 \<and> aval e2 s \<in> gamma a2"
     using inv_less_sound[OF e1a e2a less] pair[symmetric] by simp
@@ -400,9 +397,8 @@ next
   case (Eq e1 e2)
   obtain a1 a2 where pair: "(a1, a2) = inv_eq res (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>)"
     by (cases "inv_eq res (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>)") auto
-  have gs: "\<forall>x. s x \<in> gamma (\<sigma> x)" using gamma_stateD[OF Eq.prems(1)] .
-  have e1a: "aval e1 s \<in> gamma (aval_abs e1 \<sigma>)" using aval_abs_sound[OF gs] by simp
-  have e2a: "aval e2 s \<in> gamma (aval_abs e2 \<sigma>)" using aval_abs_sound[OF gs] by simp
+  have e1a: "aval e1 s \<in> gamma (aval_abs e1 \<sigma>)" using aval_abs_sound[OF Eq.prems(1)] by simp
+  have e2a: "aval e2 s \<in> gamma (aval_abs e2 \<sigma>)" using aval_abs_sound[OF Eq.prems(1)] by simp
   have eq: "(aval e1 s = aval e2 s) = res" using Eq.prems(2) by (auto split: if_splits)
   have inv12: "aval e1 s \<in> gamma a1 \<and> aval e2 s \<in> gamma a2"
     using inv_eq_sound[OF e1a e2a eq] pair[symmetric] by simp
@@ -414,8 +410,8 @@ next
 qed
 
 text \<open>
-  \<open>branch_lifted\<close> is the canonical Goblint-aligned branch semantics: the
-  forward \<open>feasible\<close> gate on the whole condition ahead of \<open>bfilter\<close>, matching
+  \<open>branch_lifted\<close> is the Goblint-aligned branch semantics: the forward
+  \<open>feasible\<close> gate on the whole condition ahead of \<open>bfilter\<close>, matching
   \<open>Base.branch\<close>'s \<open>eval_rv\<close> / \<open>to_bool\<close> dead-code gate ahead of \<open>invariant\<close>.
   An infeasible condition denotes \<open>Bot\<close> -- no concrete successor, matching
   Goblint's \<open>Deadcode\<close> as an outer control-flow fact rather than a value of the
@@ -429,14 +425,20 @@ text \<open>
   here run on the whole condition -- which is what makes it a control-flow fact
   rather than a narrowing.
 
+  A feasible condition's \<open>bfilter\<close> narrowing can itself still land on a
+  witness-bottom store (@{const is_empty_state}, without being the raw
+  \<open>Lifted\<close>'s structural \<open>Bot\<close>): \<open>feasible\<close> is only a necessary forward gate,
+  and \<open>bfilter\<close>'s backward narrowing may subsequently discover a stronger
+  contradiction. \<open>branch_lifted\<close> does not itself re-normalize that result
+  against \<open>is_empty_state\<close>, so it is sound but not always structurally
+  canonical; \<open>branch_lifted_normalized_iff\<close> below states exactly when the
+  two coincide.
+
   \<open>branch\<close> is the plain-\<open>abs_state\<close> projection of \<open>branch_lifted\<close>, used by
-  \<open>domain_transfer\<close>'s \<open>tf_branch\<close> field (and hence \<open>apply_tf\<close>) and the
-  executable mirror: it collapses \<open>Bot\<close> to ordinary \<open>bot\<close>, so a caller that
-  never needs to distinguish "no successor" from "successor whose store is
-  bottom" can keep working with plain \<open>abs_state\<close>. The routed D/G pipeline
-  instead consumes \<open>branch_lifted\<close> directly, so that a dead branch never has to
-  be reconstructed as a whole-state-bottom value indistinguishable from an
-  ordinary local/global-restricted result.
+  \<open>domain_transfer\<close>'s \<open>tf_branch\<close> field (and hence \<open>apply_tf\<close>): it collapses
+  \<open>Bot\<close> to ordinary \<open>bot\<close>, so a caller that never needs to distinguish "no
+  successor" from "successor whose store is bottom" can keep working with
+  plain \<open>abs_state\<close>.
 \<close>
 
 definition branch_lifted :: "exp => bool => 'a abs_state => 'a abs_state lifted" where
@@ -444,6 +446,11 @@ definition branch_lifted :: "exp => bool => 'a abs_state => 'a abs_state lifted"
 
 definition branch :: "exp => bool => 'a abs_state => 'a abs_state" where
   "branch e pol \<sigma> = (case branch_lifted e pol \<sigma> of Bot \<Rightarrow> bot | Lifted \<sigma>' \<Rightarrow> \<sigma>')"
+
+lemma branch_lifted_normalized_iff:
+  "normalized_lift is_empty_state (branch_lifted e pol \<sigma>) \<longleftrightarrow>
+     \<not> feasible e pol \<sigma> \<or> \<not> is_empty_state (bfilter e pol \<sigma>)"
+  by (simp add: branch_lifted_def normalized_lift_def)
 
 text \<open>
   The plain-state case split, recovered as a lemma rather than the primitive
@@ -473,7 +480,7 @@ lemma bfilter_And_False_branch:
 lemma bfilter_Or_True_branch:
   "bfilter (Or b1 b2) True \<sigma> = branch b1 True \<sigma> \<squnion> branch b2 True \<sigma>"
   by (simp add: branch_unfold)
-lemma branch_lifted_sound:
+lemma branch_lifted_sound [intro]:
   assumes "s \<in> \<lbrakk>\<sigma>\<rbrakk>" "truthy (aval e s) = pol"
   shows "s \<in> gamma_state_lift (branch_lifted e pol \<sigma>)"
 proof -
@@ -481,7 +488,7 @@ proof -
   then show ?thesis
     using bfilter_sound[OF assms] by (simp add: branch_lifted_def)
 qed
-lemma branch_sound:
+lemma branch_sound [intro]:
   assumes "s \<in> \<lbrakk>\<sigma>\<rbrakk>" "truthy (aval e s) = pol"
   shows "s \<in> \<lbrakk>branch e pol \<sigma>\<rbrakk>"
 proof -
@@ -500,7 +507,7 @@ text \<open>
 \<close>
 
 lemma branch_le_bfilter: "branch e pol \<sigma> \<le> bfilter e pol \<sigma>"
-  unfolding branch_unfold by (auto split: option.splits)
+  by (simp add: branch_unfold)
 
 end
 
@@ -565,17 +572,14 @@ text \<open>
   relation. This local, self-contained \<open>\<le>_pair\<close> avoids that entirely.
 \<close>
 
-definition le_pair :: "'a::order \<times> 'a \<Rightarrow> 'a \<times> 'a \<Rightarrow> bool" where
-  "le_pair p q \<longleftrightarrow> fst p \<le> fst q \<and> snd p \<le> snd q"
-
-lemma le_pairI: "fst p \<le> fst q \<Longrightarrow> snd p \<le> snd q \<Longrightarrow> le_pair p q"
-  unfolding le_pair_def by simp
+abbreviation le_pair :: "'a::order \<times> 'a \<Rightarrow> 'a \<times> 'a \<Rightarrow> bool" where
+  "le_pair p q \<equiv> fst p \<le> fst q \<and> snd p \<le> snd q"
 
 lemma le_pair_fst: "le_pair p q \<Longrightarrow> fst p \<le> fst q"
-  unfolding le_pair_def by simp
+  by simp
 
 lemma le_pair_snd: "le_pair p q \<Longrightarrow> snd p \<le> snd q"
-  unfolding le_pair_def by simp
+  by simp
 
 subsection \<open>Refined backward-analysis locale\<close>
 
@@ -589,14 +593,16 @@ text \<open>
       monotone in the abstract state (and target value) by the same induction
       that proves their soundness.
 
-    - Reductiveness: each operator's result is below the input operand it
-      refines -- refinement narrows, never enlarges. Bottom-preservation for
-      \<open>intersect\<close>/\<open>inv_*\<close> -- needed so a compound \<open>afilter\<close>/\<open>bfilter\<close>'s recursive
-      re-narrowing of an already-dead location cannot revive it -- follows
-      generically from this via @{thm is_bot_mono} and \<open>bot\<close>'s leastness,
-      rather than as separate per-operator bottom axioms.
+    - Reductiveness: \<open>intersect\<close>'s result is below both input operands --
+      refinement narrows, never enlarges. This is the only reductiveness this
+      locale assumes: \<open>afilter_reductive\<close>/\<open>bfilter_reductive\<close> need it solely at
+      @{term afilter}'s \<open>V\<close> case, where \<open>intersect\<close> is the sole narrowing step;
+      the \<open>inv_*\<close> operators have no reductiveness assumption of their own,
+      because none of the reductiveness proofs need one -- each recursive
+      \<open>afilter\<close>/\<open>bfilter\<close> step is bounded by its own induction hypothesis, not
+      by a per-operator shrink fact.
 
-  Each \<open>inv_*\<close> operator's mono/reductive contract is one @{const le_pair} fact
+  Each \<open>inv_*\<close> operator's monotonicity contract is one @{const le_pair} fact
   about its returned pair rather than two separately-assumed \<open>fst\<close>/\<open>snd\<close>
   projections; the componentwise facts \<open>afilter_mono\<close>/\<open>bfilter_mono\<close>'s own
   induction needs are derived from these once, inside this locale.
@@ -619,112 +625,11 @@ locale backward_domain_refined = backward_domain +
       "r1 \<le> r2 \<Longrightarrow> x1 \<le> x2 \<Longrightarrow> y1 \<le> y2 \<Longrightarrow> le_pair (inv_times r1 x1 y1) (inv_times r2 x2 y2)"
   and intersect_reductive1[intro]: "intersect a b \<le> a"
   and intersect_reductive2[intro]: "intersect a b \<le> b"
-  and inv_less_reductive: "le_pair (inv_less res a1 a2) (a1, a2)"
-  and inv_eq_reductive: "le_pair (inv_eq res a1 a2) (a1, a2)"
-  and inv_plus_reductive: "le_pair (inv_plus r a1 a2) (a1, a2)"
-  and inv_minus_reductive: "le_pair (inv_minus r a1 a2) (a1, a2)"
-  and inv_times_reductive: "le_pair (inv_times r a1 a2) (a1, a2)"
   and tobool_mono:
-      "\<not> is_bot (p1::'a) \<Longrightarrow> p1 \<le> p2 \<Longrightarrow> tobool p2 = Some (bv::bool) \<Longrightarrow> tobool p1 = Some bv"
+      "\<not> is_empty (p1::'a) \<Longrightarrow> p1 \<le> p2 \<Longrightarrow> tobool p2 = Some (bv::bool) \<Longrightarrow> tobool p1 = Some bv"
 begin
 
-text \<open>Componentwise projections of each pair-shaped reductive assumption, used by the
-  bottom-preservation lemmas below.\<close>
 
-lemma inv_less_reductive1: "fst (inv_less res a1 a2) \<le> a1"
-  using le_pair_fst[OF inv_less_reductive] by simp
-lemma inv_less_reductive2: "snd (inv_less res a1 a2) \<le> a2"
-  using le_pair_snd[OF inv_less_reductive] by simp
-
-lemma inv_eq_reductive1: "fst (inv_eq res a1 a2) \<le> a1"
-  using le_pair_fst[OF inv_eq_reductive] by simp
-lemma inv_eq_reductive2: "snd (inv_eq res a1 a2) \<le> a2"
-  using le_pair_snd[OF inv_eq_reductive] by simp
-
-lemma inv_plus_reductive1: "fst (inv_plus r a1 a2) \<le> a1"
-  using le_pair_fst[OF inv_plus_reductive] by simp
-lemma inv_plus_reductive2: "snd (inv_plus r a1 a2) \<le> a2"
-  using le_pair_snd[OF inv_plus_reductive] by simp
-
-lemma inv_minus_reductive1: "fst (inv_minus r a1 a2) \<le> a1"
-  using le_pair_fst[OF inv_minus_reductive] by simp
-lemma inv_minus_reductive2: "snd (inv_minus r a1 a2) \<le> a2"
-  using le_pair_snd[OF inv_minus_reductive] by simp
-
-lemma inv_times_reductive1: "fst (inv_times r a1 a2) \<le> a1"
-  using le_pair_fst[OF inv_times_reductive] by simp
-lemma inv_times_reductive2: "snd (inv_times r a1 a2) \<le> a2"
-  using le_pair_snd[OF inv_times_reductive] by simp
-
-text \<open>Componentwise conjunctions of each pair-shaped monotonicity assumption, used by
-  \<open>afilter_mono\<close>/\<open>bfilter_mono\<close>'s own induction below.\<close>
-
-lemma inv_less_mono_conj:
-  "x1 \<le> x2 \<Longrightarrow> y1 \<le> y2 \<Longrightarrow>
-   fst (inv_less res x1 y1) \<le> fst (inv_less res x2 y2) \<and>
-   snd (inv_less res x1 y1) \<le> snd (inv_less res x2 y2)"
-  using inv_less_mono le_pair_fst le_pair_snd by blast
-
-lemma inv_eq_mono_conj:
-  "x1 \<le> x2 \<Longrightarrow> y1 \<le> y2 \<Longrightarrow>
-   fst (inv_eq res x1 y1) \<le> fst (inv_eq res x2 y2) \<and>
-   snd (inv_eq res x1 y1) \<le> snd (inv_eq res x2 y2)"
-  using inv_eq_mono le_pair_fst le_pair_snd by blast
-
-lemma inv_plus_mono_conj:
-  "r1 \<le> r2 \<Longrightarrow> x1 \<le> x2 \<Longrightarrow> y1 \<le> y2 \<Longrightarrow>
-   fst (inv_plus r1 x1 y1) \<le> fst (inv_plus r2 x2 y2) \<and>
-   snd (inv_plus r1 x1 y1) \<le> snd (inv_plus r2 x2 y2)"
-  using inv_plus_mono le_pair_fst le_pair_snd by metis
-
-lemma inv_minus_mono_conj:
-  "r1 \<le> r2 \<Longrightarrow> x1 \<le> x2 \<Longrightarrow> y1 \<le> y2 \<Longrightarrow>
-   fst (inv_minus r1 x1 y1) \<le> fst (inv_minus r2 x2 y2) \<and>
-   snd (inv_minus r1 x1 y1) \<le> snd (inv_minus r2 x2 y2)"
-  using inv_minus_mono le_pair_fst le_pair_snd by metis
-
-lemma inv_times_mono_conj:
-  "r1 \<le> r2 \<Longrightarrow> x1 \<le> x2 \<Longrightarrow> y1 \<le> y2 \<Longrightarrow>
-   fst (inv_times r1 x1 y1) \<le> fst (inv_times r2 x2 y2) \<and>
-   snd (inv_times r1 x1 y1) \<le> snd (inv_times r2 x2 y2)"
-  using inv_times_mono le_pair_fst le_pair_snd by metis
-
-text \<open>Bottom-preservation, bare (not \<open>[intro]\<close>): @{term "intersect_bot1"}/@{term "intersect_bot2"}
-  conclude the same @{term is_bot} goal from different premises, so tagging both would
-  make \<open>blast\<close>/\<open>auto\<close> search ambiguous wherever these are pulled in unqualified; cited
-  by name instead, matching this file's existing convention for non-searched facts.\<close>
-
-lemma intersect_bot1: "is_bot a \<Longrightarrow> is_bot (intersect a b)"
-  using intersect_reductive1 is_bot_mono by blast
-lemma intersect_bot2: "is_bot b \<Longrightarrow> is_bot (intersect a b)"
-  using intersect_reductive2 is_bot_mono by blast
-
-lemma inv_less_fst_bot: "is_bot a1 \<Longrightarrow> is_bot (fst (inv_less res a1 a2))"
-  using inv_less_reductive1 is_bot_mono by blast
-lemma inv_less_snd_bot: "is_bot a2 \<Longrightarrow> is_bot (snd (inv_less res a1 a2))"
-  using inv_less_reductive2 is_bot_mono by blast
-
-lemma inv_eq_fst_bot: "is_bot a1 \<Longrightarrow> is_bot (fst (inv_eq res a1 a2))"
-  using inv_eq_reductive1 is_bot_mono by blast
-lemma inv_eq_snd_bot: "is_bot a2 \<Longrightarrow> is_bot (snd (inv_eq res a1 a2))"
-  using inv_eq_reductive2 is_bot_mono by blast
-
-lemma inv_plus_fst_bot: "is_bot a1 \<Longrightarrow> is_bot (fst (inv_plus r a1 a2))"
-  using inv_plus_reductive1 is_bot_mono by blast
-lemma inv_plus_snd_bot: "is_bot a2 \<Longrightarrow> is_bot (snd (inv_plus r a1 a2))"
-  using inv_plus_reductive2 is_bot_mono by blast
-
-lemma inv_minus_fst_bot: "is_bot a1 \<Longrightarrow> is_bot (fst (inv_minus r a1 a2))"
-  using inv_minus_reductive1 is_bot_mono by blast
-lemma inv_minus_snd_bot: "is_bot a2 \<Longrightarrow> is_bot (snd (inv_minus r a1 a2))"
-  using inv_minus_reductive2 is_bot_mono by blast
-
-lemma inv_times_fst_bot: "is_bot a1 \<Longrightarrow> is_bot (fst (inv_times r a1 a2))"
-  using inv_times_reductive1 is_bot_mono by blast
-lemma inv_times_snd_bot: "is_bot a2 \<Longrightarrow> is_bot (snd (inv_times r a1 a2))"
-  using inv_times_reductive2 is_bot_mono by blast
-
-text \<open>Expose the @{term afilter} arithmetic recursions in @{term fst} / @{term snd} form.\<close>
 lemma afilter_Plus_unfold:
   "afilter (Plus e1 e2) a \<sigma> =
      afilter e1 (fst (inv_plus a (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>)))
@@ -782,7 +687,7 @@ next
               \<le> fst (inv_plus a2 (aval_abs e1 \<sigma>2) (aval_abs e2 \<sigma>2))
           \<and> snd (inv_plus a1 (aval_abs e1 \<sigma>1) (aval_abs e2 \<sigma>1))
               \<le> snd (inv_plus a2 (aval_abs e1 \<sigma>2) (aval_abs e2 \<sigma>2))"
-    by (rule inv_plus_mono_conj[OF Plus.prems(1) v1 v2])
+    by (rule inv_plus_mono[OF Plus.prems(1) v1 v2])
   have step: "afilter e2 (snd (inv_plus a1 (aval_abs e1 \<sigma>1) (aval_abs e2 \<sigma>1))) \<sigma>1
             \<le> afilter e2 (snd (inv_plus a2 (aval_abs e1 \<sigma>2) (aval_abs e2 \<sigma>2))) \<sigma>2"
     by (rule Plus.IH(2)[OF conjunct2[OF iv] Plus.prems(2)])
@@ -796,7 +701,7 @@ next
               \<le> fst (inv_minus a2 (aval_abs e1 \<sigma>2) (aval_abs e2 \<sigma>2))
           \<and> snd (inv_minus a1 (aval_abs e1 \<sigma>1) (aval_abs e2 \<sigma>1))
               \<le> snd (inv_minus a2 (aval_abs e1 \<sigma>2) (aval_abs e2 \<sigma>2))"
-    by (rule inv_minus_mono_conj[OF Minus.prems(1) v1 v2])
+    by (rule inv_minus_mono[OF Minus.prems(1) v1 v2])
   have step: "afilter e2 (snd (inv_minus a1 (aval_abs e1 \<sigma>1) (aval_abs e2 \<sigma>1))) \<sigma>1
             \<le> afilter e2 (snd (inv_minus a2 (aval_abs e1 \<sigma>2) (aval_abs e2 \<sigma>2))) \<sigma>2"
     by (rule Minus.IH(2)[OF conjunct2[OF iv] Minus.prems(2)])
@@ -810,7 +715,7 @@ next
               \<le> fst (inv_times a2 (aval_abs e1 \<sigma>2) (aval_abs e2 \<sigma>2))
           \<and> snd (inv_times a1 (aval_abs e1 \<sigma>1) (aval_abs e2 \<sigma>1))
               \<le> snd (inv_times a2 (aval_abs e1 \<sigma>2) (aval_abs e2 \<sigma>2))"
-    by (rule inv_times_mono_conj[OF Times.prems(1) v1 v2])
+    by (rule inv_times_mono[OF Times.prems(1) v1 v2])
   have step: "afilter e2 (snd (inv_times a1 (aval_abs e1 \<sigma>1) (aval_abs e2 \<sigma>1))) \<sigma>1
             \<le> afilter e2 (snd (inv_times a2 (aval_abs e1 \<sigma>2) (aval_abs e2 \<sigma>2))) \<sigma>2"
     by (rule Times.IH(2)[OF conjunct2[OF iv] Times.prems(2)])
@@ -842,18 +747,18 @@ proof -
   have v0: "aval_abs (N 0) \<sigma>1 \<le> aval_abs (N 0) \<sigma>2" by (rule aval_abs_mono[OF assms])
   have iv: "fst (inv_eq (\<not> res) (aval_abs e \<sigma>1) (aval_abs (N 0) \<sigma>1))
               \<le> fst (inv_eq (\<not> res) (aval_abs e \<sigma>2) (aval_abs (N 0) \<sigma>2))"
-    using inv_eq_mono_conj[OF v1 v0] by simp
+    using inv_eq_mono[OF v1 v0] by simp
   show ?thesis by (rule afilter_mono[OF iv assms])
 qed
 
 text \<open>
   The forward gate is monotone in the direction its call sites need: a state
   whose forward value already rules the selected polarity out cannot become
-  feasible by shrinking. \<open>is_bot_mono\<close> settles the bottom case and
+  feasible by shrinking. \<open>is_empty_antimono\<close> settles the bottom case and
   \<open>tobool_mono\<close> the definite-answer case. \<open>tobool_mono\<close> explicitly excludes
   bottom operands -- an author's \<open>tobool\<close> may answer arbitrarily there, since
   \<open>gamma bot = {}\<close> makes every answer vacuously sound -- which is why
-  \<open>feasible\<close> tests \<open>is_bot\<close> first rather than relying on \<open>tobool\<close> to agree
+  \<open>feasible\<close> tests \<open>is_empty\<close> first rather than relying on \<open>tobool\<close> to agree
   across a bottom/non-bottom pair.
 \<close>
 
@@ -862,8 +767,8 @@ lemma feasible_mono:
   shows "feasible e pol sigma2"
 proof -
   have v: "aval_abs e sigma1 \<le> aval_abs e sigma2" by (rule aval_abs_mono[OF assms(1)])
-  have nb1: "\<not> is_bot (aval_abs e sigma1)" using assms(2) by (simp add: feasible_def)
-  have nb2: "\<not> is_bot (aval_abs e sigma2)" using nb1 is_bot_mono[OF v] by blast
+  have nb1: "\<not> is_empty (aval_abs e sigma1)" using assms(2) by (simp add: feasible_def)
+  have nb2: "\<not> is_empty (aval_abs e sigma2)" using nb1 is_empty_antimono[OF v] by blast
   have "tobool (aval_abs e sigma2) \<noteq> Some (\<not> pol)"
   proof
     assume "tobool (aval_abs e sigma2) = Some (\<not> pol)"
@@ -897,23 +802,23 @@ lemma bfilter_mono:
 proof (induction b arbitrary: res \<sigma>1 \<sigma>2)
   case (N n) show ?case
     using bfilter_default_mono[where e = "N n" and res = res, OF N.prems]
-    by (simp add: bfilter.simps Let_def case_prod_beta)
+    by (simp add: Let_def case_prod_beta)
 next
   case (V x) show ?case
     using bfilter_default_mono[where e = "V x" and res = res, OF V.prems]
-    by (simp add: bfilter.simps Let_def case_prod_beta fun_upd_def)
+    by (simp add: Let_def case_prod_beta fun_upd_def)
 next
   case (Plus e1 e2) show ?case
     using bfilter_default_mono[where e = "Plus e1 e2" and res = res, OF Plus.prems]
-    by (simp add: bfilter.simps Let_def case_prod_beta)
+    by (simp add: Let_def case_prod_beta)
 next
   case (Minus e1 e2) show ?case
     using bfilter_default_mono[where e = "Minus e1 e2" and res = res, OF Minus.prems]
-    by (simp add: bfilter.simps Let_def case_prod_beta)
+    by (simp add: Let_def case_prod_beta)
 next
   case (Times e1 e2) show ?case
     using bfilter_default_mono[where e = "Times e1 e2" and res = res, OF Times.prems]
-    by (simp add: bfilter.simps Let_def case_prod_beta)
+    by (simp add: Let_def case_prod_beta)
 next
   case (Not b) show ?case unfolding bfilter.simps by (rule Not.IH[OF Not.prems])
 next
@@ -976,7 +881,7 @@ next
               \<le> fst (inv_less res (aval_abs e1 \<sigma>2) (aval_abs e2 \<sigma>2))
           \<and> snd (inv_less res (aval_abs e1 \<sigma>1) (aval_abs e2 \<sigma>1))
               \<le> snd (inv_less res (aval_abs e1 \<sigma>2) (aval_abs e2 \<sigma>2))"
-    by (rule inv_less_mono_conj[OF v1 v2])
+    by (rule inv_less_mono[OF v1 v2])
   have step: "afilter e2 (snd (inv_less res (aval_abs e1 \<sigma>1) (aval_abs e2 \<sigma>1))) \<sigma>1
             \<le> afilter e2 (snd (inv_less res (aval_abs e1 \<sigma>2) (aval_abs e2 \<sigma>2))) \<sigma>2"
     by (rule afilter_mono[OF conjunct2[OF iv] Less.prems])
@@ -990,7 +895,7 @@ next
               \<le> fst (inv_eq res (aval_abs e1 \<sigma>2) (aval_abs e2 \<sigma>2))
           \<and> snd (inv_eq res (aval_abs e1 \<sigma>1) (aval_abs e2 \<sigma>1))
               \<le> snd (inv_eq res (aval_abs e1 \<sigma>2) (aval_abs e2 \<sigma>2))"
-    by (rule inv_eq_mono_conj[OF v1 v2])
+    by (rule inv_eq_mono[OF v1 v2])
   have step: "afilter e2 (snd (inv_eq res (aval_abs e1 \<sigma>1) (aval_abs e2 \<sigma>1))) \<sigma>1
             \<le> afilter e2 (snd (inv_eq res (aval_abs e1 \<sigma>2) (aval_abs e2 \<sigma>2))) \<sigma>2"
     by (rule afilter_mono[OF conjunct2[OF iv] Eq.prems])
@@ -1034,91 +939,45 @@ text \<open>
   steps: @{term \<open>afilter e a \<sigma>\<close>}/@{term \<open>bfilter b res \<sigma>\<close>} are always \<le> their
   input state. This is what lets a compound expression's re-narrowing of an
   already-settled location never revive it -- each recursive step only shrinks
-  the state further, so once some location is @{const is_bot}, it stays
-  @{const is_bot} through every later step (@{thm is_bot_state_mono}).
+  the state further, so once some location is @{const is_empty}, it stays
+  @{const is_empty} through every later step (@{thm is_empty_state_antimono}).
 \<close>
 
 lemma afilter_reductive: "afilter e a \<sigma> \<le> \<sigma>"
 proof (induction e arbitrary: a \<sigma>)
-  case (N n)
-  then show ?case by simp
+  case (V x) then show ?case by (auto simp: le_fun_def)
 next
-  case (V x)
-  show ?case
-    unfolding afilter.simps
-  proof (rule le_funI)
-    fix y show "(\<sigma>(x := intersect a (\<sigma> x))) y \<le> \<sigma> y"
-      by (cases "y = x") (auto intro: intersect_reductive2)
-  qed
+  case (Plus e1 e2) then show ?case
+    unfolding afilter_Plus_unfold split_beta by (blast intro: order_trans)
 next
-  case (Plus e1 e2)
-  have h2: "afilter e2 (snd (inv_plus a (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>))) \<sigma> \<le> \<sigma>"
-    by (rule Plus.IH(2))
-  have h1: "afilter e1 (fst (inv_plus a (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>)))
-              (afilter e2 (snd (inv_plus a (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>))) \<sigma>)
-            \<le> afilter e2 (snd (inv_plus a (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>))) \<sigma>"
-    by (rule Plus.IH(1))
-  show ?case unfolding afilter_Plus_unfold by (rule order_trans[OF h1 h2])
+  case (Minus e1 e2) then show ?case
+    unfolding afilter_Minus_unfold split_beta by (blast intro: order_trans)
 next
-  case (Minus e1 e2)
-  have h2: "afilter e2 (snd (inv_minus a (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>))) \<sigma> \<le> \<sigma>"
-    by (rule Minus.IH(2))
-  have h1: "afilter e1 (fst (inv_minus a (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>)))
-              (afilter e2 (snd (inv_minus a (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>))) \<sigma>)
-            \<le> afilter e2 (snd (inv_minus a (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>))) \<sigma>"
-    by (rule Minus.IH(1))
-  show ?case unfolding afilter_Minus_unfold by (rule order_trans[OF h1 h2])
-next
-  case (Times e1 e2)
-  have h2: "afilter e2 (snd (inv_times a (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>))) \<sigma> \<le> \<sigma>"
-    by (rule Times.IH(2))
-  have h1: "afilter e1 (fst (inv_times a (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>)))
-              (afilter e2 (snd (inv_times a (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>))) \<sigma>)
-            \<le> afilter e2 (snd (inv_times a (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>))) \<sigma>"
-    by (rule Times.IH(1))
-  show ?case unfolding afilter_Times_unfold by (rule order_trans[OF h1 h2])
-next
-  case (Less e1 e2) show ?case by simp
-next
-  case (Eq e1 e2) show ?case by simp
-next
-  case (Not e) show ?case by simp
-next
-  case (And e1 e2) show ?case by simp
-next
-  case (Or e1 e2) show ?case by simp
-qed
+  case (Times e1 e2) then show ?case
+    unfolding afilter_Times_unfold split_beta by (blast intro: order_trans)
+qed simp_all
 
 text \<open>
   Reductiveness companion to \<open>bfilter_default_sound\<close>: the \<open>inv_eq\<close>-against-\<open>0\<close>
   reduction is exactly an \<open>afilter\<close> call, so reductiveness falls straight out
   of \<open>afilter_reductive\<close> with no further argument.
 \<close>
-lemma bfilter_default_reductive:
-  "afilter e (fst (inv_eq (\<not> res) (aval_abs e \<sigma>) (aval_abs (N 0) \<sigma>))) \<sigma> \<le> \<sigma>"
-  by (rule afilter_reductive)
-
 lemma bfilter_reductive: "bfilter b res \<sigma> \<le> \<sigma>"
 proof (induction b arbitrary: res \<sigma>)
-  case (N n) show ?case
-    using bfilter_default_reductive[where e = "N n" and res = res]
-    by (simp add: bfilter.simps Let_def case_prod_beta)
+  case (N n) then show ?case
+    unfolding bfilter.simps Let_def split_beta by (rule afilter_reductive)
 next
-  case (V x) show ?case
-    using bfilter_default_reductive[where e = "V x" and res = res]
-    by (simp add: bfilter.simps Let_def case_prod_beta fun_upd_def)
+  case (V x) then show ?case
+    unfolding bfilter.simps Let_def split_beta by (rule afilter_reductive)
 next
-  case (Plus e1 e2) show ?case
-    using bfilter_default_reductive[where e = "Plus e1 e2" and res = res]
-    by (simp add: bfilter.simps Let_def case_prod_beta)
+  case (Plus e1 e2) then show ?case
+    unfolding bfilter.simps Let_def split_beta by (blast intro: afilter_reductive)
 next
-  case (Minus e1 e2) show ?case
-    using bfilter_default_reductive[where e = "Minus e1 e2" and res = res]
-    by (simp add: bfilter.simps Let_def case_prod_beta)
+  case (Minus e1 e2) then show ?case
+    unfolding bfilter.simps Let_def split_beta by (blast intro: afilter_reductive)
 next
-  case (Times e1 e2) show ?case
-    using bfilter_default_reductive[where e = "Times e1 e2" and res = res]
-    by (simp add: bfilter.simps Let_def case_prod_beta)
+  case (Times e1 e2) then show ?case
+    unfolding bfilter.simps Let_def split_beta by (blast intro: afilter_reductive)
 next
   case (Not b)
   show ?case unfolding bfilter.simps by (rule Not.IH)

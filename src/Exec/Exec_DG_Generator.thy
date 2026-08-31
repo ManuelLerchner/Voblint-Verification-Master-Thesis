@@ -264,7 +264,7 @@ proof -
   have outside_le: "\<And>x. location_of gs x \<notin> set (locations_of v) \<Longrightarrow>
       locals (eq (placed_abs_dg_gen_of gs owner_of keep_local publish_side transfer_abs enter_abs g
         bot0_abs s0d_abs s0g_abs) (v, ()) sigma_abs) x \<le> top_val"
-    by (simp add: abs_eq project_abs_on_def project_component_def top_ge)
+    by (simp add: abs_eq project_abs_on_def combine_env_def top_ge)
   have local_le: "locals (eq (placed_abs_dg_gen_of gs owner_of keep_local publish_side transfer_abs enter_abs g
         bot0_abs s0d_abs s0g_abs) (v, ()) sigma_abs) \<le> locals (sigma_abs (Inl (v, ())))"
     using local_bound_of_dg_refines[
@@ -274,7 +274,7 @@ proof -
   have side_outside_le: "\<And>x. location_of gs x \<notin> set (locations_of v) \<Longrightarrow>
       globs (sides_of_rhs (placed_abs_dg_gen_of gs owner_of keep_local publish_side transfer_abs enter_abs g
         bot0_abs s0d_abs s0g_abs (v, ())) sigma_abs (Inr ())) x \<le> bot"
-    by (simp add: abs_sides project_abs_on_def project_component_def side_outside_raw)
+    by (simp add: abs_sides project_abs_on_def combine_env_def side_outside_raw)
   have dg_ref_side: "\<And>location. location \<in> set (locations_of v) \<Longrightarrow>
       lookup_resolved_st_q (globs (sides_of_rhs (placed_dg_gen_of_strict gs owner_of locations_of keep_local publish_side
           transfer_st enter_st g bot0 s0d s0g (v, ())) sigma_exec (Inr ()))) location =

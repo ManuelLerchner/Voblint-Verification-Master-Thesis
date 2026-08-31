@@ -365,9 +365,10 @@ proof unfold_locales
     using meet_sign_sound[of n a b] H1 H2 by simp
 next
   fix s :: store and e :: exp and \<sigma> :: "vname \<Rightarrow> sign"
-  assume H: "\<forall>x. s x \<in> gamma (\<sigma> x)"
+  assume H: "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
+  have H': "\<forall>x. s x \<in> gamma (\<sigma> x)" using gamma_stateD[OF H] by blast
   show "aval e s \<in> gamma (aval_sign e \<sigma>)"
-    using aval_sign_sound[of s \<sigma> e] H by simp
+    using aval_sign_sound[of s \<sigma> e] H' by simp
 next
   fix n1 n2 :: int and a1 a2 :: sign and res :: bool
   assume H1: "n1 \<in> gamma a1" and H2: "n2 \<in> gamma a2" and H3: "(n1 < n2) = res"
@@ -409,17 +410,17 @@ next
   fix x1 x2 y1 y2 :: sign and res :: bool
   assume A: "x1 \<le> x2" and B: "y1 \<le> y2"
   show "le_pair (inv_less_sign res x1 y1) (inv_less_sign res x2 y2)"
-    using inv_less_sign_mono[OF A B] by (simp add: le_pair_def)
+    using inv_less_sign_mono[OF A B] by simp
 next
   fix x1 x2 y1 y2 :: sign and res :: bool
   assume A: "x1 \<le> x2" and B: "y1 \<le> y2"
   show "le_pair (inv_eq_sign res x1 y1) (inv_eq_sign res x2 y2)"
-    using inv_eq_sign_mono[OF A B] by (simp add: le_pair_def)
+    using inv_eq_sign_mono[OF A B] by simp
 next
   fix r1 r2 x1 x2 y1 y2 :: sign
   assume A: "x1 \<le> x2" and B: "y1 \<le> y2"
   show "le_pair (inv_conservative r1 x1 y1) (inv_conservative r2 x2 y2)"
-    using A B by (simp add: inv_conservative_def le_pair_def)
+    using A B by (simp add: inv_conservative_def)
 next
   fix a b :: sign
   show "meet_sign a b \<le> a" by (rule meet_sign_le1)
@@ -427,20 +428,8 @@ next
   fix a b :: sign
   show "meet_sign a b \<le> b" by (rule meet_sign_le2)
 next
-  fix res :: bool and a1 a2 :: sign
-  show "le_pair (inv_less_sign res a1 a2) (a1, a2)"
-    using inv_less_sign_reductive1 inv_less_sign_reductive2 by (simp add: le_pair_def)
-next
-  fix res :: bool and a1 a2 :: sign
-  show "le_pair (inv_eq_sign res a1 a2) (a1, a2)"
-    using inv_eq_sign_reductive1 inv_eq_sign_reductive2 by (simp add: le_pair_def)
-next
-  fix r a1 a2 :: sign
-  show "le_pair (inv_conservative r a1 a2) (a1, a2)"
-    by (simp add: inv_conservative_def le_pair_def)
-next
   fix p1 p2 :: sign and bv :: bool
-  assume "\<not> is_bot p1" and "p1 \<le> p2" and "sign_tobool p2 = Some bv"
+  assume "\<not> is_empty p1" and "p1 \<le> p2" and "sign_tobool p2 = Some bv"
   then show "sign_tobool p1 = Some bv" using sign_tobool_mono by simp
 qed
 
@@ -458,12 +447,11 @@ lemmas bfilter_sign_st_commute = sign_backward_domain.bfilter_st_commute
 lemmas branch_sign_st_commute = sign_backward_domain.branch_st_commute
 
 text \<open>
-  \<open>sign_eq_true_of_less\<close> sits two \<open>sublocale\<close> layers below \<open>backward_domain\<close>
-  (\<open>backward_domain \<subseteq> derived_less_queries \<subseteq> derived_eq_true_from_less\<close>), one
-  layer deeper than \<open>sign_less_true_of_inv\<close>/\<open>sign_less_false_of_inv\<close> or
-  \<open>sign_eq_false_of_intersection\<close>. The automatic code-equation chain the \<open>defines\<close>
-  clause above sets up does not reach that deep, so this restates the
-  definition explicitly in terms of the already-executable
+  \<open>sign_eq_true_of_less\<close> is \<open>sign_backward_domain.eq_true\<close>, defined in
+  \<^locale>\<open>backward_domain\<close>'s own context off \<open>less_false\<close> in both directions
+  (\<^theory>\<open>Voblint_Domain.Abstract_Numeric_Queries\<close>). The automatic
+  code-equation chain the \<open>defines\<close> clause above sets up does not unfold that
+  definition, so this restates it explicitly in terms of the already-executable
   \<open>sign_less_false_of_inv\<close>, tagged \<open>[code]\<close> directly.
 \<close>
 

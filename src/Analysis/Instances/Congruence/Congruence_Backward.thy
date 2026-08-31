@@ -902,7 +902,7 @@ lemma inv_less_congruence_mono:
     "le_pair
       (inv_less_congruence result a1 b1)
       (inv_less_congruence result a2 b2)"
-  using assms by (simp add: inv_less_congruence_def le_pair_def)
+  using assms by (simp add: inv_less_congruence_def)
 
 lemma inv_eq_congruence_mono:
   assumes "a1 <= a2" and "b1 <= b2"
@@ -911,7 +911,7 @@ lemma inv_eq_congruence_mono:
       (inv_eq_congruence result a1 b1)
       (inv_eq_congruence result a2 b2)"
   using assms intersect_congruence_mono
-  by (cases result) (auto simp: le_pair_def)
+  by (cases result) auto
 
 lemma inv_plus_congruence_mono:
   assumes "r1 <= r2" and "a1 <= a2" and "b1 <= b2"
@@ -920,7 +920,7 @@ lemma inv_plus_congruence_mono:
       (inv_plus_congruence r1 a1 b1)
       (inv_plus_congruence r2 a2 b2)"
   using assms congruence_minus_mono intersect_congruence_mono
-  by (auto simp: inv_plus_congruence_def le_pair_def)
+  by (auto simp: inv_plus_congruence_def)
 
 lemma inv_minus_congruence_mono:
   assumes "r1 <= r2" and "a1 <= a2" and "b1 <= b2"
@@ -930,7 +930,7 @@ lemma inv_minus_congruence_mono:
       (inv_minus_congruence r2 a2 b2)"
   using assms congruence_plus_mono congruence_minus_mono
     intersect_congruence_mono
-  by (auto simp: inv_minus_congruence_def le_pair_def)
+  by (auto simp: inv_minus_congruence_def)
 
 lemma inv_times_congruence_mono:
   assumes "r1 <= r2" and "a1 <= a2" and "b1 <= b2"
@@ -939,31 +939,33 @@ lemma inv_times_congruence_mono:
       (inv_times_congruence r1 a1 b1)
       (inv_times_congruence r2 a2 b2)"
   using assms inverse_times_candidate_mono intersect_congruence_mono
-  by (auto simp: inv_times_congruence_def le_pair_def)
+  by (auto simp: inv_times_congruence_def)
 
 lemma inv_less_congruence_reductive:
   "le_pair (inv_less_congruence result a b) (a, b)"
-  by (simp add: inv_less_congruence_def le_pair_def)
+  by (simp add: inv_less_congruence_def)
 
 lemma inv_eq_congruence_reductive:
   "le_pair (inv_eq_congruence result a b) (a, b)"
   using intersect_congruence_le1 intersect_congruence_le2
-  by (cases result) (auto simp: le_pair_def)
+  by (cases result) auto
 
 lemma inv_plus_congruence_reductive:
   "le_pair (inv_plus_congruence r a b) (a, b)"
-  by (simp add: inv_plus_congruence_def le_pair_def
+  by (simp add: inv_plus_congruence_def
         intersect_congruence_le1)
 
 lemma inv_minus_congruence_reductive:
   "le_pair (inv_minus_congruence r a b) (a, b)"
-  by (simp add: inv_minus_congruence_def le_pair_def
+  by (simp add: inv_minus_congruence_def
         intersect_congruence_le1)
 
 lemma inv_times_congruence_reductive:
   "le_pair (inv_times_congruence r a b) (a, b)"
-  by (simp add: inv_times_congruence_def le_pair_def
+  by (simp add: inv_times_congruence_def
         intersect_congruence_le1)
+
+
 
 
 
@@ -990,9 +992,10 @@ proof unfold_locales
 next
   fix s :: store and e :: exp
     and sigma :: "vname => congruence"
-  assume H: "\<forall>x. s x : gamma (sigma x)"
+  assume H: "s \<in> \<lbrakk>sigma\<rbrakk>"
+  have H': "\<forall>x. s x : gamma (sigma x)" using gamma_stateD[OF H] by blast
   show "aval e s : gamma (aval_congruence e sigma)"
-    by (rule congruence_arith.aval_dom_sound[OF H])
+    by (rule congruence_arith.aval_dom_sound[OF H'])
 next
   fix n1 n2 :: int and a1 a2 :: congruence and result :: bool
   assume H1: "n1 : gamma a1"
@@ -1116,28 +1119,8 @@ next
   show "intersect_congruence a b <= b"
     by (rule intersect_congruence_le2)
 next
-  fix result :: bool and a b :: congruence
-  show "le_pair (inv_less_congruence result a b) (a, b)"
-    by (rule inv_less_congruence_reductive)
-next
-  fix result :: bool and a b :: congruence
-  show "le_pair (inv_eq_congruence result a b) (a, b)"
-    by (rule inv_eq_congruence_reductive)
-next
-  fix r a b :: congruence
-  show "le_pair (inv_plus_congruence r a b) (a, b)"
-    by (rule inv_plus_congruence_reductive)
-next
-  fix r a b :: congruence
-  show "le_pair (inv_minus_congruence r a b) (a, b)"
-    by (rule inv_minus_congruence_reductive)
-next
-  fix r a b :: congruence
-  show "le_pair (inv_times_congruence r a b) (a, b)"
-    by (rule inv_times_congruence_reductive)
-next
   fix p1 p2 :: congruence and bv :: bool
-  assume "\<not> is_bot p1" and "p1 <= p2" and "congruence_tobool p2 = Some bv"
+  assume "\<not> is_empty p1" and "p1 <= p2" and "congruence_tobool p2 = Some bv"
   then show "congruence_tobool p1 = Some bv" using congruence_tobool_mono by simp
 qed
 

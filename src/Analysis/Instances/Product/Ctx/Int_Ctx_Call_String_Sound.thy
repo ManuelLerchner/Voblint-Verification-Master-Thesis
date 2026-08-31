@@ -34,33 +34,33 @@ subsection \<open>The routed equation system and its executable solution\<close>
 definition ics_eqs ::
     "nat \<Rightarrow> refine_mode \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> (int_dom exec_dg_st \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list
        \<Rightarrow> (pp \<times> call_string, call_string_gk, (int_dom exec_dg_st lifted, int_dom exec_dg_st lifted) dg_state) eqsT" where
-  "ics_eqs k mode gs is_bot_pred Pi ps =
+  "ics_eqs k mode gs empty_pred Pi ps =
      side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_addr_list (\<lambda>_. Call_String_Context.Global)
        (cs_route k)
-       (routed_cmb_g_contribution (ictx_spec mode is_bot_pred gs)
+       (routed_cmb_g_contribution (ictx_spec mode empty_pred gs)
           Call_String_Context.Global Call_String_Context.Seed
           (static_resolve (compile_prog Pi ps)))
        (routed_extra_g Call_String_Context.Seed Call_String_Context.Global)
-       (compile_prog Pi ps) (ictx_spec mode is_bot_pred gs) Bot (Lifted cinit_int_dom_st) Bot"
+       (compile_prog Pi ps) (ictx_spec mode empty_pred gs) Bot (Lifted cinit_int_dom_st) Bot"
 
 definition ics_sol ::
     "nat \<Rightarrow> refine_mode \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> (int_dom exec_dg_st \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list
        \<Rightarrow> (pp \<times> call_string) set \<times> (pp \<times> call_string + call_string_gk \<Rightarrow> (int_dom exec_dg_st lifted, int_dom exec_dg_st lifted) dg_state)" where
-  "ics_sol k mode gs is_bot_pred Pi ps =
-     TD_side_always_join_Interp_solve (ics_eqs k mode gs is_bot_pred Pi ps)
+  "ics_sol k mode gs empty_pred Pi ps =
+     TD_side_always_join_Interp_solve (ics_eqs k mode gs empty_pred Pi ps)
        (cfg_exit (compile_prog Pi ps), [])"
 
 definition ics_terminates ::
     "nat \<Rightarrow> refine_mode \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> (int_dom exec_dg_st \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list
        \<Rightarrow> bool" where
-  "ics_terminates k mode gs is_bot_pred Pi ps =
+  "ics_terminates k mode gs empty_pred Pi ps =
      TD_side_always_join_Interp.solve_dom TYPE(call_string_gk) TYPE((int_dom exec_dg_st lifted, int_dom exec_dg_st lifted) dg_state)
-       (ics_eqs k mode gs is_bot_pred Pi ps) (cfg_exit (compile_prog Pi ps), [])"
+       (ics_eqs k mode gs empty_pred Pi ps) (cfg_exit (compile_prog Pi ps), [])"
 
 lemma ics_terminates_via_solve_c:
-  assumes "TD_side_always_join_Interp_solve_c (ics_eqs k mode gs is_bot_pred Pi ps)
+  assumes "TD_side_always_join_Interp_solve_c (ics_eqs k mode gs empty_pred Pi ps)
              (cfg_exit (compile_prog Pi ps), []) \<noteq> None"
-  shows "ics_terminates k mode gs is_bot_pred Pi ps"
+  shows "ics_terminates k mode gs empty_pred Pi ps"
   unfolding ics_terminates_def
   by (rule TD_side_always_join_Interp.solve_dom_of_solve_c[OF assms])
 
@@ -77,21 +77,21 @@ text \<open>
 definition ics_sol_warrow ::
     "nat \<Rightarrow> refine_mode \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> (int_dom exec_dg_st \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list
        \<Rightarrow> (pp \<times> call_string) set \<times> (pp \<times> call_string + call_string_gk \<Rightarrow> (int_dom exec_dg_st lifted, int_dom exec_dg_st lifted) dg_state)" where
-  "ics_sol_warrow k mode gs is_bot_pred Pi ps =
-     TD_side_warrowing_apinis_Interp_solve (ics_eqs k mode gs is_bot_pred Pi ps)
+  "ics_sol_warrow k mode gs empty_pred Pi ps =
+     TD_side_warrowing_apinis_Interp_solve (ics_eqs k mode gs empty_pred Pi ps)
        (cfg_exit (compile_prog Pi ps), [])"
 
 definition ics_terminates_warrow ::
     "nat \<Rightarrow> refine_mode \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> (int_dom exec_dg_st \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list
        \<Rightarrow> bool" where
-  "ics_terminates_warrow k mode gs is_bot_pred Pi ps =
+  "ics_terminates_warrow k mode gs empty_pred Pi ps =
      TD_side_warrowing_apinis_Interp.solve_dom TYPE(call_string_gk) TYPE((int_dom exec_dg_st lifted, int_dom exec_dg_st lifted) dg_state)
-       (ics_eqs k mode gs is_bot_pred Pi ps) (cfg_exit (compile_prog Pi ps), [])"
+       (ics_eqs k mode gs empty_pred Pi ps) (cfg_exit (compile_prog Pi ps), [])"
 
 lemma ics_terminates_warrow_via_solve_c:
-  assumes "TD_side_warrowing_apinis_Interp_solve_c (ics_eqs k mode gs is_bot_pred Pi ps)
+  assumes "TD_side_warrowing_apinis_Interp_solve_c (ics_eqs k mode gs empty_pred Pi ps)
              (cfg_exit (compile_prog Pi ps), []) \<noteq> None"
-  shows "ics_terminates_warrow k mode gs is_bot_pred Pi ps"
+  shows "ics_terminates_warrow k mode gs empty_pred Pi ps"
   unfolding ics_terminates_warrow_def
   by (rule TD_side_warrowing_apinis_Interp.solve_dom_of_solve_c[OF assms])
 
@@ -111,12 +111,12 @@ lemma ics_route_commute: "cs_route k u c' d ca = cs_route k u c' (f d) ca"
 
 context
   fixes mode :: refine_mode and gs :: "vname \<Rightarrow> bool"
-    and is_bot_pred :: "int_dom exec_dg_st \<Rightarrow> bool" and k :: nat
-  assumes exact: "\<And>s. is_bot_pred s = is_bot_state (fun_of_resolved_st_q_for gs s)"
+    and empty_pred :: "int_dom exec_dg_st \<Rightarrow> bool" and k :: nat
+  assumes exact: "\<And>s. empty_pred s = is_empty_state (fun_of_resolved_st_q_for gs s)"
 begin
 
 interpretation int_cs: routed_domain_exec
-  gs is_bot_pred "int_tf_st_for mode gs" "int_dom_enter_st_for mode gs" "int_tf_for mode gs"
+  gs empty_pred "int_tf_st_for mode gs" "int_dom_enter_st_for mode gs" "int_tf_for mode gs"
   Call_String_Context.Global Call_String_Context.Seed "cs_route k" "cs_route k"
   static_resolve static_resolve
   by unfold_locales
@@ -130,23 +130,23 @@ end
 subsection \<open>The certified executable post-solution, generic per compiled program\<close>
 
 context
-  fixes mode :: refine_mode and gs :: "vname \<Rightarrow> bool" and is_bot_pred :: "int_dom exec_dg_st \<Rightarrow> bool"
+  fixes mode :: refine_mode and gs :: "vname \<Rightarrow> bool" and empty_pred :: "int_dom exec_dg_st \<Rightarrow> bool"
     and Pi :: proc_table and ps :: "pname list" and k :: nat
-  assumes solves: "ics_terminates k mode gs is_bot_pred Pi ps"
-    and exact: "\<And>s. is_bot_pred s = is_bot_state (fun_of_resolved_st_q_for gs s)"
+  assumes solves: "ics_terminates k mode gs empty_pred Pi ps"
+    and exact: "\<And>s. empty_pred s = is_empty_state (fun_of_resolved_st_q_for gs s)"
 begin
 
 lemma ics_solve_dom:
   "TD_side_always_join_Interp.solve_dom TYPE(call_string_gk) TYPE((int_dom exec_dg_st lifted, int_dom exec_dg_st lifted) dg_state)
-     (ics_eqs k mode gs is_bot_pred Pi ps) (cfg_exit (compile_prog Pi ps), [])"
+     (ics_eqs k mode gs empty_pred Pi ps) (cfg_exit (compile_prog Pi ps), [])"
   using solves[unfolded ics_terminates_def] .
 
 lemma ics_pp_st:
-  "part_post_solution (ics_eqs k mode gs is_bot_pred Pi ps) (cfg_exit (compile_prog Pi ps), [])
-     (snd (ics_sol k mode gs is_bot_pred Pi ps)) (fst (ics_sol k mode gs is_bot_pred Pi ps))"
+  "part_post_solution (ics_eqs k mode gs empty_pred Pi ps) (cfg_exit (compile_prog Pi ps), [])
+     (snd (ics_sol k mode gs empty_pred Pi ps)) (fst (ics_sol k mode gs empty_pred Pi ps))"
   using TD_side_always_join_Interp.partial_post_solution
-          [OF ics_solve_dom, of "fst (ics_sol k mode gs is_bot_pred Pi ps)"
-             "snd (ics_sol k mode gs is_bot_pred Pi ps)"]
+          [OF ics_solve_dom, of "fst (ics_sol k mode gs empty_pred Pi ps)"
+             "snd (ics_sol k mode gs empty_pred Pi ps)"]
   unfolding ics_sol_def by simp
 
 text \<open>The solver's post-solution, for the unbuffered routed generator at the executable
@@ -156,48 +156,48 @@ theorem ics_pp_routed:
   "part_post_solution
      (side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. Call_String_Context.Global)
         (cs_route k)
-        (routed_cmb_g (ictx_spec mode is_bot_pred gs) Call_String_Context.Global
+        (routed_cmb_g (ictx_spec mode empty_pred gs) Call_String_Context.Global
            Call_String_Context.Seed (static_resolve (compile_prog Pi ps)))
         (routed_extra_g Call_String_Context.Seed Call_String_Context.Global)
-        (compile_prog Pi ps) (ictx_spec mode is_bot_pred gs) Bot (Lifted cinit_int_dom_st) Bot)
+        (compile_prog Pi ps) (ictx_spec mode empty_pred gs) Bot (Lifted cinit_int_dom_st) Bot)
      (cfg_exit (compile_prog Pi ps), [])
-     (snd (ics_sol k mode gs is_bot_pred Pi ps)) (fst (ics_sol k mode gs is_bot_pred Pi ps))"
+     (snd (ics_sol k mode gs empty_pred Pi ps)) (fst (ics_sol k mode gs empty_pred Pi ps))"
   using ics_pp_st unfolding ics_eqs_def ictx_spec_def by (rule int_cs_pp_st_gen[OF exact])
 end
 
 subsection \<open>The certified executable post-solution under warrowing\<close>
 
 context
-  fixes mode :: refine_mode and gs :: "vname \<Rightarrow> bool" and is_bot_pred :: "int_dom exec_dg_st \<Rightarrow> bool"
+  fixes mode :: refine_mode and gs :: "vname \<Rightarrow> bool" and empty_pred :: "int_dom exec_dg_st \<Rightarrow> bool"
     and Pi :: proc_table and ps :: "pname list" and k :: nat
-  assumes solves: "ics_terminates_warrow k mode gs is_bot_pred Pi ps"
-    and exact: "\<And>s. is_bot_pred s = is_bot_state (fun_of_resolved_st_q_for gs s)"
+  assumes solves: "ics_terminates_warrow k mode gs empty_pred Pi ps"
+    and exact: "\<And>s. empty_pred s = is_empty_state (fun_of_resolved_st_q_for gs s)"
 begin
 
 lemma ics_solve_dom_warrow:
   "TD_side_warrowing_apinis_Interp.solve_dom TYPE(call_string_gk) TYPE((int_dom exec_dg_st lifted, int_dom exec_dg_st lifted) dg_state)
-     (ics_eqs k mode gs is_bot_pred Pi ps) (cfg_exit (compile_prog Pi ps), [])"
+     (ics_eqs k mode gs empty_pred Pi ps) (cfg_exit (compile_prog Pi ps), [])"
   using solves[unfolded ics_terminates_warrow_def] .
 
 lemma ics_pp_st_warrow:
-  "part_post_solution (ics_eqs k mode gs is_bot_pred Pi ps) (cfg_exit (compile_prog Pi ps), [])
-     (snd (ics_sol_warrow k mode gs is_bot_pred Pi ps)) (fst (ics_sol_warrow k mode gs is_bot_pred Pi ps))"
+  "part_post_solution (ics_eqs k mode gs empty_pred Pi ps) (cfg_exit (compile_prog Pi ps), [])
+     (snd (ics_sol_warrow k mode gs empty_pred Pi ps)) (fst (ics_sol_warrow k mode gs empty_pred Pi ps))"
   using TD_side_warrowing_apinis_Interp.partial_post_solution
-          [OF ics_solve_dom_warrow, of "fst (ics_sol_warrow k mode gs is_bot_pred Pi ps)"
-             "snd (ics_sol_warrow k mode gs is_bot_pred Pi ps)"]
+          [OF ics_solve_dom_warrow, of "fst (ics_sol_warrow k mode gs empty_pred Pi ps)"
+             "snd (ics_sol_warrow k mode gs empty_pred Pi ps)"]
   unfolding ics_sol_warrow_def by simp
 
 theorem ics_pp_routed_warrow:
   "part_post_solution
      (side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. Call_String_Context.Global)
         (cs_route k)
-        (routed_cmb_g (ictx_spec mode is_bot_pred gs) Call_String_Context.Global
+        (routed_cmb_g (ictx_spec mode empty_pred gs) Call_String_Context.Global
            Call_String_Context.Seed (static_resolve (compile_prog Pi ps)))
         (routed_extra_g Call_String_Context.Seed Call_String_Context.Global)
-        (compile_prog Pi ps) (ictx_spec mode is_bot_pred gs) Bot (Lifted cinit_int_dom_st) Bot)
+        (compile_prog Pi ps) (ictx_spec mode empty_pred gs) Bot (Lifted cinit_int_dom_st) Bot)
      (cfg_exit (compile_prog Pi ps), [])
-     (snd (ics_sol_warrow k mode gs is_bot_pred Pi ps))
-     (fst (ics_sol_warrow k mode gs is_bot_pred Pi ps))"
+     (snd (ics_sol_warrow k mode gs empty_pred Pi ps))
+     (fst (ics_sol_warrow k mode gs empty_pred Pi ps))"
   using ics_pp_st_warrow unfolding ics_eqs_def ictx_spec_def by (rule int_cs_pp_st_gen[OF exact])
 end
 

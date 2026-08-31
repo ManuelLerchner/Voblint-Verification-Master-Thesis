@@ -89,7 +89,7 @@ text \<open>
   per-node state through \<^const>\<open>analyse_interval_td_result_for\<close>'s
   \<^type>\<open>analysis_result\<close> table via \<^const>\<open>lookup_context\<close>, mirroring
   \<open>Sign_Checks\<close>'s \<open>analyse_sign_report_for\<close> exactly, including its choice to
-  classify an \<^const>\<open>Unreachable\<close> point at \<^const>\<open>bot\<close> -- the same value
+  classify an \<^const>\<open>Bot\<close> point at \<^const>\<open>bot\<close> -- the same value
   \<^const>\<open>classify_checks\<close> always fed such a node -- rather than introducing a
   fourth, \<open>Dead\<close> outcome \<open>check_result\<close> does not carry. Reusing the exact
   same warrowing/\<open>analyse_interval_td\<close> naming keeps the
@@ -121,7 +121,7 @@ text \<open>
   \<open>analyse_interval_td_report\<close>, via \<^const>\<open>classify_checks_with_state\<close>: same
   result table, with the per-check Interval environment attached to each
   report entry instead of discarded, and an exact \<open>unreachable\<close> flag read
-  straight off \<^const>\<open>lookup_context\<close>'s \<^const>\<open>Unreachable\<close>/\<^const>\<open>Reachable\<close>
+  straight off \<^const>\<open>lookup_context\<close>'s \<^const>\<open>Bot\<close>/\<^const>\<open>Lifted\<close>
   case split -- exact because \<open>normalize_point_canonicalize_lift_eq_old\<close>
   (\<^theory>\<open>Voblint_Core.Analysis_Result\<close>) is precisely the fact that this
   reading agrees with the older \<^const>\<open>resolved_st_q_lifted_is_bot_for\<close>
@@ -135,8 +135,8 @@ definition analyse_interval_td_report_for_with_state ::
      (let r = analyse_interval_td_result_for gs p
       in classify_checks_with_state (prog_cfg p)
            (\<lambda>v. case lookup_context r v () of
-                  Unreachable \<Rightarrow> (True, bot)
-                | Reachable st \<Rightarrow> (False, st))
+                  Bot \<Rightarrow> (True, bot)
+                | Lifted st \<Rightarrow> (False, st))
            (\<lambda>c (_, s). interval_classify_check c s))"
 
 text \<open>Convenience instance at \<^const>\<open>declared_global\<close> \<open>p\<close>, matching

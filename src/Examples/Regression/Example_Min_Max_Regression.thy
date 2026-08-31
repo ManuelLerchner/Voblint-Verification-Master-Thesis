@@ -63,7 +63,7 @@ definition min_max_demo_parity_env :: "vname \<Rightarrow> parity" where
      (case lookup_context
              (analyse_parity_result_for (declared_global min_max_demo_prog) min_max_demo_prog)
              (cfg_exit (prog_cfg min_max_demo_prog)) () of
-        Unreachable \<Rightarrow> bot | Reachable st \<Rightarrow> st)"
+        Bot \<Rightarrow> bot | Lifted st \<Rightarrow> st)"
 
 lemma min_max_demo_parity_z_odd:
   "min_max_demo_parity_env (STR ''z'') = POdd"

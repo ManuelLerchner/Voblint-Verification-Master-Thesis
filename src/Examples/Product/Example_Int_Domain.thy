@@ -11,7 +11,7 @@ text \<open>
 \<close>
 
 lemma sign_interval_contradiction:
-  "is_bot (int_dom_sip SPos (Ivl (Fin (-2)) (Fin (-1))) PTop)"
+  "is_empty (int_dom_sip SPos (Ivl (Fin (-2)) (Fin (-1))) PTop)"
   by eval
 
 lemma sign_interval_components_inhabited:
@@ -28,7 +28,7 @@ proof -
 qed
 
 lemma interval_parity_contradiction:
-  "is_bot (int_dom_sip STop (Ivl (Fin 0) (Fin 0)) POdd)"
+  "is_empty (int_dom_sip STop (Ivl (Fin 0) (Fin 0)) POdd)"
   by eval
 
 lemma interval_parity_components_inhabited:
@@ -45,7 +45,7 @@ proof -
 qed
 
 lemma compatible_components_nonbottom:
-  "\<not> is_bot (int_dom_sip SNonNeg (Ivl (Fin 0) (Fin 1)) POdd)"
+  "\<not> is_empty (int_dom_sip SNonNeg (Ivl (Fin 0) (Fin 1)) POdd)"
   by eval
 
 lemma compatible_components_witness:
@@ -60,7 +60,7 @@ text \<open>
 \<close>
 
 lemma interval_congruence_contradiction:
-  "is_bot
+  "is_empty
     (int_dom_sipc
       STop
       (Ivl (Fin 0) (Fin 0))
@@ -69,7 +69,7 @@ lemma interval_congruence_contradiction:
   by eval
 
 lemma parity_congruence_contradiction:
-  "is_bot
+  "is_empty
     (int_dom_sipc
       STop
       (top :: ivl)
@@ -91,7 +91,7 @@ proof -
 qed
 
 lemma compatible_four_components_nonbottom:
-  "\<not> is_bot
+  "\<not> is_empty
     (int_dom_sipc
       SNonNeg
       (Ivl (Fin 0) (Fin 3))
@@ -135,7 +135,7 @@ lemma parity_exports_congruence_fact:
   by eval
 
 lemma congruence_refinement_detects_contradiction:
-  "is_bot
+  "is_empty
     (refine_congruence
       (int_dom_sipc
         STop

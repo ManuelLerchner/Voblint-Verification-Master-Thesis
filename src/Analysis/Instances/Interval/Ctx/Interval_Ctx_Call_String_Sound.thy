@@ -35,31 +35,31 @@ text \<open>
 
 definition cs_call_string_eqs ::
     "nat \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> (ivl exec_dg_st \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> (pp \<times> call_string, call_string_gk, (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state) eqsT" where
-  "cs_call_string_eqs k gs is_bot_pred Pi ps =
+  "cs_call_string_eqs k gs empty_pred Pi ps =
      side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_addr_list (\<lambda>_. Call_String_Context.Global)
        (cs_route k)
-       (routed_cmb_g_contribution (ectx_spec gs is_bot_pred)
+       (routed_cmb_g_contribution (ectx_spec gs empty_pred)
           Call_String_Context.Global Call_String_Context.Seed
           (static_resolve (compile_prog Pi ps)))
        (routed_extra_g Call_String_Context.Seed Call_String_Context.Global)
-       (compile_prog Pi ps) (ectx_spec gs is_bot_pred) Bot (Lifted cinit_ivl_st) Bot"
+       (compile_prog Pi ps) (ectx_spec gs empty_pred) Bot (Lifted cinit_ivl_st) Bot"
 
 definition cs_call_string_sol ::
     "nat \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> (ivl exec_dg_st \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> (pp \<times> call_string) set \<times> (pp \<times> call_string + call_string_gk \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)" where
-  "cs_call_string_sol k gs is_bot_pred Pi ps =
-     TD_side_warrowing_apinis_Interp_solve (cs_call_string_eqs k gs is_bot_pred Pi ps)
+  "cs_call_string_sol k gs empty_pred Pi ps =
+     TD_side_warrowing_apinis_Interp_solve (cs_call_string_eqs k gs empty_pred Pi ps)
        (cfg_exit (compile_prog Pi ps), [])"
 
 definition cs_call_string_terminates ::
     "nat \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> (ivl exec_dg_st \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> bool" where
-  "cs_call_string_terminates k gs is_bot_pred Pi ps =
+  "cs_call_string_terminates k gs empty_pred Pi ps =
      TD_side_warrowing_apinis_Interp.solve_dom TYPE(call_string_gk) TYPE((ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)
-       (cs_call_string_eqs k gs is_bot_pred Pi ps) (cfg_exit (compile_prog Pi ps), [])"
+       (cs_call_string_eqs k gs empty_pred Pi ps) (cfg_exit (compile_prog Pi ps), [])"
 
 lemma cs_call_string_terminates_via_solve_c:
-  assumes "TD_side_warrowing_apinis_Interp_solve_c (cs_call_string_eqs k gs is_bot_pred Pi ps)
+  assumes "TD_side_warrowing_apinis_Interp_solve_c (cs_call_string_eqs k gs empty_pred Pi ps)
              (cfg_exit (compile_prog Pi ps), []) \<noteq> None"
-  shows "cs_call_string_terminates k gs is_bot_pred Pi ps"
+  shows "cs_call_string_terminates k gs empty_pred Pi ps"
   unfolding cs_call_string_terminates_def
   by (rule TD_side_warrowing_apinis_Interp.solve_dom_of_solve_c[OF assms])
 

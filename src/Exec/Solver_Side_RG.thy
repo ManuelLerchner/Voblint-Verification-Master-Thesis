@@ -468,7 +468,7 @@ text \<open>
   invariant on the solver's \<open>ug_state\<close> component alongside \<open>rg_state\<close>.
 \<close>
 
-abbreviation rg_ug :: "('x, 'g, ('a::bot) resolved_st_q lifted) ug_state \<Rightarrow> bool" where
+abbreviation rg_ug :: "('x, 'g, ('a::bounded_warrowing) resolved_st_q lifted) ug_state \<Rightarrow> bool" where
   "rg_ug ug \<equiv> (\<forall>g orig. rg_val_lift (rho_lookup (\<rho> ug) g orig))"
 
 abbreviation rg_both where

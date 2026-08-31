@@ -13,6 +13,18 @@ text \<open>
   in the analysis pipeline uses it.
 \<close>
 
+subsection \<open>Projecting a component\<close>
+
+definition project_component ::
+  "('loc \<Rightarrow> bool) \<Rightarrow> ('loc \<Rightarrow> 'a::bot) \<Rightarrow> 'loc \<Rightarrow> 'a" where
+  "project_component placed state = (\<lambda>loc. if placed loc then state loc else bot)"
+
+definition classic_split_keep_local :: "(vname \<Rightarrow> bool) \<Rightarrow> vname \<Rightarrow> bool" where
+  "classic_split_keep_local storage loc = (\<not> storage loc)"
+
+definition classic_split_publish_side :: "(vname \<Rightarrow> bool) \<Rightarrow> vname \<Rightarrow> bool" where
+  "classic_split_publish_side storage loc = storage loc"
+
 subsection \<open>The placed unit step and specification\<close>
 
 definition unit_step_placed ::
@@ -95,7 +107,7 @@ text \<open>
   to the pre-split value is just as sound as any other. \<^const>\<open>unit_dg_spec_placed\<close>
   exposes that split as two independent predicates, \<open>keep_local\<close>/\<open>publish_side\<close>;
   the only requirement is that every location is covered by at least one of them.
-  Unlike \<^const>\<open>wf_split\<close>, covering does not demand exclusivity: a location may
+  Unlike \<open>wf_split\<close>, covering does not demand exclusivity: a location may
   sit in both, which is exactly the shape a privatized global needs (kept
   precisely in D for the current activation and also published to G for other
   activations). This is a genuinely different target from \<open>gamma_unit\<close>: the

@@ -115,7 +115,7 @@ text \<open>The computed Parity environment at an arbitrary node, read out of th
 definition parity_ex_env :: "pp \<Rightarrow> parity abs_state" where
   "parity_ex_env v =
      (case lookup_context (analyse_parity_result_for parity_ex_gs parity_ex_program) v () of
-        Unreachable \<Rightarrow> bot | Reachable st \<Rightarrow> st)"
+        Bot \<Rightarrow> bot | Lifted st \<Rightarrow> st)"
 
 text \<open>The compiled edges, read off \<^const>\<open>prog_cfg\<close>'s own \<open>eval\<close>-computed
   shape: \<open>Statement 0\<close> (\<open>x := __voblint_nondet_int()\<close>) reaches \<open>Statement 1\<close>
@@ -156,19 +156,19 @@ lemma parity_ex_node_sound_3:
   "parity_ex_reach (Statement 3) \<le> \<lbrakk>parity_ex_env (Statement 3)\<rbrakk>"
   unfolding parity_ex_reach_def parity_ex_env_def
   using parity_ex_node_sound
-  by (simp add: prog_main_name_def gamma_point_def split: point_state.splits)
+  by (simp add: prog_main_name_def gamma_point_def split: lifted.splits)
 
 lemma parity_ex_node_sound_4:
   "parity_ex_reach (Statement 4) \<le> \<lbrakk>parity_ex_env (Statement 4)\<rbrakk>"
   unfolding parity_ex_reach_def parity_ex_env_def
   using parity_ex_node_sound
-  by (simp add: prog_main_name_def gamma_point_def split: point_state.splits)
+  by (simp add: prog_main_name_def gamma_point_def split: lifted.splits)
 
 lemma parity_ex_node_sound_6:
   "parity_ex_reach (Statement 6) \<le> \<lbrakk>parity_ex_env (Statement 6)\<rbrakk>"
   unfolding parity_ex_reach_def parity_ex_env_def
   using parity_ex_node_sound
-  by (simp add: prog_main_name_def gamma_point_def split: point_state.splits)
+  by (simp add: prog_main_name_def gamma_point_def split: lifted.splits)
 
 text \<open>Executable classification at each check's own node --- \<open>y\<close> is \<open>PEven\<close>
   and \<open>z\<close> is \<open>POdd\<close> at both \<open>Statement 3\<close> and \<open>Statement 4\<close> (checks do not
@@ -220,7 +220,7 @@ proof (rule parity_checks_provenI)
   fix v :: pp and cnd :: exp
   assume mem: "(v, cnd) \<in> {(Statement 3, Not (Eq (V (STR ''y'')) (V (STR ''z''))))}"
   then have v_eq: "v = Statement 3" and cnd_eq: "cnd = Not (Eq (V (STR ''y'')) (V (STR ''z'')))" by auto
-  show "parity_check_true cnd (parity_ex_env v)"
+  show "parity_check_query cnd (parity_ex_env v) = Some True"
     unfolding v_eq cnd_eq parity_ex_env_def by eval
 qed
 

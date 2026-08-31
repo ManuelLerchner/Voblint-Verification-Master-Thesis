@@ -1,5 +1,5 @@
-  theory Abstract_Arithmetic
-  imports "Voblint_Domain.Abstract_Domain"
+theory Abstract_Arithmetic
+  imports "Voblint_Domain.Abstract_Domain" "Voblint_VIMP.VIMP_Expr"
 begin
 
 section \<open>Generic expression soundness\<close>
@@ -36,7 +36,7 @@ text \<open>
   to the fully unknown join, mirroring \<open>id_binary_log\<close>'s own short-circuit.
 
   Each operand is queried through \<open>lt\<close>/\<open>eqb\<close>/\<open>tobool\<close> only when it is not
-  itself \<open>is_bot\<close>: an \<open>is_bot\<close> operand denotes an unreachable value (its
+  itself \<open>is_empty\<close>: an \<open>is_empty\<close> operand denotes an unreachable value (its
   concretization is empty), so the whole comparison collapses to \<open>bot\<close> rather
   than querying a value with no witness to reason about. This guard is not
   optional bookkeeping -- \<open>bot\<close> is every domain's own least element, so a
@@ -59,29 +59,29 @@ locale expression_domain_sound =
     and ev_Minus[simp]: "ev (Minus e1 e2) sigma = ev e1 sigma - ev e2 sigma"
     and ev_Times[simp]: "ev (Times e1 e2) sigma = ev e1 sigma * ev e2 sigma"
     and ev_Less[simp]: "ev (Less e1 e2) sigma =
-         (if is_bot (ev e1 sigma) \<or> is_bot (ev e2 sigma) then bot
+         (if is_empty (ev e1 sigma) \<or> is_empty (ev e2 sigma) then bot
           else if lt (ev e1 sigma) (ev e2 sigma) = Some True then lit 1
           else if lt (ev e1 sigma) (ev e2 sigma) = Some False then lit 0
           else lit 0 \<squnion> lit 1)"
     and ev_Eq[simp]: "ev (exp.Eq e1 e2) sigma =
-         (if is_bot (ev e1 sigma) \<or> is_bot (ev e2 sigma) then bot
+         (if is_empty (ev e1 sigma) \<or> is_empty (ev e2 sigma) then bot
           else if eqb (ev e1 sigma) (ev e2 sigma) = Some True then lit 1
           else if eqb (ev e1 sigma) (ev e2 sigma) = Some False then lit 0
           else lit 0 \<squnion> lit 1)"
     and ev_Not[simp]: "ev (exp.Not e) sigma =
-         (if is_bot (ev e sigma) then bot
+         (if is_empty (ev e sigma) then bot
           else if tobool (ev e sigma) = Some True then lit 0
           else if tobool (ev e sigma) = Some False then lit 1
           else lit 0 \<squnion> lit 1)"
     and ev_And[simp]: "ev (And e1 e2) sigma =
-         (if is_bot (ev e1 sigma) \<or> is_bot (ev e2 sigma) then bot
+         (if is_empty (ev e1 sigma) \<or> is_empty (ev e2 sigma) then bot
           else if tobool (ev e1 sigma) = Some False \<or> tobool (ev e2 sigma) = Some False
           then lit 0
           else if tobool (ev e1 sigma) = Some True \<and> tobool (ev e2 sigma) = Some True
           then lit 1
           else lit 0 \<squnion> lit 1)"
     and ev_Or[simp]: "ev (Or e1 e2) sigma =
-         (if is_bot (ev e1 sigma) \<or> is_bot (ev e2 sigma) then bot
+         (if is_empty (ev e1 sigma) \<or> is_empty (ev e2 sigma) then bot
           else if tobool (ev e1 sigma) = Some True \<or> tobool (ev e2 sigma) = Some True
           then lit 1
           else if tobool (ev e1 sigma) = Some False \<and> tobool (ev e2 sigma) = Some False
@@ -98,13 +98,13 @@ locale expression_domain_sound =
     and eqb_sound: "eqb p q = Some b \<Longrightarrow> i \<in> gamma (p::'a) \<Longrightarrow> j \<in> gamma q \<Longrightarrow> (i = j) = b"
     and tobool_sound: "tobool p = Some b \<Longrightarrow> i \<in> gamma (p::'a) \<Longrightarrow> truthy i = b"
     and lt_mono:
-      "\<not> is_bot (p1::'a) \<Longrightarrow> \<not> is_bot q1 \<Longrightarrow> p1 \<le> p2 \<Longrightarrow> q1 \<le> q2 \<Longrightarrow>
+      "\<not> is_empty (p1::'a) \<Longrightarrow> \<not> is_empty q1 \<Longrightarrow> p1 \<le> p2 \<Longrightarrow> q1 \<le> q2 \<Longrightarrow>
        lt p2 q2 = Some b \<Longrightarrow> lt p1 q1 = Some b"
     and eqb_mono:
-      "\<not> is_bot (p1::'a) \<Longrightarrow> \<not> is_bot q1 \<Longrightarrow> p1 \<le> p2 \<Longrightarrow> q1 \<le> q2 \<Longrightarrow>
+      "\<not> is_empty (p1::'a) \<Longrightarrow> \<not> is_empty q1 \<Longrightarrow> p1 \<le> p2 \<Longrightarrow> q1 \<le> q2 \<Longrightarrow>
        eqb p2 q2 = Some b \<Longrightarrow> eqb p1 q1 = Some b"
     and tobool_mono:
-      "\<not> is_bot (p1::'a) \<Longrightarrow> p1 \<le> p2 \<Longrightarrow> tobool p2 = Some b \<Longrightarrow> tobool p1 = Some b"
+      "\<not> is_empty (p1::'a) \<Longrightarrow> p1 \<le> p2 \<Longrightarrow> tobool p2 = Some b \<Longrightarrow> tobool p1 = Some b"
 begin
 
 lemma aval_dom_sound:
@@ -123,8 +123,8 @@ next
   case (Less e1 e2)
   have h1: "aval e1 s \<in> gamma (ev e1 sigma)" using Less.IH(1) Less.prems by simp
   have h2: "aval e2 s \<in> gamma (ev e2 sigma)" using Less.IH(2) Less.prems by simp
-  have nb1: "\<not> is_bot (ev e1 sigma)" using h1 is_bot_correct by auto
-  have nb2: "\<not> is_bot (ev e2 sigma)" using h2 is_bot_correct by auto
+  have nb1: "\<not> is_empty (ev e1 sigma)" using h1 is_empty_correct by auto
+  have nb2: "\<not> is_empty (ev e2 sigma)" using h2 is_empty_correct by auto
   show ?case
   proof (cases "lt (ev e1 sigma) (ev e2 sigma) = Some True")
     case True
@@ -145,8 +145,8 @@ next
   case (Eq e1 e2)
   have h1: "aval e1 s \<in> gamma (ev e1 sigma)" using Eq.IH(1) Eq.prems by simp
   have h2: "aval e2 s \<in> gamma (ev e2 sigma)" using Eq.IH(2) Eq.prems by simp
-  have nb1: "\<not> is_bot (ev e1 sigma)" using h1 is_bot_correct by auto
-  have nb2: "\<not> is_bot (ev e2 sigma)" using h2 is_bot_correct by auto
+  have nb1: "\<not> is_empty (ev e1 sigma)" using h1 is_empty_correct by auto
+  have nb2: "\<not> is_empty (ev e2 sigma)" using h2 is_empty_correct by auto
   show ?case
   proof (cases "eqb (ev e1 sigma) (ev e2 sigma) = Some True")
     case True
@@ -166,7 +166,7 @@ next
 next
   case (Not e)
   have h: "aval e s \<in> gamma (ev e sigma)" using Not.IH Not.prems by simp
-  have nb: "\<not> is_bot (ev e sigma)" using h is_bot_correct by auto
+  have nb: "\<not> is_empty (ev e sigma)" using h is_empty_correct by auto
   show ?case
   proof (cases "tobool (ev e sigma) = Some True")
     case True
@@ -187,8 +187,8 @@ next
   case (And e1 e2)
   have h1: "aval e1 s \<in> gamma (ev e1 sigma)" using And.IH(1) And.prems by simp
   have h2: "aval e2 s \<in> gamma (ev e2 sigma)" using And.IH(2) And.prems by simp
-  have nb1: "\<not> is_bot (ev e1 sigma)" using h1 is_bot_correct by auto
-  have nb2: "\<not> is_bot (ev e2 sigma)" using h2 is_bot_correct by auto
+  have nb1: "\<not> is_empty (ev e1 sigma)" using h1 is_empty_correct by auto
+  have nb2: "\<not> is_empty (ev e2 sigma)" using h2 is_empty_correct by auto
   show ?case
   proof (cases "tobool (ev e1 sigma) = Some False \<or> tobool (ev e2 sigma) = Some False")
     case True
@@ -214,8 +214,8 @@ next
   case (Or e1 e2)
   have h1: "aval e1 s \<in> gamma (ev e1 sigma)" using Or.IH(1) Or.prems by simp
   have h2: "aval e2 s \<in> gamma (ev e2 sigma)" using Or.IH(2) Or.prems by simp
-  have nb1: "\<not> is_bot (ev e1 sigma)" using h1 is_bot_correct by auto
-  have nb2: "\<not> is_bot (ev e2 sigma)" using h2 is_bot_correct by auto
+  have nb1: "\<not> is_empty (ev e1 sigma)" using h1 is_empty_correct by auto
+  have nb2: "\<not> is_empty (ev e2 sigma)" using h2 is_empty_correct by auto
   show ?case
   proof (cases "tobool (ev e1 sigma) = Some True \<or> tobool (ev e2 sigma) = Some True")
     case True
@@ -257,14 +257,14 @@ next
   have p_mono: "ev e1 sigma1 \<le> ev e1 sigma2" using Less.IH(1) Less.prems by simp
   have q_mono: "ev e2 sigma1 \<le> ev e2 sigma2" using Less.IH(2) Less.prems by simp
   show ?case
-  proof (cases "is_bot (ev e1 sigma1) \<or> is_bot (ev e2 sigma1)")
+  proof (cases "is_empty (ev e1 sigma1) \<or> is_empty (ev e2 sigma1)")
     case True
     then show ?thesis by (simp add: bot_least)
   next
     case False
-    then have nb1: "\<not> is_bot (ev e1 sigma1)" and nb2: "\<not> is_bot (ev e2 sigma1)" by auto
-    have nb1': "\<not> is_bot (ev e1 sigma2)" using nb1 p_mono is_bot_mono by blast
-    have nb2': "\<not> is_bot (ev e2 sigma2)" using nb2 q_mono is_bot_mono by blast
+    then have nb1: "\<not> is_empty (ev e1 sigma1)" and nb2: "\<not> is_empty (ev e2 sigma1)" by auto
+    have nb1': "\<not> is_empty (ev e1 sigma2)" using nb1 p_mono is_empty_antimono by blast
+    have nb2': "\<not> is_empty (ev e2 sigma2)" using nb2 q_mono is_empty_antimono by blast
     show ?thesis
     proof (cases "lt (ev e1 sigma2) (ev e2 sigma2)")
       case (Some b)
@@ -283,14 +283,14 @@ next
   have p_mono: "ev e1 sigma1 \<le> ev e1 sigma2" using Eq.IH(1) Eq.prems by simp
   have q_mono: "ev e2 sigma1 \<le> ev e2 sigma2" using Eq.IH(2) Eq.prems by simp
   show ?case
-  proof (cases "is_bot (ev e1 sigma1) \<or> is_bot (ev e2 sigma1)")
+  proof (cases "is_empty (ev e1 sigma1) \<or> is_empty (ev e2 sigma1)")
     case True
     then show ?thesis by (simp add: bot_least)
   next
     case False
-    then have nb1: "\<not> is_bot (ev e1 sigma1)" and nb2: "\<not> is_bot (ev e2 sigma1)" by auto
-    have nb1': "\<not> is_bot (ev e1 sigma2)" using nb1 p_mono is_bot_mono by blast
-    have nb2': "\<not> is_bot (ev e2 sigma2)" using nb2 q_mono is_bot_mono by blast
+    then have nb1: "\<not> is_empty (ev e1 sigma1)" and nb2: "\<not> is_empty (ev e2 sigma1)" by auto
+    have nb1': "\<not> is_empty (ev e1 sigma2)" using nb1 p_mono is_empty_antimono by blast
+    have nb2': "\<not> is_empty (ev e2 sigma2)" using nb2 q_mono is_empty_antimono by blast
     show ?thesis
     proof (cases "eqb (ev e1 sigma2) (ev e2 sigma2)")
       case (Some b)
@@ -308,13 +308,13 @@ next
   case (Not e)
   have p_mono: "ev e sigma1 \<le> ev e sigma2" using Not.IH Not.prems by simp
   show ?case
-  proof (cases "is_bot (ev e sigma1)")
+  proof (cases "is_empty (ev e sigma1)")
     case True
     then show ?thesis by (simp add: bot_least)
   next
     case False
-    then have nb: "\<not> is_bot (ev e sigma1)" by auto
-    have nb': "\<not> is_bot (ev e sigma2)" using nb p_mono is_bot_mono by blast
+    then have nb: "\<not> is_empty (ev e sigma1)" by auto
+    have nb': "\<not> is_empty (ev e sigma2)" using nb p_mono is_empty_antimono by blast
     show ?thesis
     proof (cases "tobool (ev e sigma2)")
       case (Some b)
@@ -332,14 +332,14 @@ next
   have p_mono: "ev e1 sigma1 \<le> ev e1 sigma2" using And.IH(1) And.prems by simp
   have q_mono: "ev e2 sigma1 \<le> ev e2 sigma2" using And.IH(2) And.prems by simp
   show ?case
-  proof (cases "is_bot (ev e1 sigma1) \<or> is_bot (ev e2 sigma1)")
+  proof (cases "is_empty (ev e1 sigma1) \<or> is_empty (ev e2 sigma1)")
     case True
     then show ?thesis by (simp add: bot_least)
   next
     case False
-    then have nb1: "\<not> is_bot (ev e1 sigma1)" and nb2: "\<not> is_bot (ev e2 sigma1)" by auto
-    have nb1': "\<not> is_bot (ev e1 sigma2)" using nb1 p_mono is_bot_mono by blast
-    have nb2': "\<not> is_bot (ev e2 sigma2)" using nb2 q_mono is_bot_mono by blast
+    then have nb1: "\<not> is_empty (ev e1 sigma1)" and nb2: "\<not> is_empty (ev e2 sigma1)" by auto
+    have nb1': "\<not> is_empty (ev e1 sigma2)" using nb1 p_mono is_empty_antimono by blast
+    have nb2': "\<not> is_empty (ev e2 sigma2)" using nb2 q_mono is_empty_antimono by blast
     show ?thesis
     proof (cases "tobool (ev e1 sigma2) = Some False \<or> tobool (ev e2 sigma2) = Some False")
       case True
@@ -369,14 +369,14 @@ next
   have p_mono: "ev e1 sigma1 \<le> ev e1 sigma2" using Or.IH(1) Or.prems by simp
   have q_mono: "ev e2 sigma1 \<le> ev e2 sigma2" using Or.IH(2) Or.prems by simp
   show ?case
-  proof (cases "is_bot (ev e1 sigma1) \<or> is_bot (ev e2 sigma1)")
+  proof (cases "is_empty (ev e1 sigma1) \<or> is_empty (ev e2 sigma1)")
     case True
     then show ?thesis by (simp add: bot_least)
   next
     case False
-    then have nb1: "\<not> is_bot (ev e1 sigma1)" and nb2: "\<not> is_bot (ev e2 sigma1)" by auto
-    have nb1': "\<not> is_bot (ev e1 sigma2)" using nb1 p_mono is_bot_mono by blast
-    have nb2': "\<not> is_bot (ev e2 sigma2)" using nb2 q_mono is_bot_mono by blast
+    then have nb1: "\<not> is_empty (ev e1 sigma1)" and nb2: "\<not> is_empty (ev e2 sigma1)" by auto
+    have nb1': "\<not> is_empty (ev e1 sigma2)" using nb1 p_mono is_empty_antimono by blast
+    have nb2': "\<not> is_empty (ev e2 sigma2)" using nb2 q_mono is_empty_antimono by blast
     show ?thesis
     proof (cases "tobool (ev e1 sigma2) = Some True \<or> tobool (ev e2 sigma2) = Some True")
       case True
@@ -406,4 +406,3 @@ qed
 end
 
 end
-

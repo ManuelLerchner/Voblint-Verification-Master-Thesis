@@ -21,7 +21,7 @@ text \<open>
   point's stored abstract state is bottom, bottom satisfies every condition
   vacuously, and the check then reports \<^const>\<open>Check_Proved\<close> for code no
   execution reaches. \<^const>\<open>classify_point\<close> declines to classify against
-  \<^const>\<open>Unreachable\<close> at all, which is what these witnesses pin.
+  \<^const>\<open>Bot\<close> at all, which is what these witnesses pin.
 \<close>
 
 subsection \<open>Reading one check's contextual observations\<close>

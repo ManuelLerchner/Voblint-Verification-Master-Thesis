@@ -1,5 +1,5 @@
 theory Congruence_Lattice
-  imports Congruence_Domain
+  imports Congruence_Domain "Voblint_VIMP.VIMP_Source_Print"
 begin
 
 section \<open>Congruence order and bounds\<close>
@@ -395,22 +395,41 @@ lemma is_top_congruence_correct:
   "is_top_congruence a \<longleftrightarrow> a = top"
   unfolding is_top_congruence_def ..
 
+lemma is_top_congruence_correct_gamma:
+  "is_top_congruence a \<longleftrightarrow> gamma_congruence a = UNIV"
+  unfolding is_top_congruence_def
+  by (metis gamma_congruence_inject gamma_top_congruence)
+
+definition string_of_congruence :: "congruence \<Rightarrow> string" where
+  "string_of_congruence c =
+     (case Rep_congruence c of
+        None \<Rightarrow> ''Top''
+      | Some (r, m) \<Rightarrow>
+          if m = 0 then ''='' @ string_of_int r
+          else ''='' @ string_of_int r @ '' (mod '' @ string_of_int m @ '')'')"
+
 instantiation congruence :: sound_domain
 begin
 
 definition gamma_abs_congruence [simp]:
   "gamma (a :: congruence) = gamma_congruence a"
 
-definition is_bot_congruence [simp]:
-  "is_bot (a :: congruence) = is_bottom_congruence a"
+definition is_empty_congruence [simp]:
+  "is_empty (a :: congruence) = is_bottom_congruence a"
 
-definition is_top_congruence' [simp]:
-  "is_top (a :: congruence) = is_top_congruence a"
+definition is_full_congruence [simp]:
+  "is_full (a :: congruence) = is_top_congruence a"
+
+definition to_string_congruence [simp]:
+  "to_string (a :: congruence) = string_of_congruence a"
 
 instance
 proof intro_classes
   show "gamma (bot :: congruence) = {}"
     unfolding bot_congruence_def by simp
+next
+  show "gamma (top :: congruence) = UNIV"
+    by simp
 next
   fix a b :: congruence
   assume "a <= b"
@@ -419,12 +438,12 @@ next
     by simp
 next
   fix a :: congruence
-  show "is_bot a \<longleftrightarrow> gamma a = {}"
+  show "is_empty a \<longleftrightarrow> gamma a = {}"
     by (simp add: is_bottom_congruence_correct)
 next
   fix a :: congruence
-  show "is_top a \<longleftrightarrow> a = top"
-    by (simp add: is_top_congruence_correct)
+  show "is_full a \<longleftrightarrow> gamma a = UNIV"
+    by (simp add: is_top_congruence_correct_gamma)
 qed
 
 end

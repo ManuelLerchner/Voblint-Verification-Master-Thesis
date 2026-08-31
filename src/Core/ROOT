@@ -13,7 +13,6 @@ session Voblint_Core in "." = "Voblint_CFG" +
     CFG_Enumeration
     Transfer_Interface
     State_Restriction
-    DG_State_Reconstruction
     DG_Framework
     DG_Soundness
     DG_LTR_Sound
@@ -33,5 +32,11 @@ session Voblint_Core in "." = "Voblint_CFG" +
     (* Ordinary __goblint_assert checks: store-only checks, with no
        ghost-domain or additional trace-projection dependency. *)
     Checks
+    (* The flat three-valued check-result lattice, split out so the
+       report/aggregation layers below don't have to pull in the domain
+       classifier locale just for the verdict type. *)
+    Check_Result
     Abstract_Checks
+    Check_Report
+    Contextual_Check_Report
     DG_Analysis_Adapter

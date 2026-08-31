@@ -31,7 +31,6 @@ theory Example_Parity_DG_Flagship
     "Voblint_Exec.Exec_DG_Bridge"
     "Voblint_Exec.DG_Base_Exec"
     "Voblint_Analysis.Parity_Exec"
-    "Voblint_Analysis.Parity_Print"
     "Voblint_Exec.Solver_Menu"
     "Voblint_Exec.DG_Coverage"
     "Voblint_CFG.CFG_Prune"
@@ -179,7 +178,7 @@ lemma parity_vars_cover: "vars_cover parity_cfg (fst parity_sol)"
         [OF parity_finE parity_finC parity_wf_cfg parity_exit_covers
             parity_pp_st[unfolded parity_eqs_def]])
 lemma parity_is_bot_exact:
-  "\<And>s. resolved_st_q_is_bot_for (declared_global_vars parity_program) s = is_bot_state (fun_of_exec_dg_st_for parity_gs s)"
+  "\<And>s::parity resolved_st_q. resolved_st_q_is_bot_for (declared_global_vars parity_program) s = is_empty_state (fun_of_exec_dg_st_for parity_gs s)"
   by (rule resolved_st_q_is_bot_for_iff[OF declared_global_iff, folded fun_of_exec_dg_st_for_def])
 
 lemma parity_sound0:
@@ -219,7 +218,7 @@ lemma parity_wf: "wf_compile_input parity_gs parity_pi []"
 text \<open>Interpret \<^locale>\<open>base_dg_exec_analysis\<close> once here at \<^const>\<open>parity_gs\<close> with
   the classifier-parametric transfer/enter functions, matching the pattern in
   \<open>Exec_Sign_DG_Run\<close>.  The interpretation absorbs the sound-transfer, primitive-
-  commutation, and \<open>is_bot_pred\<close>-exactness obligations once, so
+  commutation, and \<open>empty_pred\<close>-exactness obligations once, so
   \<open>parity_source_run_sound\<close> below only supplies the compiled-input and solver
   facts.\<close>
 

@@ -108,8 +108,8 @@ lemma cinit_ivl_st_not_bot_for:
   assumes globals: "\<And>x. gs x = (x \<in> set gl)"
   shows "\<not> resolved_st_q_is_bot_for gl cinit_ivl_st"
 proof -
-  have "\<not> is_bot_state (fun_of_resolved_st_q_for gs cinit_ivl_st)"
-    unfolding is_bot_state_def by (auto simp: is_bottom_ivl_def split: if_splits)
+  have "\<not> is_empty_state (fun_of_resolved_st_q_for gs cinit_ivl_st)"
+    unfolding is_empty_state_def by (auto simp: is_bottom_ivl_def split: if_splits)
   then show ?thesis
     by (simp add: resolved_st_q_is_bot_for_iff[OF globals])
 qed

@@ -125,7 +125,7 @@ until Phase 2 deletes what it holds.
 
 | Session | Goblint counterpart | Theories | Parents |
 | --- | --- | --- | --- |
-| `Voblint_Domain` | `goblint.domain` | `Abstract_Domain` (classes, `lifted`), `Backward_Domain` (the `backward_domain` locales, today `Abstract_Domain` 919-2078), `Split_State`, `Abstract_Numeric_Queries`, `Abstract_State` (today `Exec_St`), `Exec_Refinement` | `Voblint_VIMP`, `TD` |
+| `Voblint_Domain` | `goblint.domain` | `Abstract_Domain`, `Reachability_Lift`, `Nonrelational_State`, `Nonrelational_Reachability`, `Backward_Domain`, `Abstract_Numeric_Queries` | `Voblint_VIMP`, `TD` |
 | `Voblint_Solver` | `goblint.constraint`, `goblint.solver` | `Strategy_Tree_Monad` (absorbing `Strategy_Tree_Do`, `Solver_Mono`), `Strategy_Tree_Rhs`, `Strategy_Tree_Relabel`, `Strategy_Tree_Combinators`, `Side_Buffering`, `Post_Solution` (new), `Context_Refinement` | `TD` only |
 | `Voblint_Core` | `Analyses`, `Constraints`, `Control`, `AnalysisResult` | `CFG_Enumeration`, `Constraint_System` (absorbing `Constraint_System_Sound`), `State_Restriction`, `DG_Framework`, `DG_Soundness`, `DG_LTR_Sound`, `Activation_Local_Sound`, `Activation_Backbone`, `DG_Ctx_Activation`, `DG_Transfer_Combinators`, `Routed_Context`, `Routed_Context_Unit`, `DG_Base`, `Call_String_Context`, `Call_String_Collecting_Refinement`, `Call_String_Solver_Projection`, `Analysis_Result`, `Checks`, `Abstract_Checks`, `DG_Analysis_Adapter`, `DG_Coverage` | `Voblint_CFG`, `Voblint_Domain`, `Voblint_Solver` -- never `Voblint_Compile` |
 | `Voblint_Exec` (quarantine) | none | `Exec_DG_Refines`, `Exec_DG_Trees`, `Exec_DG_Generator`, `Exec_DG_Bridge`, `DG_Base_Exec`, `Routed_Domain_Exec`, `Solver_Side_RG`, `Solver_Menu`, `Monovariant_Analysis_Result` | `Voblint_Core`, `Voblint_Compile` |
@@ -201,7 +201,7 @@ Spike before committing to it.
 | # | Step | Status |
 | --- | --- | --- |
 | 3.1 | One `dead_code_lift :: ('dl, 'dg) dg_spec => ('dl lifted, 'dg) dg_spec` with `sound_dg_spec S ==> sound_dg_spec (dead_code_lift S)`; `base_dg_spec_for_lifted`, `unit_step_for_lifted`, `unit_dg_spec_for_lifted` and `base_dg_spec_st_for_lifted` become instances. This is Goblint's `DeadCodeLifter`, stated once. Design the seam so widening delay and context gas can use it. | open |
-| 3.2 | Split `DG_Framework`: the homogeneous unit analysis (685-956) and the keyed generators (1393-end) are separate concerns from the `dg_spec` record and edge trees. Split `Abstract_State` at the reachability lift (1763). | open |
+| 3.2 | Split `DG_Framework`: the homogeneous unit analysis (685-956) and the keyed generators (1393-end) are separate concerns from the `dg_spec` record and edge trees. Split the domain foundation at the reachability lift. | in progress: `Abstract_Domain`, `Reachability_Lift`, `Nonrelational_State`, and `Nonrelational_Reachability` separate value semantics, generic reachability, pointwise stores, and their composition; `combine_env` is the sole pointwise selector and `State_Restriction` derives projections from it; the `DG_Framework` split remains open |
 | 3.3 | Retire `metis`: after Phase 2 the count is 26; `Abstract_State` holds 13. Retire the 61 `apply` lines; `Activation_Local_Sound`'s 10 and `Routed_Domain_Exec`'s 14 first. | open |
 | 3.4 | Hoist `dg_post_solution_postfix` (272 lines) and `side_cfg_T_eff_keyed_seed_dg_buffered_correspondence` (249) into helper lemmas with named subgoals. | open |
 | 3.5 | Tag the 31 untagged `...I`/`...E`/`...D` lemmas or rename them; remove the four `[rule_format]`; add orientation blocks where missing; move the `section` heading below the `theory` header in the four `Exec_DG_*` survivors, if any survive. | open |
@@ -222,7 +222,7 @@ and mark it `superseded (see below)`.
   `call_enter`/`combine_collect` from `Voblint_CFG`, so separating them is
   proof work, not a move. Until Phase 2 does it, `Exec_St` and
   `Exec_Refinement` live in `Voblint_Exec`, and `Voblint_Domain` holds only
-  `Abstract_Domain`, `Split_State`, `Abstract_Numeric_Queries`. Step 1.2 is
+  `Abstract_Domain`, `Abstract_Numeric_Queries`. Step 1.2 is
   deferred to the same point.
 - 2026-08-30: `DG_Coverage` imports `Exec_DG_Generator`, so it is in
   `Voblint_Exec`, not `Voblint_Core` (the target table said Core).
@@ -366,6 +366,19 @@ and mark it `superseded (see below)`.
   0.1--0.6 and Phase 1 steps 1.4--1.7 are landed (I/Q-clean per theory for
   Phase 0, `isabelle build -n` clean for the session structure); the batch
   build is the gate.
+- 2026-08-31: `Abstract_Domain` now contains only abstract-value capabilities
+  and their concretization laws. `Reachability_Lift` owns the generic dead-code
+  carrier and its solver updates; `Nonrelational_State` owns pointwise stores,
+  product concretization and witness-bottom tests. `Nonrelational_Reachability`
+  owns the facts that compose those independent constructions. `combine_env`
+  is the sole pointwise selector; `State_Restriction`, frame entry, and executable
+  projections specialize it. The redundant `Split_State` representation and its
+  unused D/G conversions were removed. The old state-normalization,
+  finite-fold, D/G reconstruction and printing clusters had no live consumer
+  and were removed. Domain printing reuses `VIMP_Source_Print.string_of_int`.
+  The Domain-session attribute audit added only rules with narrow conclusion
+  heads and removed redundant `bfilter.simps` registrations; all six theories
+  are I/Q-clean with no warnings.
 
 ## Traps specific to Core
 

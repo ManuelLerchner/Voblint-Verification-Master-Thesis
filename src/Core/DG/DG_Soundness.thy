@@ -1935,7 +1935,7 @@ text \<open>The \<^const>\<open>combine_env\<close> analogue of \<open>restrict_
   already zero outside the location it owns.\<close>
 lemma combine_env_restrict_id [simp]:
   "combine_env gs (restrict_local_for gs sigma) (restrict_global_for gs sigma) = sigma"
-  by (simp add: combine_env_for_eq_restrict restrict_local_for_global_join)
+  by (simp add: combine_env_for_eq_restrictions restrict_local_for_global_join)
 
 lemma gamma_unit_combine_sound_for:
   assumes reserved: "reserved_ret_var gs"
@@ -1994,11 +1994,11 @@ subsection \<open>The homogeneous analysis as a lifted diagonal interpretation, 
   transfer\<close>
 
 text \<open>
-  \<open>gamma_unit_lifted\<close> concretizes the reachability-aware pair exactly the way
-  \<open>unit_step_for_lifted\<close> reconstructs it -- through \<open>assemble_env_abs\<close>, not a bare join --
-  mirroring \<open>gamma_state_lift_assemble_local_global\<close>'s shape for the D/G-routed
-  \<^const>\<open>combine_env\<close> reconstruction instead of plain \<open>\<squnion>\<close>. Generic in \<open>tf\<close>: nothing below
-  mentions a concrete domain, only \<^locale>\<open>sound_transfer_for\<close> and an exact \<open>is_bot_pred\<close>.
+  \<open>gamma_unit_lifted\<close> concretizes the reachability-aware pair exactly as
+  \<open>unit_step_for_lifted\<close> reconstructs it: \<open>assemble_env_abs\<close> routes payloads
+  through \<^const>\<open>combine_env\<close> rather than joining them. The construction is
+  generic in \<open>tf\<close> and uses only \<^locale>\<open>sound_transfer_for\<close> plus an exact
+  \<open>empty_pred\<close>.
 \<close>
 
 text \<open>
@@ -2045,13 +2045,13 @@ next
 qed
 
 text \<open>The exact predicate that lets a lifted-reachable transfer result normalize correctly:
-  \<open>is_bot_pred\<close> agrees with \<^const>\<open>is_bot_state\<close> everywhere.\<close>
+  \<open>empty_pred\<close> agrees with \<^const>\<open>is_empty_state\<close> everywhere.\<close>
 
 lemma gamma_unit_step_sound_for_lifted:
   assumes sound: "sound_transfer_for gs tf"
-    and exact: "\<And>s. is_bot_pred s = is_bot_state s"
+    and exact: "\<And>s. empty_pred s = is_empty_state s"
   shows "edge_collect a (gamma_unit_lifted gs d g) \<subseteq>
-           (case dg_spec_step (unit_dg_spec_for_lifted gs is_bot_pred tf) a d g of (g', d') \<Rightarrow>
+           (case dg_spec_step (unit_dg_spec_for_lifted gs empty_pred tf) a d g of (g', d') \<Rightarrow>
               gamma_unit_lifted gs d' g')"
 proof (cases d)
   case Bot
@@ -2065,28 +2065,28 @@ next
     by (cases g) auto
   have base: "edge_collect a \<lbrakk>m\<rbrakk> \<subseteq> \<lbrakk>apply_tf tf a m\<rbrakk>"
     using sound_transfer_for.edge_collect_apply_tf_sound_for[OF sound, where a = a] .
-  have step: "dg_spec_step (unit_dg_spec_for_lifted gs is_bot_pred tf) a d g
-                = (map_lift (restrict_global_for gs) (normalize_lift is_bot_pred (apply_tf tf a m)),
-                   map_lift (restrict_local_for gs) (normalize_lift is_bot_pred (apply_tf tf a m)))"
+  have step: "dg_spec_step (unit_dg_spec_for_lifted gs empty_pred tf) a d g
+                = (map_lift (restrict_global_for gs) (normalize_lift empty_pred (apply_tf tf a m)),
+                   map_lift (restrict_local_for gs) (normalize_lift empty_pred (apply_tf tf a m)))"
     unfolding dg_spec_step_unit_for_lifted unit_step_for_lifted_def
     by (simp add: m_def Let_def transfer_lift_def)
   show ?thesis
     unfolding gamma_eq step
-  proof (cases "is_bot_pred (apply_tf tf a m)")
+  proof (cases "empty_pred (apply_tf tf a m)")
     case True
     with exact have "\<lbrakk>apply_tf tf a m\<rbrakk> = {}"
-      using is_bot_state_iff_gamma_state_empty by blast
+      using is_empty_state_iff_gamma_state_empty by blast
     with base have "edge_collect a \<lbrakk>m\<rbrakk> = {}" by blast
     then show "edge_collect a \<lbrakk>m\<rbrakk> \<subseteq>
-        (case (map_lift (restrict_global_for gs) (normalize_lift is_bot_pred (apply_tf tf a m)),
-               map_lift (restrict_local_for gs) (normalize_lift is_bot_pred (apply_tf tf a m)))
+        (case (map_lift (restrict_global_for gs) (normalize_lift empty_pred (apply_tf tf a m)),
+               map_lift (restrict_local_for gs) (normalize_lift empty_pred (apply_tf tf a m)))
           of (g', d') \<Rightarrow> gamma_unit_lifted gs d' g')"
       by (simp add: True)
   next
     case False
     then show "edge_collect a \<lbrakk>m\<rbrakk> \<subseteq>
-        (case (map_lift (restrict_global_for gs) (normalize_lift is_bot_pred (apply_tf tf a m)),
-               map_lift (restrict_local_for gs) (normalize_lift is_bot_pred (apply_tf tf a m)))
+        (case (map_lift (restrict_global_for gs) (normalize_lift empty_pred (apply_tf tf a m)),
+               map_lift (restrict_local_for gs) (normalize_lift empty_pred (apply_tf tf a m)))
           of (g', d') \<Rightarrow> gamma_unit_lifted gs d' g')"
       using base
       by (simp add: gamma_unit_def combine_env_restrict_id)
@@ -2095,10 +2095,10 @@ qed
 
 lemma gamma_unit_combine_sound_for_lifted:
   assumes reserved: "reserved_ret_var gs"
-    and exact: "\<And>s. is_bot_pred s = is_bot_state s"
+    and exact: "\<And>s. empty_pred s = is_empty_state s"
     and sc: "s \<in> gamma_unit_lifted gs dc g" and tc: "t \<in> gamma_unit_lifted gs de g"
   shows "combine_collect gs (ci_dst dst) s t \<in>
-           (case dgs_combine (unit_dg_spec_for_lifted gs is_bot_pred tf) dst dc de g of (g', d') \<Rightarrow>
+           (case dgs_combine (unit_dg_spec_for_lifted gs empty_pred tf) dst dc de g of (g', d') \<Rightarrow>
               gamma_unit_lifted gs d' g')"
 proof -
   obtain dc0 where dc0: "dc = Lifted dc0" using sc by (cases dc) auto
@@ -2115,18 +2115,18 @@ proof -
                   = (let res = combine_assign (ci_dst dst) (de0 ret_var) (combine_env gs dc0 g0)
                      in (restrict_global_for gs res, restrict_local_for gs res))"
     unfolding dgs_combine_unit_dg_spec_for by simp
-  have target: "dgs_combine (unit_dg_spec_for_lifted gs is_bot_pred tf) dst dc de g
+  have target: "dgs_combine (unit_dg_spec_for_lifted gs empty_pred tf) dst dc de g
                   = (let res = combine_assign (ci_dst dst) (de0 ret_var) (combine_env gs dc0 g0)
-                     in (map_lift (restrict_global_for gs) (normalize_lift is_bot_pred res),
-                         map_lift (restrict_local_for gs) (normalize_lift is_bot_pred res)))"
+                     in (map_lift (restrict_global_for gs) (normalize_lift empty_pred res),
+                         map_lift (restrict_local_for gs) (normalize_lift empty_pred res)))"
     unfolding dgs_combine_unit_dg_spec_for_lifted
     unfolding unit_combine_step_assign_for_lifted_def unit_combine_step_env_for_lifted_def
     by (simp add: dc0 de0 g0_def Let_def transfer_lift2_def restrict_global_for_local_join)
   show ?thesis
-  proof (cases "is_bot_pred (combine_assign (ci_dst dst) (de0 ret_var) (combine_env gs dc0 g0))")
+  proof (cases "empty_pred (combine_assign (ci_dst dst) (de0 ret_var) (combine_env gs dc0 g0))")
     case True
     have empty: "\<lbrakk>combine_assign (ci_dst dst) (de0 ret_var) (combine_env gs dc0 g0)\<rbrakk> = {}"
-      using exact True is_bot_state_iff_gamma_state_empty by blast
+      using exact True is_empty_state_iff_gamma_state_empty by blast
     with raw raw_eq have "combine_collect gs (ci_dst dst) s t \<in> {}"
       by (simp add: Let_def gamma_unit_def combine_env_restrict_id)
     then show ?thesis
@@ -2143,10 +2143,10 @@ qed
 
 lemma gamma_unit_enter_sound_for_lifted:
   assumes sound: "sound_transfer_for gs tf"
-    and exact: "\<And>s. is_bot_pred s = is_bot_state s"
+    and exact: "\<And>s. empty_pred s = is_empty_state s"
     and sc: "s \<in> gamma_unit_lifted gs dc g"
   shows "call_enter gs (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci)) s \<in>
-           (case dgs_enter (unit_dg_spec_for_lifted gs is_bot_pred tf) ci dc g of (g', d') \<Rightarrow>
+           (case dgs_enter (unit_dg_spec_for_lifted gs empty_pred tf) ci dc g of (g', d') \<Rightarrow>
               gamma_unit_lifted gs d' g')"
 proof -
   obtain dc0 where dc0: "dc = Lifted dc0" using sc by (cases dc) auto
@@ -2157,16 +2157,16 @@ proof -
       \<in> \<lbrakk>snd (enter\<^sup># tf ci (combine_env gs dc0 g0))\<rbrakk>"
     using sound_transfer_for.tf_sound_enter_entry_for[OF sound sc']
     by (simp add: call_enter_CallEdge)
-  have enter: "dgs_enter (unit_dg_spec_for_lifted gs is_bot_pred tf) ci dc g
-                 = (map_lift (restrict_global_for gs) (normalize_lift is_bot_pred (snd (enter\<^sup># tf ci (combine_env gs dc0 g0)))),
-                    map_lift (restrict_local_for gs) (normalize_lift is_bot_pred (snd (enter\<^sup># tf ci (combine_env gs dc0 g0)))))"
+  have enter: "dgs_enter (unit_dg_spec_for_lifted gs empty_pred tf) ci dc g
+                 = (map_lift (restrict_global_for gs) (normalize_lift empty_pred (snd (enter\<^sup># tf ci (combine_env gs dc0 g0)))),
+                    map_lift (restrict_local_for gs) (normalize_lift empty_pred (snd (enter\<^sup># tf ci (combine_env gs dc0 g0)))))"
     unfolding dgs_enter_unit_dg_spec_for_lifted unit_step_for_lifted_def
     by (simp add: dc0 g0_def Let_def transfer_lift_def)
   show ?thesis
-  proof (cases "is_bot_pred (snd (enter\<^sup># tf ci (combine_env gs dc0 g0)))")
+  proof (cases "empty_pred (snd (enter\<^sup># tf ci (combine_env gs dc0 g0)))")
     case True
     with exact base have "\<lbrakk>snd (enter\<^sup># tf ci (combine_env gs dc0 g0))\<rbrakk> = {}"
-      using is_bot_state_iff_gamma_state_empty by blast
+      using is_empty_state_iff_gamma_state_empty by blast
     with base show ?thesis using enter True by simp
   next
     case False
@@ -2180,8 +2180,8 @@ qed
 theorem sound_dg_spec_unit_for_lifted:
   assumes sound: "sound_transfer_for gs tf"
     and reserved: "reserved_ret_var gs"
-    and exact: "\<And>s. is_bot_pred s = is_bot_state s"
-  shows "sound_dg_spec (unit_dg_spec_for_lifted gs is_bot_pred tf) (gamma_unit_lifted gs) gs"
+    and exact: "\<And>s. empty_pred s = is_empty_state s"
+  shows "sound_dg_spec (unit_dg_spec_for_lifted gs empty_pred tf) (gamma_unit_lifted gs) gs"
   apply unfold_locales
   subgoal for d d' g g'
     by (rule gamma_unit_lifted_mono)

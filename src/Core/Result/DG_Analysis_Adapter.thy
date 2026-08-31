@@ -1,5 +1,5 @@
 theory DG_Analysis_Adapter
-  imports Routed_Context Abstract_Checks Analysis_Result Activation_Backbone
+  imports Routed_Context Contextual_Check_Report Analysis_Result Activation_Backbone
 begin
 
 section \<open>Generic public result and check-report adapter for a routed DG analysis\<close>
@@ -45,9 +45,9 @@ locale dg_analysis_adapter =
     and classify :: "exp \<Rightarrow> 'a abs_state \<Rightarrow> check_result"
   assumes gammaDG_rd: "\<And>d g'. gammaDG d g' = gamma_state_lift (rd d)"
     and classify_proved:
-    "\<And>c d s. classify c d = Check_Proved \<Longrightarrow> s \<in> gamma_state d \<Longrightarrow> truthy (aval c s)"
+    "\<And>c d s. classify c d = Check_Proved \<Longrightarrow> s \<in> \<lbrakk>d\<rbrakk> \<Longrightarrow> truthy (aval c s)"
     and classify_refuted:
-    "\<And>c d s. classify c d = Check_Refuted \<Longrightarrow> s \<in> gamma_state d \<Longrightarrow> \<not> truthy (aval c s)"
+    "\<And>c d s. classify c d = Check_Refuted \<Longrightarrow> s \<in> \<lbrakk>d\<rbrakk> \<Longrightarrow> \<not> truthy (aval c s)"
 begin
 
 
@@ -61,31 +61,31 @@ text \<open>
   the identity when the framework was instantiated at that carrier, the executable
   readback when it was instantiated at the solver's own --- and the one
   collapse this table then needs is \<^const>\<open>canonicalize_lift\<close> against
-  \<^const>\<open>is_bot_state\<close>, so a witness-bottom \<^const>\<open>Lifted\<close> payload --- a solved
+  \<^const>\<open>is_empty_state\<close>, so a witness-bottom \<^const>\<open>Lifted\<close> payload --- a solved
   value that is pointwise \<^const>\<open>bot\<close> without the solver's own \<^const>\<open>Bot\<close> tag
-  --- reads as \<^const>\<open>Unreachable\<close> here, matching \<^const>\<open>classify_point\<close>'s
+  --- reads as \<^const>\<open>Bot\<close> here, matching \<^const>\<open>classify_point\<close>'s
   documented discipline of never fabricating a vacuous \<^const>\<open>Check_Proved\<close>
   off an empty state.
 \<close>
 
 definition analyse_result :: "('c, 'a abs_state) analysis_result" where
   "analyse_result = Analysis_Result vars
-     (\<lambda>v ctx. case canonicalize_lift is_bot_state (rd (locals (sigma (Inl (v, ctx))))) of
-                Bot \<Rightarrow> Unreachable | Lifted a \<Rightarrow> Reachable a)"
+     (\<lambda>v ctx. case canonicalize_lift is_empty_state (rd (locals (sigma (Inl (v, ctx))))) of
+                Bot \<Rightarrow> Bot | Lifted a \<Rightarrow> Lifted a)"
 
 lemma lookup_context_analyse_result:
   "lookup_context analyse_result v ctx =
      (if (v, ctx) \<in> vars
-      then (case canonicalize_lift is_bot_state (rd (locals (sigma (Inl (v, ctx))))) of
-              Bot \<Rightarrow> Unreachable | Lifted a \<Rightarrow> Reachable a)
-      else Unreachable)"
+      then (case canonicalize_lift is_empty_state (rd (locals (sigma (Inl (v, ctx))))) of
+              Bot \<Rightarrow> Bot | Lifted a \<Rightarrow> Lifted a)
+      else Bot)"
   unfolding lookup_context_def analyse_result_def by simp
 
 text \<open>
   The soundness bridge \<open>gammaM (sg (Inl (v, ctx)))\<close> steps need: a covered
   point's guarded reading agrees exactly with \<open>analyse_result\<close>'s own
-  \<^const>\<open>lookup_context\<close> answer at the same key, \<^const>\<open>Unreachable\<close>
-  concretizing to the empty set and \<^const>\<open>Reachable\<close> to \<^const>\<open>gamma_state\<close> of
+  \<^const>\<open>lookup_context\<close> answer at the same key, \<^const>\<open>Bot\<close>
+  concretizing to the empty set and \<^const>\<open>Lifted\<close> to \<^const>\<open>gamma_state\<close> of
   its payload. This is the un-projected special case of
   \<open>gamma_point_normalize_point_canonicalize_lift\<close> (\<^theory>\<open>Voblint_Core.Analysis_Result\<close>):
   that lemma bridges a resolved_st_q-backed report across the same
@@ -98,24 +98,24 @@ lemma gammaM_sg_eq_lookup_context:
   assumes cov: "(v, ctx) \<in> vars"
   shows "gammaM (sg (Inl (v, ctx))) =
            (case lookup_context analyse_result v ctx of
-              Unreachable \<Rightarrow> {} | Reachable st \<Rightarrow> gamma_state st)"
+              Bot \<Rightarrow> {} | Lifted st \<Rightarrow> \<lbrakk>st\<rbrakk>)"
 proof -
   have "gammaM (sg (Inl (v, ctx))) = gammaDG (locals (sigma (Inl (v, ctx))))
           (globs (sigma (Inr gk0)))"
     using cov by (simp add: sg_cov)
   also have "\<dots> = gamma_state_lift (rd (locals (sigma (Inl (v, ctx)))))"
     by (rule gammaDG_rd)
-  also have "\<dots> = (case canonicalize_lift is_bot_state (rd (locals (sigma (Inl (v, ctx))))) of
-                      Bot \<Rightarrow> {} | Lifted a \<Rightarrow> gamma_state a)"
+  also have "\<dots> = (case canonicalize_lift is_empty_state (rd (locals (sigma (Inl (v, ctx))))) of
+                      Bot \<Rightarrow> {} | Lifted a \<Rightarrow> \<lbrakk>a\<rbrakk>)"
   proof (cases "rd (locals (sigma (Inl (v, ctx))))")
     case Bot
     then show ?thesis by simp
   next
     case (Lifted st0)
     show ?thesis
-    proof (cases "is_bot_state st0")
+    proof (cases "is_empty_state st0")
       case True
-      with Lifted have "gamma_state st0 = {}" using is_bot_state_gamma_state_empty by blast
+      with Lifted have "\<lbrakk>st0\<rbrakk> = {}" using is_empty_state_gamma_state_empty by blast
       with Lifted True show ?thesis by simp
     next
       case False
@@ -123,7 +123,7 @@ proof -
     qed
   qed
   also have "\<dots> = (case lookup_context analyse_result v ctx of
-                      Unreachable \<Rightarrow> {} | Reachable st \<Rightarrow> gamma_state st)"
+                      Bot \<Rightarrow> {} | Lifted st \<Rightarrow> \<lbrakk>st\<rbrakk>)"
     using cov unfolding lookup_context_analyse_result by (simp split: lifted.splits)
   finally show ?thesis .
 qed
@@ -134,7 +134,7 @@ text \<open>
   needs, phrased directly against \<^const>\<open>analyse_result\<close> rather than against
   \<open>analyse_report_ctx\<close> (defined below): every activation-collected store at \<open>v\<close> is
   concretized by \<^const>\<open>analyse_result\<close>'s own reading, \<^const>\<open>bot\<close> when
-  uncovered or witness-bottom, its \<^const>\<open>Reachable\<close> payload otherwise ---
+  uncovered or witness-bottom, its \<^const>\<open>Lifted\<close> payload otherwise ---
   composing \<open>activation_collect_dg_sound\<close> with \<open>gammaM_sg_eq_lookup_context\<close>,
   case-split on coverage. A concrete instance whose own public result reads
   through this same \<open>analyse_result\<close> (up to a proved value equality) gets its
@@ -147,8 +147,8 @@ lemma analyse_result_node_sound:
   assumes entry_cov: "(cfg_entry g, initial_ctx) \<in> vars"
     and s0_sound: "S0 \<subseteq> gammaDG s0d s0g"
   shows "activation_collect gs enterc initial_ctx g S0 v ctx
-           \<subseteq> gamma_state (case lookup_context analyse_result v ctx of
-                             Unreachable \<Rightarrow> bot | Reachable st \<Rightarrow> st)"
+           \<subseteq> \<lbrakk>case lookup_context analyse_result v ctx of
+                             Bot \<Rightarrow> bot | Lifted st \<Rightarrow> st\<rbrakk>"
 proof -
   have "activation_collect gs enterc initial_ctx g S0 v ctx
           \<subseteq> gammaM (sg (Inl (v, ctx)))"
@@ -161,7 +161,7 @@ proof -
   next
     case False
     hence "gammaM (sg (Inl (v, ctx))) = {}" by (simp add: sg_uncov)
-    moreover from False have "lookup_context analyse_result v ctx = Unreachable"
+    moreover from False have "lookup_context analyse_result v ctx = Bot"
       unfolding lookup_context_analyse_result by simp
     ultimately show ?thesis by simp
   qed
@@ -202,10 +202,10 @@ proof -
   fix ctx s
   assume smem: "s \<in> activation_collect gs enterc initial_ctx g S0 v ctx"
   have node_sound: "activation_collect gs enterc initial_ctx g S0 v ctx
-      \<subseteq> gamma_state (case lookup_context analyse_result v ctx of Unreachable \<Rightarrow> bot | Reachable st \<Rightarrow> st)"
+      \<subseteq> \<lbrakk>case lookup_context analyse_result v ctx of Bot \<Rightarrow> bot | Lifted st \<Rightarrow> st\<rbrakk>"
     by (rule analyse_result_node_sound[OF entry_cov s0_sound])
-  obtain st where reach: "lookup_context analyse_result v ctx = Reachable st"
-    and sst: "s \<in> gamma_state st"
+  obtain st where reach: "lookup_context analyse_result v ctx = Lifted st"
+    and sst: "s \<in> \<lbrakk>st\<rbrakk>"
     using smem node_sound by (cases "lookup_context analyse_result v ctx") (auto simp: gamma_state_bot)
   have mem_unfold: "(v, c, Decided Check_Proved) \<in> set (classify_checks_verdicts g analyse_result classify)"
     using mem unfolding analyse_report_ctx_def .
@@ -225,10 +225,10 @@ proof -
   fix ctx s
   assume smem: "s \<in> activation_collect gs enterc initial_ctx g S0 v ctx"
   have node_sound: "activation_collect gs enterc initial_ctx g S0 v ctx
-      \<subseteq> gamma_state (case lookup_context analyse_result v ctx of Unreachable \<Rightarrow> bot | Reachable st \<Rightarrow> st)"
+      \<subseteq> \<lbrakk>case lookup_context analyse_result v ctx of Bot \<Rightarrow> bot | Lifted st \<Rightarrow> st\<rbrakk>"
     by (rule analyse_result_node_sound[OF entry_cov s0_sound])
-  obtain st where reach: "lookup_context analyse_result v ctx = Reachable st"
-    and sst: "s \<in> gamma_state st"
+  obtain st where reach: "lookup_context analyse_result v ctx = Lifted st"
+    and sst: "s \<in> \<lbrakk>st\<rbrakk>"
     using smem node_sound by (cases "lookup_context analyse_result v ctx") (auto simp: gamma_state_bot)
   have mem_unfold: "(v, c, Decided Check_Refuted) \<in> set (classify_checks_verdicts g analyse_result classify)"
     using mem unfolding analyse_report_ctx_def .

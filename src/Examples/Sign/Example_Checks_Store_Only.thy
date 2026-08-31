@@ -112,7 +112,7 @@ text \<open>The computed Sign environment at an arbitrary node, read out of the
 definition checks_ex_env :: "pp \<Rightarrow> sign abs_state" where
   "checks_ex_env v =
      (case lookup_context (analyse_sign_result_for checks_ex_gs checks_ex_program) v () of
-        Unreachable \<Rightarrow> bot | Reachable st \<Rightarrow> st)"
+        Bot \<Rightarrow> bot | Lifted st \<Rightarrow> st)"
 
 text \<open>The compiled edges, read off \<^const>\<open>prog_cfg\<close>'s own \<open>eval\<close>-computed
   shape: \<open>Statement 1\<close> (\<open>__voblint_check(0 < y)\<close>, proved) reaches \<open>Statement 2\<close> reaches
@@ -151,19 +151,19 @@ lemma checks_ex_node_sound_1:
   "checks_ex_reach (Statement 1) \<le> \<lbrakk>checks_ex_env (Statement 1)\<rbrakk>"
   unfolding checks_ex_reach_def checks_ex_env_def
   using checks_ex_node_sound
-  by (simp add: prog_main_name_def gamma_point_def split: point_state.splits)
+  by (simp add: prog_main_name_def gamma_point_def split: lifted.splits)
 
 lemma checks_ex_node_sound_3:
   "checks_ex_reach (Statement 3) \<le> \<lbrakk>checks_ex_env (Statement 3)\<rbrakk>"
   unfolding checks_ex_reach_def checks_ex_env_def
   using checks_ex_node_sound
-  by (simp add: prog_main_name_def gamma_point_def split: point_state.splits)
+  by (simp add: prog_main_name_def gamma_point_def split: lifted.splits)
 
 lemma checks_ex_node_sound_5:
   "checks_ex_reach (Statement 5) \<le> \<lbrakk>checks_ex_env (Statement 5)\<rbrakk>"
   unfolding checks_ex_reach_def checks_ex_env_def
   using checks_ex_node_sound
-  by (simp add: prog_main_name_def gamma_point_def split: point_state.splits)
+  by (simp add: prog_main_name_def gamma_point_def split: lifted.splits)
 
 text \<open>Executable classification at each check's own node --- \<open>y\<close> is \<open>SPos\<close>
   right after \<open>y := 5\<close> at \<open>Statement 1\<close>, \<open>SZero\<close> right after \<open>y := 0\<close> at
@@ -216,7 +216,7 @@ proof (rule sign_checks_provenI)
   fix v :: pp and cnd :: exp
   assume mem: "(v, cnd) \<in> {(Statement 1, Less (N 0) (V (STR ''y'')))}"
   then have v_eq: "v = Statement 1" and cnd_eq: "cnd = Less (N 0) (V (STR ''y''))" by auto
-  show "sign_check_true cnd (checks_ex_env v)"
+  show "sign_check_query cnd (checks_ex_env v) = Some True"
     unfolding v_eq cnd_eq checks_ex_env_def by eval
 qed
 

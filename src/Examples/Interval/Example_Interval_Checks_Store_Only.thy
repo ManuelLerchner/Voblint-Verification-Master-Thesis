@@ -116,7 +116,7 @@ text \<open>The computed Interval environment at an arbitrary node, read out of 
 definition checks_ivl_ex_env :: "pp \<Rightarrow> ivl abs_state" where
   "checks_ivl_ex_env v =
      (case lookup_context (analyse_interval_join_result_for checks_ivl_ex_gs checks_ivl_ex_program) v () of
-        Unreachable \<Rightarrow> bot | Reachable st \<Rightarrow> st)"
+        Bot \<Rightarrow> bot | Lifted st \<Rightarrow> st)"
 
 text \<open>The compiled edges, read off \<^const>\<open>prog_cfg\<close>'s own \<open>eval\<close>-computed
   shape: \<open>Statement 1\<close> (\<open>x := __voblint_nondet_int()\<close>'s successor) branches on
@@ -156,19 +156,19 @@ lemma checks_ivl_ex_node_sound_2:
   "checks_ivl_ex_reach (Statement 2) \<le> \<lbrakk>checks_ivl_ex_env (Statement 2)\<rbrakk>"
   unfolding checks_ivl_ex_reach_def checks_ivl_ex_env_def
   using checks_ivl_ex_node_sound
-  by (simp add: prog_main_name_def gamma_point_def split: point_state.splits)
+  by (simp add: prog_main_name_def gamma_point_def split: lifted.splits)
 
 lemma checks_ivl_ex_node_sound_3:
   "checks_ivl_ex_reach (Statement 3) \<le> \<lbrakk>checks_ivl_ex_env (Statement 3)\<rbrakk>"
   unfolding checks_ivl_ex_reach_def checks_ivl_ex_env_def
   using checks_ivl_ex_node_sound
-  by (simp add: prog_main_name_def gamma_point_def split: point_state.splits)
+  by (simp add: prog_main_name_def gamma_point_def split: lifted.splits)
 
 lemma checks_ivl_ex_node_sound_4:
   "checks_ivl_ex_reach (Statement 4) \<le> \<lbrakk>checks_ivl_ex_env (Statement 4)\<rbrakk>"
   unfolding checks_ivl_ex_reach_def checks_ivl_ex_env_def
   using checks_ivl_ex_node_sound
-  by (simp add: prog_main_name_def gamma_point_def split: point_state.splits)
+  by (simp add: prog_main_name_def gamma_point_def split: lifted.splits)
 
 text \<open>Executable classification at each check's own node --- the guard
   \<open>0 < x \<and> x < 10\<close> narrows \<open>x\<close> to \<open>[1,9]\<close> at \<open>Statement 2\<close>, so \<open>x < 11\<close> is
@@ -231,7 +231,7 @@ proof (rule interval_checks_provenI)
   fix v :: pp and cnd :: exp
   assume mem: "(v, cnd) \<in> {(Statement 2, Less (V (STR ''x'')) (N 11))}"
   then have v_eq: "v = Statement 2" and cnd_eq: "cnd = Less (V (STR ''x'')) (N 11)" by auto
-  show "interval_check_true cnd (checks_ivl_ex_env v)"
+  show "interval_check_query cnd (checks_ivl_ex_env v) = Some True"
     unfolding v_eq cnd_eq checks_ivl_ex_env_def by eval
 qed
 

@@ -26,22 +26,22 @@ definition base_dg_spec_st_for_lifted ::
    \<Rightarrow> (call_info \<Rightarrow> 'a exec_dg_st \<Rightarrow> 'a exec_dg_st)
    \<Rightarrow> ('a exec_dg_st lifted, 'g::bounded_semilattice_sup_bot) dg_spec"
 where
-  "base_dg_spec_st_for_lifted gs is_bot_pred tf_st enter_st = (|
-    dgs_skip       = (\<lambda>d g. (g, transfer_lift is_bot_pred (tf_st EA_Nop) d)),
-    dgs_assign     = (\<lambda>x e d g. (g, transfer_lift is_bot_pred (tf_st (EA_Assign x e)) d)),
-    dgs_special    = (\<lambda>sc x d g. (g, transfer_lift is_bot_pred (tf_st (EA_Special sc x)) d)),
-    dgs_branch     = (\<lambda>b pol d g. (g, transfer_lift is_bot_pred
+  "base_dg_spec_st_for_lifted gs empty_pred tf_st enter_st = (|
+    dgs_skip       = (\<lambda>d g. (g, transfer_lift empty_pred (tf_st EA_Nop) d)),
+    dgs_assign     = (\<lambda>x e d g. (g, transfer_lift empty_pred (tf_st (EA_Assign x e)) d)),
+    dgs_special    = (\<lambda>sc x d g. (g, transfer_lift empty_pred (tf_st (EA_Special sc x)) d)),
+    dgs_branch     = (\<lambda>b pol d g. (g, transfer_lift empty_pred
       (tf_st (if pol then EA_Assume b else EA_AssumeNot b)) d)),
-    dgs_body       = (\<lambda>p d g. (g, transfer_lift is_bot_pred (tf_st EA_Nop) d)),
-    dgs_return     = (\<lambda>e p d g. (g, transfer_lift is_bot_pred (tf_st (EA_Ret e p)) d)),
-    dgs_enter      = (\<lambda>ci d g. (g, transfer_lift is_bot_pred (enter_st ci) d)),
+    dgs_body       = (\<lambda>p d g. (g, transfer_lift empty_pred (tf_st EA_Nop) d)),
+    dgs_return     = (\<lambda>e p d g. (g, transfer_lift empty_pred (tf_st (EA_Ret e p)) d)),
+    dgs_enter      = (\<lambda>ci d g. (g, transfer_lift empty_pred (enter_st ci) d)),
     dgs_event      = (\<lambda>ev d g. (g, case ev of Check_Event bc \<Rightarrow>
-                                      transfer_lift is_bot_pred (tf_st (EA_Check bc)) d)),
+                                      transfer_lift empty_pred (tf_st (EA_Check bc)) d)),
     dgs_caller_cont    = (\<lambda>ci dc g. dc),
     dgs_combine_env    = (\<lambda>ci dc de g. (g, case dc of Bot \<Rightarrow> Bot | Lifted x \<Rightarrow>
                                             (case de of Bot \<Rightarrow> Bot | Lifted y \<Rightarrow> Lifted (combine_resolved_st_q x y)))),
     dgs_combine_assign = (\<lambda>ci de g merged.
-      (g, transfer_lift2 is_bot_pred
+      (g, transfer_lift2 empty_pred
             (\<lambda>env0 de0. combine_assign_resolved_q gs (ci_dst ci)
                 (lookup_resolved_st_q de0 (location_of gs ret_var)) env0)
             (snd merged) de))
@@ -50,14 +50,14 @@ where
 subsection \<open>Basic equations\<close>
 
 lemma dg_spec_step_base_st_for_lifted:
-  "dg_spec_step (base_dg_spec_st_for_lifted gs is_bot_pred tf_st enter_st) a d g =
-     (g, transfer_lift is_bot_pred (tf_st a) d)"
+  "dg_spec_step (base_dg_spec_st_for_lifted gs empty_pred tf_st enter_st) a d g =
+     (g, transfer_lift empty_pred (tf_st a) d)"
   unfolding base_dg_spec_st_for_lifted_def
   by (cases a) simp_all
 
 lemma dgs_enter_base_st_for_lifted:
-  "dgs_enter (base_dg_spec_st_for_lifted gs is_bot_pred tf_st enter_st) ci d g =
-     (g, transfer_lift is_bot_pred (enter_st ci) d)"
+  "dgs_enter (base_dg_spec_st_for_lifted gs empty_pred tf_st enter_st) ci d g =
+     (g, transfer_lift empty_pred (enter_st ci) d)"
   unfolding base_dg_spec_st_for_lifted_def by simp
 
 text \<open>The caller half of \<open>enter\<close> is the identity here for the same reason as in the
@@ -65,12 +65,12 @@ text \<open>The caller half of \<open>enter\<close> is the identity here for the
   nothing in it to invalidate.\<close>
 
 lemma dgs_caller_cont_base_st_for_lifted [simp]:
-  "dgs_caller_cont (base_dg_spec_st_for_lifted gs is_bot_pred tf_st enter_st) ci dc g = dc"
+  "dgs_caller_cont (base_dg_spec_st_for_lifted gs empty_pred tf_st enter_st) ci dc g = dc"
   unfolding base_dg_spec_st_for_lifted_def by simp
 
 lemma dgs_combine_base_st_for_lifted:
-  "dgs_combine (base_dg_spec_st_for_lifted gs is_bot_pred tf_st enter_st) ci dc de g =
-     (g, transfer_lift2 is_bot_pred
+  "dgs_combine (base_dg_spec_st_for_lifted gs empty_pred tf_st enter_st) ci dc de g =
+     (g, transfer_lift2 empty_pred
            (\<lambda>env0 de0. combine_assign_resolved_q gs (ci_dst ci)
                (lookup_resolved_st_q de0 (location_of gs ret_var)) env0)
            (case dc of Bot \<Rightarrow> Bot | Lifted x \<Rightarrow>
@@ -92,10 +92,10 @@ text \<open>
 
 theorem base_dg_spec_st_for_lifted_dg_spec_step_commute:
   assumes commute: "\<And>a s. fun_of_exec_dg_st_for gs (tf_st a s) = apply_tf tf a (fun_of_exec_dg_st_for gs s)"
-    and exact: "\<And>s. is_bot_pred s = is_bot_state (fun_of_exec_dg_st_for gs s)"
+    and exact: "\<And>s. empty_pred s = is_empty_state (fun_of_exec_dg_st_for gs s)"
   shows "map_prod (map_lift (fun_of_exec_dg_st_for gs)) (map_lift (fun_of_exec_dg_st_for gs))
-           (dg_spec_step (base_dg_spec_st_for_lifted gs is_bot_pred tf_st enter_st) a d g) =
-         dg_spec_step (base_dg_spec_for_lifted gs is_bot_state tf) a
+           (dg_spec_step (base_dg_spec_st_for_lifted gs empty_pred tf_st enter_st) a d g) =
+         dg_spec_step (base_dg_spec_for_lifted gs is_empty_state tf) a
            (map_lift (fun_of_exec_dg_st_for gs) d) (map_lift (fun_of_exec_dg_st_for gs) g)"
   unfolding dg_spec_step_base_st_for_lifted dg_spec_step_base_for_lifted map_prod_def
   by (cases d) (simp_all add: transfer_lift_def normalize_lift_def commute exact)
@@ -103,10 +103,10 @@ theorem base_dg_spec_st_for_lifted_dg_spec_step_commute:
 theorem base_dg_spec_st_for_lifted_dgs_enter_commute:
   assumes commute: "\<And>ci s. fun_of_exec_dg_st_for gs (enter_st ci s) =
                        snd (enter\<^sup># tf ci (fun_of_exec_dg_st_for gs s))"
-    and exact: "\<And>s. is_bot_pred s = is_bot_state (fun_of_exec_dg_st_for gs s)"
+    and exact: "\<And>s. empty_pred s = is_empty_state (fun_of_exec_dg_st_for gs s)"
   shows "map_prod (map_lift (fun_of_exec_dg_st_for gs)) (map_lift (fun_of_exec_dg_st_for gs))
-           (dgs_enter (base_dg_spec_st_for_lifted gs is_bot_pred tf_st enter_st) ci d g) =
-         dgs_enter (base_dg_spec_for_lifted gs is_bot_state tf) ci
+           (dgs_enter (base_dg_spec_st_for_lifted gs empty_pred tf_st enter_st) ci d g) =
+         dgs_enter (base_dg_spec_for_lifted gs is_empty_state tf) ci
            (map_lift (fun_of_exec_dg_st_for gs) d) (map_lift (fun_of_exec_dg_st_for gs) g)"
   unfolding dgs_enter_base_st_for_lifted dgs_enter_base_for_lifted map_prod_def
   by (cases d) (simp_all add: transfer_lift_def normalize_lift_def commute exact)
@@ -118,16 +118,16 @@ text \<open>The caller half of \<open>enter\<close> carries its own corresponden
 
 theorem base_dg_spec_st_for_lifted_dgs_caller_cont_commute:
   "map_lift (fun_of_exec_dg_st_for gs)
-     (dgs_caller_cont (base_dg_spec_st_for_lifted gs is_bot_pred tf_st enter_st) ci dc g) =
-   dgs_caller_cont (base_dg_spec_for_lifted gs is_bot_state tf) ci
+     (dgs_caller_cont (base_dg_spec_st_for_lifted gs empty_pred tf_st enter_st) ci dc g) =
+   dgs_caller_cont (base_dg_spec_for_lifted gs is_empty_state tf) ci
      (map_lift (fun_of_exec_dg_st_for gs) dc) (map_lift (fun_of_exec_dg_st_for gs) g)"
   unfolding base_dg_spec_st_for_lifted_def base_dg_spec_for_lifted_def by simp
 
 theorem base_dg_spec_st_for_lifted_dgs_combine_commute:
-  assumes exact: "\<And>(s::'a::sound_domain resolved_st_q). is_bot_pred s = is_bot_state (fun_of_exec_dg_st_for gs s)"
+  assumes exact: "\<And>(s::'a::sound_domain resolved_st_q). empty_pred s = is_empty_state (fun_of_exec_dg_st_for gs s)"
   shows "map_prod (map_lift (fun_of_exec_dg_st_for gs)) (map_lift (fun_of_exec_dg_st_for gs))
-           (dgs_combine (base_dg_spec_st_for_lifted gs is_bot_pred tf_st enter_st) ci dc de g) =
-         dgs_combine (base_dg_spec_for_lifted gs is_bot_state tf) ci
+           (dgs_combine (base_dg_spec_st_for_lifted gs empty_pred tf_st enter_st) ci dc de g) =
+         dgs_combine (base_dg_spec_for_lifted gs is_empty_state tf) ci
            (map_lift (fun_of_exec_dg_st_for gs) dc) (map_lift (fun_of_exec_dg_st_for gs) de)
            (map_lift (fun_of_exec_dg_st_for gs) g)"
   unfolding dgs_combine_base_st_for_lifted dgs_combine_base_for_lifted map_prod_def
@@ -157,7 +157,7 @@ text \<open>
   domain fact at all: \<^const>\<open>fun_of_resolved_st_q_for\<close> is already carrier-polymorphic and
   \<open>sup\<close>-homomorphic (\<open>fun_of_resolved_st_q_for_sup\<close>, \<^theory>\<open>Voblint_Exec.Exec_St\<close>), so this
   is a free-standing fact, not part of the \<open>routed_dg_domain_exec\<close> locale below -- keeping it
-  outside means citing it never drags in that locale's \<open>is_bot_pred\<close>/transfer obligations.
+  outside means citing it never drags in that locale's \<open>empty_pred\<close>/transfer obligations.
 \<close>
 
 lemma dg_reader_commute_gen_lifted_for:
@@ -167,7 +167,7 @@ lemma dg_reader_commute_gen_lifted_for:
 
 locale routed_dg_domain_exec =
   fixes gs :: "vname \<Rightarrow> bool"
-    and is_bot_pred :: "'a::sound_domain exec_dg_st \<Rightarrow> bool"
+    and empty_pred :: "'a::sound_domain exec_dg_st \<Rightarrow> bool"
     and tf_st :: "edge_action \<Rightarrow> 'a exec_dg_st \<Rightarrow> 'a exec_dg_st"
     and enter_st :: "call_info \<Rightarrow> 'a exec_dg_st \<Rightarrow> 'a exec_dg_st"
     and tf :: "'a domain_transfer"
@@ -176,39 +176,39 @@ locale routed_dg_domain_exec =
     and enter_st_commute:
       "\<And>ci s. fun_of_resolved_st_q_for gs (enter_st ci s)
                    = snd (enter\<^sup># tf ci (fun_of_resolved_st_q_for gs s))"
-    and is_bot_pred_exact:
-      "\<And>s. is_bot_pred s = is_bot_state (fun_of_resolved_st_q_for gs s)"
+    and empty_pred_exact:
+      "\<And>s. empty_pred s = is_empty_state (fun_of_resolved_st_q_for gs s)"
 begin
 
 lemma Hstep_lifted_for:
   "map_prod (map_lift (fun_of_resolved_st_q_for gs)) (map_lift (fun_of_resolved_st_q_for gs))
-     (dg_spec_step (base_dg_spec_st_for_lifted gs is_bot_pred tf_st enter_st) a d g)
-   = dg_spec_step (base_dg_spec_for_lifted gs is_bot_state tf) a
+     (dg_spec_step (base_dg_spec_st_for_lifted gs empty_pred tf_st enter_st) a d g)
+   = dg_spec_step (base_dg_spec_for_lifted gs is_empty_state tf) a
        (map_lift (fun_of_resolved_st_q_for gs) d) (map_lift (fun_of_resolved_st_q_for gs) g)"
   by (rule base_dg_spec_st_for_lifted_dg_spec_step_commute
-        [unfolded fun_of_exec_dg_st_for_def, OF tf_st_commute is_bot_pred_exact])
+        [unfolded fun_of_exec_dg_st_for_def, OF tf_st_commute empty_pred_exact])
 
 lemma Henter_lifted_for:
   "map_prod (map_lift (fun_of_resolved_st_q_for gs)) (map_lift (fun_of_resolved_st_q_for gs))
-     (dgs_enter (base_dg_spec_st_for_lifted gs is_bot_pred tf_st enter_st) ci d g)
-   = dgs_enter (base_dg_spec_for_lifted gs is_bot_state tf) ci
+     (dgs_enter (base_dg_spec_st_for_lifted gs empty_pred tf_st enter_st) ci d g)
+   = dgs_enter (base_dg_spec_for_lifted gs is_empty_state tf) ci
        (map_lift (fun_of_resolved_st_q_for gs) d) (map_lift (fun_of_resolved_st_q_for gs) g)"
   by (rule base_dg_spec_st_for_lifted_dgs_enter_commute
-        [unfolded fun_of_exec_dg_st_for_def, OF enter_st_commute is_bot_pred_exact])
+        [unfolded fun_of_exec_dg_st_for_def, OF enter_st_commute empty_pred_exact])
 
 lemma Hcomb_lifted_for:
   "map_prod (map_lift (fun_of_resolved_st_q_for gs)) (map_lift (fun_of_resolved_st_q_for gs))
-     (dgs_combine (base_dg_spec_st_for_lifted gs is_bot_pred tf_st enter_st) dst dc de g)
-   = dgs_combine (base_dg_spec_for_lifted gs is_bot_state tf) dst
+     (dgs_combine (base_dg_spec_st_for_lifted gs empty_pred tf_st enter_st) dst dc de g)
+   = dgs_combine (base_dg_spec_for_lifted gs is_empty_state tf) dst
        (map_lift (fun_of_resolved_st_q_for gs) dc) (map_lift (fun_of_resolved_st_q_for gs) de)
        (map_lift (fun_of_resolved_st_q_for gs) g)"
   by (rule base_dg_spec_st_for_lifted_dgs_combine_commute
-        [unfolded fun_of_exec_dg_st_for_def, OF is_bot_pred_exact])
+        [unfolded fun_of_exec_dg_st_for_def, OF empty_pred_exact])
 
 lemma Hcont_lifted_for:
   "map_lift (fun_of_resolved_st_q_for gs)
-     (caller_cont (base_dg_spec_st_for_lifted gs is_bot_pred tf_st enter_st) ci dc g)
-   = caller_cont (base_dg_spec_for_lifted gs is_bot_state tf) ci
+     (caller_cont (base_dg_spec_st_for_lifted gs empty_pred tf_st enter_st) ci dc g)
+   = caller_cont (base_dg_spec_for_lifted gs is_empty_state tf) ci
        (map_lift (fun_of_resolved_st_q_for gs) dc) (map_lift (fun_of_resolved_st_q_for gs) g)"
   by (rule base_dg_spec_st_for_lifted_dgs_caller_cont_commute
         [unfolded fun_of_exec_dg_st_for_def])
@@ -240,9 +240,9 @@ lemma gamma_exec_Bot [simp]: "gamma_exec Bot g = {}"
 
 theorem sound_dg_spec_st:
   assumes abs: "sound_dg_spec
-     (base_dg_spec_for_lifted gs is_bot_state tf :: ('a abs_state lifted, 'a abs_state lifted) dg_spec)
+     (base_dg_spec_for_lifted gs is_empty_state tf :: ('a abs_state lifted, 'a abs_state lifted) dg_spec)
      gamma_dg_base gs"
-  shows "sound_dg_spec (base_dg_spec_st_for_lifted gs is_bot_pred tf_st enter_st) gamma_exec gs"
+  shows "sound_dg_spec (base_dg_spec_st_for_lifted gs empty_pred tf_st enter_st) gamma_exec gs"
 proof unfold_locales
   let ?f = "map_lift (fun_of_resolved_st_q_for gs)"
   fix d d' g g' :: "'a exec_dg_st lifted"
@@ -252,8 +252,8 @@ proof unfold_locales
     by (intro sound_dg_spec.gammaDG_mono[OF abs] map_lift_fun_of_resolved_st_q_for_mono)
 next
   let ?f = "map_lift (fun_of_resolved_st_q_for gs)"
-  let ?S = "base_dg_spec_st_for_lifted gs is_bot_pred tf_st enter_st"
-  let ?A = "base_dg_spec_for_lifted gs is_bot_state tf"
+  let ?S = "base_dg_spec_st_for_lifted gs empty_pred tf_st enter_st"
+  let ?A = "base_dg_spec_for_lifted gs is_empty_state tf"
   fix a :: edge_action and d g :: "'a exec_dg_st lifted"
   obtain g1 d1 where st: "dg_spec_step ?S a d g = (g1, d1)"
     by (cases "dg_spec_step ?S a d g")
@@ -265,7 +265,7 @@ next
     unfolding gamma_exec_def st by simp
 next
   let ?f = "map_lift (fun_of_resolved_st_q_for gs)"
-  let ?S = "base_dg_spec_st_for_lifted gs is_bot_pred tf_st enter_st"
+  let ?S = "base_dg_spec_st_for_lifted gs empty_pred tf_st enter_st"
   fix s :: store and dc g :: "'a exec_dg_st lifted" and ci :: call_info
   assume "s \<in> gamma_exec dc g"
   then show "s \<in> gamma_exec (dgs_caller_cont ?S ci dc g) g"
@@ -274,8 +274,8 @@ next
       Hcont_lifted_for[of ci dc g] by simp
 next
   let ?f = "map_lift (fun_of_resolved_st_q_for gs)"
-  let ?S = "base_dg_spec_st_for_lifted gs is_bot_pred tf_st enter_st"
-  let ?A = "base_dg_spec_for_lifted gs is_bot_state tf"
+  let ?S = "base_dg_spec_st_for_lifted gs empty_pred tf_st enter_st"
+  let ?A = "base_dg_spec_for_lifted gs is_empty_state tf"
   fix s t :: store and dcont de g :: "'a exec_dg_st lifted" and ci :: call_info
   assume s: "s \<in> gamma_exec dcont g" and t: "t \<in> gamma_exec de g"
   obtain g1 d1 where cmb: "dgs_combine ?S ci dcont de g = (g1, d1)"
@@ -288,8 +288,8 @@ next
     unfolding gamma_exec_def cmb by simp
 next
   let ?f = "map_lift (fun_of_resolved_st_q_for gs)"
-  let ?S = "base_dg_spec_st_for_lifted gs is_bot_pred tf_st enter_st"
-  let ?A = "base_dg_spec_for_lifted gs is_bot_state tf"
+  let ?S = "base_dg_spec_st_for_lifted gs empty_pred tf_st enter_st"
+  let ?A = "base_dg_spec_for_lifted gs is_empty_state tf"
   fix s :: store and dc g :: "'a exec_dg_st lifted" and ci :: call_info
   assume s: "s \<in> gamma_exec dc g"
   obtain g1 d1 where en: "dgs_enter ?S ci dc g = (g1, d1)"
@@ -309,7 +309,7 @@ text \<open>
   are already domain-generic at the abstract carrier \<open>'a abs_state lifted\<close> -- the shape
   \<^locale>\<open>routed_context_base_hetero\<close>'s own \<open>route\<close> parameter needs. The executable equation
   system a solver actually runs needs the same construction at the exec carrier
-  \<open>'a exec_dg_st lifted\<close> instead, built from this locale's own \<open>enter_st\<close>/\<open>is_bot_pred\<close>
+  \<open>'a exec_dg_st lifted\<close> instead, built from this locale's own \<open>enter_st\<close>/\<open>empty_pred\<close>
   rather than the mathematical \<open>enter#\<close>/\<open>tf\<close>: every current EntryState-style routed
   instance (Interval's own \<open>entry_state_route\<close>, \<open>Interval_Ctx_Entry_State_Sound\<close>)
   reproves this exact projection and its commute lemma; stating it here once lets a
@@ -331,14 +331,14 @@ definition entry_exec_route_gen :: "pp \<Rightarrow> 'a list \<Rightarrow> 'a ex
   "entry_exec_route_gen u ctx d ca = entry_exec_route d ca"
 
 lemma entry_exec_route_commute:
-  "formals_route_lifted (base_dg_spec_for_lifted gs is_bot_state tf)
+  "formals_route_lifted (base_dg_spec_for_lifted gs is_empty_state tf)
      (map_lift (fun_of_resolved_st_q_for gs) s) ca = entry_exec_route s ca"
   by (cases ca; cases s)
      (simp_all add: formals_route_lifted_def entry_exec_route_def
                     formals_context_def fun_of_resolved_st_q_for_def)
 
 lemma entry_exec_route_gen_commute:
-  "formals_route_lifted_gen (base_dg_spec_for_lifted gs is_bot_state tf) u ctx
+  "formals_route_lifted_gen (base_dg_spec_for_lifted gs is_empty_state tf) u ctx
      (map_lift (fun_of_resolved_st_q_for gs) s) ca = entry_exec_route_gen u ctx s ca"
   by (simp add: formals_route_lifted_gen_def entry_exec_route_gen_def entry_exec_route_commute)
 

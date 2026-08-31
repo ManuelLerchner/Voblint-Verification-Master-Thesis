@@ -19,7 +19,7 @@ text \<open>
   What is under test here is the result table, not those solutions: the
   contexts stay explicit rather than being joined away, a covered context and
   an uncovered one are answered differently, and a covered-but-dead context
-  reads as \<^const>\<open>Unreachable\<close> instead of as a bottom state the caller has to
+  reads as \<^const>\<open>Bot\<close> instead of as a bottom state the caller has to
   recognize itself.
 \<close>
 
@@ -57,34 +57,34 @@ text \<open>
 \<close>
 
 lemma gcall_result_bump_first:
-  "map_point_state (\<lambda>st. (st (STR ''g''), st (STR ''n'')))
+  "map_lift (\<lambda>st. (st (STR ''g''), st (STR ''n'')))
      (lookup_context gcall_result bump_entry gcall_ctx_first)
-   = Reachable (Ivl (Fin 10) (Fin 10), Ivl (Fin 5) (Fin 5))"
+   = Lifted (Ivl (Fin 10) (Fin 10), Ivl (Fin 5) (Fin 5))"
   by eval
 
 lemma gcall_result_bump_second:
-  "map_point_state (\<lambda>st. (st (STR ''g''), st (STR ''n'')))
+  "map_lift (\<lambda>st. (st (STR ''g''), st (STR ''n'')))
      (lookup_context gcall_result bump_entry gcall_ctx_second)
-   = Reachable (Ivl (Fin 15) (Fin 15), Ivl (Fin 4) (Fin 4))"
+   = Lifted (Ivl (Fin 15) (Fin 15), Ivl (Fin 4) (Fin 4))"
   by eval
 
 lemma gcall_result_bump_third:
-  "map_point_state (\<lambda>st. (st (STR ''g''), st (STR ''n'')))
+  "map_lift (\<lambda>st. (st (STR ''g''), st (STR ''n'')))
      (lookup_context gcall_result bump_entry gcall_ctx_third)
-   = Reachable (Ivl (Fin 19) (Fin 19), Ivl (Fin 19) (Fin 19))"
+   = Lifted (Ivl (Fin 19) (Fin 19), Ivl (Fin 19) (Fin 19))"
   by eval
 
 text \<open>The three per-context states are pairwise different, so the contexts
   above are not three names for one shared unknown.\<close>
 
 lemma gcall_result_bump_states_distinct:
-  "map_point_state (\<lambda>st. st (STR ''n''))
+  "map_lift (\<lambda>st. st (STR ''n''))
      (lookup_context gcall_result bump_entry gcall_ctx_first)
-   \<noteq> map_point_state (\<lambda>st. st (STR ''n''))
+   \<noteq> map_lift (\<lambda>st. st (STR ''n''))
        (lookup_context gcall_result bump_entry gcall_ctx_second)"
-  "map_point_state (\<lambda>st. st (STR ''n''))
+  "map_lift (\<lambda>st. st (STR ''n''))
      (lookup_context gcall_result bump_entry gcall_ctx_second)
-   \<noteq> map_point_state (\<lambda>st. st (STR ''n''))
+   \<noteq> map_lift (\<lambda>st. st (STR ''n''))
        (lookup_context gcall_result bump_entry gcall_ctx_third)"
   by eval+
 
@@ -98,21 +98,21 @@ text \<open>
 \<close>
 
 lemma gcall_result_after_first_return:
-  "map_point_state (\<lambda>st. (st (STR ''g''), st (STR ''a'')))
+  "map_lift (\<lambda>st. (st (STR ''g''), st (STR ''a'')))
      (lookup_context gcall_result (Statement 5) [])
-   = Reachable (Ivl (Fin 15) (Fin 15), Ivl (Fin 15) (Fin 15))"
+   = Lifted (Ivl (Fin 15) (Fin 15), Ivl (Fin 15) (Fin 15))"
   by eval
 
 lemma gcall_result_after_second_return:
-  "map_point_state (\<lambda>st. (st (STR ''g''), st (STR ''b'')))
+  "map_lift (\<lambda>st. (st (STR ''g''), st (STR ''b'')))
      (lookup_context gcall_result (Statement 8) [])
-   = Reachable (Ivl (Fin 19) (Fin 19), Ivl (Fin 19) (Fin 19))"
+   = Lifted (Ivl (Fin 19) (Fin 19), Ivl (Fin 19) (Fin 19))"
   by eval
 
 lemma gcall_result_after_third_return:
-  "map_point_state (\<lambda>st. (st (STR ''g''), st (STR ''c'')))
+  "map_lift (\<lambda>st. (st (STR ''g''), st (STR ''c'')))
      (lookup_context gcall_result (Statement 10) [])
-   = Reachable (Ivl (Fin 38) (Fin 38), Ivl (Fin 38) (Fin 38))"
+   = Lifted (Ivl (Fin 38) (Fin 38), Ivl (Fin 38) (Fin 38))"
   by eval
 
 subsection \<open>A covered context that is nonetheless unreachable\<close>
@@ -120,7 +120,7 @@ subsection \<open>A covered context that is nonetheless unreachable\<close>
 text \<open>
   \<^const>\<open>fact_prog\<close>'s \<open>n<2\<close> base-case branch is dead inside the \<open>n=3\<close>
   activation. The solver still covers that key, so this is not the absent-key
-  case below: the table reports \<^const>\<open>Unreachable\<close> because the stored state
+  case below: the table reports \<^const>\<open>Bot\<close> because the stored state
   concretizes to nothing.
 
   The same node is live in the innermost \<open>n=1\<close> activation, where the base
@@ -142,14 +142,14 @@ lemma fact_result_dead_branch_not_reachable:
   by eval
 
 lemma fact_result_dead_branch_unreachable:
-  "lookup_context fact_result (Statement 2) ctx_a = Unreachable"
+  "lookup_context fact_result (Statement 2) ctx_a = Bot"
   using fact_result_dead_branch_not_reachable
   by (simp add: is_reachable_point_iff)
 
 lemma fact_result_base_case_live_ctx:
-  "map_point_state (\<lambda>st. st (STR ''n''))
+  "map_lift (\<lambda>st. st (STR ''n''))
      (lookup_context fact_result (Statement 2) ctx_a1)
-   = Reachable (Ivl (Fin 1) (Fin 1))"
+   = Lifted (Ivl (Fin 1) (Fin 1))"
   by eval
 
 lemma fact_result_dead_branch_node_live:
@@ -160,7 +160,7 @@ subsection \<open>A context the solver never covered\<close>
 
 text \<open>
   A real node queried at a context no activation ever entered under. The
-  membership guard in \<^const>\<open>lookup_context\<close> answers \<^const>\<open>Unreachable\<close>;
+  membership guard in \<^const>\<open>lookup_context\<close> answers \<^const>\<open>Bot\<close>;
   no fallback to the seeded default context \<open>[]\<close> takes place, so the answer
   does not silently become some other activation's state.
 \<close>
@@ -173,7 +173,7 @@ lemma gcall_result_bogus_absent:
   by eval
 
 lemma gcall_result_bogus_unreachable:
-  "lookup_context gcall_result bump_entry gcall_ctx_bogus = Unreachable"
+  "lookup_context gcall_result bump_entry gcall_ctx_bogus = Bot"
   by (rule lookup_context_absent[OF gcall_result_bogus_absent])
 
 text \<open>The default context \<open>[]\<close> is likewise uncovered at the callee entry, so
@@ -194,9 +194,9 @@ text \<open>
 \<close>
 
 lemma gcall_result_bump_joined:
-  "map_point_state (\<lambda>st. (st (STR ''g''), st (STR ''n'')))
+  "map_lift (\<lambda>st. (st (STR ''g''), st (STR ''n'')))
      (lookup_joined_state gcall_result bump_entry)
-   = Reachable (Ivl (Fin 10) (Fin 19), Ivl (Fin 4) (Fin 19))"
+   = Lifted (Ivl (Fin 10) (Fin 19), Ivl (Fin 4) (Fin 19))"
   by eval
 
 lemma gcall_result_bump_live:
@@ -207,9 +207,9 @@ subsection \<open>Routing a call from the table alone\<close>
 
 text \<open>
   \<^const>\<open>entry_state_callee_ctx\<close> recomputes a call's callee context from the
-  caller's own \<^const>\<open>Reachable\<close> state, without reopening the solver's solution
+  caller's own \<^const>\<open>Lifted\<close> state, without reopening the solver's solution
   map. \<open>gcall_callee_ctx_at\<close> is the shape a consumer of the table uses: the
-  \<^const>\<open>Unreachable\<close> case is decided first and answers \<^const>\<open>None\<close>, so no
+  \<^const>\<open>Bot\<close> case is decided first and answers \<^const>\<open>None\<close>, so no
   routing is attempted at a point no execution reaches, and the routing
   function itself never sees a reachability question.
 \<close>
@@ -217,8 +217,8 @@ text \<open>
 definition gcall_callee_ctx_at :: "pp \<Rightarrow> call_action \<Rightarrow> ivl list option" where
   "gcall_callee_ctx_at u ca =
      (case lookup_context gcall_result u [] of
-        Unreachable \<Rightarrow> None
-      | Reachable st \<Rightarrow> entry_state_callee_ctx gcall_gs ca st)"
+        Bot \<Rightarrow> None
+      | Lifted st \<Rightarrow> entry_state_callee_ctx gcall_gs ca st)"
 
 abbreviation gcall_call_first :: call_action where
   "gcall_call_first \<equiv> CallEdge (Some (STR ''a'')) [STR ''n''] [exp.N 5]"
@@ -299,8 +299,8 @@ definition twin_call_contexts :: "(pp \<times> pp \<times> ivl list option) list
      map (\<lambda>(call, ca, entry, cont).
             (call, cont,
              case lookup_context twin_result call [] of
-               Unreachable \<Rightarrow> None
-             | Reachable st \<Rightarrow>
+               Bot \<Rightarrow> None
+             | Lifted st \<Rightarrow>
                  entry_state_callee_ctx (declared_global twin_prog) ca st))
        (cfg_calls_list (prog_cfg twin_prog))"
 

@@ -321,15 +321,15 @@ proof (rule ext)
     have named: "x = (STR ''balance'') \<or> x = (STR ''request_count'')"
       using True unfolding placement_prog_def by simp
     then show ?thesis
-      unfolding project_abs_on_def project_component_def loc sup_fun_def
-      by auto
+      using True
+      unfolding project_abs_on_def project_component_def sup_fun_def
+      by (auto simp: location_of_def placement_keep_local.simps placement_publish_side.simps)
   next
     case False
-    have loc: "location_of (declared_global placement_prog) x = Local_Location x"
-      using False by (simp add: location_of_def)
     show ?thesis
-      unfolding project_abs_on_def project_component_def loc sup_fun_def
-      by simp
+      using False
+      unfolding project_abs_on_def project_component_def sup_fun_def
+      by (simp add: location_of_def placement_keep_local.simps)
   qed
 qed
 
@@ -929,14 +929,16 @@ lemma placement_side_outside_bot:
   shows "project_abs_on (placement_node_owner node) (declared_global placement_prog)
       placement_publish_side result x = bot"
 proof -
-  have "\<not> declared_global placement_prog x"
+  have not_global: "\<not> declared_global placement_prog x"
     using assms declared_global_in_scope_locations[where owner = "placement_node_owner node"]
     unfolding placement_locations_of_def location_of_def
     by force
   hence loc: "location_of (declared_global placement_prog) x = Local_Location x"
     by (simp add: location_of_def)
   show ?thesis
-    unfolding project_abs_on_def project_component_def loc by simp
+    using not_global
+    unfolding project_abs_on_def project_component_def loc
+    by (simp add: location_of_def placement_publish_side.simps)
 qed
 
 text \<open>

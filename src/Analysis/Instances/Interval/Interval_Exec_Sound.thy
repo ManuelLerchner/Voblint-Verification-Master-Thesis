@@ -37,15 +37,15 @@ text \<open>
 definition analyse_interval_dg_eqs_for ::
   "(ivl exec_dg_st \<Rightarrow> bool) \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow>
      pp \<times> unit \<Rightarrow> (pp \<times> unit, unit, (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state) strategy_tree" where
-  "analyse_interval_dg_eqs_for is_bot_pred gs p =
+  "analyse_interval_dg_eqs_for empty_pred gs p =
      dg_gen_of
-       (base_dg_spec_st_for_lifted gs is_bot_pred (ivl_tf_st_for gs) (ivl_enter_st_for gs))
+       (base_dg_spec_st_for_lifted gs empty_pred (ivl_tf_st_for gs) (ivl_enter_st_for gs))
        (prog_cfg p) bot (Lifted cinit_ivl_st) (Lifted cinit_ivl_st)"
 
 definition analyse_interval_dg_for :: "(ivl exec_dg_st \<Rightarrow> bool) \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow>
     (pp \<times> unit) set \<times> (pp \<times> unit + unit \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)" where
-  "analyse_interval_dg_for is_bot_pred gs p =
-     TD_side_warrowing_apinis_Interp_solve (analyse_interval_dg_eqs_for is_bot_pred gs p)
+  "analyse_interval_dg_for empty_pred gs p =
+     TD_side_warrowing_apinis_Interp_solve (analyse_interval_dg_eqs_for empty_pred gs p)
        (cfg_exit (prog_cfg p), ())"
 
 text \<open>
@@ -57,20 +57,20 @@ text \<open>
 
   The \<open>[code]\<close> rewrite below is point-free in \<open>v\<close>, so
   \<^const>\<open>analyse_interval_dg_for\<close> is solved exactly once per partial application
-  to \<open>is_bot_pred gs p\<close>, reused for every \<open>v\<close> queried afterward against the
+  to \<open>empty_pred gs p\<close>, reused for every \<open>v\<close> queried afterward against the
   resulting closure -- one solve per report rather than one per node.
 \<close>
 
 definition analyse_interval_dg_env_for :: "(ivl exec_dg_st \<Rightarrow> bool) \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> pp \<Rightarrow> ivl abs_state" where
-  "analyse_interval_dg_env_for is_bot_pred gs p v =
-     (case map_lift (fun_of_exec_dg_st_for gs) (locals (snd (analyse_interval_dg_for is_bot_pred gs p) (Inl (v, ()))))
+  "analyse_interval_dg_env_for empty_pred gs p v =
+     (case map_lift (fun_of_exec_dg_st_for gs) (locals (snd (analyse_interval_dg_for empty_pred gs p) (Inl (v, ()))))
       of Bot \<Rightarrow> bot | Lifted s \<Rightarrow> s)"
 
 declare analyse_interval_dg_env_for_def [code del]
 
 lemma analyse_interval_dg_env_for_code [code]:
-  "analyse_interval_dg_env_for is_bot_pred gs p =
-     (let sol = snd (analyse_interval_dg_for is_bot_pred gs p)
+  "analyse_interval_dg_env_for empty_pred gs p =
+     (let sol = snd (analyse_interval_dg_for empty_pred gs p)
       in (\<lambda>v. case map_lift (fun_of_exec_dg_st_for gs) (locals (sol (Inl (v, ()))))
               of Bot \<Rightarrow> bot | Lifted s \<Rightarrow> s))"
   unfolding analyse_interval_dg_env_for_def Let_def by (rule refl)
@@ -78,9 +78,9 @@ lemma analyse_interval_dg_env_for_code [code]:
 text \<open>
   Convenience instances at \<^const>\<open>declared_global\<close> \<open>p\<close>, the classifier every
   caller with only an \<^typ>\<open>imp_prog\<close> in hand recomputes anyway.
-  \<open>is_bot_pred\<close> is fixed here to
+  \<open>empty_pred\<close> is fixed here to
   \<^const>\<open>resolved_st_q_is_bot_for\<close> at \<open>p\<close>'s own \<^const>\<open>declared_global_vars\<close>, exact for
-  \<^const>\<open>is_bot_state\<close> by @{thm resolved_st_q_is_bot_for_iff} (@{thm declared_global_iff}).
+  \<^const>\<open>is_empty_state\<close> by @{thm resolved_st_q_is_bot_for_iff} (@{thm declared_global_iff}).
 \<close>
 
 definition analyse_interval_dg_eqs :: "imp_prog \<Rightarrow>
@@ -111,14 +111,14 @@ text \<open>
 
 definition analyse_interval_dg_join_for :: "(ivl exec_dg_st \<Rightarrow> bool) \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow>
     (pp \<times> unit) set \<times> (pp \<times> unit + unit \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)" where
-  "analyse_interval_dg_join_for is_bot_pred gs p =
-     TD_side_always_join_Interp_solve (analyse_interval_dg_eqs_for is_bot_pred gs p)
+  "analyse_interval_dg_join_for empty_pred gs p =
+     TD_side_always_join_Interp_solve (analyse_interval_dg_eqs_for empty_pred gs p)
        (cfg_exit (prog_cfg p), ())"
 
 definition analyse_interval_dg_per_origin_for :: "(ivl exec_dg_st \<Rightarrow> bool) \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow>
     (pp \<times> unit) set \<times> (pp \<times> unit + unit \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)" where
-  "analyse_interval_dg_per_origin_for is_bot_pred gs p =
-     TD_side_per_origin_Interp_solve (analyse_interval_dg_eqs_for is_bot_pred gs p)
+  "analyse_interval_dg_per_origin_for empty_pred gs p =
+     TD_side_per_origin_Interp_solve (analyse_interval_dg_eqs_for empty_pred gs p)
        (cfg_exit (prog_cfg p), ())"
 
 end

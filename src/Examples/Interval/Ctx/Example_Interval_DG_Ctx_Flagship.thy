@@ -32,15 +32,15 @@ text \<open>
 
 subsection \<open>The executable bottom predicate\<close>
 
-text \<open>\<^const>\<open>entry_state_sol\<close> takes \<open>is_bot_pred\<close> as an explicit parameter.  At a
+text \<open>\<^const>\<open>entry_state_sol\<close> takes \<open>empty_pred\<close> as an explicit parameter.  At a
   concrete program it is \<^const>\<open>resolved_st_q_is_bot_for\<close> on that program's own
-  declared globals, which is exact for \<^const>\<open>is_bot_state\<close>.\<close>
+  declared globals, which is exact for \<^const>\<open>is_empty_state\<close>.\<close>
 
-definition twice_is_bot_pred :: "ivl resolved_st_q \<Rightarrow> bool" where
-  "twice_is_bot_pred = resolved_st_q_is_bot_for (declared_global_vars twice_program)"
+definition twice_empty_pred :: "ivl resolved_st_q \<Rightarrow> bool" where
+  "twice_empty_pred = resolved_st_q_is_bot_for (declared_global_vars twice_program)"
 
-lemma twice_exact: "twice_is_bot_pred s = is_bot_state (fun_of_resolved_st_q_for twice_gs s)"
-  unfolding twice_is_bot_pred_def by (rule resolved_st_q_is_bot_for_iff) simp
+lemma twice_exact: "twice_empty_pred s = is_empty_state (fun_of_resolved_st_q_for twice_gs s)"
+  unfolding twice_empty_pred_def by (rule resolved_st_q_is_bot_for_iff) simp
 
 text \<open>Reading one variable off a lifted whole-state local unknown: an unreachable
   point (\<^const>\<open>Bot\<close>) reads \<open>bot\<close> at every variable.\<close>
@@ -54,40 +54,40 @@ text \<open>The main context is \<open>[]\<close> (\<open>main\<close> is the ro
 definition twice_ctx_sol ::
   "(pp \<times> ivl list) set
      \<times> (pp \<times> ivl list + gk \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)" where
-  "twice_ctx_sol = entry_state_sol twice_gs twice_is_bot_pred twice_pi twice_procs"
+  "twice_ctx_sol = entry_state_sol twice_gs twice_empty_pred twice_pi twice_procs"
 
 lemma twice_ctx_terminates_c:
   "TD_side_warrowing_apinis_Interp_solve_c
-     (entry_state_eqs twice_gs twice_is_bot_pred twice_pi twice_procs)
+     (entry_state_eqs twice_gs twice_empty_pred twice_pi twice_procs)
      (cfg_exit twice_cfg, []) \<noteq> None"
   unfolding twice_cfg_def by eval
 
 lemma twice_ctx_terminates:
-  "entry_state_terminates twice_gs twice_is_bot_pred twice_pi twice_procs"
+  "entry_state_terminates twice_gs twice_empty_pred twice_pi twice_procs"
   using twice_ctx_terminates_c[unfolded twice_cfg_def]
   by (rule entry_state_terminates_via_solve_c)
 
 subsection \<open>The two calling contexts are distinct\<close>
 
 definition ctx_call1 :: "ivl list" where
-  "ctx_call1 = entry_state_route twice_gs twice_is_bot_pred
-                 (entry_state_entered twice_gs twice_is_bot_pred
+  "ctx_call1 = entry_state_route twice_gs twice_empty_pred
+                 (entry_state_entered twice_gs twice_empty_pred
                     (locals (snd twice_ctx_sol (Inl (Statement 2, []))))
                     (CallEdge (Some (STR ''x'')) [(STR ''p'')] [VIMP_Syntax.N 3]))
                  (CallEdge (Some (STR ''x'')) [(STR ''p'')] [VIMP_Syntax.N 3])"
 
 definition ctx_call2 :: "ivl list" where
-  "ctx_call2 = entry_state_route twice_gs twice_is_bot_pred
-                 (entry_state_entered twice_gs twice_is_bot_pred
+  "ctx_call2 = entry_state_route twice_gs twice_empty_pred
+                 (entry_state_entered twice_gs twice_empty_pred
                     (locals (snd twice_ctx_sol (Inl (Statement 3, []))))
                     (CallEdge (Some (STR ''y'')) [(STR ''p'')] [VIMP_Syntax.N 10]))
                  (CallEdge (Some (STR ''y'')) [(STR ''p'')] [VIMP_Syntax.N 10])"
 
 lemma ctx_call1_val: "ctx_call1 = [Ivl (Fin 3) (Fin 3)]"
-  unfolding ctx_call1_def twice_ctx_sol_def twice_is_bot_pred_def by eval
+  unfolding ctx_call1_def twice_ctx_sol_def twice_empty_pred_def by eval
 
 lemma ctx_call2_val: "ctx_call2 = [Ivl (Fin 10) (Fin 10)]"
-  unfolding ctx_call2_def twice_ctx_sol_def twice_is_bot_pred_def by eval
+  unfolding ctx_call2_def twice_ctx_sol_def twice_empty_pred_def by eval
 
 lemma contexts_distinct: "ctx_call1 \<noteq> ctx_call2"
   by (simp add: ctx_call1_val ctx_call2_val)
@@ -98,34 +98,34 @@ text \<open>Callee entry parameter, per context --- against the monovariant \<op
 lemma call1_p_at_entry:
   "twice_ctx_lookup (locals (snd twice_ctx_sol (Inl (FunctionEntry (STR ''twice''), ctx_call1)))) (STR ''p'')
      = Ivl (Fin 3) (Fin 3)"
-  unfolding twice_ctx_sol_def twice_is_bot_pred_def ctx_call1_def by eval
+  unfolding twice_ctx_sol_def twice_empty_pred_def ctx_call1_def by eval
 
 lemma call2_p_at_entry:
   "twice_ctx_lookup (locals (snd twice_ctx_sol (Inl (FunctionEntry (STR ''twice''), ctx_call2)))) (STR ''p'')
      = Ivl (Fin 10) (Fin 10)"
-  unfolding twice_ctx_sol_def twice_is_bot_pred_def ctx_call2_def by eval
+  unfolding twice_ctx_sol_def twice_empty_pred_def ctx_call2_def by eval
 
 text \<open>Callee result return channel, per context --- \<^emph>\<open>not\<close> merged into the monovariant
   \<open>#ret = [6,20]\<close>.\<close>
 lemma call1_ret_at_exit:
   "twice_ctx_lookup (locals (snd twice_ctx_sol (Inl (FunctionResult (STR ''twice''), ctx_call1)))) (STR ''#ret'')
      = Ivl (Fin 6) (Fin 6)"
-  unfolding twice_ctx_sol_def twice_is_bot_pred_def ctx_call1_def by eval
+  unfolding twice_ctx_sol_def twice_empty_pred_def ctx_call1_def by eval
 
 lemma call2_ret_at_exit:
   "twice_ctx_lookup (locals (snd twice_ctx_sol (Inl (FunctionResult (STR ''twice''), ctx_call2)))) (STR ''#ret'')
      = Ivl (Fin 20) (Fin 20)"
-  unfolding twice_ctx_sol_def twice_is_bot_pred_def ctx_call2_def by eval
+  unfolding twice_ctx_sol_def twice_empty_pred_def ctx_call2_def by eval
 
 text \<open>Caller destinations after each return, where the monovariant baseline reports
   \<open>x = y = [6,20]\<close>.\<close>
 lemma x_computed:
   "twice_ctx_lookup (locals (snd twice_ctx_sol (Inl (Statement 3, [])))) (STR ''x'') = Ivl (Fin 6) (Fin 6)"
-  unfolding twice_ctx_sol_def twice_is_bot_pred_def by eval
+  unfolding twice_ctx_sol_def twice_empty_pred_def by eval
 
 lemma y_computed:
   "twice_ctx_lookup (locals (snd twice_ctx_sol (Inl (Statement 4, [])))) (STR ''y'') = Ivl (Fin 20) (Fin 20)"
-  unfolding twice_ctx_sol_def twice_is_bot_pred_def by eval
+  unfolding twice_ctx_sol_def twice_empty_pred_def by eval
 
 subsection \<open>Seed slots and coverage\<close>
 
@@ -136,23 +136,23 @@ text \<open>Each call publishes the entered store into its own context's seed sl
 lemma seed_call1:
   "twice_ctx_lookup (locals (snd twice_ctx_sol (Inr (Seed (FunctionEntry (STR ''twice'')) ctx_call1)))) (STR ''p'')
      = Ivl (Fin 3) (Fin 3)"
-  unfolding twice_ctx_sol_def twice_is_bot_pred_def ctx_call1_def by eval
+  unfolding twice_ctx_sol_def twice_empty_pred_def ctx_call1_def by eval
 
 lemma seed_call2:
   "twice_ctx_lookup (locals (snd twice_ctx_sol (Inr (Seed (FunctionEntry (STR ''twice'')) ctx_call2)))) (STR ''p'')
      = Ivl (Fin 10) (Fin 10)"
-  unfolding twice_ctx_sol_def twice_is_bot_pred_def ctx_call2_def by eval
+  unfolding twice_ctx_sol_def twice_empty_pred_def ctx_call2_def by eval
 
 text \<open>The callee entry is materialized once per routed context and never under the
   main context: the two calls are analyzed separately.\<close>
 lemma callee_covered_call1: "(FunctionEntry (STR ''twice''), ctx_call1) \<in> fst twice_ctx_sol"
-  unfolding twice_ctx_sol_def twice_is_bot_pred_def ctx_call1_def by eval
+  unfolding twice_ctx_sol_def twice_empty_pred_def ctx_call1_def by eval
 
 lemma callee_covered_call2: "(FunctionEntry (STR ''twice''), ctx_call2) \<in> fst twice_ctx_sol"
-  unfolding twice_ctx_sol_def twice_is_bot_pred_def ctx_call2_def by eval
+  unfolding twice_ctx_sol_def twice_empty_pred_def ctx_call2_def by eval
 
 lemma callee_not_under_main: "(FunctionEntry (STR ''twice''), []) \<notin> fst twice_ctx_sol"
-  unfolding twice_ctx_sol_def twice_is_bot_pred_def by eval
+  unfolding twice_ctx_sol_def twice_empty_pred_def by eval
 
 subsection \<open>Context-expanded analysis graph\<close>
 
@@ -165,8 +165,8 @@ definition twice_ctx_graph_config ::
      analysis_graph_config" where
   "twice_ctx_graph_config =
     \<lparr> local_of = locals,
-      route = (\<lambda>_ ctx action d. Some (entry_state_route twice_gs twice_is_bot_pred
-                 (entry_state_entered twice_gs twice_is_bot_pred d action) action)),
+      route = (\<lambda>_ ctx action d. Some (entry_state_route twice_gs twice_empty_pred
+                 (entry_state_entered twice_gs twice_empty_pred d action) action)),
       context_key = String.implode o (\<lambda>ctx. concat (map (\<lambda>x. string_of_ivl x @ '' '') ctx)),
       show_context = (\<lambda>ctx. concat (map (\<lambda>x. string_of_ivl x @ '' '') ctx)),
       locals_for_pp = (\<lambda>p.

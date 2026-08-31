@@ -221,15 +221,15 @@ let report_row buf (line, col) node cond verdict =
 let render_ctx_report
     (report :
       (Voblint_CLI.Core.cfg_node
-       * (Voblint_CLI.Core.exp * Voblint_CLI.Core.contextual_verdict))
+       * (Voblint_CLI.Core.exp * Voblint_CLI.Core.check_result Voblint_CLI.Core.lifted))
       list)
     (check_positions : (int * int) list) =
   let buf = Buffer.create 256 in
   List.iter2
     (fun (node, (cond, verdict)) (line, col) ->
        match verdict with
-       | Voblint_CLI.Core.Dead -> ()
-       | Voblint_CLI.Core.Decided v -> report_row buf (line, col) node cond v)
+       | Voblint_CLI.Core.Bot -> ()
+       | Voblint_CLI.Core.Lifted v -> report_row buf (line, col) node cond v)
     report check_positions;
   Buffer.contents buf
 
@@ -818,8 +818,8 @@ let () =
               List.filter_map
                 (fun ((_, (cond, verdict)), pos) ->
                    match verdict with
-                   | Voblint_CLI.Core.Dead -> None
-                   | Voblint_CLI.Core.Decided res -> Some (annotation pos res cond))
+                   | Voblint_CLI.Core.Bot -> None
+                   | Voblint_CLI.Core.Lifted res -> Some (annotation pos res cond))
                 (List.combine verdicts check_positions)
         in
         let files, nodes, dead =

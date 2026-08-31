@@ -1308,6 +1308,12 @@ leanest domain per line of real mathematics in the directory.
 
 ## 13. `src/Core/Domain` and `src/Core/Equations`
 
+> **2026-08-31 correction.** The selector unification proposed in §13.2 has
+> landed. `combine_env` is generic in key and codomain; frame entry, abstract
+> restrictions, and executable projections derive from it. `Split_State` and
+> the unused `merge_dg`/`split_dg` conversion cluster were deleted. The audit
+> below records the pre-refactor evidence that motivated that change.
+
 Two of my open questions resolve **against** the suspicion: **`Exec_Placement.thy`
 and `Split_State.thy` are both genuinely proof-load-bearing** despite
 contributing nothing to the export. `Exec_Placement`'s `scope_locations`,

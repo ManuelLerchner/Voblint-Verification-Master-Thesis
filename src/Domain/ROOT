@@ -1,9 +1,11 @@
 session Voblint_Domain in "." = "Voblint_VIMP" +
-  description "Abstract values and states: the sound-domain classes, the dead-code lift, split states"
+  description "Abstract value domains, pointwise states, and reachability constructions"
   sessions
     TD
   theories
     Abstract_Domain
+    Reachability_Lift
+    Nonrelational_State
+    Nonrelational_Reachability
     Backward_Domain
-    Split_State
     Abstract_Numeric_Queries

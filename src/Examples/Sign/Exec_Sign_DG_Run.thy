@@ -131,7 +131,7 @@ lemma dgEx_reserved: "reserved_ret_var sign_ex_gs"
   by (auto simp: wf_compile_input_simps sign_ex_pi_def sign_ex_prog_def split: if_splits)
 
 lemma dgEx_is_bot_exact:
-  "\<And>s. resolved_st_q_is_bot_for (declared_global_vars sign_ex_prog) s = is_bot_state (fun_of_exec_dg_st_for sign_ex_gs s)"
+  "\<And>s::sign resolved_st_q. resolved_st_q_is_bot_for (declared_global_vars sign_ex_prog) s = is_empty_state (fun_of_exec_dg_st_for sign_ex_gs s)"
   by (rule resolved_st_q_is_bot_for_iff[OF declared_global_iff, folded fun_of_exec_dg_st_for_def])
 
 lemma dgEx_sound0:
@@ -145,7 +145,7 @@ subsection \<open>Registration through the classifier-parametric registration lo
 text \<open>Interpret \<^locale>\<open>base_dg_exec_analysis\<close> once here at \<^const>\<open>sign_ex_gs\<close>
   with the classifier-parametric transfer/enter functions and \<^const>\<open>resolved_st_q_is_bot_for\<close>
   at this program's own declared globals -- the same five domain facts
-  \<^locale>\<open>unit_dg_exec_analysis\<close> needed, plus the one new \<open>is_bot_pred\<close> exactness obligation. \<open>G\<close>
+  \<^locale>\<open>unit_dg_exec_analysis\<close> needed, plus the one new \<open>empty_pred\<close> exactness obligation. \<open>G\<close>
   is instantiated at \<open>sign exec_dg_st lifted\<close> too (the plumbing constraint
   \<^theory>\<open>Voblint_Soundness.Run_Analysis_Sound\<close>'s \<open>base_dg_exec_analysis\<close> documents), not because
   \<open>G\<close>'s content matters here.\<close>

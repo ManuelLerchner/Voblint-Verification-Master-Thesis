@@ -94,12 +94,14 @@ invariants, forward simulation, and the bridge from a source run to a valid
 local trace).
 
 `Voblint_Domain` is what an abstract value and an abstract state are: the
-sound-domain classes with their concretization, the dead-code lift, and split
-local/global states. `Voblint_Solver` is the strategy-tree equation language
-of the vendored side-effecting solver and its monotonicity and post-solution
+sound-domain classes with their concretization, the dead-code lift, pointwise
+states, and the bridge between those constructions. `Voblint_Solver` is the
+strategy-tree equation language of the vendored side-effecting solver and its
+monotonicity and post-solution
 vocabulary; it never sees a CFG. `Voblint_Core` is the D/G analysis framework:
-the transfer contract, the equation generator, and collecting soundness for
-an arbitrary CFG, with no domain-specific content and no compiler.
+local/global state selection, the transfer contract, the equation generator, and
+collecting soundness for an arbitrary CFG, with no domain-specific content and
+no compiler.
 `Voblint_Exec` is the executable carrier and the transport of a solved
 system from the solver's association-list states to the function-valued
 states the framework is stated over. `Voblint_Analysis` threads each

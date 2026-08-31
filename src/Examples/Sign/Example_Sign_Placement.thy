@@ -109,14 +109,15 @@ proof -
             (dg_hook_D sigma source \<squnion> dg_hook_G sigma)) bot"
     unfolding sign_placement_abs_edge_tree_def
     by (simp add: traverse_rhs_placed_abs_dg_edge_of dg_hook_D_def dg_hook_G_def
-      project_abs_on_def project_component_def sign_placement_keep_local.simps)
+      project_abs_on_def project_component_def sign_placement_keep_local.simps
+      combine_env_def)
   have sides:
     "sides_of_rhs (sign_placement_abs_edge_tree source action destination) sigma (Inr ()) =
       DG bot bot"
     unfolding sign_placement_abs_edge_tree_def
     by (simp add: sides_of_rhs_placed_abs_dg_edge_of dg_hook_D_def dg_hook_G_def
       project_abs_on_def project_component_def sign_placement_publish_side.simps
-      bot_fun_def)
+      bot_fun_def combine_env_def)
   have "edge_collect action (dg_hook_gamma gamma_join sigma source) =
       edge_collect action \<lbrakk>dg_hook_D sigma source \<squnion> dg_hook_G sigma\<rbrakk>"
     unfolding dg_hook_gamma_def gamma_join_def by simp
@@ -158,7 +159,7 @@ proof -
     unfolding sign_placement_abs_enter_tree_def
     by (simp add: traverse_rhs_placed_abs_dg_enter_of dg_hook_D_def dg_hook_G_def
       project_abs_on_def project_component_def sign_placement_keep_local.simps
-      sign_placement_node_owner.simps)
+      sign_placement_node_owner.simps combine_env_def)
   have sides:
     "sides_of_rhs
         (sign_placement_abs_enter_tree caller (CallEdge dst fs args)
@@ -166,7 +167,7 @@ proof -
     unfolding sign_placement_abs_enter_tree_def
     by (simp add: sides_of_rhs_placed_abs_dg_enter_of dg_hook_D_def dg_hook_G_def
       project_abs_on_def project_component_def sign_placement_publish_side.simps
-      sign_placement_node_owner.simps bot_fun_def)
+      sign_placement_node_owner.simps bot_fun_def combine_env_def)
   have s_in: "s \<in> \<lbrakk>dg_hook_D sigma caller \<squnion> dg_hook_G sigma\<rbrakk>"
     using sin unfolding dg_hook_gamma_def gamma_join_def by simp
   have "call_enter (declared_global sign_placement_prog) (CallEdge dst fs args) s =
@@ -212,7 +213,7 @@ proof -
     by (simp add: traverse_rhs_map_gtree traverse_rhs_map_ltree
       traverse_placed_abs_dg_combine_tree dg_hook_D_def dg_hook_G_def
       sum.map_comp o_def project_abs_on_def project_component_def
-      sign_placement_keep_local.simps)
+      sign_placement_keep_local.simps combine_env_def)
   have sides:
     "sides_of_rhs
         (sign_placement_abs_combine_tree caller (CallEdge dst fs args)
@@ -222,7 +223,7 @@ proof -
     by (simp add: sides_map_gtree_unit_gen sides_map_ltree_Inr
       sides_placed_abs_dg_combine_tree_Inr dg_hook_D_def dg_hook_G_def
       sum.map_comp o_def project_abs_on_def project_component_def
-      sign_placement_publish_side.simps bot_fun_def)
+      sign_placement_publish_side.simps bot_fun_def combine_env_def)
   have s_in: "s \<in> \<lbrakk>dg_hook_D sigma caller \<squnion> dg_hook_G sigma\<rbrakk>"
     using sin unfolding dg_hook_gamma_def gamma_join_def by simp
   have t_in: "t \<in> \<lbrakk>dg_hook_D sigma (FunctionResult callee) \<squnion> dg_hook_G sigma\<rbrakk>"

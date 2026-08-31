@@ -80,8 +80,8 @@ and where the correspondence is inexact.
 
 | `Spec` component | Voblint realization | Note |
 | --- | --- | --- |
-| `D` | `'a abs_state` (`dg_state.locals`) | Flat `vname => 'a` today; Goblint's `D.t` can be any lattice. |
-| `G` | `'a abs_state` (`dg_state.globs`) | Same flat type as `D` in every current instance -- Goblint's `G.t` is a separate, analysis-chosen lattice. See "Local/global payloads" in `docs/GOBLINT_ALIGNMENT_REGISTER.md`. |
+| `D` | Opaque `'D` carrier (`dg_state.locals`) | Chosen by each `dg_spec`. Base analyses use a non-relational or executable state carrier; `Rel_Order_Domain` demonstrates a relational carrier. |
+| `G` | Opaque `'G` carrier (`dg_state.globs`) | Chosen independently by each `dg_spec`; homogeneous analyses may use the same type for `D` and `G`. See "Local/global payloads" in `docs/GOBLINT_ALIGNMENT_REGISTER.md`. |
 | `C` | `'c` (locale parameter of `dg_ctx_activation`/`routed_context`, `DG_Ctx_Activation.thy`) | Instantiated per analysis instance (`unit`, call-string, entry-state, ...). |
 | `V` | `'k` (locale parameter of `dg_ctx_activation`, `DG_Ctx_Activation.thy`) | The type of global-variable identities, matching Goblint's `S.V` (see `M1_CALLSTRING_CONTEXT_MIGRATION.md`'s `GVar = GVarF (S.V)` citation). Not the combined unknown space -- see below. |
 

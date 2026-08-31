@@ -73,15 +73,15 @@ fun int_dom_enter_st_for ::
 definition analyse_int_dg_eqs_for ::
   "refine_mode \<Rightarrow> (int_dom exec_dg_st \<Rightarrow> bool) \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow>
      pp \<times> unit \<Rightarrow> (pp \<times> unit, unit, (int_dom exec_dg_st lifted, int_dom exec_dg_st lifted) dg_state) strategy_tree" where
-  "analyse_int_dg_eqs_for mode is_bot_pred gs p =
+  "analyse_int_dg_eqs_for mode empty_pred gs p =
      dg_gen_of
-       (base_dg_spec_st_for_lifted gs is_bot_pred (int_tf_st_for mode gs) (int_dom_enter_st_for mode gs))
+       (base_dg_spec_st_for_lifted gs empty_pred (int_tf_st_for mode gs) (int_dom_enter_st_for mode gs))
        (prog_cfg p) bot (Lifted cinit_int_dom_st) (Lifted cinit_int_dom_st)"
 
 definition analyse_int_dg_for :: "refine_mode \<Rightarrow> (int_dom exec_dg_st \<Rightarrow> bool) \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow>
     (pp \<times> unit) set \<times> (pp \<times> unit + unit \<Rightarrow> (int_dom exec_dg_st lifted, int_dom exec_dg_st lifted) dg_state)" where
-  "analyse_int_dg_for mode is_bot_pred gs p =
-     TD_side_warrowing_apinis_Interp_solve (analyse_int_dg_eqs_for mode is_bot_pred gs p)
+  "analyse_int_dg_for mode empty_pred gs p =
+     TD_side_warrowing_apinis_Interp_solve (analyse_int_dg_eqs_for mode empty_pred gs p)
        (cfg_exit (prog_cfg p), ())"
 
 text \<open>
@@ -94,30 +94,30 @@ text \<open>
 
   The \<open>[code]\<close> rewrite below is point-free in \<open>v\<close>, the same single-solve-per-report fix
   \<open>analyse_interval_dg_env_for_code\<close> uses: \<^const>\<open>analyse_int_dg_for\<close> is solved exactly
-  once per partial application to \<open>is_bot_pred gs p\<close>, reused for every \<open>v\<close> queried afterward
+  once per partial application to \<open>empty_pred gs p\<close>, reused for every \<open>v\<close> queried afterward
   against the resulting closure.
 \<close>
 
 definition analyse_int_dg_env_for ::
     "refine_mode \<Rightarrow> (int_dom exec_dg_st \<Rightarrow> bool) \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> pp \<Rightarrow> int_dom abs_state" where
-  "analyse_int_dg_env_for mode is_bot_pred gs p v =
-     (case map_lift (fun_of_exec_dg_st_for gs) (locals (snd (analyse_int_dg_for mode is_bot_pred gs p) (Inl (v, ()))))
+  "analyse_int_dg_env_for mode empty_pred gs p v =
+     (case map_lift (fun_of_exec_dg_st_for gs) (locals (snd (analyse_int_dg_for mode empty_pred gs p) (Inl (v, ()))))
       of Bot \<Rightarrow> bot | Lifted s \<Rightarrow> s)"
 
 declare analyse_int_dg_env_for_def [code del]
 
 lemma analyse_int_dg_env_for_code [code]:
-  "analyse_int_dg_env_for mode is_bot_pred gs p =
-     (let sol = snd (analyse_int_dg_for mode is_bot_pred gs p)
+  "analyse_int_dg_env_for mode empty_pred gs p =
+     (let sol = snd (analyse_int_dg_for mode empty_pred gs p)
       in (\<lambda>v. case map_lift (fun_of_exec_dg_st_for gs) (locals (sol (Inl (v, ()))))
               of Bot \<Rightarrow> bot | Lifted s \<Rightarrow> s))"
   unfolding analyse_int_dg_env_for_def Let_def by (rule refl)
 
 text \<open>
   Convenience instances at \<^const>\<open>declared_global\<close> \<open>p\<close>, matching \<open>analyse_interval_dg_eqs\<close>/
-  \<open>analyse_interval_dg\<close>/\<open>analyse_interval_dg_env\<close>'s shape. \<open>is_bot_pred\<close> is fixed here
+  \<open>analyse_interval_dg\<close>/\<open>analyse_interval_dg_env\<close>'s shape. \<open>empty_pred\<close> is fixed here
   to \<^const>\<open>resolved_st_q_is_bot_for\<close> at \<open>p\<close>'s own \<^const>\<open>declared_global_vars\<close>, exact for
-  \<^const>\<open>is_bot_state\<close> by @{thm resolved_st_q_is_bot_for_iff} (@{thm declared_global_iff}).
+  \<^const>\<open>is_empty_state\<close> by @{thm resolved_st_q_is_bot_for_iff} (@{thm declared_global_iff}).
 \<close>
 
 definition analyse_int_dg_eqs :: "refine_mode \<Rightarrow> imp_prog \<Rightarrow>
@@ -147,42 +147,42 @@ text \<open>
 
 definition analyse_int_dg_join_for :: "refine_mode \<Rightarrow> (int_dom exec_dg_st \<Rightarrow> bool) \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow>
     (pp \<times> unit) set \<times> (pp \<times> unit + unit \<Rightarrow> (int_dom exec_dg_st lifted, int_dom exec_dg_st lifted) dg_state)" where
-  "analyse_int_dg_join_for mode is_bot_pred gs p =
-     TD_side_always_join_Interp_solve (analyse_int_dg_eqs_for mode is_bot_pred gs p)
+  "analyse_int_dg_join_for mode empty_pred gs p =
+     TD_side_always_join_Interp_solve (analyse_int_dg_eqs_for mode empty_pred gs p)
        (cfg_exit (prog_cfg p), ())"
 
 definition analyse_int_dg_join_env_for ::
     "refine_mode \<Rightarrow> (int_dom exec_dg_st \<Rightarrow> bool) \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> pp \<Rightarrow> int_dom abs_state" where
-  "analyse_int_dg_join_env_for mode is_bot_pred gs p v =
-     (case map_lift (fun_of_exec_dg_st_for gs) (locals (snd (analyse_int_dg_join_for mode is_bot_pred gs p) (Inl (v, ()))))
+  "analyse_int_dg_join_env_for mode empty_pred gs p v =
+     (case map_lift (fun_of_exec_dg_st_for gs) (locals (snd (analyse_int_dg_join_for mode empty_pred gs p) (Inl (v, ()))))
       of Bot \<Rightarrow> bot | Lifted s \<Rightarrow> s)"
 
 declare analyse_int_dg_join_env_for_def [code del]
 
 lemma analyse_int_dg_join_env_for_code [code]:
-  "analyse_int_dg_join_env_for mode is_bot_pred gs p =
-     (let sol = snd (analyse_int_dg_join_for mode is_bot_pred gs p)
+  "analyse_int_dg_join_env_for mode empty_pred gs p =
+     (let sol = snd (analyse_int_dg_join_for mode empty_pred gs p)
       in (\<lambda>v. case map_lift (fun_of_exec_dg_st_for gs) (locals (sol (Inl (v, ()))))
               of Bot \<Rightarrow> bot | Lifted s \<Rightarrow> s))"
   unfolding analyse_int_dg_join_env_for_def Let_def by (rule refl)
 
 definition analyse_int_dg_per_origin_for :: "refine_mode \<Rightarrow> (int_dom exec_dg_st \<Rightarrow> bool) \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow>
     (pp \<times> unit) set \<times> (pp \<times> unit + unit \<Rightarrow> (int_dom exec_dg_st lifted, int_dom exec_dg_st lifted) dg_state)" where
-  "analyse_int_dg_per_origin_for mode is_bot_pred gs p =
-     TD_side_per_origin_Interp_solve (analyse_int_dg_eqs_for mode is_bot_pred gs p)
+  "analyse_int_dg_per_origin_for mode empty_pred gs p =
+     TD_side_per_origin_Interp_solve (analyse_int_dg_eqs_for mode empty_pred gs p)
        (cfg_exit (prog_cfg p), ())"
 
 definition analyse_int_dg_per_origin_env_for ::
     "refine_mode \<Rightarrow> (int_dom exec_dg_st \<Rightarrow> bool) \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> pp \<Rightarrow> int_dom abs_state" where
-  "analyse_int_dg_per_origin_env_for mode is_bot_pred gs p v =
-     (case map_lift (fun_of_exec_dg_st_for gs) (locals (snd (analyse_int_dg_per_origin_for mode is_bot_pred gs p) (Inl (v, ()))))
+  "analyse_int_dg_per_origin_env_for mode empty_pred gs p v =
+     (case map_lift (fun_of_exec_dg_st_for gs) (locals (snd (analyse_int_dg_per_origin_for mode empty_pred gs p) (Inl (v, ()))))
       of Bot \<Rightarrow> bot | Lifted s \<Rightarrow> s)"
 
 declare analyse_int_dg_per_origin_env_for_def [code del]
 
 lemma analyse_int_dg_per_origin_env_for_code [code]:
-  "analyse_int_dg_per_origin_env_for mode is_bot_pred gs p =
-     (let sol = snd (analyse_int_dg_per_origin_for mode is_bot_pred gs p)
+  "analyse_int_dg_per_origin_env_for mode empty_pred gs p =
+     (let sol = snd (analyse_int_dg_per_origin_for mode empty_pred gs p)
       in (\<lambda>v. case map_lift (fun_of_exec_dg_st_for gs) (locals (sol (Inl (v, ()))))
               of Bot \<Rightarrow> bot | Lifted s \<Rightarrow> s))"
   unfolding analyse_int_dg_per_origin_env_for_def Let_def by (rule refl)

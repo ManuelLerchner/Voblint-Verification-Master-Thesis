@@ -27,7 +27,7 @@ text \<open>The four coverage hypotheses are properties of the \<^emph>\<open>so
   behavior --- so each is checked by evaluation against the terminated solve.\<close>
 
 lemma twice_entry_covered: "(cfg_entry twice_cfg, []) \<in> fst twice_ctx_sol"
-  unfolding twice_ctx_sol_def twice_is_bot_pred_def twice_cfg_def by eval
+  unfolding twice_ctx_sol_def twice_empty_pred_def twice_cfg_def by eval
 
 text \<open>\<^bold>\<open>Forward closure along intra edges.\<close>  Every \<^const>\<open>intra\<close> successor of a solved
   node stays solved \<^emph>\<open>at the same context\<close>.  This is not a generic solver invariant ---
@@ -38,7 +38,7 @@ text \<open>\<^bold>\<open>Forward closure along intra edges.\<close>  Every \<^
 lemma twice_fwd_closed_all:
   "\<forall>(u, c) \<in> fst twice_ctx_sol. \<forall>(u', a, v) \<in> intra twice_cfg.
       u = u' \<longrightarrow> (v, c) \<in> fst twice_ctx_sol"
-  unfolding twice_ctx_sol_def twice_is_bot_pred_def twice_cfg_def by eval
+  unfolding twice_ctx_sol_def twice_empty_pred_def twice_cfg_def by eval
 
 lemma twice_ctx_fwd_ok:
   assumes "(u, ctx) \<in> fst twice_ctx_sol" and "(u, a, v) \<in> intra twice_cfg"
@@ -50,13 +50,13 @@ text \<open>Both call sites are reached only under the root context: \<open>main
 lemma twice_call_callers_only_root:
   "\<forall>(p, ctx) \<in> fst twice_ctx_sol.
      (p = Statement 2 \<or> p = Statement 3) \<longrightarrow> ctx = []"
-  unfolding twice_ctx_sol_def twice_is_bot_pred_def by eval
+  unfolding twice_ctx_sol_def twice_empty_pred_def by eval
 
 lemma twice_covered_cont3: "(Statement 3, []) \<in> fst twice_ctx_sol"
-  unfolding twice_ctx_sol_def twice_is_bot_pred_def by eval
+  unfolding twice_ctx_sol_def twice_empty_pred_def by eval
 
 lemma twice_covered_cont4: "(Statement 4, []) \<in> fst twice_ctx_sol"
-  unfolding twice_ctx_sol_def twice_is_bot_pred_def by eval
+  unfolding twice_ctx_sol_def twice_empty_pred_def by eval
 
 lemma twice_comb_fwd_ok:
   assumes "(cl, c1) \<in> fst twice_ctx_sol"
@@ -70,8 +70,8 @@ text \<open>The routed callee entry the solved system selects is the executable 
   table, which is exactly how \<^const>\<open>ctx_call1\<close> / \<^const>\<open>ctx_call2\<close> are defined.\<close>
 
 lemma twice_route_at_call1:
-  "entry_state_route_gen twice_gs twice_is_bot_pred (Statement 2) []
-     (enter_local (ectx_spec twice_gs twice_is_bot_pred)
+  "entry_state_route_gen twice_gs twice_empty_pred (Statement 2) []
+     (enter_local (ectx_spec twice_gs twice_empty_pred)
         (call_info_of
           (CallEdge (Some (STR ''x'')) [(STR ''p'')] [VIMP_Syntax.N 3])
           (STR ''twice''))
@@ -79,12 +79,12 @@ lemma twice_route_at_call1:
         (globs (snd twice_ctx_sol (Inr Global))))
      (CallEdge (Some (STR ''x'')) [(STR ''p'')] [VIMP_Syntax.N 3])
    = ctx_call1"
-  unfolding twice_ctx_sol_def twice_is_bot_pred_def ctx_call1_def entry_state_route_gen_def
+  unfolding twice_ctx_sol_def twice_empty_pred_def ctx_call1_def entry_state_route_gen_def
   by (simp add: enter_local_ectx_spec_eq_entry_state_entered)
 
 lemma twice_route_at_call2:
-  "entry_state_route_gen twice_gs twice_is_bot_pred (Statement 3) []
-     (enter_local (ectx_spec twice_gs twice_is_bot_pred)
+  "entry_state_route_gen twice_gs twice_empty_pred (Statement 3) []
+     (enter_local (ectx_spec twice_gs twice_empty_pred)
         (call_info_of
           (CallEdge (Some (STR ''y'')) [(STR ''p'')] [VIMP_Syntax.N 10])
           (STR ''twice''))
@@ -92,15 +92,15 @@ lemma twice_route_at_call2:
         (globs (snd twice_ctx_sol (Inr Global))))
      (CallEdge (Some (STR ''y'')) [(STR ''p'')] [VIMP_Syntax.N 10])
    = ctx_call2"
-  unfolding twice_ctx_sol_def twice_is_bot_pred_def ctx_call2_def entry_state_route_gen_def
+  unfolding twice_ctx_sol_def twice_empty_pred_def ctx_call2_def entry_state_route_gen_def
   by (simp add: enter_local_ectx_spec_eq_entry_state_entered)
 
 lemma twice_call_fwd_ok:
   assumes cov: "(u, ctx) \<in> fst twice_ctx_sol"
     and ce: "(u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls twice_cfg"
   shows "(FunctionEntry p,
-            entry_state_route_gen twice_gs twice_is_bot_pred u ctx
-              (enter_local (ectx_spec twice_gs twice_is_bot_pred)
+            entry_state_route_gen twice_gs twice_empty_pred u ctx
+              (enter_local (ectx_spec twice_gs twice_empty_pred)
                  (call_info_of (CallEdge dst pars args) p)
                  (locals (snd twice_ctx_sol (Inl (u, ctx))))
                  (globs (snd twice_ctx_sol (Inr Global))))
@@ -144,10 +144,10 @@ lemmas twice_entry_state_hyps =
 
 theorem twice_activation_collect_sound:
   "activation_collect twice_gs
-     (entry_state_context twice_gs twice_is_bot_pred twice_pi twice_procs)
+     (entry_state_context twice_gs twice_empty_pred twice_pi twice_procs)
      [] (compile_prog twice_pi twice_procs) (cinit_stores twice_gs) v ctx
    \<subseteq> gamma_state_lift (map_lift (fun_of_resolved_st_q_for twice_gs)
-       (entry_state_sg_st twice_gs twice_is_bot_pred twice_pi twice_procs (Inl (v, ctx))))"
+       (entry_state_sg_st twice_gs twice_empty_pred twice_pi twice_procs (Inl (v, ctx))))"
   by (rule entry_state_activation_collect_sound[OF twice_entry_state_hyps])
 
 subsection \<open>The context each call site selects\<close>
@@ -179,14 +179,14 @@ proof (rule call_action_at_call_site_eq
 qed
 
 lemma twice_context_at_call1:
-  "entry_state_context twice_gs twice_is_bot_pred twice_pi twice_procs
+  "entry_state_context twice_gs twice_empty_pred twice_pi twice_procs
      (Statement 2) [] s = ctx_call1"
   by (simp add: entry_state_context_def[OF twice_entry_state_hyps]
         twice_call_site_action1 twice_ctx_sol_def ctx_call1_def Let_def
         enter_local_ectx_spec_eq_entry_state_entered entry_state_route_gen_def)
 
 lemma twice_context_at_call2:
-  "entry_state_context twice_gs twice_is_bot_pred twice_pi twice_procs
+  "entry_state_context twice_gs twice_empty_pred twice_pi twice_procs
      (Statement 3) [] s = ctx_call2"
   by (simp add: entry_state_context_def[OF twice_entry_state_hyps]
         twice_call_site_action2 twice_ctx_sol_def ctx_call2_def Let_def
@@ -241,14 +241,14 @@ qed
 theorem ivl_context_eq_entry_state_context_call1:
   assumes "s' = call_enter twice_gs (CallEdge dst [(STR ''p'')] [VIMP_Syntax.N 3]) s"
   shows "ivl_context (Statement 2) [] s'
-           = entry_state_context twice_gs twice_is_bot_pred twice_pi twice_procs
+           = entry_state_context twice_gs twice_empty_pred twice_pi twice_procs
                (Statement 2) [] s'"
   using enter_route_exact_call1[OF refl assms] by (simp add: twice_context_at_call1)
 
 theorem ivl_context_eq_entry_state_context_call2:
   assumes "s' = call_enter twice_gs (CallEdge dst [(STR ''p'')] [VIMP_Syntax.N 10]) s"
   shows "ivl_context (Statement 3) [] s'
-           = entry_state_context twice_gs twice_is_bot_pred twice_pi twice_procs
+           = entry_state_context twice_gs twice_empty_pred twice_pi twice_procs
                (Statement 3) [] s'"
   using enter_route_exact_call2[OF refl assms] by (simp add: twice_context_at_call2)
 
@@ -262,14 +262,14 @@ text \<open>The local unknown carries the whole abstract state, so a variable th
 lemma global_slot_shared:
   "twice_ctx_lookup (locals (snd twice_ctx_sol (Inl (FunctionEntry (STR ''twice''), ctx_call1)))) (STR ''Gx'')
      = twice_ctx_lookup (locals (snd twice_ctx_sol (Inl (FunctionEntry (STR ''twice''), ctx_call2)))) (STR ''Gx'')"
-  unfolding ctx_call1_val ctx_call2_val twice_ctx_sol_def twice_is_bot_pred_def by eval
+  unfolding ctx_call1_val ctx_call2_val twice_ctx_sol_def twice_empty_pred_def by eval
 
 text \<open>The solver-global carrier stays inert: every field of the Base-style specification
   threads its incoming \<open>g\<close> through unchanged, so the shared \<^const>\<open>Global\<close> unknown is
   never used to reconstruct program state.\<close>
 lemma twice_ctx_global_slot_inert:
   "globs (snd twice_ctx_sol (Inr Global)) = Bot"
-  unfolding twice_ctx_sol_def twice_is_bot_pred_def by eval
+  unfolding twice_ctx_sol_def twice_empty_pred_def by eval
 
 end
 

@@ -43,8 +43,8 @@ abbreviation gcall_gs :: "vname \<Rightarrow> bool" where "gcall_gs \<equiv> dec
 definition gcall_cfg :: cfg where
   "gcall_cfg = compile_prog (prog_table gcall_prog) (prog_procs gcall_prog)"
 
-definition gcall_is_bot_pred :: "ivl resolved_st_q \<Rightarrow> bool" where
-  "gcall_is_bot_pred = resolved_st_q_is_bot_for (declared_global_vars gcall_prog)"
+definition gcall_empty_pred :: "ivl resolved_st_q \<Rightarrow> bool" where
+  "gcall_empty_pred = resolved_st_q_is_bot_for (declared_global_vars gcall_prog)"
 
 definition gcall_sol ::
   "(pp \<times> ivl list) set \<times> (pp \<times> ivl list + gk \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)" where
@@ -60,15 +60,15 @@ abbreviation gcall_lookup :: "('a::bot) exec_dg_st \<Rightarrow> vname \<Rightar
   "gcall_lookup s x \<equiv> lookup_resolved_st_q s (location_of gcall_gs x)"
 
 definition gcall_ctx_first :: "ivl list" where
-  "gcall_ctx_first = entry_state_route gcall_gs gcall_is_bot_pred
-                       (entry_state_entered gcall_gs gcall_is_bot_pred
+  "gcall_ctx_first = entry_state_route gcall_gs gcall_empty_pred
+                       (entry_state_entered gcall_gs gcall_empty_pred
                           (locals (snd gcall_sol (Inl (Statement 4, []))))
                           (CallEdge (Some (STR ''a'')) [STR ''n''] [exp.N 5]))
                        (CallEdge (Some (STR ''a'')) [STR ''n''] [exp.N 5])"
 
 definition gcall_ctx_second :: "ivl list" where
-  "gcall_ctx_second = entry_state_route gcall_gs gcall_is_bot_pred
-                        (entry_state_entered gcall_gs gcall_is_bot_pred
+  "gcall_ctx_second = entry_state_route gcall_gs gcall_empty_pred
+                        (entry_state_entered gcall_gs gcall_empty_pred
                            (locals (snd gcall_sol (Inl (Statement 5, []))))
                            (CallEdge (Some (STR ''b'')) [STR ''n''] [exp.N 4]))
                         (CallEdge (Some (STR ''b'')) [STR ''n''] [exp.N 4])"
@@ -86,8 +86,8 @@ lemma gcall_ctx_distinct: "gcall_ctx_first \<noteq> gcall_ctx_second"
   by eval
 
 definition gcall_ctx_third :: "ivl list" where
-  "gcall_ctx_third = entry_state_route gcall_gs gcall_is_bot_pred
-                       (entry_state_entered gcall_gs gcall_is_bot_pred
+  "gcall_ctx_third = entry_state_route gcall_gs gcall_empty_pred
+                       (entry_state_entered gcall_gs gcall_empty_pred
                           (locals (snd gcall_sol (Inl (Statement 9, []))))
                           (CallEdge (Some (STR ''c'')) [STR ''n''] [V (STR ''g'')]))
                        (CallEdge (Some (STR ''c'')) [STR ''n''] [V (STR ''g'')])"

@@ -76,7 +76,6 @@ export_code
   Solver_Join Solver_PerOrigin Solver_Warrow Solver_WarrowPerOrigin
   mk_analysis_config valid_analysis_config
   analyse_config analyse_config_ctx analyse_config_with_state
-  Dead Decided
   in OCaml file_prefix "Voblint_CLI"
 
 end

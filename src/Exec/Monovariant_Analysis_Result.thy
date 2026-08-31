@@ -2,7 +2,7 @@ theory Monovariant_Analysis_Result
   imports
     "Voblint_Core.Analysis_Result"
     "Voblint_Core.CFG_Enumeration"
-    "Voblint_Core.Abstract_Checks"
+    "Voblint_Core.Check_Report"
     "Voblint_Compile.Compile_Invariants"
     Exec_DG_Bridge
 begin
@@ -13,8 +13,8 @@ text \<open>
   \<open>normalize_point\<close> is the sole entry point from the executable solver
   substrate into the result boundary: it relabels the local unknown exactly
   as the solver stores it (an \<^typ>\<open>'a resolved_st_q lifted\<close>) into a
-  \<^typ>\<open>'a abs_state point_state\<close>, \<^const>\<open>Bot\<close> becoming \<^const>\<open>Unreachable\<close> and
-  \<^const>\<open>Lifted\<close> becoming \<^const>\<open>Reachable\<close> of the projected state. It is a
+  \<^typ>\<open>'a abs_state lifted\<close>, \<^const>\<open>Bot\<close> becoming \<^const>\<open>Bot\<close> and
+  \<^const>\<open>Lifted\<close> becoming \<^const>\<open>Lifted\<close> of the projected state. It is a
   purely structural conversion with no bottom test of its own.
 
   Semantic deadness is normalized \<^emph>\<open>before\<close> this point, not here:
@@ -22,15 +22,15 @@ text \<open>
   \<^const>\<open>Lifted\<close> payload to \<^const>\<open>Bot\<close>, and every public result adapter
   routes its raw solver value through \<open>canonicalize_lift\<close> first, so
   \<open>normalize_point\<close> itself never needs the declared globals as a list, nor
-  \<^class>\<open>computable_domain\<close>'s executable witness-bottom test -- both were
+  \<^class>\<open>executable_domain\<close>'s executable witness-bottom test -- both were
   needed only for that test, which now lives one layer earlier.
 \<close>
 
 fun normalize_point ::
-  "(vname \<Rightarrow> bool) \<Rightarrow> ('a::bot) resolved_st_q lifted \<Rightarrow> 'a abs_state point_state"
+  "(vname \<Rightarrow> bool) \<Rightarrow> ('a::bot) resolved_st_q lifted \<Rightarrow> 'a abs_state lifted"
 where
-  "normalize_point gs Bot = Unreachable"
-| "normalize_point gs (Lifted s) = Reachable (fun_of_resolved_st_q_for gs s)"
+  "normalize_point gs Bot = Bot"
+| "normalize_point gs (Lifted s) = Lifted (fun_of_resolved_st_q_for gs s)"
 
 text \<open>
   \<open>normalize_point\<close> is exact for whatever the raw value already denotes,
@@ -46,14 +46,14 @@ lemma normalize_point_correct:
 
 text \<open>
   The other direction of the same relabeling, in the shape a consumer of a
-  \<^const>\<open>Reachable\<close> point needs: the payload it hands out is literally the
+  \<^const>\<open>Lifted\<close> point needs: the payload it hands out is literally the
   reader's image of the solved local unknown, so a fact proved about the raw
   lifted state transports to the normalized one without re-deciding
   reachability.
 \<close>
 
 lemma normalize_point_Reachable_map_lift:
-  assumes "normalize_point gs s = Reachable st"
+  assumes "normalize_point gs s = Lifted st"
   shows "map_lift (fun_of_resolved_st_q_for gs) s = Lifted st"
   using assms by (cases s) auto
 
@@ -68,32 +68,32 @@ text \<open>
 \<close>
 
 lemma normalize_point_canonicalize_lift_Bot:
-  "normalize_point gs (canonicalize_lift is_bot_pred Bot) = Unreachable"
+  "normalize_point gs (canonicalize_lift empty_pred Bot) = Bot"
   by simp
 
 lemma normalize_point_canonicalize_lift_Lifted_bot:
-  assumes "is_bot_pred s"
-  shows "normalize_point gs (canonicalize_lift is_bot_pred (Lifted s)) = Unreachable"
+  assumes "empty_pred s"
+  shows "normalize_point gs (canonicalize_lift empty_pred (Lifted s)) = Bot"
   using assms by simp
 
 lemma normalize_point_canonicalize_lift_Lifted_live:
-  assumes "\<not> is_bot_pred s"
-  shows "normalize_point gs (canonicalize_lift is_bot_pred (Lifted s)) =
-           Reachable (fun_of_resolved_st_q_for gs s)"
+  assumes "\<not> empty_pred s"
+  shows "normalize_point gs (canonicalize_lift empty_pred (Lifted s)) =
+           Lifted (fun_of_resolved_st_q_for gs s)"
   using assms by simp
 
 lemma normalize_point_canonicalize_lift_eq_old:
-  "normalize_point gs (canonicalize_lift is_bot_pred q) =
+  "normalize_point gs (canonicalize_lift empty_pred q) =
      (case q of
-        Bot \<Rightarrow> Unreachable
-      | Lifted s \<Rightarrow> if is_bot_pred s then Unreachable
-                    else Reachable (fun_of_resolved_st_q_for gs s))"
+        Bot \<Rightarrow> Bot
+      | Lifted s \<Rightarrow> if empty_pred s then Bot
+                    else Lifted (fun_of_resolved_st_q_for gs s))"
   by (cases q) simp_all
 
 text \<open>
   The soundness-facing counterpart of \<open>normalize_point_canonicalize_lift_eq_old\<close>:
   canonicalizing before normalizing never shrinks what a raw solved value
-  concretizes to, provided \<open>is_bot_pred\<close> only ever fires where the projected
+  concretizes to, provided \<open>empty_pred\<close> only ever fires where the projected
   state genuinely is witness-bottom (\<open>bot_sound\<close>, exactly what
   \<open>resolved_st_q_is_bot_for_iff\<close> gives for \<open>resolved_st_q_is_bot_for gl\<close>).
   This is the one fact a report soundness proof needs to transport an
@@ -104,8 +104,8 @@ text \<open>
 
 lemma gamma_point_normalize_point_canonicalize_lift:
   fixes q :: "'a::sound_domain resolved_st_q lifted"
-  assumes bot_sound: "\<And>s. is_bot_pred s \<Longrightarrow> is_bot_state (fun_of_resolved_st_q_for gs s)"
-  shows "gamma_point (normalize_point gs (canonicalize_lift is_bot_pred q)) =
+  assumes bot_sound: "\<And>s. empty_pred s \<Longrightarrow> is_empty_state (fun_of_resolved_st_q_for gs s)"
+  shows "gamma_point (normalize_point gs (canonicalize_lift empty_pred q)) =
            gamma_state_lift (map_lift (fun_of_resolved_st_q_for gs) q)"
 proof (cases q)
   case Bot
@@ -113,10 +113,10 @@ proof (cases q)
 next
   case (Lifted s)
   show ?thesis
-  proof (cases "is_bot_pred s")
+  proof (cases "empty_pred s")
     case True
-    with bot_sound have "gamma_state (fun_of_resolved_st_q_for gs s) = {}"
-      using is_bot_state_gamma_state_empty by blast
+    with bot_sound have "\<lbrakk>fun_of_resolved_st_q_for gs s\<rbrakk> = {}"
+      using is_empty_state_gamma_state_empty by blast
     with Lifted True show ?thesis by simp
   next
     case False
@@ -145,7 +145,7 @@ text \<open>
   context space is \<open>unit\<close>, and the CFG already statically enumerates every
   program point, so nothing about which points are queryable needs to come
   from solver support. A node the solver never touches -- dead code -- is
-  still a key, and reads as \<^const>\<open>Unreachable\<close> through \<^const>\<open>normalize_point\<close>'s
+  still a key, and reads as \<^const>\<open>Bot\<close> through \<^const>\<open>normalize_point\<close>'s
   own structural \<^const>\<open>Bot\<close> case, not through key absence. This keeps
   \<open>monovariant_analysis_result_for\<close>'s public lookup semantics independent
   of solver-support membership, which a raw environment read never tested
@@ -183,10 +183,10 @@ text \<open>
 
 definition dg_globals_for ::
     "(vname \<Rightarrow> bool) \<Rightarrow> vname list
-     \<Rightarrow> (pp \<times> 'c + 'k \<Rightarrow> ('a::computable_domain exec_dg_st lifted, 'a exec_dg_st lifted) dg_state)
+     \<Rightarrow> (pp \<times> 'c + 'k \<Rightarrow> ('a::executable_domain exec_dg_st lifted, 'a exec_dg_st lifted) dg_state)
      \<Rightarrow> ('k \<times> String.literal
           \<times> (('a exec_dg_st lifted, 'a exec_dg_st lifted) dg_state \<Rightarrow> 'a exec_dg_st lifted)) list
-     \<Rightarrow> (String.literal \<times> 'a abs_state point_state) list" where
+     \<Rightarrow> (String.literal \<times> 'a abs_state lifted) list" where
   "dg_globals_for gs gl sigma keys =
      map (\<lambda>(k, label, payload).
             (label,
@@ -194,7 +194,7 @@ definition dg_globals_for ::
                (canonicalize_lift (resolved_st_q_is_bot_for gl) (payload (sigma (Inr k))))))
          keys"
 
-text \<open>Reading a key the solver never touched is \<^const>\<open>Unreachable\<close>, the same
+text \<open>Reading a key the solver never touched is \<^const>\<open>Bot\<close>, the same
   structural \<^const>\<open>Bot\<close> case a never-visited program point takes, so a caller can
   list every key the program could have without testing solver support first.\<close>
 
@@ -215,7 +215,7 @@ text \<open>
 
   \<^const>\<open>prog_main_name\<close> is included: \<open>main\<close> compiles through the same procedure
   wrapper as any other, and a procedure nothing calls simply reads
-  \<^const>\<open>Unreachable\<close> rather than being absent.
+  \<^const>\<open>Bot\<close> rather than being absent.
 \<close>
 
 definition seed_global_keys ::
@@ -255,14 +255,14 @@ definition ctx_solved_for ::
     "((vname \<Rightarrow> bool) \<Rightarrow> imp_prog
         \<Rightarrow> (pp \<times> unit) set
              \<times> (pp \<times> unit + 'k
-                  \<Rightarrow> ('a::computable_domain exec_dg_st lifted, 'a exec_dg_st lifted) dg_state))
+                  \<Rightarrow> ('a::executable_domain exec_dg_st lifted, 'a exec_dg_st lifted) dg_state))
      \<Rightarrow> (imp_prog
           \<Rightarrow> ('k \<times> String.literal
                 \<times> (('a exec_dg_st lifted, 'a exec_dg_st lifted) dg_state
                      \<Rightarrow> 'a exec_dg_st lifted)) list)
      \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog
      \<Rightarrow> (unit, 'a abs_state) analysis_result
-          \<times> (String.literal \<times> 'a abs_state point_state) list" where
+          \<times> (String.literal \<times> 'a abs_state lifted) list" where
   "ctx_solved_for solve keys gs p =
      (let sol = solve gs p; gl = declared_global_vars p
       in (Analysis_Result (fst sol)
@@ -286,7 +286,7 @@ lemma fst_ctx_solved_for:
 
 definition monovariant_analysis_result_for ::
     "((vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow>
-        (pp \<times> unit) set \<times> (pp \<times> unit + unit \<Rightarrow> ('a::computable_domain exec_dg_st lifted, 'a exec_dg_st lifted) dg_state))
+        (pp \<times> unit) set \<times> (pp \<times> unit + unit \<Rightarrow> ('a::executable_domain exec_dg_st lifted, 'a exec_dg_st lifted) dg_state))
      \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> (unit, 'a abs_state) analysis_result" where
   "monovariant_analysis_result_for solve gs p =
      (let sol = solve gs p; gl = declared_global_vars p;
@@ -305,7 +305,7 @@ text \<open>
   differently-shaped \<open>classify_checks\<close> bodies.
 
   \<^const>\<open>lookup_context\<close> gates on key membership itself (\<open>lookup_context_def\<close>:
-  a key outside the result table answers \<^const>\<open>Unreachable\<close> regardless of
+  a key outside the result table answers \<^const>\<open>Bot\<close> regardless of
   what \<open>result_at\<close> would say there), so \<open>lookup_context_monovariant_analysis_result_for\<close>
   below states that same gate against the CFG-node key domain, not against
   the solver's own covered-key set -- a genuine CFG node always reads
@@ -318,7 +318,7 @@ lemma lookup_context_monovariant_analysis_result_for:
       then normalize_point gs
              (canonicalize_lift (resolved_st_q_is_bot_for (declared_global_vars p))
                (locals (snd (solve gs p) (Inl (v, ctx)))))
-      else Unreachable)"
+      else Bot)"
   by (auto simp: monovariant_analysis_result_for_def lookup_context_def Let_def)
 
 lemma contexts_at_monovariant_analysis_result_for:
@@ -343,7 +343,7 @@ text \<open>
   partially present, so a discipline that is interpreted has its whole surface, or none of
   it and a name that fails to resolve.
 
-  \<^const>\<open>bot\<close> at an \<^const>\<open>Unreachable\<close> point is the reading every existing report function
+  \<^const>\<open>bot\<close> at an \<^const>\<open>Bot\<close> point is the reading every existing report function
   already makes: nothing reaches the point, so no store does, and \<^const>\<open>bot\<close> is the
   abstract state whose concretisation is empty.
 \<close>
@@ -367,7 +367,7 @@ begin
 
 definition state_at :: "imp_prog \<Rightarrow> pp \<Rightarrow> 'a" where
   "state_at p v =
-     (case lookup_context (table p) v () of Unreachable \<Rightarrow> bot_state | Reachable st \<Rightarrow> st)"
+     (case lookup_context (table p) v () of Bot \<Rightarrow> bot_state | Lifted st \<Rightarrow> st)"
 
 definition report :: "imp_prog \<Rightarrow> check_report_entry list" where
   "report p = classify_checks (prog_cfg p) (state_at p) classify"
@@ -381,7 +381,7 @@ text \<open>
 
 definition reach_state_at :: "imp_prog \<Rightarrow> pp \<Rightarrow> bool \<times> 'a" where
   "reach_state_at p v =
-     (case lookup_context (table p) v () of Unreachable \<Rightarrow> (True, bot_state) | Reachable st \<Rightarrow> (False, st))"
+     (case lookup_context (table p) v () of Bot \<Rightarrow> (True, bot_state) | Lifted st \<Rightarrow> (False, st))"
 
 definition report_with_state :: "imp_prog \<Rightarrow> (pp \<times> exp \<times> check_result \<times> bool \<times> 'a) list" where
   "report_with_state p =

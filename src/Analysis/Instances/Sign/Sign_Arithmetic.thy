@@ -139,7 +139,7 @@ lemma sign_le_trans_below:
   by blast
 
 lemma sign_lt_mono:
-  assumes hp: "\<not> is_bot (a1::sign)" and hq: "\<not> is_bot b1"
+  assumes hp: "\<not> is_empty (a1::sign)" and hq: "\<not> is_empty b1"
       and hab: "a1 \<le> a2" and hbb: "b1 \<le> b2"
       and hwide: "sign_lt a2 b2 = Some c"
   shows "sign_lt a1 b1 = Some c"
@@ -156,12 +156,12 @@ next
     using hwide by (auto split: if_splits)
   then have hyp: "sign_le b1 SNonPos \<and> sign_le a1 SNonNeg \<or> sign_le b1 SNeg \<and> sign_le a1 SPos"
     using sign_le_trans_below[OF _ hab] sign_le_trans_below[OF _ hbb] by blast
-  show ?thesis using hyp False hp hq unfolding is_bot_sign is_bottom_sign_def
+  show ?thesis using hyp False hp hq unfolding is_empty_sign is_bottom_sign_def
     by (cases a1; cases b1; auto)
 qed
 
 lemma sign_eqb_mono:
-  assumes hp: "\<not> is_bot (a1::sign)" and hq: "\<not> is_bot b1"
+  assumes hp: "\<not> is_empty (a1::sign)" and hq: "\<not> is_empty b1"
       and hab: "a1 \<le> a2" and hbb: "b1 \<le> b2"
       and hwide: "sign_eqb a2 b2 = Some c"
   shows "sign_eqb a1 b1 = Some c"
@@ -174,7 +174,7 @@ proof (cases c)
     using sign_le_trans_below[OF _ hab] sign_le_trans_below[OF _ hbb] by blast+
   have ha1: "a1 = SBot \<or> a1 = SZero" using hle1 by (cases a1) auto
   have hb1: "b1 = SBot \<or> b1 = SZero" using hle2 by (cases b1) auto
-  show ?thesis using True hp hq ha1 hb1 unfolding is_bot_sign is_bottom_sign_def by auto
+  show ?thesis using True hp hq ha1 hb1 unfolding is_empty_sign is_bottom_sign_def by auto
 next
 next
   case False
@@ -188,9 +188,9 @@ next
 qed
 
 lemma sign_tobool_mono:
-  assumes "\<not> is_bot (a1::sign)" and "a1 \<le> a2" and "sign_tobool a2 = Some c"
+  assumes "\<not> is_empty (a1::sign)" and "a1 \<le> a2" and "sign_tobool a2 = Some c"
   shows "sign_tobool a1 = Some c"
-  using assms unfolding is_bot_sign is_bottom_sign_def
+  using assms unfolding is_empty_sign is_bottom_sign_def
   by (cases a1; cases a2; auto simp: less_eq_sign_def split: if_splits)
 
 subsection \<open>Abstract expression evaluation\<close>
@@ -202,29 +202,29 @@ fun aval_sign :: "exp => (vname => sign) => sign" where
   | "aval_sign (Minus a b)  \<sigma> = aval_sign a \<sigma> - aval_sign b \<sigma>"
   | "aval_sign (Times a b)  \<sigma> = aval_sign a \<sigma> * aval_sign b \<sigma>"
   | "aval_sign (Less a b)   \<sigma> =
-       (if is_bot (aval_sign a \<sigma>) \<or> is_bot (aval_sign b \<sigma>) then bot
+       (if is_empty (aval_sign a \<sigma>) \<or> is_empty (aval_sign b \<sigma>) then bot
         else if sign_lt (aval_sign a \<sigma>) (aval_sign b \<sigma>) = Some True then SPos
         else if sign_lt (aval_sign a \<sigma>) (aval_sign b \<sigma>) = Some False then SZero
         else SNonNeg)"
   | "aval_sign (exp.Eq a b) \<sigma> =
-       (if is_bot (aval_sign a \<sigma>) \<or> is_bot (aval_sign b \<sigma>) then bot
+       (if is_empty (aval_sign a \<sigma>) \<or> is_empty (aval_sign b \<sigma>) then bot
         else if sign_eqb (aval_sign a \<sigma>) (aval_sign b \<sigma>) = Some True then SPos
         else if sign_eqb (aval_sign a \<sigma>) (aval_sign b \<sigma>) = Some False then SZero
         else SNonNeg)"
   | "aval_sign (exp.Not a)  \<sigma> =
-       (if is_bot (aval_sign a \<sigma>) then bot
+       (if is_empty (aval_sign a \<sigma>) then bot
         else if sign_tobool (aval_sign a \<sigma>) = Some True then SZero
         else if sign_tobool (aval_sign a \<sigma>) = Some False then SPos
         else SNonNeg)"
   | "aval_sign (And a b)    \<sigma> =
-       (if is_bot (aval_sign a \<sigma>) \<or> is_bot (aval_sign b \<sigma>) then bot
+       (if is_empty (aval_sign a \<sigma>) \<or> is_empty (aval_sign b \<sigma>) then bot
         else if sign_tobool (aval_sign a \<sigma>) = Some False \<or> sign_tobool (aval_sign b \<sigma>) = Some False
         then SZero
         else if sign_tobool (aval_sign a \<sigma>) = Some True \<and> sign_tobool (aval_sign b \<sigma>) = Some True
         then SPos
         else SNonNeg)"
   | "aval_sign (Or a b)     \<sigma> =
-       (if is_bot (aval_sign a \<sigma>) \<or> is_bot (aval_sign b \<sigma>) then bot
+       (if is_empty (aval_sign a \<sigma>) \<or> is_empty (aval_sign b \<sigma>) then bot
         else if sign_tobool (aval_sign a \<sigma>) = Some True \<or> sign_tobool (aval_sign b \<sigma>) = Some True
         then SPos
         else if sign_tobool (aval_sign a \<sigma>) = Some False \<and> sign_tobool (aval_sign b \<sigma>) = Some False
@@ -297,9 +297,9 @@ interpretation sign_arith: expression_domain_sound
                         sign_lt_sound sign_eqb_sound sign_tobool_sound[unfolded truthy_def]
                         sup_sign_def join_sign.simps truthy_def
                     del: sign_lt.simps sign_eqb.simps sign_tobool.simps)
-  apply (blast intro: sign_lt_mono[unfolded is_bot_sign])
-  apply (blast intro: sign_eqb_mono[unfolded is_bot_sign])
-  apply (blast intro: sign_tobool_mono[unfolded is_bot_sign])
+  apply (blast intro: sign_lt_mono[unfolded is_empty_sign])
+  apply (blast intro: sign_eqb_mono[unfolded is_empty_sign])
+  apply (blast intro: sign_tobool_mono[unfolded is_empty_sign])
   done
 
 lemmas aval_sign_sound = sign_arith.aval_dom_sound[unfolded gamma_abs_sign]

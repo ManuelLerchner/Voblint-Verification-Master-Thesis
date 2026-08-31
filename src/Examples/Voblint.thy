@@ -16,7 +16,9 @@ theory Voblint
     "Voblint_Domain.Abstract_Domain"
     "Voblint_Core.Transfer_Interface"
     "Voblint_Domain.Abstract_Numeric_Queries"
+    "Voblint_Core.Check_Result"
     "Voblint_Core.Abstract_Checks"
+    "Voblint_Core.Check_Report"
     "Voblint_Analysis.Sign_Domain"
     "Voblint_Analysis.Sign_Ctx_None_Sound"
     "Voblint_Analysis.Sign_Checks"
@@ -241,14 +243,13 @@ text \<open>
     exit.
     \<^item> @{theory Voblint_Domain.Abstract_Numeric_Queries} --- the generic
       \<^locale>\<open>abstract_numeric_queries\<close> interface (entailment/refutation of
-      \<open><\<close>/\<open>=\<close> over an abstract numeric value) and its derivation from any
-      \<^locale>\<open>backward_domain\<close> instance's own narrowing operators
-      (\<^locale>\<open>derived_less_queries\<close>, \<^locale>\<open>derived_eq_true_from_less\<close>,
-      \<^locale>\<open>derived_eq_false_from_intersection\<close>) --- a sound default a concrete
+      \<open><\<close>/\<open>=\<close> over an abstract numeric value) and its derivation, defined
+      directly in any \<^locale>\<open>backward_domain\<close> instance's own context, from
+      that instance's own narrowing operators --- a sound default a concrete
       domain may override with sharper, hand-tuned predicates.
     \<^item> @{theory Voblint_Core.Abstract_Checks} --- \<^locale>\<open>abstract_expression_domain\<close>
-      and \<^locale>\<open>abstract_check_domain\<close>: mutually recursive
-      \<^verbatim>\<open>check_true\<close>/\<^verbatim>\<open>check_false\<close> over \<^typ>\<open>exp\<close>, the three-way
+      and \<^locale>\<open>abstract_check_domain\<close>: the single \<^verbatim>\<open>check_query\<close> decision
+      procedure into \<^typ>\<open>bool option\<close> over \<^typ>\<open>exp\<close>, the three-way
       \<^verbatim>\<open>check_result\<close> classification (\<^verbatim>\<open>Check_Proved\<close>/\<^verbatim>\<open>Check_Refuted\<close>/
       \<^verbatim>\<open>Check_Unknown\<close>), and the node-indexed bridge to
       \<^const>\<open>checks_proven\<close>.

@@ -1,5 +1,5 @@
 theory Transfer_Interface
-  imports CFG_Enumeration "Voblint_CFG.CFG_Transfer" "Voblint_Domain.Abstract_Domain"
+  imports CFG_Enumeration "Voblint_CFG.CFG_Transfer" "Voblint_Domain.Nonrelational_State"
     "Voblint_VIMP.VIMP_Globals" "Voblint_VIMP.VIMP_Expr" "Voblint_VIMP.VIMP_Proc"
 begin
 
@@ -8,7 +8,7 @@ section \<open>CFG transfer interface\<close>
 text \<open>
   Given:
     - A CFG  g
-    - An abstract domain  D  (instance of abstract_domain)
+    - An abstract domain  D  (instance of sound_domain)
     - Per-domain transfer functions for each edge action
 
   this theory fixes the per-edge/per-domain transfer interface
@@ -19,10 +19,12 @@ text \<open>
   solved by the verified top-down solver -- live downstream, in
   \<open>Solver/Context/DG\<close>.
 
-  The transfer interface is parameterised by the abstract value type \<open>'a\<close>, so
-  the same \<open>domain_transfer\<close> record and \<open>apply_tf\<close> dispatcher work for Sign,
-  Interval, etc.; its soundness properties are packaged separately in the
-  \<open>sound_transfer_for\<close> locale.
+  The record is intentionally specialized to the pointwise \<open>abs_state\<close> carrier
+  used by Base analyses. Its \<open>'a\<close> parameter selects the abstract value domain,
+  so the same \<open>domain_transfer\<close> record works for Sign, Interval, etc. The D/G
+  framework remains carrier-generic through \<open>dg_spec\<close>; analyses with other
+  local or global carriers instantiate that interface directly. Soundness is
+  packaged separately in the \<open>sound_transfer_for\<close> locale.
 \<close>
 
 subsection \<open>Abstract transfer function record\<close>
@@ -368,7 +370,7 @@ lemma combine_collect_abs_bound_sound:
   assumes bound: "combine\<^sup># gs dst sc se \<le> sr"
     and sc: "s \<in> \<lbrakk>sc\<rbrakk>" and se: "t \<in> \<lbrakk>se\<rbrakk>"
   shows "combine_collect gs dst s t \<in> \<lbrakk>sr\<rbrakk>"
-  using bound combine_collect_sound gamma_state_mono sc se by blast
+  using bound combine_collect_sound gamma_state_mono sc se subset_eq by metis
 
 subsection \<open>The C-faithful initial store set\<close>
 

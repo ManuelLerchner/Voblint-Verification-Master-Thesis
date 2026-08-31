@@ -978,6 +978,9 @@ code_identifier
 | code_module VIMP_Proc_to_CFG \<rightharpoonup> (OCaml) Core
 | code_module Compile_Wellformed \<rightharpoonup> (OCaml) Core
 | code_module Abstract_Domain \<rightharpoonup> (OCaml) Core
+| code_module Reachability_Lift \<rightharpoonup> (OCaml) Core
+| code_module Nonrelational_State \<rightharpoonup> (OCaml) Core
+| code_module Nonrelational_Reachability \<rightharpoonup> (OCaml) Core
 | code_module Backward_Domain \<rightharpoonup> (OCaml) Core
 | code_module Numeric_Ops \<rightharpoonup> (OCaml) Core
 | code_module Exec_St \<rightharpoonup> (OCaml) Core
@@ -1032,7 +1035,10 @@ code_identifier
 | code_module Solver_Mono \<rightharpoonup> (OCaml) Core
 | code_module Transfer_Interface \<rightharpoonup> (OCaml) Core
 | code_module DG_Framework \<rightharpoonup> (OCaml) Core
+| code_module Check_Result \<rightharpoonup> (OCaml) Core
 | code_module Abstract_Checks \<rightharpoonup> (OCaml) Core
+| code_module Check_Report \<rightharpoonup> (OCaml) Core
+| code_module Contextual_Check_Report \<rightharpoonup> (OCaml) Core
 | code_module Analysis_Result \<rightharpoonup> (OCaml) Core
 | code_module Exec_DG_Bridge \<rightharpoonup> (OCaml) Core
 | code_module Monovariant_Analysis_Result \<rightharpoonup> (OCaml) Core
@@ -1086,11 +1092,6 @@ code_identifier
 | code_module Int_Classify \<rightharpoonup> (OCaml) Core
 | code_module Int_Checks \<rightharpoonup> (OCaml) Core
 | code_module Int_Ctx_None_Sound \<rightharpoonup> (OCaml) Core
-| code_module Sign_Print \<rightharpoonup> (OCaml) Core
-| code_module Interval_Print \<rightharpoonup> (OCaml) Core
-| code_module Parity_Print \<rightharpoonup> (OCaml) Core
-| code_module Int_Print \<rightharpoonup> (OCaml) Core
-| code_module Congruence_Print \<rightharpoonup> (OCaml) Core
 | code_module Parity_Exec \<rightharpoonup> (OCaml) Core
 | code_module Parity_Numeric_Queries \<rightharpoonup> (OCaml) Core
 | code_module Parity_Checks \<rightharpoonup> (OCaml) Core

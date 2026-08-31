@@ -26,7 +26,7 @@ text \<open>
 
   Deliberately absent: the equation-system, solved-table and result \<^theory_text>\<open>definition\<close>s
   themselves. They must stay concrete per-domain constants because they carry \<open>[code]\<close>
-  equations, and \<^locale>\<open>routed_dg_domain_exec\<close>'s own \<open>is_bot_pred_exact\<close> is not
+  equations, and \<^locale>\<open>routed_dg_domain_exec\<close>'s own \<open>empty_pred_exact\<close> is not
   dischargeable without fixing a concrete global set, so no locale carrying it can be
   interpreted globally. The domain keeps its definitions; what it stops re-proving is
   everything below.
@@ -39,9 +39,9 @@ text \<open>
 
 
 locale routed_domain_exec =
-  routed_dg_domain_exec gs is_bot_pred tf_st enter_st tf
+  routed_dg_domain_exec gs empty_pred tf_st enter_st tf
   for gs :: "vname \<Rightarrow> bool"
-    and is_bot_pred :: "'a::sound_domain exec_dg_st \<Rightarrow> bool"
+    and empty_pred :: "'a::sound_domain exec_dg_st \<Rightarrow> bool"
     and tf_st :: "edge_action \<Rightarrow> 'a exec_dg_st \<Rightarrow> 'a exec_dg_st"
     and enter_st :: "call_info \<Rightarrow> 'a exec_dg_st \<Rightarrow> 'a exec_dg_st"
     and tf :: "'a domain_transfer" +
@@ -63,10 +63,10 @@ text \<open>The executable and abstract routed specs this domain solves at. Abbr
   its existing \<^theory_text>\<open>unfolding\<close> steps keep working unchanged.\<close>
 
 abbreviation spec_st :: "('a exec_dg_st lifted, 'a exec_dg_st lifted) dg_spec" where
-  "spec_st \<equiv> base_dg_spec_st_for_lifted gs is_bot_pred tf_st enter_st"
+  "spec_st \<equiv> base_dg_spec_st_for_lifted gs empty_pred tf_st enter_st"
 
 abbreviation spec_abs :: "('a abs_state lifted, 'a abs_state lifted) dg_spec" where
-  "spec_abs \<equiv> base_dg_spec_for_lifted gs is_bot_state tf"
+  "spec_abs \<equiv> base_dg_spec_for_lifted gs is_empty_state tf"
 
 text \<open>The routed combine tree commutes with the executable-to-abstract reader. Mentions no
   domain constant beyond the two specs, so one proof serves every instance.\<close>

@@ -30,29 +30,27 @@ text \<open>
 \<close>
 
 global_interpretation interval_check_domain:
-  abstract_check_domain gamma_ivl interval_less_true interval_less_false interval_eq_true
-    interval_eq_false gamma_state aval_ivl
+  abstract_check_domain interval_less interval_eq gamma_state aval_ivl
   defines
-    interval_check_true = interval_check_domain.check_true
-    and interval_check_false = interval_check_domain.check_false
+    interval_truthy_query = interval_check_domain.truthy_query
+    and interval_check_query = interval_check_domain.check_query
     and interval_classify_check = interval_check_domain.classify_check
     and interval_checks_proven = interval_check_domain.abstract_checks_proven
 proof unfold_locales
   fix s :: store and e :: exp and \<sigma> :: "ivl abs_state"
   assume "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
-  then have "\<forall>x. s x \<in> gamma (\<sigma> x)" by (rule gamma_stateD)
+  then have "\<forall>x. s x \<in> gamma (\<sigma> x)" by blast
   then have "\<forall>x. s x \<in> gamma_ivl (\<sigma> x)" by simp
-  then show "aval e s \<in> gamma_ivl (aval_ivl e \<sigma>)" using aval_ivl_sound by blast
+  then show "aval e s \<in> gamma (aval_ivl e \<sigma>)" using aval_ivl_sound by fastforce
 qed
 
 text \<open>
   Only the consumer-facing aliases get a short Interval-prefixed name, the
   same choice \<open>Sign_Checks\<close> makes: \<open>classify_check\<close>'s two directions and the
   \<open>checks_proven\<close> bridge, both exercised by the worked example. The lower-
-  level \<open>check_true_sound\<close>/\<open>check_false_sound\<close>/\<open>check_true_false_vacuous\<close>
-  facts \<open>classify_check\<close>'s own soundness is built from stay reachable under
-  the qualified \<open>interval_check_domain.\<close> name instead of a dedicated alias
-  here.
+  level \<open>check_query_sound\<close> fact \<open>classify_check\<close>'s own soundness is built
+  from stays reachable under the qualified \<open>interval_check_domain.\<close> name
+  instead of a dedicated alias here.
 \<close>
 
 lemmas interval_classify_check_proved = interval_check_domain.classify_check_proved

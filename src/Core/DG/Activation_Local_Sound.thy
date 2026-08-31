@@ -1,5 +1,5 @@
 theory Activation_Local_Sound
-  imports "Voblint_Domain.Abstract_Domain" "Voblint_CFG.LTR_Abstract"
+  imports "Voblint_Domain.Nonrelational_State" "Voblint_CFG.LTR_Abstract"
 begin
 
 section \<open>Soundness of the activation-local context collecting\<close>

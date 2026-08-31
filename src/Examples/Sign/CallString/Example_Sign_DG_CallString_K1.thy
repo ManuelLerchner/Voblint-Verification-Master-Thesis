@@ -98,19 +98,19 @@ text \<open>The executable bottom predicate the lifted carrier needs, at this pr
   declared globals; \<open>sign_nest_exact\<close> is the exactness fact every transport step below
   consumes.\<close>
 
-definition sign_nest_is_bot_pred :: "sign resolved_st_q \<Rightarrow> bool" where
-  "sign_nest_is_bot_pred = resolved_st_q_is_bot_for (declared_global_vars sign_nest_program)"
+definition sign_nest_empty_pred :: "sign resolved_st_q \<Rightarrow> bool" where
+  "sign_nest_empty_pred = resolved_st_q_is_bot_for (declared_global_vars sign_nest_program)"
 
 lemma sign_nest_exact:
-  "sign_nest_is_bot_pred s = is_bot_state (fun_of_resolved_st_q_for sign_nest_gs s)"
-  unfolding sign_nest_is_bot_pred_def by (rule resolved_st_q_is_bot_for_iff) simp
+  "sign_nest_empty_pred s = is_empty_state (fun_of_resolved_st_q_for sign_nest_gs s)"
+  unfolding sign_nest_empty_pred_def by (rule resolved_st_q_is_bot_for_iff) simp
 
 text \<open>The same Base-style pair every other Sign analysis solves over, at the same
   \<^const>\<open>sign_tf_st_for\<close>/\<^const>\<open>sign_enter_st_for\<close> primitives: nothing call-string
   specific enters the specification.\<close>
 
 definition sign_nest_S_st :: "(sign exec_dg_st lifted, sign exec_dg_st lifted) dg_spec" where
-  "sign_nest_S_st = base_dg_spec_st_for_lifted sign_nest_gs sign_nest_is_bot_pred
+  "sign_nest_S_st = base_dg_spec_st_for_lifted sign_nest_gs sign_nest_empty_pred
                       (sign_tf_st_for sign_nest_gs) (sign_enter_st_for sign_nest_gs)"
 
 subsection \<open>Soundness of the executable specification, once for every bound\<close>
@@ -124,7 +124,7 @@ definition sign_nest_gamma ::
   "sign_nest_gamma d g = gamma_state_lift (map_lift (fun_of_resolved_st_q_for sign_nest_gs) d)"
 
 interpretation sign_nest_domain: routed_dg_domain_exec
-  sign_nest_gs sign_nest_is_bot_pred "sign_tf_st_for sign_nest_gs"
+  sign_nest_gs sign_nest_empty_pred "sign_tf_st_for sign_nest_gs"
   "sign_enter_st_for sign_nest_gs" "sign_tf_for sign_nest_gs"
   by unfold_locales
      (rule sign_tf_st_for_commute, rule sign_enter_st_for_commute, rule sign_nest_exact)
@@ -135,7 +135,7 @@ lemma sign_nest_gamma_eq: "sign_nest_gamma = sign_nest_domain.gamma_exec"
 interpretation sign_nest_dg_sound: sound_dg_spec sign_nest_S_st sign_nest_gamma sign_nest_gs
   unfolding sign_nest_gamma_eq sign_nest_S_st_def
   by (rule sign_nest_domain.sound_dg_spec_st)
-     (rule base_dg_spec_sound[OF sign_is_sound_transfer_for is_bot_state_gamma_state_empty])
+     (rule base_dg_spec_sound[OF sign_is_sound_transfer_for is_empty_state_gamma_state_empty])
 
 subsection \<open>The routed equation system and its computed solution\<close>
 

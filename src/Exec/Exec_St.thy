@@ -1,5 +1,5 @@
 theory Exec_St
-  imports "Voblint_Domain.Abstract_Domain" "TD.Update_rules"
+  imports "Voblint_Domain.Nonrelational_Reachability" "TD.Update_rules"
     "Voblint_Core.Transfer_Interface" "HOL-Library.AList"
 begin
 
@@ -15,10 +15,10 @@ text \<open>
 
 lemma normalized_lift_sup_over_origins:
   fixes a :: "'a::bounded_warrowing"
-  assumes mono: "\<And>p q::'a. p \<le> q \<Longrightarrow> is_bot_pred q \<Longrightarrow> is_bot_pred p"
+  assumes mono: "\<And>p q::'a. p \<le> q \<Longrightarrow> empty_pred q \<Longrightarrow> empty_pred p"
     and contrib: "rho_lookup (\<rho> state) g orig = Lifted a"
-    and not_bot_a: "\<not> is_bot_pred a"
-  shows "normalized_lift is_bot_pred (sup_over_origins state g)"
+    and not_bot_a: "\<not> empty_pred a"
+  shows "normalized_lift empty_pred (sup_over_origins state g)"
 proof -
   have le: "Lifted a \<le> sup_over_origins state g"
     using contrib by (rule sup_over_origins_upper)
@@ -29,7 +29,7 @@ proof -
   next
     case (Lifted c)
     from le Lifted have "a \<le> c" by simp
-    with mono not_bot_a have "\<not> is_bot_pred c" by blast
+    with mono not_bot_a have "\<not> empty_pred c" by blast
     with Lifted show ?thesis by simp
   qed
 qed
@@ -425,12 +425,12 @@ qed
 subsection \<open>Executable witness-bottom detection\<close>
 
 text \<open>
-  A finite, executable sufficient condition for @{const is_bot_state} on the state a
+  A finite, executable sufficient condition for @{const is_empty_state} on the state a
   resolved_st represents. Two disjuncts: the local default already bottom (covers
   every unoverridden local); or some explicit override is bottom at a location gs
   itself would actually produce for its own vname (ruling out an override at a
   location no vname under this gs maps to, which would say nothing about
-  @{const is_bot_state}). The global default is deliberately not checked: unlike
+  @{const is_empty_state}). The global default is deliberately not checked: unlike
   locals, a @{term declared_global} classifier's true set is always finite for a
   real program, so no generic (ps-independent) argument can guarantee a fresh
   global escapes any given override list the way a fresh local's existence does;
@@ -438,11 +438,11 @@ text \<open>
 \<close>
 
 definition resolved_st_is_bot ::
-  "(vname => bool) => ('a::computable_domain) resolved_st => bool" where
+  "(vname => bool) => ('a::executable_domain) resolved_st => bool" where
   "resolved_st_is_bot gs s =
      (case s of (dl, dg, ps) =>
-       is_bot dl \<or>
-       (\<exists>loc \<in> set (map fst ps). is_bot (lookup_resolved_st s loc)
+       is_empty dl \<or>
+       (\<exists>loc \<in> set (map fst ps). is_empty (lookup_resolved_st s loc)
           \<and> location_of gs (location_vname loc) = loc))"
 
 text \<open>
@@ -454,12 +454,12 @@ text \<open>
 lemma resolved_st_is_bot_sound:
   assumes bot: "resolved_st_is_bot gs s"
     and infinite_local: "infinite {x. \<not> gs x}"
-  shows "is_bot_state (fun_of_resolved_st_for gs s)"
+  shows "is_empty_state (fun_of_resolved_st_for gs s)"
 proof -
   obtain dl dg ps where s_eq: "s = (dl, dg, ps)" by (cases s)
   from bot consider
-      (dl) "is_bot dl"
-    | (ps) loc where "loc \<in> set (map fst ps)" "is_bot (lookup_resolved_st s loc)"
+      (dl) "is_empty dl"
+    | (ps) loc where "loc \<in> set (map fst ps)" "is_empty (lookup_resolved_st s loc)"
         "location_of gs (location_vname loc) = loc"
     unfolding resolved_st_is_bot_def s_eq by auto
   then show ?thesis
@@ -481,19 +481,19 @@ proof -
       using local_ps by (simp add: map_of_resolved_none_iff)
     have "lookup_resolved_st s (Local_Location x) = dl"
       unfolding s_eq by (simp add: mo_l)
-    then have "is_bot (fun_of_resolved_st_for gs s x)"
+    then have "is_empty (fun_of_resolved_st_for gs s x)"
       unfolding fun_of_resolved_st_for_def location_of_def
       using dl not_gs by simp
-    then show ?thesis by (rule is_bot_stateI)
+    then show ?thesis by (rule is_empty_stateI)
   next
     case ps
     let ?x = "location_vname loc"
     have loc_eq: "location_of gs ?x = loc" by (rule ps(3))
     have "fun_of_resolved_st_for gs s ?x = lookup_resolved_st s loc"
       unfolding fun_of_resolved_st_for_def loc_eq by (rule refl)
-    then have "is_bot (fun_of_resolved_st_for gs s ?x)"
+    then have "is_empty (fun_of_resolved_st_for gs s ?x)"
       using ps(2) by simp
-    then show ?thesis by (rule is_bot_stateI)
+    then show ?thesis by (rule is_empty_stateI)
   qed
 qed
 
@@ -505,21 +505,21 @@ text \<open>
   that list closes the gap: every globally classified vname is checked
   directly, so the global branch needs no override witness. This makes the
   combined check an exact (not merely sound) characterization of
-  @{const is_bot_state}, with no side condition on \<open>gs\<close> beyond \<open>globals\<close>
+  @{const is_empty_state}, with no side condition on \<open>gs\<close> beyond \<open>globals\<close>
   actually listing its true set -- unlike @{thm resolved_st_is_bot_sound},
   which still needs infinitely many locals to exist.
 \<close>
 
 definition resolved_st_is_bot_for ::
-  "vname list => (vname => bool) => ('a::computable_domain) resolved_st => bool" where
+  "vname list => (vname => bool) => ('a::executable_domain) resolved_st => bool" where
   "resolved_st_is_bot_for globals gs s =
-     ((\<exists>x \<in> set globals. is_bot (lookup_resolved_st s (location_of gs x))) \<or>
+     ((\<exists>x \<in> set globals. is_empty (lookup_resolved_st s (location_of gs x))) \<or>
       resolved_st_is_bot gs s)"
 
 lemma resolved_st_is_bot_for_iff:
   fixes s :: "'a::sound_domain resolved_st"
   assumes globals: "\<And>x. gs x = (x \<in> set globals)"
-  shows "resolved_st_is_bot_for globals gs s \<longleftrightarrow> is_bot_state (fun_of_resolved_st_for gs s)"
+  shows "resolved_st_is_bot_for globals gs s \<longleftrightarrow> is_empty_state (fun_of_resolved_st_for gs s)"
 proof -
   have infinite_local: "infinite {x::vname. \<not> gs x}"
   proof
@@ -535,28 +535,28 @@ proof -
   show ?thesis
   proof
     assume "resolved_st_is_bot_for globals gs s"
-    then show "is_bot_state (fun_of_resolved_st_for gs s)"
+    then show "is_empty_state (fun_of_resolved_st_for gs s)"
       unfolding resolved_st_is_bot_for_def
     proof (elim disjE)
-      assume "\<exists>x \<in> set globals. is_bot (lookup_resolved_st s (location_of gs x))"
-      then obtain x where "is_bot (lookup_resolved_st s (location_of gs x))" by blast
-      then have "is_bot (fun_of_resolved_st_for gs s x)"
+      assume "\<exists>x \<in> set globals. is_empty (lookup_resolved_st s (location_of gs x))"
+      then obtain x where "is_empty (lookup_resolved_st s (location_of gs x))" by blast
+      then have "is_empty (fun_of_resolved_st_for gs s x)"
         unfolding fun_of_resolved_st_for_def by simp
-      then show ?thesis by (rule is_bot_stateI)
+      then show ?thesis by (rule is_empty_stateI)
     next
       assume bot: "resolved_st_is_bot gs s"
       show ?thesis by (rule resolved_st_is_bot_sound[OF bot infinite_local])
     qed
   next
-    assume "is_bot_state (fun_of_resolved_st_for gs s)"
-    then obtain x where x: "is_bot (fun_of_resolved_st_for gs s x)" by (rule is_bot_stateE)
+    assume "is_empty_state (fun_of_resolved_st_for gs s)"
+    then obtain x where x: "is_empty (fun_of_resolved_st_for gs s x)" by (rule is_empty_stateE)
     show "resolved_st_is_bot_for globals gs s"
     proof (cases "gs x")
       case True
       then have "x \<in> set globals" using globals by simp
       moreover have "fun_of_resolved_st_for gs s x = lookup_resolved_st s (location_of gs x)"
         unfolding fun_of_resolved_st_for_def by (rule refl)
-      ultimately have "\<exists>y \<in> set globals. is_bot (lookup_resolved_st s (location_of gs y))"
+      ultimately have "\<exists>y \<in> set globals. is_empty (lookup_resolved_st s (location_of gs y))"
         using x by auto
       then show ?thesis unfolding resolved_st_is_bot_for_def by (rule disjI1)
     next
@@ -581,7 +581,7 @@ proof -
           by (simp add: map_of_resolved_none_iff)
         have "lookup_resolved_st s (Local_Location x) = dl"
           unfolding s_eq using mo by simp
-        with lookup_eq x have "is_bot dl" by simp
+        with lookup_eq x have "is_empty dl" by simp
         then show ?thesis
           unfolding resolved_st_is_bot_def using s_eq by auto
       qed
@@ -1492,7 +1492,7 @@ proof -
   have lookup_eq: "lookup_resolved_st s = lookup_resolved_st t"
     using eq unfolding eq_resolved_st_def by simp
   show ?thesis
-  proof (cases "EX x : set globals. is_bot (lookup_resolved_st s (location_of (%x. x : set globals) x))")
+  proof (cases "EX x : set globals. is_empty (lookup_resolved_st s (location_of (%x. x : set globals) x))")
     case True
     then show ?thesis
       unfolding resolved_st_is_bot_for_def using lookup_eq by auto
@@ -1500,14 +1500,14 @@ proof -
     case False
     then have rb: "resolved_st_is_bot (%x. x : set globals) s"
       using bot unfolding resolved_st_is_bot_for_def by blast
-    then consider (dlc) "is_bot dl"
-      | (psc) loc0 where "loc0 : set (map fst ps)" "is_bot (lookup_resolved_st s loc0)"
+    then consider (dlc) "is_empty dl"
+      | (psc) loc0 where "loc0 : set (map fst ps)" "is_empty (lookup_resolved_st s loc0)"
           "location_of (%x. x : set globals) (location_vname loc0) = loc0"
       unfolding resolved_st_is_bot_def s_eq by auto
     then show ?thesis
     proof cases
       case dlc
-      have "is_bot dl'" using dlc dl_eq by simp
+      have "is_empty dl'" using dlc dl_eq by simp
       then have "resolved_st_is_bot (%x. x : set globals) t"
         unfolding resolved_st_is_bot_def t_eq by auto
       then show ?thesis unfolding resolved_st_is_bot_for_def by blast
@@ -1515,14 +1515,14 @@ proof -
       case (psc loc0)
       have lookup_t_loc0: "lookup_resolved_st t loc0 = lookup_resolved_st s loc0"
         using lookup_eq by simp
-      then have bot_t_loc0: "is_bot (lookup_resolved_st t loc0)"
+      then have bot_t_loc0: "is_empty (lookup_resolved_st t loc0)"
         using psc(2) by simp
       show ?thesis
       proof (cases "map_of qs loc0")
         case (Some a)
         then have loc0_in_qs: "loc0 : set (map fst qs)"
           by (force dest: map_of_SomeD)
-        have bot_t_loc0': "is_bot (lookup_resolved_st (dl', dg', qs) loc0)"
+        have bot_t_loc0': "is_empty (lookup_resolved_st (dl', dg', qs) loc0)"
           using bot_t_loc0 unfolding t_eq .
         have "resolved_st_is_bot (%x. x : set globals) t"
           unfolding resolved_st_is_bot_def t_eq
@@ -1537,7 +1537,7 @@ proof -
         show ?thesis
         proof (cases loc0)
           case (Local_Location y)
-          then have "is_bot dl'"
+          then have "is_empty dl'"
             using default_val bot_t_loc0 by simp
           then have "resolved_st_is_bot (%x. x : set globals) t"
             unfolding resolved_st_is_bot_def t_eq by auto
@@ -1546,7 +1546,7 @@ proof -
           case (Global_Location y)
           then have gs_y: "y : set globals"
             using psc(3) unfolding location_of_def by (auto split: if_splits)
-          have "is_bot (lookup_resolved_st t (location_of (%x. x : set globals) y))"
+          have "is_empty (lookup_resolved_st t (location_of (%x. x : set globals) y))"
             using default_val bot_t_loc0 Global_Location gs_y
             unfolding location_of_def by simp
           then show ?thesis
@@ -1577,7 +1577,7 @@ text \<open>
   The exec-bridge exact witness-bottom check (@{thm resolved_st_is_bot_for_iff}),
   transported to the quotient through @{const rep_resolved_st}. This is the
   predicate the executable side trees are built against: unlike
-  @{const is_bot_state} composed with @{const fun_of_resolved_st_q_for}, it has
+  @{const is_empty_state} composed with @{const fun_of_resolved_st_q_for}, it has
   a genuine \<open>[code]\<close> equation, since it never quantifies over all of
   @{typ vname}.
 \<close>
@@ -1592,7 +1592,7 @@ text \<open>
 \<close>
 
 lift_definition resolved_st_q_is_bot_for ::
-  "vname list => ('a::computable_domain) resolved_st_q => bool"
+  "vname list => ('a::executable_domain) resolved_st_q => bool"
   is "%globals s. resolved_st_is_bot_for globals (%x. x : set globals) s"
   by (rule eq_resolved_st_is_bot_for)
 
@@ -1602,8 +1602,9 @@ lemma resolved_st_q_is_bot_for_alt:
   by (rule resolved_st_q_is_bot_for.rep_eq)
 
 lemma resolved_st_q_is_bot_for_iff:
+  fixes s :: "'a::sound_domain resolved_st_q"
   assumes globals: "\<And>x. gs x = (x \<in> set globals)"
-  shows "resolved_st_q_is_bot_for globals s \<longleftrightarrow> is_bot_state (fun_of_resolved_st_q_for gs s)"
+  shows "resolved_st_q_is_bot_for globals s \<longleftrightarrow> is_empty_state (fun_of_resolved_st_q_for gs s)"
 proof -
   have gs_eq: "gs = (%x. x : set globals)"
     using globals by (rule ext)
@@ -1614,7 +1615,7 @@ proof -
                  resolved_st_is_bot_for globals gs (rep_resolved_st s)"
     using gs_eq by simp
   have step3: "resolved_st_is_bot_for globals gs (rep_resolved_st s) =
-                 is_bot_state (fun_of_resolved_st_for gs (rep_resolved_st s))"
+                 is_empty_state (fun_of_resolved_st_for gs (rep_resolved_st s))"
     by (rule resolved_st_is_bot_for_iff[OF globals])
   show ?thesis
     using step1 step2 step3 fun_of_resolved_st_q_for_rep[of gs s] by simp
@@ -1623,20 +1624,21 @@ qed
 text \<open>
   \<open>resolved_st_q_is_bot_for\<close>'s lifted counterpart: a solver-level \<open>Bot\<close> local
   unknown is \<open>True\<close> outright, without inspecting any \<open>resolved_st_q\<close> payload at
-  all, matching \<^const>\<open>is_bot_state_lift\<close>'s own \<open>Bot\<close> case. This is the
+  all, matching \<^const>\<open>is_empty_state_lift\<close>'s own \<open>Bot\<close> case. This is the
   executable predicate the report layer needs at the point where it currently
   case-splits \<open>Bot\<close>/\<open>Lifted\<close> and discards which branch fired.
 \<close>
 
 fun resolved_st_q_lifted_is_bot_for ::
-  "vname list \<Rightarrow> ('a::computable_domain) resolved_st_q lifted \<Rightarrow> bool" where
+  "vname list \<Rightarrow> ('a::executable_domain) resolved_st_q lifted \<Rightarrow> bool" where
   "resolved_st_q_lifted_is_bot_for globals Bot = True"
 | "resolved_st_q_lifted_is_bot_for globals (Lifted s) = resolved_st_q_is_bot_for globals s"
 
 lemma resolved_st_q_lifted_is_bot_for_iff:
+  fixes s :: "('a::sound_domain) resolved_st_q lifted"
   assumes globals: "\<And>x. gs x = (x \<in> set globals)"
   shows "resolved_st_q_lifted_is_bot_for globals s
-       \<longleftrightarrow> is_bot_state_lift (map_lift (fun_of_resolved_st_q_for gs) s)"
+       \<longleftrightarrow> is_empty_state_lift (map_lift (fun_of_resolved_st_q_for gs) s)"
   by (cases s) (simp_all add: resolved_st_q_is_bot_for_iff[OF globals])
 
 
@@ -1701,23 +1703,23 @@ subsection \<open>Structural reachability lift for the resolved-state quotient\<
 definition live_resolved_st_q ::
   "(vname => bool) => ('a::sound_domain) resolved_st_q => bool"
 where
-  "live_resolved_st_q gs s = (~ is_bot_state (fun_of_resolved_st_q_for gs s))"
+  "live_resolved_st_q gs s = (~ is_empty_state (fun_of_resolved_st_q_for gs s))"
 
 lemma live_resolved_st_qI:
-  "(!!x. ~ is_bot (fun_of_resolved_st_q_for gs s x)) ==> live_resolved_st_q gs s"
-  unfolding live_resolved_st_q_def is_bot_state_def by blast
+  "(!!x. ~ is_empty (fun_of_resolved_st_q_for gs s x)) ==> live_resolved_st_q gs s"
+  unfolding live_resolved_st_q_def is_empty_state_def by blast
 
 lemma live_resolved_st_qE:
   assumes "live_resolved_st_q gs s"
-  shows "~ is_bot (fun_of_resolved_st_q_for gs s x)"
-  using assms unfolding live_resolved_st_q_def is_bot_state_def by blast
+  shows "~ is_empty (fun_of_resolved_st_q_for gs s x)"
+  using assms unfolding live_resolved_st_q_def is_empty_state_def by blast
 
 text \<open>
-  \<open>is_bot_state\<close> on \<open>fun_of_resolved_st_q_for gs s\<close> is an infinite existential over
+  \<open>is_empty_state\<close> on \<open>fun_of_resolved_st_q_for gs s\<close> is an infinite existential over
   \<open>vname\<close>, not executable on a quotient value.  \<open>update_resolved_st_q_lift\<close> tracks it
   incrementally instead: given a @{const live_resolved_st_q} input and the single
   freshly computed element, the result is witness-bottom iff that element is
-  \<open>is_bot\<close> -- every other location is provably unchanged
+  \<open>is_empty\<close> -- every other location is provably unchanged
   (@{thm fun_of_resolved_st_q_for_update}), so it cannot newly become bottom.  This
   mirrors Goblint's per-analysis \<open>Deadcode\<close> raise while staying generic: it lives at
   the shared update primitive, not in each domain's own transfer code.
@@ -1728,7 +1730,7 @@ definition update_resolved_st_q_lift ::
 where
   "update_resolved_st_q_lift x loc a = do {
      s <- x;
-     if is_bot a then Bot else Lifted (update_resolved_st_q s loc a)
+     if is_empty a then Bot else Lifted (update_resolved_st_q s loc a)
    }"
 
 lemma update_resolved_st_q_lift_Bot [simp]:
@@ -1737,7 +1739,7 @@ lemma update_resolved_st_q_lift_Bot [simp]:
 
 lemma update_resolved_st_q_lift_Lifted:
   "update_resolved_st_q_lift (Lifted s) loc a =
-     (if is_bot a then Bot else Lifted (update_resolved_st_q s loc a))"
+     (if is_empty a then Bot else Lifted (update_resolved_st_q s loc a))"
   unfolding update_resolved_st_q_lift_def by simp
 
 text \<open>
@@ -1753,27 +1755,27 @@ lemma update_resolved_st_q_lift_correct:
   assumes live: "live_resolved_st_q gs s"
   shows "map_lift (fun_of_resolved_st_q_for gs)
            (update_resolved_st_q_lift (Lifted s) (location_of gs x) a) =
-         normalize_lift is_bot_state ((fun_of_resolved_st_q_for gs s)(x := a))"
-proof (cases "is_bot a")
+         normalize_lift is_empty_state ((fun_of_resolved_st_q_for gs s)(x := a))"
+proof (cases "is_empty a")
   case True
-  have "is_bot_state ((fun_of_resolved_st_q_for gs s)(x := a))"
-    by (rule is_bot_stateI[of _ x]) (simp add: True)
+  have "is_empty_state ((fun_of_resolved_st_q_for gs s)(x := a))"
+    by (rule is_empty_stateI[of _ x]) (simp add: True)
   with True show ?thesis
     by (simp add: update_resolved_st_q_lift_Lifted)
 next
   case False
-  have not_bot: "~ is_bot_state ((fun_of_resolved_st_q_for gs s)(x := a))"
+  have not_bot: "~ is_empty_state ((fun_of_resolved_st_q_for gs s)(x := a))"
   proof
-    assume "is_bot_state ((fun_of_resolved_st_q_for gs s)(x := a))"
-    then obtain y where y: "is_bot (((fun_of_resolved_st_q_for gs s)(x := a)) y)"
-      by (rule is_bot_stateE)
+    assume "is_empty_state ((fun_of_resolved_st_q_for gs s)(x := a))"
+    then obtain y where y: "is_empty (((fun_of_resolved_st_q_for gs s)(x := a)) y)"
+      by (rule is_empty_stateE)
     show False
     proof (cases "y = x")
       case True
       with y False show ?thesis by simp
     next
       case False
-      with y have "is_bot (fun_of_resolved_st_q_for gs s y)" by simp
+      with y have "is_empty (fun_of_resolved_st_q_for gs s y)" by simp
       with live show ?thesis using live_resolved_st_qE by blast
     qed
   qed
@@ -1850,48 +1852,48 @@ text \<open>
   is the same premise \<open>resolved_st_is_bot_sound\<close> relies on, needed here to
   obtain a local vname the formals list does not shadow.
 \<close>
-lemma is_bot_state_bind_formals_abs_enter_frame:
+lemma is_empty_state_bind_formals_abs_enter_frame:
   fixes top_val :: "'a::sound_domain" and sigma :: "'a abs_state"
-  assumes live: "~ is_bot_state sigma"
-    and top_ok: "~ is_bot top_val"
+  assumes live: "~ is_empty_state sigma"
+    and top_ok: "~ is_empty top_val"
     and dist: "distinct xs"
     and len: "length xs = length avs"
     and infinite_local: "infinite {x. ~ gs x}"
-  shows "is_bot_state (bind_formals xs avs (enter_frame gs top_val sigma))
-       \<longleftrightarrow> is_bot top_val \<or> (\<exists>v \<in> set avs. is_bot v)"
+  shows "is_empty_state (bind_formals xs avs (enter_frame gs top_val sigma))
+       \<longleftrightarrow> is_empty top_val \<or> (\<exists>v \<in> set avs. is_empty v)"
 proof -
   have dist': "distinct (map fst (zip xs avs))"
     using dist len by (simp add: map_fst_zip)
   show ?thesis
   proof
-    assume "is_bot_state (bind_formals xs avs (enter_frame gs top_val sigma))"
+    assume "is_empty_state (bind_formals xs avs (enter_frame gs top_val sigma))"
     then obtain y where y:
-      "is_bot (bind_formals xs avs (enter_frame gs top_val sigma) y)"
-      by (rule is_bot_stateE)
-    show "is_bot top_val \<or> (\<exists>v \<in> set avs. is_bot v)"
+      "is_empty (bind_formals xs avs (enter_frame gs top_val sigma) y)"
+      by (rule is_empty_stateE)
+    show "is_empty top_val \<or> (\<exists>v \<in> set avs. is_empty v)"
     proof (cases "map_of (zip xs avs) y")
       case None
       then have "bind_formals xs avs (enter_frame gs top_val sigma) y =
                    enter_frame gs top_val sigma y"
         unfolding fold_fun_upd_apply[OF dist'] by simp
-      with y have "is_bot (enter_frame gs top_val sigma y)" by simp
-      then have "is_bot top_val \<or> is_bot (sigma y)"
+      with y have "is_empty (enter_frame gs top_val sigma y)" by simp
+      then have "is_empty top_val \<or> is_empty (sigma y)"
         unfolding enter_frame_def by (cases "gs y") simp_all
-      with live show ?thesis by (auto simp: is_bot_state_def)
+      with live show ?thesis by (auto simp: is_empty_state_def)
     next
       case (Some v)
       then have "bind_formals xs avs (enter_frame gs top_val sigma) y = v"
         unfolding fold_fun_upd_apply[OF dist'] by simp
-      with y have "is_bot v" by simp
+      with y have "is_empty v" by simp
       moreover have "v \<in> set avs" using Some by (rule map_of_SomeD[THEN set_zip_rightD])
       ultimately show ?thesis by blast
     qed
   next
-    assume disj: "is_bot top_val \<or> (\<exists>v \<in> set avs. is_bot v)"
-    show "is_bot_state (bind_formals xs avs (enter_frame gs top_val sigma))"
-    proof (cases "\<exists>v \<in> set avs. is_bot v")
+    assume disj: "is_empty top_val \<or> (\<exists>v \<in> set avs. is_empty v)"
+    show "is_empty_state (bind_formals xs avs (enter_frame gs top_val sigma))"
+    proof (cases "\<exists>v \<in> set avs. is_empty v")
       case True
-      then obtain v where v: "v \<in> set avs" "is_bot v" by blast
+      then obtain v where v: "v \<in> set avs" "is_empty v" by blast
       then obtain i where i: "i < length avs" "avs ! i = v" by (metis in_set_conv_nth)
       then have i': "i < length xs" using len by simp
       have len_zip: "i < length (zip xs avs)" using i' i(1) by simp
@@ -1901,10 +1903,10 @@ proof -
         using dist' mem i by (simp add: map_of_eq_Some_iff)
       then have "bind_formals xs avs (enter_frame gs top_val sigma) (xs ! i) = v"
         unfolding fold_fun_upd_apply[OF dist'] by simp
-      then show ?thesis using v by (metis is_bot_stateI)
+      then show ?thesis using v by (metis is_empty_stateI)
     next
       case False
-      with disj have top_bot: "is_bot top_val" by blast
+      with disj have top_bot: "is_empty top_val" by blast
       have "finite (set xs)" by (rule finite_set)
       then have "infinite ({x. ~ gs x} - set xs)"
         using infinite_local by (rule Diff_infinite_finite)
@@ -1919,7 +1921,7 @@ proof -
                    enter_frame gs top_val sigma z"
         unfolding fold_fun_upd_apply[OF dist'] by simp
       also have "... = top_val" using z unfolding enter_frame_def by simp
-      finally show ?thesis using top_bot by (metis is_bot_stateI)
+      finally show ?thesis using top_bot by (metis is_empty_stateI)
     qed
   qed
 qed
@@ -1927,7 +1929,7 @@ qed
 text \<open>
   \<open>enter_resolved_st_q_lift\<close> is the exec analog of @{const update_resolved_st_q_lift}:
   input-strict on \<open>Bot\<close>, and normalizes to \<open>Bot\<close> exactly when the fresh frame or one
-  of the freshly computed formal values is \<open>is_bot\<close> -- both finite, decidable checks,
+  of the freshly computed formal values is \<open>is_empty\<close> -- both finite, decidable checks,
   never a scan of the resolved state itself.
 \<close>
 definition enter_resolved_st_q_lift ::
@@ -1936,7 +1938,7 @@ definition enter_resolved_st_q_lift ::
 where
   "enter_resolved_st_q_lift gs x top_val xs avs = do {
      s <- x;
-     if is_bot top_val \<or> list_ex is_bot avs then Bot
+     if is_empty top_val \<or> list_ex is_empty avs then Bot
      else Lifted (bind_formals_resolved_q gs xs avs (enter_frame_D_resolved_q top_val s))
    }"
 
@@ -1951,13 +1953,13 @@ lemma enter_resolved_st_q_lift_correct:
     and infinite_local: "infinite {x. ~ gs x}"
   shows "map_lift (fun_of_resolved_st_q_for gs)
            (enter_resolved_st_q_lift gs (Lifted s) top_val xs avs) =
-        normalize_lift is_bot_state
+        normalize_lift is_empty_state
           (bind_formals xs avs (enter_frame gs top_val (fun_of_resolved_st_q_for gs s)))"
 proof -
-  have key: "is_bot_state
+  have key: "is_empty_state
       (bind_formals xs avs (enter_frame gs top_val (fun_of_resolved_st_q_for gs s)))
-    \<longleftrightarrow> is_bot top_val \<or> list_ex is_bot avs"
-  proof (cases "is_bot top_val")
+    \<longleftrightarrow> is_empty top_val \<or> list_ex is_empty avs"
+  proof (cases "is_empty top_val")
     case True
     have dist': "distinct (map fst (zip xs avs))"
       using dist len by (simp add: map_fst_zip)
@@ -1977,17 +1979,17 @@ proof -
                enter_frame gs top_val (fun_of_resolved_st_q_for gs s) z"
       unfolding fold_fun_upd_apply[OF dist'] by simp
     also have "... = top_val" using z unfolding enter_frame_def by simp
-    finally have "is_bot (bind_formals xs avs
+    finally have "is_empty (bind_formals xs avs
                     (enter_frame gs top_val (fun_of_resolved_st_q_for gs s)) z)"
       using True by simp
-    then have "is_bot_state
+    then have "is_empty_state
         (bind_formals xs avs (enter_frame gs top_val (fun_of_resolved_st_q_for gs s)))"
-      by (rule is_bot_stateI)
+      by (rule is_empty_stateI)
     with True show ?thesis by simp
   next
     case False
     show ?thesis
-      using is_bot_state_bind_formals_abs_enter_frame
+      using is_empty_state_bind_formals_abs_enter_frame
               [OF live[unfolded live_resolved_st_q_def] False dist len infinite_local]
       by (simp add: list_ex_iff)
   qed
@@ -2056,15 +2058,15 @@ lemma combine_resolved_st_q_lift_Lifted [simp]:
 lemma combine_resolved_st_q_lift_correct:
   fixes sc se :: "'a::sound_domain resolved_st_q"
   assumes live_c: "live_resolved_st_q gs sc" and live_e: "live_resolved_st_q gs se"
-  shows "~ is_bot_state (fun_of_resolved_st_q_for gs (combine_resolved_st_q sc se))"
+  shows "~ is_empty_state (fun_of_resolved_st_q_for gs (combine_resolved_st_q sc se))"
   unfolding fun_of_resolved_st_q_for_combine
 proof (rule notI)
-  assume "is_bot_state (combine_env gs (fun_of_resolved_st_q_for gs sc)
+  assume "is_empty_state (combine_env gs (fun_of_resolved_st_q_for gs sc)
                                         (fun_of_resolved_st_q_for gs se))"
   then obtain y where y:
-    "is_bot (combine_env gs (fun_of_resolved_st_q_for gs sc)
+    "is_empty (combine_env gs (fun_of_resolved_st_q_for gs sc)
                               (fun_of_resolved_st_q_for gs se) y)"
-    by (rule is_bot_stateE)
+    by (rule is_empty_stateE)
   show False
     using y live_c live_e
     unfolding combine_env_def

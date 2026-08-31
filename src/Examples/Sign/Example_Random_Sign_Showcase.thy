@@ -160,7 +160,7 @@ lemma random_guard_node_sound:
   "ltr_collect random_guard_gs (prog_cfg random_guard_program)
      (cinit_stores random_guard_gs) v
    \<subseteq> \<lbrakk>case lookup_context (analyse_sign_result_for random_guard_gs random_guard_program) v () of
-          Unreachable \<Rightarrow> bot | Reachable st \<Rightarrow> st\<rbrakk>"
+          Bot \<Rightarrow> bot | Lifted st \<Rightarrow> st\<rbrakk>"
   by (rule analyse_sign_result_node_sound_for
         [OF random_guard_reserved random_guard_solver_terminates random_guard_entry_cov
             random_guard_fwd_ok random_guard_call_fwd_ok random_guard_comb_fwd_ok])
@@ -169,7 +169,7 @@ definition random_guard_env :: "vname \<Rightarrow> sign" where
   "random_guard_env =
      (case lookup_context (analyse_sign_result_for random_guard_gs random_guard_program)
              (cfg_exit (prog_cfg random_guard_program)) () of
-        Unreachable \<Rightarrow> bot | Reachable st \<Rightarrow> st)"
+        Bot \<Rightarrow> bot | Lifted st \<Rightarrow> st)"
 
 lemma random_guard_exec_y: "random_guard_env (STR ''y'') = SNonNeg"
   by (simp add: random_guard_env_def) eval
@@ -180,7 +180,7 @@ corollary random_guard_exit_sound:
    \<le> \<lbrakk>random_guard_env\<rbrakk>"
   unfolding random_guard_env_def
   using random_guard_node_sound
-  by (simp add: prog_main_name_def gamma_point_def split: point_state.splits)
+  by (simp add: prog_main_name_def gamma_point_def split: lifted.splits)
 
 text \<open>
   Closing issue #43: for every concrete execution state that reaches the

@@ -11,20 +11,19 @@ text \<open>
   \<open>combine_env caller callee\<close> restores the caller's locals and keeps the
   callee's globals on exit.
 
-  \<open>combine_env\<close> and \<open>enter_frame\<close> are pure per-variable selectors, generic in the
-  codomain: the concrete VIMP semantics uses each at \<open>store = vname \<Rightarrow> int\<close>
-  (\<open>enter_frame\<close> fixed at reset value \<open>0\<close>, i.e. \<open>enter_state\<close>), and every abstract
-  domain's own \<open>vname \<Rightarrow> 'a\<close> state reuses the same two definitions -- at its own
-  reset/join value -- rather than restating an \<open>_abs\<close> copy of either.
+  \<open>combine_env\<close> is the single pointwise selector, generic in both key and
+  codomain. \<open>enter_frame\<close> specializes it with a constant reset map. The
+  concrete semantics uses these operations at \<open>store = vname \<Rightarrow> int\<close>, while
+  abstract states reuse them at their own codomain.
 \<close>
 
 type_synonym pname = String.literal
 
-definition combine_env :: "(vname \<Rightarrow> bool) \<Rightarrow> (vname \<Rightarrow> 'a) \<Rightarrow> (vname \<Rightarrow> 'a) \<Rightarrow> (vname \<Rightarrow> 'a)" where
+definition combine_env :: "('k \<Rightarrow> bool) \<Rightarrow> ('k \<Rightarrow> 'a) \<Rightarrow> ('k \<Rightarrow> 'a) \<Rightarrow> ('k \<Rightarrow> 'a)" where
   "combine_env gs s t = (\<lambda>n. if gs n then t n else s n)"
 
-definition enter_frame :: "(vname \<Rightarrow> bool) \<Rightarrow> 'a \<Rightarrow> (vname \<Rightarrow> 'a) \<Rightarrow> (vname \<Rightarrow> 'a)" where
-  "enter_frame gs reset_val s = (\<lambda>n. if gs n then s n else reset_val)"
+definition enter_frame :: "('k \<Rightarrow> bool) \<Rightarrow> 'a \<Rightarrow> ('k \<Rightarrow> 'a) \<Rightarrow> ('k \<Rightarrow> 'a)" where
+  "enter_frame gs reset_val s = combine_env gs (\<lambda>_. reset_val) s"
 
 definition enter_state :: "(vname \<Rightarrow> bool) \<Rightarrow> store \<Rightarrow> store" where
   "enter_state gs s = enter_frame gs 0 s"

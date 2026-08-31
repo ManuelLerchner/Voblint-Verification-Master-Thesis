@@ -326,7 +326,7 @@ lemma gamma_int_dom_sup_ub2: "gamma_int_dom b \<subseteq> gamma_int_dom (a \<squ
   using gamma_sup_ub2[of b a] by simp
 
 lemma int_dom_not_bot_componentsE:
-  assumes "\<not> is_bot (d::int_dom)"
+  assumes "\<not> is_empty (d::int_dom)"
   obtains n where "n \<in> gamma_sign (int_sign d)" "n \<in> gamma_ivl (int_ivl d)"
     "n \<in> gamma_parity (int_parity d)" "n \<in> gamma_congruence (int_congruence d)"
 proof -
@@ -454,7 +454,7 @@ proof -
 qed
 
 lemma int_dom_lt_mono:
-  assumes h1: "\<not> is_bot (d1::int_dom)" and h2: "\<not> is_bot e1"
+  assumes h1: "\<not> is_empty (d1::int_dom)" and h2: "\<not> is_empty e1"
       and hd: "d1 \<le> d2" and he: "e1 \<le> e2"
       and hwide: "int_dom_lt d2 e2 = Some c"
   shows "int_dom_lt d1 e1 = Some c"
@@ -471,14 +471,14 @@ proof -
   have le2: "int_sign e1 \<le> int_sign e2" "int_ivl e1 \<le> int_ivl e2"
             "int_parity e1 \<le> int_parity e2" "int_congruence e1 \<le> int_congruence e2"
     using he by (simp_all add: less_eq_int_dom_ext_def)
-  have nb1_sign: "\<not> is_bot (int_sign d1)" using hn(1) by (auto simp: is_bottom_sign_correct)
-  have nb1_ivl: "\<not> is_bot (int_ivl d1)" using hn(2) by (auto simp: is_bottom_ivl_correct)
-  have nb1_parity: "\<not> is_bot (int_parity d1)" using hn(3) by (auto simp: is_bottom_parity_correct)
-  have nb1_cong: "\<not> is_bot (int_congruence d1)" using hn(4) by (auto simp: is_bottom_congruence_correct)
-  have nb2_sign: "\<not> is_bot (int_sign e1)" using hm(1) by (auto simp: is_bottom_sign_correct)
-  have nb2_ivl: "\<not> is_bot (int_ivl e1)" using hm(2) by (auto simp: is_bottom_ivl_correct)
-  have nb2_parity: "\<not> is_bot (int_parity e1)" using hm(3) by (auto simp: is_bottom_parity_correct)
-  have nb2_cong: "\<not> is_bot (int_congruence e1)" using hm(4) by (auto simp: is_bottom_congruence_correct)
+  have nb1_sign: "\<not> is_empty (int_sign d1)" using hn(1) by (auto simp: is_bottom_sign_correct)
+  have nb1_ivl: "\<not> is_empty (int_ivl d1)" using hn(2) by (auto simp: is_bottom_ivl_correct)
+  have nb1_parity: "\<not> is_empty (int_parity d1)" using hn(3) by (auto simp: is_bottom_parity_correct)
+  have nb1_cong: "\<not> is_empty (int_congruence d1)" using hn(4) by (auto simp: is_bottom_congruence_correct)
+  have nb2_sign: "\<not> is_empty (int_sign e1)" using hm(1) by (auto simp: is_bottom_sign_correct)
+  have nb2_ivl: "\<not> is_empty (int_ivl e1)" using hm(2) by (auto simp: is_bottom_ivl_correct)
+  have nb2_parity: "\<not> is_empty (int_parity e1)" using hm(3) by (auto simp: is_bottom_parity_correct)
+  have nb2_cong: "\<not> is_empty (int_congruence e1)" using hm(4) by (auto simp: is_bottom_congruence_correct)
   have m_ivl: "interval_lt (int_ivl d2) (int_ivl e2) = Some c \<Longrightarrow>
                interval_lt (int_ivl d1) (int_ivl e1) = Some c"
     by (rule interval_lt_mono[OF nb1_ivl nb2_ivl le1(2) le2(2)])
@@ -543,7 +543,7 @@ proof -
 qed
 
 lemma int_dom_eqb_mono:
-  assumes h1: "\<not> is_bot (d1::int_dom)" and h2: "\<not> is_bot e1"
+  assumes h1: "\<not> is_empty (d1::int_dom)" and h2: "\<not> is_empty e1"
       and hd: "d1 \<le> d2" and he: "e1 \<le> e2"
       and hwide: "int_dom_eqb d2 e2 = Some c"
   shows "int_dom_eqb d1 e1 = Some c"
@@ -560,14 +560,14 @@ proof -
   have le2: "int_sign e1 \<le> int_sign e2" "int_ivl e1 \<le> int_ivl e2"
             "int_parity e1 \<le> int_parity e2" "int_congruence e1 \<le> int_congruence e2"
     using he by (simp_all add: less_eq_int_dom_ext_def)
-  have nb1_sign: "\<not> is_bot (int_sign d1)" using hn(1) by (auto simp: is_bottom_sign_correct)
-  have nb1_ivl: "\<not> is_bot (int_ivl d1)" using hn(2) by (auto simp: is_bottom_ivl_correct)
-  have nb1_parity: "\<not> is_bot (int_parity d1)" using hn(3) by (auto simp: is_bottom_parity_correct)
-  have nb1_cong: "\<not> is_bot (int_congruence d1)" using hn(4) by (auto simp: is_bottom_congruence_correct)
-  have nb2_sign: "\<not> is_bot (int_sign e1)" using hm(1) by (auto simp: is_bottom_sign_correct)
-  have nb2_ivl: "\<not> is_bot (int_ivl e1)" using hm(2) by (auto simp: is_bottom_ivl_correct)
-  have nb2_parity: "\<not> is_bot (int_parity e1)" using hm(3) by (auto simp: is_bottom_parity_correct)
-  have nb2_cong: "\<not> is_bot (int_congruence e1)" using hm(4) by (auto simp: is_bottom_congruence_correct)
+  have nb1_sign: "\<not> is_empty (int_sign d1)" using hn(1) by (auto simp: is_bottom_sign_correct)
+  have nb1_ivl: "\<not> is_empty (int_ivl d1)" using hn(2) by (auto simp: is_bottom_ivl_correct)
+  have nb1_parity: "\<not> is_empty (int_parity d1)" using hn(3) by (auto simp: is_bottom_parity_correct)
+  have nb1_cong: "\<not> is_empty (int_congruence d1)" using hn(4) by (auto simp: is_bottom_congruence_correct)
+  have nb2_sign: "\<not> is_empty (int_sign e1)" using hm(1) by (auto simp: is_bottom_sign_correct)
+  have nb2_ivl: "\<not> is_empty (int_ivl e1)" using hm(2) by (auto simp: is_bottom_ivl_correct)
+  have nb2_parity: "\<not> is_empty (int_parity e1)" using hm(3) by (auto simp: is_bottom_parity_correct)
+  have nb2_cong: "\<not> is_empty (int_congruence e1)" using hm(4) by (auto simp: is_bottom_congruence_correct)
   have m_ivl: "interval_eqb (int_ivl d2) (int_ivl e2) = Some c \<Longrightarrow>
                interval_eqb (int_ivl d1) (int_ivl e1) = Some c"
     by (rule interval_eqb_mono[OF nb1_ivl nb2_ivl le1(2) le2(2)])
@@ -632,7 +632,7 @@ proof -
 qed
 
 lemma int_dom_tobool_mono:
-  assumes h1: "\<not> is_bot (d1::int_dom)" and hd: "d1 \<le> d2"
+  assumes h1: "\<not> is_empty (d1::int_dom)" and hd: "d1 \<le> d2"
       and hwide: "int_dom_tobool d2 = Some c"
   shows "int_dom_tobool d1 = Some c"
 proof -
@@ -642,10 +642,10 @@ proof -
   have le1: "int_sign d1 \<le> int_sign d2" "int_ivl d1 \<le> int_ivl d2"
             "int_parity d1 \<le> int_parity d2" "int_congruence d1 \<le> int_congruence d2"
     using hd by (simp_all add: less_eq_int_dom_ext_def)
-  have nb1_sign: "\<not> is_bot (int_sign d1)" using hn(1) by (auto simp: is_bottom_sign_correct)
-  have nb1_ivl: "\<not> is_bot (int_ivl d1)" using hn(2) by (auto simp: is_bottom_ivl_correct)
-  have nb1_parity: "\<not> is_bot (int_parity d1)" using hn(3) by (auto simp: is_bottom_parity_correct)
-  have nb1_cong: "\<not> is_bot (int_congruence d1)" using hn(4) by (auto simp: is_bottom_congruence_correct)
+  have nb1_sign: "\<not> is_empty (int_sign d1)" using hn(1) by (auto simp: is_bottom_sign_correct)
+  have nb1_ivl: "\<not> is_empty (int_ivl d1)" using hn(2) by (auto simp: is_bottom_ivl_correct)
+  have nb1_parity: "\<not> is_empty (int_parity d1)" using hn(3) by (auto simp: is_bottom_parity_correct)
+  have nb1_cong: "\<not> is_empty (int_congruence d1)" using hn(4) by (auto simp: is_bottom_congruence_correct)
   have m_ivl: "interval_tobool (int_ivl d2) = Some c \<Longrightarrow> interval_tobool (int_ivl d1) = Some c"
     by (rule interval_tobool_mono[OF nb1_ivl le1(2)])
   have m_sign: "sign_tobool (int_sign d2) = Some c \<Longrightarrow> sign_tobool (int_sign d1) = Some c"
@@ -746,19 +746,19 @@ where
        (aval_int_dom mode e2 sigma)"
 | "aval_int_dom mode (Less e1 e2) sigma =
      (let a = aval_int_dom mode e1 sigma; b = aval_int_dom mode e2 sigma
-      in if is_bot a \<or> is_bot b then bot else int_dom_of_bool_option (int_dom_lt a b))"
+      in if is_empty a \<or> is_empty b then bot else int_dom_of_bool_option (int_dom_lt a b))"
 | "aval_int_dom mode (exp.Eq e1 e2) sigma =
      (let a = aval_int_dom mode e1 sigma; b = aval_int_dom mode e2 sigma
-      in if is_bot a \<or> is_bot b then bot else int_dom_of_bool_option (int_dom_eqb a b))"
+      in if is_empty a \<or> is_empty b then bot else int_dom_of_bool_option (int_dom_eqb a b))"
 | "aval_int_dom mode (exp.Not e) sigma =
      (let a = aval_int_dom mode e sigma
-      in if is_bot a then bot
+      in if is_empty a then bot
          else if int_dom_tobool a = Some True then int_dom_of_int 0
          else if int_dom_tobool a = Some False then int_dom_of_int 1
          else int_dom_bool_unknown)"
 | "aval_int_dom mode (And e1 e2) sigma =
      (let a = aval_int_dom mode e1 sigma; b = aval_int_dom mode e2 sigma
-      in if is_bot a \<or> is_bot b then bot
+      in if is_empty a \<or> is_empty b then bot
          else if int_dom_tobool a = Some False \<or> int_dom_tobool b = Some False
          then int_dom_of_int 0
          else if int_dom_tobool a = Some True \<and> int_dom_tobool b = Some True
@@ -766,7 +766,7 @@ where
          else int_dom_bool_unknown)"
 | "aval_int_dom mode (Or e1 e2) sigma =
      (let a = aval_int_dom mode e1 sigma; b = aval_int_dom mode e2 sigma
-      in if is_bot a \<or> is_bot b then bot
+      in if is_empty a \<or> is_empty b then bot
          else if int_dom_tobool a = Some True \<or> int_dom_tobool b = Some True
          then int_dom_of_int 1
          else if int_dom_tobool a = Some False \<and> int_dom_tobool b = Some False
@@ -781,8 +781,8 @@ proof (induction e arbitrary: s sigma)
   case (Less e1 e2)
   have h1: "aval e1 s \<in> gamma_int_dom (aval_int_dom mode e1 sigma)" using Less.IH(1) Less.prems by simp
   have h2: "aval e2 s \<in> gamma_int_dom (aval_int_dom mode e2 sigma)" using Less.IH(2) Less.prems by simp
-  have nb1: "\<not> is_bot (aval_int_dom mode e1 sigma)" using h1 by (auto simp: is_bottom_int_dom_correct)
-  have nb2: "\<not> is_bot (aval_int_dom mode e2 sigma)" using h2 by (auto simp: is_bottom_int_dom_correct)
+  have nb1: "\<not> is_empty (aval_int_dom mode e1 sigma)" using h1 by (auto simp: is_bottom_int_dom_correct)
+  have nb2: "\<not> is_empty (aval_int_dom mode e2 sigma)" using h2 by (auto simp: is_bottom_int_dom_correct)
   show ?case
   proof (cases "int_dom_lt (aval_int_dom mode e1 sigma) (aval_int_dom mode e2 sigma) = Some True")
     case True
@@ -805,8 +805,8 @@ next
   case (Eq e1 e2)
   have h1: "aval e1 s \<in> gamma_int_dom (aval_int_dom mode e1 sigma)" using Eq.IH(1) Eq.prems by simp
   have h2: "aval e2 s \<in> gamma_int_dom (aval_int_dom mode e2 sigma)" using Eq.IH(2) Eq.prems by simp
-  have nb1: "\<not> is_bot (aval_int_dom mode e1 sigma)" using h1 by (auto simp: is_bottom_int_dom_correct)
-  have nb2: "\<not> is_bot (aval_int_dom mode e2 sigma)" using h2 by (auto simp: is_bottom_int_dom_correct)
+  have nb1: "\<not> is_empty (aval_int_dom mode e1 sigma)" using h1 by (auto simp: is_bottom_int_dom_correct)
+  have nb2: "\<not> is_empty (aval_int_dom mode e2 sigma)" using h2 by (auto simp: is_bottom_int_dom_correct)
   show ?case
   proof (cases "int_dom_eqb (aval_int_dom mode e1 sigma) (aval_int_dom mode e2 sigma) = Some True")
     case True
@@ -828,7 +828,7 @@ next
 next
   case (Not e)
   have h: "aval e s \<in> gamma_int_dom (aval_int_dom mode e sigma)" using Not.IH Not.prems by simp
-  have nb: "\<not> is_bot (aval_int_dom mode e sigma)" using h by (auto simp: is_bottom_int_dom_correct)
+  have nb: "\<not> is_empty (aval_int_dom mode e sigma)" using h by (auto simp: is_bottom_int_dom_correct)
   show ?case
   proof (cases "int_dom_tobool (aval_int_dom mode e sigma) = Some True")
     case True
@@ -850,8 +850,8 @@ next
   case (And e1 e2)
   have h1: "aval e1 s \<in> gamma_int_dom (aval_int_dom mode e1 sigma)" using And.IH(1) And.prems by simp
   have h2: "aval e2 s \<in> gamma_int_dom (aval_int_dom mode e2 sigma)" using And.IH(2) And.prems by simp
-  have nb1: "\<not> is_bot (aval_int_dom mode e1 sigma)" using h1 by (auto simp: is_bottom_int_dom_correct)
-  have nb2: "\<not> is_bot (aval_int_dom mode e2 sigma)" using h2 by (auto simp: is_bottom_int_dom_correct)
+  have nb1: "\<not> is_empty (aval_int_dom mode e1 sigma)" using h1 by (auto simp: is_bottom_int_dom_correct)
+  have nb2: "\<not> is_empty (aval_int_dom mode e2 sigma)" using h2 by (auto simp: is_bottom_int_dom_correct)
   show ?case
   proof (cases "int_dom_tobool (aval_int_dom mode e1 sigma) = Some False
               \<or> int_dom_tobool (aval_int_dom mode e2 sigma) = Some False")
@@ -881,8 +881,8 @@ next
   case (Or e1 e2)
   have h1: "aval e1 s \<in> gamma_int_dom (aval_int_dom mode e1 sigma)" using Or.IH(1) Or.prems by simp
   have h2: "aval e2 s \<in> gamma_int_dom (aval_int_dom mode e2 sigma)" using Or.IH(2) Or.prems by simp
-  have nb1: "\<not> is_bot (aval_int_dom mode e1 sigma)" using h1 by (auto simp: is_bottom_int_dom_correct)
-  have nb2: "\<not> is_bot (aval_int_dom mode e2 sigma)" using h2 by (auto simp: is_bottom_int_dom_correct)
+  have nb1: "\<not> is_empty (aval_int_dom mode e1 sigma)" using h1 by (auto simp: is_bottom_int_dom_correct)
+  have nb2: "\<not> is_empty (aval_int_dom mode e2 sigma)" using h2 by (auto simp: is_bottom_int_dom_correct)
   show ?case
   proof (cases "int_dom_tobool (aval_int_dom mode e1 sigma) = Some True
               \<or> int_dom_tobool (aval_int_dom mode e2 sigma) = Some True")
@@ -922,15 +922,15 @@ proof (induction e)
   have q_mono: "aval_int_dom mode e2 sigma1 \<le> aval_int_dom mode e2 sigma2"
     using Less.IH(2) Less.prems by simp
   show ?case
-  proof (cases "is_bot (aval_int_dom mode e1 sigma1) \<or> is_bot (aval_int_dom mode e2 sigma1)")
+  proof (cases "is_empty (aval_int_dom mode e1 sigma1) \<or> is_empty (aval_int_dom mode e2 sigma1)")
     case True
     then show ?thesis by (simp add: bot_least)
   next
     case False
-    then have nb1: "\<not> is_bot (aval_int_dom mode e1 sigma1)"
-      and nb2: "\<not> is_bot (aval_int_dom mode e2 sigma1)" by auto
-    have nb1': "\<not> is_bot (aval_int_dom mode e1 sigma2)" using nb1 p_mono is_bot_mono by blast
-    have nb2': "\<not> is_bot (aval_int_dom mode e2 sigma2)" using nb2 q_mono is_bot_mono by blast
+    then have nb1: "\<not> is_empty (aval_int_dom mode e1 sigma1)"
+      and nb2: "\<not> is_empty (aval_int_dom mode e2 sigma1)" by auto
+    have nb1': "\<not> is_empty (aval_int_dom mode e1 sigma2)" using nb1 p_mono is_empty_antimono by blast
+    have nb2': "\<not> is_empty (aval_int_dom mode e2 sigma2)" using nb2 q_mono is_empty_antimono by blast
     show ?thesis
     proof (cases "int_dom_lt (aval_int_dom mode e1 sigma2) (aval_int_dom mode e2 sigma2)")
       case (Some b)
@@ -952,15 +952,15 @@ next
   have q_mono: "aval_int_dom mode e2 sigma1 \<le> aval_int_dom mode e2 sigma2"
     using Eq.IH(2) Eq.prems by simp
   show ?case
-  proof (cases "is_bot (aval_int_dom mode e1 sigma1) \<or> is_bot (aval_int_dom mode e2 sigma1)")
+  proof (cases "is_empty (aval_int_dom mode e1 sigma1) \<or> is_empty (aval_int_dom mode e2 sigma1)")
     case True
     then show ?thesis by (simp add: bot_least)
   next
     case False
-    then have nb1: "\<not> is_bot (aval_int_dom mode e1 sigma1)"
-      and nb2: "\<not> is_bot (aval_int_dom mode e2 sigma1)" by auto
-    have nb1': "\<not> is_bot (aval_int_dom mode e1 sigma2)" using nb1 p_mono is_bot_mono by blast
-    have nb2': "\<not> is_bot (aval_int_dom mode e2 sigma2)" using nb2 q_mono is_bot_mono by blast
+    then have nb1: "\<not> is_empty (aval_int_dom mode e1 sigma1)"
+      and nb2: "\<not> is_empty (aval_int_dom mode e2 sigma1)" by auto
+    have nb1': "\<not> is_empty (aval_int_dom mode e1 sigma2)" using nb1 p_mono is_empty_antimono by blast
+    have nb2': "\<not> is_empty (aval_int_dom mode e2 sigma2)" using nb2 q_mono is_empty_antimono by blast
     show ?thesis
     proof (cases "int_dom_eqb (aval_int_dom mode e1 sigma2) (aval_int_dom mode e2 sigma2)")
       case (Some b)
@@ -980,13 +980,13 @@ next
   have p_mono: "aval_int_dom mode e sigma1 \<le> aval_int_dom mode e sigma2"
     using Not.IH Not.prems by simp
   show ?case
-  proof (cases "is_bot (aval_int_dom mode e sigma1)")
+  proof (cases "is_empty (aval_int_dom mode e sigma1)")
     case True
     then show ?thesis by (simp add: bot_least)
   next
     case False
-    then have nb: "\<not> is_bot (aval_int_dom mode e sigma1)" by auto
-    have nb': "\<not> is_bot (aval_int_dom mode e sigma2)" using nb p_mono is_bot_mono by blast
+    then have nb: "\<not> is_empty (aval_int_dom mode e sigma1)" by auto
+    have nb': "\<not> is_empty (aval_int_dom mode e sigma2)" using nb p_mono is_empty_antimono by blast
     show ?thesis
     proof (cases "int_dom_tobool (aval_int_dom mode e sigma2)")
       case (Some b)
@@ -1007,15 +1007,15 @@ next
   have q_mono: "aval_int_dom mode e2 sigma1 \<le> aval_int_dom mode e2 sigma2"
     using And.IH(2) And.prems by simp
   show ?case
-  proof (cases "is_bot (aval_int_dom mode e1 sigma1) \<or> is_bot (aval_int_dom mode e2 sigma1)")
+  proof (cases "is_empty (aval_int_dom mode e1 sigma1) \<or> is_empty (aval_int_dom mode e2 sigma1)")
     case True
     then show ?thesis by (simp add: bot_least)
   next
     case False
-    then have nb1: "\<not> is_bot (aval_int_dom mode e1 sigma1)"
-      and nb2: "\<not> is_bot (aval_int_dom mode e2 sigma1)" by auto
-    have nb1': "\<not> is_bot (aval_int_dom mode e1 sigma2)" using nb1 p_mono is_bot_mono by blast
-    have nb2': "\<not> is_bot (aval_int_dom mode e2 sigma2)" using nb2 q_mono is_bot_mono by blast
+    then have nb1: "\<not> is_empty (aval_int_dom mode e1 sigma1)"
+      and nb2: "\<not> is_empty (aval_int_dom mode e2 sigma1)" by auto
+    have nb1': "\<not> is_empty (aval_int_dom mode e1 sigma2)" using nb1 p_mono is_empty_antimono by blast
+    have nb2': "\<not> is_empty (aval_int_dom mode e2 sigma2)" using nb2 q_mono is_empty_antimono by blast
     show ?thesis
     proof (cases "int_dom_tobool (aval_int_dom mode e1 sigma2) = Some False
                 \<or> int_dom_tobool (aval_int_dom mode e2 sigma2) = Some False")
@@ -1054,15 +1054,15 @@ next
   have q_mono: "aval_int_dom mode e2 sigma1 \<le> aval_int_dom mode e2 sigma2"
     using Or.IH(2) Or.prems by simp
   show ?case
-  proof (cases "is_bot (aval_int_dom mode e1 sigma1) \<or> is_bot (aval_int_dom mode e2 sigma1)")
+  proof (cases "is_empty (aval_int_dom mode e1 sigma1) \<or> is_empty (aval_int_dom mode e2 sigma1)")
     case True
     then show ?thesis by (simp add: bot_least)
   next
     case False
-    then have nb1: "\<not> is_bot (aval_int_dom mode e1 sigma1)"
-      and nb2: "\<not> is_bot (aval_int_dom mode e2 sigma1)" by auto
-    have nb1': "\<not> is_bot (aval_int_dom mode e1 sigma2)" using nb1 p_mono is_bot_mono by blast
-    have nb2': "\<not> is_bot (aval_int_dom mode e2 sigma2)" using nb2 q_mono is_bot_mono by blast
+    then have nb1: "\<not> is_empty (aval_int_dom mode e1 sigma1)"
+      and nb2: "\<not> is_empty (aval_int_dom mode e2 sigma1)" by auto
+    have nb1': "\<not> is_empty (aval_int_dom mode e1 sigma2)" using nb1 p_mono is_empty_antimono by blast
+    have nb2': "\<not> is_empty (aval_int_dom mode e2 sigma2)" using nb2 q_mono is_empty_antimono by blast
     show ?thesis
     proof (cases "int_dom_tobool (aval_int_dom mode e1 sigma2) = Some True
                 \<or> int_dom_tobool (aval_int_dom mode e2 sigma2) = Some True")

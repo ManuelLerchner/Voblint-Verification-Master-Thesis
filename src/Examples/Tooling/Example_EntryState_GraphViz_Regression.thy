@@ -9,7 +9,7 @@ section \<open>Regression: the entry-state GraphViz surface reads the result tab
 
 text \<open>
   Acceptance witnesses for the two entry-state rendering paths --- the
-  full-state one through \<^const>\<open>point_state_node_annotation\<close> and the
+  full-state one through \<^const>\<open>point_node_annotation\<close> and the
   check-report one through \<^const>\<open>verdict_state_report_node_annotation\<close> ---
   against \<^const>\<open>analyse_interval_entry_state_result\<close>, the canonical solved
   table both now read.
@@ -34,9 +34,9 @@ text \<open>
 \<close>
 
 lemma gcall_graph_state_at_bump_entry_is_context_join:
-  "map_point_state (\<lambda>st. st (STR ''n''))
+  "map_lift (\<lambda>st. st (STR ''n''))
      (entry_state_point_env_at (analyse_interval_entry_state_result gcall_prog) bump_entry)
-   = Reachable (IntervalValue
+   = Lifted (IntervalValue
        (Ivl (Fin 5) (Fin 5) \<squnion> Ivl (Fin 4) (Fin 4) \<squnion> Ivl (Fin 19) (Fin 19)))"
   by eval
 
@@ -44,7 +44,7 @@ text \<open>The rendered label the graph actually carries for that variable.\<cl
 
 lemma gcall_graph_annotation_at_bump_entry:
   "map_option (\<lambda>a. (split_gv_nl (annotation_label a), annotation_style a))
-     (point_state_node_annotation [STR ''n'']
+     (point_node_annotation [STR ''n'']
         (entry_state_point_env_at (analyse_interval_entry_state_result gcall_prog))
         bump_entry)
    = Some ([''n=[4,19]''], ''shape=box,style=filled,fillcolor=lightgreen'')"
@@ -54,9 +54,9 @@ text \<open>The caller's own single context is unaffected by the join: \<open>bu
   activations do not leak into \<open>main\<close>'s nodes.\<close>
 
 lemma gcall_graph_state_after_first_return:
-  "map_point_state (\<lambda>st. st (STR ''a''))
+  "map_lift (\<lambda>st. st (STR ''a''))
      (entry_state_point_env_at (analyse_interval_entry_state_result gcall_prog) (Statement 5))
-   = Reachable (IntervalValue (Ivl (Fin 15) (Fin 15)))"
+   = Lifted (IntervalValue (Ivl (Fin 15) (Fin 15)))"
   by eval
 
 subsection \<open>A node no execution reaches\<close>
@@ -78,7 +78,7 @@ lemma dead_check_graph_node_not_live:
   by eval
 
 text \<open>
-  So the renderer is handed \<^const>\<open>Unreachable\<close>, not a store. Reading the
+  So the renderer is handed \<^const>\<open>Bot\<close>, not a store. Reading the
   solved local unknown directly would have produced an ordinary abstract state
   here, every variable at its \<^const>\<open>bot\<close> witness, and the graph would have
   shown \<open>x=[]\<close>-style variable lines for a branch nothing enters.
@@ -91,7 +91,7 @@ lemma dead_check_graph_state_unreachable:
   by eval
 
 lemma dead_check_graph_annotation_unreachable:
-  "point_state_node_annotation (program_vars dead_check_prog)
+  "point_node_annotation (program_vars dead_check_prog)
      (entry_state_point_env_at (analyse_interval_entry_state_result dead_check_prog))
      (Statement 2)
    = Some unreachable_state_annotation"
@@ -102,14 +102,14 @@ text \<open>The reachable sibling branch in the same program still renders its s
 
 lemma dead_check_graph_annotation_live_sibling:
   "map_option (\<lambda>a. (split_gv_nl (annotation_label a), annotation_style a))
-     (point_state_node_annotation [STR ''x'']
+     (point_node_annotation [STR ''x'']
         (entry_state_point_env_at (analyse_interval_entry_state_result dead_check_prog))
         (Statement 3))
    = Some ([''x=[5,5]''], ''shape=box,style=filled,fillcolor=lightgreen'')"
   by eval
 
 text \<open>A \<^typ>\<open>pp\<close> the solve never covered reads the same way. The join's unit is
-  \<^const>\<open>Unreachable\<close>, so this needs no separate guard and, in particular, no
+  \<^const>\<open>Bot\<close>, so this needs no separate guard and, in particular, no
   fallback to the seeded default context.\<close>
 
 lemma dead_check_graph_uncovered_node:
@@ -138,7 +138,7 @@ lemma dead_check_full_state_unreachable:
   by eval
 
 lemma dead_check_full_state_annotation_unreachable:
-  "point_state_node_annotation (program_vars dead_check_prog)
+  "point_node_annotation (program_vars dead_check_prog)
      (analyse_point_env_for Interval_Analysis dead_check_prog)
      (Statement 2)
    = Some unreachable_state_annotation"
@@ -149,7 +149,7 @@ text \<open>The live sibling branch in the same program still renders its state,
 
 lemma dead_check_full_state_annotation_live_sibling:
   "map_option (\<lambda>a. (split_gv_nl (annotation_label a), annotation_style a))
-     (point_state_node_annotation [STR ''x'']
+     (point_node_annotation [STR ''x'']
         (analyse_point_env_for Interval_Analysis dead_check_prog)
         (Statement 3))
    = Some ([''x=[5,5]''], ''shape=box,style=filled,fillcolor=lightgreen'')"
@@ -257,17 +257,17 @@ text \<open>\<open>Statement 0\<close> is \<open>bump\<close>'s own first statem
   up would answer the single interval spanning all three.\<close>
 
 lemma gcall_ctx_graph_states_per_context:
-  "map (\<lambda>ctx. map_point_state (\<lambda>st. st (STR ''n''))
+  "map (\<lambda>ctx. map_lift (\<lambda>st. st (STR ''n''))
           (lookup_context gcall_result (Statement 0) ctx))
      [gcall_ctx_first, gcall_ctx_second, gcall_ctx_third]
-   = [Reachable (Ivl (Fin 5) (Fin 5)),
-      Reachable (Ivl (Fin 4) (Fin 4)),
-      Reachable (Ivl (Fin 19) (Fin 19))]"
+   = [Lifted (Ivl (Fin 5) (Fin 5)),
+      Lifted (Ivl (Fin 4) (Fin 4)),
+      Lifted (Ivl (Fin 19) (Fin 19))]"
   by eval
 
 lemma gcall_ctx_graph_states_are_not_the_join:
-  "map_point_state (\<lambda>st. st (STR ''n'')) (lookup_joined_state gcall_result (Statement 0))
-   = Reachable (Ivl (Fin 4) (Fin 19))"
+  "map_lift (\<lambda>st. st (STR ''n'')) (lookup_joined_state gcall_result (Statement 0))
+   = Lifted (Ivl (Fin 4) (Fin 19))"
   by eval
 
 subsection \<open>Call edges land on their own call site's context\<close>
@@ -394,7 +394,7 @@ lemma mixed_ctx_graph_states_live_and_dead:
 text \<open>
   The recursion also leaves the solver a context whose entered formal is
   \<^const>\<open>bot\<close>, reached from the base-case activation's own dead call site. The
-  graph draws no call edge into it: the caller point is \<^const>\<open>Unreachable\<close>
+  graph draws no call edge into it: the caller point is \<^const>\<open>Bot\<close>
   there, so \<^const>\<open>entry_state_ctx_route\<close> stops before routing rather than
   fabricating an activation out of a state that represents nothing.
 \<close>
@@ -485,7 +485,7 @@ text \<open>
   A sentinel-based route would still have routed the dead call somewhere
   real (\<open>[3]\<close>, not the empty-list coincidence a zero-formal callee would
   produce): \<^const>\<open>analysis_enter_edges\<close>/\<^const>\<open>analysis_combine_edges\<close>
-  draw no edge from an \<open>Unreachable\<close> caller regardless of what its route
+  draw no edge from an \<open>Bot\<close> caller regardless of what its route
   would have been.
 \<close>
 

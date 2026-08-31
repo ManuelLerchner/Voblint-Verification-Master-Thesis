@@ -742,6 +742,27 @@ proof -
     using nonempty restricted interval by blast
 qed
 
+text \<open>
+  Semantic fullness, symmetric to \<open>is_bottom_int_dom\<close> above: \<open>d = top\<close>
+  additionally pins the record's own \<open>more\<close> extension field to its top,
+  which \<open>gamma_int_dom\<close> never inspects, so it is strictly stronger than
+  \<open>gamma_int_dom d = UNIV\<close> at this instance's actual, extension-polymorphic
+  \<open>'a int_dom_scheme\<close> type. Testing each of the four concrete components'
+  own exact fullness instead reads off \<open>gamma_int_dom\<close>'s own definition
+  directly, the same move \<open>is_bottom_int_dom\<close> already makes for emptiness.
+\<close>
+
+definition is_top_int_dom :: "'a int_dom_scheme => bool" where
+  "is_top_int_dom d \<longleftrightarrow>
+     is_top_sign (int_sign d) \<and> is_top_ivl (int_ivl d) \<and>
+     is_top_parity (int_parity d) \<and> is_top_congruence (int_congruence d)"
+
+lemma is_top_int_dom_correct_gamma: "is_top_int_dom d \<longleftrightarrow> gamma_int_dom d = UNIV"
+  unfolding is_top_int_dom_def gamma_int_dom_def
+  using is_top_sign_correct_gamma is_top_ivl_correct_gamma
+        is_top_parity_correct_gamma is_top_congruence_correct_gamma
+  by auto
+
 lemma gamma_int_dom_mono:
   assumes ab: "a \<le> b"
   shows "gamma_int_dom a \<subseteq> gamma_int_dom b"
@@ -769,6 +790,13 @@ qed
 
 subsection \<open>Sound-domain instance\<close>
 
+definition string_of_int_dom :: "'a int_dom_scheme \<Rightarrow> string" where
+  "string_of_int_dom d =
+     ''sign='' @ string_of_sign (int_sign d)
+     @ '', ivl='' @ string_of_ivl (int_ivl d)
+     @ '', parity='' @ string_of_parity (int_parity d)
+     @ '', congruence='' @ string_of_congruence (int_congruence d)"
+
 instantiation int_dom_ext ::
   (int_dom_record_lattice) sound_domain
 begin
@@ -776,11 +804,14 @@ begin
 definition gamma_abs_int_dom_ext [simp]:
   "gamma (d :: 'a int_dom_scheme) = gamma_int_dom d"
 
-definition is_bot_int_dom_ext [simp]:
-  "is_bot (d :: 'a int_dom_scheme) = is_bottom_int_dom d"
+definition is_empty_int_dom_ext [simp]:
+  "is_empty (d :: 'a int_dom_scheme) = is_bottom_int_dom d"
 
-definition is_top_int_dom_ext [simp]:
-  "is_top (d :: 'a int_dom_scheme) = (d = top)"
+definition is_full_int_dom_ext [simp]:
+  "is_full (d :: 'a int_dom_scheme) = is_top_int_dom d"
+
+definition to_string_int_dom_ext [simp]:
+  "to_string (d :: 'a int_dom_scheme) = string_of_int_dom d"
 
 instance
 proof intro_classes
@@ -788,17 +819,21 @@ proof intro_classes
     by (simp add: gamma_int_dom_def bot_int_dom_ext_def
           bot_sign_def bot_ivl_def bot_parity_def)
 next
+  show "gamma (top :: 'a int_dom_scheme) = UNIV"
+    by (simp add: gamma_int_dom_def top_int_dom_ext_def
+          gamma_sign_top gamma_ivl_top top_ivl_def gamma_parity_top)
+next
   fix a b :: "'a int_dom_scheme"
   show "a \<le> b \<Longrightarrow> gamma a \<subseteq> gamma b"
     by (simp add: gamma_int_dom_mono)
 next
   fix a :: "'a int_dom_scheme"
-  show "is_bot a \<longleftrightarrow> gamma a = {}"
+  show "is_empty a \<longleftrightarrow> gamma a = {}"
     by (simp add: is_bottom_int_dom_correct)
 next
   fix a :: "'a int_dom_scheme"
-  show "is_top a \<longleftrightarrow> a = top"
-    by simp
+  show "is_full a \<longleftrightarrow> gamma a = UNIV"
+    by (simp add: is_top_int_dom_correct_gamma)
 qed
 
 end

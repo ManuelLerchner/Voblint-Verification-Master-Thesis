@@ -149,7 +149,7 @@ definition analyse_interval_demo2_env :: "vname \<Rightarrow> ivl" where
      (case lookup_context
              (analyse_interval_join_result analyse_interval_demo2_prog)
              (cfg_exit (prog_cfg analyse_interval_demo2_prog)) () of
-        Unreachable \<Rightarrow> bot | Reachable st \<Rightarrow> st)"
+        Bot \<Rightarrow> bot | Lifted st \<Rightarrow> st)"
 
 lemma analyse_interval_demo2_result:
   "analyse_interval_demo2_env (STR ''b'') = Ivl (Fin 4) (Fin 4)"
@@ -166,7 +166,7 @@ definition analyse_interval_td_demo2_env :: "vname \<Rightarrow> ivl" where
      (case lookup_context
              (analyse_interval_td_result analyse_interval_demo2_prog)
              (cfg_exit (prog_cfg analyse_interval_demo2_prog)) () of
-        Unreachable \<Rightarrow> bot | Reachable st \<Rightarrow> st)"
+        Bot \<Rightarrow> bot | Lifted st \<Rightarrow> st)"
 
 lemma analyse_interval_td_demo2_result:
   "analyse_interval_td_demo2_env (STR ''b'') = Ivl (Fin 4) (Fin 4)"
