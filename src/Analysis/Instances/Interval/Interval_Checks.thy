@@ -153,7 +153,7 @@ text \<open>
   \<^const>\<open>analyse_interval_td_report\<close> mirrors \<^const>\<open>analyse_interval_join_result\<close>'s
   to \<^const>\<open>analyse_interval_td_result\<close>: this route exists so
   \<open>analyse_with_solver\<close> can compare update rules on the identical equation
-  system (issue #131), mirroring Sign's own always-join default
+  system, mirroring Sign's own always-join default
   (\<open>Sign_Checks.analyse_sign_report\<close>). Plain join has no widening, so it
   lacks warrowing's termination guarantee on a genuine local loop with
   unbounded growth -- production still dispatches to

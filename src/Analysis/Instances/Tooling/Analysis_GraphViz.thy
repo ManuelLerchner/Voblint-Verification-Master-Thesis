@@ -634,7 +634,7 @@ lemma in_set_map_filter_conv:
   "y \<in> set (List.map_filter f xs) \<longleftrightarrow> (\<exists>x\<in>set xs. f x = Some y)"
   by (induction xs) (auto split: option.splits)
 
-lemma distinct_map_filterI:
+lemma distinct_map_filterI [intro]:
   assumes dist: "distinct xs"
       and uniq: "\<And>x1 x2 y. x1 \<in> set xs \<Longrightarrow> x2 \<in> set xs
                     \<Longrightarrow> f x1 = Some y \<Longrightarrow> f x2 = Some y \<Longrightarrow> x1 = x2"
@@ -663,7 +663,7 @@ lemma distinct_cfg_calls_list [simp]: "distinct (cfg_calls_list g)"
 text \<open>One call site carries one call edge, so a rendered edge that mentions only part of
   the call action still determines the tuple it came from.\<close>
 
-lemma calls_source_uniqueD:
+lemma calls_source_uniqueD [dest]:
   assumes uniq: "calls_source_unique g" and fin: "finite (calls g)"
       and m1: "y1 \<in> set (cfg_calls_list g)" and m2: "y2 \<in> set (cfg_calls_list g)"
       and src: "fst y1 = fst y2"

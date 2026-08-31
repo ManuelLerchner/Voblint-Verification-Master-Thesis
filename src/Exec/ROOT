@@ -6,7 +6,6 @@ session Voblint_Exec in "." = "Voblint_Core" +
   theories
     Exec_St
     Exec_Refinement
-    Exec_Placement
     Exec_DG_Refines
     Exec_DG_Trees
     Exec_DG_Generator

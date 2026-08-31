@@ -42,27 +42,27 @@ locale sound_special_ops =
     "gamma (top :: 'a) = UNIV"
 begin
 
-lemma special_min_soundD:
+lemma special_min_soundD [dest]:
   "i \<in> gamma p \<Longrightarrow> j \<in> gamma q \<Longrightarrow> min i j \<in> gamma (special_min ops p q)"
   using special_min_sound_for by blast
 
-lemma special_max_soundD:
+lemma special_max_soundD [dest]:
   "i \<in> gamma p \<Longrightarrow> j \<in> gamma q \<Longrightarrow> max i j \<in> gamma (special_max ops p q)"
   using special_max_sound_for by blast
 
-lemma special_min_monoD:
+lemma special_min_monoD [dest]:
   "p1 \<le> p2 \<Longrightarrow> q1 \<le> q2 \<Longrightarrow> special_min ops p1 q1 \<le> special_min ops p2 q2"
   using special_min_mono_for by blast
 
-lemma special_max_monoD:
+lemma special_max_monoD [dest]:
   "p1 \<le> p2 \<Longrightarrow> q1 \<le> q2 \<Longrightarrow> special_max ops p1 q1 \<le> special_max ops p2 q2"
   using special_max_mono_for by blast
 
-lemma ev_soundD:
+lemma ev_soundD [dest]:
   "(\<forall>x. s x \<in> gamma (\<sigma> x)) \<Longrightarrow> aval e s \<in> gamma (ev e \<sigma>)"
   using ev_sound_for by blast
 
-lemma ev_monoD:
+lemma ev_monoD [dest]:
   "\<sigma>1 \<le> \<sigma>2 \<Longrightarrow> ev e \<sigma>1 \<le> ev e \<sigma>2"
   using ev_mono_for by blast
 

@@ -36,6 +36,7 @@ session Voblint_Examples in "." = "Voblint_CLI" +
     Example_Side_Proc_Global
     Example_Side_Branch_Calls
     Placement_Policy
+    Placement_Policy_Exec
     Example_Sign_Placement
     Example_Placement_Regression
     Example_Sign_DG_Custom_Combine

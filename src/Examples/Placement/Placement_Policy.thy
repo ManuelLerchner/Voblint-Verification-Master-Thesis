@@ -132,8 +132,8 @@ lemma gamma_joinD [dest]: "s \<in> gamma_join d g \<Longrightarrow> s \<in> \<lb
 text \<open>\<open>gamma_unit\<close> refines \<open>gamma_join\<close>: routing to the owning component is always
   at most as permissive as joining both, since the routed value is one of the two
   join operands. The two targets are genuinely different (an untouched name still
-  loses precision under \<open>gamma_join\<close> the way the issue this file's \<open>unit_dg_spec_for\<close>
-  chain fixes described), so this is a one-way refinement, not an equivalence --
+  loses precision under \<open>gamma_join\<close>, the way this file's \<open>unit_dg_spec_for\<close>
+  chain fixes), so this is a one-way refinement, not an equivalence --
   \<open>gamma_join\<close> stays the sound target for \<^const>\<open>unit_dg_spec_placed\<close>'s non-exclusive
   covering, where no single component owns every name.\<close>
 lemma combine_env_le_sup: "combine_env gs sc se \<le> sc \<squnion> se"
@@ -173,57 +173,59 @@ proof -
     by (simp add: env_join project_component_cover_sup[OF cover])
 qed
 
-lemma gamma_join_combine_sound_placed:
-  assumes cover: "\<forall>x. publish_side x \<or> keep_local x"
-    and sc: "s \<in> gamma_join dc g" and tc: "t \<in> gamma_join de g"
-  shows "combine_collect gs (ci_dst dst) s t \<in>
-           (case dgs_combine (unit_dg_spec_placed gs keep_local publish_side tf) dst dc de g of (g', d') \<Rightarrow> gamma_join d' g')"
-proof -
-  have sc': "s \<in> \<lbrakk>dc \<squnion> g\<rbrakk>" using gamma_joinD[OF sc] .
-  have tc': "t \<in> \<lbrakk>de \<squnion> g\<rbrakk>" using gamma_joinD[OF tc] .
-  have "combine_collect gs (ci_dst dst) s t \<in> \<lbrakk>combine\<^sup># gs (ci_dst dst) (dc \<squnion> g) (de \<squnion> g)\<rbrakk>"
-    by (rule combine_collect_sound[OF sc' tc'])
-  then show ?thesis
-    unfolding dgs_combine_unit_dg_spec_placed[OF cover] gamma_join_def
-    by (simp add: Let_def project_component_cover_sup2[OF cover])
+text \<open>The placed record is the covering instance of
+  \<^locale>\<open>merge_split_spec\<close>: merge by the raw lattice join, split by the two
+  covering projections. Covering is the only condition
+  \<open>keep_local\<close>/\<open>publish_side\<close> must satisfy -- it is exactly what makes the
+  split reassemble.\<close>
+lemma merge_split_spec_unit_placed:
+  assumes sound: "sound_transfer_for gs tf"
+    and cover: "\<forall>x. publish_side x \<or> keep_local x"
+  shows "merge_split_spec (unit_dg_spec_placed gs keep_local publish_side tf) gs (\<squnion>)
+           (project_component publish_side) (project_component keep_local) tf"
+proof (rule merge_split_spec.intro)
+  show "sound_transfer_for gs tf" by (rule sound)
+next
+  fix d d' g g' :: "'a abs_state"
+  assume "d \<le> d'" "g \<le> g'"
+  then show "d \<squnion> g \<le> d' \<squnion> g'"
+    by (rule sup_mono)
+next
+  show "\<And>res :: 'a abs_state.
+      project_component keep_local res \<squnion> project_component publish_side res = res"
+    by (rule project_component_cover_sup2[OF cover])
+next
+  show "\<And>a d g. dg_spec_step (unit_dg_spec_placed gs keep_local publish_side tf) a d g =
+      (let res = apply_tf tf a (d \<squnion> g)
+       in (project_component publish_side res, project_component keep_local res))"
+    by (simp add: dg_spec_step_unit_placed unit_step_placed_def)
+next
+  show "\<And>ci d g. dgs_enter (unit_dg_spec_placed gs keep_local publish_side tf) ci d g =
+      (let res = snd (enter\<^sup># tf ci (d \<squnion> g))
+       in (project_component publish_side res, project_component keep_local res))"
+    by (simp add: dgs_enter_unit_dg_spec_placed unit_step_placed_def)
+next
+  show "\<And>ci dc g. dgs_caller_cont (unit_dg_spec_placed gs keep_local publish_side tf) ci dc g = dc"
+    by (simp add: unit_dg_spec_placed_def)
+next
+  show "\<And>ci dc de g. dgs_combine (unit_dg_spec_placed gs keep_local publish_side tf) ci dc de g =
+      (let res = combine\<^sup># gs (ci_dst ci) (dc \<squnion> g) (de \<squnion> g)
+       in (project_component publish_side res, project_component keep_local res))"
+    by (simp add: dgs_combine_unit_dg_spec_placed[OF cover] Let_def)
 qed
 
-lemma gamma_join_enter_sound_placed:
-  assumes cover: "\<forall>x. publish_side x \<or> keep_local x"
-    and sound: "sound_transfer_for gs tf"
-    and sc: "s \<in> gamma_join dc g"
-  shows "call_enter gs (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci)) s \<in>
-           (case dgs_enter (unit_dg_spec_placed gs keep_local publish_side tf) ci dc g of (g', d') \<Rightarrow> gamma_join d' g')"
-proof -
-  have sc': "s \<in> \<lbrakk>dc \<squnion> g\<rbrakk>" using gamma_joinD[OF sc] .
-  have "call_enter gs (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci)) s \<in> \<lbrakk>snd (enter\<^sup># tf ci (dc \<squnion> g))\<rbrakk>"
-    using sound_transfer_for.tf_sound_enter_entry_for[OF sound sc']
-    by (simp add: call_enter_CallEdge)
-  then show ?thesis
-    unfolding dgs_enter_unit_dg_spec_placed unit_step_placed_def gamma_join_def
-    by (simp add: Let_def project_component_cover_sup2[OF cover])
-qed
-
-text \<open>The placed generalization for an arbitrary covering placement: covering
-  is the only condition \<open>keep_local\<close>/\<open>publish_side\<close> must satisfy.\<close>
 theorem sound_dg_spec_unit_placed:
   assumes sound: "sound_transfer_for gs tf"
     and cover: "\<forall>x. publish_side x \<or> keep_local x"
   shows "sound_dg_spec (unit_dg_spec_placed gs keep_local publish_side tf) gamma_join gs"
-  apply unfold_locales
-  subgoal for d d' g g'
-    by (rule gamma_join_mono)
-  subgoal for a d g
-    unfolding gamma_join_def dg_spec_step_unit_placed unit_step_placed_def
-    using sound_transfer_for.edge_collect_apply_tf_sound_for[OF sound, where a = a]
-      sound_transfer_for.edge_collect_check_sound_for[OF sound, where \<sigma> = "d \<squnion> g"]
-    by (auto simp add: Let_def project_component_cover_sup2[OF cover])
-  subgoal premises prems using prems by (simp add: unit_dg_spec_placed_def)
-  subgoal premises prems
-    by (rule gamma_join_combine_sound_placed[OF cover prems])
-  subgoal premises prems
-    by (rule gamma_join_enter_sound_placed[OF cover sound prems])
-  done
+proof -
+  interpret merge_split_spec "unit_dg_spec_placed gs keep_local publish_side tf" gs "(\<squnion>)"
+    "project_component publish_side" "project_component keep_local" tf
+    by (rule merge_split_spec_unit_placed[OF sound cover])
+  have "gamma_join = gammaM"
+    by (simp add: fun_eq_iff gamma_join_def gammaM_def)
+  then show ?thesis using merge_split_sound by simp
+qed
 
 lemma classic_split_cover:
   "\<forall>x. classic_split_publish_side storage x \<or> classic_split_keep_local storage x"

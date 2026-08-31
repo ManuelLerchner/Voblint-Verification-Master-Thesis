@@ -17,7 +17,7 @@ it as a refinement layer, not as part of the framework.
 | --- | --- |
 | `Exec_St.thy` | `'a resolved_st` (local/global defaults plus location-keyed overrides) and its quotient `'a resolved_st_q`; lattice, widening and bottom detection on it |
 | `Exec_Refinement.thy` | `fun_of_resolved_st_q_for gs`: the readback into `'a abs_state`, and what commutes with it |
-| `Exec_DG_Refines.thy` | The D/G product on the executable carrier, its lattice instances, and the refinement relation to an abstract table |
+| `Exec_DG_Refines.thy` | The D/G product on the executable carrier, its classifier-parametric readback, the executable diagonal step/combine, and `merge_split_spec_exec`: four record-level commute facts pull a merge/split soundness argument back to the executable record |
 | `Exec_DG_Trees.thy` | Executable per-edge, combine and enter trees; one tree's traversal commutes with the readback |
 | `Exec_DG_Generator.thy` | The executable equation generator; one node's equation commutes with the readback (`dg_reader_commute_gen`) |
 | `DG_Base_Exec.thy` | The executable Base-style spec; `routed_dg_domain_exec`: the three commute facts a domain owes, and from them `sound_dg_spec_st` -- the executable spec is itself a `sound_dg_spec` under `gamma_exec`, the concretization read through the readback, with no separate transport theorem |

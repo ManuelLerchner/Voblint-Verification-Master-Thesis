@@ -272,7 +272,7 @@ fun first_deciding2 :: "('a => 'a => 'b option) list => 'a => 'a => 'b option" w
   "first_deciding2 [] x y = None"
 | "first_deciding2 (q # qs) x y = (case q x y of Some z => Some z | None => first_deciding2 qs x y)"
 
-lemma first_deciding_SomeE:
+lemma first_deciding_SomeE [elim]:
   assumes "first_deciding qs x = Some y"
   obtains q where "q \<in> set qs" and "q x = Some y"
   using assms by (induction qs) (auto split: option.splits)
@@ -282,7 +282,7 @@ lemma first_deciding_not_none_of_component:
   shows "first_deciding qs x \<noteq> None"
   using assms by (induction qs) (auto split: option.splits)
 
-lemma first_deciding2_SomeE:
+lemma first_deciding2_SomeE [elim]:
   assumes "first_deciding2 qs x y = Some z"
   obtains q where "q \<in> set qs" and "q x y = Some z"
   using assms by (induction qs) (auto split: option.splits)
@@ -325,7 +325,7 @@ lemma gamma_int_dom_sup_ub1: "gamma_int_dom a \<subseteq> gamma_int_dom (a \<squ
 lemma gamma_int_dom_sup_ub2: "gamma_int_dom b \<subseteq> gamma_int_dom (a \<squnion> b)"
   using gamma_sup_ub2[of b a] by simp
 
-lemma int_dom_not_bot_componentsE:
+lemma int_dom_not_bot_componentsE [elim]:
   assumes "\<not> is_empty (d::int_dom)"
   obtains n where "n \<in> gamma_sign (int_sign d)" "n \<in> gamma_ivl (int_ivl d)"
     "n \<in> gamma_parity (int_parity d)" "n \<in> gamma_congruence (int_congruence d)"

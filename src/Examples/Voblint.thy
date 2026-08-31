@@ -1,5 +1,3 @@
-(* SPDX-License-Identifier: MIT *)
-
 section \<open>Voblint: a verified abstract interpreter for VIMP\<close>
 
 theory Voblint
@@ -119,7 +117,7 @@ text \<open>
     always-join solver. \<^verbatim>\<open>dgEx_source_run_sound\<close> is the same source-run bound.
 \<close>
 
-subsection \<open>Context sensitivity: the axis issue \<open>#66\<close> is about\<close>
+subsection \<open>Context sensitivity: three storage policies for one axis\<close>
 
 text \<open>
   Three storage policies, each certified against the same activation-indexed semantics
@@ -145,7 +143,7 @@ text \<open>
     \<^bold>\<open>@{theory Voblint_Examples.Example_Interval_DG_CallString_K1}\<close> and
     \<^bold>\<open>@{theory Voblint_Examples.Example_Interval_DG_CallString_K2}\<close> run one \<open>nest\<close> program at
     \<open>k = 1\<close> and \<open>k = 2\<close>, so the pair also measures what raising the bound buys.  This policy
-    needed \<open>enterc\<close> widened to see the call site (issue \<open>#66\<close>, G1) to be expressible at all.
+    needed \<open>enterc\<close> widened to see the call site to be expressible at all.
 
   \<^bold>\<open>@{theory Voblint_Examples.Example_Interval_Source_Ctx}\<close> is the sharpest statement of the
   entry-state route: bound against \<^emph>\<open>actual source runs\<close> at each activation's own context,
@@ -315,12 +313,12 @@ text \<open>
     \<^item> @{theory Voblint_Examples.Example_Proc_Call} --- concrete-semantics witness for \<^verbatim>\<open>inc\<close> and \<^verbatim>\<open>sqr\<close> procedures communicating through a global, and their compiled interprocedural CFG; a certified Sign analysis of a shared-global increment call is @{theory Voblint_Examples.Example_Side_Proc_Global}.
     \<^item> @{theory Voblint_Examples.Example_Interval_Loop_Coverage} --- backward guard-refinement precision witness for a bounded loop's body entry; the certified computed bound at the loop head is @{text "Exec_Interval_Run"}'s.
     \<^item> @{theory Voblint_Examples.Example_Guard_Refinement} --- backward guard refinement precision witness.
-    \<^item> @{theory Voblint_Examples.Example_Random_Sign_Showcase} --- issue \<open>#43\<close>'s nondeterministic
+    \<^item> @{theory Voblint_Examples.Example_Random_Sign_Showcase} --- a nondeterministic
       \<open>x := __voblint_nondet_int()\<close>, closed end to end: \<^const>\<open>special_sign\<close> forgets \<open>x\<close> to \<^term>\<open>STop\<close>, a
       guard on \<open>x\<close> narrows each branch, and the branches join to \<^term>\<open>SNonNeg\<close> rather than
       \<^term>\<open>STop\<close>. Computed by \<^const>\<open>analyse_sign_result_for\<close> and the vendored TD solver, not asserted
       by hand; \<open>random_guard_exit_sound\<close> over-approximates every reachable exit state and
-      \<open>random_guard_exit_y_nonneg\<close> closes the issue's \<open>y \<ge> 0\<close> claim there.
+      \<open>random_guard_exit_y_nonneg\<close> closes the \<open>y \<ge> 0\<close> claim there.
       \<open>random_guard_run_42\<close> is a non-vacuity witness at the source semantics: fixing the
       random draw at \<open>v = 42\<close>, \<^const>\<open>pcompletes\<close> derives an actual terminating run
       reaching \<open>y = 42\<close>.

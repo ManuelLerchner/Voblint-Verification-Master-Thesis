@@ -6821,6 +6821,16 @@ let rec side_cfg_T_eff_keyed_seed_dg_buffered _B _C _D
                        (DG (locals res,
                              bot _D.order_bot_bounded_semilattice_sup_bot.bot_order_bot)))))));;
 
+let rec intra_predecessor_list
+  g v = map_filter
+          (fun x ->
+            (if (let (_, (_, w)) = x in equal_cfg_nodea w v)
+              then Some (let (u, (a, _)) = x in (u, a)) else None))
+          (cfg_intra_list g);;
+
+let rec intra_predecessor_addr_list
+  g v ctx = map (fun (u, a) -> (Inl (u, ctx), a)) (intra_predecessor_list g v);;
+
 let rec dgs_caller_cont
   (Dg_spec_ext
     (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
@@ -6875,16 +6885,6 @@ let rec routed_cmb_g_contribution _A _B
               (map (routed_cmb_g_contribution_at _A _B s gk0 seed_key route ctx
                      ca cc (locals caller_state) (globs globals_state1))
                 (resolve v cc ca (locals caller_state)))));;
-
-let rec intra_predecessor_list
-  g v = map_filter
-          (fun x ->
-            (if (let (_, (_, w)) = x in equal_cfg_nodea w v)
-              then Some (let (u, (a, _)) = x in (u, a)) else None))
-          (cfg_intra_list g);;
-
-let rec intra_predecessor_addr_list
-  g v ctx = map (fun (u, a) -> (Inl (u, ctx), a)) (intra_predecessor_list g v);;
 
 let rec route_unit u ctx d ca = ();;
 

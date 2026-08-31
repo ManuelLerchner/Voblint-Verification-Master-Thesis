@@ -183,7 +183,7 @@ corollary random_guard_exit_sound:
   by (simp add: prog_main_name_def gamma_point_def split: lifted.splits)
 
 text \<open>
-  Closing issue #43: for every concrete execution state that reaches the
+  For every concrete execution state that reaches the
   exit of \<open>random_guard_program\<close>, regardless of the value chosen by
   the nondeterministic call, \<open>y\<close> is nonnegative. \<open>random_guard_exit_sound\<close>
   over-approximates every such exit state by the computed

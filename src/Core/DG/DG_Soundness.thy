@@ -1,5 +1,5 @@
 theory DG_Soundness
-  imports DG_Framework
+  imports DG_Unit_Spec DG_Keyed_Generator
 begin
 
 section \<open>Native heterogeneous soundness\<close>
@@ -162,17 +162,17 @@ lemma vars_coverI [intro]:
 lemma vars_cover_entryD [dest]: "vars_cover g vars \<Longrightarrow> (cfg_entry g, ()) \<in> vars"
   unfolding vars_cover_def by blast
 
-lemma vars_cover_edgeD:
+lemma vars_cover_edgeD [dest]:
   "vars_cover g vars \<Longrightarrow> (u, a, v) \<in> intra g \<Longrightarrow> (v, ()) \<in> vars"
   unfolding vars_cover_def by blast
 
-lemma vars_cover_enterD:
+lemma vars_cover_enterD [dest]:
   assumes cover: "vars_cover g vars"
   shows "\<And>c dst fs as q k. (c, CallEdge dst fs as, FunctionEntry q, k) \<in> calls g
      \<Longrightarrow> (FunctionEntry q, ()) \<in> vars"
   using cover unfolding vars_cover_def by blast
 
-lemma vars_cover_combineD:
+lemma vars_cover_combineD [dest]:
   assumes cover: "vars_cover g vars"
   shows "\<And>c dst fs as q k. (c, CallEdge dst fs as, FunctionEntry q, k) \<in> calls g
      \<Longrightarrow> (k, ()) \<in> vars"
@@ -431,7 +431,7 @@ where
    pays the conjunct-navigation cost once here instead of at every call site via a
    positional [THEN conjunct2, THEN conjunct2, ...] chain that would silently misdirect
    if a conjunct were ever inserted or reordered. *)
-lemma dg_postfix_entryD:
+lemma dg_postfix_entryD [dest]:
   assumes pf: "dg_postfix g s0d s0g sigma"
   shows "s0d \<le> dg_D sigma (cfg_entry g)"
   using pf unfolding dg_postfix_def by blast
@@ -441,7 +441,7 @@ lemma dg_postfix_entryG:
   shows "s0g \<le> dg_G sigma"
   using pf unfolding dg_postfix_def by blast
 
-lemma dg_postfix_edgeD:
+lemma dg_postfix_edgeD [dest]:
   assumes pf: "dg_postfix g s0d s0g sigma"
     and edge: "(u, a, w) \<in> intra g"
   shows "snd (dg_spec_step S a (dg_D sigma u) (dg_G sigma)) \<le> dg_D sigma w"
@@ -453,7 +453,7 @@ lemma dg_postfix_edgeG:
   shows "fst (dg_spec_step S a (dg_D sigma u) (dg_G sigma)) \<le> dg_G sigma"
   using dg_postfix_def edge pf by fastforce
 
-lemma dg_postfix_enterD:
+lemma dg_postfix_enterD [dest]:
   assumes pf: "dg_postfix g s0d s0g sigma"
     and ce: "(cc, CallEdge dst fs as, FunctionEntry p, k) \<in> calls g"
   shows "snd (dgs_enter S (call_info_of (CallEdge dst fs as) p) (dg_D sigma cc) (dg_G sigma))
@@ -467,7 +467,7 @@ lemma dg_postfix_enterG:
            \<le> dg_G sigma"
   using pf ce unfolding dg_postfix_def by blast
 
-lemma dg_postfix_combineD:
+lemma dg_postfix_combineD [dest]:
   assumes pf: "dg_postfix g s0d s0g sigma"
     and ce: "(cc, CallEdge dst fs as, FunctionEntry p, k) \<in> calls g"
   shows "snd (dgs_combine S (call_info_of (CallEdge dst fs as) p) (dgs_caller_cont S (call_info_of (CallEdge dst fs as) p) (dg_D sigma cc) (dg_G sigma)) (dg_D sigma (FunctionResult p)) (dg_G sigma))
@@ -1481,7 +1481,7 @@ proof -
 qed
 
 
-lemma hook_postfix_entryD:
+lemma hook_postfix_entryD [dest]:
   assumes pf: "hook_postfix g s0d s0g sigma"
   shows "s0d \<le> dg_hook_D sigma (cfg_entry g)"
   using pf unfolding hook_postfix_def by blast
@@ -1937,6 +1937,142 @@ lemma combine_env_restrict_id [simp]:
   "combine_env gs (restrict_local_for gs sigma) (restrict_global_for gs sigma) = sigma"
   by (simp add: combine_env_for_eq_restrictions restrict_local_for_global_join)
 
+text \<open>
+  The soundness argument for a homogeneous specification does not depend on
+  how the merge and the split are chosen: every step merges \<open>D\<close> and \<open>G\<close>,
+  applies the raw transfer, and splits the result back, and the target
+  concretization is the re-merged pair. \<open>merge_split_spec\<close> captures exactly
+  that shape -- a merge \<open>M\<close>, a split pair \<open>sg\<close>/\<open>sd\<close> whose re-merge is the
+  identity, and the record equations -- and proves \<open>sound_dg_spec\<close> once for
+  its \<open>gammaM d g = \<lbrakk>M d g\<rbrakk>\<close>. \<^const>\<open>unit_dg_spec_for\<close> is the exclusive
+  instance (\<^const>\<open>combine_env\<close> routing, split by
+  \<^const>\<open>restrict_local_for\<close>/\<^const>\<open>restrict_global_for\<close>); a non-exclusive
+  covering split over the raw lattice join is a second one. The locale
+  characterizes the record by its equations rather than rebuilding it, so an
+  instance keeps its own optimized definition and only shows it equal to the
+  generic shape.
+\<close>
+
+locale merge_split_spec =
+  fixes S :: "('a::sound_domain abs_state, 'a abs_state) dg_spec"
+    and gs :: "vname \<Rightarrow> bool"
+    and M :: "'a abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
+    and sg :: "'a abs_state \<Rightarrow> 'a abs_state"
+    and sd :: "'a abs_state \<Rightarrow> 'a abs_state"
+    and tf :: "'a domain_transfer"
+  assumes tf_sound: "sound_transfer_for gs tf"
+    and M_mono: "d \<le> d' \<Longrightarrow> g \<le> g' \<Longrightarrow> M d g \<le> M d' g'"
+    and reassemble [simp]: "M (sd res) (sg res) = res"
+    and step_eq: "dg_spec_step S a d g =
+      (let res = apply_tf tf a (M d g) in (sg res, sd res))"
+    and enter_eq: "dgs_enter S ci d g =
+      (let res = snd (enter\<^sup># tf ci (M d g)) in (sg res, sd res))"
+    and cont_eq: "dgs_caller_cont S ci dc g = dc"
+    and combine_eq: "dgs_combine S ci dc de g =
+      (let res = combine\<^sup># gs (ci_dst ci) (M dc g) (M de g)
+       in (sg res, sd res))"
+begin
+
+definition gammaM :: "'a abs_state \<Rightarrow> 'a abs_state \<Rightarrow> store set" where
+  "gammaM d g = \<lbrakk>M d g\<rbrakk>"
+
+theorem merge_split_sound: "sound_dg_spec S gammaM gs"
+proof unfold_locales
+  fix d d' g g' :: "'a abs_state"
+  assume "d \<le> d'" "g \<le> g'"
+  then show "gammaM d g \<subseteq> gammaM d' g'"
+    unfolding gammaM_def by (intro gamma_state_mono M_mono)
+next
+  fix a and d g :: "'a abs_state"
+  have "edge_collect a \<lbrakk>M d g\<rbrakk> \<subseteq> \<lbrakk>apply_tf tf a (M d g)\<rbrakk>"
+    by (rule sound_transfer_for.edge_collect_apply_tf_sound_for[OF tf_sound])
+  then show "edge_collect a (gammaM d g)
+      \<subseteq> (case dg_spec_step S a d g of (g', d') \<Rightarrow> gammaM d' g')"
+    unfolding gammaM_def step_eq by (simp add: Let_def)
+next
+  fix s and dc g :: "'a abs_state" and ci :: call_info
+  assume "s \<in> gammaM dc g"
+  then show "s \<in> gammaM (dgs_caller_cont S ci dc g) g"
+    by (simp add: cont_eq)
+next
+  fix s t and dcont de g :: "'a abs_state" and ci :: call_info
+  assume s: "s \<in> gammaM dcont g" and t: "t \<in> gammaM de g"
+  have "combine_collect gs (ci_dst ci) s t
+          \<in> \<lbrakk>combine\<^sup># gs (ci_dst ci) (M dcont g) (M de g)\<rbrakk>"
+    by (rule combine_collect_sound[OF s[unfolded gammaM_def] t[unfolded gammaM_def]])
+  then show "combine_collect gs (ci_dst ci) s t
+      \<in> (case dgs_combine S ci dcont de g of (g', d') \<Rightarrow> gammaM d' g')"
+    unfolding gammaM_def combine_eq by (simp add: Let_def)
+next
+  fix s and dc g :: "'a abs_state" and ci :: call_info
+  assume "s \<in> gammaM dc g"
+  then have sc': "s \<in> \<lbrakk>M dc g\<rbrakk>" unfolding gammaM_def .
+  have "call_enter gs (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci)) s
+          \<in> \<lbrakk>snd (enter\<^sup># tf ci (M dc g))\<rbrakk>"
+    using sound_transfer_for.tf_sound_enter_entry_for[OF tf_sound sc']
+    by (simp add: call_enter_CallEdge)
+  then show "call_enter gs (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci)) s
+      \<in> (case dgs_enter S ci dc g of (g', d') \<Rightarrow> gammaM d' g')"
+    unfolding gammaM_def enter_eq by (simp add: Let_def)
+qed
+
+end
+
+lemma merge_split_spec_unit_for:
+  assumes sound: "sound_transfer_for gs tf"
+    and reserved: "reserved_ret_var gs"
+  shows "merge_split_spec (unit_dg_spec_for gs tf) gs (combine_env gs)
+           (restrict_global_for gs) (restrict_local_for gs) tf"
+proof (rule merge_split_spec.intro)
+  show "sound_transfer_for gs tf" by (rule sound)
+next
+  fix d d' g g' :: "'a abs_state"
+  assume "d \<le> d'" "g \<le> g'"
+  then show "combine_env gs d g \<le> combine_env gs d' g'"
+    by (rule combine_env_mono)
+next
+  show "\<And>res :: 'a abs_state.
+      combine_env gs (restrict_local_for gs res) (restrict_global_for gs res) = res"
+    by (rule combine_env_restrict_id)
+next
+  show "\<And>a d g. dg_spec_step (unit_dg_spec_for gs tf) a d g =
+      (let res = apply_tf tf a (combine_env gs d g)
+       in (restrict_global_for gs res, restrict_local_for gs res))"
+    by (simp add: dg_spec_step_unit_for unit_step_for_def)
+next
+  show "\<And>ci d g. dgs_enter (unit_dg_spec_for gs tf) ci d g =
+      (let res = snd (enter\<^sup># tf ci (combine_env gs d g))
+       in (restrict_global_for gs res, restrict_local_for gs res))"
+    by (simp add: dgs_enter_unit_dg_spec_for unit_step_for_def)
+next
+  show "\<And>ci dc g. dgs_caller_cont (unit_dg_spec_for gs tf) ci dc g = dc"
+    by (simp add: unit_dg_spec_for_def)
+next
+  show "\<And>ci dc de g. dgs_combine (unit_dg_spec_for gs tf) ci dc de g =
+      (let res = combine\<^sup># gs (ci_dst ci) (combine_env gs dc g) (combine_env gs de g)
+       in (restrict_global_for gs res, restrict_local_for gs res))"
+    using reserved
+    unfolding dgs_combine_unit_dg_spec_for combine_collect_abs_def reserved_ret_var_def
+    by (simp add: Let_def)
+qed
+
+lemma sound_dg_spec_unit_for:
+  assumes sound: "sound_transfer_for gs tf"
+    and reserved: "reserved_ret_var gs"
+  shows "sound_dg_spec (unit_dg_spec_for gs tf) (gamma_unit gs) gs"
+proof -
+  interpret merge_split_spec "unit_dg_spec_for gs tf" gs "combine_env gs"
+    "restrict_global_for gs" "restrict_local_for gs" tf
+    by (rule merge_split_spec_unit_for[OF sound reserved])
+  have "gamma_unit gs = gammaM"
+    by (simp add: fun_eq_iff gamma_unit_def gammaM_def)
+  then show ?thesis using merge_split_sound by simp
+qed
+
+text \<open>The combine half of the unit argument, kept standalone: the lifted
+  diagonal section below reuses it verbatim through
+  \<open>gamma_unit_combine_sound_for_lifted\<close>, where only the live/live case
+  reaches an actual combine.\<close>
 lemma gamma_unit_combine_sound_for:
   assumes reserved: "reserved_ret_var gs"
     and sc: "s \<in> gamma_unit gs dc g" and tc: "t \<in> gamma_unit gs de g"
@@ -1954,41 +2090,6 @@ proof -
       reserved_ret_var_def
     by (simp add: Let_def)
 qed
-
-lemma gamma_unit_enter_sound_for:
-  assumes sound: "sound_transfer_for gs tf"
-    and sc: "s \<in> gamma_unit gs dc g"
-  shows "call_enter gs (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci)) s \<in>
-           (case dgs_enter (unit_dg_spec_for gs tf) ci dc g of (g', d') \<Rightarrow> gamma_unit gs d' g')"
-proof -
-  have sc': "s \<in> \<lbrakk>combine_env gs dc g\<rbrakk>" using gamma_unitD[OF sc] .
-  have "call_enter gs (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci)) s \<in>
-      \<lbrakk>snd (enter\<^sup># tf ci (combine_env gs dc g))\<rbrakk>"
-    using sound_transfer_for.tf_sound_enter_entry_for[OF sound sc']
-    by (simp add: call_enter_CallEdge)
-  then show ?thesis
-    unfolding dgs_enter_unit_dg_spec_for unit_step_for_def gamma_unit_def
-    by (simp add: Let_def restrict_local_for_global_join)
-qed
-
-lemma sound_dg_spec_unit_for:
-  assumes sound: "sound_transfer_for gs tf"
-    and reserved: "reserved_ret_var gs"
-  shows "sound_dg_spec (unit_dg_spec_for gs tf) (gamma_unit gs) gs"
-  apply unfold_locales
-  subgoal for d d' g g'
-    by (rule gamma_unit_mono)
-  subgoal for a d g
-    unfolding gamma_unit_def dg_spec_step_unit_for unit_step_for_def
-    using sound_transfer_for.edge_collect_apply_tf_sound_for[OF sound, where a = a]
-      sound_transfer_for.edge_collect_check_sound_for[OF sound, where \<sigma> = "combine_env gs d g"]
-    by (auto simp add: Let_def restrict_local_for_global_join)
-  subgoal premises prems using prems by (simp add: unit_dg_spec_for_def)
-  subgoal premises prems
-    by (rule gamma_unit_combine_sound_for[OF reserved prems])
-  subgoal premises prems
-    by (rule gamma_unit_enter_sound_for[OF sound prems])
-  done
 
 subsection \<open>The homogeneous analysis as a lifted diagonal interpretation, generic over the
   transfer\<close>

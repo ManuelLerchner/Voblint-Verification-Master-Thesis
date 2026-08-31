@@ -1,15 +1,15 @@
 theory Example_Keyed_Solver_Update_Rule_Regression
   imports
-    "Voblint_Core.DG_Framework"
+    "Voblint_Core.DG_Keyed_Generator"
     "Voblint_Core.Routed_Context"
     "Voblint_Exec.Solver_Side_RG"
     "Voblint_Analysis.Ivl_Exec"
 begin
 
-section \<open>Minimal keyed update-rule regression: multiple Side writes per RHS evaluation (issue #121, keyed)\<close>
+section \<open>Minimal keyed update-rule regression: multiple Side writes per RHS evaluation (keyed)\<close>
 
 text \<open>
-  Isolates the keyed-generator instance of issue #121 at
+  Isolates the keyed-generator instance of multiple Side writes per RHS evaluation at
   \<^const>\<open>side_cfg_T_eff_keyed_seed_dg\<close>'s own interface, independent of a real
   \<^typ>\<open>cfg\<close>, procedure calls, or Interval program construction: a dummy
   \<^typ>\<open>cfg\<close> with no edges of its own (\<open>intra = {}\<close>, \<open>calls = {}\<close>) paired with a

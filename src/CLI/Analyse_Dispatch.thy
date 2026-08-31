@@ -1035,6 +1035,8 @@ code_identifier
 | code_module Solver_Mono \<rightharpoonup> (OCaml) Core
 | code_module Transfer_Interface \<rightharpoonup> (OCaml) Core
 | code_module DG_Framework \<rightharpoonup> (OCaml) Core
+| code_module DG_Unit_Spec \<rightharpoonup> (OCaml) Core
+| code_module DG_Keyed_Generator \<rightharpoonup> (OCaml) Core
 | code_module Check_Result \<rightharpoonup> (OCaml) Core
 | code_module Abstract_Checks \<rightharpoonup> (OCaml) Core
 | code_module Check_Report \<rightharpoonup> (OCaml) Core

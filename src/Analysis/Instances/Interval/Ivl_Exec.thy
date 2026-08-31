@@ -247,14 +247,10 @@ text \<open>
   recursive equations, \<^theory>\<open>Voblint_Analysis.Exec_Backward\<close>) to a single
   \<^const>\<open>update_resolved_st_q\<close> at \<open>location_of gs x\<close> computed purely from
   \<open>x\<close>'s own value -- \<open>N n\<close> is a literal, so its own \<open>afilter_st\<close> case is the
-  identity, and every location other than \<open>x\<close> is left untouched. This lets a
-  placement example discharge \<open>placed_hook_se_edge\<close>'s per-location
-  \<open>raw\<close> premise for an \<open>x < n\<close>-shaped guard from ordinary in-scope value
-  agreement, without needing the full-store agreement
-  \<open>ivl_tf_st_for_assume_agree\<close> asks for -- the completed abstract state
-  disagrees with the executable one outside a node's own scope by
-  construction, so a whole-store premise is never available at a placement
-  call site the way it is for a flat, unscoped analysis.\<close>
+  identity, and every location other than \<open>x\<close> is left untouched. A consumer
+  reasoning per location can therefore discharge an \<open>x < n\<close>-shaped guard
+  from ordinary value agreement at \<open>x\<close> alone, without the full-store
+  agreement \<open>ivl_tf_st_for_assume_agree\<close> asks for.\<close>
 
 lemma ivl_bfilter_st_for_less_var_lit_agree:
   fixes s_exec :: "ivl resolved_st_q" and s_abs :: "ivl abs_state"

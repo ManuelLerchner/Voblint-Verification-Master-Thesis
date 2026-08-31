@@ -505,10 +505,10 @@ locale routed_context_base_hetero =
        \<Longrightarrow> es = call_enter gs (CallEdge dst pars args) s"
 begin
 
-lemma le_dg_state_localsD: "d \<le> d' \<Longrightarrow> locals d \<le> locals d'"
+lemma le_dg_state_localsD [dest]: "d \<le> d' \<Longrightarrow> locals d \<le> locals d'"
   by (simp add: less_eq_dg_state_def)
 
-lemma le_dg_state_globsD: "d \<le> d' \<Longrightarrow> globs d \<le> globs d'"
+lemma le_dg_state_globsD [dest]: "d \<le> d' \<Longrightarrow> globs d \<le> globs d'"
   by (simp add: less_eq_dg_state_def)
 
 subsection \<open>Reaching a resolved callee's contribution\<close>

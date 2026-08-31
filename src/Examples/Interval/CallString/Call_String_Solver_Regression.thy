@@ -4,7 +4,7 @@ begin
 
 section \<open>Exact equation-tree snapshots\<close>
 
-text \<open>Regression coverage for the shape \<^const>\<open>DG_Framework.side_cfg_T_eff_keyed_seed_dg\<close>
+text \<open>Regression coverage for the shape \<^const>\<open>DG_Keyed_Generator.side_cfg_T_eff_keyed_seed_dg\<close>
   generates at a genuine \<^const>\<open>routed_cmb_g\<close> continuation, at both k=1 and k=2: this locks
   in that the routed context (\<open>cs_route k\<close>), the seed publication, and the callee-exit read
   all still live in \<open>Statement 3\<close>'s own equation, not in the call site's, and that the seed

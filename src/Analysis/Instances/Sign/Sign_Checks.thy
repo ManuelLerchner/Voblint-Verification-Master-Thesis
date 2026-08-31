@@ -278,7 +278,7 @@ text \<open>
   combination here -- \<open>analyse\<close> and its soundness corollaries are
   unaffected, and this definition exists solely so \<open>Analyse_Dispatch\<close>'s
   \<open>analyse_with_solver\<close> can compare solver choices on the routed-unit
-  equation system (issue #131).
+  equation system.
 \<close>
 
 definition analyse_sign_result_per_origin_for ::

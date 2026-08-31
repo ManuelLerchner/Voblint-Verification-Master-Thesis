@@ -143,7 +143,7 @@ text \<open>
   \<open>analyse_int_report_join_for\<close>'s sibling relationship to \<^const>\<open>analyse_int_report\<close>
   mirrors \<^const>\<open>analyse_int_join_result\<close>'s to \<^const>\<open>analyse_int_result\<close>: this route
   exists so \<open>analyse_with_solver\<close> can compare update rules on the identical equation
-  system (issue #131), mirroring \<open>Interval_Checks.analyse_interval_report_for\<close>/
+  system, mirroring \<open>Interval_Checks.analyse_interval_report_for\<close>/
   \<open>Sign_Checks.analyse_sign_report_for\<close>'s own always-join default. The CLI does not
   expose refinement mode as a separate axis, so this convenience instance stays pinned
   at \<open>Refine_Fixpoint\<close> like \<^const>\<open>analyse_int_report\<close>. Propagates the routed producer

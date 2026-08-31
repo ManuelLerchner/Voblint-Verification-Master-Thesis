@@ -184,112 +184,32 @@ text \<open>
 text \<open>
   \<open>gamma_unit_exec\<close> is the executable-carrier sibling of \<open>gamma_unit gs\<close>, reading
   its two arguments back through \<open>fun_of_exec_dg_st_for\<close> first --- the diagonal
-  analogue of \<^theory>\<open>Voblint_Exec.DG_Base_Exec\<close>'s \<open>gamma_exec\<close>. \<open>sound_dg_spec_st\<close>
-  below pulls \<open>sound_dg_spec\<close> back along it from the abstract carrier using only
-  the two primitive commute facts this locale already carries, exactly as
-  \<^locale>\<open>routed_dg_domain_exec\<close>'s own \<open>sound_dg_spec_st\<close> does for the lifted
-  Base-style spec; \<open>run_source_sound\<close>/\<open>collect_sound\<close> then interpret
-  \<open>sound_dg_spec_ltr_for\<close> directly at this carrier, so no solved system is ever
-  transported to the abstract one.
+  analogue of \<^theory>\<open>Voblint_Exec.DG_Base_Exec\<close>'s \<open>gamma_exec\<close>.
+  \<open>sound_dg_spec_st\<close> below is \<^locale>\<open>merge_split_spec_exec\<close>'s pullback at
+  this locale's own instance: the four record-level commute facts it takes are
+  the generic \<open>unit_dg_Hstep_for\<close>/\<open>unit_dg_Henter_for\<close>/\<open>unit_dg_Hcomb_for\<close>/
+  \<open>unit_dg_Hcont_for\<close>, packaged from the two primitive commute facts this
+  locale already carries. \<open>run_source_sound\<close>/\<open>collect_sound\<close> then interpret
+  \<open>sound_dg_spec_ltr_for\<close> directly at this carrier, so no solved system is
+  ever transported to the abstract one.
 \<close>
 
 definition gamma_unit_exec :: "'a exec_dg_st \<Rightarrow> 'a exec_dg_st \<Rightarrow> store set" where
   "gamma_unit_exec d g = gamma_unit gs (fun_of_exec_dg_st_for gs d) (fun_of_exec_dg_st_for gs g)"
 
-lemma sds_abs: "sound_dg_spec (unit_dg_spec_for gs tf) (gamma_unit gs) gs"
-  by (rule sound_dg_spec_unit_for[OF tf_sound reserved])
-
-text \<open>Locale-concrete restatements of \<open>unit_dg_Hstep_for\<close>/etc, with \<open>gs\<close>/\<open>tf\<close>/
-  \<open>tf_st\<close>/\<open>enter_st\<close> already this locale's own fixed values rather than left
-  schematic --- the same role \<^locale>\<open>routed_dg_domain_exec\<close>'s
-  \<open>Hstep_lifted_for\<close>/etc play for the lifted Base-style spec.\<close>
-
-lemma Hstep_unit_for:
-  "map_prod (fun_of_exec_dg_st_for gs) (fun_of_exec_dg_st_for gs)
-     (dg_spec_step (unit_dg_spec_st_for gs tf_st enter_st) a d g)
-   = dg_spec_step (unit_dg_spec_for gs tf) a
-       (fun_of_exec_dg_st_for gs d) (fun_of_exec_dg_st_for gs g)"
-  by (rule unit_dg_Hstep_for[OF tf_commute])
-
-lemma Henter_unit_for:
-  "map_prod (fun_of_exec_dg_st_for gs) (fun_of_exec_dg_st_for gs)
-     (dgs_enter (unit_dg_spec_st_for gs tf_st enter_st) ci d g)
-   = dgs_enter (unit_dg_spec_for gs tf) ci
-       (fun_of_exec_dg_st_for gs d) (fun_of_exec_dg_st_for gs g)"
-  by (rule unit_dg_Henter_for[OF enter_commute])
-
-lemma Hcomb_unit_for:
-  "map_prod (fun_of_exec_dg_st_for gs) (fun_of_exec_dg_st_for gs)
-     (dgs_combine (unit_dg_spec_st_for gs tf_st enter_st) ci dc de g)
-   = dgs_combine (unit_dg_spec_for gs tf) ci
-       (fun_of_exec_dg_st_for gs dc) (fun_of_exec_dg_st_for gs de) (fun_of_exec_dg_st_for gs g)"
-  by (rule unit_dg_Hcomb_for)
-
-lemma Hcont_unit_for:
-  "fun_of_exec_dg_st_for gs (caller_cont (unit_dg_spec_st_for gs tf_st enter_st) ci d g)
-   = caller_cont (unit_dg_spec_for gs tf) ci
-       (fun_of_exec_dg_st_for gs d) (fun_of_exec_dg_st_for gs g)"
-  by (rule unit_dg_Hcont_for)
+sublocale msx: merge_split_spec_exec "unit_dg_spec_for gs tf" gs "combine_env gs"
+  "restrict_global_for gs" "restrict_local_for gs" tf
+  "unit_dg_spec_st_for gs tf_st enter_st"
+  by (intro merge_split_spec_exec.intro merge_split_spec_exec_axioms.intro
+        merge_split_spec_unit_for[OF tf_sound reserved]
+        unit_dg_Hstep_for[OF tf_commute] unit_dg_Henter_for[OF enter_commute]
+        unit_dg_Hcomb_for unit_dg_Hcont_for)
 
 theorem sound_dg_spec_st: "sound_dg_spec (unit_dg_spec_st_for gs tf_st enter_st) gamma_unit_exec gs"
-proof unfold_locales
-  let ?f = "fun_of_exec_dg_st_for gs"
-  fix d d' g g' :: "'a exec_dg_st"
-  assume "d \<le> d'" "g \<le> g'"
-  then show "gamma_unit_exec d g \<subseteq> gamma_unit_exec d' g'"
-    unfolding gamma_unit_exec_def
-    by (intro sound_dg_spec.gammaDG_mono[OF sds_abs]
-          fun_of_resolved_st_q_for_mono[folded fun_of_exec_dg_st_for_def])
-next
-  let ?f = "fun_of_exec_dg_st_for gs"
-  let ?S = "unit_dg_spec_st_for gs tf_st enter_st"
-  let ?A = "unit_dg_spec_for gs tf"
-  fix a :: edge_action and d g :: "'a exec_dg_st"
-  obtain g1 d1 where st: "dg_spec_step ?S a d g = (g1, d1)"
-    by (cases "dg_spec_step ?S a d g")
-  have "dg_spec_step ?A a (?f d) (?f g) = (?f g1, ?f d1)"
-    using Hstep_unit_for[of a d g] st by simp
-  with sound_dg_spec.step_sound[OF sds_abs, of a "?f d" "?f g"]
-  show "edge_collect a (gamma_unit_exec d g)
-          \<subseteq> (case dg_spec_step ?S a d g of (g', d') \<Rightarrow> gamma_unit_exec d' g')"
-    unfolding gamma_unit_exec_def st by simp
-next
-  let ?f = "fun_of_exec_dg_st_for gs"
-  let ?S = "unit_dg_spec_st_for gs tf_st enter_st"
-  fix s :: store and dc g :: "'a exec_dg_st" and ci :: call_info
-  assume "s \<in> gamma_unit_exec dc g"
-  then show "s \<in> gamma_unit_exec (dgs_caller_cont ?S ci dc g) g"
-    unfolding gamma_unit_exec_def
-    using sound_dg_spec.caller_cont_sound[OF sds_abs, of s "?f dc" "?f g" ci]
-      Hcont_unit_for[of ci dc g] by simp
-next
-  let ?f = "fun_of_exec_dg_st_for gs"
-  let ?S = "unit_dg_spec_st_for gs tf_st enter_st"
-  let ?A = "unit_dg_spec_for gs tf"
-  fix s t :: store and dcont de g :: "'a exec_dg_st" and ci :: call_info
-  assume s: "s \<in> gamma_unit_exec dcont g" and t: "t \<in> gamma_unit_exec de g"
-  obtain g1 d1 where cmb: "dgs_combine ?S ci dcont de g = (g1, d1)"
-    by (cases "dgs_combine ?S ci dcont de g")
-  have "dgs_combine ?A ci (?f dcont) (?f de) (?f g) = (?f g1, ?f d1)"
-    using Hcomb_unit_for[of ci dcont de g] cmb by simp
-  with sound_dg_spec.combine_sound[OF sds_abs, of s "?f dcont" "?f g" t "?f de" ci] s t
-  show "combine_collect gs (ci_dst ci) s t
-          \<in> (case dgs_combine ?S ci dcont de g of (g', d') \<Rightarrow> gamma_unit_exec d' g')"
-    unfolding gamma_unit_exec_def cmb by simp
-next
-  let ?f = "fun_of_exec_dg_st_for gs"
-  let ?S = "unit_dg_spec_st_for gs tf_st enter_st"
-  let ?A = "unit_dg_spec_for gs tf"
-  fix s :: store and dc g :: "'a exec_dg_st" and ci :: call_info
-  assume s: "s \<in> gamma_unit_exec dc g"
-  obtain g1 d1 where en: "dgs_enter ?S ci dc g = (g1, d1)"
-    by (cases "dgs_enter ?S ci dc g")
-  have "dgs_enter ?A ci (?f dc) (?f g) = (?f g1, ?f d1)"
-    using Henter_unit_for[of ci dc g] en by simp
-  with sound_dg_spec.enter_sound[OF sds_abs, of s "?f dc" "?f g" ci] s
-  show "call_enter gs (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci)) s
-          \<in> (case dgs_enter ?S ci dc g of (g', d') \<Rightarrow> gamma_unit_exec d' g')"
-    unfolding gamma_unit_exec_def en by simp
+proof -
+  have "gamma_unit_exec = msx.gammaM_exec"
+    by (simp add: fun_eq_iff gamma_unit_exec_def msx.gammaM_exec_def msx.gammaM_def gamma_unit_def)
+  then show ?thesis using msx.merge_split_sound_st by simp
 qed
 
 interpretation sds: sound_dg_spec_ltr_for

@@ -1,22 +1,24 @@
+theory Exec_DG_Refines
+  imports
+    "Voblint_Core.DG_Soundness"
+    Exec_Refinement
+    "Voblint_Core.Routed_Context"
+begin
+
 section \<open>The executable carrier and its readback\<close>
 
 text \<open>
   The verified solver uses the executable association-list carrier \<open>'a exec_dg_st\<close>, while
   soundness is stated over function-valued abstract states. This theory is the bottom of the
-  bridge: the D/G product's lattice structure, the finite-scope representation the solver
-  hands back, the readback \<open>fun_of_dg_st_for\<close> that lifts \<open>fun_of_exec_dg_st_for\<close> to that product,
-  and the refinement relation between an executable table and an abstract one.
+  bridge: the D/G product's lattice structure, the classifier-parametric readback
+  \<open>fun_of_dg_st_for\<close> that lifts \<open>fun_of_exec_dg_st_for\<close> to that product, the executable
+  diagonal step/combine operations, and the pullback locale that turns a merge/split
+  soundness argument into soundness of the executable record at the read-back
+  concretization.
 
   D/G lattice operations are componentwise, so the product inherits the order, join, bottom,
   equality, and widening operations the solver requires.
 \<close>
-
-theory Exec_DG_Refines
-  imports
-    "Voblint_Core.DG_Soundness"
-    Exec_Refinement Exec_Placement
-    "Voblint_Core.Routed_Context"
-begin
 
 
 type_synonym 'a exec_dg_st = "'a resolved_st_q"
@@ -30,323 +32,6 @@ text \<open>
 \<close>
 
 text \<open>The quotient carrier inherits the executable lattice structure.\<close>
-
-subsection \<open>Finite-scope D/G representation\<close>
-
-text \<open>The executable local and side components represent their abstract counterparts pointwise on a finite set of executable locations.  Scope resolution is an explicit premise of transfer lemmas: this relation itself does not infer storage from a missing declaration.\<close>
-
-definition dg_refines_on ::
-  "location set =>
-   (('a::bot) exec_dg_st, ('b::bot) exec_dg_st) dg_state =>
-   ('a abs_state, 'b abs_state) dg_state => bool"
-where
-  "dg_refines_on universe executable abstract_state \<longleftrightarrow>
-    (\<forall>location \<in> universe.
-      lookup_resolved_st_q (locals executable) location =
-        locals abstract_state (location_vname location)) \<and>
-    (\<forall>location \<in> universe.
-      lookup_resolved_st_q (globs executable) location =
-        globs abstract_state (location_vname location))"
-
-lemma dg_refines_onD_local:
-  "\<lbrakk>dg_refines_on universe executable abstract_state; location \<in> universe\<rbrakk> \<Longrightarrow>
-   lookup_resolved_st_q (locals executable) location =
-     locals abstract_state (location_vname location)"
-  by (simp add: dg_refines_on_def)
-
-lemma dg_refines_onD_side:
-  "\<lbrakk>dg_refines_on universe executable abstract_state; location \<in> universe\<rbrakk> \<Longrightarrow>
-   lookup_resolved_st_q (globs executable) location =
-     globs abstract_state (location_vname location)"
-  by (simp add: dg_refines_on_def)
-
-lemma dg_refines_onI:
-  assumes "\<And>location. location \<in> universe \<Longrightarrow>
-    lookup_resolved_st_q (locals executable) location =
-      locals abstract_state (location_vname location)"
-    and "\<And>location. location \<in> universe \<Longrightarrow>
-    lookup_resolved_st_q (globs executable) location =
-      globs abstract_state (location_vname location)"
-  shows "dg_refines_on universe executable abstract_state"
-  using assms by (simp add: dg_refines_on_def)
-
-lemma dg_refines_on_recombine:
-  fixes executable :: "('a::bounded_semilattice_sup_bot exec_dg_st,
-    'a exec_dg_st) dg_state"
-  assumes refines: "dg_refines_on universe executable abstract_state"
-    and relevant: "location \<in> universe"
-  shows
-    "lookup_resolved_st_q (locals executable \<squnion> globs executable) location =
-      (locals abstract_state \<squnion> globs abstract_state) (location_vname location)"
-proof -
-  have local:
-    "lookup_resolved_st_q (locals executable) location =
-      locals abstract_state (location_vname location)"
-    by (rule dg_refines_onD_local[OF refines relevant])
-  have side:
-    "lookup_resolved_st_q (globs executable) location =
-      globs abstract_state (location_vname location)"
-    by (rule dg_refines_onD_side[OF refines relevant])
-  show ?thesis by (simp add: local side)
-qed
-
-lemma dg_refines_on_sup:
-  fixes exec1 exec2 :: "(('a::bounded_semilattice_sup_bot) exec_dg_st,
-    ('b::bounded_semilattice_sup_bot) exec_dg_st) dg_state"
-  assumes r1: "dg_refines_on universe exec1 abs1"
-    and r2: "dg_refines_on universe exec2 abs2"
-  shows "dg_refines_on universe (exec1 \<squnion> exec2) (abs1 \<squnion> abs2)"
-proof (rule dg_refines_onI)
-  fix location assume loc: "location \<in> universe"
-  show "lookup_resolved_st_q (locals (exec1 \<squnion> exec2)) location =
-      locals (abs1 \<squnion> abs2) (location_vname location)"
-    by (simp add: sup_dg_state_def sup_fun_def
-      dg_refines_onD_local[OF r1 loc] dg_refines_onD_local[OF r2 loc])
-next
-  fix location assume loc: "location \<in> universe"
-  show "lookup_resolved_st_q (globs (exec1 \<squnion> exec2)) location =
-      globs (abs1 \<squnion> abs2) (location_vname location)"
-    by (simp add: sup_dg_state_def sup_fun_def
-      dg_refines_onD_side[OF r1 loc] dg_refines_onD_side[OF r2 loc])
-qed
-
-lemma dg_refines_on_bot:
-  "dg_refines_on universe (bot :: (('a::bounded_semilattice_sup_bot) exec_dg_st,
-    ('b::bounded_semilattice_sup_bot) exec_dg_st) dg_state) bot"
-  by (simp add: bot_dg_state_def dg_refines_onI)
-
-definition project_abs_on ::
-  "pname => (vname => bool) => (scoped_location => bool) =>
-   'a::bot abs_state => 'a abs_state"
-where
-  "project_abs_on owner gs placed state =
-    combine_env (\<lambda>x. placed (owner, location_of gs x)) bot state"
-
-lemma project_abs_on_lookup:
-  assumes resolved: "location = location_of gs (location_vname location)"
-  shows
-    "project_abs_on owner gs placed state (location_vname location) =
-      (if placed (owner, location) then state (location_vname location) else bot)"
-  using resolved
-  unfolding project_abs_on_def by simp
-
-subsection \<open>Owner-aware abstract D/G trees\<close>
-
-text \<open>The abstract tree mirrors the executable placed tree.  It projects function states pointwise, while the executable tree materializes the same policy over a finite scope.\<close>
-
-definition placed_abs_dg_edge_tree ::
-  "(vname => bool) => (pp => pname) =>
-   (scoped_location => bool) => (scoped_location => bool) =>
-   ('a::bounded_semilattice_sup_bot abs_state => 'a abs_state) =>
-   pp => pp => (pp, unit, ('a abs_state, 'a abs_state) dg_state) strategy_tree"
-where
-  "placed_abs_dg_edge_tree gs owner_of keep_local publish_side
-      transfer read_node write_node = do {
-     local \<leftarrow> read_local read_node;
-     side \<leftarrow> read_global ();
-     let result = transfer (locals local \<squnion> globs side);
-     depend_on () (DG bot
-         (project_abs_on (owner_of write_node) gs publish_side result))
-       (answer (DG
-         (project_abs_on (owner_of write_node) gs keep_local result)
-         bot))
-   }"
-
-lemma traverse_placed_abs_dg_edge_tree:
-  "traverse_rhs
-    (placed_abs_dg_edge_tree gs owner_of keep_local publish_side
-      transfer read_node write_node) sigma =
-    DG (project_abs_on (owner_of write_node) gs keep_local
-          (transfer (locals (sigma (Inl read_node)) \<squnion>
-            globs (sigma (Inr ()))))) bot"
-  unfolding placed_abs_dg_edge_tree_def by (simp add: Let_def)
-
-lemma sides_placed_abs_dg_edge_tree_Inr:
-  "sides_of_rhs
-    (placed_abs_dg_edge_tree gs owner_of keep_local publish_side
-      transfer read_node write_node) sigma (Inr ()) =
-    DG bot
-      (project_abs_on (owner_of write_node) gs publish_side
-        (transfer (locals (sigma (Inl read_node)) \<squnion>
-          globs (sigma (Inr ())))))"
-  unfolding placed_abs_dg_edge_tree_def by (simp add: Let_def)
-
-definition placed_abs_dg_enter_tree ::
-  "(vname => bool) => (pp => pname) =>
-   (scoped_location => bool) => (scoped_location => bool) =>
-   (call_info =>
-     ('a::bounded_semilattice_sup_bot) abs_state => 'a abs_state \<times> 'a abs_state) =>
-   call_info => pp => pp =>
-   (pp, unit, ('a abs_state, 'a abs_state) dg_state) strategy_tree"
-where
-  "placed_abs_dg_enter_tree gs owner_of keep_local publish_side
-      enter ci caller callee =
-    placed_abs_dg_edge_tree gs owner_of keep_local publish_side
-      (\<lambda>s. snd (enter ci s)) caller callee"
-
-definition placed_abs_dg_combine_tree ::
-  "(vname => bool) => (pp => pname) =>
-   (scoped_location => bool) => (scoped_location => bool) =>
-   (vname option => ('a::bounded_semilattice_sup_bot) abs_state =>
-     'a abs_state => 'a abs_state => 'a abs_state) =>
-   vname option => pp => pp => pp =>
-   (pp, unit, ('a abs_state, 'a abs_state) dg_state) strategy_tree"
-where
-  "placed_abs_dg_combine_tree gs owner_of keep_local publish_side
-      combine destination caller callee write_node = do {
-     caller_state \<leftarrow> read_local caller;
-     callee_state \<leftarrow> read_local callee;
-     side \<leftarrow> read_global ();
-     let result = combine destination (locals caller_state)
-       (locals callee_state) (globs side);
-     depend_on () (DG bot
-         (project_abs_on (owner_of write_node) gs publish_side result))
-       (answer (DG
-         (project_abs_on (owner_of write_node) gs keep_local result)
-         bot))
-   }"
-
-lemma traverse_placed_abs_dg_combine_tree:
-  "traverse_rhs
-    (placed_abs_dg_combine_tree gs owner_of keep_local publish_side
-      combine destination caller callee write_node) sigma =
-    DG (project_abs_on (owner_of write_node) gs keep_local
-      (combine destination (locals (sigma (Inl caller)))
-        (locals (sigma (Inl callee))) (globs (sigma (Inr ()))))) bot"
-  unfolding placed_abs_dg_combine_tree_def by (simp add: Let_def)
-
-lemma sides_placed_abs_dg_combine_tree_Inr:
-  "sides_of_rhs
-    (placed_abs_dg_combine_tree gs owner_of keep_local publish_side
-      combine destination caller callee write_node) sigma (Inr ()) =
-    DG bot
-      (project_abs_on (owner_of write_node) gs publish_side
-        (combine destination (locals (sigma (Inl caller)))
-          (locals (sigma (Inl callee))) (globs (sigma (Inr ())))))"
-  unfolding placed_abs_dg_combine_tree_def by (simp add: Let_def)
-
-lemma dg_refines_on_project:
-  fixes executable_result :: "'a::bounded_semilattice_sup_bot exec_dg_st"
-  assumes raw:
-    "\<And>location. location \<in> set universe \<Longrightarrow>
-      lookup_resolved_st_q executable_result location =
-        abstract_result (location_vname location)"
-    and resolved:
-      "\<And>location. location \<in> set universe \<Longrightarrow>
-        location = location_of gs (location_vname location)"
-  shows
-    "dg_refines_on (set universe)
-      (DG (project_resolved_on owner universe keep_local executable_result)
-        (project_resolved_on owner universe publish_side executable_result))
-      (DG (project_abs_on owner gs keep_local abstract_result)
-        (project_abs_on owner gs publish_side abstract_result))"
-proof (rule dg_refines_onI)
-  fix location
-  assume location: "location \<in> set universe"
-  have raw_location:
-    "lookup_resolved_st_q executable_result location =
-      abstract_result (location_vname location)"
-    by (rule raw[OF location])
-  have resolved_location:
-    "location = location_of gs (location_vname location)"
-    by (rule resolved[OF location])
-  show
-    "lookup_resolved_st_q
-      (locals
-        (DG (project_resolved_on owner universe keep_local executable_result)
-          (project_resolved_on owner universe publish_side executable_result)))
-      location =
-      locals
-        (DG (project_abs_on owner gs keep_local abstract_result)
-          (project_abs_on owner gs publish_side abstract_result))
-        (location_vname location)"
-    by (simp add: lookup_project_resolved_on
-      project_abs_on_lookup[OF resolved_location] raw_location location)
-next
-  fix location
-  assume location: "location \<in> set universe"
-  have raw_location:
-    "lookup_resolved_st_q executable_result location =
-      abstract_result (location_vname location)"
-    by (rule raw[OF location])
-  have resolved_location:
-    "location = location_of gs (location_vname location)"
-    by (rule resolved[OF location])
-  show
-    "lookup_resolved_st_q
-      (globs
-        (DG (project_resolved_on owner universe keep_local executable_result)
-          (project_resolved_on owner universe publish_side executable_result)))
-      location =
-      globs
-        (DG (project_abs_on owner gs keep_local abstract_result)
-          (project_abs_on owner gs publish_side abstract_result))
-        (location_vname location)"
-    by (simp add: lookup_project_resolved_on
-      project_abs_on_lookup[OF resolved_location] raw_location location)
-qed
-
-lemma dg_refines_on_project_strict:
-  fixes executable_result :: "'a::bounded_semilattice_sup_bot exec_dg_st"
-  assumes raw:
-    "\<And>location. location \<in> set universe \<Longrightarrow>
-      lookup_resolved_st_q executable_result location =
-        abstract_result (location_vname location)"
-    and resolved:
-      "\<And>location. location \<in> set universe \<Longrightarrow>
-        location = location_of gs (location_vname location)"
-  shows
-    "dg_refines_on (set universe)
-      (DG (project_resolved_on_strict owner universe keep_local executable_result)
-        (project_resolved_on_strict owner universe publish_side executable_result))
-      (DG (project_abs_on owner gs keep_local abstract_result)
-        (project_abs_on owner gs publish_side abstract_result))"
-proof (rule dg_refines_onI)
-  fix location
-  assume location: "location \<in> set universe"
-  have raw_location:
-    "lookup_resolved_st_q executable_result location =
-      abstract_result (location_vname location)"
-    by (rule raw[OF location])
-  have resolved_location:
-    "location = location_of gs (location_vname location)"
-    by (rule resolved[OF location])
-  show
-    "lookup_resolved_st_q
-      (locals
-        (DG (project_resolved_on_strict owner universe keep_local executable_result)
-          (project_resolved_on_strict owner universe publish_side executable_result)))
-      location =
-      locals
-        (DG (project_abs_on owner gs keep_local abstract_result)
-          (project_abs_on owner gs publish_side abstract_result))
-        (location_vname location)"
-    by (simp add: lookup_project_resolved_on_strict
-      project_abs_on_lookup[OF resolved_location] raw_location location)
-next
-  fix location
-  assume location: "location \<in> set universe"
-  have raw_location:
-    "lookup_resolved_st_q executable_result location =
-      abstract_result (location_vname location)"
-    by (rule raw[OF location])
-  have resolved_location:
-    "location = location_of gs (location_vname location)"
-    by (rule resolved[OF location])
-  show
-    "lookup_resolved_st_q
-      (globs
-        (DG (project_resolved_on_strict owner universe keep_local executable_result)
-          (project_resolved_on_strict owner universe publish_side executable_result)))
-      location =
-      globs
-        (DG (project_abs_on owner gs keep_local abstract_result)
-          (project_abs_on owner gs publish_side abstract_result))
-        (location_vname location)"
-    by (simp add: lookup_project_resolved_on_strict
-      project_abs_on_lookup[OF resolved_location] raw_location location)
-qed
-
 
 
 subsection \<open>Classifier-parametric readback\<close>
@@ -405,176 +90,6 @@ lemma fun_of_dg_st_for_mono:
 lemma location_vname_location_of [simp]:
   "location_vname (location_of gs x) = x"
   by (simp add: location_of_def)
-
-text \<open>
-  The two state representations disagree on what an unrepresented location
-  means.  The executable carrier is sparse: a location a placement never
-  materializes reads back as \<open>bot\<close>, "no value is recorded here".  The abstract
-  carrier is total: \<^const>\<open>project_abs_on\<close> classifies every location as local
-  or side but never restricts \<^emph>\<open>which\<close> locations exist, so an abstract value
-  at a location outside a node's own scope is still whatever the transfer
-  function produced there, not \<open>bot\<close> -- collapsing it to \<open>bot\<close> would assert
-  "no concrete state reaches here", which is false for a location the node
-  simply never mentions.  \<open>complete_abs_on\<close> is the correct completion: read
-  through the scope, and complete with a caller-supplied \<open>outside\<close> value
-  everywhere else.  For a domain where every value is bounded by a single
-  greatest element, \<open>outside\<close> can be that top element, and the completed
-  bound is trivially large enough outside the scope; the lemma is stated
-  against an arbitrary \<open>outside\<close> so it does not depend on such an element
-  existing.
-\<close>
-
-definition complete_abs_on ::
-  "(vname => bool) => location set => (vname => 'a) =>
-    ('a::bot) exec_dg_st => 'a abs_state"
-where
-  "complete_abs_on gs universe outside s x =
-    (if location_of gs x \<in> universe then fun_of_exec_dg_st_for gs s x
-     else outside x)"
-
-lemma complete_abs_on_inside:
-  "location_of gs x \<in> universe \<Longrightarrow>
-    complete_abs_on gs universe outside s x = fun_of_exec_dg_st_for gs s x"
-  by (simp add: complete_abs_on_def)
-
-lemma complete_abs_on_outside:
-  "location_of gs x \<notin> universe \<Longrightarrow>
-    complete_abs_on gs universe outside s x = outside x"
-  by (simp add: complete_abs_on_def)
-
-text \<open>
-  The upgrade from scoped agreement to a full inequality against the
-  completed lift.  \<open>dg_refines_on\<close> only claims equality on a finite scope; a
-  \<^const>\<open>part_post_solution\<close> obligation is an inequality against the \<^emph>\<open>whole\<close>
-  abstract state.  Inside the scope, the executable side's own inequality
-  (from its part_post_solution) transports verbatim through the scoped
-  equality.  Outside the scope, the obligation is discharged against
-  whatever \<open>outside\<close> value the completed bound uses there, not against
-  \<open>bot\<close>; the caller supplies the bound \<open>abs_val x \<le> outside x\<close>, which for a
-  domain with a greatest element is free.
-\<close>
-
-lemma le_lift_if_dg_refines_on_and_le:
-  fixes exec_val exec_bound :: "('a::bounded_semilattice_sup_bot) exec_dg_st"
-    and outside :: "vname => 'a"
-  assumes refines: "\<And>location. location \<in> universe \<Longrightarrow>
-      lookup_resolved_st_q exec_val location = abs_val (location_vname location)"
-    and outside_le: "\<And>x. location_of gs x \<notin> universe \<Longrightarrow> abs_val x \<le> outside x"
-    and le: "exec_val \<le> exec_bound"
-  shows "abs_val \<le> complete_abs_on gs universe outside exec_bound"
-proof (rule le_funI)
-  fix x
-  show "abs_val x \<le> complete_abs_on gs universe outside exec_bound x"
-  proof (cases "location_of gs x \<in> universe")
-    case True
-    have "abs_val x = lookup_resolved_st_q exec_val (location_of gs x)"
-      using refines[OF True] by simp
-    also have "\<dots> \<le> lookup_resolved_st_q exec_bound (location_of gs x)"
-      using le by (simp add: le_resolved_st_q_iff)
-    also have "\<dots> = complete_abs_on gs universe outside exec_bound x"
-      unfolding complete_abs_on_def fun_of_exec_dg_st_for_def fun_of_resolved_st_q_for_def
-      using True by simp
-    finally show ?thesis .
-  next
-    case False
-    have "abs_val x \<le> outside x" by (rule outside_le[OF False])
-    also have "\<dots> = complete_abs_on gs universe outside exec_bound x"
-      using False by (simp add: complete_abs_on_def)
-    finally show ?thesis .
-  qed
-qed
-
-subsection \<open>The generic completed-readback constructor\<close>
-
-text \<open>
-  \<open>completed_sigma_abs\<close> builds the abstract witness fed to a hook-generated
-  equation system directly from the executable solution: the executable
-  readback at every node's own scope, completed to \<open>outside\<close> beyond it, and
-  the executable readback straight through elsewhere (the shared \<open>G\<close> side
-  channel, which needs no completion since \<^const>\<open>complete_abs_on\<close>'s scope
-  argument is per-node, not per-channel). An analysis instance's own
-  completed sigma (its \<open>_sigma_abs\<close>) is this constructor applied to its own
-  executable TD solution, classifier, node-scope function, and completion
-  value -- not a fresh case split over \<open>Inl\<close>/\<open>Inr\<close>.
-\<close>
-
-definition completed_sigma_abs ::
-  "(vname \<Rightarrow> bool) \<Rightarrow> (pp \<Rightarrow> location list) \<Rightarrow> 'a \<Rightarrow>
-   (pp \<times> 'c + unit \<Rightarrow> ('a::bounded_semilattice_sup_bot exec_dg_st, 'a exec_dg_st) dg_state) \<Rightarrow>
-   pp \<times> 'c + unit \<Rightarrow> ('a abs_state, 'a abs_state) dg_state"
-where
-  "completed_sigma_abs gs locations_of outside exec_sigma k =
-    (case k of
-       Inl (v, ctx) \<Rightarrow> DG
-         (complete_abs_on gs (set (locations_of v)) (\<lambda>_. outside)
-           (locals (exec_sigma (Inl (v, ctx)))))
-         (fun_of_exec_dg_st_for gs (globs (exec_sigma (Inl (v, ctx)))))
-     | Inr () \<Rightarrow> fun_of_dg_st_for gs (exec_sigma (Inr ())))"
-
-lemma completed_sigma_abs_Inl:
-  "completed_sigma_abs gs locations_of outside exec_sigma (Inl (v, ctx)) = DG
-     (complete_abs_on gs (set (locations_of v)) (\<lambda>_. outside)
-       (locals (exec_sigma (Inl (v, ctx)))))
-     (fun_of_exec_dg_st_for gs (globs (exec_sigma (Inl (v, ctx)))))"
-  by (simp add: completed_sigma_abs_def)
-
-lemma completed_sigma_abs_Inr:
-  "completed_sigma_abs gs locations_of outside exec_sigma (Inr ()) =
-     fun_of_dg_st_for gs (exec_sigma (Inr ()))"
-  by (simp add: completed_sigma_abs_def split: unit.split)
-
-text \<open>
-  The executable TD solution scoped-refines its own completed readback at
-  every node, by construction of \<^const>\<open>complete_abs_on\<close>: an instance needs
-  only the canonical-scope side condition (that every location its own
-  \<open>locations_of\<close> lists resolves back to itself under \<open>gs\<close> --
-  \<open>scope_locations_canonical\<close> discharges this whenever \<open>locations_of\<close>
-  is a \<^const>\<open>scope_locations\<close> instance), not a fresh per-node argument.
-\<close>
-
-lemma dg_refines_on_completed_sigma_abs:
-  fixes exec_sigma :: "pp \<times> 'c + unit \<Rightarrow>
-    ('a::bounded_semilattice_sup_bot exec_dg_st, 'a exec_dg_st) dg_state"
-  assumes canonical: "\<And>location. location \<in> set (locations_of v) \<Longrightarrow>
-      location = location_of gs (location_vname location)"
-  shows
-    "dg_refines_on (set (locations_of v))
-       (exec_sigma (Inl (v, ctx)))
-       (completed_sigma_abs gs locations_of outside exec_sigma (Inl (v, ctx)))"
-proof (rule dg_refines_onI)
-  fix location assume loc: "location \<in> set (locations_of v)"
-  show "lookup_resolved_st_q (locals (exec_sigma (Inl (v, ctx)))) location =
-      locals (completed_sigma_abs gs locations_of outside exec_sigma (Inl (v, ctx)))
-        (location_vname location)"
-    using canonical[OF loc] loc
-    by (simp add: completed_sigma_abs_Inl complete_abs_on_def
-      fun_of_exec_dg_st_for_def fun_of_resolved_st_q_for_def)
-next
-  fix location assume loc: "location \<in> set (locations_of v)"
-  show "lookup_resolved_st_q (globs (exec_sigma (Inl (v, ctx)))) location =
-      globs (completed_sigma_abs gs locations_of outside exec_sigma (Inl (v, ctx)))
-        (location_vname location)"
-    using canonical[OF loc]
-    by (simp add: completed_sigma_abs_Inl
-      fun_of_exec_dg_st_for_def fun_of_resolved_st_q_for_def)
-qed
-
-text \<open>The side/global channel needs no completion at all: it scoped-refines
-  over every canonical location, not just a node's own scope, since
-  \<open>completed_sigma_abs\<close> reads it back plainly.\<close>
-
-lemma dg_refines_on_completed_sigma_abs_side:
-  fixes exec_sigma :: "pp \<times> 'c + unit \<Rightarrow>
-    ('a::bounded_semilattice_sup_bot exec_dg_st, 'a exec_dg_st) dg_state"
-  assumes canonical: "location = location_of gs (location_vname location)"
-  shows
-    "lookup_resolved_st_q (locals (exec_sigma (Inr ()))) location =
-       locals (completed_sigma_abs gs locations_of outside exec_sigma (Inr ())) (location_vname location)"
-    "lookup_resolved_st_q (globs (exec_sigma (Inr ()))) location =
-       globs (completed_sigma_abs gs locations_of outside exec_sigma (Inr ())) (location_vname location)"
-  using canonical
-  by (simp_all add: completed_sigma_abs_Inr fun_of_dg_st_for_def
-    fun_of_exec_dg_st_for_def fun_of_resolved_st_q_for_def)
 
 subsection \<open>Executable unit (diagonal) step and combine\<close>
 
@@ -764,5 +279,100 @@ lemma dg_spec_step_unit_st_for:
   "dg_spec_step (unit_dg_spec_st_for gs tf_st enter_st) a = unit_step_st (tf_st a)"
   unfolding unit_dg_spec_st_for_def
   by (cases a) simp_all
+
+subsection \<open>Pulling a merge/split soundness argument back to the executable carrier\<close>
+
+text \<open>
+  \<^locale>\<open>merge_split_spec\<close> proves \<open>sound_dg_spec\<close> for any homogeneous
+  merge/split-shaped record at the abstract carrier. If an executable
+  record's four fields commute with such an instance's under
+  \<^const>\<open>fun_of_exec_dg_st_for\<close>, the same theorem holds at the executable
+  carrier, for the concretization that reads both components back first --
+  the derivation \<open>routed_dg_domain_exec\<close> performs for the lifted
+  Base shape, stated once here for the merge/split family. An instance
+  supplies only the four record-level commute facts.
+\<close>
+
+locale merge_split_spec_exec = merge_split_spec S gs M sg sd tf
+  for S :: "('a::sound_domain abs_state, 'a abs_state) dg_spec"
+    and gs :: "vname \<Rightarrow> bool"
+    and M sg sd tf +
+  fixes S_st :: "('a exec_dg_st, 'a exec_dg_st) dg_spec"
+  assumes Hstep_st:
+      "map_prod (fun_of_exec_dg_st_for gs) (fun_of_exec_dg_st_for gs)
+         (dg_spec_step S_st a d g)
+       = dg_spec_step S a (fun_of_exec_dg_st_for gs d) (fun_of_exec_dg_st_for gs g)"
+    and Henter_st:
+      "map_prod (fun_of_exec_dg_st_for gs) (fun_of_exec_dg_st_for gs)
+         (dgs_enter S_st ci d g)
+       = dgs_enter S ci (fun_of_exec_dg_st_for gs d) (fun_of_exec_dg_st_for gs g)"
+    and Hcomb_st:
+      "map_prod (fun_of_exec_dg_st_for gs) (fun_of_exec_dg_st_for gs)
+         (dgs_combine S_st ci dc de g)
+       = dgs_combine S ci (fun_of_exec_dg_st_for gs dc) (fun_of_exec_dg_st_for gs de)
+           (fun_of_exec_dg_st_for gs g)"
+    and Hcont_st:
+      "fun_of_exec_dg_st_for gs (dgs_caller_cont S_st ci d g)
+       = dgs_caller_cont S ci (fun_of_exec_dg_st_for gs d) (fun_of_exec_dg_st_for gs g)"
+begin
+
+definition gammaM_exec :: "'a exec_dg_st \<Rightarrow> 'a exec_dg_st \<Rightarrow> store set" where
+  "gammaM_exec d g = gammaM (fun_of_exec_dg_st_for gs d) (fun_of_exec_dg_st_for gs g)"
+
+theorem merge_split_sound_st: "sound_dg_spec S_st gammaM_exec gs"
+proof unfold_locales
+  let ?f = "fun_of_exec_dg_st_for gs"
+  fix d d' g g' :: "'a exec_dg_st"
+  assume "d \<le> d'" "g \<le> g'"
+  then show "gammaM_exec d g \<subseteq> gammaM_exec d' g'"
+    unfolding gammaM_exec_def
+    by (intro sound_dg_spec.gammaDG_mono[OF merge_split_sound]
+          fun_of_resolved_st_q_for_mono[folded fun_of_exec_dg_st_for_def])
+next
+  let ?f = "fun_of_exec_dg_st_for gs"
+  fix a :: edge_action and d g :: "'a exec_dg_st"
+  obtain g1 d1 where st: "dg_spec_step S_st a d g = (g1, d1)"
+    by (cases "dg_spec_step S_st a d g")
+  have "dg_spec_step S a (?f d) (?f g) = (?f g1, ?f d1)"
+    using Hstep_st[of a d g] st by simp
+  with sound_dg_spec.step_sound[OF merge_split_sound, of a "?f d" "?f g"]
+  show "edge_collect a (gammaM_exec d g)
+          \<subseteq> (case dg_spec_step S_st a d g of (g', d') \<Rightarrow> gammaM_exec d' g')"
+    unfolding gammaM_exec_def st by simp
+next
+  let ?f = "fun_of_exec_dg_st_for gs"
+  fix s :: store and dc g :: "'a exec_dg_st" and ci :: call_info
+  assume "s \<in> gammaM_exec dc g"
+  then show "s \<in> gammaM_exec (dgs_caller_cont S_st ci dc g) g"
+    unfolding gammaM_exec_def
+    using sound_dg_spec.caller_cont_sound[OF merge_split_sound, of s "?f dc" "?f g" ci]
+      Hcont_st[of ci dc g] by simp
+next
+  let ?f = "fun_of_exec_dg_st_for gs"
+  fix s t :: store and dcont de g :: "'a exec_dg_st" and ci :: call_info
+  assume s: "s \<in> gammaM_exec dcont g" and t: "t \<in> gammaM_exec de g"
+  obtain g1 d1 where cmb: "dgs_combine S_st ci dcont de g = (g1, d1)"
+    by (cases "dgs_combine S_st ci dcont de g")
+  have "dgs_combine S ci (?f dcont) (?f de) (?f g) = (?f g1, ?f d1)"
+    using Hcomb_st[of ci dcont de g] cmb by simp
+  with sound_dg_spec.combine_sound[OF merge_split_sound, of s "?f dcont" "?f g" t "?f de" ci] s t
+  show "combine_collect gs (ci_dst ci) s t
+          \<in> (case dgs_combine S_st ci dcont de g of (g', d') \<Rightarrow> gammaM_exec d' g')"
+    unfolding gammaM_exec_def cmb by simp
+next
+  let ?f = "fun_of_exec_dg_st_for gs"
+  fix s :: store and dc g :: "'a exec_dg_st" and ci :: call_info
+  assume s: "s \<in> gammaM_exec dc g"
+  obtain g1 d1 where en: "dgs_enter S_st ci dc g = (g1, d1)"
+    by (cases "dgs_enter S_st ci dc g")
+  have "dgs_enter S ci (?f dc) (?f g) = (?f g1, ?f d1)"
+    using Henter_st[of ci dc g] en by simp
+  with sound_dg_spec.enter_sound[OF merge_split_sound, of s "?f dc" "?f g" ci] s
+  show "call_enter gs (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci)) s
+          \<in> (case dgs_enter S_st ci dc g of (g', d') \<Rightarrow> gammaM_exec d' g')"
+    unfolding gammaM_exec_def en by simp
+qed
+
+end
 
 end

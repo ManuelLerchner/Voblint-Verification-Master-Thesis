@@ -14,6 +14,8 @@ session Voblint_Core in "." = "Voblint_CFG" +
     Transfer_Interface
     State_Restriction
     DG_Framework
+    DG_Unit_Spec
+    DG_Keyed_Generator
     DG_Soundness
     DG_LTR_Sound
     Activation_Local_Sound

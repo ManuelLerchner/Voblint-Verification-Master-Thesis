@@ -5,9 +5,8 @@ begin
 section \<open>Call-string context spaces are finite by construction\<close>
 
 text \<open>
-  #77's ask ("Context-bounding lifters ... make bounding a first-class, terminating
-  mechanism instead of relying on the ambient finiteness assumption") is already met for
-  call-string contexts: \<^const>\<open>cs_route\<close> truncates every context to length at most \<open>k\<close>
+  Making context-bounding a first-class, terminating mechanism instead of relying on the
+  ambient finiteness assumption is already met for call-string contexts: \<^const>\<open>cs_route\<close> truncates every context to length at most \<open>k\<close>
   (\<open>cs_route_length\<close>, \<^theory>\<open>Voblint_Core.Call_String_Context\<close>), and a compiled program's
   CFG has finitely many nodes (\<open>cfg_nodes_finite\<close>, \<^theory>\<open>Voblint_CFG.CFG_Def\<close>). Those
   two facts alone bound the entire call-string-keyed context space: combined with the
@@ -24,8 +23,8 @@ text \<open>
   and for an infinite-height domain such as \<open>ivl\<close> the context space is genuinely
   unbounded. Making \<^emph>\<open>that\<close> case "first-class" needs an actual bounding policy (a gas
   budget, a widening threshold, ...) with real precision consequences that nothing in the
-  codebase or the tracking issue specifies yet; this development deliberately stops at the
-  call-string case, which needs no such policy decision.
+  codebase specifies yet; this development deliberately stops at the call-string case,
+  which needs no such policy decision.
 \<close>
 
 lemma call_strings_bounded_finite:

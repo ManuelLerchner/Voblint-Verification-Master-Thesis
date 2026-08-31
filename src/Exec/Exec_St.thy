@@ -3,37 +3,6 @@ theory Exec_St
     "Voblint_Core.Transfer_Interface" "HOL-Library.AList"
 begin
 
-text \<open>
-  \<open>sup_over_origins\<close> (vendored, \<^theory>\<open>TD.Update_rules\<close>) is PerOrigin's own read of a
-  global: the join, across every write origin, of that origin's own contribution. Its
-  closure under \<^const>\<open>normalized_lift\<close> needs no new induction over
-  \<^const>\<open>Finite_Set.fold\<close>/\<open>Sup_fin\<close>: \<open>sup_over_origins_upper\<close> already gives every
-  contributing origin's own value as a lower bound on the joined read, the same shape
-  \<open>sup_ge1\<close>/\<open>sup_ge2\<close> gave \<open>normalized_lift_sup\<close> above, so one live origin keeps the
-  joined read live by the identical \<open>mono\<close> argument -- a corollary, not a fresh proof.
-\<close>
-
-lemma normalized_lift_sup_over_origins:
-  fixes a :: "'a::bounded_warrowing"
-  assumes mono: "\<And>p q::'a. p \<le> q \<Longrightarrow> empty_pred q \<Longrightarrow> empty_pred p"
-    and contrib: "rho_lookup (\<rho> state) g orig = Lifted a"
-    and not_bot_a: "\<not> empty_pred a"
-  shows "normalized_lift empty_pred (sup_over_origins state g)"
-proof -
-  have le: "Lifted a \<le> sup_over_origins state g"
-    using contrib by (rule sup_over_origins_upper)
-  show ?thesis
-  proof (cases "sup_over_origins state g")
-    case Bot
-    then show ?thesis by simp
-  next
-    case (Lifted c)
-    from le Lifted have "a \<le> c" by simp
-    with mono not_bot_a have "\<not> empty_pred c" by blast
-    with Lifted show ?thesis by simp
-  qed
-qed
-
 section \<open>Classifier-independent executable abstract state\<close>
 
 text \<open>
@@ -1291,12 +1260,10 @@ text \<open>
   preserve the caller's semantic default over the (potentially infinite)
   location space: the kept side carries over its input's own per-location
   default verbatim (\<^term>\<open>dl\<close>/\<^term>\<open>dg\<close>, which need not be \<^term>\<open>bot\<close>), and
-  only the dropped side is forced to \<^term>\<open>bot\<close>. The scope-parametric
-  \<open>project_resolved_on\<close> family is not a generalization of this pair: it
-  optimizes for a different invariant, a bounded materialized support, and
-  the two disagree outside that bound. See the comparison note at
-  \<open>project_resolved_on\<close>'s own definition for the argument and a
-  counterexample; both constructions stay, permanently.
+  only the dropped side is forced to \<^term>\<open>bot\<close>. A scope-parametric
+  projection over a bounded materialized support would disagree with this
+  pair outside its bound, so the pair is stated over the full location
+  space and preserves the default by construction.
 \<close>
 
 lemma lookup_restrict_local_resolved_q [simp]:

@@ -11,6 +11,8 @@ theory Example_Interval_Global_Flow_Sensitivity
     Example_Interval_Placement
 begin
 
+hide_const phase.N
+
 text \<open>
   Three questions about how a global is treated, answered by computation
   rather than assertion, on programs small enough to read the expected value
@@ -18,6 +20,14 @@ text \<open>
   spelling; does a global written in sequence keep its exact value at each
   program point; and can flow sensitivity be chosen per variable instead of
   fixed for a whole storage class.
+
+  Placement policies appear in classifier-split form throughout, the shape
+  \<^const>\<open>unit_dg_spec_placed_st\<close> takes: an all-or-nothing flag for the
+  locals plus an explicit list of covered globals, per component. Classic
+  placement keeps every local and publishes every global
+  (\<open>kl = True, kll = [], ps = False, psl = \<close>the declared globals);
+  all-flow-sensitive keeps everything and publishes nothing, so the shared
+  \<open>G\<close> unknown never receives a write and stays \<open>bot\<close> for the whole solve.
 \<close>
 
 subsection \<open>A declared global, recognised without a naming hint\<close>
@@ -33,24 +43,17 @@ text \<open>
   flow-sensitive because it is local) and reading off real computed values.
 \<close>
 
-fun a1_node_owner :: "pp \<Rightarrow> pname" where
-  "a1_node_owner (FunctionEntry p) = p"
-| "a1_node_owner (FunctionResult p) = p"
-| "a1_node_owner (Statement n) = (if n < 2 then (STR ''p'') else prog_main_name)"
-
-definition a1_locations_of :: "pp \<Rightarrow> location list" where
-  "a1_locations_of node = scope_locations inc_program (a1_node_owner node)"
-
 definition a1_dg_eqs ::
   "pp \<times> unit \<Rightarrow> (pp \<times> unit, unit, (ivl exec_dg_st, ivl exec_dg_st) dg_state) strategy_tree"
 where
   "a1_dg_eqs =
-    placed_dg_gen_of_strict (declared_global inc_program) a1_node_owner a1_locations_of
-      classic_keep_local classic_publish_side
-      (ivl_tf_st_for (declared_global inc_program)) (ivl_enter_st_for (declared_global inc_program))
+    dg_gen_of
+      (unit_dg_spec_placed_st (declared_global inc_program)
+        True [] False [STR ''counter'']
+        (ivl_tf_st_for (declared_global inc_program))
+        (ivl_enter_st_for (declared_global inc_program)))
       inc_g bot cinit_ivl_st
-      (project_resolved_on_strict prog_main_name
-        (a1_locations_of (cfg_entry inc_g)) classic_publish_side cinit_ivl_st)"
+      (project_placed_resolved_q False [STR ''counter''] cinit_ivl_st)"
 
 definition a1_sol ::
   "(pp \<times> unit) set \<times> (pp \<times> unit + unit \<Rightarrow> (ivl exec_dg_st, ivl exec_dg_st) dg_state)"
@@ -95,10 +98,9 @@ subsection \<open>A global written in sequence, exact at every point\<close>
 text \<open>
   \<open>global x; x := 0; x := 1; __voblint_check(x == 1)\<close>, exactly as specified.
   Two placements of the same program, same classifier, same check: classic
-  (\<open>x\<close> exclusively side-effected) against all-flow-sensitive
-  (\<open>keep_local = True\<close>, \<open>publish_side = False\<close> for every location, so the
-  shared \<open>G\<close> unknown never receives a write and stays \<open>bot\<close> for the whole
-  solve -- \<open>d \<squnion> g = d \<squnion> bot = d\<close>, so nothing dilutes the flow-sensitive
+  (\<open>x\<close> exclusively side-effected) against all-flow-sensitive (\<open>x\<close> kept in
+  the local component, nothing published, so the shared \<open>G\<close> unknown stays
+  \<open>bot\<close> and \<open>d \<squnion> g = d \<squnion> bot = d\<close> -- nothing dilutes the flow-sensitive
   read). This is not assumed: both solves are run and both check results are
   computed via \<^const>\<open>interval_classify_check\<close>, the same node-local
   classifier \<^theory>\<open>Voblint_Analysis.Interval_Checks\<close> already proves sound
@@ -123,39 +125,24 @@ definition a2_cfg :: cfg where
 lemma a2_checks_eval: "checks a2_cfg = {(Statement 2, exp.Eq (V (STR ''x'')) (N 1))}"
   unfolding a2_cfg_def by eval
 
-fun a2_node_owner :: "pp \<Rightarrow> pname" where
-  "a2_node_owner _ = prog_main_name"
-
-definition a2_locations_of :: "pp \<Rightarrow> location list" where
-  "a2_locations_of node = scope_locations a2_program (a2_node_owner node)"
-
-definition a2_keep_flowsens_sl :: "scoped_location \<Rightarrow> bool" where
-  "a2_keep_flowsens_sl loc = True"
-
-definition a2_publish_flowsens_sl :: "scoped_location \<Rightarrow> bool" where
-  "a2_publish_flowsens_sl loc = False"
-
 definition a2_dg_eqs_classic ::
   "pp \<times> unit \<Rightarrow> (pp \<times> unit, unit, (ivl exec_dg_st, ivl exec_dg_st) dg_state) strategy_tree"
 where
   "a2_dg_eqs_classic =
-    placed_dg_gen_of_strict a2_gs a2_node_owner a2_locations_of
-      classic_keep_local classic_publish_side
-      (ivl_tf_st_for a2_gs) (ivl_enter_st_for a2_gs)
+    dg_gen_of
+      (unit_dg_spec_placed_st a2_gs True [] False [STR ''x'']
+        (ivl_tf_st_for a2_gs) (ivl_enter_st_for a2_gs))
       a2_cfg bot cinit_ivl_st
-      (project_resolved_on_strict prog_main_name
-        (a2_locations_of (cfg_entry a2_cfg)) classic_publish_side cinit_ivl_st)"
+      (project_placed_resolved_q False [STR ''x''] cinit_ivl_st)"
 
 definition a2_dg_eqs_flowsens ::
   "pp \<times> unit \<Rightarrow> (pp \<times> unit, unit, (ivl exec_dg_st, ivl exec_dg_st) dg_state) strategy_tree"
 where
   "a2_dg_eqs_flowsens =
-    placed_dg_gen_of_strict a2_gs a2_node_owner a2_locations_of
-      a2_keep_flowsens_sl a2_publish_flowsens_sl
-      (ivl_tf_st_for a2_gs) (ivl_enter_st_for a2_gs)
-      a2_cfg bot cinit_ivl_st
-      (project_resolved_on_strict prog_main_name
-        (a2_locations_of (cfg_entry a2_cfg)) a2_publish_flowsens_sl cinit_ivl_st)"
+    dg_gen_of
+      (unit_dg_spec_placed_st a2_gs True [STR ''x''] False []
+        (ivl_tf_st_for a2_gs) (ivl_enter_st_for a2_gs))
+      a2_cfg bot cinit_ivl_st bot"
 
 definition a2_sol_classic ::
   "(pp \<times> unit) set \<times> (pp \<times> unit + unit \<Rightarrow> (ivl exec_dg_st, ivl exec_dg_st) dg_state)"
@@ -221,38 +208,31 @@ text \<open>
   instead of re-solved. What's new here is running the identical program
   under classic and all-flow-sensitive placement too, so all three policies
   A3 names are compared on the same source, holding the program fixed and
-  varying only placement -- the opposite axis from that theory's own
-  \<open>section 3090\<close> flat-vs-D/G-split comparison, which holds placement fixed
-  and varies architecture.
+  varying only placement.
 \<close>
-
-definition a3_keep_flowsens :: "scoped_location \<Rightarrow> bool" where
-  "a3_keep_flowsens loc = True"
-
-definition a3_publish_flowsens :: "scoped_location \<Rightarrow> bool" where
-  "a3_publish_flowsens loc = False"
 
 definition a3_dg_eqs_classic ::
   "pp \<times> unit \<Rightarrow> (pp \<times> unit, unit, (ivl exec_dg_st, ivl exec_dg_st) dg_state) strategy_tree"
 where
   "a3_dg_eqs_classic =
-    placed_dg_gen_of_strict (declared_global placement_prog) placement_node_owner
-      placement_locations_of classic_keep_local classic_publish_side
-      (ivl_tf_st_for (declared_global placement_prog)) (ivl_enter_st_for (declared_global placement_prog))
+    dg_gen_of
+      (unit_dg_spec_placed_st (declared_global placement_prog)
+        True [] False [STR ''balance'', STR ''request_count'']
+        (ivl_tf_st_for (declared_global placement_prog))
+        (ivl_enter_st_for (declared_global placement_prog)))
       placement_cfg bot cinit_ivl_st
-      (project_resolved_on_strict prog_main_name
-        (placement_locations_of (cfg_entry placement_cfg)) classic_publish_side cinit_ivl_st)"
+      (project_placed_resolved_q False [STR ''balance'', STR ''request_count''] cinit_ivl_st)"
 
 definition a3_dg_eqs_flowsens ::
   "pp \<times> unit \<Rightarrow> (pp \<times> unit, unit, (ivl exec_dg_st, ivl exec_dg_st) dg_state) strategy_tree"
 where
   "a3_dg_eqs_flowsens =
-    placed_dg_gen_of_strict (declared_global placement_prog) placement_node_owner
-      placement_locations_of a3_keep_flowsens a3_publish_flowsens
-      (ivl_tf_st_for (declared_global placement_prog)) (ivl_enter_st_for (declared_global placement_prog))
-      placement_cfg bot cinit_ivl_st
-      (project_resolved_on_strict prog_main_name
-        (placement_locations_of (cfg_entry placement_cfg)) a3_publish_flowsens cinit_ivl_st)"
+    dg_gen_of
+      (unit_dg_spec_placed_st (declared_global placement_prog)
+        True [STR ''balance'', STR ''request_count''] False []
+        (ivl_tf_st_for (declared_global placement_prog))
+        (ivl_enter_st_for (declared_global placement_prog)))
+      placement_cfg bot cinit_ivl_st bot"
 
 definition a3_sol_classic ::
   "(pp \<times> unit) set \<times> (pp \<times> unit + unit \<Rightarrow> (ivl exec_dg_st, ivl exec_dg_st) dg_state)"
