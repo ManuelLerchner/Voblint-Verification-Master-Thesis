@@ -1,7 +1,6 @@
 theory Int_Ctx_None_Sound
   imports
     "Voblint_Exec.Monovariant_Analysis_Result"
-    "Voblint_Exec.Exec_DG_Bridge"
     "Voblint_Exec.Routed_Domain_Exec"
     "Voblint_Analysis.Int_Classify"
     "Voblint_Core.DG_Analysis_Adapter"

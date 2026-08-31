@@ -5,7 +5,6 @@ theory Interval_Exec_Sound
           "Voblint_CFG.CFG_Prune"
           "Voblint_VIMP.VIMP_Program"
           "Voblint_Compile.Compile_Invariants"
-          "Voblint_Exec.Exec_DG_Bridge"
           "Voblint_Exec.DG_Base_Exec"
 begin
 

@@ -4,7 +4,7 @@ theory Monovariant_Analysis_Result
     "Voblint_Core.CFG_Enumeration"
     "Voblint_Core.Check_Report"
     "Voblint_Compile.Compile_Invariants"
-    Exec_DG_Bridge
+    Exec_DG_Generator
 begin
 
 section \<open>Normalizing a solved local unknown\<close>

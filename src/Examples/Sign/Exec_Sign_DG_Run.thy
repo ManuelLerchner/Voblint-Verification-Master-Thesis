@@ -21,7 +21,6 @@ text \<open>
 
 theory Exec_Sign_DG_Run
   imports
-    "Voblint_Exec.Exec_DG_Bridge"
     "Voblint_Exec.DG_Base_Exec"
     "Voblint_Exec.DG_Coverage"
     "Voblint_Analysis.Sign_Exec"
@@ -188,7 +187,7 @@ proof -
               dgEx_vars_cover[unfolded dgEx_sol_def dgEx_eqs_def gEx_def]
               gEx_finE[unfolded gEx_def]
               gEx_finC[unfolded gEx_def]
-              dgEx_sound0
+              dgEx_sound0[unfolded fun_of_exec_dg_st_for_def, folded sign_ex_reg.gamma_exec_def]
               init run'])
 qed
 

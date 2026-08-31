@@ -4,7 +4,6 @@ theory Example_Interval_Global_Flow_Sensitivity
   imports
     "Voblint_Analysis.Interval_Checks"
     "Voblint_Analysis.Ivl_Exec"
-    "Voblint_Exec.Exec_DG_Bridge"
     "Voblint_Exec.Solver_Menu"
     "Voblint_CFG.CFG_Prune"
     "Voblint_VIMP.VIMP_Notation"

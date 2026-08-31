@@ -1,6 +1,5 @@
 theory Exec_Int_DG_Run
   imports
-    "Voblint_Exec.Exec_DG_Bridge"
     "Voblint_Exec.DG_Base_Exec"
     "Voblint_Analysis.Int_Exec"
     "Voblint_VIMP.VIMP_Notation"

@@ -190,7 +190,7 @@ Spike before committing to it.
 | --- | --- | --- |
 | 2.1 | Spike on Sign, in a scratch theory: interpret `sound_dg_spec` at `base_dg_spec_st_for_lifted gs is_bot_pred tf_st enter_st` with `gammaDG d g = gamma_state (fun_of_resolved_st_q_for gs (unlift d)) ...` using only `routed_dg_domain_exec`'s three commute facts and Sign's `sound_transfer_for`. Then `dg_ctx_activation_base` and `routed_context_base_hetero` at that carrier. Exit criterion: no citation of anything in `Voblint_Exec` except `Exec_DG_Refines`'s lattice instances for `exec_dg_st`, and `cli-test` green with Sign routed through the new interpretation. | landed: `Examples/Tooling/Spike_Sign_Quotient.thy` |
 | 2.2 | If 2.1 fails, record why under "Decisions and corrections", keep `Voblint_Exec` as a permanent session named for what it is, and skip to Phase 3. | open |
-| 2.3 | Delete `Exec_DG_Trees`, `Exec_DG_Generator`, `Exec_DG_Bridge`; the transport half of `DG_Base_Exec` (keep `routed_dg_domain_exec` and the `base_dg_spec_st_for_lifted` commute lemmas it cites); `Routed_Domain_Exec`; the owner-aware trees and classifier-parametric readback in `Exec_DG_Refines` (keep the `exec_dg_st` lattice instances and `fun_of_dg_st_for`). | open |
+| 2.3 | Delete `Exec_DG_Trees`, `Exec_DG_Generator`, `Exec_DG_Bridge`; the transport half of `DG_Base_Exec` (keep `routed_dg_domain_exec` and the `base_dg_spec_st_for_lifted` commute lemmas it cites); the owner-aware trees and classifier-parametric readback in `Exec_DG_Refines` (keep the `exec_dg_st` lattice instances and `fun_of_dg_st_for`). `Routed_Domain_Exec` stays -- superseded, see decision below. | partly landed (2026-08-31) -- `Exec_DG_Bridge` itself is deleted, zero remaining importers. `Exec_DG_Trees`, `Exec_DG_Generator`, and `Routed_Domain_Exec` are load-bearing and stay (see "Decisions and corrections"); the owner-aware half of `Exec_DG_Refines`/`Exec_DG_Trees` the step's last clause names is unstarted |
 | 2.4 | `routed_context_hetero` becomes `routed_context_base_hetero` at whichever carrier the instance chooses; delete the restated assumptions. Same for `unit_routed_context_hetero`. | landed: `entry_state_routed_context` and `call_string_routed_context` (Analysis) are stated at a carrier parameter with `gammaDG`/`gammaM` and sublocale `routed_context_base_hetero`; `routed_context_hetero` and `unit_routed_context_hetero` are deleted, having no interpreter left |
 | 2.5 | `Analysis_Result` holds the quotient; `normalize_point` becomes the single readback at publication, in `DG_Analysis_Adapter`. `Abstract_Checks` reads the published table. | landed in the generic form: `dg_analysis_adapter` extends `routed_context_base_hetero` and takes a readback `rd` with `gammaDG d g = gamma_state_lift (rd d)`; the four abstract-carrier sites pass `rd = id` |
 | 2.6 | Rewrite the twelve `*_Ctx_*_Sound` theories and the four CLI `*_Entry` theories to interpret at the quotient carrier. Expect the transport boilerplate that NEXT_STEPS records as the 23-suffix duplication to shrink. | in progress: the four unit-context instances (Sign, Parity, Interval, Int, with their `*_Checks`/`*_Entry` consumers), the three entry-state instances and the two call-string instances are on the executable carrier; the two Interval entry-state examples and `Example_Interval_Source_Ctx` follow the theory; the four CallString examples interpret `call_string_routed_context` at their executable spec and get their headline theorem from `activation_collect_sound`. Still on the transport, gating 2.3: `Run_Analysis_Sound`'s flat bundles (`dg_exec_run_source_sound_for`, `dg_exec_collect_sound_for`, their `_lifted` twins and the registration locales `unit_dg_exec_analysis`/`base_dg_exec_analysis`, interpreted by `Exec_Sign_DG_Run`, `Example_Parity_DG_Flagship`, `Example_Interval_DG_Flagship`, `Example_Interval_DG_IP_Flagship`), and the abstract-transport section of `Interval_Ctx_Entry_State_Sound` (`dg_reader_commute_gen_ivl_lifted`, `entry_state_route_abs_gen`, `ectx_abs_spec`) |
@@ -379,6 +379,105 @@ and mark it `superseded (see below)`.
   The Domain-session attribute audit added only rules with narrow conclusion
   heads and removed redundant `bfilter.simps` registrations; all six theories
   are I/Q-clean with no warnings.
+- 2026-08-31: the flat bundle restatement from the entry above is done.
+  `Run_Analysis_Sound`'s `base_dg_exec_analysis` (Sign, Parity) now proves
+  soundness via `routed_dg_domain_exec.sound_dg_spec_st` directly at the
+  executable carrier, with G narrowed to match D (the only shape either
+  instance actually used). `unit_dg_exec_analysis` (both Interval flagships)
+  gets the same treatment via a new, file-local `sound_dg_spec_st` built from
+  the existing `unit_dg_Hstep_for`/`unit_dg_Henter_for`/`unit_dg_Hcomb_for`/
+  `unit_dg_Hcont_for` commute lemmas -- no shared locale needed, since this
+  spec shape has exactly one consumer. Neither locale transports a solved
+  system to the abstract carrier any more. `Run_Analysis_Sound` no longer
+  imports `Exec_DG_Bridge`. `Interval_Ctx_Entry_State_Sound`'s own dead
+  hand-rolled transport lemmas (`ivl_Hstep_lifted_for`/etc.,
+  `dg_reader_commute_gen_ivl_lifted`) were deleted too, duplicating exactly
+  what `routed_dg_domain_exec` already gives; its `ectx_abs_spec`/
+  `entry_state_route_abs_gen` stay, being the genuine abstract-carrier route
+  witness `routed_context_base_hetero` structurally requires.
+- 2026-08-31: **step 2.3 is not safely executable yet**, despite the above
+  closing both items the plan named as gating it. A repo-wide sweep found
+  ~19 files with a directly-imported, apparently-dead `Exec_DG_Bridge`; 14
+  were genuinely dead and had the import dropped (the four `*_Ctx_None_Sound`
+  theories, `Interval_Exec_Sound`, `Int_Exec_Sound`, both Interval flagships,
+  the Parity flagship, `Exec_Sign_DG_Run`, `Example_Interval_Global_Flow_Sensitivity`,
+  `Example_Int_Refinement_Mode_Regression`, `Exec_Int_DG_Run`, `Voblint.thy`).
+  Three findings block the theory-level deletions the step names:
+  - `Routed_Domain_Exec` is load-bearing, not deletable: `routed_domain_exec`
+    (extending `routed_dg_domain_exec` with the routing/seed-key parameters)
+    is actively interpreted by `Sign_Ctx_None_Sound`, `Interval_Ctx_None_Sound`,
+    `Int_Ctx_None_Sound`, and `Interval_Ctx_Entry_State_Sound` for
+    `.pp_st`/`.sound_dg_spec_st`. This was already known generically ("the
+    owner-aware trees ... keep routed_dg_domain_exec") but the step's own
+    text still lists the whole theory for deletion; it should not be.
+  - `dg_gen_of` -- the core "build an equation system from a spec" function
+    every registration locale calls, including the ones just migrated above
+    -- is defined in `Exec_DG_Generator.thy`, one of the three theories named
+    for outright deletion. `Example_Relational_DG_Demo` and
+    `Example_Sign_DG_Custom_Combine` need it directly (plus `exec_dg_st`,
+    `unit_combine_step_st_env`) and had their import narrowed to
+    `Exec_DG_Generator` alone rather than dropped.
+  - The Placement examples (`Example_Sign_Placement`, `Example_Interval_Placement`,
+    and `Monovariant_Analysis_Result` itself) are genuine, heavy consumers of
+    the owner-aware tree machinery (`placed_abs_dg_edge_of`/`_enter_of`/
+    `_combine_of`, `scoped_location`, `traverse_rhs_placed_abs_dg_edge_of`,
+    ...) -- removing their import broke 24-76 commands each. These were
+    never migrated off the transport route the way the flagship examples
+    were; step 1.3's hooks-route move to `Examples/Placement/` did not
+    include this. Deleting `Exec_DG_Trees`/`Exec_DG_Refines`'s owner-aware
+    half, as the step's last clause names, needs these three migrated first
+    -- a separate, real proof-engineering task, not a mechanical import
+    cleanup, closer in size to today's flagship migration than to the import
+    sweep above.
+  Net: `Exec_DG_Trees`, `Exec_DG_Generator`, `Exec_DG_Bridge`, and
+  `Routed_Domain_Exec` all stay for now. The step's own three-way split
+  (transport theories / `DG_Base_Exec`'s transport half / `Exec_DG_Refines`'s
+  owner-aware half) is right in shape; what changed is that `Routed_Domain_Exec`
+  isn't part of what's being deleted, and the Placement examples are a
+  precondition, not a side effect, of the `Exec_DG_Refines`/`Exec_DG_Trees`
+  half landing.
+- 2026-08-31: the precondition above is closed, and `Exec_DG_Bridge.thy` is
+  deleted. Its three named consumers were re-checked against what they
+  actually cite, not what the entry above assumed: none of
+  `Example_Sign_Placement`, `Example_Interval_Placement`, or
+  `Monovariant_Analysis_Result` cites a name `Exec_DG_Bridge.thy` itself
+  defines (`dg_tree_st_commute_for`, `part_post_solution_dg_st_to_abs_for`,
+  and siblings) -- every `placed_*`/`traverse_rhs_*`/`scoped_location` name
+  the earlier 76-error count turned up lives in `Exec_DG_Trees.thy` or
+  `Exec_Placement.thy`, both kept. The prior finding conflated "breaks if the
+  import is deleted outright" with "needs Bridge specifically"; the fix in
+  both cases was narrowing the import to `Exec_DG_Generator`, the same
+  mechanical move already used for `Example_Relational_DG_Demo` and
+  `Example_Sign_DG_Custom_Combine`, not a migration. `DG_Base_Exec.thy`'s own
+  `imports ... Exec_DG_Bridge` was the same class of dead import (zero uses
+  of Bridge's own content) and was the reason `Example_Interval_DG_IP_Flagship`
+  still type-checked with a leftover pre-migration `twice_pp_abs`/
+  `twice_collect_sound` pair reaching `part_post_solution_dg_st_to_abs_for`
+  transitively; both are dead (superseded by the `twice_ex_reg`-registered
+  route `twice_source_run_sound` already uses) and are deleted along with
+  the stray citation. With every consumer narrowed to `Exec_DG_Generator`,
+  `Exec_DG_Bridge.thy` had zero remaining importers repo-wide and is removed
+  from `src/Exec/ROOT` and disk; `src/CLI/Analyse_Dispatch.thy`'s
+  `code_module Exec_DG_Bridge` remap entry, and the stale `@{theory
+  Voblint_Exec.Exec_DG_Bridge}` references in `Run_Analysis_Sound.thy` and
+  `Voblint.thy`, are updated to match. `Exec_DG_Trees`, `Exec_DG_Generator`,
+  and `Routed_Domain_Exec` remain load-bearing and are not part of this
+  deletion.
+- 2026-09-01: the batch build the deletion above claimed as verification
+  caught what the interactive sweep missed: `Routed_Domain_Exec.thy`'s
+  `pp_abs` theorem cited `part_post_solution_seed_dg_st_to_abs_lifted_for`
+  directly, a name `Exec_DG_Bridge.thy` itself defined, not merely something
+  reachable through its import. `pp_abs` is the same dead
+  executable-to-abstract transport shape as `twice_pp_abs` above -- zero
+  external consumers (`rg` for `\bpp_abs\b` outside its own file finds
+  none) -- and is deleted; `pp_st`, the theorem right above it in the same
+  file, stays: `sign_pp_st_gen`/`ivl_pp_st_gen`/`int_pp_st_gen`/
+  `parity_pp_st_gen` all cite it. `src/Exec/README.md`'s `Routed_Domain_Exec`
+  row is corrected to match. This is the load-bearing reminder for next
+  time: an import-narrowing sweep only proves a file doesn't need Bridge's
+  *import*; a direct citation of one of Bridge's twelve own names inside a
+  file that imports something else entirely (here, `DG_Base_Exec`) still
+  needs checking name-by-name before the file it names is deleted.
 
 ## Traps specific to Core
 

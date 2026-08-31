@@ -12,8 +12,9 @@ exports.
 **Top level:** the interprocedural / side-effecting spine —
 `Run_Analysis_Sound`, `Source_Activation_Sound`,
 `Analysis_Sound`, plus the native D/G interface (`DG_Soundness`, `Sign_DG`,
-`Interval_DG`) and its executable transport
-(`Exec_DG_Bridge`). An intra-procedural (classical) formulation is developed
+`Interval_DG`) and its executable carrier (`Exec_DG_Generator`,
+`DG_Base_Exec`), sound directly at that carrier with no separate abstract
+transport. An intra-procedural (classical) formulation is developed
 in the sibling repo `voblint-formalization-classical`.
 
 **Pipeline (left to right):**

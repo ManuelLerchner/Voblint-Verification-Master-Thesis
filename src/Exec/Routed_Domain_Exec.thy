@@ -162,56 +162,6 @@ proof (rule part_post_solution_seed_dg_buffered_to_old
     by (rule routed_extra_g_local_only)
 qed (rule pp)
 
-text \<open>
-  Executable-to-abstract transport of a routed unit post-solution, in one step. The
-  buffered generator a domain actually solves is first reconciled with the unbuffered
-  one --- every obligation there is a \<^const>\<open>routed_cmb_g\<close> fact needing only
-  \<open>seed_key_ne_gk0\<close> --- and the result is then read through
-  \<open>fun_of_resolved_st_q_for\<close> at the abstract spec.
-
-  The compiled graph, the three seed states and the solved table stay universally
-  quantified: nothing in the argument inspects them, so an instance supplies its own
-  \<open>cinit\<close> without this locale fixing one. The executable post-solution is a hypothesis
-  rather than a derived fact for the same reason a solver is not a parameter --- which
-  update rule produced it is the caller's choice.
-\<close>
-theorem pp_abs:
-  assumes pp: "part_post_solution
-     (side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_addr_list (\<lambda>_. gk0) route_st
-        (routed_cmb_g_contribution spec_st gk0 seed_key (resolve_st g))
-        (routed_extra_g seed_key gk0)
-        g spec_st bot0 s0d s0g)
-     x0 sigma_st vars"
-  shows "part_post_solution
-     (side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. gk0) route_abs
-        (routed_cmb_g spec_abs gk0 seed_key (resolve_abs g)) (routed_extra_g seed_key gk0)
-        g spec_abs
-        (map_lift (fun_of_resolved_st_q_for gs) bot0)
-        (map_lift (fun_of_resolved_st_q_for gs) s0d)
-        (map_lift (fun_of_resolved_st_q_for gs) s0g))
-     x0
-     (fun_of_dg_st_gen (map_lift (fun_of_resolved_st_q_for gs))
-        (map_lift (fun_of_resolved_st_q_for gs)) \<circ> sigma_st)
-     vars"
-proof -
-  note pp' = pp_st[OF pp]
-  show ?thesis
-    apply (rule part_post_solution_seed_dg_st_to_abs_lifted_for
-          [where gs = gs and pred_sel = intra_predecessor_addr_list and gkey = "\<lambda>_. gk0"
-             and route_st = route_st and route_abs = route_abs
-             and cmb_st = "routed_cmb_g spec_st gk0 seed_key (resolve_st g)"
-             and cmb_abs = "routed_cmb_g spec_abs gk0 seed_key (resolve_abs g)"
-             and extra_st = "routed_extra_g seed_key gk0"
-             and extra_abs = "routed_extra_g seed_key gk0"
-             and g = g and S_st = spec_st and S_abs = spec_abs])
-        apply (rule Hstep_lifted_for)
-       apply (rule route_agree)
-      apply (rule dg_tree_st_commute_routed_cmb_g)
-     apply (rule hextra_commute_routed)
-    apply (rule pp')
-    done
-qed
-
 end
 
 end

@@ -10,7 +10,6 @@ session Voblint_Exec in "." = "Voblint_Core" +
     Exec_DG_Refines
     Exec_DG_Trees
     Exec_DG_Generator
-    Exec_DG_Bridge
     DG_Base_Exec
     Routed_Domain_Exec
     (* Solved-key coverage as a graph property: vars_cover from reachability to

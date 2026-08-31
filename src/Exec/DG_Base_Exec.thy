@@ -1,5 +1,5 @@
 theory DG_Base_Exec
-  imports "Voblint_Core.DG_Base" Exec_DG_Bridge
+  imports "Voblint_Core.DG_Base" Exec_DG_Generator
 begin
 
 section \<open>Executable Base-style DG construction\<close>

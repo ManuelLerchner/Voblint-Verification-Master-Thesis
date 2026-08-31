@@ -1,6 +1,6 @@
 theory Example_Relational_DG_Demo
   imports
-    "Voblint_Exec.Exec_DG_Bridge"
+    "Voblint_Exec.Exec_DG_Generator"
     "Voblint_Analysis.Rel_Order_Domain"
     "Voblint_Core.DG_LTR_Sound"
     "Voblint_Analysis.Interval_Transfer"

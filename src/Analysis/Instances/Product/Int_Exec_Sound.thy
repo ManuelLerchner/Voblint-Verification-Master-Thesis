@@ -4,7 +4,6 @@ theory Int_Exec_Sound
     "Voblint_Exec.DG_Base_Exec"
     Int_Exec
     Int_Warrowing
-    "Voblint_Exec.Exec_DG_Bridge"
     "Voblint_Compile.Compile_Invariants"
     "Voblint_CFG.CFG_Prune"
     "Voblint_VIMP.VIMP_Program"

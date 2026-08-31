@@ -20,9 +20,8 @@ it as a refinement layer, not as part of the framework.
 | `Exec_DG_Refines.thy` | The D/G product on the executable carrier, its lattice instances, and the refinement relation to an abstract table |
 | `Exec_DG_Trees.thy` | Executable per-edge, combine and enter trees; one tree's traversal commutes with the readback |
 | `Exec_DG_Generator.thy` | The executable equation generator; one node's equation commutes with the readback (`dg_reader_commute_gen`) |
-| `Exec_DG_Bridge.thy` | The transport theorem: a partial post-solution of the executable system is one of the abstract system |
-| `DG_Base_Exec.thy` | The executable Base-style spec; `routed_dg_domain_exec`: the three commute facts a domain owes, and from them `sound_dg_spec_st` -- the executable spec is itself a `sound_dg_spec` under `gamma_exec`, the concretization read through the readback |
-| `Routed_Domain_Exec.thy` | The routed layer, once for every domain and context policy: `pp_st` reconciles the buffered generator a domain solves with the unbuffered one the framework is stated over; `pp_abs` additionally transports the result to the abstract carrier |
+| `DG_Base_Exec.thy` | The executable Base-style spec; `routed_dg_domain_exec`: the three commute facts a domain owes, and from them `sound_dg_spec_st` -- the executable spec is itself a `sound_dg_spec` under `gamma_exec`, the concretization read through the readback, with no separate transport theorem |
+| `Routed_Domain_Exec.thy` | The routed layer, once for every domain and context policy: `pp_st` reconciles the buffered generator a domain solves with the unbuffered one the framework is stated over |
 | `DG_Coverage.thy` | `vars_cover` from graph reachability rather than from the solver's key set |
 | `Solver_Side_RG.thy` | The side-effecting solver keeps every global slot globally restricted |
 | `Solver_Menu.thy` | The three update rules (`join`, `per_origin`, `warrow`) behind one signature |

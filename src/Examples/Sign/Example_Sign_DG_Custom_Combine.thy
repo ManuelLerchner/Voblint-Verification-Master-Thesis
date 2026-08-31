@@ -1,6 +1,6 @@
 theory Example_Sign_DG_Custom_Combine
   imports
-    "Voblint_Exec.Exec_DG_Bridge"
+    "Voblint_Exec.Exec_DG_Generator"
     "Voblint_Analysis.Sign_Exec"
     "Voblint_Core.DG_LTR_Sound"
     "Voblint_Analysis.Sign_Transfer"

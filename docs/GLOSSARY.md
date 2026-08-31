@@ -67,7 +67,7 @@ layer without embedding line numbers that drift.
 | `G` | Analysis-chosen shared fact routed through global side effects. | `src/Core/DG/DG_Framework.thy` |
 | `dg_spec` | D/G transfer, entry, combine, read, and publication interface. | `src/Core/DG/DG_Framework.thy` |
 | `sound_dg_spec` | Concrete-soundness obligations for a D/G instance. | `src/Core/DG/DG_Soundness.thy` |
-| `dg_gen_of` | Executable D/G equation generator. | `src/Exec/Exec_DG_Bridge.thy` |
+| `dg_gen_of` | Executable D/G equation generator. | `src/Exec/Exec_DG_Generator.thy` |
 | `dg_postfix` | Mathematical post-solution property for D/G equations. | `src/Core/DG/DG_Soundness.thy` |
 
 ### Correspondence to Goblint's `Spec` interface

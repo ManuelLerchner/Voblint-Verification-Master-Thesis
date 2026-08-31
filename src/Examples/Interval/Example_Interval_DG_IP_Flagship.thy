@@ -1,6 +1,5 @@
 theory Example_Interval_DG_IP_Flagship
   imports
-    "Voblint_Exec.Exec_DG_Bridge"
     "Voblint_Core.DG_LTR_Sound"
     "Voblint_Analysis.Interval_Transfer"
     "Voblint_Analysis.Ivl_Exec"
@@ -90,30 +89,20 @@ lemmas twice_finC = twice.finite_calls
 
 subsection \<open>The analysis specification (interval, as an executable D/G analysis)\<close>
 
-text \<open>Classifier-parametric commutation mirrors, generic in \<open>gs\<close>: the entry point for
-  this file, generic in the classifier rather than fixed to a name-based convention.\<close>
+text \<open>
+  Intervals form the diagonal D/G analysis \<open>D = G = ivl abs_state\<close>, with executable
+  mirror \<open>unit_dg_spec_st_for twice_gs (ivl_tf_st_for twice_gs)\<close>.  The registration
+  \<^locale>\<open>unit_dg_exec_analysis\<close> --- interpreted as \<open>twice_ex_reg\<close> below, at this
+  file's own classifier \<open>twice_gs\<close>, from \<open>ivl_is_sound_transfer_for\<close> and
+  \<open>ivl_tf_st_for_commute\<close> alone --- discharges the transport, soundness, and
+  solver-crossing obligations generically.  This example supplies only the program,
+  the executable solve, and the coverage witnesses.
+\<close>
 
-lemmas ivl_Hstep_for =
-  unit_dg_Hstep_for[OF ivl_tf_st_for_commute[folded fun_of_exec_dg_st_for_def]]
-
-lemmas ivl_Henter_for =
-  unit_dg_Henter_for[OF ivl_enter_st_for_commute[folded fun_of_exec_dg_st_for_def]]
-
-lemmas ivl_Hcomb_for = unit_dg_Hcomb_for
-lemmas ivl_Hcont_for = unit_dg_Hcont_for
-
-text \<open>The abstract D/G soundness interpretation at \<open>twice_gs\<close>, generic in the
-  storage classifier: gives access to this instantiation's own \<open>dg_gen\<close>/\<open>dg_gamma\<close>
-  accessors and the \<open>dg_post_solution_collect_sound_ltr_for\<close> endpoint below.\<close>
 lemma twice_reserved: "reserved_ret_var twice_gs"
   by (auto simp: wf_compile_input_simps
       twice_pi_def twice_procs_def twice_main_def twice_program_def
       split: if_splits option.splits)
-
-interpretation twice_sds:
-  sound_dg_spec_ltr_for "unit_dg_spec_for twice_gs (ivl_tf_for twice_gs)" "gamma_unit twice_gs" twice_gs
-  unfolding sound_dg_spec_ltr_for_def
-  by (rule sound_dg_spec_unit_for[OF ivl_is_sound_transfer_for twice_reserved])
 
 subsection \<open>Equation generation\<close>
 
@@ -145,27 +134,14 @@ lemma twice_pp_st:
           [OF twice_solve_dom, of "fst twice_sol" "snd twice_sol"]
   unfolding twice_sol_def by simp
 
-subsection \<open>Transport to the abstract D/G semantics\<close>
-
-lemma twice_pp_abs:
-  "part_post_solution
-     (twice_sds.dg_gen twice_cfg (fun_of_exec_dg_st_for twice_gs (bot::ivl exec_dg_st))
-        (fun_of_exec_dg_st_for twice_gs cinit_ivl_st)
-        (fun_of_exec_dg_st_for twice_gs (restrict_global_resolved_q cinit_ivl_st)))
-     (cfg_exit twice_cfg, ()) (fun_of_dg_st_for twice_gs \<circ> snd twice_sol) (fst twice_sol)"
-  using part_post_solution_dg_st_to_abs_for[OF ivl_Hstep_for ivl_Henter_for ivl_Hcomb_for ivl_Hcont_for twice_pp_st[unfolded twice_eqs_def]]
-  unfolding twice_sds.dg_gen_of_eq_for .
-
-subsection \<open>Soundness: the computed analysis over-approximates the collecting semantics\<close>
+subsection \<open>Soundness premises for the registered endpoint\<close>
 
 text \<open>
-  The premises of the \<^emph>\<open>generic\<close> endpoint \<open>dg_post_solution_collect_sound_ltr_for\<close>:
-  every point is solved (\<^verbatim>\<open>eval\<close>), the graph is finite --- and, crucially,
-  \<^bold>\<open>no \<open>no_enter\<close> premise\<close>: the two \<^const>\<open>CallEdge\<close> entries are covered by the
-  same collecting-soundness theorem as ordinary intra edges.
-\<close>
+  The premises \<open>twice_ex_reg.run_source_sound\<close> consumes: every program point is
+  covered by the solved variable set, the graph is finite and enter-free, and the
+  concrete initial stores are covered by the seed.
 
-text \<open>Coverage is not read off the solved key set. Every node of \<open>twice_cfg\<close> ---
+  Coverage is not read off the solved key set. Every node of \<open>twice_cfg\<close> ---
   including both callee entries and both continuations --- reaches
   \<^const>\<open>cfg_exit\<close>, a structural fact about the graph alone decided by
   \<^const>\<open>cfg_exit_covers\<close>, and \<^const>\<open>vars_cover\<close> follows from that together with
@@ -194,17 +170,10 @@ proof -
 qed
 
 text \<open>
-  The computed D/G post-solution bounds every stack-faithful local trace, including matched calls
-  and returns, at each CFG point.
+  The coverage facts, finiteness, and the seed-soundness \<open>twice_sound0\<close> are the
+  instance premises the bundled endpoint \<open>twice_ex_reg.run_source_sound\<close> consumes;
+  the collecting-soundness and transport steps are discharged inside it.
 \<close>
-
-theorem twice_collect_sound:
-  "ltr_collect twice_gs twice_cfg (cinit_stores twice_gs) v
-     \<subseteq> twice_sds.dg_gamma (fun_of_dg_st_for twice_gs \<circ> snd twice_sol) v"
-  by (rule twice_sds.dg_post_solution_collect_sound_ltr_for
-        [OF twice_pp_abs
-            twice_vars_cover
-            twice_finE twice_finC twice_sound0[folded gamma_unit_def]])
 
 subsection \<open>Inspecting the certified result\<close>
 
@@ -284,7 +253,7 @@ proof -
               twice_vars_cover[unfolded twice_sol_def twice_eqs_def twice_cfg_def]
               twice_finE[unfolded twice_cfg_def]
               twice_finC[unfolded twice_cfg_def]
-              twice_sound0[folded gamma_unit_def]
+              twice_sound0[folded gamma_unit_def, folded twice_ex_reg.gamma_unit_exec_def]
               init run'])
   show ?thesis using cert src' by blast
 qed

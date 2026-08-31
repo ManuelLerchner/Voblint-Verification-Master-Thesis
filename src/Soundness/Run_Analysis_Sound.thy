@@ -1,6 +1,5 @@
 theory Run_Analysis_Sound
   imports
-    "Voblint_Exec.Exec_DG_Bridge"
     "Voblint_Exec.DG_Base_Exec"
     "Voblint_Core.DG_LTR_Sound"
     "Voblint_Exec.Solver_Menu"
@@ -77,122 +76,17 @@ qed
 
 end
 
-subsection \<open>Executable bundle: from a computed post-solution to source soundness\<close>
-
-text \<open>
-  The caller obtains \<open>pp_st\<close> from a single \<open>solve_c ... \<noteq> None\<close> success by the vendored
-  adapter \<^verbatim>\<open>TD_side_<rule>_Interp.part_post_solution_of_solve_c\<close>.  This global theorem
-  then hides executable-to-abstract transport, the D/G collecting endpoint, and the
-  source bridge behind one application.  It is classifier-parametric in \<open>gs\<close>
-  throughout: the executable-to-abstract transport uses
-  \<open>part_post_solution_dg_st_to_abs_for\<close>, and the semantic core uses
-  \<open>sound_dg_spec_ltr_for\<close>'s own \<open>dg_run_source_sound_abs_for\<close>.
-\<close>
-
-theorem dg_exec_run_source_sound_for:
-  fixes Pi :: proc_table and s0 t :: store
-    and S_st :: "('d1::bounded_semilattice_sup_bot exec_dg_st, 'g1::bounded_semilattice_sup_bot exec_dg_st) dg_spec"
-    and S_abs :: "('d1 abs_state, 'g1 abs_state) dg_spec"
-    and gammaDG :: "'d1 abs_state \<Rightarrow> 'g1 abs_state \<Rightarrow> store set"
-    and bot0 s0d :: "'d1 exec_dg_st" and s0g :: "'g1 exec_dg_st"
-    and gs :: "vname \<Rightarrow> bool"
-  assumes sds: "sound_dg_spec_ltr_for S_abs gammaDG gs"
-    and Hstep: "\<And>a d g. map_prod (fun_of_exec_dg_st_for gs) (fun_of_exec_dg_st_for gs) (dg_spec_step S_st a d g)
-                        = dg_spec_step S_abs a (fun_of_exec_dg_st_for gs d) (fun_of_exec_dg_st_for gs g)"
-    and Henter: "\<And>ci d g. map_prod (fun_of_exec_dg_st_for gs) (fun_of_exec_dg_st_for gs) (dgs_enter S_st ci d g)
-                        = dgs_enter S_abs ci (fun_of_exec_dg_st_for gs d) (fun_of_exec_dg_st_for gs g)"
-    and Hcomb: "\<And>ci dc de g. map_prod (fun_of_exec_dg_st_for gs) (fun_of_exec_dg_st_for gs) (dgs_combine S_st ci dc de g)
-                        = dgs_combine S_abs ci (fun_of_exec_dg_st_for gs dc) (fun_of_exec_dg_st_for gs de) (fun_of_exec_dg_st_for gs g)"
-    and Hcont: "\<And>ci d g. fun_of_exec_dg_st_for gs (caller_cont S_st ci d g)
-                        = caller_cont S_abs ci (fun_of_exec_dg_st_for gs d) (fun_of_exec_dg_st_for gs g)"
-    and pp_st: "part_post_solution
-                  (dg_gen_of S_st (compile_prog Pi ps) bot0 s0d s0g) x sigma_st vars"
-    and wf: "wf_compile_input gs Pi ps"
-    and cover: "vars_cover (compile_prog Pi ps) vars"
-    and finI: "finite (intra (compile_prog Pi ps))"
-    and finC: "finite (calls (compile_prog Pi ps))"
-    and sound0: "S0 \<subseteq> gammaDG (fun_of_exec_dg_st_for gs s0d) (fun_of_exec_dg_st_for gs s0g)"
-    and s0mem: "s0 \<in> S0"
-    and run: "star (pstep gs Pi) (main_body Pi, s0, []) (residual, t, frs)"
-  shows "\<exists>v stk. csim Pi (compile_prog Pi ps) (residual, t, frs) (v, t, stk)
-                 \<and> t \<in> sound_dg_spec.dg_gamma gammaDG (fun_of_dg_st_for gs \<circ> sigma_st) v"
-proof -
-  interpret sds: sound_dg_spec_ltr_for S_abs gammaDG gs by (rule sds)
-  have pp_abs: "part_post_solution
-      (dg_gen_of S_abs (compile_prog Pi ps)
-         (fun_of_exec_dg_st_for gs bot0) (fun_of_exec_dg_st_for gs s0d) (fun_of_exec_dg_st_for gs s0g))
-      x (fun_of_dg_st_for gs \<circ> sigma_st) vars"
-    by (rule part_post_solution_dg_st_to_abs_for[OF Hstep Henter Hcomb Hcont pp_st])
-  have pp_gen: "part_post_solution
-      (sds.dg_gen (compile_prog Pi ps)
-         (fun_of_exec_dg_st_for gs bot0) (fun_of_exec_dg_st_for gs s0d) (fun_of_exec_dg_st_for gs s0g))
-      x (fun_of_dg_st_for gs \<circ> sigma_st) vars"
-    using pp_abs unfolding sds.dg_gen_of_eq_for .
-  show ?thesis
-    by (rule sds.dg_run_source_sound_abs_for[OF wf pp_gen cover finI finC sound0 s0mem run])
-qed
-
-text \<open>
-  The same executable-to-abstract transport as \<open>dg_exec_run_source_sound_for\<close>,
-  stopping at the collecting endpoint instead of continuing through a
-  concrete source run: no \<open>s0mem\<close>/\<open>run\<close> premise, and the conclusion holds at
-  every \<open>v\<close>, not just the one point a run happens to reach. Reusable by any
-  consumer (a check-report layer, for instance) that wants per-node collecting
-  soundness for a computed D/G post-solution without going through
-  \<open>csim\<close>/\<open>pstep\<close>.
-\<close>
-
-theorem dg_exec_collect_sound_for:
-  fixes Pi :: proc_table and v :: pp
-    and S_st :: "('d1::bounded_semilattice_sup_bot exec_dg_st, 'g1::bounded_semilattice_sup_bot exec_dg_st) dg_spec"
-    and S_abs :: "('d1 abs_state, 'g1 abs_state) dg_spec"
-    and gammaDG :: "'d1 abs_state \<Rightarrow> 'g1 abs_state \<Rightarrow> store set"
-    and bot0 s0d :: "'d1 exec_dg_st" and s0g :: "'g1 exec_dg_st"
-    and gs :: "vname \<Rightarrow> bool"
-  assumes sds: "sound_dg_spec_ltr_for S_abs gammaDG gs"
-    and Hstep: "\<And>a d g. map_prod (fun_of_exec_dg_st_for gs) (fun_of_exec_dg_st_for gs) (dg_spec_step S_st a d g)
-                        = dg_spec_step S_abs a (fun_of_exec_dg_st_for gs d) (fun_of_exec_dg_st_for gs g)"
-    and Henter: "\<And>ci d g. map_prod (fun_of_exec_dg_st_for gs) (fun_of_exec_dg_st_for gs) (dgs_enter S_st ci d g)
-                        = dgs_enter S_abs ci (fun_of_exec_dg_st_for gs d) (fun_of_exec_dg_st_for gs g)"
-    and Hcomb: "\<And>ci dc de g. map_prod (fun_of_exec_dg_st_for gs) (fun_of_exec_dg_st_for gs) (dgs_combine S_st ci dc de g)
-                        = dgs_combine S_abs ci (fun_of_exec_dg_st_for gs dc) (fun_of_exec_dg_st_for gs de) (fun_of_exec_dg_st_for gs g)"
-    and Hcont: "\<And>ci d g. fun_of_exec_dg_st_for gs (caller_cont S_st ci d g)
-                        = caller_cont S_abs ci (fun_of_exec_dg_st_for gs d) (fun_of_exec_dg_st_for gs g)"
-    and pp_st: "part_post_solution
-                  (dg_gen_of S_st (compile_prog Pi ps) bot0 s0d s0g) x sigma_st vars"
-    and wf: "wf_compile_input gs Pi ps"
-    and cover: "vars_cover (compile_prog Pi ps) vars"
-    and finI: "finite (intra (compile_prog Pi ps))"
-    and finC: "finite (calls (compile_prog Pi ps))"
-    and sound0: "S0 \<subseteq> gammaDG (fun_of_exec_dg_st_for gs s0d) (fun_of_exec_dg_st_for gs s0g)"
-  shows "ltr_collect gs (compile_prog Pi ps) S0 v
-           \<subseteq> sound_dg_spec.dg_gamma gammaDG (fun_of_dg_st_for gs \<circ> sigma_st) v"
-proof -
-  interpret sds: sound_dg_spec_ltr_for S_abs gammaDG gs by (rule sds)
-  have pp_abs: "part_post_solution
-      (dg_gen_of S_abs (compile_prog Pi ps)
-         (fun_of_exec_dg_st_for gs bot0) (fun_of_exec_dg_st_for gs s0d) (fun_of_exec_dg_st_for gs s0g))
-      x (fun_of_dg_st_for gs \<circ> sigma_st) vars"
-    by (rule part_post_solution_dg_st_to_abs_for[OF Hstep Henter Hcomb Hcont pp_st])
-  have pp_gen: "part_post_solution
-      (sds.dg_gen (compile_prog Pi ps)
-         (fun_of_exec_dg_st_for gs bot0) (fun_of_exec_dg_st_for gs s0d) (fun_of_exec_dg_st_for gs s0g))
-      x (fun_of_dg_st_for gs \<circ> sigma_st) vars"
-    using pp_abs unfolding sds.dg_gen_of_eq_for .
-  show ?thesis
-    by (rule sds.dg_post_solution_collect_sound_ltr_for[OF pp_gen cover finI finC sound0])
-qed
 
 section \<open>Registered executable D/G analyses\<close>
 
 subsection \<open>Executable-to-abstract transport for diagonal unit specifications\<close>
 
 text \<open>
-  For a diagonal (unit) D/G analysis the two transport-commutation hypotheses of
-  \<^theory_text>\<open>dg_exec_run_source_sound_for\<close> are \<^emph>\<open>derivable\<close>: the combine side holds
+  For a diagonal (unit) D/G analysis the packaging-correspondence obligations
+  \<open>sound_dg_spec_st\<close> below discharges are \<^emph>\<open>derivable\<close>: the combine side holds
   unconditionally, and the step side reduces to the single primitive per-action
   commutation of the executable transfer \<^term>\<open>tf_st\<close> with its abstract image
-  \<^term>\<open>apply_tf tf\<close>.  The generic lemmas keep this transport argument in the
+  \<^term>\<open>apply_tf tf\<close>.  The generic lemmas keep this argument in the
   registration interface rather than in individual analyses.
 \<close>
 
@@ -287,12 +181,124 @@ text \<open>
   no \<open>dg_spec_step\<close>/\<open>fun_of_dg_st_for\<close>/\<open>part_post_solution\<close> plumbing reaches the
   caller.
 \<close>
-definition gamma :: "(pp \<times> unit + unit \<Rightarrow> ('a exec_dg_st, 'a exec_dg_st) dg_state) \<Rightarrow> pp \<Rightarrow> store set"
-  where "gamma sigma_st v = sound_dg_spec.dg_gamma (gamma_unit gs) (fun_of_dg_st_for gs \<circ> sigma_st) v"
+text \<open>
+  \<open>gamma_unit_exec\<close> is the executable-carrier sibling of \<open>gamma_unit gs\<close>, reading
+  its two arguments back through \<open>fun_of_exec_dg_st_for\<close> first --- the diagonal
+  analogue of \<^theory>\<open>Voblint_Exec.DG_Base_Exec\<close>'s \<open>gamma_exec\<close>. \<open>sound_dg_spec_st\<close>
+  below pulls \<open>sound_dg_spec\<close> back along it from the abstract carrier using only
+  the two primitive commute facts this locale already carries, exactly as
+  \<^locale>\<open>routed_dg_domain_exec\<close>'s own \<open>sound_dg_spec_st\<close> does for the lifted
+  Base-style spec; \<open>run_source_sound\<close>/\<open>collect_sound\<close> then interpret
+  \<open>sound_dg_spec_ltr_for\<close> directly at this carrier, so no solved system is ever
+  transported to the abstract one.
+\<close>
 
-lemma sds: "sound_dg_spec_ltr_for (unit_dg_spec_for gs tf) (gamma_unit gs) gs"
-  unfolding sound_dg_spec_ltr_for_def
+definition gamma_unit_exec :: "'a exec_dg_st \<Rightarrow> 'a exec_dg_st \<Rightarrow> store set" where
+  "gamma_unit_exec d g = gamma_unit gs (fun_of_exec_dg_st_for gs d) (fun_of_exec_dg_st_for gs g)"
+
+lemma sds_abs: "sound_dg_spec (unit_dg_spec_for gs tf) (gamma_unit gs) gs"
   by (rule sound_dg_spec_unit_for[OF tf_sound reserved])
+
+text \<open>Locale-concrete restatements of \<open>unit_dg_Hstep_for\<close>/etc, with \<open>gs\<close>/\<open>tf\<close>/
+  \<open>tf_st\<close>/\<open>enter_st\<close> already this locale's own fixed values rather than left
+  schematic --- the same role \<^locale>\<open>routed_dg_domain_exec\<close>'s
+  \<open>Hstep_lifted_for\<close>/etc play for the lifted Base-style spec.\<close>
+
+lemma Hstep_unit_for:
+  "map_prod (fun_of_exec_dg_st_for gs) (fun_of_exec_dg_st_for gs)
+     (dg_spec_step (unit_dg_spec_st_for gs tf_st enter_st) a d g)
+   = dg_spec_step (unit_dg_spec_for gs tf) a
+       (fun_of_exec_dg_st_for gs d) (fun_of_exec_dg_st_for gs g)"
+  by (rule unit_dg_Hstep_for[OF tf_commute])
+
+lemma Henter_unit_for:
+  "map_prod (fun_of_exec_dg_st_for gs) (fun_of_exec_dg_st_for gs)
+     (dgs_enter (unit_dg_spec_st_for gs tf_st enter_st) ci d g)
+   = dgs_enter (unit_dg_spec_for gs tf) ci
+       (fun_of_exec_dg_st_for gs d) (fun_of_exec_dg_st_for gs g)"
+  by (rule unit_dg_Henter_for[OF enter_commute])
+
+lemma Hcomb_unit_for:
+  "map_prod (fun_of_exec_dg_st_for gs) (fun_of_exec_dg_st_for gs)
+     (dgs_combine (unit_dg_spec_st_for gs tf_st enter_st) ci dc de g)
+   = dgs_combine (unit_dg_spec_for gs tf) ci
+       (fun_of_exec_dg_st_for gs dc) (fun_of_exec_dg_st_for gs de) (fun_of_exec_dg_st_for gs g)"
+  by (rule unit_dg_Hcomb_for)
+
+lemma Hcont_unit_for:
+  "fun_of_exec_dg_st_for gs (caller_cont (unit_dg_spec_st_for gs tf_st enter_st) ci d g)
+   = caller_cont (unit_dg_spec_for gs tf) ci
+       (fun_of_exec_dg_st_for gs d) (fun_of_exec_dg_st_for gs g)"
+  by (rule unit_dg_Hcont_for)
+
+theorem sound_dg_spec_st: "sound_dg_spec (unit_dg_spec_st_for gs tf_st enter_st) gamma_unit_exec gs"
+proof unfold_locales
+  let ?f = "fun_of_exec_dg_st_for gs"
+  fix d d' g g' :: "'a exec_dg_st"
+  assume "d \<le> d'" "g \<le> g'"
+  then show "gamma_unit_exec d g \<subseteq> gamma_unit_exec d' g'"
+    unfolding gamma_unit_exec_def
+    by (intro sound_dg_spec.gammaDG_mono[OF sds_abs]
+          fun_of_resolved_st_q_for_mono[folded fun_of_exec_dg_st_for_def])
+next
+  let ?f = "fun_of_exec_dg_st_for gs"
+  let ?S = "unit_dg_spec_st_for gs tf_st enter_st"
+  let ?A = "unit_dg_spec_for gs tf"
+  fix a :: edge_action and d g :: "'a exec_dg_st"
+  obtain g1 d1 where st: "dg_spec_step ?S a d g = (g1, d1)"
+    by (cases "dg_spec_step ?S a d g")
+  have "dg_spec_step ?A a (?f d) (?f g) = (?f g1, ?f d1)"
+    using Hstep_unit_for[of a d g] st by simp
+  with sound_dg_spec.step_sound[OF sds_abs, of a "?f d" "?f g"]
+  show "edge_collect a (gamma_unit_exec d g)
+          \<subseteq> (case dg_spec_step ?S a d g of (g', d') \<Rightarrow> gamma_unit_exec d' g')"
+    unfolding gamma_unit_exec_def st by simp
+next
+  let ?f = "fun_of_exec_dg_st_for gs"
+  let ?S = "unit_dg_spec_st_for gs tf_st enter_st"
+  fix s :: store and dc g :: "'a exec_dg_st" and ci :: call_info
+  assume "s \<in> gamma_unit_exec dc g"
+  then show "s \<in> gamma_unit_exec (dgs_caller_cont ?S ci dc g) g"
+    unfolding gamma_unit_exec_def
+    using sound_dg_spec.caller_cont_sound[OF sds_abs, of s "?f dc" "?f g" ci]
+      Hcont_unit_for[of ci dc g] by simp
+next
+  let ?f = "fun_of_exec_dg_st_for gs"
+  let ?S = "unit_dg_spec_st_for gs tf_st enter_st"
+  let ?A = "unit_dg_spec_for gs tf"
+  fix s t :: store and dcont de g :: "'a exec_dg_st" and ci :: call_info
+  assume s: "s \<in> gamma_unit_exec dcont g" and t: "t \<in> gamma_unit_exec de g"
+  obtain g1 d1 where cmb: "dgs_combine ?S ci dcont de g = (g1, d1)"
+    by (cases "dgs_combine ?S ci dcont de g")
+  have "dgs_combine ?A ci (?f dcont) (?f de) (?f g) = (?f g1, ?f d1)"
+    using Hcomb_unit_for[of ci dcont de g] cmb by simp
+  with sound_dg_spec.combine_sound[OF sds_abs, of s "?f dcont" "?f g" t "?f de" ci] s t
+  show "combine_collect gs (ci_dst ci) s t
+          \<in> (case dgs_combine ?S ci dcont de g of (g', d') \<Rightarrow> gamma_unit_exec d' g')"
+    unfolding gamma_unit_exec_def cmb by simp
+next
+  let ?f = "fun_of_exec_dg_st_for gs"
+  let ?S = "unit_dg_spec_st_for gs tf_st enter_st"
+  let ?A = "unit_dg_spec_for gs tf"
+  fix s :: store and dc g :: "'a exec_dg_st" and ci :: call_info
+  assume s: "s \<in> gamma_unit_exec dc g"
+  obtain g1 d1 where en: "dgs_enter ?S ci dc g = (g1, d1)"
+    by (cases "dgs_enter ?S ci dc g")
+  have "dgs_enter ?A ci (?f dc) (?f g) = (?f g1, ?f d1)"
+    using Henter_unit_for[of ci dc g] en by simp
+  with sound_dg_spec.enter_sound[OF sds_abs, of s "?f dc" "?f g" ci] s
+  show "call_enter gs (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci)) s
+          \<in> (case dgs_enter ?S ci dc g of (g', d') \<Rightarrow> gamma_unit_exec d' g')"
+    unfolding gamma_unit_exec_def en by simp
+qed
+
+interpretation sds: sound_dg_spec_ltr_for
+  "unit_dg_spec_st_for gs tf_st enter_st" gamma_unit_exec gs
+  unfolding sound_dg_spec_ltr_for_def
+  by (rule sound_dg_spec_st)
+
+definition gamma :: "(pp \<times> unit + unit \<Rightarrow> ('a exec_dg_st, 'a exec_dg_st) dg_state) \<Rightarrow> pp \<Rightarrow> store set"
+  where "gamma sigma_st v = sound_dg_spec.dg_gamma gamma_unit_exec sigma_st v"
 
 theorem run_source_sound:
   fixes Pi :: proc_table and ps and s0 t :: store and bot0 s0d s0g :: "'a exec_dg_st"
@@ -301,7 +307,7 @@ theorem run_source_sound:
     and cover: "vars_cover (compile_prog Pi ps) (fst (solve eqs x))"
     and finI: "finite (intra (compile_prog Pi ps))"
     and finC: "finite (calls (compile_prog Pi ps))"
-    and sound0: "S0 \<subseteq> gamma_unit gs (fun_of_exec_dg_st_for gs s0d) (fun_of_exec_dg_st_for gs s0g)"
+    and sound0: "S0 \<subseteq> gamma_unit_exec s0d s0g"
     and s0mem: "s0 \<in> S0"
     and run: "star (pstep gs Pi) (main_body Pi, s0, []) (residual, t, frs)"
   shows "\<exists>v stk. csim Pi (compile_prog Pi ps) (residual, t, frs) (v, t, stk)
@@ -310,12 +316,10 @@ proof -
   have pp_st: "part_post_solution eqs x (snd (solve eqs x)) (fst (solve eqs x))"
     by (rule solver_pps[OF SOLVE])
   show ?thesis
-    unfolding gamma_def eqs_def
-    by (rule dg_exec_run_source_sound_for
-          [OF sds unit_dg_Hstep_for[OF tf_commute]
-              unit_dg_Henter_for[OF enter_commute] unit_dg_Hcomb_for unit_dg_Hcont_for
-              pp_st[unfolded eqs_def] wf cover[unfolded eqs_def]
-              finI finC sound0 s0mem run])
+    unfolding gamma_def eqs_def sds.dg_gen_of_eq_for
+    by (rule sds.dg_run_source_sound_abs_for
+          [OF wf pp_st[unfolded eqs_def sds.dg_gen_of_eq_for]
+              cover[unfolded eqs_def sds.dg_gen_of_eq_for] finI finC sound0 s0mem run])
 qed
 
 text \<open>
@@ -333,154 +337,36 @@ theorem collect_sound:
     and cover: "vars_cover (compile_prog Pi ps) (fst (solve eqs x))"
     and finI: "finite (intra (compile_prog Pi ps))"
     and finC: "finite (calls (compile_prog Pi ps))"
-    and sound0: "S0 \<subseteq> gamma_unit gs (fun_of_exec_dg_st_for gs s0d) (fun_of_exec_dg_st_for gs s0g)"
+    and sound0: "S0 \<subseteq> gamma_unit_exec s0d s0g"
   shows "ltr_collect gs (compile_prog Pi ps) S0 v \<subseteq> gamma (snd (solve eqs x)) v"
 proof -
   have pp_st: "part_post_solution eqs x (snd (solve eqs x)) (fst (solve eqs x))"
     by (rule solver_pps[OF SOLVE])
   show ?thesis
-    unfolding gamma_def eqs_def
-    by (rule dg_exec_collect_sound_for
-          [OF sds unit_dg_Hstep_for[OF tf_commute]
-              unit_dg_Henter_for[OF enter_commute] unit_dg_Hcomb_for unit_dg_Hcont_for
-              pp_st[unfolded eqs_def] wf cover[unfolded eqs_def]
-              finI finC sound0])
+    unfolding gamma_def eqs_def sds.dg_gen_of_eq_for
+    by (rule sds.dg_post_solution_collect_sound_ltr_for
+          [OF pp_st[unfolded eqs_def sds.dg_gen_of_eq_for]
+              cover[unfolded eqs_def sds.dg_gen_of_eq_for] finI finC sound0])
 qed
 
 end
 
 section \<open>Registered executable D/G analyses, lifted Base-style local carrier\<close>
 
-subsection \<open>Executable-to-abstract transport for the lifted diagonal carrier\<close>
-
-text \<open>
-  Lifted siblings of \<open>dg_exec_run_source_sound_for\<close>/\<open>dg_exec_collect_sound_for\<close>,
-  reachability-lifted at the local carrier so a Base-style analysis (whole abstract
-  state as \<open>D\<close>, no VIMP-global split into a solver-global unknown) can supply its own
-  D and G types independently -- only their common \<open>exec_dg_st lifted\<close> wrapper shape,
-  read back through the same classifier \<open>gs\<close>, is fixed here.  Every step is a direct
-  citation of the already-proved generic transport
-  \<open>part_post_solution_dg_st_to_abs_lifted_for\<close> and the classifier-parametric semantic
-  core \<open>sound_dg_spec_ltr_for.dg_run_source_sound_abs_for\<close>; no trace or DG semantic
-  argument is re-derived.
-\<close>
-
-theorem dg_exec_run_source_sound_lifted_for:
-  fixes Pi :: proc_table and s0 t :: store
-    and S_st :: "('d1::bounded_semilattice_sup_bot exec_dg_st lifted,
-                   'g1::bounded_semilattice_sup_bot exec_dg_st lifted) dg_spec"
-    and S_abs :: "('d1 abs_state lifted, 'g1 abs_state lifted) dg_spec"
-    and gammaDG :: "'d1 abs_state lifted \<Rightarrow> 'g1 abs_state lifted \<Rightarrow> store set"
-    and bot0 s0d :: "'d1 exec_dg_st lifted" and s0g :: "'g1 exec_dg_st lifted"
-    and gs :: "vname \<Rightarrow> bool"
-  assumes sds: "sound_dg_spec_ltr_for S_abs gammaDG gs"
-    and Hstep: "\<And>a d g. map_prod (map_lift (fun_of_exec_dg_st_for gs)) (map_lift (fun_of_exec_dg_st_for gs))
-                        (dg_spec_step S_st a d g)
-                      = dg_spec_step S_abs a (map_lift (fun_of_exec_dg_st_for gs) d) (map_lift (fun_of_exec_dg_st_for gs) g)"
-    and Henter: "\<And>ci d g. map_prod (map_lift (fun_of_exec_dg_st_for gs)) (map_lift (fun_of_exec_dg_st_for gs))
-                        (dgs_enter S_st ci d g)
-                      = dgs_enter S_abs ci (map_lift (fun_of_exec_dg_st_for gs) d) (map_lift (fun_of_exec_dg_st_for gs) g)"
-    and Hcomb: "\<And>ci dc de g. map_prod (map_lift (fun_of_exec_dg_st_for gs)) (map_lift (fun_of_exec_dg_st_for gs))
-                        (dgs_combine S_st ci dc de g)
-                      = dgs_combine S_abs ci (map_lift (fun_of_exec_dg_st_for gs) dc)
-                          (map_lift (fun_of_exec_dg_st_for gs) de) (map_lift (fun_of_exec_dg_st_for gs) g)"
-    and Hcont: "\<And>ci d g. map_lift (fun_of_exec_dg_st_for gs) (caller_cont S_st ci d g)
-                      = caller_cont S_abs ci (map_lift (fun_of_exec_dg_st_for gs) d)
-                          (map_lift (fun_of_exec_dg_st_for gs) g)"
-    and pp_st: "part_post_solution
-                  (dg_gen_of S_st (compile_prog Pi ps) bot0 s0d s0g) x sigma_st vars"
-    and wf: "wf_compile_input gs Pi ps"
-    and cover: "vars_cover (compile_prog Pi ps) vars"
-    and finI: "finite (intra (compile_prog Pi ps))"
-    and finC: "finite (calls (compile_prog Pi ps))"
-    and sound0: "S0 \<subseteq> gammaDG (map_lift (fun_of_exec_dg_st_for gs) s0d) (map_lift (fun_of_exec_dg_st_for gs) s0g)"
-    and s0mem: "s0 \<in> S0"
-    and run: "star (pstep gs Pi) (main_body Pi, s0, []) (residual, t, frs)"
-  shows "\<exists>v stk. csim Pi (compile_prog Pi ps) (residual, t, frs) (v, t, stk)
-                 \<and> t \<in> sound_dg_spec.dg_gamma gammaDG
-                     (fun_of_dg_st_gen (map_lift (fun_of_exec_dg_st_for gs)) (map_lift (fun_of_exec_dg_st_for gs)) \<circ> sigma_st) v"
-proof -
-  interpret sds: sound_dg_spec_ltr_for S_abs gammaDG gs by (rule sds)
-  have pp_abs: "part_post_solution
-      (dg_gen_of S_abs (compile_prog Pi ps)
-         (map_lift (fun_of_exec_dg_st_for gs) bot0) (map_lift (fun_of_exec_dg_st_for gs) s0d)
-         (map_lift (fun_of_exec_dg_st_for gs) s0g))
-      x (fun_of_dg_st_gen (map_lift (fun_of_exec_dg_st_for gs)) (map_lift (fun_of_exec_dg_st_for gs)) \<circ> sigma_st) vars"
-    by (rule part_post_solution_dg_st_to_abs_lifted_for[folded fun_of_exec_dg_st_for_def, OF Hstep Henter Hcomb Hcont pp_st])
-  have pp_gen: "part_post_solution
-      (sds.dg_gen (compile_prog Pi ps)
-         (map_lift (fun_of_exec_dg_st_for gs) bot0) (map_lift (fun_of_exec_dg_st_for gs) s0d)
-         (map_lift (fun_of_exec_dg_st_for gs) s0g))
-      x (fun_of_dg_st_gen (map_lift (fun_of_exec_dg_st_for gs)) (map_lift (fun_of_exec_dg_st_for gs)) \<circ> sigma_st) vars"
-    using pp_abs unfolding sds.dg_gen_of_eq_for .
-  show ?thesis
-    by (rule sds.dg_run_source_sound_abs_for[OF wf pp_gen cover finI finC sound0 s0mem run])
-qed
-
-theorem dg_exec_collect_sound_lifted_for:
-  fixes Pi :: proc_table and v :: pp
-    and S_st :: "('d1::bounded_semilattice_sup_bot exec_dg_st lifted,
-                   'g1::bounded_semilattice_sup_bot exec_dg_st lifted) dg_spec"
-    and S_abs :: "('d1 abs_state lifted, 'g1 abs_state lifted) dg_spec"
-    and gammaDG :: "'d1 abs_state lifted \<Rightarrow> 'g1 abs_state lifted \<Rightarrow> store set"
-    and bot0 s0d :: "'d1 exec_dg_st lifted" and s0g :: "'g1 exec_dg_st lifted"
-    and gs :: "vname \<Rightarrow> bool"
-  assumes sds: "sound_dg_spec_ltr_for S_abs gammaDG gs"
-    and Hstep: "\<And>a d g. map_prod (map_lift (fun_of_exec_dg_st_for gs)) (map_lift (fun_of_exec_dg_st_for gs))
-                        (dg_spec_step S_st a d g)
-                      = dg_spec_step S_abs a (map_lift (fun_of_exec_dg_st_for gs) d) (map_lift (fun_of_exec_dg_st_for gs) g)"
-    and Henter: "\<And>ci d g. map_prod (map_lift (fun_of_exec_dg_st_for gs)) (map_lift (fun_of_exec_dg_st_for gs))
-                        (dgs_enter S_st ci d g)
-                      = dgs_enter S_abs ci (map_lift (fun_of_exec_dg_st_for gs) d) (map_lift (fun_of_exec_dg_st_for gs) g)"
-    and Hcomb: "\<And>ci dc de g. map_prod (map_lift (fun_of_exec_dg_st_for gs)) (map_lift (fun_of_exec_dg_st_for gs))
-                        (dgs_combine S_st ci dc de g)
-                      = dgs_combine S_abs ci (map_lift (fun_of_exec_dg_st_for gs) dc)
-                          (map_lift (fun_of_exec_dg_st_for gs) de) (map_lift (fun_of_exec_dg_st_for gs) g)"
-    and Hcont: "\<And>ci d g. map_lift (fun_of_exec_dg_st_for gs) (caller_cont S_st ci d g)
-                      = caller_cont S_abs ci (map_lift (fun_of_exec_dg_st_for gs) d)
-                          (map_lift (fun_of_exec_dg_st_for gs) g)"
-    and pp_st: "part_post_solution
-                  (dg_gen_of S_st (compile_prog Pi ps) bot0 s0d s0g) x sigma_st vars"
-    and wf: "wf_compile_input gs Pi ps"
-    and cover: "vars_cover (compile_prog Pi ps) vars"
-    and finI: "finite (intra (compile_prog Pi ps))"
-    and finC: "finite (calls (compile_prog Pi ps))"
-    and sound0: "S0 \<subseteq> gammaDG (map_lift (fun_of_exec_dg_st_for gs) s0d) (map_lift (fun_of_exec_dg_st_for gs) s0g)"
-  shows "ltr_collect gs (compile_prog Pi ps) S0 v
-           \<subseteq> sound_dg_spec.dg_gamma gammaDG
-               (fun_of_dg_st_gen (map_lift (fun_of_exec_dg_st_for gs)) (map_lift (fun_of_exec_dg_st_for gs)) \<circ> sigma_st) v"
-proof -
-  interpret sds: sound_dg_spec_ltr_for S_abs gammaDG gs by (rule sds)
-  have pp_abs: "part_post_solution
-      (dg_gen_of S_abs (compile_prog Pi ps)
-         (map_lift (fun_of_exec_dg_st_for gs) bot0) (map_lift (fun_of_exec_dg_st_for gs) s0d)
-         (map_lift (fun_of_exec_dg_st_for gs) s0g))
-      x (fun_of_dg_st_gen (map_lift (fun_of_exec_dg_st_for gs)) (map_lift (fun_of_exec_dg_st_for gs)) \<circ> sigma_st) vars"
-    by (rule part_post_solution_dg_st_to_abs_lifted_for[folded fun_of_exec_dg_st_for_def, OF Hstep Henter Hcomb Hcont pp_st])
-  have pp_gen: "part_post_solution
-      (sds.dg_gen (compile_prog Pi ps)
-         (map_lift (fun_of_exec_dg_st_for gs) bot0) (map_lift (fun_of_exec_dg_st_for gs) s0d)
-         (map_lift (fun_of_exec_dg_st_for gs) s0g))
-      x (fun_of_dg_st_gen (map_lift (fun_of_exec_dg_st_for gs)) (map_lift (fun_of_exec_dg_st_for gs)) \<circ> sigma_st) vars"
-    using pp_abs unfolding sds.dg_gen_of_eq_for .
-  show ?thesis
-    by (rule sds.dg_post_solution_collect_sound_ltr_for[OF pp_gen cover finI finC sound0])
-qed
 
 subsection \<open>Registration locale for the lifted Base-style diagonal analysis\<close>
 
 text \<open>
   The canonical executable Base analysis: whole-state \<open>D\<close> lifted for reachability,
-  \<open>G\<close> left an independent, otherwise-unconstrained \<open>bounded_semilattice_sup_bot\<close> type
-  (never forced to equal \<open>D\<close>'s content type or to \<open>unit\<close>) so this locale does not
-  itself claim any particular \<open>G\<close> shape is fundamental -- only that the executable
-  solver route \<open>dg_gen_of\<close> needs a common \<open>exec_dg_st lifted\<close> wrapper for both sides,
-  the same plumbing constraint \<open>unit_dg_exec_analysis\<close> already carries.  A registered
-  domain supplies only \<open>tf\<close>/\<open>tf_st\<close>/\<open>enter_st\<close>/\<open>empty_pred\<close> and their three primitive
-  commute facts; the packaging-correspondence proof itself is \<^theory>\<open>Voblint_Exec.DG_Base_Exec\<close>'s
-  \<open>base_dg_spec_st_for_lifted_dg_spec_step_commute\<close>/\<open>_dgs_enter_commute\<close>/\<open>_dgs_combine_commute\<close>,
-  cited directly -- unlike \<open>unit_dg_exec_analysis\<close>, no intermediate \<open>unit_dg_H*_for\<close>
-  layer is needed because the Base packaging proof already has exactly this shape.
+  \<open>G\<close> the same type as \<open>D\<close> -- the only shape either registered instance
+  (Sign, Parity) actually needs, and the shape \<^locale>\<open>routed_dg_domain_exec\<close>
+  (\<^theory>\<open>Voblint_Exec.DG_Base_Exec\<close>) already proves sound at the executable
+  carrier. A registered domain supplies only \<open>tf\<close>/\<open>tf_st\<close>/\<open>enter_st\<close>/\<open>empty_pred\<close>
+  and their three primitive commute facts; this locale's \<open>sublocale\<close> discharges
+  \<^locale>\<open>routed_dg_domain_exec\<close>'s three assumptions from exactly those facts,
+  and its own \<open>sound_dg_spec_st\<close> theorem does the rest: no solved system is ever
+  transported from the executable carrier to the abstract one, so this
+  registration locale needs no separate post-solution transport theorem.
 \<close>
 
 locale base_dg_exec_analysis =
@@ -490,16 +376,16 @@ locale base_dg_exec_analysis =
     and enter_st :: "call_info \<Rightarrow> 'a exec_dg_st \<Rightarrow> 'a exec_dg_st"
     and empty_pred :: "'a exec_dg_st \<Rightarrow> bool"
     and solve :: "(pp \<times> unit, unit,
-                    ('a exec_dg_st lifted, 'g::bounded_semilattice_sup_bot exec_dg_st lifted) dg_state) eqsT
+                    ('a exec_dg_st lifted, 'a exec_dg_st lifted) dg_state) eqsT
                    \<Rightarrow> pp \<times> unit
                    \<Rightarrow> (pp \<times> unit) set \<times>
                        (pp \<times> unit + unit \<Rightarrow>
-                         ('a exec_dg_st lifted, 'g exec_dg_st lifted) dg_state)"
-    and solve_c :: "(pp \<times> unit, unit, ('a exec_dg_st lifted, 'g exec_dg_st lifted) dg_state) eqsT
+                         ('a exec_dg_st lifted, 'a exec_dg_st lifted) dg_state)"
+    and solve_c :: "(pp \<times> unit, unit, ('a exec_dg_st lifted, 'a exec_dg_st lifted) dg_state) eqsT
                    \<Rightarrow> pp \<times> unit
                    \<Rightarrow> ((pp \<times> unit) set \<times>
                        (pp \<times> unit + unit \<Rightarrow>
-                         ('a exec_dg_st lifted, 'g exec_dg_st lifted) dg_state)) option"
+                         ('a exec_dg_st lifted, 'a exec_dg_st lifted) dg_state)) option"
   assumes tf_sound:
       "sound_transfer_for gs tf"
     and reserved:
@@ -521,24 +407,41 @@ locale base_dg_exec_analysis =
 begin
 
 text \<open>
-  \<open>gamma\<close> mirrors \<open>unit_dg_exec_analysis.gamma\<close> exactly, reading the lifted executable
-  post-solution back through \<open>fun_of_dg_st_gen\<close> at the diagonal lifted reader and
-  concretizing via \<open>gamma_dg_base\<close> -- the reachability stays lifted end-to-end from the
-  solver's raw \<open>exec_dg_st lifted\<close> value through to this concretization call; nothing
-  here converts a \<open>Bot\<close> solver value back to a plain \<open>abs_state\<close> bottom first.
+  The packaging correspondence and its executable-carrier soundness pullback
+  are \<open>routed_dg_domain_exec\<close>'s own content (\<open>Voblint_Exec.DG_Base_Exec\<close>):
+  discharging its three assumptions from this locale's own commute facts gets
+  \<open>sound_dg_spec_st\<close> for free, so no transport of a solved system between
+  carriers is needed here at all -- the solver's own executable post-solution
+  already satisfies \<open>sound_dg_spec_ltr_for\<close>'s \<open>pp\<close> premise directly, once
+  \<open>sds\<close> below interprets that locale at the executable carrier.
+\<close>
+
+sublocale routed_dg_domain_exec gs empty_pred tf_st enter_st tf
+  by unfold_locales
+     (rule tf_commute[unfolded fun_of_exec_dg_st_for_def],
+      rule enter_commute[unfolded fun_of_exec_dg_st_for_def],
+      rule is_bot_exact[unfolded fun_of_exec_dg_st_for_def])
+
+text \<open>
+  \<open>gamma\<close> reads the executable post-solution back through \<open>gamma_exec\<close> ---
+  \<^locale>\<open>routed_dg_domain_exec\<close>'s own executable-carrier concretization ---
+  directly, with no transport to the abstract carrier first.
 \<close>
 definition gamma ::
-  "(pp \<times> unit + unit \<Rightarrow> ('a exec_dg_st lifted, 'g exec_dg_st lifted) dg_state) \<Rightarrow> pp \<Rightarrow> store set"
-  where "gamma sigma_st v = sound_dg_spec.dg_gamma gamma_dg_base
-           (fun_of_dg_st_gen (map_lift (fun_of_exec_dg_st_for gs)) (map_lift (fun_of_exec_dg_st_for gs)) \<circ> sigma_st) v"
+  "(pp \<times> unit + unit \<Rightarrow> ('a exec_dg_st lifted, 'a exec_dg_st lifted) dg_state) \<Rightarrow> pp \<Rightarrow> store set"
+  where "gamma sigma_st v = sound_dg_spec.dg_gamma gamma_exec sigma_st v"
 
-lemma sds: "sound_dg_spec_ltr_for (base_dg_spec_for_lifted gs is_empty_state tf) gamma_dg_base gs"
-  unfolding sound_dg_spec_ltr_for_def
+lemma sds_abs: "sound_dg_spec (base_dg_spec_for_lifted gs is_empty_state tf) gamma_dg_base gs"
   by (rule base_dg_spec_sound[OF tf_sound is_empty_state_gamma_state_empty])
+
+interpretation sds: sound_dg_spec_ltr_for
+  "base_dg_spec_st_for_lifted gs empty_pred tf_st enter_st" gamma_exec gs
+  unfolding sound_dg_spec_ltr_for_def
+  by (rule sound_dg_spec_st[OF sds_abs])
 
 theorem run_source_sound:
   fixes Pi :: proc_table and ps and s0 t :: store
-    and bot0 s0d :: "'a exec_dg_st lifted" and s0g :: "'g exec_dg_st lifted"
+    and bot0 s0d s0g :: "'a exec_dg_st lifted"
   defines "eqs \<equiv> dg_gen_of (base_dg_spec_st_for_lifted gs empty_pred tf_st enter_st)
                    (compile_prog Pi ps) bot0 s0d s0g"
   assumes SOLVE: "solve_c eqs x \<noteq> None"
@@ -546,7 +449,7 @@ theorem run_source_sound:
     and cover: "vars_cover (compile_prog Pi ps) (fst (solve eqs x))"
     and finI: "finite (intra (compile_prog Pi ps))"
     and finC: "finite (calls (compile_prog Pi ps))"
-    and sound0: "S0 \<subseteq> gamma_dg_base (map_lift (fun_of_exec_dg_st_for gs) s0d) (map_lift (fun_of_exec_dg_st_for gs) s0g)"
+    and sound0: "S0 \<subseteq> gamma_exec s0d s0g"
     and s0mem: "s0 \<in> S0"
     and run: "star (pstep gs Pi) (main_body Pi, s0, []) (residual, t, frs)"
   shows "\<exists>v stk. csim Pi (compile_prog Pi ps) (residual, t, frs) (v, t, stk)
@@ -555,14 +458,10 @@ proof -
   have pp_st: "part_post_solution eqs x (snd (solve eqs x)) (fst (solve eqs x))"
     by (rule solver_pps[OF SOLVE])
   show ?thesis
-    unfolding gamma_def eqs_def
-    by (rule dg_exec_run_source_sound_lifted_for
-          [OF sds base_dg_spec_st_for_lifted_dg_spec_step_commute[OF tf_commute is_bot_exact]
-              base_dg_spec_st_for_lifted_dgs_enter_commute[OF enter_commute is_bot_exact]
-              base_dg_spec_st_for_lifted_dgs_combine_commute[OF is_bot_exact]
-              base_dg_spec_st_for_lifted_dgs_caller_cont_commute
-              pp_st[unfolded eqs_def] wf cover[unfolded eqs_def]
-              finI finC sound0 s0mem run])
+    unfolding gamma_def eqs_def sds.dg_gen_of_eq_for
+    by (rule sds.dg_run_source_sound_abs_for
+          [OF wf pp_st[unfolded eqs_def sds.dg_gen_of_eq_for]
+              cover[unfolded eqs_def sds.dg_gen_of_eq_for] finI finC sound0 s0mem run])
 qed
 
 text \<open>
@@ -574,7 +473,7 @@ text \<open>
 
 theorem collect_sound:
   fixes Pi :: proc_table and ps and v :: pp
-    and bot0 s0d :: "'a exec_dg_st lifted" and s0g :: "'g exec_dg_st lifted"
+    and bot0 s0d s0g :: "'a exec_dg_st lifted"
   defines "eqs \<equiv> dg_gen_of (base_dg_spec_st_for_lifted gs empty_pred tf_st enter_st)
                    (compile_prog Pi ps) bot0 s0d s0g"
   assumes SOLVE: "solve_c eqs x \<noteq> None"
@@ -582,20 +481,16 @@ theorem collect_sound:
     and cover: "vars_cover (compile_prog Pi ps) (fst (solve eqs x))"
     and finI: "finite (intra (compile_prog Pi ps))"
     and finC: "finite (calls (compile_prog Pi ps))"
-    and sound0: "S0 \<subseteq> gamma_dg_base (map_lift (fun_of_exec_dg_st_for gs) s0d) (map_lift (fun_of_exec_dg_st_for gs) s0g)"
+    and sound0: "S0 \<subseteq> gamma_exec s0d s0g"
   shows "ltr_collect gs (compile_prog Pi ps) S0 v \<subseteq> gamma (snd (solve eqs x)) v"
 proof -
   have pp_st: "part_post_solution eqs x (snd (solve eqs x)) (fst (solve eqs x))"
     by (rule solver_pps[OF SOLVE])
   show ?thesis
-    unfolding gamma_def eqs_def
-    by (rule dg_exec_collect_sound_lifted_for
-          [OF sds base_dg_spec_st_for_lifted_dg_spec_step_commute[OF tf_commute is_bot_exact]
-              base_dg_spec_st_for_lifted_dgs_enter_commute[OF enter_commute is_bot_exact]
-              base_dg_spec_st_for_lifted_dgs_combine_commute[OF is_bot_exact]
-              base_dg_spec_st_for_lifted_dgs_caller_cont_commute
-              pp_st[unfolded eqs_def] wf cover[unfolded eqs_def]
-              finI finC sound0])
+    unfolding gamma_def eqs_def sds.dg_gen_of_eq_for
+    by (rule sds.dg_post_solution_collect_sound_ltr_for
+          [OF pp_st[unfolded eqs_def sds.dg_gen_of_eq_for]
+              cover[unfolded eqs_def sds.dg_gen_of_eq_for] finI finC sound0])
 qed
 
 end

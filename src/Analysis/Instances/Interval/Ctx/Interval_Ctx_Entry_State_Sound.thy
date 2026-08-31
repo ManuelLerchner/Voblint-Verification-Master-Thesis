@@ -1,6 +1,5 @@
 theory Interval_Ctx_Entry_State_Sound
   imports
-    "Voblint_Exec.Exec_DG_Bridge"
     "Voblint_Core.DG_LTR_Sound"
     "Voblint_Analysis.Interval_Transfer"
     "Voblint_Analysis.Interval_Exec_Sound"
@@ -306,98 +305,16 @@ lemma entry_state_terminates_prog_via_solve_c:
   unfolding entry_state_terminates_prog_def entry_state_eqs_prog_def
   by (rule entry_state_terminates_via_solve_c)
 
-section \<open>Route consistency and the abstract transport of the executable solution\<close>
+section \<open>The abstract-carrier route witness\<close>
 
 text \<open>
-  Mirrors an entry-state acceptance example's \<open>Sound\<close> theory, generalized from one
-  fixed compiled program to an arbitrary one: nothing in that argument used the
-  example's concrete shape, only the generic commutation facts
-  \<open>ivl_Henter_for\<close>/\<open>ivl_Hcomb_for\<close>/\<open>ivl_Hstep_for\<close>, so every lemma
-  below repeats \<open>gs Pi ps\<close> as free variables exactly as
-  \<^theory>\<open>Voblint_Analysis.Interval_Exec_Sound\<close>'s own theorems do.
+  \<open>ectx_abs_spec\<close> is the abstract-carrier half of the \<open>route\<close>/\<open>resolve\<close> pair
+  \<^locale>\<open>routed_context_base_hetero\<close> requires: its \<open>route_agree\<close> assumption
+  needs both an executable-carrier route and an abstract-carrier one it
+  agrees with along the readback, so this witness stays even once the
+  interpretation below runs entirely at the executable carrier.
 \<close>
 
-subsection \<open>The abstract routed hooks\<close>
-
-text \<open>
-  Classifier-parametric commutation mirrors, generic in \<open>gs\<close>: same aliases the
-  entry-state example's own base theory defines, not tied to any one \<open>gs\<close>.
-\<close>
-
-subsection \<open>The abstract routed hooks\<close>
-
-text \<open>
-  Classifier-parametric commutation mirrors, generic in \<open>gs\<close>: same aliases the
-  entry-state example's own base theory defines, not tied to any one \<open>gs\<close>.
-  \<open>ectx_abs_spec\<close> and every hook below carry the reachability-lifted abstract
-  carrier, mirroring \<open>ectx_spec\<close> itself.
-  Every commutation fact between the executable and abstract solvers threads
-  the same explicit \<open>empty_pred\<close>/\<open>exact\<close> pair the flat pipeline uses,
-  discharged only once a concrete program supplies \<open>resolved_st_q_is_bot_for\<close>.
-  The whole-CFG commute obligations (\<open>Hcmb\<close>/\<open>Hextra\<close> below) are discharged
-  through \<open>dg_reader_commute_gen\<close>, the carrier-generic
-  engine \<open>Voblint_Exec.Exec_DG_Bridge\<close> proves once and instantiates here at
-  the lifted reader \<open>map_lift (fun_of_resolved_st_q_for gs)\<close>.
-\<close>
-
-text \<open>
-  The three primitive packaging commutes, at the Base-style record: \<^theory>\<open>Voblint_Exec.DG_Base_Exec\<close>
-  proves them once generically from \<^theory>\<open>Voblint_Core.DG_Base\<close>'s \<open>transfer_lift_commute\<close>/
-  \<open>transfer_lift2_commute\<close>, so only Interval's own primitive facts
-  \<open>ivl_tf_st_for_commute\<close>/\<open>ivl_enter_st_for_commute\<close> are supplied here. They are restated at
-  \<^const>\<open>fun_of_resolved_st_q_for\<close> rather than its \<^const>\<open>fun_of_exec_dg_st_for\<close> alias so
-  every fact below shares one reader with \<open>part_post_solution_seed_dg_st_to_abs_lifted_for\<close>.
-\<close>
-
-lemma ivl_Hstep_lifted_for:
-  assumes exact: "\<And>s. empty_pred s = is_empty_state (fun_of_resolved_st_q_for gs s)"
-  shows "map_prod (map_lift (fun_of_resolved_st_q_for gs)) (map_lift (fun_of_resolved_st_q_for gs))
-           (dg_spec_step (base_dg_spec_st_for_lifted gs empty_pred (ivl_tf_st_for gs) (ivl_enter_st_for gs)) a d g)
-         = dg_spec_step (base_dg_spec_for_lifted gs is_empty_state (ivl_tf_for gs)) a
-             (map_lift (fun_of_resolved_st_q_for gs) d) (map_lift (fun_of_resolved_st_q_for gs) g)"
-  by (rule base_dg_spec_st_for_lifted_dg_spec_step_commute
-        [unfolded fun_of_exec_dg_st_for_def, OF ivl_tf_st_for_commute exact])
-
-lemma ivl_Henter_lifted_for:
-  assumes exact: "\<And>s. empty_pred s = is_empty_state (fun_of_resolved_st_q_for gs s)"
-  shows "map_prod (map_lift (fun_of_resolved_st_q_for gs)) (map_lift (fun_of_resolved_st_q_for gs))
-           (dgs_enter (base_dg_spec_st_for_lifted gs empty_pred (ivl_tf_st_for gs) (ivl_enter_st_for gs)) ci d g)
-         = dgs_enter (base_dg_spec_for_lifted gs is_empty_state (ivl_tf_for gs)) ci
-             (map_lift (fun_of_resolved_st_q_for gs) d) (map_lift (fun_of_resolved_st_q_for gs) g)"
-  by (rule base_dg_spec_st_for_lifted_dgs_enter_commute
-        [unfolded fun_of_exec_dg_st_for_def, OF ivl_enter_st_for_commute exact])
-
-lemma ivl_Hcomb_lifted_for:
-  assumes exact: "\<And>s. empty_pred s = is_empty_state (fun_of_resolved_st_q_for gs s)"
-  shows "map_prod (map_lift (fun_of_resolved_st_q_for gs)) (map_lift (fun_of_resolved_st_q_for gs))
-           (dgs_combine (base_dg_spec_st_for_lifted gs empty_pred (ivl_tf_st_for gs) (ivl_enter_st_for gs)) dst dc de g)
-         = dgs_combine (base_dg_spec_for_lifted gs is_empty_state (ivl_tf_for gs)) dst
-             (map_lift (fun_of_resolved_st_q_for gs) dc) (map_lift (fun_of_resolved_st_q_for gs) de)
-             (map_lift (fun_of_resolved_st_q_for gs) g)"
-  by (rule base_dg_spec_st_for_lifted_dgs_combine_commute
-        [where tf = "ivl_tf_for gs", unfolded fun_of_exec_dg_st_for_def, OF exact])
-
-lemma ivl_Hcont_lifted_for:
-  "map_lift (fun_of_resolved_st_q_for gs)
-     (caller_cont (base_dg_spec_st_for_lifted gs empty_pred (ivl_tf_st_for gs) (ivl_enter_st_for gs)) ci dc g)
-   = caller_cont (base_dg_spec_for_lifted gs is_empty_state (ivl_tf_for gs)) ci
-       (map_lift (fun_of_resolved_st_q_for gs) dc) (map_lift (fun_of_resolved_st_q_for gs) g)"
-  by (rule base_dg_spec_st_for_lifted_dgs_caller_cont_commute
-        [where tf = "ivl_tf_for gs", unfolded fun_of_exec_dg_st_for_def])
-
-text \<open>
-  Registers \<open>dg_reader_commute_gen\<close> (\<^theory>\<open>Voblint_Exec.Exec_DG_Bridge\<close>)
-  at the one reader this whole section needs --
-  the lifted executable-to-abstract readback \<open>map_lift (fun_of_resolved_st_q_for gs)\<close> used
-  identically for both the local and global carrier -- so every locale fact below
-  (\<open>dg_tree_st_commute_def\<close>, \<open>fun_of_dg_st_gen_sup\<close>, ...) is available unconditionally,
-  the guard already discharged, instead of citing each one with an explicit \<open>[OF ...]\<close>.
-\<close>
-
-lemma dg_reader_commute_gen_ivl_lifted:
-  "dg_reader_commute_gen
-     (map_lift (fun_of_resolved_st_q_for gs)) (map_lift (fun_of_resolved_st_q_for gs))"
-  by unfold_locales (simp_all add: map_lift_sup fun_of_resolved_st_q_for_sup)
 
 definition ectx_abs_spec :: "(vname \<Rightarrow> bool) \<Rightarrow> (ivl abs_state lifted, ivl abs_state lifted) dg_spec" where
   "ectx_abs_spec gs = base_dg_spec_for_lifted gs is_empty_state (ivl_tf_for gs)"

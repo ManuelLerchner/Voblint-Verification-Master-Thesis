@@ -974,8 +974,7 @@ qed
 subsection \<open>Carrier-generic whole-CFG commute\<close>
 
 text \<open>
-  \<open>dg_tree_st_commute_for\<close> / \<open>part_post_solution_seed_dg_st_to_abs_for\<close> below (and their
-  five supporting theorems) only ever use that the readback preserves \<open>bot\<close> and \<open>(\<squnion>)\<close>; no
+  The commute facts below only ever use that a readback preserves \<open>bot\<close> and \<open>(\<squnion>)\<close>; no
   proof in the chain inspects \<open>fun_of_resolved_st_q_for\<close> or \<open>abs_state\<close> itself.
   \<open>dg_reader_commute_gen\<close> factors that out: a pair of local/global readers \<open>Floc\<close>/\<open>Fglob\<close>
   satisfying those two laws, from which every whole-tree and whole-equation-system commute

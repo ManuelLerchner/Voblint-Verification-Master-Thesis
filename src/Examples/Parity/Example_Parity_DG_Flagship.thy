@@ -28,7 +28,6 @@ text \<open>
 
 theory Example_Parity_DG_Flagship
   imports
-    "Voblint_Exec.Exec_DG_Bridge"
     "Voblint_Exec.DG_Base_Exec"
     "Voblint_Analysis.Parity_Exec"
     "Voblint_Exec.Solver_Menu"
@@ -260,7 +259,7 @@ proof -
               parity_vars_cover[unfolded parity_sol_def parity_eqs_def parity_cfg_def]
               parity_finE[unfolded parity_cfg_def]
               parity_finC[unfolded parity_cfg_def]
-              parity_sound0
+              parity_sound0[unfolded fun_of_exec_dg_st_for_def, folded parity_ex_reg.gamma_exec_def]
               init run'])
 qed
 

@@ -1,7 +1,6 @@
 theory Parity_Ctx_None_Sound
   imports
     "Voblint_Exec.Monovariant_Analysis_Result"
-    "Voblint_Exec.Exec_DG_Bridge"
     "Voblint_Exec.Routed_Domain_Exec"
     "Voblint_Core.DG_Base"
     "Voblint_Exec.DG_Base_Exec"

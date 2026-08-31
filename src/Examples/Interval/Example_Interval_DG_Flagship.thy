@@ -27,22 +27,22 @@ text \<open>
   \<^bold>\<open>Every step is machine-checked, and the result is informative:\<close> the analysis
   discovers the loop invariant \<open>x in [0,20]\<close>, the body bound \<open>x in [0,19]\<close>, and the
   exact exit value \<open>x in [20,20]\<close> --- not \<open>top\<close>.  \<open>flagship_ex_reg.run_source_sound\<close>
-  bundles executable/pure commutation, post-solution transport, D/G collecting
-  soundness, and the compiler-correctness simulation into one application, so none
-  of those intermediate obligations appear in this file's own proofs.  A later
+  bundles executable/pure commutation, D/G collecting soundness, and the
+  compiler-correctness simulation into one application, so none of those
+  intermediate obligations appear in this file's own proofs -- the solved
+  system is never transported to the abstract carrier; the registration
+  locale proves soundness directly at the executable one.  A later
   subsection exhibits an explicit reachable state so the guarantee is visibly
   \<^emph>\<open>not vacuous\<close>, reusing the native interval D/G locale from \<open>Interval_DG\<close>; the
   final subsection emits an analysis-annotated GraphViz rendering.
 
   It reuses, without duplicating: the executable interval transfer \<open>ivl_tf_st_for\<close>
-  (\<open>Ivl_Exec\<close>), the executable D/G bridge (\<open>Exec_DG_Bridge\<close>), the registration
-  locale \<open>unit_dg_exec_analysis\<close> (\<open>Run_Analysis_Sound\<close>), and the vendored
-  warrowing solver.
+  (\<open>Ivl_Exec\<close>), the registration locale \<open>unit_dg_exec_analysis\<close>
+  (\<open>Run_Analysis_Sound\<close>), and the vendored warrowing solver.
 \<close>
 
 theory Example_Interval_DG_Flagship
   imports
-    "Voblint_Exec.Exec_DG_Bridge"
     "Voblint_Core.DG_LTR_Sound"
     "Voblint_Analysis.Interval_Transfer"
     "Voblint_Analysis.Ivl_Exec"
@@ -281,7 +281,7 @@ proof -
               flagship_vars_cover[unfolded flagship_sol_def flagship_eqs_def flagship_cfg_def]
               flagship.finite_intra[unfolded flagship_cfg_def]
               flagship.finite_calls[unfolded flagship_cfg_def]
-              flagship_sound0[folded gamma_unit_def]
+              flagship_sound0[folded gamma_unit_def, folded flagship_ex_reg.gamma_unit_exec_def]
               init run'])
 qed
 

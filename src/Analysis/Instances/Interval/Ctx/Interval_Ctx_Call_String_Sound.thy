@@ -10,10 +10,11 @@ text \<open>
   The call-string sibling of \<open>Interval_Ctx_Entry_State_Sound\<close>'s entry-state pipeline:
   same \<open>ectx_spec\<close> D/G specification, same executable Warrow solve, routed at
   \<^const>\<open>Call_String_Context.cs_route\<close> with a runtime bound \<open>k\<close> instead of at the
-  entered callee formals. Every commutation fact the entry-state pipeline
-  proves against \<open>ectx_spec\<close> (\<open>ivl_Hstep_lifted_for\<close>, \<open>ivl_Henter_lifted_for\<close>,
-  \<open>ivl_Hcomb_lifted_for\<close>, \<open>dg_reader_commute_gen_ivl_lifted\<close>) is already generic
-  in the routing policy, so nothing here re-derives them.
+  entered callee formals. The packaging-correspondence facts the entry-state
+  pipeline needs come from interpreting \<^locale>\<open>routed_domain_exec\<close> once, as
+  \<open>ivl_es\<close>, giving \<open>ivl_es.sound_dg_spec_st\<close> directly at the executable
+  carrier; that interpretation is already generic in the routing policy, so
+  nothing here re-derives it.
 
   This covers only the executable/result/report path, mirroring exactly what
   \<open>Interval_Ctx_Entry_State_Sound\<close>'s own unconditional section
