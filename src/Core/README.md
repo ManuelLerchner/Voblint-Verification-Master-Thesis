@@ -29,7 +29,7 @@ in the session derives from, transports, or instantiates one of them.
 | --- | --- | --- |
 | `Equations/` | What must a per-edge transfer satisfy, and how does the solver see the graph? | `Transfer_Interface` (the non-relational Base transfer record, `apply_tf`, and `sound_transfer_for`), `CFG_Enumeration` (predecessors, call sites and returns as lists), and `State_Restriction` (local/global projections derived from the generic `combine_env` selector) |
 | `DG/` | What is a sound analysis, and why does a post-solution cover `ltr_collect`? | `DG_Framework` (the carrier-agnostic core: `dg_state`, `dg_edge_tree`/`dg_combine_tree`, the `dg_spec` record), `DG_Unit_Spec` (the homogeneous `D = G` instantiation), `DG_Keyed_Generator` (the keyed equation generators and their buffered-generator correspondence), `DG_Soundness`, `DG_LTR_Sound`, `DG_Ctx_Activation`, `DG_Transfer_Combinators`, `Routed_Context`, `Routed_Context_Unit` (the context-insensitive instance), `DG_Base` (the whole-state Base-style spec), `Activation_Local_Sound` and `Activation_Backbone` (from `ltr_coverage` to `activation_collect`) |
-| `Context/` | What is a bounded call string, and what does a coarser bound see? | `Call_String_Context` (the data and its two projections), `Call_String_Collecting_Refinement`, `Call_String_Solver_Projection` |
+| `Context/` | What is a bounded call string, and what does a coarser bound see? | `Call_String_Context` (the data and its two projections), `Call_String_Collecting_Refinement` |
 | `Result/` | What does a solved table publish, and how are checks discharged against it? | `Analysis_Result`, `Checks`, `Abstract_Checks`, `DG_Analysis_Adapter` |
 
 The routing policies that need a compiled program (`Call_String_Routed_Context`,

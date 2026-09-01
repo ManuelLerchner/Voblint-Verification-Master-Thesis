@@ -1,5 +1,5 @@
 theory Call_String_Collecting_Refinement
-  imports Call_String_Context "Voblint_CFG.LTR_Def" "Voblint_CFG.Activation_Context"
+  imports Call_String_Context "Voblint_CFG.LTR_Def" "Voblint_CFG.LTR_Activation_Context"
 begin
 
 section \<open>Bounded call-string collecting refinement\<close>

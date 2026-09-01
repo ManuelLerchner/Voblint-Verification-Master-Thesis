@@ -7,7 +7,7 @@ theory Example_Interval_DG_CallString_K1
     "Voblint_Analysis.Analysis_GraphViz"
     "Voblint_Analysis.Call_String_Routed_Context"
     "Voblint_Core.Activation_Backbone"
-    "Voblint_Exec.Solver_Menu"
+    "Voblint_Solver.Solver_Menu"
     "Voblint_Soundness.Run_Analysis_Sound"
     "Voblint_CFG.CFG_Prune"
     "Voblint_VIMP.VIMP_Notation"

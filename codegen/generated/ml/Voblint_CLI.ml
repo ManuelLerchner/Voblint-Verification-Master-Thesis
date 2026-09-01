@@ -5336,15 +5336,6 @@ let rec aval_parity
 let parity_ops : (parity, unit) numeric_ops_ext
   = Numeric_ops_ext (aval_parity, (fun _ _ _ s -> s), PTop, ());;
 
-let rec acc_add _A _B
-  k d x2 = match k, d, x2 with k, d, [] -> [(k, d)]
-    | ka, da, (k, d) :: kvs ->
-        (if eq _A k ka
-          then (k, sup _B.semilattice_sup_bounded_semilattice_sup_bot.sup_semilattice_sup
-                     d da) ::
-                 kvs
-          else (k, d) :: acc_add _A _B ka da kvs);;
-
 let rec explode s = map char_of_integer (Str_Literal.asciis_of_literal s);;
 
 let rec sigma (State_ext (c, infl, stabl, sigma, more)) = sigma;;
@@ -6384,16 +6375,6 @@ let rec generic_enter_st_for _A
 
 let rec ivl_enter_st_for x = generic_enter_st_for bot_ivl ivl_ops x;;
 
-let rec flush_sides
-  x0 t = match x0, t with [], t -> t
-    | kv :: kvs, t -> Side (fst kv, snd kv, flush_sides kvs t);;
-
-let rec buffer_aux _A _B
-  acc x1 = match acc, x1 with acc, Answer d -> flush_sides acc (Answer d)
-    | acc, QueryL (y, g) -> QueryL (y, (fun v -> buffer_aux _A _B acc (g v)))
-    | acc, QueryG (y, g) -> QueryG (y, (fun v -> buffer_aux _A _B acc (g v)))
-    | acc, Side (y, d, t) -> buffer_aux _A _B (acc_add _A _B y d acc) t;;
-
 let rec infl_update
   infla (State_ext (c, infl, stabl, sigma, more)) =
     State_ext (c, infla infl, stabl, sigma, more);;
@@ -6740,18 +6721,18 @@ let rec combine_resolved_st _A
       (dlc, (dge, filtera (fun p -> location_is_local (fst p)) psc @
                     filtera (fun p -> location_is_global (fst p)) pse)));;
 
-let rec read_at_cont x0 k = match x0, k with Inl x, k -> QueryL (x, k)
-                       | Inr y, k -> QueryG (y, k);;
-
 let rec seqcomp_tree
   x0 k = match x0, k with Answer v, k -> k v
     | QueryL (u, f), k -> QueryL (u, (fun d -> seqcomp_tree (f d) k))
     | QueryG (g, f), k -> QueryG (g, (fun d -> seqcomp_tree (f d) k))
     | Side (g, v, t), k -> Side (g, v, seqcomp_tree t k);;
 
+let rec read_at = function Inl x -> QueryL (x, (fun a -> Answer a))
+                  | Inr y -> QueryG (y, (fun a -> Answer a));;
+
 let rec dg_edge_contribution_tree_at _A _B
   step src gk =
-    seqcomp_tree (read_at_cont src (fun a -> Answer a))
+    seqcomp_tree (read_at src)
       (fun d ->
         seqcomp_tree (QueryG (gk, (fun a -> Answer a)))
           (fun g ->
@@ -6761,6 +6742,27 @@ let rec dg_edge_contribution_tree_at _A _B
 
 let rec apply_dg_spec_contribution_at _A _B
   s a src gk = dg_edge_contribution_tree_at _A _B (dg_spec_step s a) src gk;;
+
+let rec flush_sides
+  x0 t = match x0, t with [], t -> t
+    | kv :: kvs, t -> Side (fst kv, snd kv, flush_sides kvs t);;
+
+let rec acc_add _A _B
+  k d x2 = match k, d, x2 with k, d, [] -> [(k, d)]
+    | ka, da, (k, d) :: kvs ->
+        (if eq _A k ka
+          then (k, sup _B.semilattice_sup_bounded_semilattice_sup_bot.sup_semilattice_sup
+                     d da) ::
+                 kvs
+          else (k, d) :: acc_add _A _B ka da kvs);;
+
+let rec buffer_aux _A _B
+  acc x1 = match acc, x1 with acc, Answer d -> flush_sides acc (Answer d)
+    | acc, QueryL (y, g) -> QueryL (y, (fun v -> buffer_aux _A _B acc (g v)))
+    | acc, QueryG (y, g) -> QueryG (y, (fun v -> buffer_aux _A _B acc (g v)))
+    | acc, Side (y, d, t) -> buffer_aux _A _B (acc_add _A _B y d acc) t;;
+
+let rec buffer_sides _B _C t = buffer_aux _B _C [] t;;
 
 let rec fold_rhs_trees _A
   acc x1 = match acc, x1 with acc, [] -> Answer acc
@@ -6786,8 +6788,6 @@ let rec call_target_list
 
 let rec call_site_list
   g v = map (fun (c, (ca, _)) -> (c, ca)) (call_target_list g v);;
-
-let rec buffer_sides _B _C t = buffer_aux _B _C [] t;;
 
 let rec side_cfg_T_eff_keyed_seed_dg_buffered _B _C _D
   pred_sel gkey route cmb_c extra g s bot0 s0d s0g =

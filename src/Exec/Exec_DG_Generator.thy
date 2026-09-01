@@ -28,8 +28,7 @@ definition dg_cmb_at_of ::
      \<Rightarrow> (pp \<times> unit, unit, ('d, 'h) dg_state) strategy_tree"
 where
   "dg_cmb_at_of S ctx ca cc p =
-     relabel_gtree (\<lambda>_. ()) (relabel_ltree (\<lambda>w. (w, ctx))
-       (dg_spec_combine_tree S (call_info_of ca p) cc (FunctionResult p)))"
+     dg_spec_combine_tree_at S (call_info_of ca p) (Inl (cc, ctx)) (Inl (FunctionResult p, ctx)) ()"
 
 definition dg_cmb_of ::
   "(('d::bounded_semilattice_sup_bot), ('h::bounded_semilattice_sup_bot)) dg_spec \<Rightarrow> cfg
@@ -46,9 +45,9 @@ definition dg_extra_of ::
 where
   "dg_extra_of S g route ctx v =
      map (\<lambda>(cl, ca).
-       relabel_gtree (\<lambda>_. ()) (relabel_ltree (\<lambda>w. (w, ctx))
-         (dg_edge_tree (dgs_enter S (call_info_of ca (case v of FunctionEntry p \<Rightarrow> p | _ \<Rightarrow> undefined)))
-            cl))) (entry_call_list g v)"
+       dg_edge_tree_at
+         (dgs_enter S (call_info_of ca (case v of FunctionEntry p \<Rightarrow> p | _ \<Rightarrow> undefined)))
+         (Inl (cl, ctx)) ()) (entry_call_list g v)"
 
 definition dg_gen_of ::
   "(('d::bounded_semilattice_sup_bot), ('h::bounded_semilattice_sup_bot)) dg_spec \<Rightarrow> cfg \<Rightarrow> 'd \<Rightarrow> 'd \<Rightarrow> 'h
@@ -65,9 +64,6 @@ text \<open>
   so the queried-unknown set is structural: independent of the analysis step values and
   the valuation.  Hence dependencies transport verbatim.
 \<close>
-
-lemma dep_aux_dg_edge_tree: "dep_aux \<sigma> (dg_edge_tree step u) = {Inl u, Inr ()}"
-  by (simp add: dg_edge_tree_def dep_aux_def)
 
 lemma dep_aux_Side: "dep_aux \<sigma> (Side y d t) = dep_aux \<sigma> t"
   by (simp add: dep_aux_def)

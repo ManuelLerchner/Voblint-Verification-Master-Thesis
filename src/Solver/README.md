@@ -9,22 +9,24 @@ A right-hand side is a `strategy_tree` over the solver's four instructions:
 `QueryL` reads a local unknown, `QueryG` reads a global one, `Side`
 publishes a value under a global key, `Answer` yields the result. This
 session gives that language a monad, do-notation, named combinators, a way
-to fold a right-hand side from contribution trees, a relabelling of unknowns
-for context-sensitivity, and the per-key buffering that keeps repeated
-`Side` writes from destabilising an update rule.
+to fold a right-hand side from contribution trees, and the per-key
+buffering that keeps repeated `Side` writes from destabilising an update
+rule.
 
 | File | Role |
 | --- | --- |
-| `Strategy_Tree_Monad.thy` | `seqcomp_tree`, bind and `do`-notation for strategy trees, and its environment-independent/monotone dependency facts |
-| `Strategy_Tree_Rhs.thy` | `fold_rhs_trees`: a right-hand side as a join-fold over contribution trees |
-| `Post_Solution.thy` | `se_constraint_holds`: what one unknown owes a `part_post_solution` |
-| `Strategy_Tree_Relabel.thy` | `relabel_ltree`/`relabel_gtree`: reading a tree against a re-indexed unknown space |
+| `Strategy_Tree_Sequencing.thy` | `seqcomp_tree`, bind and `do`-notation for strategy trees, and its environment-independent/monotone dependency facts |
+| `Strategy_Tree_Fold.thy` | `fold_rhs_trees`: a right-hand side as a join-fold over contribution trees |
+| `Strategy_Tree_Post_Solution.thy` | `se_constraint_holds`: what one unknown owes a `part_post_solution` |
 | `Strategy_Tree_Combinators.thy` | `read_local`, `read_global`, `side_effect`, `answer`: named readings of the four constructors |
-| `Side_Buffering.thy` | `buffer_sides`: one flush per key per evaluation |
-| `Context_Refinement.thy` | A seeded valuation for a coarser system is a post-solution exactly when three per-unknown facts hold |
+| `Strategy_Tree_Side_Buffering.thy` | `buffer_sides`: one flush per key per evaluation |
+| `Solver_Menu.thy` | The generic bridge from an executable termination check to `solve_dom`/`part_post_solution`, proved once inside the vendored `TD_side_upd_rule` locale; the named menu of concrete update-rule solvers (`join`, `per_origin`, `warrow`, `warrow_per_origin`) built on it |
 
 Algorithm correctness lives upstream: `TD.TD_side` proves `partial_correctness`
 and `TD_side_mono`; `part_post_solution` (`TD.Basics_side`) is the certificate
 every soundness endpoint in `Voblint_Core` consumes. `DG_Keyed_Generator`
 (`Voblint_Core`) is what discharges `TD_side_mono`'s three preconditions for
-the keyed generator, once, for an arbitrary generator instance.
+the keyed generator, once, for an arbitrary generator instance. `Solver_Menu`
+is this session's sole point of contact with a *concrete* update rule: every
+domain/context instance reaches `solve_c`/`solve_dom`/`part_post_solution`
+through it rather than re-deriving the same three-step bridge per instance.

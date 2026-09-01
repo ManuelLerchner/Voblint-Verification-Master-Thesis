@@ -6,7 +6,7 @@ theory Int_Ctx_None_Sound
     "Voblint_Core.DG_Analysis_Adapter"
     "Voblint_Core.Routed_Context"
     "Voblint_Core.Routed_Context_Unit"
-    "Voblint_Exec.Solver_Menu"
+    "Voblint_Solver.Solver_Menu"
     "Voblint_VIMP.VIMP_Program"
     "Voblint_Core.Activation_Backbone"
 begin

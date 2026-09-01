@@ -86,12 +86,11 @@ text \<open>
   point's guarded reading agrees exactly with \<open>analyse_result\<close>'s own
   \<^const>\<open>lookup_context\<close> answer at the same key, \<^const>\<open>Bot\<close>
   concretizing to the empty set and \<^const>\<open>Lifted\<close> to \<^const>\<open>gamma_state\<close> of
-  its payload. This is the un-projected special case of
-  \<open>gamma_point_normalize_point_canonicalize_lift\<close> (\<^theory>\<open>Voblint_Core.Analysis_Result\<close>):
-  that lemma bridges a resolved_st_q-backed report across the same
-  \<^const>\<open>canonicalize_lift\<close> collapse composed with a reader projection, while
-  this locale's \<open>sigma\<close> is already at the abstract carrier, so no projection
-  is threaded here.
+  its payload. This is the un-projected special case of the general
+  executable-carrier bridge that composes the same \<^const>\<open>canonicalize_lift\<close>
+  collapse with a reader projection over a resolved_st_q-backed report,
+  while this locale's \<open>sigma\<close> is already at the abstract carrier, so no
+  projection is threaded here.
 \<close>
 
 lemma gammaM_sg_eq_lookup_context:

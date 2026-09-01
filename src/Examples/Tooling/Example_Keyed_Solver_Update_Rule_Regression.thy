@@ -2,7 +2,7 @@ theory Example_Keyed_Solver_Update_Rule_Regression
   imports
     "Voblint_Core.DG_Keyed_Generator"
     "Voblint_Core.Routed_Context"
-    "Voblint_Exec.Solver_Side_RG"
+    "Voblint_Solver.Solver_Menu"
     "Voblint_Analysis.Ivl_Exec"
 begin
 

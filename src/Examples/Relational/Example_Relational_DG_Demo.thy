@@ -5,7 +5,7 @@ theory Example_Relational_DG_Demo
     "Voblint_Core.DG_LTR_Sound"
     "Voblint_Analysis.Interval_Transfer"
     "Voblint_Analysis.Ivl_Exec"
-    "Voblint_Exec.Solver_Menu"
+    "Voblint_Solver.Solver_Menu"
     "Voblint_Analysis.Analysis_GraphViz"
     "Voblint_CFG.CFG_Prune"
     "Voblint_VIMP.VIMP_Notation"

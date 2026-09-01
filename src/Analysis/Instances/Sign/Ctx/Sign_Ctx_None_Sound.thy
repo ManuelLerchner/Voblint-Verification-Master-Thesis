@@ -5,13 +5,12 @@ theory Sign_Ctx_None_Sound
     "Voblint_Core.DG_LTR_Sound"
     "Voblint_Analysis.Sign_Transfer"
     "Voblint_Analysis.Sign_Exec"
-    "Voblint_Exec.Solver_Side_RG"
     "TD.TD_side_upd_rule"
     "Voblint_CFG.CFG_Prune"
     "Voblint_Compile.Compile_Invariants"
     "Voblint_Core.Routed_Context"
     "Voblint_Core.Routed_Context_Unit"
-    "Voblint_Exec.Solver_Menu"
+    "Voblint_Solver.Solver_Menu"
     "Voblint_VIMP.VIMP_Program"
     "Voblint_Core.Activation_Backbone"
     "Voblint_Core.Analysis_Result"
@@ -311,8 +310,9 @@ text \<open>
   \<open>analyse_interval_entry_state_result_for\<close> already use, and are the tables Sign's public
   API (\<open>Sign_Checks\<close>) redirects onto in production. Their soundness is established there
   through a \<open>dg_analysis_adapter\<close> interpretation of this file's own \<open>sctx_routed\<close>
-  context, bridged to these executable tables via \<open>normalize_point_canonicalize_lift_eq_old\<close>
-  (\<^theory>\<open>Voblint_Core.Analysis_Result\<close>).
+  context, bridged to these executable tables by composing
+  \<^const>\<open>canonicalize_lift\<close>'s witness-bottom collapse with
+  \<^const>\<open>normalize_point\<close>'s readback.
 \<close>
 
 definition sctx_eqs_prog ::

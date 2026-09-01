@@ -46,7 +46,7 @@ theory Example_Interval_DG_Flagship
     "Voblint_Core.DG_LTR_Sound"
     "Voblint_Analysis.Interval_Transfer"
     "Voblint_Analysis.Ivl_Exec"
-    "Voblint_Exec.Solver_Menu"
+    "Voblint_Solver.Solver_Menu"
     "Voblint_Exec.DG_Coverage"
     "Voblint_CFG.CFG_Prune"
     "Voblint_Analysis.Analysis_GraphViz"

@@ -856,11 +856,11 @@ into the verified layer. That is the model the rest of `cli/` should follow.
 
 | Item | Site | Lines | Evidence |
 | --- | --- | --- | --- |
-| `TD_side_always_join_solve_Inr_rg` + its 4-way `pinduct` `TD_side_always_join_rg_ind` | `Solver_Side_RG.thy:143-318` | **176** | one code occurrence: the lemma line. Its mirror half (`..._warrowing_apinis_...`, `:477-702`) *is* live via `Interval_Warrowing.thy`. The theory's genuinely load-bearing content is the 12-line `solve_dom_of_solve_c`, cited from 18 files |
+| `TD_side_always_join_solve_Inr_rg` + its 4-way `pinduct` `TD_side_always_join_rg_ind` | `Solver_Side_RG.thy:143-318` | **176** | one code occurrence: the lemma line. Its mirror half (`..._warrowing_apinis_...`, `:477-702`) *is* live via `Interval_Warrowing.thy`. `solve_dom_of_solve_c` -- the theory's only cross-domain-cited fact at the time of this audit -- has since moved to `Voblint_Solver.Solver_Menu`, which now owns the generic `solve_c`/`part_post_solution` bridge; nothing left in this file is cited outside its own `..._warrowing_apinis_...` mirror half |
 | `td_cfg_side_solver_dg` locale | `DG_Framework.thy:2360-2463` | **104** | never interpreted, never `sublocale`d, named nowhere. Its header claims it gives a mechanical `TD_side_mono` interpretation "for any `side_cfg_T_eff_keyed_seed_dg` instance"; no instance takes it |
 | `unit_routed_context_hetero` locale | `Routed_Context_Unit.thy:168-243` | 76 | never interpreted. Header claims domains reach the adapter theorems "by interpreting this locale instead of re-deriving them per domain" — no domain does |
 | ten `fst_/snd_dgs_*_for` shape lemmas | `Exec_DG_Refines.thy:655-731` | 77 | untagged, uncited. Header states the intended caller explicitly; there is none |
-| six mono/static-deps lemmas for the pre-`_at` tree formers | `DG_Framework.thy:466-553` | 88 | superseded by `apply_dg_spec_at`; no analysis cites any of the six |
+| six mono/static-deps lemmas for the pre-`_at` tree formers | `DG_Framework.thy:388-463` (line range shifted by the `_at`-specialization reorder; content and dead-code status unchanged) | 76 | superseded by `apply_dg_spec_at`; no analysis cites any of the six |
 | `analyse_report_ctx` + `analyse_report` + two soundness theorems | `DG_Analysis_Adapter.thy:244-311` | 68 | `analyse_result` in the same locale is live; only the report projection is dead |
 | `pair_of_dg`/`dg_of_pair`/`merge_dg`/`split_dg` + six `[simp]` rules | `DG_Framework.thy:194-242` | 49 | the four constants occur only inside this window, so the six rewrite rules are permanently inert |
 | `monovariant_analysis_result_for` + 2 lemmas | `Monovariant_Analysis_Result.thy:170-210` | 41+34 | superseded *within its own file* by `ctx_solved_for`, which is what the adapters go through. Its 34-line header names three adapters as consumers; none references it |
@@ -1373,8 +1373,9 @@ purely as a path to `Exec_St` + `State_Restriction`. Settle it by stripping the
   identical modulo constructor names — `point_state` even copies `lifted`'s
   `(plugins del: quickcheck_narrowing)` workaround. Downstream, `gamma_point` ≈
   `gamma_lift`, `normalize_point` ≈ `normalize_lift`, and
-  `normalize_point_canonicalize_lift_eq_old` literally proves the two towers agree
-  — and is itself dead. Type synonyms plus constructor abbreviations let both
+  `normalize_point_canonicalize_lift_eq_old` (since deleted along with the rest
+  of the confirmed-dead `normalize_point_*` family below) literally proved the
+  two towers agree. Type synonyms plus constructor abbreviations let both
   inherit all eight instances instead of re-proving four each: **123 lines of
   instantiation plus ~116 of the `normalize_point_*` family.** A real refactor
   (pattern matching in `fun` definitions has to be rewritten), not a rename.

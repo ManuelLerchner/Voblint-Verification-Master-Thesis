@@ -1,6 +1,6 @@
 theory Example_Per_Origin_Widening_Precision
   imports
-    "Voblint_Exec.Solver_Menu"
+    "Voblint_Solver.Solver_Menu"
     "Voblint_Analysis.Ivl_Exec"
 begin
 

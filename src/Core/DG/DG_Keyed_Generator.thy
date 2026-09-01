@@ -198,20 +198,23 @@ lemma apply_dg_spec_contribution_as_at:
   unfolding apply_dg_spec_contribution_def apply_dg_spec_contribution_at_def
   by (rule dg_edge_contribution_tree_as_at)
 
-text \<open>Relabelling a \<^typ>\<open>unit\<close>-keyed edge tree onto a routed local pair and a global
-  key is the same tree as building it at that address directly: \<^const>\<open>relabel_ltree\<close> and
-  \<^const>\<open>relabel_gtree\<close> rewrite exactly the two keys the former reads and writes.\<close>
+text \<open>The keyed analogue of \<^const>\<open>dg_spec_combine_tree\<close>: the caller and callee-exit
+  reads and the published slot are addresses in the solver's own valuation space, not
+  bare local unknowns and the fixed \<^typ>\<open>unit\<close> global key. Built the same way
+  \<^const>\<open>apply_dg_spec_at\<close> is, over \<^const>\<open>dg_combine_tree_at\<close> instead of
+  \<^const>\<open>dg_edge_tree_at\<close>.\<close>
 
-lemma apply_dg_spec_relabel_as_at:
-  "relabel_gtree (\<lambda>_. gk) (relabel_ltree (\<lambda>w. (w, ctx)) (apply_dg_spec S a u))
-     = apply_dg_spec_at S a (Inl (u, ctx)) gk"
-  by (simp add: apply_dg_spec_def apply_dg_spec_at_def dg_edge_tree_def dg_edge_tree_at_def)
+definition dg_spec_combine_tree_at ::
+  "('dl::bounded_semilattice_sup_bot, 'dg::bounded_semilattice_sup_bot) dg_spec
+   \<Rightarrow> call_info \<Rightarrow> 'x + 'k \<Rightarrow> 'x + 'k \<Rightarrow> 'k \<Rightarrow> ('x, 'k, ('dl, 'dg) dg_state) strategy_tree"
+where
+  "dg_spec_combine_tree_at S ci src_cc src_ex gk =
+     dg_combine_tree_at
+       (\<lambda>ci' dc de g. dgs_combine S ci' (dgs_caller_cont S ci' dc g) de g) ci src_cc src_ex gk"
 
-lemma apply_dg_spec_contribution_relabel_as_at:
-  "relabel_gtree (\<lambda>_. gk) (relabel_ltree (\<lambda>w. (w, ctx)) (apply_dg_spec_contribution S a u))
-     = apply_dg_spec_contribution_at S a (Inl (u, ctx)) gk"
-  by (simp add: apply_dg_spec_contribution_def apply_dg_spec_contribution_at_def
-        dg_edge_contribution_tree_def dg_edge_contribution_tree_at_def)
+lemma dg_spec_combine_tree_as_at:
+  "dg_spec_combine_tree S ci cc ex = dg_spec_combine_tree_at S ci (Inl cc) (Inl ex) ()"
+  unfolding dg_spec_combine_tree_def dg_spec_combine_tree_at_def by (rule dg_combine_tree_as_at)
 
 text \<open>The standard predecessor selection: every intra predecessor is carried by its
   own \<open>(pp, 'c)\<close> local unknown, so its address is \<^const>\<open>Inl\<close> of that pair.\<close>

@@ -280,9 +280,7 @@ definition dg_cmb_at ::
    \<Rightarrow> (pp \<times> unit, unit, ('D, 'G) dg_state) strategy_tree"
 where
   "dg_cmb_at ctx ca cc p =
-     relabel_gtree (\<lambda>_. ())
-       (relabel_ltree (\<lambda>w. (w, ctx))
-         (dg_spec_combine_tree S (call_info_of ca p) cc (FunctionResult p)))"
+     dg_spec_combine_tree_at S (call_info_of ca p) (Inl (cc, ctx)) (Inl (FunctionResult p, ctx)) ()"
 
 definition dg_cmb ::
   "cfg \<Rightarrow> (pp \<Rightarrow> unit \<Rightarrow> 'D \<Rightarrow> call_action \<Rightarrow> unit) \<Rightarrow> unit \<Rightarrow> call_action \<Rightarrow> pp \<Rightarrow> pp
@@ -303,9 +301,7 @@ definition dg_enter ::
    \<Rightarrow> (pp \<times> unit, unit, ('D, 'G) dg_state) strategy_tree"
 where
   "dg_enter ctx ci cl =
-     relabel_gtree (\<lambda>_. ())
-       (relabel_ltree (\<lambda>w. (w, ctx))
-         (dg_edge_tree (dgs_enter S ci) cl))"
+     dg_edge_tree_at (dgs_enter S ci) (Inl (cl, ctx)) ()"
 
 definition dg_extra ::
   "cfg \<Rightarrow> (pp \<Rightarrow> unit \<Rightarrow> 'D \<Rightarrow> call_action \<Rightarrow> unit) \<Rightarrow> unit \<Rightarrow> pp
@@ -482,55 +478,44 @@ lemma dg_postfix_combineG:
   using pf ce unfolding dg_postfix_def by blast
 
 lemma dg_edge_tree_local:
-  "locals (traverse_rhs
-      (relabel_gtree (\<lambda>_. ())
-        (relabel_ltree (\<lambda>w. (w, ()))
-          (apply_dg_spec S a u))) sigma)
+  "locals (traverse_rhs (apply_dg_spec_at S a (Inl (u, ())) ()) sigma)
    = snd (dg_spec_step S a (dg_D sigma u) (dg_G sigma))"
-  unfolding apply_dg_spec_def dg_D_def dg_G_def
-  by (subst traverse_intra_keyed)
-    (simp add: traverse_dg_edge_tree)
+  unfolding apply_dg_spec_at_def dg_D_def dg_G_def
+  by (simp add: traverse_dg_edge_tree_at)
 
 lemma dg_edge_tree_global:
-  "globs (sides_of_rhs
-      (relabel_gtree (\<lambda>_. ())
-        (relabel_ltree (\<lambda>w. (w, ()))
-          (apply_dg_spec S a u))) sigma (Inr ()))
+  "globs (sides_of_rhs (apply_dg_spec_at S a (Inl (u, ())) ()) sigma (Inr ()))
    = fst (dg_spec_step S a (dg_D sigma u) (dg_G sigma))"
-  unfolding apply_dg_spec_def dg_D_def dg_G_def
-  by (simp add: sides_relabel_gtree_unit_gen sides_relabel_ltree_Inr sides_dg_edge_tree_Inr
-      sum.map_comp o_def)
+  unfolding apply_dg_spec_at_def dg_D_def dg_G_def
+  by (simp add: sides_dg_edge_tree_at)
 
 lemma dg_combine_tree_local:
   "locals (traverse_rhs (dg_cmb_at () (CallEdge dst fs as) cc p) sigma)
    = snd (dgs_combine S (call_info_of (CallEdge dst fs as) p)
             (dgs_caller_cont S (call_info_of (CallEdge dst fs as) p) (dg_D sigma cc) (dg_G sigma))
             (dg_D sigma (FunctionResult p)) (dg_G sigma))"
-  unfolding dg_cmb_at_def dg_spec_combine_tree_def dg_D_def dg_G_def
-  by (subst traverse_intra_keyed) (simp add: traverse_dg_combine_tree)
+  unfolding dg_cmb_at_def dg_spec_combine_tree_at_def dg_D_def dg_G_def
+  by (simp add: traverse_dg_combine_tree_at)
 
 lemma dg_combine_tree_global:
   "globs (sides_of_rhs (dg_cmb_at () (CallEdge dst fs as) cc p) sigma (Inr ()))
    = fst (dgs_combine S (call_info_of (CallEdge dst fs as) p)
             (dgs_caller_cont S (call_info_of (CallEdge dst fs as) p) (dg_D sigma cc) (dg_G sigma))
             (dg_D sigma (FunctionResult p)) (dg_G sigma))"
-  unfolding dg_cmb_at_def dg_spec_combine_tree_def dg_D_def dg_G_def
-  by (simp add: sides_relabel_gtree_unit_gen sides_relabel_ltree_Inr sides_dg_combine_tree_Inr
-      sum.map_comp o_def)
+  unfolding dg_cmb_at_def dg_spec_combine_tree_at_def dg_D_def dg_G_def
+  by (simp add: sides_dg_combine_tree_at)
 
 lemma dg_enter_tree_local:
   "locals (traverse_rhs (dg_enter () ci cl) sigma)
    = snd (dgs_enter S ci (dg_D sigma cl) (dg_G sigma))"
   unfolding dg_enter_def dg_D_def dg_G_def
-  by (subst traverse_intra_keyed)
-    (simp add: traverse_dg_edge_tree)
+  by (simp add: traverse_dg_edge_tree_at)
 
 lemma dg_enter_tree_global:
   "globs (sides_of_rhs (dg_enter () ci cl) sigma (Inr ()))
    = fst (dgs_enter S ci (dg_D sigma cl) (dg_G sigma))"
   unfolding dg_enter_def dg_D_def dg_G_def
-  by (simp add: sides_relabel_gtree_unit_gen sides_relabel_ltree_Inr sides_dg_edge_tree_Inr
-      sum.map_comp o_def)
+  by (simp add: sides_dg_edge_tree_at)
 
 theorem dg_post_solution_postfix:
   assumes pp:
@@ -592,20 +577,15 @@ proof -
 
   have edge_tree_mem:
     "\<And>u a v. (u, a, v) \<in> intra g \<Longrightarrow>
-      relabel_gtree (\<lambda>_. ())
-        (relabel_ltree (\<lambda>w. (w, ())) (apply_dg_spec S a u))
-      \<in> set (dg_trees g v)"
+      apply_dg_spec_at S a (Inl (u, ())) () \<in> set (dg_trees g v)"
   proof -
     fix u a v
     assume edge: "(u, a, v) \<in> intra g"
     have "(u, a) \<in> set (intra_predecessor_list g v)"
       using edge
       by (simp add: set_intra_predecessor_list[OF finI] intra_predecessors_def)
-    then show "relabel_gtree (\<lambda>_. ())
-        (relabel_ltree (\<lambda>w. (w, ())) (apply_dg_spec S a u))
-      \<in> set (dg_trees g v)"
-      by (force simp: dg_trees_def intra_predecessor_addr_list_def
-          apply_dg_spec_relabel_as_at image_iff)
+    then show "apply_dg_spec_at S a (Inl (u, ())) () \<in> set (dg_trees g v)"
+      by (force simp: dg_trees_def intra_predecessor_addr_list_def image_iff)
   qed
 
   have edgeD:
@@ -920,8 +900,7 @@ text \<open>
 definition dg_edge_tree_hook ::
   "pp \<Rightarrow> edge_action \<Rightarrow> pp \<Rightarrow> (pp \<times> unit, unit, ('D, 'G) dg_state) strategy_tree"
 where
-  "dg_edge_tree_hook u a v =
-     relabel_gtree (\<lambda>_. ()) (relabel_ltree (\<lambda>w. (w, ())) (apply_dg_spec S a u))"
+  "dg_edge_tree_hook u a v = apply_dg_spec_at S a (Inl (u, ())) ()"
 
 definition dg_combine_tree_hook ::
   "pp \<Rightarrow> call_action \<Rightarrow> pp \<Rightarrow> pp \<Rightarrow> (pp \<times> unit, unit, ('D, 'G) dg_state) strategy_tree"
@@ -1680,8 +1659,7 @@ lemma dg_trees_as_hook_shape:
        @ map (\<lambda>(c, ca). dg_enter_tree_hook c ca v) (entry_call_list g v)"
   unfolding dg_trees_def dg_extra_def dg_edge_tree_hook_def dg_enter_tree_hook_def
     dg_cmb_def
-  by (auto simp: intra_predecessor_addr_list_def apply_dg_spec_relabel_as_at
-        o_def case_prod_unfold)
+  by (auto simp: intra_predecessor_addr_list_def o_def case_prod_unfold)
 
 lemma set_dg_cmb_targets_eq_hook:
   "set (concat (map (\<lambda>(cc, ca). map (dg_cmb_at () ca cc) (static_targets g v cc ca))

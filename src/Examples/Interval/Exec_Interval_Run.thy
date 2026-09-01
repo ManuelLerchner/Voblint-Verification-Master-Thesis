@@ -1,6 +1,6 @@
 theory Exec_Interval_Run
   imports "Voblint_CLI.Interval_Entry"
-            "Voblint_Exec.Solver_Menu" "Voblint_CFG.CFG_Prune"
+            "Voblint_Solver.Solver_Menu" "Voblint_CFG.CFG_Prune"
             "Voblint_VIMP.VIMP_Notation"
             Example_Interval_Loop_Coverage
 begin

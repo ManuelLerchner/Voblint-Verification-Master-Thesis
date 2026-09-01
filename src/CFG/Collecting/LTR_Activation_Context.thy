@@ -1,4 +1,4 @@
-theory Activation_Context
+theory LTR_Activation_Context
   imports LTR_Def
 begin
 

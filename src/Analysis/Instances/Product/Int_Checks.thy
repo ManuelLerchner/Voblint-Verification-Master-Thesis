@@ -113,8 +113,8 @@ text \<open>
   \<open>Analyse_Dispatch.analyse_with_state\<close> can stay total once \<open>Int_Analysis\<close> joins
   \<open>analysis_domain\<close>. An exact \<open>unreachable\<close> flag is read straight off
   \<^const>\<open>lookup_context\<close>'s \<^const>\<open>Bot\<close>/\<^const>\<open>Lifted\<close> case split -- exact because
-  \<open>normalize_point_canonicalize_lift_eq_old\<close> (\<^theory>\<open>Voblint_Core.Analysis_Result\<close>) is
-  precisely the fact that this reading agrees with the older
+  composing \<^const>\<open>canonicalize_lift\<close>'s witness-bottom collapse with
+  \<^const>\<open>normalize_point\<close>'s readback agrees with the older
   \<^const>\<open>resolved_st_q_lifted_is_bot_for\<close> test on the same raw local unknown, the same
   argument \<open>analyse_sign_report_for_with_state\<close>'s Sign counterpart uses. Propagates the
   routed producer transitively through \<^const>\<open>analyse_int_result_for\<close>.

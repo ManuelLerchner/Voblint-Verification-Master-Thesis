@@ -4,9 +4,12 @@ session Voblint_Solver in "." = "TD" +
     Strategy_Tree_Sequencing
     Strategy_Tree_Fold
     Strategy_Tree_Post_Solution
-    Strategy_Tree_Relabel
     Strategy_Tree_Combinators
     (* Equation-level normalization: aggregates repeated side effects to one
        key into a single write, so no right-hand side names a key twice. *)
     Strategy_Tree_Side_Buffering
-    Context_Refinement
+    (* The generic bridge from the vendored TD solver's executable termination
+       check to part_post_solution, and the named menu of concrete update-rule
+       solvers built on it. The sole point where this session names TD's
+       concrete update-rule interpretations. *)
+    Solver_Menu

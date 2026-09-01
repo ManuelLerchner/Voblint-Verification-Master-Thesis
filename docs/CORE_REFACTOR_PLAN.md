@@ -194,7 +194,7 @@ Spike before committing to it.
 | 2.4 | `routed_context_hetero` becomes `routed_context_base_hetero` at whichever carrier the instance chooses; delete the restated assumptions. Same for `unit_routed_context_hetero`. | landed: `entry_state_routed_context` and `call_string_routed_context` (Analysis) are stated at a carrier parameter with `gammaDG`/`gammaM` and sublocale `routed_context_base_hetero`; `routed_context_hetero` and `unit_routed_context_hetero` are deleted, having no interpreter left |
 | 2.5 | `Analysis_Result` holds the quotient; `normalize_point` becomes the single readback at publication, in `DG_Analysis_Adapter`. `Abstract_Checks` reads the published table. | landed in the generic form: `dg_analysis_adapter` extends `routed_context_base_hetero` and takes a readback `rd` with `gammaDG d g = gamma_state_lift (rd d)`; the four abstract-carrier sites pass `rd = id` |
 | 2.6 | Rewrite the twelve `*_Ctx_*_Sound` theories and the four CLI `*_Entry` theories to interpret at the quotient carrier. Expect the transport boilerplate that NEXT_STEPS records as the 23-suffix duplication to shrink. | landed: the four unit-context instances (Sign, Parity, Interval, Int, with their `*_Checks`/`*_Entry` consumers), the three entry-state instances and the two call-string instances are on the executable carrier; the two Interval entry-state examples and `Example_Interval_Source_Ctx` follow the theory; the four CallString examples interpret `call_string_routed_context` at their executable spec and get their headline theorem from `activation_collect_sound`. `Run_Analysis_Sound`'s flat bundles and `Interval_Ctx_Entry_State_Sound`'s hand-rolled Hstep/Henter/Hcomb/Hcont transport lemmas are migrated too (2026-08-31 decision entry); `ectx_abs_spec`/`entry_state_route_abs_gen` stay by design, being the genuine abstract-carrier route witness. What is left on the transport now is only `Example_Sign_Placement`, `Example_Interval_Placement`, and `Monovariant_Analysis_Result` -- tracked under 2.3, not 2.6 |
-| 2.7 | Move `routed_dg_domain_exec`, `Solver_Side_RG`, `Solver_Menu`, `Monovariant_Analysis_Result`, `DG_Coverage` to their final homes (`DG_Base`, Solver, Core); retire `Voblint_Exec` from `ROOTS`. | open |
+| 2.7 | Move `routed_dg_domain_exec`, `Solver_Side_RG`, `Solver_Menu`, `Monovariant_Analysis_Result`, `DG_Coverage` to their final homes (`DG_Base`, Solver, Core); retire `Voblint_Exec` from `ROOTS`. | partly landed (2026-09-01, see decision entry): `Solver_Menu` moved to `Voblint_Solver`, `Solver_Side_RG` deleted whole (its one generic fact, `solve_dom_of_solve_c`, folded into `Solver_Menu`; the rest was confirmed dead, not carrier-specific-but-kept). `routed_dg_domain_exec` and most of `Monovariant_Analysis_Result` stay in `Voblint_Exec` -- they are the executable-carrier transport itself, not misplaced generic content, and cannot move before the carrier does. `DG_Coverage` (confirmed fully generic) and the 12x-repeated domain/context solve-bridge boilerplate remain open, deliberately not touched this round |
 
 ### Phase 3 -- inside the theories
 
@@ -550,22 +550,75 @@ and mark it `superseded (see below)`.
   `simp add:` citation, which a wider default simp set changes out from
   under them. Left untagged; a future attempt should budget for repairing
   those call sites rather than treating the tag as safe by inspection.
-- 2026-09-01: open follow-up, not started -- `dg_edge_tree` already has the
-  shape `relabel_ltree`/`relabel_gtree` exist to avoid: `dg_edge_tree step u
-  = dg_edge_tree_at step (Inl u) ()` (`DG_Framework.thy:305`), so the bare
-  monovariant edge tree is a specialization of the general, key-parametric
-  `_at` form, and `DG_Keyed_Generator`'s own generator calls
-  `apply_dg_spec_at` directly -- no relabel involved for edges at all.
-  `dg_combine_tree`/`dg_spec_combine_tree` never got that treatment: there is
-  no `dg_combine_tree_at`, so `dg_cmb_at` (`DG_Soundness`) and
-  `dg_cmb_at_of`/`dg_extra_of`'s inner call (`Exec_DG_Generator`) still reach
-  the keyed address by relabeling the bare tree. Giving combine trees the
-  same `_at` generalization -- defined in `DG_Framework`, with the same
-  `traverse`/`sides`/`dep_aux` characterization lemmas `dg_edge_tree_at`
-  has -- and migrating those two call sites would likely make
-  `relabel_ltree`/`relabel_gtree` (`Strategy_Tree_Relabel`) dead. Touches
-  `DG_Framework`, `DG_Soundness`, `Exec_DG_Generator`, and needs
-  `Exec_DG_Trees`/`DG_Coverage` re-verified after.
+- 2026-09-01: `dg_combine_tree_at` landed in `DG_Framework` (definition plus
+  `traverse_dg_combine_tree_at`, `sides_dg_combine_tree_at`,
+  `sides_dg_combine_tree_at_other`, `dep_aux_dg_combine_tree_at`, and the
+  bridge lemma `dg_combine_tree_as_at` connecting it back to the bare
+  `dg_combine_tree`/`relabel_gtree` form), mirroring `dg_edge_tree_at`'s
+  existing shape: `dg_edge_tree step u = dg_edge_tree_at step (Inl u) ()`
+  (`DG_Framework.thy:305`). This is a pure addition -- nothing else in the
+  session references it yet -- verified clean (0 errors) against both
+  `DG_Soundness` and `DG_Keyed_Generator`.
+  Migrating the actual consumers off `relabel_ltree`/`relabel_gtree` remains
+  open and did not start this session; the scope is larger than first
+  estimated. `dg_cmb_at` (`DG_Soundness`) and `dg_cmb_at_of`/`dg_extra_of`'s
+  inner call (`Exec_DG_Generator`) still build the keyed address by
+  relabeling the bare tree, and a citation trace found the real consumer
+  chain to migrate alongside them is not just those two definitions but the
+  soundness lemma family built on top: `dg_edge_tree_local`,
+  `dg_edge_tree_global`, `dg_combine_tree_local`, `dg_combine_tree_global`,
+  `dg_enter_tree_local`, `dg_enter_tree_global`, `edge_tree_mem`, and the
+  `dg_edge_tree_hook`/`dg_combine_tree_hook` wrappers in `DG_Soundness`
+  (35 matches for that name family in one file) -- proof-rewriting work, not
+  a mechanical swap. Two related bridge lemmas in `DG_Keyed_Generator`
+  (`apply_dg_spec_relabel_as_at`, `apply_dg_spec_contribution_relabel_as_at`)
+  were checked for disposition: the first is genuinely cited twice in
+  `DG_Soundness` (lines 608, 1683) and stays; the second has zero citations
+  anywhere outside its own definition and is itself dead code, independent
+  of this migration.
+  Next steps, in order: add `dg_spec_combine_tree_at` to
+  `DG_Keyed_Generator` (mirrors `apply_dg_spec_at`, `DG_Keyed_Generator.thy:179`,
+  over the new `dg_combine_tree_at`); migrate `dg_cmb_at`/`dg_enter` to build
+  on the `_at` forms directly; re-derive the `DG_Soundness` consumer family
+  against that; migrate `Exec_DG_Generator`'s `dg_cmb_at_of`/`dg_extra_of`;
+  re-verify `Exec_DG_Trees`/`DG_Coverage`; delete
+  `apply_dg_spec_contribution_relabel_as_at`; then check whether
+  `relabel_ltree`/`relabel_gtree` (`Strategy_Tree_Relabel`) are fully dead.
+- 2026-09-01: the combine-tree/enter half of the `_at` migration landed.
+  `dg_spec_combine_tree_at` added to `DG_Keyed_Generator` (mirrors
+  `apply_dg_spec_at` over the new `dg_combine_tree_at`, plus a bridge lemma
+  `dg_spec_combine_tree_as_at` and, for symmetry with the edge former's own
+  bridge, `dg_spec_combine_tree_relabel_as_at`). Four call sites migrated off
+  `relabel_ltree`/`relabel_gtree` onto direct `_at` addressing, each a
+  statement-preserving change to a named definition's body (`dg_cmb_at`,
+  `dg_enter` in `DG_Soundness`; `dg_cmb_at_of`, `dg_extra_of` in
+  `Exec_DG_Generator`), so no downstream lemma *statement* changed --- only
+  proofs that unfolded the old relabel-based body, all re-derived directly
+  from `traverse_dg_combine_tree_at`/`sides_dg_combine_tree_at`/
+  `traverse_dg_edge_tree_at`/`sides_dg_edge_tree_at` instead of
+  `traverse_intra_keyed`/`sides_relabel_gtree_unit_gen`/`sum.map_comp`.
+  Touched: `dg_combine_tree_local`, `dg_combine_tree_global`,
+  `dg_enter_tree_local`, `dg_enter_tree_global` (`DG_Soundness`);
+  `dep_aux_dg_cmb_at_of`, `dep_dg_gen_of_entry` (`DG_Coverage`). Three
+  characterization lemmas that only existed to support the old relabel-based
+  proofs (`dep_aux_dg_combine_tree`, `dep_aux_dg_spec_combine_tree`,
+  `dep_aux_dg_edge_tree_relabelled`, all in `DG_Coverage`) went dead as a
+  result and were deleted, verified by citation trace across every `.thy`
+  file. `Run_Analysis_Sound`'s `dg_cmb_at_of_eq_for`/`dg_extra_of_eq_for`
+  (bridging Exec's generator to Core's) needed no change: both sides now
+  unfold to literally the same `_at` term. Full batch build green after this
+  step (`Voblint_Codegen` finished, exit 0).
+  What is left before `relabel_ltree`/`relabel_gtree` can be deleted: unlike
+  `dg_cmb_at`/`dg_enter`, `dg_edge_tree_local`/`dg_edge_tree_global` in
+  `DG_Soundness` have the relabel expression baked directly into their own
+  *statement* (there is no intermediate named definition to swap the body
+  of), so migrating them means restating both lemmas in terms of
+  `apply_dg_spec_at` and updating every citer -- a materially larger,
+  statement-level change. `edge_tree_mem` and one more site (~line 917,
+  post-migration numbering) build the relabel expression inline for the same
+  reason. `apply_dg_spec_contribution_relabel_as_at` (`DG_Keyed_Generator`,
+  confirmed dead in the prior entry) is still there, pending deletion
+  alongside this next step rather than on its own.
 - 2026-09-01: `Exec_DG_Trees` deleted whole, and ~360 lines of dead commute
   lemmas removed from `Exec_DG_Generator` (1010 -> 650 lines). Both trace to
   one root: `Exec_DG_Bridge` (deleted earlier, "zero remaining importers" per
@@ -596,6 +649,160 @@ and mark it `superseded (see below)`.
   were safe because `DG_Coverage` carries its own separate local copy of the
   former, and `Strategy_Tree_Relabel`'s copy of the latter remains reachable
   to absorb the shadow once the local one is gone.
+- 2026-09-01: the statement-level half of the `_at` migration landed, closing
+  the "what is left" note above. `dg_edge_tree_local`/`dg_edge_tree_global`
+  (`DG_Soundness`) restated in terms of `apply_dg_spec_at` directly, `dep_aux`
+  of `edge_tree_mem` likewise, and `dg_edge_tree_hook` (a named definition,
+  like `dg_cmb_at`/`dg_enter`) had its body swapped the same way its two
+  siblings' were. All five downstream citers (`edgeD`, `edgeG`,
+  `dg_edge_tree_hook_local`, `dg_edge_tree_hook_global`, and
+  `dg_trees_as_hook_shape`) needed no change beyond dropping
+  `apply_dg_spec_relabel_as_at` from one `auto simp:` set -- once both sides
+  of the equality being proved build via `apply_dg_spec_at`, the relabel
+  bridge lemma has nothing left to bridge. That made all three relabel-bridge
+  lemmas in `DG_Keyed_Generator` dead by the same citation-trace standard as
+  above (`apply_dg_spec_relabel_as_at`, `apply_dg_spec_contribution_relabel_as_at`,
+  and the newly-added `dg_spec_combine_tree_relabel_as_at`, which never
+  ended up load-bearing anywhere), and `relabel_ltree`/`relabel_gtree`
+  themselves went unreachable from every consumer in the tree.
+  `Strategy_Tree_Relabel.thy` deleted whole; `DG_Framework`'s import of it
+  dropped. Full batch build green (`Voblint_Codegen` finished, exit 0);
+  committed as `4e9a30e5`. One process note: the first build attempt failed
+  with "Cannot load theory Strategy_Tree_Relabel" from `DG_Framework` even
+  though I/Q diagnostics had shown 0 errors for the import removal -- the
+  edit was verified in the I/Q buffer but never actually saved to disk
+  before the file was deleted, so batch (which reads disk) built the
+  pre-edit import against a theory that no longer existed. `list_files`'s
+  `is_modified` flag catches this class of mistake directly; check it before
+  trusting a "0 errors" diagnostic as evidence a change reached disk.
+- 2026-09-01: `Context_Refinement.thy` (`Voblint_Solver`), and its sole
+  consumer `Call_String_Solver_Projection.thy` (`Voblint_Core`) and *its*
+  sole consumer `Call_String_Solver_Refinement_Seeded.thy`
+  (`Voblint_Examples`), deleted as one vertical slice on architectural
+  grounds, not because anything in them was unreachable dead code -- all
+  three built and proved cleanly right up to deletion. `seed_eqs` forces a
+  post-solution to additionally dominate an externally supplied valuation by
+  rewriting every equation's right-hand side to join a fixed seed into its
+  answer; `call_string_projection_refinement`'s only real content is
+  `post_solution_of_seeded` applied to a projected fine solution used purely
+  as seed data, with no hypothesis relating the coarse system being seeded
+  to whatever system that fine solution actually solves, and no `k1 <= k2`
+  premise. That is a coarse/project/seeded-refine construction from an
+  earlier design where context-sensitive equations were not built directly
+  over their final contextual unknowns; it does not fit the direct-`_at`-
+  addressing architecture this file's other entries establish, where a
+  context-sensitive equation is constructed at its final address from the
+  start and no second, seeded solve is needed. Citation-traced first: every
+  name in both theories (`seed_sides`, `seed_eqs`, `post_solution_of_seeded`,
+  `proj_local`, `proj_global`, `proj_P`, `proj_global_keys`, `proj_local_ge`,
+  `proj_global_ge`, `proj_local_ge_refl`, `cs_route_project_ctx`,
+  `project_seeded_eqs`, `call_string_projection_refinement`) had zero
+  citers outside this three-file chain; `cs_route_project_ctx` had zero
+  citers even inside its own file (its own comment records it as recorded
+  for a `comb`-hook simulation argument that was never written). Neither
+  `Context_Refinement` nor `Call_String_Solver_Projection` appeared in
+  `Analyse_Dispatch`'s `code_identifier` block, so the deletion has no
+  codegen surface at all. Updated: `Solver/ROOT`, `Core/ROOT`,
+  `Examples/ROOT`, `Solver/README.md`, `Core/README.md`,
+  `Examples/Interval/README.md`, `Voblint.thy` (theory list, the capstone
+  bullet, and one comparison clause in a neighboring bullet that named the
+  deleted theory), `Call_String_Solver_Regression.thy` (one prose sentence
+  contrasting itself with the deleted theory's proof). Moved
+  `CALLSTRING_PROJECT_SIGMA_GENERALIZATION_DESIGN.md` to `docs/history/`:
+  its entire subject is now deleted.
+
+- **2026-09-01, later same day** -- a four-agent architecture audit (Solver
+  boundary, `_at` cleanup, Goblint manager comparison, Phase 2.7 Exec
+  classification) converged on three independent commits, all batch-green:
+  1. `dg_edge_tree`/`dg_combine_tree` (`DG_Framework.thy`) redefined as
+     literal specializations of `dg_edge_tree_at`/`dg_combine_tree_at`
+     (`dg_edge_tree step u == dg_edge_tree_at step (Inl u) ()`), with the
+     "Edge formers over a solution address"/"Combine formers over a
+     solution address" subsections reordered ahead of the bare forms so the
+     specialization is definitional rather than bridged by a separate
+     lemma. Every bare-form characterization lemma (`traverse_dg_edge_tree`,
+     `sides_dg_edge_tree_Inl`/`_Inr`, `dep_aux_dg_edge_tree`, and the
+     `dg_combine_tree` analogues, plus a new `dep_aux_dg_combine_tree` that
+     did not exist before) is now a one-line corollary of its `_at`
+     counterpart. Fixed the two proofs (`env_indep_deps_dg_edge_tree`,
+     `env_indep_deps_dg_combine_tree`) that cited `dg_edge_tree_def`/
+     `dg_combine_tree_def` directly rather than through a named
+     characterization lemma, and deleted one dead duplicate
+     (`Exec_DG_Generator.thy`'s own copy of `dep_aux_dg_edge_tree`, unused
+     in its own file). No live consumer depended on the bare forms'
+     definitional shape -- confirmed by full-codebase citation trace before
+     touching anything.
+  2. `Voblint_Solver` now owns the generic bridge from the vendored TD
+     solver's executable termination check to `part_post_solution`:
+     `Solver_Menu.thy` moved wholesale from `Voblint_Exec` to
+     `Voblint_Solver`, and `Solver_Side_RG.thy`'s `solve_dom_of_solve_c`
+     (previously the only fact in that file cited by more than one
+     external site -- 30+ citers across Analysis/Soundness/Examples/CLI)
+     merged into it; `part_post_solution_of_solve_c`'s proof now cites
+     `solve_dom_of_solve_c` instead of re-deriving the same `solve_dom x`
+     fact inline. 19 files' imports retargeted from
+     `"Voblint_Exec.Solver_Menu"`/`"Voblint_Exec.Solver_Side_RG"` to
+     `"Voblint_Solver.Solver_Menu"`. `DG_Keyed_Generator.thy`'s own direct
+     `"TD.TD_side"` import (for `TD_side_mono`) is unrelated to this move
+     and was left alone -- Core reaching TD directly for that one locale
+     predicate is a separate, smaller fact than the solve/`part_post_solution`
+     boundary this commit centralizes.
+  3. Deleted `Solver_Side_RG.thy` entirely (689 lines, `git rm`, no
+     replacement) after a citation trace stronger than name-grep: every
+     head symbol (`side_rg`, `rg_val`, `rg_state`, `rg_sides`, `rg_ug`,
+     `rg_both`, both `TD_side_always_join_solve_Inr_rg`/`_rg_ind` and
+     their `..._warrowing_apinis_...` mirror halves) has zero occurrences
+     anywhere else in `src/`, so no `[simp]`-tag could be firing implicitly
+     either -- confirmed by checking the pattern, not just the lemma name.
+     This refutes `EXPORT_SURFACE_AUDIT.md`'s earlier claim that the
+     warrowing-apinis half "is live via `Interval_Warrowing.thy`": that
+     file only *mentioned* `TD_side_warrowing_apinis_solve_Inr_rg` in a
+     `text` comment explaining why two local lemmas existed, never cited
+     it in a proof. Those two local lemmas (`ivl_widen_bot_bot`,
+     `ivl_narrow_bot_bot`, `Interval_Warrowing.thy`) existed solely to
+     satisfy that now-deleted fact's preconditions and were dead in exactly
+     the same way once traced -- deleted alongside it. Also deleted 11
+     dead lemmas from `Monovariant_Analysis_Result.thy` on the same
+     evidence standard (`normalize_point_correct`,
+     `normalize_point_Reachable_map_lift`, all four
+     `normalize_point_canonicalize_lift_*`,
+     `gamma_point_normalize_point_canonicalize_lift`,
+     `lookup_context_monovariant_analysis_result_for`,
+     `contexts_at_monovariant_analysis_result_for`, `length_dg_globals_for`,
+     `map_fst_dg_globals_for`) -- `normalize_point` itself and its other
+     consumers (`dg_globals_for`, `ctx_solved_for`,
+     `monovariant_analysis_result_for`) stayed, still heavily cited.
+     Updated the six files whose prose named a deleted lemma by number
+     (`Interval_Checks.thy`, `Sign_Checks.thy`, `Int_Checks.thy`,
+     `Sign_Ctx_None_Sound.thy`, `Interval_Ctx_None_Sound.thy`,
+     `Interval_Ctx_Entry_State_Sound.thy`, `DG_Analysis_Adapter.thy`,
+     `Reachability_Lift.thy`) to describe the fact inline instead of
+     dangling a reference to a name that no longer exists -- one of these
+     (`DG_Analysis_Adapter.thy`, in `Voblint_Core`) had cited
+     `\<^theory>\<open>Voblint_Exec.Monovariant_Analysis_Result\<close>`, an actual layering
+     violation caught by the batch build (Core does not, and must not,
+     depend on Exec) rather than by the citation trace.
+  This closes the `_at` half and the Solver-boundary half of
+  `docs/HANDOFF.md`'s two open tracks; the manager question was re-audited
+  against a fresh clone of the real `goblint/analyzer` source (not memory)
+  and reconfirmed **A -- no manager needed**, with one honest new gap noted
+  (Goblint's `man.split` has no Voblint equivalent, because no current VIMP
+  transfer wants more than one resulting state outside `tf_branch`'s binary
+  case). Phase 2.7 itself turned out narrower than its own wording: only
+  `Solver_Menu` and `solve_dom_of_solve_c` were genuinely misplaced-but-
+  generic; `DG_Base_Exec.thy`/`routed_dg_domain_exec` and most of
+  `Monovariant_Analysis_Result.thy` remain in `Voblint_Exec` because they
+  are fundamentally about transporting between the concrete
+  `resolved_st_q`/`exec_dg_st` carrier and the abstract framework carrier --
+  `Voblint_Exec` does not dissolve from this round, and does not get closer
+  to dissolving until the larger, already-deferred quotient-carrier
+  restatement happens. `DG_Coverage.thy` (fully generic Core/DG content,
+  stranded only by importing `Exec_DG_Generator` for `dg_gen_of`) and the
+  12x-repeated `solve_c -> solve_dom -> part_post_solution` boilerplate
+  across `Analysis/Instances/**/Ctx/*_Sound.thy` remain open, deliberately
+  not touched this round -- the former needs a not-yet-done audit of
+  `Exec_DG_Generator.thy` in full, the latter is real proof engineering
+  (a new parametrized lemma/locale), not a move.
 
 ## Traps specific to Core
 

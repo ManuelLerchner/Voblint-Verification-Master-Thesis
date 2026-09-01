@@ -1031,7 +1031,6 @@ code_identifier
 | code_module State_Restriction \<rightharpoonup> (OCaml) Core
 | code_module Exec_Refinement \<rightharpoonup> (OCaml) Core
 | code_module Strategy_Tree_Fold \<rightharpoonup> (OCaml) Core
-| code_module Strategy_Tree_Relabel \<rightharpoonup> (OCaml) Core
 | code_module Transfer_Interface \<rightharpoonup> (OCaml) Core
 | code_module DG_Framework \<rightharpoonup> (OCaml) Core
 | code_module DG_Unit_Spec \<rightharpoonup> (OCaml) Core

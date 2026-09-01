@@ -372,10 +372,10 @@ text \<open>
   per-check Sign environment attached to each report entry instead of
   discarded, and an exact \<open>unreachable\<close> flag read straight off
   \<^const>\<open>lookup_context\<close>'s \<^const>\<open>Bot\<close>/\<^const>\<open>Lifted\<close> case split --
-  exact because \<open>normalize_point_canonicalize_lift_eq_old\<close>
-  (\<^theory>\<open>Voblint_Core.Analysis_Result\<close>) is precisely the fact that this
-  reading agrees with the older \<^const>\<open>resolved_st_q_lifted_is_bot_for\<close>
-  test on the same raw local unknown.
+  exact because composing \<^const>\<open>canonicalize_lift\<close>'s witness-bottom
+  collapse with \<^const>\<open>normalize_point\<close>'s readback agrees with the older
+  \<^const>\<open>resolved_st_q_lifted_is_bot_for\<close> test on the same raw local
+  unknown.
 \<close>
 
 definition analyse_sign_report_for_with_state ::

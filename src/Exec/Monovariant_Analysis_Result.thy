@@ -32,98 +32,6 @@ where
   "normalize_point gs Bot = Bot"
 | "normalize_point gs (Lifted s) = Lifted (fun_of_resolved_st_q_for gs s)"
 
-text \<open>
-  \<open>normalize_point\<close> is exact for whatever the raw value already denotes,
-  unconditionally: no premise on \<open>gs\<close>/declared globals is needed, since the
-  conversion no longer inspects them to decide reachability, only to project
-  the payload \<^const>\<open>fun_of_resolved_st_q_for\<close> already needs.
-\<close>
-
-lemma normalize_point_correct:
-  "gamma_point (normalize_point gs s) =
-     gamma_state_lift (map_lift (fun_of_resolved_st_q_for gs) s)"
-  by (cases s) simp_all
-
-text \<open>
-  The other direction of the same relabeling, in the shape a consumer of a
-  \<^const>\<open>Lifted\<close> point needs: the payload it hands out is literally the
-  reader's image of the solved local unknown, so a fact proved about the raw
-  lifted state transports to the normalized one without re-deciding
-  reachability.
-\<close>
-
-lemma normalize_point_Reachable_map_lift:
-  assumes "normalize_point gs s = Lifted st"
-  shows "map_lift (fun_of_resolved_st_q_for gs) s = Lifted st"
-  using assms by (cases s) auto
-
-text \<open>
-  The old, single-step reachability reading of a raw solver value (a
-  \<^const>\<open>Bot\<close>, a witness-bottom \<^const>\<open>Lifted\<close>, and a live \<^const>\<open>Lifted\<close> all
-  collapsed together) now factors into \<^const>\<open>canonicalize_lift\<close> followed by
-  \<open>normalize_point\<close>. The lemmas below pin all three cases of that
-  composition, with no premise on \<open>q\<close> beyond which case it is in: this is
-  the exact old/new behavior-preservation fact, true for every raw value a
-  solver could hand back, canonical or not.
-\<close>
-
-lemma normalize_point_canonicalize_lift_Bot:
-  "normalize_point gs (canonicalize_lift empty_pred Bot) = Bot"
-  by simp
-
-lemma normalize_point_canonicalize_lift_Lifted_bot:
-  assumes "empty_pred s"
-  shows "normalize_point gs (canonicalize_lift empty_pred (Lifted s)) = Bot"
-  using assms by simp
-
-lemma normalize_point_canonicalize_lift_Lifted_live:
-  assumes "\<not> empty_pred s"
-  shows "normalize_point gs (canonicalize_lift empty_pred (Lifted s)) =
-           Lifted (fun_of_resolved_st_q_for gs s)"
-  using assms by simp
-
-lemma normalize_point_canonicalize_lift_eq_old:
-  "normalize_point gs (canonicalize_lift empty_pred q) =
-     (case q of
-        Bot \<Rightarrow> Bot
-      | Lifted s \<Rightarrow> if empty_pred s then Bot
-                    else Lifted (fun_of_resolved_st_q_for gs s))"
-  by (cases q) simp_all
-
-text \<open>
-  The soundness-facing counterpart of \<open>normalize_point_canonicalize_lift_eq_old\<close>:
-  canonicalizing before normalizing never shrinks what a raw solved value
-  concretizes to, provided \<open>empty_pred\<close> only ever fires where the projected
-  state genuinely is witness-bottom (\<open>bot_sound\<close>, exactly what
-  \<open>resolved_st_q_is_bot_for_iff\<close> gives for \<open>resolved_st_q_is_bot_for gl\<close>).
-  This is the one fact a report soundness proof needs to transport an
-  existing raw-env node-soundness result across the
-  \<^const>\<open>canonicalize_lift\<close>/\<open>normalize_point\<close> boundary: no premise here
-  mentions solver support, so none of the three cases below needs one either.
-\<close>
-
-lemma gamma_point_normalize_point_canonicalize_lift:
-  fixes q :: "'a::sound_domain resolved_st_q lifted"
-  assumes bot_sound: "\<And>s. empty_pred s \<Longrightarrow> is_empty_state (fun_of_resolved_st_q_for gs s)"
-  shows "gamma_point (normalize_point gs (canonicalize_lift empty_pred q)) =
-           gamma_state_lift (map_lift (fun_of_resolved_st_q_for gs) q)"
-proof (cases q)
-  case Bot
-  then show ?thesis by simp
-next
-  case (Lifted s)
-  show ?thesis
-  proof (cases "empty_pred s")
-    case True
-    with bot_sound have "\<lbrakk>fun_of_resolved_st_q_for gs s\<rbrakk> = {}"
-      using is_empty_state_gamma_state_empty by blast
-    with Lifted True show ?thesis by simp
-  next
-    case False
-    with Lifted show ?thesis by simp
-  qed
-qed
-
 section \<open>One executable constructor for every monovariant \<open>AnalysisResult\<close>\<close>
 
 text \<open>
@@ -193,18 +101,6 @@ definition dg_globals_for ::
              normalize_point gs
                (canonicalize_lift (resolved_st_q_is_bot_for gl) (payload (sigma (Inr k))))))
          keys"
-
-text \<open>Reading a key the solver never touched is \<^const>\<open>Bot\<close>, the same
-  structural \<^const>\<open>Bot\<close> case a never-visited program point takes, so a caller can
-  list every key the program could have without testing solver support first.\<close>
-
-lemma length_dg_globals_for [simp]:
-  "length (dg_globals_for gs gl sigma keys) = length keys"
-  by (simp add: dg_globals_for_def)
-
-lemma map_fst_dg_globals_for:
-  "map fst (dg_globals_for gs gl sigma keys) = map (fst o snd) keys"
-  by (simp add: dg_globals_for_def case_prod_beta comp_def)
 
 text \<open>
   Which keys a routed unit-context solve can write, taking the two constructors as
@@ -304,28 +200,7 @@ text \<open>
   the way \<open>analyse_sign_report_for\<close> and its siblings still do for their own,
   differently-shaped \<open>classify_checks\<close> bodies.
 
-  \<^const>\<open>lookup_context\<close> gates on key membership itself (\<open>lookup_context_def\<close>:
-  a key outside the result table answers \<^const>\<open>Bot\<close> regardless of
-  what \<open>result_at\<close> would say there), so \<open>lookup_context_monovariant_analysis_result_for\<close>
-  below states that same gate against the CFG-node key domain, not against
-  the solver's own covered-key set -- a genuine CFG node always reads
-  through to its \<open>normalize_point\<close>/\<open>canonicalize_lift\<close> answer, live or dead.
 \<close>
-
-lemma lookup_context_monovariant_analysis_result_for:
-  "lookup_context (monovariant_analysis_result_for solve gs p) v ctx =
-     (if v \<in> set (cfg_node_list (prog_cfg p))
-      then normalize_point gs
-             (canonicalize_lift (resolved_st_q_is_bot_for (declared_global_vars p))
-               (locals (snd (solve gs p) (Inl (v, ctx)))))
-      else Bot)"
-  by (auto simp: monovariant_analysis_result_for_def lookup_context_def Let_def)
-
-lemma contexts_at_monovariant_analysis_result_for:
-  "contexts_at (monovariant_analysis_result_for solve gs p) v =
-     (if v \<in> set (cfg_node_list (prog_cfg p)) then {()} else {})"
-  by (auto simp: monovariant_analysis_result_for_def contexts_at_def Let_def)
-
 
 section \<open>The surface a solved table publishes\<close>
 

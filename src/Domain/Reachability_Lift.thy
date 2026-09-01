@@ -56,10 +56,8 @@ text \<open>
   \<open>map_lift_mono\<close>, \<open>normalize_lift_mono\<close>, \<open>transfer_lift_mono\<close>,
   \<open>transfer_lift2_mono\<close>) and the standalone widening/narrowing instances are
   stated at \<open>semilattice_sup\<close> as well. A caller that only needs the weak
-  standalone \<open>bot\<close> arity does not automatically satisfy this: \<open>Solver_Side_RG\<close>'s
-  \<open>rg_ug\<close> was one such case, declared at plain \<open>'a::bot\<close> for a value it never
-  actually used below \<open>bounded_warrowing\<close>, and had to be restated at the
-  sort its real call sites already required.
+  standalone \<open>bot\<close> arity does not automatically satisfy this, and has to
+  restate at the sort its real call sites already require.
 \<close>
 
 instantiation lifted :: (semilattice_sup) bounded_semilattice_sup_bot

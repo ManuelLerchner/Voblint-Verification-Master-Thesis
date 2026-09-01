@@ -29,7 +29,6 @@ session Voblint_Core in "." = "Voblint_CFG" +
     DG_Base
     Call_String_Context
     Call_String_Collecting_Refinement
-    Call_String_Solver_Projection
     (* Domain-generic solved-result table: per-point reachability and the
        per-context/per-node lookup surface downstream consumers read. *)
     Analysis_Result

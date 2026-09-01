@@ -13,6 +13,4 @@ session Voblint_Exec in "." = "Voblint_Core" +
     (* Solved-key coverage as a graph property: vars_cover from reachability to
        the exit, instead of evaluating the solver's own key set. *)
     DG_Coverage
-    Solver_Side_RG
-    Solver_Menu
     Monovariant_Analysis_Result

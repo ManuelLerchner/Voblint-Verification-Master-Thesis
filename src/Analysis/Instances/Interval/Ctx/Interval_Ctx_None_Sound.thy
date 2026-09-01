@@ -8,7 +8,7 @@ theory Interval_Ctx_None_Sound
     "Voblint_Core.Routed_Context"
     "Voblint_Core.Routed_Context_Unit"
     "Voblint_Core.DG_Analysis_Adapter"
-    "Voblint_Exec.Solver_Menu"
+    "Voblint_Solver.Solver_Menu"
     "Voblint_VIMP.VIMP_Program"
 begin
 
@@ -489,11 +489,10 @@ text \<open>
   Interval production's default solver: mirrors the always-join instantiation above under
   \<^const>\<open>TD_side_warrowing_apinis_Interp_solve\<close> instead, solving the exact same \<open>ictx_eqs\<close>
   equation system -- exactly as Interval's own entry-state contextual mode
-  (\<open>Interval_Ctx_Entry_State_Sound\<close>) already does. That file's own soundness derivation needs no
-  \<open>ivl_widen_bot_bot\<close>/\<open>ivl_narrow_bot_bot\<close> bridging fact: those facts are needed only by the
-  Base family's separate \<open>restrict_global_resolved_q\<close> bookkeeping for its flow-insensitive
-  global slot (\<^theory>\<open>Voblint_Analysis.Interval_Exec_Sound\<close>), which the routed spine's
-  keyed-seed \<open>Global\<close>/\<open>Seed\<close> globals replace outright. \<open>TD_side_upd_rule\<close>'s
+  (\<open>Interval_Ctx_Entry_State_Sound\<close>) already does. That file's own soundness derivation needs
+  no separate globally-restricted-slot bookkeeping the way the Base family's flow-insensitive
+  global slot once did (\<^theory>\<open>Voblint_Analysis.Interval_Exec_Sound\<close>): the routed spine's
+  keyed-seed \<open>Global\<close>/\<open>Seed\<close> globals replace that mechanism outright. \<open>TD_side_upd_rule\<close>'s
   \<open>solve_dom\<close>/\<open>partial_post_solution\<close> being locale-generic over the update rule (as for
   PerOrigin above) is exactly what makes this a mechanical solver-call swap here too.
 \<close>

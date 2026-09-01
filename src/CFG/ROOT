@@ -12,6 +12,6 @@ session Voblint_CFG in "." = "Voblint_VIMP" +
        mentions the compiler: the analysis soundness statements are about any
        graph, not only about compiled ones. *)
     LTR_Def
-    Activation_Context
+    LTR_Activation_Context
     LTR_Collect
     LTR_Abstract

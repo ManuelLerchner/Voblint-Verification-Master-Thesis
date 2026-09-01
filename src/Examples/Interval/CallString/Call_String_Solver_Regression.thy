@@ -14,8 +14,7 @@ text \<open>Regression coverage for the shape \<^const>\<open>DG_Keyed_Generator
   key all read \<open>enter_local nest_S_st\<close> applied to the same caller state \<^emph>\<open>and\<close> the same
   \<open>Global\<close> value. The site is a single tree: the caller state and \<open>Global\<close> are read
   once, the resolver names the callees, and \<^const>\<open>side_rhs_fold_dg\<close> folds their
-  contributions. \<open>Call_String_Solver_Refinement_Seeded\<close>'s
-  generic refinement proof never needs these closed forms -- they only guard against silent
+  contributions. These closed forms guard against silent
   regressions in \<^const>\<open>routed_cmb_g\<close>/\<^const>\<open>side_cfg_T_eff_keyed_seed_dg\<close> generation
   itself.\<close>
 

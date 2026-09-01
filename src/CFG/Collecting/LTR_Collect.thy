@@ -1,5 +1,5 @@
 theory LTR_Collect
-  imports LTR_Def Activation_Context
+  imports LTR_Def LTR_Activation_Context
 begin
 
 section \<open>Which stores can occur at each node\<close>

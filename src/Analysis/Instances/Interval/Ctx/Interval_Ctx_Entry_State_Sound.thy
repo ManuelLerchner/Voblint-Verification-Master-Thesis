@@ -6,7 +6,7 @@ theory Interval_Ctx_Entry_State_Sound
     "Voblint_Analysis.Interval_Checks"
     "Voblint_Core.Routed_Context"
     Entry_State_Routed_Context
-    "Voblint_Exec.Solver_Menu"
+    "Voblint_Solver.Solver_Menu"
     "Voblint_CFG.CFG_Prune"
     "Voblint_VIMP.VIMP_Program"
 begin
@@ -417,8 +417,8 @@ text \<open>
   assuming the live one.
 
   \<open>reach\<close> says the normalized state is the reader's image of the solved local
-  unknown -- the shape \<open>normalize_point_Reachable_map_lift\<close> supplies for any
-  point a result table answered \<^const>\<open>Lifted\<close>. \<open>not_bot\<close> says that
+  unknown -- what \<^const>\<open>normalize_point\<close> supplies for any point a result
+  table answered \<^const>\<open>Lifted\<close>. \<open>not_bot\<close> says that
   normalized state is not itself \<^const>\<open>is_empty_state\<close>, which
   \<open>normalize_point\<close>'s own witness-bottom test already guarantees for every
   \<^const>\<open>Lifted\<close> point a table built through it can produce.

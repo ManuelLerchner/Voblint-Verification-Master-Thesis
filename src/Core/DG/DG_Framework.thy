@@ -1,7 +1,7 @@
 theory DG_Framework
   imports Transfer_Interface State_Restriction "Voblint_Domain.Nonrelational_Reachability"
     "Voblint_Solver.Strategy_Tree_Post_Solution" "Voblint_Solver.Strategy_Tree_Side_Buffering"
-    "Voblint_Solver.Strategy_Tree_Fold" "Voblint_Solver.Strategy_Tree_Relabel" "Voblint_Solver.Strategy_Tree_Combinators"
+    "Voblint_Solver.Strategy_Tree_Fold" "Voblint_Solver.Strategy_Tree_Combinators"
     "Voblint_CFG.CFG_Transfer"
 begin
 
@@ -112,130 +112,20 @@ end
 
 
 
-subsection \<open>The heterogeneous framework edge shape\<close>
-
-text \<open>
-  Two independent opaque domains.  An analysis provides
-  \<open>step : D \<Rightarrow> G \<Rightarrow> G \<times> D\<close> (transfer plus publication); the framework reads the
-  local unknown's \<open>D\<close> and the global slot's \<open>G\<close>, and transports the step's
-  \<open>Side : G\<close> and \<open>Answer : D\<close>.  Slot packing (\<open>DG _ bot\<close> / \<open>DG bot _\<close>) is the
-  encoding of the two-typed unknown space into the solver's single value type;
-  the framework never looks inside \<open>D\<close> or \<open>G\<close>.
-\<close>
-
-definition dg_edge_tree ::
-  "('dl::bounded_semilattice_sup_bot \<Rightarrow> 'dg::bounded_semilattice_sup_bot \<Rightarrow> 'dg \<times> 'dl)
-   \<Rightarrow> pp \<Rightarrow> (pp, unit, ('dl, 'dg) dg_state) strategy_tree"
-where
-  "dg_edge_tree step u =
-     do {
-       d <- read_local u;
-       g <- read_global ();
-       side_effect () (DG bot (fst (step (locals d) (globs g))))
-         (answer (DG (snd (step (locals d) (globs g))) bot))
-     }"
-
-lemma traverse_dg_edge_tree:
-  "traverse_rhs (dg_edge_tree step u) \<tau>
-   = DG (snd (step (locals (\<tau> (Inl u))) (globs (\<tau> (Inr ()))))) bot"
-  unfolding dg_edge_tree_def by simp
-
-lemma sides_dg_edge_tree_Inr:
-  "sides_of_rhs (dg_edge_tree step u) \<tau> (Inr ())
-   = DG bot (fst (step (locals (\<tau> (Inl u))) (globs (\<tau> (Inr ())))))"
-  unfolding dg_edge_tree_def by (simp add: Let_def)
-
-lemma sides_dg_edge_tree_Inl:
-  "sides_of_rhs (dg_edge_tree step u) \<tau> (Inl v) = bot"
-  unfolding dg_edge_tree_def by (simp add: Let_def)
-
-lemma dep_aux_dg_edge_tree:
-  "dep_aux \<tau> (dg_edge_tree step u) = {Inl u, Inr ()}"
-  by (simp add: dg_edge_tree_def dep_aux_def)
-
-text \<open>
-  The framework boundary as theorems, for \<^emph>\<open>every\<close> analysis step and every
-  assignment: Answers carry no \<open>G\<close>, Side publications carry no \<open>D\<close>.
-\<close>
-
-theorem dg_edge_tree_answer_pure_D:
-  "globs (traverse_rhs (dg_edge_tree step u) \<tau>) = bot"
-  by (simp add: traverse_dg_edge_tree)
-
-theorem dg_edge_tree_side_pure_G:
-  "locals (sides_of_rhs (dg_edge_tree step u) \<tau> (Inr ())) = bot"
-  by (simp add: sides_dg_edge_tree_Inr)
-
-subsection \<open>Side-free edge contribution, for buffered keyed generation\<close>
-
-text \<open>
-  \<open>dg_edge_tree\<close> publishes its \<open>G\<close> contribution as soon as it is evaluated
-  (\<^const>\<open>side_effect\<close>). When \<open>side_cfg_T_eff_keyed_seed_dg\<close> (below) folds several such
-  trees into one equation's RHS (several intra predecessors, or several return sites),
-  each one's \<open>Side\<close> is published at a different moment within the same RHS evaluation:
-  the vendored solver's warrowing/APINIS update rule gates convergence per \<^emph>\<open>origin\<close>, so
-  repeated writes to the same key from the same origin can destabilize the equation's own
-  dependency and never converge.
-
-  \<open>dg_edge_contribution_tree\<close> is the Side-free analogue: it answers the \<^emph>\<open>unsplit\<close>
-  \<open>(G, D)\<close> result as one \<open>dg_state\<close>, publishing nothing. A caller folds several
-  contribution trees with \<^const>\<open>fold_rhs_trees\<close> (whose own \<^const>\<open>Side\<close> is empty, so no
-  intermediate publication happens) and splits the aggregate once, after every
-  contribution has been read -- reproducing \<^const>\<open>dg_edge_tree\<close>'s declarative
-  \<^const>\<open>traverse_rhs\<close>/\<^const>\<open>sides_of_rhs\<close> value while emitting at most one \<open>Side\<close> per
-  key per RHS evaluation.
-\<close>
-
-definition dg_edge_contribution_tree ::
-  "('dl::bounded_semilattice_sup_bot \<Rightarrow> 'dg::bounded_semilattice_sup_bot \<Rightarrow> 'dg \<times> 'dl)
-   \<Rightarrow> pp \<Rightarrow> (pp, unit, ('dl, 'dg) dg_state) strategy_tree"
-where
-  "dg_edge_contribution_tree step u =
-     do {
-       d \<leftarrow> read_local u;
-       g \<leftarrow> read_global ();
-       answer (DG (snd (step (locals d) (globs g))) (fst (step (locals d) (globs g))))
-     }"
-
-lemma traverse_dg_edge_contribution_tree:
-  "traverse_rhs (dg_edge_contribution_tree step u) \<tau>
-   = DG (snd (step (locals (\<tau> (Inl u))) (globs (\<tau> (Inr ())))))
-        (fst (step (locals (\<tau> (Inl u))) (globs (\<tau> (Inr ())))))"
-  unfolding dg_edge_contribution_tree_def by simp
-
-lemma sides_dg_edge_contribution_tree:
-  "sides_of_rhs (dg_edge_contribution_tree step u) \<tau> k = bot"
-  unfolding dg_edge_contribution_tree_def by (cases k) (simp_all add: Let_def)
-
-lemma dep_aux_dg_edge_contribution_tree:
-  "dep_aux \<tau> (dg_edge_contribution_tree step u) = {Inl u, Inr ()}"
-  by (simp add: dg_edge_contribution_tree_def dep_aux_def)
-
-lemma dg_edge_contribution_tree_matches_local:
-  "locals (traverse_rhs (dg_edge_contribution_tree step u) \<tau>)
-     = locals (traverse_rhs (dg_edge_tree step u) \<tau>)"
-  by (simp add: traverse_dg_edge_contribution_tree traverse_dg_edge_tree)
-
-lemma dg_edge_contribution_tree_matches_global:
-  "globs (traverse_rhs (dg_edge_contribution_tree step u) \<tau>)
-     = globs (sides_of_rhs (dg_edge_tree step u) \<tau> (Inr ()))"
-  by (simp add: traverse_dg_edge_contribution_tree sides_dg_edge_tree_Inr)
-
 subsection \<open>Edge formers over a solution address\<close>
 
 text \<open>
-  \<^const>\<open>dg_edge_tree\<close> and \<^const>\<open>dg_edge_contribution_tree\<close> fix their source to a
-  local unknown and their published slot to the \<^typ>\<open>unit\<close> key; the generator
-  relabels both afterwards.  The formers below instead take the source as an
-  \<^emph>\<open>address\<close> in the solver's own valuation space \<^typ>\<open>'x + 'k\<close> and the published
-  slot as an explicit key.  A program point whose value is carried by a
-  contribution-only unknown -- one with no equation of its own, so that its
-  value is exactly the join of what was published to it -- is then read by
-  exactly the same former as one carried by an equation-driven unknown, since
-  \<^const>\<open>QueryL\<close> and \<^const>\<open>QueryG\<close> project the same valuation.
+  An edge or combine former takes its source as an \<^emph>\<open>address\<close> in the solver's
+  own valuation space \<^typ>\<open>'x + 'k\<close> and its published slot as an explicit key,
+  rather than fixing the source to a local unknown and the slot to the
+  \<^typ>\<open>unit\<close> key -- what lets a keyed generator target an arbitrary
+  activation-indexed unknown directly, with no separate address-rewriting pass.
 
-  Fixing the address to \<^const>\<open>Inl\<close> and the key to \<^term>\<open>()\<close> recovers the two
-  formers above, so an equation system built with those is unchanged.
+  A program point whose value is carried by a contribution-only unknown --
+  one with no equation of its own, so that its value is exactly the join of
+  what was published to it -- is then read by exactly the same former as one
+  carried by an equation-driven unknown, since \<^const>\<open>QueryL\<close> and
+  \<^const>\<open>QueryG\<close> project the same valuation.
 
   \<^const>\<open>read_at\<close> itself (\<^theory>\<open>Voblint_Solver.Strategy_Tree_Combinators\<close>) is a
   generic solver-address dispatcher with no notion of \<open>D\<close>/\<open>G\<close>; here it is
@@ -301,42 +191,187 @@ lemma dep_aux_dg_edge_contribution_tree_at:
   "dep_aux tau (dg_edge_contribution_tree_at step src gk) = {src, Inr gk}"
   by (cases src) (simp_all add: dg_edge_contribution_tree_at_def)
 
+subsection \<open>The heterogeneous framework edge shape\<close>
+
+text \<open>
+  Two independent opaque domains.  An analysis provides
+  \<open>step : D \<Rightarrow> G \<Rightarrow> G \<times> D\<close> (transfer plus publication); the framework reads the
+  local unknown's \<open>D\<close> and the global slot's \<open>G\<close>, and transports the step's
+  \<open>Side : G\<close> and \<open>Answer : D\<close>.  Slot packing (\<open>DG _ bot\<close> / \<open>DG bot _\<close>) is the
+  encoding of the two-typed unknown space into the solver's single value type;
+  the framework never looks inside \<open>D\<close> or \<open>G\<close>.
+
+  \<open>dg_edge_tree\<close> is the local-unknown specialization of
+  \<^const>\<open>dg_edge_tree_at\<close>, fixing the source to \<^term>\<open>Inl u\<close> and the published
+  slot to the \<^typ>\<open>unit\<close> key.
+\<close>
+
+definition dg_edge_tree ::
+  "('dl::bounded_semilattice_sup_bot \<Rightarrow> 'dg::bounded_semilattice_sup_bot \<Rightarrow> 'dg \<times> 'dl)
+   \<Rightarrow> pp \<Rightarrow> (pp, unit, ('dl, 'dg) dg_state) strategy_tree"
+where
+  "dg_edge_tree step u = dg_edge_tree_at step (Inl u) ()"
+
 lemma dg_edge_tree_as_at:
   "dg_edge_tree step u = dg_edge_tree_at step (Inl u) ()"
-  unfolding dg_edge_tree_def dg_edge_tree_at_def by simp
+  by (simp add: dg_edge_tree_def)
+
+lemma traverse_dg_edge_tree:
+  "traverse_rhs (dg_edge_tree step u) \<tau>
+   = DG (snd (step (locals (\<tau> (Inl u))) (globs (\<tau> (Inr ()))))) bot"
+  by (simp add: dg_edge_tree_def traverse_dg_edge_tree_at)
+
+lemma sides_dg_edge_tree_Inr:
+  "sides_of_rhs (dg_edge_tree step u) \<tau> (Inr ())
+   = DG bot (fst (step (locals (\<tau> (Inl u))) (globs (\<tau> (Inr ())))))"
+  by (simp add: dg_edge_tree_def sides_dg_edge_tree_at)
+
+lemma sides_dg_edge_tree_Inl:
+  "sides_of_rhs (dg_edge_tree step u) \<tau> (Inl v) = bot"
+  by (simp add: dg_edge_tree_def sides_dg_edge_tree_at_other)
+
+lemma dep_aux_dg_edge_tree:
+  "dep_aux \<tau> (dg_edge_tree step u) = {Inl u, Inr ()}"
+  by (simp add: dg_edge_tree_def dep_aux_dg_edge_tree_at)
+
+text \<open>
+  The framework boundary as theorems, for \<^emph>\<open>every\<close> analysis step and every
+  assignment: Answers carry no \<open>G\<close>, Side publications carry no \<open>D\<close>.
+\<close>
+
+theorem dg_edge_tree_answer_pure_D:
+  "globs (traverse_rhs (dg_edge_tree step u) \<tau>) = bot"
+  by (simp add: traverse_dg_edge_tree)
+
+theorem dg_edge_tree_side_pure_G:
+  "locals (sides_of_rhs (dg_edge_tree step u) \<tau> (Inr ())) = bot"
+  by (simp add: sides_dg_edge_tree_Inr)
+
+subsection \<open>Side-free edge contribution, for buffered keyed generation\<close>
+
+text \<open>
+  \<open>dg_edge_tree\<close> publishes its \<open>G\<close> contribution as soon as it is evaluated
+  (\<^const>\<open>side_effect\<close>). When \<open>side_cfg_T_eff_keyed_seed_dg\<close> (below) folds several such
+  trees into one equation's RHS (several intra predecessors, or several return sites),
+  each one's \<open>Side\<close> is published at a different moment within the same RHS evaluation:
+  the vendored solver's warrowing/APINIS update rule gates convergence per \<^emph>\<open>origin\<close>, so
+  repeated writes to the same key from the same origin can destabilize the equation's own
+  dependency and never converge.
+
+  \<open>dg_edge_contribution_tree\<close> is the Side-free analogue -- the local-unknown
+  specialization of \<^const>\<open>dg_edge_contribution_tree_at\<close> -- it answers the
+  \<^emph>\<open>unsplit\<close> \<open>(G, D)\<close> result as one \<open>dg_state\<close>, publishing nothing. A caller
+  folds several contribution trees with \<^const>\<open>fold_rhs_trees\<close> (whose own
+  \<^const>\<open>Side\<close> is empty, so no intermediate publication happens) and splits the
+  aggregate once, after every contribution has been read -- reproducing
+  \<^const>\<open>dg_edge_tree\<close>'s declarative \<^const>\<open>traverse_rhs\<close>/\<^const>\<open>sides_of_rhs\<close>
+  value while emitting at most one \<open>Side\<close> per key per RHS evaluation.
+\<close>
+
+definition dg_edge_contribution_tree ::
+  "('dl::bounded_semilattice_sup_bot \<Rightarrow> 'dg::bounded_semilattice_sup_bot \<Rightarrow> 'dg \<times> 'dl)
+   \<Rightarrow> pp \<Rightarrow> (pp, unit, ('dl, 'dg) dg_state) strategy_tree"
+where
+  "dg_edge_contribution_tree step u = dg_edge_contribution_tree_at step (Inl u) ()"
 
 lemma dg_edge_contribution_tree_as_at:
   "dg_edge_contribution_tree step u = dg_edge_contribution_tree_at step (Inl u) ()"
-  unfolding dg_edge_contribution_tree_def dg_edge_contribution_tree_at_def by simp
+  by (simp add: dg_edge_contribution_tree_def)
 
-text \<open>Procedure-return combine: two \<open>D\<close> inputs (caller, callee exit), one \<open>G\<close>.\<close>
+lemma traverse_dg_edge_contribution_tree:
+  "traverse_rhs (dg_edge_contribution_tree step u) \<tau>
+   = DG (snd (step (locals (\<tau> (Inl u))) (globs (\<tau> (Inr ())))))
+        (fst (step (locals (\<tau> (Inl u))) (globs (\<tau> (Inr ())))))"
+  by (simp add: dg_edge_contribution_tree_def traverse_dg_edge_contribution_tree_at)
+
+lemma sides_dg_edge_contribution_tree:
+  "sides_of_rhs (dg_edge_contribution_tree step u) \<tau> k = bot"
+  by (simp add: dg_edge_contribution_tree_def sides_dg_edge_contribution_tree_at)
+
+lemma dep_aux_dg_edge_contribution_tree:
+  "dep_aux \<tau> (dg_edge_contribution_tree step u) = {Inl u, Inr ()}"
+  by (simp add: dg_edge_contribution_tree_def dep_aux_dg_edge_contribution_tree_at)
+
+lemma dg_edge_contribution_tree_matches_local:
+  "locals (traverse_rhs (dg_edge_contribution_tree step u) \<tau>)
+     = locals (traverse_rhs (dg_edge_tree step u) \<tau>)"
+  by (simp add: traverse_dg_edge_contribution_tree traverse_dg_edge_tree)
+
+lemma dg_edge_contribution_tree_matches_global:
+  "globs (traverse_rhs (dg_edge_contribution_tree step u) \<tau>)
+     = globs (sides_of_rhs (dg_edge_tree step u) \<tau> (Inr ()))"
+  by (simp add: traverse_dg_edge_contribution_tree sides_dg_edge_tree_Inr)
+
+text \<open>
+  Combine formers mirror the edge formers above: the address-parametric form
+  is primary, taking each source as a solver address rather than fixing it to
+  a local unknown, and reads two \<open>D\<close> inputs (caller, callee exit) plus one
+  \<open>G\<close> instead of one \<open>D\<close>.
+\<close>
+
+definition dg_combine_tree_at ::
+  "(call_info \<Rightarrow> 'dl::bounded_semilattice_sup_bot \<Rightarrow> 'dl \<Rightarrow> 'dg::bounded_semilattice_sup_bot \<Rightarrow> 'dg \<times> 'dl)
+   \<Rightarrow> call_info \<Rightarrow> 'x + 'k \<Rightarrow> 'x + 'k \<Rightarrow> 'k \<Rightarrow> ('x, 'k, ('dl, 'dg) dg_state) strategy_tree"
+where
+  "dg_combine_tree_at comb ci src_cc src_ex gk =
+     do {
+       dc <- read_at src_cc;
+       de <- read_at src_ex;
+       g <- read_global gk;
+       side_effect gk (DG bot (fst (comb ci (locals dc) (locals de) (globs g))))
+         (answer (DG (snd (comb ci (locals dc) (locals de) (globs g))) bot))
+     }"
+
+lemma traverse_dg_combine_tree_at:
+  "traverse_rhs (dg_combine_tree_at comb ci src_cc src_ex gk) tau
+   = DG (snd (comb ci (locals (tau src_cc)) (locals (tau src_ex)) (globs (tau (Inr gk))))) bot"
+  unfolding dg_combine_tree_at_def by (cases src_cc; cases src_ex) simp_all
+
+lemma sides_dg_combine_tree_at:
+  "sides_of_rhs (dg_combine_tree_at comb ci src_cc src_ex gk) tau (Inr gk)
+   = DG bot (fst (comb ci (locals (tau src_cc)) (locals (tau src_ex)) (globs (tau (Inr gk)))))"
+  unfolding dg_combine_tree_at_def by (cases src_cc; cases src_ex) (simp_all add: Let_def)
+
+lemma sides_dg_combine_tree_at_other:
+  "k \<noteq> Inr gk \<Longrightarrow> sides_of_rhs (dg_combine_tree_at comb ci src_cc src_ex gk) tau k = bot"
+  unfolding dg_combine_tree_at_def by (cases src_cc; cases src_ex) (simp_all add: Let_def)
+
+lemma dep_aux_dg_combine_tree_at:
+  "dep_aux tau (dg_combine_tree_at comb ci src_cc src_ex gk) = {src_cc, src_ex, Inr gk}"
+  by (cases src_cc; cases src_ex) (simp_all add: dg_combine_tree_at_def)
+
+text \<open>Procedure-return combine: \<open>dg_combine_tree\<close> is the local-unknown
+  specialization of \<^const>\<open>dg_combine_tree_at\<close>, fixing the caller and
+  callee-exit sources to \<^term>\<open>Inl cc\<close>/\<^term>\<open>Inl ex\<close> and the published slot to
+  the \<^typ>\<open>unit\<close> key.\<close>
 
 definition dg_combine_tree ::
   "(call_info \<Rightarrow> 'dl::bounded_semilattice_sup_bot \<Rightarrow> 'dl \<Rightarrow> 'dg::bounded_semilattice_sup_bot \<Rightarrow> 'dg \<times> 'dl)
    \<Rightarrow> call_info \<Rightarrow> pp \<Rightarrow> pp \<Rightarrow> (pp, unit, ('dl, 'dg) dg_state) strategy_tree"
 where
-  "dg_combine_tree comb ci cc ex =
-     do {
-       dc <- read_local cc;
-       de <- read_local ex;
-       g <- read_global ();
-       side_effect () (DG bot (fst (comb ci (locals dc) (locals de) (globs g))))
-         (answer (DG (snd (comb ci (locals dc) (locals de) (globs g))) bot))
-     }"
+  "dg_combine_tree comb ci cc ex = dg_combine_tree_at comb ci (Inl cc) (Inl ex) ()"
+
+lemma dg_combine_tree_as_at:
+  "dg_combine_tree comb ci cc ex = dg_combine_tree_at comb ci (Inl cc) (Inl ex) ()"
+  by (simp add: dg_combine_tree_def)
 
 lemma traverse_dg_combine_tree:
   "traverse_rhs (dg_combine_tree comb dst cc ex) \<tau>
    = DG (snd (comb dst (locals (\<tau> (Inl cc))) (locals (\<tau> (Inl ex))) (globs (\<tau> (Inr ()))))) bot"
-  unfolding dg_combine_tree_def by simp
+  by (simp add: dg_combine_tree_def traverse_dg_combine_tree_at)
 
 lemma sides_dg_combine_tree_Inr:
   "sides_of_rhs (dg_combine_tree comb dst cc ex) \<tau> (Inr ())
    = DG bot (fst (comb dst (locals (\<tau> (Inl cc))) (locals (\<tau> (Inl ex))) (globs (\<tau> (Inr ())))))"
-  unfolding dg_combine_tree_def by (simp add: Let_def)
+  by (simp add: dg_combine_tree_def sides_dg_combine_tree_at)
 
 lemma sides_dg_combine_tree_Inl:
   "sides_of_rhs (dg_combine_tree comb dst cc ex) \<tau> (Inl v) = bot"
-  unfolding dg_combine_tree_def by (simp add: Let_def)
+  by (simp add: dg_combine_tree_def sides_dg_combine_tree_at_other)
+
+lemma dep_aux_dg_combine_tree:
+  "dep_aux \<tau> (dg_combine_tree comb dst cc ex) = {Inl cc, Inl ex, Inr ()}"
+  by (simp add: dg_combine_tree_def dep_aux_dg_combine_tree_at)
 
 subsection \<open>Monotonicity and static dependencies of the edge and combine tree shapes\<close>
 
@@ -351,10 +386,10 @@ text \<open>
 \<close>
 
 lemma env_indep_deps_dg_edge_tree: "env_indep_deps (dg_edge_tree step u)"
-  by (rule env_indep_depsI) (simp add: dg_edge_tree_def)
+  by (rule env_indep_depsI) (simp add: dep_aux_dg_edge_tree)
 
 lemma env_indep_deps_dg_combine_tree: "env_indep_deps (dg_combine_tree comb dst cc ex)"
-  by (rule env_indep_depsI) (simp add: dg_combine_tree_def)
+  by (rule env_indep_depsI) (simp add: dep_aux_dg_combine_tree)
 
 lemma dg_edge_tree_mono:
   assumes step_mono_snd:
