@@ -408,12 +408,43 @@ corollaries mirrors `control.ml` exactly and is the intended endpoint.
 
 ### Implementation order for 3.1
 
-1. `dead_code_lift` + `lift_gamma` + `dead_code_lift_sound` in Core
-   (representation-free; reachability only, no emptiness oracle).
-2. Equality back to the frozen records: each `*_for_lifted` construction
-   shown equal to (a normalization layer over) `dead_code_lift` of its
-   unlifted core, keeping names and generated OCaml unchanged. The
-   normalization layer carries the explicit exact-emptiness interface the
-   Base route already has (`empty_pred s <-> is_empty_state (readback s)`).
-3. `dead_code_lift_exec` + the commute-preservation theorem in Exec.
+1. **Landed** (`src/Core/Lifters/DG_Dead_Code_Lift.thy`): `dead_code_lift` +
+   `lift_gamma` + `dead_code_lift_sound`; `sound_dg_spec_cong` (soundness
+   sees only the four composed operations); `renormalize` /
+   `dead_code_normalize` + `dead_code_normalize_sound` over the explicit
+   emptiness interface.
+2. **Landed** (in `DG_Base.thy`): the unlifted core `base_dg_spec_for` with
+   its own soundness, four composed-operation agreement lemmas, and
+   `base_dg_spec_sound` re-derived through the functor chain -- the three
+   hand-rolled per-obligation walls are deleted. Field-level record
+   equality is impossible (the frozen `dgs_combine_env` passthrough is not
+   strict in the callee value; the generic lifter's is), so the connection
+   is composed-operation agreement + `sound_dg_spec_cong`, the
+   characterize-don't-rebuild lesson again.
+3. **Landed** (same theory, representation-free): `dg_spec_commute` (four
+   readback-commute equations over arbitrary local/global readbacks) with
+   `dead_code_lift_commute` and `dead_code_normalize_commute` -- the
+   instances-plus-lifters naturality theorems. Wiring the Base executable
+   records onto them (subsuming `routed_dg_domain_exec`'s per-domain
+   discharge) is the remaining Exec-side step; DG_Base_Exec's four
+   whole-record commute theorems are already proved once, so this is
+   packaging for the second lifter, not deduplication.
+3a. **Resolved by deletion**: the unit route's `unit_dg_spec_for_lifted` /
+   `gamma_unit_lifted` lifted *both* carriers, but the G-side lift was
+   representation, not semantics -- `gamma_unit_lifted` sent `g = Bot` to
+   `gamma_unit d0 bot`, i.e. the ordinary G-bottom, not the empty set, so
+   global `Bot` never meant unreachability (the Goblint alignment:
+   `DeadCodeLifter` wraps only `Spec.D`; global bottom means "no
+   contribution"). A follow-up review proposed factoring it as
+   `dead_code_lift` on D plus a `collapse_global` readback on G wired by
+   `dg_spec_commute` -- but a citation sweep found the entire layer
+   (`unit_step_for_lifted`, `assemble_env_abs`, `unit_dg_spec_for_lifted`,
+   `gamma_unit_lifted`, its three soundness walls and
+   `sound_dg_spec_unit_for_lifted`, ~460 lines) had zero consumers: absent
+   from every other theory and from the generated OCaml. Deleted instead.
+   When a consumer wants a dead-code-aware unit analysis, the canonical
+   construction is one expression --
+   `dead_code_normalize empty_pred (dead_code_lift (unit_dg_spec_for gs tf))`
+   at `lift_gamma (gamma_unit gs)` -- with soundness falling out of
+   `sound_dg_spec_unit_for` plus the two preservation theorems.
 4. `|>` bundle when the second lifter lands, not before.

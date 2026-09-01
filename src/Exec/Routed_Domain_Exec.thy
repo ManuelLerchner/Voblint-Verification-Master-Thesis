@@ -76,17 +76,12 @@ lemma dg_tree_st_commute_routed_cmb_g:
      (map_lift (fun_of_resolved_st_q_for gs)) (map_lift (fun_of_resolved_st_q_for gs)) env
      (routed_cmb_g spec_st gk0 seed_key (resolve_st g) route_st ctx ca cc ex)
      (routed_cmb_g spec_abs gk0 seed_key (resolve_abs g) route_abs ctx ca cc ex)"
-  apply (rule dg_reader_commute_gen.dg_tree_st_commute_routed_cmb_g
+  by (rule dg_reader_commute_gen.dg_tree_st_commute_routed_cmb_g
         [where Floc = "map_lift (fun_of_resolved_st_q_for gs)"
            and Fglob = "map_lift (fun_of_resolved_st_q_for gs)"])
-       apply (rule dg_reader_commute_gen_lifted_for)
-      apply (rule seed_key_ne_gk0)
-     apply (rule Henter_lifted_for)
-    apply (rule Hcomb_lifted_for)
-   apply (rule Hcont_lifted_for)
-  apply (rule route_agree)
-  apply (rule resolve_agree)
-  done
+     (rule dg_reader_commute_gen_lifted_for seed_key_ne_gk0
+           Henter_lifted_for Hcomb_lifted_for Hcont_lifted_for
+           route_agree resolve_agree)+
 
 text \<open>The routed extra-goal list commutes elementwise, for the same reason.\<close>
 

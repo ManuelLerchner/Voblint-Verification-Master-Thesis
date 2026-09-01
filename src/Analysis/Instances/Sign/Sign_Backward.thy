@@ -230,9 +230,9 @@ lemma inv_eq_sign_mono:
   shows
     "fst (inv_eq_sign r a1 a2) \<le> fst (inv_eq_sign r a1' a2') \<and>
      snd (inv_eq_sign r a1 a2) \<le> snd (inv_eq_sign r a1' a2')"
-  apply (cases r)
-  using assms inv_eq_sign_false_fst_mono inv_eq_sign_false_snd_mono 
-  by (auto simp add: meet_sign_mono)
+  by (cases r)
+     (use assms inv_eq_sign_false_fst_mono inv_eq_sign_false_snd_mono
+        in \<open>auto simp add: meet_sign_mono\<close>)
 
 text \<open>
   Monotonicity of @{const inv_less_sign} needs a case split on both the guard's

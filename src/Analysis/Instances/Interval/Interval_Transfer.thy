@@ -174,18 +174,10 @@ definition ivl_tf_for :: "(vname => bool) => ivl domain_transfer" where
 
 lemma ivl_is_sound_transfer_for: "sound_transfer_for gs (ivl_tf_for gs)"
   unfolding ivl_tf_for_def
-  apply unfold_locales
-  subgoal by (simp add: assign_ivl_sound)
-  subgoal by (simp add: special_ivl_sound)
-  subgoal by (simp add: branch_ivl_sound)
-  subgoal by (simp add: skip_ivl_sound)
-  subgoal by (simp add: body_ivl_sound)
-  subgoal by (simp add: return_ivl_sound)
-  subgoal by (simp add: enter_pair_ivl_for_sound)
-  subgoal by (simp add: event_ivl_sound)
-  subgoal by (simp add: enter_pair_ivl_for_sound)
-  subgoal by (simp add: combine_env_sound)
-  done
+  by unfold_locales
+     (simp_all add: assign_ivl_sound special_ivl_sound branch_ivl_sound
+        skip_ivl_sound body_ivl_sound return_ivl_sound enter_pair_ivl_for_sound
+        event_ivl_sound combine_env_sound)
 
 lemma enter_frame_ivl_for_mono:
   assumes "s1 \<le> s2"

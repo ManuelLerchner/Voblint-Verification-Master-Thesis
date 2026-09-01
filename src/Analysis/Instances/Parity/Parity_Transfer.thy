@@ -178,18 +178,10 @@ definition parity_tf_for :: "(vname => bool) => parity domain_transfer" where
 
 lemma parity_is_sound_transfer_for: "sound_transfer_for gs (parity_tf_for gs)"
   unfolding parity_tf_for_def
-  apply unfold_locales
-  subgoal by (simp add: assign_parity_sound)
-  subgoal by (simp add: special_parity_sound)
-  subgoal by (simp add: branch_parity_sound)
-  subgoal by (simp add: skip_parity_sound)
-  subgoal by (simp add: body_parity_sound)
-  subgoal by (simp add: return_parity_sound)
-  subgoal by (simp add: enter_pair_parity_for_sound)
-  subgoal by (simp add: event_parity_sound)
-  subgoal by (simp add: enter_pair_parity_for_sound)
-  subgoal by (simp add: combine_env_sound)
-  done
+  by unfold_locales
+     (simp_all add: assign_parity_sound special_parity_sound branch_parity_sound
+        skip_parity_sound body_parity_sound return_parity_sound enter_pair_parity_for_sound
+        event_parity_sound combine_env_sound)
 
 lemma enter_frame_parity_for_mono:
   assumes "s1 \<le> s2"

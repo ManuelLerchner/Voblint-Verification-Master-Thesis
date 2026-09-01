@@ -431,8 +431,7 @@ qed
 lemma step_sound_rel:
   "edge_collect a (gammaDG_rel d g) \<subseteq>
      (case dg_spec_step rel_order_spec a d g of (g', d') \<Rightarrow> gammaDG_rel d' g')"
-  apply (cases a)
-  by (auto simp add:rel_order_simps split:option.splits)
+  by (cases a) (auto simp add: rel_order_simps split: option.splits)
 
 subsection \<open>Call-entry and combine soundness -- havoc-based, both trivial via \<open>top_relc\<close>\<close>
 

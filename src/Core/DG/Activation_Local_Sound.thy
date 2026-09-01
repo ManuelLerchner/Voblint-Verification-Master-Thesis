@@ -52,12 +52,7 @@ theorem valid_ltr_ctx_sound:
   shows "sink_store t \<in> \<lbrakk>sg (Inl (sink_node t, c))\<rbrakk>"
 proof -
   interpret G: ltr_coverage g S "\<lambda>v c. \<lbrakk>sg (Inl (v, c))\<rbrakk>" enterc initial_ctx gs
-    apply unfold_locales
-    apply (blast intro: ENTRY_G)
-    apply (blast intro: EDGE)
-    apply (blast intro: CALL)
-    apply (blast intro: COMB)
-    done
+    by (unfold_locales; blast intro: ENTRY_G EDGE CALL COMB)
   have "G.trace_covered t" using G.valid_ltr_covered[OF t] .
   then show ?thesis using ck by simp
 qed
@@ -95,12 +90,7 @@ theorem valid_ltr_ctx_sound_gen:
   shows "sink_store t \<in> gammaM (sg (Inl (sink_node t, c)))"
 proof -
   interpret G: ltr_coverage g S "\<lambda>v c. gammaM (sg (Inl (v, c)))" enterc initial_ctx gs
-    apply unfold_locales
-    apply (blast intro: ENTRY_G)
-    apply (blast intro: EDGE)
-    apply (blast intro: CALL)
-    apply (blast intro: COMB)
-    done
+    by (unfold_locales; blast intro: ENTRY_G EDGE CALL COMB)
   have "G.trace_covered t" using G.valid_ltr_covered[OF t] .
   then show ?thesis using ck by simp
 qed

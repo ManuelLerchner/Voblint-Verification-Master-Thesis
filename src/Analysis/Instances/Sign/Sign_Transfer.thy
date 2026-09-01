@@ -163,18 +163,10 @@ definition sign_tf_for :: "(vname => bool) => sign domain_transfer" where
 
 lemma sign_is_sound_transfer_for: "sound_transfer_for gs (sign_tf_for gs)"
   unfolding sign_tf_for_def
-  apply unfold_locales
-  subgoal by (simp add: assign_sign_sound)
-  subgoal by (simp add: special_sign_sound)
-  subgoal by (simp add: branch_sign_sound)
-  subgoal by (simp add: skip_sign_sound)
-  subgoal by (simp add: body_sign_sound)
-  subgoal by (simp add: return_sign_sound)
-  subgoal by (simp add: enter_pair_sign_for_sound)
-  subgoal by (simp add: event_sign_sound)
-  subgoal by (simp add: enter_pair_sign_for_sound)
-  subgoal by (simp add: combine_env_sound)
-  done
+  by unfold_locales
+     (simp_all add: assign_sign_sound special_sign_sound branch_sign_sound
+        skip_sign_sound body_sign_sound return_sign_sound enter_pair_sign_for_sound
+        event_sign_sound combine_env_sound)
 
 lemma enter_frame_sign_for_mono:
   assumes "s1 \<le> s2"

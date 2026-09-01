@@ -301,9 +301,9 @@ proof -
     by (cases "TD_side_always_join_Interp.iterate T v s0 init_basic_ug_state") auto
   have sig: "sigma = \<sigma> state"
     using sol[unfolded TD_side_always_join_Interp.solve_def]
-    apply (simp add: iter eq0[symmetric] case_prod_unfold)
-    by (metis TD_side.state.select_convs(1) TD_side_warrowing_per_origin_Interp.init_state_def eq0
-        fst_conv iter snd_conv)
+    by (simp add: iter eq0[symmetric] case_prod_unfold)
+       (metis TD_side.state.select_convs(1) TD_side_warrowing_per_origin_Interp.init_state_def eq0
+          fst_conv iter snd_conv)
   have dm: "TD_side_always_join_Interp.iterate_dom T v s0 init_basic_ug_state"
     using dom[unfolded TD_side_always_join_Interp.solve_dom_def, folded eq0]
     by (simp add: TD_side_warrowing_per_origin_Interp.init_state_def eq0)
@@ -670,9 +670,9 @@ proof -
     by (cases "TD_side_warrowing_apinis_Interp.iterate T v s0 init_basic_ug_state") auto
   have sig: "sigma = \<sigma> state"
     using sol[unfolded TD_side_warrowing_apinis_Interp.solve_def]
-    apply (simp add: iter eq0[symmetric] case_prod_unfold)
-    by (metis TD_side.state.select_convs(1) TD_side_warrowing_per_origin_Interp.init_state_def eq0
-        fst_conv iter snd_conv)
+    by (simp add: iter eq0[symmetric] case_prod_unfold)
+       (metis TD_side.state.select_convs(1) TD_side_warrowing_per_origin_Interp.init_state_def eq0
+          fst_conv iter snd_conv)
   have dm: "TD_side_warrowing_apinis_Interp.iterate_dom T v s0 init_basic_ug_state"
     using dom[unfolded TD_side_warrowing_apinis_Interp.solve_dom_def, folded eq0]
     by (simp add: TD_side_warrowing_per_origin_Interp.init_state_def eq0)

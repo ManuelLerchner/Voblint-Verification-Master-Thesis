@@ -1,5 +1,5 @@
 theory DG_Base
-  imports DG_Soundness
+  imports DG_Dead_Code_Lift
 begin
 
 section \<open>Base-style whole-state DG construction\<close>
@@ -88,7 +88,7 @@ subsection \<open>Bot propagation\<close>
 text \<open>
   A dead local unknown dominates every ordinary field before \<open>tf\<close> ever runs --
   \<^const>\<open>transfer_lift\<close>'s own \<^const>\<open>bind_lift\<close> short-circuit, with no
-  \<^const>\<open>combine_env\<close>/\<^const>\<open>assemble_env_abs\<close> reconstruction step to reason
+  \<^const>\<open>combine_env\<close> reconstruction step to reason
   about first.
 \<close>
 
@@ -130,6 +130,55 @@ lemma transfer_lift2_commute:
            transfer_lift2 empty_pred' F (map_lift phi d1) (map_lift phi d2)"
   by (cases d1; cases d2) (simp_all add: transfer_lift2_def normalize_lift_def commute exact)
 
+subsection \<open>The unlifted core\<close>
+
+text \<open>
+  \<open>base_dg_spec_for\<close> is the same construction with neither reachability
+  tracking nor normalization: the raw transfer runs on \<open>'a abs_state\<close>
+  directly.  The frozen \<^const>\<open>base_dg_spec_for_lifted\<close> agrees with
+  \<open>dead_code_normalize empty_pred (dead_code_lift (base_dg_spec_for gs tf))\<close>
+  on every composed operation; only the raw \<open>dgs_combine_env\<close> stage differs
+  (the generic lifter's is strict in the callee value, this record's
+  passthrough is not), which the composed \<^const>\<open>dgs_combine\<close> erases.
+\<close>
+
+definition base_dg_spec_for ::
+  "(vname \<Rightarrow> bool)
+   \<Rightarrow> 'a::sound_domain domain_transfer
+   \<Rightarrow> ('a abs_state, 'g::bounded_semilattice_sup_bot) dg_spec"
+where
+  "base_dg_spec_for gs tf = (|
+    dgs_skip       = (\<lambda>d g. (g, skip\<^sup># tf d)),
+    dgs_assign     = (\<lambda>x e d g. (g, assign\<^sup># tf x e d)),
+    dgs_special    = (\<lambda>sc x d g. (g, special\<^sup># tf sc x d)),
+    dgs_branch     = (\<lambda>b pol d g. (g, branch\<^sup># tf b pol d)),
+    dgs_body       = (\<lambda>p d g. (g, body\<^sup># tf p d)),
+    dgs_return     = (\<lambda>e p d g. (g, return\<^sup># tf e p d)),
+    dgs_enter      = (\<lambda>ci d g. (g, snd (enter\<^sup># tf ci d))),
+    dgs_event      = (\<lambda>ev d g. (g, event\<^sup># tf ev d)),
+    dgs_caller_cont    = (\<lambda>ci dc g. dc),
+    dgs_combine_env    = (\<lambda>ci dc de g. (g, dc)),
+    dgs_combine_assign = (\<lambda>ci de g merged.
+      (g, combine\<^sup># gs (ci_dst ci) (snd merged) de))
+  |)"
+
+lemma dg_spec_step_base_for:
+  "dg_spec_step (base_dg_spec_for gs tf) a d g = (g, apply_tf tf a d)"
+  by (cases a) (simp_all add: base_dg_spec_for_def)
+
+lemma dgs_enter_base_for:
+  "dgs_enter (base_dg_spec_for gs tf) ci d g = (g, snd (enter\<^sup># tf ci d))"
+  by (simp add: base_dg_spec_for_def)
+
+lemma dgs_caller_cont_base_for [simp]:
+  "dgs_caller_cont (base_dg_spec_for gs tf) ci dc g = dc"
+  by (simp add: base_dg_spec_for_def)
+
+lemma dgs_combine_base_for:
+  "dgs_combine (base_dg_spec_for gs tf) ci dc de g =
+     (g, combine\<^sup># gs (ci_dst ci) dc de)"
+  by (simp add: dgs_combine_def base_dg_spec_for_def)
+
 subsection \<open>Soundness\<close>
 
 text \<open>
@@ -142,107 +191,65 @@ definition gamma_dg_base ::
 where
   "gamma_dg_base d g = gamma_state_lift d"
 
-lemma gamma_dg_base_mono:
-  assumes "d \<le> d'" and "g \<le> g'"
-  shows "gamma_dg_base d g \<subseteq> gamma_dg_base d' g'"
-  unfolding gamma_dg_base_def
-proof (cases d)
-  case Bot
-  then show "gamma_state_lift d \<subseteq> gamma_state_lift d'" by simp
-next
-  case (Lifted sigma)
-  then obtain sigma' where d'_eq: "d' = Lifted sigma'" and le: "sigma \<le> sigma'"
-    using assms(1) by (cases d') auto
-  show "gamma_state_lift d \<subseteq> gamma_state_lift d'"
-    unfolding Lifted d'_eq using gamma_state_mono[OF le] by simp
+text \<open>The unlifted core is sound at the raw whole-state concretization;
+  everything else is the functor chain.\<close>
+
+lemma base_dg_spec_for_sound:
+  assumes tf_sound: "sound_transfer_for gs tf"
+  shows "sound_dg_spec (base_dg_spec_for gs tf)
+           (\<lambda>d _. \<lbrakk>d\<rbrakk>) gs"
+proof (rule sound_dg_spec.intro)
+  show "\<And>d d' g g'. d \<le> d' \<Longrightarrow> g \<le> g' \<Longrightarrow> \<lbrakk>d\<rbrakk> \<subseteq> \<lbrakk>d'\<rbrakk>"
+    by (rule gamma_state_mono)
+  show "\<And>a d g. edge_collect a \<lbrakk>d\<rbrakk> \<subseteq>
+      (case dg_spec_step (base_dg_spec_for gs tf) a d g of (g', d') \<Rightarrow> \<lbrakk>d'\<rbrakk>)"
+    unfolding dg_spec_step_base_for
+    by (simp add: sound_transfer_for.edge_collect_apply_tf_sound_for[OF tf_sound])
+  show "\<And>s dc g ci. s \<in> \<lbrakk>dc\<rbrakk> \<Longrightarrow>
+      s \<in> \<lbrakk>dgs_caller_cont (base_dg_spec_for gs tf) ci dc g\<rbrakk>"
+    by simp
+  show "\<And>s dcont g t de ci. s \<in> \<lbrakk>dcont\<rbrakk> \<Longrightarrow> t \<in> \<lbrakk>de\<rbrakk> \<Longrightarrow>
+      combine_collect gs (ci_dst ci) s t \<in>
+        (case dgs_combine (base_dg_spec_for gs tf) ci dcont de g of (g', d') \<Rightarrow> \<lbrakk>d'\<rbrakk>)"
+    unfolding dgs_combine_base_for
+    by (simp add: combine_collect_sound)
+  show "\<And>s dc g ci. s \<in> \<lbrakk>dc\<rbrakk> \<Longrightarrow>
+      call_enter gs (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci)) s \<in>
+        (case dgs_enter (base_dg_spec_for gs tf) ci dc g of (g', d') \<Rightarrow> \<lbrakk>d'\<rbrakk>)"
+    unfolding dgs_enter_base_for
+    by (simp add: call_enter_CallEdge
+        sound_transfer_for.tf_sound_enter_entry_for[OF tf_sound])
 qed
 
-lemma gamma_dg_base_step_sound:
-  assumes tf_sound: "sound_transfer_for gs tf"
-    and empty_pred_sound: "\<And>sigma. empty_pred sigma \<Longrightarrow> \<lbrakk>sigma\<rbrakk> = {}"
-  shows "edge_collect a (gamma_dg_base d g) \<subseteq>
-           (case dg_spec_step (base_dg_spec_for_lifted gs empty_pred tf) a d g of
-              (g', d') \<Rightarrow> gamma_dg_base d' g')"
-proof (cases d)
-  case Bot
-  then show ?thesis by (simp add: gamma_dg_base_def)
-next
-  case (Lifted sigma)
-  have base: "edge_collect a \<lbrakk>sigma\<rbrakk> \<subseteq> \<lbrakk>apply_tf tf a sigma\<rbrakk>"
-    by (rule sound_transfer_for.edge_collect_apply_tf_sound_for[OF tf_sound])
-  show ?thesis
-  proof (cases "empty_pred (apply_tf tf a sigma)")
-    case True
-    then have "\<lbrakk>apply_tf tf a sigma\<rbrakk> = {}"
-      by (rule empty_pred_sound)
-    with base Lifted show ?thesis by (simp add: gamma_dg_base_def)
-  next
-    case False
-    then show ?thesis
-      using base Lifted
-      unfolding dg_spec_step_base_for_lifted gamma_dg_base_def
-      by (simp add: transfer_lift_def normalize_lift_def)
-  qed
-qed
+text \<open>The composed-operation agreements between the frozen record and the
+  normalized dead-code lift of the unlifted core.\<close>
 
-lemma gamma_dg_base_combine_sound:
-  assumes tf_sound: "sound_transfer_for gs tf"
-    and empty_pred_sound: "\<And>sigma. empty_pred sigma \<Longrightarrow> \<lbrakk>sigma\<rbrakk> = {}"
-    and sc: "s \<in> gamma_dg_base dc g" and tc: "t \<in> gamma_dg_base de g"
-  shows "combine_collect gs (ci_dst ci) s t \<in>
-           (case dgs_combine (base_dg_spec_for_lifted gs empty_pred tf) ci dc de g of
-              (g', d') \<Rightarrow> gamma_dg_base d' g')"
-proof -
-  obtain sigma_c where dc_eq: "dc = Lifted sigma_c" and sc': "s \<in> \<lbrakk>sigma_c\<rbrakk>"
-    using sc unfolding gamma_dg_base_def by (cases dc) auto
-  obtain sigma_e where de_eq: "de = Lifted sigma_e" and tc': "t \<in> \<lbrakk>sigma_e\<rbrakk>"
-    using tc unfolding gamma_dg_base_def by (cases de) auto
-  have base: "combine_collect gs (ci_dst ci) s t
-                \<in> \<lbrakk>combine\<^sup># gs (ci_dst ci) sigma_c sigma_e\<rbrakk>"
-    by (rule combine_collect_sound[OF sc' tc'])
-  show ?thesis
-  proof (cases "empty_pred (combine\<^sup># gs (ci_dst ci) sigma_c sigma_e)")
-    case True
-    then have "\<lbrakk>combine\<^sup># gs (ci_dst ci) sigma_c sigma_e\<rbrakk> = {}"
-      by (rule empty_pred_sound)
-    with base show ?thesis by simp
-  next
-    case False
-    then show ?thesis
-      using base dc_eq de_eq
-      unfolding dgs_combine_base_for_lifted gamma_dg_base_def
-      by (simp add: transfer_lift2_def normalize_lift_def)
-  qed
-qed
+lemma dg_spec_step_base_lift_agree:
+  "dg_spec_step (base_dg_spec_for_lifted gs empty_pred tf) a d g =
+   dg_spec_step
+     (dead_code_normalize empty_pred (dead_code_lift (base_dg_spec_for gs tf))) a d g"
+  unfolding dg_spec_step_base_for_lifted
+  by (cases d) (simp_all add: dg_spec_step_base_for transfer_lift_def)
 
-lemma gamma_dg_base_enter_sound:
-  assumes tf_sound: "sound_transfer_for gs tf"
-    and empty_pred_sound: "\<And>sigma. empty_pred sigma \<Longrightarrow> \<lbrakk>sigma\<rbrakk> = {}"
-    and sc: "s \<in> gamma_dg_base dc g"
-  shows "call_enter gs (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci)) s \<in>
-           (case dgs_enter (base_dg_spec_for_lifted gs empty_pred tf) ci dc g of
-              (g', d') \<Rightarrow> gamma_dg_base d' g')"
-proof -
-  obtain sigma_c where dc_eq: "dc = Lifted sigma_c" and sc': "s \<in> \<lbrakk>sigma_c\<rbrakk>"
-    using sc unfolding gamma_dg_base_def by (cases dc) auto
-  have base: "call_enter gs (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci)) s
-      \<in> \<lbrakk>snd (enter\<^sup># tf ci sigma_c)\<rbrakk>"
-    using sound_transfer_for.tf_sound_enter_entry_for[OF tf_sound sc']
-    by (simp add: call_enter_CallEdge)
-  show ?thesis
-  proof (cases "empty_pred (snd (enter\<^sup># tf ci sigma_c))")
-    case True
-    then have "\<lbrakk>snd (enter\<^sup># tf ci sigma_c)\<rbrakk> = {}"
-      by (rule empty_pred_sound)
-    with base show ?thesis by simp
-  next
-    case False
-    then show ?thesis
-      using base dc_eq
-      unfolding dgs_enter_base_for_lifted gamma_dg_base_def
-      by (simp add: transfer_lift_def normalize_lift_def)
-  qed
-qed
+lemma dgs_caller_cont_base_lift_agree:
+  "dgs_caller_cont (base_dg_spec_for_lifted gs empty_pred tf) ci dc g =
+   dgs_caller_cont
+     (dead_code_normalize empty_pred (dead_code_lift (base_dg_spec_for gs tf))) ci dc g"
+  by (cases dc) (simp_all add: base_dg_spec_for_lifted_def)
+
+lemma dgs_combine_base_lift_agree:
+  "dgs_combine (base_dg_spec_for_lifted gs empty_pred tf) ci dc de g =
+   dgs_combine
+     (dead_code_normalize empty_pred (dead_code_lift (base_dg_spec_for gs tf))) ci dc de g"
+  unfolding dgs_combine_base_for_lifted
+  by (cases dc; cases de) (simp_all add: dgs_combine_base_for transfer_lift2_def)
+
+lemma dgs_enter_base_lift_agree:
+  "dgs_enter (base_dg_spec_for_lifted gs empty_pred tf) ci dc g =
+   dgs_enter
+     (dead_code_normalize empty_pred (dead_code_lift (base_dg_spec_for gs tf))) ci dc g"
+  unfolding dgs_enter_base_for_lifted
+  by (cases dc) (simp_all add: dgs_enter_base_for transfer_lift_def)
 
 text \<open>
   No reference to any concrete domain: instantiating \<open>tf\<close> with a domain's own
@@ -255,13 +262,21 @@ theorem base_dg_spec_sound:
   assumes tf_sound: "sound_transfer_for gs tf"
     and empty_pred_sound: "\<And>sigma. empty_pred sigma \<Longrightarrow> \<lbrakk>sigma\<rbrakk> = {}"
   shows "sound_dg_spec (base_dg_spec_for_lifted gs empty_pred tf) gamma_dg_base gs"
-  apply unfold_locales
-  subgoal for d d' g g' by (rule gamma_dg_base_mono)
-  subgoal for a d g by (rule gamma_dg_base_step_sound[OF tf_sound empty_pred_sound])
-  subgoal premises prems using prems by simp
-  subgoal premises prems by (rule gamma_dg_base_combine_sound[OF tf_sound empty_pred_sound prems])
-  subgoal premises prems by (rule gamma_dg_base_enter_sound[OF tf_sound empty_pred_sound prems])
-  done
+proof -
+  have norm: "sound_dg_spec
+      (dead_code_normalize empty_pred (dead_code_lift (base_dg_spec_for gs tf)))
+      (lift_gamma (\<lambda>d _. \<lbrakk>d\<rbrakk>)) gs"
+    by (rule dead_code_normalize_sound
+          [OF dead_code_lift_sound[OF base_dg_spec_for_sound[OF tf_sound]]])
+       (simp add: empty_pred_sound)
+  have geq: "gamma_dg_base = lift_gamma (\<lambda>d _. \<lbrakk>d\<rbrakk>)"
+    by (auto simp: fun_eq_iff gamma_dg_base_def gamma_lift_def lift_gamma_def
+        split: lifted.splits)
+  show ?thesis
+    unfolding geq
+    by (rule sound_dg_spec_cong[OF dg_spec_step_base_lift_agree
+          dgs_caller_cont_base_lift_agree dgs_combine_base_lift_agree
+          dgs_enter_base_lift_agree norm])
+qed
 
 end
-

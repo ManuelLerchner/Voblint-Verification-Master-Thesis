@@ -2052,9 +2052,9 @@ lemma fun_of_resolved_st_q_for_enter [simp]:
    enter_D gs top_val aval_abs xs es
       (fun_of_resolved_st_q_for gs s)"
   unfolding fun_of_resolved_st_q_for_def
-  apply transfer
-  by (metis (no_types, lifting) ext fun_of_resolved_st_for_def
-      fun_of_resolved_st_for_enter_resolved)
+  by transfer
+     (metis (no_types, lifting) ext fun_of_resolved_st_for_def
+        fun_of_resolved_st_for_enter_resolved)
 
 lemma fun_of_resolved_st_q_for_combine_collect [simp]:
   "fun_of_resolved_st_q_for gs

@@ -9,6 +9,7 @@ session Voblint_Core in "." = "Voblint_CFG" +
     "DG"
     "Context"
     "Result"
+    "Lifters"
   theories
     CFG_Enumeration
     Transfer_Interface
@@ -17,6 +18,7 @@ session Voblint_Core in "." = "Voblint_CFG" +
     DG_Unit_Spec
     DG_Keyed_Generator
     DG_Soundness
+    DG_Dead_Code_Lift
     DG_LTR_Sound
     Activation_Local_Sound
     Activation_Backbone
