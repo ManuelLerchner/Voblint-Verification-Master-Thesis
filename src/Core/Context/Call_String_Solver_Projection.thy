@@ -181,7 +181,7 @@ definition project_seeded_eqs ::
    \<Rightarrow> pp \<times> call_string
    \<Rightarrow> (pp \<times> call_string, call_string_gk, 'd) eqsT" where
   "project_seeded_eqs k1 vars2_lst sigma2 T1 root1 =
-     seed_rhs T1 (proj_P k1 vars2_lst sigma2) (proj_global_keys k1 vars2_lst) root1"
+     seed_eqs T1 (proj_P k1 vars2_lst sigma2) (proj_global_keys k1 vars2_lst) root1"
 
 theorem call_string_projection_refinement:
   fixes T1 :: "(pp \<times> call_string, call_string_gk, 'd::bounded_semilattice_sup_bot) eqsT"

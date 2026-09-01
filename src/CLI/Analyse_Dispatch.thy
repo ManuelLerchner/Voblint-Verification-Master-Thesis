@@ -1025,14 +1025,13 @@ code_identifier
 | code_module TD_side \<rightharpoonup> (OCaml) Core
 | code_module TD_side_upd_rule \<rightharpoonup> (OCaml) Core
 | code_module Update_rules \<rightharpoonup> (OCaml) Core
-| code_module Strategy_Tree_Monad \<rightharpoonup> (OCaml) Core
+| code_module Strategy_Tree_Sequencing \<rightharpoonup> (OCaml) Core
 | code_module Strategy_Tree_Combinators \<rightharpoonup> (OCaml) Core
-| code_module Side_Buffering \<rightharpoonup> (OCaml) Core
+| code_module Strategy_Tree_Side_Buffering \<rightharpoonup> (OCaml) Core
 | code_module State_Restriction \<rightharpoonup> (OCaml) Core
 | code_module Exec_Refinement \<rightharpoonup> (OCaml) Core
-| code_module Strategy_Tree_Rhs \<rightharpoonup> (OCaml) Core
+| code_module Strategy_Tree_Fold \<rightharpoonup> (OCaml) Core
 | code_module Strategy_Tree_Relabel \<rightharpoonup> (OCaml) Core
-| code_module Solver_Mono \<rightharpoonup> (OCaml) Core
 | code_module Transfer_Interface \<rightharpoonup> (OCaml) Core
 | code_module DG_Framework \<rightharpoonup> (OCaml) Core
 | code_module DG_Unit_Spec \<rightharpoonup> (OCaml) Core

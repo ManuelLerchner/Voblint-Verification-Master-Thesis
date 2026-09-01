@@ -1,7 +1,7 @@
 theory DG_Framework
   imports Transfer_Interface State_Restriction "Voblint_Domain.Nonrelational_Reachability"
-    "Voblint_Solver.Post_Solution" "Voblint_Solver.Solver_Mono" "Voblint_Solver.Side_Buffering"
-    "Voblint_Solver.Strategy_Tree_Rhs" "Voblint_Solver.Strategy_Tree_Relabel" "Voblint_Solver.Strategy_Tree_Combinators"
+    "Voblint_Solver.Strategy_Tree_Post_Solution" "Voblint_Solver.Strategy_Tree_Side_Buffering"
+    "Voblint_Solver.Strategy_Tree_Fold" "Voblint_Solver.Strategy_Tree_Relabel" "Voblint_Solver.Strategy_Tree_Combinators"
     "Voblint_CFG.CFG_Transfer"
 begin
 
@@ -131,7 +131,7 @@ where
      do {
        d <- read_local u;
        g <- read_global ();
-       depend_on () (DG bot (fst (step (locals d) (globs g))))
+       side_effect () (DG bot (fst (step (locals d) (globs g))))
          (answer (DG (snd (step (locals d) (globs g))) bot))
      }"
 
@@ -170,7 +170,7 @@ subsection \<open>Side-free edge contribution, for buffered keyed generation\<cl
 
 text \<open>
   \<open>dg_edge_tree\<close> publishes its \<open>G\<close> contribution as soon as it is evaluated
-  (\<^const>\<open>depend_on\<close>). When \<open>side_cfg_T_eff_keyed_seed_dg\<close> (below) folds several such
+  (\<^const>\<open>side_effect\<close>). When \<open>side_cfg_T_eff_keyed_seed_dg\<close> (below) folds several such
   trees into one equation's RHS (several intra predecessors, or several return sites),
   each one's \<open>Side\<close> is published at a different moment within the same RHS evaluation:
   the vendored solver's warrowing/APINIS update rule gates convergence per \<^emph>\<open>origin\<close>, so
@@ -236,6 +236,13 @@ text \<open>
 
   Fixing the address to \<^const>\<open>Inl\<close> and the key to \<^term>\<open>()\<close> recovers the two
   formers above, so an equation system built with those is unchanged.
+
+  \<^const>\<open>read_at\<close> itself (\<^theory>\<open>Voblint_Solver.Strategy_Tree_Combinators\<close>) is a
+  generic solver-address dispatcher with no notion of \<open>D\<close>/\<open>G\<close>; here it is
+  instantiated at \<open>'d = ('dl, 'dg) dg_state\<close>, so the value it returns is
+  already one of this file's packed \<open>DG _ bot\<close> / \<open>DG bot _\<close> slots, not a raw
+  \<open>D\<close>. Reading through an address is therefore an operation on already-packed
+  DG state, not a general "query something of unknown kind" primitive.
 \<close>
 
 definition dg_edge_tree_at ::
@@ -246,7 +253,7 @@ where
      do {
        d <- read_at src;
        g <- read_global gk;
-       depend_on gk (DG bot (fst (step (locals d) (globs g))))
+       side_effect gk (DG bot (fst (step (locals d) (globs g))))
          (answer (DG (snd (step (locals d) (globs g))) bot))
      }"
 
@@ -313,7 +320,7 @@ where
        dc <- read_local cc;
        de <- read_local ex;
        g <- read_global ();
-       depend_on () (DG bot (fst (comb ci (locals dc) (locals de) (globs g))))
+       side_effect () (DG bot (fst (comb ci (locals dc) (locals de) (globs g))))
          (answer (DG (snd (comb ci (locals dc) (locals de) (globs g))) bot))
      }"
 
@@ -343,11 +350,11 @@ text \<open>
   monotone, never re-derive tree monotonicity.
 \<close>
 
-lemma static_deps_dg_edge_tree: "static_deps (dg_edge_tree step u)"
-  by (rule static_depsI) (simp add: dg_edge_tree_def)
+lemma env_indep_deps_dg_edge_tree: "env_indep_deps (dg_edge_tree step u)"
+  by (rule env_indep_depsI) (simp add: dg_edge_tree_def)
 
-lemma static_deps_dg_combine_tree: "static_deps (dg_combine_tree comb dst cc ex)"
-  by (rule static_depsI) (simp add: dg_combine_tree_def)
+lemma env_indep_deps_dg_combine_tree: "env_indep_deps (dg_combine_tree comb dst cc ex)"
+  by (rule env_indep_depsI) (simp add: dg_combine_tree_def)
 
 lemma dg_edge_tree_mono:
   assumes step_mono_snd:
@@ -560,7 +567,7 @@ fun side_rhs_fold_dg ::
 where
   "side_rhs_fold_dg acc [] = Answer (DG acc bot)"
 | "side_rhs_fold_dg acc (t # ts) =
-     seqcomp_tree t (\<lambda>res. side_rhs_fold_dg (acc \<squnion> locals res) ts)"
+     t \<bind> (\<lambda>res. side_rhs_fold_dg (acc \<squnion> locals res) ts)"
 
 fun side_acc_dg ::
   "'d::bounded_semilattice_sup_bot
@@ -692,10 +699,10 @@ text \<open>
   independent).
 \<close>
 
-lemma side_rhs_fold_dg_static_deps:
-  assumes tree_static: "\<forall>t \<in> set ts. static_deps t"
-  shows "static_deps (side_rhs_fold_dg acc ts)"
-  unfolding static_deps_def
+lemma side_rhs_fold_dg_env_indep_deps:
+  assumes tree_static: "\<forall>t \<in> set ts. env_indep_deps t"
+  shows "env_indep_deps (side_rhs_fold_dg acc ts)"
+  unfolding env_indep_deps_def
 proof (intro allI)
   fix sigma1 sigma2
   show "dep_aux sigma1 (side_rhs_fold_dg acc ts) = dep_aux sigma2 (side_rhs_fold_dg acc ts)"
@@ -706,8 +713,8 @@ proof (intro allI)
   next
     case (Cons t ts)
     have t_static: "dep_aux sigma1 t = dep_aux sigma2 t"
-      using Cons.prems unfolding static_deps_def by simp
-    have tail_static: "\<forall>t' \<in> set ts. static_deps t'"
+      using Cons.prems unfolding env_indep_deps_def by simp
+    have tail_static: "\<forall>t' \<in> set ts. env_indep_deps t'"
       using Cons.prems by simp
     have "dep_aux sigma1 (side_rhs_fold_dg (acc \<squnion> locals (traverse_rhs t sigma1)) ts)
             = dep_aux sigma1 (side_rhs_fold_dg (acc \<squnion> locals (traverse_rhs t sigma2)) ts)"
@@ -718,6 +725,19 @@ proof (intro allI)
       by (simp add: dep_aux_seqcomp t_static)
   qed
 qed
+
+text \<open>
+  The vendored solver's own @{const mono_deps} precondition only needs the
+  weaker, order-conditional guarantee @{const mono_tree_deps}, not the full
+  equality @{const env_indep_deps} proves above; every current fold satisfies
+  the strong property anyway, so this is a one-line corollary through
+  @{thm env_indep_deps_imp_mono_tree_deps} rather than a separate induction.
+\<close>
+
+lemma side_rhs_fold_dg_mono_tree_deps:
+  assumes tree_static: "\<forall>t \<in> set ts. env_indep_deps t"
+  shows "mono_tree_deps (side_rhs_fold_dg acc ts)"
+  by (rule env_indep_deps_imp_mono_tree_deps[OF side_rhs_fold_dg_env_indep_deps[OF tree_static]])
 
 text \<open>
   The fold's Side contributions are carried only by the per-tree Side nodes;

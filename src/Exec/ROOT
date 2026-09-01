@@ -7,7 +7,6 @@ session Voblint_Exec in "." = "Voblint_Core" +
     Exec_St
     Exec_Refinement
     Exec_DG_Refines
-    Exec_DG_Trees
     Exec_DG_Generator
     DG_Base_Exec
     Routed_Domain_Exec

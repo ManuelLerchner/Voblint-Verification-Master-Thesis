@@ -53,7 +53,7 @@ text \<open>
   \<open>locals\<close> half because a local-key answer is read with \<open>locals\<close>. A routed
   seed slot is a global key that nonetheless carries its payload in \<open>locals\<close>,
   since \<open>routed_extra_g\<close> reads it back as \<open>answer_local (locals seed_state)\<close>;
-  it is therefore written as a plain \<^const>\<open>depend_on\<close> at its call site in
+  it is therefore written as a plain \<^const>\<open>side_effect\<close> at its call site in
   \<open>Routed_Context\<close>, rather than through an abbreviation whose name would
   suggest the \<open>globs\<close> convention.
 
@@ -69,7 +69,7 @@ text \<open>
 \<close>
 
 abbreviation publish_global where
-  "publish_global key x \<equiv> depend_on key (DG bot x) (answer (DG bot bot))"
+  "publish_global key x \<equiv> side_effect key (DG bot x) (answer (DG bot bot))"
 
 abbreviation answer_local where
   "answer_local x \<equiv> answer (DG x bot)"

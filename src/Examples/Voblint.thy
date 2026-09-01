@@ -55,7 +55,7 @@ theory Voblint
     Example_Guard_Refinement
     Example_Random_Sign_Showcase
     Example_Relational_DG_Demo
-    Example_Strategy_Tree_Demo
+    Example_Strategy_Tree
     "Voblint_CLI.Sign_Entry"
     "Voblint_CLI.Analyse_Dispatch"
     "Voblint_CLI.State_Report_GraphViz"
@@ -231,7 +231,7 @@ text \<open>
     \<^item> @{theory Voblint_Domain.Abstract_Domain} --- \<^verbatim>\<open>sound_domain\<close>, lifted state concretization, display support.
     \<^item> @{theory Voblint_Core.Transfer_Interface} --- the transfer interface \<^verbatim>\<open>domain_transfer\<close>, \<^verbatim>\<open>apply_tf\<close>, its soundness locale \<^verbatim>\<open>sound_transfer_for\<close>, and per-edge transfer soundness (\<^verbatim>\<open>edge_collect a \<lbrakk>\<sigma>\<rbrakk> \<subseteq> \<lbrakk>apply_tf tf a \<sigma>\<rbrakk>\<close>) with its \<^verbatim>\<open>EA_Check\<close> companion, the dispatch-point facts \<^theory>\<open>Voblint_Core.DG_Soundness\<close>'s \<^verbatim>\<open>step_sound\<close>/\<^verbatim>\<open>combine_sound\<close> obligations are discharged against.
     \<^item> @{theory Voblint_Core.State_Restriction} --- the local/global restriction algebra the routed spine reassembles states with.
-    \<^item> @{theory Voblint_Solver.Solver_Mono} --- \<^verbatim>\<open>threefold_mono\<close>: the monotonicity obligation the vendored solver's post-solution theorem takes.
+    \<^item> @{theory Voblint_Core.DG_Keyed_Generator} --- \<^verbatim>\<open>side_cfg_T_eff_keyed_seed_dg_is_mono_eq_gen\<close>/\<^verbatim>\<open>_mono_sides_gen\<close>/\<^verbatim>\<open>_mono_deps_gen\<close>: the vendored solver's \<^verbatim>\<open>TD_side_mono\<close> precondition, discharged once for an arbitrary generator instance.
 
   \<^bold>\<open>3b. Check discharge.\<close> A domain-generic, sound (incomplete) decision
     procedure for compiled \<^verbatim>\<open>__voblint_check(...)\<close> conditions, discharged
@@ -346,7 +346,7 @@ text \<open>
     \<^item> @{theory Voblint_Examples.Call_String_Solver_Refinement_Seeded} --- a solver-level
       refinement witness, not a source-level soundness theorem: truncates and joins the
       computed 2-call-string solution down to a finite 1-call-string lower bound
-      (\<^verbatim>\<open>proj_P\<close>), seeds the 1-call-string equations with it (\<^verbatim>\<open>seed_rhs\<close>), and runs the
+      (\<^verbatim>\<open>proj_P\<close>), seeds the 1-call-string equations with it (\<^verbatim>\<open>seed_eqs\<close>), and runs the
       same unmodified verified solver. The generic seeded-solve theorem
       (\<^verbatim>\<open>post_solution_of_seeded\<close>) then gives, with no per-node case analysis, both that the
       seeded solution is a \<^verbatim>\<open>part_post_solution\<close> of the plain 1-call-string equations and
@@ -375,7 +375,7 @@ text \<open>
       \<^verbatim>\<open>11-graph-snapshot\<close> for golden cluster/node/edge snapshots including a
       recursive procedure. Those compare output; a build-time render only proves
       it did not crash.
-    \<^item> \<^bold>\<open>Related demo:\<close> @{theory Voblint_Examples.Example_Strategy_Tree_Demo} ---
+    \<^item> \<^bold>\<open>Related demo:\<close> @{theory Voblint_Examples.Example_Strategy_Tree} ---
       \<^type>\<open>strategy_tree\<close> as a small dependency/effect language on its own,
       independent of any abstract domain: a Fibonacci equation tree built with
       \<^const>\<open>answer\<close> and \<^const>\<open>seqcomp_tree\<close>, run with \<open>traverse_rhs\<close>.

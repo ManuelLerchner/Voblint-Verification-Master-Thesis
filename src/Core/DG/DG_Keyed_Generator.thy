@@ -1,6 +1,11 @@
 theory DG_Keyed_Generator
-  imports DG_Framework
+  imports DG_Framework "TD.TD_side"
 begin
+
+text \<open>\<open>TD_side\<close> defines a record field \<open>\<sigma>\<close> for its internal state; hide the short
+  name so our \<open>\<sigma>\<close> variables (abstract state maps) are unambiguous.\<close>
+
+hide_const (open) \<sigma>
 
 section \<open>Keyed equation generators\<close>
 
@@ -17,10 +22,9 @@ text \<open>
   \<open>side_cfg_T_eff_keyed_seed_dg_is_mono_eq_gen\<close>,
   \<open>side_cfg_T_eff_keyed_seed_dg_mono_sides_gen\<close> and
   \<open>side_cfg_T_eff_keyed_seed_dg_mono_deps_gen\<close> close the file by
-  discharging \<^theory>\<open>Voblint_Solver.Solver_Mono\<close>'s \<open>threefold_mono\<close>
-  bundle for an arbitrary generator instance -- the solver's own
-  least-post-solution obligation, met once here rather than at every
-  interpreter.
+  discharging the vendored solver's own @{const TD_side_mono} preconditions
+  for an arbitrary generator instance -- the least-post-solution obligation,
+  met once here rather than at every interpreter.
 \<close>
 
 subsection \<open>The representation-neutral keyed generator\<close>
@@ -50,7 +54,7 @@ where
           enter = map (\<lambda>(call, action). enter_tree ctx call action v)
             (entry_call_list g v);
           tree = side_rhs_fold_dg acc0 (intra @ combine @ enter)
-      in if v = cfg_entry g then depend_on (gkey ctx) (DG bot s0g) tree else tree)"
+      in if v = cfg_entry g then side_effect (gkey ctx) (DG bot s0g) tree else tree)"
 
 lemma eq_side_cfg_T_eff_keyed_seed_trees:
   "eq (side_cfg_T_eff_keyed_seed_trees pred_sel gkey edge_tree combine_tree enter_tree
@@ -195,16 +199,16 @@ lemma apply_dg_spec_contribution_as_at:
   by (rule dg_edge_contribution_tree_as_at)
 
 text \<open>Relabelling a \<^typ>\<open>unit\<close>-keyed edge tree onto a routed local pair and a global
-  key is the same tree as building it at that address directly: \<^const>\<open>map_ltree\<close> and
-  \<^const>\<open>map_gtree\<close> rewrite exactly the two keys the former reads and writes.\<close>
+  key is the same tree as building it at that address directly: \<^const>\<open>relabel_ltree\<close> and
+  \<^const>\<open>relabel_gtree\<close> rewrite exactly the two keys the former reads and writes.\<close>
 
 lemma apply_dg_spec_relabel_as_at:
-  "map_gtree (\<lambda>_. gk) (map_ltree (\<lambda>w. (w, ctx)) (apply_dg_spec S a u))
+  "relabel_gtree (\<lambda>_. gk) (relabel_ltree (\<lambda>w. (w, ctx)) (apply_dg_spec S a u))
      = apply_dg_spec_at S a (Inl (u, ctx)) gk"
   by (simp add: apply_dg_spec_def apply_dg_spec_at_def dg_edge_tree_def dg_edge_tree_at_def)
 
 lemma apply_dg_spec_contribution_relabel_as_at:
-  "map_gtree (\<lambda>_. gk) (map_ltree (\<lambda>w. (w, ctx)) (apply_dg_spec_contribution S a u))
+  "relabel_gtree (\<lambda>_. gk) (relabel_ltree (\<lambda>w. (w, ctx)) (apply_dg_spec_contribution S a u))
      = apply_dg_spec_contribution_at S a (Inl (u, ctx)) gk"
   by (simp add: apply_dg_spec_contribution_def apply_dg_spec_contribution_at_def
         dg_edge_contribution_tree_def dg_edge_contribution_tree_at_def)
@@ -239,7 +243,7 @@ where
             comb = map (\<lambda>(cc, ca). cmb route c ca cc v)
                        (call_site_list g v);
             t = side_rhs_fold_dg acc0 (intra @ comb @ extra route c v)
-        in if v = cfg_entry g then depend_on (gkey c) (DG bot s0g) t else t)"
+        in if v = cfg_entry g then side_effect (gkey c) (DG bot s0g) t else t)"
 
 
 lemma eq_side_cfg_T_eff_keyed_seed_dg:
@@ -274,7 +278,7 @@ text \<open>
   \<^const>\<open>side_cfg_T_eff_keyed_seed_dg\<close> writes a node's own key once per contribution: a
   merge node with several intra predecessors, or several return call actions, each
   independently publishes a \<open>Side (gkey c) ...\<close> via \<^const>\<open>dg_edge_tree\<close>/\<open>routed_cmb_g\<close>'s
-  own \<^const>\<open>depend_on\<close>, so several writes to the same \<open>gkey c\<close> land in one RHS
+  own \<^const>\<open>side_effect\<close>, so several writes to the same \<open>gkey c\<close> land in one RHS
   evaluation. \<open>side_cfg_T_eff_keyed_seed_dg_buffered\<close> folds Side-free contribution trees
   (\<^const>\<open>apply_dg_spec_contribution\<close> for \<open>intra\<close>; the caller's own Side-free \<open>cmb_c\<close> for
   \<open>comb\<close>) with \<^const>\<open>fold_rhs_trees\<close> and publishes \<open>gkey c\<close> once, after every
@@ -313,7 +317,7 @@ where
             t = fold_rhs_trees acc0 (intra @ comb @ extra route c v)
         in buffer_sides (do {
           res \<leftarrow> t;
-          depend_on (gkey c) (DG bot (globs res)) (answer (DG (locals res) bot))
+          side_effect (gkey c) (DG bot (globs res)) (answer (DG (locals res) bot))
         }))"
 
 lemma eq_side_cfg_T_eff_keyed_seed_dg_buffered:
@@ -843,7 +847,7 @@ text \<open>
   wrapper at @{term "cfg_entry g"} is invisible to @{const traverse_rhs} and
   @{const dep_aux} (a \<^const>\<open>Side\<close> node only ever repackages, never queries);
   it only has to be threaded through the @{const sides_of_rhs} case via
-  @{thm fun_upd_sup_mono}.
+  \<open>fun_upd_sup_mono\<close>, below.
 \<close>
 
 lemma side_cfg_T_eff_keyed_seed_dg_is_mono_eq_gen:
@@ -891,6 +895,24 @@ proof -
   qed
   show ?thesis
     unfolding is_mono_eq_def using key by fastforce
+qed
+
+text \<open>
+  A generic fact about pointwise-ordered functions, function update, and join
+  -- nothing here mentions a strategy tree. It has exactly one use, below:
+  threading the outer \<open>Side\<close> wrapper at \<open>cfg_entry g\<close> through the
+  \<^const>\<open>sides_of_rhs\<close> case, so it stays local to its one call site rather
+  than living in generic infrastructure.
+\<close>
+
+lemma fun_upd_sup_mono:
+  fixes m1 m2 :: "'b \<Rightarrow> 'a::bounded_semilattice_sup_bot"
+  assumes "m1 \<le> m2"
+  shows "m1(y := m1 y \<squnion> cd) \<le> m2(y := m2 y \<squnion> cd)"
+proof -
+  have eq: "\<And>m. m(y := m y \<squnion> cd) = m \<squnion> ((\<lambda>_. bot)(y := cd))"
+    unfolding fun_upd_def sup_fun_def by (rule ext) simp
+  show ?thesis unfolding eq by (rule sup_mono[OF assms order_refl])
 qed
 
 lemma side_cfg_T_eff_keyed_seed_dg_mono_sides_gen:
@@ -944,13 +966,13 @@ lemma side_cfg_T_eff_keyed_seed_dg_mono_deps_gen:
   fixes g :: cfg
     and S :: "('d::bounded_semilattice_sup_bot, 'h::bounded_semilattice_sup_bot) dg_spec"
   assumes intra_static: "\<forall>v c src a. (src, a) \<in> set (pred_sel g v c) \<longrightarrow>
-      static_deps (apply_dg_spec_at S a src (gkey c))"
+      env_indep_deps (apply_dg_spec_at S a src (gkey c))"
   assumes comb_static: "\<forall>v c cc ca. (cc, ca) \<in> set (call_site_list g v) \<longrightarrow>
-      static_deps (cmb route c ca cc v)"
-  assumes extra_static: "\<forall>v c t. t \<in> set (extra route c v) \<longrightarrow> static_deps t"
+      env_indep_deps (cmb route c ca cc v)"
+  assumes extra_static: "\<forall>v c t. t \<in> set (extra route c v) \<longrightarrow> env_indep_deps t"
   shows "mono_deps (side_cfg_T_eff_keyed_seed_dg pred_sel gkey route cmb extra g S bot0 s0d s0g)"
 proof -
-  have key: "\<And>v c s1 s2.
+  have key: "\<And>v c s1 s2. s1 \<le> s2 \<Longrightarrow>
       dep (side_cfg_T_eff_keyed_seed_dg pred_sel gkey route cmb extra g S bot0 s0d s0g) s1 (v, c)
         \<subseteq> dep (side_cfg_T_eff_keyed_seed_dg pred_sel gkey route cmb extra g S bot0 s0d s0g) s2 (v, c)"
   proof -
@@ -959,29 +981,37 @@ proof -
                                 (pred_sel g w c)
                           @ map (\<lambda>(cc, ca). cmb route c ca cc w) (call_site_list g w)
                           @ extra route c w).
-                       static_deps t"
+                       env_indep_deps t"
       using intra_static comb_static extra_static by auto
-    have fold_static: "\<And>acc w. static_deps (side_rhs_fold_dg acc
+    have fold_mono: "\<And>acc w. mono_tree_deps (side_rhs_fold_dg acc
                       (map (\<lambda>(src, a). apply_dg_spec_at S a src (gkey c)) (pred_sel g w c)
                         @ map (\<lambda>(cc, ca). cmb route c ca cc w) (call_site_list g w)
-                        @ extra route c w))"      by (rule side_rhs_fold_dg_static_deps[OF tree_static])
-    have deq: "\<And>acc w. dep_aux s1 (side_rhs_fold_dg acc
-                  (map (\<lambda>(src, a). apply_dg_spec_at S a src (gkey c)) (pred_sel g w c)
-                    @ map (\<lambda>(cc, ca). cmb route c ca cc w) (call_site_list g w)
-                    @ extra route c w))
-                = dep_aux s2 (side_rhs_fold_dg acc
-                  (map (\<lambda>(src, a). apply_dg_spec_at S a src (gkey c)) (pred_sel g w c)
-                    @ map (\<lambda>(cc, ca). cmb route c ca cc w) (call_site_list g w)
-                    @ extra route c w))"
-      using fold_static[unfolded static_deps_def] by blast
-    show "dep (side_cfg_T_eff_keyed_seed_dg pred_sel gkey route cmb extra g S bot0 s0d s0g) s1 (v, c)
-            \<subseteq> dep (side_cfg_T_eff_keyed_seed_dg pred_sel gkey route cmb extra g S bot0 s0d s0g) s2 (v, c)"
-      unfolding dep_def side_cfg_T_eff_keyed_seed_dg_def
-      by (simp add: Let_def deq split: if_splits)
+                        @ extra route c w))"
+      by (rule side_rhs_fold_dg_mono_tree_deps[OF tree_static])
+    show "s1 \<le> s2 \<Longrightarrow>
+        dep (side_cfg_T_eff_keyed_seed_dg pred_sel gkey route cmb extra g S bot0 s0d s0g) s1 (v, c)
+          \<subseteq> dep (side_cfg_T_eff_keyed_seed_dg pred_sel gkey route cmb extra g S bot0 s0d s0g) s2 (v, c)"
+    proof -
+      assume ord: "s1 \<le> s2"
+      have dsub: "\<And>acc w. dep_aux s1 (side_rhs_fold_dg acc
+                    (map (\<lambda>(src, a). apply_dg_spec_at S a src (gkey c)) (pred_sel g w c)
+                      @ map (\<lambda>(cc, ca). cmb route c ca cc w) (call_site_list g w)
+                      @ extra route c w))
+                  \<subseteq> dep_aux s2 (side_rhs_fold_dg acc
+                    (map (\<lambda>(src, a). apply_dg_spec_at S a src (gkey c)) (pred_sel g w c)
+                      @ map (\<lambda>(cc, ca). cmb route c ca cc w) (call_site_list g w)
+                      @ extra route c w))"
+        using fold_mono[unfolded mono_tree_deps_def] ord by blast
+      show "dep (side_cfg_T_eff_keyed_seed_dg pred_sel gkey route cmb extra g S bot0 s0d s0g) s1 (v, c)
+              \<subseteq> dep (side_cfg_T_eff_keyed_seed_dg pred_sel gkey route cmb extra g S bot0 s0d s0g) s2 (v, c)"
+        unfolding dep_def side_cfg_T_eff_keyed_seed_dg_def
+        by (simp add: Let_def dsub split: if_splits)
+    qed
     qed
   show ?thesis
     unfolding mono_deps_def using key by fastforce
 qed
+
 
 text \<open>
   The generator consumes \\\<^typ>\<open>('d, 'h) dg_spec\<close> directly: Answers carry

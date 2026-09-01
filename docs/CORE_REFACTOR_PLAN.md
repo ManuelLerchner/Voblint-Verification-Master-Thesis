@@ -526,6 +526,76 @@ and mark it `superseded (see below)`.
   the deletion inventory, and the G1-G6 execution sequence -- is
   `docs/MERGE_SPLIT_GENERALIZATION.md`. Step 3.1 shrinks to the orthogonal
   Bot-carrier wrapper and is no longer on 2.3's critical path.
+- 2026-09-01: `Solver_Mono` absorbed into `Strategy_Tree_Monad`, as the
+  target layout table already named (`Voblint_Solver` row). Its
+  `threefold_mono` bundle and three `D`-lemmas had zero citations anywhere
+  outside their own file -- the three obligations it bundled are discharged
+  directly, unbundled, by `DG_Keyed_Generator`'s three `*_gen` lemmas -- and
+  are deleted. `fun_upd_sup_mono` is genuinely load-bearing (one citation,
+  in `DG_Keyed_Generator`'s `mono_sides` proof) but mentions no strategy-tree
+  concept, so it moved to sit next to that one call site rather than into
+  `Strategy_Tree_Monad`. Its `hide_const (open) \<sigma>` guard against
+  `TD.TD_side`'s own record field moved with it, onto `DG_Keyed_Generator`'s
+  own `"TD.TD_side"` import (the file's `@{const TD_side_mono}` antiquotation
+  is what actually needs that theory; `DG_Framework` no longer imports
+  `Solver_Mono` and does not need it transitively).
+- 2026-09-01: `map_ltree`/`map_gtree` (`Strategy_Tree_Relabel`) renamed to
+  `relabel_ltree`/`relabel_gtree` to match the theory's own name and stop
+  reading as a value-level `fmap`; their characterization lemmas renamed to
+  match (`traverse_rhs_relabel_ltree`, `dep_aux_relabel_gtree`, etc.).
+  Tagging the observer-characterization lemmas (`traverse_rhs_relabel_*`,
+  `dep_aux_relabel_*`, `sides_of_rhs_fold_rhs_trees_char`, and siblings)
+  `[simp]` was tried and reverted: it broke two proofs each in `DG_Soundness`
+  and `DG_Keyed_Generator` that build specific normal forms by explicit
+  `simp add:` citation, which a wider default simp set changes out from
+  under them. Left untagged; a future attempt should budget for repairing
+  those call sites rather than treating the tag as safe by inspection.
+- 2026-09-01: open follow-up, not started -- `dg_edge_tree` already has the
+  shape `relabel_ltree`/`relabel_gtree` exist to avoid: `dg_edge_tree step u
+  = dg_edge_tree_at step (Inl u) ()` (`DG_Framework.thy:305`), so the bare
+  monovariant edge tree is a specialization of the general, key-parametric
+  `_at` form, and `DG_Keyed_Generator`'s own generator calls
+  `apply_dg_spec_at` directly -- no relabel involved for edges at all.
+  `dg_combine_tree`/`dg_spec_combine_tree` never got that treatment: there is
+  no `dg_combine_tree_at`, so `dg_cmb_at` (`DG_Soundness`) and
+  `dg_cmb_at_of`/`dg_extra_of`'s inner call (`Exec_DG_Generator`) still reach
+  the keyed address by relabeling the bare tree. Giving combine trees the
+  same `_at` generalization -- defined in `DG_Framework`, with the same
+  `traverse`/`sides`/`dep_aux` characterization lemmas `dg_edge_tree_at`
+  has -- and migrating those two call sites would likely make
+  `relabel_ltree`/`relabel_gtree` (`Strategy_Tree_Relabel`) dead. Touches
+  `DG_Framework`, `DG_Soundness`, `Exec_DG_Generator`, and needs
+  `Exec_DG_Trees`/`DG_Coverage` re-verified after.
+- 2026-09-01: `Exec_DG_Trees` deleted whole, and ~360 lines of dead commute
+  lemmas removed from `Exec_DG_Generator` (1010 -> 650 lines). Both trace to
+  one root: `Exec_DG_Bridge` (deleted earlier, "zero remaining importers" per
+  the 2.3 entry above) was the sole consumer of a "_for"/"wrapped" diagonal-
+  reader commute subsystem -- `sides_of_rhs_Inl_bot`, `sides_wrap_reduce`,
+  every `*_commute_for` and `*_wrapped_*_commute` lemma, and the two dead
+  `dg_tree_st_commute_wrapped_{edge,combine}` -- that nothing has cited since.
+  `Exec_DG_Trees`'s entire content (four `traverse_*_commute_for`/
+  `traverse_wrapped_*_commute_for` lemmas) was exactly that subsystem's
+  traverse half; deleting it and repointing `Exec_DG_Generator`'s import
+  straight at `Exec_DG_Refines` builds clean. The live commute engine
+  (`dg_tree_st_commute_at_edge`, `seed_dg_list_commute`, and the generic
+  `dg_reader_commute_gen` locale) never used the dead subsystem -- it commutes
+  through `dg_edge_tree_at`-style addressing directly, which is also why the
+  follow-up above expects `dg_combine_tree_at` to make
+  `relabel_ltree`/`relabel_gtree` fully dead too. Verified by full citation
+  trace across every non-`.thy~` file, not by attribute inspection: none of
+  the deleted lemmas carried `[simp]`/`[intro]`/`[dest]`, so a zero-hit
+  `rg -w` search is conclusive here (the general trap below, about grep
+  missing simp-set uses, does not apply to unattributed lemmas). One
+  near-miss: `dep_aux_dg_edge_tree`/`dep_aux_dg_combine_tree`/
+  `dep_aux_relabel_gtree` in `Exec_DG_Generator` looked like the same kind of
+  dead local restatement, but `dep_aux_dg_edge_tree` is genuinely relied on
+  by `DG_Coverage` through name shadowing across the session boundary
+  (`DG_Framework` in Core defines the same name; the Exec-local copy shadows
+  it for anything importing through `Exec_DG_Generator`) -- deleting it would
+  have been a real regression. `dep_aux_dg_combine_tree`/`dep_aux_relabel_gtree`
+  were safe because `DG_Coverage` carries its own separate local copy of the
+  former, and `Strategy_Tree_Relabel`'s copy of the latter remains reachable
+  to absorb the shadow once the local one is gone.
 
 ## Traps specific to Core
 

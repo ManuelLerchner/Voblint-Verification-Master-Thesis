@@ -5,7 +5,7 @@ begin
 section \<open>Probing the fine solution's variable set\<close>
 
 text \<open>Explicit list form of the fine solution's variable set, needed because the generic
-  seeding infrastructure (\<^const>\<open>seed_rhs\<close>, \<^const>\<open>seed_sides\<close>, \<^const>\<open>proj_local\<close>,
+  seeding infrastructure (\<^const>\<open>seed_eqs\<close>, \<^const>\<open>seed_sides\<close>, \<^const>\<open>proj_local\<close>,
   \<^const>\<open>proj_global\<close>) folds over a \<^typ>\<open>'g list\<close>, not a \<^typ>\<open>'g set\<close>, to avoid a
   \<^const>\<open>Finite_Set.fold\<close> commutativity proof obligation. Order is irrelevant since every
   fold below only ever combines values with \<open>\<squnion>\<close>.\<close>

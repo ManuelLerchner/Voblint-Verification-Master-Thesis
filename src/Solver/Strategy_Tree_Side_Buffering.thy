@@ -1,5 +1,5 @@
-theory Side_Buffering
-  imports Strategy_Tree_Monad
+theory Strategy_Tree_Side_Buffering
+  imports Strategy_Tree_Sequencing
 begin
 
 section \<open>Per-key buffering of one right-hand side's side effects\<close>
@@ -137,19 +137,19 @@ lemma buffer_eqs_apply [simp]: "buffer_eqs T x = buffer_sides (T x)"
 
 subsection \<open>The declarative reading is unchanged\<close>
 
-lemma traverse_flush_sides [simp]:
+lemma traverse_rhs_flush_sides [simp]:
   "traverse_rhs (flush_sides acc t) \<sigma> = traverse_rhs t \<sigma>"
   by (induction acc) simp_all
 
-lemma traverse_buffer_aux [simp]:
+lemma traverse_rhs_buffer_aux [simp]:
   "traverse_rhs (buffer_aux acc t) \<sigma> = traverse_rhs t \<sigma>"
   by (induction t arbitrary: acc) simp_all
 
-lemma traverse_buffer_sides [simp]:
+lemma traverse_rhs_buffer_sides [simp]:
   "traverse_rhs (buffer_sides t) \<sigma> = traverse_rhs t \<sigma>"
   by (simp add: buffer_sides_def)
 
-lemma sides_flush_sides:
+lemma sides_of_rhs_flush_sides [simp]:
   "sides_of_rhs (flush_sides acc t) \<sigma> z = sides_of_rhs t \<sigma> z \<squnion> acc_val acc z"
 proof (induction acc arbitrary: z)
   case Nil
@@ -161,20 +161,20 @@ next
     by (simp add: kv Let_def Cons.IH acc_val_Cons ac_simps)
 qed
 
-lemma sides_buffer_aux:
+lemma sides_of_rhs_buffer_aux [simp]:
   "sides_of_rhs (buffer_aux acc t) \<sigma> z = sides_of_rhs t \<sigma> z \<squnion> acc_val acc z"
 proof (induction t arbitrary: acc z)
   case (Answer d)
-  show ?case by (simp add: sides_flush_sides)
+  show ?case by simp
 next
   case (Side y d t)
   show ?case
     by (simp add: Side.IH acc_val_add Let_def ac_simps)
 qed simp_all
 
-lemma sides_buffer_sides [simp]:
+lemma sides_of_rhs_buffer_sides [simp]:
   "sides_of_rhs (buffer_sides t) \<sigma> = sides_of_rhs t \<sigma>"
-  by (rule ext) (simp add: buffer_sides_def sides_buffer_aux)
+  by (rule ext) (simp add: buffer_sides_def)
 
 lemma dep_aux_flush_sides [simp]:
   "dep_aux \<sigma> (flush_sides acc t) = dep_aux \<sigma> t"
@@ -221,9 +221,10 @@ theorem distinct_side_path_buffer_sides:
   by (simp add: buffer_sides_def distinct_side_path_buffer_aux)
 
 text \<open>
-  So a buffered system writes each key at most once per evaluation, and the
-  update rule's per-origin slot for that key is written exactly once, with the
-  completed contribution. This replaces the generator-level assumption that no
+  So a buffered system writes each key at most once per evaluation: every key
+  an evaluation contributes to is flushed exactly once, with its completed
+  contribution, and a key the evaluation never touches is not written at all.
+  This replaces the generator-level assumption that no
   two contributions of one right-hand side can name the same key --- an
   assumption about how equations happen to be built, which a shared resume node
   refutes --- with a property of the equations handed to the solver.
@@ -247,7 +248,7 @@ lemma buffer_aux_flush_sides:
      = buffer_aux (foldl (\<lambda>a kv. acc_add (fst kv) (snd kv) a) acc0 acc) t"
   by (induction acc arbitrary: acc0) simp_all
 
-lemma buffer_sides_idem: "buffer_sides (buffer_sides t) = buffer_sides t"
+lemma buffer_sides_idem [simp]: "buffer_sides (buffer_sides t) = buffer_sides t"
 proof -
   have "buffer_aux [] (buffer_aux acc t) = buffer_aux acc t"
     if "distinct (map fst acc)" for acc
@@ -263,8 +264,8 @@ proof -
   from this[of "[]"] show ?thesis by (simp add: buffer_sides_def)
 qed
 
-lemma buffer_eqs_idem: "buffer_eqs (buffer_eqs T) = buffer_eqs T"
-  by (rule ext) (simp add: buffer_sides_idem)
+lemma buffer_eqs_idem [simp]: "buffer_eqs (buffer_eqs T) = buffer_eqs T"
+  by (rule ext) simp
 
 subsection \<open>The one transfer every consumer needs\<close>
 

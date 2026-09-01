@@ -80,7 +80,7 @@ next
   proof (cases "t = t'")
     case True
     then show ?thesis
-      by (simp add: sides_of_rhs_seqcomp_at)
+      by simp
   next
     case False
     with Cons.prems have "t \<in> set ts" by simp
@@ -96,7 +96,7 @@ next
       by simp
     also have "... =
         sides_of_rhs (side_rhs_fold_dg acc (t' # ts)) sigma k"
-      by (simp add: sides_of_rhs_seqcomp_at)
+      by simp
     finally show ?thesis .
   qed
 qed
@@ -280,8 +280,8 @@ definition dg_cmb_at ::
    \<Rightarrow> (pp \<times> unit, unit, ('D, 'G) dg_state) strategy_tree"
 where
   "dg_cmb_at ctx ca cc p =
-     map_gtree (\<lambda>_. ())
-       (map_ltree (\<lambda>w. (w, ctx))
+     relabel_gtree (\<lambda>_. ())
+       (relabel_ltree (\<lambda>w. (w, ctx))
          (dg_spec_combine_tree S (call_info_of ca p) cc (FunctionResult p)))"
 
 definition dg_cmb ::
@@ -303,8 +303,8 @@ definition dg_enter ::
    \<Rightarrow> (pp \<times> unit, unit, ('D, 'G) dg_state) strategy_tree"
 where
   "dg_enter ctx ci cl =
-     map_gtree (\<lambda>_. ())
-       (map_ltree (\<lambda>w. (w, ctx))
+     relabel_gtree (\<lambda>_. ())
+       (relabel_ltree (\<lambda>w. (w, ctx))
          (dg_edge_tree (dgs_enter S ci) cl))"
 
 definition dg_extra ::
@@ -483,8 +483,8 @@ lemma dg_postfix_combineG:
 
 lemma dg_edge_tree_local:
   "locals (traverse_rhs
-      (map_gtree (\<lambda>_. ())
-        (map_ltree (\<lambda>w. (w, ()))
+      (relabel_gtree (\<lambda>_. ())
+        (relabel_ltree (\<lambda>w. (w, ()))
           (apply_dg_spec S a u))) sigma)
    = snd (dg_spec_step S a (dg_D sigma u) (dg_G sigma))"
   unfolding apply_dg_spec_def dg_D_def dg_G_def
@@ -493,12 +493,12 @@ lemma dg_edge_tree_local:
 
 lemma dg_edge_tree_global:
   "globs (sides_of_rhs
-      (map_gtree (\<lambda>_. ())
-        (map_ltree (\<lambda>w. (w, ()))
+      (relabel_gtree (\<lambda>_. ())
+        (relabel_ltree (\<lambda>w. (w, ()))
           (apply_dg_spec S a u))) sigma (Inr ()))
    = fst (dg_spec_step S a (dg_D sigma u) (dg_G sigma))"
   unfolding apply_dg_spec_def dg_D_def dg_G_def
-  by (simp add: sides_map_gtree_unit_gen sides_map_ltree_Inr sides_dg_edge_tree_Inr
+  by (simp add: sides_relabel_gtree_unit_gen sides_relabel_ltree_Inr sides_dg_edge_tree_Inr
       sum.map_comp o_def)
 
 lemma dg_combine_tree_local:
@@ -515,7 +515,7 @@ lemma dg_combine_tree_global:
             (dgs_caller_cont S (call_info_of (CallEdge dst fs as) p) (dg_D sigma cc) (dg_G sigma))
             (dg_D sigma (FunctionResult p)) (dg_G sigma))"
   unfolding dg_cmb_at_def dg_spec_combine_tree_def dg_D_def dg_G_def
-  by (simp add: sides_map_gtree_unit_gen sides_map_ltree_Inr sides_dg_combine_tree_Inr
+  by (simp add: sides_relabel_gtree_unit_gen sides_relabel_ltree_Inr sides_dg_combine_tree_Inr
       sum.map_comp o_def)
 
 lemma dg_enter_tree_local:
@@ -529,7 +529,7 @@ lemma dg_enter_tree_global:
   "globs (sides_of_rhs (dg_enter () ci cl) sigma (Inr ()))
    = fst (dgs_enter S ci (dg_D sigma cl) (dg_G sigma))"
   unfolding dg_enter_def dg_D_def dg_G_def
-  by (simp add: sides_map_gtree_unit_gen sides_map_ltree_Inr sides_dg_edge_tree_Inr
+  by (simp add: sides_relabel_gtree_unit_gen sides_relabel_ltree_Inr sides_dg_edge_tree_Inr
       sum.map_comp o_def)
 
 theorem dg_post_solution_postfix:
@@ -592,8 +592,8 @@ proof -
 
   have edge_tree_mem:
     "\<And>u a v. (u, a, v) \<in> intra g \<Longrightarrow>
-      map_gtree (\<lambda>_. ())
-        (map_ltree (\<lambda>w. (w, ())) (apply_dg_spec S a u))
+      relabel_gtree (\<lambda>_. ())
+        (relabel_ltree (\<lambda>w. (w, ())) (apply_dg_spec S a u))
       \<in> set (dg_trees g v)"
   proof -
     fix u a v
@@ -601,8 +601,8 @@ proof -
     have "(u, a) \<in> set (intra_predecessor_list g v)"
       using edge
       by (simp add: set_intra_predecessor_list[OF finI] intra_predecessors_def)
-    then show "map_gtree (\<lambda>_. ())
-        (map_ltree (\<lambda>w. (w, ())) (apply_dg_spec S a u))
+    then show "relabel_gtree (\<lambda>_. ())
+        (relabel_ltree (\<lambda>w. (w, ())) (apply_dg_spec S a u))
       \<in> set (dg_trees g v)"
       by (force simp: dg_trees_def intra_predecessor_addr_list_def
           apply_dg_spec_relabel_as_at image_iff)
@@ -921,7 +921,7 @@ definition dg_edge_tree_hook ::
   "pp \<Rightarrow> edge_action \<Rightarrow> pp \<Rightarrow> (pp \<times> unit, unit, ('D, 'G) dg_state) strategy_tree"
 where
   "dg_edge_tree_hook u a v =
-     map_gtree (\<lambda>_. ()) (map_ltree (\<lambda>w. (w, ())) (apply_dg_spec S a u))"
+     relabel_gtree (\<lambda>_. ()) (relabel_ltree (\<lambda>w. (w, ())) (apply_dg_spec S a u))"
 
 definition dg_combine_tree_hook ::
   "pp \<Rightarrow> call_action \<Rightarrow> pp \<Rightarrow> pp \<Rightarrow> (pp \<times> unit, unit, ('D, 'G) dg_state) strategy_tree"
@@ -1727,7 +1727,7 @@ qed
 lemma dg_gen_unfold:
   "dg_gen g bot0 s0d s0g (v, ())
      = (if v = cfg_entry g
-        then depend_on () (DG bot s0g) (side_rhs_fold_dg (dg_acc g bot0 s0d v) (dg_trees g v))
+        then side_effect () (DG bot s0g) (side_rhs_fold_dg (dg_acc g bot0 s0d v) (dg_trees g v))
         else side_rhs_fold_dg (dg_acc g bot0 s0d v) (dg_trees g v))"
   unfolding dg_gen_def dg_trees_def dg_acc_def side_cfg_T_eff_keyed_seed_dg_def
   by (simp add: Let_def)
@@ -1735,7 +1735,7 @@ lemma dg_gen_unfold:
 lemma hook_gen_unfold:
   "hooks.hook_gen g bot0 s0d s0g (v, ())
      = (if v = cfg_entry g
-        then depend_on () (DG bot s0g)
+        then side_effect () (DG bot s0g)
                (side_rhs_fold_dg (dg_acc g bot0 s0d v) (hooks.hook_trees g v))
         else side_rhs_fold_dg (dg_acc g bot0 s0d v) (hooks.hook_trees g v))"
   unfolding hooks.hook_gen_def hooks.hook_trees_def dg_acc_def
@@ -2103,10 +2103,9 @@ proof -
   then show ?thesis using merge_split_sound by simp
 qed
 
-text \<open>The combine half of the unit argument, kept standalone: the lifted
-  diagonal section below reuses it verbatim through
-  \<open>gamma_unit_combine_sound_for_lifted\<close>, where only the live/live case
-  reaches an actual combine.\<close>
+text \<open>The combine half of the \<open>gamma_unit\<close> soundness argument, kept
+  standalone from \<open>sound_dg_spec_unit_for\<close> above so a future consumer can
+  cite the combine step alone.\<close>
 lemma gamma_unit_combine_sound_for:
   assumes reserved: "reserved_ret_var gs"
     and sc: "s \<in> gamma_unit gs dc g" and tc: "t \<in> gamma_unit gs de g"

@@ -1,6 +1,6 @@
 theory Routed_Context
   imports DG_Ctx_Activation DG_Base "Voblint_Solver.Strategy_Tree_Combinators" DG_Transfer_Combinators
-    "Voblint_Solver.Strategy_Tree_Do" "Voblint_CFG.LTR_Def" Activation_Backbone
+    "Voblint_CFG.LTR_Def" Activation_Backbone
 begin
 
 section \<open>One route, CALL and COMB discharged once\<close>
@@ -81,7 +81,7 @@ where
       let ctx' = route cc ctx entry ca;
       let dcont = caller_cont S ci caller globals1;
       let eg = enter_global S ci caller globals1;
-       depend_on (seed_key (FunctionEntry p) ctx')
+       side_effect (seed_key (FunctionEntry p) ctx')
          (DG entry bot) (answer (DG bot bot));
        callee_state \<leftarrow> read_local (FunctionResult p, ctx');
        globals_state2 \<leftarrow> read_global gk0;
@@ -223,7 +223,7 @@ where
       let ctx' = route cc ctx entry ca;
       let dcont = caller_cont S ci caller globals1;
       let eg = enter_global S ci caller globals1;
-       depend_on (seed_key (FunctionEntry p) ctx')
+       side_effect (seed_key (FunctionEntry p) ctx')
          (DG entry bot) (answer (DG bot bot));
        callee_state \<leftarrow> read_local (FunctionResult p, ctx');
        globals_state2 \<leftarrow> read_global gk0;

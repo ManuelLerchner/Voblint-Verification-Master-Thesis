@@ -1,14 +1,12 @@
 session Voblint_Solver in "." = "TD" +
   description "The strategy-tree equation language of the vendored side-effecting solver"
   theories
-    Strategy_Tree_Monad
-    Strategy_Tree_Do
-    Strategy_Tree_Rhs
-    Post_Solution
+    Strategy_Tree_Sequencing
+    Strategy_Tree_Fold
+    Strategy_Tree_Post_Solution
     Strategy_Tree_Relabel
-    Solver_Mono
     Strategy_Tree_Combinators
     (* Equation-level normalization: aggregates repeated side effects to one
        key into a single write, so no right-hand side names a key twice. *)
-    Side_Buffering
+    Strategy_Tree_Side_Buffering
     Context_Refinement

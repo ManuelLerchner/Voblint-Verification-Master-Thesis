@@ -1,5 +1,5 @@
-theory Post_Solution
-  imports Strategy_Tree_Rhs
+theory Strategy_Tree_Post_Solution
+  imports Strategy_Tree_Fold
 begin
 
 section \<open>What one unknown owes a post-solution\<close>
@@ -13,14 +13,19 @@ text \<open>
   projection or seeding argument only ever re-derives the per-unknown half.
 \<close>
 
+subsection \<open>The covering obligation\<close>
+
 definition se_constraint_holds ::
   "('x,'g,'d::bounded_semilattice_sup_bot) strategy_tree \<Rightarrow> ('x + 'g \<Rightarrow> 'd) \<Rightarrow> 'x \<Rightarrow> bool"
 where
   "se_constraint_holds t \<sigma> u \<equiv>
      traverse_rhs t \<sigma> \<le> \<sigma> (Inl u) \<and> sides_of_rhs t \<sigma> \<le> \<sigma>"
 
-(* The two halves of se_constraint_holds, split out so call sites can cite
-   the half they need instead of re-unfolding the conjunction. *)
+text \<open>
+  The two halves of \<^const>\<open>se_constraint_holds\<close>, split out so a call site
+  can cite the half it needs instead of re-unfolding the conjunction.
+\<close>
+
 lemma se_constraint_holds_local [dest]:
   "se_constraint_holds t \<sigma> u \<Longrightarrow> traverse_rhs t \<sigma> \<le> \<sigma> (Inl u)"
   unfolding se_constraint_holds_def by simp
@@ -28,6 +33,8 @@ lemma se_constraint_holds_local [dest]:
 lemma se_constraint_holds_sides [dest]:
   "se_constraint_holds t \<sigma> u \<Longrightarrow> sides_of_rhs t \<sigma> \<le> \<sigma>"
   unfolding se_constraint_holds_def by simp
+
+subsection \<open>Equivalent forms\<close>
 
 lemma part_post_solution_imp_se_constraint_holds:
   assumes "part_post_solution T x \<sigma> vars" and "u \<in> vars"

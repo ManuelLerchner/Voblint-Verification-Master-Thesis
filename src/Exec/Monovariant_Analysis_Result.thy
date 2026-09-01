@@ -170,7 +170,7 @@ text \<open>
   Which half of a global slot carries its payload depends on the key, and the two
   cannot be read uniformly. \<open>routed_cmb_g\<close> publishes the shared slot through
   \<open>publish_global\<close>, which writes \<^const>\<open>globs\<close>; it seeds a callee entry through
-  \<open>depend_on\<close> with \<open>DG (enter_local \<dots>) bot\<close>, whose payload is in
+  \<open>side_effect\<close> with \<open>DG (enter_local \<dots>) bot\<close>, whose payload is in
   \<^const>\<open>locals\<close> and whose \<^const>\<open>globs\<close> half is \<^const>\<open>bot\<close> -- which is also how
   \<open>routed_extra_g\<close> reads it back. Reading \<^const>\<open>globs\<close> everywhere would report
   every seed as unreachable, and nothing would fail: the shared slot would still

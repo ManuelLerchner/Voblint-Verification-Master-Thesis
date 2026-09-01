@@ -33,12 +33,12 @@ lemma dep_aux_dg_cmb_at_of:
   "dep_aux \<sigma> (dg_cmb_at_of S ctx ca cc p)
      = {Inl (cc, ctx), Inl (FunctionResult p, ctx), Inr ()}"
   unfolding dg_cmb_at_of_def
-  by (auto simp: dep_aux_map_gtree dep_aux_map_ltree dep_aux_dg_spec_combine_tree)
+  by (auto simp: dep_aux_relabel_gtree dep_aux_relabel_ltree dep_aux_dg_spec_combine_tree)
 
 lemma dep_aux_dg_edge_tree_relabelled:
-  "dep_aux \<sigma> (map_gtree (\<lambda>_. ()) (map_ltree (\<lambda>w. (w, ctx)) (dg_edge_tree step u)))
+  "dep_aux \<sigma> (relabel_gtree (\<lambda>_. ()) (relabel_ltree (\<lambda>w. (w, ctx)) (dg_edge_tree step u)))
      = {Inl (u, ctx), Inr ()}"
-  by (auto simp: dep_aux_map_gtree dep_aux_map_ltree dep_aux_dg_edge_tree)
+  by (auto simp: dep_aux_relabel_gtree dep_aux_relabel_ltree dep_aux_dg_edge_tree)
 
 text \<open>One generated equation's dependency set is the union over the three tree groups
   the generator folds: the node's intra predecessors, the call sites returning here,
@@ -128,12 +128,12 @@ proof -
     using fin e by (auto simp: entry_calls_def)
   obtain dst fs as where ca_eq: "ca = CallEdge dst fs as" by (cases ca) auto
   let ?p = "case ce of FunctionEntry p \<Rightarrow> p | _ \<Rightarrow> undefined"
-  have mem: "map_gtree (\<lambda>_. ())
-               (map_ltree (\<lambda>w. (w, ())) (dg_edge_tree (dgs_enter S (call_info_of ca ?p)) cs))
+  have mem: "relabel_gtree (\<lambda>_. ())
+               (relabel_ltree (\<lambda>w. (w, ())) (dg_edge_tree (dgs_enter S (call_info_of ca ?p)) cs))
              \<in> set (dg_extra_of S g (\<lambda>_ _ _ _. ()) () ce)"
     unfolding dg_extra_of_def using site by force
   have "Inl (cs, ()) \<in> dep_aux \<sigma>
-       (map_gtree (\<lambda>_. ()) (map_ltree (\<lambda>w. (w, ())) (dg_edge_tree (dgs_enter S (call_info_of ca ?p)) cs)))"
+       (relabel_gtree (\<lambda>_. ()) (relabel_ltree (\<lambda>w. (w, ())) (dg_edge_tree (dgs_enter S (call_info_of ca ?p)) cs)))"
     by (simp add: dep_aux_dg_edge_tree_relabelled)
   with dep_aux_dg_gen_of_extra_mem[OF mem] show ?thesis by blast
 qed

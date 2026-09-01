@@ -47,32 +47,35 @@ abbreviation nest_ci :: call_info where
 
 lemma nest_2_eqs_statement3:
   "nest_2_eqs (Statement 3, ctx)
-     = read_local_cont (Statement 2, ctx) (\<lambda>caller_state.
-         read_global_cont Global (\<lambda>globals_state1.
-           side_rhs_fold_dg bot
-             [depend_on (Seed (FunctionEntry (STR ''g''))
-                     (cs_route 2 (Statement 2) ctx
-                       (enter_local nest_S_st nest_ci
-                          (locals caller_state) (globs globals_state1))
-                       (CallEdge (Some (STR ''t'')) [(STR ''p'')] [VIMP_Syntax.V (STR ''p'')])))
-                (DG (enter_local nest_S_st nest_ci
-                      (locals caller_state) (globs globals_state1)) Bot)
-                (read_local_cont (FunctionResult (STR ''g''),
+     = do {
+         caller_state \<leftarrow> read_local (Statement 2, ctx);
+         globals_state1 \<leftarrow> read_global Global;
+         side_rhs_fold_dg bot
+           [side_effect (Seed (FunctionEntry (STR ''g''))
+                   (cs_route 2 (Statement 2) ctx
+                     (enter_local nest_S_st nest_ci
+                        (locals caller_state) (globs globals_state1))
+                     (CallEdge (Some (STR ''t'')) [(STR ''p'')] [VIMP_Syntax.V (STR ''p'')])))
+              (DG (enter_local nest_S_st nest_ci
+                    (locals caller_state) (globs globals_state1)) Bot)
+              (do {
+                 callee_state \<leftarrow> read_local (FunctionResult (STR ''g''),
                         cs_route 2 (Statement 2) ctx
                           (enter_local nest_S_st nest_ci
                              (locals caller_state) (globs globals_state1))
-                          (CallEdge (Some (STR ''t'')) [(STR ''p'')] [VIMP_Syntax.V (STR ''p'')]))
-                    (\<lambda>callee_state.
-                  read_global_cont Global (\<lambda>globals_state2.
-                    depend_on Global
-                      (DG Bot (enter_global nest_S_st nest_ci
-                            (locals caller_state) (globs globals_state1)
-                          \<squnion> combine_global nest_S_st nest_ci
-                             (caller_cont nest_S_st nest_ci (locals caller_state) (globs globals_state1))
-                             (locals callee_state) (globs globals_state2)))
-                     (answer (DG (combine_local nest_S_st nest_ci
-                           (caller_cont nest_S_st nest_ci (locals caller_state) (globs globals_state1))
-                           (locals callee_state) (globs globals_state2)) Bot)))))]))"
+                          (CallEdge (Some (STR ''t'')) [(STR ''p'')] [VIMP_Syntax.V (STR ''p'')]));
+                 globals_state2 \<leftarrow> read_global Global;
+                 side_effect Global
+                   (DG Bot (enter_global nest_S_st nest_ci
+                         (locals caller_state) (globs globals_state1)
+                       \<squnion> combine_global nest_S_st nest_ci
+                          (caller_cont nest_S_st nest_ci (locals caller_state) (globs globals_state1))
+                          (locals callee_state) (globs globals_state2)))
+                   (answer (DG (combine_local nest_S_st nest_ci
+                        (caller_cont nest_S_st nest_ci (locals caller_state) (globs globals_state1))
+                        (locals callee_state) (globs globals_state2)) Bot))
+               })]
+       }"
   unfolding nest_2_eqs_def side_cfg_T_eff_keyed_seed_dg_def routed_extra_g_def
     routed_cmb_g_def routed_cmb_g_at_def
   by (simp add: intra_predecessor_addr_list_def statement3_no_intra statement3_comb
@@ -80,32 +83,35 @@ lemma nest_2_eqs_statement3:
 
 lemma nest_1_eqs_statement3:
   "nest_1_eqs (Statement 3, ctx)
-     = read_local_cont (Statement 2, ctx) (\<lambda>caller_state.
-         read_global_cont Global (\<lambda>globals_state1.
-           side_rhs_fold_dg bot
-             [depend_on (Seed (FunctionEntry (STR ''g''))
-                     (cs_route 1 (Statement 2) ctx
-                       (enter_local nest_S_st nest_ci
-                          (locals caller_state) (globs globals_state1))
-                       (CallEdge (Some (STR ''t'')) [(STR ''p'')] [VIMP_Syntax.V (STR ''p'')])))
-                (DG (enter_local nest_S_st nest_ci
-                      (locals caller_state) (globs globals_state1)) Bot)
-                (read_local_cont (FunctionResult (STR ''g''),
+     = do {
+         caller_state \<leftarrow> read_local (Statement 2, ctx);
+         globals_state1 \<leftarrow> read_global Global;
+         side_rhs_fold_dg bot
+           [side_effect (Seed (FunctionEntry (STR ''g''))
+                   (cs_route 1 (Statement 2) ctx
+                     (enter_local nest_S_st nest_ci
+                        (locals caller_state) (globs globals_state1))
+                     (CallEdge (Some (STR ''t'')) [(STR ''p'')] [VIMP_Syntax.V (STR ''p'')])))
+              (DG (enter_local nest_S_st nest_ci
+                    (locals caller_state) (globs globals_state1)) Bot)
+              (do {
+                 callee_state \<leftarrow> read_local (FunctionResult (STR ''g''),
                         cs_route 1 (Statement 2) ctx
                           (enter_local nest_S_st nest_ci
                              (locals caller_state) (globs globals_state1))
-                          (CallEdge (Some (STR ''t'')) [(STR ''p'')] [VIMP_Syntax.V (STR ''p'')]))
-                    (\<lambda>callee_state.
-                  read_global_cont Global (\<lambda>globals_state2.
-                    depend_on Global
-                      (DG Bot (enter_global nest_S_st nest_ci
-                            (locals caller_state) (globs globals_state1)
-                          \<squnion> combine_global nest_S_st nest_ci
-                             (caller_cont nest_S_st nest_ci (locals caller_state) (globs globals_state1))
-                             (locals callee_state) (globs globals_state2)))
-                     (answer (DG (combine_local nest_S_st nest_ci
-                           (caller_cont nest_S_st nest_ci (locals caller_state) (globs globals_state1))
-                           (locals callee_state) (globs globals_state2)) Bot)))))]))"
+                          (CallEdge (Some (STR ''t'')) [(STR ''p'')] [VIMP_Syntax.V (STR ''p'')]));
+                 globals_state2 \<leftarrow> read_global Global;
+                 side_effect Global
+                   (DG Bot (enter_global nest_S_st nest_ci
+                         (locals caller_state) (globs globals_state1)
+                       \<squnion> combine_global nest_S_st nest_ci
+                          (caller_cont nest_S_st nest_ci (locals caller_state) (globs globals_state1))
+                          (locals callee_state) (globs globals_state2)))
+                   (answer (DG (combine_local nest_S_st nest_ci
+                        (caller_cont nest_S_st nest_ci (locals caller_state) (globs globals_state1))
+                        (locals callee_state) (globs globals_state2)) Bot))
+               })]
+       }"
   unfolding nest_1_eqs_def side_cfg_T_eff_keyed_seed_dg_def routed_extra_g_def
     routed_cmb_g_def routed_cmb_g_at_def
   by (simp add: intra_predecessor_addr_list_def statement3_no_intra statement3_comb
