@@ -28,7 +28,8 @@ text \<open>
 locale dg_analysis_adapter =
   routed_context_base_hetero S gammaDG gs g gk0 route bot0 s0d s0g sigma vars x0 sg seed_key
     "static_resolve g" gammaM enterc
-  for S :: "('D::bounded_semilattice_sup_bot, 'G::bounded_semilattice_sup_bot) dg_spec"
+  for S :: "(pp \<times> 'c, 'k, 'D::bounded_semilattice_sup_bot,
+              'G::bounded_semilattice_sup_bot) dg_spec"
     and gammaDG :: "'D \<Rightarrow> 'G \<Rightarrow> store set"
     and gs :: "vname \<Rightarrow> bool"
     and g gk0

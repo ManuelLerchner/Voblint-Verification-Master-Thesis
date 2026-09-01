@@ -5,4 +5,4 @@ set -euo pipefail
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/require-afp.sh"
 
 SESSION="${SESSION:-Voblint_Examples}"
-"$ISABELLE" build -v -j1 -o threads=12 -d "$AFP" -d "$TD_DIR" -D "$REPO_ROOT" "$SESSION"
+"$ISABELLE" build -v -j2 -o threads=12 -d "$AFP" -d "$TD_DIR" -D "$REPO_ROOT" "$SESSION"

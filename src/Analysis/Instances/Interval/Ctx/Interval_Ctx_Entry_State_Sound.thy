@@ -56,9 +56,11 @@ text \<open>
   program supply \<open>resolved_st_q_is_bot_for (declared_global_vars p)\<close>, exact for
   \<^const>\<open>is_empty_state\<close> (\<open>resolved_st_q_is_bot_for_iff\<close>).\<close>
 definition ectx_spec ::
-  "(vname \<Rightarrow> bool) \<Rightarrow> (ivl exec_dg_st \<Rightarrow> bool) \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_spec"
+  "(vname \<Rightarrow> bool) \<Rightarrow> (ivl exec_dg_st \<Rightarrow> bool)
+   \<Rightarrow> ('x, 'k, ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_spec"
 where
-  "ectx_spec gs empty_pred = base_dg_spec_st_for_lifted gs empty_pred (ivl_tf_st_for gs) (ivl_enter_st_for gs)"
+  "ectx_spec gs empty_pred =
+     base_dg_spec_st_for_lifted gs empty_pred (ivl_tf_st_for gs) (ivl_enter_st_for gs)"
 
 text \<open>
   \<^const>\<open>formals_route\<close>/\<^const>\<open>formals_route_gen\<close> (\<^theory>\<open>Voblint_Core.Routed_Context\<close>)
@@ -101,11 +103,13 @@ definition entry_state_entered ::
   "entry_state_entered gs empty_pred d ca =
      transfer_lift empty_pred (entry_state_enter_exec gs ca) d"
 
-lemma enter_local_ectx_spec_eq_entry_state_entered:
-  "enter_local (ectx_spec gs empty_pred) (call_info_of ca p) d g =
-   entry_state_entered gs empty_pred d ca"
-  unfolding ectx_spec_def dgs_enter_base_st_for_lifted entry_state_entered_def
-  by (cases d) (simp_all add: transfer_lift_def normalize_lift_def entry_state_enter_exec_def)
+lemma entered_ectx_spec_eq_entry_state_entered:
+  "entered (ectx_spec gs empty_pred) gk tau (call_info_of ca p) src =
+   entry_state_entered gs empty_pred (locals (tau src)) ca"
+  unfolding entered_def ectx_spec_def dgs_enter_base_st_for_lifted
+    entry_state_entered_def
+  by (cases "locals (tau src)")
+     (simp_all add: transfer_lift_def normalize_lift_def entry_state_enter_exec_def)
 
 definition entry_state_route ::
     "(vname \<Rightarrow> bool) \<Rightarrow> (ivl exec_dg_st \<Rightarrow> bool) \<Rightarrow> ivl exec_dg_st lifted \<Rightarrow> call_action \<Rightarrow> ivl list" where
@@ -152,7 +156,7 @@ text \<open>
 \<close>
 
 definition entered_is_bot_for :: "vname list \<Rightarrow> ivl abs_state \<Rightarrow> bool" where
-  "entered_is_bot_for pars entered = list_ex (\<lambda>x. is_empty (entered x)) pars"
+  "entered_is_bot_for pars ent = list_ex (\<lambda>x. is_empty (ent x)) pars"
 
 text \<open>
   Restricting \<^const>\<open>is_empty_state\<close>'s witness search to the formals is exact,
@@ -237,10 +241,11 @@ definition entry_state_eqs ::
   "entry_state_eqs gs empty_pred Pi ps =
      side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_addr_list (\<lambda>_. Global)
        (entry_state_route_gen gs empty_pred)
-      (routed_cmb_g_contribution (ectx_spec gs empty_pred) Global Seed
-         (static_resolve (compile_prog Pi ps)))
-      (routed_extra_g Seed Global)
-       (compile_prog Pi ps) (ectx_spec gs empty_pred) Bot (Lifted cinit_ivl_st) Bot"
+       (\<lambda>ctx' src a. dg_spec_edge_tree (ectx_spec gs empty_pred) a src Global)
+       (routed_cmb_g (ectx_spec gs empty_pred) Global Seed
+          (static_resolve (compile_prog Pi ps)))
+       (routed_extra_g Seed Global)
+       (compile_prog Pi ps) Bot (Lifted cinit_ivl_st) Bot"
 
 definition entry_state_sol ::
     "(vname \<Rightarrow> bool) \<Rightarrow> (ivl exec_dg_st \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> (pp \<times> ivl list) set \<times> (pp \<times> ivl list + gk \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)" where
@@ -316,7 +321,8 @@ text \<open>
 \<close>
 
 
-definition ectx_abs_spec :: "(vname \<Rightarrow> bool) \<Rightarrow> (ivl abs_state lifted, ivl abs_state lifted) dg_spec" where
+definition ectx_abs_spec ::
+    "(vname \<Rightarrow> bool) \<Rightarrow> ('x, 'k, ivl abs_state lifted, ivl abs_state lifted) dg_spec" where
   "ectx_abs_spec gs = base_dg_spec_for_lifted gs is_empty_state (ivl_tf_for gs)"
 
 definition entered_state_abs ::
@@ -339,8 +345,8 @@ text \<open>
   \<^theory>\<open>Voblint_Core.Routed_Context\<close>'s \<open>formals_route_lifted\<close>/\<open>formals_route_lifted_gen\<close>,
   generalized so any domain interprets them instead of restating them: both case-split
   the same \<^const>\<open>CallEdge\<close> and read the same entered-frame Bot/Lifted collapse, and
-  the action-only entry primitive used by entered_state_abs agrees with enter_local applied
-  to ectx_abs_spec (dgs_enter_base_for_lifted). Kept as their own named
+  the action-only entry primitive used by entered_state_abs agrees with the entered frame
+  ectx_abs_spec's own enter transfer produces. Kept as their own named
   definitions -- rather than replaced outright -- because both are cited by name from the
   regression examples
   (\<open>Example_Interval_DG_Ctx_Collect\<close>, \<open>Example_Interval_DG_EntryState_Collect\<close>); this
@@ -349,10 +355,10 @@ text \<open>
 \<close>
 
 lemma entry_state_route_abs_gen_eq_formals_route_lifted_gen:
-  "entry_state_route_abs_gen gs = formals_route_lifted_gen (ectx_abs_spec gs)"
+  "entry_state_route_abs_gen gs = formals_route_lifted_gen"
 proof (intro ext)
   fix u ctx d ca
-  show "entry_state_route_abs_gen gs u ctx d ca = formals_route_lifted_gen (ectx_abs_spec gs) u ctx d ca"
+  show "entry_state_route_abs_gen gs u ctx d ca = formals_route_lifted_gen u ctx d ca"
     unfolding entry_state_route_abs_gen_def formals_route_lifted_gen_def
       entry_state_route_abs_def formals_route_lifted_def
     by (cases ca) simp_all
@@ -506,8 +512,7 @@ lemma ectx_gamma_eq: "ectx_gamma gs = ivl_es.gamma_exec"
 
 theorem ectx_sound_exec: "sound_dg_spec (ectx_spec gs empty_pred) (ectx_gamma gs) gs"
   unfolding ectx_gamma_eq ectx_spec_def
-  by (rule ivl_es.sound_dg_spec_st)
-     (rule base_dg_spec_sound[OF ivl_is_sound_transfer_for is_empty_state_gamma_state_empty])
+  by (rule ivl_es.sound_dg_spec_st[OF ivl_is_sound_transfer_for])
 
 end
 
@@ -542,9 +547,10 @@ theorem entry_state_pp_routed:
   "part_post_solution
      (side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. Global)
         (entry_state_route_gen gs empty_pred)
+        (\<lambda>ctx' src a. dg_spec_edge_tree (ectx_spec gs empty_pred) a src Global)
         (routed_cmb_g (ectx_spec gs empty_pred) Global Seed (static_resolve (compile_prog Pi ps)))
         (routed_extra_g Seed Global)
-        (compile_prog Pi ps) (ectx_spec gs empty_pred) Bot (Lifted cinit_ivl_st) Bot)
+        (compile_prog Pi ps) Bot (Lifted cinit_ivl_st) Bot)
      (cfg_exit (compile_prog Pi ps), [])
      (snd (entry_state_sol gs empty_pred Pi ps)) (fst (entry_state_sol gs empty_pred Pi ps))"
   using entry_state_pp_st unfolding entry_state_eqs_def ectx_spec_def
@@ -591,9 +597,9 @@ context
         \<Longrightarrow> (u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps)
         \<Longrightarrow> (FunctionEntry p,
               entry_state_route_gen gs empty_pred u ctx
-                (enter_local (ectx_spec gs empty_pred) (call_info_of (CallEdge dst pars args) p)
-                   (locals (snd (entry_state_sol gs empty_pred Pi ps) (Inl (u, ctx))))
-                   (globs (snd (entry_state_sol gs empty_pred Pi ps) (Inr Global))))
+                (entered (ectx_spec gs empty_pred) Global
+                   (snd (entry_state_sol gs empty_pred Pi ps))
+                   (call_info_of (CallEdge dst pars args) p) (Inl (u, ctx)))
                 (CallEdge dst pars args))
             \<in> fst (entry_state_sol gs empty_pred Pi ps)"
     and comb_fwd_ok: "\<And>cl c1 dst pars args p cont.
@@ -617,9 +623,9 @@ definition entry_state_context :: "cfg_node \<Rightarrow> ivl list \<Rightarrow>
      (let ca = call_action_at_call_site (compile_prog Pi ps) u;
           p = (case callee_entry_at_call_site (compile_prog Pi ps) u of FunctionEntry q \<Rightarrow> q | _ \<Rightarrow> undefined)
       in entry_state_route_gen gs empty_pred u ctx
-          (enter_local (ectx_spec gs empty_pred) (call_info_of ca p)
-             (locals (snd (entry_state_sol gs empty_pred Pi ps) (Inl (u, ctx))))
-             (globs (snd (entry_state_sol gs empty_pred Pi ps) (Inr Global)))) ca)"
+          (entered (ectx_spec gs empty_pred) Global
+             (snd (entry_state_sol gs empty_pred Pi ps))
+             (call_info_of ca p) (Inl (u, ctx))) ca)"
 
 interpretation entry_state_compiled: compiled_cfg Pi ps "compile_prog Pi ps"
   by (unfold_locales; simp add: compile_prog_finite)

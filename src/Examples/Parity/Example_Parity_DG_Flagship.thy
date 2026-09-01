@@ -180,12 +180,6 @@ lemma parity_is_bot_exact:
   "\<And>s::parity resolved_st_q. resolved_st_q_is_bot_for (declared_global_vars parity_program) s = is_empty_state (fun_of_exec_dg_st_for parity_gs s)"
   by (rule resolved_st_q_is_bot_for_iff[OF declared_global_iff, folded fun_of_exec_dg_st_for_def])
 
-lemma parity_sound0:
-  "cinit_stores parity_gs \<subseteq> gamma_dg_base (map_lift (fun_of_exec_dg_st_for parity_gs) (Lifted cinit_parity_st))
-                                (map_lift (fun_of_exec_dg_st_for parity_gs) (Lifted cinit_parity_st))"
-  by (auto simp add: fun_of_exec_dg_st_for_def fun_of_st_cinit_parity_st_for cinit_stores_def gamma_state_def
-      gamma_dg_base_def)
-
 subsection \<open>7. Inspecting the certified result\<close>
 
 lemma parity_head_computed:
@@ -243,6 +237,15 @@ proof -
              TD_side_always_join_Interp.part_post_solution_of_solve_c)+
 qed
 
+text \<open>The initial stores are covered by the registered concretization at the
+  initial local value. Stated in \<^const>\<open>parity_ex_reg.gamma_exec\<close> itself rather than
+  in its unfolding, because that is the vocabulary \<open>run_source_sound\<close> assumes.\<close>
+lemma parity_sound0:
+  "cinit_stores parity_gs
+     \<subseteq> parity_ex_reg.gamma_exec (Lifted cinit_parity_st) (Lifted cinit_parity_st)"
+  by (auto simp add: parity_ex_reg.gamma_exec_def fun_of_exec_dg_st_for_def
+      fun_of_st_cinit_parity_st_for cinit_stores_def gamma_state_def)
+
 theorem parity_source_run_sound:
   assumes run: "star (pstep parity_gs parity_pi) (parity_prog, s, []) (residual, t, frs)"
       and init: "s \<in> cinit_stores parity_gs"
@@ -259,7 +262,7 @@ proof -
               parity_vars_cover[unfolded parity_sol_def parity_eqs_def parity_cfg_def]
               parity_finE[unfolded parity_cfg_def]
               parity_finC[unfolded parity_cfg_def]
-              parity_sound0[unfolded fun_of_exec_dg_st_for_def, folded parity_ex_reg.gamma_exec_def]
+              parity_sound0
               init run'])
 qed
 

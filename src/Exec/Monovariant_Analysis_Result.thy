@@ -76,9 +76,9 @@ text \<open>
   as long as this projection drops them.
 
   Which half of a global slot carries its payload depends on the key, and the two
-  cannot be read uniformly. \<open>routed_cmb_g\<close> publishes the shared slot through
-  \<open>publish_global\<close>, which writes \<^const>\<open>globs\<close>; it seeds a callee entry through
-  \<open>side_effect\<close> with \<open>DG (enter_local \<dots>) bot\<close>, whose payload is in
+  cannot be read uniformly. A specification's own \<open>man_sideg\<close> publishes the
+  shared slot, which writes \<^const>\<open>globs\<close>; \<open>routed_cmb_g\<close> seeds a callee entry
+  through \<open>side_effect\<close> with \<open>DG entry bot\<close>, whose payload is in
   \<^const>\<open>locals\<close> and whose \<^const>\<open>globs\<close> half is \<^const>\<open>bot\<close> -- which is also how
   \<open>routed_extra_g\<close> reads it back. Reading \<^const>\<open>globs\<close> everywhere would report
   every seed as unreachable, and nothing would fail: the shared slot would still

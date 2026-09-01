@@ -65,12 +65,14 @@ text \<open>
 
 definition ictx_spec ::
   "refine_mode \<Rightarrow> (int_dom exec_dg_st \<Rightarrow> bool) \<Rightarrow> (vname \<Rightarrow> bool)
-     \<Rightarrow> (int_dom exec_dg_st lifted, int_dom exec_dg_st lifted) dg_spec"
+     \<Rightarrow> ('x, 'k, int_dom exec_dg_st lifted, int_dom exec_dg_st lifted) dg_spec"
 where
   "ictx_spec mode empty_pred gs =
      base_dg_spec_st_for_lifted gs empty_pred (int_tf_st_for mode gs) (int_dom_enter_st_for mode gs)"
 
-definition ictx_abs_spec :: "refine_mode \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> (int_dom abs_state lifted, int_dom abs_state lifted) dg_spec" where
+definition ictx_abs_spec ::
+    "refine_mode \<Rightarrow> (vname \<Rightarrow> bool)
+     \<Rightarrow> ('x, 'k, int_dom abs_state lifted, int_dom abs_state lifted) dg_spec" where
   "ictx_abs_spec mode gs = base_dg_spec_for_lifted gs is_empty_state (int_tf_for mode gs)"
 
 subsection \<open>The routed equation system and its executable solution\<close>
@@ -80,10 +82,11 @@ definition ictx_eqs ::
   "ictx_eqs mode empty_pred gs Pi ps =
      side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_addr_list (\<lambda>_. Global)
        route_unit
-       (routed_cmb_g_contribution (ictx_spec mode empty_pred gs) Global Seed
+       (\<lambda>ctx' src a. dg_spec_edge_tree (ictx_spec mode empty_pred gs) a src Global)
+       (routed_cmb_g (ictx_spec mode empty_pred gs) Global Seed
           (static_resolve (compile_prog Pi ps)))
        (routed_extra_g Seed Global)
-       (compile_prog Pi ps) (ictx_spec mode empty_pred gs) Bot (Lifted cinit_int_dom_st) Bot"
+       (compile_prog Pi ps) Bot (Lifted cinit_int_dom_st) Bot"
 
 definition ictx_sol ::
     "refine_mode \<Rightarrow> (int_dom exec_dg_st \<Rightarrow> bool) \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> (pp \<times> unit) set \<times> (pp \<times> unit + gk \<Rightarrow> (int_dom exec_dg_st lifted, int_dom exec_dg_st lifted) dg_state)" where
@@ -155,23 +158,21 @@ text \<open>
   \<open>ictx_sound_exec\<close> below pulls it back along the readback.
 \<close>
 
-lemma ictx_abs_spec_sound: "sound_dg_spec (ictx_abs_spec mode gs) gamma_dg_base gs"
+lemma int_is_sound_transfer_for: "sound_transfer_for gs (int_tf_for mode gs)"
 proof (cases mode)
   case Refine_Never
-  then show ?thesis
-    unfolding ictx_abs_spec_def
-    by (simp add: base_dg_spec_sound[OF int_never_is_sound_transfer_for is_empty_state_gamma_state_empty])
+  then show ?thesis by (simp add: int_never_is_sound_transfer_for)
 next
   case Refine_Once
-  then show ?thesis
-    unfolding ictx_abs_spec_def
-    by (simp add: base_dg_spec_sound[OF int_once_is_sound_transfer_for is_empty_state_gamma_state_empty])
+  then show ?thesis by (simp add: int_once_is_sound_transfer_for)
 next
   case Refine_Fixpoint
-  then show ?thesis
-    unfolding ictx_abs_spec_def
-    by (simp add: base_dg_spec_sound[OF int_fixpoint_is_sound_transfer_for is_empty_state_gamma_state_empty])
+  then show ?thesis by (simp add: int_fixpoint_is_sound_transfer_for)
 qed
+
+lemma ictx_abs_spec_sound: "sound_dg_spec (ictx_abs_spec mode gs) gamma_dg_base gs"
+  unfolding ictx_abs_spec_def
+  by (rule base_dg_spec_sound[OF int_is_sound_transfer_for is_empty_state_gamma_state_empty])
 
 text \<open>The concretization the executable-carrier interpretations below use: a local
   unknown means \<^const>\<open>gamma_state_lift\<close> of its readback, the global slot is ignored as
@@ -203,7 +204,7 @@ lemma ictx_gamma_eq: "ictx_gamma gs = int_unit.gamma_exec"
 
 theorem ictx_sound_exec: "sound_dg_spec (ictx_spec mode empty_pred gs) (ictx_gamma gs) gs"
   unfolding ictx_gamma_eq ictx_spec_def
-  by (rule int_unit.sound_dg_spec_st) (rule ictx_abs_spec_sound[unfolded ictx_abs_spec_def])
+  by (rule int_unit.sound_dg_spec_st[OF int_is_sound_transfer_for])
 
 end
 
@@ -243,10 +244,11 @@ theorem ictx_pp_routed:
   shows
   "part_post_solution
      (side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. Global) route_unit
+        (\<lambda>ctx' src a. dg_spec_edge_tree (ictx_spec mode empty_pred gs) a src Global)
         (routed_cmb_g (ictx_spec mode empty_pred gs) Global Seed
            (static_resolve (compile_prog Pi ps)))
         (routed_extra_g Seed Global)
-        (compile_prog Pi ps) (ictx_spec mode empty_pred gs) Bot (Lifted cinit_int_dom_st) Bot)
+        (compile_prog Pi ps) Bot (Lifted cinit_int_dom_st) Bot)
      (cfg_exit (compile_prog Pi ps), ())
      (snd (ictx_sol mode empty_pred gs Pi ps)) (fst (ictx_sol mode empty_pred gs Pi ps))"
   using pp_st[OF solves] unfolding ictx_eqs_def ictx_spec_def by (rule int_pp_st_gen[OF exact])

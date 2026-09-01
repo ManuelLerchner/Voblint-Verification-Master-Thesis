@@ -39,11 +39,13 @@ definition cs_call_string_eqs ::
   "cs_call_string_eqs k gs empty_pred Pi ps =
      side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_addr_list (\<lambda>_. Call_String_Context.Global)
        (cs_route k)
-       (routed_cmb_g_contribution (ectx_spec gs empty_pred)
+       (\<lambda>ctx' src a. dg_spec_edge_tree (ectx_spec gs empty_pred) a src
+          Call_String_Context.Global)
+       (routed_cmb_g (ectx_spec gs empty_pred)
           Call_String_Context.Global Call_String_Context.Seed
           (static_resolve (compile_prog Pi ps)))
        (routed_extra_g Call_String_Context.Seed Call_String_Context.Global)
-       (compile_prog Pi ps) (ectx_spec gs empty_pred) Bot (Lifted cinit_ivl_st) Bot"
+       (compile_prog Pi ps) Bot (Lifted cinit_ivl_st) Bot"
 
 definition cs_call_string_sol ::
     "nat \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> (ivl exec_dg_st \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> (pp \<times> call_string) set \<times> (pp \<times> call_string + call_string_gk \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)" where

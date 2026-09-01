@@ -268,6 +268,50 @@ Sessions and `pixi run build` do not catch a stale export: only
 lands a new theory without regenerating `codegen/generated/` leaves the
 breakage for whoever next runs a full build.
 
+A named `dg_spec` is a construction-time description, never an exported
+runtime value -- the Isabelle analogue of Goblint's `Spec` module. Its unknown
+and global-key types occur only inside its transfer programs, never in an
+argument that builds it, so it has no most general ML type and the serializer
+rejects it with `includes a free type variable`. The rule is therefore
+uniform, and applies to concrete domain specifications (`sctx_spec`,
+`rel_order_spec`) exactly as it does to the generic builders in `DG_Spec`:
+
+> **A named `dg_spec` that can reach code generation declares its own `_def`
+> `[code_unfold]`, next to the definition.**
+
+Whether a given spec would survive anyway -- because some enclosing definition
+happens to unfold first -- is not worth reasoning about per domain. A
+redundant declaration costs nothing; a missing one fails in generated ML, far
+from the theory that caused it.
+
+## Deleting an API
+
+Isabelle does not reject every surviving use of a removed name. In a term it
+does; but inside `assumes`, `fixes`, and theorem statements an unknown
+lowercase identifier is a legal free variable, so a locale whose assumption
+cites a deleted constant keeps building -- while that assumption silently
+stops constraining anything and now holds for an arbitrary function of that
+name. Deleting `DG_Transfer_Combinators.thy` did exactly this to three
+`call_fwd_ok` assumptions via `enter_local`, and every session stayed green
+for several rebuilds afterwards. This is the `false abstraction` error of the
+autoformalization audit below, and no batch build can see it.
+
+So a deletion is not finished when the build is green:
+
+1. Search for consumers of every removed name *before* deleting, including
+   inside `assumes` and theorem statements.
+2. Append the removed names to `scripts/retired_identifiers.txt`.
+   `pixi run retired-identifiers` then fails on any that come back. Remove a
+   name from that list -- explicitly, in the same commit -- if a later design
+   deliberately reuses it.
+3. Run `pixi run locale-parameters`. It reports any identifier left free in a
+   locale assumption anywhere in `src/`, which is the general form of the same
+   defect and catches names that were never constants here at all.
+4. Run the full batch build over the leaf sessions, not just the session you
+   edited. A session that fails cancels the rest of its own theories, so one
+   red session hides every later one: a build that stops early has told you
+   nothing about what follows it.
+
 ## Regression discipline
 
 Whenever a change fixes a bug, changes semantics, or introduces a feature,

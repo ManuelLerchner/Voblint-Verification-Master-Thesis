@@ -52,13 +52,13 @@ text \<open>
 
 definition pctx_spec ::
   "(vname \<Rightarrow> bool) \<Rightarrow> (parity exec_dg_st \<Rightarrow> bool)
-     \<Rightarrow> (parity exec_dg_st lifted, parity exec_dg_st lifted) dg_spec"
+     \<Rightarrow> ('x, 'k, parity exec_dg_st lifted, parity exec_dg_st lifted) dg_spec"
 where
   "pctx_spec gs empty_pred =
      base_dg_spec_st_for_lifted gs empty_pred (parity_tf_st_for gs) (parity_enter_st_for gs)"
 
 definition pctx_abs_spec ::
-    "(vname \<Rightarrow> bool) \<Rightarrow> (parity abs_state lifted, parity abs_state lifted) dg_spec" where
+    "(vname \<Rightarrow> bool) \<Rightarrow> ('x, 'k, parity abs_state lifted, parity abs_state lifted) dg_spec" where
   "pctx_abs_spec gs = base_dg_spec_for_lifted gs is_empty_state (parity_tf_for gs)"
 
 subsection \<open>The routed equation system and its executable solution\<close>
@@ -68,10 +68,11 @@ definition pctx_eqs ::
   "pctx_eqs gs empty_pred Pi ps =
      side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_addr_list (\<lambda>_. Global)
        route_unit
-       (routed_cmb_g_contribution (pctx_spec gs empty_pred) Global Seed
+       (\<lambda>ctx' src a. dg_spec_edge_tree (pctx_spec gs empty_pred) a src Global)
+       (routed_cmb_g (pctx_spec gs empty_pred) Global Seed
           (static_resolve (compile_prog Pi ps)))
        (routed_extra_g Seed Global)
-       (compile_prog Pi ps) (pctx_spec gs empty_pred) Bot (Lifted cinit_parity_st) Bot"
+       (compile_prog Pi ps) Bot (Lifted cinit_parity_st) Bot"
 
 definition pctx_sol ::
     "(vname \<Rightarrow> bool) \<Rightarrow> (parity exec_dg_st \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> (pp \<times> unit) set
@@ -152,9 +153,10 @@ text \<open>The solver's post-solution, for the unbuffered routed generator at t
 theorem pctx_pp_routed:
   "part_post_solution
      (side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. Global) route_unit
+        (\<lambda>ctx' src a. dg_spec_edge_tree (pctx_spec gs empty_pred) a src Global)
         (routed_cmb_g (pctx_spec gs empty_pred) Global Seed (static_resolve (compile_prog Pi ps)))
         (routed_extra_g Seed Global)
-        (compile_prog Pi ps) (pctx_spec gs empty_pred) Bot (Lifted cinit_parity_st) Bot)
+        (compile_prog Pi ps) Bot (Lifted cinit_parity_st) Bot)
      (cfg_exit (compile_prog Pi ps), ())
      (snd (pctx_sol gs empty_pred Pi ps)) (fst (pctx_sol gs empty_pred Pi ps))"
   using pctx_pp_st unfolding pctx_eqs_def pctx_spec_def by (rule parity_pp_st_gen[OF exact])
@@ -205,8 +207,7 @@ lemma pctx_gamma_eq: "pctx_gamma gs = parity_unit.gamma_exec"
 
 theorem pctx_sound_exec: "sound_dg_spec (pctx_spec gs empty_pred) (pctx_gamma gs) gs"
   unfolding pctx_gamma_eq pctx_spec_def
-  by (rule parity_unit.sound_dg_spec_st)
-     (rule base_dg_spec_sound[OF parity_is_sound_transfer_for is_empty_state_gamma_state_empty])
+  by (rule parity_unit.sound_dg_spec_st[OF parity_is_sound_transfer_for])
 
 end
 

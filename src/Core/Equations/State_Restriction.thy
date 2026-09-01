@@ -114,4 +114,13 @@ lemma map_lift_restrict_global_for_join [simp]:
      = map_lift (restrict_global_for gs) a \<squnion> map_lift (restrict_global_for gs) b"
   by (rule map_lift_sup) simp
 
+subsection \<open>Splitting and rejoining\<close>
+
+text \<open>Routing a state's two halves back through \<^const>\<open>combine_env\<close> recovers it
+  exactly: each half is already bottom outside the names it owns.\<close>
+
+lemma combine_env_restrict_id [simp]:
+  "combine_env gs (restrict_local_for gs sigma) (restrict_global_for gs sigma) = sigma"
+  by (simp add: combine_env_for_eq_restrictions restrict_local_for_global_join)
+
 end

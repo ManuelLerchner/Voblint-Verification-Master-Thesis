@@ -1,0 +1,99 @@
+# Identifiers this tree has deliberately removed.
+#
+# `scripts/check_retired_identifiers.py` fails the commit when any of these
+# still occurs in a tracked `.thy` file -- in code or in prose. It exists
+# because Isabelle does not reject every surviving use of a removed name:
+# inside `assumes`, an unknown lowercase identifier silently becomes a free
+# variable, so the locale keeps building while its assumption stops saying
+# what it was written to say. Deleting `DG_Transfer_Combinators.thy` turned
+# three `call_fwd_ok` assumptions into statements about an arbitrary function
+# named `enter_local`, and every session stayed green.
+#
+# Append a name here when you remove an API. Remove it again -- explicitly --
+# if a later design deliberately reuses the name.
+#
+# Matching is whole-word, so `dgs_caller_cont` does not match `caller_cont`.
+# Deliberately NOT listed: `caller_cont`, `combine_env`, `combine_assign`.
+# Prose across this tree names record fields by their role rather than by the
+# `dgs_`-prefixed field name, and `src/Core/README.md` documents that
+# convention; those three are live vocabulary, not dead references.
+
+# --- Pure-pair transfer combinators (DG_Transfer_Combinators.thy) ---
+# Replaced by manager-native transfers: a spec's fields are `man_transfer`s,
+# and what these projected out of a `'dg \<times> 'dl` pair is now `entered` plus
+# the observations in DG_Spec.
+enter_local
+enter_global
+combine_local
+combine_global
+
+# --- Old DG_Soundness vocabulary ---
+# The surviving spine is `dg_hook_gamma` / `hook_gen` / `hook_postfix`.
+dg_cmb
+dg_cmb_at
+dg_extra
+dg_gamma
+dg_gen
+dg_acc
+dg_postfix
+dg_enter
+dg_trees
+dg_spec_commute
+sound_dg_hooks_ltr
+hook_post_solution_collect_sound_ltr
+
+# --- Pure-pair spec application, superseded by compiled transfer trees ---
+apply_dg_spec
+apply_dg_spec_at
+apply_dg_spec_contribution
+apply_dg_spec_contribution_at
+dg_edge_tree_hook
+dg_enter_tree_hook
+dg_combine_tree_hook
+dg_spec_combine_tree_at
+edge_transfer_of_step
+combine_transfer_of_comb
+dgs_enter_pair
+answer_local
+publish_global
+lift_dg_step
+lift_gamma
+indep_dg_spec
+base_dg_spec_st_for
+
+# --- Unit ownership split, before `unit_transfer_gen` ---
+merge_split_spec
+merge_split_spec_exec
+unit_step_st
+unit_combine_step_env_for
+unit_combine_step_assign_for
+unit_combine_step_st_env
+unit_combine_step_st_assign_for
+
+# --- Placement policy (removed; see docs/GOBLINT_ALIGNMENT_REGISTER.md) ---
+# Current Goblint exposes no analogous framework abstraction, so this was
+# closed by removal rather than migrated.
+placed_dg_exec_analysis
+project_component
+project_placed_resolved
+unit_dg_spec_placed
+unit_dg_spec_placed_st
+unit_step_placed
+unit_step_placed_st
+unit_combine_step_env_placed
+unit_combine_step_assign_placed
+unit_combine_step_placed_st_env
+unit_combine_step_placed_st_assign
+
+# --- Routed contribution hooks, folded into `routed_cmb_g` ---
+routed_cmb_g_contribution
+routed_cmb_g_contribution_at
+
+# --- Dead-code lift (DG_Dead_Code_Lift.thy) ---
+dead_code_lift
+dead_code_normalize
+
+# --- Concretization helpers removed with the pair interface ---
+gammaM_exec
+gamma_join
+gamma_join_exec

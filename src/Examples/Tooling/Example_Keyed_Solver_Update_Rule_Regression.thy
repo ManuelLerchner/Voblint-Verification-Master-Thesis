@@ -19,25 +19,20 @@ text \<open>
   essential two-write pattern.
 
   The two predecessor edges carry different \<open>edge_action\<close>s (\<open>EA_Nop\<close> vs.
-  \<open>EA_Assign\<close>) against \<open>keyed_spec\<close> below, so their \<^const>\<open>dg_edge_tree\<close>
+  \<open>EA_Assign\<close>) against \<open>keyed_step\<close> below, so their \<^const>\<open>dg_edge_tree_at\<close>
   contributions publish genuinely different global values -- reproducing the
   same per-origin-gate destabilization \<^const>\<open>update_global_warrowing_apinis\<close>
   exhibits, from two \<open>intra\<close> list entries of the same equation.
 \<close>
 
-definition keyed_spec :: "(ivl, ivl) dg_spec" where
-  "keyed_spec =
-     \<lparr> dgs_skip = \<lambda>d g. (g, d),
-       dgs_assign = \<lambda>x e d g. (g \<squnion> Ivl (Fin 1) (Fin 1), d),
-       dgs_special = \<lambda>sc x d g. (g, d),
-       dgs_branch = \<lambda>b pol d g. (g, d),
-       dgs_body = \<lambda>p d g. (g, d),
-       dgs_return = \<lambda>e p d g. (g, d),
-       dgs_enter = \<lambda>ci d g. (g, d),
-       dgs_event = \<lambda>ev d g. (g, d),
-       dgs_caller_cont = \<lambda>ci dc g. dc,
-       dgs_combine_env = \<lambda>ci dc de g. (g, dc \<squnion> de),
-       dgs_combine_assign = \<lambda>ci de g p. p \<rparr>"
+text \<open>An edge step in the framework's own \<open>'dl \<Rightarrow> 'dg \<Rightarrow> 'dg \<times> 'dl\<close> shape rather
+  than a \<^type>\<open>dg_spec\<close>: what is under test is the generator's \<open>Side\<close> discipline, so
+  the step is supplied directly to \<^const>\<open>dg_edge_tree_at\<close> and its Side-free
+  analogue. Only \<open>EA_Assign\<close> raises the published global, so the two predecessor
+  edges below publish different values.\<close>
+definition keyed_step :: "edge_action \<Rightarrow> ivl \<Rightarrow> ivl \<Rightarrow> ivl \<times> ivl" where
+  "keyed_step a d g =
+     (case a of EA_Assign _ _ \<Rightarrow> (g \<squnion> Ivl (Fin 1) (Fin 1), d) | _ \<Rightarrow> (g, d))"
 
 definition keyed_dummy_cfg :: cfg where
   "keyed_dummy_cfg = \<lparr> intra = {}, calls = {}, cfg_entry = Statement 0, checks = {} \<rparr>"
@@ -73,16 +68,18 @@ text \<open>The unbuffered generator: \<open>Statement 1\<close>'s equation issu
 definition keyed_multiwrite_eqs :: "(pp \<times> unit, unit, (ivl, ivl) dg_state) eqsT" where
   "keyed_multiwrite_eqs =
      side_cfg_T_eff_keyed_seed_dg keyed_pred_sel (\<lambda>_. ()) (\<lambda>_ _ _ _. ())
-       keyed_cmb keyed_extra keyed_dummy_cfg keyed_spec bot bot bot"
+       (\<lambda>ctx' src a. dg_edge_tree_at (keyed_step a) src ())
+       keyed_cmb keyed_extra keyed_dummy_cfg bot bot bot"
 
 text \<open>The buffered generator: the same two predecessor contributions, folded
-  Side-free via \<^const>\<open>apply_dg_spec_contribution\<close> and \<^const>\<open>fold_rhs_trees\<close>,
+  Side-free via \<^const>\<open>dg_edge_contribution_tree_at\<close> and \<^const>\<open>fold_rhs_trees\<close>,
   published exactly once. Terminates under the completely unmodified vendored
   \<^const>\<open>TD_side_warrowing_apinis_Interp_solve_c\<close>.\<close>
 definition keyed_multiwrite_buffered_eqs :: "(pp \<times> unit, unit, (ivl, ivl) dg_state) eqsT" where
   "keyed_multiwrite_buffered_eqs =
      side_cfg_T_eff_keyed_seed_dg_buffered keyed_pred_sel (\<lambda>_. ()) (\<lambda>_ _ _ _. ())
-       keyed_cmb_c keyed_extra keyed_dummy_cfg keyed_spec bot bot bot"
+       (\<lambda>ctx' src a. dg_edge_contribution_tree_at (keyed_step a) src ())
+       keyed_cmb_c keyed_extra keyed_dummy_cfg bot bot bot"
 
 lemma keyed_multiwrite_buffered_terminates:
   "TD_side_warrowing_apinis_Interp_solve_c keyed_multiwrite_buffered_eqs (Statement 1, ()) \<noteq> None"
@@ -95,26 +92,18 @@ text \<open>
   with two real \<open>intra\<close> edges into one merge node and the PRODUCTION
   \<^const>\<open>intra_predecessor_list\<close> selector (no hand-rolled \<open>pred_sel\<close>) --
   exactly the shape \<open>FunctionResult factorial\<close> has in the real factorial
-  regression (two incoming intra edges, one per branch). \<open>merge_spec\<close>'s
-  \<open>dgs_skip\<close>/\<open>dgs_assign\<close> answer fixed constants regardless of the incoming
+  regression (two incoming intra edges, one per branch). \<open>merge_step\<close>
+  answers fixed constants at \<open>EA_Nop\<close>/\<open>EA_Assign\<close> regardless of the incoming
   local/global state, so the solved global value at \<open>gkey ()\<close> is exactly
   the join of the two edges' own contributions, not a self-referential
   fixpoint -- letting the check below assert that join directly.
 \<close>
 
-definition merge_spec :: "(ivl, ivl) dg_spec" where
-  "merge_spec =
-     \<lparr> dgs_skip = \<lambda>d g. (Ivl (Fin 0) (Fin 0), d),
-       dgs_assign = \<lambda>x e d g. (Ivl (Fin 1) (Fin 1), d),
-       dgs_special = \<lambda>sc x d g. (g, d),
-       dgs_branch = \<lambda>b pol d g. (g, d),
-       dgs_body = \<lambda>p d g. (g, d),
-       dgs_return = \<lambda>e p d g. (g, d),
-       dgs_enter = \<lambda>ci d g. (g, d),
-       dgs_event = \<lambda>ev d g. (g, d),
-       dgs_caller_cont = \<lambda>ci dc g. dc,
-       dgs_combine_env = \<lambda>ci dc de g. (g, dc \<squnion> de),
-       dgs_combine_assign = \<lambda>ci de g p. p \<rparr>"
+definition merge_step :: "edge_action \<Rightarrow> ivl \<Rightarrow> ivl \<Rightarrow> ivl \<times> ivl" where
+  "merge_step a d g =
+     (case a of EA_Nop \<Rightarrow> (Ivl (Fin 0) (Fin 0), d)
+              | EA_Assign _ _ \<Rightarrow> (Ivl (Fin 1) (Fin 1), d)
+              | _ \<Rightarrow> (g, d))"
 
 text \<open>Two real predecessors of \<open>Statement 2\<close>: \<open>Statement 0\<close> via \<open>EA_Nop\<close>,
   \<open>Statement 1\<close> via \<open>EA_Assign\<close>. \<open>calls = {}\<close> keeps \<open>cmb\<close>/\<open>extra\<close> unused, as
@@ -128,7 +117,8 @@ definition merge_cfg :: cfg where
 definition merge_eqs :: "(pp \<times> unit, unit, (ivl, ivl) dg_state) eqsT" where
   "merge_eqs =
      side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_addr_list (\<lambda>_. ()) (\<lambda>_ _ _ _. ())
-       keyed_cmb_c keyed_extra merge_cfg merge_spec bot bot bot"
+       (\<lambda>ctx' src a. dg_edge_contribution_tree_at (merge_step a) src ())
+       keyed_cmb_c keyed_extra merge_cfg bot bot bot"
 
 lemma merge_terminates:
   "TD_side_warrowing_apinis_Interp_solve_c merge_eqs (Statement 2, ()) \<noteq> None"
@@ -158,19 +148,14 @@ text \<open>
 
 datatype w0_gk = W0Global | W0Seed pp ivl
 
-definition w0_spec :: "(ivl, ivl) dg_spec" where
-  "w0_spec =
-     \<lparr> dgs_skip = \<lambda>d g. (g, d),
-       dgs_assign = \<lambda>x e d g. (g, d),
-       dgs_special = \<lambda>sc x d g. (g, d),
-       dgs_branch = \<lambda>b pol d g. (g, d),
-       dgs_body = \<lambda>p d g. (g, d),
-       dgs_return = \<lambda>e p d g. (g, d),
-       dgs_enter = \<lambda>ci d g. (bot, g),
-       dgs_event = \<lambda>ev d g. (g, d),
-       dgs_caller_cont = \<lambda>ci dc g. dc,
-       dgs_combine_env = \<lambda>ci dc de g. (g, dc \<squnion> de),
-       dgs_combine_assign = \<lambda>ci de g p. p \<rparr>"
+text \<open>Every field but \<open>dgs_enter\<close> is the local-only default. \<open>dgs_enter\<close> is the
+  one effectful field: it reads the solver's global unknown and answers it as the
+  entered local, publishing nothing, so the entered frame differs from the caller's
+  own local state by construction.\<close>
+definition w0_spec :: "(pp \<times> ivl, w0_gk, ivl, ivl) dg_spec" where
+  "w0_spec = default_local_dg_spec\<lparr>
+     dgs_enter := (\<lambda>ci m. man_global m),
+     dgs_combine_env := (\<lambda>ci. local_combine_transfer (\<lambda>dc de. dc \<squnion> de)) \<rparr>"
 
 definition w0_route :: "pp \<Rightarrow> ivl \<Rightarrow> ivl \<Rightarrow> call_action \<Rightarrow> ivl" where
   "w0_route u ctx d ca = d"
@@ -218,6 +203,8 @@ lemma w0_dep_at_entered_frame:
       Inl (FunctionResult (STR ''f''), Ivl (Fin 7) (Fin 7))}"
   unfolding w0_tree_def w0_sigma_def w0_spec_def w0_route_def
   by (simp add: routed_cmb_g_def routed_cmb_g_at_def w0_resolve_def
+        dg_spec_combine_transfer_def dgs_combine_def mk_dg_man_def
+        dg_read_global_def local_transfer_def local_combine_transfer_def
         Let_def insert_commute)
 
 end

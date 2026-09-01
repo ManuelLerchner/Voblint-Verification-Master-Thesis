@@ -21,20 +21,25 @@ text \<open>
 
 subsection \<open>Local reads of one generated equation\<close>
 
+text \<open>The call site and the callee exit are read before the specification's combine
+  transfer runs, so they are dependencies whatever that transfer does. The analysis
+  global is deliberately not claimed here: a local-only specification never reads it,
+  and coverage does not need it.\<close>
+
 lemma dep_aux_dg_cmb_at_of:
-  "dep_aux \<sigma> (dg_cmb_at_of S ctx ca cc p)
-     = {Inl (cc, ctx), Inl (FunctionResult p, ctx), Inr ()}"
-  unfolding dg_cmb_at_of_def dg_spec_combine_tree_at_def
-  by (simp add: dep_aux_dg_combine_tree_at)
+  "{Inl (cc, ctx), Inl (FunctionResult p, ctx)}
+     \<subseteq> dep_aux \<sigma> (dg_cmb_at_of S ctx ca cc p)"
+  unfolding dg_cmb_at_of_def
+  by (rule dep_aux_dg_spec_combine_tree_sources)
 
 text \<open>One generated equation's dependency set is the union over the three tree groups
   the generator folds: the node's intra predecessors, the call sites returning here,
   and --- at a \<^const>\<open>FunctionEntry\<close> --- the call sites entering here.\<close>
 
 lemma dep_aux_side_cfg_T_eff_keyed_seed_dg_char:
-  "dep_aux \<sigma> (side_cfg_T_eff_keyed_seed_dg pred_sel gkey route cmb extra g S bot0 s0d s0g
+  "dep_aux \<sigma> (side_cfg_T_eff_keyed_seed_dg pred_sel gkey route it cmb extra g bot0 s0d s0g
        (v, ctx))
-     = (\<Union>t \<in> set (map (\<lambda>(src, a). apply_dg_spec_at S a src (gkey ctx)) (pred_sel g v ctx)
+     = (\<Union>t \<in> set (map (\<lambda>(src, a). it ctx src a) (pred_sel g v ctx)
           @ map (\<lambda>(cc, ca). cmb route ctx ca cc v) (call_site_list g v)
           @ extra route ctx v). dep_aux \<sigma> t)"
   unfolding side_cfg_T_eff_keyed_seed_dg_def
@@ -42,18 +47,17 @@ lemma dep_aux_side_cfg_T_eff_keyed_seed_dg_char:
 
 lemma dep_aux_dg_gen_of_char:
   "dep_aux \<sigma> (dg_gen_of S g bot0 s0d s0g (v, ()))
-     = (\<Union>t \<in> set (map (\<lambda>(src, a). apply_dg_spec_at S a src ())
+     = (\<Union>t \<in> set (map (\<lambda>(src, a). dg_spec_edge_tree S a src ())
             (intra_predecessor_addr_list g v ())
           @ map (\<lambda>(cc, ca). dg_cmb_of S g (\<lambda>_ _ _ _. ()) () ca cc v) (call_site_list g v)
           @ dg_extra_of S g (\<lambda>_ _ _ _. ()) () v). dep_aux \<sigma> t)"
   unfolding dg_gen_of_def
   by (rule dep_aux_side_cfg_T_eff_keyed_seed_dg_char)
-
 text \<open>Each of the three groups contributes its trees' dependencies to the whole.\<close>
 
 lemma dep_aux_dg_gen_of_pred_mem:
   assumes "(u, a) \<in> set (intra_predecessor_list g v)"
-  shows "dep_aux \<sigma> (apply_dg_spec_at S a (Inl (u, ())) ())
+  shows "dep_aux \<sigma> (dg_spec_edge_tree S a (Inl (u, ())) ())
            \<subseteq> dep_aux \<sigma> (dg_gen_of S g bot0 s0d s0g (v, ()))"
   unfolding dep_aux_dg_gen_of_char intra_predecessor_addr_list_def using assms by force
 
@@ -76,8 +80,8 @@ lemma dep_dg_gen_of_intra:
 proof -
   have pred: "(u, a) \<in> set (intra_predecessor_list g v)"
     using fin e by (simp add: intra_predecessors_def)
-  have "Inl (u, ()) \<in> dep_aux \<sigma> (apply_dg_spec_at S a (Inl (u, ())) ())"
-    unfolding apply_dg_spec_at_def by (simp add: dep_aux_dg_edge_tree_at)
+  have "Inl (u, ()) \<in> dep_aux \<sigma> (dg_spec_edge_tree S a (Inl (u, ())) ())"
+    by (rule dep_aux_dg_spec_edge_tree_source)
   with dep_aux_dg_gen_of_pred_mem[OF pred] show ?thesis by blast
 qed
 
@@ -92,13 +96,13 @@ proof -
   have tree: "dg_cmb_at_of S () ca cs p
                 \<in> set (map (dg_cmb_at_of S () ca cs) (static_targets g k cs ca))"
     using p_res by simp
-  have inner: "{Inl (cs, ()), Inl (FunctionResult p, ()), Inr ()}
+  have inner: "{Inl (cs, ()), Inl (FunctionResult p, ())}
                  \<subseteq> dep_aux \<sigma> (dg_cmb_of S g (\<lambda>_ _ _ _. ()) () ca cs k)"
   proof -
     have "dep_aux \<sigma> (dg_cmb_at_of S () ca cs p)
             \<subseteq> dep_aux \<sigma> (dg_cmb_of S g (\<lambda>_ _ _ _. ()) () ca cs k)"
       unfolding dg_cmb_of_def dep_aux_side_rhs_fold_dg_char using tree by blast
-    then show ?thesis by (simp add: dep_aux_dg_cmb_at_of)
+    then show ?thesis using dep_aux_dg_cmb_at_of by blast
   qed
   note outer = dep_aux_dg_gen_of_site_mem[OF site, of \<sigma> S bot0 s0d s0g]
   show "Inl (cs, ()) \<in> dep_aux \<sigma> (dg_gen_of S g bot0 s0d s0g (k, ()))"
@@ -115,12 +119,12 @@ proof -
     using fin e by (auto simp: entry_calls_def)
   obtain dst fs as where ca_eq: "ca = CallEdge dst fs as" by (cases ca) auto
   let ?p = "case ce of FunctionEntry p \<Rightarrow> p | _ \<Rightarrow> undefined"
-  have mem: "dg_edge_tree_at (dgs_enter S (call_info_of ca ?p)) (Inl (cs, ())) ()
+  have mem: "transfer_tree (dgs_enter S (call_info_of ca ?p)) (Inl (cs, ())) ()
              \<in> set (dg_extra_of S g (\<lambda>_ _ _ _. ()) () ce)"
     unfolding dg_extra_of_def using site by force
   have "Inl (cs, ()) \<in> dep_aux \<sigma>
-       (dg_edge_tree_at (dgs_enter S (call_info_of ca ?p)) (Inl (cs, ())) ())"
-    by (simp add: dep_aux_dg_edge_tree_at)
+       (transfer_tree (dgs_enter S (call_info_of ca ?p)) (Inl (cs, ())) ())"
+    by (rule dep_aux_transfer_tree_source)
   with dep_aux_dg_gen_of_extra_mem[OF mem] show ?thesis by blast
 qed
 

@@ -267,8 +267,8 @@ text \<open>
   \<^bold>\<open>4b. The D/G interface spine.\<close> The native, carrier-opaque Goblint-\<^verbatim>\<open>Spec\<close> interface
     (independent flow-sensitive local domain \<^verbatim>\<open>D\<close> and flow-insensitive global domain \<^verbatim>\<open>G\<close>),
     the canonical context-sensitive backbone.
-    \<^item> @{theory Voblint_Core.DG_Framework} --- the \<^verbatim>\<open>dg_spec\<close> record (\<^verbatim>\<open>step : D => G => G x D\<close>), the \<^verbatim>\<open>dg_state\<close> copy lattice, the seeded keyed generator.
-    \<^item> @{theory Voblint_Core.DG_Soundness} --- native heterogeneous soundness over opaque carriers (\<^verbatim>\<open>sound_dg_spec\<close>); the shared closure obligations \<^verbatim>\<open>dg_postfix_gamma_{entry,edge,combine}\<close> feed the trace endpoint \<^verbatim>\<open>hook_post_solution_collect_sound_ltr\<close> (\<^theory>\<open>Voblint_Core.DG_LTR_Sound\<close>).
+    \<^item> @{theory Voblint_Core.DG_Spec} --- the \<^verbatim>\<open>dg_spec\<close> record, one manager-native transfer per edge action, plus the \<^verbatim>\<open>dg_state\<close> copy lattice and the seeded keyed generator in @{theory Voblint_Core.DG_Framework}.
+    \<^item> @{theory Voblint_Core.DG_Soundness} --- native heterogeneous soundness over opaque carriers (\<^verbatim>\<open>sound_dg_spec\<close>); the shared closure obligations \<^verbatim>\<open>dg_postfix_gamma_{entry,edge,combine}\<close> feed the trace endpoint \<^verbatim>\<open>dg_post_solution_collect_sound_ltr_for\<close> (\<^theory>\<open>Voblint_Core.DG_LTR_Sound\<close>).
     \<^item> @{theory Voblint_Analysis.Sign_Ctx_None_Sound} and
       @{theory Voblint_Analysis.Interval_Ctx_None_Sound} --- Sign and Interval as
       routed \<^verbatim>\<open>sound_dg_spec\<close> instances, each reaching \<^const>\<open>ltr_collect\<close>
@@ -471,7 +471,7 @@ text \<open>
   the mixed flagship are its instances, and context slicing is factored through
   the functional activation spine and its per-context keyed slots. There is one
   such spine: every domain reaches \<^const>\<open>ltr_collect\<close> through
-  \<^verbatim>\<open>hook_post_solution_collect_sound_ltr\<close>, and the routed instances
+  \<^verbatim>\<open>dg_post_solution_collect_sound_ltr_for\<close>, and the routeCall_String_Solver_Regressiond instances
   through \<^verbatim>\<open>activation_collect_sound\<close> above it.
 \<close>
 

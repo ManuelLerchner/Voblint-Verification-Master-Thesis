@@ -16,7 +16,6 @@ session Voblint_Examples in "." = "Voblint_CLI" +
     "CFG"
     "Tooling"
     "Regression"
-    "Placement"
   theories
     (* CFG: cross-cutting compiler/collecting-semantics support and regressions *)
     Example_Inc_Proc
@@ -35,10 +34,6 @@ session Voblint_Examples in "." = "Voblint_CLI" +
     Example_Side_Execute
     Example_Side_Proc_Global
     Example_Side_Branch_Calls
-    Placement_Policy
-    Placement_Policy_Exec
-    Example_Sign_Placement
-    Example_Placement_Regression
     Example_Sign_DG_Custom_Combine
     Example_Sign_DG_CallString_K1
     Example_Sign_DG_CallString_K2
@@ -48,8 +43,8 @@ session Voblint_Examples in "." = "Voblint_CLI" +
     Exec_Interval_Run
     (* The Interval analogue, inside a two-sided bound guard. *)
     Example_Interval_Checks_Store_Only
-    Example_Interval_Placement
-    Example_Interval_Global_Flow_Sensitivity
+    Example_Interval_Global_Declaration
+    Example_Interval_Global_Sequential_Precision
     Example_Interval_DG_Flagship
     Example_Interval_DG_IP_Flagship
     Example_Interval_DG_Ctx_Flagship

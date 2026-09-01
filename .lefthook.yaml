@@ -32,6 +32,20 @@ pre-commit:
       glob: "src/**/*.thy"
       run: pixi run python3 scripts/check_thy_prose_refs.py
 
+    # An identifier removed with its theory keeps parsing inside `assumes` --
+    # as a free variable -- so a locale can go on building with an assumption
+    # that no longer says anything. The batch build cannot see that; this can.
+    - name: retired-identifiers
+      glob: "src/**/*.thy"
+      run: pixi run python3 scripts/check_retired_identifiers.py {staged_files}
+
+    # The general case: an identifier left free in a locale assumption. Reads
+    # the whole tree rather than the staged files, because whether a name is
+    # free depends on every other theory's declarations.
+    - name: locale-parameters
+      glob: "src/**/*.thy"
+      run: pixi run python3 scripts/check_locale_parameters.py
+
     - name: vimp-isabelle-grammar-drift
       glob:
         - "grammar/vimp.yaml"

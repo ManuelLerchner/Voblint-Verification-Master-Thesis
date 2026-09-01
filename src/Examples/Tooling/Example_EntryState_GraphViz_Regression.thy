@@ -532,7 +532,7 @@ text \<open>
   terminate in this session, confirmed both interactively and in an
   isolated batch process with a generous timeout well past what a program
   this size would otherwise need. Careful reading of
-  \<^const>\<open>side_cfg_T_eff_keyed_seed_dg_buffered\<close>, \<^const>\<open>routed_cmb_g_contribution\<close>,
+  \<^const>\<open>side_cfg_T_eff_keyed_seed_dg_buffered\<close>, \<^const>\<open>routed_cmb_g\<close>,
   \<^const>\<open>routed_extra_g\<close>, and the vendored warrowing solver's own
   per-origin global bookkeeping (\<open>update_global_warrowing_apinis\<close>) found no
   evident defect on inspection, so whether this is a genuine

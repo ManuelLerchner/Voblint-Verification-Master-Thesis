@@ -95,11 +95,12 @@ begin
 interpretation sctx_dg_base: sound_dg_spec "sctx_spec gs empty_pred" "sctx_gamma gs" gs
   by (rule sctx_sound_exec[OF exact])
 
-interpretation sctx_adapter: dg_analysis_adapter "sctx_spec gs empty_pred" "sctx_gamma gs" gs
+interpretation sctx_adapter: routed_analysis_sound
+    "sctx_spec gs empty_pred" "sctx_gamma gs" gs
     "compile_prog Pi ps" Global route_unit Bot "Lifted cinit_sign_st" Bot
     "snd (sctx_sol gs empty_pred Pi ps)" "fst (sctx_sol gs empty_pred Pi ps)"
-    "(cfg_exit (compile_prog Pi ps), ())" "sctx_sg_st gs empty_pred Pi ps"
-    Seed "\<lambda>m. gamma_state_lift (map_lift (fun_of_resolved_st_q_for gs) m)" enterc_unit
+    "(cfg_exit (compile_prog Pi ps), ())"
+    Seed enterc_unit
     "map_lift (fun_of_resolved_st_q_for gs)" sign_classify_check
 proof (unfold_locales, goal_cases FinE PP SgCov SgUncov Fwd FinC SeedKey ResolveSound
     RouteEnterc CallFwd CombFwd EnterAgree GammaRd ClProved ClRefuted)
@@ -109,10 +110,10 @@ next
   case PP show ?case by (rule sctx_pp_routed[OF solves exact])
 next
   case (SgCov v c)
-  thus ?case by (simp add: sctx_sg_st_def sctx_gamma_def)
+  thus ?case by (simp add: sctx_gamma_def)
 next
   case (SgUncov v c)
-  thus ?case by (simp add: sctx_sg_st_def)
+  thus ?case by simp
 next
   case (Fwd u a v c)
   thus ?case by (rule fwd_ok)

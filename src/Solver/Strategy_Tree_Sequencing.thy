@@ -1,8 +1,8 @@
 theory Strategy_Tree_Sequencing
-  imports "TD.Basics_side" "HOL-Library.Monad_Syntax"
+  imports "TD.Basics_side" "HOL-Library.Monad_Syntax" Strategy_Tree_Properties
 begin
 
-section \<open>Sequencing strategy trees, and when their query set is environment-independent\<close>
+section \<open>Sequencing already-built strategy trees\<close>
 
 text \<open>
   \<open>('x, 'g, 'd) strategy_tree\<close>, its constructors \<open>Answer\<close>/\<open>QueryL\<close>/\<open>QueryG\<close>/
@@ -11,21 +11,21 @@ text \<open>
   contributions published) are all vendored from \<open>TD.Basics_side\<close>, not
   defined in this codebase. This theory adds sequential composition for the
   homogeneous tree carrier (\<open>seqcomp_tree\<close>: run \<open>t\<close>, pass its answer to
-  continuation \<open>k\<close> -- the combinator every effectful fold over per-edge
-  trees is built from), and two dependency invariants a tree's query set can
-  satisfy: \<open>env_indep_deps\<close> (constant in the environment) and its strictly
-  weaker cousin \<open>mono_tree_deps\<close> (monotone in the environment).
+  continuation \<open>k\<close>), and how that composition interacts with
+  \<^theory>\<open>Voblint_Solver.Strategy_Tree_Properties\<close>'s dependency predicates.
 
   \<open>seqcomp_tree\<close> is not a genuine polymorphic monad's bind: a query's
   answer and the tree's own final answer are both forced to the same \<open>'d\<close>,
-  so it only ever composes \<open>Tree d \<Rightarrow> (d \<Rightarrow> Tree d) \<Rightarrow> Tree d\<close>. It remains the
+  so it only ever composes \<open>Tree d \<Rightarrow> (d \<Rightarrow> Tree d) \<Rightarrow> Tree d\<close>. It is the
   right tool for sequencing two already-built vendor trees -- what
   \<open>Strategy_Tree_Fold\<close>'s fold over contribution trees needs -- rather than
-  for writing new analysis code. \<open>Strategy_Tree_Program\<close> (downstream) is the
-  typed frontend for that: its \<open>'a\<close> can be any type, not just \<open>'d\<close>, and its
-  \<open>sp_lift_tree\<close> embeds an already-built tree via exactly this theory's
-  \<open>seqcomp_tree\<close>, so raw and typed sequencing are one model, not two --
-  \<open>seqcomp_tree\<close> is its backend specialization, not a competing "monad".
+  for writing new analysis code. \<open>Strategy_Tree_Program\<close>
+  is the typed frontend for that: its \<open>'a\<close> can be any type, not just \<open>'d\<close>,
+  and its own \<open>sp_lift_tree\<close> embeds an already-built tree by recursing over
+  \<open>strategy_tree\<close>'s constructors directly, the same way \<open>seqcomp_tree\<close> does
+  below -- the two are siblings under the same vendor tree, not one built on
+  the other, so raw and typed sequencing are two specializations of the same
+  idea rather than competing "monads".
 \<close>
 
 subsection \<open>Sequential composition (bind)\<close>
@@ -100,28 +100,11 @@ lemma seqcomp_mono:
   shows "traverse_rhs (t \<bind> k) \<sigma>1 \<le> traverse_rhs (t \<bind> k) \<sigma>2"
   using assms by (fastforce intro: order_trans)
 
-subsection \<open>Environment-independent dependencies\<close>
+subsection \<open>Bind preserves environment-independent dependencies\<close>
 
 text \<open>
-  \<open>env_indep_deps t\<close>: the set of unknowns queried in \<open>t\<close> does not depend on
-  the environment at all, for any two environments, related or not. It holds
-  for trees whose \<open>QueryL\<close>/\<open>QueryG\<close> skeleton is fixed and only the
-  \<open>Side\<close>/\<open>Answer\<close> values vary with the environment -- every tree this
-  codebase currently builds.
-\<close>
-
-definition env_indep_deps :: "('x, 'g, 'd::order_bot) strategy_tree \<Rightarrow> bool" where
-  "env_indep_deps t \<longleftrightarrow> (\<forall>\<sigma>1 \<sigma>2. dep_aux \<sigma>1 t = dep_aux \<sigma>2 t)"
-
-lemma env_indep_depsI [intro]:
-  "(\<And>\<sigma>1 \<sigma>2. dep_aux \<sigma>1 t = dep_aux \<sigma>2 t) \<Longrightarrow> env_indep_deps t"
-  unfolding env_indep_deps_def by blast
-
-lemma env_indep_deps_Answer [simp]: "env_indep_deps (Answer d)"
-  unfolding env_indep_deps_def by simp
-
-text \<open>
-  bind preserves environment-independent dependencies when the continuation's
+  bind preserves environment-independent dependencies
+  (\<^theory>\<open>Voblint_Solver.Strategy_Tree_Properties\<close>) when the continuation's
   dependency set is independent of both the value it receives and the
   environment.  The latter rules out value-dependent branching that changes
   which nodes are queried.
@@ -148,27 +131,6 @@ proof (rule env_indep_depsI)
   finally show "dep_aux \<sigma>1 (t \<bind> k) = dep_aux \<sigma>2 (t \<bind> k)" .
 qed
 
-subsection \<open>Monotone dependencies\<close>
-
-text \<open>
-  \<open>mono_tree_deps t\<close> is the per-tree form of the vendored solver's own
-  \<open>mono_deps\<close> precondition: the query set may only grow, never shrink, as
-  the environment grows. Every \<^const>\<open>env_indep_deps\<close> tree satisfies it for
-  free (\<open>env_indep_deps_imp_mono_tree_deps\<close>); a future tree whose skeleton
-  itself depends on the environment, and can therefore only be shown monotone
-  rather than constant, has an interface to satisfy without reproving the
-  stronger property. No construction in this codebase needs that yet.
-\<close>
-
-definition mono_tree_deps :: "('x, 'g, 'd::order_bot) strategy_tree \<Rightarrow> bool" where
-  "mono_tree_deps t \<longleftrightarrow> (\<forall>\<sigma>1 \<sigma>2. \<sigma>1 \<le> \<sigma>2 \<longrightarrow> dep_aux \<sigma>1 t \<subseteq> dep_aux \<sigma>2 t)"
-
-lemma mono_tree_depsI [intro]:
-  "(\<And>\<sigma>1 \<sigma>2. \<sigma>1 \<le> \<sigma>2 \<Longrightarrow> dep_aux \<sigma>1 t \<subseteq> dep_aux \<sigma>2 t) \<Longrightarrow> mono_tree_deps t"
-  unfolding mono_tree_deps_def by blast
-
-lemma env_indep_deps_imp_mono_tree_deps [intro]:
-  "env_indep_deps t \<Longrightarrow> mono_tree_deps t"
-  unfolding env_indep_deps_def mono_tree_deps_def by blast
 end
+
 

@@ -1,5 +1,5 @@
 theory Strategy_Tree_Program
-  imports Strategy_Tree_Combinators
+  imports "TD.Basics_side" "HOL-Library.Monad_Syntax"
 begin
 
 section \<open>A typed frontend over the homogeneous vendor tree\<close>
@@ -37,20 +37,33 @@ definition sp_sideg :: "'g \<Rightarrow> 'd \<Rightarrow> ('x,'g,'d,unit) strate
   "sp_sideg g d = (\<lambda>k. Side g d (k ()))"
 
 text \<open>
+  \<open>sp_at\<close> reads an unknown in the solver's combined address space
+  \<^typ>\<open>'x + 'g\<close>, dispatching \<^const>\<open>Inl\<close> to \<open>sp_local\<close> and \<^const>\<open>Inr\<close> to
+  \<open>sp_global\<close> instead of fixing the constructor at the call site -- the
+  typed counterpart of \<open>Strategy_Tree_Combinators\<close>'s \<open>read_at\<close>.
+\<close>
+
+fun sp_at :: "'x + 'g \<Rightarrow> ('x,'g,'d,'d) strategy_program" where
+  "sp_at (Inl x) = sp_local x"
+| "sp_at (Inr g) = sp_global g"
+
+adhoc_overloading Monad_Syntax.bind == sp_bind
+
+text \<open>
   \<open>sp_local\<close>/\<open>sp_global\<close>/\<open>sp_sideg\<close> build a program one effect at a time.
   \<open>sp_lift_tree\<close> instead embeds an already-built vendor tree -- the shape
   \<open>Strategy_Tree_Fold\<close>'s \<open>fold_rhs_trees\<close> and similar backend combinators
-  hand back -- as the program that runs it and continues. \<open>seqcomp_tree\<close>
-  (\<^theory>\<open>Voblint_Solver.Strategy_Tree_Sequencing\<close>) is exactly the right tool
-  for this, since a vendor tree's own answer and query carrier already agree
-  on \<open>'d\<close>: no new recursion over \<open>strategy_tree\<close>'s constructors is needed
-  here, only the existing one.
+  hand back -- as the program that runs it and continues, by recursing over
+  the tree's own constructors: an \<open>Answer\<close> becomes a pure result, a
+  \<open>QueryL\<close>/\<open>QueryG\<close> becomes a read continuing into the lifted subtree, a
+  \<open>Side\<close> becomes a write continuing into the lifted subtree.
 \<close>
 
-definition sp_lift_tree :: "('x,'g,'d) strategy_tree \<Rightarrow> ('x,'g,'d,'d) strategy_program" where
-  "sp_lift_tree t = (\<lambda>k. seqcomp_tree t k)"
-
-adhoc_overloading Monad_Syntax.bind == sp_bind
+primrec sp_lift_tree :: "('x,'g,'d) strategy_tree \<Rightarrow> ('x,'g,'d,'d) strategy_program" where
+  "sp_lift_tree (Answer d) = sp_return d"
+| "sp_lift_tree (QueryL x f) = (sp_local x)   \<bind> (\<lambda>d. sp_lift_tree (f d))"
+| "sp_lift_tree (QueryG g f) = (sp_global g)  \<bind> (\<lambda>d. sp_lift_tree (f d))"
+| "sp_lift_tree (Side g d t) = (sp_sideg g d) \<bind> (\<lambda>_. sp_lift_tree t)"
 
 text \<open>
   \<open>sp_run\<close> only accepts a program whose answer is already \<open>'d\<close>.
@@ -91,12 +104,19 @@ lemma sp_run_with_global [simp]:
   "sp_run_with encode (sp_global g) = QueryG g (Answer o encode)"
   by (simp add: sp_run_with_def sp_global_def)
 
-lemma sp_run_sp_lift_tree [simp]: "sp_run (sp_lift_tree t) = t"
-  by (simp add: sp_run_with_def sp_lift_tree_def)
+lemma sp_run_with_bind_at [simp]:
+  "sp_run_with encode ((sp_at src) \<bind> f) =
+     (case src of Inl x \<Rightarrow> QueryL x (\<lambda>d. sp_run_with encode (f d))
+                | Inr g \<Rightarrow> QueryG g (\<lambda>d. sp_run_with encode (f d)))"
+  by (cases src) simp_all
 
-lemma sp_run_with_bind_lift_tree [simp]:
-  "sp_run_with encode ((sp_lift_tree t) \<bind> f) = seqcomp_tree t (\<lambda>d. sp_run_with encode (f d))"
-  by (simp add: sp_run_with_def sp_bind_def sp_lift_tree_def)
+lemma sp_run_with_at [simp]:
+  "sp_run_with encode (sp_at src) =
+     (case src of Inl x \<Rightarrow> QueryL x (Answer o encode) | Inr g \<Rightarrow> QueryG g (Answer o encode))"
+  by (cases src) simp_all
+
+lemma sp_run_sp_lift_tree [simp]: "sp_run (sp_lift_tree t) = t"
+  by (induct t) simp_all
 
 subsection \<open>Monad laws\<close>
 

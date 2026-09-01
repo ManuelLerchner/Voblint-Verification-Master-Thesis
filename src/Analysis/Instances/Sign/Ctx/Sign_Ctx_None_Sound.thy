@@ -3,6 +3,7 @@ theory Sign_Ctx_None_Sound
     "Voblint_Exec.Monovariant_Analysis_Result"
     "Voblint_Exec.Routed_Domain_Exec"
     "Voblint_Core.DG_LTR_Sound"
+    "Voblint_Core.Routed_Analysis_Sound"
     "Voblint_Analysis.Sign_Transfer"
     "Voblint_Analysis.Sign_Exec"
     "TD.TD_side_upd_rule"
@@ -55,11 +56,16 @@ text \<open>
 \<close>
 
 definition sctx_spec ::
-  "(vname \<Rightarrow> bool) \<Rightarrow> (sign exec_dg_st \<Rightarrow> bool) \<Rightarrow> (sign exec_dg_st lifted, sign exec_dg_st lifted) dg_spec"
+  "(vname \<Rightarrow> bool) \<Rightarrow> (sign exec_dg_st \<Rightarrow> bool)
+   \<Rightarrow> ('x, 'k, sign exec_dg_st lifted, sign exec_dg_st lifted) dg_spec"
 where
-  "sctx_spec gs empty_pred = base_dg_spec_st_for_lifted gs empty_pred (sign_tf_st_for gs) (sign_enter_st_for gs)"
+  "sctx_spec gs empty_pred =
+     base_dg_spec_st_for_lifted gs empty_pred (sign_tf_st_for gs) (sign_enter_st_for gs)"
 
-definition sctx_abs_spec :: "(vname \<Rightarrow> bool) \<Rightarrow> (sign abs_state lifted, sign abs_state lifted) dg_spec" where
+definition sctx_abs_spec ::
+  "(vname \<Rightarrow> bool)
+   \<Rightarrow> ('x, 'k, sign abs_state lifted, sign abs_state lifted) dg_spec"
+where
   "sctx_abs_spec gs = base_dg_spec_for_lifted gs is_empty_state (sign_tf_for gs)"
 
 subsection \<open>The routed equation system and its executable solution\<close>
@@ -69,10 +75,11 @@ definition sctx_eqs ::
   "sctx_eqs gs empty_pred Pi ps =
      side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_addr_list (\<lambda>_. Global)
        route_unit
-       (routed_cmb_g_contribution (sctx_spec gs empty_pred) Global Seed
+       (\<lambda>ctx' src a. dg_spec_edge_tree (sctx_spec gs empty_pred) a src Global)
+       (routed_cmb_g (sctx_spec gs empty_pred) Global Seed
           (static_resolve (compile_prog Pi ps)))
        (routed_extra_g Seed Global)
-       (compile_prog Pi ps) (sctx_spec gs empty_pred) Bot (Lifted cinit_sign_st) Bot"
+       (compile_prog Pi ps) Bot (Lifted cinit_sign_st) Bot"
 
 definition sctx_sol ::
     "(vname \<Rightarrow> bool) \<Rightarrow> (sign exec_dg_st \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> (pp \<times> unit) set \<times> (pp \<times> unit + gk \<Rightarrow> (sign exec_dg_st lifted, sign exec_dg_st lifted) dg_state)" where
@@ -153,12 +160,14 @@ text \<open>The solver's post-solution, for the unbuffered routed generator at t
 theorem sctx_pp_routed:
   "part_post_solution
      (side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. Global) route_unit
+        (\<lambda>ctx' src a. dg_spec_edge_tree (sctx_spec gs empty_pred) a src Global)
         (routed_cmb_g (sctx_spec gs empty_pred) Global Seed (static_resolve (compile_prog Pi ps)))
         (routed_extra_g Seed Global)
-        (compile_prog Pi ps) (sctx_spec gs empty_pred) Bot (Lifted cinit_sign_st) Bot)
+        (compile_prog Pi ps) Bot (Lifted cinit_sign_st) Bot)
      (cfg_exit (compile_prog Pi ps), ())
      (snd (sctx_sol gs empty_pred Pi ps)) (fst (sctx_sol gs empty_pred Pi ps))"
-  using sctx_pp_st unfolding sctx_eqs_def sctx_spec_def by (rule sign_pp_st_gen[OF exact])
+  using sctx_pp_st unfolding sctx_eqs_def sctx_spec_def
+  by (rule sign_pp_st_gen[OF exact])
 end
 
 section \<open>Activation-indexed collecting soundness, generic per compiled program\<close>
@@ -181,13 +190,9 @@ lemma sctx_gamma_Bot [simp]: "sctx_gamma gs Bot g = {}"
 definition sctx_sg_st ::
     "(vname \<Rightarrow> bool) \<Rightarrow> (sign exec_dg_st \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list
        \<Rightarrow> pp \<times> unit + gk \<Rightarrow> sign exec_dg_st lifted" where
-  "sctx_sg_st gs empty_pred Pi ps k =
-     (case k of
-        Inl (v, ctx) \<Rightarrow>
-          (if (v, ctx) \<in> fst (sctx_sol gs empty_pred Pi ps)
-           then locals (snd (sctx_sol gs empty_pred Pi ps) (Inl (v, ctx)))
-           else Bot)
-      | Inr _ \<Rightarrow> Bot)"
+  "sctx_sg_st gs empty_pred Pi ps =
+     solved_local_reader (fst (sctx_sol gs empty_pred Pi ps))
+                         (snd (sctx_sol gs empty_pred Pi ps))"
 
 context
   fixes gs :: "vname \<Rightarrow> bool" and empty_pred :: "sign exec_dg_st \<Rightarrow> bool"
@@ -206,8 +211,7 @@ lemma sctx_gamma_eq: "sctx_gamma gs = sign_unit.gamma_exec"
 
 theorem sctx_sound_exec: "sound_dg_spec (sctx_spec gs empty_pred) (sctx_gamma gs) gs"
   unfolding sctx_gamma_eq sctx_spec_def
-  by (rule sign_unit.sound_dg_spec_st)
-     (rule base_dg_spec_sound[OF sign_is_sound_transfer_for is_empty_state_gamma_state_empty])
+  by (rule sign_unit.sound_dg_spec_st[OF sign_is_sound_transfer_for])
 
 end
 

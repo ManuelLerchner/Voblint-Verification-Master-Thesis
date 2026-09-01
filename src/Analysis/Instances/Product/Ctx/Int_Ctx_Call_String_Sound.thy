@@ -37,11 +37,13 @@ definition ics_eqs ::
   "ics_eqs k mode gs empty_pred Pi ps =
      side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_addr_list (\<lambda>_. Call_String_Context.Global)
        (cs_route k)
-       (routed_cmb_g_contribution (ictx_spec mode empty_pred gs)
+       (\<lambda>ctx' src a. dg_spec_edge_tree (ictx_spec mode empty_pred gs) a src
+          Call_String_Context.Global)
+       (routed_cmb_g (ictx_spec mode empty_pred gs)
           Call_String_Context.Global Call_String_Context.Seed
           (static_resolve (compile_prog Pi ps)))
        (routed_extra_g Call_String_Context.Seed Call_String_Context.Global)
-       (compile_prog Pi ps) (ictx_spec mode empty_pred gs) Bot (Lifted cinit_int_dom_st) Bot"
+       (compile_prog Pi ps) Bot (Lifted cinit_int_dom_st) Bot"
 
 definition ics_sol ::
     "nat \<Rightarrow> refine_mode \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> (int_dom exec_dg_st \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list
@@ -156,10 +158,12 @@ theorem ics_pp_routed:
   "part_post_solution
      (side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. Call_String_Context.Global)
         (cs_route k)
+        (\<lambda>ctx' src a. dg_spec_edge_tree (ictx_spec mode empty_pred gs) a src
+           Call_String_Context.Global)
         (routed_cmb_g (ictx_spec mode empty_pred gs) Call_String_Context.Global
            Call_String_Context.Seed (static_resolve (compile_prog Pi ps)))
         (routed_extra_g Call_String_Context.Seed Call_String_Context.Global)
-        (compile_prog Pi ps) (ictx_spec mode empty_pred gs) Bot (Lifted cinit_int_dom_st) Bot)
+        (compile_prog Pi ps) Bot (Lifted cinit_int_dom_st) Bot)
      (cfg_exit (compile_prog Pi ps), [])
      (snd (ics_sol k mode gs empty_pred Pi ps)) (fst (ics_sol k mode gs empty_pred Pi ps))"
   using ics_pp_st unfolding ics_eqs_def ictx_spec_def by (rule int_cs_pp_st_gen[OF exact])
@@ -191,10 +195,12 @@ theorem ics_pp_routed_warrow:
   "part_post_solution
      (side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. Call_String_Context.Global)
         (cs_route k)
+        (\<lambda>ctx' src a. dg_spec_edge_tree (ictx_spec mode empty_pred gs) a src
+           Call_String_Context.Global)
         (routed_cmb_g (ictx_spec mode empty_pred gs) Call_String_Context.Global
            Call_String_Context.Seed (static_resolve (compile_prog Pi ps)))
         (routed_extra_g Call_String_Context.Seed Call_String_Context.Global)
-        (compile_prog Pi ps) (ictx_spec mode empty_pred gs) Bot (Lifted cinit_int_dom_st) Bot)
+        (compile_prog Pi ps) Bot (Lifted cinit_int_dom_st) Bot)
      (cfg_exit (compile_prog Pi ps), [])
      (snd (ics_sol_warrow k mode gs empty_pred Pi ps))
      (fst (ics_sol_warrow k mode gs empty_pred Pi ps))"

@@ -109,7 +109,9 @@ text \<open>The same Base-style pair every other Sign analysis solves over, at t
   \<^const>\<open>sign_tf_st_for\<close>/\<^const>\<open>sign_enter_st_for\<close> primitives: nothing call-string
   specific enters the specification.\<close>
 
-definition sign_nest_S_st :: "(sign exec_dg_st lifted, sign exec_dg_st lifted) dg_spec" where
+definition sign_nest_S_st ::
+  "(pp \<times> cfg_node list, call_string_gk,
+     sign exec_dg_st lifted, sign exec_dg_st lifted) dg_spec" where
   "sign_nest_S_st = base_dg_spec_st_for_lifted sign_nest_gs sign_nest_empty_pred
                       (sign_tf_st_for sign_nest_gs) (sign_enter_st_for sign_nest_gs)"
 
@@ -134,8 +136,7 @@ lemma sign_nest_gamma_eq: "sign_nest_gamma = sign_nest_domain.gamma_exec"
 
 interpretation sign_nest_dg_sound: sound_dg_spec sign_nest_S_st sign_nest_gamma sign_nest_gs
   unfolding sign_nest_gamma_eq sign_nest_S_st_def
-  by (rule sign_nest_domain.sound_dg_spec_st)
-     (rule base_dg_spec_sound[OF sign_is_sound_transfer_for is_empty_state_gamma_state_empty])
+  by (rule sign_nest_domain.sound_dg_spec_st[OF sign_is_sound_transfer_for])
 
 subsection \<open>The routed equation system and its computed solution\<close>
 
@@ -148,9 +149,10 @@ definition sign_nest_1_eqs ::
      (sign exec_dg_st lifted, sign exec_dg_st lifted) dg_state) eqsT" where
   "sign_nest_1_eqs =
      side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. Global) (cs_route 1)
+       (\<lambda>ctx' src a. dg_spec_edge_tree sign_nest_S_st a src Global)
        (routed_cmb_g sign_nest_S_st Global Seed (static_resolve sign_nest_cfg))
        (routed_extra_g Seed Global)
-       sign_nest_cfg sign_nest_S_st Bot (Lifted cinit_sign_st) Bot"
+       sign_nest_cfg Bot (Lifted cinit_sign_st) Bot"
 
 definition sign_nest_1_sol ::
   "(pp \<times> cfg_node list) set

@@ -2,6 +2,7 @@ theory Sign_Ctx_Entry_State_Sound
   imports
     "Voblint_Analysis.Sign_Ctx_None_Sound"
     "Voblint_Analysis.Sign_Checks"
+    "Voblint_Core.Routed_Analysis_Sound"
     Entry_State_Routed_Context
 begin
 
@@ -66,10 +67,11 @@ definition sctx_entry_eqs ::
   "sctx_entry_eqs gs empty_pred Pi ps =
      side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_addr_list (\<lambda>_. Global)
        (sctx_entry_route_gen gs empty_pred)
-       (routed_cmb_g_contribution (sctx_spec gs empty_pred) Global Seed
+       (\<lambda>ctx' src a. dg_spec_edge_tree (sctx_spec gs empty_pred) a src Global)
+       (routed_cmb_g (sctx_spec gs empty_pred) Global Seed
           (static_resolve (compile_prog Pi ps)))
        (routed_extra_g Seed Global)
-       (compile_prog Pi ps) (sctx_spec gs empty_pred) Bot (Lifted cinit_sign_st) Bot"
+       (compile_prog Pi ps) Bot (Lifted cinit_sign_st) Bot"
 
 definition sctx_entry_sol ::
     "(vname \<Rightarrow> bool) \<Rightarrow> (sign exec_dg_st \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> (pp \<times> sign list) set \<times> (pp \<times> sign list + gk \<Rightarrow> (sign exec_dg_st lifted, sign exec_dg_st lifted) dg_state)" where
@@ -108,9 +110,9 @@ lemma sctx_entry_route_gen_eq_generic:
   by (rule refl)
 
 lemma sctx_entry_route_gen_commute:
-  "formals_route_lifted_gen (sctx_abs_spec gs) u ctx (map_lift (fun_of_resolved_st_q_for gs) d) ca
+  "formals_route_lifted_gen u ctx (map_lift (fun_of_resolved_st_q_for gs) d) ca
      = sctx_entry_route_gen gs empty_pred u ctx d ca"
-  unfolding sctx_entry_route_gen_eq_generic sctx_abs_spec_def
+  unfolding sctx_entry_route_gen_eq_generic
   by (rule sign_domain.entry_exec_route_gen_commute)
 
 end
@@ -133,7 +135,7 @@ begin
 interpretation sign_es: routed_domain_exec
   gs empty_pred "sign_tf_st_for gs" "sign_enter_st_for gs" "sign_tf_for gs"
   Global Seed "sctx_entry_route_gen gs empty_pred"
-  "formals_route_lifted_gen (sctx_abs_spec gs)"
+  formals_route_lifted_gen
   static_resolve static_resolve
   by unfold_locales
      (rule sign_tf_st_for_commute, rule sign_enter_st_for_commute, rule exact, simp,
@@ -173,9 +175,10 @@ theorem sctx_entry_pp_routed:
   "part_post_solution
      (side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. Global)
         (sctx_entry_route_gen gs empty_pred)
+        (\<lambda>ctx' src a. dg_spec_edge_tree (sctx_spec gs empty_pred) a src Global)
         (routed_cmb_g (sctx_spec gs empty_pred) Global Seed (static_resolve (compile_prog Pi ps)))
         (routed_extra_g Seed Global)
-        (compile_prog Pi ps) (sctx_spec gs empty_pred) Bot (Lifted cinit_sign_st) Bot)
+        (compile_prog Pi ps) Bot (Lifted cinit_sign_st) Bot)
      (cfg_exit (compile_prog Pi ps), [])
      (snd (sctx_entry_sol gs empty_pred Pi ps)) (fst (sctx_entry_sol gs empty_pred Pi ps))"
   using sctx_entry_pp_st unfolding sctx_entry_eqs_def sctx_spec_def
@@ -196,13 +199,9 @@ text \<open>
 definition sctx_entry_sg_st ::
     "(vname \<Rightarrow> bool) \<Rightarrow> (sign exec_dg_st \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list
        \<Rightarrow> pp \<times> sign list + gk \<Rightarrow> sign exec_dg_st lifted" where
-  "sctx_entry_sg_st gs empty_pred Pi ps k =
-     (case k of
-        Inl (v, ctx) \<Rightarrow>
-          (if (v, ctx) \<in> fst (sctx_entry_sol gs empty_pred Pi ps)
-           then locals (snd (sctx_entry_sol gs empty_pred Pi ps) (Inl (v, ctx)))
-           else Bot)
-      | Inr _ \<Rightarrow> Bot)"
+  "sctx_entry_sg_st gs empty_pred Pi ps =
+     solved_local_reader (fst (sctx_entry_sol gs empty_pred Pi ps))
+                         (snd (sctx_entry_sol gs empty_pred Pi ps))"
 
 context
   fixes gs :: "vname \<Rightarrow> bool" and empty_pred :: "sign exec_dg_st \<Rightarrow> bool"
@@ -218,9 +217,9 @@ context
         \<Longrightarrow> (u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps)
         \<Longrightarrow> (FunctionEntry p,
                sctx_entry_route_gen gs empty_pred u ctx
-                 (enter_local (sctx_spec gs empty_pred) (call_info_of (CallEdge dst pars args) p)
-                    (locals (snd (sctx_entry_sol gs empty_pred Pi ps) (Inl (u, ctx))))
-                    (globs (snd (sctx_entry_sol gs empty_pred Pi ps) (Inr Global))))
+                 (entered (sctx_spec gs empty_pred) Global
+                    (snd (sctx_entry_sol gs empty_pred Pi ps))
+                    (call_info_of (CallEdge dst pars args) p) (Inl (u, ctx)))
                  (CallEdge dst pars args))
              \<in> fst (sctx_entry_sol gs empty_pred Pi ps)"
     and comb_fwd_ok: "\<And>cl c1 dst pars args p cont.
@@ -309,11 +308,12 @@ text \<open>
   \<^const>\<open>gamma_state_lift\<close>.
 \<close>
 
-interpretation sctx_entry_adapter: dg_analysis_adapter "sctx_spec gs empty_pred" "sctx_gamma gs" gs
+interpretation sctx_entry_adapter: routed_analysis_sound
+    "sctx_spec gs empty_pred" "sctx_gamma gs" gs
     "compile_prog Pi ps" Global "sctx_entry_route_gen gs empty_pred" Bot "Lifted cinit_sign_st" Bot
     "snd (sctx_entry_sol gs empty_pred Pi ps)" "fst (sctx_entry_sol gs empty_pred Pi ps)"
-    "(cfg_exit (compile_prog Pi ps), [])" "sctx_entry_sg_st gs empty_pred Pi ps"
-    Seed "\<lambda>m. gamma_state_lift (map_lift (fun_of_resolved_st_q_for gs) m)" sctx_entry_enterc
+    "(cfg_exit (compile_prog Pi ps), [])"
+    Seed sctx_entry_enterc
     "map_lift (fun_of_resolved_st_q_for gs)" sign_classify_check
 proof (unfold_locales, goal_cases FinE PP SgCov SgUncov Fwd FinC SeedKey ResolveSound
     RouteEnterc CallFwd CombFwd EnterAgree GammaRd ClProved ClRefuted)
@@ -322,10 +322,10 @@ next
   case PP show ?case by (rule sctx_entry_pp_routed[OF solves exact])
 next
   case (SgCov v c)
-  thus ?case by (simp add: sctx_entry_sg_st_def sctx_gamma_def)
+  thus ?case by (simp add: sctx_gamma_def)
 next
   case (SgUncov v c)
-  thus ?case by (simp add: sctx_entry_sg_st_def)
+  thus ?case by simp
 next
   case (Fwd u a v c)
   thus ?case by (rule fwd_ok)
@@ -372,7 +372,9 @@ theorem sctx_entry_activation_collect_sound:
   "activation_collect gs sctx_entry_enterc [] (compile_prog Pi ps) (cinit_stores gs) v ctx
      \<subseteq> gamma_state_lift (map_lift (fun_of_resolved_st_q_for gs)
            (sctx_entry_sg_st gs empty_pred Pi ps (Inl (v, ctx))))"
-  by (rule sctx_entry_adapter.activation_collect_dg_sound[OF entry_cov sctx_entry_cinit_le_cinit_sign_st])
+  unfolding sctx_entry_sg_st_def
+  by (rule sctx_entry_adapter.routed_activation_collect_sound
+        [OF entry_cov sctx_entry_cinit_le_cinit_sign_st])
 end
 
 subsection \<open>Whole-program convenience layer\<close>

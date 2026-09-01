@@ -109,7 +109,9 @@ text \<open>The same Base-style pair the context-insensitive and entry-state-key
   analyses solve over, at the same \<^const>\<open>ivl_tf_st_for\<close>/\<^const>\<open>ivl_enter_st_for\<close>
   primitives: nothing call-string specific enters the specification.\<close>
 
-definition nest_S_st :: "(ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_spec" where
+definition nest_S_st ::
+  "(pp \<times> cfg_node list, call_string_gk,
+     ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_spec" where
   "nest_S_st = base_dg_spec_st_for_lifted nest_gs nest_empty_pred
                  (ivl_tf_st_for nest_gs) (ivl_enter_st_for nest_gs)"
 
@@ -131,8 +133,7 @@ lemma nest_gamma_eq: "nest_gamma = nest_domain.gamma_exec"
 
 interpretation nest_dg_sound: sound_dg_spec nest_S_st nest_gamma nest_gs
   unfolding nest_gamma_eq nest_S_st_def
-  by (rule nest_domain.sound_dg_spec_st)
-     (rule base_dg_spec_sound[OF ivl_is_sound_transfer_for is_empty_state_gamma_state_empty])
+  by (rule nest_domain.sound_dg_spec_st[OF ivl_is_sound_transfer_for])
 
 subsection \<open>The routed equation system and its computed solution\<close>
 
@@ -145,9 +146,10 @@ definition nest_1_eqs ::
      (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state) eqsT" where
   "nest_1_eqs =
      side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. Global) (cs_route 1)
+      (\<lambda>ctx' src a. dg_spec_edge_tree nest_S_st a src Global)
       (routed_cmb_g nest_S_st Global Seed (static_resolve nest_cfg))
       (routed_extra_g Seed Global)
-       nest_cfg nest_S_st Bot (Lifted cinit_ivl_st) Bot"
+       nest_cfg Bot (Lifted cinit_ivl_st) Bot"
 
 definition nest_1_sol ::
   "(pp \<times> cfg_node list) set
@@ -468,13 +470,14 @@ definition nestg_1_eqs ::
      (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state) eqsT" where
   "nestg_1_eqs =
      side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. Global) (cs_route 1)
+      (\<lambda>ctx' src a. dg_spec_edge_tree
+         (base_dg_spec_st_for_lifted nestg_gs nestg_empty_pred
+            (ivl_tf_st_for nestg_gs) (ivl_enter_st_for nestg_gs)) a src Global)
       (routed_cmb_g (base_dg_spec_st_for_lifted nestg_gs nestg_empty_pred
                        (ivl_tf_st_for nestg_gs) (ivl_enter_st_for nestg_gs)) Global Seed
          (static_resolve nestg_cfg))
       (routed_extra_g Seed Global)
        nestg_cfg
-       (base_dg_spec_st_for_lifted nestg_gs nestg_empty_pred
-          (ivl_tf_st_for nestg_gs) (ivl_enter_st_for nestg_gs))
        Bot (Lifted cinit_ivl_st) Bot"
 
 definition nestg_1_sol ::

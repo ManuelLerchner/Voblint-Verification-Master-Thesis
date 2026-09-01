@@ -1027,12 +1027,15 @@ code_identifier
 | code_module Update_rules \<rightharpoonup> (OCaml) Core
 | code_module Strategy_Tree_Sequencing \<rightharpoonup> (OCaml) Core
 | code_module Strategy_Tree_Combinators \<rightharpoonup> (OCaml) Core
+| code_module Strategy_Tree_Program \<rightharpoonup> (OCaml) Core
 | code_module Strategy_Tree_Side_Buffering \<rightharpoonup> (OCaml) Core
 | code_module State_Restriction \<rightharpoonup> (OCaml) Core
 | code_module Exec_Refinement \<rightharpoonup> (OCaml) Core
 | code_module Strategy_Tree_Fold \<rightharpoonup> (OCaml) Core
 | code_module Transfer_Interface \<rightharpoonup> (OCaml) Core
 | code_module DG_Framework \<rightharpoonup> (OCaml) Core
+| code_module DG_Manager \<rightharpoonup> (OCaml) Core
+| code_module DG_Spec \<rightharpoonup> (OCaml) Core
 | code_module DG_Unit_Spec \<rightharpoonup> (OCaml) Core
 | code_module DG_Keyed_Generator \<rightharpoonup> (OCaml) Core
 | code_module Check_Result \<rightharpoonup> (OCaml) Core

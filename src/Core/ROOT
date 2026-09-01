@@ -9,21 +9,21 @@ session Voblint_Core in "." = "Voblint_CFG" +
     "DG"
     "Context"
     "Result"
-    "Lifters"
   theories
     CFG_Enumeration
     Transfer_Interface
     State_Restriction
     DG_Framework
+    DG_Manager
+    DG_Spec
+    DG_Spec_Sound
     DG_Unit_Spec
     DG_Keyed_Generator
     DG_Soundness
-    DG_Dead_Code_Lift
     DG_LTR_Sound
     Activation_Local_Sound
     Activation_Backbone
     DG_Ctx_Activation
-    DG_Transfer_Combinators
     Routed_Context
     Routed_Context_Unit
     DG_Base
@@ -43,3 +43,6 @@ session Voblint_Core in "." = "Voblint_CFG" +
     Check_Report
     Contextual_Check_Report
     DG_Analysis_Adapter
+    (* Composition of a solved routed system with a context policy, once:
+       the (domain, context-policy) product is instantiated, not duplicated. *)
+    Routed_Analysis_Sound

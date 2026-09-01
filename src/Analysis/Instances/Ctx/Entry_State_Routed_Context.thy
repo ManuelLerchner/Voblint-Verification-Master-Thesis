@@ -31,7 +31,8 @@ locale entry_state_routed_context =
     "routed_cmb_g S gk0 seed_key (static_resolve (compile_prog Pi ps))"
     "routed_extra_g seed_key gk0"
     bot0 s0d s0g sigma vars x0 sg gammaM
-  for S :: "('D::bounded_semilattice_sup_bot, 'G::bounded_semilattice_sup_bot) dg_spec"
+  for S :: "(pp \<times> 'c, 'k, 'D::bounded_semilattice_sup_bot,
+              'G::bounded_semilattice_sup_bot) dg_spec"
     and gammaDG :: "'D \<Rightarrow> 'G \<Rightarrow> store set"
     and gs :: "vname \<Rightarrow> bool"
     and Pi :: proc_table and ps :: "pname list"
@@ -48,8 +49,8 @@ locale entry_state_routed_context =
              \<in> calls (compile_prog Pi ps)
        \<Longrightarrow> (FunctionEntry p,
               route u ctx
-                (enter_local S (call_info_of (CallEdge dst pars args) p)
-                    (locals (sigma (Inl (u, ctx)))) (globs (sigma (Inr gk0)))) (CallEdge dst pars args))
+                (entered S gk0 sigma (call_info_of (CallEdge dst pars args) p)
+                    (Inl (u, ctx))) (CallEdge dst pars args))
              \<in> vars"
     and comb_fwd:
     "\<And>cl c1 dst pars args p cont.
@@ -69,8 +70,10 @@ next
   show "\<And>p ctx. seed_key p ctx \<noteq> gk0" by (rule seed_key_ne_gk0)
 next
   fix u ctx dst pars args p cont s
-  assume "(u, CallEdge dst pars args, FunctionEntry p, cont)
+  assume "(u, ctx) \<in> vars"
+    and "(u, CallEdge dst pars args, FunctionEntry p, cont)
             \<in> calls (compile_prog Pi ps)"
+    and "s \<in> gammaDG (locals (sigma (Inl (u, ctx)))) (globs (sigma (Inr gk0)))"
   then show "p \<in> set (static_resolve (compile_prog Pi ps) cont u
                         (CallEdge dst pars args) (locals (sigma (Inl (u, ctx)))))"
     by (simp add: static_resolve_iff compile_prog_finite)
@@ -79,10 +82,10 @@ next
   assume "(u, ctx) \<in> vars"
     and ce: "(u, CallEdge dst pars args, FunctionEntry p, cont)
            \<in> calls (compile_prog Pi ps)"
+    and "s \<in> gammaDG (locals (sigma (Inl (u, ctx)))) (globs (sigma (Inr gk0)))"
   have fin: "finite (calls (compile_prog Pi ps))" using compile_prog_finite by blast
   show "route u ctx
-            (enter_local S (call_info_of (CallEdge dst pars args) p)
-                (locals (sigma (Inl (u, ctx)))) (globs (sigma (Inr gk0))))
+            (entered S gk0 sigma (call_info_of (CallEdge dst pars args) p) (Inl (u, ctx)))
             (CallEdge dst pars args)
           = route_enterc_of_sigma S route sigma gk0
               (compile_prog Pi ps) u ctx (call_enter gs (CallEdge dst pars args) s)"
@@ -94,8 +97,8 @@ next
            \<in> calls (compile_prog Pi ps)"
   then show "(FunctionEntry p,
                 route u ctx
-                  (enter_local S (call_info_of (CallEdge dst pars args) p)
-                      (locals (sigma (Inl (u, ctx)))) (globs (sigma (Inr gk0)))) (CallEdge dst pars args))
+                  (entered S gk0 sigma (call_info_of (CallEdge dst pars args) p)
+                      (Inl (u, ctx))) (CallEdge dst pars args))
                \<in> vars"
     by (rule call_fwd)
 next

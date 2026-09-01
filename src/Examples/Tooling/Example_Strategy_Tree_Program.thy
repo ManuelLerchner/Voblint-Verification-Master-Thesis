@@ -100,12 +100,12 @@ definition demo_program_from_tree ::
        v \<leftarrow> sp_lift_tree demo_tree;
        w \<leftarrow> sp_local (STR ''extra'');
        sp_return (v + w)
-     }"
+     }" 
 
 lemma demo_program_from_tree_eq:
   "sp_run demo_program_from_tree =
      QueryL (STR ''local'')
        (\<lambda>x. Side (STR ''global'') (x + 1) (QueryL (STR ''extra'') (\<lambda>w. Answer (x * 2 + w))))"
-  by (simp add: demo_program_from_tree_def demo_tree_def)
+  by (simp add: demo_program_from_tree_def demo_tree_def sp_bind_assoc)
 
 end

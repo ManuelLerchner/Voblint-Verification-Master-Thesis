@@ -49,7 +49,7 @@ text \<open>
   caller state produced them (so \<open>route_unit\<close>/\<open>enterc_unit\<close> are interchangeable in any
   proof obligation, not merely equal pointwise). Deeper equivalence --- that
   \<open>routed_cmb_g\<close>/\<open>routed_extra_g\<close> instantiated here compute the same solved local/global
-  contributions as \<^theory>\<open>Voblint_Core.DG_Soundness\<close>'s \<open>dg_cmb\<close>/\<open>dg_extra\<close> --- is not
+  contributions as the Base route's own call and seed hooks --- is not
   attempted: the two trees have different shapes (Base reads the callee entry directly;
   here the entry is published through \<open>seed_key\<close> and read back), so any such equivalence
   is a solved-system/solver argument, not a local rewrite.
@@ -83,7 +83,8 @@ locale unit_routed_context =
   dg_ctx_activation_base S gammaDG gs g gk0 route_unit
     "routed_cmb_g S gk0 seed_key (static_resolve g)" "routed_extra_g seed_key gk0"
     bot0 s0d s0g sigma vars x0 sg gammaM
-  for S :: "('D::bounded_semilattice_sup_bot, 'G::bounded_semilattice_sup_bot) dg_spec"
+  for S :: "(pp \<times> unit, 'k, 'D::bounded_semilattice_sup_bot,
+              'G::bounded_semilattice_sup_bot) dg_spec"
     and gammaDG :: "'D \<Rightarrow> 'G \<Rightarrow> store set"
     and gs :: "vname \<Rightarrow> bool"
     and g :: cfg and gk0 :: 'k
@@ -99,9 +100,7 @@ locale unit_routed_context =
     "\<And>u ctx dst pars args p cont.
        (u, ctx) \<in> vars
        \<Longrightarrow> (u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g
-       \<Longrightarrow> (FunctionEntry p,
-              route_unit u ctx (locals (sigma (Inl (u, ctx)))) (CallEdge dst pars args))
-             \<in> vars"
+       \<Longrightarrow> (FunctionEntry p, ()) \<in> vars"
     and comb_fwd:
     "\<And>cl c1 dst pars args p cont.
        (cl, c1) \<in> vars \<Longrightarrow> (cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g
@@ -113,6 +112,11 @@ locale unit_routed_context =
        \<Longrightarrow> es = call_enter gs (CallEdge dst pars args) s"
 begin
 
+text \<open>The two routing obligations are discharged without looking at the state the
+  routing function is applied to: \<open>route_unit\<close> and \<open>enterc_unit\<close> are the same constant
+  function, so it makes no difference that the routed generator now applies \<open>route\<close>
+  to the entered value \<^const>\<open>entered\<close> rather than to the raw caller value.\<close>
+
 sublocale routed: routed_context_base_hetero S gammaDG gs g gk0 route_unit
   bot0 s0d s0g sigma vars x0 sg seed_key "static_resolve g" gammaM enterc_unit
 proof unfold_locales
@@ -121,27 +125,28 @@ next
   show "\<And>p ctx. seed_key p ctx \<noteq> gk0" by (rule seed_key_ne_gk0)
 next
   fix u ctx dst pars args p cont s
-  assume "(u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
+  assume "(u, ctx) \<in> vars"
+    and "(u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
+    and "s \<in> gammaDG (locals (sigma (Inl (u, ctx)))) (globs (sigma (Inr gk0)))"
   then show "p \<in> set (static_resolve g cont u (CallEdge dst pars args)
                         (locals (sigma (Inl (u, ctx)))))"
     by (simp add: static_resolve_iff[OF finC])
 next
   fix u ctx dst pars args p cont s
-  show "route_unit u ctx (enter_local S (call_info_of (CallEdge dst pars args) p)
-            (locals (sigma (Inl (u, ctx)))) (globs (sigma (Inr gk0)))) (CallEdge dst pars args)
+  show "route_unit u ctx (entered S gk0 sigma
+            (call_info_of (CallEdge dst pars args) p) (Inl (u, ctx)))
+          (CallEdge dst pars args)
           = enterc_unit u ctx (call_enter gs (CallEdge dst pars args) s)"
     by (rule route_unit_enterc_unit_agree)
 next
   fix u ctx dst pars args p cont
   assume "(u, ctx) \<in> vars"
     and "(u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
-  then have "(FunctionEntry p,
-                route_unit u ctx (locals (sigma (Inl (u, ctx)))) (CallEdge dst pars args))
-               \<in> vars"
-    by (rule call_fwd)
+  then have "(FunctionEntry p, ()) \<in> vars" by (rule call_fwd)
   then show "(FunctionEntry p,
-                route_unit u ctx (enter_local S (call_info_of (CallEdge dst pars args) p)
-                    (locals (sigma (Inl (u, ctx)))) (globs (sigma (Inr gk0)))) (CallEdge dst pars args))
+                route_unit u ctx (entered S gk0 sigma
+                    (call_info_of (CallEdge dst pars args) p) (Inl (u, ctx)))
+                  (CallEdge dst pars args))
                \<in> vars"
     by simp
 next

@@ -56,11 +56,15 @@ text \<open>
 \<close>
 
 definition ictx_spec ::
-  "(vname \<Rightarrow> bool) \<Rightarrow> (ivl exec_dg_st \<Rightarrow> bool) \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_spec"
+  "(vname \<Rightarrow> bool) \<Rightarrow> (ivl exec_dg_st \<Rightarrow> bool)
+   \<Rightarrow> ('x, 'k, ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_spec"
 where
-  "ictx_spec gs empty_pred = base_dg_spec_st_for_lifted gs empty_pred (ivl_tf_st_for gs) (ivl_enter_st_for gs)"
+  "ictx_spec gs empty_pred =
+     base_dg_spec_st_for_lifted gs empty_pred (ivl_tf_st_for gs) (ivl_enter_st_for gs)"
 
-definition ictx_abs_spec :: "(vname \<Rightarrow> bool) \<Rightarrow> (ivl abs_state lifted, ivl abs_state lifted) dg_spec" where
+definition ictx_abs_spec ::
+  "(vname \<Rightarrow> bool) \<Rightarrow> ('x, 'k, ivl abs_state lifted, ivl abs_state lifted) dg_spec"
+where
   "ictx_abs_spec gs = base_dg_spec_for_lifted gs is_empty_state (ivl_tf_for gs)"
 
 subsection \<open>The routed equation system and its executable solution\<close>
@@ -79,10 +83,11 @@ definition ictx_eqs ::
   "ictx_eqs gs empty_pred Pi ps =
      side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_addr_list (\<lambda>_. Global)
        route_unit
-       (routed_cmb_g_contribution (ictx_spec gs empty_pred) Global Seed
+       (\<lambda>ctx' src a. dg_spec_edge_tree (ictx_spec gs empty_pred) a src Global)
+       (routed_cmb_g (ictx_spec gs empty_pred) Global Seed
           (static_resolve (compile_prog Pi ps)))
        (routed_extra_g Seed Global)
-       (compile_prog Pi ps) (ictx_spec gs empty_pred) Bot (Lifted cinit_ivl_st) Bot"
+       (compile_prog Pi ps) Bot (Lifted cinit_ivl_st) Bot"
 
 definition ictx_sol ::
     "(vname \<Rightarrow> bool) \<Rightarrow> (ivl exec_dg_st \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> (pp \<times> unit) set \<times> (pp \<times> unit + gk \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)" where
@@ -144,8 +149,7 @@ lemma ictx_gamma_eq: "ictx_gamma gs = ivl_unit.gamma_exec"
 
 theorem ictx_sound_exec: "sound_dg_spec (ictx_spec gs empty_pred) (ictx_gamma gs) gs"
   unfolding ictx_gamma_eq ictx_spec_def
-  by (rule ivl_unit.sound_dg_spec_st)
-     (rule base_dg_spec_sound[OF ivl_is_sound_transfer_for is_empty_state_gamma_state_empty])
+  by (rule ivl_unit.sound_dg_spec_st[OF ivl_is_sound_transfer_for])
 
 end
 
@@ -188,9 +192,10 @@ theorem pp_routed:
   shows
   "part_post_solution
      (side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. Global) route_unit
+        (\<lambda>ctx' src a. dg_spec_edge_tree (ictx_spec gs empty_pred) a src Global)
         (routed_cmb_g (ictx_spec gs empty_pred) Global Seed (static_resolve (compile_prog Pi ps)))
         (routed_extra_g Seed Global)
-        (compile_prog Pi ps) (ictx_spec gs empty_pred) Bot (Lifted cinit_ivl_st) Bot)
+        (compile_prog Pi ps) Bot (Lifted cinit_ivl_st) Bot)
      (cfg_exit (compile_prog Pi ps), ())
      (snd (sol gs empty_pred Pi ps)) (fst (sol gs empty_pred Pi ps))"
   using pp_st[OF solves] unfolding ictx_eqs_def ictx_spec_def by (rule ivl_pp_st_gen[OF exact])

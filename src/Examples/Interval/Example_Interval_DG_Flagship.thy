@@ -324,12 +324,10 @@ proof -
 qed
 
 theorem flagship_head_bound_proper:
-  "(\<lambda>_. 100) \<notin> sound_dg_spec.dg_gamma (gamma_unit flagship_gs)
+  "(\<lambda>_. 100) \<notin> dg_hook_gamma (gamma_unit flagship_gs)
                  (fun_of_dg_st_for flagship_gs \<circ> snd flagship_sol) (Statement (Suc 0))"
-  unfolding sound_dg_spec.dg_gamma_def[OF sound_dg_spec_unit_for[OF ivl_is_sound_transfer_for flagship_wf_reserved]]
-            gamma_unit_def gamma_state_def
-            sound_dg_spec.dg_D_def[OF sound_dg_spec_unit_for[OF ivl_is_sound_transfer_for flagship_wf_reserved]]
-            sound_dg_spec.dg_G_def[OF sound_dg_spec_unit_for[OF ivl_is_sound_transfer_for flagship_wf_reserved]]
+  unfolding dg_hook_gamma_def gamma_unit_def gamma_state_def
+            dg_hook_D_def dg_hook_G_def
   apply (simp only: mem_Collect_eq not_all)
   apply (rule exI[of _ "(STR ''x'')"])
   using head_x_bound apply (simp add: fun_of_dg_st_for_simps combine_env_def)

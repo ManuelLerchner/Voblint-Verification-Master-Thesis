@@ -133,12 +133,6 @@ lemma dgEx_is_bot_exact:
   "\<And>s::sign resolved_st_q. resolved_st_q_is_bot_for (declared_global_vars sign_ex_prog) s = is_empty_state (fun_of_exec_dg_st_for sign_ex_gs s)"
   by (rule resolved_st_q_is_bot_for_iff[OF declared_global_iff, folded fun_of_exec_dg_st_for_def])
 
-lemma dgEx_sound0:
-  "cinit_stores sign_ex_gs \<subseteq> gamma_dg_base (map_lift (fun_of_exec_dg_st_for sign_ex_gs) (Lifted cinit_sign_st))
-                                (map_lift (fun_of_exec_dg_st_for sign_ex_gs) (Lifted cinit_sign_st))"
-  by (simp add: fun_of_exec_dg_st_for_def fun_of_st_cinit_sign_st_for cinit_stores_def gamma_state_def
-      gamma_dg_base_def)
-
 subsection \<open>Registration through the classifier-parametric registration locale\<close>
 
 text \<open>Interpret \<^locale>\<open>base_dg_exec_analysis\<close> once here at \<^const>\<open>sign_ex_gs\<close>
@@ -171,6 +165,15 @@ proof -
              TD_side_always_join_Interp.part_post_solution_of_solve_c)+
 qed
 
+text \<open>The initial stores are covered by the registered concretization at the
+  initial local value. Stated in \<^const>\<open>sign_ex_reg.gamma_exec\<close> itself rather than in
+  its unfolding, because that is the vocabulary \<open>run_source_sound\<close> assumes.\<close>
+lemma dgEx_sound0:
+  "cinit_stores sign_ex_gs
+     \<subseteq> sign_ex_reg.gamma_exec (Lifted cinit_sign_st) (Lifted cinit_sign_st)"
+  by (simp add: sign_ex_reg.gamma_exec_def fun_of_exec_dg_st_for_def
+      fun_of_st_cinit_sign_st_for cinit_stores_def gamma_state_def)
+
 theorem dgEx_source_run_sound:
   assumes run: "star (pstep sign_ex_gs sign_ex_pi) (prog_main sign_ex_prog, s, []) (residual, t, frs)"
       and init: "s \<in> cinit_stores sign_ex_gs"
@@ -187,7 +190,7 @@ proof -
               dgEx_vars_cover[unfolded dgEx_sol_def dgEx_eqs_def gEx_def]
               gEx_finE[unfolded gEx_def]
               gEx_finC[unfolded gEx_def]
-              dgEx_sound0[unfolded fun_of_exec_dg_st_for_def, folded sign_ex_reg.gamma_exec_def]
+              dgEx_sound0
               init run'])
 qed
 
@@ -197,7 +200,6 @@ text \<open>The Base instance routes the whole abstract state through the local 
   reachability-lifted: the local answer at the exit is exactly \<open>Lifted\<close> of a state
   mapping \<open>x\<close> to \<open>SPos\<close>, with no separate global/side slot to inspect for a purely
   local name.\<close>
-
 lemma dgEx_inspect:
   "map_option (\<lambda>sol. case map_lift (fun_of_exec_dg_st_for sign_ex_gs) (locals (snd sol (Inl (Statement 2, ()))))
                       of Lifted s \<Rightarrow> Some (s (STR ''x'')) | Bot \<Rightarrow> None)

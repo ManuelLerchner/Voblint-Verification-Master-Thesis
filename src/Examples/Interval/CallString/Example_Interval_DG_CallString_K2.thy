@@ -25,9 +25,10 @@ definition nest_2_eqs ::
      (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state) eqsT" where
   "nest_2_eqs =
      side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. Global) (cs_route 2)
+      (\<lambda>ctx' src a. dg_spec_edge_tree nest_S_st a src Global)
       (routed_cmb_g nest_S_st Global Seed (static_resolve nest_cfg))
       (routed_extra_g Seed Global)
-       nest_cfg nest_S_st Bot (Lifted cinit_ivl_st) Bot"
+       nest_cfg Bot (Lifted cinit_ivl_st) Bot"
 
 definition nest_2_sol ::
   "(pp \<times> cfg_node list) set

@@ -36,11 +36,13 @@ definition scs_eqs ::
   "scs_eqs k gs empty_pred Pi ps =
      side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_addr_list (\<lambda>_. Call_String_Context.Global)
        (cs_route k)
-       (routed_cmb_g_contribution (sctx_spec gs empty_pred)
+       (\<lambda>ctx' src a. dg_spec_edge_tree (sctx_spec gs empty_pred) a src
+          Call_String_Context.Global)
+       (routed_cmb_g (sctx_spec gs empty_pred)
           Call_String_Context.Global Call_String_Context.Seed
           (static_resolve (compile_prog Pi ps)))
        (routed_extra_g Call_String_Context.Seed Call_String_Context.Global)
-       (compile_prog Pi ps) (sctx_spec gs empty_pred) Bot (Lifted cinit_sign_st) Bot"
+       (compile_prog Pi ps) Bot (Lifted cinit_sign_st) Bot"
 
 definition scs_sol ::
     "nat \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> (sign exec_dg_st \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> (pp \<times> call_string) set \<times> (pp \<times> call_string + call_string_gk \<Rightarrow> (sign exec_dg_st lifted, sign exec_dg_st lifted) dg_state)" where
@@ -122,13 +124,128 @@ theorem scs_pp_routed:
   "part_post_solution
      (side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. Call_String_Context.Global)
         (cs_route k)
+        (\<lambda>ctx' src a. dg_spec_edge_tree (sctx_spec gs empty_pred) a src
+           Call_String_Context.Global)
         (routed_cmb_g (sctx_spec gs empty_pred) Call_String_Context.Global
            Call_String_Context.Seed (static_resolve (compile_prog Pi ps)))
         (routed_extra_g Call_String_Context.Seed Call_String_Context.Global)
-        (compile_prog Pi ps) (sctx_spec gs empty_pred) Bot (Lifted cinit_sign_st) Bot)
+        (compile_prog Pi ps) Bot (Lifted cinit_sign_st) Bot)
      (cfg_exit (compile_prog Pi ps), [])
      (snd (scs_sol k gs empty_pred Pi ps)) (fst (scs_sol k gs empty_pred Pi ps))"
   using scs_pp_st unfolding scs_eqs_def sctx_spec_def by (rule sign_cs_pp_st_gen[OF exact])
+end
+
+subsection \<open>The analysis-level result at the call-string context\<close>
+
+text \<open>
+  The call-string instance of \<^locale>\<open>routed_analysis_sound\<close>. Nothing below is
+  call-string-specific beyond the routing pair \<^const>\<open>cs_route\<close>/\<^const>\<open>cs_context\<close>
+  and the seed-key encoding: the solved-table reader, its two coverage
+  obligations and the published result all come from the generic composition,
+  which is why this context reaches the same activation-collect theorem the
+  unit and entry-state instances reach.
+\<close>
+
+definition scs_sg_st ::
+    "nat \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> (sign exec_dg_st \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list
+       \<Rightarrow> pp \<times> call_string + call_string_gk \<Rightarrow> sign exec_dg_st lifted" where
+  "scs_sg_st k gs empty_pred Pi ps =
+     solved_local_reader (fst (scs_sol k gs empty_pred Pi ps))
+                         (snd (scs_sol k gs empty_pred Pi ps))"
+
+context
+  fixes gs :: "vname \<Rightarrow> bool" and empty_pred :: "sign exec_dg_st \<Rightarrow> bool"
+    and Pi :: proc_table and ps :: "pname list" and k :: nat
+  assumes solves: "scs_terminates k gs empty_pred Pi ps"
+    and exact: "\<And>s. empty_pred s = is_empty_state (fun_of_resolved_st_q_for gs s)"
+    and entry_cov:
+      "(cfg_entry (compile_prog Pi ps), []) \<in> fst (scs_sol k gs empty_pred Pi ps)"
+    and fwd_ok: "\<And>u a v ctx. (u, ctx) \<in> fst (scs_sol k gs empty_pred Pi ps)
+                   \<Longrightarrow> (u, a, v) \<in> intra (compile_prog Pi ps)
+                   \<Longrightarrow> (v, ctx) \<in> fst (scs_sol k gs empty_pred Pi ps)"
+    and call_fwd_ok: "\<And>u ctx dst pars args p cont d.
+        (u, ctx) \<in> fst (scs_sol k gs empty_pred Pi ps)
+        \<Longrightarrow> (u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps)
+        \<Longrightarrow> (FunctionEntry p, cs_route k u ctx d (CallEdge dst pars args))
+              \<in> fst (scs_sol k gs empty_pred Pi ps)"
+    and comb_fwd_ok: "\<And>cl c1 dst pars args p cont.
+        (cl, c1) \<in> fst (scs_sol k gs empty_pred Pi ps)
+        \<Longrightarrow> (cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps)
+        \<Longrightarrow> (cont, c1) \<in> fst (scs_sol k gs empty_pred Pi ps)"
+begin
+
+lemma scs_cinit_le_cinit_sign_st:
+  "cinit_stores gs \<subseteq> sctx_gamma gs (Lifted cinit_sign_st) Bot"
+  by (auto simp: sctx_gamma_def cinit_stores_def gamma_state_def
+                 fun_of_resolved_st_q_for_def fun_of_st_cinit_sign_st_for)
+
+interpretation scs_dg_base: sound_dg_spec "sctx_spec gs empty_pred" "sctx_gamma gs" gs
+  by (rule sctx_sound_exec[OF exact])
+
+interpretation scs_adapter: routed_analysis_sound
+    "sctx_spec gs empty_pred" "sctx_gamma gs" gs
+    "compile_prog Pi ps" Call_String_Context.Global "cs_route k"
+    Bot "Lifted cinit_sign_st" Bot
+    "snd (scs_sol k gs empty_pred Pi ps)" "fst (scs_sol k gs empty_pred Pi ps)"
+    "(cfg_exit (compile_prog Pi ps), [])"
+    Call_String_Context.Seed "cs_context k"
+    "map_lift (fun_of_resolved_st_q_for gs)" sign_classify_check
+proof (unfold_locales, goal_cases FinE PP SgCov SgUncov Fwd FinC SeedKey ResolveSound
+    RouteEnterc CallFwd CombFwd EnterAgree GammaRd ClProved ClRefuted)
+  case FinE show ?case using compile_prog_finite by auto
+next
+  case PP show ?case by (rule scs_pp_routed[OF solves exact])
+next
+  case (SgCov v c)
+  thus ?case by (simp add: sctx_gamma_def)
+next
+  case (SgUncov v c)
+  thus ?case by simp
+next
+  case (Fwd u a v c)
+  thus ?case by (rule fwd_ok)
+next
+  case FinC show ?case by (simp add: compile_prog_finite)
+next
+  case (SeedKey p ctx) show ?case by simp
+next
+  case (ResolveSound u ctx dst pars args p cont s)
+  thus ?case by (simp add: static_resolve_iff compile_prog_finite)
+next
+  case (RouteEnterc u ctx dst pars args p cont s)
+  show ?case by (rule cs_route_context_agree)
+next
+  case (CallFwd u ctx dst pars args p cont)
+  show ?case using call_fwd_ok[OF CallFwd(1,2)] by (simp add: cs_route_def)
+next
+  case (CombFwd cl c1 dst pars args p cont)
+  show ?case using CombFwd(1,2) by (rule comb_fwd_ok)
+next
+  case (EnterAgree cl s es dst pars args p cont)
+  note ces = EnterAgree(1) and ce = EnterAgree(2)
+  obtain dst' pars' args' p' cont' where
+      ce': "(cl, CallEdge dst' pars' args', FunctionEntry p', cont') \<in> calls (compile_prog Pi ps)"
+    and es_eq: "es = call_enter gs (CallEdge dst' pars' args') s"
+    using ces unfolding call_enter_store_def by blast
+  have "CallEdge dst' pars' args' = CallEdge dst pars args"
+    using compile_prog_calls_source_unique[OF ce' ce] by simp
+  thus ?case using es_eq by simp
+next
+  case (GammaRd d g') show ?case by (simp add: sctx_gamma_def)
+next
+  case (ClProved c d s) thus ?case by (rule sign_classify_check_proved)
+next
+  case (ClRefuted c d s) thus ?case by (rule sign_classify_check_refuted)
+qed
+
+theorem scs_activation_collect_sound:
+  "activation_collect gs (cs_context k) [] (compile_prog Pi ps) (cinit_stores gs) v ctx
+     \<subseteq> gamma_state_lift (map_lift (fun_of_resolved_st_q_for gs)
+           (scs_sg_st k gs empty_pred Pi ps (Inl (v, ctx))))"
+  unfolding scs_sg_st_def
+  by (rule scs_adapter.routed_activation_collect_sound
+        [OF entry_cov scs_cinit_le_cinit_sign_st])
+
 end
 
 subsection \<open>Whole-program convenience layer\<close>

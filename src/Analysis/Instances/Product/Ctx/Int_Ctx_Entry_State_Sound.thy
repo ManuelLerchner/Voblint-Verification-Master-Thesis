@@ -70,10 +70,11 @@ definition ictx_entry_eqs ::
   "ictx_entry_eqs mode gs empty_pred Pi ps =
      side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_addr_list (\<lambda>_. Global)
        (ictx_entry_route_gen mode gs empty_pred)
-       (routed_cmb_g_contribution (ictx_spec mode empty_pred gs) Global Seed
+       (\<lambda>ctx' src a. dg_spec_edge_tree (ictx_spec mode empty_pred gs) a src Global)
+       (routed_cmb_g (ictx_spec mode empty_pred gs) Global Seed
           (static_resolve (compile_prog Pi ps)))
        (routed_extra_g Seed Global)
-       (compile_prog Pi ps) (ictx_spec mode empty_pred gs) Bot (Lifted cinit_int_dom_st) Bot"
+       (compile_prog Pi ps) Bot (Lifted cinit_int_dom_st) Bot"
 
 definition ictx_entry_sol ::
     "refine_mode \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> (int_dom exec_dg_st \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list
@@ -142,9 +143,9 @@ lemma ictx_entry_route_gen_eq_generic:
   by (rule refl)
 
 lemma ictx_entry_route_gen_commute:
-  "formals_route_lifted_gen (ictx_abs_spec mode gs) u ctx (map_lift (fun_of_resolved_st_q_for gs) d) ca
+  "formals_route_lifted_gen u ctx (map_lift (fun_of_resolved_st_q_for gs) d) ca
      = ictx_entry_route_gen mode gs empty_pred u ctx d ca"
-  unfolding ictx_entry_route_gen_eq_generic ictx_abs_spec_def
+  unfolding ictx_entry_route_gen_eq_generic
   by (rule int_domain.entry_exec_route_gen_commute)
 
 end
@@ -167,7 +168,7 @@ begin
 interpretation int_es: routed_domain_exec
   gs empty_pred "int_tf_st_for mode gs" "int_dom_enter_st_for mode gs" "int_tf_for mode gs"
   Global Seed "ictx_entry_route_gen mode gs empty_pred"
-  "formals_route_lifted_gen (ictx_abs_spec mode gs)"
+  formals_route_lifted_gen
   static_resolve static_resolve
   by unfold_locales
      (rule int_tf_st_for_commute, rule int_dom_enter_st_for_commute, rule exact, simp,
@@ -207,10 +208,11 @@ theorem ictx_entry_pp_routed:
   "part_post_solution
      (side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. Global)
         (ictx_entry_route_gen mode gs empty_pred)
+        (\<lambda>ctx' src a. dg_spec_edge_tree (ictx_spec mode empty_pred gs) a src Global)
         (routed_cmb_g (ictx_spec mode empty_pred gs) Global Seed
            (static_resolve (compile_prog Pi ps)))
         (routed_extra_g Seed Global)
-        (compile_prog Pi ps) (ictx_spec mode empty_pred gs) Bot (Lifted cinit_int_dom_st) Bot)
+        (compile_prog Pi ps) Bot (Lifted cinit_int_dom_st) Bot)
      (cfg_exit (compile_prog Pi ps), [])
      (snd (ictx_entry_sol mode gs empty_pred Pi ps)) (fst (ictx_entry_sol mode gs empty_pred Pi ps))"
   using ictx_entry_pp_st unfolding ictx_entry_eqs_def ictx_spec_def
@@ -244,10 +246,11 @@ theorem ictx_entry_pp_routed_warrow:
   "part_post_solution
      (side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. Global)
         (ictx_entry_route_gen mode gs empty_pred)
+        (\<lambda>ctx' src a. dg_spec_edge_tree (ictx_spec mode empty_pred gs) a src Global)
         (routed_cmb_g (ictx_spec mode empty_pred gs) Global Seed
            (static_resolve (compile_prog Pi ps)))
         (routed_extra_g Seed Global)
-        (compile_prog Pi ps) (ictx_spec mode empty_pred gs) Bot (Lifted cinit_int_dom_st) Bot)
+        (compile_prog Pi ps) Bot (Lifted cinit_int_dom_st) Bot)
      (cfg_exit (compile_prog Pi ps), [])
      (snd (ictx_entry_sol_warrow mode gs empty_pred Pi ps))
      (fst (ictx_entry_sol_warrow mode gs empty_pred Pi ps))"
@@ -291,9 +294,9 @@ context
         \<Longrightarrow> (u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps)
         \<Longrightarrow> (FunctionEntry p,
                ictx_entry_route_gen mode gs empty_pred u ctx
-                 (enter_local (ictx_spec mode empty_pred gs) (call_info_of (CallEdge dst pars args) p)
-                    (locals (snd (ictx_entry_sol mode gs empty_pred Pi ps) (Inl (u, ctx))))
-                    (globs (snd (ictx_entry_sol mode gs empty_pred Pi ps) (Inr Global))))
+                 (entered (ictx_spec mode empty_pred gs) Global
+                    (snd (ictx_entry_sol mode gs empty_pred Pi ps))
+                    (call_info_of (CallEdge dst pars args) p) (Inl (u, ctx)))
                  (CallEdge dst pars args))
              \<in> fst (ictx_entry_sol mode gs empty_pred Pi ps)"
     and comb_fwd_ok: "\<And>cl c1 dst pars args p cont.

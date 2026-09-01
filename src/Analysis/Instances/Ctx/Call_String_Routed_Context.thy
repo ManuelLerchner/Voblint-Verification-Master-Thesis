@@ -29,7 +29,8 @@ locale call_string_routed_context =
     "routed_cmb_g S Global Seed (static_resolve (compile_prog Pi ps))"
     "routed_extra_g Seed Global"
     bot0 s0d s0g sigma vars x0 sg gammaM
-  for S :: "('D::bounded_semilattice_sup_bot, 'G::bounded_semilattice_sup_bot) dg_spec"
+  for S :: "(pp \<times> cfg_node list, call_string_gk, 'D::bounded_semilattice_sup_bot,
+              'G::bounded_semilattice_sup_bot) dg_spec"
     and gammaDG :: "'D \<Rightarrow> 'G \<Rightarrow> store set"
     and gs :: "vname \<Rightarrow> bool"
     and Pi :: proc_table and ps :: "pname list"
@@ -59,17 +60,19 @@ proof unfold_locales
   show "finite (calls (compile_prog Pi ps))" using compile_prog_finite by simp
 next
   show "\<And>p ctx. Seed p ctx \<noteq> Global" by simp
-next
   fix u ctx dst pars args p cont s
-  assume "(u, CallEdge dst pars args, FunctionEntry p, cont)
+  assume "(u, ctx) \<in> vars"
+    and "(u, CallEdge dst pars args, FunctionEntry p, cont)
             \<in> calls (compile_prog Pi ps)"
+    and "s \<in> gammaDG (locals (sigma (Inl (u, ctx)))) (globs (sigma (Inr Global)))"
   then show "p \<in> set (static_resolve (compile_prog Pi ps) cont u
                         (CallEdge dst pars args) (locals (sigma (Inl (u, ctx)))))"
     by (simp add: static_resolve_iff compile_prog_finite)
 next
   fix u ctx dst pars args p cont s
-  show "cs_route k u ctx (enter_local S (call_info_of (CallEdge dst pars args) p)
-            (locals (sigma (Inl (u, ctx)))) (globs (sigma (Inr Global)))) (CallEdge dst pars args)
+  show "cs_route k u ctx (entered S Global sigma
+            (call_info_of (CallEdge dst pars args) p) (Inl (u, ctx)))
+          (CallEdge dst pars args)
           = cs_context k u ctx (call_enter gs (CallEdge dst pars args) s)"
     by (rule cs_route_context_agree)
 next
@@ -82,10 +85,12 @@ next
                \<in> vars"
     by (rule call_fwd)
   then show "(FunctionEntry p,
-                cs_route k u ctx (enter_local S (call_info_of (CallEdge dst pars args) p)
-                    (locals (sigma (Inl (u, ctx)))) (globs (sigma (Inr Global)))) (CallEdge dst pars args))
+                cs_route k u ctx (entered S Global sigma
+                    (call_info_of (CallEdge dst pars args) p) (Inl (u, ctx)))
+                  (CallEdge dst pars args))
                \<in> vars"
     by (simp add: cs_route_def)
+next
 next
   fix cl c1 dst pars args p cont
   assume "(cl, c1) \<in> vars"

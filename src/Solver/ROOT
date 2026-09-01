@@ -1,6 +1,9 @@
 session Voblint_Solver in "." = "TD" +
   description "The strategy-tree equation language of the vendored side-effecting solver"
   theories
+    (* Query-set dependency predicates on a tree value, independent of how
+       the tree was built. *)
+    Strategy_Tree_Properties
     Strategy_Tree_Sequencing
     Strategy_Tree_Fold
     Strategy_Tree_Post_Solution

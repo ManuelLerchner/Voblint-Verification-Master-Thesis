@@ -76,9 +76,8 @@ text \<open>
   dependency on its target: dependencies arise from queried unknowns, while
   \<open>Side\<close> contributes to another unknown. Its trailing continuation is what a
   do-block statement (no \<open>\<leftarrow>\<close>) needs, so \<open>side_effect\<close> itself keeps this
-  shape rather than gaining a value-producing twin: a statement-form
-  combinator built on it (\<open>publish_global\<close>, \<open>DG_Transfer_Combinators\<close>)
-  supplies the neutral answer as that continuation.
+  shape rather than gaining a value-producing twin: a caller writing it as a
+  do-block statement supplies the neutral answer as that continuation.
 \<close>
 
 abbreviation side_effect ::

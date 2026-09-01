@@ -19,9 +19,7 @@ Backward-analysis arc: `Example_Guard_Refinement` (one guard) -> `Example_Interv
 
 Not tabled above, and grouped by what they pin rather than by domain concern:
 `Example_Interval_Checks_Store_Only.thy` (check discharge, the Interval
-analogue of Sign's), `Example_Interval_Placement.thy` (the placement/storage
-independence skeleton), `Example_Interval_Global_Flow_Sensitivity.thy` (how a declared global is
-stored and how flow-sensitively). Role vocabulary: repository `README.md`.
+analogue of Sign's). Role vocabulary: repository `README.md`.
 
 ## `Ctx/` — context routed by entered value
 
