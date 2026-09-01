@@ -93,6 +93,7 @@ session Voblint_Examples in "." = "Voblint_CLI" +
 
     (* Solver, domain-independent *)
     Example_Strategy_Tree
+    Example_Strategy_Tree_Program
 
     (* Tooling *)
     Example_EntryState_GraphViz_Regression

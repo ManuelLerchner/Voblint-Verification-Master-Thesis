@@ -13,7 +13,7 @@ text \<open>
   than that is losing precision to its own combination discipline rather than to the
   program.
 
-  This separates the two widening rules on \<^const>\<open>TD_Solver_Menu\<close>, which agree everywhere a
+  This separates the two widening rules on \<^const>\<open>solver_menu\<close>, which agree everywhere a
   global has a single producer:
 
   \<^item> \<^const>\<open>update_global_warrowing_apinis\<close> widens the slot value \<^emph>\<open>after\<close> the join.  The

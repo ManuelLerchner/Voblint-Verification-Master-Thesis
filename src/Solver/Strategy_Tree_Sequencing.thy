@@ -9,12 +9,23 @@ text \<open>
   \<open>Side\<close>, and its interpreters \<open>traverse_rhs\<close> (the local answer),
   \<open>dep_aux\<close> (the unknowns queried) and \<open>sides_of_rhs\<close> (the global
   contributions published) are all vendored from \<open>TD.Basics_side\<close>, not
-  defined in this codebase. This theory adds bind for the strategy-tree monad
-  (\<open>seqcomp_tree\<close>: run \<open>t\<close>, pass its answer to continuation \<open>k\<close> -- the
-  combinator every effectful fold over per-edge trees is built from), and two
-  dependency invariants a tree's query set can satisfy: \<open>env_indep_deps\<close>
-  (constant in the environment) and its strictly weaker cousin
-  \<open>mono_tree_deps\<close> (monotone in the environment).
+  defined in this codebase. This theory adds sequential composition for the
+  homogeneous tree carrier (\<open>seqcomp_tree\<close>: run \<open>t\<close>, pass its answer to
+  continuation \<open>k\<close> -- the combinator every effectful fold over per-edge
+  trees is built from), and two dependency invariants a tree's query set can
+  satisfy: \<open>env_indep_deps\<close> (constant in the environment) and its strictly
+  weaker cousin \<open>mono_tree_deps\<close> (monotone in the environment).
+
+  \<open>seqcomp_tree\<close> is not a genuine polymorphic monad's bind: a query's
+  answer and the tree's own final answer are both forced to the same \<open>'d\<close>,
+  so it only ever composes \<open>Tree d \<Rightarrow> (d \<Rightarrow> Tree d) \<Rightarrow> Tree d\<close>. It remains the
+  right tool for sequencing two already-built vendor trees -- what
+  \<open>Strategy_Tree_Fold\<close>'s fold over contribution trees needs -- rather than
+  for writing new analysis code. \<open>Strategy_Tree_Program\<close> (downstream) is the
+  typed frontend for that: its \<open>'a\<close> can be any type, not just \<open>'d\<close>, and its
+  \<open>sp_lift_tree\<close> embeds an already-built tree via exactly this theory's
+  \<open>seqcomp_tree\<close>, so raw and typed sequencing are one model, not two --
+  \<open>seqcomp_tree\<close> is its backend specialization, not a competing "monad".
 \<close>
 
 subsection \<open>Sequential composition (bind)\<close>

@@ -8,10 +8,11 @@ domain, no analysis. The counterpart of Goblint's `goblint.constraint` and
 A right-hand side is a `strategy_tree` over the solver's four instructions:
 `QueryL` reads a local unknown, `QueryG` reads a global one, `Side`
 publishes a value under a global key, `Answer` yields the result. This
-session gives that language a monad, do-notation, named combinators, a way
-to fold a right-hand side from contribution trees, and the per-key
-buffering that keeps repeated `Side` writes from destabilising an update
-rule.
+session gives that language sequential composition and do-notation over its
+own homogeneous carrier, a genuinely polymorphic typed frontend for
+intermediate values that aren't that carrier, named combinators, a way to
+fold a right-hand side from contribution trees, and the per-key buffering
+that keeps repeated `Side` writes from destabilising an update rule.
 
 | File | Role |
 | --- | --- |
@@ -19,6 +20,7 @@ rule.
 | `Strategy_Tree_Fold.thy` | `fold_rhs_trees`: a right-hand side as a join-fold over contribution trees |
 | `Strategy_Tree_Post_Solution.thy` | `se_constraint_holds`: what one unknown owes a `part_post_solution` |
 | `Strategy_Tree_Combinators.thy` | `read_local`, `read_global`, `side_effect`, `answer`: named readings of the four constructors |
+| `Strategy_Tree_Program.thy` | `strategy_program`, a typed continuation-passing frontend: `sp_bind`'s intermediate type need not be the solver carrier `'d`, only `sp_run`/`sp_run_with`'s final answer does. `sp_lift_tree` embeds an already-built vendor tree via `Strategy_Tree_Sequencing`'s own `seqcomp_tree`, so raw and typed sequencing are one model -- `seqcomp_tree` is `Strategy_Tree_Program`'s backend specialization, not a competing implementation |
 | `Strategy_Tree_Side_Buffering.thy` | `buffer_sides`: one flush per key per evaluation |
 | `TD_Solver_Bridge.thy` | The semantic boundary to the vendored TD solver: an executable termination check to `solve_dom` to `part_post_solution`, proved once inside the vendored `TD_side_upd_rule` locale, for any update rule |
 | `TD_Solver_Menu.thy` | The named menu of concrete update-rule solvers (`join`, `per_origin`, `warrow`, `warrow_per_origin`) built on `TD_Solver_Bridge`; the sole point where this session names TD's concrete update-rule interpretations |

@@ -5,6 +5,10 @@ session Voblint_Solver in "." = "TD" +
     Strategy_Tree_Fold
     Strategy_Tree_Post_Solution
     Strategy_Tree_Combinators
+    (* A typed continuation-passing frontend over the homogeneous vendor
+       tree: sp_bind's intermediate type need not be the solver carrier,
+       only the final answer does. *)
+    Strategy_Tree_Program
     (* Equation-level normalization: aggregates repeated side effects to one
        key into a single write, so no right-hand side names a key twice. *)
     Strategy_Tree_Side_Buffering
