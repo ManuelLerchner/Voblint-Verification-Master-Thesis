@@ -1,6 +1,6 @@
 theory Interval_Exec_Sound
   imports Ivl_Exec
-          "Voblint_Solver.Solver_Menu"
+          "Voblint_Solver.TD_Solver_Menu"
           "TD.TD_side_upd_rule"
           "Voblint_CFG.CFG_Prune"
           "Voblint_VIMP.VIMP_Program"

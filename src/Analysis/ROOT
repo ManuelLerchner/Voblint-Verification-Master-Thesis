@@ -22,6 +22,7 @@ session Voblint_Analysis in "." = "Voblint_Exec" +
     Special_Ops
     Numeric_Ops
     Exec_Backward
+    Analysis_Surface
     Call_String_Context_Finite
     Call_String_Routed_Context
     Entry_State_Routed_Context

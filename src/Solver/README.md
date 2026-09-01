@@ -20,13 +20,15 @@ rule.
 | `Strategy_Tree_Post_Solution.thy` | `se_constraint_holds`: what one unknown owes a `part_post_solution` |
 | `Strategy_Tree_Combinators.thy` | `read_local`, `read_global`, `side_effect`, `answer`: named readings of the four constructors |
 | `Strategy_Tree_Side_Buffering.thy` | `buffer_sides`: one flush per key per evaluation |
-| `Solver_Menu.thy` | The generic bridge from an executable termination check to `solve_dom`/`part_post_solution`, proved once inside the vendored `TD_side_upd_rule` locale; the named menu of concrete update-rule solvers (`join`, `per_origin`, `warrow`, `warrow_per_origin`) built on it |
+| `TD_Solver_Bridge.thy` | The semantic boundary to the vendored TD solver: an executable termination check to `solve_dom` to `part_post_solution`, proved once inside the vendored `TD_side_upd_rule` locale, for any update rule |
+| `TD_Solver_Menu.thy` | The named menu of concrete update-rule solvers (`join`, `per_origin`, `warrow`, `warrow_per_origin`) built on `TD_Solver_Bridge`; the sole point where this session names TD's concrete update-rule interpretations |
 
 Algorithm correctness lives upstream: `TD.TD_side` proves `partial_correctness`
 and `TD_side_mono`; `part_post_solution` (`TD.Basics_side`) is the certificate
 every soundness endpoint in `Voblint_Core` consumes. `DG_Keyed_Generator`
 (`Voblint_Core`) is what discharges `TD_side_mono`'s three preconditions for
-the keyed generator, once, for an arbitrary generator instance. `Solver_Menu`
-is this session's sole point of contact with a *concrete* update rule: every
+the keyed generator, once, for an arbitrary generator instance. `TD_Solver_Bridge`
+is this session's sole point of contact with TD's own proof vocabulary
+(`term_equivalence`, `solve_c_dom_def`, `partial_post_solution`): every
 domain/context instance reaches `solve_c`/`solve_dom`/`part_post_solution`
 through it rather than re-deriving the same three-step bridge per instance.

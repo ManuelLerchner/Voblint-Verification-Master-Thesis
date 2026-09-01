@@ -22,7 +22,7 @@ comparison, Phase 2.7 Exec classification) that this doc's own previous
    first in the file; every bare-form characterization lemma is a one-line
    corollary of its `_at` counterpart.
 5. `e4ae0177` -- `Voblint_Solver` now owns the generic bridge from the
-   vendored TD solver to `part_post_solution`: `Solver_Menu.thy` moved from
+   vendored TD solver to `part_post_solution`: `TD_Solver_Menu.thy` moved from
    `Voblint_Exec`; `Solver_Side_RG.thy`'s `solve_dom_of_solve_c` (30+
    external citers -- its only fact cited outside its own file) folded in
    alongside it. 19 files retargeted their imports.

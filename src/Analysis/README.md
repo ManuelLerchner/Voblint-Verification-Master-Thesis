@@ -11,7 +11,7 @@ Downstream consumers are in `src/Formalization/Pipeline/` and `src/Examples/`.
 
 | Folder | Content |
 | --- | --- |
-| `Instances/Common/` | Base-level reuse locales every domain interprets: the expression-evaluation induction (`Abstract_Arithmetic`), special-call dispatch (`Special_Ops`), the executable branch/enter construction (`Numeric_Ops`), and executable backward filtering (`Exec_Backward`) |
+| `Instances/Common/` | Base-level reuse locales every domain interprets: the expression-evaluation induction (`Abstract_Arithmetic`), special-call dispatch (`Special_Ops`), the executable branch/enter construction (`Numeric_Ops`), executable backward filtering (`Exec_Backward`), and what a solved table publishes -- state and check report, generic in the domain (`Analysis_Surface`) |
 | `Instances/Ctx/` | Routing policies over a compiled program: bounded call strings (`Call_String_Routed_Context`, `Call_String_Context_Finite`) and entry-state contexts (`Entry_State_Routed_Context`) |
 | `Instances/Sign/` | Seven-element sign lattice, executable bridge, end-to-end soundness |
 | `Instances/Interval/` | Interval domain (`ivl`), executable bridge, soundness |

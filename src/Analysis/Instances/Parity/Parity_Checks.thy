@@ -3,6 +3,7 @@ theory Parity_Checks
     "Voblint_Core.Analysis_Result"
     "Voblint_Core.DG_Analysis_Adapter"
     "Voblint_Exec.Monovariant_Analysis_Result"
+    Analysis_Surface
     Parity_Ctx_None_Sound
 begin
 

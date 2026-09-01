@@ -6,7 +6,7 @@ theory Interval_Ctx_Entry_State_Sound
     "Voblint_Analysis.Interval_Checks"
     "Voblint_Core.Routed_Context"
     Entry_State_Routed_Context
-    "Voblint_Solver.Solver_Menu"
+    "Voblint_Solver.TD_Solver_Menu"
     "Voblint_CFG.CFG_Prune"
     "Voblint_VIMP.VIMP_Program"
 begin

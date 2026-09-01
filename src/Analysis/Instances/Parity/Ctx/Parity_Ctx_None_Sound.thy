@@ -10,7 +10,7 @@ theory Parity_Ctx_None_Sound
     "TD.TD_side_upd_rule"
     "Voblint_Core.Routed_Context"
     "Voblint_Core.Routed_Context_Unit"
-    "Voblint_Solver.Solver_Menu"
+    "Voblint_Solver.TD_Solver_Menu"
     "Voblint_Core.Analysis_Result"
     "Voblint_VIMP.VIMP_Program"
     "Voblint_Core.Activation_Backbone"

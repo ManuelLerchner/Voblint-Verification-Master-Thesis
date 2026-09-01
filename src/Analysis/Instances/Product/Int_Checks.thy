@@ -1,5 +1,5 @@
 theory Int_Checks
-  imports Int_Classify Int_Ctx_None_Sound
+  imports Int_Classify Int_Ctx_None_Sound Analysis_Surface
 begin
 
 hide_const phase.N

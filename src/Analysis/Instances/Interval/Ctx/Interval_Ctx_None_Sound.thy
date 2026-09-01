@@ -8,7 +8,7 @@ theory Interval_Ctx_None_Sound
     "Voblint_Core.Routed_Context"
     "Voblint_Core.Routed_Context_Unit"
     "Voblint_Core.DG_Analysis_Adapter"
-    "Voblint_Solver.Solver_Menu"
+    "Voblint_Solver.TD_Solver_Menu"
     "Voblint_VIMP.VIMP_Program"
 begin
 

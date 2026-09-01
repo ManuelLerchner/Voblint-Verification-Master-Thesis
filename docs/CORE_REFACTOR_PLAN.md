@@ -128,7 +128,7 @@ until Phase 2 deletes what it holds.
 | `Voblint_Domain` | `goblint.domain` | `Abstract_Domain`, `Reachability_Lift`, `Nonrelational_State`, `Nonrelational_Reachability`, `Backward_Domain`, `Abstract_Numeric_Queries` | `Voblint_VIMP`, `TD` |
 | `Voblint_Solver` | `goblint.constraint`, `goblint.solver` | `Strategy_Tree_Monad` (absorbing `Strategy_Tree_Do`, `Solver_Mono`), `Strategy_Tree_Rhs`, `Strategy_Tree_Relabel`, `Strategy_Tree_Combinators`, `Side_Buffering`, `Post_Solution` (new), `Context_Refinement` | `TD` only |
 | `Voblint_Core` | `Analyses`, `Constraints`, `Control`, `AnalysisResult` | `CFG_Enumeration`, `Constraint_System` (absorbing `Constraint_System_Sound`), `State_Restriction`, `DG_Framework`, `DG_Unit_Spec`, `DG_Keyed_Generator`, `DG_Soundness`, `DG_LTR_Sound`, `Activation_Local_Sound`, `Activation_Backbone`, `DG_Ctx_Activation`, `DG_Transfer_Combinators`, `Routed_Context`, `Routed_Context_Unit`, `DG_Base`, `Call_String_Context`, `Call_String_Collecting_Refinement`, `Call_String_Solver_Projection`, `Analysis_Result`, `Checks`, `Abstract_Checks`, `DG_Analysis_Adapter`, `DG_Coverage` | `Voblint_CFG`, `Voblint_Domain`, `Voblint_Solver` -- never `Voblint_Compile` |
-| `Voblint_Exec` (quarantine) | none | `Exec_DG_Refines`, `Exec_DG_Trees`, `Exec_DG_Generator`, `Exec_DG_Bridge`, `DG_Base_Exec`, `Routed_Domain_Exec`, `Solver_Side_RG`, `Solver_Menu`, `Monovariant_Analysis_Result` | `Voblint_Core`, `Voblint_Compile` |
+| `Voblint_Exec` (quarantine) | none | `Exec_DG_Refines`, `Exec_DG_Trees`, `Exec_DG_Generator`, `Exec_DG_Bridge`, `DG_Base_Exec`, `Routed_Domain_Exec`, `Solver_Side_RG`, `TD_Solver_Menu`, `Monovariant_Analysis_Result` | `Voblint_Core`, `Voblint_Compile` |
 | into `Voblint_Analysis` | `analyses/base.ml`, `lifters/` | `Abstract_Arithmetic`, `Special_Ops`, `Numeric_Ops`, `Exec_Backward`; `Call_String_Context_Finite`, `Call_String_Routed_Context`, `Entry_State_Routed_Context` | |
 | into `Voblint_Examples` | none | the hooks route: `sound_dg_hooks` and the hook-parametric section (`DG_Soundness` 968-1508), `sound_dg_hooks_ltr`, `gamma_join`, `unit_dg_spec_placed`, as a `Placement/` group next to the two examples that use them | |
 
@@ -194,7 +194,7 @@ Spike before committing to it.
 | 2.4 | `routed_context_hetero` becomes `routed_context_base_hetero` at whichever carrier the instance chooses; delete the restated assumptions. Same for `unit_routed_context_hetero`. | landed: `entry_state_routed_context` and `call_string_routed_context` (Analysis) are stated at a carrier parameter with `gammaDG`/`gammaM` and sublocale `routed_context_base_hetero`; `routed_context_hetero` and `unit_routed_context_hetero` are deleted, having no interpreter left |
 | 2.5 | `Analysis_Result` holds the quotient; `normalize_point` becomes the single readback at publication, in `DG_Analysis_Adapter`. `Abstract_Checks` reads the published table. | landed in the generic form: `dg_analysis_adapter` extends `routed_context_base_hetero` and takes a readback `rd` with `gammaDG d g = gamma_state_lift (rd d)`; the four abstract-carrier sites pass `rd = id` |
 | 2.6 | Rewrite the twelve `*_Ctx_*_Sound` theories and the four CLI `*_Entry` theories to interpret at the quotient carrier. Expect the transport boilerplate that NEXT_STEPS records as the 23-suffix duplication to shrink. | landed: the four unit-context instances (Sign, Parity, Interval, Int, with their `*_Checks`/`*_Entry` consumers), the three entry-state instances and the two call-string instances are on the executable carrier; the two Interval entry-state examples and `Example_Interval_Source_Ctx` follow the theory; the four CallString examples interpret `call_string_routed_context` at their executable spec and get their headline theorem from `activation_collect_sound`. `Run_Analysis_Sound`'s flat bundles and `Interval_Ctx_Entry_State_Sound`'s hand-rolled Hstep/Henter/Hcomb/Hcont transport lemmas are migrated too (2026-08-31 decision entry); `ectx_abs_spec`/`entry_state_route_abs_gen` stay by design, being the genuine abstract-carrier route witness. What is left on the transport now is only `Example_Sign_Placement`, `Example_Interval_Placement`, and `Monovariant_Analysis_Result` -- tracked under 2.3, not 2.6 |
-| 2.7 | Move `routed_dg_domain_exec`, `Solver_Side_RG`, `Solver_Menu`, `Monovariant_Analysis_Result`, `DG_Coverage` to their final homes (`DG_Base`, Solver, Core); retire `Voblint_Exec` from `ROOTS`. | partly landed (2026-09-01, see decision entry): `Solver_Menu` moved to `Voblint_Solver`, `Solver_Side_RG` deleted whole (its one generic fact, `solve_dom_of_solve_c`, folded into `Solver_Menu`; the rest was confirmed dead, not carrier-specific-but-kept). `routed_dg_domain_exec` and most of `Monovariant_Analysis_Result` stay in `Voblint_Exec` -- they are the executable-carrier transport itself, not misplaced generic content, and cannot move before the carrier does. `DG_Coverage` (confirmed fully generic) and the 12x-repeated domain/context solve-bridge boilerplate remain open, deliberately not touched this round |
+| 2.7 | Move `routed_dg_domain_exec`, `Solver_Side_RG`, `TD_Solver_Menu`, `Monovariant_Analysis_Result`, `DG_Coverage` to their final homes (`DG_Base`, Solver, Core); retire `Voblint_Exec` from `ROOTS`. | partly landed (2026-09-01, see decision entry): `TD_Solver_Menu` moved to `Voblint_Solver`, `Solver_Side_RG` deleted whole (its one generic fact, `solve_dom_of_solve_c`, folded into `TD_Solver_Menu`; the rest was confirmed dead, not carrier-specific-but-kept). `routed_dg_domain_exec` and most of `Monovariant_Analysis_Result` stay in `Voblint_Exec` -- they are the executable-carrier transport itself, not misplaced generic content, and cannot move before the carrier does. `DG_Coverage` (confirmed fully generic) and the 12x-repeated domain/context solve-bridge boilerplate remain open, deliberately not touched this round |
 
 ### Phase 3 -- inside the theories
 
@@ -734,19 +734,28 @@ and mark it `superseded (see below)`.
      touching anything.
   2. `Voblint_Solver` now owns the generic bridge from the vendored TD
      solver's executable termination check to `part_post_solution`:
-     `Solver_Menu.thy` moved wholesale from `Voblint_Exec` to
+     `TD_Solver_Menu.thy` moved wholesale from `Voblint_Exec` to
      `Voblint_Solver`, and `Solver_Side_RG.thy`'s `solve_dom_of_solve_c`
      (previously the only fact in that file cited by more than one
      external site -- 30+ citers across Analysis/Soundness/Examples/CLI)
      merged into it; `part_post_solution_of_solve_c`'s proof now cites
      `solve_dom_of_solve_c` instead of re-deriving the same `solve_dom x`
      fact inline. 19 files' imports retargeted from
-     `"Voblint_Exec.Solver_Menu"`/`"Voblint_Exec.Solver_Side_RG"` to
-     `"Voblint_Solver.Solver_Menu"`. `DG_Keyed_Generator.thy`'s own direct
+     `"Voblint_Exec.TD_Solver_Menu"`/`"Voblint_Exec.Solver_Side_RG"` to
+     `"Voblint_Solver.TD_Solver_Menu"`. `DG_Keyed_Generator.thy`'s own direct
      `"TD.TD_side"` import (for `TD_side_mono`) is unrelated to this move
      and was left alone -- Core reaching TD directly for that one locale
      predicate is a separate, smaller fact than the solve/`part_post_solution`
-     boundary this commit centralizes.
+     boundary this commit centralizes. (Follow-up split, same day: the two
+     generic `TD_side_upd_rule` lemmas -- `solve_dom_of_solve_c` and
+     `part_post_solution_of_solve_c` -- moved out of `TD_Solver_Menu.thy` into
+     a new `TD_Solver_Bridge.thy`, so `TD_Solver_Menu` is genuinely only the
+     named menu of concrete update rules and `TD_Solver_Bridge` is the one
+     place TD's own proof vocabulary -- `term_equivalence`, `solve_c_dom_def`,
+     `partial_post_solution` -- stops leaking upward. `TD_Solver_Menu` now
+     imports `TD_Solver_Bridge`; no other file needed a new import, since
+     every existing `"Voblint_Solver.TD_Solver_Menu"` importer gets the bridge
+     transitively.)
   3. Deleted `Solver_Side_RG.thy` entirely (689 lines, `git rm`, no
      replacement) after a citation trace stronger than name-grep: every
      head symbol (`side_rg`, `rg_val`, `rg_state`, `rg_sides`, `rg_ug`,
@@ -789,7 +798,7 @@ and mark it `superseded (see below)`.
   (Goblint's `man.split` has no Voblint equivalent, because no current VIMP
   transfer wants more than one resulting state outside `tf_branch`'s binary
   case). Phase 2.7 itself turned out narrower than its own wording: only
-  `Solver_Menu` and `solve_dom_of_solve_c` were genuinely misplaced-but-
+  `TD_Solver_Menu` and `solve_dom_of_solve_c` were genuinely misplaced-but-
   generic; `DG_Base_Exec.thy`/`routed_dg_domain_exec` and most of
   `Monovariant_Analysis_Result.thy` remain in `Voblint_Exec` because they
   are fundamentally about transporting between the concrete

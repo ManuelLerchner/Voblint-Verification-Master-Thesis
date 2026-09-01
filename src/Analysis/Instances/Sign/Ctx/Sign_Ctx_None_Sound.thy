@@ -10,7 +10,7 @@ theory Sign_Ctx_None_Sound
     "Voblint_Compile.Compile_Invariants"
     "Voblint_Core.Routed_Context"
     "Voblint_Core.Routed_Context_Unit"
-    "Voblint_Solver.Solver_Menu"
+    "Voblint_Solver.TD_Solver_Menu"
     "Voblint_VIMP.VIMP_Program"
     "Voblint_Core.Activation_Backbone"
     "Voblint_Core.Analysis_Result"

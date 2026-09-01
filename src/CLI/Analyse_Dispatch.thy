@@ -1041,6 +1041,7 @@ code_identifier
 | code_module Contextual_Check_Report \<rightharpoonup> (OCaml) Core
 | code_module Analysis_Result \<rightharpoonup> (OCaml) Core
 | code_module Monovariant_Analysis_Result \<rightharpoonup> (OCaml) Core
+| code_module Analysis_Surface \<rightharpoonup> (OCaml) Core
 | code_module DG_Base_Exec \<rightharpoonup> (OCaml) Core
 | code_module Sign_Arithmetic \<rightharpoonup> (OCaml) Core
 | code_module Sign_Special \<rightharpoonup> (OCaml) Core

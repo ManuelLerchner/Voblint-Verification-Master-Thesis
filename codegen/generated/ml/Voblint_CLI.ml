@@ -414,6 +414,11 @@ module Core : sig
   val analyse_interval_report_per_origin :
     unit imp_prog_ext -> (cfg_node * (exp * check_result)) list
   val scope_return_slot : 'a procedure_scope_ext -> string option
+  val report_with_state :
+    (unit imp_prog_ext -> (unit, 'a) analysis_result) ->
+      'a -> (exp -> 'a -> check_result) ->
+              unit imp_prog_ext ->
+                (cfg_node * (exp * (check_result * (bool * 'a)))) list
   val analyse_parity_ctx_solved_for :
     (string -> bool) ->
       unit imp_prog_ext ->
@@ -459,11 +464,6 @@ module Core : sig
       unit imp_prog_ext ->
         (unit, (string -> ivl)) analysis_result *
           (string * (string -> ivl) lifted) list
-  val report_with_state :
-    (unit imp_prog_ext -> (unit, 'a) analysis_result) ->
-      'a -> (exp -> 'a -> check_result) ->
-              unit imp_prog_ext ->
-                (cfg_node * (exp * (check_result * (bool * 'a)))) list
   val analyse_int_call_string_report_warrow :
     nat -> unit imp_prog_ext -> (cfg_node * (exp * check_result lifted)) list
   val analyse_int_entry_state_report_warrow :
@@ -10747,6 +10747,11 @@ let rec analyse_sign_ctx_solved_for
   x = ctx_solved_for executable_domain_sign sctx_sol_prog
         (unit_seed_global_keys Globala (fun a b -> Seeda (a, b))) x;;
 
+let rec reach_state_at
+  table bot_state p v =
+    (match lookup_context equal_unit (table p) v ()
+      with Bot -> (true, bot_state) | Lifted a -> (false, a));;
+
 let rec wf_program_compile_input_exec
   p = (let procs = proc_rep p in
        let gs = declared_global p in
@@ -10890,6 +10895,11 @@ let rec scs_verdict_report_prog
 let rec scope_return_slot
   (Procedure_scope_ext (scope_formals, scope_locals, scope_return_slot, more)) =
     scope_return_slot;;
+
+let rec report_with_state
+  table bot_state classify p =
+    classify_checks_with_state (prog_cfg p) (reach_state_at table bot_state p)
+      (fun c (_, a) -> classify c a);;
 
 let rec entry_state_eqs_prog
   gs p =
@@ -11168,11 +11178,6 @@ let rec entry_state_verdict_report_prog
 
 let rec analyse_interval_entry_state p = entry_state_verdict_report_prog p;;
 
-let rec reach_state_at
-  table bot_state p v =
-    (match lookup_context equal_unit (table p) v ()
-      with Bot -> (true, bot_state) | Lifted a -> (false, a));;
-
 let rec node_annotation_update
   node_annotationa
     (Analysis_graph_config_ext
@@ -11234,11 +11239,6 @@ let rec entry_state_sol_prog_per_origin
 let rec analyse_interval_ctx_solved_warrow_for
   x = ctx_solved_for executable_domain_ivl ictx_sol_prog_warrowa
         (unit_seed_global_keys Globalc (fun a b -> Seedc (a, b))) x;;
-
-let rec report_with_state
-  table bot_state classify p =
-    classify_checks_with_state (prog_cfg p) (reach_state_at table bot_state p)
-      (fun c (_, a) -> classify c a);;
 
 let rec analyse_int_call_string_report_warrow
   k p = ics_verdict_report_prog_warrow k p;;

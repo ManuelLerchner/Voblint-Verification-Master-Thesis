@@ -1,5 +1,5 @@
 theory Interval_Checks
-  imports Interval_Classify Interval_Ctx_None_Sound
+  imports Interval_Classify Interval_Ctx_None_Sound Analysis_Surface
 begin
 
 hide_const phase.N
