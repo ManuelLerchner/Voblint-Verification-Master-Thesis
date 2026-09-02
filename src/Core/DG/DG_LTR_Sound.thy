@@ -24,7 +24,7 @@ text \<open>
 \<close>
 
 locale sound_dg_spec_ltr_for = sound_dg_spec S gammaDG gs
-  for S :: "(pp \<times> unit, unit, 'D::bounded_semilattice_sup_bot,
+  for S :: "(pp \<times> unit, unit, unit, 'D::bounded_semilattice_sup_bot,
               'G::bounded_semilattice_sup_bot) dg_spec"
     and gammaDG :: "'D \<Rightarrow> 'G \<Rightarrow> store set"
     and gs :: "vname \<Rightarrow> bool"
@@ -36,13 +36,13 @@ text \<open>The specification's own compiled trees, addressed at the monovariant
 definition ltr_edge_tree ::
   "pp \<Rightarrow> edge_action \<Rightarrow> pp \<Rightarrow> (pp \<times> unit, unit, ('D, 'G) dg_state) strategy_tree"
 where
-  "ltr_edge_tree u a v = dg_spec_edge_tree S a (Inl (u, ())) ()"
+  "ltr_edge_tree u a v = dg_spec_edge_tree S a (Inl (u, ())) (\<lambda>_. ())"
 
 definition ltr_enter_tree ::
   "pp \<Rightarrow> call_action \<Rightarrow> pp \<Rightarrow> (pp \<times> unit, unit, ('D, 'G) dg_state) strategy_tree"
 where
   "ltr_enter_tree u ca p =
-     transfer_tree (dgs_enter S (call_info_of ca (entry_proc p))) (Inl (u, ())) ()"
+     transfer_tree (dgs_enter S (call_info_of ca (entry_proc p))) (Inl (u, ())) (\<lambda>_. ())"
 
 definition ltr_combine_tree ::
   "pp \<Rightarrow> call_action \<Rightarrow> pp \<Rightarrow> pp
@@ -50,7 +50,7 @@ definition ltr_combine_tree ::
 where
   "ltr_combine_tree u ca ex k =
      dg_spec_combine_tree S (call_info_of ca (result_proc ex))
-       (Inl (u, ())) (Inl (ex, ())) ()"
+       (Inl (u, ())) (Inl (ex, ())) (\<lambda>_. ())"
 sublocale hooks: sound_dg_hooks gammaDG gs ltr_edge_tree ltr_combine_tree ltr_enter_tree
 proof unfold_locales
   show "\<And>d d' g g'. \<lbrakk>d \<le> d'; g \<le> g'\<rbrakk> \<Longrightarrow> gammaDG d g \<subseteq> gammaDG d' g'"

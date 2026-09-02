@@ -23,18 +23,18 @@ text \<open>
 \<close>
 
 
-record ('x,'k,'dl,'dg) dg_spec =
-  dgs_skip       :: "('x,'k,'dl,'dg) man_transfer"
-  dgs_assign     :: "vname \<Rightarrow> exp \<Rightarrow> ('x,'k,'dl,'dg) man_transfer"
-  dgs_special    :: "special_call \<Rightarrow> vname \<Rightarrow> ('x,'k,'dl,'dg) man_transfer"
-  dgs_branch     :: "exp \<Rightarrow> bool \<Rightarrow> ('x,'k,'dl,'dg) man_transfer"
-  dgs_body       :: "pname \<Rightarrow> ('x,'k,'dl,'dg) man_transfer"
-  dgs_return     :: "exp option \<Rightarrow> pname \<Rightarrow> ('x,'k,'dl,'dg) man_transfer"
-  dgs_enter      :: "call_info \<Rightarrow> ('x,'k,'dl,'dg) man_transfer"
-  dgs_event      :: "analysis_event \<Rightarrow> ('x,'k,'dl,'dg) man_transfer"
-  dgs_caller_cont    :: "call_info \<Rightarrow> ('x,'k,'dl,'dg) man_transfer"
-  dgs_combine_env    :: "call_info \<Rightarrow> ('x,'k,'dl,'dg) man_combine_transfer"
-  dgs_combine_assign :: "call_info \<Rightarrow> ('x,'k,'dl,'dg) man_combine_transfer"
+record ('x,'k,'v,'dl,'dg) dg_spec =
+  dgs_skip       :: "('x,'k,'v,'dl,'dg) man_transfer"
+  dgs_assign     :: "vname \<Rightarrow> exp \<Rightarrow> ('x,'k,'v,'dl,'dg) man_transfer"
+  dgs_special    :: "special_call \<Rightarrow> vname \<Rightarrow> ('x,'k,'v,'dl,'dg) man_transfer"
+  dgs_branch     :: "exp \<Rightarrow> bool \<Rightarrow> ('x,'k,'v,'dl,'dg) man_transfer"
+  dgs_body       :: "pname \<Rightarrow> ('x,'k,'v,'dl,'dg) man_transfer"
+  dgs_return     :: "exp option \<Rightarrow> pname \<Rightarrow> ('x,'k,'v,'dl,'dg) man_transfer"
+  dgs_enter      :: "call_info \<Rightarrow> ('x,'k,'v,'dl,'dg) man_transfer"
+  dgs_event      :: "analysis_event \<Rightarrow> ('x,'k,'v,'dl,'dg) man_transfer"
+  dgs_caller_cont    :: "call_info \<Rightarrow> ('x,'k,'v,'dl,'dg) man_transfer"
+  dgs_combine_env    :: "call_info \<Rightarrow> ('x,'k,'v,'dl,'dg) man_combine_transfer"
+  dgs_combine_assign :: "call_info \<Rightarrow> ('x,'k,'v,'dl,'dg) man_combine_transfer"
 
 text \<open>
   Procedure-return combine is split the same way Goblint's \<open>Spec\<close> splits
@@ -46,7 +46,7 @@ text \<open>
 \<close>
 
 definition dgs_combine ::
-  "('x,'k,'dl,'dg) dg_spec \<Rightarrow> call_info \<Rightarrow> ('x,'k,'dl,'dg) man_combine_transfer"
+  "('x,'k,'v,'dl,'dg) dg_spec \<Rightarrow> call_info \<Rightarrow> ('x,'k,'v,'dl,'dg) man_combine_transfer"
 where
   "dgs_combine S ci m exit =
      do {
@@ -62,7 +62,7 @@ text \<open>
 \<close>
 
 fun dg_spec_step ::
-  "('x,'k,'dl,'dg,'z) dg_spec_scheme \<Rightarrow> edge_action \<Rightarrow> ('x,'k,'dl,'dg) man_transfer"
+  "('x,'k,'v,'dl,'dg,'z) dg_spec_scheme \<Rightarrow> edge_action \<Rightarrow> ('x,'k,'v,'dl,'dg) man_transfer"
 where
   "dg_spec_step S EA_Nop            = dgs_skip S"
 | "dg_spec_step S (EA_Assign x e)   = dgs_assign S x e"
@@ -84,26 +84,26 @@ text \<open>
 \<close>
 
 definition transfer_tree ::
-  "('x,'k,'dl::bot,'dg::bot) man_transfer \<Rightarrow> 'x + 'k \<Rightarrow> 'k
+  "('x,'k,'v,'dl::bot,'dg::bot) man_transfer \<Rightarrow> 'x + 'k \<Rightarrow> ('v \<Rightarrow> 'k)
    \<Rightarrow> ('x,'k,('dl,'dg) dg_state) strategy_tree"
 where
-  "transfer_tree T src gk = sp_run_with (\<lambda>d. DG d bot) (dg_edge_tree_man T src gk)"
+  "transfer_tree T src key = sp_run_with (\<lambda>d. DG d bot) (dg_edge_tree_man T src key)"
 
 definition combine_transfer_tree ::
-  "('x,'k,'dl::bot,'dg::bot) man_combine_transfer \<Rightarrow> 'x + 'k \<Rightarrow> 'x + 'k \<Rightarrow> 'k
+  "('x,'k,'v,'dl::bot,'dg::bot) man_combine_transfer \<Rightarrow> 'x + 'k \<Rightarrow> 'x + 'k \<Rightarrow> ('v \<Rightarrow> 'k)
    \<Rightarrow> ('x,'k,('dl,'dg) dg_state) strategy_tree"
 where
-  "combine_transfer_tree T src_cc src_ex gk =
-     sp_run_with (\<lambda>d. DG d bot) (dg_combine_tree_man T src_cc src_ex gk)"
+  "combine_transfer_tree T src_cc src_ex key =
+     sp_run_with (\<lambda>d. DG d bot) (dg_combine_tree_man T src_cc src_ex key)"
 
 definition dg_spec_edge_tree ::
-  "('x,'k,'dl::bot,'dg::bot) dg_spec \<Rightarrow> edge_action \<Rightarrow> 'x + 'k \<Rightarrow> 'k
+  "('x,'k,'v,'dl::bot,'dg::bot) dg_spec \<Rightarrow> edge_action \<Rightarrow> 'x + 'k \<Rightarrow> ('v \<Rightarrow> 'k)
    \<Rightarrow> ('x,'k,('dl,'dg) dg_state) strategy_tree"
 where
-  "dg_spec_edge_tree S a src gk = transfer_tree (dg_spec_step S a) src gk"
+  "dg_spec_edge_tree S a src key = transfer_tree (dg_spec_step S a) src key"
 
 definition dg_spec_combine_transfer ::
-  "('x,'k,'dl,'dg) dg_spec \<Rightarrow> call_info \<Rightarrow> ('x,'k,'dl,'dg) man_combine_transfer"
+  "('x,'k,'v,'dl,'dg) dg_spec \<Rightarrow> call_info \<Rightarrow> ('x,'k,'v,'dl,'dg) man_combine_transfer"
 where
   "dg_spec_combine_transfer S ci m exit =
      do {
@@ -112,11 +112,11 @@ where
      }"
 
 definition dg_spec_combine_tree ::
-  "('x,'k,'dl::bot,'dg::bot) dg_spec \<Rightarrow> call_info \<Rightarrow> 'x + 'k \<Rightarrow> 'x + 'k \<Rightarrow> 'k
+  "('x,'k,'v,'dl::bot,'dg::bot) dg_spec \<Rightarrow> call_info \<Rightarrow> 'x + 'k \<Rightarrow> 'x + 'k \<Rightarrow> ('v \<Rightarrow> 'k)
    \<Rightarrow> ('x,'k,('dl,'dg) dg_state) strategy_tree"
 where
-  "dg_spec_combine_tree S ci src_cc src_ex gk =
-     combine_transfer_tree (dg_spec_combine_transfer S ci) src_cc src_ex gk"
+  "dg_spec_combine_tree S ci src_cc src_ex key =
+     combine_transfer_tree (dg_spec_combine_transfer S ci) src_cc src_ex key"
 
 subsection \<open>Observable transfer properties\<close>
 
@@ -134,25 +134,25 @@ text \<open>
 
 
 definition local_result ::
-  "('x,'k,'dl::bounded_semilattice_sup_bot,'dg::bounded_semilattice_sup_bot) man_transfer
+  "('x,'k,'v,'dl::bounded_semilattice_sup_bot,'dg::bounded_semilattice_sup_bot) man_transfer
    \<Rightarrow> ('dl \<Rightarrow> 'dl) \<Rightarrow> bool"
 where
   "local_result T f \<longleftrightarrow>
-     (\<forall>src gk \<tau>. locals (traverse_rhs (transfer_tree T src gk) \<tau>) = f (locals (\<tau> src)))"
+     (\<forall>src key \<tau>. locals (traverse_rhs (transfer_tree T src key) \<tau>) = f (locals (\<tau> src)))"
 
 definition emits_no_sides ::
-  "('x,'k,'dl::bounded_semilattice_sup_bot,'dg::bounded_semilattice_sup_bot) man_transfer
+  "('x,'k,'v,'dl::bounded_semilattice_sup_bot,'dg::bounded_semilattice_sup_bot) man_transfer
    \<Rightarrow> bool"
 where
   "emits_no_sides T \<longleftrightarrow>
-     (\<forall>src gk \<tau> k. sides_of_rhs (transfer_tree T src gk) \<tau> k = bot)"
+     (\<forall>src key \<tau> k. sides_of_rhs (transfer_tree T src key) \<tau> k = bot)"
 
 definition reads_only_source ::
-  "('x,'k,'dl::bounded_semilattice_sup_bot,'dg::bounded_semilattice_sup_bot) man_transfer
+  "('x,'k,'v,'dl::bounded_semilattice_sup_bot,'dg::bounded_semilattice_sup_bot) man_transfer
    \<Rightarrow> bool"
 where
   "reads_only_source T \<longleftrightarrow>
-     (\<forall>src gk \<tau>. dep_aux \<tau> (transfer_tree T src gk) = {src})"
+     (\<forall>src key \<tau>. dep_aux \<tau> (transfer_tree T src key) = {src})"
 subsection \<open>Local-only transfers\<close>
 
 text \<open>
@@ -165,27 +165,27 @@ text \<open>
   soundness argument collapse to plain inclusions on pure functions.
 \<close>
 
-definition local_transfer :: "('dl \<Rightarrow> 'dl) \<Rightarrow> ('x,'k,'dl,'dg) man_transfer" where
+definition local_transfer :: "('dl \<Rightarrow> 'dl) \<Rightarrow> ('x,'k,'v,'dl,'dg) man_transfer" where
   "local_transfer f m = sp_return (f (man_local m))"
 
 lemma transfer_tree_local_transfer:
-  "transfer_tree (local_transfer f) (Inl x) gk
+  "transfer_tree (local_transfer f) (Inl x) key
      = QueryL x (\<lambda>a. Answer (DG (f (locals a)) bot))"
-  "transfer_tree (local_transfer f) (Inr g) gk
+  "transfer_tree (local_transfer f) (Inr g) key
      = QueryG g (\<lambda>a. Answer (DG (f (locals a)) bot))"
   by (simp_all add: transfer_tree_def dg_edge_tree_man_def local_transfer_def mk_dg_man_def
       dg_read_at_def sp_bind_assoc)
 
 lemma traverse_local_transfer_tree [simp]:
-  "traverse_rhs (transfer_tree (local_transfer f) src gk) \<tau> = DG (f (locals (\<tau> src))) bot"
+  "traverse_rhs (transfer_tree (local_transfer f) src key) \<tau> = DG (f (locals (\<tau> src))) bot"
   by (cases src) (simp_all add: transfer_tree_local_transfer)
 
 lemma sides_local_transfer_tree [simp]:
-  "sides_of_rhs (transfer_tree (local_transfer f) src gk) \<tau> k = bot"
+  "sides_of_rhs (transfer_tree (local_transfer f) src key) \<tau> k = bot"
   by (cases src) (simp_all add: transfer_tree_local_transfer)
 
 lemma dep_aux_local_transfer_tree [simp]:
-  "dep_aux \<tau> (transfer_tree (local_transfer f) src gk) = {src}"
+  "dep_aux \<tau> (transfer_tree (local_transfer f) src key) = {src}"
   by (cases src) (simp_all add: transfer_tree_local_transfer)
 
 lemma local_transfer_local_result:
@@ -216,7 +216,7 @@ text \<open>
 \<close>
 
 definition local_combine_transfer ::
-  "('dl \<Rightarrow> 'dl \<Rightarrow> 'dl) \<Rightarrow> ('x,'k,'dl,'dg) man_combine_transfer"
+  "('dl \<Rightarrow> 'dl \<Rightarrow> 'dl) \<Rightarrow> ('x,'k,'v,'dl,'dg) man_combine_transfer"
 where
   "local_combine_transfer f m exit = sp_return (f (man_local m) exit)"
 
@@ -342,7 +342,7 @@ text \<open>
 \<close>
 
 
-definition default_local_dg_spec :: "('x,'k,'D,'G) dg_spec" where
+definition default_local_dg_spec :: "('x,'k,'v,'D,'G) dg_spec" where
   "default_local_dg_spec = \<lparr>
      dgs_skip = local_transfer id,
      dgs_assign = (\<lambda>x e. local_transfer id),
@@ -398,7 +398,7 @@ definition local_dg_spec ::
    \<Rightarrow> (exp option \<Rightarrow> pname \<Rightarrow> 'D \<Rightarrow> 'D) \<Rightarrow> (call_info \<Rightarrow> 'D \<Rightarrow> 'D)
    \<Rightarrow> (analysis_event \<Rightarrow> 'D \<Rightarrow> 'D) \<Rightarrow> (call_info \<Rightarrow> 'D \<Rightarrow> 'D)
    \<Rightarrow> (call_info \<Rightarrow> 'D \<Rightarrow> 'D \<Rightarrow> 'D) \<Rightarrow> (call_info \<Rightarrow> 'D \<Rightarrow> 'D \<Rightarrow> 'D)
-   \<Rightarrow> ('x,'k,'D,'G) dg_spec"
+   \<Rightarrow> ('x,'k,'v,'D,'G) dg_spec"
 where
   "local_dg_spec sk asn sp br bd rt en ev cc ce ca = default_local_dg_spec\<lparr>
      dgs_skip := local_transfer sk,

@@ -36,13 +36,13 @@ text \<open>
 
 definition unit_transfer_gen ::
   "('d \<Rightarrow> 'd \<Rightarrow> 'd) \<Rightarrow> ('d \<Rightarrow> 'd) \<Rightarrow> ('d \<Rightarrow> 'd) \<Rightarrow> ('d \<Rightarrow> 'd)
-   \<Rightarrow> ('x,'k,'d::bounded_semilattice_sup_bot,'d) man_transfer"
+   \<Rightarrow> ('x,'k,unit,'d::bounded_semilattice_sup_bot,'d) man_transfer"
 where
   "unit_transfer_gen cmb rg rl f m =
      do {
-       g \<leftarrow> man_global m;
+       g \<leftarrow> man_global m ();
        let res = f (cmb (man_local m) g);
-       _ \<leftarrow> man_sideg m (rg res);
+       _ \<leftarrow> man_sideg m () (rg res);
        sp_return (rl res)
      }"
 
@@ -55,7 +55,7 @@ text \<open>
 
 definition unit_combine_transfer_gen ::
   "('d \<Rightarrow> 'd \<Rightarrow> 'd) \<Rightarrow> ('d \<Rightarrow> 'd) \<Rightarrow> ('d \<Rightarrow> 'd) \<Rightarrow> ('d \<Rightarrow> 'd \<Rightarrow> 'd)
-   \<Rightarrow> ('x,'k,'d::bounded_semilattice_sup_bot,'d) man_combine_transfer"
+   \<Rightarrow> ('x,'k,unit,'d::bounded_semilattice_sup_bot,'d) man_combine_transfer"
 where
   "unit_combine_transfer_gen cmb rg rl asn m de = unit_transfer_gen cmb rg rl (asn de) m"
 
@@ -69,7 +69,7 @@ text \<open>
 \<close>
 
 lemma traverse_unit_transfer_gen [simp]:
-  "locals (traverse_rhs (transfer_tree (unit_transfer_gen cmb rg rl f) src gk) \<tau>)
+  "locals (traverse_rhs (transfer_tree (unit_transfer_gen cmb rg rl f) src (\<lambda>_. gk)) \<tau>)
      = rl (f (cmb (locals (\<tau> src)) (globs (\<tau> (Inr gk)))))"
   by (cases src)
      (simp_all add: transfer_tree_def dg_edge_tree_man_def unit_transfer_gen_def
@@ -77,7 +77,8 @@ lemma traverse_unit_transfer_gen [simp]:
         Let_def)
 
 lemma sides_unit_transfer_gen [simp]:
-  "globs (sides_of_rhs (transfer_tree (unit_transfer_gen cmb rg rl f) src gk) \<tau> (Inr gk))
+  "globs (sides_of_rhs (transfer_tree (unit_transfer_gen cmb rg rl f) src (\<lambda>_. gk))
+            \<tau> (Inr gk))
      = rg (f (cmb (locals (\<tau> src)) (globs (\<tau> (Inr gk)))))"
   by (cases src)
      (simp_all add: transfer_tree_def dg_edge_tree_man_def unit_transfer_gen_def
@@ -87,7 +88,7 @@ lemma sides_unit_transfer_gen [simp]:
 lemma traverse_unit_combine_transfer_gen [simp]:
   "locals (traverse_rhs
              (combine_transfer_tree (unit_combine_transfer_gen cmb rg rl asn)
-                src_cc src_ex gk) \<tau>)
+                src_cc src_ex (\<lambda>_. gk)) \<tau>)
      = rl (asn (locals (\<tau> src_ex)) (cmb (locals (\<tau> src_cc)) (globs (\<tau> (Inr gk)))))"
   by (cases src_cc; cases src_ex)
      (simp_all add: combine_transfer_tree_def dg_combine_tree_man_def
@@ -97,7 +98,7 @@ lemma traverse_unit_combine_transfer_gen [simp]:
 lemma sides_unit_combine_transfer_gen [simp]:
   "globs (sides_of_rhs
             (combine_transfer_tree (unit_combine_transfer_gen cmb rg rl asn)
-               src_cc src_ex gk) \<tau> (Inr gk))
+               src_cc src_ex (\<lambda>_. gk)) \<tau> (Inr gk))
      = rg (asn (locals (\<tau> src_ex)) (cmb (locals (\<tau> src_cc)) (globs (\<tau> (Inr gk)))))"
   by (cases src_cc; cases src_ex)
      (simp_all add: combine_transfer_tree_def dg_combine_tree_man_def
@@ -106,7 +107,7 @@ lemma sides_unit_combine_transfer_gen [simp]:
 
 definition unit_transfer ::
   "(vname \<Rightarrow> bool) \<Rightarrow> ('a::bounded_semilattice_sup_bot abs_state \<Rightarrow> 'a abs_state)
-   \<Rightarrow> ('x,'k,'a abs_state,'a abs_state) man_transfer"
+   \<Rightarrow> ('x,'k,unit,'a abs_state,'a abs_state) man_transfer"
 where
   "unit_transfer gs =
      unit_transfer_gen (combine_env gs) (restrict_global_for gs) (restrict_local_for gs)"
@@ -114,9 +115,9 @@ where
 lemma unit_transfer_unfold:
   "unit_transfer gs f m =
      do {
-       g \<leftarrow> man_global m;
+       g \<leftarrow> man_global m ();
        let res = f (combine_env gs (man_local m) g);
-       _ \<leftarrow> man_sideg m (restrict_global_for gs res);
+       _ \<leftarrow> man_sideg m () (restrict_global_for gs res);
        sp_return (restrict_local_for gs res)
      }"
   unfolding unit_transfer_def unit_transfer_gen_def by (rule refl)
@@ -131,7 +132,7 @@ text \<open>
 
 definition unit_combine_transfer ::
   "(vname \<Rightarrow> bool) \<Rightarrow> call_info
-   \<Rightarrow> ('x,'k,'a::bounded_semilattice_sup_bot abs_state,'a abs_state) man_combine_transfer"
+   \<Rightarrow> ('x,'k,unit,'a::bounded_semilattice_sup_bot abs_state,'a abs_state) man_combine_transfer"
 where
   "unit_combine_transfer gs ci =
      unit_combine_transfer_gen (combine_env gs) (restrict_global_for gs) (restrict_local_for gs)
@@ -140,10 +141,10 @@ where
 lemma unit_combine_transfer_unfold:
   "unit_combine_transfer gs ci m de =
      do {
-       g \<leftarrow> man_global m;
+       g \<leftarrow> man_global m ();
        let res = combine_assign (ci_dst ci) (de ret_var)
                    (combine_env gs (man_local m) g);
-       _ \<leftarrow> man_sideg m (restrict_global_for gs res);
+       _ \<leftarrow> man_sideg m () (restrict_global_for gs res);
        sp_return (restrict_local_for gs res)
      }"
   unfolding unit_combine_transfer_def unit_combine_transfer_gen_def unit_transfer_gen_def
@@ -161,7 +162,7 @@ text \<open>
 
 definition unit_dg_spec_for ::
   "(vname \<Rightarrow> bool) \<Rightarrow> 'a::sound_domain domain_transfer
-   \<Rightarrow> ('x,'k,'a abs_state,'a abs_state) dg_spec"
+   \<Rightarrow> ('x,'k,unit,'a abs_state,'a abs_state) dg_spec"
 where
   "unit_dg_spec_for gs tf = default_local_dg_spec\<lparr>
      dgs_skip := unit_transfer gs (apply_tf tf EA_Nop),

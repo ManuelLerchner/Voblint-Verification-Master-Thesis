@@ -335,24 +335,24 @@ text \<open>
 \<close>
 
 definition rel_transfer ::
-  "(relc \<Rightarrow> relc \<Rightarrow> relc \<times> relc) \<Rightarrow> ('x,'k,relc,relc) man_transfer"
+  "(relc \<Rightarrow> relc \<Rightarrow> relc \<times> relc) \<Rightarrow> ('x,'k,unit,relc,relc) man_transfer"
 where
   "rel_transfer f m =
      do {
-       g \<leftarrow> man_global m;
+       g \<leftarrow> man_global m ();
        let r = f (man_local m) g;
-       _ \<leftarrow> man_sideg m (fst r);
+       _ \<leftarrow> man_sideg m () (fst r);
        sp_return (snd r)
      }"
 
 definition rel_combine_transfer ::
-  "(relc \<Rightarrow> relc \<Rightarrow> relc \<Rightarrow> relc \<times> relc) \<Rightarrow> ('x,'k,relc,relc) man_combine_transfer"
+  "(relc \<Rightarrow> relc \<Rightarrow> relc \<Rightarrow> relc \<times> relc) \<Rightarrow> ('x,'k,unit,relc,relc) man_combine_transfer"
 where
   "rel_combine_transfer f m de =
      do {
-       g \<leftarrow> man_global m;
+       g \<leftarrow> man_global m ();
        let r = f (man_local m) de g;
-       _ \<leftarrow> man_sideg m (fst r);
+       _ \<leftarrow> man_sideg m () (fst r);
        sp_return (snd r)
      }"
 
@@ -361,7 +361,7 @@ text \<open>The observations of a compiled \<open>rel_transfer\<close>: its answ
   what \<^locale>\<open>sound_dg_spec\<close> is stated against.\<close>
 
 lemma traverse_rel_transfer [simp]:
-  "locals (traverse_rhs (transfer_tree (rel_transfer f) src gk) \<tau>)
+  "locals (traverse_rhs (transfer_tree (rel_transfer f) src (\<lambda>_. gk)) \<tau>)
      = snd (f (locals (\<tau> src)) (globs (\<tau> (Inr gk))))"
   by (cases src)
      (simp_all add: transfer_tree_def dg_edge_tree_man_def rel_transfer_def
@@ -369,14 +369,14 @@ lemma traverse_rel_transfer [simp]:
         Let_def)
 
 lemma sides_rel_transfer [simp]:
-  "globs (sides_of_rhs (transfer_tree (rel_transfer f) src gk) \<tau> (Inr gk))
+  "globs (sides_of_rhs (transfer_tree (rel_transfer f) src (\<lambda>_. gk)) \<tau> (Inr gk))
      = fst (f (locals (\<tau> src)) (globs (\<tau> (Inr gk))))"
   by (cases src)
      (simp_all add: transfer_tree_def dg_edge_tree_man_def rel_transfer_def
         mk_dg_man_def dg_read_at_def dg_read_global_def dg_sideg_def sp_bind_assoc
         Let_def)
 
-definition rel_order_spec :: "('x,'k,relc,relc) dg_spec" where
+definition rel_order_spec :: "('x,'k,unit,relc,relc) dg_spec" where
   "rel_order_spec = default_local_dg_spec\<lparr>
      dgs_skip := rel_transfer dgs_skip_rel,
      dgs_assign := (\<lambda>x e. rel_transfer (dgs_assign_rel x e)),
@@ -526,14 +526,16 @@ lemma dg_spec_combine_transfer_rel_order_spec [simp]:
         rel_combine_transfer_def)
 
 lemma traverse_rel_combine [simp]:
-  "locals (traverse_rhs (combine_transfer_tree (rel_combine_transfer f) src_cc src_ex gk) \<tau>)
+  "locals (traverse_rhs
+             (combine_transfer_tree (rel_combine_transfer f) src_cc src_ex (\<lambda>_. gk)) \<tau>)
      = snd (f (locals (\<tau> src_cc)) (locals (\<tau> src_ex)) (globs (\<tau> (Inr gk))))"
   by (cases src_cc; cases src_ex)
      (simp_all add: combine_transfer_tree_def dg_combine_tree_man_def rel_combine_transfer_def
         mk_dg_man_def dg_read_at_def dg_read_global_def dg_sideg_def sp_bind_assoc Let_def)
 
 lemma sides_rel_combine [simp]:
-  "globs (sides_of_rhs (combine_transfer_tree (rel_combine_transfer f) src_cc src_ex gk)
+  "globs (sides_of_rhs
+            (combine_transfer_tree (rel_combine_transfer f) src_cc src_ex (\<lambda>_. gk))
             \<tau> (Inr gk))
      = fst (f (locals (\<tau> src_cc)) (locals (\<tau> src_ex)) (globs (\<tau> (Inr gk))))"
   by (cases src_cc; cases src_ex)
@@ -550,8 +552,10 @@ proof unfold_locales
 next
   fix a and \<tau> :: "'a + 'b \<Rightarrow> (relc, relc) dg_state" and src gk
   show "edge_collect a (gammaDG_rel (locals (\<tau> src)) (globs (\<tau> (Inr gk))))
-          \<subseteq> gammaDG_rel (locals (traverse_rhs (dg_spec_edge_tree rel_order_spec a src gk) \<tau>))
-              (globs (sides_of_rhs (dg_spec_edge_tree rel_order_spec a src gk) \<tau> (Inr gk)))"
+          \<subseteq> gammaDG_rel
+              (locals (traverse_rhs (dg_spec_edge_tree rel_order_spec a src (\<lambda>_. gk)) \<tau>))
+              (globs (sides_of_rhs (dg_spec_edge_tree rel_order_spec a src (\<lambda>_. gk))
+                        \<tau> (Inr gk)))"
     using step_sound_rel[of a "locals (\<tau> src)" "globs (\<tau> (Inr gk))"]
     by (simp add: dg_spec_edge_tree_def split: prod.splits)
 next
@@ -559,9 +563,10 @@ next
   show "s \<in> gammaDG_rel (locals (\<tau> src)) (globs (\<tau> (Inr gk))) \<Longrightarrow>
           call_enter is_global (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci)) s
             \<in> gammaDG_rel
-                (locals (traverse_rhs (transfer_tree (dgs_enter rel_order_spec ci) src gk) \<tau>))
-                (globs (sides_of_rhs (transfer_tree (dgs_enter rel_order_spec ci) src gk)
-                          \<tau> (Inr gk)))"
+                (locals (traverse_rhs
+                   (transfer_tree (dgs_enter rel_order_spec ci) src (\<lambda>_. gk)) \<tau>))
+                (globs (sides_of_rhs
+                   (transfer_tree (dgs_enter rel_order_spec ci) src (\<lambda>_. gk)) \<tau> (Inr gk)))"
     by (simp add: dgs_enter_rel_def)
 next
   fix s t and \<tau> :: "'a + 'b \<Rightarrow> (relc, relc) dg_state" and src_cc src_ex gk ci
@@ -570,9 +575,10 @@ next
           combine_collect is_global (ci_dst ci) s t
             \<in> gammaDG_rel
                 (locals (traverse_rhs
-                   (dg_spec_combine_tree rel_order_spec ci src_cc src_ex gk) \<tau>))
+                   (dg_spec_combine_tree rel_order_spec ci src_cc src_ex (\<lambda>_. gk)) \<tau>))
                 (globs (sides_of_rhs
-                   (dg_spec_combine_tree rel_order_spec ci src_cc src_ex gk) \<tau> (Inr gk)))"
+                   (dg_spec_combine_tree rel_order_spec ci src_cc src_ex (\<lambda>_. gk))
+                     \<tau> (Inr gk)))"
     by (simp add: dg_spec_combine_tree_def dg_spec_combine_transfer_rel_order_spec
         dgs_combine_env_rel_def)
 qed

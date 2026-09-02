@@ -29,7 +29,7 @@ locale call_string_routed_context =
     "routed_cmb_g S Global Seed (static_resolve (compile_prog Pi ps))"
     "routed_extra_g Seed Global"
     bot0 s0d s0g sigma vars x0 sg gammaM
-  for S :: "(pp \<times> cfg_node list, call_string_gk, 'D::bounded_semilattice_sup_bot,
+  for S :: "(pp \<times> cfg_node list, call_string_gk, unit, 'D::bounded_semilattice_sup_bot,
               'G::bounded_semilattice_sup_bot) dg_spec"
     and gammaDG :: "'D \<Rightarrow> 'G \<Rightarrow> store set"
     and gs :: "vname \<Rightarrow> bool"

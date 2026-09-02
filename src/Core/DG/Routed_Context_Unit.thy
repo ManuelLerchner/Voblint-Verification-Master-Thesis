@@ -83,7 +83,7 @@ locale unit_routed_context =
   dg_ctx_activation_base S gammaDG gs g gk0 route_unit
     "routed_cmb_g S gk0 seed_key (static_resolve g)" "routed_extra_g seed_key gk0"
     bot0 s0d s0g sigma vars x0 sg gammaM
-  for S :: "(pp \<times> unit, 'k, 'D::bounded_semilattice_sup_bot,
+  for S :: "(pp \<times> unit, 'k, unit, 'D::bounded_semilattice_sup_bot,
               'G::bounded_semilattice_sup_bot) dg_spec"
     and gammaDG :: "'D \<Rightarrow> 'G \<Rightarrow> store set"
     and gs :: "vname \<Rightarrow> bool"

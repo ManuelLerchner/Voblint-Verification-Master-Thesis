@@ -108,7 +108,7 @@ text \<open>
 abbreviation intra_st :: "'c \<Rightarrow> pp \<times> 'c + 'k \<Rightarrow> edge_action
    \<Rightarrow> (pp \<times> 'c, 'k, ('a exec_dg_st lifted, 'a exec_dg_st lifted) dg_state) strategy_tree"
 where
-  "intra_st ctx' src a \<equiv> dg_spec_edge_tree spec_st a src gk0"
+  "intra_st ctx' src a \<equiv> dg_spec_edge_tree spec_st a src (\<lambda>_. gk0)"
 
 abbreviation cmb_st :: "cfg \<Rightarrow> (pp \<Rightarrow> 'c \<Rightarrow> 'a exec_dg_st lifted \<Rightarrow> call_action \<Rightarrow> 'c)
    \<Rightarrow> 'c \<Rightarrow> call_action \<Rightarrow> pp \<Rightarrow> pp

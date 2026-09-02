@@ -111,7 +111,7 @@ text \<open>The same Base-style pair the context-insensitive and entry-state-key
 
 definition nest_S_st ::
   "(pp \<times> cfg_node list, call_string_gk,
-     ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_spec" where
+     unit, ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_spec" where
   "nest_S_st = base_dg_spec_st_for_lifted nest_gs nest_empty_pred
                  (ivl_tf_st_for nest_gs) (ivl_enter_st_for nest_gs)"
 
@@ -146,7 +146,7 @@ definition nest_1_eqs ::
      (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state) eqsT" where
   "nest_1_eqs =
      side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. Global) (cs_route 1)
-      (\<lambda>ctx' src a. dg_spec_edge_tree nest_S_st a src Global)
+      (\<lambda>ctx' src a. dg_spec_edge_tree nest_S_st a src (\<lambda>_. Global))
       (routed_cmb_g nest_S_st Global Seed (static_resolve nest_cfg))
       (routed_extra_g Seed Global)
        nest_cfg Bot (Lifted cinit_ivl_st) Bot"
@@ -472,7 +472,7 @@ definition nestg_1_eqs ::
      side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. Global) (cs_route 1)
       (\<lambda>ctx' src a. dg_spec_edge_tree
          (base_dg_spec_st_for_lifted nestg_gs nestg_empty_pred
-            (ivl_tf_st_for nestg_gs) (ivl_enter_st_for nestg_gs)) a src Global)
+            (ivl_tf_st_for nestg_gs) (ivl_enter_st_for nestg_gs)) a src (\<lambda>_. Global))
       (routed_cmb_g (base_dg_spec_st_for_lifted nestg_gs nestg_empty_pred
                        (ivl_tf_st_for nestg_gs) (ivl_enter_st_for nestg_gs)) Global Seed
          (static_resolve nestg_cfg))

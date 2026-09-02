@@ -57,7 +57,7 @@ text \<open>
   \<^const>\<open>is_empty_state\<close> (\<open>resolved_st_q_is_bot_for_iff\<close>).\<close>
 definition ectx_spec ::
   "(vname \<Rightarrow> bool) \<Rightarrow> (ivl exec_dg_st \<Rightarrow> bool)
-   \<Rightarrow> ('x, 'k, ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_spec"
+   \<Rightarrow> ('x, 'k, unit, ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_spec"
 where
   "ectx_spec gs empty_pred =
      base_dg_spec_st_for_lifted gs empty_pred (ivl_tf_st_for gs) (ivl_enter_st_for gs)"
@@ -241,7 +241,7 @@ definition entry_state_eqs ::
   "entry_state_eqs gs empty_pred Pi ps =
      side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_addr_list (\<lambda>_. Global)
        (entry_state_route_gen gs empty_pred)
-       (\<lambda>ctx' src a. dg_spec_edge_tree (ectx_spec gs empty_pred) a src Global)
+       (\<lambda>ctx' src a. dg_spec_edge_tree (ectx_spec gs empty_pred) a src (\<lambda>_. Global))
        (routed_cmb_g (ectx_spec gs empty_pred) Global Seed
           (static_resolve (compile_prog Pi ps)))
        (routed_extra_g Seed Global)
@@ -322,7 +322,7 @@ text \<open>
 
 
 definition ectx_abs_spec ::
-    "(vname \<Rightarrow> bool) \<Rightarrow> ('x, 'k, ivl abs_state lifted, ivl abs_state lifted) dg_spec" where
+    "(vname \<Rightarrow> bool) \<Rightarrow> ('x, 'k, unit, ivl abs_state lifted, ivl abs_state lifted) dg_spec" where
   "ectx_abs_spec gs = base_dg_spec_for_lifted gs is_empty_state (ivl_tf_for gs)"
 
 definition entered_state_abs ::
@@ -547,7 +547,7 @@ theorem entry_state_pp_routed:
   "part_post_solution
      (side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. Global)
         (entry_state_route_gen gs empty_pred)
-        (\<lambda>ctx' src a. dg_spec_edge_tree (ectx_spec gs empty_pred) a src Global)
+        (\<lambda>ctx' src a. dg_spec_edge_tree (ectx_spec gs empty_pred) a src (\<lambda>_. Global))
         (routed_cmb_g (ectx_spec gs empty_pred) Global Seed (static_resolve (compile_prog Pi ps)))
         (routed_extra_g Seed Global)
         (compile_prog Pi ps) Bot (Lifted cinit_ivl_st) Bot)

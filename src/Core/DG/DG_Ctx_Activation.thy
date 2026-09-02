@@ -25,7 +25,7 @@ text \<open>
 \<close>
 
 locale dg_ctx_activation_base = sound_dg_spec S gammaDG gs
-  for S :: "(pp \<times> 'c, 'k, 'D::bounded_semilattice_sup_bot,
+  for S :: "(pp \<times> 'c, 'k, unit, 'D::bounded_semilattice_sup_bot,
               'G::bounded_semilattice_sup_bot) dg_spec"
     and gammaDG :: "'D \<Rightarrow> 'G \<Rightarrow> store set"
     and gs :: "vname \<Rightarrow> bool" +
@@ -44,7 +44,7 @@ locale dg_ctx_activation_base = sound_dg_spec S gammaDG gs
   assumes finE[intro]: "finite (intra g)"
     and pp: "part_post_solution
                (side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. gk0)
-                  route (\<lambda>c src a. dg_spec_edge_tree S a src gk0) cmb extra g bot0 s0d s0g)
+                  route (\<lambda>c src a. dg_spec_edge_tree S a src (\<lambda>_. gk0)) cmb extra g bot0 s0d s0g)
                x0 sigma vars"
     and sg_cov[simp]: "\<And>v c. (v, c) \<in> vars
         \<Longrightarrow> gammaM (sg (Inl (v, c))) =
@@ -58,7 +58,7 @@ begin
 
 abbreviation Gen :: "(pp \<times> 'c, 'k, ('D, 'G) dg_state) eqsT" where
   "Gen \<equiv> side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. gk0)
-           route (\<lambda>c src a. dg_spec_edge_tree S a src gk0) cmb extra g bot0 s0d s0g"
+           route (\<lambda>c src a. dg_spec_edge_tree S a src (\<lambda>_. gk0)) cmb extra g bot0 s0d s0g"
 
 abbreviation acc0 :: "pp \<Rightarrow> 'D" where
   "acc0 v \<equiv> (if v = cfg_entry g then bot0 \<squnion> s0d else bot0)"
@@ -66,7 +66,7 @@ abbreviation acc0 :: "pp \<Rightarrow> 'D" where
 abbreviation trees :: "pp \<Rightarrow> 'c
     \<Rightarrow> (pp \<times> 'c, 'k, ('D, 'G) dg_state) strategy_tree list" where
   "trees v ctx \<equiv>
-     map (\<lambda>(src, a). dg_spec_edge_tree S a src gk0) (intra_predecessor_addr_list g v ctx)
+     map (\<lambda>(src, a). dg_spec_edge_tree S a src (\<lambda>_. gk0)) (intra_predecessor_addr_list g v ctx)
      @ map (\<lambda>(cc, ca). cmb route ctx ca cc v) (call_site_list g v)
      @ extra route ctx v"
 
@@ -113,10 +113,10 @@ subsection \<open>EDGE: the routed intra bounds and the guarded transport\<close
 lemma edge_bound_local:
   assumes cov_v: "(v, ctx) \<in> vars"
     and e: "(u, a, v) \<in> intra g"
-  shows "locals (traverse_rhs (dg_spec_edge_tree S a (Inl (u, ctx)) gk0) sigma)
+  shows "locals (traverse_rhs (dg_spec_edge_tree S a (Inl (u, ctx)) (\<lambda>_. gk0)) sigma)
            \<le> locals (sigma (Inl (v, ctx)))"
 proof -
-  let ?t = "dg_spec_edge_tree S a (Inl (u, ctx)) gk0"
+  let ?t = "dg_spec_edge_tree S a (Inl (u, ctx)) (\<lambda>_. gk0)"
   have pred: "(Inl (u, ctx), a) \<in> set (intra_predecessor_addr_list g v ctx)"
     using e by (force simp: intra_predecessor_addr_list_def
         set_intra_predecessor_list[OF finE] intra_predecessors_def)
@@ -133,10 +133,10 @@ qed
 lemma edge_bound_global:
   assumes cov_v: "(v, ctx) \<in> vars"
     and e: "(u, a, v) \<in> intra g"
-  shows "globs (sides_of_rhs (dg_spec_edge_tree S a (Inl (u, ctx)) gk0) sigma (Inr gk0))
+  shows "globs (sides_of_rhs (dg_spec_edge_tree S a (Inl (u, ctx)) (\<lambda>_. gk0)) sigma (Inr gk0))
            \<le> globs (sigma (Inr gk0))"
 proof -
-  let ?t = "dg_spec_edge_tree S a (Inl (u, ctx)) gk0"
+  let ?t = "dg_spec_edge_tree S a (Inl (u, ctx)) (\<lambda>_. gk0)"
   have pred: "(Inl (u, ctx), a) \<in> set (intra_predecessor_addr_list g v ctx)"
     using e by (force simp: intra_predecessor_addr_list_def
         set_intra_predecessor_list[OF finE] intra_predecessors_def)
@@ -174,8 +174,8 @@ next
   moreover have "s' \<in> edge_collect a {s}" using st by (simp add: edge_collect_single)
   ultimately have "s' \<in> edge_collect a (gammaDG ?d ?g)" by blast
   hence "s' \<in> gammaDG
-      (locals (traverse_rhs (dg_spec_edge_tree S a (Inl (u, ctx)) gk0) sigma))
-      (globs (sides_of_rhs (dg_spec_edge_tree S a (Inl (u, ctx)) gk0) sigma (Inr gk0)))"
+      (locals (traverse_rhs (dg_spec_edge_tree S a (Inl (u, ctx)) (\<lambda>_. gk0)) sigma))
+      (globs (sides_of_rhs (dg_spec_edge_tree S a (Inl (u, ctx)) (\<lambda>_. gk0)) sigma (Inr gk0)))"
     using step_sound[of a sigma "Inl (u, ctx)" gk0] by blast
   also have "\<dots> \<subseteq> gammaDG (locals (sigma (Inl (v, ctx)))) (globs (sigma (Inr gk0)))"
     by (rule gammaDG_mono[OF edge_bound_local[OF cov_v e] edge_bound_global[OF cov_v e]])
@@ -194,11 +194,11 @@ lemma dg_ctx_act_comb_covered:
     and t: "t \<in> gammaM (sg (Inl (ex, c2)))"
     and bound_local:
       "locals (traverse_rhs
-                 (dg_spec_combine_tree S ci (Inl (cl, c1)) (Inl (ex, c2)) gk0) sigma)
+                 (dg_spec_combine_tree S ci (Inl (cl, c1)) (Inl (ex, c2)) (\<lambda>_. gk0)) sigma)
        \<le> locals (sigma (Inl (v, cv)))"
     and bound_global:
       "globs (sides_of_rhs
-                (dg_spec_combine_tree S ci (Inl (cl, c1)) (Inl (ex, c2)) gk0) sigma
+                (dg_spec_combine_tree S ci (Inl (cl, c1)) (Inl (ex, c2)) (\<lambda>_. gk0)) sigma
                 (Inr gk0))
        \<le> globs (sigma (Inr gk0))"
   shows "combine_collect gs (ci_dst ci) s t \<in> gammaM (sg (Inl (v, cv)))"
@@ -213,9 +213,9 @@ proof -
   have "combine_collect gs (ci_dst ci) s t
         \<in> gammaDG
             (locals (traverse_rhs
-               (dg_spec_combine_tree S ci (Inl (cl, c1)) (Inl (ex, c2)) gk0) sigma))
+               (dg_spec_combine_tree S ci (Inl (cl, c1)) (Inl (ex, c2)) (\<lambda>_. gk0)) sigma))
             (globs (sides_of_rhs
-               (dg_spec_combine_tree S ci (Inl (cl, c1)) (Inl (ex, c2)) gk0) sigma
+               (dg_spec_combine_tree S ci (Inl (cl, c1)) (Inl (ex, c2)) (\<lambda>_. gk0)) sigma
                (Inr gk0)))"
     using combine_sound[where \<tau> = sigma and src_cc = "Inl (cl, c1)"
         and src_ex = "Inl (ex, c2)" and gk = gk0 and ci = ci, OF sin tin] .

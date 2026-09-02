@@ -18,8 +18,19 @@ text \<open>
   pure-transfer inclusions an existing domain already proves.
 \<close>
 
+text \<open>
+  This locale is stated for a \<^emph>\<open>single\<close> global: \<open>gammaDG\<close> takes one \<open>'G\<close>, read at
+  the one slot \<open>Inr gk\<close>, so a specification publishing at two distinct global
+  names would have contributions this concretization never sees. The global-name
+  type is therefore pinned at \<^typ>\<open>unit\<close> here and the manager is built from the
+  constant embedding, rather than stating an obligation over a namespace the
+  conclusion cannot account for. Every analysis in this tree has one global, so
+  nothing is lost today; a second global needs \<open>gammaDG\<close> over a global
+  \<^emph>\<open>environment\<close> first, and that is what would generalize this locale.
+\<close>
+
 locale sound_dg_spec =
-  fixes S :: "('x,'k,'D::bounded_semilattice_sup_bot,
+  fixes S :: "('x,'k,unit,'D::bounded_semilattice_sup_bot,
                 'G::bounded_semilattice_sup_bot) dg_spec"
     and gammaDG :: "'D \<Rightarrow> 'G \<Rightarrow> store set"
     and gs :: "vname \<Rightarrow> bool"
@@ -27,19 +38,21 @@ locale sound_dg_spec =
       "\<lbrakk>d \<le> d'; g \<le> g'\<rbrakk> \<Longrightarrow> gammaDG d g \<subseteq> gammaDG d' g'"
     and step_sound:
       "edge_collect a (gammaDG (locals (\<tau> src)) (globs (\<tau> (Inr gk))))
-         \<subseteq> gammaDG (locals (traverse_rhs (dg_spec_edge_tree S a src gk) \<tau>))
-                   (globs (sides_of_rhs (dg_spec_edge_tree S a src gk) \<tau> (Inr gk)))"
+         \<subseteq> gammaDG (locals (traverse_rhs (dg_spec_edge_tree S a src (\<lambda>_. gk)) \<tau>))
+                   (globs (sides_of_rhs (dg_spec_edge_tree S a src (\<lambda>_. gk)) \<tau> (Inr gk)))"
     and enter_sound:
       "s \<in> gammaDG (locals (\<tau> src)) (globs (\<tau> (Inr gk))) \<Longrightarrow>
          call_enter gs (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci)) s
-           \<in> gammaDG (locals (traverse_rhs (transfer_tree (dgs_enter S ci) src gk) \<tau>))
-                     (globs (sides_of_rhs (transfer_tree (dgs_enter S ci) src gk) \<tau> (Inr gk)))"
+           \<in> gammaDG (locals (traverse_rhs (transfer_tree (dgs_enter S ci) src (\<lambda>_. gk)) \<tau>))
+                     (globs (sides_of_rhs (transfer_tree (dgs_enter S ci) src (\<lambda>_. gk))
+                                           \<tau> (Inr gk)))"
     and combine_sound:
       "\<lbrakk>s \<in> gammaDG (locals (\<tau> src_cc)) (globs (\<tau> (Inr gk)));
         t \<in> gammaDG (locals (\<tau> src_ex)) (globs (\<tau> (Inr gk)))\<rbrakk> \<Longrightarrow>
         combine_collect gs (ci_dst ci) s t
-          \<in> gammaDG (locals (traverse_rhs (dg_spec_combine_tree S ci src_cc src_ex gk) \<tau>))
-                    (globs (sides_of_rhs (dg_spec_combine_tree S ci src_cc src_ex gk)
+          \<in> gammaDG (locals (traverse_rhs
+                (dg_spec_combine_tree S ci src_cc src_ex (\<lambda>_. gk)) \<tau>))
+                    (globs (sides_of_rhs (dg_spec_combine_tree S ci src_cc src_ex (\<lambda>_. gk))
                                           \<tau> (Inr gk)))"
 
 section \<open>The collapsed obligations of a local-only specification\<close>

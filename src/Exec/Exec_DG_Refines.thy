@@ -119,7 +119,7 @@ text \<open>
 
 definition unit_transfer_st ::
   "('a::bounded_semilattice_sup_bot exec_dg_st \<Rightarrow> 'a exec_dg_st)
-   \<Rightarrow> ('x,'k,'a exec_dg_st,'a exec_dg_st) man_transfer"
+   \<Rightarrow> ('x,'k,unit,'a exec_dg_st,'a exec_dg_st) man_transfer"
 where
   "unit_transfer_st =
      unit_transfer_gen combine_resolved_st_q restrict_global_resolved_q restrict_local_resolved_q"
@@ -132,7 +132,7 @@ text \<open>
 
 definition unit_combine_transfer_st ::
   "(vname \<Rightarrow> bool) \<Rightarrow> call_info
-   \<Rightarrow> ('x,'k,'a::bounded_semilattice_sup_bot exec_dg_st,'a exec_dg_st) man_combine_transfer"
+   \<Rightarrow> ('x,'k,unit,'a::bounded_semilattice_sup_bot exec_dg_st,'a exec_dg_st) man_combine_transfer"
 where
   "unit_combine_transfer_st gs ci =
      unit_combine_transfer_gen combine_resolved_st_q restrict_global_resolved_q
@@ -144,7 +144,7 @@ definition unit_dg_spec_st_for ::
   "(vname \<Rightarrow> bool)
    \<Rightarrow> (edge_action \<Rightarrow> 'a::bounded_semilattice_sup_bot exec_dg_st \<Rightarrow> 'a exec_dg_st)
    \<Rightarrow> (call_info \<Rightarrow> 'a exec_dg_st \<Rightarrow> 'a exec_dg_st)
-   \<Rightarrow> ('x,'k,'a exec_dg_st,'a exec_dg_st) dg_spec"
+   \<Rightarrow> ('x,'k,unit,'a exec_dg_st,'a exec_dg_st) dg_spec"
 where
   "unit_dg_spec_st_for gs tf_st enter_st = default_local_dg_spec\<lparr>
      dgs_skip := unit_transfer_st (tf_st EA_Nop),

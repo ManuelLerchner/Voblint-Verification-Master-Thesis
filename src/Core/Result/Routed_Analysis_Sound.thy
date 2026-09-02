@@ -80,7 +80,7 @@ locale routed_analysis_sound =
   dg_analysis_adapter S gammaDG gs g gk0 route bot0 s0d s0g sigma vars x0
     "solved_local_reader vars sigma" seed_key "\<lambda>d. gamma_state_lift (rd d)"
     enterc rd classify
-  for S :: "(pp \<times> 'c, 'k, 'D::bounded_semilattice_sup_bot,
+  for S :: "(pp \<times> 'c, 'k, unit, 'D::bounded_semilattice_sup_bot,
               'G::bounded_semilattice_sup_bot) dg_spec"
     and gammaDG :: "'D \<Rightarrow> 'G \<Rightarrow> store set"
     and gs :: "vname \<Rightarrow> bool"

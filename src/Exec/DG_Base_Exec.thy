@@ -26,7 +26,7 @@ definition base_dg_spec_st_for_lifted ::
    \<Rightarrow> ('a::bounded_semilattice_sup_bot exec_dg_st \<Rightarrow> bool)
    \<Rightarrow> (edge_action \<Rightarrow> 'a exec_dg_st \<Rightarrow> 'a exec_dg_st)
    \<Rightarrow> (call_info \<Rightarrow> 'a exec_dg_st \<Rightarrow> 'a exec_dg_st)
-   \<Rightarrow> ('x,'k,'a exec_dg_st lifted,'g::bounded_semilattice_sup_bot) dg_spec"
+   \<Rightarrow> ('x,'k,unit,'a exec_dg_st lifted,'g::bounded_semilattice_sup_bot) dg_spec"
 where
   "base_dg_spec_st_for_lifted gs empty_pred tf_st enter_st = local_dg_spec
      (transfer_lift empty_pred (tf_st EA_Nop))
@@ -231,34 +231,34 @@ text \<open>
   \<^const>\<open>dg_spec_combine_transfer\<close> already runs it inside the combine sub-tree.
 \<close>
 
-abbreviation spec_st :: "('x,'k,'a exec_dg_st lifted,'a exec_dg_st lifted) dg_spec" where
+abbreviation spec_st :: "('x,'k,unit,'a exec_dg_st lifted,'a exec_dg_st lifted) dg_spec" where
   "spec_st \<equiv> base_dg_spec_st_for_lifted gs empty_pred tf_st enter_st"
 
-abbreviation spec_abs :: "('x,'k,'a abs_state lifted,'a abs_state lifted) dg_spec" where
+abbreviation spec_abs :: "('x,'k,unit,'a abs_state lifted,'a abs_state lifted) dg_spec" where
   "spec_abs \<equiv> base_dg_spec_for_lifted gs is_empty_state tf"
 
 lemma Hstep_lifted_for:
   "dg_reader_commute_gen.dg_tree_st_commute reader reader \<sigma>_st
-     (sp_run_with (\<lambda>x. DG x bot) (dg_spec_step spec_st a (mk_dg_man d gk)))
-     (sp_run_with (\<lambda>x. DG x bot) (dg_spec_step spec_abs a (mk_dg_man (reader d) gk)))"
+     (sp_run_with (\<lambda>x. DG x bot) (dg_spec_step spec_st a (mk_dg_man d (\<lambda>_. gk))))
+     (sp_run_with (\<lambda>x. DG x bot) (dg_spec_step spec_abs a (mk_dg_man (reader d) (\<lambda>_. gk))))"
   unfolding dg_spec_step_base_st_for_lifted dg_spec_step_base_for_lifted
-  by (metis dg_reader_commute_gen.dg_tree_st_commute_local_transfer dg_reader_commute_gen_lifted_for
-      step_lift_commute)
+  using dg_reader_commute_gen.dg_tree_st_commute_local_transfer dg_reader_commute_gen_lifted_for
+    step_lift_commute by fastforce
 
 lemma Henter_lifted_for:
   "dg_reader_commute_gen.dg_tree_st_commute reader reader \<sigma>_st
-     (sp_run_with (\<lambda>x. DG x bot) (dgs_enter spec_st ci (mk_dg_man d gk)))
-     (sp_run_with (\<lambda>x. DG x bot) (dgs_enter spec_abs ci (mk_dg_man (reader d) gk)))"
+     (sp_run_with (\<lambda>x. DG x bot) (dgs_enter spec_st ci (mk_dg_man d (\<lambda>_. gk))))
+     (sp_run_with (\<lambda>x. DG x bot) (dgs_enter spec_abs ci (mk_dg_man (reader d) (\<lambda>_. gk))))"
   unfolding dgs_enter_base_st_for_lifted dgs_enter_base_for_lifted
-  by (metis dg_reader_commute_gen.dg_tree_st_commute_local_transfer dg_reader_commute_gen_lifted_for
-      enter_lift_commute)
+  using dg_reader_commute_gen.dg_tree_st_commute_local_transfer dg_reader_commute_gen_lifted_for
+    enter_lift_commute by fastforce
 
 lemma Hcomb_lifted_for:
   "dg_reader_commute_gen.dg_tree_st_commute reader reader \<sigma>_st
      (sp_run_with (\<lambda>x. DG x bot)
-        (dg_spec_combine_transfer spec_st ci (mk_dg_man d gk) de))
+        (dg_spec_combine_transfer spec_st ci (mk_dg_man d (\<lambda>_. gk)) de))
      (sp_run_with (\<lambda>x. DG x bot)
-        (dg_spec_combine_transfer spec_abs ci (mk_dg_man (reader d) gk) (reader de)))"
+        (dg_spec_combine_transfer spec_abs ci (mk_dg_man (reader d) (\<lambda>_. gk)) (reader de)))"
   unfolding dg_spec_combine_transfer_base_st_for_lifted
     dg_spec_combine_transfer_base_for_lifted
   by (rule dg_reader_commute_gen.dg_tree_st_commute_local_combine_transfer

@@ -7,11 +7,21 @@ section \<open>A manager capability interface for the D/G packed carrier\<close>
 text \<open>
   \<open>man\<close> bundles what Goblint's own manager record bundles: \<open>man_local\<close> is the
   current local value, \<open>man_global\<close>/\<open>man_sideg\<close> are \<^emph>\<open>capabilities\<close> a
-  transfer runs to read or publish the current routed global state, without
-  naming which solver key that state lives at. Every \<open>Spec\<close> transfer takes a
-  manager, including ones whose global component is trivial -- Goblint's
-  default \<open>Spec\<close> sets \<open>G = Lattice.Unit\<close>, \<open>V = EmptyV\<close>, and its transfers
-  still take the manager and mostly return \<open>man.local\<close>.
+  transfer runs to read or publish shared state, without naming which solver
+  key that state lives at. Every \<open>Spec\<close> transfer takes a manager, including
+  ones whose global component is trivial -- Goblint's default \<open>Spec\<close> sets
+  \<open>G = Lattice.Unit\<close>, \<open>V = EmptyV\<close>, and its transfers still take the manager
+  and mostly return \<open>man.local\<close>.
+
+  Both capabilities take a \<^emph>\<open>global name\<close> of the analysis's own type \<open>'v\<close>,
+  Goblint's \<open>V\<close>: an analysis says \<open>man_global m v\<close>, naming which of its
+  globals it means, and never builds a solver key. Which key that name lives
+  at is the manager's business --- \<open>mk_dg_man\<close> takes the embedding \<open>'v \<Rightarrow> 'k\<close>
+  and closes it into both fields. An analysis with a single global instantiates
+  \<open>'v = unit\<close> and writes \<open>man_global m ()\<close>. The separation matters because the
+  key type also carries the routed seed slots, which belong to the generator,
+  not to any analysis: \<open>'v\<close> is exactly the part of the key space an analysis
+  may address.
 
   A Base-style specification ignores the global channel entirely: it calls
   neither capability, so its compiled equations carry no \<open>QueryG\<close> and no
@@ -20,17 +30,17 @@ text \<open>
   therefore shows up in its compiled trees, not in this interface.
 
   \<open>mk_dg_man\<close> is the one place that interprets those capabilities against the
-  packed \<open>('dl,'dg) dg_state\<close> carrier, closing the routed key \<open>gk\<close> into both
+  packed \<open>('dl,'dg) dg_state\<close> carrier, closing the embedding \<open>key\<close> into both
   effectful fields; a transfer written against \<open>man\<close>'s fields never sees the
   packed carrier or a key.
 \<close>
 
 subsection \<open>The manager record\<close>
 
-record ('x,'k,'dl,'dg) man =
+record ('x,'k,'v,'dl,'dg) man =
   man_local :: 'dl
-  man_global :: "('x,'k,('dl,'dg) dg_state,'dg) strategy_program"
-  man_sideg :: "'dg \<Rightarrow> ('x,'k,('dl,'dg) dg_state,unit) strategy_program"
+  man_global :: "'v \<Rightarrow> ('x,'k,('dl,'dg) dg_state,'dg) strategy_program"
+  man_sideg :: "'v \<Rightarrow> 'dg \<Rightarrow> ('x,'k,('dl,'dg) dg_state,unit) strategy_program"
 
 subsection \<open>Packed-carrier primitives\<close>
 
@@ -65,11 +75,14 @@ text \<open>
   change to any transfer.
 \<close>
 
-definition mk_dg_man :: "'dl::bot \<Rightarrow> 'k \<Rightarrow> ('x,'k,'dl,'dg) man" where
-  "mk_dg_man d gk = \<lparr> man_local = d, man_global = dg_read_global gk, man_sideg = dg_sideg gk \<rparr>"
+definition mk_dg_man :: "'dl::bot \<Rightarrow> ('v \<Rightarrow> 'k) \<Rightarrow> ('x,'k,'v,'dl,'dg) man" where
+  "mk_dg_man d key =
+     \<lparr> man_local = d,
+       man_global = (\<lambda>v. dg_read_global (key v)),
+       man_sideg = (\<lambda>v. dg_sideg (key v)) \<rparr>"
 
-type_synonym ('x,'k,'dl,'dg) man_transfer =
-  "('x,'k,'dl,'dg) man \<Rightarrow> ('x,'k,('dl,'dg) dg_state,'dl) strategy_program"
+type_synonym ('x,'k,'v,'dl,'dg) man_transfer =
+  "('x,'k,'v,'dl,'dg) man \<Rightarrow> ('x,'k,('dl,'dg) dg_state,'dl) strategy_program"
 
 text \<open>
   A combine-shaped transfer takes the same manager plus the callee-exit
@@ -77,8 +90,8 @@ text \<open>
   \<open>combine_env\<close>/\<open>combine_assign\<close> take the same \<open>man\<close> plus a \<open>D.t\<close>.
 \<close>
 
-type_synonym ('x,'k,'dl,'dg) man_combine_transfer =
-  "('x,'k,'dl,'dg) man \<Rightarrow> 'dl \<Rightarrow> ('x,'k,('dl,'dg) dg_state,'dl) strategy_program"
+type_synonym ('x,'k,'v,'dl,'dg) man_combine_transfer =
+  "('x,'k,'v,'dl,'dg) man \<Rightarrow> 'dl \<Rightarrow> ('x,'k,('dl,'dg) dg_state,'dl) strategy_program"
 
 text \<open>
   \<open>man_with_local\<close> is the same environment with a different current local
@@ -88,7 +101,7 @@ text \<open>
   out of the program and re-wrapping it.
 \<close>
 
-definition man_with_local :: "('x,'k,'dl,'dg) man \<Rightarrow> 'dl \<Rightarrow> ('x,'k,'dl,'dg) man" where
+definition man_with_local :: "('x,'k,'v,'dl,'dg) man \<Rightarrow> 'dl \<Rightarrow> ('x,'k,'v,'dl,'dg) man" where
   "man_with_local m d = m\<lparr>man_local := d\<rparr>"
 
 lemma man_with_local_simps [simp]:
@@ -112,24 +125,25 @@ text \<open>
 \<close>
 
 definition dg_edge_tree_man ::
-  "('x,'k,'dl,'dg) man_transfer \<Rightarrow> 'x + 'k \<Rightarrow> 'k
+  "('x,'k,'v,'dl,'dg) man_transfer \<Rightarrow> 'x + 'k \<Rightarrow> ('v \<Rightarrow> 'k)
    \<Rightarrow> ('x,'k,('dl::bot,'dg) dg_state,'dl) strategy_program"
 where
-  "dg_edge_tree_man transfer src gk =
+  "dg_edge_tree_man transfer src key =
      do {
        d \<leftarrow> dg_read_at src;
-       transfer (mk_dg_man d gk)
+       transfer (mk_dg_man d key)
      }"
 
 definition dg_combine_tree_man ::
-  "('x,'k,'dl,'dg) man_combine_transfer
-   \<Rightarrow> 'x + 'k \<Rightarrow> 'x + 'k \<Rightarrow> 'k \<Rightarrow> ('x,'k,('dl::bot,'dg) dg_state,'dl) strategy_program"
+  "('x,'k,'v,'dl,'dg) man_combine_transfer
+   \<Rightarrow> 'x + 'k \<Rightarrow> 'x + 'k \<Rightarrow> ('v \<Rightarrow> 'k)
+   \<Rightarrow> ('x,'k,('dl::bot,'dg) dg_state,'dl) strategy_program"
 where
-  "dg_combine_tree_man transfer src_cc src_ex gk =
+  "dg_combine_tree_man transfer src_cc src_ex key =
      do {
        dc \<leftarrow> dg_read_at src_cc;
        de \<leftarrow> dg_read_at src_ex;
-       transfer (mk_dg_man dc gk) de
+       transfer (mk_dg_man dc key) de
      }"
 
 end

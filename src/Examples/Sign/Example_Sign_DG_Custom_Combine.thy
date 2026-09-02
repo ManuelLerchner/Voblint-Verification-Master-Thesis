@@ -13,7 +13,7 @@ begin
 section \<open>An analysis-supplied return combine on the D/G spine\<close>
 
 text \<open>
-  The call-return environment merge is a field of \<^typ>\<open>('x, 'k, 'dl, 'dg) dg_spec\<close>,
+  The call-return environment merge is a field of \<^typ>\<open>('x, 'k, 'v, 'dl, 'dg) dg_spec\<close>,
   not a formula built into the equation generator or the solver:
   \<^const>\<open>dgs_combine_env\<close> is what \<^const>\<open>dgs_combine\<close> consults before handing the
   merged environment to \<^const>\<open>dgs_combine_assign\<close>.  This theory witnesses that
@@ -41,7 +41,7 @@ text \<open>
 \<close>
 
 definition sign_combine_env_callee_join ::
-  "('x,'k,'a::bounded_semilattice_sup_bot exec_dg_st,'a exec_dg_st) man_combine_transfer"
+  "('x,'k,unit,'a::bounded_semilattice_sup_bot exec_dg_st,'a exec_dg_st) man_combine_transfer"
 where
   "sign_combine_env_callee_join =
      local_combine_transfer (\<lambda>dc de. dc \<squnion> restrict_local_resolved_q de)"
@@ -53,7 +53,7 @@ definition sign_dg_spec_callee_join ::
   "(vname \<Rightarrow> bool)
    \<Rightarrow> (edge_action \<Rightarrow> sign exec_dg_st \<Rightarrow> sign exec_dg_st)
    \<Rightarrow> (call_info \<Rightarrow> sign exec_dg_st \<Rightarrow> sign exec_dg_st)
-   \<Rightarrow> ('x, 'k, sign exec_dg_st, sign exec_dg_st) dg_spec" where
+   \<Rightarrow> ('x, 'k, unit, sign exec_dg_st, sign exec_dg_st) dg_spec" where
   "sign_dg_spec_callee_join gs tf_st enter_st =
      (unit_dg_spec_st_for gs tf_st enter_st)
        \<lparr> dgs_combine_env := (\<lambda>ci. sign_combine_env_callee_join) \<rparr>"
@@ -149,13 +149,13 @@ text \<open>
 
 definition combine_env_callee_join_abs ::
   "(vname \<Rightarrow> bool)
-   \<Rightarrow> ('x,'k,'a::bounded_semilattice_sup_bot abs_state,'a abs_state) man_combine_transfer"
+   \<Rightarrow> ('x,'k,unit,'a::bounded_semilattice_sup_bot abs_state,'a abs_state) man_combine_transfer"
 where
   "combine_env_callee_join_abs gs =
      local_combine_transfer (\<lambda>dc de. dc \<squnion> restrict_local_for gs de)"
 
 definition sign_dg_spec_env_join ::
-  "(vname \<Rightarrow> bool) \<Rightarrow> ('x,'k,sign abs_state, sign abs_state) dg_spec" where
+  "(vname \<Rightarrow> bool) \<Rightarrow> ('x,'k,unit,sign abs_state, sign abs_state) dg_spec" where
   "sign_dg_spec_env_join gs =
      (unit_dg_spec_for gs (sign_tf_for gs))
        \<lparr> dgs_combine_env := (\<lambda>ci. combine_env_callee_join_abs gs) \<rparr>"
@@ -217,7 +217,7 @@ text \<open>The override's own tree observations. The generic reduction rules do
 
 lemma traverse_combine_env_join:
   "locals (traverse_rhs (dg_spec_combine_tree
-       (sign_dg_spec_env_join gs) ci src_cc src_ex gk) \<tau>)
+       (sign_dg_spec_env_join gs) ci src_cc src_ex (\<lambda>_. gk)) \<tau>)
      = restrict_local_for gs
          (combine_assign (ci_dst ci) (locals (\<tau> src_ex) ret_var)
             (combine_env gs (locals (\<tau> src_cc) \<squnion> restrict_local_for gs (locals (\<tau> src_ex)))
@@ -232,7 +232,7 @@ lemma traverse_combine_env_join:
 
 lemma sides_combine_env_join:
   "globs (sides_of_rhs (dg_spec_combine_tree
-       (sign_dg_spec_env_join gs) ci src_cc src_ex gk) \<tau> (Inr gk))
+       (sign_dg_spec_env_join gs) ci src_cc src_ex (\<lambda>_. gk)) \<tau> (Inr gk))
      = restrict_global_for gs
          (combine_assign (ci_dst ci) (locals (\<tau> src_ex) ret_var)
             (combine_env gs (locals (\<tau> src_cc) \<squnion> restrict_local_for gs (locals (\<tau> src_ex)))
@@ -250,7 +250,7 @@ text \<open>The stock observations, in the same shape, so the comparison below i
 
 lemma traverse_combine_stock:
   "locals (traverse_rhs (dg_spec_combine_tree
-       (unit_dg_spec_for gs tf) ci src_cc src_ex gk) \<tau>)
+       (unit_dg_spec_for gs tf) ci src_cc src_ex (\<lambda>_. gk)) \<tau>)
      = restrict_local_for gs
          (combine_assign (ci_dst ci) (locals (\<tau> src_ex) ret_var)
             (combine_env gs (locals (\<tau> src_cc)) (globs (\<tau> (Inr gk)))))"
@@ -259,7 +259,7 @@ lemma traverse_combine_stock:
 
 lemma sides_combine_stock:
   "globs (sides_of_rhs (dg_spec_combine_tree
-       (unit_dg_spec_for gs tf) ci src_cc src_ex gk) \<tau> (Inr gk))
+       (unit_dg_spec_for gs tf) ci src_cc src_ex (\<lambda>_. gk)) \<tau> (Inr gk))
      = restrict_global_for gs
          (combine_assign (ci_dst ci) (locals (\<tau> src_ex) ret_var)
             (combine_env gs (locals (\<tau> src_cc)) (globs (\<tau> (Inr gk)))))"
@@ -268,17 +268,17 @@ lemma sides_combine_stock:
 
 lemma traverse_combine_env_join_ge:
   "locals (traverse_rhs (dg_spec_combine_tree
-       (unit_dg_spec_for gs (sign_tf_for gs)) ci src_cc src_ex gk) \<tau>)
+       (unit_dg_spec_for gs (sign_tf_for gs)) ci src_cc src_ex (\<lambda>_. gk)) \<tau>)
      \<le> locals (traverse_rhs (dg_spec_combine_tree
-          (sign_dg_spec_env_join gs) ci src_cc src_ex gk) \<tau>)"
+          (sign_dg_spec_env_join gs) ci src_cc src_ex (\<lambda>_. gk)) \<tau>)"
   unfolding traverse_combine_stock traverse_combine_env_join
   by (rule restrict_local_for_mono[OF combine_assign_mono[OF combine_env_join_ge]])
 
 lemma sides_combine_env_join_ge:
   "globs (sides_of_rhs (dg_spec_combine_tree
-       (unit_dg_spec_for gs (sign_tf_for gs)) ci src_cc src_ex gk) \<tau> (Inr gk))
+       (unit_dg_spec_for gs (sign_tf_for gs)) ci src_cc src_ex (\<lambda>_. gk)) \<tau> (Inr gk))
      \<le> globs (sides_of_rhs (dg_spec_combine_tree
-          (sign_dg_spec_env_join gs) ci src_cc src_ex gk) \<tau> (Inr gk))"
+          (sign_dg_spec_env_join gs) ci src_cc src_ex (\<lambda>_. gk)) \<tau> (Inr gk))"
   unfolding sides_combine_stock sides_combine_env_join
   by (rule restrict_global_for_mono[OF combine_assign_mono[OF combine_env_join_ge]])
 

@@ -50,7 +50,7 @@ lemma nest_2_eqs_statement3:
   "nest_2_eqs (Statement 3, ctx)
      = QueryL (Statement 2, ctx)
          (\<lambda>d. sp_run_with (\<lambda>x. DG x Bot)
-                 (dgs_enter nest_S_st nest_ci (mk_dg_man (locals d) Global))
+                 (dgs_enter nest_S_st nest_ci (mk_dg_man (locals d) (\<lambda>_. Global)))
                \<bind> (\<lambda>entry_state.
                      side_effect
                        (Seed (FunctionEntry (STR ''g''))
@@ -63,7 +63,7 @@ lemma nest_2_eqs_statement3:
                                 [VIMP_Syntax.V (STR ''p'')]))
                           (\<lambda>da. sp_run_with (\<lambda>x. DG x Bot)
                                   (dg_spec_combine_transfer nest_S_st nest_ci
-                                     (mk_dg_man (locals d) Global) (locals da)))))
+                                     (mk_dg_man (locals d) (\<lambda>_. Global)) (locals da)))))
                \<bind> (\<lambda>res. answer (DG (locals res) Bot))
                \<bind> (\<lambda>res. answer (DG (locals res) Bot)))"
   unfolding nest_2_eqs_def side_cfg_T_eff_keyed_seed_dg_def routed_extra_g_def
@@ -75,7 +75,7 @@ lemma nest_1_eqs_statement3:
   "nest_1_eqs (Statement 3, ctx)
      = QueryL (Statement 2, ctx)
          (\<lambda>d. sp_run_with (\<lambda>x. DG x Bot)
-                 (dgs_enter nest_S_st nest_ci (mk_dg_man (locals d) Global))
+                 (dgs_enter nest_S_st nest_ci (mk_dg_man (locals d) (\<lambda>_. Global)))
                \<bind> (\<lambda>entry_state.
                      side_effect
                        (Seed (FunctionEntry (STR ''g''))
@@ -88,7 +88,7 @@ lemma nest_1_eqs_statement3:
                                 [VIMP_Syntax.V (STR ''p'')]))
                           (\<lambda>da. sp_run_with (\<lambda>x. DG x Bot)
                                   (dg_spec_combine_transfer nest_S_st nest_ci
-                                     (mk_dg_man (locals d) Global) (locals da)))))
+                                     (mk_dg_man (locals d) (\<lambda>_. Global)) (locals da)))))
                \<bind> (\<lambda>res. answer (DG (locals res) Bot))
                \<bind> (\<lambda>res. answer (DG (locals res) Bot)))"
   unfolding nest_1_eqs_def side_cfg_T_eff_keyed_seed_dg_def routed_extra_g_def

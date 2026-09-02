@@ -152,9 +152,9 @@ text \<open>Every field but \<open>dgs_enter\<close> is the local-only default. 
   one effectful field: it reads the solver's global unknown and answers it as the
   entered local, publishing nothing, so the entered frame differs from the caller's
   own local state by construction.\<close>
-definition w0_spec :: "(pp \<times> ivl, w0_gk, ivl, ivl) dg_spec" where
+definition w0_spec :: "(pp \<times> ivl, w0_gk, unit, ivl, ivl) dg_spec" where
   "w0_spec = default_local_dg_spec\<lparr>
-     dgs_enter := (\<lambda>ci m. man_global m),
+     dgs_enter := (\<lambda>ci m. man_global m ()),
      dgs_combine_env := (\<lambda>ci. local_combine_transfer (\<lambda>dc de. dc \<squnion> de)) \<rparr>"
 
 definition w0_route :: "pp \<Rightarrow> ivl \<Rightarrow> ivl \<Rightarrow> call_action \<Rightarrow> ivl" where

@@ -29,7 +29,7 @@ subsection \<open>The unlifted core\<close>
 definition base_dg_spec_for ::
   "(vname \<Rightarrow> bool)
    \<Rightarrow> 'a::sound_domain domain_transfer
-   \<Rightarrow> ('x,'k,'a abs_state,'g::bounded_semilattice_sup_bot) dg_spec"
+   \<Rightarrow> ('x,'k,unit,'a abs_state,'g::bounded_semilattice_sup_bot) dg_spec"
 where
   "base_dg_spec_for gs tf = local_dg_spec
      (skip\<^sup># tf) (assign\<^sup># tf) (special\<^sup># tf) (branch\<^sup># tf) (body\<^sup># tf) (return\<^sup># tf)
@@ -139,7 +139,7 @@ definition base_dg_spec_for_lifted ::
   "(vname \<Rightarrow> bool)
    \<Rightarrow> ('a abs_state \<Rightarrow> bool)
    \<Rightarrow> 'a::sound_domain domain_transfer
-   \<Rightarrow> ('x,'k,'a abs_state lifted,'g::bounded_semilattice_sup_bot) dg_spec"
+   \<Rightarrow> ('x,'k,unit,'a abs_state lifted,'g::bounded_semilattice_sup_bot) dg_spec"
 where
   "base_dg_spec_for_lifted gs empty_pred tf = local_dg_spec
      (transfer_lift empty_pred (skip\<^sup># tf))

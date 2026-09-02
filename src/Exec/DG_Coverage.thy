@@ -47,7 +47,7 @@ lemma dep_aux_side_cfg_T_eff_keyed_seed_dg_char:
 
 lemma dep_aux_dg_gen_of_char:
   "dep_aux \<sigma> (dg_gen_of S g bot0 s0d s0g (v, ()))
-     = (\<Union>t \<in> set (map (\<lambda>(src, a). dg_spec_edge_tree S a src ())
+     = (\<Union>t \<in> set (map (\<lambda>(src, a). dg_spec_edge_tree S a src (\<lambda>_. ()))
             (intra_predecessor_addr_list g v ())
           @ map (\<lambda>(cc, ca). dg_cmb_of S g (\<lambda>_ _ _ _. ()) () ca cc v) (call_site_list g v)
           @ dg_extra_of S g (\<lambda>_ _ _ _. ()) () v). dep_aux \<sigma> t)"
@@ -57,7 +57,7 @@ text \<open>Each of the three groups contributes its trees' dependencies to the 
 
 lemma dep_aux_dg_gen_of_pred_mem:
   assumes "(u, a) \<in> set (intra_predecessor_list g v)"
-  shows "dep_aux \<sigma> (dg_spec_edge_tree S a (Inl (u, ())) ())
+  shows "dep_aux \<sigma> (dg_spec_edge_tree S a (Inl (u, ())) (\<lambda>_. ()))
            \<subseteq> dep_aux \<sigma> (dg_gen_of S g bot0 s0d s0g (v, ()))"
   unfolding dep_aux_dg_gen_of_char intra_predecessor_addr_list_def using assms by force
 
@@ -80,7 +80,7 @@ lemma dep_dg_gen_of_intra:
 proof -
   have pred: "(u, a) \<in> set (intra_predecessor_list g v)"
     using fin e by (simp add: intra_predecessors_def)
-  have "Inl (u, ()) \<in> dep_aux \<sigma> (dg_spec_edge_tree S a (Inl (u, ())) ())"
+  have "Inl (u, ()) \<in> dep_aux \<sigma> (dg_spec_edge_tree S a (Inl (u, ())) (\<lambda>_. ()))"
     by (rule dep_aux_dg_spec_edge_tree_source)
   with dep_aux_dg_gen_of_pred_mem[OF pred] show ?thesis by blast
 qed
@@ -119,11 +119,11 @@ proof -
     using fin e by (auto simp: entry_calls_def)
   obtain dst fs as where ca_eq: "ca = CallEdge dst fs as" by (cases ca) auto
   let ?p = "case ce of FunctionEntry p \<Rightarrow> p | _ \<Rightarrow> undefined"
-  have mem: "transfer_tree (dgs_enter S (call_info_of ca ?p)) (Inl (cs, ())) ()
+  have mem: "transfer_tree (dgs_enter S (call_info_of ca ?p)) (Inl (cs, ())) (\<lambda>_. ())
              \<in> set (dg_extra_of S g (\<lambda>_ _ _ _. ()) () ce)"
     unfolding dg_extra_of_def using site by force
   have "Inl (cs, ()) \<in> dep_aux \<sigma>
-       (transfer_tree (dgs_enter S (call_info_of ca ?p)) (Inl (cs, ())) ())"
+       (transfer_tree (dgs_enter S (call_info_of ca ?p)) (Inl (cs, ())) (\<lambda>_. ()))"
     by (rule dep_aux_transfer_tree_source)
   with dep_aux_dg_gen_of_extra_mem[OF mem] show ?thesis by blast
 qed

@@ -111,7 +111,7 @@ text \<open>The same Base-style pair every other Sign analysis solves over, at t
 
 definition sign_nest_S_st ::
   "(pp \<times> cfg_node list, call_string_gk,
-     sign exec_dg_st lifted, sign exec_dg_st lifted) dg_spec" where
+     unit, sign exec_dg_st lifted, sign exec_dg_st lifted) dg_spec" where
   "sign_nest_S_st = base_dg_spec_st_for_lifted sign_nest_gs sign_nest_empty_pred
                       (sign_tf_st_for sign_nest_gs) (sign_enter_st_for sign_nest_gs)"
 
@@ -149,7 +149,7 @@ definition sign_nest_1_eqs ::
      (sign exec_dg_st lifted, sign exec_dg_st lifted) dg_state) eqsT" where
   "sign_nest_1_eqs =
      side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. Global) (cs_route 1)
-       (\<lambda>ctx' src a. dg_spec_edge_tree sign_nest_S_st a src Global)
+       (\<lambda>ctx' src a. dg_spec_edge_tree sign_nest_S_st a src (\<lambda>_. Global))
        (routed_cmb_g sign_nest_S_st Global Seed (static_resolve sign_nest_cfg))
        (routed_extra_g Seed Global)
        sign_nest_cfg Bot (Lifted cinit_sign_st) Bot"

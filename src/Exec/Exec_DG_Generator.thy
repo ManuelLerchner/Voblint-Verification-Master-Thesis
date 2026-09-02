@@ -25,16 +25,16 @@ text \<open>
 \<close>
 
 definition dg_cmb_at_of ::
-  "(pp \<times> unit, unit, 'd::bounded_semilattice_sup_bot,
+  "(pp \<times> unit, unit, unit, 'd::bounded_semilattice_sup_bot,
      'h::bounded_semilattice_sup_bot) dg_spec
      \<Rightarrow> unit \<Rightarrow> call_action \<Rightarrow> pp \<Rightarrow> pname
      \<Rightarrow> (pp \<times> unit, unit, ('d, 'h) dg_state) strategy_tree"
 where
   "dg_cmb_at_of S ctx ca cc p =
-     dg_spec_combine_tree S (call_info_of ca p) (Inl (cc, ctx)) (Inl (FunctionResult p, ctx)) ()"
+     dg_spec_combine_tree S (call_info_of ca p) (Inl (cc, ctx)) (Inl (FunctionResult p, ctx)) (\<lambda>_. ())"
 
 definition dg_cmb_of ::
-  "(pp \<times> unit, unit, 'd::bounded_semilattice_sup_bot,
+  "(pp \<times> unit, unit, unit, 'd::bounded_semilattice_sup_bot,
      'h::bounded_semilattice_sup_bot) dg_spec \<Rightarrow> cfg
      \<Rightarrow> (pp \<Rightarrow> unit \<Rightarrow> 'd \<Rightarrow> call_action \<Rightarrow> unit) \<Rightarrow> unit \<Rightarrow> call_action \<Rightarrow> pp \<Rightarrow> pp
      \<Rightarrow> (pp \<times> unit, unit, ('d, 'h) dg_state) strategy_tree"
@@ -43,7 +43,7 @@ where
      side_rhs_fold_dg bot (map (dg_cmb_at_of S ctx ca cc) (static_targets g v cc ca))"
 
 definition dg_extra_of ::
-  "(pp \<times> unit, unit, 'd::bounded_semilattice_sup_bot,
+  "(pp \<times> unit, unit, unit, 'd::bounded_semilattice_sup_bot,
      'h::bounded_semilattice_sup_bot) dg_spec \<Rightarrow> cfg
      \<Rightarrow> (pp \<Rightarrow> unit \<Rightarrow> 'd \<Rightarrow> call_action \<Rightarrow> unit) \<Rightarrow> unit \<Rightarrow> pp
      \<Rightarrow> (pp \<times> unit, unit, ('d, 'h) dg_state) strategy_tree list"
@@ -52,16 +52,16 @@ where
      map (\<lambda>(cl, ca).
        transfer_tree
          (dgs_enter S (call_info_of ca (case v of FunctionEntry p \<Rightarrow> p | _ \<Rightarrow> undefined)))
-         (Inl (cl, ctx)) ()) (entry_call_list g v)"
+         (Inl (cl, ctx)) (\<lambda>_. ())) (entry_call_list g v)"
 
 definition dg_gen_of ::
-  "(pp \<times> unit, unit, 'd::bounded_semilattice_sup_bot,
+  "(pp \<times> unit, unit, unit, 'd::bounded_semilattice_sup_bot,
      'h::bounded_semilattice_sup_bot) dg_spec \<Rightarrow> cfg \<Rightarrow> 'd \<Rightarrow> 'd \<Rightarrow> 'h
      \<Rightarrow> (pp \<times> unit, unit, ('d, 'h) dg_state) eqsT"
 where
   "dg_gen_of S g bot0 s0d s0g =
      side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. ())
-       (\<lambda>_ _ _ _. ()) (\<lambda>c src a. dg_spec_edge_tree S a src ())
+       (\<lambda>_ _ _ _. ()) (\<lambda>c src a. dg_spec_edge_tree S a src (\<lambda>_. ()))
        (dg_cmb_of S g) (dg_extra_of S g) g bot0 s0d s0g"
 
 subsection \<open>Dependency commutation for the generator\<close>
@@ -337,22 +337,22 @@ qed
 
 lemma dg_tree_st_commute_routed_cmb_g_at:
   assumes Henter: "\<And>ci d. dg_tree_st_commute \<sigma>_st
-        (sp_run_with (\<lambda>x. DG x bot) (dgs_enter S_st ci (mk_dg_man d gk0)))
-        (sp_run_with (\<lambda>x. DG x bot) (dgs_enter S_abs ci (mk_dg_man (Floc d) gk0)))"
+        (sp_run_with (\<lambda>x. DG x bot) (dgs_enter S_st ci (mk_dg_man d (\<lambda>_. gk0))))
+        (sp_run_with (\<lambda>x. DG x bot) (dgs_enter S_abs ci (mk_dg_man (Floc d) (\<lambda>_. gk0))))"
     and Hcomb: "\<And>ci d de. dg_tree_st_commute \<sigma>_st
         (sp_run_with (\<lambda>x. DG x bot)
-           (dg_spec_combine_transfer S_st ci (mk_dg_man d gk0) de))
+           (dg_spec_combine_transfer S_st ci (mk_dg_man d (\<lambda>_. gk0)) de))
         (sp_run_with (\<lambda>x. DG x bot)
-           (dg_spec_combine_transfer S_abs ci (mk_dg_man (Floc d) gk0) (Floc de)))"
+           (dg_spec_combine_transfer S_abs ci (mk_dg_man (Floc d) (\<lambda>_. gk0)) (Floc de)))"
     and Hroute: "\<And>u c' d ca'. route_st u c' d ca' = route_abs u c' (Floc d) ca'"
   shows "dg_tree_st_commute \<sigma>_st
            (routed_cmb_g_at S_st gk0 seed_key route_st ctx ca cc caller p)
            (routed_cmb_g_at S_abs gk0 seed_key route_abs ctx ca cc (Floc caller) p)"
 proof -
   let ?ci = "call_info_of ca p"
-  let ?et_st = "sp_run_with (\<lambda>x. DG x bot) (dgs_enter S_st ?ci (mk_dg_man caller gk0))"
+  let ?et_st = "sp_run_with (\<lambda>x. DG x bot) (dgs_enter S_st ?ci (mk_dg_man caller (\<lambda>_. gk0)))"
   let ?et_abs = "sp_run_with (\<lambda>x. DG x bot)
-                   (dgs_enter S_abs ?ci (mk_dg_man (Floc caller) gk0))"
+                   (dgs_enter S_abs ?ci (mk_dg_man (Floc caller) (\<lambda>_. gk0)))"
   let ?\<sigma>_abs = "fun_of_dg_st_gen Floc Fglob \<circ> \<sigma>_st"
   have ent: "Floc (locals (traverse_rhs ?et_st \<sigma>_st)) = locals (traverse_rhs ?et_abs ?\<sigma>_abs)"
     using dg_tree_st_commute_trav[OF Henter] by (metis fun_of_dg_st_gen_simps(1))
@@ -366,13 +366,13 @@ proof -
            (answer (DG bot bot))
          \<bind> (\<lambda>_. read_local (FunctionResult p, route_st cc ctx (locals es_st) ca)
            \<bind> (\<lambda>cs. sp_run_with (\<lambda>x. DG x bot)
-                 (dg_spec_combine_transfer S_st ?ci (mk_dg_man caller gk0) (locals cs)))))
+                 (dg_spec_combine_transfer S_st ?ci (mk_dg_man caller (\<lambda>_. gk0)) (locals cs)))))
         (side_effect (seed_key (FunctionEntry p) (route_abs cc ctx (locals es_abs) ca))
            (DG (locals es_abs) bot)
            (answer (DG bot bot))
          \<bind> (\<lambda>_. read_local (FunctionResult p, route_abs cc ctx (locals es_abs) ca)
            \<bind> (\<lambda>cs. sp_run_with (\<lambda>x. DG x bot)
-                 (dg_spec_combine_transfer S_abs ?ci (mk_dg_man (Floc caller) gk0) (locals cs)))))"
+                 (dg_spec_combine_transfer S_abs ?ci (mk_dg_man (Floc caller) (\<lambda>_. gk0)) (locals cs)))))"
   proof -
     fix es_st es_abs
     assume e: "Floc (locals es_st) = locals es_abs"
@@ -383,12 +383,12 @@ proof -
            (DG (locals es_st) bot) (answer (DG bot bot))
          \<bind> (\<lambda>_. read_local (FunctionResult p, route_st cc ctx (locals es_st) ca)
            \<bind> (\<lambda>cs. sp_run_with (\<lambda>x. DG x bot)
-                 (dg_spec_combine_transfer S_st ?ci (mk_dg_man caller gk0) (locals cs)))))
+                 (dg_spec_combine_transfer S_st ?ci (mk_dg_man caller (\<lambda>_. gk0)) (locals cs)))))
         (side_effect (seed_key (FunctionEntry p) (route_abs cc ctx (locals es_abs) ca))
            (DG (locals es_abs) bot) (answer (DG bot bot))
          \<bind> (\<lambda>_. read_local (FunctionResult p, route_abs cc ctx (locals es_abs) ca)
            \<bind> (\<lambda>cs. sp_run_with (\<lambda>x. DG x bot)
-                 (dg_spec_combine_transfer S_abs ?ci (mk_dg_man (Floc caller) gk0) (locals cs)))))"
+                 (dg_spec_combine_transfer S_abs ?ci (mk_dg_man (Floc caller) (\<lambda>_. gk0)) (locals cs)))))"
       unfolding r
       apply (simp only: seqcomp_tree.simps)
       apply (rule dg_tree_st_commute_side_effect[where d = "DG (locals es_st) bot",
@@ -410,13 +410,13 @@ text \<open>The call site itself: the resolver must answer the same targets on b
 
 lemma dg_tree_st_commute_routed_cmb_g:
   assumes Henter: "\<And>ci d. dg_tree_st_commute \<sigma>_st
-        (sp_run_with (\<lambda>x. DG x bot) (dgs_enter S_st ci (mk_dg_man d gk0)))
-        (sp_run_with (\<lambda>x. DG x bot) (dgs_enter S_abs ci (mk_dg_man (Floc d) gk0)))"
+        (sp_run_with (\<lambda>x. DG x bot) (dgs_enter S_st ci (mk_dg_man d (\<lambda>_. gk0))))
+        (sp_run_with (\<lambda>x. DG x bot) (dgs_enter S_abs ci (mk_dg_man (Floc d) (\<lambda>_. gk0))))"
     and Hcomb: "\<And>ci d de. dg_tree_st_commute \<sigma>_st
         (sp_run_with (\<lambda>x. DG x bot)
-           (dg_spec_combine_transfer S_st ci (mk_dg_man d gk0) de))
+           (dg_spec_combine_transfer S_st ci (mk_dg_man d (\<lambda>_. gk0)) de))
         (sp_run_with (\<lambda>x. DG x bot)
-           (dg_spec_combine_transfer S_abs ci (mk_dg_man (Floc d) gk0) (Floc de)))"
+           (dg_spec_combine_transfer S_abs ci (mk_dg_man (Floc d) (\<lambda>_. gk0)) (Floc de)))"
     and Hroute: "\<And>u c' d ca'. route_st u c' d ca' = route_abs u c' (Floc d) ca'"
     and Hresolve: "\<And>w cc' ca' d. resolve_st w cc' ca' d = resolve_abs w cc' ca' (Floc d)"
   shows "dg_tree_st_commute \<sigma>_st
@@ -551,7 +551,7 @@ proof -
   obtain v c where vc: "vc = (v, c)" by (cases vc)
   have c: "c = ()" by simp
   define I where
-    "I = map (\<lambda>(u, a). transfer_tree (dg_spec_step S a) (Inl (u, ())) ())
+    "I = map (\<lambda>(u, a). transfer_tree (dg_spec_step S a) (Inl (u, ())) (\<lambda>_. ()))
            (intra_predecessor_list g v)"
   define TSS where
     "TSS = map (\<lambda>(cc, ca). map (dg_cmb_at_of S () ca cc) (static_targets g v cc ca))

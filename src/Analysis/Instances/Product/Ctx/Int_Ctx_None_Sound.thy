@@ -65,14 +65,14 @@ text \<open>
 
 definition ictx_spec ::
   "refine_mode \<Rightarrow> (int_dom exec_dg_st \<Rightarrow> bool) \<Rightarrow> (vname \<Rightarrow> bool)
-     \<Rightarrow> ('x, 'k, int_dom exec_dg_st lifted, int_dom exec_dg_st lifted) dg_spec"
+     \<Rightarrow> ('x, 'k, unit, int_dom exec_dg_st lifted, int_dom exec_dg_st lifted) dg_spec"
 where
   "ictx_spec mode empty_pred gs =
      base_dg_spec_st_for_lifted gs empty_pred (int_tf_st_for mode gs) (int_dom_enter_st_for mode gs)"
 
 definition ictx_abs_spec ::
     "refine_mode \<Rightarrow> (vname \<Rightarrow> bool)
-     \<Rightarrow> ('x, 'k, int_dom abs_state lifted, int_dom abs_state lifted) dg_spec" where
+     \<Rightarrow> ('x, 'k, unit, int_dom abs_state lifted, int_dom abs_state lifted) dg_spec" where
   "ictx_abs_spec mode gs = base_dg_spec_for_lifted gs is_empty_state (int_tf_for mode gs)"
 
 subsection \<open>The routed equation system and its executable solution\<close>
@@ -82,7 +82,7 @@ definition ictx_eqs ::
   "ictx_eqs mode empty_pred gs Pi ps =
      side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_addr_list (\<lambda>_. Global)
        route_unit
-       (\<lambda>ctx' src a. dg_spec_edge_tree (ictx_spec mode empty_pred gs) a src Global)
+       (\<lambda>ctx' src a. dg_spec_edge_tree (ictx_spec mode empty_pred gs) a src (\<lambda>_. Global))
        (routed_cmb_g (ictx_spec mode empty_pred gs) Global Seed
           (static_resolve (compile_prog Pi ps)))
        (routed_extra_g Seed Global)
@@ -244,7 +244,7 @@ theorem ictx_pp_routed:
   shows
   "part_post_solution
      (side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. Global) route_unit
-        (\<lambda>ctx' src a. dg_spec_edge_tree (ictx_spec mode empty_pred gs) a src Global)
+        (\<lambda>ctx' src a. dg_spec_edge_tree (ictx_spec mode empty_pred gs) a src (\<lambda>_. Global))
         (routed_cmb_g (ictx_spec mode empty_pred gs) Global Seed
            (static_resolve (compile_prog Pi ps)))
         (routed_extra_g Seed Global)

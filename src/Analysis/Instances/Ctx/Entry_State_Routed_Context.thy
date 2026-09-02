@@ -31,7 +31,7 @@ locale entry_state_routed_context =
     "routed_cmb_g S gk0 seed_key (static_resolve (compile_prog Pi ps))"
     "routed_extra_g seed_key gk0"
     bot0 s0d s0g sigma vars x0 sg gammaM
-  for S :: "(pp \<times> 'c, 'k, 'D::bounded_semilattice_sup_bot,
+  for S :: "(pp \<times> 'c, 'k, unit, 'D::bounded_semilattice_sup_bot,
               'G::bounded_semilattice_sup_bot) dg_spec"
     and gammaDG :: "'D \<Rightarrow> 'G \<Rightarrow> store set"
     and gs :: "vname \<Rightarrow> bool"

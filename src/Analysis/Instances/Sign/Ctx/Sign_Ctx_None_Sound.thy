@@ -57,14 +57,14 @@ text \<open>
 
 definition sctx_spec ::
   "(vname \<Rightarrow> bool) \<Rightarrow> (sign exec_dg_st \<Rightarrow> bool)
-   \<Rightarrow> ('x, 'k, sign exec_dg_st lifted, sign exec_dg_st lifted) dg_spec"
+   \<Rightarrow> ('x, 'k, unit, sign exec_dg_st lifted, sign exec_dg_st lifted) dg_spec"
 where
   "sctx_spec gs empty_pred =
      base_dg_spec_st_for_lifted gs empty_pred (sign_tf_st_for gs) (sign_enter_st_for gs)"
 
 definition sctx_abs_spec ::
   "(vname \<Rightarrow> bool)
-   \<Rightarrow> ('x, 'k, sign abs_state lifted, sign abs_state lifted) dg_spec"
+   \<Rightarrow> ('x, 'k, unit, sign abs_state lifted, sign abs_state lifted) dg_spec"
 where
   "sctx_abs_spec gs = base_dg_spec_for_lifted gs is_empty_state (sign_tf_for gs)"
 
@@ -75,7 +75,7 @@ definition sctx_eqs ::
   "sctx_eqs gs empty_pred Pi ps =
      side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_addr_list (\<lambda>_. Global)
        route_unit
-       (\<lambda>ctx' src a. dg_spec_edge_tree (sctx_spec gs empty_pred) a src Global)
+       (\<lambda>ctx' src a. dg_spec_edge_tree (sctx_spec gs empty_pred) a src (\<lambda>_. Global))
        (routed_cmb_g (sctx_spec gs empty_pred) Global Seed
           (static_resolve (compile_prog Pi ps)))
        (routed_extra_g Seed Global)
@@ -160,7 +160,7 @@ text \<open>The solver's post-solution, for the unbuffered routed generator at t
 theorem sctx_pp_routed:
   "part_post_solution
      (side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. Global) route_unit
-        (\<lambda>ctx' src a. dg_spec_edge_tree (sctx_spec gs empty_pred) a src Global)
+        (\<lambda>ctx' src a. dg_spec_edge_tree (sctx_spec gs empty_pred) a src (\<lambda>_. Global))
         (routed_cmb_g (sctx_spec gs empty_pred) Global Seed (static_resolve (compile_prog Pi ps)))
         (routed_extra_g Seed Global)
         (compile_prog Pi ps) Bot (Lifted cinit_sign_st) Bot)

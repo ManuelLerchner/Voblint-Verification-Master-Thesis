@@ -67,7 +67,7 @@ definition sctx_entry_eqs ::
   "sctx_entry_eqs gs empty_pred Pi ps =
      side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_addr_list (\<lambda>_. Global)
        (sctx_entry_route_gen gs empty_pred)
-       (\<lambda>ctx' src a. dg_spec_edge_tree (sctx_spec gs empty_pred) a src Global)
+       (\<lambda>ctx' src a. dg_spec_edge_tree (sctx_spec gs empty_pred) a src (\<lambda>_. Global))
        (routed_cmb_g (sctx_spec gs empty_pred) Global Seed
           (static_resolve (compile_prog Pi ps)))
        (routed_extra_g Seed Global)
@@ -175,7 +175,7 @@ theorem sctx_entry_pp_routed:
   "part_post_solution
      (side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. Global)
         (sctx_entry_route_gen gs empty_pred)
-        (\<lambda>ctx' src a. dg_spec_edge_tree (sctx_spec gs empty_pred) a src Global)
+        (\<lambda>ctx' src a. dg_spec_edge_tree (sctx_spec gs empty_pred) a src (\<lambda>_. Global))
         (routed_cmb_g (sctx_spec gs empty_pred) Global Seed (static_resolve (compile_prog Pi ps)))
         (routed_extra_g Seed Global)
         (compile_prog Pi ps) Bot (Lifted cinit_sign_st) Bot)

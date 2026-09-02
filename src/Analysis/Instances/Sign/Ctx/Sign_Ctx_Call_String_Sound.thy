@@ -37,7 +37,7 @@ definition scs_eqs ::
      side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_addr_list (\<lambda>_. Call_String_Context.Global)
        (cs_route k)
        (\<lambda>ctx' src a. dg_spec_edge_tree (sctx_spec gs empty_pred) a src
-          Call_String_Context.Global)
+          (\<lambda>_. Call_String_Context.Global))
        (routed_cmb_g (sctx_spec gs empty_pred)
           Call_String_Context.Global Call_String_Context.Seed
           (static_resolve (compile_prog Pi ps)))
@@ -125,7 +125,7 @@ theorem scs_pp_routed:
      (side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. Call_String_Context.Global)
         (cs_route k)
         (\<lambda>ctx' src a. dg_spec_edge_tree (sctx_spec gs empty_pred) a src
-           Call_String_Context.Global)
+           (\<lambda>_. Call_String_Context.Global))
         (routed_cmb_g (sctx_spec gs empty_pred) Call_String_Context.Global
            Call_String_Context.Seed (static_resolve (compile_prog Pi ps)))
         (routed_extra_g Call_String_Context.Seed Call_String_Context.Global)
