@@ -26,7 +26,7 @@ session Voblint_Framework in "." = "Voblint_CFG" +
     DG_Ctx_Activation
     Routed_Context
     Routed_Context_Unit
-    DG_Base
+    DG_Local_State_Spec
     Call_String_Context
     Call_String_Collecting_Refinement
     (* Domain-generic solved-result table: per-point reachability and the

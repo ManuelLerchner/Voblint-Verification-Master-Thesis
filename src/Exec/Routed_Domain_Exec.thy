@@ -1,6 +1,6 @@
 theory Routed_Domain_Exec
   imports
-    DG_Base_Exec
+    DG_Local_State_Exec
     "Voblint_Framework.Routed_Context_Unit"
 begin
 
@@ -121,11 +121,11 @@ text \<open>The two tree properties that make the identity hooks legitimate: nei
   \<open>bot\<close> on the globals half.\<close>
 
 lemma intra_st_side_free: "sides_of_rhs (intra_st ctx' src a) \<tau> z = bot"
-  by (simp add: dg_spec_edge_tree_def dg_spec_step_base_st_for_lifted)
+  by (simp add: dg_spec_edge_tree_def dg_spec_step_local_state_st_for_lifted)
 
 lemma cmb_st_side_free_at_gk0: "sides_of_rhs (cmb_st g route' ctx' ca cc ex) \<tau> (Inr gk0) = bot"
   by (rule routed_cmb_g_side_free_at_gk0)
-     (simp_all add: dgs_enter_base_st_for_lifted dg_spec_combine_transfer_base_st_for_lifted
+     (simp_all add: dgs_enter_local_state_st_for_lifted dg_spec_combine_transfer_local_state_st_for_lifted
         local_transfer_def local_combine_transfer_def seed_key_ne_gk0)
 
 theorem pp_st:
@@ -148,7 +148,7 @@ proof (rule part_post_solution_seed_dg_buffered_to_old
     by (simp add: intra_st_side_free bot_dg_state_def)
   show "\<And>c' src a \<tau>. globs (traverse_rhs (intra_st c' src a) \<tau>)
          = globs (sides_of_rhs (intra_st c' src a) \<tau> (Inr ((\<lambda>_. gk0) c')))"
-    by (simp add: dg_spec_edge_tree_def dg_spec_step_base_st_for_lifted bot_dg_state_def)
+    by (simp add: dg_spec_edge_tree_def dg_spec_step_local_state_st_for_lifted bot_dg_state_def)
   show "\<And>c' src a \<tau>. sides_of_rhs (intra_st c' src a) \<tau> (Inr ((\<lambda>_. gk0) c')) = bot"
     by (rule intra_st_side_free)
   show "\<And>c' src a \<tau> z. z \<noteq> Inr ((\<lambda>_. gk0) c') \<Longrightarrow>

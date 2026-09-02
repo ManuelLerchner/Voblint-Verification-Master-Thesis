@@ -1,6 +1,6 @@
 theory Parity_Sound
   imports
-    "Voblint_Exec.DG_Base_Exec"
+    "Voblint_Exec.DG_Local_State_Exec"
     "Voblint_Analysis.Parity_Exec"
 begin
 
@@ -21,11 +21,11 @@ definition pctx_spec ::
      \<Rightarrow> ('x, 'k, unit, parity exec_dg_st lifted, parity exec_dg_st lifted) dg_spec"
 where
   "pctx_spec gs empty_pred =
-     base_dg_spec_st_for_lifted gs empty_pred (parity_tf_st_for gs) (parity_enter_st_for gs)"
+     local_state_dg_spec_st_for_lifted gs empty_pred (parity_tf_st_for gs) (parity_enter_st_for gs)"
 
 definition pctx_abs_spec ::
     "(vname \<Rightarrow> bool) \<Rightarrow> ('x, 'k, unit, parity abs_state lifted, parity abs_state lifted) dg_spec" where
-  "pctx_abs_spec gs = base_dg_spec_for_lifted gs is_empty_state (parity_tf_for gs)"
+  "pctx_abs_spec gs = local_state_dg_spec_for_lifted gs is_empty_state (parity_tf_for gs)"
 
 definition pctx_gamma ::
     "(vname \<Rightarrow> bool) \<Rightarrow> parity exec_dg_st lifted \<Rightarrow> parity exec_dg_st lifted \<Rightarrow> store set" where

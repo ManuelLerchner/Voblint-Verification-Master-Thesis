@@ -1,6 +1,6 @@
 theory Exec_Int_DG_Run
   imports
-    "Voblint_Exec.DG_Base_Exec"
+    "Voblint_Exec.DG_Local_State_Exec"
     "Voblint_Analysis.Int_Exec"
     "Voblint_VIMP.VIMP_Notation"
     "Voblint_Soundness.Run_Analysis_Sound"
@@ -58,7 +58,7 @@ text \<open>
   observable in the solver's own computed result.
 
   Each mode is registered on the generic Base construction
-  \<^const>\<open>base_dg_spec_st_for_lifted\<close> (\<^theory>\<open>Voblint_Exec.DG_Base_Exec\<close>),
+  \<^const>\<open>local_state_dg_spec_st_for_lifted\<close> (\<^theory>\<open>Voblint_Exec.DG_Local_State_Exec\<close>),
   matching Sign's own production route: the local unknown carries the whole
   reachability-lifted \<open>int_dom exec_dg_st\<close>, with no separate local/global
   split for \<open>int_ex_prog\<close>'s (empty) set of declared globals to route through.
@@ -68,7 +68,7 @@ definition dgExI_never_eqs ::
     "pp * unit => (pp * unit, unit, (int_dom exec_dg_st lifted, int_dom exec_dg_st lifted) dg_state) strategy_tree"
 where
   "dgExI_never_eqs = dg_gen_of
-     (base_dg_spec_st_for_lifted int_ex_gs (resolved_st_q_is_bot_for (declared_global_vars int_ex_prog))
+     (local_state_dg_spec_st_for_lifted int_ex_gs (resolved_st_q_is_bot_for (declared_global_vars int_ex_prog))
        (int_tf_st_never_for int_ex_gs) (int_dom_enter_never_st_for int_ex_gs))
      gExI bot (Lifted cinit_int_dom_st) (Lifted cinit_int_dom_st)"
 
@@ -90,7 +90,7 @@ definition dgExI_once_eqs ::
     "pp * unit => (pp * unit, unit, (int_dom exec_dg_st lifted, int_dom exec_dg_st lifted) dg_state) strategy_tree"
 where
   "dgExI_once_eqs = dg_gen_of
-     (base_dg_spec_st_for_lifted int_ex_gs (resolved_st_q_is_bot_for (declared_global_vars int_ex_prog))
+     (local_state_dg_spec_st_for_lifted int_ex_gs (resolved_st_q_is_bot_for (declared_global_vars int_ex_prog))
        (int_tf_st_once_for int_ex_gs) (int_dom_enter_once_st_for int_ex_gs))
      gExI bot (Lifted cinit_int_dom_st) (Lifted cinit_int_dom_st)"
 
@@ -112,7 +112,7 @@ definition dgExI_fixpoint_eqs ::
     "pp * unit => (pp * unit, unit, (int_dom exec_dg_st lifted, int_dom exec_dg_st lifted) dg_state) strategy_tree"
 where
   "dgExI_fixpoint_eqs = dg_gen_of
-     (base_dg_spec_st_for_lifted int_ex_gs (resolved_st_q_is_bot_for (declared_global_vars int_ex_prog))
+     (local_state_dg_spec_st_for_lifted int_ex_gs (resolved_st_q_is_bot_for (declared_global_vars int_ex_prog))
        (int_tf_st_fixpoint_for int_ex_gs) (int_dom_enter_fixpoint_st_for int_ex_gs))
      gExI bot (Lifted cinit_int_dom_st) (Lifted cinit_int_dom_st)"
 

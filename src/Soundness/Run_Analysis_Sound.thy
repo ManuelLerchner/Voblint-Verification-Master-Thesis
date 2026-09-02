@@ -1,6 +1,6 @@
 theory Run_Analysis_Sound
   imports
-    "Voblint_Exec.DG_Base_Exec"
+    "Voblint_Exec.DG_Local_State_Exec"
     "Voblint_Exec.Exec_DG_Generator"
     "Voblint_Framework.DG_LTR_Sound"
     "Voblint_Solver.TD_Solver_Menu"
@@ -135,7 +135,7 @@ text \<open>
 text \<open>
   \<open>gamma_unit_exec\<close> is the executable-carrier sibling of \<open>gamma_unit gs\<close>, reading
   its two arguments back through \<open>fun_of_exec_dg_st_for\<close> first --- the diagonal
-  analogue of \<^theory>\<open>Voblint_Exec.DG_Base_Exec\<close>'s \<open>gamma_exec\<close>.
+  analogue of \<^theory>\<open>Voblint_Exec.DG_Local_State_Exec\<close>'s \<open>gamma_exec\<close>.
   \<open>run_source_sound\<close>/\<open>collect_sound\<close> interpret \<open>sound_dg_spec_ltr_for\<close> directly at
   this carrier, so no solved system is ever transported to the abstract one.
 \<close>
@@ -269,7 +269,7 @@ text \<open>
   The canonical executable Base analysis: whole-state \<open>D\<close> lifted for reachability,
   \<open>G\<close> the same type as \<open>D\<close> -- the only shape either registered instance
   (Sign, Parity) actually needs, and the shape \<^locale>\<open>routed_dg_domain_exec\<close>
-  (\<^theory>\<open>Voblint_Exec.DG_Base_Exec\<close>) already proves sound at the executable
+  (\<^theory>\<open>Voblint_Exec.DG_Local_State_Exec\<close>) already proves sound at the executable
   carrier. A registered domain supplies only \<open>tf\<close>/\<open>tf_st\<close>/\<open>enter_st\<close>/\<open>empty_pred\<close>
   and their three primitive commute facts; this locale's \<open>sublocale\<close> discharges
   \<^locale>\<open>routed_dg_domain_exec\<close>'s three assumptions from exactly those facts,
@@ -278,7 +278,7 @@ text \<open>
   registration locale needs no separate post-solution transport theorem.
 \<close>
 
-locale base_dg_exec_analysis =
+locale local_state_dg_exec_analysis =
   fixes gs :: "vname \<Rightarrow> bool"
     and tf :: "'a::sound_domain domain_transfer"
     and tf_st :: "edge_action \<Rightarrow> 'a exec_dg_st \<Rightarrow> 'a exec_dg_st"
@@ -317,7 +317,7 @@ begin
 
 text \<open>
   The packaging correspondence and its executable-carrier soundness pullback
-  are \<open>routed_dg_domain_exec\<close>'s own content (\<open>Voblint_Exec.DG_Base_Exec\<close>):
+  are \<open>routed_dg_domain_exec\<close>'s own content (\<open>Voblint_Exec.DG_Local_State_Exec\<close>):
   discharging its three assumptions from this locale's own commute facts gets
   \<open>sound_dg_spec_st\<close> for free, so no transport of a solved system between
   carriers is needed here at all -- the solver's own executable post-solution
@@ -341,14 +341,14 @@ definition gamma ::
   where "gamma sigma_st v = dg_hook_gamma gamma_exec sigma_st v"
 
 interpretation sds: sound_dg_spec_ltr_for
-  "base_dg_spec_st_for_lifted gs empty_pred tf_st enter_st" gamma_exec gs
+  "local_state_dg_spec_st_for_lifted gs empty_pred tf_st enter_st" gamma_exec gs
   unfolding sound_dg_spec_ltr_for_def
   by (rule sound_dg_spec_st[OF tf_sound])
 
 theorem run_source_sound:
   fixes Pi :: proc_table and ps and s0 t :: store
     and bot0 s0d s0g :: "'a exec_dg_st lifted"
-  defines "eqs \<equiv> dg_gen_of (base_dg_spec_st_for_lifted gs empty_pred tf_st enter_st)
+  defines "eqs \<equiv> dg_gen_of (local_state_dg_spec_st_for_lifted gs empty_pred tf_st enter_st)
                    (compile_prog Pi ps) bot0 s0d s0g"
   assumes SOLVE: "solve_c eqs x \<noteq> None"
     and wf: "wf_compile_input gs Pi ps"
@@ -384,7 +384,7 @@ text \<open>
 theorem collect_sound:
   fixes Pi :: proc_table and ps and v :: pp
     and bot0 s0d s0g :: "'a exec_dg_st lifted"
-  defines "eqs \<equiv> dg_gen_of (base_dg_spec_st_for_lifted gs empty_pred tf_st enter_st)
+  defines "eqs \<equiv> dg_gen_of (local_state_dg_spec_st_for_lifted gs empty_pred tf_st enter_st)
                    (compile_prog Pi ps) bot0 s0d s0g"
   assumes SOLVE: "solve_c eqs x \<noteq> None"
     and wf: "wf_compile_input gs Pi ps"

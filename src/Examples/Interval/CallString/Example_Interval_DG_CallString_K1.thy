@@ -3,7 +3,7 @@ theory Example_Interval_DG_CallString_K1
     "Voblint_Framework.DG_LTR_Sound"
     "Voblint_Analysis.Interval_Transfer"
     "Voblint_Analysis.Ivl_Exec"
-    "Voblint_Exec.DG_Base_Exec"
+    "Voblint_Exec.DG_Local_State_Exec"
     "Voblint_Analysis.Analysis_GraphViz"
     "Voblint_Analysis.Call_String_Routed_Context"
     "Voblint_Framework.Activation_Backbone"
@@ -25,7 +25,7 @@ text \<open>
   Storage is Base-style: the local unknown carries the whole abstract state on the lifted
   carrier \<^typ>\<open>ivl exec_dg_st lifted\<close>, so a global is read and written exactly where a
   local is, and the solver-global carrier is inert --- every field of
-  \<^const>\<open>base_dg_spec_st_for_lifted\<close> threads its incoming \<open>g\<close> through unchanged, so
+  \<^const>\<open>local_state_dg_spec_st_for_lifted\<close> threads its incoming \<open>g\<close> through unchanged, so
   \<open>Inr Global\<close> is never read back to reconstruct program state. Only the routing policy
   (\<^const>\<open>cs_route\<close>, \<^const>\<open>cs_context\<close>) is call-string specific; the storage, the
   transfer primitives, and the CALL/COMB discharge are shared with the
@@ -112,7 +112,7 @@ text \<open>The same Base-style pair the context-insensitive and entry-state-key
 definition nest_S_st ::
   "(pp \<times> cfg_node list, call_string_gk,
      unit, ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_spec" where
-  "nest_S_st = base_dg_spec_st_for_lifted nest_gs nest_empty_pred
+  "nest_S_st = local_state_dg_spec_st_for_lifted nest_gs nest_empty_pred
                  (ivl_tf_st_for nest_gs) (ivl_enter_st_for nest_gs)"
 
 subsection \<open>Soundness of the executable specification, once for every bound\<close>
@@ -129,7 +129,7 @@ interpretation nest_domain: routed_dg_domain_exec
   by unfold_locales (rule ivl_tf_st_for_commute, rule ivl_enter_st_for_commute, rule nest_exact)
 
 lemma nest_gamma_eq: "nest_gamma = nest_domain.gamma_exec"
-  by (intro ext) (simp add: nest_gamma_def nest_domain.gamma_exec_def gamma_dg_base_def)
+  by (intro ext) (simp add: nest_gamma_def nest_domain.gamma_exec_def gamma_dg_local_state_def)
 
 interpretation nest_dg_sound: sound_dg_spec nest_S_st nest_gamma nest_gs
   unfolding nest_gamma_eq nest_S_st_def
@@ -471,9 +471,9 @@ definition nestg_1_eqs ::
   "nestg_1_eqs =
      side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. Global) (cs_route 1)
       (\<lambda>ctx' src a. dg_spec_edge_tree
-         (base_dg_spec_st_for_lifted nestg_gs nestg_empty_pred
+         (local_state_dg_spec_st_for_lifted nestg_gs nestg_empty_pred
             (ivl_tf_st_for nestg_gs) (ivl_enter_st_for nestg_gs)) a src (\<lambda>_. Global))
-      (routed_cmb_g (base_dg_spec_st_for_lifted nestg_gs nestg_empty_pred
+      (routed_cmb_g (local_state_dg_spec_st_for_lifted nestg_gs nestg_empty_pred
                        (ivl_tf_st_for nestg_gs) (ivl_enter_st_for nestg_gs)) Global Seed
          (static_resolve nestg_cfg))
       (routed_extra_g Seed Global)

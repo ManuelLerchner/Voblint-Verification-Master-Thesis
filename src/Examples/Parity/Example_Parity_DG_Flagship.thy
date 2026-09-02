@@ -3,7 +3,7 @@ section \<open>Flagship: parity analysis of an even-step loop, executed and cert
 
 text \<open>
   \<^bold>\<open>Second domain, same registration.\<close>  This theory is the E1 validation of the
-  domain-registration API: parity registers through the \<open>base_dg_exec_analysis\<close>
+  domain-registration API: parity registers through the \<open>local_state_dg_exec_analysis\<close>
   locale (as \<open>parity_ex_reg\<close> below, at this file's own storage classifier
   \<open>parity_gs\<close>) with \<^emph>\<open>no\<close> copied \<open>Hstep\<close>, \<open>Hcomb\<close>, \<open>strategy_tree\<close>, \<open>Inl\<close>/\<open>Inr\<close>,
   or manual post-solution transport lemmas.  An IMP2 program is compiled to a
@@ -17,7 +17,7 @@ text \<open>
   program point (\<open>x = 0\<close> initially, then \<open>x := x + 2\<close> preserves parity), so the loop
   invariant \<open>x\<close> even holds without any guard refinement --- parity ignores the guard.
 
-  Registration is on the generic Base construction (\<open>DG_Base_Exec\<close>), matching
+  Registration is on the generic Base construction (\<open>DG_Local_State_Exec\<close>), matching
   Sign's own production route: the local unknown carries the whole
   reachability-lifted \<open>parity exec_dg_st\<close>,
   locals and \<open>total\<close> (the one declared global) alike, with no separate
@@ -28,7 +28,7 @@ text \<open>
 
 theory Example_Parity_DG_Flagship
   imports
-    "Voblint_Exec.DG_Base_Exec"
+    "Voblint_Exec.DG_Local_State_Exec"
     "Voblint_Analysis.Parity_Exec"
     "Voblint_Solver.TD_Solver_Menu"
     "Voblint_Exec.DG_Coverage"
@@ -122,8 +122,8 @@ subsection \<open>3. Executable parity D/G specification\<close>
 
 text \<open>
   Parity forms the Base D/G analysis, with executable mirror
-  \<^const>\<open>base_dg_spec_st_for_lifted\<close> \<open>parity_gs\<close> over \<open>parity_tf_st_for\<close>/
-  \<open>parity_enter_st_for\<close>.  The registration \<^locale>\<open>base_dg_exec_analysis\<close> ---
+  \<^const>\<open>local_state_dg_spec_st_for_lifted\<close> \<open>parity_gs\<close> over \<open>parity_tf_st_for\<close>/
+  \<open>parity_enter_st_for\<close>.  The registration \<^locale>\<open>local_state_dg_exec_analysis\<close> ---
   interpreted as \<open>parity_ex_reg\<close> below, at this file's own classifier
   \<open>parity_gs\<close>, from \<open>parity_is_sound_transfer_for\<close> and
   \<open>parity_tf_st_for_commute\<close> alone --- discharges the transport, soundness, and
@@ -135,7 +135,7 @@ subsection \<open>4. Equation generation\<close>
 
 definition parity_eqs :: "pp \<times> unit \<Rightarrow> (pp \<times> unit, unit, (parity exec_dg_st lifted, parity exec_dg_st lifted) dg_state) strategy_tree" where
   "parity_eqs = dg_gen_of
-     (base_dg_spec_st_for_lifted parity_gs (resolved_st_q_is_bot_for (declared_global_vars parity_program))
+     (local_state_dg_spec_st_for_lifted parity_gs (resolved_st_q_is_bot_for (declared_global_vars parity_program))
        (parity_tf_st_for parity_gs) (parity_enter_st_for parity_gs))
      parity_cfg bot (Lifted cinit_parity_st) (Lifted cinit_parity_st)"
 
@@ -208,7 +208,7 @@ lemma parity_wf: "wf_compile_input parity_gs parity_pi []"
   by (auto simp: wf_compile_input_simps parity_pi_def parity_prog_def parity_program_def
       split: if_splits)
 
-text \<open>Interpret \<^locale>\<open>base_dg_exec_analysis\<close> once here at \<^const>\<open>parity_gs\<close> with
+text \<open>Interpret \<^locale>\<open>local_state_dg_exec_analysis\<close> once here at \<^const>\<open>parity_gs\<close> with
   the classifier-parametric transfer/enter functions, matching the pattern in
   \<open>Exec_Sign_DG_Run\<close>.  The interpretation absorbs the sound-transfer, primitive-
   commutation, and \<open>empty_pred\<close>-exactness obligations once, so
@@ -216,14 +216,14 @@ text \<open>Interpret \<^locale>\<open>base_dg_exec_analysis\<close> once here a
   facts.\<close>
 
 interpretation parity_ex_reg:
-  base_dg_exec_analysis parity_gs
+  local_state_dg_exec_analysis parity_gs
     "parity_tf_for parity_gs" "parity_tf_st_for parity_gs" "parity_enter_st_for parity_gs"
     "resolved_st_q_is_bot_for (declared_global_vars parity_program)"
     "TD_side_always_join_Interp.solve" "TD_side_always_join_Interp.solve_c"
 proof -
   interpret parity_ex_transfer: sound_transfer_for parity_gs "parity_tf_for parity_gs"
     by (rule parity_is_sound_transfer_for)
-  show "base_dg_exec_analysis parity_gs (parity_tf_for parity_gs) (parity_tf_st_for parity_gs)
+  show "local_state_dg_exec_analysis parity_gs (parity_tf_for parity_gs) (parity_tf_st_for parity_gs)
           (parity_enter_st_for parity_gs) (resolved_st_q_is_bot_for (declared_global_vars parity_program))
           TD_side_always_join_Interp.solve TD_side_always_join_Interp.solve_c"
     by unfold_locales

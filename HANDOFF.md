@@ -79,7 +79,7 @@ file for whoever picks it up next.
   by importing `Exec_DG_Generator.thy` for `dg_gen_of`) needs `dg_gen_of`/
   `dg_reader_commute_gen` extracted from `Exec_DG_Generator.thy` first --
   that file has not been audited in full by anyone yet, unlike everything
-  else touched this session. `DG_Base_Exec.thy`/`routed_dg_domain_exec` and
+  else touched this session. `DG_Local_State_Exec.thy`/`routed_dg_domain_exec` and
   most of `Monovariant_Analysis_Result.thy` do **not** move -- they are the
   executable-carrier transport itself (bridging `resolved_st_q`/
   `exec_dg_st` to the abstract framework), not misplaced generic content,

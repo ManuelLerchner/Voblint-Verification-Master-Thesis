@@ -1,5 +1,5 @@
 theory Routed_Context
-  imports DG_Ctx_Activation DG_Base "Voblint_Solver.Strategy_Tree_Combinators"
+  imports DG_Ctx_Activation DG_Local_State_Spec "Voblint_Solver.Strategy_Tree_Combinators"
     "Voblint_CFG.LTR_Def" Activation_Backbone
 begin
 

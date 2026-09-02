@@ -69,7 +69,7 @@ next to the abstract framework they mirror:
 
 ```text
 Exec_DG_Bridge               carrier-generic executable/abstract transport
-DG_Base_Exec                 executable mirror of Core's DG_Base
+DG_Local_State_Exec                 executable mirror of Core's DG_Local_State_Spec
 Routed_Domain_Exec           the routing layer, renamed with the locale
 Monovariant_Analysis_Result  one executable AnalysisResult constructor
 ```

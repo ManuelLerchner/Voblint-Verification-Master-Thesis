@@ -5,8 +5,8 @@ theory Int_Analyses
     "Voblint_Analysis.Int_Exec"
     "Voblint_Exec.Monovariant_Analysis_Result"
     "Voblint_Exec.Routed_Domain_Exec"
-    "Voblint_Exec.DG_Base_Exec"
-    "Voblint_Framework.DG_Base"
+    "Voblint_Exec.DG_Local_State_Exec"
+    "Voblint_Framework.DG_Local_State_Spec"
     "Voblint_Framework.DG_LTR_Sound"
     "Voblint_Framework.Routed_Analysis_Sound"
     "Voblint_Framework.Routed_Context"
@@ -157,7 +157,7 @@ text \<open>
 
 text \<open>The concretization the executable-carrier interpretations below use: a local
   unknown means \<^const>\<open>gamma_state_lift\<close> of its readback, the global slot is ignored as
-  in \<^const>\<open>gamma_dg_base\<close>. Named at top level so a downstream theory can state it.\<close>
+  in \<^const>\<open>gamma_dg_local_state\<close>. Named at top level so a downstream theory can state it.\<close>
 
 context
   fixes gs :: "vname \<Rightarrow> bool" and empty_pred :: "int_dom exec_dg_st \<Rightarrow> bool" and mode :: refine_mode
@@ -523,7 +523,7 @@ text \<open>
   derivation for a second domain: same \<^const>\<open>int_dom_spec\<close>/\<^const>\<open>int_dom_abs_spec\<close>
   D/G specification and the same domain-commute facts Int's own routed-unit
   instance already interprets (\<^locale>\<open>routed_dg_domain_exec\<close>,
-  \<^theory>\<open>Voblint_Exec.DG_Base_Exec\<close>) -- nothing here re-derives them, and the
+  \<^theory>\<open>Voblint_Exec.DG_Local_State_Exec\<close>) -- nothing here re-derives them, and the
   \<^typ>\<open>refine_mode\<close> parameter Int threads throughout stays a genuine fixed
   argument exactly as it already is at Int's own \<^const>\<open>int_dom_spec\<close>. Only the
   routing policy changes, from \<^const>\<open>route_unit\<close> to
@@ -815,12 +815,12 @@ text \<open>
   acceptance test, after Sign's own call-string and entry-state derivations and Int's
   own call-string derivation: same \<^const>\<open>int_dom_spec\<close>/\<^const>\<open>int_dom_abs_spec\<close> D/G
   specification and the same domain-commute facts Int already interprets
-  (\<^locale>\<open>routed_dg_domain_exec\<close>, \<^theory>\<open>Voblint_Exec.DG_Base_Exec\<close>) -- nothing here
+  (\<^locale>\<open>routed_dg_domain_exec\<close>, \<^theory>\<open>Voblint_Exec.DG_Local_State_Exec\<close>) -- nothing here
   re-derives them, and the \<^typ>\<open>refine_mode\<close> parameter Int threads throughout stays a
   genuine fixed argument exactly as it already is at Int's own \<^const>\<open>int_dom_spec\<close>. The
   routing policy is the same generic entry-state construction
   (\<open>entry_exec_route_gen\<close>/\<^const>\<open>formals_route_lifted_gen\<close>,
-  \<^theory>\<open>Voblint_Exec.DG_Base_Exec\<close>/\<^theory>\<open>Voblint_Framework.Routed_Context\<close>) Sign's own
+  \<^theory>\<open>Voblint_Exec.DG_Local_State_Exec\<close>/\<^theory>\<open>Voblint_Framework.Routed_Context\<close>) Sign's own
   entry-state instance already uses: it needed only \<^locale>\<open>routed_dg_domain_exec\<close>'s
   own three primitive commute facts, which Int's own routed-unit instance has already
   established, so no new Int-domain mathematics is needed here either.
@@ -841,7 +841,7 @@ text \<open>
   \<open>sctx_entry_route\<close>/\<open>sctx_entry_route_gen\<close> exactly, at Int's own
   \<open>int_dom_enter_st_for mode gs\<close> instead of Sign's \<open>sign_enter_st_for gs\<close> -- this is
   precisely \<^locale>\<open>routed_dg_domain_exec\<close>'s own \<open>entry_exec_route\<close>/
-  \<open>entry_exec_route_gen\<close> (\<^theory>\<open>Voblint_Exec.DG_Base_Exec\<close>), restated here as
+  \<open>entry_exec_route_gen\<close> (\<^theory>\<open>Voblint_Exec.DG_Local_State_Exec\<close>), restated here as
   unconditional top-level definitions so the equation-system definitions below need no
   \<open>exact\<close> premise to be stated, matching every other routed instance's convention. The
   routed generator enters the callee frame before it routes, so the route itself only

@@ -5,8 +5,8 @@ theory Parity_Analyses
     "Voblint_Analysis.Parity_Exec"
     "Voblint_Exec.Monovariant_Analysis_Result"
     "Voblint_Exec.Routed_Domain_Exec"
-    "Voblint_Exec.DG_Base_Exec"
-    "Voblint_Framework.DG_Base"
+    "Voblint_Exec.DG_Local_State_Exec"
+    "Voblint_Framework.DG_Local_State_Spec"
     "Voblint_Framework.Routed_Analysis_Sound"
     "Voblint_Framework.Routed_Context"
     "Voblint_Framework.Routed_Context_Unit"
@@ -763,7 +763,7 @@ subsection \<open>The routed equation system's own route, generic per compiled p
 
 text \<open>
   Parity's executable-carrier route: this is \<^locale>\<open>routed_dg_domain_exec\<close>'s own
-  \<open>entry_exec_route\<close>/\<open>entry_exec_route_gen\<close> (\<^theory>\<open>Voblint_Exec.DG_Base_Exec\<close>),
+  \<open>entry_exec_route\<close>/\<open>entry_exec_route_gen\<close> (\<^theory>\<open>Voblint_Exec.DG_Local_State_Exec\<close>),
   restated as unconditional top-level definitions rather than reached through an
   interpretation, so the equation-system definitions below need no \<open>exact\<close> premise in
   order to be stated.

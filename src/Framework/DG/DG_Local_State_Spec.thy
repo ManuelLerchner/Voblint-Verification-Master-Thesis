@@ -1,4 +1,4 @@
-theory DG_Base
+theory DG_Local_State_Spec
   imports DG_Spec_Sound
 begin
 
@@ -26,12 +26,12 @@ text \<open>
 
 subsection \<open>The unlifted core\<close>
 
-definition base_dg_spec_for ::
+definition local_state_dg_spec_for ::
   "(vname \<Rightarrow> bool)
    \<Rightarrow> 'a::sound_domain domain_transfer
    \<Rightarrow> ('x,'k,unit,'a abs_state,'g::bounded_semilattice_sup_bot) dg_spec"
 where
-  "base_dg_spec_for gs tf = local_dg_spec
+  "local_state_dg_spec_for gs tf = local_dg_spec
      (skip\<^sup># tf) (assign\<^sup># tf) (special\<^sup># tf) (branch\<^sup># tf) (body\<^sup># tf) (return\<^sup># tf)
      (\<lambda>ci. snd o enter\<^sup># tf ci) (event\<^sup># tf)
      (\<lambda>ci d. d) (\<lambda>ci dc de. dc)
@@ -43,14 +43,14 @@ lemma local_spec_step_apply_tf:
      = apply_tf tf a"
   by (cases a) simp_all
 
-lemma dg_spec_step_base_for:
-  "dg_spec_step (base_dg_spec_for gs tf) a = local_transfer (apply_tf tf a)"
-  by (simp add: base_dg_spec_for_def dg_spec_step_local_dg_spec local_spec_step_apply_tf)
+lemma dg_spec_step_local_state_for:
+  "dg_spec_step (local_state_dg_spec_for gs tf) a = local_transfer (apply_tf tf a)"
+  by (simp add: local_state_dg_spec_for_def dg_spec_step_local_dg_spec local_spec_step_apply_tf)
 
-theorem base_dg_spec_for_sound:
+theorem local_state_dg_spec_for_sound:
   assumes tf_sound: "sound_transfer_for gs tf"
-  shows "sound_dg_spec (base_dg_spec_for gs tf) (\<lambda>d g. \<lbrakk>d\<rbrakk>) gs"
-  unfolding base_dg_spec_for_def
+  shows "sound_dg_spec (local_state_dg_spec_for gs tf) (\<lambda>d g. \<lbrakk>d\<rbrakk>) gs"
+  unfolding local_state_dg_spec_for_def
 proof (rule sound_local_dg_spec.local_spec_sound, unfold_locales, goal_cases)
   case 1
   then show ?case by (meson gamma_state_mono)
@@ -135,13 +135,13 @@ qed
 
 subsection \<open>The reachability-lifted construction\<close>
 
-definition base_dg_spec_for_lifted ::
+definition local_state_dg_spec_for_lifted ::
   "(vname \<Rightarrow> bool)
    \<Rightarrow> ('a abs_state \<Rightarrow> bool)
    \<Rightarrow> 'a::sound_domain domain_transfer
    \<Rightarrow> ('x,'k,unit,'a abs_state lifted,'g::bounded_semilattice_sup_bot) dg_spec"
 where
-  "base_dg_spec_for_lifted gs empty_pred tf = local_dg_spec
+  "local_state_dg_spec_for_lifted gs empty_pred tf = local_dg_spec
      (transfer_lift empty_pred (skip\<^sup># tf))
      (\<lambda>x e. transfer_lift empty_pred (assign\<^sup># tf x e))
      (\<lambda>sc x. transfer_lift empty_pred (special\<^sup># tf sc x))
@@ -163,26 +163,26 @@ lemma local_spec_step_transfer_lift_apply_tf:
      = transfer_lift empty_pred (apply_tf tf a)"
   by (cases a) simp_all
 
-lemma dg_spec_step_base_for_lifted:
-  "dg_spec_step (base_dg_spec_for_lifted gs empty_pred tf) a
+lemma dg_spec_step_local_state_for_lifted:
+  "dg_spec_step (local_state_dg_spec_for_lifted gs empty_pred tf) a
      = local_transfer (transfer_lift empty_pred (apply_tf tf a))"
-  by (simp add: base_dg_spec_for_lifted_def dg_spec_step_local_dg_spec
+  by (simp add: local_state_dg_spec_for_lifted_def dg_spec_step_local_dg_spec
       local_spec_step_transfer_lift_apply_tf)
 
-lemma dgs_enter_base_for_lifted:
-  "dgs_enter (base_dg_spec_for_lifted gs empty_pred tf) ci
+lemma dgs_enter_local_state_for_lifted:
+  "dgs_enter (local_state_dg_spec_for_lifted gs empty_pred tf) ci
      = local_transfer (transfer_lift empty_pred (snd o enter\<^sup># tf ci))"
-  by (simp add: base_dg_spec_for_lifted_def)
+  by (simp add: local_state_dg_spec_for_lifted_def)
 
 text \<open>The caller half of \<open>enter\<close> and the env stage are both identities, so the
   whole return pipeline is the return assignment applied to the raw call-site
   value and the callee exit.\<close>
 
-lemma dg_spec_combine_transfer_base_for_lifted:
-  "dg_spec_combine_transfer (base_dg_spec_for_lifted gs empty_pred tf) ci
+lemma dg_spec_combine_transfer_local_state_for_lifted:
+  "dg_spec_combine_transfer (local_state_dg_spec_for_lifted gs empty_pred tf) ci
      = local_combine_transfer
          (\<lambda>dc de. transfer_lift2 empty_pred (combine\<^sup># gs (ci_dst ci)) dc de)"
-  by (simp add: base_dg_spec_for_lifted_def dg_spec_combine_transfer_local_dg_spec)
+  by (simp add: local_state_dg_spec_for_lifted_def dg_spec_combine_transfer_local_dg_spec)
 subsection \<open>Packaging correspondence\<close>
 
 text \<open>
@@ -209,25 +209,25 @@ subsection \<open>Soundness of the lifted construction\<close>
 
 text \<open>
   The meaning of a Base-style equation never depends on the global slot:
-  nothing in \<^const>\<open>base_dg_spec_for_lifted\<close> ever publishes to or reads
-  from it, so \<open>gamma_dg_base\<close> ignores its global argument entirely and the
+  nothing in \<^const>\<open>local_state_dg_spec_for_lifted\<close> ever publishes to or reads
+  from it, so \<open>gamma_dg_local_state\<close> ignores its global argument entirely and the
   \<^const>\<open>sound_local_dg_spec\<close> obligations are the transported pure facts.
 \<close>
 
-definition gamma_dg_base ::
+definition gamma_dg_local_state ::
   "'a::sound_domain abs_state lifted \<Rightarrow> 'g::bounded_semilattice_sup_bot \<Rightarrow> store set"
 where
-  "gamma_dg_base d g = gamma_state_lift d"
+  "gamma_dg_local_state d g = gamma_state_lift d"
 
-theorem base_dg_spec_sound:
+theorem local_state_dg_spec_sound:
   assumes tf_sound: "sound_transfer_for gs tf"
     and empty_pred_sound: "\<And>sigma. empty_pred sigma \<Longrightarrow> \<lbrakk>sigma\<rbrakk> = {}"
-  shows "sound_dg_spec (base_dg_spec_for_lifted gs empty_pred tf) gamma_dg_base gs"
+  shows "sound_dg_spec (local_state_dg_spec_for_lifted gs empty_pred tf) gamma_dg_local_state gs"
 proof -
-  have geq: "gamma_dg_base = (\<lambda>d g. gamma_state_lift d)"
-    by (simp add: fun_eq_iff gamma_dg_base_def)
+  have geq: "gamma_dg_local_state = (\<lambda>d g. gamma_state_lift d)"
+    by (simp add: fun_eq_iff gamma_dg_local_state_def)
   show ?thesis
-    unfolding base_dg_spec_for_lifted_def geq
+    unfolding local_state_dg_spec_for_lifted_def geq
   proof (rule sound_local_dg_spec.local_spec_sound, unfold_locales, goal_cases)
     case 1
     then show ?case by (meson gamma_lift_mono gamma_state_mono)

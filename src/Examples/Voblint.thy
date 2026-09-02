@@ -283,7 +283,7 @@ text \<open>
     \<^item> @{theory Voblint_Exec.Exec_St} --- executable abstract-state maps for code generation.
     \<^item> @{theory Voblint_Exec.Exec_Refinement} --- commutation bridge from executable states to function states.
     \<^item> @{theory Voblint_Exec.Exec_DG_Generator} --- the executable D/G equation generator (\<^const>\<open>dg_gen_of\<close>, \<^const>\<open>fun_of_dg_st_gen\<close>): the verified solver \<^emph>\<open>runs\<close> on D/G equations.
-    \<^item> @{theory Voblint_Exec.DG_Base_Exec} --- \<^locale>\<open>routed_dg_domain_exec\<close> proves a registered domain's D/G spec sound directly at this executable carrier, with no separate abstract-carrier transport step.
+    \<^item> @{theory Voblint_Exec.DG_Local_State_Exec} --- \<^locale>\<open>routed_dg_domain_exec\<close> proves a registered domain's D/G spec sound directly at this executable carrier, with no separate abstract-carrier transport step.
     \<^item> @{theory Voblint_Analysis.Sign_Exec} --- executable Sign transfer functions.
     \<^item> @{theory Voblint_Analysis.Sign_Analyses} --- the routed D/G runtime for Sign: the equation system, its solved table, and the termination hypothesis each solver discipline turns on.
     \<^item> @{theory Voblint_Analysis.Interval_Analyses} --- the Interval counterpart, with the join, per-origin and warrowing solver-choice siblings.
@@ -383,7 +383,7 @@ text \<open>
       computation, not two.
     \<^item> @{theory Voblint_CLI.Interval_Entry} --- \<^verbatim>\<open>analyse_interval_dg\<close>/
       \<^verbatim>\<open>analyse_interval_td_report\<close>, the Interval counterpart production \<^verbatim>\<open>analyse\<close> actually
-      dispatches to, built the same way on \<^verbatim>\<open>base_dg_exec_analysis\<close>'s own \<^verbatim>\<open>run_source_sound\<close>/
+      dispatches to, built the same way on \<^verbatim>\<open>local_state_dg_exec_analysis\<close>'s own \<^verbatim>\<open>run_source_sound\<close>/
       \<^verbatim>\<open>collect_sound\<close>. \<^verbatim>\<open>Interval_Checks\<close> additionally carries \<^verbatim>\<open>analyse_interval_report\<close>/
       \<^verbatim>\<open>analyse_interval_report_per_origin\<close>, the always-join and per-origin update-rule siblings
       \<^verbatim>\<open>analyse_with_solver\<close> (@{theory Voblint_CLI.Analyse_Dispatch}) compares against this

@@ -75,7 +75,7 @@ text \<open>
   \<^const>\<open>analyse_interval_dg_eqs_for\<close> already solves over
   (\<^theory>\<open>Voblint_Analysis.Interval_Exec_Sound\<close>), at the same
   \<^const>\<open>ivl_tf_st_for\<close>/\<^const>\<open>ivl_enter_st_for\<close> primitives -- byte-for-byte the
-  term \<open>base_dg_spec_st_for_lifted gs empty_pred (ivl_tf_st_for gs) (ivl_enter_st_for gs)\<close>
+  term \<open>local_state_dg_spec_st_for_lifted gs empty_pred (ivl_tf_st_for gs) (ivl_enter_st_for gs)\<close>
   that \<^const>\<open>analyse_interval_dg_eqs_for\<close> feeds \<^const>\<open>dg_gen_of\<close>. Only the
   equation-generator wrapped around this spec changes (\<open>dg_gen_of\<close> there, the
   routed keyed-seed generator here) --- the spec itself, and every domain-transfer
@@ -136,7 +136,7 @@ text \<open>
 
 text \<open>The concretization the executable-carrier interpretation below uses: a local
   unknown means \<^const>\<open>gamma_state_lift\<close> of its readback, the global slot is ignored as
-  in \<^const>\<open>gamma_dg_base\<close>. Named at top level so a downstream theory can state it.\<close>
+  in \<^const>\<open>gamma_dg_local_state\<close>. Named at top level so a downstream theory can state it.\<close>
 
 context
   fixes gs :: "vname \<Rightarrow> bool" and empty_pred :: "ivl exec_dg_st \<Rightarrow> bool"
@@ -689,14 +689,14 @@ text \<open>
 
 text \<open>
   \<open>interval_spec\<close> is the Base-style whole-state specification
-  (\<^const>\<open>base_dg_spec_st_for_lifted\<close>), the same one context-insensitive Interval already
+  (\<^const>\<open>local_state_dg_spec_st_for_lifted\<close>), the same one context-insensitive Interval already
   solves over in \<^const>\<open>analyse_interval_dg_eqs_for\<close>, at the same
   \<^const>\<open>ivl_tf_st_for\<close>/\<^const>\<open>ivl_enter_st_for\<close> primitives: the local unknown
   \<^typ>\<open>ivl exec_dg_st lifted\<close> carries every VIMP variable, global and local alike, so a
   global is read and written exactly where a local is. The solver-global carrier stays
   diagonal at \<^typ>\<open>ivl exec_dg_st lifted\<close> -- the type the keyed generator and its
   warrowing solver instance already fix -- but is inert: every field of
-  \<^const>\<open>base_dg_spec_st_for_lifted\<close> threads its incoming \<open>g\<close> through unchanged, so
+  \<^const>\<open>local_state_dg_spec_st_for_lifted\<close> threads its incoming \<open>g\<close> through unchanged, so
   \<open>Inr (Analysis_Global ())\<close> is never read back to reconstruct program state.
 
   \<open>interval_spec\<close> carries an explicit executable bottom predicate and solves over the lifted
@@ -750,7 +750,7 @@ definition entry_state_entered ::
 lemma entered_interval_spec_eq_entry_state_entered:
   "entered (interval_spec gs empty_pred) gkey tau (call_info_of ca p) src =
    entry_state_entered gs empty_pred (locals (tau src)) ca"
-  unfolding entered_def interval_spec_def dgs_enter_base_st_for_lifted
+  unfolding entered_def interval_spec_def dgs_enter_local_state_st_for_lifted
     entry_state_entered_def
   by (cases "locals (tau src)")
      (simp_all add: transfer_lift_def normalize_lift_def entry_state_enter_exec_def)
@@ -1120,7 +1120,7 @@ text \<open>
 
 text \<open>The concretization the executable-carrier interpretations below use: a local
   unknown means \<^const>\<open>gamma_state_lift\<close> of its readback, the global slot is ignored as
-  in \<^const>\<open>gamma_dg_base\<close>. Named at top level so a downstream theory can state it.\<close>
+  in \<^const>\<open>gamma_dg_local_state\<close>. Named at top level so a downstream theory can state it.\<close>
 
 context
   fixes gs :: "vname \<Rightarrow> bool" and empty_pred :: "ivl exec_dg_st \<Rightarrow> bool"

@@ -5,7 +5,7 @@ theory Interval_Exec_Sound
           "Voblint_CFG.CFG_Prune"
           "Voblint_VIMP.VIMP_Program"
           "Voblint_Compile.Compile_Invariants"
-          "Voblint_Exec.DG_Base_Exec"
+          "Voblint_Exec.DG_Local_State_Exec"
 begin
 
 section \<open>Native D/G runtime API: an arbitrary VIMP program\<close>
@@ -24,13 +24,13 @@ text \<open>
   genuinely unbounded loop.
 
   Only the raw computation lives here: soundness needs the
-  \<open>base_dg_exec_analysis\<close> locale (\<open>Run_Analysis_Sound\<close>, Formalization session),
+  \<open>local_state_dg_exec_analysis\<close> locale (\<open>Run_Analysis_Sound\<close>, Formalization session),
   one session later than Analysis in the locked six-session chain, so that half
   stays downstream in \<open>Interval_Entry\<close> (CLI), mirroring \<open>Sign_Entry\<close>.
 
   \<open>G\<close> stays diagonal at \<open>ivl exec_dg_st lifted\<close>, matching what \<open>dg_gen_of\<close>
   needs; its content is never read, since every field of
-  \<^const>\<open>base_dg_spec_st_for_lifted\<close> threads its incoming \<open>g\<close> through unchanged.
+  \<^const>\<open>local_state_dg_spec_st_for_lifted\<close> threads its incoming \<open>g\<close> through unchanged.
 \<close>
 
 definition analyse_interval_dg_eqs_for ::
@@ -38,7 +38,7 @@ definition analyse_interval_dg_eqs_for ::
      pp \<times> unit \<Rightarrow> (pp \<times> unit, unit, (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state) strategy_tree" where
   "analyse_interval_dg_eqs_for empty_pred gs p =
      dg_gen_of
-       (base_dg_spec_st_for_lifted gs empty_pred (ivl_tf_st_for gs) (ivl_enter_st_for gs))
+       (local_state_dg_spec_st_for_lifted gs empty_pred (ivl_tf_st_for gs) (ivl_enter_st_for gs))
        (prog_cfg p) bot (Lifted cinit_ivl_st) (Lifted cinit_ivl_st)"
 
 definition analyse_interval_dg_for :: "(ivl exec_dg_st \<Rightarrow> bool) \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow>
@@ -104,7 +104,7 @@ text \<open>
   separate flow-insensitive summary reintroduced for either update rule. Both get
   the same \<open>_env_for\<close> reading layer \<^const>\<open>analyse_interval_dg_env_for\<close> already
   has, so their soundness proofs (in the Examples session, downstream) reuse the
-  identical \<open>base_dg_exec_analysis\<close> proof shape the warrowing route uses, not a
+  identical \<open>local_state_dg_exec_analysis\<close> proof shape the warrowing route uses, not a
   bespoke argument per update rule.
 \<close>
 

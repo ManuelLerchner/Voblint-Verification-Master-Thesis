@@ -1,6 +1,6 @@
 theory Sign_Sound
   imports
-    "Voblint_Exec.DG_Base_Exec"
+    "Voblint_Exec.DG_Local_State_Exec"
     "Voblint_Analysis.Sign_Transfer"
     "Voblint_Analysis.Sign_Exec"
 begin
@@ -35,13 +35,13 @@ definition sctx_spec ::
    \<Rightarrow> ('x, 'k, unit, sign exec_dg_st lifted, sign exec_dg_st lifted) dg_spec"
 where
   "sctx_spec gs empty_pred =
-     base_dg_spec_st_for_lifted gs empty_pred (sign_tf_st_for gs) (sign_enter_st_for gs)"
+     local_state_dg_spec_st_for_lifted gs empty_pred (sign_tf_st_for gs) (sign_enter_st_for gs)"
 
 definition sctx_abs_spec ::
   "(vname \<Rightarrow> bool)
    \<Rightarrow> ('x, 'k, unit, sign abs_state lifted, sign abs_state lifted) dg_spec"
 where
-  "sctx_abs_spec gs = base_dg_spec_for_lifted gs is_empty_state (sign_tf_for gs)"
+  "sctx_abs_spec gs = local_state_dg_spec_for_lifted gs is_empty_state (sign_tf_for gs)"
 
 subsection \<open>The concretization\<close>
 

@@ -6,7 +6,7 @@ concrete run to the abstract result.
 
 | File | Role | What |
 | --- | --- | --- |
-| `Exec_Sign_DG_Run.thy` | required support | end-to-end certified run on the Base-style D/G equation system, registered through `base_dg_exec_analysis` as `sign_ex_reg` |
+| `Exec_Sign_DG_Run.thy` | required support | end-to-end certified run on the Base-style D/G equation system, registered through `local_state_dg_exec_analysis` as `sign_ex_reg` |
 | `Example_Sign_Codegen_Exec_Consistency.thy` | regression | `Exec_Sign_DG_Run`'s `gEx`/`dgEx_eqs`/`dgEx_sol` really are the instance of `Sign_Codegen`'s arbitrary-program chain, not a parallel definition |
 | `Example_Side_Execute.thy` | canonical spine | the smallest certified sign IP run, on `x := 1` (`x1_certified_sound`, `x1_explicit_completed_run_covered`) |
 | `Example_Side_Proc_Global.thy` | canonical spine | sign IP on a global increment call (`inc_program`, see `../CFG/`); `inc_certified_sound` |

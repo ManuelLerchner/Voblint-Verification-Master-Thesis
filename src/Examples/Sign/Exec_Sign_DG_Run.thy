@@ -2,11 +2,11 @@ section \<open>Running the verified solver on the native D/G spine (Sign)\<close
 
 text \<open>
   An end-to-end certified run on the Base-style D/G equation system, registered
-  through the \<open>base_dg_exec_analysis\<close> locale (interpreted as \<open>sign_ex_reg\<close> below, at
+  through the \<open>local_state_dg_exec_analysis\<close> locale (interpreted as \<open>sign_ex_reg\<close> below, at
   this file's own storage classifier \<open>sign_ex_gs\<close>, from \<open>sign_is_sound_transfer_for\<close>,
   \<open>sign_tf_st_for_commute\<close>, and \<open>sign_enter_st_for_commute\<close>).
   A concrete call-free Sign program is compiled to a CFG; the executable D/G
-  generator (\<open>dg_gen_of (base_dg_spec_st_for_lifted sign_ex_gs \<dots> sign_tf_st_for sign_enter_st_for)\<close>,
+  generator (\<open>dg_gen_of (local_state_dg_spec_st_for_lifted sign_ex_gs \<dots> sign_tf_st_for sign_enter_st_for)\<close>,
   values in \<open>(sign exec_dg_st lifted, sign exec_dg_st lifted) dg_state\<close> --- the whole
   abstract state routed through the local unknown, no separate global/side slot) is
   handed to the vendored always-join TD-side solver; the solver \<^emph>\<open>computes\<close> a
@@ -21,7 +21,7 @@ text \<open>
 
 theory Exec_Sign_DG_Run
   imports
-    "Voblint_Exec.DG_Base_Exec"
+    "Voblint_Exec.DG_Local_State_Exec"
     "Voblint_Exec.DG_Coverage"
     "Voblint_Analysis.Sign_Exec"
     "Voblint_Solver.TD_Solver_Menu"
@@ -80,7 +80,7 @@ lemmas gEx_finC = gEx.finite_calls
 
 definition dgEx_eqs :: "pp \<times> unit \<Rightarrow> (pp \<times> unit, unit, (sign exec_dg_st lifted, sign exec_dg_st lifted) dg_state) strategy_tree" where
   "dgEx_eqs = dg_gen_of
-     (base_dg_spec_st_for_lifted sign_ex_gs (resolved_st_q_is_bot_for (declared_global_vars sign_ex_prog))
+     (local_state_dg_spec_st_for_lifted sign_ex_gs (resolved_st_q_is_bot_for (declared_global_vars sign_ex_prog))
        (sign_tf_st_for sign_ex_gs) (sign_enter_st_for sign_ex_gs))
      gEx bot (Lifted cinit_sign_st) (Lifted cinit_sign_st)"
 
@@ -135,23 +135,23 @@ lemma dgEx_is_bot_exact:
 
 subsection \<open>Registration through the classifier-parametric registration locale\<close>
 
-text \<open>Interpret \<^locale>\<open>base_dg_exec_analysis\<close> once here at \<^const>\<open>sign_ex_gs\<close>
+text \<open>Interpret \<^locale>\<open>local_state_dg_exec_analysis\<close> once here at \<^const>\<open>sign_ex_gs\<close>
   with the classifier-parametric transfer/enter functions and \<^const>\<open>resolved_st_q_is_bot_for\<close>
   at this program's own declared globals -- the same five domain facts
   \<^locale>\<open>unit_dg_exec_analysis\<close> needed, plus the one new \<open>empty_pred\<close> exactness obligation. \<open>G\<close>
   is instantiated at \<open>sign exec_dg_st lifted\<close> too (the plumbing constraint
-  \<^theory>\<open>Voblint_Soundness.Run_Analysis_Sound\<close>'s \<open>base_dg_exec_analysis\<close> documents), not because
+  \<^theory>\<open>Voblint_Soundness.Run_Analysis_Sound\<close>'s \<open>local_state_dg_exec_analysis\<close> documents), not because
   \<open>G\<close>'s content matters here.\<close>
 
 interpretation sign_ex_reg:
-  base_dg_exec_analysis sign_ex_gs
+  local_state_dg_exec_analysis sign_ex_gs
     "sign_tf_for sign_ex_gs" "sign_tf_st_for sign_ex_gs" "sign_enter_st_for sign_ex_gs"
     "resolved_st_q_is_bot_for (declared_global_vars sign_ex_prog)"
     "TD_side_always_join_Interp.solve" "TD_side_always_join_Interp.solve_c"
 proof -
   interpret sign_ex_transfer: sound_transfer_for sign_ex_gs "sign_tf_for sign_ex_gs"
     by (rule sign_is_sound_transfer_for)
-  show "base_dg_exec_analysis sign_ex_gs (sign_tf_for sign_ex_gs) (sign_tf_st_for sign_ex_gs)
+  show "local_state_dg_exec_analysis sign_ex_gs (sign_tf_for sign_ex_gs) (sign_tf_st_for sign_ex_gs)
           (sign_enter_st_for sign_ex_gs) (resolved_st_q_is_bot_for (declared_global_vars sign_ex_prog))
           TD_side_always_join_Interp.solve TD_side_always_join_Interp.solve_c"
     by unfold_locales

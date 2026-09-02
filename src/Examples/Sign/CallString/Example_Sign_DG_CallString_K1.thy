@@ -3,7 +3,7 @@ theory Example_Sign_DG_CallString_K1
     "Voblint_Framework.DG_LTR_Sound"
     "Voblint_Analysis.Sign_Transfer"
     "Voblint_Analysis.Sign_Exec"
-    "Voblint_Exec.DG_Base_Exec"
+    "Voblint_Exec.DG_Local_State_Exec"
     "Voblint_Analysis.Call_String_Routed_Context"
     "Voblint_Framework.Activation_Backbone"
     "Voblint_Solver.TD_Solver_Menu"
@@ -24,7 +24,7 @@ text \<open>
   Storage is Base-style: the local unknown carries the whole abstract state on the lifted
   carrier \<^typ>\<open>sign exec_dg_st lifted\<close>, so a global is read and written exactly where a
   local is, and the solver-global carrier is inert --- every field of
-  \<^const>\<open>base_dg_spec_st_for_lifted\<close> threads its incoming \<open>g\<close> through unchanged, so
+  \<^const>\<open>local_state_dg_spec_st_for_lifted\<close> threads its incoming \<open>g\<close> through unchanged, so
   \<open>Inr Global\<close> is never read back to reconstruct program state. Only the routing policy
   (\<^const>\<open>cs_route\<close>, \<^const>\<open>cs_context\<close>) is call-string specific; the storage, the transfer
   primitives, and the CALL/COMB discharge are shared with every other Base-style analysis.
@@ -112,7 +112,7 @@ text \<open>The same Base-style pair every other Sign analysis solves over, at t
 definition sign_nest_S_st ::
   "(pp \<times> cfg_node list, call_string_gk,
      unit, sign exec_dg_st lifted, sign exec_dg_st lifted) dg_spec" where
-  "sign_nest_S_st = base_dg_spec_st_for_lifted sign_nest_gs sign_nest_empty_pred
+  "sign_nest_S_st = local_state_dg_spec_st_for_lifted sign_nest_gs sign_nest_empty_pred
                       (sign_tf_st_for sign_nest_gs) (sign_enter_st_for sign_nest_gs)"
 
 subsection \<open>Soundness of the executable specification, once for every bound\<close>
@@ -132,7 +132,7 @@ interpretation sign_nest_domain: routed_dg_domain_exec
      (rule sign_tf_st_for_commute, rule sign_enter_st_for_commute, rule sign_nest_exact)
 
 lemma sign_nest_gamma_eq: "sign_nest_gamma = sign_nest_domain.gamma_exec"
-  by (intro ext) (simp add: sign_nest_gamma_def sign_nest_domain.gamma_exec_def gamma_dg_base_def)
+  by (intro ext) (simp add: sign_nest_gamma_def sign_nest_domain.gamma_exec_def gamma_dg_local_state_def)
 
 interpretation sign_nest_dg_sound: sound_dg_spec sign_nest_S_st sign_nest_gamma sign_nest_gs
   unfolding sign_nest_gamma_eq sign_nest_S_st_def

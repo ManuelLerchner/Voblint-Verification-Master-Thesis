@@ -59,7 +59,7 @@ publish_global
 lift_dg_step
 lift_gamma
 indep_dg_spec
-base_dg_spec_st_for
+local_state_dg_spec_st_for
 
 # --- Unit ownership split, before `unit_transfer_gen` ---
 merge_split_spec
@@ -110,3 +110,10 @@ ictx_spec
 ictx_abs_spec
 ictx_gamma
 ictx_sound_exec
+base_dg_spec_for
+base_dg_spec_for_lifted
+base_dg_spec_st_for_lifted
+base_dg_spec_sound
+base_dg_spec_for_sound
+gamma_dg_base
+base_dg_exec_analysis

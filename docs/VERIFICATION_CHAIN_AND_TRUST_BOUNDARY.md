@@ -322,7 +322,7 @@ the older `side_cfg_T_eff_st` equation system `sign_exec_sound_collecting_at`/
 `ivl_exec_sound_collecting_at` are stated over, and not the mathematical
 `abs_state` generator the DG-native capstones `sign_dg_post_solution_collect_sound`/
 `ivl_dg_post_solution_collect_sound` are stated over). The connection reuses
-`base_dg_exec_analysis.collect_sound` (`Soundness/Run_Analysis_Sound.thy`)
+`local_state_dg_exec_analysis.collect_sound` (`Soundness/Run_Analysis_Sound.thy`)
 -- the same generic locale fact `analyse_sign_collect_sound_for`/
 `analyse_interval_dg_collect_sound_for` already cite to prove
 `analyse_sign_report_sound_proved_for`/`analyse_interval_td_report_sound_proved_for`

@@ -232,15 +232,15 @@ Downstream, it is the missing prerequisite chain for the remaining
   (`('dl,'dg) dg_spec => ('dl lifted,'dg) dg_spec` with
   `sound_dg_spec S ==> sound_dg_spec (dead_code_lift S)`), which then wraps
   *one* unlifted core instead of two -- and `unit_step_for_lifted` /
-  `unit_dg_spec_for_lifted` / `base_dg_spec_for_lifted` /
-  `base_dg_spec_st_for_lifted` become its instances as planned.
+  `unit_dg_spec_for_lifted` / `local_state_dg_spec_for_lifted` /
+  `local_state_dg_spec_st_for_lifted` become its instances as planned.
 - The alignment register's kept alternative stays true: `sound_dg_hooks`
   remains in Core (it is what `sound_dg_spec` reduces to), and
   `gamma_join` is *promoted* from example-only to the generic locale's
   second instantiation target rather than deleted.
 
 What this deliberately does **not** touch: `routed_dg_domain_exec`,
-`base_dg_spec_st_for_lifted`, and everything the nine production instances
+`local_state_dg_spec_st_for_lifted`, and everything the nine production instances
 interpret. The Base shape's exclusive routing and its lifted carrier are a
 different, sharper target (`gamma_unit \<subset> gamma_join`); folding it
 into this locale would trade proven precision for uniformity. If a later
@@ -413,9 +413,9 @@ corollaries mirrors `control.ml` exactly and is the intended endpoint.
    sees only the four composed operations); `renormalize` /
    `dead_code_normalize` + `dead_code_normalize_sound` over the explicit
    emptiness interface.
-2. **Landed** (in `DG_Base.thy`): the unlifted core `base_dg_spec_for` with
+2. **Landed** (in `DG_Local_State_Spec.thy`): the unlifted core `local_state_dg_spec_for` with
    its own soundness, four composed-operation agreement lemmas, and
-   `base_dg_spec_sound` re-derived through the functor chain -- the three
+   `local_state_dg_spec_sound` re-derived through the functor chain -- the three
    hand-rolled per-obligation walls are deleted. Field-level record
    equality is impossible (the frozen `dgs_combine_env` passthrough is not
    strict in the callee value; the generic lifter's is), so the connection
@@ -426,7 +426,7 @@ corollaries mirrors `control.ml` exactly and is the intended endpoint.
    `dead_code_lift_commute` and `dead_code_normalize_commute` -- the
    instances-plus-lifters naturality theorems. Wiring the Base executable
    records onto them (subsuming `routed_dg_domain_exec`'s per-domain
-   discharge) is the remaining Exec-side step; DG_Base_Exec's four
+   discharge) is the remaining Exec-side step; DG_Local_State_Exec's four
    whole-record commute theorems are already proved once, so this is
    packaging for the second lifter, not deduplication.
 3a. **Resolved by deletion**: the unit route's `unit_dg_spec_for_lifted` /

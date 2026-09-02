@@ -8,7 +8,7 @@ session Voblint_Exec in "." = "Voblint_Framework" +
     Exec_Refinement
     Exec_DG_Refines
     Exec_DG_Generator
-    DG_Base_Exec
+    DG_Local_State_Exec
     Routed_Domain_Exec
     (* Solved-key coverage as a graph property: vars_cover from reachability to
        the exit, instead of evaluating the solver's own key set. *)

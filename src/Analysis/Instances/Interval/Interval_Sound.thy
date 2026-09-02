@@ -1,6 +1,6 @@
 theory Interval_Sound
   imports
-    "Voblint_Exec.DG_Base_Exec"
+    "Voblint_Exec.DG_Local_State_Exec"
     "Voblint_Analysis.Interval_Transfer"
     "Voblint_Analysis.Interval_Exec_Sound"
 begin
@@ -22,12 +22,12 @@ definition interval_spec ::
    \<Rightarrow> ('x, 'k, unit, ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_spec"
 where
   "interval_spec gs empty_pred =
-     base_dg_spec_st_for_lifted gs empty_pred (ivl_tf_st_for gs) (ivl_enter_st_for gs)"
+     local_state_dg_spec_st_for_lifted gs empty_pred (ivl_tf_st_for gs) (ivl_enter_st_for gs)"
 
 definition interval_abs_spec ::
   "(vname \<Rightarrow> bool) \<Rightarrow> ('x, 'k, unit, ivl abs_state lifted, ivl abs_state lifted) dg_spec"
 where
-  "interval_abs_spec gs = base_dg_spec_for_lifted gs is_empty_state (ivl_tf_for gs)"
+  "interval_abs_spec gs = local_state_dg_spec_for_lifted gs is_empty_state (ivl_tf_for gs)"
 
 definition interval_gamma ::
     "(vname \<Rightarrow> bool) \<Rightarrow> ivl exec_dg_st lifted \<Rightarrow> ivl exec_dg_st lifted \<Rightarrow> store set" where

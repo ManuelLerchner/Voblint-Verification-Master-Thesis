@@ -1,11 +1,11 @@
-theory DG_Base_Exec
-  imports "Voblint_Framework.DG_Base" Exec_DG_Generator
+theory DG_Local_State_Exec
+  imports "Voblint_Framework.DG_Local_State_Spec" Exec_DG_Generator
 begin
 
 section \<open>Executable Base-style DG construction\<close>
 
 text \<open>
-  Executable mirror of \<^const>\<open>base_dg_spec_for_lifted\<close>: the same
+  Executable mirror of \<^const>\<open>local_state_dg_spec_for_lifted\<close>: the same
   \<^const>\<open>local_dg_spec\<close> shape, over \<open>'a exec_dg_st lifted\<close> instead of
   \<open>'a abs_state lifted\<close>, with \<open>tf_st\<close> a bare \<open>edge_action \<Rightarrow> _\<close> dispatcher
   (the executable representation has no \<^type>\<open>domain_transfer\<close> record) and
@@ -21,14 +21,14 @@ text \<open>
   explicitly before the assign stage writes the return value.
 \<close>
 
-definition base_dg_spec_st_for_lifted ::
+definition local_state_dg_spec_st_for_lifted ::
   "(vname \<Rightarrow> bool)
    \<Rightarrow> ('a::bounded_semilattice_sup_bot exec_dg_st \<Rightarrow> bool)
    \<Rightarrow> (edge_action \<Rightarrow> 'a exec_dg_st \<Rightarrow> 'a exec_dg_st)
    \<Rightarrow> (call_info \<Rightarrow> 'a exec_dg_st \<Rightarrow> 'a exec_dg_st)
    \<Rightarrow> ('x,'k,unit,'a exec_dg_st lifted,'g::bounded_semilattice_sup_bot) dg_spec"
 where
-  "base_dg_spec_st_for_lifted gs empty_pred tf_st enter_st = local_dg_spec
+  "local_state_dg_spec_st_for_lifted gs empty_pred tf_st enter_st = local_dg_spec
      (transfer_lift empty_pred (tf_st EA_Nop))
      (\<lambda>x e. transfer_lift empty_pred (tf_st (EA_Assign x e)))
      (\<lambda>sc x. transfer_lift empty_pred (tf_st (EA_Special sc x)))
@@ -51,7 +51,7 @@ text \<open>Consumed at code-generation time like every other specification buil
   (see \<^theory>\<open>Voblint_Framework.DG_Spec\<close>): the executable carrier changes what a
   transfer computes, not whether the specification can be exported.\<close>
 
-declare base_dg_spec_st_for_lifted_def [code_unfold]
+declare local_state_dg_spec_st_for_lifted_def [code_unfold]
 
 subsection \<open>Basic equations\<close>
 
@@ -68,16 +68,16 @@ lemma local_spec_step_transfer_lift_tf_st:
      = transfer_lift empty_pred (tf_st a)"
   by (cases a) simp_all
 
-lemma dg_spec_step_base_st_for_lifted:
-  "dg_spec_step (base_dg_spec_st_for_lifted gs empty_pred tf_st enter_st) a
+lemma dg_spec_step_local_state_st_for_lifted:
+  "dg_spec_step (local_state_dg_spec_st_for_lifted gs empty_pred tf_st enter_st) a
      = local_transfer (transfer_lift empty_pred (tf_st a))"
-  by (simp add: base_dg_spec_st_for_lifted_def dg_spec_step_local_dg_spec
+  by (simp add: local_state_dg_spec_st_for_lifted_def dg_spec_step_local_dg_spec
       local_spec_step_transfer_lift_tf_st)
 
-lemma dgs_enter_base_st_for_lifted:
-  "dgs_enter (base_dg_spec_st_for_lifted gs empty_pred tf_st enter_st) ci
+lemma dgs_enter_local_state_st_for_lifted:
+  "dgs_enter (local_state_dg_spec_st_for_lifted gs empty_pred tf_st enter_st) ci
      = local_transfer (transfer_lift empty_pred (enter_st ci))"
-  by (simp add: base_dg_spec_st_for_lifted_def)
+  by (simp add: local_state_dg_spec_st_for_lifted_def)
 
 text \<open>The caller half of \<open>enter\<close> is the identity for the same reason as in the
   abstract Base record: the carrier relates no two locations, so a call has
@@ -92,14 +92,14 @@ where
      (case dc of Bot \<Rightarrow> Bot | Lifted x \<Rightarrow>
         (case de of Bot \<Rightarrow> Bot | Lifted y \<Rightarrow> Lifted (combine_resolved_st_q x y)))"
 
-lemma dg_spec_combine_transfer_base_st_for_lifted:
-  "dg_spec_combine_transfer (base_dg_spec_st_for_lifted gs empty_pred tf_st enter_st) ci
+lemma dg_spec_combine_transfer_local_state_st_for_lifted:
+  "dg_spec_combine_transfer (local_state_dg_spec_st_for_lifted gs empty_pred tf_st enter_st) ci
      = local_combine_transfer
          (\<lambda>dc de. transfer_lift2 empty_pred
             (\<lambda>env0 de0. combine_assign_resolved_q gs (ci_dst ci)
                  (lookup_resolved_st_q de0 (location_of gs ret_var)) env0)
             (combine_env_st_lifted dc de) de)"
-  by (simp add: base_dg_spec_st_for_lifted_def combine_env_st_lifted_def
+  by (simp add: local_state_dg_spec_st_for_lifted_def combine_env_st_lifted_def
       dg_spec_combine_transfer_local_dg_spec)
 
 subsection \<open>The readback of one return combine\<close>
@@ -232,16 +232,16 @@ text \<open>
 \<close>
 
 abbreviation spec_st :: "('x,'k,unit,'a exec_dg_st lifted,'a exec_dg_st lifted) dg_spec" where
-  "spec_st \<equiv> base_dg_spec_st_for_lifted gs empty_pred tf_st enter_st"
+  "spec_st \<equiv> local_state_dg_spec_st_for_lifted gs empty_pred tf_st enter_st"
 
 abbreviation spec_abs :: "('x,'k,unit,'a abs_state lifted,'a abs_state lifted) dg_spec" where
-  "spec_abs \<equiv> base_dg_spec_for_lifted gs is_empty_state tf"
+  "spec_abs \<equiv> local_state_dg_spec_for_lifted gs is_empty_state tf"
 
 lemma Hstep_lifted_for:
   "dg_reader_commute_gen.dg_tree_st_commute reader reader \<sigma>_st
      (sp_run_with (\<lambda>x. DG x bot) (dg_spec_step spec_st a (mk_dg_man d (\<lambda>_. gk))))
      (sp_run_with (\<lambda>x. DG x bot) (dg_spec_step spec_abs a (mk_dg_man (reader d) (\<lambda>_. gk))))"
-  unfolding dg_spec_step_base_st_for_lifted dg_spec_step_base_for_lifted
+  unfolding dg_spec_step_local_state_st_for_lifted dg_spec_step_local_state_for_lifted
   using dg_reader_commute_gen.dg_tree_st_commute_local_transfer dg_reader_commute_gen_lifted_for
     step_lift_commute by fastforce
 
@@ -249,7 +249,7 @@ lemma Henter_lifted_for:
   "dg_reader_commute_gen.dg_tree_st_commute reader reader \<sigma>_st
      (sp_run_with (\<lambda>x. DG x bot) (dgs_enter spec_st ci (mk_dg_man d (\<lambda>_. gk))))
      (sp_run_with (\<lambda>x. DG x bot) (dgs_enter spec_abs ci (mk_dg_man (reader d) (\<lambda>_. gk))))"
-  unfolding dgs_enter_base_st_for_lifted dgs_enter_base_for_lifted
+  unfolding dgs_enter_local_state_st_for_lifted dgs_enter_local_state_for_lifted
   using dg_reader_commute_gen.dg_tree_st_commute_local_transfer dg_reader_commute_gen_lifted_for
     enter_lift_commute by fastforce
 
@@ -259,8 +259,8 @@ lemma Hcomb_lifted_for:
         (dg_spec_combine_transfer spec_st ci (mk_dg_man d (\<lambda>_. gk)) de))
      (sp_run_with (\<lambda>x. DG x bot)
         (dg_spec_combine_transfer spec_abs ci (mk_dg_man (reader d) (\<lambda>_. gk)) (reader de)))"
-  unfolding dg_spec_combine_transfer_base_st_for_lifted
-    dg_spec_combine_transfer_base_for_lifted
+  unfolding dg_spec_combine_transfer_local_state_st_for_lifted
+    dg_spec_combine_transfer_local_state_for_lifted
   by (rule dg_reader_commute_gen.dg_tree_st_commute_local_combine_transfer
         [OF dg_reader_commute_gen_lifted_for,
          where F = "transfer_lift2 is_empty_state (combine\<^sup># gs (ci_dst ci))"])
@@ -295,7 +295,7 @@ proof -
   have geq: "gamma_exec = (\<lambda>d g. gamma_state_lift (reader d))"
     by (simp add: fun_eq_iff gamma_exec_def)
   show ?thesis
-    unfolding base_dg_spec_st_for_lifted_def geq
+    unfolding local_state_dg_spec_st_for_lifted_def geq
   proof (rule sound_local_dg_spec.local_spec_sound, unfold_locales, goal_cases)
     case 1
     then show ?case

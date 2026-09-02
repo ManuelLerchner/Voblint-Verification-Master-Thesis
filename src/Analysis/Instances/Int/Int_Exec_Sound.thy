@@ -1,7 +1,7 @@
 theory Int_Exec_Sound
   imports
-    "Voblint_Framework.DG_Base"
-    "Voblint_Exec.DG_Base_Exec"
+    "Voblint_Framework.DG_Local_State_Spec"
+    "Voblint_Exec.DG_Local_State_Exec"
     Int_Exec
     Int_Warrowing
     "Voblint_Compile.Compile_Invariants"
@@ -35,7 +35,7 @@ text \<open>
   makes the local unknown's type admit this solver at all.
 
   \<open>G\<close> stays diagonal at \<open>int_dom exec_dg_st lifted\<close>, matching what \<^const>\<open>dg_gen_of\<close> needs;
-  its content is never read, since every field of \<^const>\<open>base_dg_spec_st_for_lifted\<close> threads
+  its content is never read, since every field of \<^const>\<open>local_state_dg_spec_st_for_lifted\<close> threads
   its incoming \<open>g\<close> through unchanged.
 \<close>
 
@@ -47,7 +47,7 @@ text \<open>
   imply a uniform \<open>apply_tf\<close> monotonicity fact across modes -- \<open>Refine_Fixpoint\<close>
   still has none (\<^theory>\<open>Voblint_Analysis.Int_Transfer\<close>'s own header explains why),
   and nothing below requires one; the production soundness route (the
-  \<open>base_dg_exec_analysis\<close> locale, one session downstream) never cites transfer
+  \<open>local_state_dg_exec_analysis\<close> locale, one session downstream) never cites transfer
   monotonicity.
 \<close>
 
@@ -74,7 +74,7 @@ definition analyse_int_dg_eqs_for ::
      pp \<times> unit \<Rightarrow> (pp \<times> unit, unit, (int_dom exec_dg_st lifted, int_dom exec_dg_st lifted) dg_state) strategy_tree" where
   "analyse_int_dg_eqs_for mode empty_pred gs p =
      dg_gen_of
-       (base_dg_spec_st_for_lifted gs empty_pred (int_tf_st_for mode gs) (int_dom_enter_st_for mode gs))
+       (local_state_dg_spec_st_for_lifted gs empty_pred (int_tf_st_for mode gs) (int_dom_enter_st_for mode gs))
        (prog_cfg p) bot (Lifted cinit_int_dom_st) (Lifted cinit_int_dom_st)"
 
 definition analyse_int_dg_for :: "refine_mode \<Rightarrow> (int_dom exec_dg_st \<Rightarrow> bool) \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow>

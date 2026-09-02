@@ -1,6 +1,6 @@
 theory Int_Sound
   imports
-    "Voblint_Exec.DG_Base_Exec"
+    "Voblint_Exec.DG_Local_State_Exec"
     "Voblint_Analysis.Int_Exec_Sound"
     "Voblint_Analysis.Int_Classify"
 begin
@@ -22,12 +22,12 @@ definition int_dom_spec ::
      \<Rightarrow> ('x, 'k, unit, int_dom exec_dg_st lifted, int_dom exec_dg_st lifted) dg_spec"
 where
   "int_dom_spec mode empty_pred gs =
-     base_dg_spec_st_for_lifted gs empty_pred (int_tf_st_for mode gs) (int_dom_enter_st_for mode gs)"
+     local_state_dg_spec_st_for_lifted gs empty_pred (int_tf_st_for mode gs) (int_dom_enter_st_for mode gs)"
 
 definition int_dom_abs_spec ::
     "refine_mode \<Rightarrow> (vname \<Rightarrow> bool)
      \<Rightarrow> ('x, 'k, unit, int_dom abs_state lifted, int_dom abs_state lifted) dg_spec" where
-  "int_dom_abs_spec mode gs = base_dg_spec_for_lifted gs is_empty_state (int_tf_for mode gs)"
+  "int_dom_abs_spec mode gs = local_state_dg_spec_for_lifted gs is_empty_state (int_tf_for mode gs)"
 
 lemma int_tf_st_for_commute:
   "fun_of_resolved_st_q_for gs (int_tf_st_for mode gs a s) =
@@ -64,9 +64,9 @@ next
   then show ?thesis by (simp add: int_fixpoint_is_sound_transfer_for)
 qed
 
-lemma int_dom_abs_spec_sound: "sound_dg_spec (int_dom_abs_spec mode gs) gamma_dg_base gs"
+lemma int_dom_abs_spec_sound: "sound_dg_spec (int_dom_abs_spec mode gs) gamma_dg_local_state gs"
   unfolding int_dom_abs_spec_def
-  by (rule base_dg_spec_sound[OF int_is_sound_transfer_for is_empty_state_gamma_state_empty])
+  by (rule local_state_dg_spec_sound[OF int_is_sound_transfer_for is_empty_state_gamma_state_empty])
 
 definition int_dom_gamma ::
     "(vname \<Rightarrow> bool) \<Rightarrow> int_dom exec_dg_st lifted \<Rightarrow> int_dom exec_dg_st lifted \<Rightarrow> store set" where

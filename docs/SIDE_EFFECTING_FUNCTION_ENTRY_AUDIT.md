@@ -142,7 +142,7 @@ publishes `enter_local S fs as caller globals1` with the real globals. Goblint
 uses the *same* `v` for `S.context man f v` and for `sidel`. Today the two agree,
 because every spec in this development is Base-shaped and its
 `dgs_enter` local half discards its global argument
-(`base_dg_spec_for_lifted`, `DG_Base.thy:45`:
+(`local_state_dg_spec_for_lifted`, `DG_Local_State_Spec.thy:45`:
 `dgs_enter = (\<lambda>xs es d g. (g, transfer_lift is_bot_pred (enter\<^sup># tf xs es) d))`).
 
 This holds by a property of the current specs, not by construction.
@@ -361,7 +361,7 @@ Footprint (`dg_gen|dg_trees|dg_postfix|dg_cmb|dg_enter|dg_extra|hook_gen|sound_d
 | `Soundness/Run_Analysis_Sound.thy` | 29 | pull-only endpoint |
 | `Core/Solver/Context/DG/DG_Framework.thy` | 2 | `side_cfg_T_eff_keyed_seed_trees` + four single-tree lemmas |
 
-`Routed_Context` imports `DG_Ctx_Activation` and `DG_Base`, both of which import
+`Routed_Context` imports `DG_Ctx_Activation` and `DG_Local_State_Spec`, both of which import
 `DG_Soundness`. The routed path depends on `sound_dg_spec`'s record and transfer
 soundness, **not** on its generator. The generator is a separable leaf; the
 locale is not.

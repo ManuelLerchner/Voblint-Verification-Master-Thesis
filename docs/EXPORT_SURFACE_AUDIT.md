@@ -1134,14 +1134,14 @@ itself is correct — `check_codegen_modules.py` passes.
 The `<D>_Base_DG` pair (228 lines) is dead in an instructive way: each places an
 `interpretation ... : sound_dg_spec` **inside a `context fixes gs ... end` block**,
 so the facts never escape the context — and neither file's own theorems cite them
-(they prove themselves from `base_dg_spec_st_for_lifted_dg_spec_step_commute`
-directly). The interpretations are inert *and* the twelve `*_base_dg_spec_*_commute`
+(they prove themselves from `local_state_dg_spec_st_for_lifted_dg_spec_step_commute`
+directly). The interpretations are inert *and* the twelve `*_local_state_dg_spec_*_commute`
 theorems beside them have zero citations. Both files exist only as import edges.
 
 The `<D>_DG` family (429 lines) is different: `sign_dg_api` / `ivl_dg_api` /
 `int_{never,once,fixpoint}_dg_api` are never interpreted and
 `<D>_dg_post_solution_collect_sound` is never cited, but these are *real terminal
-soundness theorems*. The shipped pipeline runs through `base_dg_spec_*` +
+soundness theorems*. The shipped pipeline runs through `local_state_dg_spec_*` +
 `dg_ctx_activation_base` and never reaches them. That is the project's own
 "instantiation gap" pattern in reverse — the abstract statement exists and no
 concrete path arrives at it. The `int_*_dg_api_trivial_gs` lemmas prove
@@ -1418,7 +1418,7 @@ IMP2-vs-VIMP naming drift, and adds:
 - **The `D`/`G` payload split has landed at the type level, and the register still
   files it as an unstarted "high-cost stretch."** `('l,'g) split_state`,
   `datatype ('l,'g) dg_state`, `record ('dl,'dg) dg_spec` with every field typed
-  `... ⇒ 'dl ⇒ 'dg ⇒ 'dg × 'dl`, and `base_dg_spec_for_lifted` leaving `'g` free.
+  `... ⇒ 'dl ⇒ 'dg ⇒ 'dg × 'dl`, and `local_state_dg_spec_for_lifted` leaving `'g` free.
   What is *actually* still true is narrower and worth stating precisely: **no live
   instance varies the parameter** — every one pins `('a, 'a)` — and
   `merge_state`/`split_state`/`merge_dg`/`split_dg` are monotyped at `('a,'a)`, so
@@ -1442,7 +1442,7 @@ IMP2-vs-VIMP naming drift, and adds:
 - **The `combine_env`/`combine_assign` split is nominal — the work sits in the
   wrong halves.** Goblint: `combine_env` handles globals and effects with no
   result assignment; `combine_assign` writes only the destination. Here
-  `DG_Base.thy:47-51` sets `dgs_combine_env = (λci dc de g. (g, dc))` — the
+  `DG_Local_State_Spec.thy:47-51` sets `dgs_combine_env = (λci dc de g. (g, dc))` — the
   identity on the caller continuation — while `dgs_combine_assign` does *both* the
   global merge and the destination write. The record has Goblint's field names but
   not Goblint's factorization.
