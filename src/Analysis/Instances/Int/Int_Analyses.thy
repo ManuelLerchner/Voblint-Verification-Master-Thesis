@@ -490,8 +490,8 @@ text \<open>
   same \<open>int_conf_sol_prog\<close> instance above, generic in \<open>mode\<close> to match
   \<open>int_conf_sol_prog\<close>'s own signature. The \<open>[code]\<close> swap avoids re-solving per
   lookup: \<^const>\<open>int_conf_sol_prog\<close> is bound once as \<open>sol\<close>, then read pointwise via
-  \<^const>\<open>normalize_point\<close>/\<^const>\<open>canonicalize_lift\<close>, exactly as
-  \<open>monovariant_analysis_result_for\<close> does internally.
+  \<^const>\<open>normalize_point\<close>/\<^const>\<open>canonicalize_lift\<close>, the same
+  boundary every other domain's result table reads through.
 \<close>
 
 definition analyse_int_ctx_result_for ::

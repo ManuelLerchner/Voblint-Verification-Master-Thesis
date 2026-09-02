@@ -379,13 +379,6 @@ cannot. Do not split the carrier into local and global maps first: keyed by raw
 `vname` they admit the same malformed states, and the migration would be done
 twice.
 
-**`monovariant_analysis_result_for`.** No call sites, and the prose around it
-describes concrete adapters as partial applications of it, which they are not --
-each builds its `Analysis_Result` directly. Delete it once the three-criterion
-audit is clean: zero executable uses, zero theorem uses, zero checked
-antiquotations. Bare cartouches naming it are documentation to rewrite, not
-dependencies.
-
 **Names that still need a read before they are changed.** `State_Restriction`
 holds only ownership projections, so `Ownership_Restriction` would be more
 truthful. `DG_Soundness` and `DG_LTR_Sound` sit next to `DG_Spec_Sound` without

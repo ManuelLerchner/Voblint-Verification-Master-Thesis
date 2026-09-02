@@ -56,8 +56,8 @@ subsection \<open>The public result table\<close>
 
 text \<open>
   Built from the locale's own solved \<open>vars\<close>/\<open>sigma\<close> pair, mirroring how
-  \<open>monovariant_analysis_result_for\<close> and \<open>analyse_interval_entry_state_result_for\<close>
-  build an \<^type>\<open>analysis_result\<close> from an already-solved key set and reader.
+  \<open>analyse_interval_entry_state_result_for\<close> builds an
+  \<^type>\<open>analysis_result\<close> from an already-solved key set and reader.
   The solved local unknown is read back into \<^typ>\<open>'a abs_state lifted\<close> by \<open>rd\<close> ---
   the identity when the framework was instantiated at that carrier, the executable
   readback when it was instantiated at the solver's own --- and the one

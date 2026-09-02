@@ -297,8 +297,7 @@ text \<open>
   Whole-program convenience layer, mirroring Interval's own \<open>entry_state_eqs_prog\<close>/
   \<open>entry_state_sol_prog\<close>/\<open>entry_state_terminates_prog\<close>. The result tables below read
   the raw executable solve through the same \<^const>\<open>canonicalize_lift\<close>/\<^const>\<open>normalize_point\<close>
-  boundary the mixed-analysis \<open>monovariant_analysis_result_for\<close> and Interval's own
-  \<open>analyse_interval_entry_state_result_for\<close> already use, and are the tables Sign's public
+  boundary Interval's own \<open>analyse_interval_entry_state_result_for\<close> already uses, and are the tables Sign's public
   API (\<open>Sign_Checks\<close>) redirects onto in production. Their soundness is established there
   through a \<open>dg_analysis_adapter\<close> interpretation of this file's own \<open>sctx_routed\<close>
   context, bridged to these executable tables by composing
