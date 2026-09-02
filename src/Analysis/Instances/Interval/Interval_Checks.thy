@@ -1,5 +1,5 @@
 theory Interval_Checks
-  imports Interval_Classify Interval_Analyses Analysis_Surface
+  imports Interval_Classify Interval_Solver_Analyses Analysis_Surface
 begin
 
 hide_const phase.N

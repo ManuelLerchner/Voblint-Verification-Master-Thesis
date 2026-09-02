@@ -49,7 +49,7 @@ Comparison target: Goblint-CIL `src/cfg.ml` at
 | Locality | `src/Compile/Compile_Locality.thy` | `pfn`, edge shapes, per-procedure ownership, fragment bounds, `valid_ltr_frag_callers` |
 | Invariants | `src/Compile/Compile_Invariants.thy`, `Compile_Certificate.thy` | `inv1`..`inv16`, `compiled_cfg_wf`, `procs_compiled` |
 | Trace bridge | `src/Compile/Located_LTR.thy` | `ltr_repr`, `stack_repr` |
-| Rendering | `src/Analysis/Instances/Tooling/Analysis_GraphViz.thy` | `raw_cfg_dot_lit`, `compiled_proc_owner`, `compiled_owner_of` |
+| Rendering | `src/Analysis/Reporting/Analysis_GraphViz.thy` | `raw_cfg_dot_lit`, `compiled_proc_owner`, `compiled_owner_of` |
 
 ### The fragment interface
 
@@ -647,7 +647,7 @@ src/Analysis/Instances/Product/Mixed_Sign_Interval.thy   dgs literal
 src/Analysis/Instances/Product/Exec_DG_Bridge.thy        dgs literal
 src/Analysis/Instances/NamedGlobalSign/…               etf literal
 src/CFG/CFG_Def.thy, src/CFG/CFG_Transfer.thy          edge_step, edge_collect
-src/Analysis/Instances/Tooling/Analysis_GraphViz.thy   string_of_action (two sites)
+src/Analysis/Reporting/Analysis_GraphViz.thy   string_of_action (two sites)
 ```
 
 plus the exhaustive case analyses in `Constraint_System_Sound.thy:146` and
@@ -1072,7 +1072,7 @@ dominate the migration effort. Nothing in it looks conceptually threatened.
 | `src/Compile/Located_LTR.thy` | local repair | 2 references, both via `compiled_at` |
 | `src/CFG/Collecting/*` (`CFG_Local_Trace`, `LTR_Abstract`, `LTR_Collect`) | unchanged | defined over `cfg`, not over `compile` |
 | `src/Analysis/**` (equations, TD solver, DG, Sign, Interval, Mixed) | unchanged | consume `compile_prog` and the `cfg` record only; no dense-index assumptions found |
-| `src/Analysis/Instances/Tooling/Analysis_GraphViz.thy` | unchanged | `compiled_proc_owner` recomputes `compile_proc` ranges; the shape of that recursion is preserved |
+| `src/Analysis/Reporting/Analysis_GraphViz.thy` | unchanged | `compiled_proc_owner` recomputes `compile_proc` ranges; the shape of that recursion is preserved |
 | `src/Soundness/Run_Analysis_Sound.thy`, `Mixed_Flow_Sound.thy`, `DG_Domain_Registration.thy` | unchanged | |
 | `src/Soundness/Source_Activation_Sound.thy` | local repair | one `compiled_atE` destructuring at line 191; the `compile_control_at_SKIP_exit_path` + epilogue-edge composition still closes the same way |
 | `src/Examples/Interprocedural/Example_Compile_Regression.thy` | local repair | `ex_nested_calls`, `compile_seq_call_edge`, `example_nested_call_preserves_outer`, `example_normal_fallthrough` hardcode `Statement (Suc n)`; regenerate |

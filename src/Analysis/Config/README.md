@@ -1,7 +1,7 @@
 # Dispatch — semantic analysis configuration
 
 Cross-domain analysis selection, no soundness obligation. Distinct from
-`Instances/Tooling/`, which renders an already-computed result; this
+`Reporting/`, which renders an already-computed result; this
 directory decides which computation runs.
 
 | File | Role |

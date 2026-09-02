@@ -3,16 +3,16 @@ session Voblint_Analysis in "." = "Voblint_Exec" +
   sessions
     TD
   directories
-    "Instances/Common"
-    "Instances/Ctx"
+    "Common"
+    "Context"
+    "Components/Congruence"
+    "Config"
+    "Reporting"
     "Instances/Sign"
     "Instances/Interval"
-    "Instances/Congruence"
-    "Instances/Parity"
     "Instances/Int"
+    "Instances/Parity"
     "Instances/Relational"
-    "Instances/Tooling"
-    "Instances/Dispatch"
   theories
     Abstract_Arithmetic
     Special_Ops
@@ -45,6 +45,7 @@ session Voblint_Analysis in "." = "Voblint_Exec" +
     Interval_Exec_Sound
     Interval_Sound
     Interval_Analyses
+    Interval_Solver_Analyses
     Congruence_Domain
     Congruence_Lattice
     Congruence_Warrowing
@@ -71,6 +72,7 @@ session Voblint_Analysis in "." = "Voblint_Exec" +
     Int_Exec_Sound
     Int_Sound
     Int_Analyses
+    Int_Solver_Analyses
     Int_Classify
     Int_Checks
     Analysis_GraphViz

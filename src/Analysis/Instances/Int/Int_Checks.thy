@@ -1,5 +1,5 @@
 theory Int_Checks
-  imports Int_Classify Int_Analyses Analysis_Surface
+  imports Int_Classify Int_Solver_Analyses Analysis_Surface
 begin
 
 hide_const phase.N
