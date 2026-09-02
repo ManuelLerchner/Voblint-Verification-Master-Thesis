@@ -3,7 +3,7 @@ theory Parity_Analyses
     "Voblint_Analysis.Parity_Sound"
     "Voblint_Analysis.Parity_Classify"
     "Voblint_Analysis.Parity_Exec"
-    "Voblint_Exec.Monovariant_Analysis_Result"
+    "Voblint_Exec.Result_Normalization"
     "Voblint_Exec.Routed_Domain_Exec"
     "Voblint_Exec.DG_Local_State_Exec"
     "Voblint_Framework.DG_Local_State_Spec"

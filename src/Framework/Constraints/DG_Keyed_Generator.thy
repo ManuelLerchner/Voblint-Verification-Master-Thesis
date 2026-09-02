@@ -1,5 +1,5 @@
 theory DG_Keyed_Generator
-  imports DG_Framework "TD.TD_side"
+  imports DG_Constraint_Trees "TD.TD_side"
 begin
 
 text \<open>\<open>TD_side\<close> defines a record field \<open>\<sigma>\<close> for its internal state; hide the short

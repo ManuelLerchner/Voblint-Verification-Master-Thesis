@@ -63,9 +63,9 @@ layer without embedding line numbers that drift.
 
 | Term | Meaning | Source |
 | --- | --- | --- |
-| `D` | Analysis-chosen flow-sensitive fact associated with a local unknown. | `src/Framework/DG/DG_Framework.thy` |
-| `G` | Analysis-chosen shared fact routed through global side effects. | `src/Framework/DG/DG_Framework.thy` |
-| `dg_spec` | D/G transfer, entry, combine, read, and publication interface. | `src/Framework/DG/DG_Framework.thy` |
+| `D` | Analysis-chosen flow-sensitive fact associated with a local unknown. | `src/Framework/DG/DG_Constraint_Trees.thy` |
+| `G` | Analysis-chosen shared fact routed through global side effects. | `src/Framework/DG/DG_Constraint_Trees.thy` |
+| `dg_spec` | D/G transfer, entry, combine, read, and publication interface. | `src/Framework/DG/DG_Constraint_Trees.thy` |
 | `sound_dg_spec` | Concrete-soundness obligations for a D/G instance. | `src/Framework/DG/DG_Soundness.thy` |
 | `dg_gen_of` | Executable D/G equation generator. | `src/Exec/Exec_DG_Generator.thy` |
 | `dg_postfix` | Mathematical post-solution property for D/G equations. | `src/Framework/DG/DG_Soundness.thy` |
@@ -90,7 +90,7 @@ and where the correspondence is inexact.
 and `'g` (global key): `('x, 'g, 'd) eqsT = 'x => ('x, 'g, 'd) strategy_tree`,
 with unknowns typed `'x + 'g`. `DG_Ctx_Activation.thy` instantiates
 `'x = pp \<times> 'c` and, deliberately, `'g = 'k` rather than reusing the bare
-letter `'g` -- `DG_Framework.thy`'s `dg_state` datatype already fixes `'g` as
+letter `'g` -- `DG_Constraint_Trees.thy`'s `dg_state` datatype already fixes `'g` as
 the global *value* type (the `globs` field, i.e. Goblint's `G.t`), one layer
 up. Reusing `'g` for the global *key* at the activation layer would silently
 overload one letter for two different `Spec` components (`G` and `V`) across

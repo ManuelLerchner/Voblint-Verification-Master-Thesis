@@ -142,9 +142,9 @@ Scripts that helped (recreate under the scratchpad as needed):
 ## Traps from the Core split
 
 - **Measure an import edge against every theory that reaches it, not the
-  one that writes it.** `DG_Framework imports Exec_Placement` used zero
+  one that writes it.** `DG_Constraint_Trees imports Exec_Placement` used zero
   names from it, so the survey called `Exec_Placement` example-only. Three
-  theories *behind* `DG_Framework` used 70 of its names through that same
+  theories *behind* `DG_Constraint_Trees` used 70 of its names through that same
   import. Before dropping an import, grep the imported theory's definitions
   against the whole downstream closure of the importer.
 - **A `\<^theory>`/`\<^const>` antiquotation in prose is a dependency.**
@@ -338,7 +338,7 @@ passes:
 | theories with no orientation block | 3 | 6 | 2 | 6 |
 
 The largest theories are `Example_Interval_Placement` (2901),
-`DG_Framework` (2472), `DG_Soundness` (2317), `Exec_St` (2231) and
+`DG_Constraint_Trees` (2472), `DG_Soundness` (2317), `Exec_St` (2231) and
 `Abstract_Domain` (2110). Splitting those is the structural half of the Core
 pass; retiring `metis` and the apply scripts is the proof half.
 

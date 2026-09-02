@@ -278,7 +278,7 @@ ones -- every intermediate state is a working build.
   record level or at the `gamma` level (weaker, easier to discharge, still
   sufficient for the soundness case). Start at the record level; weaken if
   `unit_for`'s discharge is awkward.
-- Whether `Monovariant_Analysis_Result.thy` needs anything here at all: its
+- Whether `Result_Normalization.thy` needs anything here at all: its
   `normalize_point`/`analysis_surface` are production readback machinery
   used by the migrated instances and only its `Exec_DG_Generator` import
   ties it to this cleanup; expected outcome is "unaffected", to be

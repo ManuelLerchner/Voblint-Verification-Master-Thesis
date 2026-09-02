@@ -22,7 +22,7 @@ The removal has **no abort condition on the core soundness path**, and the two
 risks the handoff flagged both dissolve:
 
 1. **Retained core rides the `cmp` generator, but only functionally.**
-   `DG_Framework` and `Exec_DG_Bridge` (Category A) directly import
+   `DG_Constraint_Trees` and `Exec_DG_Bridge` (Category A) directly import
    `TD_Side_Eff_Cmp_Gen`. Its generator `side_cfg_T_eff_cmp` is **already
    functional** — parameters `gkey` (functional context key) and `cmb`
    (combine), no relation in the body. The load-bearing theorem
@@ -82,7 +82,7 @@ Computed from parsed `imports` clauses (short-name graph over `src/**/*.thy`).
 | --- | --- | ---: |
 | `CFG_Collect_Trace` | LTR_Def, Compile_Invariants, Constraint_System_Sound, Ctx_Collect_Backbone, Example_Trace_Digest_Combine, Example_Trace_Digest_ReachingCompat, Sign_Exec_Sound, Trace_Analysis_Sound, Voblint | **86** |
 | `Ctx_Collect_Backbone` | DG_Route_Soundness, TD_Side_Eff_Cmp_Sound | 39 |
-| `TD_Side_Eff_Cmp_Gen` | **DG_Framework**, **Exec_DG_Bridge** | 32 |
+| `TD_Side_Eff_Cmp_Gen` | **DG_Constraint_Trees**, **Exec_DG_Bridge** | 32 |
 | `TD_Side_Eff_Cmp_Sound` | Clean_RRead_Sound, Digest_Global_Read, TD_Side_Eff_Cmp_Pull | 38 |
 | `DG_Route_Soundness` | Exec_Sign_Cmp_Keyed_DG_Run, Local_DG | 7 |
 | `Clean_RRead_Sound` | Seed_EnterMono_Lift | 4 |
@@ -105,7 +105,7 @@ call sites move).
 
 ### `TD_Side_Eff_Cmp_Gen` (42 decls) — **mostly D1**
 
-The generator DG_Framework rides. Body is functional (`gkey`, `cmb`); `cmp`/`gcmp`
+The generator DG_Constraint_Trees rides. Body is functional (`gkey`, `cmb`); `cmp`/`gcmp`
 enter only via the read side.
 
 | Decl(s) | Class | Action |
@@ -321,7 +321,7 @@ Category-B rebasing.
 executable/DG/activation soundness path carries **no live relational `cmp`/`gcmp`
 interface**. Verified:
 
-* `DG_Framework` and `DG_Soundness` contain **0** `gcmp`/`side_env_cmp` references.
+* `DG_Constraint_Trees` and `DG_Soundness` contain **0** `gcmp`/`side_env_cmp` references.
 * The retained DG generator is `side_cfg_T_eff_cmp` / `side_cfg_T_eff_cmp_seed_dg`,
   parameterised by `gkey` (functional context key) and `cmb` (combine) — **no `cmp`
   parameter**. The `_cmp` in the name is legacy, not a relation.
@@ -342,7 +342,7 @@ deletion cluster — none on the retained path):
 | `obs_digest*`, `glob_env_cmp_*` | `Digest_Global_Read` | Category-C digest | Stage 5 |
 | `read_ctx_*`, `ln (=) …` reads | `Example_Global_Ctx_Read_Precision` | Category-C digest example | Stage 5 |
 
-**Functional core to retain** (already used by `DG_Framework`, no `cmp`): the
+**Functional core to retain** (already used by `DG_Constraint_Trees`, no `cmp`): the
 generator algebra in `TD_Side_Eff_Cmp_Gen` — `side_cfg_T_eff_cmp`,
 `side_cfg_T_eff_cmp_seed`, `side_cfg_T_eff_cmp_seed_dg`, `pull_gk`, the
 `traverse`/`sides`/`side_rhs_fold` lemmas, `*_edge_le`/`*_enter_le`/`*_combine_le`,

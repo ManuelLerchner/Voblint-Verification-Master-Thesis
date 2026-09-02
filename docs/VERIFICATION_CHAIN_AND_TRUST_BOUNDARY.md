@@ -367,7 +367,7 @@ These are different claims, and only the first is currently supported:
 
 Voblint does not maintain a second, simplified constraint system alongside the
 production one. Every analysis is stated over the side-effecting D/G equation system
-(`Core/Solver/Context/DG/DG_Framework.thy`'s `dg_gen`, an instance of the vendored
+(`Core/Solver/Context/DG/DG_Constraint_Trees.thy`'s `dg_gen`, an instance of the vendored
 `eqsT` type), and the same generic certificate applies uniformly regardless of who
 produces it:
 

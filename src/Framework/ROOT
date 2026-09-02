@@ -16,7 +16,8 @@ session Voblint_Framework in "." = "Voblint_CFG" +
     CFG_Enumeration
     Transfer_Interface
     State_Restriction
-    DG_Framework
+    DG_State
+    DG_Constraint_Trees
     DG_Manager
     DG_Spec
     DG_Spec_Sound

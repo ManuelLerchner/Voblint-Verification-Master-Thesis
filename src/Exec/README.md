@@ -22,7 +22,7 @@ it as a refinement layer, not as part of the framework.
 | `DG_Local_State_Exec.thy` | The executable Base-style spec; `routed_dg_domain_exec`: the three commute facts a domain owes, and from them `sound_dg_spec_st` -- the executable spec is itself a `sound_dg_spec` under `gamma_exec`, the concretization read through the readback, with no separate transport theorem |
 | `Routed_Domain_Exec.thy` | The routed layer, once for every domain and context policy: `pp_st` reconciles the buffered generator a domain solves with the unbuffered one the framework is stated over |
 | `DG_Coverage.thy` | `vars_cover` from graph reachability rather than from the solver's key set |
-| `Monovariant_Analysis_Result.thy` | `normalize_point` (the readback into `point_state`) and the one constructor every monovariant `analysis_result` uses |
+| `Result_Normalization.thy` | `normalize_point` (the readback into `point_state`) and the one constructor every monovariant `analysis_result` uses |
 
-Depends on `Voblint_Framework` and, through `Monovariant_Analysis_Result`'s use of
+Depends on `Voblint_Framework` and, through `Result_Normalization`'s use of
 `prog_cfg`, on `Voblint_Compile`.

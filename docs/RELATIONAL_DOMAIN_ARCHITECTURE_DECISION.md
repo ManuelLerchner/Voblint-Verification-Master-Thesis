@@ -22,13 +22,13 @@ their migration to the **flat spine** — `Constraint_System.thy`,
 own contract (`AGENTS.md`: "the procedure-aware CFG and generic D/G route are
 the sole analysis path. Sign, Interval, and mixed Sign/Interval instances use
 the side-effecting verified solver"), **that is not where Sign, Interval, or
-Mixed Sign/Interval actually run.** They run through `DG_Framework.thy` /
+Mixed Sign/Interval actually run.** They run through `DG_Constraint_Trees.thy` /
 `DG_Soundness.thy` / the effectful TD solver.
 
 Tracing the DG layer directly (not assumed — read below) shows:
 
 - `dg_spec`'s carriers `'dl`/`'dg` are already fully opaque type parameters
-  (`DG_Framework.thy:242-247`) — no `abs_state`, no pointwise structure baked
+  (`DG_Constraint_Trees.thy:242-247`) — no `abs_state`, no pointwise structure baked
   into the record itself.
 - `sound_dg_spec` — the soundness locale every DG instance discharges — is
   **already a locale over an arbitrary joint concretization**:
@@ -96,7 +96,7 @@ The real remaining blockers, precisely stated:
    ~245-line file's worth of new locale work) — but this is additive and only
    needed if an instance actually wants context-sensitivity.
 
-None of 1-5 requires touching `Constraint_System.thy`, `DG_Framework.thy`,
+None of 1-5 requires touching `Constraint_System.thy`, `DG_Constraint_Trees.thy`,
 `DG_Soundness.thy`, or any existing Sign/Interval/Mixed proof. They are new
 files interpreting existing locales, exactly the "generalize in place" vs.
 "new instance" distinction this project already draws correctly for Gap 3/4.
@@ -121,7 +121,7 @@ TD_Side_Eff_Cone_Lemmas.thy        16
 Solver_Side_RG.thy                  7
 TD_Side_RHS_Generator.thy           7
 Exec_DG_Bridge.thy                  6
-DG_Framework.thy                    6
+DG_Constraint_Trees.thy                    6
 (11 more files, 1-5 each)          20
                                   ---
 Total                              399
@@ -280,7 +280,7 @@ blocks. Then every flat-layer file naming `abs_state` explicitly
 (`Constraint_System.thy`, `TD_Side_CFG.thy`, ~399-site footprint). The DG
 layer would *not* need to change at all — it already routes through opaque
 `'dl`/`'dg`, so a class-ified `abs_state` at the flat layer has zero
-obligation to reach `DG_Framework.thy`. This narrows the original 4-6 week
+obligation to reach `DG_Constraint_Trees.thy`. This narrows the original 4-6 week
 estimate's scope somewhat (DG layer untouched) but the flat-layer +
 `restrict_local`/`restrict_global` footprint the estimate didn't budget for
 widens it back; net, likely still 4-6 weeks, for a spine generalization that
@@ -339,7 +339,7 @@ directly: define `'dl`/`'dg` for the order-constraint domain, implement
 `dgs_assign`/`dgs_assume`/`dgs_assume_not`/`dgs_enter`/`dgs_combine_env`/
 `dgs_combine_assign` for it (small — assign/assume on a pair-set domain is a
 handful of set operations), write `gammaDG` for it, and discharge
-`sound_dg_spec`'s four obligations. Zero edits to `DG_Framework.thy`,
+`sound_dg_spec`'s four obligations. Zero edits to `DG_Constraint_Trees.thy`,
 `DG_Soundness.thy`, or any existing Sign/Interval/Mixed file — an
 `interpretation`/new-instance exercise, not a migration.
 
@@ -355,7 +355,7 @@ scope. No compatibility strategy needed — nothing existing changes.
 
 **Proof impact.** Unchanged: literally everything under
 `src/Analysis/Instances/Sign`, `.../Interval`, `.../Mixed`, and all of
-`DG_Framework.thy`/`DG_Soundness.thy`. Requiring generalization: nothing —
+`DG_Constraint_Trees.thy`/`DG_Soundness.thy`. Requiring generalization: nothing —
 this is the point of targeting an already-generic locale. New abstraction
 lemmas required: exactly the four `sound_dg_spec` obligations for the new
 carrier (`gammaDG_mono`, `step_sound`, `combine_sound`, `enter_sound`) —
@@ -1077,7 +1077,7 @@ and `Voblint_Examples` sessions, which re-verified clean in the same run)
 finished exit code 0, zero `FAILED`/error/`sorry` anywhere in the log.
 `git diff --stat` against the rest of the framework shows exactly one line
 changed outside the new file: `src/Analysis/ROOT` registering the theory
-name. `DG_Framework.thy`, `DG_Soundness.thy`, and every existing Sign/
+name. `DG_Constraint_Trees.thy`, `DG_Soundness.thy`, and every existing Sign/
 Interval/Mixed instance are untouched.
 
 This empirically validates the architectural claim underlying Option 4:

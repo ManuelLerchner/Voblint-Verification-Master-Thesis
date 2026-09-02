@@ -1,5 +1,5 @@
 theory DG_Manager
-  imports DG_Framework "Voblint_Solver.Strategy_Tree_Program"
+  imports DG_Constraint_Trees "Voblint_Solver.Strategy_Tree_Program"
 begin
 
 section \<open>A manager capability interface for the D/G packed carrier\<close>

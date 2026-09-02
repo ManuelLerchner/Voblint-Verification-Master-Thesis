@@ -16,7 +16,7 @@ constructing `strategy_tree` by hand. Term definitions are in
    (`src/Analysis/Generic/Equations/Constraint_System.thy`).
 
 3. **Package enter/combine as a `dg_spec`.** `dgs_enter`,
-   `dgs_combine_env`/`dgs_combine_assign` (`DG_Framework.thy`), proved to
+   `dgs_combine_env`/`dgs_combine_assign` (`DG_Constraint_Trees.thy`), proved to
    satisfy `sound_dg_spec`.
 
 4. **Context-sensitive with one shared global and one routing policy:**

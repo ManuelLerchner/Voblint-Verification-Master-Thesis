@@ -91,7 +91,7 @@ routed_extra_g seed_key gk0 route ctx v =
 ```
 
 Both are hooks of the generator `side_cfg_T_eff_keyed_seed_dg[_buffered]`
-(`DG_Framework.thy`). Three routing instances exist: `unit_routed_context`
+(`DG_Constraint_Trees.thy`). Three routing instances exist: `unit_routed_context`
 (`route_unit`), `call_string_routed_context` (`cs_route`),
 `entry_state_routed_context` (`formals_route_lifted_gen`).
 
@@ -359,7 +359,7 @@ Footprint (`dg_gen|dg_trees|dg_postfix|dg_cmb|dg_enter|dg_extra|hook_gen|sound_d
 | `Core/Solver/Context/DG/Exec_DG_Bridge.thy` | 194 | mostly generic transport; the `placed_*`/hook transport is the pull-specific part |
 | `Core/Solver/Context/DG/DG_LTR_Sound.thy` | 33 | pull-only endpoint |
 | `Soundness/Run_Analysis_Sound.thy` | 29 | pull-only endpoint |
-| `Core/Solver/Context/DG/DG_Framework.thy` | 2 | `side_cfg_T_eff_keyed_seed_trees` + four single-tree lemmas |
+| `Core/Solver/Context/DG/DG_Constraint_Trees.thy` | 2 | `side_cfg_T_eff_keyed_seed_trees` + four single-tree lemmas |
 
 `Routed_Context` imports `DG_Ctx_Activation` and `DG_Local_State_Spec`, both of which import
 `DG_Soundness`. The routed path depends on `sound_dg_spec`'s record and transfer

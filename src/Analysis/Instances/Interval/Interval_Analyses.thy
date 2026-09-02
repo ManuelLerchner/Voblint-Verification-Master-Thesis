@@ -4,7 +4,7 @@ theory Interval_Analyses
     "Voblint_Analysis.Interval_Classify"
     "Voblint_Analysis.Interval_Transfer"
     "Voblint_Analysis.Interval_Exec_Sound"
-    "Voblint_Exec.Monovariant_Analysis_Result"
+    "Voblint_Exec.Result_Normalization"
     "Voblint_Exec.Routed_Domain_Exec"
     "Voblint_Framework.DG_LTR_Sound"
     "Voblint_Framework.Routed_Analysis_Sound"

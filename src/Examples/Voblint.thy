@@ -24,7 +24,7 @@ theory Voblint
     "Voblint_Analysis.Interval_Analyses"
     "Voblint_Analysis.Interval_Checks"
     "Voblint_Analysis.Interval_Exec_Sound"
-    "Voblint_Framework.DG_Framework"
+    "Voblint_Framework.DG_Constraint_Trees"
     "Voblint_Framework.DG_Soundness"
     "Voblint_Analysis.Sign_Transfer"
     "Voblint_Analysis.Interval_Transfer"
@@ -267,7 +267,7 @@ text \<open>
   \<^bold>\<open>4b. The D/G interface spine.\<close> The native, carrier-opaque Goblint-\<^verbatim>\<open>Spec\<close> interface
     (independent flow-sensitive local domain \<^verbatim>\<open>D\<close> and flow-insensitive global domain \<^verbatim>\<open>G\<close>),
     the canonical context-sensitive backbone.
-    \<^item> @{theory Voblint_Framework.DG_Spec} --- the \<^verbatim>\<open>dg_spec\<close> record, one manager-native transfer per edge action, plus the \<^verbatim>\<open>dg_state\<close> copy lattice and the seeded keyed generator in @{theory Voblint_Framework.DG_Framework}.
+    \<^item> @{theory Voblint_Framework.DG_Spec} --- the \<^verbatim>\<open>dg_spec\<close> record, one manager-native transfer per edge action, plus the \<^verbatim>\<open>dg_state\<close> copy lattice and the seeded keyed generator in @{theory Voblint_Framework.DG_Constraint_Trees}.
     \<^item> @{theory Voblint_Framework.DG_Soundness} --- native heterogeneous soundness over opaque carriers (\<^verbatim>\<open>sound_dg_spec\<close>); the shared closure obligations \<^verbatim>\<open>dg_postfix_gamma_{entry,edge,combine}\<close> feed the trace endpoint \<^verbatim>\<open>dg_post_solution_collect_sound_ltr_for\<close> (\<^theory>\<open>Voblint_Framework.DG_LTR_Sound\<close>).
     \<^item> @{theory Voblint_Analysis.Sign_Analyses} and
       @{theory Voblint_Analysis.Interval_Analyses} --- Sign and Interval as

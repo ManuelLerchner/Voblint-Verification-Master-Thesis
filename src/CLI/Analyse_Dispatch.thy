@@ -918,7 +918,7 @@ text \<open>
   \<open>module_name\<close>, the serializer distributes output over one module per
   contributing Isabelle theory --- around sixty of them here, most named
   after internal proof-repo theories (\<open>TD_side\<close>, \<open>Interval_Warrowing\<close>,
-  \<open>DG_Framework\<close>, ...) meaningless to an external reader and irrelevant to
+  \<open>DG_Constraint_Trees\<close>, ...) meaningless to an external reader and irrelevant to
   \<open>analyse\<close>'s public surface. The remapping places every contributing
   theory in two named OCaml modules, so an external reader is not left
   staring at either one undifferentiated file or dozens of
@@ -1028,7 +1028,8 @@ code_identifier
 | code_module Exec_Refinement \<rightharpoonup> (OCaml) Core
 | code_module Strategy_Tree_Fold \<rightharpoonup> (OCaml) Core
 | code_module Transfer_Interface \<rightharpoonup> (OCaml) Core
-| code_module DG_Framework \<rightharpoonup> (OCaml) Core
+| code_module DG_State \<rightharpoonup> (OCaml) Core
+| code_module DG_Constraint_Trees \<rightharpoonup> (OCaml) Core
 | code_module DG_Manager \<rightharpoonup> (OCaml) Core
 | code_module DG_Spec \<rightharpoonup> (OCaml) Core
 | code_module DG_Ownership_Split_Spec \<rightharpoonup> (OCaml) Core
@@ -1038,7 +1039,7 @@ code_identifier
 | code_module Check_Report \<rightharpoonup> (OCaml) Core
 | code_module Contextual_Check_Report \<rightharpoonup> (OCaml) Core
 | code_module Analysis_Result \<rightharpoonup> (OCaml) Core
-| code_module Monovariant_Analysis_Result \<rightharpoonup> (OCaml) Core
+| code_module Result_Normalization \<rightharpoonup> (OCaml) Core
 | code_module Analysis_Surface \<rightharpoonup> (OCaml) Core
 | code_module DG_Local_State_Exec \<rightharpoonup> (OCaml) Core
 | code_module Sign_Arithmetic \<rightharpoonup> (OCaml) Core

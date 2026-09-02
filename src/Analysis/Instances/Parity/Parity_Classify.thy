@@ -1,7 +1,7 @@
 theory Parity_Classify
   imports Parity_Numeric_Queries "Voblint_Framework.Abstract_Checks"
     "Voblint_Framework.Analysis_Result" Parity_Exec
-    "Voblint_Exec.Monovariant_Analysis_Result"
+    "Voblint_Exec.Result_Normalization"
 begin
 
 hide_const phase.N

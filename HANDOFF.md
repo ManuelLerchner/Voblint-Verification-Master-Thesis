@@ -16,7 +16,7 @@ comparison, Phase 2.7 Exec classification) that this doc's own previous
 "What's next" section triggered:
 
 4. `905026ea` -- Track A closed: `dg_edge_tree`/`dg_combine_tree`
-   (`DG_Framework.thy`) are now literal specializations of
+   (`DG_Constraint_Trees.thy`) are now literal specializations of
    `dg_edge_tree_at`/`dg_combine_tree_at`, not independent `do{}` bodies.
    The "Edge/Combine formers over a solution address" subsections now come
    first in the file; every bare-form characterization lemma is a one-line
@@ -32,7 +32,7 @@ comparison, Phase 2.7 Exec classification) that this doc's own previous
    `solve_dom_of_solve_c` left it -- this also refuted
    `EXPORT_SURFACE_AUDIT.md`'s claim that its warrowing-apinis half was
    "live via `Interval_Warrowing.thy`": that was a prose mention, not a
-   citation). 11 dead lemmas deleted from `Monovariant_Analysis_Result.thy`
+   citation). 11 dead lemmas deleted from `Result_Normalization.thy`
    on the same evidence standard. Two now-dead lemmas in
    `Interval_Warrowing.thy` (`ivl_widen_bot_bot`/`ivl_narrow_bot_bot`, whose
    only purpose was feeding `Solver_Side_RG`'s now-deleted invariant) went
@@ -80,7 +80,7 @@ file for whoever picks it up next.
   `dg_reader_commute_gen` extracted from `Exec_DG_Generator.thy` first --
   that file has not been audited in full by anyone yet, unlike everything
   else touched this session. `DG_Local_State_Exec.thy`/`routed_dg_domain_exec` and
-  most of `Monovariant_Analysis_Result.thy` do **not** move -- they are the
+  most of `Result_Normalization.thy` do **not** move -- they are the
   executable-carrier transport itself (bridging `resolved_st_q`/
   `exec_dg_st` to the abstract framework), not misplaced generic content,
   and stay put until Phase 2's own deferred quotient-carrier restatement

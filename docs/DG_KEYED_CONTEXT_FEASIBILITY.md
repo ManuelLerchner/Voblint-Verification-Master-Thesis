@@ -17,7 +17,7 @@ Historical note: the `TD_Side_Eff_Ctx_Sound` / `side_env_ctx` spine discussed in
 to `unit`: `dg_gen`/`dg_D`/`dg_G`/`dg_postfix` read the single slots `Inl (v, ())` /
 `Inr ()`, and `dg_gen` is literally `side_cfg_T_eff_cmp_seed_dg` frozen at
 `(λ_. ())` (`DG_Soundness.thy:175`). The keyed DG generator
-`side_cfg_T_eff_cmp_seed_dg gkey cmb frame_seed …` (`DG_Framework.thy:311`) is fully
+`side_cfg_T_eff_cmp_seed_dg gkey cmb frame_seed …` (`DG_Constraint_Trees.thy:311`) is fully
 context/key-general but has **no** soundness theorem. Keyed/context soundness lives
 only on the homogeneous `abs_state` kernel.
 

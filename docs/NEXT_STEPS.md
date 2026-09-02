@@ -324,10 +324,16 @@ precision gap documented in-theory (`Interval_Backward.thy`). This is
 separate from the boolean `eq_true`/`eq_false` query interface used for check
 classification (`Abstract_Numeric_Queries.thy`).
 
-## Per-domain Ctx duplication in the Analysis session
+## Per-domain configuration duplication in the Analysis session
 
-Deferred until the Analysis cleanup pass; recorded here while the evidence is
-fresh. `Sign_Ctx_*`, `Interval_Ctx_*`, `Parity_Ctx_*` and the `entry_state_*`
+Still open, and narrower than when it was written. The twelve-theory
+`Domain x Context` matrix it described is gone: each domain now has one
+`*_Sound` package and one `*_Analyses` configuration module, and the prefixes
+are `sctx_`, `interval_conf_`, `int_conf_` and `pctx_`. What remains is the
+duplication this section is actually about -- the configuration family is still
+written out once per domain rather than derived once.
+
+`sctx_*`, `interval_conf_*`, `int_conf_*`, `pctx_*` and the `entry_state_*`
 family mirror each other across 23 suffixes -- `_eqs_prog`, `_sol_prog`,
 `_sol_prog_per_origin`, `_terminates_prog`, `_sg`, `_sg_covered`,
 `_sg_uncovered_empty`, `_sigma_abs`, `_fin`, `_finC` and the rest -- for a
@@ -338,9 +344,9 @@ copies. The bodies are character-identical modulo the domain type and the
 `_eqs_prog` they call:
 
 ```
-sctx_sol_prog gs p = TD_side_always_join_Interp_solve (sctx_eqs_prog gs p) (cfg_exit (prog_cfg p), ())
-ictx_sol_prog gs p = TD_side_always_join_Interp_solve (ictx_eqs_prog gs p) (cfg_exit (prog_cfg p), ())
-pctx_sol_prog gs p = TD_side_always_join_Interp_solve (pctx_eqs_prog gs p) (cfg_exit (prog_cfg p), ())
+sctx_sol_prog          gs p = TD_side_always_join_Interp_solve (sctx_eqs_prog gs p)          (cfg_exit (prog_cfg p), ())
+interval_conf_sol_prog gs p = TD_side_always_join_Interp_solve (interval_conf_eqs_prog gs p) (cfg_exit (prog_cfg p), ())
+pctx_sol_prog          gs p = TD_side_always_join_Interp_solve (pctx_eqs_prog gs p)          (cfg_exit (prog_cfg p), ())
 ```
 
 A locale fixing `eqs_prog` and polymorphic in the domain would derive the
@@ -352,6 +358,54 @@ Size this as a session-scale change, not a cleanup pass: this layer feeds
 gate run. `_wf` and most of `_reserved` are *not* part of it --- those
 discharge the same obligation for different concrete programs, and a locale
 would only rename the work.
+
+## Deferred from the Framework and Analysis restructure
+
+Each of these was found with evidence during the restructure and deliberately
+not acted on, either because it needs a semantic decision or because it belongs
+to a larger migration.
+
+**Resolved variable identities.** `gs :: vname => bool` classifies a *textual
+name*, so a state carrier keyed by `location = Local_Location vname |
+Global_Location vname` admits entries at the tagging a name does not have.
+`resolved_st_is_bot` is the one carrier operation that must consult `gs`, and it
+does so only to filter those entries: the quotient's equality observes every
+tagged location while the concretization reads back only the one `gs` selects.
+`canonical_location` names that filter and `canonical_resolved_st` records that
+transfers only ever produce canonical states. The dependency disappears when
+elaboration resolves each declaration to its own identity -- one declaration,
+one cell, scope as metadata -- which also handles shadowing that a textual name
+cannot. Do not split the carrier into local and global maps first: keyed by raw
+`vname` they admit the same malformed states, and the migration would be done
+twice.
+
+**`monovariant_analysis_result_for`.** No call sites, and the prose around it
+describes concrete adapters as partial applications of it, which they are not --
+each builds its `Analysis_Result` directly. Delete it once the three-criterion
+audit is clean: zero executable uses, zero theorem uses, zero checked
+antiquotations. Bare cartouches naming it are documentation to rewrite, not
+dependencies.
+
+**Names that still need a read before they are changed.** `State_Restriction`
+holds only ownership projections, so `Ownership_Restriction` would be more
+truthful. `DG_Soundness` and `DG_LTR_Sound` sit next to `DG_Spec_Sound` without
+saying how the three differ -- spec-level, generated-constraint and trace-level
+soundness respectively, if a read confirms it. `DG_Ctx_Activation` abbreviates a
+word its own directory already supplies.
+
+**`Instances/Relational`.** `rel_order_spec` is a complete `dg_spec` with global
+access and side effects, so it belongs among the instances; but it has no
+`*_Analyses` wiring it to a context policy, which is why the directory looks
+thin next to the other four. Either wire it up or say in its README why it
+stops at the domain.
+
+**Refining the override list.** `resolved_st`'s association list is a candidate
+for an AFP `rbt` map. Keep it independent of the identity migration above, and
+benchmark the generated OCaml rather than Isabelle evaluation.
+
+**Examples layout.** `Examples/` still reflects the development order rather
+than what each example demonstrates. Low value relative to the churn; do it only
+alongside work that touches those files anyway.
 
 ## Source extensions
 

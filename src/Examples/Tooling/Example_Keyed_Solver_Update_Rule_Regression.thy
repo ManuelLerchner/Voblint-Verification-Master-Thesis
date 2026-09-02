@@ -15,7 +15,7 @@ text \<open>
   \<^typ>\<open>cfg\<close> with no edges of its own (\<open>intra = {}\<close>, \<open>calls = {}\<close>) paired with a
   hand-supplied \<open>pred_sel\<close> that reports two intra predecessors for one node --
   exactly the shape a real merge node with two incoming intra edges produces
-  (\<^theory>\<open>Voblint_Framework.DG_Framework\<close>'s own \<open>intra\<close> fold), collapsed to its
+  (\<^theory>\<open>Voblint_Framework.DG_Constraint_Trees\<close>'s own \<open>intra\<close> fold), collapsed to its
   essential two-write pattern.
 
   The two predecessor edges carry different \<open>edge_action\<close>s (\<open>EA_Nop\<close> vs.

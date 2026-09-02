@@ -188,11 +188,14 @@ lemma result_demo_interval_absent_not_live:
   by eval
 
 text \<open>
-  Case C's dead node is covered because it is a structural CFG node, not
-  because the solver happened to reach it: \<^const>\<open>cfg_node_list\<close> is
-  \<open>monovariant_analysis_result_for\<close>'s key domain (\<^theory>\<open>Voblint_Exec.Monovariant_Analysis_Result\<close>),
-  independent of solver support. \<^const>\<open>Statement\<close> \<open>99\<close> (Case D) has no such
-  membership, which is exactly why it alone stays outside \<^const>\<open>result_keys\<close>.
+  Together the two cases separate solver coverage from the value stored at a
+  covered key. Case C's node is present in \<^const>\<open>result_keys\<close> because the
+  solver covered it, and reports \<^const>\<open>Bot\<close> because that is what the solver
+  stored there -- coverage and reachability are independent. Case D's
+  \<^const>\<open>Statement\<close> \<open>99\<close> is absent because no key for it is ever covered; that
+  it is also outside \<^const>\<open>cfg_node_list\<close> is why it makes a reliable witness,
+  not the mechanism by which the result excludes it. The key domain here is the
+  solve's own covered set, never an enumeration of the CFG.
 \<close>
 
 lemma result_demo_interval_stmt2_cfg_node:
@@ -353,10 +356,10 @@ subsection \<open>Solver-choice variants: the same generic constructor, off a di
 text \<open>
   \<open>analyse_sign_result_per_origin\<close>, \<open>analyse_interval_join_result\<close>,
   \<open>analyse_interval_per_origin_result\<close>, \<open>analyse_int_join_result\<close>, and
-  \<open>analyse_int_per_origin_result\<close> all come from
-  \<^const>\<open>monovariant_analysis_result_for\<close>, the same generic constructor as
-  the default-solver adapters above, applied to a different native solve
-  function. \<open>result_demo_prog\<close> has no loop and no global feedback, so every
+  \<open>analyse_int_per_origin_result\<close> all have
+  the same shape as the default-solver adapters above -- an
+  \<^const>\<open>Analysis_Result\<close> over that discipline's own solve, read back through
+  \<^const>\<open>normalize_point\<close> -- differing only in the native solve function. \<open>result_demo_prog\<close> has no loop and no global feedback, so every
   update-rule discipline agrees with the default solver on it; these pins
   witness that each variant reaches the same generic
   \<^const>\<open>normalize_point\<close>/\<^const>\<open>lookup_context\<close> surface with the same

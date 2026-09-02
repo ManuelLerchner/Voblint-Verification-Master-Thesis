@@ -266,7 +266,7 @@ row 3 is pursued.
 Per the plan: define the projection explicitly and check its algebraic
 shape before touching the transfer/combine rules. Read the actual RHS
 constructors directly (`side_cfg_T_eff_keyed_seed_dg`,
-`DG_Framework.thy:393`; `routed_cmb`/`routed_extra`, `Routed_Context.thy`)
+`DG_Constraint_Trees.thy:393`; `routed_cmb`/`routed_extra`, `Routed_Context.thy`)
 rather than guessing their shape.
 
 ### 9.1 The unknown spaces are not quite the same type
@@ -285,7 +285,7 @@ explicit case split between `Inl` (shared type, direct fiber join) and
 
 ### 9.2 What the RHS actually reads, read off the definitions directly
 
-`side_cfg_T_eff_keyed_seed_dg`'s RHS at `(v, c)` (`DG_Framework.thy:406`)
+`side_cfg_T_eff_keyed_seed_dg`'s RHS at `(v, c)` (`DG_Constraint_Trees.thy:406`)
 is `side_rhs_fold_dg` over three pieces:
 
 - `intra`: for each CFG predecessor `(u, a)` of `v` (from `pred_sel g v`,
@@ -372,12 +372,12 @@ exactly the separation the plan asked for.
 ### 9.6 What is left before attacking the transfer equations
 
 > **Landed (2026-07-31, issue #45).** `side_cfg_T_eff_keyed_seed_dg_is_mono_eq_gen`,
-> `_mono_sides_gen`, `_mono_deps_gen` (`DG_Framework.thy`) discharge the three
+> `_mono_sides_gen`, `_mono_deps_gen` (`DG_Constraint_Trees.thy`) discharge the three
 > `TD_side_mono` preconditions for an arbitrary `side_cfg_T_eff_keyed_seed_dg`
 > instance from a per-tree contract on the `pred_sel`/`cmb`/`extra` hooks —
 > mirroring `td_cfg_side_solver_eff_gen` (`TD_Side_Eff_Pipeline.thy`), the same
 > reduction already landed for the flat generator. `side_rhs_fold_dg_mono`,
-> `_sides_mono`, `_static_deps` (also `DG_Framework.thy`) are the underlying
+> `_sides_mono`, `_static_deps` (also `DG_Constraint_Trees.thy`) are the underlying
 > fold lemmas, proved by structural induction over the tree list via
 > `seqcomp_mono`/`static_deps_seqcomp` (`Strategy_Tree_Monad.thy`) — no new
 > proof technique beyond what the flat generator's own pipeline used.
@@ -431,7 +431,7 @@ down to the base solver constructors instead of guessing.
 
 ### 10.1 The local (`eq`) obligation is a plain monotone fold
 
-`side_acc_dg` (`DG_Framework.thy:357`), which `eq_side_cfg_T_eff_keyed_seed_dg`
+`side_acc_dg` (`DG_Constraint_Trees.thy:357`), which `eq_side_cfg_T_eff_keyed_seed_dg`
 reduces every `eq` to, is exactly `acc \<squnion> locals (traverse_rhs t tau)` folded
 over the `intra @ comb @ extra` subtree list, starting from `acc0`. No
 hidden structure — the `eq` obligation is a join of independently-evaluated
