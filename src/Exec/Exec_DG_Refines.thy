@@ -1,9 +1,9 @@
 theory Exec_DG_Refines
   imports
-    "Voblint_Core.DG_Soundness"
-    "Voblint_Core.DG_Unit_Spec"
+    "Voblint_Framework.DG_Soundness"
+    "Voblint_Framework.DG_Unit_Spec"
     Exec_Refinement
-    "Voblint_Core.Routed_Context"
+    "Voblint_Framework.Routed_Context"
 begin
 
 section \<open>The executable carrier and its readback\<close>

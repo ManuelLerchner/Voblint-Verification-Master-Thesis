@@ -408,7 +408,7 @@ corollaries mirrors `control.ml` exactly and is the intended endpoint.
 
 ### Implementation order for 3.1
 
-1. **Landed** (`src/Core/Lifters/DG_Dead_Code_Lift.thy`): `dead_code_lift` +
+1. **Landed** (`src/Framework/Lifters/DG_Dead_Code_Lift.thy`): `dead_code_lift` +
    `lift_gamma` + `dead_code_lift_sound`; `sound_dg_spec_cong` (soundness
    sees only the four composed operations); `renormalize` /
    `dead_code_normalize` + `dead_code_normalize_sound` over the explicit

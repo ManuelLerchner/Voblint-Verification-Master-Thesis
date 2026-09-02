@@ -6,14 +6,14 @@ theory Int_Analyses
     "Voblint_Exec.Monovariant_Analysis_Result"
     "Voblint_Exec.Routed_Domain_Exec"
     "Voblint_Exec.DG_Base_Exec"
-    "Voblint_Core.DG_Base"
-    "Voblint_Core.DG_LTR_Sound"
-    "Voblint_Core.Routed_Analysis_Sound"
-    "Voblint_Core.Routed_Context"
-    "Voblint_Core.Routed_Context_Unit"
-    "Voblint_Core.Activation_Backbone"
-    "Voblint_Core.Analysis_Result"
-    "Voblint_Core.Call_String_Context"
+    "Voblint_Framework.DG_Base"
+    "Voblint_Framework.DG_LTR_Sound"
+    "Voblint_Framework.Routed_Analysis_Sound"
+    "Voblint_Framework.Routed_Context"
+    "Voblint_Framework.Routed_Context_Unit"
+    "Voblint_Framework.Activation_Backbone"
+    "Voblint_Framework.Analysis_Result"
+    "Voblint_Framework.Call_String_Context"
     "Voblint_Solver.TD_Solver_Menu"
     "Voblint_Compile.Compile_Invariants"
     "Voblint_CFG.CFG_Prune"
@@ -52,7 +52,7 @@ text \<open>
   \<^locale>\<open>unit_routed_context\<close>) that Interval's own entry-state and call-string context
   analyses already use, mirroring Sign's own routed-unit-context production cutover
   exactly. The context here is \<^typ>\<open>unit\<close>:
-  \<^locale>\<open>unit_routed_context\<close> (\<^theory>\<open>Voblint_Core.Routed_Context_Unit\<close>) fixes
+  \<^locale>\<open>unit_routed_context\<close> (\<^theory>\<open>Voblint_Framework.Routed_Context_Unit\<close>) fixes
   \<^const>\<open>route_unit\<close>, so every routing-agreement obligation that Interval's
   formals-context instance must prove from its own transfer facts collapses here
   to a free lemma about the constant function \<^const>\<open>route_unit\<close>.
@@ -399,7 +399,7 @@ lemmas ictx_analyse_report_ctx_refuted_sound = ictx_adapter.analyse_report_ctx_r
 
 text \<open>
   \<open>ictx_result_node_sound\<close> re-exports the adapter's generic node-soundness bridge
-  (\<^theory>\<open>Voblint_Core.DG_Analysis_Adapter\<close>). \<open>ictx_analyse_result_eq\<close> identifies that
+  (\<^theory>\<open>Voblint_Framework.DG_Analysis_Adapter\<close>). \<open>ictx_analyse_result_eq\<close> identifies that
   reading with the raw-tuple shape \<open>analyse_int_ctx_result_for\<close> (defined below)
   already builds by hand, mirroring \<open>Interval_Analyses.ictx_analyse_result_eq\<close>.
 \<close>
@@ -820,7 +820,7 @@ text \<open>
   genuine fixed argument exactly as it already is at Int's own \<^const>\<open>int_dom_spec\<close>. The
   routing policy is the same generic entry-state construction
   (\<open>entry_exec_route_gen\<close>/\<^const>\<open>formals_route_lifted_gen\<close>,
-  \<^theory>\<open>Voblint_Exec.DG_Base_Exec\<close>/\<^theory>\<open>Voblint_Core.Routed_Context\<close>) Sign's own
+  \<^theory>\<open>Voblint_Exec.DG_Base_Exec\<close>/\<^theory>\<open>Voblint_Framework.Routed_Context\<close>) Sign's own
   entry-state instance already uses: it needed only \<^locale>\<open>routed_dg_domain_exec\<close>'s
   own three primitive commute facts, which Int's own routed-unit instance has already
   established, so no new Int-domain mathematics is needed here either.

@@ -1,5 +1,5 @@
 session Voblint_Analysis in "." = "Voblint_Exec" +
-  description "Concrete domain instances over the abstract Voblint_Core framework"
+  description "Concrete analysis families over the generic Voblint_Framework"
   sessions
     TD
   directories

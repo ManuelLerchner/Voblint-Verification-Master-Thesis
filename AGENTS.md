@@ -26,7 +26,7 @@ task at hand:
 - Before auditing or cleaning up a session, read
   `docs/SESSION_CLEANUP_PLAYBOOK.md`: the procedure, the patterns that paid
   off, and the traps that each cost a rebuild.
-- Before moving, splitting, or deleting anything in `src/Core`, read
+- Before moving, splitting, or deleting anything in `src/Framework`, read
   `docs/CORE_REFACTOR_PLAN.md` and work its step table in order; record
   what the build contradicts in its "Decisions and corrections" section.
 - For an area-specific task, read the nearest `README.md`.
@@ -76,14 +76,14 @@ The session dependency graph is:
 
 ```text
 VIMP -> Domain -+
-                +-> CFG -> Core -> Compile -> Exec -> Analysis -+-> Soundness -+
-TD   -> Solver -+                                               |              v
-                                                                +------------> CLI -> Codegen
-                                                                                +---> Examples
+                +-> CFG -> Framework -> Compile -> Exec -> Analysis -+-> Soundness -+
+TD   -> Solver -+                                                    |              v
+                                                                     +------------> CLI -> Codegen
+                                                                                     +---> Examples
 ```
 
-(`CFG` depends on `VIMP` only; `Core` on `CFG`, `Domain` and `Solver`;
-`Compile` on `CFG`; `Exec` on `Core` and `Compile`.)
+(`CFG` depends on `VIMP` only; `Framework` on `CFG`, `Domain` and `Solver`;
+`Compile` on `CFG`; `Exec` on `Framework` and `Compile`.)
 
 `Voblint_CFG` is the graph model and its activation-local collecting
 semantics: what a soundness claim is stated *about*. It never mentions the
@@ -98,7 +98,7 @@ sound-domain classes with their concretization, the dead-code lift, pointwise
 states, and the bridge between those constructions. `Voblint_Solver` is the
 strategy-tree equation language of the vendored side-effecting solver and its
 monotonicity and post-solution
-vocabulary; it never sees a CFG. `Voblint_Core` is the D/G analysis framework:
+vocabulary; it never sees a CFG. `Voblint_Framework` is the D/G analysis framework:
 local/global state selection, the transfer contract, the equation generator, and
 collecting soundness for an arbitrary CFG, with no domain-specific content and
 no compiler.

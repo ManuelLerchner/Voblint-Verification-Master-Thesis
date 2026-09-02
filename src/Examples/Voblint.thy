@@ -12,11 +12,11 @@ theory Voblint
     "Voblint_CFG.LTR_Def"
     "Voblint_CFG.CFG_Prune"
     "Voblint_Domain.Abstract_Domain"
-    "Voblint_Core.Transfer_Interface"
+    "Voblint_Framework.Transfer_Interface"
     "Voblint_Domain.Abstract_Numeric_Queries"
-    "Voblint_Core.Check_Result"
-    "Voblint_Core.Abstract_Checks"
-    "Voblint_Core.Check_Report"
+    "Voblint_Framework.Check_Result"
+    "Voblint_Framework.Abstract_Checks"
+    "Voblint_Framework.Check_Report"
     "Voblint_Analysis.Sign_Domain"
     "Voblint_Analysis.Sign_Analyses"
     "Voblint_Analysis.Sign_Checks"
@@ -24,12 +24,12 @@ theory Voblint
     "Voblint_Analysis.Interval_Analyses"
     "Voblint_Analysis.Interval_Checks"
     "Voblint_Analysis.Interval_Exec_Sound"
-    "Voblint_Core.DG_Framework"
-    "Voblint_Core.DG_Soundness"
+    "Voblint_Framework.DG_Framework"
+    "Voblint_Framework.DG_Soundness"
     "Voblint_Analysis.Sign_Transfer"
     "Voblint_Analysis.Interval_Transfer"
-    "Voblint_Core.Activation_Backbone"
-    "Voblint_Core.DG_Ctx_Activation"
+    "Voblint_Framework.Activation_Backbone"
+    "Voblint_Framework.DG_Ctx_Activation"
     "Voblint_Exec.Exec_St"
     "Voblint_Analysis.Sign_Exec"
     Exec_Sign_DG_Run
@@ -228,9 +228,9 @@ text \<open>
   \<^bold>\<open>3. Analysis spine.\<close> Abstract domains, equation systems, and the TD_side solver bridge; every
   generic endpoint concludes over the trace projections.
     \<^item> @{theory Voblint_Domain.Abstract_Domain} --- \<^verbatim>\<open>sound_domain\<close>, lifted state concretization, display support.
-    \<^item> @{theory Voblint_Core.Transfer_Interface} --- the transfer interface \<^verbatim>\<open>domain_transfer\<close>, \<^verbatim>\<open>apply_tf\<close>, its soundness locale \<^verbatim>\<open>sound_transfer_for\<close>, and per-edge transfer soundness (\<^verbatim>\<open>edge_collect a \<lbrakk>\<sigma>\<rbrakk> \<subseteq> \<lbrakk>apply_tf tf a \<sigma>\<rbrakk>\<close>) with its \<^verbatim>\<open>EA_Check\<close> companion, the dispatch-point facts \<^theory>\<open>Voblint_Core.DG_Soundness\<close>'s \<^verbatim>\<open>step_sound\<close>/\<^verbatim>\<open>combine_sound\<close> obligations are discharged against.
-    \<^item> @{theory Voblint_Core.State_Restriction} --- the local/global restriction algebra the routed spine reassembles states with.
-    \<^item> @{theory Voblint_Core.DG_Keyed_Generator} --- \<^verbatim>\<open>side_cfg_T_eff_keyed_seed_dg_is_mono_eq_gen\<close>/\<^verbatim>\<open>_mono_sides_gen\<close>/\<^verbatim>\<open>_mono_deps_gen\<close>: the vendored solver's \<^verbatim>\<open>TD_side_mono\<close> precondition, discharged once for an arbitrary generator instance.
+    \<^item> @{theory Voblint_Framework.Transfer_Interface} --- the transfer interface \<^verbatim>\<open>domain_transfer\<close>, \<^verbatim>\<open>apply_tf\<close>, its soundness locale \<^verbatim>\<open>sound_transfer_for\<close>, and per-edge transfer soundness (\<^verbatim>\<open>edge_collect a \<lbrakk>\<sigma>\<rbrakk> \<subseteq> \<lbrakk>apply_tf tf a \<sigma>\<rbrakk>\<close>) with its \<^verbatim>\<open>EA_Check\<close> companion, the dispatch-point facts \<^theory>\<open>Voblint_Framework.DG_Soundness\<close>'s \<^verbatim>\<open>step_sound\<close>/\<^verbatim>\<open>combine_sound\<close> obligations are discharged against.
+    \<^item> @{theory Voblint_Framework.State_Restriction} --- the local/global restriction algebra the routed spine reassembles states with.
+    \<^item> @{theory Voblint_Framework.DG_Keyed_Generator} --- \<^verbatim>\<open>side_cfg_T_eff_keyed_seed_dg_is_mono_eq_gen\<close>/\<^verbatim>\<open>_mono_sides_gen\<close>/\<^verbatim>\<open>_mono_deps_gen\<close>: the vendored solver's \<^verbatim>\<open>TD_side_mono\<close> precondition, discharged once for an arbitrary generator instance.
 
   \<^bold>\<open>3b. Check discharge.\<close> A domain-generic, sound (incomplete) decision
     procedure for compiled \<^verbatim>\<open>__voblint_check(...)\<close> conditions, discharged
@@ -243,7 +243,7 @@ text \<open>
       directly in any \<^locale>\<open>backward_domain\<close> instance's own context, from
       that instance's own narrowing operators --- a sound default a concrete
       domain may override with sharper, hand-tuned predicates.
-    \<^item> @{theory Voblint_Core.Abstract_Checks} --- \<^locale>\<open>abstract_expression_domain\<close>
+    \<^item> @{theory Voblint_Framework.Abstract_Checks} --- \<^locale>\<open>abstract_expression_domain\<close>
       and \<^locale>\<open>abstract_check_domain\<close>: the single \<^verbatim>\<open>check_query\<close> decision
       procedure into \<^typ>\<open>bool option\<close> over \<^typ>\<open>exp\<close>, the three-way
       \<^verbatim>\<open>check_result\<close> classification (\<^verbatim>\<open>Check_Proved\<close>/\<^verbatim>\<open>Check_Refuted\<close>/
@@ -267,8 +267,8 @@ text \<open>
   \<^bold>\<open>4b. The D/G interface spine.\<close> The native, carrier-opaque Goblint-\<^verbatim>\<open>Spec\<close> interface
     (independent flow-sensitive local domain \<^verbatim>\<open>D\<close> and flow-insensitive global domain \<^verbatim>\<open>G\<close>),
     the canonical context-sensitive backbone.
-    \<^item> @{theory Voblint_Core.DG_Spec} --- the \<^verbatim>\<open>dg_spec\<close> record, one manager-native transfer per edge action, plus the \<^verbatim>\<open>dg_state\<close> copy lattice and the seeded keyed generator in @{theory Voblint_Core.DG_Framework}.
-    \<^item> @{theory Voblint_Core.DG_Soundness} --- native heterogeneous soundness over opaque carriers (\<^verbatim>\<open>sound_dg_spec\<close>); the shared closure obligations \<^verbatim>\<open>dg_postfix_gamma_{entry,edge,combine}\<close> feed the trace endpoint \<^verbatim>\<open>dg_post_solution_collect_sound_ltr_for\<close> (\<^theory>\<open>Voblint_Core.DG_LTR_Sound\<close>).
+    \<^item> @{theory Voblint_Framework.DG_Spec} --- the \<^verbatim>\<open>dg_spec\<close> record, one manager-native transfer per edge action, plus the \<^verbatim>\<open>dg_state\<close> copy lattice and the seeded keyed generator in @{theory Voblint_Framework.DG_Framework}.
+    \<^item> @{theory Voblint_Framework.DG_Soundness} --- native heterogeneous soundness over opaque carriers (\<^verbatim>\<open>sound_dg_spec\<close>); the shared closure obligations \<^verbatim>\<open>dg_postfix_gamma_{entry,edge,combine}\<close> feed the trace endpoint \<^verbatim>\<open>dg_post_solution_collect_sound_ltr_for\<close> (\<^theory>\<open>Voblint_Framework.DG_LTR_Sound\<close>).
     \<^item> @{theory Voblint_Analysis.Sign_Analyses} and
       @{theory Voblint_Analysis.Interval_Analyses} --- Sign and Interval as
       routed \<^verbatim>\<open>sound_dg_spec\<close> instances, each reaching \<^const>\<open>ltr_collect\<close>
@@ -276,8 +276,8 @@ text \<open>
 
   \<^bold>\<open>4c. Activation-local certification.\<close> The concrete object the context-sensitive soundness
     rides: one trace per activation, with a stable call-only context.
-    \<^item> @{theory Voblint_Core.Activation_Backbone} --- the generic \<^verbatim>\<open>activation_collect_sound\<close>: over \<^const>\<open>valid_ltr\<close>, four obligations \<^verbatim>\<open>ENTRY_G\<close>/\<^verbatim>\<open>EDGE\<close>/\<^verbatim>\<open>SEED_G\<close>/\<^verbatim>\<open>COMB\<close> (\<^verbatim>\<open>COMB\<close> at the caller context) bound \<^const>\<open>activation_collect\<close> at every \<^verbatim>\<open>(node, context)\<close>.
-    \<^item> @{theory Voblint_Core.DG_Ctx_Activation} --- DG-native discharge of those four obligations from a \<^verbatim>\<open>sound_dg_spec\<close> post-solution, so a computed D/G solution certifies the activation collecting.
+    \<^item> @{theory Voblint_Framework.Activation_Backbone} --- the generic \<^verbatim>\<open>activation_collect_sound\<close>: over \<^const>\<open>valid_ltr\<close>, four obligations \<^verbatim>\<open>ENTRY_G\<close>/\<^verbatim>\<open>EDGE\<close>/\<^verbatim>\<open>SEED_G\<close>/\<^verbatim>\<open>COMB\<close> (\<^verbatim>\<open>COMB\<close> at the caller context) bound \<^const>\<open>activation_collect\<close> at every \<^verbatim>\<open>(node, context)\<close>.
+    \<^item> @{theory Voblint_Framework.DG_Ctx_Activation} --- DG-native discharge of those four obligations from a \<^verbatim>\<open>sound_dg_spec\<close> post-solution, so a computed D/G solution certifies the activation collecting.
 
   \<^bold>\<open>5. Executable frontend.\<close> Finite-map state representation and certified execution.
     \<^item> @{theory Voblint_Exec.Exec_St} --- executable abstract-state maps for code generation.
@@ -394,7 +394,7 @@ text \<open>
       dispatches on \<^verbatim>\<open>analysis_domain\<close> (\<^verbatim>\<open>Sign_Analysis\<close>/\<^verbatim>\<open>Interval_Analysis\<close>)
       to the two domains' report functions; both already share the observable
       \<^verbatim>\<open>check_report_entry list\<close> result type
-      (@{theory Voblint_Core.Abstract_Checks}), so the dispatcher adds no new
+      (@{theory Voblint_Framework.Abstract_Checks}), so the dispatcher adds no new
       proof. \<^verbatim>\<open>dispatch_demo_interval_precise\<close> computes
       (\<^verbatim>\<open>by eval\<close>) that program's report, and the executable corpus under
       \<^verbatim>\<open>tests/regression/\<close> runs the same analysis through the generated CLI

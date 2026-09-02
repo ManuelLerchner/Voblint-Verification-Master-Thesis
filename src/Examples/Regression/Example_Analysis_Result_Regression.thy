@@ -5,7 +5,7 @@ begin
 section \<open>Regression: the solved-result table\<close>
 
 text \<open>
-  Acceptance witnesses for \<^theory>\<open>Voblint_Core.Analysis_Result\<close>'s reachability
+  Acceptance witnesses for \<^theory>\<open>Voblint_Framework.Analysis_Result\<close>'s reachability
   reading, in the same \<open>by eval\<close> style as the sibling regressions. The Interval
   adapter carries the detailed four-case coverage; Sign and \<open>int_dom\<close> only
   witness that they reach the same generic abstraction correctly.

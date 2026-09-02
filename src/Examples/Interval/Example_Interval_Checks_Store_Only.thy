@@ -1,7 +1,7 @@
 section \<open>Example: checks_proven/checks_proven_sound alone, store-only, Interval\<close>
 
 theory Example_Interval_Checks_Store_Only
-  imports "Voblint_Core.Checks" "Voblint_CLI.Interval_Entry" "Voblint_Analysis.Interval_Checks"
+  imports "Voblint_Framework.Checks" "Voblint_CLI.Interval_Entry" "Voblint_Analysis.Interval_Checks"
           "Voblint_Analysis.Sign_Checks" "Voblint_Analysis.Analysis_GraphViz"
           "Voblint_VIMP.VIMP_Notation"
           Example_Compile_Call_Free
@@ -217,7 +217,7 @@ proof -
   then show ?thesis using interval_classify_check_refuted[OF checks_ivl_ex_classify_3] by blast
 qed
 
-text \<open>The generic \<^const>\<open>checks_proven\<close>/\<^theory>\<open>Voblint_Core.Checks\<close> bridge,
+text \<open>The generic \<^const>\<open>checks_proven\<close>/\<^theory>\<open>Voblint_Framework.Checks\<close> bridge,
   exercised on exactly the checks that are actually true: the compiler's own
   \<^const>\<open>checks\<close> table names all three, but a blanket \<open>checks_proven\<close> over the
   whole table would be a false statement here, since the second check is a

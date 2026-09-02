@@ -13,7 +13,7 @@ text \<open>
   computes, and stay owned by the CLI layer instead (\<open>Analysis_GraphViz\<close>).
 
   This theory names \<open>Sign\<close>/\<open>Interval\<close>/\<open>Int\<close> explicitly by construction, so it
-  sits in \<open>Voblint_Analysis\<close> rather than \<open>Voblint_Core\<close>: \<open>Core\<close> carries no
+  sits in \<open>Voblint_Analysis\<close> rather than \<open>Voblint_Framework\<close>: \<open>Core\<close> carries no
   domain-specific content, and a domain-naming enum is domain-specific
   content even though it carries no analysis logic of its own.
 

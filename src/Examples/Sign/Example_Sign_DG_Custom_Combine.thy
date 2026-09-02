@@ -2,7 +2,7 @@ theory Example_Sign_DG_Custom_Combine
   imports
     "Voblint_Exec.Exec_DG_Generator"
     "Voblint_Analysis.Sign_Exec"
-    "Voblint_Core.DG_LTR_Sound"
+    "Voblint_Framework.DG_LTR_Sound"
     "Voblint_Analysis.Sign_Transfer"
     "Voblint_Solver.TD_Solver_Menu"
     "Voblint_CFG.CFG_Prune"

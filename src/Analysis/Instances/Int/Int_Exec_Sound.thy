@@ -1,6 +1,6 @@
 theory Int_Exec_Sound
   imports
-    "Voblint_Core.DG_Base"
+    "Voblint_Framework.DG_Base"
     "Voblint_Exec.DG_Base_Exec"
     Int_Exec
     Int_Warrowing

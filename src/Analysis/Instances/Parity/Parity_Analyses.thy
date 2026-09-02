@@ -6,13 +6,13 @@ theory Parity_Analyses
     "Voblint_Exec.Monovariant_Analysis_Result"
     "Voblint_Exec.Routed_Domain_Exec"
     "Voblint_Exec.DG_Base_Exec"
-    "Voblint_Core.DG_Base"
-    "Voblint_Core.Routed_Analysis_Sound"
-    "Voblint_Core.Routed_Context"
-    "Voblint_Core.Routed_Context_Unit"
-    "Voblint_Core.Activation_Backbone"
-    "Voblint_Core.Analysis_Result"
-    "Voblint_Core.Call_String_Context"
+    "Voblint_Framework.DG_Base"
+    "Voblint_Framework.Routed_Analysis_Sound"
+    "Voblint_Framework.Routed_Context"
+    "Voblint_Framework.Routed_Context_Unit"
+    "Voblint_Framework.Activation_Backbone"
+    "Voblint_Framework.Analysis_Result"
+    "Voblint_Framework.Call_String_Context"
     "Voblint_Solver.TD_Solver_Menu"
     "Voblint_Compile.Compile_Invariants"
     "Voblint_CFG.CFG_Prune"
@@ -426,7 +426,7 @@ text \<open>
   table, and the two coverage premises the solver's own reachable set must satisfy.
 
   The global keys are \<^typ>\<open>call_string_gk\<close> from
-  \<^theory>\<open>Voblint_Core.Call_String_Context\<close>, shared with every other call-string-keyed
+  \<^theory>\<open>Voblint_Framework.Call_String_Context\<close>, shared with every other call-string-keyed
   instance rather than declared again per domain.
 \<close>
 

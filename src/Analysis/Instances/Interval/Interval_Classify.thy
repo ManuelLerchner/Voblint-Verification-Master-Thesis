@@ -1,6 +1,6 @@
 theory Interval_Classify
-  imports Interval_Numeric_Queries Interval_Backward "Voblint_Core.Abstract_Checks"
-    "Voblint_Core.Analysis_Result" Interval_Exec_Sound
+  imports Interval_Numeric_Queries Interval_Backward "Voblint_Framework.Abstract_Checks"
+    "Voblint_Framework.Analysis_Result" Interval_Exec_Sound
     "Voblint_Exec.Monovariant_Analysis_Result"
 begin
 

@@ -482,10 +482,10 @@ roots.
 | Area | Dead (delete) | Unification (net) |
 | --- | ---: | ---: |
 | Original sweep (§1–§3, §7) | 1,193 | 740–980 |
-| `src/Core/Solver` (§9) | ~860 | ~250 |
+| `src/Framework/Solver` (§9) | ~860 | ~250 |
 | `src/CFG` (§10) | ~550 | ~595 |
 | `src/Analysis` (§12) | ~700 | ~4,440 |
-| `src/Core/Domain` + `Equations` (§13) | ~2,700 | ~370 |
+| `src/Framework/Domain` + `Equations` (§13) | ~2,700 | ~370 |
 | `src/VIMP` + `src/CLI` (§11) | ~200 | ~1,230 |
 | **Total** | **≈6,200** | **≈7,600** |
 
@@ -850,7 +850,7 @@ rather than re-deriving the ordering, and fails closed on a length mismatch;
 reconstructed in OCaml, and the file documents that this was deliberately moved
 into the verified layer. That is the model the rest of `cli/` should follow.
 
-## 9. `src/Core/Solver` (15,168 lines)
+## 9. `src/Framework/Solver` (15,168 lines)
 
 ### 9.1 Confirmed dead — verified with prose stripped
 
@@ -1007,7 +1007,7 @@ checker does not resolve:
   `etf_enter` and `etf_combine_collect`, constants from a deleted record that survive only
   in an untracked `.thy~` backup. The transfer bundle is now `dg_spec`, where the single
   combine is three fields. Structural note: `CFG_Prune` is in `Voblint_CFG`, *upstream* of
-  `Voblint_Core` — the prose cites downstream constants across a session boundary, which is
+  `Voblint_Framework` — the prose cites downstream constants across a session boundary, which is
   how it drifted unnoticed.
 - **`LTR_Abstract.thy:220-224`** names three deleted lemmas and describes a migration
   ("once `activation_collect` itself is redefined against `ctx_key`") that already landed —
@@ -1306,7 +1306,7 @@ and actually reached. Congruence has no `_Transfer`, `_Exec`, `_DG`, `_Checks` o
 `_Ctx_*` layer at all, because it is only a product component — and it is the
 leanest domain per line of real mathematics in the directory.
 
-## 13. `src/Core/Domain` and `src/Core/Equations`
+## 13. `src/Framework/Domain` and `src/Framework/Equations`
 
 > **2026-08-31 correction.** The selector unification proposed in §13.2 has
 > landed. `combine_env` is generic in key and codomain; frame entry, abstract

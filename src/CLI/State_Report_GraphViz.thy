@@ -1037,7 +1037,7 @@ text \<open>
   contextual renderer stops being per-domain. An entry-state context is the analysed
   domain's own value list (\<^typ>\<open>ivl list\<close>), so its graph configuration can only ever be
   written for one domain at a time. A call-string context is a \<^typ>\<open>cfg_node list\<close>
-  (\<^theory>\<open>Voblint_Core.Call_String_Context\<close>) --- pure call history, no domain content ---
+  (\<^theory>\<open>Voblint_Framework.Call_String_Context\<close>) --- pure call history, no domain content ---
   and every rendered state here is projected into \<^typ>\<open>abstract_value\<close> exactly as
   \<^const>\<open>analyse_point_env_for\<close> already projects the monovariant tables. Both axes of
   domain-dependence are therefore removed, and Sign, Interval and Int share \<^emph>\<open>one\<close>

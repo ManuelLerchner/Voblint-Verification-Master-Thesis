@@ -32,7 +32,7 @@ These documents describe the supported architecture and its verification.
 - [Cleanup migration plan](CLEANUP_MIGRATION_PLAN.md) — the phased execution
   sequence for that audit.
 - [Core refactor plan](CORE_REFACTOR_PLAN.md) — the four-phase split of
-  `Voblint_Core` along Goblint's library boundaries, with the measured
+  `Voblint_Framework` along Goblint's library boundaries, with the measured
   import evidence and a per-step status table.
 - [Roadmap](ROADMAP.md) — stable extension directions and completion criteria.
 - [Next work](NEXT_STEPS.md) — near-term technical directions.

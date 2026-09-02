@@ -12,7 +12,7 @@ text \<open>
   Sign's own entry-state routing separates the two activations of \<open>f\<close> into
   two distinct contexts, \<open>[SPos]\<close> and \<open>[SNeg]\<close>, rather than joining them at
   \<open>f\<close>'s single \<^const>\<open>FunctionEntry\<close> node. What is under test is that the
-  generic \<open>entry_state_routed_context\<close> pipeline (Voblint_Core), freshly
+  generic \<open>entry_state_routed_context\<close> pipeline (Voblint_Framework), freshly
   derived for Sign this pass, actually keeps two contextually distinct
   activations apart end to end -- not merely that \<open>Ctx_EntryState\<close> resolves
   for Sign.

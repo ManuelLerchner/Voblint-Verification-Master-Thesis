@@ -29,7 +29,7 @@ text \<open>
   is \<^const>\<open>Lifted\<close>, and the order/bottom/join this section used to
   instantiate by hand agree with \<^typ>\<open>'a lifted\<close>'s own generic instance at
   \<^typ>\<open>check_result\<close> (itself \<^class>\<open>semilattice_sup\<close>, from
-  \<^theory>\<open>Voblint_Core.Check_Result\<close>) constructor for constructor: \<open>Dead \<le> _\<close>
+  \<^theory>\<open>Voblint_Framework.Check_Result\<close>) constructor for constructor: \<open>Dead \<le> _\<close>
   always, a \<open>Decided\<close> never sits below \<open>Dead\<close>, and two \<open>Decided\<close> verdicts
   compare and join through \<^typ>\<open>check_result\<close>'s own flat order. Reusing it
   here keeps one lattice construction for "structurally absent vs. present

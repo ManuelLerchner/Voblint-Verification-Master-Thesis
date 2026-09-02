@@ -1,6 +1,6 @@
 theory Int_Classify
-  imports Int_Exec_Sound "Voblint_Core.Abstract_Checks"
-    "Voblint_Core.Analysis_Result"
+  imports Int_Exec_Sound "Voblint_Framework.Abstract_Checks"
+    "Voblint_Framework.Analysis_Result"
     "Voblint_Exec.Monovariant_Analysis_Result"
 begin
 

@@ -43,7 +43,7 @@ text \<open>
 
 theory Example_Interval_DG_Flagship
   imports
-    "Voblint_Core.DG_LTR_Sound"
+    "Voblint_Framework.DG_LTR_Sound"
     "Voblint_Analysis.Interval_Transfer"
     "Voblint_Analysis.Ivl_Exec"
     "Voblint_Solver.TD_Solver_Menu"

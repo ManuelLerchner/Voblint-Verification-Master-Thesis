@@ -1,7 +1,7 @@
 theory Routed_Domain_Exec
   imports
     DG_Base_Exec
-    "Voblint_Core.Routed_Context_Unit"
+    "Voblint_Framework.Routed_Context_Unit"
 begin
 
 section \<open>Routed execution, once for every domain and context policy\<close>

@@ -1,7 +1,7 @@
 theory Sign_Checks
   imports Sign_Classify
-    "Voblint_Core.Check_Report"
-    "Voblint_Core.DG_Analysis_Adapter"
+    "Voblint_Framework.Check_Report"
+    "Voblint_Framework.DG_Analysis_Adapter"
     Analysis_Surface
     Sign_Analyses
 begin
@@ -128,7 +128,7 @@ lemmas sctx_report_ctx_refuted_sound = sctx_adapter.analyse_report_ctx_refuted_s
 
 text \<open>
   \<open>sctx_result_node_sound\<close> re-exports the adapter's generic node-soundness bridge
-  (\<^theory>\<open>Voblint_Core.DG_Analysis_Adapter\<close>), phrased against \<open>sctx_adapter.analyse_result\<close>.
+  (\<^theory>\<open>Voblint_Framework.DG_Analysis_Adapter\<close>), phrased against \<open>sctx_adapter.analyse_result\<close>.
   \<open>sctx_analyse_result_eq\<close> identifies that reading with the raw-tuple shape
   \<^const>\<open>analyse_sign_ctx_result_for\<close> (\<open>Sign_Analyses\<close>) already builds by hand from
   \<^const>\<open>normalize_point\<close>/\<^const>\<open>canonicalize_lift\<close> directly: both collapse the same

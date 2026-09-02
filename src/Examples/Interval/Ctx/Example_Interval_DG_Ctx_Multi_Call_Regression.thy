@@ -1,5 +1,5 @@
 theory Example_Interval_DG_Ctx_Multi_Call_Regression
-  imports "Voblint_Core.CFG_Enumeration" "Voblint_Core.Routed_Context"
+  imports "Voblint_Framework.CFG_Enumeration" "Voblint_Framework.Routed_Context"
 begin
 
 section \<open>Regression: a call site with more than one outgoing call edge\<close>

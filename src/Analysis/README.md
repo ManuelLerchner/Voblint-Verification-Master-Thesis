@@ -1,6 +1,6 @@
 # Voblint_Analysis session
 
-Concrete domain instances over the `Voblint_Core` framework and its `Voblint_Exec` carrier. Each
+Concrete domain instances over the `Voblint_Framework` framework and its `Voblint_Exec` carrier. Each
 domain threads its type through type-class declarations, locale interpretation,
 the executable bridge, and end-to-end soundness.
 

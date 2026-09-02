@@ -1,7 +1,7 @@
 theory Example_Keyed_Solver_Update_Rule_Regression
   imports
-    "Voblint_Core.DG_Keyed_Generator"
-    "Voblint_Core.Routed_Context"
+    "Voblint_Framework.DG_Keyed_Generator"
+    "Voblint_Framework.Routed_Context"
     "Voblint_Solver.TD_Solver_Menu"
     "Voblint_Analysis.Ivl_Exec"
 begin
@@ -15,7 +15,7 @@ text \<open>
   \<^typ>\<open>cfg\<close> with no edges of its own (\<open>intra = {}\<close>, \<open>calls = {}\<close>) paired with a
   hand-supplied \<open>pred_sel\<close> that reports two intra predecessors for one node --
   exactly the shape a real merge node with two incoming intra edges produces
-  (\<^theory>\<open>Voblint_Core.DG_Framework\<close>'s own \<open>intra\<close> fold), collapsed to its
+  (\<^theory>\<open>Voblint_Framework.DG_Framework\<close>'s own \<open>intra\<close> fold), collapsed to its
   essential two-write pattern.
 
   The two predecessor edges carry different \<open>edge_action\<close>s (\<open>EA_Nop\<close> vs.

@@ -1,4 +1,4 @@
-session Voblint_Core in "." = "Voblint_CFG" +
+session Voblint_Framework in "." = "Voblint_CFG" +
   description "The D/G analysis framework: transfer contract, equation generator, and collecting soundness"
   sessions
     TD

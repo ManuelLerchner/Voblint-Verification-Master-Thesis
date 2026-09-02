@@ -1,6 +1,6 @@
 theory Sign_Classify
-  imports Sign_Numeric_Queries "Voblint_Core.Abstract_Checks"
-    "Voblint_Core.Analysis_Result" Sign_Exec
+  imports Sign_Numeric_Queries "Voblint_Framework.Abstract_Checks"
+    "Voblint_Framework.Analysis_Result" Sign_Exec
     "Voblint_Exec.Monovariant_Analysis_Result"
 begin
 
@@ -16,7 +16,7 @@ text \<open>
   evaluator \<open>aval_sign\<close> lives in \<^theory>\<open>Voblint_Analysis.Sign_Arithmetic\<close>. The
   Boolean recursion over \<^typ>\<open>exp\<close> (\<open>Not\<close>, \<open>And\<close>, \<open>Or\<close>), the three-way
   classification, and the node-indexed bridge to \<^const>\<open>checks_proven\<close> come
-  from interpreting \<open>abstract_check_domain\<close> (\<^theory>\<open>Voblint_Core.Abstract_Checks\<close>)
+  from interpreting \<open>abstract_check_domain\<close> (\<^theory>\<open>Voblint_Framework.Abstract_Checks\<close>)
   once, below, reusing the numeric-query facts already proved sound in
   \<open>sign_numeric_queries\<close> rather than re-deriving the comparison tables ---
   the same way \<open>sign_backward_domain\<close> in \<open>Sign_Backward\<close> interprets

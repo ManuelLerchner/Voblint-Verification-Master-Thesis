@@ -12,7 +12,7 @@ text \<open>
   covered \<open>(node, context)\<close> pair into an \<^type>\<open>analysis_result\<close>, classify
   every compiled check against it via \<^const>\<open>classify_checks_verdicts\<close>, and
   discharge that report's own soundness from the activation-indexed
-  collecting semantics (\<^theory>\<open>Voblint_Core.Activation_Backbone\<close>) already
+  collecting semantics (\<^theory>\<open>Voblint_Framework.Activation_Backbone\<close>) already
   available once EDGE/CALL/COMB are in hand from \<^locale>\<open>routed_context_base_hetero\<close>.
   \<open>dg_analysis_adapter\<close> derives that whole triple once, generic in a domain
   instance (a \<open>classify\<close> function with its own soundness obligations), a

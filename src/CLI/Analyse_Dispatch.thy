@@ -21,7 +21,7 @@ text \<open>
   \<open>analyse_interval_td_report_for\<close>/\<open>analyse_interval_td_report\<close>
   (\<^theory>\<open>Voblint_Analysis.Interval_Checks\<close>) already share one observable
   result type, \<open>check_report_entry list\<close>
-  (\<^theory>\<open>Voblint_Core.Abstract_Checks\<close>), even though the two domains'
+  (\<^theory>\<open>Voblint_Framework.Abstract_Checks\<close>), even though the two domains'
   internal abstract states (\<open>sign abs_state\<close> vs \<open>ivl abs_state\<close>) genuinely
   differ. \<open>analyse\<close> below is therefore a thin dispatcher, not a new proof:
   each branch reuses the domain's own already-generic, already-sound report

@@ -1,5 +1,5 @@
 theory Entry_State_Routed_Context
-  imports "Voblint_Core.Routed_Context" "Voblint_Compile.Compile_Wellformed"
+  imports "Voblint_Framework.Routed_Context" "Voblint_Compile.Compile_Wellformed"
 begin
 
 section \<open>Entry-state routing as a routed-context instance\<close>

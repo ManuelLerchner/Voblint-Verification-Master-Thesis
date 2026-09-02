@@ -4,7 +4,7 @@ The executable carrier, and the transport of a solved system from it back to
 the carrier the framework is stated over. This session has no Goblint
 counterpart, and that is the point of naming it: Goblint's `D.t` is already
 executable, so it needs no second representation. Here the soundness theorems
-of `Voblint_Core` are stated over function-valued states `vname => 'a`, the
+of `Voblint_Framework` are stated over function-valued states `vname => 'a`, the
 verified solver runs on the association-list quotient `'a resolved_st_q`,
 and every theory in this session exists to connect the two.
 
@@ -24,5 +24,5 @@ it as a refinement layer, not as part of the framework.
 | `DG_Coverage.thy` | `vars_cover` from graph reachability rather than from the solver's key set |
 | `Monovariant_Analysis_Result.thy` | `normalize_point` (the readback into `point_state`) and the one constructor every monovariant `analysis_result` uses |
 
-Depends on `Voblint_Core` and, through `Monovariant_Analysis_Result`'s use of
+Depends on `Voblint_Framework` and, through `Monovariant_Analysis_Result`'s use of
 `prog_cfg`, on `Voblint_Compile`.

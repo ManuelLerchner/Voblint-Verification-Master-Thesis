@@ -4,9 +4,9 @@ theory Analysis_GraphViz
     "Voblint_VIMP.VIMP_Source_Print"
     "Voblint_Exec.Exec_St"
     "Voblint_Domain.Abstract_Domain"
-    "Voblint_Core.Check_Report"
-    "Voblint_Core.Analysis_Result"
-    "Voblint_Core.Call_String_Context"
+    "Voblint_Framework.Check_Report"
+    "Voblint_Framework.Analysis_Result"
+    "Voblint_Framework.Call_String_Context"
 begin
 
 text \<open>
@@ -838,7 +838,7 @@ fun string_of_cfg_node :: "cfg_node \<Rightarrow> string" where
 subsection \<open>Call-string context presentation\<close>
 
 text \<open>
-  A call-string context is a \<^typ>\<open>cfg_node list\<close> (\<^theory>\<open>Voblint_Core.Call_String_Context\<close>),
+  A call-string context is a \<^typ>\<open>cfg_node list\<close> (\<^theory>\<open>Voblint_Framework.Call_String_Context\<close>),
   so unlike an entry-state context --- whose type is the analysed domain's own value list
   (\<open>ivl list\<close>, \<open>sign list\<close>, ...) --- it carries no domain content at all. Every part of
   presenting one is therefore shared by every domain that routes through

@@ -3,7 +3,7 @@ src/Domain
 src/Solver
 src/CFG
 src/Compile
-src/Core
+src/Framework
 src/Exec
 src/Analysis
 src/Soundness

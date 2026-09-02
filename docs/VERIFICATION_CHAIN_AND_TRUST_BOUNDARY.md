@@ -202,7 +202,7 @@ for the domain in play, not a universal fact.
 
 ## 6. Solver specification vs. executable `solve_c`
 
-`Voblint_Core` depends on session `TD` (`Core/ROOT`), an externally-authored
+`Voblint_Framework` depends on session `TD` (`Core/ROOT`), an externally-authored
 formalization of top-down solving vendored under `vendor/td-verification/`
 -- not a house-written, separately-tested mirror. The locale
 `TD_side_upd_rule` (`vendor/td-verification/TD_side_upd_rule.thy:18`) fixes

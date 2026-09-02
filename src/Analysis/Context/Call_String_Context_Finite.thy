@@ -1,5 +1,5 @@
 theory Call_String_Context_Finite
-  imports "Voblint_Core.Call_String_Context" "Voblint_Compile.Compile_Wellformed"
+  imports "Voblint_Framework.Call_String_Context" "Voblint_Compile.Compile_Wellformed"
 begin
 
 section \<open>Call-string context spaces are finite by construction\<close>
@@ -7,7 +7,7 @@ section \<open>Call-string context spaces are finite by construction\<close>
 text \<open>
   Making context-bounding a first-class, terminating mechanism instead of relying on the
   ambient finiteness assumption is already met for call-string contexts: \<^const>\<open>cs_route\<close> truncates every context to length at most \<open>k\<close>
-  (\<open>cs_route_length\<close>, \<^theory>\<open>Voblint_Core.Call_String_Context\<close>), and a compiled program's
+  (\<open>cs_route_length\<close>, \<^theory>\<open>Voblint_Framework.Call_String_Context\<close>), and a compiled program's
   CFG has finitely many nodes (\<open>cfg_nodes_finite\<close>, \<^theory>\<open>Voblint_CFG.CFG_Def\<close>). Those
   two facts alone bound the entire call-string-keyed context space: combined with the
   standard library's own \<open>finite_lists_length_le\<close>, the set of contexts \<^emph>\<open>any\<close> \<open>k\<close>-bounded

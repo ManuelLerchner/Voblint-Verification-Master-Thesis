@@ -1,8 +1,8 @@
 theory Monovariant_Analysis_Result
   imports
-    "Voblint_Core.Analysis_Result"
-    "Voblint_Core.CFG_Enumeration"
-    "Voblint_Core.Check_Report"
+    "Voblint_Framework.Analysis_Result"
+    "Voblint_Framework.CFG_Enumeration"
+    "Voblint_Framework.Check_Report"
     "Voblint_Compile.Compile_Invariants"
     Exec_DG_Generator
 begin

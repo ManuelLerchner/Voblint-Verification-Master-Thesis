@@ -1,11 +1,11 @@
 theory Example_Sign_DG_CallString_K1
   imports
-    "Voblint_Core.DG_LTR_Sound"
+    "Voblint_Framework.DG_LTR_Sound"
     "Voblint_Analysis.Sign_Transfer"
     "Voblint_Analysis.Sign_Exec"
     "Voblint_Exec.DG_Base_Exec"
     "Voblint_Analysis.Call_String_Routed_Context"
-    "Voblint_Core.Activation_Backbone"
+    "Voblint_Framework.Activation_Backbone"
     "Voblint_Solver.TD_Solver_Menu"
     "Voblint_Soundness.Run_Analysis_Sound"
     "Voblint_VIMP.VIMP_Notation"
@@ -141,7 +141,7 @@ interpretation sign_nest_dg_sound: sound_dg_spec sign_nest_S_st sign_nest_gamma 
 subsection \<open>The routed equation system and its computed solution\<close>
 
 text \<open>The global-key type \<^type>\<open>call_string_gk\<close> and its truncation
-  \<^const>\<open>cs_project_gk\<close> come from \<^theory>\<open>Voblint_Core.Call_String_Context\<close>: the key
+  \<^const>\<open>cs_project_gk\<close> come from \<^theory>\<open>Voblint_Framework.Call_String_Context\<close>: the key
   shape never depended on \<open>k\<close> or on this program.\<close>
 
 definition sign_nest_1_eqs ::

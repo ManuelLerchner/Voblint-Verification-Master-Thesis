@@ -28,8 +28,8 @@ that keeps repeated `Side` writes from destabilising an update rule.
 
 Algorithm correctness lives upstream: `TD.TD_side` proves `partial_correctness`
 and `TD_side_mono`; `part_post_solution` (`TD.Basics_side`) is the certificate
-every soundness endpoint in `Voblint_Core` consumes. `DG_Keyed_Generator`
-(`Voblint_Core`) is what discharges `TD_side_mono`'s three preconditions for
+every soundness endpoint in `Voblint_Framework` consumes. `DG_Keyed_Generator`
+(`Voblint_Framework`) is what discharges `TD_side_mono`'s three preconditions for
 the keyed generator, once, for an arbitrary generator instance. `TD_Solver_Bridge`
 is this session's sole point of contact with TD's own proof vocabulary
 (`term_equivalence`, `solve_c_dom_def`, `partial_post_solution`): every

@@ -1,5 +1,5 @@
 theory Sign_Transfer
-  imports Sign_Backward Sign_Special "Voblint_Core.Transfer_Interface" "Voblint_VIMP.VIMP_Globals"
+  imports Sign_Backward Sign_Special "Voblint_Framework.Transfer_Interface" "Voblint_VIMP.VIMP_Globals"
 
 begin
 

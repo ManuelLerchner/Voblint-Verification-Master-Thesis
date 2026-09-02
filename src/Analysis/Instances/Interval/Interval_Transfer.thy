@@ -1,5 +1,5 @@
 theory Interval_Transfer
-  imports Interval_Backward Interval_Special "Voblint_Core.Transfer_Interface"
+  imports Interval_Backward Interval_Special "Voblint_Framework.Transfer_Interface"
     "Voblint_VIMP.VIMP_Globals"
 begin
 

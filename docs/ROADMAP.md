@@ -87,7 +87,7 @@ sound_dg_spec / sound_dg_spec_ltr        <- concise adapter, ordinary analyses
 sound_dg_hooks / sound_dg_hooks_ltr      <- framework-construction API
 ```
 
-`sound_dg_hooks`/`sound_dg_hooks_ltr` (`src/Core/DG/DG_Soundness.thy`,
+`sound_dg_hooks`/`sound_dg_hooks_ltr` (`src/Framework/DG/DG_Soundness.thy`,
 `DG_LTR_Sound.thy`) generate D/G equations from arbitrary hook trees and prove
 them sound generically. `sound_dg_spec` is `sound_dg_hooks` specialized to
 `dg_spec`-record trees: one locale interpretation per analysis instance

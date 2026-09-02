@@ -1,5 +1,5 @@
 theory Special_Ops
-  imports "Voblint_Core.Transfer_Interface"
+  imports "Voblint_Framework.Transfer_Interface"
 begin
 
 section \<open>Generic special-call dispatch\<close>

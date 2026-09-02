@@ -1,4 +1,4 @@
-# Core
+# Framework
 
 The D/G analysis framework: what an analysis must supply, how its equations
 are generated from a CFG, and why a solved system covers the collecting

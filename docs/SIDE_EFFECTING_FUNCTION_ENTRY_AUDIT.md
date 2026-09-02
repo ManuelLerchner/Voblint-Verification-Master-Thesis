@@ -68,7 +68,7 @@ the identical `sidel (FunctionEntry fd, c) d` shape for thread entry.
 
 ## 2. What Voblint does — correspondence, not identity
 
-`routed_cmb_g` (`src/Core/DG/Routed_Context.thy:63`):
+`routed_cmb_g` (`src/Framework/DG/Routed_Context.thy:63`):
 
 | Goblint | `routed_cmb_g` | Same? |
 | --- | --- | --- |
@@ -105,7 +105,7 @@ that the exported analyses run exclusively on the routed side-effecting model
 and that the pull families are unreachable from every export root.
 
 Outside `src/**/*.thy` and `docs/`, the pull families are named in exactly one
-place: `src/Core/ROOT:52` (`DG_LTR_Sound`). No CI workflow, script, CLI source,
+place: `src/Framework/ROOT:52` (`DG_LTR_Sound`). No CI workflow, script, CLI source,
 generated artifact, or test references them.
 
 ## 3. Routing order — the apparent difference, resolved
@@ -510,7 +510,7 @@ cleanup. The migration order for that route:
 | Check | Result |
 | --- | --- |
 | Export reachability (`codegen/generated/ml/Voblint_CLI.ml`) | routed constants present (`routed_extra_g`, `routed_cmb_g_contribution`, 7 `Seed*` constructors); **zero** pull-family constants |
-| Consumer graph outside `src/**/*.thy`, `docs/` | one hit: `src/Core/ROOT:52` (`DG_LTR_Sound`). No CI, script, CLI, generated artifact, or test reference |
+| Consumer graph outside `src/**/*.thy`, `docs/` | one hit: `src/Framework/ROOT:52` (`DG_LTR_Sound`). No CI, script, CLI, generated artifact, or test reference |
 | `sorry`/`oops` in `src/` | none |
 | Full Isabelle batch build | **not run** |
 

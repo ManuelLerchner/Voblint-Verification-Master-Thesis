@@ -1,5 +1,5 @@
 theory Call_String_Routed_Context
-  imports "Voblint_Core.Routed_Context" "Voblint_Core.Call_String_Context" "Voblint_Compile.Compile_Wellformed"
+  imports "Voblint_Framework.Routed_Context" "Voblint_Framework.Call_String_Context" "Voblint_Compile.Compile_Wellformed"
 begin
 
 section \<open>Call-string routing as a routed-context instance\<close>

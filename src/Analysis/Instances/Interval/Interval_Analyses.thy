@@ -6,13 +6,13 @@ theory Interval_Analyses
     "Voblint_Analysis.Interval_Exec_Sound"
     "Voblint_Exec.Monovariant_Analysis_Result"
     "Voblint_Exec.Routed_Domain_Exec"
-    "Voblint_Core.DG_LTR_Sound"
-    "Voblint_Core.Routed_Analysis_Sound"
-    "Voblint_Core.Routed_Context"
-    "Voblint_Core.Routed_Context_Unit"
-    "Voblint_Core.Activation_Backbone"
-    "Voblint_Core.Analysis_Result"
-    "Voblint_Core.Call_String_Context"
+    "Voblint_Framework.DG_LTR_Sound"
+    "Voblint_Framework.Routed_Analysis_Sound"
+    "Voblint_Framework.Routed_Context"
+    "Voblint_Framework.Routed_Context_Unit"
+    "Voblint_Framework.Activation_Backbone"
+    "Voblint_Framework.Analysis_Result"
+    "Voblint_Framework.Call_String_Context"
     "Voblint_Solver.TD_Solver_Menu"
     "Voblint_Compile.Compile_Invariants"
     "Voblint_CFG.CFG_Prune"
@@ -49,7 +49,7 @@ text \<open>
   routed D/G spine (\<^locale>\<open>dg_ctx_activation_base\<close>, \<^locale>\<open>unit_routed_context\<close>)
   that Interval's own entry-state and call-string context analyses already use.
   The context here is \<^typ>\<open>unit\<close>: \<^locale>\<open>unit_routed_context\<close>
-  (\<^theory>\<open>Voblint_Core.Routed_Context_Unit\<close>) fixes \<^const>\<open>route_unit\<close>, so every
+  (\<^theory>\<open>Voblint_Framework.Routed_Context_Unit\<close>) fixes \<^const>\<open>route_unit\<close>, so every
   routing-agreement obligation a non-trivial routed instance must prove from its
   own transfer facts collapses here to a free lemma about the constant function
   \<^const>\<open>route_unit\<close> --- exactly the collapse Sign's own unit-context instance
@@ -391,7 +391,7 @@ lemmas report_ctx_refuted_sound = adapter.analyse_report_ctx_refuted_sound
 
 text \<open>
   \<open>result_node_sound\<close> re-exports the adapter's generic node-soundness bridge
-  (\<^theory>\<open>Voblint_Core.DG_Analysis_Adapter\<close>). \<open>analyse_result_eq\<close> identifies that
+  (\<^theory>\<open>Voblint_Framework.DG_Analysis_Adapter\<close>). \<open>analyse_result_eq\<close> identifies that
   reading with the raw-tuple shape \<open>analyse_interval_ctx_result_for\<close> (defined below)
   already builds by hand, identical for every update rule.
 \<close>
@@ -707,7 +707,7 @@ text \<open>
   \<^const>\<open>is_empty_state\<close> (\<open>resolved_st_q_is_bot_for_iff\<close>).\<close>
 
 text \<open>
-  \<^const>\<open>formals_route\<close>/\<^const>\<open>formals_route_gen\<close> (\<^theory>\<open>Voblint_Core.Routed_Context\<close>)
+  \<^const>\<open>formals_route\<close>/\<^const>\<open>formals_route_gen\<close> (\<^theory>\<open>Voblint_Framework.Routed_Context\<close>)
   read the entered callee formals off an arbitrary \<^const>\<open>CallEdge\<close> generically,
   but only at the semantic \<^typ>\<open>'a abs_state\<close> carrier, not the executable
   \<^typ>\<open>'a exec_dg_st\<close> one this equation system solves over: the entered callee
@@ -982,7 +982,7 @@ definition entry_state_route_abs_gen ::
 
 text \<open>
   \<open>entry_state_route_abs\<close>/\<open>entry_state_route_abs_gen\<close> are exactly
-  \<^theory>\<open>Voblint_Core.Routed_Context\<close>'s \<open>formals_route_lifted\<close>/\<open>formals_route_lifted_gen\<close>,
+  \<^theory>\<open>Voblint_Framework.Routed_Context\<close>'s \<open>formals_route_lifted\<close>/\<open>formals_route_lifted_gen\<close>,
   generalized so any domain interprets them instead of restating them: both case-split
   the same \<^const>\<open>CallEdge\<close> and read the same entered-frame Bot/Lifted collapse, and
   the action-only entry primitive used by entered_state_abs agrees with the entered frame

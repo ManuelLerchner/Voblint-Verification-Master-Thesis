@@ -10,7 +10,7 @@ section \<open>Sign codegen API: an arbitrary VIMP program, and its OCaml export
 subsection \<open>Whole-program entry point: an arbitrary VIMP program\<close>
 
 text \<open>
-  \<open>activation_collect_unit_eq_ltr_collect\<close> (\<^theory>\<open>Voblint_Core.Routed_Context_Unit\<close>,
+  \<open>activation_collect_unit_eq_ltr_collect\<close> (\<^theory>\<open>Voblint_Framework.Routed_Context_Unit\<close>,
   reached transitively through \<open>Sign_Analyses\<close>) is the domain-generic unit-context
   collapse this file's own node-soundness bridge below needs: no Sign-specific fact is used
   in its proof, so it is proved once there rather than re-derived per domain -- Interval's
@@ -30,7 +30,7 @@ text \<open>
   now \<^const>\<open>analyse_sign_ctx_result_for\<close> (\<^theory>\<open>Voblint_Analysis.Sign_Analyses\<close>):
   the  routed-unit producer's own solved table, at \<open>prog_main_name\<close>.
   \<open>analyse_sign_result_node_sound_for\<close> below is the node-soundness bridge for
-  that table, built from \<^theory>\<open>Voblint_Core.DG_Analysis_Adapter\<close>'s generic
+  that table, built from \<^theory>\<open>Voblint_Framework.DG_Analysis_Adapter\<close>'s generic
   \<open>analyse_result_node_sound\<close> (\<open>Sign_Checks.sctx_result_node_sound\<close>), composed
   with \<open>activation_collect_unit_eq_ltr_collect\<close> (the unit-context collapse to
   \<^const>\<open>ltr_collect\<close>) and \<open>Sign_Checks.sctx_analyse_result_eq\<close> (identifying the

@@ -1,6 +1,6 @@
 theory Parity_Classify
-  imports Parity_Numeric_Queries "Voblint_Core.Abstract_Checks"
-    "Voblint_Core.Analysis_Result" Parity_Exec
+  imports Parity_Numeric_Queries "Voblint_Framework.Abstract_Checks"
+    "Voblint_Framework.Analysis_Result" Parity_Exec
     "Voblint_Exec.Monovariant_Analysis_Result"
 begin
 
@@ -18,7 +18,7 @@ text \<open>
   evaluator \<open>aval_parity\<close> lives in \<^theory>\<open>Voblint_Analysis.Parity_Domain\<close>. The
   Boolean recursion over \<^typ>\<open>exp\<close>, the three-way classification, and the
   node-indexed bridge to \<^const>\<open>checks_proven\<close> come from interpreting
-  \<open>abstract_check_domain\<close> (\<^theory>\<open>Voblint_Core.Abstract_Checks\<close>) once, below,
+  \<open>abstract_check_domain\<close> (\<^theory>\<open>Voblint_Framework.Abstract_Checks\<close>) once, below,
   reusing the numeric-query facts already proved sound in
   \<open>parity_numeric_queries\<close> --- no Boolean recursion or classification logic
   is restated.

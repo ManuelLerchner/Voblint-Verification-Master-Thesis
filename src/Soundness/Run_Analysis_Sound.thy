@@ -2,7 +2,7 @@ theory Run_Analysis_Sound
   imports
     "Voblint_Exec.DG_Base_Exec"
     "Voblint_Exec.Exec_DG_Generator"
-    "Voblint_Core.DG_LTR_Sound"
+    "Voblint_Framework.DG_LTR_Sound"
     "Voblint_Solver.TD_Solver_Menu"
     Source_Activation_Sound
 begin

@@ -1,7 +1,7 @@
 theory Exec_DG_Generator
   imports
     Exec_DG_Refines
-    "Voblint_Core.DG_LTR_Sound"
+    "Voblint_Framework.DG_LTR_Sound"
 begin
 
 section \<open>The executable equation generator and its transport\<close>
@@ -236,7 +236,7 @@ qed
 subsubsection \<open>Routed heterogeneous CALL/COMB transport\<close>
 
 text \<open>
-  \<^const>\<open>routed_cmb_g\<close>/\<^const>\<open>routed_extra_g\<close> (\<^theory>\<open>Voblint_Core.Routed_Context\<close>)
+  \<^const>\<open>routed_cmb_g\<close>/\<^const>\<open>routed_extra_g\<close> (\<^theory>\<open>Voblint_Framework.Routed_Context\<close>)
   are the canonical heterogeneous routing shape: parametric only in a routing
   function \<open>route\<close> and a seed-key injection \<open>seed_key\<close>, with the seed payload
   carried on the \<open>locals\<close> half so \<open>'D\<close>/\<open>'G\<close> stay independent. The two lemmas

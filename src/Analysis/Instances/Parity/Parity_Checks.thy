@@ -1,7 +1,7 @@
 theory Parity_Checks
   imports Parity_Classify
-    "Voblint_Core.Check_Report"
-    "Voblint_Core.DG_Analysis_Adapter"
+    "Voblint_Framework.Check_Report"
+    "Voblint_Framework.DG_Analysis_Adapter"
     Analysis_Surface
     Parity_Analyses
 begin

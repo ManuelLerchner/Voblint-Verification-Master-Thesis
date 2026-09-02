@@ -1,5 +1,5 @@
 theory DG_Base_Exec
-  imports "Voblint_Core.DG_Base" Exec_DG_Generator
+  imports "Voblint_Framework.DG_Base" Exec_DG_Generator
 begin
 
 section \<open>Executable Base-style DG construction\<close>
@@ -48,7 +48,7 @@ where
         dcM de)"
 
 text \<open>Consumed at code-generation time like every other specification builder
-  (see \<^theory>\<open>Voblint_Core.DG_Spec\<close>): the executable carrier changes what a
+  (see \<^theory>\<open>Voblint_Framework.DG_Spec\<close>): the executable carrier changes what a
   transfer computes, not whether the specification can be exported.\<close>
 
 declare base_dg_spec_st_for_lifted_def [code_unfold]
@@ -341,7 +341,7 @@ qed
 subsection \<open>A generic exec-level formal-entry route, and its commute to the abstract one\<close>
 
 text \<open>
-  \<open>formals_route_lifted\<close>/\<open>formals_route_lifted_gen\<close> (\<^theory>\<open>Voblint_Core.Routed_Context\<close>)
+  \<open>formals_route_lifted\<close>/\<open>formals_route_lifted_gen\<close> (\<^theory>\<open>Voblint_Framework.Routed_Context\<close>)
   are already domain-generic at the abstract carrier \<open>'a abs_state lifted\<close> -- the shape
   \<^locale>\<open>routed_context_base_hetero\<close>'s own \<open>route\<close> parameter needs. The executable equation
   system a solver actually runs needs the same construction at the exec carrier

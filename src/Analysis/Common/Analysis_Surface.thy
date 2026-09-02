@@ -1,7 +1,7 @@
 theory Analysis_Surface
   imports
-    "Voblint_Core.Analysis_Result"
-    "Voblint_Core.Check_Report"
+    "Voblint_Framework.Analysis_Result"
+    "Voblint_Framework.Check_Report"
     "Voblint_Compile.Compile_Invariants"
 begin
 

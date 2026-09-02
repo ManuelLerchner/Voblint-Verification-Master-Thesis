@@ -16,7 +16,7 @@ text \<open>
 
 subsection \<open>The routed equation system and its computed solution\<close>
 
-text \<open>Reuses \<^type>\<open>call_string_gk\<close> from \<^theory>\<open>Voblint_Core.Call_String_Context\<close> rather
+text \<open>Reuses \<^type>\<open>call_string_gk\<close> from \<^theory>\<open>Voblint_Framework.Call_String_Context\<close> rather
   than minting its own global-key type: the key shape never depended on \<open>k\<close>, only the
   \<open>Seed\<close> payload's context length did.\<close>
 

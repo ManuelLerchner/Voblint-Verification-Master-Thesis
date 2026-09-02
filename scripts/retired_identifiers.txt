@@ -15,7 +15,7 @@
 # Matching is whole-word, so `dgs_caller_cont` does not match `caller_cont`.
 # Deliberately NOT listed: `caller_cont`, `combine_env`, `combine_assign`.
 # Prose across this tree names record fields by their role rather than by the
-# `dgs_`-prefixed field name, and `src/Core/README.md` documents that
+# `dgs_`-prefixed field name, and `src/Framework/README.md` documents that
 # convention; those three are live vocabulary, not dead references.
 
 # --- Pure-pair transfer combinators (DG_Transfer_Combinators.thy) ---

@@ -1,6 +1,6 @@
 theory Exec_St
   imports "Voblint_Domain.Nonrelational_Reachability" "TD.Update_rules"
-    "Voblint_Core.Transfer_Interface" "HOL-Library.AList"
+    "Voblint_Framework.Transfer_Interface" "HOL-Library.AList"
 begin
 
 section \<open>Classifier-independent executable abstract state\<close>

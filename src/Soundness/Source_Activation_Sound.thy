@@ -1,5 +1,5 @@
 theory Source_Activation_Sound
-  imports "Voblint_Core.Activation_Backbone" "Voblint_Compile.Source_To_Trace"
+  imports "Voblint_Framework.Activation_Backbone" "Voblint_Compile.Source_To_Trace"
     "Voblint_CFG.CFG_Prune"
 begin
 

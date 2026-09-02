@@ -6,13 +6,13 @@ theory Sign_Analyses
     "Voblint_Analysis.Sign_Exec"
     "Voblint_Exec.Monovariant_Analysis_Result"
     "Voblint_Exec.Routed_Domain_Exec"
-    "Voblint_Core.DG_LTR_Sound"
-    "Voblint_Core.Routed_Analysis_Sound"
-    "Voblint_Core.Routed_Context"
-    "Voblint_Core.Routed_Context_Unit"
-    "Voblint_Core.Activation_Backbone"
-    "Voblint_Core.Analysis_Result"
-    "Voblint_Core.Call_String_Context"
+    "Voblint_Framework.DG_LTR_Sound"
+    "Voblint_Framework.Routed_Analysis_Sound"
+    "Voblint_Framework.Routed_Context"
+    "Voblint_Framework.Routed_Context_Unit"
+    "Voblint_Framework.Activation_Backbone"
+    "Voblint_Framework.Analysis_Result"
+    "Voblint_Framework.Call_String_Context"
     "Voblint_Solver.TD_Solver_Menu"
     "Voblint_Compile.Compile_Invariants"
     "Voblint_CFG.CFG_Prune"
@@ -53,7 +53,7 @@ text \<open>
   D/G spine (\<^locale>\<open>dg_ctx_activation_base\<close>, \<^locale>\<open>unit_routed_context\<close>) that
   Interval's own entry-state and call-string context analyses already use. The
   context here is \<^typ>\<open>unit\<close>:
-  \<^locale>\<open>unit_routed_context\<close> (\<^theory>\<open>Voblint_Core.Routed_Context_Unit\<close>) fixes
+  \<^locale>\<open>unit_routed_context\<close> (\<^theory>\<open>Voblint_Framework.Routed_Context_Unit\<close>) fixes
   \<^const>\<open>route_unit\<close>, so every routing-agreement obligation that Interval's
   formals-context instance must prove from its own transfer facts collapses here
   to a free lemma about the constant function \<^const>\<open>route_unit\<close> --- the same
@@ -765,7 +765,7 @@ text \<open>
   (\<^locale>\<open>routed_dg_domain_exec\<close>, \<^theory>\<open>Voblint_Exec.DG_Base_Exec\<close>) -- nothing here
   re-derives them. The routing policy is Interval's own entry-state construction
   (\<open>entry_exec_route_gen\<close>/\<^const>\<open>formals_route_lifted_gen\<close>,
-  \<^theory>\<open>Voblint_Exec.DG_Base_Exec\<close>/\<^theory>\<open>Voblint_Core.Routed_Context\<close>), already
+  \<^theory>\<open>Voblint_Exec.DG_Base_Exec\<close>/\<^theory>\<open>Voblint_Framework.Routed_Context\<close>), already
   generalized in a domain -- unlike \<open>cs_route\<close>, this route genuinely depends on
   its caller-state argument (the entered callee frame), which is exactly the "small
   additional domain capability" the routed-domain milestone anticipated for EntryState;
