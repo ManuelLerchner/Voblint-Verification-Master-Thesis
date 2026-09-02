@@ -138,7 +138,7 @@ subsection \<open>Registration through the classifier-parametric registration lo
 text \<open>Interpret \<^locale>\<open>local_state_dg_exec_analysis\<close> once here at \<^const>\<open>sign_ex_gs\<close>
   with the classifier-parametric transfer/enter functions and \<^const>\<open>resolved_st_q_is_bot_for\<close>
   at this program's own declared globals -- the same five domain facts
-  \<^locale>\<open>unit_dg_exec_analysis\<close> needed, plus the one new \<open>empty_pred\<close> exactness obligation. \<open>G\<close>
+  \<^locale>\<open>ownership_split_dg_exec_analysis\<close> needed, plus the one new \<open>empty_pred\<close> exactness obligation. \<open>G\<close>
   is instantiated at \<open>sign exec_dg_st lifted\<close> too (the plumbing constraint
   \<^theory>\<open>Voblint_Soundness.Run_Analysis_Sound\<close>'s \<open>local_state_dg_exec_analysis\<close> documents), not because
   \<open>G\<close>'s content matters here.\<close>

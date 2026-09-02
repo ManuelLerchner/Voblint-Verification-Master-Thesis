@@ -37,7 +37,7 @@ text \<open>
   final subsection emits an analysis-annotated GraphViz rendering.
 
   It reuses, without duplicating: the executable interval transfer \<open>ivl_tf_st_for\<close>
-  (\<open>Ivl_Exec\<close>), the registration locale \<open>unit_dg_exec_analysis\<close>
+  (\<open>Ivl_Exec\<close>), the registration locale \<open>ownership_split_dg_exec_analysis\<close>
   (\<open>Run_Analysis_Sound\<close>), and the vendored warrowing solver.
 \<close>
 
@@ -117,8 +117,8 @@ subsection \<open>Executable interval D/G specification\<close>
 
 text \<open>
   Intervals form the diagonal D/G analysis \<open>D = G = ivl abs_state\<close>, with executable
-  mirror \<open>unit_dg_spec_st_for flagship_gs (ivl_tf_st_for flagship_gs)\<close>.  The
-  registration \<^locale>\<open>unit_dg_exec_analysis\<close> --- interpreted as \<open>flagship_ex_reg\<close>
+  mirror \<open>ownership_split_dg_spec_st_for flagship_gs (ivl_tf_st_for flagship_gs)\<close>.  The
+  registration \<^locale>\<open>ownership_split_dg_exec_analysis\<close> --- interpreted as \<open>flagship_ex_reg\<close>
   below, at this file's own classifier \<open>flagship_gs\<close>, from \<open>ivl_is_sound_transfer_for\<close>
   and \<open>ivl_tf_st_for_commute\<close> alone --- discharges the transport, soundness, and
   solver-crossing obligations generically.  This example supplies only the program,
@@ -136,7 +136,7 @@ text \<open>
 \<close>
 
 definition flagship_eqs :: "pp \<times> unit \<Rightarrow> (pp \<times> unit, unit, (ivl exec_dg_st, ivl exec_dg_st) dg_state) strategy_tree" where
-  "flagship_eqs = dg_gen_of (unit_dg_spec_st_for flagship_gs (ivl_tf_st_for flagship_gs) (ivl_enter_st_for flagship_gs))
+  "flagship_eqs = dg_gen_of (ownership_split_dg_spec_st_for flagship_gs (ivl_tf_st_for flagship_gs) (ivl_enter_st_for flagship_gs))
      flagship_cfg bot cinit_ivl_st (restrict_global_resolved_q cinit_ivl_st)"
 
 subsection \<open>Executable solve\<close>
@@ -224,7 +224,7 @@ lemma flagship_exit_computed:
 
 subsection \<open>Registration through the classifier-parametric registration locale\<close>
 
-text \<open>Interpret \<^locale>\<open>unit_dg_exec_analysis\<close> once here at \<open>flagship_gs\<close>,
+text \<open>Interpret \<^locale>\<open>ownership_split_dg_exec_analysis\<close> once here at \<open>flagship_gs\<close>,
   matching the pattern in \<open>Exec_Sign_DG_Run\<close> and \<open>Example_Parity_DG_Flagship\<close>.
   The interpretation absorbs the sound-transfer and primitive-commutation
   obligations once, so \<open>flagship_source_run_sound\<close> below only supplies the
@@ -234,13 +234,13 @@ lemma flagship_wf_reserved: "reserved_ret_var flagship_gs"
   by (auto simp: wf_compile_input_simps flagship_pi_def flagship_prog_def split: if_splits)
 
 interpretation flagship_ex_reg:
-  unit_dg_exec_analysis flagship_gs
+  ownership_split_dg_exec_analysis flagship_gs
     "ivl_tf_for flagship_gs" "ivl_tf_st_for flagship_gs" "ivl_enter_st_for flagship_gs"
     "TD_side_warrowing_apinis_Interp.solve" "TD_side_warrowing_apinis_Interp.solve_c"
 proof -
   interpret flagship_ex_transfer: sound_transfer_for flagship_gs "ivl_tf_for flagship_gs"
     by (rule ivl_is_sound_transfer_for)
-  show "unit_dg_exec_analysis flagship_gs (ivl_tf_for flagship_gs) (ivl_tf_st_for flagship_gs)
+  show "ownership_split_dg_exec_analysis flagship_gs (ivl_tf_for flagship_gs) (ivl_tf_st_for flagship_gs)
           (ivl_enter_st_for flagship_gs)
           TD_side_warrowing_apinis_Interp.solve TD_side_warrowing_apinis_Interp.solve_c"
     by unfold_locales
@@ -281,7 +281,7 @@ proof -
               flagship_vars_cover[unfolded flagship_sol_def flagship_eqs_def flagship_cfg_def]
               flagship.finite_intra[unfolded flagship_cfg_def]
               flagship.finite_calls[unfolded flagship_cfg_def]
-              flagship_sound0[folded gamma_unit_def, folded flagship_ex_reg.gamma_unit_exec_def]
+              flagship_sound0[folded gamma_ownership_split_def, folded flagship_ex_reg.gamma_ownership_split_exec_def]
               init run'])
 qed
 
@@ -324,9 +324,9 @@ proof -
 qed
 
 theorem flagship_head_bound_proper:
-  "(\<lambda>_. 100) \<notin> dg_hook_gamma (gamma_unit flagship_gs)
+  "(\<lambda>_. 100) \<notin> dg_hook_gamma (gamma_ownership_split flagship_gs)
                  (fun_of_dg_st_for flagship_gs \<circ> snd flagship_sol) (Statement (Suc 0))"
-  unfolding dg_hook_gamma_def gamma_unit_def gamma_state_def
+  unfolding dg_hook_gamma_def gamma_ownership_split_def gamma_state_def
             dg_hook_D_def dg_hook_G_def
   apply (simp only: mem_Collect_eq not_all)
   apply (rule exI[of _ "(STR ''x'')"])

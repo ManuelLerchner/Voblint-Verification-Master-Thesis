@@ -17,7 +17,7 @@ session Voblint_Framework in "." = "Voblint_CFG" +
     DG_Manager
     DG_Spec
     DG_Spec_Sound
-    DG_Unit_Spec
+    DG_Ownership_Split_Spec
     DG_Keyed_Generator
     DG_Soundness
     DG_LTR_Sound

@@ -80,7 +80,7 @@ subsection \<open>Interval, on the same CFG, same generator, same solver menu\<c
 definition demo_ivl_eqs ::
   "pp \<times> unit \<Rightarrow> (pp \<times> unit, unit, (ivl exec_dg_st, ivl exec_dg_st) dg_state) strategy_tree" where
   "demo_ivl_eqs =
-     dg_gen_of (unit_dg_spec_st_for demo_gs (ivl_tf_st_for demo_gs) (ivl_enter_st_for demo_gs)) demo_cfg
+     dg_gen_of (ownership_split_dg_spec_st_for demo_gs (ivl_tf_st_for demo_gs) (ivl_enter_st_for demo_gs)) demo_cfg
        bot top_ivl_st (restrict_global_resolved_q top_ivl_st)"
 
 definition demo_ivl_sol ::

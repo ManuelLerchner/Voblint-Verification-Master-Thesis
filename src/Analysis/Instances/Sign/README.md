@@ -17,4 +17,4 @@ are not part of the reusable instance.
 | `Sign_Domain.thy` | `abstract_domain` instantiation; `backward_domain_mono` interpretation (`afilter`/`bfilter` monotonicity) |
 | `Sign_Exec.thy` | executable transfer mirror + `tf_st_commute` commutation |
 | `Sign_Exec_Sound.thy` | the computed sign result and its certified soundness |
-| `Sign_DG.thy` | `sound_dg_spec` interpretation (`unit_dg_spec` diagonal); `sign_dg_post_solution_collect_sound` |
+| `Sign_DG.thy` | `sound_dg_spec` interpretation (`ownership_split_dg_spec` diagonal); `sign_dg_post_solution_collect_sound` |

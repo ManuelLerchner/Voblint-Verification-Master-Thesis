@@ -131,7 +131,7 @@ not scaffolding.
   keep-all placement. `Example_Placement_Regression.thy:78` says it "validates
   concretely" the exact case that interpretation covers, and that example is one
   of the two the alignment register cites as evidence for the
-  `gamma_unit` / `gamma_join` row.
+  `gamma_ownership_split` / `gamma_join` row.
 - `Parity_Base_DG` / `Int_Base_DG` each export three `*_dg_spec_*_commute`
   theorems from a `context fixes gs` block. The inner `interpretation` really is
   inert (its facts never escape the context), but the theorems are not — they

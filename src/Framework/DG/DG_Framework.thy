@@ -17,12 +17,12 @@ text \<open>An analysis chooses a flow-sensitive answer domain \<open>D\<close> 
 
 
 
-definition unit_step_for ::
+definition ownership_split_step_for ::
   "(vname => bool) =>
    ('a::bounded_semilattice_sup_bot abs_state => 'a abs_state)
    => 'a abs_state => 'a abs_state => 'a abs_state \<times> 'a abs_state"
 where
-  "unit_step_for gs f d g =
+  "ownership_split_step_for gs f d g =
      (let res = f (combine_env gs d g) in
       (restrict_global_for gs res, restrict_local_for gs res))"
 

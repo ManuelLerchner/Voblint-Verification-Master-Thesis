@@ -61,7 +61,7 @@ lift_gamma
 indep_dg_spec
 local_state_dg_spec_st_for
 
-# --- Unit ownership split, before `unit_transfer_gen` ---
+# --- Unit ownership split, before `ownership_split_transfer_gen` ---
 merge_split_spec
 merge_split_spec_exec
 unit_step_st
@@ -76,8 +76,8 @@ unit_combine_step_st_assign_for
 placed_dg_exec_analysis
 project_component
 project_placed_resolved
-unit_dg_spec_placed
-unit_dg_spec_placed_st
+ownership_split_dg_spec_placed
+ownership_split_dg_spec_placed_st
 unit_step_placed
 unit_step_placed_st
 unit_combine_step_env_placed
@@ -117,3 +117,11 @@ base_dg_spec_sound
 base_dg_spec_for_sound
 gamma_dg_base
 base_dg_exec_analysis
+unit_transfer
+unit_transfer_gen
+unit_combine_transfer
+unit_dg_spec_for
+unit_dg_spec_st_for
+gamma_unit
+sound_dg_spec_unit_for
+unit_dg_exec_analysis

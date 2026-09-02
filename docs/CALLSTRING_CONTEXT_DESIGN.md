@@ -55,7 +55,7 @@ Read `Routed_Context.thy`, `DG_Ctx_Activation.thy`, `DG_Soundness.thy`,
 `dg_ctx_activation`'s locale header (`DG_Ctx_Activation.thy:18-33`):
 
 ```isabelle
-locale dg_ctx_activation = sound_dg_spec S gamma_unit gs
+locale dg_ctx_activation = sound_dg_spec S gamma_ownership_split gs
   for S :: "('a::sound_domain abs_state, 'a abs_state) dg_spec"
     and gs :: "vname => bool" +
   fixes g :: cfg and gk0 :: 'k
@@ -95,7 +95,7 @@ locale routed_context =
   assumes ...
     and route_enterc_agree:
       "(u, ctx) : vars ==> (u, CallEdge dst pars args, FunctionEntry p, cont) : calls g
-       ==> s : gamma_unit ... ==> route u ctx (locals (sigma (Inl (u,ctx)))) (CallEdge dst pars args)
+       ==> s : gamma_ownership_split ... ==> route u ctx (locals (sigma (Inl (u,ctx)))) (CallEdge dst pars args)
             = enterc u ctx (call_enter gs (CallEdge dst pars args) s)"
 ```
 

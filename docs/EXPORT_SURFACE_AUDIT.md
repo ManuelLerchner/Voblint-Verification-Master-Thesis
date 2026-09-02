@@ -25,7 +25,7 @@ diverges from Goblint.
 signal on its own. Isabelle emits the transitive closure of the export roots
 under the *registered code equations*, so a specification-side constant that a
 `[code]` lemma rewrites away vanishes from the OCaml while remaining load-bearing
-in the proof. `unit_dg_spec_for`, `dg_gen_of`, `fun_of_dg_st`, `gamma_unit` and
+in the proof. `ownership_split_dg_spec_for`, `dg_gen_of`, `fun_of_dg_st`, `gamma_ownership_split` and
 most of `Exec_DG_Generator` are in that category: absent from the OCaml, not
 legacy. The findings below are the cases where absence *plus* a use-graph check
 shows the construct is genuinely unreferenced or superseded.
@@ -259,9 +259,9 @@ The naming is also inconsistent in a way that hides the parallelism:
 
 ### 3.2 The `_lifted` mirror
 
-`unit_dg_spec_for` / `unit_dg_spec_for_lifted`, `unit_step_for` / `_lifted`,
+`ownership_split_dg_spec_for` / `ownership_split_dg_spec_for_lifted`, `ownership_split_step_for` / `_lifted`,
 `unit_combine_step_env_for` / `_lifted`, `unit_combine_step_assign_for` /
-`_lifted`, `gamma_unit` / `gamma_unit_lifted`, `formals_route` / `_lifted` /
+`_lifted`, `gamma_ownership_split` / `gamma_ownership_split_lifted`, `formals_route` / `_lifted` /
 `_gen` / `_lifted_gen`, `branch` / `branch_lifted` — each pair is structurally
 identical modulo the carrier (`'a abs_state` vs `'a abs_state lifted`) plus an
 `is_bot_pred`, and each pair is bridged by an explicit `*_agrees` lemma.
@@ -635,7 +635,7 @@ kept alive alongside the one the CLI uses.
 
 **They are not deletable.** `GOBLINT_ALIGNMENT_REGISTER.md`'s D/G-reconstruction
 row cites `Example_Sign_Placement.thy` and `Example_Interval_Placement.thy` as
-the concrete counterexamples distinguishing `gamma_unit gs` from `gamma_join` —
+the concrete counterexamples distinguishing `gamma_ownership_split gs` from `gamma_join` —
 they are load-bearing evidence for a documented architectural claim. The
 finding is that 3,861 lines is a disproportionate way to carry that evidence,
 and that ~1,500 of it is framework work misfiled as an example.
@@ -878,7 +878,7 @@ into the verified layer. That is the model the rest of `cli/` should follow.
 - **Twelve identical `metis` calls** — `by (metis map_prod_simp snd_conv surj_pair)` ×6 and the `fst_conv` variant ×6 across `Exec_DG_Generator.thy` and `Exec_DG_Trees.thy`. Two named `[simp]` lemmas (`fst (map_prod f g p) = f (fst p)`, `by (cases p) simp`) turn all twelve into `by simp`. This is the densest `metis` cluster in the project, in a file with 19 of the scope's 26 `metis` calls.
 - **`cs_route` and `cs_context` are the same function** (`Call_String_Context.thy:31, 39`) — both `take k (u # ctx)`, both ignoring their last argument. Six lemmas exist in mirrored pairs, five of them uncited.
 - **`proj_local_ge` / `proj_global_ge`** (`Call_String_Solver_Projection.thy:78-131`): identical `foldr`-domination inductions. One `foldr_guarded_sup_ge` lemma makes both one-liners. 54 -> ~14.
-- **Severable but load-bearing, not dead**: the `_placed` family (`unit_dg_spec_placed` and the `gamma_join` soundness section, ~210 lines) is absent from the OCaml and reached only from `Sign_DG.thy` and two Examples — but `sound_dg_spec_unit_placed` is a real theorem that `Sign_DG.thy:36` interprets. Treat as a demonstration family with a known cost.
+- **Severable but load-bearing, not dead**: the `_placed` family (`ownership_split_dg_spec_placed` and the `gamma_join` soundness section, ~210 lines) is absent from the OCaml and reached only from `Sign_DG.thy` and two Examples — but `sound_dg_spec_unit_placed` is a real theorem that `Sign_DG.thy:36` interprets. Treat as a demonstration family with a known cost.
 
 ### 9.3 Goblint findings beyond the register
 

@@ -1,4 +1,4 @@
-theory DG_Unit_Spec
+theory DG_Ownership_Split_Spec
   imports DG_Spec_Sound
 begin
 
@@ -10,17 +10,28 @@ text \<open>
   does the opposite, and is the reason those capabilities exist.
 
   It chooses \<open>D = G = 'a abs_state\<close>, splitting each state by variable
-  ownership: the global names live on the shared channel, the rest on the
-  program point's own unknown. A transfer therefore reads the shared fact,
-  rejoins it with the local half to recover the whole state, runs the
-  ordinary transfer on that, and splits the result back -- publishing the
-  global half with \<open>man_sideg\<close> and answering with the local half.
+  ownership: \<^const>\<open>combine_env\<close>'s predicate is the source language's own
+  declaration of which names are global, so the global names live on the shared
+  channel and the rest on the program point's own unknown. The split is not a
+  representation choice: a return recombines two concrete stores by that same
+  ownership rule, keeping the caller's locals and taking the globals from the
+  callee, which is what \<open>gamma_ownership_split_combine_env\<close> states.
 
-  \<open>unit_transfer\<close> is that shape, and it is written in the manager language
-  directly: there is no \<open>'dl \<Rightarrow> 'dg \<Rightarrow> 'dg \<times> 'dl\<close> anywhere. Its compiled
+  A transfer therefore reads the shared fact, rejoins it with the local half to
+  recover the whole state, runs the ordinary transfer on that, and splits the
+  result back -- publishing the global half with \<open>man_sideg\<close> and answering
+  with the local half.
+
+  \<open>ownership_split_transfer\<close> is that shape, and it is written in the
+  manager language directly: there is no \<open>'dl \<Rightarrow> 'dg \<Rightarrow> 'dg \<times> 'dl\<close> anywhere. Its compiled
   tree reads the source, queries the global key, publishes a \<open>Side\<close>, and
   answers -- which is what makes it the first specification whose equations
   carry a genuine \<open>QueryG\<close> and \<open>Side\<close>.
+
+  The construction is generic in the carrier -- the same three operations exist
+  on function-valued states and on the solver's association lists -- but not in
+  the ownership rule, which is always \<^const>\<open>combine_env\<close> and the two
+  \<open>restrict_\<close> projections at that carrier.
 \<close>
 
 subsection \<open>The ownership-splitting transfer\<close>
@@ -34,11 +45,11 @@ text \<open>
   second development.
 \<close>
 
-definition unit_transfer_gen ::
+definition ownership_split_transfer_gen ::
   "('d \<Rightarrow> 'd \<Rightarrow> 'd) \<Rightarrow> ('d \<Rightarrow> 'd) \<Rightarrow> ('d \<Rightarrow> 'd) \<Rightarrow> ('d \<Rightarrow> 'd)
    \<Rightarrow> ('x,'k,unit,'d::bounded_semilattice_sup_bot,'d) man_transfer"
 where
-  "unit_transfer_gen cmb rg rl f m =
+  "ownership_split_transfer_gen cmb rg rl f m =
      do {
        g \<leftarrow> man_global m ();
        let res = f (cmb (man_local m) g);
@@ -53,11 +64,11 @@ text \<open>
   the callee exit is just an extra argument, so one definition covers both.
 \<close>
 
-definition unit_combine_transfer_gen ::
+definition ownership_split_combine_transfer_gen ::
   "('d \<Rightarrow> 'd \<Rightarrow> 'd) \<Rightarrow> ('d \<Rightarrow> 'd) \<Rightarrow> ('d \<Rightarrow> 'd) \<Rightarrow> ('d \<Rightarrow> 'd \<Rightarrow> 'd)
    \<Rightarrow> ('x,'k,unit,'d::bounded_semilattice_sup_bot,'d) man_combine_transfer"
 where
-  "unit_combine_transfer_gen cmb rg rl asn m de = unit_transfer_gen cmb rg rl (asn de) m"
+  "ownership_split_combine_transfer_gen cmb rg rl asn m de = ownership_split_transfer_gen cmb rg rl (asn de) m"
 
 subsection \<open>What the compiled tree reads and publishes\<close>
 
@@ -68,59 +79,59 @@ text \<open>
   is its global projection.
 \<close>
 
-lemma traverse_unit_transfer_gen [simp]:
-  "locals (traverse_rhs (transfer_tree (unit_transfer_gen cmb rg rl f) src (\<lambda>_. gk)) \<tau>)
+lemma traverse_ownership_split_transfer_gen [simp]:
+  "locals (traverse_rhs (transfer_tree (ownership_split_transfer_gen cmb rg rl f) src (\<lambda>_. gk)) \<tau>)
      = rl (f (cmb (locals (\<tau> src)) (globs (\<tau> (Inr gk)))))"
   by (cases src)
-     (simp_all add: transfer_tree_def dg_edge_tree_man_def unit_transfer_gen_def
+     (simp_all add: transfer_tree_def dg_edge_tree_man_def ownership_split_transfer_gen_def
         mk_dg_man_def dg_read_at_def dg_read_global_def dg_sideg_def sp_bind_assoc
         Let_def)
 
-lemma sides_unit_transfer_gen [simp]:
-  "globs (sides_of_rhs (transfer_tree (unit_transfer_gen cmb rg rl f) src (\<lambda>_. gk))
+lemma sides_ownership_split_transfer_gen [simp]:
+  "globs (sides_of_rhs (transfer_tree (ownership_split_transfer_gen cmb rg rl f) src (\<lambda>_. gk))
             \<tau> (Inr gk))
      = rg (f (cmb (locals (\<tau> src)) (globs (\<tau> (Inr gk)))))"
   by (cases src)
-     (simp_all add: transfer_tree_def dg_edge_tree_man_def unit_transfer_gen_def
+     (simp_all add: transfer_tree_def dg_edge_tree_man_def ownership_split_transfer_gen_def
         mk_dg_man_def dg_read_at_def dg_read_global_def dg_sideg_def sp_bind_assoc
         Let_def)
 
-lemma traverse_unit_combine_transfer_gen [simp]:
+lemma traverse_ownership_split_combine_transfer_gen [simp]:
   "locals (traverse_rhs
-             (combine_transfer_tree (unit_combine_transfer_gen cmb rg rl asn)
+             (combine_transfer_tree (ownership_split_combine_transfer_gen cmb rg rl asn)
                 src_cc src_ex (\<lambda>_. gk)) \<tau>)
      = rl (asn (locals (\<tau> src_ex)) (cmb (locals (\<tau> src_cc)) (globs (\<tau> (Inr gk)))))"
   by (cases src_cc; cases src_ex)
      (simp_all add: combine_transfer_tree_def dg_combine_tree_man_def
-        unit_combine_transfer_gen_def unit_transfer_gen_def mk_dg_man_def
+        ownership_split_combine_transfer_gen_def ownership_split_transfer_gen_def mk_dg_man_def
         dg_read_at_def dg_read_global_def dg_sideg_def sp_bind_assoc Let_def)
 
-lemma sides_unit_combine_transfer_gen [simp]:
+lemma sides_ownership_split_combine_transfer_gen [simp]:
   "globs (sides_of_rhs
-            (combine_transfer_tree (unit_combine_transfer_gen cmb rg rl asn)
+            (combine_transfer_tree (ownership_split_combine_transfer_gen cmb rg rl asn)
                src_cc src_ex (\<lambda>_. gk)) \<tau> (Inr gk))
      = rg (asn (locals (\<tau> src_ex)) (cmb (locals (\<tau> src_cc)) (globs (\<tau> (Inr gk)))))"
   by (cases src_cc; cases src_ex)
      (simp_all add: combine_transfer_tree_def dg_combine_tree_man_def
-        unit_combine_transfer_gen_def unit_transfer_gen_def mk_dg_man_def
+        ownership_split_combine_transfer_gen_def ownership_split_transfer_gen_def mk_dg_man_def
         dg_read_at_def dg_read_global_def dg_sideg_def sp_bind_assoc Let_def)
 
-definition unit_transfer ::
+definition ownership_split_transfer ::
   "(vname \<Rightarrow> bool) \<Rightarrow> ('a::bounded_semilattice_sup_bot abs_state \<Rightarrow> 'a abs_state)
    \<Rightarrow> ('x,'k,unit,'a abs_state,'a abs_state) man_transfer"
 where
-  "unit_transfer gs =
-     unit_transfer_gen (combine_env gs) (restrict_global_for gs) (restrict_local_for gs)"
+  "ownership_split_transfer gs =
+     ownership_split_transfer_gen (combine_env gs) (restrict_global_for gs) (restrict_local_for gs)"
 
-lemma unit_transfer_unfold:
-  "unit_transfer gs f m =
+lemma ownership_split_transfer_unfold:
+  "ownership_split_transfer gs f m =
      do {
        g \<leftarrow> man_global m ();
        let res = f (combine_env gs (man_local m) g);
        _ \<leftarrow> man_sideg m () (restrict_global_for gs res);
        sp_return (restrict_local_for gs res)
      }"
-  unfolding unit_transfer_def unit_transfer_gen_def by (rule refl)
+  unfolding ownership_split_transfer_def ownership_split_transfer_gen_def by (rule refl)
 
 text \<open>
   The return combine is the same shape with one extra read: the return slot
@@ -130,16 +141,16 @@ text \<open>
   routing for the non-return names; \<open>de ret_var\<close> is read directly.
 \<close>
 
-definition unit_combine_transfer ::
+definition ownership_split_combine_transfer ::
   "(vname \<Rightarrow> bool) \<Rightarrow> call_info
    \<Rightarrow> ('x,'k,unit,'a::bounded_semilattice_sup_bot abs_state,'a abs_state) man_combine_transfer"
 where
-  "unit_combine_transfer gs ci =
-     unit_combine_transfer_gen (combine_env gs) (restrict_global_for gs) (restrict_local_for gs)
+  "ownership_split_combine_transfer gs ci =
+     ownership_split_combine_transfer_gen (combine_env gs) (restrict_global_for gs) (restrict_local_for gs)
        (\<lambda>de. combine_assign (ci_dst ci) (de ret_var))"
 
-lemma unit_combine_transfer_unfold:
-  "unit_combine_transfer gs ci m de =
+lemma ownership_split_combine_transfer_unfold:
+  "ownership_split_combine_transfer gs ci m de =
      do {
        g \<leftarrow> man_global m ();
        let res = combine_assign (ci_dst ci) (de ret_var)
@@ -147,7 +158,7 @@ lemma unit_combine_transfer_unfold:
        _ \<leftarrow> man_sideg m () (restrict_global_for gs res);
        sp_return (restrict_local_for gs res)
      }"
-  unfolding unit_combine_transfer_def unit_combine_transfer_gen_def unit_transfer_gen_def
+  unfolding ownership_split_combine_transfer_def ownership_split_combine_transfer_gen_def ownership_split_transfer_gen_def
   by (rule refl)
 
 subsection \<open>The complete unit specification\<close>
@@ -160,38 +171,38 @@ text \<open>
   needs the callee exit and the shared fact together.
 \<close>
 
-definition unit_dg_spec_for ::
+definition ownership_split_dg_spec_for ::
   "(vname \<Rightarrow> bool) \<Rightarrow> 'a::sound_domain domain_transfer
    \<Rightarrow> ('x,'k,unit,'a abs_state,'a abs_state) dg_spec"
 where
-  "unit_dg_spec_for gs tf = default_local_dg_spec\<lparr>
-     dgs_skip := unit_transfer gs (apply_tf tf EA_Nop),
-     dgs_assign := (\<lambda>x e. unit_transfer gs (apply_tf tf (EA_Assign x e))),
-     dgs_special := (\<lambda>sc x. unit_transfer gs (apply_tf tf (EA_Special sc x))),
-     dgs_branch := (\<lambda>b pol. unit_transfer gs (branch\<^sup># tf b pol)),
-     dgs_body := (\<lambda>p. unit_transfer gs (body\<^sup># tf p)),
-     dgs_return := (\<lambda>e p. unit_transfer gs (return\<^sup># tf e p)),
-     dgs_enter := (\<lambda>ci. unit_transfer gs (snd o enter\<^sup># tf ci)),
-     dgs_event := (\<lambda>ev. unit_transfer gs (event\<^sup># tf ev)),
-     dgs_combine_assign := unit_combine_transfer gs \<rparr>"
+  "ownership_split_dg_spec_for gs tf = default_local_dg_spec\<lparr>
+     dgs_skip := ownership_split_transfer gs (apply_tf tf EA_Nop),
+     dgs_assign := (\<lambda>x e. ownership_split_transfer gs (apply_tf tf (EA_Assign x e))),
+     dgs_special := (\<lambda>sc x. ownership_split_transfer gs (apply_tf tf (EA_Special sc x))),
+     dgs_branch := (\<lambda>b pol. ownership_split_transfer gs (branch\<^sup># tf b pol)),
+     dgs_body := (\<lambda>p. ownership_split_transfer gs (body\<^sup># tf p)),
+     dgs_return := (\<lambda>e p. ownership_split_transfer gs (return\<^sup># tf e p)),
+     dgs_enter := (\<lambda>ci. ownership_split_transfer gs (snd o enter\<^sup># tf ci)),
+     dgs_event := (\<lambda>ev. ownership_split_transfer gs (event\<^sup># tf ev)),
+     dgs_combine_assign := ownership_split_combine_transfer gs \<rparr>"
 
-lemma dg_spec_step_unit_for:
-  "dg_spec_step (unit_dg_spec_for gs tf) a = unit_transfer gs (apply_tf tf a)"
-  unfolding unit_dg_spec_for_def
+lemma dg_spec_step_ownership_split_for:
+  "dg_spec_step (ownership_split_dg_spec_for gs tf) a = ownership_split_transfer gs (apply_tf tf a)"
+  unfolding ownership_split_dg_spec_for_def
   by (cases a) simp_all
 
-lemma dgs_enter_unit_dg_spec_for:
-  "dgs_enter (unit_dg_spec_for gs tf) ci = unit_transfer gs (snd o enter\<^sup># tf ci)"
-  unfolding unit_dg_spec_for_def by simp
+lemma dgs_enter_ownership_split_dg_spec_for:
+  "dgs_enter (ownership_split_dg_spec_for gs tf) ci = ownership_split_transfer gs (snd o enter\<^sup># tf ci)"
+  unfolding ownership_split_dg_spec_for_def by simp
 
 text \<open>The composed return pipeline: \<open>caller_cont\<close> and \<open>combine_env\<close> are
-  identities, so the whole combine is \<^const>\<open>unit_combine_transfer\<close> on the raw
+  identities, so the whole combine is \<^const>\<open>ownership_split_combine_transfer\<close> on the raw
   call-site value.\<close>
 
-lemma dg_spec_combine_transfer_unit_dg_spec_for:
-  "dg_spec_combine_transfer (unit_dg_spec_for gs tf) ci m de
-     = unit_combine_transfer gs ci m de"
-  unfolding dg_spec_combine_transfer_def dgs_combine_def unit_dg_spec_for_def
+lemma dg_spec_combine_transfer_ownership_split_dg_spec_for:
+  "dg_spec_combine_transfer (ownership_split_dg_spec_for gs tf) ci m de
+     = ownership_split_combine_transfer gs ci m de"
+  unfolding dg_spec_combine_transfer_def dgs_combine_def ownership_split_dg_spec_for_def
   by (simp add: local_transfer_def local_combine_transfer_def man_with_local_def)
 
 section \<open>What a split point means\<close>
@@ -204,21 +215,21 @@ text \<open>
   is why this is the concretization they are sound for.
 \<close>
 
-definition gamma_unit ::
+definition gamma_ownership_split ::
   "(vname \<Rightarrow> bool) \<Rightarrow> 'a::sound_domain abs_state \<Rightarrow> 'a abs_state \<Rightarrow> store set"
 where
-  "gamma_unit gs d g = \<lbrakk>combine_env gs d g\<rbrakk>"
+  "gamma_ownership_split gs d g = \<lbrakk>combine_env gs d g\<rbrakk>"
 
-lemma gamma_unit_eq: "gamma_unit gs d g = \<lbrakk>combine_env gs d g\<rbrakk>"
-  unfolding gamma_unit_def ..
+lemma gamma_ownership_split_eq: "gamma_ownership_split gs d g = \<lbrakk>combine_env gs d g\<rbrakk>"
+  unfolding gamma_ownership_split_def ..
 
-lemma gamma_unitD [dest]: "s \<in> gamma_unit gs d g \<Longrightarrow> s \<in> \<lbrakk>combine_env gs d g\<rbrakk>"
-  unfolding gamma_unit_def by simp
+lemma gamma_ownership_splitD [dest]: "s \<in> gamma_ownership_split gs d g \<Longrightarrow> s \<in> \<lbrakk>combine_env gs d g\<rbrakk>"
+  unfolding gamma_ownership_split_def by simp
 
-lemma gamma_unit_mono:
+lemma gamma_ownership_split_mono:
   assumes "d \<le> d'" and "g \<le> g'"
-  shows "gamma_unit gs d g \<subseteq> gamma_unit gs d' g'"
-  unfolding gamma_unit_def
+  shows "gamma_ownership_split gs d g \<subseteq> gamma_ownership_split gs d' g'"
+  unfolding gamma_ownership_split_def
   by (rule gamma_state_mono) (use assms in \<open>auto simp: combine_env_def le_fun_def\<close>)
 
 text \<open>
@@ -228,7 +239,7 @@ text \<open>
   a state whose global half is the same \<open>g\<close>.
 \<close>
 
-lemma gamma_unit_combine_env:
+lemma gamma_ownership_split_combine_env:
   assumes cc: "s \<in> \<lbrakk>combine_env gs dc g\<rbrakk>"
     and ex: "t \<in> \<lbrakk>combine_env gs de g\<rbrakk>"
   shows "combine_env gs s t \<in> \<lbrakk>combine_env gs dc g\<rbrakk>"
@@ -253,7 +264,7 @@ text \<open>
   state there.
 \<close>
 
-lemma gamma_unit_combine_assign:
+lemma gamma_ownership_split_combine_assign:
   assumes reserved: "reserved_ret_var gs"
     and cc: "s \<in> \<lbrakk>combine_env gs dc g\<rbrakk>"
     and ex: "t \<in> \<lbrakk>combine_env gs de g\<rbrakk>"
@@ -261,7 +272,7 @@ lemma gamma_unit_combine_assign:
            \<in> \<lbrakk>combine_assign dst (de ret_var) (combine_env gs dc g)\<rbrakk>"
 proof (cases dst)
   case None
-  then show ?thesis using gamma_unit_combine_env[OF cc ex] by simp
+  then show ?thesis using gamma_ownership_split_combine_env[OF cc ex] by simp
 next
   case (Some x)
   have ret: "t ret_var \<in> gamma (de ret_var)"
@@ -273,7 +284,7 @@ next
   qed
   show ?thesis
     unfolding Some
-    using gamma_unit_combine_env[OF cc ex] ret
+    using gamma_ownership_split_combine_env[OF cc ex] ret
     by (auto simp: gamma_state_def)
 qed
 
@@ -287,33 +298,33 @@ text \<open>
   cited from the interpreted locale.
 \<close>
 
-theorem sound_dg_spec_unit_for:
+theorem sound_dg_spec_ownership_split_for:
   assumes tf_sound: "sound_transfer_for gs tf"
     and reserved: "reserved_ret_var gs"
-  shows "sound_dg_spec (unit_dg_spec_for gs tf) (gamma_unit gs) gs"
+  shows "sound_dg_spec (ownership_split_dg_spec_for gs tf) (gamma_ownership_split gs) gs"
 proof -
   interpret tfs: sound_transfer_for gs tf by (rule tf_sound)
   show ?thesis
   proof (unfold_locales, goal_cases)
     case (1 d d' g g')
-    then show ?case by (rule gamma_unit_mono)
+    then show ?case by (rule gamma_ownership_split_mono)
   next
     case (2 a \<tau> src gk)
     show ?case
-      unfolding dg_spec_edge_tree_def dg_spec_step_unit_for unit_transfer_def
-        gamma_unit_def
+      unfolding dg_spec_edge_tree_def dg_spec_step_ownership_split_for ownership_split_transfer_def
+        gamma_ownership_split_def
       by (simp add: tfs.edge_collect_apply_tf_sound_for)
   next
     case (3 s \<tau> src gk ci)
     then show ?case
-      unfolding dgs_enter_unit_dg_spec_for unit_transfer_def gamma_unit_def
+      unfolding dgs_enter_ownership_split_dg_spec_for ownership_split_transfer_def gamma_ownership_split_def
       by (simp add: call_enter_def tfs.tf_sound_enter_entry_for)
   next
     case (4 s \<tau> src_cc gk t src_ex ci)
     then show ?case
-      unfolding dg_spec_combine_tree_def dg_spec_combine_transfer_unit_dg_spec_for
-        unit_combine_transfer_def gamma_unit_def combine_collect_def
-      by (simp add: gamma_unit_combine_assign[OF reserved])
+      unfolding dg_spec_combine_tree_def dg_spec_combine_transfer_ownership_split_dg_spec_for
+        ownership_split_combine_transfer_def gamma_ownership_split_def combine_collect_def
+      by (simp add: gamma_ownership_split_combine_assign[OF reserved])
   qed
 qed
 

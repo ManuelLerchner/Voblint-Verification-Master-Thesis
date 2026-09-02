@@ -29,7 +29,7 @@ each gated on a green `isabelle build … Voblint_Soundness`.
 | E — Sign/Interval instance mirror | **Deferred per doc guidance** — the doc recommends waiting for the Octagon domain so the abstraction is designed against a third client. B already extracted the largest shared piece (filter monotonicity). |
 | L.1 — concept stepping-stones | **Decided, no deletion.** NamedGlobalSign is intentional WIP ("soundness in progress"); the ctx/retain run demos are documented contrasts now housed under `Examples/Executable/`. Retiring proven WIP / milestone witnesses was not warranted; the reorg delivered the organizational win without destroying work. |
 | M — RD def-site emitter scaffold | **Done (commit `f455d93`).** `rd_switching_combine_st/abs` + the return-aware `cmp_site_ret` transport (`side_cfg_T_eff_cmp_site_ret`, `part_post_solution_{cmp_site_ret,rd_switching}_st_to_abs_eff`) were proven but had zero live consumers. −467 lines. RD *reader* family untouched. |
-| N — `cmp_site` site-keyed writer family | **Done (commit `964ea1a`).** `side_cfg_T_eff_cmp_site(_st)`, its transport chain, the edge-bound soundness cluster, and the orphan `..._cmp_site_switching_..._unit_transfer` capstone — superseded by `Digest_Keyed_Writer`. −523 lines. Stale doc refs reconciled. |
+| N — `cmp_site` site-keyed writer family | **Done (commit `964ea1a`).** `side_cfg_T_eff_cmp_site(_st)`, its transport chain, the edge-bound soundness cluster, and the orphan `..._cmp_site_switching_..._ownership_split_transfer` capstone — superseded by `Digest_Keyed_Writer`. −523 lines. Stale doc refs reconciled. |
 | O — reaching-definitions digest family | **Done (commit `92739cf`).** Family A (external RD digest): the RD instance of `Digest_Global_Read`, `Reaching_Defs`, `RD_Set_Edge_Backbone`, the `Exec_Sign_RD_Keyed_*` witnesses, `Example_Config_Mode_Digest_Precision`. Demonstration-only, off the value-derived thesis. −1741 lines; the generic kernel + mode family untouched. Design docs retired to historical. |
 
 The findings below are the original menu, kept as the rationale record.
@@ -62,7 +62,7 @@ The findings below are the original menu, kept as the rationale record.
 **The biggest single win.** The solver bridge proves, once per executable
 generator variant, that an `'a st` post-solution maps under `fun_of_st` to an
 abstract `part_post_solution`. There are **ten** such theorems plus their
-`_unit_transfer` corollaries:
+`_ownership_split_transfer` corollaries:
 
 - `part_post_solution_st_to_abs_eff` — `Exec_Bridge.thy:860`
 - `part_post_solution_cmp_st_to_abs_eff` — `Exec_Cmp_Bridge.thy:765` (~270 lines)
@@ -72,7 +72,7 @@ abstract `part_post_solution`. There are **ten** such theorems plus their
 - `part_post_solution_ctx_st_to_abs_eff` — `Exec_Ctx_Bridge.thy:488`
 - `part_post_solution_ctx_seeded_st_to_abs_eff` — `Exec_Ctx_Bridge.thy:985`
 - `part_post_solution_digest_st_to_abs_eff` — `Digest_Keyed_Writer_Sound.thy:359`
-- plus `_unit_transfer` corollaries at `Exec_Bridge:914`, `Exec_Ctx_Bridge:544`,
+- plus `_ownership_split_transfer` corollaries at `Exec_Bridge:914`, `Exec_Ctx_Bridge:544`,
   `Exec_Ctx_Bridge:1036`, `Digest_Keyed_Writer_Sound:503`, `Exec_Cmp_Bridge:1483`,
   `Exec_Cmp_Bridge:1549`.
 
@@ -110,7 +110,7 @@ part_post_solution_st_to_abs_transport[OF ... pp_st])`. The 6-argument node-leve
 first derives EQ/SIDES/DEP from its per-node commutation facts, then applies the
 generic lemma.
 
-The `_unit_transfer` corollaries (e.g. `Exec_Bridge.thy:914-963`) are also a
+The `_ownership_split_transfer` corollaries (e.g. `Exec_Bridge.thy:914-963`) are also a
 shared shape — each `interpret`s a `sound_rhs_generator_exec`-family locale, proves
 six `tr_*`/`sd_*`/`dep_*` facts by the same unfolding, and applies the base
 theorem. Once A lands, these can share a second small helper or at least be

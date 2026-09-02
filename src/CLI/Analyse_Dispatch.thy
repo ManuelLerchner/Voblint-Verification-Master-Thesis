@@ -1033,7 +1033,7 @@ code_identifier
 | code_module DG_Framework \<rightharpoonup> (OCaml) Core
 | code_module DG_Manager \<rightharpoonup> (OCaml) Core
 | code_module DG_Spec \<rightharpoonup> (OCaml) Core
-| code_module DG_Unit_Spec \<rightharpoonup> (OCaml) Core
+| code_module DG_Ownership_Split_Spec \<rightharpoonup> (OCaml) Core
 | code_module DG_Keyed_Generator \<rightharpoonup> (OCaml) Core
 | code_module Check_Result \<rightharpoonup> (OCaml) Core
 | code_module Abstract_Checks \<rightharpoonup> (OCaml) Core

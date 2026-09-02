@@ -15,4 +15,4 @@ The interval domain threaded through the four layers of the
 | `Interval_Print.thy` | display support for examples and DOT output |
 | `Interval_Domain.thy` | `abstract_domain` instantiation; `backward_domain_mono` interpretation |
 | `Ivl_Exec.thy` | executable transfer mirror + commutation |
-| `Interval_DG.thy` | `sound_dg_spec` interpretation (`unit_dg_spec` diagonal); `ivl_dg_post_solution_collect_sound`; `ivl_dg_two_context_sound` |
+| `Interval_DG.thy` | `sound_dg_spec` interpretation (`ownership_split_dg_spec` diagonal); `ivl_dg_post_solution_collect_sound`; `ivl_dg_two_context_sound` |

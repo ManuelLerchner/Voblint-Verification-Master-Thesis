@@ -374,7 +374,7 @@ text \<open>
     parallel one, exported to OCaml.
     \<^item> @{theory Voblint_CLI.Sign_Entry} --- \<^verbatim>\<open>analyse_sign\<close>
       takes an arbitrary \<^typ>\<open>imp_prog\<close> at runtime (not a fixed example
-      program) and reuses \<^verbatim>\<open>unit_dg_exec_analysis\<close>'s own \<^verbatim>\<open>run_source_sound\<close>
+      program) and reuses \<^verbatim>\<open>ownership_split_dg_exec_analysis\<close>'s own \<^verbatim>\<open>run_source_sound\<close>
       and \<^verbatim>\<open>collect_sound\<close> (@{theory Voblint_Soundness.Run_Analysis_Sound})
       for its soundness theorems. \<^verbatim>\<open>analyse_sign_report\<close> classifies every
       compiled \<^verbatim>\<open>__voblint_check(...)\<close> against that same computed
@@ -461,7 +461,7 @@ text \<open>
     \<^item> the generic D/G generator \<^verbatim>\<open>dg_gen_of\<close> emits the equation system;
     \<^item> the verified solver \<^emph>\<open>computes\<close> a solution (\<^verbatim>\<open>solve_c ... = Some sigma\<close>, \<^verbatim>\<open>by eval\<close>);
     \<^item> the registered endpoint \<open>flagship_ex_reg.run_source_sound\<close>
-      (@{theory Voblint_Soundness.Run_Analysis_Sound}'s \<^verbatim>\<open>unit_dg_exec_analysis\<close>
+      (@{theory Voblint_Soundness.Run_Analysis_Sound}'s \<^verbatim>\<open>ownership_split_dg_exec_analysis\<close>
       locale) bundles solver correctness, executable/pure commutation,
       post-solution transport, and D/G collecting soundness into one
       application, bounding \<open>ltr_collect g S v\<close> at every program point.

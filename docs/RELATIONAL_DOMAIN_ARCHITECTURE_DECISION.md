@@ -57,7 +57,7 @@ What **is** box-only is not the framework — it's every existing
 *interpretation* of it: `gamma_dg d g = ⟦d⟧ ∩ ⟦g⟧` (`DG_Soundness.thy:106-109`)
 calls `gamma_state`, which is `'a::sound_domain abs_state => store set`
 (`Abstract_Domain.thy:58`, "lifts `gamma` pointwise," per the domain README).
-`unit_dg_spec`, `indep_dg_spec`, `mixed_si_spec` all choose `'dl = 'a abs_state`,
+`ownership_split_dg_spec`, `indep_dg_spec`, `mixed_si_spec` all choose `'dl = 'a abs_state`,
 `'dg = 'b abs_state` — a choice, not a constraint the locale imposes.
 
 **Consequence for the three designs as literally scoped:** each would, if
@@ -92,7 +92,7 @@ The real remaining blockers, precisely stated:
    `Exec_DG_Bridge.thy`) is separate, additive work.
 5. Context-sensitivity (`DG_Ctx_Activation.thy`) needs its own new
    `gammaDG`-shaped locale if a relational domain wants it — matches Gap 4's
-   own finding this session (`gamma_unit d g = ⟦d ⊔ g⟧` needs a unified type,
+   own finding this session (`gamma_ownership_split d g = ⟦d ⊔ g⟧` needs a unified type,
    ~245-line file's worth of new locale work) — but this is additive and only
    needed if an instance actually wants context-sensitivity.
 
@@ -148,7 +148,7 @@ projection), a structurally different operation that cannot be written as
 `restrict_global` are flat-layer (`TD_Side_CFG.thy`) and executable-bridge
 (`Exec_Bridge.thy`, `Exec_St.thy`) constructs. The DG-layer generic interface
 (`dgs_combine_env`/`dgs_combine_assign`, split this session in Gap 3 Site A)
-does not call them — `indep_dg_spec` and `unit_dg_spec` *choose* to build
+does not call them — `indep_dg_spec` and `ownership_split_dg_spec` *choose* to build
 their combine via `combine_abs`/`combine_collect_abs`, which is where
 `restrict_local`/`restrict_global`-flavored per-variable reasoning enters,
 but a **new** `dg_spec` instance for a relational carrier supplies its own
@@ -374,7 +374,7 @@ substantially more). Context-sensitivity: not included, add the
 ~245-line-file-sized new locale from Gap 4's own estimate if wanted later.
 Risk: low — additive, no shared-file blast radius, and the exact
 lattice-obligation shape (`bounded_semilattice_sup_bot` + a locale-supplied
-concretization) is proven out three times already in this codebase (`unit_dg_spec`,
+concretization) is proven out three times already in this codebase (`ownership_split_dg_spec`,
 `indep_dg_spec`, `mixed_si_spec`).
 
 **Recommendation weight.** Strongest of the three, once retargeted at the DG
@@ -650,7 +650,7 @@ Deferred, opt-in, later extensions (not needed to add one instance):
    project has already tried once and not kept, or a functor pattern with no
    precedent here.
 3. **Ability to add relational domains** — direct: a relational domain is a
-   `dg_spec` instance plus a `gammaDG`, exactly the shape `unit_dg_spec`/
+   `dg_spec` instance plus a `gammaDG`, exactly the shape `ownership_split_dg_spec`/
    `indep_dg_spec`/`mixed_si_spec` already demonstrate for other carriers.
 4. **Minimal unnecessary rewrite** — the only one of the four whose first
    phase touches zero existing files.

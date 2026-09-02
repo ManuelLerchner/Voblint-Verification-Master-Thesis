@@ -61,7 +61,7 @@ definition seq_global_eqs ::
 where
   "seq_global_eqs =
      dg_gen_of
-       (unit_dg_spec_st_for (declared_global seq_global_prog)
+       (ownership_split_dg_spec_st_for (declared_global seq_global_prog)
           (ivl_tf_st_for (declared_global seq_global_prog))
           (ivl_enter_st_for (declared_global seq_global_prog)))
        seq_global_cfg bot cinit_ivl_st (restrict_global_resolved_q cinit_ivl_st)"
@@ -71,7 +71,7 @@ definition seq_local_eqs ::
 where
   "seq_local_eqs =
      dg_gen_of
-       (unit_dg_spec_st_for (declared_global seq_local_prog)
+       (ownership_split_dg_spec_st_for (declared_global seq_local_prog)
           (ivl_tf_st_for (declared_global seq_local_prog))
           (ivl_enter_st_for (declared_global seq_local_prog)))
        seq_local_cfg bot cinit_ivl_st (restrict_global_resolved_q cinit_ivl_st)"

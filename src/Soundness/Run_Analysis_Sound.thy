@@ -90,7 +90,7 @@ text \<open>
   \<^const>\<open>part_post_solution\<close>, or transport lemmas exposed to callers.
 \<close>
 
-locale unit_dg_exec_analysis =
+locale ownership_split_dg_exec_analysis =
   fixes gs :: "vname \<Rightarrow> bool"
     and tf :: "'a::sound_domain domain_transfer"
     and tf_st :: "edge_action \<Rightarrow> 'a exec_dg_st \<Rightarrow> 'a exec_dg_st"
@@ -127,21 +127,21 @@ text \<open>
   \<open>gamma\<close> is the caller-facing concretization at \<open>v\<close>: convert the executable
   post-solution \<open>sigma_st\<close> to its semantic function via \<open>fun_of_dg_st_for\<close>, then
   read off the set of stores the DG framework's own hook concretization assigns it,
-  instantiated at this locale's context-insensitive \<open>gamma_unit\<close>. This is the
+  instantiated at this locale's context-insensitive \<open>gamma_ownership_split\<close>. This is the
   accessor \<open>run_source_sound\<close> states its soundness guarantee in terms of, so
   no \<open>dg_spec_step\<close>/\<open>fun_of_dg_st_for\<close>/\<open>part_post_solution\<close> plumbing reaches the
   caller.
 \<close>
 text \<open>
-  \<open>gamma_unit_exec\<close> is the executable-carrier sibling of \<open>gamma_unit gs\<close>, reading
+  \<open>gamma_ownership_split_exec\<close> is the executable-carrier sibling of \<open>gamma_ownership_split gs\<close>, reading
   its two arguments back through \<open>fun_of_exec_dg_st_for\<close> first --- the diagonal
   analogue of \<^theory>\<open>Voblint_Exec.DG_Local_State_Exec\<close>'s \<open>gamma_exec\<close>.
   \<open>run_source_sound\<close>/\<open>collect_sound\<close> interpret \<open>sound_dg_spec_ltr_for\<close> directly at
   this carrier, so no solved system is ever transported to the abstract one.
 \<close>
 
-definition gamma_unit_exec :: "'a exec_dg_st \<Rightarrow> 'a exec_dg_st \<Rightarrow> store set" where
-  "gamma_unit_exec d g = gamma_unit gs (fun_of_exec_dg_st_for gs d) (fun_of_exec_dg_st_for gs g)"
+definition gamma_ownership_split_exec :: "'a exec_dg_st \<Rightarrow> 'a exec_dg_st \<Rightarrow> store set" where
+  "gamma_ownership_split_exec d g = gamma_ownership_split gs (fun_of_exec_dg_st_for gs d) (fun_of_exec_dg_st_for gs g)"
 
 text \<open>
   Each obligation is the abstract one under the readback: the observation
@@ -151,22 +151,22 @@ text \<open>
   remains is exactly the transfer contract.
 \<close>
 
-theorem sound_dg_spec_st: "sound_dg_spec (unit_dg_spec_st_for gs tf_st enter_st) gamma_unit_exec gs"
+theorem sound_dg_spec_st: "sound_dg_spec (ownership_split_dg_spec_st_for gs tf_st enter_st) gamma_ownership_split_exec gs"
 proof -
   interpret tfs: sound_transfer_for gs tf by (rule tf_sound)
   show ?thesis
   proof (unfold_locales, goal_cases)
     case (1 d d' g g')
     show ?case
-      unfolding gamma_unit_exec_def fun_of_exec_dg_st_for_def
-      by (rule gamma_unit_mono)
+      unfolding gamma_ownership_split_exec_def fun_of_exec_dg_st_for_def
+      by (rule gamma_ownership_split_mono)
          (rule fun_of_resolved_st_q_for_mono[OF 1(1)],
           rule fun_of_resolved_st_q_for_mono[OF 1(2)])
   next
     case (2 a \<tau> src gk)
     show ?case
-      unfolding dg_spec_step_unit_st_for unit_transfer_st_def gamma_unit_exec_def
-        dg_spec_edge_tree_def fun_of_exec_dg_st_for_def gamma_unit_def
+      unfolding dg_spec_step_ownership_split_st_for ownership_split_transfer_st_def gamma_ownership_split_exec_def
+        dg_spec_edge_tree_def fun_of_exec_dg_st_for_def gamma_ownership_split_def
       by (simp add: fun_of_resolved_st_q_for_restrict_local_for
             fun_of_resolved_st_q_for_restrict_global_for
             tf_commute[unfolded fun_of_exec_dg_st_for_def]
@@ -174,8 +174,8 @@ proof -
   next
     case (3 s \<tau> src gk ci)
     then show ?case
-      unfolding dgs_enter_unit_dg_spec_st_for unit_transfer_st_def gamma_unit_exec_def
-        fun_of_exec_dg_st_for_def gamma_unit_def
+      unfolding dgs_enter_ownership_split_dg_spec_st_for ownership_split_transfer_st_def gamma_ownership_split_exec_def
+        fun_of_exec_dg_st_for_def gamma_ownership_split_def
       by (simp add: fun_of_resolved_st_q_for_restrict_local_for
             fun_of_resolved_st_q_for_restrict_global_for call_enter_def
             enter_commute[unfolded fun_of_exec_dg_st_for_def]
@@ -183,32 +183,32 @@ proof -
   next
     case (4 s \<tau> src_cc gk t src_ex ci)
     then show ?case
-      unfolding dg_spec_combine_tree_def dg_spec_combine_transfer_unit_dg_spec_st_for
-        unit_combine_transfer_st_def gamma_unit_exec_def combine_collect_def
-        fun_of_exec_dg_st_for_def gamma_unit_def
+      unfolding dg_spec_combine_tree_def dg_spec_combine_transfer_ownership_split_dg_spec_st_for
+        ownership_split_combine_transfer_st_def gamma_ownership_split_exec_def combine_collect_def
+        fun_of_exec_dg_st_for_def gamma_ownership_split_def
       by (simp add: fun_of_resolved_st_q_for_restrict_local_for
             fun_of_resolved_st_q_for_restrict_global_for
             fun_of_resolved_st_q_for_def[symmetric]
-            gamma_unit_combine_assign[OF reserved, unfolded gamma_unit_def])
+            gamma_ownership_split_combine_assign[OF reserved, unfolded gamma_ownership_split_def])
   qed
 qed
 
 interpretation sds: sound_dg_spec_ltr_for
-  "unit_dg_spec_st_for gs tf_st enter_st" gamma_unit_exec gs
+  "ownership_split_dg_spec_st_for gs tf_st enter_st" gamma_ownership_split_exec gs
   unfolding sound_dg_spec_ltr_for_def
   by (rule sound_dg_spec_st)
 
 definition gamma :: "(pp \<times> unit + unit \<Rightarrow> ('a exec_dg_st, 'a exec_dg_st) dg_state) \<Rightarrow> pp \<Rightarrow> store set"
-  where "gamma sigma_st v = dg_hook_gamma gamma_unit_exec sigma_st v"
+  where "gamma sigma_st v = dg_hook_gamma gamma_ownership_split_exec sigma_st v"
 
 theorem run_source_sound:
   fixes Pi :: proc_table and ps and s0 t :: store and bot0 s0d s0g :: "'a exec_dg_st"
-  defines "eqs \<equiv> dg_gen_of (unit_dg_spec_st_for gs tf_st enter_st) (compile_prog Pi ps) bot0 s0d s0g"  assumes SOLVE: "solve_c eqs x \<noteq> None"
+  defines "eqs \<equiv> dg_gen_of (ownership_split_dg_spec_st_for gs tf_st enter_st) (compile_prog Pi ps) bot0 s0d s0g"  assumes SOLVE: "solve_c eqs x \<noteq> None"
     and wf: "wf_compile_input gs Pi ps"
     and cover: "vars_cover (compile_prog Pi ps) (fst (solve eqs x))"
     and finI: "finite (intra (compile_prog Pi ps))"
     and finC: "finite (calls (compile_prog Pi ps))"
-    and sound0: "S0 \<subseteq> gamma_unit_exec s0d s0g"
+    and sound0: "S0 \<subseteq> gamma_ownership_split_exec s0d s0g"
     and s0mem: "s0 \<in> S0"
     and run: "star (pstep gs Pi) (main_body Pi, s0, []) (residual, t, frs)"
   shows "\<exists>v stk. csim Pi (compile_prog Pi ps) (residual, t, frs) (v, t, stk)
@@ -236,13 +236,13 @@ text \<open>
 
 theorem collect_sound:
   fixes Pi :: proc_table and ps and v :: pp and bot0 s0d s0g :: "'a exec_dg_st"
-  defines "eqs \<equiv> dg_gen_of (unit_dg_spec_st_for gs tf_st enter_st) (compile_prog Pi ps) bot0 s0d s0g"
+  defines "eqs \<equiv> dg_gen_of (ownership_split_dg_spec_st_for gs tf_st enter_st) (compile_prog Pi ps) bot0 s0d s0g"
   assumes SOLVE: "solve_c eqs x \<noteq> None"
     and wf: "wf_compile_input gs Pi ps"
     and cover: "vars_cover (compile_prog Pi ps) (fst (solve eqs x))"
     and finI: "finite (intra (compile_prog Pi ps))"
     and finC: "finite (calls (compile_prog Pi ps))"
-    and sound0: "S0 \<subseteq> gamma_unit_exec s0d s0g"
+    and sound0: "S0 \<subseteq> gamma_ownership_split_exec s0d s0g"
   shows "ltr_collect gs (compile_prog Pi ps) S0 v \<subseteq> gamma (snd (solve eqs x)) v"
 proof -
   have pp_st: "part_post_solution eqs x (snd (solve eqs x)) (fst (solve eqs x))"

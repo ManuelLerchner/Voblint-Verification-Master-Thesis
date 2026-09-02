@@ -110,7 +110,7 @@ slots directly; no projection layer is needed.
 * **Where does the proof need `D`–`G` relations rather than separate concretizations?**
   Nowhere in the slice. `gammaDG` is used only through `gammaDG_mono` + the two
   step/combine soundness assumptions, which already package any D/G interaction inside
-  the analysis. The intersection `gamma_dg` and the `gamma_unit` merge are the only two
+  the analysis. The intersection `gamma_dg` and the `gamma_ownership_split` merge are the only two
   instantiations and neither needs a cross-carrier invariant. **The combine/return does
   not require a new cross-carrier invariant** for own-slot reads.
 * **Does `ENTER_MONO` stay expressible without strengthening the DG interface?** The

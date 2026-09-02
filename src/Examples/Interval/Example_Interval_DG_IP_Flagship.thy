@@ -91,8 +91,8 @@ subsection \<open>The analysis specification (interval, as an executable D/G ana
 
 text \<open>
   Intervals form the diagonal D/G analysis \<open>D = G = ivl abs_state\<close>, with executable
-  mirror \<open>unit_dg_spec_st_for twice_gs (ivl_tf_st_for twice_gs)\<close>.  The registration
-  \<^locale>\<open>unit_dg_exec_analysis\<close> --- interpreted as \<open>twice_ex_reg\<close> below, at this
+  mirror \<open>ownership_split_dg_spec_st_for twice_gs (ivl_tf_st_for twice_gs)\<close>.  The registration
+  \<^locale>\<open>ownership_split_dg_exec_analysis\<close> --- interpreted as \<open>twice_ex_reg\<close> below, at this
   file's own classifier \<open>twice_gs\<close>, from \<open>ivl_is_sound_transfer_for\<close> and
   \<open>ivl_tf_st_for_commute\<close> alone --- discharges the transport, soundness, and
   solver-crossing obligations generically.  This example supplies only the program,
@@ -108,7 +108,7 @@ subsection \<open>Equation generation\<close>
 
 definition twice_eqs ::
   "pp \<times> unit \<Rightarrow> (pp \<times> unit, unit, (ivl exec_dg_st, ivl exec_dg_st) dg_state) strategy_tree" where
-  "twice_eqs = dg_gen_of (unit_dg_spec_st_for twice_gs (ivl_tf_st_for twice_gs) (ivl_enter_st_for twice_gs))
+  "twice_eqs = dg_gen_of (ownership_split_dg_spec_st_for twice_gs (ivl_tf_st_for twice_gs) (ivl_enter_st_for twice_gs))
      twice_cfg bot cinit_ivl_st (restrict_global_resolved_q cinit_ivl_st)"
 
 subsection \<open>Executable solve\<close>
@@ -197,20 +197,20 @@ lemma twice_y_computed:
 
 subsection \<open>Registration through the classifier-parametric registration locale\<close>
 
-text \<open>Interpret \<^locale>\<open>unit_dg_exec_analysis\<close> once here at \<open>twice_gs\<close>, matching the
+text \<open>Interpret \<^locale>\<open>ownership_split_dg_exec_analysis\<close> once here at \<open>twice_gs\<close>, matching the
   pattern in \<open>Exec_Sign_DG_Run\<close>, \<open>Example_Parity_DG_Flagship\<close>, and
   \<open>Example_Interval_DG_Flagship\<close>.  The interpretation absorbs the sound-transfer and
   primitive-commutation obligations once, so \<open>twice_source_run_sound\<close> below only
   supplies the compiled-input and solver facts.\<close>
 
 interpretation twice_ex_reg:
-  unit_dg_exec_analysis twice_gs
+  ownership_split_dg_exec_analysis twice_gs
     "ivl_tf_for twice_gs" "ivl_tf_st_for twice_gs" "ivl_enter_st_for twice_gs"
     "TD_side_warrowing_apinis_Interp.solve" "TD_side_warrowing_apinis_Interp.solve_c"
 proof -
   interpret twice_transfer: sound_transfer_for twice_gs "ivl_tf_for twice_gs"
     by (rule ivl_is_sound_transfer_for)
-  show "unit_dg_exec_analysis twice_gs (ivl_tf_for twice_gs) (ivl_tf_st_for twice_gs)
+  show "ownership_split_dg_exec_analysis twice_gs (ivl_tf_for twice_gs) (ivl_tf_st_for twice_gs)
           (ivl_enter_st_for twice_gs)
           TD_side_warrowing_apinis_Interp.solve TD_side_warrowing_apinis_Interp.solve_c"
     by unfold_locales
@@ -253,7 +253,7 @@ proof -
               twice_vars_cover[unfolded twice_sol_def twice_eqs_def twice_cfg_def]
               twice_finE[unfolded twice_cfg_def]
               twice_finC[unfolded twice_cfg_def]
-              twice_sound0[folded gamma_unit_def, folded twice_ex_reg.gamma_unit_exec_def]
+              twice_sound0[folded gamma_ownership_split_def, folded twice_ex_reg.gamma_ownership_split_exec_def]
               init run'])
   show ?thesis using cert src' by blast
 qed
