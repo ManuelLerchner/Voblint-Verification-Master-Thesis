@@ -11,7 +11,7 @@ session Voblint_Examples in "." = "Voblint_CLI" +
     "Interval/Ctx"
     "Congruence"
     "Parity"
-    "Product"
+    "Int"
     "Relational"
     "CFG"
     "Tooling"

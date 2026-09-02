@@ -17,7 +17,7 @@ Downstream consumers are in `src/Formalization/Pipeline/` and `src/Examples/`.
 | `Instances/Interval/` | Interval domain (`ivl`), executable bridge, soundness |
 | `Instances/Congruence/` | Normalized congruence domain with executable lattice, arithmetic, backward filtering, and `sound_domain` |
 | `Instances/Parity/` | Parity domain, executable bridge |
-| `Instances/Product/` | Composite Sign/Interval/Parity/Congruence facts, verified progressive and structural-fixpoint refinement, and heterogeneous D/G instances |
+| `Instances/Int/` | The `int_dom` analysis family: a reduced product of Sign, Interval, Parity and Congruence, with verified progressive and structural-fixpoint refinement. Named for the domain it analyses, not for the product construction -- multi-analysis composition in the Goblint sense does not exist here yet, and that vocabulary is deliberately left free |
 | `Instances/Relational/` | Order carriers that are not pointwise abstract states |
 | `Instances/Tooling/` | GraphViz output for CFG/analysis visualisation |
 

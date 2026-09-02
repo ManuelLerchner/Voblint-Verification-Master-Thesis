@@ -9,7 +9,7 @@ session Voblint_Analysis in "." = "Voblint_Exec" +
     "Instances/Interval"
     "Instances/Congruence"
     "Instances/Parity"
-    "Instances/Product"
+    "Instances/Int"
     "Instances/Relational"
     "Instances/Tooling"
     "Instances/Dispatch"
