@@ -1,6 +1,6 @@
 theory Example_Sign_DG_EntryState_Result_Regression
   imports
-    "Voblint_Analysis.Sign_Ctx_Entry_State_Sound"
+    "Voblint_Analysis.Sign_Analyses"
     "Voblint_VIMP.VIMP_Notation"
 begin
 

@@ -21,7 +21,7 @@ text \<open>The analysis' own context function and solved reader, abbreviated fo
 abbreviation twice_ctx :: "cfg_node \<Rightarrow> ivl list \<Rightarrow> store \<Rightarrow> ivl list" where
   "twice_ctx \<equiv> entry_state_context twice_gs twice_empty_pred twice_pi twice_procs"
 
-abbreviation twice_ctx_sg :: "pp \<times> ivl list + gk \<Rightarrow> ivl exec_dg_st lifted" where
+abbreviation twice_ctx_sg :: "pp \<times> ivl list + (unit, ivl list) routed_gk \<Rightarrow> ivl exec_dg_st lifted" where
   "twice_ctx_sg \<equiv> entry_state_sg_st twice_gs twice_empty_pred twice_pi twice_procs"
 
 abbreviation twice_ctx_gamma :: "ivl exec_dg_st lifted \<Rightarrow> store set" where

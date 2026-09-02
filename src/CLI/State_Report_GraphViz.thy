@@ -848,7 +848,7 @@ text \<open>
 
 definition entry_state_ctx_sol ::
     "(ivl list, ivl abs_state) analysis_result
-       \<Rightarrow> pp \<times> ivl list + gk \<Rightarrow> ivl abs_state lifted" where
+       \<Rightarrow> pp \<times> ivl list + (unit, ivl list) routed_gk \<Rightarrow> ivl abs_state lifted" where
   "entry_state_ctx_sol r k =
      (case k of Inl (v, ctx) \<Rightarrow> lookup_context r v ctx | Inr _ \<Rightarrow> Bot)"
 
@@ -872,7 +872,7 @@ definition entry_state_ctx_route ::
       | Lifted st \<Rightarrow> entry_state_callee_ctx (declared_global p) ca st)"
 
 definition entry_state_ctx_graph_config ::
-    "imp_prog \<Rightarrow> (ivl list, gk, ivl abs_state lifted, ivl abs_state lifted)
+    "imp_prog \<Rightarrow> (ivl list, (unit, ivl list) routed_gk, ivl abs_state lifted, ivl abs_state lifted)
        analysis_graph_config" where
   "entry_state_ctx_graph_config p =
     \<lparr> local_of = id,
@@ -943,7 +943,7 @@ text \<open>
 \<close>
 
 definition entry_state_ctx_annotated_config ::
-    "imp_prog \<Rightarrow> (ivl list, gk, ivl abs_state lifted, ivl abs_state lifted)
+    "imp_prog \<Rightarrow> (ivl list, (unit, ivl list) routed_gk, ivl abs_state lifted, ivl abs_state lifted)
        analysis_graph_config" where
   "entry_state_ctx_annotated_config p =
      entry_state_ctx_graph_config p
@@ -951,7 +951,7 @@ definition entry_state_ctx_annotated_config ::
            entry_state_ctx_check_annotation (prog_cfg p)
              (analyse_interval_entry_state_result p) \<rparr>"
 
-definition entry_state_ctx_graph :: "imp_prog \<Rightarrow> (ivl list, gk) analysis_graph" where
+definition entry_state_ctx_graph :: "imp_prog \<Rightarrow> (ivl list, (unit, ivl list) routed_gk) analysis_graph" where
   "entry_state_ctx_graph p =
      build_analysis_graph (entry_state_ctx_annotated_config p) (prog_cfg p)
        (contextual_result_domain (entry_state_ctx_graph_config p) (prog_cfg p)

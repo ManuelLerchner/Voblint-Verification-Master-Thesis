@@ -11,7 +11,7 @@ subsection \<open>Whole-program entry point: an arbitrary VIMP program\<close>
 
 text \<open>
   \<open>activation_collect_unit_eq_ltr_collect\<close> (\<^theory>\<open>Voblint_Core.Routed_Context_Unit\<close>,
-  reached transitively through \<open>Sign_Ctx_None_Sound\<close>) is the domain-generic unit-context
+  reached transitively through \<open>Sign_Analyses\<close>) is the domain-generic unit-context
   collapse this file's own node-soundness bridge below needs: no Sign-specific fact is used
   in its proof, so it is proved once there rather than re-derived per domain -- Interval's
   routed cutover cites the same lemma.
@@ -27,7 +27,7 @@ abbreviation pgs :: "vname \<Rightarrow> bool" where "pgs \<equiv> declared_glob
 text \<open>
   \<open>analyse_sign_report_for\<close> reads its per-node state through
   \<^const>\<open>analyse_sign_result_for\<close>'s \<^type>\<open>analysis_result\<close> table, which is
-  now \<^const>\<open>analyse_sign_ctx_result_for\<close> (\<^theory>\<open>Voblint_Analysis.Sign_Ctx_None_Sound\<close>):
+  now \<^const>\<open>analyse_sign_ctx_result_for\<close> (\<^theory>\<open>Voblint_Analysis.Sign_Analyses\<close>):
   the  routed-unit producer's own solved table, at \<open>prog_main_name\<close>.
   \<open>analyse_sign_result_node_sound_for\<close> below is the node-soundness bridge for
   that table, built from \<^theory>\<open>Voblint_Core.DG_Analysis_Adapter\<close>'s generic

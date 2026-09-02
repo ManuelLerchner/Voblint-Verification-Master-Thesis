@@ -99,3 +99,14 @@ gamma_join
 gamma_join_exec
 cs_route_commute
 ics_route_commute
+ectx_spec
+ectx_abs_spec
+ectx_gamma
+ectx_gamma_Bot
+ectx_gamma_eq
+ectx_sound_exec
+entered_ectx_spec_eq_entry_state_entered
+ictx_spec
+ictx_abs_spec
+ictx_gamma
+ictx_sound_exec

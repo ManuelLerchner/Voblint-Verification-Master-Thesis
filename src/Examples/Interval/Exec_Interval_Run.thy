@@ -16,7 +16,7 @@ text \<open>
   compiled \<open>loop_cfg\<close> this theory imports rather than restates: there it is
   carried to trace-native soundness, here through three fixpoint engines.
 
-  The routed transfer \<open>ictx_spec\<close> applies the same forward-gated branch
+  The routed transfer \<open>interval_spec\<close> applies the same forward-gated branch
   transfer as @{const branch_ivl} on @{const EA_Assume} edges.  Node~2
   therefore reads @{text "[0,19]"} because @{text "x < 20"} refines
   @{text "x"} at the loop head --- not because of widening.
@@ -50,7 +50,7 @@ lemma loop_cfg_exit [simp]: "cfg_exit loop_cfg = FunctionResult (STR ''main'')"
   by (simp add: loop_cfg_full cfg_exit_def)
 
 definition loop_ivl_eqs ::
-    "(pp \<times> unit, gk, (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state) eqsT" where
+    "(pp \<times> unit, (unit, unit) routed_gk, (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state) eqsT" where
   "loop_ivl_eqs = ictx_eqs_prog loop_gs loop_prog"
 
 text \<open>One projection, reused by every engine below: take a solved D/G slot's local
@@ -62,20 +62,20 @@ definition loop_read_x ::
      case_lifted bot (\<lambda>q. lookup_resolved_st_q q (location_of loop_gs (STR ''x''))) (locals d)"
 
 definition loop_sig0 ::
-    "pp \<times> unit + gk \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state" where
+    "pp \<times> unit + (unit, unit) routed_gk \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state" where
   "loop_sig0 = (\<lambda>_. bot)"
 
 definition loop_kleene_step ::
-    "(pp \<times> unit + gk \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)
-       \<Rightarrow> (pp \<times> unit + gk \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)" where
+    "(pp \<times> unit + (unit, unit) routed_gk \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)
+       \<Rightarrow> (pp \<times> unit + (unit, unit) routed_gk \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)" where
   "loop_kleene_step sig =
      (\<lambda>k. case k of
         Inl v \<Rightarrow> eq loop_ivl_eqs v sig
       | Inr g \<Rightarrow> sig (Inr g))"
 
 fun loop_iter_sig ::
-    "nat \<Rightarrow> (pp \<times> unit + gk \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)
-       \<Rightarrow> (pp \<times> unit + gk \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)" where
+    "nat \<Rightarrow> (pp \<times> unit + (unit, unit) routed_gk \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)
+       \<Rightarrow> (pp \<times> unit + (unit, unit) routed_gk \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)" where
   "loop_iter_sig 0 sig = sig"
 | "loop_iter_sig (Suc n) sig = loop_iter_sig n (loop_kleene_step sig)"
 
@@ -94,7 +94,7 @@ lemma loop_body_ivl:
 
 definition loop_ivl_td_sol ::
     "(pp \<times> unit) set
-       \<times> (pp \<times> unit + gk \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)" where
+       \<times> (pp \<times> unit + (unit, unit) routed_gk \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)" where
   "loop_ivl_td_sol = ictx_sol_prog_warrow loop_gs loop_prog"
 
 definition loop_ivl_td_at :: "pp \<Rightarrow> ivl" where

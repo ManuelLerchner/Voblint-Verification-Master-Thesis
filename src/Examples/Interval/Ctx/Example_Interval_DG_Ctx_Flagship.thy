@@ -1,7 +1,7 @@
 theory Example_Interval_DG_Ctx_Flagship
   imports
     Example_Interval_DG_IP_Flagship
-    "Voblint_Analysis.Interval_Ctx_Entry_State_Sound"
+    "Voblint_Analysis.Interval_Analyses"
     "Voblint_Analysis.Analysis_GraphViz"
 begin
 
@@ -9,7 +9,7 @@ section \<open>Context-sensitive interval analysis of \<open>twice\<close> (exec
 
 text \<open>
   The production entry-state analysis
-  (\<^theory>\<open>Voblint_Analysis.Interval_Ctx_Entry_State_Sound\<close>) run on
+  (\<^theory>\<open>Voblint_Analysis.Interval_Analyses\<close>) run on
   \<^const>\<open>twice_program\<close>.  Each call to \<open>twice\<close> receives the abstract entry value
   of formal \<open>p\<close> as its context:
 
@@ -24,7 +24,7 @@ text \<open>
   states may grow under recursion and widening.
 
   Nothing solver-shaped is owned here: the equation system, its routing hook, the
-  solver-global key type \<^type>\<open>gk\<close>, and the solved projection all come from the
+  solver-global key type \<^type>\<open>routed_gk\<close>, and the solved projection all come from the
   production analysis.  The local unknown carries the whole abstract state on the
   lifted carrier \<^typ>\<open>ivl exec_dg_st lifted\<close>, so a global is read where a local is
   and there is no separate solver-global slot holding program state.
@@ -53,7 +53,7 @@ text \<open>The main context is \<open>[]\<close> (\<open>main\<close> is the ro
 
 definition twice_ctx_sol ::
   "(pp \<times> ivl list) set
-     \<times> (pp \<times> ivl list + gk \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)" where
+     \<times> (pp \<times> ivl list + (unit, ivl list) routed_gk \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)" where
   "twice_ctx_sol = entry_state_sol twice_gs twice_empty_pred twice_pi twice_procs"
 
 lemma twice_ctx_terminates_c:
@@ -134,12 +134,12 @@ text \<open>Each call publishes the entered store into its own context's seed sl
   carries that store in the seed unknown's \<^const>\<open>locals\<close> half, the same carrier the
   callee entry reads it back on.\<close>
 lemma seed_call1:
-  "twice_ctx_lookup (locals (snd twice_ctx_sol (Inr (Seed (FunctionEntry (STR ''twice'')) ctx_call1)))) (STR ''p'')
+  "twice_ctx_lookup (locals (snd twice_ctx_sol (Inr (Activation_Seed (FunctionEntry (STR ''twice'')) ctx_call1)))) (STR ''p'')
      = Ivl (Fin 3) (Fin 3)"
   unfolding twice_ctx_sol_def twice_empty_pred_def ctx_call1_def by eval
 
 lemma seed_call2:
-  "twice_ctx_lookup (locals (snd twice_ctx_sol (Inr (Seed (FunctionEntry (STR ''twice'')) ctx_call2)))) (STR ''p'')
+  "twice_ctx_lookup (locals (snd twice_ctx_sol (Inr (Activation_Seed (FunctionEntry (STR ''twice'')) ctx_call2)))) (STR ''p'')
      = Ivl (Fin 10) (Fin 10)"
   unfolding twice_ctx_sol_def twice_empty_pred_def ctx_call2_def by eval
 
@@ -161,7 +161,7 @@ text \<open>The exporter is retyped for the lifted whole-state carrier the produ
   value, and the routing hook is \<^const>\<open>entry_state_route\<close> itself.\<close>
 
 definition twice_ctx_graph_config ::
-  "(ivl list, gk, (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state, ivl exec_dg_st lifted)
+  "(ivl list, (unit, ivl list) routed_gk, (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state, ivl exec_dg_st lifted)
      analysis_graph_config" where
   "twice_ctx_graph_config =
     \<lparr> local_of = locals,
@@ -183,8 +183,8 @@ definition twice_ctx_graph_config ::
         if twice_ctx_lookup d ret = ivl_top then []
         else [''ret='' @ string_of_ivl (twice_ctx_lookup d ret)]),
       show_global = (\<lambda>k vars s. [''(none)'']),
-      show_global_key = (\<lambda>k. case k of Global \<Rightarrow> ''Global'' | Seed p ctx \<Rightarrow> ''Seed''),
-      is_shared_global = (\<lambda>k. case k of Global \<Rightarrow> True | Seed _ _ \<Rightarrow> False),
+      show_global_key = (\<lambda>k. case k of Analysis_Global _ \<Rightarrow> ''Global'' | Activation_Seed p ctx \<Rightarrow> ''Seed''),
+      is_shared_global = (\<lambda>k. case k of Analysis_Global _ \<Rightarrow> True | Activation_Seed _ _ \<Rightarrow> False),
       show_internal_globals = False,
       owner_of = String.explode o compiled_owner_of twice_pi twice_procs,
       cluster_label = (\<lambda>owner ctx.
@@ -199,19 +199,19 @@ definition twice_ctx_contexts_for_pp :: "pp \<Rightarrow> ivl list list" where
     (if compiled_owner_of twice_pi twice_procs p = (STR ''main'')
      then [[]] else [ctx_call1, ctx_call2])"
 
-definition twice_ctx_local_graph_domain :: "(pp \<times> ivl list + gk) list" where
+definition twice_ctx_local_graph_domain :: "(pp \<times> ivl list + (unit, ivl list) routed_gk) list" where
   "twice_ctx_local_graph_domain =
     contextual_graph_domain twice_cfg twice_ctx_contexts_for_pp"
 
-definition twice_ctx_seed_keys :: "gk list" where
+definition twice_ctx_seed_keys :: "(unit, ivl list) routed_gk list" where
   "twice_ctx_seed_keys =
-     map (\<lambda>ctx. Seed (FunctionEntry (STR ''twice'')) ctx) [ctx_call1, ctx_call2]"
+     map (\<lambda>ctx. Activation_Seed (FunctionEntry (STR ''twice'')) ctx) [ctx_call1, ctx_call2]"
 
-definition twice_ctx_graph_domain :: "(pp \<times> ivl list + gk) list" where
+definition twice_ctx_graph_domain :: "(pp \<times> ivl list + (unit, ivl list) routed_gk) list" where
   "twice_ctx_graph_domain =
     twice_ctx_local_graph_domain @ map Inr twice_ctx_seed_keys"
 
-definition twice_ctx_graph :: "(ivl list, gk) analysis_graph" where
+definition twice_ctx_graph :: "(ivl list, (unit, ivl list) routed_gk) analysis_graph" where
   "twice_ctx_graph =
     build_analysis_graph twice_ctx_graph_config twice_cfg twice_ctx_graph_domain
       (snd twice_ctx_sol)"
@@ -232,8 +232,8 @@ lemma twice_ctx_graph_domain_is_covered:
     twice_ctx_graph_domain" by eval
 
 lemma twice_ctx_graph_seed_keys_follow_enters:
-  "map (\<lambda>e. case e of (_, EnterEdge _ _, LocalNode p ctx) \<Rightarrow> Seed p ctx
-                  | _ \<Rightarrow> Global)
+  "map (\<lambda>e. case e of (_, EnterEdge _ _, LocalNode p ctx) \<Rightarrow> Activation_Seed p ctx
+                  | _ \<Rightarrow> Analysis_Global ())
      (filter (\<lambda>e. case e of (_, EnterEdge _ _, _) \<Rightarrow> True | _ \<Rightarrow> False)
        (analysis_graph_edges twice_ctx_graph)) = twice_ctx_seed_keys" by eval
 

@@ -1,6 +1,6 @@
 theory Example_Interval_DG_Ctx_Factorial_Regression
   imports
-    "Voblint_Analysis.Interval_Ctx_Entry_State_Sound"
+    "Voblint_Analysis.Interval_Analyses"
     "Voblint_VIMP.VIMP_Notation"
 begin
 
@@ -47,7 +47,7 @@ definition fact_empty_pred :: "ivl resolved_st_q \<Rightarrow> bool" where
   "fact_empty_pred = resolved_st_q_is_bot_for (declared_global_vars fact_prog)"
 
 definition fact_sol ::
-  "(pp \<times> ivl list) set \<times> (pp \<times> ivl list + gk \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)" where
+  "(pp \<times> ivl list) set \<times> (pp \<times> ivl list + (unit, ivl list) routed_gk \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)" where
   "fact_sol = entry_state_sol_prog fact_gs fact_prog"
 
 text \<open>The same solution read through the public result table rather than the solver's

@@ -203,7 +203,7 @@ text \<open>
   cross.
 \<close>
 
-definition gcall_ctx_graph :: "(ivl list, gk) analysis_graph" where
+definition gcall_ctx_graph :: "(ivl list, (unit, ivl list) routed_gk) analysis_graph" where
   "gcall_ctx_graph = entry_state_ctx_graph gcall_prog"
 
 lemma gcall_ctx_graph_wf: "analysis_graph_wf gcall_ctx_graph"
@@ -322,7 +322,7 @@ text \<open>\<^const>\<open>twin_prog\<close>'s two calls share one callee conte
   different continuations, so the return edge cannot have been recovered from
   the callee key.\<close>
 
-definition twin_ctx_graph :: "(ivl list, gk) analysis_graph" where
+definition twin_ctx_graph :: "(ivl list, (unit, ivl list) routed_gk) analysis_graph" where
   "twin_ctx_graph = entry_state_ctx_graph twin_prog"
 
 lemma twin_ctx_graph_combine_edges_are_call_site_derived:
@@ -367,7 +367,7 @@ text \<open>
   carries its own.
 \<close>
 
-definition mixed_ctx_graph :: "(ivl list, gk) analysis_graph" where
+definition mixed_ctx_graph :: "(ivl list, (unit, ivl list) routed_gk) analysis_graph" where
   "mixed_ctx_graph = entry_state_ctx_graph mixed_ctx_prog"
 
 lemma mixed_ctx_graph_wf: "analysis_graph_wf mixed_ctx_graph"
@@ -452,7 +452,7 @@ definition dead_route_prog :: imp_prog where
 definition dead_route_result :: "(ivl list, ivl abs_state) analysis_result" where
   "dead_route_result = analyse_interval_entry_state_result dead_route_prog"
 
-definition dead_route_graph :: "(ivl list, gk) analysis_graph" where
+definition dead_route_graph :: "(ivl list, (unit, ivl list) routed_gk) analysis_graph" where
   "dead_route_graph = entry_state_ctx_graph dead_route_prog"
 
 lemma dead_route_graph_wf: "analysis_graph_wf dead_route_graph"

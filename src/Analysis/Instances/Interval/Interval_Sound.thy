@@ -17,24 +17,24 @@ text \<open>
   every context-sensitive one without restatement.
 \<close>
 
-definition ictx_spec ::
+definition interval_spec ::
   "(vname \<Rightarrow> bool) \<Rightarrow> (ivl exec_dg_st \<Rightarrow> bool)
    \<Rightarrow> ('x, 'k, unit, ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_spec"
 where
-  "ictx_spec gs empty_pred =
+  "interval_spec gs empty_pred =
      base_dg_spec_st_for_lifted gs empty_pred (ivl_tf_st_for gs) (ivl_enter_st_for gs)"
 
-definition ictx_abs_spec ::
+definition interval_abs_spec ::
   "(vname \<Rightarrow> bool) \<Rightarrow> ('x, 'k, unit, ivl abs_state lifted, ivl abs_state lifted) dg_spec"
 where
-  "ictx_abs_spec gs = base_dg_spec_for_lifted gs is_empty_state (ivl_tf_for gs)"
+  "interval_abs_spec gs = base_dg_spec_for_lifted gs is_empty_state (ivl_tf_for gs)"
 
-definition ictx_gamma ::
+definition interval_gamma ::
     "(vname \<Rightarrow> bool) \<Rightarrow> ivl exec_dg_st lifted \<Rightarrow> ivl exec_dg_st lifted \<Rightarrow> store set" where
-  "ictx_gamma gs d g = gamma_state_lift (map_lift (fun_of_resolved_st_q_for gs) d)"
+  "interval_gamma gs d g = gamma_state_lift (map_lift (fun_of_resolved_st_q_for gs) d)"
 
-lemma ictx_gamma_Bot [simp]: "ictx_gamma gs Bot g = {}"
-  by (simp add: ictx_gamma_def)
+lemma interval_gamma_Bot [simp]: "interval_gamma gs Bot g = {}"
+  by (simp add: interval_gamma_def)
 
 subsection \<open>Soundness of the specification against the concretization\<close>
 
@@ -54,11 +54,11 @@ interpretation ivl_dom: routed_dg_domain_exec
   by unfold_locales
      (rule ivl_tf_st_for_commute, rule ivl_enter_st_for_commute, rule exact)
 
-lemma ictx_gamma_eq: "ictx_gamma gs = ivl_dom.gamma_exec"
-  by (intro ext) (simp add: ictx_gamma_def ivl_dom.gamma_exec_def)
+lemma interval_gamma_eq: "interval_gamma gs = ivl_dom.gamma_exec"
+  by (intro ext) (simp add: interval_gamma_def ivl_dom.gamma_exec_def)
 
-theorem ictx_sound_exec: "sound_dg_spec (ictx_spec gs empty_pred) (ictx_gamma gs) gs"
-  unfolding ictx_gamma_eq ictx_spec_def
+theorem interval_sound_exec: "sound_dg_spec (interval_spec gs empty_pred) (interval_gamma gs) gs"
+  unfolding interval_gamma_eq interval_spec_def
   by (rule ivl_dom.sound_dg_spec_st[OF ivl_is_sound_transfer_for])
 
 end

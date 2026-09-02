@@ -1,5 +1,5 @@
 theory Interval_Checks
-  imports Interval_Classify Interval_Ctx_None_Sound Analysis_Surface
+  imports Interval_Classify Interval_Analyses Analysis_Surface
 begin
 
 hide_const phase.N
@@ -9,7 +9,7 @@ section \<open>Interval instance of the generic check-discharge interface\<close
 text \<open>
   The check-classification machinery (\<open>interval_classify_check\<close> and its
   soundness directions) lives in \<open>Interval_Classify\<close>, split out so the
-  routed-spine producer below (\<open>Interval_Ctx_None_Sound\<close>) can depend
+  routed-spine producer below (\<open>Interval_Analyses\<close>) can depend
   on it without a cycle through this theory's own solved-result tables,
   which read that producer's routed output.
 \<close>
@@ -23,7 +23,7 @@ text \<open>
   lattice needs it for termination), read as a
   \<^typ>\<open>(unit, ivl abs_state) analysis_result\<close>: a one-line partial
   application of \<^const>\<open>analyse_interval_ctx_result_warrow_for\<close>
-  (\<^theory>\<open>Voblint_Analysis.Interval_Ctx_None_Sound\<close>), fixed at
+  (\<^theory>\<open>Voblint_Analysis.Interval_Analyses\<close>), fixed at
   \<^const>\<open>prog_main_name\<close>, which already binds the single routed-unit solve
   and canonicalizes/normalizes each local key. Every report below reads
   through a result table via \<^const>\<open>lookup_context\<close> rather than a raw
@@ -47,7 +47,7 @@ text \<open>
   \<open>analyse_interval_join_result\<close> is \<^const>\<open>analyse_interval_td_result\<close>'s
   sibling under the always-join update rule: a one-line partial application
   of \<^const>\<open>analyse_interval_ctx_result_for\<close>
-  (\<^theory>\<open>Voblint_Analysis.Interval_Ctx_None_Sound\<close>), fixed at
+  (\<^theory>\<open>Voblint_Analysis.Interval_Analyses\<close>), fixed at
   \<^const>\<open>prog_main_name\<close>, reading \<^const>\<open>ictx_sol_prog\<close> instead of
   \<^const>\<open>ictx_sol_prog_warrow\<close>.
 \<close>
@@ -66,7 +66,7 @@ text \<open>
   \<open>analyse_interval_per_origin_result\<close> mirrors
   \<open>analyse_interval_join_result\<close> exactly, a one-line partial application of
   \<^const>\<open>analyse_interval_ctx_result_per_origin_for\<close>
-  (\<^theory>\<open>Voblint_Analysis.Interval_Ctx_None_Sound\<close>), fixed at
+  (\<^theory>\<open>Voblint_Analysis.Interval_Analyses\<close>), fixed at
   \<^const>\<open>prog_main_name\<close>, reading \<^const>\<open>ictx_sol_prog_per_origin\<close> instead
   of \<^const>\<open>ictx_sol_prog\<close>.
 \<close>

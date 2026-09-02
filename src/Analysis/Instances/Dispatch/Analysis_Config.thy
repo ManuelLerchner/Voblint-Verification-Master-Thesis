@@ -40,11 +40,11 @@ text \<open>
 
   Call-string context length, by contrast, is now genuinely public: unlike
   the fixed \<open>k=1\<close>/\<open>k=2\<close> example theories this datatype once deferred to,
-  \<open>Interval_Ctx_Call_String_Sound\<close> is one
+  \<open>Interval_Analyses\<close> is one
   runtime-\<open>k\<close>-parametric pipeline, proved to reproduce those two examples'
   exact solved states and their precision separation. \<open>Ctx_CallString k\<close>
   routes to it directly, the same way \<open>Ctx_EntryState\<close> routes to
-  \<open>Interval_Ctx_Entry_State_Sound\<close>.
+  \<open>Interval_Analyses\<close>.
 \<close>
 
 datatype analysis_domain = Sign_Analysis | Interval_Analysis | Int_Analysis | Parity_Analysis
@@ -91,8 +91,8 @@ text \<open>
   (\<open>Analyse_Dispatch\<close>'s own \<open>analyse\<close>/\<open>analyse_with_solver\<close> branches,
   unchanged). \<open>Plan_Interval_EntryState\<close> and
   \<open>Plan_Interval_CallString\<close> both carry a \<^typ>\<open>solver_choice\<close>: the routed
-  equation system underneath either context (\<open>Interval_Ctx_Entry_State_Sound\<close>'s
-  \<open>entry_state_eqs\<close>, \<open>Interval_Ctx_Call_String_Sound\<close>'s
+  equation system underneath either context (\<open>Interval_Analyses\<close>'s
+  \<open>entry_state_eqs\<close>, \<open>Interval_Analyses\<close>'s
   \<open>cs_call_string_eqs\<close>) names no solve function of its own -- only the
   shared D/G spec and the routing policy -- so it is solved under all three
   disciplines exactly as the flat \<open>Ctx_None\<close> equation system already is

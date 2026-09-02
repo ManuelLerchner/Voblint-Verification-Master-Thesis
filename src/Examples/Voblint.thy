@@ -18,10 +18,10 @@ theory Voblint
     "Voblint_Core.Abstract_Checks"
     "Voblint_Core.Check_Report"
     "Voblint_Analysis.Sign_Domain"
-    "Voblint_Analysis.Sign_Ctx_None_Sound"
+    "Voblint_Analysis.Sign_Analyses"
     "Voblint_Analysis.Sign_Checks"
     "Voblint_Analysis.Interval_Domain"
-    "Voblint_Analysis.Interval_Ctx_None_Sound"
+    "Voblint_Analysis.Interval_Analyses"
     "Voblint_Analysis.Interval_Checks"
     "Voblint_Analysis.Interval_Exec_Sound"
     "Voblint_Core.DG_Framework"
@@ -260,17 +260,17 @@ text \<open>
 
   \<^bold>\<open>4. Concrete domains.\<close> Domain instances used by the proof spine and examples.
     \<^item> @{theory Voblint_Analysis.Sign_Domain} --- Sign lattice, transfer functions, soundness, monotonicity, display instance.
-    \<^item> @{theory Voblint_Analysis.Sign_Ctx_None_Sound} --- Sign at the routed D/G spine, over \<^const>\<open>ltr_collect\<close>.
+    \<^item> @{theory Voblint_Analysis.Sign_Analyses} --- Sign at the routed D/G spine, over \<^const>\<open>ltr_collect\<close>.
     \<^item> @{theory Voblint_Analysis.Interval_Domain} --- interval lattice, widening, transfer functions, soundness, monotonicity.
-    \<^item> @{theory Voblint_Analysis.Interval_Ctx_None_Sound} --- Interval at the routed D/G spine, over \<^const>\<open>ltr_collect\<close>.
+    \<^item> @{theory Voblint_Analysis.Interval_Analyses} --- Interval at the routed D/G spine, over \<^const>\<open>ltr_collect\<close>.
 
   \<^bold>\<open>4b. The D/G interface spine.\<close> The native, carrier-opaque Goblint-\<^verbatim>\<open>Spec\<close> interface
     (independent flow-sensitive local domain \<^verbatim>\<open>D\<close> and flow-insensitive global domain \<^verbatim>\<open>G\<close>),
     the canonical context-sensitive backbone.
     \<^item> @{theory Voblint_Core.DG_Spec} --- the \<^verbatim>\<open>dg_spec\<close> record, one manager-native transfer per edge action, plus the \<^verbatim>\<open>dg_state\<close> copy lattice and the seeded keyed generator in @{theory Voblint_Core.DG_Framework}.
     \<^item> @{theory Voblint_Core.DG_Soundness} --- native heterogeneous soundness over opaque carriers (\<^verbatim>\<open>sound_dg_spec\<close>); the shared closure obligations \<^verbatim>\<open>dg_postfix_gamma_{entry,edge,combine}\<close> feed the trace endpoint \<^verbatim>\<open>dg_post_solution_collect_sound_ltr_for\<close> (\<^theory>\<open>Voblint_Core.DG_LTR_Sound\<close>).
-    \<^item> @{theory Voblint_Analysis.Sign_Ctx_None_Sound} and
-      @{theory Voblint_Analysis.Interval_Ctx_None_Sound} --- Sign and Interval as
+    \<^item> @{theory Voblint_Analysis.Sign_Analyses} and
+      @{theory Voblint_Analysis.Interval_Analyses} --- Sign and Interval as
       routed \<^verbatim>\<open>sound_dg_spec\<close> instances, each reaching \<^const>\<open>ltr_collect\<close>
       through the adapter's generic node-soundness bridge.
 
@@ -285,8 +285,8 @@ text \<open>
     \<^item> @{theory Voblint_Exec.Exec_DG_Generator} --- the executable D/G equation generator (\<^const>\<open>dg_gen_of\<close>, \<^const>\<open>fun_of_dg_st_gen\<close>): the verified solver \<^emph>\<open>runs\<close> on D/G equations.
     \<^item> @{theory Voblint_Exec.DG_Base_Exec} --- \<^locale>\<open>routed_dg_domain_exec\<close> proves a registered domain's D/G spec sound directly at this executable carrier, with no separate abstract-carrier transport step.
     \<^item> @{theory Voblint_Analysis.Sign_Exec} --- executable Sign transfer functions.
-    \<^item> @{theory Voblint_Analysis.Sign_Ctx_None_Sound} --- the routed D/G runtime for Sign: the equation system, its solved table, and the termination hypothesis each solver discipline turns on.
-    \<^item> @{theory Voblint_Analysis.Interval_Ctx_None_Sound} --- the Interval counterpart, with the join, per-origin and warrowing solver-choice siblings.
+    \<^item> @{theory Voblint_Analysis.Sign_Analyses} --- the routed D/G runtime for Sign: the equation system, its solved table, and the termination hypothesis each solver discipline turns on.
+    \<^item> @{theory Voblint_Analysis.Interval_Analyses} --- the Interval counterpart, with the join, per-origin and warrowing solver-choice siblings.
 
   \<^bold>\<open>6. End-to-end theorems.\<close> Headline soundness and the source bridge.
     \<^item> @{theory Voblint_Soundness.Source_Activation_Sound} --- the source-adequacy bridge: a reachable VIMP source configuration produces a \<^const>\<open>valid_ltr\<close> trace (\<^verbatim>\<open>source_run_has_ltr\<close>), bounded at its activation context (\<^verbatim>\<open>source_activation_sound\<close>) and monovariantly (\<^verbatim>\<open>source_reaches_ltr_collect\<close>).

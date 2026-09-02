@@ -71,7 +71,7 @@ text \<open>The routed callee entry the solved system selects is the executable 
 
 lemma twice_route_at_call1:
   "entry_state_route_gen twice_gs twice_empty_pred (Statement 2) []
-     (entered (ectx_spec twice_gs twice_empty_pred) Global (snd twice_ctx_sol)
+     (entered (interval_spec twice_gs twice_empty_pred) (Analysis_Global ()) (snd twice_ctx_sol)
         (call_info_of
           (CallEdge (Some (STR ''x'')) [(STR ''p'')] [VIMP_Syntax.N 3])
           (STR ''twice''))
@@ -79,11 +79,11 @@ lemma twice_route_at_call1:
      (CallEdge (Some (STR ''x'')) [(STR ''p'')] [VIMP_Syntax.N 3])
    = ctx_call1"
   unfolding twice_ctx_sol_def twice_empty_pred_def ctx_call1_def entry_state_route_gen_def
-  by (simp add: entered_ectx_spec_eq_entry_state_entered)
+  by (simp add: entered_interval_spec_eq_entry_state_entered)
 
 lemma twice_route_at_call2:
   "entry_state_route_gen twice_gs twice_empty_pred (Statement 3) []
-     (entered (ectx_spec twice_gs twice_empty_pred) Global (snd twice_ctx_sol)
+     (entered (interval_spec twice_gs twice_empty_pred) (Analysis_Global ()) (snd twice_ctx_sol)
         (call_info_of
           (CallEdge (Some (STR ''y'')) [(STR ''p'')] [VIMP_Syntax.N 10])
           (STR ''twice''))
@@ -91,14 +91,14 @@ lemma twice_route_at_call2:
      (CallEdge (Some (STR ''y'')) [(STR ''p'')] [VIMP_Syntax.N 10])
    = ctx_call2"
   unfolding twice_ctx_sol_def twice_empty_pred_def ctx_call2_def entry_state_route_gen_def
-  by (simp add: entered_ectx_spec_eq_entry_state_entered)
+  by (simp add: entered_interval_spec_eq_entry_state_entered)
 
 lemma twice_call_fwd_ok:
   assumes cov: "(u, ctx) \<in> fst twice_ctx_sol"
     and ce: "(u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls twice_cfg"
   shows "(FunctionEntry p,
             entry_state_route_gen twice_gs twice_empty_pred u ctx
-              (entered (ectx_spec twice_gs twice_empty_pred) Global (snd twice_ctx_sol)
+              (entered (interval_spec twice_gs twice_empty_pred) (Analysis_Global ()) (snd twice_ctx_sol)
                  (call_info_of (CallEdge dst pars args) p) (Inl (u, ctx)))
               (CallEdge dst pars args))
          \<in> fst twice_ctx_sol"
@@ -179,14 +179,14 @@ lemma twice_context_at_call1:
      (Statement 2) [] s = ctx_call1"
   by (simp add: entry_state_context_def[OF twice_entry_state_hyps]
         twice_call_site_action1 twice_ctx_sol_def ctx_call1_def Let_def
-        entered_ectx_spec_eq_entry_state_entered entry_state_route_gen_def)
+        entered_interval_spec_eq_entry_state_entered entry_state_route_gen_def)
 
 lemma twice_context_at_call2:
   "entry_state_context twice_gs twice_empty_pred twice_pi twice_procs
      (Statement 3) [] s = ctx_call2"
   by (simp add: entry_state_context_def[OF twice_entry_state_hyps]
         twice_call_site_action2 twice_ctx_sol_def ctx_call2_def Let_def
-        entered_ectx_spec_eq_entry_state_entered entry_state_route_gen_def)
+        entered_interval_spec_eq_entry_state_entered entry_state_route_gen_def)
 
 subsection \<open>The concrete store-decoding context, and its agreement with the analysis\<close>
 
@@ -264,7 +264,7 @@ text \<open>The solver-global carrier stays inert: every field of the Base-style
   threads its incoming \<open>g\<close> through unchanged, so the shared \<^const>\<open>Global\<close> unknown is
   never used to reconstruct program state.\<close>
 lemma twice_ctx_global_slot_inert:
-  "globs (snd twice_ctx_sol (Inr Global)) = Bot"
+  "globs (snd twice_ctx_sol (Inr (Analysis_Global ()))) = Bot"
   unfolding twice_ctx_sol_def twice_empty_pred_def by eval
 
 end

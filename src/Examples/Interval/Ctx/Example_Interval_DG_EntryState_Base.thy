@@ -1,6 +1,6 @@
 theory Example_Interval_DG_EntryState_Base
   imports
-    "Voblint_Analysis.Interval_Ctx_Entry_State_Sound"
+    "Voblint_Analysis.Interval_Analyses"
     "Voblint_VIMP.VIMP_Notation"
 begin
 

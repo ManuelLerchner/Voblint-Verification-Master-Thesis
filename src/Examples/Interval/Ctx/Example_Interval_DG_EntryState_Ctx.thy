@@ -34,7 +34,7 @@ subsection \<open>The routed equation system and its solution\<close>
 text \<open>The main context is \<open>[]\<close> (\<open>main\<close> is the root activation, no formal binds it).\<close>
 
 definition rc_ctx_sol ::
-  "(pp \<times> ivl list) set \<times> (pp \<times> ivl list + gk \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)" where
+  "(pp \<times> ivl list) set \<times> (pp \<times> ivl list + (unit, ivl list) routed_gk \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)" where
   "rc_ctx_sol = entry_state_sol rc_gs rc_empty_pred rc_pi rc_procs"
 
 lemma rc_ctx_terminates_c:

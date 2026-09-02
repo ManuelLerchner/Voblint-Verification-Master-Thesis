@@ -17,17 +17,17 @@ text \<open>
   every context-sensitive one without restatement.
 \<close>
 
-definition ictx_spec ::
+definition int_dom_spec ::
   "refine_mode \<Rightarrow> (int_dom exec_dg_st \<Rightarrow> bool) \<Rightarrow> (vname \<Rightarrow> bool)
      \<Rightarrow> ('x, 'k, unit, int_dom exec_dg_st lifted, int_dom exec_dg_st lifted) dg_spec"
 where
-  "ictx_spec mode empty_pred gs =
+  "int_dom_spec mode empty_pred gs =
      base_dg_spec_st_for_lifted gs empty_pred (int_tf_st_for mode gs) (int_dom_enter_st_for mode gs)"
 
-definition ictx_abs_spec ::
+definition int_dom_abs_spec ::
     "refine_mode \<Rightarrow> (vname \<Rightarrow> bool)
      \<Rightarrow> ('x, 'k, unit, int_dom abs_state lifted, int_dom abs_state lifted) dg_spec" where
-  "ictx_abs_spec mode gs = base_dg_spec_for_lifted gs is_empty_state (int_tf_for mode gs)"
+  "int_dom_abs_spec mode gs = base_dg_spec_for_lifted gs is_empty_state (int_tf_for mode gs)"
 
 lemma int_tf_st_for_commute:
   "fun_of_resolved_st_q_for gs (int_tf_st_for mode gs a s) =
@@ -64,16 +64,16 @@ next
   then show ?thesis by (simp add: int_fixpoint_is_sound_transfer_for)
 qed
 
-lemma ictx_abs_spec_sound: "sound_dg_spec (ictx_abs_spec mode gs) gamma_dg_base gs"
-  unfolding ictx_abs_spec_def
+lemma int_dom_abs_spec_sound: "sound_dg_spec (int_dom_abs_spec mode gs) gamma_dg_base gs"
+  unfolding int_dom_abs_spec_def
   by (rule base_dg_spec_sound[OF int_is_sound_transfer_for is_empty_state_gamma_state_empty])
 
-definition ictx_gamma ::
+definition int_dom_gamma ::
     "(vname \<Rightarrow> bool) \<Rightarrow> int_dom exec_dg_st lifted \<Rightarrow> int_dom exec_dg_st lifted \<Rightarrow> store set" where
-  "ictx_gamma gs d g = gamma_state_lift (map_lift (fun_of_resolved_st_q_for gs) d)"
+  "int_dom_gamma gs d g = gamma_state_lift (map_lift (fun_of_resolved_st_q_for gs) d)"
 
-lemma ictx_gamma_Bot [simp]: "ictx_gamma gs Bot g = {}"
-  by (simp add: ictx_gamma_def)
+lemma int_dom_gamma_Bot [simp]: "int_dom_gamma gs Bot g = {}"
+  by (simp add: int_dom_gamma_def)
 
 subsection \<open>Soundness of the specification against the concretization\<close>
 
@@ -93,11 +93,11 @@ interpretation int_dom: routed_dg_domain_exec
   by unfold_locales
      (rule int_tf_st_for_commute, rule int_dom_enter_st_for_commute, rule exact)
 
-lemma ictx_gamma_eq: "ictx_gamma gs = int_dom.gamma_exec"
-  by (intro ext) (simp add: ictx_gamma_def int_dom.gamma_exec_def)
+lemma int_dom_gamma_eq: "int_dom_gamma gs = int_dom.gamma_exec"
+  by (intro ext) (simp add: int_dom_gamma_def int_dom.gamma_exec_def)
 
-theorem ictx_sound_exec: "sound_dg_spec (ictx_spec mode empty_pred gs) (ictx_gamma gs) gs"
-  unfolding ictx_gamma_eq ictx_spec_def
+theorem int_dom_sound_exec: "sound_dg_spec (int_dom_spec mode empty_pred gs) (int_dom_gamma gs) gs"
+  unfolding int_dom_gamma_eq int_dom_spec_def
   by (rule int_dom.sound_dg_spec_st[OF int_is_sound_transfer_for])
 
 end

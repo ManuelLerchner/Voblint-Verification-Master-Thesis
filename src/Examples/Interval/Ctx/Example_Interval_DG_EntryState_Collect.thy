@@ -72,7 +72,7 @@ text \<open>The routed callee entry the solved system selects is the executable
 
 lemma rc_route_at_call:
   "entry_state_route_gen rc_gs rc_empty_pred (Statement 3) []
-     (entered (ectx_spec rc_gs rc_empty_pred) Global
+     (entered (interval_spec rc_gs rc_empty_pred) (Analysis_Global ())
         (snd (entry_state_sol rc_gs rc_empty_pred rc_pi rc_procs))
         (call_info_of (CallEdge (Some (STR ''y'')) [(STR ''a'')] [V (STR ''x'')])
           (STR ''p''))
@@ -80,7 +80,7 @@ lemma rc_route_at_call:
      (CallEdge (Some (STR ''y'')) [(STR ''a'')] [V (STR ''x'')])
    = ctx_call"
   unfolding rc_empty_pred_def ctx_call_def rc_ctx_sol_def entry_state_route_gen_def
-  by (simp add: entered_ectx_spec_eq_entry_state_entered)
+  by (simp add: entered_interval_spec_eq_entry_state_entered)
 
 lemma rc_call_fwd_ok:
   assumes cov: "(u, ctx) \<in> fst (entry_state_sol rc_gs rc_empty_pred rc_pi rc_procs)"
@@ -88,7 +88,7 @@ lemma rc_call_fwd_ok:
                \<in> calls (compile_prog rc_pi rc_procs)"
   shows "(FunctionEntry p,
             entry_state_route_gen rc_gs rc_empty_pred u ctx
-              (entered (ectx_spec rc_gs rc_empty_pred) Global
+              (entered (interval_spec rc_gs rc_empty_pred) (Analysis_Global ())
                  (snd (entry_state_sol rc_gs rc_empty_pred rc_pi rc_procs))
                  (call_info_of (CallEdge dst pars args) p) (Inl (u, ctx)))
               (CallEdge dst pars args))
@@ -145,7 +145,7 @@ lemma rc_context_at_call:
      (Statement 3) [] s = ctx_call"
   by (simp add: entry_state_context_def[OF rc_entry_state_hyps]
         rc_call_site_action rc_ctx_sol_def ctx_call_def Let_def
-        entered_ectx_spec_eq_entry_state_entered entry_state_route_gen_def)
+        entered_interval_spec_eq_entry_state_entered entry_state_route_gen_def)
 
 text \<open>The crux corollary: for \<^emph>\<open>every\<close> concrete store \<open>s\<close> that reaches the call site
   --- in particular every store obtained by any \<open>__voblint_nondet_int()\<close> outcome, since \<open>x\<close>'s

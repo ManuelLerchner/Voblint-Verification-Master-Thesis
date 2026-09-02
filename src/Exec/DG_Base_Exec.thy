@@ -347,7 +347,7 @@ text \<open>
   system a solver actually runs needs the same construction at the exec carrier
   \<open>'a exec_dg_st lifted\<close> instead, built from this locale's own \<open>enter_st\<close>/\<open>empty_pred\<close>
   rather than the mathematical \<open>enter#\<close>/\<open>tf\<close>: every current EntryState-style routed
-  instance (Interval's own \<open>entry_state_route\<close>, \<open>Interval_Ctx_Entry_State_Sound\<close>)
+  instance (Interval's own \<open>entry_state_route\<close>, \<open>Interval_Analyses\<close>)
   reproves this exact projection and its commute lemma; stating it here once lets a
   domain interpret it instead of restating it, mirroring how \<open>Hstep_lifted_for\<close> etc.
   already generalize the step/enter/combine commute facts.
