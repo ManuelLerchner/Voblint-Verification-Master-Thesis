@@ -5,10 +5,13 @@ session Voblint_Framework in "." = "Voblint_CFG" +
     "Voblint_Domain"
     "Voblint_Solver"
   directories
-    "Equations"
-    "DG"
+    "Spec"
     "Context"
+    "Activation"
+    "Constraints"
     "Result"
+    "Checks"
+    "Soundness"
   theories
     CFG_Enumeration
     Transfer_Interface
