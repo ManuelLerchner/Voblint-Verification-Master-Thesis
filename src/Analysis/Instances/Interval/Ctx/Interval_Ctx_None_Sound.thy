@@ -4,6 +4,7 @@ theory Interval_Ctx_None_Sound
     "Voblint_Core.DG_LTR_Sound"
     "Voblint_Analysis.Interval_Transfer"
     "Voblint_Analysis.Interval_Exec_Sound"
+    "Voblint_Analysis.Interval_Sound"
     "Voblint_Analysis.Interval_Classify"
     "Voblint_Core.Routed_Context"
     "Voblint_Core.Routed_Context_Unit"
@@ -54,18 +55,6 @@ text \<open>
   routed keyed-seed generator here) --- the spec itself, and every domain-transfer
   soundness fact about it, is untouched.
 \<close>
-
-definition ictx_spec ::
-  "(vname \<Rightarrow> bool) \<Rightarrow> (ivl exec_dg_st \<Rightarrow> bool)
-   \<Rightarrow> ('x, 'k, unit, ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_spec"
-where
-  "ictx_spec gs empty_pred =
-     base_dg_spec_st_for_lifted gs empty_pred (ivl_tf_st_for gs) (ivl_enter_st_for gs)"
-
-definition ictx_abs_spec ::
-  "(vname \<Rightarrow> bool) \<Rightarrow> ('x, 'k, unit, ivl abs_state lifted, ivl abs_state lifted) dg_spec"
-where
-  "ictx_abs_spec gs = base_dg_spec_for_lifted gs is_empty_state (ivl_tf_for gs)"
 
 subsection \<open>The routed equation system and its executable solution\<close>
 
@@ -123,13 +112,6 @@ text \<open>The concretization the executable-carrier interpretation below uses:
   unknown means \<^const>\<open>gamma_state_lift\<close> of its readback, the global slot is ignored as
   in \<^const>\<open>gamma_dg_base\<close>. Named at top level so a downstream theory can state it.\<close>
 
-definition ictx_gamma ::
-    "(vname \<Rightarrow> bool) \<Rightarrow> ivl exec_dg_st lifted \<Rightarrow> ivl exec_dg_st lifted \<Rightarrow> store set" where
-  "ictx_gamma gs d g = gamma_state_lift (map_lift (fun_of_resolved_st_q_for gs) d)"
-
-lemma ictx_gamma_Bot [simp]: "ictx_gamma gs Bot g = {}"
-  by (simp add: ictx_gamma_def)
-
 context
   fixes gs :: "vname \<Rightarrow> bool" and empty_pred :: "ivl exec_dg_st \<Rightarrow> bool"
   assumes exact: "\<And>s. empty_pred s = is_empty_state (fun_of_resolved_st_q_for gs s)"
@@ -143,13 +125,6 @@ interpretation ivl_unit: routed_domain_exec
       simp add: static_resolve_def)
 
 lemmas ivl_pp_st_gen = ivl_unit.pp_st
-
-lemma ictx_gamma_eq: "ictx_gamma gs = ivl_unit.gamma_exec"
-  by (intro ext) (simp add: ictx_gamma_def ivl_unit.gamma_exec_def gamma_dg_base_def)
-
-theorem ictx_sound_exec: "sound_dg_spec (ictx_spec gs empty_pred) (ictx_gamma gs) gs"
-  unfolding ictx_gamma_eq ictx_spec_def
-  by (rule ivl_unit.sound_dg_spec_st[OF ivl_is_sound_transfer_for])
 
 end
 

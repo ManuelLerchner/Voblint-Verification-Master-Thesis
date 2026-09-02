@@ -6,6 +6,7 @@ theory Sign_Ctx_None_Sound
     "Voblint_Core.Routed_Analysis_Sound"
     "Voblint_Analysis.Sign_Transfer"
     "Voblint_Analysis.Sign_Exec"
+    "Voblint_Analysis.Sign_Sound"
     "TD.TD_side_upd_rule"
     "Voblint_CFG.CFG_Prune"
     "Voblint_Compile.Compile_Invariants"
@@ -45,28 +46,11 @@ text \<open>
 
 datatype gk = Global | Seed (seed_pp: pp) (seed_ctx: unit)
 
-subsection \<open>The routed unit-context D/G spec\<close>
-
 text \<open>
-  A whole-state specification over Sign's \<^const>\<open>sign_tf_st_for\<close> /
-  \<^const>\<open>sign_enter_st_for\<close> primitives: the local unknown carries the entire
-  reachability-lifted abstract state, VIMP globals included. The routed
-  keyed-seed generator is wrapped around this spec; the spec itself, and every
-  domain-transfer soundness fact about it, is independent of that choice.
+  The specification, its concretization, and their soundness are Sign's own and
+  carry no context: they live in \<^theory>\<open>Voblint_Analysis.Sign_Sound\<close>, and this
+  theory adds only the context-insensitive instantiation on top of them.
 \<close>
-
-definition sctx_spec ::
-  "(vname \<Rightarrow> bool) \<Rightarrow> (sign exec_dg_st \<Rightarrow> bool)
-   \<Rightarrow> ('x, 'k, unit, sign exec_dg_st lifted, sign exec_dg_st lifted) dg_spec"
-where
-  "sctx_spec gs empty_pred =
-     base_dg_spec_st_for_lifted gs empty_pred (sign_tf_st_for gs) (sign_enter_st_for gs)"
-
-definition sctx_abs_spec ::
-  "(vname \<Rightarrow> bool)
-   \<Rightarrow> ('x, 'k, unit, sign abs_state lifted, sign abs_state lifted) dg_spec"
-where
-  "sctx_abs_spec gs = base_dg_spec_for_lifted gs is_empty_state (sign_tf_for gs)"
 
 subsection \<open>The routed equation system and its executable solution\<close>
 
@@ -180,13 +164,6 @@ text \<open>
   concretization outside the interpretation so a downstream theory can state it.
 \<close>
 
-definition sctx_gamma ::
-    "(vname \<Rightarrow> bool) \<Rightarrow> sign exec_dg_st lifted \<Rightarrow> sign exec_dg_st lifted \<Rightarrow> store set" where
-  "sctx_gamma gs d g = gamma_state_lift (map_lift (fun_of_resolved_st_q_for gs) d)"
-
-lemma sctx_gamma_Bot [simp]: "sctx_gamma gs Bot g = {}"
-  by (simp add: sctx_gamma_def)
-
 definition sctx_sg_st ::
     "(vname \<Rightarrow> bool) \<Rightarrow> (sign exec_dg_st \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list
        \<Rightarrow> pp \<times> unit + gk \<Rightarrow> sign exec_dg_st lifted" where
@@ -198,20 +175,6 @@ context
   fixes gs :: "vname \<Rightarrow> bool" and empty_pred :: "sign exec_dg_st \<Rightarrow> bool"
   assumes exact: "\<And>s. empty_pred s = is_empty_state (fun_of_resolved_st_q_for gs s)"
 begin
-
-interpretation sign_unit: routed_domain_exec
-  gs empty_pred "sign_tf_st_for gs" "sign_enter_st_for gs" "sign_tf_for gs"
-  Global Seed route_unit route_unit static_resolve static_resolve
-  by unfold_locales
-     (rule sign_tf_st_for_commute, rule sign_enter_st_for_commute, rule exact,
-      simp, simp, simp add: static_resolve_def)
-
-lemma sctx_gamma_eq: "sctx_gamma gs = sign_unit.gamma_exec"
-  by (intro ext) (simp add: sctx_gamma_def sign_unit.gamma_exec_def gamma_dg_base_def)
-
-theorem sctx_sound_exec: "sound_dg_spec (sctx_spec gs empty_pred) (sctx_gamma gs) gs"
-  unfolding sctx_gamma_eq sctx_spec_def
-  by (rule sign_unit.sound_dg_spec_st[OF sign_is_sound_transfer_for])
 
 end
 

@@ -1,6 +1,6 @@
 theory Sign_Ctx_Entry_State_Sound
   imports
-    "Voblint_Analysis.Sign_Ctx_None_Sound"
+    "Voblint_Analysis.Sign_Sound"
     "Voblint_Analysis.Sign_Checks"
     "Voblint_Core.Routed_Analysis_Sound"
     Entry_State_Routed_Context
@@ -9,8 +9,8 @@ begin
 section \<open>Sign at the routed spine, instantiated at the entry-state context\<close>
 
 text \<open>
-  The entry-state sibling of \<^theory>\<open>Voblint_Analysis.Sign_Ctx_None_Sound\<close>'s own
-  routed-unit-context instance, and the second architecture-milestone acceptance test
+  The entry-state instance of the Sign analysis package in
+  \<^theory>\<open>Voblint_Analysis.Sign_Sound\<close>, and the second architecture-milestone acceptance test
   after \<open>Sign_Ctx_Call_String_Sound\<close>: same \<^const>\<open>sctx_spec\<close>/\<^const>\<open>sctx_abs_spec\<close>  D/G specification and the same domain-commute facts Sign already interprets
   (\<^locale>\<open>routed_dg_domain_exec\<close>, \<^theory>\<open>Voblint_Exec.DG_Base_Exec\<close>) -- nothing here
   re-derives them. The routing policy is Interval's own entry-state construction

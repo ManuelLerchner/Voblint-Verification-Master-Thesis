@@ -1051,6 +1051,7 @@ code_identifier
 | code_module Sign_Backward \<rightharpoonup> (OCaml) Core
 | code_module Sign_Checks \<rightharpoonup> (OCaml) Core
 | code_module Sign_Exec \<rightharpoonup> (OCaml) Core
+| code_module Sign_Sound \<rightharpoonup> (OCaml) Core
 | code_module Sign_Ctx_None_Sound \<rightharpoonup> (OCaml) Core
 | code_module Sign_Lattice \<rightharpoonup> (OCaml) Core
 | code_module Sign_Numeric_Queries \<rightharpoonup> (OCaml) Core
@@ -1069,6 +1070,7 @@ code_identifier
 | code_module Routed_Context \<rightharpoonup> (OCaml) Core
 | code_module Routed_Context_Unit \<rightharpoonup> (OCaml) Core
 | code_module Interval_Ctx_Entry_State_Sound \<rightharpoonup> (OCaml) Core
+| code_module Interval_Sound \<rightharpoonup> (OCaml) Core
 | code_module Interval_Ctx_None_Sound \<rightharpoonup> (OCaml) Core
 | code_module HOL \<rightharpoonup> (OCaml) Core
 | code_module Multiset \<rightharpoonup> (OCaml) Core
@@ -1094,10 +1096,14 @@ code_identifier
 | code_module Int_Exec_Sound \<rightharpoonup> (OCaml) Core
 | code_module Int_Classify \<rightharpoonup> (OCaml) Core
 | code_module Int_Checks \<rightharpoonup> (OCaml) Core
+| code_module Int_Sound \<rightharpoonup> (OCaml) Core
 | code_module Int_Ctx_None_Sound \<rightharpoonup> (OCaml) Core
 | code_module Parity_Exec \<rightharpoonup> (OCaml) Core
 | code_module Parity_Numeric_Queries \<rightharpoonup> (OCaml) Core
 | code_module Parity_Checks \<rightharpoonup> (OCaml) Core
+| code_module Parity_Sound \<rightharpoonup> (OCaml) Core
+| code_module Parity_Ctx_Entry_State_Sound \<rightharpoonup> (OCaml) Core
+| code_module Parity_Ctx_Call_String_Sound \<rightharpoonup> (OCaml) Core
 | code_module Parity_Ctx_None_Sound \<rightharpoonup> (OCaml) Core
 | code_module Call_String_Context \<rightharpoonup> (OCaml) Core
 | code_module Sign_Ctx_Entry_State_Sound \<rightharpoonup> (OCaml) Core

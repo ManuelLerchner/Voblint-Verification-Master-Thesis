@@ -3,6 +3,7 @@ theory Int_Ctx_None_Sound
     "Voblint_Exec.Monovariant_Analysis_Result"
     "Voblint_Exec.Routed_Domain_Exec"
     "Voblint_Analysis.Int_Classify"
+    "Voblint_Analysis.Int_Sound"
     "Voblint_Core.DG_Analysis_Adapter"
     "Voblint_Core.Routed_Context"
     "Voblint_Core.Routed_Context_Unit"
@@ -63,18 +64,6 @@ text \<open>
   \<open>empty_pred\<close>, \<open>gs\<close>) matches \<^const>\<open>analyse_int_dg_eqs_for\<close>'s own.
 \<close>
 
-definition ictx_spec ::
-  "refine_mode \<Rightarrow> (int_dom exec_dg_st \<Rightarrow> bool) \<Rightarrow> (vname \<Rightarrow> bool)
-     \<Rightarrow> ('x, 'k, unit, int_dom exec_dg_st lifted, int_dom exec_dg_st lifted) dg_spec"
-where
-  "ictx_spec mode empty_pred gs =
-     base_dg_spec_st_for_lifted gs empty_pred (int_tf_st_for mode gs) (int_dom_enter_st_for mode gs)"
-
-definition ictx_abs_spec ::
-    "refine_mode \<Rightarrow> (vname \<Rightarrow> bool)
-     \<Rightarrow> ('x, 'k, unit, int_dom abs_state lifted, int_dom abs_state lifted) dg_spec" where
-  "ictx_abs_spec mode gs = base_dg_spec_for_lifted gs is_empty_state (int_tf_for mode gs)"
-
 subsection \<open>The routed equation system and its executable solution\<close>
 
 definition ictx_eqs ::
@@ -119,29 +108,6 @@ text \<open>
   (\<open>int_tf_st_never_for_commute\<close> etc., \<^theory>\<open>Voblint_Analysis.Int_Exec\<close>) unchanged.
 \<close>
 
-lemma int_tf_st_for_commute:
-  "fun_of_resolved_st_q_for gs (int_tf_st_for mode gs a s) =
-     apply_tf (int_tf_for mode gs) a (fun_of_resolved_st_q_for gs s)"
-  by (cases mode)
-     (simp_all add: int_tf_st_never_for_commute int_tf_st_once_for_commute int_tf_st_fixpoint_for_commute)
-
-lemma int_dom_enter_st_for_commute:
-  "fun_of_resolved_st_q_for gs (int_dom_enter_st_for mode gs ci s) =
-     snd (tf_enter (int_tf_for mode gs) ci (fun_of_resolved_st_q_for gs s))"
-proof (cases mode)
-  case Refine_Never
-  then show ?thesis
-    by (simp only: int_dom_enter_st_for.simps int_tf_for.simps int_dom_enter_never_st_for_commute)
-next
-  case Refine_Once
-  then show ?thesis
-    by (simp only: int_dom_enter_st_for.simps int_tf_for.simps int_dom_enter_once_st_for_commute)
-next
-  case Refine_Fixpoint
-  then show ?thesis
-    by (simp only: int_dom_enter_st_for.simps int_tf_for.simps int_dom_enter_fixpoint_st_for_commute)
-qed
-
 text \<open>
   \<^locale>\<open>routed_domain_exec\<close> derives exactly this shape once, generic in a domain:
   an interpretation at Int's own mode-generic commute facts just above replaces what used
@@ -158,32 +124,9 @@ text \<open>
   \<open>ictx_sound_exec\<close> below pulls it back along the readback.
 \<close>
 
-lemma int_is_sound_transfer_for: "sound_transfer_for gs (int_tf_for mode gs)"
-proof (cases mode)
-  case Refine_Never
-  then show ?thesis by (simp add: int_never_is_sound_transfer_for)
-next
-  case Refine_Once
-  then show ?thesis by (simp add: int_once_is_sound_transfer_for)
-next
-  case Refine_Fixpoint
-  then show ?thesis by (simp add: int_fixpoint_is_sound_transfer_for)
-qed
-
-lemma ictx_abs_spec_sound: "sound_dg_spec (ictx_abs_spec mode gs) gamma_dg_base gs"
-  unfolding ictx_abs_spec_def
-  by (rule base_dg_spec_sound[OF int_is_sound_transfer_for is_empty_state_gamma_state_empty])
-
 text \<open>The concretization the executable-carrier interpretations below use: a local
   unknown means \<^const>\<open>gamma_state_lift\<close> of its readback, the global slot is ignored as
   in \<^const>\<open>gamma_dg_base\<close>. Named at top level so a downstream theory can state it.\<close>
-
-definition ictx_gamma ::
-    "(vname \<Rightarrow> bool) \<Rightarrow> int_dom exec_dg_st lifted \<Rightarrow> int_dom exec_dg_st lifted \<Rightarrow> store set" where
-  "ictx_gamma gs d g = gamma_state_lift (map_lift (fun_of_resolved_st_q_for gs) d)"
-
-lemma ictx_gamma_Bot [simp]: "ictx_gamma gs Bot g = {}"
-  by (simp add: ictx_gamma_def)
 
 context
   fixes gs :: "vname \<Rightarrow> bool" and empty_pred :: "int_dom exec_dg_st \<Rightarrow> bool" and mode :: refine_mode
@@ -198,13 +141,6 @@ interpretation int_unit: routed_domain_exec
       simp add: static_resolve_def)
 
 lemmas int_pp_st_gen = int_unit.pp_st
-
-lemma ictx_gamma_eq: "ictx_gamma gs = int_unit.gamma_exec"
-  by (intro ext) (simp add: ictx_gamma_def int_unit.gamma_exec_def gamma_dg_base_def)
-
-theorem ictx_sound_exec: "sound_dg_spec (ictx_spec mode empty_pred gs) (ictx_gamma gs) gs"
-  unfolding ictx_gamma_eq ictx_spec_def
-  by (rule int_unit.sound_dg_spec_st[OF int_is_sound_transfer_for])
 
 end
 

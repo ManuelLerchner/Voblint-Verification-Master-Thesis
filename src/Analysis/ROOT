@@ -46,6 +46,7 @@ session Voblint_Analysis in "." = "Voblint_Exec" +
     Sign_Domain
     Interval_Point_Digest
     Interval_Exec_Sound
+    Interval_Sound
     Interval_Ctx_None_Sound
     Congruence_Domain
     Congruence_Lattice
@@ -53,12 +54,14 @@ session Voblint_Analysis in "." = "Voblint_Exec" +
     Congruence_Arithmetic
     Congruence_Backward
     Sign_Exec
+    Sign_Sound
     Sign_Ctx_None_Sound
     Parity_Domain
     Parity_Transfer
     Parity_Exec
     Parity_Checks
     Parity_Numeric_Queries
+    Parity_Sound
     Parity_Ctx_None_Sound
     Int_Domain
     Int_Refinement
@@ -68,6 +71,7 @@ session Voblint_Analysis in "." = "Voblint_Exec" +
     Int_Transfer
     Int_Exec
     Int_Exec_Sound
+    Int_Sound
     Int_Classify
     Int_Checks
     Int_Ctx_None_Sound
@@ -77,6 +81,8 @@ session Voblint_Analysis in "." = "Voblint_Exec" +
     Interval_Ctx_Call_String_Sound
     Int_Ctx_Entry_State_Sound
     Int_Ctx_Call_String_Sound
+    Parity_Ctx_Entry_State_Sound
+    Parity_Ctx_Call_String_Sound
     Analysis_GraphViz
     Rel_Order_Domain
     Analysis_Config

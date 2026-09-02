@@ -1,6 +1,6 @@
 theory Sign_Ctx_Call_String_Sound
   imports
-    "Voblint_Analysis.Sign_Ctx_None_Sound"
+    "Voblint_Analysis.Sign_Sound"
     "Voblint_Analysis.Sign_Checks"
     "Voblint_Core.Call_String_Context"
     Call_String_Routed_Context
@@ -9,8 +9,8 @@ begin
 section \<open>Sign at the routed spine, instantiated at the call-string context\<close>
 
 text \<open>
-  The call-string sibling of \<^theory>\<open>Voblint_Analysis.Sign_Ctx_None_Sound\<close>'s own
-  routed-unit-context instance: same \<^const>\<open>sctx_spec\<close>/\<^const>\<open>sctx_abs_spec\<close> D/G
+  The call-string instance of the Sign analysis package in
+  \<^theory>\<open>Voblint_Analysis.Sign_Sound\<close>: same \<^const>\<open>sctx_spec\<close>/\<^const>\<open>sctx_abs_spec\<close> D/G
   specification and the same domain-commute facts it already interprets
   (\<^locale>\<open>routed_dg_domain_exec\<close>, \<^theory>\<open>Voblint_Exec.DG_Base_Exec\<close>) --
   nothing here re-derives them. Only the routing policy changes, from
@@ -75,9 +75,6 @@ text \<open>
   is for \<^const>\<open>route_unit\<close>.
 \<close>
 
-lemma cs_route_commute: "cs_route k u c' d ca = cs_route k u c' (f d) ca"
-  by (simp add: cs_route_def)
-
 context
   fixes gs :: "vname \<Rightarrow> bool" and empty_pred :: "sign exec_dg_st \<Rightarrow> bool" and k :: nat
   assumes exact: "\<And>s. empty_pred s = is_empty_state (fun_of_resolved_st_q_for gs s)"
@@ -89,7 +86,7 @@ interpretation sign_cs: routed_domain_exec
   static_resolve static_resolve
   by unfold_locales
      (rule sign_tf_st_for_commute, rule sign_enter_st_for_commute, rule exact, simp,
-      rule cs_route_commute, simp add: static_resolve_def)
+      rule cs_route_indep_of_data, simp add: static_resolve_def)
 
 lemmas sign_cs_pp_st_gen = sign_cs.pp_st
 

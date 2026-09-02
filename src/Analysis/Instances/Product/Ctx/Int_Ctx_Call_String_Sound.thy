@@ -1,6 +1,14 @@
 theory Int_Ctx_Call_String_Sound
   imports
-    "Voblint_Analysis.Int_Ctx_None_Sound"
+    "Voblint_Analysis.Int_Sound"
+    "Voblint_Exec.Routed_Domain_Exec"
+    "Voblint_Core.DG_Analysis_Adapter"
+    "Voblint_Solver.TD_Solver_Menu"
+    "Voblint_Exec.Monovariant_Analysis_Result"
+    "Voblint_Core.Routed_Context"
+    "Voblint_Core.Routed_Context_Unit"
+    "Voblint_Core.Activation_Backbone"
+    "Voblint_VIMP.VIMP_Program"
     "Voblint_Analysis.Int_Classify"
     "Voblint_Core.Call_String_Context"
     Call_String_Routed_Context
@@ -9,7 +17,8 @@ begin
 section \<open>Int at the routed spine, instantiated at the call-string context\<close>
 
 text \<open>
-  The call-string sibling of \<^theory>\<open>Voblint_Analysis.Int_Ctx_None_Sound\<close>'s own
+  The call-string instance of the Int analysis package in
+  \<^theory>\<open>Voblint_Analysis.Int_Sound\<close>, alongside its
   routed-unit-context instance, mirroring \<open>Sign_Ctx_Call_String_Sound\<close>'s own
   derivation for a second domain: same \<^const>\<open>ictx_spec\<close>/\<^const>\<open>ictx_abs_spec\<close>
   D/G specification and the same domain-commute facts Int's own routed-unit
@@ -73,7 +82,7 @@ text \<open>
   own decremented formals, and a join-only solve descends that chain forever.
   \<^locale>\<open>TD_side_upd_rule\<close>'s \<open>solve_dom\<close>/\<open>partial_post_solution\<close> are generic over
   the update rule, so the certificate below is the join one with the solver
-  swapped, exactly as \<^theory>\<open>Voblint_Analysis.Int_Ctx_None_Sound\<close> does.
+  swapped, exactly as the context-insensitive instance does.
 \<close>
 
 definition ics_sol_warrow ::
@@ -108,9 +117,6 @@ text \<open>
   derivation, not a second one.
 \<close>
 
-lemma ics_route_commute: "cs_route k u c' d ca = cs_route k u c' (f d) ca"
-  by (simp add: cs_route_def)
-
 context
   fixes mode :: refine_mode and gs :: "vname \<Rightarrow> bool"
     and empty_pred :: "int_dom exec_dg_st \<Rightarrow> bool" and k :: nat
@@ -123,7 +129,7 @@ interpretation int_cs: routed_domain_exec
   static_resolve static_resolve
   by unfold_locales
      (rule int_tf_st_for_commute, rule int_dom_enter_st_for_commute, rule exact, simp,
-      rule ics_route_commute, simp add: static_resolve_def)
+      rule cs_route_indep_of_data, simp add: static_resolve_def)
 
 lemmas int_cs_pp_st_gen = int_cs.pp_st
 

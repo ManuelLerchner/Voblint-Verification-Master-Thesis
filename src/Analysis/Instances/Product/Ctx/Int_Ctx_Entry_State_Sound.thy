@@ -1,6 +1,14 @@
 theory Int_Ctx_Entry_State_Sound
   imports
-    "Voblint_Analysis.Int_Ctx_None_Sound"
+    "Voblint_Analysis.Int_Sound"
+    "Voblint_Exec.Routed_Domain_Exec"
+    "Voblint_Core.DG_Analysis_Adapter"
+    "Voblint_Solver.TD_Solver_Menu"
+    "Voblint_Exec.Monovariant_Analysis_Result"
+    "Voblint_Core.Routed_Context"
+    "Voblint_Core.Routed_Context_Unit"
+    "Voblint_Core.Activation_Backbone"
+    "Voblint_VIMP.VIMP_Program"
     "Voblint_Analysis.Int_Classify"
     Entry_State_Routed_Context
 begin
@@ -9,7 +17,7 @@ section \<open>Int at the routed spine, instantiated at the entry-state context\
 
 text \<open>
   The entry-state sibling of Int's own routed-unit-context instance
-  (\<^theory>\<open>Voblint_Analysis.Int_Ctx_None_Sound\<close>), and the fourth architecture-milestone
+  (\<^theory>\<open>Voblint_Analysis.Int_Sound\<close>), and the fourth architecture-milestone
   acceptance test, after Sign's own call-string and entry-state derivations and Int's
   own call-string derivation: same \<^const>\<open>ictx_spec\<close>/\<^const>\<open>ictx_abs_spec\<close> D/G
   specification and the same domain-commute facts Int already interprets
@@ -101,7 +109,7 @@ text \<open>
   The same routed system under Apinis warrowing, Int's production default at
   \<open>Ctx_None\<close>. Always-join has no termination guarantee on the interval component,
   so it is offered only as an explicit selection; the certificate is the join one
-  with the solver swapped, as \<^theory>\<open>Voblint_Analysis.Int_Ctx_None_Sound\<close> does.
+  with the solver swapped, as the context-insensitive instance does.
 \<close>
 
 definition ictx_entry_sol_warrow ::
@@ -263,7 +271,7 @@ section \<open>Activation-indexed collecting soundness, generic per compiled pro
 
 text \<open>
   The routed spine is interpreted at Int's executable carrier and fed the solver's own
-  table, as \<open>Int_Ctx_None_Sound\<close> does at the unit context: a local unknown concretizes
+  table, as the context-insensitive instance does: a local unknown concretizes
   to \<^const>\<open>gamma_state_lift\<close> of its readback (\<^const>\<open>ictx_gamma\<close>), the covered reader
   \<open>ictx_entry_sg_st\<close> hands the table's local slot through unchanged, and the route is
   Int's own executable \<^const>\<open>ictx_entry_route_gen\<close>.
