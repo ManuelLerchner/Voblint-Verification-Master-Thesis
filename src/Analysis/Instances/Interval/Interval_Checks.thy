@@ -48,8 +48,8 @@ text \<open>
   sibling under the always-join update rule: a one-line partial application
   of \<^const>\<open>analyse_interval_ctx_result_for\<close>
   (\<^theory>\<open>Voblint_Analysis.Interval_Analyses\<close>), fixed at
-  \<^const>\<open>prog_main_name\<close>, reading \<^const>\<open>ictx_sol_prog\<close> instead of
-  \<^const>\<open>ictx_sol_prog_warrow\<close>.
+  \<^const>\<open>prog_main_name\<close>, reading \<^const>\<open>interval_conf_sol_prog\<close> instead of
+  \<^const>\<open>interval_conf_sol_prog_warrow\<close>.
 \<close>
 
 definition analyse_interval_join_result_for ::
@@ -67,8 +67,8 @@ text \<open>
   \<open>analyse_interval_join_result\<close> exactly, a one-line partial application of
   \<^const>\<open>analyse_interval_ctx_result_per_origin_for\<close>
   (\<^theory>\<open>Voblint_Analysis.Interval_Analyses\<close>), fixed at
-  \<^const>\<open>prog_main_name\<close>, reading \<^const>\<open>ictx_sol_prog_per_origin\<close> instead
-  of \<^const>\<open>ictx_sol_prog\<close>.
+  \<^const>\<open>prog_main_name\<close>, reading \<^const>\<open>interval_conf_sol_prog_per_origin\<close> instead
+  of \<^const>\<open>interval_conf_sol_prog\<close>.
 \<close>
 
 definition analyse_interval_per_origin_result_for ::

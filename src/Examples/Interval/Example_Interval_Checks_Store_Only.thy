@@ -74,36 +74,36 @@ text \<open>The routed-unit solve terminates, and its solved key set is closed u
   turns on, each computed rather than argued.\<close>
 
 lemma checks_ivl_ex_solver_terminates:
-  "ictx_terminates_prog checks_ivl_ex_gs checks_ivl_ex_program"
-  by (rule ictx_terminates_prog_via_solve_c) eval
+  "interval_conf_terminates_prog checks_ivl_ex_gs checks_ivl_ex_program"
+  by (rule interval_conf_terminates_prog_via_solve_c) eval
 
 lemma checks_ivl_ex_entry_cov:
   "(cfg_entry (prog_cfg checks_ivl_ex_program), ())
-     \<in> fst (ictx_sol_prog checks_ivl_ex_gs checks_ivl_ex_program)"
+     \<in> fst (interval_conf_sol_prog checks_ivl_ex_gs checks_ivl_ex_program)"
   by eval
 
 lemma checks_ivl_ex_fwd_ok_ball:
   "\<forall>(u, a, w) \<in> intra (prog_cfg checks_ivl_ex_program).
-     (u, ()) \<in> fst (ictx_sol_prog checks_ivl_ex_gs checks_ivl_ex_program) \<longrightarrow>
-     (w, ()) \<in> fst (ictx_sol_prog checks_ivl_ex_gs checks_ivl_ex_program)"
+     (u, ()) \<in> fst (interval_conf_sol_prog checks_ivl_ex_gs checks_ivl_ex_program) \<longrightarrow>
+     (w, ()) \<in> fst (interval_conf_sol_prog checks_ivl_ex_gs checks_ivl_ex_program)"
   by eval
 
 lemma checks_ivl_ex_fwd_ok:
-  assumes "(u, ctx) \<in> fst (ictx_sol_prog checks_ivl_ex_gs checks_ivl_ex_program)"
+  assumes "(u, ctx) \<in> fst (interval_conf_sol_prog checks_ivl_ex_gs checks_ivl_ex_program)"
     and "(u, a, w) \<in> intra (prog_cfg checks_ivl_ex_program)"
-  shows "(w, ctx) \<in> fst (ictx_sol_prog checks_ivl_ex_gs checks_ivl_ex_program)"
+  shows "(w, ctx) \<in> fst (interval_conf_sol_prog checks_ivl_ex_gs checks_ivl_ex_program)"
   using assms checks_ivl_ex_fwd_ok_ball by (cases ctx) auto
 
 lemma checks_ivl_ex_call_fwd_ok:
-  assumes "(u, ctx) \<in> fst (ictx_sol_prog checks_ivl_ex_gs checks_ivl_ex_program)"
+  assumes "(u, ctx) \<in> fst (interval_conf_sol_prog checks_ivl_ex_gs checks_ivl_ex_program)"
     and "(u, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg checks_ivl_ex_program)"
-  shows "(FunctionEntry q, ()) \<in> fst (ictx_sol_prog checks_ivl_ex_gs checks_ivl_ex_program)"
+  shows "(FunctionEntry q, ()) \<in> fst (interval_conf_sol_prog checks_ivl_ex_gs checks_ivl_ex_program)"
   using assms by (simp add: checks_ivl_ex_calls_eval)
 
 lemma checks_ivl_ex_comb_fwd_ok:
-  assumes "(cl, c1) \<in> fst (ictx_sol_prog checks_ivl_ex_gs checks_ivl_ex_program)"
+  assumes "(cl, c1) \<in> fst (interval_conf_sol_prog checks_ivl_ex_gs checks_ivl_ex_program)"
     and "(cl, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg checks_ivl_ex_program)"
-  shows "(k, c1) \<in> fst (ictx_sol_prog checks_ivl_ex_gs checks_ivl_ex_program)"
+  shows "(k, c1) \<in> fst (interval_conf_sol_prog checks_ivl_ex_gs checks_ivl_ex_program)"
   using assms by (simp add: checks_ivl_ex_calls_eval)
 
 definition checks_ivl_ex_reach :: "pp \<Rightarrow> store set" where

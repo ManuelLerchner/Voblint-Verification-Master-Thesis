@@ -21,9 +21,9 @@ text \<open>
 section \<open>PerOrigin solver instantiation, at the same routed unit-context spec\<close>
 
 text \<open>
-  Mirrors the always-join instantiation above (\<open>ictx_eqs\<close>/\<open>ictx_sol\<close>/\<open>ictx_terminates\<close>)
+  Mirrors the always-join instantiation above (\<open>interval_conf_eqs\<close>/\<open>interval_conf_sol\<close>/\<open>interval_conf_terminates\<close>)
   under \<^const>\<open>TD_side_per_origin_Interp_solve\<close> instead, solving the exact same
-  \<open>ictx_eqs\<close> equation system -- mirroring how Interval's own Base family
+  \<open>interval_conf_eqs\<close> equation system -- mirroring how Interval's own Base family
   (\<^theory>\<open>Voblint_Analysis.Interval_Exec_Sound\<close>) already solves
   \<open>analyse_interval_dg_eqs_for\<close> under three interchangeable update rules. Genuinely
   sound: \<^locale>\<open>TD_side_upd_rule\<close>'s \<open>solve_dom\<close>/\<open>partial_post_solution\<close> are
@@ -32,50 +32,50 @@ text \<open>
   \<open>partial_post_solution\<close> did above, with no extra premises.
 \<close>
 
-definition ictx_sol_per_origin ::
+definition interval_conf_sol_per_origin ::
     "(vname \<Rightarrow> bool) \<Rightarrow> (ivl exec_dg_st \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> (pp \<times> unit) set \<times> (pp \<times> unit + (unit, unit) routed_gk \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)" where
-  "ictx_sol_per_origin gs empty_pred Pi ps =
-     TD_side_per_origin_Interp_solve (ictx_eqs gs empty_pred Pi ps)
+  "interval_conf_sol_per_origin gs empty_pred Pi ps =
+     TD_side_per_origin_Interp_solve (interval_conf_eqs gs empty_pred Pi ps)
        (cfg_exit (compile_prog Pi ps), ())"
 
-definition ictx_terminates_per_origin ::
+definition interval_conf_terminates_per_origin ::
     "(vname \<Rightarrow> bool) \<Rightarrow> (ivl exec_dg_st \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> bool" where
-  "ictx_terminates_per_origin gs empty_pred Pi ps =
+  "interval_conf_terminates_per_origin gs empty_pred Pi ps =
      TD_side_per_origin_Interp.solve_dom TYPE((unit, unit) routed_gk) TYPE((ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)
-       (ictx_eqs gs empty_pred Pi ps) (cfg_exit (compile_prog Pi ps), ())"
+       (interval_conf_eqs gs empty_pred Pi ps) (cfg_exit (compile_prog Pi ps), ())"
 
-lemma ictx_terminates_per_origin_via_solve_c:
-  assumes "TD_side_per_origin_Interp_solve_c (ictx_eqs gs empty_pred Pi ps)
+lemma interval_conf_terminates_per_origin_via_solve_c:
+  assumes "TD_side_per_origin_Interp_solve_c (interval_conf_eqs gs empty_pred Pi ps)
              (cfg_exit (compile_prog Pi ps), ()) \<noteq> None"
-  shows "ictx_terminates_per_origin gs empty_pred Pi ps"
-  unfolding ictx_terminates_per_origin_def
+  shows "interval_conf_terminates_per_origin gs empty_pred Pi ps"
+  unfolding interval_conf_terminates_per_origin_def
   by (rule TD_side_per_origin_Interp.solve_dom_of_solve_c[OF assms])
 
 subsection \<open>The PerOrigin instance\<close>
 
-lemma ictx_per_origin_pp_st:
-  "ictx_terminates_per_origin gs empty_pred Pi ps
-     \<Longrightarrow> part_post_solution (ictx_eqs gs empty_pred Pi ps)
+lemma interval_conf_per_origin_pp_st:
+  "interval_conf_terminates_per_origin gs empty_pred Pi ps
+     \<Longrightarrow> part_post_solution (interval_conf_eqs gs empty_pred Pi ps)
            (cfg_exit (compile_prog Pi ps), ())
-           (snd (ictx_sol_per_origin gs empty_pred Pi ps))
-           (fst (ictx_sol_per_origin gs empty_pred Pi ps))"
-  unfolding ictx_sol_per_origin_def ictx_terminates_per_origin_def
+           (snd (interval_conf_sol_per_origin gs empty_pred Pi ps))
+           (fst (interval_conf_sol_per_origin gs empty_pred Pi ps))"
+  unfolding interval_conf_sol_per_origin_def interval_conf_terminates_per_origin_def
   by (rule TD_side_per_origin_Interp.partial_post_solution[OF _ surjective_pairing])
 
-global_interpretation ictx_po: ictx_solved ictx_sol_per_origin ictx_terminates_per_origin
-  by unfold_locales (rule ictx_per_origin_pp_st)
+global_interpretation interval_conf_po: interval_conf_solved interval_conf_sol_per_origin interval_conf_terminates_per_origin
+  by unfold_locales (rule interval_conf_per_origin_pp_st)
 
-lemmas ictx_result_node_sound_per_origin = ictx_po.result_node_sound
-lemmas ictx_analyse_result_eq_per_origin = ictx_po.analyse_result_eq
-lemmas ictx_cinit_le_cinit_ivl_st_per_origin = ictx_po.cinit_le_cinit_ivl_st
-lemmas ictx_report_ctx_proved_sound_per_origin = ictx_po.report_ctx_proved_sound
-lemmas ictx_report_ctx_refuted_sound_per_origin = ictx_po.report_ctx_refuted_sound
+lemmas interval_conf_result_node_sound_per_origin = interval_conf_po.result_node_sound
+lemmas interval_conf_analyse_result_eq_per_origin = interval_conf_po.analyse_result_eq
+lemmas interval_conf_cinit_le_cinit_ivl_st_per_origin = interval_conf_po.cinit_le_cinit_ivl_st
+lemmas interval_conf_report_ctx_proved_sound_per_origin = interval_conf_po.report_ctx_proved_sound
+lemmas interval_conf_report_ctx_refuted_sound_per_origin = interval_conf_po.report_ctx_refuted_sound
 
 section \<open>Apinis warrowing solver instantiation, at the same routed unit-context spec\<close>
 
 text \<open>
   Interval production's default solver: mirrors the always-join instantiation above under
-  \<^const>\<open>TD_side_warrowing_apinis_Interp_solve\<close> instead, solving the exact same \<open>ictx_eqs\<close>
+  \<^const>\<open>TD_side_warrowing_apinis_Interp_solve\<close> instead, solving the exact same \<open>interval_conf_eqs\<close>
   equation system -- exactly as Interval's own entry-state contextual mode
   (the entry-state configuration below) already does. That file's own soundness derivation needs
   no separate globally-restricted-slot bookkeeping the way the Base family's flow-insensitive
@@ -85,44 +85,44 @@ text \<open>
   PerOrigin above) is exactly what makes this a mechanical solver-call swap here too.
 \<close>
 
-definition ictx_sol_warrow ::
+definition interval_conf_sol_warrow ::
     "(vname \<Rightarrow> bool) \<Rightarrow> (ivl exec_dg_st \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> (pp \<times> unit) set \<times> (pp \<times> unit + (unit, unit) routed_gk \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)" where
-  "ictx_sol_warrow gs empty_pred Pi ps =
-     TD_side_warrowing_apinis_Interp_solve (ictx_eqs gs empty_pred Pi ps)
+  "interval_conf_sol_warrow gs empty_pred Pi ps =
+     TD_side_warrowing_apinis_Interp_solve (interval_conf_eqs gs empty_pred Pi ps)
        (cfg_exit (compile_prog Pi ps), ())"
 
-definition ictx_terminates_warrow ::
+definition interval_conf_terminates_warrow ::
     "(vname \<Rightarrow> bool) \<Rightarrow> (ivl exec_dg_st \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> bool" where
-  "ictx_terminates_warrow gs empty_pred Pi ps =
+  "interval_conf_terminates_warrow gs empty_pred Pi ps =
      TD_side_warrowing_apinis_Interp.solve_dom TYPE((unit, unit) routed_gk) TYPE((ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)
-       (ictx_eqs gs empty_pred Pi ps) (cfg_exit (compile_prog Pi ps), ())"
+       (interval_conf_eqs gs empty_pred Pi ps) (cfg_exit (compile_prog Pi ps), ())"
 
-lemma ictx_terminates_warrow_via_solve_c:
-  assumes "TD_side_warrowing_apinis_Interp_solve_c (ictx_eqs gs empty_pred Pi ps)
+lemma interval_conf_terminates_warrow_via_solve_c:
+  assumes "TD_side_warrowing_apinis_Interp_solve_c (interval_conf_eqs gs empty_pred Pi ps)
              (cfg_exit (compile_prog Pi ps), ()) \<noteq> None"
-  shows "ictx_terminates_warrow gs empty_pred Pi ps"
-  unfolding ictx_terminates_warrow_def
+  shows "interval_conf_terminates_warrow gs empty_pred Pi ps"
+  unfolding interval_conf_terminates_warrow_def
   by (rule TD_side_warrowing_apinis_Interp.solve_dom_of_solve_c[OF assms])
 
 subsection \<open>The Apinis warrowing instance\<close>
 
-lemma ictx_warrow_pp_st:
-  "ictx_terminates_warrow gs empty_pred Pi ps
-     \<Longrightarrow> part_post_solution (ictx_eqs gs empty_pred Pi ps)
+lemma interval_conf_warrow_pp_st:
+  "interval_conf_terminates_warrow gs empty_pred Pi ps
+     \<Longrightarrow> part_post_solution (interval_conf_eqs gs empty_pred Pi ps)
            (cfg_exit (compile_prog Pi ps), ())
-           (snd (ictx_sol_warrow gs empty_pred Pi ps))
-           (fst (ictx_sol_warrow gs empty_pred Pi ps))"
-  unfolding ictx_sol_warrow_def ictx_terminates_warrow_def
+           (snd (interval_conf_sol_warrow gs empty_pred Pi ps))
+           (fst (interval_conf_sol_warrow gs empty_pred Pi ps))"
+  unfolding interval_conf_sol_warrow_def interval_conf_terminates_warrow_def
   by (rule TD_side_warrowing_apinis_Interp.partial_post_solution[OF _ surjective_pairing])
 
-global_interpretation ictx_wa: ictx_solved ictx_sol_warrow ictx_terminates_warrow
-  by unfold_locales (rule ictx_warrow_pp_st)
+global_interpretation interval_conf_wa: interval_conf_solved interval_conf_sol_warrow interval_conf_terminates_warrow
+  by unfold_locales (rule interval_conf_warrow_pp_st)
 
-lemmas ictx_result_node_sound_warrow = ictx_wa.result_node_sound
-lemmas ictx_analyse_result_eq_warrow = ictx_wa.analyse_result_eq
-lemmas ictx_cinit_le_cinit_ivl_st_warrow = ictx_wa.cinit_le_cinit_ivl_st
-lemmas ictx_report_ctx_proved_sound_warrow = ictx_wa.report_ctx_proved_sound
-lemmas ictx_report_ctx_refuted_sound_warrow = ictx_wa.report_ctx_refuted_sound
+lemmas interval_conf_result_node_sound_warrow = interval_conf_wa.result_node_sound
+lemmas interval_conf_analyse_result_eq_warrow = interval_conf_wa.analyse_result_eq
+lemmas interval_conf_cinit_le_cinit_ivl_st_warrow = interval_conf_wa.cinit_le_cinit_ivl_st
+lemmas interval_conf_report_ctx_proved_sound_warrow = interval_conf_wa.report_ctx_proved_sound
+lemmas interval_conf_report_ctx_refuted_sound_warrow = interval_conf_wa.report_ctx_refuted_sound
 
 section \<open>Warrowing-per-origin solver instantiation\<close>
 
@@ -134,88 +134,88 @@ text \<open>
   to one global separate the two.
 \<close>
 
-definition ictx_sol_wpo ::
+definition interval_conf_sol_wpo ::
     "(vname \<Rightarrow> bool) \<Rightarrow> (ivl exec_dg_st \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> (pp \<times> unit) set \<times> (pp \<times> unit + (unit, unit) routed_gk \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)" where
-  "ictx_sol_wpo gs empty_pred Pi ps =
-     TD_side_warrowing_per_origin_Interp_solve (ictx_eqs gs empty_pred Pi ps)
+  "interval_conf_sol_wpo gs empty_pred Pi ps =
+     TD_side_warrowing_per_origin_Interp_solve (interval_conf_eqs gs empty_pred Pi ps)
        (cfg_exit (compile_prog Pi ps), ())"
 
-definition ictx_terminates_wpo ::
+definition interval_conf_terminates_wpo ::
     "(vname \<Rightarrow> bool) \<Rightarrow> (ivl exec_dg_st \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> bool" where
-  "ictx_terminates_wpo gs empty_pred Pi ps =
+  "interval_conf_terminates_wpo gs empty_pred Pi ps =
      TD_side_warrowing_per_origin_Interp.solve_dom TYPE((unit, unit) routed_gk)
        TYPE((ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)
-       (ictx_eqs gs empty_pred Pi ps) (cfg_exit (compile_prog Pi ps), ())"
+       (interval_conf_eqs gs empty_pred Pi ps) (cfg_exit (compile_prog Pi ps), ())"
 
-lemma ictx_terminates_wpo_via_solve_c:
-  assumes "TD_side_warrowing_per_origin_Interp_solve_c (ictx_eqs gs empty_pred Pi ps)
+lemma interval_conf_terminates_wpo_via_solve_c:
+  assumes "TD_side_warrowing_per_origin_Interp_solve_c (interval_conf_eqs gs empty_pred Pi ps)
              (cfg_exit (compile_prog Pi ps), ()) \<noteq> None"
-  shows "ictx_terminates_wpo gs empty_pred Pi ps"
-  unfolding ictx_terminates_wpo_def
+  shows "interval_conf_terminates_wpo gs empty_pred Pi ps"
+  unfolding interval_conf_terminates_wpo_def
   by (rule TD_side_warrowing_per_origin_Interp.solve_dom_of_solve_c[OF assms])
 
-lemma ictx_wpo_pp_st:
-  "ictx_terminates_wpo gs empty_pred Pi ps
-     \<Longrightarrow> part_post_solution (ictx_eqs gs empty_pred Pi ps)
+lemma interval_conf_wpo_pp_st:
+  "interval_conf_terminates_wpo gs empty_pred Pi ps
+     \<Longrightarrow> part_post_solution (interval_conf_eqs gs empty_pred Pi ps)
            (cfg_exit (compile_prog Pi ps), ())
-           (snd (ictx_sol_wpo gs empty_pred Pi ps))
-           (fst (ictx_sol_wpo gs empty_pred Pi ps))"
-  unfolding ictx_sol_wpo_def ictx_terminates_wpo_def
+           (snd (interval_conf_sol_wpo gs empty_pred Pi ps))
+           (fst (interval_conf_sol_wpo gs empty_pred Pi ps))"
+  unfolding interval_conf_sol_wpo_def interval_conf_terminates_wpo_def
   by (rule TD_side_warrowing_per_origin_Interp.partial_post_solution[OF _ surjective_pairing])
 
-global_interpretation ictx_wpo: ictx_solved ictx_sol_wpo ictx_terminates_wpo
-  by unfold_locales (rule ictx_wpo_pp_st)
+global_interpretation interval_conf_wpo: interval_conf_solved interval_conf_sol_wpo interval_conf_terminates_wpo
+  by unfold_locales (rule interval_conf_wpo_pp_st)
 
-lemmas ictx_result_node_sound_wpo = ictx_wpo.result_node_sound
-lemmas ictx_analyse_result_eq_wpo = ictx_wpo.analyse_result_eq
-lemmas ictx_cinit_le_cinit_ivl_st_wpo = ictx_wpo.cinit_le_cinit_ivl_st
-lemmas ictx_report_ctx_proved_sound_wpo = ictx_wpo.report_ctx_proved_sound
-lemmas ictx_report_ctx_refuted_sound_wpo = ictx_wpo.report_ctx_refuted_sound
+lemmas interval_conf_result_node_sound_wpo = interval_conf_wpo.result_node_sound
+lemmas interval_conf_analyse_result_eq_wpo = interval_conf_wpo.analyse_result_eq
+lemmas interval_conf_cinit_le_cinit_ivl_st_wpo = interval_conf_wpo.cinit_le_cinit_ivl_st
+lemmas interval_conf_report_ctx_proved_sound_wpo = interval_conf_wpo.report_ctx_proved_sound
+lemmas interval_conf_report_ctx_refuted_sound_wpo = interval_conf_wpo.report_ctx_refuted_sound
 
 subsection \<open>Solved-result tables: PerOrigin and Apinis warrowing siblings\<close>
 
 text \<open>
-  Mirror \<open>ictx_sol_prog\<close>/\<open>ictx_terminates_prog\<close>/\<open>analyse_interval_ctx_result_for\<close> (the Join
+  Mirror \<open>interval_conf_sol_prog\<close>/\<open>interval_conf_terminates_prog\<close>/\<open>analyse_interval_ctx_result_for\<close> (the Join
   table above) at the PerOrigin and Apinis warrowing solvers, reading the same
-  \<open>ictx_eqs_prog\<close> equation system: the three-solver orthogonality Interval's Base family
+  \<open>interval_conf_eqs_prog\<close> equation system: the three-solver orthogonality Interval's Base family
   already has (\<open>analyse_interval_dg_for\<close>/\<open>_join_for\<close>/\<open>_per_origin_for\<close>,
   \<^theory>\<open>Voblint_Analysis.Interval_Exec_Sound\<close>) now also holds at the routed spine.
 \<close>
 
-definition ictx_sol_prog_per_origin ::
+definition interval_conf_sol_prog_per_origin ::
     "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog
        \<Rightarrow> (pp \<times> unit) set \<times> (pp \<times> unit + (unit, unit) routed_gk \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)" where
-  "ictx_sol_prog_per_origin gs p =
-     TD_side_per_origin_Interp_solve (ictx_eqs_prog gs p) (cfg_exit (prog_cfg p), ())"
+  "interval_conf_sol_prog_per_origin gs p =
+     TD_side_per_origin_Interp_solve (interval_conf_eqs_prog gs p) (cfg_exit (prog_cfg p), ())"
 
-definition ictx_terminates_prog_per_origin :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> bool" where
-  "ictx_terminates_prog_per_origin gs p =
-     ictx_terminates_per_origin gs (resolved_st_q_is_bot_for (declared_global_vars p))
+definition interval_conf_terminates_prog_per_origin :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> bool" where
+  "interval_conf_terminates_prog_per_origin gs p =
+     interval_conf_terminates_per_origin gs (resolved_st_q_is_bot_for (declared_global_vars p))
        (prog_table p) (prog_procs p)"
 
-lemma ictx_terminates_prog_per_origin_via_solve_c:
+lemma interval_conf_terminates_prog_per_origin_via_solve_c:
   assumes "TD_side_per_origin_Interp_solve_c
-             (ictx_eqs gs (resolved_st_q_is_bot_for (declared_global_vars p))
+             (interval_conf_eqs gs (resolved_st_q_is_bot_for (declared_global_vars p))
                 (prog_table p) (prog_procs p))
              (cfg_exit (compile_prog (prog_table p) (prog_procs p)), ()) \<noteq> None"
-  shows "ictx_terminates_prog_per_origin gs p"
-  unfolding ictx_terminates_prog_per_origin_def
-  using assms by (rule ictx_terminates_per_origin_via_solve_c)
+  shows "interval_conf_terminates_prog_per_origin gs p"
+  unfolding interval_conf_terminates_prog_per_origin_def
+  using assms by (rule interval_conf_terminates_per_origin_via_solve_c)
 
 definition analyse_interval_ctx_result_per_origin_for ::
     "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> (unit, ivl abs_state) analysis_result" where
   "analyse_interval_ctx_result_per_origin_for gs p =
      Analysis_Result
-       (fst (ictx_sol_prog_per_origin gs p))
+       (fst (interval_conf_sol_prog_per_origin gs p))
        (\<lambda>v ctx. normalize_point gs
                   (canonicalize_lift (resolved_st_q_is_bot_for (declared_global_vars p))
-                    (locals (snd (ictx_sol_prog_per_origin gs p) (Inl (v, ctx))))))"
+                    (locals (snd (interval_conf_sol_prog_per_origin gs p) (Inl (v, ctx))))))"
 
 declare analyse_interval_ctx_result_per_origin_for_def [code del]
 
 lemma analyse_interval_ctx_result_per_origin_for_code [code]:
   "analyse_interval_ctx_result_per_origin_for gs p =
-     (let sol = ictx_sol_prog_per_origin gs p; gl = declared_global_vars p
+     (let sol = interval_conf_sol_prog_per_origin gs p; gl = declared_global_vars p
       in Analysis_Result (fst sol)
            (\<lambda>v ctx. normalize_point gs
                       (canonicalize_lift (resolved_st_q_is_bot_for gl)
@@ -226,40 +226,40 @@ definition analyse_interval_ctx_result_per_origin :: "imp_prog \<Rightarrow> (un
   "analyse_interval_ctx_result_per_origin p =
      analyse_interval_ctx_result_per_origin_for (declared_global p) p"
 
-definition ictx_sol_prog_warrow ::
+definition interval_conf_sol_prog_warrow ::
     "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog
        \<Rightarrow> (pp \<times> unit) set \<times> (pp \<times> unit + (unit, unit) routed_gk \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)" where
-  "ictx_sol_prog_warrow gs p =
-     TD_side_warrowing_apinis_Interp_solve (ictx_eqs_prog gs p) (cfg_exit (prog_cfg p), ())"
+  "interval_conf_sol_prog_warrow gs p =
+     TD_side_warrowing_apinis_Interp_solve (interval_conf_eqs_prog gs p) (cfg_exit (prog_cfg p), ())"
 
-definition ictx_terminates_prog_warrow :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> bool" where
-  "ictx_terminates_prog_warrow gs p =
-     ictx_terminates_warrow gs (resolved_st_q_is_bot_for (declared_global_vars p))
+definition interval_conf_terminates_prog_warrow :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> bool" where
+  "interval_conf_terminates_prog_warrow gs p =
+     interval_conf_terminates_warrow gs (resolved_st_q_is_bot_for (declared_global_vars p))
        (prog_table p) (prog_procs p)"
 
-lemma ictx_terminates_prog_warrow_via_solve_c:
+lemma interval_conf_terminates_prog_warrow_via_solve_c:
   assumes "TD_side_warrowing_apinis_Interp_solve_c
-             (ictx_eqs gs (resolved_st_q_is_bot_for (declared_global_vars p))
+             (interval_conf_eqs gs (resolved_st_q_is_bot_for (declared_global_vars p))
                 (prog_table p) (prog_procs p))
              (cfg_exit (compile_prog (prog_table p) (prog_procs p)), ()) \<noteq> None"
-  shows "ictx_terminates_prog_warrow gs p"
-  unfolding ictx_terminates_prog_warrow_def
-  using assms by (rule ictx_terminates_warrow_via_solve_c)
+  shows "interval_conf_terminates_prog_warrow gs p"
+  unfolding interval_conf_terminates_prog_warrow_def
+  using assms by (rule interval_conf_terminates_warrow_via_solve_c)
 
 definition analyse_interval_ctx_result_warrow_for ::
     "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> (unit, ivl abs_state) analysis_result" where
   "analyse_interval_ctx_result_warrow_for gs p =
      Analysis_Result
-       (fst (ictx_sol_prog_warrow gs p))
+       (fst (interval_conf_sol_prog_warrow gs p))
        (\<lambda>v ctx. normalize_point gs
                   (canonicalize_lift (resolved_st_q_is_bot_for (declared_global_vars p))
-                    (locals (snd (ictx_sol_prog_warrow gs p) (Inl (v, ctx))))))"
+                    (locals (snd (interval_conf_sol_prog_warrow gs p) (Inl (v, ctx))))))"
 
 declare analyse_interval_ctx_result_warrow_for_def [code del]
 
 lemma analyse_interval_ctx_result_warrow_for_code [code]:
   "analyse_interval_ctx_result_warrow_for gs p =
-     (let sol = ictx_sol_prog_warrow gs p; gl = declared_global_vars p
+     (let sol = interval_conf_sol_prog_warrow gs p; gl = declared_global_vars p
       in Analysis_Result (fst sol)
            (\<lambda>v ctx. normalize_point gs
                       (canonicalize_lift (resolved_st_q_is_bot_for gl)
@@ -284,7 +284,7 @@ definition analyse_interval_ctx_solved_warrow_for ::
      \<Rightarrow> (unit, ivl abs_state) analysis_result
           \<times> (String.literal \<times> ivl abs_state lifted) list" where
   "analyse_interval_ctx_solved_warrow_for =
-     ctx_solved_for ictx_sol_prog_warrow (unit_seed_global_keys (Analysis_Global ()) Activation_Seed)"
+     ctx_solved_for interval_conf_sol_prog_warrow (unit_seed_global_keys (Analysis_Global ()) Activation_Seed)"
 
 lemma fst_analyse_interval_ctx_solved_warrow_for:
   "fst (analyse_interval_ctx_solved_warrow_for gs p)
@@ -294,40 +294,40 @@ lemma fst_analyse_interval_ctx_solved_warrow_for:
 
 subsection \<open>Solved-result table: warrowing per origin\<close>
 
-definition ictx_sol_prog_wpo ::
+definition interval_conf_sol_prog_wpo ::
     "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog
        \<Rightarrow> (pp \<times> unit) set \<times> (pp \<times> unit + (unit, unit) routed_gk \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)" where
-  "ictx_sol_prog_wpo gs p =
-     TD_side_warrowing_per_origin_Interp_solve (ictx_eqs_prog gs p) (cfg_exit (prog_cfg p), ())"
+  "interval_conf_sol_prog_wpo gs p =
+     TD_side_warrowing_per_origin_Interp_solve (interval_conf_eqs_prog gs p) (cfg_exit (prog_cfg p), ())"
 
-definition ictx_terminates_prog_wpo :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> bool" where
-  "ictx_terminates_prog_wpo gs p =
-     ictx_terminates_wpo gs (resolved_st_q_is_bot_for (declared_global_vars p))
+definition interval_conf_terminates_prog_wpo :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> bool" where
+  "interval_conf_terminates_prog_wpo gs p =
+     interval_conf_terminates_wpo gs (resolved_st_q_is_bot_for (declared_global_vars p))
        (prog_table p) (prog_procs p)"
 
-lemma ictx_terminates_prog_wpo_via_solve_c:
+lemma interval_conf_terminates_prog_wpo_via_solve_c:
   assumes "TD_side_warrowing_per_origin_Interp_solve_c
-             (ictx_eqs gs (resolved_st_q_is_bot_for (declared_global_vars p))
+             (interval_conf_eqs gs (resolved_st_q_is_bot_for (declared_global_vars p))
                 (prog_table p) (prog_procs p))
              (cfg_exit (compile_prog (prog_table p) (prog_procs p)), ()) \<noteq> None"
-  shows "ictx_terminates_prog_wpo gs p"
-  unfolding ictx_terminates_prog_wpo_def
-  using assms by (rule ictx_terminates_wpo_via_solve_c)
+  shows "interval_conf_terminates_prog_wpo gs p"
+  unfolding interval_conf_terminates_prog_wpo_def
+  using assms by (rule interval_conf_terminates_wpo_via_solve_c)
 
 definition analyse_interval_ctx_result_wpo_for ::
     "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> (unit, ivl abs_state) analysis_result" where
   "analyse_interval_ctx_result_wpo_for gs p =
      Analysis_Result
-       (fst (ictx_sol_prog_wpo gs p))
+       (fst (interval_conf_sol_prog_wpo gs p))
        (\<lambda>v ctx. normalize_point gs
                   (canonicalize_lift (resolved_st_q_is_bot_for (declared_global_vars p))
-                    (locals (snd (ictx_sol_prog_wpo gs p) (Inl (v, ctx))))))"
+                    (locals (snd (interval_conf_sol_prog_wpo gs p) (Inl (v, ctx))))))"
 
 declare analyse_interval_ctx_result_wpo_for_def [code del]
 
 lemma analyse_interval_ctx_result_wpo_for_code [code]:
   "analyse_interval_ctx_result_wpo_for gs p =
-     (let sol = ictx_sol_prog_wpo gs p; gl = declared_global_vars p
+     (let sol = interval_conf_sol_prog_wpo gs p; gl = declared_global_vars p
       in Analysis_Result (fst sol)
            (\<lambda>v ctx. normalize_point gs
                       (canonicalize_lift (resolved_st_q_is_bot_for gl)
@@ -344,7 +344,7 @@ section \<open>Solver-choice generalization\<close>
 text \<open>
   \<^const>\<open>cs_call_string_eqs\<close> names no solve function -- only \<open>interval_spec\<close> and
   the routing policy -- so it is exactly as solver-independent as
-  \<open>ictx_eqs\<close> at \<open>Ctx_None\<close> (\<^theory>\<open>Voblint_Analysis.Interval_Exec_Sound\<close>'s
+  \<open>interval_conf_eqs\<close> at \<open>Ctx_None\<close> (\<^theory>\<open>Voblint_Analysis.Interval_Exec_Sound\<close>'s
   \<open>analyse_interval_dg_join_for\<close>/\<open>_per_origin_for\<close> alongside the Warrow
   default). The same routed system is solved under every discipline
   below, mirroring that pattern precisely; \<open>cs_call_string_sol_prog\<close> (Warrow,
@@ -474,7 +474,7 @@ section \<open>Solver-choice generalization\<close>
 text \<open>
   \<^const>\<open>entry_state_eqs\<close> names no solve function -- only \<open>interval_spec\<close> and
   the routing policy -- so it is exactly as solver-independent as
-  \<open>ictx_eqs\<close> at \<open>Ctx_None\<close>
+  \<open>interval_conf_eqs\<close> at \<open>Ctx_None\<close>
   (\<^theory>\<open>Voblint_Analysis.Interval_Exec_Sound\<close>'s \<open>analyse_interval_dg_join_for\<close>/
   \<open>_per_origin_for\<close> alongside the Warrow default), and exactly as its own
   the call-string configuration above sibling solves the routed call-string

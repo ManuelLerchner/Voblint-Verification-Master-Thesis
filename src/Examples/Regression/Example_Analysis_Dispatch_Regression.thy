@@ -107,10 +107,10 @@ text \<open>
 \<close>
 
 lemma dispatch_demo_terminates:
-  "Interval_Solver_Analyses.ictx_terminates_prog_warrow (declared_global dispatch_demo_prog) dispatch_demo_prog"
-proof (rule Interval_Solver_Analyses.ictx_terminates_prog_warrow_via_solve_c)
+  "interval_conf_terminates_prog_warrow (declared_global dispatch_demo_prog) dispatch_demo_prog"
+proof (rule interval_conf_terminates_prog_warrow_via_solve_c)
   show "TD_side_warrowing_apinis_Interp_solve_c
-          (Interval_Analyses.ictx_eqs (declared_global dispatch_demo_prog)
+          (interval_conf_eqs (declared_global dispatch_demo_prog)
              (resolved_st_q_is_bot_for (declared_global_vars dispatch_demo_prog))
              (prog_table dispatch_demo_prog) (prog_procs dispatch_demo_prog))
           (cfg_exit (compile_prog (prog_table dispatch_demo_prog) (prog_procs dispatch_demo_prog)), ()) \<noteq> None"
@@ -119,18 +119,18 @@ qed
 
 lemma dispatch_demo_cover_edge_ball:
   "\<forall>(u, a, w) \<in> intra (prog_cfg dispatch_demo_prog).
-     (w, ()) \<in> fst (Interval_Solver_Analyses.ictx_sol_prog_warrow (declared_global dispatch_demo_prog) dispatch_demo_prog)"
+     (w, ()) \<in> fst (interval_conf_sol_prog_warrow (declared_global dispatch_demo_prog) dispatch_demo_prog)"
   by eval
 
 lemma dispatch_demo_cover_edge:
-  "\<And>u a w ctx. (u, ctx) \<in> fst (Interval_Solver_Analyses.ictx_sol_prog_warrow (declared_global dispatch_demo_prog) dispatch_demo_prog)
+  "\<And>u a w ctx. (u, ctx) \<in> fst (interval_conf_sol_prog_warrow (declared_global dispatch_demo_prog) dispatch_demo_prog)
      \<Longrightarrow> (u, a, w) \<in> intra (prog_cfg dispatch_demo_prog)
-     \<Longrightarrow> (w, ctx) \<in> fst (Interval_Solver_Analyses.ictx_sol_prog_warrow (declared_global dispatch_demo_prog) dispatch_demo_prog)"
+     \<Longrightarrow> (w, ctx) \<in> fst (interval_conf_sol_prog_warrow (declared_global dispatch_demo_prog) dispatch_demo_prog)"
   using dispatch_demo_cover_edge_ball by auto
 
 lemma dispatch_demo_entry_cov:
   "(cfg_entry (prog_cfg dispatch_demo_prog), ())
-     \<in> fst (Interval_Solver_Analyses.ictx_sol_prog_warrow (declared_global dispatch_demo_prog) dispatch_demo_prog)"
+     \<in> fst (interval_conf_sol_prog_warrow (declared_global dispatch_demo_prog) dispatch_demo_prog)"
   by eval
 
 theorem dispatch_demo_first_check_certified:
@@ -141,22 +141,22 @@ proof (rule analyse_interval_proved_sound)
   show "wf_compile_input (declared_global dispatch_demo_prog) (prog_table dispatch_demo_prog)
           (prog_procs dispatch_demo_prog)"
     by (auto simp: wf_compile_input_simps dispatch_demo_prog_def split: if_splits)
-  show "Interval_Solver_Analyses.ictx_terminates_prog_warrow (declared_global dispatch_demo_prog) dispatch_demo_prog"
+  show "interval_conf_terminates_prog_warrow (declared_global dispatch_demo_prog) dispatch_demo_prog"
     by (rule dispatch_demo_terminates)
   show "(cfg_entry (prog_cfg dispatch_demo_prog), ())
-          \<in> fst (Interval_Solver_Analyses.ictx_sol_prog_warrow (declared_global dispatch_demo_prog) dispatch_demo_prog)"
+          \<in> fst (interval_conf_sol_prog_warrow (declared_global dispatch_demo_prog) dispatch_demo_prog)"
     by (rule dispatch_demo_entry_cov)
-  show "\<And>u a w ctx. (u, ctx) \<in> fst (Interval_Solver_Analyses.ictx_sol_prog_warrow (declared_global dispatch_demo_prog) dispatch_demo_prog)
+  show "\<And>u a w ctx. (u, ctx) \<in> fst (interval_conf_sol_prog_warrow (declared_global dispatch_demo_prog) dispatch_demo_prog)
           \<Longrightarrow> (u, a, w) \<in> intra (prog_cfg dispatch_demo_prog)
-          \<Longrightarrow> (w, ctx) \<in> fst (Interval_Solver_Analyses.ictx_sol_prog_warrow (declared_global dispatch_demo_prog) dispatch_demo_prog)"
+          \<Longrightarrow> (w, ctx) \<in> fst (interval_conf_sol_prog_warrow (declared_global dispatch_demo_prog) dispatch_demo_prog)"
     by (rule dispatch_demo_cover_edge)
-  show "\<And>u ctx dst fs as q k. (u, ctx) \<in> fst (Interval_Solver_Analyses.ictx_sol_prog_warrow (declared_global dispatch_demo_prog) dispatch_demo_prog)
+  show "\<And>u ctx dst fs as q k. (u, ctx) \<in> fst (interval_conf_sol_prog_warrow (declared_global dispatch_demo_prog) dispatch_demo_prog)
           \<Longrightarrow> (u, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg dispatch_demo_prog)
-          \<Longrightarrow> (FunctionEntry q, ()) \<in> fst (Interval_Solver_Analyses.ictx_sol_prog_warrow (declared_global dispatch_demo_prog) dispatch_demo_prog)"
+          \<Longrightarrow> (FunctionEntry q, ()) \<in> fst (interval_conf_sol_prog_warrow (declared_global dispatch_demo_prog) dispatch_demo_prog)"
     by (simp add: dispatch_demo_calls_eval)
-  show "\<And>cl c1 dst fs as q k. (cl, c1) \<in> fst (Interval_Solver_Analyses.ictx_sol_prog_warrow (declared_global dispatch_demo_prog) dispatch_demo_prog)
+  show "\<And>cl c1 dst fs as q k. (cl, c1) \<in> fst (interval_conf_sol_prog_warrow (declared_global dispatch_demo_prog) dispatch_demo_prog)
           \<Longrightarrow> (cl, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg dispatch_demo_prog)
-          \<Longrightarrow> (k, c1) \<in> fst (Interval_Solver_Analyses.ictx_sol_prog_warrow (declared_global dispatch_demo_prog) dispatch_demo_prog)"
+          \<Longrightarrow> (k, c1) \<in> fst (interval_conf_sol_prog_warrow (declared_global dispatch_demo_prog) dispatch_demo_prog)"
     by (simp add: dispatch_demo_calls_eval)
   show "(Statement 1, Less (N 0) (V (STR ''y'')), Check_Proved) \<in> set (analyse Interval_Analysis dispatch_demo_prog)"
     unfolding dispatch_demo_interval_precise by simp

@@ -93,9 +93,9 @@ text \<open>
   (commit \<open>c38efade\<close>) and is future work here, not attempted.
 \<close>
 
-definition ictx_eqs ::
+definition interval_conf_eqs ::
     "(vname \<Rightarrow> bool) \<Rightarrow> (ivl exec_dg_st \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> (pp \<times> unit, (unit, unit) routed_gk, (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state) eqsT" where
-  "ictx_eqs gs empty_pred Pi ps =
+  "interval_conf_eqs gs empty_pred Pi ps =
      side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_addr_list (\<lambda>_. Analysis_Global ())
        route_unit
        (\<lambda>ctx' src a. dg_spec_edge_tree (interval_spec gs empty_pred) a src (\<lambda>_. Analysis_Global ()))
@@ -104,23 +104,23 @@ definition ictx_eqs ::
        (routed_extra_g Activation_Seed (Analysis_Global ()))
        (compile_prog Pi ps) Bot (Lifted cinit_ivl_st) Bot"
 
-definition ictx_sol ::
+definition interval_conf_sol ::
     "(vname \<Rightarrow> bool) \<Rightarrow> (ivl exec_dg_st \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> (pp \<times> unit) set \<times> (pp \<times> unit + (unit, unit) routed_gk \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)" where
-  "ictx_sol gs empty_pred Pi ps =
-     TD_side_always_join_Interp_solve (ictx_eqs gs empty_pred Pi ps)
+  "interval_conf_sol gs empty_pred Pi ps =
+     TD_side_always_join_Interp_solve (interval_conf_eqs gs empty_pred Pi ps)
        (cfg_exit (compile_prog Pi ps), ())"
 
-definition ictx_terminates ::
+definition interval_conf_terminates ::
     "(vname \<Rightarrow> bool) \<Rightarrow> (ivl exec_dg_st \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> bool" where
-  "ictx_terminates gs empty_pred Pi ps =
+  "interval_conf_terminates gs empty_pred Pi ps =
      TD_side_always_join_Interp.solve_dom TYPE((unit, unit) routed_gk) TYPE((ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)
-       (ictx_eqs gs empty_pred Pi ps) (cfg_exit (compile_prog Pi ps), ())"
+       (interval_conf_eqs gs empty_pred Pi ps) (cfg_exit (compile_prog Pi ps), ())"
 
-lemma ictx_terminates_via_solve_c:
-  assumes "TD_side_always_join_Interp_solve_c (ictx_eqs gs empty_pred Pi ps)
+lemma interval_conf_terminates_via_solve_c:
+  assumes "TD_side_always_join_Interp_solve_c (interval_conf_eqs gs empty_pred Pi ps)
              (cfg_exit (compile_prog Pi ps), ()) \<noteq> None"
-  shows "ictx_terminates gs empty_pred Pi ps"
-  unfolding ictx_terminates_def
+  shows "interval_conf_terminates gs empty_pred Pi ps"
+  unfolding interval_conf_terminates_def
   by (rule TD_side_always_join_Interp.solve_dom_of_solve_c[OF assms])
 
 subsection \<open>Domain commute facts, at the routed unit spec\<close>
@@ -159,8 +159,8 @@ section \<open>The solver-generic instantiation\<close>
 
 text \<open>
   Everything downstream of the executable post-solution reaches the solver through exactly one
-  fact: that the solved pair is a \<^const>\<open>part_post_solution\<close> of \<^const>\<open>ictx_eqs\<close>.  The update
-  rule itself never appears again.  \<open>ictx_solved\<close> therefore fixes the solved pair and its
+  fact: that the solved pair is a \<^const>\<open>part_post_solution\<close> of \<^const>\<open>interval_conf_eqs\<close>.  The update
+  rule itself never appears again.  \<open>interval_conf_solved\<close> therefore fixes the solved pair and its
   termination predicate and assumes that single fact, so each update rule contributes an
   interpretation rather than a copy of the development.
 
@@ -168,14 +168,14 @@ text \<open>
   \<open>partial_post_solution\<close> once, inside the locale, for every update rule.
 \<close>
 
-locale ictx_solved =
+locale interval_conf_solved =
   fixes sol :: "(vname \<Rightarrow> bool) \<Rightarrow> (ivl exec_dg_st \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> (pp \<times> unit) set
                      \<times> (pp \<times> unit + (unit, unit) routed_gk \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)"
     and terminates :: "(vname \<Rightarrow> bool) \<Rightarrow> (ivl exec_dg_st \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list
                          \<Rightarrow> bool"
   assumes pp_st:
     "terminates gs empty_pred Pi ps
-       \<Longrightarrow> part_post_solution (ictx_eqs gs empty_pred Pi ps)
+       \<Longrightarrow> part_post_solution (interval_conf_eqs gs empty_pred Pi ps)
              (cfg_exit (compile_prog Pi ps), ())
              (snd (sol gs empty_pred Pi ps))
              (fst (sol gs empty_pred Pi ps))"
@@ -196,7 +196,7 @@ theorem pp_routed:
         (compile_prog Pi ps) Bot (Lifted cinit_ivl_st) Bot)
      (cfg_exit (compile_prog Pi ps), ())
      (snd (sol gs empty_pred Pi ps)) (fst (sol gs empty_pred Pi ps))"
-  using pp_st[OF solves] unfolding ictx_eqs_def interval_spec_def by (rule ivl_pp_st_gen[OF exact])
+  using pp_st[OF solves] unfolding interval_conf_eqs_def interval_spec_def by (rule ivl_pp_st_gen[OF exact])
 
 subsection \<open>Activation-indexed collecting soundness, generic per compiled program\<close>
 
@@ -415,75 +415,75 @@ end
 text \<open>The always-join rule as an instance.  \<open>partial_post_solution\<close> is the whole obligation,
   and \<^locale>\<open>TD_side_upd_rule\<close> already carries it.\<close>
 
-lemma ictx_join_pp_st:
-  "ictx_terminates gs empty_pred Pi ps
-     \<Longrightarrow> part_post_solution (ictx_eqs gs empty_pred Pi ps)
+lemma interval_conf_join_pp_st:
+  "interval_conf_terminates gs empty_pred Pi ps
+     \<Longrightarrow> part_post_solution (interval_conf_eqs gs empty_pred Pi ps)
            (cfg_exit (compile_prog Pi ps), ())
-           (snd (ictx_sol gs empty_pred Pi ps))
-           (fst (ictx_sol gs empty_pred Pi ps))"
-  unfolding ictx_sol_def ictx_terminates_def
+           (snd (interval_conf_sol gs empty_pred Pi ps))
+           (fst (interval_conf_sol gs empty_pred Pi ps))"
+  unfolding interval_conf_sol_def interval_conf_terminates_def
   by (rule TD_side_always_join_Interp.partial_post_solution[OF _ surjective_pairing])
 
-global_interpretation ictx_join: ictx_solved ictx_sol ictx_terminates
-  by unfold_locales (rule ictx_join_pp_st)
+global_interpretation interval_conf_join: interval_conf_solved interval_conf_sol interval_conf_terminates
+  by unfold_locales (rule interval_conf_join_pp_st)
 
-lemmas ictx_result_node_sound = ictx_join.result_node_sound
-lemmas ictx_analyse_result_eq = ictx_join.analyse_result_eq
-lemmas ictx_cinit_le_cinit_ivl_st = ictx_join.cinit_le_cinit_ivl_st
-lemmas ictx_report_ctx_proved_sound = ictx_join.report_ctx_proved_sound
-lemmas ictx_report_ctx_refuted_sound = ictx_join.report_ctx_refuted_sound
+lemmas interval_conf_result_node_sound = interval_conf_join.result_node_sound
+lemmas interval_conf_analyse_result_eq = interval_conf_join.analyse_result_eq
+lemmas interval_conf_cinit_le_cinit_ivl_st = interval_conf_join.cinit_le_cinit_ivl_st
+lemmas interval_conf_report_ctx_proved_sound = interval_conf_join.report_ctx_proved_sound
+lemmas interval_conf_report_ctx_refuted_sound = interval_conf_join.report_ctx_refuted_sound
 
 section \<open>Solved-result table\<close>
 
 text \<open>
   Whole-program convenience layer, interpreting \<^locale>\<open>dg_analysis_adapter\<close>
   directly rather than hand-rolling a temporary adapter the way Sign's own file (predating that
-  locale) had to. \<open>ictx_eqs_prog\<close>/\<open>ictx_sol_prog\<close>/\<open>ictx_terminates_prog\<close> mirror
+  locale) had to. \<open>interval_conf_eqs_prog\<close>/\<open>interval_conf_sol_prog\<close>/\<open>interval_conf_terminates_prog\<close> mirror
   Interval's own \<open>entry_state_eqs_prog\<close>/\<open>entry_state_sol_prog\<close>/
   \<open>entry_state_terminates_prog\<close>.
 \<close>
 
-definition ictx_eqs_prog ::
+definition interval_conf_eqs_prog ::
     "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog
        \<Rightarrow> (pp \<times> unit, (unit, unit) routed_gk, (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state) eqsT" where
-  "ictx_eqs_prog gs p =
-     ictx_eqs gs (resolved_st_q_is_bot_for (declared_global_vars p))
+  "interval_conf_eqs_prog gs p =
+     interval_conf_eqs gs (resolved_st_q_is_bot_for (declared_global_vars p))
        (prog_table p) (prog_procs p)"
 
-definition ictx_sol_prog ::
+definition interval_conf_sol_prog ::
     "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog
        \<Rightarrow> (pp \<times> unit) set \<times> (pp \<times> unit + (unit, unit) routed_gk \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)" where
-  "ictx_sol_prog gs p =
-     TD_side_always_join_Interp_solve (ictx_eqs_prog gs p) (cfg_exit (prog_cfg p), ())"
+  "interval_conf_sol_prog gs p =
+     TD_side_always_join_Interp_solve (interval_conf_eqs_prog gs p) (cfg_exit (prog_cfg p), ())"
 
-definition ictx_terminates_prog :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> bool" where
-  "ictx_terminates_prog gs p =
-     ictx_terminates gs (resolved_st_q_is_bot_for (declared_global_vars p))
+definition interval_conf_terminates_prog :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> bool" where
+  "interval_conf_terminates_prog gs p =
+     interval_conf_terminates gs (resolved_st_q_is_bot_for (declared_global_vars p))
        (prog_table p) (prog_procs p)"
 
-lemma ictx_terminates_prog_via_solve_c:
+lemma interval_conf_terminates_prog_via_solve_c:
   assumes "TD_side_always_join_Interp_solve_c
-             (ictx_eqs gs (resolved_st_q_is_bot_for (declared_global_vars p))
+             (interval_conf_eqs gs (resolved_st_q_is_bot_for (declared_global_vars p))
                 (prog_table p) (prog_procs p))
              (cfg_exit (compile_prog (prog_table p) (prog_procs p)), ()) \<noteq> None"
-  shows "ictx_terminates_prog gs p"
-  unfolding ictx_terminates_prog_def
-  using assms by (rule ictx_terminates_via_solve_c)
+  shows "interval_conf_terminates_prog gs p"
+  unfolding interval_conf_terminates_prog_def
+  using assms by (rule interval_conf_terminates_via_solve_c)
 
 definition analyse_interval_ctx_result_for ::
     "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> (unit, ivl abs_state) analysis_result" where
   "analyse_interval_ctx_result_for gs p =
      Analysis_Result
-       (fst (ictx_sol_prog gs p))
+       (fst (interval_conf_sol_prog gs p))
        (\<lambda>v ctx. normalize_point gs
                   (canonicalize_lift (resolved_st_q_is_bot_for (declared_global_vars p))
-                    (locals (snd (ictx_sol_prog gs p) (Inl (v, ctx))))))"
+                    (locals (snd (interval_conf_sol_prog gs p) (Inl (v, ctx))))))"
 
 declare analyse_interval_ctx_result_for_def [code del]
 
 lemma analyse_interval_ctx_result_for_code [code]:
   "analyse_interval_ctx_result_for gs p =
-     (let sol = ictx_sol_prog gs p; gl = declared_global_vars p
+     (let sol = interval_conf_sol_prog gs p; gl = declared_global_vars p
       in Analysis_Result (fst sol)
            (\<lambda>v ctx. normalize_point gs
                       (canonicalize_lift (resolved_st_q_is_bot_for gl)
@@ -700,7 +700,7 @@ text \<open>
   \<open>Inr (Analysis_Global ())\<close> is never read back to reconstruct program state.
 
   \<open>interval_spec\<close> carries an explicit executable bottom predicate and solves over the lifted
-  carrier, mirroring \<open>ictx_eqs\<close>'s convention
+  carrier, mirroring \<open>interval_conf_eqs\<close>'s convention
   (\<^theory>\<open>Voblint_Analysis.Interval_Exec_Sound\<close>) of taking \<open>empty_pred\<close> as a
   caller-supplied parameter rather than deriving it internally. Callers with a concrete
   program supply \<open>resolved_st_q_is_bot_for (declared_global_vars p)\<close>, exact for
@@ -905,8 +905,8 @@ definition entry_state_terminates ::
 
 text \<open>
   Discharging termination by execution, exactly as
-  \<open>ictx_terminates_prog_via_solve_c\<close> discharges
-  \<open>ictx_terminates_prog\<close>.
+  \<open>interval_conf_terminates_prog_via_solve_c\<close> discharges
+  \<open>interval_conf_terminates_prog\<close>.
 \<close>
 
 lemma entry_state_terminates_via_solve_c:
@@ -921,9 +921,9 @@ subsection \<open>Whole-program convenience layer\<close>
 text \<open>
   \<open>Pi ps\<close> alone give no @{type imp_prog} to read a declared-global list off of, so
   \<open>entry_state_eqs\<close> and friends keep \<open>empty_pred\<close> as an explicit parameter, mirroring
-  the context-insensitive run's own \<open>ictx_eqs\<close>. The \<open>_prog\<close> wrappers do
+  the context-insensitive run's own \<open>interval_conf_eqs\<close>. The \<open>_prog\<close> wrappers do
   have a program and instantiate \<open>empty_pred\<close> to \<^const>\<open>resolved_st_q_is_bot_for\<close> at its own
-  \<^const>\<open>declared_global_vars\<close>, mirroring \<open>ictx_sol_prog\<close>.
+  \<^const>\<open>declared_global_vars\<close>, mirroring \<open>interval_conf_sol_prog\<close>.
 \<close>
 
 definition entry_state_eqs_prog ::

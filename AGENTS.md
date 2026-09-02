@@ -284,6 +284,34 @@ happens to unfold first -- is not worth reasoning about per domain. A
 redundant declaration costs nothing; a missing one fails in generated ML, far
 from the theory that caused it.
 
+## Prose that claims a dependency must pin the theory
+
+A bare `\<open>name\<close>` cartouche is unchecked. `scripts/check_thy_prose_refs.py`
+only asks whether the name exists *somewhere* in the tree, which is all it can
+ask: prose here cites other domains' counterparts constantly and on purpose
+("mirroring Sign's own `analyse_sign_report_for`"), so a lint that demanded
+every reference resolve in the citing theory's own import closure would flag
+around a hundred correct sentences.
+
+That leaves one failure it cannot catch: prose stating that a proof is *built
+from* a fact the citing theory cannot see. `Interval_Entry` claimed its
+node-soundness bridges were built from `ictx_activation_collect_sound_warrow`
+for as long as `ictx_` was ambiguous -- a theorem only Int has, while the
+bridges actually use `interval_conf_result_node_sound_warrow`. The lint passed
+throughout, because the name existed in Int.
+
+So distinguish the two kinds of citation:
+
+- A **comparison** -- "mirroring", "as X does", "the counterpart of" -- may name
+  anything, in a bare cartouche.
+- A **dependency claim** -- "built from", "follows from", "discharged by" --
+  names the owning theory with `\<^theory>\<open>Session.Theory\<close>`, which
+  Isabelle checks and which therefore fails if the theory is not in scope. Use
+  `\<^const>` for a constant, since that is checked outright.
+
+The distinction is what a reader needs anyway: a comparison is orientation, a
+dependency claim is something they may go on to rely on.
+
 ## Do not infer removability from local non-use
 
 Before removing a parameter, name, key component, or locale assumption, check

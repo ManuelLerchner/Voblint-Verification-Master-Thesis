@@ -22,7 +22,7 @@ text \<open>
   @{text "x"} at the loop head --- not because of widening.
 
   This theory runs several fixpoint engines on the one canonical routed
-  equation system \<^const>\<open>ictx_eqs_prog\<close>: bounded Kleene iteration on
+  equation system \<^const>\<open>interval_conf_eqs_prog\<close>: bounded Kleene iteration on
   @{const eq}, @{const TD_side_warrowing_apinis_Interp_solve} (pointwise
   interval widening for solver termination), and -- through
   \<^const>\<open>run_menu\<close> -- every update rule on the solver menu at once.  All of
@@ -51,7 +51,7 @@ lemma loop_cfg_exit [simp]: "cfg_exit loop_cfg = FunctionResult (STR ''main'')"
 
 definition loop_ivl_eqs ::
     "(pp \<times> unit, (unit, unit) routed_gk, (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state) eqsT" where
-  "loop_ivl_eqs = ictx_eqs_prog loop_gs loop_prog"
+  "loop_ivl_eqs = interval_conf_eqs_prog loop_gs loop_prog"
 
 text \<open>One projection, reused by every engine below: take a solved D/G slot's local
   component and read \<open>x\<close> out of it.\<close>
@@ -95,7 +95,7 @@ lemma loop_body_ivl:
 definition loop_ivl_td_sol ::
     "(pp \<times> unit) set
        \<times> (pp \<times> unit + (unit, unit) routed_gk \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)" where
-  "loop_ivl_td_sol = ictx_sol_prog_warrow loop_gs loop_prog"
+  "loop_ivl_td_sol = interval_conf_sol_prog_warrow loop_gs loop_prog"
 
 definition loop_ivl_td_at :: "pp \<Rightarrow> ivl" where
   "loop_ivl_td_at pp = loop_read_x (snd loop_ivl_td_sol (Inl (pp, ())))"
@@ -131,7 +131,7 @@ subsection \<open>Whole-program entry points, and a second program\<close>
 text \<open>
   \<open>analyse_interval_join_result_for\<close> and \<open>analyse_interval_td_result_for\<close>
   (\<open>Interval_Checks\<close>) are the whole-program convenience layer over the very
-  \<^const>\<open>ictx_eqs_prog\<close> system \<open>loop_ivl_eqs\<close> above is, under the join and the
+  \<^const>\<open>interval_conf_eqs_prog\<close> system \<open>loop_ivl_eqs\<close> above is, under the join and the
   Apinis-warrowing update rule respectively. A different program from
   \<open>loop_prog\<close>, run through them: the entry points are not specialized to one
   hard-coded example.\<close>
@@ -140,9 +140,9 @@ definition analyse_interval_demo2_prog :: imp_prog where
   "analyse_interval_demo2_prog = program { void main() { a := 3; b := a + 1 } }"
 
 lemma analyse_interval_demo2_terminates:
-  "ictx_terminates_prog (declared_global analyse_interval_demo2_prog)
+  "interval_conf_terminates_prog (declared_global analyse_interval_demo2_prog)
      analyse_interval_demo2_prog"
-  by (rule ictx_terminates_prog_via_solve_c) eval
+  by (rule interval_conf_terminates_prog_via_solve_c) eval
 
 definition analyse_interval_demo2_env :: "vname \<Rightarrow> ivl" where
   "analyse_interval_demo2_env =

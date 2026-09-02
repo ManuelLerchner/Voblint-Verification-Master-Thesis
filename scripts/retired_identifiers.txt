@@ -126,3 +126,8 @@ gamma_unit
 sound_dg_spec_unit_for
 unit_dg_exec_analysis
 ownership_split_step_for
+ictx_eqs
+ictx_sol
+ictx_sol_prog
+ictx_terminates
+ictx_terminates_prog

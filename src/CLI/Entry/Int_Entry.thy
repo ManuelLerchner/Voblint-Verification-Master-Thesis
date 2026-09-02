@@ -24,7 +24,7 @@ text \<open>
   (\<^theory>\<open>Voblint_Analysis.Int_Analyses\<close>): the routed-unit producer's own solved
   table, at \<open>mode\<close> and \<open>prog_main_name\<close>. \<open>analyse_int_ctx_result_warrow_node_sound_for\<close>
   below is the node-soundness bridge for that table, built from
-  \<open>ictx_activation_collect_sound_warrow\<close> (the routed spine's own activation-indexed
+  \<open>int_conf_activation_collect_sound_warrow\<close> (the routed spine's own activation-indexed
   collecting soundness) composed with \<open>activation_collect_unit_eq_ltr_collect\<close> (the
   unit-context collapse to \<^const>\<open>ltr_collect\<close>) --- the routed spine needs no
   \<open>wf_compile_input\<close>/finiteness/node-membership premise, so this bridge only takes the
@@ -38,7 +38,7 @@ text \<open>
   (\<^theory>\<open>Voblint_Analysis.Int_Analyses\<close>): the routed-unit producer's own solved
   table, at \<open>mode\<close> and \<open>prog_main_name\<close>. \<open>analyse_int_ctx_result_warrow_node_sound_for\<close>
   below is the node-soundness bridge for that table, built from
-  \<open>ictx_activation_collect_sound_warrow\<close> (the routed spine's own activation-indexed
+  \<open>int_conf_activation_collect_sound_warrow\<close> (the routed spine's own activation-indexed
   collecting soundness) composed with \<open>activation_collect_unit_eq_ltr_collect\<close> (the
   unit-context collapse to \<^const>\<open>ltr_collect\<close>) rather than from
   \<open>p_reg\<close>/\<open>analyse_int_dg_for\<close> --- the routed spine needs no
@@ -47,19 +47,19 @@ text \<open>
 \<close>
 
 lemma analyse_int_ctx_result_warrow_node_sound_for:
-  assumes solve: "ictx_terminates_prog_warrow mode pgs p"
-      and entry_cov: "(cfg_entry (prog_cfg p), ()) \<in> fst (ictx_sol_prog_warrow mode pgs p)"
+  assumes solve: "int_conf_terminates_prog_warrow mode pgs p"
+      and entry_cov: "(cfg_entry (prog_cfg p), ()) \<in> fst (int_conf_sol_prog_warrow mode pgs p)"
       and fwd_ok:
-        "\<And>u a w ctx. (u, ctx) \<in> fst (ictx_sol_prog_warrow mode pgs p)
-           \<Longrightarrow> (u, a, w) \<in> intra (prog_cfg p) \<Longrightarrow> (w, ctx) \<in> fst (ictx_sol_prog_warrow mode pgs p)"
+        "\<And>u a w ctx. (u, ctx) \<in> fst (int_conf_sol_prog_warrow mode pgs p)
+           \<Longrightarrow> (u, a, w) \<in> intra (prog_cfg p) \<Longrightarrow> (w, ctx) \<in> fst (int_conf_sol_prog_warrow mode pgs p)"
       and call_fwd_ok:
-        "\<And>u ctx dst fs as q k. (u, ctx) \<in> fst (ictx_sol_prog_warrow mode pgs p)
+        "\<And>u ctx dst fs as q k. (u, ctx) \<in> fst (int_conf_sol_prog_warrow mode pgs p)
            \<Longrightarrow> (u, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg p)
-           \<Longrightarrow> (FunctionEntry q, ()) \<in> fst (ictx_sol_prog_warrow mode pgs p)"
+           \<Longrightarrow> (FunctionEntry q, ()) \<in> fst (int_conf_sol_prog_warrow mode pgs p)"
       and comb_fwd_ok:
-        "\<And>cl c1 dst fs as q k. (cl, c1) \<in> fst (ictx_sol_prog_warrow mode pgs p)
+        "\<And>cl c1 dst fs as q k. (cl, c1) \<in> fst (int_conf_sol_prog_warrow mode pgs p)
            \<Longrightarrow> (cl, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg p)
-           \<Longrightarrow> (k, c1) \<in> fst (ictx_sol_prog_warrow mode pgs p)"
+           \<Longrightarrow> (k, c1) \<in> fst (int_conf_sol_prog_warrow mode pgs p)"
   shows "ltr_collect pgs (prog_cfg p) (cinit_stores pgs) v
            \<subseteq> \<lbrakk>case lookup_context (analyse_int_ctx_result_warrow_for mode pgs p) v () of
                              Bot \<Rightarrow> bot | Lifted st \<Rightarrow> st\<rbrakk>"
@@ -68,78 +68,78 @@ proof -
     where "empty_pred = resolved_st_q_is_bot_for (declared_global_vars p)"
   have exact: "\<And>s. empty_pred s = is_empty_state (fun_of_resolved_st_q_for pgs s)"
     unfolding empty_pred_def by (rule resolved_st_q_is_bot_for_iff[OF declared_global_iff])
-  have sol_eq: "ictx_sol_prog_warrow mode pgs p
-      = ictx_sol_warrow mode empty_pred pgs (prog_table p) (prog_procs p)"
-    unfolding ictx_sol_prog_warrow_def ictx_eqs_prog_def ictx_sol_warrow_def empty_pred_def prog_cfg_def by simp
+  have sol_eq: "int_conf_sol_prog_warrow mode pgs p
+      = int_conf_sol_warrow mode empty_pred pgs (prog_table p) (prog_procs p)"
+    unfolding int_conf_sol_prog_warrow_def int_conf_eqs_prog_def int_conf_sol_warrow_def empty_pred_def prog_cfg_def by simp
   have cfg_eq: "prog_cfg p = compile_prog (prog_table p) (prog_procs p)"
     by (rule prog_cfg_def)
-  have solves': "ictx_terminates_warrow mode empty_pred pgs (prog_table p) (prog_procs p)"
-    using solve unfolding ictx_terminates_prog_warrow_def empty_pred_def .
+  have solves': "int_conf_terminates_warrow mode empty_pred pgs (prog_table p) (prog_procs p)"
+    using solve unfolding int_conf_terminates_prog_warrow_def empty_pred_def .
   have entry_cov': "(cfg_entry (compile_prog (prog_table p) (prog_procs p)), ())
-      \<in> fst (ictx_sol_warrow mode empty_pred pgs (prog_table p) (prog_procs p))"
+      \<in> fst (int_conf_sol_warrow mode empty_pred pgs (prog_table p) (prog_procs p))"
     using entry_cov unfolding sol_eq[symmetric] cfg_eq[symmetric] .
-  have fwd_ok': "\<And>u a w ctx. (u, ctx) \<in> fst (ictx_sol_warrow mode empty_pred pgs (prog_table p) (prog_procs p))
+  have fwd_ok': "\<And>u a w ctx. (u, ctx) \<in> fst (int_conf_sol_warrow mode empty_pred pgs (prog_table p) (prog_procs p))
       \<Longrightarrow> (u, a, w) \<in> intra (compile_prog (prog_table p) (prog_procs p))
-      \<Longrightarrow> (w, ctx) \<in> fst (ictx_sol_warrow mode empty_pred pgs (prog_table p) (prog_procs p))"
+      \<Longrightarrow> (w, ctx) \<in> fst (int_conf_sol_warrow mode empty_pred pgs (prog_table p) (prog_procs p))"
     using fwd_ok unfolding sol_eq[symmetric] cfg_eq[symmetric] .
   have call_fwd_ok': "\<And>u ctx dst fs as q k.
-      (u, ctx) \<in> fst (ictx_sol_warrow mode empty_pred pgs (prog_table p) (prog_procs p))
+      (u, ctx) \<in> fst (int_conf_sol_warrow mode empty_pred pgs (prog_table p) (prog_procs p))
       \<Longrightarrow> (u, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (compile_prog (prog_table p) (prog_procs p))
-      \<Longrightarrow> (FunctionEntry q, ()) \<in> fst (ictx_sol_warrow mode empty_pred pgs (prog_table p) (prog_procs p))"
+      \<Longrightarrow> (FunctionEntry q, ()) \<in> fst (int_conf_sol_warrow mode empty_pred pgs (prog_table p) (prog_procs p))"
     using call_fwd_ok unfolding sol_eq[symmetric] cfg_eq[symmetric] .
   have comb_fwd_ok': "\<And>cl c1 dst fs as q k.
-      (cl, c1) \<in> fst (ictx_sol_warrow mode empty_pred pgs (prog_table p) (prog_procs p))
+      (cl, c1) \<in> fst (int_conf_sol_warrow mode empty_pred pgs (prog_table p) (prog_procs p))
       \<Longrightarrow> (cl, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (compile_prog (prog_table p) (prog_procs p))
-      \<Longrightarrow> (k, c1) \<in> fst (ictx_sol_warrow mode empty_pred pgs (prog_table p) (prog_procs p))"
+      \<Longrightarrow> (k, c1) \<in> fst (int_conf_sol_warrow mode empty_pred pgs (prog_table p) (prog_procs p))"
     using comb_fwd_ok unfolding sol_eq[symmetric] cfg_eq[symmetric] .
   have s0_sound: "cinit_stores pgs \<subseteq> int_dom_gamma pgs (Lifted cinit_int_dom_st) Bot"
-    by (rule ictx_cinit_le_cinit_int_dom_st_warrow[OF solves' exact entry_cov' fwd_ok' call_fwd_ok'
+    by (rule int_conf_cinit_le_cinit_int_dom_st_warrow[OF solves' exact entry_cov' fwd_ok' call_fwd_ok'
                                                      comb_fwd_ok'])
   have node_sound: "activation_collect pgs enterc_unit ()
         (compile_prog (prog_table p) (prog_procs p)) (cinit_stores pgs) v ()
       \<subseteq> \<lbrakk>case lookup_context
               (dg_analysis_adapter.analyse_result
-                 (snd (ictx_sol_warrow mode empty_pred pgs (prog_table p) (prog_procs p)))
-                 (fst (ictx_sol_warrow mode empty_pred pgs (prog_table p) (prog_procs p)))
+                 (snd (int_conf_sol_warrow mode empty_pred pgs (prog_table p) (prog_procs p)))
+                 (fst (int_conf_sol_warrow mode empty_pred pgs (prog_table p) (prog_procs p)))
                  (map_lift (fun_of_resolved_st_q_for pgs)))
               v () of
             Bot \<Rightarrow> bot | Lifted st \<Rightarrow> st\<rbrakk>"
-    by (rule ictx_result_node_sound_warrow
+    by (rule int_conf_result_node_sound_warrow
           [OF solves' exact entry_cov' fwd_ok' call_fwd_ok' comb_fwd_ok' entry_cov' s0_sound])
   have ltr_eq: "ltr_collect pgs (prog_cfg p) (cinit_stores pgs) v
       = activation_collect pgs enterc_unit ()
           (compile_prog (prog_table p) (prog_procs p)) (cinit_stores pgs) v ()"
     unfolding cfg_eq by (rule activation_collect_unit_eq_ltr_collect[symmetric])
   have result_eq: "lookup_context (analyse_int_ctx_result_warrow_for mode pgs p) v ()
-      = (if (v, ()) \<in> fst (ictx_sol_prog_warrow mode pgs p)
+      = (if (v, ()) \<in> fst (int_conf_sol_prog_warrow mode pgs p)
          then normalize_point pgs
                 (canonicalize_lift empty_pred
-                  (locals (snd (ictx_sol_prog_warrow mode pgs p) (Inl (v, ())))))
+                  (locals (snd (int_conf_sol_prog_warrow mode pgs p) (Inl (v, ())))))
          else Bot)"
     unfolding analyse_int_ctx_result_warrow_for_def lookup_context_def empty_pred_def
     by simp
   have adapter_eq0: "lookup_context
           (dg_analysis_adapter.analyse_result
-             (snd (ictx_sol_warrow mode empty_pred pgs (prog_table p) (prog_procs p)))
-             (fst (ictx_sol_warrow mode empty_pred pgs (prog_table p) (prog_procs p)))
+             (snd (int_conf_sol_warrow mode empty_pred pgs (prog_table p) (prog_procs p)))
+             (fst (int_conf_sol_warrow mode empty_pred pgs (prog_table p) (prog_procs p)))
              (map_lift (fun_of_resolved_st_q_for pgs)))
           v ()
-      = (if (v, ()) \<in> fst (ictx_sol_warrow mode empty_pred pgs (prog_table p) (prog_procs p))
+      = (if (v, ()) \<in> fst (int_conf_sol_warrow mode empty_pred pgs (prog_table p) (prog_procs p))
          then normalize_point pgs
                 (canonicalize_lift empty_pred
-                  (locals (snd (ictx_sol_warrow mode empty_pred pgs (prog_table p) (prog_procs p))
+                  (locals (snd (int_conf_sol_warrow mode empty_pred pgs (prog_table p) (prog_procs p))
                     (Inl (v, ())))))
          else Bot)"
-    by (rule ictx_analyse_result_eq_warrow[OF solves' exact entry_cov' fwd_ok' call_fwd_ok' comb_fwd_ok'])
-  have adapter_eq: "(if (v, ()) \<in> fst (ictx_sol_prog_warrow mode pgs p)
+    by (rule int_conf_analyse_result_eq_warrow[OF solves' exact entry_cov' fwd_ok' call_fwd_ok' comb_fwd_ok'])
+  have adapter_eq: "(if (v, ()) \<in> fst (int_conf_sol_prog_warrow mode pgs p)
          then normalize_point pgs
                 (canonicalize_lift empty_pred
-                  (locals (snd (ictx_sol_prog_warrow mode pgs p) (Inl (v, ())))))
+                  (locals (snd (int_conf_sol_prog_warrow mode pgs p) (Inl (v, ())))))
          else Bot)
       = lookup_context
           (dg_analysis_adapter.analyse_result
-             (snd (ictx_sol_prog_warrow mode pgs p))
-             (fst (ictx_sol_prog_warrow mode pgs p)) (map_lift (fun_of_resolved_st_q_for pgs)))
+             (snd (int_conf_sol_prog_warrow mode pgs p))
+             (fst (int_conf_sol_prog_warrow mode pgs p)) (map_lift (fun_of_resolved_st_q_for pgs)))
           v ()"
     using adapter_eq0[unfolded sol_eq[symmetric]]
     by (rule sym)
@@ -150,19 +150,19 @@ qed
 
 theorem analyse_int_report_sound_proved_for:
   fixes v :: pp and c :: exp
-  assumes solve: "ictx_terminates_prog_warrow mode pgs p"
-      and entry_cov: "(cfg_entry (prog_cfg p), ()) \<in> fst (ictx_sol_prog_warrow mode pgs p)"
+  assumes solve: "int_conf_terminates_prog_warrow mode pgs p"
+      and entry_cov: "(cfg_entry (prog_cfg p), ()) \<in> fst (int_conf_sol_prog_warrow mode pgs p)"
       and fwd_ok:
-        "\<And>u a w ctx. (u, ctx) \<in> fst (ictx_sol_prog_warrow mode pgs p)
-           \<Longrightarrow> (u, a, w) \<in> intra (prog_cfg p) \<Longrightarrow> (w, ctx) \<in> fst (ictx_sol_prog_warrow mode pgs p)"
+        "\<And>u a w ctx. (u, ctx) \<in> fst (int_conf_sol_prog_warrow mode pgs p)
+           \<Longrightarrow> (u, a, w) \<in> intra (prog_cfg p) \<Longrightarrow> (w, ctx) \<in> fst (int_conf_sol_prog_warrow mode pgs p)"
       and call_fwd_ok:
-        "\<And>u ctx dst fs as q k. (u, ctx) \<in> fst (ictx_sol_prog_warrow mode pgs p)
+        "\<And>u ctx dst fs as q k. (u, ctx) \<in> fst (int_conf_sol_prog_warrow mode pgs p)
            \<Longrightarrow> (u, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg p)
-           \<Longrightarrow> (FunctionEntry q, ()) \<in> fst (ictx_sol_prog_warrow mode pgs p)"
+           \<Longrightarrow> (FunctionEntry q, ()) \<in> fst (int_conf_sol_prog_warrow mode pgs p)"
       and comb_fwd_ok:
-        "\<And>cl c1 dst fs as q k. (cl, c1) \<in> fst (ictx_sol_prog_warrow mode pgs p)
+        "\<And>cl c1 dst fs as q k. (cl, c1) \<in> fst (int_conf_sol_prog_warrow mode pgs p)
            \<Longrightarrow> (cl, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg p)
-           \<Longrightarrow> (k, c1) \<in> fst (ictx_sol_prog_warrow mode pgs p)"
+           \<Longrightarrow> (k, c1) \<in> fst (int_conf_sol_prog_warrow mode pgs p)"
       and mem: "(v, c, Check_Proved) \<in> set (analyse_int_report_for mode pgs p)"
   shows "\<forall>s \<in> ltr_collect pgs (prog_cfg p) (cinit_stores pgs) v. truthy (aval c s)"
 proof -
@@ -189,19 +189,19 @@ qed
 
 theorem analyse_int_report_sound_refuted_for:
   fixes v :: pp and c :: exp
-  assumes solve: "ictx_terminates_prog_warrow mode pgs p"
-      and entry_cov: "(cfg_entry (prog_cfg p), ()) \<in> fst (ictx_sol_prog_warrow mode pgs p)"
+  assumes solve: "int_conf_terminates_prog_warrow mode pgs p"
+      and entry_cov: "(cfg_entry (prog_cfg p), ()) \<in> fst (int_conf_sol_prog_warrow mode pgs p)"
       and fwd_ok:
-        "\<And>u a w ctx. (u, ctx) \<in> fst (ictx_sol_prog_warrow mode pgs p)
-           \<Longrightarrow> (u, a, w) \<in> intra (prog_cfg p) \<Longrightarrow> (w, ctx) \<in> fst (ictx_sol_prog_warrow mode pgs p)"
+        "\<And>u a w ctx. (u, ctx) \<in> fst (int_conf_sol_prog_warrow mode pgs p)
+           \<Longrightarrow> (u, a, w) \<in> intra (prog_cfg p) \<Longrightarrow> (w, ctx) \<in> fst (int_conf_sol_prog_warrow mode pgs p)"
       and call_fwd_ok:
-        "\<And>u ctx dst fs as q k. (u, ctx) \<in> fst (ictx_sol_prog_warrow mode pgs p)
+        "\<And>u ctx dst fs as q k. (u, ctx) \<in> fst (int_conf_sol_prog_warrow mode pgs p)
            \<Longrightarrow> (u, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg p)
-           \<Longrightarrow> (FunctionEntry q, ()) \<in> fst (ictx_sol_prog_warrow mode pgs p)"
+           \<Longrightarrow> (FunctionEntry q, ()) \<in> fst (int_conf_sol_prog_warrow mode pgs p)"
       and comb_fwd_ok:
-        "\<And>cl c1 dst fs as q k. (cl, c1) \<in> fst (ictx_sol_prog_warrow mode pgs p)
+        "\<And>cl c1 dst fs as q k. (cl, c1) \<in> fst (int_conf_sol_prog_warrow mode pgs p)
            \<Longrightarrow> (cl, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg p)
-           \<Longrightarrow> (k, c1) \<in> fst (ictx_sol_prog_warrow mode pgs p)"
+           \<Longrightarrow> (k, c1) \<in> fst (int_conf_sol_prog_warrow mode pgs p)"
       and mem: "(v, c, Check_Refuted) \<in> set (analyse_int_report_for mode pgs p)"
   shows "\<forall>s \<in> ltr_collect pgs (prog_cfg p) (cinit_stores pgs) v. \<not> truthy (aval c s)"
 proof -
@@ -240,19 +240,19 @@ text \<open>
 corollary analyse_int_report_sound_proved:
   fixes p :: imp_prog and v :: pp and c :: exp
   assumes wf: "wf_compile_input (declared_global p) (prog_table p) (prog_procs p)"
-      and solve: "ictx_terminates_prog_warrow Refine_Fixpoint (declared_global p) p"
-      and entry_cov: "(cfg_entry (prog_cfg p), ()) \<in> fst (ictx_sol_prog_warrow Refine_Fixpoint (declared_global p) p)"
+      and solve: "int_conf_terminates_prog_warrow Refine_Fixpoint (declared_global p) p"
+      and entry_cov: "(cfg_entry (prog_cfg p), ()) \<in> fst (int_conf_sol_prog_warrow Refine_Fixpoint (declared_global p) p)"
       and fwd_ok:
-        "\<And>u a w ctx. (u, ctx) \<in> fst (ictx_sol_prog_warrow Refine_Fixpoint (declared_global p) p)
-           \<Longrightarrow> (u, a, w) \<in> intra (prog_cfg p) \<Longrightarrow> (w, ctx) \<in> fst (ictx_sol_prog_warrow Refine_Fixpoint (declared_global p) p)"
+        "\<And>u a w ctx. (u, ctx) \<in> fst (int_conf_sol_prog_warrow Refine_Fixpoint (declared_global p) p)
+           \<Longrightarrow> (u, a, w) \<in> intra (prog_cfg p) \<Longrightarrow> (w, ctx) \<in> fst (int_conf_sol_prog_warrow Refine_Fixpoint (declared_global p) p)"
       and call_fwd_ok:
-        "\<And>u ctx dst fs as q k. (u, ctx) \<in> fst (ictx_sol_prog_warrow Refine_Fixpoint (declared_global p) p)
+        "\<And>u ctx dst fs as q k. (u, ctx) \<in> fst (int_conf_sol_prog_warrow Refine_Fixpoint (declared_global p) p)
            \<Longrightarrow> (u, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg p)
-           \<Longrightarrow> (FunctionEntry q, ()) \<in> fst (ictx_sol_prog_warrow Refine_Fixpoint (declared_global p) p)"
+           \<Longrightarrow> (FunctionEntry q, ()) \<in> fst (int_conf_sol_prog_warrow Refine_Fixpoint (declared_global p) p)"
       and comb_fwd_ok:
-        "\<And>cl c1 dst fs as q k. (cl, c1) \<in> fst (ictx_sol_prog_warrow Refine_Fixpoint (declared_global p) p)
+        "\<And>cl c1 dst fs as q k. (cl, c1) \<in> fst (int_conf_sol_prog_warrow Refine_Fixpoint (declared_global p) p)
            \<Longrightarrow> (cl, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg p)
-           \<Longrightarrow> (k, c1) \<in> fst (ictx_sol_prog_warrow Refine_Fixpoint (declared_global p) p)"
+           \<Longrightarrow> (k, c1) \<in> fst (int_conf_sol_prog_warrow Refine_Fixpoint (declared_global p) p)"
       and mem: "(v, c, Check_Proved) \<in> set (analyse_int_report p)"
   shows "\<forall>s \<in> ltr_collect (declared_global p) (prog_cfg p) (cinit_stores (declared_global p)) v.
            truthy (aval c s)"
@@ -264,19 +264,19 @@ corollary analyse_int_report_sound_proved:
 corollary analyse_int_report_sound_refuted:
   fixes p :: imp_prog and v :: pp and c :: exp
   assumes wf: "wf_compile_input (declared_global p) (prog_table p) (prog_procs p)"
-      and solve: "ictx_terminates_prog_warrow Refine_Fixpoint (declared_global p) p"
-      and entry_cov: "(cfg_entry (prog_cfg p), ()) \<in> fst (ictx_sol_prog_warrow Refine_Fixpoint (declared_global p) p)"
+      and solve: "int_conf_terminates_prog_warrow Refine_Fixpoint (declared_global p) p"
+      and entry_cov: "(cfg_entry (prog_cfg p), ()) \<in> fst (int_conf_sol_prog_warrow Refine_Fixpoint (declared_global p) p)"
       and fwd_ok:
-        "\<And>u a w ctx. (u, ctx) \<in> fst (ictx_sol_prog_warrow Refine_Fixpoint (declared_global p) p)
-           \<Longrightarrow> (u, a, w) \<in> intra (prog_cfg p) \<Longrightarrow> (w, ctx) \<in> fst (ictx_sol_prog_warrow Refine_Fixpoint (declared_global p) p)"
+        "\<And>u a w ctx. (u, ctx) \<in> fst (int_conf_sol_prog_warrow Refine_Fixpoint (declared_global p) p)
+           \<Longrightarrow> (u, a, w) \<in> intra (prog_cfg p) \<Longrightarrow> (w, ctx) \<in> fst (int_conf_sol_prog_warrow Refine_Fixpoint (declared_global p) p)"
       and call_fwd_ok:
-        "\<And>u ctx dst fs as q k. (u, ctx) \<in> fst (ictx_sol_prog_warrow Refine_Fixpoint (declared_global p) p)
+        "\<And>u ctx dst fs as q k. (u, ctx) \<in> fst (int_conf_sol_prog_warrow Refine_Fixpoint (declared_global p) p)
            \<Longrightarrow> (u, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg p)
-           \<Longrightarrow> (FunctionEntry q, ()) \<in> fst (ictx_sol_prog_warrow Refine_Fixpoint (declared_global p) p)"
+           \<Longrightarrow> (FunctionEntry q, ()) \<in> fst (int_conf_sol_prog_warrow Refine_Fixpoint (declared_global p) p)"
       and comb_fwd_ok:
-        "\<And>cl c1 dst fs as q k. (cl, c1) \<in> fst (ictx_sol_prog_warrow Refine_Fixpoint (declared_global p) p)
+        "\<And>cl c1 dst fs as q k. (cl, c1) \<in> fst (int_conf_sol_prog_warrow Refine_Fixpoint (declared_global p) p)
            \<Longrightarrow> (cl, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg p)
-           \<Longrightarrow> (k, c1) \<in> fst (ictx_sol_prog_warrow Refine_Fixpoint (declared_global p) p)"
+           \<Longrightarrow> (k, c1) \<in> fst (int_conf_sol_prog_warrow Refine_Fixpoint (declared_global p) p)"
       and mem: "(v, c, Check_Refuted) \<in> set (analyse_int_report p)"
   shows "\<forall>s \<in> ltr_collect (declared_global p) (prog_cfg p) (cinit_stores (declared_global p)) v.
            \<not> truthy (aval c s)"

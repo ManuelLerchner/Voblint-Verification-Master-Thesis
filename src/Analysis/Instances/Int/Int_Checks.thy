@@ -42,8 +42,8 @@ text \<open>
   \<open>analyse_int_join_result\<close> is \<^const>\<open>analyse_int_result\<close>'s sibling under the
   always-join update rule: a one-line partial application of
   \<^const>\<open>analyse_int_ctx_result_for\<close> (\<^theory>\<open>Voblint_Analysis.Int_Analyses\<close>), fixed at
-  \<^const>\<open>prog_main_name\<close>, reading \<^const>\<open>ictx_sol_prog\<close> instead of
-  \<^const>\<open>ictx_sol_prog_warrow\<close>. The CLI does not expose refinement mode as a separate
+  \<^const>\<open>prog_main_name\<close>, reading \<^const>\<open>int_conf_sol_prog\<close> instead of
+  \<^const>\<open>int_conf_sol_prog_warrow\<close>. The CLI does not expose refinement mode as a separate
   axis, so the convenience instance below stays pinned at \<^const>\<open>Refine_Fixpoint\<close> like
   every other exported \<open>int_dom\<close> entry point.
 \<close>
@@ -62,7 +62,7 @@ text \<open>
   \<open>analyse_int_per_origin_result\<close> mirrors \<^const>\<open>analyse_int_join_result\<close> exactly, a
   one-line partial application of \<^const>\<open>analyse_int_ctx_result_per_origin_for\<close>
   (\<^theory>\<open>Voblint_Analysis.Int_Analyses\<close>), fixed at \<^const>\<open>prog_main_name\<close>, reading
-  \<^const>\<open>ictx_sol_prog_per_origin\<close> instead of \<^const>\<open>ictx_sol_prog\<close>.
+  \<^const>\<open>int_conf_sol_prog_per_origin\<close> instead of \<^const>\<open>int_conf_sol_prog\<close>.
 \<close>
 
 definition analyse_int_per_origin_result_for ::
