@@ -402,7 +402,7 @@ certified bound is wanted.
 
 `domain_transfer`'s shared `tf_branch` field stays plain-state-valued (`branch`, not
 `branch_lifted`); `ownership_split_dg_spec_for`'s diagonal D/G spec still dispatches branch through
-it (`dgs_branch = ownership_split_step_for gs (branch# tf b pol)`). `branch` is intentionally the
+it (`dgs_branch = ownership_split_transfer gs (branch# tf b pol)`). `branch` is intentionally the
 projection of the more expressive `branch_lifted`, which the TD-Side effectful
 architecture uses directly where it must preserve explicit Deadcode/reachability
 distinctions that `branch`'s whole-state-bottom encoding cannot make; the production D/G

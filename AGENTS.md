@@ -284,6 +284,48 @@ happens to unfold first -- is not worth reasoning about per domain. A
 redundant declaration costs nothing; a missing one fails in generated ML, far
 from the theory that caused it.
 
+## Do not infer removability from local non-use
+
+Before removing a parameter, name, key component, or locale assumption, check
+three things:
+
+1. whether it occurs in the fully expanded statement or constructed value;
+2. whether it is consumed through locale inheritance, interpretation,
+   abbreviation, or another transitive dependency;
+3. whether callers use it to distinguish instantiated objects, even when the
+   current body does not inspect it.
+
+A component can be load-bearing as identity, routing information, or inherited
+configuration while the declaration in front of you never applies it. A lemma
+about `f gs x` needs `gs` whether or not the lemma inspects it, and a locale
+that forwards a parameter to a parent needs it whether or not its own body
+mentions it again. Local body inspection and raw occurrence counts are
+discovery signals, not evidence.
+
+The same failure mode produced three separate defects here: `enter_local`
+(a deleted constant left an assumption quantifying over an arbitrary
+function), `gk` (a deleted datatype let a signature silently rebind to another
+theory's type of the same name), and `gs` (an audit read "not applied in the
+body" as "removable" for a locale parameter its parent consumes nine times).
+
+## Where the global-variable predicate may appear
+
+`gs :: vname => bool` is VIMP's declaration of which names are global. It has
+three legitimate roles: naming the concrete call/return semantics an abstract
+answer must over-approximate (`call_enter`, `combine_collect`, `valid_ltr`),
+implementing the ownership-split specification, and keying the executable
+carrier's locations. It is not a framework parameter, and the invariant is:
+
+> `gs` exists only above or at the transfer boundary. Below it, operations may
+> consume an already-classified location but must never classify a name.
+
+Concretely, `Framework/Constraints` is ownership-free -- `CFG_Enumeration`,
+`DG_Framework` and `DG_Keyed_Generator` mention `gs` zero times, as do
+`DG_Spec`, `DG_Keyed_Generator` and `DG_Manager`. A carrier that holds
+`Local_Location` and `Global_Location` is not itself evidence of leakage; a
+join, order, or widening operation that needs `gs` to reconstruct that
+classification would be.
+
 ## Deleting an API
 
 Isabelle does not reject every surviving use of a removed name. In a term it
