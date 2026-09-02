@@ -319,12 +319,21 @@ carrier's locations. It is not a framework parameter, and the invariant is:
 > `gs` exists only above or at the transfer boundary. Below it, operations may
 > consume an already-classified location but must never classify a name.
 
-Concretely, `Framework/Constraints` is ownership-free -- `CFG_Enumeration`,
-`DG_Framework` and `DG_Keyed_Generator` mention `gs` zero times, as do
-`DG_Spec`, `DG_Keyed_Generator` and `DG_Manager`. A carrier that holds
-`Local_Location` and `Global_Location` is not itself evidence of leakage; a
-join, order, or widening operation that needs `gs` to reconstruct that
-classification would be.
+The checkable form of that is narrower and has no exceptions:
+`Framework/Constraints` must not depend on ownership-split semantics.
+`CFG_Enumeration`, `DG_Framework` and `DG_Keyed_Generator` mention `gs` zero
+times, as do `DG_Spec` and `DG_Manager`.
+
+The boundary statement above has exactly one known exception, and it is
+deliberate. `resolved_st_is_bot` classifies below the boundary because the
+quotient's equality observes every tagged location while the concretization
+reads back only the one `gs` selects for each name; a bottom test that must
+agree with the readback has to filter the others, which `canonical_location`
+names. A carrier holding `Local_Location` and `Global_Location` is not itself
+evidence of leakage -- a join, order or widening that needed `gs` to
+reconstruct the classification would be, and none does. The exception is
+expected to disappear when variables carry resolved declaration identities
+rather than textual names.
 
 ## Deleting an API
 

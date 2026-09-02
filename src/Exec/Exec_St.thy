@@ -406,13 +406,67 @@ text \<open>
   only the ps branch can safely observe a global.
 \<close>
 
+text \<open>
+  Why bottom detection is the one carrier operation that consults \<open>gs\<close>. The
+  quotient \<^typ>\<open>'a resolved_st_q\<close> identifies two states exactly when their
+  lookup functions agree at \<^emph>\<open>every\<close> location, whereas
+  \<^const>\<open>fun_of_resolved_st_for\<close> reads back only the one location \<open>gs\<close> selects
+  for each vname. An override at the other tagging of a name is therefore
+  visible to equality and invisible to the concretization, and a bottom test
+  that must agree with \<^const>\<open>is_empty_state\<close> on the readback has to skip it.
+  \<open>canonical_location\<close> names that filter. Every other operation on the carrier --
+  lookup, update, order, join, widening, narrowing -- treats all locations alike
+  and needs no classifier.
+\<close>
+
+definition canonical_location ::
+  "(vname => bool) => location => bool" where
+  "canonical_location gs loc \<longleftrightarrow> location_of gs (location_vname loc) = loc"
+
+lemma canonical_location_location_of [simp]:
+  "canonical_location gs (location_of gs x)"
+  by (simp add: canonical_location_def location_of_def)
+
 definition resolved_st_is_bot ::
   "(vname => bool) => ('a::executable_domain) resolved_st => bool" where
   "resolved_st_is_bot gs s =
      (case s of (dl, dg, ps) =>
        is_empty dl \<or>
        (\<exists>loc \<in> set (map fst ps). is_empty (lookup_resolved_st s loc)
-          \<and> location_of gs (location_vname loc) = loc))"
+          \<and> canonical_location gs loc))"
+
+text \<open>
+  Every state a transfer produces is canonical: writes go through
+  \<^const>\<open>location_of\<close>, and removing a key cannot introduce one. The invariant is
+  stated rather than enforced by the type, because the tagging that makes a
+  location canonical depends on the program's own \<open>gs\<close>.
+\<close>
+
+definition canonical_resolved_st ::
+  "(vname => bool) => ('a::bot) resolved_st => bool" where
+  "canonical_resolved_st gs s =
+     (case s of (dl, dg, ps) => (\<forall>loc \<in> set (map fst ps). canonical_location gs loc))"
+
+lemma remove_resolved_key_subset:
+  "set (remove_resolved_key loc ps) \<subseteq> set ps"
+  by (induction ps) (auto split: if_splits)
+
+lemma fst_remove_resolved_key_subset:
+  "fst ` set (remove_resolved_key loc ps) \<subseteq> fst ` set ps"
+  by (rule image_mono[OF remove_resolved_key_subset])
+
+lemma canonical_resolved_st_update_location_of:
+  assumes "canonical_resolved_st gs s"
+  shows "canonical_resolved_st gs (update_resolved_st s (location_of gs x) a)"
+proof -
+  obtain dl dg ps where s_eq: "s = (dl, dg, ps)" by (cases s) auto
+  have ps_can: "\<forall>loc \<in> fst ` set ps. canonical_location gs loc"
+    using assms by (simp add: canonical_resolved_st_def s_eq)
+  have "\<forall>loc \<in> fst ` set (remove_resolved_key (location_of gs x) ps). canonical_location gs loc"
+    using ps_can fst_remove_resolved_key_subset by blast
+  thus ?thesis
+    by (simp add: canonical_resolved_st_def s_eq)
+qed
 
 text \<open>
   Soundness needs gs to leave infinitely many vnames local, so that some local
@@ -430,7 +484,7 @@ proof -
       (dl) "is_empty dl"
     | (ps) loc where "loc \<in> set (map fst ps)" "is_empty (lookup_resolved_st s loc)"
         "location_of gs (location_vname loc) = loc"
-    unfolding resolved_st_is_bot_def s_eq by auto
+    unfolding resolved_st_is_bot_def canonical_location_def s_eq by auto
   then show ?thesis
   proof cases
     case dl
@@ -541,7 +595,7 @@ proof -
         have loc_vname_eq: "location_of gs (location_vname (Local_Location x)) = Local_Location x"
           using loc_eq by simp
         show ?thesis
-          unfolding resolved_st_is_bot_def
+          unfolding resolved_st_is_bot_def canonical_location_def
           using True lookup_eq x loc_vname_eq s_eq
           by (metis (mono_tags, lifting) case_prod_conv)
       next
@@ -552,7 +606,7 @@ proof -
           unfolding s_eq using mo by simp
         with lookup_eq x have "is_empty dl" by simp
         then show ?thesis
-          unfolding resolved_st_is_bot_def using s_eq by auto
+          unfolding resolved_st_is_bot_def canonical_location_def using s_eq by auto
       qed
       then show ?thesis unfolding resolved_st_is_bot_for_def by (rule disjI2)
     qed
@@ -1470,13 +1524,13 @@ proof -
     then consider (dlc) "is_empty dl"
       | (psc) loc0 where "loc0 : set (map fst ps)" "is_empty (lookup_resolved_st s loc0)"
           "location_of (%x. x : set globals) (location_vname loc0) = loc0"
-      unfolding resolved_st_is_bot_def s_eq by auto
+      unfolding resolved_st_is_bot_def canonical_location_def s_eq by auto
     then show ?thesis
     proof cases
       case dlc
       have "is_empty dl'" using dlc dl_eq by simp
       then have "resolved_st_is_bot (%x. x : set globals) t"
-        unfolding resolved_st_is_bot_def t_eq by auto
+        unfolding resolved_st_is_bot_def canonical_location_def t_eq by auto
       then show ?thesis unfolding resolved_st_is_bot_for_def by blast
     next
       case (psc loc0)
@@ -1492,7 +1546,7 @@ proof -
         have bot_t_loc0': "is_empty (lookup_resolved_st (dl', dg', qs) loc0)"
           using bot_t_loc0 unfolding t_eq .
         have "resolved_st_is_bot (%x. x : set globals) t"
-          unfolding resolved_st_is_bot_def t_eq
+          unfolding resolved_st_is_bot_def canonical_location_def t_eq
           using bot_t_loc0' psc(3) loc0_in_qs by auto
         then show ?thesis unfolding resolved_st_is_bot_for_def by blast
       next
@@ -1507,7 +1561,7 @@ proof -
           then have "is_empty dl'"
             using default_val bot_t_loc0 by simp
           then have "resolved_st_is_bot (%x. x : set globals) t"
-            unfolding resolved_st_is_bot_def t_eq by auto
+            unfolding resolved_st_is_bot_def canonical_location_def t_eq by auto
           then show ?thesis unfolding resolved_st_is_bot_for_def by blast
         next
           case (Global_Location y)
