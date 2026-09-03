@@ -200,3 +200,37 @@ run_menu
 # semantic emptiness (gamma_state = {}) from structural bottom, and the old
 # name suggested the latter. The lemma proves the former. ---
 gamma_state_witness_not_bot
+
+# --- gamma_bfilter_lifted / gamma_branch_lifted removed: bfilter_lifted is no
+# longer bfilter's thin normalize_lift wrapper, so its concretization is no
+# longer equal to plain bfilter's -- only bounded by it (bfilter_lifted_sound,
+# branch_lifted_sound). An equality lemma of the old shape would be false. ---
+gamma_bfilter_lifted
+gamma_branch_lifted
+
+# --- canonicalize_state removed: it existed only to fix bfilter's And/Or
+# join-arm pollution, which would have made plain bfilter's own equations
+# depend on the non-executable is_empty_state. bfilter_lifted fixes the
+# pollution instead, at the lifted level, by returning structural Bot
+# directly -- canonicalize_state had no remaining consumer. ---
+canonicalize_state
+canonicalize_state_bot
+canonicalize_state_id
+canonicalize_state_le
+canonicalize_state_gamma
+canonicalize_state_mono
+canonicalize_state_idem
+
+# --- footprint_exp / probe_exp / afilter_st_locality / bfilter_st_bot /
+# bfilter_st_locality removed (Exec_Backward.thy): this whole chain existed
+# solely to support bfilter_st_lift's old whole-expression witness-bottom
+# probe after a plain, possibly-polluted join. bfilter_st_lift's And-False/
+# Or-True equations now gate each arm to structural Bot before joining,
+# exactly mirroring bfilter_lifted, so no probe is needed. ---
+footprint_exp
+probe_exp
+afilter_st_locality
+bfilter_st_bot
+bfilter_st_locality
+lift_probe_step
+bfilter_lift_step

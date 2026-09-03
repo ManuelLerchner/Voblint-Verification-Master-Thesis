@@ -285,6 +285,8 @@ next
 qed
 end
 
+declare gamma_abs_sign [code del]
+
 instance sign :: widening_domain ..
 
 end

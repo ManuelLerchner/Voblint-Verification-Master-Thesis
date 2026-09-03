@@ -168,6 +168,20 @@ lemma gamma_lift_mono:
   shows "gamma_lift gam x \<subseteq> gamma_lift gam y"
   using le by (cases x; cases y) (auto simp: gam_mono)
 
+text \<open>
+  \<open>gamma_liftE\<close> recovers the \<open>Lifted\<close> payload a lifted membership witnesses:
+  \<open>Bot\<close> concretizes to \<open>{}\<close>, so any \<open>s \<in> gamma_lift gam x\<close> already forces
+  \<open>x = Lifted a\<close> for some \<open>a\<close> with \<open>s \<in> gam a\<close>. Named as an eliminator
+  because its witness is exactly this structural case split, replacing the
+  repeated manual \<open>obtain ... where "... = Lifted ..." "s \<in> ..." by (cases
+  ...) auto\<close> pattern with one rule application.
+\<close>
+
+lemma gamma_liftE [elim]:
+  assumes "s \<in> gamma_lift gam x"
+  obtains a where "x = Lifted a" and "s \<in> gam a"
+  using assms by (cases x) auto
+
 subsection \<open>Generic reachability combinators\<close>
 
 text \<open>
@@ -193,6 +207,21 @@ lemma bind_lift_right_identity [simp]: "bind_lift x Lifted = x"
 lemma bind_lift_assoc:
   "bind_lift (bind_lift x f) g = bind_lift x (\<lambda>a. bind_lift (f a) g)"
   by (cases x) simp_all
+
+text \<open>
+  \<open>gamma_lift_bindI\<close> follows \<open>bind_lift\<close>'s own structure: a witness for \<open>xs\<close>
+  together with a step that carries any such witness through \<open>f\<close> gives a
+  witness for the bind. Targets the sequential \<open>And\<close>/\<open>Or\<close> recursions that
+  chain one filtering step's result into the next, replacing their manual
+  \<open>obtain \<sigma>' where "... = Lifted \<sigma>'" "s \<in> ..."\<close> destructuring with one
+  \<open>cases\<close>-driven rule.
+\<close>
+
+lemma gamma_lift_bindI [intro]:
+  assumes xs: "s \<in> gamma_lift gam xs"
+      and step: "\<And>a. s \<in> gam a \<Longrightarrow> s \<in> gamma_lift gam' (f a)"
+  shows "s \<in> gamma_lift gam' (bind_lift xs f)"
+  using xs by (cases xs) (auto intro: step)
 
 text \<open>
   Registers \<^const>\<open>bind_lift\<close> under \<^const>\<open>Monad_Syntax.bind\<close>'s ad hoc overloading, so
@@ -253,6 +282,20 @@ lemma normalize_lift_bot [simp]: "empty_pred a \<Longrightarrow> normalize_lift 
 lemma normalize_lift_not_bot [simp]:
   "\<not> empty_pred a \<Longrightarrow> normalize_lift empty_pred a = Lifted a"
   unfolding normalize_lift_def by simp
+
+text \<open>
+  When \<open>empty_pred\<close> exactly tracks \<open>gam\<close>'s own emptiness, normalizing never
+  changes what a payload concretizes to: the \<open>if\<close> only chooses between
+  \<open>gam a\<close> and \<open>{}\<close>, and those coincide exactly when \<open>empty_pred a\<close> does.
+  This is the generic fact every \<open>gamma_*_lift\<close> correctness statement
+  (\<open>Nonrelational_Reachability\<close>'s \<open>is_empty_state_lift_iff\<close>) reduces to, once
+  \<open>empty_pred\<close>'s own iff-correctness is in hand.
+\<close>
+
+lemma gamma_normalize_lift:
+  assumes "empty_pred a \<longleftrightarrow> gam a = {}"
+  shows "gamma_lift gam (normalize_lift empty_pred a) = gam a"
+  using assms unfolding normalize_lift_def by auto
 
 definition transfer_lift ::
   "('b \<Rightarrow> bool) \<Rightarrow> ('a \<Rightarrow> 'b) \<Rightarrow> 'a lifted \<Rightarrow> 'b lifted" where
@@ -375,6 +418,19 @@ lemma normalized_lift_sup:
   using nx ny by (cases x; cases y) (auto dest: mono[OF sup_ge1] mono[OF sup_ge2])
 
 text \<open>
+  \<open>normalized_lift_bind\<close> lifts a per-payload \<open>normalized_lift\<close> guarantee on
+  \<open>f\<close> through \<open>bind_lift\<close>: \<open>Bot\<close> is already normalized, and \<open>Lifted a\<close> hands
+  off to \<open>f a\<close>, which the assumption covers uniformly. Left unattributed:
+  its premise is a schematic function fact, too broad a shape for automatic
+  intro search.
+\<close>
+
+lemma normalized_lift_bind:
+  assumes "\<And>a. normalized_lift empty_pred (f a)"
+  shows "normalized_lift empty_pred (bind_lift x f)"
+  using assms by (cases x) simp_all
+
+text \<open>
   Generic monotonicity for the reachability dispatch, proved once here instead of at every
   instantiation (\<open>abs_state\<close>, \<open>resolved_st_q\<close>, ...): whenever the underlying transfer is
   monotone and the bottom predicate is downward closed (as \<open>is_empty_state\<close> always is, via
@@ -405,6 +461,20 @@ lemma transfer_lift2_mono:
   shows "transfer_lift2 empty_pred f x1 y1
            \<le> (transfer_lift2 empty_pred f x2 y2 :: 'c::semilattice_sup lifted)"
   using assms by (cases x1; cases x2; cases y1; cases y2) (auto intro: normalize_lift_mono f_mono bot_mono)
+
+text \<open>
+  \<open>bind_lift\<close>'s own monotonicity: a monotone step function carried through
+  a monotone bind argument stays monotone. Left unattributed, like
+  \<open>normalized_lift_bind\<close>: its \<open>f\<close>/\<open>g\<close> premise is schematic and broader than
+  a typical \<open>[intro]\<close> shape, so call sites invoke it explicitly.
+\<close>
+
+lemma bind_lift_mono2:
+  fixes x y :: "'a::semilattice_sup lifted"
+  assumes xy: "x \<le> y"
+      and fg: "\<And>a b. a \<le> b \<Longrightarrow> f a \<le> (g b :: 'b::semilattice_sup lifted)"
+  shows "bind_lift x f \<le> bind_lift y g"
+  using xy by (cases x; cases y) (auto intro: fg)
 
 subsection \<open>Solver update integration\<close>
 

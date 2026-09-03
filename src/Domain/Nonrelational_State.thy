@@ -70,6 +70,26 @@ lemma gamma_state_sup_ub2 [intro]:
   using gamma_sup_ub2 by blast
 
 text \<open>
+  Membership counterparts of \<open>gamma_state_sup_ub1\<close>/\<open>gamma_state_sup_ub2\<close>,
+  for citing at a witness \<open>s\<close> directly (\<open>using subsetD[OF gamma_state_sup_ub1 h]\<close>
+  otherwise repeats the same \<open>subsetD\<close> wrapper at every call site).
+  \<open>[intro]\<close>: their conclusion has the distinctive
+  \<open>s \<in> \<lbrakk>sigma1 \<squnion> sigma2\<rbrakk>\<close> shape a join-injection goal actually has, and a
+  witness already in one side's concretization is exactly the natural way to
+  discharge it.
+\<close>
+
+lemma gamma_state_supI1 [intro]:
+  "s \<in> \<lbrakk>sigma1\<rbrakk> \<Longrightarrow> s \<in> \<lbrakk>sigma1 \<squnion> sigma2\<rbrakk>"
+  for sigma1 sigma2 :: "'a::sound_domain abs_state"
+  using gamma_state_sup_ub1 by blast
+
+lemma gamma_state_supI2 [intro]:
+  "s \<in> \<lbrakk>sigma2\<rbrakk> \<Longrightarrow> s \<in> \<lbrakk>sigma1 \<squnion> sigma2\<rbrakk>"
+  for sigma1 sigma2 :: "'a::sound_domain abs_state"
+  using gamma_state_sup_ub2 by blast
+
+text \<open>
   Left bare rather than \<open>[dest]\<close>: \<open>x\<close> is unconstrained by the premise, so a
   global destruction rule here would let \<open>auto\<close> pick a schematic variable
   unrelated to the goal at hand (as with the \<open>Voblint_Solver\<close> session's

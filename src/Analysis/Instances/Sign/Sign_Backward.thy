@@ -354,6 +354,8 @@ global_interpretation sign_backward_domain:
     and afilter_sign_st = sign_backward_domain.afilter_st
     and bfilter_sign_st = sign_backward_domain.bfilter_st
     and branch_sign_st = sign_backward_domain.branch_st
+    and afilter_sign_st_lift = sign_backward_domain.afilter_st_lift
+    and bfilter_sign_st_lift = sign_backward_domain.bfilter_st_lift
     and sign_less_true_of_inv = sign_backward_domain.less_true
     and sign_less_false_of_inv = sign_backward_domain.less_false
     and sign_eq_true_of_less = sign_backward_domain.eq_true
