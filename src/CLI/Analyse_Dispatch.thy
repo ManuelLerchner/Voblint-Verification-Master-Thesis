@@ -111,9 +111,10 @@ text \<open>
   semantically.
 
   Among \<open>Solver_Join\<close>, \<open>Solver_PerOrigin\<close> and \<open>Solver_Warrow\<close> the choice is a convergence
-  strategy: \<open>Exec_Interval_Run\<close>'s \<open>loop_head_across_update_rules\<close> proves all three compute
-  the identical result on a bounded local loop whenever they terminate, since interval
-  narrowing and the backward guard filter -- not the update rule -- carry that precision.
+  strategy: \<open>Exec_Interval_Run\<close>'s \<open>loop_head_join\<close>, \<open>loop_head_per_origin\<close> and
+  \<open>loop_head_warrow\<close> prove all three compute the identical result on a bounded local loop
+  whenever they terminate, since interval narrowing and the backward guard filter -- not
+  the update rule -- carry that precision.
   Since the Base-style migration, a VIMP global lives in the same reachability-lifted local
   unknown as any local, so the choice is no longer global-specific either: any node the D/G
   solver revisits without a bounding narrowing phase --- a genuine loop, or a call site
@@ -1020,8 +1021,6 @@ code_identifier
 | code_module TD_side \<rightharpoonup> (OCaml) Core
 | code_module TD_side_upd_rule \<rightharpoonup> (OCaml) Core
 | code_module Update_rules \<rightharpoonup> (OCaml) Core
-| code_module Strategy_Tree_Sequencing \<rightharpoonup> (OCaml) Core
-| code_module Strategy_Tree_Combinators \<rightharpoonup> (OCaml) Core
 | code_module Strategy_Tree_Program \<rightharpoonup> (OCaml) Core
 | code_module Strategy_Tree_Side_Buffering \<rightharpoonup> (OCaml) Core
 | code_module State_Restriction \<rightharpoonup> (OCaml) Core

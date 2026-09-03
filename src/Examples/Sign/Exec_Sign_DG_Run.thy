@@ -24,7 +24,7 @@ theory Exec_Sign_DG_Run
     "Voblint_Exec.DG_Local_State_Exec"
     "Voblint_Exec.DG_Coverage"
     "Voblint_Analysis.Sign_Exec"
-    "Voblint_Solver.TD_Solver_Menu"
+    "Voblint_Solver.TD_Solver_Bridge"
     "TD.TD_side_upd_rule"
     "Voblint_CFG.CFG_Prune"
     "Voblint_Compile.Compile_Invariants"

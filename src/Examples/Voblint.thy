@@ -366,8 +366,10 @@ text \<open>
       it did not crash.
     \<^item> \<^bold>\<open>Related demo:\<close> @{theory Voblint_Examples.Example_Strategy_Tree} ---
       \<^type>\<open>strategy_tree\<close> as a small dependency/effect language on its own,
-      independent of any abstract domain: a Fibonacci equation tree built with
-      \<^const>\<open>answer\<close> and \<^const>\<open>seqcomp_tree\<close>, run with \<open>traverse_rhs\<close>.
+      independent of any abstract domain, built directly from \<^const>\<open>QueryL\<close>/
+      \<^const>\<open>Side\<close>/\<^const>\<open>Answer\<close>; \<open>Example_Strategy_Tree_Program\<close>
+      builds the identical tree through \<open>strategy_program\<close>'s typed \<open>do\<close> combinators
+      and proves the two coincide.
 
   \<^bold>\<open>9. Executable code generation.\<close> A runtime-program entry point per domain,
     reusing the exact native D/G pipeline behind \<open>4b\<close>/\<open>5\<close> above rather than a

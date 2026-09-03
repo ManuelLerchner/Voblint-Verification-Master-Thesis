@@ -15,18 +15,18 @@ architecture audit (Solver boundary, `_at` cleanup, Goblint manager
 comparison, Phase 2.7 Exec classification) that this doc's own previous
 "What's next" section triggered:
 
-4. `905026ea` -- Track A closed: `dg_edge_tree`/`dg_combine_tree`
+1. `905026ea` -- Track A closed: `dg_edge_tree`/`dg_combine_tree`
    (`DG_Constraint_Trees.thy`) are now literal specializations of
    `dg_edge_tree_at`/`dg_combine_tree_at`, not independent `do{}` bodies.
    The "Edge/Combine formers over a solution address" subsections now come
    first in the file; every bare-form characterization lemma is a one-line
    corollary of its `_at` counterpart.
-5. `e4ae0177` -- `Voblint_Solver` now owns the generic bridge from the
+2. `e4ae0177` -- `Voblint_Solver` now owns the generic bridge from the
    vendored TD solver to `part_post_solution`: `TD_Solver_Menu.thy` moved from
    `Voblint_Exec`; `Solver_Side_RG.thy`'s `solve_dom_of_solve_c` (30+
    external citers -- its only fact cited outside its own file) folded in
    alongside it. 19 files retargeted their imports.
-6. (pending final commit as this doc is written; verify with
+3. (pending final commit as this doc is written; verify with
    `git log --oneline -5` before starting new work) -- `Solver_Side_RG.thy`
    deleted whole (confirmed 100% dead by pattern, not just name, after
    `solve_dom_of_solve_c` left it -- this also refuted

@@ -1,5 +1,5 @@
 theory Strategy_Tree_Side_Buffering
-  imports Strategy_Tree_Sequencing
+  imports "TD.Basics_side"
 begin
 
 section \<open>Per-key buffering of one right-hand side's side effects\<close>
@@ -72,34 +72,11 @@ subsubsection \<open>Key order and distinctness\<close>
 lemma acc_keys_add:
   "map fst (acc_add k d acc)
      = (if k \<in> set (map fst acc) then map fst acc else map fst acc @ [k])"
-proof (induction acc)
-  case Nil
-  show ?case by simp
-next
-  case (Cons kv kvs)
-  obtain k' d' where kv: "kv = (k', d')" by (cases kv)
-  show ?case
-  proof (cases "k' = k")
-    case True
-    then show ?thesis by (simp add: kv)
-  next
-    case False
-    then show ?thesis using Cons.IH by (simp add: kv)
-  qed
-qed
+  by (induction acc) (auto simp add: rev_image_eqI)
 
 lemma acc_add_append:
   "k \<notin> set (map fst acc) \<Longrightarrow> acc_add k d acc = acc @ [(k, d)]"
-proof (induction acc)
-  case Nil
-  show ?case by simp
-next
-  case (Cons kv kvs)
-  obtain k' d' where kv: "kv = (k', d')" by (cases kv)
-  have ne: "k' \<noteq> k" using Cons.prems by (auto simp: kv)
-  have notin: "k \<notin> set (map fst kvs)" using Cons.prems by (simp add: kv)
-  show ?case using Cons.IH[OF notin] ne by (simp add: kv)
-qed
+  by (induction acc) (auto simp add: rev_image_eqI)
 
 lemma distinct_acc_add:
   "distinct (map fst acc) \<Longrightarrow> distinct (map fst (acc_add k d acc))"
@@ -151,26 +128,11 @@ lemma traverse_rhs_buffer_sides [simp]:
 
 lemma sides_of_rhs_flush_sides [simp]:
   "sides_of_rhs (flush_sides acc t) \<sigma> z = sides_of_rhs t \<sigma> z \<squnion> acc_val acc z"
-proof (induction acc arbitrary: z)
-  case Nil
-  show ?case by simp
-next
-  case (Cons kv kvs)
-  obtain k d where kv: "kv = (k, d)" by (cases kv)
-  show ?case
-    by (simp add: kv Let_def Cons.IH acc_val_Cons ac_simps)
-qed
+  by (induction acc arbitrary: z) (auto simp add: Let_def acc_val_Cons ac_simps)
 
 lemma sides_of_rhs_buffer_aux [simp]:
   "sides_of_rhs (buffer_aux acc t) \<sigma> z = sides_of_rhs t \<sigma> z \<squnion> acc_val acc z"
-proof (induction t arbitrary: acc z)
-  case (Answer d)
-  show ?case by simp
-next
-  case (Side y d t)
-  show ?case
-    by (simp add: Side.IH acc_val_add Let_def ac_simps)
-qed simp_all
+  by (induction t arbitrary: acc z) (auto simp add: acc_val_add Let_def ac_simps)
 
 lemma sides_of_rhs_buffer_sides [simp]:
   "sides_of_rhs (buffer_sides t) \<sigma> = sides_of_rhs t \<sigma>"
@@ -211,10 +173,7 @@ lemma side_path_flush_sides [simp]:
 
 lemma distinct_side_path_buffer_aux:
   "distinct (map fst acc) \<Longrightarrow> distinct (side_path \<sigma> (buffer_aux acc t))"
-proof (induction t arbitrary: acc)
-  case (Side y d t)
-  then show ?case by (simp add: distinct_acc_add)
-qed simp_all
+  by (induction t arbitrary: acc) (auto simp add: distinct_acc_add)
 
 theorem distinct_side_path_buffer_sides:
   "distinct (side_path \<sigma> (buffer_sides t))"
@@ -235,13 +194,7 @@ subsection \<open>Buffering is idempotent\<close>
 lemma acc_add_fold_append:
   "distinct (map fst (acc0 @ acc))
      \<Longrightarrow> foldl (\<lambda>a kv. acc_add (fst kv) (snd kv) a) acc0 acc = acc0 @ acc"
-proof (induction acc arbitrary: acc0)
-  case (Cons kv kvs)
-  obtain k d where kv: "kv = (k, d)" by (cases kv)
-  have "k \<notin> set (map fst acc0)" using Cons.prems by (simp add: kv)
-  then have "acc_add k d acc0 = acc0 @ [(k, d)]" by (rule acc_add_append)
-  then show ?case using Cons.IH[of "acc0 @ [(k, d)]"] Cons.prems by (simp add: kv)
-qed simp
+  by (induction acc arbitrary: acc0) (auto simp add: acc_add_append)
 
 lemma buffer_aux_flush_sides:
   "buffer_aux acc0 (flush_sides acc t)
@@ -250,22 +203,10 @@ lemma buffer_aux_flush_sides:
 
 lemma buffer_sides_idem [simp]: "buffer_sides (buffer_sides t) = buffer_sides t"
 proof -
-  have "buffer_aux [] (buffer_aux acc t) = buffer_aux acc t"
-    if "distinct (map fst acc)" for acc
-    using that
-  proof (induction t arbitrary: acc)
-    case (Answer d)
-    then show ?case
-      by (simp add: buffer_aux_flush_sides acc_add_fold_append)
-  next
-    case (Side y d t)
-    then show ?case by (simp add: distinct_acc_add)
-  qed simp_all
-  from this[of "[]"] show ?thesis by (simp add: buffer_sides_def)
+  have "\<And>acc. distinct (map fst acc) \<Longrightarrow> buffer_aux [] (buffer_aux acc t) = buffer_aux acc t"
+    by (induction t) (auto simp add: buffer_aux_flush_sides acc_add_fold_append distinct_acc_add)
+  then show ?thesis by (simp add: buffer_sides_def)
 qed
-
-lemma buffer_eqs_idem [simp]: "buffer_eqs (buffer_eqs T) = buffer_eqs T"
-  by (rule ext) simp
 
 subsection \<open>The one transfer every consumer needs\<close>
 
@@ -274,7 +215,11 @@ text \<open>
   spine consumes --- is stated over \<^const>\<open>dep\<^sub>L\<close>,
   \<^const>\<open>traverse_rhs\<close> and \<^const>\<open>sides_of_rhs\<close> alone. All three are
   invariant under buffering, so a solution of the buffered system is a solution
-  of the original one and no result upstream of the solver changes.
+  of the original one. Buffering preserves this declarative right-hand-side
+  semantics and the post-solution obligation the soundness proof consumes; it
+  does not claim the buffered and unbuffered systems drive the solver through
+  the same operational iteration, or, under widening, to the same computed
+  post-solution.
 \<close>
 
 lemma dep_buffer_eqs [simp]: "dep (buffer_eqs T) \<sigma> x = dep T \<sigma> x"

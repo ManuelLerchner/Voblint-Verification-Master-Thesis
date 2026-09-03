@@ -1,7 +1,7 @@
 theory DG_State
   imports Transfer_Interface State_Restriction "Voblint_Domain.Nonrelational_Reachability"
     "Voblint_Solver.Strategy_Tree_Post_Solution" "Voblint_Solver.Strategy_Tree_Side_Buffering"
-    "Voblint_Solver.Strategy_Tree_Fold" "Voblint_Solver.Strategy_Tree_Combinators"
+    "Voblint_Solver.Strategy_Tree_Fold"
     "Voblint_CFG.CFG_Transfer"
 begin
 

@@ -4,7 +4,7 @@ theory Example_Interval_Global_Declaration
   imports
     "Voblint_Analysis.Interval_Checks"
     "Voblint_Analysis.Ivl_Exec"
-    "Voblint_Solver.TD_Solver_Menu"
+    "Voblint_Solver.TD_Solver_Bridge"
     "Voblint_VIMP.VIMP_Notation"
     "Voblint_Examples.Example_Inc_Proc"
 begin

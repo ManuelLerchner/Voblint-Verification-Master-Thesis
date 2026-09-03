@@ -49,10 +49,11 @@ abbreviation nest_ci :: call_info where
 lemma nest_2_eqs_statement3:
   "nest_2_eqs (Statement 3, ctx)
      = QueryL (Statement 2, ctx)
-         (\<lambda>d. sp_run_with (\<lambda>x. DG x Bot)
-                 (dgs_enter nest_S_st nest_ci (mk_dg_man (locals d) (\<lambda>_. Global)))
-               \<bind> (\<lambda>entry_state.
-                     side_effect
+         (\<lambda>d. sp_lift_tree (sp_lift_tree
+                 (sp_lift_tree (sp_compile_with (\<lambda>x. DG x Bot)
+                     (dgs_enter nest_S_st nest_ci (mk_dg_man (locals d) (\<lambda>_. Global))))
+                   (\<lambda>entry_state.
+                     Side
                        (Seed (FunctionEntry (STR ''g''))
                           (cs_route 2 (Statement 2) ctx (locals entry_state)
                             (CallEdge (Some (STR ''t'')) [(STR ''p'')] [VIMP_Syntax.V (STR ''p'')])))
@@ -61,23 +62,25 @@ lemma nest_2_eqs_statement3:
                             cs_route 2 (Statement 2) ctx (locals entry_state)
                               (CallEdge (Some (STR ''t'')) [(STR ''p'')]
                                 [VIMP_Syntax.V (STR ''p'')]))
-                          (\<lambda>da. sp_run_with (\<lambda>x. DG x Bot)
+                          (\<lambda>da. sp_compile_with (\<lambda>x. DG x Bot)
                                   (dg_spec_combine_transfer nest_S_st nest_ci
-                                     (mk_dg_man (locals d) (\<lambda>_. Global)) (locals da)))))
-               \<bind> (\<lambda>res. answer (DG (locals res) Bot))
-               \<bind> (\<lambda>res. answer (DG (locals res) Bot)))"
+                                     (mk_dg_man (locals d) (\<lambda>_. Global)) (locals da))))))
+                 (\<lambda>res. Answer (DG (locals res) Bot)))
+               (\<lambda>res. Answer (DG (locals res) Bot)))"
   unfolding nest_2_eqs_def side_cfg_T_eff_keyed_seed_dg_def routed_extra_g_def
     routed_cmb_g_def routed_cmb_g_at_def
   by (simp add: intra_predecessor_addr_list_def statement3_no_intra statement3_comb
-        statement3_targets statement3_no_calls nest_entry Let_def)
+        statement3_targets statement3_no_calls nest_entry Let_def
+        sp_compile_with_bind sp_bind_def sp_return_def)
 
 lemma nest_1_eqs_statement3:
   "nest_1_eqs (Statement 3, ctx)
      = QueryL (Statement 2, ctx)
-         (\<lambda>d. sp_run_with (\<lambda>x. DG x Bot)
-                 (dgs_enter nest_S_st nest_ci (mk_dg_man (locals d) (\<lambda>_. Global)))
-               \<bind> (\<lambda>entry_state.
-                     side_effect
+         (\<lambda>d. sp_lift_tree (sp_lift_tree
+                 (sp_lift_tree (sp_compile_with (\<lambda>x. DG x Bot)
+                     (dgs_enter nest_S_st nest_ci (mk_dg_man (locals d) (\<lambda>_. Global))))
+                   (\<lambda>entry_state.
+                     Side
                        (Seed (FunctionEntry (STR ''g''))
                           (cs_route 1 (Statement 2) ctx (locals entry_state)
                             (CallEdge (Some (STR ''t'')) [(STR ''p'')] [VIMP_Syntax.V (STR ''p'')])))
@@ -86,15 +89,16 @@ lemma nest_1_eqs_statement3:
                             cs_route 1 (Statement 2) ctx (locals entry_state)
                               (CallEdge (Some (STR ''t'')) [(STR ''p'')]
                                 [VIMP_Syntax.V (STR ''p'')]))
-                          (\<lambda>da. sp_run_with (\<lambda>x. DG x Bot)
+                          (\<lambda>da. sp_compile_with (\<lambda>x. DG x Bot)
                                   (dg_spec_combine_transfer nest_S_st nest_ci
-                                     (mk_dg_man (locals d) (\<lambda>_. Global)) (locals da)))))
-               \<bind> (\<lambda>res. answer (DG (locals res) Bot))
-               \<bind> (\<lambda>res. answer (DG (locals res) Bot)))"
+                                     (mk_dg_man (locals d) (\<lambda>_. Global)) (locals da))))))
+                 (\<lambda>res. Answer (DG (locals res) Bot)))
+               (\<lambda>res. Answer (DG (locals res) Bot)))"
   unfolding nest_1_eqs_def side_cfg_T_eff_keyed_seed_dg_def routed_extra_g_def
     routed_cmb_g_def routed_cmb_g_at_def
   by (simp add: intra_predecessor_addr_list_def statement3_no_intra statement3_comb
-        statement3_targets statement3_no_calls nest_entry Let_def)
+        statement3_targets statement3_no_calls nest_entry Let_def
+        sp_compile_with_bind sp_bind_def sp_return_def)
 
 end
 

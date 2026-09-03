@@ -354,6 +354,7 @@ envisioned is already realised in-tree — the retained path is functional and
 exposes no `cmp`/`gcmp` parameter. The only residual is splitting the *dead*
 relational scaffolding out of the mixed `TD_Side_Eff_Cmp_Gen`. That split is
 large, touches a core file feeding every DG flagship, and the scaffolding is dead
+
 * Category-C-coupled, so it is safest performed **as part of the Stage-5 deletion**
 of the relational/digest cluster rather than as a speculative Stage-4 refactor.
 Renaming the functional generator off `_cmp` is likewise best done at that point

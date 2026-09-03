@@ -3,7 +3,7 @@ theory Run_Analysis_Sound
     "Voblint_Exec.DG_Local_State_Exec"
     "Voblint_Exec.Exec_DG_Generator"
     "Voblint_Framework.DG_LTR_Sound"
-    "Voblint_Solver.TD_Solver_Menu"
+    "Voblint_Solver.TD_Solver_Bridge"
     Source_Activation_Sound
 begin
 

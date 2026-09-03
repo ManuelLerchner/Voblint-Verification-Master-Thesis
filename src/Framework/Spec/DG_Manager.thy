@@ -54,13 +54,13 @@ text \<open>
 \<close>
 
 definition dg_read_at :: "'x + 'k \<Rightarrow> ('x,'k,('dl,'dg) dg_state,'dl) strategy_program" where
-  "dg_read_at src = sp_at src \<bind> (sp_return o locals)"
+  "dg_read_at src = sp_read_at src \<bind> (sp_return o locals)"
 
 definition dg_read_global :: "'k \<Rightarrow> ('x,'k,('dl,'dg) dg_state,'dg) strategy_program" where
-  "dg_read_global gk = sp_global gk \<bind> (sp_return o globs)"
+  "dg_read_global gk = sp_read_global gk \<bind> (sp_return o globs)"
 
 definition dg_sideg :: "'k \<Rightarrow> 'dg \<Rightarrow> ('x,'k,('dl::bot,'dg) dg_state,unit) strategy_program" where
-  "dg_sideg gk gd = sp_sideg gk (DG bot gd)"
+  "dg_sideg gk gd = sp_publish gk (DG bot gd)"
 
 subsection \<open>Constructing a manager\<close>
 

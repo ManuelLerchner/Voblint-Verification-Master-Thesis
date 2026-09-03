@@ -87,14 +87,14 @@ definition transfer_tree ::
   "('x,'k,'v,'dl::bot,'dg::bot) man_transfer \<Rightarrow> 'x + 'k \<Rightarrow> ('v \<Rightarrow> 'k)
    \<Rightarrow> ('x,'k,('dl,'dg) dg_state) strategy_tree"
 where
-  "transfer_tree T src key = sp_run_with (\<lambda>d. DG d bot) (dg_edge_tree_man T src key)"
+  "transfer_tree T src key = sp_compile_with (\<lambda>d. DG d bot) (dg_edge_tree_man T src key)"
 
 definition combine_transfer_tree ::
   "('x,'k,'v,'dl::bot,'dg::bot) man_combine_transfer \<Rightarrow> 'x + 'k \<Rightarrow> 'x + 'k \<Rightarrow> ('v \<Rightarrow> 'k)
    \<Rightarrow> ('x,'k,('dl,'dg) dg_state) strategy_tree"
 where
   "combine_transfer_tree T src_cc src_ex key =
-     sp_run_with (\<lambda>d. DG d bot) (dg_combine_tree_man T src_cc src_ex key)"
+     sp_compile_with (\<lambda>d. DG d bot) (dg_combine_tree_man T src_cc src_ex key)"
 
 definition dg_spec_edge_tree ::
   "('x,'k,'v,'dl::bot,'dg::bot) dg_spec \<Rightarrow> edge_action \<Rightarrow> 'x + 'k \<Rightarrow> ('v \<Rightarrow> 'k)
@@ -295,19 +295,19 @@ text \<open>
 
 lemma traverse_transfer_tree:
   "traverse_rhs (transfer_tree T src gk) \<sigma>
-     = traverse_rhs (sp_run_with (\<lambda>d. DG d bot) (T (mk_dg_man (locals (\<sigma> src)) gk))) \<sigma>"
+     = traverse_rhs (sp_compile_with (\<lambda>d. DG d bot) (T (mk_dg_man (locals (\<sigma> src)) gk))) \<sigma>"
   by (cases src)
      (simp_all add: transfer_tree_def dg_edge_tree_man_def dg_read_at_def sp_bind_assoc)
 
 lemma sides_transfer_tree:
   "sides_of_rhs (transfer_tree T src gk) \<sigma> z
-     = sides_of_rhs (sp_run_with (\<lambda>d. DG d bot) (T (mk_dg_man (locals (\<sigma> src)) gk))) \<sigma> z"
+     = sides_of_rhs (sp_compile_with (\<lambda>d. DG d bot) (T (mk_dg_man (locals (\<sigma> src)) gk))) \<sigma> z"
   by (cases src)
      (simp_all add: transfer_tree_def dg_edge_tree_man_def dg_read_at_def sp_bind_assoc)
 
 lemma traverse_combine_transfer_tree:
   "traverse_rhs (combine_transfer_tree T src_cc src_ex gk) \<sigma>
-     = traverse_rhs (sp_run_with (\<lambda>d. DG d bot)
+     = traverse_rhs (sp_compile_with (\<lambda>d. DG d bot)
          (T (mk_dg_man (locals (\<sigma> src_cc)) gk) (locals (\<sigma> src_ex)))) \<sigma>"
   by (cases src_cc; cases src_ex)
      (simp_all add: combine_transfer_tree_def dg_combine_tree_man_def dg_read_at_def
@@ -315,7 +315,7 @@ lemma traverse_combine_transfer_tree:
 
 lemma sides_combine_transfer_tree:
   "sides_of_rhs (combine_transfer_tree T src_cc src_ex gk) \<sigma> z
-     = sides_of_rhs (sp_run_with (\<lambda>d. DG d bot)
+     = sides_of_rhs (sp_compile_with (\<lambda>d. DG d bot)
          (T (mk_dg_man (locals (\<sigma> src_cc)) gk) (locals (\<sigma> src_ex)))) \<sigma> z"
   by (cases src_cc; cases src_ex)
      (simp_all add: combine_transfer_tree_def dg_combine_tree_man_def dg_read_at_def

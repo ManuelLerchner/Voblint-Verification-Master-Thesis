@@ -41,6 +41,7 @@
 > above: rather than proving `project_sigma` (or a generic replacement)
 > satisfies `part_post_solution` directly, the finite projection is now
 > *seeded into* the k=1 equation system (`seed_rhs`, already landed in Stage
+>
 > 1) and the ordinary, unmodified TD solver is re-run on the seeded system.
 > `post_solution_of_seeded`'s already-derived transfer step then gives the
 > k=1 post-solution and both domination facts for free, with no

@@ -4,7 +4,7 @@ theory Example_Sign_DG_Custom_Combine
     "Voblint_Analysis.Sign_Exec"
     "Voblint_Framework.DG_LTR_Sound"
     "Voblint_Analysis.Sign_Transfer"
-    "Voblint_Solver.TD_Solver_Menu"
+    "Voblint_Solver.TD_Solver_Bridge"
     "Voblint_CFG.CFG_Prune"
     "Voblint_VIMP.VIMP_Notation" "Voblint_Compile.Compile_Wellformed"
 begin

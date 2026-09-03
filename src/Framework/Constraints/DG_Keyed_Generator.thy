@@ -7,6 +7,17 @@ text \<open>\<open>TD_side\<close> defines a record field \<open>\<sigma>\<close
 
 hide_const (open) \<sigma>
 
+context
+begin
+
+text \<open>
+  This theory reasons about \<^const>\<open>sp_compile\<close> at the compiled-tree level
+  throughout, so \<open>sp_compile_def\<close> is simp for its whole body -- a local
+  re-declaration, not exported to importers, which keep the public
+  discipline of crossing that boundary explicitly.
+\<close>
+declare sp_compile_def [simp]
+
 section \<open>Keyed equation generators\<close>
 
 text \<open>
@@ -59,8 +70,8 @@ where
             (return_call_action_list g v);
           enter = map (\<lambda>(call, action). enter_tree ctx call action v)
             (entry_call_list g v);
-          tree = side_rhs_fold_dg acc0 (intra @ combine @ enter)
-      in if v = cfg_entry g then side_effect (gkey ctx) (DG bot s0g) tree else tree)"
+          tree = sp_compile (side_rhs_fold_dg acc0 (intra @ combine @ enter))
+      in if v = cfg_entry g then Side (gkey ctx) (DG bot s0g) tree else tree)"
 
 lemma eq_side_cfg_T_eff_keyed_seed_trees:
   "eq (side_cfg_T_eff_keyed_seed_trees pred_sel gkey edge_tree combine_tree enter_tree
@@ -72,7 +83,7 @@ lemma eq_side_cfg_T_eff_keyed_seed_trees:
        @ map (\<lambda>(call, action). enter_tree ctx call action v)
            (entry_call_list g v))) bot"
   by (simp add: side_cfg_T_eff_keyed_seed_trees_def Let_def
-    traverse_side_rhs_fold_dg)
+    traverse_side_rhs_fold_dg[unfolded sp_compile_def])
 
 text \<open>
   Every node of a CFG has at most one incoming hook tree per predecessor
@@ -105,7 +116,7 @@ lemma side_cfg_T_eff_keyed_seed_trees_single_edge:
        sides_of_rhs (edge_tree ctx u a v) sigma (Inr (gkey ctx))"
   unfolding side_cfg_T_eff_keyed_seed_trees_def
   by (simp_all add: not_entry pred no_combine no_enter bot0
-    Let_def sides_of_rhs_seqcomp traverse_seqcomp)
+    Let_def sides_of_rhs_sp_lift_tree traverse_rhs_sp_lift_tree sp_compile_with_bind)
 
 lemma side_cfg_T_eff_keyed_seed_trees_single_enter:
   fixes bot0 :: "'d::bounded_semilattice_sup_bot"
@@ -124,7 +135,7 @@ lemma side_cfg_T_eff_keyed_seed_trees_single_enter:
        sides_of_rhs (enter_tree ctx caller action v) sigma (Inr (gkey ctx))"
   unfolding side_cfg_T_eff_keyed_seed_trees_def
   by (simp_all add: not_entry no_edge no_combine pred bot0
-    Let_def sides_of_rhs_seqcomp traverse_seqcomp)
+    Let_def sides_of_rhs_sp_lift_tree traverse_rhs_sp_lift_tree sp_compile_with_bind)
 
 lemma side_cfg_T_eff_keyed_seed_trees_single_combine:
   fixes bot0 :: "'d::bounded_semilattice_sup_bot"
@@ -143,7 +154,7 @@ lemma side_cfg_T_eff_keyed_seed_trees_single_combine:
        sides_of_rhs (combine_tree ctx caller action callee_exit v) sigma (Inr (gkey ctx))"
   unfolding side_cfg_T_eff_keyed_seed_trees_def
   by (simp_all add: not_entry no_edge pred no_enter bot0
-    Let_def sides_of_rhs_seqcomp traverse_seqcomp)
+    Let_def sides_of_rhs_sp_lift_tree traverse_rhs_sp_lift_tree sp_compile_with_bind)
 
 lemma side_cfg_T_eff_keyed_seed_trees_entry:
   fixes bot0 :: "'d::bounded_semilattice_sup_bot"
@@ -216,8 +227,8 @@ where
             intra = map (\<lambda>(src, a). it c src a) (pred_sel g v c);
             comb = map (\<lambda>(cc, ca). cmb route c ca cc v)
                        (call_site_list g v);
-            t = side_rhs_fold_dg acc0 (intra @ comb @ extra route c v)
-        in if v = cfg_entry g then side_effect (gkey c) (DG bot s0g) t else t)"
+            t = sp_compile (side_rhs_fold_dg acc0 (intra @ comb @ extra route c v))
+        in if v = cfg_entry g then Side (gkey c) (DG bot s0g) t else t)"
 
 
 lemma eq_side_cfg_T_eff_keyed_seed_dg:
@@ -231,7 +242,7 @@ lemma eq_side_cfg_T_eff_keyed_seed_dg:
             (call_site_list g v)
       @ extra route ctx v)) bot"
   by (simp add: side_cfg_T_eff_keyed_seed_dg_def Let_def
-        traverse_side_rhs_fold_dg)
+        traverse_side_rhs_fold_dg[unfolded sp_compile_def])
 
 lemma sides_side_cfg_T_eff_keyed_seed_dg:
   "sides_of_rhs (side_cfg_T_eff_keyed_seed_dg pred_sel gkey route it cmb extra g bot0 s0d s0g
@@ -241,7 +252,8 @@ lemma sides_side_cfg_T_eff_keyed_seed_dg:
        (map (\<lambda>(src, a). it ctx src a) (pred_sel g v ctx)
         @ map (\<lambda>(cc, ca). cmb route ctx ca cc v) (call_site_list g v)
         @ extra route ctx v) bot"
-  by (simp add: side_cfg_T_eff_keyed_seed_dg_def Let_def sides_of_rhs_side_rhs_fold_dg_char
+  by (simp add: side_cfg_T_eff_keyed_seed_dg_def Let_def
+        sides_of_rhs_side_rhs_fold_dg_char[unfolded sp_compile_def]
         bot_dg_state_def[symmetric] ac_simps)
 
 subsection \<open>Buffered generator: fold Side-free contributions, publish once\<close>
@@ -252,7 +264,7 @@ text \<open>
   each independently emit a \<open>Side (gkey c) ...\<close>, so several writes to the same
   \<open>gkey c\<close> land in one RHS evaluation. \<open>side_cfg_T_eff_keyed_seed_dg_buffered\<close> folds
   Side-free contribution trees (the caller's own \<open>it_c\<close> for \<open>intra\<close> and \<open>cmb_c\<close> for
-  \<open>comb\<close>) with \<^const>\<open>fold_rhs_trees\<close> and publishes \<open>gkey c\<close> once, after every
+  \<open>comb\<close>) with \<^const>\<open>fold_rhs_contributions\<close> and publishes \<open>gkey c\<close> once, after every
   contribution has been read.
 
   That fold shapes the node's \<^emph>\<open>own\<close> key, but \<open>extra route c v\<close> stays a list of
@@ -285,11 +297,32 @@ where
         let acc0 = (if v = cfg_entry g then DG (bot0 \<squnion> s0d) s0g else DG bot0 bot);
             intra = map (\<lambda>(src, a). it_c c src a) (pred_sel g v c);
             comb = map (\<lambda>(cc, ca). cmb_c route c ca cc v) (call_site_list g v);
-            t = fold_rhs_trees acc0 (intra @ comb @ extra route c v)
-        in buffer_sides (do {
-          res \<leftarrow> t;
-          side_effect (gkey c) (DG bot (globs res)) (answer (DG (locals res) bot))
-        }))"
+            t = sp_compile (fold_rhs_contributions acc0 (intra @ comb @ extra route c v))
+        in buffer_sides (sp_lift_tree t (\<lambda>res.
+          Side (gkey c) (DG bot (globs res)) (Answer (DG (locals res) bot)))))"
+
+lemma foldr_sup_seed_swap:
+  fixes h :: "'a \<Rightarrow> 'b::semilattice_sup"
+  shows "foldr (\<lambda>t acc'. h t \<squnion> acc') ts (acc \<squnion> x) = x \<squnion> foldr (\<lambda>t acc'. h t \<squnion> acc') ts acc"
+  by (induction ts arbitrary: acc) (simp_all add: sup_assoc sup_commute sup_left_commute)
+
+text \<open>
+  \<open>traverse_fold_rhs_contributions_char\<close> states the fold in evaluation order (a left
+  fold); the lemmas below need the equivalent right fold, since that is how each of
+  their own goals is already phrased. \<^const>\<open>traverse_rhs\<close> only ever joins, so the
+  two forms agree by \<open>foldr_sup_seed_swap\<close>.
+\<close>
+
+lemma traverse_fold_rhs_contributions_char_foldr:
+  "traverse_rhs (sp_compile (fold_rhs_contributions acc ts)) \<sigma>
+     = foldr (\<lambda>t acc'. traverse_rhs t \<sigma> \<squnion> acc') ts acc"
+proof (induction ts arbitrary: acc)
+  case Nil
+  then show ?case by simp
+next
+  case (Cons t ts)
+  then show ?case by (simp add: sp_compile_with_bind foldr_sup_seed_swap)
+qed
 
 lemma eq_side_cfg_T_eff_keyed_seed_dg_buffered:
   "eq (side_cfg_T_eff_keyed_seed_dg_buffered pred_sel gkey route it_c cmb_c extra g bot0 s0d s0g)
@@ -299,7 +332,8 @@ lemma eq_side_cfg_T_eff_keyed_seed_dg_buffered:
       @ map (\<lambda>(cc, ca). cmb_c route ctx ca cc v) (call_site_list g v)
       @ extra route ctx v)
      (if v = cfg_entry g then DG (bot0 \<squnion> s0d) s0g else DG bot0 bot))) bot"
-  by (simp add: side_cfg_T_eff_keyed_seed_dg_buffered_def Let_def traverse_fold_rhs_trees_char)
+  by (simp add: side_cfg_T_eff_keyed_seed_dg_buffered_def Let_def
+        traverse_fold_rhs_contributions_char_foldr[unfolded sp_compile_def])
 
 lemma foldr_sup_bot_of_all_bot:
   fixes L :: "'a list" and h :: "'a \<Rightarrow> 'b::bounded_semilattice_sup_bot"
@@ -327,26 +361,28 @@ proof -
   show ?thesis
   proof (cases "v = cfg_entry g")
     case True
-    have z0: "sides_of_rhs (fold_rhs_trees (DG (bot0 \<squnion> s0d) s0g)
+    have z0: "sides_of_rhs (sp_compile (fold_rhs_contributions (DG (bot0 \<squnion> s0d) s0g)
         (map (\<lambda>(src, a). it_c ctx src a) (pred_sel g (cfg_entry g) ctx)
          @ map (\<lambda>(cc, ca). cmb_c route ctx ca cc (cfg_entry g)) (call_site_list g (cfg_entry g))
-         @ extra route ctx (cfg_entry g))) \<tau> (Inr (gkey ctx)) = bot"
-      by (simp only: sides_of_rhs_fold_rhs_trees_char
+         @ extra route ctx (cfg_entry g)))) \<tau> (Inr (gkey ctx)) = bot"
+      by (simp only: sides_of_rhs_fold_rhs_contributions_char
           foldr_sup_bot_of_all_bot[OF free[where w = "cfg_entry g"]])
     from True show ?thesis
-      by (simp add: side_cfg_T_eff_keyed_seed_dg_buffered_def Let_def traverse_fold_rhs_trees_char
-          bot_dg_state_def sup_dg_state_def z0)
+      by (simp add: side_cfg_T_eff_keyed_seed_dg_buffered_def Let_def
+          traverse_fold_rhs_contributions_char_foldr[unfolded sp_compile_def]
+          bot_dg_state_def sup_dg_state_def z0[unfolded sp_compile_def])
   next
     case False
-    have z0: "sides_of_rhs (fold_rhs_trees (DG bot0 bot)
+    have z0: "sides_of_rhs (sp_compile (fold_rhs_contributions (DG bot0 bot)
         (map (\<lambda>(src, a). it_c ctx src a) (pred_sel g v ctx)
          @ map (\<lambda>(cc, ca). cmb_c route ctx ca cc v) (call_site_list g v)
-         @ extra route ctx v)) \<tau> (Inr (gkey ctx)) = bot"
-      by (simp only: sides_of_rhs_fold_rhs_trees_char
+         @ extra route ctx v))) \<tau> (Inr (gkey ctx)) = bot"
+      by (simp only: sides_of_rhs_fold_rhs_contributions_char
           foldr_sup_bot_of_all_bot[OF free[where w = v]])
     from False show ?thesis
-      by (simp add: side_cfg_T_eff_keyed_seed_dg_buffered_def Let_def traverse_fold_rhs_trees_char
-          bot_dg_state_def sup_dg_state_def z0)
+      by (simp add: side_cfg_T_eff_keyed_seed_dg_buffered_def Let_def
+          traverse_fold_rhs_contributions_char_foldr[unfolded sp_compile_def]
+          bot_dg_state_def sup_dg_state_def z0[unfolded sp_compile_def])
   qed
 qed
 
@@ -362,20 +398,20 @@ next
   case (Cons a ts)
   have "foldr (\<lambda>t acc'. locals (traverse_rhs t \<tau>) \<squnion> acc') ts (acc \<squnion> locals (traverse_rhs a \<tau>))
       = locals (traverse_rhs a \<tau>) \<squnion> foldr (\<lambda>t acc'. locals (traverse_rhs t \<tau>) \<squnion> acc') ts acc"
-    by (simp add: sup_commute[of acc] foldr_sup_seed_swap)
+    by (rule foldr_sup_seed_swap)
   then show ?case using Cons.IH by simp
 qed
 
 text \<open>
   A pointwise correspondence between two parallel contribution lists -- one Side-free
-  (feeding \<^const>\<open>fold_rhs_trees\<close>), one Side-emitting (feeding \<^const>\<open>side_rhs_fold_dg\<close>)
+  (feeding \<^const>\<open>fold_rhs_contributions\<close>), one Side-emitting (feeding \<^const>\<open>side_rhs_fold_dg\<close>)
   -- lifts to their whole-list fold, in both the local-answer and global-side
   components. This is the list-level engine behind
   \<open>side_cfg_T_eff_keyed_seed_dg_buffered_correspondence\<close>: each of \<open>intra\<close>, \<open>comb\<close>, and
   \<open>extra\<close> instantiates it once, and \<open>foldr_append\<close> combines the three.
 \<close>
 
-lemma fold_rhs_trees_side_rhs_fold_dg_local_char:
+lemma fold_rhs_contributions_side_rhs_fold_dg_local_char:
   assumes h: "list_all2 (\<lambda>t_new t_old. locals (traverse_rhs t_new \<tau>) = locals (traverse_rhs t_old \<tau>))
                 L_new L_old"
   shows "foldr (\<lambda>t acc'. locals (traverse_rhs t \<tau>) \<squnion> acc') L_new (acc::'d::bounded_semilattice_sup_bot)
@@ -443,7 +479,7 @@ next
   then show ?case by (simp add: ac_simps)
 qed
 
-lemma fold_rhs_trees_side_rhs_fold_dg_global_char:
+lemma fold_rhs_contributions_side_rhs_fold_dg_global_char:
   assumes h: "list_all2 (\<lambda>t_new t_old. globs (traverse_rhs t_new \<tau>) = globs (sides_of_rhs t_old \<tau> z))
                 L_new L_old"
   shows "foldr (\<lambda>t acc'. globs (traverse_rhs t \<tau>) \<squnion> acc') L_new (acc::'h::bounded_semilattice_sup_bot)
@@ -551,7 +587,7 @@ proof -
       by (simp add: locals_foldr_generic)
     also have "\<dots> = DG (foldr (\<lambda>t acc'. locals (traverse_rhs t \<tau>) \<squnion> acc')
                      (?intra_old @ ?comb_old @ ?extra) (locals ?acc0)) bot"
-      by (simp only: fold_rhs_trees_side_rhs_fold_dg_local_char[OF local_list])
+      by (simp only: fold_rhs_contributions_side_rhs_fold_dg_local_char[OF local_list])
     also have "\<dots> = DG (side_acc_dg (locals ?acc0) \<tau> (?intra_old @ ?comb_old @ ?extra)) bot"
       by (simp add: side_acc_dg_eq_foldr)
     also have "\<dots> = traverse_rhs
@@ -574,7 +610,7 @@ proof -
       by (rule globs_foldr_generic)
     also have "\<dots> = foldr (\<lambda>t acc'. globs (sides_of_rhs t \<tau> (Inr (gkey ctx))) \<squnion> acc')
                      (?intra_old @ ?comb_old @ ?extra) (globs ?acc0)"
-      by (simp only: fold_rhs_trees_side_rhs_fold_dg_global_char[OF global_list])
+      by (simp only: fold_rhs_contributions_side_rhs_fold_dg_global_char[OF global_list])
     also have "\<dots> = globs ?acc0
                      \<squnion> foldr (\<lambda>t acc'. globs (sides_of_rhs t \<tau> (Inr (gkey ctx))) \<squnion> acc')
                          (?intra_old @ ?comb_old @ ?extra) bot"
@@ -651,14 +687,14 @@ proof -
     have "dep_aux \<tau>
         (side_cfg_T_eff_keyed_seed_dg_buffered pred_sel gkey route it_c cmb_c extra g bot0 s0d s0g (v, ctx))
         = (\<Union>t\<in>set (?intra_new @ ?comb_new @ ?extra). dep_aux \<tau> t)"
-      by (simp add: side_cfg_T_eff_keyed_seed_dg_buffered_def Let_def dep_aux_seqcomp
-          dep_aux_fold_rhs_trees_char)
+      by (simp add: side_cfg_T_eff_keyed_seed_dg_buffered_def Let_def dep_aux_sp_lift_tree
+          dep_aux_fold_rhs_contributions_char[unfolded sp_compile_def])
     also have "\<dots> = (\<Union>t\<in>set (?intra_old @ ?comb_old @ ?extra). dep_aux \<tau> t)"
       by (rule list_all2_Union_eq[OF dep_list])
     also have "\<dots> = dep_aux \<tau>
         (side_cfg_T_eff_keyed_seed_dg pred_sel gkey route it cmb extra g bot0 s0d s0g (v, ctx))"
-      by (simp add: side_cfg_T_eff_keyed_seed_dg_def Let_def dep_aux_seqcomp
-          dep_aux_side_rhs_fold_dg_char)
+      by (simp add: side_cfg_T_eff_keyed_seed_dg_def Let_def dep_aux_sp_lift_tree
+          dep_aux_side_rhs_fold_dg_char[unfolded sp_compile_def])
     finally show ?thesis .
   qed
   have intra_sides_off: "\<And>z. z \<noteq> Inr (gkey ctx)
@@ -702,14 +738,14 @@ proof -
             (v, ctx)) \<tau> z
         = foldr (\<lambda>t acc'. sides_of_rhs t \<tau> z \<squnion> acc') (?intra_new @ ?comb_new @ ?extra) bot"
         using False
-        by (simp add: side_cfg_T_eff_keyed_seed_dg_buffered_def Let_def sides_of_rhs_seqcomp
-            sides_of_rhs_fold_rhs_trees_char bot_dg_state_def[symmetric])
+        by (simp add: side_cfg_T_eff_keyed_seed_dg_buffered_def Let_def sides_of_rhs_sp_lift_tree
+            sides_of_rhs_fold_rhs_contributions_char[unfolded sp_compile_def] bot_dg_state_def[symmetric])
       have old_off: "sides_of_rhs
           (side_cfg_T_eff_keyed_seed_dg pred_sel gkey route it cmb extra g bot0 s0d s0g (v, ctx)) \<tau> z
         = foldr (\<lambda>t acc'. sides_of_rhs t \<tau> z \<squnion> acc') (?intra_old @ ?comb_old @ ?extra) bot"
         using False
-        by (simp add: side_cfg_T_eff_keyed_seed_dg_def Let_def sides_of_rhs_fold_rhs_trees_char
-            sides_of_rhs_side_rhs_fold_dg_char)
+        by (simp add: side_cfg_T_eff_keyed_seed_dg_def Let_def
+            sides_of_rhs_side_rhs_fold_dg_char[unfolded sp_compile_def])
       from new_off old_off fold_sides_off[OF False] show ?thesis by simp
     qed
   qed
@@ -833,19 +869,19 @@ proof -
                             @ extra route c v).
                          \<forall>s1 s2. s1 \<le> s2 \<longrightarrow> traverse_rhs t s1 \<le> traverse_rhs t s2"
         using intra_mono comb_mono extra_mono by auto
-      have step: "traverse_rhs (side_rhs_fold_dg (if v = cfg_entry g then bot0 \<squnion> s0d else bot0)
+      have step: "traverse_rhs (sp_compile (side_rhs_fold_dg (if v = cfg_entry g then bot0 \<squnion> s0d else bot0)
                      (map (\<lambda>(src, a). it c src a) (pred_sel g v c)
                        @ map (\<lambda>(cc, ca). cmb route c ca cc v) (call_site_list g v)
-                       @ extra route c v)) s1
-                  \<le> traverse_rhs (side_rhs_fold_dg (if v = cfg_entry g then bot0 \<squnion> s0d else bot0)
+                       @ extra route c v))) s1
+                  \<le> traverse_rhs (sp_compile (side_rhs_fold_dg (if v = cfg_entry g then bot0 \<squnion> s0d else bot0)
                      (map (\<lambda>(src, a). it c src a) (pred_sel g v c)
                        @ map (\<lambda>(cc, ca). cmb route c ca cc v) (call_site_list g v)
-                       @ extra route c v)) s2"
+                       @ extra route c v))) s2"
         by (rule side_rhs_fold_dg_mono[OF tree_mono le])
       show "eq (side_cfg_T_eff_keyed_seed_dg pred_sel gkey route it cmb extra g bot0 s0d s0g) (v, c) s1
             \<le> eq (side_cfg_T_eff_keyed_seed_dg pred_sel gkey route it cmb extra g bot0 s0d s0g) (v, c) s2"
         unfolding eq_side_cfg_T_eff_keyed_seed_dg using step
-        by (simp add: traverse_side_rhs_fold_dg)
+        by (simp add: traverse_side_rhs_fold_dg[unfolded sp_compile_def])
     qed
   qed
   show ?thesis
@@ -895,19 +931,20 @@ proof -
                             @ extra route c w).
                          \<forall>s1 s2. s1 \<le> s2 \<longrightarrow> sides_of_rhs t s1 \<le> sides_of_rhs t s2"
         using intra_sides_mono comb_sides_mono extra_sides_mono by auto
-      have fold_le: "\<And>acc w. sides_of_rhs (side_rhs_fold_dg acc
+      have fold_le: "\<And>acc w. sides_of_rhs (sp_compile (side_rhs_fold_dg acc
                         (map (\<lambda>(src, a). it c src a) (pred_sel g w c)
                           @ map (\<lambda>(cc, ca). cmb route c ca cc w) (call_site_list g w)
-                          @ extra route c w)) s1
-                    \<le> sides_of_rhs (side_rhs_fold_dg acc
+                          @ extra route c w))) s1
+                    \<le> sides_of_rhs (sp_compile (side_rhs_fold_dg acc
                         (map (\<lambda>(src, a). it c src a) (pred_sel g w c)
                           @ map (\<lambda>(cc, ca). cmb route c ca cc w) (call_site_list g w)
-                          @ extra route c w)) s2"
+                          @ extra route c w))) s2"
         by (rule side_rhs_fold_dg_sides_mono[OF tree_sides_mono le])
       show "sides_of_rhs (side_cfg_T_eff_keyed_seed_dg pred_sel gkey route it cmb extra g bot0 s0d s0g (v, c)) s1
             \<le> sides_of_rhs (side_cfg_T_eff_keyed_seed_dg pred_sel gkey route it cmb extra g bot0 s0d s0g (v, c)) s2"
         unfolding side_cfg_T_eff_keyed_seed_dg_def
-        by (simp add: Let_def fold_le fun_upd_sup_mono[OF fold_le] split: if_splits)
+        by (simp add: Let_def fold_le[unfolded sp_compile_def]
+              fun_upd_sup_mono[OF fold_le[unfolded sp_compile_def]] split: if_splits)
     qed
   qed
   show ?thesis
@@ -933,29 +970,29 @@ proof -
                           @ extra route c w).
                        env_indep_deps t"
       using intra_static comb_static extra_static by auto
-    have fold_mono: "\<And>acc w. mono_tree_deps (side_rhs_fold_dg acc
+    have fold_mono: "\<And>acc w. mono_tree_deps (sp_compile (side_rhs_fold_dg acc
                       (map (\<lambda>(src, a). it c src a) (pred_sel g w c)
                         @ map (\<lambda>(cc, ca). cmb route c ca cc w) (call_site_list g w)
-                        @ extra route c w))"
+                        @ extra route c w)))"
       by (rule side_rhs_fold_dg_mono_tree_deps[OF tree_static])
     show "s1 \<le> s2 \<Longrightarrow>
         dep (side_cfg_T_eff_keyed_seed_dg pred_sel gkey route it cmb extra g bot0 s0d s0g) s1 (v, c)
           \<subseteq> dep (side_cfg_T_eff_keyed_seed_dg pred_sel gkey route it cmb extra g bot0 s0d s0g) s2 (v, c)"
     proof -
       assume ord: "s1 \<le> s2"
-      have dsub: "\<And>acc w. dep_aux s1 (side_rhs_fold_dg acc
+      have dsub: "\<And>acc w. dep_aux s1 (sp_compile (side_rhs_fold_dg acc
                     (map (\<lambda>(src, a). it c src a) (pred_sel g w c)
                       @ map (\<lambda>(cc, ca). cmb route c ca cc w) (call_site_list g w)
-                      @ extra route c w))
-                  \<subseteq> dep_aux s2 (side_rhs_fold_dg acc
+                      @ extra route c w)))
+                  \<subseteq> dep_aux s2 (sp_compile (side_rhs_fold_dg acc
                     (map (\<lambda>(src, a). it c src a) (pred_sel g w c)
                       @ map (\<lambda>(cc, ca). cmb route c ca cc w) (call_site_list g w)
-                      @ extra route c w))"
+                      @ extra route c w)))"
         using fold_mono[unfolded mono_tree_deps_def] ord by blast
       show "dep (side_cfg_T_eff_keyed_seed_dg pred_sel gkey route it cmb extra g bot0 s0d s0g) s1 (v, c)
               \<subseteq> dep (side_cfg_T_eff_keyed_seed_dg pred_sel gkey route it cmb extra g bot0 s0d s0g) s2 (v, c)"
         unfolding dep_def side_cfg_T_eff_keyed_seed_dg_def
-        by (simp add: Let_def dsub split: if_splits)
+        by (simp add: Let_def dsub[unfolded sp_compile_def] split: if_splits)
     qed
     qed
   show ?thesis
@@ -969,5 +1006,7 @@ text \<open>
   properties of the supplied trees, not of the generator. Only the entry
   seeding names \<open>gkey\<close> directly.
 \<close>
+
+end
 
 end

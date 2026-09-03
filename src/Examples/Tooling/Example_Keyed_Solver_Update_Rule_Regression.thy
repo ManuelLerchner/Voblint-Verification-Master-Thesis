@@ -2,7 +2,7 @@ theory Example_Keyed_Solver_Update_Rule_Regression
   imports
     "Voblint_Framework.DG_Keyed_Generator"
     "Voblint_Framework.Routed_Context"
-    "Voblint_Solver.TD_Solver_Menu"
+    "Voblint_Solver.TD_Solver_Bridge"
     "Voblint_Analysis.Ivl_Exec"
 begin
 
@@ -51,11 +51,11 @@ text \<open>\<open>cmb\<close>/\<open>extra\<close> are never invoked: \<open>ca
   \<open>return_call_action_list\<close>/\<open>entry_call_list\<close> empty for every node.\<close>
 definition keyed_cmb :: "(pp \<Rightarrow> unit \<Rightarrow> ivl \<Rightarrow> call_action \<Rightarrow> unit) \<Rightarrow> unit \<Rightarrow> call_action \<Rightarrow> pp \<Rightarrow> pp
     \<Rightarrow> (pp \<times> unit, unit, (ivl, ivl) dg_state) strategy_tree" where
-  "keyed_cmb route ctx ca cc ex = answer (DG bot bot)"
+  "keyed_cmb route ctx ca cc ex = Answer (DG bot bot)"
 
 definition keyed_cmb_c :: "(pp \<Rightarrow> unit \<Rightarrow> ivl \<Rightarrow> call_action \<Rightarrow> unit) \<Rightarrow> unit \<Rightarrow> call_action \<Rightarrow> pp \<Rightarrow> pp
     \<Rightarrow> (pp \<times> unit, unit, (ivl, ivl) dg_state) strategy_tree" where
-  "keyed_cmb_c route ctx ca cc ex = answer (DG bot bot)"
+  "keyed_cmb_c route ctx ca cc ex = Answer (DG bot bot)"
 
 definition keyed_extra :: "(pp \<Rightarrow> unit \<Rightarrow> ivl \<Rightarrow> call_action \<Rightarrow> unit) \<Rightarrow> unit \<Rightarrow> pp
     \<Rightarrow> (pp \<times> unit, unit, (ivl, ivl) dg_state) strategy_tree list" where
@@ -72,7 +72,7 @@ definition keyed_multiwrite_eqs :: "(pp \<times> unit, unit, (ivl, ivl) dg_state
        keyed_cmb keyed_extra keyed_dummy_cfg bot bot bot"
 
 text \<open>The buffered generator: the same two predecessor contributions, folded
-  Side-free via \<^const>\<open>dg_edge_contribution_tree_at\<close> and \<^const>\<open>fold_rhs_trees\<close>,
+  Side-free via \<^const>\<open>dg_edge_contribution_tree_at\<close> and \<^const>\<open>fold_rhs_contributions\<close>,
   published exactly once. Terminates under the completely unmodified vendored
   \<^const>\<open>TD_side_warrowing_apinis_Interp_solve_c\<close>.\<close>
 definition keyed_multiwrite_buffered_eqs :: "(pp \<times> unit, unit, (ivl, ivl) dg_state) eqsT" where
@@ -205,6 +205,6 @@ lemma w0_dep_at_entered_frame:
   by (simp add: routed_cmb_g_def routed_cmb_g_at_def w0_resolve_def
         dg_spec_combine_transfer_def dgs_combine_def mk_dg_man_def
         dg_read_global_def local_transfer_def local_combine_transfer_def
-        Let_def insert_commute)
+        Let_def insert_commute sp_compile_with_bind sp_read_global_def)
 
 end

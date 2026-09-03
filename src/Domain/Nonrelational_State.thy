@@ -142,11 +142,9 @@ lemma gamma_state_witness_not_bot:
   "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> \<not> is_empty_state \<sigma>"
   using is_empty_state_gamma_state_empty by blast
 
-
 lemma is_empty_state_antimono:
   "\<sigma>1 \<le> \<sigma>2 \<Longrightarrow> is_empty_state \<sigma>2 \<Longrightarrow> is_empty_state \<sigma>1"
   for \<sigma>1 \<sigma>2 :: "'a::sound_domain abs_state"
   unfolding is_empty_state_def le_fun_def using is_empty_antimono by blast
-
 
 end

@@ -43,7 +43,7 @@ lemma dep_aux_side_cfg_T_eff_keyed_seed_dg_char:
           @ map (\<lambda>(cc, ca). cmb route ctx ca cc v) (call_site_list g v)
           @ extra route ctx v). dep_aux \<sigma> t)"
   unfolding side_cfg_T_eff_keyed_seed_dg_def
-  by (simp add: Let_def dep_aux_Side dep_aux_side_rhs_fold_dg_char)
+  by (simp add: Let_def dep_aux_Side dep_aux_side_rhs_fold_dg_char[unfolded sp_compile_def])
 
 lemma dep_aux_dg_gen_of_char:
   "dep_aux \<sigma> (dg_gen_of S g bot0 s0d s0g (v, ()))

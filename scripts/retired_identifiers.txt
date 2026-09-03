@@ -132,3 +132,66 @@ ictx_sol_prog
 ictx_terminates
 ictx_terminates_prog
 monovariant_analysis_result_for
+seqcomp_tree
+seqcomp_mono
+seqcomp_assoc
+seqcomp_Answer_right
+env_indep_deps_seqcomp
+traverse_seqcomp
+traverse_rhs_seqcomp
+dep_aux_seqcomp
+sides_of_rhs_seqcomp
+sp_local
+sp_global
+sp_at
+sp_sideg
+read_local
+read_global
+read_at
+side_effect
+
+# --- sp_run renamed to sp_compile: it compiles a program to a tree, it does
+# not execute one ---
+sp_run
+sp_run_def
+sp_run_with
+sp_run_with_def
+sp_run_with_bind
+sp_run_with_bind_read_local
+sp_run_with_bind_read_global
+sp_run_with_bind_publish
+sp_run_with_bind_read_at
+sp_run_with_read_local
+sp_run_with_read_global
+sp_run_with_publish
+sp_run_with_read_at
+sp_run_with_return
+sp_run_sp_lift_tree
+
+# --- se_constraint_holds renamed to tree_covered_at: names the covering
+# obligation the tree states, not an unexplained abbreviation ---
+se_constraint_holds
+se_constraint_holds_def
+se_constraint_holds_local
+se_constraint_holds_sides
+part_post_solution_imp_se_constraint_holds
+part_post_solution_iff_se_constraint_holds
+
+# --- fold_rhs_trees renamed to fold_rhs_contributions: the function returns
+# a strategy_program, not a tree ---
+fold_rhs_trees
+dep_aux_fold_rhs_trees_char
+sides_of_rhs_fold_rhs_trees_char
+sides_of_rhs_fold_rhs_trees_bot
+traverse_fold_rhs_trees_char
+fold_rhs_trees_side_rhs_fold_dg_global_char
+fold_rhs_trees_side_rhs_fold_dg_local_char
+
+# --- solver_menu/run_menu removed: demo-only convenience for running all four
+# update rules at once, used only under Examples. Solver dispatch for the CLI
+# already exists independently as analyse_with_solver (Analyse_Dispatch); the
+# example call sites now name each concrete TD_side_<rule>_Interp_solve
+# directly. TD_Solver_Menu.thy stays as a facade import for TD_Solver_Bridge. ---
+side_solver
+solver_menu
+run_menu

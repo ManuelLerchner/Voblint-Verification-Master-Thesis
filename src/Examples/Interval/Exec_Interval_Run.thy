@@ -1,6 +1,6 @@
 theory Exec_Interval_Run
   imports "Voblint_CLI.Interval_Entry"
-            "Voblint_Solver.TD_Solver_Menu" "Voblint_CFG.CFG_Prune"
+            "Voblint_CFG.CFG_Prune"
             "Voblint_VIMP.VIMP_Notation"
             Example_Interval_Loop_Coverage
 begin
@@ -24,10 +24,9 @@ text \<open>
   This theory runs several fixpoint engines on the one canonical routed
   equation system \<^const>\<open>interval_conf_eqs_prog\<close>: bounded Kleene iteration on
   @{const eq}, @{const TD_side_warrowing_apinis_Interp_solve} (pointwise
-  interval widening for solver termination), and -- through
-  \<^const>\<open>run_menu\<close> -- every update rule on the solver menu at once.  All of
-  them agree here, which is the point: the precision comes from the backward
-  guard filter, not from the solver.
+  interval widening for solver termination), and each of the four vendored
+  update rules directly.  All of them agree here, which is the point: the
+  precision comes from the backward guard filter, not from the solver.
 \<close>
 
 text \<open>\<^const>\<open>loop_prog\<close> and its compiled \<open>loop_cfg\<close> come from
@@ -110,20 +109,37 @@ lemma loop_body_ivl_td:
   "loop_ivl_td_at (Statement 2) = Ivl (Fin 0) (Fin 19)"
   by (simp add: loop_ivl_td_at_def) eval
 
-subsection \<open>The loop under every update rule at once\<close>
+subsection \<open>The loop under every update rule\<close>
 
-text \<open>\<^const>\<open>run_menu\<close> reads the loop-head value of \<open>x\<close> under each update rule in one line,
-  and here all three \<^emph>\<open>agree\<close> at the precise \<open>[0, 20]\<close>.  \<open>x\<close> is a bounded local: interval
-  narrowing (fill an infinite bound from the guard-refined value) plus the backward guard
-  filter on \<open>x < 20\<close> recovers the bound whether the global rule widens (\<open>warrow\<close>) or not
-  (\<open>join\<close>, \<open>per_origin\<close>).  Contrast a flow-insensitive \<^emph>\<open>global\<close> counter, where the same
-  machinery cannot bound the write-back and the slot stays \<open>[0, +inf]\<close>.\<close>
-lemma loop_head_across_update_rules:
-  "run_menu loop_read_x loop_ivl_eqs (cfg_exit loop_cfg, ()) (Inl (Statement 1, ()))
-     = [(STR ''join'',              Ivl (Fin 0) (Fin 20)),
-        (STR ''per_origin'',        Ivl (Fin 0) (Fin 20)),
-        (STR ''warrow'',            Ivl (Fin 0) (Fin 20)),
-        (STR ''warrow_per_origin'', Ivl (Fin 0) (Fin 20))]"
+text \<open>The loop-head value of \<open>x\<close> under each update rule, and here all four \<^emph>\<open>agree\<close> at the
+  precise \<open>[0, 20]\<close>.  \<open>x\<close> is a bounded local: interval narrowing (fill an infinite bound
+  from the guard-refined value) plus the backward guard filter on \<open>x < 20\<close> recovers the
+  bound whether the global rule widens (\<open>warrow\<close>) or not (\<open>join\<close>, \<open>per_origin\<close>).  Contrast
+  a flow-insensitive \<^emph>\<open>global\<close> counter, where the same machinery cannot bound the
+  write-back and the slot stays \<open>[0, +inf]\<close>.\<close>
+
+lemma loop_head_join:
+  "loop_read_x (snd (TD_side_always_join_Interp_solve loop_ivl_eqs (cfg_exit loop_cfg, ()))
+       (Inl (Statement 1, ())))
+     = Ivl (Fin 0) (Fin 20)"
+  by eval
+
+lemma loop_head_per_origin:
+  "loop_read_x (snd (TD_side_per_origin_Interp_solve loop_ivl_eqs (cfg_exit loop_cfg, ()))
+       (Inl (Statement 1, ())))
+     = Ivl (Fin 0) (Fin 20)"
+  by eval
+
+lemma loop_head_warrow:
+  "loop_read_x (snd (TD_side_warrowing_apinis_Interp_solve loop_ivl_eqs (cfg_exit loop_cfg, ()))
+       (Inl (Statement 1, ())))
+     = Ivl (Fin 0) (Fin 20)"
+  by eval
+
+lemma loop_head_warrow_per_origin:
+  "loop_read_x (snd (TD_side_warrowing_per_origin_Interp_solve loop_ivl_eqs
+       (cfg_exit loop_cfg, ())) (Inl (Statement 1, ())))
+     = Ivl (Fin 0) (Fin 20)"
   by eval
 
 subsection \<open>Whole-program entry points, and a second program\<close>

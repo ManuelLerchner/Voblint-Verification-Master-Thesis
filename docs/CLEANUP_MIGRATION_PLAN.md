@@ -170,6 +170,7 @@ subsystem (~173). Then the locales nobody interprets
 and the ~30 smaller items.
 
 Two judgment calls inside this batch, not mechanical:
+
 - `afilter_st_lift_correct` / `bfilter_st_lift_correct` are named *correctness*
   results. Deleting them removes stated theorems, not scaffolding.
 - `Exec_Refinement.thy` has zero external references but eight `[simp]` lemmas

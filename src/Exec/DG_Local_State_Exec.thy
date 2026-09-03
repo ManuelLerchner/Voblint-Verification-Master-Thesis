@@ -239,25 +239,25 @@ abbreviation spec_abs :: "('x,'k,unit,'a abs_state lifted,'a abs_state lifted) d
 
 lemma Hstep_lifted_for:
   "dg_reader_commute_gen.dg_tree_st_commute reader reader \<sigma>_st
-     (sp_run_with (\<lambda>x. DG x bot) (dg_spec_step spec_st a (mk_dg_man d (\<lambda>_. gk))))
-     (sp_run_with (\<lambda>x. DG x bot) (dg_spec_step spec_abs a (mk_dg_man (reader d) (\<lambda>_. gk))))"
+     (sp_compile_with (\<lambda>x. DG x bot) (dg_spec_step spec_st a (mk_dg_man d (\<lambda>_. gk))))
+     (sp_compile_with (\<lambda>x. DG x bot) (dg_spec_step spec_abs a (mk_dg_man (reader d) (\<lambda>_. gk))))"
   unfolding dg_spec_step_local_state_st_for_lifted dg_spec_step_local_state_for_lifted
   using dg_reader_commute_gen.dg_tree_st_commute_local_transfer dg_reader_commute_gen_lifted_for
     step_lift_commute by fastforce
 
 lemma Henter_lifted_for:
   "dg_reader_commute_gen.dg_tree_st_commute reader reader \<sigma>_st
-     (sp_run_with (\<lambda>x. DG x bot) (dgs_enter spec_st ci (mk_dg_man d (\<lambda>_. gk))))
-     (sp_run_with (\<lambda>x. DG x bot) (dgs_enter spec_abs ci (mk_dg_man (reader d) (\<lambda>_. gk))))"
+     (sp_compile_with (\<lambda>x. DG x bot) (dgs_enter spec_st ci (mk_dg_man d (\<lambda>_. gk))))
+     (sp_compile_with (\<lambda>x. DG x bot) (dgs_enter spec_abs ci (mk_dg_man (reader d) (\<lambda>_. gk))))"
   unfolding dgs_enter_local_state_st_for_lifted dgs_enter_local_state_for_lifted
   using dg_reader_commute_gen.dg_tree_st_commute_local_transfer dg_reader_commute_gen_lifted_for
     enter_lift_commute by fastforce
 
 lemma Hcomb_lifted_for:
   "dg_reader_commute_gen.dg_tree_st_commute reader reader \<sigma>_st
-     (sp_run_with (\<lambda>x. DG x bot)
+     (sp_compile_with (\<lambda>x. DG x bot)
         (dg_spec_combine_transfer spec_st ci (mk_dg_man d (\<lambda>_. gk)) de))
-     (sp_run_with (\<lambda>x. DG x bot)
+     (sp_compile_with (\<lambda>x. DG x bot)
         (dg_spec_combine_transfer spec_abs ci (mk_dg_man (reader d) (\<lambda>_. gk)) (reader de)))"
   unfolding dg_spec_combine_transfer_local_state_st_for_lifted
     dg_spec_combine_transfer_local_state_for_lifted

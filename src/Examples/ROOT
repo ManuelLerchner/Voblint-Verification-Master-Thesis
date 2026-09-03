@@ -88,7 +88,6 @@ session Voblint_Examples in "." = "Voblint_CLI" +
 
     (* Solver, domain-independent *)
     Example_Strategy_Tree
-    Example_Strategy_Tree_Program
 
     (* Tooling *)
     Example_EntryState_GraphViz_Regression
@@ -98,6 +97,12 @@ session Voblint_Examples in "." = "Voblint_CLI" +
     (* Two producers, one global: warrowing after the join loses the upper
        bound that warrowing per origin keeps. *)
     Example_Per_Origin_Widening_Precision
+    (* Tilscher's TDside lock-set running example, through the typed
+       strategy_program frontend. *)
+    Example_TD_Side_Program
+    (* Tilscher's TD must-be-initialized running example, through the same
+       frontend with no side effects. *)
+    Example_TD_Plain_Program
 
     Voblint
   document_files

@@ -74,12 +74,12 @@ subsection \<open>Post-solution elimination\<close>
 
 lemma pp_eq_bound:
   "(v, ctx) \<in> vars \<Longrightarrow> eq Gen (v, ctx) sigma \<le> sigma (Inl (v, ctx))"
-  using se_constraint_holds_local[OF part_post_solution_imp_se_constraint_holds[OF pp]]
+  using tree_covered_at_local[OF part_post_solution_imp_tree_covered_at[OF pp]]
   by blast
 
 lemma pp_sides_bound:
   "(v, ctx) \<in> vars \<Longrightarrow> sides_of_rhs (Gen (v, ctx)) sigma \<le> sigma"
-  using se_constraint_holds_sides[OF part_post_solution_imp_se_constraint_holds[OF pp]]
+  using tree_covered_at_sides[OF part_post_solution_imp_tree_covered_at[OF pp]]
   by blast
 
 lemma pp_entry_s0g_bound:
@@ -103,7 +103,7 @@ lemma sg_uncovered_empty: "(v, ctx) \<notin> vars \<Longrightarrow> gammaM (sg (
 subsection \<open>The entry Side wrapper only grows the sides\<close>
 
 lemma sides_fold_le_Gen:
-  "sides_of_rhs (side_rhs_fold_dg (acc0 v) (trees v ctx)) sigma k
+  "sides_of_rhs (sp_compile (side_rhs_fold_dg (acc0 v) (trees v ctx))) sigma k
    \<le> sides_of_rhs (Gen (v, ctx)) sigma k"
   unfolding side_cfg_T_eff_keyed_seed_dg_def Let_def
   by (cases "v = cfg_entry g") (auto simp: Let_def intro: sup.cobounded1)
@@ -142,7 +142,7 @@ proof -
         set_intra_predecessor_list[OF finE] intra_predecessors_def)
   hence mem: "?t \<in> set (trees v ctx)" by (force intro: rev_image_eqI)
   have "globs (sides_of_rhs ?t sigma (Inr gk0))
-      \<le> globs (sides_of_rhs (side_rhs_fold_dg (acc0 v) (trees v ctx)) sigma (Inr gk0))"
+      \<le> globs (sides_of_rhs (sp_compile (side_rhs_fold_dg (acc0 v) (trees v ctx))) sigma (Inr gk0))"
     using sides_le_side_rhs_fold_dg[OF mem, where k = "Inr gk0"]
     by (simp add: less_eq_dg_state_def)
   also have "\<dots> \<le> globs (sides_of_rhs (Gen (v, ctx)) sigma (Inr gk0))"

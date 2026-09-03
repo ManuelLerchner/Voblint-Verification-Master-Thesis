@@ -67,7 +67,7 @@ qed
 lemma sides_le_side_rhs_fold_dg:
   assumes "t \<in> set ts"
   shows "sides_of_rhs t sigma k
-    \<le> sides_of_rhs (side_rhs_fold_dg acc ts) sigma k"
+    \<le> sides_of_rhs (sp_compile (side_rhs_fold_dg acc ts)) sigma k"
 using assms
 proof (induction ts arbitrary: acc)
   case Nil
@@ -78,23 +78,23 @@ next
   proof (cases "t = t'")
     case True
     then show ?thesis
-      by simp
+      by (simp add: sp_compile_with_bind)
   next
     case False
     with Cons.prems have "t \<in> set ts" by simp
     then have "sides_of_rhs t sigma k
         \<le> sides_of_rhs
-          (side_rhs_fold_dg
-            (acc \<squnion> locals (traverse_rhs t' sigma)) ts) sigma k"
+          (sp_compile (side_rhs_fold_dg
+            (acc \<squnion> locals (traverse_rhs t' sigma)) ts)) sigma k"
       by (rule Cons.IH)
     also have "... \<le> sides_of_rhs t' sigma k \<squnion>
         sides_of_rhs
-          (side_rhs_fold_dg
-            (acc \<squnion> locals (traverse_rhs t' sigma)) ts) sigma k"
+          (sp_compile (side_rhs_fold_dg
+            (acc \<squnion> locals (traverse_rhs t' sigma)) ts)) sigma k"
       by simp
     also have "... =
-        sides_of_rhs (side_rhs_fold_dg acc (t' # ts)) sigma k"
-      by simp
+        sides_of_rhs (sp_compile (side_rhs_fold_dg acc (t' # ts))) sigma k"
+      by (simp add: sp_compile_with_bind)
     finally show ?thesis .
   qed
 qed
@@ -282,8 +282,8 @@ lemma eq_hook_gen:
 
 lemma sides_fold_le_hook_gen:
   "sides_of_rhs
-      (side_rhs_fold_dg (hook_acc g bot0 s0d v)
-        (hook_trees g v)) sigma k
+      (sp_compile (side_rhs_fold_dg (hook_acc g bot0 s0d v)
+        (hook_trees g v))) sigma k
    \<le> sides_of_rhs (hook_gen g bot0 s0d s0g (v, ())) sigma k"
   unfolding hook_gen_def hook_trees_def hook_acc_def
     side_cfg_T_eff_keyed_seed_trees_def
@@ -410,8 +410,8 @@ proof -
   have eq_le:
       "eq (hook_gen g bot0 s0d s0g) (v, ()) sigma
         \<le> sigma (Inl (v, ()))"
-    using se_constraint_holds_local
-      [OF part_post_solution_imp_se_constraint_holds[OF pp]]
+    using tree_covered_at_local
+      [OF part_post_solution_imp_tree_covered_at[OF pp]]
       cover
     by blast
   have "locals (traverse_rhs t sigma)
@@ -437,14 +437,14 @@ proof -
   have sides_le:
       "sides_of_rhs (hook_gen g bot0 s0d s0g (v, ())) sigma
         \<le> sigma"
-    using se_constraint_holds_sides
-      [OF part_post_solution_imp_se_constraint_holds[OF pp]]
+    using tree_covered_at_sides
+      [OF part_post_solution_imp_tree_covered_at[OF pp]]
       cover
     by blast
   have "globs (sides_of_rhs t sigma (Inr ()))
       \<le> globs (sides_of_rhs
-        (side_rhs_fold_dg (hook_acc g bot0 s0d v)
-          (hook_trees g v)) sigma (Inr ()))"
+        (sp_compile (side_rhs_fold_dg (hook_acc g bot0 s0d v)
+          (hook_trees g v))) sigma (Inr ()))"
     using sides_le_side_rhs_fold_dg[OF tree, where k = "Inr ()"]
     by (simp add: less_eq_dg_state_def)
   also have "... \<le> globs (sides_of_rhs
@@ -527,15 +527,15 @@ proof -
     "\<And>v. (v, ()) \<in> vars \<Longrightarrow>
       eq (hook_gen g bot0 s0d s0g) (v, ()) sigma
         \<le> sigma (Inl (v, ()))"
-    using se_constraint_holds_local
-      [OF part_post_solution_imp_se_constraint_holds[OF pp]]
+    using tree_covered_at_local
+      [OF part_post_solution_imp_tree_covered_at[OF pp]]
     by blast
   have sides_le:
     "\<And>v. (v, ()) \<in> vars \<Longrightarrow>
       sides_of_rhs (hook_gen g bot0 s0d s0g (v, ()))
         sigma \<le> sigma"
-    using se_constraint_holds_sides
-      [OF part_post_solution_imp_se_constraint_holds[OF pp]]
+    using tree_covered_at_sides
+      [OF part_post_solution_imp_tree_covered_at[OF pp]]
     by blast
 
   have entryD: "s0d \<le> dg_hook_D sigma (cfg_entry g)"
@@ -722,7 +722,7 @@ subsection \<open>Generic post-solution assembly\<close>
 text \<open>
   Turning a per-node dependency-closure fact (a @{const dep\<^sub>L} equation,
   obtained by unfolding @{const hook_gen} against the node's own CFG shape)
-  and a per-node @{const se_constraint_holds} fact into the single conjunct
+  and a per-node @{const tree_covered_at} fact into the single conjunct
   @{const part_post_solution} needs at that node -- and combining every
   node's conjunct with exit membership into @{const part_post_solution}
   itself -- is the same argument regardless of which CFG or domain
@@ -731,46 +731,46 @@ text \<open>
   dependency/effect facts vary per call site. These lemmas fix that argument
   once, so an instance's own post-solution assembly reduces to a case split
   whose branches each cite one dependency fact, one membership fact, and one
-  @{const se_constraint_holds} fact.
+  @{const tree_covered_at} fact.
 \<close>
 
 lemma hook_gen_dep_and_se_entry:
   assumes dep_eq: "dep\<^sub>L (hook_gen g bot0 s0d s0g) sigma (cfg_entry g, ()) = {}"
-    and se: "se_constraint_holds (hook_gen g bot0 s0d s0g (cfg_entry g, ())) sigma
+    and se: "tree_covered_at (hook_gen g bot0 s0d s0g (cfg_entry g, ())) sigma
       (cfg_entry g, ())"
   shows "dep\<^sub>L (hook_gen g bot0 s0d s0g) sigma (cfg_entry g, ()) \<subseteq> vars \<and>
-    se_constraint_holds (hook_gen g bot0 s0d s0g (cfg_entry g, ())) sigma (cfg_entry g, ())"
+    tree_covered_at (hook_gen g bot0 s0d s0g (cfg_entry g, ())) sigma (cfg_entry g, ())"
   using dep_eq se by auto
 
 lemma hook_gen_dep_and_se_single:
   assumes dep_eq: "dep\<^sub>L (hook_gen g bot0 s0d s0g) sigma (v, ()) = {(u, ())}"
     and mem: "(u, ()) \<in> vars"
-    and se: "se_constraint_holds (hook_gen g bot0 s0d s0g (v, ())) sigma (v, ())"
+    and se: "tree_covered_at (hook_gen g bot0 s0d s0g (v, ())) sigma (v, ())"
   shows "dep\<^sub>L (hook_gen g bot0 s0d s0g) sigma (v, ()) \<subseteq> vars \<and>
-    se_constraint_holds (hook_gen g bot0 s0d s0g (v, ())) sigma (v, ())"
+    tree_covered_at (hook_gen g bot0 s0d s0g (v, ())) sigma (v, ())"
   using dep_eq mem se by auto
 
 lemma hook_gen_dep_and_se_pair:
   assumes dep_eq: "dep\<^sub>L (hook_gen g bot0 s0d s0g) sigma (v, ()) = {(u1, ()), (u2, ())}"
     and mem1: "(u1, ()) \<in> vars"
     and mem2: "(u2, ()) \<in> vars"
-    and se: "se_constraint_holds (hook_gen g bot0 s0d s0g (v, ())) sigma (v, ())"
+    and se: "tree_covered_at (hook_gen g bot0 s0d s0g (v, ())) sigma (v, ())"
   shows "dep\<^sub>L (hook_gen g bot0 s0d s0g) sigma (v, ()) \<subseteq> vars \<and>
-    se_constraint_holds (hook_gen g bot0 s0d s0g (v, ())) sigma (v, ())"
+    tree_covered_at (hook_gen g bot0 s0d s0g (v, ())) sigma (v, ())"
   using dep_eq mem1 mem2 se by auto
 
 text \<open>
   Assembling the whole node-indexed ball into @{const part_post_solution}
   itself needs only exit membership, via
-  @{thm part_post_solution_iff_se_constraint_holds}.
+  @{thm part_post_solution_iff_tree_covered_at}.
 \<close>
 
 lemma part_post_solution_of_ball:
   assumes exit_mem: "x \<in> vars"
     and ball: "\<forall>u \<in> vars. dep\<^sub>L (hook_gen g bot0 s0d s0g) sigma u \<subseteq> vars \<and>
-      se_constraint_holds (hook_gen g bot0 s0d s0g u) sigma u"
+      tree_covered_at (hook_gen g bot0 s0d s0g u) sigma u"
   shows "part_post_solution (hook_gen g bot0 s0d s0g) x sigma vars"
-  unfolding part_post_solution_iff_se_constraint_holds using exit_mem ball by blast
+  unfolding part_post_solution_iff_tree_covered_at using exit_mem ball by blast
 
 end
 

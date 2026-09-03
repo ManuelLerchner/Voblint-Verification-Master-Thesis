@@ -30,7 +30,7 @@ theory Example_Parity_DG_Flagship
   imports
     "Voblint_Exec.DG_Local_State_Exec"
     "Voblint_Analysis.Parity_Exec"
-    "Voblint_Solver.TD_Solver_Menu"
+    "Voblint_Solver.TD_Solver_Bridge"
     "Voblint_Exec.DG_Coverage"
     "Voblint_CFG.CFG_Prune"
     "Voblint_Analysis.Analysis_GraphViz"

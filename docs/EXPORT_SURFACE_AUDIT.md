@@ -1150,7 +1150,7 @@ non-vacuity, which suggests the authors already knew.
 Dead constants: five more in `Analysis_GraphViz.thy` beyond the ones in §1
 (`prog_cfg_edges`, `prog_cfg_calls`, `no_annotations`,
 `compiled_domain_graph_config`, `enter_action_label`); `congruence_fact_of_parity`
-+ its `[simp]` gamma lemma (`Int_Domain.thy:222-228`), superseded by
+- its `[simp]` gamma lemma (`Int_Domain.thy:222-228`), superseded by
 `restrict_congruence_by_parity` which is what `congruence_fact_of_int_dom`
 actually calls. Plus proved-and-never-consumed lemma families:
 `fun_of_st_top_<D>_st` ×4, `<D>_tf_st_for_reduces` ×5 (only Interval's is used —

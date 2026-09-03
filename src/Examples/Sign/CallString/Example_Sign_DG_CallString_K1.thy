@@ -6,7 +6,7 @@ theory Example_Sign_DG_CallString_K1
     "Voblint_Exec.DG_Local_State_Exec"
     "Voblint_Analysis.Call_String_Routed_Context"
     "Voblint_Framework.Activation_Backbone"
-    "Voblint_Solver.TD_Solver_Menu"
+    "Voblint_Solver.TD_Solver_Bridge"
     "Voblint_Soundness.Run_Analysis_Sound"
     "Voblint_VIMP.VIMP_Notation"
 begin

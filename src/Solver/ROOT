@@ -4,10 +4,8 @@ session Voblint_Solver in "." = "TD" +
     (* Query-set dependency predicates on a tree value, independent of how
        the tree was built. *)
     Strategy_Tree_Properties
-    Strategy_Tree_Sequencing
     Strategy_Tree_Fold
     Strategy_Tree_Post_Solution
-    Strategy_Tree_Combinators
     (* A typed continuation-passing frontend over the homogeneous vendor
        tree: sp_bind's intermediate type need not be the solver carrier,
        only the final answer does. *)

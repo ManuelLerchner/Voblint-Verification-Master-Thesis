@@ -17,13 +17,10 @@ text \<open>
 
 subsection \<open>Generic: an executable termination check yields solver-domain membership\<close>
 
-text \<open>Every domain instance restates the same three-line bridge --- unfold its own
-  \<open>_terminates_def\<close>, then \<open>term_equivalence\<close> and \<open>solve_c_dom_def\<close> turn the executable
-  \<open>solve_c x \<noteq> None\<close> check into \<open>solve_dom x\<close> --- once per update rule (join, warrowing, ...)
-  and once per domain (Sign, Interval, Parity). Stating it generically \<^emph>\<open>inside\<close> the vendored
-  \<^locale>\<open>TD_side_upd_rule\<close> makes it available on every concrete interpretation as
-  \<open>TD_side_<rule>_Interp.solve_dom_of_solve_c\<close>, so a domain's \<open>_terminates_via_solve_c\<close> lemma
-  reduces to unfolding its own definition and citing this fact.\<close>
+text \<open>Unfolds \<open>term_equivalence\<close> and \<open>solve_c_dom_def\<close> to turn the executable
+  \<open>solve_c x \<noteq> None\<close> check into \<open>solve_dom x\<close>. A domain's own
+  \<open>_terminates_via_solve_c\<close> lemma need only unfold its own \<open>_terminates_def\<close>
+  and cite \<open>TD_side_<rule>_Interp.solve_dom_of_solve_c\<close>.\<close>
 
 lemma (in TD_side_upd_rule) solve_dom_of_solve_c:
   assumes "solve_c x \<noteq> None"
@@ -32,13 +29,9 @@ lemma (in TD_side_upd_rule) solve_dom_of_solve_c:
 
 subsection \<open>Generic: executable termination yields a post-solution, for every update rule\<close>
 
-text \<open>Any interpretation of the vendored \<^locale>\<open>TD_side_upd_rule\<close> --- \<open>join\<close>, \<open>per_origin\<close>,
-  \<open>warrowing_apinis\<close>, and the rest --- turns a single executable termination check
-  (\<open>solve_c x \<noteq> None\<close>) into a \<^const>\<open>part_post_solution\<close>, the exact fact the analyzer
-  soundness spine consumes.  Proving it once \<^emph>\<open>inside the locale\<close> makes it available on every
-  concrete solver as \<open>TD_side_<rule>_Interp.part_post_solution_of_solve_c\<close>, so an analysis
-  instance discharges update-rule soundness with one lemma call instead of the three-step
-  \<open>solve_c \<Rightarrow> solve_dom \<Rightarrow> partial_post_solution\<close> boilerplate repeated per rule.\<close>
+text \<open>Composes \<open>solve_dom_of_solve_c\<close> with \<open>partial_post_solution\<close>, so an
+  analysis instance discharges update-rule soundness with one lemma call instead of
+  restating the \<open>solve_c \<Rightarrow> solve_dom \<Rightarrow> partial_post_solution\<close> chain per rule.\<close>
 
 lemma (in TD_side_upd_rule) part_post_solution_of_solve_c:
   assumes "solve_c x \<noteq> None"

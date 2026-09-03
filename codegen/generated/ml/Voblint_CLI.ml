@@ -4591,9 +4591,9 @@ let sign_ops : (sign, unit) numeric_ops_ext
 
 let rec infl (State_ext (c, infl, stabl, sigma, more)) = infl;;
 
-let rec sp_sideg g d = (fun k -> Side (g, d, k ()));;
+let rec sp_publish g d k = Side (g, d, k ());;
 
-let rec dg_sideg _D gk gd = sp_sideg gk (DG (bot _D, gd));;
+let rec dg_sideg _D gk gd = sp_publish gk (DG (bot _D, gd));;
 
 let rec dgs_combine_assign
   (Dg_spec_ext
@@ -4609,7 +4609,7 @@ let rec dgs_combine_env
       dgs_combine_assign, more))
     = dgs_combine_env;;
 
-let rec sp_bind m f = (fun k -> m (fun x -> f x k));;
+let rec sp_bind m f k = m (fun v -> f v k);;
 
 let rec man_local_update
   man_locala (Man_ext (man_local, man_global, man_sideg, more)) =
@@ -4955,11 +4955,11 @@ let rec ce_dst (CallEdge (x1, x2, x3)) = x1;;
 let rec call_info_of
   ca p = Call_info_ext (ce_dst ca, p, ce_formals ca, ce_args ca, ());;
 
-let rec sp_return a = (fun k -> k a);;
+let rec sp_read_global g k = QueryG (g, k);;
 
-let rec sp_global g = (fun a -> QueryG (g, a));;
+let rec sp_return a k = k a;;
 
-let rec dg_read_global gk = sp_bind (sp_global gk) (comp sp_return globs);;
+let rec dg_read_global gk = sp_bind (sp_read_global gk) (comp sp_return globs);;
 
 let rec mk_dg_man _A
   d key =
@@ -5038,21 +5038,22 @@ let rec buffer_aux _A _B
 
 let rec buffer_sides _B _C t = buffer_aux _B _C [] t;;
 
-let rec seqcomp_tree
-  x0 k = match x0, k with Answer v, k -> k v
-    | QueryL (u, f), k -> QueryL (u, (fun d -> seqcomp_tree (f d) k))
-    | QueryG (g, f), k -> QueryG (g, (fun d -> seqcomp_tree (f d) k))
-    | Side (g, v, t), k -> Side (g, v, seqcomp_tree t k);;
+let rec sp_lift_tree
+  x0 k = match x0, k with Answer d, k -> k d
+    | QueryL (x, f), k -> QueryL (x, (fun d -> sp_lift_tree (f d) k))
+    | QueryG (g, f), k -> QueryG (g, (fun d -> sp_lift_tree (f d) k))
+    | Side (g, d, t), k -> Side (g, d, sp_lift_tree t k);;
 
-let rec fold_rhs_trees _A
-  acc x1 = match acc, x1 with acc, [] -> Answer acc
+let rec fold_rhs_contributions _A
+  acc x1 = match acc, x1 with acc, [] -> sp_return acc
     | acc, t :: ts ->
-        seqcomp_tree t
+        sp_bind (sp_lift_tree t)
           (fun res ->
-            fold_rhs_trees _A
-              (sup _A.semilattice_sup_bounded_semilattice_sup_bot.sup_semilattice_sup
-                acc res)
-              ts);;
+            fold_rhs_contributions _A (sup _A.sup_semilattice_sup acc res) ts);;
+
+let rec sp_compile_with encode p = p (comp (fun a -> Answer a) encode);;
+
+let rec sp_compile p = sp_compile_with id p;;
 
 let rec size_list xs = length_tailrec xs zero_nat;;
 
@@ -5124,11 +5125,15 @@ let rec side_cfg_T_eff_keyed_seed_dg_buffered _B _C _D
        let comb =
          map (fun (cc, ca) -> cmb_c route c ca cc v) (call_site_list g v) in
        let t =
-         fold_rhs_trees (bounded_semilattice_sup_bot_dg_state _C _D) acc0
-           (intra @ comb @ extra route c v)
+         sp_compile
+           (fold_rhs_contributions
+             (semilattice_sup_dg_state
+               _C.semilattice_sup_bounded_semilattice_sup_bot
+               _D.semilattice_sup_bounded_semilattice_sup_bot)
+             acc0 (intra @ comb @ extra route c v))
          in
         buffer_sides _B (bounded_semilattice_sup_bot_dg_state _C _D)
-          (seqcomp_tree t
+          (sp_lift_tree t
             (fun res ->
               Side (gkey c,
                      DG (bot _C.order_bot_bounded_semilattice_sup_bot.bot_order_bot,
@@ -5451,7 +5456,7 @@ let rec routed_extra_g _C _D
   seed_key gk0 route ctx v =
     (match v with Statement _ -> []
       | FunctionEntry _ ->
-        [seqcomp_tree (QueryG (seed_key v ctx, (fun a -> Answer a)))
+        [sp_lift_tree (QueryG (seed_key v ctx, (fun a -> Answer a)))
            (fun seed_state ->
              Answer
                (DG (locals seed_state,
@@ -5463,17 +5468,15 @@ let rec cs_route k u ctx d ca = take k (u :: ctx);;
 let rec side_rhs_fold_dg _A _D
   acc x1 = match acc, x1 with
     acc, [] ->
-      Answer
+      sp_return
         (DG (acc, bot _D.order_bot_bounded_semilattice_sup_bot.bot_order_bot))
     | acc, t :: ts ->
-        seqcomp_tree t
+        sp_bind (sp_lift_tree t)
           (fun res ->
             side_rhs_fold_dg _A _D
               (sup _A.semilattice_sup_bounded_semilattice_sup_bot.sup_semilattice_sup
                 acc (locals res))
               ts);;
-
-let rec sp_run_with encode p = p (comp (fun a -> Answer a) encode);;
 
 let rec dgs_caller_cont
   (Dg_spec_ext
@@ -5497,8 +5500,8 @@ let rec dgs_enter
 let rec routed_cmb_g_at _C _D
   s gk0 seed_key route ctx ca cc caller p =
     (let ci = call_info_of ca p in
-      seqcomp_tree
-        (sp_run_with
+      sp_lift_tree
+        (sp_compile_with
           (fun d ->
             DG (d, bot _D.order_bot_bounded_semilattice_sup_bot.bot_order_bot))
           (dgs_enter s ci
@@ -5507,7 +5510,7 @@ let rec routed_cmb_g_at _C _D
         (fun entry_state ->
           (let entry = locals entry_state in
            let ctxa = route cc ctx entry ca in
-            seqcomp_tree
+            sp_lift_tree
               (Side (seed_key (FunctionEntry p) ctxa,
                       DG (entry,
                            bot _D.order_bot_bounded_semilattice_sup_bot.bot_order_bot),
@@ -5515,10 +5518,10 @@ let rec routed_cmb_g_at _C _D
                         (DG (bot _C.order_bot_bounded_semilattice_sup_bot.bot_order_bot,
                               bot _D.order_bot_bounded_semilattice_sup_bot.bot_order_bot))))
               (fun _ ->
-                seqcomp_tree
+                sp_lift_tree
                   (QueryL ((FunctionResult p, ctxa), (fun a -> Answer a)))
                   (fun callee_state ->
-                    sp_run_with
+                    sp_compile_with
                       (fun d ->
                         DG (d, bot _D.order_bot_bounded_semilattice_sup_bot.bot_order_bot))
                       (dg_spec_combine_transfer s ci
@@ -5529,13 +5532,14 @@ let rec routed_cmb_g_at _C _D
 
 let rec routed_cmb_g _C _D
   s gk0 seed_key resolve route ctx ca cc v =
-    seqcomp_tree (QueryL ((cc, ctx), (fun a -> Answer a)))
+    sp_lift_tree (QueryL ((cc, ctx), (fun a -> Answer a)))
       (fun caller_state ->
-        side_rhs_fold_dg _C _D
-          (bot _C.order_bot_bounded_semilattice_sup_bot.bot_order_bot)
-          (map (routed_cmb_g_at _C _D s gk0 seed_key route ctx ca cc
-                 (locals caller_state))
-            (resolve v cc ca (locals caller_state))));;
+        sp_compile
+          (side_rhs_fold_dg _C _D
+            (bot _C.order_bot_bounded_semilattice_sup_bot.bot_order_bot)
+            (map (routed_cmb_g_at _C _D s gk0 seed_key route ctx ca cc
+                   (locals caller_state))
+              (resolve v cc ca (locals caller_state)))));;
 
 let rec congruence_of_int n = mk_congruence n zero_inta;;
 
@@ -5555,12 +5559,12 @@ let cinit_int_dom_st : unit int_dom_ext resolved_st_q
       (top_int_dom_exta int_dom_record_lattice_unit,
         (int_dom_of_int zero_inta, []));;
 
-let rec sp_local x = (fun a -> QueryL (x, a));;
+let rec sp_read_local x k = QueryL (x, k);;
 
-let rec sp_at = function Inl x -> sp_local x
-                | Inr g -> sp_global g;;
+let rec sp_read_at = function Inl x -> sp_read_local x
+                     | Inr g -> sp_read_global g;;
 
-let rec dg_read_at src = sp_bind (sp_at src) (comp sp_return locals);;
+let rec dg_read_at src = sp_bind (sp_read_at src) (comp sp_return locals);;
 
 let rec dg_edge_tree_man _D
   transfer src key =
@@ -5568,7 +5572,7 @@ let rec dg_edge_tree_man _D
 
 let rec transfer_tree _D _E
   t src key =
-    sp_run_with (fun d -> DG (d, bot _E)) (dg_edge_tree_man _D t src key);;
+    sp_compile_with (fun d -> DG (d, bot _E)) (dg_edge_tree_man _D t src key);;
 
 let rec dg_spec_edge_tree _D _E
   s a src key = transfer_tree _D _E (dg_spec_step s a) src key;;

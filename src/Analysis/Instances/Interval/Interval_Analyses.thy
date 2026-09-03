@@ -13,7 +13,7 @@ theory Interval_Analyses
     "Voblint_Framework.Activation_Backbone"
     "Voblint_Framework.Analysis_Result"
     "Voblint_Framework.Call_String_Context"
-    "Voblint_Solver.TD_Solver_Menu"
+    "Voblint_Solver.TD_Solver_Bridge"
     "Voblint_Compile.Compile_Invariants"
     "Voblint_CFG.CFG_Prune"
     "Voblint_VIMP.VIMP_Program"
