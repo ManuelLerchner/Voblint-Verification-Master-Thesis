@@ -8,7 +8,12 @@ text \<open>
   Pointwise stores and structural reachability are independent domain
   constructions. This theory composes them: unreachable points denote no
   concrete store, and reachable payloads use \<^const>\<open>gamma_state\<close>.
-  The executable bottom test agrees with that composed concretization.
+  The logical witness-empty predicate agrees with that composed
+  concretization; a concrete executable state representation supplies a
+  finite implementation of it (\<open>resolved_st_q_is_bot_for\<close>, downstream in the
+  \<open>Voblint_Exec\<close> session), since \<open>is_empty_state_lift\<close> below inherits
+  \<^const>\<open>is_empty_state\<close>'s non-executable quantifier over \<^typ>\<open>vname\<close> on its
+  \<open>Lifted\<close> case.
 \<close>
 
 subsection \<open>Composed concretization\<close>

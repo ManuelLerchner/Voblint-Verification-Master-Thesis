@@ -8,4 +8,6 @@ session Voblint_Domain in "." = "Voblint_VIMP" +
     Nonrelational_State
     Nonrelational_Reachability
     Backward_Domain
+    Backward_Domain_Refined
     Abstract_Numeric_Queries
+    Backward_Numeric_Queries

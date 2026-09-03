@@ -1,5 +1,6 @@
 theory Int_Classify
   imports Int_Exec_Sound "Voblint_Framework.Abstract_Checks"
+    "Voblint_Domain.Backward_Numeric_Queries"
     "Voblint_Framework.Analysis_Result"
     "Voblint_Exec.Result_Normalization"
 begin
@@ -113,7 +114,7 @@ global_interpretation int_check_domain:
 proof unfold_locales
   fix s :: store and e :: exp and \<sigma> :: "int_dom abs_state"
   assume "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
-  then have "\<forall>x. s x \<in> gamma (\<sigma> x)" by blast
+  then have "\<forall>x. s x \<in> gamma (\<sigma> x)" using gamma_stateD by blast
   then show "aval e s \<in> gamma (aval_int_dom_fixpoint e \<sigma>)" using aval_int_dom_sound by simp
 qed
 

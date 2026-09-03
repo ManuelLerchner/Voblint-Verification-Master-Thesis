@@ -18,9 +18,15 @@ text \<open>
   outer \<open>`Bot\<close> means dead code and whose \<open>unlift\<close> only accepts \<open>`Lifted x\<close>. Reachability is
   carried as an explicit tag on top of the analysis-local state, not rediscovered from the
   state's own contents. \<open>Bot\<close> mirrors Goblint's lifted \<open>`Bot\<close>; \<open>Lifted\<close> mirrors \<open>`Lifted\<close>.
-  Goblint's lift also carries an outer \<open>`Top\<close> for its own pre-analysis bookkeeping; every
-  @{class sound_domain} instance here already has its own \<open>top\<close>, so this lift stays
-  two-valued. At the raw lifted representation, \<open>Bot\<close> is strictly below every \<open>Lifted a\<close>
+  Goblint's lift also carries an outer \<open>`Top\<close>, but not merely as a substitute for a missing
+  payload \<open>top\<close>: \<open>Lattice.LiftConf\<close>'s \<open>join\<close>/\<open>widen\<close> fall back to \<open>`Top\<close> whenever the base
+  domain's own \<open>join\<close>/\<open>widen\<close> raises \<open>TopValue\<close> or \<open>Uncomparable\<close>, i.e. whenever the base
+  domain is partial enough that two of its values have no expressible join, and \<open>unlift\<close>
+  rejects \<open>`Top\<close> exactly like \<open>`Bot\<close>. Every @{class sound_domain} instance here is instead a
+  total \<open>bounded_semilattice_sup_bot\<close> with its own \<open>top\<close>: \<open>\<squnion>\<close> and \<open>\<nabla>\<close> always return a value,
+  so a lifted operation here can never fail the way Goblint's can, and \<open>Lifted top\<close> already
+  says everything an outer \<open>`Top\<close> would. This lift therefore stays two-valued. At the raw
+  lifted representation, \<open>Bot\<close> is strictly below every \<open>Lifted a\<close>
   regardless of \<open>a\<close> -- including \<open>Lifted bot\<close>, which remains distinct from \<open>Bot\<close> even
   though \<open>a\<close> is itself locally bottom -- since dead-by-construction and
   reachable-but-locally-bottom are the two concepts this lift exists to keep separate. The
@@ -341,6 +347,17 @@ lemma canonicalize_lift_Lifted [simp]:
 lemma canonicalize_lift_normalized [simp]:
   "normalized_lift empty_pred (canonicalize_lift empty_pred x)"
   unfolding canonicalize_lift_def by (rule transfer_lift_normalized)
+
+text \<open>
+  Canonicalization is idempotent: a value already collapsed against
+  \<open>empty_pred\<close> is left unchanged by collapsing it again -- the defining
+  property of a normalization operation.
+\<close>
+
+lemma canonicalize_lift_idem [simp]:
+  "canonicalize_lift empty_pred (canonicalize_lift empty_pred x)
+     = canonicalize_lift empty_pred x"
+  by (cases x) (auto simp: normalize_lift_def)
 
 text \<open>
   \<open>\<squnion>\<close> preserves \<open>normalized_lift\<close> from two already-normalized operands: \<^const>\<open>Bot\<close> is

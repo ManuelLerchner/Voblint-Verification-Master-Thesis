@@ -69,9 +69,13 @@ lemma gamma_state_sup_ub2 [intro]:
   unfolding gamma_state_def sup_fun_def
   using gamma_sup_ub2 by blast
 
-(* The pointwise projection gamma_state_def unfolds to; downstream proofs
-   cite this instead of re-unfolding the definition at each site. *)
-lemma gamma_stateD [dest]:
+text \<open>
+  Left bare rather than \<open>[dest]\<close>: \<open>x\<close> is unconstrained by the premise, so a
+  global destruction rule here would let \<open>auto\<close> pick a schematic variable
+  unrelated to the goal at hand (as with the \<open>Voblint_Solver\<close> session's
+  \<open>env_indep_depsD\<close>). Cite it explicitly with the variable the goal needs.
+\<close>
+lemma gamma_stateD:
   "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> s x \<in> gamma (\<sigma> x)"
   for \<sigma> :: "'a::sound_domain abs_state"
   unfolding gamma_state_def by simp
@@ -87,9 +91,16 @@ text \<open>
   suffices -- \<open>gamma_state\<close>'s product structure means a single empty
   component collapses the whole state's concretization to the empty set of
   stores, so a second, third, or every remaining empty component would only
-  reconfirm what the first already decided. This is why an executable
-  dispatcher can stop scanning at the first witness it finds instead of
-  first ruling out, or counting, any others.
+  reconfirm what the first already decided.
+
+  \<open>is_empty_state\<close> is a logical characterization of that condition, not an
+  executable test: \<open>'a abs_state\<close> is a raw function \<open>vname \<Rightarrow> 'a\<close>, and
+  \<^typ>\<open>vname\<close> is infinite, so \<open>\<exists>x. is_empty (\<sigma> x)\<close> has no code equation --
+  there is no finite witness search for code generation to compile. The
+  finite executable bottom test a real dispatcher runs is \<open>resolved_st_q_is_bot_for\<close>,
+  defined downstream in the \<open>Voblint_Exec\<close> session, which scans only the
+  resolved state's finitely many locations and is proved to agree with
+  \<open>is_empty_state\<close> on every resolved state.
 \<close>
 
 definition is_empty_state :: "('a::executable_domain) abs_state \<Rightarrow> bool" where
@@ -107,7 +118,11 @@ lemma is_empty_stateE [elim]:
 lemma is_empty_state_gamma_state_empty:
   assumes "is_empty_state \<sigma>"
   shows "\<lbrakk>\<sigma>\<rbrakk> = {}"
-  using assms is_empty_correct by fastforce
+proof -
+  obtain x where "is_empty (\<sigma> x)" using assms by (rule is_empty_stateE)
+  then show ?thesis
+    using gamma_stateD[of _ \<sigma> x] unfolding is_empty_correct by fastforce
+qed
 
 lemma gamma_state_empty_is_empty_state:
   assumes "\<lbrakk>\<sigma>\<rbrakk> = {}"
@@ -138,7 +153,7 @@ text \<open>
   short-circuit condition can never fire on an abstract state some reachable
   concrete store still belongs to.
 \<close>
-lemma gamma_state_witness_not_bot:
+lemma gamma_state_witness_not_empty:
   "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> \<not> is_empty_state \<sigma>"
   using is_empty_state_gamma_state_empty by blast
 

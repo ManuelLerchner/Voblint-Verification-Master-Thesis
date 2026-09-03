@@ -1,5 +1,5 @@
   theory Exec_Backward
-    imports "Voblint_Exec.Exec_St" "Voblint_Domain.Backward_Domain"
+    imports "Voblint_Exec.Exec_St" "Voblint_Domain.Backward_Domain_Refined"
 begin
 
 section \<open>Generic executable mirror of backward filtering\<close>

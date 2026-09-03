@@ -33,9 +33,10 @@ class sound_domain = executable_domain +
 
 text \<open>
   \<open>executable_domain\<close> carries exactly the executable per-element operations a
-  concrete domain's runtime representation needs: the lattice structure plus
-  \<open>is_empty\<close>/\<open>is_full\<close>, both finite decision procedures on every real instance
-  (Interval's bound comparison, Sign's constructor match, ...). \<open>sound_domain\<close>
+  concrete domain's runtime representation needs: the lattice structure,
+  \<open>is_empty\<close>/\<open>is_full\<close> (both finite decision procedures on every real instance
+  -- Interval's bound comparison, Sign's constructor match, ...), and
+  \<open>to_string\<close> for reporting a solved value back to a caller. \<open>sound_domain\<close>
   extends it with \<open>gamma\<close>, which is not executable in general (an infinite
   \<^typ>\<open>int set\<close>) and exists purely to state and prove soundness. Splitting the
   class this way keeps \<open>gamma\<close> out of the type-class dictionary that code
@@ -52,19 +53,25 @@ text \<open>
   tests against \<open>bot\<close>/\<open>top\<close>: \<open>is_empty\<close> mirrors Goblint's own \<open>Lattice.Bot\<close>
   signature (@{url "https://github.com/goblint/analyzer/blob/master/src/domain/lattice.ml"}):
   \<open>val is_bot: t -> bool\<close> is a per-domain operation there too, not a
-  derived equality test against one canonical bottom value. The reason is
-  the same in both codebases: many domains have representations with more
-  than one empty- or full-denoting value (Interval's inverted bound pairs, e.g.
-  \<^term>\<open>Ivl (Fin 5) (Fin (-1))\<close>, none of them favored over \<open>bot\<close> itself),
-  so \<open>a = bot\<close> would silently miss some of them, and symmetrically for
-  \<open>a = top\<close> and full concretizations. Fixing \<open>is_empty\<close>/\<open>is_full\<close> as their
-  own class operations, correct against \<^const>\<open>gamma\<close> rather than against
-  \<^const>\<open>bot\<close>/\<^const>\<open>top\<close>, makes every \<^class>\<open>sound_domain\<close> instance responsible
-  for its own exact emptiness and fullness tests, the same obligation every
-  domain already carries for \<^const>\<open>gamma\<close> itself. The lattice constants
-  \<open>bot\<close>/\<open>top\<close> stay the canonical representatives; \<open>is_empty\<close>/\<open>is_full\<close> answer
-  a different question (what a value denotes), and a proof that genuinely
-  needs the canonical element still writes \<open>a = bot\<close>/\<open>a = top\<close> directly.
+  generic derived test. Goblint's own default implementation (\<open>IntDomain0.Std\<close>
+  in
+  @{url "https://github.com/goblint/analyzer/blob/master/src/cdomain/value/cdomains/intDomain0.ml"})
+  in fact defines it as structural equality against one canonical \<open>bot_of\<close>
+  value, since most of its domains keep a single bottom representation
+  (Interval's \<open>bot () = None\<close>, normalized on every operation). Voblint
+  cannot take that shortcut: some Voblint domains admit representations with
+  more than one empty- or full-denoting value that are never normalized away
+  (Interval's inverted bound pairs, e.g. \<^term>\<open>Ivl (Fin 5) (Fin (-1))\<close>, none
+  of them favored over \<open>bot\<close> itself), so \<open>a = bot\<close> would silently miss some
+  of them, and symmetrically for \<open>a = top\<close> and full concretizations. Fixing
+  \<open>is_empty\<close>/\<open>is_full\<close> as their own class operations, correct against
+  \<^const>\<open>gamma\<close> rather than against \<^const>\<open>bot\<close>/\<^const>\<open>top\<close>, makes every
+  \<^class>\<open>sound_domain\<close> instance responsible for its own exact emptiness and
+  fullness tests, the same obligation every domain already carries for
+  \<^const>\<open>gamma\<close> itself. The lattice constants \<open>bot\<close>/\<open>top\<close> stay the canonical
+  representatives; \<open>is_empty\<close>/\<open>is_full\<close> answer a different question (what a
+  value denotes), and a proof that genuinely needs the canonical element
+  still writes \<open>a = bot\<close>/\<open>a = top\<close> directly.
 \<close>
 
 subsection \<open>Concretization bounds\<close>
@@ -88,11 +95,11 @@ text \<open>
 \<close>
 lemma is_empty_antimono:
   "a \<le> b \<Longrightarrow> is_empty b \<Longrightarrow> is_empty a" for a b :: "'a::sound_domain"
-  by (metis bot.extremum_uniqueI gamma_mono is_empty_correct)
+  using gamma_mono unfolding is_empty_correct by blast
 
 lemma is_full_mono:
   "a \<le> b \<Longrightarrow> is_full a \<Longrightarrow> is_full b" for a b :: "'a::sound_domain"
-  by (metis gamma_mono is_full_correct subset_UNIV subset_antisym)
+  using gamma_mono unfolding is_full_correct by blast
 
 subsection \<open>Domains with widening\<close>
 

@@ -39,7 +39,7 @@ global_interpretation interval_check_domain:
 proof unfold_locales
   fix s :: store and e :: exp and \<sigma> :: "ivl abs_state"
   assume "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
-  then have "\<forall>x. s x \<in> gamma (\<sigma> x)" by blast
+  then have "\<forall>x. s x \<in> gamma (\<sigma> x)" using gamma_stateD by blast
   then have "\<forall>x. s x \<in> gamma_ivl (\<sigma> x)" by simp
   then show "aval e s \<in> gamma (aval_ivl e \<sigma>)" using aval_ivl_sound by fastforce
 qed

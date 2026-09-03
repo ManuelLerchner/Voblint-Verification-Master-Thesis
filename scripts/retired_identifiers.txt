@@ -195,3 +195,8 @@ fold_rhs_trees_side_rhs_fold_dg_local_char
 side_solver
 solver_menu
 run_menu
+
+# --- gamma_state_witness_not_bot renamed: the theory explicitly distinguishes
+# semantic emptiness (gamma_state = {}) from structural bottom, and the old
+# name suggested the latter. The lemma proves the former. ---
+gamma_state_witness_not_bot
