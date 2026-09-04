@@ -234,3 +234,18 @@ bfilter_st_bot
 bfilter_st_locality
 lift_probe_step
 bfilter_lift_step
+
+# --- branch/branch_st redefined via collapse_lift(branch_lifted ...): the
+# old feasible-gated-raw-bfilter branch and branch_st are strictly less
+# precise on And/Or conditions than the pollution-fixed branch_lifted, and
+# this project keeps exactly one public plain-state branch operation (per
+# level) rather than two of different precision. branch/branch_sound/
+# branch_mono/branch_st/branch_st_commute/branch_le_bfilter keep their
+# names -- only their definitions changed -- so those are not retired; the
+# helpers that existed solely to state the old branch's own equational
+# unfold are gone with no replacement under the same name. ---
+branch_unfold
+bfilter_And_False_branch
+bfilter_Or_True_branch
+bfilter_st_And_False_branch
+bfilter_st_Or_True_branch

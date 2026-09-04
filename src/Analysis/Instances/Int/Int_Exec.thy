@@ -104,8 +104,10 @@ fun int_tf_st_never_for ::
   | "int_tf_st_never_for gs (EA_Check cnd) s = s"
 
 theorem int_tf_st_never_for_commute:
-  "fun_of_resolved_st_q_for gs (int_tf_st_never_for gs a s) =
-   apply_tf (int_tf_never_for gs) a (fun_of_resolved_st_q_for gs s)"
+  assumes "live_resolved_st_q gs s"
+  shows
+    "fun_of_resolved_st_q_for gs (int_tf_st_never_for gs a s) =
+     apply_tf (int_tf_never_for gs) a (fun_of_resolved_st_q_for gs s)"
 proof (cases a)
   case EA_Nop
   then show ?thesis by (simp add: int_tf_never_for_def skip_int_dom_def)
@@ -117,10 +119,12 @@ next
   then show ?thesis by (auto simp: int_tf_never_for_def split: special_call.splits)
 next
   case (EA_Assume b)
-  then show ?thesis by (simp add: int_tf_never_for_def int_dom_backward_never.branch_st_commute)
+  then show ?thesis
+    using assms by (simp add: int_tf_never_for_def int_dom_backward_never.branch_st_commute)
 next
   case (EA_AssumeNot b)
-  then show ?thesis by (simp add: int_tf_never_for_def int_dom_backward_never.branch_st_commute)
+  then show ?thesis
+    using assms by (simp add: int_tf_never_for_def int_dom_backward_never.branch_st_commute)
 next
   case (EA_Ret ea p)
   then show ?thesis
@@ -203,8 +207,10 @@ fun int_tf_st_once_for ::
   | "int_tf_st_once_for gs (EA_Check cnd) s = s"
 
 theorem int_tf_st_once_for_commute:
-  "fun_of_resolved_st_q_for gs (int_tf_st_once_for gs a s) =
-   apply_tf (int_tf_once_for gs) a (fun_of_resolved_st_q_for gs s)"
+  assumes "live_resolved_st_q gs s"
+  shows
+    "fun_of_resolved_st_q_for gs (int_tf_st_once_for gs a s) =
+     apply_tf (int_tf_once_for gs) a (fun_of_resolved_st_q_for gs s)"
 proof (cases a)
   case EA_Nop
   then show ?thesis by (simp add: int_tf_once_for_def skip_int_dom_def)
@@ -216,10 +222,12 @@ next
   then show ?thesis by (auto simp: int_tf_once_for_def split: special_call.splits)
 next
   case (EA_Assume b)
-  then show ?thesis by (simp add: int_tf_once_for_def int_dom_backward_once.branch_st_commute)
+  then show ?thesis
+    using assms by (simp add: int_tf_once_for_def int_dom_backward_once.branch_st_commute)
 next
   case (EA_AssumeNot b)
-  then show ?thesis by (simp add: int_tf_once_for_def int_dom_backward_once.branch_st_commute)
+  then show ?thesis
+    using assms by (simp add: int_tf_once_for_def int_dom_backward_once.branch_st_commute)
 next
   case (EA_Ret ea p)
   then show ?thesis
@@ -302,8 +310,10 @@ fun int_tf_st_fixpoint_for ::
   | "int_tf_st_fixpoint_for gs (EA_Check cnd) s = s"
 
 theorem int_tf_st_fixpoint_for_commute:
-  "fun_of_resolved_st_q_for gs (int_tf_st_fixpoint_for gs a s) =
-   apply_tf (int_tf_fixpoint_for gs) a (fun_of_resolved_st_q_for gs s)"
+  assumes "live_resolved_st_q gs s"
+  shows
+    "fun_of_resolved_st_q_for gs (int_tf_st_fixpoint_for gs a s) =
+     apply_tf (int_tf_fixpoint_for gs) a (fun_of_resolved_st_q_for gs s)"
 proof (cases a)
   case EA_Nop
   then show ?thesis by (simp add: int_tf_fixpoint_for_def skip_int_dom_def)
@@ -316,11 +326,11 @@ next
 next
   case (EA_Assume b)
   then show ?thesis
-    by (simp add: int_tf_fixpoint_for_def int_dom_backward_fixpoint.branch_st_commute)
+    using assms by (simp add: int_tf_fixpoint_for_def branch_int_dom_fixpoint_st_commute)
 next
   case (EA_AssumeNot b)
   then show ?thesis
-    by (simp add: int_tf_fixpoint_for_def int_dom_backward_fixpoint.branch_st_commute)
+    using assms by (simp add: int_tf_fixpoint_for_def branch_int_dom_fixpoint_st_commute)
 next
   case (EA_Ret ea p)
   then show ?thesis

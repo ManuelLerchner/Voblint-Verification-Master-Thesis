@@ -173,8 +173,10 @@ text \<open>The classifier-parametric commutation of the executable and abstract
   transfer at an arbitrary classifier \<open>gs\<close>.\<close>
 
 theorem sign_tf_st_for_commute:
-  "fun_of_resolved_st_q_for gs (sign_tf_st_for gs a s) =
-   apply_tf (sign_tf_for gs) a (fun_of_resolved_st_q_for gs s)"
+  assumes "live_resolved_st_q gs s"
+  shows
+    "fun_of_resolved_st_q_for gs (sign_tf_st_for gs a s) =
+     apply_tf (sign_tf_for gs) a (fun_of_resolved_st_q_for gs s)"
 proof (cases a)
   case EA_Nop
   then show ?thesis by (simp add: sign_tf_for_def skip_sign_def)
@@ -186,10 +188,12 @@ next
   then show ?thesis by (auto simp: sign_tf_for_def split: special_call.splits)
 next
   case (EA_Assume b)
-  then show ?thesis by (simp add: sign_tf_for_def sign_backward_domain.branch_st_commute)
+  then show ?thesis
+    using assms by (simp add: sign_tf_for_def sign_backward_domain.branch_st_commute)
 next
   case (EA_AssumeNot b)
-  then show ?thesis by (simp add: sign_tf_for_def sign_backward_domain.branch_st_commute)
+  then show ?thesis
+    using assms by (simp add: sign_tf_for_def sign_backward_domain.branch_st_commute)
 next
   case (EA_Ret ea p)
   then show ?thesis

@@ -168,7 +168,7 @@ interpretation int_unit: routed_domain_exec
   gs empty_pred "int_tf_st_for mode gs" "int_dom_enter_st_for mode gs" "int_tf_for mode gs"
   "Analysis_Global ()" Activation_Seed route_unit route_unit static_resolve static_resolve
   by unfold_locales
-     (rule int_tf_st_for_commute, rule int_dom_enter_st_for_commute, rule exact, simp, simp,
+     (rule int_tf_st_for_commute, assumption, rule int_dom_enter_st_for_commute, rule exact, simp, simp,
       simp add: static_resolve_def)
 
 lemmas int_pp_st_gen = int_unit.pp_st
@@ -628,7 +628,7 @@ interpretation int_cs: routed_domain_exec
   Call_String_Context.Global Call_String_Context.Seed "cs_route k" "cs_route k"
   static_resolve static_resolve
   by unfold_locales
-     (rule int_tf_st_for_commute, rule int_dom_enter_st_for_commute, rule exact, simp,
+     (rule int_tf_st_for_commute, assumption, rule int_dom_enter_st_for_commute, rule exact, simp,
       rule cs_route_indep_of_data, simp add: static_resolve_def)
 
 lemmas int_cs_pp_st_gen = int_cs.pp_st
@@ -933,7 +933,7 @@ begin
 
 interpretation int_domain: routed_dg_domain_exec
   gs empty_pred "int_tf_st_for mode gs" "int_dom_enter_st_for mode gs" "int_tf_for mode gs"
-  by unfold_locales (rule int_tf_st_for_commute, rule int_dom_enter_st_for_commute, rule exact)
+  by unfold_locales (rule int_tf_st_for_commute, assumption, rule int_dom_enter_st_for_commute, rule exact)
 
 lemma int_conf_entry_route_gen_eq_generic:
   "int_conf_entry_route_gen mode gs empty_pred u ctx d ca = int_domain.entry_exec_route_gen u ctx d ca"
@@ -970,7 +970,7 @@ interpretation int_es: routed_domain_exec
   formals_route_lifted_gen
   static_resolve static_resolve
   by unfold_locales
-     (rule int_tf_st_for_commute, rule int_dom_enter_st_for_commute, rule exact, simp,
+     (rule int_tf_st_for_commute, assumption, rule int_dom_enter_st_for_commute, rule exact, simp,
       rule int_conf_entry_route_gen_commute[OF exact, symmetric],
       simp add: static_resolve_def)
 

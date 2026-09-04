@@ -158,7 +158,8 @@ locale routed_dg_domain_exec =
     and enter_st :: "call_info \<Rightarrow> 'a exec_dg_st \<Rightarrow> 'a exec_dg_st"
     and tf :: "'a domain_transfer"
   assumes tf_st_commute:
-      "\<And>a s. fun_of_resolved_st_q_for gs (tf_st a s) = apply_tf tf a (fun_of_resolved_st_q_for gs s)"
+      "\<And>a s. live_resolved_st_q gs s \<Longrightarrow>
+         fun_of_resolved_st_q_for gs (tf_st a s) = apply_tf tf a (fun_of_resolved_st_q_for gs s)"
     and enter_st_commute:
       "\<And>ci s. fun_of_resolved_st_q_for gs (enter_st ci s)
                    = snd (enter\<^sup># tf ci (fun_of_resolved_st_q_for gs s))"
@@ -173,15 +174,30 @@ text \<open>Each field's readback equation, once. These are the only inputs the 
   commutes below take: a local-only transfer compiles to a single answer, so
   its transport is exactly the pure equation on the function it wraps.\<close>
 
+text \<open>
+  Unlike \<open>enter_st_commute\<close>/\<open>combine\<close>'s field equations, \<open>tf_st_commute\<close> only
+  holds on live inputs (a domain's \<open>branch_st\<close>-style raw result need not
+  match its abstract \<open>branch\<close>'s on a dead one), so this cannot go through the
+  blanket \<open>transfer_lift_commute\<close>. \<open>normalized_lift\<close> supplies liveness
+  directly instead: production only ever feeds \<open>tf_st\<close> a \<open>d\<close> that is
+  itself \<open>Bot\<close> or the (always-normalized, \<open>transfer_lift_normalized\<close>) result
+  of a prior step.
+\<close>
+
 lemma step_lift_commute:
-  "reader (transfer_lift empty_pred (tf_st a) d)
+  assumes norm: "normalized_lift empty_pred d"
+  shows "reader (transfer_lift empty_pred (tf_st a) d)
      = transfer_lift is_empty_state (apply_tf tf a) (reader d)"
-proof (rule transfer_lift_commute)
-  show "\<And>s. fun_of_resolved_st_q_for gs (tf_st a s)
-              = apply_tf tf a (fun_of_resolved_st_q_for gs s)"
-    by (rule tf_st_commute)
-  show "\<And>s. empty_pred s = is_empty_state (fun_of_resolved_st_q_for gs s)"
-    by (rule empty_pred_exact)
+using norm proof (cases d)
+  case Bot
+  then show ?thesis by (simp add: transfer_lift_def)
+next
+  case (Lifted s)
+  with norm have "live_resolved_st_q gs s"
+    by (simp add: live_resolved_st_q_def empty_pred_exact)
+  then show ?thesis
+    unfolding Lifted
+    by (simp add: transfer_lift_def normalize_lift_def tf_st_commute empty_pred_exact)
 qed
 
 lemma enter_lift_commute:
@@ -238,12 +254,13 @@ abbreviation spec_abs :: "('x,'k,unit,'a abs_state lifted,'a abs_state lifted) d
   "spec_abs \<equiv> local_state_dg_spec_for_lifted gs is_empty_state tf"
 
 lemma Hstep_lifted_for:
-  "dg_reader_commute_gen.dg_tree_st_commute reader reader \<sigma>_st
+  assumes "normalized_lift empty_pred d"
+  shows "dg_reader_commute_gen.dg_tree_st_commute reader reader \<sigma>_st
      (sp_compile_with (\<lambda>x. DG x bot) (dg_spec_step spec_st a (mk_dg_man d (\<lambda>_. gk))))
      (sp_compile_with (\<lambda>x. DG x bot) (dg_spec_step spec_abs a (mk_dg_man (reader d) (\<lambda>_. gk))))"
   unfolding dg_spec_step_local_state_st_for_lifted dg_spec_step_local_state_for_lifted
   using dg_reader_commute_gen.dg_tree_st_commute_local_transfer dg_reader_commute_gen_lifted_for
-    step_lift_commute by fastforce
+    step_lift_commute[OF assms] by fastforce
 
 lemma Henter_lifted_for:
   "dg_reader_commute_gen.dg_tree_st_commute reader reader \<sigma>_st
@@ -302,11 +319,29 @@ proof -
       by (meson gamma_lift_mono gamma_state_mono map_lift_fun_of_resolved_st_q_for_mono)
   next
     case (2 a d)
-    show ?case
-      unfolding local_spec_step_transfer_lift_tf_st step_lift_commute
-      by (rule transfer_lift_sound_collect
-            [OF sound_transfer_for.edge_collect_apply_tf_sound_for[OF tf_sound]
-                edge_collect_empty_set is_empty_state_gamma_state_empty])
+    have step: "edge_collect a (gamma_state_lift (reader d))
+                  \<subseteq> gamma_state_lift (reader (transfer_lift empty_pred (tf_st a) d))"
+    proof (cases "normalized_lift empty_pred d")
+      case True
+      then have eq: "reader (transfer_lift empty_pred (tf_st a) d)
+                       = transfer_lift is_empty_state (apply_tf tf a) (reader d)"
+        by (rule step_lift_commute)
+      show ?thesis
+        unfolding eq
+        by (rule transfer_lift_sound_collect
+              [OF sound_transfer_for.edge_collect_apply_tf_sound_for[OF tf_sound]
+                  edge_collect_empty_set is_empty_state_gamma_state_empty])
+    next
+      case False
+      then obtain s where "d = Lifted s" "empty_pred s"
+        by (cases d) simp_all
+      then have "gamma_state_lift (reader d) = {}"
+        by (simp add: empty_pred_exact is_empty_state_gamma_state_empty)
+      then show ?thesis
+        by (simp add: edge_collect_empty_set)
+    qed
+    then show ?case
+      by (simp add: local_spec_step_transfer_lift_tf_st)
   next
     case (3 s d ci)
     show ?case

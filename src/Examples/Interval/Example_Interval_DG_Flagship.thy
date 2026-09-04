@@ -250,7 +250,8 @@ proof -
              flagship_ex_transfer.tf_sound_enter_entry_for flagship_ex_transfer.tf_sound_combine_env_for
              ivl_tf_st_for_commute[folded fun_of_exec_dg_st_for_def]
              ivl_enter_st_for_commute[folded fun_of_exec_dg_st_for_def]
-             TD_side_warrowing_apinis_Interp.part_post_solution_of_solve_c)+
+             TD_side_warrowing_apinis_Interp.part_post_solution_of_solve_c
+        | assumption)+
 qed
 
 text \<open>

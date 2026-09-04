@@ -28,7 +28,7 @@ text \<open>
 lemma apply_tf_once_assign:
   "apply_tf (int_tf_once_for test_gs) (EA_Assign (STR ''x'') (N 5)) test_env_top (STR ''x'') =
    int_dom_of_int 5"
-  by eval
+  unfolding int_tf_once_for_def by simp eval
 
 text \<open>
   \<open>tf_enter\<close> resets the frame (every variable is local under \<open>test_gs\<close>)
@@ -40,28 +40,39 @@ lemma tf_enter_once_binds_formal:
      (call_info_of (CallEdge None [STR ''p''] [N 7]) (STR ''f''))
      test_env_top) (STR ''p'') =
    int_dom_of_int 7"
-  by eval
+  unfolding int_tf_once_for_def by simp eval
 
 subsection \<open>Guard refinement through the registered bundle, mode contrast\<close>
 
 text \<open>
   The same \<open>x + 1 = 3 ==> x = 2\<close> witness as
-  \<open>Example_Int_Backward.bfilter_int_dom_once_plus_eq_exact\<close>, now reached
-  through \<open>apply_tf\<close>'s \<open>EA_Assume\<close> dispatch: confirms \<open>tf_branch\<close> is wired
-  to \<open>bfilter_int_dom_once\<close>, not merely that the underlying filter is
-  sound in isolation.
+  \<open>Example_Int_Backward.bfilter_int_dom_once_plus_eq_exact\<close>, in the two
+  halves that together say what a single \<open>apply_tf\<close> run would: the bundle's
+  \<open>tf_branch\<close> field is the mode's own \<open>branch_int_dom_*\<close>, and that branch's
+  filter narrows exactly. The dispatch half is an equation between
+  operations rather than a computation, because \<open>branch_int_dom_*\<close> collapses
+  the lifted filter and \<open>bfilter_lifted\<close> normalizes against
+  \<open>is_empty_state\<close>, which quantifies over an infinite \<open>vname\<close> and so has no
+  code equation --- only the executable \<open>resolved_st_q\<close> mirror
+  \<open>branch_int_dom_*_st\<close> runs.
 \<close>
 
-lemma apply_tf_once_assume_exact:
-  "apply_tf (int_tf_once_for test_gs)
-     (EA_Assume (Eq (Plus (V (STR ''x'')) (N 1)) (N 3)))
+lemma tf_branch_once_is_branch_int_dom:
+  "tf_branch (int_tf_once_for test_gs) = branch_int_dom_once"
+  by (simp add: int_tf_once_for_def)
+
+lemma tf_branch_never_is_branch_int_dom:
+  "tf_branch (int_tf_never_for test_gs) = branch_int_dom_never"
+  by (simp add: int_tf_never_for_def)
+
+lemma bfilter_once_assume_exact:
+  "bfilter_int_dom_once (Eq (Plus (V (STR ''x'')) (N 1)) (N 3)) True
      test_env_top (STR ''x'') =
    int_dom_sipc SPos (Ivl (Fin 2) (Fin 2)) PEven (congruence_of_int 2)"
   by eval
 
-lemma apply_tf_never_assume_congruence_only:
-  "apply_tf (int_tf_never_for test_gs)
-     (EA_Assume (Eq (Plus (V (STR ''x'')) (N 1)) (N 3)))
+lemma bfilter_never_assume_congruence_only:
+  "bfilter_int_dom_never (Eq (Plus (V (STR ''x'')) (N 1)) (N 3)) True
      test_env_top (STR ''x'') =
    int_dom_sipc STop top PTop (congruence_of_int 2)"
   by eval
@@ -84,7 +95,7 @@ lemma apply_tf_once_special_min:
      (EA_Special (Min (N 3) (N 5)) (STR ''x''))
      test_env_top (STR ''x'') =
    int_dom_sipc SPos (Ivl (Fin 3) (Fin 3)) POdd (mk_congruence 1 2)"
-  by eval
+  unfolding int_tf_once_for_def by simp eval
 
 end
 

@@ -126,7 +126,8 @@ definition nest_gamma :: "ivl exec_dg_st lifted \<Rightarrow> ivl exec_dg_st lif
 
 interpretation nest_domain: routed_dg_domain_exec
   nest_gs nest_empty_pred "ivl_tf_st_for nest_gs" "ivl_enter_st_for nest_gs" "ivl_tf_for nest_gs"
-  by unfold_locales (rule ivl_tf_st_for_commute, rule ivl_enter_st_for_commute, rule nest_exact)
+  by unfold_locales
+     (rule ivl_tf_st_for_commute, assumption, rule ivl_enter_st_for_commute, rule nest_exact)
 
 lemma nest_gamma_eq: "nest_gamma = nest_domain.gamma_exec"
   by (intro ext) (simp add: nest_gamma_def nest_domain.gamma_exec_def gamma_dg_local_state_def)

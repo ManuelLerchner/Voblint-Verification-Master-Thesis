@@ -69,7 +69,8 @@ begin
 interpretation sign_dom: routed_dg_domain_exec
   gs empty_pred "sign_tf_st_for gs" "sign_enter_st_for gs" "sign_tf_for gs"
   by unfold_locales
-     (rule sign_tf_st_for_commute, rule sign_enter_st_for_commute, rule exact)
+     (rule sign_tf_st_for_commute, assumption,
+      rule sign_enter_st_for_commute, rule exact)
 
 lemma sctx_gamma_eq: "sctx_gamma gs = sign_dom.gamma_exec"
   by (intro ext) (simp add: sctx_gamma_def sign_dom.gamma_exec_def)

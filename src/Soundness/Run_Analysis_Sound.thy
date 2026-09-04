@@ -111,6 +111,7 @@ locale ownership_split_dg_exec_analysis =
       "reserved_ret_var gs"
     and tf_commute[simp]:
       "\<And>a s.
+        live_resolved_st_q gs s \<Longrightarrow>
         fun_of_exec_dg_st_for gs (tf_st a s) =
         apply_tf tf a (fun_of_exec_dg_st_for gs s)"
     and enter_commute[simp]:
@@ -167,10 +168,13 @@ proof -
     show ?case
       unfolding dg_spec_step_ownership_split_st_for ownership_split_transfer_st_def gamma_ownership_split_exec_def
         dg_spec_edge_tree_def fun_of_exec_dg_st_for_def gamma_ownership_split_def
-      by (simp add: fun_of_resolved_st_q_for_restrict_local_for
-            fun_of_resolved_st_q_for_restrict_global_for
-            tf_commute[unfolded fun_of_exec_dg_st_for_def]
-            tfs.edge_collect_apply_tf_sound_for)
+      apply (simp add: fun_of_resolved_st_q_for_restrict_local_for
+            fun_of_resolved_st_q_for_restrict_global_for)
+      apply (cases "live_resolved_st_q gs (combine_resolved_st_q (locals (\<tau> src)) (globs (\<tau> (Inr gk))))")
+       apply (simp add: tf_commute[unfolded fun_of_exec_dg_st_for_def]
+              tfs.edge_collect_apply_tf_sound_for)
+      apply (simp add: live_resolved_st_q_def is_empty_state_gamma_state_empty edge_collect_empty_set)
+      done
   next
     case (3 s \<tau> src gk ci)
     then show ?case
@@ -301,6 +305,7 @@ locale local_state_dg_exec_analysis =
       "reserved_ret_var gs"
     and tf_commute[simp]:
       "\<And>a s.
+        live_resolved_st_q gs s \<Longrightarrow>
         fun_of_exec_dg_st_for gs (tf_st a s) =
         apply_tf tf a (fun_of_exec_dg_st_for gs s)"
     and enter_commute[simp]:
@@ -327,7 +332,7 @@ text \<open>
 
 sublocale routed_dg_domain_exec gs empty_pred tf_st enter_st tf
   by unfold_locales
-     (rule tf_commute[unfolded fun_of_exec_dg_st_for_def],
+     (rule tf_commute[unfolded fun_of_exec_dg_st_for_def], assumption,
       rule enter_commute[unfolded fun_of_exec_dg_st_for_def],
       rule is_bot_exact[unfolded fun_of_exec_dg_st_for_def])
 

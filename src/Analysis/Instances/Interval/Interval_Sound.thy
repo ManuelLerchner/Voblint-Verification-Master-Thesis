@@ -52,7 +52,8 @@ begin
 interpretation ivl_dom: routed_dg_domain_exec
   gs empty_pred "ivl_tf_st_for gs" "ivl_enter_st_for gs" "ivl_tf_for gs"
   by unfold_locales
-     (rule ivl_tf_st_for_commute, rule ivl_enter_st_for_commute, rule exact)
+     (rule ivl_tf_st_for_commute, assumption,
+      rule ivl_enter_st_for_commute, rule exact)
 
 lemma interval_gamma_eq: "interval_gamma gs = ivl_dom.gamma_exec"
   by (intro ext) (simp add: interval_gamma_def ivl_dom.gamma_exec_def)

@@ -1386,7 +1386,7 @@ where
   "inv_times_int_dom_fixpoint == inv_times_int_dom Refine_Fixpoint"
 
 global_interpretation int_dom_backward_fixpoint:
-    backward_domain
+    backward_domain_reductive
       intersect_int_dom_fixpoint aval_int_dom_fixpoint tobool_int_dom_fixpoint
       inv_less_int_dom_fixpoint inv_eq_int_dom_fixpoint
       inv_plus_int_dom_fixpoint inv_minus_int_dom_fixpoint inv_times_int_dom_fixpoint
@@ -1394,8 +1394,8 @@ global_interpretation int_dom_backward_fixpoint:
     afilter_int_dom_fixpoint = int_dom_backward_fixpoint.afilter
     and feasible_int_dom_fixpoint = int_dom_backward_fixpoint.feasible
     and bfilter_int_dom_fixpoint = int_dom_backward_fixpoint.bfilter
-    and branch_int_dom_fixpoint = int_dom_backward_fixpoint.branch
     and branch_lifted_int_dom_fixpoint = int_dom_backward_fixpoint.branch_lifted
+    and branch_int_dom_fixpoint = int_dom_backward_fixpoint.branch
     and afilter_int_dom_fixpoint_st = int_dom_backward_fixpoint.afilter_st
     and bfilter_int_dom_fixpoint_st = int_dom_backward_fixpoint.bfilter_st
     and branch_int_dom_fixpoint_st = int_dom_backward_fixpoint.branch_st
@@ -1449,6 +1449,28 @@ next
   fix p :: int_dom and b :: bool and i :: int
   assume "tobool_int_dom_fixpoint p = Some b" and "i \<in> gamma p"
   then show "truthy i = b" using int_dom_tobool_sound by simp
+next
+  fix a b :: int_dom
+  show "intersect_int_dom_fixpoint a b \<le> a"
+    by (rule intersect_int_dom_mode_reductive1)
+next
+  fix a b :: int_dom
+  show "intersect_int_dom_fixpoint a b \<le> b"
+    by (rule intersect_int_dom_mode_reductive2)
 qed
+
+text \<open>
+  \<open>Refine_Fixpoint\<close> interprets \<^locale>\<open>backward_domain_reductive\<close>, not the
+  full \<^locale>\<open>backward_domain_refined\<close>: \<open>refine\<close> is reductive at every mode
+  (\<open>refine_reductive\<close>) but monotone only off \<open>Refine_Fixpoint\<close>
+  (\<open>refine_nonfixpoint_mono\<close>). Reductivity is all the lifted executable
+  filtering needs, so this mode shares the same precise, dead-arm-eliminating
+  \<open>branch\<close>/\<open>branch_st\<close> as every other, and only the monotonicity layer
+  (\<open>branch_mono\<close> and friends) stays out of its reach.
+\<close>
+
+lemmas branch_int_dom_fixpoint_sound [intro] = int_dom_backward_fixpoint.branch_sound
+
+lemmas branch_int_dom_fixpoint_st_commute = int_dom_backward_fixpoint.branch_st_commute
 
 end

@@ -1747,7 +1747,7 @@ text \<open>
 \<close>
 
 definition update_resolved_st_q_lift ::
-  "('a::sound_domain) resolved_st_q lifted => location => 'a => 'a resolved_st_q lifted"
+  "('a::executable_domain) resolved_st_q lifted => location => 'a => 'a resolved_st_q lifted"
 where
   "update_resolved_st_q_lift x loc a = do {
      s <- x;

@@ -102,11 +102,30 @@ text \<open>
 
 abbreviation "loop_body_entry \<equiv> Statement 2"
 
+lemma loop_head_guard_feasible:
+  "feasible_ivl (Less (V (STR ''x'')) (N 20)) True (loop_env (Statement 1))"
+  unfolding loop_env_def by simp eval
+
+lemma bfilter_loop_head_state:
+  "bfilter_ivl (Less (V (STR ''x'')) (N 20)) True (loop_env (Statement 1))
+     = (\<lambda>_. Ivl MinInf PlusInf)((STR ''x'') := Ivl (Fin 0) (Fin 19))"
+  unfolding loop_env_def by (simp add: normalize_ivl_def)
+
+lemma bfilter_loop_head_live:
+  "\<not> is_empty_state (bfilter_ivl (Less (V (STR ''x'')) (N 20)) True (loop_env (Statement 1)))"
+  unfolding bfilter_loop_head_state
+  by (auto simp: is_empty_state_def is_bottom_ivl_def split: if_splits)
+
 lemma loop_body_x_from_assume:
   "tf_branch (ivl_tf_for gs) (Less (V (STR ''x'')) (N 20)) True (loop_env (Statement 1)) (STR ''x'') = Ivl (Fin 0) (Fin 19)"
 proof -
-  have "tf_branch (ivl_tf_for gs) = branch_ivl" by (simp add: ivl_tf_for_def)
-  then show ?thesis unfolding loop_env_def by (simp only:) eval
+  have tf: "tf_branch (ivl_tf_for gs) = branch_ivl" by (simp add: ivl_tf_for_def)
+  have "branch_ivl (Less (V (STR ''x'')) (N 20)) True (loop_env (Statement 1))
+          = bfilter_ivl (Less (V (STR ''x'')) (N 20)) True (loop_env (Statement 1))"
+    using loop_head_guard_feasible bfilter_loop_head_live
+    by (simp add: ivl_backward_domain.branch_def ivl_backward_domain.branch_lifted_def)
+  then show ?thesis
+    unfolding tf bfilter_loop_head_state by simp
 qed
 
 lemma loop_body_entry_x:

@@ -30,8 +30,11 @@ definition int_dom_abs_spec ::
   "int_dom_abs_spec mode gs = local_state_dg_spec_for_lifted gs is_empty_state (int_tf_for mode gs)"
 
 lemma int_tf_st_for_commute:
-  "fun_of_resolved_st_q_for gs (int_tf_st_for mode gs a s) =
-     apply_tf (int_tf_for mode gs) a (fun_of_resolved_st_q_for gs s)"
+  assumes "live_resolved_st_q gs s"
+  shows
+    "fun_of_resolved_st_q_for gs (int_tf_st_for mode gs a s) =
+       apply_tf (int_tf_for mode gs) a (fun_of_resolved_st_q_for gs s)"
+  using assms
   by (cases mode)
      (simp_all add: int_tf_st_never_for_commute int_tf_st_once_for_commute int_tf_st_fixpoint_for_commute)
 
@@ -91,7 +94,8 @@ begin
 interpretation int_dom: routed_dg_domain_exec
   gs empty_pred "int_tf_st_for mode gs" "int_dom_enter_st_for mode gs" "int_tf_for mode gs"
   by unfold_locales
-     (rule int_tf_st_for_commute, rule int_dom_enter_st_for_commute, rule exact)
+     (rule int_tf_st_for_commute, assumption,
+      rule int_dom_enter_st_for_commute, rule exact)
 
 lemma int_dom_gamma_eq: "int_dom_gamma gs = int_dom.gamma_exec"
   by (intro ext) (simp add: int_dom_gamma_def int_dom.gamma_exec_def)

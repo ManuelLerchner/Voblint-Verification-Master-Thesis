@@ -162,7 +162,8 @@ proof -
              sign_tf_st_for_commute[folded fun_of_exec_dg_st_for_def]
              sign_enter_st_for_commute[folded fun_of_exec_dg_st_for_def]
              dgEx_is_bot_exact
-             TD_side_always_join_Interp.part_post_solution_of_solve_c)+
+             TD_side_always_join_Interp.part_post_solution_of_solve_c
+        | assumption)+
 qed
 
 text \<open>The initial stores are covered by the registered concretization at the

@@ -450,71 +450,28 @@ text \<open>
   (\<open>branch_lifted_normalized\<close>), so a caller can rely on structural \<open>Bot\<close>
   alone rather than re-testing \<open>is_empty_state\<close> on a \<open>Lifted\<close> result.
 
-  \<open>branch\<close> is the plain-\<open>abs_state\<close> projection of \<open>branch_lifted\<close>, used by
-  \<open>domain_transfer\<close>'s \<open>tf_branch\<close> field (and hence \<open>apply_tf\<close>): it collapses
-  \<open>Bot\<close> to ordinary \<open>bot\<close>, so a caller that never needs to distinguish "no
-  successor" from "successor whose store is bottom" can keep working with
-  plain \<open>abs_state\<close>.
+  \<open>bfilter\<close>'s two join cases, restated directly against \<open>feasible\<close> and raw
+  \<open>bfilter\<close>, matching \<open>bfilter\<close>'s own join-case equations: a disjunct
+  feasible by the forward gate can still have its own \<open>bfilter\<close> narrowing
+  discover a stronger backward-only contradiction, landing on a
+  witness-bottom, non-canonical \<open>abs_state\<close> (@{const is_empty_state} without
+  being the literal pointwise \<open>bot\<close>) that pollutes the pointwise join with
+  its unrefined other locations. \<open>bfilter_lifted\<close> is where this is
+  corrected; these two are restatements of \<open>bfilter\<close>'s own primitive
+  equations, not a claim that this join is precise.
 \<close>
 
-definition branch :: "exp => bool => 'a abs_state => 'a abs_state" where
-  "branch e pol \<sigma> = (if feasible e pol \<sigma> then bfilter e pol \<sigma> else bot)"
+lemma bfilter_And_False_unfold:
+  "bfilter (And b1 b2) False \<sigma> =
+     (if feasible b1 False \<sigma> then bfilter b1 False \<sigma> else bot)
+     \<squnion> (if feasible b2 False \<sigma> then bfilter b2 False \<sigma> else bot)"
+  by simp
 
-text \<open>
-  The plain-state case split, recovered as a lemma rather than the primitive
-  definition: callers reasoning about \<open>branch\<close> at the plain \<open>abs_state\<close> level
-  (\<open>domain_transfer\<close>'s \<open>tf_branch\<close> field, the executable mirror) unfold through
-  this instead of \<open>branch_lifted\<close>.
-\<close>
-
-lemma branch_unfold:
-  "branch e pol \<sigma> = (if feasible e pol \<sigma> then bfilter e pol \<sigma> else bot)"
-  by (rule branch_def)
-
-text \<open>
-  \<open>bfilter\<close>'s two join cases, restated through \<open>branch\<close>: each disjunct is
-  narrowed by exactly the operator the branch transfer applies to a whole
-  condition, and the results are joined. This is the shape Goblint's \<open>inv_exp\<close>
-  has for \<open>LOr\<close> -- refine each arm, drop an arm whose refinement raises
-  \<open>Deadcode\<close> -- with \<open>bot\<close> in place of the exception, since \<open>bot\<close> is the unit
-  of \<open>\<squnion>\<close>. Downstream mirrors and their correctness proofs cite these rather
-  than re-deriving the gate from \<open>bfilter\<close>'s primitive equations.
-
-  Each equation is stated directly over raw \<open>branch\<close> results, matching
-  \<open>bfilter\<close>'s own join-case equations: a disjunct feasible by the forward
-  gate can still have its own \<open>bfilter\<close> narrowing discover a stronger
-  backward-only contradiction, landing on a witness-bottom, non-canonical
-  \<open>abs_state\<close> (@{const is_empty_state} without being the literal pointwise
-  \<open>bot\<close>) that pollutes the pointwise join with its unrefined other
-  locations -- see \<open>bfilter\<close>'s own comment. \<open>bfilter_lifted\<close> is where this
-  is corrected.
-\<close>
-
-lemma bfilter_And_False_branch:
-  "bfilter (And b1 b2) False \<sigma> = branch b1 False \<sigma> \<squnion> branch b2 False \<sigma>"
-  by (simp add: branch_unfold)
-
-lemma bfilter_Or_True_branch:
-  "bfilter (Or b1 b2) True \<sigma> = branch b1 True \<sigma> \<squnion> branch b2 True \<sigma>"
-  by (simp add: branch_unfold)
-
-lemma branch_sound [intro]:
-  assumes "s \<in> \<lbrakk>\<sigma>\<rbrakk>" "truthy (aval e s) = pol"
-  shows "s \<in> \<lbrakk>branch e pol \<sigma>\<rbrakk>"
-  using assms feasible_of_concrete[OF assms] bfilter_sound[OF assms]
-  by (simp add: branch_unfold)
-
-text \<open>
-  \<open>branch\<close> only ever narrows further than \<open>bfilter\<close>: it either falls
-  through to \<open>bfilter\<close> unchanged, or short-circuits to \<open>bot\<close>, and \<open>bot\<close> is
-  least. Callers that only need an upper bound on \<open>branch\<close>'s result -- e.g.
-  post-fixpoint checks -- can reuse their existing \<open>bfilter\<close>-level
-  reasoning through this fact instead of re-deriving it against \<open>branch\<close>'s
-  case split.
-\<close>
-
-lemma branch_le_bfilter: "branch e pol \<sigma> \<le> bfilter e pol \<sigma>"
-  by (simp add: branch_unfold)
+lemma bfilter_Or_True_unfold:
+  "bfilter (Or b1 b2) True \<sigma> =
+     (if feasible b1 True \<sigma> then bfilter b1 True \<sigma> else bot)
+     \<squnion> (if feasible b2 True \<sigma> then bfilter b2 True \<sigma> else bot)"
+  by simp
 
 text \<open>
   \<open>bfilter_lifted\<close> is not \<open>bfilter\<close>'s wrapper: a wrapper can only test the
@@ -703,6 +660,45 @@ proof -
   have "s \<in> gamma_state_lift (bfilter_lifted e pol \<sigma>)" by (rule bfilter_lifted_sound[OF assms])
   with g show ?thesis unfolding branch_lifted_def by simp
 qed
+
+text \<open>
+  \<open>domain_transfer\<close>'s \<open>tf_branch\<close> field has no room for \<open>lifted\<close>: it is one
+  plain-state-to-plain-state operation among several, consumed uniformly by
+  \<open>apply_tf\<close> with no \<open>Bot\<close>/\<open>Lifted\<close> case at that layer. \<open>branch\<close> is
+  \<open>branch_lifted\<close> collapsed back through \<^const>\<open>collapse_lift\<close>, so
+  \<open>tf_branch\<close> can use the pollution-fixed recursion while still returning a
+  plain \<open>abs_state\<close>: an infeasible or witness-bottom result becomes the
+  plain type's own \<open>bot\<close>, exactly the value \<open>tf_branch\<close>'s callers already
+  treat as a dead program point. This replaces the old feasible-gated-raw-
+  \<open>bfilter\<close> \<open>branch\<close>: that definition is strictly less precise on \<open>And\<close>/
+  \<open>Or\<close> conditions (the join-arm-pollution \<open>bfilter\<close>'s own comment
+  documents), and this project keeps exactly one public plain-state branch
+  operation rather than two of different precision.
+\<close>
+
+definition branch :: "exp => bool => 'a abs_state => 'a abs_state" where
+  "branch e pol \<sigma> = collapse_lift (branch_lifted e pol \<sigma>)"
+
+lemma branch_sound [intro]:
+  assumes "s \<in> \<lbrakk>\<sigma>\<rbrakk>" "truthy (aval e s) = pol"
+  shows "s \<in> \<lbrakk>branch e pol \<sigma>\<rbrakk>"
+  unfolding branch_def
+  by (rule gamma_collapse_lift[where gam = gamma_state,
+        OF branch_lifted_sound[OF assms] gamma_state_bot])
+
+text \<open>
+  \<open>branch\<close> and \<open>branch_lifted\<close> denote the same concrete stores: \<open>branch\<close>
+  only adapts the carrier to the plain-state interface \<open>tf_branch\<close> needs,
+  it does not lose precision relative to \<open>branch_lifted\<close>. Left bare rather
+  than \<open>[simp]\<close>: its right-hand side is a strictly more complex normal
+  form than its left, so declaring it a default rewrite would silently
+  block every proof that reasons about \<open>branch\<close> directly (\<open>branch_sound\<close>
+  among them) -- cite it explicitly where the lifted view is actually
+  needed.
+\<close>
+
+lemma gamma_branch: "\<lbrakk>branch e pol \<sigma>\<rbrakk> = gamma_state_lift (branch_lifted e pol \<sigma>)"
+  unfolding branch_def by (cases "branch_lifted e pol \<sigma>") simp_all
 
 end
 

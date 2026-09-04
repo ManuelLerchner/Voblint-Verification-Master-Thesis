@@ -262,6 +262,54 @@ lemma map_lift_id [simp]: "map_lift id x = x"
 lemma map_lift_comp [simp]: "map_lift g (map_lift f x) = map_lift (g \<circ> f) x"
   by (cases x) simp_all
 
+subsection \<open>Collapsing back to the plain, bot-carrying type\<close>
+
+text \<open>
+  \<open>collapse_lift\<close> goes the opposite direction from \<open>normalize_lift\<close>: where
+  \<open>normalize_lift\<close> turns a domain-produced witness-bottom value into
+  structural \<open>Bot\<close>, \<open>collapse_lift\<close> turns \<open>Bot\<close> back into the plain type's
+  own \<open>bot\<close>, so a caller whose interface only has room for the plain type
+  -- not the \<open>lifted\<close> wrapper -- can still receive a more precise lifted
+  result. Unlike \<open>normalize_lift\<close>, no predicate is needed: \<open>Bot\<close> already
+  says the value is empty, and \<open>bot\<close> is exactly the plain type's own
+  representative of that.
+\<close>
+
+fun collapse_lift :: "'a::bot lifted \<Rightarrow> 'a" where
+    "collapse_lift Bot = bot"
+  | "collapse_lift (Lifted a) = a"
+
+lemma collapse_lift_mono:
+  fixes x y :: "'a::bounded_semilattice_sup_bot lifted"
+  assumes "x \<le> y"
+  shows "collapse_lift x \<le> collapse_lift y"
+  using assms by (cases x; cases y) simp_all
+
+text \<open>
+  The soundness counterpart: a witness against \<open>gam\<close> through the lifted
+  carrier survives collapsing, since \<open>Bot\<close> can only arise when there is no
+  witness at all (\<open>gam bot = {}\<close> rules that reading out).
+\<close>
+
+lemma gamma_collapse_lift:
+  assumes "s \<in> gamma_lift gam x" and "gam bot = {}"
+  shows "s \<in> gam (collapse_lift x)"
+  using assms by (cases x) simp_all
+
+text \<open>
+  \<open>collapse_lift\<close> commutes with \<open>map_lift f\<close> whenever \<open>f\<close> itself sends
+  \<open>bot\<close> to \<open>bot\<close>: both sides land on \<open>Bot\<close>'s collapse, \<open>bot\<close>, when the
+  carrier is \<open>Bot\<close>, and agree trivially on \<open>Lifted a\<close>. This is what lets an
+  executable-carrier readback (\<open>f\<close>) be applied either before or after
+  collapsing a \<open>lifted\<close> result, so a commutation theorem proved for the
+  \<open>lifted\<close> level transports to the collapsed, plain-type level for free.
+\<close>
+
+lemma collapse_lift_map_lift:
+  assumes "f bot = bot"
+  shows "collapse_lift (map_lift f x) = f (collapse_lift x)"
+  using assms by (cases x) simp_all
+
 subsection \<open>Canonical-bottom normalization\<close>
 
 text \<open>

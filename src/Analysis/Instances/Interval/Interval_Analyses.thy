@@ -147,7 +147,8 @@ interpretation ivl_unit: routed_domain_exec
   gs empty_pred "ivl_tf_st_for gs" "ivl_enter_st_for gs" "ivl_tf_for gs"
   "Analysis_Global ()" Activation_Seed route_unit route_unit static_resolve static_resolve
   by unfold_locales
-     (rule ivl_tf_st_for_commute, rule ivl_enter_st_for_commute, rule exact, simp, simp,
+     (rule ivl_tf_st_for_commute, assumption,
+      rule ivl_enter_st_for_commute, rule exact, simp, simp,
       simp add: static_resolve_def)
 
 lemmas ivl_pp_st_gen = ivl_unit.pp_st
@@ -1132,7 +1133,8 @@ interpretation ivl_es: routed_domain_exec
   "Analysis_Global ()" Activation_Seed "entry_state_route_gen gs empty_pred" "entry_state_route_abs_gen gs"
   static_resolve static_resolve
   by unfold_locales
-     (rule ivl_tf_st_for_commute, rule ivl_enter_st_for_commute, rule exact, simp,
+     (rule ivl_tf_st_for_commute, assumption,
+      rule ivl_enter_st_for_commute, rule exact, simp,
       rule entry_state_route_commute_gen[OF exact], simp add: static_resolve_def)
 
 lemmas ivl_es_pp_st_gen = ivl_es.pp_st

@@ -47,19 +47,22 @@ and its own expected verdict inline next to each check:
                                    compiler must never silently drop a
                                    reachable check). Mirrors Goblint's
                                    "__goblint_check(1); // reachable".
-  // NOWARN                       asserts the check is ABSENT from the
-                                   report entirely. Mirrors Goblint's
+  // NOWARN                       asserts the check's program point is
+                                   PROVED UNREACHABLE -- its report row
+                                   carries the DEAD label, not a verdict.
+                                   Corresponds to Goblint's
                                    "__goblint_check(0); // NOWARN
-                                   (unreachable)": voblint detects an
-                                   unreachable program point by probing
-                                   every in-scope variable's is_bot
-                                   (sound_domain class method, exact for
-                                   non-relational domains -- see
-                                   program_vars/is_bottom_abstract_value in
-                                   Example_State_Report_GraphViz.thy) and
-                                   suppresses that report entry, so a NOWARN
-                                   check contributes zero lines of output,
-                                   not a vacuous PROVED.
+                                   (unreachable)", but asserts more than
+                                   Goblint's silence does: voblint carries
+                                   an exact, proved per-check unreachable
+                                   flag (resolved_st_q_lifted_is_bot_for,
+                                   Exec_St.thy; contextual_verdict's Dead
+                                   under --context) and names it in the
+                                   report, so a NOWARN that fails because
+                                   the compiler dropped the check entirely
+                                   is distinguishable from one the analysis
+                                   genuinely proved dead. A vacuous PROVED
+                                   is a failure either way.
 
 A case with no verdict annotations at all is a rejection case -- a parse
 error (see 00-sanity/02-malformed.vimp) or a well-formedness error (e.g. a
@@ -200,6 +203,9 @@ VOBLINT = Path(os.environ["VOBLINT_BIN"]) if "VOBLINT_BIN" in os.environ else CL
 
 REACHABLE = "reachable"
 NOWARN = "NOWARN"
+# The verdict column voblint prints for a check whose point is proved
+# unreachable, in place of PROVED/REFUTED/UNKNOWN -- what NOWARN asserts.
+DEAD = "DEAD"
 KNOWN_VERDICTS = {"PROVED", "REFUTED", "UNKNOWN", NOWARN, REACHABLE}
 
 # A generous ceiling, not a performance budget: this exists to turn a solver
@@ -453,12 +459,26 @@ def _check_case_body(path: Path, args: list[str], cmd: str) -> tuple[bool, list[
     ok = True
     for line_no, exp in sorted(expected.items()):
         if exp == NOWARN:
-            if line_no in actual:
+            if line_no not in actual:
                 lines.append(
-                    f"FAIL {cmd}: line {line_no} expected NOWARN (suppressed), "
+                    f"FAIL {cmd}: line {line_no} expected NOWARN (proved unreachable), "
+                    "but the check is missing from the report entirely -- the compiler "
+                    "dropped it, which is a CFG defect, not an unreachability result"
+                )
+                ok = False
+            elif actual[line_no] != DEAD:
+                lines.append(
+                    f"FAIL {cmd}: line {line_no} expected NOWARN (proved unreachable), "
                     f"but got {actual[line_no]}"
                 )
                 ok = False
+            continue
+        if actual.get(line_no) == DEAD:
+            lines.append(
+                f"FAIL {cmd}: line {line_no} expected {exp}, but the point is "
+                "proved unreachable (annotate it NOWARN)"
+            )
+            ok = False
             continue
         if line_no not in actual:
             lines.append(f"FAIL {cmd}: line {line_no} expected {exp}, but missing from the report")

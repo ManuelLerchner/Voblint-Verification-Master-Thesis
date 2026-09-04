@@ -978,6 +978,7 @@ code_identifier
 | code_module Nonrelational_State \<rightharpoonup> (OCaml) Core
 | code_module Nonrelational_Reachability \<rightharpoonup> (OCaml) Core
 | code_module Backward_Domain \<rightharpoonup> (OCaml) Core
+| code_module Exec_Backward \<rightharpoonup> (OCaml) Core
 | code_module Numeric_Ops \<rightharpoonup> (OCaml) Core
 | code_module Exec_St \<rightharpoonup> (OCaml) Core
 | code_module AList \<rightharpoonup> (OCaml) Core

@@ -52,9 +52,14 @@ lemma branch_int_dom_once_sound:
   "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> truthy(aval b s) = res \<Longrightarrow> s \<in> \<lbrakk>branch_int_dom_once b res \<sigma>\<rbrakk>"
   using int_dom_backward_once.branch_sound by simp
 
-lemma branch_int_dom_fixpoint_sound:
-  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> truthy(aval b s) = res \<Longrightarrow> s \<in> \<lbrakk>branch_int_dom_fixpoint b res \<sigma>\<rbrakk>"
-  using int_dom_backward_fixpoint.branch_sound by simp
+text \<open>
+  \<open>branch_int_dom_fixpoint\<close>'s own soundness (\<open>branch_int_dom_fixpoint_sound\<close>)
+  is proved directly in \<open>Int_Backward.thy\<close>, next to its definition: unlike
+  \<open>Never\<close>/\<open>Once\<close>, \<open>Refine_Fixpoint\<close> names an explicitly local raw
+  feasible-gated-\<open>bfilter\<close> pair rather than the shared, pollution-fixed
+  \<open>branch\<close>, so there is no generic \<open>backward_domain.branch_sound\<close> instance
+  to reuse here.
+\<close>
 
 subsection \<open>Abstract assignment\<close>
 
@@ -476,21 +481,30 @@ text \<open>
   (\<open>bfilter_mono\<close>). \<open>bfilter_int_dom_fixpoint\<close> has no such theorem --
   \<open>Int_Backward\<close> interpreted \<open>Refine_Fixpoint\<close> against the weaker
   \<^locale>\<open>backward_domain\<close> locale precisely because \<open>refine_fix\<close> lacks one --
-  so \<open>int_tf_fixpoint_for\<close> gets no matching monotonicity lemma here.
+  so \<open>int_tf_fixpoint_for\<close> gets no matching monotonicity lemma here. The same
+  gap means \<open>Never\<close>/\<open>Once\<close> alone get the pollution-fixed, shared \<open>branch\<close>
+  (\<open>branch_int_dom_never\<close>/\<open>_once\<close>, backed by
+  \<^theory>\<open>Voblint_Analysis.Exec_Backward\<close>'s \<open>bfilter_st_lift_correct\<close>, itself
+  only proved for \<^locale>\<open>backward_domain_refined\<close>): \<open>int_tf_fixpoint_for\<close>
+  instead names its own, explicitly local \<open>branch_int_dom_fixpoint\<close>
+  (\<open>Int_Backward.thy\<close>), since there is no executable correspondence theorem
+  to route the shared one's dispatch through for this mode.
 \<close>
 
 lemma int_tf_never_for_mono:
   "s1 <= s2 \<Longrightarrow> apply_tf (int_tf_never_for gs) a s1 <= apply_tf (int_tf_never_for gs) a s2"
   by (cases a)
      (auto simp: int_tf_never_for_def assign_int_dom_mono special_int_dom_mono
-                 int_dom_backward_never.branch_mono skip_int_dom_mono body_int_dom_mono
-                 return_int_dom_mono enter_int_dom_for_mono event_int_dom_mono)
+                 int_dom_backward_never.branch_mono skip_int_dom_mono
+                 body_int_dom_mono return_int_dom_mono enter_int_dom_for_mono
+                 event_int_dom_mono)
 
 lemma int_tf_once_for_mono:
   "s1 <= s2 \<Longrightarrow> apply_tf (int_tf_once_for gs) a s1 <= apply_tf (int_tf_once_for gs) a s2"
   by (cases a)
      (auto simp: int_tf_once_for_def assign_int_dom_mono special_int_dom_mono
-                 int_dom_backward_once.branch_mono skip_int_dom_mono body_int_dom_mono
-                 return_int_dom_mono enter_int_dom_for_mono event_int_dom_mono)
+                 int_dom_backward_once.branch_mono skip_int_dom_mono
+                 body_int_dom_mono return_int_dom_mono enter_int_dom_for_mono
+                 event_int_dom_mono)
 
 end

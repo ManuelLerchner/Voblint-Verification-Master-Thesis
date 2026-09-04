@@ -132,7 +132,7 @@ interpretation sign_unit: routed_domain_exec
   gs empty_pred "sign_tf_st_for gs" "sign_enter_st_for gs" "sign_tf_for gs"
   "Analysis_Global ()" Activation_Seed route_unit route_unit static_resolve static_resolve
   by unfold_locales
-     (rule sign_tf_st_for_commute, rule sign_enter_st_for_commute, rule exact,
+     (rule sign_tf_st_for_commute, assumption, rule sign_enter_st_for_commute, rule exact,
       simp, simp, simp add: static_resolve_def)
 
 lemmas sign_pp_st_gen = sign_unit.pp_st
@@ -490,7 +490,7 @@ interpretation sign_cs: routed_domain_exec
   Call_String_Context.Global Call_String_Context.Seed "cs_route k" "cs_route k"
   static_resolve static_resolve
   by unfold_locales
-     (rule sign_tf_st_for_commute, rule sign_enter_st_for_commute, rule exact, simp,
+     (rule sign_tf_st_for_commute, assumption, rule sign_enter_st_for_commute, rule exact, simp,
       rule cs_route_indep_of_data, simp add: static_resolve_def)
 
 lemmas sign_cs_pp_st_gen = sign_cs.pp_st
@@ -846,7 +846,7 @@ begin
 
 interpretation sign_domain: routed_dg_domain_exec
   gs empty_pred "sign_tf_st_for gs" "sign_enter_st_for gs" "sign_tf_for gs"
-  by unfold_locales (rule sign_tf_st_for_commute, rule sign_enter_st_for_commute, rule exact)
+  by unfold_locales (rule sign_tf_st_for_commute, assumption, rule sign_enter_st_for_commute, rule exact)
 
 lemma sctx_entry_route_gen_eq_generic:
   "sctx_entry_route_gen gs empty_pred u ctx d ca = sign_domain.entry_exec_route_gen u ctx d ca"
@@ -883,7 +883,7 @@ interpretation sign_es: routed_domain_exec
   formals_route_lifted_gen
   static_resolve static_resolve
   by unfold_locales
-     (rule sign_tf_st_for_commute, rule sign_enter_st_for_commute, rule exact, simp,
+     (rule sign_tf_st_for_commute, assumption, rule sign_enter_st_for_commute, rule exact, simp,
       rule sctx_entry_route_gen_commute[OF exact, symmetric],
       simp add: static_resolve_def)
 

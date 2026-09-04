@@ -175,7 +175,8 @@ definition ivl_tf_for :: "(vname => bool) => ivl domain_transfer" where
 lemma ivl_is_sound_transfer_for: "sound_transfer_for gs (ivl_tf_for gs)"
   unfolding ivl_tf_for_def
   by unfold_locales
-     (simp_all add: assign_ivl_sound special_ivl_sound branch_ivl_sound
+     (simp_all add: assign_ivl_sound special_ivl_sound
+        ivl_backward_domain.branch_sound
         skip_ivl_sound body_ivl_sound return_ivl_sound enter_pair_ivl_for_sound
         event_ivl_sound combine_env_sound)
 
@@ -197,7 +198,8 @@ qed
 lemma ivl_tf_for_mono:
   "s1 \<le> s2 \<Longrightarrow> apply_tf (ivl_tf_for gs) a s1 \<le> apply_tf (ivl_tf_for gs) a s2"
   by (cases a)
-     (auto simp: ivl_tf_for_def assign_ivl_mono special_ivl_mono branch_ivl_mono
+     (auto simp: ivl_tf_for_def assign_ivl_mono special_ivl_mono
+                 ivl_backward_domain.branch_mono
                  skip_ivl_mono body_ivl_mono return_ivl_mono enter_ivl_for_mono
                  event_ivl_mono)
 

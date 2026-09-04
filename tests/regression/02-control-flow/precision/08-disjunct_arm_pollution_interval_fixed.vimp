@@ -1,0 +1,18 @@
+// PARAM: --analysis interval
+// x == 0 && x == 1 is self-contradictory (no integer is both), and so is
+// y == 0 && y == 1; either disjunct's own two-step backward narrowing
+// intersects x's (or y's) interval down to Bottom. bfilter_lifted
+// (Backward_Domain.thy) canonicalizes each arm to structural Bottom before
+// joining, so the pointwise And/Or join no longer lets the other disjunct's
+// untouched x (or y) location survive and override the narrowed-Bottom arm:
+// the whole guard comes back witness-bottom, and the branch is recognized
+// as unreachable.
+void main() {
+  x := __voblint_nondet_int();
+  y := __voblint_nondet_int();
+  if ((x == 0 && x == 1) || (y == 0 && y == 1)) {
+    __voblint_check(x == 5) // NOWARN (unreachable)
+  } else {
+    skip
+  }
+}
