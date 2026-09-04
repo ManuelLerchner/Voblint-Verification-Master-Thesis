@@ -154,7 +154,7 @@ text \<open>Every field but \<open>dgs_enter\<close> is the local-only default. 
   own local state by construction.\<close>
 definition w0_spec :: "(pp \<times> ivl, w0_gk, unit, ivl, ivl) dg_spec" where
   "w0_spec = default_local_dg_spec\<lparr>
-     dgs_enter := (\<lambda>ci m. man_global m ()),
+     dgs_enter := (\<lambda>ci m K. man_global m () (\<lambda>g. K [(man_local m, g)])),
      dgs_combine_env := (\<lambda>ci. local_combine_transfer (\<lambda>dc de. dc \<squnion> de)) \<rparr>"
 
 definition w0_route :: "pp \<Rightarrow> ivl \<Rightarrow> ivl \<Rightarrow> call_action \<Rightarrow> ivl" where
@@ -178,7 +178,7 @@ definition w0_resolve :: "pp \<Rightarrow> pp \<Rightarrow> call_action \<Righta
 
 definition w0_tree :: "(pp \<times> ivl, w0_gk, (ivl, ivl) dg_state) strategy_tree" where
   "w0_tree =
-     routed_cmb_g w0_spec W0Global W0Seed w0_resolve w0_route bot
+     routed_cmb_g w0_spec W0Global W0Seed w0_resolve (\<lambda>d. d = bot) w0_route bot
        (CallEdge None [STR ''p''] []) (Statement 0) (FunctionResult (STR ''f''))"
 
 text \<open>The seed lands at the entered frame's own key, carrying that same frame.\<close>
@@ -202,9 +202,10 @@ lemma w0_dep_at_entered_frame:
    = {Inl (Statement 0, bot), Inr W0Global,
       Inl (FunctionResult (STR ''f''), Ivl (Fin 7) (Fin 7))}"
   unfolding w0_tree_def w0_sigma_def w0_spec_def w0_route_def
-  by (simp add: routed_cmb_g_def routed_cmb_g_at_def w0_resolve_def
-        dg_spec_combine_transfer_def dgs_combine_def mk_dg_man_def
+  by (simp add: routed_cmb_g_def routed_cmb_g_at_def routed_cmb_g_alt_def w0_resolve_def
+        dg_spec_combine_transfer_def dgs_combine_def mk_dg_man_def man_with_local_def
         dg_read_global_def local_transfer_def local_combine_transfer_def
-        Let_def insert_commute sp_compile_with_bind sp_read_global_def)
+        Let_def insert_commute sp_compile_with_bind sp_read_global_def
+        sp_bind_def sp_return_def comp_def bot_ivl_def)
 
 end

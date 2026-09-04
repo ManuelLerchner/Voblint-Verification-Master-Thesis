@@ -217,7 +217,7 @@ proof -
             (globs (sides_of_rhs
                (dg_spec_combine_tree S ci (Inl (cl, c1)) (Inl (ex, c2)) (\<lambda>_. gk0)) sigma
                (Inr gk0)))"
-    using combine_sound[where \<tau> = sigma and src_cc = "Inl (cl, c1)"
+    using combine_sound_tree[where \<tau> = sigma and src_cc = "Inl (cl, c1)"
         and src_ex = "Inl (ex, c2)" and gk = gk0 and ci = ci, OF sin tin] .
   also have "\<dots> \<subseteq> gammaDG (locals (sigma (Inl (v, cv)))) ?G"
     by (rule gammaDG_mono[OF bound_local bound_global])

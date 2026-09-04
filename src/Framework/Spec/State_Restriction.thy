@@ -121,6 +121,6 @@ text \<open>Routing a state's two halves back through \<^const>\<open>combine_en
 
 lemma combine_env_restrict_id [simp]:
   "combine_env gs (restrict_local_for gs sigma) (restrict_global_for gs sigma) = sigma"
-  by (simp add: combine_env_for_eq_restrictions restrict_local_for_global_join)
+  by (simp add: combine_env_for_eq_restrictions)
 
 end

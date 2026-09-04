@@ -249,3 +249,139 @@ bfilter_And_False_branch
 bfilter_Or_True_branch
 bfilter_st_And_False_branch
 bfilter_st_Or_True_branch
+
+# --- CFG_Enumeration's return side collapsed onto one canonical
+# enumeration: call_targets/call_target_list decode a call edge once and
+# every other return view is an image or a map of them. The one-way
+# non-emptiness lemma was replaced by the exact static_targets_neq_Nil_iff,
+# and Exec_DG_Generator's local copy of the site-resolution set equality by
+# CFG_Enumeration's set_concat_call_site_static_targets. ---
+static_targets_nonempty
+set_concat_static_targets
+
+# --- The `domain_transfer` record and its `apply_tf` dispatcher were removed:
+# an analysis now supplies a `dg_spec` (built from named pure operations by
+# `local_state_dg_spec_for`/`_lifted`), and `sound_transfer_for` fixes those
+# operations directly instead of a bundled record. The per-domain bundles and
+# their record-field accessors went with it, as did the pair-shaped `enter`
+# (the caller continuation is a specification field, so the entry operation
+# returns only the callee state) and `ownership_split_dg_spec_for`, replaced by
+# the specification-to-specification lifter `ownership_split_lift`. ---
+domain_transfer
+apply_tf
+tf_assign
+tf_special
+tf_branch
+tf_skip
+tf_body
+tf_return
+tf_enter
+tf_event
+tf_combine_env
+tf_combine_collect_abs
+tf_combine_collect_abs_combine_env
+tf_combine_collect_abs_mono
+tf_sound_combine_collect_for
+tf_sound_combine_collect_at_call_for
+tf_sound_combine_env_at_call_for
+tf_sound_combine_env_for
+tf_sound_enter_cont_for
+sound_transfer_enter_cont_idI
+sound_transfer_combine_envI
+edge_collect_apply_tf_sound_for
+local_spec_step_apply_tf
+local_spec_step_transfer_lift_apply_tf
+enter_pair_D
+enter_pair_D_sound
+enter_pair_D_mono
+enter_pair_sign_for
+enter_pair_sign_for_sound
+enter_pair_ivl_for
+enter_pair_ivl_for_sound
+enter_pair_parity_for
+enter_pair_parity_for_sound
+enter_pair_int_dom_for
+enter_pair_int_dom_for_sound
+sign_tf_for
+sign_tf_for_mono
+ivl_tf_for
+ivl_tf_for_mono
+parity_tf_for
+parity_tf_for_mono
+int_tf_for
+int_tf_never_for
+int_tf_once_for
+int_tf_fixpoint_for
+int_tf_never_for_mono
+int_tf_once_for_mono
+int_never_is_sound_transfer_for
+int_once_is_sound_transfer_for
+int_fixpoint_is_sound_transfer_for
+ownership_split_dg_spec_for
+dg_spec_step_ownership_split_for
+dgs_enter_ownership_split_dg_spec_for
+dg_spec_combine_transfer_ownership_split_dg_spec_for
+sound_dg_spec_ownership_split_for
+tf_enter_ivl_for_call_info_of_eq_entry_state_enter_abs
+
+# --- Procedure entry is one definition, not a concrete one with an abstract
+# copy: `enter_binding` (VIMP_Proc) is generic in the state's codomain, the
+# evaluator and the reset value, so `call_enter` is its instance at `aval`/`0`
+# and a domain's entry operation is its instance at that domain's evaluator and
+# `top`. The abstract-only `enter_D`/`enter_ci_D` pair is gone. ---
+enter_D
+enter_D_def
+enter_D_sound
+enter_D_mono
+enter_ci_D
+enter_ci_D_def
+enter_ci_D_sound
+enter_ci_D_mono
+
+# The call_info projection for entry is inlined at the four domain
+# definitions, matching how the return side writes combine^# gs (ci_dst ci).
+enter_binding_ci
+enter_binding_ci_def
+enter_binding_ci_sound
+enter_binding_ci_mono
+
+# The call answers correlated (continuation, callee-entry) pairs from one run
+# of dgs_enter, so there is no separate caller-continuation field to leave
+# untouched, and no lemma saying an override left it untouched.
+dgs_caller_cont
+dgs_caller_cont_update
+dgs_caller_cont_sign_dg_spec_callee_join
+dgs_caller_cont_sign_dg_spec_env_join
+
+# The call boundary answers correlated (continuation, callee-entry) pairs from
+# one run of dgs_enter, read back through enter_runs. The constant that re-ran
+# the entry against a solution to recover a single entered value is gone; it is
+# not listed here because "entered" is ordinary prose throughout this tree, so a
+# word-level guard on it would flag the wording rather than the constant.
+entered_interval_spec_eq_entry_state_entered
+
+# routed_cmb_g_at now folds one alternative tree per pair, so its observations
+# are stated per alternative (routed_cmb_g_alt) rather than as bounds on a
+# single seed/enter/combine leg.
+routed_cmb_g_at_traverse
+routed_cmb_g_at_sides_le_seed
+routed_cmb_g_at_sides_le_enter
+routed_cmb_g_at_sides_le_combine
+
+# The transfer record was replaced by eight explicit operations, so the
+# record-application function and the lemmas phrased through it are gone.
+apply_tf_once_assign
+apply_tf_once_special_min
+tf_enter_once_binds_formal
+tf_branch_once_is_branch_int_dom
+tf_branch_never_is_branch_int_dom
+
+# The ownership-split wrapper is stated over the generic carrier operations,
+# so the "unfold at the pointwise instance" shortcuts have no consumers.
+ownership_split_transfer_unfold
+ownership_split_combine_transfer_unfold
+
+# A bottom callee entry is dropped before routing, so no context is seeded for
+# it: the graph regression asserts the absence of that context outright rather
+# than its presence without an enter edge.
+mixed_ctx_graph_bottom_context_is_covered_but_unentered

@@ -65,11 +65,16 @@ text \<open>Caller-side entry transfer at a call.  The actuals are evaluated in 
 definition call_enter :: "(vname \<Rightarrow> bool) \<Rightarrow> call_action \<Rightarrow> store \<Rightarrow> store" where
   "call_enter gs ca s =
      (case ca of CallEdge dst pars actuals \<Rightarrow>
-        bind_formals pars (map (\<lambda>e. aval e s) actuals) (enter_state gs s))"
+        enter_binding gs 0 aval pars actuals s)"
 
 lemma call_enter_CallEdge:
   "call_enter gs (CallEdge dst pars actuals) s
      = bind_formals pars (map (\<lambda>e. aval e s) actuals) (enter_state gs s)"
+  by (simp add: call_enter_def enter_binding_def enter_state_def)
+
+lemma call_enter_CallEdge_enter_binding:
+  "call_enter gs (CallEdge dst pars actuals) s
+     = enter_binding gs 0 aval pars actuals s"
   by (simp add: call_enter_def)
 
 text \<open>A parameterless call is exactly \<^const>\<open>enter_state\<close>: no actuals to evaluate and no

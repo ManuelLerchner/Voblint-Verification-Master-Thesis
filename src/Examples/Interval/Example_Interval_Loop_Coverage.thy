@@ -117,9 +117,11 @@ lemma bfilter_loop_head_live:
   by (auto simp: is_empty_state_def is_bottom_ivl_def split: if_splits)
 
 lemma loop_body_x_from_assume:
-  "tf_branch (ivl_tf_for gs) (Less (V (STR ''x'')) (N 20)) True (loop_env (Statement 1)) (STR ''x'') = Ivl (Fin 0) (Fin 19)"
+  "ivl_tf_abs (EA_Assume (Less (V (STR ''x'')) (N 20)))
+     (loop_env (Statement 1)) (STR ''x'') = Ivl (Fin 0) (Fin 19)"
 proof -
-  have tf: "tf_branch (ivl_tf_for gs) = branch_ivl" by (simp add: ivl_tf_for_def)
+  have tf: "ivl_tf_abs (EA_Assume (Less (V (STR ''x'')) (N 20)))
+              = branch_ivl (Less (V (STR ''x'')) (N 20)) True" by simp
   have "branch_ivl (Less (V (STR ''x'')) (N 20)) True (loop_env (Statement 1))
           = bfilter_ivl (Less (V (STR ''x'')) (N 20)) True (loop_env (Statement 1))"
     using loop_head_guard_feasible bfilter_loop_head_live

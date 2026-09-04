@@ -39,12 +39,19 @@ text \<open>
 
 
 locale routed_domain_exec =
-  routed_dg_domain_exec gs empty_pred tf_st enter_st tf
+  routed_dg_domain_exec gs empty_pred tf_st enter_st sk asn sp br bd rt en ev
   for gs :: "vname \<Rightarrow> bool"
     and empty_pred :: "'a::sound_domain exec_dg_st \<Rightarrow> bool"
     and tf_st :: "edge_action \<Rightarrow> 'a exec_dg_st \<Rightarrow> 'a exec_dg_st"
     and enter_st :: "call_info \<Rightarrow> 'a exec_dg_st \<Rightarrow> 'a exec_dg_st"
-    and tf :: "'a domain_transfer" +
+    and sk :: "'a abs_state \<Rightarrow> 'a abs_state"
+    and asn :: "vname \<Rightarrow> exp \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
+    and sp :: "special_call \<Rightarrow> vname \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
+    and br :: "exp \<Rightarrow> bool \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
+    and bd :: "pname \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
+    and rt :: "exp option \<Rightarrow> pname \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
+    and en :: "call_info \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
+    and ev :: "analysis_event \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state" +
   fixes gk0 :: 'k
     and seed_key :: "pp \<Rightarrow> 'c \<Rightarrow> 'k"
     and route_st :: "pp \<Rightarrow> 'c \<Rightarrow> 'a exec_dg_st lifted \<Rightarrow> call_action \<Rightarrow> 'c"
@@ -67,14 +74,14 @@ text \<open>The routed combine tree commutes with the executable-to-abstract rea
 lemma dg_tree_st_commute_routed_cmb_g:
   "dg_reader_commute_gen.dg_tree_st_commute
      (map_lift (fun_of_resolved_st_q_for gs)) (map_lift (fun_of_resolved_st_q_for gs)) env
-     (routed_cmb_g spec_st gk0 seed_key (resolve_st g) route_st ctx ca cc ex)
-     (routed_cmb_g spec_abs gk0 seed_key (resolve_abs g) route_abs ctx ca cc ex)"
+     (routed_cmb_g spec_st gk0 seed_key (resolve_st g) (\<lambda>d. d = Bot) route_st ctx ca cc ex)
+     (routed_cmb_g spec_abs gk0 seed_key (resolve_abs g) (\<lambda>d. d = Bot) route_abs ctx ca cc ex)"
   by (rule dg_reader_commute_gen.dg_tree_st_commute_routed_cmb_g
         [where Floc = "map_lift (fun_of_resolved_st_q_for gs)"
            and Fglob = "map_lift (fun_of_resolved_st_q_for gs)"])
      (rule dg_reader_commute_gen_lifted_for seed_key_ne_gk0
            Henter_lifted_for Hcomb_lifted_for
-           route_agree resolve_agree)+
+           route_agree map_lift_eq_Bot_iff resolve_agree)+
 
 text \<open>The routed extra-goal list commutes elementwise, for the same reason.\<close>
 
@@ -114,7 +121,7 @@ abbreviation cmb_st :: "cfg \<Rightarrow> (pp \<Rightarrow> 'c \<Rightarrow> 'a 
    \<Rightarrow> 'c \<Rightarrow> call_action \<Rightarrow> pp \<Rightarrow> pp
    \<Rightarrow> (pp \<times> 'c, 'k, ('a exec_dg_st lifted, 'a exec_dg_st lifted) dg_state) strategy_tree"
 where
-  "cmb_st g \<equiv> routed_cmb_g spec_st gk0 seed_key (resolve_st g)"
+  "cmb_st g \<equiv> routed_cmb_g spec_st gk0 seed_key (resolve_st g) (\<lambda>d. d = Bot)"
 
 text \<open>The two tree properties that make the identity hooks legitimate: neither the
   compiled intra edge nor the routed combine publishes at \<open>gk0\<close>, and both answer with
@@ -125,8 +132,10 @@ lemma intra_st_side_free: "sides_of_rhs (intra_st ctx' src a) \<tau> z = bot"
 
 lemma cmb_st_side_free_at_gk0: "sides_of_rhs (cmb_st g route' ctx' ca cc ex) \<tau> (Inr gk0) = bot"
   by (rule routed_cmb_g_side_free_at_gk0)
-     (simp_all add: dgs_enter_local_state_st_for_lifted dg_spec_combine_transfer_local_state_st_for_lifted
-        local_transfer_def local_combine_transfer_def seed_key_ne_gk0)
+     (auto simp: dgs_enter_local_state_st_for_lifted
+        dg_spec_combine_transfer_local_state_st_for_lifted
+        local_transfer_def local_combine_transfer_def seed_key_ne_gk0 bot_fun_def
+        dest!: enter_runs_local_pub_bot)
 
 theorem pp_st:
   assumes pp: "part_post_solution

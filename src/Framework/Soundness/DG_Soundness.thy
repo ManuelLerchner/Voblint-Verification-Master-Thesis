@@ -1,5 +1,6 @@
 theory DG_Soundness
-  imports DG_Spec_Sound DG_Keyed_Generator
+  imports DG_Spec_Sound DG_Keyed_Generator "Voblint_Domain.Nonrelational_State"
+    "Voblint_Solver.Strategy_Tree_Post_Solution"
 begin
 
 section \<open>Generic D/G post-solution soundness\<close>

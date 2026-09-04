@@ -367,7 +367,7 @@ theorem ics_pp_routed_warrow:
         (\<lambda>ctx' src a. dg_spec_edge_tree (int_dom_spec mode empty_pred gs) a src
            (\<lambda>_. Call_String_Context.Global))
         (routed_cmb_g (int_dom_spec mode empty_pred gs) Call_String_Context.Global
-           Call_String_Context.Seed (static_resolve (compile_prog Pi ps)))
+           Call_String_Context.Seed (static_resolve (compile_prog Pi ps)) (\<lambda>d. d = Bot))
         (routed_extra_g Call_String_Context.Seed Call_String_Context.Global)
         (compile_prog Pi ps) Bot (Lifted cinit_int_dom_st) Bot)
      (cfg_exit (compile_prog Pi ps), [])
@@ -443,7 +443,7 @@ theorem int_conf_entry_pp_routed_warrow:
         (int_conf_entry_route_gen mode gs empty_pred)
         (\<lambda>ctx' src a. dg_spec_edge_tree (int_dom_spec mode empty_pred gs) a src (\<lambda>_. Analysis_Global ()))
         (routed_cmb_g (int_dom_spec mode empty_pred gs) (Analysis_Global ()) Activation_Seed
-           (static_resolve (compile_prog Pi ps)))
+           (static_resolve (compile_prog Pi ps)) (\<lambda>d. d = Bot))
         (routed_extra_g Activation_Seed (Analysis_Global ()))
         (compile_prog Pi ps) Bot (Lifted cinit_int_dom_st) Bot)
      (cfg_exit (compile_prog Pi ps), [])

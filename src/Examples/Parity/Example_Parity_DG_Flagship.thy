@@ -217,21 +217,28 @@ text \<open>Interpret \<^locale>\<open>local_state_dg_exec_analysis\<close> once
 
 interpretation parity_ex_reg:
   local_state_dg_exec_analysis parity_gs
-    "parity_tf_for parity_gs" "parity_tf_st_for parity_gs" "parity_enter_st_for parity_gs"
+    skip_parity assign_parity special_parity branch_parity body_parity return_parity
+    "enter_parity_ci_for parity_gs" event_parity
+    "parity_tf_st_for parity_gs" "parity_enter_st_for parity_gs"
     "resolved_st_q_is_bot_for (declared_global_vars parity_program)"
     "TD_side_always_join_Interp.solve" "TD_side_always_join_Interp.solve_c"
 proof -
-  interpret parity_ex_transfer: sound_transfer_for parity_gs "parity_tf_for parity_gs"
+  interpret parity_ex_transfer: sound_transfer_for parity_gs
+      skip_parity assign_parity special_parity branch_parity body_parity return_parity
+      "enter_parity_ci_for parity_gs" event_parity
     by (rule parity_is_sound_transfer_for)
-  show "local_state_dg_exec_analysis parity_gs (parity_tf_for parity_gs) (parity_tf_st_for parity_gs)
+  show "local_state_dg_exec_analysis parity_gs
+          skip_parity assign_parity special_parity branch_parity body_parity return_parity
+          (enter_parity_ci_for parity_gs) event_parity
+          (parity_tf_st_for parity_gs)
           (parity_enter_st_for parity_gs) (resolved_st_q_is_bot_for (declared_global_vars parity_program))
           TD_side_always_join_Interp.solve TD_side_always_join_Interp.solve_c"
     by unfold_locales
        (rule parity_wf[THEN wf_compile_input_reserved_ret_var]
              parity_ex_transfer.tf_sound_assign_for parity_ex_transfer.tf_sound_special_for
              parity_ex_transfer.tf_sound_branch_for
-             parity_ex_transfer.tf_sound_enter_entry_for parity_ex_transfer.tf_sound_combine_env_for
-             parity_tf_st_for_commute[folded fun_of_exec_dg_st_for_def]
+             parity_ex_transfer.tf_sound_enter_entry_for
+             parity_tf_st_for_commute[unfolded parity_tf_abs_def, folded fun_of_exec_dg_st_for_def]
              parity_enter_st_for_commute[folded fun_of_exec_dg_st_for_def]
              parity_is_bot_exact
              TD_side_always_join_Interp.part_post_solution_of_solve_c)+

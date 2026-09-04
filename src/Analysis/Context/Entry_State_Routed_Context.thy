@@ -18,7 +18,7 @@ text \<open>
   Three of the obligations \<^locale>\<open>routed_context_base_hetero\<close> leaves are facts about
   the routing policy or about \<^const>\<open>compile_prog\<close> alone and are discharged here once:
   \<open>finC\<close> (\<open>compile_prog_finite\<close>), \<open>call_enter_store_agree\<close> (call-source uniqueness,
-  \<open>compile_prog_calls_source_unique\<close>) and \<open>route_enterc_agree\<close>
+  \<open>compile_prog_calls_source_unique\<close>) and \<open>routed_entry_cover\<close>'s routing agreement
   (\<open>route_enterc_of_sigma_agree\<close>, generic in any \<open>route\<close> reading its caller state from
   \<open>sigma\<close>). \<open>seed_key_ne_gk0\<close>, \<open>call_fwd\<close> and \<open>comb_fwd\<close> remain per-instance
   assumptions: the first is datatype distinctness of the instance's seed key, the other
@@ -28,7 +28,7 @@ text \<open>
 
 locale entry_state_routed_context =
   dg_ctx_activation_base S gammaDG gs "compile_prog Pi ps" gk0 route
-    "routed_cmb_g S gk0 seed_key (static_resolve (compile_prog Pi ps))"
+    "routed_cmb_g S gk0 seed_key (static_resolve (compile_prog Pi ps)) is_bot"
     "routed_extra_g seed_key gk0"
     bot0 s0d s0g sigma vars x0 sg gammaM
   for S :: "(pp \<times> 'c, 'k, unit, 'D::bounded_semilattice_sup_bot,
@@ -40,8 +40,38 @@ locale entry_state_routed_context =
     and route :: "pp \<Rightarrow> 'c \<Rightarrow> 'D \<Rightarrow> call_action \<Rightarrow> 'c"
     and bot0 s0d s0g sigma vars x0 sg
     and seed_key :: "pp \<Rightarrow> 'c \<Rightarrow> 'k"
-    and gammaM :: "'M \<Rightarrow> store set" +
+    and is_bot :: "'D \<Rightarrow> bool"
+    and gammaM :: "'M \<Rightarrow> store set"
+    and en :: "call_info \<Rightarrow> 'D \<Rightarrow> 'D" +
   assumes seed_key_ne_gk0[simp]: "\<And>p ctx. seed_key p ctx \<noteq> gk0"
+    and is_bot_bot: "is_bot bot"
+    and is_bot_sound: "\<And>d gv. is_bot d \<Longrightarrow> gammaDG d gv = {}"
+    and is_bot_mono: "\<And>d d'. \<not> is_bot d \<Longrightarrow> d \<le> d' \<Longrightarrow> \<not> is_bot d'"
+    and enter_singleton:
+    "\<And>u ctx dst pars args p cont.
+       (u, ctx) \<in> vars
+       \<Longrightarrow> (u, CallEdge dst pars args, FunctionEntry p, cont)
+             \<in> calls (compile_prog Pi ps)
+       \<Longrightarrow> \<exists>pub deps.
+             enter_runs (dgs_enter S (call_info_of (CallEdge dst pars args) p))
+               (mk_dg_man (locals (sigma (Inl (u, ctx)))) (\<lambda>_. gk0)) sigma
+               [(locals (sigma (Inl (u, ctx))),
+                 en (call_info_of (CallEdge dst pars args) p)
+                    (locals (sigma (Inl (u, ctx)))))] pub
+           \<and> enter_deps (dgs_enter S (call_info_of (CallEdge dst pars args) p))
+               (mk_dg_man (locals (sigma (Inl (u, ctx)))) (\<lambda>_. gk0)) sigma
+               [(locals (sigma (Inl (u, ctx))),
+                 en (call_info_of (CallEdge dst pars args) p)
+                    (locals (sigma (Inl (u, ctx)))))] deps"
+    and enter_sound_at:
+    "\<And>u ctx dst pars args p cont s.
+       (u, ctx) \<in> vars
+       \<Longrightarrow> (u, CallEdge dst pars args, FunctionEntry p, cont)
+             \<in> calls (compile_prog Pi ps)
+       \<Longrightarrow> s \<in> gammaDG (locals (sigma (Inl (u, ctx)))) (globs (sigma (Inr gk0)))
+       \<Longrightarrow> call_enter gs (CallEdge dst pars args) s
+             \<in> gammaDG (en (call_info_of (CallEdge dst pars args) p)
+                           (locals (sigma (Inl (u, ctx))))) (globs (sigma (Inr gk0)))"
     and call_fwd:
     "\<And>u ctx dst pars args p cont.
        (u, ctx) \<in> vars
@@ -49,8 +79,8 @@ locale entry_state_routed_context =
              \<in> calls (compile_prog Pi ps)
        \<Longrightarrow> (FunctionEntry p,
               route u ctx
-                (entered S gk0 sigma (call_info_of (CallEdge dst pars args) p)
-                    (Inl (u, ctx))) (CallEdge dst pars args))
+                (en (call_info_of (CallEdge dst pars args) p)
+                    (locals (sigma (Inl (u, ctx))))) (CallEdge dst pars args))
              \<in> vars"
     and comb_fwd:
     "\<And>cl c1 dst pars args p cont.
@@ -62,12 +92,18 @@ begin
 
 sublocale routed: routed_context_base_hetero S gammaDG gs "compile_prog Pi ps" gk0
   route bot0 s0d s0g sigma vars x0 sg seed_key
-  "static_resolve (compile_prog Pi ps)" gammaM
-  "route_enterc_of_sigma S route sigma gk0 (compile_prog Pi ps)"
+  "static_resolve (compile_prog Pi ps)" is_bot gammaM
+  "route_enterc_of_sigma route en sigma (compile_prog Pi ps)"
 proof unfold_locales
   show "finite (calls (compile_prog Pi ps))" using compile_prog_finite by simp
 next
   show "\<And>p ctx. seed_key p ctx \<noteq> gk0" by (rule seed_key_ne_gk0)
+next
+  show "is_bot bot" by (rule is_bot_bot)
+next
+  show "\<And>d gv. is_bot d \<Longrightarrow> gammaDG d gv = {}" by (rule is_bot_sound)
+next
+  show "\<And>d d'. \<not> is_bot d \<Longrightarrow> d \<le> d' \<Longrightarrow> \<not> is_bot d'" by (rule is_bot_mono)
 next
   fix u ctx dst pars args p cont s
   assume "(u, ctx) \<in> vars"
@@ -79,28 +115,39 @@ next
     by (simp add: static_resolve_iff compile_prog_finite)
 next
   fix u ctx dst pars args p cont s
-  assume "(u, ctx) \<in> vars"
+  assume covV: "(u, ctx) \<in> vars"
     and ce: "(u, CallEdge dst pars args, FunctionEntry p, cont)
-           \<in> calls (compile_prog Pi ps)"
-    and "s \<in> gammaDG (locals (sigma (Inl (u, ctx)))) (globs (sigma (Inr gk0)))"
+               \<in> calls (compile_prog Pi ps)"
+    and sin: "s \<in> gammaDG (locals (sigma (Inl (u, ctx)))) (globs (sigma (Inr gk0)))"
   have fin: "finite (calls (compile_prog Pi ps))" using compile_prog_finite by blast
-  show "route u ctx
-            (entered S gk0 sigma (call_info_of (CallEdge dst pars args) p) (Inl (u, ctx)))
-            (CallEdge dst pars args)
-          = route_enterc_of_sigma S route sigma gk0
-              (compile_prog Pi ps) u ctx (call_enter gs (CallEdge dst pars args) s)"
-    by (rule route_enterc_of_sigma_agree[OF fin compile_prog_calls_source_unique ce])
-next
-  fix u ctx dst pars args p cont
-  assume "(u, ctx) \<in> vars"
-    and "(u, CallEdge dst pars args, FunctionEntry p, cont)
-           \<in> calls (compile_prog Pi ps)"
-  then show "(FunctionEntry p,
-                route u ctx
-                  (entered S gk0 sigma (call_info_of (CallEdge dst pars args) p)
-                      (Inl (u, ctx))) (CallEdge dst pars args))
-               \<in> vars"
-    by (rule call_fwd)
+  let ?ci = "call_info_of (CallEdge dst pars args) p"
+  let ?caller = "locals (sigma (Inl (u, ctx)))"
+  obtain pub deps
+    where R: "enter_runs (dgs_enter S ?ci) (mk_dg_man ?caller (\<lambda>_. gk0)) sigma
+                [(?caller, en ?ci ?caller)] pub"
+      and D: "enter_deps (dgs_enter S ?ci) (mk_dg_man ?caller (\<lambda>_. gk0)) sigma
+                [(?caller, en ?ci ?caller)] deps"
+    using enter_singleton[OF covV ce] by blast
+  have ecov: "call_enter gs (CallEdge dst pars args) s
+                \<in> gammaDG (en ?ci ?caller) (globs (sigma (Inr gk0)))"
+    using covV ce sin by (rule enter_sound_at)
+  have req: "route u ctx (en ?ci ?caller) (CallEdge dst pars args)
+               = route_enterc_of_sigma route en sigma (compile_prog Pi ps) u ctx
+                   (call_enter gs (CallEdge dst pars args) s)"
+    by (rule route_enterc_of_sigma_agree
+          [OF fin compile_prog_calls_source_unique ce refl])
+  show "\<exists>pairs pub deps cont' entry.
+             enter_runs (dgs_enter S ?ci) (mk_dg_man ?caller (\<lambda>_. gk0)) sigma pairs pub
+           \<and> enter_deps (dgs_enter S ?ci) (mk_dg_man ?caller (\<lambda>_. gk0)) sigma pairs deps
+           \<and> (cont', entry) \<in> set pairs
+           \<and> s \<in> gammaDG cont' (globs (sigma (Inr gk0)))
+           \<and> call_enter gs (CallEdge dst pars args) s
+               \<in> gammaDG entry (globs (sigma (Inr gk0)))
+           \<and> route u ctx entry (CallEdge dst pars args)
+               = route_enterc_of_sigma route en sigma (compile_prog Pi ps) u ctx
+                   (call_enter gs (CallEdge dst pars args) s)
+           \<and> (FunctionEntry p, route u ctx entry (CallEdge dst pars args)) \<in> vars"
+    using R D sin ecov req call_fwd[OF covV ce] by force
 next
   fix cl c1 dst pars args p cont
   assume "(cl, c1) \<in> vars"

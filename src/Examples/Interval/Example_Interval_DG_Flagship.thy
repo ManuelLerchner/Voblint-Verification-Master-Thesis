@@ -232,27 +232,35 @@ text \<open>Interpret \<^locale>\<open>ownership_split_dg_exec_analysis\<close> 
 
 lemma flagship_wf_reserved: "reserved_ret_var flagship_gs"
   by (auto simp: wf_compile_input_simps flagship_pi_def flagship_prog_def split: if_splits)
-
 interpretation flagship_ex_reg:
   ownership_split_dg_exec_analysis flagship_gs
-    "ivl_tf_for flagship_gs" "ivl_tf_st_for flagship_gs" "ivl_enter_st_for flagship_gs"
+    skip_ivl assign_ivl special_ivl branch_ivl body_ivl return_ivl
+    "enter_ivl_ci_for flagship_gs" event_ivl
+    "ivl_tf_st_for flagship_gs" "ivl_enter_st_for flagship_gs"
     "TD_side_warrowing_apinis_Interp.solve" "TD_side_warrowing_apinis_Interp.solve_c"
 proof -
-  interpret flagship_ex_transfer: sound_transfer_for flagship_gs "ivl_tf_for flagship_gs"
+  interpret flagship_ex_transfer: sound_transfer_for flagship_gs
+      skip_ivl assign_ivl special_ivl branch_ivl body_ivl return_ivl
+      "enter_ivl_ci_for flagship_gs" event_ivl
     by (rule ivl_is_sound_transfer_for)
-  show "ownership_split_dg_exec_analysis flagship_gs (ivl_tf_for flagship_gs) (ivl_tf_st_for flagship_gs)
+  show "ownership_split_dg_exec_analysis flagship_gs
+          skip_ivl assign_ivl special_ivl branch_ivl body_ivl return_ivl
+          (enter_ivl_ci_for flagship_gs) event_ivl
+          (ivl_tf_st_for flagship_gs)
           (ivl_enter_st_for flagship_gs)
           TD_side_warrowing_apinis_Interp.solve TD_side_warrowing_apinis_Interp.solve_c"
     by unfold_locales
        (rule flagship_wf_reserved
              flagship_ex_transfer.tf_sound_assign_for flagship_ex_transfer.tf_sound_special_for
              flagship_ex_transfer.tf_sound_branch_for
-             flagship_ex_transfer.tf_sound_enter_entry_for flagship_ex_transfer.tf_sound_combine_env_for
-             ivl_tf_st_for_commute[folded fun_of_exec_dg_st_for_def]
+             flagship_ex_transfer.tf_sound_enter_entry_for
+             ivl_tf_st_for_commute[unfolded ivl_tf_abs_def, folded fun_of_exec_dg_st_for_def]
              ivl_enter_st_for_commute[folded fun_of_exec_dg_st_for_def]
              TD_side_warrowing_apinis_Interp.part_post_solution_of_solve_c
         | assumption)+
 qed
+
+
 
 text \<open>
   The registered endpoint \<open>flagship_ex_reg.run_source_sound\<close> turns the single \<^theory_text>\<open>by eval\<close>

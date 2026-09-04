@@ -46,6 +46,28 @@ text \<open>Formal binding is the same fold over the concrete store and over eve
 abbreviation bind_formals :: "vname list \<Rightarrow> 'v list \<Rightarrow> (vname \<Rightarrow> 'v) \<Rightarrow> vname \<Rightarrow> 'v" where
   "bind_formals xs vs s \<equiv> fold (\<lambda>(x, v) st. st(x := v)) (zip xs vs) s"
 
+text \<open>Whole procedure entry, for the same reason: reset every local to a chosen
+  value, keep the globals, then bind the formals to the actuals evaluated in the
+  caller's own state. Which state and which evaluator is all that separates the
+  concrete entry from an abstract one -- the concrete semantics runs it at
+  \<^const>\<open>aval\<close> and the reset value \<open>0\<close>, an abstract domain at its own
+  evaluator and its own \<open>top\<close> -- so it is one definition, not a concrete one
+  with an \<open>_abs\<close> copy beside it.\<close>
+definition enter_binding ::
+  "(vname \<Rightarrow> bool) \<Rightarrow> 'a \<Rightarrow> (exp \<Rightarrow> (vname \<Rightarrow> 'a) \<Rightarrow> 'a)
+   \<Rightarrow> vname list \<Rightarrow> exp list \<Rightarrow> (vname \<Rightarrow> 'a) \<Rightarrow> (vname \<Rightarrow> 'a)"
+where
+  "enter_binding gs reset_val ev xs es s =
+     bind_formals xs (map (\<lambda>e. ev e s) es) (enter_frame gs reset_val s)"
+
+text \<open>The concrete instance, spelled out: this is the equation that lets a
+  soundness statement about the shared constant be read as one about the entry
+  store the source semantics actually builds.\<close>
+lemma enter_binding_concrete:
+  "enter_binding gs 0 aval xs es s
+     = bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state gs s)"
+  by (simp add: enter_binding_def enter_state_def)
+
 text \<open>The return-slot write is a pure per-variable update, generic in the codomain:
   the concrete VIMP semantics uses it at \<open>store = vname \<Rightarrow> int\<close>, and every abstract
   domain's own \<open>vname \<Rightarrow> 'a\<close> state reuses the same definition rather than restating

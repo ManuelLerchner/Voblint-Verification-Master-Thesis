@@ -118,16 +118,32 @@ text \<open>
 \<close>
 
 definition ownership_split_transfer_st ::
-  "('a::bounded_semilattice_sup_bot exec_dg_st \<Rightarrow> 'a exec_dg_st)
+  "('x,'k,unit,'a::bounded_semilattice_sup_bot exec_dg_st,'a exec_dg_st) man_transfer
    \<Rightarrow> ('x,'k,unit,'a exec_dg_st,'a exec_dg_st) man_transfer"
 where
   "ownership_split_transfer_st =
      ownership_split_transfer_gen combine_resolved_st_q restrict_global_resolved_q restrict_local_resolved_q"
 
 text \<open>
-  The return slot is a local name the callee's exit owns, so it is read off
-  \<open>de\<close> at the classifier's own location for \<^const>\<open>ret_var\<close> rather than through
-  the merge.
+  Entry is the same wrapping one step up in arity: it answers a list of
+  caller-continuation/callee-entry pairs rather than one successor value, so the
+  executable carrier supplies the same three operations to
+  \<^const>\<open>ownership_split_enter_transfer_gen\<close>.
+\<close>
+
+definition ownership_split_enter_transfer_st ::
+  "('x,'k,unit,'a::bounded_semilattice_sup_bot exec_dg_st,'a exec_dg_st) man_enter_transfer
+   \<Rightarrow> ('x,'k,unit,'a exec_dg_st,'a exec_dg_st) man_enter_transfer"
+where
+  "ownership_split_enter_transfer_st =
+     ownership_split_enter_transfer_gen combine_resolved_st_q restrict_global_resolved_q
+       restrict_local_resolved_q"
+
+text \<open>
+  The callee exit reaches the wrapped stage merged against the same shared fact,
+  like the caller continuation. The return slot is read off it at the classifier's
+  own location for \<^const>\<open>ret_var\<close>; that name is local, so the merge leaves it
+  at the callee's own value.
 \<close>
 
 definition ownership_split_combine_transfer_st ::
@@ -137,8 +153,9 @@ where
   "ownership_split_combine_transfer_st gs ci =
      ownership_split_combine_transfer_gen combine_resolved_st_q restrict_global_resolved_q
        restrict_local_resolved_q
-       (\<lambda>de. combine_assign_resolved_q gs (ci_dst ci)
-               (lookup_resolved_st_q de (location_of gs ret_var)))"
+       (local_combine_transfer
+          (\<lambda>env de. combine_assign_resolved_q gs (ci_dst ci)
+                      (lookup_resolved_st_q de (location_of gs ret_var)) env))"
 
 definition ownership_split_dg_spec_st_for ::
   "(vname \<Rightarrow> bool)
@@ -147,24 +164,28 @@ definition ownership_split_dg_spec_st_for ::
    \<Rightarrow> ('x,'k,unit,'a exec_dg_st,'a exec_dg_st) dg_spec"
 where
   "ownership_split_dg_spec_st_for gs tf_st enter_st = default_local_dg_spec\<lparr>
-     dgs_skip := ownership_split_transfer_st (tf_st EA_Nop),
-     dgs_assign := (\<lambda>x e. ownership_split_transfer_st (tf_st (EA_Assign x e))),
-     dgs_special := (\<lambda>sc x. ownership_split_transfer_st (tf_st (EA_Special sc x))),
+     dgs_skip := ownership_split_transfer_st (local_transfer (tf_st EA_Nop)),
+     dgs_assign := (\<lambda>x e. ownership_split_transfer_st (local_transfer (tf_st (EA_Assign x e)))),
+     dgs_special := (\<lambda>sc x. ownership_split_transfer_st (local_transfer (tf_st (EA_Special sc x)))),
      dgs_branch := (\<lambda>b pol. ownership_split_transfer_st
-                      (tf_st (if pol then EA_Assume b else EA_AssumeNot b))),
-     dgs_body := (\<lambda>p. ownership_split_transfer_st (tf_st EA_Nop)),
-     dgs_return := (\<lambda>e p. ownership_split_transfer_st (tf_st (EA_Ret e p))),
-     dgs_enter := (\<lambda>ci. ownership_split_transfer_st (enter_st ci)),
-     dgs_event := (\<lambda>ev. case ev of Check_Event bc \<Rightarrow> ownership_split_transfer_st (tf_st (EA_Check bc))),
+                      (local_transfer (tf_st (if pol then EA_Assume b else EA_AssumeNot b)))),
+     dgs_body := (\<lambda>p. ownership_split_transfer_st (local_transfer (tf_st EA_Nop))),
+     dgs_return := (\<lambda>e p. ownership_split_transfer_st (local_transfer (tf_st (EA_Ret e p)))),
+     dgs_enter := (\<lambda>ci. ownership_split_enter_transfer_st
+                          (local_enter_transfer (\<lambda>d. [(d, enter_st ci d)]))),
+     dgs_event := (\<lambda>ev. case ev of Check_Event bc
+                     \<Rightarrow> ownership_split_transfer_st (local_transfer (tf_st (EA_Check bc)))),
      dgs_combine_assign := ownership_split_combine_transfer_st gs \<rparr>"
 
 lemma dg_spec_step_ownership_split_st_for:
-  "dg_spec_step (ownership_split_dg_spec_st_for gs tf_st enter_st) a = ownership_split_transfer_st (tf_st a)"
+  "dg_spec_step (ownership_split_dg_spec_st_for gs tf_st enter_st) a
+     = ownership_split_transfer_st (local_transfer (tf_st a))"
   unfolding ownership_split_dg_spec_st_for_def
   by (cases a) simp_all
 
 lemma dgs_enter_ownership_split_dg_spec_st_for:
-  "dgs_enter (ownership_split_dg_spec_st_for gs tf_st enter_st) ci = ownership_split_transfer_st (enter_st ci)"
+  "dgs_enter (ownership_split_dg_spec_st_for gs tf_st enter_st) ci
+     = ownership_split_enter_transfer_st (local_enter_transfer (\<lambda>d. [(d, enter_st ci d)]))"
   unfolding ownership_split_dg_spec_st_for_def by simp
 
 lemma dg_spec_combine_transfer_ownership_split_dg_spec_st_for:

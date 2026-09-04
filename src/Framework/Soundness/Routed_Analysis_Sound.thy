@@ -78,7 +78,7 @@ text \<open>
 
 locale routed_analysis_sound =
   dg_analysis_adapter S gammaDG gs g gk0 route bot0 s0d s0g sigma vars x0
-    "solved_local_reader vars sigma" seed_key "\<lambda>d. gamma_state_lift (rd d)"
+    "solved_local_reader vars sigma" seed_key is_bot "\<lambda>d. gamma_state_lift (rd d)"
     enterc rd classify
   for S :: "(pp \<times> 'c, 'k, unit, 'D::bounded_semilattice_sup_bot,
               'G::bounded_semilattice_sup_bot) dg_spec"
@@ -91,6 +91,7 @@ locale routed_analysis_sound =
     and vars :: "(pp \<times> 'c) set"
     and x0 :: "pp \<times> 'c"
     and seed_key :: "pp \<Rightarrow> 'c \<Rightarrow> 'k"
+    and is_bot :: "'D \<Rightarrow> bool"
     and enterc :: "cfg_node \<Rightarrow> 'c \<Rightarrow> store \<Rightarrow> 'c"
     and rd :: "'D \<Rightarrow> 'a::sound_domain abs_state lifted"
     and classify :: "exp \<Rightarrow> 'a abs_state \<Rightarrow> check_result"

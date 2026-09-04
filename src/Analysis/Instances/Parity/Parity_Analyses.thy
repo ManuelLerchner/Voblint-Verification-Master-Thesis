@@ -82,7 +82,7 @@ definition pctx_eqs ::
        route_unit
        (\<lambda>ctx' src a. dg_spec_edge_tree (pctx_spec gs empty_pred) a src (\<lambda>_. Analysis_Global ()))
        (routed_cmb_g (pctx_spec gs empty_pred) (Analysis_Global ()) Activation_Seed
-          (static_resolve (compile_prog Pi ps)))
+          (static_resolve (compile_prog Pi ps)) (\<lambda>d. d = Bot))
        (routed_extra_g Activation_Seed (Analysis_Global ()))
        (compile_prog Pi ps) Bot (Lifted cinit_parity_st) Bot"
 
@@ -125,10 +125,14 @@ context
 begin
 
 interpretation parity_unit: routed_domain_exec
-  gs empty_pred "parity_tf_st_for gs" "parity_enter_st_for gs" "parity_tf_for gs"
+  gs empty_pred "parity_tf_st_for gs" "parity_enter_st_for gs"
+  skip_parity assign_parity special_parity branch_parity body_parity return_parity
+  "enter_parity_ci_for gs" event_parity
   "Analysis_Global ()" Activation_Seed route_unit route_unit static_resolve static_resolve
   by unfold_locales
-     (rule parity_tf_st_for_commute, rule parity_enter_st_for_commute, rule exact, simp, simp,
+     (rule parity_tf_st_for_commute[unfolded parity_tf_abs_def],
+      rule parity_enter_st_for_commute, rule exact, simp, simp,
+
       simp add: static_resolve_def)
 
 lemmas parity_pp_st_gen = parity_unit.pp_st
@@ -166,7 +170,7 @@ theorem pctx_pp_routed:
   "part_post_solution
      (side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. Analysis_Global ()) route_unit
         (\<lambda>ctx' src a. dg_spec_edge_tree (pctx_spec gs empty_pred) a src (\<lambda>_. Analysis_Global ()))
-        (routed_cmb_g (pctx_spec gs empty_pred) (Analysis_Global ()) Activation_Seed (static_resolve (compile_prog Pi ps)))
+        (routed_cmb_g (pctx_spec gs empty_pred) (Analysis_Global ()) Activation_Seed (static_resolve (compile_prog Pi ps)) (\<lambda>d. d = Bot))
         (routed_extra_g Activation_Seed (Analysis_Global ()))
         (compile_prog Pi ps) Bot (Lifted cinit_parity_st) Bot)
      (cfg_exit (compile_prog Pi ps), ())
@@ -201,10 +205,14 @@ context
 begin
 
 interpretation parity_unit: routed_domain_exec
-  gs empty_pred "parity_tf_st_for gs" "parity_enter_st_for gs" "parity_tf_for gs"
+  gs empty_pred "parity_tf_st_for gs" "parity_enter_st_for gs"
+  skip_parity assign_parity special_parity branch_parity body_parity return_parity
+  "enter_parity_ci_for gs" event_parity
   "Analysis_Global ()" Activation_Seed route_unit route_unit static_resolve static_resolve
   by unfold_locales
-     (rule parity_tf_st_for_commute, rule parity_enter_st_for_commute, rule exact, simp, simp,
+     (rule parity_tf_st_for_commute[unfolded parity_tf_abs_def],
+      rule parity_enter_st_for_commute, rule exact, simp, simp,
+
       simp add: static_resolve_def)
 
 end
@@ -255,8 +263,9 @@ interpretation pctx_routed: unit_routed_context "pctx_spec gs empty_pred" "pctx_
     "compile_prog Pi ps" "Analysis_Global ()" Bot "Lifted cinit_parity_st" Bot
     "snd (pctx_sol gs empty_pred Pi ps)" "fst (pctx_sol gs empty_pred Pi ps)"
     "(cfg_exit (compile_prog Pi ps), ())" "pctx_sg_st gs empty_pred Pi ps" Activation_Seed
-    "\<lambda>m. gamma_state_lift (map_lift (fun_of_resolved_st_q_for gs) m)"
-proof (unfold_locales, goal_cases FinE PP SgCov SgUncov Fwd FinC SeedKey CallFwd CombFwd EnterAgree)
+    "\<lambda>d. d = Bot" "\<lambda>m. gamma_state_lift (map_lift (fun_of_resolved_st_q_for gs) m)"
+proof (unfold_locales, goal_cases FinE PP SgCov SgUncov Fwd FinC SeedKey
+    IsBotBot IsBotSound IsBotMono EnterComplete CallFwd CombFwd EnterAgree)
   case FinE show ?case by (rule pctx_fin)
 next
   case PP show ?case by (rule pctx_pp_routed[OF solves exact])
@@ -271,6 +280,25 @@ next
   case FinC show ?case by (rule pctx_finC)
 next
   case (SeedKey p ctx) show ?case by simp
+next
+  case IsBotBot show ?case by simp
+next
+  case (IsBotSound d gv) then show ?case by (simp add: pctx_gamma_def)
+next
+  case (IsBotMono d d') then show ?case by (cases d; cases d'; simp)
+next
+  case (EnterComplete u ctx dst pars args p cont s)
+  let ?ci = "call_info_of (CallEdge dst pars args) p"
+  let ?caller = "locals (snd (pctx_sol gs empty_pred Pi ps) (Inl (u, ctx)))"
+  have cov: "entry_pairs_cover
+      (\<lambda>d. pctx_gamma gs d
+             (globs (snd (pctx_sol gs empty_pred Pi ps) (Inr (Analysis_Global ())))))
+      s (call_enter gs (CallEdge dst pars args) s)
+      [(?caller, transfer_lift empty_pred (parity_enter_st_for gs ?ci) ?caller)]"
+    using pctx_entry_cover_exec[OF exact EnterComplete(3), where ci = ?ci] by simp
+  show ?case
+    unfolding pctx_spec_def dgs_enter_local_state_st_for_lifted
+    using enter_runs_local_enter_transfer enter_deps_local_enter_transfer cov by fastforce
 next
   case (CallFwd u ctx dst pars args p cont)
   show ?case using CallFwd(1,2) call_fwd_ok unfolding route_unit_def by blast
@@ -441,7 +469,7 @@ definition pcs_eqs ::
           (\<lambda>_. Call_String_Context.Global))
        (routed_cmb_g (pctx_spec gs empty_pred)
           Call_String_Context.Global Call_String_Context.Seed
-          (static_resolve (compile_prog Pi ps)))
+          (static_resolve (compile_prog Pi ps)) (\<lambda>d. d = Bot))
        (routed_extra_g Call_String_Context.Seed Call_String_Context.Global)
        (compile_prog Pi ps) Bot (Lifted cinit_parity_st) Bot"
 
@@ -479,11 +507,15 @@ context
 begin
 
 interpretation parity_cs: routed_domain_exec
-  gs empty_pred "parity_tf_st_for gs" "parity_enter_st_for gs" "parity_tf_for gs"
+  gs empty_pred "parity_tf_st_for gs" "parity_enter_st_for gs"
+  skip_parity assign_parity special_parity branch_parity body_parity return_parity
+  "enter_parity_ci_for gs" event_parity
   Call_String_Context.Global Call_String_Context.Seed "cs_route k" "cs_route k"
   static_resolve static_resolve
   by unfold_locales
-     (rule parity_tf_st_for_commute, rule parity_enter_st_for_commute, rule exact, simp,
+     (rule parity_tf_st_for_commute[unfolded parity_tf_abs_def],
+      rule parity_enter_st_for_commute, rule exact, simp,
+
       rule cs_route_indep_of_data, simp add: static_resolve_def)
 
 lemmas parity_cs_pp_st_gen = parity_cs.pp_st
@@ -522,7 +554,7 @@ theorem pcs_pp_routed:
         (\<lambda>ctx' src a. dg_spec_edge_tree (pctx_spec gs empty_pred) a src
            (\<lambda>_. Call_String_Context.Global))
         (routed_cmb_g (pctx_spec gs empty_pred) Call_String_Context.Global
-           Call_String_Context.Seed (static_resolve (compile_prog Pi ps)))
+           Call_String_Context.Seed (static_resolve (compile_prog Pi ps)) (\<lambda>d. d = Bot))
         (routed_extra_g Call_String_Context.Seed Call_String_Context.Global)
         (compile_prog Pi ps) Bot (Lifted cinit_parity_st) Bot)
      (cfg_exit (compile_prog Pi ps), [])
@@ -582,10 +614,11 @@ interpretation pcs_adapter: routed_analysis_sound
     Bot "Lifted cinit_parity_st" Bot
     "snd (pcs_sol k gs empty_pred Pi ps)" "fst (pcs_sol k gs empty_pred Pi ps)"
     "(cfg_exit (compile_prog Pi ps), [])"
-    Call_String_Context.Seed "cs_context k"
+    Call_String_Context.Seed "\<lambda>d. d = Bot" "cs_context k"
     "map_lift (fun_of_resolved_st_q_for gs)" parity_classify_check
-proof (unfold_locales, goal_cases FinE PP SgCov SgUncov Fwd FinC SeedKey ResolveSound
-    RouteEnterc CallFwd CombFwd EnterAgree GammaRd ClProved ClRefuted)
+proof (unfold_locales, goal_cases FinE PP SgCov SgUncov Fwd FinC SeedKey
+    IsBotBot IsBotSound IsBotMono ResolveSound
+    EnterCover CombFwd EnterAgree GammaRd ClProved ClRefuted)
   case FinE show ?case using compile_prog_finite by auto
 next
   case PP show ?case by (rule pcs_pp_routed[OF solves exact])
@@ -603,14 +636,29 @@ next
 next
   case (SeedKey p ctx) show ?case by simp
 next
+  case IsBotBot show ?case by simp
+next
+  case (IsBotSound d g') then show ?case by (simp add: pctx_gamma_def)
+next
+  case (IsBotMono d d') then show ?case by (cases d; cases d'; simp)
+next
   case (ResolveSound u ctx dst pars args p cont s)
   thus ?case by (simp add: static_resolve_iff compile_prog_finite)
 next
-  case (RouteEnterc u ctx dst pars args p cont s)
-  show ?case by (rule cs_route_context_agree)
-next
-  case (CallFwd u ctx dst pars args p cont)
-  show ?case using call_fwd_ok[OF CallFwd(1,2)] by (simp add: cs_route_def)
+  case (EnterCover u ctx dst pars args p cont s)
+  let ?ci = "call_info_of (CallEdge dst pars args) p"
+  let ?caller = "locals (snd (pcs_sol k gs empty_pred Pi ps) (Inl (u, ctx)))"
+  have cov: "entry_pairs_cover
+      (\<lambda>d. pctx_gamma gs d
+             (globs (snd (pcs_sol k gs empty_pred Pi ps) (Inr Call_String_Context.Global))))
+      s (call_enter gs (CallEdge dst pars args) s)
+      [(?caller, transfer_lift empty_pred (parity_enter_st_for gs ?ci) ?caller)]"
+    using pctx_entry_cover_exec[OF exact EnterCover(3), where ci = ?ci] by simp
+  show ?case
+    unfolding pctx_spec_def dgs_enter_local_state_st_for_lifted
+    using enter_runs_local_enter_transfer enter_deps_local_enter_transfer cov
+          cs_route_context_agree call_fwd_ok[OF EnterCover(1,2)]
+    by (fastforce simp: entry_pairs_cover_def cs_route_def)
 next
   case (CombFwd cl c1 dst pars args p cont)
   show ?case using CombFwd(1,2) by (rule comb_fwd_ok)
@@ -789,7 +837,7 @@ definition pctx_entry_eqs ::
        (pctx_entry_route_gen gs empty_pred)
        (\<lambda>ctx' src a. dg_spec_edge_tree (pctx_spec gs empty_pred) a src (\<lambda>_. Analysis_Global ()))
        (routed_cmb_g (pctx_spec gs empty_pred) (Analysis_Global ()) Activation_Seed
-          (static_resolve (compile_prog Pi ps)))
+          (static_resolve (compile_prog Pi ps)) (\<lambda>d. d = Bot))
        (routed_extra_g Activation_Seed (Analysis_Global ()))
        (compile_prog Pi ps) Bot (Lifted cinit_parity_st) Bot"
 
@@ -820,8 +868,13 @@ context
 begin
 
 interpretation parity_domain: routed_dg_domain_exec
-  gs empty_pred "parity_tf_st_for gs" "parity_enter_st_for gs" "parity_tf_for gs"
-  by unfold_locales (rule parity_tf_st_for_commute, rule parity_enter_st_for_commute, rule exact)
+  gs empty_pred "parity_tf_st_for gs" "parity_enter_st_for gs"
+  skip_parity assign_parity special_parity branch_parity body_parity return_parity
+  "enter_parity_ci_for gs" event_parity
+  by unfold_locales
+     (rule parity_tf_st_for_commute[unfolded parity_tf_abs_def],
+      rule parity_enter_st_for_commute, rule exact)
+
 
 lemma pctx_entry_route_gen_eq_generic:
   "pctx_entry_route_gen gs empty_pred u ctx d ca = parity_domain.entry_exec_route_gen u ctx d ca"
@@ -851,12 +904,16 @@ context
 begin
 
 interpretation parity_es: routed_domain_exec
-  gs empty_pred "parity_tf_st_for gs" "parity_enter_st_for gs" "parity_tf_for gs"
+  gs empty_pred "parity_tf_st_for gs" "parity_enter_st_for gs"
+  skip_parity assign_parity special_parity branch_parity body_parity return_parity
+  "enter_parity_ci_for gs" event_parity
   "Analysis_Global ()" Activation_Seed "pctx_entry_route_gen gs empty_pred"
   formals_route_lifted_gen
   static_resolve static_resolve
   by unfold_locales
-     (rule parity_tf_st_for_commute, rule parity_enter_st_for_commute, rule exact, simp,
+     (rule parity_tf_st_for_commute[unfolded parity_tf_abs_def],
+      rule parity_enter_st_for_commute, rule exact, simp,
+
       rule pctx_entry_route_gen_commute[OF exact, symmetric],
       simp add: static_resolve_def)
 
@@ -895,7 +952,7 @@ theorem pctx_entry_pp_routed:
         (pctx_entry_route_gen gs empty_pred)
         (\<lambda>ctx' src a. dg_spec_edge_tree (pctx_spec gs empty_pred) a src (\<lambda>_. Analysis_Global ()))
         (routed_cmb_g (pctx_spec gs empty_pred) (Analysis_Global ()) Activation_Seed
-           (static_resolve (compile_prog Pi ps)))
+           (static_resolve (compile_prog Pi ps)) (\<lambda>d. d = Bot))
         (routed_extra_g Activation_Seed (Analysis_Global ()))
         (compile_prog Pi ps) Bot (Lifted cinit_parity_st) Bot)
      (cfg_exit (compile_prog Pi ps), [])
@@ -928,9 +985,9 @@ context
         \<Longrightarrow> (u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps)
         \<Longrightarrow> (FunctionEntry p,
                pctx_entry_route_gen gs empty_pred u ctx
-                 (entered (pctx_spec gs empty_pred) (Analysis_Global ())
-                    (snd (pctx_entry_sol gs empty_pred Pi ps))
-                    (call_info_of (CallEdge dst pars args) p) (Inl (u, ctx)))
+                 (transfer_lift empty_pred
+                    (parity_enter_st_for gs (call_info_of (CallEdge dst pars args) p))
+                    (locals (snd (pctx_entry_sol gs empty_pred Pi ps) (Inl (u, ctx)))))
                  (CallEdge dst pars args))
              \<in> fst (pctx_entry_sol gs empty_pred Pi ps)"
     and comb_fwd_ok: "\<And>cl c1 dst pars args p cont.
@@ -969,8 +1026,10 @@ interpretation pctx_entry_routed: entry_state_routed_context "pctx_spec gs empty
     Bot "Lifted cinit_parity_st" Bot
     "snd (pctx_entry_sol gs empty_pred Pi ps)" "fst (pctx_entry_sol gs empty_pred Pi ps)"
     "(cfg_exit (compile_prog Pi ps), [])" "pctx_entry_sg_st gs empty_pred Pi ps" Activation_Seed
-    "\<lambda>m. gamma_state_lift (map_lift (fun_of_resolved_st_q_for gs) m)"
-proof (unfold_locales, goal_cases FinE PP SgCov SgUncov Fwd SeedNe CallFwd CombFwd)
+    "\<lambda>d. d = Bot" "\<lambda>m. gamma_state_lift (map_lift (fun_of_resolved_st_q_for gs) m)"
+    "\<lambda>ci. transfer_lift empty_pred (parity_enter_st_for gs ci)"
+proof (unfold_locales, goal_cases FinE PP SgCov SgUncov Fwd SeedNe
+    IsBotBot IsBotSound IsBotMono EnterSingleton EnterSoundAt CallFwd CombFwd)
   case FinE show ?case by (rule pctx_entry_fin)
 next
   case PP show ?case by (rule pctx_entry_pp_routed[OF solves exact])
@@ -983,6 +1042,29 @@ next
   case (Fwd u a v ctx) then show ?case by (rule fwd_ok)
 next
   case (SeedNe p ctx) show ?case by simp
+next
+  case IsBotBot show ?case by simp
+next
+  case (IsBotSound d gv) then show ?case by (simp add: pctx_gamma_def)
+next
+  case (IsBotMono d d') then show ?case by (cases d; cases d'; simp)
+next
+  case (EnterSingleton u ctx dst pars args p cont)
+  let ?m = "mk_dg_man (locals (snd (pctx_entry_sol gs empty_pred Pi ps) (Inl (u, ctx))))
+              (\<lambda>_. Analysis_Global ())"
+  let ?f = "\<lambda>d. [(d, transfer_lift empty_pred
+                       (parity_enter_st_for gs (call_info_of (CallEdge dst pars args) p)) d)]"
+  show ?case
+    unfolding pctx_spec_def dgs_enter_local_state_st_for_lifted
+    using enter_runs_local_enter_transfer[of ?f ?m "snd (pctx_entry_sol gs empty_pred Pi ps)"]
+          enter_deps_local_enter_transfer[of ?f ?m "snd (pctx_entry_sol gs empty_pred Pi ps)"]
+    by simp blast
+next
+  case (EnterSoundAt u ctx dst pars args p cont s)
+  show ?case
+    using pctx_entry_cover_exec[OF exact EnterSoundAt(3),
+        where ci = "call_info_of (CallEdge dst pars args) p"]
+    by (auto simp: entry_pairs_cover_def)
 next
   case (CallFwd u ctx dst pars args p cont)
   show ?case using CallFwd(1,2) by (rule call_fwd_ok)
@@ -1003,9 +1085,9 @@ text \<open>The trace-semantic context function the routed table induces: at a c
 
 definition pctx_entry_enterc :: "cfg_node \<Rightarrow> parity list \<Rightarrow> store \<Rightarrow> parity list" where
   "pctx_entry_enterc u ctx s =
-     route_enterc_of_sigma (pctx_spec gs empty_pred)
-       (pctx_entry_route_gen gs empty_pred) (snd (pctx_entry_sol gs empty_pred Pi ps))
-       (Analysis_Global ()) (compile_prog Pi ps) u ctx s"
+     route_enterc_of_sigma (pctx_entry_route_gen gs empty_pred)
+       (\<lambda>ci. transfer_lift empty_pred (parity_enter_st_for gs ci))
+       (snd (pctx_entry_sol gs empty_pred Pi ps)) (compile_prog Pi ps) u ctx s"
 
 lemmas pctx_entry_routed_context_call =
   pctx_entry_routed.routed_context_call[folded pctx_entry_enterc_def]
@@ -1018,10 +1100,11 @@ interpretation pctx_entry_adapter: routed_analysis_sound
     Bot "Lifted cinit_parity_st" Bot
     "snd (pctx_entry_sol gs empty_pred Pi ps)" "fst (pctx_entry_sol gs empty_pred Pi ps)"
     "(cfg_exit (compile_prog Pi ps), [])"
-    Activation_Seed pctx_entry_enterc
+    Activation_Seed "\<lambda>d. d = Bot" pctx_entry_enterc
     "map_lift (fun_of_resolved_st_q_for gs)" parity_classify_check
-proof (unfold_locales, goal_cases FinE PP SgCov SgUncov Fwd FinC SeedKey ResolveSound
-    RouteEnterc CallFwd CombFwd EnterAgree GammaRd ClProved ClRefuted)
+proof (unfold_locales, goal_cases FinE PP SgCov SgUncov Fwd FinC SeedKey
+    IsBotBot IsBotSound IsBotMono ResolveSound
+    EnterCover CombFwd EnterAgree GammaRd ClProved ClRefuted)
   case FinE show ?case by (rule pctx_entry_fin)
 next
   case PP show ?case by (rule pctx_entry_pp_routed[OF solves exact])
@@ -1039,16 +1122,20 @@ next
 next
   case (SeedKey p ctx) show ?case by simp
 next
+  case IsBotBot show ?case by simp
+next
+  case (IsBotSound d g') then show ?case by (simp add: pctx_gamma_def)
+next
+  case (IsBotMono d d') then show ?case by (cases d; cases d'; simp)
+next
   case (ResolveSound u ctx dst pars args p cont s)
   thus ?case by (simp add: static_resolve_iff[OF pctx_entry_finC])
 next
-  case (RouteEnterc u ctx dst pars args p cont s)
-  show ?case unfolding pctx_entry_enterc_def
-    by (rule route_enterc_of_sigma_agree[OF pctx_entry_finC compile_prog_calls_source_unique
-                                              RouteEnterc(2)])
-next
-  case (CallFwd u ctx dst pars args p cont)
-  show ?case using CallFwd(1,2) by (rule call_fwd_ok)
+  case (EnterCover u ctx dst pars args p cont s)
+  show ?case
+    unfolding pctx_entry_enterc_def
+    using pctx_entry_routed.routed.routed_entry_cover[OF EnterCover(1,2,3)]
+    by (simp add: pctx_entry_enterc_def)
 next
   case (CombFwd cl c1 dst pars args p cont)
   show ?case using CombFwd(1,2) by (rule comb_fwd_ok)

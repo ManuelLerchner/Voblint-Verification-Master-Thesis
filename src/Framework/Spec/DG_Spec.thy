@@ -1,5 +1,5 @@
 theory DG_Spec
-  imports DG_Manager
+  imports DG_Manager "Voblint_CFG.CFG_Def"
 begin
 
 section \<open>What an analysis supplies: manager-native transfers\<close>
@@ -23,6 +23,27 @@ text \<open>
 \<close>
 
 
+text \<open>
+  An \<open>analysis_event\<close> is an analyzer-visible occurrence distinct from an ordinary
+  control-flow transfer: a domain may observe it, but it must not by itself refine
+  execution. This matches Goblint's own separation of its ordinary \<open>Spec\<close>
+  transfer methods (\<open>assign\<close>/\<open>branch\<close>/\<open>skip\<close>/...) from \<open>Spec.event\<close>,
+  which handles \<open>Events.Assert\<close> and similar occurrences outside the ordinary
+  transfer vocabulary. Voblint's sole current event is a check's condition; the
+  vocabulary is deliberately left open rather than pre-populated, so that a future
+  VIMP source construct with no current counterpart (e.g. a diagnostic-only
+  annotation) adds a constructor here instead of a new specification field. A
+  construct that narrows feasible execution, such as \<open>assume\<close>, is not a
+  candidate: it belongs on \<open>dgs_branch\<close> or on a new refining field, not here.
+
+  It is declared here, beside the \<open>dgs_event\<close> field it types, because the
+  specification record and the edge-action dispatcher that feeds it are the only
+  things that ever case on it.
+\<close>
+
+datatype analysis_event =
+  Check_Event exp
+
 record ('x,'k,'v,'dl,'dg) dg_spec =
   dgs_skip       :: "('x,'k,'v,'dl,'dg) man_transfer"
   dgs_assign     :: "vname \<Rightarrow> exp \<Rightarrow> ('x,'k,'v,'dl,'dg) man_transfer"
@@ -30,11 +51,25 @@ record ('x,'k,'v,'dl,'dg) dg_spec =
   dgs_branch     :: "exp \<Rightarrow> bool \<Rightarrow> ('x,'k,'v,'dl,'dg) man_transfer"
   dgs_body       :: "pname \<Rightarrow> ('x,'k,'v,'dl,'dg) man_transfer"
   dgs_return     :: "exp option \<Rightarrow> pname \<Rightarrow> ('x,'k,'v,'dl,'dg) man_transfer"
-  dgs_enter      :: "call_info \<Rightarrow> ('x,'k,'v,'dl,'dg) man_transfer"
+  dgs_enter      :: "call_info \<Rightarrow> ('x,'k,'v,'dl,'dg) man_enter_transfer"
   dgs_event      :: "analysis_event \<Rightarrow> ('x,'k,'v,'dl,'dg) man_transfer"
-  dgs_caller_cont    :: "call_info \<Rightarrow> ('x,'k,'v,'dl,'dg) man_transfer"
   dgs_combine_env    :: "call_info \<Rightarrow> ('x,'k,'v,'dl,'dg) man_combine_transfer"
   dgs_combine_assign :: "call_info \<Rightarrow> ('x,'k,'v,'dl,'dg) man_combine_transfer"
+
+text \<open>
+  Notation for the four call-boundary fields, so a proof can name them without
+  the record prefix. Each abbreviates its field and nothing else; construction
+  and record update still use the field names.
+
+  \<open>enter\<^sup>#\<close> answers the whole operation Goblint's \<open>Spec.enter\<close> answers: the list
+  of alternatives, each pairing the caller's continuation with the callee's
+  entry value. There is no separate caller-continuation field, because the two
+  halves of an alternative only mean anything together.
+\<close>
+
+notation dgs_enter ("enter\<^sup>#")
+notation dgs_combine_env ("combine'_env\<^sup>#")
+notation dgs_combine_assign ("combine'_assign\<^sup>#")
 
 text \<open>
   Procedure-return combine is split the same way Goblint's \<open>Spec\<close> splits
@@ -55,8 +90,11 @@ where
      }"
 
 text \<open>
-  \<open>EA_Check\<close> routes through \<^const>\<open>dgs_event\<close>, matching \<^const>\<open>apply_tf\<close>'s
-  own \<open>event\<^sup>#\<close> dispatch: a concrete \<open>dg_spec\<close> supplies its own notion of a
+  \<open>EA_Check\<close> routes through \<^const>\<open>dgs_event\<close> rather than \<^const>\<open>dgs_skip\<close>:
+  a check is an analysis event (matching Goblint's \<open>Spec.event\<close>, not
+  \<open>Spec.skip\<close>), and conflating it with skip would make a future domain's
+  non-identity skip silently change what a check edge does. A concrete
+  \<open>dg_spec\<close> therefore supplies its own notion of a
   check event directly, the same way it already supplies
   \<^const>\<open>dgs_body\<close>/\<^const>\<open>dgs_return\<close>.
 \<close>
@@ -77,10 +115,10 @@ subsection \<open>Compiling a specification to right-hand sides\<close>
 text \<open>
   The generator-facing tree formers: an edge equation reads the source
   unknown, builds the manager around it with the routed key closed in, and
-  runs the spec's transfer; the combine equation additionally reads the
-  callee exit and reconstructs the caller continuation through
-  \<^const>\<open>dgs_caller_cont\<close> before \<^const>\<open>dgs_combine\<close> runs, so combine still
-  receives a continuation and never the raw caller.
+  runs the spec's transfer; the combine equation additionally reads the callee
+  exit. Which continuation \<^const>\<open>dgs_combine\<close> runs against is the manager's
+  current local value, so an equation shape that has the matching alternative
+  in hand supplies it, and one that does not supplies the caller.
 \<close>
 
 definition transfer_tree ::
@@ -105,11 +143,7 @@ where
 definition dg_spec_combine_transfer ::
   "('x,'k,'v,'dl,'dg) dg_spec \<Rightarrow> call_info \<Rightarrow> ('x,'k,'v,'dl,'dg) man_combine_transfer"
 where
-  "dg_spec_combine_transfer S ci m exit =
-     do {
-       dcont \<leftarrow> dgs_caller_cont S ci m;
-       dgs_combine S ci (man_with_local m dcont) exit
-     }"
+  "dg_spec_combine_transfer S ci m exit = dgs_combine S ci m exit"
 
 definition dg_spec_combine_tree ::
   "('x,'k,'v,'dl::bot,'dg::bot) dg_spec \<Rightarrow> call_info \<Rightarrow> 'x + 'k \<Rightarrow> 'x + 'k \<Rightarrow> ('v \<Rightarrow> 'k)
@@ -168,6 +202,18 @@ text \<open>
 definition local_transfer :: "('dl \<Rightarrow> 'dl) \<Rightarrow> ('x,'k,'v,'dl,'dg) man_transfer" where
   "local_transfer f m = sp_return (f (man_local m))"
 
+text \<open>
+  The entry counterpart: the alternatives are a pure function of the caller
+  value, so the program reads no unknown and publishes nothing. \<open>f\<close> answers the
+  whole list, which is what lets a local-only specification still offer several
+  alternatives.
+\<close>
+
+definition local_enter_transfer ::
+  "('dl \<Rightarrow> 'dl enter_result list) \<Rightarrow> ('x,'k,'v,'dl,'dg) man_enter_transfer"
+where
+  "local_enter_transfer f m = sp_return (f (man_local m))"
+
 lemma transfer_tree_local_transfer:
   "transfer_tree (local_transfer f) (Inl x) key
      = QueryL x (\<lambda>a. Answer (DG (f (locals a)) bot))"
@@ -221,13 +267,12 @@ where
   "local_combine_transfer f m exit = sp_return (f (man_local m) exit)"
 
 lemma dg_spec_combine_transfer_local:
-  assumes "dgs_caller_cont S ci = local_transfer cc"
-    and "dgs_combine_env S ci = local_combine_transfer ce"
+  assumes "dgs_combine_env S ci = local_combine_transfer ce"
     and "dgs_combine_assign S ci = local_combine_transfer ca"
   shows "dg_spec_combine_transfer S ci m exit
-           = sp_return (ca (ce (cc (man_local m)) exit) exit)"
+           = sp_return (ca (ce (man_local m) exit) exit)"
   by (simp add: dg_spec_combine_transfer_def dgs_combine_def assms
-      local_transfer_def local_combine_transfer_def)
+      local_combine_transfer_def)
 
 lemma traverse_local_combine_tree [simp]:
   "traverse_rhs (combine_transfer_tree (local_combine_transfer h) src_cc src_ex gk) \<tau>
@@ -266,6 +311,15 @@ lemma dep_aux_transfer_tree_source:
   "src \<in> dep_aux \<tau> (transfer_tree T src gk)"
   by (cases src)
      (simp_all add: transfer_tree_def dg_edge_tree_man_def dg_read_at_def sp_bind_assoc)
+
+text \<open>The same fact one level lower, for a tree that reads an unknown and then
+  continues into a program the caller supplies rather than into a transfer.\<close>
+
+lemma dep_aux_dg_read_at_source:
+  "src \<in> dep_aux \<tau> (dg_read_at src K)"
+  by (cases src)
+     (simp_all add: dg_read_at_def sp_bind_def sp_read_local_def sp_read_global_def
+        sp_return_def)
 
 lemma dep_aux_combine_transfer_tree_sources:
   "{src_cc, src_ex} \<subseteq> dep_aux \<tau> (combine_transfer_tree T src_cc src_ex gk)"
@@ -350,9 +404,8 @@ definition default_local_dg_spec :: "('x,'k,'v,'D,'G) dg_spec" where
      dgs_branch = (\<lambda>b pol. local_transfer id),
      dgs_body = (\<lambda>p. local_transfer id),
      dgs_return = (\<lambda>e p. local_transfer id),
-     dgs_enter = (\<lambda>ci. local_transfer id),
+     dgs_enter = (\<lambda>ci. local_enter_transfer (\<lambda>d. [(d, d)])),
      dgs_event = (\<lambda>ev. local_transfer id),
-     dgs_caller_cont = (\<lambda>ci. local_transfer id),
      dgs_combine_env = (\<lambda>ci. local_combine_transfer (\<lambda>d de. d)),
      dgs_combine_assign = (\<lambda>ci. local_combine_transfer (\<lambda>d de. d)) \<rparr>"
 
@@ -363,9 +416,8 @@ lemma default_local_dg_spec_simps [simp]:
   "dgs_branch default_local_dg_spec b pol = local_transfer id"
   "dgs_body default_local_dg_spec p = local_transfer id"
   "dgs_return default_local_dg_spec eo p = local_transfer id"
-  "dgs_enter default_local_dg_spec ci = local_transfer id"
+  "dgs_enter default_local_dg_spec ci = local_enter_transfer (\<lambda>d. [(d, d)])"
   "dgs_event default_local_dg_spec ev = local_transfer id"
-  "dgs_caller_cont default_local_dg_spec ci = local_transfer id"
   "dgs_combine_env default_local_dg_spec ci = local_combine_transfer (\<lambda>d de. d)"
   "dgs_combine_assign default_local_dg_spec ci = local_combine_transfer (\<lambda>d de. d)"
   by (simp_all add: default_local_dg_spec_def)
@@ -395,21 +447,21 @@ where
 definition local_dg_spec ::
   "('D \<Rightarrow> 'D) \<Rightarrow> (vname \<Rightarrow> exp \<Rightarrow> 'D \<Rightarrow> 'D) \<Rightarrow> (special_call \<Rightarrow> vname \<Rightarrow> 'D \<Rightarrow> 'D)
    \<Rightarrow> (exp \<Rightarrow> bool \<Rightarrow> 'D \<Rightarrow> 'D) \<Rightarrow> (pname \<Rightarrow> 'D \<Rightarrow> 'D)
-   \<Rightarrow> (exp option \<Rightarrow> pname \<Rightarrow> 'D \<Rightarrow> 'D) \<Rightarrow> (call_info \<Rightarrow> 'D \<Rightarrow> 'D)
-   \<Rightarrow> (analysis_event \<Rightarrow> 'D \<Rightarrow> 'D) \<Rightarrow> (call_info \<Rightarrow> 'D \<Rightarrow> 'D)
+   \<Rightarrow> (exp option \<Rightarrow> pname \<Rightarrow> 'D \<Rightarrow> 'D)
+   \<Rightarrow> (call_info \<Rightarrow> 'D \<Rightarrow> 'D enter_result list)
+   \<Rightarrow> (analysis_event \<Rightarrow> 'D \<Rightarrow> 'D)
    \<Rightarrow> (call_info \<Rightarrow> 'D \<Rightarrow> 'D \<Rightarrow> 'D) \<Rightarrow> (call_info \<Rightarrow> 'D \<Rightarrow> 'D \<Rightarrow> 'D)
    \<Rightarrow> ('x,'k,'v,'D,'G) dg_spec"
 where
-  "local_dg_spec sk asn sp br bd rt en ev cc ce ca = default_local_dg_spec\<lparr>
+  "local_dg_spec sk asn sp br bd rt en ev ce ca = default_local_dg_spec\<lparr>
      dgs_skip := local_transfer sk,
      dgs_assign := (\<lambda>x e. local_transfer (asn x e)),
      dgs_special := (\<lambda>sc x. local_transfer (sp sc x)),
      dgs_branch := (\<lambda>b pol. local_transfer (br b pol)),
      dgs_body := (\<lambda>p. local_transfer (bd p)),
      dgs_return := (\<lambda>e p. local_transfer (rt e p)),
-     dgs_enter := (\<lambda>ci. local_transfer (en ci)),
+     dgs_enter := (\<lambda>ci. local_enter_transfer (en ci)),
      dgs_event := (\<lambda>ev'. local_transfer (ev ev')),
-     dgs_caller_cont := (\<lambda>ci. local_transfer (cc ci)),
      dgs_combine_env := (\<lambda>ci. local_combine_transfer (ce ci)),
      dgs_combine_assign := (\<lambda>ci. local_combine_transfer (ca ci)) \<rparr>"
 
@@ -447,33 +499,31 @@ text \<open>
 \<close>
 
 lemma local_dg_spec_simps [simp]:
-  "dgs_skip (local_dg_spec sk asn sp br bd rt en ev cc ce ca) = local_transfer sk"
-  "dgs_assign (local_dg_spec sk asn sp br bd rt en ev cc ce ca) x e = local_transfer (asn x e)"
-  "dgs_special (local_dg_spec sk asn sp br bd rt en ev cc ce ca) sc x
+  "dgs_skip (local_dg_spec sk asn sp br bd rt en ev ce ca) = local_transfer sk"
+  "dgs_assign (local_dg_spec sk asn sp br bd rt en ev ce ca) x e = local_transfer (asn x e)"
+  "dgs_special (local_dg_spec sk asn sp br bd rt en ev ce ca) sc x
      = local_transfer (sp sc x)"
-  "dgs_branch (local_dg_spec sk asn sp br bd rt en ev cc ce ca) b pol
+  "dgs_branch (local_dg_spec sk asn sp br bd rt en ev ce ca) b pol
      = local_transfer (br b pol)"
-  "dgs_body (local_dg_spec sk asn sp br bd rt en ev cc ce ca) p = local_transfer (bd p)"
-  "dgs_return (local_dg_spec sk asn sp br bd rt en ev cc ce ca) eo p
+  "dgs_body (local_dg_spec sk asn sp br bd rt en ev ce ca) p = local_transfer (bd p)"
+  "dgs_return (local_dg_spec sk asn sp br bd rt en ev ce ca) eo p
      = local_transfer (rt eo p)"
-  "dgs_enter (local_dg_spec sk asn sp br bd rt en ev cc ce ca) ci = local_transfer (en ci)"
-  "dgs_event (local_dg_spec sk asn sp br bd rt en ev cc ce ca) ev' = local_transfer (ev ev')"
-  "dgs_caller_cont (local_dg_spec sk asn sp br bd rt en ev cc ce ca) ci
-     = local_transfer (cc ci)"
-  "dgs_combine_env (local_dg_spec sk asn sp br bd rt en ev cc ce ca) ci
+  "dgs_enter (local_dg_spec sk asn sp br bd rt en ev ce ca) ci = local_enter_transfer (en ci)"
+  "dgs_event (local_dg_spec sk asn sp br bd rt en ev ce ca) ev' = local_transfer (ev ev')"
+  "dgs_combine_env (local_dg_spec sk asn sp br bd rt en ev ce ca) ci
      = local_combine_transfer (ce ci)"
-  "dgs_combine_assign (local_dg_spec sk asn sp br bd rt en ev cc ce ca) ci
+  "dgs_combine_assign (local_dg_spec sk asn sp br bd rt en ev ce ca) ci
      = local_combine_transfer (ca ci)"
   by (simp_all add: local_dg_spec_def)
 
 lemma dg_spec_step_local_dg_spec:
-  "dg_spec_step (local_dg_spec sk asn sp br bd rt en ev cc ce ca) a
+  "dg_spec_step (local_dg_spec sk asn sp br bd rt en ev ce ca) a
      = local_transfer (local_spec_step sk asn sp br rt ev a)"
   by (cases a) simp_all
 
 lemma dg_spec_combine_transfer_local_dg_spec:
-  "dg_spec_combine_transfer (local_dg_spec sk asn sp br bd rt en ev cc ce ca) ci
-     = local_combine_transfer (\<lambda>dc de. ca ci (ce ci (cc ci dc) de) de)"
+  "dg_spec_combine_transfer (local_dg_spec sk asn sp br bd rt en ev ce ca) ci
+     = local_combine_transfer (\<lambda>dc de. ca ci (ce ci dc de) de)"
   by (intro ext)
      (simp add: dg_spec_combine_transfer_local local_combine_transfer_def)
 

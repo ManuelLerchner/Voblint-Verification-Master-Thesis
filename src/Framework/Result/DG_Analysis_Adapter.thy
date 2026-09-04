@@ -27,7 +27,7 @@ text \<open>
 
 locale dg_analysis_adapter =
   routed_context_base_hetero S gammaDG gs g gk0 route bot0 s0d s0g sigma vars x0 sg seed_key
-    "static_resolve g" gammaM enterc
+    "static_resolve g" is_bot gammaM enterc
   for S :: "(pp \<times> 'c, 'k, unit, 'D::bounded_semilattice_sup_bot,
               'G::bounded_semilattice_sup_bot) dg_spec"
     and gammaDG :: "'D \<Rightarrow> 'G \<Rightarrow> store set"
@@ -40,6 +40,7 @@ locale dg_analysis_adapter =
     and x0 :: "pp \<times> 'c"
     and sg :: "pp \<times> 'c + 'k \<Rightarrow> 'M"
     and seed_key :: "pp \<Rightarrow> 'c \<Rightarrow> 'k"
+    and is_bot :: "'D \<Rightarrow> bool"
     and gammaM :: "'M \<Rightarrow> store set"
     and enterc :: "cfg_node \<Rightarrow> 'c \<Rightarrow> store \<Rightarrow> 'c" +
   fixes rd :: "'D \<Rightarrow> 'a::sound_domain abs_state lifted"

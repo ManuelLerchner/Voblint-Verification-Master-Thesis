@@ -202,23 +202,29 @@ text \<open>Interpret \<^locale>\<open>ownership_split_dg_exec_analysis\<close> 
   \<open>Example_Interval_DG_Flagship\<close>.  The interpretation absorbs the sound-transfer and
   primitive-commutation obligations once, so \<open>twice_source_run_sound\<close> below only
   supplies the compiled-input and solver facts.\<close>
-
 interpretation twice_ex_reg:
   ownership_split_dg_exec_analysis twice_gs
-    "ivl_tf_for twice_gs" "ivl_tf_st_for twice_gs" "ivl_enter_st_for twice_gs"
+    skip_ivl assign_ivl special_ivl branch_ivl body_ivl return_ivl
+    "enter_ivl_ci_for twice_gs" event_ivl
+    "ivl_tf_st_for twice_gs" "ivl_enter_st_for twice_gs"
     "TD_side_warrowing_apinis_Interp.solve" "TD_side_warrowing_apinis_Interp.solve_c"
 proof -
-  interpret twice_transfer: sound_transfer_for twice_gs "ivl_tf_for twice_gs"
+  interpret twice_transfer: sound_transfer_for twice_gs
+      skip_ivl assign_ivl special_ivl branch_ivl body_ivl return_ivl
+      "enter_ivl_ci_for twice_gs" event_ivl
     by (rule ivl_is_sound_transfer_for)
-  show "ownership_split_dg_exec_analysis twice_gs (ivl_tf_for twice_gs) (ivl_tf_st_for twice_gs)
+  show "ownership_split_dg_exec_analysis twice_gs
+          skip_ivl assign_ivl special_ivl branch_ivl body_ivl return_ivl
+          (enter_ivl_ci_for twice_gs) event_ivl
+          (ivl_tf_st_for twice_gs)
           (ivl_enter_st_for twice_gs)
           TD_side_warrowing_apinis_Interp.solve TD_side_warrowing_apinis_Interp.solve_c"
     by unfold_locales
        (rule twice_reserved
              twice_transfer.tf_sound_assign_for twice_transfer.tf_sound_special_for
              twice_transfer.tf_sound_branch_for
-             twice_transfer.tf_sound_enter_entry_for twice_transfer.tf_sound_combine_env_for
-             ivl_tf_st_for_commute[folded fun_of_exec_dg_st_for_def]
+             twice_transfer.tf_sound_enter_entry_for
+             ivl_tf_st_for_commute[unfolded ivl_tf_abs_def, folded fun_of_exec_dg_st_for_def]
              ivl_enter_st_for_commute[folded fun_of_exec_dg_st_for_def]
              TD_side_warrowing_apinis_Interp.part_post_solution_of_solve_c
         | assumption)+

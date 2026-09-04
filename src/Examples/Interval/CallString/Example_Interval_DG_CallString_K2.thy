@@ -26,7 +26,7 @@ definition nest_2_eqs ::
   "nest_2_eqs =
      side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. Global) (cs_route 2)
       (\<lambda>ctx' src a. dg_spec_edge_tree nest_S_st a src (\<lambda>_. Global))
-      (routed_cmb_g nest_S_st Global Seed (static_resolve nest_cfg))
+      (routed_cmb_g nest_S_st Global Seed (static_resolve nest_cfg) (\<lambda>d. d = Bot))
       (routed_extra_g Seed Global)
        nest_cfg Bot (Lifted cinit_ivl_st) Bot"
 
@@ -151,9 +151,11 @@ text \<open>Unlike \<open>k = 1\<close>, \<open>call_fwd\<close>'s \<open>Statem
 interpretation nest_2_cs: call_string_routed_context
     nest_S_st nest_gamma nest_gs nest_pi nest_procs 2 Bot "Lifted cinit_ivl_st" Bot
     "snd nest_2_sol" "fst nest_2_sol" "(cfg_exit nest_cfg, [])" nest_2_sg
+    "\<lambda>d. d = Bot"
     "\<lambda>m. gamma_state_lift (map_lift (fun_of_resolved_st_q_for nest_gs) m)"
 proof (unfold_locales, unfold nest_cfg_compile,
-       goal_cases FinE PP SgCov SgUncov Fwd CallFwd CombFwd)
+       goal_cases FinE PP SgCov SgUncov Fwd IsBotBot IsBotSound IsBotMono
+       EnterComplete CallFwd CombFwd)
   case FinE
   show ?case by (rule nest_finE)
 next
@@ -168,6 +170,26 @@ next
 next
   case (Fwd u a v c)
   show ?case using Fwd by (rule nest_fwd_closed_2)
+next
+  case IsBotBot show ?case by simp
+next
+  case (IsBotSound d gv) then show ?case by (simp add: nest_gamma_eq)
+next
+  case (IsBotMono d d') then show ?case by (cases d; cases d'; simp)
+next
+  case (EnterComplete u ctx dst pars args p cont s)
+  let ?ci = "call_info_of (CallEdge dst pars args) p"
+  let ?caller = "locals (snd nest_2_sol (Inl (u, ctx)))"
+  have cov: "entry_pairs_cover (\<lambda>d. nest_gamma d (globs (snd nest_2_sol (Inr Global)))) s
+      (call_enter nest_gs (CallEdge dst pars args) s)
+      [(?caller, transfer_lift nest_empty_pred (ivl_enter_st_for nest_gs ?ci) ?caller)]"
+    using nest_domain.entry_pairs_cover_st
+            [OF ivl_is_sound_transfer_for, where ci = ?ci and d = ?caller]
+      EnterComplete(3)
+    by (simp add: nest_gamma_eq nest_domain.gamma_exec_def)
+  show ?case
+    unfolding nest_S_st_def dgs_enter_local_state_st_for_lifted
+    using enter_runs_local_enter_transfer enter_deps_local_enter_transfer cov by fastforce
 next
   case (CallFwd u ctx dst pars args p cont)
   note covU = CallFwd(1) and ce = CallFwd(2)

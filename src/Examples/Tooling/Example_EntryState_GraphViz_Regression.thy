@@ -392,11 +392,12 @@ lemma mixed_ctx_graph_states_live_and_dead:
   by eval+
 
 text \<open>
-  The recursion also leaves the solver a context whose entered formal is
-  \<^const>\<open>bot\<close>, reached from the base-case activation's own dead call site. The
-  graph draws no call edge into it: the caller point is \<^const>\<open>Bot\<close>
-  there, so \<^const>\<open>entry_state_ctx_route\<close> stops before routing rather than
-  fabricating an activation out of a state that represents nothing.
+  The base-case activation's own call site would enter \<open>f\<close> with a
+  \<^const>\<open>bot\<close> formal: the caller point is \<^const>\<open>Bot\<close> there. That
+  alternative is dropped at the call boundary, before any context is computed
+  for it, so the solver never creates an unknown for a context built out of a
+  state that represents nothing --- and, having no unknown, the graph has
+  neither a node nor a call edge for it.
 \<close>
 
 lemma mixed_ctx_graph_enter_edges:
@@ -408,9 +409,9 @@ lemma mixed_ctx_graph_enter_edges:
       (Statement 6, [], FunctionEntry (STR ''f''), [Ivl (Fin 3) (Fin 3)])]"
   by eval
 
-lemma mixed_ctx_graph_bottom_context_is_covered_but_unentered:
+lemma mixed_ctx_graph_bottom_context_absent:
   "(FunctionEntry (STR ''f''), [Ivl PlusInf MinInf])
-     \<in> result_keys (analyse_interval_entry_state_result mixed_ctx_prog)"
+     \<notin> result_keys (analyse_interval_entry_state_result mixed_ctx_prog)"
   "(LocalNode (Statement 3) [Ivl (Fin 1) (Fin 1)],
     EnterEdge ''f'' (CallEdge (Some (STR ''r'')) [STR ''n''] [Minus (V (STR ''n'')) (exp.N 1)]),
     LocalNode (FunctionEntry (STR ''f'')) [Ivl PlusInf MinInf])

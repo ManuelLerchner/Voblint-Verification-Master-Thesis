@@ -1,5 +1,5 @@
 theory DG_Spec_Sound
-  imports DG_Spec
+  imports DG_Spec "Voblint_CFG.CFG_Transfer"
 begin
 
 section \<open>What a manager-native specification owes a concretization\<close>
@@ -29,6 +29,157 @@ text \<open>
   \<^emph>\<open>environment\<close> first, and that is what would generalize this locale.
 \<close>
 
+text \<open>
+  What a call's alternatives must establish, once, for both equation shapes.
+  \<open>pairs\<close> covers a concrete caller when \<^emph>\<open>some\<close> alternative accounts for it: the
+  caller store lies in the continuation half and the store the callee starts
+  from lies in the entry half, in the same pair. The quantifier is existential
+  because alternatives are a disjunction --- a call that splits into two of them
+  has each covering the concrete runs it was computed for, and demanding that
+  every alternative cover every caller would defeat the splitting the list
+  exists to express.
+
+  Both generators state their entry obligation through this, so the two cannot
+  drift apart on what an alternative means; they differ only in how the tree
+  they build consumes the list.
+\<close>
+
+definition entry_pairs_cover ::
+  "('D \<Rightarrow> store set) \<Rightarrow> store \<Rightarrow> store \<Rightarrow> 'D enter_result list \<Rightarrow> bool"
+where
+  "entry_pairs_cover gammaD caller entered pairs \<longleftrightarrow>
+     (\<exists>cont entry. (cont, entry) \<in> set pairs
+        \<and> caller \<in> gammaD cont \<and> entered \<in> gammaD entry)"
+
+lemma entry_pairs_coverI [intro]:
+  assumes "(cont, entry) \<in> set pairs"
+    and "caller \<in> gammaD cont" and "entered \<in> gammaD entry"
+  shows "entry_pairs_cover gammaD caller entered pairs"
+  using assms unfolding entry_pairs_cover_def by blast
+
+lemma entry_pairs_coverE [elim]:
+  assumes "entry_pairs_cover gammaD caller entered pairs"
+  obtains cont entry
+    where "(cont, entry) \<in> set pairs"
+      and "caller \<in> gammaD cont" and "entered \<in> gammaD entry"
+  using assms unfolding entry_pairs_cover_def by blast
+
+lemma entry_pairs_cover_Nil [simp]:
+  "\<not> entry_pairs_cover gammaD caller entered []"
+  by (simp add: entry_pairs_cover_def)
+
+text \<open>
+  An entry transfer is a program, so its alternatives cannot be read back out of
+  it: the tree it builds answers into the solver's carrier, and a list of pairs
+  does not live there. What \<^emph>\<open>can\<close> be said is how it behaves under a fixed
+  solution. \<open>enter_runs T m sigma pairs pub\<close> says that under \<open>sigma\<close> the program
+  hands its continuation exactly \<open>pairs\<close> and publishes exactly \<open>pub\<close> on the way,
+  whatever the continuation then does --- the reads resolve against \<open>sigma\<close>, so
+  both are determined before any continuation is chosen.
+
+  This is what lets a proof name an alternative. Rather than extracting the list
+  after the fact, a caller fixes the \<open>pairs\<close> the continuation receives and
+  reasons under that, which is the ordinary way to reason about a
+  continuation-passing program. \<open>pub\<close> is carried separately because the prefix's
+  own publications are part of what the call establishes: an entry that reads a
+  global and republishes it has those contributions in \<open>pub\<close>, not in anything
+  the continuation returns.
+\<close>
+
+definition enter_runs ::
+  "('x,'k,unit,'D::bounded_semilattice_sup_bot,'G::bounded_semilattice_sup_bot) man_enter_transfer
+   \<Rightarrow> ('x,'k,unit,'D,'G) man \<Rightarrow> ('x + 'k \<Rightarrow> ('D,'G) dg_state)
+   \<Rightarrow> 'D enter_result list \<Rightarrow> ('x + 'k \<Rightarrow> ('D,'G) dg_state) \<Rightarrow> bool"
+where
+  "enter_runs T m sigma pairs pub \<longleftrightarrow>
+     (\<forall>K. traverse_rhs (T m K) sigma = traverse_rhs (K pairs) sigma
+          \<and> sides_of_rhs (T m K) sigma = pub \<squnion> sides_of_rhs (K pairs) sigma)"
+
+lemma enter_runsD_traverse:
+  assumes "enter_runs T m sigma pairs pub"
+  shows "traverse_rhs (T m K) sigma = traverse_rhs (K pairs) sigma"
+  using assms unfolding enter_runs_def by blast
+
+lemma enter_runsD_sides:
+  assumes "enter_runs T m sigma pairs pub"
+  shows "sides_of_rhs (T m K) sigma = pub \<squnion> sides_of_rhs (K pairs) sigma"
+  using assms unfolding enter_runs_def by blast
+
+text \<open>A pure entry hands over its alternatives directly and publishes nothing.\<close>
+
+lemma enter_runs_local_enter_transfer [intro]:
+  "enter_runs (local_enter_transfer f) m sigma (f (man_local m)) bot"
+  by (simp add: enter_runs_def local_enter_transfer_def sp_return_def
+      sup_fun_def bot_fun_def)
+
+text \<open>The converse direction, which a consumer needs when it has an arbitrary run
+  in hand rather than the one above: a pure entry's publication is pinned, so no
+  case analysis on the run is possible.\<close>
+
+lemma enter_runs_local_pub_bot:
+  assumes "enter_runs (local_enter_transfer f) m sigma pairs pub"
+  shows "pub = bot"
+proof -
+  have "sides_of_rhs (local_enter_transfer f m (\<lambda>_. Answer bot)) sigma
+          = pub \<squnion> sides_of_rhs (Answer bot) sigma"
+    using assms by (rule enter_runsD_sides)
+  then show ?thesis
+    by (simp add: local_enter_transfer_def sp_return_def fun_eq_iff sup_fun_def bot_fun_def)
+qed
+
+text \<open>
+  Values and publications are not everything the generator needs to know about
+  an entry program: what it \<^emph>\<open>reads\<close> matters too, and reading is invisible in
+  both. An entry that consults a global depends on that unknown even when it
+  publishes \<open>bot\<close> there, and the solver's admissibility arguments are stated
+  over dependencies, not over answers.
+
+  \<open>enter_deps\<close> is deliberately a separate relation over the \<^emph>\<open>same\<close> \<open>pairs\<close>: a
+  proof that obtained its alternatives from \<^const>\<open>enter_runs\<close> and its
+  dependencies from an independently quantified list would be talking about two
+  different executions. Packaging the two together, with
+  \<^const>\<open>entry_pairs_cover\<close>, is what keeps one call's story single.
+\<close>
+
+definition enter_deps ::
+  "('x,'k,unit,'D::bounded_semilattice_sup_bot,'G::bounded_semilattice_sup_bot) man_enter_transfer
+   \<Rightarrow> ('x,'k,unit,'D,'G) man \<Rightarrow> ('x + 'k \<Rightarrow> ('D,'G) dg_state)
+   \<Rightarrow> 'D enter_result list \<Rightarrow> ('x + 'k) set \<Rightarrow> bool"
+where
+  "enter_deps T m sigma pairs deps \<longleftrightarrow>
+     (\<forall>K. dep_aux sigma (T m K) = deps \<union> dep_aux sigma (K pairs))"
+
+lemma enter_depsD:
+  assumes "enter_deps T m sigma pairs deps"
+  shows "dep_aux sigma (T m K) = deps \<union> dep_aux sigma (K pairs)"
+  using assms unfolding enter_deps_def by blast
+
+text \<open>A pure entry reads nothing of its own.\<close>
+
+lemma enter_deps_local_enter_transfer [intro]:
+  "enter_deps (local_enter_transfer f) m sigma (f (man_local m)) {}"
+  by (simp add: enter_deps_def local_enter_transfer_def sp_return_def)
+
+text \<open>
+  The core carries everything that is independent of how a call is compiled:
+  the ordinary edge transfers and the return combine. Entry is not here. A
+  \<^const>\<open>dgs_enter\<close> answers a list, which is not an equation's answer, so what
+  makes it sound is a property of the tree the consuming generator builds from
+  it --- and the routed and unrouted generators build different trees from the
+  same list. Each states its own entry obligation, through
+  \<^const>\<open>entry_pairs_cover\<close>, against the \<open>enter_tree\<close> hook the shared
+  post-solution layer already takes as a parameter.
+  A locale here that claimed to settle entry for both would be claiming
+  something neither generator's proof could use.
+
+  So \<open>sound_dg_spec\<close> is the common core and not a complete soundness statement:
+  interpreting it alone leaves a call's entry entirely unconstrained. The
+  complete statements are the two locales that extend it with the entry
+  obligation for their own equation shape --- \<open>sound_dg_spec_ltr_for\<close> for the
+  monovariant generator and \<open>dg_ctx_activation_base\<close> for the routed one --- and
+  those are what an analysis should be asked to establish.
+\<close>
+
 locale sound_dg_spec =
   fixes S :: "('x,'k,unit,'D::bounded_semilattice_sup_bot,
                 'G::bounded_semilattice_sup_bot) dg_spec"
@@ -40,20 +191,38 @@ locale sound_dg_spec =
       "edge_collect a (gammaDG (locals (\<tau> src)) (globs (\<tau> (Inr gk))))
          \<subseteq> gammaDG (locals (traverse_rhs (dg_spec_edge_tree S a src (\<lambda>_. gk)) \<tau>))
                    (globs (sides_of_rhs (dg_spec_edge_tree S a src (\<lambda>_. gk)) \<tau> (Inr gk)))"
-    and enter_sound:
-      "s \<in> gammaDG (locals (\<tau> src)) (globs (\<tau> (Inr gk))) \<Longrightarrow>
-         call_enter gs (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci)) s
-           \<in> gammaDG (locals (traverse_rhs (transfer_tree (dgs_enter S ci) src (\<lambda>_. gk)) \<tau>))
-                     (globs (sides_of_rhs (transfer_tree (dgs_enter S ci) src (\<lambda>_. gk))
-                                           \<tau> (Inr gk)))"
     and combine_sound:
-      "\<lbrakk>s \<in> gammaDG (locals (\<tau> src_cc)) (globs (\<tau> (Inr gk)));
-        t \<in> gammaDG (locals (\<tau> src_ex)) (globs (\<tau> (Inr gk)))\<rbrakk> \<Longrightarrow>
+      "\<lbrakk>s \<in> gammaDG dc (globs (\<tau> (Inr gk)));
+        t \<in> gammaDG de (globs (\<tau> (Inr gk)))\<rbrakk> \<Longrightarrow>
         combine_collect gs (ci_dst ci) s t
+          \<in> gammaDG (locals (traverse_rhs (sp_compile_with (\<lambda>d. DG d bot)
+                  (dg_spec_combine_transfer S ci (mk_dg_man dc (\<lambda>_. gk)) de)) \<tau>))
+                    (globs (sides_of_rhs (sp_compile_with (\<lambda>d. DG d bot)
+                  (dg_spec_combine_transfer S ci (mk_dg_man dc (\<lambda>_. gk)) de)) \<tau> (Inr gk)))"
+
+text \<open>
+  The obligation is stated at \<^emph>\<open>values\<close> rather than at two unknown reads,
+  because the routed call boundary applies combine at the continuation the
+  entry produced, which is not in general what any unknown holds. Where the
+  continuation \<^emph>\<open>is\<close> the caller's own solved value --- the monovariant call
+  shape --- the tree form below is the instance at that value, so nothing is
+  lost for a generator that reads both sides from unknowns.
+\<close>
+
+lemma (in sound_dg_spec) combine_sound_tree:
+  assumes sc: "s \<in> gammaDG (locals (\<tau> src_cc)) (globs (\<tau> (Inr gk)))"
+    and se: "t \<in> gammaDG (locals (\<tau> src_ex)) (globs (\<tau> (Inr gk)))"
+  shows "combine_collect gs (ci_dst ci) s t
           \<in> gammaDG (locals (traverse_rhs
                 (dg_spec_combine_tree S ci src_cc src_ex (\<lambda>_. gk)) \<tau>))
                     (globs (sides_of_rhs (dg_spec_combine_tree S ci src_cc src_ex (\<lambda>_. gk))
                                           \<tau> (Inr gk)))"
+  using combine_sound[where dc = "locals (\<tau> src_cc)" and de = "locals (\<tau> src_ex)"
+      and \<tau> = \<tau> and gk = gk and ci = ci, OF sc se]
+  by (cases src_cc; cases src_ex)
+     (simp_all add: dg_spec_combine_tree_def combine_transfer_tree_def dg_combine_tree_man_def
+        dg_read_at_def sp_read_local_def sp_read_global_def sp_bind_def sp_return_def
+        sp_compile_with_def comp_def)
 
 section \<open>The collapsed obligations of a local-only specification\<close>
 
@@ -64,9 +233,8 @@ locale sound_local_dg_spec =
     and br :: "exp \<Rightarrow> bool \<Rightarrow> 'D \<Rightarrow> 'D"
     and bd :: "pname \<Rightarrow> 'D \<Rightarrow> 'D"
     and rt :: "exp option \<Rightarrow> pname \<Rightarrow> 'D \<Rightarrow> 'D"
-    and en :: "call_info \<Rightarrow> 'D \<Rightarrow> 'D"
+    and en :: "call_info \<Rightarrow> 'D \<Rightarrow> 'D enter_result list"
     and ev :: "analysis_event \<Rightarrow> 'D \<Rightarrow> 'D"
-    and cc :: "call_info \<Rightarrow> 'D \<Rightarrow> 'D"
     and ce :: "call_info \<Rightarrow> 'D \<Rightarrow> 'D \<Rightarrow> 'D"
     and ca :: "call_info \<Rightarrow> 'D \<Rightarrow> 'D \<Rightarrow> 'D"
     and gammaD :: "'D \<Rightarrow> store set"
@@ -76,15 +244,16 @@ locale sound_local_dg_spec =
       "edge_collect a (gammaD d) \<subseteq> gammaD (local_spec_step sk asn sp br rt ev a d)"
     and enter_sound_local:
       "s \<in> gammaD d \<Longrightarrow>
-         call_enter gs (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci)) s
-           \<in> gammaD (en ci d)"
+         entry_pairs_cover gammaD s
+           (call_enter gs (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci)) s)
+           (en ci d)"
     and combine_sound_local:
       "\<lbrakk>s \<in> gammaD dc; t \<in> gammaD de\<rbrakk> \<Longrightarrow>
-        combine_collect gs (ci_dst ci) s t \<in> gammaD (ca ci (ce ci (cc ci dc) de) de)"
+        combine_collect gs (ci_dst ci) s t \<in> gammaD (ca ci (ce ci dc de) de)"
 begin
 
 theorem local_spec_sound:
-  "sound_dg_spec (local_dg_spec sk asn sp br bd rt en ev cc ce ca) (\<lambda>d g. gammaD d) gs"
+  "sound_dg_spec (local_dg_spec sk asn sp br bd rt en ev ce ca) (\<lambda>d g. gammaD d) gs"
 proof (unfold_locales, goal_cases)
   case 1
   then show ?case by (meson gammaD_mono)
@@ -94,12 +263,9 @@ next
     by (simp add: dg_spec_edge_tree_def dg_spec_step_local_dg_spec step_sound_local)
 next
   case 3
-  then show ?case by (simp add: enter_sound_local)
-next
-  case 4
   then show ?case
-    by (simp add: dg_spec_combine_tree_def dg_spec_combine_transfer_local_dg_spec
-        traverse_local_combine_tree combine_sound_local)
+    by (simp add: dg_spec_combine_transfer_local_dg_spec local_combine_transfer_def
+        combine_sound_local)
 qed
 
 end

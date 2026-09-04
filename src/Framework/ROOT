@@ -14,13 +14,13 @@ session Voblint_Framework in "." = "Voblint_CFG" +
     "Soundness"
   theories
     CFG_Enumeration
-    Transfer_Interface
-    State_Restriction
     DG_State
     DG_Constraint_Trees
     DG_Manager
     DG_Spec
     DG_Spec_Sound
+    Transfer_Algebra
+    State_Restriction
     DG_Ownership_Split_Spec
     DG_Keyed_Generator
     DG_Soundness

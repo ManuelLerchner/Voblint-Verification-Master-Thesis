@@ -1,6 +1,6 @@
 theory Exec_St
   imports "Voblint_Domain.Nonrelational_Reachability" "TD.Update_rules"
-    "Voblint_Framework.Transfer_Interface" "HOL-Library.AList"
+    "Voblint_Framework.Transfer_Algebra" "HOL-Library.AList"
 begin
 
 section \<open>Classifier-independent executable abstract state\<close>
@@ -1229,8 +1229,8 @@ by (rule fun_of_resolved_st_for_fold_update)
 lemma fun_of_resolved_st_for_enter_resolved [simp]:
   "fun_of_resolved_st_for gs
       (enter_resolved_for gs top_val aval_abs xs es s) =
-   enter_D gs top_val aval_abs xs es (fun_of_resolved_st_for gs s)"
-unfolding enter_resolved_for_def enter_D_def
+   enter_binding gs top_val aval_abs xs es (fun_of_resolved_st_for gs s)"
+unfolding enter_resolved_for_def enter_binding_def
 by simp
 
 lemma fun_of_resolved_st_for_combine_collect [simp]:
@@ -1394,7 +1394,7 @@ lemma refines_enter:
   assumes "resolved_st_refines_for gs s sigma"
   shows "resolved_st_refines_for gs
       (enter_resolved_for gs top_val aval_abs xs es s)
-      (enter_D gs top_val aval_abs xs es sigma)"
+      (enter_binding gs top_val aval_abs xs es sigma)"
   using assms
   unfolding resolved_st_refines_for_def
   by simp
@@ -2103,7 +2103,7 @@ lemma fun_of_resolved_st_q_for_sup [simp]:
 lemma fun_of_resolved_st_q_for_enter [simp]:
   "fun_of_resolved_st_q_for gs
       (enter_resolved_for_q gs top_val aval_abs xs es s) =
-   enter_D gs top_val aval_abs xs es
+   enter_binding gs top_val aval_abs xs es
       (fun_of_resolved_st_q_for gs s)"
   unfolding fun_of_resolved_st_q_for_def
   by transfer
@@ -2162,7 +2162,7 @@ lemma refines_enter_q:
   assumes "resolved_st_q_refines_for gs s sigma"
   shows "resolved_st_q_refines_for gs
       (enter_resolved_for_q gs top_val aval_abs xs es s)
-      (enter_D gs top_val aval_abs xs es sigma)"
+      (enter_binding gs top_val aval_abs xs es sigma)"
   using assms
   unfolding resolved_st_q_refines_for_def
   by simp

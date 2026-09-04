@@ -27,49 +27,41 @@ where
 definition int_dom_abs_spec ::
     "refine_mode \<Rightarrow> (vname \<Rightarrow> bool)
      \<Rightarrow> ('x, 'k, unit, int_dom abs_state lifted, int_dom abs_state lifted) dg_spec" where
-  "int_dom_abs_spec mode gs = local_state_dg_spec_for_lifted gs is_empty_state (int_tf_for mode gs)"
+  "int_dom_abs_spec mode gs = local_state_dg_spec_for_lifted gs is_empty_state
+     skip_int_dom (assign_int_dom mode) (special_int_dom mode) (branch_int_dom_for mode)
+     body_int_dom (return_int_dom mode) (enter_int_dom_ci_for mode gs) event_int_dom"
 
 lemma int_tf_st_for_commute:
   assumes "live_resolved_st_q gs s"
   shows
     "fun_of_resolved_st_q_for gs (int_tf_st_for mode gs a s) =
-       apply_tf (int_tf_for mode gs) a (fun_of_resolved_st_q_for gs s)"
+       int_tf_abs mode a (fun_of_resolved_st_q_for gs s)"
   using assms
   by (cases mode)
      (simp_all add: int_tf_st_never_for_commute int_tf_st_once_for_commute int_tf_st_fixpoint_for_commute)
 
 lemma int_dom_enter_st_for_commute:
   "fun_of_resolved_st_q_for gs (int_dom_enter_st_for mode gs ci s) =
-     snd (tf_enter (int_tf_for mode gs) ci (fun_of_resolved_st_q_for gs s))"
+     enter_int_dom_ci_for mode gs ci (fun_of_resolved_st_q_for gs s)"
 proof (cases mode)
   case Refine_Never
   then show ?thesis
-    by (simp only: int_dom_enter_st_for.simps int_tf_for.simps int_dom_enter_never_st_for_commute)
+    by (simp only: int_dom_enter_st_for.simps int_dom_enter_never_st_for_commute)
 next
   case Refine_Once
   then show ?thesis
-    by (simp only: int_dom_enter_st_for.simps int_tf_for.simps int_dom_enter_once_st_for_commute)
+    by (simp only: int_dom_enter_st_for.simps int_dom_enter_once_st_for_commute)
 next
   case Refine_Fixpoint
   then show ?thesis
-    by (simp only: int_dom_enter_st_for.simps int_tf_for.simps int_dom_enter_fixpoint_st_for_commute)
-qed
-
-lemma int_is_sound_transfer_for: "sound_transfer_for gs (int_tf_for mode gs)"
-proof (cases mode)
-  case Refine_Never
-  then show ?thesis by (simp add: int_never_is_sound_transfer_for)
-next
-  case Refine_Once
-  then show ?thesis by (simp add: int_once_is_sound_transfer_for)
-next
-  case Refine_Fixpoint
-  then show ?thesis by (simp add: int_fixpoint_is_sound_transfer_for)
+    by (simp only: int_dom_enter_st_for.simps int_dom_enter_fixpoint_st_for_commute)
 qed
 
 lemma int_dom_abs_spec_sound: "sound_dg_spec (int_dom_abs_spec mode gs) gamma_dg_local_state gs"
   unfolding int_dom_abs_spec_def
-  by (rule local_state_dg_spec_sound[OF int_is_sound_transfer_for is_empty_state_gamma_state_empty])
+  by (rule sound_transfer_for.local_state_dg_spec_sound
+        [OF int_is_sound_transfer_for is_empty_state_gamma_state_empty])
+
 
 definition int_dom_gamma ::
     "(vname \<Rightarrow> bool) \<Rightarrow> int_dom exec_dg_st lifted \<Rightarrow> int_dom exec_dg_st lifted \<Rightarrow> store set" where
@@ -92,9 +84,11 @@ context
 begin
 
 interpretation int_dom: routed_dg_domain_exec
-  gs empty_pred "int_tf_st_for mode gs" "int_dom_enter_st_for mode gs" "int_tf_for mode gs"
+  gs empty_pred "int_tf_st_for mode gs" "int_dom_enter_st_for mode gs"
+  skip_int_dom "assign_int_dom mode" "special_int_dom mode" "branch_int_dom_for mode"
+  body_int_dom "return_int_dom mode" "enter_int_dom_ci_for mode gs" event_int_dom
   by unfold_locales
-     (rule int_tf_st_for_commute, assumption,
+     (rule int_tf_st_for_commute[unfolded int_tf_abs_def], assumption,
       rule int_dom_enter_st_for_commute, rule exact)
 
 lemma int_dom_gamma_eq: "int_dom_gamma gs = int_dom.gamma_exec"
@@ -103,6 +97,17 @@ lemma int_dom_gamma_eq: "int_dom_gamma gs = int_dom.gamma_exec"
 theorem int_dom_sound_exec: "sound_dg_spec (int_dom_spec mode empty_pred gs) (int_dom_gamma gs) gs"
   unfolding int_dom_gamma_eq int_dom_spec_def
   by (rule int_dom.sound_dg_spec_st[OF int_is_sound_transfer_for])
+
+text \<open>Entry is stated apart from \<^locale>\<open>sound_dg_spec\<close>, so a routed instance cites
+  it separately; the alternative list is the singleton this Base-style entry answers.\<close>
+
+theorem int_dom_entry_cover_exec:
+  assumes "s \<in> int_dom_gamma gs d g"
+  shows "entry_pairs_cover (\<lambda>d'. int_dom_gamma gs d' g) s
+           (call_enter gs (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci)) s)
+           [(d, transfer_lift empty_pred (int_dom_enter_st_for mode gs ci) d)]"
+  using assms unfolding int_dom_gamma_eq int_dom.gamma_exec_def
+  by (rule int_dom.entry_pairs_cover_st[OF int_is_sound_transfer_for])
 
 end
 

@@ -15,8 +15,9 @@ text \<open>
     \<^item> \<open>call_enter_store_agree\<close> is call-source uniqueness for every
       \<^const>\<open>compile_prog\<close> output (\<open>compile_prog_calls_source_unique\<close>);
     \<^item> \<open>seed_key_ne_gk0\<close> is datatype distinctness for \<^type>\<open>call_string_gk\<close>;
-    \<^item> \<open>route_enterc_agree\<close> is \<^const>\<open>cs_route\<close> and \<^const>\<open>cs_context\<close> being the same
-      closed term (\<open>cs_route_context_agree\<close>), independently of the entered value.
+    \<^item> \<open>routed_entry_cover\<close>'s routing agreement is \<^const>\<open>cs_route\<close> and
+      \<^const>\<open>cs_context\<close> being the same closed term (\<open>cs_route_context_agree\<close>),
+      independently of the entered value.
 
   \<open>call_fwd\<close> and \<open>comb_fwd\<close> remain assumptions, and deliberately so: each says the solved
   variable set covers a particular routed callee entry or return continuation, which is a
@@ -26,7 +27,7 @@ text \<open>
 
 locale call_string_routed_context =
   dg_ctx_activation_base S gammaDG gs "compile_prog Pi ps" Global "cs_route k"
-    "routed_cmb_g S Global Seed (static_resolve (compile_prog Pi ps))"
+    "routed_cmb_g S Global Seed (static_resolve (compile_prog Pi ps)) is_bot"
     "routed_extra_g Seed Global"
     bot0 s0d s0g sigma vars x0 sg gammaM
   for S :: "(pp \<times> cfg_node list, call_string_gk, unit, 'D::bounded_semilattice_sup_bot,
@@ -36,8 +37,25 @@ locale call_string_routed_context =
     and Pi :: proc_table and ps :: "pname list"
     and k :: nat
     and bot0 s0d s0g sigma vars x0 sg
+    and is_bot :: "'D \<Rightarrow> bool"
     and gammaM :: "'M \<Rightarrow> store set" +
-  assumes call_fwd:
+  assumes is_bot_bot: "is_bot bot"
+    and is_bot_sound: "\<And>d gv. is_bot d \<Longrightarrow> gammaDG d gv = {}"
+    and is_bot_mono: "\<And>d d'. \<not> is_bot d \<Longrightarrow> d \<le> d' \<Longrightarrow> \<not> is_bot d'"
+    and enter_complete:
+    "\<And>u ctx dst pars args p cont s.
+       (u, ctx) \<in> vars
+       \<Longrightarrow> (u, CallEdge dst pars args, FunctionEntry p, cont)
+             \<in> calls (compile_prog Pi ps)
+       \<Longrightarrow> s \<in> gammaDG (locals (sigma (Inl (u, ctx)))) (globs (sigma (Inr Global)))
+       \<Longrightarrow> \<exists>pairs pub deps.
+             enter_runs (dgs_enter S (call_info_of (CallEdge dst pars args) p))
+               (mk_dg_man (locals (sigma (Inl (u, ctx)))) (\<lambda>_. Global)) sigma pairs pub
+           \<and> enter_deps (dgs_enter S (call_info_of (CallEdge dst pars args) p))
+               (mk_dg_man (locals (sigma (Inl (u, ctx)))) (\<lambda>_. Global)) sigma pairs deps
+           \<and> entry_pairs_cover (\<lambda>d. gammaDG d (globs (sigma (Inr Global)))) s
+               (call_enter gs (CallEdge dst pars args) s) pairs"
+    and call_fwd:
     "\<And>u ctx dst pars args p cont.
        (u, ctx) \<in> vars
        \<Longrightarrow> (u, CallEdge dst pars args, FunctionEntry p, cont)
@@ -55,11 +73,18 @@ begin
 
 sublocale routed: routed_context_base_hetero S gammaDG gs "compile_prog Pi ps" Global
   "cs_route k" bot0 s0d s0g sigma vars x0 sg Seed
-  "static_resolve (compile_prog Pi ps)" gammaM "cs_context k"
+  "static_resolve (compile_prog Pi ps)" is_bot gammaM "cs_context k"
 proof unfold_locales
   show "finite (calls (compile_prog Pi ps))" using compile_prog_finite by simp
 next
   show "\<And>p ctx. Seed p ctx \<noteq> Global" by simp
+next
+  show "is_bot bot" by (rule is_bot_bot)
+next
+  show "\<And>d gv. is_bot d \<Longrightarrow> gammaDG d gv = {}" by (rule is_bot_sound)
+next
+  show "\<And>d d'. \<not> is_bot d \<Longrightarrow> d \<le> d' \<Longrightarrow> \<not> is_bot d'" by (rule is_bot_mono)
+next
   fix u ctx dst pars args p cont s
   assume "(u, ctx) \<in> vars"
     and "(u, CallEdge dst pars args, FunctionEntry p, cont)
@@ -70,27 +95,40 @@ next
     by (simp add: static_resolve_iff compile_prog_finite)
 next
   fix u ctx dst pars args p cont s
-  show "cs_route k u ctx (entered S Global sigma
-            (call_info_of (CallEdge dst pars args) p) (Inl (u, ctx)))
-          (CallEdge dst pars args)
-          = cs_context k u ctx (call_enter gs (CallEdge dst pars args) s)"
+  assume covV: "(u, ctx) \<in> vars"
+    and ce: "(u, CallEdge dst pars args, FunctionEntry p, cont)
+               \<in> calls (compile_prog Pi ps)"
+    and sin: "s \<in> gammaDG (locals (sigma (Inl (u, ctx)))) (globs (sigma (Inr Global)))"
+  obtain pairs pub deps
+    where R: "enter_runs (dgs_enter S (call_info_of (CallEdge dst pars args) p))
+                (mk_dg_man (locals (sigma (Inl (u, ctx)))) (\<lambda>_. Global)) sigma pairs pub"
+      and D: "enter_deps (dgs_enter S (call_info_of (CallEdge dst pars args) p))
+                (mk_dg_man (locals (sigma (Inl (u, ctx)))) (\<lambda>_. Global)) sigma pairs deps"
+      and P: "entry_pairs_cover (\<lambda>d. gammaDG d (globs (sigma (Inr Global)))) s
+                (call_enter gs (CallEdge dst pars args) s) pairs"
+    using enter_complete[OF covV ce sin] by blast
+  from P obtain cont' entry
+    where mem: "(cont', entry) \<in> set pairs"
+      and ccov: "s \<in> gammaDG cont' (globs (sigma (Inr Global)))"
+      and ecov: "call_enter gs (CallEdge dst pars args) s
+                   \<in> gammaDG entry (globs (sigma (Inr Global)))"
+    by (rule entry_pairs_coverE)
+  have req: "cs_route k u ctx entry (CallEdge dst pars args)
+               = cs_context k u ctx (call_enter gs (CallEdge dst pars args) s)"
     by (rule cs_route_context_agree)
-next
-  fix u ctx dst pars args p cont
-  assume "(u, ctx) \<in> vars"
-    and "(u, CallEdge dst pars args, FunctionEntry p, cont)
-           \<in> calls (compile_prog Pi ps)"
-  then have "(FunctionEntry p,
-                cs_route k u ctx (locals (sigma (Inl (u, ctx)))) (CallEdge dst pars args))
-               \<in> vars"
-    by (rule call_fwd)
-  then show "(FunctionEntry p,
-                cs_route k u ctx (entered S Global sigma
-                    (call_info_of (CallEdge dst pars args) p) (Inl (u, ctx)))
-                  (CallEdge dst pars args))
-               \<in> vars"
-    by (simp add: cs_route_def)
-next
+  show "\<exists>pairs pub deps cont' entry.
+             enter_runs (dgs_enter S (call_info_of (CallEdge dst pars args) p))
+               (mk_dg_man (locals (sigma (Inl (u, ctx)))) (\<lambda>_. Global)) sigma pairs pub
+           \<and> enter_deps (dgs_enter S (call_info_of (CallEdge dst pars args) p))
+               (mk_dg_man (locals (sigma (Inl (u, ctx)))) (\<lambda>_. Global)) sigma pairs deps
+           \<and> (cont', entry) \<in> set pairs
+           \<and> s \<in> gammaDG cont' (globs (sigma (Inr Global)))
+           \<and> call_enter gs (CallEdge dst pars args) s
+               \<in> gammaDG entry (globs (sigma (Inr Global)))
+           \<and> cs_route k u ctx entry (CallEdge dst pars args)
+               = cs_context k u ctx (call_enter gs (CallEdge dst pars args) s)
+           \<and> (FunctionEntry p, cs_route k u ctx entry (CallEdge dst pars args)) \<in> vars"
+    using R D mem ccov ecov req call_fwd[OF covV ce] by (simp add: cs_route_def) blast
 next
   fix cl c1 dst pars args p cont
   assume "(cl, c1) \<in> vars"

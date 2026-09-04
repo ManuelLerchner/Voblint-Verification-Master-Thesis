@@ -291,7 +291,7 @@ text \<open>
   \<open>assume_step\<close>/\<open>assume_not_step\<close> stay separate, genuinely asymmetric
   operations (\<open>x < y\<close> vs.\ its mirror \<open>y \<le> x\<close> insert different pairs, not
   the same formula under a polarity flag); only the interface-level dispatch
-  consolidates into one @{text tf_branch}-shaped operation.
+  consolidates them into one polarity-parametrized branch operation.
 \<close>
 definition branch_step_rel :: "exp \<Rightarrow> bool \<Rightarrow> relc \<Rightarrow> relc" where
   "branch_step_rel b pol d = (if pol then assume_step b d else assume_not_step b d)"
@@ -345,6 +345,20 @@ where
        sp_return (snd r)
      }"
 
+text \<open>Entry at this carrier: the same global read and publication, answering the one
+  alternative whose continuation is the caller value unchanged.\<close>
+
+definition rel_enter_transfer ::
+  "(relc \<Rightarrow> relc \<Rightarrow> relc \<times> relc) \<Rightarrow> ('x,'k,unit,relc,relc) man_enter_transfer"
+where
+  "rel_enter_transfer f m =
+     do {
+       g \<leftarrow> man_global m ();
+       let r = f (man_local m) g;
+       _ \<leftarrow> man_sideg m () (fst r);
+       sp_return [(man_local m, snd r)]
+     }"
+
 definition rel_combine_transfer ::
   "(relc \<Rightarrow> relc \<Rightarrow> relc \<Rightarrow> relc \<times> relc) \<Rightarrow> ('x,'k,unit,relc,relc) man_combine_transfer"
 where
@@ -384,7 +398,7 @@ definition rel_order_spec :: "('x,'k,unit,relc,relc) dg_spec" where
      dgs_branch := (\<lambda>b pol. rel_transfer (dgs_branch_rel b pol)),
      dgs_body := (\<lambda>p. rel_transfer (dgs_body_rel p)),
      dgs_return := (\<lambda>e p. rel_transfer (dgs_return_rel e p)),
-     dgs_enter := (\<lambda>ci. rel_transfer (dgs_enter_rel ci)),
+     dgs_enter := (\<lambda>ci. rel_enter_transfer (dgs_enter_rel ci)),
      dgs_event := (\<lambda>ev. rel_transfer (dgs_event_rel ev)),
      dgs_combine_env := (\<lambda>ci. rel_combine_transfer (dgs_combine_env_rel ci))
    \<rparr>"
@@ -504,7 +518,7 @@ lemma dg_spec_step_rel_order_spec [simp]:
   unfolding rel_order_spec_def by (cases a) simp_all
 
 lemma dgs_enter_rel_order_spec [simp]:
-  "dgs_enter rel_order_spec ci = rel_transfer (dgs_enter_rel ci)"
+  "dgs_enter rel_order_spec ci = rel_enter_transfer (dgs_enter_rel ci)"
   unfolding rel_order_spec_def by simp
 
 lemma step_sound_rel:
@@ -559,27 +573,19 @@ next
     using step_sound_rel[of a "locals (\<tau> src)" "globs (\<tau> (Inr gk))"]
     by (simp add: dg_spec_edge_tree_def split: prod.splits)
 next
-  fix s and \<tau> :: "'a + 'b \<Rightarrow> (relc, relc) dg_state" and src gk ci
-  show "s \<in> gammaDG_rel (locals (\<tau> src)) (globs (\<tau> (Inr gk))) \<Longrightarrow>
-          call_enter is_global (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci)) s
-            \<in> gammaDG_rel
-                (locals (traverse_rhs
-                   (transfer_tree (dgs_enter rel_order_spec ci) src (\<lambda>_. gk)) \<tau>))
-                (globs (sides_of_rhs
-                   (transfer_tree (dgs_enter rel_order_spec ci) src (\<lambda>_. gk)) \<tau> (Inr gk)))"
-    by (simp add: dgs_enter_rel_def)
-next
-  fix s t and \<tau> :: "'a + 'b \<Rightarrow> (relc, relc) dg_state" and src_cc src_ex gk ci
-  show "\<lbrakk>s \<in> gammaDG_rel (locals (\<tau> src_cc)) (globs (\<tau> (Inr gk)));
-         t \<in> gammaDG_rel (locals (\<tau> src_ex)) (globs (\<tau> (Inr gk)))\<rbrakk> \<Longrightarrow>
+  fix s t dc de and \<tau> :: "'a + 'b \<Rightarrow> (relc, relc) dg_state" and gk ci
+  show "\<lbrakk>s \<in> gammaDG_rel dc (globs (\<tau> (Inr gk)));
+         t \<in> gammaDG_rel de (globs (\<tau> (Inr gk)))\<rbrakk> \<Longrightarrow>
           combine_collect is_global (ci_dst ci) s t
             \<in> gammaDG_rel
-                (locals (traverse_rhs
-                   (dg_spec_combine_tree rel_order_spec ci src_cc src_ex (\<lambda>_. gk)) \<tau>))
-                (globs (sides_of_rhs
-                   (dg_spec_combine_tree rel_order_spec ci src_cc src_ex (\<lambda>_. gk))
-                     \<tau> (Inr gk)))"
-    by (simp add: dg_spec_combine_tree_def dg_spec_combine_transfer_rel_order_spec
+                (locals (traverse_rhs (sp_compile_with (\<lambda>d. DG d bot)
+                   (dg_spec_combine_transfer rel_order_spec ci
+                      (mk_dg_man dc (\<lambda>_. gk)) de)) \<tau>))
+                (globs (sides_of_rhs (sp_compile_with (\<lambda>d. DG d bot)
+                   (dg_spec_combine_transfer rel_order_spec ci
+                      (mk_dg_man dc (\<lambda>_. gk)) de)) \<tau> (Inr gk)))"
+    by (simp add: dg_spec_combine_transfer_rel_order_spec rel_combine_transfer_def
+        mk_dg_man_def dg_read_global_def dg_sideg_def sp_bind_assoc Let_def
         dgs_combine_env_rel_def)
 qed
 

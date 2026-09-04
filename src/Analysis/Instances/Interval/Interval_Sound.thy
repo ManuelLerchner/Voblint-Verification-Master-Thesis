@@ -27,7 +27,9 @@ where
 definition interval_abs_spec ::
   "(vname \<Rightarrow> bool) \<Rightarrow> ('x, 'k, unit, ivl abs_state lifted, ivl abs_state lifted) dg_spec"
 where
-  "interval_abs_spec gs = local_state_dg_spec_for_lifted gs is_empty_state (ivl_tf_for gs)"
+  "interval_abs_spec gs = local_state_dg_spec_for_lifted gs is_empty_state
+     skip_ivl assign_ivl special_ivl branch_ivl body_ivl return_ivl
+     (enter_ivl_ci_for gs) event_ivl"
 
 definition interval_gamma ::
     "(vname \<Rightarrow> bool) \<Rightarrow> ivl exec_dg_st lifted \<Rightarrow> ivl exec_dg_st lifted \<Rightarrow> store set" where
@@ -50,9 +52,11 @@ context
 begin
 
 interpretation ivl_dom: routed_dg_domain_exec
-  gs empty_pred "ivl_tf_st_for gs" "ivl_enter_st_for gs" "ivl_tf_for gs"
+  gs empty_pred "ivl_tf_st_for gs" "ivl_enter_st_for gs"
+  skip_ivl assign_ivl special_ivl branch_ivl body_ivl return_ivl
+  "enter_ivl_ci_for gs" event_ivl
   by unfold_locales
-     (rule ivl_tf_st_for_commute, assumption,
+     (rule ivl_tf_st_for_commute[unfolded ivl_tf_abs_def], assumption,
       rule ivl_enter_st_for_commute, rule exact)
 
 lemma interval_gamma_eq: "interval_gamma gs = ivl_dom.gamma_exec"
@@ -61,6 +65,17 @@ lemma interval_gamma_eq: "interval_gamma gs = ivl_dom.gamma_exec"
 theorem interval_sound_exec: "sound_dg_spec (interval_spec gs empty_pred) (interval_gamma gs) gs"
   unfolding interval_gamma_eq interval_spec_def
   by (rule ivl_dom.sound_dg_spec_st[OF ivl_is_sound_transfer_for])
+
+text \<open>Entry is stated apart from \<^locale>\<open>sound_dg_spec\<close>, so a routed instance cites
+  it separately; the alternative list is the singleton this Base-style entry answers.\<close>
+
+theorem interval_entry_cover_exec:
+  assumes "s \<in> interval_gamma gs d g"
+  shows "entry_pairs_cover (\<lambda>d'. interval_gamma gs d' g) s
+           (call_enter gs (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci)) s)
+           [(d, transfer_lift empty_pred (ivl_enter_st_for gs ci) d)]"
+  using assms unfolding interval_gamma_eq ivl_dom.gamma_exec_def
+  by (rule ivl_dom.entry_pairs_cover_st[OF ivl_is_sound_transfer_for])
 
 end
 

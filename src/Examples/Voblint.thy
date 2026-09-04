@@ -12,7 +12,7 @@ theory Voblint
     "Voblint_CFG.LTR_Def"
     "Voblint_CFG.CFG_Prune"
     "Voblint_Domain.Abstract_Domain"
-    "Voblint_Framework.Transfer_Interface"
+    "Voblint_Framework.Transfer_Algebra"
     "Voblint_Domain.Abstract_Numeric_Queries"
     "Voblint_Framework.Check_Result"
     "Voblint_Framework.Abstract_Checks"
@@ -228,7 +228,8 @@ text \<open>
   \<^bold>\<open>3. Analysis spine.\<close> Abstract domains, equation systems, and the TD_side solver bridge; every
   generic endpoint concludes over the trace projections.
     \<^item> @{theory Voblint_Domain.Abstract_Domain} --- \<^verbatim>\<open>sound_domain\<close>, lifted state concretization, display support.
-    \<^item> @{theory Voblint_Framework.Transfer_Interface} --- the transfer interface \<^verbatim>\<open>domain_transfer\<close>, \<^verbatim>\<open>apply_tf\<close>, its soundness locale \<^verbatim>\<open>sound_transfer_for\<close>, and per-edge transfer soundness (\<^verbatim>\<open>edge_collect a \<lbrakk>\<sigma>\<rbrakk> \<subseteq> \<lbrakk>apply_tf tf a \<sigma>\<rbrakk>\<close>) with its \<^verbatim>\<open>EA_Check\<close> companion, the dispatch-point facts \<^theory>\<open>Voblint_Framework.DG_Soundness\<close>'s \<^verbatim>\<open>step_sound\<close>/\<^verbatim>\<open>combine_sound\<close> obligations are discharged against.
+    \<^item> @{theory Voblint_Framework.Transfer_Algebra} --- the pure abstract-state algebra a whole-state transfer computes in: the call-entry frame reset and formal binding, the structural return combine, and their soundness against \<^verbatim>\<open>gamma_state\<close>.
+    \<^item> @{theory Voblint_Framework.DG_Local_State_Spec} --- the contract those operations owe (\<^verbatim>\<open>sound_transfer_for\<close>) and the two Base constructions built from them, with per-edge transfer soundness (\<^verbatim>\<open>edge_collect a \<lbrakk>\<sigma>\<rbrakk> \<subseteq> \<lbrakk>local_spec_step \<dots> a \<sigma>\<rbrakk>\<close>) and its \<^verbatim>\<open>EA_Check\<close> companion, the dispatch-point facts \<^theory>\<open>Voblint_Framework.DG_Soundness\<close>'s \<^verbatim>\<open>step_sound\<close>/\<^verbatim>\<open>combine_sound\<close> obligations are discharged against.
     \<^item> @{theory Voblint_Framework.State_Restriction} --- the local/global restriction algebra the routed spine reassembles states with.
     \<^item> @{theory Voblint_Framework.DG_Keyed_Generator} --- \<^verbatim>\<open>side_cfg_T_eff_keyed_seed_dg_is_mono_eq_gen\<close>/\<^verbatim>\<open>_mono_sides_gen\<close>/\<^verbatim>\<open>_mono_deps_gen\<close>: the vendored solver's \<^verbatim>\<open>TD_side_mono\<close> precondition, discharged once for an arbitrary generator instance.
 

@@ -12,6 +12,13 @@ text \<open>
   enumerated over \<^const>\<open>intra\<close>; procedure calls --- entry routing and return combining ---
   over \<^const>\<open>calls\<close>.  There is no unified edge set and no separate combine relation: a
   return is recovered from the same \<^const>\<open>calls\<close> tuple that created the activation.
+
+  Every enumeration appears twice: as a set, which the proofs reason over, and as a list,
+  which code generation and the solver's folds consume, identified by a \<open>set_..._list\<close>
+  lemma whenever the edge set is finite.  On the return side there is one of each ---
+  the set \<open>call_targets\<close> and the list \<open>call_target_list\<close> --- and every other return view
+  is an image or a \<open>map\<close> of those, so the views cannot come to disagree about which edges
+  they enumerate.
 \<close>
 
 subsection \<open>Intra predecessors\<close>
@@ -38,12 +45,23 @@ proof -
   then show ?thesis using assms finite_subset finite_imageI by blast
 qed
 
+definition intra_predecessor_list ::
+    "cfg \<Rightarrow> cfg_node \<Rightarrow> (cfg_node \<times> edge_action) list" where
+  "intra_predecessor_list g v =
+     map (\<lambda>(u, a, w). (u, a)) (filter (\<lambda>(u, a, w). w = v) (cfg_intra_list g))"
+
+lemma set_intra_predecessor_list [simp]:
+  assumes "finite (intra g)"
+  shows "set (intra_predecessor_list g v) = intra_predecessors g v"
+  unfolding intra_predecessor_list_def intra_predecessors_def
+  using set_cfg_intra_list[OF assms] by (force simp: image_iff)
+
 subsection \<open>Call-entry enumeration\<close>
 
 text \<open>The call tuples whose callee entry is the queried node \<open>v\<close> (a \<^term>\<open>FunctionEntry p\<close>).
   The continuation does not affect the callee-entry state, so it is projected away; the
   entry contribution is the caller state routed through the call action's parameter
-  binding (\<open>enter\<^sup>#\<close>).\<close>
+  binding, which is what an analysis's entry operation computes.\<close>
 
 definition entry_calls :: "cfg \<Rightarrow> cfg_node \<Rightarrow> (cfg_node \<times> call_action) set" where
   "entry_calls g v = {(c, ca). \<exists>k. (c, ca, v, k) \<in> calls g}"
@@ -62,59 +80,6 @@ proof -
   then show ?thesis using assms finite_subset finite_imageI by blast
 qed
 
-subsection \<open>Return enumeration\<close>
-
-text \<open>The call tuples whose continuation is the queried node \<open>v\<close>, each paired with the
-  caller destination and the callee's \<^term>\<open>FunctionResult p\<close> exit node --- recovered from
-  the callee entry \<^term>\<open>FunctionEntry p\<close>, so no separate combine relation is needed.  The
-  return contribution is the caller state and the callee-exit state assembled by
-  \<open>combine\<^sup>#\<close>.  The final component is returned directly so clients need not
-  rebuild the result node.\<close>
-
-text \<open>The middle component is the call's own @{typ call_info}, not just its destination: an
-  interprocedural transfer sees the callee, its formals and the actual arguments at the return
-  point, matching what Goblint's \<open>combine_env\<close>/\<open>combine_assign\<close> receive.  The enumeration is the
-  only layer holding the \<^const>\<open>calls\<close> relation, so the metadata is projected here; a combine
-  tree never sees the CFG, and \<^const>\<open>wf_cfg\<close> does not force a call site's outgoing call edge
-  to be unique, so there is no well-defined downstream lookup that could recover it instead.\<close>
-definition return_calls ::
-    "cfg \<Rightarrow> cfg_node \<Rightarrow> (cfg_node \<times> call_info \<times> cfg_node) set" where
-  "return_calls g v =
-     {(c, call_info_of ca p, FunctionResult p) | c ca p.
-        (c, ca, FunctionEntry p, v) \<in> calls g}"
-
-lemma return_calls_iff [simp]:
-  "(c, ci, r) \<in> return_calls g v
-     \<longleftrightarrow> (\<exists>ca p. r = FunctionResult p \<and> ci = call_info_of ca p
-             \<and> (c, ca, FunctionEntry p, v) \<in> calls g)"
-  by (auto simp: return_calls_def)
-
-lemma finite_return_calls [intro]:
-  assumes "finite (calls g)"
-  shows "finite (return_calls g v)"
-proof -
-  have "return_calls g v
-          \<subseteq> (\<lambda>(c, ca, ce, k).
-                (c, call_info_of ca (case ce of FunctionEntry p \<Rightarrow> p | _ \<Rightarrow> undefined),
-                    case ce of FunctionEntry p \<Rightarrow> FunctionResult p | _ \<Rightarrow> ce)) ` calls g"
-    unfolding return_calls_def by (force split: prod.splits)
-  then show ?thesis using assms finite_subset finite_imageI by blast
-qed
-
-text \<open>Stable list views for the TD bridge: the queried-node projections built by
-  filtering \<^const>\<open>cfg_intra_list\<close>/\<^const>\<open>cfg_calls_list\<close> (\<^theory>\<open>Voblint_CFG.CFG_Def\<close>).\<close>
-
-definition intra_predecessor_list ::
-    "cfg \<Rightarrow> cfg_node \<Rightarrow> (cfg_node \<times> edge_action) list" where
-  "intra_predecessor_list g v =
-     map (\<lambda>(u, a, w). (u, a)) (filter (\<lambda>(u, a, w). w = v) (cfg_intra_list g))"
-
-lemma set_intra_predecessor_list [simp]:
-  assumes "finite (intra g)"
-  shows "set (intra_predecessor_list g v) = intra_predecessors g v"
-  unfolding intra_predecessor_list_def intra_predecessors_def
-  using set_cfg_intra_list[OF assms] by (force simp: image_iff)
-
 definition entry_call_list :: "cfg \<Rightarrow> cfg_node \<Rightarrow> (cfg_node \<times> call_action) list" where
   "entry_call_list g v =
      map (\<lambda>(c, ca, ce, k). (c, ca)) (filter (\<lambda>(c, ca, ce, k). ce = v) (cfg_calls_list g))"
@@ -125,218 +90,13 @@ lemma set_entry_call_list [simp]:
   unfolding entry_call_list_def entry_calls_def
   using set_cfg_calls_list[OF assms] by (force simp: image_iff)
 
-definition return_call_list ::
-    "cfg \<Rightarrow> cfg_node \<Rightarrow> (cfg_node \<times> call_info \<times> cfg_node) list" where
-  "return_call_list g v =
-     map (\<lambda>(c, ca, ce, k).
-            (c, call_info_of ca (case ce of FunctionEntry p \<Rightarrow> p | _ \<Rightarrow> undefined),
-                              case ce of FunctionEntry p \<Rightarrow> FunctionResult p | _ \<Rightarrow> ce))
-       (filter (\<lambda>(c, ca, ce, k).
-          k = v \<and> (case ce of FunctionEntry _ \<Rightarrow> True | _ \<Rightarrow> False))
-         (cfg_calls_list g))"
-
-lemma set_return_call_list [simp]:
-  assumes "finite (calls g)"
-  shows "set (return_call_list g v) = return_calls g v"
-  unfolding return_call_list_def return_calls_def
-  using set_cfg_calls_list[OF assms]
-  by (auto simp: image_iff split: call_action.splits cfg_node.splits) blast+
-
-subsection \<open>Return enumeration with the triggering call action\<close>
-
-text \<open>\<^const>\<open>return_call_list\<close> keeps only the caller destination projected from the
-  triggering \<^typ>\<open>call_action\<close>, which is all the flat/context-insensitive combine
-  (\<open>combine_collect_abs\<close>, \<open>combine\<^sup>#\<close>) needs.
-  The context-sensitive DG generator needs more: it must route both the callee-entry seed
-  publication and the return-side context read from the \<^emph>\<open>same\<close> call action, and
-  \<^const>\<open>entry_call_list\<close> already keeps \<open>ca\<close> whole on the entry side.  This is the return-side
-  counterpart that does the same --- kept as a separate enumeration rather than widening
-  \<^const>\<open>return_call_list\<close> itself, since that function and its \<^typ>\<open>vname option\<close> shape are
-  also relied on by the context-free constraint system, which is out of scope for context
-  routing.\<close>
-
-definition return_call_actions ::
-    "cfg \<Rightarrow> cfg_node \<Rightarrow> (cfg_node \<times> call_action \<times> cfg_node) set" where
-  "return_call_actions g v =
-     {(c, ca, FunctionResult p) | c ca p. (c, ca, FunctionEntry p, v) \<in> calls g}"
-
-lemma return_call_actions_iff [simp]:
-  "(c, ca, r) \<in> return_call_actions g v
-     \<longleftrightarrow> (\<exists>p. r = FunctionResult p \<and> (c, ca, FunctionEntry p, v) \<in> calls g)"
-  by (auto simp: return_call_actions_def)
-
-lemma finite_return_call_actions [intro]:
-  assumes "finite (calls g)"
-  shows "finite (return_call_actions g v)"
-proof -
-  have "return_call_actions g v
-          \<subseteq> (\<lambda>(c, ca, ce, k).
-                (c, ca, case ce of FunctionEntry p \<Rightarrow> FunctionResult p | _ \<Rightarrow> ce)) ` calls g"
-    unfolding return_call_actions_def by (force split: prod.splits)
-  then show ?thesis using assms finite_subset finite_imageI by blast
-qed
-
-definition return_call_action_list ::
-    "cfg \<Rightarrow> cfg_node \<Rightarrow> (cfg_node \<times> call_action \<times> cfg_node) list" where
-  "return_call_action_list g v =
-     map (\<lambda>(c, ca, ce, k). (c, ca,
-                              case ce of FunctionEntry p \<Rightarrow> FunctionResult p | _ \<Rightarrow> ce))
-       (filter (\<lambda>(c, ca, ce, k).
-          k = v \<and> (case ce of FunctionEntry _ \<Rightarrow> True | _ \<Rightarrow> False))
-         (cfg_calls_list g))"
-
-lemma set_return_call_action_list [simp]:
-  assumes "finite (calls g)"
-  shows "set (return_call_action_list g v) = return_call_actions g v"
-  unfolding return_call_action_list_def return_call_actions_def
-  using set_cfg_calls_list[OF assms]
-  by (auto simp: image_iff split: cfg_node.splits)
-
-text \<open>The two enumerations agree on the call metadata they can both see: packaging the call
-  action together with the callee read off the result node recovers the flat-side list exactly.
-  This is the fact that justifies calling both "the return enumeration for the same edge" rather
-  than two unrelated relations.\<close>
-
-lemma return_call_action_list_call_info:
-  "map (\<lambda>(c, ca, ce).
-          (c, call_info_of ca (case ce of FunctionResult p \<Rightarrow> p | _ \<Rightarrow> undefined), ce))
-       (return_call_action_list g v)
-     = return_call_list g v"
-  unfolding return_call_action_list_def return_call_list_def
-  by (induction "cfg_calls_list g") (auto split: cfg_node.splits)
-
-
-subsection \<open>Call sites, named by callee procedure\<close>
-
-text \<open>
-  \<^const>\<open>return_call_action_list\<close> names a callee by the node its result is read at.
-  That node is derived data: the enumeration built it by mapping \<open>FunctionEntry p\<close> to
-  \<open>FunctionResult p\<close> in the first place. Naming the callee by its procedure instead
-  keeps the call site's own data (where the call is, what it passes, where it returns to)
-  separate from anything a resolver would decide, which is what lets the callee stop
-  being fixed at enumeration time. The result node is then \<open>FunctionResult p\<close> at the
-  point of use.
-\<close>
-
-definition call_target_list ::
-    "cfg \<Rightarrow> cfg_node \<Rightarrow> (cfg_node \<times> call_action \<times> pname) list" where
-  "call_target_list g v =
-     map (\<lambda>(c, ca, ce, k). (c, ca, case ce of FunctionEntry p \<Rightarrow> p | _ \<Rightarrow> undefined))
-       (filter (\<lambda>(c, ca, ce, k).
-          k = v \<and> (case ce of FunctionEntry _ \<Rightarrow> True | _ \<Rightarrow> False))
-         (cfg_calls_list g))"
-
-text \<open>The two enumerations carry the same call sites in the same order; only the callee's
-  spelling differs.\<close>
-
-lemma return_call_action_list_eq_call_target_list:
-  "return_call_action_list g v
-     = map (\<lambda>(c, ca, p). (c, ca, FunctionResult p)) (call_target_list g v)"
-  unfolding return_call_action_list_def call_target_list_def
-  by (induction "cfg_calls_list g") (auto split: cfg_node.splits)
-
-lemma call_target_list_eq_return_call_action_list:
-  "call_target_list g v
-     = map (\<lambda>(c, ca, ex). (c, ca, result_proc ex)) (return_call_action_list g v)"
-  unfolding return_call_action_list_def call_target_list_def
-  by (induction "cfg_calls_list g") (auto split: cfg_node.splits)
-
-text \<open>Membership, in the form a call-site obligation states it: the enumeration lists
-  exactly the call edges of \<open>g\<close> whose continuation is \<open>v\<close>, each paired with the
-  procedure its callee entry names.\<close>
-
-lemma set_call_target_list [simp]:
-  assumes "finite (calls g)"
-  shows "set (call_target_list g v)
-           = {(c, ca, p) | c ca p. (c, ca, FunctionEntry p, v) \<in> calls g}"
-  unfolding call_target_list_def using set_cfg_calls_list[OF assms]
-  by (auto simp: image_iff split: cfg_node.splits)
-
-lemma call_target_list_iff:
-  assumes "finite (calls g)"
-  shows "(c, ca, p) \<in> set (call_target_list g v)
-           \<longleftrightarrow> (c, ca, FunctionEntry p, v) \<in> calls g"
-  by (simp add: set_call_target_list[OF assms])
-
-text \<open>
-  The call site alone, with no callee: what a call-site-owned resolver is given.
-  \<open>static_targets\<close> is the resolver that answers from the CFG, ignoring the
-  caller's abstract state -- the behaviour a statically enumerated generator already
-  has. A resolver reading that state instead is what makes an indirect call
-  expressible; the shape of the equation does not change when it does.
-\<close>
-
-definition call_site_list ::
-    "cfg \<Rightarrow> cfg_node \<Rightarrow> (cfg_node \<times> call_action) list" where
-  "call_site_list g v = map (\<lambda>(c, ca, p). (c, ca)) (call_target_list g v)"
-
-definition static_targets ::
-    "cfg \<Rightarrow> cfg_node \<Rightarrow> cfg_node \<Rightarrow> call_action \<Rightarrow> pname list" where
-  "static_targets g v cc ca =
-     map (\<lambda>(c, a, p). p)
-       (filter (\<lambda>(c, a, p). c = cc \<and> a = ca) (call_target_list g v))"
-
-lemma set_call_site_list [simp]:
-  assumes "finite (calls g)"
-  shows "set (call_site_list g v)
-           = {(c, ca) | c ca. \<exists>p. (c, ca, FunctionEntry p, v) \<in> calls g}"
-  unfolding call_site_list_def
-  by (force simp: set_call_target_list[OF assms] image_iff)
-
-lemma static_targets_iff:
-  assumes "finite (calls g)"
-  shows "p \<in> set (static_targets g v cc ca)
-           \<longleftrightarrow> (cc, ca, FunctionEntry p, v) \<in> calls g"
-  unfolding static_targets_def
-  by (force simp: call_target_list_iff[OF assms, symmetric] image_iff)
-
-text \<open>The resolver that ignores the caller state and answers from the CFG. A call site
-  parameterised by a resolver reproduces the statically enumerated behaviour exactly at
-  this one; a resolver reading the state can only narrow the answer.\<close>
-
-definition static_resolve ::
-  "cfg \<Rightarrow> cfg_node \<Rightarrow> cfg_node \<Rightarrow> call_action \<Rightarrow> 'd \<Rightarrow> pname list" where
-  "static_resolve g v cc ca d = static_targets g v cc ca"
-
-lemma static_resolve_iff:
-  assumes "finite (calls g)"
-  shows "p \<in> set (static_resolve g v cc ca d)
-           \<longleftrightarrow> (cc, ca, FunctionEntry p, v) \<in> calls g"
-  unfolding static_resolve_def by (rule static_targets_iff[OF assms])
-
-text \<open>Grouping the enumeration by call site and resolving each site loses nothing:
-  the sites' resolved targets, concatenated, carry exactly the pairs
-  \<^const>\<open>call_target_list\<close> lists. Order and multiplicity are not preserved --- one
-  site's targets are gathered together --- so this is a set equality, which is all a
-  fold over the entries can observe.\<close>
-
-lemma set_concat_call_site_static_targets:
-  "set (concat (map (\<lambda>(cc, ca). map (h cc ca) (static_targets g v cc ca))
-                    (call_site_list g v)))
-     = set (map (\<lambda>(c, ca, p). h c ca p) (call_target_list g v))"
-  by (force simp: call_site_list_def static_targets_def image_iff)
-
-text \<open>Every listed call site resolves to at least its own callee, which is what a
-  coverage obligation stated over the enumeration needs.\<close>
-
-lemma static_targets_nonempty:
-  assumes "finite (calls g)" and "(cc, ca, FunctionEntry p, v) \<in> calls g"
-  shows "static_targets g v cc ca \<noteq> []"
-proof -
-  have "p \<in> set (static_targets g v cc ca)"
-    using static_targets_iff[OF assms(1)] assms(2) by simp
-  thus ?thesis by auto
-qed
-
-
 subsection \<open>Outgoing call enumeration (caller perspective)\<close>
 
 text \<open>The call tuples whose call site is the queried node \<open>v\<close>: the entry, action, and
   continuation of every call \<open>v\<close> makes. This is the caller-side counterpart of
-  \<^const>\<open>entry_calls\<close> (callee-indexed) and \<^const>\<open>return_call_actions\<close>
-  (continuation-indexed) --- routing a call-entry seed publication at its call site needs
-  the callee entry and the whole \<^typ>\<open>call_action\<close> together, which neither of those two
-  enumerations exposes.\<close>
+  \<^const>\<open>entry_calls\<close> (callee-indexed) --- routing a call-entry seed publication at its call
+  site needs the callee entry and the whole \<^typ>\<open>call_action\<close> together, which the
+  continuation-indexed enumerations below do not expose.\<close>
 
 definition call_successors ::
     "cfg \<Rightarrow> cfg_node \<Rightarrow> (cfg_node \<times> call_action \<times> cfg_node) set" where
@@ -367,4 +127,300 @@ lemma set_call_successor_list [simp]:
   unfolding call_successor_list_def call_successors_def
   using set_cfg_calls_list[OF assms] by (force simp: image_iff)
 
+
+subsection \<open>Call targets at a continuation\<close>
+
+text \<open>
+  The call edges whose continuation is \<open>v\<close>, each paired with the procedure its callee entry
+  names.  This is the one continuation-indexed enumeration that reads \<^const>\<open>calls\<close>
+  directly; every return-side view below is an image or a map of it.
+
+  \<open>call_target_at\<close> decodes a single call edge, selecting on the continuation and reading the
+  callee's procedure off \<^term>\<open>FunctionEntry p\<close> in one total function, so there is no
+  unreachable-but-present branch and no later definition has to re-establish that the node
+  it is looking at really is a callee entry.
+
+  Naming the callee by its procedure rather than by the \<^term>\<open>FunctionResult p\<close> node its
+  result is read at keeps the call site's own data --- where the call is, what it passes,
+  where it returns to --- separate from the callee, which is what lets a resolver choose
+  among candidates rather than read a callee the enumeration already fixed.  The result
+  node is then \<open>FunctionResult p\<close> at the point of use.
+\<close>
+
+definition call_targets ::
+    "cfg \<Rightarrow> cfg_node \<Rightarrow> (cfg_node \<times> call_action \<times> pname) set" where
+  "call_targets g v = {(c, ca, p). (c, ca, FunctionEntry p, v) \<in> calls g}"
+
+lemma call_targets_iff [simp]:
+  "(c, ca, p) \<in> call_targets g v \<longleftrightarrow> (c, ca, FunctionEntry p, v) \<in> calls g"
+  by (simp add: call_targets_def)
+
+fun call_target_at ::
+    "cfg_node \<Rightarrow> (cfg_node \<times> call_action \<times> cfg_node \<times> cfg_node)
+       \<Rightarrow> (cfg_node \<times> call_action \<times> pname) option" where
+  "call_target_at v (c, ca, FunctionEntry p, k) =
+     (if k = v then Some (c, ca, p) else None)"
+| "call_target_at v _ = None"
+
+definition call_target_list ::
+    "cfg \<Rightarrow> cfg_node \<Rightarrow> (cfg_node \<times> call_action \<times> pname) list" where
+  "call_target_list g v = List.map_filter (call_target_at v) (cfg_calls_list g)"
+
+lemma set_map_filter_call_target_at:
+  "set (List.map_filter (call_target_at v) es)
+     = {(c, ca, p). (c, ca, FunctionEntry p, v) \<in> set es}"
+proof (induction es)
+  case Nil
+  show ?case by simp
+next
+  case (Cons e es)
+  obtain c ca ce k where e: "e = (c, ca, ce, k)" by (cases e) auto
+  show ?case by (cases ce) (auto simp: e Cons.IH)
+qed
+
+text \<open>Membership, in the form a call-site obligation states it: the enumeration lists
+  exactly the call edges of \<open>g\<close> whose continuation is \<open>v\<close>, each paired with the
+  procedure its callee entry names.\<close>
+
+lemma set_call_target_list [simp]:
+  assumes "finite (calls g)"
+  shows "set (call_target_list g v) = call_targets g v"
+  unfolding call_target_list_def call_targets_def
+  by (simp add: set_map_filter_call_target_at set_cfg_calls_list[OF assms])
+
+lemma finite_call_targets [intro]:
+  assumes "finite (calls g)"
+  shows "finite (call_targets g v)"
+proof -
+  have "call_targets g v = set (call_target_list g v)"
+    using set_call_target_list[OF assms] by simp
+  then show ?thesis by simp
+qed
+
+text \<open>The enumeration lists each call edge once: \<^const>\<open>cfg_calls_list\<close> is duplicate-free
+  and \<^const>\<open>call_target_at\<close> discards exactly the components a decoded entry does not
+  determine.  This is what makes the site and target lists below duplicate-free too, so
+  the generator builds one contribution per site-target pair rather than one per pair of
+  co-listed callees.\<close>
+
+lemma distinct_map_filter_call_target_at:
+  assumes "distinct es"
+  shows "distinct (List.map_filter (call_target_at v) es)"
+  using assms
+proof (induction es)
+  case Nil
+  show ?case by simp
+next
+  case (Cons e es)
+  obtain c ca ce k where e: "e = (c, ca, ce, k)" by (cases e) auto
+  show ?case
+    using Cons by (cases ce) (auto simp: e set_map_filter_call_target_at)
+qed
+
+lemma distinct_call_target_list [simp]:
+  assumes "finite (calls g)"
+  shows "distinct (call_target_list g v)"
+  unfolding call_target_list_def
+  by (rule distinct_map_filter_call_target_at) (simp add: cfg_calls_list_def assms)
+
+lemma call_target_list_iff:
+  assumes "finite (calls g)"
+  shows "(c, ca, p) \<in> set (call_target_list g v)
+           \<longleftrightarrow> (c, ca, FunctionEntry p, v) \<in> calls g"
+  by (simp add: set_call_target_list[OF assms])
+
+
+subsection \<open>Return enumeration\<close>
+
+text \<open>Two views of the same return edges, both images of \<^const>\<open>call_targets\<close>: one keeping
+  the triggering \<^typ>\<open>call_action\<close> whole, one replacing it with the call's
+  \<^typ>\<open>call_info\<close>.  The return contribution is the caller state and the callee-exit state
+  assembled by \<open>combine\<^sup>#\<close>.  Both hand back the callee's \<^term>\<open>FunctionResult p\<close> node
+  directly --- recovered from the callee entry \<^term>\<open>FunctionEntry p\<close>, so no separate
+  combine relation is needed and no client has to rebuild the result node.\<close>
+
+definition return_call_actions ::
+    "cfg \<Rightarrow> cfg_node \<Rightarrow> (cfg_node \<times> call_action \<times> cfg_node) set" where
+  "return_call_actions g v =
+     (\<lambda>(c, ca, p). (c, ca, FunctionResult p)) ` call_targets g v"
+
+lemma return_call_actions_iff [simp]:
+  "(c, ca, r) \<in> return_call_actions g v
+     \<longleftrightarrow> (\<exists>p. r = FunctionResult p \<and> (c, ca, FunctionEntry p, v) \<in> calls g)"
+  by (auto simp: return_call_actions_def image_iff Bex_def)
+
+lemma finite_return_call_actions [intro]:
+  assumes "finite (calls g)"
+  shows "finite (return_call_actions g v)"
+  using finite_call_targets[OF assms] by (simp add: return_call_actions_def)
+
+definition return_call_action_list ::
+    "cfg \<Rightarrow> cfg_node \<Rightarrow> (cfg_node \<times> call_action \<times> cfg_node) list" where
+  "return_call_action_list g v =
+     map (\<lambda>(c, ca, p). (c, ca, FunctionResult p)) (call_target_list g v)"
+
+lemma set_return_call_action_list [simp]:
+  assumes "finite (calls g)"
+  shows "set (return_call_action_list g v) = return_call_actions g v"
+  unfolding return_call_action_list_def return_call_actions_def
+  by (simp add: set_call_target_list[OF assms])
+
+text \<open>The packaged view carries the call's own \<^typ>\<open>call_info\<close> --- callee, formals and
+  actual arguments --- rather than a bare destination, because that is what an
+  interprocedural transfer sees at the return point, matching what Goblint's
+  \<open>combine_env\<close>/\<open>combine_assign\<close> receive.  The enumeration is the only layer holding the
+  \<^const>\<open>calls\<close> relation, so the metadata is projected here; a combine tree never sees the
+  CFG, and \<^const>\<open>wf_cfg\<close> does not force a call site's outgoing call edge to be unique, so
+  there is no well-defined downstream lookup that could recover it instead.
+
+  The flat, context-insensitive combine (\<open>combine_collect_abs\<close>, \<open>combine\<^sup>#\<close>) needs no more
+  than this.  The context-sensitive DG generator uses \<^const>\<open>return_call_action_list\<close>
+  instead, because it must route the callee-entry seed publication and the return-side
+  context read from the \<^emph>\<open>same\<close> call action, exactly as \<^const>\<open>entry_call_list\<close> keeps \<open>ca\<close>
+  whole on the entry side.\<close>
+
+definition return_calls ::
+    "cfg \<Rightarrow> cfg_node \<Rightarrow> (cfg_node \<times> call_info \<times> cfg_node) set" where
+  "return_calls g v =
+     (\<lambda>(c, ca, p). (c, call_info_of ca p, FunctionResult p)) ` call_targets g v"
+
+lemma return_calls_iff [simp]:
+  "(c, ci, r) \<in> return_calls g v
+     \<longleftrightarrow> (\<exists>ca p. r = FunctionResult p \<and> ci = call_info_of ca p
+             \<and> (c, ca, FunctionEntry p, v) \<in> calls g)"
+  by (auto simp: return_calls_def image_iff Bex_def)
+
+lemma finite_return_calls [intro]:
+  assumes "finite (calls g)"
+  shows "finite (return_calls g v)"
+  using finite_call_targets[OF assms] by (simp add: return_calls_def)
+
+definition return_call_list ::
+    "cfg \<Rightarrow> cfg_node \<Rightarrow> (cfg_node \<times> call_info \<times> cfg_node) list" where
+  "return_call_list g v =
+     map (\<lambda>(c, ca, p). (c, call_info_of ca p, FunctionResult p)) (call_target_list g v)"
+
+lemma set_return_call_list [simp]:
+  assumes "finite (calls g)"
+  shows "set (return_call_list g v) = return_calls g v"
+  unfolding return_call_list_def return_calls_def
+  by (simp add: set_call_target_list[OF assms])
+
+text \<open>The three lists carry the same call sites in the same order; only the callee's
+  spelling differs.  This is what justifies calling them return enumerations for the same
+  edge rather than unrelated relations --- and, since two of them are maps over the third,
+  it holds by construction and cannot lapse.\<close>
+
+lemma return_call_action_list_eq_call_target_list:
+  "return_call_action_list g v
+     = map (\<lambda>(c, ca, p). (c, ca, FunctionResult p)) (call_target_list g v)"
+  by (simp add: return_call_action_list_def)
+
+lemma call_target_list_eq_return_call_action_list:
+  "call_target_list g v
+     = map (\<lambda>(c, ca, ex). (c, ca, result_proc ex)) (return_call_action_list g v)"
+  by (simp add: return_call_action_list_def comp_def case_prod_beta)
+
+lemma return_call_action_list_call_info:
+  "map (\<lambda>(c, ca, ex). (c, call_info_of ca (result_proc ex), ex))
+       (return_call_action_list g v)
+     = return_call_list g v"
+  by (simp add: return_call_action_list_def return_call_list_def comp_def case_prod_beta)
+
+
+subsection \<open>Call sites and the resolver adapter\<close>
+
+text \<open>
+  The call site alone, with no callee: what a call-site-owned resolver is given.  The list
+  is duplicate-free, so a site with several statically known callees is listed once; with
+  \<open>distinct_static_targets\<close> below, resolving every listed site therefore visits each
+  site-target pair exactly once.
+
+  \<open>static_targets\<close> below is the resolver that answers from the CFG and ignores the caller's
+  abstract state --- the behaviour a statically enumerated generator already has.  A
+  resolver reading that state instead is what makes an indirect call expressible, and the
+  shape of the equation does not change when it does.  Two limits are worth stating,
+  because the resolver type \<open>cfg \<Rightarrow> cfg_node \<Rightarrow> cfg_node \<Rightarrow> call_action \<Rightarrow> 'd \<Rightarrow> pname list\<close>
+  does not: a resolver may answer with any procedures at all, so a sound instance needs an
+  explicit coverage assumption relating its answer to the concrete callees reachable at the
+  site; and the sites themselves come from \<^const>\<open>call_target_list\<close>, so a call with no
+  statically enumerated target is not listed and no resolver is consulted for it.  What
+  this supports is therefore state-dependent choice among enumerated candidates, not a
+  fully late-bound call whose site exists independently of any known target.
+\<close>
+
+definition call_site_list ::
+    "cfg \<Rightarrow> cfg_node \<Rightarrow> (cfg_node \<times> call_action) list" where
+  "call_site_list g v = remdups (map (\<lambda>(c, ca, p). (c, ca)) (call_target_list g v))"
+
+lemma distinct_call_site_list [simp]:
+  "distinct (call_site_list g v)"
+  by (simp add: call_site_list_def)
+
+lemma set_call_site_list [simp]:
+  assumes "finite (calls g)"
+  shows "set (call_site_list g v)
+           = {(c, ca) | c ca. \<exists>p. (c, ca, FunctionEntry p, v) \<in> calls g}"
+  unfolding call_site_list_def
+  by (force simp: set_call_target_list[OF assms] call_targets_def image_iff)
+
+definition static_targets ::
+    "cfg \<Rightarrow> cfg_node \<Rightarrow> cfg_node \<Rightarrow> call_action \<Rightarrow> pname list" where
+  "static_targets g v cc ca =
+     map (\<lambda>(c, a, p). p)
+       (filter (\<lambda>(c, a, p). c = cc \<and> a = ca) (call_target_list g v))"
+
+lemma static_targets_iff [simp]:
+  assumes "finite (calls g)"
+  shows "p \<in> set (static_targets g v cc ca)
+           \<longleftrightarrow> (cc, ca, FunctionEntry p, v) \<in> calls g"
+  unfolding static_targets_def
+  by (force simp: call_target_list_iff[OF assms, symmetric] image_iff)
+
+lemma distinct_static_targets [simp]:
+  assumes "finite (calls g)"
+  shows "distinct (static_targets g v cc ca)"
+proof -
+  let ?es = "filter (\<lambda>(c, a, p). c = cc \<and> a = ca) (call_target_list g v)"
+  have "inj_on (\<lambda>(c, a, p). p) (set ?es)" by (auto simp: inj_on_def)
+  moreover have "distinct ?es" using distinct_call_target_list[OF assms] by simp
+  ultimately show ?thesis unfolding static_targets_def by (simp add: distinct_map)
+qed
+
+text \<open>Exactly when a site has a statically known callee, which is the form a coverage
+  obligation stated over the enumeration needs.\<close>
+
+lemma static_targets_neq_Nil_iff [simp]:
+  assumes "finite (calls g)"
+  shows "static_targets g v cc ca \<noteq> []
+           \<longleftrightarrow> (\<exists>p. (cc, ca, FunctionEntry p, v) \<in> calls g)"
+proof -
+  have "static_targets g v cc ca \<noteq> [] \<longleftrightarrow> (\<exists>p. p \<in> set (static_targets g v cc ca))"
+    by (cases "static_targets g v cc ca") auto
+  thus ?thesis using static_targets_iff[OF assms] by blast
+qed
+
+definition static_resolve ::
+  "cfg \<Rightarrow> cfg_node \<Rightarrow> cfg_node \<Rightarrow> call_action \<Rightarrow> 'd \<Rightarrow> pname list" where
+  "static_resolve g v cc ca d = static_targets g v cc ca"
+
+lemma static_resolve_iff [simp]:
+  assumes "finite (calls g)"
+  shows "p \<in> set (static_resolve g v cc ca d)
+           \<longleftrightarrow> (cc, ca, FunctionEntry p, v) \<in> calls g"
+  unfolding static_resolve_def by (rule static_targets_iff[OF assms])
+
+text \<open>Resolving each listed site loses nothing: the sites' resolved targets, concatenated,
+  carry exactly the pairs \<^const>\<open>call_target_list\<close> lists.  Order is not preserved --- one
+  site's targets are gathered together --- so this is a set equality.  That is enough for
+  the commutative, idempotent join folds the constraint generator runs over these entries,
+  and only for those; a fold that could observe order or multiplicity would need more.\<close>
+
+lemma set_concat_call_site_static_targets:
+  "set (concat (map (\<lambda>(cc, ca). map (h cc ca) (static_targets g v cc ca))
+                    (call_site_list g v)))
+     = set (map (\<lambda>(c, ca, p). h c ca p) (call_target_list g v))"
+  by (force simp: call_site_list_def static_targets_def image_iff)
+
 end
+

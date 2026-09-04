@@ -41,7 +41,9 @@ definition sctx_abs_spec ::
   "(vname \<Rightarrow> bool)
    \<Rightarrow> ('x, 'k, unit, sign abs_state lifted, sign abs_state lifted) dg_spec"
 where
-  "sctx_abs_spec gs = local_state_dg_spec_for_lifted gs is_empty_state (sign_tf_for gs)"
+  "sctx_abs_spec gs = local_state_dg_spec_for_lifted gs is_empty_state
+     skip_sign assign_sign special_sign branch_sign body_sign return_sign
+     (enter_sign_ci_for gs) event_sign"
 
 subsection \<open>The concretization\<close>
 
@@ -67,9 +69,11 @@ context
 begin
 
 interpretation sign_dom: routed_dg_domain_exec
-  gs empty_pred "sign_tf_st_for gs" "sign_enter_st_for gs" "sign_tf_for gs"
+  gs empty_pred "sign_tf_st_for gs" "sign_enter_st_for gs"
+  skip_sign assign_sign special_sign branch_sign body_sign return_sign
+  "enter_sign_ci_for gs" event_sign
   by unfold_locales
-     (rule sign_tf_st_for_commute, assumption,
+     (rule sign_tf_st_for_commute[unfolded sign_tf_abs_def], assumption,
       rule sign_enter_st_for_commute, rule exact)
 
 lemma sctx_gamma_eq: "sctx_gamma gs = sign_dom.gamma_exec"
@@ -78,6 +82,17 @@ lemma sctx_gamma_eq: "sctx_gamma gs = sign_dom.gamma_exec"
 theorem sctx_sound_exec: "sound_dg_spec (sctx_spec gs empty_pred) (sctx_gamma gs) gs"
   unfolding sctx_gamma_eq sctx_spec_def
   by (rule sign_dom.sound_dg_spec_st[OF sign_is_sound_transfer_for])
+
+text \<open>Entry is stated apart from \<^locale>\<open>sound_dg_spec\<close>, so a routed instance cites
+  it separately; the alternative list is the singleton this Base-style entry answers.\<close>
+
+theorem sctx_entry_cover_exec:
+  assumes "s \<in> sctx_gamma gs d g"
+  shows "entry_pairs_cover (\<lambda>d'. sctx_gamma gs d' g) s
+           (call_enter gs (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci)) s)
+           [(d, transfer_lift empty_pred (sign_enter_st_for gs ci) d)]"
+  using assms unfolding sctx_gamma_eq sign_dom.gamma_exec_def
+  by (rule sign_dom.entry_pairs_cover_st[OF sign_is_sound_transfer_for])
 
 end
 

@@ -49,9 +49,9 @@ subsection \<open>Computed post-solution, one per refinement mode\<close>
 text \<open>
   \<open>y + 1 = 3\<close> is the same composite guard as
   \<open>Example_Int_Backward.bfilter_int_dom_once_plus_eq_exact\<close> and
-  \<open>Example_Int_Transfer.apply_tf_once_assume_exact\<close>, now reached through a
+  \<open>Example_Int_Transfer.bfilter_once_assume_exact\<close>, now reached through a
   real compiled \<open>if\<close> and the vendored solver instead of a direct
-  \<open>bfilter\<close>/\<open>apply_tf\<close> call. \<open>Statement 1\<close> is the interior node right after
+  \<open>bfilter\<close> call. \<open>Statement 1\<close> is the interior node right after
   the true branch's guard and before the branches rejoin at \<open>Statement 3\<close>
   (a join would erase the refinement, since the false branch never
   constrains \<open>y\<close>), so that is where \<open>y\<close>'s mode-dependent precision is
@@ -132,7 +132,7 @@ lemma dgExI_fixpoint_inspect_y_at_Statement_1:
 
 text \<open>
   The mode contrast, established through three real solver runs on the same
-  compiled program rather than three direct \<open>apply_tf\<close> calls:
+  compiled program rather than three direct transfer calls:
   \<open>Refine_Never\<close> only narrows the congruence component (Congruence's own
   real inverse, not cross-component refinement), while \<open>Refine_Once\<close> and
   \<open>Refine_Fixpoint\<close> both reach the exact singleton -- the sequence of

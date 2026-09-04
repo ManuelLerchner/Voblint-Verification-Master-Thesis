@@ -124,8 +124,8 @@ text \<open>
   reduces to \<open>sign_backward_domain.bfilter_lifted\<close> here and inherits its
   precision directly, exercising \<open>branch_lifted_sign\<close> itself rather than
   only its internal filter. \<open>branch_lifted_sign\<close> is not yet the domain's
-  \<open>tf_branch\<close> instance -- \<^const>\<open>sign_tf_for\<close>'s \<open>tf_branch\<close> still names
-  plain \<open>branch_sign\<close> -- so this regression covers the fixed operation
+  registered branch operation -- Sign still supplies plain
+  \<^const>\<open>branch_sign\<close> -- so this regression covers the fixed operation
   itself, not yet a production analyzer run through it.
 \<close>
 

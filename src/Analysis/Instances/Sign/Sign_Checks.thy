@@ -62,10 +62,11 @@ interpretation sctx_adapter: routed_analysis_sound
     "compile_prog Pi ps" "Analysis_Global ()" route_unit Bot "Lifted cinit_sign_st" Bot
     "snd (sctx_sol gs empty_pred Pi ps)" "fst (sctx_sol gs empty_pred Pi ps)"
     "(cfg_exit (compile_prog Pi ps), ())"
-    Activation_Seed enterc_unit
+    Activation_Seed "\<lambda>d. d = Bot" enterc_unit
     "map_lift (fun_of_resolved_st_q_for gs)" sign_classify_check
-proof (unfold_locales, goal_cases FinE PP SgCov SgUncov Fwd FinC SeedKey ResolveSound
-    RouteEnterc CallFwd CombFwd EnterAgree GammaRd ClProved ClRefuted)
+proof (unfold_locales, goal_cases FinE PP SgCov SgUncov Fwd FinC SeedKey
+    IsBotBot IsBotSound IsBotMono ResolveSound
+    EnterCover CombFwd EnterAgree GammaRd ClProved ClRefuted)
   case FinE show ?case
     using compile_prog_finite by auto
 next
@@ -85,15 +86,29 @@ next
 next
   case (SeedKey p ctx) show ?case by simp
 next
+  case IsBotBot show ?case by simp
+next
+  case (IsBotSound d g') then show ?case by (simp add: sctx_gamma_def)
+next
+  case (IsBotMono d d') then show ?case by (cases d; cases d'; simp)
+next
   case (ResolveSound u ctx dst pars args p cont s)
   thus ?case by (simp add: static_resolve_iff compile_prog_finite)
 next
-  case (RouteEnterc u ctx dst pars args p cont s)
-  show ?case by (simp add: route_unit_def enterc_unit_def)
-next
-  case (CallFwd u ctx dst pars args p cont)
+  case (EnterCover u ctx dst pars args p cont s)
+  let ?ci = "call_info_of (CallEdge dst pars args) p"
+  let ?caller = "locals (snd (sctx_sol gs empty_pred Pi ps) (Inl (u, ctx)))"
+  have cov: "entry_pairs_cover
+      (\<lambda>d. sctx_gamma gs d
+             (globs (snd (sctx_sol gs empty_pred Pi ps) (Inr (Analysis_Global ())))))
+      s (call_enter gs (CallEdge dst pars args) s)
+      [(?caller, transfer_lift empty_pred (sign_enter_st_for gs ?ci) ?caller)]"
+    using sctx_entry_cover_exec[OF exact EnterCover(3), where ci = ?ci] by simp
   show ?case
-    using CallFwd(1,2) call_fwd_ok unfolding route_unit_def by blast
+    unfolding sctx_spec_def dgs_enter_local_state_st_for_lifted
+    using enter_runs_local_enter_transfer enter_deps_local_enter_transfer cov
+          call_fwd_ok[OF EnterCover(1,2)]
+    by (fastforce simp: entry_pairs_cover_def route_unit_def enterc_unit_def)
 next
   case (CombFwd cl c1 dst pars args p cont)
   show ?case using CombFwd(1,2) comb_fwd_ok by blast

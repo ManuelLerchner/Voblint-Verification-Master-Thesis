@@ -40,21 +40,18 @@ text \<open>
 \<close>
 
 text \<open>
-  \<open>int_tf_for\<close>/\<open>int_tf_st_for\<close>/\<open>int_dom_enter_st_for\<close> are production-selection
+  \<open>int_tf_st_for\<close>/\<open>int_dom_enter_st_for\<close> are production-selection
   dispatchers only: each mode case is a bare reference to its own
-  \<^theory>\<open>Voblint_Analysis.Int_Transfer\<close>/\<open>Int_Exec\<close> bundle, so none of the three
-  bundles' distinct capabilities collapse into these. In particular they do not
-  imply a uniform \<open>apply_tf\<close> monotonicity fact across modes -- \<open>Refine_Fixpoint\<close>
-  still has none (\<^theory>\<open>Voblint_Analysis.Int_Transfer\<close>'s own header explains why),
-  and nothing below requires one; the production soundness route (the
-  \<open>local_state_dg_exec_analysis\<close> locale, one session downstream) never cites transfer
-  monotonicity.
+  \<open>Int_Exec\<close> definition, so none of the three modes' distinct capabilities
+  collapse into them. In particular they do not imply a uniform monotonicity
+  fact across modes -- \<open>Refine_Fixpoint\<close> still has none
+  (\<^theory>\<open>Voblint_Analysis.Int_Transfer\<close>'s own header explains why), and
+  nothing below requires one; the production soundness route (the
+  \<open>local_state_dg_exec_analysis\<close> locale, one session downstream) never cites
+  transfer monotonicity.
 \<close>
 
-fun int_tf_for :: "refine_mode \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> int_dom domain_transfer" where
-  "int_tf_for Refine_Never gs = int_tf_never_for gs"
-| "int_tf_for Refine_Once gs = int_tf_once_for gs"
-| "int_tf_for Refine_Fixpoint gs = int_tf_fixpoint_for gs"
+
 
 fun int_tf_st_for :: "refine_mode \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> edge_action \<Rightarrow>
     int_dom resolved_st_q \<Rightarrow> int_dom resolved_st_q" where

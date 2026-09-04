@@ -112,19 +112,20 @@ proof -
 qed
 
 lemma dep_dg_gen_of_entry:
-  assumes fin: "finite (calls g)" and e: "(cs, ca, ce, k) \<in> calls g"
+  assumes fin: "finite (calls g)" and wf: "wf_cfg g" and e: "(cs, ca, ce, k) \<in> calls g"
   shows "Inl (cs, ()) \<in> dep_aux \<sigma> (dg_gen_of S g bot0 s0d s0g (ce, ()))"
 proof -
   have site: "(cs, ca) \<in> set (entry_call_list g ce)"
     using fin e by (auto simp: entry_calls_def)
-  obtain dst fs as where ca_eq: "ca = CallEdge dst fs as" by (cases ca) auto
-  let ?p = "case ce of FunctionEntry p \<Rightarrow> p | _ \<Rightarrow> undefined"
-  have mem: "transfer_tree (dgs_enter S (call_info_of ca ?p)) (Inl (cs, ())) (\<lambda>_. ())
-             \<in> set (dg_extra_of S g (\<lambda>_ _ _ _. ()) () ce)"
-    unfolding dg_extra_of_def using site by force
-  have "Inl (cs, ()) \<in> dep_aux \<sigma>
-       (transfer_tree (dgs_enter S (call_info_of ca ?p)) (Inl (cs, ())) (\<lambda>_. ()))"
-    by (rule dep_aux_transfer_tree_source)
+  obtain p where ce_eq: "ce = FunctionEntry p"
+    using wf e unfolding wf_cfg_def by blast
+  let ?K = "\<lambda>d. dgs_enter S (call_info_of ca p) (mk_dg_man d (\<lambda>_. ()))
+                  (\<lambda>pairs. sp_compile (side_rhs_fold_dg bot
+                             (map (\<lambda>(_, entry). Answer (DG entry bot)) pairs)))"
+  have mem: "dg_read_at (Inl (cs, ())) ?K \<in> set (dg_extra_of S g (\<lambda>_ _ _ _. ()) () ce)"
+    unfolding dg_extra_of_def ce_eq using site[unfolded ce_eq] by force
+  have "Inl (cs, ()) \<in> dep_aux \<sigma> (dg_read_at (Inl (cs, ())) ?K)"
+    by (rule dep_aux_dg_read_at_source)
   with dep_aux_dg_gen_of_extra_mem[OF mem] show ?thesis by blast
 qed
 
@@ -145,7 +146,7 @@ proof (cases rule: cfg_succ_rel_cases)
 next
   case (ENTRY ca k)
   then show ?thesis
-    using dep_dg_gen_of_entry[OF fin(2) ENTRY] by (simp add: dep\<^sub>L_def dep_def)
+    using dep_dg_gen_of_entry[OF fin(2) wf ENTRY] by (simp add: dep\<^sub>L_def dep_def)
 next
   case (COMB_CALLER ca ce)
   obtain p where "ce = FunctionEntry p"

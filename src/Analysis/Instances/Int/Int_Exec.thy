@@ -107,47 +107,47 @@ theorem int_tf_st_never_for_commute:
   assumes "live_resolved_st_q gs s"
   shows
     "fun_of_resolved_st_q_for gs (int_tf_st_never_for gs a s) =
-     apply_tf (int_tf_never_for gs) a (fun_of_resolved_st_q_for gs s)"
+     int_tf_abs Refine_Never a (fun_of_resolved_st_q_for gs s)"
 proof (cases a)
   case EA_Nop
-  then show ?thesis by (simp add: int_tf_never_for_def skip_int_dom_def)
+  then show ?thesis by (simp add: skip_int_dom_def)
 next
   case (EA_Assign x e)
-  then show ?thesis by (simp add: int_tf_never_for_def assign_int_dom_def)
+  then show ?thesis by (simp add: assign_int_dom_def)
 next
   case (EA_Special sc x)
-  then show ?thesis by (auto simp: int_tf_never_for_def split: special_call.splits)
+  then show ?thesis by (auto split: special_call.splits)
 next
   case (EA_Assume b)
   then show ?thesis
-    using assms by (simp add: int_tf_never_for_def int_dom_backward_never.branch_st_commute)
+    using assms by (simp add: int_dom_backward_never.branch_st_commute)
 next
   case (EA_AssumeNot b)
   then show ?thesis
-    using assms by (simp add: int_tf_never_for_def int_dom_backward_never.branch_st_commute)
+    using assms by (simp add: int_dom_backward_never.branch_st_commute)
 next
   case (EA_Ret ea p)
   then show ?thesis
   proof (cases ea)
     case None
     then show ?thesis using \<open>a = EA_Ret ea p\<close>
-      by (simp add: int_tf_never_for_def return_int_dom_def)
+      by (simp add: return_int_dom_def)
   next
     case (Some av)
     then show ?thesis using \<open>a = EA_Ret ea p\<close>
-      by (simp add: int_tf_never_for_def return_int_dom_def assign_int_dom_def)
+      by (simp add: return_int_dom_def assign_int_dom_def)
   qed
 next
   case (EA_Check c)
-  then show ?thesis by (simp add: int_tf_never_for_def event_int_dom_def)
+  then show ?thesis by (simp add: event_int_dom_def)
 qed
 
 lemma int_dom_enter_never_st_for_commute:
   "fun_of_resolved_st_q_for gs (int_dom_enter_never_st_for gs ci s) =
-   snd (tf_enter (int_tf_never_for gs) ci (fun_of_resolved_st_q_for gs s))"
-  by (simp add: int_tf_never_for_def enter_int_dom_for_def enter_D_def enter_frame_def
-                enter_pair_int_dom_for_def enter_pair_D_def
-                enter_frame_int_dom_for_def fun_of_resolved_st_q_for_enter_frame)
+   enter_int_dom_ci_for Refine_Never gs ci (fun_of_resolved_st_q_for gs s)"
+  by (simp add: enter_int_dom_ci_for_def enter_int_dom_for_def enter_binding_def
+                enter_frame_def enter_frame_int_dom_for_def fun_of_resolved_st_q_for_enter_frame)
+
 
 subsection \<open>Refine_Once\<close>
 
@@ -210,47 +210,47 @@ theorem int_tf_st_once_for_commute:
   assumes "live_resolved_st_q gs s"
   shows
     "fun_of_resolved_st_q_for gs (int_tf_st_once_for gs a s) =
-     apply_tf (int_tf_once_for gs) a (fun_of_resolved_st_q_for gs s)"
+     int_tf_abs Refine_Once a (fun_of_resolved_st_q_for gs s)"
 proof (cases a)
   case EA_Nop
-  then show ?thesis by (simp add: int_tf_once_for_def skip_int_dom_def)
+  then show ?thesis by (simp add: skip_int_dom_def)
 next
   case (EA_Assign x e)
-  then show ?thesis by (simp add: int_tf_once_for_def assign_int_dom_def)
+  then show ?thesis by (simp add: assign_int_dom_def)
 next
   case (EA_Special sc x)
-  then show ?thesis by (auto simp: int_tf_once_for_def split: special_call.splits)
+  then show ?thesis by (auto split: special_call.splits)
 next
   case (EA_Assume b)
   then show ?thesis
-    using assms by (simp add: int_tf_once_for_def int_dom_backward_once.branch_st_commute)
+    using assms by (simp add: int_dom_backward_once.branch_st_commute)
 next
   case (EA_AssumeNot b)
   then show ?thesis
-    using assms by (simp add: int_tf_once_for_def int_dom_backward_once.branch_st_commute)
+    using assms by (simp add: int_dom_backward_once.branch_st_commute)
 next
   case (EA_Ret ea p)
   then show ?thesis
   proof (cases ea)
     case None
     then show ?thesis using \<open>a = EA_Ret ea p\<close>
-      by (simp add: int_tf_once_for_def return_int_dom_def)
+      by (simp add: return_int_dom_def)
   next
     case (Some av)
     then show ?thesis using \<open>a = EA_Ret ea p\<close>
-      by (simp add: int_tf_once_for_def return_int_dom_def assign_int_dom_def)
+      by (simp add: return_int_dom_def assign_int_dom_def)
   qed
 next
   case (EA_Check c)
-  then show ?thesis by (simp add: int_tf_once_for_def event_int_dom_def)
+  then show ?thesis by (simp add: event_int_dom_def)
 qed
 
 lemma int_dom_enter_once_st_for_commute:
   "fun_of_resolved_st_q_for gs (int_dom_enter_once_st_for gs ci s) =
-   snd (tf_enter (int_tf_once_for gs) ci (fun_of_resolved_st_q_for gs s))"
-  by (simp add: int_tf_once_for_def enter_int_dom_for_def enter_D_def enter_frame_def
-                enter_pair_int_dom_for_def enter_pair_D_def
-                enter_frame_int_dom_for_def fun_of_resolved_st_q_for_enter_frame)
+   enter_int_dom_ci_for Refine_Once gs ci (fun_of_resolved_st_q_for gs s)"
+  by (simp add: enter_int_dom_ci_for_def enter_int_dom_for_def enter_binding_def
+                enter_frame_def enter_frame_int_dom_for_def fun_of_resolved_st_q_for_enter_frame)
+
 
 subsection \<open>Refine_Fixpoint\<close>
 
@@ -313,46 +313,46 @@ theorem int_tf_st_fixpoint_for_commute:
   assumes "live_resolved_st_q gs s"
   shows
     "fun_of_resolved_st_q_for gs (int_tf_st_fixpoint_for gs a s) =
-     apply_tf (int_tf_fixpoint_for gs) a (fun_of_resolved_st_q_for gs s)"
+     int_tf_abs Refine_Fixpoint a (fun_of_resolved_st_q_for gs s)"
 proof (cases a)
   case EA_Nop
-  then show ?thesis by (simp add: int_tf_fixpoint_for_def skip_int_dom_def)
+  then show ?thesis by (simp add: skip_int_dom_def)
 next
   case (EA_Assign x e)
-  then show ?thesis by (simp add: int_tf_fixpoint_for_def assign_int_dom_def)
+  then show ?thesis by (simp add: assign_int_dom_def)
 next
   case (EA_Special sc x)
-  then show ?thesis by (auto simp: int_tf_fixpoint_for_def split: special_call.splits)
+  then show ?thesis by (auto split: special_call.splits)
 next
   case (EA_Assume b)
   then show ?thesis
-    using assms by (simp add: int_tf_fixpoint_for_def branch_int_dom_fixpoint_st_commute)
+    using assms by (simp add: int_dom_backward_fixpoint.branch_st_commute)
 next
   case (EA_AssumeNot b)
   then show ?thesis
-    using assms by (simp add: int_tf_fixpoint_for_def branch_int_dom_fixpoint_st_commute)
+    using assms by (simp add: int_dom_backward_fixpoint.branch_st_commute)
 next
   case (EA_Ret ea p)
   then show ?thesis
   proof (cases ea)
     case None
     then show ?thesis using \<open>a = EA_Ret ea p\<close>
-      by (simp add: int_tf_fixpoint_for_def return_int_dom_def)
+      by (simp add: return_int_dom_def)
   next
     case (Some av)
     then show ?thesis using \<open>a = EA_Ret ea p\<close>
-      by (simp add: int_tf_fixpoint_for_def return_int_dom_def assign_int_dom_def)
+      by (simp add: return_int_dom_def assign_int_dom_def)
   qed
 next
   case (EA_Check c)
-  then show ?thesis by (simp add: int_tf_fixpoint_for_def event_int_dom_def)
+  then show ?thesis by (simp add: event_int_dom_def)
 qed
 
 lemma int_dom_enter_fixpoint_st_for_commute:
   "fun_of_resolved_st_q_for gs (int_dom_enter_fixpoint_st_for gs ci s) =
-   snd (tf_enter (int_tf_fixpoint_for gs) ci (fun_of_resolved_st_q_for gs s))"
-  by (simp add: int_tf_fixpoint_for_def enter_int_dom_for_def enter_D_def enter_frame_def
-                enter_pair_int_dom_for_def enter_pair_D_def
-                enter_frame_int_dom_for_def fun_of_resolved_st_q_for_enter_frame)
+   enter_int_dom_ci_for Refine_Fixpoint gs ci (fun_of_resolved_st_q_for gs s)"
+  by (simp add: enter_int_dom_ci_for_def enter_int_dom_for_def enter_binding_def
+                enter_frame_def enter_frame_int_dom_for_def fun_of_resolved_st_q_for_enter_frame)
+
 
 end

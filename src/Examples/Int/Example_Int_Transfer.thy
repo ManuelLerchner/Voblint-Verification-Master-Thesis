@@ -5,8 +5,8 @@ begin
 section \<open>Composite integer-domain transfer functions: examples\<close>
 
 text \<open>
-  \<open>test_gs\<close> classifies every variable as local, so \<open>tf_enter\<close> resets the
-  whole frame to \<open>top\<close> before binding formals -- the simplest possible
+  \<open>test_gs\<close> classifies every variable as local, so the entry operation resets
+  the whole frame to \<open>top\<close> before binding formals -- the simplest possible
   classifier for exercising \<open>enter_int_dom_for\<close>.
 \<close>
 
@@ -16,40 +16,40 @@ definition test_gs :: "vname => bool" where
 definition test_env_top :: "int_dom abs_state" where
   "test_env_top = (%_. top)"
 
-subsection \<open>Assignment and procedure entry through the registered bundle\<close>
+subsection \<open>Assignment and procedure entry through the registered operations\<close>
 
 text \<open>
-  \<open>apply_tf\<close> dispatches \<open>EA_Assign\<close> to \<open>tf_assign\<close>: reached through
-  \<open>int_tf_once_for\<close> rather than \<open>assign_int_dom\<close> directly, this confirms
-  the bundle's \<open>tf_assign\<close> field is wired to the right primitive, not just
-  that \<open>assign_int_dom\<close> is sound in isolation.
+  \<open>int_tf_abs\<close> dispatches \<open>EA_Assign\<close> to the mode's assignment operation:
+  reached through the dispatcher rather than through \<open>assign_int_dom\<close>
+  directly, this confirms the dispatch is wired to the right primitive, not
+  just that \<open>assign_int_dom\<close> is sound in isolation.
 \<close>
 
-lemma apply_tf_once_assign:
-  "apply_tf (int_tf_once_for test_gs) (EA_Assign (STR ''x'') (N 5)) test_env_top (STR ''x'') =
+lemma int_tf_abs_once_assign:
+  "int_tf_abs Refine_Once (EA_Assign (STR ''x'') (N 5)) test_env_top (STR ''x'') =
    int_dom_of_int 5"
-  unfolding int_tf_once_for_def by simp eval
+  by simp eval
 
 text \<open>
-  \<open>tf_enter\<close> resets the frame (every variable is local under \<open>test_gs\<close>)
-  and binds the single formal \<open>p\<close> to the actual's abstract value.
+  The entry operation resets the frame (every variable is local under
+  \<open>test_gs\<close>) and binds the single formal \<open>p\<close> to the actual's abstract value.
 \<close>
 
-lemma tf_enter_once_binds_formal:
-  "snd (tf_enter (int_tf_once_for test_gs)
+lemma enter_int_dom_ci_for_once_binds_formal:
+  "enter_int_dom_ci_for Refine_Once test_gs
      (call_info_of (CallEdge None [STR ''p''] [N 7]) (STR ''f''))
-     test_env_top) (STR ''p'') =
+     test_env_top (STR ''p'') =
    int_dom_of_int 7"
-  unfolding int_tf_once_for_def by simp eval
+  unfolding enter_int_dom_ci_for_def by simp eval
 
-subsection \<open>Guard refinement through the registered bundle, mode contrast\<close>
+subsection \<open>Guard refinement through the registered operations, mode contrast\<close>
 
 text \<open>
   The same \<open>x + 1 = 3 ==> x = 2\<close> witness as
   \<open>Example_Int_Backward.bfilter_int_dom_once_plus_eq_exact\<close>, in the two
-  halves that together say what a single \<open>apply_tf\<close> run would: the bundle's
-  \<open>tf_branch\<close> field is the mode's own \<open>branch_int_dom_*\<close>, and that branch's
-  filter narrows exactly. The dispatch half is an equation between
+  halves that together say what a single dispatched branch step would: the
+  dispatcher's branch case is the mode's own \<open>branch_int_dom_*\<close>, and that
+  branch's filter narrows exactly. The dispatch half is an equation between
   operations rather than a computation, because \<open>branch_int_dom_*\<close> collapses
   the lifted filter and \<open>bfilter_lifted\<close> normalizes against
   \<open>is_empty_state\<close>, which quantifies over an infinite \<open>vname\<close> and so has no
@@ -57,13 +57,13 @@ text \<open>
   \<open>branch_int_dom_*_st\<close> runs.
 \<close>
 
-lemma tf_branch_once_is_branch_int_dom:
-  "tf_branch (int_tf_once_for test_gs) = branch_int_dom_once"
-  by (simp add: int_tf_once_for_def)
+lemma branch_int_dom_for_once_is_branch_int_dom:
+  "branch_int_dom_for Refine_Once = branch_int_dom_once"
+  by simp
 
-lemma tf_branch_never_is_branch_int_dom:
-  "tf_branch (int_tf_never_for test_gs) = branch_int_dom_never"
-  by (simp add: int_tf_never_for_def)
+lemma branch_int_dom_for_never_is_branch_int_dom:
+  "branch_int_dom_for Refine_Never = branch_int_dom_never"
+  by simp
 
 lemma bfilter_once_assume_exact:
   "bfilter_int_dom_once (Eq (Plus (V (STR ''x'')) (N 1)) (N 3)) True
@@ -90,12 +90,12 @@ text \<open>
   (\"odd\") rather than the sharper \<open>congruence_of_int 3\<close> (\"exactly 3\").
 \<close>
 
-lemma apply_tf_once_special_min:
-  "apply_tf (int_tf_once_for test_gs)
+lemma int_tf_abs_once_special_min:
+  "int_tf_abs Refine_Once
      (EA_Special (Min (N 3) (N 5)) (STR ''x''))
      test_env_top (STR ''x'') =
    int_dom_sipc SPos (Ivl (Fin 3) (Fin 3)) POdd (mk_congruence 1 2)"
-  unfolding int_tf_once_for_def by simp eval
+  by simp eval
 
 end
 

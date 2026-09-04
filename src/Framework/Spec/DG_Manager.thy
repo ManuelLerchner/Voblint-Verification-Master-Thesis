@@ -1,5 +1,5 @@
 theory DG_Manager
-  imports DG_Constraint_Trees "Voblint_Solver.Strategy_Tree_Program"
+  imports DG_State "Voblint_Solver.Strategy_Tree_Program"
 begin
 
 section \<open>A manager capability interface for the D/G packed carrier\<close>
@@ -81,6 +81,12 @@ definition mk_dg_man :: "'dl::bot \<Rightarrow> ('v \<Rightarrow> 'k) \<Rightarr
        man_global = (\<lambda>v. dg_read_global (key v)),
        man_sideg = (\<lambda>v. dg_sideg (key v)) \<rparr>"
 
+lemma mk_dg_man_simps [simp]:
+  "man_local (mk_dg_man d key) = d"
+  "man_global (mk_dg_man d key) = (\<lambda>v. dg_read_global (key v))"
+  "man_sideg (mk_dg_man d key) = (\<lambda>v. dg_sideg (key v))"
+  by (simp_all add: mk_dg_man_def)
+
 type_synonym ('x,'k,'v,'dl,'dg) man_transfer =
   "('x,'k,'v,'dl,'dg) man \<Rightarrow> ('x,'k,('dl,'dg) dg_state,'dl) strategy_program"
 
@@ -92,6 +98,26 @@ text \<open>
 
 type_synonym ('x,'k,'v,'dl,'dg) man_combine_transfer =
   "('x,'k,'v,'dl,'dg) man \<Rightarrow> 'dl \<Rightarrow> ('x,'k,('dl,'dg) dg_state,'dl) strategy_program"
+
+text \<open>
+  A call answers a list of alternatives, and each alternative is a pair: the
+  value the caller resumes with once the callee returns, and the value the
+  callee starts from. This is Goblint's \<open>Spec.enter\<close>, whose result is a list of
+  such pairs. The two halves must be produced by one run of the transfer,
+  because an alternative's continuation is only meaningful against the callee
+  entry it was computed with; a program answering the pairs keeps them together
+  and leaves the caller free to consume them however the equation shape needs.
+
+  The result is not a \<open>'dl\<close>, so an entry transfer is not a
+  \<^type>\<open>man_transfer\<close>: it cannot be the answer of an equation on its own, and
+  whatever consumes it must reduce the list to one local value first.
+\<close>
+
+type_synonym 'dl enter_result = "'dl \<times> 'dl"
+
+type_synonym ('x,'k,'v,'dl,'dg) man_enter_transfer =
+  "('x,'k,'v,'dl,'dg) man
+   \<Rightarrow> ('x,'k,('dl,'dg) dg_state,'dl enter_result list) strategy_program"
 
 text \<open>
   \<open>man_with_local\<close> is the same environment with a different current local

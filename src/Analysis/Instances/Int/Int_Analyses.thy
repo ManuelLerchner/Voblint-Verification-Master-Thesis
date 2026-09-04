@@ -104,7 +104,7 @@ definition int_conf_eqs ::
        route_unit
        (\<lambda>ctx' src a. dg_spec_edge_tree (int_dom_spec mode empty_pred gs) a src (\<lambda>_. Analysis_Global ()))
        (routed_cmb_g (int_dom_spec mode empty_pred gs) (Analysis_Global ()) Activation_Seed
-          (static_resolve (compile_prog Pi ps)))
+          (static_resolve (compile_prog Pi ps)) (\<lambda>d. d = Bot))
        (routed_extra_g Activation_Seed (Analysis_Global ()))
        (compile_prog Pi ps) Bot (Lifted cinit_int_dom_st) Bot"
 
@@ -165,11 +165,15 @@ context
 begin
 
 interpretation int_unit: routed_domain_exec
-  gs empty_pred "int_tf_st_for mode gs" "int_dom_enter_st_for mode gs" "int_tf_for mode gs"
+  gs empty_pred "int_tf_st_for mode gs" "int_dom_enter_st_for mode gs"
+  skip_int_dom "assign_int_dom mode" "special_int_dom mode" "branch_int_dom_for mode"
+  body_int_dom "return_int_dom mode" "enter_int_dom_ci_for mode gs" event_int_dom
   "Analysis_Global ()" Activation_Seed route_unit route_unit static_resolve static_resolve
   by unfold_locales
-     (rule int_tf_st_for_commute, assumption, rule int_dom_enter_st_for_commute, rule exact, simp, simp,
+     (rule int_tf_st_for_commute[unfolded int_tf_abs_def], assumption,
+      rule int_dom_enter_st_for_commute, rule exact, simp, simp,
       simp add: static_resolve_def)
+
 
 lemmas int_pp_st_gen = int_unit.pp_st
 
@@ -210,7 +214,7 @@ theorem int_conf_pp_routed:
      (side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. Analysis_Global ()) route_unit
         (\<lambda>ctx' src a. dg_spec_edge_tree (int_dom_spec mode empty_pred gs) a src (\<lambda>_. Analysis_Global ()))
         (routed_cmb_g (int_dom_spec mode empty_pred gs) (Analysis_Global ()) Activation_Seed
-           (static_resolve (compile_prog Pi ps)))
+           (static_resolve (compile_prog Pi ps)) (\<lambda>d. d = Bot))
         (routed_extra_g Activation_Seed (Analysis_Global ()))
         (compile_prog Pi ps) Bot (Lifted cinit_int_dom_st) Bot)
      (cfg_exit (compile_prog Pi ps), ())
@@ -283,8 +287,9 @@ interpretation int_conf_routed: unit_routed_context "int_dom_spec mode empty_pre
     "compile_prog Pi ps" "Analysis_Global ()" Bot "Lifted cinit_int_dom_st" Bot
     "snd (int_conf_sol mode empty_pred gs Pi ps)" "fst (int_conf_sol mode empty_pred gs Pi ps)"
     "(cfg_exit (compile_prog Pi ps), ())" "int_conf_sg_st mode empty_pred gs Pi ps" Activation_Seed
-    "\<lambda>m. gamma_state_lift (map_lift (fun_of_resolved_st_q_for gs) m)"
-proof (unfold_locales, goal_cases FinE PP SgCov SgUncov Fwd FinC SeedKey CallFwd CombFwd EnterAgree)
+    "\<lambda>d. d = Bot" "\<lambda>m. gamma_state_lift (map_lift (fun_of_resolved_st_q_for gs) m)"
+proof (unfold_locales, goal_cases FinE PP SgCov SgUncov Fwd FinC SeedKey
+    IsBotBot IsBotSound IsBotMono EnterComplete CallFwd CombFwd EnterAgree)
   case FinE show ?case by (rule int_conf_fin)
 next
   case PP show ?case by (rule int_conf_pp_routed[OF solves exact])
@@ -299,6 +304,25 @@ next
   case FinC show ?case by (rule int_conf_finC)
 next
   case (SeedKey p ctx) show ?case by simp
+next
+  case IsBotBot show ?case by simp
+next
+  case (IsBotSound d gv) then show ?case by (simp add: int_dom_gamma_def)
+next
+  case (IsBotMono d d') then show ?case by (cases d; cases d'; simp)
+next
+  case (EnterComplete u ctx dst pars args p cont s)
+  let ?ci = "call_info_of (CallEdge dst pars args) p"
+  let ?caller = "locals (snd (int_conf_sol mode empty_pred gs Pi ps) (Inl (u, ctx)))"
+  have cov: "entry_pairs_cover
+      (\<lambda>d. int_dom_gamma gs d
+             (globs (snd (int_conf_sol mode empty_pred gs Pi ps) (Inr (Analysis_Global ())))))
+      s (call_enter gs (CallEdge dst pars args) s)
+      [(?caller, transfer_lift empty_pred (int_dom_enter_st_for mode gs ?ci) ?caller)]"
+    using int_dom_entry_cover_exec[OF exact EnterComplete(3), where ci = ?ci] by simp
+  show ?case
+    unfolding int_dom_spec_def dgs_enter_local_state_st_for_lifted
+    using enter_runs_local_enter_transfer enter_deps_local_enter_transfer cov by fastforce
 next
   case (CallFwd u ctx dst pars args p cont)
   show ?case using CallFwd(1,2) call_fwd_ok unfolding route_unit_def by blast
@@ -336,10 +360,12 @@ interpretation int_conf_adapter: dg_analysis_adapter "int_dom_spec mode empty_pr
     "compile_prog Pi ps" "Analysis_Global ()" route_unit Bot "Lifted cinit_int_dom_st" Bot
     "snd (int_conf_sol mode empty_pred gs Pi ps)" "fst (int_conf_sol mode empty_pred gs Pi ps)"
     "(cfg_exit (compile_prog Pi ps), ())" "int_conf_sg_st mode empty_pred gs Pi ps"
-    Activation_Seed "\<lambda>m. gamma_state_lift (map_lift (fun_of_resolved_st_q_for gs) m)" enterc_unit
+    Activation_Seed "\<lambda>d. d = Bot"
+    "\<lambda>m. gamma_state_lift (map_lift (fun_of_resolved_st_q_for gs) m)" enterc_unit
     "map_lift (fun_of_resolved_st_q_for gs)" int_classify_check
-proof (unfold_locales, goal_cases FinE PP SgCov SgUncov Fwd FinC SeedKey ResolveSound
-    RouteEnterc CallFwd CombFwd EnterAgree GammaRd ClProved ClRefuted)
+proof (unfold_locales, goal_cases FinE PP SgCov SgUncov Fwd FinC SeedKey
+    IsBotBot IsBotSound IsBotMono ResolveSound
+    EnterCover CombFwd EnterAgree GammaRd ClProved ClRefuted)
   case FinE show ?case by (rule int_conf_fin)
 next
   case PP show ?case by (rule int_conf_pp_routed[OF solves exact])
@@ -357,15 +383,29 @@ next
 next
   case (SeedKey p ctx) show ?case by simp
 next
+  case IsBotBot show ?case by simp
+next
+  case (IsBotSound d g') then show ?case by (simp add: int_dom_gamma_def)
+next
+  case (IsBotMono d d') then show ?case by (cases d; cases d'; simp)
+next
   case (ResolveSound u ctx dst pars args p cont s)
   thus ?case by (simp add: static_resolve_iff[OF int_conf_finC])
 next
-  case (RouteEnterc u ctx dst pars args p cont s)
-  show ?case by simp
-next
-  case (CallFwd u ctx dst pars args p cont)
+  case (EnterCover u ctx dst pars args p cont s)
+  let ?ci = "call_info_of (CallEdge dst pars args) p"
+  let ?caller = "locals (snd (int_conf_sol mode empty_pred gs Pi ps) (Inl (u, ctx)))"
+  have cov: "entry_pairs_cover
+      (\<lambda>d. int_dom_gamma gs d
+             (globs (snd (int_conf_sol mode empty_pred gs Pi ps) (Inr (Analysis_Global ())))))
+      s (call_enter gs (CallEdge dst pars args) s)
+      [(?caller, transfer_lift empty_pred (int_dom_enter_st_for mode gs ?ci) ?caller)]"
+    using int_dom_entry_cover_exec[OF exact EnterCover(3), where ci = ?ci] by simp
   show ?case
-    using CallFwd(1,2) call_fwd_ok unfolding route_unit_def by blast
+    unfolding int_dom_spec_def dgs_enter_local_state_st_for_lifted
+    using enter_runs_local_enter_transfer enter_deps_local_enter_transfer cov
+          call_fwd_ok[OF EnterCover(1,2)]
+    by (fastforce simp: entry_pairs_cover_def route_unit_def)
 next
   case (CombFwd cl c1 dst pars args p cont)
   show ?case using CombFwd(1,2) comb_fwd_ok by blast
@@ -550,7 +590,7 @@ definition ics_eqs ::
           (\<lambda>_. Call_String_Context.Global))
        (routed_cmb_g (int_dom_spec mode empty_pred gs)
           Call_String_Context.Global Call_String_Context.Seed
-          (static_resolve (compile_prog Pi ps)))
+          (static_resolve (compile_prog Pi ps)) (\<lambda>d. d = Bot))
        (routed_extra_g Call_String_Context.Seed Call_String_Context.Global)
        (compile_prog Pi ps) Bot (Lifted cinit_int_dom_st) Bot"
 
@@ -624,11 +664,15 @@ context
 begin
 
 interpretation int_cs: routed_domain_exec
-  gs empty_pred "int_tf_st_for mode gs" "int_dom_enter_st_for mode gs" "int_tf_for mode gs"
+  gs empty_pred "int_tf_st_for mode gs" "int_dom_enter_st_for mode gs"
+  skip_int_dom "assign_int_dom mode" "special_int_dom mode" "branch_int_dom_for mode"
+  body_int_dom "return_int_dom mode" "enter_int_dom_ci_for mode gs" event_int_dom
   Call_String_Context.Global Call_String_Context.Seed "cs_route k" "cs_route k"
   static_resolve static_resolve
   by unfold_locales
-     (rule int_tf_st_for_commute, assumption, rule int_dom_enter_st_for_commute, rule exact, simp,
+     (rule int_tf_st_for_commute[unfolded int_tf_abs_def], assumption,
+      rule int_dom_enter_st_for_commute, rule exact, simp,
+
       rule cs_route_indep_of_data, simp add: static_resolve_def)
 
 lemmas int_cs_pp_st_gen = int_cs.pp_st
@@ -667,7 +711,7 @@ theorem ics_pp_routed:
         (\<lambda>ctx' src a. dg_spec_edge_tree (int_dom_spec mode empty_pred gs) a src
            (\<lambda>_. Call_String_Context.Global))
         (routed_cmb_g (int_dom_spec mode empty_pred gs) Call_String_Context.Global
-           Call_String_Context.Seed (static_resolve (compile_prog Pi ps)))
+           Call_String_Context.Seed (static_resolve (compile_prog Pi ps)) (\<lambda>d. d = Bot))
         (routed_extra_g Call_String_Context.Seed Call_String_Context.Global)
         (compile_prog Pi ps) Bot (Lifted cinit_int_dom_st) Bot)
      (cfg_exit (compile_prog Pi ps), [])
@@ -871,7 +915,7 @@ definition int_conf_entry_eqs ::
        (int_conf_entry_route_gen mode gs empty_pred)
        (\<lambda>ctx' src a. dg_spec_edge_tree (int_dom_spec mode empty_pred gs) a src (\<lambda>_. Analysis_Global ()))
        (routed_cmb_g (int_dom_spec mode empty_pred gs) (Analysis_Global ()) Activation_Seed
-          (static_resolve (compile_prog Pi ps)))
+          (static_resolve (compile_prog Pi ps)) (\<lambda>d. d = Bot))
        (routed_extra_g Activation_Seed (Analysis_Global ()))
        (compile_prog Pi ps) Bot (Lifted cinit_int_dom_st) Bot"
 
@@ -932,8 +976,13 @@ context
 begin
 
 interpretation int_domain: routed_dg_domain_exec
-  gs empty_pred "int_tf_st_for mode gs" "int_dom_enter_st_for mode gs" "int_tf_for mode gs"
-  by unfold_locales (rule int_tf_st_for_commute, assumption, rule int_dom_enter_st_for_commute, rule exact)
+  gs empty_pred "int_tf_st_for mode gs" "int_dom_enter_st_for mode gs"
+  skip_int_dom "assign_int_dom mode" "special_int_dom mode" "branch_int_dom_for mode"
+  body_int_dom "return_int_dom mode" "enter_int_dom_ci_for mode gs" event_int_dom
+  by unfold_locales
+     (rule int_tf_st_for_commute[unfolded int_tf_abs_def], assumption,
+      rule int_dom_enter_st_for_commute, rule exact)
+
 
 lemma int_conf_entry_route_gen_eq_generic:
   "int_conf_entry_route_gen mode gs empty_pred u ctx d ca = int_domain.entry_exec_route_gen u ctx d ca"
@@ -965,12 +1014,16 @@ context
 begin
 
 interpretation int_es: routed_domain_exec
-  gs empty_pred "int_tf_st_for mode gs" "int_dom_enter_st_for mode gs" "int_tf_for mode gs"
+  gs empty_pred "int_tf_st_for mode gs" "int_dom_enter_st_for mode gs"
+  skip_int_dom "assign_int_dom mode" "special_int_dom mode" "branch_int_dom_for mode"
+  body_int_dom "return_int_dom mode" "enter_int_dom_ci_for mode gs" event_int_dom
   "Analysis_Global ()" Activation_Seed "int_conf_entry_route_gen mode gs empty_pred"
   formals_route_lifted_gen
   static_resolve static_resolve
   by unfold_locales
-     (rule int_tf_st_for_commute, assumption, rule int_dom_enter_st_for_commute, rule exact, simp,
+     (rule int_tf_st_for_commute[unfolded int_tf_abs_def], assumption,
+      rule int_dom_enter_st_for_commute, rule exact, simp,
+
       rule int_conf_entry_route_gen_commute[OF exact, symmetric],
       simp add: static_resolve_def)
 
@@ -1009,7 +1062,7 @@ theorem int_conf_entry_pp_routed:
         (int_conf_entry_route_gen mode gs empty_pred)
         (\<lambda>ctx' src a. dg_spec_edge_tree (int_dom_spec mode empty_pred gs) a src (\<lambda>_. Analysis_Global ()))
         (routed_cmb_g (int_dom_spec mode empty_pred gs) (Analysis_Global ()) Activation_Seed
-           (static_resolve (compile_prog Pi ps)))
+           (static_resolve (compile_prog Pi ps)) (\<lambda>d. d = Bot))
         (routed_extra_g Activation_Seed (Analysis_Global ()))
         (compile_prog Pi ps) Bot (Lifted cinit_int_dom_st) Bot)
      (cfg_exit (compile_prog Pi ps), [])
@@ -1054,9 +1107,9 @@ context
         \<Longrightarrow> (u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps)
         \<Longrightarrow> (FunctionEntry p,
                int_conf_entry_route_gen mode gs empty_pred u ctx
-                 (entered (int_dom_spec mode empty_pred gs) (Analysis_Global ())
-                    (snd (int_conf_entry_sol mode gs empty_pred Pi ps))
-                    (call_info_of (CallEdge dst pars args) p) (Inl (u, ctx)))
+                 (transfer_lift empty_pred
+                    (int_dom_enter_st_for mode gs (call_info_of (CallEdge dst pars args) p))
+                    (locals (snd (int_conf_entry_sol mode gs empty_pred Pi ps) (Inl (u, ctx)))))
                  (CallEdge dst pars args))
              \<in> fst (int_conf_entry_sol mode gs empty_pred Pi ps)"
     and comb_fwd_ok: "\<And>cl c1 dst pars args p cont.
@@ -1095,8 +1148,10 @@ interpretation int_conf_entry_routed: entry_state_routed_context "int_dom_spec m
     Bot "Lifted cinit_int_dom_st" Bot
     "snd (int_conf_entry_sol mode gs empty_pred Pi ps)" "fst (int_conf_entry_sol mode gs empty_pred Pi ps)"
     "(cfg_exit (compile_prog Pi ps), [])" "int_conf_entry_sg_st mode gs empty_pred Pi ps" Activation_Seed
-    "\<lambda>m. gamma_state_lift (map_lift (fun_of_resolved_st_q_for gs) m)"
-proof (unfold_locales, goal_cases FinE PP SgCov SgUncov Fwd SeedNe CallFwd CombFwd)
+    "\<lambda>d. d = Bot" "\<lambda>m. gamma_state_lift (map_lift (fun_of_resolved_st_q_for gs) m)"
+    "\<lambda>ci. transfer_lift empty_pred (int_dom_enter_st_for mode gs ci)"
+proof (unfold_locales, goal_cases FinE PP SgCov SgUncov Fwd SeedNe
+    IsBotBot IsBotSound IsBotMono EnterSingleton EnterSoundAt CallFwd CombFwd)
   case FinE show ?case by (rule int_conf_entry_fin)
 next
   case PP show ?case by (rule int_conf_entry_pp_routed[OF solves exact])
@@ -1109,6 +1164,32 @@ next
   case (Fwd u a v ctx) then show ?case by (rule fwd_ok)
 next
   case (SeedNe p ctx) show ?case by simp
+next
+  case IsBotBot show ?case by simp
+next
+  case (IsBotSound d gv) then show ?case by (simp add: int_dom_gamma_def)
+next
+  case (IsBotMono d d') then show ?case by (cases d; cases d'; simp)
+next
+  case (EnterSingleton u ctx dst pars args p cont)
+  let ?m = "mk_dg_man (locals (snd (int_conf_entry_sol mode gs empty_pred Pi ps) (Inl (u, ctx))))
+              (\<lambda>_. Analysis_Global ())"
+  let ?f = "\<lambda>d. [(d, transfer_lift empty_pred
+                       (int_dom_enter_st_for mode gs
+                          (call_info_of (CallEdge dst pars args) p)) d)]"
+  show ?case
+    unfolding int_dom_spec_def dgs_enter_local_state_st_for_lifted
+    using enter_runs_local_enter_transfer
+            [of ?f ?m "snd (int_conf_entry_sol mode gs empty_pred Pi ps)"]
+          enter_deps_local_enter_transfer
+            [of ?f ?m "snd (int_conf_entry_sol mode gs empty_pred Pi ps)"]
+    by simp blast
+next
+  case (EnterSoundAt u ctx dst pars args p cont s)
+  show ?case
+    using int_dom_entry_cover_exec[OF exact EnterSoundAt(3),
+        where ci = "call_info_of (CallEdge dst pars args) p"]
+    by (auto simp: entry_pairs_cover_def)
 next
   case (CallFwd u ctx dst pars args p cont)
   show ?case using CallFwd(1,2) by (rule call_fwd_ok)
@@ -1129,9 +1210,9 @@ text \<open>The trace-semantic context function the routed table induces: at a c
 
 definition int_conf_entry_enterc :: "cfg_node \<Rightarrow> int_dom list \<Rightarrow> store \<Rightarrow> int_dom list" where
   "int_conf_entry_enterc u ctx s =
-     route_enterc_of_sigma (int_dom_spec mode empty_pred gs)
-       (int_conf_entry_route_gen mode gs empty_pred) (snd (int_conf_entry_sol mode gs empty_pred Pi ps))
-       (Analysis_Global ()) (compile_prog Pi ps) u ctx s"
+     route_enterc_of_sigma (int_conf_entry_route_gen mode gs empty_pred)
+       (\<lambda>ci. transfer_lift empty_pred (int_dom_enter_st_for mode gs ci))
+       (snd (int_conf_entry_sol mode gs empty_pred Pi ps)) (compile_prog Pi ps) u ctx s"
 
 lemmas int_conf_entry_routed_context_call =
   int_conf_entry_routed.routed_context_call[folded int_conf_entry_enterc_def]
@@ -1150,10 +1231,12 @@ interpretation int_conf_entry_adapter: dg_analysis_adapter "int_dom_spec mode em
     Bot "Lifted cinit_int_dom_st" Bot
     "snd (int_conf_entry_sol mode gs empty_pred Pi ps)" "fst (int_conf_entry_sol mode gs empty_pred Pi ps)"
     "(cfg_exit (compile_prog Pi ps), [])" "int_conf_entry_sg_st mode gs empty_pred Pi ps"
-    Activation_Seed "\<lambda>m. gamma_state_lift (map_lift (fun_of_resolved_st_q_for gs) m)" int_conf_entry_enterc
+    Activation_Seed "\<lambda>d. d = Bot"
+    "\<lambda>m. gamma_state_lift (map_lift (fun_of_resolved_st_q_for gs) m)" int_conf_entry_enterc
     "map_lift (fun_of_resolved_st_q_for gs)" int_classify_check
-proof (unfold_locales, goal_cases FinE PP SgCov SgUncov Fwd FinC SeedKey ResolveSound
-    RouteEnterc CallFwd CombFwd EnterAgree GammaRd ClProved ClRefuted)
+proof (unfold_locales, goal_cases FinE PP SgCov SgUncov Fwd FinC SeedKey
+    IsBotBot IsBotSound IsBotMono ResolveSound
+    EnterCover CombFwd EnterAgree GammaRd ClProved ClRefuted)
   case FinE show ?case by (rule int_conf_entry_fin)
 next
   case PP show ?case by (rule int_conf_entry_pp_routed[OF solves exact])
@@ -1171,16 +1254,20 @@ next
 next
   case (SeedKey p ctx) show ?case by simp
 next
+  case IsBotBot show ?case by simp
+next
+  case (IsBotSound d g') then show ?case by (simp add: int_dom_gamma_def)
+next
+  case (IsBotMono d d') then show ?case by (cases d; cases d'; simp)
+next
   case (ResolveSound u ctx dst pars args p cont s)
   thus ?case by (simp add: static_resolve_iff[OF int_conf_entry_finC])
 next
-  case (RouteEnterc u ctx dst pars args p cont s)
-  show ?case unfolding int_conf_entry_enterc_def
-    by (rule route_enterc_of_sigma_agree[OF int_conf_entry_finC compile_prog_calls_source_unique
-                                              RouteEnterc(2)])
-next
-  case (CallFwd u ctx dst pars args p cont)
-  show ?case using CallFwd(1,2) by (rule call_fwd_ok)
+  case (EnterCover u ctx dst pars args p cont s)
+  show ?case
+    unfolding int_conf_entry_enterc_def
+    using int_conf_entry_routed.routed.routed_entry_cover[OF EnterCover(1,2,3)]
+    by (simp add: int_conf_entry_enterc_def)
 next
   case (CombFwd cl c1 dst pars args p cont)
   show ?case using CombFwd(1,2) by (rule comb_fwd_ok)

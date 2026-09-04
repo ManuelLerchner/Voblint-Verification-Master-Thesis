@@ -28,8 +28,8 @@ text \<open>
   call-site history, no dependence on the caller's abstract state, no sentinel encoding.
   \<open>enterc_unit\<close> is its trace-semantic counterpart, needed to instantiate
   \<^locale>\<open>routed_context_base_hetero\<close>'s \<open>enterc\<close> parameter. The two are definitionally
-  the same constant function, so \<open>route_enterc_agree\<close> holds independently of any call
-  edge, solved state, or concrete store.
+  the same constant function, so \<open>routed_entry_cover\<close>'s routing agreement holds
+  independently of any call edge, solved state, or concrete store.
 \<close>
 
 definition route_unit :: "pp \<Rightarrow> unit \<Rightarrow> 'D \<Rightarrow> call_action \<Rightarrow> unit" where
@@ -62,10 +62,12 @@ lemma routed_callee_ctx_is_unit:
 subsection \<open>The unit-routed-context locale\<close>
 
 text \<open>
-  Beyond \<^locale>\<open>dg_ctx_activation_base\<close>'s own five obligations, \<open>routed_context_base_hetero\<close>
-  asks for six more. Four collapse to free lemmas once \<open>route := route_unit\<close> and
-  \<open>enterc := enterc_unit\<close>:
-    - \<open>route_enterc_agree\<close> is \<open>route_unit_enterc_unit_agree\<close>, unconditionally;
+  Beyond \<^locale>\<open>dg_ctx_activation_base\<close>'s own obligations,
+  \<open>routed_context_base_hetero\<close> asks for more. Fixing \<open>route := route_unit\<close> and
+  \<open>enterc := enterc_unit\<close> settles one of them and leaves the rest genuine:
+    - \<open>routed_entry_cover\<close>'s route conjunct is \<open>route_unit_enterc_unit_agree\<close>,
+      unconditionally, so the obligation reduces to \<open>enter_complete\<close> --- the
+      specification's own entry must still produce a covering alternative;
     - \<open>seed_key_ne_gk0\<close> is untouched by the routing choice, so it stays a genuine
       per-\<open>seed_key\<close> obligation, not something \<open>route_unit\<close> discharges;
     - \<open>call_fwd\<close>/\<open>comb_fwd\<close> remain genuine per-instance obligations: each says the
@@ -81,7 +83,8 @@ text \<open>
 
 locale unit_routed_context =
   dg_ctx_activation_base S gammaDG gs g gk0 route_unit
-    "routed_cmb_g S gk0 seed_key (static_resolve g)" "routed_extra_g seed_key gk0"
+    "routed_cmb_g S gk0 seed_key (static_resolve g) is_bot"
+    "routed_extra_g seed_key gk0"
     bot0 s0d s0g sigma vars x0 sg gammaM
   for S :: "(pp \<times> unit, 'k, unit, 'D::bounded_semilattice_sup_bot,
               'G::bounded_semilattice_sup_bot) dg_spec"
@@ -93,9 +96,25 @@ locale unit_routed_context =
     and vars :: "(pp \<times> unit) set" and x0 :: "pp \<times> unit"
     and sg :: "pp \<times> unit + 'k \<Rightarrow> 'M"
     and seed_key :: "pp \<Rightarrow> unit \<Rightarrow> 'k"
+    and is_bot :: "'D \<Rightarrow> bool"
     and gammaM :: "'M \<Rightarrow> store set" +
   assumes finC[intro,simp]: "finite (calls g)"
     and seed_key_ne_gk0[simp]: "\<And>p ctx. seed_key p ctx \<noteq> gk0"
+    and is_bot_bot[simp]: "is_bot bot"
+    and is_bot_sound: "\<And>d gv. is_bot d \<Longrightarrow> gammaDG d gv = {}"
+    and is_bot_mono: "\<And>d d'. \<not> is_bot d \<Longrightarrow> d \<le> d' \<Longrightarrow> \<not> is_bot d'"
+    and enter_complete:
+    "\<And>u ctx dst pars args p cont s.
+       (u, ctx) \<in> vars
+       \<Longrightarrow> (u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g
+       \<Longrightarrow> s \<in> gammaDG (locals (sigma (Inl (u, ctx)))) (globs (sigma (Inr gk0)))
+       \<Longrightarrow> \<exists>pairs pub deps.
+             enter_runs (dgs_enter S (call_info_of (CallEdge dst pars args) p))
+               (mk_dg_man (locals (sigma (Inl (u, ctx)))) (\<lambda>_. gk0)) sigma pairs pub
+           \<and> enter_deps (dgs_enter S (call_info_of (CallEdge dst pars args) p))
+               (mk_dg_man (locals (sigma (Inl (u, ctx)))) (\<lambda>_. gk0)) sigma pairs deps
+           \<and> entry_pairs_cover (\<lambda>d. gammaDG d (globs (sigma (Inr gk0)))) s
+               (call_enter gs (CallEdge dst pars args) s) pairs"
     and call_fwd:
     "\<And>u ctx dst pars args p cont.
        (u, ctx) \<in> vars
@@ -112,17 +131,26 @@ locale unit_routed_context =
        \<Longrightarrow> es = call_enter gs (CallEdge dst pars args) s"
 begin
 
-text \<open>The two routing obligations are discharged without looking at the state the
-  routing function is applied to: \<open>route_unit\<close> and \<open>enterc_unit\<close> are the same constant
-  function, so it makes no difference that the routed generator now applies \<open>route\<close>
-  to the entered value \<^const>\<open>entered\<close> rather than to the raw caller value.\<close>
+text \<open>
+  The two routing obligations are discharged without looking at the value the
+  routing function is applied to: \<open>route_unit\<close> and \<open>enterc_unit\<close> are the same
+  constant function, so it makes no difference which alternative's entry value
+  the routed generator hands \<open>route\<close>. That is also why monovariance survives a
+  call answering several alternatives: they all route to \<open>()\<close>.
+\<close>
 
 sublocale routed: routed_context_base_hetero S gammaDG gs g gk0 route_unit
-  bot0 s0d s0g sigma vars x0 sg seed_key "static_resolve g" gammaM enterc_unit
+  bot0 s0d s0g sigma vars x0 sg seed_key "static_resolve g" is_bot gammaM enterc_unit
 proof unfold_locales
   show "finite (calls g)" by (rule finC)
 next
   show "\<And>p ctx. seed_key p ctx \<noteq> gk0" by (rule seed_key_ne_gk0)
+next
+  show "is_bot bot" by (rule is_bot_bot)
+next
+  show "\<And>d gv. is_bot d \<Longrightarrow> gammaDG d gv = {}" by (rule is_bot_sound)
+next
+  show "\<And>d d'. \<not> is_bot d \<Longrightarrow> d \<le> d' \<Longrightarrow> \<not> is_bot d'" by (rule is_bot_mono)
 next
   fix u ctx dst pars args p cont s
   assume "(u, ctx) \<in> vars"
@@ -133,22 +161,39 @@ next
     by (simp add: static_resolve_iff[OF finC])
 next
   fix u ctx dst pars args p cont s
-  show "route_unit u ctx (entered S gk0 sigma
-            (call_info_of (CallEdge dst pars args) p) (Inl (u, ctx)))
-          (CallEdge dst pars args)
-          = enterc_unit u ctx (call_enter gs (CallEdge dst pars args) s)"
+  assume covV: "(u, ctx) \<in> vars"
+    and ce: "(u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
+    and sin: "s \<in> gammaDG (locals (sigma (Inl (u, ctx)))) (globs (sigma (Inr gk0)))"
+  obtain pairs pub deps
+    where R: "enter_runs (dgs_enter S (call_info_of (CallEdge dst pars args) p))
+                (mk_dg_man (locals (sigma (Inl (u, ctx)))) (\<lambda>_. gk0)) sigma pairs pub"
+      and D: "enter_deps (dgs_enter S (call_info_of (CallEdge dst pars args) p))
+                (mk_dg_man (locals (sigma (Inl (u, ctx)))) (\<lambda>_. gk0)) sigma pairs deps"
+      and P: "entry_pairs_cover (\<lambda>d. gammaDG d (globs (sigma (Inr gk0)))) s
+                (call_enter gs (CallEdge dst pars args) s) pairs"
+    using enter_complete[OF covV ce sin] by blast
+  from P obtain cont' entry
+    where mem: "(cont', entry) \<in> set pairs"
+      and ccov: "s \<in> gammaDG cont' (globs (sigma (Inr gk0)))"
+      and ecov: "call_enter gs (CallEdge dst pars args) s
+                   \<in> gammaDG entry (globs (sigma (Inr gk0)))"
+    by (rule entry_pairs_coverE)
+  have req: "route_unit u ctx entry (CallEdge dst pars args)
+               = enterc_unit u ctx (call_enter gs (CallEdge dst pars args) s)"
     by (rule route_unit_enterc_unit_agree)
-next
-  fix u ctx dst pars args p cont
-  assume "(u, ctx) \<in> vars"
-    and "(u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
-  then have "(FunctionEntry p, ()) \<in> vars" by (rule call_fwd)
-  then show "(FunctionEntry p,
-                route_unit u ctx (entered S gk0 sigma
-                    (call_info_of (CallEdge dst pars args) p) (Inl (u, ctx)))
-                  (CallEdge dst pars args))
-               \<in> vars"
-    by simp
+  show "\<exists>pairs pub deps cont' entry.
+             enter_runs (dgs_enter S (call_info_of (CallEdge dst pars args) p))
+               (mk_dg_man (locals (sigma (Inl (u, ctx)))) (\<lambda>_. gk0)) sigma pairs pub
+           \<and> enter_deps (dgs_enter S (call_info_of (CallEdge dst pars args) p))
+               (mk_dg_man (locals (sigma (Inl (u, ctx)))) (\<lambda>_. gk0)) sigma pairs deps
+           \<and> (cont', entry) \<in> set pairs
+           \<and> s \<in> gammaDG cont' (globs (sigma (Inr gk0)))
+           \<and> call_enter gs (CallEdge dst pars args) s
+               \<in> gammaDG entry (globs (sigma (Inr gk0)))
+           \<and> route_unit u ctx entry (CallEdge dst pars args)
+               = enterc_unit u ctx (call_enter gs (CallEdge dst pars args) s)
+           \<and> (FunctionEntry p, route_unit u ctx entry (CallEdge dst pars args)) \<in> vars"
+    using R D mem ccov ecov req call_fwd[OF covV ce] by simp blast
 next
   fix cl c1 dst pars args p cont
   assume "(cl, c1) \<in> vars"

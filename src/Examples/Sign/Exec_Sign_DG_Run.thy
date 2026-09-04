@@ -145,25 +145,33 @@ text \<open>Interpret \<^locale>\<open>local_state_dg_exec_analysis\<close> once
 
 interpretation sign_ex_reg:
   local_state_dg_exec_analysis sign_ex_gs
-    "sign_tf_for sign_ex_gs" "sign_tf_st_for sign_ex_gs" "sign_enter_st_for sign_ex_gs"
+    skip_sign assign_sign special_sign branch_sign body_sign return_sign
+    "enter_sign_ci_for sign_ex_gs" event_sign
+    "sign_tf_st_for sign_ex_gs" "sign_enter_st_for sign_ex_gs"
     "resolved_st_q_is_bot_for (declared_global_vars sign_ex_prog)"
     "TD_side_always_join_Interp.solve" "TD_side_always_join_Interp.solve_c"
 proof -
-  interpret sign_ex_transfer: sound_transfer_for sign_ex_gs "sign_tf_for sign_ex_gs"
+  interpret sign_ex_transfer: sound_transfer_for sign_ex_gs
+      skip_sign assign_sign special_sign branch_sign body_sign return_sign
+      "enter_sign_ci_for sign_ex_gs" event_sign
     by (rule sign_is_sound_transfer_for)
-  show "local_state_dg_exec_analysis sign_ex_gs (sign_tf_for sign_ex_gs) (sign_tf_st_for sign_ex_gs)
+  show "local_state_dg_exec_analysis sign_ex_gs
+          skip_sign assign_sign special_sign branch_sign body_sign return_sign
+          (enter_sign_ci_for sign_ex_gs) event_sign
+          (sign_tf_st_for sign_ex_gs)
           (sign_enter_st_for sign_ex_gs) (resolved_st_q_is_bot_for (declared_global_vars sign_ex_prog))
           TD_side_always_join_Interp.solve TD_side_always_join_Interp.solve_c"
     by unfold_locales
        (rule dgEx_reserved
              sign_ex_transfer.tf_sound_assign_for sign_ex_transfer.tf_sound_special_for
              sign_ex_transfer.tf_sound_branch_for
-             sign_ex_transfer.tf_sound_enter_entry_for sign_ex_transfer.tf_sound_combine_env_for
-             sign_tf_st_for_commute[folded fun_of_exec_dg_st_for_def]
+             sign_ex_transfer.tf_sound_enter_entry_for
+             sign_tf_st_for_commute[unfolded sign_tf_abs_def, folded fun_of_exec_dg_st_for_def]
              sign_enter_st_for_commute[folded fun_of_exec_dg_st_for_def]
              dgEx_is_bot_exact
              TD_side_always_join_Interp.part_post_solution_of_solve_c
         | assumption)+
+
 qed
 
 text \<open>The initial stores are covered by the registered concretization at the

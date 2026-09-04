@@ -1,5 +1,5 @@
 theory DG_Constraint_Trees
-  imports DG_State
+  imports DG_State "Voblint_Solver.Strategy_Tree_Fold" "Voblint_CFG.CFG_Def"
 begin
 
 context

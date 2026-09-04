@@ -125,9 +125,13 @@ definition nest_gamma :: "ivl exec_dg_st lifted \<Rightarrow> ivl exec_dg_st lif
   "nest_gamma d g = gamma_state_lift (map_lift (fun_of_resolved_st_q_for nest_gs) d)"
 
 interpretation nest_domain: routed_dg_domain_exec
-  nest_gs nest_empty_pred "ivl_tf_st_for nest_gs" "ivl_enter_st_for nest_gs" "ivl_tf_for nest_gs"
+  nest_gs nest_empty_pred "ivl_tf_st_for nest_gs" "ivl_enter_st_for nest_gs"
+  skip_ivl assign_ivl special_ivl branch_ivl body_ivl return_ivl
+  "enter_ivl_ci_for nest_gs" event_ivl
   by unfold_locales
-     (rule ivl_tf_st_for_commute, assumption, rule ivl_enter_st_for_commute, rule nest_exact)
+     (rule ivl_tf_st_for_commute[unfolded ivl_tf_abs_def], assumption,
+      rule ivl_enter_st_for_commute, rule nest_exact)
+
 
 lemma nest_gamma_eq: "nest_gamma = nest_domain.gamma_exec"
   by (intro ext) (simp add: nest_gamma_def nest_domain.gamma_exec_def gamma_dg_local_state_def)
@@ -148,7 +152,7 @@ definition nest_1_eqs ::
   "nest_1_eqs =
      side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. Global) (cs_route 1)
       (\<lambda>ctx' src a. dg_spec_edge_tree nest_S_st a src (\<lambda>_. Global))
-      (routed_cmb_g nest_S_st Global Seed (static_resolve nest_cfg))
+      (routed_cmb_g nest_S_st Global Seed (static_resolve nest_cfg) (\<lambda>d. d = Bot))
       (routed_extra_g Seed Global)
        nest_cfg Bot (Lifted cinit_ivl_st) Bot"
 
@@ -275,9 +279,11 @@ text \<open>The call-string routing policy instantiated at \<open>k = 1\<close>.
 interpretation nest_1_cs: call_string_routed_context
     nest_S_st nest_gamma nest_gs nest_pi nest_procs 1 Bot "Lifted cinit_ivl_st" Bot
     "snd nest_1_sol" "fst nest_1_sol" "(cfg_exit nest_cfg, [])" nest_1_sg
+    "\<lambda>d. d = Bot"
     "\<lambda>m. gamma_state_lift (map_lift (fun_of_resolved_st_q_for nest_gs) m)"
 proof (unfold_locales, unfold nest_cfg_compile,
-       goal_cases FinE PP SgCov SgUncov Fwd CallFwd CombFwd)
+       goal_cases FinE PP SgCov SgUncov Fwd IsBotBot IsBotSound IsBotMono
+       EnterComplete CallFwd CombFwd)
   case FinE
   show ?case by (rule nest_finE)
 next
@@ -292,6 +298,26 @@ next
 next
   case (Fwd u a v c)
   show ?case using Fwd by (rule nest_fwd_closed_1)
+next
+  case IsBotBot show ?case by simp
+next
+  case (IsBotSound d gv) then show ?case by (simp add: nest_gamma_eq)
+next
+  case (IsBotMono d d') then show ?case by (cases d; cases d'; simp)
+next
+  case (EnterComplete u ctx dst pars args p cont s)
+  let ?ci = "call_info_of (CallEdge dst pars args) p"
+  let ?caller = "locals (snd nest_1_sol (Inl (u, ctx)))"
+  have cov: "entry_pairs_cover (\<lambda>d. nest_gamma d (globs (snd nest_1_sol (Inr Global)))) s
+      (call_enter nest_gs (CallEdge dst pars args) s)
+      [(?caller, transfer_lift nest_empty_pred (ivl_enter_st_for nest_gs ?ci) ?caller)]"
+    using nest_domain.entry_pairs_cover_st
+            [OF ivl_is_sound_transfer_for, where ci = ?ci and d = ?caller]
+      EnterComplete(3)
+    by (simp add: nest_gamma_eq nest_domain.gamma_exec_def)
+  show ?case
+    unfolding nest_S_st_def dgs_enter_local_state_st_for_lifted
+    using enter_runs_local_enter_transfer enter_deps_local_enter_transfer cov by fastforce
 next
   case (CallFwd u ctx dst pars args p cont)
   note covU = CallFwd(1) and ce = CallFwd(2)
@@ -476,7 +502,7 @@ definition nestg_1_eqs ::
             (ivl_tf_st_for nestg_gs) (ivl_enter_st_for nestg_gs)) a src (\<lambda>_. Global))
       (routed_cmb_g (local_state_dg_spec_st_for_lifted nestg_gs nestg_empty_pred
                        (ivl_tf_st_for nestg_gs) (ivl_enter_st_for nestg_gs)) Global Seed
-         (static_resolve nestg_cfg))
+         (static_resolve nestg_cfg) (\<lambda>d. d = Bot))
       (routed_extra_g Seed Global)
        nestg_cfg
        Bot (Lifted cinit_ivl_st) Bot"

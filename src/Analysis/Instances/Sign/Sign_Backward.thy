@@ -469,7 +469,7 @@ text \<open>
   abstract state on the branch selected by its boolean polarity argument
   (@{text True} for the then-branch, @{text False} for the else-branch),
   delegating to the generic @{text bfilter} proved sound in @{locale backward_domain}.
-  This is the domain's @{text tf_branch} instance directly (@{text Sign_Transfer.thy}),
+  This is what the domain's registered branch operation delegates to,
   matching Goblint's single polarity-parametrized @{text Spec.branch}.
 \<close>
 
@@ -478,7 +478,7 @@ lemma bfilter_sign_sound:
   using sign_backward_domain.bfilter_sound by simp
 
 text \<open>
-  @{const branch_sign} is Sign's \<open>tf_branch\<close> instance: a forward
+  @{const branch_sign} is Sign's registered branch operation: a forward
   @{const sign_tobool} feasibility check ahead of @{const bfilter_sign},
   matching Goblint's \<open>Base.branch\<close> structure. Proved once, generically, as
   @{thm [source] backward_domain.branch_sound}.

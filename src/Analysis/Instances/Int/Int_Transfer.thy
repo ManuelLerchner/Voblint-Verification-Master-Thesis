@@ -1,22 +1,23 @@
 theory Int_Transfer
   imports Int_Backward Int_Warrowing Sign_Special Parity_Special
-    "Voblint_Framework.Transfer_Interface" "Voblint_VIMP.VIMP_Globals"
+    "Voblint_Framework.DG_Local_State_Spec" "Voblint_VIMP.VIMP_Globals"
 begin
 
 section \<open>Composite integer-domain transfer functions\<close>
 
 text \<open>
   Registers the composite Sign/Interval/Parity/Congruence domain against the
-  generic transfer-function interface (\<^locale>\<open>sound_transfer_for\<close>,
-  \<^typ>\<open>'a domain_transfer\<close>), mirroring \<open>ivl_tf_for\<close>/\<open>sign_tf_for\<close>. Every
-  refinement mode gets its own registered bundle rather than a single
-  mode-parameterised one: \<open>Int_Backward\<close> already split \<open>Refine_Fixpoint\<close>
-  onto the weaker \<^locale>\<open>backward_domain\<close> locale (no monotonicity theorem
-  for \<open>refine_fix\<close>), and keeping that split visible at the
-  transfer-registration layer -- three named bundles, three named soundness
-  interpretations, a monotonicity bonus lemma for only two of them -- avoids
-  hiding the asymmetry behind a single mode argument.
+  framework's transfer contract (\<^locale>\<open>sound_transfer_for\<close>), mirroring
+  Interval's and Sign's own registrations. One registration covers all three
+  refinement modes, since every operation already takes \<open>mode\<close> as an argument
+  and \<open>branch_int_dom_for\<close> dispatches the one whose name does not.
+
+  What stays asymmetric is monotonicity: \<open>Int_Backward\<close> put
+  \<open>Refine_Fixpoint\<close> on the weaker \<^locale>\<open>backward_domain\<close> locale (no
+  monotonicity theorem for \<open>refine_fix\<close>), so only \<open>Never\<close> and \<open>Once\<close>
+  get a monotonicity lemma below.
 \<close>
+
 
 subsection \<open>Guard refinement\<close>
 
@@ -38,8 +39,8 @@ lemma bfilter_int_dom_fixpoint_sound:
   using int_dom_backward_fixpoint.bfilter_sound by simp
 
 text \<open>
-  \<open>branch_int_dom_*\<close> is the composite domain's Goblint-aligned \<open>tf_branch\<close>
-  instance per mode: a forward \<open>int_dom_tobool\<close> feasibility check ahead of
+  \<open>branch_int_dom_*\<close> is the composite domain's Goblint-aligned branch
+  operation per mode: a forward \<open>int_dom_tobool\<close> feasibility check ahead of
   \<open>bfilter_int_dom_*\<close>, proved once generically as
   @{thm [source] backward_domain.branch_sound}.
 \<close>
@@ -331,7 +332,7 @@ definition enter_frame_int_dom_for ::
 definition enter_int_dom_for ::
     "refine_mode => (vname => bool) => vname list => exp list =>
       int_dom abs_state => int_dom abs_state" where
-  "enter_int_dom_for mode gs = enter_D gs (top :: int_dom) (aval_int_dom mode)"
+  "enter_int_dom_for mode gs = enter_binding gs (top :: int_dom) (aval_int_dom mode)"
 
 lemma enter_frame_int_dom_for_sound:
   assumes gs: "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
@@ -345,15 +346,15 @@ lemma enter_int_dom_for_sound:
   assumes gs: "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
   shows "bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state cls s)
            \<in> \<lbrakk>enter_int_dom_for mode cls xs es \<sigma>\<rbrakk>"
-  unfolding enter_int_dom_for_def
-proof (rule enter_D_sound[OF gs])
+  unfolding enter_int_dom_for_def enter_binding_concrete[symmetric]
+proof (rule enter_binding_sound[OF gs])
   show "gamma (top :: int_dom) = UNIV" by (simp add: gamma_int_dom_top)
 next
+  fix e
   have V: "\<forall>y. s y \<in> gamma_int_dom (\<sigma> y)"
     using gs unfolding gamma_state_def by simp
-  show "list_all2 (\<lambda>v a. v \<in> gamma a)
-          (map (\<lambda>e. aval e s) es) (map (\<lambda>e. aval_int_dom mode e \<sigma>) es)"
-    using V by (simp add: list_all2_conv_all_nth aval_int_dom_sound)
+  show "aval e s \<in> gamma (aval_int_dom mode e \<sigma>)"
+    using V by (simp add: aval_int_dom_sound)
 qed
 
 lemma enter_frame_int_dom_for_mono:
@@ -365,115 +366,75 @@ lemma enter_int_dom_for_mono:
   assumes "mode ~= Refine_Fixpoint" and "s1 <= s2"
   shows "enter_int_dom_for mode gs xs es s1 <= enter_int_dom_for mode gs xs es s2"
   unfolding enter_int_dom_for_def
-proof (rule enter_D_mono[OF assms(2)])
-  show "list_all2 (<=) (map (\<lambda>e. aval_int_dom mode e s1) es) (map (\<lambda>e. aval_int_dom mode e s2) es)"
-    using assms by (simp add: list_all2_conv_all_nth aval_int_dom_mono)
+proof (rule enter_binding_mono[OF assms(2)])
+  fix e
+  show "aval_int_dom mode e s1 <= aval_int_dom mode e s2"
+    using assms by (simp add: aval_int_dom_mono)
 qed
 
-definition enter_pair_int_dom_for ::
-    "refine_mode => (vname => bool) => call_info => int_dom abs_state
-     => int_dom abs_state \<times> int_dom abs_state" where
-  "enter_pair_int_dom_for mode gs = enter_pair_D gs (top :: int_dom) (aval_int_dom mode)"
+definition enter_int_dom_ci_for ::
+    "refine_mode => (vname => bool) => call_info => int_dom abs_state => int_dom abs_state" where
+  "enter_int_dom_ci_for mode gs ci = enter_int_dom_for mode gs (ci_formals ci) (ci_args ci)"
 
-lemma enter_pair_int_dom_for_sound:
+lemma enter_int_dom_ci_for_sound:
   assumes gs: "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
-  shows "s \<in> \<lbrakk>fst (enter_pair_int_dom_for mode cls ci \<sigma>)\<rbrakk>"
-    and "bind_formals (ci_formals ci) (map (\<lambda>e. aval e s) (ci_args ci)) (enter_state cls s)
-           \<in> \<lbrakk>snd (enter_pair_int_dom_for mode cls ci \<sigma>)\<rbrakk>"
-  unfolding enter_pair_int_dom_for_def
-proof -
-  show "s \<in> \<lbrakk>fst (enter_pair_D cls (top :: int_dom) (aval_int_dom mode) ci \<sigma>)\<rbrakk>"
-    using gs by (simp add: enter_pair_D_def)
-next
-  show "bind_formals (ci_formals ci) (map (\<lambda>e. aval e s) (ci_args ci)) (enter_state cls s)
-          \<in> \<lbrakk>snd (enter_pair_D cls (top :: int_dom) (aval_int_dom mode) ci \<sigma>)\<rbrakk>"
-    unfolding enter_pair_D_def snd_conv
-    apply (fold enter_int_dom_for_def)
-    by (rule enter_int_dom_for_sound[OF gs])
-qed
+  shows "bind_formals (ci_formals ci) (map (\<lambda>e. aval e s) (ci_args ci)) (enter_state cls s)
+           \<in> \<lbrakk>enter_int_dom_ci_for mode cls ci \<sigma>\<rbrakk>"
+  using enter_int_dom_for_sound[OF gs, where xs = "ci_formals ci" and es = "ci_args ci"
+      and mode = mode]
+  by (simp add: enter_int_dom_ci_for_def)
 
-subsection \<open>Registered transfer bundles, one per refinement mode\<close>
+lemma enter_int_dom_ci_for_mono:
+  assumes "mode ~= Refine_Fixpoint" and "s1 <= s2"
+  shows "enter_int_dom_ci_for mode gs ci s1 <= enter_int_dom_ci_for mode gs ci s2"
+  using enter_int_dom_for_mono[OF assms, of gs "ci_formals ci" "ci_args ci"]
+  by (simp add: enter_int_dom_ci_for_def)
 
-definition int_tf_never_for :: "(vname => bool) => int_dom domain_transfer" where
-  "int_tf_never_for gs = (| tf_assign  = assign_int_dom Refine_Never,
-                            tf_special = special_int_dom Refine_Never,
-                            tf_branch  = branch_int_dom_never,
-                            tf_skip    = skip_int_dom,
-                            tf_body    = body_int_dom,
-                            tf_return  = return_int_dom Refine_Never,
-                            tf_enter   = enter_pair_int_dom_for Refine_Never gs,
-                            tf_event   = event_int_dom,
-                            tf_combine_env = (\<lambda>_. combine_env gs) |)"
+subsection \<open>Registered transfer operations, one set per refinement mode\<close>
 
-definition int_tf_once_for :: "(vname => bool) => int_dom domain_transfer" where
-  "int_tf_once_for gs = (| tf_assign  = assign_int_dom Refine_Once,
-                           tf_special = special_int_dom Refine_Once,
-                           tf_branch  = branch_int_dom_once,
-                           tf_skip    = skip_int_dom,
-                           tf_body    = body_int_dom,
-                           tf_return  = return_int_dom Refine_Once,
-                           tf_enter   = enter_pair_int_dom_for Refine_Once gs,
-                           tf_event   = event_int_dom,
-                           tf_combine_env = (\<lambda>_. combine_env gs) |)"
+text \<open>The branch operation is the only one whose name differs per mode, so it gets
+  its own dispatcher; everything else already takes \<open>mode\<close> as an argument.\<close>
 
-definition int_tf_fixpoint_for :: "(vname => bool) => int_dom domain_transfer" where
-  "int_tf_fixpoint_for gs = (| tf_assign  = assign_int_dom Refine_Fixpoint,
-                               tf_special = special_int_dom Refine_Fixpoint,
-                               tf_branch  = branch_int_dom_fixpoint,
-                               tf_skip    = skip_int_dom,
-                               tf_body    = body_int_dom,
-                               tf_return  = return_int_dom Refine_Fixpoint,
-                               tf_enter   = enter_pair_int_dom_for Refine_Fixpoint gs,
-                               tf_event   = event_int_dom,
-                               tf_combine_env = (\<lambda>_. combine_env gs) |)"
+fun branch_int_dom_for ::
+    "refine_mode => exp => bool => int_dom abs_state => int_dom abs_state" where
+  "branch_int_dom_for Refine_Never = branch_int_dom_never"
+| "branch_int_dom_for Refine_Once = branch_int_dom_once"
+| "branch_int_dom_for Refine_Fixpoint = branch_int_dom_fixpoint"
 
-lemma int_never_is_sound_transfer_for: "sound_transfer_for gs (int_tf_never_for gs)"
-  unfolding int_tf_never_for_def
+lemma int_is_sound_transfer_for:
+  "sound_transfer_for gs skip_int_dom (assign_int_dom mode) (special_int_dom mode)
+     (branch_int_dom_for mode) body_int_dom (return_int_dom mode)
+     (enter_int_dom_ci_for mode gs) event_int_dom"
   apply unfold_locales
   subgoal by (simp add: assign_int_dom_sound)
   subgoal by (simp add: special_int_dom_sound)
-  subgoal by (simp add: branch_int_dom_never_sound)
+  subgoal by (cases mode)
+       (simp_all add: branch_int_dom_never_sound branch_int_dom_once_sound
+          branch_int_dom_fixpoint_sound)
   subgoal by (simp add: skip_int_dom_sound)
   subgoal by (simp add: body_int_dom_sound)
   subgoal by (simp add: return_int_dom_sound)
-  subgoal by (simp add: enter_pair_int_dom_for_sound)
+  subgoal by (simp add: enter_int_dom_ci_for_sound)
   subgoal by (simp add: event_int_dom_sound)
-  subgoal by (simp add: enter_pair_int_dom_for_sound)
-  subgoal by (simp add: combine_env_sound)
   done
 
-lemma int_once_is_sound_transfer_for: "sound_transfer_for gs (int_tf_once_for gs)"
-  unfolding int_tf_once_for_def
-  apply unfold_locales
-  subgoal by (simp add: assign_int_dom_sound)
-  subgoal by (simp add: special_int_dom_sound)
-  subgoal by (simp add: branch_int_dom_once_sound)
-  subgoal by (simp add: skip_int_dom_sound)
-  subgoal by (simp add: body_int_dom_sound)
-  subgoal by (simp add: return_int_dom_sound)
-  subgoal by (simp add: enter_pair_int_dom_for_sound)
-  subgoal by (simp add: event_int_dom_sound)
-  subgoal by (simp add: enter_pair_int_dom_for_sound)
-  subgoal by (simp add: combine_env_sound)
-  done
+definition int_tf_abs ::
+    "refine_mode => edge_action => int_dom abs_state => int_dom abs_state" where
+  "int_tf_abs mode = local_spec_step skip_int_dom (assign_int_dom mode) (special_int_dom mode)
+     (branch_int_dom_for mode) (return_int_dom mode) event_int_dom"
 
-lemma int_fixpoint_is_sound_transfer_for: "sound_transfer_for gs (int_tf_fixpoint_for gs)"
-  unfolding int_tf_fixpoint_for_def
-  apply unfold_locales
-  subgoal by (simp add: assign_int_dom_sound)
-  subgoal by (simp add: special_int_dom_sound)
-  subgoal by (simp add: branch_int_dom_fixpoint_sound)
-  subgoal by (simp add: skip_int_dom_sound)
-  subgoal by (simp add: body_int_dom_sound)
-  subgoal by (simp add: return_int_dom_sound)
-  subgoal by (simp add: enter_pair_int_dom_for_sound)
-  subgoal by (simp add: event_int_dom_sound)
-  subgoal by (simp add: enter_pair_int_dom_for_sound)
-  subgoal by (simp add: combine_env_sound)
-  done
+lemma int_tf_abs_simps [simp]:
+  "int_tf_abs mode EA_Nop = skip_int_dom"
+  "int_tf_abs mode (EA_Assign x e) = assign_int_dom mode x e"
+  "int_tf_abs mode (EA_Special sc y) = special_int_dom mode sc y"
+  "int_tf_abs mode (EA_Assume b) = branch_int_dom_for mode b True"
+  "int_tf_abs mode (EA_AssumeNot b) = branch_int_dom_for mode b False"
+  "int_tf_abs mode (EA_Ret eo p) = return_int_dom mode eo p"
+  "int_tf_abs mode (EA_Check c) = event_int_dom (Check_Event c)"
+  by (simp_all add: int_tf_abs_def)
 
 text \<open>
-  \<open>apply_tf\<close> monotonicity is available for \<open>Never\<close> and \<open>Once\<close>: every field
+  Monotonicity is available for \<open>Never\<close> and \<open>Once\<close>: every operation
   behind them (\<open>assign_int_dom\<close>, \<open>special_int_dom\<close>, \<open>return_int_dom\<close>,
   \<open>enter_int_dom_for\<close>) is monotone once \<open>mode \<noteq> Refine_Fixpoint\<close>, and
   \<open>Int_Backward\<close>'s \<open>backward_domain_refined\<close> interpretation gives
@@ -481,30 +442,31 @@ text \<open>
   (\<open>bfilter_mono\<close>). \<open>bfilter_int_dom_fixpoint\<close> has no such theorem --
   \<open>Int_Backward\<close> interpreted \<open>Refine_Fixpoint\<close> against the weaker
   \<^locale>\<open>backward_domain\<close> locale precisely because \<open>refine_fix\<close> lacks one --
-  so \<open>int_tf_fixpoint_for\<close> gets no matching monotonicity lemma here. The same
+  so \<open>Refine_Fixpoint\<close> gets no matching monotonicity lemma here. The same
   gap means \<open>Never\<close>/\<open>Once\<close> alone get the pollution-fixed, shared \<open>branch\<close>
   (\<open>branch_int_dom_never\<close>/\<open>_once\<close>, backed by
   \<^theory>\<open>Voblint_Analysis.Exec_Backward\<close>'s \<open>bfilter_st_lift_correct\<close>, itself
-  only proved for \<^locale>\<open>backward_domain_refined\<close>): \<open>int_tf_fixpoint_for\<close>
+  only proved for \<^locale>\<open>backward_domain_refined\<close>): \<open>Refine_Fixpoint\<close>
   instead names its own, explicitly local \<open>branch_int_dom_fixpoint\<close>
   (\<open>Int_Backward.thy\<close>), since there is no executable correspondence theorem
   to route the shared one's dispatch through for this mode.
 \<close>
 
-lemma int_tf_never_for_mono:
-  "s1 <= s2 \<Longrightarrow> apply_tf (int_tf_never_for gs) a s1 <= apply_tf (int_tf_never_for gs) a s2"
+lemma int_tf_abs_never_mono:
+  "s1 <= s2 \<Longrightarrow> int_tf_abs Refine_Never a s1 <= int_tf_abs Refine_Never a s2"
   by (cases a)
-     (auto simp: int_tf_never_for_def assign_int_dom_mono special_int_dom_mono
+     (auto simp: assign_int_dom_mono special_int_dom_mono
                  int_dom_backward_never.branch_mono skip_int_dom_mono
-                 body_int_dom_mono return_int_dom_mono enter_int_dom_for_mono
+                 body_int_dom_mono return_int_dom_mono
                  event_int_dom_mono)
 
-lemma int_tf_once_for_mono:
-  "s1 <= s2 \<Longrightarrow> apply_tf (int_tf_once_for gs) a s1 <= apply_tf (int_tf_once_for gs) a s2"
+lemma int_tf_abs_once_mono:
+  "s1 <= s2 \<Longrightarrow> int_tf_abs Refine_Once a s1 <= int_tf_abs Refine_Once a s2"
   by (cases a)
-     (auto simp: int_tf_once_for_def assign_int_dom_mono special_int_dom_mono
+     (auto simp: assign_int_dom_mono special_int_dom_mono
                  int_dom_backward_once.branch_mono skip_int_dom_mono
-                 body_int_dom_mono return_int_dom_mono enter_int_dom_for_mono
+                 body_int_dom_mono return_int_dom_mono
                  event_int_dom_mono)
+
 
 end

@@ -243,6 +243,12 @@ lemma map_lift_Bot [simp]: "map_lift f Bot = Bot"
 lemma map_lift_Lifted [simp]: "map_lift f (Lifted a) = Lifted (f a)"
   unfolding map_lift_def by simp
 
+text \<open>A readback never invents or destroys the dead point, so the two carriers agree
+  on the coarsest bottom test there is.\<close>
+
+lemma map_lift_eq_Bot_iff [simp]: "map_lift f x = Bot \<longleftrightarrow> x = Bot"
+  by (cases x) simp_all
+
 lemma map_lift_mono:
   fixes x y :: "'a::semilattice_sup lifted"
   assumes f_mono: "\<And>a b. a \<le> b \<Longrightarrow> f a \<le> (f b :: 'b::semilattice_sup)"

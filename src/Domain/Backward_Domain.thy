@@ -662,13 +662,13 @@ proof -
 qed
 
 text \<open>
-  \<open>domain_transfer\<close>'s \<open>tf_branch\<close> field has no room for \<open>lifted\<close>: it is one
-  plain-state-to-plain-state operation among several, consumed uniformly by
-  \<open>apply_tf\<close> with no \<open>Bot\<close>/\<open>Lifted\<close> case at that layer. \<open>branch\<close> is
-  \<open>branch_lifted\<close> collapsed back through \<^const>\<open>collapse_lift\<close>, so
-  \<open>tf_branch\<close> can use the pollution-fixed recursion while still returning a
+  A domain's branch operation has no room for \<open>lifted\<close>: it is one
+  plain-state-to-plain-state operation among several, dispatched uniformly by
+  the edge-action dispatcher with no \<open>Bot\<close>/\<open>Lifted\<close> case at that layer.
+  \<open>branch\<close> is \<open>branch_lifted\<close> collapsed back through \<^const>\<open>collapse_lift\<close>,
+  so a domain can use the pollution-fixed recursion while still returning a
   plain \<open>abs_state\<close>: an infeasible or witness-bottom result becomes the
-  plain type's own \<open>bot\<close>, exactly the value \<open>tf_branch\<close>'s callers already
+  plain type's own \<open>bot\<close>, exactly the value the branch operation's callers already
   treat as a dead program point. This replaces the old feasible-gated-raw-
   \<open>bfilter\<close> \<open>branch\<close>: that definition is strictly less precise on \<open>And\<close>/
   \<open>Or\<close> conditions (the join-arm-pollution \<open>bfilter\<close>'s own comment
@@ -688,7 +688,7 @@ lemma branch_sound [intro]:
 
 text \<open>
   \<open>branch\<close> and \<open>branch_lifted\<close> denote the same concrete stores: \<open>branch\<close>
-  only adapts the carrier to the plain-state interface \<open>tf_branch\<close> needs,
+  only adapts the carrier to the plain-state shape a domain's branch operation needs,
   it does not lose precision relative to \<open>branch_lifted\<close>. Left bare rather
   than \<open>[simp]\<close>: its right-hand side is a strictly more complex normal
   form than its left, so declaring it a default rewrite would silently

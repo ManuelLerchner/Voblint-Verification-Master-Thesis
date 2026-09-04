@@ -92,7 +92,14 @@ text \<open>
 
 locale ownership_split_dg_exec_analysis =
   fixes gs :: "vname \<Rightarrow> bool"
-    and tf :: "'a::sound_domain domain_transfer"
+    and sk :: "'a::sound_domain abs_state \<Rightarrow> 'a abs_state"
+    and asn :: "vname \<Rightarrow> exp \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
+    and sp :: "special_call \<Rightarrow> vname \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
+    and br :: "exp \<Rightarrow> bool \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
+    and bd :: "pname \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
+    and rt :: "exp option \<Rightarrow> pname \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
+    and en :: "call_info \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
+    and ev :: "analysis_event \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
     and tf_st :: "edge_action \<Rightarrow> 'a exec_dg_st \<Rightarrow> 'a exec_dg_st"
     and enter_st :: "call_info \<Rightarrow> 'a exec_dg_st \<Rightarrow> 'a exec_dg_st"
     and solve :: "(pp \<times> unit, unit, ('a exec_dg_st, 'a exec_dg_st) dg_state) eqsT
@@ -106,18 +113,18 @@ locale ownership_split_dg_exec_analysis =
                        (pp \<times> unit + unit \<Rightarrow>
                          ('a exec_dg_st, 'a exec_dg_st) dg_state)) option"
   assumes tf_sound:
-      "sound_transfer_for gs tf"
+      "sound_transfer_for gs sk asn sp br bd rt en ev"
     and reserved:
       "reserved_ret_var gs"
     and tf_commute[simp]:
       "\<And>a s.
         live_resolved_st_q gs s \<Longrightarrow>
         fun_of_exec_dg_st_for gs (tf_st a s) =
-        apply_tf tf a (fun_of_exec_dg_st_for gs s)"
+        local_spec_step sk asn sp br rt ev a (fun_of_exec_dg_st_for gs s)"
     and enter_commute[simp]:
       "\<And>ci s.
         fun_of_exec_dg_st_for gs (enter_st ci s) =
-        snd (enter\<^sup># tf ci (fun_of_exec_dg_st_for gs s))"
+        en ci (fun_of_exec_dg_st_for gs s)"
     and solver_pps:
       "\<And>eqs x. solve_c eqs x \<noteq> None \<Longrightarrow>
         part_post_solution eqs x
@@ -154,7 +161,7 @@ text \<open>
 
 theorem sound_dg_spec_st: "sound_dg_spec (ownership_split_dg_spec_st_for gs tf_st enter_st) gamma_ownership_split_exec gs"
 proof -
-  interpret tfs: sound_transfer_for gs tf by (rule tf_sound)
+  interpret tfs: sound_transfer_for gs sk asn sp br bd rt en ev by (rule tf_sound)
   show ?thesis
   proof (unfold_locales, goal_cases)
     case (1 d d' g g')
@@ -172,35 +179,126 @@ proof -
             fun_of_resolved_st_q_for_restrict_global_for)
       apply (cases "live_resolved_st_q gs (combine_resolved_st_q (locals (\<tau> src)) (globs (\<tau> (Inr gk))))")
        apply (simp add: tf_commute[unfolded fun_of_exec_dg_st_for_def]
-              tfs.edge_collect_apply_tf_sound_for)
+              tfs.step_sound_for)
       apply (simp add: live_resolved_st_q_def is_empty_state_gamma_state_empty edge_collect_empty_set)
       done
   next
-    case (3 s \<tau> src gk ci)
+    case (3 s dc \<tau> gk t de ci)
     then show ?case
-      unfolding dgs_enter_ownership_split_dg_spec_st_for ownership_split_transfer_st_def gamma_ownership_split_exec_def
-        fun_of_exec_dg_st_for_def gamma_ownership_split_def
-      by (simp add: fun_of_resolved_st_q_for_restrict_local_for
-            fun_of_resolved_st_q_for_restrict_global_for call_enter_def
-            enter_commute[unfolded fun_of_exec_dg_st_for_def]
-            tfs.tf_sound_enter_entry_for)
-  next
-    case (4 s \<tau> src_cc gk t src_ex ci)
-    then show ?case
-      unfolding dg_spec_combine_tree_def dg_spec_combine_transfer_ownership_split_dg_spec_st_for
+      unfolding dg_spec_combine_transfer_ownership_split_dg_spec_st_for
         ownership_split_combine_transfer_st_def gamma_ownership_split_exec_def combine_collect_def
         fun_of_exec_dg_st_for_def gamma_ownership_split_def
-      by (simp add: fun_of_resolved_st_q_for_restrict_local_for
+      by (simp add: ownership_split_combine_transfer_gen_def local_combine_transfer_def
+            man_with_local_def mk_dg_man_def dg_read_global_def dg_sideg_def sp_bind_assoc
+            fun_of_resolved_st_q_for_restrict_local_for
             fun_of_resolved_st_q_for_restrict_global_for
             fun_of_resolved_st_q_for_def[symmetric]
+            reserved[unfolded reserved_ret_var_def]
             gamma_ownership_split_combine_assign[OF reserved, unfolded gamma_ownership_split_def])
+  qed
+qed
+
+text \<open>
+  The monovariant generator's own entry obligation. The wrapper runs the pure
+  entry against the reconstructed whole state, so the call has exactly one
+  alternative; both of its halves are described by what the wrapper published at
+  the shared slot, which is why the cover is taken against that publication.
+\<close>
+
+lemma sound_dg_spec_ltr_for_st:
+  "sound_dg_spec_ltr_for (ownership_split_dg_spec_st_for gs tf_st enter_st)
+     gamma_ownership_split_exec gs"
+proof (rule sound_dg_spec_ltr_for.intro)
+  show "sound_dg_spec (ownership_split_dg_spec_st_for gs tf_st enter_st)
+          gamma_ownership_split_exec gs"
+    by (rule sound_dg_spec_st)
+next
+  interpret tfs: sound_transfer_for gs sk asn sp br bd rt en ev by (rule tf_sound)
+  note mono = sound_dg_spec.gammaDG_mono[OF sound_dg_spec_st]
+  show "sound_dg_spec_ltr_for_axioms (ownership_split_dg_spec_st_for gs tf_st enter_st)
+          gamma_ownership_split_exec gs"
+    unfolding sound_dg_spec_ltr_for_axioms_def
+  proof (intro allI impI)
+    fix s and sigma :: "pp \<times> unit + unit \<Rightarrow> ('a exec_dg_st, 'a exec_dg_st) dg_state"
+      and u dst fs args callee
+    assume sin: "s \<in> gamma_ownership_split_exec
+                       (locals (sigma (Inl (u, ())))) (globs (sigma (Inr ())))"
+    let ?ci = "call_info_of (CallEdge dst fs args) callee"
+    let ?d = "locals (sigma (Inl (u, ())))"
+    let ?dw = "combine_resolved_st_q ?d (globs (sigma (Inr ())))"
+    let ?inner = "[(?dw, enter_st ?ci ?dw)]"
+    let ?pairs = "map (\<lambda>(cont, entry). (restrict_local_resolved_q cont,
+                                        restrict_local_resolved_q entry)) ?inner"
+    let ?pub = "(bot :: pp \<times> unit + unit \<Rightarrow> ('a exec_dg_st, 'a exec_dg_st) dg_state)
+                  (Inr () := DG bot (ownership_split_enter_sides restrict_global_resolved_q ?inner))"
+    have runs: "enter_runs
+        (dgs_enter (ownership_split_dg_spec_st_for gs tf_st enter_st) ?ci)
+        (mk_dg_man ?d (\<lambda>_. ())) sigma ?pairs (bot \<squnion> ?pub)"
+      unfolding dgs_enter_ownership_split_dg_spec_st_for ownership_split_enter_transfer_st_def
+      by (rule enter_runs_ownership_split_enter_transfer_gen)
+         (use enter_runs_local_enter_transfer
+                [of "\<lambda>d. [(d, enter_st ?ci d)]"
+                    "man_with_local (mk_dg_man ?d (\<lambda>_. ())) ?dw" sigma]
+          in simp)
+    have whole: "s \<in> \<lbrakk>combine_env gs (fun_of_resolved_st_q_for gs ?d)
+                        (fun_of_resolved_st_q_for gs (globs (sigma (Inr ()))))\<rbrakk>"
+      using sin unfolding gamma_ownership_split_exec_def fun_of_exec_dg_st_for_def
+        gamma_ownership_split_def .
+    have caller: "s \<in> gamma_ownership_split_exec
+        (restrict_local_resolved_q ?dw) (restrict_global_resolved_q ?dw)"
+      using whole
+      unfolding gamma_ownership_split_exec_def fun_of_exec_dg_st_for_def
+        gamma_ownership_split_def
+      by (simp add: fun_of_resolved_st_q_for_restrict_local_for
+          fun_of_resolved_st_q_for_restrict_global_for combine_env_for_eq_restrictions)
+    have entered: "call_enter gs (CallEdge dst fs args) s \<in> gamma_ownership_split_exec
+        (restrict_local_resolved_q (enter_st ?ci ?dw))
+        (restrict_global_resolved_q (enter_st ?ci ?dw))"
+      unfolding gamma_ownership_split_exec_def fun_of_exec_dg_st_for_def
+        gamma_ownership_split_def
+      using tfs.tf_sound_enter_entry_for[OF whole, where ci = ?ci]
+      by (simp add: fun_of_resolved_st_q_for_restrict_local_for
+          fun_of_resolved_st_q_for_restrict_global_for call_enter_def
+          enter_binding_concrete
+          enter_commute[unfolded fun_of_exec_dg_st_for_def])
+    have cov: "entry_pairs_cover
+        (\<lambda>e. gamma_ownership_split_exec e (globs ((bot \<squnion> ?pub) (Inr ())))) s
+        (call_enter gs (CallEdge dst fs args) s) ?pairs"
+    proof (rule entry_pairs_coverI)
+      show "(restrict_local_resolved_q ?dw, restrict_local_resolved_q (enter_st ?ci ?dw))
+              \<in> set ?pairs" by simp
+      show "s \<in> gamma_ownership_split_exec
+              (restrict_local_resolved_q ?dw) (globs ((bot \<squnion> ?pub) (Inr ())))"
+        using caller
+              mono[OF order_refl
+                ownership_split_enter_sides_cont_le[where cont = ?dw and pairs = ?inner
+                  and rg = restrict_global_resolved_q]]
+        by auto
+      show "call_enter gs (CallEdge dst fs args) s \<in> gamma_ownership_split_exec
+              (restrict_local_resolved_q (enter_st ?ci ?dw))
+              (globs ((bot \<squnion> ?pub) (Inr ())))"
+        using entered
+              mono[OF order_refl
+                ownership_split_enter_sides_entry_le[where entry = "enter_st ?ci ?dw"
+                  and pairs = ?inner and rg = restrict_global_resolved_q]]
+        by auto
+    qed
+    show "call_enter gs (CallEdge dst fs args) s
+            \<in> gamma_ownership_split_exec
+                (locals (traverse_rhs (ltr_enter_tree_of
+                    (ownership_split_dg_spec_st_for gs tf_st enter_st) u
+                    (CallEdge dst fs args) (FunctionEntry callee)) sigma))
+                (globs (sides_of_rhs (ltr_enter_tree_of
+                    (ownership_split_dg_spec_st_for gs tf_st enter_st) u
+                    (CallEdge dst fs args) (FunctionEntry callee)) sigma (Inr ())))"
+      by (rule enter_sound_ltr_of_enter_runs
+            [where gammaDG = gamma_ownership_split_exec, OF mono runs cov]) auto
   qed
 qed
 
 interpretation sds: sound_dg_spec_ltr_for
   "ownership_split_dg_spec_st_for gs tf_st enter_st" gamma_ownership_split_exec gs
-  unfolding sound_dg_spec_ltr_for_def
-  by (rule sound_dg_spec_st)
+  by (rule sound_dg_spec_ltr_for_st)
 
 definition gamma :: "(pp \<times> unit + unit \<Rightarrow> ('a exec_dg_st, 'a exec_dg_st) dg_state) \<Rightarrow> pp \<Rightarrow> store set"
   where "gamma sigma_st v = dg_hook_gamma gamma_ownership_split_exec sigma_st v"
@@ -274,7 +372,8 @@ text \<open>
   \<open>G\<close> the same type as \<open>D\<close> -- the only shape either registered instance
   (Sign, Parity) actually needs, and the shape \<^locale>\<open>routed_dg_domain_exec\<close>
   (\<^theory>\<open>Voblint_Exec.DG_Local_State_Exec\<close>) already proves sound at the executable
-  carrier. A registered domain supplies only \<open>tf\<close>/\<open>tf_st\<close>/\<open>enter_st\<close>/\<open>empty_pred\<close>
+  carrier. A registered domain supplies only its eight transfer operations,
+  \<open>tf_st\<close>, \<open>enter_st\<close> and \<open>empty_pred\<close>
   and their three primitive commute facts; this locale's \<open>sublocale\<close> discharges
   \<^locale>\<open>routed_dg_domain_exec\<close>'s three assumptions from exactly those facts,
   and its own \<open>sound_dg_spec_st\<close> theorem does the rest: no solved system is ever
@@ -284,7 +383,14 @@ text \<open>
 
 locale local_state_dg_exec_analysis =
   fixes gs :: "vname \<Rightarrow> bool"
-    and tf :: "'a::sound_domain domain_transfer"
+    and sk :: "'a::sound_domain abs_state \<Rightarrow> 'a abs_state"
+    and asn :: "vname \<Rightarrow> exp \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
+    and sp :: "special_call \<Rightarrow> vname \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
+    and br :: "exp \<Rightarrow> bool \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
+    and bd :: "pname \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
+    and rt :: "exp option \<Rightarrow> pname \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
+    and en :: "call_info \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
+    and ev :: "analysis_event \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
     and tf_st :: "edge_action \<Rightarrow> 'a exec_dg_st \<Rightarrow> 'a exec_dg_st"
     and enter_st :: "call_info \<Rightarrow> 'a exec_dg_st \<Rightarrow> 'a exec_dg_st"
     and empty_pred :: "'a exec_dg_st \<Rightarrow> bool"
@@ -300,18 +406,18 @@ locale local_state_dg_exec_analysis =
                        (pp \<times> unit + unit \<Rightarrow>
                          ('a exec_dg_st lifted, 'a exec_dg_st lifted) dg_state)) option"
   assumes tf_sound:
-      "sound_transfer_for gs tf"
+      "sound_transfer_for gs sk asn sp br bd rt en ev"
     and reserved:
       "reserved_ret_var gs"
     and tf_commute[simp]:
       "\<And>a s.
         live_resolved_st_q gs s \<Longrightarrow>
         fun_of_exec_dg_st_for gs (tf_st a s) =
-        apply_tf tf a (fun_of_exec_dg_st_for gs s)"
+        local_spec_step sk asn sp br rt ev a (fun_of_exec_dg_st_for gs s)"
     and enter_commute[simp]:
       "\<And>ci s.
         fun_of_exec_dg_st_for gs (enter_st ci s) =
-        snd (enter\<^sup># tf ci (fun_of_exec_dg_st_for gs s))"
+        en ci (fun_of_exec_dg_st_for gs s)"
     and is_bot_exact[simp]:
       "\<And>s. empty_pred s = is_empty_state (fun_of_exec_dg_st_for gs s)"
     and solver_pps:
@@ -330,7 +436,7 @@ text \<open>
   \<open>sds\<close> below interprets that locale at the executable carrier.
 \<close>
 
-sublocale routed_dg_domain_exec gs empty_pred tf_st enter_st tf
+sublocale routed_dg_domain_exec gs empty_pred tf_st enter_st sk asn sp br bd rt en ev
   by unfold_locales
      (rule tf_commute[unfolded fun_of_exec_dg_st_for_def], assumption,
       rule enter_commute[unfolded fun_of_exec_dg_st_for_def],
@@ -345,10 +451,60 @@ definition gamma ::
   "(pp \<times> unit + unit \<Rightarrow> ('a exec_dg_st lifted, 'a exec_dg_st lifted) dg_state) \<Rightarrow> pp \<Rightarrow> store set"
   where "gamma sigma_st v = dg_hook_gamma gamma_exec sigma_st v"
 
+text \<open>
+  The monovariant generator's own entry obligation. The specification's entry is
+  pure, so its one alternative is the run, and \<open>entry_pairs_cover_st\<close> is the
+  coverage that alternative already carries; the tree publishes nothing, which is
+  why \<^const>\<open>bot\<close> is the global the cover is taken against.
+\<close>
+
+lemma sound_dg_spec_ltr_for_st:
+  "sound_dg_spec_ltr_for (local_state_dg_spec_st_for_lifted gs empty_pred tf_st enter_st)
+     gamma_exec gs"
+proof (rule sound_dg_spec_ltr_for.intro)
+  show "sound_dg_spec (local_state_dg_spec_st_for_lifted gs empty_pred tf_st enter_st)
+          gamma_exec gs"
+    by (rule sound_dg_spec_st[OF tf_sound])
+next
+  note mono = sound_dg_spec.gammaDG_mono[OF sound_dg_spec_st[OF tf_sound]]
+  show "sound_dg_spec_ltr_for_axioms
+          (local_state_dg_spec_st_for_lifted gs empty_pred tf_st enter_st) gamma_exec gs"
+    unfolding sound_dg_spec_ltr_for_axioms_def
+  proof (intro allI impI)
+    fix s and sigma :: "pp \<times> unit + unit \<Rightarrow> ('a exec_dg_st lifted, 'a exec_dg_st lifted) dg_state"
+      and u dst fs args callee
+    assume sin: "s \<in> gamma_exec (locals (sigma (Inl (u, ())))) (globs (sigma (Inr ())))"
+    let ?ci = "call_info_of (CallEdge dst fs args) callee"
+    let ?d = "locals (sigma (Inl (u, ())))"
+    have runs: "enter_runs
+        (dgs_enter (local_state_dg_spec_st_for_lifted gs empty_pred tf_st enter_st) ?ci)
+        (mk_dg_man ?d (\<lambda>_. ())) sigma [(?d, transfer_lift empty_pred (enter_st ?ci) ?d)] bot"
+      unfolding dgs_enter_local_state_st_for_lifted
+      using enter_runs_local_enter_transfer
+              [of "\<lambda>d. [(d, transfer_lift empty_pred (enter_st ?ci) d)]"
+                  "mk_dg_man ?d (\<lambda>_. ())" sigma]
+      by simp
+    have cov: "entry_pairs_cover (\<lambda>e. gamma_exec e bot) s
+        (call_enter gs (CallEdge dst fs args) s)
+        [(?d, transfer_lift empty_pred (enter_st ?ci) ?d)]"
+      using entry_pairs_cover_st[OF tf_sound, where ci = ?ci and d = ?d]
+        sin by (simp add: gamma_exec_def)
+    show "call_enter gs (CallEdge dst fs args) s
+            \<in> gamma_exec
+                (locals (traverse_rhs (ltr_enter_tree_of
+                    (local_state_dg_spec_st_for_lifted gs empty_pred tf_st enter_st) u
+                    (CallEdge dst fs args) (FunctionEntry callee)) sigma))
+                (globs (sides_of_rhs (ltr_enter_tree_of
+                    (local_state_dg_spec_st_for_lifted gs empty_pred tf_st enter_st) u
+                    (CallEdge dst fs args) (FunctionEntry callee)) sigma (Inr ())))"
+      by (rule enter_sound_ltr_of_enter_runs
+            [where gammaDG = gamma_exec, OF mono runs cov]) (auto simp: bot_fun_def)
+  qed
+qed
+
 interpretation sds: sound_dg_spec_ltr_for
   "local_state_dg_spec_st_for_lifted gs empty_pred tf_st enter_st" gamma_exec gs
-  unfolding sound_dg_spec_ltr_for_def
-  by (rule sound_dg_spec_st[OF tf_sound])
+  by (rule sound_dg_spec_ltr_for_st)
 
 theorem run_source_sound:
   fixes Pi :: proc_table and ps and s0 t :: store

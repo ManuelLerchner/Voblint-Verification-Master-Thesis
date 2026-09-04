@@ -8,12 +8,12 @@ text \<open>
   Executable mirror of \<^const>\<open>local_state_dg_spec_for_lifted\<close>: the same
   \<^const>\<open>local_dg_spec\<close> shape, over \<open>'a exec_dg_st lifted\<close> instead of
   \<open>'a abs_state lifted\<close>, with \<open>tf_st\<close> a bare \<open>edge_action \<Rightarrow> _\<close> dispatcher
-  (the executable representation has no \<^type>\<open>domain_transfer\<close> record) and
-  \<open>enter_st\<close> its enter counterpart. Local-only means it reads no global and
+  -- the executable side dispatches on the action rather than naming one operation
+  per edge kind -- and \<open>enter_st\<close> its enter counterpart. Local-only means it reads no global and
   publishes none, so its compiled equations carry no \<open>QueryG\<close> and no \<open>Side\<close>
   -- exactly as on the mathematical side.
 
-  One field differs from the mathematical record: the env stage of \<open>combine\<close>
+  One field differs from the mathematical construction: the env stage of \<open>combine\<close>
   is not the identity here. \<^const>\<open>combine_assign_resolved_q\<close> (unlike
   \<^const>\<open>combine_collect_abs\<close>) does not itself select
   locals-from-caller/globals-from-callee; that selection is what
@@ -36,10 +36,9 @@ where
         (tf_st (if pol then EA_Assume b else EA_AssumeNot b)))
      (\<lambda>p. transfer_lift empty_pred (tf_st EA_Nop))
      (\<lambda>e p. transfer_lift empty_pred (tf_st (EA_Ret e p)))
-     (\<lambda>ci. transfer_lift empty_pred (enter_st ci))
+     (\<lambda>ci d. [(d, transfer_lift empty_pred (enter_st ci) d)])
      (\<lambda>ev. transfer_lift empty_pred
         (tf_st (case ev of Check_Event bc \<Rightarrow> EA_Check bc)))
-     (\<lambda>ci d. d)
      (\<lambda>ci dc de. case dc of Bot \<Rightarrow> Bot | Lifted x \<Rightarrow>
         (case de of Bot \<Rightarrow> Bot | Lifted y \<Rightarrow> Lifted (combine_resolved_st_q x y)))
      (\<lambda>ci dcM de. transfer_lift2 empty_pred
@@ -76,7 +75,7 @@ lemma dg_spec_step_local_state_st_for_lifted:
 
 lemma dgs_enter_local_state_st_for_lifted:
   "dgs_enter (local_state_dg_spec_st_for_lifted gs empty_pred tf_st enter_st) ci
-     = local_transfer (transfer_lift empty_pred (enter_st ci))"
+     = local_enter_transfer (\<lambda>d. [(d, transfer_lift empty_pred (enter_st ci) d)])"
   by (simp add: local_state_dg_spec_st_for_lifted_def)
 
 text \<open>The caller half of \<open>enter\<close> is the identity for the same reason as in the
@@ -156,13 +155,21 @@ locale routed_dg_domain_exec =
     and empty_pred :: "'a::sound_domain exec_dg_st \<Rightarrow> bool"
     and tf_st :: "edge_action \<Rightarrow> 'a exec_dg_st \<Rightarrow> 'a exec_dg_st"
     and enter_st :: "call_info \<Rightarrow> 'a exec_dg_st \<Rightarrow> 'a exec_dg_st"
-    and tf :: "'a domain_transfer"
+    and sk :: "'a abs_state \<Rightarrow> 'a abs_state"
+    and asn :: "vname \<Rightarrow> exp \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
+    and sp :: "special_call \<Rightarrow> vname \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
+    and br :: "exp \<Rightarrow> bool \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
+    and bd :: "pname \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
+    and rt :: "exp option \<Rightarrow> pname \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
+    and en :: "call_info \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
+    and ev :: "analysis_event \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
   assumes tf_st_commute:
       "\<And>a s. live_resolved_st_q gs s \<Longrightarrow>
-         fun_of_resolved_st_q_for gs (tf_st a s) = apply_tf tf a (fun_of_resolved_st_q_for gs s)"
+         fun_of_resolved_st_q_for gs (tf_st a s)
+           = local_spec_step sk asn sp br rt ev a (fun_of_resolved_st_q_for gs s)"
     and enter_st_commute:
       "\<And>ci s. fun_of_resolved_st_q_for gs (enter_st ci s)
-                   = snd (enter\<^sup># tf ci (fun_of_resolved_st_q_for gs s))"
+                   = en ci (fun_of_resolved_st_q_for gs s)"
     and empty_pred_exact:
       "\<And>s. empty_pred s = is_empty_state (fun_of_resolved_st_q_for gs s)"
 begin
@@ -187,7 +194,7 @@ text \<open>
 lemma step_lift_commute:
   assumes norm: "normalized_lift empty_pred d"
   shows "reader (transfer_lift empty_pred (tf_st a) d)
-     = transfer_lift is_empty_state (apply_tf tf a) (reader d)"
+     = transfer_lift is_empty_state (local_spec_step sk asn sp br rt ev a) (reader d)"
 using norm proof (cases d)
   case Bot
   then show ?thesis by (simp add: transfer_lift_def)
@@ -202,10 +209,10 @@ qed
 
 lemma enter_lift_commute:
   "reader (transfer_lift empty_pred (enter_st ci) d)
-     = transfer_lift is_empty_state (snd o enter\<^sup># tf ci) (reader d)"
+     = transfer_lift is_empty_state (en ci) (reader d)"
 proof (rule transfer_lift_commute)
   show "\<And>s. fun_of_resolved_st_q_for gs (enter_st ci s)
-              = (snd o enter\<^sup># tf ci) (fun_of_resolved_st_q_for gs s)"
+              = en ci (fun_of_resolved_st_q_for gs s)"
     by (simp add: enter_st_commute)
   show "\<And>s. empty_pred s = is_empty_state (fun_of_resolved_st_q_for gs s)"
     by (rule empty_pred_exact)
@@ -237,6 +244,7 @@ proof (rule transfer_lift2_commute)
     by (rule empty_pred_exact)
 qed
 
+
 subsection \<open>Tree-level transport of the two specifications\<close>
 
 text \<open>
@@ -251,7 +259,7 @@ abbreviation spec_st :: "('x,'k,unit,'a exec_dg_st lifted,'a exec_dg_st lifted) 
   "spec_st \<equiv> local_state_dg_spec_st_for_lifted gs empty_pred tf_st enter_st"
 
 abbreviation spec_abs :: "('x,'k,unit,'a abs_state lifted,'a abs_state lifted) dg_spec" where
-  "spec_abs \<equiv> local_state_dg_spec_for_lifted gs is_empty_state tf"
+  "spec_abs \<equiv> local_state_dg_spec_for_lifted gs is_empty_state sk asn sp br bd rt en ev"
 
 lemma Hstep_lifted_for:
   assumes "normalized_lift empty_pred d"
@@ -263,12 +271,13 @@ lemma Hstep_lifted_for:
     step_lift_commute[OF assms] by fastforce
 
 lemma Henter_lifted_for:
-  "dg_reader_commute_gen.dg_tree_st_commute reader reader \<sigma>_st
-     (sp_compile_with (\<lambda>x. DG x bot) (dgs_enter spec_st ci (mk_dg_man d (\<lambda>_. gk))))
-     (sp_compile_with (\<lambda>x. DG x bot) (dgs_enter spec_abs ci (mk_dg_man (reader d) (\<lambda>_. gk))))"
+  "dg_reader_commute_gen.dg_enter_st_commute reader reader \<sigma>_st
+     (dgs_enter spec_st ci (mk_dg_man d (\<lambda>_. gk)))
+     (dgs_enter spec_abs ci (mk_dg_man (reader d) (\<lambda>_. gk)))"
   unfolding dgs_enter_local_state_st_for_lifted dgs_enter_local_state_for_lifted
-  using dg_reader_commute_gen.dg_tree_st_commute_local_transfer dg_reader_commute_gen_lifted_for
-    enter_lift_commute by fastforce
+  by (rule dg_reader_commute_gen.dg_enter_st_commute_local_enter_transfer
+        [OF dg_reader_commute_gen_lifted_for])
+     (simp add: enter_lift_commute)
 
 lemma Hcomb_lifted_for:
   "dg_reader_commute_gen.dg_tree_st_commute reader reader \<sigma>_st
@@ -305,8 +314,41 @@ definition gamma_exec :: "'a exec_dg_st lifted \<Rightarrow> 'a exec_dg_st lifte
 lemma gamma_exec_Bot [simp]: "gamma_exec Bot g = {}"
   by (simp add: gamma_exec_def)
 
+text \<open>
+  Entry is no longer part of \<^locale>\<open>sound_dg_spec\<close>, so a routed instance needs it
+  separately. This is the same fact the collapse below proves for its own entry
+  obligation, exported once because every routed instance over this carrier
+  discharges its entry coverage from it.
+\<close>
+
+theorem entry_pairs_cover_st:
+  assumes tf_sound: "sound_transfer_for gs sk asn sp br bd rt en ev"
+    and sin: "s \<in> gamma_state_lift (reader d)"
+  shows "entry_pairs_cover (\<lambda>d'. gamma_state_lift (reader d')) s
+           (call_enter gs (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci)) s)
+           [(d, transfer_lift empty_pred (enter_st ci) d)]"
+proof -
+  have entered: "call_enter gs (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci)) s
+      \<in> gamma_state_lift (reader (transfer_lift empty_pred (enter_st ci) d))"
+    unfolding enter_lift_commute
+  proof (rule transfer_lift_sound_mem
+        [where h = "call_enter gs (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci))"])
+    show "\<And>\<sigma>. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow>
+        call_enter gs (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci)) s \<in> \<lbrakk>en ci \<sigma>\<rbrakk>"
+      by (simp add: call_enter_CallEdge
+          sound_transfer_for.tf_sound_enter_entry_for[OF tf_sound])
+    show "\<And>\<sigma>. is_empty_state \<sigma> \<Longrightarrow> \<lbrakk>\<sigma>\<rbrakk> = {}"
+      by (rule is_empty_state_gamma_state_empty)
+    show "s \<in> gamma_state_lift (reader d)" by (rule sin)
+  qed
+  show ?thesis
+    by (rule entry_pairs_coverI
+          [where cont = d and entry = "transfer_lift empty_pred (enter_st ci) d"])
+       (simp_all add: sin entered)
+qed
+
 theorem sound_dg_spec_st:
-  assumes tf_sound: "sound_transfer_for gs tf"
+  assumes tf_sound: "sound_transfer_for gs sk asn sp br bd rt en ev"
   shows "sound_dg_spec spec_st gamma_exec gs"
 proof -
   have geq: "gamma_exec = (\<lambda>d g. gamma_state_lift (reader d))"
@@ -324,12 +366,12 @@ proof -
     proof (cases "normalized_lift empty_pred d")
       case True
       then have eq: "reader (transfer_lift empty_pred (tf_st a) d)
-                       = transfer_lift is_empty_state (apply_tf tf a) (reader d)"
+                       = transfer_lift is_empty_state (local_spec_step sk asn sp br rt ev a) (reader d)"
         by (rule step_lift_commute)
       show ?thesis
         unfolding eq
         by (rule transfer_lift_sound_collect
-              [OF sound_transfer_for.edge_collect_apply_tf_sound_for[OF tf_sound]
+              [OF sound_transfer_for.step_sound_for[OF tf_sound]
                   edge_collect_empty_set is_empty_state_gamma_state_empty])
     next
       case False
@@ -344,19 +386,24 @@ proof -
       by (simp add: local_spec_step_transfer_lift_tf_st)
   next
     case (3 s d ci)
-    show ?case
+    have entered: "call_enter gs (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci)) s
+        \<in> gamma_state_lift (reader (transfer_lift empty_pred (enter_st ci) d))"
       unfolding enter_lift_commute
     proof (rule transfer_lift_sound_mem
           [where h = "call_enter gs (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci))"])
       show "\<And>\<sigma>. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow>
           call_enter gs (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci)) s
-            \<in> \<lbrakk>(snd o enter\<^sup># tf ci) \<sigma>\<rbrakk>"
+            \<in> \<lbrakk>en ci \<sigma>\<rbrakk>"
         by (simp add: call_enter_CallEdge
             sound_transfer_for.tf_sound_enter_entry_for[OF tf_sound])
       show "\<And>\<sigma>. is_empty_state \<sigma> \<Longrightarrow> \<lbrakk>\<sigma>\<rbrakk> = {}"
         by (rule is_empty_state_gamma_state_empty)
       show "s \<in> gamma_state_lift (reader d)" by (rule 3)
     qed
+    show ?case
+      by (rule entry_pairs_coverI
+            [where cont = d and entry = "transfer_lift empty_pred (enter_st ci) d"])
+         (simp_all add: 3 entered)
   next
     case (4 s dc t de ci)
     show ?case

@@ -49,10 +49,16 @@ definition dg_extra_of ::
      \<Rightarrow> (pp \<times> unit, unit, ('d, 'h) dg_state) strategy_tree list"
 where
   "dg_extra_of S g route ctx v =
-     map (\<lambda>(cl, ca).
-       transfer_tree
-         (dgs_enter S (call_info_of ca (case v of FunctionEntry p \<Rightarrow> p | _ \<Rightarrow> undefined)))
-         (Inl (cl, ctx)) (\<lambda>_. ())) (entry_call_list g v)"
+     (case v of
+        FunctionEntry p \<Rightarrow>
+          map (\<lambda>(cl, ca).
+            dg_read_at (Inl (cl, ctx))
+              (\<lambda>d. dgs_enter S (call_info_of ca p)
+                     (mk_dg_man d (\<lambda>_. ()))
+                     (\<lambda>pairs. sp_compile (side_rhs_fold_dg bot
+                                (map (\<lambda>(_, entry). Answer (DG entry bot)) pairs)))))
+            (entry_call_list g v)
+      | _ \<Rightarrow> [])"
 
 definition dg_gen_of ::
   "(pp \<times> unit, unit, unit, 'd::bounded_semilattice_sup_bot,
@@ -338,72 +344,148 @@ proof -
           sides_side_rhs_fold_dg_commute[OF dg_list_commute_travsides[OF la], unfolded sp_compile_def])
 qed
 
+text \<open>
+  What a compiled entry must satisfy to transport. Entry answers a list of
+  caller-continuation/callee-entry pairs, which is not the solver's carrier, so the
+  readback cannot be stated on the answer of a compiled tree the way the edge and
+  combine transports are. It is stated on the program instead: run both entries
+  against continuations that already agree on pairs read back componentwise, and the
+  two trees agree. This observes the entry program exactly as \<^const>\<open>enter_runs\<close>
+  does, and for the same reason.
+\<close>
+
+definition dg_enter_st_commute ::
+  "('u + 'k \<Rightarrow> ('a,'b) dg_state)
+   \<Rightarrow> ('u,'k,('a,'b) dg_state,'a enter_result list) strategy_program
+   \<Rightarrow> ('u,'k,('a2,'b2) dg_state,'a2 enter_result list) strategy_program \<Rightarrow> bool"
+where
+  "dg_enter_st_commute \<sigma>_st T_st T_abs \<longleftrightarrow>
+     (\<forall>K_st K_abs.
+        (\<forall>ps. dg_tree_st_commute \<sigma>_st (K_st ps) (K_abs (map (map_prod Floc Floc) ps)))
+          \<longrightarrow> dg_tree_st_commute \<sigma>_st (T_st K_st) (T_abs K_abs))"
+
+lemma dg_enter_st_commuteD:
+  assumes "dg_enter_st_commute \<sigma>_st T_st T_abs"
+    and "\<And>ps. dg_tree_st_commute \<sigma>_st (K_st ps) (K_abs (map (map_prod Floc Floc) ps))"
+  shows "dg_tree_st_commute \<sigma>_st (T_st K_st) (T_abs K_abs)"
+  using assms unfolding dg_enter_st_commute_def by blast
+
+text \<open>A Base-style entry answers its list outright, so its transport is the readback
+  equation on that list alone.\<close>
+
+lemma dg_enter_st_commute_local_enter_transfer:
+  assumes "map (map_prod Floc Floc) (f d) = F (Floc d)"
+  shows "dg_enter_st_commute \<sigma>_st
+           (local_enter_transfer f (mk_dg_man d gk))
+           (local_enter_transfer F (mk_dg_man (Floc d) gk))"
+  unfolding dg_enter_st_commute_def local_enter_transfer_def sp_return_def
+proof (intro allI impI)
+  fix K_st K_abs
+  assume K: "\<forall>ps. dg_tree_st_commute \<sigma>_st (K_st ps) (K_abs (map (map_prod Floc Floc) ps))"
+  show "dg_tree_st_commute \<sigma>_st (K_st (f (man_local (mk_dg_man d gk))))
+          (K_abs (F (man_local (mk_dg_man (Floc d) gk))))"
+    using K[rule_format, of "f d"] assms by simp
+qed
+
+text \<open>
+  One call alternative. The bottom branch is a plain combine against \<^const>\<open>bot\<close>, so
+  it needs nothing beyond \<open>Hcomb\<close>; the other publishes the seed and reads the callee
+  exit back, which is where \<open>Hroute\<close> is used. \<open>Hbot\<close> is what keeps the two carriers
+  on the \<^emph>\<open>same\<close> branch: without it one could take the seed and the other not.
+\<close>
+
+lemma dg_tree_st_commute_routed_cmb_g_alt:
+  assumes Hcomb: "\<And>ci d de. dg_tree_st_commute \<sigma>_st
+        (sp_compile_with (\<lambda>x. DG x bot)
+           (dg_spec_combine_transfer S_st ci (mk_dg_man d (\<lambda>_. gk0)) de))
+        (sp_compile_with (\<lambda>x. DG x bot)
+           (dg_spec_combine_transfer S_abs ci (mk_dg_man (Floc d) (\<lambda>_. gk0)) (Floc de)))"
+    and Hroute: "\<And>u c' d ca'. route_st u c' d ca' = route_abs u c' (Floc d) ca'"
+    and Hbot: "\<And>d. is_bot_abs (Floc d) = is_bot_st d"
+  shows "dg_tree_st_commute \<sigma>_st
+           (routed_cmb_g_alt S_st gk0 seed_key route_st is_bot_st ctx ca cc p alt)
+           (routed_cmb_g_alt S_abs gk0 seed_key route_abs is_bot_abs ctx ca cc p
+              (map_prod Floc Floc alt))"
+proof (cases alt)
+  case (Pair cont entry)
+  show ?thesis
+  proof (cases "is_bot_st entry")
+    case True
+    then have abs: "is_bot_abs (Floc entry)" by (simp add: Hbot)
+    have cb: "dg_tree_st_commute \<sigma>_st
+        (sp_compile_with (\<lambda>x. DG x bot)
+           (dg_spec_combine_transfer S_st (call_info_of ca p) (mk_dg_man cont (\<lambda>_. gk0)) bot))
+        (sp_compile_with (\<lambda>x. DG x bot)
+           (dg_spec_combine_transfer S_abs (call_info_of ca p)
+              (mk_dg_man (Floc cont) (\<lambda>_. gk0)) bot))"
+      using Hcomb[of "call_info_of ca p" cont bot] by (simp add: Floc_bot)
+    show ?thesis
+      unfolding Pair using cb by (simp add: True abs)
+  next
+    case False
+    then have abs: "\<not> is_bot_abs (Floc entry)" by (simp add: Hbot)
+    have r: "route_abs cc ctx (Floc entry) ca = route_st cc ctx entry ca"
+      by (rule Hroute[symmetric])
+    have eq_st: "routed_cmb_g_alt S_st gk0 seed_key route_st is_bot_st ctx ca cc p (cont, entry)
+        = Side (seed_key (FunctionEntry p) (route_st cc ctx entry ca)) (DG entry bot)
+            (QueryL (FunctionResult p, route_st cc ctx entry ca)
+               (\<lambda>cs. sp_compile_with (\<lambda>x. DG x bot)
+                  (dg_spec_combine_transfer S_st (call_info_of ca p)
+                     (mk_dg_man cont (\<lambda>_. gk0)) (locals cs))))"
+      using False by simp
+    have eq_abs: "routed_cmb_g_alt S_abs gk0 seed_key route_abs is_bot_abs ctx ca cc p
+            (Floc cont, Floc entry)
+        = Side (seed_key (FunctionEntry p) (route_st cc ctx entry ca)) (DG (Floc entry) bot)
+            (QueryL (FunctionResult p, route_st cc ctx entry ca)
+               (\<lambda>cs. sp_compile_with (\<lambda>x. DG x bot)
+                  (dg_spec_combine_transfer S_abs (call_info_of ca p)
+                     (mk_dg_man (Floc cont) (\<lambda>_. gk0)) (locals cs))))"
+      using abs by (simp add: r)
+    show ?thesis
+      unfolding Pair map_prod_simp fst_conv snd_conv eq_st eq_abs
+      by (rule dg_tree_st_commute_side_effect
+            [where d = "DG entry bot", simplified fun_of_dg_st_gen_simps Fglob_bot],
+          rule dg_tree_st_commute_QueryL,
+          simp only: fun_of_dg_st_gen_simps,
+          rule Hcomb)
+  qed
+qed
+
 lemma dg_tree_st_commute_routed_cmb_g_at:
-  assumes Henter: "\<And>ci d. dg_tree_st_commute \<sigma>_st
-        (sp_compile_with (\<lambda>x. DG x bot) (dgs_enter S_st ci (mk_dg_man d (\<lambda>_. gk0))))
-        (sp_compile_with (\<lambda>x. DG x bot) (dgs_enter S_abs ci (mk_dg_man (Floc d) (\<lambda>_. gk0))))"
+  assumes Henter: "\<And>ci d. dg_enter_st_commute \<sigma>_st
+        (dgs_enter S_st ci (mk_dg_man d (\<lambda>_. gk0)))
+        (dgs_enter S_abs ci (mk_dg_man (Floc d) (\<lambda>_. gk0)))"
     and Hcomb: "\<And>ci d de. dg_tree_st_commute \<sigma>_st
         (sp_compile_with (\<lambda>x. DG x bot)
            (dg_spec_combine_transfer S_st ci (mk_dg_man d (\<lambda>_. gk0)) de))
         (sp_compile_with (\<lambda>x. DG x bot)
            (dg_spec_combine_transfer S_abs ci (mk_dg_man (Floc d) (\<lambda>_. gk0)) (Floc de)))"
     and Hroute: "\<And>u c' d ca'. route_st u c' d ca' = route_abs u c' (Floc d) ca'"
+    and Hbot: "\<And>d. is_bot_abs (Floc d) = is_bot_st d"
   shows "dg_tree_st_commute \<sigma>_st
-           (routed_cmb_g_at S_st gk0 seed_key route_st ctx ca cc caller p)
-           (routed_cmb_g_at S_abs gk0 seed_key route_abs ctx ca cc (Floc caller) p)"
-proof -
-  let ?ci = "call_info_of ca p"
-  let ?et_st = "sp_compile_with (\<lambda>x. DG x bot) (dgs_enter S_st ?ci (mk_dg_man caller (\<lambda>_. gk0)))"
-  let ?et_abs = "sp_compile_with (\<lambda>x. DG x bot)
-                   (dgs_enter S_abs ?ci (mk_dg_man (Floc caller) (\<lambda>_. gk0)))"
-  let ?\<sigma>_abs = "fun_of_dg_st_gen Floc Fglob \<circ> \<sigma>_st"
-  have ent: "Floc (locals (traverse_rhs ?et_st \<sigma>_st)) = locals (traverse_rhs ?et_abs ?\<sigma>_abs)"
-    using dg_tree_st_commute_trav[OF Henter] by (metis fun_of_dg_st_gen_simps(1))
-  have ctx_eq: "route_abs cc ctx (locals (traverse_rhs ?et_abs ?\<sigma>_abs)) ca
-              = route_st cc ctx (locals (traverse_rhs ?et_st \<sigma>_st)) ca"
-    unfolding ent[symmetric] by (rule Hroute[symmetric])
-  have tail: "\<And>es_st es_abs. Floc (locals es_st) = locals es_abs \<Longrightarrow>
-      dg_tree_st_commute \<sigma>_st
-        (sp_lift_tree (Side (seed_key (FunctionEntry p) (route_st cc ctx (locals es_st) ca))
-           (DG (locals es_st) bot)
-           (Answer (DG bot bot)))
-         (\<lambda>_. sp_lift_tree (QueryL (FunctionResult p, route_st cc ctx (locals es_st) ca) Answer)
-           (\<lambda>cs. sp_compile_with (\<lambda>x. DG x bot)
-                 (dg_spec_combine_transfer S_st ?ci (mk_dg_man caller (\<lambda>_. gk0)) (locals cs)))))
-        (sp_lift_tree (Side (seed_key (FunctionEntry p) (route_abs cc ctx (locals es_abs) ca))
-           (DG (locals es_abs) bot)
-           (Answer (DG bot bot)))
-         (\<lambda>_. sp_lift_tree (QueryL (FunctionResult p, route_abs cc ctx (locals es_abs) ca) Answer)
-           (\<lambda>cs. sp_compile_with (\<lambda>x. DG x bot)
-                 (dg_spec_combine_transfer S_abs ?ci (mk_dg_man (Floc caller) (\<lambda>_. gk0)) (locals cs)))))"
-  proof -
-    fix es_st es_abs
-    assume e: "Floc (locals es_st) = locals es_abs"
-    have r: "route_abs cc ctx (locals es_abs) ca = route_st cc ctx (locals es_st) ca"
-      unfolding e[symmetric] by (rule Hroute[symmetric])
-    show "dg_tree_st_commute \<sigma>_st
-        (sp_lift_tree (Side (seed_key (FunctionEntry p) (route_st cc ctx (locals es_st) ca))
-           (DG (locals es_st) bot) (Answer (DG bot bot)))
-         (\<lambda>_. sp_lift_tree (QueryL (FunctionResult p, route_st cc ctx (locals es_st) ca) Answer)
-           (\<lambda>cs. sp_compile_with (\<lambda>x. DG x bot)
-                 (dg_spec_combine_transfer S_st ?ci (mk_dg_man caller (\<lambda>_. gk0)) (locals cs)))))
-        (sp_lift_tree (Side (seed_key (FunctionEntry p) (route_abs cc ctx (locals es_abs) ca))
-           (DG (locals es_abs) bot) (Answer (DG bot bot)))
-         (\<lambda>_. sp_lift_tree (QueryL (FunctionResult p, route_abs cc ctx (locals es_abs) ca) Answer)
-           (\<lambda>cs. sp_compile_with (\<lambda>x. DG x bot)
-                 (dg_spec_combine_transfer S_abs ?ci (mk_dg_man (Floc caller) (\<lambda>_. gk0)) (locals cs)))))"
-      unfolding r
-      apply (simp only: sp_lift_tree.simps)
-      apply (rule dg_tree_st_commute_side_effect[where d = "DG (locals es_st) bot",
-              simplified fun_of_dg_st_gen_simps e Fglob_bot])
-      apply (rule dg_tree_st_commute_QueryL)
-      apply (simp only: fun_of_dg_st_gen_simps)
-      apply (rule Hcomb)
-      done
-  qed
-  show ?thesis
-    unfolding routed_cmb_g_at_def Let_def
-    by (rule dg_tree_st_commute_seqcomp[OF Henter]) (rule tail[OF ent])
+           (routed_cmb_g_at S_st gk0 seed_key route_st is_bot_st ctx ca cc caller p)
+           (routed_cmb_g_at S_abs gk0 seed_key route_abs is_bot_abs ctx ca cc (Floc caller) p)"
+  unfolding routed_cmb_g_at_def
+proof (rule dg_enter_st_commuteD[OF Henter])
+  fix ps :: "'a enter_result list"
+  have alt: "\<And>x. dg_tree_st_commute \<sigma>_st
+      (routed_cmb_g_alt S_st gk0 seed_key route_st is_bot_st ctx ca cc p x)
+      (routed_cmb_g_alt S_abs gk0 seed_key route_abs is_bot_abs ctx ca cc p
+         (map_prod Floc Floc x))"
+    using Hcomb Hroute Hbot by (rule dg_tree_st_commute_routed_cmb_g_alt)
+  have la: "list_all2 (dg_tree_st_commute \<sigma>_st)
+      (map (routed_cmb_g_alt S_st gk0 seed_key route_st is_bot_st ctx ca cc p) ps)
+      (map (routed_cmb_g_alt S_abs gk0 seed_key route_abs is_bot_abs ctx ca cc p)
+        (map (map_prod Floc Floc) ps))"
+    by (simp add: list_all2_conv_all_nth alt)
+  show "dg_tree_st_commute \<sigma>_st
+      (sp_compile (side_rhs_fold_dg bot
+        (map (routed_cmb_g_alt S_st gk0 seed_key route_st is_bot_st ctx ca cc p) ps)))
+      (sp_compile (side_rhs_fold_dg bot
+        (map (routed_cmb_g_alt S_abs gk0 seed_key route_abs is_bot_abs ctx ca cc p)
+          (map (map_prod Floc Floc) ps))))"
+    using dg_tree_st_commute_side_rhs_fold_dg[OF la, where acc_st = bot]
+    by (simp add: Floc_bot)
 qed
 
 text \<open>The call site itself: the resolver must answer the same targets on both
@@ -412,37 +494,38 @@ text \<open>The call site itself: the resolver must answer the same targets on b
   state.\<close>
 
 lemma dg_tree_st_commute_routed_cmb_g:
-  assumes Henter: "\<And>ci d. dg_tree_st_commute \<sigma>_st
-        (sp_compile_with (\<lambda>x. DG x bot) (dgs_enter S_st ci (mk_dg_man d (\<lambda>_. gk0))))
-        (sp_compile_with (\<lambda>x. DG x bot) (dgs_enter S_abs ci (mk_dg_man (Floc d) (\<lambda>_. gk0))))"
+  assumes Henter: "\<And>ci d. dg_enter_st_commute \<sigma>_st
+        (dgs_enter S_st ci (mk_dg_man d (\<lambda>_. gk0)))
+        (dgs_enter S_abs ci (mk_dg_man (Floc d) (\<lambda>_. gk0)))"
     and Hcomb: "\<And>ci d de. dg_tree_st_commute \<sigma>_st
         (sp_compile_with (\<lambda>x. DG x bot)
            (dg_spec_combine_transfer S_st ci (mk_dg_man d (\<lambda>_. gk0)) de))
         (sp_compile_with (\<lambda>x. DG x bot)
            (dg_spec_combine_transfer S_abs ci (mk_dg_man (Floc d) (\<lambda>_. gk0)) (Floc de)))"
     and Hroute: "\<And>u c' d ca'. route_st u c' d ca' = route_abs u c' (Floc d) ca'"
+    and Hbot: "\<And>d. is_bot_abs (Floc d) = is_bot_st d"
     and Hresolve: "\<And>w cc' ca' d. resolve_st w cc' ca' d = resolve_abs w cc' ca' (Floc d)"
   shows "dg_tree_st_commute \<sigma>_st
-           (routed_cmb_g S_st gk0 seed_key resolve_st route_st ctx ca cc v)
-           (routed_cmb_g S_abs gk0 seed_key resolve_abs route_abs ctx ca cc v)"
+           (routed_cmb_g S_st gk0 seed_key resolve_st is_bot_st route_st ctx ca cc v)
+           (routed_cmb_g S_abs gk0 seed_key resolve_abs is_bot_abs route_abs ctx ca cc v)"
 proof -
   let ?caller = "locals (\<sigma>_st (Inl (cc, ctx)))"
   have at: "\<And>p. dg_tree_st_commute \<sigma>_st
-      (routed_cmb_g_at S_st gk0 seed_key route_st ctx ca cc ?caller p)
-      (routed_cmb_g_at S_abs gk0 seed_key route_abs ctx ca cc (Floc ?caller) p)"
-    using Henter Hcomb Hroute by (rule dg_tree_st_commute_routed_cmb_g_at)
+      (routed_cmb_g_at S_st gk0 seed_key route_st is_bot_st ctx ca cc ?caller p)
+      (routed_cmb_g_at S_abs gk0 seed_key route_abs is_bot_abs ctx ca cc (Floc ?caller) p)"
+    using Henter Hcomb Hroute Hbot by (rule dg_tree_st_commute_routed_cmb_g_at)
   have la: "list_all2 (dg_tree_st_commute \<sigma>_st)
-      (map (routed_cmb_g_at S_st gk0 seed_key route_st ctx ca cc ?caller)
+      (map (routed_cmb_g_at S_st gk0 seed_key route_st is_bot_st ctx ca cc ?caller)
         (resolve_st v cc ca ?caller))
-      (map (routed_cmb_g_at S_abs gk0 seed_key route_abs ctx ca cc (Floc ?caller))
+      (map (routed_cmb_g_at S_abs gk0 seed_key route_abs is_bot_abs ctx ca cc (Floc ?caller))
         (resolve_st v cc ca ?caller))"
     by (simp add: list_all2_conv_all_nth at)
   have body: "dg_tree_st_commute \<sigma>_st
       (sp_compile (side_rhs_fold_dg bot
-        (map (routed_cmb_g_at S_st gk0 seed_key route_st ctx ca cc ?caller)
+        (map (routed_cmb_g_at S_st gk0 seed_key route_st is_bot_st ctx ca cc ?caller)
           (resolve_st v cc ca ?caller))))
       (sp_compile (side_rhs_fold_dg bot
-        (map (routed_cmb_g_at S_abs gk0 seed_key route_abs ctx ca cc (Floc ?caller))
+        (map (routed_cmb_g_at S_abs gk0 seed_key route_abs is_bot_abs ctx ca cc (Floc ?caller))
           (resolve_st v cc ca ?caller))))"
     using dg_tree_st_commute_side_rhs_fold_dg[OF la, where acc_st = bot]
     by (simp add: Floc_bot)
@@ -474,18 +557,6 @@ text \<open>
   the answer, the published sides and the dependency set all match. These are
   observational theorems for that reason, and deliberately not an equality.
 \<close>
-
-lemma set_concat_static_targets:
-  "set (concat (map (\<lambda>(cc, ca). map (h cc ca) (static_targets g v cc ca))
-                    (call_site_list g v)))
-     = set (map (\<lambda>(c, ca, p). h c ca p) (call_target_list g v))"
-proof -
-  have "set (static_targets g v c ca) = {p. (c, ca, p) \<in> set (call_target_list g v)}"
-    for c ca
-    unfolding static_targets_def call_target_list_def by force
-  then show ?thesis
-    unfolding call_site_list_def by force
-qed
 
 context sound_dg_spec_ltr_for
 begin
@@ -529,7 +600,7 @@ lemma dg_extra_of_eq_ltr_enter_trees:
   shows "dg_extra_of S g route () v
            = map (\<lambda>(cl, ca). ltr_enter_tree cl ca v) (entry_call_list g v)"
   by (cases v)
-     (simp_all add: dg_extra_of_def ltr_enter_tree_def transfer_tree_def
+     (simp_all add: dg_extra_of_def ltr_enter_tree_def ltr_enter_tree_of_def transfer_tree_def
         entry_call_list_empty_if_not_entry[OF wf fin])
 
 text \<open>
@@ -571,7 +642,7 @@ proof -
       by (simp add: ltr_combine_tree_eq_dg_cmb_at_of case_prod_beta)
     then show ?thesis
       unfolding TSS_def
-        set_concat_static_targets[where h = "\<lambda>cc ca. dg_cmb_at_of S () ca cc"]
+        set_concat_call_site_static_targets[where h = "\<lambda>cc ca. dg_cmb_at_of S () ca cc"]
       by simp
   qed
 

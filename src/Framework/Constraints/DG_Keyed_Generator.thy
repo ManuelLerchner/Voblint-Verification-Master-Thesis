@@ -1,5 +1,6 @@
 theory DG_Keyed_Generator
-  imports DG_Constraint_Trees "TD.TD_side"
+  imports DG_Constraint_Trees CFG_Enumeration "TD.TD_side"
+    "Voblint_Solver.Strategy_Tree_Side_Buffering"
 begin
 
 text \<open>\<open>TD_side\<close> defines a record field \<open>\<sigma>\<close> for its internal state; hide the short
