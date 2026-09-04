@@ -34,19 +34,6 @@ lemma restrict_global_for_mono:
   unfolding restrict_global_for_def le_fun_def
   by (auto dest: le_funD)
 
-lemma restrict_local_for_le:
-  "restrict_local_for gs (sigma :: 'a::bounded_semilattice_sup_bot abs_state) \<le> sigma"
-  unfolding restrict_local_for_def le_fun_def by auto
-
-lemma restrict_global_for_le:
-  "restrict_global_for gs (sigma :: 'a::bounded_semilattice_sup_bot abs_state) \<le> sigma"
-  unfolding restrict_global_for_def le_fun_def by auto
-
-lemma map_lift_restrict_global_for_le:
-  fixes x :: "'a::bounded_semilattice_sup_bot abs_state lifted"
-  shows "map_lift (restrict_global_for gs) x \<le> x"
-  by (cases x) (simp_all add: restrict_global_for_le)
-
 lemma restrict_local_for_join [simp]:
   "restrict_local_for gs (A \<squnion> B) = restrict_local_for gs A \<squnion> restrict_local_for gs B"
   unfolding restrict_local_for_def sup_fun_def by (rule ext) simp

@@ -160,7 +160,7 @@ what a later phase deletes.
 | 0.4 | `CFG_Enumeration`: import `Voblint_CFG.CFG_Transfer` instead of `Voblint_Compile.VIMP_Proc_to_CFG`. The build shows whether a VIMP name rode on the transitive import. | landed |
 | 0.5 | Move `normalize_point` and its lemmas (`Analysis_Result` 133-250) into `Result_Normalization`. `Abstract_Checks` cites `normalize_point` once; repoint its import for now and resolve in Phase 2. | landed |
 | 0.6 | Delete `td_cfg_side_solver_dg`, `cfg_pkg_dg`, `stabl_at`, `nu_at`, `solve_prod`, `part_post_at`, `least_part_post_at` (`DG_Constraint_Trees` 2365-2470). Then check `threefold_mono` (one remaining user, `Voblint.thy`). | landed |
-| 0.7 | Delete the other zero-use definitions in `DG_Constraint_Trees` and `DG_Soundness` one at a time; keep any the build wants (grep cannot see simp-set uses). | open -- every candidate has internal users (it is a self-contained cluster with no external consumer, e.g. `pair_of_dg`/`dg_of_pair`/`merge_dg`/`split_dg`, `dgs_enter_pair`, `apply_dg_spec_contribution_at`, `indep_dg_spec`, `gamma_dg`, `dg_trees`/`dg_acc`, `hook_trees`/`hook_acc`, `gamma_ownership_split_lifted`); deciding per cluster is Phase 3 work |
+| 0.7 | Delete the other zero-use definitions in `DG_Constraint_Trees` and `DG_Soundness` one at a time; keep any the build wants (grep cannot see simp-set uses). | open -- every candidate has internal users (it is a self-contained cluster with no external consumer, e.g. `pair_of_dg`/`dg_of_pair`/`merge_dg`/`split_dg`, `dgs_enter_pair`, `apply_dg_spec_contribution_at`, `indep_dg_spec`, `dg_trees`/`dg_acc`, `hook_trees`/`hook_acc`, `gamma_ownership_split_lifted`); deciding per cluster is Phase 3 work. `gamma_dg` is closed (2026-09-04 decision entry): it was a self-contained cluster whose five lemmas nothing outside `DG_Soundness` cited, and it is deleted |
 | 0.8 | Run `partition_check.py` with the target assignment: zero violating edges is the exit criterion. | landed |
 
 Gate: `AFP=$HOME/afp/thys pixi run build`, `pixi run codegen`,
@@ -854,3 +854,47 @@ and mark it `superseded (see below)`.
   (an off-by-two dropped a `lemmas` re-export in `Interval_Ctx_None_Sound`
   and surfaced two theories later as an undefined fact). Anchor on a unique
   string with `str_replace` wherever one exists.
+
+### 2026-09-04 -- shallow-definition audit, first deletion wave
+
+A per-session audit looked for definitions that fix a few parameters of a more
+general constant, alias one, or support only their own lemmas. The first wave
+deleted the candidates with no consumer anywhere in `src/`, `cli/`,
+`codegen/generated/` or `scripts/`, each confirmed by whole-word search
+including `assumes`, `lemmas` and `interpretation` positions before removal:
+
+- `gamma_dg` and its five lemmas (`DG_Soundness`) -- closes that name in 0.7.
+- `lookup_joined_with`, `lookup_joined_with_absent`,
+  `lookup_joined_state_eq_with` (`Analysis_Result`): the join-generic lookup was
+  only ever instantiated at `\<squnion>`, which `lookup_joined_state` already is.
+- `analyse_report` (`DG_Analysis_Adapter`) and `verdict_check_result`
+  (`Contextual_Check_Report`), its sole consumer.
+- The four `routed_result`/`routed_report_*` re-exports
+  (`Routed_Analysis_Sound`); instances cite the adapter's facts directly.
+  `routed_activation_collect_sound` has four consumers and stays.
+- `unrouted_enter_compatible` and its intro rule (`DG_LTR_Sound`). No theorem
+  assumed it, so the monovariant generator's soundness never depended on it;
+  the condition it recorded is now stated in prose at `ltr_enter_tree_of`.
+- `entry_seed_at`, the `seed_addr`/`seed_predecessor_addr_list`/`val_at`
+  addressing cluster, and the unlifted `formals_route`/`formals_route_gen`
+  (`Routed_Context`). Every routed instance uses `formals_route_lifted`, which
+  builds on `formals_context` and does not go through the unlifted pair.
+- `cs_project_gk` (`Call_String_Context`): seed-key truncation for a
+  `k1 \<le> k2` projection theorem that was never stated.
+- `cone` (`CFG_Prune`): the backward-reachability set, already recorded as dead
+  in `docs/EXPORT_SURFACE_AUDIT.md`. Not added to
+  `scripts/retired_identifiers.txt` -- "cone" is ordinary English in this tree's
+  prose, so a whole-word rule would reject correct sentences.
+
+Every other name is appended to `scripts/retired_identifiers.txt`.
+`pixi run locale-parameters` reports no free identifier left in any locale
+assumption, which is the check that catches a deleted constant silently turning
+an assumption into a statement about an arbitrary function.
+
+Deferred deliberately, because each is a rename or a migration rather than a
+deletion, and each touches proofs: `dg_spec_combine_transfer` -> `dgs_combine`
+(~50 sites), `compile_program` -> `prog_cfg` (an export root, needs
+`pixi run codegen`), `gamma_point` -> `gamma_state_lift`, `map_lift` ->
+the BNF-generated `map_lifted` (244 sites), `normalize_point` -> `map_lift`
+(97 sites), and the Exec refinement locales.
+

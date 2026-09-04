@@ -8,6 +8,7 @@ theory Int_Exec_Sound
     "Voblint_CFG.CFG_Prune"
     "Voblint_VIMP.VIMP_Program"
     "TD.TD_side_upd_rule"
+    "Voblint_Solver.TD_Solver_Bridge"
 begin
 
 section \<open>Native D/G runtime API: the composite integer domain, Refine_Fixpoint mode\<close>
@@ -34,9 +35,16 @@ text \<open>
   \<^theory>\<open>Voblint_Analysis.Int_Warrowing\<close>'s \<open>bounded_warrowing\<close> instance for \<open>int_dom\<close> is what
   makes the local unknown's type admit this solver at all.
 
-  \<open>G\<close> stays diagonal at \<open>int_dom exec_dg_st lifted\<close>, matching what \<^const>\<open>dg_gen_of\<close> needs;
-  its content is never read, since every field of \<^const>\<open>local_state_dg_spec_st_for_lifted\<close> threads
-  its incoming \<open>g\<close> through unchanged.
+  \<open>G\<close> stays diagonal at \<open>int_dom exec_dg_st lifted\<close>, matching what \<^const>\<open>unit_routed_eqs\<close>
+  needs; its content is never read, since every field of \<^const>\<open>local_state_dg_spec_st_for_lifted\<close>
+  threads its incoming \<open>g\<close> through unchanged.
+
+  The equation system is \<^const>\<open>unit_routed_eqs\<close> at the unit context, the same routed
+  generator every registration locale and every other flagship uses, so a VIMP call site
+  publishes its callee's entry through an activation seed. \<open>p\<close> is an arbitrary
+  \<^typ>\<open>imp_prog\<close>, so a call may genuinely occur; \<^const>\<open>TD_side_seed_join_warrowing_Interp_solve\<close>
+  keeps that seed join-only while still warrowing the analysis global and every
+  loop-carried local, mirroring Interval's own production route.
 \<close>
 
 text \<open>
@@ -68,16 +76,19 @@ fun int_dom_enter_st_for ::
 
 definition analyse_int_dg_eqs_for ::
   "refine_mode \<Rightarrow> (int_dom exec_dg_st \<Rightarrow> bool) \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow>
-     pp \<times> unit \<Rightarrow> (pp \<times> unit, unit, (int_dom exec_dg_st lifted, int_dom exec_dg_st lifted) dg_state) strategy_tree" where
+     pp \<times> unit \<Rightarrow> (pp \<times> unit, (unit, unit) routed_gk,
+       (int_dom exec_dg_st lifted, int_dom exec_dg_st lifted) dg_state) strategy_tree" where
   "analyse_int_dg_eqs_for mode empty_pred gs p =
-     dg_gen_of
+     unit_routed_eqs
        (local_state_dg_spec_st_for_lifted gs empty_pred (int_tf_st_for mode gs) (int_dom_enter_st_for mode gs))
        (prog_cfg p) bot (Lifted cinit_int_dom_st) (Lifted cinit_int_dom_st)"
 
 definition analyse_int_dg_for :: "refine_mode \<Rightarrow> (int_dom exec_dg_st \<Rightarrow> bool) \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow>
-    (pp \<times> unit) set \<times> (pp \<times> unit + unit \<Rightarrow> (int_dom exec_dg_st lifted, int_dom exec_dg_st lifted) dg_state)" where
+    (pp \<times> unit) set
+     \<times> (pp \<times> unit + (unit, unit) routed_gk \<Rightarrow> (int_dom exec_dg_st lifted, int_dom exec_dg_st lifted) dg_state)" where
   "analyse_int_dg_for mode empty_pred gs p =
-     TD_side_warrowing_apinis_Interp_solve (analyse_int_dg_eqs_for mode empty_pred gs p)
+     TD_side_seed_join_warrowing_Interp_solve is_activation_seed
+       (analyse_int_dg_eqs_for mode empty_pred gs p)
        (cfg_exit (prog_cfg p), ())"
 
 text \<open>
@@ -117,12 +128,14 @@ text \<open>
 \<close>
 
 definition analyse_int_dg_eqs :: "refine_mode \<Rightarrow> imp_prog \<Rightarrow>
-    pp \<times> unit \<Rightarrow> (pp \<times> unit, unit, (int_dom exec_dg_st lifted, int_dom exec_dg_st lifted) dg_state) strategy_tree" where
+    pp \<times> unit \<Rightarrow> (pp \<times> unit, (unit, unit) routed_gk,
+      (int_dom exec_dg_st lifted, int_dom exec_dg_st lifted) dg_state) strategy_tree" where
   "analyse_int_dg_eqs mode p =
      analyse_int_dg_eqs_for mode (resolved_st_q_is_bot_for (declared_global_vars p)) (declared_global p) p"
 
 definition analyse_int_dg :: "refine_mode \<Rightarrow> imp_prog \<Rightarrow>
-    (pp \<times> unit) set \<times> (pp \<times> unit + unit \<Rightarrow> (int_dom exec_dg_st lifted, int_dom exec_dg_st lifted) dg_state)" where
+    (pp \<times> unit) set
+     \<times> (pp \<times> unit + (unit, unit) routed_gk \<Rightarrow> (int_dom exec_dg_st lifted, int_dom exec_dg_st lifted) dg_state)" where
   "analyse_int_dg mode p =
      analyse_int_dg_for mode (resolved_st_q_is_bot_for (declared_global_vars p)) (declared_global p) p"
 
@@ -142,7 +155,8 @@ text \<open>
 \<close>
 
 definition analyse_int_dg_join_for :: "refine_mode \<Rightarrow> (int_dom exec_dg_st \<Rightarrow> bool) \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow>
-    (pp \<times> unit) set \<times> (pp \<times> unit + unit \<Rightarrow> (int_dom exec_dg_st lifted, int_dom exec_dg_st lifted) dg_state)" where
+    (pp \<times> unit) set
+     \<times> (pp \<times> unit + (unit, unit) routed_gk \<Rightarrow> (int_dom exec_dg_st lifted, int_dom exec_dg_st lifted) dg_state)" where
   "analyse_int_dg_join_for mode empty_pred gs p =
      TD_side_always_join_Interp_solve (analyse_int_dg_eqs_for mode empty_pred gs p)
        (cfg_exit (prog_cfg p), ())"
@@ -163,7 +177,8 @@ lemma analyse_int_dg_join_env_for_code [code]:
   unfolding analyse_int_dg_join_env_for_def Let_def by (rule refl)
 
 definition analyse_int_dg_per_origin_for :: "refine_mode \<Rightarrow> (int_dom exec_dg_st \<Rightarrow> bool) \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow>
-    (pp \<times> unit) set \<times> (pp \<times> unit + unit \<Rightarrow> (int_dom exec_dg_st lifted, int_dom exec_dg_st lifted) dg_state)" where
+    (pp \<times> unit) set
+     \<times> (pp \<times> unit + (unit, unit) routed_gk \<Rightarrow> (int_dom exec_dg_st lifted, int_dom exec_dg_st lifted) dg_state)" where
   "analyse_int_dg_per_origin_for mode empty_pred gs p =
      TD_side_per_origin_Interp_solve (analyse_int_dg_eqs_for mode empty_pred gs p)
        (cfg_exit (prog_cfg p), ())"

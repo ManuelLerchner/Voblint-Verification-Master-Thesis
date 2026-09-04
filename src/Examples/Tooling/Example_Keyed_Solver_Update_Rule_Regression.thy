@@ -38,7 +38,7 @@ definition keyed_dummy_cfg :: cfg where
   "keyed_dummy_cfg = \<lparr> intra = {}, calls = {}, cfg_entry = Statement 0, checks = {} \<rparr>"
 
 text \<open>Two predecessors of \<open>Statement 1\<close>, both from \<open>Statement 0\<close>, with different
-  \<open>edge_action\<close>s so their \<^const>\<open>dg_edge_tree\<close> contributions differ.\<close>
+  \<open>edge_action\<close>s so their \<^const>\<open>dg_edge_tree_at\<close> contributions differ.\<close>
 definition keyed_pred_sel ::
   "cfg \<Rightarrow> pp \<Rightarrow> unit \<Rightarrow> ((pp \<times> unit + unit) \<times> edge_action) list" where
   "keyed_pred_sel g v ctx =

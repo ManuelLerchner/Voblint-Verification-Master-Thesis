@@ -53,12 +53,12 @@ locale entry_state_routed_context =
        \<Longrightarrow> (u, CallEdge dst pars args, FunctionEntry p, cont)
              \<in> calls (compile_prog Pi ps)
        \<Longrightarrow> \<exists>pub deps.
-             enter_runs (dgs_enter S (call_info_of (CallEdge dst pars args) p))
+             enter_runs (enter\<^sup># S (call_info_of (CallEdge dst pars args) p))
                (mk_dg_man (locals (sigma (Inl (u, ctx)))) (\<lambda>_. gk0)) sigma
                [(locals (sigma (Inl (u, ctx))),
                  en (call_info_of (CallEdge dst pars args) p)
                     (locals (sigma (Inl (u, ctx)))))] pub
-           \<and> enter_deps (dgs_enter S (call_info_of (CallEdge dst pars args) p))
+           \<and> enter_deps (enter\<^sup># S (call_info_of (CallEdge dst pars args) p))
                (mk_dg_man (locals (sigma (Inl (u, ctx)))) (\<lambda>_. gk0)) sigma
                [(locals (sigma (Inl (u, ctx))),
                  en (call_info_of (CallEdge dst pars args) p)
@@ -123,9 +123,9 @@ next
   let ?ci = "call_info_of (CallEdge dst pars args) p"
   let ?caller = "locals (sigma (Inl (u, ctx)))"
   obtain pub deps
-    where R: "enter_runs (dgs_enter S ?ci) (mk_dg_man ?caller (\<lambda>_. gk0)) sigma
+    where R: "enter_runs (enter\<^sup># S ?ci) (mk_dg_man ?caller (\<lambda>_. gk0)) sigma
                 [(?caller, en ?ci ?caller)] pub"
-      and D: "enter_deps (dgs_enter S ?ci) (mk_dg_man ?caller (\<lambda>_. gk0)) sigma
+      and D: "enter_deps (enter\<^sup># S ?ci) (mk_dg_man ?caller (\<lambda>_. gk0)) sigma
                 [(?caller, en ?ci ?caller)] deps"
     using enter_singleton[OF covV ce] by blast
   have ecov: "call_enter gs (CallEdge dst pars args) s
@@ -137,8 +137,8 @@ next
     by (rule route_enterc_of_sigma_agree
           [OF fin compile_prog_calls_source_unique ce refl])
   show "\<exists>pairs pub deps cont' entry.
-             enter_runs (dgs_enter S ?ci) (mk_dg_man ?caller (\<lambda>_. gk0)) sigma pairs pub
-           \<and> enter_deps (dgs_enter S ?ci) (mk_dg_man ?caller (\<lambda>_. gk0)) sigma pairs deps
+             enter_runs (enter\<^sup># S ?ci) (mk_dg_man ?caller (\<lambda>_. gk0)) sigma pairs pub
+           \<and> enter_deps (enter\<^sup># S ?ci) (mk_dg_man ?caller (\<lambda>_. gk0)) sigma pairs deps
            \<and> (cont', entry) \<in> set pairs
            \<and> s \<in> gammaDG cont' (globs (sigma (Inr gk0)))
            \<and> call_enter gs (CallEdge dst pars args) s

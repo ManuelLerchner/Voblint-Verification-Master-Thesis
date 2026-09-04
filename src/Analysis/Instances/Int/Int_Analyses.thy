@@ -7,7 +7,6 @@ theory Int_Analyses
     "Voblint_Exec.Routed_Domain_Exec"
     "Voblint_Exec.DG_Local_State_Exec"
     "Voblint_Framework.DG_Local_State_Spec"
-    "Voblint_Framework.DG_LTR_Sound"
     "Voblint_Framework.Routed_Analysis_Sound"
     "Voblint_Framework.Routed_Context"
     "Voblint_Framework.Routed_Context_Unit"
@@ -47,11 +46,12 @@ text \<open>
 section \<open>Int at the routed spine, instantiated at the unit context\<close>
 
 text \<open>
-  Redirects the composite integer domain's production Base-family (\<^const>\<open>dg_gen_of\<close>)
-  analysis onto the routed D/G spine (\<^locale>\<open>dg_ctx_activation_base\<close>,
-  \<^locale>\<open>unit_routed_context\<close>) that Interval's own entry-state and call-string context
-  analyses already use, mirroring Sign's own routed-unit-context production cutover
-  exactly. The context here is \<^typ>\<open>unit\<close>:
+  A second soundness derivation at the routed D/G spine
+  (\<^locale>\<open>dg_ctx_activation_base\<close>, \<^locale>\<open>unit_routed_context\<close>) that Interval's own
+  entry-state and call-string context analyses already use, going directly
+  through that generic machinery rather than through a packaged registration
+  locale, mirroring Sign's own routed-unit-context instance exactly. The
+  context here is \<^typ>\<open>unit\<close>:
   \<^locale>\<open>unit_routed_context\<close> (\<^theory>\<open>Voblint_Framework.Routed_Context_Unit\<close>) fixes
   \<^const>\<open>route_unit\<close>, so every routing-agreement obligation that Interval's
   formals-context instance must prove from its own transfer facts collapses here
@@ -67,8 +67,7 @@ text \<open>
 
   Soundness below is derived directly from \<^locale>\<open>dg_ctx_activation_base\<close>'s generic
   machinery against the collecting semantics, exactly as Sign's and Interval's own
-  routed analyses are derived. No comparison to Int's Base-family production result is
-  attempted or needed: \<^const>\<open>dg_gen_of\<close> never appears in this development.
+  routed analyses are derived.
 
   The public result/report table (Section 7) interprets \<^locale>\<open>dg_analysis_adapter\<close>
   directly instead of hand-rolling one: Sign's own file predates that locale.
@@ -89,8 +88,9 @@ text \<open>
   \<^const>\<open>analyse_int_dg_eqs_for\<close> already solves over
   (\<^theory>\<open>Voblint_Analysis.Int_Exec_Sound\<close>), at the same
   \<^const>\<open>int_tf_st_for\<close>/\<^const>\<open>int_dom_enter_st_for\<close> primitives, \<open>mode\<close> included.
-  Only the equation-generator wrapped around this spec changes (\<^const>\<open>dg_gen_of\<close>
-  there, the routed keyed-seed generator here) --- the spec itself, and every
+  Only the routed generator variant wrapping this spec changes: the unbuffered
+  \<^const>\<open>unit_routed_eqs\<close> there, the buffered
+  \<^const>\<open>side_cfg_T_eff_keyed_seed_dg_buffered\<close> here --- the spec itself, and every
   domain-transfer soundness fact about it, is untouched. Argument order (\<open>mode\<close>,
   \<open>empty_pred\<close>, \<open>gs\<close>) matches \<^const>\<open>analyse_int_dg_eqs_for\<close>'s own.
 \<close>
@@ -433,7 +433,6 @@ qed
 
 lemmas int_conf_analyse_result_def = int_conf_adapter.analyse_result_def
 lemmas int_conf_analyse_report_ctx_def = int_conf_adapter.analyse_report_ctx_def
-lemmas int_conf_analyse_report_def = int_conf_adapter.analyse_report_def
 lemmas int_conf_analyse_report_ctx_proved_sound = int_conf_adapter.analyse_report_ctx_proved_sound
 lemmas int_conf_analyse_report_ctx_refuted_sound = int_conf_adapter.analyse_report_ctx_refuted_sound
 
@@ -486,7 +485,6 @@ lemmas int_conf_analyse_report_ctx_proved_sound = int_conf_join.int_conf_analyse
 lemmas int_conf_analyse_report_ctx_refuted_sound = int_conf_join.int_conf_analyse_report_ctx_refuted_sound
 lemmas int_conf_analyse_result_def = int_conf_join.int_conf_analyse_result_def
 lemmas int_conf_analyse_report_ctx_def = int_conf_join.int_conf_analyse_report_ctx_def
-lemmas int_conf_analyse_report_def = int_conf_join.int_conf_analyse_report_def
 
 section \<open>Whole-program convenience layer\<close>
 

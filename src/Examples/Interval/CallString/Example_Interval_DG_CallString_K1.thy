@@ -1,6 +1,5 @@
 theory Example_Interval_DG_CallString_K1
   imports
-    "Voblint_Framework.DG_LTR_Sound"
     "Voblint_Analysis.Interval_Transfer"
     "Voblint_Analysis.Ivl_Exec"
     "Voblint_Exec.DG_Local_State_Exec"
@@ -142,9 +141,9 @@ interpretation nest_dg_sound: sound_dg_spec nest_S_st nest_gamma nest_gs
 
 subsection \<open>The routed equation system and its computed solution\<close>
 
-text \<open>The global-key type \<^type>\<open>call_string_gk\<close> and its truncation
-  \<^const>\<open>cs_project_gk\<close> come from \<^theory>\<open>Voblint_Framework.Call_String_Context\<close>: the key
-  shape never depended on \<open>k\<close> or on this program.\<close>
+text \<open>The global-key type \<^type>\<open>call_string_gk\<close> comes from
+  \<^theory>\<open>Voblint_Framework.Call_String_Context\<close>: the key shape never depended
+  on \<open>k\<close> or on this program.\<close>
 
 definition nest_1_eqs ::
   "(pp \<times> cfg_node list, call_string_gk,

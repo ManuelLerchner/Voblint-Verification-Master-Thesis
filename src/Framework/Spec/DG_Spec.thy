@@ -7,19 +7,25 @@ section \<open>What an analysis supplies: manager-native transfers\<close>
 text \<open>
   An analysis supplies one manager-native transfer per edge action and the
   pieces of the call/return protocol. A transfer takes a \<open>man\<close> and returns
-  a \<open>strategy_program\<close> whose result is the successor local value: global
-  reads are \<open>man_global\<close> calls, global publications are \<open>man_sideg\<close> calls,
-  and a transfer that makes neither compiles to a tree with no \<open>QueryG\<close>
-  and no \<open>Side\<close> at all. This replaces the state-threading shape
-  \<open>'dl \<Rightarrow> 'dg \<Rightarrow> 'dg \<times> 'dl\<close>, which forced every transfer to republish the
-  global it read even where the global channel is provably inert.
+  a \<open>strategy_program\<close>: global reads are \<open>man_global\<close> calls, global
+  publications are \<open>man_sideg\<close> calls, and a transfer that makes neither
+  compiles to a tree with no \<open>QueryG\<close> and no \<open>Side\<close> at all. This replaces the
+  state-threading shape \<open>'dl \<Rightarrow> 'dg \<Rightarrow> 'dg \<times> 'dl\<close>, which forced every transfer to
+  republish the global it read even where the global channel is provably inert.
+
+  What a program answers with depends on the field. An edge transfer and a
+  combine stage answer the successor local value, so their compiled tree is an
+  equation's right-hand side outright. Entry answers a list of alternatives
+  instead, which no equation carries: whatever consumes it reduces the list to
+  one value, and the two generators reduce it differently.
 
   There is one interface here, not a hierarchy of them. A specification is
-  \<^emph>\<open>local-only\<close> when every field is a plain \<open>local_transfer\<close> of a pure
-  function on the local value, and \<^emph>\<open>effectful\<close> when some field reads or
-  publishes through \<open>man_global\<close>/\<open>man_sideg\<close>. Those words describe what a
-  given specification's compiled trees do, and are read off those trees --
-  they are not a classification the framework branches on.
+  \<^emph>\<open>local-only\<close> when every field is a pure function of the values it is handed
+  --- \<open>local_transfer\<close> for the edge fields, \<open>local_enter_transfer\<close> for entry ---
+  and \<^emph>\<open>effectful\<close> when some field reads or publishes through
+  \<open>man_global\<close>/\<open>man_sideg\<close>. Those words describe what a given specification's
+  compiled trees do, and are read off those trees -- they are not a
+  classification the framework branches on.
 \<close>
 
 
@@ -45,31 +51,31 @@ datatype analysis_event =
   Check_Event exp
 
 record ('x,'k,'v,'dl,'dg) dg_spec =
-  dgs_skip       :: "('x,'k,'v,'dl,'dg) man_transfer"
-  dgs_assign     :: "vname \<Rightarrow> exp \<Rightarrow> ('x,'k,'v,'dl,'dg) man_transfer"
-  dgs_special    :: "special_call \<Rightarrow> vname \<Rightarrow> ('x,'k,'v,'dl,'dg) man_transfer"
-  dgs_branch     :: "exp \<Rightarrow> bool \<Rightarrow> ('x,'k,'v,'dl,'dg) man_transfer"
-  dgs_body       :: "pname \<Rightarrow> ('x,'k,'v,'dl,'dg) man_transfer"
-  dgs_return     :: "exp option \<Rightarrow> pname \<Rightarrow> ('x,'k,'v,'dl,'dg) man_transfer"
-  dgs_enter      :: "call_info \<Rightarrow> ('x,'k,'v,'dl,'dg) man_enter_transfer"
-  dgs_event      :: "analysis_event \<Rightarrow> ('x,'k,'v,'dl,'dg) man_transfer"
-  dgs_combine_env    :: "call_info \<Rightarrow> ('x,'k,'v,'dl,'dg) man_combine_transfer"
-  dgs_combine_assign :: "call_info \<Rightarrow> ('x,'k,'v,'dl,'dg) man_combine_transfer"
+  dgs_skip       :: "('x,'k,'v,'dl,'dg) man_transfer" ("skip\<^sup>#")
+  dgs_assign     :: "vname \<Rightarrow> exp \<Rightarrow> ('x,'k,'v,'dl,'dg) man_transfer" ("assign\<^sup>#")
+  dgs_special    :: "special_call \<Rightarrow> vname \<Rightarrow> ('x,'k,'v,'dl,'dg) man_transfer" ("special\<^sup>#")
+  dgs_branch     :: "exp \<Rightarrow> bool \<Rightarrow> ('x,'k,'v,'dl,'dg) man_transfer" ("branch\<^sup>#")
+  dgs_body       :: "pname \<Rightarrow> ('x,'k,'v,'dl,'dg) man_transfer" ("body\<^sup>#")
+  dgs_return     :: "exp option \<Rightarrow> pname \<Rightarrow> ('x,'k,'v,'dl,'dg) man_transfer" ("return\<^sup>#")
+  dgs_enter      :: "call_info \<Rightarrow> ('x,'k,'v,'dl,'dg) man_enter_transfer" ("enter\<^sup>#")
+  dgs_event      :: "analysis_event \<Rightarrow> ('x,'k,'v,'dl,'dg) man_transfer" ("event\<^sup>#")
+  dgs_combine_env    :: "call_info \<Rightarrow> ('x,'k,'v,'dl,'dg) man_combine_transfer" ("combine'_env\<^sup>#")
+  dgs_combine_assign :: "call_info \<Rightarrow> ('x,'k,'v,'dl,'dg) man_combine_transfer" ("combine'_assign\<^sup>#")
 
 text \<open>
-  Notation for the four call-boundary fields, so a proof can name them without
-  the record prefix. Each abbreviates its field and nothing else; construction
-  and record update still use the field names.
+  Every field carries the Goblint \<open>Spec\<close> method name it answers to, marked
+  \<open>\<^sup>#\<close>. A specification therefore reads in the analyzer's vocabulary,
+  and the marker keeps the abstract operation apart from the concrete one it
+  over-approximates: \<^const>\<open>combine_env\<close> merges two stores, whereas
+  \<open>combine_env\<^sup>#\<close> is the field a domain fills to describe that merge.
+  The whole-state combine wears the same marker as \<open>combine\<^sup>#\<close>, so it
+  means one thing on both sides of the transfer boundary.
 
-  \<open>enter\<^sup>#\<close> answers the whole operation Goblint's \<open>Spec.enter\<close> answers: the list
-  of alternatives, each pairing the caller's continuation with the callee's
-  entry value. There is no separate caller-continuation field, because the two
-  halves of an alternative only mean anything together.
+  Two of the names contain an underscore, which a mixfix template would
+  otherwise read as an argument slot, so they escape it as \<open>'_\<close>. The
+  selector names stay available for record construction and update, neither of
+  which takes notation.
 \<close>
-
-notation dgs_enter ("enter\<^sup>#")
-notation dgs_combine_env ("combine'_env\<^sup>#")
-notation dgs_combine_assign ("combine'_assign\<^sup>#")
 
 text \<open>
   Procedure-return combine is split the same way Goblint's \<open>Spec\<close> splits
@@ -85,8 +91,8 @@ definition dgs_combine ::
 where
   "dgs_combine S ci m exit =
      do {
-       d_env \<leftarrow> dgs_combine_env S ci m exit;
-       dgs_combine_assign S ci (man_with_local m d_env) exit
+       d_env \<leftarrow> combine_env\<^sup># S ci m exit;
+       combine_assign\<^sup># S ci (man_with_local m d_env) exit
      }"
 
 text \<open>
@@ -102,13 +108,13 @@ text \<open>
 fun dg_spec_step ::
   "('x,'k,'v,'dl,'dg,'z) dg_spec_scheme \<Rightarrow> edge_action \<Rightarrow> ('x,'k,'v,'dl,'dg) man_transfer"
 where
-  "dg_spec_step S EA_Nop            = dgs_skip S"
-| "dg_spec_step S (EA_Assign x e)   = dgs_assign S x e"
-| "dg_spec_step S (EA_Special sc x) = dgs_special S sc x"
-| "dg_spec_step S (EA_Assume b)     = dgs_branch S b True"
-| "dg_spec_step S (EA_AssumeNot b)  = dgs_branch S b False"
-| "dg_spec_step S (EA_Ret e p)      = dgs_return S e p"
-| "dg_spec_step S (EA_Check cnd)    = dgs_event S (Check_Event cnd)"
+  "dg_spec_step S EA_Nop            = skip\<^sup># S"
+| "dg_spec_step S (EA_Assign x e)   = assign\<^sup># S x e"
+| "dg_spec_step S (EA_Special sc x) = special\<^sup># S sc x"
+| "dg_spec_step S (EA_Assume b)     = branch\<^sup># S b True"
+| "dg_spec_step S (EA_AssumeNot b)  = branch\<^sup># S b False"
+| "dg_spec_step S (EA_Ret e p)      = return\<^sup># S e p"
+| "dg_spec_step S (EA_Check cnd)    = event\<^sup># S (Check_Event cnd)"
 
 subsection \<open>Compiling a specification to right-hand sides\<close>
 
@@ -152,41 +158,6 @@ where
   "dg_spec_combine_tree S ci src_cc src_ex key =
      combine_transfer_tree (dg_spec_combine_transfer S ci) src_cc src_ex key"
 
-subsection \<open>Observable transfer properties\<close>
-
-text \<open>
-  Three things are observable about a compiled transfer: what local value it
-  returns, which unknowns it depends on, and what it publishes. The
-  predicates below name those observations.
-
-  They are not the soundness interface -- \<open>sound_dg_spec\<close> states its
-  assumptions directly against \<open>traverse_rhs\<close>/\<open>sides_of_rhs\<close> and does not
-  mention them. They are useful wherever a proof needs to know how a tree
-  behaves rather than what it means: equation generators, the buffered
-  generator's contribution hooks, and the local-only specializations below.
-\<close>
-
-
-definition local_result ::
-  "('x,'k,'v,'dl::bounded_semilattice_sup_bot,'dg::bounded_semilattice_sup_bot) man_transfer
-   \<Rightarrow> ('dl \<Rightarrow> 'dl) \<Rightarrow> bool"
-where
-  "local_result T f \<longleftrightarrow>
-     (\<forall>src key \<tau>. locals (traverse_rhs (transfer_tree T src key) \<tau>) = f (locals (\<tau> src)))"
-
-definition emits_no_sides ::
-  "('x,'k,'v,'dl::bounded_semilattice_sup_bot,'dg::bounded_semilattice_sup_bot) man_transfer
-   \<Rightarrow> bool"
-where
-  "emits_no_sides T \<longleftrightarrow>
-     (\<forall>src key \<tau> k. sides_of_rhs (transfer_tree T src key) \<tau> k = bot)"
-
-definition reads_only_source ::
-  "('x,'k,'v,'dl::bounded_semilattice_sup_bot,'dg::bounded_semilattice_sup_bot) man_transfer
-   \<Rightarrow> bool"
-where
-  "reads_only_source T \<longleftrightarrow>
-     (\<forall>src key \<tau>. dep_aux \<tau> (transfer_tree T src key) = {src})"
 subsection \<open>Local-only transfers\<close>
 
 text \<open>
@@ -234,31 +205,16 @@ lemma dep_aux_local_transfer_tree [simp]:
   "dep_aux \<tau> (transfer_tree (local_transfer f) src key) = {src}"
   by (cases src) (simp_all add: transfer_tree_local_transfer)
 
-lemma local_transfer_local_result:
-  "local_result (local_transfer f) f"
-  unfolding local_result_def
-  by (intro allI, case_tac src) (simp_all add: transfer_tree_local_transfer)
-
-lemma local_transfer_emits_no_sides:
-  "emits_no_sides (local_transfer f)"
-  unfolding emits_no_sides_def
-  by (intro allI, case_tac src) (simp_all add: transfer_tree_local_transfer)
-
-lemma local_transfer_reads_only_source:
-  "reads_only_source (local_transfer f)"
-  unfolding reads_only_source_def
-  by (intro allI, case_tac src) (simp_all add: transfer_tree_local_transfer)
-
 subsection \<open>Local-only combine\<close>
 
 text \<open>
   The combine counterpart: a pure function of the caller-continuation and
-  callee-exit values, no global contact. When \<open>caller_cont\<close>,
-  \<open>combine_env\<close>, and \<open>combine_assign\<close> are all local, the whole return
-  pipeline collapses monadically to one pure composition -- the sequencing
-  through \<^const>\<open>man_with_local\<close> is definitional, nothing is extracted --
-  and the compiled combine tree is two reads and an answer, with no side
-  contribution and dependencies exactly the two sources.
+  callee-exit values, no global contact. When both stages --- \<open>combine_env\<^sup>#\<close>
+  and \<open>combine_assign\<^sup>#\<close> --- are local, the whole return pipeline collapses
+  monadically to one pure composition -- the sequencing through
+  \<^const>\<open>man_with_local\<close> is definitional, nothing is extracted -- and the
+  compiled combine tree is two reads and an answer, with no side contribution
+  and dependencies exactly the two sources.
 \<close>
 
 definition local_combine_transfer ::
@@ -267,8 +223,8 @@ where
   "local_combine_transfer f m exit = sp_return (f (man_local m) exit)"
 
 lemma dg_spec_combine_transfer_local:
-  assumes "dgs_combine_env S ci = local_combine_transfer ce"
-    and "dgs_combine_assign S ci = local_combine_transfer ca"
+  assumes "combine_env\<^sup># S ci = local_combine_transfer ce"
+    and "combine_assign\<^sup># S ci = local_combine_transfer ca"
   shows "dg_spec_combine_transfer S ci m exit
            = sp_return (ca (ce (man_local m) exit) exit)"
   by (simp add: dg_spec_combine_transfer_def dgs_combine_def assms
@@ -347,35 +303,6 @@ text \<open>
   formers; these equations connect the two.
 \<close>
 
-lemma traverse_transfer_tree:
-  "traverse_rhs (transfer_tree T src gk) \<sigma>
-     = traverse_rhs (sp_compile_with (\<lambda>d. DG d bot) (T (mk_dg_man (locals (\<sigma> src)) gk))) \<sigma>"
-  by (cases src)
-     (simp_all add: transfer_tree_def dg_edge_tree_man_def dg_read_at_def sp_bind_assoc)
-
-lemma sides_transfer_tree:
-  "sides_of_rhs (transfer_tree T src gk) \<sigma> z
-     = sides_of_rhs (sp_compile_with (\<lambda>d. DG d bot) (T (mk_dg_man (locals (\<sigma> src)) gk))) \<sigma> z"
-  by (cases src)
-     (simp_all add: transfer_tree_def dg_edge_tree_man_def dg_read_at_def sp_bind_assoc)
-
-lemma traverse_combine_transfer_tree:
-  "traverse_rhs (combine_transfer_tree T src_cc src_ex gk) \<sigma>
-     = traverse_rhs (sp_compile_with (\<lambda>d. DG d bot)
-         (T (mk_dg_man (locals (\<sigma> src_cc)) gk) (locals (\<sigma> src_ex)))) \<sigma>"
-  by (cases src_cc; cases src_ex)
-     (simp_all add: combine_transfer_tree_def dg_combine_tree_man_def dg_read_at_def
-        sp_bind_assoc)
-
-lemma sides_combine_transfer_tree:
-  "sides_of_rhs (combine_transfer_tree T src_cc src_ex gk) \<sigma> z
-     = sides_of_rhs (sp_compile_with (\<lambda>d. DG d bot)
-         (T (mk_dg_man (locals (\<sigma> src_cc)) gk) (locals (\<sigma> src_ex)))) \<sigma> z"
-  by (cases src_cc; cases src_ex)
-     (simp_all add: combine_transfer_tree_def dg_combine_tree_man_def dg_read_at_def
-        sp_bind_assoc)
-
-
 subsection \<open>A default specification, and overriding its fields\<close>
 
 text \<open>
@@ -410,16 +337,16 @@ definition default_local_dg_spec :: "('x,'k,'v,'D,'G) dg_spec" where
      dgs_combine_assign = (\<lambda>ci. local_combine_transfer (\<lambda>d de. d)) \<rparr>"
 
 lemma default_local_dg_spec_simps [simp]:
-  "dgs_skip default_local_dg_spec = local_transfer id"
-  "dgs_assign default_local_dg_spec x e = local_transfer id"
-  "dgs_special default_local_dg_spec sc x = local_transfer id"
-  "dgs_branch default_local_dg_spec b pol = local_transfer id"
-  "dgs_body default_local_dg_spec p = local_transfer id"
-  "dgs_return default_local_dg_spec eo p = local_transfer id"
-  "dgs_enter default_local_dg_spec ci = local_enter_transfer (\<lambda>d. [(d, d)])"
-  "dgs_event default_local_dg_spec ev = local_transfer id"
-  "dgs_combine_env default_local_dg_spec ci = local_combine_transfer (\<lambda>d de. d)"
-  "dgs_combine_assign default_local_dg_spec ci = local_combine_transfer (\<lambda>d de. d)"
+  "skip\<^sup># default_local_dg_spec = local_transfer id"
+  "assign\<^sup># default_local_dg_spec x e = local_transfer id"
+  "special\<^sup># default_local_dg_spec sc x = local_transfer id"
+  "branch\<^sup># default_local_dg_spec b pol = local_transfer id"
+  "body\<^sup># default_local_dg_spec p = local_transfer id"
+  "return\<^sup># default_local_dg_spec eo p = local_transfer id"
+  "enter\<^sup># default_local_dg_spec ci = local_enter_transfer (\<lambda>d. [(d, d)])"
+  "event\<^sup># default_local_dg_spec ev = local_transfer id"
+  "combine_env\<^sup># default_local_dg_spec ci = local_combine_transfer (\<lambda>d de. d)"
+  "combine_assign\<^sup># default_local_dg_spec ci = local_combine_transfer (\<lambda>d de. d)"
   by (simp_all add: default_local_dg_spec_def)
 
 subsection \<open>Overriding every field at once\<close>
@@ -427,8 +354,8 @@ subsection \<open>Overriding every field at once\<close>
 text \<open>
   \<open>local_spec_step\<close> is the pure counterpart of \<^const>\<open>dg_spec_step\<close>'s
   dispatch, and \<open>local_dg_spec\<close> overrides every field of the default from
-  eleven pure functions -- the shape a whole-state domain takes, where
-  naming the functions positionally is shorter than eleven updates.
+  ten pure functions -- the shape a whole-state domain takes, where naming the
+  functions positionally is shorter than ten record updates.
 \<close>
 
 fun local_spec_step ::
@@ -499,20 +426,20 @@ text \<open>
 \<close>
 
 lemma local_dg_spec_simps [simp]:
-  "dgs_skip (local_dg_spec sk asn sp br bd rt en ev ce ca) = local_transfer sk"
-  "dgs_assign (local_dg_spec sk asn sp br bd rt en ev ce ca) x e = local_transfer (asn x e)"
-  "dgs_special (local_dg_spec sk asn sp br bd rt en ev ce ca) sc x
+  "skip\<^sup># (local_dg_spec sk asn sp br bd rt en ev ce ca) = local_transfer sk"
+  "assign\<^sup># (local_dg_spec sk asn sp br bd rt en ev ce ca) x e = local_transfer (asn x e)"
+  "special\<^sup># (local_dg_spec sk asn sp br bd rt en ev ce ca) sc x
      = local_transfer (sp sc x)"
-  "dgs_branch (local_dg_spec sk asn sp br bd rt en ev ce ca) b pol
+  "branch\<^sup># (local_dg_spec sk asn sp br bd rt en ev ce ca) b pol
      = local_transfer (br b pol)"
-  "dgs_body (local_dg_spec sk asn sp br bd rt en ev ce ca) p = local_transfer (bd p)"
-  "dgs_return (local_dg_spec sk asn sp br bd rt en ev ce ca) eo p
+  "body\<^sup># (local_dg_spec sk asn sp br bd rt en ev ce ca) p = local_transfer (bd p)"
+  "return\<^sup># (local_dg_spec sk asn sp br bd rt en ev ce ca) eo p
      = local_transfer (rt eo p)"
-  "dgs_enter (local_dg_spec sk asn sp br bd rt en ev ce ca) ci = local_enter_transfer (en ci)"
-  "dgs_event (local_dg_spec sk asn sp br bd rt en ev ce ca) ev' = local_transfer (ev ev')"
-  "dgs_combine_env (local_dg_spec sk asn sp br bd rt en ev ce ca) ci
+  "enter\<^sup># (local_dg_spec sk asn sp br bd rt en ev ce ca) ci = local_enter_transfer (en ci)"
+  "event\<^sup># (local_dg_spec sk asn sp br bd rt en ev ce ca) ev' = local_transfer (ev ev')"
+  "combine_env\<^sup># (local_dg_spec sk asn sp br bd rt en ev ce ca) ci
      = local_combine_transfer (ce ci)"
-  "dgs_combine_assign (local_dg_spec sk asn sp br bd rt en ev ce ca) ci
+  "combine_assign\<^sup># (local_dg_spec sk asn sp br bd rt en ev ce ca) ci
      = local_combine_transfer (ca ci)"
   by (simp_all add: local_dg_spec_def)
 

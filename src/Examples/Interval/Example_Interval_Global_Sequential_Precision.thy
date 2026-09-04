@@ -57,20 +57,20 @@ definition seq_local_cfg :: cfg where
   "seq_local_cfg = compile_prog (prog_table seq_local_prog) (prog_procs seq_local_prog)"
 
 definition seq_global_eqs ::
-  "pp \<times> unit \<Rightarrow> (pp \<times> unit, unit, (ivl exec_dg_st, ivl exec_dg_st) dg_state) strategy_tree"
+  "pp \<times> unit \<Rightarrow> (pp \<times> unit, (unit, unit) routed_gk, (ivl exec_dg_st, ivl exec_dg_st) dg_state) strategy_tree"
 where
   "seq_global_eqs =
-     dg_gen_of
+     unit_routed_eqs
        (ownership_split_dg_spec_st_for (declared_global seq_global_prog)
           (ivl_tf_st_for (declared_global seq_global_prog))
           (ivl_enter_st_for (declared_global seq_global_prog)))
        seq_global_cfg bot cinit_ivl_st (restrict_global_resolved_q cinit_ivl_st)"
 
 definition seq_local_eqs ::
-  "pp \<times> unit \<Rightarrow> (pp \<times> unit, unit, (ivl exec_dg_st, ivl exec_dg_st) dg_state) strategy_tree"
+  "pp \<times> unit \<Rightarrow> (pp \<times> unit, (unit, unit) routed_gk, (ivl exec_dg_st, ivl exec_dg_st) dg_state) strategy_tree"
 where
   "seq_local_eqs =
-     dg_gen_of
+     unit_routed_eqs
        (ownership_split_dg_spec_st_for (declared_global seq_local_prog)
           (ivl_tf_st_for (declared_global seq_local_prog))
           (ivl_enter_st_for (declared_global seq_local_prog)))
@@ -85,13 +85,13 @@ lemma seq_local_terminates:
   by eval
 
 definition seq_global_sol ::
-  "(pp \<times> unit) set \<times> (pp \<times> unit + unit \<Rightarrow> (ivl exec_dg_st, ivl exec_dg_st) dg_state)"
+  "(pp \<times> unit) set \<times> (pp \<times> unit + (unit, unit) routed_gk \<Rightarrow> (ivl exec_dg_st, ivl exec_dg_st) dg_state)"
 where
   "seq_global_sol =
      TD_side_warrowing_apinis_Interp_solve seq_global_eqs (cfg_exit seq_global_cfg, ())"
 
 definition seq_local_sol ::
-  "(pp \<times> unit) set \<times> (pp \<times> unit + unit \<Rightarrow> (ivl exec_dg_st, ivl exec_dg_st) dg_state)"
+  "(pp \<times> unit) set \<times> (pp \<times> unit + (unit, unit) routed_gk \<Rightarrow> (ivl exec_dg_st, ivl exec_dg_st) dg_state)"
 where
   "seq_local_sol =
      TD_side_warrowing_apinis_Interp_solve seq_local_eqs (cfg_exit seq_local_cfg, ())"
@@ -113,8 +113,8 @@ text \<open>Global: the shared unknown holds \<open>[0,1]\<close>, so the check 
 lemma seq_global_check_unknown:
   "interval_classify_check (exp.Eq (V (STR ''x'')) (N 1))
      (fun_of_exec_dg_st_for (declared_global seq_global_prog)
-       (dg_hook_D (snd seq_global_sol) (Statement 2)
-          \<squnion> dg_hook_G (snd seq_global_sol)))
+       (locals (snd seq_global_sol (Inl (Statement 2, ())))
+          \<squnion> globs (snd seq_global_sol (Inr (Analysis_Global ())))))
    = Check_Unknown"
   by eval
 
@@ -123,8 +123,8 @@ text \<open>Local: the value is carried per program point and the check is decid
 lemma seq_local_check_proved:
   "interval_classify_check (exp.Eq (V (STR ''x'')) (N 1))
      (fun_of_exec_dg_st_for (declared_global seq_local_prog)
-       (dg_hook_D (snd seq_local_sol) (Statement 2)
-          \<squnion> dg_hook_G (snd seq_local_sol)))
+       (locals (snd seq_local_sol (Inl (Statement 2, ())))
+          \<squnion> globs (snd seq_local_sol (Inr (Analysis_Global ())))))
    = Check_Proved"
   by eval
 

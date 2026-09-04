@@ -31,7 +31,6 @@ theory Example_Parity_DG_Flagship
     "Voblint_Exec.DG_Local_State_Exec"
     "Voblint_Analysis.Parity_Exec"
     "Voblint_Solver.TD_Solver_Bridge"
-    "Voblint_Exec.DG_Coverage"
     "Voblint_CFG.CFG_Prune"
     "Voblint_Analysis.Analysis_GraphViz"
     "Voblint_VIMP.VIMP_Notation"
@@ -131,82 +130,15 @@ text \<open>
   the executable solve, and the coverage witnesses.
 \<close>
 
-subsection \<open>4. Equation generation\<close>
+lemma parity_wf: "wf_compile_input parity_gs parity_pi []"
+  by (auto simp: wf_compile_input_simps parity_pi_def parity_prog_def parity_program_def
+      split: if_splits)
 
-definition parity_eqs :: "pp \<times> unit \<Rightarrow> (pp \<times> unit, unit, (parity exec_dg_st lifted, parity exec_dg_st lifted) dg_state) strategy_tree" where
-  "parity_eqs = dg_gen_of
-     (local_state_dg_spec_st_for_lifted parity_gs (resolved_st_q_is_bot_for (declared_global_vars parity_program))
-       (parity_tf_st_for parity_gs) (parity_enter_st_for parity_gs))
-     parity_cfg bot (Lifted cinit_parity_st) (Lifted cinit_parity_st)"
-
-subsection \<open>5. Executable solve (always-join; parity is finite-height)\<close>
-
-lemma parity_terminates_c:
-  "TD_side_always_join_Interp_solve_c parity_eqs (cfg_exit parity_cfg, ()) \<noteq> None"
-  by eval
-
-definition parity_sol :: "(pp \<times> unit) set \<times> (pp \<times> unit + unit \<Rightarrow> (parity exec_dg_st lifted, parity exec_dg_st lifted) dg_state)" where
-  "parity_sol = TD_side_always_join_Interp_solve parity_eqs (cfg_exit parity_cfg, ())"
-
-subsection \<open>6. Soundness premises for the registered endpoint\<close>
-
-text \<open>Coverage is not read off the solved key set. Every node of \<open>parity_cfg\<close> reaches
-  \<^const>\<open>cfg_exit\<close> --- a structural fact about the graph alone, decided by
-  \<^const>\<open>cfg_exit_covers\<close> --- and \<^const>\<open>vars_cover\<close> follows from that together
-  with the post-solution the solver already returns.\<close>
-
-lemma parity_solve_dom:
-  "TD_side_always_join_Interp.solve_dom TYPE(unit)
-     TYPE((parity exec_dg_st lifted, parity exec_dg_st lifted) dg_state)
-     parity_eqs (cfg_exit parity_cfg, ())"
-  by (rule TD_side_always_join_Interp.solve_dom_of_solve_c[OF parity_terminates_c])
-
-lemma parity_pp_st:
-  "part_post_solution parity_eqs (cfg_exit parity_cfg, ()) (snd parity_sol) (fst parity_sol)"
-  using TD_side_always_join_Interp.partial_post_solution
-          [OF parity_solve_dom, of "fst parity_sol" "snd parity_sol"]
-  unfolding parity_sol_def by simp
-
-lemma parity_wf_cfg: "wf_cfg parity_cfg"
-  unfolding parity_cfg_def by (rule compile_prog_wf)
-
-lemma parity_exit_covers: "cfg_exit_covers parity_cfg" by eval
-
-lemma parity_vars_cover: "vars_cover parity_cfg (fst parity_sol)"
-  by (rule vars_cover_of_dg_gen_of_covers
-        [OF parity_finE parity_finC parity_wf_cfg parity_exit_covers
-            parity_pp_st[unfolded parity_eqs_def]])
 lemma parity_is_bot_exact:
   "\<And>s::parity resolved_st_q. resolved_st_q_is_bot_for (declared_global_vars parity_program) s = is_empty_state (fun_of_exec_dg_st_for parity_gs s)"
   by (rule resolved_st_q_is_bot_for_iff[OF declared_global_iff, folded fun_of_exec_dg_st_for_def])
 
-subsection \<open>7. Inspecting the certified result\<close>
-
-lemma parity_head_computed:
-  "parity_lookup (locals (snd parity_sol (Inl (Statement (Suc 0), ())))) (STR ''x'') = PEven"
-  unfolding parity_sol_def parity_eqs_def by eval
-
-lemma parity_exit_computed:
-  "parity_lookup (locals (snd parity_sol (Inl (Statement 3, ())))) (STR ''x'') = PEven"
-  unfolding parity_sol_def parity_eqs_def by eval
-
-subsection \<open>8. Source-level soundness through the registered analysis\<close>
-
-text \<open>
-  The registered endpoint \<open>parity_ex_reg.run_source_sound\<close> turns the single \<open>by eval\<close>
-  solver success \<open>parity_terminates_c\<close> directly into a source-level guarantee: every
-  reachable IMP2 store is bounded by the computed parity at its matched program point,
-  read through the semantic accessor \<open>parity_ex_reg.gamma\<close>.  No transport lemma,
-  \<^const>\<open>part_post_solution\<close>, \<open>solve_dom\<close>, or \<open>fun_of_dg_st_for\<close> appears in this proof.
-\<close>
-
-lemma parity_main_body [simp]: "main_body parity_pi = parity_prog"
-  by (simp add: main_body_def prog_main_name_def parity_pi_def parity_program_def
-        parity_prog_def)
-
-lemma parity_wf: "wf_compile_input parity_gs parity_pi []"
-  by (auto simp: wf_compile_input_simps parity_pi_def parity_prog_def parity_program_def
-      split: if_splits)
+subsection \<open>4. Registration through the classifier-parametric registration locale\<close>
 
 text \<open>Interpret \<^locale>\<open>local_state_dg_exec_analysis\<close> once here at \<^const>\<open>parity_gs\<close> with
   the classifier-parametric transfer/enter functions, matching the pattern in
@@ -244,6 +176,64 @@ proof -
              TD_side_always_join_Interp.part_post_solution_of_solve_c)+
 qed
 
+subsection \<open>5. Equation generation\<close>
+
+text \<open>The registration locale owns the equation system: \<open>parity_eqs\<close> names
+  \<^const>\<open>parity_ex_reg.routed_eqs\<close> at this program, the routed generator at the
+  unit context.\<close>
+
+definition parity_eqs ::
+  "pp \<times> unit
+   \<Rightarrow> (pp \<times> unit, (unit, unit) routed_gk,
+        (parity exec_dg_st lifted, parity exec_dg_st lifted) dg_state) strategy_tree" where
+  "parity_eqs = parity_ex_reg.routed_eqs parity_pi [] bot (Lifted cinit_parity_st) (Lifted cinit_parity_st)"
+
+subsection \<open>6. Executable solve (always-join; parity is finite-height)\<close>
+
+lemma parity_terminates_c:
+  "TD_side_always_join_Interp_solve_c parity_eqs (cfg_exit parity_cfg, ()) \<noteq> None"
+  by eval
+
+definition parity_sol ::
+  "(pp \<times> unit) set
+   \<times> (pp \<times> unit + (unit, unit) routed_gk \<Rightarrow> (parity exec_dg_st lifted, parity exec_dg_st lifted) dg_state)" where
+  "parity_sol = TD_side_always_join_Interp_solve parity_eqs (cfg_exit parity_cfg, ())"
+
+subsection \<open>7. Soundness premises for the registered endpoint\<close>
+
+text \<open>Coverage is read off the solved key set: a routed callee entry is solved only
+  once a caller publishes its seed, so which nodes this run visited is a fact
+  about the run, decided by \<^const>\<open>vars_cover_exec\<close> over the two edge
+  enumerations. \<open>parity_cfg\<close> has no calls, so here it says every intra target
+  was solved.\<close>
+
+lemma parity_vars_cover: "vars_cover parity_cfg (fst parity_sol)"
+  by (rule vars_cover_of_exec[OF parity_finE parity_finC]) eval
+
+subsection \<open>8. Inspecting the certified result\<close>
+
+lemma parity_head_computed:
+  "parity_lookup (locals (snd parity_sol (Inl (Statement (Suc 0), ())))) (STR ''x'') = PEven"
+  unfolding parity_sol_def parity_eqs_def by eval
+
+lemma parity_exit_computed:
+  "parity_lookup (locals (snd parity_sol (Inl (Statement 3, ())))) (STR ''x'') = PEven"
+  unfolding parity_sol_def parity_eqs_def by eval
+
+subsection \<open>9. Source-level soundness through the registered analysis\<close>
+
+text \<open>
+  The registered endpoint \<open>parity_ex_reg.run_source_sound\<close> turns the single \<open>by eval\<close>
+  solver success \<open>parity_terminates_c\<close> directly into a source-level guarantee: every
+  reachable IMP2 store is bounded by the computed parity at its matched program point,
+  read through the semantic accessor \<open>parity_ex_reg.gamma\<close>.  No transport lemma,
+  \<^const>\<open>part_post_solution\<close>, \<open>solve_dom\<close>, or \<open>fun_of_dg_st_for\<close> appears in this proof.
+\<close>
+
+lemma parity_main_body [simp]: "main_body parity_pi = parity_prog"
+  by (simp add: main_body_def prog_main_name_def parity_pi_def parity_program_def
+        parity_prog_def)
+
 text \<open>The initial stores are covered by the registered concretization at the
   initial local value. Stated in \<^const>\<open>parity_ex_reg.gamma_exec\<close> itself rather than
   in its unfolding, because that is the vocabulary \<open>run_source_sound\<close> assumes.\<close>
@@ -257,7 +247,7 @@ theorem parity_source_run_sound:
   assumes run: "star (pstep parity_gs parity_pi) (parity_prog, s, []) (residual, t, frs)"
       and init: "s \<in> cinit_stores parity_gs"
   shows "\<exists>v stk. csim parity_pi parity_cfg (residual, t, frs) (v, t, stk)
-                 \<and> t \<in> parity_ex_reg.gamma (snd parity_sol) v"
+                 \<and> t \<in> parity_ex_reg.gamma (fst parity_sol) (snd parity_sol) v"
 proof -
   have run': "star (pstep parity_gs parity_pi) (main_body parity_pi, s, []) (residual, t, frs)"
     using run by simp
@@ -268,7 +258,6 @@ proof -
               parity_wf
               parity_vars_cover[unfolded parity_sol_def parity_eqs_def parity_cfg_def]
               parity_finE[unfolded parity_cfg_def]
-              parity_finC[unfolded parity_cfg_def]
               parity_sound0
               init run'])
 qed
@@ -305,7 +294,8 @@ text \<open>
 \<close>
 
 definition parity_graph_config ::
-  "(unit, unit, (parity exec_dg_st lifted, parity exec_dg_st lifted) dg_state, parity exec_dg_st lifted) analysis_graph_config" where
+  "(unit, (unit, unit) routed_gk, (parity exec_dg_st lifted, parity exec_dg_st lifted) dg_state, parity exec_dg_st lifted)
+     analysis_graph_config" where
   "parity_graph_config =
     \<lparr> local_of = locals,
       route = (\<lambda>_ _ _ _. Some ()),
@@ -323,8 +313,8 @@ definition parity_graph_config ::
           String.explode x @ ''='' @ string_of_parity (parity_lookup d x)) vars),
       format_return = (\<lambda>_ _ _ _. []),
       show_global = (\<lambda>_ _ _. []),
-      show_global_key = (\<lambda>_. ''Global''),
-      is_shared_global = (\<lambda>_. False),
+      show_global_key = (\<lambda>k. case k of Analysis_Global _ \<Rightarrow> ''Global'' | Activation_Seed _ _ \<Rightarrow> ''Seed''),
+      is_shared_global = (\<lambda>k. case k of Analysis_Global _ \<Rightarrow> False | Activation_Seed _ _ \<Rightarrow> False),
       show_internal_globals = False,
       owner_of = (\<lambda>_. ''main''),
       cluster_label = (\<lambda>_ _. ''main / root context''),
@@ -332,10 +322,10 @@ definition parity_graph_config ::
       node_annotation = (\<lambda>_ _. None)
     \<rparr>"
 
-definition parity_graph_domain :: "(pp \<times> unit + unit) list" where
+definition parity_graph_domain :: "(pp \<times> unit + (unit, unit) routed_gk) list" where
   "parity_graph_domain =
     contextual_graph_domain parity_cfg (\<lambda>_. [()])
-    @ [Inr ()]"
+    @ [Inr (Analysis_Global ())]"
 
 definition parity_dot :: String.literal where
   "parity_dot =

@@ -302,11 +302,6 @@ next
   from While.IH[OF c1] n' show ?case by simp
 qed (auto split: prod.splits option.splits)
 
-lemma compile_counter_mono:
-  assumes "compile \<Pi> p c k n = (n', en, E, K)"
-  shows "n \<le> n'"
-  using compile_next_id[OF assms] by simp
-
 text \<open>Every fragment enters at its base counter.  Handing the continuation down does not
   change this, which is why \<^const>\<open>SKIP\<close> keeps a node of its own instead of reporting the
   continuation as its entry.\<close>

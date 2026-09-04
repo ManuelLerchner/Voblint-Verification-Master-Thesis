@@ -148,10 +148,6 @@ lemma entry_store_extend [simp]:
   shows "entry_store (extend t x) = entry_store t"
   using assms by (simp add: entry_store_def)
 
-lemma entry_store_extend_valid:
-  "t \<in> valid_ltr gs g S \<Longrightarrow> entry_store (extend t x) = entry_store t"
-  by (simp add: valid_ltr_path_nonempty)
-
 subsection \<open>Design invariants\<close>
 
 text \<open>A valid \<^const>\<open>Call\<close> activation has a valid caller, even after intra steps have

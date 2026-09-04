@@ -5,9 +5,9 @@ text \<open>
   through the \<open>local_state_dg_exec_analysis\<close> locale (interpreted as \<open>sign_ex_reg\<close> below, at
   this file's own storage classifier \<open>sign_ex_gs\<close>, from \<open>sign_is_sound_transfer_for\<close>,
   \<open>sign_tf_st_for_commute\<close>, and \<open>sign_enter_st_for_commute\<close>).
-  A concrete call-free Sign program is compiled to a CFG; the executable D/G
-  generator (\<open>dg_gen_of (local_state_dg_spec_st_for_lifted sign_ex_gs \<dots> sign_tf_st_for sign_enter_st_for)\<close>,
-  values in \<open>(sign exec_dg_st lifted, sign exec_dg_st lifted) dg_state\<close> --- the whole
+  A concrete call-free Sign program is compiled to a CFG; the registration locale's
+  own routed equation system (\<open>sign_ex_reg.routed_eqs\<close>, values in
+  \<open>(sign exec_dg_st lifted, sign exec_dg_st lifted) dg_state\<close> --- the whole
   abstract state routed through the local unknown, no separate global/side slot) is
   handed to the vendored always-join TD-side solver; the solver \<^emph>\<open>computes\<close> a
   partial post-solution.
@@ -22,7 +22,6 @@ text \<open>
 theory Exec_Sign_DG_Run
   imports
     "Voblint_Exec.DG_Local_State_Exec"
-    "Voblint_Exec.DG_Coverage"
     "Voblint_Analysis.Sign_Exec"
     "Voblint_Solver.TD_Solver_Bridge"
     "TD.TD_side_upd_rule"
@@ -78,59 +77,12 @@ lemmas gEx_wf_cfg = gEx.wf
 lemmas gEx_finE = gEx.finite_intra
 lemmas gEx_finC = gEx.finite_calls
 
-definition dgEx_eqs :: "pp \<times> unit \<Rightarrow> (pp \<times> unit, unit, (sign exec_dg_st lifted, sign exec_dg_st lifted) dg_state) strategy_tree" where
-  "dgEx_eqs = dg_gen_of
-     (local_state_dg_spec_st_for_lifted sign_ex_gs (resolved_st_q_is_bot_for (declared_global_vars sign_ex_prog))
-       (sign_tf_st_for sign_ex_gs) (sign_enter_st_for sign_ex_gs))
-     gEx bot (Lifted cinit_sign_st) (Lifted cinit_sign_st)"
-
-definition dgEx_sol :: "(pp \<times> unit) set \<times> (pp \<times> unit + unit \<Rightarrow> (sign exec_dg_st lifted, sign exec_dg_st lifted) dg_state)" where
-  "dgEx_sol = TD_side_always_join_Interp_solve dgEx_eqs (cfg_exit gEx, ())"
-
-subsection \<open>The solver computes a partial post-solution\<close>
-
-text \<open>
-  The executable option-valued solver terminates on the D/G equation system --- a
-  code-generated \<open>by eval\<close> fact --- so the solver-domain predicate holds and the
-  vendored partial-post-solution theorem applies to the computed result.
-\<close>
-
-lemma dgEx_terminates_c: "TD_side_always_join_Interp_solve_c dgEx_eqs (cfg_exit gEx, ()) \<noteq> None"
-  by eval
-
-lemma dgEx_solve_dom:
-  "TD_side_always_join_Interp.solve_dom TYPE(unit) TYPE((sign exec_dg_st lifted, sign exec_dg_st lifted) dg_state) dgEx_eqs (cfg_exit gEx, ())"
-  by (rule TD_side_always_join_Interp.solve_dom_of_solve_c[OF dgEx_terminates_c])
-
-lemma dgEx_pp_st:
-  "part_post_solution dgEx_eqs (cfg_exit gEx, ()) (snd dgEx_sol) (fst dgEx_sol)"
-  using TD_side_always_join_Interp.partial_post_solution[OF dgEx_solve_dom, of "fst dgEx_sol" "snd dgEx_sol"]
-  unfolding dgEx_sol_def by simp
-
-subsection \<open>Well-formedness of the compiled input\<close>
-
-lemma dgEx_wf:
-  "wf_compile_input sign_ex_gs sign_ex_pi (prog_procs sign_ex_prog)"
-  by (auto simp: wf_compile_input_simps sign_ex_pi_def sign_ex_prog_def split: if_splits)
-
-subsection \<open>Collecting-semantics over-approximation from the computed result\<close>
-
-text \<open>Coverage is not read off the solved key set. Every node of \<open>gEx\<close> reaches
-  \<^const>\<open>cfg_exit\<close> --- a structural fact about the graph alone, decided by
-  \<^const>\<open>cfg_exit_covers\<close> --- and \<^const>\<open>vars_cover\<close> follows from that together
-  with the post-solution the solver already returns.\<close>
-
-lemma dgEx_exit_covers: "cfg_exit_covers gEx" by eval
-
-lemma dgEx_vars_cover: "vars_cover gEx (fst dgEx_sol)"
-  by (rule vars_cover_of_dg_gen_of_covers
-        [OF gEx_finE gEx_finC gEx_wf_cfg dgEx_exit_covers
-            dgEx_pp_st[unfolded dgEx_eqs_def]])
 lemma dgEx_reserved: "reserved_ret_var sign_ex_gs"
   by (auto simp: wf_compile_input_simps sign_ex_pi_def sign_ex_prog_def split: if_splits)
 
 lemma dgEx_is_bot_exact:
-  "\<And>s::sign resolved_st_q. resolved_st_q_is_bot_for (declared_global_vars sign_ex_prog) s = is_empty_state (fun_of_exec_dg_st_for sign_ex_gs s)"
+  "\<And>s::sign resolved_st_q. resolved_st_q_is_bot_for (declared_global_vars sign_ex_prog) s
+     = is_empty_state (fun_of_exec_dg_st_for sign_ex_gs s)"
   by (rule resolved_st_q_is_bot_for_iff[OF declared_global_iff, folded fun_of_exec_dg_st_for_def])
 
 subsection \<open>Registration through the classifier-parametric registration locale\<close>
@@ -171,8 +123,63 @@ proof -
              dgEx_is_bot_exact
              TD_side_always_join_Interp.part_post_solution_of_solve_c
         | assumption)+
-
 qed
+
+subsection \<open>The equation system\<close>
+
+text \<open>The registration locale owns the equation system: \<open>dgEx_eqs\<close> names
+  \<^const>\<open>sign_ex_reg.routed_eqs\<close> at this program, the routed generator at the unit
+  context, so there is no second call protocol to align with the locale's endpoints.\<close>
+
+definition dgEx_eqs ::
+  "pp \<times> unit
+   \<Rightarrow> (pp \<times> unit, (unit, unit) routed_gk,
+        (sign exec_dg_st lifted, sign exec_dg_st lifted) dg_state) strategy_tree" where
+  "dgEx_eqs = sign_ex_reg.routed_eqs sign_ex_pi (prog_procs sign_ex_prog)
+                bot (Lifted cinit_sign_st) (Lifted cinit_sign_st)"
+
+definition dgEx_sol ::
+  "(pp \<times> unit) set
+   \<times> (pp \<times> unit + (unit, unit) routed_gk
+        \<Rightarrow> (sign exec_dg_st lifted, sign exec_dg_st lifted) dg_state)" where
+  "dgEx_sol = TD_side_always_join_Interp_solve dgEx_eqs (cfg_exit gEx, ())"
+
+subsection \<open>The solver computes a partial post-solution\<close>
+
+text \<open>
+  The executable option-valued solver terminates on the D/G equation system --- a
+  code-generated \<open>by eval\<close> fact --- so the solver-domain predicate holds and the
+  vendored partial-post-solution theorem applies to the computed result.
+\<close>
+
+lemma dgEx_terminates_c: "TD_side_always_join_Interp_solve_c dgEx_eqs (cfg_exit gEx, ()) \<noteq> None"
+  by eval
+
+lemma dgEx_solve_dom:
+  "TD_side_always_join_Interp.solve_dom TYPE((unit, unit) routed_gk)
+     TYPE((sign exec_dg_st lifted, sign exec_dg_st lifted) dg_state) dgEx_eqs (cfg_exit gEx, ())"
+  by (rule TD_side_always_join_Interp.solve_dom_of_solve_c[OF dgEx_terminates_c])
+
+lemma dgEx_pp_st:
+  "part_post_solution dgEx_eqs (cfg_exit gEx, ()) (snd dgEx_sol) (fst dgEx_sol)"
+  using TD_side_always_join_Interp.partial_post_solution[OF dgEx_solve_dom, of "fst dgEx_sol" "snd dgEx_sol"]
+  unfolding dgEx_sol_def by simp
+
+subsection \<open>Well-formedness of the compiled input\<close>
+
+lemma dgEx_wf:
+  "wf_compile_input sign_ex_gs sign_ex_pi (prog_procs sign_ex_prog)"
+  by (auto simp: wf_compile_input_simps sign_ex_pi_def sign_ex_prog_def split: if_splits)
+
+subsection \<open>Collecting-semantics over-approximation from the computed result\<close>
+
+text \<open>Coverage is read off the solved key set. A routed callee entry is solved only
+  once a caller publishes its seed, so which nodes the solver visited is a fact
+  about this run, decided by \<^const>\<open>vars_cover_exec\<close> over the two edge
+  enumerations. \<open>gEx\<close> has no calls, so here it says every intra target was solved.\<close>
+
+lemma dgEx_vars_cover: "vars_cover gEx (fst dgEx_sol)"
+  by (rule vars_cover_of_exec[OF gEx_finE gEx_finC]) eval
 
 text \<open>The initial stores are covered by the registered concretization at the
   initial local value. Stated in \<^const>\<open>sign_ex_reg.gamma_exec\<close> itself rather than in
@@ -187,7 +194,7 @@ theorem dgEx_source_run_sound:
   assumes run: "star (pstep sign_ex_gs sign_ex_pi) (prog_main sign_ex_prog, s, []) (residual, t, frs)"
       and init: "s \<in> cinit_stores sign_ex_gs"
   shows "\<exists>v stk. csim sign_ex_pi gEx (residual, t, frs) (v, t, stk)
-                 \<and> t \<in> sign_ex_reg.gamma (snd dgEx_sol) v"
+                 \<and> t \<in> sign_ex_reg.gamma (fst dgEx_sol) (snd dgEx_sol) v"
 proof -
   have run': "star (pstep sign_ex_gs sign_ex_pi) (main_body sign_ex_pi, s, []) (residual, t, frs)"
     using run by (simp add: sign_ex_pi_def)
@@ -198,7 +205,6 @@ proof -
               dgEx_wf
               dgEx_vars_cover[unfolded dgEx_sol_def dgEx_eqs_def gEx_def]
               gEx_finE[unfolded gEx_def]
-              gEx_finC[unfolded gEx_def]
               dgEx_sound0
               init run'])
 qed

@@ -65,15 +65,17 @@ text \<open>
 \<close>
 
 definition dgExI_never_eqs ::
-    "pp * unit => (pp * unit, unit, (int_dom exec_dg_st lifted, int_dom exec_dg_st lifted) dg_state) strategy_tree"
+    "pp * unit => (pp * unit, (unit, unit) routed_gk,
+       (int_dom exec_dg_st lifted, int_dom exec_dg_st lifted) dg_state) strategy_tree"
 where
-  "dgExI_never_eqs = dg_gen_of
+  "dgExI_never_eqs = unit_routed_eqs_buffered
      (local_state_dg_spec_st_for_lifted int_ex_gs (resolved_st_q_is_bot_for (declared_global_vars int_ex_prog))
        (int_tf_st_never_for int_ex_gs) (int_dom_enter_never_st_for int_ex_gs))
      gExI bot (Lifted cinit_int_dom_st) (Lifted cinit_int_dom_st)"
 
 definition dgExI_never_sol ::
-    "(pp * unit) set * (pp * unit + unit => (int_dom exec_dg_st lifted, int_dom exec_dg_st lifted) dg_state)"
+    "(pp * unit) set
+     * (pp * unit + (unit, unit) routed_gk => (int_dom exec_dg_st lifted, int_dom exec_dg_st lifted) dg_state)"
 where
   "dgExI_never_sol = TD_side_always_join_Interp_solve dgExI_never_eqs (cfg_exit gExI, ())"
 
@@ -87,15 +89,17 @@ lemma dgExI_never_inspect_y_at_Statement_1:
   by eval
 
 definition dgExI_once_eqs ::
-    "pp * unit => (pp * unit, unit, (int_dom exec_dg_st lifted, int_dom exec_dg_st lifted) dg_state) strategy_tree"
+    "pp * unit => (pp * unit, (unit, unit) routed_gk,
+       (int_dom exec_dg_st lifted, int_dom exec_dg_st lifted) dg_state) strategy_tree"
 where
-  "dgExI_once_eqs = dg_gen_of
+  "dgExI_once_eqs = unit_routed_eqs_buffered
      (local_state_dg_spec_st_for_lifted int_ex_gs (resolved_st_q_is_bot_for (declared_global_vars int_ex_prog))
        (int_tf_st_once_for int_ex_gs) (int_dom_enter_once_st_for int_ex_gs))
      gExI bot (Lifted cinit_int_dom_st) (Lifted cinit_int_dom_st)"
 
 definition dgExI_once_sol ::
-    "(pp * unit) set * (pp * unit + unit => (int_dom exec_dg_st lifted, int_dom exec_dg_st lifted) dg_state)"
+    "(pp * unit) set
+     * (pp * unit + (unit, unit) routed_gk => (int_dom exec_dg_st lifted, int_dom exec_dg_st lifted) dg_state)"
 where
   "dgExI_once_sol = TD_side_always_join_Interp_solve dgExI_once_eqs (cfg_exit gExI, ())"
 
@@ -109,15 +113,17 @@ lemma dgExI_once_inspect_y_at_Statement_1:
   by eval
 
 definition dgExI_fixpoint_eqs ::
-    "pp * unit => (pp * unit, unit, (int_dom exec_dg_st lifted, int_dom exec_dg_st lifted) dg_state) strategy_tree"
+    "pp * unit => (pp * unit, (unit, unit) routed_gk,
+       (int_dom exec_dg_st lifted, int_dom exec_dg_st lifted) dg_state) strategy_tree"
 where
-  "dgExI_fixpoint_eqs = dg_gen_of
+  "dgExI_fixpoint_eqs = unit_routed_eqs_buffered
      (local_state_dg_spec_st_for_lifted int_ex_gs (resolved_st_q_is_bot_for (declared_global_vars int_ex_prog))
        (int_tf_st_fixpoint_for int_ex_gs) (int_dom_enter_fixpoint_st_for int_ex_gs))
      gExI bot (Lifted cinit_int_dom_st) (Lifted cinit_int_dom_st)"
 
 definition dgExI_fixpoint_sol ::
-    "(pp * unit) set * (pp * unit + unit => (int_dom exec_dg_st lifted, int_dom exec_dg_st lifted) dg_state)"
+    "(pp * unit) set
+     * (pp * unit + (unit, unit) routed_gk => (int_dom exec_dg_st lifted, int_dom exec_dg_st lifted) dg_state)"
 where
   "dgExI_fixpoint_sol = TD_side_always_join_Interp_solve dgExI_fixpoint_eqs (cfg_exit gExI, ())"
 

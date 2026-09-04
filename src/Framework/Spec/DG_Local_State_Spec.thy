@@ -21,10 +21,11 @@ text \<open>
   it once, by \<open>interpretation\<close>, and both constructions become sound
   specifications.
 
-  The call boundary is fixed here rather than supplied. The caller continuation is
-  the identity -- the pointwise carrier relates no two variables, so a call has
-  nothing in it for a callee to invalidate -- the environment stage passes that
-  continuation through, and the whole return happens in the assign stage as
+  The call boundary is fixed here rather than supplied. A call answers exactly one
+  alternative, whose continuation is the caller value unchanged -- the pointwise
+  carrier relates no two variables, so a call has nothing in it for a callee to
+  invalidate. The environment stage passes that continuation through, and the
+  whole return happens in the assign stage as
   \<^const>\<open>combine_collect_abs\<close>: caller locals, callee globals, and the callee's
   \<^const>\<open>ret_var\<close> written to the destination. An analysis that needs a
   different boundary overrides those three fields of its own specification instead
@@ -261,7 +262,7 @@ lemma dg_spec_step_local_state_for_lifted:
       local_spec_step_transfer_lift)
 
 lemma dgs_enter_local_state_for_lifted:
-  "dgs_enter (local_state_dg_spec_for_lifted gs empty_pred sk asn sp br bd rt en ev) ci
+  "enter\<^sup># (local_state_dg_spec_for_lifted gs empty_pred sk asn sp br bd rt en ev) ci
      = local_enter_transfer (\<lambda>d. [(d, transfer_lift empty_pred (en ci) d)])"
   by (simp add: local_state_dg_spec_for_lifted_def)
 

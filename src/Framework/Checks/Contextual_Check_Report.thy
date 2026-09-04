@@ -117,36 +117,11 @@ lemma sup_contextual_verdict_eq_Dead_iff [simp]:
   "(x \<squnion> y = Dead) \<longleftrightarrow> x = Dead \<and> y = Dead"
   by (cases x; cases y) simp_all
 
-lemma aggregate_verdicts_eq_Dead_iff:
-  "finite vs \<Longrightarrow> aggregate_verdicts vs = Dead \<longleftrightarrow> (\<forall>v \<in> vs. v = Dead)"
-proof (induct rule: finite_induct)
-  case empty then show ?case by simp
-next
-  case (insert v vs) then show ?case by simp
-qed
-
 definition check_dead :: "('ctx \<times> contextual_verdict) set \<Rightarrow> bool" where
   "check_dead vs = (\<forall>(c, v) \<in> vs. v = Dead)"
 
 lemma check_dead_empty [simp]: "check_dead {}"
   unfolding check_dead_def by simp
-
-lemma check_dead_iff_aggregate:
-  assumes "finite vs"
-  shows "check_dead vs \<longleftrightarrow> aggregate_verdicts (snd ` vs) = Dead"
-  unfolding check_dead_def
-  using aggregate_verdicts_eq_Dead_iff[OF finite_imageI[OF assms, of snd]]
-  by auto
-
-text \<open>The lossy collapse back into \<^typ>\<open>check_result\<close>, for a consumer whose
-  report type has no dead case. \<open>Dead\<close> becomes \<^const>\<open>Check_Unknown\<close>: of the
-  three values it is the only one asserting nothing about the checked
-  condition, so collapsing this way weakens the report rather than
-  fabricating a verdict.\<close>
-
-fun verdict_check_result :: "contextual_verdict \<Rightarrow> check_result" where
-  "verdict_check_result Dead = Check_Unknown"
-| "verdict_check_result (Decided r) = r"
 
 text \<open>The opposite direction, for a report that has only one observation per
   check and therefore no dead case to distinguish: every entry is
@@ -204,12 +179,6 @@ lemma classify_checks_ctx_positions:
   "map (\<lambda>(u, c, vs). (u, c)) (classify_checks_ctx g r classify)
      = map (\<lambda>(u, c, res). (u, c)) (classify_checks g env classify')"
   unfolding classify_checks_ctx_def classify_checks_def
-  by (simp add: comp_def case_prod_beta)
-
-lemma classify_checks_verdicts_positions:
-  "map (\<lambda>(u, c, v). (u, c)) (classify_checks_verdicts g r classify)
-     = map (\<lambda>(u, c, res). (u, c)) (classify_checks g env classify')"
-  unfolding classify_checks_verdicts_def classify_checks_ctx_def classify_checks_def
   by (simp add: comp_def case_prod_beta)
 
 text \<open>Membership unfolds to an \<^const>\<open>EA_Check\<close> edge at the entry's own source
@@ -275,7 +244,6 @@ proof
     using aggregate_verdicts_member_le[OF aggregate_verdicts_decided_finite[OF agg] \<open>v \<in> vs\<close>] .
   with agg known show "v = Dead \<or> v = Decided r" by simp
 qed
-
 
 
 text \<open>

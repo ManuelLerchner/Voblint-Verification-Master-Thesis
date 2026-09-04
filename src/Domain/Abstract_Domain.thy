@@ -82,9 +82,6 @@ lemma gamma_sup_ub1[intro]: "gamma a \<subseteq> gamma (a \<squnion> b)" for a b
 lemma gamma_sup_ub2[intro]: "gamma b \<subseteq> gamma (a \<squnion> b)" for a b :: "'a::sound_domain"
   by (rule gamma_mono[OF sup_ge2])
 
-lemma gamma_sup_sound: "gamma a \<union> gamma b \<subseteq> gamma (a \<squnion> b)" for a b :: "'a::sound_domain"
-  using gamma_sup_ub1 gamma_sup_ub2 by blast
-
 text \<open>
   Emptiness is downward closed under the abstract order, and fullness is
   upward closed: both follow from \<open>gamma_mono\<close> alone, with no per-domain fact
@@ -96,10 +93,6 @@ text \<open>
 lemma is_empty_antimono:
   "a \<le> b \<Longrightarrow> is_empty b \<Longrightarrow> is_empty a" for a b :: "'a::sound_domain"
   using gamma_mono unfolding is_empty_correct by blast
-
-lemma is_full_mono:
-  "a \<le> b \<Longrightarrow> is_full a \<Longrightarrow> is_full b" for a b :: "'a::sound_domain"
-  using gamma_mono unfolding is_full_correct by blast
 
 subsection \<open>Domains with widening\<close>
 

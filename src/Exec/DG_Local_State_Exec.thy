@@ -74,7 +74,7 @@ lemma dg_spec_step_local_state_st_for_lifted:
       local_spec_step_transfer_lift_tf_st)
 
 lemma dgs_enter_local_state_st_for_lifted:
-  "dgs_enter (local_state_dg_spec_st_for_lifted gs empty_pred tf_st enter_st) ci
+  "enter\<^sup># (local_state_dg_spec_st_for_lifted gs empty_pred tf_st enter_st) ci
      = local_enter_transfer (\<lambda>d. [(d, transfer_lift empty_pred (enter_st ci) d)])"
   by (simp add: local_state_dg_spec_st_for_lifted_def)
 
@@ -272,8 +272,8 @@ lemma Hstep_lifted_for:
 
 lemma Henter_lifted_for:
   "dg_reader_commute_gen.dg_enter_st_commute reader reader \<sigma>_st
-     (dgs_enter spec_st ci (mk_dg_man d (\<lambda>_. gk)))
-     (dgs_enter spec_abs ci (mk_dg_man (reader d) (\<lambda>_. gk)))"
+     (enter\<^sup># spec_st ci (mk_dg_man d (\<lambda>_. gk)))
+     (enter\<^sup># spec_abs ci (mk_dg_man (reader d) (\<lambda>_. gk)))"
   unfolding dgs_enter_local_state_st_for_lifted dgs_enter_local_state_for_lifted
   by (rule dg_reader_commute_gen.dg_enter_st_commute_local_enter_transfer
         [OF dg_reader_commute_gen_lifted_for])
@@ -291,10 +291,6 @@ lemma Hcomb_lifted_for:
         [OF dg_reader_commute_gen_lifted_for,
          where F = "transfer_lift2 is_empty_state (combine\<^sup># gs (ci_dst ci))"])
      (rule combine_lift_commute)
-
-lemma dg_reader_commute_gen_lifted:
-  "dg_reader_commute_gen reader reader"
-  by (rule dg_reader_commute_gen_lifted_for)
 
 subsection \<open>Soundness at the executable carrier, pulled back along the readback\<close>
 

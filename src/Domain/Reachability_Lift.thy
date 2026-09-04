@@ -204,10 +204,6 @@ lemma bind_lift_left_identity: "bind_lift (Lifted a) f = f a" by simp
 lemma bind_lift_right_identity [simp]: "bind_lift x Lifted = x"
   by (cases x) simp_all
 
-lemma bind_lift_assoc:
-  "bind_lift (bind_lift x f) g = bind_lift x (\<lambda>a. bind_lift (f a) g)"
-  by (cases x) simp_all
-
 text \<open>
   \<open>gamma_lift_bindI\<close> follows \<open>bind_lift\<close>'s own structure: a witness for \<open>xs\<close>
   together with a step that carries any such witness through \<open>f\<close> gives a
@@ -549,15 +545,5 @@ text \<open>
   non-bottom. Stated after the \<open>bounded_warrowing\<close> instance above, because \<open>\<nabla>\<Delta>\<close> on
   \<^typ>\<open>'a lifted\<close> only exists once that instance is in scope.
 \<close>
-
-lemma normalized_lift_warrow:
-  fixes x y :: "'a::bounded_warrowing lifted"
-  assumes mono: "\<And>a b::'a. a \<le> b \<Longrightarrow> empty_pred b \<Longrightarrow> empty_pred a"
-    and ny: "normalized_lift empty_pred y"
-  shows "normalized_lift empty_pred (x \<nabla>\<Delta> y)"
-  using assms unfolding warrow_def
-  by (cases x; cases y)
-     (auto dest: mono[OF narrow_ge] mono[OF widen_ge2]
-           simp: warrow_idem)
 
 end

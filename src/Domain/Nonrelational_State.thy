@@ -28,11 +28,6 @@ instance "fun" :: (type, bounded_semilattice_sup_bot) bounded_semilattice_sup_bo
 text \<open>Pointwise join on abstract states is idempotent because the value-domain
   semilattice structure lifts pointwise.  Finite folds can therefore use the
   standard idempotent-join laws without a separate state-level assumption.\<close>
-lemma join_state_comp_fun_idem:
-  "comp_fun_idem ((\<squnion>) ::
-     'a::semilattice_sup abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state)"
-  by (rule comp_fun_idem_sup)
-
 subsection \<open>State concretization\<close>
 
 definition gamma_state :: "('a::sound_domain) abs_state \<Rightarrow> store set" ("\<lbrakk>_\<rbrakk>") where

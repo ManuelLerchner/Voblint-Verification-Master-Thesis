@@ -98,30 +98,6 @@ text \<open>
   between \<open>Some True\<close> and \<open>Some False\<close> below is never live.
 \<close>
 
-lemma less_judgments_consistent:
-  assumes na: "\<not> is_empty a" and nb: "\<not> is_empty b"
-  shows "\<not> (less_true a b \<and> less_false a b)"
-proof
-  assume both: "less_true a b \<and> less_false a b"
-  from na obtain i where i: "i \<in> gamma a" using is_empty_correct by blast
-  from nb obtain j where j: "j \<in> gamma b" using is_empty_correct by blast
-  from both have "i < j" using less_true_sound i j by blast
-  moreover from both have "\<not> i < j" using less_false_sound i j by blast
-  ultimately show False by blast
-qed
-
-lemma eq_judgments_consistent:
-  assumes na: "\<not> is_empty a" and nb: "\<not> is_empty b"
-  shows "\<not> (eq_true a b \<and> eq_false a b)"
-proof
-  assume both: "eq_true a b \<and> eq_false a b"
-  from na obtain i where i: "i \<in> gamma a" using is_empty_correct by blast
-  from nb obtain j where j: "j \<in> gamma b" using is_empty_correct by blast
-  from both have "i = j" using eq_true_sound i j by blast
-  moreover from both have "i \<noteq> j" using eq_false_sound i j by blast
-  ultimately show False by blast
-qed
-
 subsection \<open>Goblint-style optional-Boolean queries\<close>
 
 text \<open>

@@ -65,12 +65,6 @@ lemma foldr_sup_bot_of_all_bot:
   shows "foldr (\<lambda>x acc'. h x \<squnion> acc') L bot = bot"
   using assms by (induction L) simp_all
 
-lemma sides_of_rhs_fold_rhs_contributions_bot:
-  fixes cs :: "('x,'g,'d::bounded_semilattice_sup_bot) strategy_tree list"
-  assumes "\<And>c. c \<in> set cs \<Longrightarrow> sides_of_rhs c \<sigma> = \<bottom>"
-  shows "sides_of_rhs (sp_compile (fold_rhs_contributions acc cs)) \<sigma> = \<bottom>"
-  using assms by (induction cs arbitrary: acc) (auto simp add: sp_compile_def sp_compile_with_bind)
-
 subsection \<open>Dependency-property preservation\<close>
 
 text \<open>
@@ -80,26 +74,6 @@ text \<open>
   own single-tree closure facts, and what lets a generator's whole-node
   dependency obligation reduce to a per-hook one.
 \<close>
-
-lemma env_indep_deps_fold_rhs_contributions:
-  assumes "\<And>t. t \<in> set ts \<Longrightarrow> env_indep_deps t"
-  shows "env_indep_deps (sp_compile (fold_rhs_contributions acc ts))"
-proof (rule env_indep_depsI)
-  fix \<sigma>1 \<sigma>2
-  have "dep_aux \<sigma>1 (sp_compile (fold_rhs_contributions acc ts)) = (\<Union>t\<in>set ts. dep_aux \<sigma>1 t)"
-    by (rule dep_aux_fold_rhs_contributions_char)
-  also have "\<dots> = (\<Union>t\<in>set ts. dep_aux \<sigma>2 t)"
-    using assms unfolding env_indep_deps_def by (intro SUP_cong refl) blast
-  also have "\<dots> = dep_aux \<sigma>2 (sp_compile (fold_rhs_contributions acc ts))"
-    by (rule dep_aux_fold_rhs_contributions_char[symmetric])
-  finally show "dep_aux \<sigma>1 (sp_compile (fold_rhs_contributions acc ts))
-      = dep_aux \<sigma>2 (sp_compile (fold_rhs_contributions acc ts))" .
-qed
-
-lemma mono_tree_deps_fold_rhs_contributions:
-  assumes "\<And>t. t \<in> set ts \<Longrightarrow> env_indep_deps t"
-  shows "mono_tree_deps (sp_compile (fold_rhs_contributions acc ts))"
-  by (rule env_indep_deps_imp_mono_tree_deps[OF env_indep_deps_fold_rhs_contributions[OF assms]])
 
 end
 

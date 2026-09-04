@@ -518,7 +518,7 @@ lemma dg_spec_step_rel_order_spec [simp]:
   unfolding rel_order_spec_def by (cases a) simp_all
 
 lemma dgs_enter_rel_order_spec [simp]:
-  "dgs_enter rel_order_spec ci = rel_enter_transfer (dgs_enter_rel ci)"
+  "enter\<^sup># rel_order_spec ci = rel_enter_transfer (dgs_enter_rel ci)"
   unfolding rel_order_spec_def by simp
 
 lemma step_sound_rel:

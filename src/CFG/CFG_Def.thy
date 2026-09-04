@@ -237,9 +237,6 @@ lemma call_endpoints_in_nodes:
   shows "u \<in> cfg_nodes g" and "ce \<in> cfg_nodes g" and "after \<in> cfg_nodes g"
   using assms by (auto simp: cfg_nodes_def)
 
-lemma cfg_entry_in_nodes: "cfg_entry g \<in> cfg_nodes g"
-  by (simp add: cfg_nodes_def)
-
 text \<open>Each of the five \<open>cfg_nodes\<close> disjuncts is a projection of \<open>intra g\<close> or \<open>calls g\<close>,
   so it inherits their finiteness as a finite image; the sixth is a singleton.\<close>
 lemma cfg_nodes_finite:

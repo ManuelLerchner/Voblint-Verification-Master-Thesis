@@ -85,15 +85,6 @@ lemma dg_tree_st_commute_routed_cmb_g:
 
 text \<open>The routed extra-goal list commutes elementwise, for the same reason.\<close>
 
-lemma hextra_commute_routed:
-  "list_all2 (dg_reader_commute_gen.dg_tree_st_commute
-                (map_lift (fun_of_resolved_st_q_for gs))
-                (map_lift (fun_of_resolved_st_q_for gs)) env)
-     (routed_extra_g seed_key gk0 route_st ctx w)
-     (routed_extra_g seed_key gk0 route_abs ctx w)"
-  by (rule dg_reader_commute_gen.dg_tree_st_commute_routed_extra_g
-        [OF dg_reader_commute_gen_lifted_for])
-
 text \<open>
   The buffered generator a domain actually solves, reconciled with the unbuffered one
   the framework is stated over --- at the executable spec, before any readback.
@@ -140,12 +131,14 @@ lemma cmb_st_side_free_at_gk0: "sides_of_rhs (cmb_st g route' ctx' ca cc ex) \<t
 theorem pp_st:
   assumes pp: "part_post_solution
      (side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_addr_list (\<lambda>_. gk0) route_st
-        intra_st (cmb_st g) (routed_extra_g seed_key gk0)
+        intra_st (routed_cmb_g spec_st gk0 seed_key (resolve_st g) (\<lambda>d. d = Bot))
+        (routed_extra_g seed_key gk0)
         g bot0 s0d s0g)
      x0 sigma_st vars"
   shows "part_post_solution
      (side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. gk0) route_st
-        intra_st (cmb_st g) (routed_extra_g seed_key gk0)
+        intra_st (routed_cmb_g spec_st gk0 seed_key (resolve_st g) (\<lambda>d. d = Bot))
+        (routed_extra_g seed_key gk0)
         g bot0 s0d s0g)
      x0 sigma_st vars"
 proof (rule part_post_solution_seed_dg_buffered_to_old
@@ -191,6 +184,7 @@ proof (rule part_post_solution_seed_dg_buffered_to_old
          \<Longrightarrow> globs (traverse_rhs x \<tau>) = bot"
     by (rule routed_extra_g_local_only)
 qed (rule pp)
+
 end
 
 end

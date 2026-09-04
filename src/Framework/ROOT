@@ -9,6 +9,7 @@ session Voblint_Framework in "." = "Voblint_CFG" +
     "Context"
     "Activation"
     "Constraints"
+    "State"
     "Result"
     "Checks"
     "Soundness"
@@ -24,7 +25,6 @@ session Voblint_Framework in "." = "Voblint_CFG" +
     DG_Ownership_Split_Spec
     DG_Keyed_Generator
     DG_Soundness
-    DG_LTR_Sound
     Activation_Local_Sound
     Activation_Backbone
     DG_Ctx_Activation
@@ -32,7 +32,6 @@ session Voblint_Framework in "." = "Voblint_CFG" +
     Routed_Context_Unit
     DG_Local_State_Spec
     Call_String_Context
-    Call_String_Collecting_Refinement
     (* Domain-generic solved-result table: per-point reachability and the
        per-context/per-node lookup surface downstream consumers read. *)
     Analysis_Result

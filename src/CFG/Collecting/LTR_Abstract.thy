@@ -57,7 +57,7 @@ text \<open>\<open>trace_covered u\<close>: the sink store of \<open>u\<close> i
 abbreviation trace_covered :: "ltr \<Rightarrow> bool" where
   "trace_covered u \<equiv> sink_store u \<in> cover (sink_node u) (key enterc initial_ctx u)"
 
-subsection \<open>Closure under the four ltr_F clauses\<close>
+subsection \<open>Closure under the four constructor clauses\<close>
 
 text \<open>\<open>init_covered\<close>: the main activation's seed store is admitted at \<open>initial_ctx\<close>, the
   \<^const>\<open>key\<close> of every \<^const>\<open>Root\<close>.\<close>
@@ -173,9 +173,6 @@ subsection \<open>Non-vacuity\<close>
 text \<open>The interface is satisfiable for every graph, seed set, routing function, and seed
   context --- the top abstraction \<open>cover = (\<lambda>_ _. UNIV)\<close> discharges the remaining three
   obligations.\<close>
-lemma ltr_coverage_UNIV: "ltr_coverage g S (\<lambda>_ _. UNIV) enterc initial_ctx gs"
-  by unfold_locales auto
-
 subsection \<open>Monovariant semantic post-fixpoint\<close>
 
 text \<open>

@@ -49,8 +49,11 @@ text \<open>
   the packed read the same way \<open>dg_edge_tree_at\<close>'s own body does; \<open>dg_sideg\<close>
   injects a contribution back into the packed carrier the same way
   \<open>dg_edge_tree_at\<close>'s own \<open>Side\<close> does, padding the local half with \<open>bot\<close>.
-  These three are the only place in the theory that mention \<open>dg_state\<close> by
-  name; \<open>man\<close>'s fields are built from them once, inside \<open>mk_dg_man\<close>.
+
+  These three are where the packed carrier is taken apart and put back
+  together. Everything below reaches it only through them or through \<open>man\<close>'s
+  own fields, so no transfer ever writes \<^const>\<open>DG\<close>, \<^const>\<open>locals\<close> or
+  \<^const>\<open>globs\<close> --- the carrier survives in later types, never in a body.
 \<close>
 
 definition dg_read_at :: "'x + 'k \<Rightarrow> ('x,'k,('dl,'dg) dg_state,'dl) strategy_program" where

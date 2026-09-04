@@ -385,3 +385,197 @@ ownership_split_combine_transfer_unfold
 # it: the graph regression asserts the absence of that context outright rather
 # than its presence without an enter edge.
 mixed_ctx_graph_bottom_context_is_covered_but_unentered
+
+# The pp/unit-specialized half of the raw D/G tree family. The manager-native
+# spine is the analysis-facing interface; what survives is the address-
+# parametric pair the keyed-solver Side-discipline regression drives directly
+# (dg_edge_tree_at, dg_edge_contribution_tree_at), so the specializations and
+# the monotonicity lemmas nothing consumed are gone.
+dg_edge_tree
+dg_edge_tree_as_at
+traverse_dg_edge_tree
+sides_dg_edge_tree_Inr
+sides_dg_edge_tree_Inl
+dep_aux_dg_edge_tree
+dg_edge_tree_answer_pure_D
+dg_edge_tree_side_pure_G
+dg_edge_contribution_tree
+dg_edge_contribution_tree_as_at
+traverse_dg_edge_contribution_tree
+sides_dg_edge_contribution_tree
+dep_aux_dg_edge_contribution_tree
+dg_edge_contribution_tree_matches_local
+dg_edge_contribution_tree_matches_global
+dg_combine_tree_at
+traverse_dg_combine_tree_at
+sides_dg_combine_tree_at
+sides_dg_combine_tree_at_other
+dep_aux_dg_combine_tree_at
+dg_combine_tree
+dg_combine_tree_as_at
+traverse_dg_combine_tree
+sides_dg_combine_tree_Inr
+sides_dg_combine_tree_Inl
+dep_aux_dg_combine_tree
+env_indep_deps_dg_edge_tree
+env_indep_deps_dg_combine_tree
+dg_edge_tree_mono
+dg_edge_tree_sides_mono
+dg_combine_tree_mono
+dg_combine_tree_sides_mono
+
+# The three "observable transfer property" predicates supported only their own
+# witness lemmas: soundness is stated directly against traverse_rhs/sides_of_rhs
+# and the local-only compile-down equations say the same thing more directly.
+local_result
+emits_no_sides
+reads_only_source
+local_transfer_local_result
+local_transfer_emits_no_sides
+local_transfer_reads_only_source
+
+# Both restated gamma_ownership_split's definition; the [dest] one added a
+# global proof-search branch that only unfolded it. Callers unfold
+# gamma_ownership_split_def, which is the same fact.
+gamma_ownership_split_eq
+gamma_ownership_splitD
+
+# Shallow definitions removed after a per-session audit: each was either an
+# alias with no consumer, or a definition supporting only its own lemmas. None
+# was assumed by any theorem, so no proof lost a hypothesis.
+#
+# The intersection concretization and its five lemmas: nothing assumed it, and
+# gamma_dg_local_state (still live) is the concretization instances actually use.
+gamma_dg
+gamma_dg_le_D
+gamma_dg_le_G
+gamma_dg_mono
+gamma_dgD1
+gamma_dgD2
+
+# The join-generic lookup and the equation relating it to lookup_joined_state,
+# which is the only form any caller uses.
+lookup_joined_with
+lookup_joined_with_absent
+lookup_joined_state_eq_with
+
+# The source-level projection of the context-indexed report, and the collapse
+# it was the sole consumer of. Callers read classify_checks_verdicts directly.
+analyse_report
+verdict_check_result
+
+# Re-exports naming the adapter's facts a second time; instances cite
+# analyse_result_node_sound and the analyse_report_ctx_* theorems directly.
+routed_result
+routed_result_node_sound
+routed_report_proved_sound
+routed_report_refuted_sound
+
+# A side condition on the monovariant generator that no theorem assumed. The
+# condition it recorded is now stated in prose where the generator is defined.
+unrouted_enter_compatible
+unrouted_enter_compatibleI
+
+# Seed-key addressing helpers with no consumer: the coverage statements they
+# were meant to make uniform read Inl/Inr directly.
+entry_seed_at
+seed_addr
+seed_addr_FunctionEntry
+seed_addr_Statement
+seed_addr_FunctionResult
+seed_predecessor_addr_list
+val_at
+val_at_FunctionEntry
+val_at_not_entry
+
+# The unlifted formal-entry routing pair. Every routed instance uses the lifted
+# pair, which builds on formals_context directly and is still live.
+formals_route
+formals_route_gen
+
+# Seed-key truncation for a k1 <= k2 projection theorem that was never stated.
+cs_project_gk
+
+# Deliberately NOT listed: `cone` (the deleted backward-reachability set).
+# "cone" is ordinary English throughout this tree -- "exit-cone", "cone guard",
+# "dependency cone" -- so a whole-word rule would reject correct prose. The
+# constant is gone; grep for `\<^const>\<open>cone\<close>` to confirm no checked
+# reference survives.
+
+# --- Source-level flat check report on dg_analysis_adapter (DG_Analysis_Adapter.thy) ---
+# The locale dropped its context-collapsed `analyse_report` in favor of only
+# `analyse_report_ctx` (the context-indexed report). The `verdict_check_result`
+# down-conversion `analyse_report` relied on is gone too; Sign and Interval
+# already built their flat `check_report_entry list` reports through
+# `analysis_surface.report` instead, and Int_Checks.thy already does the same,
+# so these re-exports had no consumer left.
+int_conf_analyse_report_def
+int_conf_analyse_report_per_origin_def
+int_conf_analyse_report_warrow_def
+int_conf_analyse_report_wpo_def
+
+# --- The unrouted (monovariant) call generator and its LTR soundness bridge ---
+# dg_gen_of walked call sites and folded over static targets directly from the
+# caller unknown, instead of publishing an activation seed the callee reads
+# back; DG_LTR_Sound.thy's whole-file soundness bridge (sound_dg_spec_ltr_for)
+# and DG_Soundness.thy's hook-parametric spine (sound_dg_hooks) existed only to
+# state and compare that generator's post-fixpoint against the generic one.
+# Every registration locale, production entry point, and example now builds
+# its equation system from unit_routed_eqs (Exec_DG_Generator.thy) instead.
+dg_gen_of
+dg_cmb_at_of
+dg_cmb_of
+dg_extra_of
+dep_aux_side_rhs_fold_dg_commute
+entry_call_list_empty_if_not_entry
+dg_extra_of_eq_ltr_enter_trees
+dg_gen_of_obs_hook_gen
+part_post_solution_dg_gen_of_iff
+ltr_combine_tree_eq_dg_cmb_at_of
+ltr_enter_tree_of
+sides_side_rhs_fold_dg_entry_answers
+sound_dg_spec_ltr_for
+enter_sound_ltr
+ltr_edge_tree
+ltr_enter_tree
+ltr_combine_tree
+hook_postfix_gamma_entry
+dg_postfix_collect_sound_ltr_for
+dg_post_solution_collect_sound_ltr_for
+sound_dg_hooks
+dg_hook_D
+dg_hook_G
+dg_hook_gamma
+hook_trees
+hook_gen
+hook_acc
+eq_hook_gen
+sides_fold_le_hook_gen
+hook_postfix
+hook_tree_local_le
+hook_tree_side_le
+hook_edge_tree_mem
+hook_enter_tree_mem
+hook_combine_tree_mem
+hook_post_solution_postfix
+hook_postfix_entryD
+hook_postfix_entryG
+hook_postfix_edge
+hook_postfix_enter
+hook_postfix_combine
+
+# --- Solved-key coverage read off graph reachability (DG_Coverage.thy) ---
+# vars_cover_of_dg_gen_of_covers and cfg_exit_covers proved a routed system's
+# vars_cover from the compiled graph's own connectivity to the exit. A routed
+# callee's entry is solved only once a caller actually publishes its seed, so
+# that argument no longer holds; vars_cover_exec (DG_Soundness.thy) is the
+# executable coverage witness for a routed system's own solved key set.
+vars_cover_of_dg_gen_of_covers
+cfg_exit_covers
+dep_aux_dg_gen_of_char
+dep_aux_dg_gen_of_pred_mem
+dep_aux_dg_gen_of_site_mem
+dep_aux_dg_gen_of_extra_mem
+dep_dg_gen_of_intra
+dep_dg_gen_of_comb
+dep_dg_gen_of_entry

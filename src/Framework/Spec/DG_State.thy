@@ -2,15 +2,17 @@ theory DG_State
   imports "Voblint_Domain.Abstract_Domain"
 begin
 
-section \<open>The D/G framework core\<close>
+section \<open>The value a D/G unknown carries\<close>
 
 text \<open>An analysis chooses a flow-sensitive answer domain \<open>D\<close> and a
-  flow-insensitive side-effect domain \<open>G\<close>. The framework keeps them opaque and stores
-  them in separate components of \<open>dg_state\<close>; it never copies a global component
-  into a local answer.
+  flow-insensitive side-effect domain \<open>G\<close>. The framework keeps them opaque and
+  stores them in separate components of \<open>dg_state\<close>; it never copies a global
+  component into a local answer.
 
-  \<open>dg_edge_tree\<close> and \<open>dg_combine_tree\<close> only project and repack those
-  components, so their construction is independent of the concrete domains.\<close>
+  This theory is that carrier and its order, and nothing else: no address, no
+  solver tree, no transfer. Everything above it only projects and repacks the
+  two components, which is what makes those constructions independent of the
+  concrete domains.\<close>
 
 
 

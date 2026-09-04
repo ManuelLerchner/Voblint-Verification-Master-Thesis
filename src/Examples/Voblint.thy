@@ -223,7 +223,7 @@ text \<open>
     \<^item> @{theory Voblint_Compile.VIMP_Proc_to_CFG} --- \<^verbatim>\<open>compile_prog\<close>: VIMP programs to interprocedural CFGs.
     \<^item> @{theory Voblint_CFG.CFG_Transfer} --- the concrete store transformers shared by the semantics: \<^verbatim>\<open>edge_step\<close>, \<^verbatim>\<open>edge_collect\<close>, \<^verbatim>\<open>edges_collect\<close>, \<^verbatim>\<open>combine_collect\<close>, \<^verbatim>\<open>call_enter_store\<close>.
     \<^item> @{theory Voblint_CFG.LTR_Def} --- the call-structured activation-local trace \<^const>\<open>valid_ltr\<close> (\<^verbatim>\<open>Root\<close>/\<^verbatim>\<open>Call\<close>/\<^verbatim>\<open>Resume\<close>), the projections \<^const>\<open>ltr_collect\<close> / \<^const>\<open>activation_collect\<close>, and the correlation-preserving interface \<^locale>\<open>ltr_coverage\<close> (with the keystone \<^verbatim>\<open>ltr_collect_semantic_postfix\<close>).
-    \<^item> @{theory Voblint_CFG.CFG_Prune} --- interprocedural graph reachability (\<^const>\<open>cfg_reaches\<close>) and the backward exit cone (\<^const>\<open>cone\<close>); these feed the cone guard.  No graph is pruned: the cone restriction lives in the abstract concretization, not in a semantics-altering transformation.
+    \<^item> @{theory Voblint_CFG.CFG_Prune} --- interprocedural graph reachability (\<^const>\<open>cfg_reaches\<close>), which feeds the cone guard.  No graph is pruned: the cone restriction lives in the abstract concretization, not in a semantics-altering transformation.
 
   \<^bold>\<open>3. Analysis spine.\<close> Abstract domains, equation systems, and the TD_side solver bridge; every
   generic endpoint concludes over the trace projections.
@@ -269,7 +269,7 @@ text \<open>
     (independent flow-sensitive local domain \<^verbatim>\<open>D\<close> and flow-insensitive global domain \<^verbatim>\<open>G\<close>),
     the canonical context-sensitive backbone.
     \<^item> @{theory Voblint_Framework.DG_Spec} --- the \<^verbatim>\<open>dg_spec\<close> record, one manager-native transfer per edge action, plus the \<^verbatim>\<open>dg_state\<close> copy lattice and the seeded keyed generator in @{theory Voblint_Framework.DG_Constraint_Trees}.
-    \<^item> @{theory Voblint_Framework.DG_Soundness} --- native heterogeneous soundness over opaque carriers (\<^verbatim>\<open>sound_dg_spec\<close>); the shared closure obligations \<^verbatim>\<open>dg_postfix_gamma_{entry,edge,combine}\<close> feed the trace endpoint \<^verbatim>\<open>dg_post_solution_collect_sound_ltr_for\<close> (\<^theory>\<open>Voblint_Framework.DG_LTR_Sound\<close>).
+    \<^item> @{theory Voblint_Framework.DG_Soundness} --- native heterogeneous soundness over opaque carriers (\<^verbatim>\<open>sound_dg_spec\<close>); the routed context locales in @{theory Voblint_Framework.Routed_Context} feed those obligations directly into \<^const>\<open>activation_collect\<close>, so the routed unit-context instance reaches \<^const>\<open>ltr_collect\<close> through \<^verbatim>\<open>ltr_collect_eq_Union_activation\<close> (@{theory Voblint_Framework.Routed_Context_Unit}).
     \<^item> @{theory Voblint_Analysis.Sign_Analyses} and
       @{theory Voblint_Analysis.Interval_Analyses} --- Sign and Interval as
       routed \<^verbatim>\<open>sound_dg_spec\<close> instances, each reaching \<^const>\<open>ltr_collect\<close>
@@ -283,7 +283,7 @@ text \<open>
   \<^bold>\<open>5. Executable frontend.\<close> Finite-map state representation and certified execution.
     \<^item> @{theory Voblint_Exec.Exec_St} --- executable abstract-state maps for code generation.
     \<^item> @{theory Voblint_Exec.Exec_Refinement} --- commutation bridge from executable states to function states.
-    \<^item> @{theory Voblint_Exec.Exec_DG_Generator} --- the executable D/G equation generator (\<^const>\<open>dg_gen_of\<close>, \<^const>\<open>fun_of_dg_st_gen\<close>): the verified solver \<^emph>\<open>runs\<close> on D/G equations.
+    \<^item> @{theory Voblint_Exec.Exec_DG_Generator} --- the executable D/G equation generator (\<^const>\<open>unit_routed_eqs\<close>, \<^const>\<open>fun_of_dg_st_gen\<close>): the verified solver \<^emph>\<open>runs\<close> on D/G equations.
     \<^item> @{theory Voblint_Exec.DG_Local_State_Exec} --- \<^locale>\<open>routed_dg_domain_exec\<close> proves a registered domain's D/G spec sound directly at this executable carrier, with no separate abstract-carrier transport step.
     \<^item> @{theory Voblint_Analysis.Sign_Exec} --- executable Sign transfer functions.
     \<^item> @{theory Voblint_Analysis.Sign_Analyses} --- the routed D/G runtime for Sign: the equation system, its solved table, and the termination hypothesis each solver discipline turns on.
@@ -345,7 +345,7 @@ text \<open>
     \<^item> @{theory Voblint_Examples.Example_Relational_DG_Demo} --- an execution
       witness, not a soundness-certified result: a compiled full-program
       `if (x < y) { z := 1 } else { z := 0 }` runs through the *same*
-      \<^verbatim>\<open>dg_gen_of\<close>/vendored-solver pipeline as Sign/Interval, this time
+      \<^verbatim>\<open>unit_routed_eqs\<close>/vendored-solver pipeline as Sign/Interval, this time
       over \<^verbatim>\<open>Voblint_Analysis.Rel_Order_Domain\<close>'s non-\<^verbatim>\<open>abs_state\<close>
       relational carrier; the computed result is compared against
       Interval's on the identical program and rendered, raw and
@@ -354,7 +354,7 @@ text \<open>
   \<^bold>\<open>8. Tooling.\<close> Theories outside the core proof spine.
     \<^item> \<^bold>\<open>Named global unknowns\<close> --- a keyed global family is the routed D/G
       context's own \<open>gkey\<close>, and \<^const>\<open>dep_aux\<close> pins what a per-edge tree reads:
-      @{thm dep_aux_dg_edge_tree} names the source local unknown and the one
+      @{thm dep_aux_dg_edge_tree_at} names the source address and the one
       global slot, nothing else.
     \<^item> \<^bold>\<open>Rendering\<close> --- \<^const>\<open>raw_cfg_dot_lit\<close> and the \<open>_graph_snapshot_auto\<close> /
       \<open>_export_auto\<close> family (@{theory Voblint_CLI.State_Report_GraphViz}) have no
@@ -461,7 +461,7 @@ text \<open>
   \<^emph>\<open>computed\<close> analysis result:
 
     \<^item> VIMP source \<^verbatim>\<open>compile_prog\<close> to a CFG;
-    \<^item> the generic D/G generator \<^verbatim>\<open>dg_gen_of\<close> emits the equation system;
+    \<^item> the generic D/G generator \<^verbatim>\<open>unit_routed_eqs\<close> emits the equation system;
     \<^item> the verified solver \<^emph>\<open>computes\<close> a solution (\<^verbatim>\<open>solve_c ... = Some sigma\<close>, \<^verbatim>\<open>by eval\<close>);
     \<^item> the registered endpoint \<open>flagship_ex_reg.run_source_sound\<close>
       (@{theory Voblint_Soundness.Run_Analysis_Sound}'s \<^verbatim>\<open>ownership_split_dg_exec_analysis\<close>
@@ -473,9 +473,9 @@ text \<open>
   interface, the carrier-opaque \<^verbatim>\<open>sound_dg_spec\<close>; Sign, Interval, and
   the mixed flagship are its instances, and context slicing is factored through
   the functional activation spine and its per-context keyed slots. There is one
-  such spine: every domain reaches \<^const>\<open>ltr_collect\<close> through
-  \<^verbatim>\<open>dg_post_solution_collect_sound_ltr_for\<close>, and the routeCall_String_Solver_Regressiond instances
-  through \<^verbatim>\<open>activation_collect_sound\<close> above it.
+  such spine: every domain reaches \<^const>\<open>ltr_collect\<close> through the routed
+  unit-context instance's \<^verbatim>\<open>ltr_collect_eq_Union_activation\<close>, and the routed
+  instances through \<^verbatim>\<open>activation_collect_sound\<close> above it.
 \<close>
 
 end

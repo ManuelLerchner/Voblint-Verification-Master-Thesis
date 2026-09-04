@@ -6,7 +6,6 @@ theory Sign_Analyses
     "Voblint_Analysis.Sign_Exec"
     "Voblint_Exec.Result_Normalization"
     "Voblint_Exec.Routed_Domain_Exec"
-    "Voblint_Framework.DG_LTR_Sound"
     "Voblint_Framework.Routed_Analysis_Sound"
     "Voblint_Framework.Routed_Context"
     "Voblint_Framework.Routed_Context_Unit"
@@ -49,10 +48,14 @@ text \<open>
 section \<open>Sign at the routed spine, instantiated at the unit context\<close>
 
 text \<open>
-  Redirects Sign's production Base-family (\<open>dg_gen_of\<close>) analysis onto the routed
-  D/G spine (\<^locale>\<open>dg_ctx_activation_base\<close>, \<^locale>\<open>unit_routed_context\<close>) that
-  Interval's own entry-state and call-string context analyses already use. The
-  context here is \<^typ>\<open>unit\<close>:
+  A second soundness derivation for the same \<^const>\<open>unit_routed_eqs\<close> equation
+  system Sign's production route (\<open>Exec_Sign_DG_Run\<close>, via the downstream
+  \<open>Voblint_Soundness\<close> session's packaged \<open>local_state_dg_exec_analysis\<close>
+  registration locale) also builds: this one goes
+  directly through \<^locale>\<open>dg_ctx_activation_base\<close> at the routed D/G spine
+  (\<^locale>\<open>unit_routed_context\<close>), matching Interval's own entry-state and
+  call-string context analyses, rather than through the packaged registration
+  bundle. The context here is \<^typ>\<open>unit\<close>:
   \<^locale>\<open>unit_routed_context\<close> (\<^theory>\<open>Voblint_Framework.Routed_Context_Unit\<close>) fixes
   \<^const>\<open>route_unit\<close>, so every routing-agreement obligation that Interval's
   formals-context instance must prove from its own transfer facts collapses here
@@ -61,8 +64,7 @@ text \<open>
 
   Soundness below is derived directly from \<^locale>\<open>dg_ctx_activation_base\<close>'s generic
   machinery against the collecting semantics, exactly as Interval's entry-state
-  analysis is derived. No comparison to Sign's Base-family production result is
-  attempted or needed: \<^const>\<open>dg_gen_of\<close> never appears in this development.
+  analysis is derived.
 \<close>
 
 subsection \<open>Global key: real globals vs callee-entry seed slots\<close>

@@ -13,7 +13,7 @@ text \<open>
             |  compile_prog
             v
           CFG
-            |  dg_gen_of, executable D/G specification
+            |  flagship_ex_reg.routed_eqs, executable D/G specification
             v
     D/G equation system
             |  verified solver, by eval
@@ -43,11 +43,9 @@ text \<open>
 
 theory Example_Interval_DG_Flagship
   imports
-    "Voblint_Framework.DG_LTR_Sound"
     "Voblint_Analysis.Interval_Transfer"
     "Voblint_Analysis.Ivl_Exec"
     "Voblint_Solver.TD_Solver_Bridge"
-    "Voblint_Exec.DG_Coverage"
     "Voblint_CFG.CFG_Prune"
     "Voblint_Analysis.Analysis_GraphViz"
     "Voblint_VIMP.VIMP_Notation"
@@ -125,68 +123,102 @@ text \<open>
   the executable solve, and the coverage witnesses.
 \<close>
 
+subsection \<open>Registration through the classifier-parametric registration locale\<close>
+
+text \<open>Interpret \<^locale>\<open>ownership_split_dg_exec_analysis\<close> once here at \<open>flagship_gs\<close>,
+  matching the pattern in \<open>Exec_Sign_DG_Run\<close> and \<open>Example_Parity_DG_Flagship\<close>.
+  The interpretation absorbs the sound-transfer and primitive-commutation
+  obligations once, so \<open>flagship_source_run_sound\<close> below only supplies the
+  compiled-input and solver facts. The solver is the seed-joining warrowing rule:
+  interval widening on the analysis global and on local widening points, plain
+  join on every activation seed.\<close>
+
+lemma flagship_wf_reserved: "reserved_ret_var flagship_gs"
+  by (auto simp: wf_compile_input_simps flagship_pi_def flagship_prog_def split: if_splits)
+
+interpretation flagship_ex_reg:
+  ownership_split_dg_exec_analysis flagship_gs
+    skip_ivl assign_ivl special_ivl branch_ivl body_ivl return_ivl
+    "enter_ivl_ci_for flagship_gs" event_ivl
+    "ivl_tf_st_for flagship_gs" "ivl_enter_st_for flagship_gs"
+    "TD_side_seed_join_warrowing_Interp.solve is_activation_seed"
+    "TD_side_seed_join_warrowing_Interp.solve_c is_activation_seed"
+proof -
+  interpret flagship_ex_transfer: sound_transfer_for flagship_gs
+      skip_ivl assign_ivl special_ivl branch_ivl body_ivl return_ivl
+      "enter_ivl_ci_for flagship_gs" event_ivl
+    by (rule ivl_is_sound_transfer_for)
+  show "ownership_split_dg_exec_analysis flagship_gs
+          skip_ivl assign_ivl special_ivl branch_ivl body_ivl return_ivl
+          (enter_ivl_ci_for flagship_gs) event_ivl
+          (ivl_tf_st_for flagship_gs)
+          (ivl_enter_st_for flagship_gs)
+          (TD_side_seed_join_warrowing_Interp.solve is_activation_seed)
+          (TD_side_seed_join_warrowing_Interp.solve_c is_activation_seed)"
+    by unfold_locales
+       (rule flagship_wf_reserved
+             flagship_ex_transfer.tf_sound_assign_for flagship_ex_transfer.tf_sound_special_for
+             flagship_ex_transfer.tf_sound_branch_for
+             flagship_ex_transfer.tf_sound_enter_entry_for
+             ivl_tf_st_for_commute[unfolded ivl_tf_abs_def, folded fun_of_exec_dg_st_for_def]
+             ivl_enter_st_for_commute[folded fun_of_exec_dg_st_for_def]
+             TD_side_seed_join_warrowing_Interp.part_post_solution_of_solve_c
+        | assumption)+
+qed
+
 subsection \<open>Equation generation\<close>
 
 text \<open>
-  The generic D/G generator \<open>dg_gen_of\<close> turns the CFG into an equation system over
-  unknowns \<open>(pp x unit) + unit\<close>, values in \<open>(ivl exec_dg_st, ivl exec_dg_st) dg_state\<close>.  Locals
-  seed at \<open>cinit_ivl_st\<close> (globals \<open>[0,0]\<close>, locals \<open>top\<close>); the flow-insensitive
-  global slot seeds at \<open>restrict_global_resolved_q cinit_ivl_st\<close> (bottom on locals, so it
-  never pollutes the local \<open>x\<close> through the diagonal read).
+  The registration locale owns the equation system: \<open>flagship_eqs\<close> names
+  \<^const>\<open>flagship_ex_reg.routed_eqs\<close> at this program, over unknowns
+  \<open>(pp x unit) + (unit, unit) routed_gk\<close> and values in
+  \<open>(ivl exec_dg_st, ivl exec_dg_st) dg_state\<close>. Locals seed at \<open>cinit_ivl_st\<close>
+  (globals \<open>[0,0]\<close>, locals \<open>top\<close>); the flow-insensitive global slot seeds at
+  \<open>restrict_global_resolved_q cinit_ivl_st\<close> (bottom on locals, so it never pollutes
+  the local \<open>x\<close> through the diagonal read).
 \<close>
 
-definition flagship_eqs :: "pp \<times> unit \<Rightarrow> (pp \<times> unit, unit, (ivl exec_dg_st, ivl exec_dg_st) dg_state) strategy_tree" where
-  "flagship_eqs = dg_gen_of (ownership_split_dg_spec_st_for flagship_gs (ivl_tf_st_for flagship_gs) (ivl_enter_st_for flagship_gs))
-     flagship_cfg bot cinit_ivl_st (restrict_global_resolved_q cinit_ivl_st)"
+definition flagship_eqs ::
+  "pp \<times> unit
+   \<Rightarrow> (pp \<times> unit, (unit, unit) routed_gk, (ivl exec_dg_st, ivl exec_dg_st) dg_state) strategy_tree" where
+  "flagship_eqs = flagship_ex_reg.routed_eqs flagship_pi (prog_procs flagship_prog)
+                    bot cinit_ivl_st (restrict_global_resolved_q cinit_ivl_st)"
 
 subsection \<open>Executable solve\<close>
 
 text \<open>
-  The vendored \<open>TD_side_warrowing_apinis_Interp_solve_c\<close> --- pointwise interval
-  widening on \<open>(ivl exec_dg_st, ivl exec_dg_st) dg_state\<close> for solver termination --- \<^emph>\<open>computes\<close> a
+  The seed-joining warrowing solver --- pointwise interval widening on
+  \<open>(ivl exec_dg_st, ivl exec_dg_st) dg_state\<close> for termination --- \<^emph>\<open>computes\<close> a
   solution.  Termination is a code-generated \<^verbatim>\<open>by eval\<close> fact; the solution is not
   written by hand.
 \<close>
 
 lemma flagship_terminates_c:
-  "TD_side_warrowing_apinis_Interp_solve_c flagship_eqs (cfg_exit flagship_cfg, ()) \<noteq> None"
+  "TD_side_seed_join_warrowing_Interp_solve_c is_activation_seed flagship_eqs
+     (cfg_exit flagship_cfg, ()) \<noteq> None"
   by eval
 
-definition flagship_sol :: "(pp \<times> unit) set \<times> (pp \<times> unit + unit \<Rightarrow> (ivl exec_dg_st, ivl exec_dg_st) dg_state)" where
-  "flagship_sol = TD_side_warrowing_apinis_Interp_solve flagship_eqs (cfg_exit flagship_cfg, ())"
+definition flagship_sol ::
+  "(pp \<times> unit) set
+   \<times> (pp \<times> unit + (unit, unit) routed_gk \<Rightarrow> (ivl exec_dg_st, ivl exec_dg_st) dg_state)" where
+  "flagship_sol = TD_side_seed_join_warrowing_Interp_solve is_activation_seed flagship_eqs
+                    (cfg_exit flagship_cfg, ())"
 
 subsection \<open>Soundness premises for the registered endpoint\<close>
 
 text \<open>
   The premises \<open>flagship_ex_reg.run_source_sound\<close> consumes: every program point is
-  covered by the solved variable set, the graph is finite and enter-free, and the
-  concrete initial stores are covered by the seed.
+  covered by the solved variable set, the graph is finite, and the concrete initial
+  stores are covered by the seed.
 
-  Coverage is not read off the solved key set. Every node of \<open>flagship_cfg\<close> reaches
-  \<^const>\<open>cfg_exit\<close> --- a structural fact about the graph alone, decided by
-  \<^const>\<open>cfg_exit_covers\<close> --- and \<^const>\<open>vars_cover\<close> follows from that together
-  with the post-solution the solver already returns.
+  Coverage is read off the solved key set: a routed callee entry is solved only once
+  a caller publishes its seed, so which nodes a run visited is a fact about the run,
+  decided by \<^const>\<open>vars_cover_exec\<close> over the two edge enumerations. \<open>flagship_cfg\<close>
+  has no calls, so here it says every intra target was solved.
 \<close>
 
-lemma flagship_solve_dom:
-  "TD_side_warrowing_apinis_Interp.solve_dom TYPE(unit)
-     TYPE((ivl exec_dg_st, ivl exec_dg_st) dg_state)
-     flagship_eqs (cfg_exit flagship_cfg, ())"
-  by (rule TD_side_warrowing_apinis_Interp.solve_dom_of_solve_c[OF flagship_terminates_c])
-
-lemma flagship_pp_st:
-  "part_post_solution flagship_eqs (cfg_exit flagship_cfg, ())
-     (snd flagship_sol) (fst flagship_sol)"
-  using TD_side_warrowing_apinis_Interp.partial_post_solution
-          [OF flagship_solve_dom, of "fst flagship_sol" "snd flagship_sol"]
-  unfolding flagship_sol_def by simp
-
-lemma flagship_exit_covers: "cfg_exit_covers flagship_cfg" by eval
-
 lemma flagship_vars_cover: "vars_cover flagship_cfg (fst flagship_sol)"
-  by (rule vars_cover_of_dg_gen_of_covers
-        [OF flagship.finite_intra flagship.finite_calls flagship.wf flagship_exit_covers
-            flagship_pp_st[unfolded flagship_eqs_def]])
+  by (rule vars_cover_of_exec[OF flagship.finite_intra flagship.finite_calls]) eval
 
 lemma flagship_sound0:
   "cinit_stores flagship_gs \<subseteq>
@@ -222,45 +254,6 @@ lemma flagship_exit_computed:
   "flagship_lookup (locals (snd flagship_sol (Inl (Statement 3, ())))) (STR ''x'') = Ivl (Fin 20) (Fin 20)"
   unfolding flagship_sol_def flagship_eqs_def by eval
 
-subsection \<open>Registration through the classifier-parametric registration locale\<close>
-
-text \<open>Interpret \<^locale>\<open>ownership_split_dg_exec_analysis\<close> once here at \<open>flagship_gs\<close>,
-  matching the pattern in \<open>Exec_Sign_DG_Run\<close> and \<open>Example_Parity_DG_Flagship\<close>.
-  The interpretation absorbs the sound-transfer and primitive-commutation
-  obligations once, so \<open>flagship_source_run_sound\<close> below only supplies the
-  compiled-input and solver facts.\<close>
-
-lemma flagship_wf_reserved: "reserved_ret_var flagship_gs"
-  by (auto simp: wf_compile_input_simps flagship_pi_def flagship_prog_def split: if_splits)
-interpretation flagship_ex_reg:
-  ownership_split_dg_exec_analysis flagship_gs
-    skip_ivl assign_ivl special_ivl branch_ivl body_ivl return_ivl
-    "enter_ivl_ci_for flagship_gs" event_ivl
-    "ivl_tf_st_for flagship_gs" "ivl_enter_st_for flagship_gs"
-    "TD_side_warrowing_apinis_Interp.solve" "TD_side_warrowing_apinis_Interp.solve_c"
-proof -
-  interpret flagship_ex_transfer: sound_transfer_for flagship_gs
-      skip_ivl assign_ivl special_ivl branch_ivl body_ivl return_ivl
-      "enter_ivl_ci_for flagship_gs" event_ivl
-    by (rule ivl_is_sound_transfer_for)
-  show "ownership_split_dg_exec_analysis flagship_gs
-          skip_ivl assign_ivl special_ivl branch_ivl body_ivl return_ivl
-          (enter_ivl_ci_for flagship_gs) event_ivl
-          (ivl_tf_st_for flagship_gs)
-          (ivl_enter_st_for flagship_gs)
-          TD_side_warrowing_apinis_Interp.solve TD_side_warrowing_apinis_Interp.solve_c"
-    by unfold_locales
-       (rule flagship_wf_reserved
-             flagship_ex_transfer.tf_sound_assign_for flagship_ex_transfer.tf_sound_special_for
-             flagship_ex_transfer.tf_sound_branch_for
-             flagship_ex_transfer.tf_sound_enter_entry_for
-             ivl_tf_st_for_commute[unfolded ivl_tf_abs_def, folded fun_of_exec_dg_st_for_def]
-             ivl_enter_st_for_commute[folded fun_of_exec_dg_st_for_def]
-             TD_side_warrowing_apinis_Interp.part_post_solution_of_solve_c
-        | assumption)+
-qed
-
-
 
 text \<open>
   The registered endpoint \<open>flagship_ex_reg.run_source_sound\<close> turns the single \<^theory_text>\<open>by eval\<close>
@@ -278,7 +271,7 @@ theorem flagship_source_run_sound:
   assumes run: "star (pstep flagship_gs flagship_pi) (prog_main flagship_prog, s, []) (residual, t, frs)"
       and init: "s \<in> cinit_stores flagship_gs"
   shows "\<exists>v stk. csim flagship_pi flagship_cfg (residual, t, frs) (v, t, stk)
-                 \<and> t \<in> flagship_ex_reg.gamma (snd flagship_sol) v"
+                 \<and> t \<in> flagship_ex_reg.gamma (fst flagship_sol) (snd flagship_sol) v"
 proof -
   have run': "star (pstep flagship_gs flagship_pi) (main_body flagship_pi, s, []) (residual, t, frs)"
     using run by (simp add: flagship_pi_def)
@@ -289,7 +282,6 @@ proof -
               flagship_wf
               flagship_vars_cover[unfolded flagship_sol_def flagship_eqs_def flagship_cfg_def]
               flagship.finite_intra[unfolded flagship_cfg_def]
-              flagship.finite_calls[unfolded flagship_cfg_def]
               flagship_sound0[folded gamma_ownership_split_def, folded flagship_ex_reg.gamma_ownership_split_exec_def]
               init run'])
 qed
@@ -307,7 +299,8 @@ text \<open>
   purely local name, and not needed by the bound's own proof.)
 \<close>
 
-lemma glob_x_at_head: "flagship_lookup (globs (snd flagship_sol (Inr ()))) (STR ''x'') = bot"
+lemma glob_x_at_head:
+  "flagship_lookup (globs (snd flagship_sol (Inr (Analysis_Global ())))) (STR ''x'') = bot"
   unfolding flagship_sol_def flagship_eqs_def by eval
 
 lemma flagship_x_not_global: "\<not> flagship_gs (STR ''x'')"
@@ -316,14 +309,15 @@ lemma flagship_x_not_global: "\<not> flagship_gs (STR ''x'')"
 lemma head_x_bound:
   "combine_env flagship_gs
      (locals ((fun_of_dg_st_for flagship_gs \<circ> snd flagship_sol) (Inl (Statement (Suc 0), ()))))
-     (globs ((fun_of_dg_st_for flagship_gs \<circ> snd flagship_sol) (Inr ()))) (STR ''x'') = Ivl (Fin 0) (Fin 20)"
+     (globs ((fun_of_dg_st_for flagship_gs \<circ> snd flagship_sol) (Inr (Analysis_Global ()))))
+       (STR ''x'') = Ivl (Fin 0) (Fin 20)"
 proof -
   have L: "flagship_fun_of (locals (snd flagship_sol (Inl (Statement (Suc 0), ())))) (STR ''x'') = Ivl (Fin 0) (Fin 20)"
     using flagship_head_computed
     by (simp add: fun_of_resolved_st_q_for_def)
   have C: "combine_env flagship_gs
              (flagship_fun_of (locals (snd flagship_sol (Inl (Statement (Suc 0), ())))))
-             (flagship_fun_of (globs (snd flagship_sol (Inr ())))) (STR ''x'')
+             (flagship_fun_of (globs (snd flagship_sol (Inr (Analysis_Global ()))))) (STR ''x'')
            = flagship_fun_of (locals (snd flagship_sol (Inl (Statement (Suc 0), ())))) (STR ''x'')"
     by (rule combine_env_local_eq[where gs = flagship_gs and x = "STR ''x''",
           OF flagship_x_not_global])
@@ -333,10 +327,10 @@ proof -
 qed
 
 theorem flagship_head_bound_proper:
-  "(\<lambda>_. 100) \<notin> dg_hook_gamma (gamma_ownership_split flagship_gs)
-                 (fun_of_dg_st_for flagship_gs \<circ> snd flagship_sol) (Statement (Suc 0))"
-  unfolding dg_hook_gamma_def gamma_ownership_split_def gamma_state_def
-            dg_hook_D_def dg_hook_G_def
+  "(\<lambda>_. 100) \<notin> flagship_ex_reg.gamma_ownership_split_exec
+                 (locals (snd flagship_sol (Inl (Statement (Suc 0), ()))))
+                 (globs (snd flagship_sol (Inr (Analysis_Global ()))))"
+  unfolding flagship_ex_reg.gamma_ownership_split_exec_def gamma_ownership_split_def gamma_state_def
   apply (simp only: mem_Collect_eq not_all)
   apply (rule exI[of _ "(STR ''x'')"])
   using head_x_bound apply (simp add: fun_of_dg_st_for_simps combine_env_def)
@@ -352,7 +346,8 @@ text \<open>
 \<close>
 
 definition flagship_graph_config ::
-  "(unit, unit, (ivl exec_dg_st, ivl exec_dg_st) dg_state, ivl exec_dg_st) analysis_graph_config" where
+  "(unit, (unit, unit) routed_gk, (ivl exec_dg_st, ivl exec_dg_st) dg_state, ivl exec_dg_st)
+     analysis_graph_config" where
   "flagship_graph_config =
     \<lparr> local_of = locals,
       route = (\<lambda>_ _ _ _. Some ()),
@@ -369,8 +364,8 @@ definition flagship_graph_config ::
         String.explode x @ ''='' @ string_of_ivl (flagship_lookup d x)) vars),
       format_return = (\<lambda>_ _ _ _. []),
       show_global = (\<lambda>_ _ _. [''(none)'']),
-      show_global_key = (\<lambda>_. ''Global''),
-      is_shared_global = (\<lambda>_. True),
+      show_global_key = (\<lambda>k. case k of Analysis_Global _ \<Rightarrow> ''Global'' | Activation_Seed _ _ \<Rightarrow> ''Seed''),
+      is_shared_global = (\<lambda>k. case k of Analysis_Global _ \<Rightarrow> True | Activation_Seed _ _ \<Rightarrow> False),
       show_internal_globals = False,
       owner_of = (\<lambda>_. ''main''),
       cluster_label = (\<lambda>_ _. ''main / root context''),
@@ -378,14 +373,15 @@ definition flagship_graph_config ::
       node_annotation = (\<lambda>_ _. None)
     \<rparr>"
 
-definition flagship_graph_domain :: "(pp \<times> unit + unit) list" where
+definition flagship_graph_domain :: "(pp \<times> unit + (unit, unit) routed_gk) list" where
   "flagship_graph_domain =
     contextual_graph_domain flagship_cfg (\<lambda>_. [()])"
 
 definition flagship_dot :: String.literal where
   "flagship_dot =
      String.implode
-       (case TD_side_warrowing_apinis_Interp_solve_c flagship_eqs (cfg_exit flagship_cfg, ()) of
+       (case TD_side_seed_join_warrowing_Interp_solve_c is_activation_seed flagship_eqs
+               (cfg_exit flagship_cfg, ()) of
           None \<Rightarrow> ''solver did not terminate''
         | Some sol \<Rightarrow> contextual_analysis_dot flagship_graph_config flagship_cfg
             flagship_graph_domain (snd sol))"

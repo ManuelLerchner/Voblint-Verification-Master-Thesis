@@ -75,19 +75,6 @@ lemma fun_of_dg_st_for_bot [simp]:
                          'b::bounded_semilattice_sup_bot exec_dg_st) dg_state) = bot"
   by (simp add: bot_dg_state_def)
 
-lemma fun_of_dg_st_for_sup:
-  "fun_of_dg_st_for gs ((a::('c::bounded_semilattice_sup_bot exec_dg_st,
-                      'd::bounded_semilattice_sup_bot exec_dg_st) dg_state) \<squnion> b)
-     = fun_of_dg_st_for gs a \<squnion> fun_of_dg_st_for gs b"
-  by (simp add: fun_of_dg_st_for_def sup_dg_state_def fun_of_exec_dg_st_for_def
-    fun_of_resolved_st_q_for_sup)
-
-lemma fun_of_dg_st_for_mono:
-  "(a::('c::bounded_semilattice_sup_bot exec_dg_st, 'd::bounded_semilattice_sup_bot exec_dg_st) dg_state) \<le> b
-     \<Longrightarrow> fun_of_dg_st_for gs a \<le> fun_of_dg_st_for gs b"
-  by (auto simp: fun_of_dg_st_for_def less_eq_dg_state_def fun_of_exec_dg_st_for_def
-    fun_of_resolved_st_q_for_mono)
-
 lemma location_vname_location_of [simp]:
   "location_vname (location_of gs x) = x"
   by (simp add: location_of_def)
@@ -184,7 +171,7 @@ lemma dg_spec_step_ownership_split_st_for:
   by (cases a) simp_all
 
 lemma dgs_enter_ownership_split_dg_spec_st_for:
-  "dgs_enter (ownership_split_dg_spec_st_for gs tf_st enter_st) ci
+  "enter\<^sup># (ownership_split_dg_spec_st_for gs tf_st enter_st) ci
      = ownership_split_enter_transfer_st (local_enter_transfer (\<lambda>d. [(d, enter_st ci d)]))"
   unfolding ownership_split_dg_spec_st_for_def by simp
 

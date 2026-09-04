@@ -60,24 +60,11 @@ subsection \<open>Bounded length\<close>
 lemma cs_route_length: "length (cs_route k u ctx d ca) \<le> k"
   by (simp add: cs_route_def)
 
-lemma cs_context_length: "length (cs_context k u ctx s) \<le> k"
-  by (simp add: cs_context_def)
-
 subsection \<open>Truncation behaviour\<close>
 
 text \<open>Below the bound, pushing a call site loses nothing --- a plain cons, not a
   truncation. Needed for any future precision argument: contexts stay distinct as long as
   the call histories being separated fit under \<open>k\<close>.\<close>
-
-lemma cs_route_no_truncation:
-  assumes "length ctx < k"
-  shows "cs_route k u ctx d ca = u # ctx"
-  using assms by (simp add: cs_route_def)
-
-lemma cs_context_no_truncation:
-  assumes "length ctx < k"
-  shows "cs_context k u ctx s = u # ctx"
-  using assms by (simp add: cs_context_def)
 
 text \<open>The central algebraic property of a bounded call string: projecting a longer bound's
   context down to a shorter one agrees with routing at the shorter bound directly. This is
@@ -89,11 +76,6 @@ lemma cs_route_k_mono:
   shows "take k1 (cs_route k2 u ctx d ca) = cs_route k1 u ctx d ca"
   using assms by (simp add: cs_route_def)
 
-lemma cs_context_k_mono:
-  assumes "k1 \<le> k2"
-  shows "take k1 (cs_context k2 u ctx s) = cs_context k1 u ctx s"
-  using assms by (simp add: cs_context_def)
-
 subsection \<open>The call-string-keyed global-key type\<close>
 
 text \<open>The global-key space a call-string-routed equation system publishes into: one
@@ -103,13 +85,5 @@ text \<open>The global-key space a call-string-routed equation system publishes 
   payload's length does. Still pure data: no domain, no solver, no CFG.\<close>
 
 datatype call_string_gk = Global | Seed (seed_pp: pp) (seed_cs: "cfg_node list")
-
-text \<open>Truncating a call-string context inside a seed key: the counterpart of
-  \<open>cs_route_k_mono\<close>/\<open>cs_context_k_mono\<close> at the global-key level, which is what lets a
-  \<open>k1 \<le> k2\<close> solver-projection theorem be stated generically over the key type shared by
-  every call-string-keyed instance.\<close>
-
-definition cs_project_gk :: "nat \<Rightarrow> call_string_gk \<Rightarrow> call_string_gk" where
-  "cs_project_gk k x = (case x of Global \<Rightarrow> Global | Seed p cs \<Rightarrow> Seed p (take k cs))"
 
 end

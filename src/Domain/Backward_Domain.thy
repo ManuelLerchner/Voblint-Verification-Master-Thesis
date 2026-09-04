@@ -697,9 +697,6 @@ text \<open>
   needed.
 \<close>
 
-lemma gamma_branch: "\<lbrakk>branch e pol \<sigma>\<rbrakk> = gamma_state_lift (branch_lifted e pol \<sigma>)"
-  unfolding branch_def by (cases "branch_lifted e pol \<sigma>") simp_all
-
 end
 
 

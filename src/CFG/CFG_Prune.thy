@@ -65,9 +65,6 @@ definition cfg_succ :: "cfg \<Rightarrow> cfg_node \<Rightarrow> cfg_node \<Righ
 definition cfg_reaches :: "cfg \<Rightarrow> cfg_node \<Rightarrow> cfg_node \<Rightarrow> bool" where
   "cfg_reaches g v v0 \<longleftrightarrow> (v, v0) \<in> (cfg_succ_rel g)\<^sup>*"
 
-definition cone :: "cfg \<Rightarrow> cfg_node \<Rightarrow> cfg_node set" where
-  "cone g v0 = {v. cfg_reaches g v v0}"
-
 lemma cfg_reaches_refl: "cfg_reaches g v v"
   by (simp add: cfg_reaches_def)
 

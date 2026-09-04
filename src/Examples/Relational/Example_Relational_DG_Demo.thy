@@ -2,7 +2,6 @@ theory Example_Relational_DG_Demo
   imports
     "Voblint_Exec.Exec_DG_Generator"
     "Voblint_Analysis.Rel_Order_Domain"
-    "Voblint_Framework.DG_LTR_Sound"
     "Voblint_Analysis.Interval_Transfer"
     "Voblint_Analysis.Ivl_Exec"
     "Voblint_Solver.TD_Solver_Bridge"
@@ -19,9 +18,9 @@ text \<open>
   @{theory Voblint_Analysis.Rel_Order_Domain} interprets
   \<^locale>\<open>sound_dg_spec\<close> over \<open>relc\<close>, a non-\<open>abs_state\<close> relational carrier,
   with zero DG-framework changes -- the mathematical half of the claim.
-  This file is the executable half: the same CFG, the same generic \<open>dg_gen_of\<close>
-  generator, and the same vendored solver that runs Interval also run \<open>relc\<close>,
-  end to end, with a genuinely different observable result.
+  This file is the executable half: the same CFG, the same generic
+  \<open>unit_routed_eqs\<close> generator, and the same vendored solver that runs Interval
+  also run \<open>relc\<close>, end to end, with a genuinely different observable result.
 
   \<^bold>\<open>Program.\<close> \<open>if (x < y) { z := 1 } else { z := 0 }\<close>, with \<open>x\<close>/\<open>y\<close> left
   entirely unconstrained at entry (no prior assignment).  This is deliberately
@@ -78,13 +77,13 @@ text \<open>\<open>Statement 1\<close> is the true branch of the guard, right af
 subsection \<open>Interval, on the same CFG, same generator, same solver menu\<close>
 
 definition demo_ivl_eqs ::
-  "pp \<times> unit \<Rightarrow> (pp \<times> unit, unit, (ivl exec_dg_st, ivl exec_dg_st) dg_state) strategy_tree" where
+  "pp \<times> unit \<Rightarrow> (pp \<times> unit, (unit, unit) routed_gk, (ivl exec_dg_st, ivl exec_dg_st) dg_state) strategy_tree" where
   "demo_ivl_eqs =
-     dg_gen_of (ownership_split_dg_spec_st_for demo_gs (ivl_tf_st_for demo_gs) (ivl_enter_st_for demo_gs)) demo_cfg
+     unit_routed_eqs (ownership_split_dg_spec_st_for demo_gs (ivl_tf_st_for demo_gs) (ivl_enter_st_for demo_gs)) demo_cfg
        bot top_ivl_st (restrict_global_resolved_q top_ivl_st)"
 
 definition demo_ivl_sol ::
-  "(pp \<times> unit) set \<times> (pp \<times> unit + unit \<Rightarrow> (ivl exec_dg_st, ivl exec_dg_st) dg_state)" where
+  "(pp \<times> unit) set \<times> (pp \<times> unit + (unit, unit) routed_gk \<Rightarrow> (ivl exec_dg_st, ivl exec_dg_st) dg_state)" where
   "demo_ivl_sol = TD_side_always_join_Interp_solve demo_ivl_eqs (cfg_exit demo_cfg, ())"
 
 lemma demo_ivl_terminates:
@@ -95,15 +94,15 @@ subsection \<open>The relational analysis, on the very same CFG, generator, and 
 
 text \<open>\<open>rel_order_spec\<close> is already both the sound \<^emph>\<open>and\<close> the executable
   specification -- \<open>relc\<close> needed no \<open>Exec_St\<close>-style refinement layer,
-  so \<open>dg_gen_of\<close> is applied to it directly, with no bridging step and no
+  so \<open>unit_routed_eqs\<close> is applied to it directly, with no bridging step and no
   parallel generator.\<close>
 
 definition demo_rel_eqs ::
-  "pp \<times> unit \<Rightarrow> (pp \<times> unit, unit, (relc, relc) dg_state) strategy_tree" where
-  "demo_rel_eqs = dg_gen_of rel_order_spec demo_cfg bot top_relc top_relc"
+  "pp \<times> unit \<Rightarrow> (pp \<times> unit, (unit, unit) routed_gk, (relc, relc) dg_state) strategy_tree" where
+  "demo_rel_eqs = unit_routed_eqs rel_order_spec demo_cfg bot top_relc top_relc"
 
 definition demo_rel_sol ::
-  "(pp \<times> unit) set \<times> (pp \<times> unit + unit \<Rightarrow> (relc, relc) dg_state)" where
+  "(pp \<times> unit) set \<times> (pp \<times> unit + (unit, unit) routed_gk \<Rightarrow> (relc, relc) dg_state)" where
   "demo_rel_sol = TD_side_always_join_Interp_solve demo_rel_eqs (cfg_exit demo_cfg, ())"
 
 lemma demo_rel_terminates:
@@ -161,7 +160,7 @@ text \<open>Same CFG, same rendering backend, this time with each node labelled 
   projection the flagship Interval example uses.\<close>
 
 definition demo_rel_graph_config ::
-  "(unit, unit, (relc, relc) dg_state, relc) analysis_graph_config" where
+  "(unit, (unit, unit) routed_gk, (relc, relc) dg_state, relc) analysis_graph_config" where
   "demo_rel_graph_config =
     \<lparr> local_of = locals,
       route = (\<lambda>_ _ _ _. Some ()),
@@ -175,8 +174,8 @@ definition demo_rel_graph_config ::
       show_local = (\<lambda>_ _ _ d. [string_of_relc d]),
       format_return = (\<lambda>_ _ _ _. []),
       show_global = (\<lambda>_ _ _. [''(none)'']),
-      show_global_key = (\<lambda>_. ''Global''),
-      is_shared_global = (\<lambda>_. True),
+      show_global_key = (\<lambda>k. case k of Analysis_Global _ \<Rightarrow> ''Global'' | Activation_Seed _ _ \<Rightarrow> ''Seed''),
+      is_shared_global = (\<lambda>k. case k of Analysis_Global _ \<Rightarrow> True | Activation_Seed _ _ \<Rightarrow> False),
       show_internal_globals = False,
       owner_of = (\<lambda>_. ''main''),
       cluster_label = (\<lambda>_ _. ''main / relational''),
@@ -185,7 +184,7 @@ definition demo_rel_graph_config ::
       node_annotation = (\<lambda>_ _. None)
     \<rparr>"
 
-definition demo_graph_domain :: "(pp \<times> unit + unit) list" where
+definition demo_graph_domain :: "(pp \<times> unit + (unit, unit) routed_gk) list" where
   "demo_graph_domain = contextual_graph_domain demo_cfg (\<lambda>_. [()])"
 
 definition demo_rel_dot :: String.literal where

@@ -6,7 +6,6 @@ theory Interval_Analyses
     "Voblint_Analysis.Interval_Exec_Sound"
     "Voblint_Exec.Result_Normalization"
     "Voblint_Exec.Routed_Domain_Exec"
-    "Voblint_Framework.DG_LTR_Sound"
     "Voblint_Framework.Routed_Analysis_Sound"
     "Voblint_Framework.Routed_Context"
     "Voblint_Framework.Routed_Context_Unit"
@@ -45,10 +44,12 @@ text \<open>
 section \<open>Interval at the routed spine, instantiated at the unit context\<close>
 
 text \<open>
-  Redirects Interval's production Base-family (\<open>dg_gen_of\<close>) analysis onto the
-  routed D/G spine (\<^locale>\<open>dg_ctx_activation_base\<close>, \<^locale>\<open>unit_routed_context\<close>)
-  that Interval's own entry-state and call-string context analyses already use.
-  The context here is \<^typ>\<open>unit\<close>: \<^locale>\<open>unit_routed_context\<close>
+  A second soundness derivation at the routed D/G spine
+  (\<^locale>\<open>dg_ctx_activation_base\<close>, \<^locale>\<open>unit_routed_context\<close>) that Interval's own
+  entry-state and call-string context analyses already use, going directly
+  through that generic machinery rather than through a packaged registration
+  locale (Interval's production route, \<open>Interval_Exec_Sound\<close>, goes the packaged
+  way instead). The context here is \<^typ>\<open>unit\<close>: \<^locale>\<open>unit_routed_context\<close>
   (\<^theory>\<open>Voblint_Framework.Routed_Context_Unit\<close>) fixes \<^const>\<open>route_unit\<close>, so every
   routing-agreement obligation a non-trivial routed instance must prove from its
   own transfer facts collapses here to a free lemma about the constant function
@@ -57,9 +58,7 @@ text \<open>
 
   Soundness below is derived directly from \<^locale>\<open>dg_ctx_activation_base\<close>'s
   generic machinery against the collecting semantics, exactly as Interval's
-  entry-state analysis is derived. No comparison to Interval's Base-family
-  production result is attempted or needed: \<^const>\<open>dg_gen_of\<close> never appears in
-  this development.
+  entry-state analysis is derived.
 \<close>
 
 text \<open>
@@ -76,10 +75,12 @@ text \<open>
   (\<^theory>\<open>Voblint_Analysis.Interval_Exec_Sound\<close>), at the same
   \<^const>\<open>ivl_tf_st_for\<close>/\<^const>\<open>ivl_enter_st_for\<close> primitives -- byte-for-byte the
   term \<open>local_state_dg_spec_st_for_lifted gs empty_pred (ivl_tf_st_for gs) (ivl_enter_st_for gs)\<close>
-  that \<^const>\<open>analyse_interval_dg_eqs_for\<close> feeds \<^const>\<open>dg_gen_of\<close>. Only the
-  equation-generator wrapped around this spec changes (\<open>dg_gen_of\<close> there, the
-  routed keyed-seed generator here) --- the spec itself, and every domain-transfer
-  soundness fact about it, is untouched.
+  \<^const>\<open>analyse_interval_dg_eqs_for\<close> feeds \<^const>\<open>unit_routed_eqs\<close>. Only the
+  routed generator variant wrapping this spec changes: the unbuffered
+  \<^const>\<open>unit_routed_eqs\<close> there, the buffered
+  \<^const>\<open>side_cfg_T_eff_keyed_seed_dg_buffered\<close> here (deduplicating repeated
+  writes to one key within a single RHS evaluation) --- the spec itself, and
+  every domain-transfer soundness fact about it, is untouched.
 \<close>
 
 subsection \<open>The routed equation system and its executable solution\<close>
@@ -707,7 +708,7 @@ text \<open>
   acceptance case such as \<open>void p(a) { return a }\<close> / \<open>void main() { x := __voblint_nondet_int();
   y := p(x) }\<close>) exercises to an executable analysis over an arbitrary
   \<^type>\<open>imp_prog\<close>: the context at a call is the entered abstract value of the
-  callee's declared formals (\<^const>\<open>formals_route\<close>/\<^const>\<open>formals_context\<close>),
+  callee's declared formals (\<^const>\<open>formals_context\<close>),
   never call-site history, so a call whose argument is unconstrained (e.g.
   \<open>__voblint_nondet_int()\<close>) is analyzed once under one wide context rather than diverging over
   every concrete value. Mirrors \<^theory>\<open>Voblint_Analysis.Interval_Exec_Sound\<close>'s
@@ -745,8 +746,8 @@ text \<open>
   \<^const>\<open>is_empty_state\<close> (\<open>resolved_st_q_is_bot_for_iff\<close>).\<close>
 
 text \<open>
-  \<^const>\<open>formals_route\<close>/\<^const>\<open>formals_route_gen\<close> (\<^theory>\<open>Voblint_Framework.Routed_Context\<close>)
-  read the entered callee formals off an arbitrary \<^const>\<open>CallEdge\<close> generically,
+  \<^const>\<open>formals_context\<close> (\<^theory>\<open>Voblint_Framework.Routed_Context\<close>)
+  reads the entered callee formals off an arbitrary \<^const>\<open>CallEdge\<close> generically,
   but only at the semantic \<^typ>\<open>'a abs_state\<close> carrier, not the executable
   \<^typ>\<open>'a exec_dg_st\<close> one this equation system solves over: the entered callee
   store is materialized here by the same \<^const>\<open>ivl_enter_st_for\<close> primitive

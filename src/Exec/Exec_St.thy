@@ -18,7 +18,6 @@ text \<open>
 \<close>
 
 
-
 subsection \<open>Core operations\<close>
 datatype location =
   Local_Location (location_vname: vname)
@@ -162,13 +161,6 @@ next
 qed
 
 
-
-
-
-
-
-
-
 quotient_type 'a resolved_st_q =
   "('a::bot) resolved_st" / "eq_resolved_st"
   morphisms rep_resolved_st Abs_resolved_st
@@ -206,11 +198,6 @@ lemma resolved_st_q_eq_iff:
   "s = t \<longleftrightarrow>
      lookup_resolved_st_q s = lookup_resolved_st_q t"
   by transfer (simp add: eq_resolved_st_def)
-
-
-
-
-
 
 
 instantiation resolved_st_q :: (bot) bot
@@ -367,15 +354,6 @@ definition fun_of_resolved_st_for ::
   "fun_of_resolved_st_for gs s x =
      lookup_resolved_st s (location_of gs x)"
 
-lemma fun_of_resolved_st_for_update:
-  "fun_of_resolved_st_for gs
-      (update_resolved_st s loc a) x =
-     (if location_of gs x = loc then a
-      else fun_of_resolved_st_for gs s x)"
-  unfolding fun_of_resolved_st_for_def
-  by (cases "location_of gs x = loc")
-     (simp_all add: lookup_resolved_st_update_diff)
-
 lemma fun_of_resolved_st_for_update_location [simp]:
   "fun_of_resolved_st_for gs
       (update_resolved_st s (location_of gs x) a) =
@@ -388,7 +366,6 @@ proof (rule ext)
     unfolding fun_of_resolved_st_for_def    by (cases "x = y"; cases "gs x"; cases "gs y";
         simp_all add: location_of_def)
 qed
-
 
 
 subsection \<open>Executable witness-bottom detection\<close>
@@ -434,39 +411,6 @@ definition resolved_st_is_bot ::
        is_empty dl \<or>
        (\<exists>loc \<in> set (map fst ps). is_empty (lookup_resolved_st s loc)
           \<and> canonical_location gs loc))"
-
-text \<open>
-  Every state a transfer produces is canonical: writes go through
-  \<^const>\<open>location_of\<close>, and removing a key cannot introduce one. The invariant is
-  stated rather than enforced by the type, because the tagging that makes a
-  location canonical depends on the program's own \<open>gs\<close>.
-\<close>
-
-definition canonical_resolved_st ::
-  "(vname => bool) => ('a::bot) resolved_st => bool" where
-  "canonical_resolved_st gs s =
-     (case s of (dl, dg, ps) => (\<forall>loc \<in> set (map fst ps). canonical_location gs loc))"
-
-lemma remove_resolved_key_subset:
-  "set (remove_resolved_key loc ps) \<subseteq> set ps"
-  by (induction ps) (auto split: if_splits)
-
-lemma fst_remove_resolved_key_subset:
-  "fst ` set (remove_resolved_key loc ps) \<subseteq> fst ` set ps"
-  by (rule image_mono[OF remove_resolved_key_subset])
-
-lemma canonical_resolved_st_update_location_of:
-  assumes "canonical_resolved_st gs s"
-  shows "canonical_resolved_st gs (update_resolved_st s (location_of gs x) a)"
-proof -
-  obtain dl dg ps where s_eq: "s = (dl, dg, ps)" by (cases s) auto
-  have ps_can: "\<forall>loc \<in> fst ` set ps. canonical_location gs loc"
-    using assms by (simp add: canonical_resolved_st_def s_eq)
-  have "\<forall>loc \<in> fst ` set (remove_resolved_key (location_of gs x) ps). canonical_location gs loc"
-    using ps_can fst_remove_resolved_key_subset by blast
-  thus ?thesis
-    by (simp add: canonical_resolved_st_def s_eq)
-qed
 
 text \<open>
   Soundness needs gs to leave infinitely many vnames local, so that some local
@@ -726,32 +670,6 @@ lemma bind_formals_resolved_q_singleton:
   "bind_formals_resolved_q gs [x] [a] s = update_resolved_st_q s (location_of gs x) a"
   by transfer (simp add: bind_formals_resolved_def eq_resolved_st_def)
 
-definition enter_resolved_for ::
-  "(vname => bool) => 'a => (exp => 'a abs_state => 'a)
-   => vname list => exp list => ('a::bot) resolved_st => 'a resolved_st"
-where
-  "enter_resolved_for gs top_val aval_abs xs es s =
-     bind_formals_resolved gs xs
-       (map (%e. aval_abs e (fun_of_resolved_st_for gs s)) es)
-       (enter_frame_D_resolved top_val s)"
-
-definition combine_collect_resolved_for ::
-  "(vname => bool) => vname option => ('a::bot) resolved_st
-   => 'a resolved_st => 'a resolved_st"
-where
-  "combine_collect_resolved_for gs dst sc se =
-     combine_assign_resolved gs dst
-       (lookup_resolved_st se (location_of gs ret_var))
-       (combine_resolved_st sc se)"
-
-
-
-
-
-lemma map_of_filter_key:
-  "map_of (filter (\<lambda>(k, _). P k) xs) k = (if P k then map_of xs k else None)"
-  by (induction xs) auto
-
 lemma filter_fst_eq_restrict:
   fixes P :: "location => bool"
   shows "filter (%p. P (fst p)) xs = AList.restrict {k. P k} xs"
@@ -822,24 +740,6 @@ proof -
   qed
 qed
 
-lemma eq_resolved_st_combine_collect:
-  assumes "eq_resolved_st sc1 sc2"
-    and "eq_resolved_st se1 se2"
-  shows "eq_resolved_st
-      (combine_collect_resolved_for gs dst sc1 se1)
-      (combine_collect_resolved_for gs dst sc2 se2)"
-  unfolding combine_collect_resolved_for_def eq_resolved_st_def
-  using assms
-  by (metis eq_resolved_st_combine eq_resolved_st_combine_assign
-      eq_resolved_st_def)
-
-lift_definition combine_collect_resolved_for_q ::
-  "(vname => bool) => vname option => ('a::bot) resolved_st_q
-   => 'a resolved_st_q => 'a resolved_st_q"
-  is combine_collect_resolved_for
-  by (rule eq_resolved_st_combine_collect)
-
-
 lift_definition combine_resolved_st_q ::
   "('a::bot) resolved_st_q => 'a resolved_st_q => 'a resolved_st_q"
   is combine_resolved_st
@@ -857,10 +757,6 @@ text \<open>
   \<^theory>\<open>HOL.Map\<close>'s @{thm [source] map_of_append}, so no bespoke append lemma
   is needed here.
 \<close>
-
-lemma map_of_eq_None_map_fst:
-  "x \<notin> set (map fst ps) \<Longrightarrow> map_of ps x = None"
-  by (simp add: Map.map_of_eq_None_iff)
 
 fun merge_resolved_st ::
   "('a::bounded_semilattice_sup_bot) resolved_st =>
@@ -1082,7 +978,6 @@ end
 instance resolved_st_q :: (bounded_warrowing) warrowing ..
 
 
-
 instance resolved_st_q :: (order_bot) order_bot
   by standard (rule bot_le_resolved_st_q)
 
@@ -1102,7 +997,6 @@ instance resolved_st_q ::
   (bounded_semilattice_sup_bot) bounded_semilattice_sup_bot ..
 
 instance resolved_st_q :: (bounded_warrowing) bounded_warrowing ..
-
 
 
 lemma fun_of_resolved_st_for_combine_resolved [simp]:
@@ -1160,39 +1054,6 @@ lemma lookup_enter_frame_D_resolved_q [simp]:
       | Global_Location x => lookup_resolved_st_q s loc)"
   by transfer (rule lookup_enter_frame_D_resolved)
 
-lemma eq_resolved_st_enter_resolved_for:
-  assumes "eq_resolved_st s t"
-  shows "eq_resolved_st
-      (enter_resolved_for gs top_val aval_abs xs es s)
-      (enter_resolved_for gs top_val aval_abs xs es t)"
-proof -
-  have hlookup: "lookup_resolved_st s = lookup_resolved_st t"
-    using assms unfolding eq_resolved_st_def by simp
-  have hfun: "fun_of_resolved_st_for gs s =
-      fun_of_resolved_st_for gs t"
-    unfolding fun_of_resolved_st_for_def
-    by (simp add: hlookup)
-  have hargs:
-      "map (%e. aval_abs e (fun_of_resolved_st_for gs s)) es =
-       map (%e. aval_abs e (fun_of_resolved_st_for gs t)) es"
-    by (simp add: hfun)
-  show "eq_resolved_st
-      (enter_resolved_for gs top_val aval_abs xs es s)
-      (enter_resolved_for gs top_val aval_abs xs es t)"
-    unfolding enter_resolved_for_def
-    by (simp only: hargs;
-        rule eq_resolved_st_bind_formals;
-        rule eq_resolved_st_enter_frame_D;
-        rule assms)
-qed
-
-lift_definition enter_resolved_for_q ::
-  "(vname => bool) => 'a => (exp => 'a abs_state => 'a)
-   => vname list => exp list => ('a::bot) resolved_st_q
-   => 'a resolved_st_q"
-  is enter_resolved_for
-  by (rule eq_resolved_st_enter_resolved_for)
-
 lemma fun_of_st_enter_frame_D_resolved [simp]:
   "fun_of_resolved_st_for gs (enter_frame_D_resolved top_val s) =
    enter_frame gs top_val (fun_of_resolved_st_for gs s)"
@@ -1225,23 +1086,6 @@ lemma fun_of_resolved_st_for_bind_formals [simp]:
    bind_formals xs avs (fun_of_resolved_st_for gs s)"
 unfolding bind_formals_resolved_def
 by (rule fun_of_resolved_st_for_fold_update)
-
-lemma fun_of_resolved_st_for_enter_resolved [simp]:
-  "fun_of_resolved_st_for gs
-      (enter_resolved_for gs top_val aval_abs xs es s) =
-   enter_binding gs top_val aval_abs xs es (fun_of_resolved_st_for gs s)"
-unfolding enter_resolved_for_def enter_binding_def
-by simp
-
-lemma fun_of_resolved_st_for_combine_collect [simp]:
-  "fun_of_resolved_st_for gs
-      (combine_collect_resolved_for gs dst sc se) =
-   combine\<^sup># gs dst
-      (fun_of_resolved_st_for gs sc) (fun_of_resolved_st_for gs se)"
-unfolding combine_collect_resolved_for_def combine_collect_abs_def
-by (simp add: fun_of_resolved_st_for_def)
-
-
 
 lemma lookup_restrict_local_resolved:
   "lookup_resolved_st (restrict_local_resolved s) loc =
@@ -1333,83 +1177,6 @@ lemma lookup_restrict_global_resolved_q [simp]:
         Local_Location x => bot
       | Global_Location x => lookup_resolved_st_q s loc)"
   by transfer (rule lookup_restrict_global_resolved)
-
-lemma fun_of_resolved_st_for_restrict_local:
-  "fun_of_resolved_st_for gs (restrict_local_resolved s) x =
-     (if gs x then bot else fun_of_resolved_st_for gs s x)"
-  unfolding fun_of_resolved_st_for_def location_of_def
-  by (simp add: lookup_restrict_local_resolved)
-
-lemma fun_of_resolved_st_for_restrict_global:
-  "fun_of_resolved_st_for gs (restrict_global_resolved s) x =
-     (if gs x then fun_of_resolved_st_for gs s x else bot)"
-  unfolding fun_of_resolved_st_for_def location_of_def
-  by (simp add: lookup_restrict_global_resolved)
-
-
-definition resolved_st_refines_for ::
-  "(vname => bool) => ('a::bot) resolved_st => 'a abs_state => bool"
-where
-  "resolved_st_refines_for gs s sigma =
-     (fun_of_resolved_st_for gs s = sigma)"
-
-locale resolved_st_refinement =
-  fixes gs :: "vname => bool"
-begin
-
-lemma refines_update:
-  assumes "resolved_st_refines_for gs s sigma"
-  shows "resolved_st_refines_for gs
-      (update_resolved_st s (location_of gs x) a) (sigma(x := a))"
-  using assms
-  unfolding resolved_st_refines_for_def
-  by simp
-
-lemma refines_restrict_local:
-  assumes "resolved_st_refines_for gs s sigma"
-  shows "resolved_st_refines_for gs (restrict_local_resolved s)
-      (%x. if gs x then bot else sigma x)"
-  using assms
-  unfolding resolved_st_refines_for_def
-  by (simp add: fun_eq_iff fun_of_resolved_st_for_restrict_local)
-
-lemma refines_restrict_global:
-  assumes "resolved_st_refines_for gs s sigma"
-  shows "resolved_st_refines_for gs (restrict_global_resolved s)
-      (%x. if gs x then sigma x else bot)"
-  using assms
-  unfolding resolved_st_refines_for_def
-  by (simp add: fun_eq_iff fun_of_resolved_st_for_restrict_global)
-
-lemma refines_combine:
-  assumes sc: "resolved_st_refines_for gs sc sigma_c"
-    and se: "resolved_st_refines_for gs se sigma_e"
-  shows "resolved_st_refines_for gs (combine_resolved_st sc se)
-      (combine_env gs sigma_c sigma_e)"
-  using sc se
-  unfolding resolved_st_refines_for_def
-  by simp
-
-lemma refines_enter:
-  assumes "resolved_st_refines_for gs s sigma"
-  shows "resolved_st_refines_for gs
-      (enter_resolved_for gs top_val aval_abs xs es s)
-      (enter_binding gs top_val aval_abs xs es sigma)"
-  using assms
-  unfolding resolved_st_refines_for_def
-  by simp
-
-lemma refines_combine_collect:
-  assumes sc: "resolved_st_refines_for gs sc sigma_c"
-    and se: "resolved_st_refines_for gs se sigma_e"
-  shows "resolved_st_refines_for gs
-      (combine_collect_resolved_for gs dst sc se)
-      (combine\<^sup># gs dst sigma_c sigma_e)"
-  using sc se
-  unfolding resolved_st_refines_for_def
-  by simp
-
-end
 
 definition fun_of_resolved_st_q_for ::
   "(vname => bool) => ('a::bot) resolved_st_q => vname => 'a"
@@ -1655,16 +1422,6 @@ fun resolved_st_q_lifted_is_bot_for ::
   "resolved_st_q_lifted_is_bot_for globals Bot = True"
 | "resolved_st_q_lifted_is_bot_for globals (Lifted s) = resolved_st_q_is_bot_for globals s"
 
-lemma resolved_st_q_lifted_is_bot_for_iff:
-  fixes s :: "('a::sound_domain) resolved_st_q lifted"
-  assumes globals: "\<And>x. gs x = (x \<in> set globals)"
-  shows "resolved_st_q_lifted_is_bot_for globals s
-       \<longleftrightarrow> is_empty_state_lift (map_lift (fun_of_resolved_st_q_for gs) s)"
-  by (cases s) (simp_all add: resolved_st_q_is_bot_for_iff[OF globals])
-
-
-
-
 lemma fun_of_resolved_st_q_for_mono:
   assumes "s \<le> t"
   shows "fun_of_resolved_st_q_for gs s \<le> fun_of_resolved_st_q_for gs t"
@@ -1690,12 +1447,6 @@ lemma fun_of_resolved_st_q_for_bind_formals [simp]:
   apply transfer
   by (metis (no_types, lifting) ext fun_of_resolved_st_for_def
       fun_of_resolved_st_for_bind_formals)
-definition resolved_st_q_refines_for ::
-  "(vname => bool) => ('a::bot) resolved_st_q => 'a abs_state => bool"
-where
-  "resolved_st_q_refines_for gs s sigma =
-     (fun_of_resolved_st_q_for gs s = sigma)"
-
 lemma fun_of_resolved_st_q_for_combine_assign [simp]:
   "fun_of_resolved_st_q_for gs
       (combine_assign_resolved_q gs dst v s) =
@@ -1725,10 +1476,6 @@ definition live_resolved_st_q ::
   "(vname => bool) => ('a::sound_domain) resolved_st_q => bool"
 where
   "live_resolved_st_q gs s = (~ is_empty_state (fun_of_resolved_st_q_for gs s))"
-
-lemma live_resolved_st_qI:
-  "(!!x. ~ is_empty (fun_of_resolved_st_q_for gs s x)) ==> live_resolved_st_q gs s"
-  unfolding live_resolved_st_q_def is_empty_state_def by blast
 
 lemma live_resolved_st_qE:
   assumes "live_resolved_st_q gs s"
@@ -1809,219 +1556,12 @@ text \<open>
   the formal names are distinct: no formal's binding is later overwritten by
   another, so lookup at any location reduces to a single \<open>map_of\<close> probe.
 \<close>
-lemma fold_fun_upd_notin:
-  "x \<notin> set (map fst ps) ==> fold (\<lambda>(x, a) \<tau>. \<tau>(x := a)) ps sigma x = sigma x"
-proof (induction ps arbitrary: sigma)
-  case Nil
-  then show ?case by simp
-next
-  case (Cons p ps)
-  obtain y b where p: "p = (y, b)" by (cases p)
-  have neq: "x \<noteq> y" and notin: "x \<notin> set (map fst ps)" using Cons.prems p by auto
-  have "fold (\<lambda>(x, a) \<tau>. \<tau>(x := a)) (p # ps) sigma x =
-          fold (\<lambda>(x, a) \<tau>. \<tau>(x := a)) ps (sigma(y := b)) x"
-    using p by simp
-  also have "... = (sigma(y := b)) x"
-    using Cons.IH[OF notin, of "sigma(y := b)"] .
-  also have "... = sigma x" using neq by simp
-  finally show ?case .
-qed
-
-lemma fold_fun_upd_apply:
-  assumes "distinct (map fst ps)"
-  shows "fold (\<lambda>(x, a) \<tau>. \<tau>(x := a)) ps sigma y =
-           (case map_of ps y of Some a => a | None => sigma y)"
-  using assms
-proof (induction ps arbitrary: sigma)
-  case Nil
-  then show ?case by simp
-next
-  case (Cons p ps)
-  obtain x a where p: "p = (x, a)" by (cases p)
-  show ?case
-  proof (cases "y = x")
-    case True
-    have notin: "x \<notin> set (map fst ps)" using Cons.prems p by simp
-    have "fold (\<lambda>(x, a) \<tau>. \<tau>(x := a)) (p # ps) sigma y =
-            fold (\<lambda>(x, a) \<tau>. \<tau>(x := a)) ps (sigma(x := a)) x"
-      using p True by simp
-    also have "... = (sigma(x := a)) x"
-      using fold_fun_upd_notin[OF notin] .
-    also have "... = a" by simp
-    also have "... = (case map_of (p # ps) y of Some b => b | None => sigma y)"
-      using p True by simp
-    finally show ?thesis .
-  next
-    case False
-    have dist: "distinct (map fst ps)" using Cons.prems p by simp
-    have "fold (\<lambda>(x, a) \<tau>. \<tau>(x := a)) (p # ps) sigma y =
-            fold (\<lambda>(x, a) \<tau>. \<tau>(x := a)) ps (sigma(x := a)) y"
-      using p by simp
-    also have "... = (case map_of ps y of Some b => b | None => (sigma(x := a)) y)"
-      using Cons.IH[OF dist, of "sigma(x := a)"] .
-    also have "... = (case map_of ps y of Some b => b | None => sigma y)"
-      using False by (cases "map_of ps y") simp_all
-    also have "... = (case map_of (p # ps) y of Some b => b | None => sigma y)"
-      using p False by simp
-    finally show ?thesis .
-  qed
-qed
-
 text \<open>
   A formals list names only finitely many locals, and (per Voblint's CFG
   well-formedness) every classifier \<open>gs\<close> leaves infinitely many vnames local: this
   is the same premise \<open>resolved_st_is_bot_sound\<close> relies on, needed here to
   obtain a local vname the formals list does not shadow.
 \<close>
-lemma is_empty_state_bind_formals_abs_enter_frame:
-  fixes top_val :: "'a::sound_domain" and sigma :: "'a abs_state"
-  assumes live: "~ is_empty_state sigma"
-    and top_ok: "~ is_empty top_val"
-    and dist: "distinct xs"
-    and len: "length xs = length avs"
-    and infinite_local: "infinite {x. ~ gs x}"
-  shows "is_empty_state (bind_formals xs avs (enter_frame gs top_val sigma))
-       \<longleftrightarrow> is_empty top_val \<or> (\<exists>v \<in> set avs. is_empty v)"
-proof -
-  have dist': "distinct (map fst (zip xs avs))"
-    using dist len by (simp add: map_fst_zip)
-  show ?thesis
-  proof
-    assume "is_empty_state (bind_formals xs avs (enter_frame gs top_val sigma))"
-    then obtain y where y:
-      "is_empty (bind_formals xs avs (enter_frame gs top_val sigma) y)"
-      by (rule is_empty_stateE)
-    show "is_empty top_val \<or> (\<exists>v \<in> set avs. is_empty v)"
-    proof (cases "map_of (zip xs avs) y")
-      case None
-      then have "bind_formals xs avs (enter_frame gs top_val sigma) y =
-                   enter_frame gs top_val sigma y"
-        unfolding fold_fun_upd_apply[OF dist'] by simp
-      with y have "is_empty (enter_frame gs top_val sigma y)" by simp
-      then have "is_empty top_val \<or> is_empty (sigma y)"
-        unfolding enter_frame_def by (cases "gs y") simp_all
-      with live show ?thesis by (auto simp: is_empty_state_def)
-    next
-      case (Some v)
-      then have "bind_formals xs avs (enter_frame gs top_val sigma) y = v"
-        unfolding fold_fun_upd_apply[OF dist'] by simp
-      with y have "is_empty v" by simp
-      moreover have "v \<in> set avs" using Some by (rule map_of_SomeD[THEN set_zip_rightD])
-      ultimately show ?thesis by blast
-    qed
-  next
-    assume disj: "is_empty top_val \<or> (\<exists>v \<in> set avs. is_empty v)"
-    show "is_empty_state (bind_formals xs avs (enter_frame gs top_val sigma))"
-    proof (cases "\<exists>v \<in> set avs. is_empty v")
-      case True
-      then obtain v where v: "v \<in> set avs" "is_empty v" by blast
-      then obtain i where i: "i < length avs" "avs ! i = v" by (metis in_set_conv_nth)
-      then have i': "i < length xs" using len by simp
-      have len_zip: "i < length (zip xs avs)" using i' i(1) by simp
-      have mem: "(xs ! i, avs ! i) \<in> set (zip xs avs)"
-        using nth_mem[OF len_zip] nth_zip[OF i' i(1)] by simp
-      have "map_of (zip xs avs) (xs ! i) = Some v"
-        using dist' mem i by (simp add: map_of_eq_Some_iff)
-      then have "bind_formals xs avs (enter_frame gs top_val sigma) (xs ! i) = v"
-        unfolding fold_fun_upd_apply[OF dist'] by simp
-      then show ?thesis using v by (metis is_empty_stateI)
-    next
-      case False
-      with disj have top_bot: "is_empty top_val" by blast
-      have "finite (set xs)" by (rule finite_set)
-      then have "infinite ({x. ~ gs x} - set xs)"
-        using infinite_local by (rule Diff_infinite_finite)
-      then obtain z where z: "~ gs z" "z \<notin> set xs"
-        using infinite_imp_nonempty by blast
-      have "fst ` set (zip xs avs) \<subseteq> set xs"
-        using set_zip_leftD by fastforce
-      with z(2) have "z \<notin> fst ` set (zip xs avs)" by blast
-      then have "map_of (zip xs avs) z = None"
-        by (simp add: map_of_eq_None_iff)
-      then have "bind_formals xs avs (enter_frame gs top_val sigma) z =
-                   enter_frame gs top_val sigma z"
-        unfolding fold_fun_upd_apply[OF dist'] by simp
-      also have "... = top_val" using z unfolding enter_frame_def by simp
-      finally show ?thesis using top_bot by (metis is_empty_stateI)
-    qed
-  qed
-qed
-
-text \<open>
-  \<open>enter_resolved_st_q_lift\<close> is the exec analog of @{const update_resolved_st_q_lift}:
-  input-strict on \<open>Bot\<close>, and normalizes to \<open>Bot\<close> exactly when the fresh frame or one
-  of the freshly computed formal values is \<open>is_empty\<close> -- both finite, decidable checks,
-  never a scan of the resolved state itself.
-\<close>
-definition enter_resolved_st_q_lift ::
-  "(vname => bool) => 'a::sound_domain resolved_st_q lifted
-   => 'a => vname list => 'a list => 'a resolved_st_q lifted"
-where
-  "enter_resolved_st_q_lift gs x top_val xs avs = do {
-     s <- x;
-     if is_empty top_val \<or> list_ex is_empty avs then Bot
-     else Lifted (bind_formals_resolved_q gs xs avs (enter_frame_D_resolved_q top_val s))
-   }"
-
-lemma enter_resolved_st_q_lift_Bot [simp]:
-  "enter_resolved_st_q_lift gs Bot top_val xs avs = Bot"
-  unfolding enter_resolved_st_q_lift_def by simp
-
-lemma enter_resolved_st_q_lift_correct:
-  fixes s :: "'a::sound_domain resolved_st_q"
-  assumes live: "live_resolved_st_q gs s"
-    and dist: "distinct xs" and len: "length xs = length avs"
-    and infinite_local: "infinite {x. ~ gs x}"
-  shows "map_lift (fun_of_resolved_st_q_for gs)
-           (enter_resolved_st_q_lift gs (Lifted s) top_val xs avs) =
-        normalize_lift is_empty_state
-          (bind_formals xs avs (enter_frame gs top_val (fun_of_resolved_st_q_for gs s)))"
-proof -
-  have key: "is_empty_state
-      (bind_formals xs avs (enter_frame gs top_val (fun_of_resolved_st_q_for gs s)))
-    \<longleftrightarrow> is_empty top_val \<or> list_ex is_empty avs"
-  proof (cases "is_empty top_val")
-    case True
-    have dist': "distinct (map fst (zip xs avs))"
-      using dist len by (simp add: map_fst_zip)
-    have "finite (set xs)" by (rule finite_set)
-    then have "infinite ({x. ~ gs x} - set xs)"
-      using infinite_local by (rule Diff_infinite_finite)
-    then obtain z where z: "~ gs z" "z \<notin> set xs"
-      by (metis (mono_tags, lifting) Collect_mem_eq Collect_mono_iff
-          infinite_local list.set_finite rev_finite_subset)
-    have "fst ` set (zip xs avs) \<subseteq> set xs"
-      using set_zip_leftD by fastforce
-    with z(2) have "z \<notin> fst ` set (zip xs avs)" by blast
-    then have "map_of (zip xs avs) z = None"
-      by (simp add: map_of_eq_None_iff)
-    then have "bind_formals xs avs
-                 (enter_frame gs top_val (fun_of_resolved_st_q_for gs s)) z =
-               enter_frame gs top_val (fun_of_resolved_st_q_for gs s) z"
-      unfolding fold_fun_upd_apply[OF dist'] by simp
-    also have "... = top_val" using z unfolding enter_frame_def by simp
-    finally have "is_empty (bind_formals xs avs
-                    (enter_frame gs top_val (fun_of_resolved_st_q_for gs s)) z)"
-      using True by simp
-    then have "is_empty_state
-        (bind_formals xs avs (enter_frame gs top_val (fun_of_resolved_st_q_for gs s)))"
-      by (rule is_empty_stateI)
-    with True show ?thesis by simp
-  next
-    case False
-    show ?thesis
-      using is_empty_state_bind_formals_abs_enter_frame
-              [OF live[unfolded live_resolved_st_q_def] False dist len infinite_local]
-      by (simp add: list_ex_iff)
-  qed
-  show ?thesis
-    unfolding enter_resolved_st_q_lift_def normalize_lift_def
-    by (simp add: key)
-qed
-
-
-
-
 lemma fun_of_resolved_st_q_for_restrict_local [simp]:
   "fun_of_resolved_st_q_for gs (restrict_local_resolved_q s) x =
      (if gs x then bot else fun_of_resolved_st_q_for gs s x)"
@@ -2076,115 +1616,14 @@ lemma combine_resolved_st_q_lift_Lifted [simp]:
      Lifted (combine_resolved_st_q sc se)"
   unfolding combine_resolved_st_q_lift_def by simp
 
-lemma combine_resolved_st_q_lift_correct:
-  fixes sc se :: "'a::sound_domain resolved_st_q"
-  assumes live_c: "live_resolved_st_q gs sc" and live_e: "live_resolved_st_q gs se"
-  shows "~ is_empty_state (fun_of_resolved_st_q_for gs (combine_resolved_st_q sc se))"
-  unfolding fun_of_resolved_st_q_for_combine
-proof (rule notI)
-  assume "is_empty_state (combine_env gs (fun_of_resolved_st_q_for gs sc)
-                                        (fun_of_resolved_st_q_for gs se))"
-  then obtain y where y:
-    "is_empty (combine_env gs (fun_of_resolved_st_q_for gs sc)
-                              (fun_of_resolved_st_q_for gs se) y)"
-    by (rule is_empty_stateE)
-  show False
-    using y live_c live_e
-    unfolding combine_env_def
-    by (cases "gs y") (auto simp: live_resolved_st_qE)
-qed
-
-
 lemma fun_of_resolved_st_q_for_sup [simp]:
   "fun_of_resolved_st_q_for gs (s \<squnion> t) =
    fun_of_resolved_st_q_for gs s \<squnion> fun_of_resolved_st_q_for gs t"
   by (rule ext) (simp add: fun_of_resolved_st_q_for_def sup_fun_def)
 
-lemma fun_of_resolved_st_q_for_enter [simp]:
-  "fun_of_resolved_st_q_for gs
-      (enter_resolved_for_q gs top_val aval_abs xs es s) =
-   enter_binding gs top_val aval_abs xs es
-      (fun_of_resolved_st_q_for gs s)"
-  unfolding fun_of_resolved_st_q_for_def
-  by transfer
-     (metis (no_types, lifting) ext fun_of_resolved_st_for_def
-        fun_of_resolved_st_for_enter_resolved)
-
-lemma fun_of_resolved_st_q_for_combine_collect [simp]:
-  "fun_of_resolved_st_q_for gs
-      (combine_collect_resolved_for_q gs dst sc se) =
-   combine\<^sup># gs dst
-      (fun_of_resolved_st_q_for gs sc)
-      (fun_of_resolved_st_q_for gs se)"
-  unfolding fun_of_resolved_st_q_for_def
-  apply transfer
-  by (metis (no_types, lifting) ext fun_of_resolved_st_for_combine_collect
-      fun_of_resolved_st_for_def)
-
-locale resolved_st_q_refinement =
-  fixes gs :: "vname => bool"
-begin
-
-lemma refines_update_q:
-  assumes "resolved_st_q_refines_for gs s sigma"
-  shows "resolved_st_q_refines_for gs
-      (update_resolved_st_q s (location_of gs x) a) (sigma(x := a))"
-  using assms
-  unfolding resolved_st_q_refines_for_def
-  by simp
-
-lemma refines_restrict_local_q:
-  assumes "resolved_st_q_refines_for gs s sigma"
-  shows "resolved_st_q_refines_for gs (restrict_local_resolved_q s)
-      (%x. if gs x then bot else sigma x)"
-  using assms
-  unfolding resolved_st_q_refines_for_def
-  by (simp add: fun_eq_iff)
-
-lemma refines_restrict_global_q:
-  assumes "resolved_st_q_refines_for gs s sigma"
-  shows "resolved_st_q_refines_for gs (restrict_global_resolved_q s)
-      (%x. if gs x then sigma x else bot)"
-  using assms
-  unfolding resolved_st_q_refines_for_def
-  by (simp add: fun_eq_iff)
-
-lemma refines_combine_q:
-  assumes sc: "resolved_st_q_refines_for gs sc sigma_c"
-    and se: "resolved_st_q_refines_for gs se sigma_e"
-  shows "resolved_st_q_refines_for gs (combine_resolved_st_q sc se)
-      (combine_env gs sigma_c sigma_e)"
-  using sc se
-  unfolding resolved_st_q_refines_for_def
-  by simp
-
-lemma refines_enter_q:
-  assumes "resolved_st_q_refines_for gs s sigma"
-  shows "resolved_st_q_refines_for gs
-      (enter_resolved_for_q gs top_val aval_abs xs es s)
-      (enter_binding gs top_val aval_abs xs es sigma)"
-  using assms
-  unfolding resolved_st_q_refines_for_def
-  by simp
-
-lemma refines_combine_collect_q:
-  assumes sc: "resolved_st_q_refines_for gs sc sigma_c"
-    and se: "resolved_st_q_refines_for gs se sigma_e"
-  shows "resolved_st_q_refines_for gs
-      (combine_collect_resolved_for_q gs dst sc se)
-      (combine\<^sup># gs dst sigma_c sigma_e)"
-  using sc se
-  unfolding resolved_st_q_refines_for_def
-  by simp
-
-end
-
 
 end
 
                                            
-
-
-
 
 

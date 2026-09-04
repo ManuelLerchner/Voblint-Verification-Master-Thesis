@@ -169,13 +169,10 @@ proof -
   finally show ?thesis by simp
 qed
 
-subsection \<open>The context-indexed and source-level check reports\<close>
+subsection \<open>The context-indexed check report\<close>
 
 definition analyse_report_ctx :: "(pp \<times> exp \<times> contextual_verdict) list" where
   "analyse_report_ctx = classify_checks_verdicts g analyse_result classify"
-
-definition analyse_report :: "check_report_entry list" where
-  "analyse_report = map (\<lambda>(u, c, v). (u, c, verdict_check_result v)) analyse_report_ctx"
 
 subsection \<open>Report soundness\<close>
 

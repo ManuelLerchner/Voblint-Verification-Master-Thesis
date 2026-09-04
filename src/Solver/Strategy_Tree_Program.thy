@@ -116,42 +116,6 @@ text \<open>
   the environment.
 \<close>
 
-lemma mono_tree_deps_sp_lift_tree:
-  fixes t :: "('x, 'g, 'd::{order,bot}) strategy_tree"
-  assumes t_mono: "mono_tree_deps t"
-  assumes t_val_mono: "\<And>\<sigma>1 \<sigma>2. \<sigma>1 \<le> \<sigma>2 \<Longrightarrow> traverse_rhs t \<sigma>1 \<le> traverse_rhs t \<sigma>2"
-  assumes k_mono_env: "\<And>v. mono_tree_deps (k v)"
-  assumes k_mono_val: "\<And>\<sigma> v1 v2. v1 \<le> v2 \<Longrightarrow> dep_aux \<sigma> (k v1) \<subseteq> dep_aux \<sigma> (k v2)"
-  shows "mono_tree_deps (sp_lift_tree t k)"
-proof (rule mono_tree_depsI)
-  fix \<sigma>1 \<sigma>2 :: "'x + 'g \<Rightarrow> 'd"
-  assume le: "\<sigma>1 \<le> \<sigma>2"
-  have t_dep: "dep_aux \<sigma>1 t \<subseteq> dep_aux \<sigma>2 t"
-    using t_mono le by blast
-  have "dep_aux \<sigma>1 (k (traverse_rhs t \<sigma>1)) \<subseteq> dep_aux \<sigma>2 (k (traverse_rhs t \<sigma>1))"
-    using k_mono_env le by blast
-  also have "\<dots> \<subseteq> dep_aux \<sigma>2 (k (traverse_rhs t \<sigma>2))"
-    using k_mono_val t_val_mono[OF le] by blast
-  finally have k_dep: "dep_aux \<sigma>1 (k (traverse_rhs t \<sigma>1)) \<subseteq> dep_aux \<sigma>2 (k (traverse_rhs t \<sigma>2))" .
-  show "dep_aux \<sigma>1 (sp_lift_tree t k) \<subseteq> dep_aux \<sigma>2 (sp_lift_tree t k)"
-    unfolding dep_aux_sp_lift_tree using t_dep k_dep by blast
-qed
-
-lemma env_indep_deps_sp_lift_tree:
-  fixes t :: "('x, 'g, 'd::bot) strategy_tree"
-  assumes t_indep: "env_indep_deps t"
-  assumes k_indep: "\<And>v1 v2 \<sigma>1 \<sigma>2. dep_aux \<sigma>1 (k v1) = dep_aux \<sigma>2 (k v2)"
-  shows "env_indep_deps (sp_lift_tree t k)"
-proof (rule env_indep_depsI)
-  fix \<sigma>1 \<sigma>2
-  have t_eq: "dep_aux \<sigma>1 t = dep_aux \<sigma>2 t"
-    by (rule env_indep_depsD[OF t_indep])
-  have k_eq: "dep_aux \<sigma>1 (k (traverse_rhs t \<sigma>1)) = dep_aux \<sigma>2 (k (traverse_rhs t \<sigma>2))"
-    by (rule k_indep)
-  show "dep_aux \<sigma>1 (sp_lift_tree t k) = dep_aux \<sigma>2 (sp_lift_tree t k)"
-    by (simp add: t_eq k_eq)
-qed
-
 text \<open>
   \<open>sp_compile\<close> only accepts a program whose answer is already \<open>'d\<close>.
   \<open>sp_compile_with encode\<close> generalizes that to any \<open>'a\<close>, packing the final

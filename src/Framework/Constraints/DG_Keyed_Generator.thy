@@ -95,9 +95,8 @@ text \<open>
   against the named tree constructor instead of re-deriving the fold's
   single-element degeneracy at every call site. They are stated for
   \<^const>\<open>side_cfg_T_eff_keyed_seed_trees\<close> itself, so they specialize to any
-  concrete generator built from it -- the hook-parametric \<open>hook_gen\<close>
-  included -- without re-unfolding \<open>side_cfg_T_eff_keyed_seed_trees_def\<close>
-  at each one.
+  concrete generator built from it without re-unfolding
+  \<open>side_cfg_T_eff_keyed_seed_trees_def\<close> at each one.
 \<close>
 
 lemma side_cfg_T_eff_keyed_seed_trees_single_edge:
@@ -256,6 +255,35 @@ lemma sides_side_cfg_T_eff_keyed_seed_dg:
   by (simp add: side_cfg_T_eff_keyed_seed_dg_def Let_def
         sides_of_rhs_side_rhs_fold_dg_char[unfolded sp_compile_def]
         bot_dg_state_def[symmetric] ac_simps)
+
+text \<open>
+  One call site's own contribution to the node's key, as a bound rather than an
+  equation: what a call site publishes at \<open>gkey ctx\<close> is below what the whole
+  equation publishes there. A soundness argument that has to place a single
+  publication inside the solution reaches for this, and then for
+  \<^const>\<open>part_post_solution\<close>; it is deliberately directional and untagged.
+\<close>
+
+lemma sides_comb_le_side_cfg_T_eff_keyed_seed_dg:
+  assumes site: "(cc, ca) \<in> set (call_site_list g v)"
+  shows "sides_of_rhs (cmb route ctx ca cc v) \<tau> (Inr (gkey ctx))
+           \<le> sides_of_rhs (side_cfg_T_eff_keyed_seed_dg pred_sel gkey route it cmb extra
+                 g bot0 s0d s0g (v, ctx)) \<tau> (Inr (gkey ctx))"
+proof -
+  have "cmb route ctx ca cc v
+          \<in> set (map (\<lambda>(src, a). it ctx src a) (pred_sel g v ctx)
+                  @ map (\<lambda>(cc, ca). cmb route ctx ca cc v) (call_site_list g v)
+                  @ extra route ctx v)"
+    using site by force
+  then have "sides_of_rhs (cmb route ctx ca cc v) \<tau> (Inr (gkey ctx))
+          \<le> foldr (\<lambda>t acc. sides_of_rhs t \<tau> (Inr (gkey ctx)) \<squnion> acc)
+              (map (\<lambda>(src, a). it ctx src a) (pred_sel g v ctx)
+                @ map (\<lambda>(cc, ca). cmb route ctx ca cc v) (call_site_list g v)
+                @ extra route ctx v) bot"
+    using foldr_sup_le_iff[of "\<lambda>t. sides_of_rhs t \<tau> (Inr (gkey ctx))"] by blast
+  then show ?thesis
+    unfolding sides_side_cfg_T_eff_keyed_seed_dg by (simp add: le_supI2)
+qed
 
 subsection \<open>Buffered generator: fold Side-free contributions, publish once\<close>
 
@@ -447,10 +475,6 @@ qed
 lemma list_all2_map_diag:
   "(\<And>x. x \<in> set xs \<Longrightarrow> P (f x) (g x)) \<Longrightarrow> list_all2 P (map f xs) (map g xs)"
   by (induction xs) simp_all
-
-lemma sides_of_rhs_Inl_bot:
-  "sides_of_rhs T \<sigma> (Inl x) = bot"
-  by (induction T arbitrary: \<sigma>) (auto simp: Let_def)
 
 lemma list_all2_Union_eq:
   assumes "list_all2 (\<lambda>a b. f a = g b) xs ys"

@@ -164,20 +164,17 @@ text \<open>
   The core carries everything that is independent of how a call is compiled:
   the ordinary edge transfers and the return combine. Entry is not here. A
   \<^const>\<open>dgs_enter\<close> answers a list, which is not an equation's answer, so what
-  makes it sound is a property of the tree the consuming generator builds from
-  it --- and the routed and unrouted generators build different trees from the
-  same list. Each states its own entry obligation, through
-  \<^const>\<open>entry_pairs_cover\<close>, against the \<open>enter_tree\<close> hook the shared
-  post-solution layer already takes as a parameter.
-  A locale here that claimed to settle entry for both would be claiming
-  something neither generator's proof could use.
+  makes it sound is a property of the tree the routed generator builds from
+  it, stated through \<^const>\<open>entry_pairs_cover\<close> against the routed alternative
+  the solved system actually selects --- a property this locale alone cannot
+  state, since it never mentions how a call compiles.
 
   So \<open>sound_dg_spec\<close> is the common core and not a complete soundness statement:
-  interpreting it alone leaves a call's entry entirely unconstrained. The
-  complete statements are the two locales that extend it with the entry
-  obligation for their own equation shape --- \<open>sound_dg_spec_ltr_for\<close> for the
-  monovariant generator and \<open>dg_ctx_activation_base\<close> for the routed one --- and
-  those are what an analysis should be asked to establish.
+  interpreting it alone leaves a call's entry entirely unconstrained.
+  \<open>dg_ctx_activation_base\<close> (\<open>Routed_Context\<close>, downstream in this session) is
+  the complete statement, extending this core with that entry obligation for
+  the routed equation shape, and is what an analysis should be asked to
+  establish.
 \<close>
 
 locale sound_dg_spec =

@@ -439,10 +439,6 @@ definition main_body :: "proc_table \<Rightarrow> com" where
 text \<open>Deliberately not \<open>[simp]\<close>: \<open>wf_source_program\<close>'s entry conjunct has the shape
   \<open>\<Pi> prog_main_name = Some \<lparr>formals = [], body = main_body \<Pi>\<rparr>\<close>, against which
   this rule would rewrite \<open>main_body \<Pi>\<close> to itself.\<close>
-lemma main_body_Some:
-  "\<Pi> prog_main_name = Some decl \<Longrightarrow> main_body \<Pi> = body decl"
-  by (simp add: main_body_def)
-
 definition wf_source_program :: "(vname \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> bool" where
   "wf_source_program gs \<Pi> \<longleftrightarrow>
      reserved_ret_var gs \<and>

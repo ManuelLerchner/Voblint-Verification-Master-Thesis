@@ -153,16 +153,6 @@ definition join_abs_state_with ::
   "('a \<Rightarrow> 'a \<Rightarrow> 'a) \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state" where
   "join_abs_state_with j a b = (\<lambda>x. j (a x) (b x))"
 
-definition lookup_joined_with ::
-  "('a \<Rightarrow> 'a \<Rightarrow> 'a) \<Rightarrow> ('ctx, 'a) analysis_result \<Rightarrow> pp \<Rightarrow> 'a lifted" where
-  "lookup_joined_with j r v =
-     Finite_Set.fold (\<lambda>ctx. join_point_with j (lookup_context r v ctx)) Bot
-       (contexts_at r v)"
-
-lemma lookup_joined_with_absent [simp]:
-  "contexts_at r v = {} \<Longrightarrow> lookup_joined_with j r v = Bot"
-  unfolding lookup_joined_with_def by simp
-
 text \<open>
   Instantiating the join with the domain's own \<open>\<squnion>\<close> recovers exactly the
   lattice join of the payloads, variable by variable: the explicit argument is
@@ -215,11 +205,6 @@ definition lookup_joined_state ::
   "('ctx, 'a::semilattice_sup abs_state) analysis_result \<Rightarrow> pp \<Rightarrow>
    'a abs_state lifted" where
   "lookup_joined_state r v = join_states_over (lookup_context r v) (contexts_at r v)"
-
-lemma lookup_joined_state_eq_with:
-  "lookup_joined_state r v = lookup_joined_with (join_abs_state_with (\<squnion>)) r v"
-  unfolding lookup_joined_state_def join_states_over_def lookup_joined_with_def
-  by (rule refl)
 
 lemma lookup_joined_state_absent [simp]:
   "contexts_at r v = {} \<Longrightarrow> lookup_joined_state r v = Bot"

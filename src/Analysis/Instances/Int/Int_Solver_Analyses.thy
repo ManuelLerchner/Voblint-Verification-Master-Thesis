@@ -74,7 +74,6 @@ lemmas int_conf_analyse_report_ctx_proved_sound_per_origin = int_conf_po.int_con
 lemmas int_conf_analyse_report_ctx_refuted_sound_per_origin = int_conf_po.int_conf_analyse_report_ctx_refuted_sound
 lemmas int_conf_analyse_result_per_origin_def = int_conf_po.int_conf_analyse_result_def
 lemmas int_conf_analyse_report_ctx_per_origin_def = int_conf_po.int_conf_analyse_report_ctx_def
-lemmas int_conf_analyse_report_per_origin_def = int_conf_po.int_conf_analyse_report_def
 
 
 section \<open>Apinis warrowing solver instantiation, at the same routed unit-context spec\<close>
@@ -133,7 +132,6 @@ lemmas int_conf_analyse_report_ctx_proved_sound_warrow = int_conf_wa.int_conf_an
 lemmas int_conf_analyse_report_ctx_refuted_sound_warrow = int_conf_wa.int_conf_analyse_report_ctx_refuted_sound
 lemmas int_conf_analyse_result_warrow_def = int_conf_wa.int_conf_analyse_result_def
 lemmas int_conf_analyse_report_ctx_warrow_def = int_conf_wa.int_conf_analyse_report_ctx_def
-lemmas int_conf_analyse_report_warrow_def = int_conf_wa.int_conf_analyse_report_def
 
 section \<open>Warrowing-per-origin solver instantiation\<close>
 
@@ -183,7 +181,6 @@ lemmas int_conf_analyse_report_ctx_proved_sound_wpo = int_conf_wpo.int_conf_anal
 lemmas int_conf_analyse_report_ctx_refuted_sound_wpo = int_conf_wpo.int_conf_analyse_report_ctx_refuted_sound
 lemmas int_conf_analyse_result_wpo_def = int_conf_wpo.int_conf_analyse_result_def
 lemmas int_conf_analyse_report_ctx_wpo_def = int_conf_wpo.int_conf_analyse_report_ctx_def
-lemmas int_conf_analyse_report_wpo_def = int_conf_wpo.int_conf_analyse_report_def
 
 
 subsection \<open>Solved-result tables: PerOrigin and Apinis warrowing siblings\<close>

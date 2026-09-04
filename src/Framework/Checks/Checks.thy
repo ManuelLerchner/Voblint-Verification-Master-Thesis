@@ -11,9 +11,9 @@ text \<open>
   every concrete store the caller's reachable-store function admits at a
   checked point satisfies that point's condition. The reachable-store
   function is left abstract (\<open>pp \<Rightarrow> store set\<close>) so an instance supplies
-  whatever collecting semantics its own \<open>sound_dg_spec\<close> or \<open>sound_dg_hooks\<close>
-  interpretation already proves sound: this theory adds no new soundness
-  anchor, only the store-level check layer on top of an existing one.
+  whatever collecting semantics its own \<open>sound_dg_spec\<close> interpretation
+  already proves sound: this theory adds no new soundness anchor, only the
+  store-level check layer on top of an existing one.
 
   The table's shape, \<open>(pp \<times> exp) set\<close>, matches \<^const>\<open>checks\<close> --- the
   \<^type>\<open>cfg\<close> record field the compiler populates from the \<open>EA_Check\<close> edges it

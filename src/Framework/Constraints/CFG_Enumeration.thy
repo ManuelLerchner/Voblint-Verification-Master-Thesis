@@ -316,18 +316,6 @@ lemma return_call_action_list_eq_call_target_list:
      = map (\<lambda>(c, ca, p). (c, ca, FunctionResult p)) (call_target_list g v)"
   by (simp add: return_call_action_list_def)
 
-lemma call_target_list_eq_return_call_action_list:
-  "call_target_list g v
-     = map (\<lambda>(c, ca, ex). (c, ca, result_proc ex)) (return_call_action_list g v)"
-  by (simp add: return_call_action_list_def comp_def case_prod_beta)
-
-lemma return_call_action_list_call_info:
-  "map (\<lambda>(c, ca, ex). (c, call_info_of ca (result_proc ex), ex))
-       (return_call_action_list g v)
-     = return_call_list g v"
-  by (simp add: return_call_action_list_def return_call_list_def comp_def case_prod_beta)
-
-
 subsection \<open>Call sites and the resolver adapter\<close>
 
 text \<open>

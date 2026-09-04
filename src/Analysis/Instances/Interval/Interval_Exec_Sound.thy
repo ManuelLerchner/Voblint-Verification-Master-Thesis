@@ -28,23 +28,36 @@ text \<open>
   one session later than Analysis in the locked six-session chain, so that half
   stays downstream in \<open>Interval_Entry\<close> (CLI), mirroring \<open>Sign_Entry\<close>.
 
-  \<open>G\<close> stays diagonal at \<open>ivl exec_dg_st lifted\<close>, matching what \<open>dg_gen_of\<close>
+  \<open>G\<close> stays diagonal at \<open>ivl exec_dg_st lifted\<close>, matching what \<open>unit_routed_eqs\<close>
   needs; its content is never read, since every field of
   \<^const>\<open>local_state_dg_spec_st_for_lifted\<close> threads its incoming \<open>g\<close> through unchanged.
+
+  The equation system is \<^const>\<open>unit_routed_eqs\<close> at the unit context: the same
+  routed generator every registration locale and every other flagship uses, so a
+  VIMP call site publishes its callee's entry through an activation seed rather
+  than through a second, unrouted call protocol. Since \<open>p\<close> is an arbitrary
+  \<^typ>\<open>imp_prog\<close>, a call may genuinely occur, and the solver below --
+  \<^const>\<open>TD_side_seed_join_warrowing_Interp_solve\<close> -- keeps that seed join-only
+  while still warrowing the analysis global and every loop-carried local: an
+  activation seed is the join of what its callers publish, and widening it would
+  age the callee's entry before the callee has iterated at all.
 \<close>
 
 definition analyse_interval_dg_eqs_for ::
   "(ivl exec_dg_st \<Rightarrow> bool) \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow>
-     pp \<times> unit \<Rightarrow> (pp \<times> unit, unit, (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state) strategy_tree" where
+     pp \<times> unit \<Rightarrow> (pp \<times> unit, (unit, unit) routed_gk,
+       (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state) strategy_tree" where
   "analyse_interval_dg_eqs_for empty_pred gs p =
-     dg_gen_of
+     unit_routed_eqs
        (local_state_dg_spec_st_for_lifted gs empty_pred (ivl_tf_st_for gs) (ivl_enter_st_for gs))
        (prog_cfg p) bot (Lifted cinit_ivl_st) (Lifted cinit_ivl_st)"
 
 definition analyse_interval_dg_for :: "(ivl exec_dg_st \<Rightarrow> bool) \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow>
-    (pp \<times> unit) set \<times> (pp \<times> unit + unit \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)" where
+    (pp \<times> unit) set
+     \<times> (pp \<times> unit + (unit, unit) routed_gk \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)" where
   "analyse_interval_dg_for empty_pred gs p =
-     TD_side_warrowing_apinis_Interp_solve (analyse_interval_dg_eqs_for empty_pred gs p)
+     TD_side_seed_join_warrowing_Interp_solve is_activation_seed
+       (analyse_interval_dg_eqs_for empty_pred gs p)
        (cfg_exit (prog_cfg p), ())"
 
 text \<open>
@@ -83,11 +96,13 @@ text \<open>
 \<close>
 
 definition analyse_interval_dg_eqs :: "imp_prog \<Rightarrow>
-    pp \<times> unit \<Rightarrow> (pp \<times> unit, unit, (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state) strategy_tree" where
+    pp \<times> unit \<Rightarrow> (pp \<times> unit, (unit, unit) routed_gk,
+      (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state) strategy_tree" where
   "analyse_interval_dg_eqs p = analyse_interval_dg_eqs_for (resolved_st_q_is_bot_for (declared_global_vars p)) (declared_global p) p"
 
 definition analyse_interval_dg :: "imp_prog \<Rightarrow>
-    (pp \<times> unit) set \<times> (pp \<times> unit + unit \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)" where
+    (pp \<times> unit) set
+     \<times> (pp \<times> unit + (unit, unit) routed_gk \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)" where
   "analyse_interval_dg p = analyse_interval_dg_for (resolved_st_q_is_bot_for (declared_global_vars p)) (declared_global p) p"
 
 definition analyse_interval_dg_env :: "imp_prog \<Rightarrow> pp \<Rightarrow> ivl abs_state" where
@@ -109,13 +124,15 @@ text \<open>
 \<close>
 
 definition analyse_interval_dg_join_for :: "(ivl exec_dg_st \<Rightarrow> bool) \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow>
-    (pp \<times> unit) set \<times> (pp \<times> unit + unit \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)" where
+    (pp \<times> unit) set
+     \<times> (pp \<times> unit + (unit, unit) routed_gk \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)" where
   "analyse_interval_dg_join_for empty_pred gs p =
      TD_side_always_join_Interp_solve (analyse_interval_dg_eqs_for empty_pred gs p)
        (cfg_exit (prog_cfg p), ())"
 
 definition analyse_interval_dg_per_origin_for :: "(ivl exec_dg_st \<Rightarrow> bool) \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow>
-    (pp \<times> unit) set \<times> (pp \<times> unit + unit \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)" where
+    (pp \<times> unit) set
+     \<times> (pp \<times> unit + (unit, unit) routed_gk \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)" where
   "analyse_interval_dg_per_origin_for empty_pred gs p =
      TD_side_per_origin_Interp_solve (analyse_interval_dg_eqs_for empty_pred gs p)
        (cfg_exit (prog_cfg p), ())"

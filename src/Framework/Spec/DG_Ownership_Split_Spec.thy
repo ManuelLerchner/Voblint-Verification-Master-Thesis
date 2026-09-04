@@ -135,11 +135,6 @@ lemma ownership_split_enter_sides_le_iff:
      \<longleftrightarrow> (\<forall>(cont, entry) \<in> set pairs. rg cont \<le> g \<and> rg entry \<le> g)"
   by (induction pairs) auto
 
-lemma ownership_split_enter_sides_cont_le:
-  assumes "(cont, entry) \<in> set pairs"
-  shows "rg cont \<le> ownership_split_enter_sides rg pairs"
-  using assms ownership_split_enter_sides_le_iff by blast
-
 lemma ownership_split_enter_sides_entry_le:
   assumes "(cont, entry) \<in> set pairs"
   shows "rg entry \<le> ownership_split_enter_sides rg pairs"
@@ -328,14 +323,14 @@ definition ownership_split_lift ::
    \<Rightarrow> ('x,'k,unit,'a abs_state,'a abs_state) dg_spec"
 where
   "ownership_split_lift gs S = default_local_dg_spec\<lparr>
-     dgs_skip := ownership_split_transfer gs (dgs_skip S),
-     dgs_assign := (\<lambda>x e. ownership_split_transfer gs (dgs_assign S x e)),
-     dgs_special := (\<lambda>sc x. ownership_split_transfer gs (dgs_special S sc x)),
-     dgs_branch := (\<lambda>b pol. ownership_split_transfer gs (dgs_branch S b pol)),
-     dgs_body := (\<lambda>p. ownership_split_transfer gs (dgs_body S p)),
-     dgs_return := (\<lambda>e p. ownership_split_transfer gs (dgs_return S e p)),
-     dgs_enter := (\<lambda>ci. ownership_split_enter_transfer gs (dgs_enter S ci)),
-     dgs_event := (\<lambda>evt. ownership_split_transfer gs (dgs_event S evt)),
+     dgs_skip := ownership_split_transfer gs (skip\<^sup># S),
+     dgs_assign := (\<lambda>x e. ownership_split_transfer gs (assign\<^sup># S x e)),
+     dgs_special := (\<lambda>sc x. ownership_split_transfer gs (special\<^sup># S sc x)),
+     dgs_branch := (\<lambda>b pol. ownership_split_transfer gs (branch\<^sup># S b pol)),
+     dgs_body := (\<lambda>p. ownership_split_transfer gs (body\<^sup># S p)),
+     dgs_return := (\<lambda>e p. ownership_split_transfer gs (return\<^sup># S e p)),
+     dgs_enter := (\<lambda>ci. ownership_split_enter_transfer gs (enter\<^sup># S ci)),
+     dgs_event := (\<lambda>evt. ownership_split_transfer gs (event\<^sup># S evt)),
      dgs_combine_assign :=
        (\<lambda>ci. ownership_split_combine_transfer gs (dg_spec_combine_transfer S ci)) \<rparr>"
 
@@ -344,10 +339,6 @@ declare ownership_split_lift_def [code_unfold]
 lemma dg_spec_step_ownership_split_lift:
   "dg_spec_step (ownership_split_lift gs S) a = ownership_split_transfer gs (dg_spec_step S a)"
   unfolding ownership_split_lift_def by (cases a) simp_all
-
-lemma dgs_enter_ownership_split_lift:
-  "dgs_enter (ownership_split_lift gs S) ci = ownership_split_enter_transfer gs (dgs_enter S ci)"
-  unfolding ownership_split_lift_def by simp
 
 lemma dg_spec_combine_transfer_ownership_split_lift:
   "dg_spec_combine_transfer (ownership_split_lift gs S) ci
@@ -370,12 +361,6 @@ definition gamma_ownership_split ::
   "(vname \<Rightarrow> bool) \<Rightarrow> 'a::sound_domain abs_state \<Rightarrow> 'a abs_state \<Rightarrow> store set"
 where
   "gamma_ownership_split gs d g = \<lbrakk>combine_env gs d g\<rbrakk>"
-
-lemma gamma_ownership_split_eq: "gamma_ownership_split gs d g = \<lbrakk>combine_env gs d g\<rbrakk>"
-  unfolding gamma_ownership_split_def ..
-
-lemma gamma_ownership_splitD [dest]: "s \<in> gamma_ownership_split gs d g \<Longrightarrow> s \<in> \<lbrakk>combine_env gs d g\<rbrakk>"
-  unfolding gamma_ownership_split_def by simp
 
 lemma gamma_ownership_split_mono:
   assumes "d \<le> d'" and "g \<le> g'"

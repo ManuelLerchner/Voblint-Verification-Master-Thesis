@@ -46,11 +46,6 @@ lemma cstep_nop:
   shows "cstep gs g (u, s, stk) (v, s, stk)"
   by (rule cstep.Intra[OF assms]) simp
 
-lemma cstep_assign:
-  assumes "(u, EA_Assign x a, v) \<in> intra g"
-  shows "cstep gs g (u, s, stk) (v, s(x := aval a s), stk)"
-  by (rule cstep.Intra[OF assms]) simp
-
 lemma cstep_assume:
   assumes "(u, EA_Assume b, v) \<in> intra g" and "truthy (aval b s)"
   shows "cstep gs g (u, s, stk) (v, s, stk)"
@@ -65,11 +60,6 @@ lemma cstep_ret:
   assumes "(u, EA_Ret e q, v) \<in> intra g"
   shows "cstep gs g (u, s, stk)
      (v, s(ret_var := (case e of None \<Rightarrow> s ret_var | Some a \<Rightarrow> aval a s)), stk)"
-  by (rule cstep.Intra[OF assms]) simp
-
-lemma cstep_check:
-  assumes "(u, EA_Check c, v) \<in> intra g"
-  shows "cstep gs g (u, s, stk) (v, s, stk)"
   by (rule cstep.Intra[OF assms]) simp
 
 subsection \<open>Intra-only paths as stack-preserving runs\<close>

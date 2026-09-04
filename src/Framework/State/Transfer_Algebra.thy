@@ -171,12 +171,14 @@ text \<open>
   writes \<open>enter_binding gs top ev (ci_formals ci) (ci_args ci)\<close>, exactly as the
   return side writes \<open>combine\<^sup># gs (ci_dst ci)\<close>. No constant here wraps it.
 
-  The caller's own continuation is not part of the entry answer either. Goblint's
-  \<open>Spec.enter\<close> returns caller/callee pairs and \<open>constraints.ml\<close> hands
-  the caller half to \<open>combine_env\<close>; here that half is a separate specification
-  field, so a domain that wants to drop caller facts a callee could invalidate --
-  Goblint's \<open>varEq\<close> filters its caller state by taint -- overrides that field
-  instead of returning a second component.
+  The caller's own continuation is not computed here either. Goblint's
+  \<open>Spec.enter\<close> answers caller/callee pairs and \<open>constraints.ml\<close> hands the caller
+  half on to \<open>combine_env\<close>; a specification's entry field answers the same
+  pairs, so a domain that wants to drop caller facts a callee could invalidate
+  --- Goblint's \<open>varEq\<close> filters its caller state by taint --- returns the
+  filtered state as the continuation half of its own alternatives. Nothing in
+  this algebra chooses that half: the operations below are what a whole-state
+  domain computes each half \<^emph>\<open>with\<close>.
 \<close>
 
 subsection \<open>The structural return combine\<close>
@@ -248,13 +250,6 @@ text \<open>
   @{thm gamma_state_mono}.  The order-theoretic \<open>combine_bound\<close> shape is
   checkable against a post-solution, so no raw \<open><s|t>\<close> obligation reaches callers.
 \<close>
-lemma combine_collect_abs_bound_sound:
-  fixes sc se sr :: "'a::sound_domain abs_state"
-  assumes bound: "combine\<^sup># gs dst sc se \<le> sr"
-    and sc: "s \<in> \<lbrakk>sc\<rbrakk>" and se: "t \<in> \<lbrakk>se\<rbrakk>"
-  shows "combine_collect gs dst s t \<in> \<lbrakk>sr\<rbrakk>"
-  using bound combine_collect_sound gamma_state_mono sc se subset_eq by metis
-
 subsection \<open>The C-faithful initial store set\<close>
 
 text \<open>

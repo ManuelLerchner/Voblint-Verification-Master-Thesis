@@ -49,9 +49,9 @@ locale call_string_routed_context =
              \<in> calls (compile_prog Pi ps)
        \<Longrightarrow> s \<in> gammaDG (locals (sigma (Inl (u, ctx)))) (globs (sigma (Inr Global)))
        \<Longrightarrow> \<exists>pairs pub deps.
-             enter_runs (dgs_enter S (call_info_of (CallEdge dst pars args) p))
+             enter_runs (enter\<^sup># S (call_info_of (CallEdge dst pars args) p))
                (mk_dg_man (locals (sigma (Inl (u, ctx)))) (\<lambda>_. Global)) sigma pairs pub
-           \<and> enter_deps (dgs_enter S (call_info_of (CallEdge dst pars args) p))
+           \<and> enter_deps (enter\<^sup># S (call_info_of (CallEdge dst pars args) p))
                (mk_dg_man (locals (sigma (Inl (u, ctx)))) (\<lambda>_. Global)) sigma pairs deps
            \<and> entry_pairs_cover (\<lambda>d. gammaDG d (globs (sigma (Inr Global)))) s
                (call_enter gs (CallEdge dst pars args) s) pairs"
@@ -100,9 +100,9 @@ next
                \<in> calls (compile_prog Pi ps)"
     and sin: "s \<in> gammaDG (locals (sigma (Inl (u, ctx)))) (globs (sigma (Inr Global)))"
   obtain pairs pub deps
-    where R: "enter_runs (dgs_enter S (call_info_of (CallEdge dst pars args) p))
+    where R: "enter_runs (enter\<^sup># S (call_info_of (CallEdge dst pars args) p))
                 (mk_dg_man (locals (sigma (Inl (u, ctx)))) (\<lambda>_. Global)) sigma pairs pub"
-      and D: "enter_deps (dgs_enter S (call_info_of (CallEdge dst pars args) p))
+      and D: "enter_deps (enter\<^sup># S (call_info_of (CallEdge dst pars args) p))
                 (mk_dg_man (locals (sigma (Inl (u, ctx)))) (\<lambda>_. Global)) sigma pairs deps"
       and P: "entry_pairs_cover (\<lambda>d. gammaDG d (globs (sigma (Inr Global)))) s
                 (call_enter gs (CallEdge dst pars args) s) pairs"
@@ -117,9 +117,9 @@ next
                = cs_context k u ctx (call_enter gs (CallEdge dst pars args) s)"
     by (rule cs_route_context_agree)
   show "\<exists>pairs pub deps cont' entry.
-             enter_runs (dgs_enter S (call_info_of (CallEdge dst pars args) p))
+             enter_runs (enter\<^sup># S (call_info_of (CallEdge dst pars args) p))
                (mk_dg_man (locals (sigma (Inl (u, ctx)))) (\<lambda>_. Global)) sigma pairs pub
-           \<and> enter_deps (dgs_enter S (call_info_of (CallEdge dst pars args) p))
+           \<and> enter_deps (enter\<^sup># S (call_info_of (CallEdge dst pars args) p))
                (mk_dg_man (locals (sigma (Inl (u, ctx)))) (\<lambda>_. Global)) sigma pairs deps
            \<and> (cont', entry) \<in> set pairs
            \<and> s \<in> gammaDG cont' (globs (sigma (Inr Global)))

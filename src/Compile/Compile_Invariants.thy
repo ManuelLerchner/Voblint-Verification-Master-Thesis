@@ -274,30 +274,6 @@ text \<open>The enumeration names exactly the indices the fragment allocates, ea
 lemma length_com_stmt_post_order [simp]: "length (com_stmt_post_order n c) = csize c"
   by (induction c arbitrary: n) auto
 
-lemma set_com_stmt_post_order:
-  "set (com_stmt_post_order n c) = Statement ` {n ..< n + csize c}"
-proof (induction c arbitrary: n)
-  case (Seq c1 c2)
-  have "{n ..< n + csize c1} \<union> {n + csize c1 ..< n + csize c1 + csize c2}
-          = {n ..< n + (csize c1 + csize c2)}"
-    by auto
-  then show ?case using Seq by (simp flip: image_Un add: add.assoc)
-next
-  case (If b c1 c2)
-  have "insert n ({Suc n ..< Suc (n + csize c1)}
-          \<union> {Suc (n + csize c1) ..< Suc (n + csize c1 + csize c2)})
-          = {n ..< Suc (n + (csize c1 + csize c2))}"
-    by auto
-  then show ?case using If by (auto simp flip: image_Un image_insert)
-next
-  case (While b c)
-  have "insert n {Suc n ..< Suc (n + csize c)} = {n ..< Suc (n + csize c)}" by auto
-  then show ?case using While by (auto simp flip: image_insert)
-qed auto
-
-lemma distinct_com_stmt_post_order: "distinct (com_stmt_post_order n c)"
-  by (induction c arbitrary: n) (auto simp: set_com_stmt_post_order)
-
 text \<open>
   \<^const>\<open>com_stmt_post_order\<close> answers this for one fragment given the counter it
   starts at. A whole program needs those starting counters, and they are not a
@@ -324,28 +300,6 @@ text \<open>
   from \<^const>\<open>compile_procs\<close>, and every position in every procedure after the first
   would move with it.
 \<close>
-
-lemma procs_stmt_next_eq_compile_procs:
-  "procs_stmt_next \<Pi> ps n = fst (compile_procs \<Pi> ps n)"
-proof (induction ps arbitrary: n)
-  case (Cons p ps)
-  show ?case
-  proof (cases "\<Pi> p")
-    case None
-    then show ?thesis using Cons by simp
-  next
-    case (Some decl)
-    obtain n1 E K where cp: "compile_proc \<Pi> p decl n = (n1, E, K)"
-      by (cases "compile_proc \<Pi> p decl n") auto
-    obtain n2 E' K' where cps: "compile_procs \<Pi> ps n1 = (n2, E', K')"
-      by (cases "compile_procs \<Pi> ps n1") auto
-    have n1: "n1 = Suc (n + csize (body decl))"
-      using cp by (simp add: compile_proc_def Let_def split: prod.splits)
-    have "procs_stmt_next \<Pi> (p # ps) n = fst (compile_procs \<Pi> ps n1)"
-      using Some Cons n1 by simp
-    then show ?thesis using Some cp cps by simp
-  qed
-qed simp
 
 text \<open>
   Each definition paired with the statement indices its body owns, in the order a
@@ -376,10 +330,11 @@ definition prog_stmt_post_order :: "imp_prog \<Rightarrow> (pname \<times> cfg_n
 section \<open>Connectivity of a compiled graph\<close>
 
 text \<open>A compiled fragment's entry reaches its continuation or its procedure result along
-  the structural successor relation.  Nothing downstream consumes this: the exit-cone
-  coverage the D/G layer needs is decided per node by \<open>cfg_exit_covers\<close>.  It is the
-  connectivity witness that pins the transparent \<^const>\<open>Restore\<close>/\<^const>\<open>Unwind\<close>
-  encoding --- emitting nothing for those clauses would make them dead ends and force a
+  the structural successor relation.  Nothing downstream consumes this: a routed D/G
+  system's own coverage witness is \<open>vars_cover_exec\<close>, decided per node from whether a
+  caller actually published a seed, not from graph reachability.  This connectivity fact
+  is instead what pins the transparent \<^const>\<open>Restore\<close>/\<^const>\<open>Unwind\<close> encoding ---
+  emitting nothing for those clauses would make them dead ends and force a
   \<^const>\<open>source_com\<close> hypothesis onto the whole-program statement.\<close>
 
 text \<open>The fragment-relative forms the compiler inductions use: an edge of a fragment

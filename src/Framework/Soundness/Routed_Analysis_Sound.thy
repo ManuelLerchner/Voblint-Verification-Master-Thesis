@@ -48,19 +48,6 @@ text \<open>
   context policy, so no instance need prove them again.
 \<close>
 
-lemma solved_local_reader_sg_cov:
-  assumes rd_eq: "\<And>d g'. gammaDG d g' = gamma_state_lift (rd d)"
-    and cov: "(v, c) \<in> vars"
-  shows "gamma_state_lift (rd (solved_local_reader vars sigma (Inl (v, c))))
-           = gammaDG (locals (sigma (Inl (v, c)))) (globs (sigma (Inr gk0)))"
-  by (simp add: cov rd_eq)
-
-lemma solved_local_reader_sg_uncov:
-  assumes rd_bot: "rd bot = Bot"
-    and uncov: "(v, c) \<notin> vars"
-  shows "gamma_state_lift (rd (solved_local_reader vars sigma (Inl (v, c)))) = {}"
-  by (simp add: uncov rd_bot)
-
 subsection \<open>The composition locale\<close>
 
 text \<open>
@@ -97,13 +84,9 @@ locale routed_analysis_sound =
     and classify :: "exp \<Rightarrow> 'a abs_state \<Rightarrow> check_result"
 begin
 
-text \<open>The analysis-level endpoints, named without mentioning the sublocale so an
-  instance cites them directly.\<close>
+text \<open>The activation-collecting endpoint, named without mentioning the
+  sublocale so an instance cites it directly.\<close>
 
-lemmas routed_result = analyse_result_def
-lemmas routed_result_node_sound = analyse_result_node_sound
-lemmas routed_report_proved_sound = analyse_report_ctx_proved_sound
-lemmas routed_report_refuted_sound = analyse_report_ctx_refuted_sound
 lemmas routed_activation_collect_sound = activation_collect_dg_sound
 
 end

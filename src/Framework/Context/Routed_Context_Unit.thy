@@ -55,10 +55,6 @@ text \<open>
   is a solved-system/solver argument, not a local rewrite.
 \<close>
 
-lemma routed_callee_ctx_is_unit:
-  "route_unit u ctx d ca = ()"
-  by simp
-
 subsection \<open>The unit-routed-context locale\<close>
 
 text \<open>
@@ -109,9 +105,9 @@ locale unit_routed_context =
        \<Longrightarrow> (u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g
        \<Longrightarrow> s \<in> gammaDG (locals (sigma (Inl (u, ctx)))) (globs (sigma (Inr gk0)))
        \<Longrightarrow> \<exists>pairs pub deps.
-             enter_runs (dgs_enter S (call_info_of (CallEdge dst pars args) p))
+             enter_runs (enter\<^sup># S (call_info_of (CallEdge dst pars args) p))
                (mk_dg_man (locals (sigma (Inl (u, ctx)))) (\<lambda>_. gk0)) sigma pairs pub
-           \<and> enter_deps (dgs_enter S (call_info_of (CallEdge dst pars args) p))
+           \<and> enter_deps (enter\<^sup># S (call_info_of (CallEdge dst pars args) p))
                (mk_dg_man (locals (sigma (Inl (u, ctx)))) (\<lambda>_. gk0)) sigma pairs deps
            \<and> entry_pairs_cover (\<lambda>d. gammaDG d (globs (sigma (Inr gk0)))) s
                (call_enter gs (CallEdge dst pars args) s) pairs"
@@ -165,9 +161,9 @@ next
     and ce: "(u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
     and sin: "s \<in> gammaDG (locals (sigma (Inl (u, ctx)))) (globs (sigma (Inr gk0)))"
   obtain pairs pub deps
-    where R: "enter_runs (dgs_enter S (call_info_of (CallEdge dst pars args) p))
+    where R: "enter_runs (enter\<^sup># S (call_info_of (CallEdge dst pars args) p))
                 (mk_dg_man (locals (sigma (Inl (u, ctx)))) (\<lambda>_. gk0)) sigma pairs pub"
-      and D: "enter_deps (dgs_enter S (call_info_of (CallEdge dst pars args) p))
+      and D: "enter_deps (enter\<^sup># S (call_info_of (CallEdge dst pars args) p))
                 (mk_dg_man (locals (sigma (Inl (u, ctx)))) (\<lambda>_. gk0)) sigma pairs deps"
       and P: "entry_pairs_cover (\<lambda>d. gammaDG d (globs (sigma (Inr gk0)))) s
                 (call_enter gs (CallEdge dst pars args) s) pairs"
@@ -182,9 +178,9 @@ next
                = enterc_unit u ctx (call_enter gs (CallEdge dst pars args) s)"
     by (rule route_unit_enterc_unit_agree)
   show "\<exists>pairs pub deps cont' entry.
-             enter_runs (dgs_enter S (call_info_of (CallEdge dst pars args) p))
+             enter_runs (enter\<^sup># S (call_info_of (CallEdge dst pars args) p))
                (mk_dg_man (locals (sigma (Inl (u, ctx)))) (\<lambda>_. gk0)) sigma pairs pub
-           \<and> enter_deps (dgs_enter S (call_info_of (CallEdge dst pars args) p))
+           \<and> enter_deps (enter\<^sup># S (call_info_of (CallEdge dst pars args) p))
                (mk_dg_man (locals (sigma (Inl (u, ctx)))) (\<lambda>_. gk0)) sigma pairs deps
            \<and> (cont', entry) \<in> set pairs
            \<and> s \<in> gammaDG cont' (globs (sigma (Inr gk0)))
