@@ -27,6 +27,7 @@ fun string_of_action :: "edge_action \<Rightarrow> string" where
     String.explode x @ '' := max('' @ string_of_exp 0 a @ '', '' @ string_of_exp 0 b @ '')''"
 | "string_of_action (EA_Assume b) = ''['' @ string_of_exp 0 b @ '']''"
 | "string_of_action (EA_AssumeNot b) = ''!['' @ string_of_exp 0 b @ '']''"
+| "string_of_action (EA_Body p) = ''body('' @ String.explode p @ '')''"
 | "string_of_action (EA_Ret None p) = ''return''"
 | "string_of_action (EA_Ret (Some e) p) =
     ''return '' @ string_of_exp 0 e"

@@ -30,7 +30,10 @@ text \<open>
 \<close>
 
 text \<open>
-  What a call's alternatives must establish, once, for both equation shapes.
+  What a call's alternatives must establish. The coverage contract is the part
+  that does not mention a tree: \<open>enter_runs\<close> and \<open>enter_deps\<close> below do describe
+  an entry program and the continuations it is handed, but what an alternative
+  \<^emph>\<open>means\<close> is settled here, before any of that.
   \<open>pairs\<close> covers a concrete caller when \<^emph>\<open>some\<close> alternative accounts for it: the
   caller store lies in the continuation half and the store the callee starts
   from lies in the entry half, in the same pair. The quantifier is existential
@@ -39,9 +42,9 @@ text \<open>
   every alternative cover every caller would defeat the splitting the list
   exists to express.
 
-  Both generators state their entry obligation through this, so the two cannot
-  drift apart on what an alternative means; they differ only in how the tree
-  they build consumes the list.
+  Keeping it separate from any particular tree is what lets an entry
+  obligation be discharged once and reused: a proof about how alternatives are
+  folded never has to restate what an alternative means.
 \<close>
 
 definition entry_pairs_cover ::
@@ -169,7 +172,7 @@ text \<open>
   the solved system actually selects --- a property this locale alone cannot
   state, since it never mentions how a call compiles.
 
-  So \<open>sound_dg_spec\<close> is the common core and not a complete soundness statement:
+  So \<open>sound_dg_spec_core\<close> is the common core and not a complete soundness statement:
   interpreting it alone leaves a call's entry entirely unconstrained.
   \<open>dg_ctx_activation_base\<close> (\<open>Routed_Context\<close>, downstream in this session) is
   the complete statement, extending this core with that entry obligation for
@@ -177,7 +180,7 @@ text \<open>
   establish.
 \<close>
 
-locale sound_dg_spec =
+locale sound_dg_spec_core =
   fixes S :: "('x,'k,unit,'D::bounded_semilattice_sup_bot,
                 'G::bounded_semilattice_sup_bot) dg_spec"
     and gammaDG :: "'D \<Rightarrow> 'G \<Rightarrow> store set"
@@ -206,7 +209,7 @@ text \<open>
   lost for a generator that reads both sides from unknowns.
 \<close>
 
-lemma (in sound_dg_spec) combine_sound_tree:
+lemma (in sound_dg_spec_core) combine_sound_tree:
   assumes sc: "s \<in> gammaDG (locals (\<tau> src_cc)) (globs (\<tau> (Inr gk)))"
     and se: "t \<in> gammaDG (locals (\<tau> src_ex)) (globs (\<tau> (Inr gk)))"
   shows "combine_collect gs (ci_dst ci) s t
@@ -238,7 +241,7 @@ locale sound_local_dg_spec =
     and gs :: "vname \<Rightarrow> bool"
   assumes gammaD_mono: "d \<le> d' \<Longrightarrow> gammaD d \<subseteq> gammaD d'"
     and step_sound_local:
-      "edge_collect a (gammaD d) \<subseteq> gammaD (local_spec_step sk asn sp br rt ev a d)"
+      "edge_collect a (gammaD d) \<subseteq> gammaD (local_spec_step sk asn sp br bd rt ev a d)"
     and enter_sound_local:
       "s \<in> gammaD d \<Longrightarrow>
          entry_pairs_cover gammaD s
@@ -250,7 +253,7 @@ locale sound_local_dg_spec =
 begin
 
 theorem local_spec_sound:
-  "sound_dg_spec (local_dg_spec sk asn sp br bd rt en ev ce ca) (\<lambda>d g. gammaD d) gs"
+  "sound_dg_spec_core (local_dg_spec sk asn sp br bd rt en ev ce ca) (\<lambda>d g. gammaD d) gs"
 proof (unfold_locales, goal_cases)
   case 1
   then show ?case by (meson gammaD_mono)

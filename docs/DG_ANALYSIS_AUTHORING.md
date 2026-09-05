@@ -17,7 +17,7 @@ constructing `strategy_tree` by hand. Term definitions are in
 
 3. **Package enter/combine as a `dg_spec`.** `dgs_enter`,
    `dgs_combine_env`/`dgs_combine_assign` (`DG_Constraint_Trees.thy`), proved to
-   satisfy `sound_dg_spec`.
+   satisfy `sound_dg_spec_core`.
 
 4. **Context-sensitive with one shared global and one routing policy:**
    interpret the `routed_context` locale

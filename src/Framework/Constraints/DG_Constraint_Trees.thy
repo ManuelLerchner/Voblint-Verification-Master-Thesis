@@ -30,9 +30,17 @@ text \<open>
   address and a key are all a former sees, which is why the same former reads a
   contribution-only unknown and an equation-driven one.\<close>
 
-subsection \<open>Edge formers over a solution address\<close>
+subsection \<open>Low-level edge formers over a solution address\<close>
 
 text \<open>
+  The two formers in this subsection take a step in the direct shape
+  \<open>'dl \<Rightarrow> 'dg \<Rightarrow> 'dg \<times> 'dl\<close>, which no analysis writes any more: a specification
+  supplies manager-native transfers, and \<open>DG_Spec\<close> compiles those. They
+  survive because the keyed-solver update-rule regression
+  needs a step it can vary directly, without a \<open>dg_spec\<close> in the way, and that
+  regression is their only consumer. Read them as the minimal thing a
+  right-hand side can be, not as the shape production equations take.
+
   An edge or combine former takes its source as an \<^emph>\<open>address\<close> in the solver's
   own valuation space \<^typ>\<open>'x + 'k\<close> and its published slot as an explicit key,
   rather than fixing the source to a local unknown and the slot to the

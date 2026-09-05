@@ -148,9 +148,9 @@
 //   main_pp9_ctx0 -> main_pp10_ctx0: check(c==20)
 //   main_pp10_ctx0 -> main_result_main_ctx0: terminate
 //   bump_pp0_ctx1 -> bump_pp1_ctx1: m := n+1
-//   main_entry_main_ctx0 -> main_pp3_ctx0: nop
+//   main_entry_main_ctx0 -> main_pp3_ctx0: body(main)
 //   main_pp3_ctx0 -> main_pp4_ctx0: g := 19
-//   bump_entry_bump_ctx1 -> bump_pp0_ctx1: nop
+//   bump_entry_bump_ctx1 -> bump_pp0_ctx1: body(bump)
 //   main_pp7_ctx0 -> main_pp8_ctx0: check(a==6)
 //   main_pp4_ctx0 -> bump_entry_bump_ctx1: enter bump(5)
 //   main_pp5_ctx0 -> bump_entry_bump_ctx1: enter bump(4)

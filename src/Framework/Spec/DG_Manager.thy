@@ -5,23 +5,34 @@ begin
 section \<open>A manager capability interface for the D/G packed carrier\<close>
 
 text \<open>
-  \<open>man\<close> bundles what Goblint's own manager record bundles: \<open>man_local\<close> is the
-  current local value, \<open>man_global\<close>/\<open>man_sideg\<close> are \<^emph>\<open>capabilities\<close> a
-  transfer runs to read or publish shared state, without naming which solver
-  key that state lives at. Every \<open>Spec\<close> transfer takes a manager, including
-  ones whose global component is trivial -- Goblint's default \<open>Spec\<close> sets
-  \<open>G = Lattice.Unit\<close>, \<open>V = EmptyV\<close>, and its transfers still take the manager
-  and mostly return \<open>man.local\<close>.
+  \<open>man\<close> is the local/global capability fragment of Goblint's own manager
+  record, and only that fragment: \<open>man_local\<close> is the current local value, and
+  \<open>man_global\<close>/\<open>man_sideg\<close> are \<^emph>\<open>capabilities\<close> a transfer runs to read or
+  publish shared state, without naming which solver key that state lives at.
+  Goblint's manager carries more -- a query channel, an event emitter, the
+  current node and edge, spawn and split -- and none of that is modelled here,
+  because no transfer in this development asks for it. Every \<open>Spec\<close> transfer
+  takes a manager, including ones whose global component is trivial --
+  Goblint's default \<open>Spec\<close> sets \<open>G = Lattice.Unit\<close>, \<open>V = EmptyV\<close>, and its
+  transfers still take the manager and mostly return \<open>man.local\<close>.
 
-  Both capabilities take a \<^emph>\<open>global name\<close> of the analysis's own type \<open>'v\<close>,
-  Goblint's \<open>V\<close>: an analysis says \<open>man_global m v\<close>, naming which of its
-  globals it means, and never builds a solver key. Which key that name lives
-  at is the manager's business --- \<open>mk_dg_man\<close> takes the embedding \<open>'v \<Rightarrow> 'k\<close>
-  and closes it into both fields. An analysis with a single global instantiates
-  \<open>'v = unit\<close> and writes \<open>man_global m ()\<close>. The separation matters because the
-  key type also carries the routed seed slots, which belong to the generator,
-  not to any analysis: \<open>'v\<close> is exactly the part of the key space an analysis
-  may address.
+  Five type parameters run through this theory and every one built on it:
+
+    \<^item> \<open>'x\<close> --- a local solver unknown, the name of a program point under a
+      context.
+    \<^item> \<open>'k\<close> --- a solver global key, the whole side-effect address space.
+    \<^item> \<open>'v\<close> --- an analysis-visible global name, Goblint's \<open>V\<close>. It embeds into
+      \<open>'k\<close>, and is exactly the part of that space an analysis may address.
+    \<^item> \<open>'dl\<close> --- the local domain, Goblint's \<open>D\<close>.
+    \<^item> \<open>'dg\<close> --- the analysis-global domain, Goblint's \<open>G\<close>.
+
+  Both capabilities take a global name rather than a key: an analysis says
+  \<open>man_global m v\<close>, naming which of its globals it means, and never builds a
+  solver key. Which key that name lives at is the manager's business ---
+  \<open>mk_dg_man\<close> takes the embedding \<open>'v \<Rightarrow> 'k\<close> and closes it into both fields.
+  An analysis with a single global instantiates \<open>'v = unit\<close> and writes
+  \<open>man_global m ()\<close>. The separation matters because \<open>'k\<close> also carries the
+  routed activation slots, which belong to the generator and to no analysis.
 
   A Base-style specification ignores the global channel entirely: it calls
   neither capability, so its compiled equations carry no \<open>QueryG\<close> and no
@@ -45,10 +56,11 @@ record ('x,'k,'v,'dl,'dg) man =
 subsection \<open>Packed-carrier primitives\<close>
 
 text \<open>
-  \<open>dg_read_at\<close>/\<open>dg_read_global\<close> project \<^const>\<open>locals\<close>/\<^const>\<open>globs\<close> out of
-  the packed read the same way \<open>dg_edge_tree_at\<close>'s own body does; \<open>dg_sideg\<close>
-  injects a contribution back into the packed carrier the same way
-  \<open>dg_edge_tree_at\<close>'s own \<open>Side\<close> does, padding the local half with \<open>bot\<close>.
+  A solver unknown holds a whole \<^type>\<open>dg_state\<close>, so reading one yields both
+  halves and only one of them is ever wanted. \<open>dg_read_at\<close> reads any unknown
+  and keeps \<^const>\<open>locals\<close>; \<open>dg_read_global\<close> reads a global key and keeps
+  \<^const>\<open>globs\<close>; \<open>dg_sideg\<close> publishes a global contribution, padding the local
+  half it does not write with \<open>bot\<close>.
 
   These three are where the packed carrier is taken apart and put back
   together. Everything below reaches it only through them or through \<open>man\<close>'s
@@ -68,27 +80,46 @@ definition dg_sideg :: "'k \<Rightarrow> 'dg \<Rightarrow> ('x,'k,('dl::bot,'dg)
 subsection \<open>Constructing a manager\<close>
 
 text \<open>
-  \<open>mk_dg_man\<close> closes the routed global key \<open>gk\<close> into both effectful
-  fields, so a transfer built against \<open>man\<close> never sees \<open>gk\<close> itself --
-  matching how \<open>dg_edge_tree_at\<close>'s own \<open>step :: 'dl \<Rightarrow> 'dg \<Rightarrow> 'dg \<times> 'dl\<close>
-  never sees a key either. Every transfer in this theory only ever calls
-  record fields, never \<open>dg_read_global\<close>/\<open>dg_sideg\<close> or a key directly, so a
+  \<open>mk_dg_man\<close> closes the name-to-key embedding into both effectful fields, so
+  a transfer built against \<open>man\<close> never sees a key itself. Every transfer in
+  this theory only ever calls record fields, never
+  \<open>dg_read_global\<close>/\<open>dg_sideg\<close> or a key directly, so a
   future manager (instrumented, differently routed, or backed by distinct
   global unknowns) is a second interpretation of the same fields, not a
   change to any transfer.
 \<close>
 
 definition mk_dg_man :: "'dl::bot \<Rightarrow> ('v \<Rightarrow> 'k) \<Rightarrow> ('x,'k,'v,'dl,'dg) man" where
-  "mk_dg_man d key =
-     \<lparr> man_local = d,
-       man_global = (\<lambda>v. dg_read_global (key v)),
-       man_sideg = (\<lambda>v. dg_sideg (key v)) \<rparr>"
+  "mk_dg_man d key = \<lparr>
+     man_local = d,
+     man_global = (\<lambda>v. dg_read_global (key v)),
+     man_sideg = (\<lambda>v. dg_sideg (key v)) \<rparr>"
+
+text \<open>
+  What a built manager answers, and the one way it is rebuilt: a second transfer
+  stage runs from the point the first reached, and since only the local value
+  changes, that update is again a manager built at the new value. These are the
+  rules the proofs need; \<^const>\<open>mk_dg_man\<close> itself stays folded, so a manager
+  travels through a goal as one term instead of a three-field record literal.
+  That matters beyond term size: an assumption about a built manager stops
+  matching a goal once the goal has decayed into a literal, which is what
+  unfolding \<^const>\<open>mk_dg_man\<close> by default used to cause.
+
+  The two capability rules are stated unapplied. Applying one is the same rule
+  plus a beta step, so the unapplied form subsumes the applied one and also
+  rewrites the occurrences that carry no argument --- a manager passed whole to
+  an entry transfer, for instance.
+\<close>
 
 lemma mk_dg_man_simps [simp]:
   "man_local (mk_dg_man d key) = d"
   "man_global (mk_dg_man d key) = (\<lambda>v. dg_read_global (key v))"
   "man_sideg (mk_dg_man d key) = (\<lambda>v. dg_sideg (key v))"
   by (simp_all add: mk_dg_man_def)
+
+lemma mk_dg_man_local_update [simp]:
+  "mk_dg_man d key\<lparr>man_local := e\<rparr> = mk_dg_man e key"
+  by (simp add: mk_dg_man_def)
 
 type_synonym ('x,'k,'v,'dl,'dg) man_transfer =
   "('x,'k,'v,'dl,'dg) man \<Rightarrow> ('x,'k,('dl,'dg) dg_state,'dl) strategy_program"
@@ -122,23 +153,37 @@ type_synonym ('x,'k,'v,'dl,'dg) man_enter_transfer =
   "('x,'k,'v,'dl,'dg) man
    \<Rightarrow> ('x,'k,('dl,'dg) dg_state,'dl enter_result list) strategy_program"
 
+subsection \<open>Writing a transfer\<close>
+
 text \<open>
-  \<open>man_with_local\<close> is the same environment with a different current local
-  value: capabilities unchanged, only \<open>man_local\<close> replaced. It is how a
-  second transfer stage (a \<open>combine_assign\<close> after its \<open>combine_env\<close>) is
-  run from the point the first stage reached, without extracting anything
-  out of the program and re-wrapping it.
+  An analysis author writes manager-native transfers and nothing else. The
+  framework turns them into solver right-hand sides; \<^const>\<open>QueryL\<close>,
+  \<^const>\<open>QueryG\<close> and \<^const>\<open>Side\<close> belong to that step, and a specification
+  field that names one has reached past this interface into the solver's. That
+  is a discipline, not something the types rule out: a transfer returns a
+  \<^type>\<open>strategy_program\<close> and could build any of them by hand. Three recipes
+  cover every field of a \<open>dg_spec\<close> without doing so:
+
+    \<^item> A transfer that only transforms the local value is \<open>local_transfer f\<close>,
+      and its compiled tree is one read and an answer: no \<open>QueryG\<close>, no
+      \<open>Side\<close>.
+    \<^item> A transfer that reads or publishes shared state runs the capabilities
+      in sequence and answers the new local value ---
+      \<open>do {g <- man_global m v; _ <- man_sideg m v g'; sp_return d'}\<close> --- which
+      is the same shape as the Goblint method that reads \<open>man.global\<close>, calls
+      \<open>man.sideg\<close>, and returns a \<open>D.t\<close>.
+    \<^item> An entry transfer answers the list of alternatives instead of one
+      value: \<open>sp_return [(continuation, entry), ...]\<close>, possibly after the same
+      capability calls. It never folds that list; the routed call tree does.
 \<close>
 
-definition man_with_local :: "('x,'k,'v,'dl,'dg) man \<Rightarrow> 'dl \<Rightarrow> ('x,'k,'v,'dl,'dg) man" where
-  "man_with_local m d = m\<lparr>man_local := d\<rparr>"
-
-lemma man_with_local_simps [simp]:
-  "man_local (man_with_local m d) = d"
-  "man_global (man_with_local m d) = man_global m"
-  "man_sideg (man_with_local m d) = man_sideg m"
-  by (simp_all add: man_with_local_def)
-
+text \<open>
+  A second transfer stage runs from the point the first reached by updating
+  \<^const>\<open>man_local\<close> in place --- \<open>m\<lparr>man_local := d\<rparr>\<close> --- leaving both
+  capabilities as they were. Nothing is extracted out of the program and
+  re-wrapped, and the record's own update equations are all the later proofs
+  need about it.
+\<close>
 
 subsection \<open>Edge and combine program drivers\<close>
 

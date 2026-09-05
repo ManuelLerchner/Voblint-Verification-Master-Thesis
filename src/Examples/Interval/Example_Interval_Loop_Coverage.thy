@@ -46,7 +46,7 @@ abbreviation "loop_cfg \<equiv>
 lemma loop_cfg_full:
   "loop_cfg =
      \<lparr> intra =
-         {(FunctionEntry (STR ''main''), EA_Nop, Statement 0),
+         {(FunctionEntry (STR ''main''), EA_Body (STR ''main''), Statement 0),
           (Statement 0, EA_Assign (STR ''x'') (N 0), Statement 1),
           (Statement 1, EA_Assume (Less (V (STR ''x'')) (N 20)), Statement 2),
           (Statement 1, EA_AssumeNot (Less (V (STR ''x'')) (N 20)), Statement 3),
@@ -63,7 +63,7 @@ lemma loop_cfg_calls: "calls loop_cfg = {}"
   by (simp add: loop_cfg_full)
 lemma loop_cfg_intra:
   "intra loop_cfg =
-     {(FunctionEntry (STR ''main''), EA_Nop, Statement 0),
+     {(FunctionEntry (STR ''main''), EA_Body (STR ''main''), Statement 0),
       (Statement 0, EA_Assign (STR ''x'') (N 0), Statement 1),
       (Statement 1, EA_Assume (Less (V (STR ''x'')) (N 20)), Statement 2),
       (Statement 1, EA_AssumeNot (Less (V (STR ''x'')) (N 20)), Statement 3),

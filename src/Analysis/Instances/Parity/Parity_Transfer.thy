@@ -168,7 +168,7 @@ lemma parity_is_sound_transfer_for:
 
 definition parity_tf_abs :: "edge_action => parity abs_state => parity abs_state" where
   "parity_tf_abs = local_spec_step skip_parity assign_parity special_parity branch_parity
-     return_parity event_parity"
+     body_parity return_parity event_parity"
 
 lemma parity_tf_abs_simps [simp]:
   "parity_tf_abs EA_Nop = skip_parity"
@@ -176,6 +176,7 @@ lemma parity_tf_abs_simps [simp]:
   "parity_tf_abs (EA_Special sc y) = special_parity sc y"
   "parity_tf_abs (EA_Assume b) = branch_parity b True"
   "parity_tf_abs (EA_AssumeNot b) = branch_parity b False"
+  "parity_tf_abs (EA_Body p) = body_parity p"
   "parity_tf_abs (EA_Ret eo p) = return_parity eo p"
   "parity_tf_abs (EA_Check c) = event_parity (Check_Event c)"
   by (simp_all add: parity_tf_abs_def)

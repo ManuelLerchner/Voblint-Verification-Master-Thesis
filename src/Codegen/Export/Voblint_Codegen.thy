@@ -70,7 +70,7 @@ export_code
   Statement FunctionEntry FunctionResult
   integer_of_char
   compile_program cfg_intra_list cfg_calls_list prog_stmt_post_order
-  EA_Nop EA_Assign EA_Special EA_Assume EA_AssumeNot EA_Ret EA_Check CallEdge Nondet_Int
+  EA_Nop EA_Assign EA_Special EA_Assume EA_AssumeNot EA_Body EA_Ret EA_Check CallEdge Nondet_Int
   string_of_exp
   wf_program_compile_input_exec
   Solver_Join Solver_PerOrigin Solver_Warrow Solver_WarrowPerOrigin

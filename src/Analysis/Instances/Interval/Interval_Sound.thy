@@ -62,11 +62,11 @@ interpretation ivl_dom: routed_dg_domain_exec
 lemma interval_gamma_eq: "interval_gamma gs = ivl_dom.gamma_exec"
   by (intro ext) (simp add: interval_gamma_def ivl_dom.gamma_exec_def)
 
-theorem interval_sound_exec: "sound_dg_spec (interval_spec gs empty_pred) (interval_gamma gs) gs"
+theorem interval_sound_exec: "sound_dg_spec_core (interval_spec gs empty_pred) (interval_gamma gs) gs"
   unfolding interval_gamma_eq interval_spec_def
-  by (rule ivl_dom.sound_dg_spec_st[OF ivl_is_sound_transfer_for])
+  by (rule ivl_dom.sound_dg_spec_core_st[OF ivl_is_sound_transfer_for])
 
-text \<open>Entry is stated apart from \<^locale>\<open>sound_dg_spec\<close>, so a routed instance cites
+text \<open>Entry is stated apart from \<^locale>\<open>sound_dg_spec_core\<close>, so a routed instance cites
   it separately; the alternative list is the singleton this Base-style entry answers.\<close>
 
 theorem interval_entry_cover_exec:

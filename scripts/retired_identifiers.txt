@@ -579,3 +579,23 @@ dep_aux_dg_gen_of_extra_mem
 dep_dg_gen_of_intra
 dep_dg_gen_of_comb
 dep_dg_gen_of_entry
+
+# --- Manager and composed-combine aliases (DG_Manager.thy, DG_Spec.thy) ---
+# man_with_local m d was a pass-through for the record update
+# m(|man_local := d|); the update is now written out at its call sites, and
+# mk_dg_man_local_update collapses it back into a built manager. dgs_combine
+# was an alias with one consumer: dg_spec_combine_transfer now carries the
+# monadic combine_env-then-combine_assign body directly.
+man_with_local
+man_with_local_simps
+dgs_combine
+
+# --- sound_dg_spec renamed to sound_dg_spec_core (DG_Spec_Sound.thy) ---
+# The locale never constrained a call's entry -- DG_Spec_Sound says so in its
+# own prose -- so the bare name claimed a completeness it does not have. The
+# derived names moved with it: sound_dg_spec_st, and the two lift/override
+# results, are now sound_dg_spec_core_st and sound_dg_spec_core_*.
+sound_dg_spec
+sound_dg_spec_st
+sound_dg_spec_ownership_split_lift
+sound_dg_spec_sign_dg_spec_env_join

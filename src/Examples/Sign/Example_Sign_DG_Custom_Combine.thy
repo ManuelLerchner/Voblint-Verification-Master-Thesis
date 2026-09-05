@@ -14,11 +14,11 @@ section \<open>An analysis-supplied return combine on the D/G spine\<close>
 text \<open>
   The call-return environment merge is a field of \<^typ>\<open>('x, 'k, 'v, 'dl, 'dg) dg_spec\<close>,
   not a formula built into the equation generator or the solver:
-  \<^const>\<open>dgs_combine_env\<close> is what \<^const>\<open>dgs_combine\<close> consults before handing the
-  merged environment to \<^const>\<open>dgs_combine_assign\<close>.  This theory witnesses that
-  the field is genuinely free.  It takes the ordinary executable Sign
-  specification, overrides \<^emph>\<open>only\<close> that one field, and runs the result through
-  the same \<^const>\<open>unit_routed_eqs\<close> generator and the same vendored solver a
+  \<^const>\<open>dgs_combine_env\<close> is what \<^const>\<open>dg_spec_combine_transfer\<close> consults
+  before handing the merged environment to \<^const>\<open>dgs_combine_assign\<close>.  This
+  theory witnesses that the field is genuinely free.  It takes the ordinary
+  executable Sign specification, overrides \<^emph>\<open>only\<close> that one field, and runs
+  the result through the same \<^const>\<open>unit_routed_eqs\<close> generator and the same vendored solver a
   production analysis uses.  Every other field --- the caller continuation, the
   edge transfers, \<^const>\<open>dgs_enter\<close>, and \<^const>\<open>dgs_combine_assign\<close> --- is the
   stock one, so the observed difference isolates exactly that degree of
@@ -141,7 +141,7 @@ text \<open>
   monotone in exactly that argument. So the answer and the published
   contribution both move up, and \<^const>\<open>gamma_ownership_split\<close>'s monotonicity
   carries the stock membership across. No second soundness chain appears: this
-  instance reuses \<open>sound_dg_spec_ownership_split_lift\<close> for everything else.
+  instance reuses \<open>sound_dg_spec_core_ownership_split_lift\<close> for everything else.
 \<close>
 
 abbreviation sign_base_spec ::
@@ -182,10 +182,10 @@ text \<open>
 lemma dg_spec_combine_transfer_env_join:
   "dg_spec_combine_transfer (sign_dg_spec_env_join gs) ci m de
      = ownership_split_combine_transfer gs (dg_spec_combine_transfer (sign_base_spec gs) ci)
-         (man_with_local m (man_local m \<squnion> restrict_local_for gs de)) de"
-  unfolding dg_spec_combine_transfer_def dgs_combine_def sign_dg_spec_env_join_def
+         (m\<lparr>man_local := man_local m \<squnion> restrict_local_for gs de\<rparr>) de"
+  unfolding dg_spec_combine_transfer_def sign_dg_spec_env_join_def
     combine_env_callee_join_abs_def ownership_split_lift_def
-  by (simp add: local_transfer_def local_combine_transfer_def man_with_local_def)
+  by (simp add: local_transfer_def local_combine_transfer_def)
 
 subsection \<open>The override only ever widens\<close>
 
@@ -196,7 +196,7 @@ text \<open>
   So the answer and the published contribution both move up, and
   \<^const>\<open>gamma_ownership_split\<close>'s monotonicity carries the stock membership
   across. No second soundness chain appears --- everything but the combine is
-  inherited from \<open>sound_dg_spec_ownership_split_lift\<close>.
+  inherited from \<open>sound_dg_spec_core_ownership_split_lift\<close>.
 \<close>
 
 lemma combine_env_join_ge:
@@ -225,7 +225,7 @@ lemma traverse_combine_env_join:
     ownership_split_combine_transfer_def local_state_dg_spec_for_def
     dg_spec_combine_transfer_local_dg_spec
   by (simp add: ownership_split_combine_transfer_gen_def local_combine_transfer_def
-        mk_dg_man_def man_with_local_def dg_read_global_def dg_sideg_def sp_bind_assoc)
+        mk_dg_man_def dg_read_global_def dg_sideg_def sp_bind_assoc)
 
 lemma sides_combine_env_join:
   "globs (sides_of_rhs (sp_compile_with (\<lambda>d. DG d bot)
@@ -239,7 +239,7 @@ lemma sides_combine_env_join:
     ownership_split_combine_transfer_def local_state_dg_spec_for_def
     dg_spec_combine_transfer_local_dg_spec
   by (simp add: ownership_split_combine_transfer_gen_def local_combine_transfer_def
-        mk_dg_man_def man_with_local_def dg_read_global_def dg_sideg_def sp_bind_assoc)
+        mk_dg_man_def dg_read_global_def dg_sideg_def sp_bind_assoc)
 
 text \<open>The stock observations, in the same shape, so the comparison below is
   between two equations rather than between a tree and an equation.\<close>
@@ -256,7 +256,7 @@ lemma traverse_combine_stock:
     ownership_split_combine_transfer_def local_state_dg_spec_for_def
     dg_spec_combine_transfer_local_dg_spec
   by (simp add: ownership_split_combine_transfer_gen_def local_combine_transfer_def
-        mk_dg_man_def man_with_local_def dg_read_global_def dg_sideg_def sp_bind_assoc)
+        mk_dg_man_def dg_read_global_def dg_sideg_def sp_bind_assoc)
 
 lemma sides_combine_stock:
   "globs (sides_of_rhs (sp_compile_with (\<lambda>d. DG d bot)
@@ -270,7 +270,7 @@ lemma sides_combine_stock:
     ownership_split_combine_transfer_def local_state_dg_spec_for_def
     dg_spec_combine_transfer_local_dg_spec
   by (simp add: ownership_split_combine_transfer_gen_def local_combine_transfer_def
-        mk_dg_man_def man_with_local_def dg_read_global_def dg_sideg_def sp_bind_assoc)
+        mk_dg_man_def dg_read_global_def dg_sideg_def sp_bind_assoc)
 
 lemma traverse_combine_env_join_ge:
   "locals (traverse_rhs (sp_compile_with (\<lambda>d. DG d bot)
@@ -292,16 +292,16 @@ lemma sides_combine_env_join_ge:
   unfolding sides_combine_stock sides_combine_env_join
   by (rule restrict_global_for_mono[OF combine_collect_abs_join_ge])
 
-theorem sound_dg_spec_sign_dg_spec_env_join:
-  "sound_dg_spec (sign_dg_spec_env_join gs) (gamma_ownership_split gs) gs"
+theorem sound_dg_spec_core_sign_dg_spec_env_join:
+  "sound_dg_spec_core (sign_dg_spec_env_join gs) (gamma_ownership_split gs) gs"
 proof -
   interpret sign_tf: sound_transfer_for gs
       skip_sign assign_sign special_sign branch_sign body_sign return_sign
       "enter_sign_ci_for gs" event_sign
     by (rule sign_is_sound_transfer_for)
-  interpret stock: sound_dg_spec
+  interpret stock: sound_dg_spec_core
     "ownership_split_lift gs (sign_base_spec gs)" "gamma_ownership_split gs" gs
-    by (rule sign_tf.sound_dg_spec_ownership_split_lift)
+    by (rule sign_tf.sound_dg_spec_core_ownership_split_lift)
   show ?thesis
   proof (unfold_locales, goal_cases)
     case (1 d d' g g')

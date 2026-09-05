@@ -247,7 +247,7 @@ lemma sctx_sg_st_uncovered_empty:
 
 subsection \<open>Instantiating the generic DG-native activation discharge\<close>
 
-interpretation sctx_dg_base: sound_dg_spec "sctx_spec gs empty_pred" "sctx_gamma gs" gs
+interpretation sctx_dg_base: sound_dg_spec_core "sctx_spec gs empty_pred" "sctx_gamma gs" gs
   by (rule sctx_sound_exec[OF exact])
 
 interpretation sctx_routed: unit_routed_context "sctx_spec gs empty_pred" "sctx_gamma gs" gs
@@ -611,7 +611,7 @@ lemma scs_cinit_le_cinit_sign_st:
   by (auto simp: sctx_gamma_def cinit_stores_def gamma_state_def
                  fun_of_resolved_st_q_for_def fun_of_st_cinit_sign_st_for)
 
-interpretation scs_dg_base: sound_dg_spec "sctx_spec gs empty_pred" "sctx_gamma gs" gs
+interpretation scs_dg_base: sound_dg_spec_core "sctx_spec gs empty_pred" "sctx_gamma gs" gs
   by (rule sctx_sound_exec[OF exact])
 
 interpretation scs_adapter: routed_analysis_sound
@@ -1049,7 +1049,7 @@ lemma sctx_entry_sg_st_uncovered_empty:
 
 subsection \<open>Instantiating the generic routed-context locale\<close>
 
-interpretation sctx_entry_dg_base: sound_dg_spec "sctx_spec gs empty_pred" "sctx_gamma gs" gs
+interpretation sctx_entry_dg_base: sound_dg_spec_core "sctx_spec gs empty_pred" "sctx_gamma gs" gs
   by (rule sctx_sound_exec[OF exact])
 
 

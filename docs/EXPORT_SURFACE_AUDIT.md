@@ -224,7 +224,7 @@ exposes, not only through direct calls. Check both spellings.
 
 489 lines whose own header says "The purpose of this file is not a useful
 analysis". It demonstrates that a non-`abs_state` carrier discharges
-`sound_dg_spec` unchanged. That is a real result about the framework's
+`sound_dg_spec_core` unchanged. That is a real result about the framework's
 genericity and worth keeping — but it is a *demonstration*, and it sits in
 `src/Analysis/Instances/`, where every sibling is a shipped domain. It belongs
 next to its `Example_Relational_DG_Demo.thy`, not in the instance directory.
@@ -354,7 +354,7 @@ prose. The worst cases:
 | `fun_of_dg_st` | `Exec_DG_Bridge`, `Exec_DG_Refines`, `Exec_DG_Trees`, `Exec_Sign_DG_Run`, `Run_Analysis_Sound`, **`Voblint.thy`** | the constant is `fun_of_dg_st_gen` |
 | `part_post_solution_dg_st_to_abs`, `dg_post_solution_collect_sound_ltr` | **`Voblint.thy`** (×3), `Run_Analysis_Sound` | gone |
 | `state_report_dot_auto`, `full_state_dot_auto`, `entry_state_full_state_dot_auto_code` | `State_Report_GraphViz` (9 mentions) | gone; see §2.3 |
-| `sound_dg_spec_ltr` | `DG_LTR_Sound` | renamed `sound_dg_spec_ltr_for` |
+| `sound_dg_spec_core_ltr` | `DG_LTR_Sound` | renamed `sound_dg_spec_core_ltr_for` |
 | `analyse_interval_td`, `analyse_interval_td_at`, `analyse_interval_td_terminates` | `Interval_Checks`, `Interval_Ctx_Entry_State_Sound` | only `analyse_interval_td_result`/`_report` exist |
 | `assume_sign_st`, `assume_not_sign_st`, `branch_parity_st_for` | `Sign_Backward`, `Parity_Exec` | gone |
 | `p_reg_join`, `p_reg_per_origin`, `analyse_sign_sound` | `Interval_Entry` | gone |
@@ -878,7 +878,7 @@ into the verified layer. That is the model the rest of `cli/` should follow.
 - **Twelve identical `metis` calls** — `by (metis map_prod_simp snd_conv surj_pair)` ×6 and the `fst_conv` variant ×6 across `Exec_DG_Generator.thy` and `Exec_DG_Trees.thy`. Two named `[simp]` lemmas (`fst (map_prod f g p) = f (fst p)`, `by (cases p) simp`) turn all twelve into `by simp`. This is the densest `metis` cluster in the project, in a file with 19 of the scope's 26 `metis` calls.
 - **`cs_route` and `cs_context` are the same function** (`Call_String_Context.thy:31, 39`) — both `take k (u # ctx)`, both ignoring their last argument. Six lemmas exist in mirrored pairs, five of them uncited.
 - **`proj_local_ge` / `proj_global_ge`** (`Call_String_Solver_Projection.thy:78-131`): identical `foldr`-domination inductions. One `foldr_guarded_sup_ge` lemma makes both one-liners. 54 -> ~14.
-- **Severable but load-bearing, not dead**: the `_placed` family (`ownership_split_dg_spec_placed` and the `gamma_join` soundness section, ~210 lines) is absent from the OCaml and reached only from `Sign_DG.thy` and two Examples — but `sound_dg_spec_unit_placed` is a real theorem that `Sign_DG.thy:36` interprets. Treat as a demonstration family with a known cost.
+- **Severable but load-bearing, not dead**: the `_placed` family (`ownership_split_dg_spec_placed` and the `gamma_join` soundness section, ~210 lines) is absent from the OCaml and reached only from `Sign_DG.thy` and two Examples — but `sound_dg_spec_core_unit_placed` is a real theorem that `Sign_DG.thy:36` interprets. Treat as a demonstration family with a known cost.
 
 ### 9.3 Goblint findings beyond the register
 
@@ -1132,7 +1132,7 @@ itself is correct — `check_codegen_modules.py` passes.
 `Parity_Base_DG.thy` (74), `Interval_DG.thy` (86, one Example consumer).
 
 The `<D>_Base_DG` pair (228 lines) is dead in an instructive way: each places an
-`interpretation ... : sound_dg_spec` **inside a `context fixes gs ... end` block**,
+`interpretation ... : sound_dg_spec_core` **inside a `context fixes gs ... end` block**,
 so the facts never escape the context — and neither file's own theorems cite them
 (they prove themselves from `local_state_dg_spec_st_for_lifted_dg_spec_step_commute`
 directly). The interpretations are inert *and* the twelve `*_local_state_dg_spec_*_commute`

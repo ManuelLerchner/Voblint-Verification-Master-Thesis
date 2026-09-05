@@ -92,6 +92,7 @@ fun parity_tf_st_for ::
                                    (aval_parity b (fun_of_resolved_st_q_for gs s)))"
   | "parity_tf_st_for gs (EA_Assume b) s = s"
   | "parity_tf_st_for gs (EA_AssumeNot b) s = s"
+  | "parity_tf_st_for gs (EA_Body p) s = s"
   | "parity_tf_st_for gs (EA_Ret None p) s = s"
   | "parity_tf_st_for gs (EA_Ret (Some a) p) s =
        update_resolved_st_q s (location_of gs ret_var)
@@ -116,6 +117,9 @@ next
 next
   case (EA_AssumeNot b)
   then show ?thesis by (simp add: branch_parity_def)
+next
+  case (EA_Body p)
+  then show ?thesis by (simp add: body_parity_def)
 next
   case (EA_Ret ea p)
   then show ?thesis

@@ -97,6 +97,7 @@ fun int_tf_st_never_for ::
        branch_int_dom_never_st_for gs b True s"
   | "int_tf_st_never_for gs (EA_AssumeNot b) s =
        branch_int_dom_never_st_for gs b False s"
+  | "int_tf_st_never_for gs (EA_Body p) s = s"
   | "int_tf_st_never_for gs (EA_Ret None p) s = s"
   | "int_tf_st_never_for gs (EA_Ret (Some a) p) s =
        update_resolved_st_q s (location_of gs ret_var)
@@ -125,6 +126,9 @@ next
   case (EA_AssumeNot b)
   then show ?thesis
     using assms by (simp add: int_dom_backward_never.branch_st_commute)
+next
+  case (EA_Body p)
+  then show ?thesis by (simp add: body_int_dom_def)
 next
   case (EA_Ret ea p)
   then show ?thesis
@@ -200,6 +204,7 @@ fun int_tf_st_once_for ::
        branch_int_dom_once_st_for gs b True s"
   | "int_tf_st_once_for gs (EA_AssumeNot b) s =
        branch_int_dom_once_st_for gs b False s"
+  | "int_tf_st_once_for gs (EA_Body p) s = s"
   | "int_tf_st_once_for gs (EA_Ret None p) s = s"
   | "int_tf_st_once_for gs (EA_Ret (Some a) p) s =
        update_resolved_st_q s (location_of gs ret_var)
@@ -228,6 +233,9 @@ next
   case (EA_AssumeNot b)
   then show ?thesis
     using assms by (simp add: int_dom_backward_once.branch_st_commute)
+next
+  case (EA_Body p)
+  then show ?thesis by (simp add: body_int_dom_def)
 next
   case (EA_Ret ea p)
   then show ?thesis
@@ -303,6 +311,7 @@ fun int_tf_st_fixpoint_for ::
        branch_int_dom_fixpoint_st_for gs b True s"
   | "int_tf_st_fixpoint_for gs (EA_AssumeNot b) s =
        branch_int_dom_fixpoint_st_for gs b False s"
+  | "int_tf_st_fixpoint_for gs (EA_Body p) s = s"
   | "int_tf_st_fixpoint_for gs (EA_Ret None p) s = s"
   | "int_tf_st_fixpoint_for gs (EA_Ret (Some a) p) s =
        update_resolved_st_q s (location_of gs ret_var)
@@ -331,6 +340,9 @@ next
   case (EA_AssumeNot b)
   then show ?thesis
     using assms by (simp add: int_dom_backward_fixpoint.branch_st_commute)
+next
+  case (EA_Body p)
+  then show ?thesis by (simp add: body_int_dom_def)
 next
   case (EA_Ret ea p)
   then show ?thesis

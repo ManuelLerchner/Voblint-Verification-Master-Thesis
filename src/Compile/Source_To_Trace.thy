@@ -208,7 +208,7 @@ text \<open>The program entry \<^term>\<open>FunctionEntry prog_main_name\<close
 lemma compile_prog_main_base:
   assumes wf: "wf_compile_input gs \<Pi> ps"
   obtains en where
-    "(FunctionEntry prog_main_name, EA_Nop, en) \<in> intra (compile_prog \<Pi> ps)"
+    "(FunctionEntry prog_main_name, EA_Body prog_main_name, en) \<in> intra (compile_prog \<Pi> ps)"
     "csim \<Pi> (compile_prog \<Pi> ps) ((main_body \<Pi>), s, []) (en, s, [])"
 proof -
   let ?g = "compile_prog \<Pi> ps"
@@ -219,7 +219,7 @@ proof -
     cacc: "compiled_at \<Pi> ?g prog_main_name (body (\<lparr>formals = [], body = (main_body \<Pi>)\<rparr>)) k m"
       and ctrl: "control_at \<Pi> prog_main_name (body (\<lparr>formals = [], body = (main_body \<Pi>)\<rparr>)) k m
                    (body (\<lparr>formals = [], body = (main_body \<Pi>)\<rparr>)) en"
-      and entry: "(FunctionEntry prog_main_name, EA_Nop, en) \<in> intra ?g"
+      and entry: "(FunctionEntry prog_main_name, EA_Body prog_main_name, en) \<in> intra ?g"
     by (rule procs_embedded_activation[OF pc main_decl])
   have bodyeq: "body (\<lparr>formals = [], body = (main_body \<Pi>)\<rparr>) = (main_body \<Pi>)" by simp
   have base: "csim \<Pi> ?g ((main_body \<Pi>), s, []) (en, s, [])"
@@ -256,13 +256,13 @@ proof -
   let ?g = "compile_prog \<Pi> ps"
   have pc: "procs_embedded \<Pi> ?g" by (rule procs_embedded_compile_prog[OF wf])
   have swf: "return_safe (main_body \<Pi>)" by (rule wf_compile_input_return_safe[OF wf])
-  obtain en where entry: "(FunctionEntry prog_main_name, EA_Nop, en) \<in> intra ?g"
+  obtain en where entry: "(FunctionEntry prog_main_name, EA_Body prog_main_name, en) \<in> intra ?g"
     and base: "csim \<Pi> ?g ((main_body \<Pi>), s0, []) (en, s0, [])"
     by (rule compile_prog_main_base[OF wf])
   have loc0: "located_ltr gs (compile_prog \<Pi> ps) S (FunctionEntry prog_main_name, s0, [])"
     using located_ltr_entry[where g = "compile_prog \<Pi> ps", OF s0] by simp
   have step0: "cstep gs ?g (FunctionEntry prog_main_name, s0, []) (en, s0, [])"
-    by (rule cstep_nop[OF entry])
+    by (rule cstep_body[OF entry])
   have loc_en: "located_ltr gs ?g S (en, s0, [])"
     by (rule cstep_preserves_located_ltr[OF wf loc0 step0])
   from csim_star[OF base pc swf run] obtain cf'

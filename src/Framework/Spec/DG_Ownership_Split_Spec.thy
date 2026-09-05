@@ -63,7 +63,7 @@ where
   "ownership_split_transfer_gen cmb rg rl T m =
      do {
        g \<leftarrow> man_global m ();
-       res \<leftarrow> T (man_with_local m (cmb (man_local m) g));
+       res \<leftarrow> T (m\<lparr>man_local := cmb (man_local m) g\<rparr>);
        _ \<leftarrow> man_sideg m () (rg res);
        sp_return (rl res)
      }"
@@ -85,7 +85,7 @@ where
   "ownership_split_combine_transfer_gen cmb rg rl T m de =
      do {
        g \<leftarrow> man_global m ();
-       res \<leftarrow> T (man_with_local m (cmb (man_local m) g)) (cmb de g);
+       res \<leftarrow> T (m\<lparr>man_local := cmb (man_local m) g\<rparr>) (cmb de g);
        _ \<leftarrow> man_sideg m () (rg res);
        sp_return (rl res)
      }"
@@ -140,6 +140,11 @@ lemma ownership_split_enter_sides_entry_le:
   shows "rg entry \<le> ownership_split_enter_sides rg pairs"
   using assms ownership_split_enter_sides_le_iff by blast
 
+lemma ownership_split_enter_sides_cont_le:
+  assumes "(cont, entry) \<in> set pairs"
+  shows "rg cont \<le> ownership_split_enter_sides rg pairs"
+  using assms ownership_split_enter_sides_le_iff by blast
+
 definition ownership_split_enter_transfer_gen ::
   "('d \<Rightarrow> 'd \<Rightarrow> 'd) \<Rightarrow> ('d \<Rightarrow> 'd) \<Rightarrow> ('d \<Rightarrow> 'd)
    \<Rightarrow> ('x,'k,unit,'d::bounded_semilattice_sup_bot,'d) man_enter_transfer
@@ -148,7 +153,7 @@ where
   "ownership_split_enter_transfer_gen cmb rg rl T m =
      do {
        g \<leftarrow> man_global m ();
-       pairs \<leftarrow> T (man_with_local m (cmb (man_local m) g));
+       pairs \<leftarrow> T (m\<lparr>man_local := cmb (man_local m) g\<rparr>);
        _ \<leftarrow> man_sideg m () (ownership_split_enter_sides rg pairs);
        sp_return (map (\<lambda>(cont, entry). (rl cont, rl entry)) pairs)
      }"
@@ -169,7 +174,7 @@ lemma traverse_ownership_split_transfer_gen [simp]:
      = rl (f (cmb (locals (\<tau> src)) (globs (\<tau> (Inr gk)))))"
   by (cases src)
      (simp_all add: transfer_tree_def dg_edge_tree_man_def ownership_split_transfer_gen_def
-        local_transfer_def man_with_local_def mk_dg_man_def dg_read_at_def dg_read_global_def
+        local_transfer_def mk_dg_man_def dg_read_at_def dg_read_global_def
         dg_sideg_def sp_bind_assoc)
 
 lemma sides_ownership_split_transfer_gen [simp]:
@@ -179,7 +184,7 @@ lemma sides_ownership_split_transfer_gen [simp]:
      = rg (f (cmb (locals (\<tau> src)) (globs (\<tau> (Inr gk)))))"
   by (cases src)
      (simp_all add: transfer_tree_def dg_edge_tree_man_def ownership_split_transfer_gen_def
-        local_transfer_def man_with_local_def mk_dg_man_def dg_read_at_def dg_read_global_def
+        local_transfer_def mk_dg_man_def dg_read_at_def dg_read_global_def
         dg_sideg_def sp_bind_assoc)
 
 lemma traverse_ownership_split_combine_transfer_gen [simp]:
@@ -191,7 +196,7 @@ lemma traverse_ownership_split_combine_transfer_gen [simp]:
              (cmb (locals (\<tau> src_ex)) (globs (\<tau> (Inr gk)))))"
   by (cases src_cc; cases src_ex)
      (simp_all add: combine_transfer_tree_def dg_combine_tree_man_def
-        ownership_split_combine_transfer_gen_def local_combine_transfer_def man_with_local_def
+        ownership_split_combine_transfer_gen_def local_combine_transfer_def
         mk_dg_man_def dg_read_at_def dg_read_global_def dg_sideg_def sp_bind_assoc)
 
 lemma sides_ownership_split_combine_transfer_gen [simp]:
@@ -203,7 +208,7 @@ lemma sides_ownership_split_combine_transfer_gen [simp]:
              (cmb (locals (\<tau> src_ex)) (globs (\<tau> (Inr gk)))))"
   by (cases src_cc; cases src_ex)
      (simp_all add: combine_transfer_tree_def dg_combine_tree_man_def
-        ownership_split_combine_transfer_gen_def local_combine_transfer_def man_with_local_def
+        ownership_split_combine_transfer_gen_def local_combine_transfer_def
         mk_dg_man_def dg_read_at_def dg_read_global_def dg_sideg_def sp_bind_assoc)
 
 subsection \<open>The ownership rule at the pointwise carrier\<close>
@@ -231,8 +236,8 @@ text \<open>
 
 lemma enter_deps_ownership_split_enter_transfer_gen [intro]:
   fixes sigma :: "'x + 'k \<Rightarrow> ('d::bounded_semilattice_sup_bot,'d) dg_state"
-  assumes T: "enter_deps T (man_with_local (mk_dg_man d key)
-                              (cmb d (globs (sigma (Inr (key ())))))) sigma pairs deps"
+  assumes T: "enter_deps T (mk_dg_man (cmb d (globs (sigma (Inr (key ()))))) key)
+                sigma pairs deps"
   shows "enter_deps (ownership_split_enter_transfer_gen cmb rg rl T) (mk_dg_man d key) sigma
            (map (\<lambda>(cont, entry). (rl cont, rl entry)) pairs)
            ({Inr (key ())} \<union> deps)"
@@ -271,8 +276,8 @@ text \<open>
 
 lemma enter_runs_ownership_split_enter_transfer_gen [intro]:
   fixes sigma :: "'x + 'k \<Rightarrow> ('d::bounded_semilattice_sup_bot,'d) dg_state"
-  assumes T: "enter_runs T (man_with_local (mk_dg_man d key)
-                              (cmb d (globs (sigma (Inr (key ())))))) sigma pairs pub"
+  assumes T: "enter_runs T (mk_dg_man (cmb d (globs (sigma (Inr (key ()))))) key)
+                sigma pairs pub"
   shows "enter_runs (ownership_split_enter_transfer_gen cmb rg rl T) (mk_dg_man d key) sigma
            (map (\<lambda>(cont, entry). (rl cont, rl entry)) pairs)
            (pub \<squnion> (bot(Inr (key ()) := DG bot (ownership_split_enter_sides rg pairs))))"
@@ -343,8 +348,8 @@ lemma dg_spec_step_ownership_split_lift:
 lemma dg_spec_combine_transfer_ownership_split_lift:
   "dg_spec_combine_transfer (ownership_split_lift gs S) ci
      = ownership_split_combine_transfer gs (dg_spec_combine_transfer S ci)"
-  unfolding dg_spec_combine_transfer_def dgs_combine_def ownership_split_lift_def
-  by (simp add: local_transfer_def local_combine_transfer_def man_with_local_def)
+  unfolding dg_spec_combine_transfer_def ownership_split_lift_def
+  by (simp add: local_transfer_def local_combine_transfer_def)
 
 
 section \<open>What a split point means\<close>
@@ -444,8 +449,8 @@ text \<open>
   side condition arises.
 \<close>
 
-theorem (in sound_transfer_for) sound_dg_spec_ownership_split_lift:
-  "sound_dg_spec (ownership_split_lift gs (local_state_dg_spec_for gs sk asn sp br bd rt en ev))
+theorem (in sound_transfer_for) sound_dg_spec_core_ownership_split_lift:
+  "sound_dg_spec_core (ownership_split_lift gs (local_state_dg_spec_for gs sk asn sp br bd rt en ev))
      (gamma_ownership_split gs) gs"
 proof (unfold_locales, goal_cases)
   case (1 d d' g g')
@@ -463,7 +468,7 @@ next
       local_state_dg_spec_for_def dg_spec_combine_transfer_local_dg_spec
       ownership_split_combine_transfer_def gamma_ownership_split_def
     by (simp add: ownership_split_combine_transfer_gen_def local_combine_transfer_def
-        man_with_local_def mk_dg_man_def dg_read_global_def dg_sideg_def sp_bind_assoc
+        mk_dg_man_def dg_read_global_def dg_sideg_def sp_bind_assoc
         combine_collect_sound)
 qed
 

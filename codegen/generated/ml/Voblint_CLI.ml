@@ -127,7 +127,7 @@ module Core : sig
   type special_call = Nondet_Int | Min of exp * exp | Max of exp * exp
   type edge_action = EA_Nop | EA_Assign of string * exp |
     EA_Special of special_call * string | EA_Assume of exp | EA_AssumeNot of exp
-    | EA_Ret of exp option * string | EA_Check of exp
+    | EA_Body of string | EA_Ret of exp option * string | EA_Check of exp
   type eint
   type ivl
   val equal_ivla : ivl -> ivl -> bool
@@ -2213,43 +2213,57 @@ let rec equal_special_call
 
 type edge_action = EA_Nop | EA_Assign of string * exp |
   EA_Special of special_call * string | EA_Assume of exp | EA_AssumeNot of exp |
-  EA_Ret of exp option * string | EA_Check of exp;;
+  EA_Body of string | EA_Ret of exp option * string | EA_Check of exp;;
 
 let rec equal_edge_actiona
-  x0 x1 = match x0, x1 with EA_Ret (x61, x62), EA_Check x7 -> false
-    | EA_Check x7, EA_Ret (x61, x62) -> false
-    | EA_AssumeNot x5, EA_Check x7 -> false
-    | EA_Check x7, EA_AssumeNot x5 -> false
-    | EA_AssumeNot x5, EA_Ret (x61, x62) -> false
-    | EA_Ret (x61, x62), EA_AssumeNot x5 -> false
-    | EA_Assume x4, EA_Check x7 -> false
-    | EA_Check x7, EA_Assume x4 -> false
-    | EA_Assume x4, EA_Ret (x61, x62) -> false
-    | EA_Ret (x61, x62), EA_Assume x4 -> false
+  x0 x1 = match x0, x1 with EA_Ret (x71, x72), EA_Check x8 -> false
+    | EA_Check x8, EA_Ret (x71, x72) -> false
+    | EA_Body x6, EA_Check x8 -> false
+    | EA_Check x8, EA_Body x6 -> false
+    | EA_Body x6, EA_Ret (x71, x72) -> false
+    | EA_Ret (x71, x72), EA_Body x6 -> false
+    | EA_AssumeNot x5, EA_Check x8 -> false
+    | EA_Check x8, EA_AssumeNot x5 -> false
+    | EA_AssumeNot x5, EA_Ret (x71, x72) -> false
+    | EA_Ret (x71, x72), EA_AssumeNot x5 -> false
+    | EA_AssumeNot x5, EA_Body x6 -> false
+    | EA_Body x6, EA_AssumeNot x5 -> false
+    | EA_Assume x4, EA_Check x8 -> false
+    | EA_Check x8, EA_Assume x4 -> false
+    | EA_Assume x4, EA_Ret (x71, x72) -> false
+    | EA_Ret (x71, x72), EA_Assume x4 -> false
+    | EA_Assume x4, EA_Body x6 -> false
+    | EA_Body x6, EA_Assume x4 -> false
     | EA_Assume x4, EA_AssumeNot x5 -> false
     | EA_AssumeNot x5, EA_Assume x4 -> false
-    | EA_Special (x31, x32), EA_Check x7 -> false
-    | EA_Check x7, EA_Special (x31, x32) -> false
-    | EA_Special (x31, x32), EA_Ret (x61, x62) -> false
-    | EA_Ret (x61, x62), EA_Special (x31, x32) -> false
+    | EA_Special (x31, x32), EA_Check x8 -> false
+    | EA_Check x8, EA_Special (x31, x32) -> false
+    | EA_Special (x31, x32), EA_Ret (x71, x72) -> false
+    | EA_Ret (x71, x72), EA_Special (x31, x32) -> false
+    | EA_Special (x31, x32), EA_Body x6 -> false
+    | EA_Body x6, EA_Special (x31, x32) -> false
     | EA_Special (x31, x32), EA_AssumeNot x5 -> false
     | EA_AssumeNot x5, EA_Special (x31, x32) -> false
     | EA_Special (x31, x32), EA_Assume x4 -> false
     | EA_Assume x4, EA_Special (x31, x32) -> false
-    | EA_Assign (x21, x22), EA_Check x7 -> false
-    | EA_Check x7, EA_Assign (x21, x22) -> false
-    | EA_Assign (x21, x22), EA_Ret (x61, x62) -> false
-    | EA_Ret (x61, x62), EA_Assign (x21, x22) -> false
+    | EA_Assign (x21, x22), EA_Check x8 -> false
+    | EA_Check x8, EA_Assign (x21, x22) -> false
+    | EA_Assign (x21, x22), EA_Ret (x71, x72) -> false
+    | EA_Ret (x71, x72), EA_Assign (x21, x22) -> false
+    | EA_Assign (x21, x22), EA_Body x6 -> false
+    | EA_Body x6, EA_Assign (x21, x22) -> false
     | EA_Assign (x21, x22), EA_AssumeNot x5 -> false
     | EA_AssumeNot x5, EA_Assign (x21, x22) -> false
     | EA_Assign (x21, x22), EA_Assume x4 -> false
     | EA_Assume x4, EA_Assign (x21, x22) -> false
     | EA_Assign (x21, x22), EA_Special (x31, x32) -> false
     | EA_Special (x31, x32), EA_Assign (x21, x22) -> false
-    | EA_Nop, EA_Check x7 -> false
-    | EA_Check x7, EA_Nop -> false
-    | EA_Nop, EA_Ret (x61, x62) -> false
-    | EA_Ret (x61, x62), EA_Nop -> false
+    | EA_Nop, EA_Check x8 -> false
+    | EA_Check x8, EA_Nop -> false
+    | EA_Nop, EA_Ret (x71, x72) -> false
+    | EA_Ret (x71, x72), EA_Nop -> false
+    | EA_Nop, EA_Body x6 -> false
+    | EA_Body x6, EA_Nop -> false
     | EA_Nop, EA_AssumeNot x5 -> false
     | EA_AssumeNot x5, EA_Nop -> false
     | EA_Nop, EA_Assume x4 -> false
@@ -2258,9 +2272,10 @@ let rec equal_edge_actiona
     | EA_Special (x31, x32), EA_Nop -> false
     | EA_Nop, EA_Assign (x21, x22) -> false
     | EA_Assign (x21, x22), EA_Nop -> false
-    | EA_Check x7, EA_Check y7 -> equal_expa x7 y7
-    | EA_Ret (x61, x62), EA_Ret (y61, y62) ->
-        equal_option equal_exp x61 y61 && ((x62 : string) = y62)
+    | EA_Check x8, EA_Check y8 -> equal_expa x8 y8
+    | EA_Ret (x71, x72), EA_Ret (y71, y72) ->
+        equal_option equal_exp x71 y71 && ((x72 : string) = y72)
+    | EA_Body x6, EA_Body y6 -> ((x6 : string) = y6)
     | EA_AssumeNot x5, EA_AssumeNot y5 -> equal_expa x5 y5
     | EA_Assume x4, EA_Assume y4 -> equal_expa x4 y4
     | EA_Special (x31, x32), EA_Special (y31, y32) ->
@@ -2292,8 +2307,9 @@ let rec comparator_edge_action
     | EA_Nop, EA_Special (yb, yc) -> Lt
     | EA_Nop, EA_Assume yd -> Lt
     | EA_Nop, EA_AssumeNot ye -> Lt
-    | EA_Nop, EA_Ret (yf, yg) -> Lt
-    | EA_Nop, EA_Check yh -> Lt
+    | EA_Nop, EA_Body yf -> Lt
+    | EA_Nop, EA_Ret (yg, yh) -> Lt
+    | EA_Nop, EA_Check yi -> Lt
     | EA_Assign (x, xa), EA_Nop -> Gt
     | EA_Assign (x, xa), EA_Assign (y, ya) ->
         (match comparator_of (equal_literal, linorder_literal) x y
@@ -2301,8 +2317,9 @@ let rec comparator_edge_action
     | EA_Assign (x, xa), EA_Special (yb, yc) -> Lt
     | EA_Assign (x, xa), EA_Assume yd -> Lt
     | EA_Assign (x, xa), EA_AssumeNot ye -> Lt
-    | EA_Assign (x, xa), EA_Ret (yf, yg) -> Lt
-    | EA_Assign (x, xa), EA_Check yh -> Lt
+    | EA_Assign (x, xa), EA_Body yf -> Lt
+    | EA_Assign (x, xa), EA_Ret (yg, yh) -> Lt
+    | EA_Assign (x, xa), EA_Check yi -> Lt
     | EA_Special (x, xa), EA_Nop -> Gt
     | EA_Special (x, xa), EA_Assign (y, ya) -> Gt
     | EA_Special (x, xa), EA_Special (yb, yc) ->
@@ -2311,39 +2328,53 @@ let rec comparator_edge_action
           | Lt -> Lt | Gt -> Gt)
     | EA_Special (x, xa), EA_Assume yd -> Lt
     | EA_Special (x, xa), EA_AssumeNot ye -> Lt
-    | EA_Special (x, xa), EA_Ret (yf, yg) -> Lt
-    | EA_Special (x, xa), EA_Check yh -> Lt
+    | EA_Special (x, xa), EA_Body yf -> Lt
+    | EA_Special (x, xa), EA_Ret (yg, yh) -> Lt
+    | EA_Special (x, xa), EA_Check yi -> Lt
     | EA_Assume x, EA_Nop -> Gt
     | EA_Assume x, EA_Assign (y, ya) -> Gt
     | EA_Assume x, EA_Special (yb, yc) -> Gt
     | EA_Assume x, EA_Assume yd -> comparator_exp x yd
     | EA_Assume x, EA_AssumeNot ye -> Lt
-    | EA_Assume x, EA_Ret (yf, yg) -> Lt
-    | EA_Assume x, EA_Check yh -> Lt
+    | EA_Assume x, EA_Body yf -> Lt
+    | EA_Assume x, EA_Ret (yg, yh) -> Lt
+    | EA_Assume x, EA_Check yi -> Lt
     | EA_AssumeNot x, EA_Nop -> Gt
     | EA_AssumeNot x, EA_Assign (y, ya) -> Gt
     | EA_AssumeNot x, EA_Special (yb, yc) -> Gt
     | EA_AssumeNot x, EA_Assume yd -> Gt
     | EA_AssumeNot x, EA_AssumeNot ye -> comparator_exp x ye
-    | EA_AssumeNot x, EA_Ret (yf, yg) -> Lt
-    | EA_AssumeNot x, EA_Check yh -> Lt
+    | EA_AssumeNot x, EA_Body yf -> Lt
+    | EA_AssumeNot x, EA_Ret (yg, yh) -> Lt
+    | EA_AssumeNot x, EA_Check yi -> Lt
+    | EA_Body x, EA_Nop -> Gt
+    | EA_Body x, EA_Assign (y, ya) -> Gt
+    | EA_Body x, EA_Special (yb, yc) -> Gt
+    | EA_Body x, EA_Assume yd -> Gt
+    | EA_Body x, EA_AssumeNot ye -> Gt
+    | EA_Body x, EA_Body yf ->
+        comparator_of (equal_literal, linorder_literal) x yf
+    | EA_Body x, EA_Ret (yg, yh) -> Lt
+    | EA_Body x, EA_Check yi -> Lt
     | EA_Ret (x, xa), EA_Nop -> Gt
     | EA_Ret (x, xa), EA_Assign (y, ya) -> Gt
     | EA_Ret (x, xa), EA_Special (yb, yc) -> Gt
     | EA_Ret (x, xa), EA_Assume yd -> Gt
     | EA_Ret (x, xa), EA_AssumeNot ye -> Gt
-    | EA_Ret (x, xa), EA_Ret (yf, yg) ->
-        (match comparator_option comparator_exp x yf
-          with Eqa -> comparator_of (equal_literal, linorder_literal) xa yg
+    | EA_Ret (x, xa), EA_Body yf -> Gt
+    | EA_Ret (x, xa), EA_Ret (yg, yh) ->
+        (match comparator_option comparator_exp x yg
+          with Eqa -> comparator_of (equal_literal, linorder_literal) xa yh
           | Lt -> Lt | Gt -> Gt)
-    | EA_Ret (x, xa), EA_Check yh -> Lt
+    | EA_Ret (x, xa), EA_Check yi -> Lt
     | EA_Check x, EA_Nop -> Gt
     | EA_Check x, EA_Assign (y, ya) -> Gt
     | EA_Check x, EA_Special (yb, yc) -> Gt
     | EA_Check x, EA_Assume yd -> Gt
     | EA_Check x, EA_AssumeNot ye -> Gt
-    | EA_Check x, EA_Ret (yf, yg) -> Gt
-    | EA_Check x, EA_Check yh -> comparator_exp x yh;;
+    | EA_Check x, EA_Body yf -> Gt
+    | EA_Check x, EA_Ret (yg, yh) -> Gt
+    | EA_Check x, EA_Check yi -> comparator_exp x yi;;
 
 let rec less_eq_edge_action x = le_of_comp comparator_edge_action x;;
 
@@ -4694,31 +4725,6 @@ let rec sp_publish g d k = Side (g, d, k ());;
 
 let rec dg_sideg _D gk gd = sp_publish gk (DG (bot _D, gd));;
 
-let rec dgs_combine_assign
-  (Dg_spec_ext
-    (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
-      dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign, more))
-    = dgs_combine_assign;;
-
-let rec dgs_combine_env
-  (Dg_spec_ext
-    (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
-      dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign, more))
-    = dgs_combine_env;;
-
-let rec sp_bind m f k = m (fun v -> f v k);;
-
-let rec man_local_update
-  man_locala (Man_ext (man_local, man_global, man_sideg, more)) =
-    Man_ext (man_locala man_local, man_global, man_sideg, more);;
-
-let rec man_with_local m d = man_local_update (fun _ -> d) m;;
-
-let rec dgs_combine
-  s ci m exit =
-    sp_bind (dgs_combine_env s ci m exit)
-      (fun d_env -> dgs_combine_assign s ci (man_with_local m d_env) exit);;
-
 let rec euclid_ext_aux (_A1, _A2)
   sa s ta t ra r =
     (if eq _A2 r
@@ -5056,6 +5062,8 @@ let rec sp_read_global g k = QueryG (g, k);;
 
 let rec sp_return a k = k a;;
 
+let rec sp_bind m f k = m (fun v -> f v k);;
+
 let rec dg_read_global gk = sp_bind (sp_read_global gk) (comp sp_return globs);;
 
 let rec mk_dg_man _A
@@ -5100,11 +5108,18 @@ let rec dgs_skip
       dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign, more))
     = dgs_skip;;
 
+let rec dgs_body
+  (Dg_spec_ext
+    (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
+      dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign, more))
+    = dgs_body;;
+
 let rec dg_spec_step s x1 = match s, x1 with s, EA_Nop -> dgs_skip s
                        | s, EA_Assign (x, e) -> dgs_assign s x e
                        | s, EA_Special (sc, x) -> dgs_special s sc x
                        | s, EA_Assume b -> dgs_branch s b true
                        | s, EA_AssumeNot b -> dgs_branch s b false
+                       | s, EA_Body p -> dgs_body s p
                        | s, EA_Ret (e, p) -> dgs_return s e p
                        | s, EA_Check cnd -> dgs_event s (Check_Event cnd);;
 
@@ -5261,15 +5276,16 @@ let rec static_targets
 
 let rec static_resolve g v cc ca d = static_targets g v cc ca;;
 
-let rec ea_check_cond (EA_Check x7) = x7;;
+let rec ea_check_cond (EA_Check x8) = x8;;
 
 let rec is_EA_Check = function EA_Nop -> false
                       | EA_Assign (x21, x22) -> false
                       | EA_Special (x31, x32) -> false
                       | EA_Assume x4 -> false
                       | EA_AssumeNot x5 -> false
-                      | EA_Ret (x61, x62) -> false
-                      | EA_Check x7 -> true;;
+                      | EA_Body x6 -> false
+                      | EA_Ret (x71, x72) -> false
+                      | EA_Check x8 -> true;;
 
 let rec falls_through
   = function SKIP -> true
@@ -5491,7 +5507,7 @@ let rec compile_proc
         (insert
            (equal_prod equal_cfg_node
              (equal_prod equal_edge_action equal_cfg_node))
-           (FunctionEntry p, (EA_Nop, ben))
+           (FunctionEntry p, (EA_Body p, ben))
            (if falls_through (body decl)
              then insert
                     (equal_prod equal_cfg_node
@@ -5568,7 +5584,27 @@ let rec side_rhs_fold_dg _A _D
                 acc (locals res))
               ts);;
 
-let rec dg_spec_combine_transfer s ci m exit = dgs_combine s ci m exit;;
+let rec dgs_combine_assign
+  (Dg_spec_ext
+    (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
+      dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign, more))
+    = dgs_combine_assign;;
+
+let rec dgs_combine_env
+  (Dg_spec_ext
+    (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
+      dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign, more))
+    = dgs_combine_env;;
+
+let rec man_local_update
+  man_locala (Man_ext (man_local, man_global, man_sideg, more)) =
+    Man_ext (man_locala man_local, man_global, man_sideg, more);;
+
+let rec dg_spec_combine_transfer
+  s ci m exit =
+    sp_bind (dgs_combine_env s ci m exit)
+      (fun d_env ->
+        dgs_combine_assign s ci (man_local_update (fun _ -> d_env) m) exit);;
 
 let rec routed_cmb_g_alt _C _D
   s gk0 seed_key route is_bot ctx ca cc p alt =
@@ -6530,6 +6566,7 @@ let rec int_tf_st_fixpoint_for
                     (bot_int_dom_ext int_dom_record_lattice_unit) gs s)))
     | gs, EA_Assume b, s -> branch_int_dom_fixpoint_st_for gs b true s
     | gs, EA_AssumeNot b, s -> branch_int_dom_fixpoint_st_for gs b false s
+    | gs, EA_Body p, s -> s
     | gs, EA_Ret (None, p), s -> s
     | gs, EA_Ret (Some a, p), s ->
         update_resolved_st_q (bot_int_dom_ext int_dom_record_lattice_unit) s
@@ -6574,6 +6611,7 @@ let rec int_tf_st_never_for
                     (bot_int_dom_ext int_dom_record_lattice_unit) gs s)))
     | gs, EA_Assume b, s -> branch_int_dom_never_st_for gs b true s
     | gs, EA_AssumeNot b, s -> branch_int_dom_never_st_for gs b false s
+    | gs, EA_Body p, s -> s
     | gs, EA_Ret (None, p), s -> s
     | gs, EA_Ret (Some a, p), s ->
         update_resolved_st_q (bot_int_dom_ext int_dom_record_lattice_unit) s
@@ -6618,6 +6656,7 @@ let rec int_tf_st_once_for
                     (bot_int_dom_ext int_dom_record_lattice_unit) gs s)))
     | gs, EA_Assume b, s -> branch_int_dom_once_st_for gs b true s
     | gs, EA_AssumeNot b, s -> branch_int_dom_once_st_for gs b false s
+    | gs, EA_Body p, s -> s
     | gs, EA_Ret (None, p), s -> s
     | gs, EA_Ret (Some a, p), s ->
         update_resolved_st_q (bot_int_dom_ext int_dom_record_lattice_unit) s
@@ -6680,9 +6719,10 @@ let rec int_dom_spec
                   (transfer_lift empty_pred
                     (int_tf_st_for mode gs (EA_Ret (e, p)))))
               (dgs_body_update
-                (fun _ _ ->
+                (fun _ p ->
                   local_transfer
-                    (transfer_lift empty_pred (int_tf_st_for mode gs EA_Nop)))
+                    (transfer_lift empty_pred
+                      (int_tf_st_for mode gs (EA_Body p))))
                 (dgs_branch_update
                   (fun _ b pol ->
                     local_transfer
@@ -7016,6 +7056,7 @@ let rec sign_tf_st_for
                 (aval_sign b (fun_of_resolved_st_q_for bot_sign gs s)))
     | gs, EA_Assume b, s -> branch_sign_st_for gs b true s
     | gs, EA_AssumeNot b, s -> branch_sign_st_for gs b false s
+    | gs, EA_Body p, s -> s
     | gs, EA_Ret (None, p), s -> s
     | gs, EA_Ret (Some a, p), s ->
         update_resolved_st_q bot_sign s (location_of gs ret_var)
@@ -7057,9 +7098,9 @@ let rec sctx_spec
                   (transfer_lift empty_pred
                     (sign_tf_st_for gs (EA_Ret (e, p)))))
               (dgs_body_update
-                (fun _ _ ->
+                (fun _ p ->
                   local_transfer
-                    (transfer_lift empty_pred (sign_tf_st_for gs EA_Nop)))
+                    (transfer_lift empty_pred (sign_tf_st_for gs (EA_Body p))))
                 (dgs_branch_update
                   (fun _ b pol ->
                     local_transfer
@@ -7246,6 +7287,7 @@ let rec ivl_tf_st_for
                 (aval_ivl b (fun_of_resolved_st_q_for bot_ivl gs s)))
     | gs, EA_Assume b, s -> branch_ivl_st_for gs b true s
     | gs, EA_AssumeNot b, s -> branch_ivl_st_for gs b false s
+    | gs, EA_Body p, s -> s
     | gs, EA_Ret (None, p), s -> s
     | gs, EA_Ret (Some a, p), s ->
         update_resolved_st_q bot_ivl s (location_of gs ret_var)
@@ -7348,6 +7390,7 @@ let rec parity_tf_st_for
                 (aval_parity b (fun_of_resolved_st_q_for bot_parity gs s)))
     | gs, EA_Assume b, s -> s
     | gs, EA_AssumeNot b, s -> s
+    | gs, EA_Body p, s -> s
     | gs, EA_Ret (None, p), s -> s
     | gs, EA_Ret (Some a, p), s ->
         update_resolved_st_q bot_parity s (location_of gs ret_var)
@@ -7390,9 +7433,10 @@ let rec pctx_spec
                   (transfer_lift empty_pred
                     (parity_tf_st_for gs (EA_Ret (e, p)))))
               (dgs_body_update
-                (fun _ _ ->
+                (fun _ p ->
                   local_transfer
-                    (transfer_lift empty_pred (parity_tf_st_for gs EA_Nop)))
+                    (transfer_lift empty_pred
+                      (parity_tf_st_for gs (EA_Body p))))
                 (dgs_branch_update
                   (fun _ b pol ->
                     local_transfer
@@ -8100,9 +8144,9 @@ let rec interval_spec
                 local_transfer
                   (transfer_lift empty_pred (ivl_tf_st_for gs (EA_Ret (e, p)))))
               (dgs_body_update
-                (fun _ _ ->
+                (fun _ p ->
                   local_transfer
-                    (transfer_lift empty_pred (ivl_tf_st_for gs EA_Nop)))
+                    (transfer_lift empty_pred (ivl_tf_st_for gs (EA_Body p))))
                 (dgs_branch_update
                   (fun _ b pol ->
                     local_transfer
@@ -8969,6 +9013,9 @@ let rec string_of_action
     | EA_Assume b -> [char_0x5B] @ string_of_exp zero_nat b @ [char_0x5D]
     | EA_AssumeNot b ->
         [char_0x21; char_0x5B] @ string_of_exp zero_nat b @ [char_0x5D]
+    | EA_Body p ->
+        [char_0x62; char_0x6F; char_0x64; char_0x79; char_0x28] @
+          explode p @ [char_0x29]
     | EA_Ret (None, p) ->
         [char_0x72; char_0x65; char_0x74; char_0x75; char_0x72; char_0x6E]
     | EA_Ret (Some e, p) ->
@@ -8992,6 +9039,7 @@ let rec source_action_label
           | EA_AssumeNot b ->
             [char_0x6E; char_0x6F; char_0x74; char_0x20; char_0x28] @
               string_of_exp zero_nat b @ [char_0x29]
+          | EA_Body _ -> string_of_action a
           | EA_Ret (_, p) ->
             (if equal_cfg_nodea (cfg_entry g) (FunctionEntry p)
               then [char_0x74; char_0x65; char_0x72; char_0x6D; char_0x69;
@@ -10078,6 +10126,7 @@ let rec graphviz_action_defs = function EA_Assign (x, e) -> [x]
                                | EA_Nop -> []
                                | EA_Assume v -> []
                                | EA_AssumeNot v -> []
+                               | EA_Body v -> []
                                | EA_Ret (v, va) -> []
                                | EA_Check v -> [];;
 

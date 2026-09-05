@@ -264,7 +264,7 @@ lemma sg_st_uncovered_empty:
 
 subsubsection \<open>Instantiating the generic DG-native activation discharge\<close>
 
-interpretation dg_base: sound_dg_spec "interval_spec gs empty_pred" "interval_gamma gs" gs
+interpretation dg_base: sound_dg_spec_core "interval_spec gs empty_pred" "interval_gamma gs" gs
   by (rule interval_sound_exec[OF exact])
 
 interpretation routed: unit_routed_context "interval_spec gs empty_pred" "interval_gamma gs" gs
@@ -541,7 +541,7 @@ text \<open>
   \<^const>\<open>Call_String_Context.cs_route\<close> with a runtime bound \<open>k\<close> instead of at the
   entered callee formals. The packaging-correspondence facts the entry-state
   pipeline needs come from interpreting \<^locale>\<open>routed_domain_exec\<close> once, as
-  \<open>ivl_es\<close>, giving \<open>ivl_es.sound_dg_spec_st\<close> directly at the executable
+  \<open>ivl_es\<close>, giving \<open>ivl_es.sound_dg_spec_core_st\<close> directly at the executable
   carrier; that interpretation is already generic in the routing policy, so
   nothing here re-derives it.
 
@@ -1309,7 +1309,7 @@ lemma entry_state_sg_st_uncovered_empty:
 
 subsection \<open>Instantiating the generic routed-context locale\<close>
 
-interpretation entry_state_dg_base: sound_dg_spec "interval_spec gs empty_pred" "interval_gamma gs" gs
+interpretation entry_state_dg_base: sound_dg_spec_core "interval_spec gs empty_pred" "interval_gamma gs" gs
   by (rule interval_sound_exec[OF exact])
 
 

@@ -280,7 +280,7 @@ lemma int_conf_sg_st_uncovered_empty:
 
 subsection \<open>Instantiating the generic DG-native activation discharge\<close>
 
-interpretation int_conf_dg_base: sound_dg_spec "int_dom_spec mode empty_pred gs" "int_dom_gamma gs" gs
+interpretation int_conf_dg_base: sound_dg_spec_core "int_dom_spec mode empty_pred gs" "int_dom_gamma gs" gs
   by (rule int_dom_sound_exec[OF exact])
 
 interpretation int_conf_routed: unit_routed_context "int_dom_spec mode empty_pred gs" "int_dom_gamma gs" gs
@@ -1138,7 +1138,7 @@ lemma int_conf_entry_sg_st_uncovered_empty:
 
 subsection \<open>Instantiating the generic routed-context locale\<close>
 
-interpretation int_conf_entry_dg_base: sound_dg_spec "int_dom_spec mode empty_pred gs" "int_dom_gamma gs" gs
+interpretation int_conf_entry_dg_base: sound_dg_spec_core "int_dom_spec mode empty_pred gs" "int_dom_gamma gs" gs
   by (rule int_dom_sound_exec[OF exact])
 
 interpretation int_conf_entry_routed: entry_state_routed_context "int_dom_spec mode empty_pred gs"

@@ -46,6 +46,14 @@ text \<open>
   graph target is \<open>FunctionResult p\<close> (enforced by \<open>wf_cfg\<close>), which is why return
   summarisation is ordinary predecessor folding over \<open>FunctionResult p\<close>.
 
+  \<open>EA_Body p\<close> labels the one edge leaving \<open>FunctionEntry p\<close>, so an activation's
+  first step inside the callee is distinguishable from an ordinary \<open>EA_Nop\<close>.
+  Concretely it is the identity: a VIMP procedure declares no locals beyond its
+  formals, which the call already bound. It exists so that an analysis has a
+  transition to attach procedure-entry work to --- Goblint runs \<open>body\<close> on
+  exactly this edge --- and it carries the procedure name because that work is
+  per-procedure.
+
   \<open>call_action\<close> labels call edges.  \<open>CallEdge dst formals args\<close> records the caller
   destination variable, the callee's formal parameter names, and the actual arguments; the
   callee identity and the continuation are the two target nodes of the \<open>calls\<close> tuple, not
@@ -60,6 +68,7 @@ datatype edge_action =
   | EA_Special  (ea_special_op: special_call) (ea_special_dst: vname)
   | EA_Assume    (ea_cond: exp)
   | EA_AssumeNot (ea_cond: exp)
+  | EA_Body     (ea_body_proc: pname)
   | EA_Ret      (ea_ret_val: "exp option") (ea_ret_proc: pname)
   | EA_Check    (ea_check_cond: exp)
 
@@ -146,6 +155,7 @@ fun edge_step :: "edge_action \<Rightarrow> store \<Rightarrow> store set" where
 | "edge_step (EA_Special sc x) s = special_step sc x s"
 | "edge_step (EA_Assume b) s = (if truthy (aval b s) then {s} else {})"
 | "edge_step (EA_AssumeNot b) s = (if truthy (aval b s) then {} else {s})"
+| "edge_step (EA_Body p) s = {s}"
 | "edge_step (EA_Ret e p) s =
      {s(ret_var := (case e of None \<Rightarrow> s ret_var | Some a \<Rightarrow> aval a s))}"
 | "edge_step (EA_Check c) s = {s}"

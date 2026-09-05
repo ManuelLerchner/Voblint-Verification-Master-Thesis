@@ -77,6 +77,7 @@ fun ivl_tf_st_for ::
        branch_ivl_st_for gs b True s"
   | "ivl_tf_st_for gs (EA_AssumeNot b) s =
        branch_ivl_st_for gs b False s"
+  | "ivl_tf_st_for gs (EA_Body p) s = s"
   | "ivl_tf_st_for gs (EA_Ret None p) s = s"
   | "ivl_tf_st_for gs (EA_Ret (Some a) p) s =
        update_resolved_st_q s (location_of gs ret_var)
@@ -444,6 +445,9 @@ next
   then show ?thesis
     unfolding \<open>a = EA_AssumeNot b\<close>
     by (metis ivl_tf_st_for_assume_not_agree assms)
+next
+  case (EA_Body p)
+  then show ?thesis by (simp add: body_ivl_def)
 next
   case (EA_Ret ea p)
   then show ?thesis

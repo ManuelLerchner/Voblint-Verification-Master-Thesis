@@ -118,7 +118,7 @@ Regression: a program where `x <= y` survives from the caller (callee touches
 neither) while `g <= h` comes from the callee exit; prove both hold after
 return, and compare against a havoc/structural implementation that recovers
 only one. It must run through the canonical D/G generator and solver, not by
-evaluating the combine directly. Prove `sound_dg_spec` for the instance. Own
+evaluating the combine directly. Prove `sound_dg_spec_core` for the instance. Own
 commit.
 
 ## P8 - Guard the `code_identifier` module map

@@ -421,7 +421,7 @@ lemma int_is_sound_transfer_for:
 definition int_tf_abs ::
     "refine_mode => edge_action => int_dom abs_state => int_dom abs_state" where
   "int_tf_abs mode = local_spec_step skip_int_dom (assign_int_dom mode) (special_int_dom mode)
-     (branch_int_dom_for mode) (return_int_dom mode) event_int_dom"
+     (branch_int_dom_for mode) body_int_dom (return_int_dom mode) event_int_dom"
 
 lemma int_tf_abs_simps [simp]:
   "int_tf_abs mode EA_Nop = skip_int_dom"
@@ -429,6 +429,7 @@ lemma int_tf_abs_simps [simp]:
   "int_tf_abs mode (EA_Special sc y) = special_int_dom mode sc y"
   "int_tf_abs mode (EA_Assume b) = branch_int_dom_for mode b True"
   "int_tf_abs mode (EA_AssumeNot b) = branch_int_dom_for mode b False"
+  "int_tf_abs mode (EA_Body p) = body_int_dom p"
   "int_tf_abs mode (EA_Ret eo p) = return_int_dom mode eo p"
   "int_tf_abs mode (EA_Check c) = event_int_dom (Check_Event c)"
   by (simp_all add: int_tf_abs_def)

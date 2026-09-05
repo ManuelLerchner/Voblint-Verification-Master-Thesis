@@ -95,12 +95,12 @@
 //   main_pp8_ctx1 -> main_pp9_ctx1: check(y==20)
 //   main_pp9_ctx1 -> main_result_main_ctx1: terminate
 //   g_pp0_ctx0 -> g_result_g_ctx0: return p+p
-//   main_entry_main_ctx1 -> main_pp5_ctx1: nop
-//   g_entry_g_ctx0 -> g_pp0_ctx0: nop
+//   main_entry_main_ctx1 -> main_pp5_ctx1: body(main)
+//   g_entry_g_ctx0 -> g_pp0_ctx0: body(g)
 //   f_pp3_ctx2 -> f_result_f_ctx2: return t
 //   f_pp3_ctx3 -> f_result_f_ctx3: return t
-//   f_entry_f_ctx2 -> f_pp2_ctx2: nop
-//   f_entry_f_ctx3 -> f_pp2_ctx3: nop
+//   f_entry_f_ctx2 -> f_pp2_ctx2: body(f)
+//   f_entry_f_ctx3 -> f_pp2_ctx3: body(f)
 //   main_pp7_ctx1 -> main_pp8_ctx1: check(x==6)
 //   f_pp2_ctx2 -> g_entry_g_ctx0: enter g(p)
 //   f_pp2_ctx3 -> g_entry_g_ctx0: enter g(p)

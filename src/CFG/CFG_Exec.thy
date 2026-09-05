@@ -46,6 +46,11 @@ lemma cstep_nop:
   shows "cstep gs g (u, s, stk) (v, s, stk)"
   by (rule cstep.Intra[OF assms]) simp
 
+lemma cstep_body:
+  assumes "(u, EA_Body p, v) \<in> intra g"
+  shows "cstep gs g (u, s, stk) (v, s, stk)"
+  by (rule cstep.Intra[OF assms]) simp
+
 lemma cstep_assume:
   assumes "(u, EA_Assume b, v) \<in> intra g" and "truthy (aval b s)"
   shows "cstep gs g (u, s, stk) (v, s, stk)"

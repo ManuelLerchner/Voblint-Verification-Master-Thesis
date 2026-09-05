@@ -53,7 +53,7 @@ text \<open>
 
 lemma dispatch_demo_intra_eval:
   "intra (prog_cfg dispatch_demo_prog) =
-     {(FunctionEntry (STR ''main''), EA_Nop, Statement 0),
+     {(FunctionEntry (STR ''main''), EA_Body (STR ''main''), Statement 0),
       (Statement 0, EA_Assign (STR ''y'') (N 1), Statement 1),
       (Statement 1, EA_Check (Less (N 0) (V (STR ''y''))), Statement 2),
       (Statement 2, EA_Assign (STR ''y'') (Minus (N 0) (N 1)), Statement 3),

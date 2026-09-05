@@ -161,7 +161,7 @@ text \<open>The per-edge dispatcher, the abstract counterpart of \<open>sign_tf_
 
 definition sign_tf_abs :: "edge_action => sign abs_state => sign abs_state" where
   "sign_tf_abs = local_spec_step skip_sign assign_sign special_sign branch_sign
-     return_sign event_sign"
+     body_sign return_sign event_sign"
 
 lemma sign_tf_abs_simps [simp]:
   "sign_tf_abs EA_Nop = skip_sign"
@@ -169,6 +169,7 @@ lemma sign_tf_abs_simps [simp]:
   "sign_tf_abs (EA_Special sc y) = special_sign sc y"
   "sign_tf_abs (EA_Assume b) = branch_sign b True"
   "sign_tf_abs (EA_AssumeNot b) = branch_sign b False"
+  "sign_tf_abs (EA_Body p) = body_sign p"
   "sign_tf_abs (EA_Ret eo p) = return_sign eo p"
   "sign_tf_abs (EA_Check c) = event_sign (Check_Event c)"
   by (simp_all add: sign_tf_abs_def)

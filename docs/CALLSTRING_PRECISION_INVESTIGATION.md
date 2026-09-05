@@ -209,7 +209,7 @@ activation_collect gs enterc seedc g S v c  <=  gamma (locals (sigma (Inl (v,c))
 — the collected concrete states are a subset of what the abstract value
 denotes. There is no lemma anywhere in `DG_Ctx_Activation.thy` or
 `DG_Soundness.thy` stating the reverse inclusion or an equality. This is
-expected (`sound_dg_spec` is a soundness locale, not an exactness one), but
+expected (`sound_dg_spec_core` is a soundness locale, not an exactness one), but
 it means two independently sound upper bounds — `ivl_ctx_sg_2` and
 `ivl_ctx_sg_1` — do not become comparable just because their underlying
 concrete sets (row 2) are now known to be comparable. An inclusion between

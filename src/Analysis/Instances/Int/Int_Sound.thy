@@ -57,7 +57,7 @@ next
     by (simp only: int_dom_enter_st_for.simps int_dom_enter_fixpoint_st_for_commute)
 qed
 
-lemma int_dom_abs_spec_sound: "sound_dg_spec (int_dom_abs_spec mode gs) gamma_dg_local_state gs"
+lemma int_dom_abs_spec_sound: "sound_dg_spec_core (int_dom_abs_spec mode gs) gamma_dg_local_state gs"
   unfolding int_dom_abs_spec_def
   by (rule sound_transfer_for.local_state_dg_spec_sound
         [OF int_is_sound_transfer_for is_empty_state_gamma_state_empty])
@@ -94,11 +94,11 @@ interpretation int_dom: routed_dg_domain_exec
 lemma int_dom_gamma_eq: "int_dom_gamma gs = int_dom.gamma_exec"
   by (intro ext) (simp add: int_dom_gamma_def int_dom.gamma_exec_def)
 
-theorem int_dom_sound_exec: "sound_dg_spec (int_dom_spec mode empty_pred gs) (int_dom_gamma gs) gs"
+theorem int_dom_sound_exec: "sound_dg_spec_core (int_dom_spec mode empty_pred gs) (int_dom_gamma gs) gs"
   unfolding int_dom_gamma_eq int_dom_spec_def
-  by (rule int_dom.sound_dg_spec_st[OF int_is_sound_transfer_for])
+  by (rule int_dom.sound_dg_spec_core_st[OF int_is_sound_transfer_for])
 
-text \<open>Entry is stated apart from \<^locale>\<open>sound_dg_spec\<close>, so a routed instance cites
+text \<open>Entry is stated apart from \<^locale>\<open>sound_dg_spec_core\<close>, so a routed instance cites
   it separately; the alternative list is the singleton this Base-style entry answers.\<close>
 
 theorem int_dom_entry_cover_exec:

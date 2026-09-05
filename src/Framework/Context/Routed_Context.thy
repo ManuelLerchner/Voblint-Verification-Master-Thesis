@@ -39,9 +39,11 @@ text \<open>
   (privatization globals, thread-return globals) rather than a single global
   cell. \<open>Activation_Seed\<close> is not Goblint's --- their
   framework records reachable contexts on a separate global whose value is a
-  set of contexts, keyed by function. It is this development's device for
-  activating a local unknown through the vendored side-effecting solver, and is
-  named to say so, so that no later reader takes it for a Goblint correspondence.
+  set of contexts, keyed by function. It is a solver adapter, not the
+  translation of any Goblint constraint constructor: the vendored solver
+  publishes to global keys only, so the one way to activate a callee's local
+  unknown is to publish at a global proxy the callee reads back. It is named to
+  say so, so that no later reader takes it for a Goblint correspondence.
 
   The types keep the two apart. A transfer names a global as a \<open>'v\<close> and never
   builds a key, because \<^const>\<open>mk_dg_man\<close> holds the embedding; only the routing

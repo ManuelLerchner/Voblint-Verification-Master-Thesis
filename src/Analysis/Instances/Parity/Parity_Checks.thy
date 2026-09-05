@@ -51,7 +51,7 @@ context
         \<Longrightarrow> (cont, c1) \<in> fst (pctx_sol gs empty_pred Pi ps)"
 begin
 
-interpretation pctx_dg_base: sound_dg_spec "pctx_spec gs empty_pred" "pctx_gamma gs" gs
+interpretation pctx_dg_base: sound_dg_spec_core "pctx_spec gs empty_pred" "pctx_gamma gs" gs
   by (rule pctx_sound_exec[OF exact])
 
 interpretation pctx_adapter: dg_analysis_adapter "pctx_spec gs empty_pred" "pctx_gamma gs" gs

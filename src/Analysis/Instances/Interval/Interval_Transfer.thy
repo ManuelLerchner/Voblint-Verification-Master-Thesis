@@ -164,7 +164,7 @@ lemma ivl_is_sound_transfer_for:
 
 definition ivl_tf_abs :: "edge_action => ivl abs_state => ivl abs_state" where
   "ivl_tf_abs = local_spec_step skip_ivl assign_ivl special_ivl branch_ivl
-     return_ivl event_ivl"
+     body_ivl return_ivl event_ivl"
 
 lemma ivl_tf_abs_simps [simp]:
   "ivl_tf_abs EA_Nop = skip_ivl"
@@ -172,6 +172,7 @@ lemma ivl_tf_abs_simps [simp]:
   "ivl_tf_abs (EA_Special sc y) = special_ivl sc y"
   "ivl_tf_abs (EA_Assume b) = branch_ivl b True"
   "ivl_tf_abs (EA_AssumeNot b) = branch_ivl b False"
+  "ivl_tf_abs (EA_Body p) = body_ivl p"
   "ivl_tf_abs (EA_Ret eo p) = return_ivl eo p"
   "ivl_tf_abs (EA_Check c) = event_ivl (Check_Event c)"
   by (simp_all add: ivl_tf_abs_def)

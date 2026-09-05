@@ -137,10 +137,10 @@ lemma cstep_inc_pcall_declared:
            (FunctionResult (STR ''main''), s((STR ''Glocal'') := 1, (STR ''counter'') := s (STR ''counter'') + 1), [])"
 proof -
   let ?gs = "declared_global inc_program"
-  have e1: "(FunctionEntry (STR ''main''), EA_Nop, Statement 2) \<in> intra inc_g"
+  have e1: "(FunctionEntry (STR ''main''), EA_Body (STR ''main''), Statement 2) \<in> intra inc_g"
     and e2: "(Statement 2, EA_Assign (STR ''Glocal'') (N 1), Statement 3) \<in> intra inc_g"
     and e3: "(Statement 3, CallEdge None [] [], FunctionEntry (STR ''p''), Statement 4) \<in> calls inc_g"
-    and e4: "(FunctionEntry (STR ''p''), EA_Nop, Statement 0) \<in> intra inc_g"
+    and e4: "(FunctionEntry (STR ''p''), EA_Body (STR ''p''), Statement 0) \<in> intra inc_g"
     and e5: "(Statement 0, EA_Assign (STR ''counter'') (Plus (V (STR ''counter'')) (N 1)), Statement 1) \<in> intra inc_g"
     and e6: "(Statement 1, EA_Ret None (STR ''p''), FunctionResult (STR ''p'')) \<in> intra inc_g"
     and e7: "(Statement 4, EA_Ret None (STR ''main''), FunctionResult (STR ''main'')) \<in> intra inc_g"

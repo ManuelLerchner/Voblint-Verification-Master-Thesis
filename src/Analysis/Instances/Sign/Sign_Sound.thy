@@ -79,11 +79,11 @@ interpretation sign_dom: routed_dg_domain_exec
 lemma sctx_gamma_eq: "sctx_gamma gs = sign_dom.gamma_exec"
   by (intro ext) (simp add: sctx_gamma_def sign_dom.gamma_exec_def)
 
-theorem sctx_sound_exec: "sound_dg_spec (sctx_spec gs empty_pred) (sctx_gamma gs) gs"
+theorem sctx_sound_exec: "sound_dg_spec_core (sctx_spec gs empty_pred) (sctx_gamma gs) gs"
   unfolding sctx_gamma_eq sctx_spec_def
-  by (rule sign_dom.sound_dg_spec_st[OF sign_is_sound_transfer_for])
+  by (rule sign_dom.sound_dg_spec_core_st[OF sign_is_sound_transfer_for])
 
-text \<open>Entry is stated apart from \<^locale>\<open>sound_dg_spec\<close>, so a routed instance cites
+text \<open>Entry is stated apart from \<^locale>\<open>sound_dg_spec_core\<close>, so a routed instance cites
   it separately; the alternative list is the singleton this Base-style entry answers.\<close>
 
 theorem sctx_entry_cover_exec:

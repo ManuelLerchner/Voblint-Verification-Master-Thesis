@@ -96,7 +96,7 @@ locale ownership_split_dg_exec_analysis =
       "\<And>a s.
         live_resolved_st_q gs s \<Longrightarrow>
         fun_of_exec_dg_st_for gs (tf_st a s) =
-        local_spec_step sk asn sp br rt ev a (fun_of_exec_dg_st_for gs s)"
+        local_spec_step sk asn sp br bd rt ev a (fun_of_exec_dg_st_for gs s)"
     and enter_commute[simp]:
       "\<And>ci s.
         fun_of_exec_dg_st_for gs (enter_st ci s) =
@@ -135,7 +135,7 @@ text \<open>
   remains is exactly the transfer contract.
 \<close>
 
-theorem sound_dg_spec_st: "sound_dg_spec (ownership_split_dg_spec_st_for gs tf_st enter_st) gamma_ownership_split_exec gs"
+theorem sound_dg_spec_core_st: "sound_dg_spec_core (ownership_split_dg_spec_st_for gs tf_st enter_st) gamma_ownership_split_exec gs"
 proof -
   interpret tfs: sound_transfer_for gs sk asn sp br bd rt en ev by (rule tf_sound)
   show ?thesis
@@ -165,7 +165,7 @@ proof -
         ownership_split_combine_transfer_st_def gamma_ownership_split_exec_def combine_collect_def
         fun_of_exec_dg_st_for_def gamma_ownership_split_def
       by (simp add: ownership_split_combine_transfer_gen_def local_combine_transfer_def
-            man_with_local_def mk_dg_man_def dg_read_global_def dg_sideg_def sp_bind_assoc
+            mk_dg_man_def dg_read_global_def dg_sideg_def sp_bind_assoc
             fun_of_resolved_st_q_for_restrict_local_for
             fun_of_resolved_st_q_for_restrict_global_for
             fun_of_resolved_st_q_for_def[symmetric]
@@ -297,11 +297,11 @@ lemma unit_routed_context_of_solve:
            (\<lambda>d. gamma_ownership_split_exec d
                   (globs (snd (solve eqs x) (Inr (Analysis_Global ())))))"
 proof -
-  interpret base: sound_dg_spec "ownership_split_dg_spec_st_for gs tf_st enter_st"
+  interpret base: sound_dg_spec_core "ownership_split_dg_spec_st_for gs tf_st enter_st"
       gamma_ownership_split_exec gs
-    by (rule sound_dg_spec_st)
+    by (rule sound_dg_spec_core_st)
   interpret tfs: sound_transfer_for gs sk asn sp br bd rt en ev by (rule tf_sound)
-  note mono = sound_dg_spec.gammaDG_mono[OF sound_dg_spec_st]
+  note mono = sound_dg_spec_core.gammaDG_mono[OF sound_dg_spec_core_st]
   show ?thesis
 proof (unfold_locales, goal_cases Mono Step Comb FinE PP SgCov SgUncov Fwd FinC SeedKey
     IsBotBot IsBotSound IsBotMono EnterComplete CallFwd CombFwd EnterAgree)
@@ -350,7 +350,7 @@ next
       by (rule enter_runs_ownership_split_enter_transfer_gen)
          (use enter_runs_local_enter_transfer
                 [of "\<lambda>d. [(d, enter_st ?ci d)]"
-                    "man_with_local (mk_dg_man ?d (\<lambda>_. Analysis_Global ())) ?dw" ?sigma]
+                    "mk_dg_man ?dw (\<lambda>_. Analysis_Global ())" ?sigma]
           in simp)
     have deps: "enter_deps
         (enter\<^sup># (ownership_split_dg_spec_st_for gs tf_st enter_st) ?ci)
@@ -360,7 +360,7 @@ next
       by (rule enter_deps_ownership_split_enter_transfer_gen)
          (use enter_deps_local_enter_transfer
                 [of "\<lambda>d. [(d, enter_st ?ci d)]"
-                    "man_with_local (mk_dg_man ?d (\<lambda>_. Analysis_Global ())) ?dw" ?sigma]
+                    "mk_dg_man ?dw (\<lambda>_. Analysis_Global ())" ?sigma]
           in simp)
     have whole: "s \<in> \<lbrakk>combine_env gs (fun_of_resolved_st_q_for gs ?d)
                         (fun_of_resolved_st_q_for gs
@@ -518,7 +518,7 @@ text \<open>
   \<open>tf_st\<close>, \<open>enter_st\<close> and \<open>empty_pred\<close>
   and their three primitive commute facts; this locale's \<open>sublocale\<close> discharges
   \<^locale>\<open>routed_dg_domain_exec\<close>'s three assumptions from exactly those facts,
-  and its own \<open>sound_dg_spec_st\<close> theorem does the rest: no solved system is ever
+  and its own \<open>sound_dg_spec_core_st\<close> theorem does the rest: no solved system is ever
   transported from the executable carrier to the abstract one, so this
   registration locale needs no separate post-solution transport theorem.
 \<close>
@@ -556,7 +556,7 @@ locale local_state_dg_exec_analysis =
       "\<And>a s.
         live_resolved_st_q gs s \<Longrightarrow>
         fun_of_exec_dg_st_for gs (tf_st a s) =
-        local_spec_step sk asn sp br rt ev a (fun_of_exec_dg_st_for gs s)"
+        local_spec_step sk asn sp br bd rt ev a (fun_of_exec_dg_st_for gs s)"
     and enter_commute[simp]:
       "\<And>ci s.
         fun_of_exec_dg_st_for gs (enter_st ci s) =
@@ -573,7 +573,7 @@ text \<open>
   The packaging correspondence and its executable-carrier soundness pullback
   are \<open>routed_dg_domain_exec\<close>'s own content (\<open>Voblint_Exec.DG_Local_State_Exec\<close>):
   discharging its three assumptions from this locale's own commute facts gets
-  \<open>sound_dg_spec_st\<close> for free, so no transport of a solved system between
+  \<open>sound_dg_spec_core_st\<close> for free, so no transport of a solved system between
   carriers is needed here at all -- the solver's own executable post-solution
   already satisfies \<^locale>\<open>unit_routed_context\<close>'s \<open>pp\<close> premise directly.
 \<close>
@@ -649,7 +649,7 @@ lemma unit_routed_context_of_solve:
            (solved_local_reader (fst (solve eqs x)) (snd (solve eqs x)))
            Activation_Seed (\<lambda>d. d = bot) (\<lambda>d. gamma_exec d bot)"
 proof -
-  interpret base: sound_dg_spec spec_st gamma_exec gs by (rule sound_dg_spec_st[OF tf_sound])
+  interpret base: sound_dg_spec_core spec_st gamma_exec gs by (rule sound_dg_spec_core_st[OF tf_sound])
   show ?thesis
 proof (unfold_locales, goal_cases Mono Step Comb FinE PP SgCov SgUncov Fwd FinC SeedKey
     IsBotBot IsBotSound IsBotMono EnterComplete CallFwd CombFwd EnterAgree)

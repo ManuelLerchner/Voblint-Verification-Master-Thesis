@@ -105,6 +105,7 @@ fun sign_tf_st_for ::
        branch_sign_st_for gs b True s"
   | "sign_tf_st_for gs (EA_AssumeNot b) s =
        branch_sign_st_for gs b False s"
+  | "sign_tf_st_for gs (EA_Body p) s = s"
   | "sign_tf_st_for gs (EA_Ret None p) s = s"
   | "sign_tf_st_for gs (EA_Ret (Some a) p) s =
        update_resolved_st_q s (location_of gs ret_var)
@@ -194,6 +195,9 @@ next
   case (EA_AssumeNot b)
   then show ?thesis
     using assms by (simp add: sign_tf_abs_def sign_backward_domain.branch_st_commute)
+next
+  case (EA_Body p)
+  then show ?thesis by (simp add: sign_tf_abs_def body_sign_def)
 next
   case (EA_Ret ea p)
   then show ?thesis

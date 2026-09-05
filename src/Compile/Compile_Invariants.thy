@@ -446,7 +446,7 @@ proof -
   let ?r = "n + csize (body decl)"
   obtain Eb where
       body: "compile \<Pi> p (body decl) (Statement ?r) n = (?r, Statement n, Eb, K)"
-    and E_eq: "E = insert (FunctionEntry p, EA_Nop, Statement n)
+    and E_eq: "E = insert (FunctionEntry p, EA_Body p, Statement n)
                      (if falls_through (body decl)
                       then insert (Statement ?r, EA_Ret None p, FunctionResult p) Eb
                       else Eb)"

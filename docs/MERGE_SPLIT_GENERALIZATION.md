@@ -11,7 +11,7 @@ This document supersedes the 2026-09-01 decision entry in
 `CORE_REFACTOR_PLAN.md` that called step 3.1 (`dead_code_lift`) a
 precondition for closing step 2.3's owner-aware half. It is not. The
 research below found the abstract-carrier soundness of the placement policy
-already proved (`sound_dg_spec_unit_placed`, `Placement_Policy.thy`); the
+already proved (`sound_dg_spec_core_unit_placed`, `Placement_Policy.thy`); the
 actual gap is the executable mirror, and `dead_code_lift` is orthogonal to
 it (see "Relation to step 3.1").
 
@@ -42,7 +42,7 @@ pair `sg, sd :: 'a abs_state => 'a abs_state`. The two instances:
 | gamma | `gamma_ownership_split gs d g = [[combine_env gs d g]]` | `gamma_join d g = [[d \<squnion> g]]` |
 | reassembly law | `combine_env_restrict_id`: exact | `project_component_cover_sup`: exact, needs `cover` |
 | extra premise | `reserved_ret_var gs` | `\<forall>x. ps x \<or> kl x` (cover) |
-| abstract soundness | `sound_dg_spec_ownership_split_for` (DG_Soundness 1977) | `sound_dg_spec_unit_placed` (Placement_Policy 209) |
+| abstract soundness | `sound_dg_spec_core_ownership_split_for` (DG_Soundness 1977) | `sound_dg_spec_core_unit_placed` (Placement_Policy 209) |
 
 Two identities make the table exact rather than analogical
 (`State_Restriction.thy` 15-21 against `Placement_Policy.thy` 18-20):
@@ -93,12 +93,12 @@ site). Instead:
 locale that *fixes* an arbitrary spec `S` together with `(M, sg, sd)` and
 *assumes* the four shape equations (step, enter, caller_cont = identity,
 combine up to the generic value), plus `M`-monotonicity and reassembly. It
-proves `sound_dg_spec S (\<lambda>d g. [[M d g]]) gs` once. The two existing
+proves `sound_dg_spec_core S (\<lambda>d g. [[M d g]]) gs` once. The two existing
 records interpret it: `unit_for` discharges the combine equation via
 absorption + `reserved_ret_var`, `placed` via `cover`. No existing
 definition changes; the two ~60-line soundness proof bodies
-(`sound_dg_spec_ownership_split_for` with its two helper lemmas,
-`sound_dg_spec_unit_placed` with its two) collapse to interpretations, and
+(`sound_dg_spec_core_ownership_split_for` with its two helper lemmas,
+`sound_dg_spec_core_unit_placed` with its two) collapse to interpretations, and
 their theorem names survive as re-exports. This is the same
 "characterize by equations" pattern the executable layer already uses
 (`Hstep`/`Henter`/`Hcomb`/`Hcont`).
@@ -120,8 +120,8 @@ already generic in the domain -- just not in `(M, sg, sd)`:
   simps.
 - `unit_dg_Hstep_for`/`_Henter_for`/`_Hcomb_for`/`_Hcont_for`
   (`Run_Analysis_Sound.thy` 96-128) package those per record field, and
-  `ownership_split_dg_exec_analysis.sound_dg_spec_st` (234) derives
-  `sound_dg_spec (ownership_split_dg_spec_st_for ...) gamma_ownership_split_exec gs` from them
+  `ownership_split_dg_exec_analysis.sound_dg_spec_core_st` (234) derives
+  `sound_dg_spec_core (ownership_split_dg_spec_st_for ...) gamma_ownership_split_exec gs` from them
   plus the abstract theorem -- the same five-case pullback
   `routed_dg_domain_exec` performs for the lifted Base shape.
 
@@ -129,13 +129,13 @@ The generalized executable locale (`merge_split_spec_exec`, extending
 `merge_split_spec`) fixes the executable mirror `S_st` and assumes the four
 *record-level* commute facts (`dg_spec_step`/`dgs_enter`/`dgs_combine`/
 `dgs_caller_cont` of `S_st` each commuting with `S`'s under
-`fun_of_exec_dg_st_for`); the `sound_dg_spec_st` derivation is then the
+`fun_of_exec_dg_st_for`); the `sound_dg_spec_core_st` derivation is then the
 existing `ownership_split_dg_exec_analysis` proof verbatim, with `(M, sg, sd)`
 abstract. (G2 refinement over the first draft: the interface is the four
 record-level facts, not `(M_st, sg_st, sd_st)`-level operator commutes --
 strictly weaker assumptions, exactly what the derivation consumes, and the
 per-operator packaging stays per-instance where it belongs.)
-`ownership_split_dg_exec_analysis` re-derives its `sound_dg_spec_st` by a `sublocale`
+`ownership_split_dg_exec_analysis` re-derives its `sound_dg_spec_core_st` by a `sublocale`
 interpretation discharged from the untouched generic
 `unit_dg_Hstep_for`/`_Henter_for`/`_Hcomb_for`/`_Hcont_for`, unchanged
 outward; the batch build is the regression check that the Interval flagship
@@ -193,7 +193,7 @@ with `gs = declared_global placement_prog = {balance, request_count}`, so
 every `gs`-global is one of the two named ones and every other vname is
 covered by `kl_v`'s local clause: **cover holds**. Sign's `(\<top>, \<bottom>)`
 pair covers trivially. Both examples are therefore genuine
-`sound_dg_spec_unit_placed` instances at the vname level, and since neither
+`sound_dg_spec_core_unit_placed` instances at the vname level, and since neither
 predicate depends on the node's owner, the node-independent `dg_spec` route
 applies without any per-node policy plumbing.
 
@@ -201,10 +201,10 @@ applies without any per-node policy plumbing.
 
 Immediately, on landing:
 
-- `sound_dg_spec_ownership_split_for` and `sound_dg_spec_unit_placed` become two
+- `sound_dg_spec_core_ownership_split_for` and `sound_dg_spec_core_unit_placed` become two
   interpretations of one theorem (~120 lines of isomorphic proof retired).
 - The four `unit_dg_Hxxx_for` lemmas and `ownership_split_dg_exec_analysis`'s
-  `sound_dg_spec_st` become instances of one executable pullback locale;
+  `sound_dg_spec_core_st` become instances of one executable pullback locale;
   the placed instance gets the same theorem for the cost of its commute
   obligations only.
 
@@ -230,12 +230,12 @@ Downstream, it is the missing prerequisite chain for the remaining
   axes. The merge/split axis is this document; what remains for 3.1 is only
   the orthogonal Bot-carrier wrapper
   (`('dl,'dg) dg_spec => ('dl lifted,'dg) dg_spec` with
-  `sound_dg_spec S ==> sound_dg_spec (dead_code_lift S)`), which then wraps
+  `sound_dg_spec_core S ==> sound_dg_spec_core (dead_code_lift S)`), which then wraps
   *one* unlifted core instead of two -- and `ownership_split_step_for_lifted` /
   `ownership_split_dg_spec_for_lifted` / `local_state_dg_spec_for_lifted` /
   `local_state_dg_spec_st_for_lifted` become its instances as planned.
 - The alignment register's kept alternative stays true: `sound_dg_hooks`
-  remains in Core (it is what `sound_dg_spec` reduces to), and
+  remains in Core (it is what `sound_dg_spec_core` reduces to), and
   `gamma_join` is *promoted* from example-only to the generic locale's
   second instantiation target rather than deleted.
 
@@ -265,8 +265,8 @@ ones -- every intermediate state is a working build.
 
 | # | Step | Gate risk |
 | --- | --- | --- |
-| G1 | `merge_split_spec` locale in `DG_Ownership_Split_Spec.thy`; re-derive `sound_dg_spec_ownership_split_for` (in `DG_Soundness.thy`) and `sound_dg_spec_unit_placed` (in `Placement_Policy.thy`) as interpretations, names kept | combine-equation discharge for `unit_for` needs absorption + `reserved_ret_var`; if the characterization equations fight the record simps, fall back to keeping the two concrete proofs and generalizing only G2 |
-| G2 | `merge_split_spec_exec` in `Exec_DG_Refines.thy` (or beside `ownership_split_dg_exec_analysis`); re-derive the four `unit_dg_Hxxx_for` + `ownership_split_dg_exec_analysis.sound_dg_spec_st` via interpretation | Interval flagship must rebuild unchanged; that is the whole regression content of this step |
+| G1 | `merge_split_spec` locale in `DG_Ownership_Split_Spec.thy`; re-derive `sound_dg_spec_core_ownership_split_for` (in `DG_Soundness.thy`) and `sound_dg_spec_core_unit_placed` (in `Placement_Policy.thy`) as interpretations, names kept | combine-equation discharge for `unit_for` needs absorption + `reserved_ret_var`; if the characterization equations fight the record simps, fall back to keeping the two concrete proofs and generalizing only G2 |
+| G2 | `merge_split_spec_exec` in `Exec_DG_Refines.thy` (or beside `ownership_split_dg_exec_analysis`); re-derive the four `unit_dg_Hxxx_for` + `ownership_split_dg_exec_analysis.sound_dg_spec_core_st` via interpretation | Interval flagship must rebuild unchanged; that is the whole regression content of this step |
 | G3 | Executable placed mirror: flat projection via `project_resolved_on_strict` at a degenerate owner + program-wide universe, commute lemmas, `ownership_split_dg_spec_placed_st` | the universe-threading through the commute facts is the untested part; fall back to a fresh vname-predicate `lift_definition` |
 | G4 | Interpret `merge_split_spec_exec` for placed; migrate `Example_Sign_Placement` by the flagship recipe | first end-to-end validation; Sign chosen because its policy is the trivial covering |
 | G5 | Migrate `Example_Interval_Placement` | largest file; per-node scope lists replaced by the program-wide universe |
@@ -298,7 +298,7 @@ raised and constrain step 3.1 in `CORE_REFACTOR_PLAN.md`.
 - **Keep `merge_split_spec` and `merge_split_spec_exec` as built.** The
   characterization-locale shape with four record-level commute facts is a
   good abstraction boundary; no surveyed system replaces it with something
-  lighter. The two-carrier layout (representation-free `sound_dg_spec`
+  lighter. The two-carrier layout (representation-free `sound_dg_spec_core`
   above, quotient carrier below, readback homomorphism between) has no
   exact precedent but follows from keeping Core representation-free; the
   closest description is "HOL-IMP's executable quotient with a
@@ -366,7 +366,7 @@ Every lifter contributes at three levels, and nothing else:
    `widen_delay_lift :: nat => ('d,'g) dg_spec => ('d x nat,'g) dg_spec`.
 3. **Verification transformer** -- two theorems per lifter:
    - soundness preservation:
-     `sound_dg_spec S gamma gs ==> sound_dg_spec (dead_code_lift S) (lift_gamma gamma) gs`;
+     `sound_dg_spec_core S gamma gs ==> sound_dg_spec_core (dead_code_lift S) (lift_gamma gamma) gs`;
    - executable commute preservation (the multiplicative one):
      `commute rb S_st S ==> commute (map_lift rb) (dead_code_lift_exec S_st) (dead_code_lift S)`.
 
@@ -409,7 +409,7 @@ corollaries mirrors `control.ml` exactly and is the intended endpoint.
 ### Implementation order for 3.1
 
 1. **Landed** (`src/Framework/Lifters/DG_Dead_Code_Lift.thy`): `dead_code_lift` +
-   `lift_gamma` + `dead_code_lift_sound`; `sound_dg_spec_cong` (soundness
+   `lift_gamma` + `dead_code_lift_sound`; `sound_dg_spec_core_cong` (soundness
    sees only the four composed operations); `renormalize` /
    `dead_code_normalize` + `dead_code_normalize_sound` over the explicit
    emptiness interface.
@@ -419,7 +419,7 @@ corollaries mirrors `control.ml` exactly and is the intended endpoint.
    hand-rolled per-obligation walls are deleted. Field-level record
    equality is impossible (the frozen `dgs_combine_env` passthrough is not
    strict in the callee value; the generic lifter's is), so the connection
-   is composed-operation agreement + `sound_dg_spec_cong`, the
+   is composed-operation agreement + `sound_dg_spec_core_cong`, the
    characterize-don't-rebuild lesson again.
 3. **Landed** (same theory, representation-free): `dg_spec_commute` (four
    readback-commute equations over arbitrary local/global readbacks) with
@@ -440,11 +440,11 @@ corollaries mirrors `control.ml` exactly and is the intended endpoint.
    `dg_spec_commute` -- but a citation sweep found the entire layer
    (`ownership_split_step_for_lifted`, `assemble_env_abs`, `ownership_split_dg_spec_for_lifted`,
    `gamma_ownership_split_lifted`, its three soundness walls and
-   `sound_dg_spec_ownership_split_for_lifted`, ~460 lines) had zero consumers: absent
+   `sound_dg_spec_core_ownership_split_for_lifted`, ~460 lines) had zero consumers: absent
    from every other theory and from the generated OCaml. Deleted instead.
    When a consumer wants a dead-code-aware unit analysis, the canonical
    construction is one expression --
    `dead_code_normalize empty_pred (dead_code_lift (ownership_split_dg_spec_for gs tf))`
    at `lift_gamma (gamma_ownership_split gs)` -- with soundness falling out of
-   `sound_dg_spec_ownership_split_for` plus the two preservation theorems.
+   `sound_dg_spec_core_ownership_split_for` plus the two preservation theorems.
 4. `|>` bundle when the second lifter lands, not before.

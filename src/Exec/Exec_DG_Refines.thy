@@ -156,7 +156,7 @@ where
      dgs_special := (\<lambda>sc x. ownership_split_transfer_st (local_transfer (tf_st (EA_Special sc x)))),
      dgs_branch := (\<lambda>b pol. ownership_split_transfer_st
                       (local_transfer (tf_st (if pol then EA_Assume b else EA_AssumeNot b)))),
-     dgs_body := (\<lambda>p. ownership_split_transfer_st (local_transfer (tf_st EA_Nop))),
+     dgs_body := (\<lambda>p. ownership_split_transfer_st (local_transfer (tf_st (EA_Body p)))),
      dgs_return := (\<lambda>e p. ownership_split_transfer_st (local_transfer (tf_st (EA_Ret e p)))),
      dgs_enter := (\<lambda>ci. ownership_split_enter_transfer_st
                           (local_enter_transfer (\<lambda>d. [(d, enter_st ci d)]))),
@@ -178,8 +178,8 @@ lemma dgs_enter_ownership_split_dg_spec_st_for:
 lemma dg_spec_combine_transfer_ownership_split_dg_spec_st_for:
   "dg_spec_combine_transfer (ownership_split_dg_spec_st_for gs tf_st enter_st) ci m de
      = ownership_split_combine_transfer_st gs ci m de"
-  unfolding dg_spec_combine_transfer_def dgs_combine_def ownership_split_dg_spec_st_for_def
-  by (simp add: local_transfer_def local_combine_transfer_def man_with_local_def)
+  unfolding dg_spec_combine_transfer_def ownership_split_dg_spec_st_for_def
+  by (simp add: local_transfer_def local_combine_transfer_def)
 
 end
 

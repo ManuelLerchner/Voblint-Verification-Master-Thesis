@@ -11,7 +11,7 @@ text \<open>
   every concrete store the caller's reachable-store function admits at a
   checked point satisfies that point's condition. The reachable-store
   function is left abstract (\<open>pp \<Rightarrow> store set\<close>) so an instance supplies
-  whatever collecting semantics its own \<open>sound_dg_spec\<close> interpretation
+  whatever collecting semantics its own \<open>sound_dg_spec_core\<close> interpretation
   already proves sound: this theory adds no new soundness anchor, only the
   store-level check layer on top of an existing one.
 

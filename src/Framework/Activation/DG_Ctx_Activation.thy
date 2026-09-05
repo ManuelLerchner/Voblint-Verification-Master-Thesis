@@ -11,7 +11,7 @@ text \<open>
 
   Both carriers and both concretizations are free parameters: \<open>gammaDG\<close> interprets a
   D/G pair, \<open>gammaM\<close> interprets whatever the reader \<open>sg\<close> returns.  This matches
-  \<^locale>\<open>sound_dg_spec\<close>'s own genericity, so an analysis whose reader is not an
+  \<^locale>\<open>sound_dg_spec_core\<close>'s own genericity, so an analysis whose reader is not an
   \<open>abs_state\<close> instantiates the locale directly.  Solutions carry one shared global slot
   \<open>Inr gk0\<close>, and the reader's coverage assumption ties \<open>gammaM (sg (Inl (v, c)))\<close>
   to \<open>gammaDG\<close> of the local slot against that global.  The specification's soundness
@@ -24,7 +24,7 @@ text \<open>
   not reconstruct activation pairing.
 \<close>
 
-locale dg_ctx_activation_base = sound_dg_spec S gammaDG gs
+locale dg_ctx_activation_base = sound_dg_spec_core S gammaDG gs
   for S :: "(pp \<times> 'c, 'k, unit, 'D::bounded_semilattice_sup_bot,
               'G::bounded_semilattice_sup_bot) dg_spec"
     and gammaDG :: "'D \<Rightarrow> 'G \<Rightarrow> store set"

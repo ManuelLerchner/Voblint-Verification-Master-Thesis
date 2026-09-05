@@ -125,7 +125,7 @@ text \<open>The compiled edges, read off \<^const>\<open>prog_cfg\<close>'s own 
   \<open>Statement 6\<close>.\<close>
 lemma checks_ivl_ex_intra_eval:
   "intra (prog_cfg checks_ivl_ex_program) =
-     {(FunctionEntry (STR ''main''), EA_Nop, Statement 0),
+     {(FunctionEntry (STR ''main''), EA_Body (STR ''main''), Statement 0),
       (Statement 0, EA_Special Nondet_Int (STR ''x''), Statement 1),
       (Statement 1, EA_Assume (And (Less (N 0) (V (STR ''x''))) (Less (V (STR ''x'')) (N 10))), Statement 2),
       (Statement 1, EA_AssumeNot (And (Less (N 0) (V (STR ''x''))) (Less (V (STR ''x'')) (N 10))), Statement 5),
@@ -262,11 +262,11 @@ proof -
       by (rule ltr_collect_init[OF zero_init])
     then show ?thesis unfolding checks_ivl_ex_reach_def checks_ivl_ex_entry_eval .
   qed
-  have e0: "(FunctionEntry (STR ''main''), EA_Nop, Statement 0) \<in> intra (prog_cfg checks_ivl_ex_program)"
+  have e0: "(FunctionEntry (STR ''main''), EA_Body (STR ''main''), Statement 0) \<in> intra (prog_cfg checks_ivl_ex_program)"
     by (simp add: checks_ivl_ex_intra_eval)
   have s1: "(\<lambda>_. 0) \<in> checks_ivl_ex_reach (Statement 0)"
     using ltr_collect_intra_step[of "\<lambda>_. 0" checks_ivl_ex_gs "prog_cfg checks_ivl_ex_program"
-        "cinit_stores checks_ivl_ex_gs" "FunctionEntry (STR ''main'')" EA_Nop "Statement 0"]
+        "cinit_stores checks_ivl_ex_gs" "FunctionEntry (STR ''main'')" "EA_Body (STR ''main'')" "Statement 0"]
     using s0 e0 unfolding checks_ivl_ex_reach_def by simp
   have e1: "(Statement 0, EA_Special Nondet_Int (STR ''x''), Statement 1) \<in> intra (prog_cfg checks_ivl_ex_program)"
     by (simp add: checks_ivl_ex_intra_eval)

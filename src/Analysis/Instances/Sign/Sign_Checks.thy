@@ -54,7 +54,7 @@ context
         \<Longrightarrow> (cont, c1) \<in> fst (sctx_sol gs empty_pred Pi ps)"
 begin
 
-interpretation sctx_dg_base: sound_dg_spec "sctx_spec gs empty_pred" "sctx_gamma gs" gs
+interpretation sctx_dg_base: sound_dg_spec_core "sctx_spec gs empty_pred" "sctx_gamma gs" gs
   by (rule sctx_sound_exec[OF exact])
 
 interpretation sctx_adapter: routed_analysis_sound

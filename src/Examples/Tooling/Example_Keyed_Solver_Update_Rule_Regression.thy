@@ -203,7 +203,7 @@ lemma w0_dep_at_entered_frame:
       Inl (FunctionResult (STR ''f''), Ivl (Fin 7) (Fin 7))}"
   unfolding w0_tree_def w0_sigma_def w0_spec_def w0_route_def
   by (simp add: routed_cmb_g_def routed_cmb_g_at_def routed_cmb_g_alt_def w0_resolve_def
-        dg_spec_combine_transfer_def dgs_combine_def mk_dg_man_def man_with_local_def
+        dg_spec_combine_transfer_def mk_dg_man_def
         dg_read_global_def local_transfer_def local_combine_transfer_def
         Let_def insert_commute sp_compile_with_bind sp_read_global_def
         sp_bind_def sp_return_def comp_def bot_ivl_def)

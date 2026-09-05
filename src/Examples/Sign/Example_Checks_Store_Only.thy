@@ -122,7 +122,7 @@ text \<open>The compiled edges, read off \<^const>\<open>prog_cfg\<close>'s own 
   \<open>Statement 6\<close> reaches \<open>cfg_exit\<close>.\<close>
 lemma checks_ex_intra_eval:
   "intra (prog_cfg checks_ex_program) =
-     {(FunctionEntry (STR ''main''), EA_Nop, Statement 0),
+     {(FunctionEntry (STR ''main''), EA_Body (STR ''main''), Statement 0),
       (Statement 0, EA_Assign (STR ''y'') (N 5), Statement 1),
       (Statement 1, EA_Check (Less (N 0) (V (STR ''y''))), Statement 2),
       (Statement 2, EA_Assign (STR ''y'') (N 0), Statement 3),
@@ -247,11 +247,11 @@ proof -
       by (rule ltr_collect_init[OF zero_init])
     then show ?thesis unfolding checks_ex_reach_def checks_ex_entry_eval .
   qed
-  have e0: "(FunctionEntry (STR ''main''), EA_Nop, Statement 0) \<in> intra (prog_cfg checks_ex_program)"
+  have e0: "(FunctionEntry (STR ''main''), EA_Body (STR ''main''), Statement 0) \<in> intra (prog_cfg checks_ex_program)"
     by (simp add: checks_ex_intra_eval)
   have s1: "(\<lambda>_. 0) \<in> checks_ex_reach (Statement 0)"
     using ltr_collect_intra_step[of "\<lambda>_. 0" checks_ex_gs "prog_cfg checks_ex_program"
-        "cinit_stores checks_ex_gs" "FunctionEntry (STR ''main'')" EA_Nop "Statement 0"]
+        "cinit_stores checks_ex_gs" "FunctionEntry (STR ''main'')" "EA_Body (STR ''main'')" "Statement 0"]
     using s0 e0 unfolding checks_ex_reach_def by simp
   have e1: "(Statement 0, EA_Assign (STR ''y'') (N 5), Statement 1) \<in> intra (prog_cfg checks_ex_program)"
     by (simp add: checks_ex_intra_eval)
@@ -273,11 +273,11 @@ proof -
       by (rule ltr_collect_init[OF zero_init])
     then show ?thesis unfolding checks_ex_reach_def checks_ex_entry_eval .
   qed
-  have e0: "(FunctionEntry (STR ''main''), EA_Nop, Statement 0) \<in> intra (prog_cfg checks_ex_program)"
+  have e0: "(FunctionEntry (STR ''main''), EA_Body (STR ''main''), Statement 0) \<in> intra (prog_cfg checks_ex_program)"
     by (simp add: checks_ex_intra_eval)
   have s1: "(\<lambda>_. 0) \<in> checks_ex_reach (Statement 0)"
     using ltr_collect_intra_step[of "\<lambda>_. 0" checks_ex_gs "prog_cfg checks_ex_program"
-        "cinit_stores checks_ex_gs" "FunctionEntry (STR ''main'')" EA_Nop "Statement 0"]
+        "cinit_stores checks_ex_gs" "FunctionEntry (STR ''main'')" "EA_Body (STR ''main'')" "Statement 0"]
     using s0 e0 unfolding checks_ex_reach_def by simp
   have e1: "(Statement 0, EA_Assign (STR ''y'') (N 5), Statement 1) \<in> intra (prog_cfg checks_ex_program)"
     by (simp add: checks_ex_intra_eval)

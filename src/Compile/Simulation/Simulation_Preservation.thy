@@ -24,7 +24,7 @@ definition procs_embedded :: "proc_table \<Rightarrow> cfg \<Rightarrow> bool" w
         (\<exists>k n n' en E K.
            compile \<Pi> p (body decl) k n = (n', en, E, K)
          \<and> E \<subseteq> intra g \<and> K \<subseteq> calls g
-         \<and> (FunctionEntry p, EA_Nop, en) \<in> intra g
+         \<and> (FunctionEntry p, EA_Body p, en) \<in> intra g
          \<and> (falls_through (body decl) \<longrightarrow>
               (k, EA_Ret None p, FunctionResult p) \<in> intra g)
          \<and> source_com (body decl) \<and> special_table p = None))"
@@ -34,7 +34,7 @@ lemma procs_embedded_proc:
   obtains k n n' en E K where
     "compile \<Pi> p (body decl) k n = (n', en, E, K)"
     "E \<subseteq> intra g" "K \<subseteq> calls g"
-    "(FunctionEntry p, EA_Nop, en) \<in> intra g"
+    "(FunctionEntry p, EA_Body p, en) \<in> intra g"
     "falls_through (body decl) \<longrightarrow> (k, EA_Ret None p, FunctionResult p) \<in> intra g"
     "source_com (body decl)" "special_table p = None"
   using assms unfolding procs_embedded_def by blast
@@ -61,13 +61,13 @@ lemma procs_embedded_activation:
   obtains k n en where
     "compiled_at \<Pi> g p (body decl) k n"
     "control_at \<Pi> p (body decl) k n (body decl) en"
-    "(FunctionEntry p, EA_Nop, en) \<in> intra g"
+    "(FunctionEntry p, EA_Body p, en) \<in> intra g"
     "source_com (body decl)"
 proof -
   obtain k n n' en E K where
     cb: "compile \<Pi> p (body decl) k n = (n', en, E, K)"
       and Esub: "E \<subseteq> intra g" and Ksub: "K \<subseteq> calls g"
-      and entry: "(FunctionEntry p, EA_Nop, en) \<in> intra g"
+      and entry: "(FunctionEntry p, EA_Body p, en) \<in> intra g"
       and ex: "falls_through (body decl) \<longrightarrow> (k, EA_Ret None p, FunctionResult p) \<in> intra g"
       and src: "source_com (body decl)"
       and sp: "special_table p = None"
@@ -176,7 +176,7 @@ section \<open>Call preservation\<close>
 
 text \<open>
   A source \<^const>\<open>Call\<close> at the head of the active residual is matched by two \<^const>\<open>cstep\<close>s
-  --- the call edge to \<^term>\<open>FunctionEntry q\<close> and the entry \<^term>\<open>EA_Nop\<close> to the callee body
+  --- the call edge to \<^term>\<open>FunctionEntry q\<close> and the \<^term>\<open>EA_Body\<close> edge to the callee body
   --- and adds exactly one \<open>Nested\<close> layer: the callee body becomes a fresh \<open>Base\<close> activation
   and the caller resumes at \<^term>\<open>seq_after SKIP afters\<close>.  Everything the callee needs comes
   from the single \<^const>\<open>procs_embedded\<close> certificate.
@@ -212,11 +212,11 @@ proof -
   obtain kq m en_q where
     caccq: "compiled_at \<Pi> g q (body decl) kq m"
       and ctrlq: "control_at \<Pi> q (body decl) kq m (body decl) en_q"
-      and entry: "(FunctionEntry q, EA_Nop, en_q) \<in> intra g"
+      and entry: "(FunctionEntry q, EA_Body q, en_q) \<in> intra g"
     by (rule procs_embedded_activation[OF pc decl])
   have cstep2: "cstep gs g (FunctionEntry q, ?callee, [(w, dst, s)])
                         (en_q, ?callee, [(w, dst, s)])"
-    using cstep_nop[OF entry] .
+    using cstep_body[OF entry] .
   have star: "star (cstep gs g) (v, s, []) (en_q, ?callee, [(w, dst, s)])"
     using cstep1[unfolded ce] cstep2 vk by (simp add: star.step)
   have baseCallee: "csim \<Pi> g (body decl, ?callee, []) (en_q, ?callee, [])"
@@ -791,20 +791,20 @@ proof (intro allI impI)
   from cp obtain Eb where
     cb: "compile \<Pi> p (body decl) (Statement (m + csize (body decl))) m
            = (m + csize (body decl), Statement m, Eb, Kf)"
-    and Edef: "Ef = insert (FunctionEntry p, EA_Nop, Statement m)
+    and Edef: "Ef = insert (FunctionEntry p, EA_Body p, Statement m)
                  (if falls_through (body decl)
                   then insert (Statement (m + csize (body decl)), EA_Ret None p, FunctionResult p)
                          Eb
                   else Eb)"
     by (rule compile_procE)
   have Ebsub: "Eb \<subseteq> intra ?g" using Edef Esub by (auto split: if_splits)
-  have ent: "(FunctionEntry p, EA_Nop, Statement m) \<in> intra ?g" using Edef Esub by auto
+  have ent: "(FunctionEntry p, EA_Body p, Statement m) \<in> intra ?g" using Edef Esub by auto
   have ext: "falls_through (body decl) \<longrightarrow>
                (Statement (m + csize (body decl)), EA_Ret None p, FunctionResult p) \<in> intra ?g"
     using Edef Esub by auto
   show "\<exists>k n n' en E K. compile \<Pi> p (body decl) k n = (n', en, E, K)
           \<and> E \<subseteq> intra ?g \<and> K \<subseteq> calls ?g
-          \<and> (FunctionEntry p, EA_Nop, en) \<in> intra ?g
+          \<and> (FunctionEntry p, EA_Body p, en) \<in> intra ?g
           \<and> (falls_through (body decl) \<longrightarrow>
                (k, EA_Ret None p, FunctionResult p) \<in> intra ?g)
           \<and> source_com (body decl) \<and> special_table p = None"

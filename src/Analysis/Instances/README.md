@@ -23,7 +23,7 @@ Executable runs and concrete precision witnesses live in `src/Examples/`.
    soundness obligations.
 3. Provide the executable `st` operations and prove they commute with the
    function-state operations.
-4. Instantiate `sound_dg_spec` directly or register a diagonal unit D/G
+4. Instantiate `sound_dg_spec_core` directly or register a diagonal unit D/G
    analysis.
 5. Add an executable example that checks solver success and states a concrete
    precision fact.

@@ -135,9 +135,9 @@ interpretation nest_domain: routed_dg_domain_exec
 lemma nest_gamma_eq: "nest_gamma = nest_domain.gamma_exec"
   by (intro ext) (simp add: nest_gamma_def nest_domain.gamma_exec_def gamma_dg_local_state_def)
 
-interpretation nest_dg_sound: sound_dg_spec nest_S_st nest_gamma nest_gs
+interpretation nest_dg_sound: sound_dg_spec_core nest_S_st nest_gamma nest_gs
   unfolding nest_gamma_eq nest_S_st_def
-  by (rule nest_domain.sound_dg_spec_st[OF ivl_is_sound_transfer_for])
+  by (rule nest_domain.sound_dg_spec_core_st[OF ivl_is_sound_transfer_for])
 
 subsection \<open>The routed equation system and its computed solution\<close>
 

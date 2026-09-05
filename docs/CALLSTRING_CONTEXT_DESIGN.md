@@ -55,7 +55,7 @@ Read `Routed_Context.thy`, `DG_Ctx_Activation.thy`, `DG_Soundness.thy`,
 `dg_ctx_activation`'s locale header (`DG_Ctx_Activation.thy:18-33`):
 
 ```isabelle
-locale dg_ctx_activation = sound_dg_spec S gamma_ownership_split gs
+locale dg_ctx_activation = sound_dg_spec_core S gamma_ownership_split gs
   for S :: "('a::sound_domain abs_state, 'a abs_state) dg_spec"
     and gs :: "vname => bool" +
   fixes g :: cfg and gk0 :: 'k
@@ -291,10 +291,10 @@ explicit parameters/locales where Isabelle style benefits" directly — there
 is nothing here that a record, a locale-fixed `k`, or a new abstraction
 would improve.
 
-**Plugging into `routed_context`/`dg_ctx_activation`/`sound_dg_spec`:**
+**Plugging into `routed_context`/`dg_ctx_activation`/`sound_dg_spec_core`:**
 unchanged from how `Example_Interval_DG_CallString.thy` already plugs in
-(`twice_cs_dg`, `twice_cs_routed`) — `sound_dg_spec` is untouched (still
-`ivl_dg`/`sound_dg_spec_unit`), `dg_ctx_activation` is interpreted at
+(`twice_cs_dg`, `twice_cs_routed`) — `sound_dg_spec_core` is untouched (still
+`ivl_dg`/`sound_dg_spec_core_unit`), `dg_ctx_activation` is interpreted at
 `route_k k`, `routed_context` is interpreted at `route_k k`/`enterc_k k`.
 No changes to any of the three locales themselves.
 
@@ -475,7 +475,7 @@ value-sensitive contexts (section 5a).
 not just planned: a `k = 2` instance (`route_2 u ctx d ca = take 2 (u #
 ctx)`) on `twice_cfg`, same `Sabs`/`ivl_dg` domain spec, same
 `TD_side_warrowing_apinis_Interp_solve` backend, with no changes to
-`routed_context`, `dg_ctx_activation`, or `sound_dg_spec`. Verified twice,
+`routed_context`, `dg_ctx_activation`, or `sound_dg_spec_core`. Verified twice,
 independently: interactively via I/Q (0 errors, 228/228 commands processed)
 and by a full `Voblint_Examples` batch build confirming no regression to any
 existing example. The one place the mechanical claim needed correcting
@@ -570,7 +570,7 @@ better outcome than planned, not a compromise.
 
 `cs_route`/`cs_enterc` need only `pp`/`cfg_node`/`call_action`/`store`
 (`Abstract_Domain.thy`, itself domain-agnostic) — no `dg_spec`, no
-`sound_dg_spec`, no `routed_context`, no `TD_side` solver. Nothing about a
+`sound_dg_spec_core`, no `routed_context`, no `TD_side` solver. Nothing about a
 call string requires knowing what a "sound domain" or a "routed context
 policy" *is*; it only needs the CFG-level vocabulary those things are later
 built from. So the file deliberately does not import `Routed_Context.thy`

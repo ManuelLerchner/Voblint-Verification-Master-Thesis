@@ -24,7 +24,7 @@ locales are spread over two folders. Five theories exceed the 1500-line cap
 The session also mixes three things a reader wants kept apart:
 
 1. **The abstract framework** -- what a sound analysis is and why a solved
-   system covers the collecting semantics. Carrier-agnostic: `sound_dg_spec`,
+   system covers the collecting semantics. Carrier-agnostic: `sound_dg_spec_core`,
    `dg_ctx_activation_base` and `routed_context_base_hetero` are generic in
    the local carrier `'D`, and `Rel_Order_Domain` already interprets them at
    a relational one.
@@ -94,7 +94,7 @@ Usage counts (`rg -w` over `src/`):
   (`DG_Constraint_Trees` 2365-2470): no user outside the file.
 - `sound_dg_hooks`, `sound_dg_hooks_ltr`, `hook_gen`, `gamma_join`,
   `ownership_split_dg_spec_placed`: reached only from `Example_Sign_Placement` and
-  `Example_Interval_Placement`. The spec route (`sound_dg_spec`, interpreted
+  `Example_Interval_Placement`. The spec route (`sound_dg_spec_core`, interpreted
   12 times) is what Analysis and Soundness use.
 - `Exec_Placement` (1134 lines): imported by `DG_Constraint_Trees`, which uses nothing
   from it, and reached through that import by `Exec_DG_Refines`,
@@ -175,7 +175,7 @@ Mechanical once Phase 0 is green.
 | --- | --- | --- |
 | 1.1 | Split `Abstract_Domain` at line 919: `Backward_Domain.thy` takes `semantic_intersection`, `backward_domain`, `backward_domain_refined`, the inverse-operator sections, `show_val`. | landed (`Backward_Domain.thy`, 1180 lines; `Abstract_Domain` 1013) |
 | 1.2 | Rename `Exec_St` to `Abstract_State` (it is the quotient state, the counterpart of HOL-IMP's `Abs_State`; nothing about it is specific to execution). Keep the constant names for now. | deferred with 1.1 |
-| 1.3 | Extract the hooks route from `DG_Soundness` (968-1508) and `DG_LTR_Sound` (`sound_dg_hooks_ltr`), plus `gamma_join` and `ownership_split_dg_spec_placed`, into `Examples/Placement/Placement_Hooks.thy`. Move `Exec_Placement` beside it. | landed as `Examples/Placement/Placement_Policy.thy`: the `*_placed` specification, `gamma_join` and its section, and `sound_dg_hooks_ltr`; `sound_dg_hooks` itself stays, it is the engine `sound_dg_spec` reduces to |
+| 1.3 | Extract the hooks route from `DG_Soundness` (968-1508) and `DG_LTR_Sound` (`sound_dg_hooks_ltr`), plus `gamma_join` and `ownership_split_dg_spec_placed`, into `Examples/Placement/Placement_Hooks.thy`. Move `Exec_Placement` beside it. | landed as `Examples/Placement/Placement_Policy.thy`: the `*_placed` specification, `gamma_join` and its section, and `sound_dg_hooks_ltr`; `sound_dg_hooks` itself stays, it is the engine `sound_dg_spec_core` reduces to |
 | 1.4 | Create `src/Domain/ROOT`, `src/Solver/ROOT`, `src/Exec/ROOT`; rewrite `src/Framework/ROOT`; add the four directories to `ROOTS`. | landed |
 | 1.5 | Move the seven Base-level and compile-dependent theories into `src/Analysis/` (`Common/` for the four reuse locales, `Context/` for the three routed contexts, or wherever the Analysis README's layout puts them). | landed |
 | 1.6 | Repoint every qualified import across Analysis, Soundness, CLI, Codegen, Examples. Check by arity where a locale header changed, not by grep. | landed |
@@ -188,7 +188,7 @@ Spike before committing to it.
 
 | # | Step | Status |
 | --- | --- | --- |
-| 2.1 | Spike on Sign, in a scratch theory: interpret `sound_dg_spec` at `local_state_dg_spec_st_for_lifted gs is_bot_pred tf_st enter_st` with `gammaDG d g = gamma_state (fun_of_resolved_st_q_for gs (unlift d)) ...` using only `routed_dg_domain_exec`'s three commute facts and Sign's `sound_transfer_for`. Then `dg_ctx_activation_base` and `routed_context_base_hetero` at that carrier. Exit criterion: no citation of anything in `Voblint_Exec` except `Exec_DG_Refines`'s lattice instances for `exec_dg_st`, and `cli-test` green with Sign routed through the new interpretation. | landed: `Examples/Tooling/Spike_Sign_Quotient.thy` |
+| 2.1 | Spike on Sign, in a scratch theory: interpret `sound_dg_spec_core` at `local_state_dg_spec_st_for_lifted gs is_bot_pred tf_st enter_st` with `gammaDG d g = gamma_state (fun_of_resolved_st_q_for gs (unlift d)) ...` using only `routed_dg_domain_exec`'s three commute facts and Sign's `sound_transfer_for`. Then `dg_ctx_activation_base` and `routed_context_base_hetero` at that carrier. Exit criterion: no citation of anything in `Voblint_Exec` except `Exec_DG_Refines`'s lattice instances for `exec_dg_st`, and `cli-test` green with Sign routed through the new interpretation. | landed: `Examples/Tooling/Spike_Sign_Quotient.thy` |
 | 2.2 | If 2.1 fails, record why under "Decisions and corrections", keep `Voblint_Exec` as a permanent session named for what it is, and skip to Phase 3. | open |
 | 2.3 | Delete `Exec_DG_Trees`, `Exec_DG_Generator`, `Exec_DG_Bridge`; the transport half of `DG_Local_State_Exec` (keep `routed_dg_domain_exec` and the `local_state_dg_spec_st_for_lifted` commute lemmas it cites); the owner-aware trees and classifier-parametric readback in `Exec_DG_Refines` (keep the `exec_dg_st` lattice instances and `fun_of_dg_st_for`). `Routed_Domain_Exec` stays -- superseded, see decision below. | partly landed (2026-08-31) -- `Exec_DG_Bridge` itself is deleted, zero remaining importers. `Exec_DG_Trees`, `Exec_DG_Generator`, and `Routed_Domain_Exec` are load-bearing and stay (see "Decisions and corrections"); the owner-aware half is now deleted (2026-09-01, G1-G6 of `docs/MERGE_SPLIT_GENERALIZATION.md` executed): `merge_split_spec`/`merge_split_spec_exec` generalize the unit/placed skeleton once; `Placement_Policy_Exec` supplies the classifier-split executable projection, `ownership_split_dg_spec_placed_st`, and the `placed_dg_exec_analysis` registration locale; `Example_Sign_Placement` (949 -> 153 lines), `Example_Interval_Placement` (2926 -> 203), and `Example_Interval_Global_Flow_Sensitivity` re-solve on that spine with every value, check, and equation-count regression reproducing unchanged; then `Exec_Placement.thy` (1149 lines) is deleted whole and the owner-aware halves of `Exec_DG_Refines` (863 -> 379), `Exec_DG_Trees` (905 -> 96) and `Exec_DG_Generator` (1719 -> 1009) are removed. `dg_gen_of`, the classifier-parametric readback, the unit executable ops, and the carrier-generic commute engine are what remains. Step closed |
 | 2.4 | `routed_context_hetero` becomes `routed_context_base_hetero` at whichever carrier the instance chooses; delete the restated assumptions. Same for `unit_routed_context_hetero`. | landed: `entry_state_routed_context` and `call_string_routed_context` (Analysis) are stated at a carrier parameter with `gammaDG`/`gammaM` and sublocale `routed_context_base_hetero`; `routed_context_hetero` and `unit_routed_context_hetero` are deleted, having no interpreter left |
@@ -200,7 +200,7 @@ Spike before committing to it.
 
 | # | Step | Status |
 | --- | --- | --- |
-| 3.1 | One `dead_code_lift :: ('dl, 'dg) dg_spec => ('dl lifted, 'dg) dg_spec` with `sound_dg_spec S ==> sound_dg_spec (dead_code_lift S)`; `local_state_dg_spec_for_lifted`, `ownership_split_step_for_lifted`, `ownership_split_dg_spec_for_lifted` and `local_state_dg_spec_st_for_lifted` become instances. This is Goblint's `DeadCodeLifter`, stated once. Design the seam so widening delay and context gas can use it. | open -- and narrower than written: the merge/split research (2026-09-01 decision entry, `docs/MERGE_SPLIT_GENERALIZATION.md`) found this step was conflating two axes. The merge/split axis (unit vs placed routing) is handled by that document's own generalization and is no longer on 2.3's critical path; what remains for 3.1 is only the orthogonal Bot-carrier wrapper `('dl,'dg) dg_spec => ('dl lifted,'dg) dg_spec` with `sound_dg_spec S ==> sound_dg_spec (dead_code_lift S)`, which then wraps one unlifted core instead of two, with the four `*_for_lifted` constructions as its instances. Design pass complete (2026-09-01): the external carrier-architecture review and the follow-up lifter-pipeline session fixed the shape -- reachability-first functor with `lift_gamma`, normalization as a separate layer over an explicit emptiness interface, one executable commute-preservation theorem per lifter, `\|>` pipe bundle deferred until a second lifter exists; see "External review" and "Lifter pipeline design" in `docs/MERGE_SPLIT_GENERALIZATION.md`. Core landed (2026-09-01, uncommitted): `src/Framework/Lifters/DG_Dead_Code_Lift.thy` holds `dead_code_lift` + `lift_gamma` + `dead_code_lift_sound`, `sound_dg_spec_cong`, `dead_code_normalize` + its soundness, and the `dg_spec_commute` naturality theorems (`dead_code_lift_commute`, `dead_code_normalize_commute`); `DG_Local_State_Spec` gains the unlifted `local_state_dg_spec_for` and re-derives `local_state_dg_spec_sound` through the functor chain, deleting its three hand-rolled obligation walls. The unit-lifted family (`ownership_split_step_for_lifted`, `ownership_split_dg_spec_for_lifted`, `gamma_ownership_split_lifted` + walls, `assemble_env_abs`; ~460 lines) turned out consumer-free -- absent from every other theory and the generated OCaml -- and is deleted rather than subsumed; the canonical dead-code-aware unit analysis is now the one-expression functor application (see the design doc's resolved finding 3a). Remaining: wire the Base executable records onto `dg_spec_commute` when a second lifter lands; batch gate at phase end. Step 3.3 progress: DG_Soundness's four `apply` sites converted to structured Isar in the same pass. |
+| 3.1 | One `dead_code_lift :: ('dl, 'dg) dg_spec => ('dl lifted, 'dg) dg_spec` with `sound_dg_spec_core S ==> sound_dg_spec_core (dead_code_lift S)`; `local_state_dg_spec_for_lifted`, `ownership_split_step_for_lifted`, `ownership_split_dg_spec_for_lifted` and `local_state_dg_spec_st_for_lifted` become instances. This is Goblint's `DeadCodeLifter`, stated once. Design the seam so widening delay and context gas can use it. | open -- and narrower than written: the merge/split research (2026-09-01 decision entry, `docs/MERGE_SPLIT_GENERALIZATION.md`) found this step was conflating two axes. The merge/split axis (unit vs placed routing) is handled by that document's own generalization and is no longer on 2.3's critical path; what remains for 3.1 is only the orthogonal Bot-carrier wrapper `('dl,'dg) dg_spec => ('dl lifted,'dg) dg_spec` with `sound_dg_spec_core S ==> sound_dg_spec_core (dead_code_lift S)`, which then wraps one unlifted core instead of two, with the four `*_for_lifted` constructions as its instances. Design pass complete (2026-09-01): the external carrier-architecture review and the follow-up lifter-pipeline session fixed the shape -- reachability-first functor with `lift_gamma`, normalization as a separate layer over an explicit emptiness interface, one executable commute-preservation theorem per lifter, `\|>` pipe bundle deferred until a second lifter exists; see "External review" and "Lifter pipeline design" in `docs/MERGE_SPLIT_GENERALIZATION.md`. Core landed (2026-09-01, uncommitted): `src/Framework/Lifters/DG_Dead_Code_Lift.thy` holds `dead_code_lift` + `lift_gamma` + `dead_code_lift_sound`, `sound_dg_spec_core_cong`, `dead_code_normalize` + its soundness, and the `dg_spec_commute` naturality theorems (`dead_code_lift_commute`, `dead_code_normalize_commute`); `DG_Local_State_Spec` gains the unlifted `local_state_dg_spec_for` and re-derives `local_state_dg_spec_sound` through the functor chain, deleting its three hand-rolled obligation walls. The unit-lifted family (`ownership_split_step_for_lifted`, `ownership_split_dg_spec_for_lifted`, `gamma_ownership_split_lifted` + walls, `assemble_env_abs`; ~460 lines) turned out consumer-free -- absent from every other theory and the generated OCaml -- and is deleted rather than subsumed; the canonical dead-code-aware unit analysis is now the one-expression functor application (see the design doc's resolved finding 3a). Remaining: wire the Base executable records onto `dg_spec_commute` when a second lifter lands; batch gate at phase end. Step 3.3 progress: DG_Soundness's four `apply` sites converted to structured Isar in the same pass. |
 | 3.2 | Split `DG_Constraint_Trees`: the homogeneous unit analysis (685-956) and the keyed generators (1393-end) are separate concerns from the `dg_spec` record and edge trees. Split the domain foundation at the reachability lift. | landed: `Abstract_Domain`, `Reachability_Lift`, `Nonrelational_State`, and `Nonrelational_Reachability` separate value semantics, generic reachability, pointwise stores, and their composition; `combine_env` is the sole pointwise selector and `State_Restriction` derives projections from it. `DG_Constraint_Trees` (2230 lines) split three ways: the file itself keeps only the carrier-agnostic core (`dg_state`, `dg_edge_tree`/`dg_combine_tree`, the fold combinators `side_rhs_fold_dg`/`side_acc_dg`, the `dg_spec` record and `apply_dg_spec`) at 951 lines; `DG_Ownership_Split_Spec.thy` (327 lines) holds the homogeneous `ownership_split_dg_spec_for`/`unit_combine_step_*` instantiation; `DG_Keyed_Generator.thy` (995 lines) holds the keyed generators, the buffered-generator correspondence proof, and the generic instance's `threefold_mono` discharge. All three under the 1500-line cap. Only two theories anywhere directly `imports DG_Constraint_Trees`'s pre-split content and needed repointing (`DG_Soundness`, `Example_Keyed_Solver_Update_Rule_Regression`); everything else reached it transitively through `DG_Soundness` and needed no change |
 | 3.3 | Retire `metis`: after Phase 2 the count is 26; `Abstract_State` holds 13. Retire the 61 `apply` lines; `Activation_Local_Sound`'s 10 and `Routed_Domain_Exec`'s 14 first. | open |
 | 3.4 | Hoist `dg_post_solution_postfix` (272 lines) and `side_cfg_T_eff_keyed_seed_dg_buffered_correspondence` (249) into helper lemmas with named subgoals. | open |
@@ -247,18 +247,18 @@ and mark it `superseded (see below)`.
   `compile_prog` in two checked antiquotations inside prose; they are
   unchecked `\<open>...\<close>` now. Core is compiler-free in fact, not only
   in its import list.
-- 2026-08-30: The hooks route is not example-only either: `sound_dg_spec`
-  is proved by reduction to `sound_dg_hooks` (`sublocale sound_dg_spec
+- 2026-08-30: The hooks route is not example-only either: `sound_dg_spec_core`
+  is proved by reduction to `sound_dg_hooks` (`sublocale sound_dg_spec_core
   \<subseteq> hooks`, DG_Soundness), so the locale stays in Core. What was
   placement-only is the `*_placed` specification, `gamma_join` with its
   policy section, and the `sound_dg_hooks_ltr` re-packaging whose
   `hooks_ltr.` sublocale nothing cited. Those are `Placement_Policy.thy` in
   Examples now; `DG_Soundness` is 2182 lines, `DG_LTR_Sound` 68.
 - 2026-08-30: **Spike 2.1 succeeds.** `Spike_Sign_Quotient.thy` proves a
-  generic pullback inside `routed_dg_domain_exec` -- `sound_dg_spec` at the
-  abstract Base spec gives `sound_dg_spec` at the executable Base spec with
+  generic pullback inside `routed_dg_domain_exec` -- `sound_dg_spec_core` at the
+  abstract Base spec gives `sound_dg_spec_core` at the executable Base spec with
   `gamma_exec d g = gamma_dg_local_state (readback d) (readback g)`, from the three
-  commute facts alone -- and then interprets `sound_dg_spec`,
+  commute facts alone -- and then interprets `sound_dg_spec_core`,
   `dg_ctx_activation_base` and `unit_routed_context` at
   `sctx_spec gs is_bot_pred` with `sigma := snd (sctx_sol ...)`, the solver's
   own table. The post-solution of the unbuffered generator is the first half
@@ -267,10 +267,10 @@ and mark it `superseded (see below)`.
   transport, is not needed. Nothing in `Exec_DG_Trees`, `Exec_DG_Generator`
   or `Exec_DG_Bridge` is cited. Phase 2 proceeds.
 - 2026-08-30: The two generic halves of the spike are now framework facts:
-  `routed_dg_domain_exec.sound_dg_spec_st` with `gamma_exec` (DG_Local_State_Exec)
+  `routed_dg_domain_exec.sound_dg_spec_core_st` with `gamma_exec` (DG_Local_State_Exec)
   and `routed_domain_exec.pp_st` (Routed_Domain_Exec, factored out of
   `pp_abs`, which now cites it). An instance migrating to the executable
-  carrier interprets `sound_dg_spec` by `sound_dg_spec_st`, feeds
+  carrier interprets `sound_dg_spec_core` by `sound_dg_spec_core_st`, feeds
   `dg_ctx_activation_base` the solver's table with `pp_st`, and needs nothing
   from `Exec_DG_Trees`/`Generator`/`Bridge`. The spike is 123 lines and is
   the template for step 2.6.
@@ -287,7 +287,7 @@ and mark it `superseded (see below)`.
 - 2026-08-30: Sign at unit context is the first instance on the executable
   carrier. `Sign_Ctx_None_Sound` defines `sctx_gamma gs d g =
   gamma_state_lift (readback d)` and the covered reader `sctx_sg_st`, proves
-  `sctx_sound_exec` by `sound_dg_spec_st` and `sctx_pp_routed` by `pp_st`,
+  `sctx_sound_exec` by `sound_dg_spec_core_st` and `sctx_pp_routed` by `pp_st`,
   and interprets `unit_routed_context` at `sctx_spec` with
   `sigma := snd (sctx_sol ...)`. `Sign_Checks` interprets the adapter with
   `rd := map_lift (fun_of_resolved_st_q_for gs)`; `sctx_analyse_result_eq`
@@ -295,7 +295,7 @@ and mark it `superseded (see below)`.
   and `sign_pp_abs_gen` are gone, and the spike theory is deleted because
   the instance is its content. Recipe per remaining instance: replace the
   `*_sigma_abs`/`*_sg` section with `*_gamma`/`*_sg_st`, replace `*_pp_abs`
-  with `*_pp_routed`, re-interpret `sound_dg_spec` and the routed locale at
+  with `*_pp_routed`, re-interpret `sound_dg_spec_core` and the routed locale at
   the executable spec, and hand the adapter `rd := map_lift readback`.
 - 2026-08-30: Parity, Interval and Int at unit context follow the recipe
   unchanged. Interval and Int keep their solver-generic `ictx_solved`
@@ -335,8 +335,8 @@ and mark it `superseded (see below)`.
   locales re-export the fact as `activation_collect_sound`.
 - 2026-08-30: the four CallString examples solve the unbuffered
   `side_cfg_T_eff_keyed_seed_dg` at the executable spec already, so their
-  migration is only the interpretation: `sound_dg_spec` at `*_S_st` via
-  `routed_dg_domain_exec.sound_dg_spec_st`, `sigma := snd *_sol`, the covered
+  migration is only the interpretation: `sound_dg_spec_core` at `*_S_st` via
+  `routed_dg_domain_exec.sound_dg_spec_core_st`, `sigma := snd *_sol`, the covered
   reader typed at the executable carrier, and the hand-rolled
   `dg_reader_commute_gen`/`part_post_solution_seed_dg_st_to_abs_lifted_for`
   transport deleted. The examples were the last interpreters of
@@ -349,7 +349,7 @@ and mark it `superseded (see below)`.
   (unrouted, `dg_gen_of`) executable bundle in `Run_Analysis_Sound` and its
   two registration locales, interpreted by four flagship examples. Step 2.3
   either restates those bundles at the executable carrier the same way
-  (`sound_dg_spec_st` for the flat spec, the collecting endpoint fed by the
+  (`sound_dg_spec_core_st` for the flat spec, the collecting endpoint fed by the
   solver's own table) or retires the flat registration API in favour of the
   routed adapter; decide there, not here.
 - 2026-08-30 (superseded by the entry above): the six contextual instances cannot follow the recipe yet.
@@ -381,10 +381,10 @@ and mark it `superseded (see below)`.
   are I/Q-clean with no warnings.
 - 2026-08-31: the flat bundle restatement from the entry above is done.
   `Run_Analysis_Sound`'s `local_state_dg_exec_analysis` (Sign, Parity) now proves
-  soundness via `routed_dg_domain_exec.sound_dg_spec_st` directly at the
+  soundness via `routed_dg_domain_exec.sound_dg_spec_core_st` directly at the
   executable carrier, with G narrowed to match D (the only shape either
   instance actually used). `ownership_split_dg_exec_analysis` (both Interval flagships)
-  gets the same treatment via a new, file-local `sound_dg_spec_st` built from
+  gets the same treatment via a new, file-local `sound_dg_spec_core_st` built from
   the existing `unit_dg_Hstep_for`/`unit_dg_Henter_for`/`unit_dg_Hcomb_for`/
   `unit_dg_Hcont_for` commute lemmas -- no shared locale needed, since this
   spec shape has exactly one consumer. Neither locale transports a solved
@@ -407,7 +407,7 @@ and mark it `superseded (see below)`.
     (extending `routed_dg_domain_exec` with the routing/seed-key parameters)
     is actively interpreted by `Sign_Ctx_None_Sound`, `Interval_Ctx_None_Sound`,
     `Int_Ctx_None_Sound`, and `Interval_Ctx_Entry_State_Sound` for
-    `.pp_st`/`.sound_dg_spec_st`. This was already known generically ("the
+    `.pp_st`/`.sound_dg_spec_core_st`. This was already known generically ("the
     owner-aware trees ... keep routed_dg_domain_exec") but the step's own
     text still lists the whole theory for deletion; it should not be.
   - `dg_gen_of` -- the core "build an equation system from a spec" function
@@ -489,12 +489,12 @@ and mark it `superseded (see below)`.
   `Exec_DG_Trees` provides (`dg_refines_on_placed_edge_strict` and its
   enter/combine counterparts, per the file's own comments). What the
   flagship migration doesn't hand them for free is the *policy* itself: the
-  flagships interpret `sound_dg_spec` and get `routed_dg_domain_exec`'s
-  generic `sound_dg_spec_st` pullback; the Placement examples interpret
+  flagships interpret `sound_dg_spec_core` and get `routed_dg_domain_exec`'s
+  generic `sound_dg_spec_core_st` pullback; the Placement examples interpret
   `sound_dg_hooks` with a custom `keep_local`/`publish_side` split threaded
   through `placed_abs_dg_gen_of`, and no spike has proved the analogous
   pullback for that generator. That pullback is exactly what step 3.1
-  ("One `dead_code_lift` ... `sound_dg_spec S ==> sound_dg_spec
+  ("One `dead_code_lift` ... `sound_dg_spec_core S ==> sound_dg_spec_core
   (dead_code_lift S)`, design the seam so widening delay and context gas
   can use it") would need to produce as a byproduct of making the placement
   policy an instance of the general spec shape -- 3.1 is a precondition
@@ -507,7 +507,7 @@ and mark it `superseded (see below)`.
   read found the entry above wrong on both counts.
   (1) The placement policy is *already* an instance of the general spec
   shape: `Placement_Policy.thy` defines `ownership_split_dg_spec_placed` as a genuine
-  `dg_spec` record and proves `sound_dg_spec_unit_placed` -- the
+  `dg_spec` record and proves `sound_dg_spec_core_unit_placed` -- the
   abstract-carrier soundness the entry above thought was missing. (2)
   `dead_code_lift` is therefore not a precondition for 2.3; the actual gap
   is only the *executable mirror* of that record and its pullback, and the
@@ -826,7 +826,7 @@ and mark it `superseded (see below)`.
 - `gamma_join` and the hooks route are recorded in the alignment register as
   a kept alternative concretization target. Moving them to Examples keeps
   the register true; deleting them would not.
-- `Rel_Order_Domain` interprets `sound_dg_spec` at a carrier that is not an
+- `Rel_Order_Domain` interprets `sound_dg_spec_core` at a carrier that is not an
   `abs_state`. It is the existing witness that the framework is
   carrier-agnostic; if a Phase 2 change breaks it, the change narrowed the
   framework.

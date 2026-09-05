@@ -126,7 +126,7 @@ text \<open>The compiled edges, read off \<^const>\<open>prog_cfg\<close>'s own 
   unknown) reaches the epilogue \<open>Statement 7\<close> reaches \<open>cfg_exit\<close>.\<close>
 lemma parity_ex_intra_eval:
   "intra (prog_cfg parity_ex_program) =
-     {(FunctionEntry (STR ''main''), EA_Nop, Statement 0),
+     {(FunctionEntry (STR ''main''), EA_Body (STR ''main''), Statement 0),
       (Statement 0, EA_Special Nondet_Int (STR ''x''), Statement 1),
       (Statement 1, EA_Assign (STR ''y'') (Times (V (STR ''x'')) (N 2)), Statement 2),
       (Statement 2, EA_Assign (STR ''z'') (Plus (V (STR ''y'')) (N 1)), Statement 3),
@@ -252,11 +252,11 @@ proof -
       by (rule ltr_collect_init[OF zero_init])
     then show ?thesis unfolding parity_ex_reach_def parity_ex_entry_eval .
   qed
-  have e0: "(FunctionEntry (STR ''main''), EA_Nop, Statement 0) \<in> intra (prog_cfg parity_ex_program)"
+  have e0: "(FunctionEntry (STR ''main''), EA_Body (STR ''main''), Statement 0) \<in> intra (prog_cfg parity_ex_program)"
     by (simp add: parity_ex_intra_eval)
   have s1: "(\<lambda>_. 0) \<in> parity_ex_reach (Statement 0)"
     using ltr_collect_intra_step[of "\<lambda>_. 0" parity_ex_gs "prog_cfg parity_ex_program"
-        "cinit_stores parity_ex_gs" "FunctionEntry (STR ''main'')" EA_Nop "Statement 0"]
+        "cinit_stores parity_ex_gs" "FunctionEntry (STR ''main'')" "EA_Body (STR ''main'')" "Statement 0"]
     using s0 e0 unfolding parity_ex_reach_def by simp
   have e1: "(Statement 0, EA_Special Nondet_Int (STR ''x''), Statement 1) \<in> intra (prog_cfg parity_ex_program)"
     by (simp add: parity_ex_intra_eval)

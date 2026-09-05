@@ -16,7 +16,7 @@ text \<open>
   have.
 
   Layout of one procedure \<open>p\<close> with body \<open>b\<close>:
-    \<^item> \<open>FunctionEntry p --EA_Nop--> entry(b)\<close>;
+    \<^item> \<open>FunctionEntry p --EA_Body p--> entry(b)\<close>;
     \<^item> the compiled body edges, with the epilogue node as the body's continuation;
     \<^item> \<open>epilogue --EA_Ret None p--> FunctionResult p\<close> (normal fall-through returns without a
        value);
@@ -201,7 +201,7 @@ where
      (let r = n + csize (body decl);
           (n', ben, E, K) = compile \<Pi> p (body decl) (Statement r) n
       in (Suc r,
-          insert (FunctionEntry p, EA_Nop, ben)
+          insert (FunctionEntry p, EA_Body p, ben)
             (if falls_through (body decl)
              then insert (Statement r, EA_Ret None p, FunctionResult p) E
              else E),
@@ -516,7 +516,7 @@ lemma compile_procE [elim]:
   obtains Eb where
     "compile \<Pi> p (body decl) (Statement (n + csize (body decl))) n
        = (n + csize (body decl), Statement n, Eb, K)"
-    "E = insert (FunctionEntry p, EA_Nop, Statement n)
+    "E = insert (FunctionEntry p, EA_Body p, Statement n)
            (if falls_through (body decl)
             then insert (Statement (n + csize (body decl)), EA_Ret None p, FunctionResult p) Eb
             else Eb)"
@@ -529,7 +529,7 @@ proof -
   have e: "ben = Statement n" using compile_entry[OF cb] .
   have i: "m = r" using compile_next_id[OF cb] unfolding r_def by simp
   from assms cb e i
-  have "E = insert (FunctionEntry p, EA_Nop, Statement n)
+  have "E = insert (FunctionEntry p, EA_Body p, Statement n)
               (if falls_through (body decl)
                then insert (Statement r, EA_Ret None p, FunctionResult p) Eb
                else Eb)"

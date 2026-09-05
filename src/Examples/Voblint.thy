@@ -269,16 +269,16 @@ text \<open>
     (independent flow-sensitive local domain \<^verbatim>\<open>D\<close> and flow-insensitive global domain \<^verbatim>\<open>G\<close>),
     the canonical context-sensitive backbone.
     \<^item> @{theory Voblint_Framework.DG_Spec} --- the \<^verbatim>\<open>dg_spec\<close> record, one manager-native transfer per edge action, plus the \<^verbatim>\<open>dg_state\<close> copy lattice and the seeded keyed generator in @{theory Voblint_Framework.DG_Constraint_Trees}.
-    \<^item> @{theory Voblint_Framework.DG_Soundness} --- native heterogeneous soundness over opaque carriers (\<^verbatim>\<open>sound_dg_spec\<close>); the routed context locales in @{theory Voblint_Framework.Routed_Context} feed those obligations directly into \<^const>\<open>activation_collect\<close>, so the routed unit-context instance reaches \<^const>\<open>ltr_collect\<close> through \<^verbatim>\<open>ltr_collect_eq_Union_activation\<close> (@{theory Voblint_Framework.Routed_Context_Unit}).
+    \<^item> @{theory Voblint_Framework.DG_Soundness} --- native heterogeneous soundness over opaque carriers (\<^verbatim>\<open>sound_dg_spec_core\<close>); the routed context locales in @{theory Voblint_Framework.Routed_Context} feed those obligations directly into \<^const>\<open>activation_collect\<close>, so the routed unit-context instance reaches \<^const>\<open>ltr_collect\<close> through \<^verbatim>\<open>ltr_collect_eq_Union_activation\<close> (@{theory Voblint_Framework.Routed_Context_Unit}).
     \<^item> @{theory Voblint_Analysis.Sign_Analyses} and
       @{theory Voblint_Analysis.Interval_Analyses} --- Sign and Interval as
-      routed \<^verbatim>\<open>sound_dg_spec\<close> instances, each reaching \<^const>\<open>ltr_collect\<close>
+      routed \<^verbatim>\<open>sound_dg_spec_core\<close> instances, each reaching \<^const>\<open>ltr_collect\<close>
       through the adapter's generic node-soundness bridge.
 
   \<^bold>\<open>4c. Activation-local certification.\<close> The concrete object the context-sensitive soundness
     rides: one trace per activation, with a stable call-only context.
     \<^item> @{theory Voblint_Framework.Activation_Backbone} --- the generic \<^verbatim>\<open>activation_collect_sound\<close>: over \<^const>\<open>valid_ltr\<close>, four obligations \<^verbatim>\<open>ENTRY_G\<close>/\<^verbatim>\<open>EDGE\<close>/\<^verbatim>\<open>SEED_G\<close>/\<^verbatim>\<open>COMB\<close> (\<^verbatim>\<open>COMB\<close> at the caller context) bound \<^const>\<open>activation_collect\<close> at every \<^verbatim>\<open>(node, context)\<close>.
-    \<^item> @{theory Voblint_Framework.DG_Ctx_Activation} --- DG-native discharge of those four obligations from a \<^verbatim>\<open>sound_dg_spec\<close> post-solution, so a computed D/G solution certifies the activation collecting.
+    \<^item> @{theory Voblint_Framework.DG_Ctx_Activation} --- DG-native discharge of those four obligations from a \<^verbatim>\<open>sound_dg_spec_core\<close> post-solution, so a computed D/G solution certifies the activation collecting.
 
   \<^bold>\<open>5. Executable frontend.\<close> Finite-map state representation and certified execution.
     \<^item> @{theory Voblint_Exec.Exec_St} --- executable abstract-state maps for code generation.
@@ -470,7 +470,7 @@ text \<open>
       application, bounding \<open>ltr_collect g S v\<close> at every program point.
 
   \<^bold>\<open>Soundness spine.\<close> The context-sensitive analyses converge on one native
-  interface, the carrier-opaque \<^verbatim>\<open>sound_dg_spec\<close>; Sign, Interval, and
+  interface, the carrier-opaque \<^verbatim>\<open>sound_dg_spec_core\<close>; Sign, Interval, and
   the mixed flagship are its instances, and context slicing is factored through
   the functional activation spine and its per-context keyed slots. There is one
   such spine: every domain reaches \<^const>\<open>ltr_collect\<close> through the routed

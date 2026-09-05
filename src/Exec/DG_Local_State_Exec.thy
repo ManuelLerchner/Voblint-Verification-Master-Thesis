@@ -34,7 +34,7 @@ where
      (\<lambda>sc x. transfer_lift empty_pred (tf_st (EA_Special sc x)))
      (\<lambda>b pol. transfer_lift empty_pred
         (tf_st (if pol then EA_Assume b else EA_AssumeNot b)))
-     (\<lambda>p. transfer_lift empty_pred (tf_st EA_Nop))
+     (\<lambda>p. transfer_lift empty_pred (tf_st (EA_Body p)))
      (\<lambda>e p. transfer_lift empty_pred (tf_st (EA_Ret e p)))
      (\<lambda>ci d. [(d, transfer_lift empty_pred (enter_st ci) d)])
      (\<lambda>ev. transfer_lift empty_pred
@@ -61,6 +61,7 @@ lemma local_spec_step_transfer_lift_tf_st:
      (\<lambda>sc x. transfer_lift empty_pred (tf_st (EA_Special sc x)))
      (\<lambda>b pol. transfer_lift empty_pred
         (tf_st (if pol then EA_Assume b else EA_AssumeNot b)))
+     (\<lambda>p. transfer_lift empty_pred (tf_st (EA_Body p)))
      (\<lambda>e p. transfer_lift empty_pred (tf_st (EA_Ret e p)))
      (\<lambda>ev. transfer_lift empty_pred
         (tf_st (case ev of Check_Event bc \<Rightarrow> EA_Check bc))) a
@@ -166,7 +167,7 @@ locale routed_dg_domain_exec =
   assumes tf_st_commute:
       "\<And>a s. live_resolved_st_q gs s \<Longrightarrow>
          fun_of_resolved_st_q_for gs (tf_st a s)
-           = local_spec_step sk asn sp br rt ev a (fun_of_resolved_st_q_for gs s)"
+           = local_spec_step sk asn sp br bd rt ev a (fun_of_resolved_st_q_for gs s)"
     and enter_st_commute:
       "\<And>ci s. fun_of_resolved_st_q_for gs (enter_st ci s)
                    = en ci (fun_of_resolved_st_q_for gs s)"
@@ -194,7 +195,7 @@ text \<open>
 lemma step_lift_commute:
   assumes norm: "normalized_lift empty_pred d"
   shows "reader (transfer_lift empty_pred (tf_st a) d)
-     = transfer_lift is_empty_state (local_spec_step sk asn sp br rt ev a) (reader d)"
+     = transfer_lift is_empty_state (local_spec_step sk asn sp br bd rt ev a) (reader d)"
 using norm proof (cases d)
   case Bot
   then show ?thesis by (simp add: transfer_lift_def)
@@ -298,7 +299,7 @@ text \<open>
   The framework is carrier-agnostic, so nothing forces it to be instantiated at
   \<open>'a abs_state lifted\<close>: with the concretization read through
   \<^const>\<open>fun_of_resolved_st_q_for\<close>, the executable Base-style spec is itself a
-  \<^locale>\<open>sound_dg_spec\<close>, and the field equations above are all that the proof
+  \<^locale>\<open>sound_dg_spec_core\<close>, and the field equations above are all that the proof
   needs. An instance that interprets the routed spine at \<open>spec_st\<close> with this
   concretization feeds it the solver's own table and never transports a solved
   system between carriers.
@@ -311,7 +312,7 @@ lemma gamma_exec_Bot [simp]: "gamma_exec Bot g = {}"
   by (simp add: gamma_exec_def)
 
 text \<open>
-  Entry is no longer part of \<^locale>\<open>sound_dg_spec\<close>, so a routed instance needs it
+  Entry is no longer part of \<^locale>\<open>sound_dg_spec_core\<close>, so a routed instance needs it
   separately. This is the same fact the collapse below proves for its own entry
   obligation, exported once because every routed instance over this carrier
   discharges its entry coverage from it.
@@ -343,9 +344,9 @@ proof -
        (simp_all add: sin entered)
 qed
 
-theorem sound_dg_spec_st:
+theorem sound_dg_spec_core_st:
   assumes tf_sound: "sound_transfer_for gs sk asn sp br bd rt en ev"
-  shows "sound_dg_spec spec_st gamma_exec gs"
+  shows "sound_dg_spec_core spec_st gamma_exec gs"
 proof -
   have geq: "gamma_exec = (\<lambda>d g. gamma_state_lift (reader d))"
     by (simp add: fun_eq_iff gamma_exec_def)
@@ -362,7 +363,7 @@ proof -
     proof (cases "normalized_lift empty_pred d")
       case True
       then have eq: "reader (transfer_lift empty_pred (tf_st a) d)
-                       = transfer_lift is_empty_state (local_spec_step sk asn sp br rt ev a) (reader d)"
+                       = transfer_lift is_empty_state (local_spec_step sk asn sp br bd rt ev a) (reader d)"
         by (rule step_lift_commute)
       show ?thesis
         unfolding eq

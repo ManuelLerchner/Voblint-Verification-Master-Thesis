@@ -60,16 +60,16 @@ text \<open>Layout regression: statement indices are allocated procedure by proc
   the first index of its block, and its \<^const>\<open>EA_Ret\<close> edge the last.\<close>
 
 lemma proc_layout_regression_blocks:
-  "(FunctionEntry (STR ''f''), EA_Nop, Statement 0) \<in> intra proc_layout_regression_cfg \<and>
+  "(FunctionEntry (STR ''f''), EA_Body (STR ''f''), Statement 0) \<in> intra proc_layout_regression_cfg \<and>
    (Statement 3, EA_Ret None (STR ''f''), FunctionResult (STR ''f'')) \<in> intra proc_layout_regression_cfg \<and>
-   (FunctionEntry (STR ''g''), EA_Nop, Statement 4) \<in> intra proc_layout_regression_cfg \<and>
+   (FunctionEntry (STR ''g''), EA_Body (STR ''g''), Statement 4) \<in> intra proc_layout_regression_cfg \<and>
    (Statement 5, EA_Ret None (STR ''g''), FunctionResult (STR ''g'')) \<in> intra proc_layout_regression_cfg \<and>
-   (FunctionEntry (STR ''h''), EA_Nop, Statement 6) \<in> intra proc_layout_regression_cfg \<and>
+   (FunctionEntry (STR ''h''), EA_Body (STR ''h''), Statement 6) \<in> intra proc_layout_regression_cfg \<and>
    (Statement 7, EA_Ret None (STR ''h''), FunctionResult (STR ''h'')) \<in> intra proc_layout_regression_cfg \<and>
-   (FunctionEntry (STR ''inc''), EA_Nop, Statement 8) \<in> intra proc_layout_regression_cfg \<and>
+   (FunctionEntry (STR ''inc''), EA_Body (STR ''inc''), Statement 8) \<in> intra proc_layout_regression_cfg \<and>
    (Statement 9, EA_Ret None (STR ''inc''), FunctionResult (STR ''inc''))
      \<in> intra proc_layout_regression_cfg \<and>
-   (FunctionEntry (STR ''main''), EA_Nop, Statement 10) \<in> intra proc_layout_regression_cfg \<and>
+   (FunctionEntry (STR ''main''), EA_Body (STR ''main''), Statement 10) \<in> intra proc_layout_regression_cfg \<and>
    (Statement 13, EA_Ret None (STR ''main''), FunctionResult (STR ''main''))
      \<in> intra proc_layout_regression_cfg"
   unfolding proc_layout_regression_cfg_def proc_layout_regression_prog_def by eval

@@ -335,7 +335,7 @@ context-from-entry-state order structural rather than an instance property (§3)
 Two equation families remain that are *not* push-based. Neither is reachable
 from any export root (§2).
 
-**Base family** — `DG_Soundness.thy`, in `sound_dg_spec`:
+**Base family** — `DG_Soundness.thy`, in `sound_dg_spec_core`:
 
 ```isabelle
 dg_extra g route ctx v =
@@ -362,7 +362,7 @@ Footprint (`dg_gen|dg_trees|dg_postfix|dg_cmb|dg_enter|dg_extra|hook_gen|sound_d
 | `Core/Solver/Context/DG/DG_Constraint_Trees.thy` | 2 | `side_cfg_T_eff_keyed_seed_trees` + four single-tree lemmas |
 
 `Routed_Context` imports `DG_Ctx_Activation` and `DG_Local_State_Spec`, both of which import
-`DG_Soundness`. The routed path depends on `sound_dg_spec`'s record and transfer
+`DG_Soundness`. The routed path depends on `sound_dg_spec_core`'s record and transfer
 soundness, **not** on its generator. The generator is a separable leaf; the
 locale is not.
 

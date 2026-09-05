@@ -2,7 +2,7 @@ theory Rel_Order_Domain
   imports "Voblint_Framework.DG_Soundness"
 begin
 
-section \<open>A minimal relational carrier for \<^const>\<open>sound_dg_spec\<close>\<close>
+section \<open>A minimal relational carrier for \<^const>\<open>sound_dg_spec_core\<close>\<close>
 
 text \<open>
   \<open>relc\<close> tracks a finite set of known pairwise-ordered variables, \<open>(x, y)\<close>
@@ -13,7 +13,7 @@ text \<open>
   (no \<open>vname \<Rightarrow> 'a\<close> function type anywhere in the carrier).
 
   The purpose of this file is not a useful analysis.  It demonstrates that a
-  non-\<open>abs_state\<close> carrier discharges \<^locale>\<open>sound_dg_spec\<close> with zero
+  non-\<open>abs_state\<close> carrier discharges \<^locale>\<open>sound_dg_spec_core\<close> with zero
   changes to the DG framework.
   Every transfer below is deliberately the most imprecise sound choice
   (forget on assign, havoc on call) except for a precise \<open>assume\<close>/
@@ -372,7 +372,7 @@ where
 
 text \<open>The observations of a compiled \<open>rel_transfer\<close>: its answer is the operation's
   local half, and what it publishes at the routed key is the global half. These are
-  what \<^locale>\<open>sound_dg_spec\<close> is stated against.\<close>
+  what \<^locale>\<open>sound_dg_spec_core\<close> is stated against.\<close>
 
 lemma traverse_rel_transfer [simp]:
   "locals (traverse_rhs (transfer_tree (rel_transfer f) src (\<lambda>_. gk)) \<tau>)
@@ -510,6 +510,7 @@ fun rel_step_for :: "edge_action \<Rightarrow> relc \<Rightarrow> relc \<Rightar
 | "rel_step_for (EA_Special sc x) = dgs_special_rel sc x"
 | "rel_step_for (EA_Assume b) = dgs_branch_rel b True"
 | "rel_step_for (EA_AssumeNot b) = dgs_branch_rel b False"
+| "rel_step_for (EA_Body p) = dgs_body_rel p"
 | "rel_step_for (EA_Ret e p) = dgs_return_rel e p"
 | "rel_step_for (EA_Check cnd) = dgs_event_rel (Check_Event cnd)"
 
@@ -534,10 +535,9 @@ text \<open>The composed return pipeline: \<open>caller_cont\<close> and \<open>
 
 lemma dg_spec_combine_transfer_rel_order_spec [simp]:
   "dg_spec_combine_transfer rel_order_spec ci = rel_combine_transfer (dgs_combine_env_rel ci)"
-  unfolding dg_spec_combine_transfer_def dgs_combine_def rel_order_spec_def
+  unfolding dg_spec_combine_transfer_def rel_order_spec_def
   by (intro ext)
-     (simp add: local_transfer_def local_combine_transfer_def man_with_local_def
-        rel_combine_transfer_def)
+     (simp add: local_transfer_def local_combine_transfer_def rel_combine_transfer_def)
 
 lemma traverse_rel_combine [simp]:
   "locals (traverse_rhs
@@ -558,7 +558,7 @@ lemma sides_rel_combine [simp]:
 
 subsection \<open>The interpretation\<close>
 
-interpretation rel_order: sound_dg_spec rel_order_spec gammaDG_rel is_global
+interpretation rel_order: sound_dg_spec_core rel_order_spec gammaDG_rel is_global
 proof unfold_locales
   fix d d' :: relc and g g' :: relc
   show "d \<le> d' \<Longrightarrow> g \<le> g' \<Longrightarrow> gammaDG_rel d g \<subseteq> gammaDG_rel d' g'"

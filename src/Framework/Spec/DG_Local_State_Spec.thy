@@ -84,7 +84,7 @@ text \<open>The per-edge dispatcher's soundness, which is what an equation gener
   action names, and each selected operation is sound by one locale assumption.\<close>
 
 lemma step_sound_for[intro]:
-  "edge_collect a \<lbrakk>\<sigma>\<rbrakk> \<subseteq> \<lbrakk>local_spec_step sk asn sp br rt ev a \<sigma>\<rbrakk>"
+  "edge_collect a \<lbrakk>\<sigma>\<rbrakk> \<subseteq> \<lbrakk>local_spec_step sk asn sp br bd rt ev a \<sigma>\<rbrakk>"
 proof (cases a)
   case (EA_Special sc x)
   then show ?thesis by (cases sc) auto
@@ -92,9 +92,15 @@ qed auto
 
 text \<open>A specification dispatches its own \<open>EA_Check\<close> case through its own event
   operation, matching \<^const>\<open>local_spec_step\<close>'s own dispatch: this is the
-  per-domain soundness bound each such instance needs at that dispatch point.\<close>
+  per-domain soundness bound each such instance needs at that dispatch point.
 
-lemma edge_collect_check_sound_for[intro]:
+  Untagged, unlike \<^const>\<open>local_spec_step\<close>'s own rule above. Unfolding the
+  dispatcher at \<open>EA_Check\<close> turns that rule into this one, so tagging both puts
+  two routes to the same conclusion into the classical set --- and this one's
+  conclusion mentions \<open>ev\<close> rather than the dispatcher, so it also fires on
+  goals the dispatcher rule would leave alone.\<close>
+
+lemma edge_collect_check_sound_for:
   "edge_collect (EA_Check c) \<lbrakk>\<sigma>\<rbrakk> \<subseteq> \<lbrakk>ev (Check_Event c) \<sigma>\<rbrakk>"
   by auto
 
@@ -144,11 +150,11 @@ declare local_state_dg_spec_for_def [code_unfold]
 
 lemma dg_spec_step_local_state_for:
   "dg_spec_step (local_state_dg_spec_for gs sk asn sp br bd rt en ev) a
-     = local_transfer (local_spec_step sk asn sp br rt ev a)"
+     = local_transfer (local_spec_step sk asn sp br bd rt ev a)"
   by (simp add: local_state_dg_spec_for_def dg_spec_step_local_dg_spec)
 
 theorem (in sound_transfer_for) local_state_dg_spec_for_sound:
-  "sound_dg_spec (local_state_dg_spec_for gs sk asn sp br bd rt en ev) (\<lambda>d g. \<lbrakk>d\<rbrakk>) gs"
+  "sound_dg_spec_core (local_state_dg_spec_for gs sk asn sp br bd rt en ev) (\<lambda>d g. \<lbrakk>d\<rbrakk>) gs"
   unfolding local_state_dg_spec_for_def by (rule base.local_spec_sound)
 
 
@@ -250,14 +256,15 @@ lemma local_spec_step_transfer_lift:
      (\<lambda>x e. transfer_lift empty_pred (asn x e))
      (\<lambda>sc x. transfer_lift empty_pred (sp sc x))
      (\<lambda>b pol. transfer_lift empty_pred (br b pol))
+     (\<lambda>p. transfer_lift empty_pred (bd p))
      (\<lambda>e p. transfer_lift empty_pred (rt e p))
      (\<lambda>evt. transfer_lift empty_pred (ev evt)) a
-     = transfer_lift empty_pred (local_spec_step sk asn sp br rt ev a)"
+     = transfer_lift empty_pred (local_spec_step sk asn sp br bd rt ev a)"
   by (cases a) simp_all
 
 lemma dg_spec_step_local_state_for_lifted:
   "dg_spec_step (local_state_dg_spec_for_lifted gs empty_pred sk asn sp br bd rt en ev) a
-     = local_transfer (transfer_lift empty_pred (local_spec_step sk asn sp br rt ev a))"
+     = local_transfer (transfer_lift empty_pred (local_spec_step sk asn sp br bd rt ev a))"
   by (simp add: local_state_dg_spec_for_lifted_def dg_spec_step_local_dg_spec
       local_spec_step_transfer_lift)
 
@@ -314,7 +321,7 @@ where
 
 theorem (in sound_transfer_for) local_state_dg_spec_sound:
   assumes empty_pred_sound: "\<And>sigma. empty_pred sigma \<Longrightarrow> \<lbrakk>sigma\<rbrakk> = {}"
-  shows "sound_dg_spec (local_state_dg_spec_for_lifted gs empty_pred sk asn sp br bd rt en ev)
+  shows "sound_dg_spec_core (local_state_dg_spec_for_lifted gs empty_pred sk asn sp br bd rt en ev)
            gamma_dg_local_state gs"
 proof -
   have geq: "gamma_dg_local_state = (\<lambda>d g. gamma_state_lift d)"

@@ -16,8 +16,9 @@ text \<open>
   What a program answers with depends on the field. An edge transfer and a
   combine stage answer the successor local value, so their compiled tree is an
   equation's right-hand side outright. Entry answers a list of alternatives
-  instead, which no equation carries: whatever consumes it reduces the list to
-  one value, and the two generators reduce it differently.
+  instead, which no equation carries: the routed call tree consumes that list,
+  running one activation and return combine per alternative and joining what
+  they contribute.
 
   There is one interface here, not a hierarchy of them. A specification is
   \<^emph>\<open>local-only\<close> when every field is a pure function of the values it is handed
@@ -82,17 +83,18 @@ text \<open>
   it: an environment merge followed by a return-value assign, both taking
   the same manager plus the callee exit. The composed form sequences them
   monadically -- \<open>combine_assign\<close> runs from the point \<open>combine_env\<close>
-  reached, via \<open>man_with_local\<close>, so any effects \<open>combine_env\<close> emitted stay
-  in the program and nothing is extracted into a pure pair in between.
+  reached, against the same manager with \<^const>\<open>man_local\<close> updated to that
+  point, so any effects \<open>combine_env\<close> emitted stay in the program and nothing
+  is extracted into a pure pair in between.
 \<close>
 
-definition dgs_combine ::
+definition dg_spec_combine_transfer ::
   "('x,'k,'v,'dl,'dg) dg_spec \<Rightarrow> call_info \<Rightarrow> ('x,'k,'v,'dl,'dg) man_combine_transfer"
 where
-  "dgs_combine S ci m exit =
+  "dg_spec_combine_transfer S ci m exit =
      do {
        d_env \<leftarrow> combine_env\<^sup># S ci m exit;
-       combine_assign\<^sup># S ci (man_with_local m d_env) exit
+       combine_assign\<^sup># S ci (m\<lparr>man_local := d_env\<rparr>) exit
      }"
 
 text \<open>
@@ -113,18 +115,16 @@ where
 | "dg_spec_step S (EA_Special sc x) = special\<^sup># S sc x"
 | "dg_spec_step S (EA_Assume b)     = branch\<^sup># S b True"
 | "dg_spec_step S (EA_AssumeNot b)  = branch\<^sup># S b False"
+| "dg_spec_step S (EA_Body p)       = body\<^sup># S p"
 | "dg_spec_step S (EA_Ret e p)      = return\<^sup># S e p"
 | "dg_spec_step S (EA_Check cnd)    = event\<^sup># S (Check_Event cnd)"
 
 subsection \<open>Compiling a specification to right-hand sides\<close>
 
 text \<open>
-  The generator-facing tree formers: an edge equation reads the source
-  unknown, builds the manager around it with the routed key closed in, and
-  runs the spec's transfer; the combine equation additionally reads the callee
-  exit. Which continuation \<^const>\<open>dgs_combine\<close> runs against is the manager's
-  current local value, so an equation shape that has the matching alternative
-  in hand supplies it, and one that does not supplies the caller.
+  An edge equation reads the source unknown, builds the manager around it with
+  the routed key closed in, and runs the specification's transfer. Every
+  generator's edge right-hand side is a \<open>dg_spec_edge_tree\<close>.
 \<close>
 
 definition transfer_tree ::
@@ -133,23 +133,33 @@ definition transfer_tree ::
 where
   "transfer_tree T src key = sp_compile_with (\<lambda>d. DG d bot) (dg_edge_tree_man T src key)"
 
-definition combine_transfer_tree ::
-  "('x,'k,'v,'dl::bot,'dg::bot) man_combine_transfer \<Rightarrow> 'x + 'k \<Rightarrow> 'x + 'k \<Rightarrow> ('v \<Rightarrow> 'k)
-   \<Rightarrow> ('x,'k,('dl,'dg) dg_state) strategy_tree"
-where
-  "combine_transfer_tree T src_cc src_ex key =
-     sp_compile_with (\<lambda>d. DG d bot) (dg_combine_tree_man T src_cc src_ex key)"
-
 definition dg_spec_edge_tree ::
   "('x,'k,'v,'dl::bot,'dg::bot) dg_spec \<Rightarrow> edge_action \<Rightarrow> 'x + 'k \<Rightarrow> ('v \<Rightarrow> 'k)
    \<Rightarrow> ('x,'k,('dl,'dg) dg_state) strategy_tree"
 where
   "dg_spec_edge_tree S a src key = transfer_tree (dg_spec_step S a) src key"
 
-definition dg_spec_combine_transfer ::
-  "('x,'k,'v,'dl,'dg) dg_spec \<Rightarrow> call_info \<Rightarrow> ('x,'k,'v,'dl,'dg) man_combine_transfer"
+subsection \<open>Proof-level compiled combine form\<close>
+
+text \<open>
+  The same compilation for a return combine: read the caller continuation and
+  the callee exit, and run the composed combine against them. No generator
+  builds one. The routed call tree already holds the alternative's own
+  continuation, so it runs \<^const>\<open>dg_spec_combine_transfer\<close> against that value
+  directly and never reads a caller unknown a second time --- which is also why
+  the continuation an equation shape supplies need not be the caller's.
+
+  What these two formers are for is \<^emph>\<open>stating\<close> the return obligation at a pair
+  of addresses, so that a proof can quantify over the pair. Their consumers are
+  proofs, and a reader should not take them for part of the active generator.
+\<close>
+
+definition combine_transfer_tree ::
+  "('x,'k,'v,'dl::bot,'dg::bot) man_combine_transfer \<Rightarrow> 'x + 'k \<Rightarrow> 'x + 'k \<Rightarrow> ('v \<Rightarrow> 'k)
+   \<Rightarrow> ('x,'k,('dl,'dg) dg_state) strategy_tree"
 where
-  "dg_spec_combine_transfer S ci m exit = dgs_combine S ci m exit"
+  "combine_transfer_tree T src_cc src_ex key =
+     sp_compile_with (\<lambda>d. DG d bot) (dg_combine_tree_man T src_cc src_ex key)"
 
 definition dg_spec_combine_tree ::
   "('x,'k,'v,'dl::bot,'dg::bot) dg_spec \<Rightarrow> call_info \<Rightarrow> 'x + 'k \<Rightarrow> 'x + 'k \<Rightarrow> ('v \<Rightarrow> 'k)
@@ -211,8 +221,8 @@ text \<open>
   The combine counterpart: a pure function of the caller-continuation and
   callee-exit values, no global contact. When both stages --- \<open>combine_env\<^sup>#\<close>
   and \<open>combine_assign\<^sup>#\<close> --- are local, the whole return pipeline collapses
-  monadically to one pure composition -- the sequencing through
-  \<^const>\<open>man_with_local\<close> is definitional, nothing is extracted -- and the
+  monadically to one pure composition -- the sequencing updates
+  \<^const>\<open>man_local\<close> and extracts nothing -- and the
   compiled combine tree is two reads and an answer, with no side contribution
   and dependencies exactly the two sources.
 \<close>
@@ -227,8 +237,7 @@ lemma dg_spec_combine_transfer_local:
     and "combine_assign\<^sup># S ci = local_combine_transfer ca"
   shows "dg_spec_combine_transfer S ci m exit
            = sp_return (ca (ce (man_local m) exit) exit)"
-  by (simp add: dg_spec_combine_transfer_def dgs_combine_def assms
-      local_combine_transfer_def)
+  by (simp add: dg_spec_combine_transfer_def assms local_combine_transfer_def)
 
 lemma traverse_local_combine_tree [simp]:
   "traverse_rhs (combine_transfer_tree (local_combine_transfer h) src_cc src_ex gk) \<tau>
@@ -291,18 +300,6 @@ lemma dep_aux_dg_spec_combine_tree_sources:
   "{src_cc, src_ex} \<subseteq> dep_aux \<tau> (dg_spec_combine_tree S ci src_cc src_ex gk)"
   unfolding dg_spec_combine_tree_def by (rule dep_aux_combine_transfer_tree_sources)
 
-subsection \<open>Reducing a compiled tree to its manager-applied form\<close>
-
-text \<open>
-  Under an environment, a compiled transfer's observations coincide with
-  those of the transfer applied inline to a manager built from the
-  environment's own answers at the source reads -- the initial reads only
-  look values up. Routed generators build their trees in the inline form
-  (the caller value is read once per call site and shared by every resolved
-  target), while the soundness assumptions are stated over the compiled
-  formers; these equations connect the two.
-\<close>
-
 subsection \<open>A default specification, and overriding its fields\<close>
 
 text \<open>
@@ -318,8 +315,22 @@ text \<open>
   at the identity is a claim about that analysis: that ignoring the edge is
   sound for it. It is false in general -- an assignment analysis that leaves
   \<open>dgs_assign\<close> at the identity does not track assignments -- and nothing here
-  checks it. \<open>sound_dg_spec\<close> remains the only authority on whether a
-  specification, defaulted fields included, means anything.
+  checks it. Whether a specification, defaulted fields included, means
+  anything is settled by \<open>sound_dg_spec_core\<close> together with the entry
+  obligation that locale deliberately leaves open --- never by how the record
+  was assembled.
+
+  It is also not a transcription of Goblint's \<open>IdentitySpec\<close>, and the return
+  combine is where the two differ: both stages here keep the value they are
+  handed, so the composed default keeps the \<^emph>\<open>caller\<close> continuation, whereas
+  Goblint's \<open>combine_env\<close> answers the callee exit and its \<open>combine_assign\<close>
+  answers \<open>man.local\<close>, so the composed default there ends at the callee's
+  value. Both are neutral for their own purpose; this one is neutral for
+  \<^emph>\<open>record update\<close>. A wrapper that overrides only the final stage --
+  \<open>ownership_split_lift\<close> is the one in this session -- relies on that: were the
+  default to substitute the callee exit first, the wrapper would run against a
+  continuation the caller never had. Changing the default is therefore an
+  audit of every partial override, not a one-line edit.
 \<close>
 
 
@@ -360,16 +371,18 @@ text \<open>
 
 fun local_spec_step ::
   "('D \<Rightarrow> 'D) \<Rightarrow> (vname \<Rightarrow> exp \<Rightarrow> 'D \<Rightarrow> 'D) \<Rightarrow> (special_call \<Rightarrow> vname \<Rightarrow> 'D \<Rightarrow> 'D)
-   \<Rightarrow> (exp \<Rightarrow> bool \<Rightarrow> 'D \<Rightarrow> 'D) \<Rightarrow> (exp option \<Rightarrow> pname \<Rightarrow> 'D \<Rightarrow> 'D)
+   \<Rightarrow> (exp \<Rightarrow> bool \<Rightarrow> 'D \<Rightarrow> 'D) \<Rightarrow> (pname \<Rightarrow> 'D \<Rightarrow> 'D)
+   \<Rightarrow> (exp option \<Rightarrow> pname \<Rightarrow> 'D \<Rightarrow> 'D)
    \<Rightarrow> (analysis_event \<Rightarrow> 'D \<Rightarrow> 'D) \<Rightarrow> edge_action \<Rightarrow> 'D \<Rightarrow> 'D"
 where
-  "local_spec_step sk asn sp br rt ev EA_Nop = sk"
-| "local_spec_step sk asn sp br rt ev (EA_Assign x e) = asn x e"
-| "local_spec_step sk asn sp br rt ev (EA_Special sc x) = sp sc x"
-| "local_spec_step sk asn sp br rt ev (EA_Assume b) = br b True"
-| "local_spec_step sk asn sp br rt ev (EA_AssumeNot b) = br b False"
-| "local_spec_step sk asn sp br rt ev (EA_Ret e p) = rt e p"
-| "local_spec_step sk asn sp br rt ev (EA_Check cnd) = ev (Check_Event cnd)"
+  "local_spec_step sk asn sp br bd rt ev EA_Nop = sk"
+| "local_spec_step sk asn sp br bd rt ev (EA_Assign x e) = asn x e"
+| "local_spec_step sk asn sp br bd rt ev (EA_Special sc x) = sp sc x"
+| "local_spec_step sk asn sp br bd rt ev (EA_Assume b) = br b True"
+| "local_spec_step sk asn sp br bd rt ev (EA_AssumeNot b) = br b False"
+| "local_spec_step sk asn sp br bd rt ev (EA_Body p) = bd p"
+| "local_spec_step sk asn sp br bd rt ev (EA_Ret e p) = rt e p"
+| "local_spec_step sk asn sp br bd rt ev (EA_Check cnd) = ev (Check_Event cnd)"
 
 definition local_dg_spec ::
   "('D \<Rightarrow> 'D) \<Rightarrow> (vname \<Rightarrow> exp \<Rightarrow> 'D \<Rightarrow> 'D) \<Rightarrow> (special_call \<Rightarrow> vname \<Rightarrow> 'D \<Rightarrow> 'D)
@@ -445,7 +458,7 @@ lemma local_dg_spec_simps [simp]:
 
 lemma dg_spec_step_local_dg_spec:
   "dg_spec_step (local_dg_spec sk asn sp br bd rt en ev ce ca) a
-     = local_transfer (local_spec_step sk asn sp br rt ev a)"
+     = local_transfer (local_spec_step sk asn sp br bd rt ev a)"
   by (cases a) simp_all
 
 lemma dg_spec_combine_transfer_local_dg_spec:
