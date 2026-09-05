@@ -410,5 +410,88 @@ lemma set_concat_call_site_static_targets:
      = set (map (\<lambda>(c, ca, p). h c ca p) (call_target_list g v))"
   by (force simp: call_site_list_def static_targets_def image_iff)
 
+section \<open>Which unknowns a run has to have solved\<close>
+
+text \<open>
+  \<open>vars_cover g vars\<close> is the one recurring premise every post-solution
+  soundness theorem here needs: the solved key set \<open>vars\<close> contains the CFG
+  entry, the target of every \<open>intra\<close> edge, and both halves of every call ---
+  the callee's entry and the caller's continuation.
+
+  Read it as a statement about a solver run, not about the graph. It
+  quantifies over every edge \<open>g\<close> has, so a graph carrying a call the run never
+  activated does not satisfy it: in a routed system a callee's entry unknown is
+  solved only once some caller publishes its seed, and an unreachable call site
+  publishes nothing. That is why a run establishes it by deciding
+  \<open>vars_cover_exec\<close> against the keys it actually solved, on a graph
+  \<^emph>\<open>pruned\<close> to what it can reach, rather than by an argument about
+  connectivity.
+
+  The four components travel together, so callers state and discharge one
+  premise instead of four positional ones. Global, not locale-local: every
+  analysis instance and the executable pipeline cite it under this name.
+\<close>
+
+definition vars_cover :: "cfg \<Rightarrow> (cfg_node \<times> unit) set \<Rightarrow> bool" where
+  "vars_cover g vars \<longleftrightarrow>
+     (cfg_entry g, ()) \<in> vars
+   \<and> (\<forall>u a v. (u, a, v) \<in> intra g \<longrightarrow> (v, ()) \<in> vars)
+   \<and> (\<forall>c dst fs as q k. (c, CallEdge dst fs as, FunctionEntry q, k) \<in> calls g
+        \<longrightarrow> (FunctionEntry q, ()) \<in> vars \<and> (k, ()) \<in> vars)"
+
+lemma vars_coverI [intro]:
+  assumes "(cfg_entry g, ()) \<in> vars"
+    and "\<And>u a v. (u, a, v) \<in> intra g \<Longrightarrow> (v, ()) \<in> vars"
+    and "\<And>c dst fs as q k. (c, CallEdge dst fs as, FunctionEntry q, k) \<in> calls g
+           \<Longrightarrow> (FunctionEntry q, ()) \<in> vars"
+    and "\<And>c dst fs as q k. (c, CallEdge dst fs as, FunctionEntry q, k) \<in> calls g
+           \<Longrightarrow> (k, ()) \<in> vars"
+  shows "vars_cover g vars"
+  unfolding vars_cover_def using assms by blast
+
+lemma vars_cover_entryD [dest]: "vars_cover g vars \<Longrightarrow> (cfg_entry g, ()) \<in> vars"
+  unfolding vars_cover_def by blast
+
+lemma vars_cover_edgeD [dest]:
+  "vars_cover g vars \<Longrightarrow> (u, a, v) \<in> intra g \<Longrightarrow> (v, ()) \<in> vars"
+  unfolding vars_cover_def by blast
+
+lemma vars_cover_enterD [dest]:
+  assumes cover: "vars_cover g vars"
+  shows "\<And>c dst fs as q k. (c, CallEdge dst fs as, FunctionEntry q, k) \<in> calls g
+     \<Longrightarrow> (FunctionEntry q, ()) \<in> vars"
+  using cover unfolding vars_cover_def by blast
+
+lemma vars_cover_combineD [dest]:
+  assumes cover: "vars_cover g vars"
+  shows "\<And>c dst fs as q k. (c, CallEdge dst fs as, FunctionEntry q, k) \<in> calls g
+     \<Longrightarrow> (k, ()) \<in> vars"
+  using cover unfolding vars_cover_def by blast
+
+text \<open>
+  Coverage of a finite graph is testable: walk the two edge enumerations and
+  test membership. The test is sufficient, not equivalent, and deliberately so.
+  \<^const>\<open>vars_cover\<close> asks only about calls of the shape
+  \<open>(c, CallEdge dst fs as, FunctionEntry q, k)\<close>, while the test asks about
+  every tuple the enumeration yields, so it is the stronger of the two: it also
+  covers a \<open>calls\<close> entry whose action or target has some other shape. Turning
+  it into an equivalence would mean assuming that \<open>g\<close> has no such entry, which
+  is a well-formedness fact about the graph and not something a coverage check
+  should carry.
+\<close>
+
+definition vars_cover_exec :: "cfg \<Rightarrow> (cfg_node \<times> unit) set \<Rightarrow> bool" where
+  "vars_cover_exec g vars \<longleftrightarrow>
+     (cfg_entry g, ()) \<in> vars
+   \<and> list_all (\<lambda>(u, a, v). (v, ()) \<in> vars) (cfg_intra_list g)
+   \<and> list_all (\<lambda>(c, ca, ce, k). (ce, ()) \<in> vars \<and> (k, ()) \<in> vars) (cfg_calls_list g)"
+
+lemma vars_cover_of_exec:
+  assumes finE: "finite (intra g)" and finC: "finite (calls g)"
+    and cover: "vars_cover_exec g vars"
+  shows "vars_cover g vars"
+  using cover unfolding vars_cover_exec_def vars_cover_def
+  by (auto simp: list_all_iff set_cfg_intra_list[OF finE] set_cfg_calls_list[OF finC])
+
 end
 

@@ -316,7 +316,7 @@ definition ownership_split_lift ::
    \<Rightarrow> ('x,'k,unit,'a::bounded_semilattice_sup_bot abs_state,'a abs_state) dg_spec
    \<Rightarrow> ('x,'k,unit,'a abs_state,'a abs_state) dg_spec"
 where
-  "ownership_split_lift gs S = default_local_dg_spec\<lparr>
+  "ownership_split_lift gs S = local_dg_spec_template\<lparr>
      dgs_skip := ownership_split_transfer gs (skip\<^sup># S),
      dgs_assign := (\<lambda>x e. ownership_split_transfer gs (assign\<^sup># S x e)),
      dgs_special := (\<lambda>sc x. ownership_split_transfer gs (special\<^sup># S sc x)),

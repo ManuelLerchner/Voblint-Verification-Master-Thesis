@@ -302,13 +302,17 @@ lemma dep_aux_dg_spec_edge_tree_source:
 subsection \<open>A default specification, and overriding its fields\<close>
 
 text \<open>
-  \<open>default_local_dg_spec\<close> is the identity local-only specification: every
+  \<open>local_dg_spec_template\<close> is the identity local-only specification: every
   transfer hands back the local value it was given, and a return combine
   keeps the caller's. An analysis starts from it and overrides the fields
   it implements --
-  \<open>default_local_dg_spec\<lparr>dgs_assign := ..., dgs_branch := ...\<rparr>\<close> -- the way a
+  \<open>local_dg_spec_template\<lparr>dgs_assign := ..., dgs_branch := ...\<rparr>\<close> -- the way a
   Goblint \<open>Spec\<close> includes \<open>DefaultSpec\<close> and defines only the transfers it
   needs.
+
+  It is named a template, not a default, because it is not Goblint's default
+  behavior and nothing here treats it as one: it is the record every field of
+  which is still to be chosen.
 
   This is a construction scaffold, not a soundness result. Leaving a field
   at the identity is a claim about that analysis: that ignoring the edge is
@@ -333,8 +337,8 @@ text \<open>
 \<close>
 
 
-definition default_local_dg_spec :: "('x,'k,'v,'D,'G) dg_spec" where
-  "default_local_dg_spec = \<lparr>
+definition local_dg_spec_template :: "('x,'k,'v,'D,'G) dg_spec" where
+  "local_dg_spec_template = \<lparr>
      dgs_skip = local_transfer id,
      dgs_assign = (\<lambda>x e. local_transfer id),
      dgs_special = (\<lambda>sc x. local_transfer id),
@@ -346,18 +350,18 @@ definition default_local_dg_spec :: "('x,'k,'v,'D,'G) dg_spec" where
      dgs_combine_env = (\<lambda>ci. local_combine_transfer (\<lambda>d de. d)),
      dgs_combine_assign = (\<lambda>ci. local_combine_transfer (\<lambda>d de. d)) \<rparr>"
 
-lemma default_local_dg_spec_simps [simp]:
-  "skip\<^sup># default_local_dg_spec = local_transfer id"
-  "assign\<^sup># default_local_dg_spec x e = local_transfer id"
-  "special\<^sup># default_local_dg_spec sc x = local_transfer id"
-  "branch\<^sup># default_local_dg_spec b pol = local_transfer id"
-  "body\<^sup># default_local_dg_spec p = local_transfer id"
-  "return\<^sup># default_local_dg_spec eo p = local_transfer id"
-  "enter\<^sup># default_local_dg_spec ci = local_enter_transfer (\<lambda>d. [(d, d)])"
-  "event\<^sup># default_local_dg_spec ev = local_transfer id"
-  "combine_env\<^sup># default_local_dg_spec ci = local_combine_transfer (\<lambda>d de. d)"
-  "combine_assign\<^sup># default_local_dg_spec ci = local_combine_transfer (\<lambda>d de. d)"
-  by (simp_all add: default_local_dg_spec_def)
+lemma local_dg_spec_template_simps [simp]:
+  "skip\<^sup># local_dg_spec_template = local_transfer id"
+  "assign\<^sup># local_dg_spec_template x e = local_transfer id"
+  "special\<^sup># local_dg_spec_template sc x = local_transfer id"
+  "branch\<^sup># local_dg_spec_template b pol = local_transfer id"
+  "body\<^sup># local_dg_spec_template p = local_transfer id"
+  "return\<^sup># local_dg_spec_template eo p = local_transfer id"
+  "enter\<^sup># local_dg_spec_template ci = local_enter_transfer (\<lambda>d. [(d, d)])"
+  "event\<^sup># local_dg_spec_template ev = local_transfer id"
+  "combine_env\<^sup># local_dg_spec_template ci = local_combine_transfer (\<lambda>d de. d)"
+  "combine_assign\<^sup># local_dg_spec_template ci = local_combine_transfer (\<lambda>d de. d)"
+  by (simp_all add: local_dg_spec_template_def)
 
 subsection \<open>Overriding every field at once\<close>
 
@@ -392,7 +396,7 @@ definition local_dg_spec ::
    \<Rightarrow> (call_info \<Rightarrow> 'D \<Rightarrow> 'D \<Rightarrow> 'D) \<Rightarrow> (call_info \<Rightarrow> 'D \<Rightarrow> 'D \<Rightarrow> 'D)
    \<Rightarrow> ('x,'k,'v,'D,'G) dg_spec"
 where
-  "local_dg_spec sk asn sp br bd rt en ev ce ca = default_local_dg_spec\<lparr>
+  "local_dg_spec sk asn sp br bd rt en ev ce ca = local_dg_spec_template\<lparr>
      dgs_skip := local_transfer sk,
      dgs_assign := (\<lambda>x e. local_transfer (asn x e)),
      dgs_special := (\<lambda>sc x. local_transfer (sp sc x)),
@@ -421,7 +425,7 @@ text \<open>
   generated program already inlined into an equation whose types are ground.
 \<close>
 
-declare default_local_dg_spec_def [code_unfold]
+declare local_dg_spec_template_def [code_unfold]
   local_dg_spec_def [code_unfold]
 
 text \<open>

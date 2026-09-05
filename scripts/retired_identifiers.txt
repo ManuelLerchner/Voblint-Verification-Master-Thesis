@@ -629,3 +629,56 @@ traverse_ownership_split_transfer_gen
 sides_ownership_split_transfer_gen
 traverse_ownership_split_combine_transfer_gen
 sides_ownership_split_combine_transfer_gen
+
+# --- Legacy representation-neutral keyed generator (2026-09-05) ---
+# routed_node_trees predated the routed protocol: it decomposed a node from
+# intra predecessors, return_call_action_list and entry_call_list, while
+# routed_node_rhs builds the same system from intra/combine/extra hooks. It had
+# no consumer outside its own five lemmas.
+routed_node_trees
+eq_routed_node_trees
+routed_node_trees_single_edge
+routed_node_trees_single_enter
+routed_node_trees_single_combine
+routed_node_trees_entry
+
+# --- Renamed to say what they are (2026-09-05) ---
+# local_spec_sound concluded sound_dg_spec_core, not full analysis soundness;
+# default_local_dg_spec is a construction scaffold, not Goblint's default.
+local_spec_sound
+default_local_dg_spec
+default_local_dg_spec_def
+default_local_dg_spec_simps
+side_rhs_fold_dg_val_mono
+
+# --- Fold generalization: renamed or absorbed into the generic fold (2026-09-05) ---
+# The three TD_side_mono discharges lost their redundant _gen suffix; the
+# buffered transport is now a part_post_solution_cong instance and named for
+# what it transports; the rest became instances of Strategy_Tree_Fold's
+# fold_rhs_projected algebra.
+routed_node_rhs_is_mono_eq_gen
+routed_node_rhs_mono_sides_gen
+routed_node_rhs_mono_deps_gen
+part_post_solution_seed_dg_buffered_to_old
+side_acc_dg_eq_foldr
+fold_rhs_contributions_side_rhs_fold_dg_local_char
+fold_rhs_contributions_side_rhs_fold_dg_global_char
+
+# --- Contribution-list membership rule with no consumer (2026-09-05) ---
+# The intra rule could not be applied where it was wanted: `it` is a lambda at
+# every instantiation, so the goal is already beta-reduced and `rule` cannot
+# invert the redex. Those proofs unfold routed_contribution_trees_def instead.
+# The combine and extra rules and the eliminator do have consumers.
+routed_contribution_trees_intraI
+
+# --- Activation backbone collapsed onto ltr_coverage (2026-09-05) ---
+# Each name below was one half of a specialized/generic pair, or a one-line
+# alias. activation_collect_sound survives with the generic statement: it takes
+# the cover map ltr_coverage already fixes, so the abs_state reading is an
+# instantiation rather than a second theorem. The trace-level result is
+# ltr_coverage.valid_ltr_covered itself and needs no global-shape wrapper.
+valid_ltr_ctx_sound
+valid_ltr_ctx_sound_gen
+activation_collect_sound_gen
+# Restated its own locale assumption sg_uncov verbatim; callers cite sg_uncov.
+sg_uncovered_empty

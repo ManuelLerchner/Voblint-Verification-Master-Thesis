@@ -1,6 +1,7 @@
 theory Exec_DG_Refines
   imports
-    "Voblint_Framework.DG_Soundness"
+    "Voblint_Framework.DG_Spec_Sound"
+    "Voblint_Framework.DG_Keyed_Generator"
     "Voblint_Framework.DG_Ownership_Split_Spec"
     Exec_Refinement
     "Voblint_Framework.Routed_Context"
@@ -150,7 +151,7 @@ definition ownership_split_dg_spec_st_for ::
    \<Rightarrow> (call_info \<Rightarrow> 'a exec_dg_st \<Rightarrow> 'a exec_dg_st)
    \<Rightarrow> ('x,'k,unit,'a exec_dg_st,'a exec_dg_st) dg_spec"
 where
-  "ownership_split_dg_spec_st_for gs tf_st enter_st = default_local_dg_spec\<lparr>
+  "ownership_split_dg_spec_st_for gs tf_st enter_st = local_dg_spec_template\<lparr>
      dgs_skip := ownership_split_transfer_st (local_transfer (tf_st EA_Nop)),
      dgs_assign := (\<lambda>x e. ownership_split_transfer_st (local_transfer (tf_st (EA_Assign x e)))),
      dgs_special := (\<lambda>sc x. ownership_split_transfer_st (local_transfer (tf_st (EA_Special sc x)))),

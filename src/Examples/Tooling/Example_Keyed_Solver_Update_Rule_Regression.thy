@@ -153,7 +153,7 @@ text \<open>Every field but \<open>dgs_enter\<close> is the local-only default. 
   entered local, publishing nothing, so the entered frame differs from the caller's
   own local state by construction.\<close>
 definition w0_spec :: "(pp \<times> ivl, w0_gk, unit, ivl, ivl) dg_spec" where
-  "w0_spec = default_local_dg_spec\<lparr>
+  "w0_spec = local_dg_spec_template\<lparr>
      dgs_enter := (\<lambda>ci m K. man_global m () (\<lambda>g. K [(man_local m, g)])),
      dgs_combine_env := (\<lambda>ci. local_combine_transfer (\<lambda>dc de. dc \<squnion> de)) \<rparr>"
 
@@ -205,7 +205,7 @@ lemma w0_dep_at_entered_frame:
   by (simp add: routed_call_tree_def routed_callee_call_tree_def routed_call_alternative_tree_def w0_resolve_def
         dg_spec_combine_transfer_def mk_dg_man_def
         dg_read_global_def local_transfer_def local_combine_transfer_def
-        Let_def insert_commute sp_compile_with_bind sp_read_global_def
+        Let_def insert_commute sp_compile_def sp_compile_with_bind sp_read_global_def
         sp_bind_def sp_return_def comp_def bot_ivl_def)
 
 end

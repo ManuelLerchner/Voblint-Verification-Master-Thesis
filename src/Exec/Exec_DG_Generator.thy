@@ -200,7 +200,7 @@ next
            = Floc acc_st \<squnion> locals (traverse_rhs t_abs (fun_of_dg_st_gen Floc Fglob \<circ> \<sigma>_st))"
     by (simp add: Floc_sup hl)
   show ?case
-    by (metis (no_types, lifting) Cons.IH h side_acc_dg.simps(2))
+    by (metis (no_types, lifting) Cons.IH h side_acc_dg_simps(2))
 qed
 
 lemma sides_side_rhs_fold_dg_commute:
@@ -223,7 +223,7 @@ next
     by (rule Cons.IH)
   show ?case
     by (simp add: sides_of_rhs_sp_lift_tree fun_of_dg_st_gen_sup sd
-          ih[unfolded sp_compile_def] comp_def sp_compile_with_bind)
+          ih[unfolded sp_compile_def] comp_def sp_compile_with_bind sp_compile_def)
 qed
 
 
@@ -324,10 +324,10 @@ proof -
     by (induction rule: list_all2_induct) (auto simp: comp_def)
   show ?thesis
     unfolding dg_tree_st_commute_def
-    by (simp add: traverse_side_rhs_fold_dg[unfolded sp_compile_def] Fglob_bot
-          dep_aux_side_rhs_fold_dg_char[unfolded sp_compile_def] dep
+    by (simp add: traverse_side_rhs_fold_dg Fglob_bot
+          dep_aux_side_rhs_fold_dg_char dep
           side_acc_dg_commute[OF dg_list_commute_trav[OF la]]
-          sides_side_rhs_fold_dg_commute[OF dg_list_commute_travsides[OF la], unfolded sp_compile_def])
+          sides_side_rhs_fold_dg_commute[OF dg_list_commute_travsides[OF la]])
 qed
 
 text \<open>

@@ -50,4 +50,24 @@ lemma part_post_solution_imp_tree_covered_at:
   shows "tree_covered_at (T u) \<sigma> u"
   using assms part_post_solution_iff_tree_covered_at by blast
 
+subsection \<open>Two systems the solution cannot tell apart\<close>
+
+text \<open>
+  \<^const>\<open>part_post_solution\<close> reads an equation system only through the three
+  observations, so two systems agreeing on all three at every unknown are
+  post-solved by exactly the same valuations. Any re-encoding that preserves
+  answer, publications and dependencies --- buffering a right-hand side,
+  reshaping its contributions --- transports its post-solutions through this
+  one congruence, rather than through a second copy of whatever argument
+  established the agreement.
+\<close>
+
+lemma part_post_solution_cong:
+  assumes traverse: "\<And>u. traverse_rhs (T u) \<sigma> = traverse_rhs (T' u) \<sigma>"
+    and deps: "\<And>u. dep_aux \<sigma> (T u) = dep_aux \<sigma> (T' u)"
+    and sides: "\<And>u. sides_of_rhs (T u) \<sigma> = sides_of_rhs (T' u) \<sigma>"
+  shows "part_post_solution T x \<sigma> vars \<longleftrightarrow> part_post_solution T' x \<sigma> vars"
+  unfolding part_post_solution_iff_tree_covered_at tree_covered_at_def dep\<^sub>L_def dep_def
+  by (simp add: traverse deps sides)
+
 end

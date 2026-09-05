@@ -1,90 +1,68 @@
 theory Activation_Backbone
-  imports Activation_Local_Sound
+  imports "Voblint_Domain.Nonrelational_State" "Voblint_CFG.LTR_Abstract"
 begin
 
-section \<open>Generic soundness of the activation-indexed collecting semantics\<close>
-
-text \<open>The activation key is fixed when a call creates an activation and remains
-  unchanged across its local steps and nested calls. This structural key lets
-  @{const activation_collect} project concrete local traces without propagating an
-  auxiliary digest. The soundness argument depends only on concretization and the
-  activation-local trace rules.\<close>
-
-subsection \<open>The domain-independent backbone\<close>
-
-text \<open>Local obligations connect the abstract solution to the trace rules. The root seed
-  covers initial stores; ordinary edges preserve the activation context; calls cover the
-  entered store at exactly the context \<open>enterc\<close> computes; and return combination writes to
-  the original caller context, reading the callee back at exactly that same computed context
-  (\<open>COMB\<close>'s context is not rediscovered independently --- it is \<open>CALL\<close>'s own \<open>enterc\<close>
-  application). The theorem is parameterized by the solution reader, routing function, and
-  root context.\<close>
-
-theorem activation_collect_sound:
-  fixes sg :: "pp \<times> 'c + 'g \<Rightarrow> 'a::sound_domain abs_state"
-    and enterc :: "cfg_node \<Rightarrow> 'c \<Rightarrow> store \<Rightarrow> 'c" and initial_ctx :: 'c
-    and gs :: "vname \<Rightarrow> bool"
-  assumes ENTRY_G: "\<And>s. s \<in> S \<Longrightarrow> s \<in> \<lbrakk>sg (Inl (cfg_entry g, initial_ctx))\<rbrakk>"
-    and EDGE: "\<And>u a v c s s'. (u, a, v) \<in> intra g
-        \<Longrightarrow> s \<in> \<lbrakk>sg (Inl (u, c))\<rbrakk> \<Longrightarrow> s' \<in> edge_step a s
-        \<Longrightarrow> s' \<in> \<lbrakk>sg (Inl (v, c))\<rbrakk>"
-    and CALL: "\<And>u dst pars args p cont c s.
-        (u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g
-        \<Longrightarrow> s \<in> \<lbrakk>sg (Inl (u, c))\<rbrakk>
-        \<Longrightarrow> call_enter gs (CallEdge dst pars args) s
-              \<in> \<lbrakk>sg (Inl (FunctionEntry p, enterc u c (call_enter gs (CallEdge dst pars args) s)))\<rbrakk>"
-    and COMB: "\<And>cl dst pars args p cont c1 s t es.
-        (cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g
-        \<Longrightarrow> s \<in> \<lbrakk>sg (Inl (cl, c1))\<rbrakk> \<Longrightarrow> t \<in> \<lbrakk>sg (Inl (FunctionResult p, enterc cl c1 es))\<rbrakk>
-        \<Longrightarrow> call_enter_store gs g cl s es
-        \<Longrightarrow> combine_collect gs dst s t \<in> \<lbrakk>sg (Inl (cont, c1))\<rbrakk>"
-  shows "activation_collect gs enterc initial_ctx g S v ctx \<subseteq> \<lbrakk>sg (Inl (v, ctx))\<rbrakk>"
-proof (rule subsetI)
-  fix st assume "st \<in> activation_collect gs enterc initial_ctx g S v ctx"
-  then obtain t where t: "t \<in> valid_ltr gs g S"
-    and sn: "sink_node t = v" and kc: "key enterc initial_ctx t = ctx" and st: "sink_store t = st"
-    by (rule activation_collect_E)
-  have "sink_store t \<in> \<lbrakk>sg (Inl (sink_node t, ctx))\<rbrakk>"
-    using ENTRY_G EDGE CALL COMB t kc by (rule valid_ltr_ctx_sound)
-  then show "st \<in> \<lbrakk>sg (Inl (v, ctx))\<rbrakk>" using sn st by simp
-qed
+section \<open>What one activation of a procedure may observe\<close>
 
 text \<open>
-  Generic counterpart of \<open>activation_collect_sound\<close>, parametric in the concretization
-  reader \<open>gammaM\<close> rather than fixed to \<open>'a::sound_domain abs_state\<close>/\<open>\<lbrakk>_\<rbrakk>\<close>: see
-  \<open>valid_ltr_ctx_sound_gen\<close>'s comment for why this is a genuine generalization, not a
-  new proof.
+  Every concrete call creates one callee activation.  Each step of that activation carries
+  the context its creating call chose, a nested call derives its callee's context from that
+  one, and a return resumes the caller at the caller's own context.  \<^const>\<open>key\<close> replays
+  those choices along a trace, so a table indexed by \<open>(node, context)\<close> can be checked
+  against concrete runs without carrying an auxiliary digest.  That indexing is
+  many-to-one: activations reaching the same key are collected together, which is what
+  keeps the table finite and what the bound below is stated over.
+
+  \<open>cover v c\<close> is the set of stores that table admits at node \<open>v\<close> in context \<open>c\<close>.  Given four
+  local closure obligations on it --- \<open>INIT\<close> for the seed stores, \<open>INTRA\<close> per intra edge,
+  \<open>CALL\<close> per call, \<open>RETURN\<close> per return --- \<open>activation_collect_sound\<close> bounds
+  \<^const>\<open>activation_collect\<close>, the set of stores some valid trace can leave at one
+  \<open>(node, context)\<close>.  It is the context-sensitive twin of \<open>ltr_collect_semantic_postfix\<close>
+  and shares its proof shape: interpret \<^locale>\<open>ltr_coverage\<close> at the supplied \<open>cover\<close>,
+  then read off \<open>valid_ltr_covered\<close>.
+
+  \<open>enterc\<close> assigns a context to each concrete call transition, and that is what indexes
+  the collecting semantics.  It is handed the entered store, so a policy may inspect it,
+  but need not: a call-string policy ignores it entirely, and an entry-state policy is
+  induced instead by the analyzer's own routing decision on the abstract entry value.
+  What the store argument buys is that the index is pinned to the concrete transition
+  rather than left to the abstraction being proved sound.  Proving a particular policy's
+  \<open>route\<close> and \<open>enterc\<close> agree on a covering entry alternative is the routed context
+  locale's job downstream, not this theorem's.
 \<close>
 
-theorem activation_collect_sound_gen:
-  fixes sg :: "pp \<times> 'c + 'g \<Rightarrow> 'M"
-    and gammaM :: "'M \<Rightarrow> store set"
+theorem activation_collect_sound:
+  fixes cover :: "cfg_node \<Rightarrow> 'c \<Rightarrow> store set"
     and enterc :: "cfg_node \<Rightarrow> 'c \<Rightarrow> store \<Rightarrow> 'c" and initial_ctx :: 'c
     and gs :: "vname \<Rightarrow> bool"
-  assumes ENTRY_G: "\<And>s. s \<in> S \<Longrightarrow> s \<in> gammaM (sg (Inl (cfg_entry g, initial_ctx)))"
-    and EDGE: "\<And>u a v c s s'. (u, a, v) \<in> intra g
-        \<Longrightarrow> s \<in> gammaM (sg (Inl (u, c))) \<Longrightarrow> s' \<in> edge_step a s
-        \<Longrightarrow> s' \<in> gammaM (sg (Inl (v, c)))"
+  assumes INIT: "\<And>s. s \<in> S \<Longrightarrow> s \<in> cover (cfg_entry g) initial_ctx"
+    and INTRA: "\<And>u a v c s s'. (u, a, v) \<in> intra g
+        \<Longrightarrow> s \<in> cover u c \<Longrightarrow> s' \<in> edge_step a s
+        \<Longrightarrow> s' \<in> cover v c"
     and CALL: "\<And>u dst pars args p cont c s.
         (u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g
-        \<Longrightarrow> s \<in> gammaM (sg (Inl (u, c)))
+        \<Longrightarrow> s \<in> cover u c
         \<Longrightarrow> call_enter gs (CallEdge dst pars args) s
-              \<in> gammaM (sg (Inl (FunctionEntry p, enterc u c (call_enter gs (CallEdge dst pars args) s))))"
-    and COMB: "\<And>cl dst pars args p cont c1 s t es.
+              \<in> cover (FunctionEntry p) (enterc u c (call_enter gs (CallEdge dst pars args) s))"
+    and RETURN: "\<And>cl dst pars args p cont c1 s t es.
         (cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g
-        \<Longrightarrow> s \<in> gammaM (sg (Inl (cl, c1))) \<Longrightarrow> t \<in> gammaM (sg (Inl (FunctionResult p, enterc cl c1 es)))
+        \<Longrightarrow> s \<in> cover cl c1 \<Longrightarrow> t \<in> cover (FunctionResult p) (enterc cl c1 es)
         \<Longrightarrow> call_enter_store gs g cl s es
-        \<Longrightarrow> combine_collect gs dst s t \<in> gammaM (sg (Inl (cont, c1)))"
-  shows "activation_collect gs enterc initial_ctx g S v ctx \<subseteq> gammaM (sg (Inl (v, ctx)))"
-proof (rule subsetI)
-  fix st assume "st \<in> activation_collect gs enterc initial_ctx g S v ctx"
-  then obtain t where t: "t \<in> valid_ltr gs g S"
-    and sn: "sink_node t = v" and kc: "key enterc initial_ctx t = ctx" and st: "sink_store t = st"
-    by (rule activation_collect_E)
-  have "sink_store t \<in> gammaM (sg (Inl (sink_node t, ctx)))"
-    using ENTRY_G EDGE CALL COMB t kc by (rule valid_ltr_ctx_sound_gen)
-  then show "st \<in> gammaM (sg (Inl (v, ctx)))" using sn st by simp
+        \<Longrightarrow> combine_collect gs dst s t \<in> cover cont c1"
+  shows "activation_collect gs enterc initial_ctx g S v ctx \<subseteq> cover v ctx"
+proof -
+  interpret G: ltr_coverage g S cover enterc initial_ctx gs
+    by (standard; blast intro: INIT INTRA CALL RETURN)
+  show ?thesis
+  proof (rule subsetI)
+    fix st assume "st \<in> activation_collect gs enterc initial_ctx g S v ctx"
+    then obtain t where t: "t \<in> valid_ltr gs g S"
+      and sn: "sink_node t = v" and kc: "key enterc initial_ctx t = ctx"
+      and st: "sink_store t = st"
+      by (rule activation_collect_E)
+    have "G.trace_covered t" using G.valid_ltr_covered[OF t] .
+    then show "st \<in> cover v ctx" using sn kc st by simp
+  qed
 qed
-
 
 end

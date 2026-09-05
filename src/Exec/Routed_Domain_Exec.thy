@@ -141,7 +141,7 @@ theorem pp_st:
         (routed_entry_seed_tree seed_key gk0)
         g bot0 s0d s0g)
      x0 sigma_st vars"
-proof (rule part_post_solution_seed_dg_buffered_to_old
+proof (rule part_post_solution_routed_node_rhs_buffered
     [where cmb_c = "cmb_st g" and it_c = intra_st])
   show "\<And>c' src a \<tau>. locals (traverse_rhs (intra_st c' src a) \<tau>)
          = locals (traverse_rhs (intra_st c' src a) \<tau>)"

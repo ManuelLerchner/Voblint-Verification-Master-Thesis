@@ -1,5 +1,7 @@
 theory Routed_Call_Trees
-  imports DG_Ctx_Activation "Voblint_Solver.Strategy_Tree_Program"
+  imports DG_Spec_Sound DG_Keyed_Generator State_Restriction
+    "Voblint_Domain.Nonrelational_State" "Voblint_Solver.Strategy_Tree_Post_Solution"
+    "Voblint_Solver.Strategy_Tree_Program"
 begin
 
 section \<open>The equations one call action generates\<close>
@@ -76,7 +78,8 @@ subsection \<open>The canonical routed entry-seed publication and return combine
 
 text \<open>
   The routing combine reads the caller under its own context, the callee exit under the
-  context \<open>route\<close> selects from the caller's local value and the exact matched
+  context \<open>route\<close> selects from the callee's entered value --- the alternative's own
+  second component, after \<open>enter\<^sup>#\<close> has run --- and the exact matched
   \<^typ>\<open>call_action\<close> (from \<^const>\<open>return_call_action_list\<close>, never re-derived from
   the call site's outgoing edges). The spec's own enter and combine transfers run as
   compiled manager programs over the caller value, so whether the global slot \<open>gk0\<close>
@@ -85,7 +88,7 @@ text \<open>
   while an effectful spec's own \<open>man_global\<close>/\<open>man_sideg\<close> calls ride inside the
   compiled subtrees.
 
-  Parameter order matches \<^locale>\<open>dg_ctx_activation_base\<close>'s \<open>cmb\<close> calling
+  Parameter order matches \<open>dg_ctx_activation_base\<close>'s \<open>cmb\<close> calling
   convention: the generator supplies \<open>route\<close> as \<open>cmb\<close>'s own first argument
   (\<open>cmb route c ca cc ex\<close> in \<^const>\<open>routed_node_rhs\<close>), so
   \<open>routed_call_tree S gk0 seed_key\<close>, closing over the spec, the shared slot, and the
@@ -96,12 +99,13 @@ text \<open>
   entry-seed publication and the combine's callee-exit read. The callee is therefore
   activated as a side effect of whichever equation combines its result, discharging
   \<open>enter#\<close> exactly once per call action rather than once per hook. The caller
-  continuation is not reconstructed here: \<^const>\<open>dg_spec_combine_transfer\<close>'s own
-  pipeline runs \<open>caller_cont\<close>, \<open>combine_env\<close>, and \<open>combine_assign\<close> in sequence,
+  continuation is not reconstructed here: it is handed to
+  \<^const>\<open>dg_spec_combine_transfer\<close> as the manager's own local value, and that
+  pipeline runs \<open>combine_env\<^sup>#\<close> and \<open>combine_assign\<^sup>#\<close> over it,
   so this layer only chooses addresses and keys. Only the half that
   cannot move stays with \<open>routed_entry_seed_tree\<close>: a callee's own entry equation is the one
   place that can read its own seed slot back. \<open>route\<close> is kept as a parameter of that
-  hook purely to match \<^locale>\<open>dg_ctx_activation_base\<close>'s \<open>extra\<close> calling
+  hook purely to match \<open>dg_ctx_activation_base\<close>'s \<open>extra\<close> calling
   convention, which always supplies it.
 
   The seed channel is \<open>'D\<close>-typed, so \<open>'D\<close> and \<open>'G\<close> stay independent. The
@@ -368,8 +372,7 @@ proof -
   also have "\<dots> = locals (traverse_rhs
                      (routed_callee_call_tree S gk0 seed_key route is_bot ctx ca cc caller p) \<sigma>)"
     unfolding routed_callee_call_tree_def
-    by (simp add: enter_runsD_traverse[OF R]
-        traverse_side_rhs_fold_dg[unfolded sp_compile_def])
+    by (simp add: enter_runsD_traverse[OF R] traverse_side_rhs_fold_dg)
   finally show ?thesis .
 qed
 
@@ -395,11 +398,12 @@ text \<open>
 lemma sides_side_rhs_fold_dg_bot:
   assumes "\<And>t. t \<in> set ts \<Longrightarrow> sides_of_rhs t \<sigma> z = bot"
   shows "sides_of_rhs (sp_compile (side_rhs_fold_dg acc ts)) \<sigma> z = bot"
-  using assms by (induction ts arbitrary: acc) (simp_all add: sp_compile_with_bind)
+  using assms
+  by (simp add: sides_of_rhs_side_rhs_fold_dg_char foldr_sup_bot_of_all_bot)
 
 lemma routed_call_tree_global_free:
   "globs (traverse_rhs (routed_call_tree S gk0 seed_key resolve is_bot route ctx ca cc v) \<sigma>) = bot"
-  by (simp add: routed_call_tree_def traverse_side_rhs_fold_dg[unfolded sp_compile_def])
+  by (simp add: routed_call_tree_def traverse_side_rhs_fold_dg)
 
 text \<open>
   The entry half of the condition is now stated through \<^const>\<open>enter_runs\<close>: an

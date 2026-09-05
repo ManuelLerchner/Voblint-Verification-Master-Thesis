@@ -381,7 +381,7 @@ locale sound_local_dg_spec =
         combine_collect gs (ci_dst ci) s t \<in> gammaD (ca ci (ce ci dc de) de)"
 begin
 
-theorem local_spec_sound:
+theorem local_spec_core_sound:
   "sound_dg_spec_core (local_dg_spec sk asn sp br bd rt en ev ce ca) (\<lambda>d g. gammaD d) gs"
 proof (unfold_locales, goal_cases mono step comb)
   case mono

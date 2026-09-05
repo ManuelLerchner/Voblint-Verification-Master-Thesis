@@ -1,5 +1,6 @@
 theory Rel_Order_Domain
-  imports "Voblint_Framework.DG_Soundness"
+  imports "Voblint_Framework.DG_Spec_Sound" "Voblint_Framework.DG_Keyed_Generator"
+    "Voblint_Framework.State_Restriction"
 begin
 
 section \<open>A minimal relational carrier for \<^const>\<open>sound_dg_spec_core\<close>\<close>
@@ -391,7 +392,7 @@ lemma sides_rel_transfer [simp]:
         Let_def)
 
 definition rel_order_spec :: "('x,'k,unit,relc,relc) dg_spec" where
-  "rel_order_spec = default_local_dg_spec\<lparr>
+  "rel_order_spec = local_dg_spec_template\<lparr>
      dgs_skip := rel_transfer dgs_skip_rel,
      dgs_assign := (\<lambda>x e. rel_transfer (dgs_assign_rel x e)),
      dgs_special := (\<lambda>sc x. rel_transfer (dgs_special_rel sc x)),

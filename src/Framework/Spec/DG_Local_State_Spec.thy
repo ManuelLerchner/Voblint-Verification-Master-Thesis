@@ -148,7 +148,7 @@ lemma dg_spec_step_local_state_for:
 
 theorem (in sound_transfer_for) local_state_dg_spec_for_core_sound:
   "sound_dg_spec_core (local_state_dg_spec_for gs sk asn sp br bd rt en ev) (\<lambda>d g. \<lbrakk>d\<rbrakk>) gs"
-  unfolding local_state_dg_spec_for_def by (rule base.local_spec_sound)
+  unfolding local_state_dg_spec_for_def by (rule base.local_spec_core_sound)
 
 
 subsection \<open>Transporting soundness through the reachability lift\<close>
@@ -246,7 +246,7 @@ proof -
     by (simp add: fun_eq_iff gamma_dg_local_state_def)
   show ?thesis
     unfolding local_state_dg_spec_for_lifted_def geq
-  proof (rule sound_local_dg_spec.local_spec_sound, unfold_locales, goal_cases)
+  proof (rule sound_local_dg_spec.local_spec_core_sound, unfold_locales, goal_cases)
     case 1
     then show ?case by (meson gamma_lift_mono gamma_state_mono)
   next

@@ -66,7 +66,6 @@ layer without embedding line numbers that drift.
 | `dg_spec` | D/G transfer, entry, combine, read, and publication interface. | `src/Framework/Spec/DG_Spec.thy` |
 | `sound_dg_spec_core` | Concrete-soundness obligations for a D/G instance. | `src/Framework/Spec/DG_Spec_Sound.thy` |
 | `dg_gen_of` | Executable D/G equation generator. | `src/Exec/Exec_DG_Generator.thy` |
-| `dg_postfix` | Mathematical post-solution property for D/G equations. | `src/Framework/Soundness/DG_Soundness.thy` |
 
 ### Correspondence to Goblint's `Spec` interface
 

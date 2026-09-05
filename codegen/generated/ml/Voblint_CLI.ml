@@ -151,9 +151,9 @@ module Core : sig
   val map : ('a -> 'b) -> 'a list -> 'b list
   type 'a resolved_st_q
   type 'a lifted = Bot | Lifted of 'a
+  type check_result = Check_Proved | Check_Refuted | Check_Unknown
   type ('a, 'b) routed_gk
   val equal_routed_gk : 'a equal -> 'b equal -> ('a, 'b) routed_gk equal
-  type check_result = Check_Proved | Check_Refuted | Check_Unknown
   type congruence
   type 'a int_dom_ext
   val equal_int_dom_exta : 'a equal -> 'a int_dom_ext -> 'a int_dom_ext -> bool
@@ -219,10 +219,10 @@ module Core : sig
   val map_filter : ('a -> 'b option) -> 'a list -> 'b list
   val prog_main_name : string
   val sorted_list_of_set : 'a equal * 'a linorder -> 'a set -> 'a list
-  val cfg_calls_list :
-    unit cfg_ext -> (cfg_node * (call_action * (cfg_node * cfg_node))) list
   val cfg_intra_list :
     unit cfg_ext -> (cfg_node * (edge_action * cfg_node)) list
+  val cfg_calls_list :
+    unit cfg_ext -> (cfg_node * (call_action * (cfg_node * cfg_node))) list
   val ea_check_cond : edge_action -> exp
   val is_EA_Check : edge_action -> bool
   val sup_seta : 'a equal -> 'a set set -> 'a set
@@ -2965,20 +2965,6 @@ let rec bounded_warrowing_lifted _A =
      warrowing_bounded_warrowing = (warrowing_lifted _A)}
     : 'a lifted bounded_warrowing);;
 
-type ('a, 'b) routed_gk = Analysis_Global of 'a |
-  Activation_Seed of cfg_node * 'b;;
-
-let rec equal_routed_gka _A _B
-  x0 x1 = match x0, x1 with
-    Analysis_Global x1, Activation_Seed (x21, x22) -> false
-    | Activation_Seed (x21, x22), Analysis_Global x1 -> false
-    | Activation_Seed (x21, x22), Activation_Seed (y21, y22) ->
-        equal_cfg_nodea x21 y21 && eq _B x22 y22
-    | Analysis_Global x1, Analysis_Global y1 -> eq _A x1 y1;;
-
-let rec equal_routed_gk _A _B =
-  ({equal = equal_routed_gka _A _B} : ('a, 'b) routed_gk equal);;
-
 type check_result = Check_Proved | Check_Refuted | Check_Unknown;;
 
 let rec equal_check_result
@@ -3017,6 +3003,20 @@ let semilattice_sup_check_result =
   ({sup_semilattice_sup = sup_check_result;
      order_semilattice_sup = order_check_result}
     : check_result semilattice_sup);;
+
+type ('a, 'b) routed_gk = Analysis_Global of 'a |
+  Activation_Seed of cfg_node * 'b;;
+
+let rec equal_routed_gka _A _B
+  x0 x1 = match x0, x1 with
+    Analysis_Global x1, Activation_Seed (x21, x22) -> false
+    | Activation_Seed (x21, x22), Analysis_Global x1 -> false
+    | Activation_Seed (x21, x22), Activation_Seed (y21, y22) ->
+        equal_cfg_nodea x21 y21 && eq _B x22 y22
+    | Analysis_Global x1, Analysis_Global y1 -> eq _A x1 y1;;
+
+let rec equal_routed_gk _A _B =
+  ({equal = equal_routed_gka _A _B} : ('a, 'b) routed_gk equal);;
 
 type congruence = Abs_congruence of (int * int) option;;
 
@@ -5123,6 +5123,84 @@ let rec dg_spec_step s x1 = match s, x1 with s, EA_Nop -> dgs_skip s
                        | s, EA_Ret (e, p) -> dgs_return s e p
                        | s, EA_Check cnd -> dgs_event s (Check_Event cnd);;
 
+let rec size_list xs = length_tailrec xs zero_nat;;
+
+let rec part _B
+  f pivot x2 = match f, pivot, x2 with f, pivot, [] -> ([], ([], []))
+    | f, pivot, x :: xs ->
+        (let (lts, (eqs, gts)) = part _B f pivot xs in
+         let xa = f x in
+          (if less _B.order_linorder.preorder_order.ord_preorder xa pivot
+            then (x :: lts, (eqs, gts))
+            else (if less _B.order_linorder.preorder_order.ord_preorder pivot xa
+                   then (lts, (eqs, x :: gts)) else (lts, (x :: eqs, gts)))));;
+
+let rec sort_key _B
+  f xs =
+    (match xs with [] -> [] | [_] -> xs
+      | [x; y] ->
+        (if less_eq _B.order_linorder.preorder_order.ord_preorder (f x) (f y)
+          then xs else [y; x])
+      | _ :: _ :: _ :: _ ->
+        (let (lts, (eqs, gts)) =
+           part _B f
+             (f (nth xs
+                  (divide_nat (size_list xs) (nat_of_integer (Z.of_int 2)))))
+             xs
+           in
+          sort_key _B f lts @ eqs @ sort_key _B f gts));;
+
+let rec sorted_list_of_set (_A1, _A2)
+  (Set xs) = sort_key _A2 (fun x -> x) (remdups _A1 xs);;
+
+let rec cfg_intra_list
+  g = sorted_list_of_set
+        ((equal_prod equal_cfg_node
+           (equal_prod equal_edge_action equal_cfg_node)),
+          (linorder_prod linorder_cfg_node
+            (linorder_prod linorder_edge_action linorder_cfg_node)))
+        (intra g);;
+
+let rec intra_predecessor_list
+  g v = map_filter
+          (fun x ->
+            (if (let (_, (_, w)) = x in equal_cfg_nodea w v)
+              then Some (let (u, (a, _)) = x in (u, a)) else None))
+          (cfg_intra_list g);;
+
+let rec intra_predecessor_addr_list
+  g v ctx = map (fun (u, a) -> (Inl (u, ctx), a)) (intra_predecessor_list g v);;
+
+let rec call_target_at
+  v x1 = match v, x1 with
+    v, (c, (ca, (FunctionEntry p, k))) ->
+      (if equal_cfg_nodea k v then Some (c, (ca, p)) else None)
+    | v, (va, (vc, (Statement vg, vf))) -> None
+    | v, (va, (vc, (FunctionResult vg, vf))) -> None;;
+
+let rec cfg_calls_list
+  g = sorted_list_of_set
+        ((equal_prod equal_cfg_node
+           (equal_prod equal_call_action
+             (equal_prod equal_cfg_node equal_cfg_node))),
+          (linorder_prod linorder_cfg_node
+            (linorder_prod linorder_call_action
+              (linorder_prod linorder_cfg_node linorder_cfg_node))))
+        (calls g);;
+
+let rec call_target_list
+  g v = map_filter (call_target_at v) (cfg_calls_list g);;
+
+let rec call_site_list
+  g v = remdups (equal_prod equal_cfg_node equal_call_action)
+          (map (fun (c, (ca, _)) -> (c, ca)) (call_target_list g v));;
+
+let rec routed_contribution_trees _C _D
+  pred_sel route it cmb extra g ctx v =
+    map (fun (a, b) -> it ctx a b) (pred_sel g v ctx) @
+      map (fun (cc, ca) -> cmb route ctx ca cc v) (call_site_list g v) @
+        extra route ctx v;;
+
 let rec flush_sides
   x0 t = match x0, t with [], t -> t
     | kv :: kvs, t -> Side (fst kv, snd kv, flush_sides kvs t);;
@@ -5161,61 +5239,7 @@ let rec sp_compile_with encode p = p (comp (fun a -> Answer a) encode);;
 
 let rec sp_compile p = sp_compile_with id p;;
 
-let rec call_target_at
-  v x1 = match v, x1 with
-    v, (c, (ca, (FunctionEntry p, k))) ->
-      (if equal_cfg_nodea k v then Some (c, (ca, p)) else None)
-    | v, (va, (vc, (Statement vg, vf))) -> None
-    | v, (va, (vc, (FunctionResult vg, vf))) -> None;;
-
-let rec size_list xs = length_tailrec xs zero_nat;;
-
-let rec part _B
-  f pivot x2 = match f, pivot, x2 with f, pivot, [] -> ([], ([], []))
-    | f, pivot, x :: xs ->
-        (let (lts, (eqs, gts)) = part _B f pivot xs in
-         let xa = f x in
-          (if less _B.order_linorder.preorder_order.ord_preorder xa pivot
-            then (x :: lts, (eqs, gts))
-            else (if less _B.order_linorder.preorder_order.ord_preorder pivot xa
-                   then (lts, (eqs, x :: gts)) else (lts, (x :: eqs, gts)))));;
-
-let rec sort_key _B
-  f xs =
-    (match xs with [] -> [] | [_] -> xs
-      | [x; y] ->
-        (if less_eq _B.order_linorder.preorder_order.ord_preorder (f x) (f y)
-          then xs else [y; x])
-      | _ :: _ :: _ :: _ ->
-        (let (lts, (eqs, gts)) =
-           part _B f
-             (f (nth xs
-                  (divide_nat (size_list xs) (nat_of_integer (Z.of_int 2)))))
-             xs
-           in
-          sort_key _B f lts @ eqs @ sort_key _B f gts));;
-
-let rec sorted_list_of_set (_A1, _A2)
-  (Set xs) = sort_key _A2 (fun x -> x) (remdups _A1 xs);;
-
-let rec cfg_calls_list
-  g = sorted_list_of_set
-        ((equal_prod equal_cfg_node
-           (equal_prod equal_call_action
-             (equal_prod equal_cfg_node equal_cfg_node))),
-          (linorder_prod linorder_cfg_node
-            (linorder_prod linorder_call_action
-              (linorder_prod linorder_cfg_node linorder_cfg_node))))
-        (calls g);;
-
-let rec call_target_list
-  g v = map_filter (call_target_at v) (cfg_calls_list g);;
-
-let rec call_site_list
-  g v = remdups (equal_prod equal_cfg_node equal_call_action)
-          (map (fun (c, (ca, _)) -> (c, ca)) (call_target_list g v));;
-
-let rec side_cfg_T_eff_keyed_seed_dg_buffered _B _C _D
+let rec routed_node_rhs_buffered _B _C _D
   pred_sel gkey route it_c cmb_c extra g bot0 s0d s0g =
     (fun (v, c) ->
       (let acc0 =
@@ -5226,16 +5250,15 @@ let rec side_cfg_T_eff_keyed_seed_dg_buffered _B _C _D
            else DG (bot0,
                      bot _D.order_bot_bounded_semilattice_sup_bot.bot_order_bot))
          in
-       let intra = map (fun (a, b) -> it_c c a b) (pred_sel g v c) in
-       let comb =
-         map (fun (cc, ca) -> cmb_c route c ca cc v) (call_site_list g v) in
        let t =
          sp_compile
            (fold_rhs_contributions
              (semilattice_sup_dg_state
                _C.semilattice_sup_bounded_semilattice_sup_bot
                _D.semilattice_sup_bounded_semilattice_sup_bot)
-             acc0 (intra @ comb @ extra route c v))
+             acc0
+             (routed_contribution_trees _C _D pred_sel route it_c cmb_c extra g
+               c v))
          in
         buffer_sides _B (bounded_semilattice_sup_bot_dg_state _C _D)
           (sp_lift_tree t
@@ -5247,23 +5270,110 @@ let rec side_cfg_T_eff_keyed_seed_dg_buffered _B _C _D
                        (DG (locals res,
                              bot _D.order_bot_bounded_semilattice_sup_bot.bot_order_bot)))))));;
 
-let rec cfg_intra_list
-  g = sorted_list_of_set
-        ((equal_prod equal_cfg_node
-           (equal_prod equal_edge_action equal_cfg_node)),
-          (linorder_prod linorder_cfg_node
-            (linorder_prod linorder_edge_action linorder_cfg_node)))
-        (intra g);;
+let rec routed_entry_seed_tree _C _D
+  seed_key gk0 route ctx v =
+    (match v with Statement _ -> []
+      | FunctionEntry _ ->
+        [sp_lift_tree (QueryG (seed_key v ctx, (fun a -> Answer a)))
+           (fun seed_state ->
+             Answer
+               (DG (locals seed_state,
+                     bot _D.order_bot_bounded_semilattice_sup_bot.bot_order_bot)))]
+      | FunctionResult _ -> []);;
 
-let rec intra_predecessor_list
-  g v = map_filter
-          (fun x ->
-            (if (let (_, (_, w)) = x in equal_cfg_nodea w v)
-              then Some (let (u, (a, _)) = x in (u, a)) else None))
-          (cfg_intra_list g);;
+let rec dgs_combine_assign
+  (Dg_spec_ext
+    (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
+      dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign, more))
+    = dgs_combine_assign;;
 
-let rec intra_predecessor_addr_list
-  g v ctx = map (fun (u, a) -> (Inl (u, ctx), a)) (intra_predecessor_list g v);;
+let rec dgs_combine_env
+  (Dg_spec_ext
+    (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
+      dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign, more))
+    = dgs_combine_env;;
+
+let rec man_local_update
+  man_locala (Man_ext (man_local, man_global, man_sideg, more)) =
+    Man_ext (man_locala man_local, man_global, man_sideg, more);;
+
+let rec dg_spec_combine_transfer
+  s ci m exit =
+    sp_bind (dgs_combine_env s ci m exit)
+      (fun d_env ->
+        dgs_combine_assign s ci (man_local_update (fun _ -> d_env) m) exit);;
+
+let rec routed_call_alternative_tree _C _D
+  s gk0 seed_key route is_bot ctx ca cc p alt =
+    (let (cont, entry) = alt in
+      (if is_bot entry
+        then sp_compile_with
+               (fun d ->
+                 DG (d, bot _D.order_bot_bounded_semilattice_sup_bot.bot_order_bot))
+               (dg_spec_combine_transfer s (call_info_of ca p)
+                 (mk_dg_man
+                   _C.order_bot_bounded_semilattice_sup_bot.bot_order_bot cont
+                   (fun _ -> gk0))
+                 (bot _C.order_bot_bounded_semilattice_sup_bot.bot_order_bot))
+        else (let ctxa = route cc ctx entry ca in
+               Side (seed_key (FunctionEntry p) ctxa,
+                      DG (entry,
+                           bot _D.order_bot_bounded_semilattice_sup_bot.bot_order_bot),
+                      QueryL
+                        ((FunctionResult p, ctxa),
+                          (fun callee_state ->
+                            sp_compile_with
+                              (fun d ->
+                                DG (d, bot
+ _D.order_bot_bounded_semilattice_sup_bot.bot_order_bot))
+                              (dg_spec_combine_transfer s (call_info_of ca p)
+                                (mk_dg_man
+                                  _C.order_bot_bounded_semilattice_sup_bot.bot_order_bot
+                                  cont (fun _ -> gk0))
+                                (locals callee_state))))))));;
+
+let rec side_rhs_fold_dg _A _D
+  acc x1 = match acc, x1 with
+    acc, [] ->
+      sp_return
+        (DG (acc, bot _D.order_bot_bounded_semilattice_sup_bot.bot_order_bot))
+    | acc, t :: ts ->
+        sp_bind (sp_lift_tree t)
+          (fun res ->
+            side_rhs_fold_dg _A _D
+              (sup _A.semilattice_sup_bounded_semilattice_sup_bot.sup_semilattice_sup
+                acc (locals res))
+              ts);;
+
+let rec dgs_enter
+  (Dg_spec_ext
+    (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
+      dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign, more))
+    = dgs_enter;;
+
+let rec routed_callee_call_tree _C _D
+  s gk0 seed_key route is_bot ctx ca cc caller p =
+    dgs_enter s (call_info_of ca p)
+      (mk_dg_man _C.order_bot_bounded_semilattice_sup_bot.bot_order_bot caller
+        (fun _ -> gk0))
+      (fun pairs ->
+        sp_compile
+          (side_rhs_fold_dg _C _D
+            (bot _C.order_bot_bounded_semilattice_sup_bot.bot_order_bot)
+            (map (routed_call_alternative_tree _C _D s gk0 seed_key route is_bot
+                   ctx ca cc p)
+              pairs)));;
+
+let rec routed_call_tree _C _D
+  s gk0 seed_key resolve is_bot route ctx ca cc v =
+    sp_lift_tree (QueryL ((cc, ctx), (fun a -> Answer a)))
+      (fun caller_state ->
+        sp_compile
+          (side_rhs_fold_dg _C _D
+            (bot _C.order_bot_bounded_semilattice_sup_bot.bot_order_bot)
+            (map (routed_callee_call_tree _C _D s gk0 seed_key route is_bot ctx
+                   ca cc (locals caller_state))
+              (resolve v cc ca (locals caller_state)))));;
 
 let rec static_targets
   g v cc ca =
@@ -5558,112 +5668,7 @@ let rec compile_prog
                 eprocs emain)),
           ()));;
 
-let rec routed_extra_g _C _D
-  seed_key gk0 route ctx v =
-    (match v with Statement _ -> []
-      | FunctionEntry _ ->
-        [sp_lift_tree (QueryG (seed_key v ctx, (fun a -> Answer a)))
-           (fun seed_state ->
-             Answer
-               (DG (locals seed_state,
-                     bot _D.order_bot_bounded_semilattice_sup_bot.bot_order_bot)))]
-      | FunctionResult _ -> []);;
-
 let rec cs_route k u ctx d ca = take k (u :: ctx);;
-
-let rec side_rhs_fold_dg _A _D
-  acc x1 = match acc, x1 with
-    acc, [] ->
-      sp_return
-        (DG (acc, bot _D.order_bot_bounded_semilattice_sup_bot.bot_order_bot))
-    | acc, t :: ts ->
-        sp_bind (sp_lift_tree t)
-          (fun res ->
-            side_rhs_fold_dg _A _D
-              (sup _A.semilattice_sup_bounded_semilattice_sup_bot.sup_semilattice_sup
-                acc (locals res))
-              ts);;
-
-let rec dgs_combine_assign
-  (Dg_spec_ext
-    (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
-      dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign, more))
-    = dgs_combine_assign;;
-
-let rec dgs_combine_env
-  (Dg_spec_ext
-    (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
-      dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign, more))
-    = dgs_combine_env;;
-
-let rec man_local_update
-  man_locala (Man_ext (man_local, man_global, man_sideg, more)) =
-    Man_ext (man_locala man_local, man_global, man_sideg, more);;
-
-let rec dg_spec_combine_transfer
-  s ci m exit =
-    sp_bind (dgs_combine_env s ci m exit)
-      (fun d_env ->
-        dgs_combine_assign s ci (man_local_update (fun _ -> d_env) m) exit);;
-
-let rec routed_cmb_g_alt _C _D
-  s gk0 seed_key route is_bot ctx ca cc p alt =
-    (let (cont, entry) = alt in
-      (if is_bot entry
-        then sp_compile_with
-               (fun d ->
-                 DG (d, bot _D.order_bot_bounded_semilattice_sup_bot.bot_order_bot))
-               (dg_spec_combine_transfer s (call_info_of ca p)
-                 (mk_dg_man
-                   _C.order_bot_bounded_semilattice_sup_bot.bot_order_bot cont
-                   (fun _ -> gk0))
-                 (bot _C.order_bot_bounded_semilattice_sup_bot.bot_order_bot))
-        else (let ctxa = route cc ctx entry ca in
-               Side (seed_key (FunctionEntry p) ctxa,
-                      DG (entry,
-                           bot _D.order_bot_bounded_semilattice_sup_bot.bot_order_bot),
-                      QueryL
-                        ((FunctionResult p, ctxa),
-                          (fun callee_state ->
-                            sp_compile_with
-                              (fun d ->
-                                DG (d, bot
- _D.order_bot_bounded_semilattice_sup_bot.bot_order_bot))
-                              (dg_spec_combine_transfer s (call_info_of ca p)
-                                (mk_dg_man
-                                  _C.order_bot_bounded_semilattice_sup_bot.bot_order_bot
-                                  cont (fun _ -> gk0))
-                                (locals callee_state))))))));;
-
-let rec dgs_enter
-  (Dg_spec_ext
-    (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
-      dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign, more))
-    = dgs_enter;;
-
-let rec routed_cmb_g_at _C _D
-  s gk0 seed_key route is_bot ctx ca cc caller p =
-    dgs_enter s (call_info_of ca p)
-      (mk_dg_man _C.order_bot_bounded_semilattice_sup_bot.bot_order_bot caller
-        (fun _ -> gk0))
-      (fun pairs ->
-        sp_compile
-          (side_rhs_fold_dg _C _D
-            (bot _C.order_bot_bounded_semilattice_sup_bot.bot_order_bot)
-            (map (routed_cmb_g_alt _C _D s gk0 seed_key route is_bot ctx ca cc
-                   p)
-              pairs)));;
-
-let rec routed_cmb_g _C _D
-  s gk0 seed_key resolve is_bot route ctx ca cc v =
-    sp_lift_tree (QueryL ((cc, ctx), (fun a -> Answer a)))
-      (fun caller_state ->
-        sp_compile
-          (side_rhs_fold_dg _C _D
-            (bot _C.order_bot_bounded_semilattice_sup_bot.bot_order_bot)
-            (map (routed_cmb_g_at _C _D s gk0 seed_key route is_bot ctx ca cc
-                   (locals caller_state))
-              (resolve v cc ca (locals caller_state)))));;
 
 let rec congruence_of_int n = mk_congruence n zero_inta;;
 
@@ -5690,13 +5695,14 @@ let rec sp_read_at = function Inl x -> sp_read_local x
 
 let rec dg_read_at src = sp_bind (sp_read_at src) (comp sp_return locals);;
 
-let rec dg_edge_tree_man _D
+let rec transfer_program_at _D
   transfer src key =
     sp_bind (dg_read_at src) (fun d -> transfer (mk_dg_man _D d key));;
 
 let rec transfer_tree _D _E
   t src key =
-    sp_compile_with (fun d -> DG (d, bot _E)) (dg_edge_tree_man _D t src key);;
+    sp_compile_with (fun d -> DG (d, bot _E))
+      (transfer_program_at _D t src key);;
 
 let rec dg_spec_edge_tree _D _E
   s a src key = transfer_tree _D _E (dg_spec_step s a) src key;;
@@ -6758,7 +6764,7 @@ let rec int_dom_spec
 
 let rec ics_eqs
   k mode gs empty_pred pi ps =
-    side_cfg_T_eff_keyed_seed_dg_buffered equal_call_string_gk
+    routed_node_rhs_buffered equal_call_string_gk
       (bounded_semilattice_sup_bot_lifted
         (semilattice_sup_resolved_st_q
           (bounded_semilattice_sup_bot_int_dom_ext
@@ -6779,7 +6785,7 @@ let rec ics_eqs
               (bounded_semilattice_sup_bot_int_dom_ext
                 int_dom_record_lattice_unit)))
           (int_dom_spec mode empty_pred gs) a src (fun _ -> Global))
-      (routed_cmb_g
+      (routed_call_tree
         (bounded_semilattice_sup_bot_lifted
           (semilattice_sup_resolved_st_q
             (bounded_semilattice_sup_bot_int_dom_ext
@@ -6796,7 +6802,7 @@ let rec ics_eqs
               ((equal_int_dom_ext equal_unit),
                 (order_bot_int_dom_ext int_dom_record_lattice_unit)))
             d Bot))
-      (routed_extra_g
+      (routed_entry_seed_tree
         (bounded_semilattice_sup_bot_lifted
           (semilattice_sup_resolved_st_q
             (bounded_semilattice_sup_bot_int_dom_ext
@@ -7197,7 +7203,7 @@ let cinit_sign_st : sign resolved_st_q = Abs_resolved_st (STop, (SZero, []));;
 
 let rec scs_eqs
   k gs empty_pred pi ps =
-    side_cfg_T_eff_keyed_seed_dg_buffered equal_call_string_gk
+    routed_node_rhs_buffered equal_call_string_gk
       (bounded_semilattice_sup_bot_lifted
         (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_sign))
       (bounded_semilattice_sup_bot_lifted
@@ -7210,7 +7216,7 @@ let rec scs_eqs
           (bot_lifted
             (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_sign))
           (sctx_spec gs empty_pred) a src (fun _ -> Global))
-      (routed_cmb_g
+      (routed_call_tree
         (bounded_semilattice_sup_bot_lifted
           (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_sign))
         (bounded_semilattice_sup_bot_lifted
@@ -7220,7 +7226,7 @@ let rec scs_eqs
         (fun d ->
           equal_lifteda (equal_resolved_st_q (equal_sign, order_bot_sign)) d
             Bot))
-      (routed_extra_g
+      (routed_entry_seed_tree
         (bounded_semilattice_sup_bot_lifted
           (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_sign))
         (bounded_semilattice_sup_bot_lifted
@@ -7474,8 +7480,7 @@ let rec route_unit u ctx d ca = ();;
 
 let rec sctx_eqs
   gs empty_pred pi ps =
-    side_cfg_T_eff_keyed_seed_dg_buffered
-      (equal_routed_gk equal_unit equal_unit)
+    routed_node_rhs_buffered (equal_routed_gk equal_unit equal_unit)
       (bounded_semilattice_sup_bot_lifted
         (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_sign))
       (bounded_semilattice_sup_bot_lifted
@@ -7488,7 +7493,7 @@ let rec sctx_eqs
           (bot_lifted
             (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_sign))
           (sctx_spec gs empty_pred) a src (fun _ -> Analysis_Global ()))
-      (routed_cmb_g
+      (routed_call_tree
         (bounded_semilattice_sup_bot_lifted
           (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_sign))
         (bounded_semilattice_sup_bot_lifted
@@ -7499,7 +7504,7 @@ let rec sctx_eqs
         (fun d ->
           equal_lifteda (equal_resolved_st_q (equal_sign, order_bot_sign)) d
             Bot))
-      (routed_extra_g
+      (routed_entry_seed_tree
         (bounded_semilattice_sup_bot_lifted
           (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_sign))
         (bounded_semilattice_sup_bot_lifted
@@ -7637,8 +7642,7 @@ let cinit_parity_st : parity resolved_st_q
 
 let rec pctx_eqs
   gs empty_pred pi ps =
-    side_cfg_T_eff_keyed_seed_dg_buffered
-      (equal_routed_gk equal_unit equal_unit)
+    routed_node_rhs_buffered (equal_routed_gk equal_unit equal_unit)
       (bounded_semilattice_sup_bot_lifted
         (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_parity))
       (bounded_semilattice_sup_bot_lifted
@@ -7651,7 +7655,7 @@ let rec pctx_eqs
           (bot_lifted
             (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_parity))
           (pctx_spec gs empty_pred) a src (fun _ -> Analysis_Global ()))
-      (routed_cmb_g
+      (routed_call_tree
         (bounded_semilattice_sup_bot_lifted
           (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_parity))
         (bounded_semilattice_sup_bot_lifted
@@ -7662,7 +7666,7 @@ let rec pctx_eqs
         (fun d ->
           equal_lifteda (equal_resolved_st_q (equal_parity, order_bot_parity)) d
             Bot))
-      (routed_extra_g
+      (routed_entry_seed_tree
         (bounded_semilattice_sup_bot_lifted
           (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_parity))
         (bounded_semilattice_sup_bot_lifted
@@ -7717,8 +7721,7 @@ let rec ics_sol_prog
 
 let rec int_conf_eqs
   mode empty_pred gs pi ps =
-    side_cfg_T_eff_keyed_seed_dg_buffered
-      (equal_routed_gk equal_unit equal_unit)
+    routed_node_rhs_buffered (equal_routed_gk equal_unit equal_unit)
       (bounded_semilattice_sup_bot_lifted
         (semilattice_sup_resolved_st_q
           (bounded_semilattice_sup_bot_int_dom_ext
@@ -7739,7 +7742,7 @@ let rec int_conf_eqs
               (bounded_semilattice_sup_bot_int_dom_ext
                 int_dom_record_lattice_unit)))
           (int_dom_spec mode empty_pred gs) a src (fun _ -> Analysis_Global ()))
-      (routed_cmb_g
+      (routed_call_tree
         (bounded_semilattice_sup_bot_lifted
           (semilattice_sup_resolved_st_q
             (bounded_semilattice_sup_bot_int_dom_ext
@@ -7757,7 +7760,7 @@ let rec int_conf_eqs
               ((equal_int_dom_ext equal_unit),
                 (order_bot_int_dom_ext int_dom_record_lattice_unit)))
             d Bot))
-      (routed_extra_g
+      (routed_entry_seed_tree
         (bounded_semilattice_sup_bot_lifted
           (semilattice_sup_resolved_st_q
             (bounded_semilattice_sup_bot_int_dom_ext
@@ -8202,7 +8205,7 @@ let rec sctx_entry_route_gen
 
 let rec sctx_entry_eqs
   gs empty_pred pi ps =
-    side_cfg_T_eff_keyed_seed_dg_buffered
+    routed_node_rhs_buffered
       (equal_routed_gk equal_unit (equal_list equal_sign))
       (bounded_semilattice_sup_bot_lifted
         (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_sign))
@@ -8217,7 +8220,7 @@ let rec sctx_entry_eqs
           (bot_lifted
             (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_sign))
           (sctx_spec gs empty_pred) a src (fun _ -> Analysis_Global ()))
-      (routed_cmb_g
+      (routed_call_tree
         (bounded_semilattice_sup_bot_lifted
           (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_sign))
         (bounded_semilattice_sup_bot_lifted
@@ -8228,7 +8231,7 @@ let rec sctx_entry_eqs
         (fun d ->
           equal_lifteda (equal_resolved_st_q (equal_sign, order_bot_sign)) d
             Bot))
-      (routed_extra_g
+      (routed_entry_seed_tree
         (bounded_semilattice_sup_bot_lifted
           (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_sign))
         (bounded_semilattice_sup_bot_lifted
@@ -8524,7 +8527,7 @@ let rec int_conf_entry_route_gen
 
 let rec int_conf_entry_eqs
   mode gs empty_pred pi ps =
-    side_cfg_T_eff_keyed_seed_dg_buffered
+    routed_node_rhs_buffered
       (equal_routed_gk equal_unit (equal_list (equal_int_dom_ext equal_unit)))
       (bounded_semilattice_sup_bot_lifted
         (semilattice_sup_resolved_st_q
@@ -8547,7 +8550,7 @@ let rec int_conf_entry_eqs
               (bounded_semilattice_sup_bot_int_dom_ext
                 int_dom_record_lattice_unit)))
           (int_dom_spec mode empty_pred gs) a src (fun _ -> Analysis_Global ()))
-      (routed_cmb_g
+      (routed_call_tree
         (bounded_semilattice_sup_bot_lifted
           (semilattice_sup_resolved_st_q
             (bounded_semilattice_sup_bot_int_dom_ext
@@ -8565,7 +8568,7 @@ let rec int_conf_entry_eqs
               ((equal_int_dom_ext equal_unit),
                 (order_bot_int_dom_ext int_dom_record_lattice_unit)))
             d Bot))
-      (routed_extra_g
+      (routed_entry_seed_tree
         (bounded_semilattice_sup_bot_lifted
           (semilattice_sup_resolved_st_q
             (bounded_semilattice_sup_bot_int_dom_ext
@@ -9759,8 +9762,7 @@ let rec entry_state_route_gen
 
 let rec entry_state_eqs
   gs empty_pred pi ps =
-    side_cfg_T_eff_keyed_seed_dg_buffered
-      (equal_routed_gk equal_unit (equal_list equal_ivl))
+    routed_node_rhs_buffered (equal_routed_gk equal_unit (equal_list equal_ivl))
       (bounded_semilattice_sup_bot_lifted
         (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_ivl))
       (bounded_semilattice_sup_bot_lifted
@@ -9774,7 +9776,7 @@ let rec entry_state_eqs
           (bot_lifted
             (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_ivl))
           (interval_spec gs empty_pred) a src (fun _ -> Analysis_Global ()))
-      (routed_cmb_g
+      (routed_call_tree
         (bounded_semilattice_sup_bot_lifted
           (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_ivl))
         (bounded_semilattice_sup_bot_lifted
@@ -9784,7 +9786,7 @@ let rec entry_state_eqs
         (static_resolve (compile_prog pi ps))
         (fun d ->
           equal_lifteda (equal_resolved_st_q (equal_ivl, order_bot_ivl)) d Bot))
-      (routed_extra_g
+      (routed_entry_seed_tree
         (bounded_semilattice_sup_bot_lifted
           (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_ivl))
         (bounded_semilattice_sup_bot_lifted
@@ -9930,8 +9932,7 @@ let rec lookup_joined_state _A _B
 
 let rec interval_conf_eqs
   gs empty_pred pi ps =
-    side_cfg_T_eff_keyed_seed_dg_buffered
-      (equal_routed_gk equal_unit equal_unit)
+    routed_node_rhs_buffered (equal_routed_gk equal_unit equal_unit)
       (bounded_semilattice_sup_bot_lifted
         (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_ivl))
       (bounded_semilattice_sup_bot_lifted
@@ -9944,7 +9945,7 @@ let rec interval_conf_eqs
           (bot_lifted
             (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_ivl))
           (interval_spec gs empty_pred) a src (fun _ -> Analysis_Global ()))
-      (routed_cmb_g
+      (routed_call_tree
         (bounded_semilattice_sup_bot_lifted
           (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_ivl))
         (bounded_semilattice_sup_bot_lifted
@@ -9954,7 +9955,7 @@ let rec interval_conf_eqs
         (static_resolve (compile_prog pi ps))
         (fun d ->
           equal_lifteda (equal_resolved_st_q (equal_ivl, order_bot_ivl)) d Bot))
-      (routed_extra_g
+      (routed_entry_seed_tree
         (bounded_semilattice_sup_bot_lifted
           (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_ivl))
         (bounded_semilattice_sup_bot_lifted
@@ -10048,7 +10049,7 @@ let rec int_conf_entry_sol_prog
 
 let rec cs_call_string_eqs
   k gs empty_pred pi ps =
-    side_cfg_T_eff_keyed_seed_dg_buffered equal_call_string_gk
+    routed_node_rhs_buffered equal_call_string_gk
       (bounded_semilattice_sup_bot_lifted
         (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_ivl))
       (bounded_semilattice_sup_bot_lifted
@@ -10061,7 +10062,7 @@ let rec cs_call_string_eqs
           (bot_lifted
             (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_ivl))
           (interval_spec gs empty_pred) a src (fun _ -> Global))
-      (routed_cmb_g
+      (routed_call_tree
         (bounded_semilattice_sup_bot_lifted
           (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_ivl))
         (bounded_semilattice_sup_bot_lifted
@@ -10070,7 +10071,7 @@ let rec cs_call_string_eqs
         (static_resolve (compile_prog pi ps))
         (fun d ->
           equal_lifteda (equal_resolved_st_q (equal_ivl, order_bot_ivl)) d Bot))
-      (routed_extra_g
+      (routed_entry_seed_tree
         (bounded_semilattice_sup_bot_lifted
           (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_ivl))
         (bounded_semilattice_sup_bot_lifted

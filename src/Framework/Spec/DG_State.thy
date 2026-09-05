@@ -19,10 +19,11 @@ text \<open>An analysis chooses a flow-sensitive answer domain \<open>D\<close> 
 subsection \<open>A lattice copy type for D-times-G unknown values\<close>
 text \<open>
   The solver's single value type must order local and global halves
-  componentwise. Raw pairs cannot: \<open>CFG_Def\<close> imports
-  \<open>HOL-Library.Product_Lexorder\<close>, so \<open>'l * 'g\<close> already carries the
-  lexicographic order throughout this repository. \<open>dg_state\<close> supplies a
-  distinct componentwise-ordered carrier.
+  componentwise. Raw pairs cannot: this repository loads
+  \<open>HOL-Library.Product_Lexorder\<close>, so every \<open>'l * 'g\<close> in scope already
+  carries the lexicographic order, and a componentwise instance for the same
+  type would clash with it. \<open>dg_state\<close> is a distinct carrier so that both
+  orders can coexist.
 \<close>
 
 datatype ('l, 'g) dg_state = DG (locals: 'l) (globs: 'g)
@@ -75,6 +76,38 @@ end
 
 instance dg_state ::
   (bounded_semilattice_sup_bot, bounded_semilattice_sup_bot) bounded_semilattice_sup_bot ..
+
+subsection \<open>Reading the two components back\<close>
+
+text \<open>Every construction above this theory projects and repacks, so the four
+  projection equations and the constructor comparison are what its proofs
+  should meet instead of the instance definitions. The order itself stays
+  unfolded: \<open>less_eq_dg_state_def\<close> is not a simp rule, because a bound
+  between two values that are not both constructor terms reads better as one
+  \<open>\<le>\<close> than as a conjunction of two.\<close>
+
+lemma locals_sup [simp]:
+  fixes x y :: "('a::semilattice_sup, 'b::semilattice_sup) dg_state"
+  shows "locals (x \<squnion> y) = locals x \<squnion> locals y"
+  by (simp add: sup_dg_state_def)
+
+lemma globs_sup [simp]:
+  fixes x y :: "('a::semilattice_sup, 'b::semilattice_sup) dg_state"
+  shows "globs (x \<squnion> y) = globs x \<squnion> globs y"
+  by (simp add: sup_dg_state_def)
+
+lemma locals_bot [simp]:
+  "locals (bot :: ('a::order_bot, 'b::order_bot) dg_state) = bot"
+  by (simp add: bot_dg_state_def)
+
+lemma globs_bot [simp]:
+  "globs (bot :: ('a::order_bot, 'b::order_bot) dg_state) = bot"
+  by (simp add: bot_dg_state_def)
+
+lemma DG_le_DG [simp]:
+  fixes d d' :: "'a::ord" and g g' :: "'b::ord"
+  shows "DG d g \<le> DG d' g' \<longleftrightarrow> d \<le> d' \<and> g \<le> g'"
+  by (simp add: less_eq_dg_state_def)
 
 instantiation dg_state :: (bounded_warrowing, bounded_warrowing) bounded_warrowing
 begin

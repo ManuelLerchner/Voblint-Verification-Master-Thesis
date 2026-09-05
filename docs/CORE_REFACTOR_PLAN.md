@@ -262,7 +262,7 @@ and mark it `superseded (see below)`.
   `dg_ctx_activation_base` and `unit_routed_context` at
   `sctx_spec gs is_bot_pred` with `sigma := snd (sctx_sol ...)`, the solver's
   own table. The post-solution of the unbuffered generator is the first half
-  of `routed_domain_exec.pp_abs` (`part_post_solution_seed_dg_buffered_to_old`
+  of `routed_domain_exec.pp_abs` (`part_post_solution_routed_node_rhs_buffered`
   plus the `routed_call_tree_contribution_*` facts); the second half, the
   transport, is not needed. Nothing in `Exec_DG_Trees`, `Exec_DG_Generator`
   or `Exec_DG_Bridge` is cited. Phase 2 proceeds.

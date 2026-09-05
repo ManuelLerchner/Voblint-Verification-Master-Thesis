@@ -1,5 +1,5 @@
 theory Routed_Context
-  imports Routed_Call_Trees DG_Local_State_Spec "Voblint_CFG.LTR_Def"
+  imports Routed_Call_Trees DG_Ctx_Activation DG_Local_State_Spec "Voblint_CFG.LTR_Def"
     Activation_Backbone
 begin
 
@@ -176,7 +176,7 @@ lemma resolved_site_mem:
 proof -
   have "(cc, CallEdge dst pars args) \<in> set (call_site_list g cont)"
     using ce by (auto simp: set_call_site_list[OF finC])
-  then show ?thesis by (force intro: rev_image_eqI)
+  then show ?thesis by (rule routed_contribution_trees_combineI)
 qed
 
 lemma resolved_target_mem:
@@ -209,7 +209,7 @@ proof -
               (CallEdge dst pars args) cc cont)
            sigma)"
     using locals_traverse_le_side_acc_dg[OF resolved_target_mem[OF covV ce sin], where acc = bot]
-    by (simp add: routed_call_tree_def traverse_side_rhs_fold_dg[unfolded sp_compile_def])
+    by (simp add: routed_call_tree_def traverse_side_rhs_fold_dg)
   also have "\<dots> \<le> side_acc_dg (acc0 cont) sigma (trees cont ctx)"
     by (rule locals_traverse_le_side_acc_dg[OF resolved_site_mem[OF ce]])
   finally show ?thesis .
@@ -248,7 +248,7 @@ lemma routed_seed_read_bound:
 proof -
   let ?t = "QueryG (seed_key (FunctionEntry p) ctx') (\<lambda>s. Answer (DG (locals s) bot))"
   have mem: "?t \<in> set (trees (FunctionEntry p) ctx')"
-    by (simp add: routed_entry_seed_tree_def)
+    by (rule routed_contribution_trees_extraI) (simp add: routed_entry_seed_tree_def)
   have "locals (sigma (Inr (seed_key (FunctionEntry p) ctx')))
       = locals (traverse_rhs ?t sigma)"
     by simp
@@ -327,7 +327,7 @@ theorem routed_context_call:
                  enterc u ctx (call_enter gs (CallEdge dst pars args) s))))"
 proof (cases "(u, ctx) \<in> vars")
   case False
-  hence "gammaM (sg (Inl (u, ctx))) = {}" by (rule sg_uncovered_empty)
+  hence "gammaM (sg (Inl (u, ctx))) = {}" by (rule sg_uncov)
   thus ?thesis using sin by simp
 next
   case True
@@ -426,7 +426,7 @@ theorem routed_context_comb:
   shows "combine_collect gs dst s t \<in> gammaM (sg (Inl (cont, c1)))"
 proof (cases "(cl, c1) \<in> vars")
   case False
-  hence "gammaM (sg (Inl (cl, c1))) = {}" by (rule sg_uncovered_empty)
+  hence "gammaM (sg (Inl (cl, c1))) = {}" by (rule sg_uncov)
   thus ?thesis using s by simp
 next
   case True
@@ -453,7 +453,7 @@ next
   show ?thesis
   proof (cases "(FunctionResult p, ?ex_ctx) \<in> vars")
     case False
-    hence "gammaM (sg (Inl (FunctionResult p, ?ex_ctx))) = {}" by (rule sg_uncovered_empty)
+    hence "gammaM (sg (Inl (FunctionResult p, ?ex_ctx))) = {}" by (rule sg_uncov)
     with route_agree have "gammaM (sg (Inl (FunctionResult p, enterc cl c1 es))) = {}" by simp
     with t show ?thesis by simp
   next
@@ -517,10 +517,11 @@ subsection \<open>Activation-collect soundness against the routed local unknown\
 
 text \<open>
   Every activation-collected store at any \<open>(v, ctx)\<close> pair is concretized by the routed
-  local unknown's own \<open>gammaM\<close> reading. The six obligations of
-  \<open>activation_collect_sound_gen\<close> are this locale's own facts: the two entry bounds,
-  \<open>dg_ctx_act_edge\<close>, and the CALL and COMB theorems above. An instance therefore
-  gets its activation-indexed soundness theorem by interpretation alone.
+  local unknown's own \<open>gammaM\<close> reading. The four obligations of
+  \<open>activation_collect_sound\<close> are this locale's own facts: the two entry bounds discharge
+  \<open>INIT\<close> together, \<open>dg_ctx_act_edge\<close> is \<open>INTRA\<close>, and the CALL and COMB theorems above are
+  \<open>CALL\<close> and \<open>RETURN\<close>. An instance therefore gets its activation-indexed soundness theorem
+  by interpretation alone.
 \<close>
 
 lemma activation_collect_dg_sound:
@@ -529,7 +530,7 @@ lemma activation_collect_dg_sound:
     and s0_sound: "S0 \<subseteq> gammaDG s0d s0g"
   shows "activation_collect gs enterc initial_ctx g S0 v ctx
            \<subseteq> gammaM (sg (Inl (v, ctx)))"
-proof (rule activation_collect_sound_gen)
+proof (rule activation_collect_sound[where cover = "\<lambda>v c. gammaM (sg (Inl (v, c)))"])
   fix s0 assume s0mem: "s0 \<in> S0"
   have le_local: "s0d \<le> locals (sigma (Inl (cfg_entry g, initial_ctx)))"
     by (rule locals_ge_s0d[OF entry_cov])

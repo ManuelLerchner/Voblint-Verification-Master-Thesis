@@ -352,7 +352,7 @@ proof -
     by (simp add: fun_eq_iff gamma_exec_def)
   show ?thesis
     unfolding local_state_dg_spec_st_for_lifted_def geq
-  proof (rule sound_local_dg_spec.local_spec_sound, unfold_locales, goal_cases)
+  proof (rule sound_local_dg_spec.local_spec_core_sound, unfold_locales, goal_cases)
     case 1
     then show ?case
       by (meson gamma_lift_mono gamma_state_mono map_lift_fun_of_resolved_st_q_for_mono)

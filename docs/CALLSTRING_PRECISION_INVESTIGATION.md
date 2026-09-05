@@ -371,8 +371,8 @@ exactly the separation the plan asked for.
 
 ### 9.6 What is left before attacking the transfer equations
 
-> **Landed (2026-07-31, issue #45).** `routed_node_rhs_is_mono_eq_gen`,
-> `_mono_sides_gen`, `_mono_deps_gen` (`DG_Constraint_Trees.thy`) discharge the three
+> **Landed (2026-07-31, issue #45).** `routed_node_rhs_mono_eq`,
+> `_mono_sides`, `_mono_deps` (`DG_Keyed_Generator.thy`) discharge the three
 > `TD_side_mono` preconditions for an arbitrary `routed_node_rhs`
 > instance from a per-tree contract on the `pred_sel`/`cmb`/`extra` hooks —
 > mirroring `td_cfg_side_solver_eff_gen` (`TD_Side_Eff_Pipeline.thy`), the same

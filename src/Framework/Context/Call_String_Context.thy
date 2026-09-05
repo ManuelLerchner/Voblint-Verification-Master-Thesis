@@ -66,6 +66,14 @@ text \<open>Below the bound, pushing a call site loses nothing --- a plain cons,
   truncation. Needed for any future precision argument: contexts stay distinct as long as
   the call histories being separated fit under \<open>k\<close>.\<close>
 
+lemma cs_route_below_bound:
+  "length ctx < k \<Longrightarrow> cs_route k u ctx d ca = u # ctx"
+  by (simp add: cs_route_def)
+
+lemma cs_context_below_bound:
+  "length ctx < k \<Longrightarrow> cs_context k u ctx s = u # ctx"
+  by (simp add: cs_context_def)
+
 text \<open>The central algebraic property of a bounded call string: projecting a longer bound's
   context down to a shorter one agrees with routing at the shorter bound directly. This is
   the \<open>take k1 ctx_k2 = ctx_k1\<close> fact any future \<open>k1 <= k2\<close> refinement theorem needs to relate
