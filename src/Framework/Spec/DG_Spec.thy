@@ -127,46 +127,33 @@ text \<open>
   generator's edge right-hand side is a \<open>dg_spec_edge_tree\<close>.
 \<close>
 
+text \<open>
+  The driver underneath: read the source unknown, close the key into a fresh
+  manager around what came back, and run the transfer once. The transfer itself
+  never sees the key, only whatever the manager's fields already close over.
+\<close>
+
+definition transfer_program_at ::
+  "('x,'k,'v,'dl,'dg) man_transfer \<Rightarrow> 'x + 'k \<Rightarrow> ('v \<Rightarrow> 'k)
+   \<Rightarrow> ('x,'k,('dl::bot,'dg) dg_state,'dl) strategy_program"
+where
+  "transfer_program_at transfer src key =
+     do {
+       d \<leftarrow> dg_read_at src;
+       transfer (mk_dg_man d key)
+     }"
+
 definition transfer_tree ::
   "('x,'k,'v,'dl::bot,'dg::bot) man_transfer \<Rightarrow> 'x + 'k \<Rightarrow> ('v \<Rightarrow> 'k)
    \<Rightarrow> ('x,'k,('dl,'dg) dg_state) strategy_tree"
 where
-  "transfer_tree T src key = sp_compile_with (\<lambda>d. DG d bot) (dg_edge_tree_man T src key)"
+  "transfer_tree T src key = sp_compile_with (\<lambda>d. DG d bot) (transfer_program_at T src key)"
 
 definition dg_spec_edge_tree ::
   "('x,'k,'v,'dl::bot,'dg::bot) dg_spec \<Rightarrow> edge_action \<Rightarrow> 'x + 'k \<Rightarrow> ('v \<Rightarrow> 'k)
    \<Rightarrow> ('x,'k,('dl,'dg) dg_state) strategy_tree"
 where
   "dg_spec_edge_tree S a src key = transfer_tree (dg_spec_step S a) src key"
-
-subsection \<open>Proof-level compiled combine form\<close>
-
-text \<open>
-  The same compilation for a return combine: read the caller continuation and
-  the callee exit, and run the composed combine against them. No generator
-  builds one. The routed call tree already holds the alternative's own
-  continuation, so it runs \<^const>\<open>dg_spec_combine_transfer\<close> against that value
-  directly and never reads a caller unknown a second time --- which is also why
-  the continuation an equation shape supplies need not be the caller's.
-
-  What these two formers are for is \<^emph>\<open>stating\<close> the return obligation at a pair
-  of addresses, so that a proof can quantify over the pair. Their consumers are
-  proofs, and a reader should not take them for part of the active generator.
-\<close>
-
-definition combine_transfer_tree ::
-  "('x,'k,'v,'dl::bot,'dg::bot) man_combine_transfer \<Rightarrow> 'x + 'k \<Rightarrow> 'x + 'k \<Rightarrow> ('v \<Rightarrow> 'k)
-   \<Rightarrow> ('x,'k,('dl,'dg) dg_state) strategy_tree"
-where
-  "combine_transfer_tree T src_cc src_ex key =
-     sp_compile_with (\<lambda>d. DG d bot) (dg_combine_tree_man T src_cc src_ex key)"
-
-definition dg_spec_combine_tree ::
-  "('x,'k,'v,'dl::bot,'dg::bot) dg_spec \<Rightarrow> call_info \<Rightarrow> 'x + 'k \<Rightarrow> 'x + 'k \<Rightarrow> ('v \<Rightarrow> 'k)
-   \<Rightarrow> ('x,'k,('dl,'dg) dg_state) strategy_tree"
-where
-  "dg_spec_combine_tree S ci src_cc src_ex key =
-     combine_transfer_tree (dg_spec_combine_transfer S ci) src_cc src_ex key"
 
 subsection \<open>Local-only transfers\<close>
 
@@ -200,7 +187,7 @@ lemma transfer_tree_local_transfer:
      = QueryL x (\<lambda>a. Answer (DG (f (locals a)) bot))"
   "transfer_tree (local_transfer f) (Inr g) key
      = QueryG g (\<lambda>a. Answer (DG (f (locals a)) bot))"
-  by (simp_all add: transfer_tree_def dg_edge_tree_man_def local_transfer_def mk_dg_man_def
+  by (simp_all add: transfer_tree_def transfer_program_at_def local_transfer_def mk_dg_man_def
       dg_read_at_def sp_bind_assoc)
 
 lemma traverse_local_transfer_tree [simp]:
@@ -239,27 +226,6 @@ lemma dg_spec_combine_transfer_local:
            = sp_return (ca (ce (man_local m) exit) exit)"
   by (simp add: dg_spec_combine_transfer_def assms local_combine_transfer_def)
 
-lemma traverse_local_combine_tree [simp]:
-  "traverse_rhs (combine_transfer_tree (local_combine_transfer h) src_cc src_ex gk) \<tau>
-     = DG (h (locals (\<tau> src_cc)) (locals (\<tau> src_ex))) bot"
-  by (cases src_cc; cases src_ex)
-     (simp_all add: combine_transfer_tree_def dg_combine_tree_man_def
-        local_combine_transfer_def mk_dg_man_def dg_read_at_def sp_bind_assoc)
-
-lemma sides_local_combine_tree [simp]:
-  "sides_of_rhs (combine_transfer_tree (local_combine_transfer h) src_cc src_ex gk) \<tau> k
-     = bot"
-  by (cases src_cc; cases src_ex)
-     (simp_all add: combine_transfer_tree_def dg_combine_tree_man_def
-        local_combine_transfer_def mk_dg_man_def dg_read_at_def sp_bind_assoc)
-
-lemma dep_aux_local_combine_tree [simp]:
-  "dep_aux \<tau> (combine_transfer_tree (local_combine_transfer h) src_cc src_ex gk)
-     = {src_cc, src_ex}"
-  by (cases src_cc; cases src_ex)
-     (simp_all add: combine_transfer_tree_def dg_combine_tree_man_def
-        local_combine_transfer_def mk_dg_man_def dg_read_at_def sp_bind_assoc)
-
 subsection \<open>The reads every compiled transfer makes\<close>
 
 text \<open>
@@ -275,30 +241,11 @@ text \<open>
 lemma dep_aux_transfer_tree_source:
   "src \<in> dep_aux \<tau> (transfer_tree T src gk)"
   by (cases src)
-     (simp_all add: transfer_tree_def dg_edge_tree_man_def dg_read_at_def sp_bind_assoc)
-
-text \<open>The same fact one level lower, for a tree that reads an unknown and then
-  continues into a program the caller supplies rather than into a transfer.\<close>
-
-lemma dep_aux_dg_read_at_source:
-  "src \<in> dep_aux \<tau> (dg_read_at src K)"
-  by (cases src)
-     (simp_all add: dg_read_at_def sp_bind_def sp_read_local_def sp_read_global_def
-        sp_return_def)
-
-lemma dep_aux_combine_transfer_tree_sources:
-  "{src_cc, src_ex} \<subseteq> dep_aux \<tau> (combine_transfer_tree T src_cc src_ex gk)"
-  by (cases src_cc; cases src_ex)
-     (simp_all add: combine_transfer_tree_def dg_combine_tree_man_def dg_read_at_def
-        sp_bind_assoc)
+     (simp_all add: transfer_tree_def transfer_program_at_def dg_read_at_def sp_bind_assoc)
 
 lemma dep_aux_dg_spec_edge_tree_source:
   "src \<in> dep_aux \<tau> (dg_spec_edge_tree S a src gk)"
   unfolding dg_spec_edge_tree_def by (rule dep_aux_transfer_tree_source)
-
-lemma dep_aux_dg_spec_combine_tree_sources:
-  "{src_cc, src_ex} \<subseteq> dep_aux \<tau> (dg_spec_combine_tree S ci src_cc src_ex gk)"
-  unfolding dg_spec_combine_tree_def by (rule dep_aux_combine_transfer_tree_sources)
 
 subsection \<open>A default specification, and overriding its fields\<close>
 

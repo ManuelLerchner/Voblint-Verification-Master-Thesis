@@ -78,12 +78,12 @@ subsection \<open>The routed equation system and its executable solution\<close>
 definition pctx_eqs ::
     "(vname \<Rightarrow> bool) \<Rightarrow> (parity exec_dg_st \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> (pp \<times> unit, (unit, unit) routed_gk, (parity exec_dg_st lifted, parity exec_dg_st lifted) dg_state) eqsT" where
   "pctx_eqs gs empty_pred Pi ps =
-     side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_addr_list (\<lambda>_. Analysis_Global ())
+     routed_node_rhs_buffered intra_predecessor_addr_list (\<lambda>_. Analysis_Global ())
        route_unit
        (\<lambda>ctx' src a. dg_spec_edge_tree (pctx_spec gs empty_pred) a src (\<lambda>_. Analysis_Global ()))
-       (routed_cmb_g (pctx_spec gs empty_pred) (Analysis_Global ()) Activation_Seed
+       (routed_call_tree (pctx_spec gs empty_pred) (Analysis_Global ()) Activation_Seed
           (static_resolve (compile_prog Pi ps)) (\<lambda>d. d = Bot))
-       (routed_extra_g Activation_Seed (Analysis_Global ()))
+       (routed_entry_seed_tree Activation_Seed (Analysis_Global ()))
        (compile_prog Pi ps) Bot (Lifted cinit_parity_st) Bot"
 
 definition pctx_sol ::
@@ -168,10 +168,10 @@ text \<open>The solver's post-solution, for the unbuffered routed generator at t
 
 theorem pctx_pp_routed:
   "part_post_solution
-     (side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. Analysis_Global ()) route_unit
+     (routed_node_rhs intra_predecessor_addr_list (\<lambda>_. Analysis_Global ()) route_unit
         (\<lambda>ctx' src a. dg_spec_edge_tree (pctx_spec gs empty_pred) a src (\<lambda>_. Analysis_Global ()))
-        (routed_cmb_g (pctx_spec gs empty_pred) (Analysis_Global ()) Activation_Seed (static_resolve (compile_prog Pi ps)) (\<lambda>d. d = Bot))
-        (routed_extra_g Activation_Seed (Analysis_Global ()))
+        (routed_call_tree (pctx_spec gs empty_pred) (Analysis_Global ()) Activation_Seed (static_resolve (compile_prog Pi ps)) (\<lambda>d. d = Bot))
+        (routed_entry_seed_tree Activation_Seed (Analysis_Global ()))
         (compile_prog Pi ps) Bot (Lifted cinit_parity_st) Bot)
      (cfg_exit (compile_prog Pi ps), ())
      (snd (pctx_sol gs empty_pred Pi ps)) (fst (pctx_sol gs empty_pred Pi ps))"
@@ -380,7 +380,7 @@ definition analyse_parity_ctx_result_for ::
                     (locals (snd (pctx_sol_prog gs p) (Inl (v, ctx))))))"
 
 text \<open>\<^const>\<open>ctx_solved_for\<close> at this domain's solve, with \<^const>\<open>Analysis_Global\<close> and
-  \<^const>\<open>Activation_Seed\<close> handed to \<^const>\<open>seed_global_keys\<close> the way \<^const>\<open>routed_extra_g\<close>
+  \<^const>\<open>Activation_Seed\<close> handed to \<^const>\<open>seed_global_keys\<close> the way \<^const>\<open>routed_entry_seed_tree\<close>
   already takes them.\<close>
 
 definition analyse_parity_ctx_solved_for ::
@@ -463,14 +463,14 @@ subsection \<open>The routed equation system and its executable solution\<close>
 definition pcs_eqs ::
     "nat \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> (parity exec_dg_st \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> (pp \<times> call_string, call_string_gk, (parity exec_dg_st lifted, parity exec_dg_st lifted) dg_state) eqsT" where
   "pcs_eqs k gs empty_pred Pi ps =
-     side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_addr_list (\<lambda>_. Call_String_Context.Global)
+     routed_node_rhs_buffered intra_predecessor_addr_list (\<lambda>_. Call_String_Context.Global)
        (cs_route k)
        (\<lambda>ctx' src a. dg_spec_edge_tree (pctx_spec gs empty_pred) a src
           (\<lambda>_. Call_String_Context.Global))
-       (routed_cmb_g (pctx_spec gs empty_pred)
+       (routed_call_tree (pctx_spec gs empty_pred)
           Call_String_Context.Global Call_String_Context.Seed
           (static_resolve (compile_prog Pi ps)) (\<lambda>d. d = Bot))
-       (routed_extra_g Call_String_Context.Seed Call_String_Context.Global)
+       (routed_entry_seed_tree Call_String_Context.Seed Call_String_Context.Global)
        (compile_prog Pi ps) Bot (Lifted cinit_parity_st) Bot"
 
 definition pcs_sol ::
@@ -549,13 +549,13 @@ text \<open>The solver's post-solution, for the unbuffered routed generator at t
 
 theorem pcs_pp_routed:
   "part_post_solution
-     (side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. Call_String_Context.Global)
+     (routed_node_rhs intra_predecessor_addr_list (\<lambda>_. Call_String_Context.Global)
         (cs_route k)
         (\<lambda>ctx' src a. dg_spec_edge_tree (pctx_spec gs empty_pred) a src
            (\<lambda>_. Call_String_Context.Global))
-        (routed_cmb_g (pctx_spec gs empty_pred) Call_String_Context.Global
+        (routed_call_tree (pctx_spec gs empty_pred) Call_String_Context.Global
            Call_String_Context.Seed (static_resolve (compile_prog Pi ps)) (\<lambda>d. d = Bot))
-        (routed_extra_g Call_String_Context.Seed Call_String_Context.Global)
+        (routed_entry_seed_tree Call_String_Context.Seed Call_String_Context.Global)
         (compile_prog Pi ps) Bot (Lifted cinit_parity_st) Bot)
      (cfg_exit (compile_prog Pi ps), [])
      (snd (pcs_sol k gs empty_pred Pi ps)) (fst (pcs_sol k gs empty_pred Pi ps))"
@@ -833,12 +833,12 @@ subsection \<open>The routed equation system and its executable solution\<close>
 definition pctx_entry_eqs ::
     "(vname \<Rightarrow> bool) \<Rightarrow> (parity exec_dg_st \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> (pp \<times> parity list, (unit, parity list) routed_gk, (parity exec_dg_st lifted, parity exec_dg_st lifted) dg_state) eqsT" where
   "pctx_entry_eqs gs empty_pred Pi ps =
-     side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_addr_list (\<lambda>_. Analysis_Global ())
+     routed_node_rhs_buffered intra_predecessor_addr_list (\<lambda>_. Analysis_Global ())
        (pctx_entry_route_gen gs empty_pred)
        (\<lambda>ctx' src a. dg_spec_edge_tree (pctx_spec gs empty_pred) a src (\<lambda>_. Analysis_Global ()))
-       (routed_cmb_g (pctx_spec gs empty_pred) (Analysis_Global ()) Activation_Seed
+       (routed_call_tree (pctx_spec gs empty_pred) (Analysis_Global ()) Activation_Seed
           (static_resolve (compile_prog Pi ps)) (\<lambda>d. d = Bot))
-       (routed_extra_g Activation_Seed (Analysis_Global ()))
+       (routed_entry_seed_tree Activation_Seed (Analysis_Global ()))
        (compile_prog Pi ps) Bot (Lifted cinit_parity_st) Bot"
 
 definition pctx_entry_sol ::
@@ -948,12 +948,12 @@ text \<open>The solver's post-solution, for the unbuffered routed generator at t
 
 theorem pctx_entry_pp_routed:
   "part_post_solution
-     (side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. Analysis_Global ())
+     (routed_node_rhs intra_predecessor_addr_list (\<lambda>_. Analysis_Global ())
         (pctx_entry_route_gen gs empty_pred)
         (\<lambda>ctx' src a. dg_spec_edge_tree (pctx_spec gs empty_pred) a src (\<lambda>_. Analysis_Global ()))
-        (routed_cmb_g (pctx_spec gs empty_pred) (Analysis_Global ()) Activation_Seed
+        (routed_call_tree (pctx_spec gs empty_pred) (Analysis_Global ()) Activation_Seed
            (static_resolve (compile_prog Pi ps)) (\<lambda>d. d = Bot))
-        (routed_extra_g Activation_Seed (Analysis_Global ()))
+        (routed_entry_seed_tree Activation_Seed (Analysis_Global ()))
         (compile_prog Pi ps) Bot (Lifted cinit_parity_st) Bot)
      (cfg_exit (compile_prog Pi ps), [])
      (snd (pctx_entry_sol gs empty_pred Pi ps)) (fst (pctx_entry_sol gs empty_pred Pi ps))"

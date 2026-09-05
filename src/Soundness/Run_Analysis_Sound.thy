@@ -218,9 +218,9 @@ text \<open>
   the \<^emph>\<open>solved\<close> global needs the entry's own publication to be inside that
   solution. It is, and the argument is one chain of directional bounds: the
   entry program's publications survive the fold over alternatives
-  (\<open>routed_cmb_g_at_sides_ge_prefix\<close>), one resolved target survives the fold over
-  targets (\<open>routed_cmb_g_sides_ge_at\<close>), one call site survives the
-  node's own equation (\<open>sides_comb_le_side_cfg_T_eff_keyed_seed_dg\<close>), and a
+  (\<open>routed_callee_call_tree_sides_ge_prefix\<close>), one resolved target survives the fold over
+  targets (\<open>routed_call_tree_sides_ge_at\<close>), one call site survives the
+  node's own equation (\<open>sides_comb_le_routed_node_rhs\<close>), and a
   post-solution contains every equation's publications. The continuation node is
   the one carrying that equation, which is why \<^const>\<open>vars_cover\<close>'s combine
   component is what makes it a covered unknown.
@@ -256,19 +256,19 @@ proof -
     using pp covcont
     unfolding part_post_solution_iff_tree_covered_at by (blast dest: tree_covered_at_sides)
   have "pub (Inr (Analysis_Global ()))
-          \<le> sides_of_rhs (routed_cmb_g_at ?S (Analysis_Global ()) Activation_Seed
+          \<le> sides_of_rhs (routed_callee_call_tree ?S (Analysis_Global ()) Activation_Seed
                 route_unit (\<lambda>d. d = bot) () ?ca u
                 (locals (?sigma (Inl (u, ())))) p) ?sigma (Inr (Analysis_Global ()))"
-    using routed_cmb_g_at_sides_ge_prefix[OF runs] by (simp add: le_fun_def)
-  also have "\<dots> \<le> sides_of_rhs (routed_cmb_g ?S (Analysis_Global ()) Activation_Seed
+    using routed_callee_call_tree_sides_ge_prefix[OF runs] by (simp add: le_fun_def)
+  also have "\<dots> \<le> sides_of_rhs (routed_call_tree ?S (Analysis_Global ()) Activation_Seed
                      (static_resolve ?g) (\<lambda>d. d = bot) route_unit () ?ca u cont)
                     ?sigma (Inr (Analysis_Global ()))"
-    by (rule routed_cmb_g_sides_ge_at
+    by (rule routed_call_tree_sides_ge_at
           [where resolve = "static_resolve ?g" and v = cont and cc = u
              and ctx = "()" and \<sigma> = "?sigma" and ca = ?ca, OF res])
   also have "\<dots> \<le> sides_of_rhs (eqs (cont, ())) ?sigma (Inr (Analysis_Global ()))"
     unfolding eqs_def unit_routed_eqs_def
-    by (rule sides_comb_le_side_cfg_T_eff_keyed_seed_dg[OF site,
+    by (rule sides_comb_le_routed_node_rhs[OF site,
           where gkey = "\<lambda>_. Analysis_Global ()"])
   also have "\<dots> \<le> ?sigma (Inr (Analysis_Global ()))"
     using sides_sol by (simp add: le_fun_def)
@@ -664,26 +664,26 @@ next
   case PP
   have pp_buf:
       "part_post_solution
-        (side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_addr_list
+        (routed_node_rhs_buffered intra_predecessor_addr_list
           (\<lambda>_. Analysis_Global ()) route_unit unit_buf.intra_st
           (unit_buf.cmb_st (compile_prog Pi ps))
-          (routed_extra_g Activation_Seed (Analysis_Global ()))
+          (routed_entry_seed_tree Activation_Seed (Analysis_Global ()))
           (compile_prog Pi ps) bot0 s0d s0g)
         x (snd (solve eqs x)) (fst (solve eqs x))"
     using solver_pps[OF SOLVE] unfolding eqs_def
     by (simp add: unit_routed_eqs_buffered_def)
   have pp_old:
       "part_post_solution
-        (side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list
+        (routed_node_rhs intra_predecessor_addr_list
           (\<lambda>_. Analysis_Global ()) route_unit unit_buf.intra_st
           (unit_buf.cmb_st (compile_prog Pi ps))
-          (routed_extra_g Activation_Seed (Analysis_Global ()))
+          (routed_entry_seed_tree Activation_Seed (Analysis_Global ()))
           (compile_prog Pi ps) bot0 s0d s0g)
         x (snd (solve eqs x)) (fst (solve eqs x))"
     using unit_buf.pp_st[OF pp_buf] .
   have cmb_eq:
       "unit_buf.cmb_st (compile_prog Pi ps) =
-        routed_cmb_g spec_st (Analysis_Global ()) Activation_Seed
+        routed_call_tree spec_st (Analysis_Global ()) Activation_Seed
           (static_resolve (compile_prog Pi ps)) (\<lambda>d. d = bot)"
     by (simp add: route_unit_def static_resolve_def)
   then show ?case using pp_old by simp

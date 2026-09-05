@@ -149,10 +149,10 @@ definition nest_1_eqs ::
   "(pp \<times> cfg_node list, call_string_gk,
      (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state) eqsT" where
   "nest_1_eqs =
-     side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. Global) (cs_route 1)
+     routed_node_rhs intra_predecessor_addr_list (\<lambda>_. Global) (cs_route 1)
       (\<lambda>ctx' src a. dg_spec_edge_tree nest_S_st a src (\<lambda>_. Global))
-      (routed_cmb_g nest_S_st Global Seed (static_resolve nest_cfg) (\<lambda>d. d = Bot))
-      (routed_extra_g Seed Global)
+      (routed_call_tree nest_S_st Global Seed (static_resolve nest_cfg) (\<lambda>d. d = Bot))
+      (routed_entry_seed_tree Seed Global)
        nest_cfg Bot (Lifted cinit_ivl_st) Bot"
 
 definition nest_1_sol ::
@@ -495,14 +495,14 @@ definition nestg_1_eqs ::
   "(pp \<times> cfg_node list, call_string_gk,
      (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state) eqsT" where
   "nestg_1_eqs =
-     side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. Global) (cs_route 1)
+     routed_node_rhs intra_predecessor_addr_list (\<lambda>_. Global) (cs_route 1)
       (\<lambda>ctx' src a. dg_spec_edge_tree
          (local_state_dg_spec_st_for_lifted nestg_gs nestg_empty_pred
             (ivl_tf_st_for nestg_gs) (ivl_enter_st_for nestg_gs)) a src (\<lambda>_. Global))
-      (routed_cmb_g (local_state_dg_spec_st_for_lifted nestg_gs nestg_empty_pred
+      (routed_call_tree (local_state_dg_spec_st_for_lifted nestg_gs nestg_empty_pred
                        (ivl_tf_st_for nestg_gs) (ivl_enter_st_for nestg_gs)) Global Seed
          (static_resolve nestg_cfg) (\<lambda>d. d = Bot))
-      (routed_extra_g Seed Global)
+      (routed_entry_seed_tree Seed Global)
        nestg_cfg
        Bot (Lifted cinit_ivl_st) Bot"
 

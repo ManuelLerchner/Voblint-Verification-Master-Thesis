@@ -500,7 +500,7 @@ subsection \<open>Global unknowns of a context-sensitive solve\<close>
 
 text \<open>
   A seed's payload is readable off the local table, so this needs no second solve:
-  \<open>routed_extra_g\<close> answers a callee entry's local from
+  \<open>routed_entry_seed_tree\<close> answers a callee entry's local from
   \<^term>\<open>locals (sigma (Inr (seed_key v ctx)))\<close>, which makes
   \<^term>\<open>lookup_context r (FunctionEntry f) ctx\<close> that seed rather than a summary of it.
 

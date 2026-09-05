@@ -68,9 +68,9 @@ the identical `sidel (FunctionEntry fd, c) d` shape for thread entry.
 
 ## 2. What Voblint does — correspondence, not identity
 
-`routed_cmb_g` (`src/Framework/DG/Routed_Context.thy:63`):
+`routed_call_tree` (`src/Framework/DG/Routed_Context.thy:63`):
 
-| Goblint | `routed_cmb_g` | Same? |
+| Goblint | `routed_call_tree` | Same? |
 | --- | --- | --- |
 | caller state | `caller_state <- read_local (cc, ctx)` | yes |
 | `S.context man f v` | `ctx' = route cc ctx caller ca` | see §3 |
@@ -80,24 +80,24 @@ the identical `sidel (FunctionEntry fd, c) d` shape for thread entry.
 | `combine_env`; `combine_assign` | `combine_local S ci dcont callee globals2` | fused, not two hooks |
 | target resolution in the RHS | statically enumerated `calls` tuple | **no** (§5) |
 
-`routed_extra_g` supplies the other half — the callee entry equation reads its
+`routed_entry_seed_tree` supplies the other half — the callee entry equation reads its
 own seed back:
 
 ```isabelle
-routed_extra_g seed_key gk0 route ctx v =
+routed_entry_seed_tree seed_key gk0 route ctx v =
   (case v of FunctionEntry _ =>
      [do { seed_state <- read_global (seed_key v ctx); answer_local (locals seed_state) }]
    | _ => [])
 ```
 
-Both are hooks of the generator `side_cfg_T_eff_keyed_seed_dg[_buffered]`
+Both are hooks of the generator `routed_node_rhs[_buffered]`
 (`DG_Constraint_Trees.thy`). Three routing instances exist: `unit_routed_context`
 (`route_unit`), `call_string_routed_context` (`cs_route`),
 `entry_state_routed_context` (`formals_route_lifted_gen`).
 
 **Reachability evidence, independent of any reading of the sources.** The
 checked-in export `codegen/generated/ml/Voblint_CLI.ml` (12,186 lines) contains
-`routed_extra_g` (11), `routed_cmb_g_contribution` (11), and seven distinct
+`routed_entry_seed_tree` (11), `routed_call_tree_contribution` (11), and seven distinct
 `Seed*` constructors — and **zero** occurrences of `dg_gen`, `hook_gen`,
 `placed_dg`, `placed_abs_dg`, `dg_extra`, `dg_cmb`, `dg_trees`. Isabelle emits
 the transitive closure of the export roots, so this is machine-computed proof
@@ -137,7 +137,7 @@ outright, which is legitimate — Goblint's `S.context` is likewise per-analysis
 and need not read `v`.
 
 **One latent discrepancy this exposed.** The route computes
-`enter_local S pars args d bot` — globals bottomed — while `routed_cmb_g`
+`enter_local S pars args d bot` — globals bottomed — while `routed_call_tree`
 publishes `enter_local S fs as caller globals1` with the real globals. Goblint
 uses the *same* `v` for `S.context man f v` and for `sidel`. Today the two agree,
 because every spec in this development is Base-shaped and its
@@ -272,7 +272,7 @@ same hazard applies to repeated `SideL` writes.
 ### A second, smaller delta
 
 Goblint's `enter` returns a *list* of (caller-continuation, callee-entry) pairs
-and side-effects each. `routed_cmb_g` publishes exactly one. VIMP needs no
+and side-effects each. `routed_call_tree` publishes exactly one. VIMP needs no
 split today, but the interface shape differs.
 
 ## 5. The static call-target dependency (missed by the first draft)
@@ -348,7 +348,7 @@ local unknown — push inverted into pull. Endpoint:
 `dg_postfix_collect_sound_ltr_for` (`DG_LTR_Sound.thy`).
 
 **Hook family** — `sound_dg_hooks` / `hook_gen` over
-`side_cfg_T_eff_keyed_seed_trees`, whose `enter` list is again
+`routed_node_trees`, whose `enter` list is again
 `entry_call_list g v`. Fixed at `pp \<times> unit` / `unit`; it cannot carry a context.
 
 Footprint (`dg_gen|dg_trees|dg_postfix|dg_cmb|dg_enter|dg_extra|hook_gen|sound_dg_hooks|dg_hook_`):
@@ -359,7 +359,7 @@ Footprint (`dg_gen|dg_trees|dg_postfix|dg_cmb|dg_enter|dg_extra|hook_gen|sound_d
 | `Core/Solver/Context/DG/Exec_DG_Bridge.thy` | 194 | mostly generic transport; the `placed_*`/hook transport is the pull-specific part |
 | `Core/Solver/Context/DG/DG_LTR_Sound.thy` | 33 | pull-only endpoint |
 | `Soundness/Run_Analysis_Sound.thy` | 29 | pull-only endpoint |
-| `Core/Solver/Context/DG/DG_Constraint_Trees.thy` | 2 | `side_cfg_T_eff_keyed_seed_trees` + four single-tree lemmas |
+| `Core/Solver/Context/DG/DG_Constraint_Trees.thy` | 2 | `routed_node_trees` + four single-tree lemmas |
 
 `Routed_Context` imports `DG_Ctx_Activation` and `DG_Local_State_Spec`, both of which import
 `DG_Soundness`. The routed path depends on `sound_dg_spec_core`'s record and transfer
@@ -428,7 +428,7 @@ Works end to end, regression-covered:
 The issue asks whether the TD side solver handles recursive entry contributions
 "without additional machinery". Recorded in the first fixture's own header, the
 answer is **no**: it needed `buffer_sides` /
-`side_cfg_T_eff_keyed_seed_dg_buffered` (#123). That machinery exists and is
+`routed_node_rhs_buffered` (#123). That machinery exists and is
 proved (`distinct_side_path_buffer_sides`); it is not new work, and §4 notes it
 does not disappear under `SideL`.
 
@@ -509,7 +509,7 @@ cleanup. The migration order for that route:
 
 | Check | Result |
 | --- | --- |
-| Export reachability (`codegen/generated/ml/Voblint_CLI.ml`) | routed constants present (`routed_extra_g`, `routed_cmb_g_contribution`, 7 `Seed*` constructors); **zero** pull-family constants |
+| Export reachability (`codegen/generated/ml/Voblint_CLI.ml`) | routed constants present (`routed_entry_seed_tree`, `routed_call_tree_contribution`, 7 `Seed*` constructors); **zero** pull-family constants |
 | Consumer graph outside `src/**/*.thy`, `docs/` | one hit: `src/Framework/ROOT:52` (`DG_LTR_Sound`). No CI, script, CLI, generated artifact, or test reference |
 | `sorry`/`oops` in `src/` | none |
 | Full Isabelle batch build | **not run** |

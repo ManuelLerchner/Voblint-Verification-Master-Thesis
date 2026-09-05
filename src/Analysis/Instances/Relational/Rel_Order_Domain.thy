@@ -378,7 +378,7 @@ lemma traverse_rel_transfer [simp]:
   "locals (traverse_rhs (transfer_tree (rel_transfer f) src (\<lambda>_. gk)) \<tau>)
      = snd (f (locals (\<tau> src)) (globs (\<tau> (Inr gk))))"
   by (cases src)
-     (simp_all add: transfer_tree_def dg_edge_tree_man_def rel_transfer_def
+     (simp_all add: transfer_tree_def transfer_program_at_def rel_transfer_def
         mk_dg_man_def dg_read_at_def dg_read_global_def dg_sideg_def sp_bind_assoc
         Let_def)
 
@@ -386,7 +386,7 @@ lemma sides_rel_transfer [simp]:
   "globs (sides_of_rhs (transfer_tree (rel_transfer f) src (\<lambda>_. gk)) \<tau> (Inr gk))
      = fst (f (locals (\<tau> src)) (globs (\<tau> (Inr gk))))"
   by (cases src)
-     (simp_all add: transfer_tree_def dg_edge_tree_man_def rel_transfer_def
+     (simp_all add: transfer_tree_def transfer_program_at_def rel_transfer_def
         mk_dg_man_def dg_read_at_def dg_read_global_def dg_sideg_def sp_bind_assoc
         Let_def)
 
@@ -544,7 +544,7 @@ lemma traverse_rel_combine [simp]:
              (combine_transfer_tree (rel_combine_transfer f) src_cc src_ex (\<lambda>_. gk)) \<tau>)
      = snd (f (locals (\<tau> src_cc)) (locals (\<tau> src_ex)) (globs (\<tau> (Inr gk))))"
   by (cases src_cc; cases src_ex)
-     (simp_all add: combine_transfer_tree_def dg_combine_tree_man_def rel_combine_transfer_def
+     (simp_all add: combine_transfer_tree_def combine_program_at_def rel_combine_transfer_def
         mk_dg_man_def dg_read_at_def dg_read_global_def dg_sideg_def sp_bind_assoc Let_def)
 
 lemma sides_rel_combine [simp]:
@@ -553,7 +553,7 @@ lemma sides_rel_combine [simp]:
             \<tau> (Inr gk))
      = fst (f (locals (\<tau> src_cc)) (locals (\<tau> src_ex)) (globs (\<tau> (Inr gk))))"
   by (cases src_cc; cases src_ex)
-     (simp_all add: combine_transfer_tree_def dg_combine_tree_man_def rel_combine_transfer_def
+     (simp_all add: combine_transfer_tree_def combine_program_at_def rel_combine_transfer_def
         mk_dg_man_def dg_read_at_def dg_read_global_def dg_sideg_def sp_bind_assoc Let_def)
 
 subsection \<open>The interpretation\<close>

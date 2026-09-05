@@ -31,7 +31,7 @@ constructing `strategy_tree` by hand. Term definitions are in
 
    ```isabelle
    definition my_eqs where
-     "my_eqs = side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. Global)
+     "my_eqs = routed_node_rhs intra_predecessor_list (\<lambda>_. Global)
          my_route (routed_cmb S Global) (routed_extra g S Seed Global)
          g S bot0 s0d s0g"
    ```

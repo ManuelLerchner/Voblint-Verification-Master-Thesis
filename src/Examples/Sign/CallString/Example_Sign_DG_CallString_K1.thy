@@ -150,11 +150,11 @@ definition sign_nest_1_eqs ::
   "(pp \<times> cfg_node list, call_string_gk,
      (sign exec_dg_st lifted, sign exec_dg_st lifted) dg_state) eqsT" where
   "sign_nest_1_eqs =
-     side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. Global) (cs_route 1)
+     routed_node_rhs intra_predecessor_addr_list (\<lambda>_. Global) (cs_route 1)
        (\<lambda>ctx' src a. dg_spec_edge_tree sign_nest_S_st a src (\<lambda>_. Global))
-       (routed_cmb_g sign_nest_S_st Global Seed (static_resolve sign_nest_cfg)
+       (routed_call_tree sign_nest_S_st Global Seed (static_resolve sign_nest_cfg)
           (\<lambda>d. d = Bot))
-       (routed_extra_g Seed Global)
+       (routed_entry_seed_tree Seed Global)
        sign_nest_cfg Bot (Lifted cinit_sign_st) Bot"
 
 definition sign_nest_1_sol ::

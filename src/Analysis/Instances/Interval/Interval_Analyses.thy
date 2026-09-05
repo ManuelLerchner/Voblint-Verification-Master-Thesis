@@ -78,7 +78,7 @@ text \<open>
   \<^const>\<open>analyse_interval_dg_eqs_for\<close> feeds \<^const>\<open>unit_routed_eqs\<close>. Only the
   routed generator variant wrapping this spec changes: the unbuffered
   \<^const>\<open>unit_routed_eqs\<close> there, the buffered
-  \<^const>\<open>side_cfg_T_eff_keyed_seed_dg_buffered\<close> here (deduplicating repeated
+  \<^const>\<open>routed_node_rhs_buffered\<close> here (deduplicating repeated
   writes to one key within a single RHS evaluation) --- the spec itself, and
   every domain-transfer soundness fact about it, is untouched.
 \<close>
@@ -97,12 +97,12 @@ text \<open>
 definition interval_conf_eqs ::
     "(vname \<Rightarrow> bool) \<Rightarrow> (ivl exec_dg_st \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> (pp \<times> unit, (unit, unit) routed_gk, (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state) eqsT" where
   "interval_conf_eqs gs empty_pred Pi ps =
-     side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_addr_list (\<lambda>_. Analysis_Global ())
+     routed_node_rhs_buffered intra_predecessor_addr_list (\<lambda>_. Analysis_Global ())
        route_unit
        (\<lambda>ctx' src a. dg_spec_edge_tree (interval_spec gs empty_pred) a src (\<lambda>_. Analysis_Global ()))
-       (routed_cmb_g (interval_spec gs empty_pred) (Analysis_Global ()) Activation_Seed
+       (routed_call_tree (interval_spec gs empty_pred) (Analysis_Global ()) Activation_Seed
           (static_resolve (compile_prog Pi ps)) (\<lambda>d. d = Bot))
-       (routed_extra_g Activation_Seed (Analysis_Global ()))
+       (routed_entry_seed_tree Activation_Seed (Analysis_Global ()))
        (compile_prog Pi ps) Bot (Lifted cinit_ivl_st) Bot"
 
 definition interval_conf_sol ::
@@ -194,10 +194,10 @@ theorem pp_routed:
     and exact: "\<And>s. empty_pred s = is_empty_state (fun_of_resolved_st_q_for gs s)"
   shows
   "part_post_solution
-     (side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. Analysis_Global ()) route_unit
+     (routed_node_rhs intra_predecessor_addr_list (\<lambda>_. Analysis_Global ()) route_unit
         (\<lambda>ctx' src a. dg_spec_edge_tree (interval_spec gs empty_pred) a src (\<lambda>_. Analysis_Global ()))
-        (routed_cmb_g (interval_spec gs empty_pred) (Analysis_Global ()) Activation_Seed (static_resolve (compile_prog Pi ps)) (\<lambda>d. d = Bot))
-        (routed_extra_g Activation_Seed (Analysis_Global ()))
+        (routed_call_tree (interval_spec gs empty_pred) (Analysis_Global ()) Activation_Seed (static_resolve (compile_prog Pi ps)) (\<lambda>d. d = Bot))
+        (routed_entry_seed_tree Activation_Seed (Analysis_Global ()))
         (compile_prog Pi ps) Bot (Lifted cinit_ivl_st) Bot)
      (cfg_exit (compile_prog Pi ps), ())
      (snd (sol gs empty_pred Pi ps)) (fst (sol gs empty_pred Pi ps))"
@@ -559,21 +559,21 @@ subsection \<open>The routed equation system and its executable solution\<close>
 text \<open>
   \<^const>\<open>Call_String_Context.cs_route\<close>, applied to \<open>k\<close>, is already exactly the
   four-argument \<open>pp \<Rightarrow> call_string \<Rightarrow> 'd \<Rightarrow> call_action \<Rightarrow> call_string\<close> route
-  \<open>side_cfg_T_eff_keyed_seed_dg_buffered\<close> wants -- unlike entry-state's own
+  \<open>routed_node_rhs_buffered\<close> wants -- unlike entry-state's own
   \<open>entry_state_route_gen\<close>, no wrapper is needed to reach that shape.
 \<close>
 
 definition cs_call_string_eqs ::
     "nat \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> (ivl exec_dg_st \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> (pp \<times> call_string, call_string_gk, (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state) eqsT" where
   "cs_call_string_eqs k gs empty_pred Pi ps =
-     side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_addr_list (\<lambda>_. Call_String_Context.Global)
+     routed_node_rhs_buffered intra_predecessor_addr_list (\<lambda>_. Call_String_Context.Global)
        (cs_route k)
        (\<lambda>ctx' src a. dg_spec_edge_tree (interval_spec gs empty_pred) a src
           (\<lambda>_. Call_String_Context.Global))
-       (routed_cmb_g (interval_spec gs empty_pred)
+       (routed_call_tree (interval_spec gs empty_pred)
           Call_String_Context.Global Call_String_Context.Seed
           (static_resolve (compile_prog Pi ps)) (\<lambda>d. d = Bot))
-       (routed_extra_g Call_String_Context.Seed Call_String_Context.Global)
+       (routed_entry_seed_tree Call_String_Context.Seed Call_String_Context.Global)
        (compile_prog Pi ps) Bot (Lifted cinit_ivl_st) Bot"
 
 definition cs_call_string_sol ::
@@ -919,12 +919,12 @@ subsection \<open>The routed equation system and its executable solution\<close>
 definition entry_state_eqs ::
     "(vname \<Rightarrow> bool) \<Rightarrow> (ivl exec_dg_st \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> (pp \<times> ivl list, (unit, ivl list) routed_gk, (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state) eqsT" where
   "entry_state_eqs gs empty_pred Pi ps =
-     side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_addr_list (\<lambda>_. Analysis_Global ())
+     routed_node_rhs_buffered intra_predecessor_addr_list (\<lambda>_. Analysis_Global ())
        (entry_state_route_gen gs empty_pred)
        (\<lambda>ctx' src a. dg_spec_edge_tree (interval_spec gs empty_pred) a src (\<lambda>_. Analysis_Global ()))
-       (routed_cmb_g (interval_spec gs empty_pred) (Analysis_Global ()) Activation_Seed
+       (routed_call_tree (interval_spec gs empty_pred) (Analysis_Global ()) Activation_Seed
           (static_resolve (compile_prog Pi ps)) (\<lambda>d. d = Bot))
-       (routed_extra_g Activation_Seed (Analysis_Global ()))
+       (routed_entry_seed_tree Activation_Seed (Analysis_Global ()))
        (compile_prog Pi ps) Bot (Lifted cinit_ivl_st) Bot"
 
 definition entry_state_sol ::
@@ -1208,11 +1208,11 @@ text \<open>The solver's post-solution, for the unbuffered routed generator at t
 
 theorem entry_state_pp_routed:
   "part_post_solution
-     (side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. Analysis_Global ())
+     (routed_node_rhs intra_predecessor_addr_list (\<lambda>_. Analysis_Global ())
         (entry_state_route_gen gs empty_pred)
         (\<lambda>ctx' src a. dg_spec_edge_tree (interval_spec gs empty_pred) a src (\<lambda>_. Analysis_Global ()))
-        (routed_cmb_g (interval_spec gs empty_pred) (Analysis_Global ()) Activation_Seed (static_resolve (compile_prog Pi ps)) (\<lambda>d. d = Bot))
-        (routed_extra_g Activation_Seed (Analysis_Global ()))
+        (routed_call_tree (interval_spec gs empty_pred) (Analysis_Global ()) Activation_Seed (static_resolve (compile_prog Pi ps)) (\<lambda>d. d = Bot))
+        (routed_entry_seed_tree Activation_Seed (Analysis_Global ()))
         (compile_prog Pi ps) Bot (Lifted cinit_ivl_st) Bot)
      (cfg_exit (compile_prog Pi ps), [])
      (snd (entry_state_sol gs empty_pred Pi ps)) (fst (entry_state_sol gs empty_pred Pi ps))"

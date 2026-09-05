@@ -90,7 +90,7 @@ text \<open>
   \<^const>\<open>int_tf_st_for\<close>/\<^const>\<open>int_dom_enter_st_for\<close> primitives, \<open>mode\<close> included.
   Only the routed generator variant wrapping this spec changes: the unbuffered
   \<^const>\<open>unit_routed_eqs\<close> there, the buffered
-  \<^const>\<open>side_cfg_T_eff_keyed_seed_dg_buffered\<close> here --- the spec itself, and every
+  \<^const>\<open>routed_node_rhs_buffered\<close> here --- the spec itself, and every
   domain-transfer soundness fact about it, is untouched. Argument order (\<open>mode\<close>,
   \<open>empty_pred\<close>, \<open>gs\<close>) matches \<^const>\<open>analyse_int_dg_eqs_for\<close>'s own.
 \<close>
@@ -100,12 +100,12 @@ subsection \<open>The routed equation system and its executable solution\<close>
 definition int_conf_eqs ::
     "refine_mode \<Rightarrow> (int_dom exec_dg_st \<Rightarrow> bool) \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> (pp \<times> unit, (unit, unit) routed_gk, (int_dom exec_dg_st lifted, int_dom exec_dg_st lifted) dg_state) eqsT" where
   "int_conf_eqs mode empty_pred gs Pi ps =
-     side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_addr_list (\<lambda>_. Analysis_Global ())
+     routed_node_rhs_buffered intra_predecessor_addr_list (\<lambda>_. Analysis_Global ())
        route_unit
        (\<lambda>ctx' src a. dg_spec_edge_tree (int_dom_spec mode empty_pred gs) a src (\<lambda>_. Analysis_Global ()))
-       (routed_cmb_g (int_dom_spec mode empty_pred gs) (Analysis_Global ()) Activation_Seed
+       (routed_call_tree (int_dom_spec mode empty_pred gs) (Analysis_Global ()) Activation_Seed
           (static_resolve (compile_prog Pi ps)) (\<lambda>d. d = Bot))
-       (routed_extra_g Activation_Seed (Analysis_Global ()))
+       (routed_entry_seed_tree Activation_Seed (Analysis_Global ()))
        (compile_prog Pi ps) Bot (Lifted cinit_int_dom_st) Bot"
 
 definition int_conf_sol ::
@@ -211,11 +211,11 @@ theorem int_conf_pp_routed:
     and exact: "\<And>s. empty_pred s = is_empty_state (fun_of_resolved_st_q_for gs s)"
   shows
   "part_post_solution
-     (side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. Analysis_Global ()) route_unit
+     (routed_node_rhs intra_predecessor_addr_list (\<lambda>_. Analysis_Global ()) route_unit
         (\<lambda>ctx' src a. dg_spec_edge_tree (int_dom_spec mode empty_pred gs) a src (\<lambda>_. Analysis_Global ()))
-        (routed_cmb_g (int_dom_spec mode empty_pred gs) (Analysis_Global ()) Activation_Seed
+        (routed_call_tree (int_dom_spec mode empty_pred gs) (Analysis_Global ()) Activation_Seed
            (static_resolve (compile_prog Pi ps)) (\<lambda>d. d = Bot))
-        (routed_extra_g Activation_Seed (Analysis_Global ()))
+        (routed_entry_seed_tree Activation_Seed (Analysis_Global ()))
         (compile_prog Pi ps) Bot (Lifted cinit_int_dom_st) Bot)
      (cfg_exit (compile_prog Pi ps), ())
      (snd (int_conf_sol mode empty_pred gs Pi ps)) (fst (int_conf_sol mode empty_pred gs Pi ps))"
@@ -582,14 +582,14 @@ definition ics_eqs ::
     "nat \<Rightarrow> refine_mode \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> (int_dom exec_dg_st \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list
        \<Rightarrow> (pp \<times> call_string, call_string_gk, (int_dom exec_dg_st lifted, int_dom exec_dg_st lifted) dg_state) eqsT" where
   "ics_eqs k mode gs empty_pred Pi ps =
-     side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_addr_list (\<lambda>_. Call_String_Context.Global)
+     routed_node_rhs_buffered intra_predecessor_addr_list (\<lambda>_. Call_String_Context.Global)
        (cs_route k)
        (\<lambda>ctx' src a. dg_spec_edge_tree (int_dom_spec mode empty_pred gs) a src
           (\<lambda>_. Call_String_Context.Global))
-       (routed_cmb_g (int_dom_spec mode empty_pred gs)
+       (routed_call_tree (int_dom_spec mode empty_pred gs)
           Call_String_Context.Global Call_String_Context.Seed
           (static_resolve (compile_prog Pi ps)) (\<lambda>d. d = Bot))
-       (routed_extra_g Call_String_Context.Seed Call_String_Context.Global)
+       (routed_entry_seed_tree Call_String_Context.Seed Call_String_Context.Global)
        (compile_prog Pi ps) Bot (Lifted cinit_int_dom_st) Bot"
 
 definition ics_sol ::
@@ -704,13 +704,13 @@ text \<open>The solver's post-solution, for the unbuffered routed generator at t
 
 theorem ics_pp_routed:
   "part_post_solution
-     (side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. Call_String_Context.Global)
+     (routed_node_rhs intra_predecessor_addr_list (\<lambda>_. Call_String_Context.Global)
         (cs_route k)
         (\<lambda>ctx' src a. dg_spec_edge_tree (int_dom_spec mode empty_pred gs) a src
            (\<lambda>_. Call_String_Context.Global))
-        (routed_cmb_g (int_dom_spec mode empty_pred gs) Call_String_Context.Global
+        (routed_call_tree (int_dom_spec mode empty_pred gs) Call_String_Context.Global
            Call_String_Context.Seed (static_resolve (compile_prog Pi ps)) (\<lambda>d. d = Bot))
-        (routed_extra_g Call_String_Context.Seed Call_String_Context.Global)
+        (routed_entry_seed_tree Call_String_Context.Seed Call_String_Context.Global)
         (compile_prog Pi ps) Bot (Lifted cinit_int_dom_st) Bot)
      (cfg_exit (compile_prog Pi ps), [])
      (snd (ics_sol k mode gs empty_pred Pi ps)) (fst (ics_sol k mode gs empty_pred Pi ps))"
@@ -909,12 +909,12 @@ definition int_conf_entry_eqs ::
     "refine_mode \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> (int_dom exec_dg_st \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list
        \<Rightarrow> (pp \<times> int_dom list, (unit, int_dom list) routed_gk, (int_dom exec_dg_st lifted, int_dom exec_dg_st lifted) dg_state) eqsT" where
   "int_conf_entry_eqs mode gs empty_pred Pi ps =
-     side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_addr_list (\<lambda>_. Analysis_Global ())
+     routed_node_rhs_buffered intra_predecessor_addr_list (\<lambda>_. Analysis_Global ())
        (int_conf_entry_route_gen mode gs empty_pred)
        (\<lambda>ctx' src a. dg_spec_edge_tree (int_dom_spec mode empty_pred gs) a src (\<lambda>_. Analysis_Global ()))
-       (routed_cmb_g (int_dom_spec mode empty_pred gs) (Analysis_Global ()) Activation_Seed
+       (routed_call_tree (int_dom_spec mode empty_pred gs) (Analysis_Global ()) Activation_Seed
           (static_resolve (compile_prog Pi ps)) (\<lambda>d. d = Bot))
-       (routed_extra_g Activation_Seed (Analysis_Global ()))
+       (routed_entry_seed_tree Activation_Seed (Analysis_Global ()))
        (compile_prog Pi ps) Bot (Lifted cinit_int_dom_st) Bot"
 
 definition int_conf_entry_sol ::
@@ -1056,12 +1056,12 @@ text \<open>The solver's post-solution, for the unbuffered routed generator at t
 
 theorem int_conf_entry_pp_routed:
   "part_post_solution
-     (side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. Analysis_Global ())
+     (routed_node_rhs intra_predecessor_addr_list (\<lambda>_. Analysis_Global ())
         (int_conf_entry_route_gen mode gs empty_pred)
         (\<lambda>ctx' src a. dg_spec_edge_tree (int_dom_spec mode empty_pred gs) a src (\<lambda>_. Analysis_Global ()))
-        (routed_cmb_g (int_dom_spec mode empty_pred gs) (Analysis_Global ()) Activation_Seed
+        (routed_call_tree (int_dom_spec mode empty_pred gs) (Analysis_Global ()) Activation_Seed
            (static_resolve (compile_prog Pi ps)) (\<lambda>d. d = Bot))
-        (routed_extra_g Activation_Seed (Analysis_Global ()))
+        (routed_entry_seed_tree Activation_Seed (Analysis_Global ()))
         (compile_prog Pi ps) Bot (Lifted cinit_int_dom_st) Bot)
      (cfg_exit (compile_prog Pi ps), [])
      (snd (int_conf_entry_sol mode gs empty_pred Pi ps)) (fst (int_conf_entry_sol mode gs empty_pred Pi ps))"

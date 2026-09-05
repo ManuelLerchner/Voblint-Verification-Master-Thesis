@@ -66,7 +66,7 @@ definition dg_globals_for ::
 
 text \<open>
   Which keys a routed unit-context solve can write, taking the two constructors as
-  arguments the way \<^const>\<open>routed_extra_g\<close> already does. Every domain declares its own
+  arguments the way \<^const>\<open>routed_entry_seed_tree\<close> already does. Every domain declares its own
   \<open>gk\<close>, but they agree on the shape the routed spine imposes --- a shared slot and one
   seed per callee entry --- so the enumeration is a fact about that spine, not about
   any domain, and does not need restating once per \<open>gk\<close>.

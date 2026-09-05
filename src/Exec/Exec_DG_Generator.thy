@@ -18,7 +18,7 @@ subsection \<open>The executable D/G equation generator\<close>
 
 text \<open>
   The executable generator is the same polymorphic seeded keyed generator
-  (\<^const>\<open>side_cfg_T_eff_keyed_seed_dg\<close>) every routed instance uses, with its
+  (\<^const>\<open>routed_node_rhs\<close>) every routed instance uses, with its
   intra hook instantiated at the specification's own compiled edge tree.
   Unit context (\<open>gkey = (\<lambda>_. ())\<close>), no procedure-entry seed
   (\<open>frame_seed = (\<lambda>_. bot)\<close>).
@@ -41,11 +41,11 @@ definition unit_routed_eqs ::
    \<Rightarrow> (pp \<times> unit, (unit, unit) routed_gk, ('D, 'G) dg_state) eqsT"
 where
   "unit_routed_eqs S g bot0 s0d s0g =
-     side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. Analysis_Global ())
+     routed_node_rhs intra_predecessor_addr_list (\<lambda>_. Analysis_Global ())
        route_unit
        (\<lambda>c src a. dg_spec_edge_tree S a src (\<lambda>_. Analysis_Global ()))
-       (routed_cmb_g S (Analysis_Global ()) Activation_Seed (static_resolve g) (\<lambda>d. d = bot))
-       (routed_extra_g Activation_Seed (Analysis_Global ()))
+       (routed_call_tree S (Analysis_Global ()) Activation_Seed (static_resolve g) (\<lambda>d. d = bot))
+       (routed_entry_seed_tree Activation_Seed (Analysis_Global ()))
        g bot0 s0d s0g"
 
 text \<open>
@@ -66,11 +66,11 @@ definition unit_routed_eqs_buffered ::
    \<Rightarrow> (pp \<times> unit, (unit, unit) routed_gk, ('D, 'G) dg_state) eqsT"
 where
   "unit_routed_eqs_buffered S g bot0 s0d s0g =
-     side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_addr_list (\<lambda>_. Analysis_Global ())
+     routed_node_rhs_buffered intra_predecessor_addr_list (\<lambda>_. Analysis_Global ())
        route_unit
        (\<lambda>c src a. dg_spec_edge_tree S a src (\<lambda>_. Analysis_Global ()))
-       (routed_cmb_g S (Analysis_Global ()) Activation_Seed (static_resolve g) (\<lambda>d. d = bot))
-       (routed_extra_g Activation_Seed (Analysis_Global ()))
+       (routed_call_tree S (Analysis_Global ()) Activation_Seed (static_resolve g) (\<lambda>d. d = bot))
+       (routed_entry_seed_tree Activation_Seed (Analysis_Global ()))
        g bot0 s0d s0g"
 
 subsection \<open>Dependency commutation for the generator\<close>
@@ -230,7 +230,7 @@ qed
 subsubsection \<open>Routed heterogeneous CALL/COMB transport\<close>
 
 text \<open>
-  \<^const>\<open>routed_cmb_g\<close>/\<^const>\<open>routed_extra_g\<close> (\<^theory>\<open>Voblint_Framework.Routed_Context\<close>)
+  \<^const>\<open>routed_call_tree\<close>/\<^const>\<open>routed_entry_seed_tree\<close> (\<^theory>\<open>Voblint_Framework.Routed_Context\<close>)
   are the canonical heterogeneous routing shape: parametric only in a routing
   function \<open>route\<close> and a seed-key injection \<open>seed_key\<close>, with the seed payload
   carried on the \<open>locals\<close> half so \<open>'D\<close>/\<open>'G\<close> stay independent. The two lemmas
@@ -380,7 +380,7 @@ text \<open>
   on the \<^emph>\<open>same\<close> branch: without it one could take the seed and the other not.
 \<close>
 
-lemma dg_tree_st_commute_routed_cmb_g_alt:
+lemma dg_tree_st_commute_routed_call_alternative_tree:
   assumes Hcomb: "\<And>ci d de. dg_tree_st_commute \<sigma>_st
         (sp_compile_with (\<lambda>x. DG x bot)
            (dg_spec_combine_transfer S_st ci (mk_dg_man d (\<lambda>_. gk0)) de))
@@ -389,8 +389,8 @@ lemma dg_tree_st_commute_routed_cmb_g_alt:
     and Hroute: "\<And>u c' d ca'. route_st u c' d ca' = route_abs u c' (Floc d) ca'"
     and Hbot: "\<And>d. is_bot_abs (Floc d) = is_bot_st d"
   shows "dg_tree_st_commute \<sigma>_st
-           (routed_cmb_g_alt S_st gk0 seed_key route_st is_bot_st ctx ca cc p alt)
-           (routed_cmb_g_alt S_abs gk0 seed_key route_abs is_bot_abs ctx ca cc p
+           (routed_call_alternative_tree S_st gk0 seed_key route_st is_bot_st ctx ca cc p alt)
+           (routed_call_alternative_tree S_abs gk0 seed_key route_abs is_bot_abs ctx ca cc p
               (map_prod Floc Floc alt))"
 proof (cases alt)
   case (Pair cont entry)
@@ -412,14 +412,14 @@ proof (cases alt)
     then have abs: "\<not> is_bot_abs (Floc entry)" by (simp add: Hbot)
     have r: "route_abs cc ctx (Floc entry) ca = route_st cc ctx entry ca"
       by (rule Hroute[symmetric])
-    have eq_st: "routed_cmb_g_alt S_st gk0 seed_key route_st is_bot_st ctx ca cc p (cont, entry)
+    have eq_st: "routed_call_alternative_tree S_st gk0 seed_key route_st is_bot_st ctx ca cc p (cont, entry)
         = Side (seed_key (FunctionEntry p) (route_st cc ctx entry ca)) (DG entry bot)
             (QueryL (FunctionResult p, route_st cc ctx entry ca)
                (\<lambda>cs. sp_compile_with (\<lambda>x. DG x bot)
                   (dg_spec_combine_transfer S_st (call_info_of ca p)
                      (mk_dg_man cont (\<lambda>_. gk0)) (locals cs))))"
       using False by simp
-    have eq_abs: "routed_cmb_g_alt S_abs gk0 seed_key route_abs is_bot_abs ctx ca cc p
+    have eq_abs: "routed_call_alternative_tree S_abs gk0 seed_key route_abs is_bot_abs ctx ca cc p
             (Floc cont, Floc entry)
         = Side (seed_key (FunctionEntry p) (route_st cc ctx entry ca)) (DG (Floc entry) bot)
             (QueryL (FunctionResult p, route_st cc ctx entry ca)
@@ -437,7 +437,7 @@ proof (cases alt)
   qed
 qed
 
-lemma dg_tree_st_commute_routed_cmb_g_at:
+lemma dg_tree_st_commute_routed_callee_call_tree:
   assumes Henter: "\<And>ci d. dg_enter_st_commute \<sigma>_st
         (enter\<^sup># S_st ci (mk_dg_man d (\<lambda>_. gk0)))
         (enter\<^sup># S_abs ci (mk_dg_man (Floc d) (\<lambda>_. gk0)))"
@@ -449,26 +449,26 @@ lemma dg_tree_st_commute_routed_cmb_g_at:
     and Hroute: "\<And>u c' d ca'. route_st u c' d ca' = route_abs u c' (Floc d) ca'"
     and Hbot: "\<And>d. is_bot_abs (Floc d) = is_bot_st d"
   shows "dg_tree_st_commute \<sigma>_st
-           (routed_cmb_g_at S_st gk0 seed_key route_st is_bot_st ctx ca cc caller p)
-           (routed_cmb_g_at S_abs gk0 seed_key route_abs is_bot_abs ctx ca cc (Floc caller) p)"
-  unfolding routed_cmb_g_at_def
+           (routed_callee_call_tree S_st gk0 seed_key route_st is_bot_st ctx ca cc caller p)
+           (routed_callee_call_tree S_abs gk0 seed_key route_abs is_bot_abs ctx ca cc (Floc caller) p)"
+  unfolding routed_callee_call_tree_def
 proof (rule dg_enter_st_commuteD[OF Henter])
   fix ps :: "'a enter_result list"
   have alt: "\<And>x. dg_tree_st_commute \<sigma>_st
-      (routed_cmb_g_alt S_st gk0 seed_key route_st is_bot_st ctx ca cc p x)
-      (routed_cmb_g_alt S_abs gk0 seed_key route_abs is_bot_abs ctx ca cc p
+      (routed_call_alternative_tree S_st gk0 seed_key route_st is_bot_st ctx ca cc p x)
+      (routed_call_alternative_tree S_abs gk0 seed_key route_abs is_bot_abs ctx ca cc p
          (map_prod Floc Floc x))"
-    using Hcomb Hroute Hbot by (rule dg_tree_st_commute_routed_cmb_g_alt)
+    using Hcomb Hroute Hbot by (rule dg_tree_st_commute_routed_call_alternative_tree)
   have la: "list_all2 (dg_tree_st_commute \<sigma>_st)
-      (map (routed_cmb_g_alt S_st gk0 seed_key route_st is_bot_st ctx ca cc p) ps)
-      (map (routed_cmb_g_alt S_abs gk0 seed_key route_abs is_bot_abs ctx ca cc p)
+      (map (routed_call_alternative_tree S_st gk0 seed_key route_st is_bot_st ctx ca cc p) ps)
+      (map (routed_call_alternative_tree S_abs gk0 seed_key route_abs is_bot_abs ctx ca cc p)
         (map (map_prod Floc Floc) ps))"
     by (simp add: list_all2_conv_all_nth alt)
   show "dg_tree_st_commute \<sigma>_st
       (sp_compile (side_rhs_fold_dg bot
-        (map (routed_cmb_g_alt S_st gk0 seed_key route_st is_bot_st ctx ca cc p) ps)))
+        (map (routed_call_alternative_tree S_st gk0 seed_key route_st is_bot_st ctx ca cc p) ps)))
       (sp_compile (side_rhs_fold_dg bot
-        (map (routed_cmb_g_alt S_abs gk0 seed_key route_abs is_bot_abs ctx ca cc p)
+        (map (routed_call_alternative_tree S_abs gk0 seed_key route_abs is_bot_abs ctx ca cc p)
           (map (map_prod Floc Floc) ps))))"
     using dg_tree_st_commute_side_rhs_fold_dg[OF la, where acc_st = bot]
     by (simp add: Floc_bot)
@@ -479,7 +479,7 @@ text \<open>The call site itself: the resolver must answer the same targets on b
   \<^const>\<open>static_resolve\<close> that premise is free, since the answer never reads the
   state.\<close>
 
-lemma dg_tree_st_commute_routed_cmb_g:
+lemma dg_tree_st_commute_routed_call_tree:
   assumes Henter: "\<And>ci d. dg_enter_st_commute \<sigma>_st
         (enter\<^sup># S_st ci (mk_dg_man d (\<lambda>_. gk0)))
         (enter\<^sup># S_abs ci (mk_dg_man (Floc d) (\<lambda>_. gk0)))"
@@ -492,39 +492,39 @@ lemma dg_tree_st_commute_routed_cmb_g:
     and Hbot: "\<And>d. is_bot_abs (Floc d) = is_bot_st d"
     and Hresolve: "\<And>w cc' ca' d. resolve_st w cc' ca' d = resolve_abs w cc' ca' (Floc d)"
   shows "dg_tree_st_commute \<sigma>_st
-           (routed_cmb_g S_st gk0 seed_key resolve_st is_bot_st route_st ctx ca cc v)
-           (routed_cmb_g S_abs gk0 seed_key resolve_abs is_bot_abs route_abs ctx ca cc v)"
+           (routed_call_tree S_st gk0 seed_key resolve_st is_bot_st route_st ctx ca cc v)
+           (routed_call_tree S_abs gk0 seed_key resolve_abs is_bot_abs route_abs ctx ca cc v)"
 proof -
   let ?caller = "locals (\<sigma>_st (Inl (cc, ctx)))"
   have at: "\<And>p. dg_tree_st_commute \<sigma>_st
-      (routed_cmb_g_at S_st gk0 seed_key route_st is_bot_st ctx ca cc ?caller p)
-      (routed_cmb_g_at S_abs gk0 seed_key route_abs is_bot_abs ctx ca cc (Floc ?caller) p)"
-    using Henter Hcomb Hroute Hbot by (rule dg_tree_st_commute_routed_cmb_g_at)
+      (routed_callee_call_tree S_st gk0 seed_key route_st is_bot_st ctx ca cc ?caller p)
+      (routed_callee_call_tree S_abs gk0 seed_key route_abs is_bot_abs ctx ca cc (Floc ?caller) p)"
+    using Henter Hcomb Hroute Hbot by (rule dg_tree_st_commute_routed_callee_call_tree)
   have la: "list_all2 (dg_tree_st_commute \<sigma>_st)
-      (map (routed_cmb_g_at S_st gk0 seed_key route_st is_bot_st ctx ca cc ?caller)
+      (map (routed_callee_call_tree S_st gk0 seed_key route_st is_bot_st ctx ca cc ?caller)
         (resolve_st v cc ca ?caller))
-      (map (routed_cmb_g_at S_abs gk0 seed_key route_abs is_bot_abs ctx ca cc (Floc ?caller))
+      (map (routed_callee_call_tree S_abs gk0 seed_key route_abs is_bot_abs ctx ca cc (Floc ?caller))
         (resolve_st v cc ca ?caller))"
     by (simp add: list_all2_conv_all_nth at)
   have body: "dg_tree_st_commute \<sigma>_st
       (sp_compile (side_rhs_fold_dg bot
-        (map (routed_cmb_g_at S_st gk0 seed_key route_st is_bot_st ctx ca cc ?caller)
+        (map (routed_callee_call_tree S_st gk0 seed_key route_st is_bot_st ctx ca cc ?caller)
           (resolve_st v cc ca ?caller))))
       (sp_compile (side_rhs_fold_dg bot
-        (map (routed_cmb_g_at S_abs gk0 seed_key route_abs is_bot_abs ctx ca cc (Floc ?caller))
+        (map (routed_callee_call_tree S_abs gk0 seed_key route_abs is_bot_abs ctx ca cc (Floc ?caller))
           (resolve_st v cc ca ?caller))))"
     using dg_tree_st_commute_side_rhs_fold_dg[OF la, where acc_st = bot]
     by (simp add: Floc_bot)
   show ?thesis
-    unfolding routed_cmb_g_def
+    unfolding routed_call_tree_def
     using body by (simp add: dg_tree_st_commute_def Hresolve[symmetric] comp_def)
 qed
 
-lemma dg_tree_st_commute_routed_extra_g:
+lemma dg_tree_st_commute_routed_entry_seed_tree:
   shows "list_all2 (dg_tree_st_commute \<sigma>_st)
-           (routed_extra_g seed_key gk0 route_st ctx v)
-           (routed_extra_g seed_key gk0 route_abs ctx v)"
-  by (cases v) (simp_all add: routed_extra_g_def dg_tree_st_commute_def Fglob_bot)
+           (routed_entry_seed_tree seed_key gk0 route_st ctx v)
+           (routed_entry_seed_tree seed_key gk0 route_abs ctx v)"
+  by (cases v) (simp_all add: routed_entry_seed_tree_def dg_tree_st_commute_def Fglob_bot)
 
 end
 end

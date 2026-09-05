@@ -10,7 +10,7 @@ section \<open>Minimal keyed update-rule regression: multiple Side writes per RH
 
 text \<open>
   Isolates the keyed-generator instance of multiple Side writes per RHS evaluation at
-  \<^const>\<open>side_cfg_T_eff_keyed_seed_dg\<close>'s own interface, independent of a real
+  \<^const>\<open>routed_node_rhs\<close>'s own interface, independent of a real
   \<^typ>\<open>cfg\<close>, procedure calls, or Interval program construction: a dummy
   \<^typ>\<open>cfg\<close> with no edges of its own (\<open>intra = {}\<close>, \<open>calls = {}\<close>) paired with a
   hand-supplied \<open>pred_sel\<close> that reports two intra predecessors for one node --
@@ -67,7 +67,7 @@ text \<open>The unbuffered generator: \<open>Statement 1\<close>'s equation issu
   flat file's documented convention).\<close>
 definition keyed_multiwrite_eqs :: "(pp \<times> unit, unit, (ivl, ivl) dg_state) eqsT" where
   "keyed_multiwrite_eqs =
-     side_cfg_T_eff_keyed_seed_dg keyed_pred_sel (\<lambda>_. ()) (\<lambda>_ _ _ _. ())
+     routed_node_rhs keyed_pred_sel (\<lambda>_. ()) (\<lambda>_ _ _ _. ())
        (\<lambda>ctx' src a. dg_edge_tree_at (keyed_step a) src ())
        keyed_cmb keyed_extra keyed_dummy_cfg bot bot bot"
 
@@ -77,7 +77,7 @@ text \<open>The buffered generator: the same two predecessor contributions, fold
   \<^const>\<open>TD_side_warrowing_apinis_Interp_solve_c\<close>.\<close>
 definition keyed_multiwrite_buffered_eqs :: "(pp \<times> unit, unit, (ivl, ivl) dg_state) eqsT" where
   "keyed_multiwrite_buffered_eqs =
-     side_cfg_T_eff_keyed_seed_dg_buffered keyed_pred_sel (\<lambda>_. ()) (\<lambda>_ _ _ _. ())
+     routed_node_rhs_buffered keyed_pred_sel (\<lambda>_. ()) (\<lambda>_ _ _ _. ())
        (\<lambda>ctx' src a. dg_edge_contribution_tree_at (keyed_step a) src ())
        keyed_cmb_c keyed_extra keyed_dummy_cfg bot bot bot"
 
@@ -116,7 +116,7 @@ definition merge_cfg :: cfg where
 
 definition merge_eqs :: "(pp \<times> unit, unit, (ivl, ivl) dg_state) eqsT" where
   "merge_eqs =
-     side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_addr_list (\<lambda>_. ()) (\<lambda>_ _ _ _. ())
+     routed_node_rhs_buffered intra_predecessor_addr_list (\<lambda>_. ()) (\<lambda>_ _ _ _. ())
        (\<lambda>ctx' src a. dg_edge_contribution_tree_at (merge_step a) src ())
        keyed_cmb_c keyed_extra merge_cfg bot bot bot"
 
@@ -132,7 +132,7 @@ lemma merge_global_value:
 section \<open>Routed enter regression: one entered frame, keyed and published together\<close>
 
 text \<open>
-  \<^const>\<open>routed_cmb_g\<close> selects the callee's context and publishes the callee's
+  \<^const>\<open>routed_call_tree\<close> selects the callee's context and publishes the callee's
   entry state. Both must read the \<^emph>\<open>same\<close> entered frame: the frame entered
   from the caller's local state \<^bold>\<open>and\<close> the solver's global unknown. A route
   reading anything else -- the caller's own local state, or a frame entered
@@ -178,7 +178,7 @@ definition w0_resolve :: "pp \<Rightarrow> pp \<Rightarrow> call_action \<Righta
 
 definition w0_tree :: "(pp \<times> ivl, w0_gk, (ivl, ivl) dg_state) strategy_tree" where
   "w0_tree =
-     routed_cmb_g w0_spec W0Global W0Seed w0_resolve (\<lambda>d. d = bot) w0_route bot
+     routed_call_tree w0_spec W0Global W0Seed w0_resolve (\<lambda>d. d = bot) w0_route bot
        (CallEdge None [STR ''p''] []) (Statement 0) (FunctionResult (STR ''f''))"
 
 text \<open>The seed lands at the entered frame's own key, carrying that same frame.\<close>
@@ -202,7 +202,7 @@ lemma w0_dep_at_entered_frame:
    = {Inl (Statement 0, bot), Inr W0Global,
       Inl (FunctionResult (STR ''f''), Ivl (Fin 7) (Fin 7))}"
   unfolding w0_tree_def w0_sigma_def w0_spec_def w0_route_def
-  by (simp add: routed_cmb_g_def routed_cmb_g_at_def routed_cmb_g_alt_def w0_resolve_def
+  by (simp add: routed_call_tree_def routed_callee_call_tree_def routed_call_alternative_tree_def w0_resolve_def
         dg_spec_combine_transfer_def mk_dg_man_def
         dg_read_global_def local_transfer_def local_combine_transfer_def
         Let_def insert_commute sp_compile_with_bind sp_read_global_def

@@ -81,8 +81,8 @@ text \<open>
 
   Parameter order matches \<^locale>\<open>dg_ctx_activation_base\<close>'s \<open>cmb\<close> calling
   convention: the generator supplies \<open>route\<close> as \<open>cmb\<close>'s own first argument
-  (\<open>cmb route c ca cc ex\<close> in \<^const>\<open>side_cfg_T_eff_keyed_seed_dg\<close>), so
-  \<open>routed_cmb_g S gk0 seed_key\<close>, closing over the spec, the shared slot, and the
+  (\<open>cmb route c ca cc ex\<close> in \<^const>\<open>routed_node_rhs\<close>), so
+  \<open>routed_call_tree S gk0 seed_key\<close>, closing over the spec, the shared slot, and the
   seed-key injection, is the value that instantiates \<open>cmb\<close>.
 
   This tree owns the whole call lifecycle for one call action: it reads the caller once,
@@ -93,7 +93,7 @@ text \<open>
   continuation is not reconstructed here: \<^const>\<open>dg_spec_combine_transfer\<close>'s own
   pipeline runs \<open>caller_cont\<close>, \<open>combine_env\<close>, and \<open>combine_assign\<close> in sequence,
   so this layer only chooses addresses and keys. Only the half that
-  cannot move stays with \<open>routed_extra_g\<close>: a callee's own entry equation is the one
+  cannot move stays with \<open>routed_entry_seed_tree\<close>: a callee's own entry equation is the one
   place that can read its own seed slot back. \<open>route\<close> is kept as a parameter of that
   hook purely to match \<^locale>\<open>dg_ctx_activation_base\<close>'s \<open>extra\<close> calling
   convention, which always supplies it.
@@ -131,7 +131,7 @@ text \<open>
   that fold rather than about the fold itself.
 \<close>
 
-definition routed_cmb_g_alt ::
+definition routed_call_alternative_tree ::
   "(pp \<times> 'c, 'k, unit, 'D::bounded_semilattice_sup_bot,
      'G::bounded_semilattice_sup_bot) dg_spec \<Rightarrow> 'k
    \<Rightarrow> (pp \<Rightarrow> 'c \<Rightarrow> 'k)
@@ -140,7 +140,7 @@ definition routed_cmb_g_alt ::
    \<Rightarrow> 'c \<Rightarrow> call_action \<Rightarrow> pp \<Rightarrow> pname \<Rightarrow> 'D enter_result
    \<Rightarrow> (pp \<times> 'c, 'k, ('D, 'G) dg_state) strategy_tree"
 where
-  "routed_cmb_g_alt S gk0 seed_key route is_bot ctx ca cc p alt =
+  "routed_call_alternative_tree S gk0 seed_key route is_bot ctx ca cc p alt =
      (case alt of (cont, entry) \<Rightarrow>
         (if is_bot entry
          then sp_compile_with (\<lambda>d. DG d bot)
@@ -163,17 +163,17 @@ text \<open>
   The observation lemmas below cite it where they need it.
 \<close>
 
-lemma routed_cmb_g_alt_bot [simp]:
+lemma routed_call_alternative_tree_bot [simp]:
   assumes "is_bot entry"
-  shows "routed_cmb_g_alt S gk0 seed_key route is_bot ctx ca cc p (cont, entry)
+  shows "routed_call_alternative_tree S gk0 seed_key route is_bot ctx ca cc p (cont, entry)
            = sp_compile_with (\<lambda>d. DG d bot)
                (dg_spec_combine_transfer S (call_info_of ca p)
                  (mk_dg_man cont (\<lambda>_. gk0)) bot)"
-  using assms by (simp add: routed_cmb_g_alt_def)
+  using assms by (simp add: routed_call_alternative_tree_def)
 
-lemma routed_cmb_g_alt_nonbot [simp]:
+lemma routed_call_alternative_tree_nonbot [simp]:
   assumes "\<not> is_bot entry"
-  shows "routed_cmb_g_alt S gk0 seed_key route is_bot ctx ca cc p (cont, entry)
+  shows "routed_call_alternative_tree S gk0 seed_key route is_bot ctx ca cc p (cont, entry)
      = Side (seed_key (FunctionEntry p) (route cc ctx entry ca)) (DG entry bot)
          (QueryL (FunctionResult p, route cc ctx entry ca)
             (\<lambda>callee_state.
@@ -181,9 +181,9 @@ lemma routed_cmb_g_alt_nonbot [simp]:
                  (dg_spec_combine_transfer S (call_info_of ca p)
                    (mk_dg_man cont (\<lambda>_. gk0))
                    (locals callee_state))))"
-  unfolding routed_cmb_g_alt_def using assms by (simp add: Let_def)
+  unfolding routed_call_alternative_tree_def using assms by (simp add: Let_def)
 
-definition routed_cmb_g_at ::
+definition routed_callee_call_tree ::
   "(pp \<times> 'c, 'k, unit, 'D::bounded_semilattice_sup_bot,
      'G::bounded_semilattice_sup_bot) dg_spec \<Rightarrow> 'k
    \<Rightarrow> (pp \<Rightarrow> 'c \<Rightarrow> 'k)
@@ -192,11 +192,11 @@ definition routed_cmb_g_at ::
    \<Rightarrow> 'c \<Rightarrow> call_action \<Rightarrow> pp \<Rightarrow> 'D \<Rightarrow> pname
    \<Rightarrow> (pp \<times> 'c, 'k, ('D, 'G) dg_state) strategy_tree"
 where
-  "routed_cmb_g_at S gk0 seed_key route is_bot ctx ca cc caller p =
+  "routed_callee_call_tree S gk0 seed_key route is_bot ctx ca cc caller p =
      enter\<^sup># S (call_info_of ca p) (mk_dg_man caller (\<lambda>_. gk0))
        (\<lambda>pairs.
           sp_compile (side_rhs_fold_dg bot
-            (map (routed_cmb_g_alt S gk0 seed_key route is_bot ctx ca cc p) pairs)))"
+            (map (routed_call_alternative_tree S gk0 seed_key route is_bot ctx ca cc p) pairs)))"
 
 text \<open>
   The call site's own contribution: read the caller state, ask
@@ -212,7 +212,7 @@ text \<open>
   tree either.
 \<close>
 
-definition routed_cmb_g ::
+definition routed_call_tree ::
   "(pp \<times> 'c, 'k, unit, 'D::bounded_semilattice_sup_bot,
      'G::bounded_semilattice_sup_bot) dg_spec \<Rightarrow> 'k
    \<Rightarrow> (pp \<Rightarrow> 'c \<Rightarrow> 'k)
@@ -221,34 +221,34 @@ definition routed_cmb_g ::
    \<Rightarrow> (pp \<Rightarrow> 'c \<Rightarrow> 'D \<Rightarrow> call_action \<Rightarrow> 'c)
    \<Rightarrow> 'c \<Rightarrow> call_action \<Rightarrow> pp \<Rightarrow> pp \<Rightarrow> (pp \<times> 'c, 'k, ('D, 'G) dg_state) strategy_tree"
 where
-  "routed_cmb_g S gk0 seed_key resolve is_bot route ctx ca cc v =
+  "routed_call_tree S gk0 seed_key resolve is_bot route ctx ca cc v =
      sp_lift_tree (QueryL (cc, ctx) Answer)
        (\<lambda>caller_state.
           sp_compile (side_rhs_fold_dg bot
-            (map (routed_cmb_g_at S gk0 seed_key route is_bot ctx ca cc
+            (map (routed_callee_call_tree S gk0 seed_key route is_bot ctx ca cc
                     (locals caller_state))
                  (resolve v cc ca (locals caller_state)))))"
 
 
 text \<open>The seed read-back hook: at a callee entry it reads the seed out of the
-  \<open>locals\<close> half, matching \<open>routed_cmb_g\<close>'s write.\<close>
-definition routed_extra_g ::
+  \<open>locals\<close> half, matching \<open>routed_call_tree\<close>'s write.\<close>
+definition routed_entry_seed_tree ::
   "(pp \<Rightarrow> 'c \<Rightarrow> 'k) \<Rightarrow> 'k
    \<Rightarrow> (pp \<Rightarrow> 'c \<Rightarrow> 'D::bounded_semilattice_sup_bot \<Rightarrow> call_action \<Rightarrow> 'c)
    \<Rightarrow> 'c \<Rightarrow> pp \<Rightarrow> (pp \<times> 'c, 'k, ('D, 'G::bounded_semilattice_sup_bot) dg_state) strategy_tree list"
 where
-  "routed_extra_g seed_key gk0 route ctx v =
+  "routed_entry_seed_tree seed_key gk0 route ctx v =
      (case v of FunctionEntry _ \<Rightarrow>
         [sp_lift_tree (QueryG (seed_key v ctx) Answer) (\<lambda>seed_state. Answer (DG (locals seed_state) bot))]
        | _ \<Rightarrow> [])"
 
-lemma routed_extra_g_free:
-  "x \<in> set (routed_extra_g seed_key gk0 route ctx v) \<Longrightarrow> sides_of_rhs x tau z = bot"
-  unfolding routed_extra_g_def by (cases v) (auto simp: bot_fun_def)
+lemma routed_entry_seed_tree_free:
+  "x \<in> set (routed_entry_seed_tree seed_key gk0 route ctx v) \<Longrightarrow> sides_of_rhs x tau z = bot"
+  unfolding routed_entry_seed_tree_def by (cases v) (auto simp: bot_fun_def)
 
-lemma routed_extra_g_local_only:
-  "x \<in> set (routed_extra_g seed_key gk0 route ctx v) \<Longrightarrow> globs (traverse_rhs x tau) = bot"
-  unfolding routed_extra_g_def by (cases v) auto
+lemma routed_entry_seed_tree_local_only:
+  "x \<in> set (routed_entry_seed_tree seed_key gk0 route ctx v) \<Longrightarrow> globs (traverse_rhs x tau) = bot"
+  unfolding routed_entry_seed_tree_def by (cases v) auto
 
 text \<open>
   How a routed per-target tree relates to its parts under a solution. Each bound
@@ -258,26 +258,26 @@ text \<open>
 \<close>
 
 
-lemma routed_cmb_g_at_sides_ge_seed:
+lemma routed_callee_call_tree_sides_ge_seed:
   assumes R: "enter_runs (enter\<^sup># S (call_info_of (CallEdge dst pars args) p))
                 (mk_dg_man caller (\<lambda>_. gk0)) \<sigma> pairs pub"
     and mem: "(cont, entry) \<in> set pairs"
     and nb: "\<not> is_bot entry"
   shows "DG entry bot
-           \<le> sides_of_rhs (routed_cmb_g_at S gk0 seed_key route is_bot ctx
+           \<le> sides_of_rhs (routed_callee_call_tree S gk0 seed_key route is_bot ctx
                 (CallEdge dst pars args) cc caller p) \<sigma>
                 (Inr (seed_key (FunctionEntry p)
                    (route cc ctx entry (CallEdge dst pars args))))"
 proof -
-  let ?F = "routed_cmb_g_alt S gk0 seed_key route is_bot ctx (CallEdge dst pars args) cc p"
+  let ?F = "routed_call_alternative_tree S gk0 seed_key route is_bot ctx (CallEdge dst pars args) cc p"
   let ?k = "Inr (seed_key (FunctionEntry p) (route cc ctx entry (CallEdge dst pars args)))"
   have "DG entry bot \<le> sides_of_rhs (?F (cont, entry)) \<sigma> ?k"
-    unfolding routed_cmb_g_alt_def using nb by (simp add: Let_def)
+    unfolding routed_call_alternative_tree_def using nb by (simp add: Let_def)
   also have "\<dots> \<le> sides_of_rhs (sp_compile (side_rhs_fold_dg bot (map ?F pairs))) \<sigma> ?k"
     by (rule sides_le_side_rhs_fold_dg) (use mem in force)
-  also have "\<dots> \<le> sides_of_rhs (routed_cmb_g_at S gk0 seed_key route is_bot ctx
+  also have "\<dots> \<le> sides_of_rhs (routed_callee_call_tree S gk0 seed_key route is_bot ctx
                      (CallEdge dst pars args) cc caller p) \<sigma> ?k"
-    unfolding routed_cmb_g_at_def
+    unfolding routed_callee_call_tree_def
     by (simp add: enter_runsD_sides[OF R] sup_fun_def)
   finally show ?thesis .
 qed
@@ -288,12 +288,12 @@ text \<open>
   effectful entry needs, and it holds without selecting an alternative at all.
 \<close>
 
-lemma routed_cmb_g_at_sides_ge_prefix:
+lemma routed_callee_call_tree_sides_ge_prefix:
   assumes R: "enter_runs (enter\<^sup># S (call_info_of ca p))
                 (mk_dg_man caller (\<lambda>_. gk0)) \<sigma> pairs pub"
   shows "pub \<le> sides_of_rhs
-                 (routed_cmb_g_at S gk0 seed_key route is_bot ctx ca cc caller p) \<sigma>"
-  unfolding routed_cmb_g_at_def
+                 (routed_callee_call_tree S gk0 seed_key route is_bot ctx ca cc caller p) \<sigma>"
+  unfolding routed_callee_call_tree_def
   by (simp add: enter_runsD_sides[OF R])
 
 text \<open>
@@ -303,37 +303,37 @@ text \<open>
   channel --- can walk outwards from a call site it has not yet routed.
 \<close>
 
-lemma routed_cmb_g_sides_ge_at:
+lemma routed_call_tree_sides_ge_at:
   assumes mem: "p \<in> set (resolve v cc ca (locals (\<sigma> (Inl (cc, ctx)))))"
-  shows "sides_of_rhs (routed_cmb_g_at S gk0 seed_key route is_bot ctx ca cc
+  shows "sides_of_rhs (routed_callee_call_tree S gk0 seed_key route is_bot ctx ca cc
              (locals (\<sigma> (Inl (cc, ctx)))) p) \<sigma> z
-           \<le> sides_of_rhs (routed_cmb_g S gk0 seed_key resolve is_bot route ctx ca cc v) \<sigma> z"
+           \<le> sides_of_rhs (routed_call_tree S gk0 seed_key resolve is_bot route ctx ca cc v) \<sigma> z"
 proof -
-  have "routed_cmb_g_at S gk0 seed_key route is_bot ctx ca cc (locals (\<sigma> (Inl (cc, ctx)))) p
-          \<in> set (map (routed_cmb_g_at S gk0 seed_key route is_bot ctx ca cc
+  have "routed_callee_call_tree S gk0 seed_key route is_bot ctx ca cc (locals (\<sigma> (Inl (cc, ctx)))) p
+          \<in> set (map (routed_callee_call_tree S gk0 seed_key route is_bot ctx ca cc
                         (locals (\<sigma> (Inl (cc, ctx)))))
                   (resolve v cc ca (locals (\<sigma> (Inl (cc, ctx))))))"
     using mem by simp
   from sides_le_side_rhs_fold_dg[OF this, where acc = bot and k = z] show ?thesis
-    by (simp add: routed_cmb_g_def)
+    by (simp add: routed_call_tree_def)
 qed
 
-lemma routed_cmb_g_at_sides_ge_combine:
+lemma routed_callee_call_tree_sides_ge_combine:
   assumes R: "enter_runs (enter\<^sup># S (call_info_of ca p))
                 (mk_dg_man caller (\<lambda>_. gk0)) \<sigma> pairs pub"
     and mem: "(cont, entry) \<in> set pairs"
   shows "sides_of_rhs
-           (routed_cmb_g_alt S gk0 seed_key route is_bot ctx ca cc p (cont, entry)) \<sigma> z
+           (routed_call_alternative_tree S gk0 seed_key route is_bot ctx ca cc p (cont, entry)) \<sigma> z
            \<le> sides_of_rhs
-                (routed_cmb_g_at S gk0 seed_key route is_bot ctx ca cc caller p) \<sigma> z"
+                (routed_callee_call_tree S gk0 seed_key route is_bot ctx ca cc caller p) \<sigma> z"
 proof -
-  let ?F = "routed_cmb_g_alt S gk0 seed_key route is_bot ctx ca cc p"
+  let ?F = "routed_call_alternative_tree S gk0 seed_key route is_bot ctx ca cc p"
   have "sides_of_rhs (?F (cont, entry)) \<sigma> z
           \<le> sides_of_rhs (sp_compile (side_rhs_fold_dg bot (map ?F pairs))) \<sigma> z"
     by (rule sides_le_side_rhs_fold_dg) (use mem in force)
   also have "\<dots> \<le> sides_of_rhs
-                    (routed_cmb_g_at S gk0 seed_key route is_bot ctx ca cc caller p) \<sigma> z"
-    unfolding routed_cmb_g_at_def
+                    (routed_callee_call_tree S gk0 seed_key route is_bot ctx ca cc caller p) \<sigma> z"
+    unfolding routed_callee_call_tree_def
     by (simp add: enter_runsD_sides[OF R] sup_fun_def)
   finally show ?thesis .
 qed
@@ -346,22 +346,22 @@ text \<open>
   combine runs against \<^const>\<open>bot\<close>.
 \<close>
 
-lemma routed_cmb_g_at_traverse_ge:
+lemma routed_callee_call_tree_traverse_ge:
   assumes R: "enter_runs (enter\<^sup># S (call_info_of ca p))
                 (mk_dg_man caller (\<lambda>_. gk0)) \<sigma> pairs pub"
     and mem: "(cont, entry) \<in> set pairs"
   shows "locals (traverse_rhs
-             (routed_cmb_g_alt S gk0 seed_key route is_bot ctx ca cc p (cont, entry)) \<sigma>)
+             (routed_call_alternative_tree S gk0 seed_key route is_bot ctx ca cc p (cont, entry)) \<sigma>)
            \<le> locals (traverse_rhs
-                (routed_cmb_g_at S gk0 seed_key route is_bot ctx ca cc caller p) \<sigma>)"
+                (routed_callee_call_tree S gk0 seed_key route is_bot ctx ca cc caller p) \<sigma>)"
 proof -
-  let ?F = "routed_cmb_g_alt S gk0 seed_key route is_bot ctx ca cc p"
+  let ?F = "routed_call_alternative_tree S gk0 seed_key route is_bot ctx ca cc p"
   have "locals (traverse_rhs (?F (cont, entry)) \<sigma>)
           \<le> side_acc_dg bot \<sigma> (map ?F pairs)"
     by (rule locals_traverse_le_side_acc_dg) (use mem in force)
   also have "\<dots> = locals (traverse_rhs
-                     (routed_cmb_g_at S gk0 seed_key route is_bot ctx ca cc caller p) \<sigma>)"
-    unfolding routed_cmb_g_at_def
+                     (routed_callee_call_tree S gk0 seed_key route is_bot ctx ca cc caller p) \<sigma>)"
+    unfolding routed_callee_call_tree_def
     by (simp add: enter_runsD_traverse[OF R]
         traverse_side_rhs_fold_dg[unfolded sp_compile_def])
   finally show ?thesis .
@@ -391,9 +391,9 @@ lemma sides_side_rhs_fold_dg_bot:
   shows "sides_of_rhs (sp_compile (side_rhs_fold_dg acc ts)) \<sigma> z = bot"
   using assms by (induction ts arbitrary: acc) (simp_all add: sp_compile_with_bind)
 
-lemma routed_cmb_g_global_free:
-  "globs (traverse_rhs (routed_cmb_g S gk0 seed_key resolve is_bot route ctx ca cc v) \<sigma>) = bot"
-  by (simp add: routed_cmb_g_def traverse_side_rhs_fold_dg[unfolded sp_compile_def])
+lemma routed_call_tree_global_free:
+  "globs (traverse_rhs (routed_call_tree S gk0 seed_key resolve is_bot route ctx ca cc v) \<sigma>) = bot"
+  by (simp add: routed_call_tree_def traverse_side_rhs_fold_dg[unfolded sp_compile_def])
 
 text \<open>
   The entry half of the condition is now stated through \<^const>\<open>enter_runs\<close>: an
@@ -403,7 +403,7 @@ text \<open>
   tree of its own.
 \<close>
 
-lemma routed_cmb_g_at_side_free_at_gk0:
+lemma routed_callee_call_tree_side_free_at_gk0:
   assumes enter_free: "\<And>ci d pairs pub.
         enter_runs (enter\<^sup># S ci) (mk_dg_man d (\<lambda>_. gk0)) \<sigma> pairs pub \<Longrightarrow> pub (Inr gk0) = bot"
     and enter_runs_ex: "\<And>ci d. \<exists>pairs pub.
@@ -412,27 +412,27 @@ lemma routed_cmb_g_at_side_free_at_gk0:
         (dg_spec_combine_transfer S ci (mk_dg_man d (\<lambda>_. gk0)) de)) \<sigma> z = bot"
     and ne: "\<And>p ctx'. seed_key (FunctionEntry p) ctx' \<noteq> gk0"
   shows "sides_of_rhs
-           (routed_cmb_g_at S gk0 seed_key route is_bot ctx ca cc caller p) \<sigma> (Inr gk0) = bot"
+           (routed_callee_call_tree S gk0 seed_key route is_bot ctx ca cc caller p) \<sigma> (Inr gk0) = bot"
 proof -
   obtain pairs pub
     where R: "enter_runs (enter\<^sup># S (call_info_of ca p))
                 (mk_dg_man caller (\<lambda>_. gk0)) \<sigma> pairs pub"
     using enter_runs_ex by blast
-  have alts: "\<And>t. t \<in> set (map (routed_cmb_g_alt S gk0 seed_key route is_bot ctx ca cc p) pairs)
+  have alts: "\<And>t. t \<in> set (map (routed_call_alternative_tree S gk0 seed_key route is_bot ctx ca cc p) pairs)
                  \<Longrightarrow> sides_of_rhs t \<sigma> (Inr gk0) = bot"
-    by (auto simp: routed_cmb_g_alt_def Let_def comb_free ne[THEN not_sym]
+    by (auto simp: routed_call_alternative_tree_def Let_def comb_free ne[THEN not_sym]
         split: if_splits)
   have "sides_of_rhs
-          (routed_cmb_g_at S gk0 seed_key route is_bot ctx ca cc caller p) \<sigma> (Inr gk0)
+          (routed_callee_call_tree S gk0 seed_key route is_bot ctx ca cc caller p) \<sigma> (Inr gk0)
         = pub (Inr gk0)
           \<squnion> sides_of_rhs (sp_compile (side_rhs_fold_dg bot
-                (map (routed_cmb_g_alt S gk0 seed_key route is_bot ctx ca cc p) pairs)))
+                (map (routed_call_alternative_tree S gk0 seed_key route is_bot ctx ca cc p) pairs)))
               \<sigma> (Inr gk0)"
-    unfolding routed_cmb_g_at_def by (simp add: enter_runsD_sides[OF R] sup_fun_def)
+    unfolding routed_callee_call_tree_def by (simp add: enter_runsD_sides[OF R] sup_fun_def)
   also have "\<dots> = bot"
   proof -
     have "sides_of_rhs (sp_compile (side_rhs_fold_dg bot
-            (map (routed_cmb_g_alt S gk0 seed_key route is_bot ctx ca cc p) pairs)))
+            (map (routed_call_alternative_tree S gk0 seed_key route is_bot ctx ca cc p) pairs)))
             \<sigma> (Inr gk0) = bot"
       by (rule sides_side_rhs_fold_dg_bot) (rule alts)
     then show ?thesis using enter_free[OF R] by simp
@@ -440,7 +440,7 @@ proof -
   finally show ?thesis .
 qed
 
-lemma routed_cmb_g_side_free_at_gk0:
+lemma routed_call_tree_side_free_at_gk0:
   assumes enter_free: "\<And>ci d pairs pub.
         enter_runs (enter\<^sup># S ci) (mk_dg_man d (\<lambda>_. gk0)) \<sigma> pairs pub \<Longrightarrow> pub (Inr gk0) = bot"
     and enter_runs_ex: "\<And>ci d. \<exists>pairs pub.
@@ -448,35 +448,35 @@ lemma routed_cmb_g_side_free_at_gk0:
     and comb_free: "\<And>ci d de z. sides_of_rhs (sp_compile_with (\<lambda>x. DG x bot)
         (dg_spec_combine_transfer S ci (mk_dg_man d (\<lambda>_. gk0)) de)) \<sigma> z = bot"
     and ne: "\<And>p ctx'. seed_key (FunctionEntry p) ctx' \<noteq> gk0"
-  shows "sides_of_rhs (routed_cmb_g S gk0 seed_key resolve is_bot route ctx ca cc v)
+  shows "sides_of_rhs (routed_call_tree S gk0 seed_key resolve is_bot route ctx ca cc v)
            \<sigma> (Inr gk0) = bot"
 proof -
   have at_free: "\<And>caller p.
-      sides_of_rhs (routed_cmb_g_at S gk0 seed_key route is_bot ctx ca cc caller p)
+      sides_of_rhs (routed_callee_call_tree S gk0 seed_key route is_bot ctx ca cc caller p)
         \<sigma> (Inr gk0) = bot"
-    by (rule routed_cmb_g_at_side_free_at_gk0)
+    by (rule routed_callee_call_tree_side_free_at_gk0)
        (rule enter_free enter_runs_ex comb_free ne, assumption?)+
   have "sides_of_rhs (sp_compile (side_rhs_fold_dg bot
-          (map (routed_cmb_g_at S gk0 seed_key route is_bot ctx ca cc
+          (map (routed_callee_call_tree S gk0 seed_key route is_bot ctx ca cc
                   (locals (\<sigma> (Inl (cc, ctx)))))
              (resolve v cc ca (locals (\<sigma> (Inl (cc, ctx)))))))) \<sigma> (Inr gk0) = bot"
     by (rule sides_side_rhs_fold_dg_bot) (auto simp: at_free)
-  then show ?thesis by (simp add: routed_cmb_g_def)
+  then show ?thesis by (simp add: routed_call_tree_def)
 qed
 
 subsection \<open>The routed-context locale: D and G independently typed\<close>
 
 text \<open>
   \<open>routed_context_base_hetero\<close> instantiates \<^locale>\<open>dg_ctx_activation_base\<close> at
-  \<open>routed_cmb_g\<close>/\<open>routed_extra_g\<close>, so \<open>S\<close>'s own \<open>'D\<close>/\<open>'G\<close> stay as
+  \<open>routed_call_tree\<close>/\<open>routed_entry_seed_tree\<close>, so \<open>S\<close>'s own \<open>'D\<close>/\<open>'G\<close> stay as
   independent as that locale already keeps them: no \<open>'D = 'G\<close> constraint is threaded
   in by this locale's \<open>for\<close> clause. \<^locale>\<open>dg_ctx_activation_base\<close> itself carries
   no routing-specific content: every fact it supplies (\<open>pp_eq_bound\<close>,
   \<open>pp_sides_bound\<close>, \<open>sides_fold_le_Gen\<close>, \<open>edge_bound_local\<close>/\<open>_global\<close>,
   \<open>dg_ctx_act_edge\<close>, \<open>dg_ctx_act_comb_covered\<close>) is already generic in
-  \<open>cmb\<close>/\<open>extra\<close>, so instantiating it at \<open>routed_cmb_g\<close>/\<open>routed_extra_g\<close>
+  \<open>cmb\<close>/\<open>extra\<close>, so instantiating it at \<open>routed_call_tree\<close>/\<open>routed_entry_seed_tree\<close>
   reuses those proofs unchanged; only the seed-specific reasoning below, which
-  \<open>dg_ctx_activation_base\<close> never has since seeding is \<open>routed_cmb_g\<close>'s own
+  \<open>dg_ctx_activation_base\<close> never has since seeding is \<open>routed_call_tree\<close>'s own
   addition, is carried out here.
 
   Beyond \<^locale>\<open>dg_ctx_activation_base\<close>'s parameters: \<open>seed_key\<close> injects a routed
@@ -497,7 +497,7 @@ text \<open>
 
 locale routed_context_base_hetero =
   dg_ctx_activation_base S gammaDG gs g gk0 route
-    "routed_cmb_g S gk0 seed_key resolve is_bot" "routed_extra_g seed_key gk0"
+    "routed_call_tree S gk0 seed_key resolve is_bot" "routed_entry_seed_tree seed_key gk0"
     bot0 s0d s0g sigma vars x0 sg gammaM
   for S :: "(pp \<times> 'c, 'k, unit, 'D::bounded_semilattice_sup_bot,
               'G::bounded_semilattice_sup_bot) dg_spec"
@@ -616,7 +616,7 @@ text \<open>
 
 lemma resolved_site_mem:
   assumes ce: "(cc, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
-  shows "routed_cmb_g S gk0 seed_key resolve is_bot route ctx (CallEdge dst pars args) cc cont
+  shows "routed_call_tree S gk0 seed_key resolve is_bot route ctx (CallEdge dst pars args) cc cont
            \<in> set (trees cont ctx)"
 proof -
   have "(cc, CallEdge dst pars args) \<in> set (call_site_list g cont)"
@@ -628,9 +628,9 @@ lemma resolved_target_mem:
   assumes covV: "(cc, ctx) \<in> vars"
     and ce: "(cc, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
     and sin: "s \<in> gammaDG (locals (sigma (Inl (cc, ctx)))) (globs (sigma (Inr gk0)))"
-  shows "routed_cmb_g_at S gk0 seed_key route is_bot ctx (CallEdge dst pars args) cc
+  shows "routed_callee_call_tree S gk0 seed_key route is_bot ctx (CallEdge dst pars args) cc
              (locals (sigma (Inl (cc, ctx)))) p
-           \<in> set (map (routed_cmb_g_at S gk0 seed_key route is_bot ctx
+           \<in> set (map (routed_callee_call_tree S gk0 seed_key route is_bot ctx
                           (CallEdge dst pars args) cc
                         (locals (sigma (Inl (cc, ctx)))))
                       (resolve cont cc (CallEdge dst pars args)
@@ -642,19 +642,19 @@ lemma resolved_at_le_site_acc:
     and ce: "(cc, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
     and sin: "s \<in> gammaDG (locals (sigma (Inl (cc, ctx)))) (globs (sigma (Inr gk0)))"
   shows "locals (traverse_rhs
-           (routed_cmb_g_at S gk0 seed_key route is_bot ctx (CallEdge dst pars args) cc
+           (routed_callee_call_tree S gk0 seed_key route is_bot ctx (CallEdge dst pars args) cc
               (locals (sigma (Inl (cc, ctx)))) p) sigma)
          \<le> side_acc_dg (acc0 cont) sigma (trees cont ctx)"
 proof -
   have "locals (traverse_rhs
-           (routed_cmb_g_at S gk0 seed_key route is_bot ctx (CallEdge dst pars args) cc
+           (routed_callee_call_tree S gk0 seed_key route is_bot ctx (CallEdge dst pars args) cc
               (locals (sigma (Inl (cc, ctx)))) p) sigma)
       \<le> locals (traverse_rhs
-           (routed_cmb_g S gk0 seed_key resolve is_bot route ctx
+           (routed_call_tree S gk0 seed_key resolve is_bot route ctx
               (CallEdge dst pars args) cc cont)
            sigma)"
     using locals_traverse_le_side_acc_dg[OF resolved_target_mem[OF covV ce sin], where acc = bot]
-    by (simp add: routed_cmb_g_def traverse_side_rhs_fold_dg[unfolded sp_compile_def])
+    by (simp add: routed_call_tree_def traverse_side_rhs_fold_dg[unfolded sp_compile_def])
   also have "\<dots> \<le> side_acc_dg (acc0 cont) sigma (trees cont ctx)"
     by (rule locals_traverse_le_side_acc_dg[OF resolved_site_mem[OF ce]])
   finally show ?thesis .
@@ -665,18 +665,18 @@ lemma resolved_at_le_site_sides:
     and ce: "(cc, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
     and sin: "s \<in> gammaDG (locals (sigma (Inl (cc, ctx)))) (globs (sigma (Inr gk0)))"
   shows "sides_of_rhs
-           (routed_cmb_g_at S gk0 seed_key route is_bot ctx (CallEdge dst pars args) cc
+           (routed_callee_call_tree S gk0 seed_key route is_bot ctx (CallEdge dst pars args) cc
               (locals (sigma (Inl (cc, ctx)))) p) sigma z
          \<le> sides_of_rhs (sp_compile (side_rhs_fold_dg (acc0 cont) (trees cont ctx))) sigma z"
 proof -
   have "sides_of_rhs
-           (routed_cmb_g_at S gk0 seed_key route is_bot ctx (CallEdge dst pars args) cc
+           (routed_callee_call_tree S gk0 seed_key route is_bot ctx (CallEdge dst pars args) cc
               (locals (sigma (Inl (cc, ctx)))) p) sigma z
       \<le> sides_of_rhs
-           (routed_cmb_g S gk0 seed_key resolve is_bot route ctx
+           (routed_call_tree S gk0 seed_key resolve is_bot route ctx
               (CallEdge dst pars args) cc cont)
            sigma z"
-    by (rule routed_cmb_g_sides_ge_at
+    by (rule routed_call_tree_sides_ge_at
           [where resolve = resolve and v = cont and cc = cc and ctx = ctx and \<sigma> = sigma,
            OF resolve_sound[OF covV ce sin]])
   also have "\<dots> \<le> sides_of_rhs (sp_compile (side_rhs_fold_dg (acc0 cont) (trees cont ctx))) sigma z"
@@ -693,14 +693,14 @@ lemma routed_seed_read_bound:
 proof -
   let ?t = "QueryG (seed_key (FunctionEntry p) ctx') (\<lambda>s. Answer (DG (locals s) bot))"
   have mem: "?t \<in> set (trees (FunctionEntry p) ctx')"
-    by (simp add: routed_extra_g_def)
+    by (simp add: routed_entry_seed_tree_def)
   have "locals (sigma (Inr (seed_key (FunctionEntry p) ctx')))
       = locals (traverse_rhs ?t sigma)"
     by simp
   also have "\<dots> \<le> side_acc_dg (acc0 (FunctionEntry p)) sigma (trees (FunctionEntry p) ctx')"
     using locals_traverse_le_side_acc_dg[OF mem] .
   also have "\<dots> = locals (eq Gen (FunctionEntry p, ctx') sigma)"
-    by (simp add: eq_side_cfg_T_eff_keyed_seed_dg)
+    by (simp add: eq_routed_node_rhs)
   also have "\<dots> \<le> locals (sigma (Inl (FunctionEntry p, ctx')))"
     using pp_eq_bound[OF covV] by (simp add: less_eq_dg_state_def)
   finally show ?thesis .
@@ -730,10 +730,10 @@ lemma routed_seed_publish_bound_seed:
 proof -
   let ?ctx' = "route u ctx entry (CallEdge dst pars args)"
   let ?k = "Inr (seed_key (FunctionEntry p) ?ctx')"
-  let ?t = "routed_cmb_g_at S gk0 seed_key route is_bot ctx (CallEdge dst pars args) u
+  let ?t = "routed_callee_call_tree S gk0 seed_key route is_bot ctx (CallEdge dst pars args) u
               (locals (sigma (Inl (u, ctx)))) p"
   have seedb: "DG entry bot \<le> sides_of_rhs ?t sigma ?k"
-    using R mem nb by (rule routed_cmb_g_at_sides_ge_seed)
+    using R mem nb by (rule routed_callee_call_tree_sides_ge_seed)
   have "entry \<le> locals (sides_of_rhs ?t sigma ?k)"
     using le_dg_state_localsD[OF seedb] by simp
   also have "\<dots> \<le> locals (sides_of_rhs
@@ -812,21 +812,21 @@ lemma routed_comb_bound_local:
               (mk_dg_man (locals (sigma (Inl (cl, c1)))) (\<lambda>_. gk0)) sigma pairs pub"
     and mem: "(cont', entry) \<in> set pairs"
   shows "locals (traverse_rhs
-           (routed_cmb_g_alt S gk0 seed_key route is_bot c1 (CallEdge dst pars args) cl p
+           (routed_call_alternative_tree S gk0 seed_key route is_bot c1 (CallEdge dst pars args) cl p
               (cont', entry)) sigma)
          \<le> locals (sigma (Inl (cont, c1)))"
 proof -
   have "locals (traverse_rhs
-           (routed_cmb_g_alt S gk0 seed_key route is_bot c1 (CallEdge dst pars args) cl p
+           (routed_call_alternative_tree S gk0 seed_key route is_bot c1 (CallEdge dst pars args) cl p
               (cont', entry)) sigma)
       \<le> locals (traverse_rhs
-           (routed_cmb_g_at S gk0 seed_key route is_bot c1 (CallEdge dst pars args) cl
+           (routed_callee_call_tree S gk0 seed_key route is_bot c1 (CallEdge dst pars args) cl
               (locals (sigma (Inl (cl, c1)))) p) sigma)"
-    by (rule routed_cmb_g_at_traverse_ge[OF R mem])
+    by (rule routed_callee_call_tree_traverse_ge[OF R mem])
   also have "\<dots> \<le> side_acc_dg (acc0 cont) sigma (trees cont c1)"
     by (rule resolved_at_le_site_acc[OF covV ce sin])
   also have "\<dots> = locals (eq Gen (cont, c1) sigma)"
-    by (simp add: eq_side_cfg_T_eff_keyed_seed_dg)
+    by (simp add: eq_routed_node_rhs)
   also have "\<dots> \<le> locals (sigma (Inl (cont, c1)))"
     using pp_eq_bound[OF covV_cont] by (simp add: less_eq_dg_state_def)
   finally show ?thesis .
@@ -841,17 +841,17 @@ lemma routed_comb_bound_global:
               (mk_dg_man (locals (sigma (Inl (cl, c1)))) (\<lambda>_. gk0)) sigma pairs pub"
     and mem: "(cont', entry) \<in> set pairs"
   shows "globs (sides_of_rhs
-           (routed_cmb_g_alt S gk0 seed_key route is_bot c1 (CallEdge dst pars args) cl p
+           (routed_call_alternative_tree S gk0 seed_key route is_bot c1 (CallEdge dst pars args) cl p
               (cont', entry)) sigma (Inr gk0))
          \<le> globs (sigma (Inr gk0))"
 proof -
   have "globs (sides_of_rhs
-           (routed_cmb_g_alt S gk0 seed_key route is_bot c1 (CallEdge dst pars args) cl p
+           (routed_call_alternative_tree S gk0 seed_key route is_bot c1 (CallEdge dst pars args) cl p
               (cont', entry)) sigma (Inr gk0))
       \<le> globs (sides_of_rhs
-           (routed_cmb_g_at S gk0 seed_key route is_bot c1 (CallEdge dst pars args) cl
+           (routed_callee_call_tree S gk0 seed_key route is_bot c1 (CallEdge dst pars args) cl
               (locals (sigma (Inl (cl, c1)))) p) sigma (Inr gk0))"
-    by (rule le_dg_state_globsD[OF routed_cmb_g_at_sides_ge_combine[OF R mem]])
+    by (rule le_dg_state_globsD[OF routed_callee_call_tree_sides_ge_combine[OF R mem]])
   also have "\<dots> \<le> globs (sides_of_rhs
       (sp_compile (side_rhs_fold_dg (acc0 cont) (trees cont c1))) sigma (Inr gk0))"
     by (rule le_dg_state_globsD[OF resolved_at_le_site_sides[OF covV ce sin]])
@@ -891,7 +891,7 @@ next
                   = enterc cl c1 (call_enter gs (CallEdge dst pars args) s)"
     by (rule routed_enter_witness[OF True ce sin])
   let ?ex_ctx = "route cl c1 entry (CallEdge dst pars args)"
-  let ?alt = "routed_cmb_g_alt S gk0 seed_key route is_bot c1 (CallEdge dst pars args) cl p
+  let ?alt = "routed_call_alternative_tree S gk0 seed_key route is_bot c1 (CallEdge dst pars args) cl p
                 (cont', entry)"
   have nb: "\<not> is_bot entry" using ecov by (rule entry_cover_not_bot)
   have route_agree: "?ex_ctx = enterc cl c1 es" using req es_eq by simp
@@ -951,7 +951,7 @@ lemma locals_ge_s0d:
   shows "s0d \<le> locals (sigma (Inl (cfg_entry g, ctx)))"
 proof -
   have "s0d \<le> locals (eq Gen (cfg_entry g, ctx) sigma)"
-    by (simp add: eq_side_cfg_T_eff_keyed_seed_dg)
+    by (simp add: eq_routed_node_rhs)
        (rule order_trans[OF _ side_acc_dg_ge_acc], simp add: le_supI2)
   also have "\<dots> \<le> locals (sigma (Inl (cfg_entry g, ctx)))"
     using pp_eq_bound[OF cov] by (simp add: less_eq_dg_state_def)
@@ -1023,7 +1023,7 @@ text \<open>
   \<^typ>\<open>vname \<Rightarrow> 'a\<close>, so this is just \<^const>\<open>map\<close>), and the routing functions
   below apply it to the state they are handed. That state is already the
   \<^emph>\<open>entered\<close> callee frame:
-  \<^const>\<open>routed_cmb_g_at\<close> runs the specification's own enter transfer first and
+  \<^const>\<open>routed_callee_call_tree\<close> runs the specification's own enter transfer first and
   passes its answer to \<open>route\<close>, so a routing function must not enter again.
   \<open>formals_context_sem\<close> is the trace-semantic counterpart, decoding the concrete
   entered store's formals the same way, given the point abstraction \<open>decode\<close> a

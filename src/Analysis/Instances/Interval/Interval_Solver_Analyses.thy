@@ -274,7 +274,7 @@ subsection \<open>The global unknowns the same solve side-effects\<close>
 
 text \<open>
   \<^const>\<open>ctx_solved_for\<close> at this domain's warrowing solve, with \<^const>\<open>Analysis_Global\<close> and
-  \<^const>\<open>Activation_Seed\<close> handed to \<^const>\<open>seed_global_keys\<close> the way \<^const>\<open>routed_extra_g\<close>
+  \<^const>\<open>Activation_Seed\<close> handed to \<^const>\<open>seed_global_keys\<close> the way \<^const>\<open>routed_entry_seed_tree\<close>
   already takes them. Nothing here is domain-specific but the solve and the two
   constructors.
 \<close>

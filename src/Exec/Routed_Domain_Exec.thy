@@ -11,7 +11,7 @@ text \<open>
   spine to three primitive commute facts. What it deliberately does not carry is the
   \<^emph>\<open>routing\<close> layer: the equation system a routed analysis actually solves, and the
   executable-to-abstract transport of its post-solution. Each domain, at each context
-  policy, re-derived that layer, and because \<^const>\<open>routed_cmb_g\<close> mentions no domain
+  policy, re-derived that layer, and because \<^const>\<open>routed_call_tree\<close> mentions no domain
   constant, those derivations differ only in the domain carrier, the routing function
   and a name prefix.
 
@@ -71,12 +71,12 @@ text \<open>The routed combine tree commutes with the executable-to-abstract rea
   no hypothesis: \<^const>\<open>dg_spec_combine_transfer\<close> already runs it inside the combine
   sub-tree.\<close>
 
-lemma dg_tree_st_commute_routed_cmb_g:
+lemma dg_tree_st_commute_routed_call_tree:
   "dg_reader_commute_gen.dg_tree_st_commute
      (map_lift (fun_of_resolved_st_q_for gs)) (map_lift (fun_of_resolved_st_q_for gs)) env
-     (routed_cmb_g spec_st gk0 seed_key (resolve_st g) (\<lambda>d. d = Bot) route_st ctx ca cc ex)
-     (routed_cmb_g spec_abs gk0 seed_key (resolve_abs g) (\<lambda>d. d = Bot) route_abs ctx ca cc ex)"
-  by (rule dg_reader_commute_gen.dg_tree_st_commute_routed_cmb_g
+     (routed_call_tree spec_st gk0 seed_key (resolve_st g) (\<lambda>d. d = Bot) route_st ctx ca cc ex)
+     (routed_call_tree spec_abs gk0 seed_key (resolve_abs g) (\<lambda>d. d = Bot) route_abs ctx ca cc ex)"
+  by (rule dg_reader_commute_gen.dg_tree_st_commute_routed_call_tree
         [where Floc = "map_lift (fun_of_resolved_st_q_for gs)"
            and Fglob = "map_lift (fun_of_resolved_st_q_for gs)"])
      (rule dg_reader_commute_gen_lifted_for seed_key_ne_gk0
@@ -93,7 +93,7 @@ text \<open>
   hook to hoist what it publishes at the buffered key \<open>gk0\<close>; this spec is local-only,
   so its intra tree and its routed combine publish nothing there, and each tree is
   already its own contribution analogue. That is a property of the trees --- read off
-  \<open>routed_cmb_g_side_free_at_gk0\<close> and the local-only compile-down facts --- not of any
+  \<open>routed_call_tree_side_free_at_gk0\<close> and the local-only compile-down facts --- not of any
   analysis family: a spec whose transfers do publish at \<open>gk0\<close> would have to supply
   reshaped hooks instead, with the same generic bridge unchanged. The routed seed
   survives untouched, because a seed key is never \<open>gk0\<close> and the bridge requires
@@ -112,7 +112,7 @@ abbreviation cmb_st :: "cfg \<Rightarrow> (pp \<Rightarrow> 'c \<Rightarrow> 'a 
    \<Rightarrow> 'c \<Rightarrow> call_action \<Rightarrow> pp \<Rightarrow> pp
    \<Rightarrow> (pp \<times> 'c, 'k, ('a exec_dg_st lifted, 'a exec_dg_st lifted) dg_state) strategy_tree"
 where
-  "cmb_st g \<equiv> routed_cmb_g spec_st gk0 seed_key (resolve_st g) (\<lambda>d. d = Bot)"
+  "cmb_st g \<equiv> routed_call_tree spec_st gk0 seed_key (resolve_st g) (\<lambda>d. d = Bot)"
 
 text \<open>The two tree properties that make the identity hooks legitimate: neither the
   compiled intra edge nor the routed combine publishes at \<open>gk0\<close>, and both answer with
@@ -122,7 +122,7 @@ lemma intra_st_side_free: "sides_of_rhs (intra_st ctx' src a) \<tau> z = bot"
   by (simp add: dg_spec_edge_tree_def dg_spec_step_local_state_st_for_lifted)
 
 lemma cmb_st_side_free_at_gk0: "sides_of_rhs (cmb_st g route' ctx' ca cc ex) \<tau> (Inr gk0) = bot"
-  by (rule routed_cmb_g_side_free_at_gk0)
+  by (rule routed_call_tree_side_free_at_gk0)
      (auto simp: dgs_enter_local_state_st_for_lifted
         dg_spec_combine_transfer_local_state_st_for_lifted
         local_transfer_def local_combine_transfer_def seed_key_ne_gk0 bot_fun_def
@@ -130,15 +130,15 @@ lemma cmb_st_side_free_at_gk0: "sides_of_rhs (cmb_st g route' ctx' ca cc ex) \<t
 
 theorem pp_st:
   assumes pp: "part_post_solution
-     (side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_addr_list (\<lambda>_. gk0) route_st
-        intra_st (routed_cmb_g spec_st gk0 seed_key (resolve_st g) (\<lambda>d. d = Bot))
-        (routed_extra_g seed_key gk0)
+     (routed_node_rhs_buffered intra_predecessor_addr_list (\<lambda>_. gk0) route_st
+        intra_st (routed_call_tree spec_st gk0 seed_key (resolve_st g) (\<lambda>d. d = Bot))
+        (routed_entry_seed_tree seed_key gk0)
         g bot0 s0d s0g)
      x0 sigma_st vars"
   shows "part_post_solution
-     (side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. gk0) route_st
-        intra_st (routed_cmb_g spec_st gk0 seed_key (resolve_st g) (\<lambda>d. d = Bot))
-        (routed_extra_g seed_key gk0)
+     (routed_node_rhs intra_predecessor_addr_list (\<lambda>_. gk0) route_st
+        intra_st (routed_call_tree spec_st gk0 seed_key (resolve_st g) (\<lambda>d. d = Bot))
+        (routed_entry_seed_tree seed_key gk0)
         g bot0 s0d s0g)
      x0 sigma_st vars"
 proof (rule part_post_solution_seed_dg_buffered_to_old
@@ -166,7 +166,7 @@ proof (rule part_post_solution_seed_dg_buffered_to_old
     by (simp add: cmb_st_side_free_at_gk0 bot_dg_state_def)
   show "\<And>c' ca cc ex \<tau>. globs (traverse_rhs (cmb_st g route_st c' ca cc ex) \<tau>)
          = globs (sides_of_rhs (cmb_st g route_st c' ca cc ex) \<tau> (Inr ((\<lambda>_. gk0) c')))"
-    by (simp add: routed_cmb_g_global_free cmb_st_side_free_at_gk0 bot_dg_state_def)
+    by (simp add: routed_call_tree_global_free cmb_st_side_free_at_gk0 bot_dg_state_def)
   show "\<And>c' ca cc ex \<tau>.
          sides_of_rhs (cmb_st g route_st c' ca cc ex) \<tau> (Inr ((\<lambda>_. gk0) c')) = bot"
     by (rule cmb_st_side_free_at_gk0)
@@ -177,12 +177,12 @@ proof (rule part_post_solution_seed_dg_buffered_to_old
   show "\<And>c' ca cc ex \<tau>. dep_aux \<tau> (cmb_st g route_st c' ca cc ex)
          = dep_aux \<tau> (cmb_st g route_st c' ca cc ex)"
     by (rule refl)
-  show "\<And>c' w \<tau> z x. x \<in> set (routed_extra_g seed_key gk0 route_st c' w)
+  show "\<And>c' w \<tau> z x. x \<in> set (routed_entry_seed_tree seed_key gk0 route_st c' w)
          \<Longrightarrow> sides_of_rhs x \<tau> z = bot"
-    by (rule routed_extra_g_free)
-  show "\<And>c' w \<tau> x. x \<in> set (routed_extra_g seed_key gk0 route_st c' w)
+    by (rule routed_entry_seed_tree_free)
+  show "\<And>c' w \<tau> x. x \<in> set (routed_entry_seed_tree seed_key gk0 route_st c' w)
          \<Longrightarrow> globs (traverse_rhs x \<tau>) = bot"
-    by (rule routed_extra_g_local_only)
+    by (rule routed_entry_seed_tree_local_only)
 qed (rule pp)
 
 end

@@ -599,3 +599,19 @@ sound_dg_spec
 sound_dg_spec_st
 sound_dg_spec_ownership_split_lift
 sound_dg_spec_sign_dg_spec_env_join
+
+# --- Routed call/generator formers renamed by abstraction level (2026-09-05) ---
+# The old names described implementation history rather than layer, and made
+# several helpers read like competing generators. routed_cmb_g* became the
+# routed call-tree family, routed_extra_g the entry-seed tree, the two manager
+# program drivers say they build programs rather than trees, and the keyed
+# generator family is named for what it produces.
+routed_cmb_g
+routed_cmb_g_at
+routed_cmb_g_alt
+routed_extra_g
+dg_edge_tree_man
+dg_combine_tree_man
+side_cfg_T_eff_keyed_seed_dg
+side_cfg_T_eff_keyed_seed_dg_buffered
+side_cfg_T_eff_keyed_seed_trees

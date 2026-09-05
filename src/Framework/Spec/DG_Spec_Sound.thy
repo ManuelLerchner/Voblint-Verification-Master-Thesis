@@ -180,6 +180,86 @@ text \<open>
   establish.
 \<close>
 
+subsection \<open>Proof-level compiled combine form\<close>
+
+text \<open>
+  A return combine compiled the way an edge transfer is: read the caller
+  continuation and the callee exit from two unknowns, and run the composed
+  combine against them. No generator builds this. The routed call tree already
+  holds the alternative's own continuation, so it runs
+  \<^const>\<open>dg_spec_combine_transfer\<close> against that value directly and never reads
+  a caller unknown a second time.
+
+  It lives here, ahead of the locale whose one lemma uses it, because
+  \<^emph>\<open>stating\<close> the return obligation at a pair of addresses is all it is for: a
+  proof that quantifies over the pair needs a tree to quantify over. Reading it
+  in \<^theory>\<open>Voblint_Framework.DG_Spec\<close>, among the formers a generator really
+  does build, invited exactly the wrong conclusion.
+\<close>
+
+definition combine_program_at ::
+  "('x,'k,'v,'dl,'dg) man_combine_transfer
+   \<Rightarrow> 'x + 'k \<Rightarrow> 'x + 'k \<Rightarrow> ('v \<Rightarrow> 'k)
+   \<Rightarrow> ('x,'k,('dl::bot,'dg) dg_state,'dl) strategy_program"
+where
+  "combine_program_at transfer src_cc src_ex key =
+     do {
+       dc \<leftarrow> dg_read_at src_cc;
+       de \<leftarrow> dg_read_at src_ex;
+       transfer (mk_dg_man dc key) de
+     }"
+
+definition combine_transfer_tree ::
+  "('x,'k,'v,'dl::bot,'dg::bot) man_combine_transfer \<Rightarrow> 'x + 'k \<Rightarrow> 'x + 'k \<Rightarrow> ('v \<Rightarrow> 'k)
+   \<Rightarrow> ('x,'k,('dl,'dg) dg_state) strategy_tree"
+where
+  "combine_transfer_tree T src_cc src_ex key =
+     sp_compile_with (\<lambda>d. DG d bot) (combine_program_at T src_cc src_ex key)"
+
+definition dg_spec_combine_tree ::
+  "('x,'k,'v,'dl::bot,'dg::bot) dg_spec \<Rightarrow> call_info \<Rightarrow> 'x + 'k \<Rightarrow> 'x + 'k \<Rightarrow> ('v \<Rightarrow> 'k)
+   \<Rightarrow> ('x,'k,('dl,'dg) dg_state) strategy_tree"
+where
+  "dg_spec_combine_tree S ci src_cc src_ex key =
+     combine_transfer_tree (dg_spec_combine_transfer S ci) src_cc src_ex key"
+
+text \<open>What the compiled form observes when both stages are local, and the two
+  reads it always makes --- the combine counterparts of the edge-tree facts in
+  \<^theory>\<open>Voblint_Framework.DG_Spec\<close>.\<close>
+
+lemma traverse_local_combine_tree [simp]:
+  "traverse_rhs (combine_transfer_tree (local_combine_transfer h) src_cc src_ex gk) \<tau>
+     = DG (h (locals (\<tau> src_cc)) (locals (\<tau> src_ex))) bot"
+  by (cases src_cc; cases src_ex)
+     (simp_all add: combine_transfer_tree_def combine_program_at_def
+        local_combine_transfer_def mk_dg_man_def dg_read_at_def sp_bind_assoc)
+
+lemma sides_local_combine_tree [simp]:
+  "sides_of_rhs (combine_transfer_tree (local_combine_transfer h) src_cc src_ex gk) \<tau> k
+     = bot"
+  by (cases src_cc; cases src_ex)
+     (simp_all add: combine_transfer_tree_def combine_program_at_def
+        local_combine_transfer_def mk_dg_man_def dg_read_at_def sp_bind_assoc)
+
+lemma dep_aux_local_combine_tree [simp]:
+  "dep_aux \<tau> (combine_transfer_tree (local_combine_transfer h) src_cc src_ex gk)
+     = {src_cc, src_ex}"
+  by (cases src_cc; cases src_ex)
+     (simp_all add: combine_transfer_tree_def combine_program_at_def
+        local_combine_transfer_def mk_dg_man_def dg_read_at_def sp_bind_assoc)
+
+lemma dep_aux_combine_transfer_tree_sources:
+  "{src_cc, src_ex} \<subseteq> dep_aux \<tau> (combine_transfer_tree T src_cc src_ex gk)"
+  by (cases src_cc; cases src_ex)
+     (simp_all add: combine_transfer_tree_def combine_program_at_def dg_read_at_def
+        sp_bind_assoc)
+
+lemma dep_aux_dg_spec_combine_tree_sources:
+  "{src_cc, src_ex} \<subseteq> dep_aux \<tau> (dg_spec_combine_tree S ci src_cc src_ex gk)"
+  unfolding dg_spec_combine_tree_def by (rule dep_aux_combine_transfer_tree_sources)
+
+subsection \<open>What a manager-native specification owes\<close>
+
 locale sound_dg_spec_core =
   fixes S :: "('x,'k,unit,'D::bounded_semilattice_sup_bot,
                 'G::bounded_semilattice_sup_bot) dg_spec"
@@ -220,7 +300,7 @@ lemma (in sound_dg_spec_core) combine_sound_tree:
   using combine_sound[where dc = "locals (\<tau> src_cc)" and de = "locals (\<tau> src_ex)"
       and \<tau> = \<tau> and gk = gk and ci = ci, OF sc se]
   by (cases src_cc; cases src_ex)
-     (simp_all add: dg_spec_combine_tree_def combine_transfer_tree_def dg_combine_tree_man_def
+     (simp_all add: dg_spec_combine_tree_def combine_transfer_tree_def combine_program_at_def
         dg_read_at_def sp_read_local_def sp_read_global_def sp_bind_def sp_return_def
         sp_compile_with_def comp_def)
 

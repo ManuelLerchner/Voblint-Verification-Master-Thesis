@@ -264,7 +264,7 @@ definition analyse_int_ctx_result_warrow_for ::
                     (locals (snd (int_conf_sol_prog_warrow mode gs p) (Inl (v, ctx))))))"
 
 text \<open>\<^const>\<open>ctx_solved_for\<close> at this domain's warrowing solve, with \<^const>\<open>Analysis_Global\<close>
-  and \<^const>\<open>Activation_Seed\<close> handed to \<^const>\<open>seed_global_keys\<close> the way \<^const>\<open>routed_extra_g\<close>
+  and \<^const>\<open>Activation_Seed\<close> handed to \<^const>\<open>seed_global_keys\<close> the way \<^const>\<open>routed_entry_seed_tree\<close>
   already takes them. The refinement mode is applied first, leaving the solve in the
   shape \<^const>\<open>ctx_solved_for\<close> takes.\<close>
 
@@ -359,13 +359,13 @@ lemma ics_pp_st_warrow:
 
 theorem ics_pp_routed_warrow:
   "part_post_solution
-     (side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. Call_String_Context.Global)
+     (routed_node_rhs intra_predecessor_addr_list (\<lambda>_. Call_String_Context.Global)
         (cs_route k)
         (\<lambda>ctx' src a. dg_spec_edge_tree (int_dom_spec mode empty_pred gs) a src
            (\<lambda>_. Call_String_Context.Global))
-        (routed_cmb_g (int_dom_spec mode empty_pred gs) Call_String_Context.Global
+        (routed_call_tree (int_dom_spec mode empty_pred gs) Call_String_Context.Global
            Call_String_Context.Seed (static_resolve (compile_prog Pi ps)) (\<lambda>d. d = Bot))
-        (routed_extra_g Call_String_Context.Seed Call_String_Context.Global)
+        (routed_entry_seed_tree Call_String_Context.Seed Call_String_Context.Global)
         (compile_prog Pi ps) Bot (Lifted cinit_int_dom_st) Bot)
      (cfg_exit (compile_prog Pi ps), [])
      (snd (ics_sol_warrow k mode gs empty_pred Pi ps))
@@ -436,12 +436,12 @@ lemma int_conf_entry_pp_st_warrow:
 
 theorem int_conf_entry_pp_routed_warrow:
   "part_post_solution
-     (side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. Analysis_Global ())
+     (routed_node_rhs intra_predecessor_addr_list (\<lambda>_. Analysis_Global ())
         (int_conf_entry_route_gen mode gs empty_pred)
         (\<lambda>ctx' src a. dg_spec_edge_tree (int_dom_spec mode empty_pred gs) a src (\<lambda>_. Analysis_Global ()))
-        (routed_cmb_g (int_dom_spec mode empty_pred gs) (Analysis_Global ()) Activation_Seed
+        (routed_call_tree (int_dom_spec mode empty_pred gs) (Analysis_Global ()) Activation_Seed
            (static_resolve (compile_prog Pi ps)) (\<lambda>d. d = Bot))
-        (routed_extra_g Activation_Seed (Analysis_Global ()))
+        (routed_entry_seed_tree Activation_Seed (Analysis_Global ()))
         (compile_prog Pi ps) Bot (Lifted cinit_int_dom_st) Bot)
      (cfg_exit (compile_prog Pi ps), [])
      (snd (int_conf_entry_sol_warrow mode gs empty_pred Pi ps))

@@ -77,6 +77,17 @@ definition dg_read_global :: "'k \<Rightarrow> ('x,'k,('dl,'dg) dg_state,'dg) st
 definition dg_sideg :: "'k \<Rightarrow> 'dg \<Rightarrow> ('x,'k,('dl::bot,'dg) dg_state,unit) strategy_program" where
   "dg_sideg gk gd = sp_publish gk (DG bot gd)"
 
+text \<open>Reading an unknown depends on it, whatever the program does next. Stated
+  here rather than about any particular compiled tree, because it is a property
+  of \<^const>\<open>dg_read_at\<close> alone: every later interpreter that begins by reading a
+  source inherits it.\<close>
+
+lemma dep_aux_dg_read_at_source:
+  "src \<in> dep_aux \<tau> (dg_read_at src K)"
+  by (cases src)
+     (simp_all add: dg_read_at_def sp_bind_def sp_read_local_def sp_read_global_def
+        sp_return_def)
+
 subsection \<open>Constructing a manager\<close>
 
 text \<open>
@@ -184,41 +195,6 @@ text \<open>
   re-wrapped, and the record's own update equations are all the later proofs
   need about it.
 \<close>
-
-subsection \<open>Edge and combine program drivers\<close>
-
-text \<open>
-  \<open>dg_edge_tree_man\<close> reads the local unknown, closes \<open>gk\<close> into a fresh
-  manager around it, and runs the transfer once -- \<open>transfer\<close> itself never
-  sees \<open>gk\<close>, only whatever the manager's fields already close over.
-  \<open>dg_combine_tree_man\<close> is the same for a return combine: it reads the caller
-  continuation and the callee exit, builds one manager around the former, and
-  passes the latter as an ordinary trailing argument, the way Goblint's
-  \<open>combine_env\<close> takes the same \<open>man\<close> plus a \<open>D.t\<close> rather than a second
-  manager shape.
-\<close>
-
-definition dg_edge_tree_man ::
-  "('x,'k,'v,'dl,'dg) man_transfer \<Rightarrow> 'x + 'k \<Rightarrow> ('v \<Rightarrow> 'k)
-   \<Rightarrow> ('x,'k,('dl::bot,'dg) dg_state,'dl) strategy_program"
-where
-  "dg_edge_tree_man transfer src key =
-     do {
-       d \<leftarrow> dg_read_at src;
-       transfer (mk_dg_man d key)
-     }"
-
-definition dg_combine_tree_man ::
-  "('x,'k,'v,'dl,'dg) man_combine_transfer
-   \<Rightarrow> 'x + 'k \<Rightarrow> 'x + 'k \<Rightarrow> ('v \<Rightarrow> 'k)
-   \<Rightarrow> ('x,'k,('dl::bot,'dg) dg_state,'dl) strategy_program"
-where
-  "dg_combine_tree_man transfer src_cc src_ex key =
-     do {
-       dc \<leftarrow> dg_read_at src_cc;
-       de \<leftarrow> dg_read_at src_ex;
-       transfer (mk_dg_man dc key) de
-     }"
 
 end
 

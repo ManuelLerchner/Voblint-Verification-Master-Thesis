@@ -198,7 +198,7 @@ which is why the omission was invisible. Add a CLI regression.
 
 **3.3 `publish_seed` encodes the opposite convention from the code.** §9.1.
 Definition puts the payload in the `globs` half; `Routed_Context` writes it in
-`locals` and `routed_extra_g` reads it back from `locals`. It is dead, its
+`locals` and `routed_entry_seed_tree` reads it back from `locals`. It is dead, its
 `_cont` twin is dead, both are textually identical to their `publish_global`
 counterparts, and the 20-line doc block above them asserts the wrong convention
 twice. Delete the pair and fix the comment.

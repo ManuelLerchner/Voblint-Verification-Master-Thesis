@@ -43,7 +43,7 @@ locale dg_ctx_activation_base = sound_dg_spec_core S gammaDG gs
     and gammaM :: "'M \<Rightarrow> store set"
   assumes finE[intro]: "finite (intra g)"
     and pp: "part_post_solution
-               (side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. gk0)
+               (routed_node_rhs intra_predecessor_addr_list (\<lambda>_. gk0)
                   route (\<lambda>c src a. dg_spec_edge_tree S a src (\<lambda>_. gk0)) cmb extra g bot0 s0d s0g)
                x0 sigma vars"
     and sg_cov[simp]: "\<And>v c. (v, c) \<in> vars
@@ -57,7 +57,7 @@ locale dg_ctx_activation_base = sound_dg_spec_core S gammaDG gs
 begin
 
 abbreviation Gen :: "(pp \<times> 'c, 'k, ('D, 'G) dg_state) eqsT" where
-  "Gen \<equiv> side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. gk0)
+  "Gen \<equiv> routed_node_rhs intra_predecessor_addr_list (\<lambda>_. gk0)
            route (\<lambda>c src a. dg_spec_edge_tree S a src (\<lambda>_. gk0)) cmb extra g bot0 s0d s0g"
 
 abbreviation acc0 :: "pp \<Rightarrow> 'D" where
@@ -87,7 +87,7 @@ lemma pp_entry_s0g_bound:
   shows "s0g \<le> globs (sigma (Inr gk0))"
 proof -
   have "s0g \<le> globs (sides_of_rhs (Gen (cfg_entry g, ctx)) sigma (Inr gk0))"
-    unfolding side_cfg_T_eff_keyed_seed_dg_def Let_def
+    unfolding routed_node_rhs_def Let_def
     by (simp add: Let_def sup_dg_state_def)
   also have "\<dots> \<le> globs (sigma (Inr gk0))"
     using pp_sides_bound[OF cov, THEN le_funD, of "Inr gk0"]
@@ -105,7 +105,7 @@ subsection \<open>The entry Side wrapper only grows the sides\<close>
 lemma sides_fold_le_Gen:
   "sides_of_rhs (sp_compile (side_rhs_fold_dg (acc0 v) (trees v ctx))) sigma k
    \<le> sides_of_rhs (Gen (v, ctx)) sigma k"
-  unfolding side_cfg_T_eff_keyed_seed_dg_def Let_def
+  unfolding routed_node_rhs_def Let_def
   by (cases "v = cfg_entry g") (auto simp: Let_def intro: sup.cobounded1)
 
 subsection \<open>EDGE: the routed intra bounds and the guarded transport\<close>
@@ -124,7 +124,7 @@ proof -
   have "locals (traverse_rhs ?t sigma) \<le> side_acc_dg (acc0 v) sigma (trees v ctx)"
     using locals_traverse_le_side_acc_dg[OF mem] .
   also have "\<dots> = locals (eq Gen (v, ctx) sigma)"
-    by (simp add: eq_side_cfg_T_eff_keyed_seed_dg)
+    by (simp add: eq_routed_node_rhs)
   also have "\<dots> \<le> locals (sigma (Inl (v, ctx)))"
     using pp_eq_bound[OF cov_v] by (simp add: less_eq_dg_state_def)
   finally show ?thesis .

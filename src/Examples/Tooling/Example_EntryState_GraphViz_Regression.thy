@@ -431,7 +431,7 @@ text \<open>
   program is built to catch. Two distinct calls to the same callee under
   two distinct, non-empty contexts -- one from a dead branch, one live --
   exercise that without also asking the solver to route two call sites onto
-  one shared continuation, which \<^const>\<open>side_cfg_T_eff_keyed_seed_dg_buffered\<close>
+  one shared continuation, which \<^const>\<open>routed_node_rhs_buffered\<close>
   is separately responsible for and is exercised by \<open>mixed_ctx_prog\<close> above.
 \<close>
 
@@ -533,8 +533,8 @@ text \<open>
   terminate in this session, confirmed both interactively and in an
   isolated batch process with a generous timeout well past what a program
   this size would otherwise need. Careful reading of
-  \<^const>\<open>side_cfg_T_eff_keyed_seed_dg_buffered\<close>, \<^const>\<open>routed_cmb_g\<close>,
-  \<^const>\<open>routed_extra_g\<close>, and the vendored warrowing solver's own
+  \<^const>\<open>routed_node_rhs_buffered\<close>, \<^const>\<open>routed_call_tree\<close>,
+  \<^const>\<open>routed_entry_seed_tree\<close>, and the vendored warrowing solver's own
   per-origin global bookkeeping (\<open>update_global_warrowing_apinis\<close>) found no
   evident defect on inspection, so whether this is a genuine
   non-terminating instance of a solver whose termination is checked per

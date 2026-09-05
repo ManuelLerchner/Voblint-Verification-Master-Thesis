@@ -173,7 +173,7 @@ lemma traverse_ownership_split_transfer_gen [simp]:
                 src (\<lambda>_. gk)) \<tau>)
      = rl (f (cmb (locals (\<tau> src)) (globs (\<tau> (Inr gk)))))"
   by (cases src)
-     (simp_all add: transfer_tree_def dg_edge_tree_man_def ownership_split_transfer_gen_def
+     (simp_all add: transfer_tree_def transfer_program_at_def ownership_split_transfer_gen_def
         local_transfer_def mk_dg_man_def dg_read_at_def dg_read_global_def
         dg_sideg_def sp_bind_assoc)
 
@@ -183,7 +183,7 @@ lemma sides_ownership_split_transfer_gen [simp]:
                src (\<lambda>_. gk)) \<tau> (Inr gk))
      = rg (f (cmb (locals (\<tau> src)) (globs (\<tau> (Inr gk)))))"
   by (cases src)
-     (simp_all add: transfer_tree_def dg_edge_tree_man_def ownership_split_transfer_gen_def
+     (simp_all add: transfer_tree_def transfer_program_at_def ownership_split_transfer_gen_def
         local_transfer_def mk_dg_man_def dg_read_at_def dg_read_global_def
         dg_sideg_def sp_bind_assoc)
 
@@ -195,7 +195,7 @@ lemma traverse_ownership_split_combine_transfer_gen [simp]:
      = rl (h (cmb (locals (\<tau> src_cc)) (globs (\<tau> (Inr gk))))
              (cmb (locals (\<tau> src_ex)) (globs (\<tau> (Inr gk)))))"
   by (cases src_cc; cases src_ex)
-     (simp_all add: combine_transfer_tree_def dg_combine_tree_man_def
+     (simp_all add: combine_transfer_tree_def combine_program_at_def
         ownership_split_combine_transfer_gen_def local_combine_transfer_def
         mk_dg_man_def dg_read_at_def dg_read_global_def dg_sideg_def sp_bind_assoc)
 
@@ -207,7 +207,7 @@ lemma sides_ownership_split_combine_transfer_gen [simp]:
      = rg (h (cmb (locals (\<tau> src_cc)) (globs (\<tau> (Inr gk))))
              (cmb (locals (\<tau> src_ex)) (globs (\<tau> (Inr gk)))))"
   by (cases src_cc; cases src_ex)
-     (simp_all add: combine_transfer_tree_def dg_combine_tree_man_def
+     (simp_all add: combine_transfer_tree_def combine_program_at_def
         ownership_split_combine_transfer_gen_def local_combine_transfer_def
         mk_dg_man_def dg_read_at_def dg_read_global_def dg_sideg_def sp_bind_assoc)
 

@@ -33,11 +33,18 @@ says whether an analysis author may call it.
 | Layer | What it produces | Examples |
 | --- | --- | --- |
 | transfer | a manager-native `strategy_program` -- what an analysis writes | `local_transfer`, an analysis's own `do`-block |
-| program runner | reads the source unknowns, builds the manager, runs a transfer | `dg_edge_tree_man`, `dg_combine_tree_man` |
+| program runner | reads the source unknowns, builds the manager, runs a transfer | `transfer_program_at`, `combine_program_at` |
 | tree compiler | compiles one manager program into one solver right-hand side | `transfer_tree`, `combine_transfer_tree`, `dg_spec_edge_tree` |
-| protocol builder | the call lifecycle for one alternative, callee or call site | `routed_cmb_g_alt`, `routed_cmb_g_at`, `routed_cmb_g`, `routed_extra_g` |
+| protocol builder | the call lifecycle for one alternative, callee or call site | `routed_call_alternative_tree`, `routed_callee_call_tree`, `routed_call_tree`, `routed_entry_seed_tree` |
 | fold | joins several right-hand sides for one unknown | `side_rhs_fold_dg`, `fold_rhs_contributions` |
-| generator | builds the equation system for a whole graph | `side_cfg_T_eff_keyed_seed_dg`, and its unit-context specialization `unit_routed_eqs` |
+| generator | builds the equation system for a whole graph | `routed_node_rhs`, and its unit-context specialization `unit_routed_eqs` |
+
+The combine half of the middle two rows -- `combine_program_at`,
+`combine_transfer_tree`, `dg_spec_combine_tree` -- is proof-only and lives in
+`Spec/DG_Spec_Sound.thy` beside `combine_sound_tree`, the one lemma that uses
+it. No generator builds a combine tree: the routed call tree already holds the
+alternative's continuation and runs `dg_spec_combine_transfer` against that
+value. The edge half is the active compilation path and lives in `Spec/DG_Spec.thy`.
 
 Three audiences follow from that table. An analysis writes `man_local`,
 `man_global`, `man_sideg`, `sp_return`, the `local_*` adapters, and `dg_spec`

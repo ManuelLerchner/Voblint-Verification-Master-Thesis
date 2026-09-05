@@ -103,7 +103,7 @@ text \<open>
   \<^const>\<open>analyse_sign_result_for\<close> is not a black box: it is exactly three named steps.
   \<^item> \<^const>\<open>prog_cfg\<close> compiles the source program to a CFG (\<^const>\<open>compile_prog\<close>).
   \<^item> \<^const>\<open>sctx_eqs_prog\<close> is \<^emph>\<open>the equation system generator\<close>: it applies
-    \<^const>\<open>side_cfg_T_eff_keyed_seed_dg_buffered\<close> to that CFG and the routed
+    \<^const>\<open>routed_node_rhs_buffered\<close> to that CFG and the routed
     D/G spec \<open>sctx_spec\<close>, producing one equation per CFG node and context.
   \<^item> \<^const>\<open>TD_side_always_join_Interp_solve\<close> is \<^emph>\<open>the vendored TD solver\<close>: it
     takes that equation system and a query node and computes a fixpoint,

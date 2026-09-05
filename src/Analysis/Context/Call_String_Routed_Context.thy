@@ -27,8 +27,8 @@ text \<open>
 
 locale call_string_routed_context =
   dg_ctx_activation_base S gammaDG gs "compile_prog Pi ps" Global "cs_route k"
-    "routed_cmb_g S Global Seed (static_resolve (compile_prog Pi ps)) is_bot"
-    "routed_extra_g Seed Global"
+    "routed_call_tree S Global Seed (static_resolve (compile_prog Pi ps)) is_bot"
+    "routed_entry_seed_tree Seed Global"
     bot0 s0d s0g sigma vars x0 sg gammaM
   for S :: "(pp \<times> cfg_node list, call_string_gk, unit, 'D::bounded_semilattice_sup_bot,
               'G::bounded_semilattice_sup_bot) dg_spec"

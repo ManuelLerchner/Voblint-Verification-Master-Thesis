@@ -28,8 +28,8 @@ text \<open>
 
 locale entry_state_routed_context =
   dg_ctx_activation_base S gammaDG gs "compile_prog Pi ps" gk0 route
-    "routed_cmb_g S gk0 seed_key (static_resolve (compile_prog Pi ps)) is_bot"
-    "routed_extra_g seed_key gk0"
+    "routed_call_tree S gk0 seed_key (static_resolve (compile_prog Pi ps)) is_bot"
+    "routed_entry_seed_tree seed_key gk0"
     bot0 s0d s0g sigma vars x0 sg gammaM
   for S :: "(pp \<times> 'c, 'k, unit, 'D::bounded_semilattice_sup_bot,
               'G::bounded_semilattice_sup_bot) dg_spec"

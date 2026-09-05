@@ -62,4 +62,4 @@ the call-string bound `k`.
 | `Example_Interval_DG_CallString_K1.thy` | canonical spine | `cs_route`/`cs_context` instance at `k = 1` (Seidl et al. 2026, Example 7) |
 | `Example_Interval_DG_CallString_K2.thy` | canonical spine | `cs_route`/`cs_context` instance at `k = 2` |
 | `Example_Interval_Call_String_Generic_Parity.thy` | regression | the runtime-`k` generic pipeline (`cs_call_string_sol_prog`) solves the same equation system the hand-built `nest_1_eqs`/`nest_2_eqs` do — same `ectx_spec`, same `cs_route`, same seeds |
-| `Call_String_Solver_Regression.thy` | regression | exact-tree snapshots (`nest_1_eqs_statement3`, `nest_2_eqs_statement3`) locking in that `routed_cmb_g_def`/`routed_extra_g_def`/`side_cfg_T_eff_keyed_seed_dg` still generate the expected equation shape at a genuine call continuation |
+| `Call_String_Solver_Regression.thy` | regression | exact-tree snapshots (`nest_1_eqs_statement3`, `nest_2_eqs_statement3`) locking in that `routed_call_tree_def`/`routed_entry_seed_tree_def`/`routed_node_rhs` still generate the expected equation shape at a genuine call continuation |

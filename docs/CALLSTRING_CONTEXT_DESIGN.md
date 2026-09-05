@@ -65,7 +65,7 @@ locale dg_ctx_activation = sound_dg_spec_core S gamma_ownership_split gs
     and sigma :: "pp * 'c + 'k => ('a abs_state, 'a abs_state) dg_state"
     and vars :: "(pp * 'c) set" and x0 :: "pp * 'c"
   assumes finE: "finite (intra g)"
-    and pp: "part_post_solution (side_cfg_T_eff_keyed_seed_dg ... ) x0 sigma vars"
+    and pp: "part_post_solution (routed_node_rhs ... ) x0 sigma vars"
     ...
 ```
 
@@ -177,7 +177,7 @@ choice of `cfg_node` for the call-site type), `route_k u ctx d ca = take k
   per-instance `is_mono_eq`/`mono_sides`/`mono_deps` re-proof the way M1's
   plan (section 6, R1) assumed, because that re-proof burden belongs to a
   *different* solver-integration style (a new keyed equation-system variant)
-  that this route does not need — `side_cfg_T_eff_keyed_seed_dg` is already
+  that this route does not need — `routed_node_rhs` is already
   parametric in `'c` and already proved sound for arbitrary `'c` via
   `dg_ctx_activation`.
 - *M1's R3 ("primary soundness hazard"), does not apply here.* R3 worried
