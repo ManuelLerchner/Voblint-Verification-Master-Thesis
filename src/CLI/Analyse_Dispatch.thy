@@ -1065,6 +1065,7 @@ code_identifier
 | code_module Interval_Transfer \<rightharpoonup> (OCaml) Core
 | code_module Interval_Warrowing \<rightharpoonup> (OCaml) Core
 | code_module Ivl_Exec \<rightharpoonup> (OCaml) Core
+| code_module Routed_Call_Trees \<rightharpoonup> (OCaml) Core
 | code_module Routed_Context \<rightharpoonup> (OCaml) Core
 | code_module Routed_Context_Unit \<rightharpoonup> (OCaml) Core
 | code_module Interval_Analyses \<rightharpoonup> (OCaml) Core

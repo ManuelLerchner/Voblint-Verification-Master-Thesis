@@ -1,7 +1,7 @@
 # Interval domain (`ivl`)
 
-The interval domain threaded through the four layers of the
-`Instances/README.md` recipe. Executable witnesses live under
+The interval domain threaded through the roles of the assembly map in
+`Instances/README.md`. Executable witnesses live under
 `src/Examples/Interval/`.
 
 | File | Role |
@@ -12,7 +12,14 @@ The interval domain threaded through the four layers of the
 | `Interval_Arithmetic.thy` | abstract arithmetic over intervals |
 | `Interval_Backward.thy` | backward guard/filter operators; names the interval `afilter_ivl_st`/`bfilter_ivl_st` executable mirror via `Exec_Backward` |
 | `Interval_Transfer.thy` | edge transfer record and transfer soundness |
-| `Interval_Print.thy` | display support for examples and DOT output |
 | `Interval_Domain.thy` | `abstract_domain` instantiation; `backward_domain_mono` interpretation |
 | `Ivl_Exec.thy` | executable transfer mirror + commutation |
-| `Interval_DG.thy` | `sound_dg_spec_core` interpretation (`ownership_split_dg_spec` diagonal); `ivl_dg_post_solution_collect_sound`; `ivl_dg_two_context_sound` |
+| `Interval_Special.thy` | the abstract implementation of the `Min`/`Max` special calls |
+| `Interval_Numeric_Queries.thy` | Interval's instance of `abstract_numeric_queries` |
+| `Interval_Point_Digest.thy` | the point abstraction: a slot is a point when it is a singleton interval |
+| `Interval_Sound.thy` | the `dg_spec` Interval supplies, its concretization, and `sound_dg_spec_core` — no context, no solver |
+| `Interval_Exec_Sound.thy` | the production endpoint: an arbitrary VIMP program solved executably, with soundness |
+| `Interval_Analyses.thy` | the same equation system derived a second time, through the routed spine's generic locales |
+| `Interval_Solver_Analyses.thy` | the same equations again under the PerOrigin update rule instead of always-join |
+| `Interval_Classify.thy` | Interval instance of the generic check-discharge interface |
+| `Interval_Checks.thy` | result tables and check reports off one solved run |

@@ -87,4 +87,70 @@ lemma gamma_state_lift_supI2 [intro]:
   for x y :: "'a::sound_domain abs_state lifted"
   by (cases x; cases y) auto
 
+subsection \<open>Carrying a transfer's soundness through the lift\<close>
+
+text \<open>
+  A pure transfer's soundness fact carries over the \<^const>\<open>transfer_lift\<close>
+  wrapper by one case split: \<^const>\<open>Bot\<close>'s concretization is empty, and a
+  \<^const>\<open>normalize_lift\<close> collapse to \<^const>\<open>Bot\<close> only ever fires when
+  \<open>empty_pred\<close> holds, whose concretization is empty by assumption. Three shapes
+  cover every use --- a collecting inclusion, a membership, and a binary
+  membership for a combine --- so no consumer repeats the bottom argument.
+\<close>
+
+lemma transfer_lift_sound_collect:
+  assumes step: "\<And>\<sigma>. C \<lbrakk>\<sigma>\<rbrakk> \<subseteq> \<lbrakk>f \<sigma>\<rbrakk>"
+    and Cempty: "C {} = {}"
+    and empty_pred_sound: "\<And>\<sigma>. empty_pred \<sigma> \<Longrightarrow> \<lbrakk>\<sigma>\<rbrakk> = {}"
+  shows "C (gamma_state_lift d) \<subseteq> gamma_state_lift (transfer_lift empty_pred f d)"
+proof (cases d)
+  case Bot
+  then show ?thesis by (simp add: Cempty)
+next
+  case (Lifted \<sigma>)
+  have "C \<lbrakk>\<sigma>\<rbrakk> \<subseteq> \<lbrakk>f \<sigma>\<rbrakk>" by (rule step)
+  then show ?thesis
+    using Lifted empty_pred_sound[of "f \<sigma>"] by (auto simp: normalize_lift_def)
+qed
+
+lemma transfer_lift_sound_mem:
+  assumes step: "\<And>\<sigma>. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> h s \<in> \<lbrakk>f \<sigma>\<rbrakk>"
+    and empty_pred_sound: "\<And>\<sigma>. empty_pred \<sigma> \<Longrightarrow> \<lbrakk>\<sigma>\<rbrakk> = {}"
+    and s: "s \<in> gamma_state_lift d"
+  shows "h s \<in> gamma_state_lift (transfer_lift empty_pred f d)"
+proof (cases d)
+  case Bot
+  then show ?thesis using s by simp
+next
+  case (Lifted \<sigma>)
+  with s have "s \<in> \<lbrakk>\<sigma>\<rbrakk>" by simp
+  then have hs: "h s \<in> \<lbrakk>f \<sigma>\<rbrakk>" by (rule step)
+  then have "\<not> empty_pred (f \<sigma>)" using empty_pred_sound by auto
+  with Lifted hs show ?thesis by simp
+qed
+
+lemma transfer_lift2_sound_mem:
+  assumes step: "\<And>\<sigma>1 \<sigma>2. s \<in> \<lbrakk>\<sigma>1\<rbrakk> \<Longrightarrow> t \<in> \<lbrakk>\<sigma>2\<rbrakk> \<Longrightarrow> h s t \<in> \<lbrakk>f \<sigma>1 \<sigma>2\<rbrakk>"
+    and empty_pred_sound: "\<And>\<sigma>. empty_pred \<sigma> \<Longrightarrow> \<lbrakk>\<sigma>\<rbrakk> = {}"
+    and s: "s \<in> gamma_state_lift d1"
+    and t: "t \<in> gamma_state_lift d2"
+  shows "h s t \<in> gamma_state_lift (transfer_lift2 empty_pred f d1 d2)"
+proof (cases d1)
+  case Bot
+  then show ?thesis using s by simp
+next
+  case (Lifted \<sigma>1)
+  show ?thesis
+  proof (cases d2)
+    case Bot
+    then show ?thesis using t by simp
+  next
+    case (Lifted \<sigma>2)
+    with \<open>d1 = Lifted \<sigma>1\<close> s t have "s \<in> \<lbrakk>\<sigma>1\<rbrakk>" "t \<in> \<lbrakk>\<sigma>2\<rbrakk>" by simp_all
+    then have hst: "h s t \<in> \<lbrakk>f \<sigma>1 \<sigma>2\<rbrakk>" by (rule step)
+    then have "\<not> empty_pred (f \<sigma>1 \<sigma>2)" using empty_pred_sound by auto
+    with \<open>d1 = Lifted \<sigma>1\<close> Lifted hst show ?thesis by simp
+  qed
+qed
+
 end

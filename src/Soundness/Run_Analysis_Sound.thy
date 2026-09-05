@@ -348,20 +348,14 @@ next
         (mk_dg_man ?d (\<lambda>_. Analysis_Global ())) ?sigma ?pairs (bot \<squnion> ?pub)"
       unfolding dgs_enter_ownership_split_dg_spec_st_for ownership_split_enter_transfer_st_def
       by (rule enter_runs_ownership_split_enter_transfer_gen)
-         (use enter_runs_local_enter_transfer
-                [of "\<lambda>d. [(d, enter_st ?ci d)]"
-                    "mk_dg_man ?dw (\<lambda>_. Analysis_Global ())" ?sigma]
-          in simp)
+         (rule enter_runs_local_enter_transfer_mk_dg_man)
     have deps: "enter_deps
         (enter\<^sup># (ownership_split_dg_spec_st_for gs tf_st enter_st) ?ci)
         (mk_dg_man ?d (\<lambda>_. Analysis_Global ())) ?sigma ?pairs
         ({Inr (Analysis_Global ())} \<union> {})"
       unfolding dgs_enter_ownership_split_dg_spec_st_for ownership_split_enter_transfer_st_def
       by (rule enter_deps_ownership_split_enter_transfer_gen)
-         (use enter_deps_local_enter_transfer
-                [of "\<lambda>d. [(d, enter_st ?ci d)]"
-                    "mk_dg_man ?dw (\<lambda>_. Analysis_Global ())" ?sigma]
-          in simp)
+         (rule enter_deps_local_enter_transfer_mk_dg_man)
     have whole: "s \<in> \<lbrakk>combine_env gs (fun_of_resolved_st_q_for gs ?d)
                         (fun_of_resolved_st_q_for gs
                            (globs (?sigma (Inr (Analysis_Global ())))))\<rbrakk>"

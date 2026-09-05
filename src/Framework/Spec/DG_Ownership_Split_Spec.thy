@@ -167,49 +167,41 @@ text \<open>
   the routed key is its global projection.
 \<close>
 
-lemma traverse_ownership_split_transfer_gen [simp]:
+lemma locals_traverse_ownership_split_transfer_gen [simp]:
   "locals (traverse_rhs
              (transfer_tree (ownership_split_transfer_gen cmb rg rl (local_transfer f))
                 src (\<lambda>_. gk)) \<tau>)
      = rl (f (cmb (locals (\<tau> src)) (globs (\<tau> (Inr gk)))))"
-  by (cases src)
-     (simp_all add: transfer_tree_def transfer_program_at_def ownership_split_transfer_gen_def
-        local_transfer_def mk_dg_man_def dg_read_at_def dg_read_global_def
-        dg_sideg_def sp_bind_assoc)
+  by (simp add: traverse_transfer_tree ownership_split_transfer_gen_def
+      local_transfer_def sp_compile_with_def sp_bind_def sp_return_def)
 
-lemma sides_ownership_split_transfer_gen [simp]:
+lemma globs_sides_ownership_split_transfer_gen [simp]:
   "globs (sides_of_rhs
             (transfer_tree (ownership_split_transfer_gen cmb rg rl (local_transfer f))
                src (\<lambda>_. gk)) \<tau> (Inr gk))
      = rg (f (cmb (locals (\<tau> src)) (globs (\<tau> (Inr gk)))))"
-  by (cases src)
-     (simp_all add: transfer_tree_def transfer_program_at_def ownership_split_transfer_gen_def
-        local_transfer_def mk_dg_man_def dg_read_at_def dg_read_global_def
-        dg_sideg_def sp_bind_assoc)
+  by (simp add: sides_transfer_tree ownership_split_transfer_gen_def
+      local_transfer_def sp_compile_with_def sp_bind_def sp_return_def)
 
-lemma traverse_ownership_split_combine_transfer_gen [simp]:
+lemma locals_traverse_ownership_split_combine_transfer_gen [simp]:
   "locals (traverse_rhs
              (combine_transfer_tree
                 (ownership_split_combine_transfer_gen cmb rg rl (local_combine_transfer h))
                 src_cc src_ex (\<lambda>_. gk)) \<tau>)
      = rl (h (cmb (locals (\<tau> src_cc)) (globs (\<tau> (Inr gk))))
              (cmb (locals (\<tau> src_ex)) (globs (\<tau> (Inr gk)))))"
-  by (cases src_cc; cases src_ex)
-     (simp_all add: combine_transfer_tree_def combine_program_at_def
-        ownership_split_combine_transfer_gen_def local_combine_transfer_def
-        mk_dg_man_def dg_read_at_def dg_read_global_def dg_sideg_def sp_bind_assoc)
+  by (simp add: traverse_combine_transfer_tree ownership_split_combine_transfer_gen_def
+      local_combine_transfer_def sp_compile_with_def sp_bind_def sp_return_def)
 
-lemma sides_ownership_split_combine_transfer_gen [simp]:
+lemma globs_sides_ownership_split_combine_transfer_gen [simp]:
   "globs (sides_of_rhs
             (combine_transfer_tree
                (ownership_split_combine_transfer_gen cmb rg rl (local_combine_transfer h))
                src_cc src_ex (\<lambda>_. gk)) \<tau> (Inr gk))
      = rg (h (cmb (locals (\<tau> src_cc)) (globs (\<tau> (Inr gk))))
              (cmb (locals (\<tau> src_ex)) (globs (\<tau> (Inr gk)))))"
-  by (cases src_cc; cases src_ex)
-     (simp_all add: combine_transfer_tree_def combine_program_at_def
-        ownership_split_combine_transfer_gen_def local_combine_transfer_def
-        mk_dg_man_def dg_read_at_def dg_read_global_def dg_sideg_def sp_bind_assoc)
+  by (simp add: sides_combine_transfer_tree ownership_split_combine_transfer_gen_def
+      local_combine_transfer_def sp_compile_with_def sp_bind_def sp_return_def)
 
 subsection \<open>The ownership rule at the pointwise carrier\<close>
 
@@ -247,8 +239,7 @@ proof (intro allI)
   show "dep_aux sigma (ownership_split_enter_transfer_gen cmb rg rl T (mk_dg_man d key) K)
           = ({Inr (key ())} \<union> deps)
             \<union> dep_aux sigma (K (map (\<lambda>(cont, entry). (rl cont, rl entry)) pairs))"
-    by (simp add: ownership_split_enter_transfer_gen_def dg_read_global_def dg_sideg_def
-        sp_read_global_def sp_publish_def sp_bind_def sp_return_def comp_def
+    by (simp add: ownership_split_enter_transfer_gen_def sp_bind_def sp_return_def
         enter_depsD[OF T] Un_assoc)
 qed
 
@@ -286,16 +277,14 @@ proof (intro allI conjI)
   fix K
   show "traverse_rhs (ownership_split_enter_transfer_gen cmb rg rl T (mk_dg_man d key) K) sigma
           = traverse_rhs (K (map (\<lambda>(cont, entry). (rl cont, rl entry)) pairs)) sigma"
-    by (simp add: ownership_split_enter_transfer_gen_def dg_read_global_def dg_sideg_def
-        sp_read_global_def sp_publish_def sp_bind_def sp_return_def comp_def
+    by (simp add: ownership_split_enter_transfer_gen_def sp_bind_def sp_return_def
         enter_runsD_traverse[OF T])
 next
   fix K
   show "sides_of_rhs (ownership_split_enter_transfer_gen cmb rg rl T (mk_dg_man d key) K) sigma
           = (pub \<squnion> (bot(Inr (key ()) := DG bot (ownership_split_enter_sides rg pairs))))
             \<squnion> sides_of_rhs (K (map (\<lambda>(cont, entry). (rl cont, rl entry)) pairs)) sigma"
-    by (simp add: ownership_split_enter_transfer_gen_def dg_read_global_def dg_sideg_def
-        sp_read_global_def sp_publish_def sp_bind_def sp_return_def comp_def Let_def
+    by (simp add: ownership_split_enter_transfer_gen_def sp_bind_def sp_return_def
         enter_runsD_sides[OF T] sup_fun_def fun_upd_def)
        (auto simp: fun_eq_iff ac_simps split: if_splits)
 qed
@@ -341,11 +330,15 @@ where
 
 declare ownership_split_lift_def [code_unfold]
 
-lemma dg_spec_step_ownership_split_lift:
+text \<open>Both eliminate a constructed wrapper specification and expose the
+  corresponding transfer wrapper, in a terminating direction, so they fire
+  wherever a lifted specification meets the edge or combine dispatch.\<close>
+
+lemma dg_spec_step_ownership_split_lift [simp]:
   "dg_spec_step (ownership_split_lift gs S) a = ownership_split_transfer gs (dg_spec_step S a)"
   unfolding ownership_split_lift_def by (cases a) simp_all
 
-lemma dg_spec_combine_transfer_ownership_split_lift:
+lemma dg_spec_combine_transfer_ownership_split_lift [simp]:
   "dg_spec_combine_transfer (ownership_split_lift gs S) ci
      = ownership_split_combine_transfer gs (dg_spec_combine_transfer S ci)"
   unfolding dg_spec_combine_transfer_def ownership_split_lift_def
@@ -449,7 +442,7 @@ text \<open>
   side condition arises.
 \<close>
 
-theorem (in sound_transfer_for) sound_dg_spec_core_ownership_split_lift:
+theorem (in sound_transfer_for) ownership_split_lift_core_sound:
   "sound_dg_spec_core (ownership_split_lift gs (local_state_dg_spec_for gs sk asn sp br bd rt en ev))
      (gamma_ownership_split gs) gs"
 proof (unfold_locales, goal_cases)

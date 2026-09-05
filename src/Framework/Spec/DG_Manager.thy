@@ -40,10 +40,11 @@ text \<open>
   through \<open>man_global\<close>/\<open>man_sideg\<close>. Which of the two a given analysis is
   therefore shows up in its compiled trees, not in this interface.
 
-  \<open>mk_dg_man\<close> is the one place that interprets those capabilities against the
-  packed \<open>('dl,'dg) dg_state\<close> carrier, closing the embedding \<open>key\<close> into both
-  effectful fields; a transfer written against \<open>man\<close>'s fields never sees the
-  packed carrier or a key.
+  \<open>dg_read_global\<close> and \<open>dg_sideg\<close> are what interpret those capabilities
+  against the packed \<open>('dl,'dg) dg_state\<close> carrier; \<open>mk_dg_man\<close> is where the
+  embedding \<open>key\<close> is closed into them, so it is the only place a name becomes a
+  key. Either way a transfer written against \<open>man\<close>'s fields sees neither the
+  packed carrier nor a key.
 \<close>
 
 subsection \<open>The manager record\<close>
@@ -63,9 +64,11 @@ text \<open>
   half it does not write with \<open>bot\<close>.
 
   These three are where the packed carrier is taken apart and put back
-  together. Everything below reaches it only through them or through \<open>man\<close>'s
-  own fields, so no transfer ever writes \<^const>\<open>DG\<close>, \<^const>\<open>locals\<close> or
-  \<^const>\<open>globs\<close> --- the carrier survives in later types, never in a body.
+  together. The framework's own transfer constructors use only these and
+  \<open>man\<close>'s fields, and an analysis author is expected to do the same; the
+  transfer type does not enforce it, since a transfer may build any
+  \<open>strategy_program\<close> it likes. The tree formers that assemble a right-hand side
+  do construct \<^const>\<open>DG\<close> values directly.
 \<close>
 
 definition dg_read_at :: "'x + 'k \<Rightarrow> ('x,'k,('dl,'dg) dg_state,'dl) strategy_program" where
@@ -77,27 +80,83 @@ definition dg_read_global :: "'k \<Rightarrow> ('x,'k,('dl,'dg) dg_state,'dg) st
 definition dg_sideg :: "'k \<Rightarrow> 'dg \<Rightarrow> ('x,'k,('dl::bot,'dg) dg_state,unit) strategy_program" where
   "dg_sideg gk gd = sp_publish gk (DG bot gd)"
 
-text \<open>Reading an unknown depends on it, whatever the program does next. Stated
-  here rather than about any particular compiled tree, because it is a property
-  of \<^const>\<open>dg_read_at\<close> alone: every later interpreter that begins by reading a
-  source inherits it.\<close>
+subsection \<open>What the primitives do, observed\<close>
+
+text \<open>
+  Each primitive contributes one step to a compiled tree, and the three
+  observations a solver makes of that tree --- its answer, its publications,
+  its dependencies --- see exactly that step and then continue into the
+  continuation. Proving it once here is what keeps later proofs off the
+  encoding: without these, every fact about a compiled transfer has to case on
+  the address and unfold \<^const>\<open>sp_bind\<close>, \<^const>\<open>sp_return\<close> and the read
+  primitives to reach its own subject.
+
+  They are \<open>simp\<close> rules in the direction that eliminates a primitive and
+  exposes the value it read, and they terminate because the program strictly
+  shrinks at each step.
+\<close>
+
+lemma traverse_dg_read_at [simp]:
+  "traverse_rhs (dg_read_at src K) \<tau> = traverse_rhs (K (locals (\<tau> src))) \<tau>"
+  by (cases src) (simp_all add: dg_read_at_def sp_bind_def sp_read_local_def
+      sp_read_global_def sp_return_def)
+
+lemma sides_dg_read_at [simp]:
+  "sides_of_rhs (dg_read_at src K) \<tau> = sides_of_rhs (K (locals (\<tau> src))) \<tau>"
+  by (cases src) (simp_all add: dg_read_at_def sp_bind_def sp_read_local_def
+      sp_read_global_def sp_return_def)
+
+lemma dep_aux_dg_read_at [simp]:
+  "dep_aux \<tau> (dg_read_at src K) = insert src (dep_aux \<tau> (K (locals (\<tau> src))))"
+  by (cases src) (simp_all add: dg_read_at_def sp_bind_def sp_read_local_def
+      sp_read_global_def sp_return_def)
+
+lemma traverse_dg_read_global [simp]:
+  "traverse_rhs (dg_read_global gk K) \<tau> = traverse_rhs (K (globs (\<tau> (Inr gk)))) \<tau>"
+  by (simp add: dg_read_global_def sp_bind_def sp_read_global_def sp_return_def)
+
+lemma sides_dg_read_global [simp]:
+  "sides_of_rhs (dg_read_global gk K) \<tau> = sides_of_rhs (K (globs (\<tau> (Inr gk)))) \<tau>"
+  by (simp add: dg_read_global_def sp_bind_def sp_read_global_def sp_return_def)
+
+lemma dep_aux_dg_read_global [simp]:
+  "dep_aux \<tau> (dg_read_global gk K)
+     = insert (Inr gk) (dep_aux \<tau> (K (globs (\<tau> (Inr gk)))))"
+  by (simp add: dg_read_global_def sp_bind_def sp_read_global_def sp_return_def)
+
+lemma traverse_dg_sideg [simp]:
+  "traverse_rhs (dg_sideg gk gd K) \<tau> = traverse_rhs (K ()) \<tau>"
+  by (simp add: dg_sideg_def sp_publish_def)
+
+lemma dep_aux_dg_sideg [simp]:
+  "dep_aux \<tau> (dg_sideg gk gd K) = dep_aux \<tau> (K ())"
+  by (simp add: dg_sideg_def sp_publish_def)
+
+text \<open>Publication is the one primitive an observation does not simply pass
+  through: it raises the contribution at its own key and leaves every other
+  key to the continuation.\<close>
+
+lemma sides_dg_sideg [simp]:
+  "sides_of_rhs (dg_sideg gk gd K) \<tau> = sides_of_rhs (K ()) \<tau> \<squnion> bot(Inr gk := DG bot gd)"
+  by (simp add: dg_sideg_def sp_publish_def Let_def fun_eq_iff sup_fun_def)
+
+text \<open>Reading an unknown depends on it, whatever the program does next --- now
+  an instance of the law above rather than its own case analysis.\<close>
 
 lemma dep_aux_dg_read_at_source:
   "src \<in> dep_aux \<tau> (dg_read_at src K)"
-  by (cases src)
-     (simp_all add: dg_read_at_def sp_bind_def sp_read_local_def sp_read_global_def
-        sp_return_def)
+  by simp
 
 subsection \<open>Constructing a manager\<close>
 
 text \<open>
   \<open>mk_dg_man\<close> closes the name-to-key embedding into both effectful fields, so
-  a transfer built against \<open>man\<close> never sees a key itself. Every transfer in
-  this theory only ever calls record fields, never
-  \<open>dg_read_global\<close>/\<open>dg_sideg\<close> or a key directly, so a
-  future manager (instrumented, differently routed, or backed by distinct
-  global unknowns) is a second interpretation of the same fields, not a
-  change to any transfer.
+  a transfer built against \<open>man\<close> never sees a key itself. A manager-native
+  transfer should reach shared state through the record fields rather than
+  call \<open>dg_read_global\<close>/\<open>dg_sideg\<close> or name a key directly, so that a future
+  manager (instrumented, differently routed, or backed by distinct global
+  unknowns) is a second interpretation of the same fields rather than a change
+  to any transfer.
 \<close>
 
 definition mk_dg_man :: "'dl::bot \<Rightarrow> ('v \<Rightarrow> 'k) \<Rightarrow> ('x,'k,'v,'dl,'dg) man" where
@@ -163,30 +222,6 @@ type_synonym 'dl enter_result = "'dl \<times> 'dl"
 type_synonym ('x,'k,'v,'dl,'dg) man_enter_transfer =
   "('x,'k,'v,'dl,'dg) man
    \<Rightarrow> ('x,'k,('dl,'dg) dg_state,'dl enter_result list) strategy_program"
-
-subsection \<open>Writing a transfer\<close>
-
-text \<open>
-  An analysis author writes manager-native transfers and nothing else. The
-  framework turns them into solver right-hand sides; \<^const>\<open>QueryL\<close>,
-  \<^const>\<open>QueryG\<close> and \<^const>\<open>Side\<close> belong to that step, and a specification
-  field that names one has reached past this interface into the solver's. That
-  is a discipline, not something the types rule out: a transfer returns a
-  \<^type>\<open>strategy_program\<close> and could build any of them by hand. Three recipes
-  cover every field of a \<open>dg_spec\<close> without doing so:
-
-    \<^item> A transfer that only transforms the local value is \<open>local_transfer f\<close>,
-      and its compiled tree is one read and an answer: no \<open>QueryG\<close>, no
-      \<open>Side\<close>.
-    \<^item> A transfer that reads or publishes shared state runs the capabilities
-      in sequence and answers the new local value ---
-      \<open>do {g <- man_global m v; _ <- man_sideg m v g'; sp_return d'}\<close> --- which
-      is the same shape as the Goblint method that reads \<open>man.global\<close>, calls
-      \<open>man.sideg\<close>, and returns a \<open>D.t\<close>.
-    \<^item> An entry transfer answers the list of alternatives instead of one
-      value: \<open>sp_return [(continuation, entry), ...]\<close>, possibly after the same
-      capability calls. It never folds that list; the routed call tree does.
-\<close>
 
 text \<open>
   A second transfer stage runs from the point the first reached by updating

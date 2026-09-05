@@ -12,7 +12,7 @@ Downstream consumers are in `src/Formalization/Pipeline/` and `src/Examples/`.
 | Folder | Content |
 | --- | --- |
 | `Common/` | Base-level reuse locales every domain interprets: the expression-evaluation induction (`Abstract_Arithmetic`), special-call dispatch (`Special_Ops`), the executable branch/enter construction (`Numeric_Ops`), executable backward filtering (`Exec_Backward`), and what a solved table publishes -- state and check report, generic in the domain (`Analysis_Surface`) |
-| `Context/` | Routing policies over a compiled program: bounded call strings (`Call_String_Routed_Context`, `Call_String_Context_Finite`) and entry-state contexts (`Entry_State_Routed_Context`) |
+| `Context/` | The concrete routing policies, each over a compiled program: bounded call strings (`Call_String_Routed_Context`, `Call_String_Context_Finite`) and entry-state contexts (`Entry_State_Routed_Context`). Distinct from `src/Framework/Context/`, which holds the policy-generic locale they instantiate and cannot mention a compiled program at all |
 | `Instances/Sign/` | Seven-element sign lattice, executable bridge, end-to-end soundness |
 | `Instances/Interval/` | Interval domain (`ivl`), executable bridge, soundness |
 | `Components/Congruence/` (a domain component, not a runnable analysis: no `_Sound`/`_Analyses` of its own, consumed by `Instances/Int`) | Normalized congruence domain with executable lattice, arithmetic, backward filtering, and `sound_domain` |

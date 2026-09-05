@@ -155,6 +155,59 @@ definition dg_spec_edge_tree ::
 where
   "dg_spec_edge_tree S a src key = transfer_tree (dg_spec_step S a) src key"
 
+text \<open>
+  What compilation costs an observation: exactly the source read, and then the
+  transfer run at the value that read produced. Everything a proof about a
+  compiled edge needs from the encoding is here, so nothing downstream has to
+  case on the address or unfold the program monad again.
+
+  Left untagged. Rewriting a compiled tree back into a manager application
+  grows the term, and the direction is only wanted where a proof is about to
+  reason about the transfer itself; the primitive laws in
+  \<^theory>\<open>Voblint_Framework.DG_Manager\<close> are the ones that should fire
+  everywhere.
+\<close>
+
+lemma traverse_transfer_tree:
+  "traverse_rhs (transfer_tree T src key) \<tau>
+     = traverse_rhs (sp_compile_with (\<lambda>d. DG d bot) (T (mk_dg_man (locals (\<tau> src)) key))) \<tau>"
+  by (simp add: transfer_tree_def transfer_program_at_def sp_compile_with_def sp_bind_def)
+
+lemma sides_transfer_tree:
+  "sides_of_rhs (transfer_tree T src key) \<tau>
+     = sides_of_rhs (sp_compile_with (\<lambda>d. DG d bot) (T (mk_dg_man (locals (\<tau> src)) key))) \<tau>"
+  by (simp add: transfer_tree_def transfer_program_at_def sp_compile_with_def sp_bind_def)
+
+lemma dep_aux_transfer_tree:
+  "dep_aux \<tau> (transfer_tree T src key)
+     = insert src
+         (dep_aux \<tau> (sp_compile_with (\<lambda>d. DG d bot) (T (mk_dg_man (locals (\<tau> src)) key))))"
+  by (simp add: transfer_tree_def transfer_program_at_def sp_compile_with_def sp_bind_def)
+
+subsection \<open>Writing a transfer\<close>
+
+text \<open>
+  An analysis author writes manager-native transfers and nothing else. The
+  framework turns them into solver right-hand sides; \<^const>\<open>QueryL\<close>,
+  \<^const>\<open>QueryG\<close> and \<^const>\<open>Side\<close> belong to that step, and a specification
+  field that names one has reached past the interface into the solver's. That
+  is a discipline, not something the types rule out: a transfer returns a
+  \<^type>\<open>strategy_program\<close> and could build any of them by hand. Three recipes
+  cover every field of a \<^type>\<open>dg_spec\<close> without doing so:
+
+    \<^item> A transfer that only transforms the local value is \<open>local_transfer f\<close>,
+      and its compiled tree is one read and an answer: no \<open>QueryG\<close>, no
+      \<open>Side\<close>.
+    \<^item> A transfer that reads or publishes shared state runs the capabilities
+      in sequence and answers the new local value ---
+      \<open>do {g <- man_global m v; _ <- man_sideg m v g'; sp_return d'}\<close> --- which
+      is the same shape as the Goblint method that reads \<open>man.global\<close>, calls
+      \<open>man.sideg\<close>, and returns a \<open>D.t\<close>.
+    \<^item> An entry transfer answers the list of alternatives instead of one
+      value: \<open>sp_return [(continuation, entry), ...]\<close>, possibly after the same
+      capability calls. It never folds that list; the routed call tree does.
+\<close>
+
 subsection \<open>Local-only transfers\<close>
 
 text \<open>
@@ -187,7 +240,7 @@ lemma transfer_tree_local_transfer:
      = QueryL x (\<lambda>a. Answer (DG (f (locals a)) bot))"
   "transfer_tree (local_transfer f) (Inr g) key
      = QueryG g (\<lambda>a. Answer (DG (f (locals a)) bot))"
-  by (simp_all add: transfer_tree_def transfer_program_at_def local_transfer_def mk_dg_man_def
+  by (simp_all add: transfer_tree_def transfer_program_at_def local_transfer_def
       dg_read_at_def sp_bind_assoc)
 
 lemma traverse_local_transfer_tree [simp]:
@@ -240,8 +293,7 @@ text \<open>
 
 lemma dep_aux_transfer_tree_source:
   "src \<in> dep_aux \<tau> (transfer_tree T src gk)"
-  by (cases src)
-     (simp_all add: transfer_tree_def transfer_program_at_def dg_read_at_def sp_bind_assoc)
+  by (simp add: dep_aux_transfer_tree)
 
 lemma dep_aux_dg_spec_edge_tree_source:
   "src \<in> dep_aux \<tau> (dg_spec_edge_tree S a src gk)"
@@ -403,12 +455,16 @@ lemma local_dg_spec_simps [simp]:
      = local_combine_transfer (ca ci)"
   by (simp_all add: local_dg_spec_def)
 
-lemma dg_spec_step_local_dg_spec:
+text \<open>Both directions of the local construction reduce to the pure operation
+  it was built from, and the reduction terminates, so they fire everywhere
+  rather than being cited per proof.\<close>
+
+lemma dg_spec_step_local_dg_spec [simp]:
   "dg_spec_step (local_dg_spec sk asn sp br bd rt en ev ce ca) a
      = local_transfer (local_spec_step sk asn sp br bd rt ev a)"
   by (cases a) simp_all
 
-lemma dg_spec_combine_transfer_local_dg_spec:
+lemma dg_spec_combine_transfer_local_dg_spec [simp]:
   "dg_spec_combine_transfer (local_dg_spec sk asn sp br bd rt en ev ce ca) ci
      = local_combine_transfer (\<lambda>dc de. ca ci (ce ci dc de) de)"
   by (intro ext)

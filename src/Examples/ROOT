@@ -47,6 +47,10 @@ session Voblint_Examples in "." = "Voblint_CLI" +
     Example_Interval_Checks_Store_Only
     Example_Interval_Global_Declaration
     Example_Interval_Global_Sequential_Precision
+    (* An activation seed carrying every entered state of one recursive
+       callee: the seed is joined, never widened, and the callee's entry
+       unknown is exactly what the seed holds. *)
+    Example_Interval_DG_Seed_Join_Recursion
     Example_Interval_DG_Flagship
     Example_Interval_DG_IP_Flagship
     Example_Interval_DG_Ctx_Flagship

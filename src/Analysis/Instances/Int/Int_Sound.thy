@@ -59,7 +59,7 @@ qed
 
 lemma int_dom_abs_spec_sound: "sound_dg_spec_core (int_dom_abs_spec mode gs) gamma_dg_local_state gs"
   unfolding int_dom_abs_spec_def
-  by (rule sound_transfer_for.local_state_dg_spec_sound
+  by (rule sound_transfer_for.local_state_dg_spec_for_lifted_core_sound
         [OF int_is_sound_transfer_for is_empty_state_gamma_state_empty])
 
 

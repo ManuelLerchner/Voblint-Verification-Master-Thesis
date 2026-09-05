@@ -141,7 +141,7 @@ text \<open>
   monotone in exactly that argument. So the answer and the published
   contribution both move up, and \<^const>\<open>gamma_ownership_split\<close>'s monotonicity
   carries the stock membership across. No second soundness chain appears: this
-  instance reuses \<open>sound_dg_spec_core_ownership_split_lift\<close> for everything else.
+  instance reuses \<open>ownership_split_lift_core_sound\<close> for everything else.
 \<close>
 
 abbreviation sign_base_spec ::
@@ -196,7 +196,7 @@ text \<open>
   So the answer and the published contribution both move up, and
   \<^const>\<open>gamma_ownership_split\<close>'s monotonicity carries the stock membership
   across. No second soundness chain appears --- everything but the combine is
-  inherited from \<open>sound_dg_spec_core_ownership_split_lift\<close>.
+  inherited from \<open>ownership_split_lift_core_sound\<close>.
 \<close>
 
 lemma combine_env_join_ge:
@@ -301,7 +301,7 @@ proof -
     by (rule sign_is_sound_transfer_for)
   interpret stock: sound_dg_spec_core
     "ownership_split_lift gs (sign_base_spec gs)" "gamma_ownership_split gs" gs
-    by (rule sign_tf.sound_dg_spec_core_ownership_split_lift)
+    by (rule sign_tf.ownership_split_lift_core_sound)
   show ?thesis
   proof (unfold_locales, goal_cases)
     case (1 d d' g g')

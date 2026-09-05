@@ -28,6 +28,7 @@ session Voblint_Framework in "." = "Voblint_CFG" +
     Activation_Local_Sound
     Activation_Backbone
     DG_Ctx_Activation
+    Routed_Call_Trees
     Routed_Context
     Routed_Context_Unit
     DG_Local_State_Spec

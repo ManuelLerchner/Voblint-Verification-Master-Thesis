@@ -615,3 +615,17 @@ dg_combine_tree_man
 side_cfg_T_eff_keyed_seed_dg
 side_cfg_T_eff_keyed_seed_dg_buffered
 side_cfg_T_eff_keyed_seed_trees
+
+# --- Local-state / ownership-split cleanup (2026-09-05) ---
+# edge_collect_check_sound_for was the EA_Check instance of step_sound_for and
+# had no consumer. The soundness theorems now say which construction they
+# establish and that it is the core, and the projected observations say which
+# half of the dg_state they project.
+edge_collect_check_sound_for
+sound_dg_spec_core_ownership_split_lift
+local_state_dg_spec_for_sound
+local_state_dg_spec_sound
+traverse_ownership_split_transfer_gen
+sides_ownership_split_transfer_gen
+traverse_ownership_split_combine_transfer_gen
+sides_ownership_split_combine_transfer_gen

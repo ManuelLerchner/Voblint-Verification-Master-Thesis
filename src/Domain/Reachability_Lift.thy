@@ -546,4 +546,28 @@ text \<open>
   \<^typ>\<open>'a lifted\<close> only exists once that instance is in scope.
 \<close>
 
+subsection \<open>Transporting a lifted transfer along a representation map\<close>
+
+text \<open>
+  A representation map that commutes with the underlying operation, and
+  classifies emptiness the same way on both sides, commutes with the whole
+  lifted transfer. Stated for \<^const>\<open>transfer_lift\<close>/\<^const>\<open>transfer_lift2\<close>
+  themselves, so any pair of representations of one domain --- an executable
+  carrier and the mathematical one it stands for, say --- gets the fact once
+  rather than once per operation that uses it.
+\<close>
+
+lemma transfer_lift_commute:
+  assumes commute: "\<And>s. phi (f s) = F (phi s)"
+    and exact: "\<And>s. empty_pred s = empty_pred' (phi s)"
+  shows "map_lift phi (transfer_lift empty_pred f d) = transfer_lift empty_pred' F (map_lift phi d)"
+  by (cases d) (simp_all add: transfer_lift_def normalize_lift_def commute exact)
+
+lemma transfer_lift2_commute:
+  assumes commute: "\<And>s t. phi (f s t) = F (phi s) (phi t)"
+    and exact: "\<And>s. empty_pred s = empty_pred' (phi s)"
+  shows "map_lift phi (transfer_lift2 empty_pred f d1 d2) =
+           transfer_lift2 empty_pred' F (map_lift phi d1) (map_lift phi d2)"
+  by (cases d1; cases d2) (simp_all add: transfer_lift2_def normalize_lift_def commute exact)
+
 end

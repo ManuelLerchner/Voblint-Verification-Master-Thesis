@@ -1348,9 +1348,8 @@ next
                        (ivl_enter_st_for gs (call_info_of (CallEdge dst pars args) p)) d)]"
   show ?case
     unfolding interval_spec_def dgs_enter_local_state_st_for_lifted
-    using enter_runs_local_enter_transfer[of ?f ?m "snd (entry_state_sol gs empty_pred Pi ps)"]
-          enter_deps_local_enter_transfer[of ?f ?m "snd (entry_state_sol gs empty_pred Pi ps)"]
-    by simp blast
+    by (blast intro: enter_runs_local_enter_transfer_mk_dg_man
+        enter_deps_local_enter_transfer_mk_dg_man)
 next
   case (EnterSoundAt u ctx dst pars args p cont s)
   show ?case

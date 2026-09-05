@@ -415,7 +415,7 @@ corollaries mirrors `control.ml` exactly and is the intended endpoint.
    emptiness interface.
 2. **Landed** (in `DG_Local_State_Spec.thy`): the unlifted core `local_state_dg_spec_for` with
    its own soundness, four composed-operation agreement lemmas, and
-   `local_state_dg_spec_sound` re-derived through the functor chain -- the three
+   `local_state_dg_spec_for_lifted_core_sound` re-derived through the functor chain -- the three
    hand-rolled per-obligation walls are deleted. Field-level record
    equality is impossible (the frozen `dgs_combine_env` passthrough is not
    strict in the callee value; the generic lifter's is), so the connection

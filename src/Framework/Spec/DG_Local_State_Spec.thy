@@ -8,23 +8,29 @@ text \<open>
   A Base-style analysis answers from one pointwise abstract state per program
   point and never touches a global: its transfers read the manager's local value,
   compute, and return, so the compiled equations carry no \<open>QueryG\<close> and no
-  \<open>Side\<close>. Such an analysis supplies eight pure operations -- one per edge
-  action, plus the callee entry -- and this theory turns them into a
+  \<open>Side\<close>. Such an analysis supplies seven pure edge-operation families ---
+  skip, assign, special, branch, body, return, event, with branch covering both
+  \<open>EA_Assume\<close> and \<open>EA_AssumeNot\<close> --- plus the callee entry, and this theory
+  turns them into a
   \<^type>\<open>dg_spec\<close> two ways: \<open>local_state_dg_spec_for\<close> on the raw
   states, and \<open>local_state_dg_spec_for_lifted\<close> on states carrying an
   explicit unreachable value, where a dead point collapses to \<^const>\<open>Bot\<close>
   before any transfer runs.
 
-  \<open>sound_transfer_for\<close> is the contract those eight operations owe: every
+  \<open>sound_transfer_for\<close> is the contract those operations owe: every
   concrete transition the collecting semantics allows must land inside the
   concretization of what the corresponding operation computes. A domain discharges
   it once, by \<open>interpretation\<close>, and both constructions become sound
   specifications.
 
   The call boundary is fixed here rather than supplied. A call answers exactly one
-  alternative, whose continuation is the caller value unchanged -- the pointwise
-  carrier relates no two variables, so a call has nothing in it for a callee to
-  invalidate. The environment stage passes that continuation through, and the
+  alternative, whose continuation is the caller value unchanged. That is sound
+  because of what the fixed combine does later, not because of anything about the
+  carrier: the continuation is kept for its \<^emph>\<open>local\<close> part, and whatever the
+  callee may have invalidated --- the globals --- is taken from the callee exit
+  instead. A nonrelational caller still holds global facts a callee can
+  invalidate; it is the combine protocol that repairs them, not the absence of
+  relations. The environment stage passes that continuation through, and the
   whole return happens in the assign stage as
   \<^const>\<open>combine_collect_abs\<close>: caller locals, callee globals, and the callee's
   \<^const>\<open>ret_var\<close> written to the destination. An analysis that needs a
@@ -37,8 +43,9 @@ subsection \<open>The transfer contract\<close>
 
 text \<open>One assumption per operation, each an inference rule from a concrete store
   in an abstract state's concretization to the corresponding concrete successor in
-  the operation's own result. A domain proves the eight facts about its own
-  functions and interprets this locale once; nothing below asks it for more.\<close>
+  the operation's own result. A domain proves one fact per operation about its
+  own functions and interprets this locale once; nothing below asks it for
+  more.\<close>
 
 locale sound_transfer_for =
   fixes gs :: "vname \<Rightarrow> bool"
@@ -90,20 +97,6 @@ proof (cases a)
   then show ?thesis by (cases sc) auto
 qed auto
 
-text \<open>A specification dispatches its own \<open>EA_Check\<close> case through its own event
-  operation, matching \<^const>\<open>local_spec_step\<close>'s own dispatch: this is the
-  per-domain soundness bound each such instance needs at that dispatch point.
-
-  Untagged, unlike \<^const>\<open>local_spec_step\<close>'s own rule above. Unfolding the
-  dispatcher at \<open>EA_Check\<close> turns that rule into this one, so tagging both puts
-  two routes to the same conclusion into the classical set --- and this one's
-  conclusion mentions \<open>ev\<close> rather than the dispatcher, so it also fires on
-  goals the dispatcher rule would leave alone.\<close>
-
-lemma edge_collect_check_sound_for:
-  "edge_collect (EA_Check c) \<lbrakk>\<sigma>\<rbrakk> \<subseteq> \<lbrakk>ev (Check_Event c) \<sigma>\<rbrakk>"
-  by auto
-
 end
 
 text \<open>The contract is exactly \<^locale>\<open>sound_local_dg_spec\<close> at the fixed Base call
@@ -122,7 +115,7 @@ next
 next
   case (3 s d ci)
   then show ?case
-    by (auto simp: call_enter_CallEdge intro: tf_sound_enter_entry_for)
+    by (auto simp: call_enter_CallEdge)
 next
   case 4
   then show ?case by (simp add: combine_collect_sound)
@@ -151,9 +144,9 @@ declare local_state_dg_spec_for_def [code_unfold]
 lemma dg_spec_step_local_state_for:
   "dg_spec_step (local_state_dg_spec_for gs sk asn sp br bd rt en ev) a
      = local_transfer (local_spec_step sk asn sp br bd rt ev a)"
-  by (simp add: local_state_dg_spec_for_def dg_spec_step_local_dg_spec)
+  by (simp add: local_state_dg_spec_for_def)
 
-theorem (in sound_transfer_for) local_state_dg_spec_for_sound:
+theorem (in sound_transfer_for) local_state_dg_spec_for_core_sound:
   "sound_dg_spec_core (local_state_dg_spec_for gs sk asn sp br bd rt en ev) (\<lambda>d g. \<lbrakk>d\<rbrakk>) gs"
   unfolding local_state_dg_spec_for_def by (rule base.local_spec_sound)
 
@@ -161,67 +154,13 @@ theorem (in sound_transfer_for) local_state_dg_spec_for_sound:
 subsection \<open>Transporting soundness through the reachability lift\<close>
 
 text \<open>
-  A pure transfer's soundness fact carries over the \<^const>\<open>transfer_lift\<close>
-  wrapper by one case split: \<^const>\<open>Bot\<close>'s concretization is empty, and a
-  \<^const>\<open>normalize_lift\<close> collapse to \<^const>\<open>Bot\<close> only ever fires when
-  \<open>empty_pred\<close> holds, whose concretization is empty by assumption.
+  The bottom bookkeeping the lift needs --- \<open>transfer_lift_sound_collect\<close>,
+  \<open>transfer_lift_sound_mem\<close>, \<open>transfer_lift2_sound_mem\<close> --- is proved once in
+  \<^theory>\<open>Voblint_Domain.Nonrelational_Reachability\<close>, beside the
+  concretization it is about, and the commute laws in
+  \<^theory>\<open>Voblint_Domain.Reachability_Lift\<close> beside the lift itself. Neither
+  concerns a \<^type>\<open>dg_spec\<close>; this theory only applies them.
 \<close>
-
-lemma transfer_lift_sound_collect:
-  assumes step: "\<And>\<sigma>. C \<lbrakk>\<sigma>\<rbrakk> \<subseteq> \<lbrakk>f \<sigma>\<rbrakk>"
-    and Cempty: "C {} = {}"
-    and empty_pred_sound: "\<And>\<sigma>. empty_pred \<sigma> \<Longrightarrow> \<lbrakk>\<sigma>\<rbrakk> = {}"
-  shows "C (gamma_state_lift d) \<subseteq> gamma_state_lift (transfer_lift empty_pred f d)"
-proof (cases d)
-  case Bot
-  then show ?thesis by (simp add: Cempty)
-next
-  case (Lifted \<sigma>)
-  have "C \<lbrakk>\<sigma>\<rbrakk> \<subseteq> \<lbrakk>f \<sigma>\<rbrakk>" by (rule step)
-  then show ?thesis
-    using Lifted empty_pred_sound[of "f \<sigma>"] by (auto simp: normalize_lift_def)
-qed
-
-lemma transfer_lift_sound_mem:
-  assumes step: "\<And>\<sigma>. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> h s \<in> \<lbrakk>f \<sigma>\<rbrakk>"
-    and empty_pred_sound: "\<And>\<sigma>. empty_pred \<sigma> \<Longrightarrow> \<lbrakk>\<sigma>\<rbrakk> = {}"
-    and s: "s \<in> gamma_state_lift d"
-  shows "h s \<in> gamma_state_lift (transfer_lift empty_pred f d)"
-proof (cases d)
-  case Bot
-  then show ?thesis using s by simp
-next
-  case (Lifted \<sigma>)
-  with s have "s \<in> \<lbrakk>\<sigma>\<rbrakk>" by simp
-  then have hs: "h s \<in> \<lbrakk>f \<sigma>\<rbrakk>" by (rule step)
-  then have "\<not> empty_pred (f \<sigma>)" using empty_pred_sound by auto
-  with Lifted hs show ?thesis by simp
-qed
-
-lemma transfer_lift2_sound_mem:
-  assumes step: "\<And>\<sigma>1 \<sigma>2. s \<in> \<lbrakk>\<sigma>1\<rbrakk> \<Longrightarrow> t \<in> \<lbrakk>\<sigma>2\<rbrakk> \<Longrightarrow> h s t \<in> \<lbrakk>f \<sigma>1 \<sigma>2\<rbrakk>"
-    and empty_pred_sound: "\<And>\<sigma>. empty_pred \<sigma> \<Longrightarrow> \<lbrakk>\<sigma>\<rbrakk> = {}"
-    and s: "s \<in> gamma_state_lift d1"
-    and t: "t \<in> gamma_state_lift d2"
-  shows "h s t \<in> gamma_state_lift (transfer_lift2 empty_pred f d1 d2)"
-proof (cases d1)
-  case Bot
-  then show ?thesis using s by simp
-next
-  case (Lifted \<sigma>1)
-  show ?thesis
-  proof (cases d2)
-    case Bot
-    then show ?thesis using t by simp
-  next
-    case (Lifted \<sigma>2)
-    with \<open>d1 = Lifted \<sigma>1\<close> s t have "s \<in> \<lbrakk>\<sigma>1\<rbrakk>" "t \<in> \<lbrakk>\<sigma>2\<rbrakk>" by simp_all
-    then have hst: "h s t \<in> \<lbrakk>f \<sigma>1 \<sigma>2\<rbrakk>" by (rule step)
-    then have "\<not> empty_pred (f \<sigma>1 \<sigma>2)" using empty_pred_sound by auto
-    with \<open>d1 = Lifted \<sigma>1\<close> Lifted hst show ?thesis by simp
-  qed
-qed
-
 subsection \<open>The reachability-lifted construction\<close>
 
 definition local_state_dg_spec_for_lifted ::
@@ -265,8 +204,7 @@ lemma local_spec_step_transfer_lift:
 lemma dg_spec_step_local_state_for_lifted:
   "dg_spec_step (local_state_dg_spec_for_lifted gs empty_pred sk asn sp br bd rt en ev) a
      = local_transfer (transfer_lift empty_pred (local_spec_step sk asn sp br bd rt ev a))"
-  by (simp add: local_state_dg_spec_for_lifted_def dg_spec_step_local_dg_spec
-      local_spec_step_transfer_lift)
+  by (simp add: local_state_dg_spec_for_lifted_def local_spec_step_transfer_lift)
 
 lemma dgs_enter_local_state_for_lifted:
   "enter\<^sup># (local_state_dg_spec_for_lifted gs empty_pred sk asn sp br bd rt en ev) ci
@@ -281,29 +219,9 @@ lemma dg_spec_combine_transfer_local_state_for_lifted:
   "dg_spec_combine_transfer (local_state_dg_spec_for_lifted gs empty_pred sk asn sp br bd rt en ev) ci
      = local_combine_transfer
          (\<lambda>dc de. transfer_lift2 empty_pred (combine\<^sup># gs (ci_dst ci)) dc de)"
-  by (simp add: local_state_dg_spec_for_lifted_def dg_spec_combine_transfer_local_dg_spec)
+  by (simp add: local_state_dg_spec_for_lifted_def)
 
 subsection \<open>Packaging correspondence\<close>
-
-text \<open>
-  Generic executable/mathematical commute for \<^const>\<open>transfer_lift\<close>/
-  \<^const>\<open>transfer_lift2\<close> themselves, independent of any executable state
-  representation: this is the one fact an executable Base mirror needs per
-  field, proved once here rather than once per domain.
-\<close>
-
-lemma transfer_lift_commute:
-  assumes commute: "\<And>s. phi (f s) = F (phi s)"
-    and exact: "\<And>s. empty_pred s = empty_pred' (phi s)"
-  shows "map_lift phi (transfer_lift empty_pred f d) = transfer_lift empty_pred' F (map_lift phi d)"
-  by (cases d) (simp_all add: transfer_lift_def normalize_lift_def commute exact)
-
-lemma transfer_lift2_commute:
-  assumes commute: "\<And>s t. phi (f s t) = F (phi s) (phi t)"
-    and exact: "\<And>s. empty_pred s = empty_pred' (phi s)"
-  shows "map_lift phi (transfer_lift2 empty_pred f d1 d2) =
-           transfer_lift2 empty_pred' F (map_lift phi d1) (map_lift phi d2)"
-  by (cases d1; cases d2) (simp_all add: transfer_lift2_def normalize_lift_def commute exact)
 
 subsection \<open>Soundness of the lifted construction\<close>
 
@@ -319,7 +237,7 @@ definition gamma_dg_local_state ::
 where
   "gamma_dg_local_state d g = gamma_state_lift d"
 
-theorem (in sound_transfer_for) local_state_dg_spec_sound:
+theorem (in sound_transfer_for) local_state_dg_spec_for_lifted_core_sound:
   assumes empty_pred_sound: "\<And>sigma. empty_pred sigma \<Longrightarrow> \<lbrakk>sigma\<rbrakk> = {}"
   shows "sound_dg_spec_core (local_state_dg_spec_for_lifted gs empty_pred sk asn sp br bd rt en ev)
            gamma_dg_local_state gs"
