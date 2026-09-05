@@ -62,8 +62,24 @@ lemma interval_conf_per_origin_pp_st:
   unfolding interval_conf_sol_per_origin_def interval_conf_terminates_per_origin_def
   by (rule TD_side_per_origin_Interp.partial_post_solution[OF _ surjective_pairing])
 
+text \<open>Each solver variant discharges \<open>vars_fin\<close> from the same locale-level
+  solver invariant, instantiated at its own update rule.\<close>
+
+lemma interval_conf_per_origin_vars_finite:
+  assumes "interval_conf_terminates_per_origin gs empty_pred Pi ps"
+  shows "finite (fst (interval_conf_sol_per_origin gs empty_pred Pi ps))"
+  using TD_side_per_origin_Interp.finite_stabl_solve[
+      OF assms[unfolded interval_conf_terminates_per_origin_def]]
+  unfolding interval_conf_sol_per_origin_def TD_side_per_origin_Interp_solve_def
+  by simp
+
 global_interpretation interval_conf_po: interval_conf_solved interval_conf_sol_per_origin interval_conf_terminates_per_origin
-  by unfold_locales (rule interval_conf_per_origin_pp_st)
+proof (unfold_locales, goal_cases PpSt VarsFin)
+  case (PpSt gs empty_pred Pi ps) thus ?case by (rule interval_conf_per_origin_pp_st)
+next
+  case (VarsFin gs empty_pred Pi ps) thus ?case
+    by (rule interval_conf_per_origin_vars_finite)
+qed
 
 lemmas interval_conf_result_node_sound_per_origin = interval_conf_po.result_node_sound
 lemmas interval_conf_analyse_result_eq_per_origin = interval_conf_po.analyse_result_eq
@@ -115,8 +131,20 @@ lemma interval_conf_warrow_pp_st:
   unfolding interval_conf_sol_warrow_def interval_conf_terminates_warrow_def
   by (rule TD_side_warrowing_apinis_Interp.partial_post_solution[OF _ surjective_pairing])
 
+lemma interval_conf_warrow_vars_finite:
+  assumes "interval_conf_terminates_warrow gs empty_pred Pi ps"
+  shows "finite (fst (interval_conf_sol_warrow gs empty_pred Pi ps))"
+  using TD_side_warrowing_apinis_Interp.finite_stabl_solve[
+      OF assms[unfolded interval_conf_terminates_warrow_def]]
+  unfolding interval_conf_sol_warrow_def TD_side_warrowing_apinis_Interp_solve_def
+  by simp
+
 global_interpretation interval_conf_wa: interval_conf_solved interval_conf_sol_warrow interval_conf_terminates_warrow
-  by unfold_locales (rule interval_conf_warrow_pp_st)
+proof (unfold_locales, goal_cases PpSt VarsFin)
+  case (PpSt gs empty_pred Pi ps) thus ?case by (rule interval_conf_warrow_pp_st)
+next
+  case (VarsFin gs empty_pred Pi ps) thus ?case by (rule interval_conf_warrow_vars_finite)
+qed
 
 lemmas interval_conf_result_node_sound_warrow = interval_conf_wa.result_node_sound
 lemmas interval_conf_analyse_result_eq_warrow = interval_conf_wa.analyse_result_eq
@@ -163,8 +191,20 @@ lemma interval_conf_wpo_pp_st:
   unfolding interval_conf_sol_wpo_def interval_conf_terminates_wpo_def
   by (rule TD_side_warrowing_per_origin_Interp.partial_post_solution[OF _ surjective_pairing])
 
+lemma interval_conf_wpo_vars_finite:
+  assumes "interval_conf_terminates_wpo gs empty_pred Pi ps"
+  shows "finite (fst (interval_conf_sol_wpo gs empty_pred Pi ps))"
+  using TD_side_warrowing_per_origin_Interp.finite_stabl_solve[
+      OF assms[unfolded interval_conf_terminates_wpo_def]]
+  unfolding interval_conf_sol_wpo_def TD_side_warrowing_per_origin_Interp_solve_def
+  by simp
+
 global_interpretation interval_conf_wpo: interval_conf_solved interval_conf_sol_wpo interval_conf_terminates_wpo
-  by unfold_locales (rule interval_conf_wpo_pp_st)
+proof (unfold_locales, goal_cases PpSt VarsFin)
+  case (PpSt gs empty_pred Pi ps) thus ?case by (rule interval_conf_wpo_pp_st)
+next
+  case (VarsFin gs empty_pred Pi ps) thus ?case by (rule interval_conf_wpo_vars_finite)
+qed
 
 lemmas interval_conf_result_node_sound_wpo = interval_conf_wpo.result_node_sound
 lemmas interval_conf_analyse_result_eq_wpo = interval_conf_wpo.analyse_result_eq

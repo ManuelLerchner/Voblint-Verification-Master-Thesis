@@ -63,7 +63,7 @@ interpretation pctx_adapter: dg_analysis_adapter "pctx_spec gs empty_pred" "pctx
     "map_lift (fun_of_resolved_st_q_for gs)" parity_classify_check
 proof (unfold_locales, goal_cases FinE PP SgCov SgUncov Fwd FinC SeedKey
     IsBotBot IsBotSound ResolveSound
-    EnterCover CombFwd EnterAgree GammaRd ClProved ClRefuted)
+    EnterCover CombFwd EnterAgree GammaRd ClProved ClRefuted VarsFin)
   case FinE show ?case
     using compile_prog_finite by auto
 next
@@ -127,6 +127,8 @@ next
 next
   case (ClRefuted c d s)
   thus ?case by (rule parity_classify_check_refuted)
+next
+  case VarsFin show ?case by (rule pctx_vars_finite[OF solves])
 qed
 
 text \<open>

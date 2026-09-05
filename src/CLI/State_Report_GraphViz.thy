@@ -967,8 +967,6 @@ lemma entry_state_ctx_graph_wf: "analysis_graph_wf (entry_state_ctx_graph p)"
   by (rule build_analysis_graph_wf
         [OF calls_source_unique_compile_prog compile_prog_finite[THEN conjunct2]])
 
-declare entry_state_ctx_graph_def [code del]
-
 lemma entry_state_ctx_graph_code [code]:
   "entry_state_ctx_graph p =
      (let r = analyse_interval_entry_state_result p;
@@ -993,8 +991,6 @@ definition entry_state_ctx_graph_snapshot_auto :: "imp_prog \<Rightarrow> String
           (entry_state_ctx_sol (analyse_interval_entry_state_result p))
           (entry_state_ctx_graph p))"
 
-declare entry_state_ctx_graph_snapshot_auto_def [code del]
-
 lemma entry_state_ctx_graph_snapshot_auto_code [code]:
   "entry_state_ctx_graph_snapshot_auto p =
      (let r = analyse_interval_entry_state_result p;
@@ -1014,8 +1010,6 @@ definition entry_state_ctx_export_auto :: "imp_prog \<Rightarrow> export_graph" 
      analysis_graph_to_export (entry_state_ctx_annotated_config p) (prog_cfg p)
        (entry_state_ctx_sol (analyse_interval_entry_state_result p))
        (entry_state_ctx_graph p)"
-
-declare entry_state_ctx_export_auto_def [code del]
 
 lemma entry_state_ctx_export_auto_code [code]:
   "entry_state_ctx_export_auto p =

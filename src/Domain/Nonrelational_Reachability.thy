@@ -44,6 +44,16 @@ lemma gamma_state_normalize_lift [simp]:
   "gamma_state_lift (normalize_lift is_empty_state \<sigma>) = \<lbrakk>\<sigma>\<rbrakk>"
   by (rule gamma_normalize_lift) (rule is_empty_state_iff_gamma_state_empty)
 
+text \<open>Collapsing a witness-bottom payload changes what a value says about
+  itself, never what it represents. Every public result adapter routes its
+  solved values through \<^const>\<open>canonicalize_lift\<close> before publishing them, so
+  this is what lets such an adapter's soundness argument ignore the collapse
+  entirely.\<close>
+
+lemma gamma_state_canonicalize_lift [simp]:
+  "gamma_state_lift (canonicalize_lift is_empty_state \<sigma>) = gamma_state_lift \<sigma>"
+  by (cases \<sigma>) simp_all
+
 lemma normalize_state_lift_mono [intro]:
   fixes \<sigma>1 \<sigma>2 :: "'a::sound_domain abs_state"
   assumes le: "\<sigma>1 \<le> \<sigma>2"

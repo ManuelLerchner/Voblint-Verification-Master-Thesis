@@ -63,8 +63,24 @@ lemma int_conf_per_origin_pp_st:
   unfolding int_conf_sol_per_origin_def int_conf_terminates_per_origin_def
   by (rule TD_side_per_origin_Interp.partial_post_solution[OF _ surjective_pairing])
 
+text \<open>Each solver variant discharges \<open>vars_fin\<close> from the same locale-level
+  solver invariant, instantiated at its own update rule.\<close>
+
+lemma int_conf_per_origin_vars_finite:
+  assumes "int_conf_terminates_per_origin mode empty_pred gs Pi ps"
+  shows "finite (fst (int_conf_sol_per_origin mode empty_pred gs Pi ps))"
+  using TD_side_per_origin_Interp.finite_stabl_solve[
+      OF assms[unfolded int_conf_terminates_per_origin_def]]
+  unfolding int_conf_sol_per_origin_def TD_side_per_origin_Interp_solve_def
+  by simp
+
 global_interpretation int_conf_po: int_conf_solved int_conf_sol_per_origin int_conf_terminates_per_origin
-  by unfold_locales (rule int_conf_per_origin_pp_st)
+proof (unfold_locales, goal_cases PpSt VarsFin)
+  case (PpSt mode empty_pred gs Pi ps) thus ?case by (rule int_conf_per_origin_pp_st)
+next
+  case (VarsFin mode empty_pred gs Pi ps) thus ?case
+    by (rule int_conf_per_origin_vars_finite)
+qed
 
 lemmas int_conf_result_node_sound_per_origin = int_conf_po.int_conf_result_node_sound
 lemmas int_conf_analyse_result_eq_per_origin = int_conf_po.int_conf_analyse_result_eq
@@ -121,8 +137,21 @@ lemma int_conf_warrow_pp_st:
   unfolding int_conf_sol_warrow_def int_conf_terminates_warrow_def
   by (rule TD_side_warrowing_apinis_Interp.partial_post_solution[OF _ surjective_pairing])
 
+lemma int_conf_warrow_vars_finite:
+  assumes "int_conf_terminates_warrow mode empty_pred gs Pi ps"
+  shows "finite (fst (int_conf_sol_warrow mode empty_pred gs Pi ps))"
+  using TD_side_warrowing_apinis_Interp.finite_stabl_solve[
+      OF assms[unfolded int_conf_terminates_warrow_def]]
+  unfolding int_conf_sol_warrow_def TD_side_warrowing_apinis_Interp_solve_def
+  by simp
+
 global_interpretation int_conf_wa: int_conf_solved int_conf_sol_warrow int_conf_terminates_warrow
-  by unfold_locales (rule int_conf_warrow_pp_st)
+proof (unfold_locales, goal_cases PpSt VarsFin)
+  case (PpSt mode empty_pred gs Pi ps) thus ?case by (rule int_conf_warrow_pp_st)
+next
+  case (VarsFin mode empty_pred gs Pi ps) thus ?case
+    by (rule int_conf_warrow_vars_finite)
+qed
 
 lemmas int_conf_result_node_sound_warrow = int_conf_wa.int_conf_result_node_sound
 lemmas int_conf_analyse_result_eq_warrow = int_conf_wa.int_conf_analyse_result_eq
@@ -170,8 +199,21 @@ lemma int_conf_wpo_pp_st:
   unfolding int_conf_sol_wpo_def int_conf_terminates_wpo_def
   by (rule TD_side_warrowing_per_origin_Interp.partial_post_solution[OF _ surjective_pairing])
 
+lemma int_conf_wpo_vars_finite:
+  assumes "int_conf_terminates_wpo mode empty_pred gs Pi ps"
+  shows "finite (fst (int_conf_sol_wpo mode empty_pred gs Pi ps))"
+  using TD_side_warrowing_per_origin_Interp.finite_stabl_solve[
+      OF assms[unfolded int_conf_terminates_wpo_def]]
+  unfolding int_conf_sol_wpo_def TD_side_warrowing_per_origin_Interp_solve_def
+  by simp
+
 global_interpretation int_conf_wpo: int_conf_solved int_conf_sol_wpo int_conf_terminates_wpo
-  by unfold_locales (rule int_conf_wpo_pp_st)
+proof (unfold_locales, goal_cases PpSt VarsFin)
+  case (PpSt mode empty_pred gs Pi ps) thus ?case by (rule int_conf_wpo_pp_st)
+next
+  case (VarsFin mode empty_pred gs Pi ps) thus ?case
+    by (rule int_conf_wpo_vars_finite)
+qed
 
 lemmas int_conf_result_node_sound_wpo = int_conf_wpo.int_conf_result_node_sound
 lemmas int_conf_analyse_result_eq_wpo = int_conf_wpo.int_conf_analyse_result_eq

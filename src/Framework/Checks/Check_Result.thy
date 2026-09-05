@@ -35,4 +35,23 @@ instance
 
 end
 
+text \<open>
+  There is no dual bottom: \<open>Check_Proved\<close> and \<open>Check_Refuted\<close> have no common
+  lower verdict, and the absence of any evidence at all is expressed one level
+  up, by \<open>check_result lifted\<close>, not inside this type.
+\<close>
+
+instantiation check_result :: top
+begin
+
+definition top_check_result :: check_result where
+  "top_check_result = Check_Unknown"
+
+instance ..
+
+end
+
+instance check_result :: order_top
+  by standard (simp add: less_eq_check_result_def top_check_result_def)
+
 end

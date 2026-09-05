@@ -30,14 +30,15 @@ lemma checks_provenI [intro]:
   "(\<And>v c s. (v, c) \<in> ck \<Longrightarrow> s \<in> reach v \<Longrightarrow> truthy (aval c s)) \<Longrightarrow> checks_proven ck reach"
   unfolding checks_proven_def by blast
 
-text \<open>\<open>checks_proven_sound\<close> is a thin extraction from \<open>checks_proven\<close> --- named
-  and tagged \<open>[dest]\<close> so call sites cite it instead of unfolding the
-  definition, not because it carries new soundness content itself. The real
-  soundness work happens where a caller establishes \<open>checks_proven\<close> for a
-  concrete \<open>reach\<close>, by composing this theory with an existing
-  \<open>ltr_collect \<le> gamma_state(\<dots>)\<close>-shaped corollary; this theory never states
-  or proves that inclusion itself.\<close>
-lemma checks_proven_sound [dest]:
+text \<open>The one-step destruction dual of \<open>checks_provenI\<close>, so a caller with a
+  \<open>checks_proven\<close> fact in hand reaches the store-level conclusion without
+  unfolding the definition. It carries no soundness content of its own, and is
+  named for what it is rather than \<open>_sound\<close>: the real soundness work happens
+  where a caller establishes \<open>checks_proven\<close> for a concrete \<open>reach\<close>, by
+  composing this theory with an existing \<open>ltr_collect \<le> gamma_state(\<dots>)\<close>-shaped
+  corollary; this theory never states or proves that inclusion itself.\<close>
+
+lemma checks_provenD [dest]:
   assumes proven: "checks_proven ck reach"
     and at_v: "(v, c) \<in> ck"
     and mem: "s \<in> reach v"

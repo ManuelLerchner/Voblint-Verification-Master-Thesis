@@ -85,8 +85,6 @@ text \<open>
 definition aggregate_verdicts :: "contextual_verdict set \<Rightarrow> contextual_verdict" where
   "aggregate_verdicts vs = Finite_Set.fold sup Dead vs"
 
-declare aggregate_verdicts_def [code del]
-
 lemma aggregate_verdicts_code [code]:
   "aggregate_verdicts (set vs) = List.fold sup vs Dead"
 proof -
@@ -110,8 +108,8 @@ qed
 
 text \<open>A check is dead exactly when every context observed at it is dead ---
   vacuously so when none is observed. Stated over the observations themselves
-  rather than over the aggregate, and then shown to agree with it, so the two
-  readings cannot drift.\<close>
+  rather than over the aggregate, and then shown to agree with it by
+  \<open>check_dead_iff_aggregate\<close>, so the two readings cannot drift.\<close>
 
 lemma sup_contextual_verdict_eq_Dead_iff [simp]:
   "(x \<squnion> y = Dead) \<longleftrightarrow> x = Dead \<and> y = Dead"
@@ -122,6 +120,23 @@ definition check_dead :: "('ctx \<times> contextual_verdict) set \<Rightarrow> b
 
 lemma check_dead_empty [simp]: "check_dead {}"
   unfolding check_dead_def by simp
+
+text \<open>The finiteness premise is not bookkeeping: \<^const>\<open>Finite_Set.fold\<close> returns
+  its identity on an infinite carrier, so an infinite set of observations
+  aggregates to \<open>Dead\<close> whatever its members are, and only the left-to-right
+  direction would survive without it.\<close>
+
+lemma aggregate_verdicts_eq_Dead_iff:
+  assumes "finite vs"
+  shows "aggregate_verdicts vs = Dead \<longleftrightarrow> (\<forall>v \<in> vs. v = Dead)"
+  using assms by (induction vs rule: finite_induct) simp_all
+
+lemma check_dead_iff_aggregate:
+  assumes "finite vs"
+  shows "check_dead vs \<longleftrightarrow> aggregate_verdicts (snd ` vs) = Dead"
+  unfolding check_dead_def
+  using aggregate_verdicts_eq_Dead_iff[OF finite_imageI[OF assms, of snd]]
+  by auto
 
 text \<open>The opposite direction, for a report that has only one observation per
   check and therefore no dead case to distinguish: every entry is
@@ -266,43 +281,17 @@ lemma classify_checks_verdicts_mem_iff:
          \<and> vr = aggregate_verdicts
                   ((\<lambda>ctx. classify_point classify c (lookup_context ar v ctx)) ` contexts_at ar v)"
 proof -
+  have img: "snd ` (\<lambda>ctx. (ctx, classify_point classify c (lookup_context ar v ctx))) ` contexts_at ar v
+           = (\<lambda>ctx. classify_point classify c (lookup_context ar v ctx)) ` contexts_at ar v"
+    by (simp add: image_comp comp_def)
   have "(v, c, vr) \<in> set (classify_checks_verdicts g ar classify)
-      \<longleftrightarrow> (\<exists>vs. (v, c, vs) \<in> set (classify_checks_ctx g ar classify) \<and> vr = aggregate_verdicts (snd ` vs))"
+      \<longleftrightarrow> (\<exists>vs. (v, c, vs) \<in> set (classify_checks_ctx g ar classify)
+                 \<and> vr = aggregate_verdicts (snd ` vs))"
     unfolding classify_checks_verdicts_def set_map by (force simp: image_iff)
   also have "... \<longleftrightarrow> (\<exists>tgt. (v, EA_Check c, tgt) \<in> intra g)
          \<and> vr = aggregate_verdicts
                   ((\<lambda>ctx. classify_point classify c (lookup_context ar v ctx)) ` contexts_at ar v)"
-  proof
-    assume "\<exists>vs. (v, c, vs) \<in> set (classify_checks_ctx g ar classify) \<and> vr = aggregate_verdicts (snd ` vs)"
-    then obtain vs where mem_vs: "(v, c, vs) \<in> set (classify_checks_ctx g ar classify)"
-      and vr_eq: "vr = aggregate_verdicts (snd ` vs)" by blast
-    from mem_vs classify_checks_ctx_mem_iff[OF assms] obtain tgt
-      where tgt: "(v, EA_Check c, tgt) \<in> intra g"
-        and vs_eq: "vs = (\<lambda>ctx. (ctx, classify_point classify c (lookup_context ar v ctx))) ` contexts_at ar v"
-      by (metis (mono_tags, lifting))
-    from vr_eq vs_eq have "vr = aggregate_verdicts
-        ((\<lambda>ctx. classify_point classify c (lookup_context ar v ctx)) ` contexts_at ar v)"
-      by (simp add: image_comp comp_def)
-    with tgt show "(\<exists>tgt. (v, EA_Check c, tgt) \<in> intra g)
-         \<and> vr = aggregate_verdicts
-                  ((\<lambda>ctx. classify_point classify c (lookup_context ar v ctx)) ` contexts_at ar v)"
-      by blast
-  next
-    assume "(\<exists>tgt. (v, EA_Check c, tgt) \<in> intra g)
-         \<and> vr = aggregate_verdicts
-                  ((\<lambda>ctx. classify_point classify c (lookup_context ar v ctx)) ` contexts_at ar v)"
-    then obtain tgt where tgt: "(v, EA_Check c, tgt) \<in> intra g"
-      and vr_eq: "vr = aggregate_verdicts
-          ((\<lambda>ctx. classify_point classify c (lookup_context ar v ctx)) ` contexts_at ar v)"
-      by blast
-    let ?vs = "(\<lambda>ctx. (ctx, classify_point classify c (lookup_context ar v ctx))) ` contexts_at ar v"
-    have mem_vs: "(v, c, ?vs) \<in> set (classify_checks_ctx g ar classify)"
-      using classify_checks_ctx_mem_iff[OF assms] tgt by blast
-    have "vr = aggregate_verdicts (snd ` ?vs)"
-      using vr_eq by (simp add: image_comp comp_def)
-    with mem_vs show "\<exists>vs. (v, c, vs) \<in> set (classify_checks_ctx g ar classify) \<and> vr = aggregate_verdicts (snd ` vs)"
-      by blast
-  qed
+    unfolding classify_checks_ctx_mem_iff[OF assms] using img by auto
   finally show ?thesis .
 qed
 

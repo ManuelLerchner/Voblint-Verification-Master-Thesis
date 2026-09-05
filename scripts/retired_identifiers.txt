@@ -704,3 +704,8 @@ locals_ge_s0d
 route_enterc_of_sigma
 route_enterc_of_sigma_agree
 entry_state_context_eq_route_enterc_of_sigma
+
+# Renamed to checks_provenD: it is the one-step destruction dual of
+# checks_provenI off checks_proven_def, not a soundness theorem, and the
+# _sound name invited the [dest] rationale the header used to give.
+checks_proven_sound

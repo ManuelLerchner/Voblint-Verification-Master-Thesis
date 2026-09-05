@@ -41,6 +41,97 @@ proof -
   show ?thesis by simp
 qed
 
+subsection \<open>Generic: a terminating solve reaches finitely many unknowns\<close>
+
+text \<open>
+  The solver's stable set is what a solved system publishes as its key set, and
+  a result table is well formed only if that set is finite. Finiteness is not
+  structural --- \<open>stabl\<close> is an ordinary set field grown by the recursion, not
+  the image of a list --- so it has to be an invariant of the recursion itself.
+
+  It is a cheap one. \<open>stabl\<close> is touched at exactly three places: \<open>repeat\<close>
+  inserts one unknown, and \<open>iterate\<close> and \<open>eval\<close>'s side-effect case each replace
+  it by a \<^const>\<open>destab_opt\<close> result, which \<open>destab_opt_infl_stabl_relation\<close>
+  says is a subset of what it was given. No update rule, domain, or lattice
+  reasoning enters, which is why this is proved once here for the locale rather
+  than per interpreted solver.
+\<close>
+
+text \<open>Stated with the pair equation oriented as \<open>prod.splits\<close> produces it, so
+  \<open>auto\<close> can use it as a \<open>dest\<close> rule without a \<open>[symmetric]\<close> at each call.\<close>
+
+lemma destab_opt_stabl_finite:
+  assumes "destab_opt x i s cs = (i', s')" and "finite s"
+  shows "finite s'"
+  using destab_opt_infl_stabl_relation[OF assms(1)[symmetric]] assms(2) by simp
+
+lemma (in TD_side_upd_rule) finite_stabl_ind:
+  shows "query_dom x y state ug_state
+    \<Longrightarrow> (xd, state', ug_state') = query x y state ug_state
+    \<Longrightarrow> finite (stabl state) \<Longrightarrow> finite (stabl state')"
+    and "iterate_dom x state ug_state
+    \<Longrightarrow> (xd, state', ug_state') = iterate x state ug_state
+    \<Longrightarrow> finite (stabl state) \<Longrightarrow> finite (stabl state')"
+    and "repeat_dom x state ug_state
+    \<Longrightarrow> (xd, state', ug_state') = repeat x state ug_state
+    \<Longrightarrow> finite (stabl state) \<Longrightarrow> finite (stabl state')"
+    and "eval_dom x t sides\<^sub>a\<^sub>c\<^sub>c state ug_state
+    \<Longrightarrow> (xd, state', ug_state') = eval x t sides\<^sub>a\<^sub>c\<^sub>c state ug_state
+    \<Longrightarrow> finite (stabl state) \<Longrightarrow> finite (stabl state')"
+proof (induction x y state ug_state and x state ug_state and x state ug_state
+        and x t sides\<^sub>a\<^sub>c\<^sub>c state ug_state
+      arbitrary: xd state' ug_state' and xd state' ug_state' and xd state' ug_state'
+        and xd state' ug_state'
+      rule: query_iterate_repeat_eval_pinduct)
+  case (Query x y state ug_state)
+  then show ?case
+    by (auto simp: query.psimps[OF Query(1)[unfolded query_dom_def]]
+        split: if_splits prod.splits)
+next
+  case (Iterate x state ug_state)
+  then show ?case
+    by (auto simp: iterate.psimps[OF Iterate(1)[unfolded iterate_dom_def]] Let_def
+        split: if_splits prod.splits dest: destab_opt_stabl_finite)
+next
+  case (Repeat x state ug_state)
+  then show ?case
+    by (auto simp: repeat.psimps[OF Repeat(1)[unfolded repeat_dom_def]] Let_def
+        split: if_splits prod.splits)
+next
+  case (Eval x t sides\<^sub>a\<^sub>c\<^sub>c state ug_state)
+  text \<open>\<open>Side\<close> is the one shape whose recursive call moves to a destabilized
+    state, so its induction hypothesis wants finiteness of a set \<open>auto\<close> has not
+    yet related to \<open>stabl state\<close>. Supplying that link with this case's own
+    finiteness already discharged keeps it a one-premise \<open>dest\<close> rule, which
+    leaves the \<open>destab_opt\<close> equation in place for the hypothesis itself.\<close>
+  from Eval have fin: "finite (stabl state)" by blast
+  have fin_destab: "\<And>y i' s'.
+      destab_opt y (infl state) (stabl state) (c state) = (i', s') \<Longrightarrow> finite s'"
+    using fin destab_opt_stabl_finite by blast
+  from Eval fin_destab show ?case
+    by (auto simp: eval.psimps[OF Eval(1)[unfolded eval_dom_def]] Let_def
+        split: if_splits prod.splits option.splits strategy_tree.splits)
+qed
+
+text \<open>The only form the rest of Voblint consumes: a terminating solve returns a
+  finite key set. \<open>solve\<close> starts from \<open>init_state\<close>, whose \<open>stabl\<close> is
+  empty, so the invariant above applies with nothing to assume.\<close>
+
+lemma (in TD_side_upd_rule) finite_stabl_solve:
+  assumes "solve_dom x"
+  shows "finite (fst (solve x))"
+proof -
+  obtain d state ug_state where iterate: "(d, state, ug_state) =
+      iterate x (init_state \<lparr> c := insert x (c init_state) \<rparr>) init_ug_state"
+    by (cases "iterate x (init_state \<lparr> c := insert x (c init_state) \<rparr>) init_ug_state") auto
+  have "fst (solve x) = stabl state"
+    using iterate unfolding solve_def by (auto split: prod.splits)
+  moreover have "finite (stabl state)"
+    using finite_stabl_ind(2)[OF assms[unfolded solve_dom_def] iterate]
+    unfolding init_state_def by simp
+  ultimately show ?thesis by simp
+qed
+
 subsection \<open>Key-selected update rules\<close>
 
 text \<open>

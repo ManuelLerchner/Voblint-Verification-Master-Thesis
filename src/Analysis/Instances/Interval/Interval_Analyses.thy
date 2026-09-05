@@ -124,6 +124,14 @@ lemma interval_conf_terminates_via_solve_c:
   unfolding interval_conf_terminates_def
   by (rule TD_side_always_join_Interp.solve_dom_of_solve_c[OF assms])
 
+lemma interval_conf_vars_finite:
+  assumes "interval_conf_terminates gs empty_pred Pi ps"
+  shows "finite (fst (interval_conf_sol gs empty_pred Pi ps))"
+  using TD_side_always_join_Interp.finite_stabl_solve[
+      OF assms[unfolded interval_conf_terminates_def]]
+  unfolding interval_conf_sol_def TD_side_always_join_Interp_solve_def
+  by simp
+
 subsection \<open>Domain commute facts, at the routed unit spec\<close>
 text \<open>
   The whole of Interval's obligation to the routed spine, in one interpretation.
@@ -184,6 +192,8 @@ locale interval_conf_solved =
              (cfg_exit (compile_prog Pi ps), ())
              (snd (sol gs empty_pred Pi ps))
              (fst (sol gs empty_pred Pi ps))"
+    and vars_fin:
+    "terminates gs empty_pred Pi ps \<Longrightarrow> finite (fst (sol gs empty_pred Pi ps))"
 begin
 
 text \<open>The solver's post-solution, for the unbuffered routed generator at the executable
@@ -351,7 +361,7 @@ interpretation adapter: dg_analysis_adapter "interval_spec gs empty_pred" "inter
     "map_lift (fun_of_resolved_st_q_for gs)" interval_classify_check
 proof (unfold_locales, goal_cases FinE PP SgCov SgUncov Fwd FinC SeedKey
     IsBotBot IsBotSound ResolveSound
-    EnterCover CombFwd EnterAgree GammaRd ClProved ClRefuted)
+    EnterCover CombFwd EnterAgree GammaRd ClProved ClRefuted VarsFin)
   case FinE show ?case by (rule fin)
 next
   case PP show ?case by (rule pp_routed[OF solves exact])
@@ -411,6 +421,8 @@ next
 next
   case (ClRefuted c d s)
   thus ?case by (rule interval_classify_check_refuted)
+next
+  case VarsFin show ?case by (rule vars_fin[OF solves])
 qed
 
 text \<open>
@@ -460,7 +472,11 @@ lemma interval_conf_join_pp_st:
   by (rule TD_side_always_join_Interp.partial_post_solution[OF _ surjective_pairing])
 
 global_interpretation interval_conf_join: interval_conf_solved interval_conf_sol interval_conf_terminates
-  by unfold_locales (rule interval_conf_join_pp_st)
+proof (unfold_locales, goal_cases PpSt VarsFin)
+  case (PpSt gs empty_pred Pi ps) thus ?case by (rule interval_conf_join_pp_st)
+next
+  case (VarsFin gs empty_pred Pi ps) thus ?case by (rule interval_conf_vars_finite)
+qed
 
 lemmas interval_conf_result_node_sound = interval_conf_join.result_node_sound
 lemmas interval_conf_analyse_result_eq = interval_conf_join.analyse_result_eq
@@ -590,6 +606,14 @@ lemma cs_call_string_terminates_via_solve_c:
   shows "cs_call_string_terminates k gs empty_pred Pi ps"
   unfolding cs_call_string_terminates_def
   by (rule TD_side_warrowing_apinis_Interp.solve_dom_of_solve_c[OF assms])
+
+lemma cs_call_string_vars_finite:
+  assumes "cs_call_string_terminates k gs empty_pred Pi ps"
+  shows "finite (fst (cs_call_string_sol k gs empty_pred Pi ps))"
+  using TD_side_warrowing_apinis_Interp.finite_stabl_solve[
+      OF assms[unfolded cs_call_string_terminates_def]]
+  unfolding cs_call_string_sol_def TD_side_warrowing_apinis_Interp_solve_def
+  by simp
 
 subsection \<open>Whole-program convenience layer\<close>
 
@@ -947,6 +971,22 @@ lemma entry_state_terminates_via_solve_c:
   shows "entry_state_terminates gs empty_pred Pi ps"
   unfolding entry_state_terminates_def
   by (rule TD_side_warrowing_apinis_Interp.solve_dom_of_solve_c[OF assms])
+
+text \<open>Finiteness of the entry-state key set, from the solver's own invariant
+  (\<open>finite_stabl_solve\<close>, \<^theory>\<open>Voblint_Solver.TD_Solver_Bridge\<close>). That invariant
+  is proved for the \<open>TD_side_upd_rule\<close> locale rather than per update rule, so it
+  applies to Apinis warrowing here exactly as it does to always-join elsewhere.
+  It also depends on nothing about the context type, which is what makes the
+  entry-state case available at all: its contexts are \<^typ>\<open>ivl list\<close> values, a
+  space no bound could enumerate.\<close>
+
+lemma entry_state_vars_finite:
+  assumes "entry_state_terminates gs empty_pred Pi ps"
+  shows "finite (fst (entry_state_sol gs empty_pred Pi ps))"
+  using TD_side_warrowing_apinis_Interp.finite_stabl_solve[
+      OF assms[unfolded entry_state_terminates_def]]
+  unfolding entry_state_sol_def TD_side_warrowing_apinis_Interp_solve_def
+  by simp
 
 subsection \<open>Whole-program convenience layer\<close>
 
@@ -1424,7 +1464,7 @@ interpretation entry_state_adapter: dg_analysis_adapter "interval_spec gs empty_
     "map_lift (fun_of_resolved_st_q_for gs)" interval_classify_check
 proof (unfold_locales, goal_cases FinE PP SgCov SgUncov Fwd FinC SeedKey
     IsBotBot IsBotSound ResolveSound
-    EnterCover CombFwd EnterAgree GammaRd ClProved ClRefuted)
+    EnterCover CombFwd EnterAgree GammaRd ClProved ClRefuted VarsFin)
   case FinE show ?case by (rule entry_state_fin)
 next
   case PP show ?case by (rule entry_state_pp_routed[OF solves exact])
@@ -1476,6 +1516,8 @@ next
 next
   case (ClRefuted c d s)
   thus ?case by (rule interval_classify_check_refuted)
+next
+  case VarsFin show ?case by (rule entry_state_vars_finite[OF solves])
 qed
 
 theorem entry_state_activation_collect_sound:

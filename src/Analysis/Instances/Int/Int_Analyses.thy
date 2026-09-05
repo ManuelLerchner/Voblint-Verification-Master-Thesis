@@ -127,6 +127,20 @@ lemma int_conf_terminates_via_solve_c:
   unfolding int_conf_terminates_def
   by (rule TD_side_always_join_Interp.solve_dom_of_solve_c[OF assms])
 
+text \<open>The key set a terminated solve returns is finite, so the published result
+  table is well formed. This is the solver's own invariant
+  (\<open>finite_stabl_solve\<close>, \<^theory>\<open>Voblint_Solver.TD_Solver_Bridge\<close>) at this
+  instance: it needs nothing about the context type, and so holds for entry-state
+  contexts exactly as it does for the monovariant one.\<close>
+
+lemma int_conf_vars_finite:
+  assumes "int_conf_terminates mode empty_pred gs Pi ps"
+  shows "finite (fst (int_conf_sol mode empty_pred gs Pi ps))"
+  using TD_side_always_join_Interp.finite_stabl_solve[
+      OF assms[unfolded int_conf_terminates_def]]
+  unfolding int_conf_sol_def TD_side_always_join_Interp_solve_def
+  by simp
+
 subsection \<open>Route agreement collapses to a free lemma\<close>
 
 
@@ -201,6 +215,9 @@ locale int_conf_solved =
              (cfg_exit (compile_prog Pi ps), ())
              (snd (int_conf_sol mode empty_pred gs Pi ps))
              (fst (int_conf_sol mode empty_pred gs Pi ps))"
+    and vars_fin:
+    "int_conf_terminates mode empty_pred gs Pi ps
+       \<Longrightarrow> finite (fst (int_conf_sol mode empty_pred gs Pi ps))"
 begin
 
 text \<open>The solver's post-solution, for the unbuffered routed generator at the executable
@@ -363,7 +380,7 @@ interpretation int_conf_adapter: dg_analysis_adapter "int_dom_spec mode empty_pr
     "map_lift (fun_of_resolved_st_q_for gs)" int_classify_check
 proof (unfold_locales, goal_cases FinE PP SgCov SgUncov Fwd FinC SeedKey
     IsBotBot IsBotSound ResolveSound
-    EnterCover CombFwd EnterAgree GammaRd ClProved ClRefuted)
+    EnterCover CombFwd EnterAgree GammaRd ClProved ClRefuted VarsFin)
   case FinE show ?case by (rule int_conf_fin)
 next
   case PP show ?case by (rule int_conf_pp_routed[OF solves exact])
@@ -425,12 +442,16 @@ next
 next
   case (ClRefuted c d s)
   thus ?case by (rule int_classify_check_refuted)
+next
+  case VarsFin show ?case by (rule vars_fin[OF solves])
 qed
 
 lemmas int_conf_analyse_result_def = int_conf_adapter.analyse_result_def
 lemmas int_conf_analyse_report_ctx_def = int_conf_adapter.analyse_report_ctx_def
 lemmas int_conf_analyse_report_ctx_proved_sound = int_conf_adapter.analyse_report_ctx_proved_sound
 lemmas int_conf_analyse_report_ctx_refuted_sound = int_conf_adapter.analyse_report_ctx_refuted_sound
+
+lemmas int_conf_wf_analyse_result = int_conf_adapter.wf_analyse_result
 
 text \<open>
   \<open>int_conf_result_node_sound\<close> re-exports the adapter's generic node-soundness bridge
@@ -471,7 +492,11 @@ lemma int_conf_join_pp_st:
   by (rule TD_side_always_join_Interp.partial_post_solution[OF _ surjective_pairing])
 
 global_interpretation int_conf_join: int_conf_solved int_conf_sol int_conf_terminates
-  by unfold_locales (rule int_conf_join_pp_st)
+proof (unfold_locales, goal_cases PpSt VarsFin)
+  case (PpSt mode empty_pred gs Pi ps) thus ?case by (rule int_conf_join_pp_st)
+next
+  case (VarsFin mode empty_pred gs Pi ps) thus ?case by (rule int_conf_vars_finite)
+qed
 
 lemmas int_conf_result_node_sound = int_conf_join.int_conf_result_node_sound
 lemmas int_conf_analyse_result_eq = int_conf_join.int_conf_analyse_result_eq
@@ -481,6 +506,8 @@ lemmas int_conf_analyse_report_ctx_proved_sound = int_conf_join.int_conf_analyse
 lemmas int_conf_analyse_report_ctx_refuted_sound = int_conf_join.int_conf_analyse_report_ctx_refuted_sound
 lemmas int_conf_analyse_result_def = int_conf_join.int_conf_analyse_result_def
 lemmas int_conf_analyse_report_ctx_def = int_conf_join.int_conf_analyse_report_ctx_def
+
+lemmas int_conf_wf_analyse_result = int_conf_join.int_conf_wf_analyse_result
 
 section \<open>Whole-program convenience layer\<close>
 
@@ -608,6 +635,14 @@ lemma ics_terminates_via_solve_c:
   shows "ics_terminates k mode gs empty_pred Pi ps"
   unfolding ics_terminates_def
   by (rule TD_side_always_join_Interp.solve_dom_of_solve_c[OF assms])
+
+lemma ics_vars_finite:
+  assumes "ics_terminates k mode gs empty_pred Pi ps"
+  shows "finite (fst (ics_sol k mode gs empty_pred Pi ps))"
+  using TD_side_always_join_Interp.finite_stabl_solve[
+      OF assms[unfolded ics_terminates_def]]
+  unfolding ics_sol_def TD_side_always_join_Interp_solve_def
+  by simp
 
 text \<open>
   The same routed system under Apinis warrowing, Int's production default at
@@ -934,6 +969,21 @@ lemma int_conf_entry_terminates_via_solve_c:
   unfolding int_conf_entry_terminates_def
   by (rule TD_side_always_join_Interp.solve_dom_of_solve_c[OF assms])
 
+text \<open>Finiteness of the entry-state key set, on the same argument as the
+  monovariant one. Worth stating separately only because it is the case no
+  bound on the context space could give: a context here is an \<^typ>\<open>int_dom list\<close>,
+  and over an infinite-height component that space is unbounded. What makes the
+  key set finite is that a terminating run stabilizes finitely many unknowns,
+  which is a fact about the solver and not about \<^typ>\<open>'c\<close> at all.\<close>
+
+lemma int_conf_entry_vars_finite:
+  assumes "int_conf_entry_terminates mode gs empty_pred Pi ps"
+  shows "finite (fst (int_conf_entry_sol mode gs empty_pred Pi ps))"
+  using TD_side_always_join_Interp.finite_stabl_solve[
+      OF assms[unfolded int_conf_entry_terminates_def]]
+  unfolding int_conf_entry_sol_def TD_side_always_join_Interp_solve_def
+  by simp
+
 text \<open>
   The same routed system under Apinis warrowing, Int's production default at
   \<open>Ctx_None\<close>. Always-join has no termination guarantee on the interval component,
@@ -1225,7 +1275,7 @@ interpretation int_conf_entry_adapter: dg_analysis_adapter "int_dom_spec mode em
     "map_lift (fun_of_resolved_st_q_for gs)" int_classify_check
 proof (unfold_locales, goal_cases FinE PP SgCov SgUncov Fwd FinC SeedKey
     IsBotBot IsBotSound ResolveSound
-    EnterCover CombFwd EnterAgree GammaRd ClProved ClRefuted)
+    EnterCover CombFwd EnterAgree GammaRd ClProved ClRefuted VarsFin)
   case FinE show ?case by (rule int_conf_entry_fin)
 next
   case PP show ?case by (rule int_conf_entry_pp_routed[OF solves exact])
@@ -1277,6 +1327,8 @@ next
 next
   case (ClRefuted c d s)
   thus ?case by (rule int_classify_check_refuted)
+next
+  case VarsFin show ?case by (rule int_conf_entry_vars_finite[OF solves])
 qed
 
 theorem int_conf_entry_activation_collect_sound:

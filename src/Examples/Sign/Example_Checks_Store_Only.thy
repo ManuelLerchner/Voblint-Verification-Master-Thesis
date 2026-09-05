@@ -1,4 +1,4 @@
-section \<open>Example: checks_proven/checks_proven_sound alone, store-only\<close>
+section \<open>Example: checks_proven/checks_provenD alone, store-only\<close>
 
 theory Example_Checks_Store_Only
   imports "Voblint_Framework.Checks" "Voblint_CLI.Sign_Entry" "Voblint_Analysis.Sign_Checks"

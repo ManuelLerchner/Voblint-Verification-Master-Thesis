@@ -5,10 +5,18 @@ begin
 section \<open>Solved analysis results\<close>
 
 text \<open>
-  The canonical, domain-generic shape of a finished analysis: a finite set of
-  covered @{typ "pp \<times> 'ctx"} keys together with a total lookup into a
-  per-point abstract state. Checks, reports, and rendering are downstream
-  consumers of this table, not siblings of it.
+  The canonical, domain-generic shape of a finished analysis: a set of covered
+  @{typ "pp \<times> 'ctx"} keys together with a total lookup into a per-point
+  abstract state. Checks, reports, and rendering are downstream consumers of
+  this table, not siblings of it.
+
+  The datatype constrains neither the key set nor the payloads. What the rest
+  of this text describes --- finitely many keys, and canonical payloads --- is
+  \<open>wf_analysis_result\<close>, stated at the end of this theory. Its two halves are
+  not established alike: an adapter canonicalizes every payload it publishes,
+  so canonicality is unconditional, while finiteness holds only for those
+  context policies whose whole context space is bounded in advance, and is
+  carried as a hypothesis everywhere else.
 
   \<^const>\<open>Bot\<close> means ``the solver's canonical result at this key is an
   outer \<^const>\<open>Bot\<close>'', or the key is absent from \<open>result_keys\<close> altogether;
@@ -189,8 +197,6 @@ definition join_states_over ::
      Finite_Set.fold (\<lambda>ctx. join_point_with (join_abs_state_with (\<squnion>)) (g ctx))
        Bot cs"
 
-declare join_states_over_def [code del]
-
 lemma join_states_over_code [code]:
   "join_states_over g (set cs) =
      List.fold (\<lambda>ctx. join_point_with (join_abs_state_with (\<squnion>)) (g ctx)) cs Bot"
@@ -201,6 +207,30 @@ proof -
   show ?thesis unfolding join_states_over_def by (rule ci.fold_set_fold)
 qed
 
+lemma join_states_over_empty [simp]: "join_states_over g {} = Bot"
+  unfolding join_states_over_def by simp
+
+lemma join_states_over_insert [simp]:
+  assumes "finite cs"
+  shows "join_states_over g (insert ctx cs) = g ctx \<squnion> join_states_over g cs"
+proof -
+  interpret ci: comp_fun_idem
+    "\<lambda>ctx. join_point_with (join_abs_state_with (\<squnion>)) (g ctx)"
+    by (rule comp_fun_idem_join_lifted)
+  show ?thesis unfolding join_states_over_def using assms by simp
+qed
+
+text \<open>Every context folded in sits below the result. This is the property that
+  makes the join a join, and it is exactly what fails on an infinite carrier:
+  \<^const>\<open>Finite_Set.fold\<close> returns its unit there, so an unrestricted key set
+  would let a covered, reachable context sit above the node's own joined
+  state.\<close>
+
+lemma join_states_over_member_le:
+  assumes "finite cs" and "ctx \<in> cs"
+  shows "g ctx \<le> join_states_over g cs"
+  using assms by (induction cs rule: finite_induct) (auto intro: order_trans sup_ge2)
+
 definition lookup_joined_state ::
   "('ctx, 'a::semilattice_sup abs_state) analysis_result \<Rightarrow> pp \<Rightarrow>
    'a abs_state lifted" where
@@ -208,7 +238,77 @@ definition lookup_joined_state ::
 
 lemma lookup_joined_state_absent [simp]:
   "contexts_at r v = {} \<Longrightarrow> lookup_joined_state r v = Bot"
-  unfolding lookup_joined_state_def join_states_over_def by simp
+  unfolding lookup_joined_state_def by simp
+
+subsection \<open>Well-formed results\<close>
+
+text \<open>
+  \<^const>\<open>Analysis_Result\<close> is an ordinary constructor, so the two properties the
+  opening text describes are not enforced by the type and have to be stated.
+
+  Finiteness is the load-bearing one, and its failure is silent rather than
+  loud: \<^const>\<open>join_states_over\<close> folds with \<^const>\<open>Finite_Set.fold\<close>, which
+  answers with its unit on an infinite carrier. A node whose key set is
+  infinite therefore reports \<^const>\<open>Bot\<close> as its joined state --- reading as
+  dead, while \<^const>\<open>node_live_ex\<close>, which never folds, still reports it live.
+
+  Canonicality is what licenses reading \<^const>\<open>Bot\<close> and \<^const>\<open>Lifted\<close> as
+  concrete emptiness and non-emptiness rather than as the solver's own
+  structural answer. It is stated against a supplied emptiness predicate, the
+  same way the normalization operations upstream are, so this layer keeps its
+  freedom from any class constraint on the payload.
+\<close>
+
+definition finite_analysis_result :: "('ctx, 'a) analysis_result \<Rightarrow> bool" where
+  "finite_analysis_result r \<longleftrightarrow> finite (result_keys r)"
+
+definition wf_analysis_result ::
+  "('a \<Rightarrow> bool) \<Rightarrow> ('ctx, 'a) analysis_result \<Rightarrow> bool" where
+  "wf_analysis_result empty_pred r \<longleftrightarrow>
+     finite_analysis_result r
+   \<and> (\<forall>v ctx st. lookup_context r v ctx = Lifted st \<longrightarrow> \<not> empty_pred st)"
+
+lemma wf_analysis_result_finite [dest]:
+  "wf_analysis_result empty_pred r \<Longrightarrow> finite_analysis_result r"
+  unfolding wf_analysis_result_def by simp
+
+lemma wf_analysis_result_LiftedD [dest]:
+  "\<lbrakk>wf_analysis_result empty_pred r; lookup_context r v ctx = Lifted st\<rbrakk>
+     \<Longrightarrow> \<not> empty_pred st"
+  unfolding wf_analysis_result_def by blast
+
+lemma finite_contexts_at:
+  assumes "finite_analysis_result r"
+  shows "finite (contexts_at r v)"
+  using assms unfolding finite_analysis_result_def contexts_at_def by simp
+
+text \<open>What finiteness buys: the per-node view really is an upper bound of the
+  contexts it covers.\<close>
+
+lemma lookup_context_le_lookup_joined_state:
+  assumes fin: "finite_analysis_result r" and cov: "ctx \<in> contexts_at r v"
+  shows "lookup_context r v ctx \<le> lookup_joined_state r v"
+  unfolding lookup_joined_state_def
+  by (rule join_states_over_member_le[OF finite_contexts_at[OF fin] cov])
+
+text \<open>And what canonicality buys: on a well-formed result the structural
+  reading and the concrete one coincide, provided the supplied predicate is
+  the exact emptiness test its adapters use.\<close>
+
+lemma wf_analysis_result_gamma_point_eq_empty_iff:
+  fixes r :: "('ctx, 'a::sound_domain abs_state) analysis_result"
+    and empty_pred :: "'a abs_state \<Rightarrow> bool"
+  assumes wf: "wf_analysis_result empty_pred r"
+    and exact: "\<And>st. empty_pred st \<longleftrightarrow> \<lbrakk>st\<rbrakk> = {}"
+  shows "gamma_point (lookup_context r v ctx) = {} \<longleftrightarrow> lookup_context r v ctx = Bot"
+proof (cases "lookup_context r v ctx")
+  case Bot
+  then show ?thesis by simp
+next
+  case (Lifted st)
+  have "\<not> empty_pred st" using wf Lifted by blast
+  with exact Lifted show ?thesis by simp
+qed
 
 end
 

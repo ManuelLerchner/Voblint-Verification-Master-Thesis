@@ -107,6 +107,14 @@ lemma pctx_terminates_via_solve_c:
   unfolding pctx_terminates_def
   by (rule TD_side_always_join_Interp.solve_dom_of_solve_c[OF assms])
 
+lemma pctx_vars_finite:
+  assumes "pctx_terminates gs empty_pred Pi ps"
+  shows "finite (fst (pctx_sol gs empty_pred Pi ps))"
+  using TD_side_always_join_Interp.finite_stabl_solve[
+      OF assms[unfolded pctx_terminates_def]]
+  unfolding pctx_sol_def TD_side_always_join_Interp_solve_def
+  by simp
+
 subsection \<open>Domain commute facts, at the routed unit spec\<close>
 
 text \<open>
@@ -490,6 +498,14 @@ lemma pcs_terminates_via_solve_c:
   unfolding pcs_terminates_def
   by (rule TD_side_always_join_Interp.solve_dom_of_solve_c[OF assms])
 
+lemma pcs_vars_finite:
+  assumes "pcs_terminates k gs empty_pred Pi ps"
+  shows "finite (fst (pcs_sol k gs empty_pred Pi ps))"
+  using TD_side_always_join_Interp.finite_stabl_solve[
+      OF assms[unfolded pcs_terminates_def]]
+  unfolding pcs_sol_def TD_side_always_join_Interp_solve_def
+  by simp
+
 subsection \<open>Domain commute facts, at the call-string routed spec\<close>
 
 text \<open>
@@ -616,7 +632,7 @@ interpretation pcs_adapter: routed_analysis_sound
     "map_lift (fun_of_resolved_st_q_for gs)" parity_classify_check
 proof (unfold_locales, goal_cases FinE PP SgCov SgUncov Fwd FinC SeedKey
     IsBotBot IsBotSound ResolveSound
-    EnterCover CombFwd EnterAgree GammaRd ClProved ClRefuted)
+    EnterCover CombFwd EnterAgree GammaRd ClProved ClRefuted VarsFin)
   case FinE show ?case using compile_prog_finite by auto
 next
   case PP show ?case by (rule pcs_pp_routed[OF solves exact])
@@ -674,6 +690,8 @@ next
   case (ClProved c d s) thus ?case by (rule parity_classify_check_proved)
 next
   case (ClRefuted c d s) thus ?case by (rule parity_classify_check_refuted)
+next
+  case VarsFin show ?case by (rule pcs_vars_finite[OF solves])
 qed
 
 theorem pcs_activation_collect_sound:
@@ -855,6 +873,20 @@ lemma pctx_entry_terminates_via_solve_c:
   shows "pctx_entry_terminates gs empty_pred Pi ps"
   unfolding pctx_entry_terminates_def
   by (rule TD_side_always_join_Interp.solve_dom_of_solve_c[OF assms])
+
+text \<open>Finiteness of the entry-state key set, from the solver's own invariant
+  (\<open>finite_stabl_solve\<close>, \<^theory>\<open>Voblint_Solver.TD_Solver_Bridge\<close>). Nothing here
+  depends on the context type, which is what makes the entry-state case
+  available at all: its contexts are \<^typ>\<open>parity list\<close> values, not a space any
+  bound could enumerate.\<close>
+
+lemma pctx_entry_vars_finite:
+  assumes "pctx_entry_terminates gs empty_pred Pi ps"
+  shows "finite (fst (pctx_entry_sol gs empty_pred Pi ps))"
+  using TD_side_always_join_Interp.finite_stabl_solve[
+      OF assms[unfolded pctx_entry_terminates_def]]
+  unfolding pctx_entry_sol_def TD_side_always_join_Interp_solve_def
+  by simp
 
 subsection \<open>Route agreement: the one genuinely domain-specific commute fact\<close>
 
@@ -1097,7 +1129,7 @@ interpretation pctx_entry_adapter: routed_analysis_sound
     "map_lift (fun_of_resolved_st_q_for gs)" parity_classify_check
 proof (unfold_locales, goal_cases FinE PP SgCov SgUncov Fwd FinC SeedKey
     IsBotBot IsBotSound ResolveSound
-    EnterCover CombFwd EnterAgree GammaRd ClProved ClRefuted)
+    EnterCover CombFwd EnterAgree GammaRd ClProved ClRefuted VarsFin)
   case FinE show ?case by (rule pctx_entry_fin)
 next
   case PP show ?case by (rule pctx_entry_pp_routed[OF solves exact])
@@ -1149,6 +1181,8 @@ next
 next
   case (ClRefuted c d s)
   thus ?case by (rule parity_classify_check_refuted)
+next
+  case VarsFin show ?case by (rule pctx_entry_vars_finite[OF solves])
 qed
 
 theorem pctx_entry_activation_collect_sound:

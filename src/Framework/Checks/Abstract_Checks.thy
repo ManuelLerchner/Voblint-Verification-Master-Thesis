@@ -152,10 +152,12 @@ using truthy_query_sound[OF mem] proof (induction c arbitrary: r)
     using and_opt_sound by auto
 next
   case (Or b1 b2)
-  then show ?case 
-  using or_opt_sound[
-      of "check_query b1 d" "check_query b2 d" r
-         "truthy (aval b1 s)" "truthy (aval b2 s)"]
+  text \<open>Unlike \<open>And\<close>, this case names the two concrete disjuncts: \<open>or_opt_sound\<close>
+    quantifies over the propositions its two options stand for, and nothing in
+    the goal determines them by unification.\<close>
+  then show ?case
+    using or_opt_sound[of "check_query b1 d" "check_query b2 d" r
+        "truthy (aval b1 s)" "truthy (aval b2 s)"]
     by auto
 next
   case (Less a b)
