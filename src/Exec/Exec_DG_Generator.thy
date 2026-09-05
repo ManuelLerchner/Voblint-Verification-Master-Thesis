@@ -45,7 +45,7 @@ where
        route_unit
        (\<lambda>c src a. dg_spec_edge_tree S a src (\<lambda>_. Analysis_Global ()))
        (routed_call_tree S (Analysis_Global ()) Activation_Seed (static_resolve g) (\<lambda>d. d = bot))
-       (routed_entry_seed_tree Activation_Seed (Analysis_Global ()))
+       (routed_entry_seed_tree Activation_Seed)
        g bot0 s0d s0g"
 
 text \<open>
@@ -70,7 +70,7 @@ where
        route_unit
        (\<lambda>c src a. dg_spec_edge_tree S a src (\<lambda>_. Analysis_Global ()))
        (routed_call_tree S (Analysis_Global ()) Activation_Seed (static_resolve g) (\<lambda>d. d = bot))
-       (routed_entry_seed_tree Activation_Seed (Analysis_Global ()))
+       (routed_entry_seed_tree Activation_Seed)
        g bot0 s0d s0g"
 
 subsection \<open>Dependency commutation for the generator\<close>
@@ -522,8 +522,8 @@ qed
 
 lemma dg_tree_st_commute_routed_entry_seed_tree:
   shows "list_all2 (dg_tree_st_commute \<sigma>_st)
-           (routed_entry_seed_tree seed_key gk0 route_st ctx v)
-           (routed_entry_seed_tree seed_key gk0 route_abs ctx v)"
+           (routed_entry_seed_tree seed_key route_st ctx v)
+           (routed_entry_seed_tree seed_key route_abs ctx v)"
   by (cases v) (simp_all add: routed_entry_seed_tree_def dg_tree_st_commute_def Fglob_bot)
 
 end

@@ -6,7 +6,7 @@ section \<open>Entry-state routing as a routed-context instance\<close>
 
 text \<open>
   \<^locale>\<open>routed_context_base_hetero\<close> at a route that reads the entered callee state,
-  with \<open>enterc := route_enterc_of_sigma S route sigma gk0 g\<close>, over the CFG of a compiled
+  with \<open>enterc := entry_state_context_of_solution S route sigma gk0 g\<close>, over the CFG of a compiled
   program and at whichever carrier \<open>S\<close> is stated over. The route is a parameter because
   one policy is spelled differently per carrier: \<^const>\<open>formals_route_lifted_gen\<close>
   projects the formals out of an abstract state, an executable instance projects them out
@@ -19,17 +19,76 @@ text \<open>
   the routing policy or about \<^const>\<open>compile_prog\<close> alone and are discharged here once:
   \<open>finC\<close> (\<open>compile_prog_finite\<close>), \<open>call_enter_store_agree\<close> (call-source uniqueness,
   \<open>compile_prog_calls_source_unique\<close>) and \<open>routed_entry_cover\<close>'s routing agreement
-  (\<open>route_enterc_of_sigma_agree\<close>, generic in any \<open>route\<close> reading its caller state from
+  (\<open>entry_state_context_of_solution_agree\<close>, generic in any \<open>route\<close> reading its caller state from
   \<open>sigma\<close>). \<open>seed_key_ne_gk0\<close>, \<open>call_fwd\<close> and \<open>comb_fwd\<close> remain per-instance
   assumptions: the first is datatype distinctness of the instance's seed key, the other
   two say the solved variable set covers a routed callee entry or return continuation, a
   property of the program together with what the solver explored.
 \<close>
+subsection \<open>The context a solved table induces, and its agreement with \<open>route\<close>\<close>
+
+text \<open>
+  \<open>routed_entry_cover\<close> (\<^locale>\<open>routed_context_base_hetero\<close>) asks for a trace-semantic
+  \<open>enterc\<close> agreeing with the executable \<open>route\<close> on every matched call. When \<open>route\<close>
+  is state-dependent (unlike \<open>route_unit\<close> or \<open>cs_route\<close>, both of which ignore their
+  state argument outright and so satisfy this for any \<open>enterc\<close> built the same way),
+  no decoder of the concrete entered store can serve: the analyzer picks its context
+  from an abstract entry value, and an abstract value covering the store need not
+  decode back to it.  \<open>entry_state_context_of_solution\<close> therefore ignores its store
+  argument \<open>s\<close> and reads \<open>route\<close> at the caller's own \<open>sigma\<close>-recorded local value and
+  the one \<^const>\<open>call_action_at_call_site\<close> a well-formed compiled program's call-site
+  uniqueness (\<open>compile_prog_calls_source_unique\<close>) guarantees.  That makes the context
+  induced by the solution rather than by the run --- which is why it lives here, with
+  the entry-state policy, and not in the policy-generic routed context.
+
+  \<open>entry_state_context_of_solution_agree\<close> discharges the agreement for \<^emph>\<open>any\<close>
+  \<open>route\<close>, generically: the two sides differ only in which \<^type>\<open>call_action\<close> they
+  pass to \<open>route\<close> (the matched call edge vs. \<^const>\<open>call_action_at_call_site\<close>'s own
+  read), and \<open>call_action_at_call_site_eq\<close> identifies those under the same
+  uniqueness premise.
+\<close>
+
+definition entry_state_context_of_solution ::
+  "(pp \<Rightarrow> 'c \<Rightarrow> 'D \<Rightarrow> call_action \<Rightarrow> 'c)
+     \<Rightarrow> (call_info \<Rightarrow> 'D \<Rightarrow> 'D)
+     \<Rightarrow> (pp \<times> 'c + 'k \<Rightarrow> ('D::bounded_semilattice_sup_bot,
+                            'G::bounded_semilattice_sup_bot) dg_state)
+     \<Rightarrow> cfg \<Rightarrow> cfg_node \<Rightarrow> 'c \<Rightarrow> store \<Rightarrow> 'c"
+where
+  "entry_state_context_of_solution route en sigma g u ctx s =
+     (let ca = call_action_at_call_site g u;
+          p = (case callee_entry_at_call_site g u of FunctionEntry q \<Rightarrow> q | _ \<Rightarrow> undefined)
+      in route u ctx (en (call_info_of ca p) (locals (sigma (Inl (u, ctx))))) ca)"
+
+text \<open>
+  The premise \<open>ent\<close> is the restriction, and it is deliberately explicit rather
+  than folded into the definition: this \<open>enterc\<close> can only be built where the call
+  has \<^emph>\<open>one\<close> alternative, since it must answer a single context for a concrete
+  store and several alternatives may route to several. That is exactly the case
+  every context instance in the tree is in, and stating it here keeps a
+  multi-alternative instance from silently inheriting a context function that
+  cannot describe it.
+\<close>
+
+lemma entry_state_context_of_solution_agree:
+  assumes fin: "finite (calls g)"
+    and uniq: "\<And>ca1 ce1 af1 ca2 ce2 af2.
+                 (u, ca1, ce1, af1) \<in> calls g \<Longrightarrow> (u, ca2, ce2, af2) \<in> calls g
+                 \<Longrightarrow> ca1 = ca2 \<and> ce1 = ce2 \<and> af1 = af2"
+    and ce: "(u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
+    and ent: "entry = en (call_info_of (CallEdge dst pars args) p)
+                        (locals (sigma (Inl (u, ctx))))"
+  shows "route u ctx entry (CallEdge dst pars args)
+       = entry_state_context_of_solution route en sigma g u ctx s"
+  unfolding entry_state_context_of_solution_def
+  using call_action_at_call_site_eq[OF fin uniq ce] callee_entry_at_call_site_eq[OF fin uniq ce]
+        ent
+  by (simp add: Let_def)
 
 locale entry_state_routed_context =
   dg_ctx_activation_base S gammaDG gs "compile_prog Pi ps" gk0 route
     "routed_call_tree S gk0 seed_key (static_resolve (compile_prog Pi ps)) is_bot"
-    "routed_entry_seed_tree seed_key gk0"
+    "routed_entry_seed_tree seed_key"
     bot0 s0d s0g sigma vars x0 sg gammaM
   for S :: "(pp \<times> 'c, 'k, unit, 'D::bounded_semilattice_sup_bot,
               'G::bounded_semilattice_sup_bot) dg_spec"
@@ -46,7 +105,6 @@ locale entry_state_routed_context =
   assumes seed_key_ne_gk0[simp]: "\<And>p ctx. seed_key p ctx \<noteq> gk0"
     and is_bot_bot: "is_bot bot"
     and is_bot_sound: "\<And>d gv. is_bot d \<Longrightarrow> gammaDG d gv = {}"
-    and is_bot_mono: "\<And>d d'. \<not> is_bot d \<Longrightarrow> d \<le> d' \<Longrightarrow> \<not> is_bot d'"
     and enter_singleton:
     "\<And>u ctx dst pars args p cont.
        (u, ctx) \<in> vars
@@ -93,7 +151,7 @@ begin
 sublocale routed: routed_context_base_hetero S gammaDG gs "compile_prog Pi ps" gk0
   route bot0 s0d s0g sigma vars x0 sg seed_key
   "static_resolve (compile_prog Pi ps)" is_bot gammaM
-  "route_enterc_of_sigma route en sigma (compile_prog Pi ps)"
+  "entry_state_context_of_solution route en sigma (compile_prog Pi ps)"
 proof unfold_locales
   show "finite (calls (compile_prog Pi ps))" using compile_prog_finite by simp
 next
@@ -103,8 +161,6 @@ next
 next
   show "\<And>d gv. is_bot d \<Longrightarrow> gammaDG d gv = {}" by (rule is_bot_sound)
 next
-  show "\<And>d d'. \<not> is_bot d \<Longrightarrow> d \<le> d' \<Longrightarrow> \<not> is_bot d'" by (rule is_bot_mono)
-next
   fix u ctx dst pars args p cont s
   assume "(u, ctx) \<in> vars"
     and "(u, CallEdge dst pars args, FunctionEntry p, cont)
@@ -112,7 +168,7 @@ next
     and "s \<in> gammaDG (locals (sigma (Inl (u, ctx)))) (globs (sigma (Inr gk0)))"
   then show "p \<in> set (static_resolve (compile_prog Pi ps) cont u
                         (CallEdge dst pars args) (locals (sigma (Inl (u, ctx)))))"
-    by (simp add: static_resolve_iff compile_prog_finite)
+    by (simp add: compile_prog_finite)
 next
   fix u ctx dst pars args p cont s
   assume covV: "(u, ctx) \<in> vars"
@@ -132,9 +188,9 @@ next
                 \<in> gammaDG (en ?ci ?caller) (globs (sigma (Inr gk0)))"
     using covV ce sin by (rule enter_sound_at)
   have req: "route u ctx (en ?ci ?caller) (CallEdge dst pars args)
-               = route_enterc_of_sigma route en sigma (compile_prog Pi ps) u ctx
+               = entry_state_context_of_solution route en sigma (compile_prog Pi ps) u ctx
                    (call_enter gs (CallEdge dst pars args) s)"
-    by (rule route_enterc_of_sigma_agree
+    by (rule entry_state_context_of_solution_agree
           [OF fin compile_prog_calls_source_unique ce refl])
   show "\<exists>pairs pub deps cont' entry.
              enter_runs (enter\<^sup># S ?ci) (mk_dg_man ?caller (\<lambda>_. gk0)) sigma pairs pub
@@ -144,7 +200,7 @@ next
            \<and> call_enter gs (CallEdge dst pars args) s
                \<in> gammaDG entry (globs (sigma (Inr gk0)))
            \<and> route u ctx entry (CallEdge dst pars args)
-               = route_enterc_of_sigma route en sigma (compile_prog Pi ps) u ctx
+               = entry_state_context_of_solution route en sigma (compile_prog Pi ps) u ctx
                    (call_enter gs (CallEdge dst pars args) s)
            \<and> (FunctionEntry p, route u ctx entry (CallEdge dst pars args)) \<in> vars"
     using R D sin ecov req call_fwd[OF covV ce] by force

@@ -52,7 +52,7 @@ text \<open>
 
 locale routed_context_base_hetero =
   dg_ctx_activation_base S gammaDG gs g gk0 route
-    "routed_call_tree S gk0 seed_key resolve is_bot" "routed_entry_seed_tree seed_key gk0"
+    "routed_call_tree S gk0 seed_key resolve is_bot" "routed_entry_seed_tree seed_key"
     bot0 s0d s0g sigma vars x0 sg gammaM
   for S :: "(pp \<times> 'c, 'k, unit, 'D::bounded_semilattice_sup_bot,
               'G::bounded_semilattice_sup_bot) dg_spec"
@@ -66,11 +66,10 @@ locale routed_context_base_hetero =
     and is_bot :: "'D \<Rightarrow> bool"
     and gammaM :: "'M \<Rightarrow> store set" +
   fixes enterc :: "cfg_node \<Rightarrow> 'c \<Rightarrow> store \<Rightarrow> 'c"
-  assumes finC[intro,simp]: "finite (calls g)"
+  assumes finC: "finite (calls g)"
     and seed_key_ne_gk0[simp]: "\<And>p ctx. seed_key p ctx \<noteq> gk0"
     and is_bot_bot[simp]: "is_bot bot"
     and is_bot_sound: "\<And>d g. is_bot d \<Longrightarrow> gammaDG d g = {}"
-    and is_bot_mono: "\<And>d d'. \<not> is_bot d \<Longrightarrow> d \<le> d' \<Longrightarrow> \<not> is_bot d'"
     and resolve_sound:
     "\<And>u ctx dst pars args p cont s.
        (u, ctx) \<in> vars
@@ -153,10 +152,10 @@ proof
   with assms show False by simp
 qed
 
-lemma le_dg_state_localsD [dest]: "d \<le> d' \<Longrightarrow> locals d \<le> locals d'"
+lemma le_dg_state_localsD: "d \<le> d' \<Longrightarrow> locals d \<le> locals d'"
   by (simp add: less_eq_dg_state_def)
 
-lemma le_dg_state_globsD [dest]: "d \<le> d' \<Longrightarrow> globs d \<le> globs d'"
+lemma le_dg_state_globsD: "d \<le> d' \<Longrightarrow> globs d \<le> globs d'"
   by (simp add: less_eq_dg_state_def)
 
 subsection \<open>Reaching a resolved callee's contribution\<close>
@@ -335,10 +334,12 @@ next
   have covV_cont: "(cont, ctx) \<in> vars"
     using comb_fwd[OF True ce] .
   have sin': "s \<in> gammaDG (locals (sigma (Inl (u, ctx)))) ?g"
-    using sin True by (simp add: sg_cov)
+    using sin True by simp
   obtain pairs pub deps cont' entry
     where R: "enter_runs (enter\<^sup># S (call_info_of (CallEdge dst pars args) p))
                 (mk_dg_man (locals (sigma (Inl (u, ctx)))) (\<lambda>_. gk0)) sigma pairs pub"
+      and D: "enter_deps (enter\<^sup># S (call_info_of (CallEdge dst pars args) p))
+                (mk_dg_man (locals (sigma (Inl (u, ctx)))) (\<lambda>_. gk0)) sigma pairs deps"
       and mem: "(cont', entry) \<in> set pairs"
       and ecov: "call_enter gs (CallEdge dst pars args) s \<in> gammaDG entry ?g"
       and req: "route u ctx entry (CallEdge dst pars args)
@@ -352,7 +353,7 @@ next
           [OF routed_seed_publish_bound_local[OF True ce sin' covV_cont R mem nb covV]
               order_refl])
   also have "\<dots> = gammaM (sg (Inl (FunctionEntry p, ?ctx')))"
-    using covV by (simp add: sg_cov)
+    using covV by simp
   finally show ?thesis using ecov req by auto
 qed
 
@@ -433,12 +434,14 @@ next
   let ?g = "globs (sigma (Inr gk0))"
   let ?ci = "call_info_of (CallEdge dst pars args) p"
   have sin: "s \<in> gammaDG (locals (sigma (Inl (cl, c1)))) ?g"
-    using s True by (simp add: sg_cov)
+    using s True by simp
   have es_eq: "es = call_enter gs (CallEdge dst pars args) s"
     using call_enter_store_agree ces ce by blast
   obtain pairs pub deps cont' entry
     where R: "enter_runs (enter\<^sup># S ?ci)
                 (mk_dg_man (locals (sigma (Inl (cl, c1)))) (\<lambda>_. gk0)) sigma pairs pub"
+      and D: "enter_deps (enter\<^sup># S ?ci)
+                (mk_dg_man (locals (sigma (Inl (cl, c1)))) (\<lambda>_. gk0)) sigma pairs deps"
       and mem: "(cont', entry) \<in> set pairs"
       and ccov: "s \<in> gammaDG cont' ?g"
       and ecov: "call_enter gs (CallEdge dst pars args) s \<in> gammaDG entry ?g"
@@ -461,7 +464,7 @@ next
     have covV_cont: "(cont, c1) \<in> vars"
       using comb_fwd[OF \<open>(cl, c1) \<in> vars\<close> ce] .
     have tin: "t \<in> gammaDG (locals (sigma (Inl (FunctionResult p, ?ex_ctx)))) ?g"
-      using t route_agree True by (simp add: sg_cov)
+      using t route_agree True by simp
     let ?sub = "sp_compile_with (\<lambda>d. DG d bot)
                   (dg_spec_combine_transfer S ?ci (mk_dg_man cont' (\<lambda>_. gk0))
                     (locals (sigma (Inl (FunctionResult p, ?ex_ctx)))))"
@@ -486,32 +489,11 @@ next
             [OF routed_comb_bound_local[OF \<open>(cl, c1) \<in> vars\<close> ce sin covV_cont R mem]
                 routed_comb_bound_global[OF \<open>(cl, c1) \<in> vars\<close> ce sin covV_cont R mem]])
     also have "\<dots> = gammaM (sg (Inl (cont, c1)))"
-      using covV_cont by (simp add: sg_cov)
+      using covV_cont by simp
     finally show ?thesis .
   qed
 qed
 
-
-subsection \<open>An entry-local bound in the shape \<open>pp_entry_s0g_bound\<close> gives for globals\<close>
-
-text \<open>
-  The local-carrier twin of \<open>pp_entry_s0g_bound\<close> (\<^theory>\<open>Voblint_Framework.DG_Ctx_Activation\<close>),
-  proved the same way: \<open>Gen\<close>'s own entry accumulator starts at \<open>bot0 \<squnion> s0d\<close>,
-  \<open>side_acc_dg_ge_acc\<close> only grows it, and \<open>pp_eq_bound\<close> transports the
-  bound across a covered point's post-solution equation.
-\<close>
-
-lemma locals_ge_s0d:
-  assumes cov: "(cfg_entry g, ctx) \<in> vars"
-  shows "s0d \<le> locals (sigma (Inl (cfg_entry g, ctx)))"
-proof -
-  have "s0d \<le> locals (eq Gen (cfg_entry g, ctx) sigma)"
-    by (simp add: eq_routed_node_rhs)
-       (rule order_trans[OF _ side_acc_dg_ge_acc], simp add: le_supI2)
-  also have "\<dots> \<le> locals (sigma (Inl (cfg_entry g, ctx)))"
-    using pp_eq_bound[OF cov] by (simp add: less_eq_dg_state_def)
-  finally show ?thesis .
-qed
 
 subsection \<open>Activation-collect soundness against the routed local unknown\<close>
 
@@ -533,7 +515,7 @@ lemma activation_collect_dg_sound:
 proof (rule activation_collect_sound[where cover = "\<lambda>v c. gammaM (sg (Inl (v, c)))"])
   fix s0 assume s0mem: "s0 \<in> S0"
   have le_local: "s0d \<le> locals (sigma (Inl (cfg_entry g, initial_ctx)))"
-    by (rule locals_ge_s0d[OF entry_cov])
+    by (rule pp_entry_s0d_bound[OF entry_cov])
   have le_global: "s0g \<le> globs (sigma (Inr gk0))"
     by (rule pp_entry_s0g_bound[OF entry_cov])
   have "gammaDG s0d s0g
@@ -542,7 +524,7 @@ proof (rule activation_collect_sound[where cover = "\<lambda>v c. gammaM (sg (In
   with s0mem s0_sound have "s0 \<in> gammaDG (locals (sigma (Inl (cfg_entry g, initial_ctx))))
                                    (globs (sigma (Inr gk0)))" by blast
   thus "s0 \<in> gammaM (sg (Inl (cfg_entry g, initial_ctx)))"
-    using entry_cov by (simp add: sg_cov)
+    using entry_cov by simp
 next
   fix u a v' c' s' s''
   assume "(u, a, v') \<in> intra g" "s' \<in> gammaM (sg (Inl (u, c')))" "s'' \<in> edge_step a s'"
@@ -659,7 +641,7 @@ proof -
   have "set (filter ?P ?L) = {(u, ca, cf, af)}"
   proof (rule set_eqI, rule iffI)
     fix x assume hx: "x \<in> set (filter ?P ?L)"
-    then have memx: "x \<in> set ?L" and px: "?P x" by (auto simp: set_filter)
+    then have memx: "x \<in> set ?L" and px: "?P x" by auto
     obtain c ca' ce' af' where x: "x = (c, ca', ce', af')" by (cases x) auto
     from px x have cU: "c = u" by simp
     from memx x cU fin have "(u, ca', ce', af') \<in> calls g" by simp
@@ -723,60 +705,5 @@ definition formals_route_lifted_gen ::
 where
   "formals_route_lifted_gen u ctx d ca = formals_route_lifted d ca"
 
-subsection \<open>A solved-table \<open>enterc\<close> agrees with any \<open>route\<close> reading the same table\<close>
-
-text \<open>
-  \<open>routed_entry_cover\<close> (\<^locale>\<open>routed_context_base_hetero\<close>) asks for a trace-semantic
-  \<open>enterc\<close> agreeing with the executable \<open>route\<close> on every matched call. When \<open>route\<close>
-  is state-dependent (unlike \<open>route_unit\<close> or \<open>cs_route\<close>, both of which ignore their
-  state argument outright and so satisfy this for any \<open>enterc\<close> built the
-  same way), the natural \<open>enterc\<close> recomputes \<open>route\<close> from the caller's own solved
-  table instead of decoding the concrete entered store: \<open>route_enterc_of_sigma\<close>
-  ignores its store argument \<open>s\<close> entirely and reads \<open>route\<close> at the caller's own
-  \<open>sigma\<close>-recorded local value and the one \<^const>\<open>call_action_at_call_site\<close> a
-  well-formed compiled program's own call-site uniqueness (\<open>compile_prog_calls_source_unique\<close>)
-  guarantees. \<open>route_enterc_of_sigma_agree\<close> then discharges that agreement for
-  \<^emph>\<open>any\<close> \<open>route\<close>, generically: the two sides differ only in which \<^type>\<open>call_action\<close>
-  they pass to \<open>route\<close> (the matched call edge vs. \<^const>\<open>call_action_at_call_site\<close>'s own
-  read), and \<open>call_action_at_call_site_eq\<close> identifies those under the same
-  uniqueness premise.
-\<close>
-
-definition route_enterc_of_sigma ::
-  "(pp \<Rightarrow> 'c \<Rightarrow> 'D \<Rightarrow> call_action \<Rightarrow> 'c)
-     \<Rightarrow> (call_info \<Rightarrow> 'D \<Rightarrow> 'D)
-     \<Rightarrow> (pp \<times> 'c + 'k \<Rightarrow> ('D::bounded_semilattice_sup_bot,
-                            'G::bounded_semilattice_sup_bot) dg_state)
-     \<Rightarrow> cfg \<Rightarrow> cfg_node \<Rightarrow> 'c \<Rightarrow> store \<Rightarrow> 'c"
-where
-  "route_enterc_of_sigma route en sigma g u ctx s =
-     (let ca = call_action_at_call_site g u;
-          p = (case callee_entry_at_call_site g u of FunctionEntry q \<Rightarrow> q | _ \<Rightarrow> undefined)
-      in route u ctx (en (call_info_of ca p) (locals (sigma (Inl (u, ctx))))) ca)"
-
-text \<open>
-  The premise \<open>ent\<close> is the restriction, and it is deliberately explicit rather
-  than folded into the definition: this \<open>enterc\<close> can only be built where the call
-  has \<^emph>\<open>one\<close> alternative, since it must answer a single context for a concrete
-  store and several alternatives may route to several. That is exactly the case
-  every context instance in the tree is in, and stating it here keeps a
-  multi-alternative instance from silently inheriting a context function that
-  cannot describe it.
-\<close>
-
-lemma route_enterc_of_sigma_agree:
-  assumes fin: "finite (calls g)"
-    and uniq: "\<And>ca1 ce1 af1 ca2 ce2 af2.
-                 (u, ca1, ce1, af1) \<in> calls g \<Longrightarrow> (u, ca2, ce2, af2) \<in> calls g
-                 \<Longrightarrow> ca1 = ca2 \<and> ce1 = ce2 \<and> af1 = af2"
-    and ce: "(u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
-    and ent: "entry = en (call_info_of (CallEdge dst pars args) p)
-                        (locals (sigma (Inl (u, ctx))))"
-  shows "route u ctx entry (CallEdge dst pars args)
-       = route_enterc_of_sigma route en sigma g u ctx s"
-  unfolding route_enterc_of_sigma_def
-  using call_action_at_call_site_eq[OF fin uniq ce] callee_entry_at_call_site_eq[OF fin uniq ce]
-        ent
-  by (simp add: Let_def)
 
 end

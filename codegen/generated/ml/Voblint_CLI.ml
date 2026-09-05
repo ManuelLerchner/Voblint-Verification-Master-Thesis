@@ -5271,7 +5271,7 @@ let rec routed_node_rhs_buffered _B _C _D
                              bot _D.order_bot_bounded_semilattice_sup_bot.bot_order_bot)))))));;
 
 let rec routed_entry_seed_tree _C _D
-  seed_key gk0 route ctx v =
+  seed_key route ctx v =
     (match v with Statement _ -> []
       | FunctionEntry _ ->
         [sp_lift_tree (QueryG (seed_key v ctx, (fun a -> Answer a)))
@@ -6811,7 +6811,7 @@ let rec ics_eqs
           (semilattice_sup_resolved_st_q
             (bounded_semilattice_sup_bot_int_dom_ext
               int_dom_record_lattice_unit)))
-        (fun a b -> Seed (a, b)) Global)
+        (fun a b -> Seed (a, b)))
       (compile_prog pi ps) Bot (Lifted cinit_int_dom_st) Bot;;
 
 let rec rho_update
@@ -7231,7 +7231,7 @@ let rec scs_eqs
           (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_sign))
         (bounded_semilattice_sup_bot_lifted
           (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_sign))
-        (fun a b -> Seed (a, b)) Global)
+        (fun a b -> Seed (a, b)))
       (compile_prog pi ps) Bot (Lifted cinit_sign_st) Bot;;
 
 let rec scs_sol
@@ -7509,7 +7509,7 @@ let rec sctx_eqs
           (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_sign))
         (bounded_semilattice_sup_bot_lifted
           (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_sign))
-        (fun a b -> Activation_Seed (a, b)) (Analysis_Global ()))
+        (fun a b -> Activation_Seed (a, b)))
       (compile_prog pi ps) Bot (Lifted cinit_sign_st) Bot;;
 
 let rec explode s = map char_of_integer (Str_Literal.asciis_of_literal s);;
@@ -7671,7 +7671,7 @@ let rec pctx_eqs
           (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_parity))
         (bounded_semilattice_sup_bot_lifted
           (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_parity))
-        (fun a b -> Activation_Seed (a, b)) (Analysis_Global ()))
+        (fun a b -> Activation_Seed (a, b)))
       (compile_prog pi ps) Bot (Lifted cinit_parity_st) Bot;;
 
 let rec declared_global_vars
@@ -7769,7 +7769,7 @@ let rec int_conf_eqs
           (semilattice_sup_resolved_st_q
             (bounded_semilattice_sup_bot_int_dom_ext
               int_dom_record_lattice_unit)))
-        (fun a b -> Activation_Seed (a, b)) (Analysis_Global ()))
+        (fun a b -> Activation_Seed (a, b)))
       (compile_prog pi ps) Bot (Lifted cinit_int_dom_st) Bot;;
 
 let rec ivl_enter_st_for x = generic_enter_st_for bot_ivl ivl_ops x;;
@@ -8236,7 +8236,7 @@ let rec sctx_entry_eqs
           (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_sign))
         (bounded_semilattice_sup_bot_lifted
           (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_sign))
-        (fun a b -> Activation_Seed (a, b)) (Analysis_Global ()))
+        (fun a b -> Activation_Seed (a, b)))
       (compile_prog pi ps) Bot (Lifted cinit_sign_st) Bot;;
 
 let rec sctx_entry_sol
@@ -8577,7 +8577,7 @@ let rec int_conf_entry_eqs
           (semilattice_sup_resolved_st_q
             (bounded_semilattice_sup_bot_int_dom_ext
               int_dom_record_lattice_unit)))
-        (fun a b -> Activation_Seed (a, b)) (Analysis_Global ()))
+        (fun a b -> Activation_Seed (a, b)))
       (compile_prog pi ps) Bot (Lifted cinit_int_dom_st) Bot;;
 
 let rec int_conf_entry_sol
@@ -9791,7 +9791,7 @@ let rec entry_state_eqs
           (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_ivl))
         (bounded_semilattice_sup_bot_lifted
           (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_ivl))
-        (fun a b -> Activation_Seed (a, b)) (Analysis_Global ()))
+        (fun a b -> Activation_Seed (a, b)))
       (compile_prog pi ps) Bot (Lifted cinit_ivl_st) Bot;;
 
 let rec entry_state_sol
@@ -9960,7 +9960,7 @@ let rec interval_conf_eqs
           (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_ivl))
         (bounded_semilattice_sup_bot_lifted
           (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_ivl))
-        (fun a b -> Activation_Seed (a, b)) (Analysis_Global ()))
+        (fun a b -> Activation_Seed (a, b)))
       (compile_prog pi ps) Bot (Lifted cinit_ivl_st) Bot;;
 
 let rec analyse_parity_ctx_result_for
@@ -10076,7 +10076,7 @@ let rec cs_call_string_eqs
           (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_ivl))
         (bounded_semilattice_sup_bot_lifted
           (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_ivl))
-        (fun a b -> Seed (a, b)) Global)
+        (fun a b -> Seed (a, b)))
       (compile_prog pi ps) Bot (Lifted cinit_ivl_st) Bot;;
 
 let rec cs_call_string_sol

@@ -28,7 +28,7 @@ text \<open>
 locale call_string_routed_context =
   dg_ctx_activation_base S gammaDG gs "compile_prog Pi ps" Global "cs_route k"
     "routed_call_tree S Global Seed (static_resolve (compile_prog Pi ps)) is_bot"
-    "routed_entry_seed_tree Seed Global"
+    "routed_entry_seed_tree Seed"
     bot0 s0d s0g sigma vars x0 sg gammaM
   for S :: "(pp \<times> cfg_node list, call_string_gk, unit, 'D::bounded_semilattice_sup_bot,
               'G::bounded_semilattice_sup_bot) dg_spec"
@@ -41,7 +41,6 @@ locale call_string_routed_context =
     and gammaM :: "'M \<Rightarrow> store set" +
   assumes is_bot_bot: "is_bot bot"
     and is_bot_sound: "\<And>d gv. is_bot d \<Longrightarrow> gammaDG d gv = {}"
-    and is_bot_mono: "\<And>d d'. \<not> is_bot d \<Longrightarrow> d \<le> d' \<Longrightarrow> \<not> is_bot d'"
     and enter_complete:
     "\<And>u ctx dst pars args p cont s.
        (u, ctx) \<in> vars
@@ -82,8 +81,6 @@ next
   show "is_bot bot" by (rule is_bot_bot)
 next
   show "\<And>d gv. is_bot d \<Longrightarrow> gammaDG d gv = {}" by (rule is_bot_sound)
-next
-  show "\<And>d d'. \<not> is_bot d \<Longrightarrow> d \<le> d' \<Longrightarrow> \<not> is_bot d'" by (rule is_bot_mono)
 next
   fix u ctx dst pars args p cont s
   assume "(u, ctx) \<in> vars"

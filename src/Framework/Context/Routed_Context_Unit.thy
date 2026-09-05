@@ -80,7 +80,7 @@ text \<open>
 locale unit_routed_context =
   dg_ctx_activation_base S gammaDG gs g gk0 route_unit
     "routed_call_tree S gk0 seed_key (static_resolve g) is_bot"
-    "routed_entry_seed_tree seed_key gk0"
+    "routed_entry_seed_tree seed_key"
     bot0 s0d s0g sigma vars x0 sg gammaM
   for S :: "(pp \<times> unit, 'k, unit, 'D::bounded_semilattice_sup_bot,
               'G::bounded_semilattice_sup_bot) dg_spec"
@@ -98,7 +98,6 @@ locale unit_routed_context =
     and seed_key_ne_gk0[simp]: "\<And>p ctx. seed_key p ctx \<noteq> gk0"
     and is_bot_bot[simp]: "is_bot bot"
     and is_bot_sound: "\<And>d gv. is_bot d \<Longrightarrow> gammaDG d gv = {}"
-    and is_bot_mono: "\<And>d d'. \<not> is_bot d \<Longrightarrow> d \<le> d' \<Longrightarrow> \<not> is_bot d'"
     and enter_complete:
     "\<And>u ctx dst pars args p cont s.
        (u, ctx) \<in> vars
@@ -145,8 +144,6 @@ next
   show "is_bot bot" by (rule is_bot_bot)
 next
   show "\<And>d gv. is_bot d \<Longrightarrow> gammaDG d gv = {}" by (rule is_bot_sound)
-next
-  show "\<And>d d'. \<not> is_bot d \<Longrightarrow> d \<le> d' \<Longrightarrow> \<not> is_bot d'" by (rule is_bot_mono)
 next
   fix u ctx dst pars args p cont s
   assume "(u, ctx) \<in> vars"

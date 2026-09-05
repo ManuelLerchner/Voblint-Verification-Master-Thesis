@@ -304,7 +304,7 @@ proof -
   note mono = sound_dg_spec_core.gammaDG_mono[OF sound_dg_spec_core_st]
   show ?thesis
 proof (unfold_locales, goal_cases Mono Step Comb FinE PP SgCov SgUncov Fwd FinC SeedKey
-    IsBotBot IsBotSound IsBotMono EnterComplete CallFwd CombFwd EnterAgree)
+    IsBotBot IsBotSound EnterComplete CallFwd CombFwd EnterAgree)
   case (Mono d d' g g') then show ?case by (rule base.gammaDG_mono)
 next
   case (Step a \<tau> src gk) show ?case by (rule base.step_sound)
@@ -328,8 +328,6 @@ next
   case IsBotBot show ?case by simp
 next
   case (IsBotSound d gv) then show ?case by simp
-next
-  case (IsBotMono d d') then show ?case using le_bot by blast
 next
   case (EnterComplete u ctx dst pars args p cont s)
   let ?sigma = "snd (solve eqs x)"
@@ -646,7 +644,7 @@ proof -
   interpret base: sound_dg_spec_core spec_st gamma_exec gs by (rule sound_dg_spec_core_st[OF tf_sound])
   show ?thesis
 proof (unfold_locales, goal_cases Mono Step Comb FinE PP SgCov SgUncov Fwd FinC SeedKey
-    IsBotBot IsBotSound IsBotMono EnterComplete CallFwd CombFwd EnterAgree)
+    IsBotBot IsBotSound EnterComplete CallFwd CombFwd EnterAgree)
   case (Mono d d' g g') then show ?case by (rule base.gammaDG_mono)
 next
   case (Step a \<tau> src gk) show ?case by (rule base.step_sound)
@@ -661,7 +659,7 @@ next
         (routed_node_rhs_buffered intra_predecessor_addr_list
           (\<lambda>_. Analysis_Global ()) route_unit unit_buf.intra_st
           (unit_buf.cmb_st (compile_prog Pi ps))
-          (routed_entry_seed_tree Activation_Seed (Analysis_Global ()))
+          (routed_entry_seed_tree Activation_Seed)
           (compile_prog Pi ps) bot0 s0d s0g)
         x (snd (solve eqs x)) (fst (solve eqs x))"
     using solver_pps[OF SOLVE] unfolding eqs_def
@@ -671,7 +669,7 @@ next
         (routed_node_rhs intra_predecessor_addr_list
           (\<lambda>_. Analysis_Global ()) route_unit unit_buf.intra_st
           (unit_buf.cmb_st (compile_prog Pi ps))
-          (routed_entry_seed_tree Activation_Seed (Analysis_Global ()))
+          (routed_entry_seed_tree Activation_Seed)
           (compile_prog Pi ps) bot0 s0d s0g)
         x (snd (solve eqs x)) (fst (solve eqs x))"
     using unit_buf.pp_st[OF pp_buf] .
@@ -695,8 +693,6 @@ next
   case IsBotBot show ?case by simp
 next
   case (IsBotSound d gv) then show ?case by simp
-next
-  case (IsBotMono d d') then show ?case by (cases d; cases d'; simp)
 next
   case (EnterComplete u ctx dst pars args p cont s)
   let ?ci = "call_info_of (CallEdge dst pars args) p"

@@ -65,7 +65,7 @@ interpretation sctx_adapter: routed_analysis_sound
     Activation_Seed "\<lambda>d. d = Bot" enterc_unit
     "map_lift (fun_of_resolved_st_q_for gs)" sign_classify_check
 proof (unfold_locales, goal_cases FinE PP SgCov SgUncov Fwd FinC SeedKey
-    IsBotBot IsBotSound IsBotMono ResolveSound
+    IsBotBot IsBotSound ResolveSound
     EnterCover CombFwd EnterAgree GammaRd ClProved ClRefuted)
   case FinE show ?case
     using compile_prog_finite by auto
@@ -89,8 +89,6 @@ next
   case IsBotBot show ?case by simp
 next
   case (IsBotSound d g') then show ?case by (simp add: sctx_gamma_def)
-next
-  case (IsBotMono d d') then show ?case by (cases d; cases d'; simp)
 next
   case (ResolveSound u ctx dst pars args p cont s)
   thus ?case by (simp add: static_resolve_iff compile_prog_finite)

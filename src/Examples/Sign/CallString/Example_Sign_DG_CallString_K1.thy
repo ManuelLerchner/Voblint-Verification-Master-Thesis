@@ -154,7 +154,7 @@ definition sign_nest_1_eqs ::
        (\<lambda>ctx' src a. dg_spec_edge_tree sign_nest_S_st a src (\<lambda>_. Global))
        (routed_call_tree sign_nest_S_st Global Seed (static_resolve sign_nest_cfg)
           (\<lambda>d. d = Bot))
-       (routed_entry_seed_tree Seed Global)
+       (routed_entry_seed_tree Seed)
        sign_nest_cfg Bot (Lifted cinit_sign_st) Bot"
 
 definition sign_nest_1_sol ::
@@ -290,7 +290,7 @@ interpretation sign_nest_1_cs: call_string_routed_context
     "\<lambda>d. d = Bot"
     "\<lambda>m. gamma_state_lift (map_lift (fun_of_resolved_st_q_for sign_nest_gs) m)"
 proof (unfold_locales, unfold sign_nest_cfg_compile,
-       goal_cases FinE PP SgCov SgUncov Fwd IsBotBot IsBotSound IsBotMono
+       goal_cases FinE PP SgCov SgUncov Fwd IsBotBot IsBotSound
        EnterComplete CallFwd CombFwd)
   case FinE
   show ?case by (rule sign_nest_finE)
@@ -310,8 +310,6 @@ next
   case IsBotBot show ?case by simp
 next
   case (IsBotSound d gv) then show ?case by (simp add: sign_nest_gamma_eq)
-next
-  case (IsBotMono d d') then show ?case by (cases d; cases d'; simp)
 next
   case (EnterComplete u ctx dst pars args p cont s)
   let ?ci = "call_info_of (CallEdge dst pars args) p"

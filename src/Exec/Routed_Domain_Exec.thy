@@ -132,13 +132,13 @@ theorem pp_st:
   assumes pp: "part_post_solution
      (routed_node_rhs_buffered intra_predecessor_addr_list (\<lambda>_. gk0) route_st
         intra_st (routed_call_tree spec_st gk0 seed_key (resolve_st g) (\<lambda>d. d = Bot))
-        (routed_entry_seed_tree seed_key gk0)
+        (routed_entry_seed_tree seed_key)
         g bot0 s0d s0g)
      x0 sigma_st vars"
   shows "part_post_solution
      (routed_node_rhs intra_predecessor_addr_list (\<lambda>_. gk0) route_st
         intra_st (routed_call_tree spec_st gk0 seed_key (resolve_st g) (\<lambda>d. d = Bot))
-        (routed_entry_seed_tree seed_key gk0)
+        (routed_entry_seed_tree seed_key)
         g bot0 s0d s0g)
      x0 sigma_st vars"
 proof (rule part_post_solution_routed_node_rhs_buffered
@@ -177,10 +177,10 @@ proof (rule part_post_solution_routed_node_rhs_buffered
   show "\<And>c' ca cc ex \<tau>. dep_aux \<tau> (cmb_st g route_st c' ca cc ex)
          = dep_aux \<tau> (cmb_st g route_st c' ca cc ex)"
     by (rule refl)
-  show "\<And>c' w \<tau> z x. x \<in> set (routed_entry_seed_tree seed_key gk0 route_st c' w)
+  show "\<And>c' w \<tau> z x. x \<in> set (routed_entry_seed_tree seed_key route_st c' w)
          \<Longrightarrow> sides_of_rhs x \<tau> z = bot"
     by (rule routed_entry_seed_tree_free)
-  show "\<And>c' w \<tau> x. x \<in> set (routed_entry_seed_tree seed_key gk0 route_st c' w)
+  show "\<And>c' w \<tau> x. x \<in> set (routed_entry_seed_tree seed_key route_st c' w)
          \<Longrightarrow> globs (traverse_rhs x \<tau>) = bot"
     by (rule routed_entry_seed_tree_local_only)
 qed (rule pp)

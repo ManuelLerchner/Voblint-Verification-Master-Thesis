@@ -682,3 +682,25 @@ valid_ltr_ctx_sound_gen
 activation_collect_sound_gen
 # Restated its own locale assumption sg_uncov verbatim; callers cite sg_uncov.
 sg_uncovered_empty
+
+# --- Unused routed-context obligation (2026-09-05) ---
+# is_bot_mono was assumed by routed_context_base_hetero and its three children,
+# forwarded through every sublocale, and discharged by all 24 interpretations --
+# but no proof ever applied it. Removing an assumption only strengthens the
+# theorems that remain.
+is_bot_mono
+
+# --- Entry-local bound moved next to its global twin (2026-09-05) ---
+# Renamed pp_entry_s0d_bound and moved from Routed_Context into
+# DG_Ctx_Activation, beside pp_entry_s0g_bound: both depend only on
+# dg_ctx_activation_base, and only the pair together explains the entry seed.
+locals_ge_s0d
+
+# --- Solution-induced entry context moved to its policy (2026-09-05) ---
+# route_enterc_of_sigma named its implementation, not its meaning, and sat in
+# the policy-generic Routed_Context although only the entry-state policy uses
+# it. Now entry_state_context_of_solution in Entry_State_Routed_Context, with
+# the singleton-alternative premise still explicit.
+route_enterc_of_sigma
+route_enterc_of_sigma_agree
+entry_state_context_eq_route_enterc_of_sigma

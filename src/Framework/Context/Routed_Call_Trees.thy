@@ -243,21 +243,21 @@ where
 text \<open>The seed read-back hook: at a callee entry it reads the seed out of the
   \<open>locals\<close> half, matching \<open>routed_call_tree\<close>'s write.\<close>
 definition routed_entry_seed_tree ::
-  "(pp \<Rightarrow> 'c \<Rightarrow> 'k) \<Rightarrow> 'k
+  "(pp \<Rightarrow> 'c \<Rightarrow> 'k)
    \<Rightarrow> (pp \<Rightarrow> 'c \<Rightarrow> 'D::bounded_semilattice_sup_bot \<Rightarrow> call_action \<Rightarrow> 'c)
    \<Rightarrow> 'c \<Rightarrow> pp \<Rightarrow> (pp \<times> 'c, 'k, ('D, 'G::bounded_semilattice_sup_bot) dg_state) strategy_tree list"
 where
-  "routed_entry_seed_tree seed_key gk0 route ctx v =
+  "routed_entry_seed_tree seed_key route ctx v =
      (case v of FunctionEntry _ \<Rightarrow>
         [sp_lift_tree (QueryG (seed_key v ctx) Answer) (\<lambda>seed_state. Answer (DG (locals seed_state) bot))]
        | _ \<Rightarrow> [])"
 
 lemma routed_entry_seed_tree_free:
-  "x \<in> set (routed_entry_seed_tree seed_key gk0 route ctx v) \<Longrightarrow> sides_of_rhs x tau z = bot"
+  "x \<in> set (routed_entry_seed_tree seed_key route ctx v) \<Longrightarrow> sides_of_rhs x tau z = bot"
   unfolding routed_entry_seed_tree_def by (cases v) (auto simp: bot_fun_def)
 
 lemma routed_entry_seed_tree_local_only:
-  "x \<in> set (routed_entry_seed_tree seed_key gk0 route ctx v) \<Longrightarrow> globs (traverse_rhs x tau) = bot"
+  "x \<in> set (routed_entry_seed_tree seed_key route ctx v) \<Longrightarrow> globs (traverse_rhs x tau) = bot"
   unfolding routed_entry_seed_tree_def by (cases v) auto
 
 text \<open>

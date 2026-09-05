@@ -36,7 +36,7 @@ locale dg_ctx_activation_base = sound_dg_spec_core S gammaDG gs
     and vars :: "(pp \<times> 'c) set" and x0 :: "pp \<times> 'c"
     and sg :: "pp \<times> 'c + 'k \<Rightarrow> 'M"
     and gammaM :: "'M \<Rightarrow> store set"
-  assumes finE[intro]: "finite (intra g)"
+  assumes finE: "finite (intra g)"
     and pp: "part_post_solution
                (routed_node_rhs intra_predecessor_addr_list (\<lambda>_. gk0)
                   route (\<lambda>c src a. dg_spec_edge_tree S a src (\<lambda>_. gk0)) cmb extra g bot0 s0d s0g)
@@ -46,7 +46,7 @@ locale dg_ctx_activation_base = sound_dg_spec_core S gammaDG gs
           gammaDG (locals (sigma (Inl (v, c)))) (globs (sigma (Inr gk0)))"
     and sg_uncov[simp]: "\<And>v c. (v, c) \<notin> vars
         \<Longrightarrow> gammaM (sg (Inl (v, c))) = {}"
-    and fwd[intro]: "\<And>u a v c. (u, c) \<in> vars
+    and fwd: "\<And>u a v c. (u, c) \<in> vars
         \<Longrightarrow> (u, a, v) \<in> intra g
         \<Longrightarrow> (v, c) \<in> vars"
 begin
@@ -86,6 +86,22 @@ proof -
   also have "\<dots> \<le> globs (sigma (Inr gk0))"
     using pp_sides_bound[OF cov, THEN le_funD, of "Inr gk0"]
     by (simp add: less_eq_dg_state_def)
+  finally show ?thesis .
+qed
+
+text \<open>The local-carrier twin, proved the same way: \<open>Gen\<close>'s entry accumulator starts at
+  \<open>bot0 \<squnion> s0d\<close>, \<open>side_acc_dg_ge_acc\<close> only grows it, and \<open>pp_eq_bound\<close> transports the
+  bound across a covered point's own equation.\<close>
+
+lemma pp_entry_s0d_bound:
+  assumes cov: "(cfg_entry g, ctx) \<in> vars"
+  shows "s0d \<le> locals (sigma (Inl (cfg_entry g, ctx)))"
+proof -
+  have "s0d \<le> locals (eq Gen (cfg_entry g, ctx) sigma)"
+    by (simp add: eq_routed_node_rhs)
+       (rule order_trans[OF _ side_acc_dg_ge_acc], simp add: le_supI2)
+  also have "\<dots> \<le> locals (sigma (Inl (cfg_entry g, ctx)))"
+    using pp_eq_bound[OF cov] by (simp add: less_eq_dg_state_def)
   finally show ?thesis .
 qed
 

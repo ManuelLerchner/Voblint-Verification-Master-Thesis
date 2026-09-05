@@ -152,7 +152,7 @@ definition nest_1_eqs ::
      routed_node_rhs intra_predecessor_addr_list (\<lambda>_. Global) (cs_route 1)
       (\<lambda>ctx' src a. dg_spec_edge_tree nest_S_st a src (\<lambda>_. Global))
       (routed_call_tree nest_S_st Global Seed (static_resolve nest_cfg) (\<lambda>d. d = Bot))
-      (routed_entry_seed_tree Seed Global)
+      (routed_entry_seed_tree Seed)
        nest_cfg Bot (Lifted cinit_ivl_st) Bot"
 
 definition nest_1_sol ::
@@ -281,7 +281,7 @@ interpretation nest_1_cs: call_string_routed_context
     "\<lambda>d. d = Bot"
     "\<lambda>m. gamma_state_lift (map_lift (fun_of_resolved_st_q_for nest_gs) m)"
 proof (unfold_locales, unfold nest_cfg_compile,
-       goal_cases FinE PP SgCov SgUncov Fwd IsBotBot IsBotSound IsBotMono
+       goal_cases FinE PP SgCov SgUncov Fwd IsBotBot IsBotSound
        EnterComplete CallFwd CombFwd)
   case FinE
   show ?case by (rule nest_finE)
@@ -301,8 +301,6 @@ next
   case IsBotBot show ?case by simp
 next
   case (IsBotSound d gv) then show ?case by (simp add: nest_gamma_eq)
-next
-  case (IsBotMono d d') then show ?case by (cases d; cases d'; simp)
 next
   case (EnterComplete u ctx dst pars args p cont s)
   let ?ci = "call_info_of (CallEdge dst pars args) p"
@@ -502,7 +500,7 @@ definition nestg_1_eqs ::
       (routed_call_tree (local_state_dg_spec_st_for_lifted nestg_gs nestg_empty_pred
                        (ivl_tf_st_for nestg_gs) (ivl_enter_st_for nestg_gs)) Global Seed
          (static_resolve nestg_cfg) (\<lambda>d. d = Bot))
-      (routed_entry_seed_tree Seed Global)
+      (routed_entry_seed_tree Seed)
        nestg_cfg
        Bot (Lifted cinit_ivl_st) Bot"
 

@@ -62,7 +62,7 @@ interpretation pctx_adapter: dg_analysis_adapter "pctx_spec gs empty_pred" "pctx
     "\<lambda>m. gamma_state_lift (map_lift (fun_of_resolved_st_q_for gs) m)" enterc_unit
     "map_lift (fun_of_resolved_st_q_for gs)" parity_classify_check
 proof (unfold_locales, goal_cases FinE PP SgCov SgUncov Fwd FinC SeedKey
-    IsBotBot IsBotSound IsBotMono ResolveSound
+    IsBotBot IsBotSound ResolveSound
     EnterCover CombFwd EnterAgree GammaRd ClProved ClRefuted)
   case FinE show ?case
     using compile_prog_finite by auto
@@ -86,8 +86,6 @@ next
   case IsBotBot show ?case by simp
 next
   case (IsBotSound d g') then show ?case by (simp add: pctx_gamma_def)
-next
-  case (IsBotMono d d') then show ?case by (cases d; cases d'; simp)
 next
   case (ResolveSound u ctx dst pars args p cont s)
   thus ?case by (simp add: static_resolve_iff compile_prog_finite)

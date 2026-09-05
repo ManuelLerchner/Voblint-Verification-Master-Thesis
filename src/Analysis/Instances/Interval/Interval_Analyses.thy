@@ -102,7 +102,7 @@ definition interval_conf_eqs ::
        (\<lambda>ctx' src a. dg_spec_edge_tree (interval_spec gs empty_pred) a src (\<lambda>_. Analysis_Global ()))
        (routed_call_tree (interval_spec gs empty_pred) (Analysis_Global ()) Activation_Seed
           (static_resolve (compile_prog Pi ps)) (\<lambda>d. d = Bot))
-       (routed_entry_seed_tree Activation_Seed (Analysis_Global ()))
+       (routed_entry_seed_tree Activation_Seed)
        (compile_prog Pi ps) Bot (Lifted cinit_ivl_st) Bot"
 
 definition interval_conf_sol ::
@@ -197,7 +197,7 @@ theorem pp_routed:
      (routed_node_rhs intra_predecessor_addr_list (\<lambda>_. Analysis_Global ()) route_unit
         (\<lambda>ctx' src a. dg_spec_edge_tree (interval_spec gs empty_pred) a src (\<lambda>_. Analysis_Global ()))
         (routed_call_tree (interval_spec gs empty_pred) (Analysis_Global ()) Activation_Seed (static_resolve (compile_prog Pi ps)) (\<lambda>d. d = Bot))
-        (routed_entry_seed_tree Activation_Seed (Analysis_Global ()))
+        (routed_entry_seed_tree Activation_Seed)
         (compile_prog Pi ps) Bot (Lifted cinit_ivl_st) Bot)
      (cfg_exit (compile_prog Pi ps), ())
      (snd (sol gs empty_pred Pi ps)) (fst (sol gs empty_pred Pi ps))"
@@ -273,7 +273,7 @@ interpretation routed: unit_routed_context "interval_spec gs empty_pred" "interv
     "(cfg_exit (compile_prog Pi ps), ())" "sg_st gs empty_pred Pi ps" Activation_Seed
     "\<lambda>d. d = Bot" "\<lambda>m. gamma_state_lift (map_lift (fun_of_resolved_st_q_for gs) m)"
 proof (unfold_locales, goal_cases FinE PP SgCov SgUncov Fwd FinC SeedKey
-    IsBotBot IsBotSound IsBotMono EnterComplete CallFwd CombFwd EnterAgree)
+    IsBotBot IsBotSound EnterComplete CallFwd CombFwd EnterAgree)
   case FinE show ?case by (rule fin)
 next
   case PP show ?case by (rule pp_routed[OF solves exact])
@@ -292,8 +292,6 @@ next
   case IsBotBot show ?case by simp
 next
   case (IsBotSound d gv) then show ?case by simp
-next
-  case (IsBotMono d d') then show ?case by (cases d; cases d'; simp)
 next
   case (EnterComplete u ctx dst pars args p cont s)
   let ?ci = "call_info_of (CallEdge dst pars args) p"
@@ -352,7 +350,7 @@ interpretation adapter: dg_analysis_adapter "interval_spec gs empty_pred" "inter
     "\<lambda>m. gamma_state_lift (map_lift (fun_of_resolved_st_q_for gs) m)" enterc_unit
     "map_lift (fun_of_resolved_st_q_for gs)" interval_classify_check
 proof (unfold_locales, goal_cases FinE PP SgCov SgUncov Fwd FinC SeedKey
-    IsBotBot IsBotSound IsBotMono ResolveSound
+    IsBotBot IsBotSound ResolveSound
     EnterCover CombFwd EnterAgree GammaRd ClProved ClRefuted)
   case FinE show ?case by (rule fin)
 next
@@ -375,8 +373,6 @@ next
 next
   case (IsBotSound d g') then show ?case by simp
 next
-  case (IsBotMono d d') then show ?case by (cases d; cases d'; simp)
-next
   case (ResolveSound u ctx dst pars args p cont s)
   thus ?case by (simp add: static_resolve_iff[OF finC])
 next
@@ -392,7 +388,7 @@ next
     unfolding interval_spec_def dgs_enter_local_state_st_for_lifted
     using enter_runs_local_enter_transfer enter_deps_local_enter_transfer cov
           call_fwd_ok[OF EnterCover(1,2)]
-    by (fastforce simp: entry_pairs_cover_def route_unit_def)
+    by (fastforce simp: entry_pairs_cover_def)
 next
   case (CombFwd cl c1 dst pars args p cont)
   show ?case using CombFwd(1,2) comb_fwd_ok by blast
@@ -573,7 +569,7 @@ definition cs_call_string_eqs ::
        (routed_call_tree (interval_spec gs empty_pred)
           Call_String_Context.Global Call_String_Context.Seed
           (static_resolve (compile_prog Pi ps)) (\<lambda>d. d = Bot))
-       (routed_entry_seed_tree Call_String_Context.Seed Call_String_Context.Global)
+       (routed_entry_seed_tree Call_String_Context.Seed)
        (compile_prog Pi ps) Bot (Lifted cinit_ivl_st) Bot"
 
 definition cs_call_string_sol ::
@@ -924,7 +920,7 @@ definition entry_state_eqs ::
        (\<lambda>ctx' src a. dg_spec_edge_tree (interval_spec gs empty_pred) a src (\<lambda>_. Analysis_Global ()))
        (routed_call_tree (interval_spec gs empty_pred) (Analysis_Global ()) Activation_Seed
           (static_resolve (compile_prog Pi ps)) (\<lambda>d. d = Bot))
-       (routed_entry_seed_tree Activation_Seed (Analysis_Global ()))
+       (routed_entry_seed_tree Activation_Seed)
        (compile_prog Pi ps) Bot (Lifted cinit_ivl_st) Bot"
 
 definition entry_state_sol ::
@@ -1212,7 +1208,7 @@ theorem entry_state_pp_routed:
         (entry_state_route_gen gs empty_pred)
         (\<lambda>ctx' src a. dg_spec_edge_tree (interval_spec gs empty_pred) a src (\<lambda>_. Analysis_Global ()))
         (routed_call_tree (interval_spec gs empty_pred) (Analysis_Global ()) Activation_Seed (static_resolve (compile_prog Pi ps)) (\<lambda>d. d = Bot))
-        (routed_entry_seed_tree Activation_Seed (Analysis_Global ()))
+        (routed_entry_seed_tree Activation_Seed)
         (compile_prog Pi ps) Bot (Lifted cinit_ivl_st) Bot)
      (cfg_exit (compile_prog Pi ps), [])
      (snd (entry_state_sol gs empty_pred Pi ps)) (fst (entry_state_sol gs empty_pred Pi ps))"
@@ -1321,7 +1317,7 @@ interpretation entry_state_routed: entry_state_routed_context "interval_spec gs 
     "\<lambda>d. d = Bot" "\<lambda>m. gamma_state_lift (map_lift (fun_of_resolved_st_q_for gs) m)"
     "\<lambda>ci. transfer_lift empty_pred (ivl_enter_st_for gs ci)"
 proof (unfold_locales, goal_cases FinE PP SgCov SgUncov Fwd SeedNe
-    IsBotBot IsBotSound IsBotMono EnterSingleton EnterSoundAt CallFwd CombFwd)
+    IsBotBot IsBotSound EnterSingleton EnterSoundAt CallFwd CombFwd)
   case FinE show ?case by (rule entry_state_fin)
 next
   case PP show ?case by (rule entry_state_pp_routed[OF solves exact])
@@ -1339,8 +1335,6 @@ next
 next
   case (IsBotSound d gv) then show ?case by (simp add: interval_gamma_def)
 next
-  case (IsBotMono d d') then show ?case by (cases d; cases d'; simp)
-next
   case (EnterSingleton u ctx dst pars args p cont)
   let ?m = "mk_dg_man (locals (snd (entry_state_sol gs empty_pred Pi ps) (Inl (u, ctx))))
               (\<lambda>_. Analysis_Global ())"
@@ -1348,8 +1342,7 @@ next
                        (ivl_enter_st_for gs (call_info_of (CallEdge dst pars args) p)) d)]"
   show ?case
     unfolding interval_spec_def dgs_enter_local_state_st_for_lifted
-    by (blast intro: enter_runs_local_enter_transfer_mk_dg_man
-        enter_deps_local_enter_transfer_mk_dg_man)
+    by blast
 next
   case (EnterSoundAt u ctx dst pars args p cont s)
   show ?case
@@ -1367,19 +1360,19 @@ qed
 text \<open>
   \<^const>\<open>entry_state_context\<close> -- ignore the store, recompute the route from the table at
   \<^const>\<open>call_action_at_call_site\<close> -- is exactly \<^locale>\<open>entry_state_routed_context\<close>'s
-  own \<open>enterc\<close> (\<open>route_enterc_of_sigma\<close>).
+  own \<open>enterc\<close> (\<open>entry_state_context_of_solution\<close>).
 \<close>
 
-lemma entry_state_context_eq_route_enterc_of_sigma:
-  "entry_state_context = route_enterc_of_sigma (entry_state_route_gen gs empty_pred)
+lemma entry_state_context_eq_of_solution:
+  "entry_state_context = entry_state_context_of_solution (entry_state_route_gen gs empty_pred)
      (\<lambda>ci. transfer_lift empty_pred (ivl_enter_st_for gs ci))
      (snd (entry_state_sol gs empty_pred Pi ps)) (compile_prog Pi ps)"
-  unfolding entry_state_context_def route_enterc_of_sigma_def by (rule refl)
+  unfolding entry_state_context_def entry_state_context_of_solution_def by (rule refl)
 
 lemmas entry_state_routed_context_call =
-  entry_state_routed.routed_context_call[folded entry_state_context_eq_route_enterc_of_sigma]
+  entry_state_routed.routed_context_call[folded entry_state_context_eq_of_solution]
 lemmas entry_state_routed_context_comb =
-  entry_state_routed.routed_context_comb[folded entry_state_context_eq_route_enterc_of_sigma]
+  entry_state_routed.routed_context_comb[folded entry_state_context_eq_of_solution]
 
 lemma entry_state_sg_seed:
   assumes "(u, CallEdge dst xs es, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps)"
@@ -1430,7 +1423,7 @@ interpretation entry_state_adapter: dg_analysis_adapter "interval_spec gs empty_
     "\<lambda>m. gamma_state_lift (map_lift (fun_of_resolved_st_q_for gs) m)" entry_state_context
     "map_lift (fun_of_resolved_st_q_for gs)" interval_classify_check
 proof (unfold_locales, goal_cases FinE PP SgCov SgUncov Fwd FinC SeedKey
-    IsBotBot IsBotSound IsBotMono ResolveSound
+    IsBotBot IsBotSound ResolveSound
     EnterCover CombFwd EnterAgree GammaRd ClProved ClRefuted)
   case FinE show ?case by (rule entry_state_fin)
 next
@@ -1453,16 +1446,14 @@ next
 next
   case (IsBotSound d g') then show ?case by (simp add: interval_gamma_def)
 next
-  case (IsBotMono d d') then show ?case by (cases d; cases d'; simp)
-next
   case (ResolveSound u ctx dst pars args p cont s)
   thus ?case by (simp add: static_resolve_iff[OF entry_state_finC])
 next
   case (EnterCover u ctx dst pars args p cont s)
   show ?case
-    unfolding entry_state_context_eq_route_enterc_of_sigma
+    unfolding entry_state_context_eq_of_solution
     using entry_state_routed.routed.routed_entry_cover[OF EnterCover(1,2,3)]
-    by (simp add: entry_state_context_eq_route_enterc_of_sigma)
+    by (simp add: entry_state_context_eq_of_solution)
 next
   case (CombFwd cl c1 dst pars args p cont)
   show ?case using CombFwd(1,2) by (rule comb_fwd_ok)
