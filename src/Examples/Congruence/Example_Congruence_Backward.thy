@@ -1,5 +1,5 @@
 theory Example_Congruence_Backward
-  imports Voblint_Analysis.Congruence_Backward
+  imports Voblint_Analysis_Congruence.Congruence_Backward
 begin
 
 section \<open>Executable Congruence backward-analysis regressions\<close>

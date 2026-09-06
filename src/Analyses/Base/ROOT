@@ -1,0 +1,33 @@
+session Voblint_Analysis_Base in "." = "Voblint_Exec" +
+  description "Domain-generic reuse locales, context routing, dispatch config, and reporting shared by every concrete analysis domain"
+  sessions
+    "Voblint_VIMP"
+    "Voblint_Domain"
+    "Voblint_Framework"
+    "Voblint_Compile"
+  directories
+    "Reuse"
+    "Config"
+    "Context"
+    "Reporting"
+  theories
+    (* Reuse: base-level locales every domain interprets *)
+    Abstract_Arithmetic
+    Special_Ops
+    Numeric_Ops
+    Exec_Backward
+    Analysis_Surface
+
+    (* Config: cross-domain analysis selection *)
+    Analysis_Config
+
+    (* Context: concrete routing policies over a compiled program *)
+    Call_String_Context_Finite
+    Call_String_Routed_Context
+    Context_Space_Finite
+    Entry_State_Routed_Context
+
+    (* Reporting: generic GraphViz rendering of an analysis result *)
+    Analysis_GraphViz
+  document_files
+    "root.bib"

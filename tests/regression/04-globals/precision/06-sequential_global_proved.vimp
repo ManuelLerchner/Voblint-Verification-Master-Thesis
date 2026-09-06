@@ -1,0 +1,17 @@
+// PARAM: --analysis interval
+// x := 0; x := 1; check(x == 1) with x a declared global and no call in
+// between. The current pipeline proves the check: within one procedure a
+// declared global lives in the same reachability-lifted local unknown as
+// every local (see 02-global_var.vimp), so the second write's exact value
+// reaches the check with no flow-insensitive join against the first --
+// there is no separate shared-slot summary here for the two writes to join
+// through. Contrast with 07-sequential_local_proved.vimp, the same
+// sequence with x an ordinary local: both give the identical exact result,
+// which is the point -- declaring x global costs nothing as long as no call
+// crosses it.
+global x;
+void main() {
+  x := 0;
+  x := 1;
+  __voblint_check(x == 1) // PROVED
+}

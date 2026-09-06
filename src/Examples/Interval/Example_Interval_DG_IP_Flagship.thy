@@ -1,10 +1,10 @@
 theory Example_Interval_DG_IP_Flagship
   imports
-    "Voblint_Analysis.Interval_Transfer"
-    "Voblint_Analysis.Ivl_Exec"
+    "Voblint_Analysis_Interval.Interval_Transfer"
+    "Voblint_Analysis_Interval.Interval_Exec"
     "Voblint_Solver.TD_Solver_Bridge"
     "Voblint_CFG.CFG_Prune"
-    "Voblint_Analysis.Analysis_GraphViz"
+    "Voblint_Analysis_Base.Analysis_GraphViz"
     "Voblint_VIMP.VIMP_Notation"
     "Voblint_Soundness.Run_Analysis_Sound"
 begin

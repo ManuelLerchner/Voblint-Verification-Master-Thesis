@@ -191,7 +191,7 @@ proved by case-splitting on `edge_action` and discharging each case with
 that domain's operation-level lemmas:
 
 - `sign_tf_st_for_commute` (`Sign_Exec.thy:178-222`)
-- `ivl_tf_st_for_commute` (`Analysis/Instances/Interval/Ivl_Exec.thy:381-425`)
+- `ivl_tf_st_for_commute` (`Analysis/Instances/Interval/Interval_Exec.thy:381-425`)
 - `int_tf_st_{never,once,fixpoint}_for_commute` (`Analysis/Instances/Int/Int_Exec.thy:108,258,401`)
 - `parity_tf_st_for_commute` (`Analysis/Instances/Parity/Parity_Exec.thy:104`)
 
@@ -313,7 +313,7 @@ back it:
 `cli/main.ml` now only reads this flag (`render_text_report`); it no longer
 probes any variable list or calls `is_bottom_abstract_value` itself. A
 regression witness (`state_wiring_ex_dead_at_check`,
-`Examples/Regression/Example_Analysis_Dispatch_Regression.thy`) locks in
+`Examples/CLI/Example_Analysis_Dispatch_Regression.thy`) locks in
 `unreachable = True` at a genuinely infeasible branch, checked by `eval`.
 
 That flag's exactness now reaches all the way to `ltr_collect`, for the

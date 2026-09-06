@@ -1,7 +1,7 @@
 theory State_Report_GraphViz
   imports
-    "Voblint_Analysis.Analysis_GraphViz"
-    "Voblint_Analysis.Int_Domain"
+    "Voblint_Analysis_Base.Analysis_GraphViz"
+    "Voblint_Analysis_Int.Int_Domain"
     Analyse_Dispatch
 begin
 
@@ -122,7 +122,7 @@ definition state_report_node_annotation ::
 
 text \<open>
   \<open>analyse_with_state\<close>'s report also carries an exact \<open>unreachable\<close> flag
-  (\<^theory>\<open>Voblint_Analysis.Sign_Checks\<close>); this GraphViz rendering projects it
+  (\<^theory>\<open>Voblint_Analysis_Sign.Sign_Checks\<close>); this GraphViz rendering projects it
   away rather than threading it through \<^const>\<open>state_report_node_annotation\<close>,
   since the rendered label already shows the (necessarily witness-bottom)
   state at an unreachable point instead of suppressing the node the way the
@@ -1128,7 +1128,7 @@ definition cs_ctx_check_annotation ::
 
 text \<open>
   The configuration itself: every context-specific field comes from
-  \<^theory>\<open>Voblint_Analysis.Analysis_GraphViz\<close>'s own call-string presentation constants
+  \<^theory>\<open>Voblint_Analysis_Base.Analysis_GraphViz\<close>'s own call-string presentation constants
   (\<^const>\<open>cs_graph_route\<close>, \<^const>\<open>cs_context_key\<close>, \<^const>\<open>cs_show_context\<close>,
   \<^const>\<open>cs_cluster_label\<close>), and every state-rendering field is the \<^typ>\<open>abstract_value\<close>
   reading shared with \<^const>\<open>point_node_annotation\<close>. Nothing here mentions a domain,

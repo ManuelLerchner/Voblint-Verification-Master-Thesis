@@ -1,5 +1,5 @@
 theory Checks
-  imports "Voblint_Domain.Abstract_Domain" "Voblint_VIMP.VIMP_Expr" "Voblint_CFG.CFG_Def"
+  imports "Voblint_VIMP.VIMP_Expr" "Voblint_CFG.CFG_Def"
 begin
 
 section \<open>Ordinary assertion checks: store-only, no ghost-domain or

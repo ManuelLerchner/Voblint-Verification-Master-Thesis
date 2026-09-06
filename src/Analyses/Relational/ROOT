@@ -1,0 +1,6 @@
+session Voblint_Analysis_Relational in "." = "Voblint_Analysis_Base" +
+  description "Order carriers that are not pointwise abstract states"
+  sessions
+    "Voblint_Framework"
+  theories
+    Rel_Order_Domain

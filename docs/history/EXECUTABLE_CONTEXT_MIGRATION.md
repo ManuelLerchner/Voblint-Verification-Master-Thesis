@@ -46,7 +46,7 @@ generator -> solver -> context-separated result.
   evaluable. These are stepping stones, NOT the deliverable.
 - **Monovariant executable generator EXISTS** (`Exec_Bridge.thy`): `side_cfg_T_eff_st`
   over the executable `_st` etf record (`ivl_etf_st` / `sign_etf_st`,
-  `Ivl_Exec.thy` / `Sign_Exec.thy`), run on compiled CFGs in `Exec_Ivl_Run.thy`
+  `Interval_Exec.thy` / `Sign_Exec.thy`), run on compiled CFGs in `Exec_Ivl_Run.thy`
   through both `TD_side_always_join_Interp_solve` and
   `TD_side_warrowing_apinis_Interp_solve` (real widening). This is the executable
   spine the context version must mirror.

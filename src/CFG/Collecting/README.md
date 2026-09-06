@@ -29,4 +29,4 @@ arbitrary CFG, which is what lets the analysis soundness statements be about
 any graph rather than only about compiled ones.
 
 Concrete witness graphs and executable regressions live in
-`src/Examples/Regression/Example_LTR_Collect_Regression.thy`.
+`src/Examples/CFG/Example_LTR_Collect_Regression.thy`.

@@ -293,7 +293,7 @@ re-check them.
 
 `src/Examples/CFG/*.thy` (7 files, pure CFG/compile/simulation regression) ·
 `src/Analysis/Instances/Interval/{Interval_Arithmetic,Interval_Bounds,Interval_Print,Interval_Warrowing,Interval_Point_Digest,Interval_Side_Soundness}.thy`
-· `src/Analysis/Instances/Interval/{Interval_Backward,Interval_Domain,Interval_Lattice,Interval_Transfer,Ivl_Exec}.thy`
+· `src/Analysis/Instances/Interval/{Interval_Backward,Interval_Domain,Interval_Lattice,Interval_Transfer,Interval_Exec}.thy`
 (core-instance-infra, classifier-parametric `_for` transfer/readback shared
 prerequisite of both routes, not itself route-specific) ·
 `src/Analysis/Instances/Parity/*.thy` (4 files, core-instance-infra) ·
@@ -527,15 +527,15 @@ EA_AssumeNot (Less (V ''x'') (N 20)))` — both ordinary single-predecessor
 nodes, but both edges are `EA_Assume`/`EA_AssumeNot`, not `EA_Assign`.
 Interval's `_for` transfer layer is already complete (`ivl_tf_for`,
 `ivl_tf_st_for`, `ivl_is_sound_transfer_for`, and all five action-agreement
-lemmas already exist in `Interval_Transfer.thy`/`Ivl_Exec.thy` — unlike
+lemmas already exist in `Interval_Transfer.thy`/`Interval_Exec.thy` — unlike
 Parity, no prerequisite layer needed building).
 
 **New complication found, not yet resolved**: `ivl_tf_st_for_nop_agree`/
-`_assign_agree`/`_ret_none_agree`/`_ret_some_agree` (`Ivl_Exec.thy:228-283`)
+`_assign_agree`/`_ret_none_agree`/`_ret_some_agree` (`Interval_Exec.thy:228-283`)
 are stated in the same per-*location*, `universe`-scoped form
 `placed_hook_se_edge`'s `raw` premise needs (matching the shape every
 migration so far has used for Nop/Assign/Ret). But
-`ivl_tf_st_for_assume_agree`/`_assume_not_agree` (`Ivl_Exec.thy:292-306`)
+`ivl_tf_st_for_assume_agree`/`_assume_not_agree` (`Interval_Exec.thy:292-306`)
 are stated differently — over **full function equality**,
 `fun_of_resolved_st_q_for gs s_exec = s_abs` as the hypothesis, not a
 per-location `\<forall>location \<in> universe. ...` hypothesis. The file's own
@@ -584,7 +584,7 @@ own variable set, the filter's output at `location` equals its input at
 `location`"? If yes, deriving a scoped corollary of
 `ivl_tf_st_for_assume_agree`/`bfilter_ivl_st_commute` (mirroring the
 `_nop_agree`/`_assign_agree` shape) is bounded, per-example-appropriate work
-in `Ivl_Exec.thy` (or file-local in the flagship example itself) and the
+in `Interval_Exec.thy` (or file-local in the flagship example itself) and the
 migration proceeds exactly like Parity's did. If the backward-filter
 machinery is genuinely relational (output at one location can depend on
 input at another location currently in a *different* clause of a compound

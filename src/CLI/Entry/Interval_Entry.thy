@@ -1,13 +1,13 @@
 theory Interval_Entry
-  imports Voblint_Analysis.Interval_Checks "Voblint_Soundness.Run_Analysis_Sound"
+  imports Voblint_Analysis_Interval.Interval_Checks "Voblint_Soundness.Run_Analysis_Sound"
 begin
 
 section \<open>Interval codegen API: an arbitrary VIMP program, and its production soundness\<close>
 
 text \<open>
   \<open>analyse_interval_dg_eqs_for\<close>/\<open>analyse_interval_dg_for\<close>/\<open>analyse_interval_dg_env_for\<close>
-  (\<^theory>\<open>Voblint_Analysis.Interval_Exec_Sound\<close>) and \<open>analyse_interval_td_report_for\<close>/
-  \<open>analyse_interval_td_report\<close> (\<^theory>\<open>Voblint_Analysis.Interval_Checks\<close>) are pure
+  (\<^theory>\<open>Voblint_Analysis_Interval.Interval_Exec_Sound\<close>) and \<open>analyse_interval_td_report_for\<close>/
+  \<open>analyse_interval_td_report\<close> (\<^theory>\<open>Voblint_Analysis_Interval.Interval_Checks\<close>) are pure
   computation, so they live one session earlier (Analysis).
 \<close>
 
@@ -21,7 +21,7 @@ abbreviation pgs :: "vname \<Rightarrow> bool" where "pgs \<equiv> declared_glob
 text \<open>
   \<open>analyse_interval_td_report_for\<close> reads its per-node state through
   \<^const>\<open>analyse_interval_td_result_for\<close>'s \<^type>\<open>analysis_result\<close> table, which is
-  now \<^const>\<open>analyse_interval_ctx_result_warrow_for\<close> (\<^theory>\<open>Voblint_Analysis.Interval_Analyses\<close>):
+  now \<^const>\<open>analyse_interval_ctx_result_warrow_for\<close> (\<^theory>\<open>Voblint_Analysis_Interval.Interval_Analyses\<close>):
   the  routed-unit producer's own solved table, at \<open>prog_main_name\<close>.
   \<open>analyse_interval_td_result_node_sound_for\<close> below is the node-soundness bridge for
   that table, built from \<open>interval_conf_result_node_sound_warrow\<close> (the routed
@@ -215,8 +215,8 @@ qed
 end
 
 text \<open>
-  \<open>analyse_interval_dg_eqs\<close>/\<open>analyse_interval_dg\<close> (\<^theory>\<open>Voblint_Analysis.Interval_Exec_Sound\<close>)
-  and \<open>analyse_interval_td_report\<close> (\<^theory>\<open>Voblint_Analysis.Interval_Checks\<close>) are the
+  \<open>analyse_interval_dg_eqs\<close>/\<open>analyse_interval_dg\<close> (\<^theory>\<open>Voblint_Analysis_Interval.Interval_Exec_Sound\<close>)
+  and \<open>analyse_interval_td_report\<close> (\<^theory>\<open>Voblint_Analysis_Interval.Interval_Checks\<close>) are the
   \<^const>\<open>declared_global\<close> \<open>p\<close> convenience instances the context above's \<open>_for\<close> layer already
   feeds, matching \<open>analyse_sign_report_sound_proved\<close>'s own shape.
   \<open>wf[THEN wf_compile_input_reserved_ret_var]\<close> discharges the context's \<open>reserved\<close>
@@ -273,7 +273,7 @@ section \<open>Solver-choice soundness: join and per-origin update rules\<close>
 text \<open>
   Solver-choice siblings of the warrowing soundness above: the join and per-origin
   update rules each read their own routed-unit result table
-  (\<^theory>\<open>Voblint_Analysis.Interval_Analyses\<close>). Each block below writes
+  (\<^theory>\<open>Voblint_Analysis_Interval.Interval_Analyses\<close>). Each block below writes
   \<^term>\<open>declared_global p\<close> out in full rather than reusing the \<open>pgs\<close> abbreviation:
   \<open>pgs\<close> is local to the first context block above and, once that block closes, its global
   residue takes \<open>p\<close> as an explicit argument, so a second same-named local abbreviation here
@@ -289,7 +289,7 @@ begin
 text \<open>
   \<open>analyse_interval_report_for\<close> reads its per-node state through
   \<^const>\<open>analyse_interval_join_result_for\<close>'s \<^type>\<open>analysis_result\<close> table, which is
-  now \<^const>\<open>analyse_interval_ctx_result_for\<close> (\<^theory>\<open>Voblint_Analysis.Interval_Analyses\<close>):
+  now \<^const>\<open>analyse_interval_ctx_result_for\<close> (\<^theory>\<open>Voblint_Analysis_Interval.Interval_Analyses\<close>):
   the  routed-unit producer's own solved table, at \<open>prog_main_name\<close>.
   \<open>analyse_interval_join_result_node_sound_for\<close> below is the node-soundness bridge for
   that table, built from \<open>interval_conf_result_node_sound\<close> (the routed
@@ -542,7 +542,7 @@ begin
 text \<open>
   \<open>analyse_interval_report_per_origin_for\<close> reads its per-node state through
   \<^const>\<open>analyse_interval_per_origin_result_for\<close>'s \<^type>\<open>analysis_result\<close> table, which is
-  now \<^const>\<open>analyse_interval_ctx_result_per_origin_for\<close> (\<^theory>\<open>Voblint_Analysis.Interval_Analyses\<close>):
+  now \<^const>\<open>analyse_interval_ctx_result_per_origin_for\<close> (\<^theory>\<open>Voblint_Analysis_Interval.Interval_Analyses\<close>):
   the  routed-unit producer's own solved table, at \<open>prog_main_name\<close>.
   \<open>analyse_interval_per_origin_result_node_sound_for\<close> below is the node-soundness bridge for
   that table, built from \<open>interval_conf_result_node_sound_per_origin\<close> (the routed

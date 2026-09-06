@@ -1,5 +1,5 @@
 theory Call_String_Context
-  imports "Voblint_Domain.Abstract_Domain" "Voblint_CFG.CFG_Def"
+  imports "Voblint_CFG.CFG_Def"
 begin
 
 section \<open>A reusable bounded call-string context\<close>

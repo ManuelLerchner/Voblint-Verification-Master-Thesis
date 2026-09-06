@@ -1,5 +1,5 @@
 theory Example_Int_Transfer
-  imports Voblint_Analysis.Int_Transfer
+  imports Voblint_Analysis_Int.Int_Transfer
 begin
 
 section \<open>Composite integer-domain transfer functions: examples\<close>
@@ -83,7 +83,7 @@ text \<open>
   Sign, Interval, and Parity each combine their real \<open>min\<close> primitive on the
   two literal operands (both positive and odd, so \<open>SPos\<close>/\<open>Ivl 3 3\<close>/\<open>POdd\<close>
   all agree exactly); Congruence has no \<open>min\<close> primitive of its own
-  (\<^theory>\<open>Voblint_Analysis.Int_Transfer\<close>'s own note on
+  (\<^theory>\<open>Voblint_Analysis_Int.Int_Transfer\<close>'s own note on
   \<open>int_dom_min_raw\<close>/\<open>int_dom_max_raw\<close>), so mode-aware refinement is what
   supplies the congruence component here -- from Parity's \<open>POdd\<close>, not from
   Interval's exact singleton, which is why the result is \<open>mk_congruence 1 2\<close>

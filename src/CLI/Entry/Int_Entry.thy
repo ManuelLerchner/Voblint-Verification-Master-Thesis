@@ -1,13 +1,13 @@
 theory Int_Entry
-  imports "Voblint_Analysis.Int_Checks" "Voblint_Soundness.Run_Analysis_Sound"
+  imports "Voblint_Analysis_Int.Int_Checks" "Voblint_Soundness.Run_Analysis_Sound"
 begin
 
 section \<open>Int codegen API: an arbitrary VIMP program, and its production soundness\<close>
 
 text \<open>
   \<open>analyse_int_dg_eqs_for\<close>/\<open>analyse_int_dg_for\<close>/\<open>analyse_int_dg_env_for\<close>
-  (\<^theory>\<open>Voblint_Analysis.Int_Exec_Sound\<close>) and \<open>analyse_int_report_for\<close>/\<open>analyse_int_report\<close>
-  (\<^theory>\<open>Voblint_Analysis.Int_Checks\<close>) are pure computation, so they live one session
+  (\<^theory>\<open>Voblint_Analysis_Int.Int_Exec_Sound\<close>) and \<open>analyse_int_report_for\<close>/\<open>analyse_int_report\<close>
+  (\<^theory>\<open>Voblint_Analysis_Int.Int_Checks\<close>) are pure computation, so they live one session
   earlier (Analysis).
 \<close>
 
@@ -21,7 +21,7 @@ abbreviation pgs :: "vname \<Rightarrow> bool" where "pgs \<equiv> declared_glob
 text \<open>
   \<open>analyse_int_report_for\<close> reads its per-node state through
   \<^const>\<open>analyse_int_ctx_result_warrow_for\<close>'s \<^type>\<open>analysis_result\<close> table directly
-  (\<^theory>\<open>Voblint_Analysis.Int_Analyses\<close>): the routed-unit producer's own solved
+  (\<^theory>\<open>Voblint_Analysis_Int.Int_Analyses\<close>): the routed-unit producer's own solved
   table, at \<open>mode\<close> and \<open>prog_main_name\<close>. \<open>analyse_int_ctx_result_warrow_node_sound_for\<close>
   below is the node-soundness bridge for that table, built from
   \<open>int_conf_activation_collect_sound_warrow\<close> (the routed spine's own activation-indexed
@@ -35,7 +35,7 @@ text \<open>
 text \<open>
   \<open>analyse_int_report_for\<close> reads its per-node state through
   \<^const>\<open>analyse_int_ctx_result_warrow_for\<close>'s \<^type>\<open>analysis_result\<close> table directly
-  (\<^theory>\<open>Voblint_Analysis.Int_Analyses\<close>): the routed-unit producer's own solved
+  (\<^theory>\<open>Voblint_Analysis_Int.Int_Analyses\<close>): the routed-unit producer's own solved
   table, at \<open>mode\<close> and \<open>prog_main_name\<close>. \<open>analyse_int_ctx_result_warrow_node_sound_for\<close>
   below is the node-soundness bridge for that table, built from
   \<open>int_conf_activation_collect_sound_warrow\<close> (the routed spine's own activation-indexed
@@ -229,7 +229,7 @@ qed
 end
 
 text \<open>
-  \<open>analyse_int_report\<close> (\<^theory>\<open>Voblint_Analysis.Int_Checks\<close>) is the \<^const>\<open>declared_global\<close>
+  \<open>analyse_int_report\<close> (\<^theory>\<open>Voblint_Analysis_Int.Int_Checks\<close>) is the \<^const>\<open>declared_global\<close>
   \<open>p\<close> convenience instance the context above's \<open>_for\<close> layer already feeds, pinned at
   \<^const>\<open>Refine_Fixpoint\<close>, matching \<open>analyse_interval_td_report_sound_proved\<close>'s own
   shape. \<open>wf[THEN wf_compile_input_reserved_ret_var]\<close> discharges the context's

@@ -859,11 +859,11 @@ not meant to be executed, exactly like `gamma`/`gamma_state` today. What
 needs to be executable is the operational side: `sup`/`bot` on the lifted
 `oct st`-analogue, and `dgs_assign`/`dgs_assume`/`dgs_assume_not`/
 `dgs_enter`/`dgs_combine_env`/`dgs_combine_assign` as `lift_definition`s
-over the finite representation — the same recipe `Ivl_Exec.thy`'s
+over the finite representation — the same recipe `Interval_Exec.thy`'s
 `enter_ivl_st`/`top_ivl_st`/`cinit_ivl_st` already demonstrate
-(`Ivl_Exec.thy:139-168`), connected back to the abstract definitions by a
+(`Interval_Exec.thy:139-168`), connected back to the abstract definitions by a
 `fun_of_st`-style commute lemma per operation, exactly as
-`enter_frame_ivl_st_commute` does today (`Ivl_Exec.thy:143-146`). `eint`
+`enter_frame_ivl_st_commute` does today (`Interval_Exec.thy:143-146`). `eint`
 already has decidable equality and a computable `ord`/`plus`/`minus`, so
 nothing about the codomain blocks code generation; association lists and
 `eint` are both ordinary code-generatable HOL. `export_code`/`value` work on
@@ -1036,7 +1036,7 @@ no single obligation here is harder than what `Sign_Transfer.thy`/
 | File (new) | Role | Rough size (comparable existing file) |
 | --- | --- | --- |
 | `Rel_Octagon_Domain.thy` | `oct` type, lattice instance, `gamma`, `dgs_*`, `sound_dg_spec_core` interpretation | ~200-300 lines (cf. `Sign_Transfer.thy`) |
-| `Rel_Octagon_Exec.thy` | `oct_st`, `lift_definition`s, commute lemmas | ~150-250 lines (cf. `Ivl_Exec.thy`) |
+| `Rel_Octagon_Exec.thy` | `oct_st`, `lift_definition`s, commute lemmas | ~150-250 lines (cf. `Interval_Exec.thy`) |
 | `Example_Octagon_DG_Flagship.thy` | one worked end-to-end example | ~50-100 lines (cf. `Example_Interval_DG_Flagship.thy`) |
 
 ~400-650 lines of new Isabelle total, zero lines changed in any existing

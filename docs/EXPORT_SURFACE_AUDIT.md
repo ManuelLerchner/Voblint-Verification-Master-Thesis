@@ -255,7 +255,7 @@ with their extra solver rules on top.
 
 The naming is also inconsistent in a way that hides the parallelism:
 `Sign_DG`/`Interval_DG` vs `Parity_Base_DG`/`Int_Base_DG` for the same role, and
-`Ivl_Exec` vs `Sign_Exec`/`Parity_Exec`/`Int_Exec`.
+`Interval_Exec` vs `Sign_Exec`/`Parity_Exec`/`Int_Exec`.
 
 ### 3.2 The `_lifted` mirror
 
@@ -1360,7 +1360,7 @@ OCaml absence is worth nothing as evidence — `project_component` and
 
 **Suspected, not settled:** `Exec_Refinement.thy` (173 lines) has zero external
 references to any of its 14 items, but eight are `[simp]` and may fire implicitly
-inside `Exec_DG_Refines`/`Ivl_Exec` proofs. The theory is imported by six others
+inside `Exec_DG_Refines`/`Interval_Exec` proofs. The theory is imported by six others
 purely as a path to `Exec_St` + `State_Restriction`. Settle it by stripping the
 `[simp]` tags and rebuilding.
 

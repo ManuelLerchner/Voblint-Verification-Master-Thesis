@@ -3,7 +3,7 @@
 Sits directly above `Voblint_Analysis` and holds only the two theorems that
 close the chain. Everything domain-specific -- including each domain's routed
 instances at every context policy -- lives with its domain under
-`src/Analysis/Instances/<Domain>/Ctx/`, so this session says what is proved
+each domain's own `<Domain>_Analyses.thy`, so this session says what is proved
 about the pipeline rather than how each analysis reaches it.
 
 Theorems only. Executable demonstrations and the `Voblint` capstone live in the

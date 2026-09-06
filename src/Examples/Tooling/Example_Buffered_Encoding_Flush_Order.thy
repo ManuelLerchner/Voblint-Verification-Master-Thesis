@@ -1,8 +1,8 @@
 theory Example_Buffered_Encoding_Flush_Order
   imports
     "Voblint_Exec.Exec_DG_Generator"
-    "Voblint_Analysis.Ivl_Exec"
-    "Voblint_Analysis.Sign_Exec"
+    "Voblint_Analysis_Interval.Interval_Exec"
+    "Voblint_Analysis_Sign.Sign_Exec"
     "Voblint_Solver.TD_Solver_Bridge"
     "Voblint_CFG.CFG_Prune"
     "Voblint_VIMP.VIMP_Notation" "Voblint_Compile.Compile_Wellformed"

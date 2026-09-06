@@ -1,0 +1,16 @@
+// PARAM: --analysis sign
+// A single procedure p increments the declared global counter, and main
+// calls p once after setting an unrelated local. cinit_sign_st seeds every
+// declared global at SZero, and the one call adds exactly 1, so SPos is the
+// exact answer at the exit -- not merely SNonNeg, the weaker bound a
+// whole-state summary that cannot separate "before the call" from "after"
+// would be stuck with.
+global counter;
+void p() {
+  counter := counter + 1
+}
+void main() {
+  local := 1;
+  p();
+  __voblint_check(0 < counter) // PROVED
+}

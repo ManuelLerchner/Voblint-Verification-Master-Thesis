@@ -1,10 +1,10 @@
 theory Exec_Int_DG_Run
   imports
     "Voblint_Exec.DG_Local_State_Exec"
-    "Voblint_Analysis.Int_Exec"
+    "Voblint_Analysis_Int.Int_Exec"
     "Voblint_VIMP.VIMP_Notation"
     "Voblint_Soundness.Run_Analysis_Sound"
-    Example_Compile_Call_Free
+    "Voblint_Examples_CFG.Example_Compile_Call_Free"
 begin
 
 hide_const phase.N

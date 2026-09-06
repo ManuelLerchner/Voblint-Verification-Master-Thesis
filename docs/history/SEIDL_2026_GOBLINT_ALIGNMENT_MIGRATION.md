@@ -967,7 +967,7 @@ zero across `src/Analysis`, `src/Examples`, `src/CLI`, `src/Formalization` and
 Deleted whole: `Sign_Side_Soundness`, `Sign_Local_Effects`,
 `Interval_Side_Soundness`, `Parity_Side_Soundness`, `Parity_Exec_Sound`.
 Stripped to their D/G halves: `Sign_Exec_Sound`, `Interval_Exec_Sound`.
-Stripped of their etf factories: `Sign_Exec`, `Ivl_Exec`, `Parity_Exec`,
+Stripped of their etf factories: `Sign_Exec`, `Interval_Exec`, `Parity_Exec`,
 `Int_Exec`.
 
 #### The Parity soundness gap, closed

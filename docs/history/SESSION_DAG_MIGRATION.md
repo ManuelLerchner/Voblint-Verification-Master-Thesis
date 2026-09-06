@@ -164,7 +164,7 @@ Every bare-name import that crosses a session boundary must become a qualified i
 | `Trace_IP_Analysis_Sound.thy` | `Analysis_Sound`, `CFG_Collect_Trace_IP` → qualified |
 | `Example_Proc_GraphViz.thy` | `CFG_GraphViz`, `VIMP_Proc_to_CFG` → qualified |
 | `Example_Side_Proc_Global.thy` | `Sign_Side_IP_Soundness`, `CFG_Collect_IP_Adeq` → qualified |
-| `Example_Trace_Digest_Precision.thy` | `Sign_Domain` → `"Voblint_Analysis.Sign_Domain"` |
+| `Example_Trace_Digest_Precision.thy` | `Sign_Domain` → `"Voblint_Analysis_Sign.Sign_Domain"` |
 
 Approximately 20 import-line changes across 13 theory files. No proof changes needed —
 qualification affects only the `imports` header, not definitions or lemma bodies.

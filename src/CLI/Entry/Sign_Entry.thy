@@ -1,5 +1,5 @@
 theory Sign_Entry
-  imports Voblint_Analysis.Sign_Checks "Voblint_Soundness.Run_Analysis_Sound"
+  imports Voblint_Analysis_Sign.Sign_Checks "Voblint_Soundness.Run_Analysis_Sound"
     "Voblint_VIMP.VIMP_Notation"
 begin
 
@@ -27,7 +27,7 @@ abbreviation pgs :: "vname \<Rightarrow> bool" where "pgs \<equiv> declared_glob
 text \<open>
   \<open>analyse_sign_report_for\<close> reads its per-node state through
   \<^const>\<open>analyse_sign_result_for\<close>'s \<^type>\<open>analysis_result\<close> table, which is
-  now \<^const>\<open>analyse_sign_ctx_result_for\<close> (\<^theory>\<open>Voblint_Analysis.Sign_Analyses\<close>):
+  now \<^const>\<open>analyse_sign_ctx_result_for\<close> (\<^theory>\<open>Voblint_Analysis_Sign.Sign_Analyses\<close>):
   the  routed-unit producer's own solved table, at \<open>prog_main_name\<close>.
   \<open>analyse_sign_result_node_sound_for\<close> below is the node-soundness bridge for
   that table, built from \<^theory>\<open>Voblint_Framework.DG_Analysis_Adapter\<close>'s generic

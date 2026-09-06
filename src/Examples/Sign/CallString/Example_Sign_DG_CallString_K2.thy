@@ -6,7 +6,7 @@ begin
 section \<open>A computed 2-call-string context, routed by truncated call history\<close>
 
 text \<open>
-  The \<open>k = 2\<close> sibling of \<^theory>\<open>Voblint_Examples.Example_Sign_DG_CallString_K1\<close>, same
+  The \<open>k = 2\<close> sibling of \<^theory>\<open>Voblint_Examples_Sign.Example_Sign_DG_CallString_K1\<close>, same
   \<open>sign_nest\<close> program and same Base-style storage: \<open>g\<close>'s single call site is reached from
   two different \<open>f\<close> activations. At \<open>k = 1\<close> both collapse into one merged context and
   \<open>g\<close>'s entry parameter joins to \<open>STop\<close>; at \<open>k = 2\<close> the call string also records which

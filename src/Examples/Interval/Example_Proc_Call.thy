@@ -5,8 +5,8 @@ theory Example_Proc_Call
     "Voblint_VIMP.VIMP_Notation"
     "Voblint_CFG.CFG_Prune"
 
-    "Voblint_Analysis.Interval_Domain"
-    "Voblint_Analysis.Analysis_GraphViz"
+    "Voblint_Analysis_Interval.Interval_Domain"
+    "Voblint_Analysis_Base.Analysis_GraphViz"
 begin
 
 definition main_cfg_name :: pname where
@@ -195,8 +195,8 @@ lemma main_cfg_calls:
 
 
 text \<open>
-  A certified Sign analysis of a shared-global increment call is
-  @{text "Example_Side_Proc_Global"};
+  A Sign analysis of the same shared-global increment call is
+  \<^verbatim>\<open>tests/regression/07-sign-precision/precision/10-single_call_global_increment.vimp\<close>;
   this theory's own contribution is the concrete run (@{thm [source]
   main_prog_result [no_vars]}) and the compiled interprocedural CFG above.
 \<close>

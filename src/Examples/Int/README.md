@@ -1,4 +1,4 @@
-# Examples / Product
+# Examples / Int
 
 The Sign x Interval x Parity x Congruence product domain, run against the same
 generic D/G pipeline, solver and CFG shape as the single-domain instances. What

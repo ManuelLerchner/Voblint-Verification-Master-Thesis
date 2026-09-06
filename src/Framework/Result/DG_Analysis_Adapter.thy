@@ -1,5 +1,5 @@
 theory DG_Analysis_Adapter
-  imports Routed_Context Contextual_Check_Report Analysis_Result Activation_Backbone
+  imports Routed_Context Contextual_Check_Report Analysis_Result
 begin
 
 section \<open>Public result and check-report adapter for a local-state routed DG analysis\<close>

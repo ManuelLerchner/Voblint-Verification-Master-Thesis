@@ -11,9 +11,7 @@ text \<open>
   \<^const>\<open>Side\<close>, and \<^const>\<open>Answer\<close>: it reads local unknown
   \<open>STR ''local''\<close>, and only when that value is positive publishes one more
   than it to global key \<open>STR ''global''\<close> before doubling it; otherwise it
-  answers the value unchanged. \<open>Example_Strategy_Tree_Program\<close>
-  builds the identical tree through \<open>strategy_program\<close>'s typed combinators
-  and proves the two coincide.
+  answers the value unchanged.
 \<close>
 
 definition demo_tree :: "(String.literal, String.literal, nat) strategy_tree" where

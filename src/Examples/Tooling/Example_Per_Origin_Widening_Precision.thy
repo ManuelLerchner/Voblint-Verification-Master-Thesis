@@ -1,7 +1,7 @@
 theory Example_Per_Origin_Widening_Precision
   imports
     "TD.TD_side_upd_rule"
-    "Voblint_Analysis.Ivl_Exec"
+    "Voblint_Analysis_Interval.Interval_Exec"
 begin
 
 section \<open>Per-origin widening keeps a precision the joined-then-widened slot loses\<close>
@@ -23,7 +23,7 @@ text \<open>
     sharing one slot -- neither producer's own contribution ever moved.
   \<^item> \<^const>\<open>update_global_warrowing_per_origin\<close> widens each contribution against that
     origin's previous contribution and joins afterwards.  Both writes are first writes for
-    their origin, so the \<open>bot \<nabla> x = x\<close> law (\<^theory>\<open>Voblint_Analysis.Interval_Warrowing\<close>)
+    their origin, so the \<open>bot \<nabla> x = x\<close> law (\<^theory>\<open>Voblint_Analysis_Interval.Interval_Warrowing\<close>)
     keeps each exact, and the read joins them to \<open>[1, 2]\<close>.
 
   The narrowing half of warrowing cannot repair the joined rule here: once both producers

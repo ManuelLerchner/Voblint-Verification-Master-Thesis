@@ -1,0 +1,28 @@
+session Voblint_Analysis_Interval in "." = "Voblint_Analysis_Base" +
+  description "The Interval domain: bounds, lattice, widening, executable bridge, end-to-end soundness"
+  sessions
+    "Voblint_VIMP"
+    "Voblint_CFG"
+    "Voblint_Compile"
+    "Voblint_Domain"
+    "Voblint_Framework"
+    "Voblint_Solver"
+    "TD"
+  theories
+    Interval_Bounds
+    Interval_Lattice
+    Interval_Warrowing
+    Interval_Arithmetic
+    Interval_Backward
+    Interval_Transfer
+    Interval_Domain
+    Interval_Exec
+    Interval_Special
+    Interval_Numeric_Queries
+    Interval_Point_Digest
+    Interval_Sound
+    Interval_Exec_Sound
+    Interval_Analyses
+    Interval_Solver_Analyses
+    Interval_Classify
+    Interval_Checks

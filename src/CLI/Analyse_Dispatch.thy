@@ -4,10 +4,10 @@ theory Analyse_Dispatch
     Interval_Entry
     Int_Entry
     Parity_Entry
-    Voblint_Analysis.Interval_Analyses
-    Voblint_Analysis.Sign_Analyses
-    Voblint_Analysis.Int_Analyses
-    Voblint_Analysis.Analysis_Config
+    Voblint_Analysis_Interval.Interval_Analyses
+    Voblint_Analysis_Sign.Sign_Analyses
+    Voblint_Analysis_Int.Int_Analyses
+    Voblint_Analysis_Base.Analysis_Config
     "HOL-Library.Code_Target_Numeral"
     "HOL-Library.Code_Abstract_Char"
 begin
@@ -19,7 +19,7 @@ section \<open>A unified, verified check-report API across domains\<close>
 text \<open>
   \<open>analyse_sign_report\<close> (\<^theory>\<open>Voblint_CLI.Sign_Entry\<close>) and
   \<open>analyse_interval_td_report_for\<close>/\<open>analyse_interval_td_report\<close>
-  (\<^theory>\<open>Voblint_Analysis.Interval_Checks\<close>) already share one observable
+  (\<^theory>\<open>Voblint_Analysis_Interval.Interval_Checks\<close>) already share one observable
   result type, \<open>check_report_entry list\<close>
   (\<^theory>\<open>Voblint_Framework.Abstract_Checks\<close>), even though the two domains'
   internal abstract states (\<open>sign abs_state\<close> vs \<open>ivl abs_state\<close>) genuinely
@@ -33,7 +33,7 @@ text \<open>
   local or global value without bound still needs widening for termination, warrowing's own
   guarantee, unlike plain join. All three reports (\<open>analyse_interval_td_report\<close>,
   \<open>analyse_interval_report\<close>, \<open>analyse_interval_report_per_origin\<close>) now read through the routed
-  D/G spine (\<^theory>\<open>Voblint_Analysis.Interval_Analyses\<close>, mirroring Sign's own
+  D/G spine (\<^theory>\<open>Voblint_Analysis_Interval.Interval_Analyses\<close>, mirroring Sign's own
   migration) instead of the Base-family \<open>analyse_interval_dg_*\<close> pipeline: VIMP globals live in a
   keyed seed slot rather than a separate flow-insensitive summary, so \<open>Solver_Join\<close>'s own hazard
   is purely a loop-termination question now, not a global-specific one: a program whose global
@@ -56,7 +56,7 @@ subsection \<open>Context-sensitivity dimension\<close>
 text \<open>
   \<open>Ctx_None\<close> is today's flow-insensitive, call-site-insensitive behaviour;
   \<open>Ctx_EntryState\<close> selects the value-derived entry-state context analysis
-  (\<^theory>\<open>Voblint_Analysis.Interval_Analyses\<close>, #108). Deliberately not
+  (\<^theory>\<open>Voblint_Analysis_Interval.Interval_Analyses\<close>, #108). Deliberately not
   a wider \<open>analyse\<close>: \<open>analyse\<close>/\<open>analyse_with_state\<close> stay untouched (the CLI's
   no-\<open>--context\<close> path, the GraphViz report, and every existing
   \<open>codegen/regression\<close> consumer already pin their exact two-argument shape as a
@@ -89,7 +89,7 @@ text \<open>
   system, without touching \<open>analyse\<close> or any domain's production entry point.
 
   Not every combination is meaningful: only \<open>ivl\<close> has a \<open>widen\<close> type-class
-  instance (\<^theory>\<open>Voblint_Analysis.Interval_Warrowing\<close>), so \<open>Solver_Warrow\<close>
+  instance (\<^theory>\<open>Voblint_Analysis_Interval.Interval_Warrowing\<close>), so \<open>Solver_Warrow\<close>
   does not even type-check against Sign -- adding a pointless \<open>widen\<close>
   instance for a finite-height domain that needs no widening would be
   scope creep, not a fix. \<open>analyse_with_solver\<close> is therefore a curated,
@@ -97,7 +97,7 @@ text \<open>
   predicate over an open solver/domain space: an unsupported pairing
   returns \<open>None\<close>, the same explicit-gap discipline \<open>resolve_analysis_config\<close>
   applies on the context axis. \<open>int_dom\<close> has a
-  \<^theory>\<open>Voblint_Analysis.Int_Warrowing\<close> instance already needed for its own
+  \<^theory>\<open>Voblint_Analysis_Int.Int_Warrowing\<close> instance already needed for its own
   \<open>Solver_Warrow\<close> production route, so unlike Sign it has no type-level gap
   left on this axis: every \<open>int_dom\<close> pairing is supported. Of the sixteen
   \<open>analysis_domain \<times> solver_choice\<close> combinations the four \<open>None\<close>s are exactly the two
@@ -171,8 +171,8 @@ text \<open>
   \<open>codegen/regression\<close> drivers) already pin its \<open>check_report_entry
   list\<close> shape as a trust boundary, so this is an additional export, not a
   replacement. Each branch reuses \<open>analyse_sign_report_with_state\<close>/
-  \<open>analyse_interval_td_report_with_state\<close> (\<^theory>\<open>Voblint_Analysis.Sign_Checks\<close>,
-  \<^theory>\<open>Voblint_Analysis.Interval_Checks\<close>) unchanged, just as \<open>analyse\<close> reuses
+  \<open>analyse_interval_td_report_with_state\<close> (\<^theory>\<open>Voblint_Analysis_Sign.Sign_Checks\<close>,
+  \<^theory>\<open>Voblint_Analysis_Interval.Interval_Checks\<close>) unchanged, just as \<open>analyse\<close> reuses
   their state-free counterparts.
 \<close>
 
@@ -379,7 +379,7 @@ text \<open>
   matching the routed-unit producer \<open>analyse Int_Analysis\<close> now dispatches to: solver
   termination and coverage are stated over
   \<^const>\<open>int_conf_sol_prog_warrow\<close>/\<^const>\<open>int_conf_terminates_prog_warrow\<close>
-  (\<^theory>\<open>Voblint_Analysis.Int_Analyses\<close>), pinned at \<^const>\<open>Refine_Fixpoint\<close> --
+  (\<^theory>\<open>Voblint_Analysis_Int.Int_Analyses\<close>), pinned at \<^const>\<open>Refine_Fixpoint\<close> --
   the CLI does not expose refinement mode as a separate axis -- rather than the Base
   family's \<open>analyse_int_dg\<close>/\<open>analyse_int_dg_eqs\<close>. \<open>int_conf_sol_prog_warrow\<close>/
   \<open>int_conf_terminates_prog_warrow\<close> need no qualification: each domain's
@@ -475,7 +475,7 @@ text \<open>
   \<^const>\<open>analyse\<close>/\<^const>\<open>analyse_with_solver\<close>/
   \<^const>\<open>analyse_with_state\<close> above each decide legality over exactly two of
   \<^type>\<open>analysis_config\<close>'s three axes at a time (domain+solver, ...) and stay
-  the lower-level, typed entry points every consumer keeps using. \<^const>\<open>resolve_analysis_config\<close> (\<^theory>\<open>Voblint_Analysis.Analysis_Config\<close>)
+  the lower-level, typed entry points every consumer keeps using. \<^const>\<open>resolve_analysis_config\<close> (\<^theory>\<open>Voblint_Analysis_Base.Analysis_Config\<close>)
   is the one place all three axes' legality and defaults are decided
   together; the three wrappers below each consume its \<^type>\<open>analysis_plan\<close>
   result and pick the one existing dispatcher call that already produces
@@ -1049,6 +1049,7 @@ code_identifier
 | code_module Sign_Exec \<rightharpoonup> (OCaml) Core
 | code_module Sign_Classify \<rightharpoonup> (OCaml) Core
 | code_module Sign_Sound \<rightharpoonup> (OCaml) Core
+| code_module Sign_Exec_Sound \<rightharpoonup> (OCaml) Core
 | code_module Sign_Analyses \<rightharpoonup> (OCaml) Core
 | code_module Sign_Analyses \<rightharpoonup> (OCaml) Core
 | code_module Sign_Lattice \<rightharpoonup> (OCaml) Core
@@ -1064,7 +1065,7 @@ code_identifier
 | code_module Interval_Numeric_Queries \<rightharpoonup> (OCaml) Core
 | code_module Interval_Transfer \<rightharpoonup> (OCaml) Core
 | code_module Interval_Warrowing \<rightharpoonup> (OCaml) Core
-| code_module Ivl_Exec \<rightharpoonup> (OCaml) Core
+| code_module Interval_Exec \<rightharpoonup> (OCaml) Core
 | code_module Routed_Call_Trees \<rightharpoonup> (OCaml) Core
 | code_module Routed_Context \<rightharpoonup> (OCaml) Core
 | code_module Routed_Context_Unit \<rightharpoonup> (OCaml) Core
@@ -1106,6 +1107,7 @@ code_identifier
 | code_module Parity_Checks \<rightharpoonup> (OCaml) Core
 | code_module Parity_Classify \<rightharpoonup> (OCaml) Core
 | code_module Parity_Sound \<rightharpoonup> (OCaml) Core
+| code_module Parity_Exec_Sound \<rightharpoonup> (OCaml) Core
 | code_module Parity_Analyses \<rightharpoonup> (OCaml) Core
 | code_module Parity_Analyses \<rightharpoonup> (OCaml) Core
 | code_module Parity_Analyses \<rightharpoonup> (OCaml) Core

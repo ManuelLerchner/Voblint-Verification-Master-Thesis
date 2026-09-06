@@ -1,11 +1,11 @@
 theory Example_Relational_DG_Demo
   imports
     "Voblint_Exec.Exec_DG_Generator"
-    "Voblint_Analysis.Rel_Order_Domain"
-    "Voblint_Analysis.Interval_Transfer"
-    "Voblint_Analysis.Ivl_Exec"
+    "Voblint_Analysis_Relational.Rel_Order_Domain"
+    "Voblint_Analysis_Interval.Interval_Transfer"
+    "Voblint_Analysis_Interval.Interval_Exec"
     "Voblint_Solver.TD_Solver_Bridge"
-    "Voblint_Analysis.Analysis_GraphViz"
+    "Voblint_Analysis_Base.Analysis_GraphViz"
     "Voblint_CFG.CFG_Prune"
     "Voblint_VIMP.VIMP_Notation"
 begin
@@ -15,7 +15,7 @@ hide_const phase.N
 section \<open>End-to-end demo: a relational analysis on the same executable pipeline as Interval\<close>
 
 text \<open>
-  @{theory Voblint_Analysis.Rel_Order_Domain} interprets
+  @{theory Voblint_Analysis_Relational.Rel_Order_Domain} interprets
   \<^locale>\<open>sound_dg_spec_core\<close> over \<open>relc\<close>, a non-\<open>abs_state\<close> relational carrier,
   with zero DG-framework changes -- the mathematical half of the claim.
   This file is the executable half: the same CFG, the same generic

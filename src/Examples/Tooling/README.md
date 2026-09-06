@@ -1,15 +1,21 @@
 # Examples / Tooling
 
-Domain-independent witnesses that do not belong to any one domain folder:
-the contextual GraphViz surface, the solver's generator-layer buffering
-regressions, and the strategy-tree language on its own.
+Solver- and generator-layer witnesses that are not about any one domain. They
+are stated over whichever domain makes the effect visible -- usually Interval,
+which is why `Voblint_Examples_Tooling` is parented on
+`Voblint_Analysis_Interval` rather than on the solver.
 
 | File | Role | What |
 | --- | --- | --- |
-| `Example_EntryState_GraphViz_Regression.thy` | regression | the two entry-state rendering paths — full-state via `point_state_node_annotation`, and the check-report surface — read back off the solved result table |
 | `Example_Keyed_Solver_Update_Rule_Regression.thy` | regression | the keyed-generator instance of the same, at `routed_node_rhs`'s interface |
+| `Example_Buffered_Encoding_Flush_Order.thy` | regression | the direct and buffered routed generators solved side by side under three update rules, on one program publishing a global and an activation seed from the same evaluation |
+| `Example_Per_Origin_Widening_Precision.thy` | regression | two producers, one global: warrowing after the join loses the upper bound that warrowing per origin keeps |
 | `Example_Strategy_Tree.thy` | demo | `strategy_tree` as a small dependency/effect language with no abstract domain, CFG, or context in play |
-| `Example_Strategy_Tree_Program.thy` | demo | the typed `strategy_program` frontend compiles down to exactly `Example_Strategy_Tree`'s hand-built `demo_tree`; a `bool`- and a record-typed intermediate value both thread through and reduce the same way; `sp_lift_tree` resumes a typed program from that already-built tree |
+| `Example_TD_Side_Program.thy` | demo | Tilscher's TDside lock-set running example, through the typed `strategy_program` frontend |
+| `Example_TD_Plain_Program.thy` | demo | the TD must-be-initialized running example, through the same frontend with no side effects |
+
+The context-expanded GraphViz regression needs
+`Voblint_CLI.State_Report_GraphViz`, so it lives in `CLI/`.
 
 Plain DOT rendering has no witness here. `raw_cfg_dot_lit` and
 `state_report_dot` (`Voblint_CLI.State_Report_GraphViz`) assert nothing a

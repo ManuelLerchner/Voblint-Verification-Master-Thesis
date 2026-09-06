@@ -1,6 +1,6 @@
 theory Example_Interval_Call_String_Generic_Parity
   imports
-    "Voblint_Analysis.Interval_Analyses"
+    "Voblint_Analysis_Interval.Interval_Analyses"
     Example_Interval_DG_CallString_K2
 begin
 

@@ -1,6 +1,6 @@
 theory Routed_Call_Trees
-  imports DG_Spec_Sound DG_Keyed_Generator State_Restriction
-    "Voblint_Domain.Nonrelational_State" "Voblint_Solver.Strategy_Tree_Post_Solution"
+  imports DG_Spec_Sound DG_Keyed_Generator
+    "Voblint_Domain.Nonrelational_State"
     "Voblint_Solver.Strategy_Tree_Program"
 begin
 

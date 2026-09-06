@@ -1,7 +1,7 @@
 theory Example_Sign_Backward_Pollution_Regression
   imports
-    "Voblint_Analysis.Sign_Backward"
-    "Voblint_Analysis.Sign_Exec"
+    "Voblint_Analysis_Sign.Sign_Backward"
+    "Voblint_Analysis_Sign.Sign_Exec"
     "Voblint_VIMP.VIMP_Notation"
 begin
 
@@ -102,7 +102,7 @@ subsection \<open>The executable mirror is exact, not just the specification\<cl
 text \<open>
   \<^const>\<open>bfilter_sign_st_lift\<close> is the code-generatable mirror of
   \<open>sign_backward_domain.bfilter_lifted\<close>; \<open>bfilter_st_lift_correct\<close>
-  (\<^theory>\<open>Voblint_Analysis.Exec_Backward\<close>) proves that readback commutes
+  (\<^theory>\<open>Voblint_Analysis_Base.Exec_Backward\<close>) proves that readback commutes
   exactly with filtering. This lemma is not a restatement of that theorem:
   it separately checks that code
   generation for the whole dependency chain still succeeds (no

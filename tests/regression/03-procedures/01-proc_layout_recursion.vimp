@@ -1,0 +1,123 @@
+// PARAM: --analysis interval
+// Procedure layout regression, ported from
+// Example_Proc_Recursion_CFG.thy's proc_layout_regression_prog: the
+// procedure list is known before any body is compiled, so a call may
+// target the current procedure (f's direct self-recursion), a sibling
+// declared later (g calling h, a forward reference needing no second
+// pass), or a mutually recursive pair (g and h calling each other). The
+// claim here is purely structural -- which callee each call edge targets,
+// and where each procedure's block starts and ends -- not a value the
+// analysis proves. G defaults to 0 and neither branch of f's body changes
+// it, so f's own condition G<1 holds at every recursive re-entry: f
+// provably never reaches its else branch, never returns to main, and the
+// trailing check after inc() is therefore proved dead (NOWARN) -- a true
+// consequence of the ported source, not an artifact of the port. The
+// graph snapshot below is the CLI-observable analogue of the .thy file's
+// calls/intra membership and block-layout by-eval lemmas; the call and
+// combine edges after f's call site still appear in it; only their
+// solved state is dead.
+// EXPECT-GRAPH-BEGIN
+// clusters:
+//   cluster_ctx_0:
+//     h_entry_h_ctx0
+//     h_result_h_ctx0
+//     h_pp6_ctx0
+//     h_pp7_ctx0
+//   cluster_ctx_1:
+//     f_pp2_ctx1
+//     f_pp0_ctx1
+//     f_pp1_ctx1
+//     f_pp3_ctx1
+//     f_entry_f_ctx1
+//     f_result_f_ctx1
+//   cluster_ctx_2:
+//     g_pp4_ctx2
+//     g_pp5_ctx2
+//     g_entry_g_ctx2
+//     g_result_g_ctx2
+//   cluster_ctx_3:
+//     main_pp14_ctx3
+//     main_result_main_ctx3
+//     main_entry_main_ctx3
+//     main_pp10_ctx3
+//     main_pp11_ctx3
+//     main_pp12_ctx3
+//     main_pp13_ctx3
+//   cluster_ctx_4:
+//     inc_pp9_ctx4
+//     inc_pp8_ctx4
+//     inc_entry_inc_ctx4
+//     inc_result_inc_ctx4
+//
+// nodes:
+//   f_pp2_ctx1: pp2
+//   inc_pp9_ctx4: pp9
+//   main_pp14_ctx3: pp14
+//   main_result_main_ctx3: exit_main
+//   f_pp0_ctx1: pp0
+//   inc_pp8_ctx4: pp8
+//   main_entry_main_ctx3: entry_main
+//   f_pp1_ctx1: pp1
+//   f_pp3_ctx1: pp3
+//   g_pp4_ctx2: pp4
+//   h_entry_h_ctx0: entry_h
+//   g_pp5_ctx2: pp5
+//   h_result_h_ctx0: exit_h
+//   h_pp6_ctx0: pp6
+//   h_pp7_ctx0: pp7
+//   main_pp10_ctx3: pp10
+//   f_entry_f_ctx1: entry_f
+//   f_result_f_ctx1: exit_f
+//   main_pp11_ctx3: pp11
+//   g_entry_g_ctx2: entry_g
+//   g_result_g_ctx2: exit_g
+//   main_pp12_ctx3: pp12
+//   inc_entry_inc_ctx4: entry_inc
+//   main_pp13_ctx3: pp13
+//       check 1
+//   inc_result_inc_ctx4: exit_inc
+//
+// edges:
+//   f_pp2_ctx1 -> f_pp3_ctx1: G := G
+//   inc_pp9_ctx4 -> inc_result_inc_ctx4: return
+//   main_pp14_ctx3 -> main_result_main_ctx3: terminate
+//   f_pp0_ctx1 -> f_pp1_ctx1: G<1
+//   f_pp0_ctx1 -> f_pp2_ctx1: not (G<1)
+//   inc_pp8_ctx4 -> inc_pp9_ctx4: G := G+1
+//   main_entry_main_ctx3 -> main_pp10_ctx3: body(main)
+//   f_pp3_ctx1 -> f_result_f_ctx1: return
+//   h_entry_h_ctx0 -> h_pp6_ctx0: body(h)
+//   g_pp5_ctx2 -> g_result_g_ctx2: return
+//   h_pp7_ctx0 -> h_result_h_ctx0: return
+//   f_entry_f_ctx1 -> f_pp0_ctx1: body(f)
+//   g_entry_g_ctx2 -> g_pp4_ctx2: body(g)
+//   inc_entry_inc_ctx4 -> inc_pp8_ctx4: body(inc)
+//   main_pp13_ctx3 -> main_pp14_ctx3: check(1)
+//   f_pp1_ctx1 -> f_entry_f_ctx1: enter f()
+//   g_pp4_ctx2 -> h_entry_h_ctx0: enter h()
+//   h_pp6_ctx0 -> g_entry_g_ctx2: enter g()
+//   main_pp10_ctx3 -> f_entry_f_ctx1: enter f()
+//   main_pp11_ctx3 -> g_entry_g_ctx2: enter g()
+//   main_pp12_ctx3 -> inc_entry_inc_ctx4: enter inc()
+//   f_result_f_ctx1 -> f_pp3_ctx1: combine
+//   h_result_h_ctx0 -> g_pp5_ctx2: combine
+//   g_result_g_ctx2 -> h_pp7_ctx0: combine
+//   f_result_f_ctx1 -> main_pp11_ctx3: combine
+//   g_result_g_ctx2 -> main_pp12_ctx3: combine
+//   inc_result_inc_ctx4 -> main_pp13_ctx3: combine
+//   f_pp1_ctx1 -> f_pp3_ctx1: call-to-return f
+//   g_pp4_ctx2 -> g_pp5_ctx2: call-to-return h
+//   h_pp6_ctx0 -> h_pp7_ctx0: call-to-return g
+//   main_pp10_ctx3 -> main_pp11_ctx3: call-to-return f
+//   main_pp11_ctx3 -> main_pp12_ctx3: call-to-return g
+//   main_pp12_ctx3 -> main_pp13_ctx3: call-to-return inc
+// EXPECT-GRAPH-END
+
+global G;
+void f() {
+  if (G < 1) { f() } else { G := G }
+}
+void g() { h() }
+void h() { g() }
+void inc() { G := G + 1 }
+void main() { f(); g(); inc(); __voblint_check(true) } // NOWARN

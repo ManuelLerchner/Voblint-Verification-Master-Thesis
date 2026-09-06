@@ -76,14 +76,22 @@ The session dependency graph is:
 
 ```text
 VIMP -> Domain -+
-                +-> CFG -> Framework -> Compile -> Exec -> Analysis -+-> Soundness -+
-TD   -> Solver -+                                                    |              v
-                                                                     +------------> CLI -> Codegen
-                                                                                     +---> Examples
+                +-> CFG -> Framework -> Compile -> Exec -> Analysis/* -+-> Soundness -+
+TD   -> Solver -+                                                      |              v
+                                                                       +----------> CLI -> Codegen
+                                                                                      +--> Examples/*
 ```
 
 (`CFG` depends on `VIMP` only; `Framework` on `CFG`, `Domain` and `Solver`;
 `Compile` on `CFG`; `Exec` on `Framework` and `Compile`.)
+
+`Analysis/*` and `Examples/*` are each a family of sessions, not one session.
+`Voblint_Analysis_Base` holds what every domain reuses and is the parent of
+`Voblint_Analysis_Sign`, `_Interval`, `_Parity`, `_Congruence`, `_Relational`
+and `_Int` (which is parented on Base and lists the four component domains it
+reduces). `Voblint_Examples_<Domain>` is parented on that domain's analysis
+session, so a domain's witnesses never pull a sibling domain into their
+closure.
 
 `Voblint_CFG` is the graph model and its activation-local collecting
 semantics: what a soundness claim is stated *about*. It never mentions the
@@ -104,9 +112,11 @@ collecting soundness for an arbitrary CFG, with no domain-specific content and
 no compiler.
 `Voblint_Exec` is the executable carrier and the transport of a solved
 system from the solver's association-list states to the function-valued
-states the framework is stated over. `Voblint_Analysis` threads each
-concrete domain instance (Sign, Interval, ...) through them, and also holds
-the Base-level reuse locales and the compile-dependent routed contexts.
+states the framework is stated over. The `Voblint_Analysis_*` sessions thread
+each concrete domain instance (Sign, Interval, ...) through them; the
+Base-level reuse locales, the dispatch config, the reporting layer and the
+compile-dependent routed contexts live in `Voblint_Analysis_Base`, which every
+domain session is parented on.
 `docs/CORE_REFACTOR_PLAN.md` records why the split runs along these lines
 and what remains to move.
 
@@ -114,10 +124,21 @@ Cross-session theory imports use qualified names.
 `Voblint_Soundness` contains the reusable soundness endpoints and the
 per-domain, per-context instantiations the CLI dispatches to, so it is not a
 leaf: `Voblint_CLI` imports it, and the export in `Voblint_Codegen` reaches
-through it. `Voblint_Examples` contains executable runs, regressions, GraphViz
-output, and the `Voblint` capstone.
+through it. The `Voblint_Examples_*` sessions contain executable runs, regressions and
+GraphViz output, one session per folder under `src/Examples`. `Voblint_Examples`
+itself is the residue plus the `Voblint` capstone: the witnesses that reach a
+codegen entry point, the `AnalysisConfig` dispatcher, or the GraphViz render
+surface all import `Voblint_CLI` and therefore see every domain, so they live
+together in `Voblint_Examples_CLI` (`src/Examples/CLI`) instead of being spread
+back through the domain folders, where they would recouple each domain's session
+to all of them. That session is the capstone's *parent*, not a listed session:
+theories imported from an ancestor come from its heap, while theories from a
+merely listed session are re-elaborated in the importer.
 
-`ROOTS` lists twelve session directories, one per session in the graph above.
+`ROOTS` lists one directory per session. Isabelle rejects two sessions sharing
+a directory, so a new session means a new directory, and every directory under
+`src` that holds a `ROOT` owns exactly the theories beneath it that no nested
+session claims.
 
 The generated OCaml is compile-checked by actually compiling it: both
 `codegen-regression` and `cli-build` run `ocamlfind ocamlopt` over

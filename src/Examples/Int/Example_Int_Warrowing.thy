@@ -1,5 +1,5 @@
 theory Example_Int_Warrowing
-  imports Voblint_Analysis.Int_Warrowing Voblint_Analysis.Int_Refinement
+  imports Voblint_Analysis_Int.Int_Warrowing Voblint_Analysis_Int.Int_Refinement
 begin
 
 section \<open>Composite widening and narrowing: examples\<close>
