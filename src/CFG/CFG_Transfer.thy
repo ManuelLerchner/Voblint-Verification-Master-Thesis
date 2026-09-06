@@ -25,6 +25,7 @@ lemma edge_collect_simps [simp]:
   "edge_collect (EA_Special sc x) S = {t. \<exists>s\<in>S. t \<in> special_step sc x s}"
   "edge_collect (EA_Assume b) S = {s. s \<in> S \<and> truthy (aval b s)}"
   "edge_collect (EA_AssumeNot b) S = {s. s \<in> S \<and> \<not> truthy (aval b s)}"
+  "edge_collect (EA_Body p) S = S"
   "edge_collect (EA_Ret e p) S =
      {s(ret_var := (case e of None \<Rightarrow> s ret_var | Some a \<Rightarrow> aval a s)) | s. s \<in> S}"
   "edge_collect (EA_Check c) S = S"
@@ -65,12 +66,12 @@ text \<open>Caller-side entry transfer at a call.  The actuals are evaluated in 
 definition call_enter :: "(vname \<Rightarrow> bool) \<Rightarrow> call_action \<Rightarrow> store \<Rightarrow> store" where
   "call_enter gs ca s =
      (case ca of CallEdge dst pars actuals \<Rightarrow>
-        bind_formals pars (map (\<lambda>e. aval e s) actuals) (enter_state gs s))"
+        enter_binding gs 0 aval pars actuals s)"
 
 lemma call_enter_CallEdge:
   "call_enter gs (CallEdge dst pars actuals) s
      = bind_formals pars (map (\<lambda>e. aval e s) actuals) (enter_state gs s)"
-  by (simp add: call_enter_def)
+  by (simp add: call_enter_def enter_binding_def enter_state_def)
 
 text \<open>A parameterless call is exactly \<^const>\<open>enter_state\<close>: no actuals to evaluate and no
   formals to bind.\<close>

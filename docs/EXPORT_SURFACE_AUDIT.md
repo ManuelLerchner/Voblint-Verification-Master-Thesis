@@ -25,7 +25,7 @@ diverges from Goblint.
 signal on its own. Isabelle emits the transitive closure of the export roots
 under the *registered code equations*, so a specification-side constant that a
 `[code]` lemma rewrites away vanishes from the OCaml while remaining load-bearing
-in the proof. `unit_dg_spec_for`, `dg_gen_of`, `fun_of_dg_st`, `gamma_unit` and
+in the proof. `ownership_split_dg_spec_for`, `dg_gen_of`, `fun_of_dg_st`, `gamma_ownership_split` and
 most of `Exec_DG_Generator` are in that category: absent from the OCaml, not
 legacy. The findings below are the cases where absence *plus* a use-graph check
 shows the construct is genuinely unreferenced or superseded.
@@ -95,7 +95,7 @@ a second, older family — `analyse_sign`, `analyse_sign_eqs`,
 the generated OCaml, and — once `text \<open>...\<close>` blocks are excluded — none is
 referenced from live code either.** The many hits a naive grep produces are all
 prose: `Analyse_Dispatch.thy:230`/`:304`, `Interval_Entry.thy`,
-`Monovariant_Analysis_Result.thy` and the `*_Ctx_*_Sound` theories mention these
+`Result_Normalization.thy` and the `*_Ctx_*_Sound` theories mention these
 names only to say they are *not* the path taken.
 
 After a nesting-aware strip of comments and `text` blocks, the complete
@@ -224,7 +224,7 @@ exposes, not only through direct calls. Check both spellings.
 
 489 lines whose own header says "The purpose of this file is not a useful
 analysis". It demonstrates that a non-`abs_state` carrier discharges
-`sound_dg_spec` unchanged. That is a real result about the framework's
+`sound_dg_spec_core` unchanged. That is a real result about the framework's
 genericity and worth keeping — but it is a *demonstration*, and it sits in
 `src/Analysis/Instances/`, where every sibling is a shipped domain. It belongs
 next to its `Example_Relational_DG_Demo.thy`, not in the instance directory.
@@ -259,14 +259,14 @@ The naming is also inconsistent in a way that hides the parallelism:
 
 ### 3.2 The `_lifted` mirror
 
-`unit_dg_spec_for` / `unit_dg_spec_for_lifted`, `unit_step_for` / `_lifted`,
+`ownership_split_dg_spec_for` / `ownership_split_dg_spec_for_lifted`, `ownership_split_step_for` / `_lifted`,
 `unit_combine_step_env_for` / `_lifted`, `unit_combine_step_assign_for` /
-`_lifted`, `gamma_unit` / `gamma_unit_lifted`, `formals_route` / `_lifted` /
+`_lifted`, `gamma_ownership_split` / `gamma_ownership_split_lifted`, `formals_route` / `_lifted` /
 `_gen` / `_lifted_gen`, `branch` / `branch_lifted` — each pair is structurally
 identical modulo the carrier (`'a abs_state` vs `'a abs_state lifted`) plus an
 `is_bot_pred`, and each pair is bridged by an explicit `*_agrees` lemma.
 
-Measured cost: blocks touching `lifted` are 252/2,473 lines of `DG_Framework`,
+Measured cost: blocks touching `lifted` are 252/2,473 lines of `DG_Constraint_Trees`,
 134/1,124 of `Routed_Context`, 203/2,318 of `DG_Soundness` — about 10% each.
 That is smaller than the shape suggests, so this is a medium-priority cleanup,
 not a large one. The right move is not a delete but a parameterization: the two
@@ -287,7 +287,7 @@ smell. Fold each base into the `_gen` form by instantiation and drop the name.
 ### 3.4 Misplaced size
 
 `src/Examples/Interval/Example_Interval_Placement.thy` is 2,903 lines — the
-largest file in the repository, larger than `DG_Framework` or `DG_Soundness`.
+largest file in the repository, larger than `DG_Constraint_Trees` or `DG_Soundness`.
 An example that outweighs the framework it exercises is doing something other
 than exemplifying.
 
@@ -354,7 +354,7 @@ prose. The worst cases:
 | `fun_of_dg_st` | `Exec_DG_Bridge`, `Exec_DG_Refines`, `Exec_DG_Trees`, `Exec_Sign_DG_Run`, `Run_Analysis_Sound`, **`Voblint.thy`** | the constant is `fun_of_dg_st_gen` |
 | `part_post_solution_dg_st_to_abs`, `dg_post_solution_collect_sound_ltr` | **`Voblint.thy`** (×3), `Run_Analysis_Sound` | gone |
 | `state_report_dot_auto`, `full_state_dot_auto`, `entry_state_full_state_dot_auto_code` | `State_Report_GraphViz` (9 mentions) | gone; see §2.3 |
-| `sound_dg_spec_ltr` | `DG_LTR_Sound` | renamed `sound_dg_spec_ltr_for` |
+| `sound_dg_spec_core_ltr` | `DG_LTR_Sound` | renamed `sound_dg_spec_core_ltr_for` |
 | `analyse_interval_td`, `analyse_interval_td_at`, `analyse_interval_td_terminates` | `Interval_Checks`, `Interval_Ctx_Entry_State_Sound` | only `analyse_interval_td_result`/`_report` exist |
 | `assume_sign_st`, `assume_not_sign_st`, `branch_parity_st_for` | `Sign_Backward`, `Parity_Exec` | gone |
 | `p_reg_join`, `p_reg_per_origin`, `analyse_sign_sound` | `Interval_Entry` | gone |
@@ -482,10 +482,10 @@ roots.
 | Area | Dead (delete) | Unification (net) |
 | --- | ---: | ---: |
 | Original sweep (§1–§3, §7) | 1,193 | 740–980 |
-| `src/Core/Solver` (§9) | ~860 | ~250 |
+| `src/Framework/Solver` (§9) | ~860 | ~250 |
 | `src/CFG` (§10) | ~550 | ~595 |
 | `src/Analysis` (§12) | ~700 | ~4,440 |
-| `src/Core/Domain` + `Equations` (§13) | ~2,700 | ~370 |
+| `src/Framework/Domain` + `Equations` (§13) | ~2,700 | ~370 |
 | `src/VIMP` + `src/CLI` (§11) | ~200 | ~1,230 |
 | **Total** | **≈6,200** | **≈7,600** |
 
@@ -581,7 +581,7 @@ Cheap to share, low value either way.
 
 ### 7.4 `Example_Interval_Placement.thy` is not an example
 
-2,904 lines — the largest file in the repository, larger than `DG_Framework`
+2,904 lines — the largest file in the repository, larger than `DG_Constraint_Trees`
 (2,472) or `DG_Soundness` (2,318). 2,451 of those lines are `lemma`, against 48
 `by eval` and 49 structured `proof` blocks. Its sibling
 `Example_Sign_Placement.thy` (957) shares the section skeleton at 0.08
@@ -635,7 +635,7 @@ kept alive alongside the one the CLI uses.
 
 **They are not deletable.** `GOBLINT_ALIGNMENT_REGISTER.md`'s D/G-reconstruction
 row cites `Example_Sign_Placement.thy` and `Example_Interval_Placement.thy` as
-the concrete counterexamples distinguishing `gamma_unit gs` from `gamma_join` —
+the concrete counterexamples distinguishing `gamma_ownership_split gs` from `gamma_join` —
 they are load-bearing evidence for a documented architectural claim. The
 finding is that 3,861 lines is a disproportionate way to carry that evidence,
 and that ~1,500 of it is framework work misfiled as an example.
@@ -850,35 +850,35 @@ rather than re-deriving the ordering, and fails closed on a length mismatch;
 reconstructed in OCaml, and the file documents that this was deliberately moved
 into the verified layer. That is the model the rest of `cli/` should follow.
 
-## 9. `src/Core/Solver` (15,168 lines)
+## 9. `src/Framework/Solver` (15,168 lines)
 
 ### 9.1 Confirmed dead — verified with prose stripped
 
 | Item | Site | Lines | Evidence |
 | --- | --- | --- | --- |
-| `TD_side_always_join_solve_Inr_rg` + its 4-way `pinduct` `TD_side_always_join_rg_ind` | `Solver_Side_RG.thy:143-318` | **176** | one code occurrence: the lemma line. Its mirror half (`..._warrowing_apinis_...`, `:477-702`) *is* live via `Interval_Warrowing.thy`. The theory's genuinely load-bearing content is the 12-line `solve_dom_of_solve_c`, cited from 18 files |
-| `td_cfg_side_solver_dg` locale | `DG_Framework.thy:2360-2463` | **104** | never interpreted, never `sublocale`d, named nowhere. Its header claims it gives a mechanical `TD_side_mono` interpretation "for any `side_cfg_T_eff_keyed_seed_dg` instance"; no instance takes it |
+| `TD_side_always_join_solve_Inr_rg` + its 4-way `pinduct` `TD_side_always_join_rg_ind` | `Solver_Side_RG.thy:143-318` | **176** | one code occurrence: the lemma line. Its mirror half (`..._warrowing_apinis_...`, `:477-702`) *is* live via `Interval_Warrowing.thy`. `solve_dom_of_solve_c` -- the theory's only cross-domain-cited fact at the time of this audit -- has since moved to `Voblint_Solver.Solver_Menu`, which now owns the generic `solve_c`/`part_post_solution` bridge; nothing left in this file is cited outside its own `..._warrowing_apinis_...` mirror half |
+| `td_cfg_side_solver_dg` locale | `DG_Constraint_Trees.thy:2360-2463` | **104** | never interpreted, never `sublocale`d, named nowhere. Its header claims it gives a mechanical `TD_side_mono` interpretation "for any `routed_node_rhs` instance"; no instance takes it |
 | `unit_routed_context_hetero` locale | `Routed_Context_Unit.thy:168-243` | 76 | never interpreted. Header claims domains reach the adapter theorems "by interpreting this locale instead of re-deriving them per domain" — no domain does |
 | ten `fst_/snd_dgs_*_for` shape lemmas | `Exec_DG_Refines.thy:655-731` | 77 | untagged, uncited. Header states the intended caller explicitly; there is none |
-| six mono/static-deps lemmas for the pre-`_at` tree formers | `DG_Framework.thy:466-553` | 88 | superseded by `apply_dg_spec_at`; no analysis cites any of the six |
+| six mono/static-deps lemmas for the pre-`_at` tree formers | `DG_Constraint_Trees.thy:388-463` (line range shifted by the `_at`-specialization reorder; content and dead-code status unchanged) | 76 | superseded by `apply_dg_spec_at`; no analysis cites any of the six |
 | `analyse_report_ctx` + `analyse_report` + two soundness theorems | `DG_Analysis_Adapter.thy:244-311` | 68 | `analyse_result` in the same locale is live; only the report projection is dead |
-| `pair_of_dg`/`dg_of_pair`/`merge_dg`/`split_dg` + six `[simp]` rules | `DG_Framework.thy:194-242` | 49 | the four constants occur only inside this window, so the six rewrite rules are permanently inert |
-| `monovariant_analysis_result_for` + 2 lemmas | `Monovariant_Analysis_Result.thy:170-210` | 41+34 | superseded *within its own file* by `ctx_solved_for`, which is what the adapters go through. Its 34-line header names three adapters as consumers; none references it |
-| `buffer_eqs` + 5 lemmas | `Side_Buffering.thy:131-136, 266-288` | 29 | the pipeline calls tree-level `buffer_sides` directly (`DG_Framework.thy:1681`); the buffered *system* wrapper is never applied |
-| `dgs_enter_pair` + 2 `[simp]` projections | `DG_Framework.thy:590-614` | 25 | see §9.3 G5 |
+| `pair_of_dg`/`dg_of_pair`/`merge_dg`/`split_dg` + six `[simp]` rules | `DG_Constraint_Trees.thy:194-242` | 49 | the four constants occur only inside this window, so the six rewrite rules are permanently inert |
+| `monovariant_analysis_result_for` + 2 lemmas | deleted | 41+34 | was superseded *within its own file* by `ctx_solved_for`, which is what the adapters go through; its 34-line header named three adapters as consumers and none referenced it. Removed once an audit showed zero executable uses, zero theorem uses and zero checked antiquotations |
+| `buffer_eqs` + 5 lemmas | `Side_Buffering.thy:131-136, 266-288` | 29 | the pipeline calls tree-level `buffer_sides` directly (`DG_Constraint_Trees.thy:1681`); the buffered *system* wrapper is never applied |
+| `dgs_enter_pair` + 2 `[simp]` projections | `DG_Constraint_Trees.thy:590-614` | 25 | see §9.3 G5 |
 | smaller: `cs_project_gk`, `seed_predecessor_addr_list`, `cs_route_project_ctx`, `proj_local_ge_refl`, `val_at` + 2, five `cs_route_*`/`cs_context_*` lemmas, `threefold_monoD_*` | various | ~90 | each uncited; several carry "any **future** …" or "should one ever be wanted" framing |
 
 **The one that is not merely dead — `publish_seed` encodes the opposite convention from the code.**
-`DG_Transfer_Combinators.thy:78-79` defines `publish_seed key x = depend_on key (DG bot x) (answer (DG bot bot))` — payload in the **`globs`** half. The actual seed publication (`Routed_Context.thy:87-88`) writes `depend_on (seed_key (FunctionEntry p) ctx') (DG entry bot) ...` — payload in the **`locals`** half, which is how `routed_extra_g` (`:136`) reads it back with `answer_local (locals seed_state)`. The surrounding 20-line doc block asserts the wrong convention twice and claims "a routed context-sensitive analysis uses one of each per call" — it uses `publish_global` and zero `publish_seed`. Also verified: `publish_global` and `publish_seed` are **textually identical** definitions, as are their `_cont` forms. Four names, two bodies, one wrong comment. Deleting the seed pair removes a trap for the next person who reaches for it.
+`DG_Transfer_Combinators.thy:78-79` defines `publish_seed key x = depend_on key (DG bot x) (answer (DG bot bot))` — payload in the **`globs`** half. The actual seed publication (`Routed_Context.thy:87-88`) writes `depend_on (seed_key (FunctionEntry p) ctx') (DG entry bot) ...` — payload in the **`locals`** half, which is how `routed_entry_seed_tree` (`:136`) reads it back with `answer_local (locals seed_state)`. The surrounding 20-line doc block asserts the wrong convention twice and claims "a routed context-sensitive analysis uses one of each per call" — it uses `publish_global` and zero `publish_seed`. Also verified: `publish_global` and `publish_seed` are **textually identical** definitions, as are their `_cont` forms. Four names, two bodies, one wrong comment. Deleting the seed pair removes a trap for the next person who reaches for it.
 
 ### 9.2 Unification
 
 - **`activation_collect_sound` vs `_gen`, `valid_ltr_ctx_sound` vs `_gen`** (`Activation_Backbone.thy:24-90`, `Activation_Local_Sound.thy:37-118`): identical proofs modulo `gamma_state` vs `gammaM`. The `_gen` header already says the specialization is "accidental". Both base names are used externally, so keep them — as `lemmas X = X_gen [where gammaM = gamma_state]`. **Saves ~84 of 211 lines.**
-- **Base tree formers vs `_at` formers** (`DG_Framework.thy`): four constant pairs, two full duplicated lemma sets (9 + 7 lemmas), and **four proved-but-uncited bridge lemmas** (`dg_edge_tree_as_at` `:428`, `apply_dg_spec_as_at` `:1555`, …). The collapse is already proved and nobody uses it. ~94 lines of parallel definition; the six inert mono lemmas above are the free half.
+- **Base tree formers vs `_at` formers** (`DG_Constraint_Trees.thy`): four constant pairs, two full duplicated lemma sets (9 + 7 lemmas), and **four proved-but-uncited bridge lemmas** (`dg_edge_tree_as_at` `:428`, `apply_dg_spec_as_at` `:1555`, …). The collapse is already proved and nobody uses it. ~94 lines of parallel definition; the six inert mono lemmas above are the free half.
 - **Twelve identical `metis` calls** — `by (metis map_prod_simp snd_conv surj_pair)` ×6 and the `fst_conv` variant ×6 across `Exec_DG_Generator.thy` and `Exec_DG_Trees.thy`. Two named `[simp]` lemmas (`fst (map_prod f g p) = f (fst p)`, `by (cases p) simp`) turn all twelve into `by simp`. This is the densest `metis` cluster in the project, in a file with 19 of the scope's 26 `metis` calls.
 - **`cs_route` and `cs_context` are the same function** (`Call_String_Context.thy:31, 39`) — both `take k (u # ctx)`, both ignoring their last argument. Six lemmas exist in mirrored pairs, five of them uncited.
 - **`proj_local_ge` / `proj_global_ge`** (`Call_String_Solver_Projection.thy:78-131`): identical `foldr`-domination inductions. One `foldr_guarded_sup_ge` lemma makes both one-liners. 54 -> ~14.
-- **Severable but load-bearing, not dead**: the `_placed` family (`unit_dg_spec_placed` and the `gamma_join` soundness section, ~210 lines) is absent from the OCaml and reached only from `Sign_DG.thy` and two Examples — but `sound_dg_spec_unit_placed` is a real theorem that `Sign_DG.thy:36` interprets. Treat as a demonstration family with a known cost.
+- **Severable but load-bearing, not dead**: the `_placed` family (`ownership_split_dg_spec_placed` and the `gamma_join` soundness section, ~210 lines) is absent from the OCaml and reached only from `Sign_DG.thy` and two Examples — but `sound_dg_spec_core_unit_placed` is a real theorem that `Sign_DG.thy:36` interprets. Treat as a demonstration family with a known cost.
 
 ### 9.3 Goblint findings beyond the register
 
@@ -1007,7 +1007,7 @@ checker does not resolve:
   `etf_enter` and `etf_combine_collect`, constants from a deleted record that survive only
   in an untracked `.thy~` backup. The transfer bundle is now `dg_spec`, where the single
   combine is three fields. Structural note: `CFG_Prune` is in `Voblint_CFG`, *upstream* of
-  `Voblint_Core` — the prose cites downstream constants across a session boundary, which is
+  `Voblint_Framework` — the prose cites downstream constants across a session boundary, which is
   how it drifted unnoticed.
 - **`LTR_Abstract.thy:220-224`** names three deleted lemmas and describes a migration
   ("once `activation_collect` itself is redefined against `ctx_key`") that already landed —
@@ -1132,16 +1132,16 @@ itself is correct — `check_codegen_modules.py` passes.
 `Parity_Base_DG.thy` (74), `Interval_DG.thy` (86, one Example consumer).
 
 The `<D>_Base_DG` pair (228 lines) is dead in an instructive way: each places an
-`interpretation ... : sound_dg_spec` **inside a `context fixes gs ... end` block**,
+`interpretation ... : sound_dg_spec_core` **inside a `context fixes gs ... end` block**,
 so the facts never escape the context — and neither file's own theorems cite them
-(they prove themselves from `base_dg_spec_st_for_lifted_dg_spec_step_commute`
-directly). The interpretations are inert *and* the twelve `*_base_dg_spec_*_commute`
+(they prove themselves from `local_state_dg_spec_st_for_lifted_dg_spec_step_commute`
+directly). The interpretations are inert *and* the twelve `*_local_state_dg_spec_*_commute`
 theorems beside them have zero citations. Both files exist only as import edges.
 
 The `<D>_DG` family (429 lines) is different: `sign_dg_api` / `ivl_dg_api` /
 `int_{never,once,fixpoint}_dg_api` are never interpreted and
 `<D>_dg_post_solution_collect_sound` is never cited, but these are *real terminal
-soundness theorems*. The shipped pipeline runs through `base_dg_spec_*` +
+soundness theorems*. The shipped pipeline runs through `local_state_dg_spec_*` +
 `dg_ctx_activation_base` and never reaches them. That is the project's own
 "instantiation gap" pattern in reverse — the abstract statement exists and no
 concrete path arrives at it. The `int_*_dg_api_trivial_gs` lemmas prove
@@ -1150,7 +1150,7 @@ non-vacuity, which suggests the authors already knew.
 Dead constants: five more in `Analysis_GraphViz.thy` beyond the ones in §1
 (`prog_cfg_edges`, `prog_cfg_calls`, `no_annotations`,
 `compiled_domain_graph_config`, `enter_action_label`); `congruence_fact_of_parity`
-+ its `[simp]` gamma lemma (`Int_Domain.thy:222-228`), superseded by
+- its `[simp]` gamma lemma (`Int_Domain.thy:222-228`), superseded by
 `restrict_congruence_by_parity` which is what `congruence_fact_of_int_dom`
 actually calls. Plus proved-and-never-consumed lemma families:
 `fun_of_st_top_<D>_st` ×4, `<D>_tf_st_for_reduces` ×5 (only Interval's is used —
@@ -1306,7 +1306,13 @@ and actually reached. Congruence has no `_Transfer`, `_Exec`, `_DG`, `_Checks` o
 `_Ctx_*` layer at all, because it is only a product component — and it is the
 leanest domain per line of real mathematics in the directory.
 
-## 13. `src/Core/Domain` and `src/Core/Equations`
+## 13. `src/Framework/Domain` and `src/Framework/Equations`
+
+> **2026-08-31 correction.** The selector unification proposed in §13.2 has
+> landed. `combine_env` is generic in key and codomain; frame entry, abstract
+> restrictions, and executable projections derive from it. `Split_State` and
+> the unused `merge_dg`/`split_dg` conversion cluster were deleted. The audit
+> below records the pre-refactor evidence that motivated that change.
 
 Two of my open questions resolve **against** the suspicion: **`Exec_Placement.thy`
 and `Split_State.thy` are both genuinely proof-load-bearing** despite
@@ -1314,7 +1320,7 @@ contributing nothing to the export. `Exec_Placement`'s `scope_locations`,
 `project_resolved_on{,_strict}` and ~15 lemmas are consumed by `Exec_DG_Trees`,
 `Exec_DG_Generator`, `Exec_DG_Refines` and three Examples; `Split_State`'s
 `project_component`, `merge_state`, `split_state` and the classic split
-predicates are consumed by `DG_Framework`, `DG_Soundness` and `Sign_DG`. Their
+predicates are consumed by `DG_Constraint_Trees`, `DG_Soundness` and `Sign_DG`. Their
 OCaml absence is worth nothing as evidence — `project_component` and
 `restrict_local_for` are also absent and are core to the DG soundness proof.
 
@@ -1367,8 +1373,9 @@ purely as a path to `Exec_St` + `State_Restriction`. Settle it by stripping the
   identical modulo constructor names — `point_state` even copies `lifted`'s
   `(plugins del: quickcheck_narrowing)` workaround. Downstream, `gamma_point` ≈
   `gamma_lift`, `normalize_point` ≈ `normalize_lift`, and
-  `normalize_point_canonicalize_lift_eq_old` literally proves the two towers agree
-  — and is itself dead. Type synonyms plus constructor abbreviations let both
+  `normalize_point_canonicalize_lift_eq_old` (since deleted along with the rest
+  of the confirmed-dead `normalize_point_*` family below) literally proved the
+  two towers agree. Type synonyms plus constructor abbreviations let both
   inherit all eight instances instead of re-proving four each: **123 lines of
   instantiation plus ~116 of the `normalize_point_*` family.** A real refactor
   (pattern matching in `fun` definitions has to be rewritten), not a rename.
@@ -1411,7 +1418,7 @@ IMP2-vs-VIMP naming drift, and adds:
 - **The `D`/`G` payload split has landed at the type level, and the register still
   files it as an unstarted "high-cost stretch."** `('l,'g) split_state`,
   `datatype ('l,'g) dg_state`, `record ('dl,'dg) dg_spec` with every field typed
-  `... ⇒ 'dl ⇒ 'dg ⇒ 'dg × 'dl`, and `base_dg_spec_for_lifted` leaving `'g` free.
+  `... ⇒ 'dl ⇒ 'dg ⇒ 'dg × 'dl`, and `local_state_dg_spec_for_lifted` leaving `'g` free.
   What is *actually* still true is narrower and worth stating precisely: **no live
   instance varies the parameter** — every one pins `('a, 'a)` — and
   `merge_state`/`split_state`/`merge_dg`/`split_dg` are monotyped at `('a,'a)`, so
@@ -1435,7 +1442,7 @@ IMP2-vs-VIMP naming drift, and adds:
 - **The `combine_env`/`combine_assign` split is nominal — the work sits in the
   wrong halves.** Goblint: `combine_env` handles globals and effects with no
   result assignment; `combine_assign` writes only the destination. Here
-  `DG_Base.thy:47-51` sets `dgs_combine_env = (λci dc de g. (g, dc))` — the
+  `DG_Local_State_Spec.thy:47-51` sets `dgs_combine_env = (λci dc de g. (g, dc))` — the
   identity on the caller continuation — while `dgs_combine_assign` does *both* the
   global merge and the destination write. The record has Goblint's field names but
   not Goblint's factorization.

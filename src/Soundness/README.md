@@ -10,6 +10,12 @@ Theorems only. Executable demonstrations and the `Voblint` capstone live in the
 leaf session `Voblint_Examples` (`src/Examples/`), so this session builds
 without the slow codegen and `value` runs.
 
+The input to these is `Voblint_Framework`'s own question -- why a *solved
+equation system* covers the collecting semantics of an arbitrary CFG -- which
+is answered across `Framework/Constraints/` and `Framework/Context/`. This
+session is the step after: why a *source program's* run is covered, end to end,
+by a registered analysis.
+
 | Entry | Role |
 | --- | --- |
 | `Run_Analysis_Sound.thy` | the registered analysis endpoints: `run_source_sound` and `collect_sound` from one executable D/G solve |

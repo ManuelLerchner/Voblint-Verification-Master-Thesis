@@ -73,7 +73,7 @@ lemma x1_comb_fwd_ok:
 lemma x1_node_sound:
   "ltr_collect x1_gs (prog_cfg x1_prog) (cinit_stores x1_gs) v
      \<subseteq> \<lbrakk>case lookup_context (analyse_sign_result_for x1_gs x1_prog) v () of
-            Unreachable \<Rightarrow> bot | Reachable st \<Rightarrow> st\<rbrakk>"
+            Bot \<Rightarrow> bot | Lifted st \<Rightarrow> st\<rbrakk>"
   by (rule analyse_sign_result_node_sound_for
         [OF x1_reserved x1_terminates x1_entry_cov
             x1_fwd_ok x1_call_fwd_ok x1_comb_fwd_ok])
@@ -82,7 +82,7 @@ definition x1_exit_env :: "sign abs_state" where
   "x1_exit_env =
      (case lookup_context (analyse_sign_result_for x1_gs x1_prog)
              (cfg_exit (prog_cfg x1_prog)) () of
-        Unreachable \<Rightarrow> bot | Reachable st \<Rightarrow> st)"
+        Bot \<Rightarrow> bot | Lifted st \<Rightarrow> st)"
 
 text \<open>The solver computes the abstract state at the exit, captured as theorems
   by code reflection: \<open>x\<close> is \<open>SPos\<close>, an untouched \<open>y\<close> stays \<open>STop\<close>.\<close>
@@ -104,7 +104,7 @@ corollary x1_certified_sound:
    \<le> \<lbrakk>x1_exit_env\<rbrakk>"
   unfolding x1_exit_env_def
   using x1_node_sound
-  by (simp add: prog_main_name_def gamma_point_def split: point_state.splits)
+  by (simp add: prog_main_name_def gamma_point_def split: lifted.splits)
 
 definition x1_s0 :: store where
   "x1_s0 = (\<lambda>_. 0)"

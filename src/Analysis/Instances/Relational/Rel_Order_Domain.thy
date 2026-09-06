@@ -1,8 +1,9 @@
 theory Rel_Order_Domain
-  imports Voblint_Core.DG_Soundness
+  imports "Voblint_Framework.DG_Spec_Sound" "Voblint_Framework.DG_Keyed_Generator"
+    "Voblint_Framework.State_Restriction"
 begin
 
-section \<open>A minimal relational carrier for \<^const>\<open>sound_dg_spec\<close>\<close>
+section \<open>A minimal relational carrier for \<^const>\<open>sound_dg_spec_core\<close>\<close>
 
 text \<open>
   \<open>relc\<close> tracks a finite set of known pairwise-ordered variables, \<open>(x, y)\<close>
@@ -13,7 +14,7 @@ text \<open>
   (no \<open>vname \<Rightarrow> 'a\<close> function type anywhere in the carrier).
 
   The purpose of this file is not a useful analysis.  It demonstrates that a
-  non-\<open>abs_state\<close> carrier discharges \<^locale>\<open>sound_dg_spec\<close> with zero
+  non-\<open>abs_state\<close> carrier discharges \<^locale>\<open>sound_dg_spec_core\<close> with zero
   changes to the DG framework.
   Every transfer below is deliberately the most imprecise sound choice
   (forget on assign, havoc on call) except for a precise \<open>assume\<close>/
@@ -109,7 +110,7 @@ text \<open>Registers the sort intersection under its named synonym -- the vendo
   by name, not the raw \<open>{bounded_semilattice_sup_bot, warrowing}\<close> sort, and
   Isabelle does not compose that registration automatically from the two
   separate instances above.  \<^type>\<open>dg_state\<close> already carries the same
-  explicit step generically (\<open>DG_Framework\<close>) once its component types
+  explicit step generically (\<open>DG_Constraint_Trees\<close>) once its component types
   have it.\<close>
 instance relc :: bounded_warrowing ..
 
@@ -291,7 +292,7 @@ text \<open>
   \<open>assume_step\<close>/\<open>assume_not_step\<close> stay separate, genuinely asymmetric
   operations (\<open>x < y\<close> vs.\ its mirror \<open>y \<le> x\<close> insert different pairs, not
   the same formula under a polarity flag); only the interface-level dispatch
-  consolidates into one @{text tf_branch}-shaped operation.
+  consolidates them into one polarity-parametrized branch operation.
 \<close>
 definition branch_step_rel :: "exp \<Rightarrow> bool \<Rightarrow> relc \<Rightarrow> relc" where
   "branch_step_rel b pol d = (if pol then assume_step b d else assume_not_step b d)"
@@ -299,8 +300,8 @@ definition branch_step_rel :: "exp \<Rightarrow> bool \<Rightarrow> relc \<Right
 definition dgs_branch_rel :: "exp \<Rightarrow> bool \<Rightarrow> relc \<Rightarrow> relc \<Rightarrow> relc \<times> relc" where
   "dgs_branch_rel b pol d g = (g, branch_step_rel b pol d)"
 
-definition dgs_enter_rel :: "vname list \<Rightarrow> exp list \<Rightarrow> relc \<Rightarrow> relc \<Rightarrow> relc \<times> relc" where
-  "dgs_enter_rel xs es dc g = (top_relc, top_relc)"
+definition dgs_enter_rel :: "call_info \<Rightarrow> relc \<Rightarrow> relc \<Rightarrow> relc \<times> relc" where
+  "dgs_enter_rel ci dc g = (top_relc, top_relc)"
 
 text \<open>
   The caller continuation is the identity.  This carrier discards every caller
@@ -321,20 +322,93 @@ definition dgs_combine_assign_rel ::
 where
   "dgs_combine_assign_rel ci de g merged = merged"
 
-definition rel_order_spec :: "(relc, relc) dg_spec" where
-  "rel_order_spec = \<lparr>
-     dgs_skip = dgs_skip_rel,
-     dgs_assign = dgs_assign_rel,
-     dgs_special = dgs_special_rel,
-     dgs_branch = dgs_branch_rel,
-     dgs_body = dgs_body_rel,
-     dgs_return = dgs_return_rel,
-     dgs_enter = dgs_enter_rel,
-     dgs_event = dgs_event_rel,
-     dgs_caller_cont = dgs_caller_cont_rel,
-     dgs_combine_env = dgs_combine_env_rel,
-     dgs_combine_assign = dgs_combine_assign_rel
+text \<open>
+  Unlike the local-only domains, this one really uses the global channel:
+  \<^const>\<open>dgs_special_rel\<close> forgets the assigned name on both halves, and entry
+  and the environment merge reset the shared relation to \<^const>\<open>top_relc\<close>.
+  Its transfers are therefore written as a read-compute-publish sequence.
+
+  \<open>rel_transfer\<close> is the adapter that turns one of this file's
+  \<open>d \<Rightarrow> g \<Rightarrow> (g, d)\<close> operations into a manager transfer: query the shared
+  relation, run the operation, publish its global half, answer with its local
+  half. That pairing shape used to be the only interface; here it survives as
+  one domain's private convenience, which is the point.
+\<close>
+
+definition rel_transfer ::
+  "(relc \<Rightarrow> relc \<Rightarrow> relc \<times> relc) \<Rightarrow> ('x,'k,unit,relc,relc) man_transfer"
+where
+  "rel_transfer f m =
+     do {
+       g \<leftarrow> man_global m ();
+       let r = f (man_local m) g;
+       _ \<leftarrow> man_sideg m () (fst r);
+       sp_return (snd r)
+     }"
+
+text \<open>Entry at this carrier: the same global read and publication, answering the one
+  alternative whose continuation is the caller value unchanged.\<close>
+
+definition rel_enter_transfer ::
+  "(relc \<Rightarrow> relc \<Rightarrow> relc \<times> relc) \<Rightarrow> ('x,'k,unit,relc,relc) man_enter_transfer"
+where
+  "rel_enter_transfer f m =
+     do {
+       g \<leftarrow> man_global m ();
+       let r = f (man_local m) g;
+       _ \<leftarrow> man_sideg m () (fst r);
+       sp_return [(man_local m, snd r)]
+     }"
+
+definition rel_combine_transfer ::
+  "(relc \<Rightarrow> relc \<Rightarrow> relc \<Rightarrow> relc \<times> relc) \<Rightarrow> ('x,'k,unit,relc,relc) man_combine_transfer"
+where
+  "rel_combine_transfer f m de =
+     do {
+       g \<leftarrow> man_global m ();
+       let r = f (man_local m) de g;
+       _ \<leftarrow> man_sideg m () (fst r);
+       sp_return (snd r)
+     }"
+
+text \<open>The observations of a compiled \<open>rel_transfer\<close>: its answer is the operation's
+  local half, and what it publishes at the routed key is the global half. These are
+  what \<^locale>\<open>sound_dg_spec_core\<close> is stated against.\<close>
+
+lemma traverse_rel_transfer [simp]:
+  "locals (traverse_rhs (transfer_tree (rel_transfer f) src (\<lambda>_. gk)) \<tau>)
+     = snd (f (locals (\<tau> src)) (globs (\<tau> (Inr gk))))"
+  by (cases src)
+     (simp_all add: transfer_tree_def transfer_program_at_def rel_transfer_def
+        mk_dg_man_def dg_read_at_def dg_read_global_def dg_sideg_def sp_bind_assoc
+        Let_def)
+
+lemma sides_rel_transfer [simp]:
+  "globs (sides_of_rhs (transfer_tree (rel_transfer f) src (\<lambda>_. gk)) \<tau> (Inr gk))
+     = fst (f (locals (\<tau> src)) (globs (\<tau> (Inr gk))))"
+  by (cases src)
+     (simp_all add: transfer_tree_def transfer_program_at_def rel_transfer_def
+        mk_dg_man_def dg_read_at_def dg_read_global_def dg_sideg_def sp_bind_assoc
+        Let_def)
+
+definition rel_order_spec :: "('x,'k,unit,relc,relc) dg_spec" where
+  "rel_order_spec = local_dg_spec_template\<lparr>
+     dgs_skip := rel_transfer dgs_skip_rel,
+     dgs_assign := (\<lambda>x e. rel_transfer (dgs_assign_rel x e)),
+     dgs_special := (\<lambda>sc x. rel_transfer (dgs_special_rel sc x)),
+     dgs_branch := (\<lambda>b pol. rel_transfer (dgs_branch_rel b pol)),
+     dgs_body := (\<lambda>p. rel_transfer (dgs_body_rel p)),
+     dgs_return := (\<lambda>e p. rel_transfer (dgs_return_rel e p)),
+     dgs_enter := (\<lambda>ci. rel_enter_transfer (dgs_enter_rel ci)),
+     dgs_event := (\<lambda>ev. rel_transfer (dgs_event_rel ev)),
+     dgs_combine_env := (\<lambda>ci. rel_combine_transfer (dgs_combine_env_rel ci))
    \<rparr>"
+
+text \<open>The unknown and global-key types occur only inside this specification's transfer
+  programs, never in an argument that builds it, so it has no most general ML type and
+  cannot be a generated value. It is a construction-time description, unfolded where it
+  is used.\<close>
+declare rel_order_spec_def [code_unfold]
 
 named_theorems rel_order_simps
 
@@ -411,11 +485,11 @@ qed
 
 lemma dgs_ret_rel_sound[intro]:
   "edge_collect (EA_Ret e p) (gammaDG_rel d g) \<subseteq>
-     (case dg_spec_step rel_order_spec (EA_Ret e p) d g of (g', d') \<Rightarrow> gammaDG_rel d' g')"
+     (case dgs_return_rel e p d g of (g', d') \<Rightarrow> gammaDG_rel d' g')"
 proof (cases e)
   case None
   then show ?thesis
-    by (simp add: rel_order_spec_def dgs_return_rel_def dgs_skip_rel_def)
+    by (simp add: dgs_return_rel_def dgs_skip_rel_def)
 next
   case (Some a)
   have "edge_collect (EA_Ret (Some a) p) (gammaDG_rel d g)
@@ -425,65 +499,95 @@ next
     using forget_relc_sound unfolding gammaDG_rel_def by blast
   finally show ?thesis
     using Some
-    by (simp add: rel_order_spec_def dgs_return_rel_def dgs_assign_rel_def gammaDG_rel_def)
+    by (simp add: dgs_return_rel_def dgs_assign_rel_def gammaDG_rel_def)
 qed
+
+text \<open>The edge dispatch as one pure pairing operation, so the specification's
+  compiled step reduces to \<^const>\<open>rel_transfer\<close> of it.\<close>
+
+fun rel_step_for :: "edge_action \<Rightarrow> relc \<Rightarrow> relc \<Rightarrow> relc \<times> relc" where
+  "rel_step_for EA_Nop = dgs_skip_rel"
+| "rel_step_for (EA_Assign x e) = dgs_assign_rel x e"
+| "rel_step_for (EA_Special sc x) = dgs_special_rel sc x"
+| "rel_step_for (EA_Assume b) = dgs_branch_rel b True"
+| "rel_step_for (EA_AssumeNot b) = dgs_branch_rel b False"
+| "rel_step_for (EA_Body p) = dgs_body_rel p"
+| "rel_step_for (EA_Ret e p) = dgs_return_rel e p"
+| "rel_step_for (EA_Check cnd) = dgs_event_rel (Check_Event cnd)"
+
+lemma dg_spec_step_rel_order_spec [simp]:
+  "dg_spec_step rel_order_spec a = rel_transfer (rel_step_for a)"
+  unfolding rel_order_spec_def by (cases a) simp_all
+
+lemma dgs_enter_rel_order_spec [simp]:
+  "enter\<^sup># rel_order_spec ci = rel_enter_transfer (dgs_enter_rel ci)"
+  unfolding rel_order_spec_def by simp
 
 lemma step_sound_rel:
   "edge_collect a (gammaDG_rel d g) \<subseteq>
-     (case dg_spec_step rel_order_spec a d g of (g', d') \<Rightarrow> gammaDG_rel d' g')"
-  apply (cases a)
-  by (auto simp add:rel_order_simps split:option.splits)
+     (case rel_step_for a d g of (g', d') \<Rightarrow> gammaDG_rel d' g')"
+  by (cases a) (auto simp add: rel_order_simps split: option.splits)
 
 subsection \<open>Call-entry and combine soundness -- havoc-based, both trivial via \<open>top_relc\<close>\<close>
 
-lemma dgs_enter_rel_sound:
-  "s \<in> gammaDG_rel dc g \<Longrightarrow>
-     call_enter is_global (CallEdge dst pars args) s \<in>
-       (case dgs_enter rel_order_spec pars args dc g of (g', d') \<Rightarrow> gammaDG_rel d' g')"
-  unfolding rel_order_spec_def dgs_enter_rel_def by simp
+text \<open>The composed return pipeline: \<open>caller_cont\<close> and \<open>combine_assign\<close> are the
+  defaults, so the whole combine is the environment merge, which resets both halves
+  to \<^const>\<open>top_relc\<close>.\<close>
 
-lemma dgs_caller_cont_rel_sound:
-  "s \<in> gammaDG_rel dc g \<Longrightarrow>
-     s \<in> gammaDG_rel (dgs_caller_cont rel_order_spec ci dc g) g"
-  unfolding rel_order_spec_def dgs_caller_cont_rel_def by simp
+lemma dg_spec_combine_transfer_rel_order_spec [simp]:
+  "dg_spec_combine_transfer rel_order_spec ci = rel_combine_transfer (dgs_combine_env_rel ci)"
+  unfolding dg_spec_combine_transfer_def rel_order_spec_def
+  by (intro ext)
+     (simp add: local_transfer_def local_combine_transfer_def rel_combine_transfer_def)
 
-lemma dgs_combine_rel_sound:
-  "\<lbrakk>s \<in> gammaDG_rel dcont g; t \<in> gammaDG_rel de g\<rbrakk> \<Longrightarrow>
-     combine_collect is_global (ci_dst ci) s t \<in>
-       (case dgs_combine rel_order_spec ci dcont de g of (g', d') \<Rightarrow> gammaDG_rel d' g')"
-  unfolding dgs_combine_def rel_order_spec_def
-    dgs_combine_env_rel_def dgs_combine_assign_rel_def
-  by simp
+lemma traverse_rel_combine [simp]:
+  "locals (traverse_rhs
+             (combine_transfer_tree (rel_combine_transfer f) src_cc src_ex (\<lambda>_. gk)) \<tau>)
+     = snd (f (locals (\<tau> src_cc)) (locals (\<tau> src_ex)) (globs (\<tau> (Inr gk))))"
+  by (cases src_cc; cases src_ex)
+     (simp_all add: combine_transfer_tree_def combine_program_at_def rel_combine_transfer_def
+        mk_dg_man_def dg_read_at_def dg_read_global_def dg_sideg_def sp_bind_assoc Let_def)
+
+lemma sides_rel_combine [simp]:
+  "globs (sides_of_rhs
+            (combine_transfer_tree (rel_combine_transfer f) src_cc src_ex (\<lambda>_. gk))
+            \<tau> (Inr gk))
+     = fst (f (locals (\<tau> src_cc)) (locals (\<tau> src_ex)) (globs (\<tau> (Inr gk))))"
+  by (cases src_cc; cases src_ex)
+     (simp_all add: combine_transfer_tree_def combine_program_at_def rel_combine_transfer_def
+        mk_dg_man_def dg_read_at_def dg_read_global_def dg_sideg_def sp_bind_assoc Let_def)
 
 subsection \<open>The interpretation\<close>
 
-interpretation rel_order: sound_dg_spec rel_order_spec gammaDG_rel is_global
+interpretation rel_order: sound_dg_spec_core rel_order_spec gammaDG_rel is_global
 proof unfold_locales
   fix d d' :: relc and g g' :: relc
   show "d \<le> d' \<Longrightarrow> g \<le> g' \<Longrightarrow> gammaDG_rel d g \<subseteq> gammaDG_rel d' g'"
     by (rule gammaDG_rel_mono)
 next
-  fix a d g
-  show "edge_collect a (gammaDG_rel d g) \<subseteq>
-          (case dg_spec_step rel_order_spec a d g of (g', d') \<Rightarrow> gammaDG_rel d' g')"
-    by (rule step_sound_rel)
+  fix a and \<tau> :: "'a + 'b \<Rightarrow> (relc, relc) dg_state" and src gk
+  show "edge_collect a (gammaDG_rel (locals (\<tau> src)) (globs (\<tau> (Inr gk))))
+          \<subseteq> gammaDG_rel
+              (locals (traverse_rhs (dg_spec_edge_tree rel_order_spec a src (\<lambda>_. gk)) \<tau>))
+              (globs (sides_of_rhs (dg_spec_edge_tree rel_order_spec a src (\<lambda>_. gk))
+                        \<tau> (Inr gk)))"
+    using step_sound_rel[of a "locals (\<tau> src)" "globs (\<tau> (Inr gk))"]
+    by (simp add: dg_spec_edge_tree_def split: prod.splits)
 next
-  fix s dc g ci
-  show "s \<in> gammaDG_rel dc g \<Longrightarrow>
-          s \<in> gammaDG_rel (dgs_caller_cont rel_order_spec ci dc g) g"
-    by (rule dgs_caller_cont_rel_sound)
-next
-  fix ci s g dcont t de
-  show "\<lbrakk>s \<in> gammaDG_rel dcont g; t \<in> gammaDG_rel de g\<rbrakk> \<Longrightarrow>
-          combine_collect is_global (ci_dst ci) s t \<in>
-            (case dgs_combine rel_order_spec ci dcont de g of (g', d') \<Rightarrow> gammaDG_rel d' g')"
-    by (rule dgs_combine_rel_sound)
-next
-  fix dst pars args dc g s
-  show "s \<in> gammaDG_rel dc g \<Longrightarrow>
-          call_enter is_global (CallEdge dst pars args) s \<in>
-            (case dgs_enter rel_order_spec pars args dc g of (g', d') \<Rightarrow> gammaDG_rel d' g')"
-    by (rule dgs_enter_rel_sound)
+  fix s t dc de and \<tau> :: "'a + 'b \<Rightarrow> (relc, relc) dg_state" and gk ci
+  show "\<lbrakk>s \<in> gammaDG_rel dc (globs (\<tau> (Inr gk)));
+         t \<in> gammaDG_rel de (globs (\<tau> (Inr gk)))\<rbrakk> \<Longrightarrow>
+          combine_collect is_global (ci_dst ci) s t
+            \<in> gammaDG_rel
+                (locals (traverse_rhs (sp_compile_with (\<lambda>d. DG d bot)
+                   (dg_spec_combine_transfer rel_order_spec ci
+                      (mk_dg_man dc (\<lambda>_. gk)) de)) \<tau>))
+                (globs (sides_of_rhs (sp_compile_with (\<lambda>d. DG d bot)
+                   (dg_spec_combine_transfer rel_order_spec ci
+                      (mk_dg_man dc (\<lambda>_. gk)) de)) \<tau> (Inr gk)))"
+    by (simp add: dg_spec_combine_transfer_rel_order_spec rel_combine_transfer_def
+        mk_dg_man_def dg_read_global_def dg_sideg_def sp_bind_assoc Let_def
+        dgs_combine_env_rel_def)
 qed
 
 end

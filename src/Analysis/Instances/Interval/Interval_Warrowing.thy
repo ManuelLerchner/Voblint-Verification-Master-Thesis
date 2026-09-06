@@ -200,19 +200,6 @@ instance proof intro_classes
 qed
 end
 
-instance ivl :: abstract_domain ..
-
-text \<open>
-  \<open>bot \<nabla> bot = bot\<close> and \<open>bot \<Delta> bot = bot\<close>: the two hypotheses \<open>Solver_Side_RG\<close>'s
-  \<open>TD_side_warrowing_apinis_solve_Inr_rg\<close> needs to show that its \<open>Inr\<close>-restricted invariant
-  (every \<open>Local_Location\<close> slot at \<open>bot\<close>) survives \<open>update_global_warrowing_apinis\<close>. Both hold
-  immediately from \<open>widen_ivl_def\<close>'s \<open>bot\<close> guard and \<open>narrow_ivl_td\<close>'s bound-fill shape.
-\<close>
-
-lemma ivl_widen_bot_bot: "(bot :: ivl) \<nabla> bot = bot"
-  by (simp add: widen_ivl_def)
-
-lemma ivl_narrow_bot_bot: "(bot :: ivl) \<Delta> bot = bot"
-  by (simp add: narrow_ivl_def bot_ivl_def)
+instance ivl :: widening_domain ..
 
 end

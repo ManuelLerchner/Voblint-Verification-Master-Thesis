@@ -1,6 +1,6 @@
 theory Example_Sign_DG_EntryState_Result_Regression
   imports
-    "Voblint_Analysis.Sign_Ctx_Entry_State_Sound"
+    "Voblint_Analysis.Sign_Analyses"
     "Voblint_VIMP.VIMP_Notation"
 begin
 
@@ -12,7 +12,7 @@ text \<open>
   Sign's own entry-state routing separates the two activations of \<open>f\<close> into
   two distinct contexts, \<open>[SPos]\<close> and \<open>[SNeg]\<close>, rather than joining them at
   \<open>f\<close>'s single \<^const>\<open>FunctionEntry\<close> node. What is under test is that the
-  generic \<open>entry_state_routed_context\<close> pipeline (Voblint_Core), freshly
+  generic \<open>entry_state_routed_context\<close> pipeline (Voblint_Framework), freshly
   derived for Sign this pass, actually keeps two contextually distinct
   activations apart end to end -- not merely that \<open>Ctx_EntryState\<close> resolves
   for Sign.
@@ -43,20 +43,20 @@ lemma sign_es_result_f_context_count:
 subsection \<open>Each context carries its own entry value for the formal\<close>
 
 lemma sign_es_result_f_entry_pos:
-  "map_point_state (\<lambda>st. st (STR ''p'')) (lookup_context sign_es_result f_entry [SPos])
-     = Reachable SPos"
+  "map_lift (\<lambda>st. st (STR ''p'')) (lookup_context sign_es_result f_entry [SPos])
+     = Lifted SPos"
   by eval
 
 lemma sign_es_result_f_entry_neg:
-  "map_point_state (\<lambda>st. st (STR ''p'')) (lookup_context sign_es_result f_entry [SNeg])
-     = Reachable SNeg"
+  "map_lift (\<lambda>st. st (STR ''p'')) (lookup_context sign_es_result f_entry [SNeg])
+     = Lifted SNeg"
   by eval
 
 text \<open>The two contexts' own states are not one shared unknown collapsed to a name.\<close>
 
 lemma sign_es_result_f_entry_contexts_distinct:
-  "map_point_state (\<lambda>st. st (STR ''p'')) (lookup_context sign_es_result f_entry [SPos])
-     \<noteq> map_point_state (\<lambda>st. st (STR ''p'')) (lookup_context sign_es_result f_entry [SNeg])"
+  "map_lift (\<lambda>st. st (STR ''p'')) (lookup_context sign_es_result f_entry [SPos])
+     \<noteq> map_lift (\<lambda>st. st (STR ''p'')) (lookup_context sign_es_result f_entry [SNeg])"
   by eval
 
 subsection \<open>Each returned value propagates back to the caller, per call site\<close>
@@ -68,9 +68,9 @@ text \<open>
 \<close>
 
 lemma sign_es_result_after_both_calls:
-  "map_point_state (\<lambda>st. (st (STR ''x''), st (STR ''y'')))
+  "map_lift (\<lambda>st. (st (STR ''x''), st (STR ''y'')))
      (lookup_context sign_es_result (Statement 5) [])
-   = Reachable (SPos, SNeg)"
+   = Lifted (SPos, SNeg)"
   by eval
 
 end

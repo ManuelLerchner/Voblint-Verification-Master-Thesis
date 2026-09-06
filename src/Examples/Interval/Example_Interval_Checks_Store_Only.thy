@@ -1,7 +1,7 @@
-section \<open>Example: checks_proven/checks_proven_sound alone, store-only, Interval\<close>
+section \<open>Example: checks_proven/checks_provenD alone, store-only, Interval\<close>
 
 theory Example_Interval_Checks_Store_Only
-  imports "Voblint_Core.Checks" "Voblint_CLI.Interval_Entry" "Voblint_Analysis.Interval_Checks"
+  imports "Voblint_Framework.Checks" "Voblint_CLI.Interval_Entry" "Voblint_Analysis.Interval_Checks"
           "Voblint_Analysis.Sign_Checks" "Voblint_Analysis.Analysis_GraphViz"
           "Voblint_VIMP.VIMP_Notation"
           Example_Compile_Call_Free
@@ -74,36 +74,36 @@ text \<open>The routed-unit solve terminates, and its solved key set is closed u
   turns on, each computed rather than argued.\<close>
 
 lemma checks_ivl_ex_solver_terminates:
-  "ictx_terminates_prog checks_ivl_ex_gs checks_ivl_ex_program"
-  by (rule ictx_terminates_prog_via_solve_c) eval
+  "interval_conf_terminates_prog checks_ivl_ex_gs checks_ivl_ex_program"
+  by (rule interval_conf_terminates_prog_via_solve_c) eval
 
 lemma checks_ivl_ex_entry_cov:
   "(cfg_entry (prog_cfg checks_ivl_ex_program), ())
-     \<in> fst (ictx_sol_prog checks_ivl_ex_gs checks_ivl_ex_program)"
+     \<in> fst (interval_conf_sol_prog checks_ivl_ex_gs checks_ivl_ex_program)"
   by eval
 
 lemma checks_ivl_ex_fwd_ok_ball:
   "\<forall>(u, a, w) \<in> intra (prog_cfg checks_ivl_ex_program).
-     (u, ()) \<in> fst (ictx_sol_prog checks_ivl_ex_gs checks_ivl_ex_program) \<longrightarrow>
-     (w, ()) \<in> fst (ictx_sol_prog checks_ivl_ex_gs checks_ivl_ex_program)"
+     (u, ()) \<in> fst (interval_conf_sol_prog checks_ivl_ex_gs checks_ivl_ex_program) \<longrightarrow>
+     (w, ()) \<in> fst (interval_conf_sol_prog checks_ivl_ex_gs checks_ivl_ex_program)"
   by eval
 
 lemma checks_ivl_ex_fwd_ok:
-  assumes "(u, ctx) \<in> fst (ictx_sol_prog checks_ivl_ex_gs checks_ivl_ex_program)"
+  assumes "(u, ctx) \<in> fst (interval_conf_sol_prog checks_ivl_ex_gs checks_ivl_ex_program)"
     and "(u, a, w) \<in> intra (prog_cfg checks_ivl_ex_program)"
-  shows "(w, ctx) \<in> fst (ictx_sol_prog checks_ivl_ex_gs checks_ivl_ex_program)"
+  shows "(w, ctx) \<in> fst (interval_conf_sol_prog checks_ivl_ex_gs checks_ivl_ex_program)"
   using assms checks_ivl_ex_fwd_ok_ball by (cases ctx) auto
 
 lemma checks_ivl_ex_call_fwd_ok:
-  assumes "(u, ctx) \<in> fst (ictx_sol_prog checks_ivl_ex_gs checks_ivl_ex_program)"
+  assumes "(u, ctx) \<in> fst (interval_conf_sol_prog checks_ivl_ex_gs checks_ivl_ex_program)"
     and "(u, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg checks_ivl_ex_program)"
-  shows "(FunctionEntry q, ()) \<in> fst (ictx_sol_prog checks_ivl_ex_gs checks_ivl_ex_program)"
+  shows "(FunctionEntry q, ()) \<in> fst (interval_conf_sol_prog checks_ivl_ex_gs checks_ivl_ex_program)"
   using assms by (simp add: checks_ivl_ex_calls_eval)
 
 lemma checks_ivl_ex_comb_fwd_ok:
-  assumes "(cl, c1) \<in> fst (ictx_sol_prog checks_ivl_ex_gs checks_ivl_ex_program)"
+  assumes "(cl, c1) \<in> fst (interval_conf_sol_prog checks_ivl_ex_gs checks_ivl_ex_program)"
     and "(cl, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg checks_ivl_ex_program)"
-  shows "(k, c1) \<in> fst (ictx_sol_prog checks_ivl_ex_gs checks_ivl_ex_program)"
+  shows "(k, c1) \<in> fst (interval_conf_sol_prog checks_ivl_ex_gs checks_ivl_ex_program)"
   using assms by (simp add: checks_ivl_ex_calls_eval)
 
 definition checks_ivl_ex_reach :: "pp \<Rightarrow> store set" where
@@ -116,7 +116,7 @@ text \<open>The computed Interval environment at an arbitrary node, read out of 
 definition checks_ivl_ex_env :: "pp \<Rightarrow> ivl abs_state" where
   "checks_ivl_ex_env v =
      (case lookup_context (analyse_interval_join_result_for checks_ivl_ex_gs checks_ivl_ex_program) v () of
-        Unreachable \<Rightarrow> bot | Reachable st \<Rightarrow> st)"
+        Bot \<Rightarrow> bot | Lifted st \<Rightarrow> st)"
 
 text \<open>The compiled edges, read off \<^const>\<open>prog_cfg\<close>'s own \<open>eval\<close>-computed
   shape: \<open>Statement 1\<close> (\<open>x := __voblint_nondet_int()\<close>'s successor) branches on
@@ -125,7 +125,7 @@ text \<open>The compiled edges, read off \<^const>\<open>prog_cfg\<close>'s own 
   \<open>Statement 6\<close>.\<close>
 lemma checks_ivl_ex_intra_eval:
   "intra (prog_cfg checks_ivl_ex_program) =
-     {(FunctionEntry (STR ''main''), EA_Nop, Statement 0),
+     {(FunctionEntry (STR ''main''), EA_Body (STR ''main''), Statement 0),
       (Statement 0, EA_Special Nondet_Int (STR ''x''), Statement 1),
       (Statement 1, EA_Assume (And (Less (N 0) (V (STR ''x''))) (Less (V (STR ''x'')) (N 10))), Statement 2),
       (Statement 1, EA_AssumeNot (And (Less (N 0) (V (STR ''x''))) (Less (V (STR ''x'')) (N 10))), Statement 5),
@@ -156,19 +156,19 @@ lemma checks_ivl_ex_node_sound_2:
   "checks_ivl_ex_reach (Statement 2) \<le> \<lbrakk>checks_ivl_ex_env (Statement 2)\<rbrakk>"
   unfolding checks_ivl_ex_reach_def checks_ivl_ex_env_def
   using checks_ivl_ex_node_sound
-  by (simp add: prog_main_name_def gamma_point_def split: point_state.splits)
+  by (simp add: prog_main_name_def gamma_point_def split: lifted.splits)
 
 lemma checks_ivl_ex_node_sound_3:
   "checks_ivl_ex_reach (Statement 3) \<le> \<lbrakk>checks_ivl_ex_env (Statement 3)\<rbrakk>"
   unfolding checks_ivl_ex_reach_def checks_ivl_ex_env_def
   using checks_ivl_ex_node_sound
-  by (simp add: prog_main_name_def gamma_point_def split: point_state.splits)
+  by (simp add: prog_main_name_def gamma_point_def split: lifted.splits)
 
 lemma checks_ivl_ex_node_sound_4:
   "checks_ivl_ex_reach (Statement 4) \<le> \<lbrakk>checks_ivl_ex_env (Statement 4)\<rbrakk>"
   unfolding checks_ivl_ex_reach_def checks_ivl_ex_env_def
   using checks_ivl_ex_node_sound
-  by (simp add: prog_main_name_def gamma_point_def split: point_state.splits)
+  by (simp add: prog_main_name_def gamma_point_def split: lifted.splits)
 
 text \<open>Executable classification at each check's own node --- the guard
   \<open>0 < x \<and> x < 10\<close> narrows \<open>x\<close> to \<open>[1,9]\<close> at \<open>Statement 2\<close>, so \<open>x < 11\<close> is
@@ -217,7 +217,7 @@ proof -
   then show ?thesis using interval_classify_check_refuted[OF checks_ivl_ex_classify_3] by blast
 qed
 
-text \<open>The generic \<^const>\<open>checks_proven\<close>/\<^theory>\<open>Voblint_Core.Checks\<close> bridge,
+text \<open>The generic \<^const>\<open>checks_proven\<close>/\<^theory>\<open>Voblint_Framework.Checks\<close> bridge,
   exercised on exactly the checks that are actually true: the compiler's own
   \<^const>\<open>checks\<close> table names all three, but a blanket \<open>checks_proven\<close> over the
   whole table would be a false statement here, since the second check is a
@@ -231,7 +231,7 @@ proof (rule interval_checks_provenI)
   fix v :: pp and cnd :: exp
   assume mem: "(v, cnd) \<in> {(Statement 2, Less (V (STR ''x'')) (N 11))}"
   then have v_eq: "v = Statement 2" and cnd_eq: "cnd = Less (V (STR ''x'')) (N 11)" by auto
-  show "interval_check_true cnd (checks_ivl_ex_env v)"
+  show "interval_check_query cnd (checks_ivl_ex_env v) = Some True"
     unfolding v_eq cnd_eq checks_ivl_ex_env_def by eval
 qed
 
@@ -262,11 +262,11 @@ proof -
       by (rule ltr_collect_init[OF zero_init])
     then show ?thesis unfolding checks_ivl_ex_reach_def checks_ivl_ex_entry_eval .
   qed
-  have e0: "(FunctionEntry (STR ''main''), EA_Nop, Statement 0) \<in> intra (prog_cfg checks_ivl_ex_program)"
+  have e0: "(FunctionEntry (STR ''main''), EA_Body (STR ''main''), Statement 0) \<in> intra (prog_cfg checks_ivl_ex_program)"
     by (simp add: checks_ivl_ex_intra_eval)
   have s1: "(\<lambda>_. 0) \<in> checks_ivl_ex_reach (Statement 0)"
     using ltr_collect_intra_step[of "\<lambda>_. 0" checks_ivl_ex_gs "prog_cfg checks_ivl_ex_program"
-        "cinit_stores checks_ivl_ex_gs" "FunctionEntry (STR ''main'')" EA_Nop "Statement 0"]
+        "cinit_stores checks_ivl_ex_gs" "FunctionEntry (STR ''main'')" "EA_Body (STR ''main'')" "Statement 0"]
     using s0 e0 unfolding checks_ivl_ex_reach_def by simp
   have e1: "(Statement 0, EA_Special Nondet_Int (STR ''x''), Statement 1) \<in> intra (prog_cfg checks_ivl_ex_program)"
     by (simp add: checks_ivl_ex_intra_eval)

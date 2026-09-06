@@ -11,7 +11,7 @@ session Voblint_Examples in "." = "Voblint_CLI" +
     "Interval/Ctx"
     "Congruence"
     "Parity"
-    "Product"
+    "Int"
     "Relational"
     "CFG"
     "Tooling"
@@ -34,19 +34,24 @@ session Voblint_Examples in "." = "Voblint_CLI" +
     Example_Side_Execute
     Example_Side_Proc_Global
     Example_Side_Branch_Calls
-    Example_Sign_Placement
-    Example_Placement_Regression
+    Example_Sign_DG_Custom_Body
     Example_Sign_DG_Custom_Combine
     Example_Sign_DG_CallString_K1
     Example_Sign_DG_CallString_K2
     Example_Sign_DG_EntryState_Result_Regression
+    Example_Sign_Backward_Pollution_Regression
+    Example_Sign_DG_Overlapping_Enter
 
     (* Interval *)
     Exec_Interval_Run
     (* The Interval analogue, inside a two-sided bound guard. *)
     Example_Interval_Checks_Store_Only
-    Example_Interval_Placement
-    Example_Interval_Global_Flow_Sensitivity
+    Example_Interval_Global_Declaration
+    Example_Interval_Global_Sequential_Precision
+    (* An activation seed carrying every entered state of one recursive
+       callee: the seed is joined, never widened, and the callee's entry
+       unknown is exactly what the seed holds. *)
+    Example_Interval_DG_Seed_Join_Recursion
     Example_Interval_DG_Flagship
     Example_Interval_DG_IP_Flagship
     Example_Interval_DG_Ctx_Flagship
@@ -62,7 +67,6 @@ session Voblint_Examples in "." = "Voblint_CLI" +
     Example_Interval_DG_CallString_K1
     Example_Interval_DG_CallString_K2
     Example_Interval_Call_String_Generic_Parity
-    Call_String_Solver_Refinement_Seeded
     Call_String_Solver_Regression
     Example_Interval_Source_Ctx
     Example_Interval_Loop_Coverage
@@ -90,16 +94,26 @@ session Voblint_Examples in "." = "Voblint_CLI" +
     Example_Analysis_Result_Regression
 
     (* Solver, domain-independent *)
-    Example_Strategy_Tree_Demo
+    Example_Strategy_Tree
 
     (* Tooling *)
     Example_EntryState_GraphViz_Regression
     (* Generator-layer Side buffering: the buffered RHS generator terminates
        where issuing two Side writes per evaluation livelocks the solver. *)
     Example_Keyed_Solver_Update_Rule_Regression
+    (* The direct and buffered routed generators, solved side by side on one
+       program that publishes an analysis global and an activation seed from
+       the same evaluation, under three update rules. *)
+    Example_Buffered_Encoding_Flush_Order
     (* Two producers, one global: warrowing after the join loses the upper
        bound that warrowing per origin keeps. *)
     Example_Per_Origin_Widening_Precision
+    (* Tilscher's TDside lock-set running example, through the typed
+       strategy_program frontend. *)
+    Example_TD_Side_Program
+    (* Tilscher's TD must-be-initialized running example, through the same
+       frontend with no side effects. *)
+    Example_TD_Plain_Program
 
     Voblint
   document_files

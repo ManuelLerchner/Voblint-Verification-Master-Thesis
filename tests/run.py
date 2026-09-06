@@ -47,19 +47,22 @@ and its own expected verdict inline next to each check:
                                    compiler must never silently drop a
                                    reachable check). Mirrors Goblint's
                                    "__goblint_check(1); // reachable".
-  // NOWARN                       asserts the check is ABSENT from the
-                                   report entirely. Mirrors Goblint's
+  // NOWARN                       asserts the check's program point is
+                                   PROVED UNREACHABLE -- its report row
+                                   carries the DEAD label, not a verdict.
+                                   Corresponds to Goblint's
                                    "__goblint_check(0); // NOWARN
-                                   (unreachable)": voblint detects an
-                                   unreachable program point by probing
-                                   every in-scope variable's is_bot
-                                   (sound_domain class method, exact for
-                                   non-relational domains -- see
-                                   program_vars/is_bottom_abstract_value in
-                                   Example_State_Report_GraphViz.thy) and
-                                   suppresses that report entry, so a NOWARN
-                                   check contributes zero lines of output,
-                                   not a vacuous PROVED.
+                                   (unreachable)", but asserts more than
+                                   Goblint's silence does: voblint carries
+                                   an exact, proved per-check unreachable
+                                   flag (resolved_st_q_lifted_is_bot_for,
+                                   Exec_St.thy; contextual_verdict's Dead
+                                   under --context) and names it in the
+                                   report, so a NOWARN that fails because
+                                   the compiler dropped the check entirely
+                                   is distinguishable from one the analysis
+                                   genuinely proved dead. A vacuous PROVED
+                                   is a failure either way.
 
 A case with no verdict annotations at all is a rejection case -- a parse
 error (see 00-sanity/02-malformed.vimp) or a well-formedness error (e.g. a
@@ -104,11 +107,15 @@ subdirectory within it are both one word):
   run.py path/to/case.vimp            run a single case by path
   run.py -s ...                      sequential instead of parallel (for
                                       debugging flaky ordering)
-  run.py ... --update-graphs         (re)generate every selected case's
-                                      EXPECT-GRAPH block from a live
-                                      --graph-snapshot run instead of
-                                      checking it; creates the block if the
-                                      case doesn't have one yet
+  run.py ... --update-graphs         regenerate the EXPECT-GRAPH block of
+                                      every selected case that already has
+                                      one, from a live --graph-snapshot run
+                                      instead of checking it; a case without
+                                      a block is left alone
+  run.py ... --create-graphs         as --update-graphs, but also creates a
+                                      block for a selected case that has
+                                      none -- point it at the specific new
+                                      fixture, not at the whole corpus
   run.py --lint [selectors]          static checks over fixture source, no
                                       CLI build or voblint invocation: every
                                       check has a recognized verdict, every
@@ -200,6 +207,9 @@ VOBLINT = Path(os.environ["VOBLINT_BIN"]) if "VOBLINT_BIN" in os.environ else CL
 
 REACHABLE = "reachable"
 NOWARN = "NOWARN"
+# The verdict column voblint prints for a check whose point is proved
+# unreachable, in place of PROVED/REFUTED/UNKNOWN -- what NOWARN asserts.
+DEAD = "DEAD"
 KNOWN_VERDICTS = {"PROVED", "REFUTED", "UNKNOWN", NOWARN, REACHABLE}
 
 # A generous ceiling, not a performance budget: this exists to turn a solver
@@ -216,9 +226,11 @@ REPORT_LINE_RE = re.compile(r"^(\d+):\d+\s+\S+\s+\S+\s+(\S+)")
 GRAPH_BEGIN = "// EXPECT-GRAPH-BEGIN"
 GRAPH_END = "// EXPECT-GRAPH-END"
 
-# Set from main()'s --update-graphs before the (possibly threaded) case run;
-# read-only from then on, so concurrent check_case calls sharing it is safe.
+# Set from main()'s --update-graphs/--create-graphs before the (possibly
+# threaded) case run; read-only from then on, so concurrent check_case calls
+# sharing them is safe.
 UPDATE_GRAPHS = False
+CREATE_GRAPHS = False
 
 
 def param_args(path: Path) -> list[str]:
@@ -362,6 +374,14 @@ def check_graph_block(path: Path, args: list[str]) -> tuple[bool, list[str]]:
     graph_block = find_graph_block(fixture_lines)
     graph_cmd = voblint_cmd(graph_snapshot_args(args), path)
     if UPDATE_GRAPHS:
+        if graph_block is None and not CREATE_GRAPHS:
+            # Refresh what a fixture already pins; never decide on its behalf
+            # that it should start pinning a graph. --update-graphs is
+            # routinely pointed at a whole group, and most cases in one check
+            # verdicts only -- creating a block for each would add hundreds of
+            # snapshots nobody asked for, and every later edge-label change
+            # would then churn the whole corpus.
+            return True, lines
         snapshot, error = run_graph_snapshot(args, path)
         if error:
             # Not a failure: --update-graphs is routinely pointed at a whole
@@ -453,12 +473,26 @@ def _check_case_body(path: Path, args: list[str], cmd: str) -> tuple[bool, list[
     ok = True
     for line_no, exp in sorted(expected.items()):
         if exp == NOWARN:
-            if line_no in actual:
+            if line_no not in actual:
                 lines.append(
-                    f"FAIL {cmd}: line {line_no} expected NOWARN (suppressed), "
+                    f"FAIL {cmd}: line {line_no} expected NOWARN (proved unreachable), "
+                    "but the check is missing from the report entirely -- the compiler "
+                    "dropped it, which is a CFG defect, not an unreachability result"
+                )
+                ok = False
+            elif actual[line_no] != DEAD:
+                lines.append(
+                    f"FAIL {cmd}: line {line_no} expected NOWARN (proved unreachable), "
                     f"but got {actual[line_no]}"
                 )
                 ok = False
+            continue
+        if actual.get(line_no) == DEAD:
+            lines.append(
+                f"FAIL {cmd}: line {line_no} expected {exp}, but the point is "
+                "proved unreachable (annotate it NOWARN)"
+            )
+            ok = False
             continue
         if line_no not in actual:
             lines.append(f"FAIL {cmd}: line {line_no} expected {exp}, but missing from the report")
@@ -575,7 +609,8 @@ def discover(selectors: list[str]) -> list[Path]:
 
     # A .vimp selector naming no existing file matches neither list below,
     # so it would otherwise leave both empty and silently select the WHOLE
-    # corpus -- which under --update-graphs rewrites every fixture in it.
+    # corpus -- which under --create-graphs would give every fixture in it a
+    # snapshot block.
     missing = [s for s in selectors if s.endswith(".vimp") and not Path(s).exists()]
     if missing:
         sys.exit(f"no such case file: {', '.join(missing)}")
@@ -638,14 +673,15 @@ def main() -> int:
         )
 
     sequential = "-s" in args
-    global UPDATE_GRAPHS
-    UPDATE_GRAPHS = "--update-graphs" in args
+    global UPDATE_GRAPHS, CREATE_GRAPHS
+    CREATE_GRAPHS = "--create-graphs" in args
+    UPDATE_GRAPHS = CREATE_GRAPHS or "--update-graphs" in args
     slowest_n = 0
     if "--slowest" in args:
         i = args.index("--slowest")
         slowest_n = int(args[i + 1])
         args = args[:i] + args[i + 2 :]
-    args = [a for a in args if a not in ("-s", "--update-graphs")]
+    args = [a for a in args if a not in ("-s", "--update-graphs", "--create-graphs")]
     # Regenerating a stale snapshot is inherently sequential per file (each
     # rewrites its own fixture on disk); nothing here prevents different
     # fixtures running concurrently, but forcing -s keeps output order sane.

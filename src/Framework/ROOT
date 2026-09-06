@@ -1,0 +1,49 @@
+session Voblint_Framework in "." = "Voblint_CFG" +
+  description "The D/G analysis framework: transfer contract, equation generator, and collecting soundness"
+  sessions
+    TD
+    "Voblint_Domain"
+    "Voblint_Solver"
+  directories
+    "Spec"
+    "Context"
+    "Activation"
+    "Constraints"
+    "State"
+    "Result"
+    "Checks"
+  theories
+    CFG_Enumeration
+    DG_State
+    DG_Constraint_Trees
+    DG_Manager
+    DG_Spec
+    DG_Spec_Sound
+    Transfer_Algebra
+    State_Restriction
+    DG_Ownership_Split_Spec
+    DG_Keyed_Generator
+    Activation_Backbone
+    DG_Ctx_Activation
+    Routed_Call_Trees
+    Routed_Context
+    Routed_Context_Unit
+    DG_Local_State_Spec
+    Call_String_Context
+    (* Domain-generic solved-result table: per-point reachability and the
+       per-context/per-node lookup surface downstream consumers read. *)
+    Analysis_Result
+    (* Ordinary __goblint_assert checks: store-only checks, with no
+       ghost-domain or additional trace-projection dependency. *)
+    Checks
+    (* The flat three-valued check-result lattice, split out so the
+       report/aggregation layers below don't have to pull in the domain
+       classifier locale just for the verdict type. *)
+    Check_Result
+    Abstract_Checks
+    Check_Report
+    Contextual_Check_Report
+    DG_Analysis_Adapter
+    (* Composition of a solved routed system with a context policy, once:
+       the (domain, context-policy) product is instantiated, not duplicated. *)
+    Routed_Analysis_Sound

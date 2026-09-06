@@ -1,37 +1,38 @@
 theory Example_Sign_DG_Custom_Combine
   imports
-    "Voblint_Core.Exec_DG_Bridge"
+    "Voblint_Exec.Exec_DG_Generator"
     "Voblint_Analysis.Sign_Exec"
-    "Voblint_Core.DG_LTR_Sound"
     "Voblint_Analysis.Sign_Transfer"
-    "Voblint_Core.Solver_Menu"
+    "Voblint_Solver.TD_Solver_Bridge"
     "Voblint_CFG.CFG_Prune"
-    "Voblint_VIMP.VIMP_Notation"
+    "Voblint_VIMP.VIMP_Notation" "Voblint_Compile.Compile_Wellformed"
 begin
 
 
 section \<open>An analysis-supplied return combine on the D/G spine\<close>
 
 text \<open>
-  The call-return environment merge is a field of \<^typ>\<open>('dl, 'dg) dg_spec\<close>, not a
-  formula built into the equation generator or the solver:
-  \<^const>\<open>dgs_combine_env\<close> is what \<^const>\<open>dgs_combine\<close> consults before handing the
-  merged environment to \<^const>\<open>dgs_combine_assign\<close>.  This theory witnesses that
-  the field is genuinely free.  It takes the ordinary executable Sign
-  specification, overrides \<^emph>\<open>only\<close> that one field, and runs the result through
-  the same \<^const>\<open>dg_gen_of\<close> generator and the same vendored solver a production
-  analysis uses.  Every other field --- the caller continuation, the edge
-  transfers, \<^const>\<open>dgs_enter\<close>, and \<^const>\<open>dgs_combine_assign\<close> --- is the stock
-  one, so the observed difference isolates exactly that degree of freedom.
+  The call-return environment merge is a field of \<^typ>\<open>('x, 'k, 'v, 'dl, 'dg) dg_spec\<close>,
+  not a formula built into the equation generator or the solver:
+  \<^const>\<open>dgs_combine_env\<close> is what \<^const>\<open>dg_spec_combine_transfer\<close> consults
+  before handing the merged environment to \<^const>\<open>dgs_combine_assign\<close>.  This
+  theory witnesses that the field is genuinely free.  It takes the ordinary
+  executable Sign specification, overrides \<^emph>\<open>only\<close> that one field, and runs
+  the result through the same \<^const>\<open>unit_routed_eqs\<close> generator and the same vendored solver a
+  production analysis uses.  Every other field --- the caller continuation, the
+  edge transfers, \<^const>\<open>dgs_enter\<close>, and \<^const>\<open>dgs_combine_assign\<close> --- is the
+  stock one, so the observed difference isolates exactly that degree of
+  freedom.
 \<close>
 
 subsection \<open>A callee-joining environment merge\<close>
 
 text \<open>
-  \<^const>\<open>unit_combine_step_st_env\<close> rebuilds the returning environment from the
-  caller's locals and the current global slot, discarding the callee's locals
-  entirely: only \<^const>\<open>ret_var\<close> survives, through the return assignment that
-  \<^const>\<open>dgs_combine_assign\<close> performs afterwards.  \<open>sign_combine_env_callee_join\<close>
+  The stock environment merge passes the caller's locals through unchanged and
+  discards the callee's entirely: only \<^const>\<open>ret_var\<close> survives, through the
+  return assignment that \<^const>\<open>dgs_combine_assign\<close> performs afterwards, which
+  is also where the caller's locals meet the current global slot.
+  \<open>sign_combine_env_callee_join\<close>
   keeps them, joining the callee-exit locals into the caller's before the same
   reassembly.  Joining can only move the result up the lattice, so the merge
   stays sound; it is strictly less precise, and it is a different operation.  On
@@ -40,10 +41,10 @@ text \<open>
 \<close>
 
 definition sign_combine_env_callee_join ::
-  "'a::bounded_semilattice_sup_bot exec_dg_st \<Rightarrow> 'a exec_dg_st \<Rightarrow> 'a exec_dg_st
-   \<Rightarrow> 'a exec_dg_st \<times> 'a exec_dg_st" where
-  "sign_combine_env_callee_join dc de g =
-     unit_combine_step_st_env (dc \<squnion> restrict_local_resolved_q de) de g"
+  "('x,'k,unit,'a::bounded_semilattice_sup_bot exec_dg_st,'a exec_dg_st) man_combine_transfer"
+where
+  "sign_combine_env_callee_join =
+     local_combine_transfer (\<lambda>dc de. dc \<squnion> restrict_local_resolved_q de)"
 
 
 subsection \<open>The Sign specification that uses it\<close>
@@ -51,36 +52,31 @@ subsection \<open>The Sign specification that uses it\<close>
 definition sign_dg_spec_callee_join ::
   "(vname \<Rightarrow> bool)
    \<Rightarrow> (edge_action \<Rightarrow> sign exec_dg_st \<Rightarrow> sign exec_dg_st)
-   \<Rightarrow> (vname list \<Rightarrow> exp list \<Rightarrow> sign exec_dg_st \<Rightarrow> sign exec_dg_st)
-   \<Rightarrow> (sign exec_dg_st, sign exec_dg_st) dg_spec" where
+   \<Rightarrow> (call_info \<Rightarrow> sign exec_dg_st \<Rightarrow> sign exec_dg_st)
+   \<Rightarrow> ('x, 'k, unit, sign exec_dg_st, sign exec_dg_st) dg_spec" where
   "sign_dg_spec_callee_join gs tf_st enter_st =
-     (unit_dg_spec_st_for gs tf_st enter_st)
+     (ownership_split_dg_spec_st_for gs tf_st enter_st)
        \<lparr> dgs_combine_env := (\<lambda>ci. sign_combine_env_callee_join) \<rparr>"
 
 text \<open>Only the environment merge differs; every other field is the stock one.\<close>
 
-lemma dgs_caller_cont_sign_dg_spec_callee_join [simp]:
-  "dgs_caller_cont (sign_dg_spec_callee_join gs tf_st enter_st)
-     = dgs_caller_cont (unit_dg_spec_st_for gs tf_st enter_st)"
-  by (simp add: sign_dg_spec_callee_join_def)
-
 lemma dgs_enter_sign_dg_spec_callee_join [simp]:
-  "dgs_enter (sign_dg_spec_callee_join gs tf_st enter_st)
-     = dgs_enter (unit_dg_spec_st_for gs tf_st enter_st)"
+  "enter\<^sup># (sign_dg_spec_callee_join gs tf_st enter_st)
+     = enter\<^sup># (ownership_split_dg_spec_st_for gs tf_st enter_st)"
   by (simp add: sign_dg_spec_callee_join_def)
 
 lemma dgs_combine_assign_sign_dg_spec_callee_join [simp]:
-  "dgs_combine_assign (sign_dg_spec_callee_join gs tf_st enter_st)
-     = dgs_combine_assign (unit_dg_spec_st_for gs tf_st enter_st)"
+  "combine_assign\<^sup># (sign_dg_spec_callee_join gs tf_st enter_st)
+     = combine_assign\<^sup># (ownership_split_dg_spec_st_for gs tf_st enter_st)"
   by (simp add: sign_dg_spec_callee_join_def)
 
 lemma dg_spec_step_sign_dg_spec_callee_join [simp]:
   "dg_spec_step (sign_dg_spec_callee_join gs tf_st enter_st) a
-     = dg_spec_step (unit_dg_spec_st_for gs tf_st enter_st) a"
+     = dg_spec_step (ownership_split_dg_spec_st_for gs tf_st enter_st) a"
   by (cases a) (simp_all add: sign_dg_spec_callee_join_def)
 
 lemma dgs_combine_env_sign_dg_spec_callee_join [simp]:
-  "dgs_combine_env (sign_dg_spec_callee_join gs tf_st enter_st)
+  "combine_env\<^sup># (sign_dg_spec_callee_join gs tf_st enter_st)
      = (\<lambda>ci. sign_combine_env_callee_join)"
   by (simp add: sign_dg_spec_callee_join_def)
 
@@ -104,25 +100,25 @@ definition cj_callee :: "sign exec_dg_st" where
   "cj_callee = update_resolved_st_q bot (Local_Location (STR ''r'')) SNeg"
 
 lemma stock_env_keeps_caller:
-  "lookup_resolved_st_q
-     (snd (unit_combine_step_st_env cj_caller cj_callee bot))
-     (Local_Location (STR ''r'')) = SPos"
-  by (simp add: cj_caller_def cj_callee_def unit_combine_step_st_env_def)
+  "lookup_resolved_st_q cj_caller (Local_Location (STR ''r'')) = SPos"
+  by (simp add: cj_caller_def)
 
 lemma callee_join_env_publishes_top:
-  "lookup_resolved_st_q
-     (snd (sign_combine_env_callee_join cj_caller cj_callee bot))
+  "lookup_resolved_st_q (cj_caller \<squnion> restrict_local_resolved_q cj_callee)
      (Local_Location (STR ''r'')) = STop"
-  by (simp add: cj_caller_def cj_callee_def sign_combine_env_callee_join_def
-      unit_combine_step_st_env_def sup_sign_def)
+  by (simp add: cj_caller_def cj_callee_def sup_sign_def)
 
-lemma sign_combine_env_callee_join_neq_stock:
-  "(sign_combine_env_callee_join :: sign exec_dg_st \<Rightarrow> _) \<noteq> unit_combine_step_st_env"
+text \<open>So the two environment merges are different functions, and the override is
+  not a re-spelling of the stock one.\<close>
+
+lemma callee_join_merge_neq_stock:
+  "(\<lambda>dc de. dc \<squnion> restrict_local_resolved_q de)
+     \<noteq> (\<lambda>dc (de :: sign exec_dg_st). dc)"
 proof
-  assume "(sign_combine_env_callee_join :: sign exec_dg_st \<Rightarrow> _) = unit_combine_step_st_env"
-  from fun_cong[OF fun_cong[OF fun_cong[OF this, of cj_caller], of cj_callee], of bot]
-  have "sign_combine_env_callee_join cj_caller cj_callee bot
-          = unit_combine_step_st_env cj_caller cj_callee bot" .
+  assume "(\<lambda>dc de. dc \<squnion> restrict_local_resolved_q de)
+            = (\<lambda>dc (de :: sign exec_dg_st). dc)"
+  from fun_cong[OF fun_cong[OF this, of cj_caller], of cj_callee]
+  have "cj_caller \<squnion> restrict_local_resolved_q cj_callee = cj_caller" .
   then show False
     using stock_env_keeps_caller callee_join_env_publishes_top by simp
 qed
@@ -133,128 +129,195 @@ subsection \<open>The same merge at the abstract representation, and its soundne
 text \<open>
   \<open>combine_env_callee_join_abs\<close> is the same operation on \<^typ>\<open>'a abs_state\<close>,
   the representation soundness is stated over.  The override is again a single
-  record field of \<^const>\<open>unit_dg_spec_for\<close>, so \<^const>\<open>dg_spec_step\<close>,
-  \<^const>\<open>dgs_caller_cont\<close>, \<^const>\<open>dgs_enter\<close> and \<^const>\<open>dgs_combine_assign\<close> are
-  the stock ones and their obligations transfer verbatim.
+  field of the lifted specification, so \<^const>\<open>dg_spec_step\<close>,
+  \<^const>\<open>dgs_enter\<close> and \<^const>\<open>dgs_combine_assign\<close> are
+  the stock ones and their obligations transfer verbatim. Overriding at that
+  position means the join runs on the two split local halves, before
+  \<^const>\<open>ownership_split_lift\<close>'s wrapper merges the shared fact back in.
 
   Only \<open>combine_sound\<close> needs an argument, and it is the generic one: the merged
-  environment this specification hands \<^const>\<open>dgs_combine_assign\<close> is above the
-  one the stock specification hands it, and
-  @{thm unit_combine_step_assign_for_mono} says the return assignment is monotone
-  in exactly that argument.  Both components of the combine therefore move up,
-  and \<^const>\<open>gamma_unit\<close>'s monotonicity carries the stock membership across.  No
-  second soundness chain appears: this instance reuses
-  @{thm sound_dg_spec_unit_for} for everything else.
+  environment this specification hands the wrapped combine is above the one the
+  stock specification hands it, and the return combine and both projections are
+  monotone in exactly that argument. So the answer and the published
+  contribution both move up, and \<^const>\<open>gamma_ownership_split\<close>'s monotonicity
+  carries the stock membership across. No second soundness chain appears: this
+  instance reuses \<open>ownership_split_lift_core_sound\<close> for everything else.
 \<close>
 
+abbreviation sign_base_spec ::
+  "(vname \<Rightarrow> bool) \<Rightarrow> ('x,'k,unit,sign abs_state,sign abs_state) dg_spec" where
+  "sign_base_spec gs \<equiv> local_state_dg_spec_for gs
+     skip_sign assign_sign special_sign branch_sign body_sign return_sign
+     (enter_sign_ci_for gs) event_sign"
+
 definition combine_env_callee_join_abs ::
-  "(vname \<Rightarrow> bool) \<Rightarrow> call_info \<Rightarrow> 'a::bounded_semilattice_sup_bot abs_state
-   \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state \<times> 'a abs_state" where
-  "combine_env_callee_join_abs gs ci dc de g =
-     unit_combine_step_env_for gs ci (dc \<squnion> restrict_local_for gs de) de g"
+  "(vname \<Rightarrow> bool)
+   \<Rightarrow> ('x,'k,unit,'a::bounded_semilattice_sup_bot abs_state,'a abs_state) man_combine_transfer"
+where
+  "combine_env_callee_join_abs gs =
+     local_combine_transfer (\<lambda>dc de. dc \<squnion> restrict_local_for gs de)"
 
 definition sign_dg_spec_env_join ::
-  "(vname \<Rightarrow> bool) \<Rightarrow> (sign abs_state, sign abs_state) dg_spec" where
+  "(vname \<Rightarrow> bool) \<Rightarrow> ('x,'k,unit,sign abs_state, sign abs_state) dg_spec" where
   "sign_dg_spec_env_join gs =
-     (unit_dg_spec_for gs (sign_tf_for gs))
-       \<lparr> dgs_combine_env := combine_env_callee_join_abs gs \<rparr>"
+     (ownership_split_lift gs (sign_base_spec gs))
+       \<lparr> dgs_combine_env := (\<lambda>ci. combine_env_callee_join_abs gs) \<rparr>"
 
 lemma dg_spec_step_sign_dg_spec_env_join [simp]:
   "dg_spec_step (sign_dg_spec_env_join gs) a
-     = dg_spec_step (unit_dg_spec_for gs (sign_tf_for gs)) a"
+     = dg_spec_step (ownership_split_lift gs (sign_base_spec gs)) a"
   by (cases a) (simp_all add: sign_dg_spec_env_join_def)
 
-lemma dgs_caller_cont_sign_dg_spec_env_join [simp]:
-  "dgs_caller_cont (sign_dg_spec_env_join gs)
-     = dgs_caller_cont (unit_dg_spec_for gs (sign_tf_for gs))"
-  by (simp add: sign_dg_spec_env_join_def)
-
 lemma dgs_enter_sign_dg_spec_env_join [simp]:
-  "dgs_enter (sign_dg_spec_env_join gs)
-     = dgs_enter (unit_dg_spec_for gs (sign_tf_for gs))"
+  "enter\<^sup># (sign_dg_spec_env_join gs)
+     = enter\<^sup># (ownership_split_lift gs (sign_base_spec gs))"
   by (simp add: sign_dg_spec_env_join_def)
 
-text \<open>Both specifications reach the same \<^const>\<open>dgs_combine_assign\<close>, differing
-  only in the environment it receives.\<close>
+text \<open>
+  Both specifications run the same wrapped combine; they differ only in the
+  local value it starts from. That is the whole content of the override, and it
+  is what the two observations below inherit.
+\<close>
 
-lemma dgs_combine_unit_dg_spec_for_shape:
-  "dgs_combine (unit_dg_spec_for gs tf) ci dc de g
-     = unit_combine_step_assign_for gs ci de g (unit_combine_step_env_for gs ci dc de g)"
-  by (simp add: dgs_combine_def unit_dg_spec_for_def)
+lemma dg_spec_combine_transfer_env_join:
+  "dg_spec_combine_transfer (sign_dg_spec_env_join gs) ci m de
+     = ownership_split_combine_transfer gs (dg_spec_combine_transfer (sign_base_spec gs) ci)
+         (m\<lparr>man_local := man_local m \<squnion> restrict_local_for gs de\<rparr>) de"
+  unfolding dg_spec_combine_transfer_def sign_dg_spec_env_join_def
+    combine_env_callee_join_abs_def ownership_split_lift_def
+  by (simp add: local_transfer_def local_combine_transfer_def)
 
-lemma dgs_combine_sign_dg_spec_env_join_shape:
-  "dgs_combine (sign_dg_spec_env_join gs) ci dc de g
-     = unit_combine_step_assign_for gs ci de g (combine_env_callee_join_abs gs ci dc de g)"
-  by (simp add: dgs_combine_def sign_dg_spec_env_join_def unit_dg_spec_for_def)
+subsection \<open>The override only ever widens\<close>
 
-lemma combine_env_callee_join_abs_join:
-  "fst (combine_env_callee_join_abs gs ci dc de g)
-     \<squnion> snd (combine_env_callee_join_abs gs ci dc de g)
-   = combine_env_abs gs (dc \<squnion> restrict_local_for gs de) g"
-  unfolding combine_env_callee_join_abs_def
-  by (rule unit_combine_step_env_for_join)
+text \<open>
+  The merged environment this specification hands the return combine sits above
+  the stock one, and every step from there is monotone: the combine reads a
+  larger caller state, and both projections of the result preserve the order.
+  So the answer and the published contribution both move up, and
+  \<^const>\<open>gamma_ownership_split\<close>'s monotonicity carries the stock membership
+  across. No second soundness chain appears --- everything but the combine is
+  inherited from \<open>ownership_split_lift_core_sound\<close>.
+\<close>
 
-lemma combine_env_callee_join_abs_ge:
-  "fst (unit_combine_step_env_for gs ci dc de g)
-     \<squnion> snd (unit_combine_step_env_for gs ci dc de g)
-   \<le> fst (combine_env_callee_join_abs gs ci dc de g)
-     \<squnion> snd (combine_env_callee_join_abs gs ci dc de g)"
-  unfolding unit_combine_step_env_for_join combine_env_callee_join_abs_join
-  by (rule combine_env_abs_mono1[OF sup_ge1])
+lemma combine_env_join_ge:
+  "combine_env gs dc g \<le> combine_env gs (dc \<squnion> restrict_local_for gs de) g"
+  by (rule combine_env_mono[OF sup_ge1 order_refl])
 
-lemma dgs_combine_sign_dg_spec_env_join_ge:
-  "fst (dgs_combine (unit_dg_spec_for gs (sign_tf_for gs)) ci dc de g)
-     \<le> fst (dgs_combine (sign_dg_spec_env_join gs) ci dc de g)"
-  "snd (dgs_combine (unit_dg_spec_for gs (sign_tf_for gs)) ci dc de g)
-     \<le> snd (dgs_combine (sign_dg_spec_env_join gs) ci dc de g)"
-  unfolding dgs_combine_unit_dg_spec_for_shape dgs_combine_sign_dg_spec_env_join_shape
-  by (rule unit_combine_step_assign_for_mono[OF order_refl combine_env_callee_join_abs_ge])+
+lemma combine_collect_abs_join_ge:
+  "combine\<^sup># gs dst (combine_env gs dc g) (combine_env gs de g)
+     \<le> combine\<^sup># gs dst (combine_env gs (dc \<squnion> restrict_local_for gs de) g)
+         (combine_env gs de g)"
+  by (rule combine_collect_abs_mono[OF combine_env_join_ge order_refl])
 
-lemma gamma_unit_combine_sound_env_join:
-  assumes reserved: "reserved_ret_var gs"
-    and s: "s \<in> gamma_unit gs dcont g" and t: "t \<in> gamma_unit gs de g"
-  shows "combine_collect gs (ci_dst ci) s t \<in>
-           (case dgs_combine (sign_dg_spec_env_join gs) ci dcont de g of
-              (g', d') \<Rightarrow> gamma_unit gs d' g')"
+text \<open>The override's own tree observations. The generic reduction rules do not
+  fire here: the transfer is wrapped in the lambda that rebuilds the manager
+  with the joined local, so it is reduced once explicitly.\<close>
+
+lemma traverse_combine_env_join:
+  "locals (traverse_rhs (sp_compile_with (\<lambda>d. DG d bot)
+       (dg_spec_combine_transfer (sign_dg_spec_env_join gs) ci
+          (mk_dg_man dc (\<lambda>_. gk)) de)) \<tau>)
+     = restrict_local_for gs
+         (combine\<^sup># gs (ci_dst ci)
+            (combine_env gs (dc \<squnion> restrict_local_for gs de) (globs (\<tau> (Inr gk))))
+            (combine_env gs de (globs (\<tau> (Inr gk)))))"
+  unfolding dg_spec_combine_transfer_env_join
+    ownership_split_combine_transfer_def local_state_dg_spec_for_def
+    dg_spec_combine_transfer_local_dg_spec
+  by (simp add: ownership_split_combine_transfer_gen_def local_combine_transfer_def
+        mk_dg_man_def dg_read_global_def dg_sideg_def sp_bind_assoc)
+
+lemma sides_combine_env_join:
+  "globs (sides_of_rhs (sp_compile_with (\<lambda>d. DG d bot)
+       (dg_spec_combine_transfer (sign_dg_spec_env_join gs) ci
+          (mk_dg_man dc (\<lambda>_. gk)) de)) \<tau> (Inr gk))
+     = restrict_global_for gs
+         (combine\<^sup># gs (ci_dst ci)
+            (combine_env gs (dc \<squnion> restrict_local_for gs de) (globs (\<tau> (Inr gk))))
+            (combine_env gs de (globs (\<tau> (Inr gk)))))"
+  unfolding dg_spec_combine_transfer_env_join
+    ownership_split_combine_transfer_def local_state_dg_spec_for_def
+    dg_spec_combine_transfer_local_dg_spec
+  by (simp add: ownership_split_combine_transfer_gen_def local_combine_transfer_def
+        mk_dg_man_def dg_read_global_def dg_sideg_def sp_bind_assoc)
+
+text \<open>The stock observations, in the same shape, so the comparison below is
+  between two equations rather than between a tree and an equation.\<close>
+
+lemma traverse_combine_stock:
+  "locals (traverse_rhs (sp_compile_with (\<lambda>d. DG d bot)
+       (dg_spec_combine_transfer (ownership_split_lift gs (sign_base_spec gs)) ci
+          (mk_dg_man dc (\<lambda>_. gk)) de)) \<tau>)
+     = restrict_local_for gs
+         (combine\<^sup># gs (ci_dst ci)
+            (combine_env gs dc (globs (\<tau> (Inr gk))))
+            (combine_env gs de (globs (\<tau> (Inr gk)))))"
+  unfolding dg_spec_combine_transfer_ownership_split_lift
+    ownership_split_combine_transfer_def local_state_dg_spec_for_def
+    dg_spec_combine_transfer_local_dg_spec
+  by (simp add: ownership_split_combine_transfer_gen_def local_combine_transfer_def
+        mk_dg_man_def dg_read_global_def dg_sideg_def sp_bind_assoc)
+
+lemma sides_combine_stock:
+  "globs (sides_of_rhs (sp_compile_with (\<lambda>d. DG d bot)
+       (dg_spec_combine_transfer (ownership_split_lift gs (sign_base_spec gs)) ci
+          (mk_dg_man dc (\<lambda>_. gk)) de)) \<tau> (Inr gk))
+     = restrict_global_for gs
+         (combine\<^sup># gs (ci_dst ci)
+            (combine_env gs dc (globs (\<tau> (Inr gk))))
+            (combine_env gs de (globs (\<tau> (Inr gk)))))"
+  unfolding dg_spec_combine_transfer_ownership_split_lift
+    ownership_split_combine_transfer_def local_state_dg_spec_for_def
+    dg_spec_combine_transfer_local_dg_spec
+  by (simp add: ownership_split_combine_transfer_gen_def local_combine_transfer_def
+        mk_dg_man_def dg_read_global_def dg_sideg_def sp_bind_assoc)
+
+lemma traverse_combine_env_join_ge:
+  "locals (traverse_rhs (sp_compile_with (\<lambda>d. DG d bot)
+       (dg_spec_combine_transfer (ownership_split_lift gs (sign_base_spec gs)) ci
+          (mk_dg_man dc (\<lambda>_. gk)) de)) \<tau>)
+     \<le> locals (traverse_rhs (sp_compile_with (\<lambda>d. DG d bot)
+          (dg_spec_combine_transfer (sign_dg_spec_env_join gs) ci
+             (mk_dg_man dc (\<lambda>_. gk)) de)) \<tau>)"
+  unfolding traverse_combine_stock traverse_combine_env_join
+  by (rule restrict_local_for_mono[OF combine_collect_abs_join_ge])
+
+lemma sides_combine_env_join_ge:
+  "globs (sides_of_rhs (sp_compile_with (\<lambda>d. DG d bot)
+       (dg_spec_combine_transfer (ownership_split_lift gs (sign_base_spec gs)) ci
+          (mk_dg_man dc (\<lambda>_. gk)) de)) \<tau> (Inr gk))
+     \<le> globs (sides_of_rhs (sp_compile_with (\<lambda>d. DG d bot)
+          (dg_spec_combine_transfer (sign_dg_spec_env_join gs) ci
+             (mk_dg_man dc (\<lambda>_. gk)) de)) \<tau> (Inr gk))"
+  unfolding sides_combine_stock sides_combine_env_join
+  by (rule restrict_global_for_mono[OF combine_collect_abs_join_ge])
+
+theorem sound_dg_spec_core_sign_dg_spec_env_join:
+  "sound_dg_spec_core (sign_dg_spec_env_join gs) (gamma_ownership_split gs) gs"
 proof -
-  interpret stock: sound_dg_spec
-    "unit_dg_spec_for gs (sign_tf_for gs)" "gamma_unit gs" gs
-    by (rule sound_dg_spec_unit_for[OF sign_is_sound_transfer_for reserved])
-  have stock_in: "combine_collect gs (ci_dst ci) s t
-      \<in> gamma_unit gs (snd (dgs_combine (unit_dg_spec_for gs (sign_tf_for gs)) ci dcont de g))
-                      (fst (dgs_combine (unit_dg_spec_for gs (sign_tf_for gs)) ci dcont de g))"
-    using stock.combine_sound[OF s t] by (simp add: case_prod_beta)
-  have widen: "gamma_unit gs (snd (dgs_combine (unit_dg_spec_for gs (sign_tf_for gs)) ci dcont de g))
-                             (fst (dgs_combine (unit_dg_spec_for gs (sign_tf_for gs)) ci dcont de g))
-      \<subseteq> gamma_unit gs (snd (dgs_combine (sign_dg_spec_env_join gs) ci dcont de g))
-                       (fst (dgs_combine (sign_dg_spec_env_join gs) ci dcont de g))"
-    by (rule gamma_unit_mono[OF dgs_combine_sign_dg_spec_env_join_ge(2)
-          dgs_combine_sign_dg_spec_env_join_ge(1)])
-  from stock_in widen show ?thesis by (auto simp: case_prod_beta)
-qed
-
-theorem sound_dg_spec_sign_dg_spec_env_join:
-  assumes reserved: "reserved_ret_var gs"
-  shows "sound_dg_spec (sign_dg_spec_env_join gs) (gamma_unit gs) gs"
-proof -
-  interpret stock: sound_dg_spec
-    "unit_dg_spec_for gs (sign_tf_for gs)" "gamma_unit gs" gs
-    by (rule sound_dg_spec_unit_for[OF sign_is_sound_transfer_for reserved])
+  interpret sign_tf: sound_transfer_for gs
+      skip_sign assign_sign special_sign branch_sign body_sign return_sign
+      "enter_sign_ci_for gs" event_sign
+    by (rule sign_is_sound_transfer_for)
+  interpret stock: sound_dg_spec_core
+    "ownership_split_lift gs (sign_base_spec gs)" "gamma_ownership_split gs" gs
+    by (rule sign_tf.ownership_split_lift_core_sound)
   show ?thesis
-    apply unfold_locales
-    subgoal for d d' g g'
-      by (rule gamma_unit_mono)
-    subgoal for a d g
-      using stock.step_sound by simp
-    subgoal premises prems
-      using stock.caller_cont_sound[OF prems] by simp
-    subgoal premises prems
-      by (rule gamma_unit_combine_sound_env_join[OF reserved prems])
-    subgoal premises prems
-      using stock.enter_sound[OF prems] by simp
-    done
+  proof (unfold_locales, goal_cases)
+    case (1 d d' g g')
+    then show ?case by (rule gamma_ownership_split_mono)
+  next
+    case (2 a \<tau> src gk)
+    show ?case using stock.step_sound by (simp add: dg_spec_edge_tree_def)
+  next
+    case (3 s dc \<tau> gk t de ci)
+    from stock.combine_sound[where dc = dc and de = de and \<tau> = \<tau> and gk = gk and ci = ci,
+        OF 3(1) 3(2)]
+    show ?case
+      by (rule subsetD[OF gamma_ownership_split_mono
+            [OF traverse_combine_env_join_ge sides_combine_env_join_ge]])
+  qed
 qed
-
 
 
 subsection \<open>The solved result really differs\<close>
@@ -263,7 +326,7 @@ text \<open>
   \<open>cj_program\<close>'s callee writes \<^const>\<open>SNeg\<close> to \<open>r\<close>, a name the caller already
   holds as \<^const>\<open>SPos\<close> across the call.  Both specifications compile the same
   program to the same CFG, generate equations with the same
-  \<^const>\<open>dg_gen_of\<close>, and are solved by the same vendored solver; only
+  \<^const>\<open>unit_routed_eqs\<close>, and are solved by the same vendored solver; only
   \<^const>\<open>dgs_combine_env\<close> differs between them.
 \<close>
 
@@ -283,32 +346,32 @@ abbreviation cj_lookup :: "sign exec_dg_st \<Rightarrow> vname \<Rightarrow> sig
   "cj_lookup s x \<equiv> lookup_resolved_st_q s (location_of cj_prog_gs x)"
 
 definition cj_stock_eqs ::
-  "pp \<times> unit \<Rightarrow> (pp \<times> unit, unit, (sign exec_dg_st, sign exec_dg_st) dg_state) strategy_tree" where
-  "cj_stock_eqs = dg_gen_of
-     (unit_dg_spec_st_for cj_prog_gs (sign_tf_st_for cj_prog_gs) (sign_enter_st_for cj_prog_gs))
+  "pp \<times> unit \<Rightarrow> (pp \<times> unit, (unit, unit) routed_gk, (sign exec_dg_st, sign exec_dg_st) dg_state) strategy_tree" where
+  "cj_stock_eqs = unit_routed_eqs
+     (ownership_split_dg_spec_st_for cj_prog_gs (sign_tf_st_for cj_prog_gs) (sign_enter_st_for cj_prog_gs))
      cj_cfg bot cinit_sign_st (restrict_global_resolved_q cinit_sign_st)"
 
 definition cj_custom_eqs ::
-  "pp \<times> unit \<Rightarrow> (pp \<times> unit, unit, (sign exec_dg_st, sign exec_dg_st) dg_state) strategy_tree" where
-  "cj_custom_eqs = dg_gen_of
+  "pp \<times> unit \<Rightarrow> (pp \<times> unit, (unit, unit) routed_gk, (sign exec_dg_st, sign exec_dg_st) dg_state) strategy_tree" where
+  "cj_custom_eqs = unit_routed_eqs
      (sign_dg_spec_callee_join cj_prog_gs (sign_tf_st_for cj_prog_gs) (sign_enter_st_for cj_prog_gs))
      cj_cfg bot cinit_sign_st (restrict_global_resolved_q cinit_sign_st)"
 
 lemma cj_stock_terminates:
-  "TD_side_warrowing_apinis_Interp_solve_c cj_stock_eqs (cfg_exit cj_cfg, ()) \<noteq> None"
+  "TD_side_seed_join_warrowing_Interp_solve_c is_activation_seed cj_stock_eqs (cfg_exit cj_cfg, ()) \<noteq> None"
   by eval
 
 lemma cj_custom_terminates:
-  "TD_side_warrowing_apinis_Interp_solve_c cj_custom_eqs (cfg_exit cj_cfg, ()) \<noteq> None"
+  "TD_side_seed_join_warrowing_Interp_solve_c is_activation_seed cj_custom_eqs (cfg_exit cj_cfg, ()) \<noteq> None"
   by eval
 
 definition cj_stock_sol ::
-  "(pp \<times> unit) set \<times> (pp \<times> unit + unit \<Rightarrow> (sign exec_dg_st, sign exec_dg_st) dg_state)" where
-  "cj_stock_sol = TD_side_warrowing_apinis_Interp_solve cj_stock_eqs (cfg_exit cj_cfg, ())"
+  "(pp \<times> unit) set \<times> (pp \<times> unit + (unit, unit) routed_gk \<Rightarrow> (sign exec_dg_st, sign exec_dg_st) dg_state)" where
+  "cj_stock_sol = TD_side_seed_join_warrowing_Interp_solve is_activation_seed cj_stock_eqs (cfg_exit cj_cfg, ())"
 
 definition cj_custom_sol ::
-  "(pp \<times> unit) set \<times> (pp \<times> unit + unit \<Rightarrow> (sign exec_dg_st, sign exec_dg_st) dg_state)" where
-  "cj_custom_sol = TD_side_warrowing_apinis_Interp_solve cj_custom_eqs (cfg_exit cj_cfg, ())"
+  "(pp \<times> unit) set \<times> (pp \<times> unit + (unit, unit) routed_gk \<Rightarrow> (sign exec_dg_st, sign exec_dg_st) dg_state)" where
+  "cj_custom_sol = TD_side_seed_join_warrowing_Interp_solve is_activation_seed cj_custom_eqs (cfg_exit cj_cfg, ())"
 
 text \<open>The single call site is \<open>Statement 4\<close>, resuming at \<open>Statement 5\<close>.\<close>
 

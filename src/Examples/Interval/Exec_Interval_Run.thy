@@ -1,6 +1,6 @@
 theory Exec_Interval_Run
   imports "Voblint_CLI.Interval_Entry"
-            Voblint_Core.Solver_Menu "Voblint_CFG.CFG_Prune"
+            "Voblint_CFG.CFG_Prune"
             "Voblint_VIMP.VIMP_Notation"
             Example_Interval_Loop_Coverage
 begin
@@ -16,18 +16,17 @@ text \<open>
   compiled \<open>loop_cfg\<close> this theory imports rather than restates: there it is
   carried to trace-native soundness, here through three fixpoint engines.
 
-  The routed transfer \<open>ictx_spec\<close> applies the same forward-gated branch
+  The routed transfer \<open>interval_spec\<close> applies the same forward-gated branch
   transfer as @{const branch_ivl} on @{const EA_Assume} edges.  Node~2
   therefore reads @{text "[0,19]"} because @{text "x < 20"} refines
   @{text "x"} at the loop head --- not because of widening.
 
   This theory runs several fixpoint engines on the one canonical routed
-  equation system \<^const>\<open>ictx_eqs_prog\<close>: bounded Kleene iteration on
+  equation system \<^const>\<open>interval_conf_eqs_prog\<close>: bounded Kleene iteration on
   @{const eq}, @{const TD_side_warrowing_apinis_Interp_solve} (pointwise
-  interval widening for solver termination), and -- through
-  \<^const>\<open>run_menu\<close> -- every update rule on the solver menu at once.  All of
-  them agree here, which is the point: the precision comes from the backward
-  guard filter, not from the solver.
+  interval widening for solver termination), and each of the four vendored
+  update rules directly.  All of them agree here, which is the point: the
+  precision comes from the backward guard filter, not from the solver.
 \<close>
 
 text \<open>\<^const>\<open>loop_prog\<close> and its compiled \<open>loop_cfg\<close> come from
@@ -50,8 +49,8 @@ lemma loop_cfg_exit [simp]: "cfg_exit loop_cfg = FunctionResult (STR ''main'')"
   by (simp add: loop_cfg_full cfg_exit_def)
 
 definition loop_ivl_eqs ::
-    "(pp \<times> unit, gk, (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state) eqsT" where
-  "loop_ivl_eqs = ictx_eqs_prog loop_gs loop_prog"
+    "(pp \<times> unit, (unit, unit) routed_gk, (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state) eqsT" where
+  "loop_ivl_eqs = interval_conf_eqs_prog loop_gs loop_prog"
 
 text \<open>One projection, reused by every engine below: take a solved D/G slot's local
   component and read \<open>x\<close> out of it.\<close>
@@ -62,20 +61,20 @@ definition loop_read_x ::
      case_lifted bot (\<lambda>q. lookup_resolved_st_q q (location_of loop_gs (STR ''x''))) (locals d)"
 
 definition loop_sig0 ::
-    "pp \<times> unit + gk \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state" where
+    "pp \<times> unit + (unit, unit) routed_gk \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state" where
   "loop_sig0 = (\<lambda>_. bot)"
 
 definition loop_kleene_step ::
-    "(pp \<times> unit + gk \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)
-       \<Rightarrow> (pp \<times> unit + gk \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)" where
+    "(pp \<times> unit + (unit, unit) routed_gk \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)
+       \<Rightarrow> (pp \<times> unit + (unit, unit) routed_gk \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)" where
   "loop_kleene_step sig =
      (\<lambda>k. case k of
         Inl v \<Rightarrow> eq loop_ivl_eqs v sig
       | Inr g \<Rightarrow> sig (Inr g))"
 
 fun loop_iter_sig ::
-    "nat \<Rightarrow> (pp \<times> unit + gk \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)
-       \<Rightarrow> (pp \<times> unit + gk \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)" where
+    "nat \<Rightarrow> (pp \<times> unit + (unit, unit) routed_gk \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)
+       \<Rightarrow> (pp \<times> unit + (unit, unit) routed_gk \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)" where
   "loop_iter_sig 0 sig = sig"
 | "loop_iter_sig (Suc n) sig = loop_iter_sig n (loop_kleene_step sig)"
 
@@ -94,8 +93,8 @@ lemma loop_body_ivl:
 
 definition loop_ivl_td_sol ::
     "(pp \<times> unit) set
-       \<times> (pp \<times> unit + gk \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)" where
-  "loop_ivl_td_sol = ictx_sol_prog_warrow loop_gs loop_prog"
+       \<times> (pp \<times> unit + (unit, unit) routed_gk \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)" where
+  "loop_ivl_td_sol = interval_conf_sol_prog_warrow loop_gs loop_prog"
 
 definition loop_ivl_td_at :: "pp \<Rightarrow> ivl" where
   "loop_ivl_td_at pp = loop_read_x (snd loop_ivl_td_sol (Inl (pp, ())))"
@@ -110,20 +109,37 @@ lemma loop_body_ivl_td:
   "loop_ivl_td_at (Statement 2) = Ivl (Fin 0) (Fin 19)"
   by (simp add: loop_ivl_td_at_def) eval
 
-subsection \<open>The loop under every update rule at once\<close>
+subsection \<open>The loop under every update rule\<close>
 
-text \<open>\<^const>\<open>run_menu\<close> reads the loop-head value of \<open>x\<close> under each update rule in one line,
-  and here all three \<^emph>\<open>agree\<close> at the precise \<open>[0, 20]\<close>.  \<open>x\<close> is a bounded local: interval
-  narrowing (fill an infinite bound from the guard-refined value) plus the backward guard
-  filter on \<open>x < 20\<close> recovers the bound whether the global rule widens (\<open>warrow\<close>) or not
-  (\<open>join\<close>, \<open>per_origin\<close>).  Contrast a flow-insensitive \<^emph>\<open>global\<close> counter, where the same
-  machinery cannot bound the write-back and the slot stays \<open>[0, +inf]\<close>.\<close>
-lemma loop_head_across_update_rules:
-  "run_menu loop_read_x loop_ivl_eqs (cfg_exit loop_cfg, ()) (Inl (Statement 1, ()))
-     = [(STR ''join'',              Ivl (Fin 0) (Fin 20)),
-        (STR ''per_origin'',        Ivl (Fin 0) (Fin 20)),
-        (STR ''warrow'',            Ivl (Fin 0) (Fin 20)),
-        (STR ''warrow_per_origin'', Ivl (Fin 0) (Fin 20))]"
+text \<open>The loop-head value of \<open>x\<close> under each update rule, and here all four \<^emph>\<open>agree\<close> at the
+  precise \<open>[0, 20]\<close>.  \<open>x\<close> is a bounded local: interval narrowing (fill an infinite bound
+  from the guard-refined value) plus the backward guard filter on \<open>x < 20\<close> recovers the
+  bound whether the global rule widens (\<open>warrow\<close>) or not (\<open>join\<close>, \<open>per_origin\<close>).  Contrast
+  a flow-insensitive \<^emph>\<open>global\<close> counter, where the same machinery cannot bound the
+  write-back and the slot stays \<open>[0, +inf]\<close>.\<close>
+
+lemma loop_head_join:
+  "loop_read_x (snd (TD_side_always_join_Interp_solve loop_ivl_eqs (cfg_exit loop_cfg, ()))
+       (Inl (Statement 1, ())))
+     = Ivl (Fin 0) (Fin 20)"
+  by eval
+
+lemma loop_head_per_origin:
+  "loop_read_x (snd (TD_side_per_origin_Interp_solve loop_ivl_eqs (cfg_exit loop_cfg, ()))
+       (Inl (Statement 1, ())))
+     = Ivl (Fin 0) (Fin 20)"
+  by eval
+
+lemma loop_head_warrow:
+  "loop_read_x (snd (TD_side_warrowing_apinis_Interp_solve loop_ivl_eqs (cfg_exit loop_cfg, ()))
+       (Inl (Statement 1, ())))
+     = Ivl (Fin 0) (Fin 20)"
+  by eval
+
+lemma loop_head_warrow_per_origin:
+  "loop_read_x (snd (TD_side_warrowing_per_origin_Interp_solve loop_ivl_eqs
+       (cfg_exit loop_cfg, ())) (Inl (Statement 1, ())))
+     = Ivl (Fin 0) (Fin 20)"
   by eval
 
 subsection \<open>Whole-program entry points, and a second program\<close>
@@ -131,7 +147,7 @@ subsection \<open>Whole-program entry points, and a second program\<close>
 text \<open>
   \<open>analyse_interval_join_result_for\<close> and \<open>analyse_interval_td_result_for\<close>
   (\<open>Interval_Checks\<close>) are the whole-program convenience layer over the very
-  \<^const>\<open>ictx_eqs_prog\<close> system \<open>loop_ivl_eqs\<close> above is, under the join and the
+  \<^const>\<open>interval_conf_eqs_prog\<close> system \<open>loop_ivl_eqs\<close> above is, under the join and the
   Apinis-warrowing update rule respectively. A different program from
   \<open>loop_prog\<close>, run through them: the entry points are not specialized to one
   hard-coded example.\<close>
@@ -140,16 +156,16 @@ definition analyse_interval_demo2_prog :: imp_prog where
   "analyse_interval_demo2_prog = program { void main() { a := 3; b := a + 1 } }"
 
 lemma analyse_interval_demo2_terminates:
-  "ictx_terminates_prog (declared_global analyse_interval_demo2_prog)
+  "interval_conf_terminates_prog (declared_global analyse_interval_demo2_prog)
      analyse_interval_demo2_prog"
-  by (rule ictx_terminates_prog_via_solve_c) eval
+  by (rule interval_conf_terminates_prog_via_solve_c) eval
 
 definition analyse_interval_demo2_env :: "vname \<Rightarrow> ivl" where
   "analyse_interval_demo2_env =
      (case lookup_context
              (analyse_interval_join_result analyse_interval_demo2_prog)
              (cfg_exit (prog_cfg analyse_interval_demo2_prog)) () of
-        Unreachable \<Rightarrow> bot | Reachable st \<Rightarrow> st)"
+        Bot \<Rightarrow> bot | Lifted st \<Rightarrow> st)"
 
 lemma analyse_interval_demo2_result:
   "analyse_interval_demo2_env (STR ''b'') = Ivl (Fin 4) (Fin 4)"
@@ -166,7 +182,7 @@ definition analyse_interval_td_demo2_env :: "vname \<Rightarrow> ivl" where
      (case lookup_context
              (analyse_interval_td_result analyse_interval_demo2_prog)
              (cfg_exit (prog_cfg analyse_interval_demo2_prog)) () of
-        Unreachable \<Rightarrow> bot | Reachable st \<Rightarrow> st)"
+        Bot \<Rightarrow> bot | Lifted st \<Rightarrow> st)"
 
 lemma analyse_interval_td_demo2_result:
   "analyse_interval_td_demo2_env (STR ''b'') = Ivl (Fin 4) (Fin 4)"

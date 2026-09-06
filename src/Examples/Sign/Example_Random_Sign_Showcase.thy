@@ -103,7 +103,7 @@ text \<open>
   \<^const>\<open>analyse_sign_result_for\<close> is not a black box: it is exactly three named steps.
   \<^item> \<^const>\<open>prog_cfg\<close> compiles the source program to a CFG (\<^const>\<open>compile_prog\<close>).
   \<^item> \<^const>\<open>sctx_eqs_prog\<close> is \<^emph>\<open>the equation system generator\<close>: it applies
-    \<^const>\<open>side_cfg_T_eff_keyed_seed_dg_buffered\<close> to that CFG and the routed
+    \<^const>\<open>routed_node_rhs_buffered\<close> to that CFG and the routed
     D/G spec \<open>sctx_spec\<close>, producing one equation per CFG node and context.
   \<^item> \<^const>\<open>TD_side_always_join_Interp_solve\<close> is \<^emph>\<open>the vendored TD solver\<close>: it
     takes that equation system and a query node and computes a fixpoint,
@@ -160,7 +160,7 @@ lemma random_guard_node_sound:
   "ltr_collect random_guard_gs (prog_cfg random_guard_program)
      (cinit_stores random_guard_gs) v
    \<subseteq> \<lbrakk>case lookup_context (analyse_sign_result_for random_guard_gs random_guard_program) v () of
-          Unreachable \<Rightarrow> bot | Reachable st \<Rightarrow> st\<rbrakk>"
+          Bot \<Rightarrow> bot | Lifted st \<Rightarrow> st\<rbrakk>"
   by (rule analyse_sign_result_node_sound_for
         [OF random_guard_reserved random_guard_solver_terminates random_guard_entry_cov
             random_guard_fwd_ok random_guard_call_fwd_ok random_guard_comb_fwd_ok])
@@ -169,7 +169,7 @@ definition random_guard_env :: "vname \<Rightarrow> sign" where
   "random_guard_env =
      (case lookup_context (analyse_sign_result_for random_guard_gs random_guard_program)
              (cfg_exit (prog_cfg random_guard_program)) () of
-        Unreachable \<Rightarrow> bot | Reachable st \<Rightarrow> st)"
+        Bot \<Rightarrow> bot | Lifted st \<Rightarrow> st)"
 
 lemma random_guard_exec_y: "random_guard_env (STR ''y'') = SNonNeg"
   by (simp add: random_guard_env_def) eval
@@ -180,10 +180,10 @@ corollary random_guard_exit_sound:
    \<le> \<lbrakk>random_guard_env\<rbrakk>"
   unfolding random_guard_env_def
   using random_guard_node_sound
-  by (simp add: prog_main_name_def gamma_point_def split: point_state.splits)
+  by (simp add: prog_main_name_def gamma_point_def split: lifted.splits)
 
 text \<open>
-  Closing issue #43: for every concrete execution state that reaches the
+  For every concrete execution state that reaches the
   exit of \<open>random_guard_program\<close>, regardless of the value chosen by
   the nondeterministic call, \<open>y\<close> is nonnegative. \<open>random_guard_exit_sound\<close>
   over-approximates every such exit state by the computed

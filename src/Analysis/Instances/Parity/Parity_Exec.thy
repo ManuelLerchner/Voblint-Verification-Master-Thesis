@@ -1,5 +1,5 @@
 theory Parity_Exec
-  imports Voblint_Core.Exec_Refinement Voblint_Core.Numeric_Ops Parity_Transfer
+  imports "Voblint_Exec.Exec_Refinement" Numeric_Ops Parity_Transfer
 begin
 
 section \<open>Parity executable seam: transfer mirror and commutation\<close>
@@ -43,7 +43,7 @@ lemma fun_of_st_cinit_parity_st_for:
 
 subsection \<open>Classifier-parametric executable transfer\<close>
 
-text \<open>The executable mirror of \<open>parity_tf_for\<close>/\<open>enter_parity_for\<close>, parametric
+text \<open>The executable mirror of \<open>parity_tf_abs\<close>/\<open>enter_parity_for\<close>, parametric
   in the classifier, following the same pattern as \<open>sign_tf_st_for\<close>/
   \<open>sign_enter_st_for\<close> for the sign domain. Parity's branch transfer is the
   identity (\<open>branch_parity_def\<close>), so unlike the sign mirror there is no
@@ -51,7 +51,7 @@ text \<open>The executable mirror of \<open>parity_tf_for\<close>/\<open>enter_p
 
 text \<open>
   \<open>parity_ops\<close> bundles Parity's own primitives for the generic
-  \<open>generic_enter_st_for\<close> construction (\<^theory>\<open>Voblint_Core.Numeric_Ops\<close>), the
+  \<open>generic_enter_st_for\<close> construction (\<^theory>\<open>Voblint_Analysis.Numeric_Ops\<close>), the
   same way \<open>sign_ops\<close>/\<open>ivl_ops\<close> do for Sign/Interval. Parity's branch
   transfer is the identity, so unlike Sign/Interval there is no
   \<open>branch_parity_st_for\<close> to generalize -- only \<open>n_bfilter\<close>'s VALUE would be
@@ -63,15 +63,15 @@ definition parity_ops :: "parity numeric_ops" where
   "parity_ops = \<lparr> n_aval = aval_parity, n_bfilter = (\<lambda>_ _ _ s. s), n_top = PTop \<rparr>"
 
 definition parity_enter_st_for ::
-  "(vname => bool) => vname list => exp list =>
+  "(vname => bool) => call_info =>
    parity resolved_st_q => parity resolved_st_q" where
   "parity_enter_st_for = generic_enter_st_for parity_ops"
 
 lemma parity_enter_st_for_eq [simp]:
-  "parity_enter_st_for gs xs es s =
-    bind_formals_resolved_q gs xs
+  "parity_enter_st_for gs ci s =
+    bind_formals_resolved_q gs (ci_formals ci)
       (map (\<lambda>e. aval_parity e
-        (fun_of_resolved_st_q_for gs s)) es)
+        (fun_of_resolved_st_q_for gs s)) (ci_args ci))
       (enter_frame_D_resolved_q PTop s)"
   by (simp add: parity_enter_st_for_def generic_enter_st_for_def parity_ops_def)
 
@@ -92,59 +92,49 @@ fun parity_tf_st_for ::
                                    (aval_parity b (fun_of_resolved_st_q_for gs s)))"
   | "parity_tf_st_for gs (EA_Assume b) s = s"
   | "parity_tf_st_for gs (EA_AssumeNot b) s = s"
+  | "parity_tf_st_for gs (EA_Body p) s = s"
   | "parity_tf_st_for gs (EA_Ret None p) s = s"
   | "parity_tf_st_for gs (EA_Ret (Some a) p) s =
        update_resolved_st_q s (location_of gs ret_var)
          (aval_parity a (fun_of_resolved_st_q_for gs s))"
   | "parity_tf_st_for gs (EA_Check cnd) s = s"
 
-lemma parity_tf_st_for_reduces: "action_reduces (parity_tf_st_for gs)"
-  by unfold_locales (rule ext, simp)+
-
 theorem parity_tf_st_for_commute:
   "fun_of_resolved_st_q_for gs (parity_tf_st_for gs a s) =
-   apply_tf (parity_tf_for gs) a (fun_of_resolved_st_q_for gs s)"
-proof (rule apply_tf_wrap_eqI[
-    where H = "\<lambda>f. f (fun_of_resolved_st_q_for gs s)"])
-  show "fun_of_resolved_st_q_for gs (parity_tf_st_for gs EA_Nop s) =
-      apply_tf (parity_tf_for gs) EA_Nop (fun_of_resolved_st_q_for gs s)"
-    by (simp add: parity_tf_for_def skip_parity_def)
-  show "\<And>x e. fun_of_resolved_st_q_for gs
-      (parity_tf_st_for gs (EA_Assign x e) s) =
-    apply_tf (parity_tf_for gs) (EA_Assign x e) (fun_of_resolved_st_q_for gs s)"
-    by (simp add: parity_tf_for_def assign_parity_def)
-  show "\<And>sc x. fun_of_resolved_st_q_for gs
-      (parity_tf_st_for gs (EA_Special sc x) s) =
-    apply_tf (parity_tf_for gs) (EA_Special sc x) (fun_of_resolved_st_q_for gs s)"
-    by (auto simp: parity_tf_for_def split: special_call.splits)
-  show "\<And>b. fun_of_resolved_st_q_for gs
-      (parity_tf_st_for gs (EA_Assume b) s) =
-    apply_tf (parity_tf_for gs) (EA_Assume b) (fun_of_resolved_st_q_for gs s)"
-    by (simp add: parity_tf_for_def branch_parity_def)
-  show "\<And>b. fun_of_resolved_st_q_for gs
-      (parity_tf_st_for gs (EA_AssumeNot b) s) =
-    apply_tf (parity_tf_for gs) (EA_AssumeNot b)
-      (fun_of_resolved_st_q_for gs s)"
-    by (simp add: parity_tf_for_def branch_parity_def)
-  show "\<And>ea p. fun_of_resolved_st_q_for gs
-      (parity_tf_st_for gs (EA_Ret ea p) s) =
-    apply_tf (parity_tf_for gs) (EA_Ret ea p) (fun_of_resolved_st_q_for gs s)"
-  proof -
-    fix ea p
-    show "fun_of_resolved_st_q_for gs (parity_tf_st_for gs (EA_Ret ea p) s) =
-      apply_tf (parity_tf_for gs) (EA_Ret ea p) (fun_of_resolved_st_q_for gs s)"
-    proof (cases ea)
-      case None
-      then show ?thesis by (simp add: parity_tf_for_def skip_parity_def return_parity_def)
-    next
-      case (Some a)
-      then show ?thesis by (simp add: parity_tf_for_def return_parity_def assign_parity_def)
-    qed
+   parity_tf_abs a (fun_of_resolved_st_q_for gs s)"
+proof (cases a)
+  case EA_Nop
+  then show ?thesis by (simp add: skip_parity_def)
+next
+  case (EA_Assign x e)
+  then show ?thesis by (simp add: assign_parity_def)
+next
+  case (EA_Special sc x)
+  then show ?thesis by (auto split: special_call.splits)
+next
+  case (EA_Assume b)
+  then show ?thesis by (simp add: branch_parity_def)
+next
+  case (EA_AssumeNot b)
+  then show ?thesis by (simp add: branch_parity_def)
+next
+  case (EA_Body p)
+  then show ?thesis by (simp add: body_parity_def)
+next
+  case (EA_Ret ea p)
+  then show ?thesis
+  proof (cases ea)
+    case None
+    then show ?thesis using \<open>a = EA_Ret ea p\<close>
+      by (simp add: skip_parity_def return_parity_def)
+  next
+    case (Some av)
+    then show ?thesis using \<open>a = EA_Ret ea p\<close>
+      by (simp add: return_parity_def assign_parity_def)
   qed
-  show "\<And>c. fun_of_resolved_st_q_for gs
-      (parity_tf_st_for gs (EA_Check c) s) =
-    apply_tf (parity_tf_for gs) (EA_Check c) (fun_of_resolved_st_q_for gs s)"
-    by (simp add: parity_tf_for_def event_parity_def)
+next
+  case (EA_Check c)
+  then show ?thesis by (simp add: event_parity_def)
 qed
 
 lemma enter_frame_parity_st_for_commute:
@@ -153,10 +143,11 @@ lemma enter_frame_parity_st_for_commute:
   by (simp add: enter_frame_parity_for_def)
 
 lemma parity_enter_st_for_commute:
-  "fun_of_resolved_st_q_for gs (parity_enter_st_for gs xs es s) =
-   enter\<^sup># (parity_tf_for gs) xs es (fun_of_resolved_st_q_for gs s)"
-  by (simp add: parity_tf_for_def enter_parity_for_def enter_D_def
-                enter_frame_parity_for_def enter_frame_parity_st_for_commute)
+  "fun_of_resolved_st_q_for gs (parity_enter_st_for gs ci s) =
+   enter_parity_ci_for gs ci (fun_of_resolved_st_q_for gs s)"
+  by (simp add: enter_parity_ci_for_def enter_parity_for_def enter_binding_def
+                enter_frame_def enter_frame_parity_for_def enter_frame_parity_st_for_commute
+                fun_of_resolved_st_q_for_enter_frame)
 
 text \<open>The Nop/Assign executable-abstract correspondence facts, mirroring
   \<open>sign_tf_st_for_nop_agree\<close>/\<open>sign_tf_st_for_assign_agree\<close> for the sign
@@ -171,8 +162,8 @@ lemma parity_tf_st_for_nop_agree:
     and location_in: "location \<in> universe"
   shows
     "lookup_resolved_st_q (parity_tf_st_for gs EA_Nop s_exec) location =
-      apply_tf (parity_tf_for gs) EA_Nop s_abs (location_vname location)"
-  using agree[OF location_in] by (simp add: parity_tf_for_def skip_parity_def)
+      parity_tf_abs EA_Nop s_abs (location_vname location)"
+  using agree[OF location_in] by (simp add: skip_parity_def)
 
 lemma parity_tf_st_for_assign_agree:
   fixes y :: vname and a :: exp
@@ -183,11 +174,11 @@ lemma parity_tf_st_for_assign_agree:
     and canonical: "location = location_of gs (location_vname location)"
   shows
     "lookup_resolved_st_q (parity_tf_st_for gs (EA_Assign y a) s_exec) location =
-      apply_tf (parity_tf_for gs) (EA_Assign y a) s_abs (location_vname location)"
+      parity_tf_abs (EA_Assign y a) s_abs (location_vname location)"
 proof (cases "location_vname location = y")
   case True
   then have "location = location_of gs y" using canonical by simp
-  then show ?thesis using val_agree True by (simp add: parity_tf_for_def assign_parity_def)
+  then show ?thesis using val_agree True by (simp add: assign_parity_def)
 next
   case False
   have neq: "location \<noteq> location_of gs y"
@@ -197,7 +188,7 @@ next
     with False show False by simp
   qed
   show ?thesis
-    using agree[OF location_in] neq False by (simp add: parity_tf_for_def assign_parity_def)
+    using agree[OF location_in] neq False by (simp add: assign_parity_def)
 qed
 
 text \<open>Parity's branch transfer is the identity on both sides (\<open>branch_parity_def\<close>,
@@ -211,8 +202,8 @@ lemma parity_tf_st_for_assume_agree:
     and location_in: "location \<in> universe"
   shows
     "lookup_resolved_st_q (parity_tf_st_for gs (EA_Assume b) s_exec) location =
-      apply_tf (parity_tf_for gs) (EA_Assume b) s_abs (location_vname location)"
-  using agree[OF location_in] by (simp add: parity_tf_for_def branch_parity_def)
+      parity_tf_abs (EA_Assume b) s_abs (location_vname location)"
+  using agree[OF location_in] by (simp add: branch_parity_def)
 
 lemma parity_tf_st_for_assume_not_agree:
   fixes s_exec :: "parity resolved_st_q" and s_abs :: "parity abs_state"
@@ -221,8 +212,8 @@ lemma parity_tf_st_for_assume_not_agree:
     and location_in: "location \<in> universe"
   shows
     "lookup_resolved_st_q (parity_tf_st_for gs (EA_AssumeNot b) s_exec) location =
-      apply_tf (parity_tf_for gs) (EA_AssumeNot b) s_abs (location_vname location)"
-  using agree[OF location_in] by (simp add: parity_tf_for_def branch_parity_def)
+      parity_tf_abs (EA_AssumeNot b) s_abs (location_vname location)"
+  using agree[OF location_in] by (simp add: branch_parity_def)
 
 lemma parity_tf_st_for_ret_none_agree:
   fixes s_exec :: "parity resolved_st_q" and s_abs :: "parity abs_state"
@@ -231,9 +222,10 @@ lemma parity_tf_st_for_ret_none_agree:
     and location_in: "location \<in> universe"
   shows
     "lookup_resolved_st_q (parity_tf_st_for gs (EA_Ret None p) s_exec) location =
-      apply_tf (parity_tf_for gs) (EA_Ret None p) s_abs (location_vname location)"
+      parity_tf_abs (EA_Ret None p) s_abs (location_vname location)"
   using parity_tf_st_for_nop_agree[OF agree location_in]
-  by (simp add: parity_tf_for_def skip_parity_def return_parity_def)
+  by (simp add: skip_parity_def return_parity_def)
+
 
 
 end

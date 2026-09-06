@@ -1,9 +1,7 @@
 theory State_Report_GraphViz
   imports
     "Voblint_Analysis.Analysis_GraphViz"
-    "Voblint_Analysis.Sign_Print"
-    "Voblint_Analysis.Interval_Print"
-    "Voblint_Analysis.Int_Print"
+    "Voblint_Analysis.Int_Domain"
     Analyse_Dispatch
 begin
 
@@ -12,16 +10,16 @@ text \<open>
   \<^const>\<open>classify_checks\<close> report through \<^const>\<open>check_report_node_annotation\<close>.
   This is the same idea over \<open>analyse_with_state\<close>'s richer report: the
   rendered label gains one line per queried variable, printed through the
-  same domain print functions (\<open>string_of_sign\<close>, \<open>string_of_ivl\<close>) the
-  standalone \<open>Sign_Print\<close>/\<open>Interval_Print\<close> theories already export, so the
-  DOT rendering shows a real solved state rather than a hand-built one.
+  same \<^const>\<open>to_string\<close> every \<^class>\<open>executable_domain\<close> instance already
+  carries, so the DOT rendering shows a real solved state rather than a
+  hand-built one.
 \<close>
 
 fun string_of_abstract_value :: "abstract_value \<Rightarrow> string" where
-  "string_of_abstract_value (SignValue s) = string_of_sign s"
-| "string_of_abstract_value (IntervalValue i) = string_of_ivl i"
-| "string_of_abstract_value (IntDomValue d) = string_of_int_dom d"
-| "string_of_abstract_value (ParityValue v) = string_of_parity v"
+  "string_of_abstract_value (SignValue s) = to_string s"
+| "string_of_abstract_value (IntervalValue i) = to_string i"
+| "string_of_abstract_value (IntDomValue d) = to_string d"
+| "string_of_abstract_value (ParityValue v) = to_string v"
 
 text \<open>
   Used only to suppress an uninformative return-slot line: a \<^const>\<open>top\<close>
@@ -66,7 +64,7 @@ text \<open>
   Every renderer below needs the same thing from a solved table: the state at a point, as
   the uniform \<^typ>\<open>abstract_value\<close> view rather than the domain's own carrier. Stating that
   projection once means a dispatcher names a table and an injector and nothing else --- the
-  \<^const>\<open>map_point_state\<close>/\<^const>\<open>lookup_context\<close> pairing is not restated per domain, per
+  \<^const>\<open>map_lift\<close>/\<^const>\<open>lookup_context\<close> pairing is not restated per domain, per
   solver, and per context mode.
 
   What cannot be factored out is the dispatch itself. \<^typ>\<open>analysis_domain\<close> is a runtime
@@ -78,8 +76,8 @@ text \<open>
 
 definition project_env ::
     "('a \<Rightarrow> abstract_value) \<Rightarrow> (unit, 'a abs_state) analysis_result
-       \<Rightarrow> pp \<Rightarrow> abstract_value abs_state point_state" where
-  "project_env into r v = map_point_state (\<lambda>st. into \<circ> st) (lookup_context r v ())"
+       \<Rightarrow> pp \<Rightarrow> abstract_value abs_state lifted" where
+  "project_env into r v = map_lift (\<lambda>st. into \<circ> st) (lookup_context r v ())"
 
 text \<open>
   The context-sensitive counterpart: \<^const>\<open>lookup_joined_state\<close> joins the contexts covering
@@ -89,9 +87,9 @@ text \<open>
 
 definition project_joined_env ::
     "('a::semilattice_sup \<Rightarrow> abstract_value) \<Rightarrow> ('ctx, 'a abs_state) analysis_result
-       \<Rightarrow> pp \<Rightarrow> abstract_value abs_state point_state" where
+       \<Rightarrow> pp \<Rightarrow> abstract_value abs_state lifted" where
   "project_joined_env into r v =
-     map_point_state (\<lambda>st. into \<circ> st) (lookup_joined_state r v)"
+     map_lift (\<lambda>st. into \<circ> st) (lookup_joined_state r v)"
 
 definition program_vars :: "imp_prog \<Rightarrow> vname list" where
   "program_vars p =
@@ -104,12 +102,12 @@ text \<open>One point's state as the lines a document shows, unreachability incl
   the same rendering a node label carries, so a state reads the same wherever it
   appears.\<close>
 
-definition point_state_lines ::
-    "vname list \<Rightarrow> abstract_value abs_state point_state \<Rightarrow> String.literal list" where
-  "point_state_lines vars st =
+definition point_lines ::
+    "vname list \<Rightarrow> abstract_value abs_state lifted \<Rightarrow> String.literal list" where
+  "point_lines vars st =
      (case st of
-        Unreachable \<Rightarrow> [STR ''unreachable'']
-      | Reachable s \<Rightarrow> map (\<lambda>x. String.implode (state_line s x)) vars)"
+        Bot \<Rightarrow> [STR ''unreachable'']
+      | Lifted s \<Rightarrow> map (\<lambda>x. String.implode (state_line s x)) vars)"
 
 definition state_report_node_annotation ::
     "vname list \<Rightarrow> (pp \<times> exp \<times> check_result \<times> (vname \<Rightarrow> abstract_value)) list
@@ -176,7 +174,7 @@ text \<open>
   \<^const>\<open>analyse_with_state\<close>'s report, which \<^const>\<open>classify_checks_with_state\<close>
   only ever populates at check nodes), so every non-check node renders with no
   state at all. \<open>full_state_graph_snapshot_auto\<close> (defined below, once
-  \<open>point_state_node_annotation\<close> is in scope) instead queries the solved
+  \<open>point_node_annotation\<close> is in scope) instead queries the solved
   \<^type>\<open>analysis_result\<close> table directly at \<^emph>\<open>every\<close> \<^typ>\<open>pp\<close>, so the
   annotation exists independently of whether that point happens to carry a
   check.
@@ -192,9 +190,9 @@ text \<open>
   the table's own per-node view: it joins exactly the covered contexts, each
   read at its own key, through \<^typ>\<open>ivl\<close>'s \<^class>\<open>semilattice_sup\<close>.
 
-  That join answers with a \<^typ>\<open>'a point_state\<close>, and both of its cases are
+  That join answers with a \<^typ>\<open>'a lifted\<close>, and both of its cases are
   rendered. A node the solver never covered and a node whose every covered
-  context concretizes to nothing are alike \<^const>\<open>Unreachable\<close>: no execution
+  context concretizes to nothing are alike \<^const>\<open>Bot\<close>: no execution
   arrives, so there is no store to print variable lines for. Printing the
   underlying \<^const>\<open>bot\<close> reading instead would draw an ordinary live node for
   code nothing reaches.
@@ -202,14 +200,14 @@ text \<open>
 
 definition entry_state_point_env_at ::
     "(ivl list, ivl abs_state) analysis_result
-       \<Rightarrow> pp \<Rightarrow> abstract_value abs_state point_state" where
+       \<Rightarrow> pp \<Rightarrow> abstract_value abs_state lifted" where
   "entry_state_point_env_at r v =
-     map_point_state (\<lambda>st. IntervalValue \<circ> st) (lookup_joined_state r v)"
+     map_lift (\<lambda>st. IntervalValue \<circ> st) (lookup_joined_state r v)"
 
 text \<open>
   The domain-dispatching sibling, and the reason the collapsed entry-state renderings can
   be shared at all: \<^const>\<open>lookup_joined_state\<close> joins a point's covered contexts away, so
-  what reaches the renderer is an ordinary per-node \<^typ>\<open>'a abs_state point_state\<close> with no
+  what reaches the renderer is an ordinary per-node \<^typ>\<open>'a abs_state lifted\<close> with no
   context type left in it. Projecting that into \<^typ>\<open>abstract_value\<close> --- exactly as
   \<open>analyse_point_env_for\<close> already does for the monovariant tables --- removes the
   last domain-dependence, so Sign, Interval and Int share one renderer here.
@@ -217,12 +215,12 @@ text \<open>
   \<open>r\<close> is bound outside the returned \<open>\<lambda>\<close> for the usual single-solve reason: a caller that
   partially applies this once solves the program once, however many nodes it renders.
   \<^const>\<open>Parity_Analysis\<close> has no entry-state instance, so it answers
-  \<^const>\<open>Unreachable\<close> --- unreachable in practice, since \<^const>\<open>resolve_analysis_config\<close>
+  \<^const>\<open>Bot\<close> --- unreachable in practice, since \<^const>\<open>resolve_analysis_config\<close>
   rejects that combination before any renderer is called.
 \<close>
 
 definition entry_state_point_env_for ::
-    "analysis_domain \<Rightarrow> imp_prog \<Rightarrow> pp \<Rightarrow> abstract_value abs_state point_state" where
+    "analysis_domain \<Rightarrow> imp_prog \<Rightarrow> pp \<Rightarrow> abstract_value abs_state lifted" where
   "entry_state_point_env_for kind p =
      (case kind of
         Sign_Analysis \<Rightarrow>
@@ -231,7 +229,7 @@ definition entry_state_point_env_for ::
           project_joined_env IntervalValue (analyse_interval_entry_state_result p)
       | Int_Analysis \<Rightarrow>
           project_joined_env IntDomValue (analyse_int_entry_state_result_warrow p)
-      | Parity_Analysis \<Rightarrow> (\<lambda>_. Unreachable))"
+      | Parity_Analysis \<Rightarrow> (\<lambda>_. Bot))"
 
 text \<open>
   \<^const>\<open>NS_Unreachable\<close> is a distinct status, not a shade of the undecided one:
@@ -248,21 +246,21 @@ definition dead_check_annotation :: "exp \<Rightarrow> graphviz_node_annotation"
      Node_Annotation (''check '' @ string_of_exp 0 cnd @ '' [dead]'') NS_Unreachable"
 
 text \<open>
-  The shared full-state renderer for every \<^typ>\<open>'a point_state\<close>-valued
+  The shared full-state renderer for every \<^typ>\<open>'a lifted\<close>-valued
   monovariant or entry-state env: the same variable lines and the same
-  default \<open>lightgreen\<close> styling at a \<^const>\<open>Reachable\<close> node, the shared
+  default \<open>lightgreen\<close> styling at a \<^const>\<open>Lifted\<close> node, the shared
   \<^const>\<open>unreachable_state_annotation\<close> where there is no state to print. A
   point never gets its underlying \<^const>\<open>bot\<close> reading rendered as though it
   were an ordinary live state.
 \<close>
 
-definition point_state_node_annotation ::
-    "vname list \<Rightarrow> (pp \<Rightarrow> abstract_value abs_state point_state)
+definition point_node_annotation ::
+    "vname list \<Rightarrow> (pp \<Rightarrow> abstract_value abs_state lifted)
        \<Rightarrow> pp \<Rightarrow> graphviz_node_annotation option" where
-  "point_state_node_annotation vars env v =
+  "point_node_annotation vars env v =
      (case env v of
-        Unreachable \<Rightarrow> Some unreachable_state_annotation
-      | Reachable st \<Rightarrow>
+        Bot \<Rightarrow> Some unreachable_state_annotation
+      | Lifted st \<Rightarrow>
           Some (Node_Annotation (join_gv_nl (map (state_line st) vars)) NS_Plain))"
 
 text \<open>
@@ -277,18 +275,18 @@ text \<open>
   though each of those is itself already solved exactly once per partial
   application. Binding \<open>r\<close> here, outside the returned \<open>\<lambda>v\<close>, means a caller
   that partially applies \<open>analyse_point_env_for kind p\<close> once (every current
-  caller does: \<^const>\<open>point_state_node_annotation\<close> reuses the same closure
+  caller does: \<^const>\<open>point_node_annotation\<close> reuses the same closure
   across every CFG node) solves the selected analysis exactly once,
   regardless of how many nodes it renders. A node the solver's key domain
   never covers and a node whose stored state is witness-bottom are alike
-  \<^const>\<open>Unreachable\<close> at the \<^const>\<open>lookup_context\<close> boundary, the same
+  \<^const>\<open>Bot\<close> at the \<^const>\<open>lookup_context\<close> boundary, the same
   distinction \<open>entry_state_point_env_at\<close> already reads for the entry-state
   graph -- so this is that same reading applied to the monovariant tables,
   not a second convention.
 \<close>
 
 definition analyse_point_env_for ::
-    "analysis_domain \<Rightarrow> imp_prog \<Rightarrow> pp \<Rightarrow> abstract_value abs_state point_state" where
+    "analysis_domain \<Rightarrow> imp_prog \<Rightarrow> pp \<Rightarrow> abstract_value abs_state lifted" where
   "analyse_point_env_for kind p =
      (case kind of
         Sign_Analysis \<Rightarrow> project_env SignValue (analyse_sign_result p)
@@ -303,7 +301,7 @@ text \<open>The whole-table counterpart of \<open>state_report_graph_snapshot_au
 definition full_state_graph_snapshot_auto :: "analysis_domain \<Rightarrow> imp_prog \<Rightarrow> String.literal" where
   "full_state_graph_snapshot_auto kind p =
      raw_cfg_canonical_text_lit (prog_table p) (prog_procs p)
-       (point_state_node_annotation (program_vars p) (analyse_point_env_for kind p))"
+       (point_node_annotation (program_vars p) (analyse_point_env_for kind p))"
 
 text \<open>
   The structured-export siblings. Same report, same annotation hook, same single solve per
@@ -322,11 +320,11 @@ definition state_report_export_auto :: "analysis_domain \<Rightarrow> imp_prog \
 definition full_state_export_auto :: "analysis_domain \<Rightarrow> imp_prog \<Rightarrow> export_graph" where
   "full_state_export_auto kind p =
      raw_cfg_export (prog_table p) (prog_procs p)
-       (point_state_node_annotation (program_vars p) (analyse_point_env_for kind p))"
+       (point_node_annotation (program_vars p) (analyse_point_env_for kind p))"
 
 text \<open>
   Neither existing annotation carries what a report browser needs at once.
-  \<^const>\<open>point_state_node_annotation\<close> has a state at every point but no verdicts;
+  \<^const>\<open>point_node_annotation\<close> has a state at every point but no verdicts;
   \<^const>\<open>state_report_node_annotation\<close> has verdicts but only at check nodes, and nothing
   anywhere else. This one is their join: the state everywhere, and at a point that carries
   a check, that check's \<^typ>\<open>node_status\<close> in place of \<^const>\<open>NS_Plain\<close>, so a refuted check
@@ -338,12 +336,12 @@ text \<open>
 \<close>
 
 definition full_state_checked_node_annotation ::
-    "vname list \<Rightarrow> (pp \<Rightarrow> abstract_value abs_state point_state)
+    "vname list \<Rightarrow> (pp \<Rightarrow> abstract_value abs_state lifted)
        \<Rightarrow> (pp \<times> exp \<times> check_result) list \<Rightarrow> pp \<Rightarrow> graphviz_node_annotation option" where
   "full_state_checked_node_annotation vars env verdicts v =
      (case env v of
-        Unreachable \<Rightarrow> Some unreachable_state_annotation
-      | Reachable st \<Rightarrow>
+        Bot \<Rightarrow> Some unreachable_state_annotation
+      | Lifted st \<Rightarrow>
           (let lines = map (state_line st) vars
            in case find (\<lambda>entry. fst entry = v) verdicts of
                 None \<Rightarrow> Some (Node_Annotation (join_gv_nl lines) NS_Plain)
@@ -372,28 +370,28 @@ text \<open>
 definition checked_payload_of ::
     "('a \<Rightarrow> abstract_value) \<Rightarrow> (exp \<Rightarrow> 'a abs_state \<Rightarrow> check_result) \<Rightarrow> 'a abs_state
        \<Rightarrow> (unit, 'a abs_state) analysis_result
-       \<Rightarrow> (String.literal \<times> 'a abs_state point_state) list \<Rightarrow> imp_prog
+       \<Rightarrow> (String.literal \<times> 'a abs_state lifted) list \<Rightarrow> imp_prog
        \<Rightarrow> export_graph \<times> (pp \<times> exp \<times> check_result \<times> bool \<times> abstract_value abs_state) list
             \<times> (String.literal \<times> String.literal list) list"
 where
   "checked_payload_of into classify bot_state r globals p =
      (let full = classify_checks_with_state (prog_cfg p)
                    (\<lambda>v. case lookup_context r v () of
-                          Unreachable \<Rightarrow> (True, bot_state)
-                        | Reachable st \<Rightarrow> (False, st))
+                          Bot \<Rightarrow> (True, bot_state)
+                        | Lifted st \<Rightarrow> (False, st))
                    (\<lambda>c (_, s). classify c s)
       in (raw_cfg_export (prog_table p) (prog_procs p)
             (full_state_checked_node_annotation (program_vars p) (project_env into r)
                (map (\<lambda>(u, c, res, _, _). (u, c, res)) full)),
           map (\<lambda>(u, c, res, unr, st). (u, c, res, unr, into \<circ> st)) full,
           map (\<lambda>(k, st).
-                 (k, point_state_lines (program_vars p)
-                       (map_point_state (\<lambda>s. into \<circ> s) st)))
+                 (k, point_lines (program_vars p)
+                       (map_lift (\<lambda>s. into \<circ> s) st)))
               globals))"
 
 text \<open>
   Dropping the two published columns leaves the plain check report. The
-  state-carrying traversal reads \<^const>\<open>Unreachable\<close> into a flag beside the state
+  state-carrying traversal reads \<^const>\<open>Bot\<close> into a flag beside the state
   and classifies from the state alone, so a verdict never depends on the extra
   column --- which is what lets a payload's verdicts be compared against the
   verdict-only dispatchers below rather than trusted to agree.
@@ -402,11 +400,11 @@ text \<open>
 lemma map_classify_checks_with_state_flagged:
   "map ((\<lambda>(u, c, res, _, _). (u, c, res)) \<circ> (\<lambda>(u, c, res, unr, st). (u, c, res, unr, h st)))
      (classify_checks_with_state g
-        (\<lambda>v. case q v of Unreachable \<Rightarrow> (True, b) | Reachable st \<Rightarrow> (False, st))
+        (\<lambda>v. case q v of Bot \<Rightarrow> (True, b) | Lifted st \<Rightarrow> (False, st))
         (\<lambda>c (_, s). classify c s))
-   = classify_checks g (\<lambda>v. case q v of Unreachable \<Rightarrow> b | Reachable st \<Rightarrow> st) classify"
+   = classify_checks g (\<lambda>v. case q v of Bot \<Rightarrow> b | Lifted st \<Rightarrow> st) classify"
   by (simp add: classify_checks_with_state_def classify_checks_def comp_def case_prod_beta
-      split: point_state.split)
+      split: lifted.split)
 
 text \<open>
   Each branch reads its domain's \<open>ctx_solved_for\<close> pair rather than the result table
@@ -471,7 +469,7 @@ definition entry_state_full_state_graph_snapshot_auto ::
     "analysis_domain \<Rightarrow> imp_prog \<Rightarrow> String.literal" where
   "entry_state_full_state_graph_snapshot_auto kind p =
      raw_cfg_canonical_text_lit (prog_table p) (prog_procs p)
-       (point_state_node_annotation (program_vars p) (entry_state_point_env_for kind p))"
+       (point_node_annotation (program_vars p) (entry_state_point_env_for kind p))"
 
 text \<open>
   \<open>entry_state_report_for_annotation\<close> pairs each domain's own source-level verdicts with
@@ -502,7 +500,7 @@ subsection \<open>Global unknowns of a context-sensitive solve\<close>
 
 text \<open>
   A seed's payload is readable off the local table, so this needs no second solve:
-  \<open>routed_extra_g\<close> answers a callee entry's local from
+  \<open>routed_entry_seed_tree\<close> answers a callee entry's local from
   \<^term>\<open>locals (sigma (Inr (seed_key v ctx)))\<close>, which makes
   \<^term>\<open>lookup_context r (FunctionEntry f) ctx\<close> that seed rather than a summary of it.
 
@@ -540,8 +538,8 @@ definition ctx_seed_globals ::
        (map (\<lambda>f.
                map (\<lambda>c.
                       (STR ''enter '' + f + STR '' @ '' + String.implode (show_ctx c),
-                       point_state_lines (program_vars p)
-                         (map_point_state (\<lambda>st. into \<circ> st)
+                       point_lines (program_vars p)
+                         (map_lift (\<lambda>st. into \<circ> st)
                            (lookup_context r (FunctionEntry f) c))))
                    (ordered_by_key ckey (contexts_at r (FunctionEntry f))))
             (prog_main_name # prog_procs p))"
@@ -631,7 +629,7 @@ definition cs_globals_for ::
 
 definition entry_state_report_for_annotation ::
     "analysis_domain \<Rightarrow> imp_prog
-       \<Rightarrow> (pp \<times> exp \<times> contextual_verdict \<times> abstract_value abs_state point_state) list" where
+       \<Rightarrow> (pp \<times> exp \<times> contextual_verdict \<times> abstract_value abs_state lifted) list" where
   "entry_state_report_for_annotation kind p =
      (let env = entry_state_point_env_for kind p
       in map (\<lambda>(v, cnd, verdict). (v, cnd, verdict, env v))
@@ -642,21 +640,21 @@ text \<open>
   A decided check at a reachable node renders exactly as before, through
   \<^const>\<open>check_result_annotation\<close> plus the state lines. The remaining case is
   the dead check, and it is one case, not two: a verdict is \<^const>\<open>Dead\<close>
-  exactly when every context covered at the node is \<^const>\<open>Unreachable\<close>, which
+  exactly when every context covered at the node is \<^const>\<open>Bot\<close>, which
   is also exactly when the joined state is, so the two columns cannot
   disagree.
 \<close>
 
 definition verdict_state_report_node_annotation ::
     "vname list
-       \<Rightarrow> (pp \<times> exp \<times> contextual_verdict \<times> abstract_value abs_state point_state) list
+       \<Rightarrow> (pp \<times> exp \<times> contextual_verdict \<times> abstract_value abs_state lifted) list
        \<Rightarrow> pp \<Rightarrow> graphviz_node_annotation option" where
   "verdict_state_report_node_annotation vars report v =
      (case find (\<lambda>entry. fst entry = v) report of
         None \<Rightarrow> None
       | Some (_, cnd, verdict, st) \<Rightarrow>
           Some (case (verdict, st) of
-                  (Decided res, Reachable f) \<Rightarrow>
+                  (Decided res, Lifted f) \<Rightarrow>
                     (case check_result_annotation res cnd of
                        Node_Annotation lbl status \<Rightarrow>
                          Node_Annotation (join_gv_nl (lbl # map (state_line f) vars)) status)
@@ -680,7 +678,7 @@ definition entry_state_full_state_export_auto ::
     "analysis_domain \<Rightarrow> imp_prog \<Rightarrow> export_graph" where
   "entry_state_full_state_export_auto kind p =
      raw_cfg_export (prog_table p) (prog_procs p)
-       (point_state_node_annotation (program_vars p) (entry_state_point_env_for kind p))"
+       (point_node_annotation (program_vars p) (entry_state_point_env_for kind p))"
 
 text \<open>
   The entry-state counterpart of \<^const>\<open>full_state_checked_payload_auto\<close>. Without it a
@@ -688,7 +686,7 @@ text \<open>
   reader opens a check node for.
 
   \<^const>\<open>full_state_checked_node_annotation\<close> is reused unchanged by dropping the
-  \<^const>\<open>Dead\<close> verdicts on the way in: a dead check's point is \<^const>\<open>Unreachable\<close> in the
+  \<^const>\<open>Dead\<close> verdicts on the way in: a dead check's point is \<^const>\<open>Bot\<close> in the
   joined state as well, so the annotation reaches the same conclusion from the env alone.
   The two columns cannot disagree --- a verdict is \<^const>\<open>Dead\<close> exactly when every context
   covered at the node is unreachable, which is exactly when the join is.
@@ -842,7 +840,7 @@ text \<open>
 text \<open>
   The state source is \<^const>\<open>lookup_context\<close> at the node's own key, so the
   solution the builder is handed is already the result table, not the
-  solver's map. \<^const>\<open>Inr\<close> is answered \<^const>\<open>Unreachable\<close>: the entry-state
+  solver's map. \<^const>\<open>Inr\<close> is answered \<^const>\<open>Bot\<close>: the entry-state
   system carries every program variable in the local unknown, so its
   solver-global slots hold no program state to draw, and
   \<^const>\<open>contextual_result_domain\<close> contributes no \<^const>\<open>GlobalNode\<close> keys either.
@@ -850,14 +848,14 @@ text \<open>
 
 definition entry_state_ctx_sol ::
     "(ivl list, ivl abs_state) analysis_result
-       \<Rightarrow> pp \<times> ivl list + gk \<Rightarrow> ivl abs_state point_state" where
+       \<Rightarrow> pp \<times> ivl list + (unit, ivl list) routed_gk \<Rightarrow> ivl abs_state lifted" where
   "entry_state_ctx_sol r k =
-     (case k of Inl (v, ctx) \<Rightarrow> lookup_context r v ctx | Inr _ \<Rightarrow> Unreachable)"
+     (case k of Inl (v, ctx) \<Rightarrow> lookup_context r v ctx | Inr _ \<Rightarrow> Bot)"
 
 text \<open>
   The routing hook ignores its call site and its caller context, matching
   \<^const>\<open>entry_state_route_gen\<close>, and takes the caller's own reachability case
-  split before routing: an \<^const>\<open>Unreachable\<close> caller answers \<^const>\<open>None\<close>
+  split before routing: an \<^const>\<open>Bot\<close> caller answers \<^const>\<open>None\<close>
   directly, so \<^const>\<open>analysis_enter_edges\<close> and \<^const>\<open>analysis_combine_edges\<close>
   draw no edge at all, and \<^const>\<open>entry_state_callee_ctx\<close> is never applied to a
   state that represents nothing. This is a structural absence, not a
@@ -868,13 +866,13 @@ text \<open>
 \<close>
 
 definition entry_state_ctx_route ::
-    "imp_prog \<Rightarrow> pp \<Rightarrow> ivl list \<Rightarrow> call_action \<Rightarrow> ivl abs_state point_state \<Rightarrow> ivl list option" where
+    "imp_prog \<Rightarrow> pp \<Rightarrow> ivl list \<Rightarrow> call_action \<Rightarrow> ivl abs_state lifted \<Rightarrow> ivl list option" where
   "entry_state_ctx_route p u ctx ca d =
-     (case d of Unreachable \<Rightarrow> None
-      | Reachable st \<Rightarrow> entry_state_callee_ctx (declared_global p) ca st)"
+     (case d of Bot \<Rightarrow> None
+      | Lifted st \<Rightarrow> entry_state_callee_ctx (declared_global p) ca st)"
 
 definition entry_state_ctx_graph_config ::
-    "imp_prog \<Rightarrow> (ivl list, gk, ivl abs_state point_state, ivl abs_state point_state)
+    "imp_prog \<Rightarrow> (ivl list, (unit, ivl list) routed_gk, ivl abs_state lifted, ivl abs_state lifted)
        analysis_graph_config" where
   "entry_state_ctx_graph_config p =
     \<lparr> local_of = id,
@@ -888,11 +886,11 @@ definition entry_state_ctx_graph_config ::
         scope_return_slot (compiled_procedure_scope (declared_global p) (prog_table p) (prog_procs p) (prog_cfg p) v)),
       globals_to_show = [],
       show_local = (\<lambda>v ctx vars d.
-        case d of Unreachable \<Rightarrow> [''unreachable'']
-        | Reachable st \<Rightarrow> map (\<lambda>x. String.explode x @ ''='' @ string_of_ivl (st x)) vars),
+        case d of Bot \<Rightarrow> [''unreachable'']
+        | Lifted st \<Rightarrow> map (\<lambda>x. String.explode x @ ''='' @ string_of_ivl (st x)) vars),
       format_return = (\<lambda>v ctx ret d.
-        case d of Unreachable \<Rightarrow> []
-        | Reachable st \<Rightarrow>
+        case d of Bot \<Rightarrow> []
+        | Lifted st \<Rightarrow>
             if st ret = ivl_top then [] else [''ret='' @ string_of_ivl (st ret)]),
       show_global = (\<lambda>k vars s. []),
       show_global_key = (\<lambda>k. ''Global''),
@@ -945,7 +943,7 @@ text \<open>
 \<close>
 
 definition entry_state_ctx_annotated_config ::
-    "imp_prog \<Rightarrow> (ivl list, gk, ivl abs_state point_state, ivl abs_state point_state)
+    "imp_prog \<Rightarrow> (ivl list, (unit, ivl list) routed_gk, ivl abs_state lifted, ivl abs_state lifted)
        analysis_graph_config" where
   "entry_state_ctx_annotated_config p =
      entry_state_ctx_graph_config p
@@ -953,7 +951,7 @@ definition entry_state_ctx_annotated_config ::
            entry_state_ctx_check_annotation (prog_cfg p)
              (analyse_interval_entry_state_result p) \<rparr>"
 
-definition entry_state_ctx_graph :: "imp_prog \<Rightarrow> (ivl list, gk) analysis_graph" where
+definition entry_state_ctx_graph :: "imp_prog \<Rightarrow> (ivl list, (unit, ivl list) routed_gk) analysis_graph" where
   "entry_state_ctx_graph p =
      build_analysis_graph (entry_state_ctx_annotated_config p) (prog_cfg p)
        (contextual_result_domain (entry_state_ctx_graph_config p) (prog_cfg p)
@@ -968,8 +966,6 @@ lemma entry_state_ctx_graph_wf: "analysis_graph_wf (entry_state_ctx_graph p)"
   unfolding entry_state_ctx_graph_def prog_cfg_def
   by (rule build_analysis_graph_wf
         [OF calls_source_unique_compile_prog compile_prog_finite[THEN conjunct2]])
-
-declare entry_state_ctx_graph_def [code del]
 
 lemma entry_state_ctx_graph_code [code]:
   "entry_state_ctx_graph p =
@@ -995,8 +991,6 @@ definition entry_state_ctx_graph_snapshot_auto :: "imp_prog \<Rightarrow> String
           (entry_state_ctx_sol (analyse_interval_entry_state_result p))
           (entry_state_ctx_graph p))"
 
-declare entry_state_ctx_graph_snapshot_auto_def [code del]
-
 lemma entry_state_ctx_graph_snapshot_auto_code [code]:
   "entry_state_ctx_graph_snapshot_auto p =
      (let r = analyse_interval_entry_state_result p;
@@ -1016,8 +1010,6 @@ definition entry_state_ctx_export_auto :: "imp_prog \<Rightarrow> export_graph" 
      analysis_graph_to_export (entry_state_ctx_annotated_config p) (prog_cfg p)
        (entry_state_ctx_sol (analyse_interval_entry_state_result p))
        (entry_state_ctx_graph p)"
-
-declare entry_state_ctx_export_auto_def [code del]
 
 lemma entry_state_ctx_export_auto_code [code]:
   "entry_state_ctx_export_auto p =
@@ -1039,7 +1031,7 @@ text \<open>
   contextual renderer stops being per-domain. An entry-state context is the analysed
   domain's own value list (\<^typ>\<open>ivl list\<close>), so its graph configuration can only ever be
   written for one domain at a time. A call-string context is a \<^typ>\<open>cfg_node list\<close>
-  (\<^theory>\<open>Voblint_Core.Call_String_Context\<close>) --- pure call history, no domain content ---
+  (\<^theory>\<open>Voblint_Framework.Call_String_Context\<close>) --- pure call history, no domain content ---
   and every rendered state here is projected into \<^typ>\<open>abstract_value\<close> exactly as
   \<^const>\<open>analyse_point_env_for\<close> already projects the monovariant tables. Both axes of
   domain-dependence are therefore removed, and Sign, Interval and Int share \<^emph>\<open>one\<close>
@@ -1053,31 +1045,31 @@ text \<open>
   \<open>r\<close> is bound outside the returned \<open>\<lambda>\<close> for the same single-solve reason
   \<^const>\<open>analyse_point_env_for\<close> documents: a caller that partially applies this once
   solves the program once, however many nodes it then renders. \<^const>\<open>Inr\<close> is
-  \<^const>\<open>Unreachable\<close> --- the routed call-string system carries every program variable in
+  \<^const>\<open>Bot\<close> --- the routed call-string system carries every program variable in
   the local unknown, so its solver-global slots hold no program state to draw.
 \<close>
 
 definition cs_ctx_sol_for ::
     "analysis_domain \<Rightarrow> nat \<Rightarrow> imp_prog
-       \<Rightarrow> pp \<times> call_string + call_string_gk \<Rightarrow> abstract_value abs_state point_state" where
+       \<Rightarrow> pp \<times> call_string + call_string_gk \<Rightarrow> abstract_value abs_state lifted" where
   "cs_ctx_sol_for kind k p =
      (case kind of
         Sign_Analysis \<Rightarrow>
           (let r = analyse_sign_call_string_result k p
            in (\<lambda>x. case x of Inl (v, ctx) \<Rightarrow>
-                     map_point_state (\<lambda>st. SignValue \<circ> st) (lookup_context r v ctx)
-                   | Inr _ \<Rightarrow> Unreachable))
+                     map_lift (\<lambda>st. SignValue \<circ> st) (lookup_context r v ctx)
+                   | Inr _ \<Rightarrow> Bot))
       | Interval_Analysis \<Rightarrow>
           (let r = analyse_interval_call_string_result k p
            in (\<lambda>x. case x of Inl (v, ctx) \<Rightarrow>
-                     map_point_state (\<lambda>st. IntervalValue \<circ> st) (lookup_context r v ctx)
-                   | Inr _ \<Rightarrow> Unreachable))
+                     map_lift (\<lambda>st. IntervalValue \<circ> st) (lookup_context r v ctx)
+                   | Inr _ \<Rightarrow> Bot))
       | Int_Analysis \<Rightarrow>
           (let r = analyse_int_call_string_result k p
            in (\<lambda>x. case x of Inl (v, ctx) \<Rightarrow>
-                     map_point_state (\<lambda>st. IntDomValue \<circ> st) (lookup_context r v ctx)
-                   | Inr _ \<Rightarrow> Unreachable))
-      | Parity_Analysis \<Rightarrow> (\<lambda>_. Unreachable))"
+                     map_lift (\<lambda>st. IntDomValue \<circ> st) (lookup_context r v ctx)
+                   | Inr _ \<Rightarrow> Bot))
+      | Parity_Analysis \<Rightarrow> (\<lambda>_. Bot))"
 
 text \<open>
   The covered \<^term>\<open>(v, ctx)\<close> pairs, again read off whichever domain's table was selected.
@@ -1088,8 +1080,8 @@ text \<open>
 
 definition cs_ctx_domain_for ::
     "analysis_domain \<Rightarrow> nat \<Rightarrow> imp_prog
-       \<Rightarrow> (call_string, call_string_gk, abstract_value abs_state point_state,
-            abstract_value abs_state point_state) analysis_graph_config
+       \<Rightarrow> (call_string, call_string_gk, abstract_value abs_state lifted,
+            abstract_value abs_state lifted) analysis_graph_config
        \<Rightarrow> ((pp \<times> call_string) + call_string_gk) list" where
   "cs_ctx_domain_for kind k p base =
      (case kind of
@@ -1139,14 +1131,14 @@ text \<open>
   \<^theory>\<open>Voblint_Analysis.Analysis_GraphViz\<close>'s own call-string presentation constants
   (\<^const>\<open>cs_graph_route\<close>, \<^const>\<open>cs_context_key\<close>, \<^const>\<open>cs_show_context\<close>,
   \<^const>\<open>cs_cluster_label\<close>), and every state-rendering field is the \<^typ>\<open>abstract_value\<close>
-  reading shared with \<^const>\<open>point_state_node_annotation\<close>. Nothing here mentions a domain,
+  reading shared with \<^const>\<open>point_node_annotation\<close>. Nothing here mentions a domain,
   so adding call-string rendering for a fourth domain would extend the two dispatch
   constants above and leave this configuration untouched.
 \<close>
 
 definition cs_ctx_graph_config ::
-    "imp_prog \<Rightarrow> nat \<Rightarrow> (call_string, call_string_gk, abstract_value abs_state point_state,
-        abstract_value abs_state point_state) analysis_graph_config" where
+    "imp_prog \<Rightarrow> nat \<Rightarrow> (call_string, call_string_gk, abstract_value abs_state lifted,
+        abstract_value abs_state lifted) analysis_graph_config" where
   "cs_ctx_graph_config p k =
     \<lparr> local_of = id,
       route = (\<lambda>u ctx ca d. cs_graph_route k u ctx ca d),
@@ -1159,11 +1151,11 @@ definition cs_ctx_graph_config ::
         scope_return_slot (compiled_procedure_scope (declared_global p) (prog_table p) (prog_procs p) (prog_cfg p) v)),
       globals_to_show = [],
       show_local = (\<lambda>v ctx vars d.
-        case d of Unreachable \<Rightarrow> [''unreachable'']
-        | Reachable st \<Rightarrow> map (\<lambda>x. String.explode x @ ''='' @ string_of_abstract_value (st x)) vars),
+        case d of Bot \<Rightarrow> [''unreachable'']
+        | Lifted st \<Rightarrow> map (\<lambda>x. String.explode x @ ''='' @ string_of_abstract_value (st x)) vars),
       format_return = (\<lambda>v ctx ret d.
-        case d of Unreachable \<Rightarrow> []
-        | Reachable st \<Rightarrow>
+        case d of Bot \<Rightarrow> []
+        | Lifted st \<Rightarrow>
             if is_top_abstract_value (st ret) then []
             else [''ret='' @ string_of_abstract_value (st ret)]),
       show_global = (\<lambda>x vars s. []),
@@ -1179,8 +1171,8 @@ definition cs_ctx_graph_config ::
 
 definition cs_ctx_annotated_config ::
     "analysis_domain \<Rightarrow> nat \<Rightarrow> imp_prog
-       \<Rightarrow> (call_string, call_string_gk, abstract_value abs_state point_state,
-            abstract_value abs_state point_state) analysis_graph_config" where
+       \<Rightarrow> (call_string, call_string_gk, abstract_value abs_state lifted,
+            abstract_value abs_state lifted) analysis_graph_config" where
   "cs_ctx_annotated_config kind k p =
      cs_ctx_graph_config p k
        \<lparr> node_annotation :=

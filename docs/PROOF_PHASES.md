@@ -34,7 +34,7 @@ stable gates for assessing a change.
 
 ## D/G instances
 
-- the instance satisfies `sound_dg_spec`;
+- the instance satisfies `sound_dg_spec_core`;
 - executable transfers commute with abstract transfers;
 - entry and combine routing use the same context discipline;
 - the computed post-solution covers plain or activation-indexed collecting

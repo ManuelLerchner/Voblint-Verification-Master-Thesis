@@ -26,5 +26,31 @@ fun aval :: "exp \<Rightarrow> store \<Rightarrow> int" where
   | "aval (And b1 b2) s  = (if truthy (aval b1 s) \<and> truthy (aval b2 s) then 1 else 0)"
   | "aval (Or  b1 b2) s  = (if truthy (aval b1 s) \<or> truthy (aval b2 s) then 1 else 0)"
 
+text \<open>
+  \<open>truthy\<close> of a compiled comparison or Boolean expression restated in plain
+  Boolean form, so a caller never has to re-derive it from \<open>aval.simps\<close> and
+  \<open>truthy\<close>'s own \<open>\<noteq> 0\<close> encoding through an explicit \<open>if\<close>-split.
+\<close>
+
+lemma truthy_aval_Less [simp]:
+  "truthy (aval (Less a b) s) \<longleftrightarrow> aval a s < aval b s"
+  by simp
+
+lemma truthy_aval_Eq [simp]:
+  "truthy (aval (Eq a b) s) \<longleftrightarrow> aval a s = aval b s"
+  by simp
+
+lemma truthy_aval_Not [simp]:
+  "truthy (aval (Not b) s) \<longleftrightarrow> \<not> truthy (aval b s)"
+  by simp
+
+lemma truthy_aval_And [simp]:
+  "truthy (aval (And b1 b2) s) \<longleftrightarrow> truthy (aval b1 s) \<and> truthy (aval b2 s)"
+  by simp
+
+lemma truthy_aval_Or [simp]:
+  "truthy (aval (Or b1 b2) s) \<longleftrightarrow> truthy (aval b1 s) \<or> truthy (aval b2 s)"
+  by simp
+
 end
 

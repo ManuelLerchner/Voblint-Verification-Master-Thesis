@@ -32,8 +32,8 @@
 // edges:
 //   main_pp4_ctx0 -> main_result_main_ctx0: terminate
 //   inc_pp0_ctx1 -> inc_result_inc_ctx1: return n+1
-//   main_entry_main_ctx0 -> main_pp2_ctx0: nop
-//   inc_entry_inc_ctx1 -> inc_pp0_ctx1: nop
+//   main_entry_main_ctx0 -> main_pp2_ctx0: body(main)
+//   inc_entry_inc_ctx1 -> inc_pp0_ctx1: body(inc)
 //   main_pp3_ctx0 -> main_pp4_ctx0: check(0<r)
 //   main_pp2_ctx0 -> inc_entry_inc_ctx1: enter inc(5)
 //   inc_result_inc_ctx1 -> main_pp3_ctx0: combine r

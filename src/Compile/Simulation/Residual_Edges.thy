@@ -108,28 +108,6 @@ next
   then show ?case using jw sub by blast
 qed simp_all
 
-lemma control_at_assign_edge:
-  "control_at \<Pi> p c0 k n r v \<Longrightarrow> r = Assign x a \<Longrightarrow>
-   compile \<Pi> p c0 k n = (n', en, E, K) \<Longrightarrow>
-   \<exists>j w. v = Statement j \<and> (Statement j, EA_Assign x a, w) \<in> E
-       \<and> control_at \<Pi> p c0 k n SKIP w"
-  by (erule control_at_emitted_edge) simp_all
-
-lemma control_at_check_edge:
-  "control_at \<Pi> p c0 k n r v \<Longrightarrow> r = VIMP_Proc.com.Check cnd \<Longrightarrow>
-   compile \<Pi> p c0 k n = (n', en, E, K) \<Longrightarrow>
-   \<exists>j w. v = Statement j \<and> (Statement j, EA_Check cnd, w) \<in> E
-       \<and> control_at \<Pi> p c0 k n SKIP w"
-  by (erule control_at_emitted_edge) simp_all
-
-lemma control_at_special_edge:
-  "control_at \<Pi> p c0 k n r v \<Longrightarrow> r = Call (Some x) q actuals \<Longrightarrow>
-   special_table q = Some desc \<Longrightarrow> classify_special desc actuals = Some sc \<Longrightarrow>
-   compile \<Pi> p c0 k n = (n', en, E, K) \<Longrightarrow>
-   \<exists>j w. v = Statement j \<and> (Statement j, EA_Special sc x, w) \<in> E
-       \<and> control_at \<Pi> p c0 k n SKIP w"
-  by (erule control_at_emitted_edge) simp_all
-
 text \<open>A located conditional also arises from a loop unfolding (\<^const>\<open>While\<close> steps to
   \<open>If b (Seq c (While b c)) SKIP\<close>), so the \<open>WhileUnfolded\<close> case is real: the true branch
   re-locates the loop body followed by the loop, the false branch re-locates \<^const>\<open>SKIP\<close> at

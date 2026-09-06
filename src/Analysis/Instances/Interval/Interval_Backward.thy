@@ -1,6 +1,6 @@
 theory Interval_Backward
-  imports Interval_Arithmetic Voblint_Core.Exec_Backward "Voblint_VIMP.VIMP_Expr"
-    Voblint_Core.Abstract_Arithmetic Interval_Numeric_Queries
+  imports Interval_Arithmetic Exec_Backward "Voblint_VIMP.VIMP_Expr"
+    Abstract_Arithmetic Interval_Numeric_Queries
 begin
 
 section \<open>Interval backward filtering\<close>
@@ -11,7 +11,7 @@ text \<open>
   \<open>interval_lt\<close>/\<open>interval_eqb\<close>/\<open>interval_tobool\<close> restate
   \<open>Interval_Numeric_Queries\<close>'s \<open>interval_less_true\<close>/\<open>interval_less_false\<close>/
   \<open>interval_eq_true\<close>/\<open>interval_eq_false\<close> as the three-valued \<open>bool option\<close>
-  queries \<open>Voblint_Core.Abstract_Arithmetic\<close>'s \<open>expression_domain_sound\<close>
+  queries \<open>Voblint_Analysis.Abstract_Arithmetic\<close>'s \<open>expression_domain_sound\<close>
   locale expects: \<open>Some True\<close>/\<open>Some False\<close> when the bound-based table decides
   it, \<open>None\<close> otherwise. \<open>interval_tobool\<close> is truthiness against the point
   interval \<open>[0,0]\<close>.
@@ -59,7 +59,7 @@ proof -
 qed
 
 lemma interval_lt_mono:
-  assumes hp: "\<not> is_bot (p1::ivl)" and hq: "\<not> is_bot q1"
+  assumes hp: "\<not> is_empty (p1::ivl)" and hq: "\<not> is_empty q1"
       and hpm: "p1 \<le> p2" and hqm: "q1 \<le> q2"
       and hwide: "interval_lt p2 q2 = Some b"
   shows "interval_lt p1 q1 = Some b"
@@ -68,8 +68,8 @@ proof -
   obtain l1' u1' where p2_def: "p2 = Ivl l1' u1'" by (cases p2)
   obtain l2 u2 where q1_def: "q1 = Ivl l2 u2" by (cases q1)
   obtain l2' u2' where q2_def: "q2 = Ivl l2' u2'" by (cases q2)
-  have ne_p1: "l1 \<le> u1" using hp unfolding p1_def is_bot_ivl is_bottom_ivl_def by auto
-  have ne_q1: "l2 \<le> u2" using hq unfolding q1_def is_bot_ivl is_bottom_ivl_def by auto
+  have ne_p1: "l1 \<le> u1" using hp unfolding p1_def is_empty_ivl is_bottom_ivl_def by auto
+  have ne_q1: "l2 \<le> u2" using hq unfolding q1_def is_empty_ivl is_bottom_ivl_def by auto
   have bnds: "l1' \<le> l1" "u1 \<le> u1'" "l2' \<le> l2" "u2 \<le> u2'"
     using hpm hqm unfolding p1_def p2_def q1_def q2_def less_eq_ivl_def by auto
   have ne_p2: "l1' \<le> u1'" and ne_q2: "l2' \<le> u2'"
@@ -104,7 +104,7 @@ qed
 
 
 lemma interval_eqb_mono:
-  assumes hp: "\<not> is_bot (p1::ivl)" and hq: "\<not> is_bot q1"
+  assumes hp: "\<not> is_empty (p1::ivl)" and hq: "\<not> is_empty q1"
       and hpm: "p1 \<le> p2" and hqm: "q1 \<le> q2"
       and hwide: "interval_eqb p2 q2 = Some b"
   shows "interval_eqb p1 q1 = Some b"
@@ -113,8 +113,8 @@ proof -
   obtain l1' u1' where p2_def: "p2 = Ivl l1' u1'" by (cases p2)
   obtain l2 u2 where q1_def: "q1 = Ivl l2 u2" by (cases q1)
   obtain l2' u2' where q2_def: "q2 = Ivl l2' u2'" by (cases q2)
-  have ne_p1: "l1 \<le> u1" using hp unfolding p1_def is_bot_ivl is_bottom_ivl_def by auto
-  have ne_q1: "l2 \<le> u2" using hq unfolding q1_def is_bot_ivl is_bottom_ivl_def by auto
+  have ne_p1: "l1 \<le> u1" using hp unfolding p1_def is_empty_ivl is_bottom_ivl_def by auto
+  have ne_q1: "l2 \<le> u2" using hq unfolding q1_def is_empty_ivl is_bottom_ivl_def by auto
   have bnds: "l1' \<le> l1" "u1 \<le> u1'" "l2' \<le> l2" "u2 \<le> u2'"
     using hpm hqm unfolding p1_def p2_def q1_def q2_def less_eq_ivl_def by auto
   have ne_p2: "l1' \<le> u1'" and ne_q2: "l2' \<le> u2'"
@@ -126,13 +126,13 @@ proof -
 qed
 
 lemma interval_tobool_mono:
-  assumes hp: "\<not> is_bot (p1::ivl)" and hpm: "p1 \<le> p2"
+  assumes hp: "\<not> is_empty (p1::ivl)" and hpm: "p1 \<le> p2"
       and hwide: "interval_tobool p2 = Some b"
   shows "interval_tobool p1 = Some b"
 proof -
   obtain l1 u1 where p1_def: "p1 = Ivl l1 u1" by (cases p1)
   obtain l1' u1' where p2_def: "p2 = Ivl l1' u1'" by (cases p2)
-  have ne_p1: "l1 \<le> u1" using hp unfolding p1_def is_bot_ivl is_bottom_ivl_def by auto
+  have ne_p1: "l1 \<le> u1" using hp unfolding p1_def is_empty_ivl is_bottom_ivl_def by auto
   have bnds: "l1' \<le> l1" "u1 \<le> u1'"
     using hpm unfolding p1_def p2_def less_eq_ivl_def by auto
   have ne_p2: "l1' \<le> u1'" using bnds ne_p1 by order
@@ -151,29 +151,29 @@ fun aval_ivl :: "exp => (vname => ivl) => ivl" where
   | "aval_ivl (Minus a b)  \<sigma> = aval_ivl a \<sigma> - aval_ivl b \<sigma>"
   | "aval_ivl (Times a b)  \<sigma> = aval_ivl a \<sigma> * aval_ivl b \<sigma>"
   | "aval_ivl (Less a b)   \<sigma> =
-       (if is_bot (aval_ivl a \<sigma>) \<or> is_bot (aval_ivl b \<sigma>) then bot
+       (if is_empty (aval_ivl a \<sigma>) \<or> is_empty (aval_ivl b \<sigma>) then bot
         else if interval_lt (aval_ivl a \<sigma>) (aval_ivl b \<sigma>) = Some True then Ivl (Fin 1) (Fin 1)
         else if interval_lt (aval_ivl a \<sigma>) (aval_ivl b \<sigma>) = Some False then Ivl (Fin 0) (Fin 0)
         else Ivl (Fin 0) (Fin 1))"
   | "aval_ivl (exp.Eq a b) \<sigma> =
-       (if is_bot (aval_ivl a \<sigma>) \<or> is_bot (aval_ivl b \<sigma>) then bot
+       (if is_empty (aval_ivl a \<sigma>) \<or> is_empty (aval_ivl b \<sigma>) then bot
         else if interval_eqb (aval_ivl a \<sigma>) (aval_ivl b \<sigma>) = Some True then Ivl (Fin 1) (Fin 1)
         else if interval_eqb (aval_ivl a \<sigma>) (aval_ivl b \<sigma>) = Some False then Ivl (Fin 0) (Fin 0)
         else Ivl (Fin 0) (Fin 1))"
   | "aval_ivl (exp.Not a)  \<sigma> =
-       (if is_bot (aval_ivl a \<sigma>) then bot
+       (if is_empty (aval_ivl a \<sigma>) then bot
         else if interval_tobool (aval_ivl a \<sigma>) = Some True then Ivl (Fin 0) (Fin 0)
         else if interval_tobool (aval_ivl a \<sigma>) = Some False then Ivl (Fin 1) (Fin 1)
         else Ivl (Fin 0) (Fin 1))"
   | "aval_ivl (And a b)    \<sigma> =
-       (if is_bot (aval_ivl a \<sigma>) \<or> is_bot (aval_ivl b \<sigma>) then bot
+       (if is_empty (aval_ivl a \<sigma>) \<or> is_empty (aval_ivl b \<sigma>) then bot
         else if interval_tobool (aval_ivl a \<sigma>) = Some False \<or> interval_tobool (aval_ivl b \<sigma>) = Some False
         then Ivl (Fin 0) (Fin 0)
         else if interval_tobool (aval_ivl a \<sigma>) = Some True \<and> interval_tobool (aval_ivl b \<sigma>) = Some True
         then Ivl (Fin 1) (Fin 1)
         else Ivl (Fin 0) (Fin 1))"
   | "aval_ivl (Or a b)     \<sigma> =
-       (if is_bot (aval_ivl a \<sigma>) \<or> is_bot (aval_ivl b \<sigma>) then bot
+       (if is_empty (aval_ivl a \<sigma>) \<or> is_empty (aval_ivl b \<sigma>) then bot
         else if interval_tobool (aval_ivl a \<sigma>) = Some True \<or> interval_tobool (aval_ivl b \<sigma>) = Some True
         then Ivl (Fin 1) (Fin 1)
         else if interval_tobool (aval_ivl a \<sigma>) = Some False \<and> interval_tobool (aval_ivl b \<sigma>) = Some False
@@ -433,8 +433,8 @@ proof unfold_locales
     using intersect_ivl_gamma[OF h1 h2] by simp
 next
   fix s :: store and e :: exp and \<sigma> :: "vname \<Rightarrow> ivl"
-  assume H: "\<forall>x. s x \<in> gamma (\<sigma> x)"
-  have h: "\<forall>x. s x \<in> gamma_ivl (\<sigma> x)" using H by simp
+  assume H: "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
+  have h: "\<forall>x. s x \<in> gamma_ivl (\<sigma> x)" using gamma_stateD[OF H] by simp
   show "aval e s \<in> gamma (aval_ivl e \<sigma>)"
     using aval_ivl_sound[OF h] by simp
 next
@@ -482,17 +482,17 @@ next
   fix x1 x2 y1 y2 :: ivl and res :: bool
   assume A: "x1 \<le> x2" and B: "y1 \<le> y2"
   show "le_pair (inv_less_ivl res x1 y1) (inv_less_ivl res x2 y2)"
-    using inv_less_ivl_mono[OF A B] by (simp add: le_pair_def)
+    using inv_less_ivl_mono[OF A B] by simp
 next
   fix x1 x2 y1 y2 :: ivl and res :: bool
   assume A: "x1 \<le> x2" and B: "y1 \<le> y2"
   show "le_pair (inv_eq_ivl res x1 y1) (inv_eq_ivl res x2 y2)"
-    using inv_eq_ivl_mono[OF A B] by (simp add: le_pair_def)
+    using inv_eq_ivl_mono[OF A B] by simp
 next
   fix r1 r2 x1 x2 y1 y2 :: ivl
   assume A: "x1 \<le> x2" and B: "y1 \<le> y2"
   show "le_pair (inv_conservative r1 x1 y1) (inv_conservative r2 x2 y2)"
-    using A B by (simp add: inv_conservative_def le_pair_def)
+    using A B by (simp add: inv_conservative_def)
 next
   fix a b :: ivl
   show "intersect_ivl a b \<le> a" by (rule intersect_ivl_le1)
@@ -500,20 +500,8 @@ next
   fix a b :: ivl
   show "intersect_ivl a b \<le> b" by (rule intersect_ivl_le2)
 next
-  fix res :: bool and a1 a2 :: ivl
-  show "le_pair (inv_less_ivl res a1 a2) (a1, a2)"
-    using inv_less_ivl_reductive1 inv_less_ivl_reductive2 by (simp add: le_pair_def)
-next
-  fix res :: bool and a1 a2 :: ivl
-  show "le_pair (inv_eq_ivl res a1 a2) (a1, a2)"
-    using inv_eq_ivl_reductive1 inv_eq_ivl_reductive2 by (simp add: le_pair_def)
-next
-  fix r a1 a2 :: ivl
-  show "le_pair (inv_conservative r a1 a2) (a1, a2)"
-    by (simp add: inv_conservative_def le_pair_def)
-next
   fix p1 p2 :: ivl and bv :: bool
-  assume "\<not> is_bot p1" and "p1 \<le> p2" and "interval_tobool p2 = Some bv"
+  assume "\<not> is_empty p1" and "p1 \<le> p2" and "interval_tobool p2 = Some bv"
   then show "interval_tobool p1 = Some bv" using interval_tobool_mono by simp
 qed
 

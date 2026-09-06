@@ -148,7 +148,26 @@ docs-lint = "python3 scripts/extract_definitions.py --lint"
 # cartouches, which Isabelle does not resolve -- so a rename leaves the comment
 # describing something that no longer exists. Gating: the backlog is cleared.
 thy-prose-refs = "python3 scripts/check_thy_prose_refs.py"
+
+# An identifier removed together with its theory stays legal inside `assumes`,
+# where Isabelle reads it as a free variable -- so a locale keeps building with
+# an assumption that has quietly stopped constraining anything. Only an
+# explicit list of retired names catches that; scripts/retired_identifiers.txt
+# holds it.
+retired-identifiers = "python3 scripts/check_retired_identifiers.py"
+
+# The general form of the same failure: any identifier left free in a locale
+# assumption, whether or not it was ever a constant here. Isabelle generalizes
+# the assumption over it, so the locale keeps building while the assumption
+# stops saying anything.
+locale-parameters = "python3 scripts/check_locale_parameters.py"
 docs-overview = "python3 scripts/extract_definitions.py --dump docs/generated/DEFINITIONS_OVERVIEW.md"
+
+# Size and shape of the .thy corpus: lines per session, per theory, and per
+# proof, plus a watchlist of theories past the 1500-line / 100-symbol style
+# limits. Reporting only -- never gates a build, so it stays out of `ci`.
+# Views and formats: `pixi run stats -- --help`.
+stats = "python3 scripts/thy_stats.py"
 
 # Pins scripts/gen_vimp_isabelle.py's identifier id_position/markup shape
 # (see the test module's own docstring). Deliberately outside tests/property/
@@ -164,6 +183,8 @@ ci = { depends-on = [
   "lint",
   "grammar-check",
   "thy-prose-refs",
+  "retired-identifiers",
+  "locale-parameters",
   "build",
   "codegen-check",
   "regression-lint",

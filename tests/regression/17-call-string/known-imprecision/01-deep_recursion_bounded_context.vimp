@@ -100,11 +100,11 @@
 //   fact_pp0_ctx1 -> fact_pp2_ctx1: not (n<2)
 //   fact_pp0_ctx2 -> fact_pp1_ctx2: n<2
 //   fact_pp0_ctx2 -> fact_pp2_ctx2: not (n<2)
-//   main_entry_main_ctx0 -> main_pp5_ctx0: nop
+//   main_entry_main_ctx0 -> main_pp5_ctx0: body(main)
 //   fact_pp3_ctx1 -> fact_result_fact_ctx1: return n*tmp
 //   fact_pp3_ctx2 -> fact_result_fact_ctx2: return n*tmp
-//   fact_entry_fact_ctx1 -> fact_pp0_ctx1: nop
-//   fact_entry_fact_ctx2 -> fact_pp0_ctx2: nop
+//   fact_entry_fact_ctx1 -> fact_pp0_ctx1: body(fact)
+//   fact_entry_fact_ctx2 -> fact_pp0_ctx2: body(fact)
 //   main_pp6_ctx0 -> main_pp7_ctx0: check(0<r)
 //   fact_pp2_ctx1 -> fact_entry_fact_ctx1: enter fact(n-1)
 //   fact_pp2_ctx2 -> fact_entry_fact_ctx1: enter fact(n-1)

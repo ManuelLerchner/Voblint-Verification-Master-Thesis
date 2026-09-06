@@ -169,9 +169,10 @@ let verdict_label = function
    entry (resolved_st_q_lifted_is_bot_for, Exec_St.thy) instead of leaving
    this CLI to reconstruct reachability by probing a variable list against
    the already-converted state -- see docs/VERIFICATION_CHAIN_AND_TRUST_BOUNDARY.md,
-   section 9. Unreachable entries are suppressed entirely, matching Goblint's
-   "__goblint_check(0); // NOWARN (unreachable)" convention (no output at
-   that location), rather than shown with a vacuous PROVED verdict. *)
+   section 9. An unreachable entry gets the DEAD verdict label instead of a
+   vacuous PROVED. Goblint suppresses the location entirely there; naming it
+   keeps "proved unreachable" distinguishable from "the compiler dropped this
+   check", which a suppressed row cannot express. *)
 let render_text_report (report :
       (Voblint_CLI.Core.cfg_node
        * (Voblint_CLI.Core.exp
@@ -186,50 +187,50 @@ let render_text_report (report :
      it raise rather than silently misalign. *)
   List.iter2
     (fun (node, (cond, (verdict, (unreachable, f)))) (line, col) ->
-       if not unreachable then begin
-         let vars = Voblint_CLI.State_Report_GraphViz.exp_vnames_list cond in
-         let state =
-           vars
-           |> List.map (fun x ->
-             x ^ "=" ^ un_string (Voblint_CLI.State_Report_GraphViz.string_of_abstract_value (f x)))
-           |> String.concat ", "
-         in
-         Buffer.add_string buf
-           (Printf.sprintf "%d:%-2d %-10s %-20s %-8s %s\n" line col (node_label node)
-              (un_string (Voblint_CLI.Core.string_of_exp (Voblint_CLI.Core.nat_of_integer Z.zero) cond))
-              (verdict_label verdict) state)
-       end)
+       let label, state =
+         if unreachable then "DEAD", ""
+         else
+           let vars = Voblint_CLI.State_Report_GraphViz.exp_vnames_list cond in
+           ( verdict_label verdict,
+             vars
+             |> List.map (fun x ->
+               x ^ "=" ^ un_string (Voblint_CLI.State_Report_GraphViz.string_of_abstract_value (f x)))
+             |> String.concat ", " )
+       in
+       Buffer.add_string buf
+         (Printf.sprintf "%d:%-2d %-10s %-20s %-8s %s\n" line col (node_label node)
+            (un_string (Voblint_CLI.Core.string_of_exp (Voblint_CLI.Core.nat_of_integer Z.zero) cond))
+            label state))
     report check_positions;
   Buffer.contents buf
 
-let report_row buf (line, col) node cond verdict =
+let report_row buf (line, col) node cond label =
   Buffer.add_string buf
     (Printf.sprintf "%d:%-2d %-10s %-20s %-8s\n" line col (node_label node)
        (un_string (Voblint_CLI.Core.string_of_exp (Voblint_CLI.Core.nat_of_integer Z.zero) cond))
-       (verdict_label verdict))
+       label)
 
 (* analyse_ctx's report distinguishes Dead -- every context covering the check
    is unreachable -- from a decided verdict (Abstract_Checks.thy's
-   contextual_verdict). Dead rows are suppressed entirely, matching what
-   render_text_report already does with analyse_with_state's unreachable flag
-   and Goblint's "__goblint_check(0); // NOWARN (unreachable)" convention,
+   contextual_verdict). A dead row gets the DEAD label, matching what
+   render_text_report already does with analyse_with_state's unreachable flag,
    rather than printing a verdict for code no execution reaches.
 
-   The filter happens inside the iter2 callback, never by pre-filtering either
-   list: report and check_positions must stay the same length and the same
+   The labelling happens inside the iter2 callback, never by pre-filtering
+   either list: report and check_positions must stay the same length and the same
    order, one entry per __voblint_check the parser saw. *)
 let render_ctx_report
     (report :
       (Voblint_CLI.Core.cfg_node
-       * (Voblint_CLI.Core.exp * Voblint_CLI.Core.contextual_verdict))
+       * (Voblint_CLI.Core.exp * Voblint_CLI.Core.check_result Voblint_CLI.Core.lifted))
       list)
     (check_positions : (int * int) list) =
   let buf = Buffer.create 256 in
   List.iter2
     (fun (node, (cond, verdict)) (line, col) ->
        match verdict with
-       | Voblint_CLI.Core.Dead -> ()
-       | Voblint_CLI.Core.Decided v -> report_row buf (line, col) node cond v)
+       | Voblint_CLI.Core.Bot -> report_row buf (line, col) node cond "DEAD"
+       | Voblint_CLI.Core.Lifted v -> report_row buf (line, col) node cond (verdict_label v))
     report check_positions;
   Buffer.contents buf
 
@@ -818,8 +819,8 @@ let () =
               List.filter_map
                 (fun ((_, (cond, verdict)), pos) ->
                    match verdict with
-                   | Voblint_CLI.Core.Dead -> None
-                   | Voblint_CLI.Core.Decided res -> Some (annotation pos res cond))
+                   | Voblint_CLI.Core.Bot -> None
+                   | Voblint_CLI.Core.Lifted res -> Some (annotation pos res cond))
                 (List.combine verdicts check_positions)
         in
         let files, nodes, dead =

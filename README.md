@@ -193,13 +193,14 @@ The central abstraction is the `sound_dg_spec` locale, an Isabelle/HOL formaliza
 
 This separation allows Sign, Interval, the composite Sign × Interval × Parity × Congruence domain, and future analyses to reuse the same verified infrastructure while varying only the domain-specific analysis logic.
 
-The executable frontend is provided by `Exec_DG_Bridge.thy`, which implements:
+The executable frontend is provided by `Exec_DG_Generator.thy` and `DG_Local_State_Exec.thy`, which implement:
 
 * executable finite-map representations of D/G states,
 * the refinement morphism `fun_of_dg_st`,
 * executable equation generation via `dg_gen_of`,
-* transport of solver-computed results to abstract post-solutions through
-  `part_post_solution_dg_st_to_abs`.
+* soundness proved directly at the executable carrier through
+  `routed_dg_domain_exec`'s `sound_dg_spec_st`, with no separate transport
+  step to an abstract post-solution.
 
 Consequently, adding a new D/G analysis requires only instantiating `sound_dg_spec`; equation generation, solver execution, and the end-to-end correctness proof are inherited from the generic framework.
 

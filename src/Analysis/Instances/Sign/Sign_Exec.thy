@@ -1,5 +1,5 @@
 theory Sign_Exec
-  imports Voblint_Core.Exec_Refinement Voblint_Core.Numeric_Ops Sign_Domain
+  imports "Voblint_Exec.Exec_Refinement" Numeric_Ops Sign_Domain
 begin
 
 section \<open>Sign per-domain seam: executable transfer mirror and commutation\<close>
@@ -49,14 +49,14 @@ lemma fun_of_st_cinit_sign_st_for:
 
 subsection \<open>Classifier-parametric executable transfer\<close>
 
-text \<open>The executable mirror of \<open>sign_tf_for\<close>/\<open>enter_sign_for\<close>, parametric in
+text \<open>The executable mirror of \<open>sign_tf_abs\<close>/\<open>enter_sign_for\<close>, parametric in
   the classifier, following the same pattern as \<open>ivl_tf_st_for\<close>/
   \<open>ivl_enter_st_for\<close> for the interval domain.\<close>
 
 text \<open>
   \<open>sign_ops\<close> bundles Sign's own primitives for the generic
   \<open>generic_branch_st_for\<close>/\<open>generic_enter_st_for\<close> construction
-  (\<^theory>\<open>Voblint_Core.Numeric_Ops\<close>): \<open>branch_sign_st_for\<close>/\<open>sign_enter_st_for\<close>
+  (\<^theory>\<open>Voblint_Analysis.Numeric_Ops\<close>): \<open>branch_sign_st_for\<close>/\<open>sign_enter_st_for\<close>
   below are exactly those generic constructions instantiated at \<open>sign_ops\<close>,
   not independent definitions -- Interval and Parity instantiate the same
   generic pair at their own primitives.
@@ -74,15 +74,15 @@ lemma branch_sign_st_for_eq [simp]:
   by (simp add: branch_sign_st_for_def generic_branch_st_for_def sign_ops_def)
 
 definition sign_enter_st_for ::
-  "(vname => bool) => vname list => exp list =>
+  "(vname => bool) => call_info =>
    sign resolved_st_q => sign resolved_st_q" where
   "sign_enter_st_for = generic_enter_st_for sign_ops"
 
 lemma sign_enter_st_for_eq [simp]:
-  "sign_enter_st_for gs xs es s =
-    bind_formals_resolved_q gs xs
+  "sign_enter_st_for gs ci s =
+    bind_formals_resolved_q gs (ci_formals ci)
       (map (\<lambda>e. aval_sign e
-        (fun_of_resolved_st_q_for gs s)) es)
+        (fun_of_resolved_st_q_for gs s)) (ci_args ci))
       (enter_frame_D_resolved_q STop s)"
   by (simp add: sign_enter_st_for_def generic_enter_st_for_def sign_ops_def)
 
@@ -105,6 +105,7 @@ fun sign_tf_st_for ::
        branch_sign_st_for gs b True s"
   | "sign_tf_st_for gs (EA_AssumeNot b) s =
        branch_sign_st_for gs b False s"
+  | "sign_tf_st_for gs (EA_Body p) s = s"
   | "sign_tf_st_for gs (EA_Ret None p) s = s"
   | "sign_tf_st_for gs (EA_Ret (Some a) p) s =
        update_resolved_st_q s (location_of gs ret_var)
@@ -124,8 +125,8 @@ lemma sign_tf_st_for_nop_agree:
     and location_in: "location \<in> universe"
   shows
     "lookup_resolved_st_q (sign_tf_st_for gs EA_Nop s_exec) location =
-      apply_tf (sign_tf_for gs) EA_Nop s_abs (location_vname location)"
-  using agree[OF location_in] by (simp add: sign_tf_for_def skip_sign_def)
+      sign_tf_abs EA_Nop s_abs (location_vname location)"
+  using agree[OF location_in] by (simp add: sign_tf_abs_def skip_sign_def)
 
 lemma sign_tf_st_for_assign_agree:
   fixes y :: vname and a :: exp
@@ -136,11 +137,11 @@ lemma sign_tf_st_for_assign_agree:
     and canonical: "location = location_of gs (location_vname location)"
   shows
     "lookup_resolved_st_q (sign_tf_st_for gs (EA_Assign y a) s_exec) location =
-      apply_tf (sign_tf_for gs) (EA_Assign y a) s_abs (location_vname location)"
+      sign_tf_abs (EA_Assign y a) s_abs (location_vname location)"
 proof (cases "location_vname location = y")
   case True
   then have "location = location_of gs y" using canonical by simp
-  then show ?thesis using val_agree True by (simp add: sign_tf_for_def assign_sign_def)
+  then show ?thesis using val_agree True by (simp add: sign_tf_abs_def assign_sign_def)
 next
   case False
   have neq: "location \<noteq> location_of gs y"
@@ -150,7 +151,7 @@ next
     with False show False by simp
   qed
   show ?thesis
-    using agree[OF location_in] neq False by (simp add: sign_tf_for_def assign_sign_def)
+    using agree[OF location_in] neq False by (simp add: sign_tf_abs_def assign_sign_def)
 qed
 
 lemma sign_tf_st_for_ret_none_agree:
@@ -160,9 +161,9 @@ lemma sign_tf_st_for_ret_none_agree:
     and location_in: "location \<in> universe"
   shows
     "lookup_resolved_st_q (sign_tf_st_for gs (EA_Ret None p) s_exec) location =
-      apply_tf (sign_tf_for gs) (EA_Ret None p) s_abs (location_vname location)"
+      sign_tf_abs (EA_Ret None p) s_abs (location_vname location)"
   using sign_tf_st_for_nop_agree[OF agree location_in]
-  by (simp add: sign_tf_for_def skip_sign_def return_sign_def)
+  by (simp add: sign_tf_abs_def skip_sign_def return_sign_def)
 
 subsection \<open>Classifier-parametric commutation\<close>
 
@@ -172,53 +173,45 @@ text \<open>The classifier-parametric commutation of the executable and abstract
   declared global needs the executable transfer to commute with the abstract
   transfer at an arbitrary classifier \<open>gs\<close>.\<close>
 
-lemma sign_tf_st_for_reduces: "action_reduces (sign_tf_st_for gs)"
-  by unfold_locales (rule ext, simp)+
-
 theorem sign_tf_st_for_commute:
-  "fun_of_resolved_st_q_for gs (sign_tf_st_for gs a s) =
-   apply_tf (sign_tf_for gs) a (fun_of_resolved_st_q_for gs s)"
-proof (rule apply_tf_wrap_eqI[
-    where H = "\<lambda>f. f (fun_of_resolved_st_q_for gs s)"])
-  show "fun_of_resolved_st_q_for gs (sign_tf_st_for gs EA_Nop s) =
-      apply_tf (sign_tf_for gs) EA_Nop (fun_of_resolved_st_q_for gs s)"
-    by (simp add: sign_tf_for_def skip_sign_def)
-  show "\<And>x e. fun_of_resolved_st_q_for gs
-      (sign_tf_st_for gs (EA_Assign x e) s) =
-    apply_tf (sign_tf_for gs) (EA_Assign x e) (fun_of_resolved_st_q_for gs s)"
-    by (simp add: sign_tf_for_def assign_sign_def)
-  show "\<And>sc x. fun_of_resolved_st_q_for gs
-      (sign_tf_st_for gs (EA_Special sc x) s) =
-    apply_tf (sign_tf_for gs) (EA_Special sc x) (fun_of_resolved_st_q_for gs s)"
-    by (auto simp: sign_tf_for_def split: special_call.splits)
-  show "\<And>b. fun_of_resolved_st_q_for gs
-      (sign_tf_st_for gs (EA_Assume b) s) =
-    apply_tf (sign_tf_for gs) (EA_Assume b) (fun_of_resolved_st_q_for gs s)"
-    by (simp add: sign_tf_for_def sign_backward_domain.branch_st_commute)
-  show "\<And>b. fun_of_resolved_st_q_for gs
-      (sign_tf_st_for gs (EA_AssumeNot b) s) =
-    apply_tf (sign_tf_for gs) (EA_AssumeNot b)
-      (fun_of_resolved_st_q_for gs s)"
-    by (simp add: sign_tf_for_def sign_backward_domain.branch_st_commute)
-  show "\<And>ea p. fun_of_resolved_st_q_for gs
-      (sign_tf_st_for gs (EA_Ret ea p) s) =
-    apply_tf (sign_tf_for gs) (EA_Ret ea p) (fun_of_resolved_st_q_for gs s)"
-  proof -
-    fix ea p
-    show "fun_of_resolved_st_q_for gs (sign_tf_st_for gs (EA_Ret ea p) s) =
-      apply_tf (sign_tf_for gs) (EA_Ret ea p) (fun_of_resolved_st_q_for gs s)"
-    proof (cases ea)
-      case None
-      then show ?thesis by (simp add: sign_tf_for_def return_sign_def)
-    next
-      case (Some a)
-      then show ?thesis by (simp add: sign_tf_for_def return_sign_def assign_sign_def)
-    qed
+  assumes "live_resolved_st_q gs s"
+  shows
+    "fun_of_resolved_st_q_for gs (sign_tf_st_for gs a s) =
+     sign_tf_abs a (fun_of_resolved_st_q_for gs s)"
+proof (cases a)
+  case EA_Nop
+  then show ?thesis by (simp add: sign_tf_abs_def skip_sign_def)
+next
+  case (EA_Assign x e)
+  then show ?thesis by (simp add: sign_tf_abs_def assign_sign_def)
+next
+  case (EA_Special sc x)
+  then show ?thesis by (auto simp: sign_tf_abs_def split: special_call.splits)
+next
+  case (EA_Assume b)
+  then show ?thesis
+    using assms by (simp add: sign_tf_abs_def sign_backward_domain.branch_st_commute)
+next
+  case (EA_AssumeNot b)
+  then show ?thesis
+    using assms by (simp add: sign_tf_abs_def sign_backward_domain.branch_st_commute)
+next
+  case (EA_Body p)
+  then show ?thesis by (simp add: sign_tf_abs_def body_sign_def)
+next
+  case (EA_Ret ea p)
+  then show ?thesis
+  proof (cases ea)
+    case None
+    then show ?thesis using \<open>a = EA_Ret ea p\<close> by (simp add: sign_tf_abs_def return_sign_def)
+  next
+    case (Some av)
+    then show ?thesis using \<open>a = EA_Ret ea p\<close>
+      by (simp add: sign_tf_abs_def return_sign_def assign_sign_def)
   qed
-  show "\<And>c. fun_of_resolved_st_q_for gs
-      (sign_tf_st_for gs (EA_Check c) s) =
-    apply_tf (sign_tf_for gs) (EA_Check c) (fun_of_resolved_st_q_for gs s)"
-    by (simp add: sign_tf_for_def event_sign_def)
+next
+  case (EA_Check c)
+  then show ?thesis by (simp add: sign_tf_abs_def event_sign_def)
 qed
 
 lemma enter_frame_sign_st_for_commute:
@@ -227,10 +220,12 @@ lemma enter_frame_sign_st_for_commute:
   by (simp add: enter_frame_sign_for_def)
 
 lemma sign_enter_st_for_commute:
-  "fun_of_resolved_st_q_for gs (sign_enter_st_for gs xs es s) =
-   enter\<^sup># (sign_tf_for gs) xs es (fun_of_resolved_st_q_for gs s)"
-  by (simp add: sign_tf_for_def enter_sign_for_def enter_D_def
-                enter_frame_sign_for_def enter_frame_sign_st_for_commute)
+  "fun_of_resolved_st_q_for gs (sign_enter_st_for gs ci s) =
+   enter_sign_ci_for gs ci (fun_of_resolved_st_q_for gs s)"
+  by (simp add: enter_sign_ci_for_def enter_sign_for_def enter_binding_def
+                enter_frame_def enter_frame_sign_for_def enter_frame_sign_st_for_commute
+                fun_of_resolved_st_q_for_enter_frame)
+
 
 end
 

@@ -105,6 +105,64 @@ Scripts that helped (recreate under the scratchpad as needed):
 - **Style measured in symbols, not bytes.** `\<Rightarrow>` is one column
   in jEdit; measure line length after collapsing `\<...>`.
 
+## Traps from the parameter-deletion pass
+
+- **Deleting a parameter is an arity change, so check arity, not spelling.**
+  After removing `main_name`/`main`, a repo-wide "no bare `main_name`
+  remains" grep returned zero while four call-string `interpretation`s still
+  supplied the pair, spelled `"STR ''main''" nest_main`. The oracle is
+  Isabelle's *More arguments than parameters in instantiation of locale*,
+  not a token search. Enumerate the constant's call sites by head name and
+  compare each site's argument count against the definition.
+- **An unused `fixes` is legal, so the build will not find dead parameters.**
+  Both routed-context locales kept `main_name :: pname and main :: com` in
+  their `fixes` long after nothing read them, and every session stayed
+  green. This is audit item 3 (false abstraction); only reading the locale
+  header finds it.
+- **Anchor a deletion script on the head constant, never on the argument.**
+  A pass keyed on the *name* `main_name` stripped the second argument from
+  twenty `scope_locations p owner` calls, which take a genuine owner. The
+  line-count and line-length assertions passed straight through the damage.
+  Assert on the head's expected arity, and diff every changed line.
+- **`str.split(lit)` then `lit.join(parts[1:])` loses one separator.** It
+  rewrote `by (rule compile_prog_calls_empty)` to `by ()` in seven files.
+  Prefer `str.replace` for literal substitution; if a split is unavoidable,
+  assert the rejoined text still contains the literal N times.
+- **A `<cfg>_compile [simp]` folding rule defeats `unfolding <cfg>_def`.**
+  Several examples declare `compile_prog ... = <x>_cfg` as `[simp]`; a proof
+  that opens the definition and then calls `simp` has it folded straight
+  back, leaving the goal untouched. Use `simp only:` with the definition and
+  the rules you want.
+- **A green build does not mean the migration is finished.** The build
+  abandons a session at its first failing theory, so each fix exposes only
+  the next layer. Error counts fell 40 -> 40 -> 15 -> 2 over five passes on
+  the same session; budget for the tail rather than reading the first clean
+  prefix as done.
+
+## Traps from the Core split
+
+- **Measure an import edge against every theory that reaches it, not the
+  one that writes it.** `DG_Constraint_Trees imports Exec_Placement` used zero
+  names from it, so the survey called `Exec_Placement` example-only. Three
+  theories *behind* `DG_Constraint_Trees` used 70 of its names through that same
+  import. Before dropping an import, grep the imported theory's definitions
+  against the whole downstream closure of the importer.
+- **A `\<^theory>`/`\<^const>` antiquotation in prose is a dependency.**
+  `Routed_Context` cited `Voblint_Compile.VIMP_Proc_to_CFG` in two `text`
+  blocks; the session was compiler-free by import list and failed to build.
+  Grep antiquotations when a session boundary moves.
+- **`type_synonym` riding on an import.** `pp = cfg_node` sat in
+  `Abstract_Domain` and reached `Checks` and `Call_String_Context` through it;
+  moving it broke both. Compute, per theory, whether it *uses* a name and
+  whether its own import closure *reaches* the defining theory.
+- **Theories with `section` before `theory` break line-anchored scripts.**
+  Four `Exec_DG_*` files have their `imports` on line 15, spread over several
+  lines; a `sed` on `^  imports .*` silently missed one. Edit the block with a
+  regex over `imports ... begin`, not a line.
+- **`git mv` refuses an untracked file.** A theory created during the pass
+  must be `git add`ed before the move script runs, or the script dies half
+  way through and leaves a partially moved tree.
+
 ## VIMP status after the pass
 
 1894 -> 1019 lines across eight hand-written theories (`VIMP_Settings`
@@ -280,7 +338,7 @@ passes:
 | theories with no orientation block | 3 | 6 | 2 | 6 |
 
 The largest theories are `Example_Interval_Placement` (2901),
-`DG_Framework` (2472), `DG_Soundness` (2317), `Exec_St` (2231) and
+`DG_Constraint_Trees` (2472), `DG_Soundness` (2317), `Exec_St` (2231) and
 `Abstract_Domain` (2110). Splitting those is the structural half of the Core
 pass; retiring `metis` and the apply scripts is the proof half.
 

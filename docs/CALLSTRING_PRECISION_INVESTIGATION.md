@@ -209,7 +209,7 @@ activation_collect gs enterc seedc g S v c  <=  gamma (locals (sigma (Inl (v,c))
 — the collected concrete states are a subset of what the abstract value
 denotes. There is no lemma anywhere in `DG_Ctx_Activation.thy` or
 `DG_Soundness.thy` stating the reverse inclusion or an equality. This is
-expected (`sound_dg_spec` is a soundness locale, not an exactness one), but
+expected (`sound_dg_spec_core` is a soundness locale, not an exactness one), but
 it means two independently sound upper bounds — `ivl_ctx_sg_2` and
 `ivl_ctx_sg_1` — do not become comparable just because their underlying
 concrete sets (row 2) are now known to be comparable. An inclusion between
@@ -244,7 +244,7 @@ the shape a proof would need to take, not a proof:
    for the k1 equation system `T1` — the actual technical content. Needs
    `cs_route_k_mono` again (to match up which k2-contexts fall in which
    k1-fiber) plus a monotonicity/distributivity argument for the RHS
-   combinator (`side_cfg_T_eff_keyed_seed_dg`) under the domain join. Not
+   combinator (`routed_node_rhs`) under the domain join. Not
    attempted here.
 3. Invoke `less_than_part_post_solution`/`least_partial_post_solution` on
    the k1 solve to conclude `sigma_1 <= sigma_1'`, i.e.
@@ -265,8 +265,8 @@ row 3 is pursued.
 
 Per the plan: define the projection explicitly and check its algebraic
 shape before touching the transfer/combine rules. Read the actual RHS
-constructors directly (`side_cfg_T_eff_keyed_seed_dg`,
-`DG_Framework.thy:393`; `routed_cmb`/`routed_extra`, `Routed_Context.thy`)
+constructors directly (`routed_node_rhs`,
+`DG_Constraint_Trees.thy:393`; `routed_cmb`/`routed_extra`, `Routed_Context.thy`)
 rather than guessing their shape.
 
 ### 9.1 The unknown spaces are not quite the same type
@@ -285,7 +285,7 @@ explicit case split between `Inl` (shared type, direct fiber join) and
 
 ### 9.2 What the RHS actually reads, read off the definitions directly
 
-`side_cfg_T_eff_keyed_seed_dg`'s RHS at `(v, c)` (`DG_Framework.thy:406`)
+`routed_node_rhs`'s RHS at `(v, c)` (`DG_Constraint_Trees.thy:406`)
 is `side_rhs_fold_dg` over three pieces:
 
 - `intra`: for each CFG predecessor `(u, a)` of `v` (from `pred_sel g v`,
@@ -371,17 +371,17 @@ exactly the separation the plan asked for.
 
 ### 9.6 What is left before attacking the transfer equations
 
-> **Landed (2026-07-31, issue #45).** `side_cfg_T_eff_keyed_seed_dg_is_mono_eq_gen`,
-> `_mono_sides_gen`, `_mono_deps_gen` (`DG_Framework.thy`) discharge the three
-> `TD_side_mono` preconditions for an arbitrary `side_cfg_T_eff_keyed_seed_dg`
+> **Landed (2026-07-31, issue #45).** `routed_node_rhs_mono_eq`,
+> `_mono_sides`, `_mono_deps` (`DG_Keyed_Generator.thy`) discharge the three
+> `TD_side_mono` preconditions for an arbitrary `routed_node_rhs`
 > instance from a per-tree contract on the `pred_sel`/`cmb`/`extra` hooks —
 > mirroring `td_cfg_side_solver_eff_gen` (`TD_Side_Eff_Pipeline.thy`), the same
 > reduction already landed for the flat generator. `side_rhs_fold_dg_mono`,
-> `_sides_mono`, `_static_deps` (also `DG_Framework.thy`) are the underlying
+> `_sides_mono`, `_static_deps` (also `DG_Constraint_Trees.thy`) are the underlying
 > fold lemmas, proved by structural induction over the tree list via
 > `seqcomp_mono`/`static_deps_seqcomp` (`Strategy_Tree_Monad.thy`) — no new
 > proof technique beyond what the flat generator's own pipeline used.
-> `side_cfg_T_eff_keyed_seed_dg_threefold_mono` bundles the three into
+> `routed_node_rhs_threefold_mono` bundles the three into
 > `TD_Side_Eff_Pipeline.thy`'s `threefold_mono`. I/Q clean, no `sorry`, batch
 > green on `Voblint_Examples`. What remains is Step 3: instantiate this pipeline at
 > `nest_2_eqs`'s actual `route`/`cmb`/`extra` (`routed_cmb`/`routed_extra` via
@@ -389,7 +389,7 @@ exactly the separation the plan asked for.
 > primitive obligations concretely — not yet attempted.
 >
 > `threefold_mono` is a precondition, not a precision result: it makes the
-> TD solver's ordering reasoning available for a `side_cfg_T_eff_keyed_seed_dg`
+> TD solver's ordering reasoning available for a `routed_node_rhs`
 > instance, but proves nothing about any computed answer, and no analysis
 > gets more precise by this lemma landing. The chain to an actual k=2-vs-k=1
 > precision theorem still needs `least_partial_post_solution` (upgrading the
@@ -399,7 +399,7 @@ exactly the separation the plan asked for.
 
 The one thing not yet located: where `is_mono_eq`/`mono_sides`/`mono_deps`
 (`td_cfg_side_solver_eff`'s three assumptions, `TD_Side_Eff_Interface.thy`)
-get discharged for a `side_cfg_T_eff_keyed_seed_dg`-generated system.
+get discharged for a `routed_node_rhs`-generated system.
 Searched `src/Analysis` directly — no hits outside the locale's own
 `assumes` clauses, so the proof lives in whatever K1/K2 actually call
 (`TD_side_warrowing_apinis_Interp_solve`, via `Exec_DG_Bridge.thy`/
@@ -431,7 +431,7 @@ down to the base solver constructors instead of guessing.
 
 ### 10.1 The local (`eq`) obligation is a plain monotone fold
 
-`side_acc_dg` (`DG_Framework.thy:357`), which `eq_side_cfg_T_eff_keyed_seed_dg`
+`side_acc_dg` (`DG_Constraint_Trees.thy:357`), which `eq_routed_node_rhs`
 reduces every `eq` to, is exactly `acc \<squnion> locals (traverse_rhs t tau)` folded
 over the `intra @ comb @ extra` subtree list, starting from `acc0`. No
 hidden structure — the `eq` obligation is a join of independently-evaluated

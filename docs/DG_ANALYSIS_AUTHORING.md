@@ -16,8 +16,8 @@ constructing `strategy_tree` by hand. Term definitions are in
    (`src/Analysis/Generic/Equations/Constraint_System.thy`).
 
 3. **Package enter/combine as a `dg_spec`.** `dgs_enter`,
-   `dgs_combine_env`/`dgs_combine_assign` (`DG_Framework.thy`), proved to
-   satisfy `sound_dg_spec`.
+   `dgs_combine_env`/`dgs_combine_assign` (`DG_Constraint_Trees.thy`), proved to
+   satisfy `sound_dg_spec_core`.
 
 4. **Context-sensitive with one shared global and one routing policy:**
    interpret the `routed_context` locale
@@ -31,7 +31,7 @@ constructing `strategy_tree` by hand. Term definitions are in
 
    ```isabelle
    definition my_eqs where
-     "my_eqs = side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. Global)
+     "my_eqs = routed_node_rhs intra_predecessor_list (\<lambda>_. Global)
          my_route (routed_cmb S Global) (routed_extra g S Seed Global)
          g S bot0 s0d s0g"
    ```

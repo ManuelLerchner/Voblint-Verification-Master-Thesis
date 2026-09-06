@@ -14,7 +14,7 @@ text \<open>
   needs a splicing workaround here: both are ordinary lexable identifiers, so
   they parse inside \<open>program { ... }\<close> exactly like any other call. This is
   a small end-to-end witness that the special call reaches each domain's
-  generic \<open>sound_special_ops\<close> dispatch (\<^theory>\<open>Voblint_Core.Special_Ops\<close>,
+  generic \<open>sound_special_ops\<close> dispatch (\<^theory>\<open>Voblint_Analysis.Special_Ops\<close>,
   instantiated per domain in \<^theory>\<open>Voblint_Analysis.Sign_Special\<close>/
   \<open>Interval_Special\<close>/\<open>Parity_Special\<close>), not a flagship precision showcase.
 \<close>
@@ -63,7 +63,7 @@ definition min_max_demo_parity_env :: "vname \<Rightarrow> parity" where
      (case lookup_context
              (analyse_parity_result_for (declared_global min_max_demo_prog) min_max_demo_prog)
              (cfg_exit (prog_cfg min_max_demo_prog)) () of
-        Unreachable \<Rightarrow> bot | Reachable st \<Rightarrow> st)"
+        Bot \<Rightarrow> bot | Lifted st \<Rightarrow> st)"
 
 lemma min_max_demo_parity_z_odd:
   "min_max_demo_parity_env (STR ''z'') = POdd"

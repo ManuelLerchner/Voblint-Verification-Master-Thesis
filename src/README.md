@@ -1,7 +1,7 @@
 # Voblint formalization (`src/`)
 
 The six-session Isabelle/HOL proof chain comprises **Voblint_VIMP**,
-**Voblint_CFG**, **Voblint_Core**, **Voblint_Analysis**,
+**Voblint_CFG**, **Voblint_Framework**, **Voblint_Analysis**,
 **Voblint_Soundness**, and **Voblint_Examples**. It formalizes sound static
 analysis from VIMP source with procedures through interprocedural CFG
 collecting semantics, abstract equations, and the vendored **TD side** solver
@@ -12,8 +12,9 @@ exports.
 **Top level:** the interprocedural / side-effecting spine —
 `Run_Analysis_Sound`, `Source_Activation_Sound`,
 `Analysis_Sound`, plus the native D/G interface (`DG_Soundness`, `Sign_DG`,
-`Interval_DG`) and its executable transport
-(`Exec_DG_Bridge`). An intra-procedural (classical) formulation is developed
+`Interval_DG`) and its executable carrier (`Exec_DG_Generator`,
+`DG_Local_State_Exec`), sound directly at that carrier with no separate abstract
+transport. An intra-procedural (classical) formulation is developed
 in the sibling repo `voblint-formalization-classical`.
 
 **Pipeline (left to right):**

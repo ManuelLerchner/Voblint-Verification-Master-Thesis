@@ -17,7 +17,7 @@ text \<open>
   What the instance witnesses is coverage rather than per-value precision. The one
   call's argument is drawn from \<open>__voblint_nondet_int()\<close>, so the call site is reached by
   infinitely many concrete stores that share a single caller-local abstract value
-  \<open>Top\<close>. The production context function \<^const>\<open>entry_state_context\<close> ignores its
+  \<open>Top\<close>. The production context relation \<^const>\<open>entry_state_context_rel\<close> admits its
   concrete-store argument and recomputes the routed value from the caller's own
   solved abstract state, so every one of those draws enters under the very same
   admissible context \<^const>\<open>ctx_call\<close>.
@@ -31,82 +31,70 @@ text \<open>The four coverage hypotheses are properties of the \<^emph>\<open>so
 
 lemma rc_entry_covered:
   "(cfg_entry (compile_prog rc_pi rc_procs), [])
-     \<in> fst (entry_state_sol rc_gs rc_is_bot_pred rc_pi rc_procs)"
-  unfolding rc_is_bot_pred_def by eval
+     \<in> fst (entry_state_sol rc_gs rc_empty_pred rc_pi rc_procs)"
+  unfolding rc_empty_pred_def by eval
 
 lemma rc_fwd_closed_all:
-  "\<forall>(u, c) \<in> fst (entry_state_sol rc_gs rc_is_bot_pred rc_pi rc_procs).
+  "\<forall>(u, c) \<in> fst (entry_state_sol rc_gs rc_empty_pred rc_pi rc_procs).
      \<forall>(u', a, v) \<in> intra (compile_prog rc_pi rc_procs).
-       u = u' \<longrightarrow> (v, c) \<in> fst (entry_state_sol rc_gs rc_is_bot_pred rc_pi rc_procs)"
-  unfolding rc_is_bot_pred_def by eval
+       u = u' \<longrightarrow> (v, c) \<in> fst (entry_state_sol rc_gs rc_empty_pred rc_pi rc_procs)"
+  unfolding rc_empty_pred_def by eval
 
 lemma rc_fwd_ok:
-  assumes "(u, ctx) \<in> fst (entry_state_sol rc_gs rc_is_bot_pred rc_pi rc_procs)"
+  assumes "(u, ctx) \<in> fst (entry_state_sol rc_gs rc_empty_pred rc_pi rc_procs)"
     and "(u, a, v) \<in> intra (compile_prog rc_pi rc_procs)"
-  shows "(v, ctx) \<in> fst (entry_state_sol rc_gs rc_is_bot_pred rc_pi rc_procs)"
+  shows "(v, ctx) \<in> fst (entry_state_sol rc_gs rc_empty_pred rc_pi rc_procs)"
   using rc_fwd_closed_all assms by fastforce
 
 text \<open>The one call site is reached only under the root context: \<open>main\<close> is the root
   activation, and nothing routes back into it.\<close>
 
 lemma rc_call_caller_only_root:
-  "\<forall>(p, ctx) \<in> fst (entry_state_sol rc_gs rc_is_bot_pred rc_pi rc_procs).
+  "\<forall>(p, ctx) \<in> fst (entry_state_sol rc_gs rc_empty_pred rc_pi rc_procs).
      p = Statement 3 \<longrightarrow> ctx = []"
-  unfolding rc_is_bot_pred_def by eval
+  unfolding rc_empty_pred_def by eval
 
 lemma rc_covered_cont:
-  "(Statement 4, []) \<in> fst (entry_state_sol rc_gs rc_is_bot_pred rc_pi rc_procs)"
-  unfolding rc_is_bot_pred_def by eval
+  "(Statement 4, []) \<in> fst (entry_state_sol rc_gs rc_empty_pred rc_pi rc_procs)"
+  unfolding rc_empty_pred_def by eval
 
 lemma rc_comb_fwd_ok:
-  assumes "(cl, c1) \<in> fst (entry_state_sol rc_gs rc_is_bot_pred rc_pi rc_procs)"
+  assumes "(cl, c1) \<in> fst (entry_state_sol rc_gs rc_empty_pred rc_pi rc_procs)"
     and "(cl, CallEdge dst pars args, FunctionEntry p, cont)
            \<in> calls (compile_prog rc_pi rc_procs)"
-  shows "(cont, c1) \<in> fst (entry_state_sol rc_gs rc_is_bot_pred rc_pi rc_procs)"
+  shows "(cont, c1) \<in> fst (entry_state_sol rc_gs rc_empty_pred rc_pi rc_procs)"
   using assms rc_calls_shape[unfolded rc_cfg_def] rc_call_caller_only_root rc_covered_cont
   by fastforce
 
-text \<open>The routed callee entry the abstract side selects is the executable
-  \<^const>\<open>ctx_call\<close>: the abstract route reads the caller's solved state through the
-  same readback the transport uses, so \<open>entry_state_route_commute\<close> turns it back
-  into the executable route \<^const>\<open>ctx_call\<close> is defined by.\<close>
+text \<open>The routed callee entry the solved system selects is the executable
+  \<^const>\<open>ctx_call\<close>: the route reads the caller's solved state from the solver's own
+  table, which is exactly how \<^const>\<open>ctx_call\<close> is defined.\<close>
 
-lemma rc_enter_local_eq_entered:
-  "enter_local (ectx_abs_spec rc_gs) pars args
-      (map_lift (fun_of_resolved_st_q_for rc_gs) d) g
-   = map_lift (fun_of_resolved_st_q_for rc_gs)
-       (transfer_lift rc_is_bot_pred (ivl_enter_st_for rc_gs pars args) d)"
-  using entry_state_entered_commute[OF rc_exact, of d "CallEdge None pars args"]
-  by (simp add: entry_state_entered_def entered_state_abs_def ectx_abs_spec_def
-                dgs_enter_base_for_lifted)
-
-lemma rc_route_abs_at_call:
-  "entry_state_route_abs_gen rc_gs (Statement 3) []
-     (enter_local (ectx_abs_spec rc_gs) [(STR ''a'')] [V (STR ''x'')]
-        (locals (entry_state_sigma_abs_exec rc_gs rc_is_bot_pred rc_pi rc_procs
-           (Inl (Statement 3, []))))
-        (globs (entry_state_sigma_abs_exec rc_gs rc_is_bot_pred rc_pi rc_procs
-           (Inr Global))))
+lemma rc_route_at_call:
+  "entry_state_route_gen rc_gs rc_empty_pred (Statement 3) []
+     (transfer_lift rc_empty_pred
+        (ivl_enter_st_for rc_gs
+           (call_info_of (CallEdge (Some (STR ''y'')) [(STR ''a'')] [V (STR ''x'')])
+             (STR ''p'')))
+        (locals (snd (entry_state_sol rc_gs rc_empty_pred rc_pi rc_procs)
+                   (Inl (Statement 3, [])))))
      (CallEdge (Some (STR ''y'')) [(STR ''a'')] [V (STR ''x'')])
    = ctx_call"
-  unfolding entry_state_route_abs_gen_def entry_state_sigma_abs_exec_def ctx_call_def
-    rc_ctx_sol_def o_apply fun_of_dg_st_gen_simps
-  by (simp add: rc_enter_local_eq_entered entry_state_entered_def
-                entry_state_route_commute[OF rc_exact])
+  unfolding rc_empty_pred_def ctx_call_def rc_ctx_sol_def entry_state_route_gen_def
+  by (simp add: enter_st_interval_eq_entry_state_entered)
 
 lemma rc_call_fwd_ok:
-  assumes cov: "(u, ctx) \<in> fst (entry_state_sol rc_gs rc_is_bot_pred rc_pi rc_procs)"
+  assumes cov: "(u, ctx) \<in> fst (entry_state_sol rc_gs rc_empty_pred rc_pi rc_procs)"
     and ce: "(u, CallEdge dst pars args, FunctionEntry p, cont)
                \<in> calls (compile_prog rc_pi rc_procs)"
   shows "(FunctionEntry p,
-            entry_state_route_abs_gen rc_gs u ctx
-              (enter_local (ectx_abs_spec rc_gs) pars args
-                 (locals (entry_state_sigma_abs_exec rc_gs rc_is_bot_pred rc_pi rc_procs
-                    (Inl (u, ctx))))
-                 (globs (entry_state_sigma_abs_exec rc_gs rc_is_bot_pred rc_pi rc_procs
-                    (Inr Global))))
+            entry_state_route_gen rc_gs rc_empty_pred u ctx
+              (transfer_lift rc_empty_pred
+                 (ivl_enter_st_for rc_gs (call_info_of (CallEdge dst pars args) p))
+                 (locals (snd (entry_state_sol rc_gs rc_empty_pred rc_pi rc_procs)
+                            (Inl (u, ctx)))))
               (CallEdge dst pars args))
-         \<in> fst (entry_state_sol rc_gs rc_is_bot_pred rc_pi rc_procs)"
+         \<in> fst (entry_state_sol rc_gs rc_empty_pred rc_pi rc_procs)"
 proof -
   from ce rc_calls_shape[unfolded rc_cfg_def] have shape:
     "u = Statement 3" "dst = Some (STR ''y'')" "pars = [(STR ''a'')]" "args = [V (STR ''x'')]"
@@ -114,7 +102,7 @@ proof -
     by fastforce+
   have root: "ctx = []" using cov shape rc_call_caller_only_root by fastforce
   show ?thesis
-    unfolding shape root rc_route_abs_at_call
+    unfolding shape root rc_route_at_call
     using callee_covered_call unfolding rc_ctx_sol_def .
 qed
 
@@ -127,21 +115,21 @@ text \<open>The seven hypotheses \<open>entry_state_activation_collect_sound\<cl
   them unconditional below.\<close>
 
 lemmas rc_entry_state_hyps =
-  rc_wf rc_ctx_terminates rc_exact rc_entry_covered rc_fwd_ok rc_call_fwd_ok rc_comb_fwd_ok
+  rc_ctx_terminates rc_exact rc_entry_covered rc_fwd_ok rc_call_fwd_ok rc_comb_fwd_ok
 
 theorem rc_activation_collect_sound:
   "activation_collect rc_gs
-     (entry_state_context rc_gs rc_is_bot_pred rc_pi rc_procs)
+     (entry_state_context_rel rc_gs rc_empty_pred rc_pi rc_procs)
      [] (compile_prog rc_pi rc_procs) (cinit_stores rc_gs) v ctx
-   \<subseteq> gamma_state_lift
-       (entry_state_sg rc_gs rc_is_bot_pred rc_pi rc_procs (Inl (v, ctx)))"
-  by (rule entry_state_activation_collect_sound
-        [OF rc_wf rc_ctx_terminates rc_exact rc_entry_covered rc_fwd_ok rc_call_fwd_ok rc_comb_fwd_ok])
+   \<subseteq> gamma_state_lift (map_lift (fun_of_resolved_st_q_for rc_gs)
+       (entry_state_sg_st rc_gs rc_empty_pred rc_pi rc_procs (Inl (v, ctx))))"
+  by (rule entry_state_activation_collect_sound[OF rc_entry_state_hyps])
 
 subsection \<open>Acceptance witness: one context covers every \<open>__voblint_nondet_int()\<close> draw\<close>
 
-text \<open>\<^const>\<open>entry_state_context\<close> discards its concrete-store argument, so at the one
-  call site it is the constant \<^const>\<open>ctx_call\<close> --- no matter which \<open>__voblint_nondet_int()\<close>
+text \<open>\<^const>\<open>entry_state_context_rel\<close> admits a routed context relationally rather than
+  computing one from the concrete store, so at the one call site it admits exactly the
+  constant \<^const>\<open>ctx_call\<close> --- no matter which \<open>__voblint_nondet_int()\<close>
   outcome produced the store it is handed.\<close>
 
 lemma rc_call_site_action:
@@ -156,11 +144,35 @@ proof (rule call_action_at_call_site_eq
 qed
 
 lemma rc_context_at_call:
-  "entry_state_context rc_gs rc_is_bot_pred rc_pi rc_procs
-     (Statement 3) [] s = ctx_call"
-  by (simp add: entry_state_context_def[OF rc_entry_state_hyps]
-                entry_state_sigma_abs_def[OF rc_entry_state_hyps]
-                rc_call_site_action rc_route_abs_at_call)
+  assumes sin: "s \<in> interval_gamma rc_gs (locals (snd (entry_state_sol rc_gs rc_empty_pred rc_pi rc_procs)
+                  (Inl (Statement 3, []))))
+                  (globs (snd (entry_state_sol rc_gs rc_empty_pred rc_pi rc_procs) (Inr (Analysis_Global ()))))"
+  shows "entry_state_context_rel rc_gs rc_empty_pred rc_pi rc_procs
+           (Statement 3) [] (call_info_of (CallEdge (Some (STR ''y'')) [(STR ''a'')] [V (STR ''x'')]) (STR ''p''))
+           s (call_enter rc_gs (CallEdge (Some (STR ''y'')) [(STR ''a'')] [V (STR ''x'')]) s) ctx_call"
+proof -
+  let ?ci = "call_info_of (CallEdge (Some (STR ''y'')) [(STR ''a'')] [V (STR ''x'')]) (STR ''p'')"
+  let ?d = "locals (snd (entry_state_sol rc_gs rc_empty_pred rc_pi rc_procs) (Inl (Statement 3, [])))"
+  let ?entry = "transfer_lift rc_empty_pred (ivl_enter_st_for rc_gs ?ci) ?d"
+  have cov: "entry_pairs_cover
+      (\<lambda>d'. interval_gamma rc_gs d' (globs (snd (entry_state_sol rc_gs rc_empty_pred rc_pi rc_procs)
+              (Inr (Analysis_Global ())))))
+      s (call_enter rc_gs (CallEdge (Some (STR ''y'')) [(STR ''a'')] [V (STR ''x'')]) s)
+      [(?d, ?entry)]"
+    using interval_entry_cover_exec[OF rc_exact sin, where ci = ?ci] by simp
+  have ecov: "call_enter rc_gs (CallEdge (Some (STR ''y'')) [(STR ''a'')] [V (STR ''x'')]) s
+                \<in> interval_gamma rc_gs ?entry (globs (snd (entry_state_sol rc_gs rc_empty_pred rc_pi rc_procs)
+                    (Inr (Analysis_Global ()))))"
+    using cov unfolding entry_pairs_cover_def by simp
+  have base: "entry_state_context_rel rc_gs rc_empty_pred rc_pi rc_procs
+      (Statement 3) [] ?ci s
+      (call_enter rc_gs (CallEdge (Some (STR ''y'')) [(STR ''a'')] [V (STR ''x'')]) s)
+      (entry_state_route_gen rc_gs rc_empty_pred (Statement 3) [] ?entry
+         (CallEdge (Some (STR ''y'')) [(STR ''a'')] [V (STR ''x'')]))"
+    unfolding routed_entry_context_rel_def
+    using sin ecov by auto
+  thus ?thesis by (simp add: rc_route_at_call)
+qed
 
 text \<open>The crux corollary: for \<^emph>\<open>every\<close> concrete store \<open>s\<close> that reaches the call site
   --- in particular every store obtained by any \<open>__voblint_nondet_int()\<close> outcome, since \<open>x\<close>'s
@@ -171,37 +183,47 @@ text \<open>The crux corollary: for \<^emph>\<open>every\<close> concrete store 
   argument occurred.\<close>
 
 corollary rc_entry_state_coverage:
-  assumes sm: "s \<in> gamma_state_lift
-    (entry_state_sg rc_gs rc_is_bot_pred rc_pi rc_procs (Inl (Statement 3, [])))"
+  assumes sm: "s \<in> gamma_state_lift (map_lift (fun_of_resolved_st_q_for rc_gs)
+    (entry_state_sg_st rc_gs rc_empty_pred rc_pi rc_procs (Inl (Statement 3, []))))"
   shows "call_enter rc_gs (CallEdge (Some (STR ''y'')) [(STR ''a'')] [V (STR ''x'')]) s
-           \<in> gamma_state_lift (entry_state_sg rc_gs rc_is_bot_pred rc_pi rc_procs
-                (Inl (FunctionEntry (STR ''p''), ctx_call)))"
+           \<in> gamma_state_lift (map_lift (fun_of_resolved_st_q_for rc_gs)
+                (entry_state_sg_st rc_gs rc_empty_pred rc_pi rc_procs
+                  (Inl (FunctionEntry (STR ''p''), ctx_call))))"
 proof -
   have ce: "(Statement 3, CallEdge (Some (STR ''y'')) [(STR ''a'')] [V (STR ''x'')],
               FunctionEntry (STR ''p''), Statement 4)
               \<in> calls (compile_prog rc_pi rc_procs)"
     by eval
+  have covd: "(Statement 3, []) \<in> fst rc_ctx_sol"
+    unfolding rc_ctx_sol_def rc_empty_pred_def by eval
+  have sin: "s \<in> interval_gamma rc_gs (locals (snd rc_ctx_sol (Inl (Statement 3, []))))
+               (globs (snd rc_ctx_sol (Inr (Analysis_Global ()))))"
+    using sm covd
+    unfolding interval_gamma_def entry_state_sg_st_def rc_ctx_sol_def[symmetric]
+    by simp
   show ?thesis
-    using entry_state_sg_seed[OF rc_entry_state_hyps ce sm]
-    by (simp add: rc_context_at_call)
+    by (rule entry_state_sg_seed[OF rc_entry_state_hyps ce sm
+          rc_context_at_call[OF sin[unfolded rc_ctx_sol_def]]])
 qed
 
-text \<open>Unfolding \<^const>\<open>activation_collect\<close> at \<^const>\<open>ctx_call\<close> makes the \<^const>\<open>key\<close>
-  side of the same fact syntactically manifest: every concrete callee-entry trace this
-  set counts --- one per \<open>__voblint_nondet_int()\<close> outcome that actually occurs --- is one whose
-  \<^const>\<open>key\<close> equals the single context \<^const>\<open>ctx_call\<close>.
+text \<open>Unfolding \<^const>\<open>activation_collect\<close> at \<^const>\<open>ctx_call\<close> makes the
+  \<^const>\<open>trace_context\<close> side of the same fact syntactically manifest: every concrete
+  callee-entry trace this set counts --- one per \<open>__voblint_nondet_int()\<close> outcome that
+  actually occurs --- is one whose \<^const>\<open>trace_context\<close> admits the single context
+  \<^const>\<open>ctx_call\<close>. \<^const>\<open>entry_state_context_rel\<close> is a relation rather than a
+  function, so this is membership, not the equational form the retired \<^const>\<open>key\<close> gave.
   \<open>rc_activation_collect_sound\<close> then bounds this whole set, every context alike.\<close>
 
 corollary rc_activation_ctx_key:
   "activation_collect rc_gs
-     (entry_state_context rc_gs rc_is_bot_pred rc_pi rc_procs)
+     (entry_state_context_rel rc_gs rc_empty_pred rc_pi rc_procs)
      [] (compile_prog rc_pi rc_procs) (cinit_stores rc_gs)
      (FunctionEntry (STR ''p'')) ctx_call
    = {sink_store t | t.
         t \<in> valid_ltr rc_gs (compile_prog rc_pi rc_procs) (cinit_stores rc_gs)
         \<and> sink_node t = FunctionEntry (STR ''p'')
-        \<and> key (entry_state_context rc_gs rc_is_bot_pred rc_pi rc_procs)
-            [] t = ctx_call}"
+        \<and> trace_context rc_gs (entry_state_context_rel rc_gs rc_empty_pred rc_pi rc_procs) []
+            (compile_prog rc_pi rc_procs) t ctx_call}"
   unfolding activation_collect_def by (rule refl)
 
 end

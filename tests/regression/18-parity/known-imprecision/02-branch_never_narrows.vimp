@@ -1,0 +1,20 @@
+// PARAM: --analysis parity
+// x == 0 && x == 1 is self-contradictory (no integer is both), and so is
+// y == 0 && y == 1, so this branch is concretely unreachable. Unlike the
+// Sign/Interval/Int siblings of this fixture, the mechanism here is not
+// join-arm pollution in bfilter: Parity has no backward_domain
+// interpretation at all (Parity_Numeric_Queries.thy -- parity has no
+// inv_less/meet instance, so guards cannot refine it), and branch_parity
+// (Parity_Transfer.thy) is the identity on every guard, narrowing or not.
+// x == 5 therefore comes back UNKNOWN regardless of what the guard says.
+// There is no bfilter_lifted for Parity to wire into tf_branch, so unlike
+// its siblings this case is not expected to change.
+void main() {
+  x := __voblint_nondet_int();
+  y := __voblint_nondet_int();
+  if ((x == 0 && x == 1) || (y == 0 && y == 1)) {
+    __voblint_check(x == 5) // UNKNOWN
+  } else {
+    skip
+  }
+}

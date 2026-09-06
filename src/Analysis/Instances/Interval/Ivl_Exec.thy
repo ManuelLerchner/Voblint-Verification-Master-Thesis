@@ -1,5 +1,5 @@
 theory Ivl_Exec
-  imports Voblint_Core.Exec_Refinement Voblint_Core.Numeric_Ops Interval_Domain
+  imports "Voblint_Exec.Exec_Refinement" Numeric_Ops Interval_Domain
 begin
 
 section \<open>Interval executable transfer mirror\<close>
@@ -8,11 +8,11 @@ instance ivl :: bounded_warrowing ..
 
 
 text \<open>
-  Executable mirror of @{const ivl_tf_for} on @{typ "ivl resolved_st_q"}, following
+  Executable mirror of @{const ivl_tf_abs} on @{typ "ivl resolved_st_q"}, following
   the sign-domain pattern in \<open>Sign_Exec\<close>. Commutation lemmas hook
-  into the generic @{theory Voblint_Core.Exec_Refinement} transport; the certified
+  into the generic @{theory Voblint_Exec.Exec_Refinement} transport; the certified
   end-to-end soundness theory built on this mirror lives in
-  \<open>Interval_Ctx_None_Sound\<close>, mirroring \<open>Sign_Ctx_None_Sound\<close>.
+  \<open>Interval_Analyses\<close>, mirroring \<open>Sign_Analyses\<close>.
 \<close>
 
 text \<open>
@@ -29,7 +29,7 @@ subsection \<open>Executable transfer function and seeds, generic in the classif
 text \<open>
   \<open>ivl_ops\<close> bundles Interval's own primitives for the generic
   \<open>generic_branch_st_for\<close>/\<open>generic_enter_st_for\<close> construction
-  (\<^theory>\<open>Voblint_Core.Numeric_Ops\<close>), the same way \<open>sign_ops\<close> does for Sign:
+  (\<^theory>\<open>Voblint_Analysis.Numeric_Ops\<close>), the same way \<open>sign_ops\<close> does for Sign:
   \<open>branch_ivl_st_for\<close>/\<open>ivl_enter_st_for\<close>
   below are exactly those generic constructions instantiated at \<open>ivl_ops\<close>.
 \<close>
@@ -46,15 +46,15 @@ lemma branch_ivl_st_for_eq [simp]:
   by (simp add: branch_ivl_st_for_def generic_branch_st_for_def ivl_ops_def)
 
 definition ivl_enter_st_for ::
-  "(vname => bool) => vname list => exp list =>
+  "(vname => bool) => call_info =>
    ivl resolved_st_q => ivl resolved_st_q" where
   "ivl_enter_st_for = generic_enter_st_for ivl_ops"
 
 lemma ivl_enter_st_for_eq [simp]:
-  "ivl_enter_st_for gs xs es s =
-    bind_formals_resolved_q gs xs
+  "ivl_enter_st_for gs ci s =
+    bind_formals_resolved_q gs (ci_formals ci)
       (map (\<lambda>e. aval_ivl e
-        (fun_of_resolved_st_q_for gs s)) es)
+        (fun_of_resolved_st_q_for gs s)) (ci_args ci))
       (enter_frame_D_resolved_q ivl_top s)"
   by (simp add: ivl_enter_st_for_def generic_enter_st_for_def ivl_ops_def)
 
@@ -77,6 +77,7 @@ fun ivl_tf_st_for ::
        branch_ivl_st_for gs b True s"
   | "ivl_tf_st_for gs (EA_AssumeNot b) s =
        branch_ivl_st_for gs b False s"
+  | "ivl_tf_st_for gs (EA_Body p) s = s"
   | "ivl_tf_st_for gs (EA_Ret None p) s = s"
   | "ivl_tf_st_for gs (EA_Ret (Some a) p) s =
        update_resolved_st_q s (location_of gs ret_var)
@@ -108,8 +109,8 @@ lemma cinit_ivl_st_not_bot_for:
   assumes globals: "\<And>x. gs x = (x \<in> set gl)"
   shows "\<not> resolved_st_q_is_bot_for gl cinit_ivl_st"
 proof -
-  have "\<not> is_bot_state (fun_of_resolved_st_q_for gs cinit_ivl_st)"
-    unfolding is_bot_state_def by (auto simp: is_bottom_ivl_def split: if_splits)
+  have "\<not> is_empty_state (fun_of_resolved_st_q_for gs cinit_ivl_st)"
+    unfolding is_empty_state_def by (auto simp: is_bottom_ivl_def split: if_splits)
   then show ?thesis
     by (simp add: resolved_st_q_is_bot_for_iff[OF globals])
 qed
@@ -145,7 +146,7 @@ subsection \<open>Classifier-parametric executable/abstract transfer corresponde
 text \<open>
   A placement analysis reads its D/G unknowns back through
   \<^const>\<open>fun_of_resolved_st_q_for\<close> and needs the executable
-  \<^const>\<open>ivl_tf_st_for\<close> step to agree with the abstract \<^const>\<open>ivl_tf_for\<close>
+  \<^const>\<open>ivl_tf_st_for\<close> step to agree with the abstract \<^const>\<open>ivl_tf_abs\<close>
   step at every location a node's own scope covers -- not everywhere, since
   the executable state is sparse outside that scope. These lemmas state that
   agreement once per edge-action shape, given only that the two input states
@@ -167,8 +168,8 @@ lemma ivl_tf_st_for_nop_agree:
     and location_in: "location \<in> universe"
   shows
     "lookup_resolved_st_q (ivl_tf_st_for gs EA_Nop s_exec) location =
-      apply_tf (ivl_tf_for gs) EA_Nop s_abs (location_vname location)"
-  using agree[OF location_in] by (simp add: ivl_tf_for_def skip_ivl_def)
+      ivl_tf_abs EA_Nop s_abs (location_vname location)"
+  using agree[OF location_in] by (simp add: skip_ivl_def)
 
 lemma ivl_tf_st_for_assign_agree:
   fixes y :: vname and a :: exp
@@ -179,11 +180,11 @@ lemma ivl_tf_st_for_assign_agree:
     and canonical: "location = location_of gs (location_vname location)"
   shows
     "lookup_resolved_st_q (ivl_tf_st_for gs (EA_Assign y a) s_exec) location =
-      apply_tf (ivl_tf_for gs) (EA_Assign y a) s_abs (location_vname location)"
+      ivl_tf_abs (EA_Assign y a) s_abs (location_vname location)"
 proof (cases "location_vname location = y")
   case True
   then have "location = location_of gs y" using canonical by simp
-  then show ?thesis using val_agree True by (simp add: ivl_tf_for_def assign_ivl_def)
+  then show ?thesis using val_agree True by (simp add: assign_ivl_def)
 next
   case False
   have neq: "location \<noteq> location_of gs y"
@@ -193,7 +194,7 @@ next
     with False show False by simp
   qed
   show ?thesis
-    using agree[OF location_in] neq False by (simp add: ivl_tf_for_def assign_ivl_def)
+    using agree[OF location_in] neq False by (simp add: assign_ivl_def)
 qed
 
 lemma ivl_tf_st_for_ret_none_agree:
@@ -203,9 +204,9 @@ lemma ivl_tf_st_for_ret_none_agree:
     and location_in: "location \<in> universe"
   shows
     "lookup_resolved_st_q (ivl_tf_st_for gs (EA_Ret None p) s_exec) location =
-      apply_tf (ivl_tf_for gs) (EA_Ret None p) s_abs (location_vname location)"
+      ivl_tf_abs (EA_Ret None p) s_abs (location_vname location)"
   using ivl_tf_st_for_nop_agree[OF agree location_in]
-  by (simp add: ivl_tf_for_def skip_ivl_def return_ivl_def)
+  by (simp add: skip_ivl_def return_ivl_def)
 
 lemma ivl_tf_st_for_ret_some_agree:
   fixes a :: exp and p :: pname
@@ -216,9 +217,9 @@ lemma ivl_tf_st_for_ret_some_agree:
     and canonical: "location = location_of gs (location_vname location)"
   shows
     "lookup_resolved_st_q (ivl_tf_st_for gs (EA_Ret (Some a) p) s_exec) location =
-      apply_tf (ivl_tf_for gs) (EA_Ret (Some a) p) s_abs (location_vname location)"
+      ivl_tf_abs (EA_Ret (Some a) p) s_abs (location_vname location)"
   using ivl_tf_st_for_assign_agree[where y = ret_var, OF agree val_agree location_in canonical]
-  by (simp add: ivl_tf_for_def return_ivl_def assign_ivl_def)
+  by (simp add: return_ivl_def assign_ivl_def)
 
 text \<open>Guard filters commute totally through the readback
   (\<open>bfilter_ivl_st_commute\<close>), so full input agreement lifts directly --
@@ -226,35 +227,33 @@ text \<open>Guard filters commute totally through the readback
 
 lemma ivl_tf_st_for_branch_agree:
   assumes agree: "fun_of_resolved_st_q_for gs s_exec = s_abs"
+    and live: "live_resolved_st_q gs s_exec"
   shows
     "fun_of_resolved_st_q_for gs (branch_ivl_st_for gs b pol s_exec) =
-      branch\<^sup># (ivl_tf_for gs) b pol s_abs"
+      branch_ivl b pol s_abs"
   unfolding agree[symmetric]
-  by (simp add: branch_ivl_st_commute ivl_tf_for_def)
+  by (simp add: branch_ivl_st_commute[OF live])
 
 lemmas ivl_tf_st_for_assume_agree =
   ivl_tf_st_for_branch_agree[of gs s_exec s_abs b True for gs s_exec s_abs b,
-    unfolded ivl_tf_st_for.simps(4)[symmetric] apply_tf.simps(4)[symmetric]]
+    unfolded ivl_tf_st_for.simps(4)[symmetric] ivl_tf_abs_simps(4)[symmetric]]
 
 lemmas ivl_tf_st_for_assume_not_agree =
   ivl_tf_st_for_branch_agree[of gs s_exec s_abs b False for gs s_exec s_abs b,
-    unfolded ivl_tf_st_for.simps(5)[symmetric] apply_tf.simps(5)[symmetric]]
+    unfolded ivl_tf_st_for.simps(5)[symmetric] ivl_tf_abs_simps(5)[symmetric]]
+
 
 text \<open>
   A per-location specialization of the two lemmas above for the single-
   variable guard shape \<open>Less (V x) (N n)\<close>: \<^const>\<open>bfilter_ivl_st\<close>/
   \<^const>\<open>bfilter_ivl\<close> for this shape reduce (via \<open>afilter_st\<close>'s own
-  recursive equations, \<^theory>\<open>Voblint_Core.Exec_Backward\<close>) to a single
+  recursive equations, \<^theory>\<open>Voblint_Analysis.Exec_Backward\<close>) to a single
   \<^const>\<open>update_resolved_st_q\<close> at \<open>location_of gs x\<close> computed purely from
   \<open>x\<close>'s own value -- \<open>N n\<close> is a literal, so its own \<open>afilter_st\<close> case is the
-  identity, and every location other than \<open>x\<close> is left untouched. This lets a
-  placement example discharge \<open>placed_hook_se_edge\<close>'s per-location
-  \<open>raw\<close> premise for an \<open>x < n\<close>-shaped guard from ordinary in-scope value
-  agreement, without needing the full-store agreement
-  \<open>ivl_tf_st_for_assume_agree\<close> asks for -- the completed abstract state
-  disagrees with the executable one outside a node's own scope by
-  construction, so a whole-store premise is never available at a placement
-  call site the way it is for a flat, unscoped analysis.\<close>
+  identity, and every location other than \<open>x\<close> is left untouched. A consumer
+  reasoning per location can therefore discharge an \<open>x < n\<close>-shaped guard
+  from ordinary value agreement at \<open>x\<close> alone, without the full-store
+  agreement \<open>ivl_tf_st_for_assume_agree\<close> asks for.\<close>
 
 lemma ivl_bfilter_st_for_less_var_lit_agree:
   fixes s_exec :: "ivl resolved_st_q" and s_abs :: "ivl abs_state"
@@ -299,81 +298,60 @@ proof -
 qed
 
 text \<open>
-  \<open>branch_ivl\<close>'s forward gate reads only \<open>x\<close>'s own value (\<open>Less (V x) (N n)\<close>
-  mentions no other variable), so its decision at the executable and abstract
-  sides already agrees from \<open>val_agree\<close> alone -- no whole-store premise is
-  needed there either. When the gate fires (define infeasibility), both sides
-  collapse to their own \<open>bot\<close>, and \<open>bot\<close>'s readback is \<open>bot\<close> at \<^emph>\<open>every\<close>
-  location, not only \<open>x\<close>'s -- so this holds for the same arbitrary
-  \<open>location\<close> \<open>ivl_bfilter_st_for_less_var_lit_agree\<close> does, with no extra
-  premise. When the gate falls through, this reduces to that lemma directly.
+  \<open>branch_ivl_st\<close>'s liveness pre-check reads the \<^emph>\<open>whole\<close>
+  incoming state (\<open>live_resolved_st_q\<close>, an existential over every location),
+  unlike plain \<open>bfilter_ivl_st\<close>'s purely local update -- so, unlike
+  \<open>ivl_bfilter_st_for_less_var_lit_agree\<close> above, this cannot get away with
+  agreement at \<open>x\<close> alone. Full-state agreement makes it a direct corollary
+  of \<open>branch_ivl_st_commute\<close> instead, with no local case analysis needed.
 \<close>
 
 lemma ivl_branch_st_for_less_var_lit_agree:
   fixes s_exec :: "ivl resolved_st_q" and s_abs :: "ivl abs_state"
     and x :: vname and n :: int and res :: bool
-  assumes agree: "\<And>location. location \<in> universe \<Longrightarrow>
-      lookup_resolved_st_q s_exec location = s_abs (location_vname location)"
-    and location_in: "location \<in> universe"
+  assumes agree: "fun_of_resolved_st_q_for gs s_exec = s_abs"
+    and live: "live_resolved_st_q gs s_exec"
     and canonical: "location = location_of gs (location_vname location)"
-    and x_in: "location_of gs x \<in> universe"
   shows
     "lookup_resolved_st_q (branch_ivl_st gs (Less (V x) (N n)) res s_exec) location =
       branch_ivl (Less (V x) (N n)) res s_abs (location_vname location)"
 proof -
-  have val_agree: "fun_of_resolved_st_q_for gs s_exec x = s_abs x"
-    using agree[OF x_in]
-    by (simp add: fun_of_resolved_st_q_for_def location_of_def)
-  have aval_agree: "aval_ivl (Less (V x) (N n)) (fun_of_resolved_st_q_for gs s_exec) =
-      aval_ivl (Less (V x) (N n)) s_abs"
-    using val_agree by simp
-  have bot_readback: "lookup_resolved_st_q (bot :: ivl resolved_st_q) location = bot"
-  proof -
-    have "lookup_resolved_st_q (bot :: ivl resolved_st_q) location =
-        fun_of_resolved_st_q_for gs bot (location_vname location)"
-      unfolding fun_of_resolved_st_q_for_def canonical[symmetric] ..
-    also have "\<dots> = bot" by simp
-    finally show ?thesis .
-  qed
-  have bf: "lookup_resolved_st_q (bfilter_ivl_st gs (Less (V x) (N n)) res s_exec) location =
-      bfilter_ivl (Less (V x) (N n)) res s_abs (location_vname location)"
-    by (rule ivl_bfilter_st_for_less_var_lit_agree[OF agree location_in canonical x_in])
-  show ?thesis
-    unfolding ivl_backward_domain.branch_st_def ivl_backward_domain.branch_def[folded branch_ivl_def]
-      ivl_backward_domain.branch_lifted_def[folded branch_lifted_ivl_def]
-      ivl_backward_domain.feasible_def[folded feasible_ivl_def]
-      aval_agree bot_fun_def
-    using bot_readback bf
-    by (simp split: option.splits)
+  have "lookup_resolved_st_q (branch_ivl_st gs (Less (V x) (N n)) res s_exec) location =
+      fun_of_resolved_st_q_for gs (branch_ivl_st gs (Less (V x) (N n)) res s_exec)
+        (location_vname location)"
+    unfolding fun_of_resolved_st_q_for_def canonical[symmetric] ..
+  also have "\<dots> = branch_ivl (Less (V x) (N n)) res
+      (fun_of_resolved_st_q_for gs s_exec) (location_vname location)"
+    using branch_ivl_st_commute[OF live] by simp
+  also have "\<dots> = branch_ivl (Less (V x) (N n)) res s_abs (location_vname location)"
+    using agree by simp
+  finally show ?thesis .
 qed
 
 lemma ivl_tf_st_for_assume_var_lit_agree:
   fixes s_exec :: "ivl resolved_st_q" and s_abs :: "ivl abs_state"
     and x :: vname and n :: int
-  assumes agree: "\<And>location. location \<in> universe \<Longrightarrow>
-      lookup_resolved_st_q s_exec location = s_abs (location_vname location)"
-    and location_in: "location \<in> universe"
+  assumes agree: "fun_of_resolved_st_q_for gs s_exec = s_abs"
+    and live: "live_resolved_st_q gs s_exec"
     and canonical: "location = location_of gs (location_vname location)"
-    and x_in: "location_of gs x \<in> universe"
   shows
     "lookup_resolved_st_q (ivl_tf_st_for gs (EA_Assume (Less (V x) (N n))) s_exec) location =
-      apply_tf (ivl_tf_for gs) (EA_Assume (Less (V x) (N n))) s_abs (location_vname location)"
-  using ivl_branch_st_for_less_var_lit_agree[OF agree location_in canonical x_in, where res = True]
-  by (simp add: ivl_tf_for_def apply_tf.simps)
+      ivl_tf_abs (EA_Assume (Less (V x) (N n))) s_abs (location_vname location)"
+  using ivl_branch_st_for_less_var_lit_agree[OF agree live canonical, where res = True]
+  by simp
 
 lemma ivl_tf_st_for_assume_not_var_lit_agree:
   fixes s_exec :: "ivl resolved_st_q" and s_abs :: "ivl abs_state"
     and x :: vname and n :: int
-  assumes agree: "\<And>location. location \<in> universe \<Longrightarrow>
-      lookup_resolved_st_q s_exec location = s_abs (location_vname location)"
-    and location_in: "location \<in> universe"
+  assumes agree: "fun_of_resolved_st_q_for gs s_exec = s_abs"
+    and live: "live_resolved_st_q gs s_exec"
     and canonical: "location = location_of gs (location_vname location)"
-    and x_in: "location_of gs x \<in> universe"
   shows
     "lookup_resolved_st_q (ivl_tf_st_for gs (EA_AssumeNot (Less (V x) (N n))) s_exec) location =
-      apply_tf (ivl_tf_for gs) (EA_AssumeNot (Less (V x) (N n))) s_abs (location_vname location)"
-  using ivl_branch_st_for_less_var_lit_agree[OF agree location_in canonical x_in, where res = False]
-  by (simp add: ivl_tf_for_def apply_tf.simps)
+      ivl_tf_abs (EA_AssumeNot (Less (V x) (N n))) s_abs (location_vname location)"
+  using ivl_branch_st_for_less_var_lit_agree[OF agree live canonical, where res = False]
+  by simp
+
 
 text \<open>
   A one-argument call entry: the bound formal's location gets the evaluated
@@ -394,7 +372,7 @@ lemma ivl_enter_st_for_singleton_agree:
     and location_in: "location \<in> universe"
     and canonical: "location = location_of gs (location_vname location)"
   shows
-    "lookup_resolved_st_q (ivl_enter_st_for gs [x] [e] s_exec) location =
+    "lookup_resolved_st_q (ivl_enter_st_for gs (call_info_of (CallEdge None [x] [e]) undefined) s_exec) location =
       enter_ivl_for gs [x] [e] s_abs (location_vname location)"
 proof (cases location)
   case (Global_Location y)
@@ -411,8 +389,8 @@ proof (cases location)
   have agree: "fun_of_resolved_st_q_for gs s_exec y = s_abs y"
     by (rule agree_global[OF vg mem])
   show ?thesis
-    unfolding ivl_enter_st_for_eq enter_ivl_for_def enter_D_def
-      enter_frame_D_def
+    unfolding ivl_enter_st_for_eq enter_ivl_for_def enter_binding_def
+      enter_frame_def
     using not_x agree yneqx vg
     by (simp add: bind_formals_resolved_q_singleton Global_Location
       fun_of_resolved_st_q_for_def loy)
@@ -426,7 +404,7 @@ next
     have loc_x: "location = location_of gs x"
       using Local_Location True formal_not_global by (simp add: location_of_def)
     show ?thesis
-      unfolding ivl_enter_st_for_eq enter_ivl_for_def enter_D_def
+      unfolding ivl_enter_st_for_eq enter_ivl_for_def enter_binding_def
       using Local_Location val_agree
       by (simp add: bind_formals_resolved_q_singleton loc_x True)
   next
@@ -434,8 +412,8 @@ next
     have not_x: "location \<noteq> location_of gs x"
       using Local_Location False formal_not_global by (simp add: location_of_def)
     show ?thesis
-      unfolding ivl_enter_st_for_eq enter_ivl_for_def enter_D_def
-        enter_frame_D_def
+      unfolding ivl_enter_st_for_eq enter_ivl_for_def enter_binding_def
+        enter_frame_def
       using Local_Location not_x False not_g
       by (simp add: bind_formals_resolved_q_singleton)
   qed
@@ -443,60 +421,56 @@ qed
 
 subsection \<open>Unscoped executable/abstract correspondence, generic in the classifier\<close>
 
-lemma ivl_tf_st_for_reduces: "action_reduces (ivl_tf_st_for gs)"
-  by unfold_locales (rule ext, simp)+
-
 lemma ivl_tf_st_for_commute:
-  "fun_of_resolved_st_q_for gs (ivl_tf_st_for gs a s) =
-   apply_tf (ivl_tf_for gs) a (fun_of_resolved_st_q_for gs s)"
-proof (rule apply_tf_wrap_eqI[
-    where H = "\<lambda>f. f (fun_of_resolved_st_q_for gs s)"])
-  show "fun_of_resolved_st_q_for gs (ivl_tf_st_for gs EA_Nop s) =
-      apply_tf (ivl_tf_for gs) EA_Nop (fun_of_resolved_st_q_for gs s)"
-    by (simp add: ivl_tf_for_def skip_ivl_def)
-  show "\<And>x e. fun_of_resolved_st_q_for gs
-      (ivl_tf_st_for gs (EA_Assign x e) s) =
-    apply_tf (ivl_tf_for gs) (EA_Assign x e) (fun_of_resolved_st_q_for gs s)"
-    by (simp add: ivl_tf_for_def assign_ivl_def)
-  show "\<And>sc x. fun_of_resolved_st_q_for gs
-      (ivl_tf_st_for gs (EA_Special sc x) s) =
-    apply_tf (ivl_tf_for gs) (EA_Special sc x) (fun_of_resolved_st_q_for gs s)"
-    by (auto simp: ivl_tf_for_def split: special_call.splits)
-  show "\<And>b. fun_of_resolved_st_q_for gs
-      (ivl_tf_st_for gs (EA_Assume b) s) =
-    apply_tf (ivl_tf_for gs) (EA_Assume b) (fun_of_resolved_st_q_for gs s)"
-    by (rule ivl_tf_st_for_assume_agree[OF refl])
-  show "\<And>b. fun_of_resolved_st_q_for gs
-      (ivl_tf_st_for gs (EA_AssumeNot b) s) =
-    apply_tf (ivl_tf_for gs) (EA_AssumeNot b)
-      (fun_of_resolved_st_q_for gs s)"
-    by (rule ivl_tf_st_for_assume_not_agree[OF refl])
-  show "\<And>ea p. fun_of_resolved_st_q_for gs
-      (ivl_tf_st_for gs (EA_Ret ea p) s) =
-    apply_tf (ivl_tf_for gs) (EA_Ret ea p) (fun_of_resolved_st_q_for gs s)"
-  proof -
-    fix ea p
-    show "fun_of_resolved_st_q_for gs (ivl_tf_st_for gs (EA_Ret ea p) s) =
-      apply_tf (ivl_tf_for gs) (EA_Ret ea p) (fun_of_resolved_st_q_for gs s)"
-    proof (cases ea)
-      case None
-      then show ?thesis by (simp add: ivl_tf_for_def skip_ivl_def return_ivl_def)
-    next
-      case (Some a)
-      then show ?thesis by (simp add: ivl_tf_for_def return_ivl_def assign_ivl_def)
-    qed
+  assumes "live_resolved_st_q gs s"
+  shows
+    "fun_of_resolved_st_q_for gs (ivl_tf_st_for gs a s) =
+     ivl_tf_abs a (fun_of_resolved_st_q_for gs s)"
+proof (cases a)
+  case EA_Nop
+  then show ?thesis by (simp add: skip_ivl_def)
+next
+  case (EA_Assign x e)
+  then show ?thesis by (simp add: assign_ivl_def)
+next
+  case (EA_Special sc x)
+  then show ?thesis by (auto split: special_call.splits)
+next
+  case (EA_Assume b)
+  then show ?thesis
+    unfolding \<open>a = EA_Assume b\<close>
+    by (metis ivl_tf_st_for_assume_agree assms)
+next
+  case (EA_AssumeNot b)
+  then show ?thesis
+    unfolding \<open>a = EA_AssumeNot b\<close>
+    by (metis ivl_tf_st_for_assume_not_agree assms)
+next
+  case (EA_Body p)
+  then show ?thesis by (simp add: body_ivl_def)
+next
+  case (EA_Ret ea p)
+  then show ?thesis
+  proof (cases ea)
+    case None
+    then show ?thesis using \<open>a = EA_Ret ea p\<close>
+      by (simp add: skip_ivl_def return_ivl_def)
+  next
+    case (Some av)
+    then show ?thesis using \<open>a = EA_Ret ea p\<close>
+      by (simp add: return_ivl_def assign_ivl_def)
   qed
-  show "\<And>c. fun_of_resolved_st_q_for gs
-      (ivl_tf_st_for gs (EA_Check c) s) =
-    apply_tf (ivl_tf_for gs) (EA_Check c) (fun_of_resolved_st_q_for gs s)"
-    by (simp add: ivl_tf_for_def event_ivl_def)
+next
+  case (EA_Check c)
+  then show ?thesis by (simp add: event_ivl_def)
 qed
 
 lemma ivl_enter_st_for_commute:
-  "fun_of_resolved_st_q_for gs (ivl_enter_st_for gs xs es s) =
-   enter\<^sup># (ivl_tf_for gs) xs es (fun_of_resolved_st_q_for gs s)"
-  by (simp add: enter_D_def enter_ivl_for_def
-      ivl_tf_for_def)
+  "fun_of_resolved_st_q_for gs (ivl_enter_st_for gs ci s) =
+   enter_ivl_ci_for gs ci (fun_of_resolved_st_q_for gs s)"
+  by (simp add: enter_ivl_ci_for_def enter_ivl_for_def enter_binding_def enter_frame_def
+      fun_of_resolved_st_q_for_enter_frame)
+
 
 
 end

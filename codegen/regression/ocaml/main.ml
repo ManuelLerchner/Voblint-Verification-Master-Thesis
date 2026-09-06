@@ -194,6 +194,7 @@ let show_edge_action = function
     x ^ " := min(" ^ show_exp_compact a ^ ", " ^ show_exp_compact b ^ ")"
   | EA_Special (Max (a, b), x) ->
     x ^ " := max(" ^ show_exp_compact a ^ ", " ^ show_exp_compact b ^ ")"
+  | EA_Body p -> "body(" ^ p ^ ")"
   | EA_Assume b -> "[" ^ show_exp_compact b ^ "]"
   | EA_AssumeNot b -> "![" ^ show_exp_compact b ^ "]"
   | EA_Ret (None, _) -> "return"
@@ -225,7 +226,7 @@ let expected_proc_demo_intra =
   "pp0 --[total := (total+n)]--> pp1; pp1 --[return]--> result_inc; "
   ^ "pp2 --[total := 0]--> pp3; pp5 --[check(0<total)]--> pp6; "
   ^ "pp6 --[check(total<100)]--> pp7; pp7 --[return]--> result_main; "
-  ^ "entry_inc --[nop]--> pp0; entry_main --[nop]--> pp2"
+  ^ "entry_inc --[body(inc)]--> pp0; entry_main --[body(main)]--> pp2"
 
 let expected_proc_demo_calls =
   "pp3 --[call(3)]--> entry_inc ~cont~> pp4; pp4 --[call(4)]--> entry_inc ~cont~> pp5"
@@ -264,7 +265,7 @@ let () =
   let actual_interval = analyse Interval_Analysis demo_prog in
   let actual_proc_demo_sign = analyse Sign_Analysis proc_demo_prog in
   let actual_proc_demo_interval = analyse Interval_Analysis proc_demo_prog in
-  let proc_demo_cfg = compile_program proc_demo_prog in
+  let proc_demo_cfg = prog_cfg proc_demo_prog in
   let actual_proc_demo_intra = show_intra_list (cfg_intra_list proc_demo_cfg) in
   let actual_proc_demo_calls = show_calls_list (cfg_calls_list proc_demo_cfg) in
   let actual_no_call_global_self_ref_interval =

@@ -181,6 +181,7 @@ duplication a unification removes.
 **Convenience vs semantic dependency:** `cfg_collect_trace` in the `Example_*`
 files is largely *witness/precision demonstration* (convenience). The
 semantically load-bearing consumers of the flat world are `Ctx_Collect_Backbone`
+
 - `Trace_Analysis_Sound` + `Mixed_Flow_Sound`. Migrating those three is the real
 cost; the examples follow mechanically.
 

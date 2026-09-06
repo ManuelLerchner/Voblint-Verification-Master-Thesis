@@ -59,14 +59,15 @@ lemma cfg_succ_rel_cases:
 
 subsection \<open>Reachability: reflexive-transitive closure of the successor relation\<close>
 
+text \<open>Reachability over that successor relation, with the transitivity and one-step
+  introduction rules consumers actually cite.  Because the relation already relates a caller
+  to its continuation and a callee result to the same continuation, this closure crosses
+  procedure boundaries without any separate interprocedural notion.\<close>
 definition cfg_succ :: "cfg \<Rightarrow> cfg_node \<Rightarrow> cfg_node \<Rightarrow> bool" where
   "cfg_succ g u w \<longleftrightarrow> (u, w) \<in> cfg_succ_rel g"
 
 definition cfg_reaches :: "cfg \<Rightarrow> cfg_node \<Rightarrow> cfg_node \<Rightarrow> bool" where
   "cfg_reaches g v v0 \<longleftrightarrow> (v, v0) \<in> (cfg_succ_rel g)\<^sup>*"
-
-definition cone :: "cfg \<Rightarrow> cfg_node \<Rightarrow> cfg_node set" where
-  "cone g v0 = {v. cfg_reaches g v v0}"
 
 lemma cfg_reaches_refl: "cfg_reaches g v v"
   by (simp add: cfg_reaches_def)

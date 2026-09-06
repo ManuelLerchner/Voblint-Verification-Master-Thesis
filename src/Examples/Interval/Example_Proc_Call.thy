@@ -153,13 +153,13 @@ abbreviation "main_cfg \<equiv> compile_prog proc_pi [(STR ''inc''), (STR ''sqr'
 lemma main_cfg_full:
   "main_cfg =
      \<lparr> intra =
-         {(FunctionEntry (STR ''inc''), EA_Nop, Statement 0),
+         {(FunctionEntry (STR ''inc''), EA_Body (STR ''inc''), Statement 0),
           (Statement 0, EA_Assign (STR ''Gx'') (Plus (V (STR ''Gx'')) (N 1)), Statement 1),
           (Statement 1, EA_Ret None (STR ''inc''), FunctionResult (STR ''inc'')),
-          (FunctionEntry (STR ''sqr''), EA_Nop, Statement 2),
+          (FunctionEntry (STR ''sqr''), EA_Body (STR ''sqr''), Statement 2),
           (Statement 2, EA_Assign (STR ''Gx'') (Times (V (STR ''Gx'')) (V (STR ''Gx''))), Statement 3),
           (Statement 3, EA_Ret None (STR ''sqr''), FunctionResult (STR ''sqr'')),
-          (FunctionEntry (STR ''main''), EA_Nop, Statement 4),
+          (FunctionEntry (STR ''main''), EA_Body (STR ''main''), Statement 4),
           (Statement 4, EA_Assign (STR ''Gx'') (N 4), Statement 5),
           (Statement 7, EA_Ret None (STR ''main''), FunctionResult (STR ''main''))},
        calls =
@@ -175,13 +175,13 @@ lemma main_cfg_exit: "cfg_exit main_cfg = FunctionResult (STR ''main'')"
   by (simp add: main_cfg_full cfg_exit_def)
 lemma main_cfg_intra:
   "intra main_cfg =
-     {(FunctionEntry (STR ''inc''), EA_Nop, Statement 0),
+     {(FunctionEntry (STR ''inc''), EA_Body (STR ''inc''), Statement 0),
       (Statement 0, EA_Assign (STR ''Gx'') (Plus (V (STR ''Gx'')) (N 1)), Statement 1),
       (Statement 1, EA_Ret None (STR ''inc''), FunctionResult (STR ''inc'')),
-      (FunctionEntry (STR ''sqr''), EA_Nop, Statement 2),
+      (FunctionEntry (STR ''sqr''), EA_Body (STR ''sqr''), Statement 2),
       (Statement 2, EA_Assign (STR ''Gx'') (Times (V (STR ''Gx'')) (V (STR ''Gx''))), Statement 3),
       (Statement 3, EA_Ret None (STR ''sqr''), FunctionResult (STR ''sqr'')),
-      (FunctionEntry (STR ''main''), EA_Nop, Statement 4),
+      (FunctionEntry (STR ''main''), EA_Body (STR ''main''), Statement 4),
       (Statement 4, EA_Assign (STR ''Gx'') (N 4), Statement 5),
       (Statement 7, EA_Ret None (STR ''main''), FunctionResult (STR ''main''))}"
   by (simp add: main_cfg_full)

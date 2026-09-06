@@ -55,7 +55,7 @@ Read `Routed_Context.thy`, `DG_Ctx_Activation.thy`, `DG_Soundness.thy`,
 `dg_ctx_activation`'s locale header (`DG_Ctx_Activation.thy:18-33`):
 
 ```isabelle
-locale dg_ctx_activation = sound_dg_spec S gamma_unit gs
+locale dg_ctx_activation = sound_dg_spec_core S gamma_ownership_split gs
   for S :: "('a::sound_domain abs_state, 'a abs_state) dg_spec"
     and gs :: "vname => bool" +
   fixes g :: cfg and gk0 :: 'k
@@ -65,7 +65,7 @@ locale dg_ctx_activation = sound_dg_spec S gamma_unit gs
     and sigma :: "pp * 'c + 'k => ('a abs_state, 'a abs_state) dg_state"
     and vars :: "(pp * 'c) set" and x0 :: "pp * 'c"
   assumes finE: "finite (intra g)"
-    and pp: "part_post_solution (side_cfg_T_eff_keyed_seed_dg ... ) x0 sigma vars"
+    and pp: "part_post_solution (routed_node_rhs ... ) x0 sigma vars"
     ...
 ```
 
@@ -95,7 +95,7 @@ locale routed_context =
   assumes ...
     and route_enterc_agree:
       "(u, ctx) : vars ==> (u, CallEdge dst pars args, FunctionEntry p, cont) : calls g
-       ==> s : gamma_unit ... ==> route u ctx (locals (sigma (Inl (u,ctx)))) (CallEdge dst pars args)
+       ==> s : gamma_ownership_split ... ==> route u ctx (locals (sigma (Inl (u,ctx)))) (CallEdge dst pars args)
             = enterc u ctx (call_enter gs (CallEdge dst pars args) s)"
 ```
 
@@ -177,7 +177,7 @@ choice of `cfg_node` for the call-site type), `route_k u ctx d ca = take k
   per-instance `is_mono_eq`/`mono_sides`/`mono_deps` re-proof the way M1's
   plan (section 6, R1) assumed, because that re-proof burden belongs to a
   *different* solver-integration style (a new keyed equation-system variant)
-  that this route does not need — `side_cfg_T_eff_keyed_seed_dg` is already
+  that this route does not need — `routed_node_rhs` is already
   parametric in `'c` and already proved sound for arbitrary `'c` via
   `dg_ctx_activation`.
 - *M1's R3 ("primary soundness hazard"), does not apply here.* R3 worried
@@ -291,10 +291,10 @@ explicit parameters/locales where Isabelle style benefits" directly — there
 is nothing here that a record, a locale-fixed `k`, or a new abstraction
 would improve.
 
-**Plugging into `routed_context`/`dg_ctx_activation`/`sound_dg_spec`:**
+**Plugging into `routed_context`/`dg_ctx_activation`/`sound_dg_spec_core`:**
 unchanged from how `Example_Interval_DG_CallString.thy` already plugs in
-(`twice_cs_dg`, `twice_cs_routed`) — `sound_dg_spec` is untouched (still
-`ivl_dg`/`sound_dg_spec_unit`), `dg_ctx_activation` is interpreted at
+(`twice_cs_dg`, `twice_cs_routed`) — `sound_dg_spec_core` is untouched (still
+`ivl_dg`/`sound_dg_spec_core_unit`), `dg_ctx_activation` is interpreted at
 `route_k k`, `routed_context` is interpreted at `route_k k`/`enterc_k k`.
 No changes to any of the three locales themselves.
 
@@ -475,7 +475,7 @@ value-sensitive contexts (section 5a).
 not just planned: a `k = 2` instance (`route_2 u ctx d ca = take 2 (u #
 ctx)`) on `twice_cfg`, same `Sabs`/`ivl_dg` domain spec, same
 `TD_side_warrowing_apinis_Interp_solve` backend, with no changes to
-`routed_context`, `dg_ctx_activation`, or `sound_dg_spec`. Verified twice,
+`routed_context`, `dg_ctx_activation`, or `sound_dg_spec_core`. Verified twice,
 independently: interactively via I/Q (0 errors, 228/228 commands processed)
 and by a full `Voblint_Examples` batch build confirming no regression to any
 existing example. The one place the mechanical claim needed correcting
@@ -570,7 +570,7 @@ better outcome than planned, not a compromise.
 
 `cs_route`/`cs_enterc` need only `pp`/`cfg_node`/`call_action`/`store`
 (`Abstract_Domain.thy`, itself domain-agnostic) — no `dg_spec`, no
-`sound_dg_spec`, no `routed_context`, no `TD_side` solver. Nothing about a
+`sound_dg_spec_core`, no `routed_context`, no `TD_side` solver. Nothing about a
 call string requires knowing what a "sound domain" or a "routed context
 policy" *is*; it only needs the CFG-level vocabulary those things are later
 built from. So the file deliberately does not import `Routed_Context.thy`

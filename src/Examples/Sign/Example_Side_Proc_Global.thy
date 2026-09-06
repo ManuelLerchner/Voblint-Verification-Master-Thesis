@@ -70,7 +70,7 @@ lemma inc_comb_fwd_ok:
 lemma inc_node_sound:
   "ltr_collect inc_gs (prog_cfg inc_program) (cinit_stores inc_gs) v
      \<subseteq> \<lbrakk>case lookup_context (analyse_sign_result_for inc_gs inc_program) v () of
-            Unreachable \<Rightarrow> bot | Reachable st \<Rightarrow> st\<rbrakk>"
+            Bot \<Rightarrow> bot | Lifted st \<Rightarrow> st\<rbrakk>"
   by (rule analyse_sign_result_node_sound_for
         [OF inc_reserved inc_solver_terminates inc_entry_cov
             inc_fwd_ok inc_call_fwd_ok inc_comb_fwd_ok])
@@ -82,7 +82,7 @@ definition inc_exit_env :: "sign abs_state" where
   "inc_exit_env =
      (case lookup_context (analyse_sign_result_for inc_gs inc_program)
              (cfg_exit (prog_cfg inc_program)) () of
-        Unreachable \<Rightarrow> bot | Reachable st \<Rightarrow> st)"
+        Bot \<Rightarrow> bot | Lifted st \<Rightarrow> st)"
 
 text \<open>The global the callee increments is strictly positive at the exit ---
   computed by the solver, not asserted. \<^const>\<open>cinit_stores\<close> starts every
@@ -99,6 +99,6 @@ corollary inc_certified_sound:
    \<le> \<lbrakk>inc_exit_env\<rbrakk>"
   unfolding inc_exit_env_def
   using inc_node_sound
-  by (simp add: gamma_point_def split: point_state.splits)
+  by (simp add: gamma_point_def split: lifted.splits)
 
 end

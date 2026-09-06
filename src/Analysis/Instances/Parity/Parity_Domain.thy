@@ -1,6 +1,6 @@
 theory Parity_Domain
-  imports Voblint_Core.Abstract_Domain "Voblint_VIMP.VIMP_Expr" "TD.Update_rules"
-    Voblint_Core.Abstract_Arithmetic
+  imports "Voblint_Domain.Abstract_Domain" "Voblint_VIMP.VIMP_Expr" "TD.Update_rules"
+    Abstract_Arithmetic
 begin
 
 section \<open>Parity domain: finite even/odd abstraction\<close>
@@ -134,6 +134,9 @@ lemma is_top_parity_correct: "is_top_parity p \<longleftrightarrow> p = top"
 
 lemma gamma_parity_top: "gamma_parity top = UNIV"
   unfolding top_parity_def by simp
+ 
+lemma is_top_parity_correct_gamma: "is_top_parity p \<longleftrightarrow> gamma_parity p = UNIV"
+  by(cases p) (auto simp: is_top_parity_def set_eq_iff; presburger)+
 
 instantiation parity :: sup begin
 definition sup_parity :: "parity => parity => parity" where "sup_parity = join_parity"
@@ -247,12 +250,21 @@ lemma parity_times_combine_mono: "\<lbrakk>a1 \<le> a2; b1 \<le> b2\<rbrakk> \<L
 
 subsection \<open>sound_domain instance\<close>
 
+fun string_of_parity :: "parity \<Rightarrow> string" where
+    "string_of_parity PBot  = ''Bottom''"
+  | "string_of_parity PEven = ''Even''"
+  | "string_of_parity POdd  = ''Odd''"
+  | "string_of_parity PTop  = ''Top''"
+
 instantiation parity :: sound_domain begin
 definition gamma_abs_parity [simp]: "gamma (a :: parity) = gamma_parity a"
-definition is_bot_parity [simp]: "is_bot (a :: parity) = is_bottom_parity a"
-definition is_top_parity' [simp]: "is_top (a :: parity) = is_top_parity a"
+definition is_empty_parity [simp]: "is_empty (a :: parity) = is_bottom_parity a"
+definition is_full_parity [simp]: "is_full (a :: parity) = is_top_parity a"
+definition to_string_parity [simp]: "to_string (a :: parity) = string_of_parity a"
 instance proof
   show "gamma (bot :: parity) = {}" unfolding bot_parity_def by simp
+next
+  show "gamma (top :: parity) = UNIV" by (simp add: gamma_parity_top)
 next
   fix a b :: parity
   assume H: "a \<le> b"
@@ -260,16 +272,16 @@ next
   then show "gamma a \<subseteq> gamma b" by simp
 next
   fix a :: parity
-  show "is_bot a \<longleftrightarrow> gamma a = {}"
+  show "is_empty a \<longleftrightarrow> gamma a = {}"
     by (simp add: is_bottom_parity_correct)
 next
   fix a :: parity
-  show "is_top a \<longleftrightarrow> a = top"
-    by (simp add: is_top_parity_correct)
+  show "is_full a \<longleftrightarrow> gamma a = UNIV"
+    by (simp add: is_top_parity_correct_gamma)
 qed
 end
 
-instance parity :: abstract_domain ..
+instance parity :: widening_domain ..
 
 subsection \<open>Comparison and truthiness queries\<close>
 
@@ -305,19 +317,19 @@ lemma parity_tobool_sound:
   by (cases a; auto)
 
 lemma parity_lt_mono:
-  "\<not> is_bot (a1::parity) \<Longrightarrow> \<not> is_bot b1 \<Longrightarrow> a1 \<le> a2 \<Longrightarrow> b1 \<le> b2 \<Longrightarrow>
+  "\<not> is_empty (a1::parity) \<Longrightarrow> \<not> is_empty b1 \<Longrightarrow> a1 \<le> a2 \<Longrightarrow> b1 \<le> b2 \<Longrightarrow>
    parity_lt a2 b2 = Some c \<Longrightarrow> parity_lt a1 b1 = Some c"
   by simp
 
 lemma parity_eqb_mono:
-  "\<not> is_bot (a1::parity) \<Longrightarrow> \<not> is_bot b1 \<Longrightarrow> a1 \<le> a2 \<Longrightarrow> b1 \<le> b2 \<Longrightarrow>
+  "\<not> is_empty (a1::parity) \<Longrightarrow> \<not> is_empty b1 \<Longrightarrow> a1 \<le> a2 \<Longrightarrow> b1 \<le> b2 \<Longrightarrow>
    parity_eqb a2 b2 = Some c \<Longrightarrow> parity_eqb a1 b1 = Some c"
-  unfolding is_bot_parity is_bottom_parity_def less_eq_parity_def
+  unfolding is_empty_parity is_bottom_parity_def less_eq_parity_def
   by (cases a1; cases a2; cases b1; cases b2; simp)
 
 lemma parity_tobool_mono:
-  "\<not> is_bot (a1::parity) \<Longrightarrow> a1 \<le> a2 \<Longrightarrow> parity_tobool a2 = Some c \<Longrightarrow> parity_tobool a1 = Some c"
-  unfolding is_bot_parity is_bottom_parity_def less_eq_parity_def
+  "\<not> is_empty (a1::parity) \<Longrightarrow> a1 \<le> a2 \<Longrightarrow> parity_tobool a2 = Some c \<Longrightarrow> parity_tobool a1 = Some c"
+  unfolding is_empty_parity is_bottom_parity_def less_eq_parity_def
   by (cases a1; cases a2; simp)
 
 subsection \<open>Abstract expression evaluation\<close>
@@ -329,29 +341,29 @@ fun aval_parity :: "exp => (vname => parity) => parity" where
   | "aval_parity (Minus a b) \<sigma> = aval_parity a \<sigma> - aval_parity b \<sigma>"
   | "aval_parity (Times a b) \<sigma> = aval_parity a \<sigma> * aval_parity b \<sigma>"
   | "aval_parity (Less a b)  \<sigma> =
-       (if is_bot (aval_parity a \<sigma>) \<or> is_bot (aval_parity b \<sigma>) then bot
+       (if is_empty (aval_parity a \<sigma>) \<or> is_empty (aval_parity b \<sigma>) then bot
         else if parity_lt (aval_parity a \<sigma>) (aval_parity b \<sigma>) = Some True then POdd
         else if parity_lt (aval_parity a \<sigma>) (aval_parity b \<sigma>) = Some False then PEven
         else PTop)"
   | "aval_parity (exp.Eq a b) \<sigma> =
-       (if is_bot (aval_parity a \<sigma>) \<or> is_bot (aval_parity b \<sigma>) then bot
+       (if is_empty (aval_parity a \<sigma>) \<or> is_empty (aval_parity b \<sigma>) then bot
         else if parity_eqb (aval_parity a \<sigma>) (aval_parity b \<sigma>) = Some True then POdd
         else if parity_eqb (aval_parity a \<sigma>) (aval_parity b \<sigma>) = Some False then PEven
         else PTop)"
   | "aval_parity (exp.Not a)  \<sigma> =
-       (if is_bot (aval_parity a \<sigma>) then bot
+       (if is_empty (aval_parity a \<sigma>) then bot
         else if parity_tobool (aval_parity a \<sigma>) = Some True then PEven
         else if parity_tobool (aval_parity a \<sigma>) = Some False then POdd
         else PTop)"
   | "aval_parity (And a b)    \<sigma> =
-       (if is_bot (aval_parity a \<sigma>) \<or> is_bot (aval_parity b \<sigma>) then bot
+       (if is_empty (aval_parity a \<sigma>) \<or> is_empty (aval_parity b \<sigma>) then bot
         else if parity_tobool (aval_parity a \<sigma>) = Some False \<or> parity_tobool (aval_parity b \<sigma>) = Some False
         then PEven
         else if parity_tobool (aval_parity a \<sigma>) = Some True \<and> parity_tobool (aval_parity b \<sigma>) = Some True
         then POdd
         else PTop)"
   | "aval_parity (Or a b)     \<sigma> =
-       (if is_bot (aval_parity a \<sigma>) \<or> is_bot (aval_parity b \<sigma>) then bot
+       (if is_empty (aval_parity a \<sigma>) \<or> is_empty (aval_parity b \<sigma>) then bot
         else if parity_tobool (aval_parity a \<sigma>) = Some True \<or> parity_tobool (aval_parity b \<sigma>) = Some True
         then POdd
         else if parity_tobool (aval_parity a \<sigma>) = Some False \<and> parity_tobool (aval_parity b \<sigma>) = Some False
@@ -366,9 +378,9 @@ interpretation parity_arith: expression_domain_sound
                         parity_lt_sound parity_eqb_sound parity_tobool_sound[unfolded truthy_def]
                         sup_parity_def join_parity.simps truthy_def
                     del: parity_lt.simps parity_eqb.simps parity_tobool.simps)
-  apply (blast intro: parity_lt_mono[unfolded is_bot_parity])
-  apply (blast intro: parity_eqb_mono[unfolded is_bot_parity])
-  apply (blast intro: parity_tobool_mono[unfolded is_bot_parity])
+  apply (blast intro: parity_lt_mono[unfolded is_empty_parity])
+  apply (blast intro: parity_eqb_mono[unfolded is_empty_parity])
+  apply (blast intro: parity_tobool_mono[unfolded is_empty_parity])
   done
 
 lemmas aval_parity_sound = parity_arith.aval_dom_sound[unfolded gamma_abs_parity]

@@ -130,7 +130,7 @@ lemma ec_comb_fwd_ok:
 lemma ec_node_sound:
   "ltr_collect branch_prog_gs (prog_cfg branch_prog) (cinit_stores branch_prog_gs) v
      \<subseteq> \<lbrakk>case lookup_context (analyse_sign_result_for branch_prog_gs branch_prog) v () of
-            Unreachable \<Rightarrow> bot | Reachable st \<Rightarrow> st\<rbrakk>"
+            Bot \<Rightarrow> bot | Lifted st \<Rightarrow> st\<rbrakk>"
   by (rule analyse_sign_result_node_sound_for
         [OF ec_reserved ec_terminates ec_entry_cov
             ec_fwd_ok ec_call_fwd_ok ec_comb_fwd_ok])
@@ -142,7 +142,7 @@ definition branch_prog_env :: "vname \<Rightarrow> sign" where
   "branch_prog_env =
      (case lookup_context (analyse_sign_result_for branch_prog_gs branch_prog)
              (cfg_exit (prog_cfg branch_prog)) () of
-        Unreachable \<Rightarrow> bot | Reachable st \<Rightarrow> st)"
+        Bot \<Rightarrow> bot | Lifted st \<Rightarrow> st)"
 
 text \<open>
   Certified sound, unconditionally: from any input store, every store reaching
@@ -155,7 +155,7 @@ corollary ec_certified_sound:
    \<le> \<lbrakk>branch_prog_env\<rbrakk>"
   unfolding branch_prog_env_def
   using ec_node_sound
-  by (simp add: prog_main_name_def gamma_point_def split: point_state.splits)
+  by (simp add: prog_main_name_def gamma_point_def split: lifted.splits)
 
 text \<open>
   The store-level reading: \<^emph>\<open>any\<close> store reaching the exit under the

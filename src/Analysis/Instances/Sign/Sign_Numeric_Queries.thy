@@ -1,21 +1,20 @@
 theory Sign_Numeric_Queries
-  imports Sign_Arithmetic Sign_Backward "Voblint_Core.Abstract_Numeric_Queries"
+  imports Sign_Arithmetic Sign_Backward "Voblint_Domain.Abstract_Numeric_Queries"
 begin
 
 section \<open>Sign interpretation of the generic numeric-query interface\<close>
 
 text \<open>
-  \<open>abstract_numeric_queries\<close> (\<^theory>\<open>Voblint_Core.Abstract_Numeric_Queries\<close>) is
+  \<open>abstract_numeric_queries\<close> (\<^theory>\<open>Voblint_Domain.Abstract_Numeric_Queries\<close>) is
   the reusable interface; this theory supplies its Sign instance. None of the
   four query functions is a hand-built table any more: all four are Sign's
-  instance of generic derivations in the same theory --- \<open>sign_less_true\<close>/
-  \<open>sign_less_false\<close> from \<open>derived_less_queries\<close> (read off \<open>inv_less_sign\<close>),
-  \<open>sign_eq_true\<close> from \<open>derived_eq_true_from_less\<close> (read off \<open>sign_less_false\<close>
-  in both directions), and \<open>sign_eq_false\<close> from \<open>derived_eq_false_from_intersection\<close>
-  (read off \<open>meet_sign\<close> collapsing to \<open>SBot\<close>) --- through the \<open>sublocale\<close>
-  chain every \<open>backward_domain\<close> instance carries, with no extra proof
-  obligation. Exhaustive case analysis over the seven-element lattice confirms
-  each derived pair classifies exactly the pairs a hand-written table would.
+  instance of generic derivations defined directly in \<open>backward_domain\<close>'s own
+  context --- \<open>sign_less_true\<close>/\<open>sign_less_false\<close> read off \<open>inv_less_sign\<close>,
+  \<open>sign_eq_true\<close> reads off \<open>sign_less_false\<close> in both directions, and
+  \<open>sign_eq_false\<close> reads off \<open>meet_sign\<close> collapsing to \<open>SBot\<close> --- with no extra
+  proof obligation beyond \<open>backward_domain\<close>'s own assumptions. Exhaustive case
+  analysis over the seven-element lattice confirms each derived pair
+  classifies exactly the pairs a hand-written table would.
 \<close>
 
 text \<open>
@@ -69,27 +68,27 @@ lemma sign_less_true_eq: "sign_less_true a b \<longleftrightarrow>
   (fst (inv_less_sign False a b) = SBot \<or> snd (inv_less_sign False a b) = SBot)"
   by (cases a; cases b;
       simp add: sign_less_true_def sign_backward_domain.less_true_def
-                inv_less_sign.simps bot_sign_def)
+                inv_less_sign.simps bot_sign_def is_bottom_sign_def)
 
 lemma sign_less_false_eq: "sign_less_false a b \<longleftrightarrow>
   (fst (inv_less_sign True a b) = SBot \<or> snd (inv_less_sign True a b) = SBot)"
   by (cases a; cases b;
       simp add: sign_less_false_def sign_backward_domain.less_false_def
-                inv_less_sign.simps bot_sign_def)
+                inv_less_sign.simps bot_sign_def is_bottom_sign_def)
 
 subsection \<open>Equality judgments\<close>
 
 text \<open>Only \<open>SZero\<close> concretizes to a singleton, so equality is provable exactly
   there; two abstractions are provably unequal exactly when their
   concretizations are disjoint. Neither table is hand-built: \<open>sign_eq_true\<close>
-  is Sign's instance of \<open>derived_eq_true_from_less\<close>
-  (\<^theory>\<open>Voblint_Core.Abstract_Numeric_Queries\<close>),
-  read off \<open>sign_less_false\<close> in both directions (integer trichotomy);
-  \<open>sign_eq_false\<close> is Sign's instance of \<open>derived_eq_false_from_intersection\<close>, read off
-  \<open>meet_sign\<close> collapsing to \<open>SBot\<close> (disjoint concretizations). Both sublocale
-  under \<open>backward_domain\<close> with no extra proof obligation, and exhaustive case
-  analysis over the seven-element lattice confirms each classifies exactly the
-  pairs a hand-written table would.\<close>
+  is Sign's instance of the \<open>eq_true\<close> derivation off \<open>less_false\<close> in both
+  directions (integer trichotomy), and \<open>sign_eq_false\<close> is Sign's instance of
+  the \<open>eq_false\<close> derivation off \<open>meet_sign\<close> collapsing to \<open>SBot\<close> (disjoint
+  concretizations) --- both defined directly in \<open>backward_domain\<close>'s own
+  context (\<^theory>\<open>Voblint_Domain.Abstract_Numeric_Queries\<close>) with no extra
+  proof obligation, and exhaustive case analysis over the seven-element
+  lattice confirms each classifies exactly the pairs a hand-written table
+  would.\<close>
 
 definition sign_eq_true :: "sign \<Rightarrow> sign \<Rightarrow> bool" where
   "sign_eq_true = sign_eq_true_of_less"
@@ -114,7 +113,7 @@ definition sign_eq_false :: "sign \<Rightarrow> sign \<Rightarrow> bool" where
 
 lemma sign_eq_false_eq: "sign_eq_false a b \<longleftrightarrow> meet_sign a b = SBot"
   by (cases a; cases b;
-      simp add: sign_eq_false_def sign_backward_domain.eq_false_def bot_sign_def)
+      simp add: sign_eq_false_def sign_backward_domain.eq_false_def bot_sign_def is_bottom_sign_def)
 
 lemma sign_eq_false_sound:
   assumes "sign_eq_false a b" and "i \<in> gamma_sign a" and "j \<in> gamma_sign b"
@@ -129,20 +128,28 @@ proof
 qed
 
 
+subsection \<open>Goblint-style optional-Boolean queries\<close>
+
+definition sign_less :: "sign \<Rightarrow> sign \<Rightarrow> bool option" where
+  "sign_less a b = (if sign_less_true a b then Some True else if sign_less_false a b then Some False else None)"
+
+definition sign_eq :: "sign \<Rightarrow> sign \<Rightarrow> bool option" where
+  "sign_eq a b = (if sign_eq_true a b then Some True else if sign_eq_false a b then Some False else None)"
+
+lemma sign_less_sound:
+  assumes "sign_less a b = Some r" and "i \<in> gamma a" and "j \<in> gamma b"
+  shows "(i < j) = r"
+  using assms sign_less_true_sound sign_less_false_sound unfolding sign_less_def by (auto split: if_splits)
+
+lemma sign_eq_sound:
+  assumes "sign_eq a b = Some r" and "i \<in> gamma a" and "j \<in> gamma b"
+  shows "(i = j) = r"
+  using assms sign_eq_true_sound sign_eq_false_sound unfolding sign_eq_def by (auto split: if_splits)
+
 subsection \<open>Interpreting the generic numeric-query interface\<close>
 
-global_interpretation sign_numeric_queries:
-  abstract_numeric_queries gamma_sign sign_less_true sign_less_false sign_eq_true sign_eq_false
-proof unfold_locales
-  fix a b and i j :: int
-  show "sign_less_true a b \<Longrightarrow> i \<in> gamma_sign a \<Longrightarrow> j \<in> gamma_sign b \<Longrightarrow> i < j"
-    using sign_less_true_sound by blast
-  show "sign_less_false a b \<Longrightarrow> i \<in> gamma_sign a \<Longrightarrow> j \<in> gamma_sign b \<Longrightarrow> \<not> i < j"
-    using sign_less_false_sound by blast
-  show "sign_eq_true a b \<Longrightarrow> i \<in> gamma_sign a \<Longrightarrow> j \<in> gamma_sign b \<Longrightarrow> i = j"
-    using sign_eq_true_sound by blast
-  show "sign_eq_false a b \<Longrightarrow> i \<in> gamma_sign a \<Longrightarrow> j \<in> gamma_sign b \<Longrightarrow> i \<noteq> j"
-    using sign_eq_false_sound by blast
-qed
+global_interpretation sign_numeric_queries: abstract_numeric_queries sign_less sign_eq
+  by unfold_locales (metis sign_less_sound sign_eq_sound)+
+
 
 end

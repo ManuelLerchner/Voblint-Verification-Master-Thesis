@@ -1,6 +1,6 @@
 theory Example_Interval_Call_String_Generic_Parity
   imports
-    "Voblint_Analysis.Interval_Ctx_Call_String_Sound"
+    "Voblint_Analysis.Interval_Analyses"
     Example_Interval_DG_CallString_K2
 begin
 
@@ -9,7 +9,7 @@ section \<open>Parity: the runtime-\<open>k\<close> generic pipeline matches the
 text \<open>
   \<^const>\<open>cs_call_string_sol_prog\<close> at \<open>k = 1\<close>/\<open>k = 2\<close> against \<^const>\<open>nest_program\<close>
   is the same equation system \<open>nest_1_eqs\<close>/\<open>nest_2_eqs\<close> solve --- same
-  \<^const>\<open>ectx_spec\<close>, same \<^const>\<open>cs_route\<close>, same seeds -- read through the new
+  \<^const>\<open>interval_spec\<close>, same \<^const>\<open>cs_route\<close>, same seeds -- read through the new
   runtime-parameterized surface instead of two hand-instantiated theories.
   These lemmas witness that the generic pipeline reproduces every solved value
   \<open>Example_Interval_DG_CallString_K1\<close>/\<open>_K2\<close> pin, at the identical query

@@ -1,0 +1,13 @@
+session Voblint_Exec in "." = "Voblint_Framework" +
+  description "Executable carrier and transport: the solver runs on association lists, soundness is stated over functions"
+  sessions
+    TD
+    "Voblint_Compile"
+  theories
+    Exec_St
+    Exec_Refinement
+    Exec_DG_Refines
+    Exec_DG_Generator
+    DG_Local_State_Exec
+    Routed_Domain_Exec
+    Result_Normalization

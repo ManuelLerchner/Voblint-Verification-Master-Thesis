@@ -43,19 +43,20 @@ layer without embedding line numbers that drift.
 | `valid_ltr` | Inductive concrete semantics over activation-local traces. | `src/CFG/Collecting/LTR_Def.thy` |
 | `caller_of` | Immediate caller stored structurally in a called or resumed trace. | `src/CFG/Collecting/LTR_Def.thy` |
 | `ltr_collect` | Reachable sink stores at each CFG node, forgetting trace structure. | `src/CFG/Collecting/LTR_Collect.thy` |
-| `activation_collect` | Reachable sink stores indexed by activation context (the key-grouped view of `ltr_collect`). | `src/CFG/Collecting/LTR_Def.thy` |
+| `activation_collect` | `activation_collect gs R startcontext g S v c`: reachable sink stores at `v` in context `c`, the `trace_context`-grouped view of `ltr_collect`. `R` is the `call_context_rel`. | `src/CFG/Collecting/LTR_Activation_Context.thy` |
 | `ltr_gamma` | Concretization interface relating abstract states to local-trace collecting semantics. | `src/CFG/Collecting/LTR_Abstract.thy` |
-| `key` | Functional describing-function reading a trace's admissible context, one context per position -- the paper's `beta` one-for-one. | `src/CFG/Collecting/LTR_Def.thy` |
-| `admiss` / `ctx_key` | `admiss` is a locale-fixed relation admitting possibly several target contexts per step; `ctx_key` lifts it over a trace. The *relational* generalization of `beta`, not `beta` itself -- needed where an instance may pick a context nondeterministically. `admiss_exact` is the functional (single-admissible-target) instance. | `src/CFG/Collecting/LTR_Def.thy` |
+| `trace_context` | Inductive `trace_context gs R startcontext g t c`: the context a valid trace carries. Its Call rule picks an edge in `calls g` at the call node that reproduces the entered store, so no compiler uniqueness invariant is needed. The relational form of the paper's `beta`. | `src/CFG/Collecting/LTR_Activation_Context.thy` |
+| `call_context_rel` | `'c call_context_rel = cfg_node => 'c => call_info => store => store => 'c => bool`: the admissible callee contexts of one concrete call, from call site, caller context, call info, caller store and entered store. Several contexts per call are allowed. | `src/CFG/Collecting/LTR_Activation_Context.thy` |
+| `call_context_rel_of_fun` | Embeds a functional policy (`unit`, call strings) as the relation admitting exactly the function's value. | `src/CFG/Collecting/LTR_Activation_Context.thy` |
+| `call_context_total_on` | `call_context_total_on cover R gs g`: conditional totality -- an empty relation is rejected only where a covered call exists. `activation_bucket_sound` (one bucket) needs no totality; `activation_collect_sound` (whole program) does. Buckets form a cover, not a partition. | `src/CFG/Collecting/LTR_Activation_Context.thy` |
+| `startcontext` | Context of the root activation, Goblint's `Spec.startcontext`. | `src/CFG/Collecting/LTR_Activation_Context.thy` |
 
 ## Abstract interpretation
 
 | Term | Meaning | Source |
 | --- | --- | --- |
-| `abs_state` | Pointwise abstract variable environment. | `src/Core/Equations/Constraint_System.thy` |
-| `sound_domain` | Abstract carrier, order, and concretization obligations. | `src/Core/Domain/Abstract_Domain.thy` |
-| `domain_transfer` | Pure abstract transfers for CFG actions, entry, and return combination. | `src/Core/Equations/Constraint_System.thy` |
-| `effectful_domain_transfer` | Strategy-tree-producing transfers used by the side-effecting solver. | `src/Core/Equations/Constraint_System.thy` |
+| `abs_state` | Pointwise abstract variable environment. | `src/Domain/Nonrelational_State.thy` |
+| `sound_domain` | Abstract carrier, order, and concretization obligations. | `src/Domain/Abstract_Domain.thy` |
 | `part_post_solution` | Two-part certificate (local-result bound plus every side contribution) an equation-system valuation must satisfy; generic over the unknown/value types, so it is the shared interface between solver correctness and D/G collecting soundness, not tied to any one solver. | `vendor/td-verification/Basics_side.thy` |
 | `TD_side` | Vendored verified side-effecting top-down solver used by executable analyses. | `vendor/td-verification` |
 
@@ -63,12 +64,11 @@ layer without embedding line numbers that drift.
 
 | Term | Meaning | Source |
 | --- | --- | --- |
-| `D` | Analysis-chosen flow-sensitive fact associated with a local unknown. | `src/Core/Solver/Context/DG/DG_Framework.thy` |
-| `G` | Analysis-chosen shared fact routed through global side effects. | `src/Core/Solver/Context/DG/DG_Framework.thy` |
-| `dg_spec` | D/G transfer, entry, combine, read, and publication interface. | `src/Core/Solver/Context/DG/DG_Framework.thy` |
-| `sound_dg_spec` | Concrete-soundness obligations for a D/G instance. | `src/Core/Solver/Context/DG/DG_Soundness.thy` |
-| `dg_gen_of` | Executable D/G equation generator. | `src/Analysis/Instances/Product/Exec_DG_Bridge.thy` |
-| `dg_postfix` | Mathematical post-solution property for D/G equations. | `src/Core/Solver/Context/DG/DG_Soundness.thy` |
+| `D` | Analysis-chosen flow-sensitive fact associated with a local unknown. | `src/Framework/Spec/DG_State.thy` |
+| `G` | Analysis-chosen shared fact routed through global side effects. | `src/Framework/Spec/DG_State.thy` |
+| `dg_spec` | D/G transfer, entry, combine, read, and publication interface. | `src/Framework/Spec/DG_Spec.thy` |
+| `sound_dg_spec_core` | Concrete-soundness obligations for a D/G instance. | `src/Framework/Spec/DG_Spec_Sound.thy` |
+| `dg_gen_of` | Executable D/G equation generator. | `src/Exec/Exec_DG_Generator.thy` |
 
 ### Correspondence to Goblint's `Spec` interface
 
@@ -80,8 +80,8 @@ and where the correspondence is inexact.
 
 | `Spec` component | Voblint realization | Note |
 | --- | --- | --- |
-| `D` | `'a abs_state` (`dg_state.locals`) | Flat `vname => 'a` today; Goblint's `D.t` can be any lattice. |
-| `G` | `'a abs_state` (`dg_state.globs`) | Same flat type as `D` in every current instance -- Goblint's `G.t` is a separate, analysis-chosen lattice. See "Local/global payloads" in `docs/GOBLINT_ALIGNMENT_REGISTER.md`. |
+| `D` | Opaque `'D` carrier (`dg_state.locals`) | Chosen by each `dg_spec`. Base analyses use a non-relational or executable state carrier; `Rel_Order_Domain` demonstrates a relational carrier. |
+| `G` | Opaque `'G` carrier (`dg_state.globs`) | Chosen independently by each `dg_spec`; homogeneous analyses may use the same type for `D` and `G`. See "Local/global payloads" in `docs/GOBLINT_ALIGNMENT_REGISTER.md`. |
 | `C` | `'c` (locale parameter of `dg_ctx_activation`/`routed_context`, `DG_Ctx_Activation.thy`) | Instantiated per analysis instance (`unit`, call-string, entry-state, ...). |
 | `V` | `'k` (locale parameter of `dg_ctx_activation`, `DG_Ctx_Activation.thy`) | The type of global-variable identities, matching Goblint's `S.V` (see `M1_CALLSTRING_CONTEXT_MIGRATION.md`'s `GVar = GVarF (S.V)` citation). Not the combined unknown space -- see below. |
 
@@ -90,7 +90,7 @@ and where the correspondence is inexact.
 and `'g` (global key): `('x, 'g, 'd) eqsT = 'x => ('x, 'g, 'd) strategy_tree`,
 with unknowns typed `'x + 'g`. `DG_Ctx_Activation.thy` instantiates
 `'x = pp \<times> 'c` and, deliberately, `'g = 'k` rather than reusing the bare
-letter `'g` -- `DG_Framework.thy`'s `dg_state` datatype already fixes `'g` as
+letter `'g` -- `DG_State.thy`'s `dg_state` datatype already fixes `'g` as
 the global *value* type (the `globs` field, i.e. Goblint's `G.t`), one layer
 up. Reusing `'g` for the global *key* at the activation layer would silently
 overload one letter for two different `Spec` components (`G` and `V`) across
@@ -107,19 +107,24 @@ carries the soundness proof -- notation does not rename the identifier.
 
 | Notation | Identifier | Layer |
 | --- | --- | --- |
-| `enter#` | `tf_enter` (`domain_transfer` field) | Flat/abstract, `Constraint_System.thy` |
-| `context#` | `route` (locale parameter of `routed_context`) | Generator, `Routed_Context.thy` |
-| `combine_env#` | `combine_env_abs` | Flat/abstract, `Constraint_System.thy` |
-| `combine_assign#` | `combine_assign_abs` | Flat/abstract, `Constraint_System.thy` |
-| `combine#` | `combine_collect_abs` (`combine_env#` then `combine_assign#`) | Flat/abstract, `Constraint_System.thy` |
+| `enter#` | `dgs_enter` (`dg_spec` field) | Specification, `DG_Spec.thy` |
+| `context#` | `route` (locale parameter of `routed_context_base_hetero`) | Generator, `Routed_Context.thy` |
+| `combine_env#` | `dgs_combine_env` (`dg_spec` field) | Specification, `DG_Spec.thy` |
+| `combine_assign#` | `dgs_combine_assign` (`dg_spec` field) | Specification, `DG_Spec.thy` |
+| `combine#` | `combine_collect_abs` (the fixed whole-state return merge) | Abstract-state algebra, `Transfer_Algebra.thy` |
 
-`route`'s semantic ground truth is `enterc` (`Routed_Context.thy`), which
-consumes a **concrete** `store` rather than an abstract state and is left
-unnotated, matching `call_enter`/`dgs_enter` staying unnotated below
-`enter#`. `route_enterc_agree` is the per-instance locale obligation proving
-the two agree on real call edges, not a blanket theorem. `context#`'s
-signature is currently stronger than Goblint's `Spec.context` -- see
-`docs/GOBLINT_ALIGNMENT_REGISTER.md` and issue #114.
+`route`'s semantic counterpart is the relation `call_context_rel`
+(`LTR_Activation_Context.thy`), which consumes **concrete** stores rather than
+an abstract state and is left unnotated, matching `call_enter` -- the concrete
+counterpart of `enter#` -- staying unnotated. `routed_entry_cover` is the
+per-instance locale obligation: at a real call edge, some `(cont, entry)`
+alternative of the spec's own `enter#` run covers the caller and entered
+stores, and `route` on that entry yields a context `routed_entry_context_rel`
+admits. Goblint's `Spec.context` is a function applied per `enter`
+alternative; since `enter` returns a list, one concrete call can land in
+several contexts, and Voblint's proof relation models exactly that whole-call
+nondeterminism (`enter` alternatives x `context`). `context` itself is an Isar
+outer keyword, hence `route` -- see `docs/GOBLINT_ALIGNMENT_REGISTER.md`.
 
 ### `sigma` / `sg`
 
@@ -135,26 +140,6 @@ different objects, not naming duplication:
 point is `sigma`'s locals and globals combined through the local/global
 classifier `gs`); unifying the two names would make a proof step that needs
 both indistinguishable.
-
-## Strategy-tree equation combinators
-
-Named, zero-cost (`abbreviation`) readings of the verified solver's four
-`strategy_tree` constructors (`QueryL`, `QueryG`, `Side`, `Answer`,
-`vendor/td-verification/Basics_side.thy`). Full design and rationale in
-`docs/history/DG_COMBINATOR_MIGRATION.md`.
-
-| Term | Meaning | Source |
-| --- | --- | --- |
-| `read_local` | Read a local unknown, continue with its value. | `src/Core/Solver/Strategy_Tree/Strategy_Tree_Combinators.thy` |
-| `read_global` | Read a global unknown, continue with its value. | `src/Core/Solver/Strategy_Tree/Strategy_Tree_Combinators.thy` |
-| `depend_on` | Publish a side value under a global key, continue. | `src/Core/Solver/Strategy_Tree/Strategy_Tree_Combinators.thy` |
-| `answer` | Yield the equation's local result. | `src/Core/Solver/Strategy_Tree/Strategy_Tree_Combinators.thy` |
-| `enter_global` / `enter_local` | The global side effect / local answer half of `dgs_enter`. | `src/Core/Solver/Context/DG/DG_Transfer_Combinators.thy` |
-| `combine_global` / `combine_local` | The global side effect / local answer half of `dgs_combine`. | `src/Core/Solver/Context/DG/DG_Transfer_Combinators.thy` |
-| `publish_global` | `depend_on` to the one shared global slot, wrapping the payload as `DG bot x`. | `src/Core/Solver/Context/DG/DG_Transfer_Combinators.thy` |
-| `publish_seed` | `depend_on` to a routed per-context seed slot -- same primitive as `publish_global`, named for the role. | `src/Core/Solver/Context/DG/DG_Transfer_Combinators.thy` |
-| `return_local` | Yield the equation's own local contribution, wrapping it as `DG x bot`. | `src/Core/Solver/Context/DG/DG_Transfer_Combinators.thy` |
-| `with_call` | Destructure a `call_action`'s single constructor once per call site instead of once per `dgs_enter`/`dgs_combine` call. | `src/Core/Solver/Context/DG/DG_Transfer_Combinators.thy` |
 
 ## Source-facing endpoints
 

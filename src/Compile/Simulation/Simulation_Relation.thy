@@ -138,6 +138,10 @@ lemma compiled_at_exit:
 
 subsection \<open>The simulation relation\<close>
 
+text \<open>What it means for a source configuration and a graph configuration to be at the same
+  place.  Three shapes, one per stack situation: a single activation, a call in progress with
+  the caller recorded on both stacks, and the moment between a return and the frame pop.  All
+  three carry the same store, so the relation constrains position and stack only.\<close>
 inductive csim :: "proc_table \<Rightarrow> cfg \<Rightarrow> com \<times> store \<times> frame list
                     \<Rightarrow> cfg_node \<times> store \<times> cframe list \<Rightarrow> bool" for \<Pi> g where
   Base:
@@ -340,6 +344,10 @@ lemma unwinding_seq_after_Unwind:
 
 subsection \<open>Source-step classification\<close>
 
+text \<open>Sorting a source step into the three cases the simulation treats separately: an
+  ordinary intra step, a call, or a return in progress.  The classification is what lets each
+  preservation proof assume it is in exactly one case rather than re-deriving the exclusions
+  from \<^const>\<open>pstep\<close> every time.\<close>
 lemma intra_step_not_returning:
   "intra_step \<Pi> (c, s, frs) (c', s', frs') \<Longrightarrow> \<not> is_returning c"
   by (induction "(c, s, frs)" "(c', s', frs')" arbitrary: c s frs c' s' frs'
@@ -383,6 +391,9 @@ lemma pop_ready_is_returning: "pop_ready w \<Longrightarrow> is_returning w"
 
 subsection \<open>Stepping the frame-pop phase\<close>
 
+text \<open>How the phase between a return and its frame pop behaves: it neither changes the store
+  nor touches the frames, and it stays in the phase until the pop.  That is what lets the
+  simulation hold the graph side still while the source side unwinds.\<close>
 lemma pstep_unwinding:
   assumes "unwinding u" and "pstep gs \<Pi> (u, s, frs) (u', s', frs')"
   shows "s' = s \<and> frs' = frs \<and> unwinding u'"

@@ -3,7 +3,7 @@
 Status: **Option 4 architecturally and executably validated** — see
 "Architectural validation (completed)" and "Executable validation
 (completed)" at the end of this document. `Rel_Order_Domain.thy` is a
-batch-green `sound_dg_spec` interpretation over a non-`abs_state` relational
+batch-green `sound_dg_spec_core` interpretation over a non-`abs_state` relational
 carrier, with zero changes to the DG framework, and it now runs end to end
 through the real `dg_gen_of`/vendored-solver pipeline on a compiled IMP2
 program (`Example_Relational_DG_Demo.thy`). The design analysis below
@@ -22,19 +22,19 @@ their migration to the **flat spine** — `Constraint_System.thy`,
 own contract (`AGENTS.md`: "the procedure-aware CFG and generic D/G route are
 the sole analysis path. Sign, Interval, and mixed Sign/Interval instances use
 the side-effecting verified solver"), **that is not where Sign, Interval, or
-Mixed Sign/Interval actually run.** They run through `DG_Framework.thy` /
+Mixed Sign/Interval actually run.** They run through `DG_Constraint_Trees.thy` /
 `DG_Soundness.thy` / the effectful TD solver.
 
 Tracing the DG layer directly (not assumed — read below) shows:
 
 - `dg_spec`'s carriers `'dl`/`'dg` are already fully opaque type parameters
-  (`DG_Framework.thy:242-247`) — no `abs_state`, no pointwise structure baked
+  (`DG_Constraint_Trees.thy:242-247`) — no `abs_state`, no pointwise structure baked
   into the record itself.
-- `sound_dg_spec` — the soundness locale every DG instance discharges — is
+- `sound_dg_spec_core` — the soundness locale every DG instance discharges — is
   **already a locale over an arbitrary joint concretization**:
 
   ```isabelle
-  locale sound_dg_spec =
+  locale sound_dg_spec_core =
     fixes S :: "('D::bounded_semilattice_sup_bot, 'G::bounded_semilattice_sup_bot) dg_spec"
       and gammaDG :: "'D => 'G => store set"
     assumes gammaDG_mono: ...
@@ -57,7 +57,7 @@ What **is** box-only is not the framework — it's every existing
 *interpretation* of it: `gamma_dg d g = ⟦d⟧ ∩ ⟦g⟧` (`DG_Soundness.thy:106-109`)
 calls `gamma_state`, which is `'a::sound_domain abs_state => store set`
 (`Abstract_Domain.thy:58`, "lifts `gamma` pointwise," per the domain README).
-`unit_dg_spec`, `indep_dg_spec`, `mixed_si_spec` all choose `'dl = 'a abs_state`,
+`ownership_split_dg_spec`, `indep_dg_spec`, `mixed_si_spec` all choose `'dl = 'a abs_state`,
 `'dg = 'b abs_state` — a choice, not a constraint the locale imposes.
 
 **Consequence for the three designs as literally scoped:** each would, if
@@ -75,7 +75,7 @@ The real remaining blockers, precisely stated:
    instance).
 2. No `dgs_assign`/`dgs_assume`/`dgs_assume_not`/`dgs_enter` implementation
    for such a type, and no `gammaDG` interpretation discharging
-   `sound_dg_spec`'s four obligations for it.
+   `sound_dg_spec_core`'s four obligations for it.
 3. Interprocedural combine for a relational carrier is a genuine semantic
    design problem (projection + meet, not variable selection) — every
    existing document already flags this as the hard part, correctly.
@@ -86,17 +86,17 @@ The real remaining blockers, precisely stated:
    variables, and a finite list of explicit per-variable overrides"
    (`Exec_St.thy:12-18`). This is a per-variable association-list
    representation by construction, parametric only in the *value* type, not
-   in the state *shape*. A relational domain proven sound via `sound_dg_spec`
+   in the state *shape*. A relational domain proven sound via `sound_dg_spec_core`
    gets no executable/GraphViz/code-gen path from this file — a new
    executable representation and a new `Exec_*_Bridge` (analogous to
    `Exec_DG_Bridge.thy`) is separate, additive work.
 5. Context-sensitivity (`DG_Ctx_Activation.thy`) needs its own new
    `gammaDG`-shaped locale if a relational domain wants it — matches Gap 4's
-   own finding this session (`gamma_unit d g = ⟦d ⊔ g⟧` needs a unified type,
+   own finding this session (`gamma_ownership_split d g = ⟦d ⊔ g⟧` needs a unified type,
    ~245-line file's worth of new locale work) — but this is additive and only
    needed if an instance actually wants context-sensitivity.
 
-None of 1-5 requires touching `Constraint_System.thy`, `DG_Framework.thy`,
+None of 1-5 requires touching `Constraint_System.thy`, `DG_Constraint_Trees.thy`,
 `DG_Soundness.thy`, or any existing Sign/Interval/Mixed proof. They are new
 files interpreting existing locales, exactly the "generalize in place" vs.
 "new instance" distinction this project already draws correctly for Gap 3/4.
@@ -121,7 +121,7 @@ TD_Side_Eff_Cone_Lemmas.thy        16
 Solver_Side_RG.thy                  7
 TD_Side_RHS_Generator.thy           7
 Exec_DG_Bridge.thy                  6
-DG_Framework.thy                    6
+DG_Constraint_Trees.thy                    6
 (11 more files, 1-5 each)          20
                                   ---
 Total                              399
@@ -148,7 +148,7 @@ projection), a structurally different operation that cannot be written as
 `restrict_global` are flat-layer (`TD_Side_CFG.thy`) and executable-bridge
 (`Exec_Bridge.thy`, `Exec_St.thy`) constructs. The DG-layer generic interface
 (`dgs_combine_env`/`dgs_combine_assign`, split this session in Gap 3 Site A)
-does not call them — `indep_dg_spec` and `unit_dg_spec` *choose* to build
+does not call them — `indep_dg_spec` and `ownership_split_dg_spec` *choose* to build
 their combine via `combine_abs`/`combine_collect_abs`, which is where
 `restrict_local`/`restrict_global`-flavored per-variable reasoning enters,
 but a **new** `dg_spec` instance for a relational carrier supplies its own
@@ -197,12 +197,12 @@ independent improvement.
   history behind today's DG heterogeneity (`Split_State.thy`, `dg_state`).
   Its own "Remaining limitations toward Goblint" section, written before
   this session's Gap 3/4 work, independently names the same leverage point
-  this investigation found: *"`sound_dg_spec` currently fixes `D = 'd
+  this investigation found: *"`sound_dg_spec_core` currently fixes `D = 'd
   abs_state` and `G = 'g abs_state`... The highest-leverage next framework
-  change is to generalize `sound_dg_spec` from abstract-state-shaped `D`/`G`
+  change is to generalize `sound_dg_spec_core` from abstract-state-shaped `D`/`G`
   to arbitrary sound lattice carriers with an analysis-supplied joint
   concretization."* That sentence describes exactly what tracing
-  `sound_dg_spec`'s current locale signature shows is **already true** —
+  `sound_dg_spec_core`'s current locale signature shows is **already true** —
   `'D`/`'G` are already `bounded_semilattice_sup_bot`, not `abs_state`. This
   doc's limitation list predates the current state of the locale (or was
   scoped more conservatively than the code turned out to require); either
@@ -280,7 +280,7 @@ blocks. Then every flat-layer file naming `abs_state` explicitly
 (`Constraint_System.thy`, `TD_Side_CFG.thy`, ~399-site footprint). The DG
 layer would *not* need to change at all — it already routes through opaque
 `'dl`/`'dg`, so a class-ified `abs_state` at the flat layer has zero
-obligation to reach `DG_Framework.thy`. This narrows the original 4-6 week
+obligation to reach `DG_Constraint_Trees.thy`. This narrows the original 4-6 week
 estimate's scope somewhat (DG layer untouched) but the flat-layer +
 `restrict_local`/`restrict_global` footprint the estimate didn't budget for
 widens it back; net, likely still 4-6 weeks, for a spine generalization that
@@ -319,7 +319,7 @@ Interval analysis is the existing `interpretation`; an Octagon analysis is a
 new `'d = dbm`, a real polyhedral `gamma_st`, and one `interpretation`.
 
 **Isabelle/HOL impact.** This is the pattern this codebase already uses
-pervasively and successfully — `sound_transfer`, `sound_dg_spec`, `abstract_domain`
+pervasively and successfully — `sound_transfer`, `sound_dg_spec_core`, `abstract_domain`
 are all "one locale, many `interpretation`s" already. Locales compose with
 existing soundness proofs by construction (an `interpretation` just
 discharges obligations once, downstream lemmas are unaffected). No global
@@ -330,16 +330,16 @@ vs. `bounded_semilattice_sup_bot` today.
 **Where the original document's scope is stale, precisely.** `Approach A`
 targets `Constraint_System.thy`'s `gamma_state`, i.e. the flat spine. This
 document's investigation shows the *locale-over-opaque-carrier* pattern it
-wants **already exists**, one layer over, in `sound_dg_spec`. So Option 2's
+wants **already exists**, one layer over, in `sound_dg_spec_core`. So Option 2's
 underlying mechanism is exactly right; its originally-proposed target file
 is the less relevant one. A corrected Option 2 retargets Phase 0's spike
 (the `x<=y` toy order-constraint domain, `'d = (vname × vname) set`,
-`gamma_st d = {s. \<forall>(x,y)\<in>d. s x <= s y}`, `join = \<inter>`) at `sound_dg_spec`
+`gamma_st d = {s. \<forall>(x,y)\<in>d. s x <= s y}`, `join = \<inter>`) at `sound_dg_spec_core`
 directly: define `'dl`/`'dg` for the order-constraint domain, implement
 `dgs_assign`/`dgs_assume`/`dgs_assume_not`/`dgs_enter`/`dgs_combine_env`/
 `dgs_combine_assign` for it (small — assign/assume on a pair-set domain is a
 handful of set operations), write `gammaDG` for it, and discharge
-`sound_dg_spec`'s four obligations. Zero edits to `DG_Framework.thy`,
+`sound_dg_spec_core`'s four obligations. Zero edits to `DG_Constraint_Trees.thy`,
 `DG_Soundness.thy`, or any existing Sign/Interval/Mixed file — an
 `interpretation`/new-instance exercise, not a migration.
 
@@ -347,7 +347,7 @@ handful of set operations), write `gammaDG` for it, and discharge
 `src/Analysis/Instances/Relational/Rel_Order_Domain.thy` (matching the
 original doc's own file-naming instinct). Dependency order: (1) the DBM/pair
 type + lattice instance, (2) `dgs_*` transfer implementations, (3)
-`gammaDG` + `sound_dg_spec` interpretation for the intraprocedural fragment
+`gammaDG` + `sound_dg_spec_core` interpretation for the intraprocedural fragment
 only (`dgs_combine_env`/`dgs_combine_assign` deferred or restricted per the
 IP-combine caveat below), (4) an executable `Exec_*`-level representation and
 bridge only if a runnable/GraphViz path is wanted, deferred as separate
@@ -355,9 +355,9 @@ scope. No compatibility strategy needed — nothing existing changes.
 
 **Proof impact.** Unchanged: literally everything under
 `src/Analysis/Instances/Sign`, `.../Interval`, `.../Mixed`, and all of
-`DG_Framework.thy`/`DG_Soundness.thy`. Requiring generalization: nothing —
+`DG_Constraint_Trees.thy`/`DG_Soundness.thy`. Requiring generalization: nothing —
 this is the point of targeting an already-generic locale. New abstraction
-lemmas required: exactly the four `sound_dg_spec` obligations for the new
+lemmas required: exactly the four `sound_dg_spec_core` obligations for the new
 carrier (`gammaDG_mono`, `step_sound`, `combine_sound`, `enter_sound`) —
 `RELATIONAL_DOMAIN_PLAN.md`'s own assessment that the box case's four facts
 are "near-trivial" via intersection-monotonicity transfers directly to this
@@ -374,7 +374,7 @@ substantially more). Context-sensitivity: not included, add the
 ~245-line-file-sized new locale from Gap 4's own estimate if wanted later.
 Risk: low — additive, no shared-file blast radius, and the exact
 lattice-obligation shape (`bounded_semilattice_sup_bot` + a locale-supplied
-concretization) is proven out three times already in this codebase (`unit_dg_spec`,
+concretization) is proven out three times already in this codebase (`ownership_split_dg_spec`,
 `indep_dg_spec`, `mixed_si_spec`).
 
 **Recommendation weight.** Strongest of the three, once retargeted at the DG
@@ -459,7 +459,7 @@ side of the codebase (Option 3 especially, as a piece of technical debt
 worth paying down on its own literature-motivated merits) but neither is a
 precondition for a relational domain to exist and run.
 
-### Option 4 (proposed): no framework migration — add a relational instance directly against the existing `sound_dg_spec` locale
+### Option 4 (proposed): no framework migration — add a relational instance directly against the existing `sound_dg_spec_core` locale
 
 This is Option 2 with its target corrected, stated as its own option because
 the correction changes the migration's *shape*, not just its file list: it
@@ -473,7 +473,7 @@ Phasing, in dependency order:
 
 1. **Spike** (days): `Rel_Order_Domain.thy` — the `{x <= y}` pair-set domain,
    its `bounded_semilattice_sup_bot` instance, `gammaDG`, and a hand
-   discharge of `sound_dg_spec`'s four obligations for an *intraprocedural
+   discharge of `sound_dg_spec_core`'s four obligations for an *intraprocedural
    only* transfer set (`dgs_assign`/`dgs_assume`/`dgs_assume_not`; `dgs_enter`
    and `dgs_combine_env`/`dgs_combine_assign` stubbed conservatively — havoc
    local relations at the call boundary, matching `RELATIONAL_DOMAIN_PLAN.md`'s
@@ -523,14 +523,14 @@ document's recommendation.
 
 Checked directly against `src/cdomains/apron/relationDomain.apron.ml` and
 `src/analyses/apron/relationAnalysis.apron.ml` on `goblint/analyzer`. These
-are genuine gaps between `sound_dg_spec`'s current interface and what
+are genuine gaps between `sound_dg_spec_core`'s current interface and what
 Goblint's own relational analyses do — but each is a **bounded, deferrable
 extension**, not evidence against the recommendation. None of them
 disqualifies a specific relational instance from being added today; they
 constrain what that instance can express, or what a *later* instance might
 need.
 
-### A. `sound_dg_spec` says nothing about how `'D`/`'G` are represented internally
+### A. `sound_dg_spec_core` says nothing about how `'D`/`'G` are represented internally
 
 The locale only requires `bounded_semilattice_sup_bot` — this is enough for
 soundness, but prescribes nothing about variable environments, projection,
@@ -585,7 +585,7 @@ dgs_combine_env :: "'dl => 'dl => 'dg => ('dg * 'dl) option"
 ```
 
 or an explicit `Dead | State (...)` result type — threaded through
-`dg_spec_combine_tree`/`sound_dg_spec`'s `combine_sound` obligation
+`dg_spec_combine_tree`/`sound_dg_spec_core`'s `combine_sound` obligation
 (`gammaDG d' g' = {}` on the dead branch). This changes `dg_spec`'s record
 shape and every existing instance's combine field, so it is **not** part of
 adding one new relational instance — it would be its own, later,
@@ -609,7 +609,7 @@ Analysis-limitations table).
 
 **Not required for soundness** — omitting it means keeping more state
 conservatively (sound, less precise), never less. **Should not be added to
-`sound_dg_spec`** to support one relational instance: a query interface is
+`sound_dg_spec_core`** to support one relational instance: a query interface is
 infrastructure an arbitrary number of future analyses would share, and
 belongs above this locale as its own layer, not folded into the combine
 signature of the first relational domain that wants it.
@@ -617,7 +617,7 @@ signature of the first relational domain that wants it.
 ```text
                  DG framework
                       |
-              sound_dg_spec  (generic over 'D, 'G; done)
+              sound_dg_spec_core  (generic over 'D, 'G; done)
                       |
         +-------------+-------------+
         |                           |
@@ -642,7 +642,7 @@ Deferred, opt-in, later extensions (not needed to add one instance):
 
 **Option 4 / retargeted Option 2**, ranked against the requested criteria:
 
-1. **Correctness** — reuses `sound_dg_spec`'s existing, proven-three-times
+1. **Correctness** — reuses `sound_dg_spec_core`'s existing, proven-three-times
    obligation shape; no new soundness architecture invented, only a new
    interpretation of an existing one.
 2. **Isabelle maintainability** — matches this codebase's dominant idiom
@@ -650,7 +650,7 @@ Deferred, opt-in, later extensions (not needed to add one instance):
    project has already tried once and not kept, or a functor pattern with no
    precedent here.
 3. **Ability to add relational domains** — direct: a relational domain is a
-   `dg_spec` instance plus a `gammaDG`, exactly the shape `unit_dg_spec`/
+   `dg_spec` instance plus a `gammaDG`, exactly the shape `ownership_split_dg_spec`/
    `indep_dg_spec`/`mixed_si_spec` already demonstrate for other carriers.
 4. **Minimal unnecessary rewrite** — the only one of the four whose first
    phase touches zero existing files.
@@ -688,7 +688,7 @@ demands it.
 
 Scoped exactly as asked: efficiency and Goblint/Apron precision parity are
 explicitly out of scope; the goal is a verified, executable instance;
-`sound_dg_spec` is not touched. Every claim below is checked against an
+`sound_dg_spec_core` is not touched. Every claim below is checked against an
 actual concrete design, not asserted in the abstract — this is the design
 `Rel_Order_Domain.thy` would become if pushed one step past a two-variable
 toy.
@@ -823,7 +823,7 @@ lemmas — a bounded case list, not open-ended.
 precision" mandate does real work.** The general relational IP-combine
 problem (projection + meet across differently-scoped states) remains
 genuinely hard and is *not* solved here, consistent with every prior
-document's own scoping. But `sound_dg_spec`'s four obligations don't require
+document's own scoping. But `sound_dg_spec_core`'s four obligations don't require
 solving it *precisely* — they require it *soundly*. A legitimate minimal
 `dgs_enter`: bind the new locals/formals to `PlusInf` (fully unconstrained,
 trivially sound — `gammaDG` of an all-`PlusInf` map is `UNIV`). A legitimate
@@ -873,7 +873,7 @@ this the same way they already do on `ivl st`/`sign st`.
 
 | | Minimal executable (this design) | Goblint-compatible octagon | Apron-style octagon |
 | --- | --- | --- | --- |
-| **DG-framework cost** (`sound_dg_spec` itself) | None — interpreted as-is | None — same locale, same four obligations | None — same locale, same four obligations |
+| **DG-framework cost** (`sound_dg_spec_core` itself) | None — interpreted as-is | None — same locale, same four obligations | None — same locale, same four obligations |
 | **Abstract-domain math** | Small: no closure, `sup=max`, bounded case-split transfers, conservative combine | Large: real closure (Floyd-Warshall-style shortest-path over the doubled graph), Miné's full transfer-function case table for precision, closure soundness *and* completeness proofs — "no reusable Isabelle prior art... mechanization from scratch" (epic #25's own words) | Not internal — trust question instead: either reduces to the "Goblint-compatible" column's math (if reimplemented natively) or requires inventing a certifying-oracle trust architecture around the real C library (Verasco-style a-posteriori certificate checking) |
 | **Executable representation** | Small: one-default finite map, same recipe as `Exec_St.thy`, reused not reinvented | Moderate: the closure algorithm itself must be implemented and shown computable (efficiency still not required, but the algorithm is real work either way) | Either the "Goblint-compatible" column's cost, or FFI/external-library integration entirely outside Isabelle's code generator's normal scope — categorically different engineering, not "more of the same" |
 | **Rough scale** | Days-to-low-weeks (comparable to the `Rel_Order_Domain.thy` spike, plus the two-variable indexing) | Weeks-to-months (matches epic #25's own ~4-6 week octagon-specific estimate within its larger Scope B figure) | Not comparably scoped — a different kind of project, not a bigger version of this one |
@@ -973,7 +973,7 @@ definition gammaDG_oct :: "oct \<Rightarrow> oct \<Rightarrow> store set" where
                         \<and> (\<forall>i j. gamma_entry i j (g (i,j)) s)}"
 ```
 
-(`gammaDG` for `sound_dg_spec` takes two carriers, `'D`/`'G` — sketched here
+(`gammaDG` for `sound_dg_spec_core` takes two carriers, `'D`/`'G` — sketched here
 as the same `oct` type for both, i.e. a homogeneous instance, the simplest
 case; a `'D \<noteq> 'G` instance is a direct extension, not a different design.)
 
@@ -1024,7 +1024,7 @@ precise *cases*, never change the soundness argument for the existing ones.
 | `oct_assign` per-case soundness (`N`, `V`, fallback) | ~3 lemmas | Same class as `Sign_Transfer.thy`'s / `Interval_Transfer.thy`'s existing assign lemmas |
 | `oct_assume` per-case soundness (recognized shape, fallback) | ~2-4 lemmas | Same class as existing assume lemmas |
 | `dgs_enter`/`dgs_combine_env`/`dgs_combine_assign` soundness | ~3 lemmas | Easy, by construction — each reduces to `oct_forget`'s soundness plus "unconstrained is always sound" |
-| `sound_dg_spec`'s four top-level obligations | 4 lemmas | Assembly from the above — comparable to `mixed_si_spec_indep`'s existing proof |
+| `sound_dg_spec_core`'s four top-level obligations | 4 lemmas | Assembly from the above — comparable to `mixed_si_spec_indep`'s existing proof |
 
 Roughly 20-25 lemmas total, essentially all in the size class this
 codebase's existing Sign/Interval transfer-soundness lemmas already are —
@@ -1035,7 +1035,7 @@ no single obligation here is harder than what `Sign_Transfer.thy`/
 
 | File (new) | Role | Rough size (comparable existing file) |
 | --- | --- | --- |
-| `Rel_Octagon_Domain.thy` | `oct` type, lattice instance, `gamma`, `dgs_*`, `sound_dg_spec` interpretation | ~200-300 lines (cf. `Sign_Transfer.thy`) |
+| `Rel_Octagon_Domain.thy` | `oct` type, lattice instance, `gamma`, `dgs_*`, `sound_dg_spec_core` interpretation | ~200-300 lines (cf. `Sign_Transfer.thy`) |
 | `Rel_Octagon_Exec.thy` | `oct_st`, `lift_definition`s, commute lemmas | ~150-250 lines (cf. `Ivl_Exec.thy`) |
 | `Example_Octagon_DG_Flagship.thy` | one worked end-to-end example | ~50-100 lines (cf. `Example_Interval_DG_Flagship.thy`) |
 
@@ -1044,7 +1044,7 @@ file. Matches the "days-to-low-weeks" estimate given earlier, now
 decomposed by file rather than asserted as a single number.
 
 **Conclusion this sketch was built to test:** yes — a nontrivial relational
-executable domain fits under `sound_dg_spec` without any change to the DG
+executable domain fits under `sound_dg_spec_core` without any change to the DG
 architecture. Every piece above is either a direct reuse of an existing
 codebase pattern (`fun`-instance lattice inheritance, the `le_fun_def`/
 `sup_fun_def` soundness-proof shape, `Exec_St.thy`'s quotient/override-list
@@ -1065,23 +1065,23 @@ document's Option 4/2 recommendation called for. The carrier is not
 `abs_state` and contains no `vname => 'a` function type anywhere.
 
 ```isabelle
-interpretation rel_order: sound_dg_spec rel_order_spec gammaDG_rel
+interpretation rel_order: sound_dg_spec_core rel_order_spec gammaDG_rel
 proof
   ... (* gammaDG_mono, step_sound, combine_sound, enter_sound *)
 qed
 ```
 
-All four `sound_dg_spec` obligations are discharged. Batch build of
+All four `sound_dg_spec_core` obligations are discharged. Batch build of
 `Voblint_Analysis` (and, incidentally, the downstream `Voblint_Soundness`
 and `Voblint_Examples` sessions, which re-verified clean in the same run)
 finished exit code 0, zero `FAILED`/error/`sorry` anywhere in the log.
 `git diff --stat` against the rest of the framework shows exactly one line
 changed outside the new file: `src/Analysis/ROOT` registering the theory
-name. `DG_Framework.thy`, `DG_Soundness.thy`, and every existing Sign/
+name. `DG_Constraint_Trees.thy`, `DG_Soundness.thy`, and every existing Sign/
 Interval/Mixed instance are untouched.
 
 This empirically validates the architectural claim underlying Option 4:
-`sound_dg_spec` admits genuinely relational carriers, and a new relational
+`sound_dg_spec_core` admits genuinely relational carriers, and a new relational
 analysis is a new interpretation, not a framework migration. The executable
 follow-through below settles the representation question this section
 originally deferred to "domain-implementation work"; richer domains (real
@@ -1119,7 +1119,7 @@ particular finite-set-shaped carrier.
 **One real bug found and fixed, worth recording precisely.** The first
 version used `bot_relc = RelC UNIV` ("every pair known ordered," matching
 `RELATIONAL_DOMAIN_PLAN.md`'s own original `bot = UNIV` choice for the toy
-order domain). This type-checked, passed `sound_dg_spec`'s interpretation,
+order domain). This type-checked, passed `sound_dg_spec_core`'s interpretation,
 and even evaluated correctly under `value` for hand-picked finite examples —
 but running it through the real vendored solver raised `exception Match` in
 the generated SML the first time a genuine `Coset`/`Coset` combination
@@ -1203,7 +1203,7 @@ Not demonstrated, and not in scope here: no interprocedural precision
 Gap 5 feasibility scope's own explicit mandate); no closure (the domain
 still cannot derive `x <= z` from `x <= y` and `y <= z`); no source-level
 soundness theorem for this specific example (the batch-green result rests
-on the general `sound_dg_spec` interpretation proved earlier in this
+on the general `sound_dg_spec_core` interpretation proved earlier in this
 document, not on a bespoke `..._source_run_sound` theorem the way the
 Interval flagship has one). Closing any of these is a further, separate,
 optional increment — not a blocker discovered by this exercise.

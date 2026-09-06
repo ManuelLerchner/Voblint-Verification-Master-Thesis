@@ -1,12 +1,14 @@
 #!/usr/bin/env bash
-# Bootstrap: build all 5 upstream sessions in topological order (fresh
-# clone, no heaps). Uses -d (not -D) per session to avoid validating
-# downstream sessions before upstream heaps exist.
+# Bootstrap: build the upstream sessions in topological order (fresh
+# clone, no heaps), one target session per invocation so each session is
+# validated only once its parents have heaps.
 set -euo pipefail
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/require-afp.sh"
-
-"$ISABELLE" build -v -N -d "$AFP" -d "$TD_DIR" -d "$REPO_ROOT/src/VIMP" Voblint_VIMP
-"$ISABELLE" build -v -N -d "$AFP" -d "$TD_DIR" -d "$REPO_ROOT/src/VIMP" -d "$REPO_ROOT/src/CFG" Voblint_CFG
-"$ISABELLE" build -v -N -d "$AFP" -d "$TD_DIR" -d "$REPO_ROOT/src/VIMP" -d "$REPO_ROOT/src/CFG" -d "$REPO_ROOT/src/Core" Voblint_Core
-"$ISABELLE" build -v -N -d "$AFP" -d "$TD_DIR" -d "$REPO_ROOT/src/VIMP" -d "$REPO_ROOT/src/CFG" -d "$REPO_ROOT/src/Core" -d "$REPO_ROOT/src/Analysis" Voblint_Analysis
-"$ISABELLE" build -v -N -d "$AFP" -d "$TD_DIR" -D "$REPO_ROOT" Voblint_Soundness
+"$ISABELLE" build -v -N -d "$AFP" -d "$TD_DIR" -D "$REPO_ROOT" Voblint_VIMP
+"$ISABELLE" build -v -N -d "$AFP" -d "$TD_DIR" -D "$REPO_ROOT" Voblint_Domain
+"$ISABELLE" build -v -N -d "$AFP" -d "$TD_DIR" -D "$REPO_ROOT" Voblint_Solver
+"$ISABELLE" build -v -N -d "$AFP" -d "$TD_DIR" -D "$REPO_ROOT" Voblint_CFG
+"$ISABELLE" build -v -N -d "$AFP" -d "$TD_DIR" -D "$REPO_ROOT" Voblint_Framework
+"$ISABELLE" build -v -N -d "$AFP" -d "$TD_DIR" -D "$REPO_ROOT" Voblint_Compile
+"$ISABELLE" build -v -N -d "$AFP" -d "$TD_DIR" -D "$REPO_ROOT" Voblint_Exec
+"$ISABELLE" build -v -N -d "$AFP" -d "$TD_DIR" -D "$REPO_ROOT" Voblint_Analysis

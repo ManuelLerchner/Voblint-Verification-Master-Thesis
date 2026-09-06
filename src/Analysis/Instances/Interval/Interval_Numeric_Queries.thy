@@ -1,12 +1,12 @@
 theory Interval_Numeric_Queries
-  imports Interval_Lattice "Voblint_Core.Abstract_Numeric_Queries"
+  imports Interval_Lattice "Voblint_Domain.Backward_Numeric_Queries"
 begin
 
 section \<open>Interval interpretation of the generic numeric-query interface\<close>
 
 text \<open>
   Second-domain validation for \<open>abstract_numeric_queries\<close>
-  (\<^theory>\<open>Voblint_Core.Abstract_Numeric_Queries\<close>): a real, minimal Interval instance,
+  (\<^theory>\<open>Voblint_Domain.Abstract_Numeric_Queries\<close>): a real, minimal Interval instance,
   interpreted without touching that generic theory. Entailment/refutation of
   \<open><\<close>/\<open>=\<close> reduces to comparing bounds: two intervals' \<open><\<close> relation is
   provable exactly when one interval's upper bound is strictly below the
@@ -232,17 +232,32 @@ proof -
     using i_bounds(1,2) ivl_separated_not_equal j_bounds(1,2) by blast
 qed
 
+subsection \<open>Goblint-style optional-Boolean queries\<close>
+
+definition interval_less :: "ivl \<Rightarrow> ivl \<Rightarrow> bool option" where
+  "interval_less a b = (if interval_less_true a b then Some True
+                         else if interval_less_false a b then Some False else None)"
+
+definition interval_eq :: "ivl \<Rightarrow> ivl \<Rightarrow> bool option" where
+  "interval_eq a b = (if interval_eq_true a b then Some True
+                       else if interval_eq_false a b then Some False else None)"
+
+lemma interval_less_sound:
+  assumes "interval_less a b = Some r" and "i \<in> gamma a" and "j \<in> gamma b"
+  shows "(i < j) = r"
+  using assms interval_less_true_sound interval_less_false_sound
+  unfolding interval_less_def by (auto split: if_splits)
+
+lemma interval_eq_sound:
+  assumes "interval_eq a b = Some r" and "i \<in> gamma a" and "j \<in> gamma b"
+  shows "(i = j) = r"
+  using assms interval_eq_true_sound interval_eq_false_sound
+  unfolding interval_eq_def by (auto split: if_splits)
+
 subsection \<open>Interpreting the generic numeric-query interface\<close>
 
-global_interpretation interval_numeric_queries:
-  abstract_numeric_queries gamma_ivl interval_less_true interval_less_false
-    interval_eq_true interval_eq_false
-  by unfold_locales
-    (auto simp add:
-       interval_less_true_sound
-       interval_less_false_sound
-       interval_eq_true_sound
-       interval_eq_false_sound)
+global_interpretation interval_numeric_queries: abstract_numeric_queries interval_less interval_eq
+  by unfold_locales (metis interval_less_sound interval_eq_sound)+
 
 subsection \<open>Semantic intersection versus raw lattice meet\<close>
 
@@ -256,9 +271,12 @@ text \<open>
   result. The witness below is disjoint by \<open>interval_eq_false\<close>'s sound table,
   yet its representation-level meet is not \<open>bot\<close>.
 
-  The generic \<^locale>\<open>derived_eq_false_from_intersection\<close> instead tests
-  semantic intersection. \<^const>\<open>intersect_ivl\<close> returns canonical \<^const>\<open>bot\<close>
-  on the same witness, so the generic derivation classifies it correctly.
+  The generic \<open>eq_false\<close> derived in \<^locale>\<open>backward_domain\<close>'s own context
+  (\<^theory>\<open>Voblint_Domain.Backward_Numeric_Queries\<close>) instead tests semantic
+  intersection via @{const is_empty}. \<^const>\<open>intersect_ivl\<close> returns a value
+  @{const is_empty} classifies as empty on the same witness, so the generic
+  derivation classifies it correctly regardless of whether that value is the
+  canonical \<^const>\<open>bot\<close>.
   Interval also exposes its hand-tuned query table; both operations agree on
   this disjointness witness. \<open>interval_eq_true\<close> is independent of either
   operation because it derives equality from \<open>interval_less_false\<close> in both

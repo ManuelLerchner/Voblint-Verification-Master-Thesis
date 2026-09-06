@@ -1,7 +1,7 @@
 section \<open>Example: Parity check-discharge, node-local, store-only\<close>
 
 theory Example_Parity_Checks_Store_Only
-  imports "Voblint_Core.Checks" "Voblint_CLI.Parity_Entry"
+  imports "Voblint_Framework.Checks" "Voblint_CLI.Parity_Entry"
           "Voblint_Analysis.Analysis_GraphViz" "Voblint_VIMP.VIMP_Notation"
           Example_Compile_Call_Free
 begin
@@ -115,7 +115,7 @@ text \<open>The computed Parity environment at an arbitrary node, read out of th
 definition parity_ex_env :: "pp \<Rightarrow> parity abs_state" where
   "parity_ex_env v =
      (case lookup_context (analyse_parity_result_for parity_ex_gs parity_ex_program) v () of
-        Unreachable \<Rightarrow> bot | Reachable st \<Rightarrow> st)"
+        Bot \<Rightarrow> bot | Lifted st \<Rightarrow> st)"
 
 text \<open>The compiled edges, read off \<^const>\<open>prog_cfg\<close>'s own \<open>eval\<close>-computed
   shape: \<open>Statement 0\<close> (\<open>x := __voblint_nondet_int()\<close>) reaches \<open>Statement 1\<close>
@@ -126,7 +126,7 @@ text \<open>The compiled edges, read off \<^const>\<open>prog_cfg\<close>'s own 
   unknown) reaches the epilogue \<open>Statement 7\<close> reaches \<open>cfg_exit\<close>.\<close>
 lemma parity_ex_intra_eval:
   "intra (prog_cfg parity_ex_program) =
-     {(FunctionEntry (STR ''main''), EA_Nop, Statement 0),
+     {(FunctionEntry (STR ''main''), EA_Body (STR ''main''), Statement 0),
       (Statement 0, EA_Special Nondet_Int (STR ''x''), Statement 1),
       (Statement 1, EA_Assign (STR ''y'') (Times (V (STR ''x'')) (N 2)), Statement 2),
       (Statement 2, EA_Assign (STR ''z'') (Plus (V (STR ''y'')) (N 1)), Statement 3),
@@ -156,19 +156,19 @@ lemma parity_ex_node_sound_3:
   "parity_ex_reach (Statement 3) \<le> \<lbrakk>parity_ex_env (Statement 3)\<rbrakk>"
   unfolding parity_ex_reach_def parity_ex_env_def
   using parity_ex_node_sound
-  by (simp add: prog_main_name_def gamma_point_def split: point_state.splits)
+  by (simp add: prog_main_name_def gamma_point_def split: lifted.splits)
 
 lemma parity_ex_node_sound_4:
   "parity_ex_reach (Statement 4) \<le> \<lbrakk>parity_ex_env (Statement 4)\<rbrakk>"
   unfolding parity_ex_reach_def parity_ex_env_def
   using parity_ex_node_sound
-  by (simp add: prog_main_name_def gamma_point_def split: point_state.splits)
+  by (simp add: prog_main_name_def gamma_point_def split: lifted.splits)
 
 lemma parity_ex_node_sound_6:
   "parity_ex_reach (Statement 6) \<le> \<lbrakk>parity_ex_env (Statement 6)\<rbrakk>"
   unfolding parity_ex_reach_def parity_ex_env_def
   using parity_ex_node_sound
-  by (simp add: prog_main_name_def gamma_point_def split: point_state.splits)
+  by (simp add: prog_main_name_def gamma_point_def split: lifted.splits)
 
 text \<open>Executable classification at each check's own node --- \<open>y\<close> is \<open>PEven\<close>
   and \<open>z\<close> is \<open>POdd\<close> at both \<open>Statement 3\<close> and \<open>Statement 4\<close> (checks do not
@@ -208,7 +208,7 @@ proof -
   then show ?thesis using parity_classify_check_refuted[OF parity_ex_classify_4] by blast
 qed
 
-text \<open>The generic \<^const>\<open>checks_proven\<close>/\<^theory>\<open>Voblint_Core.Checks\<close> bridge,
+text \<open>The generic \<^const>\<open>checks_proven\<close>/\<^theory>\<open>Voblint_Framework.Checks\<close> bridge,
   exercised on exactly the check that is actually true: the compiler's own
   \<^const>\<open>checks\<close> table names all three, but a blanket \<open>checks_proven\<close> over the
   whole table would be a false statement here, since the second check is
@@ -220,7 +220,7 @@ proof (rule parity_checks_provenI)
   fix v :: pp and cnd :: exp
   assume mem: "(v, cnd) \<in> {(Statement 3, Not (Eq (V (STR ''y'')) (V (STR ''z''))))}"
   then have v_eq: "v = Statement 3" and cnd_eq: "cnd = Not (Eq (V (STR ''y'')) (V (STR ''z'')))" by auto
-  show "parity_check_true cnd (parity_ex_env v)"
+  show "parity_check_query cnd (parity_ex_env v) = Some True"
     unfolding v_eq cnd_eq parity_ex_env_def by eval
 qed
 
@@ -252,11 +252,11 @@ proof -
       by (rule ltr_collect_init[OF zero_init])
     then show ?thesis unfolding parity_ex_reach_def parity_ex_entry_eval .
   qed
-  have e0: "(FunctionEntry (STR ''main''), EA_Nop, Statement 0) \<in> intra (prog_cfg parity_ex_program)"
+  have e0: "(FunctionEntry (STR ''main''), EA_Body (STR ''main''), Statement 0) \<in> intra (prog_cfg parity_ex_program)"
     by (simp add: parity_ex_intra_eval)
   have s1: "(\<lambda>_. 0) \<in> parity_ex_reach (Statement 0)"
     using ltr_collect_intra_step[of "\<lambda>_. 0" parity_ex_gs "prog_cfg parity_ex_program"
-        "cinit_stores parity_ex_gs" "FunctionEntry (STR ''main'')" EA_Nop "Statement 0"]
+        "cinit_stores parity_ex_gs" "FunctionEntry (STR ''main'')" "EA_Body (STR ''main'')" "Statement 0"]
     using s0 e0 unfolding parity_ex_reach_def by simp
   have e1: "(Statement 0, EA_Special Nondet_Int (STR ''x''), Statement 1) \<in> intra (prog_cfg parity_ex_program)"
     by (simp add: parity_ex_intra_eval)

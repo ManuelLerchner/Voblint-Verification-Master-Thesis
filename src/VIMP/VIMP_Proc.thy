@@ -46,12 +46,44 @@ text \<open>Formal binding is the same fold over the concrete store and over eve
 abbreviation bind_formals :: "vname list \<Rightarrow> 'v list \<Rightarrow> (vname \<Rightarrow> 'v) \<Rightarrow> vname \<Rightarrow> 'v" where
   "bind_formals xs vs s \<equiv> fold (\<lambda>(x, v) st. st(x := v)) (zip xs vs) s"
 
-fun combine_assign :: "vname option \<Rightarrow> int \<Rightarrow> store \<Rightarrow> store" where
+text \<open>Whole procedure entry, for the same reason: reset every local to a chosen
+  value, keep the globals, then bind the formals to the actuals evaluated in the
+  caller's own state. Which state and which evaluator is all that separates the
+  concrete entry from an abstract one -- the concrete semantics runs it at
+  \<^const>\<open>aval\<close> and the reset value \<open>0\<close>, an abstract domain at its own
+  evaluator and its own \<open>top\<close> -- so it is one definition, not a concrete one
+  with an \<open>_abs\<close> copy beside it.\<close>
+definition enter_binding ::
+  "(vname \<Rightarrow> bool) \<Rightarrow> 'a \<Rightarrow> (exp \<Rightarrow> (vname \<Rightarrow> 'a) \<Rightarrow> 'a)
+   \<Rightarrow> vname list \<Rightarrow> exp list \<Rightarrow> (vname \<Rightarrow> 'a) \<Rightarrow> (vname \<Rightarrow> 'a)"
+where
+  "enter_binding gs reset_val ev xs es s =
+     bind_formals xs (map (\<lambda>e. ev e s) es) (enter_frame gs reset_val s)"
+
+text \<open>The concrete instance, spelled out: this is the equation that lets a
+  soundness statement about the shared constant be read as one about the entry
+  store the source semantics actually builds.\<close>
+lemma enter_binding_concrete:
+  "enter_binding gs 0 aval xs es s
+     = bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state gs s)"
+  by (simp add: enter_binding_def enter_state_def)
+
+text \<open>The return-slot write is a pure per-variable update, generic in the codomain:
+  the concrete VIMP semantics uses it at \<open>store = vname \<Rightarrow> int\<close>, and every abstract
+  domain's own \<open>vname \<Rightarrow> 'a\<close> state reuses the same definition rather than restating
+  an \<open>_abs\<close> copy of it.\<close>
+fun combine_assign :: "vname option \<Rightarrow> 'a \<Rightarrow> (vname \<Rightarrow> 'a) \<Rightarrow> (vname \<Rightarrow> 'a)" where
   "combine_assign None _ s = s"
 | "combine_assign (Some x) v s = s(x := v)"
 
 subsection \<open>Frame-stack small-step semantics\<close>
 
+text \<open>The reference semantics every soundness claim is ultimately about.  A configuration is
+  a command, a store, and a stack of caller frames; a call pushes one frame and continues in
+  the callee body followed by \<open>Restore\<close>, a return writes the return slot and hands control to
+  \<open>Unwind\<close>, which discards the rest of the callee body until that \<open>Restore\<close> pops the frame.
+  \<open>Restore\<close> and \<open>Unwind\<close> exist only here, in configurations the semantics builds; no source
+  program contains them.\<close>
 inductive
   pstep :: "(vname \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> com \<times> store \<times> frame list
                        \<Rightarrow> com \<times> store \<times> frame list \<Rightarrow> bool"
@@ -162,6 +194,9 @@ lemma pcompletes_IfFalse:
 
 subsection \<open>Frame-stack extension\<close>
 
+text \<open>A step never inspects the frames below the one it works on, so any run stays valid
+  with more callers underneath.  This is what lets a proof about a procedure in isolation be
+  reused at an arbitrary call depth.\<close>
 lemma pstep_frame_extend:
   "pstep gs \<Pi> (c, s, frs) (c', s', frs') \<Longrightarrow>
    pstep gs \<Pi> (c, s, frs @ extra) (c', s', frs' @ extra)"
@@ -182,6 +217,9 @@ lemma psteps_frame_mono:
 
 subsection \<open>Call completion\<close>
 
+text \<open>Running a whole call in one step of reasoning: a body that finishes under its own
+  frame lets the caller resume with the frame popped and the return slot written.  Callers
+  use these instead of replaying the \<open>Restore\<close> bookkeeping at every call site.\<close>
 lemma combine_env_ret_var_irrelevant [simp]:
   "\<not> gs ret_var \<Longrightarrow> combine_env gs fr (t(ret_var := v)) = combine_env gs fr t"
   by (rule ext) simp
@@ -413,10 +451,6 @@ definition main_body :: "proc_table \<Rightarrow> com" where
 text \<open>Deliberately not \<open>[simp]\<close>: \<open>wf_source_program\<close>'s entry conjunct has the shape
   \<open>\<Pi> prog_main_name = Some \<lparr>formals = [], body = main_body \<Pi>\<rparr>\<close>, against which
   this rule would rewrite \<open>main_body \<Pi>\<close> to itself.\<close>
-lemma main_body_Some:
-  "\<Pi> prog_main_name = Some decl \<Longrightarrow> main_body \<Pi> = body decl"
-  by (simp add: main_body_def)
-
 definition wf_source_program :: "(vname \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> bool" where
   "wf_source_program gs \<Pi> \<longleftrightarrow>
      reserved_ret_var gs \<and>

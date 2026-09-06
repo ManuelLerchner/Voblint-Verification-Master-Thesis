@@ -125,6 +125,9 @@ inductive_cases valid_ltr_ResumeE [elim]:
 
 subsection \<open>Structural lemmas\<close>
 
+text \<open>How the three trace shapes answer the projections every later proof reads them
+  through -- path, sink, caller, entry store.  Kept as \<open>simp\<close> rules so an induction over
+  \<open>valid_ltr\<close> never has to case on the constructor merely to look up a sink.\<close>
 lemma extend_simps [simp]:
   "path (extend t x) = path t @ [x]"
   "caller_of (extend t x) = caller_of t"
@@ -147,10 +150,6 @@ lemma entry_store_extend [simp]:
   assumes "path t \<noteq> []"
   shows "entry_store (extend t x) = entry_store t"
   using assms by (simp add: entry_store_def)
-
-lemma entry_store_extend_valid:
-  "t \<in> valid_ltr gs g S \<Longrightarrow> entry_store (extend t x) = entry_store t"
-  by (simp add: valid_ltr_path_nonempty)
 
 subsection \<open>Design invariants\<close>
 
@@ -314,6 +313,10 @@ qed
 
 subsection \<open>Stable context entry invariant\<close>
 
+text \<open>An activation's entry store is fixed once it starts: a call names the store the callee
+  begins with, and resuming a caller keeps the caller's own first store rather than adopting
+  the callee's.  Context policies that read the entry store rely on this -- otherwise the
+  context a trace carries could change under it as the trace grows.\<close>
 definition call_enter_store :: "(vname \<Rightarrow> bool) \<Rightarrow> cfg \<Rightarrow> cfg_node \<Rightarrow> store \<Rightarrow> store \<Rightarrow> bool" where
   "call_enter_store gs g c s t \<longleftrightarrow>
      (\<exists>dst pars args p cont. (c, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g

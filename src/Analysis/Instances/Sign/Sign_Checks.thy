@@ -1,132 +1,82 @@
 theory Sign_Checks
-  imports Sign_Numeric_Queries "Voblint_Core.Abstract_Checks"
-    "Voblint_Core.Analysis_Result" Sign_Exec
-    "Voblint_Core.Monovariant_Analysis_Result"
-    "Voblint_Core.DG_Analysis_Adapter"
-    Sign_Ctx_None_Sound
+  imports Sign_Classify
+    "Voblint_Framework.Check_Report"
+    "Voblint_Framework.DG_Analysis_Adapter"
+    Analysis_Surface
+    Sign_Analyses
 begin
 
-hide_const phase.N
-
-section \<open>Sign instance of the generic check-discharge interface\<close>
+section \<open>What a whole-program Sign run reports\<close>
 
 text \<open>
-  Only composition lives here: the Sign lattice comparison tables
-  (\<open>sign_less_true\<close>/\<open>sign_less_false\<close>/\<open>sign_eq_true\<close>/\<open>sign_eq_false\<close>) and their
-  \<^theory>\<open>Voblint_Analysis.Sign_Numeric_Queries\<close> interpretation of
-  \<open>abstract_numeric_queries\<close> live in that theory. The Sign expression
-  evaluator \<open>aval_sign\<close> lives in \<^theory>\<open>Voblint_Analysis.Sign_Arithmetic\<close>. The
-  Boolean recursion over \<^typ>\<open>exp\<close> (\<open>Not\<close>, \<open>And\<close>, \<open>Or\<close>), the three-way
-  classification, and the node-indexed bridge to \<^const>\<open>checks_proven\<close> come
-  from interpreting \<open>abstract_check_domain\<close> (\<^theory>\<open>Voblint_Core.Abstract_Checks\<close>)
-  once, below, reusing the numeric-query facts already proved sound in
-  \<open>sign_numeric_queries\<close> rather than re-deriving the comparison tables ---
-  the same way \<open>sign_backward_domain\<close> in \<open>Sign_Backward\<close> interprets
-  \<open>backward_domain\<close> for guard narrowing.
+  The three-way classifier itself is \<^theory>\<open>Voblint_Analysis.Sign_Classify\<close>'s and says
+  nothing about how the program was solved. This theory pairs it with one particular
+  solved system -- the context-insensitive routed-unit run -- and publishes the result
+  tables and check reports a caller consumes.
+
+  A context-sensitive run pairs the same classifier with a different solved system
+  instead, so it needs \<open>Sign_Classify\<close> alone and not the tables below.
 \<close>
-
-global_interpretation sign_check_domain:
-  abstract_check_domain gamma_sign sign_less_true sign_less_false sign_eq_true sign_eq_false
-    gamma_state aval_sign
-  defines
-    sign_check_true = sign_check_domain.check_true
-    and sign_check_false = sign_check_domain.check_false
-    and sign_classify_check = sign_check_domain.classify_check
-    and sign_checks_proven = sign_check_domain.abstract_checks_proven
-proof unfold_locales
-  fix s :: store and e :: exp and \<sigma> :: "sign abs_state"
-  assume "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
-  then have "\<forall>x. s x \<in> gamma (\<sigma> x)" by (rule gamma_stateD)
-  then have "\<forall>x. s x \<in> gamma_sign (\<sigma> x)" by simp
-  then show "aval e s \<in> gamma_sign (aval_sign e \<sigma>)" using aval_sign_sound by blast
-qed
-
-text \<open>
-  Only the consumer-facing aliases get a short Sign-prefixed name:
-  \<open>classify_check\<close>'s two directions and the \<open>checks_proven\<close> bridge, both
-  exercised below and by \<open>Example_Checks_Store_Only\<close>.
-  \<open>sign_check_domain.check_true_sound\<close>/\<open>check_false_sound\<close>/
-  \<open>check_true_false_vacuous\<close> are the lower-level facts \<open>classify_check\<close>'s
-  own soundness is built from; no caller needs them directly, so they stay
-  reachable under the qualified \<open>sign_check_domain.\<close> name instead of a
-  dedicated alias here.
-\<close>
-
-lemmas sign_classify_check_proved = sign_check_domain.classify_check_proved
-lemmas sign_classify_check_refuted = sign_check_domain.classify_check_refuted
-lemmas sign_checks_provenI = sign_check_domain.abstract_checks_provenI
-lemmas sign_checks_proven_sound = sign_check_domain.abstract_checks_proven_sound
 
 subsection \<open>The generic report adapter, at the routed-unit context\<close>
 
 text \<open>
-  Interpreting \<^locale>\<open>dg_analysis_adapter\<close> at \<open>Sign_Ctx_None_Sound\<close>'s own routed-unit
-  solved system reuses every obligation that theory's own \<open>sctx_dg\<close>/\<open>sctx_routed\<close>
-  interpretations already discharge: the five \<^locale>\<open>dg_ctx_activation_base\<close> obligations
-  are exactly \<open>sctx_dg\<close>'s own (cited here via the exported \<open>sctx_pp_abs\<close>/\<open>sctx_sg_covered\<close>/
-  \<open>sctx_sg_uncovered_empty\<close>/\<open>sctx_fin\<close>), and the routed obligations collapse the same way
+  Interpreting \<^locale>\<open>dg_analysis_adapter\<close> at \<open>Sign_Analyses\<close>'s own routed-unit
+  solved system reuses every obligation that theory's own \<open>sctx_routed\<close>
+  interpretation already discharges, at the executable carrier: the five
+  \<^locale>\<open>dg_ctx_activation_base\<close> obligations are exactly its own (cited here via the exported
+  \<open>sctx_pp_routed\<close>/\<open>sctx_sg_st_uncovered_empty\<close>), and the routed obligations collapse the same way
   \<^locale>\<open>unit_routed_context\<close>'s did, at \<^const>\<open>route_unit\<close>/\<^const>\<open>enterc_unit\<close>. Only
   \<open>classify_proved\<close>/\<open>classify_refuted\<close> are genuinely new here, discharged by
   \<open>sign_classify_check_proved\<close>/\<open>sign_classify_check_refuted\<close> above. This context re-opens
-  \<open>Sign_Ctx_None_Sound\<close>'s own six coverage hypotheses (\<open>solves\<close>/\<open>exact\<close>/\<open>entry_cov\<close>/
+  \<open>Sign_Analyses\<close>'s own six coverage hypotheses (\<open>solves\<close>/\<open>exact\<close>/\<open>entry_cov\<close>/
   \<open>fwd_ok\<close>/\<open>call_fwd_ok\<close>/\<open>comb_fwd_ok\<close>) rather than reusing that theory's context directly,
   since the classify obligations need \<open>sign_classify_check_proved\<close>/\<open>sign_classify_check_refuted\<close>,
-  which live in this theory, downstream of \<open>Sign_Ctx_None_Sound\<close>.
+  which live in this theory, downstream of \<open>Sign_Analyses\<close>.
 \<close>
 
 context
-  fixes gs :: "vname \<Rightarrow> bool" and is_bot_pred :: "sign exec_dg_st \<Rightarrow> bool"
+  fixes gs :: "vname \<Rightarrow> bool" and empty_pred :: "sign exec_dg_st \<Rightarrow> bool"
     and Pi :: proc_table and ps :: "pname list"
-  assumes solves: "sctx_terminates gs is_bot_pred Pi ps"
-    and exact: "\<And>s. is_bot_pred s = is_bot_state (fun_of_resolved_st_q_for gs s)"
-    and entry_cov: "(cfg_entry (compile_prog Pi ps), ()) \<in> fst (sctx_sol gs is_bot_pred Pi ps)"
-    and fwd_ok: "\<And>u a v ctx. (u, ctx) \<in> fst (sctx_sol gs is_bot_pred Pi ps)
+  assumes solves: "sctx_terminates gs empty_pred Pi ps"
+    and exact: "\<And>s. empty_pred s = is_empty_state (fun_of_resolved_st_q_for gs s)"
+    and entry_cov: "(cfg_entry (compile_prog Pi ps), ()) \<in> fst (sctx_sol gs empty_pred Pi ps)"
+    and fwd_ok: "\<And>u a v ctx. (u, ctx) \<in> fst (sctx_sol gs empty_pred Pi ps)
                    \<Longrightarrow> (u, a, v) \<in> intra (compile_prog Pi ps)
-                   \<Longrightarrow> (v, ctx) \<in> fst (sctx_sol gs is_bot_pred Pi ps)"
+                   \<Longrightarrow> (v, ctx) \<in> fst (sctx_sol gs empty_pred Pi ps)"
     and call_fwd_ok: "\<And>u ctx dst pars args p cont.
-        (u, ctx) \<in> fst (sctx_sol gs is_bot_pred Pi ps)
+        (u, ctx) \<in> fst (sctx_sol gs empty_pred Pi ps)
         \<Longrightarrow> (u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps)
-        \<Longrightarrow> (FunctionEntry p, ()) \<in> fst (sctx_sol gs is_bot_pred Pi ps)"
+        \<Longrightarrow> (FunctionEntry p, ()) \<in> fst (sctx_sol gs empty_pred Pi ps)"
     and comb_fwd_ok: "\<And>cl c1 dst pars args p cont.
-        (cl, c1) \<in> fst (sctx_sol gs is_bot_pred Pi ps)
+        (cl, c1) \<in> fst (sctx_sol gs empty_pred Pi ps)
         \<Longrightarrow> (cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps)
-        \<Longrightarrow> (cont, c1) \<in> fst (sctx_sol gs is_bot_pred Pi ps)"
+        \<Longrightarrow> (cont, c1) \<in> fst (sctx_sol gs empty_pred Pi ps)"
 begin
 
-interpretation sctx_dg_base: sound_dg_spec "sctx_abs_spec gs" gamma_dg_base gs
-  unfolding sctx_abs_spec_def
-  by (rule base_dg_spec_sound[OF sign_is_sound_transfer_for is_bot_state_gamma_state_empty])
+interpretation sctx_dg_base: sound_dg_spec_core "sctx_spec gs empty_pred" "sctx_gamma gs" gs
+  by (rule sctx_sound_exec[OF exact])
 
-interpretation sctx_adapter: dg_analysis_adapter enterc_unit "sctx_abs_spec gs" gs
-    "compile_prog Pi ps" Global route_unit
-    "map_lift (fun_of_resolved_st_q_for gs) (Bot::sign exec_dg_st lifted)"
-    "map_lift (fun_of_resolved_st_q_for gs) (Lifted cinit_sign_st)"
-    "map_lift (fun_of_resolved_st_q_for gs) (Bot::sign exec_dg_st lifted)"
-    "sctx_sigma_abs gs is_bot_pred Pi ps" "fst (sctx_sol gs is_bot_pred Pi ps)"
-    "(cfg_exit (compile_prog Pi ps), ())" "sctx_sg gs is_bot_pred Pi ps"
-    Seed sign_classify_check
-proof (unfold_locales, goal_cases FinE PP SgCov SgUncov Fwd FinC SeedKey ResolveSound
-    RouteEnterc CallFwd CombFwd EnterAgree ClProved ClRefuted)
+interpretation sctx_adapter: routed_analysis_sound
+    "sctx_spec gs empty_pred" "sctx_gamma gs" gs
+    "compile_prog Pi ps" "Analysis_Global ()" route_unit Bot "Lifted cinit_sign_st" Bot
+    "snd (sctx_sol gs empty_pred Pi ps)" "fst (sctx_sol gs empty_pred Pi ps)"
+    "(cfg_exit (compile_prog Pi ps), ())"
+    Activation_Seed "\<lambda>d. d = Bot" "call_context_rel_of_fun enterc_unit"
+    "map_lift (fun_of_resolved_st_q_for gs)" sign_classify_check
+proof (unfold_locales, goal_cases FinE PP SgCov SgUncov Fwd FinC CallsUnique SeedKey
+    IsBotBot IsBotSound ResolveSound
+    EnterCover EnterTotal CombFwd GammaRd ClProved ClRefuted VarsFin)
   case FinE show ?case
     using compile_prog_finite by auto
 next
-  case PP show ?case
-    by (simp only: sctx_sigma_abs_def[OF solves exact entry_cov fwd_ok call_fwd_ok comb_fwd_ok]
-        sctx_sigma_abs_exec_def)
-      (rule sctx_pp_abs[OF solves exact])
+  case PP show ?case by (rule sctx_pp_routed[OF solves exact])
 next
   case (SgCov v c)
-  note mem = this
-  have eq1: "sctx_sg gs is_bot_pred Pi ps (Inl (v, c))
-               = locals (sctx_sigma_abs gs is_bot_pred Pi ps (Inl (v, c)))"
-    by (rule sctx_sg_covered[OF solves exact entry_cov fwd_ok call_fwd_ok comb_fwd_ok mem])
-  show ?case
-    using eq1 gamma_dg_base_def by auto
+  thus ?case by (simp add: sctx_gamma_def)
 next
   case (SgUncov v c)
-  note nmem = this
-  show ?case
-    by (rule sctx_sg_uncovered_empty[OF solves exact entry_cov fwd_ok call_fwd_ok comb_fwd_ok nmem])
+  thus ?case by simp
 next
   case (Fwd u a v c)
   thus ?case by (rule fwd_ok)
@@ -134,36 +84,50 @@ next
   case FinC show ?case
     by (simp add: compile_prog_finite)
 next
+  case CallsUnique show ?case
+    unfolding calls_source_unique_def using compile_prog_calls_source_unique by blast
+next
   case (SeedKey p ctx) show ?case by simp
+next
+  case IsBotBot show ?case by simp
+next
+  case (IsBotSound d g') then show ?case by (simp add: sctx_gamma_def)
 next
   case (ResolveSound u ctx dst pars args p cont s)
   thus ?case by (simp add: static_resolve_iff compile_prog_finite)
 next
-  case (RouteEnterc u ctx dst pars args p cont s)
-  show ?case by (simp add: route_unit_def enterc_unit_def)
-next
-  case (CallFwd u ctx dst pars args p cont)
+  case (EnterCover u ctx dst pars args p cont s ctx')
+  let ?ci = "call_info_of (CallEdge dst pars args) p"
+  let ?caller = "locals (snd (sctx_sol gs empty_pred Pi ps) (Inl (u, ctx)))"
+  have cov: "entry_pairs_cover
+      (\<lambda>d. sctx_gamma gs d
+             (globs (snd (sctx_sol gs empty_pred Pi ps) (Inr (Analysis_Global ())))))
+      s (call_enter gs (CallEdge dst pars args) s)
+      [(?caller, transfer_lift empty_pred (sign_enter_st_for gs ?ci) ?caller)]"
+    using sctx_entry_cover_exec[OF exact EnterCover(3), where ci = ?ci] by simp
   show ?case
-    using CallFwd(1,2) call_fwd_ok unfolding route_unit_def by blast
+    unfolding sctx_spec_def dgs_enter_local_state_st_for_lifted
+    using enter_runs_local_enter_transfer enter_deps_local_enter_transfer cov
+          call_fwd_ok[OF EnterCover(1,2)] EnterCover(4)
+    by (fastforce simp: entry_pairs_cover_def route_unit_def call_context_rel_of_fun_iff
+                        enterc_unit_def)
+next
+  case (EnterTotal u ctx dst pars args p cont s)
+  show ?case by simp
 next
   case (CombFwd cl c1 dst pars args p cont)
   show ?case using CombFwd(1,2) comb_fwd_ok by blast
 next
-  case (EnterAgree cl s es dst pars args p cont)
-  note ces = EnterAgree(1) and ce = EnterAgree(2)
-  obtain dst' pars' args' p' cont' where
-      ce': "(cl, CallEdge dst' pars' args', FunctionEntry p', cont') \<in> calls (compile_prog Pi ps)"
-    and es_eq: "es = call_enter gs (CallEdge dst' pars' args') s"
-    using ces unfolding call_enter_store_def by blast
-  have "CallEdge dst' pars' args' = CallEdge dst pars args"
-    using compile_prog_calls_source_unique[OF ce' ce] by simp
-  thus ?case using es_eq by simp
+  case (GammaRd d g')
+  show ?case by (simp add: sctx_gamma_def)
 next
   case (ClProved c d s)
   thus ?case by (rule sign_classify_check_proved)
 next
   case (ClRefuted c d s)
   thus ?case by (rule sign_classify_check_refuted)
+next
+  case VarsFin show ?case by (rule sctx_vars_finite[OF solves])
 qed
 
 text \<open>
@@ -176,85 +140,31 @@ lemmas sctx_report_ctx_refuted_sound = sctx_adapter.analyse_report_ctx_refuted_s
 
 text \<open>
   \<open>sctx_result_node_sound\<close> re-exports the adapter's generic node-soundness bridge
-  (\<^theory>\<open>Voblint_Core.DG_Analysis_Adapter\<close>), phrased against \<open>sctx_adapter.analyse_result\<close>.
+  (\<^theory>\<open>Voblint_Framework.DG_Analysis_Adapter\<close>), phrased against \<open>sctx_adapter.analyse_result\<close>.
   \<open>sctx_analyse_result_eq\<close> identifies that reading with the raw-tuple shape
-  \<^const>\<open>analyse_sign_ctx_result_for\<close> (\<open>Sign_Ctx_None_Sound\<close>) already builds by hand from
+  \<^const>\<open>analyse_sign_ctx_result_for\<close> (\<open>Sign_Analyses\<close>) already builds by hand from
   \<^const>\<open>normalize_point\<close>/\<^const>\<open>canonicalize_lift\<close> directly: both collapse the same
   \<^const>\<open>Bot\<close>/\<^const>\<open>Lifted\<close> case split on the same projected local unknown, one via
-  \<open>is_bot_state\<close> after projecting (the adapter), the other via \<open>is_bot_pred\<close> before
+  \<open>is_empty_state\<close> after projecting (the adapter), the other via \<open>empty_pred\<close> before
   projecting (\<open>analyse_sign_ctx_result_for\<close>) --- \<open>exact\<close> is exactly what identifies the
   two orders. A caller composing \<open>sctx_result_node_sound\<close> with \<open>sctx_analyse_result_eq\<close>
   gets \<^const>\<open>analyse_sign_ctx_result_for\<close>'s own node-soundness bridge without
-  re-deriving \<open>routed_context_hetero\<close>'s coverage/sigma-projection argument by hand.
+  re-deriving \<open>routed_context_base_hetero\<close>'s coverage argument by hand.
 \<close>
 
 lemmas sctx_result_node_sound = sctx_adapter.analyse_result_node_sound
 
 lemma sctx_analyse_result_eq:
   "lookup_context sctx_adapter.analyse_result v ctx =
-     (if (v, ctx) \<in> fst (sctx_sol gs is_bot_pred Pi ps)
+     (if (v, ctx) \<in> fst (sctx_sol gs empty_pred Pi ps)
       then normalize_point gs
-             (canonicalize_lift is_bot_pred (locals (snd (sctx_sol gs is_bot_pred Pi ps) (Inl (v, ctx)))))
-      else Unreachable)"
+             (canonicalize_lift empty_pred (locals (snd (sctx_sol gs empty_pred Pi ps) (Inl (v, ctx)))))
+      else Bot)"
   unfolding sctx_adapter.lookup_context_analyse_result
-  apply (simp only: sctx_sigma_abs_def[OF solves exact entry_cov fwd_ok call_fwd_ok comb_fwd_ok]
-                     sctx_sigma_abs_exec_def o_apply fun_of_dg_st_gen_simps(1))
-  by (cases "locals (snd (sctx_sol gs is_bot_pred Pi ps) (Inl (v, ctx)))")
+  by (cases "locals (snd (sctx_sol gs empty_pred Pi ps) (Inl (v, ctx)))")
      (simp_all add: exact normalize_lift_def)
 
 end
-
-subsection \<open>Executable classification tests\<close>
-
-text \<open>One state per test, built as an override of an otherwise-unconstrained
-  (\<open>STop\<close>) environment, so each test exercises exactly the comparison it names.\<close>
-
-definition test_env_pos :: "sign abs_state" where
-  "test_env_pos = (\<lambda>_. STop)((STR ''x'') := SPos)"
-
-lemma sign_classify_less_proved:
-  "sign_classify_check (Less (N 0) (V (STR ''x''))) test_env_pos = Check_Proved"
-  unfolding test_env_pos_def by eval
-
-lemma sign_classify_less_refuted:
-  "sign_classify_check (Less (V (STR ''x'')) (N 0)) test_env_pos = Check_Refuted"
-  unfolding test_env_pos_def by eval
-
-lemma sign_classify_eq_unknown:
-  "sign_classify_check (Eq (V (STR ''x'')) (N 1)) test_env_pos = Check_Unknown"
-  unfolding test_env_pos_def by eval
-
-text \<open>Negation: \<open>!(x < 0)\<close> is provable under \<open>SNonNeg\<close>, going through
-  \<open>check_false\<close> on the un-negated \<open>x < 0\<close> rather than a one-sided
-  negation of \<open>check_true\<close>.\<close>
-
-definition test_env_nonneg :: "sign abs_state" where
-  "test_env_nonneg = (\<lambda>_. STop)((STR ''x'') := SNonNeg)"
-
-lemma sign_classify_not_proved:
-  "sign_classify_check (Not (Less (V (STR ''x'')) (N 0))) test_env_nonneg = Check_Proved"
-  unfolding test_env_nonneg_def by eval
-
-text \<open>Nested \<open>And\<close>/\<open>Or\<close>: proved through the \<open>And\<close> branch alone, and unknown
-  when neither branch resolves.\<close>
-
-definition test_env_nested_proved :: "sign abs_state" where
-  "test_env_nested_proved = (\<lambda>_. STop)((STR ''x'') := SPos, (STR ''y'') := SPos)"
-
-lemma sign_classify_nested_proved:
-  "sign_classify_check
-     (Or (And (Less (N 0) (V (STR ''x''))) (Less (N 0) (V (STR ''y'')))) (Eq (V (STR ''z'')) (N 1)))
-     test_env_nested_proved = Check_Proved"
-  unfolding test_env_nested_proved_def by eval
-
-definition test_env_nested_unknown :: "sign abs_state" where
-  "test_env_nested_unknown = (\<lambda>_. STop)((STR ''x'') := SNonNeg, (STR ''y'') := SPos)"
-
-lemma sign_classify_nested_unknown:
-  "sign_classify_check
-     (Or (And (Less (N 0) (V (STR ''x''))) (Less (N 0) (V (STR ''y'')))) (Eq (V (STR ''z'')) (N 1)))
-     test_env_nested_unknown = Check_Unknown"
-  unfolding test_env_nested_unknown_def by eval
 
 subsection \<open>Solved-result table\<close>
 subsection \<open>Solved-result table\<close>
@@ -263,7 +173,7 @@ text \<open>
   \<open>analyse_sign_result_for\<close> is the canonical solved D/G system, read as a
   \<^typ>\<open>(unit, sign abs_state) analysis_result\<close>: a one-line partial
   application of \<^const>\<open>analyse_sign_ctx_result_for\<close>
-  (\<^theory>\<open>Voblint_Analysis.Sign_Ctx_None_Sound\<close>), fixed at \<^const>\<open>prog_main_name\<close>,
+  (\<^theory>\<open>Voblint_Analysis.Sign_Analyses\<close>), fixed at \<^const>\<open>prog_main_name\<close>,
   which already binds the single routed-unit solve and
   canonicalizes/normalizes each local key. Every report below reads
   through this table via \<^const>\<open>lookup_context\<close> rather than a raw
@@ -286,13 +196,13 @@ text \<open>
   \<open>analyse_sign_result_per_origin_for\<close> is \<^const>\<open>analyse_sign_result_for\<close>'s
   sibling under the per-origin rule: a one-line partial application of
   \<^const>\<open>analyse_sign_ctx_result_per_origin_for\<close>
-  (\<^theory>\<open>Voblint_Analysis.Sign_Ctx_None_Sound\<close>), fixed at \<^const>\<open>prog_main_name\<close>,
+  (\<^theory>\<open>Voblint_Analysis.Sign_Analyses\<close>), fixed at \<^const>\<open>prog_main_name\<close>,
   reading \<^const>\<open>sctx_sol_prog_per_origin\<close> instead of \<^const>\<open>sctx_sol_prog\<close>.
   Experimental: no dedicated soundness theorem is proved for this
   combination here -- \<open>analyse\<close> and its soundness corollaries are
   unaffected, and this definition exists solely so \<open>Analyse_Dispatch\<close>'s
   \<open>analyse_with_solver\<close> can compare solver choices on the routed-unit
-  equation system (issue #131).
+  equation system.
 \<close>
 
 definition analyse_sign_result_per_origin_for ::
@@ -312,8 +222,8 @@ text \<open>
   already is. It reads its per-node state through
   \<^const>\<open>analyse_sign_result_for\<close>'s \<^type>\<open>analysis_result\<close> table --
   \<^const>\<open>lookup_context\<close>, not a raw solver-environment lookup -- so a
-  \<^const>\<open>Reachable\<close> point classifies at its projected state exactly as
-  before, and an \<^const>\<open>Unreachable\<close> one (dead or never covered; the two are
+  \<^const>\<open>Lifted\<close> point classifies at its projected state exactly as
+  before, and an \<^const>\<open>Bot\<close> one (dead or never covered; the two are
   no longer distinguishable, matching \<^const>\<open>classify_checks\<close>'s original
   \<^const>\<open>Bot\<close>-collapsing \<open>env\<close> reads) classifies at \<^const>\<open>bot\<close>, the same
   value \<^const>\<open>classify_checks\<close> always fed it for such a node: this
@@ -385,11 +295,11 @@ text \<open>
   via \<^const>\<open>classify_checks_with_state\<close>: same result table, with the
   per-check Sign environment attached to each report entry instead of
   discarded, and an exact \<open>unreachable\<close> flag read straight off
-  \<^const>\<open>lookup_context\<close>'s \<^const>\<open>Unreachable\<close>/\<^const>\<open>Reachable\<close> case split --
-  exact because \<open>normalize_point_canonicalize_lift_eq_old\<close>
-  (\<^theory>\<open>Voblint_Core.Analysis_Result\<close>) is precisely the fact that this
-  reading agrees with the older \<^const>\<open>resolved_st_q_lifted_is_bot_for\<close>
-  test on the same raw local unknown.
+  \<^const>\<open>lookup_context\<close>'s \<^const>\<open>Bot\<close>/\<^const>\<open>Lifted\<close> case split --
+  exact because composing \<^const>\<open>canonicalize_lift\<close>'s witness-bottom
+  collapse with \<^const>\<open>normalize_point\<close>'s readback agrees with the older
+  \<^const>\<open>resolved_st_q_lifted_is_bot_for\<close> test on the same raw local
+  unknown.
 \<close>
 
 definition analyse_sign_report_for_with_state ::
@@ -398,8 +308,8 @@ definition analyse_sign_report_for_with_state ::
      (let r = analyse_sign_result_for gs p
       in classify_checks_with_state (prog_cfg p)
            (\<lambda>v. case lookup_context r v () of
-                  Unreachable \<Rightarrow> (True, bot)
-                | Reachable st \<Rightarrow> (False, st))
+                  Bot \<Rightarrow> (True, bot)
+                | Lifted st \<Rightarrow> (False, st))
            (\<lambda>c (_, s). sign_classify_check c s))"
 
 text \<open>Convenience instance at \<^const>\<open>declared_global\<close> \<open>p\<close>, matching

@@ -32,6 +32,11 @@ datatype cfg_node =
 instance cfg_node :: countable
   by countable_datatype
 
+text \<open>The solver unknown for a program point is a CFG node.  Analysis-facing code keeps the
+  short name \<open>pp\<close> for it; a return node is \<^term>\<open>FunctionResult p\<close>, a callee entry
+  \<^term>\<open>FunctionEntry p\<close>, an ordinary location \<^term>\<open>Statement n\<close>.\<close>
+type_synonym pp = cfg_node
+
 subsection \<open>Edge actions and call actions\<close>
 
 text \<open>
@@ -40,6 +45,14 @@ text \<open>
   \<open>EA_Ret e p\<close> writes the return value into \<open>ret_var\<close> in the callee's own context; its
   graph target is \<open>FunctionResult p\<close> (enforced by \<open>wf_cfg\<close>), which is why return
   summarisation is ordinary predecessor folding over \<open>FunctionResult p\<close>.
+
+  \<open>EA_Body p\<close> labels the one edge leaving \<open>FunctionEntry p\<close>, so an activation's
+  first step inside the callee is distinguishable from an ordinary \<open>EA_Nop\<close>.
+  Concretely it is the identity: a VIMP procedure declares no locals beyond its
+  formals, which the call already bound. It exists so that an analysis has a
+  transition to attach procedure-entry work to --- Goblint runs \<open>body\<close> on
+  exactly this edge --- and it carries the procedure name because that work is
+  per-procedure.
 
   \<open>call_action\<close> labels call edges.  \<open>CallEdge dst formals args\<close> records the caller
   destination variable, the callee's formal parameter names, and the actual arguments; the
@@ -55,6 +68,7 @@ datatype edge_action =
   | EA_Special  (ea_special_op: special_call) (ea_special_dst: vname)
   | EA_Assume    (ea_cond: exp)
   | EA_AssumeNot (ea_cond: exp)
+  | EA_Body     (ea_body_proc: pname)
   | EA_Ret      (ea_ret_val: "exp option") (ea_ret_proc: pname)
   | EA_Check    (ea_check_cond: exp)
 
@@ -141,6 +155,7 @@ fun edge_step :: "edge_action \<Rightarrow> store \<Rightarrow> store set" where
 | "edge_step (EA_Special sc x) s = special_step sc x s"
 | "edge_step (EA_Assume b) s = (if truthy (aval b s) then {s} else {})"
 | "edge_step (EA_AssumeNot b) s = (if truthy (aval b s) then {} else {s})"
+| "edge_step (EA_Body p) s = {s}"
 | "edge_step (EA_Ret e p) s =
      {s(ret_var := (case e of None \<Rightarrow> s ret_var | Some a \<Rightarrow> aval a s))}"
 | "edge_step (EA_Check c) s = {s}"
@@ -220,8 +235,29 @@ definition wf_cfg :: "cfg \<Rightarrow> bool" where
    \<and> (\<forall>u a v. (u, a, v) \<in> intra g \<longrightarrow> (\<forall>p. v \<noteq> FunctionEntry p))
    \<and> (\<forall>u e p v. (u, EA_Ret e p, v) \<in> intra g \<longrightarrow> v = FunctionResult p)"
 
+text \<open>\<open>calls_source_unique\<close> is a separate, optional side condition: one call edge per
+  call site.  \<open>wf_cfg\<close> does not include it, and the collecting semantics never needs it ---
+  both the return clause and the context semantics name an edge by its effect.  A solved
+  routed table does need it, to match the edge a return reads against the one its callee
+  was entered through; compiled programs satisfy it by construction.\<close>
+
+definition calls_source_unique :: "cfg \<Rightarrow> bool" where
+  "calls_source_unique g \<longleftrightarrow>
+     (\<forall>u ca1 ce1 af1 ca2 ce2 af2.
+        (u, ca1, ce1, af1) \<in> calls g \<longrightarrow> (u, ca2, ce2, af2) \<in> calls g
+        \<longrightarrow> ca1 = ca2 \<and> ce1 = ce2 \<and> af1 = af2)"
+
+lemma calls_source_unique_edgesD:
+  assumes "calls_source_unique g"
+    and "(u, ca1, ce1, af1) \<in> calls g" and "(u, ca2, ce2, af2) \<in> calls g"
+  shows "ca1 = ca2" and "ce1 = ce2" and "af1 = af2"
+  using assms unfolding calls_source_unique_def by blast+
+
 subsection \<open>Structural invariants\<close>
 
+text \<open>What holds of a graph's node set no matter where the graph came from: an edge's
+  endpoints are nodes, and finitely many edges give finitely many nodes.  Both are read off
+  the definition of \<open>cfg_nodes\<close>, which is why they need no well-formedness assumption.\<close>
 lemma intra_endpoints_in_nodes:
   assumes "(u, a, v) \<in> intra g"
   shows "u \<in> cfg_nodes g" and "v \<in> cfg_nodes g"
@@ -231,9 +267,6 @@ lemma call_endpoints_in_nodes:
   assumes "(u, act, ce, after) \<in> calls g"
   shows "u \<in> cfg_nodes g" and "ce \<in> cfg_nodes g" and "after \<in> cfg_nodes g"
   using assms by (auto simp: cfg_nodes_def)
-
-lemma cfg_entry_in_nodes: "cfg_entry g \<in> cfg_nodes g"
-  by (simp add: cfg_nodes_def)
 
 text \<open>Each of the five \<open>cfg_nodes\<close> disjuncts is a projection of \<open>intra g\<close> or \<open>calls g\<close>,
   so it inherits their finiteness as a finite image; the sixth is a singleton.\<close>
@@ -253,6 +286,87 @@ proof -
   ultimately show ?thesis
     unfolding cfg_nodes_def using assms by simp
 qed
+
+subsection \<open>Executable orders\<close>
+
+text \<open>Structural orders make @{const sorted_list_of_set} a deterministic executable
+  enumeration of intra and call relations. They affect only solver representation, not
+  CFG semantics. \<open>exp\<close> already derives \<open>linorder\<close> in \<^theory>\<open>Voblint_VIMP.VIMP_Syntax\<close>.\<close>
+derive linorder special_call
+derive linorder edge_action
+derive linorder call_action
+derive linorder cfg_node
+
+subsection \<open>Executable enumeration\<close>
+
+text \<open>Stable list views for the TD bridge: the intra and call edge sets sorted by their
+  structural order. Both guard on \<^term>\<open>finite (intra g)\<close>/\<^term>\<open>finite (calls g)\<close>:
+  every compiled graph satisfies it, so the \<^const>\<open>Code.abort\<close> branch never fires in
+  practice, and names the violation instead of failing on an uninformative
+  \<^const>\<open>sorted_list_of_set\<close> pattern-match error. Placed here rather than in the Core
+  session's own equation-generation enumerations, so any consumer of this session alone
+  --- a compiled graph's \<open>finite_cfg\<close> interpretation among them --- gets them for free.\<close>
+
+definition cfg_intra_list :: "cfg \<Rightarrow> (cfg_node \<times> edge_action \<times> cfg_node) list" where
+  "cfg_intra_list g =
+     (if finite (intra g) then sorted_list_of_set (intra g)
+      else Code.abort (STR ''cfg_intra_list: infinite intra edge set'') (\<lambda>_. []))"
+
+lemma cfg_intra_list_code [code]:
+  "cfg_intra_list g = sorted_list_of_set (intra g)"
+  unfolding cfg_intra_list_def by (cases "finite (intra g)") auto
+
+definition cfg_calls_list ::
+    "cfg \<Rightarrow> (cfg_node \<times> call_action \<times> cfg_node \<times> cfg_node) list" where
+  "cfg_calls_list g =
+     (if finite (calls g) then sorted_list_of_set (calls g)
+      else Code.abort (STR ''cfg_calls_list: infinite calls edge set'') (\<lambda>_. []))"
+
+lemma cfg_calls_list_code [code]:
+  "cfg_calls_list g = sorted_list_of_set (calls g)"
+  unfolding cfg_calls_list_def by (cases "finite (calls g)") auto
+
+lemma set_cfg_intra_list [simp]:
+  "finite (intra g) \<Longrightarrow> set (cfg_intra_list g) = intra g"
+  unfolding cfg_intra_list_def by simp
+
+lemma set_cfg_calls_list [simp]:
+  "finite (calls g) \<Longrightarrow> set (cfg_calls_list g) = calls g"
+  unfolding cfg_calls_list_def by simp
+
+text \<open>Every \<^const>\<open>cfg_nodes\<close> element, listed once: the intra endpoints, the call-site/
+  callee-entry/continuation triples, and the distinguished entry, deduplicated. This is the
+  canonical finite node enumeration a public per-node result table draws its key domain from,
+  distinct from \<^const>\<open>cfg_intra_list\<close>'s edge-indexed view.\<close>
+
+definition cfg_node_list :: "cfg \<Rightarrow> cfg_node list" where
+  "cfg_node_list g =
+     remdups
+       (concat (map (\<lambda>(u, a, v). [u, v]) (cfg_intra_list g)) @
+        concat (map (\<lambda>(u, act, ce, after). [u, ce, after]) (cfg_calls_list g)) @
+        [cfg_entry g])"
+
+lemma set_cfg_node_list [simp]:
+  assumes "finite (intra g)" and "finite (calls g)"
+  shows "set (cfg_node_list g) = cfg_nodes g"
+  unfolding cfg_node_list_def cfg_nodes_def
+  using set_cfg_intra_list[OF assms(1)] set_cfg_calls_list[OF assms(2)]
+  by force
+
+text \<open>A \<open>cfg\<close> whose two transition relations are finite.  Bundles the two
+  finiteness facts every enumeration and every compiled-graph interpretation
+  needs, so a caller states one assumption instead of two, and \<open>finite_nodes\<close>
+  becomes derivable rather than re-proved at each instance.\<close>
+locale finite_cfg =
+  fixes g :: cfg
+  assumes finite_intra [intro, simp]: "finite (intra g)"
+    and finite_calls [intro, simp]: "finite (calls g)"
+begin
+
+lemma finite_nodes [simp]: "finite (cfg_nodes g)"
+  by (rule cfg_nodes_finite) simp_all
+
+end
 
 end
 

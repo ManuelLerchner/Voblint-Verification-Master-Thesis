@@ -70,7 +70,9 @@ side rather than the termination side. #108's G1-G5 plan (in the issue):
    by callee. Proved at exact call sites (matching the flagship); the
    exactness precondition above is not lifted -- that's G2.
 2. **G2 -- abstract context coverage semantics. Done, batch-green
-   (2026-08-10).** G2a's `ctx_rep`-over-exact-`key` design (below, kept for
+   (2026-08-10).** *2026-09-05: the `admiss`/`ctx_key` layer described below
+   was removed in f0588428 and is superseded by `call_context_rel`/
+   `trace_context`; what follows is history.* G2a's `ctx_rep`-over-exact-`key` design (below, kept for
    the historical record) turned out not to compose through COMB: a
    trace's admitted context and the callee's admitted context were
    rediscovered independently, so nothing tied them together at the
@@ -194,10 +196,10 @@ side rather than the termination side. #108's G1-G5 plan (in the issue):
    /03-two_call_sites_entry_state.vimp` is the DOT-free sibling.
 
 Arbitrary `gs`/`--flow-insensitive` stays explicitly out of scope -- see
-#66's M4 / `docs/history/SEIDL_CONTEXT_LIFECYCLE_MIGRATION.md`; `declared_global p`
+# 66's M4 / `docs/history/SEIDL_CONTEXT_LIFECYCLE_MIGRATION.md`; `declared_global p`
 stays invariant across whatever this lands as.
 
-6. **G6 -- #77 scoping audit and call-string finiteness. Done, batch-green
+1. **G6 -- #77 scoping audit and call-string finiteness. Done, batch-green
    (2026-08-21).** #77 ("Context-bounding lifters: Context Gas / Loopfree
    Callstring / Context Widening") asks to make context-space bounding "a
    first-class, terminating mechanism instead of relying on the ambient
@@ -269,34 +271,34 @@ precision example requires it. Preserve the generic separation between local
 
 ## Placement-aware D/G generation (settled, no further action planned)
 
-`sound_dg_spec` is a proved `sublocale` of `sound_dg_hooks`
+`sound_dg_spec_core` is a proved `sublocale` of `sound_dg_hooks`
 (`DG_Soundness.thy`, `DG_LTR_Sound.thy`): one implementation, two abstraction
-levels. `sound_dg_spec` is the concise adapter every ordinary analysis
+levels. `sound_dg_spec_core` is the concise adapter every ordinary analysis
 interprets (one locale interpretation, no per-CFG-node proof burden);
 `sound_dg_hooks` is the framework-construction API for analyses whose D/G
 structure needs arbitrary hook trees, such as owner-sensitive placement.
 Sign, Interval, Parity, Mixed, CallString, and Ctx all stay on
-`sound_dg_spec`/`dg_ctx_activation`/`routed_context`; two examples,
+`sound_dg_spec_core`/`dg_ctx_activation`/`routed_context`; two examples,
 `Example_Interval_Placement.thy` and `Example_Sign_Placement.thy`, exercise
 `sound_dg_hooks` directly as framework validation, not as templates.
 
 This closes a prior migration attempt: two flagships
 (`Exec_Sign_DG_Run.thy`, `Example_Parity_DG_Flagship.thy`) were migrated onto
-`sound_dg_hooks` directly on the mistaken premise that `sound_dg_spec` was a
+`sound_dg_hooks` directly on the mistaken premise that `sound_dg_spec_core` was a
 duplicate implementation. Both grew 5-6x for no closed soundness/drift risk
 (`docs/reviews/M4_SPINE_BOUNDARY_AUDIT.md`) and were reverted. No further
 example migration to `sound_dg_hooks` is planned; do not propose one without
 new evidence that a specific analysis's D/G structure genuinely needs the
-hook-tree level `sound_dg_spec` cannot express.
+hook-tree level `sound_dg_spec_core` cannot express.
 
 ## Domain composition
 
-No generic reduced-product constructor is planned. `sound_dg_spec`'s carriers
+No generic reduced-product constructor is planned. `sound_dg_spec_core`'s carriers
 are already opaque, and `Rel_Order_Domain.thy` demonstrates a non-`abs_state`
 instance against the unmodified framework; see
 `docs/RELATIONAL_DOMAIN_ARCHITECTURE_DECISION.md` (Option 4) for the settled
 architecture. New heterogeneous or relational analyses are added directly
-against `sound_dg_spec`, not through a shared product/reduction layer.
+against `sound_dg_spec_core`, not through a shared product/reduction layer.
 
 ## Cross-analysis query composition
 
@@ -323,6 +325,82 @@ branch. Sign has a real, monotone instance (`inv_eq_sign`,
 precision gap documented in-theory (`Interval_Backward.thy`). This is
 separate from the boolean `eq_true`/`eq_false` query interface used for check
 classification (`Abstract_Numeric_Queries.thy`).
+
+## Per-domain configuration duplication in the Analysis session
+
+Still open, and narrower than when it was written. The twelve-theory
+`Domain x Context` matrix it described is gone: each domain now has one
+`*_Sound` package and one `*_Analyses` configuration module, and the prefixes
+are `sctx_`, `interval_conf_`, `int_conf_` and `pctx_`. What remains is the
+duplication this section is actually about -- the configuration family is still
+written out once per domain rather than derived once.
+
+`sctx_*`, `interval_conf_*`, `int_conf_*`, `pctx_*` and the `entry_state_*`
+family mirror each other across 23 suffixes -- `_eqs_prog`, `_sol_prog`,
+`_sol_prog_per_origin`, `_terminates_prog`, `_sg`, `_sg_covered`,
+`_sg_uncovered_empty`, `_sigma_abs`, `_fin`, `_finC` and the rest -- for a
+combined 245 constants and lemmas across the four prefixes.
+
+These are not four instantiations of a shared abstraction; they are four
+copies. The bodies are character-identical modulo the domain type and the
+`_eqs_prog` they call:
+
+```
+sctx_sol_prog          gs p = TD_side_always_join_Interp_solve (sctx_eqs_prog gs p)          (cfg_exit (prog_cfg p), ())
+interval_conf_sol_prog gs p = TD_side_always_join_Interp_solve (interval_conf_eqs_prog gs p) (cfg_exit (prog_cfg p), ())
+pctx_sol_prog          gs p = TD_side_always_join_Interp_solve (pctx_eqs_prog gs p)          (cfg_exit (prog_cfg p), ())
+```
+
+A locale fixing `eqs_prog` and polymorphic in the domain would derive the
+whole family once, the way `compiled_cfg` (`Compile_Wellformed`) now derives
+`cfg_entry`/`cfg_exit`/finiteness/`wf_cfg` for a named compiled graph.
+
+Size this as a session-scale change, not a cleanup pass: this layer feeds
+`Voblint_CLI` and the code export, so it wants its own branch and its own
+gate run. `_wf` and most of `_reserved` are *not* part of it --- those
+discharge the same obligation for different concrete programs, and a locale
+would only rename the work.
+
+## Deferred from the Framework and Analysis restructure
+
+Each of these was found with evidence during the restructure and deliberately
+not acted on, either because it needs a semantic decision or because it belongs
+to a larger migration.
+
+**Resolved variable identities.** `gs :: vname => bool` classifies a *textual
+name*, so a state carrier keyed by `location = Local_Location vname |
+Global_Location vname` admits entries at the tagging a name does not have.
+`resolved_st_is_bot` is the one carrier operation that must consult `gs`, and it
+does so only to filter those entries: the quotient's equality observes every
+tagged location while the concretization reads back only the one `gs` selects.
+`canonical_location` names that filter and `canonical_resolved_st` records that
+transfers only ever produce canonical states. The dependency disappears when
+elaboration resolves each declaration to its own identity -- one declaration,
+one cell, scope as metadata -- which also handles shadowing that a textual name
+cannot. Do not split the carrier into local and global maps first: keyed by raw
+`vname` they admit the same malformed states, and the migration would be done
+twice.
+
+**Names that still need a read before they are changed.** `State_Restriction`
+holds only ownership projections, so `Ownership_Restriction` would be more
+truthful. `DG_Soundness` and `DG_LTR_Sound` sit next to `DG_Spec_Sound` without
+saying how the three differ -- spec-level, generated-constraint and trace-level
+soundness respectively, if a read confirms it. `DG_Ctx_Activation` abbreviates a
+word its own directory already supplies.
+
+**`Instances/Relational`.** `rel_order_spec` is a complete `dg_spec` with global
+access and side effects, so it belongs among the instances; but it has no
+`*_Analyses` wiring it to a context policy, which is why the directory looks
+thin next to the other four. Either wire it up or say in its README why it
+stops at the domain.
+
+**Refining the override list.** `resolved_st`'s association list is a candidate
+for an AFP `rbt` map. Keep it independent of the identity migration above, and
+benchmark the generated OCaml rather than Isabelle evaluation.
+
+**Examples layout.** `Examples/` still reflects the development order rather
+than what each example demonstrates. Low value relative to the churn; do it only
+alongside work that touches those files anyway.
 
 ## Source extensions
 

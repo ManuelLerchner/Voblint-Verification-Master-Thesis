@@ -1,5 +1,5 @@
 theory Interval_Domain
-  imports Interval_Warrowing Interval_Print
+  imports Interval_Warrowing Interval_Transfer
 begin
 
 hide_const (open) Update_rules.N

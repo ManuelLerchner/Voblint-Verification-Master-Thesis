@@ -1,5 +1,5 @@
 theory Interval_Checks
-  imports Interval_Classify Interval_Ctx_None_Sound
+  imports Interval_Classify Interval_Solver_Analyses Analysis_Surface
 begin
 
 hide_const phase.N
@@ -9,7 +9,7 @@ section \<open>Interval instance of the generic check-discharge interface\<close
 text \<open>
   The check-classification machinery (\<open>interval_classify_check\<close> and its
   soundness directions) lives in \<open>Interval_Classify\<close>, split out so the
-  routed-spine producer below (\<open>Interval_Ctx_None_Sound\<close>) can depend
+  routed-spine producer below (\<open>Interval_Analyses\<close>) can depend
   on it without a cycle through this theory's own solved-result tables,
   which read that producer's routed output.
 \<close>
@@ -23,7 +23,7 @@ text \<open>
   lattice needs it for termination), read as a
   \<^typ>\<open>(unit, ivl abs_state) analysis_result\<close>: a one-line partial
   application of \<^const>\<open>analyse_interval_ctx_result_warrow_for\<close>
-  (\<^theory>\<open>Voblint_Analysis.Interval_Ctx_None_Sound\<close>), fixed at
+  (\<^theory>\<open>Voblint_Analysis.Interval_Analyses\<close>), fixed at
   \<^const>\<open>prog_main_name\<close>, which already binds the single routed-unit solve
   and canonicalizes/normalizes each local key. Every report below reads
   through a result table via \<^const>\<open>lookup_context\<close> rather than a raw
@@ -47,9 +47,9 @@ text \<open>
   \<open>analyse_interval_join_result\<close> is \<^const>\<open>analyse_interval_td_result\<close>'s
   sibling under the always-join update rule: a one-line partial application
   of \<^const>\<open>analyse_interval_ctx_result_for\<close>
-  (\<^theory>\<open>Voblint_Analysis.Interval_Ctx_None_Sound\<close>), fixed at
-  \<^const>\<open>prog_main_name\<close>, reading \<^const>\<open>ictx_sol_prog\<close> instead of
-  \<^const>\<open>ictx_sol_prog_warrow\<close>.
+  (\<^theory>\<open>Voblint_Analysis.Interval_Analyses\<close>), fixed at
+  \<^const>\<open>prog_main_name\<close>, reading \<^const>\<open>interval_conf_sol_prog\<close> instead of
+  \<^const>\<open>interval_conf_sol_prog_warrow\<close>.
 \<close>
 
 definition analyse_interval_join_result_for ::
@@ -66,9 +66,9 @@ text \<open>
   \<open>analyse_interval_per_origin_result\<close> mirrors
   \<open>analyse_interval_join_result\<close> exactly, a one-line partial application of
   \<^const>\<open>analyse_interval_ctx_result_per_origin_for\<close>
-  (\<^theory>\<open>Voblint_Analysis.Interval_Ctx_None_Sound\<close>), fixed at
-  \<^const>\<open>prog_main_name\<close>, reading \<^const>\<open>ictx_sol_prog_per_origin\<close> instead
-  of \<^const>\<open>ictx_sol_prog\<close>.
+  (\<^theory>\<open>Voblint_Analysis.Interval_Analyses\<close>), fixed at
+  \<^const>\<open>prog_main_name\<close>, reading \<^const>\<open>interval_conf_sol_prog_per_origin\<close> instead
+  of \<^const>\<open>interval_conf_sol_prog\<close>.
 \<close>
 
 definition analyse_interval_per_origin_result_for ::
@@ -89,7 +89,7 @@ text \<open>
   per-node state through \<^const>\<open>analyse_interval_td_result_for\<close>'s
   \<^type>\<open>analysis_result\<close> table via \<^const>\<open>lookup_context\<close>, mirroring
   \<open>Sign_Checks\<close>'s \<open>analyse_sign_report_for\<close> exactly, including its choice to
-  classify an \<^const>\<open>Unreachable\<close> point at \<^const>\<open>bot\<close> -- the same value
+  classify an \<^const>\<open>Bot\<close> point at \<^const>\<open>bot\<close> -- the same value
   \<^const>\<open>classify_checks\<close> always fed such a node -- rather than introducing a
   fourth, \<open>Dead\<close> outcome \<open>check_result\<close> does not carry. Reusing the exact
   same warrowing/\<open>analyse_interval_td\<close> naming keeps the
@@ -121,11 +121,11 @@ text \<open>
   \<open>analyse_interval_td_report\<close>, via \<^const>\<open>classify_checks_with_state\<close>: same
   result table, with the per-check Interval environment attached to each
   report entry instead of discarded, and an exact \<open>unreachable\<close> flag read
-  straight off \<^const>\<open>lookup_context\<close>'s \<^const>\<open>Unreachable\<close>/\<^const>\<open>Reachable\<close>
-  case split -- exact because \<open>normalize_point_canonicalize_lift_eq_old\<close>
-  (\<^theory>\<open>Voblint_Core.Analysis_Result\<close>) is precisely the fact that this
-  reading agrees with the older \<^const>\<open>resolved_st_q_lifted_is_bot_for\<close>
-  test on the same raw local unknown, the same argument
+  straight off \<^const>\<open>lookup_context\<close>'s \<^const>\<open>Bot\<close>/\<^const>\<open>Lifted\<close>
+  case split -- exact because composing \<^const>\<open>canonicalize_lift\<close>'s
+  witness-bottom collapse with \<^const>\<open>normalize_point\<close>'s readback agrees
+  with the older \<^const>\<open>resolved_st_q_lifted_is_bot_for\<close> test on the same
+  raw local unknown, the same argument
   \<open>analyse_sign_report_for_with_state\<close>'s Sign counterpart uses.
 \<close>
 
@@ -135,8 +135,8 @@ definition analyse_interval_td_report_for_with_state ::
      (let r = analyse_interval_td_result_for gs p
       in classify_checks_with_state (prog_cfg p)
            (\<lambda>v. case lookup_context r v () of
-                  Unreachable \<Rightarrow> (True, bot)
-                | Reachable st \<Rightarrow> (False, st))
+                  Bot \<Rightarrow> (True, bot)
+                | Lifted st \<Rightarrow> (False, st))
            (\<lambda>c (_, s). interval_classify_check c s))"
 
 text \<open>Convenience instance at \<^const>\<open>declared_global\<close> \<open>p\<close>, matching
@@ -153,7 +153,7 @@ text \<open>
   \<^const>\<open>analyse_interval_td_report\<close> mirrors \<^const>\<open>analyse_interval_join_result\<close>'s
   to \<^const>\<open>analyse_interval_td_result\<close>: this route exists so
   \<open>analyse_with_solver\<close> can compare update rules on the identical equation
-  system (issue #131), mirroring Sign's own always-join default
+  system, mirroring Sign's own always-join default
   (\<open>Sign_Checks.analyse_sign_report\<close>). Plain join has no widening, so it
   lacks warrowing's termination guarantee on a genuine local loop with
   unbounded growth -- production still dispatches to

@@ -1,6 +1,6 @@
 theory Example_Interval_DG_EntryState_Dead_Check_Regression
   imports
-    "Voblint_Analysis.Interval_Ctx_Entry_State_Sound"
+    "Voblint_Analysis.Interval_Analyses"
     "Voblint_VIMP.VIMP_Notation"
 begin
 
@@ -21,7 +21,7 @@ text \<open>
   point's stored abstract state is bottom, bottom satisfies every condition
   vacuously, and the check then reports \<^const>\<open>Check_Proved\<close> for code no
   execution reaches. \<^const>\<open>classify_point\<close> declines to classify against
-  \<^const>\<open>Unreachable\<close> at all, which is what these witnesses pin.
+  \<^const>\<open>Bot\<close> at all, which is what these witnesses pin.
 \<close>
 
 subsection \<open>Reading one check's contextual observations\<close>
@@ -128,15 +128,15 @@ abbreviation mixed_ctx_projection ::
     "(pp \<times> exp \<times> (ivl list \<times> contextual_verdict) set) list" where
   "mixed_ctx_projection \<equiv> entry_state_check_projection mixed_ctx_prog"
 
-text \<open>Four contexts reach the base-case check: the two outer activations
-  (\<open>n = 3\<close>, \<open>n = 2\<close>) where the branch is dead, the innermost one (\<open>n = 1\<close>)
-  where it is taken, and the empty-interval context the recursive call seeds
-  once \<open>n\<close>'s own range is exhausted, which is dead as well.\<close>
+text \<open>Three contexts reach the base-case check: the two outer activations
+  (\<open>n = 3\<close>, \<open>n = 2\<close>) where the branch is dead, and the innermost one (\<open>n = 1\<close>)
+  where it is taken. The innermost activation's own recursive call would enter
+  with an empty interval, but a \<^const>\<open>bot\<close> entry is dropped at the call
+  boundary, so no context is seeded for it and it contributes no observation.\<close>
 
 lemma mixed_ctx_observations:
   "observations_at mixed_ctx_projection (Statement 1) =
-     {([Ivl PlusInf MinInf], Dead),
-      ([Ivl (Fin 1) (Fin 1)], Decided Check_Proved),
+     {([Ivl (Fin 1) (Fin 1)], Decided Check_Proved),
       ([Ivl (Fin 2) (Fin 2)], Dead),
       ([Ivl (Fin 3) (Fin 3)], Dead)}"
   by eval

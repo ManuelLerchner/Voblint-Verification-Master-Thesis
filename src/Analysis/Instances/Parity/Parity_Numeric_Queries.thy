@@ -1,12 +1,12 @@
 theory Parity_Numeric_Queries
-  imports Parity_Domain "Voblint_Core.Abstract_Numeric_Queries"
+  imports Parity_Domain "Voblint_Domain.Abstract_Numeric_Queries"
 begin
 
 section \<open>Parity interpretation of the generic numeric-query interface\<close>
 
 text \<open>
   Third-domain validation for \<open>abstract_numeric_queries\<close>
-  (\<^theory>\<open>Voblint_Core.Abstract_Numeric_Queries\<close>), hand-tuned like
+  (\<^theory>\<open>Voblint_Domain.Abstract_Numeric_Queries\<close>), hand-tuned like
   Voblint_Analysis.Interval_Numeric_Queries rather than derived through
   \<open>backward_domain\<close>: parity has no \<open>inv_less\<close>/\<open>meet\<close> instance (guards do not
   refine parity, \<^theory>\<open>Voblint_Analysis.Parity_Domain\<close>), so there is nothing for
@@ -93,16 +93,31 @@ lemma parity_eq_false_sound:
   shows "i \<noteq> j"
   using assms by (cases a; cases b; auto)
 
+subsection \<open>Goblint-style optional-Boolean queries\<close>
+
+definition parity_less :: "parity \<Rightarrow> parity \<Rightarrow> bool option" where
+  "parity_less a b = (if parity_less_true a b then Some True
+                       else if parity_less_false a b then Some False else None)"
+
+definition parity_eq :: "parity \<Rightarrow> parity \<Rightarrow> bool option" where
+  "parity_eq a b = (if parity_eq_true a b then Some True
+                     else if parity_eq_false a b then Some False else None)"
+
+lemma parity_less_sound:
+  assumes "parity_less a b = Some r" and "i \<in> gamma a" and "j \<in> gamma b"
+  shows "(i < j) = r"
+  using assms parity_less_true_sound parity_less_false_sound
+  unfolding parity_less_def by (auto split: if_splits)
+
+lemma parity_eq_sound:
+  assumes "parity_eq a b = Some r" and "i \<in> gamma a" and "j \<in> gamma b"
+  shows "(i = j) = r"
+  using assms parity_eq_true_sound parity_eq_false_sound
+  unfolding parity_eq_def by (auto split: if_splits)
+
 subsection \<open>Interpreting the generic numeric-query interface\<close>
 
-global_interpretation parity_numeric_queries:
-  abstract_numeric_queries gamma_parity parity_less_true parity_less_false
-    parity_eq_true parity_eq_false
-  by unfold_locales
-    (auto simp add:
-       parity_less_true_sound
-       parity_less_false_sound
-       parity_eq_true_sound
-       parity_eq_false_sound)
+global_interpretation parity_numeric_queries: abstract_numeric_queries parity_less parity_eq
+  by unfold_locales (metis parity_less_sound parity_eq_sound)+
 
 end

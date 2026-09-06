@@ -1,7 +1,7 @@
-section \<open>Example: checks_proven/checks_proven_sound alone, store-only\<close>
+section \<open>Example: checks_proven/checks_provenD alone, store-only\<close>
 
 theory Example_Checks_Store_Only
-  imports "Voblint_Core.Checks" "Voblint_CLI.Sign_Entry" "Voblint_Analysis.Sign_Checks"
+  imports "Voblint_Framework.Checks" "Voblint_CLI.Sign_Entry" "Voblint_Analysis.Sign_Checks"
           "Voblint_Analysis.Analysis_GraphViz" "Voblint_VIMP.VIMP_Notation"
           Example_Compile_Call_Free
 begin
@@ -112,7 +112,7 @@ text \<open>The computed Sign environment at an arbitrary node, read out of the
 definition checks_ex_env :: "pp \<Rightarrow> sign abs_state" where
   "checks_ex_env v =
      (case lookup_context (analyse_sign_result_for checks_ex_gs checks_ex_program) v () of
-        Unreachable \<Rightarrow> bot | Reachable st \<Rightarrow> st)"
+        Bot \<Rightarrow> bot | Lifted st \<Rightarrow> st)"
 
 text \<open>The compiled edges, read off \<^const>\<open>prog_cfg\<close>'s own \<open>eval\<close>-computed
   shape: \<open>Statement 1\<close> (\<open>__voblint_check(0 < y)\<close>, proved) reaches \<open>Statement 2\<close> reaches
@@ -122,7 +122,7 @@ text \<open>The compiled edges, read off \<^const>\<open>prog_cfg\<close>'s own 
   \<open>Statement 6\<close> reaches \<open>cfg_exit\<close>.\<close>
 lemma checks_ex_intra_eval:
   "intra (prog_cfg checks_ex_program) =
-     {(FunctionEntry (STR ''main''), EA_Nop, Statement 0),
+     {(FunctionEntry (STR ''main''), EA_Body (STR ''main''), Statement 0),
       (Statement 0, EA_Assign (STR ''y'') (N 5), Statement 1),
       (Statement 1, EA_Check (Less (N 0) (V (STR ''y''))), Statement 2),
       (Statement 2, EA_Assign (STR ''y'') (N 0), Statement 3),
@@ -151,19 +151,19 @@ lemma checks_ex_node_sound_1:
   "checks_ex_reach (Statement 1) \<le> \<lbrakk>checks_ex_env (Statement 1)\<rbrakk>"
   unfolding checks_ex_reach_def checks_ex_env_def
   using checks_ex_node_sound
-  by (simp add: prog_main_name_def gamma_point_def split: point_state.splits)
+  by (simp add: prog_main_name_def gamma_point_def split: lifted.splits)
 
 lemma checks_ex_node_sound_3:
   "checks_ex_reach (Statement 3) \<le> \<lbrakk>checks_ex_env (Statement 3)\<rbrakk>"
   unfolding checks_ex_reach_def checks_ex_env_def
   using checks_ex_node_sound
-  by (simp add: prog_main_name_def gamma_point_def split: point_state.splits)
+  by (simp add: prog_main_name_def gamma_point_def split: lifted.splits)
 
 lemma checks_ex_node_sound_5:
   "checks_ex_reach (Statement 5) \<le> \<lbrakk>checks_ex_env (Statement 5)\<rbrakk>"
   unfolding checks_ex_reach_def checks_ex_env_def
   using checks_ex_node_sound
-  by (simp add: prog_main_name_def gamma_point_def split: point_state.splits)
+  by (simp add: prog_main_name_def gamma_point_def split: lifted.splits)
 
 text \<open>Executable classification at each check's own node --- \<open>y\<close> is \<open>SPos\<close>
   right after \<open>y := 5\<close> at \<open>Statement 1\<close>, \<open>SZero\<close> right after \<open>y := 0\<close> at
@@ -203,7 +203,7 @@ proof -
   then show ?thesis using sign_classify_check_refuted[OF checks_ex_classify_3] by blast
 qed
 
-text \<open>The generic \<^const>\<open>checks_proven\<close>/\<^theory>\<open>Voblint_Core.Checks\<close> bridge,
+text \<open>The generic \<^const>\<open>checks_proven\<close>/\<^theory>\<open>Voblint_Framework.Checks\<close> bridge,
   exercised on exactly the checks that are actually true: the compiler's own
   \<^const>\<open>checks\<close> table names all three, but a blanket \<open>checks_proven\<close> over the
   whole table would be a false statement here, since the second check is a
@@ -216,7 +216,7 @@ proof (rule sign_checks_provenI)
   fix v :: pp and cnd :: exp
   assume mem: "(v, cnd) \<in> {(Statement 1, Less (N 0) (V (STR ''y'')))}"
   then have v_eq: "v = Statement 1" and cnd_eq: "cnd = Less (N 0) (V (STR ''y''))" by auto
-  show "sign_check_true cnd (checks_ex_env v)"
+  show "sign_check_query cnd (checks_ex_env v) = Some True"
     unfolding v_eq cnd_eq checks_ex_env_def by eval
 qed
 
@@ -247,11 +247,11 @@ proof -
       by (rule ltr_collect_init[OF zero_init])
     then show ?thesis unfolding checks_ex_reach_def checks_ex_entry_eval .
   qed
-  have e0: "(FunctionEntry (STR ''main''), EA_Nop, Statement 0) \<in> intra (prog_cfg checks_ex_program)"
+  have e0: "(FunctionEntry (STR ''main''), EA_Body (STR ''main''), Statement 0) \<in> intra (prog_cfg checks_ex_program)"
     by (simp add: checks_ex_intra_eval)
   have s1: "(\<lambda>_. 0) \<in> checks_ex_reach (Statement 0)"
     using ltr_collect_intra_step[of "\<lambda>_. 0" checks_ex_gs "prog_cfg checks_ex_program"
-        "cinit_stores checks_ex_gs" "FunctionEntry (STR ''main'')" EA_Nop "Statement 0"]
+        "cinit_stores checks_ex_gs" "FunctionEntry (STR ''main'')" "EA_Body (STR ''main'')" "Statement 0"]
     using s0 e0 unfolding checks_ex_reach_def by simp
   have e1: "(Statement 0, EA_Assign (STR ''y'') (N 5), Statement 1) \<in> intra (prog_cfg checks_ex_program)"
     by (simp add: checks_ex_intra_eval)
@@ -273,11 +273,11 @@ proof -
       by (rule ltr_collect_init[OF zero_init])
     then show ?thesis unfolding checks_ex_reach_def checks_ex_entry_eval .
   qed
-  have e0: "(FunctionEntry (STR ''main''), EA_Nop, Statement 0) \<in> intra (prog_cfg checks_ex_program)"
+  have e0: "(FunctionEntry (STR ''main''), EA_Body (STR ''main''), Statement 0) \<in> intra (prog_cfg checks_ex_program)"
     by (simp add: checks_ex_intra_eval)
   have s1: "(\<lambda>_. 0) \<in> checks_ex_reach (Statement 0)"
     using ltr_collect_intra_step[of "\<lambda>_. 0" checks_ex_gs "prog_cfg checks_ex_program"
-        "cinit_stores checks_ex_gs" "FunctionEntry (STR ''main'')" EA_Nop "Statement 0"]
+        "cinit_stores checks_ex_gs" "FunctionEntry (STR ''main'')" "EA_Body (STR ''main'')" "Statement 0"]
     using s0 e0 unfolding checks_ex_reach_def by simp
   have e1: "(Statement 0, EA_Assign (STR ''y'') (N 5), Statement 1) \<in> intra (prog_cfg checks_ex_program)"
     by (simp add: checks_ex_intra_eval)

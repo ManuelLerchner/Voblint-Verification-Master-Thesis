@@ -28,7 +28,7 @@
 // edges:
 //   main_pp1_ctx0 -> main_pp2_ctx0: check(0<x)
 //   main_pp2_ctx0 -> main_result_main_ctx0: terminate
-//   main_entry_main_ctx0 -> main_pp0_ctx0: nop
+//   main_entry_main_ctx0 -> main_pp0_ctx0: body(main)
 //   main_pp0_ctx0 -> main_pp1_ctx0: x := 5
 // EXPECT-GRAPH-END
 

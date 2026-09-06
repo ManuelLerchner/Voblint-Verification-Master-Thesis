@@ -1,5 +1,5 @@
 theory Parity_Special
-  imports Parity_Domain Voblint_Core.Special_Ops
+  imports Parity_Domain Special_Ops
 begin
 
 section \<open>Parity: special-call semantics\<close>

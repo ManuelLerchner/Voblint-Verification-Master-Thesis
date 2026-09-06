@@ -1,15 +1,14 @@
 // PARAM: --analysis interval --context entry-state --context-graph expanded
 // CLI-level sibling of Interval_Ctx_Entry_State_Sound's dead_route_prog
 // (Example_EntryState_GraphViz_Regression.thy): two calls to the same
-// callee, one from a dead branch, one live. The dead call's own entered
-// context ([3,3]) is a real, distinct context -- not the empty list, not
-// a bottomed placeholder -- so what suppresses its enter/combine edges is
-// entry_state_ctx_route answering None from the caller's own Unreachable
-// point, checked before entry_state_callee_ctx is ever applied, never a
-// context value collision. The live sibling call still routes and draws
-// both edges normally, so this cannot pass merely because routing was
-// disabled wholesale -- see analysis_enter_edges/analysis_combine_edges'
-// case split on route's option result (Analysis_GraphViz.thy).
+// callee, one from a dead branch, one live. The dead call enters from an
+// Unreachable caller point, so the state it would enter the callee with is
+// bottom, and a bottom alternative is dropped before it is routed: no seed
+// is published and no callee unknown is ever created for it. That is why the
+// graph shows exactly one callee context here -- the live call's -- rather
+// than a second, all-unreachable cluster. The live sibling call still routes
+// and draws both its enter and combine edges, so this cannot pass merely
+// because routing was disabled wholesale.
 // EXPECT-GRAPH-BEGIN
 // clusters:
 //   cluster_ctx_0:
@@ -26,10 +25,6 @@
 //     f_pp0_ctx1
 //     f_entry_f_ctx1
 //     f_result_f_ctx1
-//   cluster_ctx_2:
-//     f_pp0_ctx2
-//     f_entry_f_ctx2
-//     f_result_f_ctx2
 //
 // nodes:
 //   main_pp3_ctx0: pp3
@@ -49,8 +44,6 @@
 //       a=[-inf,+inf]
 //       b=[7,7]
 //   f_pp0_ctx1: pp0
-//       unreachable
-//   f_pp0_ctx2: pp0
 //       n=[7,7]
 //   main_entry_main_ctx0: entry_main
 //       x=[-inf,+inf]
@@ -67,8 +60,6 @@
 //       a=[-inf,+inf]
 //       b=[-inf,+inf]
 //   f_entry_f_ctx1: entry_f
-//       unreachable
-//   f_entry_f_ctx2: entry_f
 //       n=[7,7]
 //   main_pp7_ctx0: pp7
 //       x=[5,5]
@@ -76,8 +67,6 @@
 //       b=[7,7]
 //       check b==7
 //   f_result_f_ctx1: exit_f
-//       unreachable
-//   f_result_f_ctx2: exit_f
 //       n=[7,7]
 //       ret=[7,7]
 //
@@ -87,14 +76,12 @@
 //   main_pp5_ctx0 -> main_pp6_ctx0: nop
 //   main_pp8_ctx0 -> main_result_main_ctx0: terminate
 //   f_pp0_ctx1 -> f_result_f_ctx1: return n
-//   f_pp0_ctx2 -> f_result_f_ctx2: return n
-//   main_entry_main_ctx0 -> main_pp2_ctx0: nop
+//   main_entry_main_ctx0 -> main_pp2_ctx0: body(main)
 //   main_pp2_ctx0 -> main_pp3_ctx0: x := 5
-//   f_entry_f_ctx1 -> f_pp0_ctx1: nop
-//   f_entry_f_ctx2 -> f_pp0_ctx2: nop
+//   f_entry_f_ctx1 -> f_pp0_ctx1: body(f)
 //   main_pp7_ctx0 -> main_pp8_ctx0: check(b==7)
-//   main_pp6_ctx0 -> f_entry_f_ctx2: enter f(7)
-//   f_result_f_ctx2 -> main_pp7_ctx0: combine b := #ret
+//   main_pp6_ctx0 -> f_entry_f_ctx1: enter f(7)
+//   f_result_f_ctx1 -> main_pp7_ctx0: combine b := #ret
 //   main_pp4_ctx0 -> main_pp6_ctx0: call-to-return f
 //   main_pp6_ctx0 -> main_pp7_ctx0: call-to-return f
 // EXPECT-GRAPH-END

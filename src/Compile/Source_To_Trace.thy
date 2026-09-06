@@ -208,7 +208,7 @@ text \<open>The program entry \<^term>\<open>FunctionEntry prog_main_name\<close
 lemma compile_prog_main_base:
   assumes wf: "wf_compile_input gs \<Pi> ps"
   obtains en where
-    "(FunctionEntry prog_main_name, EA_Nop, en) \<in> intra (compile_prog \<Pi> ps)"
+    "(FunctionEntry prog_main_name, EA_Body prog_main_name, en) \<in> intra (compile_prog \<Pi> ps)"
     "csim \<Pi> (compile_prog \<Pi> ps) ((main_body \<Pi>), s, []) (en, s, [])"
 proof -
   let ?g = "compile_prog \<Pi> ps"
@@ -219,7 +219,7 @@ proof -
     cacc: "compiled_at \<Pi> ?g prog_main_name (body (\<lparr>formals = [], body = (main_body \<Pi>)\<rparr>)) k m"
       and ctrl: "control_at \<Pi> prog_main_name (body (\<lparr>formals = [], body = (main_body \<Pi>)\<rparr>)) k m
                    (body (\<lparr>formals = [], body = (main_body \<Pi>)\<rparr>)) en"
-      and entry: "(FunctionEntry prog_main_name, EA_Nop, en) \<in> intra ?g"
+      and entry: "(FunctionEntry prog_main_name, EA_Body prog_main_name, en) \<in> intra ?g"
     by (rule procs_embedded_activation[OF pc main_decl])
   have bodyeq: "body (\<lparr>formals = [], body = (main_body \<Pi>)\<rparr>) = (main_body \<Pi>)" by simp
   have base: "csim \<Pi> ?g ((main_body \<Pi>), s, []) (en, s, [])"
@@ -234,11 +234,12 @@ lemma stack_repr_Nil_iff:
   "stack_repr g stk t \<Longrightarrow> (stk = []) = (caller_of t = None)"
   by (cases rule: stack_repr.cases) auto
 
-text \<open>A callerless activation's \<^const>\<open>key\<close> is the seed, regardless of \<open>enterc\<close> --- the
-  \<open>Root\<close> case never consults \<open>enterc\<close>, and the \<open>Resume\<close> case only forwards to the same
-  callerless ancestor.\<close>
-lemma key_caller_of_None:
-  "caller_of t = None \<Longrightarrow> key enterc initial_ctx t = initial_ctx"
+text \<open>A callerless activation carries exactly the start context, whatever the policy ---
+  the \<open>Root\<close> case never consults \<open>R\<close>, and the \<open>Resume\<close> case only forwards to the same
+  callerless ancestor. No validity is needed: the two clauses involved name no edge.\<close>
+lemma trace_context_caller_of_None:
+  "caller_of t = None
+   \<Longrightarrow> trace_context gs R startcontext g t c \<longleftrightarrow> c = startcontext"
   by (induction t) auto
 
 subsection \<open>The source bridge\<close>
@@ -256,13 +257,13 @@ proof -
   let ?g = "compile_prog \<Pi> ps"
   have pc: "procs_embedded \<Pi> ?g" by (rule procs_embedded_compile_prog[OF wf])
   have swf: "return_safe (main_body \<Pi>)" by (rule wf_compile_input_return_safe[OF wf])
-  obtain en where entry: "(FunctionEntry prog_main_name, EA_Nop, en) \<in> intra ?g"
+  obtain en where entry: "(FunctionEntry prog_main_name, EA_Body prog_main_name, en) \<in> intra ?g"
     and base: "csim \<Pi> ?g ((main_body \<Pi>), s0, []) (en, s0, [])"
     by (rule compile_prog_main_base[OF wf])
   have loc0: "located_ltr gs (compile_prog \<Pi> ps) S (FunctionEntry prog_main_name, s0, [])"
     using located_ltr_entry[where g = "compile_prog \<Pi> ps", OF s0] by simp
   have step0: "cstep gs ?g (FunctionEntry prog_main_name, s0, []) (en, s0, [])"
-    by (rule cstep_nop[OF entry])
+    by (rule cstep_body[OF entry])
   have loc_en: "located_ltr gs ?g S (en, s0, [])"
     by (rule cstep_preserves_located_ltr[OF wf loc0 step0])
   from csim_star[OF base pc swf run] obtain cf'
@@ -279,14 +280,19 @@ proof -
 qed
 
 text \<open>The plain projected source bridge: a reachable source store lies in the local-trace
-  collecting \<^const>\<open>activation_collect\<close> at the simulated node, keyed by the witness trace.\<close>
+  collecting \<^const>\<open>activation_collect\<close> at the simulated node, in a context the witness
+  trace carries. A relational policy may leave a trace without any context, so the bridge
+  asks for one: \<open>has_ctx\<close> is what \<open>ltr_coverage\<close>'s \<open>TOTAL\<close> buys downstream, and what a
+  functional policy has outright (\<open>source_store_in_activation_collect_of_fun\<close>).\<close>
 theorem source_store_in_activation_collect:
   assumes wf: "wf_compile_input gs \<Pi> ps"
     and s0: "s0 \<in> S"
     and run: "star (pstep gs \<Pi>) ((main_body \<Pi>), s0, []) (residual, s, frs)"
+    and has_ctx: "\<And>t. t \<in> valid_ltr gs (compile_prog \<Pi> ps) S
+                   \<Longrightarrow> \<exists>c. trace_context gs R startcontext (compile_prog \<Pi> ps) t c"
   shows "\<exists>v stk t c. csim \<Pi> (compile_prog \<Pi> ps) (residual, s, frs) (v, s, stk)
-                   \<and> key enterc initial_ctx t = c
-                   \<and> s \<in> activation_collect gs enterc initial_ctx
+                   \<and> trace_context gs R startcontext (compile_prog \<Pi> ps) t c
+                   \<and> s \<in> activation_collect gs R startcontext
                             (compile_prog \<Pi> ps) S v c"
 proof -
   let ?g = "compile_prog \<Pi> ps"
@@ -296,21 +302,48 @@ proof -
   from rep have tv: "t \<in> valid_ltr gs ?g S" and sn: "sink_node t = v"
     and ss: "sink_store t = s"
     by (auto simp: ltr_repr_def)
-  have "s \<in> activation_collect gs enterc initial_ctx ?g S v (key enterc initial_ctx t)"
-    using activation_collect_I[OF tv sn refl] ss by simp
+  from has_ctx[OF tv] obtain c where tc: "trace_context gs R startcontext ?g t c" by blast
+  have "s \<in> activation_collect gs R startcontext ?g S v c"
+    using activation_collect_I[OF tv sn tc] ss by simp
+  then show ?thesis using sim tc by blast
+qed
+
+text \<open>A functional policy carries \<^const>\<open>key\<close>'s context on every valid trace, so it needs no
+  context witness.\<close>
+corollary source_store_in_activation_collect_of_fun:
+  assumes wf: "wf_compile_input gs \<Pi> ps"
+    and s0: "s0 \<in> S"
+    and run: "star (pstep gs \<Pi>) ((main_body \<Pi>), s0, []) (residual, s, frs)"
+  shows "\<exists>v stk t c. csim \<Pi> (compile_prog \<Pi> ps) (residual, s, frs) (v, s, stk)
+                   \<and> key f startcontext t = c
+                   \<and> s \<in> activation_collect gs (call_context_rel_of_fun f) startcontext
+                            (compile_prog \<Pi> ps) S v c"
+proof -
+  let ?g = "compile_prog \<Pi> ps"
+  from source_run_has_ltr[OF wf s0 run] obtain v stk t
+    where sim: "csim \<Pi> ?g (residual, s, frs) (v, s, stk)"
+      and rep: "ltr_repr gs ?g S (v, s, stk) t" by blast
+  from rep have tv: "t \<in> valid_ltr gs ?g S" and sn: "sink_node t = v"
+    and ss: "sink_store t = s"
+    by (auto simp: ltr_repr_def)
+  have tc: "trace_context gs (call_context_rel_of_fun f) startcontext ?g t (key f startcontext t)"
+    by (simp add: trace_context_of_fun_iff[OF tv])
+  have "s \<in> activation_collect gs (call_context_rel_of_fun f) startcontext ?g S v
+              (key f startcontext t)"
+    using activation_collect_I[OF tv sn tc] ss by simp
   then show ?thesis using sim by blast
 qed
 
 text \<open>The witness-free top-level result: a store reached with an empty source frame stack lies in
   the activation collecting at the fixed seed context --- no \<^typ>\<open>ltr\<close> witness and no context
-  existential.  This is the shape a user reads for main-level program points.\<close>
+  existential. This is the shape a user reads for main-level program points.\<close>
 theorem source_toplevel_in_activation_collect:
   assumes wf: "wf_compile_input gs \<Pi> ps"
     and s0: "s0 \<in> S"
     and run: "star (pstep gs \<Pi>) ((main_body \<Pi>), s0, []) (residual, s, [])"
   shows "\<exists>v. csim \<Pi> (compile_prog \<Pi> ps) (residual, s, []) (v, s, [])
-             \<and> s \<in> activation_collect gs enterc initial_ctx
-                      (compile_prog \<Pi> ps) S v initial_ctx"
+             \<and> s \<in> activation_collect gs R startcontext
+                      (compile_prog \<Pi> ps) S v startcontext"
 proof -
   let ?g = "compile_prog \<Pi> ps"
   from source_run_has_ltr[OF wf s0 run] obtain v stk t
@@ -321,9 +354,9 @@ proof -
     and ss: "sink_store t = s" and sr: "stack_repr ?g [] t"
     by (auto simp: ltr_repr_def)
   have cof: "caller_of t = None" using stack_repr_Nil_iff[OF sr] by simp
-  have covered: "key enterc initial_ctx t = initial_ctx"
-    using key_caller_of_None[OF cof] .
-  have "s \<in> activation_collect gs enterc initial_ctx ?g S v initial_ctx"
+  have covered: "trace_context gs R startcontext ?g t startcontext"
+    by (simp add: trace_context_caller_of_None[OF cof])
+  have "s \<in> activation_collect gs R startcontext ?g S v startcontext"
     using activation_collect_I[OF tv sn covered] ss by simp
   then show ?thesis using sim stk0 by blast
 qed

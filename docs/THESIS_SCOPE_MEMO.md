@@ -40,7 +40,7 @@ later simplifications; several new framework results were added.
    exist — worth a deliberate decision (restore, or correct the citing docs)
    rather than leaving as silent drift.
 3. Likely a third, **unconfirmed**: `Retain_Analysis.thy` (`retain_dg_spec`,
-   `gamma_retain`, `sound_dg_spec_retain` — cited in AD-41 as evidence for the
+   `gamma_retain`, `sound_dg_spec_core_retain` — cited in AD-41 as evidence for the
    opaque-carrier generalization) has zero hits anywhere in `src/` today. Not
    traced to a specific commit in this pass — verify before citing either way.
 
@@ -64,7 +64,7 @@ on its own):
   `Example_Sign_DG_CallString_K1/K2.thy` prove a strict-order precision
   result (`sign_k2_strictly_more_precise_than_k1_at_g`) through the real,
   executable plain-join solver.
-- **AD-48 (2026-08-04, today).** `sound_dg_spec` proved a sublocale of a more
+- **AD-48 (2026-08-04, today).** `sound_dg_spec_core` proved a sublocale of a more
   general `sound_dg_hooks`; a migration that would have moved every example
   onto the general layer was investigated and cancelled; owner-sensitive
   **placement** analyses (`Example_Sign_Placement.thy`,

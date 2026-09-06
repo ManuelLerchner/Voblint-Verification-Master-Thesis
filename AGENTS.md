@@ -26,6 +26,9 @@ task at hand:
 - Before auditing or cleaning up a session, read
   `docs/SESSION_CLEANUP_PLAYBOOK.md`: the procedure, the patterns that paid
   off, and the traps that each cost a rebuild.
+- Before moving, splitting, or deleting anything in `src/Framework`, read
+  `docs/CORE_REFACTOR_PLAN.md` and work its step table in order; record
+  what the build contradicts in its "Decisions and corrections" section.
 - For an area-specific task, read the nearest `README.md`.
 - Use `.thy` files as the source of truth for definitions, theorem statements,
   and proof status. Do not copy drifting lemma inventories into this file.
@@ -72,11 +75,15 @@ component of `int_dom`, alongside sign, interval and parity.
 The session dependency graph is:
 
 ```text
-VIMP -> CFG -> Compile -> Core -> Analysis -+-> Formalization -+
-                                            |                  v
-                                            +----------------> CLI -> Codegen
-                                                                +---> Examples
+VIMP -> Domain -+
+                +-> CFG -> Framework -> Compile -> Exec -> Analysis -+-> Soundness -+
+TD   -> Solver -+                                                    |              v
+                                                                     +------------> CLI -> Codegen
+                                                                                     +---> Examples
 ```
+
+(`CFG` depends on `VIMP` only; `Framework` on `CFG`, `Domain` and `Solver`;
+`Compile` on `CFG`; `Exec` on `Framework` and `Compile`.)
 
 `Voblint_CFG` is the graph model and its activation-local collecting
 semantics: what a soundness claim is stated *about*. It never mentions the
@@ -86,9 +93,22 @@ only for compiled ones, and the session boundary is what keeps that true.
 invariants, forward simulation, and the bridge from a source run to a valid
 local trace).
 
-`Voblint_Core` is the abstract framework: domains, constraint systems, and the
-TD solver bridge, with no domain-specific content. `Voblint_Analysis` threads
-each concrete domain instance (Sign, Interval, ...) through it.
+`Voblint_Domain` is what an abstract value and an abstract state are: the
+sound-domain classes with their concretization, the dead-code lift, pointwise
+states, and the bridge between those constructions. `Voblint_Solver` is the
+strategy-tree equation language of the vendored side-effecting solver and its
+monotonicity and post-solution
+vocabulary; it never sees a CFG. `Voblint_Framework` is the D/G analysis framework:
+local/global state selection, the transfer contract, the equation generator, and
+collecting soundness for an arbitrary CFG, with no domain-specific content and
+no compiler.
+`Voblint_Exec` is the executable carrier and the transport of a solved
+system from the solver's association-list states to the function-valued
+states the framework is stated over. `Voblint_Analysis` threads each
+concrete domain instance (Sign, Interval, ...) through them, and also holds
+the Base-level reuse locales and the compile-dependent routed contexts.
+`docs/CORE_REFACTOR_PLAN.md` records why the split runs along these lines
+and what remains to move.
 
 Cross-session theory imports use qualified names.
 `Voblint_Soundness` contains the reusable soundness endpoints and the
@@ -97,7 +117,7 @@ leaf: `Voblint_CLI` imports it, and the export in `Voblint_Codegen` reaches
 through it. `Voblint_Examples` contains executable runs, regressions, GraphViz
 output, and the `Voblint` capstone.
 
-`ROOTS` lists nine session directories, one per session in the graph above.
+`ROOTS` lists twelve session directories, one per session in the graph above.
 
 The generated OCaml is compile-checked by actually compiling it: both
 `codegen-regression` and `cli-build` run `ocamlfind ocamlopt` over
@@ -247,6 +267,129 @@ Sessions and `pixi run build` do not catch a stale export: only
 `Voblint_Codegen` runs it, and it is the last session built. A change that
 lands a new theory without regenerating `codegen/generated/` leaves the
 breakage for whoever next runs a full build.
+
+A named `dg_spec` is a construction-time description, never an exported
+runtime value -- the Isabelle analogue of Goblint's `Spec` module. Its unknown
+and global-key types occur only inside its transfer programs, never in an
+argument that builds it, so it has no most general ML type and the serializer
+rejects it with `includes a free type variable`. The rule is therefore
+uniform, and applies to concrete domain specifications (`sctx_spec`,
+`rel_order_spec`) exactly as it does to the generic builders in `DG_Spec`:
+
+> **A named `dg_spec` that can reach code generation declares its own `_def`
+> `[code_unfold]`, next to the definition.**
+
+Whether a given spec would survive anyway -- because some enclosing definition
+happens to unfold first -- is not worth reasoning about per domain. A
+redundant declaration costs nothing; a missing one fails in generated ML, far
+from the theory that caused it.
+
+## Prose that claims a dependency must pin the theory
+
+A bare `\<open>name\<close>` cartouche is unchecked. `scripts/check_thy_prose_refs.py`
+only asks whether the name exists *somewhere* in the tree, which is all it can
+ask: prose here cites other domains' counterparts constantly and on purpose
+("mirroring Sign's own `analyse_sign_report_for`"), so a lint that demanded
+every reference resolve in the citing theory's own import closure would flag
+around a hundred correct sentences.
+
+That leaves one failure it cannot catch: prose stating that a proof is *built
+from* a fact the citing theory cannot see. `Interval_Entry` claimed its
+node-soundness bridges were built from `ictx_activation_collect_sound_warrow`
+for as long as `ictx_` was ambiguous -- a theorem only Int has, while the
+bridges actually use `interval_conf_result_node_sound_warrow`. The lint passed
+throughout, because the name existed in Int.
+
+So distinguish the two kinds of citation:
+
+- A **comparison** -- "mirroring", "as X does", "the counterpart of" -- may name
+  anything, in a bare cartouche.
+- A **dependency claim** -- "built from", "follows from", "discharged by" --
+  names the owning theory with `\<^theory>\<open>Session.Theory\<close>`, which
+  Isabelle checks and which therefore fails if the theory is not in scope. Use
+  `\<^const>` for a constant, since that is checked outright.
+
+The distinction is what a reader needs anyway: a comparison is orientation, a
+dependency claim is something they may go on to rely on.
+
+## Do not infer removability from local non-use
+
+Before removing a parameter, name, key component, or locale assumption, check
+three things:
+
+1. whether it occurs in the fully expanded statement or constructed value;
+2. whether it is consumed through locale inheritance, interpretation,
+   abbreviation, or another transitive dependency;
+3. whether callers use it to distinguish instantiated objects, even when the
+   current body does not inspect it.
+
+A component can be load-bearing as identity, routing information, or inherited
+configuration while the declaration in front of you never applies it. A lemma
+about `f gs x` needs `gs` whether or not the lemma inspects it, and a locale
+that forwards a parameter to a parent needs it whether or not its own body
+mentions it again. Local body inspection and raw occurrence counts are
+discovery signals, not evidence.
+
+The same failure mode produced three separate defects here: `enter_local`
+(a deleted constant left an assumption quantifying over an arbitrary
+function), `gk` (a deleted datatype let a signature silently rebind to another
+theory's type of the same name), and `gs` (an audit read "not applied in the
+body" as "removable" for a locale parameter its parent consumes nine times).
+
+## Where the global-variable predicate may appear
+
+`gs :: vname => bool` is VIMP's declaration of which names are global. It has
+three legitimate roles: naming the concrete call/return semantics an abstract
+answer must over-approximate (`call_enter`, `combine_collect`, `valid_ltr`),
+implementing the ownership-split specification, and keying the executable
+carrier's locations. It is not a framework parameter, and the invariant is:
+
+> `gs` exists only above or at the transfer boundary. Below it, operations may
+> consume an already-classified location but must never classify a name.
+
+The checkable form of that is narrower and has no exceptions:
+`Framework/Constraints` must not depend on ownership-split semantics.
+`CFG_Enumeration`, `DG_Constraint_Trees` and `DG_Keyed_Generator` mention `gs` zero
+times, as do `DG_Spec` and `DG_Manager`.
+
+The boundary statement above has exactly one known exception, and it is
+deliberate. `resolved_st_is_bot` classifies below the boundary because the
+quotient's equality observes every tagged location while the concretization
+reads back only the one `gs` selects for each name; a bottom test that must
+agree with the readback has to filter the others, which `canonical_location`
+names. A carrier holding `Local_Location` and `Global_Location` is not itself
+evidence of leakage -- a join, order or widening that needed `gs` to
+reconstruct the classification would be, and none does. The exception is
+expected to disappear when variables carry resolved declaration identities
+rather than textual names.
+
+## Deleting an API
+
+Isabelle does not reject every surviving use of a removed name. In a term it
+does; but inside `assumes`, `fixes`, and theorem statements an unknown
+lowercase identifier is a legal free variable, so a locale whose assumption
+cites a deleted constant keeps building -- while that assumption silently
+stops constraining anything and now holds for an arbitrary function of that
+name. Deleting `DG_Transfer_Combinators.thy` did exactly this to three
+`call_fwd_ok` assumptions via `enter_local`, and every session stayed green
+for several rebuilds afterwards. This is the `false abstraction` error of the
+autoformalization audit below, and no batch build can see it.
+
+So a deletion is not finished when the build is green:
+
+1. Search for consumers of every removed name *before* deleting, including
+   inside `assumes` and theorem statements.
+2. Append the removed names to `scripts/retired_identifiers.txt`.
+   `pixi run retired-identifiers` then fails on any that come back. Remove a
+   name from that list -- explicitly, in the same commit -- if a later design
+   deliberately reuses it.
+3. Run `pixi run locale-parameters`. It reports any identifier left free in a
+   locale assumption anywhere in `src/`, which is the general form of the same
+   defect and catches names that were never constants here at all.
+4. Run the full batch build over the leaf sessions, not just the session you
+   edited. A session that fails cancels the rest of its own theories, so one
+   red session hides every later one: a build that stops early has told you
+   nothing about what follows it.
 
 ## Regression discipline
 

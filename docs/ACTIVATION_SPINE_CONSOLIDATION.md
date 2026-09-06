@@ -174,7 +174,7 @@ ROOT) confirmed it dead; remove it + its `ROOT` entry + doc references. Build gr
 - `src/Analysis/Generic/Solver/Context/Goblint/Routing/Support/Activation/Activation_Witness_From.thy` (214)
 - `src/Analysis/Generic/Solver/Context/Goblint/Routing/Support/Activation/Seeded_Activation_Reach.thy` (440)
 - `src/Analysis/Generic/Solver/Context/Goblint/Routing/Support/Activation/Seeded_Activation_Sound.thy` (395, minus ~90 extracted)
-- `src/Analysis/Instances/Tooling/Activation_Domain_Instances.thy` (49)
+- `src/Analysis/Reporting/Activation_Domain_Instances.thy` (49)
 - `src/Soundness/Examples/Executable/Common/Twfr_Reach_Read.thy` (91)
 - `src/Soundness/Examples/Executable/Interval/SeededClean/*.thy` (3 files, 295)
 - `src/Soundness/Examples/Executable/Sign/SeededClean/*.thy` (2 files, 165)

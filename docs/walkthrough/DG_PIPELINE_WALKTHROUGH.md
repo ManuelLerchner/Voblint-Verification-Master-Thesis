@@ -182,12 +182,12 @@ facts, the `dep\<^sub>L` closure facts, and exit-node membership into one
 with no extra obligations) turns that post-solution, plus finiteness of
 `intra`/`calls`, coverage of every entry/edge/enter/combine target by
 `placement_nodes`, and the concrete seed bound `placement_sound0`
-(`cinit_stores \<subseteq> gamma_unit placement_s0d_abs placement_s0g_abs`), into:
+(`cinit_stores \<subseteq> gamma_ownership_split placement_s0d_abs placement_s0g_abs`), into:
 
 ```text
 ltr_collect (declared_global placement_prog) placement_cfg
   (cinit_stores (declared_global placement_prog)) v
-    \<subseteq> dg_hook_gamma gamma_unit placement_sigma_abs v
+    \<subseteq> dg_hook_gamma gamma_ownership_split placement_sigma_abs v
 ```
 
 Every stack-faithful local trace starting from the concrete initial stores

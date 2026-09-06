@@ -1,5 +1,5 @@
 theory Sign_Special
-  imports Sign_Arithmetic Voblint_Core.Special_Ops
+  imports Sign_Arithmetic Special_Ops
 begin
 
 section \<open>Sign: special-call semantics\<close>

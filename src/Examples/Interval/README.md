@@ -19,9 +19,7 @@ Backward-analysis arc: `Example_Guard_Refinement` (one guard) -> `Example_Interv
 
 Not tabled above, and grouped by what they pin rather than by domain concern:
 `Example_Interval_Checks_Store_Only.thy` (check discharge, the Interval
-analogue of Sign's), `Example_Interval_Placement.thy` (the placement/storage
-independence skeleton), `Example_Interval_Global_Flow_Sensitivity.thy` (how a declared global is
-stored and how flow-sensitively). Role vocabulary: repository `README.md`.
+analogue of Sign's). Role vocabulary: repository `README.md`.
 
 ## `Ctx/` — context routed by entered value
 
@@ -63,6 +61,5 @@ the call-string bound `k`.
 | --- | --- | --- |
 | `Example_Interval_DG_CallString_K1.thy` | canonical spine | `cs_route`/`cs_context` instance at `k = 1` (Seidl et al. 2026, Example 7) |
 | `Example_Interval_DG_CallString_K2.thy` | canonical spine | `cs_route`/`cs_context` instance at `k = 2` |
-| `Call_String_Solver_Refinement_Seeded.thy` | canonical spine | the k=2 to k=1 refinement witness for `nest`: a thin instantiation of `Voblint_Core.Call_String_Solver_Projection` at k1=1, where a two-line context-merge fact plus solver soundness gives the whole closure |
 | `Example_Interval_Call_String_Generic_Parity.thy` | regression | the runtime-`k` generic pipeline (`cs_call_string_sol_prog`) solves the same equation system the hand-built `nest_1_eqs`/`nest_2_eqs` do — same `ectx_spec`, same `cs_route`, same seeds |
-| `Call_String_Solver_Regression.thy` | regression | exact-tree snapshots (`nest_1_eqs_statement3`, `nest_2_eqs_statement3`) locking in that `routed_cmb_g_def`/`routed_extra_g_def`/`side_cfg_T_eff_keyed_seed_dg` still generate the expected equation shape at a genuine call continuation |
+| `Call_String_Solver_Regression.thy` | regression | exact-tree snapshots (`nest_1_eqs_statement3`, `nest_2_eqs_statement3`) locking in that `routed_call_tree_def`/`routed_entry_seed_tree_def`/`routed_node_rhs` still generate the expected equation shape at a genuine call continuation |

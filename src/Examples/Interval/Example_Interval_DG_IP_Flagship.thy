@@ -1,11 +1,8 @@
 theory Example_Interval_DG_IP_Flagship
   imports
-    "Voblint_Core.Exec_DG_Bridge"
-    "Voblint_Core.DG_LTR_Sound"
     "Voblint_Analysis.Interval_Transfer"
     "Voblint_Analysis.Ivl_Exec"
-    "Voblint_Core.Solver_Menu"
-    "Voblint_Core.DG_Coverage"
+    "Voblint_Solver.TD_Solver_Bridge"
     "Voblint_CFG.CFG_Prune"
     "Voblint_Analysis.Analysis_GraphViz"
     "Voblint_VIMP.VIMP_Notation"
@@ -61,8 +58,8 @@ text \<open>
   \<open>FunctionEntry (STR ''twice'')\<close> --- this is the monovariant (single-context) view.
 \<close>
 
-lemma twice_entry: "cfg_entry twice_cfg = FunctionEntry (STR ''main'')"
-  unfolding twice_cfg_def by (simp add: cfg_entry_compile_prog prog_main_name_def)
+interpretation twice: compiled_cfg twice_pi twice_procs twice_cfg
+  by (unfold_locales; unfold twice_cfg_def; simp add: compile_prog_finite)
 
 text \<open>The two call edges' shape, computed directly from \<open>twice_cfg\<close>: each call site \<open>u\<close>
   pins down its destination variable, callee, arguments, and continuation. Exported for the
@@ -85,130 +82,127 @@ lemma twice_calls_unique_site:
       u1 = u2 \<longrightarrow> ca1 = ca2 \<and> ce1 = ce2 \<and> k1 = k2"
   unfolding twice_cfg_def by eval
 
-lemma twice_finE: "finite (intra twice_cfg)" unfolding twice_cfg_def using compile_prog_finite by simp
-lemma twice_finC: "finite (calls twice_cfg)" unfolding twice_cfg_def using compile_prog_finite by simp
+lemmas twice_finE = twice.finite_intra
+lemmas twice_finC = twice.finite_calls
 
 subsection \<open>The analysis specification (interval, as an executable D/G analysis)\<close>
 
-text \<open>Classifier-parametric commutation mirrors, generic in \<open>gs\<close>: the entry point for
-  this file, generic in the classifier rather than fixed to a name-based convention.\<close>
+text \<open>
+  Intervals form the diagonal D/G analysis \<open>D = G = ivl abs_state\<close>, with executable
+  mirror \<open>ownership_split_dg_spec_st_for twice_gs (ivl_tf_st_for twice_gs)\<close>.  The registration
+  \<^locale>\<open>ownership_split_dg_exec_analysis\<close> --- interpreted as \<open>twice_ex_reg\<close> below, at this
+  file's own classifier \<open>twice_gs\<close>, from \<open>ivl_is_sound_transfer_for\<close> and
+  \<open>ivl_tf_st_for_commute\<close> alone --- discharges the transport, soundness, and
+  solver-crossing obligations generically.  This example supplies only the program,
+  the executable solve, and the coverage witnesses.
+\<close>
 
-lemmas ivl_Hstep_for =
-  unit_dg_Hstep_for[OF ivl_tf_st_for_commute[folded fun_of_exec_dg_st_for_def]
-    ivl_tf_st_for_reduces]
-
-lemmas ivl_Henter_for =
-  unit_dg_Henter_for[OF ivl_enter_st_for_commute[folded fun_of_exec_dg_st_for_def]]
-
-lemmas ivl_Hcomb_for = unit_dg_Hcomb_for
-lemmas ivl_Hcont_for = unit_dg_Hcont_for
-
-text \<open>The abstract D/G soundness interpretation at \<open>twice_gs\<close>, generic in the
-  storage classifier: gives access to this instantiation's own \<open>dg_gen\<close>/\<open>dg_gamma\<close>
-  accessors and the \<open>dg_post_solution_collect_sound_ltr_for\<close> endpoint below.\<close>
 lemma twice_reserved: "reserved_ret_var twice_gs"
   by (auto simp: wf_compile_input_simps
       twice_pi_def twice_procs_def twice_main_def twice_program_def
       split: if_splits option.splits)
 
-interpretation twice_sds:
-  sound_dg_spec_ltr_for "unit_dg_spec_for twice_gs (ivl_tf_for twice_gs)" "gamma_unit twice_gs" twice_gs
-  unfolding sound_dg_spec_ltr_for_def
-  by (rule sound_dg_spec_unit_for[OF ivl_is_sound_transfer_for twice_reserved])
+subsection \<open>Registration through the classifier-parametric registration locale\<close>
+
+text \<open>Interpret \<^locale>\<open>ownership_split_dg_exec_analysis\<close> once here at \<open>twice_gs\<close>, matching the
+  pattern in \<open>Exec_Sign_DG_Run\<close>, \<open>Example_Parity_DG_Flagship\<close>, and
+  \<open>Example_Interval_DG_Flagship\<close>.  The interpretation absorbs the sound-transfer and
+  primitive-commutation obligations once, so \<open>twice_source_run_sound\<close> below only
+  supplies the compiled-input and solver facts.\<close>
+interpretation twice_ex_reg:
+  ownership_split_dg_exec_analysis twice_gs
+    skip_ivl assign_ivl special_ivl branch_ivl body_ivl return_ivl
+    "enter_ivl_ci_for twice_gs" event_ivl
+    "ivl_tf_st_for twice_gs" "ivl_enter_st_for twice_gs"
+    "TD_side_seed_join_warrowing_Interp.solve is_activation_seed"
+    "TD_side_seed_join_warrowing_Interp.solve_c is_activation_seed"
+proof -
+  interpret twice_transfer: sound_transfer_for twice_gs
+      skip_ivl assign_ivl special_ivl branch_ivl body_ivl return_ivl
+      "enter_ivl_ci_for twice_gs" event_ivl
+    by (rule ivl_is_sound_transfer_for)
+  show "ownership_split_dg_exec_analysis twice_gs
+          skip_ivl assign_ivl special_ivl branch_ivl body_ivl return_ivl
+          (enter_ivl_ci_for twice_gs) event_ivl
+          (ivl_tf_st_for twice_gs)
+          (ivl_enter_st_for twice_gs)
+          (TD_side_seed_join_warrowing_Interp.solve is_activation_seed)
+          (TD_side_seed_join_warrowing_Interp.solve_c is_activation_seed)"
+    by unfold_locales
+       (rule twice_reserved
+             twice_transfer.tf_sound_assign_for twice_transfer.tf_sound_special_for
+             twice_transfer.tf_sound_branch_for
+             twice_transfer.tf_sound_enter_entry_for
+             ivl_tf_st_for_commute[unfolded ivl_tf_abs_def, folded fun_of_exec_dg_st_for_def]
+             ivl_enter_st_for_commute[folded fun_of_exec_dg_st_for_def]
+             TD_side_seed_join_warrowing_Interp.part_post_solution_of_solve_c
+        | assumption)+
+qed
 
 subsection \<open>Equation generation\<close>
 
+text \<open>The registration locale owns the equation system: \<open>twice_eqs\<close> names
+  \<^const>\<open>twice_ex_reg.routed_eqs\<close> at this program, the routed generator at the unit
+  context. Both call sites publish into the one seed
+  \<open>Activation_Seed (FunctionEntry (STR ''twice'')) ()\<close>, which is the monovariant view.\<close>
+
 definition twice_eqs ::
-  "pp \<times> unit \<Rightarrow> (pp \<times> unit, unit, (ivl exec_dg_st, ivl exec_dg_st) dg_state) strategy_tree" where
-  "twice_eqs = dg_gen_of (unit_dg_spec_st_for twice_gs (ivl_tf_st_for twice_gs) (ivl_enter_st_for twice_gs))
-     twice_cfg bot cinit_ivl_st (restrict_global_resolved_q cinit_ivl_st)"
+  "pp \<times> unit
+   \<Rightarrow> (pp \<times> unit, (unit, unit) routed_gk, (ivl exec_dg_st, ivl exec_dg_st) dg_state) strategy_tree" where
+  "twice_eqs = twice_ex_reg.routed_eqs twice_pi twice_procs
+                 bot cinit_ivl_st (restrict_global_resolved_q cinit_ivl_st)"
 
 subsection \<open>Executable solve\<close>
 
 lemma twice_terminates_c:
-  "TD_side_warrowing_apinis_Interp_solve_c twice_eqs (cfg_exit twice_cfg, ()) \<noteq> None"
+  "TD_side_seed_join_warrowing_Interp_solve_c is_activation_seed twice_eqs
+     (cfg_exit twice_cfg, ()) \<noteq> None"
   by eval
 
 definition twice_sol ::
-  "(pp \<times> unit) set \<times> (pp \<times> unit + unit \<Rightarrow> (ivl exec_dg_st, ivl exec_dg_st) dg_state)" where
-  "twice_sol = TD_side_warrowing_apinis_Interp_solve twice_eqs (cfg_exit twice_cfg, ())"
+  "(pp \<times> unit) set
+   \<times> (pp \<times> unit + (unit, unit) routed_gk \<Rightarrow> (ivl exec_dg_st, ivl exec_dg_st) dg_state)" where
+  "twice_sol = TD_side_seed_join_warrowing_Interp_solve is_activation_seed twice_eqs
+                 (cfg_exit twice_cfg, ())"
 
-subsection \<open>Certified solution (reusing solver correctness)\<close>
-
-lemma twice_solve_dom:
-  "TD_side_warrowing_apinis_Interp.solve_dom TYPE(unit) TYPE((ivl exec_dg_st, ivl exec_dg_st) dg_state)
-     twice_eqs (cfg_exit twice_cfg, ())"
-  by (rule TD_side_warrowing_apinis_Interp.solve_dom_of_solve_c[OF twice_terminates_c])
-
-lemma twice_pp_st:
-  "part_post_solution twice_eqs (cfg_exit twice_cfg, ()) (snd twice_sol) (fst twice_sol)"
-  using TD_side_warrowing_apinis_Interp.partial_post_solution
-          [OF twice_solve_dom, of "fst twice_sol" "snd twice_sol"]
-  unfolding twice_sol_def by simp
-
-subsection \<open>Transport to the abstract D/G semantics\<close>
-
-lemma twice_pp_abs:
-  "part_post_solution
-     (twice_sds.dg_gen twice_cfg (fun_of_exec_dg_st_for twice_gs (bot::ivl exec_dg_st))
-        (fun_of_exec_dg_st_for twice_gs cinit_ivl_st)
-        (fun_of_exec_dg_st_for twice_gs (restrict_global_resolved_q cinit_ivl_st)))
-     (cfg_exit twice_cfg, ()) (fun_of_dg_st_for twice_gs \<circ> snd twice_sol) (fst twice_sol)"
-  using part_post_solution_dg_st_to_abs_for[OF ivl_Hstep_for ivl_Henter_for ivl_Hcomb_for ivl_Hcont_for twice_pp_st[unfolded twice_eqs_def]]
-  unfolding twice_sds.dg_gen_of_eq_for .
-
-subsection \<open>Soundness: the computed analysis over-approximates the collecting semantics\<close>
+subsection \<open>Soundness premises for the registered endpoint\<close>
 
 text \<open>
-  The premises of the \<^emph>\<open>generic\<close> endpoint \<open>dg_post_solution_collect_sound_ltr_for\<close>:
-  every point is solved (\<^verbatim>\<open>eval\<close>), the graph is finite --- and, crucially,
-  \<^bold>\<open>no \<open>no_enter\<close> premise\<close>: the two \<^const>\<open>CallEdge\<close> entries are covered by the
-  same collecting-soundness theorem as ordinary intra edges.
-\<close>
+  The premises \<open>twice_ex_reg.run_source_sound\<close> consumes: every program point is
+  covered by the solved variable set, the graph is finite, and the concrete initial
+  stores are covered by the seed.
 
-text \<open>Coverage is not read off the solved key set. Every node of \<open>twice_cfg\<close> ---
-  including both callee entries and both continuations --- reaches
-  \<^const>\<open>cfg_exit\<close>, a structural fact about the graph alone decided by
-  \<^const>\<open>cfg_exit_covers\<close>, and \<^const>\<open>vars_cover\<close> follows from that together with
-  the post-solution the solver already returns.\<close>
+  Coverage is read off the solved key set: a routed callee entry is solved only once
+  a caller publishes its seed, so which nodes this run visited --- here both call
+  sites, the shared callee entry, and both continuations --- is decided by
+  \<^const>\<open>vars_cover_exec\<close> over the two edge enumerations.\<close>
 
-lemma twice_wf_cfg: "wf_cfg twice_cfg"
-  unfolding twice_cfg_def by (rule compile_prog_wf)
-
-lemma twice_exit_covers: "cfg_exit_covers twice_cfg" by eval
+lemmas twice_wf_cfg = twice.wf
 
 lemma twice_vars_cover: "vars_cover twice_cfg (fst twice_sol)"
-  by (rule vars_cover_of_dg_gen_of_covers
-        [OF twice_finE twice_finC twice_wf_cfg twice_exit_covers
-            twice_pp_st[unfolded twice_eqs_def]])
+  by (rule vars_cover_of_exec[OF twice_finE twice_finC]) eval
 lemma twice_sound0:
   "cinit_stores twice_gs \<subseteq>
-     \<lbrakk>combine_env_abs twice_gs (fun_of_exec_dg_st_for twice_gs cinit_ivl_st)
+     \<lbrakk>combine_env twice_gs (fun_of_exec_dg_st_for twice_gs cinit_ivl_st)
         (fun_of_exec_dg_st_for twice_gs (restrict_global_resolved_q cinit_ivl_st))\<rbrakk>"
 proof -
-  have "combine_env_abs twice_gs (fun_of_exec_dg_st_for twice_gs cinit_ivl_st)
+  have "combine_env twice_gs (fun_of_exec_dg_st_for twice_gs cinit_ivl_st)
           (fun_of_exec_dg_st_for twice_gs (restrict_global_resolved_q cinit_ivl_st))
         = fun_of_exec_dg_st_for twice_gs cinit_ivl_st"
-    by (simp add: combine_env_abs_def fun_of_exec_dg_st_for_def fun_of_st_cinit_ivl_st_for
+    by (simp add: combine_env_def fun_of_exec_dg_st_for_def fun_of_st_cinit_ivl_st_for
                   restrict_global_for_def declared_global_def fun_eq_iff)
   thus ?thesis
     by (auto simp: cinit_stores_def gamma_state_def fun_of_exec_dg_st_for_def fun_of_st_cinit_ivl_st_for)
 qed
 
 text \<open>
-  The computed D/G post-solution bounds every stack-faithful local trace, including matched calls
-  and returns, at each CFG point.
+  The coverage facts, finiteness, and the seed-soundness \<open>twice_sound0\<close> are the
+  instance premises the bundled endpoint \<open>twice_ex_reg.run_source_sound\<close> consumes;
+  the collecting-soundness and transport steps are discharged inside it.
 \<close>
 
-theorem twice_collect_sound:
-  "ltr_collect twice_gs twice_cfg (cinit_stores twice_gs) v
-     \<subseteq> twice_sds.dg_gamma (fun_of_dg_st_for twice_gs \<circ> snd twice_sol) v"
-  by (rule twice_sds.dg_post_solution_collect_sound_ltr_for
-        [OF twice_pp_abs
-            twice_vars_cover
-            twice_finE twice_finC twice_sound0[folded gamma_unit_def]])
-
 subsection \<open>Inspecting the certified result\<close>
+
 
 lemma twice_p_at_entry:
   "twice_lookup (locals (snd twice_sol (Inl (FunctionEntry (STR ''twice''), ())))) (STR ''p'')
@@ -228,36 +222,6 @@ lemma twice_y_computed:
   "twice_lookup (locals (snd twice_sol (Inl (Statement 4, ())))) (STR ''y'') = Ivl (Fin 6) (Fin 20)"
   unfolding twice_sol_def twice_eqs_def by eval
 
-subsection \<open>Registration through the classifier-parametric registration locale\<close>
-
-text \<open>Interpret \<^locale>\<open>unit_dg_exec_analysis\<close> once here at \<open>twice_gs\<close>, matching the
-  pattern in \<open>Exec_Sign_DG_Run\<close>, \<open>Example_Parity_DG_Flagship\<close>, and
-  \<open>Example_Interval_DG_Flagship\<close>.  The interpretation absorbs the sound-transfer and
-  primitive-commutation obligations once, so \<open>twice_source_run_sound\<close> below only
-  supplies the compiled-input and solver facts.\<close>
-
-interpretation twice_ex_reg:
-  unit_dg_exec_analysis twice_gs
-    "ivl_tf_for twice_gs" "ivl_tf_st_for twice_gs" "ivl_enter_st_for twice_gs"
-    "TD_side_warrowing_apinis_Interp.solve" "TD_side_warrowing_apinis_Interp.solve_c"
-proof -
-  interpret twice_transfer: sound_transfer_for twice_gs "ivl_tf_for twice_gs"
-    by (rule ivl_is_sound_transfer_for)
-  show "unit_dg_exec_analysis twice_gs (ivl_tf_for twice_gs) (ivl_tf_st_for twice_gs)
-          (ivl_enter_st_for twice_gs)
-          TD_side_warrowing_apinis_Interp.solve TD_side_warrowing_apinis_Interp.solve_c"
-    by unfold_locales
-       (rule twice_reserved
-             twice_transfer.tf_sound_assign_for twice_transfer.tf_sound_special_for
-             twice_transfer.tf_sound_branch_for
-             twice_transfer.tf_sound_enter_for twice_transfer.tf_sound_combine_env_for
-             ivl_tf_st_for_commute[folded fun_of_exec_dg_st_for_def]
-             ivl_enter_st_for_commute[folded fun_of_exec_dg_st_for_def]
-             action_reduces.ret_none[OF ivl_tf_st_for_reduces]
-             action_reduces.ret_some[OF ivl_tf_st_for_reduces]
-             action_reduces.check[OF ivl_tf_st_for_reduces]
-             TD_side_warrowing_apinis_Interp.part_post_solution_of_solve_c)+
-qed
 
 subsection \<open>Source-level soundness\<close>
 
@@ -274,22 +238,21 @@ theorem twice_source_run_sound:
   assumes run: "star (pstep twice_gs twice_pi) (twice_main, s, []) src'"
       and init: "s \<in> cinit_stores twice_gs"
   shows "\<exists>v t stk. csim twice_pi twice_cfg src' (v, t, stk)
-                   \<and> t \<in> twice_ex_reg.gamma (snd twice_sol) v"
+                   \<and> t \<in> twice_ex_reg.gamma (fst twice_sol) (snd twice_sol) v"
 proof -
   obtain residual t frs where src': "src' = (residual, t, frs)" by (cases src')
   have run': "star (pstep twice_gs twice_pi) (main_body twice_pi, s, []) (residual, t, frs)"
     using run[unfolded src'] by simp
   have cert:
     "\<exists>v stk. csim twice_pi twice_cfg (residual, t, frs) (v, t, stk)
-       \<and> t \<in> twice_ex_reg.gamma (snd twice_sol) v"
+       \<and> t \<in> twice_ex_reg.gamma (fst twice_sol) (snd twice_sol) v"
     unfolding twice_cfg_def twice_sol_def twice_eqs_def
     by (rule twice_ex_reg.run_source_sound
           [OF twice_terminates_c[unfolded twice_eqs_def twice_cfg_def]
               twice_wf
               twice_vars_cover[unfolded twice_sol_def twice_eqs_def twice_cfg_def]
               twice_finE[unfolded twice_cfg_def]
-              twice_finC[unfolded twice_cfg_def]
-              twice_sound0[folded gamma_unit_def]
+              twice_sound0[folded gamma_ownership_split_def, folded twice_ex_reg.gamma_ownership_split_exec_def]
               init run'])
   show ?thesis using cert src' by blast
 qed
@@ -307,7 +270,8 @@ text \<open>
 \<close>
 
 definition twice_graph_config ::
-  "(unit, unit, (ivl exec_dg_st, ivl exec_dg_st) dg_state, ivl exec_dg_st) analysis_graph_config" where
+  "(unit, (unit, unit) routed_gk, (ivl exec_dg_st, ivl exec_dg_st) dg_state, ivl exec_dg_st)
+     analysis_graph_config" where
   "twice_graph_config =
     \<lparr> local_of = locals,
       route = (\<lambda>_ _ _ _. Some ()),
@@ -327,8 +291,8 @@ definition twice_graph_config ::
         if twice_lookup d ret = ivl_top then []
         else [''ret='' @ string_of_ivl (twice_lookup d ret)]),
       show_global = (\<lambda>_ vars s. [''(none)'']),
-      show_global_key = (\<lambda>_. ''Global''),
-      is_shared_global = (\<lambda>_. True),
+      show_global_key = (\<lambda>k. case k of Analysis_Global _ \<Rightarrow> ''Global'' | Activation_Seed _ _ \<Rightarrow> ''Seed''),
+      is_shared_global = (\<lambda>k. case k of Analysis_Global _ \<Rightarrow> True | Activation_Seed _ _ \<Rightarrow> False),
       show_internal_globals = False,
       owner_of = String.explode o compiled_owner_of twice_pi twice_procs,
       cluster_label = (\<lambda>owner _. owner @ '' / context=unit''),
@@ -336,14 +300,15 @@ definition twice_graph_config ::
       node_annotation = (\<lambda>_ _. None)
     \<rparr>"
 
-definition twice_graph_domain :: "(pp \<times> unit + unit) list" where
+definition twice_graph_domain :: "(pp \<times> unit + (unit, unit) routed_gk) list" where
   "twice_graph_domain =
     contextual_graph_domain twice_cfg (\<lambda>_. [()])"
 
 definition twice_dot :: String.literal where
   "twice_dot =
      String.implode
-       (case TD_side_warrowing_apinis_Interp_solve_c twice_eqs (cfg_exit twice_cfg, ()) of
+       (case TD_side_seed_join_warrowing_Interp_solve_c is_activation_seed twice_eqs
+               (cfg_exit twice_cfg, ()) of
           None \<Rightarrow> ''solver did not terminate''
         | Some sol \<Rightarrow> contextual_analysis_dot twice_graph_config twice_cfg
             twice_graph_domain (snd sol))"
