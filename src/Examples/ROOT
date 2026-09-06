@@ -19,26 +19,24 @@ session Voblint_Examples in "." = "Voblint_CLI" +
   theories
     (* CFG: cross-cutting compiler/collecting-semantics support and regressions *)
     Example_Inc_Proc
-    Example_Compile_Baseline
     Example_Compile_Call_Free
     Example_Compile_Regression
     Example_Control_Simulation_Regression
     Example_LTR_Collect_Regression
-    Example_Proc_Recursion_CFG
     Example_VIMP_Proc_Regression
+    Example_Analysis_Dispatch_Regression
+    Example_Analysis_Result_Regression
+    Example_Min_Max_Regression
 
     (* Sign *)
     Exec_Sign_DG_Run
     (* Check discharge against a computed post-solution, store-only. *)
     Example_Checks_Store_Only
     Example_Side_Execute
-    Example_Side_Proc_Global
-    Example_Side_Branch_Calls
     Example_Sign_DG_Custom_Body
     Example_Sign_DG_Custom_Combine
     Example_Sign_DG_CallString_K1
     Example_Sign_DG_CallString_K2
-    Example_Sign_DG_EntryState_Result_Regression
     Example_Sign_Backward_Pollution_Regression
     Example_Sign_DG_Overlapping_Enter
 
@@ -46,8 +44,6 @@ session Voblint_Examples in "." = "Voblint_CLI" +
     Exec_Interval_Run
     (* The Interval analogue, inside a two-sided bound guard. *)
     Example_Interval_Checks_Store_Only
-    Example_Interval_Global_Declaration
-    Example_Interval_Global_Sequential_Precision
     (* An activation seed carrying every entered state of one recursive
        callee: the seed is joined, never widened, and the callee's entry
        unknown is exactly what the seed holds. *)
@@ -88,10 +84,7 @@ session Voblint_Examples in "." = "Voblint_CLI" +
     Example_Int_Transfer
     Exec_Int_DG_Run
     Example_Relational_DG_Demo
-    Example_Analysis_Dispatch_Regression
-    Example_Min_Max_Regression
     Example_Int_Refinement_Mode_Regression
-    Example_Analysis_Result_Regression
 
     (* Solver, domain-independent *)
     Example_Strategy_Tree

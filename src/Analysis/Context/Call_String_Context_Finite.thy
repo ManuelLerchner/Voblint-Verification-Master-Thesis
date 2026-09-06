@@ -60,7 +60,7 @@ qed
 text \<open>
   The seed-key space follows the same shape: one \<^const>\<open>Global\<close> slot plus one \<^const>\<open>Seed\<close>
   slot per (callee-entry node, call-string) pair. \<open>seed_pp\<close> ranges over \<^typ>\<open>pp\<close>, which is
-  \<^typ>\<open>cfg_node\<close> (\<^theory>\<open>Voblint_Domain.Abstract_Domain\<close>) -- a call-string seed is keyed by the
+  \<^typ>\<open>cfg_node\<close> (\<^theory>\<open>Voblint_CFG.CFG_Def\<close>) -- a call-string seed is keyed by the
   callee's \<^const>\<open>FunctionEntry\<close> node, not the raw procedure name -- so this reuses
   \<open>cfg_nodes_finite\<close> again rather than needing a separate finiteness fact about \<open>ps\<close>.
 \<close>

@@ -48,12 +48,9 @@ theory Voblint
     Example_Interval_Source_Ctx
     Example_Inc_Proc
     Example_Side_Execute
-    Example_Side_Branch_Calls
-    Example_Side_Proc_Global
     Example_Proc_Call
     Example_Interval_Loop_Coverage
     Example_Guard_Refinement
-    Example_Random_Sign_Showcase
     Example_Relational_DG_Demo
     Example_Strategy_Tree
     "Voblint_CLI.Sign_Entry"
@@ -309,20 +306,9 @@ text \<open>
       \<^term>\<open>SPos\<close> alone classifies \<^term>\<open>Check_Unknown\<close>.
     \<^item> @{theory Voblint_Examples.Example_Inc_Proc} --- shared global-increment procedure witness.
     \<^item> @{theory Voblint_Examples.Example_Side_Execute} --- minimal certified Sign IP example with annotated CFG DOT.
-    \<^item> @{theory Voblint_Examples.Example_Side_Branch_Calls} --- branching procedure called twice; flow-sensitive locals, flow-insensitive globals.
-    \<^item> @{theory Voblint_Examples.Example_Side_Proc_Global} --- Sign IP analysis on the shared global-increment call.
-    \<^item> @{theory Voblint_Examples.Example_Proc_Call} --- concrete-semantics witness for \<^verbatim>\<open>inc\<close> and \<^verbatim>\<open>sqr\<close> procedures communicating through a global, and their compiled interprocedural CFG; a certified Sign analysis of a shared-global increment call is @{theory Voblint_Examples.Example_Side_Proc_Global}.
+    \<^item> @{theory Voblint_Examples.Example_Proc_Call} --- concrete-semantics witness for \<^verbatim>\<open>inc\<close> and \<^verbatim>\<open>sqr\<close> procedures communicating through a global, and their compiled interprocedural CFG; a Sign analysis of the same shared-global increment call is \<^verbatim>\<open>tests/regression/07-sign-precision/precision/10-single_call_global_increment.vimp\<close>.
     \<^item> @{theory Voblint_Examples.Example_Interval_Loop_Coverage} --- backward guard-refinement precision witness for a bounded loop's body entry; the certified computed bound at the loop head is @{text "Exec_Interval_Run"}'s.
     \<^item> @{theory Voblint_Examples.Example_Guard_Refinement} --- backward guard refinement precision witness.
-    \<^item> @{theory Voblint_Examples.Example_Random_Sign_Showcase} --- a nondeterministic
-      \<open>x := __voblint_nondet_int()\<close>, closed end to end: \<^const>\<open>special_sign\<close> forgets \<open>x\<close> to \<^term>\<open>STop\<close>, a
-      guard on \<open>x\<close> narrows each branch, and the branches join to \<^term>\<open>SNonNeg\<close> rather than
-      \<^term>\<open>STop\<close>. Computed by \<^const>\<open>analyse_sign_result_for\<close> and the vendored TD solver, not asserted
-      by hand; \<open>random_guard_exit_sound\<close> over-approximates every reachable exit state and
-      \<open>random_guard_exit_y_nonneg\<close> closes the \<open>y \<ge> 0\<close> claim there.
-      \<open>random_guard_run_42\<close> is a non-vacuity witness at the source semantics: fixing the
-      random draw at \<open>v = 42\<close>, \<^const>\<open>pcompletes\<close> derives an actual terminating run
-      reaching \<open>y = 42\<close>.
     \<^item> @{theory Voblint_Examples.Example_Interval_DG_CallString_K1} --- the \<open>nest\<close> program,
       computed and certified at a 1-call-string context
       (\<^verbatim>\<open>nest_1_activation_collect_sound\<close>): \<open>main\<close> calls \<open>f\<close> from two sites and \<open>f\<close>
@@ -369,9 +355,7 @@ text \<open>
     \<^item> \<^bold>\<open>Related demo:\<close> @{theory Voblint_Examples.Example_Strategy_Tree} ---
       \<^type>\<open>strategy_tree\<close> as a small dependency/effect language on its own,
       independent of any abstract domain, built directly from \<^const>\<open>QueryL\<close>/
-      \<^const>\<open>Side\<close>/\<^const>\<open>Answer\<close>; \<open>Example_Strategy_Tree_Program\<close>
-      builds the identical tree through \<open>strategy_program\<close>'s typed \<open>do\<close> combinators
-      and proves the two coincide.
+      \<^const>\<open>Side\<close>/\<^const>\<open>Answer\<close>.
 
   \<^bold>\<open>9. Executable code generation.\<close> A runtime-program entry point per domain,
     reusing the exact native D/G pipeline behind \<open>4b\<close>/\<open>5\<close> above rather than a

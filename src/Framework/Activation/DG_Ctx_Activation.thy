@@ -1,5 +1,5 @@
 theory DG_Ctx_Activation
-  imports DG_Spec_Sound DG_Keyed_Generator State_Restriction
+  imports DG_Spec_Sound DG_Keyed_Generator
     "Voblint_Domain.Nonrelational_State" "Voblint_Solver.Strategy_Tree_Post_Solution"
 begin
 

@@ -1,0 +1,167 @@
+// PARAM: --analysis interval --context entry-state --context-graph expanded
+// Recursive sibling of 05-expanded_mixed_dead_live_check.vimp: instead of two
+// call sites entering the same procedure under different contexts, one
+// recursive call site (f's own call to itself) enters f under a fresh
+// entry-state context at every depth, so f/[1] (the base case, live) and
+// f/[3], f/[2] (both take the recursive branch, so the base check is dead
+// there) coexist as three separate clusters despite sharing one textual call
+// site. The dead activations' own would-be recursive call at n=1 never fires
+// (the base case returns instead of recursing), so no fourth, all-bottom
+// context is ever created or drawn -- partial routing at a *recursive* call
+// site, complementing 09-expanded_dead_route.vimp's non-recursive one.
+// EXPECT-GRAPH-BEGIN
+// clusters:
+//   cluster_ctx_0:
+//     main_pp8_ctx0
+//     main_result_main_ctx0
+//     main_entry_main_ctx0
+//     main_pp6_ctx0
+//     main_pp7_ctx0
+//   cluster_ctx_1:
+//     f_pp1_ctx1
+//     f_pp2_ctx1
+//     f_pp0_ctx1
+//     f_pp3_ctx1
+//     f_pp4_ctx1
+//     f_entry_f_ctx1
+//     f_result_f_ctx1
+//   cluster_ctx_2:
+//     f_pp1_ctx2
+//     f_pp2_ctx2
+//     f_pp0_ctx2
+//     f_pp3_ctx2
+//     f_pp4_ctx2
+//     f_entry_f_ctx2
+//     f_result_f_ctx2
+//   cluster_ctx_3:
+//     f_pp1_ctx3
+//     f_pp2_ctx3
+//     f_pp0_ctx3
+//     f_pp3_ctx3
+//     f_pp4_ctx3
+//     f_entry_f_ctx3
+//     f_result_f_ctx3
+//
+// nodes:
+//   f_pp1_ctx1: pp1
+//       n=[1,1]
+//       r=[-inf,+inf]
+//       check n==1
+//   f_pp1_ctx2: pp1
+//       unreachable
+//       check n==1 [dead]
+//   f_pp1_ctx3: pp1
+//       unreachable
+//       check n==1 [dead]
+//   f_pp2_ctx1: pp2
+//       n=[1,1]
+//       r=[-inf,+inf]
+//   f_pp2_ctx2: pp2
+//       unreachable
+//   f_pp2_ctx3: pp2
+//       unreachable
+//   main_pp8_ctx0: pp8
+//       a=[6,6]
+//   main_result_main_ctx0: exit_main
+//       a=[6,6]
+//   f_pp0_ctx1: pp0
+//       n=[1,1]
+//       r=[-inf,+inf]
+//   f_pp0_ctx2: pp0
+//       n=[2,2]
+//       r=[-inf,+inf]
+//   f_pp0_ctx3: pp0
+//       n=[3,3]
+//       r=[-inf,+inf]
+//   main_entry_main_ctx0: entry_main
+//       a=[-inf,+inf]
+//   f_pp3_ctx1: pp3
+//       unreachable
+//   f_pp3_ctx2: pp3
+//       n=[2,2]
+//       r=[-inf,+inf]
+//   f_pp3_ctx3: pp3
+//       n=[3,3]
+//       r=[-inf,+inf]
+//   f_pp4_ctx1: pp4
+//       unreachable
+//   f_pp4_ctx2: pp4
+//       n=[2,2]
+//       r=[1,1]
+//   f_pp4_ctx3: pp4
+//       n=[3,3]
+//       r=[2,2]
+//   main_pp6_ctx0: pp6
+//       a=[-inf,+inf]
+//   f_entry_f_ctx1: entry_f
+//       n=[1,1]
+//       r=[-inf,+inf]
+//   f_entry_f_ctx2: entry_f
+//       n=[2,2]
+//       r=[-inf,+inf]
+//   f_entry_f_ctx3: entry_f
+//       n=[3,3]
+//       r=[-inf,+inf]
+//   main_pp7_ctx0: pp7
+//       a=[6,6]
+//       check a==6
+//   f_result_f_ctx1: exit_f
+//       n=[1,1]
+//       r=[-inf,+inf]
+//       ret=[1,1]
+//   f_result_f_ctx2: exit_f
+//       n=[2,2]
+//       r=[1,1]
+//       ret=[2,2]
+//   f_result_f_ctx3: exit_f
+//       n=[3,3]
+//       r=[2,2]
+//       ret=[6,6]
+//
+// edges:
+//   f_pp1_ctx1 -> f_pp2_ctx1: check(n==1)
+//   f_pp1_ctx2 -> f_pp2_ctx2: check(n==1)
+//   f_pp1_ctx3 -> f_pp2_ctx3: check(n==1)
+//   f_pp2_ctx1 -> f_result_f_ctx1: return 1
+//   f_pp2_ctx2 -> f_result_f_ctx2: return 1
+//   f_pp2_ctx3 -> f_result_f_ctx3: return 1
+//   main_pp8_ctx0 -> main_result_main_ctx0: terminate
+//   f_pp0_ctx1 -> f_pp1_ctx1: n<2
+//   f_pp0_ctx1 -> f_pp3_ctx1: not (n<2)
+//   f_pp0_ctx2 -> f_pp1_ctx2: n<2
+//   f_pp0_ctx2 -> f_pp3_ctx2: not (n<2)
+//   f_pp0_ctx3 -> f_pp1_ctx3: n<2
+//   f_pp0_ctx3 -> f_pp3_ctx3: not (n<2)
+//   main_entry_main_ctx0 -> main_pp6_ctx0: body(main)
+//   f_pp4_ctx1 -> f_result_f_ctx1: return n*r
+//   f_pp4_ctx2 -> f_result_f_ctx2: return n*r
+//   f_pp4_ctx3 -> f_result_f_ctx3: return n*r
+//   f_entry_f_ctx1 -> f_pp0_ctx1: body(f)
+//   f_entry_f_ctx2 -> f_pp0_ctx2: body(f)
+//   f_entry_f_ctx3 -> f_pp0_ctx3: body(f)
+//   main_pp7_ctx0 -> main_pp8_ctx0: check(a==6)
+//   f_pp3_ctx2 -> f_entry_f_ctx1: enter f(n-1)
+//   f_pp3_ctx3 -> f_entry_f_ctx2: enter f(n-1)
+//   main_pp6_ctx0 -> f_entry_f_ctx3: enter f(3)
+//   f_result_f_ctx1 -> f_pp4_ctx2: combine r := #ret
+//   f_result_f_ctx2 -> f_pp4_ctx3: combine r := #ret
+//   f_result_f_ctx3 -> main_pp7_ctx0: combine a := #ret
+//   f_pp3_ctx1 -> f_pp4_ctx1: call-to-return f
+//   f_pp3_ctx2 -> f_pp4_ctx2: call-to-return f
+//   f_pp3_ctx3 -> f_pp4_ctx3: call-to-return f
+//   main_pp6_ctx0 -> main_pp7_ctx0: call-to-return f
+// EXPECT-GRAPH-END
+
+void f(n) {
+  if (n < 2) {
+    __voblint_check(n == 1); // PROVED (ctx [1] live; ctx [2]/[3] dead, the aggregation identity)
+    return 1
+  } else {
+    r := f(n - 1);
+    return n * r
+  }
+}
+void main() {
+  a := f(3);
+  __voblint_check(a == 6) // PROVED
+}

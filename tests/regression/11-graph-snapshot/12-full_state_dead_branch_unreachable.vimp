@@ -1,0 +1,61 @@
+// PARAM: --analysis interval --dot-full
+// Monovariant counterpart of 06-reachability/precision/06-unreachable_dead_
+// branch_entry_state.vimp: the same infeasible branch, rendered through the
+// context-insensitive full-state graph (no --context flag) instead of the
+// entry-state contextual one. analyse_point_env_for's own unreachable point
+// must render as "unreachable" here too, not as an ordinary state box whose
+// every variable happens to read the empty interval [+inf,-inf] -- the same
+// live-looking-dead-code failure mode the entry-state fixture guards against,
+// now pinned for the monovariant renderer that draws one physical node per
+// pp with no per-context split at all.
+// EXPECT-GRAPH-BEGIN
+// clusters:
+//   cluster_ctx_0:
+//     main_pp1_ctx0
+//     main_pp2_ctx0
+//     main_pp3_ctx0
+//     main_pp4_ctx0
+//     main_result_main_ctx0
+//     main_entry_main_ctx0
+//     main_pp0_ctx0
+//
+// nodes:
+//   main_pp1_ctx0: pp1
+//       #ret=[-inf,+inf]
+//       x=[5,5]
+//   main_pp2_ctx0: pp2
+//       unreachable
+//   main_pp3_ctx0: pp3
+//       #ret=[-inf,+inf]
+//       x=[5,5]
+//   main_pp4_ctx0: pp4
+//       #ret=[-inf,+inf]
+//       x=[5,5]
+//   main_result_main_ctx0: exit_main
+//       #ret=[-inf,+inf]
+//       x=[5,5]
+//   main_entry_main_ctx0: entry_main
+//       #ret=[-inf,+inf]
+//       x=[-inf,+inf]
+//   main_pp0_ctx0: pp0
+//       #ret=[-inf,+inf]
+//       x=[-inf,+inf]
+//
+// edges:
+//   main_pp1_ctx0 -> main_pp2_ctx0: x<2
+//   main_pp1_ctx0 -> main_pp3_ctx0: not (x<2)
+//   main_pp2_ctx0 -> main_pp4_ctx0: check(x==99)
+//   main_pp3_ctx0 -> main_pp4_ctx0: check(x==5)
+//   main_pp4_ctx0 -> main_result_main_ctx0: terminate
+//   main_entry_main_ctx0 -> main_pp0_ctx0: body(main)
+//   main_pp0_ctx0 -> main_pp1_ctx0: x := 5
+// EXPECT-GRAPH-END
+
+void main() {
+  x := 5;
+  if (x < 2) {
+    __voblint_check(x == 99) // NOWARN (unreachable)
+  } else {
+    __voblint_check(x == 5) // PROVED
+  }
+}

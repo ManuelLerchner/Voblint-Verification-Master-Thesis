@@ -1,5 +1,5 @@
 theory Residual_Location
-  imports VIMP_Proc_to_CFG "Voblint_CFG.CFG_Transfer"
+  imports VIMP_Proc_to_CFG
 begin
 
 section \<open>Where a partly executed command sits in the graph\<close>

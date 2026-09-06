@@ -1,0 +1,39 @@
+// PARAM: --analysis sign
+// Procedure compute branches on a global input and is called twice from
+// main with opposite-sign inputs, followed by an arithmetic use of the
+// result. Language has no '/', so 100 / result is written as 100 * result.
+//
+// input is written 5 then -3 across the two calls: SPos join SNeg = STop,
+// so no single sign covers both writes -- UNKNOWN is the correct answer for
+// input, not a limitation.
+//
+// result is SPos regardless: both branches of compute assign a positive
+// local (1+1 and 1+2) to result, and every path to the check has run
+// compute at least once, so the zero seed is not live there. Exact, and
+// strong enough to certify result != 0 -- the fact a division such as
+// 100 / result would need. out is then SPos * SPos = SPos, and r (a local
+// call counter: 0 then two increments) is also SPos, both exact.
+global input, result, out;
+void compute() {
+  local := 1;
+  if (0 < input) {
+    local := local + 1
+  } else {
+    local := local + 2
+  };
+  result := local
+}
+void main() {
+  r := 0;
+  input := 5;
+  compute();
+  r := r + 1;
+  input := 0 - 3;
+  compute();
+  r := r + 1;
+  out := 100 * result;
+  __voblint_check(0 < input); // UNKNOWN
+  __voblint_check(0 < result); // PROVED
+  __voblint_check(0 < out); // PROVED
+  __voblint_check(0 < r) // PROVED
+}

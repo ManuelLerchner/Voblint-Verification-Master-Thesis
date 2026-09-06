@@ -19,7 +19,15 @@ text \<open>
   \<open>Interval_Special\<close>/\<open>Parity_Special\<close>), not a flagship precision showcase.
 \<close>
 
-subsection \<open>Sign and Interval: min/max of a positive and a negative constant\<close>
+subsection \<open>The demo program\<close>
+
+text \<open>
+  The Sign and Interval verdicts on this program (\<open>z < 0\<close>/\<open>0 < w\<close>, both proved) are
+  covered CLI-observably by \<^verbatim>\<open>tests/regression/14-min-max/precision/01-min_max_interval.vimp\<close>
+  and \<^verbatim>\<open>02-min_max_sign.vimp\<close>. What stays here is the parity claim below, which no
+  boolean check can express, and the wrong-arity rejection, which is a well-formedness
+  fact rather than an analysis verdict.
+\<close>
 
 definition min_max_demo_prog :: imp_prog where
   "min_max_demo_prog =
@@ -33,18 +41,6 @@ definition min_max_demo_prog :: imp_prog where
          __voblint_check(0 < w)
        }
      }"
-
-lemma min_max_demo_sign_precise:
-  "analyse Sign_Analysis min_max_demo_prog =
-     [(Statement 4, Less (V (STR ''z'')) (N 0), Check_Proved),
-      (Statement 5, Less (N 0) (V (STR ''w'')), Check_Proved)]"
-  by eval
-
-lemma min_max_demo_interval_precise:
-  "analyse Interval_Analysis min_max_demo_prog =
-     [(Statement 4, Less (V (STR ''z'')) (N 0), Check_Proved),
-      (Statement 5, Less (N 0) (V (STR ''w'')), Check_Proved)]"
-  by eval
 
 subsection \<open>Parity: min/max of two odd constants stays odd, not top\<close>
 

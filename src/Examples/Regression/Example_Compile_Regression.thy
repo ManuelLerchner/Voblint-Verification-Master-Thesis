@@ -185,4 +185,25 @@ lemma missing_main_rejected:
 lemma duplicate_procedure_names_rejected:
   "~ wf_compile_input cr_gs \<Pi> [p, p]"
   by (simp add: wf_compile_input_def)
+
+text \<open>\<^const>\<open>Restore\<close> and \<^const>\<open>Unwind\<close> cannot occur in a compiled program: the compiler
+  input contract excludes them through \<^const>\<open>source_com\<close>.  The regression is the rejection
+  itself, not a compiled graph.\<close>
+
+lemma restore_not_source: "\<not> source_com Restore"
+  by simp
+
+lemma unwind_not_source: "\<not> source_com Unwind"
+  by simp
+
+lemma restore_body_rejected:
+  "\<Pi> prog_main_name = Some \<lparr>formals = [], body = Restore\<rparr>
+     \<Longrightarrow> ~ wf_compile_input is_global \<Pi> ps"
+  by (simp add: wf_compile_input_def wf_source_program_def main_body_def)
+
+lemma unwind_body_rejected:
+  "\<Pi> prog_main_name = Some \<lparr>formals = [], body = Unwind\<rparr>
+     \<Longrightarrow> ~ wf_compile_input is_global \<Pi> ps"
+  by (simp add: wf_compile_input_def wf_source_program_def main_body_def)
+
 end
