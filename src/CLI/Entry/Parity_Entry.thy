@@ -70,12 +70,12 @@ proof -
       \<Longrightarrow> (k, c1) \<in> fst (pctx_sol pgs empty_pred (prog_table p) (prog_procs p))"
     using comb_fwd_ok unfolding sol_eq[symmetric] cfg_eq[symmetric] .
   have ltr_eq: "ltr_collect pgs (prog_cfg p) (cinit_stores pgs) v
-      = activation_collect pgs enterc_unit ()
+      = activation_collect pgs (call_context_rel_of_fun enterc_unit) ()
           (compile_prog (prog_table p) (prog_procs p)) (cinit_stores pgs) v ()"
     unfolding cfg_eq by (rule activation_collect_unit_eq_ltr_collect[symmetric])
   have s0_sound: "cinit_stores pgs \<subseteq> pctx_gamma pgs (Lifted cinit_parity_st) Bot"
     by (rule pctx_cinit_le_cinit_parity_st[OF solves' exact entry_cov' fwd_ok' call_fwd_ok' comb_fwd_ok'])
-  have node_sound: "activation_collect pgs enterc_unit ()
+  have node_sound: "activation_collect pgs (call_context_rel_of_fun enterc_unit) ()
         (compile_prog (prog_table p) (prog_procs p)) (cinit_stores pgs) v ()
       \<subseteq> \<lbrakk>case lookup_context
               (dg_analysis_adapter.analyse_result

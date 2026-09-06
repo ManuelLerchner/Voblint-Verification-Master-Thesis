@@ -66,6 +66,10 @@ abbreviation trees :: "pp \<Rightarrow> 'c
 
 subsection \<open>Post-solution elimination\<close>
 
+text \<open>The solver hypothesis, unpacked once into the two bounds every later proof uses: at a
+  covered unknown the generated right-hand side is below the stored local, and its side
+  writes are below the stored globals.  Everything downstream cites these instead of
+  \<^const>\<open>part_post_solution\<close>.\<close>
 lemma pp_eq_bound:
   "(v, ctx) \<in> vars \<Longrightarrow> eq Gen (v, ctx) sigma \<le> sigma (Inl (v, ctx))"
   using tree_covered_at_local[OF part_post_solution_imp_tree_covered_at[OF pp]]
@@ -107,6 +111,10 @@ qed
 
 subsection \<open>The entry Side wrapper only grows the sides\<close>
 
+text \<open>At the entry the generator wraps its fold in one extra \<open>Side\<close> carrying the seed
+  global, so a side read of the wrapped tree dominates the same read of the fold.  Bounds
+  proved against the fold therefore transport to \<^const>\<open>routed_node_rhs\<close> without a separate
+  entry case.\<close>
 lemma sides_fold_le_Gen:
   "sides_of_rhs (sp_compile (side_rhs_fold_dg (acc0 v) (trees v ctx))) sigma k
    \<le> sides_of_rhs (Gen (v, ctx)) sigma k"

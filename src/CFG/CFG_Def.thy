@@ -235,8 +235,29 @@ definition wf_cfg :: "cfg \<Rightarrow> bool" where
    \<and> (\<forall>u a v. (u, a, v) \<in> intra g \<longrightarrow> (\<forall>p. v \<noteq> FunctionEntry p))
    \<and> (\<forall>u e p v. (u, EA_Ret e p, v) \<in> intra g \<longrightarrow> v = FunctionResult p)"
 
+text \<open>\<open>calls_source_unique\<close> is a separate, optional side condition: one call edge per
+  call site.  \<open>wf_cfg\<close> does not include it, and the collecting semantics never needs it ---
+  both the return clause and the context semantics name an edge by its effect.  A solved
+  routed table does need it, to match the edge a return reads against the one its callee
+  was entered through; compiled programs satisfy it by construction.\<close>
+
+definition calls_source_unique :: "cfg \<Rightarrow> bool" where
+  "calls_source_unique g \<longleftrightarrow>
+     (\<forall>u ca1 ce1 af1 ca2 ce2 af2.
+        (u, ca1, ce1, af1) \<in> calls g \<longrightarrow> (u, ca2, ce2, af2) \<in> calls g
+        \<longrightarrow> ca1 = ca2 \<and> ce1 = ce2 \<and> af1 = af2)"
+
+lemma calls_source_unique_edgesD:
+  assumes "calls_source_unique g"
+    and "(u, ca1, ce1, af1) \<in> calls g" and "(u, ca2, ce2, af2) \<in> calls g"
+  shows "ca1 = ca2" and "ce1 = ce2" and "af1 = af2"
+  using assms unfolding calls_source_unique_def by blast+
+
 subsection \<open>Structural invariants\<close>
 
+text \<open>What holds of a graph's node set no matter where the graph came from: an edge's
+  endpoints are nodes, and finitely many edges give finitely many nodes.  Both are read off
+  the definition of \<open>cfg_nodes\<close>, which is why they need no well-formedness assumption.\<close>
 lemma intra_endpoints_in_nodes:
   assumes "(u, a, v) \<in> intra g"
   shows "u \<in> cfg_nodes g" and "v \<in> cfg_nodes g"

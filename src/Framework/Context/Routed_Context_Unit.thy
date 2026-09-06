@@ -26,8 +26,9 @@ subsection \<open>Unit routing\<close>
 text \<open>
   \<open>route_unit\<close> ignores every argument and always chooses the sole context \<open>()\<close>: no
   call-site history, no dependence on the caller's abstract state, no sentinel encoding.
-  \<open>enterc_unit\<close> is its trace-semantic counterpart, needed to instantiate
-  \<^locale>\<open>routed_context_base_hetero\<close>'s \<open>enterc\<close> parameter. The two are definitionally
+  \<open>enterc_unit\<close> is its trace-semantic counterpart; its graph
+  \<open>call_context_rel_of_fun enterc_unit\<close> instantiates
+  \<^locale>\<open>routed_context_base_hetero\<close>'s \<open>R\<close> parameter. The two are definitionally
   the same constant function, so \<open>routed_entry_cover\<close>'s routing agreement holds
   independently of any call edge, solved state, or concrete store.
 \<close>
@@ -60,17 +61,19 @@ subsection \<open>The unit-routed-context locale\<close>
 text \<open>
   Beyond \<^locale>\<open>dg_ctx_activation_base\<close>'s own obligations,
   \<open>routed_context_base_hetero\<close> asks for more. Fixing \<open>route := route_unit\<close> and
-  \<open>enterc := enterc_unit\<close> settles one of them and leaves the rest genuine:
+  \<open>R := call_context_rel_of_fun enterc_unit\<close> settles two of them and leaves the rest
+  genuine:
     - \<open>routed_entry_cover\<close>'s route conjunct is \<open>route_unit_enterc_unit_agree\<close>,
       unconditionally, so the obligation reduces to \<open>enter_complete\<close> --- the
       specification's own entry must still produce a covering alternative;
+    - \<open>routed_entry_total\<close> is immediate: the graph of a function is total;
     - \<open>seed_key_ne_gk0\<close> is untouched by the routing choice, so it stays a genuine
       per-\<open>seed_key\<close> obligation, not something \<open>route_unit\<close> discharges;
     - \<open>call_fwd\<close>/\<open>comb_fwd\<close> remain genuine per-instance obligations: each says the
       solved variable set covers a particular routed callee entry or return
       continuation, a property of the program and of what the solver actually explored,
       not of the routing policy. An instance supplies them; no generic argument can.
-    - \<open>call_enter_store_agree\<close> never mentioned \<open>route\<close> or \<open>ctx\<close> in the first place, so
+    - \<open>calls_unique\<close> never mentioned \<open>route\<close> or \<open>ctx\<close> in the first place, so
       it is unaffected by fixing \<open>route := route_unit\<close>.
 
   \<open>finC\<close> also stays a genuine assumption: monovariance never established \<open>calls g\<close> is
@@ -95,6 +98,7 @@ locale unit_routed_context =
     and is_bot :: "'D \<Rightarrow> bool"
     and gammaM :: "'M \<Rightarrow> store set" +
   assumes finC[intro,simp]: "finite (calls g)"
+    and calls_unique: "calls_source_unique g"
     and seed_key_ne_gk0[simp]: "\<And>p ctx. seed_key p ctx \<noteq> gk0"
     and is_bot_bot[simp]: "is_bot bot"
     and is_bot_sound: "\<And>d gv. is_bot d \<Longrightarrow> gammaDG d gv = {}"
@@ -119,11 +123,6 @@ locale unit_routed_context =
     "\<And>cl c1 dst pars args p cont.
        (cl, c1) \<in> vars \<Longrightarrow> (cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g
        \<Longrightarrow> (cont, c1) \<in> vars"
-    and call_enter_store_agree:
-    "\<And>cl s es dst pars args p cont.
-       call_enter_store gs g cl s es
-       \<Longrightarrow> (cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g
-       \<Longrightarrow> es = call_enter gs (CallEdge dst pars args) s"
 begin
 
 text \<open>
@@ -135,9 +134,12 @@ text \<open>
 \<close>
 
 sublocale routed: routed_context_base_hetero S gammaDG gs g gk0 route_unit
-  bot0 s0d s0g sigma vars x0 sg seed_key "static_resolve g" is_bot gammaM enterc_unit
+  bot0 s0d s0g sigma vars x0 sg seed_key "static_resolve g" is_bot gammaM
+  "call_context_rel_of_fun enterc_unit"
 proof unfold_locales
   show "finite (calls g)" by (rule finC)
+next
+  show "calls_source_unique g" by (rule calls_unique)
 next
   show "\<And>p ctx. seed_key p ctx \<noteq> gk0" by (rule seed_key_ne_gk0)
 next
@@ -153,12 +155,14 @@ next
                         (locals (sigma (Inl (u, ctx)))))"
     by (simp add: static_resolve_iff[OF finC])
 next
-  fix u ctx dst pars args p cont s
+  fix u ctx dst pars args p cont s ctx'
   assume covV: "(u, ctx) \<in> vars"
     and ce: "(u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
     and sin: "s \<in> gammaDG (locals (sigma (Inl (u, ctx)))) (globs (sigma (Inr gk0)))"
+    and Rc: "call_context_rel_of_fun enterc_unit u ctx (call_info_of (CallEdge dst pars args) p)
+               s (call_enter gs (CallEdge dst pars args) s) ctx'"
   obtain pairs pub deps
-    where R: "enter_runs (enter\<^sup># S (call_info_of (CallEdge dst pars args) p))
+    where Rr: "enter_runs (enter\<^sup># S (call_info_of (CallEdge dst pars args) p))
                 (mk_dg_man (locals (sigma (Inl (u, ctx)))) (\<lambda>_. gk0)) sigma pairs pub"
       and D: "enter_deps (enter\<^sup># S (call_info_of (CallEdge dst pars args) p))
                 (mk_dg_man (locals (sigma (Inl (u, ctx)))) (\<lambda>_. gk0)) sigma pairs deps"
@@ -171,9 +175,8 @@ next
       and ecov: "call_enter gs (CallEdge dst pars args) s
                    \<in> gammaDG entry (globs (sigma (Inr gk0)))"
     by (rule entry_pairs_coverE)
-  have req: "route_unit u ctx entry (CallEdge dst pars args)
-               = enterc_unit u ctx (call_enter gs (CallEdge dst pars args) s)"
-    by (rule route_unit_enterc_unit_agree)
+  have req: "route_unit u ctx entry (CallEdge dst pars args) = ctx'"
+    using Rc by simp
   show "\<exists>pairs pub deps cont' entry.
              enter_runs (enter\<^sup># S (call_info_of (CallEdge dst pars args) p))
                (mk_dg_man (locals (sigma (Inl (u, ctx)))) (\<lambda>_. gk0)) sigma pairs pub
@@ -183,21 +186,19 @@ next
            \<and> s \<in> gammaDG cont' (globs (sigma (Inr gk0)))
            \<and> call_enter gs (CallEdge dst pars args) s
                \<in> gammaDG entry (globs (sigma (Inr gk0)))
-           \<and> route_unit u ctx entry (CallEdge dst pars args)
-               = enterc_unit u ctx (call_enter gs (CallEdge dst pars args) s)
-           \<and> (FunctionEntry p, route_unit u ctx entry (CallEdge dst pars args)) \<in> vars"
-    using R D mem ccov ecov req call_fwd[OF covV ce] by simp blast
+           \<and> route_unit u ctx entry (CallEdge dst pars args) = ctx'
+           \<and> (FunctionEntry p, ctx') \<in> vars"
+    using Rr D mem ccov ecov req call_fwd[OF covV ce] by simp blast
+next
+  fix u ctx dst pars args p cont s
+  show "\<exists>ctx'. call_context_rel_of_fun enterc_unit u ctx (call_info_of (CallEdge dst pars args) p)
+                 s (call_enter gs (CallEdge dst pars args) s) ctx'"
+    by simp
 next
   fix cl c1 dst pars args p cont
   assume "(cl, c1) \<in> vars"
     and "(cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
   then show "(cont, c1) \<in> vars" by (rule comb_fwd)
-next
-  fix cl s es dst pars args p cont
-  assume "call_enter_store gs g cl s es"
-    and "(cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
-  then show "es = call_enter gs (CallEdge dst pars args) s"
-    by (rule call_enter_store_agree)
 qed
 
 text \<open>CALL and COMB at the unit instance, re-exported so a concrete instance cites
@@ -210,15 +211,15 @@ lemmas routed_context_comb = routed.routed_context_comb
 end
 
 text \<open>
-  The unit context never filters a trace: \<open>key\<close> at a \<^typ>\<open>unit\<close> result is trivially the one
-  context \<^term>\<open>()\<close>, so \<^const>\<open>activation_collect\<close>'s key conjunct holds for every trace
+  The unit context never filters a trace: every valid trace carries the one context
+  \<^term>\<open>()\<close>, so \<^const>\<open>activation_collect\<close>'s context conjunct holds for every trace
   reaching \<open>v\<close> and the two collectors coincide. Domain-generic: no domain-specific fact is
   used, so every \<^typ>\<open>unit\<close>-context routed producer (Sign, Interval, ...) cites this one
   lemma rather than re-deriving it.
 \<close>
 
 lemma activation_collect_unit_eq_ltr_collect:
-  "activation_collect gs enterc_unit () g S v () = ltr_collect gs g S v"
-  unfolding activation_collect_def ltr_collect_def by auto
+  "activation_collect gs (call_context_rel_of_fun enterc_unit) () g S v () = ltr_collect gs g S v"
+  unfolding activation_collect_of_fun ltr_collect_def by simp
 
 end

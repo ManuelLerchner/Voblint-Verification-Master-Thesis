@@ -95,7 +95,7 @@ proof -
   have s0_sound: "cinit_stores pgs \<subseteq> int_dom_gamma pgs (Lifted cinit_int_dom_st) Bot"
     by (rule int_conf_cinit_le_cinit_int_dom_st_warrow[OF solves' exact entry_cov' fwd_ok' call_fwd_ok'
                                                      comb_fwd_ok'])
-  have node_sound: "activation_collect pgs enterc_unit ()
+  have node_sound: "activation_collect pgs (call_context_rel_of_fun enterc_unit) ()
         (compile_prog (prog_table p) (prog_procs p)) (cinit_stores pgs) v ()
       \<subseteq> \<lbrakk>case lookup_context
               (dg_analysis_adapter.analyse_result
@@ -107,7 +107,7 @@ proof -
     by (rule int_conf_result_node_sound_warrow
           [OF solves' exact entry_cov' fwd_ok' call_fwd_ok' comb_fwd_ok' entry_cov' s0_sound])
   have ltr_eq: "ltr_collect pgs (prog_cfg p) (cinit_stores pgs) v
-      = activation_collect pgs enterc_unit ()
+      = activation_collect pgs (call_context_rel_of_fun enterc_unit) ()
           (compile_prog (prog_table p) (prog_procs p)) (cinit_stores pgs) v ()"
     unfolding cfg_eq by (rule activation_collect_unit_eq_ltr_collect[symmetric])
   have result_eq: "lookup_context (analyse_int_ctx_result_warrow_for mode pgs p) v ()

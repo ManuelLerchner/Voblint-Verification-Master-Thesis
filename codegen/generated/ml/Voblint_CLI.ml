@@ -304,7 +304,6 @@ module Core : sig
   val analyse_int_wpo_result :
     unit imp_prog_ext -> (unit, (string -> unit int_dom_ext)) analysis_result
   val cs_cluster_label : char list -> cfg_node list -> char list
-  val compile_program : unit imp_prog_ext -> unit cfg_ext
   val analyse_int_join_result :
     unit imp_prog_ext -> (unit, (string -> unit int_dom_ext)) analysis_result
   val analyse_int_report_join :
@@ -9841,8 +9840,6 @@ let rec cs_cluster_label
                char_0x6C; char_0x2D; char_0x73; char_0x74; char_0x72; char_0x69;
                char_0x6E; char_0x67; char_0x3D] @
                cs_show_context ctx);;
-
-let rec compile_program p = compile_prog (prog_table p) (prog_procs p);;
 
 let rec procs_stmt_next
   pi x1 n = match pi, x1, n with pi, [], n -> n

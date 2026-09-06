@@ -151,6 +151,11 @@ end
 
 subsection \<open>Generic concretization\<close>
 
+text \<open>Reading a lifted value back: \<^term>\<open>Bot\<close> denotes no state at all, so it concretizes to
+  the empty set rather than to whatever the underlying domain's own bottom denotes.  That
+  difference is the whole point of the lift -- an unreachable point and a point whose every
+  coordinate is bottom are distinguishable here, and only the former is empty by
+  construction.\<close>
 definition gamma_lift :: "('a \<Rightarrow> 'b set) \<Rightarrow> 'a lifted \<Rightarrow> 'b set" where
   "gamma_lift gam x = (case x of Bot \<Rightarrow> {} | Lifted a \<Rightarrow> gam a)"
 
@@ -376,7 +381,8 @@ lemma transfer_lift2_Lifted [simp]:
 text \<open>
   \<open>normalized_lift\<close> names the discipline every solver-facing lifted value is meant to
   keep: \<^const>\<open>Bot\<close> is the \<^emph>\<open>sole\<close> representation this construction lets a caller-supplied
-  \<open>empty_pred\<close> classification collapse to -- a \<^const>\<open>Lifted\<close> payload \<open>empty_pred\<close> still calls bottom is a
+  \<open>empty_pred\<close> classification collapse to -- a \<^const>\<open>Lifted\<close> payload \<open>empty_pred\<close> still
+  calls bottom is a
   representation the framework never lets escape a value-producing step, not a second,
   competing way to say the same thing. \<open>normalize_lift\<close>'s own \<open>if\<close> makes every one of
   its outputs self-normalized: the \<^const>\<open>Lifted\<close> branch only fires when \<open>empty_pred\<close>
@@ -510,7 +516,8 @@ lemma transfer_lift2_mono:
     and lex: "x1 \<le> x2" and ley: "y1 \<le> y2"
   shows "transfer_lift2 empty_pred f x1 y1
            \<le> (transfer_lift2 empty_pred f x2 y2 :: 'c::semilattice_sup lifted)"
-  using assms by (cases x1; cases x2; cases y1; cases y2) (auto intro: normalize_lift_mono f_mono bot_mono)
+  using assms by (cases x1; cases x2; cases y1; cases y2)
+     (auto intro: normalize_lift_mono f_mono bot_mono)
 
 text \<open>
   \<open>bind_lift\<close>'s own monotonicity: a monotone step function carried through

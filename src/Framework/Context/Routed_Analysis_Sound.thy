@@ -53,7 +53,7 @@ subsection \<open>The composition locale\<close>
 text \<open>
   Everything a routed analysis needs above its solved system, in one place: the
   domain enters through \<open>S\<close> and \<open>gammaDG\<close>, the context policy through \<open>route\<close>,
-  \<open>enterc\<close> and \<open>seed_key\<close>, and the solved system through \<open>sigma\<close>/\<open>vars\<close>. The
+  \<open>R\<close> and \<open>seed_key\<close>, and the solved system through \<open>sigma\<close>/\<open>vars\<close>. The
   reader is no longer an instance's own definition -- it is
   \<^const>\<open>solved_local_reader\<close> -- so its two coverage obligations are the
   one-line lemmas above rather than a per-instance proof.
@@ -66,7 +66,7 @@ text \<open>
 locale routed_analysis_sound =
   dg_analysis_adapter S gammaDG gs g gk0 route bot0 s0d s0g sigma vars x0
     "solved_local_reader vars sigma" seed_key is_bot "\<lambda>d. gamma_state_lift (rd d)"
-    enterc rd classify
+    R rd classify
   for S :: "(pp \<times> 'c, 'k, unit, 'D::bounded_semilattice_sup_bot,
               'G::bounded_semilattice_sup_bot) dg_spec"
     and gammaDG :: "'D \<Rightarrow> 'G \<Rightarrow> store set"
@@ -79,7 +79,7 @@ locale routed_analysis_sound =
     and x0 :: "pp \<times> 'c"
     and seed_key :: "pp \<Rightarrow> 'c \<Rightarrow> 'k"
     and is_bot :: "'D \<Rightarrow> bool"
-    and enterc :: "cfg_node \<Rightarrow> 'c \<Rightarrow> store \<Rightarrow> 'c"
+    and R :: "'c call_context_rel"
     and rd :: "'D \<Rightarrow> 'a::sound_domain abs_state lifted"
     and classify :: "exp \<Rightarrow> 'a abs_state \<Rightarrow> check_result"
 begin

@@ -39,7 +39,7 @@ text \<open>
 
 locale dg_analysis_adapter =
   routed_context_base_hetero S gammaDG gs g gk0 route bot0 s0d s0g sigma vars x0 sg seed_key
-    "static_resolve g" is_bot gammaM enterc
+    "static_resolve g" is_bot gammaM R
   for S :: "(pp \<times> 'c, 'k, unit, 'D::bounded_semilattice_sup_bot,
               'G::bounded_semilattice_sup_bot) dg_spec"
     and gammaDG :: "'D \<Rightarrow> 'G \<Rightarrow> store set"
@@ -54,7 +54,7 @@ locale dg_analysis_adapter =
     and seed_key :: "pp \<Rightarrow> 'c \<Rightarrow> 'k"
     and is_bot :: "'D \<Rightarrow> bool"
     and gammaM :: "'M \<Rightarrow> store set"
-    and enterc :: "cfg_node \<Rightarrow> 'c \<Rightarrow> store \<Rightarrow> 'c" +
+    and R :: "'c call_context_rel" +
   fixes rd :: "'D \<Rightarrow> 'a::sound_domain abs_state lifted"
     and classify :: "exp \<Rightarrow> 'a abs_state \<Rightarrow> check_result"
   assumes gammaDG_rd: "\<And>d g'. gammaDG d g' = gamma_state_lift (rd d)"
@@ -164,14 +164,14 @@ text \<open>
 \<close>
 
 lemma analyse_result_node_sound:
-  fixes S0 :: "store set" and initial_ctx :: 'c
-  assumes entry_cov: "(cfg_entry g, initial_ctx) \<in> vars"
+  fixes S0 :: "store set" and startcontext :: 'c
+  assumes entry_cov: "(cfg_entry g, startcontext) \<in> vars"
     and s0_sound: "S0 \<subseteq> gammaDG s0d s0g"
-  shows "activation_collect gs enterc initial_ctx g S0 v ctx
+  shows "activation_collect gs R startcontext g S0 v ctx
            \<subseteq> \<lbrakk>case lookup_context analyse_result v ctx of
                              Bot \<Rightarrow> bot | Lifted st \<Rightarrow> st\<rbrakk>"
 proof -
-  have "activation_collect gs enterc initial_ctx g S0 v ctx
+  have "activation_collect gs R startcontext g S0 v ctx
           \<subseteq> gammaM (sg (Inl (v, ctx)))"
     by (rule activation_collect_dg_sound[OF entry_cov s0_sound])
   also have "\<dots> = gamma_point (lookup_context analyse_result v ctx)"
@@ -191,13 +191,17 @@ qed
 
 subsection \<open>The context-indexed check report\<close>
 
+text \<open>The report the CLI prints, defined at the context-indexed level rather than after the
+  join: one verdict per check, aggregated over exactly the contexts the solved table covers
+  at that node.  Aggregating first would classify against a joined state and lose the
+  precision each context carries.\<close>
 definition analyse_report_ctx :: "(pp \<times> exp \<times> contextual_verdict) list" where
   "analyse_report_ctx = classify_checks_verdicts g analyse_result classify"
 
 subsection \<open>Report soundness\<close>
 
 text \<open>
-  \<open>S0\<close> and \<open>initial_ctx\<close> are the two facts genuinely external to this
+  \<open>S0\<close> and \<open>startcontext\<close> are the two facts genuinely external to this
   locale: which concrete stores the analysis actually starts from, and which
   context the solved system covers the entry point under. Every existing
   concrete instance (e.g. Interval's entry-state and call-string contexts)
@@ -215,15 +219,15 @@ text \<open>Both endpoints below reach their classifier obligation the same way,
   \<open>classify_proved\<close> or \<open>classify_refuted\<close> afterwards differs.\<close>
 
 lemma analyse_report_ctx_decided:
-  fixes S0 :: "store set" and initial_ctx :: 'c and v :: cfg_node and c :: exp
+  fixes S0 :: "store set" and startcontext :: 'c and v :: cfg_node and c :: exp
   assumes mem: "(v, c, Decided r) \<in> set analyse_report_ctx"
-    and entry_cov: "(cfg_entry g, initial_ctx) \<in> vars"
+    and entry_cov: "(cfg_entry g, startcontext) \<in> vars"
     and s0_sound: "S0 \<subseteq> gammaDG s0d s0g"
-    and smem: "s \<in> activation_collect gs enterc initial_ctx g S0 v ctx"
+    and smem: "s \<in> activation_collect gs R startcontext g S0 v ctx"
     and known: "r \<noteq> Check_Unknown"
   obtains st where "s \<in> \<lbrakk>st\<rbrakk>" and "classify c st = r"
 proof -
-  have node_sound: "activation_collect gs enterc initial_ctx g S0 v ctx
+  have node_sound: "activation_collect gs R startcontext g S0 v ctx
       \<subseteq> \<lbrakk>case lookup_context analyse_result v ctx of Bot \<Rightarrow> bot | Lifted st \<Rightarrow> st\<rbrakk>"
     by (rule analyse_result_node_sound[OF entry_cov s0_sound])
   obtain st where reach: "lookup_context analyse_result v ctx = Lifted st"
@@ -236,30 +240,30 @@ proof -
 qed
 
 theorem analyse_report_ctx_proved_sound:
-  fixes S0 :: "store set" and initial_ctx :: 'c and v :: cfg_node and c :: exp
+  fixes S0 :: "store set" and startcontext :: 'c and v :: cfg_node and c :: exp
   assumes mem: "(v, c, Decided Check_Proved) \<in> set analyse_report_ctx"
-    and entry_cov: "(cfg_entry g, initial_ctx) \<in> vars"
+    and entry_cov: "(cfg_entry g, startcontext) \<in> vars"
     and s0_sound: "S0 \<subseteq> gammaDG s0d s0g"
-  shows "\<And>ctx s. s \<in> activation_collect gs enterc initial_ctx g S0 v ctx
+  shows "\<And>ctx s. s \<in> activation_collect gs R startcontext g S0 v ctx
            \<Longrightarrow> truthy (aval c s)"
 proof -
   fix ctx s
-  assume smem: "s \<in> activation_collect gs enterc initial_ctx g S0 v ctx"
+  assume smem: "s \<in> activation_collect gs R startcontext g S0 v ctx"
   obtain st where sst: "s \<in> \<lbrakk>st\<rbrakk>" and "classify c st = Check_Proved"
     by (rule analyse_report_ctx_decided[OF mem entry_cov s0_sound smem]) simp
   thus "truthy (aval c s)" using classify_proved[OF _ sst] by blast
 qed
 
 theorem analyse_report_ctx_refuted_sound:
-  fixes S0 :: "store set" and initial_ctx :: 'c and v :: cfg_node and c :: exp
+  fixes S0 :: "store set" and startcontext :: 'c and v :: cfg_node and c :: exp
   assumes mem: "(v, c, Decided Check_Refuted) \<in> set analyse_report_ctx"
-    and entry_cov: "(cfg_entry g, initial_ctx) \<in> vars"
+    and entry_cov: "(cfg_entry g, startcontext) \<in> vars"
     and s0_sound: "S0 \<subseteq> gammaDG s0d s0g"
-  shows "\<And>ctx s. s \<in> activation_collect gs enterc initial_ctx g S0 v ctx
+  shows "\<And>ctx s. s \<in> activation_collect gs R startcontext g S0 v ctx
            \<Longrightarrow> \<not> truthy (aval c s)"
 proof -
   fix ctx s
-  assume smem: "s \<in> activation_collect gs enterc initial_ctx g S0 v ctx"
+  assume smem: "s \<in> activation_collect gs R startcontext g S0 v ctx"
   obtain st where sst: "s \<in> \<lbrakk>st\<rbrakk>" and "classify c st = Check_Refuted"
     by (rule analyse_report_ctx_decided[OF mem entry_cov s0_sound smem]) simp
   thus "\<not> truthy (aval c s)" using classify_refuted[OF _ sst] by blast

@@ -123,6 +123,10 @@ qed
 
 subsection \<open>The unlifted core\<close>
 
+text \<open>What a whole-state analysis actually supplies: eight pure operations over
+  \<^typ>\<open>'a abs_state\<close>, packaged as a \<^type>\<open>dg_spec\<close> whose enter yields the one callee state
+  and leaves the caller's own value untouched.  The global slot is never written here.  The
+  lifted sibling further down differs only in carrying the dead-code lift.\<close>
 definition local_state_dg_spec_for ::
   "(vname \<Rightarrow> bool)
    \<Rightarrow> ('a::sound_domain abs_state \<Rightarrow> 'a abs_state)
@@ -216,12 +220,11 @@ text \<open>The caller continuation and the env stage are both identities, so th
   value and the callee exit.\<close>
 
 lemma dg_spec_combine_transfer_local_state_for_lifted:
-  "dg_spec_combine_transfer (local_state_dg_spec_for_lifted gs empty_pred sk asn sp br bd rt en ev) ci
+  "dg_spec_combine_transfer
+     (local_state_dg_spec_for_lifted gs empty_pred sk asn sp br bd rt en ev) ci
      = local_combine_transfer
          (\<lambda>dc de. transfer_lift2 empty_pred (combine\<^sup># gs (ci_dst ci)) dc de)"
   by (simp add: local_state_dg_spec_for_lifted_def)
-
-subsection \<open>Packaging correspondence\<close>
 
 subsection \<open>Soundness of the lifted construction\<close>
 

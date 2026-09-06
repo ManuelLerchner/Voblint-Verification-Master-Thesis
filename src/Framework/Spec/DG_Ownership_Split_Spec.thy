@@ -443,7 +443,8 @@ text \<open>
 \<close>
 
 theorem (in sound_transfer_for) ownership_split_lift_core_sound:
-  "sound_dg_spec_core (ownership_split_lift gs (local_state_dg_spec_for gs sk asn sp br bd rt en ev))
+  "sound_dg_spec_core
+     (ownership_split_lift gs (local_state_dg_spec_for gs sk asn sp br bd rt en ev))
      (gamma_ownership_split gs) gs"
 proof (unfold_locales, goal_cases)
   case (1 d d' g g')

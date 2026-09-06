@@ -5,85 +5,32 @@ begin
 section \<open>Entry-state routing as a routed-context instance\<close>
 
 text \<open>
-  \<^locale>\<open>routed_context_base_hetero\<close> at a route that reads the entered callee state,
-  with \<open>enterc := entry_state_context_of_solution S route sigma gk0 g\<close>, over the CFG of a compiled
-  program and at whichever carrier \<open>S\<close> is stated over. The route is a parameter because
-  one policy is spelled differently per carrier: \<^const>\<open>formals_route_lifted_gen\<close>
-  projects the formals out of an abstract state, an executable instance projects them out
-  of its own quotient state. Unlike \<open>Call_String_Routed_Context\<close>'s
-  \<open>call_string_routed_context\<close>, no single seed-key datatype is shared across
-  entry-state instances: each is keyed by its own carrier's value list, so \<open>gk0\<close> and
-  \<open>seed_key\<close> stay genuine locale parameters.
+  \<^locale>\<open>routed_context_base_hetero\<close> at a route that reads the entered callee state, with
+  \<open>R := routed_entry_context_rel alts gammaDG sigma gk0 route\<close>, over the CFG of a compiled
+  program and at whichever carrier \<open>S\<close> is stated over.  The route is a parameter because one
+  policy is spelled differently per carrier: \<^const>\<open>formals_route_lifted_gen\<close> projects the
+  formals out of an abstract state, an executable instance projects them out of its own
+  quotient state.  Unlike \<open>Call_String_Routed_Context\<close>'s \<open>call_string_routed_context\<close>, no
+  single seed-key datatype is shared across entry-state instances: each is keyed by its own
+  carrier's value list, so \<open>gk0\<close> and \<open>seed_key\<close> stay genuine locale parameters.
 
-  Three of the obligations \<^locale>\<open>routed_context_base_hetero\<close> leaves are facts about
-  the routing policy or about \<^const>\<open>compile_prog\<close> alone and are discharged here once:
-  \<open>finC\<close> (\<open>compile_prog_finite\<close>), \<open>call_enter_store_agree\<close> (call-source uniqueness,
-  \<open>compile_prog_calls_source_unique\<close>) and \<open>routed_entry_cover\<close>'s routing agreement
-  (\<open>entry_state_context_of_solution_agree\<close>, generic in any \<open>route\<close> reading its caller state from
-  \<open>sigma\<close>). \<open>seed_key_ne_gk0\<close>, \<open>call_fwd\<close> and \<open>comb_fwd\<close> remain per-instance
-  assumptions: the first is datatype distinctness of the instance's seed key, the other
-  two say the solved variable set covers a routed callee entry or return continuation, a
-  property of the program together with what the solver explored.
+  The entry operation is pure: \<open>alts ci d\<close> is the list of alternatives the specification
+  answers for call \<open>ci\<close> at caller state \<open>d\<close>, and \<open>enter_pure\<close> says the specification's own
+  \<open>enter\<^sup>#\<close> is exactly that list handed to its continuation.  Everything the routed locale
+  asks about \<open>R\<close> then reduces to two facts about \<open>alts\<close>: its alternatives cover every
+  concrete call at a covered call site (\<open>enter_cover\<close>), and the solver visited the callee
+  entry at every context an alternative routes to (\<open>call_fwd\<close>).  A one-alternative
+  specification instantiates \<open>alts ci d = [(d, en ci d)]\<close>; one that splits a call into
+  several alternatives, possibly overlapping, instantiates it with the longer list and
+  nothing else changes.
+
+  Two of the routed obligations are facts about \<^const>\<open>compile_prog\<close> alone and are
+  discharged here once: \<open>finC\<close> (\<open>compile_prog_finite\<close>) and \<open>calls_unique\<close>
+  (\<open>compile_prog_calls_source_unique\<close>).  \<open>seed_key_ne_gk0\<close>, \<open>call_fwd\<close> and \<open>comb_fwd\<close>
+  remain per-instance assumptions: the first is datatype distinctness of the instance's
+  seed key, the other two say the solved variable set covers a routed callee entry or return
+  continuation, a property of the program together with what the solver explored.
 \<close>
-subsection \<open>The context a solved table induces, and its agreement with \<open>route\<close>\<close>
-
-text \<open>
-  \<open>routed_entry_cover\<close> (\<^locale>\<open>routed_context_base_hetero\<close>) asks for a trace-semantic
-  \<open>enterc\<close> agreeing with the executable \<open>route\<close> on every matched call. When \<open>route\<close>
-  is state-dependent (unlike \<open>route_unit\<close> or \<open>cs_route\<close>, both of which ignore their
-  state argument outright and so satisfy this for any \<open>enterc\<close> built the same way),
-  no decoder of the concrete entered store can serve: the analyzer picks its context
-  from an abstract entry value, and an abstract value covering the store need not
-  decode back to it.  \<open>entry_state_context_of_solution\<close> therefore ignores its store
-  argument \<open>s\<close> and reads \<open>route\<close> at the caller's own \<open>sigma\<close>-recorded local value and
-  the one \<^const>\<open>call_action_at_call_site\<close> a well-formed compiled program's call-site
-  uniqueness (\<open>compile_prog_calls_source_unique\<close>) guarantees.  That makes the context
-  induced by the solution rather than by the run --- which is why it lives here, with
-  the entry-state policy, and not in the policy-generic routed context.
-
-  \<open>entry_state_context_of_solution_agree\<close> discharges the agreement for \<^emph>\<open>any\<close>
-  \<open>route\<close>, generically: the two sides differ only in which \<^type>\<open>call_action\<close> they
-  pass to \<open>route\<close> (the matched call edge vs. \<^const>\<open>call_action_at_call_site\<close>'s own
-  read), and \<open>call_action_at_call_site_eq\<close> identifies those under the same
-  uniqueness premise.
-\<close>
-
-definition entry_state_context_of_solution ::
-  "(pp \<Rightarrow> 'c \<Rightarrow> 'D \<Rightarrow> call_action \<Rightarrow> 'c)
-     \<Rightarrow> (call_info \<Rightarrow> 'D \<Rightarrow> 'D)
-     \<Rightarrow> (pp \<times> 'c + 'k \<Rightarrow> ('D::bounded_semilattice_sup_bot,
-                            'G::bounded_semilattice_sup_bot) dg_state)
-     \<Rightarrow> cfg \<Rightarrow> cfg_node \<Rightarrow> 'c \<Rightarrow> store \<Rightarrow> 'c"
-where
-  "entry_state_context_of_solution route en sigma g u ctx s =
-     (let ca = call_action_at_call_site g u;
-          p = (case callee_entry_at_call_site g u of FunctionEntry q \<Rightarrow> q | _ \<Rightarrow> undefined)
-      in route u ctx (en (call_info_of ca p) (locals (sigma (Inl (u, ctx))))) ca)"
-
-text \<open>
-  The premise \<open>ent\<close> is the restriction, and it is deliberately explicit rather
-  than folded into the definition: this \<open>enterc\<close> can only be built where the call
-  has \<^emph>\<open>one\<close> alternative, since it must answer a single context for a concrete
-  store and several alternatives may route to several. That is exactly the case
-  every context instance in the tree is in, and stating it here keeps a
-  multi-alternative instance from silently inheriting a context function that
-  cannot describe it.
-\<close>
-
-lemma entry_state_context_of_solution_agree:
-  assumes fin: "finite (calls g)"
-    and uniq: "\<And>ca1 ce1 af1 ca2 ce2 af2.
-                 (u, ca1, ce1, af1) \<in> calls g \<Longrightarrow> (u, ca2, ce2, af2) \<in> calls g
-                 \<Longrightarrow> ca1 = ca2 \<and> ce1 = ce2 \<and> af1 = af2"
-    and ce: "(u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
-    and ent: "entry = en (call_info_of (CallEdge dst pars args) p)
-                        (locals (sigma (Inl (u, ctx))))"
-  shows "route u ctx entry (CallEdge dst pars args)
-       = entry_state_context_of_solution route en sigma g u ctx s"
-  unfolding entry_state_context_of_solution_def
-  using call_action_at_call_site_eq[OF fin uniq ce] callee_entry_at_call_site_eq[OF fin uniq ce]
-        ent
-  by (simp add: Let_def)
 
 locale entry_state_routed_context =
   dg_ctx_activation_base S gammaDG gs "compile_prog Pi ps" gk0 route
@@ -101,59 +48,46 @@ locale entry_state_routed_context =
     and seed_key :: "pp \<Rightarrow> 'c \<Rightarrow> 'k"
     and is_bot :: "'D \<Rightarrow> bool"
     and gammaM :: "'M \<Rightarrow> store set"
-    and en :: "call_info \<Rightarrow> 'D \<Rightarrow> 'D" +
+    and alts :: "call_info \<Rightarrow> 'D \<Rightarrow> 'D enter_result list" +
   assumes seed_key_ne_gk0[simp]: "\<And>p ctx. seed_key p ctx \<noteq> gk0"
     and is_bot_bot: "is_bot bot"
     and is_bot_sound: "\<And>d gv. is_bot d \<Longrightarrow> gammaDG d gv = {}"
-    and enter_singleton:
-    "\<And>u ctx dst pars args p cont.
-       (u, ctx) \<in> vars
-       \<Longrightarrow> (u, CallEdge dst pars args, FunctionEntry p, cont)
-             \<in> calls (compile_prog Pi ps)
-       \<Longrightarrow> \<exists>pub deps.
-             enter_runs (enter\<^sup># S (call_info_of (CallEdge dst pars args) p))
-               (mk_dg_man (locals (sigma (Inl (u, ctx)))) (\<lambda>_. gk0)) sigma
-               [(locals (sigma (Inl (u, ctx))),
-                 en (call_info_of (CallEdge dst pars args) p)
-                    (locals (sigma (Inl (u, ctx)))))] pub
-           \<and> enter_deps (enter\<^sup># S (call_info_of (CallEdge dst pars args) p))
-               (mk_dg_man (locals (sigma (Inl (u, ctx)))) (\<lambda>_. gk0)) sigma
-               [(locals (sigma (Inl (u, ctx))),
-                 en (call_info_of (CallEdge dst pars args) p)
-                    (locals (sigma (Inl (u, ctx)))))] deps"
-    and enter_sound_at:
+    and enter_pure: "\<And>ci. enter\<^sup># S ci = local_enter_transfer (alts ci)"
+    and enter_cover:
     "\<And>u ctx dst pars args p cont s.
        (u, ctx) \<in> vars
-       \<Longrightarrow> (u, CallEdge dst pars args, FunctionEntry p, cont)
-             \<in> calls (compile_prog Pi ps)
+       \<Longrightarrow> (u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps)
        \<Longrightarrow> s \<in> gammaDG (locals (sigma (Inl (u, ctx)))) (globs (sigma (Inr gk0)))
-       \<Longrightarrow> call_enter gs (CallEdge dst pars args) s
-             \<in> gammaDG (en (call_info_of (CallEdge dst pars args) p)
-                           (locals (sigma (Inl (u, ctx))))) (globs (sigma (Inr gk0)))"
+       \<Longrightarrow> entry_pairs_cover (\<lambda>d. gammaDG d (globs (sigma (Inr gk0)))) s
+             (call_enter gs (CallEdge dst pars args) s)
+             (alts (call_info_of (CallEdge dst pars args) p) (locals (sigma (Inl (u, ctx)))))"
     and call_fwd:
-    "\<And>u ctx dst pars args p cont.
+    "\<And>u ctx dst pars args p cont cont' entry.
        (u, ctx) \<in> vars
-       \<Longrightarrow> (u, CallEdge dst pars args, FunctionEntry p, cont)
-             \<in> calls (compile_prog Pi ps)
-       \<Longrightarrow> (FunctionEntry p,
-              route u ctx
-                (en (call_info_of (CallEdge dst pars args) p)
-                    (locals (sigma (Inl (u, ctx))))) (CallEdge dst pars args))
-             \<in> vars"
+       \<Longrightarrow> (u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps)
+       \<Longrightarrow> (cont', entry) \<in> set (alts (call_info_of (CallEdge dst pars args) p)
+                                  (locals (sigma (Inl (u, ctx)))))
+       \<Longrightarrow> \<not> is_bot entry
+       \<Longrightarrow> (FunctionEntry p, route u ctx entry (CallEdge dst pars args)) \<in> vars"
     and comb_fwd:
     "\<And>cl c1 dst pars args p cont.
        (cl, c1) \<in> vars
-       \<Longrightarrow> (cl, CallEdge dst pars args, FunctionEntry p, cont)
-             \<in> calls (compile_prog Pi ps)
+       \<Longrightarrow> (cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps)
        \<Longrightarrow> (cont, c1) \<in> vars"
 begin
 
+text \<open>The context relation this instance keys its collecting semantics by.\<close>
+abbreviation entry_context_rel :: "'c call_context_rel" where
+  "entry_context_rel \<equiv> routed_entry_context_rel alts gammaDG sigma gk0 route"
+
 sublocale routed: routed_context_base_hetero S gammaDG gs "compile_prog Pi ps" gk0
   route bot0 s0d s0g sigma vars x0 sg seed_key
-  "static_resolve (compile_prog Pi ps)" is_bot gammaM
-  "entry_state_context_of_solution route en sigma (compile_prog Pi ps)"
+  "static_resolve (compile_prog Pi ps)" is_bot gammaM entry_context_rel
 proof unfold_locales
   show "finite (calls (compile_prog Pi ps))" using compile_prog_finite by simp
+next
+  show "calls_source_unique (compile_prog Pi ps)"
+    unfolding calls_source_unique_def using compile_prog_calls_source_unique by blast
 next
   show "\<And>p ctx. seed_key p ctx \<noteq> gk0" by (rule seed_key_ne_gk0)
 next
@@ -163,71 +97,68 @@ next
 next
   fix u ctx dst pars args p cont s
   assume "(u, ctx) \<in> vars"
-    and "(u, CallEdge dst pars args, FunctionEntry p, cont)
-            \<in> calls (compile_prog Pi ps)"
+    and "(u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps)"
     and "s \<in> gammaDG (locals (sigma (Inl (u, ctx)))) (globs (sigma (Inr gk0)))"
   then show "p \<in> set (static_resolve (compile_prog Pi ps) cont u
                         (CallEdge dst pars args) (locals (sigma (Inl (u, ctx)))))"
     by (simp add: compile_prog_finite)
 next
-  fix u ctx dst pars args p cont s
+  fix u ctx dst pars args p cont s ctx'
   assume covV: "(u, ctx) \<in> vars"
-    and ce: "(u, CallEdge dst pars args, FunctionEntry p, cont)
-               \<in> calls (compile_prog Pi ps)"
+    and ce: "(u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps)"
     and sin: "s \<in> gammaDG (locals (sigma (Inl (u, ctx)))) (globs (sigma (Inr gk0)))"
-  have fin: "finite (calls (compile_prog Pi ps))" using compile_prog_finite by blast
+    and Rc: "entry_context_rel u ctx (call_info_of (CallEdge dst pars args) p) s
+               (call_enter gs (CallEdge dst pars args) s) ctx'"
   let ?ci = "call_info_of (CallEdge dst pars args) p"
-  let ?caller = "locals (sigma (Inl (u, ctx)))"
-  obtain pub deps
-    where R: "enter_runs (enter\<^sup># S ?ci) (mk_dg_man ?caller (\<lambda>_. gk0)) sigma
-                [(?caller, en ?ci ?caller)] pub"
-      and D: "enter_deps (enter\<^sup># S ?ci) (mk_dg_man ?caller (\<lambda>_. gk0)) sigma
-                [(?caller, en ?ci ?caller)] deps"
-    using enter_singleton[OF covV ce] by blast
-  have ecov: "call_enter gs (CallEdge dst pars args) s
-                \<in> gammaDG (en ?ci ?caller) (globs (sigma (Inr gk0)))"
-    using covV ce sin by (rule enter_sound_at)
-  have req: "route u ctx (en ?ci ?caller) (CallEdge dst pars args)
-               = entry_state_context_of_solution route en sigma (compile_prog Pi ps) u ctx
-                   (call_enter gs (CallEdge dst pars args) s)"
-    by (rule entry_state_context_of_solution_agree
-          [OF fin compile_prog_calls_source_unique ce refl])
+  let ?d = "locals (sigma (Inl (u, ctx)))"
+  from Rc obtain cont' entry
+    where mem: "(cont', entry) \<in> set (alts ?ci ?d)"
+      and ccov: "s \<in> gammaDG cont' (globs (sigma (Inr gk0)))"
+      and ecov: "call_enter gs (CallEdge dst pars args) s
+                   \<in> gammaDG entry (globs (sigma (Inr gk0)))"
+      and req0: "ctx' = route u ctx entry (CallEdge (ci_dst ?ci) (ci_formals ?ci) (ci_args ?ci))"
+    by (rule routed_entry_context_relE)
+  have req: "route u ctx entry (CallEdge dst pars args) = ctx'" using req0 by simp
+  have not_bot: "\<not> is_bot entry"
+    using ecov is_bot_sound by fastforce
+  have Rr: "enter_runs (enter\<^sup># S ?ci) (mk_dg_man ?d (\<lambda>_. gk0)) sigma (alts ?ci ?d) bot"
+    unfolding enter_pure by (rule enter_runs_local_enter_transfer_mk_dg_man)
+  have D: "enter_deps (enter\<^sup># S ?ci) (mk_dg_man ?d (\<lambda>_. gk0)) sigma (alts ?ci ?d) {}"
+    unfolding enter_pure by (rule enter_deps_local_enter_transfer_mk_dg_man)
   show "\<exists>pairs pub deps cont' entry.
-             enter_runs (enter\<^sup># S ?ci) (mk_dg_man ?caller (\<lambda>_. gk0)) sigma pairs pub
-           \<and> enter_deps (enter\<^sup># S ?ci) (mk_dg_man ?caller (\<lambda>_. gk0)) sigma pairs deps
+             enter_runs (enter\<^sup># S ?ci) (mk_dg_man ?d (\<lambda>_. gk0)) sigma pairs pub
+           \<and> enter_deps (enter\<^sup># S ?ci) (mk_dg_man ?d (\<lambda>_. gk0)) sigma pairs deps
            \<and> (cont', entry) \<in> set pairs
            \<and> s \<in> gammaDG cont' (globs (sigma (Inr gk0)))
            \<and> call_enter gs (CallEdge dst pars args) s
                \<in> gammaDG entry (globs (sigma (Inr gk0)))
-           \<and> route u ctx entry (CallEdge dst pars args)
-               = entry_state_context_of_solution route en sigma (compile_prog Pi ps) u ctx
-                   (call_enter gs (CallEdge dst pars args) s)
-           \<and> (FunctionEntry p, route u ctx entry (CallEdge dst pars args)) \<in> vars"
-    using R D sin ecov req call_fwd[OF covV ce] by force
+           \<and> route u ctx entry (CallEdge dst pars args) = ctx'
+           \<and> (FunctionEntry p, ctx') \<in> vars"
+    using Rr D mem ccov ecov req call_fwd[OF covV ce mem not_bot] by blast
+next
+next
+  fix u ctx dst pars args p cont s
+  assume covV: "(u, ctx) \<in> vars"
+    and ce: "(u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps)"
+    and sin: "s \<in> gammaDG (locals (sigma (Inl (u, ctx)))) (globs (sigma (Inr gk0)))"
+  show "\<exists>ctx'. entry_context_rel u ctx (call_info_of (CallEdge dst pars args) p) s
+                 (call_enter gs (CallEdge dst pars args) s) ctx'"
+  proof (rule routed_entry_context_rel_total)
+    show "entry_pairs_cover (\<lambda>d. gammaDG d (globs (sigma (Inr gk0)))) s
+            (call_enter gs (CallEdge dst pars args) s)
+            (alts (call_info_of (CallEdge dst pars args) p) (locals (sigma (Inl (u, ctx)))))"
+      by (rule enter_cover[OF covV ce sin])
+  qed
 next
   fix cl c1 dst pars args p cont
   assume "(cl, c1) \<in> vars"
-    and "(cl, CallEdge dst pars args, FunctionEntry p, cont)
-           \<in> calls (compile_prog Pi ps)"
+    and "(cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps)"
   then show "(cont, c1) \<in> vars" by (rule comb_fwd)
-next
-  fix cl s es dst pars args p cont
-  assume ces: "call_enter_store gs (compile_prog Pi ps) cl s es"
-    and ce: "(cl, CallEdge dst pars args, FunctionEntry p, cont)
-               \<in> calls (compile_prog Pi ps)"
-  obtain dst' pars' args' p' cont' where
-      ce': "(cl, CallEdge dst' pars' args', FunctionEntry p', cont')
-              \<in> calls (compile_prog Pi ps)"
-    and es_eq: "es = call_enter gs (CallEdge dst' pars' args') s"
-    using ces unfolding call_enter_store_def by blast
-  have "CallEdge dst' pars' args' = CallEdge dst pars args"
-    using compile_prog_calls_source_unique[OF ce' ce] by simp
-  then show "es = call_enter gs (CallEdge dst pars args) s" using es_eq by simp
 qed
 
 text \<open>CALL and COMB, at the entry-state instance: the callee entry state published under
-  the routed context is sound, and a return combine at the caller's own context is sound.
-  Both are \<^locale>\<open>routed_context_base_hetero\<close>'s theorems, re-exported here so a
+  every admitted context is sound, and a return combine at the caller's own context is
+  sound.  Both are \<^locale>\<open>routed_context_base_hetero\<close>'s theorems, re-exported here so a
   concrete instance cites them without naming the sublocale.\<close>
 
 lemmas routed_context_call = routed.routed_context_call

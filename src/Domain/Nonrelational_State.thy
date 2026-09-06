@@ -42,6 +42,9 @@ lemma gamma_stateI [intro]:
 
 subsection \<open>State concretization laws\<close>
 
+text \<open>Every value-level concretization law, lifted to states.  All of them fall out
+  pointwise, which is exactly what makes a nonrelational state cheap: order, bottom and join
+  are read one variable at a time, and no law here needs a relation between variables.\<close>
 lemma gamma_state_mono:
   "sigma1 \<le> sigma2 \<Longrightarrow> \<lbrakk>sigma1\<rbrakk> \<subseteq> \<lbrakk>sigma2\<rbrakk>"
   for sigma1 sigma2 :: "'a::sound_domain abs_state"

@@ -398,7 +398,8 @@ theorem compile_prog_calls_source_unique:
 proof -
   obtain n1 Eprocs Kprocs n2 Emain Kmain where
       procs: "compile_procs \<Pi> ps 0 = (n1, Eprocs, Kprocs)"
-    and mainc: "compile_proc \<Pi> prog_main_name \<lparr>formals = [], body = (main_body \<Pi>)\<rparr> n1 = (n2, Emain, Kmain)"
+    and mainc: "compile_proc \<Pi> prog_main_name \<lparr>formals = [], body = (main_body \<Pi>)\<rparr> n1
+                  = (n2, Emain, Kmain)"
     and g: "calls (compile_prog \<Pi> ps) = Kprocs \<union> Kmain"
     by (rule compile_prog_intra_split)
   have not_both: "\<And>u' act1' ce1' af1' act2' ce2' af2'.
@@ -517,9 +518,14 @@ next
                = frag_stmts {(Statement n, EA_Assume b, en1),
                              (Statement n, EA_AssumeNot b, k)} {} \<union> frag_stmts E1 K1"
     unfolding E K by (rule frag_stmts_Un)
-  show ?case unfolding n' dec using guard r1 i1 csize_pos[of c] by force 
+  show ?case unfolding n' dec using guard r1 i1 csize_pos[of c] by force
 qed (auto simp: frag_stmts_def split: option.splits)
+
 subsection \<open>Finiteness\<close>
+
+text \<open>Each pass emits finitely many edges.  Everything downstream that folds over the graph
+  -- the join at a node, the equation enumeration, the solver's variable set -- needs this
+  and nothing else about the compiler.\<close>
 
 lemma compile_finite:
   "compile \<Pi> p c k n = (n', en, E, K) \<Longrightarrow> finite E \<and> finite K"
@@ -671,11 +677,15 @@ lemma compile_procs_ret_wf:
 
 subsection \<open>The compiled program is well-formed\<close>
 
+text \<open>The five per-pass shape facts above, collected into the single predicate the CFG layer
+  states its own theorems over.  Nothing after this point has to know that a graph was
+  compiled rather than written by hand.\<close>
 theorem compile_prog_wf: "wf_cfg (compile_prog \<Pi> ps)"
 proof -
   obtain n1 Eprocs Kprocs n2 Emain Kmain where
       procs: "compile_procs \<Pi> ps 0 = (n1, Eprocs, Kprocs)"
-    and mainc: "compile_proc \<Pi> prog_main_name \<lparr>formals = [], body = (main_body \<Pi>)\<rparr> n1 = (n2, Emain, Kmain)"
+    and mainc: "compile_proc \<Pi> prog_main_name \<lparr>formals = [], body = (main_body \<Pi>)\<rparr> n1
+                  = (n2, Emain, Kmain)"
     and g: "intra (compile_prog \<Pi> ps) = Eprocs \<union> Emain"
            "calls (compile_prog \<Pi> ps) = Kprocs \<union> Kmain"
     by (rule compile_prog_intra_split)

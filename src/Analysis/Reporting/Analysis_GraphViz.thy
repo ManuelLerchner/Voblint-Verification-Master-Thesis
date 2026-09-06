@@ -617,11 +617,6 @@ text \<open>
   out, and it is what \<^const>\<open>compile_prog\<close> already guarantees.
 \<close>
 
-definition calls_source_unique :: "cfg \<Rightarrow> bool" where
-  "calls_source_unique g \<longleftrightarrow>
-     (\<forall>u ca1 ce1 af1 ca2 ce2 af2.
-        (u, ca1, ce1, af1) \<in> calls g \<longrightarrow> (u, ca2, ce2, af2) \<in> calls g
-        \<longrightarrow> ca1 = ca2 \<and> ce1 = ce2 \<and> af1 = af2)"
 
 text \<open>A compiled program satisfies the side condition outright: the compiler allocates
   each call at its own freshly claimed statement index.\<close>

@@ -250,7 +250,12 @@ lemma sign_ctx_sg_2_seed:
            \<in> gamma_state_lift (map_lift (fun_of_resolved_st_q_for sign_nest_gs)
                (sign_ctx_sg_2 (Inl (FunctionEntry p,
                  cs_context 2 u ctx (call_enter sign_nest_gs (CallEdge dst xs es) s)))))"
-  by (rule sign_nest_2_cs.routed_context_call[OF assms[unfolded sign_nest_cfg_def]])
+proof (rule sign_nest_2_cs.routed_context_call[OF assms[unfolded sign_nest_cfg_def]])
+  show "call_context_rel_of_fun (cs_context 2) u ctx (call_info_of (CallEdge dst xs es) p) s
+          (call_enter sign_nest_gs (CallEdge dst xs es) s)
+          (cs_context 2 u ctx (call_enter sign_nest_gs (CallEdge dst xs es) s))"
+    by simp
+qed
 
 lemma sign_ctx_sg_2_comb:
   assumes "(cl, CallEdge dst pars args, FunctionEntry p, v) \<in> calls sign_nest_cfg"
@@ -262,12 +267,24 @@ lemma sign_ctx_sg_2_comb:
   shows "combine_collect sign_nest_gs dst s t
            \<in> gamma_state_lift (map_lift (fun_of_resolved_st_q_for sign_nest_gs)
                (sign_ctx_sg_2 (Inl (v, c1))))"
-  by (rule sign_nest_2_cs.routed_context_comb[OF assms[unfolded sign_nest_cfg_def]])
+proof -
+  from assms(4) obtain dst' pars' args' p' cont' where
+      ce': "(cl, CallEdge dst' pars' args', FunctionEntry p', cont') \<in> calls sign_nest_cfg"
+    and es_eq: "es = call_enter sign_nest_gs (CallEdge dst' pars' args') s"
+    unfolding call_enter_store_def by blast
+  have adm: "admits_call_context sign_nest_gs (compile_prog sign_nest_pi sign_nest_procs)
+          (call_context_rel_of_fun (cs_context 2)) cl c1 p' s es (cs_context 2 cl c1 es)"
+    unfolding admits_call_context_def call_context_rel_of_fun_iff
+    using ce'[unfolded sign_nest_cfg_def] es_eq by blast
+  show ?thesis
+    by (rule sign_nest_2_cs.routed_context_comb[OF assms(1)[unfolded sign_nest_cfg_def]
+          assms(2)[unfolded sign_nest_cfg_def] adm assms(3)[unfolded sign_nest_cfg_def]])
+qed
 
 section \<open>The headline theorem: 2-call-string activation collecting soundness\<close>
 
 theorem sign_nest_2_activation_collect_sound:
-  "activation_collect sign_nest_gs (cs_context 2) [] sign_nest_cfg
+  "activation_collect sign_nest_gs (call_context_rel_of_fun (cs_context 2)) [] sign_nest_cfg
      (cinit_stores sign_nest_gs) v ctx
      \<subseteq> gamma_state_lift (map_lift (fun_of_resolved_st_q_for sign_nest_gs)
            (sign_ctx_sg_2 (Inl (v, ctx))))"

@@ -20,23 +20,25 @@ text \<open>
 theorem source_sound_from_collecting_cap:
   fixes sg :: "pp \<times> 'c + 'g \<Rightarrow> 'M"
     and gammaM :: "'M \<Rightarrow> store set"
-    and enterc :: "cfg_node \<Rightarrow> 'c \<Rightarrow> store \<Rightarrow> 'c" and initial_ctx :: 'c
+    and R :: "'c call_context_rel" and startcontext :: 'c
   assumes wf: "wf_compile_input gs Pi ps"
     and s0: "s0 \<in> S"
     and run: "star (pstep gs Pi) (main_body Pi, s0, []) (residual, s, frs)"
-    and cap: "\<And>v ctx. activation_collect gs enterc initial_ctx (compile_prog Pi ps) S v ctx
+    and has_ctx: "\<And>t. t \<in> valid_ltr gs (compile_prog Pi ps) S
+                   \<Longrightarrow> \<exists>c. trace_context gs R startcontext (compile_prog Pi ps) t c"
+    and cap: "\<And>v ctx. activation_collect gs R startcontext (compile_prog Pi ps) S v ctx
                        \<subseteq> gammaM (sg (Inl (v, ctx)))"
   shows "\<exists>v stk t c. csim Pi (compile_prog Pi ps) (residual, s, frs) (v, s, stk)
-                   \<and> key enterc initial_ctx t = c
+                   \<and> trace_context gs R startcontext (compile_prog Pi ps) t c
                    \<and> s \<in> gammaM (sg (Inl (v, c)))"
 proof -
   let ?g = "compile_prog Pi ps"
   from source_store_in_activation_collect
-         [where enterc=enterc and initial_ctx=initial_ctx,
-          OF wf s0 run]
+         [where R=R and startcontext=startcontext,
+          OF wf s0 run has_ctx]
   obtain v stk t c where m: "csim Pi (compile_prog Pi ps) (residual, s, frs) (v, s, stk)"
-    and ck: "key enterc initial_ctx t = c"
-    and mem: "s \<in> activation_collect gs enterc initial_ctx ?g S v c"
+    and ck: "trace_context gs R startcontext ?g t c"
+    and mem: "s \<in> activation_collect gs R startcontext ?g S v c"
     by blast
   have "s \<in> gammaM (sg (Inl (v, c)))"
     using cap[of v c] mem by blast
@@ -48,56 +50,64 @@ text \<open>The witness-free specialisation of the composition at top-level prog
 theorem source_sound_toplevel_from_collecting_cap:
   fixes sg :: "pp \<times> 'c + 'g \<Rightarrow> 'M"
     and gammaM :: "'M \<Rightarrow> store set"
-    and enterc :: "cfg_node \<Rightarrow> 'c \<Rightarrow> store \<Rightarrow> 'c" and initial_ctx :: 'c
+    and R :: "'c call_context_rel" and startcontext :: 'c
   assumes wf: "wf_compile_input gs Pi ps"
     and s0: "s0 \<in> S"
     and run: "star (pstep gs Pi) (main_body Pi, s0, []) (residual, s, [])"
-    and cap: "\<And>v ctx. activation_collect gs enterc initial_ctx (compile_prog Pi ps) S v ctx
+    and cap: "\<And>v ctx. activation_collect gs R startcontext (compile_prog Pi ps) S v ctx
                        \<subseteq> gammaM (sg (Inl (v, ctx)))"
   shows "\<exists>v. csim Pi (compile_prog Pi ps) (residual, s, []) (v, s, [])
-             \<and> s \<in> gammaM (sg (Inl (v, initial_ctx)))"
+             \<and> s \<in> gammaM (sg (Inl (v, startcontext)))"
 proof -
   let ?g = "compile_prog Pi ps"
   from source_toplevel_in_activation_collect
-         [where enterc=enterc and initial_ctx=initial_ctx, OF wf s0 run]
+         [where R=R and startcontext=startcontext, OF wf s0 run]
   obtain v where m: "csim Pi (compile_prog Pi ps) (residual, s, []) (v, s, [])"
-    and mem: "s \<in> activation_collect gs enterc initial_ctx ?g S v initial_ctx" by blast
-  have "s \<in> gammaM (sg (Inl (v, initial_ctx)))" using cap[of v initial_ctx] mem by blast
+    and mem: "s \<in> activation_collect gs R startcontext ?g S v startcontext" by blast
+  have "s \<in> gammaM (sg (Inl (v, startcontext)))" using cap[of v startcontext] mem by blast
   then show ?thesis using m by blast
 qed
 
-subsection \<open>Backbone corollaries: discharge the three obligations to build the cap\<close>
+subsection \<open>Backbone corollaries: discharge the four obligations to build the cap\<close>
 
 theorem source_activation_sound:
   fixes sg :: "pp \<times> 'c + 'g \<Rightarrow> 'a::sound_domain abs_state"
-    and enterc :: "cfg_node \<Rightarrow> 'c \<Rightarrow> store \<Rightarrow> 'c" and initial_ctx :: 'c
+    and R :: "'c call_context_rel" and startcontext :: 'c
   assumes wf: "wf_compile_input gs Pi ps"
     and s0: "s0 \<in> S"
     and run: "star (pstep gs Pi) (main_body Pi, s0, []) (residual, s, frs)"
-    and ENTRY_G: "\<And>x. x \<in> S \<Longrightarrow> x \<in> \<lbrakk>sg (Inl (cfg_entry (compile_prog Pi ps), initial_ctx))\<rbrakk>"
+    and ENTRY_G: "\<And>x. x \<in> S \<Longrightarrow> x \<in> \<lbrakk>sg (Inl (cfg_entry (compile_prog Pi ps), startcontext))\<rbrakk>"
     and EDGE: "\<And>u a v c x x'. (u, a, v) \<in> intra (compile_prog Pi ps)
         \<Longrightarrow> x \<in> \<lbrakk>sg (Inl (u, c))\<rbrakk> \<Longrightarrow> x' \<in> edge_step a x
         \<Longrightarrow> x' \<in> \<lbrakk>sg (Inl (v, c))\<rbrakk>"
-    and CALL: "\<And>u dst pars args p cont c x.
+    and CALL: "\<And>u dst pars args p cont c c' x.
         (u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps)
         \<Longrightarrow> x \<in> \<lbrakk>sg (Inl (u, c))\<rbrakk>
-        \<Longrightarrow> call_enter gs (CallEdge dst pars args) x
-              \<in> \<lbrakk>sg (Inl (FunctionEntry p, enterc u c (call_enter gs (CallEdge dst pars args) x)))\<rbrakk>"
-    and COMB: "\<And>cl dst pars args p cont c1 x t es.
+        \<Longrightarrow> R u c (call_info_of (CallEdge dst pars args) p) x
+              (call_enter gs (CallEdge dst pars args) x) c'
+        \<Longrightarrow> call_enter gs (CallEdge dst pars args) x \<in> \<lbrakk>sg (Inl (FunctionEntry p, c'))\<rbrakk>"
+    and COMB: "\<And>cl dst pars args p cont c1 c' p' x t es.
         (cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps)
-        \<Longrightarrow> x \<in> \<lbrakk>sg (Inl (cl, c1))\<rbrakk> \<Longrightarrow> t \<in> \<lbrakk>sg (Inl (FunctionResult p, enterc cl c1 es))\<rbrakk>
-        \<Longrightarrow> call_enter_store gs (compile_prog Pi ps) cl x es
+        \<Longrightarrow> x \<in> \<lbrakk>sg (Inl (cl, c1))\<rbrakk>
+        \<Longrightarrow> admits_call_context gs (compile_prog Pi ps) R cl c1 p' x es c'
+        \<Longrightarrow> t \<in> \<lbrakk>sg (Inl (FunctionResult p, c'))\<rbrakk>
         \<Longrightarrow> combine_collect gs dst x t \<in> \<lbrakk>sg (Inl (cont, c1))\<rbrakk>"
+    and TOTAL: "call_context_total_on (\<lambda>v c. \<lbrakk>sg (Inl (v, c))\<rbrakk>) R gs (compile_prog Pi ps)"
   shows "\<exists>v stk t c. csim Pi (compile_prog Pi ps) (residual, s, frs) (v, s, stk)
-                   \<and> key enterc initial_ctx t = c
+                   \<and> trace_context gs R startcontext (compile_prog Pi ps) t c
                    \<and> s \<in> \<lbrakk>sg (Inl (v, c))\<rbrakk>"
 proof -
-  have cap: "\<And>v ctx. activation_collect gs enterc initial_ctx (compile_prog Pi ps) S v ctx
+  interpret G: ltr_coverage "compile_prog Pi ps" S "\<lambda>v c. \<lbrakk>sg (Inl (v, c))\<rbrakk>" R startcontext gs
+    by (standard; blast intro: ENTRY_G EDGE CALL COMB TOTAL)
+  have cap: "\<And>v ctx. activation_collect gs R startcontext (compile_prog Pi ps) S v ctx
                      \<subseteq> \<lbrakk>sg (Inl (v, ctx))\<rbrakk>"
-    by (rule activation_collect_sound[OF ENTRY_G EDGE CALL COMB])
+    by (rule activation_collect_sound[OF ENTRY_G EDGE CALL COMB TOTAL])
+  have has_ctx: "\<And>t. t \<in> valid_ltr gs (compile_prog Pi ps) S
+                   \<Longrightarrow> \<exists>c. trace_context gs R startcontext (compile_prog Pi ps) t c"
+    using G.valid_ltr_has_context by blast
   show ?thesis
     by (rule source_sound_from_collecting_cap[where gammaM=gamma_state,
-          OF wf s0 run cap])
+          OF wf s0 run has_ctx cap])
 qed
 
 text \<open>The witness-free specialisation at top-level program points: a store reached with an empty
@@ -105,30 +115,33 @@ text \<open>The witness-free specialisation at top-level program points: a store
   context existential exposed.\<close>
 theorem source_activation_sound_toplevel:
   fixes sg :: "pp \<times> 'c + 'g \<Rightarrow> 'a::sound_domain abs_state"
-    and enterc :: "cfg_node \<Rightarrow> 'c \<Rightarrow> store \<Rightarrow> 'c" and initial_ctx :: 'c
+    and R :: "'c call_context_rel" and startcontext :: 'c
   assumes wf: "wf_compile_input gs Pi ps"
     and s0: "s0 \<in> S"
     and run: "star (pstep gs Pi) (main_body Pi, s0, []) (residual, s, [])"
-    and ENTRY_G: "\<And>x. x \<in> S \<Longrightarrow> x \<in> \<lbrakk>sg (Inl (cfg_entry (compile_prog Pi ps), initial_ctx))\<rbrakk>"
+    and ENTRY_G: "\<And>x. x \<in> S \<Longrightarrow> x \<in> \<lbrakk>sg (Inl (cfg_entry (compile_prog Pi ps), startcontext))\<rbrakk>"
     and EDGE: "\<And>u a v c x x'. (u, a, v) \<in> intra (compile_prog Pi ps)
         \<Longrightarrow> x \<in> \<lbrakk>sg (Inl (u, c))\<rbrakk> \<Longrightarrow> x' \<in> edge_step a x
         \<Longrightarrow> x' \<in> \<lbrakk>sg (Inl (v, c))\<rbrakk>"
-    and CALL: "\<And>u dst pars args p cont c x.
+    and CALL: "\<And>u dst pars args p cont c c' x.
         (u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps)
         \<Longrightarrow> x \<in> \<lbrakk>sg (Inl (u, c))\<rbrakk>
-        \<Longrightarrow> call_enter gs (CallEdge dst pars args) x
-              \<in> \<lbrakk>sg (Inl (FunctionEntry p, enterc u c (call_enter gs (CallEdge dst pars args) x)))\<rbrakk>"
-    and COMB: "\<And>cl dst pars args p cont c1 x t es.
+        \<Longrightarrow> R u c (call_info_of (CallEdge dst pars args) p) x
+              (call_enter gs (CallEdge dst pars args) x) c'
+        \<Longrightarrow> call_enter gs (CallEdge dst pars args) x \<in> \<lbrakk>sg (Inl (FunctionEntry p, c'))\<rbrakk>"
+    and COMB: "\<And>cl dst pars args p cont c1 c' p' x t es.
         (cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps)
-        \<Longrightarrow> x \<in> \<lbrakk>sg (Inl (cl, c1))\<rbrakk> \<Longrightarrow> t \<in> \<lbrakk>sg (Inl (FunctionResult p, enterc cl c1 es))\<rbrakk>
-        \<Longrightarrow> call_enter_store gs (compile_prog Pi ps) cl x es
+        \<Longrightarrow> x \<in> \<lbrakk>sg (Inl (cl, c1))\<rbrakk>
+        \<Longrightarrow> admits_call_context gs (compile_prog Pi ps) R cl c1 p' x es c'
+        \<Longrightarrow> t \<in> \<lbrakk>sg (Inl (FunctionResult p, c'))\<rbrakk>
         \<Longrightarrow> combine_collect gs dst x t \<in> \<lbrakk>sg (Inl (cont, c1))\<rbrakk>"
+    and TOTAL: "call_context_total_on (\<lambda>v c. \<lbrakk>sg (Inl (v, c))\<rbrakk>) R gs (compile_prog Pi ps)"
   shows "\<exists>v. csim Pi (compile_prog Pi ps) (residual, s, []) (v, s, [])
-             \<and> s \<in> \<lbrakk>sg (Inl (v, initial_ctx))\<rbrakk>"
+             \<and> s \<in> \<lbrakk>sg (Inl (v, startcontext))\<rbrakk>"
 proof -
-  have cap: "\<And>v ctx. activation_collect gs enterc initial_ctx (compile_prog Pi ps) S v ctx
+  have cap: "\<And>v ctx. activation_collect gs R startcontext (compile_prog Pi ps) S v ctx
                      \<subseteq> \<lbrakk>sg (Inl (v, ctx))\<rbrakk>"
-    by (rule activation_collect_sound[OF ENTRY_G EDGE CALL COMB])
+    by (rule activation_collect_sound[OF ENTRY_G EDGE CALL COMB TOTAL])
   show ?thesis
     by (rule source_sound_toplevel_from_collecting_cap[where gammaM=gamma_state,
           OF wf s0 run cap])
@@ -149,15 +162,17 @@ theorem source_reaches_ltr_collect:
                  \<and> s \<in> ltr_collect gs (compile_prog Pi ps) S v"
 proof -
   let ?g = "compile_prog Pi ps"
-  from source_store_in_activation_collect
-         [where enterc = "\<lambda>_ _ _. ()" and initial_ctx = "()",
+  from source_store_in_activation_collect_of_fun
+         [where f = "\<lambda>_ _ _. ()" and startcontext = "()",
           OF wf s0 run]
   obtain v stk t c where m: "csim Pi (compile_prog Pi ps) (residual, s, frs) (v, s, stk)"
-    and mem: "s \<in> activation_collect gs (\<lambda>_ _ _. ()) () ?g S v c" by blast
+    and mem: "s \<in> activation_collect gs (call_context_rel_of_fun (\<lambda>_ _ _. ())) () ?g S v c"
+    by blast
   have "s \<in> ltr_collect gs ?g S v"
     using mem by (rule subsetD[OF activation_collect_le_ltr_collect])
   then show ?thesis using m by blast
 qed
+
 
 subsection \<open>Completed runs reach a procedure result\<close>
 

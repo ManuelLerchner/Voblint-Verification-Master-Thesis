@@ -69,6 +69,8 @@ lemma acc_val_Cons:
 
 subsubsection \<open>Key order and distinctness\<close>
 
+text \<open>What the flush order rests on: an unseen key is appended, a seen one is joined in
+  place, so the key list only ever grows at the end and stays distinct.\<close>
 lemma acc_keys_add:
   "map fst (acc_add k d acc)
      = (if k \<in> set (map fst acc) then map fst acc else map fst acc @ [k])"
@@ -84,6 +86,9 @@ lemma distinct_acc_add:
 
 subsection \<open>Buffering a right-hand side\<close>
 
+text \<open>The traversal that does the buffering: writes are collected into the accumulator on
+  the way down and emitted once at each answer, so a query branch cannot lose the writes
+  made before it, and no key is written twice on any path.\<close>
 primrec flush_sides ::
   "('g \<times> 'd) list \<Rightarrow> ('x, 'g, 'd) strategy_tree \<Rightarrow> ('x, 'g, 'd) strategy_tree"
 where
@@ -114,6 +119,9 @@ lemma buffer_eqs_apply [simp]: "buffer_eqs T x = buffer_sides (T x)"
 
 subsection \<open>The declarative reading is unchanged\<close>
 
+text \<open>Buffering is invisible to the declarative reading: the local value is untouched, and
+  the side contribution at each key is the same join as before, only emitted once.  That is
+  what makes this a scheduling change and not a semantic one.\<close>
 lemma traverse_rhs_flush_sides [simp]:
   "traverse_rhs (flush_sides acc t) \<sigma> = traverse_rhs t \<sigma>"
   by (induction acc) simp_all

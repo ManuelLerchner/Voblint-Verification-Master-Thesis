@@ -78,6 +78,12 @@ fun combine_assign :: "vname option \<Rightarrow> 'a \<Rightarrow> (vname \<Righ
 
 subsection \<open>Frame-stack small-step semantics\<close>
 
+text \<open>The reference semantics every soundness claim is ultimately about.  A configuration is
+  a command, a store, and a stack of caller frames; a call pushes one frame and continues in
+  the callee body followed by \<open>Restore\<close>, a return writes the return slot and hands control to
+  \<open>Unwind\<close>, which discards the rest of the callee body until that \<open>Restore\<close> pops the frame.
+  \<open>Restore\<close> and \<open>Unwind\<close> exist only here, in configurations the semantics builds; no source
+  program contains them.\<close>
 inductive
   pstep :: "(vname \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> com \<times> store \<times> frame list
                        \<Rightarrow> com \<times> store \<times> frame list \<Rightarrow> bool"
@@ -188,6 +194,9 @@ lemma pcompletes_IfFalse:
 
 subsection \<open>Frame-stack extension\<close>
 
+text \<open>A step never inspects the frames below the one it works on, so any run stays valid
+  with more callers underneath.  This is what lets a proof about a procedure in isolation be
+  reused at an arbitrary call depth.\<close>
 lemma pstep_frame_extend:
   "pstep gs \<Pi> (c, s, frs) (c', s', frs') \<Longrightarrow>
    pstep gs \<Pi> (c, s, frs @ extra) (c', s', frs' @ extra)"
@@ -208,6 +217,9 @@ lemma psteps_frame_mono:
 
 subsection \<open>Call completion\<close>
 
+text \<open>Running a whole call in one step of reasoning: a body that finishes under its own
+  frame lets the caller resume with the frame popped and the return slot written.  Callers
+  use these instead of replaying the \<open>Restore\<close> bookkeeping at every call site.\<close>
 lemma combine_env_ret_var_irrelevant [simp]:
   "\<not> gs ret_var \<Longrightarrow> combine_env gs fr (t(ret_var := v)) = combine_env gs fr t"
   by (rule ext) simp

@@ -24,9 +24,9 @@ text \<open>
 subsection \<open>Forgetful projections\<close>
 
 text \<open>\<open>ltr_collect\<close> is the concrete collecting view: the sink stores of valid traces
-  reaching node \<open>v\<close>.  \<^const>\<open>activation_collect\<close> (\<open>LTR_Def\<close>) is the context-indexed
-  collector, filtering those by the structural activation key; the key type is not
-  required finite, so a keyed bucket is not claimed to be an exact activation identity.\<close>
+  reaching node \<open>v\<close>.  \<^const>\<open>activation_collect\<close> is the context-indexed collector, keeping
+  those whose trace may carry the queried context; the context type is not required
+  finite, and a bucket is not claimed to be an exact activation identity.\<close>
 
 definition ltr_collect :: "(vname \<Rightarrow> bool) \<Rightarrow> cfg \<Rightarrow> store set \<Rightarrow> cfg_node \<Rightarrow> store set" where
   "ltr_collect gs g S v =
@@ -111,28 +111,39 @@ lemma ltr_collect_init:
 
 subsection \<open>Context-sensitive / context-insensitive bridge\<close>
 
-text \<open>Bridge (1): context-sensitive collection is included in context-insensitive
-  collection.\<close>
+text \<open>Bridge (1): every context bucket, and so their union, is included in the
+  context-insensitive collection.\<close>
 theorem activation_collect_le_ltr_collect:
-  "activation_collect gs enterc initial_ctx g S v c \<subseteq> ltr_collect gs g S v"
+  "activation_collect gs R startcontext g S v c \<subseteq> ltr_collect gs g S v"
   unfolding activation_collect_def ltr_collect_def by blast
 
-text \<open>Bridge (2): context-insensitive collection is the union over contexts --- every trace
-  has exactly one context, since \<^const>\<open>key\<close> is a total function.  No finiteness assumption.\<close>
-theorem ltr_collect_eq_Union_activation:
-  "ltr_collect gs g S v = (\<Union>c. activation_collect gs enterc initial_ctx g S v c)"
+theorem Union_activation_collect_le_ltr_collect:
+  "(\<Union>c. activation_collect gs R startcontext g S v c) \<subseteq> ltr_collect gs g S v"
+  using activation_collect_le_ltr_collect by blast
+
+text \<open>Bridge (2): the converse needs every valid trace to carry some context.  A functional
+  policy has that outright, since \<^const>\<open>key\<close> is total; a relational one earns it from
+  conditional totality, which is \<open>LTR_Abstract\<close>'s business.  No finiteness assumption either
+  way.\<close>
+theorem ltr_collect_eq_Union_activation_of_fun:
+  "ltr_collect gs g S v
+     = (\<Union>c. activation_collect gs (call_context_rel_of_fun f) startcontext g S v c)"
 proof
-  show "ltr_collect gs g S v \<subseteq> (\<Union>c. activation_collect gs enterc initial_ctx g S v c)"
+  show "ltr_collect gs g S v
+          \<subseteq> (\<Union>c. activation_collect gs (call_context_rel_of_fun f) startcontext g S v c)"
   proof
     fix x assume "x \<in> ltr_collect gs g S v"
     then obtain t where t: "t \<in> valid_ltr gs g S" "sink_node t = v" "sink_store t = x"
       by (rule ltr_collect_E)
-    then show "x \<in> (\<Union>c. activation_collect gs enterc initial_ctx g S v c)"
-      unfolding activation_collect_def by blast
+    then have "trace_context gs (call_context_rel_of_fun f) startcontext g t (key f startcontext t)"
+      by (simp add: trace_context_of_fun_iff)
+    with t show "x \<in> (\<Union>c. activation_collect gs (call_context_rel_of_fun f) startcontext g S v c)"
+      by blast
   qed
 next
-  show "(\<Union>c. activation_collect gs enterc initial_ctx g S v c) \<subseteq> ltr_collect gs g S v"
-    unfolding activation_collect_def ltr_collect_def by blast
+  show "(\<Union>c. activation_collect gs (call_context_rel_of_fun f) startcontext g S v c)
+          \<subseteq> ltr_collect gs g S v"
+    by (rule Union_activation_collect_le_ltr_collect)
 qed
 
 

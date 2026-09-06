@@ -311,6 +311,10 @@ lemma dep_aux_dg_spec_combine_tree_sources:
 
 subsection \<open>What a manager-native specification owes\<close>
 
+text \<open>The contract a specification signs: its concretization is monotone, an edge's tree
+  over-approximates the concrete edge step, and its combine over-approximates the concrete
+  return.  Both soundness obligations read the shared slot through the same valuation the
+  tree does, which is what lets an analysis publish to that slot and still be covered.\<close>
 locale sound_dg_spec_core =
   fixes S :: "('x,'k,unit,'D::bounded_semilattice_sup_bot,
                 'G::bounded_semilattice_sup_bot) dg_spec"
@@ -355,6 +359,10 @@ lemma (in sound_dg_spec_core) combine_sound_tree:
 
 section \<open>The collapsed obligations of a local-only specification\<close>
 
+text \<open>The same contract for an analysis that never touches the shared slot: every obligation
+  is stated at plain values, with no valuation and no global key in sight.  The theorem
+  below derives the tree-level version from these three facts, so such an analysis proves
+  what it can state and inherits the rest.\<close>
 locale sound_local_dg_spec =
   fixes sk :: "'D::bounded_semilattice_sup_bot \<Rightarrow> 'D"
     and asn :: "vname \<Rightarrow> exp \<Rightarrow> 'D \<Rightarrow> 'D"

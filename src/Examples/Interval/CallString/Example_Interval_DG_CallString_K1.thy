@@ -359,7 +359,12 @@ lemma nest_1_sg_seed:
            \<in> gamma_state_lift (map_lift (fun_of_resolved_st_q_for nest_gs)
                (nest_1_sg (Inl (FunctionEntry p,
                  cs_context 1 u ctx (call_enter nest_gs (CallEdge dst xs es) s)))))"
-  by (rule nest_1_cs.routed_context_call[OF assms[unfolded nest_cfg_def]])
+proof (rule nest_1_cs.routed_context_call[OF assms[unfolded nest_cfg_def]])
+  show "call_context_rel_of_fun (cs_context 1) u ctx (call_info_of (CallEdge dst xs es) p) s
+          (call_enter nest_gs (CallEdge dst xs es) s)
+          (cs_context 1 u ctx (call_enter nest_gs (CallEdge dst xs es) s))"
+    by simp
+qed
 
 lemma nest_1_sg_comb:
   assumes "(cl, CallEdge dst pars args, FunctionEntry p, v) \<in> calls nest_cfg"
@@ -369,7 +374,19 @@ lemma nest_1_sg_comb:
     and "call_enter_store nest_gs nest_cfg cl s es"
   shows "combine_collect nest_gs dst s t
            \<in> gamma_state_lift (map_lift (fun_of_resolved_st_q_for nest_gs) (nest_1_sg (Inl (v, c1))))"
-  by (rule nest_1_cs.routed_context_comb[OF assms[unfolded nest_cfg_def]])
+proof -
+  from assms(4) obtain dst' pars' args' p' cont' where
+      ce': "(cl, CallEdge dst' pars' args', FunctionEntry p', cont') \<in> calls nest_cfg"
+    and es_eq: "es = call_enter nest_gs (CallEdge dst' pars' args') s"
+    unfolding call_enter_store_def by blast
+  have adm: "admits_call_context nest_gs (compile_prog nest_pi nest_procs)
+          (call_context_rel_of_fun (cs_context 1)) cl c1 p' s es (cs_context 1 cl c1 es)"
+    unfolding admits_call_context_def call_context_rel_of_fun_iff
+    using ce'[unfolded nest_cfg_def] es_eq by blast
+  show ?thesis
+    by (rule nest_1_cs.routed_context_comb[OF assms(1)[unfolded nest_cfg_def]
+          assms(2)[unfolded nest_cfg_def] adm assms(3)[unfolded nest_cfg_def]])
+qed
 
 section \<open>The headline theorem: 1-call-string activation collecting soundness\<close>
 
@@ -383,7 +400,7 @@ text \<open>The routed interpretation carries the theorem: every store the 1-cal
   local unknown at that key, read back into an abstract state.\<close>
 
 theorem nest_1_activation_collect_sound:
-  "activation_collect nest_gs (cs_context 1) [] nest_cfg (cinit_stores nest_gs) v ctx
+  "activation_collect nest_gs (call_context_rel_of_fun (cs_context 1)) [] nest_cfg (cinit_stores nest_gs) v ctx
      \<subseteq> gamma_state_lift (map_lift (fun_of_resolved_st_q_for nest_gs) (nest_1_sg (Inl (v, ctx))))"
   by (rule nest_1_cs.activation_collect_sound[unfolded nest_cfg_compile,
             OF entry_covered_1 nest_cinit_le_cinit_ivl_st])

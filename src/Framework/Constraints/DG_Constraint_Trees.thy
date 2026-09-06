@@ -197,7 +197,8 @@ text \<open>
 
 lemma side_rhs_fold_dg_acc_mono:
   "acc1 \<le> acc2
-   \<Longrightarrow> traverse_rhs (sp_compile (side_rhs_fold_dg acc1 ts)) sigma \<le> traverse_rhs (sp_compile (side_rhs_fold_dg acc2 ts)) sigma"
+   \<Longrightarrow> traverse_rhs (sp_compile (side_rhs_fold_dg acc1 ts)) sigma
+         \<le> traverse_rhs (sp_compile (side_rhs_fold_dg acc2 ts)) sigma"
   by (simp add: traverse_side_rhs_fold_dg side_acc_dg_def fold_acc_projected_acc_mono)
 
 lemma dep_aux_side_rhs_fold_dg_char:
@@ -206,7 +207,8 @@ lemma dep_aux_side_rhs_fold_dg_char:
   by (rule dep_aux_fold_rhs_projected_char)
 
 lemma dep_aux_side_rhs_fold_dg_acc_indep:
-  "dep_aux sigma (sp_compile (side_rhs_fold_dg acc1 ts)) = dep_aux sigma (sp_compile (side_rhs_fold_dg acc2 ts))"
+  "dep_aux sigma (sp_compile (side_rhs_fold_dg acc1 ts))
+     = dep_aux sigma (sp_compile (side_rhs_fold_dg acc2 ts))"
   by (simp add: dep_aux_side_rhs_fold_dg_char)
 
 text \<open>
@@ -232,7 +234,8 @@ text \<open>
 lemma side_rhs_fold_dg_mono:
   assumes tree_mono: "\<forall>t \<in> set ts. \<forall>s1 s2. s1 \<le> s2 \<longrightarrow> traverse_rhs t s1 \<le> traverse_rhs t s2"
   shows "\<And>acc s1 s2. s1 \<le> s2 \<Longrightarrow>
-           traverse_rhs (sp_compile (side_rhs_fold_dg acc ts)) s1 \<le> traverse_rhs (sp_compile (side_rhs_fold_dg acc ts)) s2"
+           traverse_rhs (sp_compile (side_rhs_fold_dg acc ts)) s1
+             \<le> traverse_rhs (sp_compile (side_rhs_fold_dg acc ts)) s2"
   using tree_mono
   unfolding side_rhs_fold_dg_def
   by (auto intro!: traverse_fold_rhs_projected_mono[OF mono_locals mono_DG_bot])
@@ -277,7 +280,8 @@ text \<open>
 \<close>
 
 lemma sides_of_rhs_side_rhs_fold_dg_acc_indep:
-  "sides_of_rhs (sp_compile (side_rhs_fold_dg acc1 ts)) sigma = sides_of_rhs (sp_compile (side_rhs_fold_dg acc2 ts)) sigma"
+  "sides_of_rhs (sp_compile (side_rhs_fold_dg acc1 ts)) sigma
+     = sides_of_rhs (sp_compile (side_rhs_fold_dg acc2 ts)) sigma"
   unfolding side_rhs_fold_dg_def
   by (rule sides_of_rhs_fold_rhs_projected_acc_indep)
 
@@ -293,7 +297,8 @@ text \<open>
 lemma sides_of_rhs_side_rhs_fold_dg_char:
   fixes ts :: "('x, 'k, ('d::bounded_semilattice_sup_bot, 'h::bounded_semilattice_sup_bot) dg_state)
                  strategy_tree list"
-  shows "sides_of_rhs (sp_compile (side_rhs_fold_dg acc ts)) \<tau> z = foldr (\<lambda>t acc'. sides_of_rhs t \<tau> z \<squnion> acc') ts bot"
+  shows "sides_of_rhs (sp_compile (side_rhs_fold_dg acc ts)) \<tau> z
+           = foldr (\<lambda>t acc'. sides_of_rhs t \<tau> z \<squnion> acc') ts bot"
   unfolding side_rhs_fold_dg_def
   by (rule sides_of_rhs_fold_rhs_projected_char)
 
@@ -318,7 +323,8 @@ lemma side_acc_dg_as_foldr_seeded:
   by (simp only: side_acc_dg_as_foldr foldr_join_seed_out[symmetric])
 
 lemma foldr_sup_locals_map_fold:
-  "foldr (\<lambda>t a. locals (traverse_rhs t \<tau>) \<squnion> a) (map (\<lambda>ts. sp_compile (side_rhs_fold_dg bot ts)) tss) b
+  "foldr (\<lambda>t a. locals (traverse_rhs t \<tau>) \<squnion> a)
+       (map (\<lambda>ts. sp_compile (side_rhs_fold_dg bot ts)) tss) b
      = foldr (\<lambda>t a. locals (traverse_rhs t \<tau>) \<squnion> a) (concat tss) b"
   by (induction tss arbitrary: b)
      (simp_all add: traverse_side_rhs_fold_dg side_acc_dg_as_foldr foldr_sup_acc)
@@ -332,25 +338,28 @@ lemma foldr_sup_sides_map_fold:
 lemma side_rhs_fold_dg_flat_cong:
   assumes eq: "set (concat tss) = set us"
   shows
-    "traverse_rhs (sp_compile (side_rhs_fold_dg acc (xs @ map (\<lambda>ts. sp_compile (side_rhs_fold_dg bot ts)) tss @ zs))) \<tau>
+    "traverse_rhs (sp_compile (side_rhs_fold_dg acc
+        (xs @ map (\<lambda>ts. sp_compile (side_rhs_fold_dg bot ts)) tss @ zs))) \<tau>
        = traverse_rhs (sp_compile (side_rhs_fold_dg acc (xs @ us @ zs))) \<tau>"
-    "sides_of_rhs (sp_compile (side_rhs_fold_dg acc (xs @ map (\<lambda>ts. sp_compile (side_rhs_fold_dg bot ts)) tss @ zs))) \<tau> z
+    (is ?T)
+    "sides_of_rhs (sp_compile (side_rhs_fold_dg acc
+        (xs @ map (\<lambda>ts. sp_compile (side_rhs_fold_dg bot ts)) tss @ zs))) \<tau> z
        = sides_of_rhs (sp_compile (side_rhs_fold_dg acc (xs @ us @ zs))) \<tau> z"
-    "dep_aux \<sigma> (sp_compile (side_rhs_fold_dg acc (xs @ map (\<lambda>ts. sp_compile (side_rhs_fold_dg bot ts)) tss @ zs)))
+    (is ?S)
+    "dep_aux \<sigma> (sp_compile (side_rhs_fold_dg acc
+        (xs @ map (\<lambda>ts. sp_compile (side_rhs_fold_dg bot ts)) tss @ zs)))
        = dep_aux \<sigma> (sp_compile (side_rhs_fold_dg acc (xs @ us @ zs)))"
+    (is ?D)
 proof -
-  show "traverse_rhs (sp_compile (side_rhs_fold_dg acc (xs @ map (\<lambda>ts. sp_compile (side_rhs_fold_dg bot ts)) tss @ zs))) \<tau>
-          = traverse_rhs (sp_compile (side_rhs_fold_dg acc (xs @ us @ zs))) \<tau>"
+  show ?T
     by (simp add: traverse_side_rhs_fold_dg side_acc_dg_as_foldr
           foldr_sup_locals_map_fold foldr_sup_set_cong[OF eq])
 next
-  show "sides_of_rhs (sp_compile (side_rhs_fold_dg acc (xs @ map (\<lambda>ts. sp_compile (side_rhs_fold_dg bot ts)) tss @ zs))) \<tau> z
-          = sides_of_rhs (sp_compile (side_rhs_fold_dg acc (xs @ us @ zs))) \<tau> z"
+  show ?S
     by (simp add: sides_of_rhs_side_rhs_fold_dg_char
           foldr_sup_sides_map_fold foldr_sup_set_cong[OF eq])
 next
-  show "dep_aux \<sigma> (sp_compile (side_rhs_fold_dg acc (xs @ map (\<lambda>ts. sp_compile (side_rhs_fold_dg bot ts)) tss @ zs)))
-          = dep_aux \<sigma> (sp_compile (side_rhs_fold_dg acc (xs @ us @ zs)))"
+  show ?D
     by (auto simp add: dep_aux_side_rhs_fold_dg_char simp flip: eq)
 qed
 

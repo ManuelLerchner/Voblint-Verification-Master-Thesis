@@ -73,7 +73,8 @@ theorem classify_checks_refuted_sound:
   fixes gamma_state :: "'s \<Rightarrow> store set"
   assumes fin: "finite (intra g)"
     and mem: "(v, c, Check_Refuted) \<in> set (classify_checks g env classify)"
-    and classify_refuted: "\<And>d s. classify c d = Check_Refuted \<Longrightarrow> s \<in> gamma_state d \<Longrightarrow> \<not> truthy (aval c s)"
+    and classify_refuted: "\<And>d s. classify c d = Check_Refuted
+                              \<Longrightarrow> s \<in> gamma_state d \<Longrightarrow> \<not> truthy (aval c s)"
     and node_sound: "reach v <= gamma_state (env v)"
   shows "\<forall>s \<in> reach v. ~ truthy (aval c s)"
 proof

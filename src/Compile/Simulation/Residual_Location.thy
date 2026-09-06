@@ -147,7 +147,12 @@ next
     by (rule compile_IfE) blast
   with IfRight.prems(2) show ?case by (intro IfRight.hyps(2)[OF c2]) blast
 qed simp_all
+
 subsection \<open>Located residuals remain source commands\<close>
+
+text \<open>Execution never introduces the runtime-only commands into a residual: whatever remains
+  of a source procedure is itself source syntax.  The simulation needs this to rule out the
+  frame-popping cases when it is reasoning inside a procedure body.\<close>
 
 lemma control_at_source_com:
   assumes "control_at \<Pi> p c0 k n r v" and "source_com c0"

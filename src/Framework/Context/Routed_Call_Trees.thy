@@ -249,7 +249,8 @@ definition routed_entry_seed_tree ::
 where
   "routed_entry_seed_tree seed_key route ctx v =
      (case v of FunctionEntry _ \<Rightarrow>
-        [sp_lift_tree (QueryG (seed_key v ctx) Answer) (\<lambda>seed_state. Answer (DG (locals seed_state) bot))]
+        [sp_lift_tree (QueryG (seed_key v ctx) Answer)
+           (\<lambda>seed_state. Answer (DG (locals seed_state) bot))]
        | _ \<Rightarrow> [])"
 
 lemma routed_entry_seed_tree_free:
@@ -279,7 +280,8 @@ lemma routed_callee_call_tree_sides_ge_seed:
                 (Inr (seed_key (FunctionEntry p)
                    (route cc ctx entry (CallEdge dst pars args))))"
 proof -
-  let ?F = "routed_call_alternative_tree S gk0 seed_key route is_bot ctx (CallEdge dst pars args) cc p"
+  let ?F = "routed_call_alternative_tree S gk0 seed_key route is_bot ctx
+              (CallEdge dst pars args) cc p"
   let ?k = "Inr (seed_key (FunctionEntry p) (route cc ctx entry (CallEdge dst pars args)))"
   have "DG entry bot \<le> sides_of_rhs (?F (cont, entry)) \<sigma> ?k"
     unfolding routed_call_alternative_tree_def using nb by (simp add: Let_def)
@@ -422,13 +424,15 @@ lemma routed_callee_call_tree_side_free_at_gk0:
         (dg_spec_combine_transfer S ci (mk_dg_man d (\<lambda>_. gk0)) de)) \<sigma> z = bot"
     and ne: "\<And>p ctx'. seed_key (FunctionEntry p) ctx' \<noteq> gk0"
   shows "sides_of_rhs
-           (routed_callee_call_tree S gk0 seed_key route is_bot ctx ca cc caller p) \<sigma> (Inr gk0) = bot"
+           (routed_callee_call_tree S gk0 seed_key route is_bot ctx ca cc caller p) \<sigma> (Inr gk0)
+         = bot"
 proof -
   obtain pairs pub
     where R: "enter_runs (enter\<^sup># S (call_info_of ca p))
                 (mk_dg_man caller (\<lambda>_. gk0)) \<sigma> pairs pub"
     using enter_runs_ex by blast
-  have alts: "\<And>t. t \<in> set (map (routed_call_alternative_tree S gk0 seed_key route is_bot ctx ca cc p) pairs)
+  have alts: "\<And>t. t \<in> set (map (routed_call_alternative_tree S gk0 seed_key route is_bot ctx
+                                  ca cc p) pairs)
                  \<Longrightarrow> sides_of_rhs t \<sigma> (Inr gk0) = bot"
     by (auto simp: routed_call_alternative_tree_def Let_def comb_free ne[THEN not_sym]
         split: if_splits)

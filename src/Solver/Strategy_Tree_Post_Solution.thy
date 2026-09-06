@@ -40,6 +40,9 @@ lemma tree_covered_atI [intro]:
 
 subsection \<open>Equivalent forms\<close>
 
+text \<open>The vendor's own post-solution predicate, restated per unknown.  A proof about one
+  node's right-hand side can then discharge its obligation locally and never unfold
+  \<^const>\<open>part_post_solution\<close> again.\<close>
 lemma part_post_solution_iff_tree_covered_at:
   "part_post_solution T x \<sigma> vars \<longleftrightarrow>
      x \<in> vars \<and> (\<forall>u \<in> vars. dep\<^sub>L T \<sigma> u \<subseteq> vars \<and> tree_covered_at (T u) \<sigma> u)"

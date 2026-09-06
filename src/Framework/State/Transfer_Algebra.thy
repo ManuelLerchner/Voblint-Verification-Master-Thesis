@@ -53,6 +53,10 @@ lemma combine_env_sound [intro]:
 
 subsection \<open>Generic soundness and monotonicity helpers\<close>
 
+text \<open>The two facts a call boundary keeps re-deriving: writing one variable, and binding a
+  list of formals, each preserve soundness and monotonicity.  They are stated for an
+  arbitrary domain and no transfer function, so every analysis picks them up rather than
+  proving its own copy.\<close>
 lemma gamma_state_upd [intro]:
   fixes \<sigma> :: "'a::sound_domain abs_state"
   assumes s: "s \<in> \<lbrakk>\<sigma>\<rbrakk>" and v: "v \<in> gamma a"

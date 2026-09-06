@@ -219,7 +219,8 @@ using assms proof (induction e arbitrary: pol)
   then show ?case by (simp add: is_empty_state_antimono[OF bfilter_reductive])
 next
   case (V x)
-  have "is_empty_state (bfilter (V x) pol sigma)" using is_empty_state_antimono[OF bfilter_reductive V.prems] .
+  have "is_empty_state (bfilter (V x) pol sigma)"
+    using is_empty_state_antimono[OF bfilter_reductive V.prems] .
   then show ?case by simp
 next
   case (Plus e1 e2)
@@ -288,6 +289,11 @@ lemma branch_witness_bottom:
 
 end
 
+text \<open>The monotonicity half of the strengthening.  Each inverse operator is assumed monotone
+  in every argument, which is what carries \<open>bfilter\<close> and \<open>branch\<close> through their structural
+  induction.  \<open>tobool_mono\<close> is the one assumption that does not read that way: a definite
+  truth value found at the coarser value must survive at the sharper one, and only a
+  non-empty sharper value can be asked -- an empty one decides everything vacuously.\<close>
 locale backward_domain_refined = backward_domain_reductive +
   assumes intersect_mono[intro]:
       "a1 \<le> a2 \<Longrightarrow> b1 \<le> b2 \<Longrightarrow> intersect a1 b1 \<le> intersect a2 b2"
@@ -624,7 +630,8 @@ next
 next
   case (Eq e1 e2)
   show ?case
-    using normalize_state_lift_mono[OF bfilter_mono[where b = "Eq e1 e2" and res = pol, OF Eq.prems]]
+    using normalize_state_lift_mono
+            [OF bfilter_mono[where b = "Eq e1 e2" and res = pol, OF Eq.prems]]
     by simp
 next
   case (Not b) then show ?case by simp
@@ -771,7 +778,8 @@ next
               \<squnion> Lifted (if feasible b2 False sigma then bfilter b2 False sigma else bot)"
       by (rule sup_mono[OF c1 c2])
     also have "\<dots> = Lifted (bfilter (And b1 b2) False sigma)" by simp
-    finally have result: "bfilter_lifted (And b1 b2) False sigma \<le> Lifted (bfilter (And b1 b2) False sigma)"
+    finally have result: "bfilter_lifted (And b1 b2) False sigma
+                            \<le> Lifted (bfilter (And b1 b2) False sigma)"
       by simp
     have pol_eq: "pol = False" using False by simp
     show ?thesis unfolding pol_eq by (rule result)
@@ -793,7 +801,8 @@ next
               \<squnion> Lifted (if feasible b2 True sigma then bfilter b2 True sigma else bot)"
       by (rule sup_mono[OF c1 c2])
     also have "\<dots> = Lifted (bfilter (Or b1 b2) True sigma)" by simp
-    finally have result: "bfilter_lifted (Or b1 b2) True sigma \<le> Lifted (bfilter (Or b1 b2) True sigma)"
+    finally have result: "bfilter_lifted (Or b1 b2) True sigma
+                            \<le> Lifted (bfilter (Or b1 b2) True sigma)"
       by simp
     have pol_eq: "pol = True" using True by simp
     show ?thesis unfolding pol_eq by (rule result)

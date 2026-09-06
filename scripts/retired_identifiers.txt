@@ -709,3 +709,29 @@ entry_state_context_eq_route_enterc_of_sigma
 # checks_provenI off checks_proven_def, not a soundness theorem, and the
 # _sound name invited the [dest] rationale the header used to give.
 checks_proven_sound
+
+# Dead: zero consumers outside their own definitions anywhere in src/.
+# callee_entry_at_call_site's sibling call_action_at_call_site (and its
+# _eq lemma, still live) cover what callers actually needed.
+callee_entry_at_call_site
+callee_entry_at_call_site_eq
+
+# --- The call_info-packaged return enumeration (2026-09-06) ---
+# return_calls/return_call_list were the return enumeration for the flat,
+# context-insensitive combine; that consumer is gone, and the routed generator
+# reads return_call_action_list, which keeps the call action whole. Nothing
+# outside CFG_Enumeration referenced either, and neither reached generated ML:
+# the pair's only uses were each other and their own characterization lemmas.
+# Reinstating them is one map over call_target_list if a call_info-shaped
+# consumer ever appears.
+return_calls
+return_call_list
+return_calls_iff
+finite_return_calls
+set_return_call_list
+
+# --- The exported duplicate of prog_cfg (2026-09-06) ---
+# compile_program had prog_cfg's body character for character, and prog_cfg is
+# itself exported, so the generated OCaml carried the same function twice. The
+# export root and codegen/regression/ocaml/main.ml now name prog_cfg.
+compile_program

@@ -62,11 +62,11 @@ interpretation sctx_adapter: routed_analysis_sound
     "compile_prog Pi ps" "Analysis_Global ()" route_unit Bot "Lifted cinit_sign_st" Bot
     "snd (sctx_sol gs empty_pred Pi ps)" "fst (sctx_sol gs empty_pred Pi ps)"
     "(cfg_exit (compile_prog Pi ps), ())"
-    Activation_Seed "\<lambda>d. d = Bot" enterc_unit
+    Activation_Seed "\<lambda>d. d = Bot" "call_context_rel_of_fun enterc_unit"
     "map_lift (fun_of_resolved_st_q_for gs)" sign_classify_check
-proof (unfold_locales, goal_cases FinE PP SgCov SgUncov Fwd FinC SeedKey
+proof (unfold_locales, goal_cases FinE PP SgCov SgUncov Fwd FinC CallsUnique SeedKey
     IsBotBot IsBotSound ResolveSound
-    EnterCover CombFwd EnterAgree GammaRd ClProved ClRefuted VarsFin)
+    EnterCover EnterTotal CombFwd GammaRd ClProved ClRefuted VarsFin)
   case FinE show ?case
     using compile_prog_finite by auto
 next
@@ -84,6 +84,9 @@ next
   case FinC show ?case
     by (simp add: compile_prog_finite)
 next
+  case CallsUnique show ?case
+    unfolding calls_source_unique_def using compile_prog_calls_source_unique by blast
+next
   case (SeedKey p ctx) show ?case by simp
 next
   case IsBotBot show ?case by simp
@@ -93,7 +96,7 @@ next
   case (ResolveSound u ctx dst pars args p cont s)
   thus ?case by (simp add: static_resolve_iff compile_prog_finite)
 next
-  case (EnterCover u ctx dst pars args p cont s)
+  case (EnterCover u ctx dst pars args p cont s ctx')
   let ?ci = "call_info_of (CallEdge dst pars args) p"
   let ?caller = "locals (snd (sctx_sol gs empty_pred Pi ps) (Inl (u, ctx)))"
   have cov: "entry_pairs_cover
@@ -105,21 +108,15 @@ next
   show ?case
     unfolding sctx_spec_def dgs_enter_local_state_st_for_lifted
     using enter_runs_local_enter_transfer enter_deps_local_enter_transfer cov
-          call_fwd_ok[OF EnterCover(1,2)]
-    by (fastforce simp: entry_pairs_cover_def route_unit_def enterc_unit_def)
+          call_fwd_ok[OF EnterCover(1,2)] EnterCover(4)
+    by (fastforce simp: entry_pairs_cover_def route_unit_def call_context_rel_of_fun_iff
+                        enterc_unit_def)
+next
+  case (EnterTotal u ctx dst pars args p cont s)
+  show ?case by simp
 next
   case (CombFwd cl c1 dst pars args p cont)
   show ?case using CombFwd(1,2) comb_fwd_ok by blast
-next
-  case (EnterAgree cl s es dst pars args p cont)
-  note ces = EnterAgree(1) and ce = EnterAgree(2)
-  obtain dst' pars' args' p' cont' where
-      ce': "(cl, CallEdge dst' pars' args', FunctionEntry p', cont') \<in> calls (compile_prog Pi ps)"
-    and es_eq: "es = call_enter gs (CallEdge dst' pars' args') s"
-    using ces unfolding call_enter_store_def by blast
-  have "CallEdge dst' pars' args' = CallEdge dst pars args"
-    using compile_prog_calls_source_unique[OF ce' ce] by simp
-  thus ?case using es_eq by simp
 next
   case (GammaRd d g')
   show ?case by (simp add: sctx_gamma_def)

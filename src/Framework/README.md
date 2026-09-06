@@ -24,6 +24,23 @@ Parents: `Voblint_CFG` (the graph and its collecting semantics),
 | routed | keyed by `(program point, context)`, with callee activations seeded through a global slot | `Context/Routed_Call_Trees.thy` |
 | whole-state | the Base-style shape where `D` is one `abs_state` and no global is touched | `Spec/DG_Local_State_Spec.thy` |
 
+### Goblint names
+
+| Voblint | Goblint |
+| --- | --- |
+| `dgs_*` fields of `dg_spec` | `Spec.*` methods of the same name |
+| `man_local` / `man_global` / `man_sideg` | `man.local` / `man.global` / `man.sideg` |
+| `route` (notation `context#`) | `Spec.context` |
+| `startcontext` | `Spec.startcontext` |
+| `Inl (pp, ctx)` | local unknown `lv = node * C.t` |
+| `Analysis_Global v` | `G of V.t` |
+| `Activation_Seed` | none; stands in for `sidel` |
+| `FunctionResult` | `Function` |
+| `call_context_rel` / `trace_context` | none; proof-only |
+
+`context` is an Isar outer keyword, so the selector is spelled `route` and
+carries `context#` as notation.
+
 ## One generator, six layers
 
 Only the last of these builds an equation system. Several constructors before
@@ -62,7 +79,7 @@ in the session derives from, transports, or instantiates one of them.
 | `dg_spec` | the analysis: one manager-native transfer per edge action, `enter`, `combine_env`/`combine_assign` -- Goblint's `Spec` | `Spec/DG_Spec.thy` |
 | `sound_dg_spec_core` | a joint concretization `gammaDG d g` the compiled trees' observations over-approximate | `Spec/DG_Spec_Sound.thy` |
 | `dg_ctx_activation_base` | a solved system: `part_post_solution`, the covered keys, a reader; derives EDGE and COMB | `Activation/DG_Ctx_Activation.thy` |
-| `routed_context_base_hetero` | a routing policy `route`/`enterc`/`seed_key`/`resolve` at any carrier and concretization; fixes the call trees `Context/Routed_Call_Trees.thy` builds, and derives CALL, COMB and activation-collect soundness | `Context/Routed_Context.thy` |
+| `routed_context_base_hetero` | a routing policy `route`/`call_context_rel`/`seed_key`/`resolve` at any carrier and concretization; fixes the call trees `Context/Routed_Call_Trees.thy` builds, and derives CALL, COMB and activation-collect soundness | `Context/Routed_Context.thy` |
 | `dg_analysis_adapter` | the published result table and check report, with their soundness | `Result/DG_Analysis_Adapter.thy` |
 
 Entry is deliberately absent from `sound_dg_spec_core`. A call answers a *list* of

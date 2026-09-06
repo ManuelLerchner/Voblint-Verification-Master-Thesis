@@ -290,7 +290,8 @@ lemma eq_routed_node_rhs_buffered:
 
 lemma sides_routed_node_rhs_buffered:
   assumes intra_free_at_key: "\<And>c' src a \<sigma>. sides_of_rhs (it_c c' src a) \<sigma> (Inr (gkey c')) = bot"
-    and comb_free_at_key: "\<And>c' ca cc ex \<sigma>. sides_of_rhs (cmb_c route c' ca cc ex) \<sigma> (Inr (gkey c')) = bot"
+    and comb_free_at_key: "\<And>c' ca cc ex \<sigma>.
+                     sides_of_rhs (cmb_c route c' ca cc ex) \<sigma> (Inr (gkey c')) = bot"
     and extra_free: "\<And>c' w \<sigma> z x. x \<in> set (extra route c' w) \<Longrightarrow> sides_of_rhs x \<sigma> z = bot"
   shows "sides_of_rhs (routed_node_rhs_buffered pred_sel gkey route it_c cmb_c extra g bot0 s0d s0g
       (v, ctx)) \<tau> (Inr (gkey ctx)) =
@@ -298,14 +299,17 @@ lemma sides_routed_node_rhs_buffered:
      (routed_contribution_trees pred_sel route it_c cmb_c extra g ctx v)
      (if v = cfg_entry g then DG (bot0 \<squnion> s0d) s0g else DG bot0 bot)))"
 proof -
-  have free: "\<And>w \<sigma> x. x \<in> set (routed_contribution_trees pred_sel route it_c cmb_c extra g ctx w) \<Longrightarrow> sides_of_rhs x \<sigma> (Inr (gkey ctx)) = bot"
+  have free: "\<And>w \<sigma> x.
+      x \<in> set (routed_contribution_trees pred_sel route it_c cmb_c extra g ctx w)
+      \<Longrightarrow> sides_of_rhs x \<sigma> (Inr (gkey ctx)) = bot"
     using intra_free_at_key comb_free_at_key extra_free
-    by (metis routed_contribution_treesE)
+    by (blast elim: routed_contribution_treesE)
   show ?thesis
   proof (cases "v = cfg_entry g")
     case True
     have z0: "sides_of_rhs (sp_compile (fold_rhs_contributions (DG (bot0 \<squnion> s0d) s0g)
-        (routed_contribution_trees pred_sel route it_c cmb_c extra g ctx (cfg_entry g)))) \<tau> (Inr (gkey ctx)) = bot"
+        (routed_contribution_trees pred_sel route it_c cmb_c extra g ctx (cfg_entry g))))
+        \<tau> (Inr (gkey ctx)) = bot"
       by (simp only: sides_of_rhs_fold_rhs_contributions_char
           foldr_sup_bot_of_all_bot[OF free[where w = "cfg_entry g"]])
     from True show ?thesis
@@ -315,7 +319,8 @@ proof -
   next
     case False
     have z0: "sides_of_rhs (sp_compile (fold_rhs_contributions (DG bot0 bot)
-        (routed_contribution_trees pred_sel route it_c cmb_c extra g ctx v))) \<tau> (Inr (gkey ctx)) = bot"
+        (routed_contribution_trees pred_sel route it_c cmb_c extra g ctx v)))
+        \<tau> (Inr (gkey ctx)) = bot"
       by (simp only: sides_of_rhs_fold_rhs_contributions_char
           foldr_sup_bot_of_all_bot[OF free[where w = v]])
     from False show ?thesis
@@ -368,13 +373,17 @@ lemma routed_node_rhs_buffered_correspondence:
     and intra_dep: "\<And>c' src a \<tau>. dep_aux \<tau> (it_c c' src a) = dep_aux \<tau> (it c' src a)"
     and comb_t: "\<And>c' ca cc ex \<tau>. locals (traverse_rhs (cmb_c route c' ca cc ex) \<tau>)
                      = locals (traverse_rhs (cmb route c' ca cc ex) \<tau>)"
-    and comb_side_pure: "\<And>c' ca cc ex \<tau>. locals (sides_of_rhs (cmb route c' ca cc ex) \<tau> (Inr (gkey c'))) = bot"
+    and comb_side_pure: "\<And>c' ca cc ex \<tau>.
+                     locals (sides_of_rhs (cmb route c' ca cc ex) \<tau> (Inr (gkey c'))) = bot"
     and comb_s: "\<And>c' ca cc ex \<tau>. globs (traverse_rhs (cmb_c route c' ca cc ex) \<tau>)
                      = globs (sides_of_rhs (cmb route c' ca cc ex) \<tau> (Inr (gkey c')))"
-    and comb_free_at_key: "\<And>c' ca cc ex \<tau>. sides_of_rhs (cmb_c route c' ca cc ex) \<tau> (Inr (gkey c')) = bot"
+    and comb_free_at_key: "\<And>c' ca cc ex \<tau>.
+                     sides_of_rhs (cmb_c route c' ca cc ex) \<tau> (Inr (gkey c')) = bot"
     and comb_sides_off_key: "\<And>c' ca cc ex \<tau> z. z \<noteq> Inr (gkey c')
-                     \<Longrightarrow> sides_of_rhs (cmb_c route c' ca cc ex) \<tau> z = sides_of_rhs (cmb route c' ca cc ex) \<tau> z"
-    and comb_dep: "\<And>c' ca cc ex \<tau>. dep_aux \<tau> (cmb_c route c' ca cc ex) = dep_aux \<tau> (cmb route c' ca cc ex)"
+                     \<Longrightarrow> sides_of_rhs (cmb_c route c' ca cc ex) \<tau> z
+                         = sides_of_rhs (cmb route c' ca cc ex) \<tau> z"
+    and comb_dep: "\<And>c' ca cc ex \<tau>. dep_aux \<tau> (cmb_c route c' ca cc ex)
+                     = dep_aux \<tau> (cmb route c' ca cc ex)"
     and extra_free: "\<And>c' w \<tau> z x. x \<in> set (extra route c' w) \<Longrightarrow> sides_of_rhs x \<tau> z = bot"
     and extra_local_only: "\<And>c' w \<tau> x. x \<in> set (extra route c' w) \<Longrightarrow> globs (traverse_rhs x \<tau>) = bot"
   shows "traverse_rhs
@@ -407,25 +416,35 @@ proof -
     by (simp add: routed_contribution_trees_def)
   have old_split: "?old = ?intra_old @ ?comb_old @ ?extra"
     by (simp add: routed_contribution_trees_def)
-  have intra_local: "list_all2 (\<lambda>t_new t_old. locals (traverse_rhs t_new \<tau>) = locals (traverse_rhs t_old \<tau>))
+  have intra_local: "list_all2
+      (\<lambda>t_new t_old. locals (traverse_rhs t_new \<tau>) = locals (traverse_rhs t_old \<tau>))
       ?intra_new ?intra_old"
     by (rule list_all2_map_diag) (auto simp: intra_t)
-  have intra_global: "list_all2 (\<lambda>t_new t_old. globs (traverse_rhs t_new \<tau>)
-                                    = globs (sides_of_rhs t_old \<tau> (Inr (gkey ctx)))) ?intra_new ?intra_old"
+  have intra_global: "list_all2
+      (\<lambda>t_new t_old. globs (traverse_rhs t_new \<tau>)
+                       = globs (sides_of_rhs t_old \<tau> (Inr (gkey ctx))))
+      ?intra_new ?intra_old"
     by (rule list_all2_map_diag) (auto simp: intra_s)
-  have comb_local: "list_all2 (\<lambda>t_new t_old. locals (traverse_rhs t_new \<tau>) = locals (traverse_rhs t_old \<tau>))
+  have comb_local: "list_all2
+      (\<lambda>t_new t_old. locals (traverse_rhs t_new \<tau>) = locals (traverse_rhs t_old \<tau>))
       ?comb_new ?comb_old"
     by (rule list_all2_map_diag) (auto simp: comb_t)
-  have comb_global: "list_all2 (\<lambda>t_new t_old. globs (traverse_rhs t_new \<tau>)
-                                   = globs (sides_of_rhs t_old \<tau> (Inr (gkey ctx)))) ?comb_new ?comb_old"
+  have comb_global: "list_all2
+      (\<lambda>t_new t_old. globs (traverse_rhs t_new \<tau>)
+                       = globs (sides_of_rhs t_old \<tau> (Inr (gkey ctx))))
+      ?comb_new ?comb_old"
     by (rule list_all2_map_diag) (auto simp: comb_s)
-  have extra_local: "list_all2 (\<lambda>t_new t_old. locals (traverse_rhs t_new \<tau>) = locals (traverse_rhs t_old \<tau>))
+  have extra_local: "list_all2
+      (\<lambda>t_new t_old. locals (traverse_rhs t_new \<tau>) = locals (traverse_rhs t_old \<tau>))
       ?extra ?extra"
     by (rule list.rel_refl_strong) simp
-  have extra_global: "list_all2 (\<lambda>t_new t_old. globs (traverse_rhs t_new \<tau>)
-                                    = globs (sides_of_rhs t_old \<tau> (Inr (gkey ctx)))) ?extra ?extra"
+  have extra_global: "list_all2
+      (\<lambda>t_new t_old. globs (traverse_rhs t_new \<tau>)
+                       = globs (sides_of_rhs t_old \<tau> (Inr (gkey ctx))))
+      ?extra ?extra"
     by (rule list.rel_refl_strong) (simp add: extra_free extra_local_only bot_dg_state_def)
-  have local_list: "list_all2 (\<lambda>t_new t_old. locals (traverse_rhs t_new \<tau>) = locals (traverse_rhs t_old \<tau>))
+  have local_list: "list_all2
+      (\<lambda>t_new t_old. locals (traverse_rhs t_new \<tau>) = locals (traverse_rhs t_old \<tau>))
       ?new ?old"
     unfolding new_split old_split
     using intra_local comb_local extra_local by (intro list_all2_appendI)
@@ -509,7 +528,8 @@ proof -
     also have "\<dots> = DG bot (globs ?acc0
           \<squnion> globs (foldr (\<lambda>t acc'. sides_of_rhs t \<tau> (Inr (gkey ctx)) \<squnion> acc')
               ?old bot))"
-      by (subst old_fold_collapse) (cases "v = cfg_entry g", simp_all add: DG_sup_bot_left bot_dg_state_def)
+      by (subst old_fold_collapse)
+         (cases "v = cfg_entry g", simp_all add: DG_sup_bot_left bot_dg_state_def)
     finally show ?thesis .
   qed
   have S_at_key: "sides_of_rhs
@@ -534,9 +554,11 @@ proof -
       by (rule old_sides[symmetric])
     finally show ?thesis .
   qed
-  have intra_dep_list: "list_all2 (\<lambda>t_new t_old. dep_aux \<tau> t_new = dep_aux \<tau> t_old) ?intra_new ?intra_old"
+  have intra_dep_list: "list_all2 (\<lambda>t_new t_old. dep_aux \<tau> t_new = dep_aux \<tau> t_old)
+      ?intra_new ?intra_old"
     by (rule list_all2_map_diag) (auto simp: intra_dep)
-  have comb_dep_list: "list_all2 (\<lambda>t_new t_old. dep_aux \<tau> t_new = dep_aux \<tau> t_old) ?comb_new ?comb_old"
+  have comb_dep_list: "list_all2 (\<lambda>t_new t_old. dep_aux \<tau> t_new = dep_aux \<tau> t_old)
+      ?comb_new ?comb_old"
     by (rule list_all2_map_diag) (auto simp: comb_dep)
   have extra_dep: "list_all2 (\<lambda>t_new t_old. dep_aux \<tau> t_new = dep_aux \<tau> t_old) ?extra ?extra"
     by (rule list.rel_refl_strong) simp
@@ -560,13 +582,16 @@ proof -
     finally show ?thesis .
   qed
   have intra_sides_off: "\<And>z. z \<noteq> Inr (gkey ctx)
-      \<Longrightarrow> list_all2 (\<lambda>t_new t_old. sides_of_rhs t_new \<tau> z = sides_of_rhs t_old \<tau> z) ?intra_new ?intra_old"
+      \<Longrightarrow> list_all2 (\<lambda>t_new t_old. sides_of_rhs t_new \<tau> z = sides_of_rhs t_old \<tau> z)
+              ?intra_new ?intra_old"
     by (rule list_all2_map_diag) (auto simp: intra_sides_off_key)
   have comb_sides_off: "\<And>z. z \<noteq> Inr (gkey ctx)
-      \<Longrightarrow> list_all2 (\<lambda>t_new t_old. sides_of_rhs t_new \<tau> z = sides_of_rhs t_old \<tau> z) ?comb_new ?comb_old"
+      \<Longrightarrow> list_all2 (\<lambda>t_new t_old. sides_of_rhs t_new \<tau> z = sides_of_rhs t_old \<tau> z)
+              ?comb_new ?comb_old"
     by (rule list_all2_map_diag) (auto simp: comb_sides_off_key)
-  have extra_sides_off: "\<And>z. list_all2 (\<lambda>t_new t_old. sides_of_rhs t_new \<tau> z = sides_of_rhs t_old \<tau> z)
-      ?extra ?extra"
+  have extra_sides_off: "\<And>z.
+      list_all2 (\<lambda>t_new t_old. sides_of_rhs t_new \<tau> z = sides_of_rhs t_old \<tau> z)
+        ?extra ?extra"
     by (rule list.rel_refl_strong) simp
   have sides_list_off: "\<And>z. z \<noteq> Inr (gkey ctx)
       \<Longrightarrow> list_all2 (\<lambda>t_new t_old. sides_of_rhs t_new \<tau> z = sides_of_rhs t_old \<tau> z)
@@ -638,13 +663,17 @@ lemma part_post_solution_routed_node_rhs_buffered:
     and intra_dep: "\<And>c' src a \<tau>. dep_aux \<tau> (it_c c' src a) = dep_aux \<tau> (it c' src a)"
     and comb_t: "\<And>c' ca cc ex \<tau>. locals (traverse_rhs (cmb_c route c' ca cc ex) \<tau>)
                      = locals (traverse_rhs (cmb route c' ca cc ex) \<tau>)"
-    and comb_side_pure: "\<And>c' ca cc ex \<tau>. locals (sides_of_rhs (cmb route c' ca cc ex) \<tau> (Inr (gkey c'))) = bot"
+    and comb_side_pure: "\<And>c' ca cc ex \<tau>.
+                     locals (sides_of_rhs (cmb route c' ca cc ex) \<tau> (Inr (gkey c'))) = bot"
     and comb_s: "\<And>c' ca cc ex \<tau>. globs (traverse_rhs (cmb_c route c' ca cc ex) \<tau>)
                      = globs (sides_of_rhs (cmb route c' ca cc ex) \<tau> (Inr (gkey c')))"
-    and comb_free_at_key: "\<And>c' ca cc ex \<tau>. sides_of_rhs (cmb_c route c' ca cc ex) \<tau> (Inr (gkey c')) = bot"
+    and comb_free_at_key: "\<And>c' ca cc ex \<tau>.
+                     sides_of_rhs (cmb_c route c' ca cc ex) \<tau> (Inr (gkey c')) = bot"
     and comb_sides_off_key: "\<And>c' ca cc ex \<tau> z. z \<noteq> Inr (gkey c')
-                     \<Longrightarrow> sides_of_rhs (cmb_c route c' ca cc ex) \<tau> z = sides_of_rhs (cmb route c' ca cc ex) \<tau> z"
-    and comb_dep: "\<And>c' ca cc ex \<tau>. dep_aux \<tau> (cmb_c route c' ca cc ex) = dep_aux \<tau> (cmb route c' ca cc ex)"
+                     \<Longrightarrow> sides_of_rhs (cmb_c route c' ca cc ex) \<tau> z
+                         = sides_of_rhs (cmb route c' ca cc ex) \<tau> z"
+    and comb_dep: "\<And>c' ca cc ex \<tau>. dep_aux \<tau> (cmb_c route c' ca cc ex)
+                     = dep_aux \<tau> (cmb route c' ca cc ex)"
     and extra_free: "\<And>c' w \<tau> z x. x \<in> set (extra route c' w) \<Longrightarrow> sides_of_rhs x \<tau> z = bot"
     and extra_local_only: "\<And>c' w \<tau> x. x \<in> set (extra route c' w) \<Longrightarrow> globs (traverse_rhs x \<tau>) = bot"
     and pp_buf: "part_post_solution
@@ -753,7 +782,8 @@ proof (unfold mono_sides_def, intro allI)
   proof (intro impI)
     assume le: "s1 \<le> s2"
     obtain v c where x: "x = (v, c)" by (cases x)
-    have tree_sides_mono: "\<And>w. \<forall>t \<in> set (routed_contribution_trees pred_sel route it cmb extra g c w).
+    have tree_sides_mono: "\<And>w. \<forall>t \<in> set
+                       (routed_contribution_trees pred_sel route it cmb extra g c w).
                        \<forall>s1 s2. s1 \<le> s2 \<longrightarrow> sides_of_rhs t s1 \<le> sides_of_rhs t s2"
       using intra_sides_mono comb_sides_mono extra_sides_mono
       by (auto simp: routed_contribution_trees_def)

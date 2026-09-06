@@ -127,7 +127,13 @@ lemma foldr_sup_bot_of_all_bot:
   assumes "\<And>x. x \<in> set L \<Longrightarrow> h x = bot"
   shows "foldr (\<lambda>x acc'. h x \<squnion> acc') L bot = bot"
   using assms by (induction L) simp_all
+
 subsection \<open>Folding contributions into one right-hand side\<close>
+
+text \<open>Several contribution trees, one right-hand side: run each in list order, join its
+  answer into the accumulator, and answer with the accumulator.  \<open>prj\<close> and \<open>emb\<close> keep the
+  fold generic in which part of an answer accumulates -- that is what later lets the D/G
+  layer join the local half while the global half travels as a side effect.\<close>
 
 fun fold_rhs_projected ::
   "('a \<Rightarrow> 'b) \<Rightarrow> ('b \<Rightarrow> 'a) \<Rightarrow> 'b::semilattice_sup

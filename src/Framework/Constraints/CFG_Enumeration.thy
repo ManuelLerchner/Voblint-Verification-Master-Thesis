@@ -232,12 +232,19 @@ lemma call_target_list_iff:
 
 subsection \<open>Return enumeration\<close>
 
-text \<open>Two views of the same return edges, both images of \<^const>\<open>call_targets\<close>: one keeping
-  the triggering \<^typ>\<open>call_action\<close> whole, one replacing it with the call's
-  \<^typ>\<open>call_info\<close>.  The return contribution is the caller state and the callee-exit state
-  assembled by \<open>combine\<^sup>#\<close>.  Both hand back the callee's \<^term>\<open>FunctionResult p\<close> node
-  directly --- recovered from the callee entry \<^term>\<open>FunctionEntry p\<close>, so no separate
-  combine relation is needed and no client has to rebuild the result node.\<close>
+text \<open>The return edges, as an image of \<^const>\<open>call_targets\<close> that keeps the triggering
+  \<^typ>\<open>call_action\<close> whole.  The return contribution is the caller state and the callee-exit
+  state assembled by \<open>combine\<^sup>#\<close>.  The callee's \<^term>\<open>FunctionResult p\<close> node comes back
+  directly --- recovered from the callee entry \<^term>\<open>FunctionEntry p\<close> --- so no separate
+  combine relation is needed and no client has to rebuild the result node.
+
+  The action is kept whole rather than packaged into the call's \<^typ>\<open>call_info\<close>, because
+  the generator must route the callee-entry seed publication and the return-side context
+  read from the \<^emph>\<open>same\<close> action, exactly as \<^const>\<open>entry_call_list\<close> keeps \<open>ca\<close> whole on
+  the entry side.  This layer is the only one holding the \<^const>\<open>calls\<close> relation, so
+  whatever a consumer needs about a call site is projected here: a combine tree never sees
+  the CFG, and \<^const>\<open>wf_cfg\<close> does not force a call site's outgoing call edge to be
+  unique, so there is no well-defined downstream lookup that could recover it instead.\<close>
 
 definition return_call_actions ::
     "cfg \<Rightarrow> cfg_node \<Rightarrow> (cfg_node \<times> call_action \<times> cfg_node) set" where
@@ -265,51 +272,8 @@ lemma set_return_call_action_list [simp]:
   unfolding return_call_action_list_def return_call_actions_def
   by (simp add: set_call_target_list[OF assms])
 
-text \<open>The packaged view carries the call's own \<^typ>\<open>call_info\<close> --- callee, formals and
-  actual arguments --- rather than a bare destination, because that is what an
-  interprocedural transfer sees at the return point, matching what Goblint's
-  \<open>combine_env\<close>/\<open>combine_assign\<close> receive.  The enumeration is the only layer holding the
-  \<^const>\<open>calls\<close> relation, so the metadata is projected here; a combine tree never sees the
-  CFG, and \<^const>\<open>wf_cfg\<close> does not force a call site's outgoing call edge to be unique, so
-  there is no well-defined downstream lookup that could recover it instead.
-
-  The flat, context-insensitive combine (\<open>combine_collect_abs\<close>, \<open>combine\<^sup>#\<close>) needs no more
-  than this.  The context-sensitive DG generator uses \<^const>\<open>return_call_action_list\<close>
-  instead, because it must route the callee-entry seed publication and the return-side
-  context read from the \<^emph>\<open>same\<close> call action, exactly as \<^const>\<open>entry_call_list\<close> keeps \<open>ca\<close>
-  whole on the entry side.\<close>
-
-definition return_calls ::
-    "cfg \<Rightarrow> cfg_node \<Rightarrow> (cfg_node \<times> call_info \<times> cfg_node) set" where
-  "return_calls g v =
-     (\<lambda>(c, ca, p). (c, call_info_of ca p, FunctionResult p)) ` call_targets g v"
-
-lemma return_calls_iff [simp]:
-  "(c, ci, r) \<in> return_calls g v
-     \<longleftrightarrow> (\<exists>ca p. r = FunctionResult p \<and> ci = call_info_of ca p
-             \<and> (c, ca, FunctionEntry p, v) \<in> calls g)"
-  by (auto simp: return_calls_def image_iff Bex_def)
-
-lemma finite_return_calls [intro]:
-  assumes "finite (calls g)"
-  shows "finite (return_calls g v)"
-  using finite_call_targets[OF assms] by (simp add: return_calls_def)
-
-definition return_call_list ::
-    "cfg \<Rightarrow> cfg_node \<Rightarrow> (cfg_node \<times> call_info \<times> cfg_node) list" where
-  "return_call_list g v =
-     map (\<lambda>(c, ca, p). (c, call_info_of ca p, FunctionResult p)) (call_target_list g v)"
-
-lemma set_return_call_list [simp]:
-  assumes "finite (calls g)"
-  shows "set (return_call_list g v) = return_calls g v"
-  unfolding return_call_list_def return_calls_def
-  by (simp add: set_call_target_list[OF assms])
-
-text \<open>The three lists carry the same call sites in the same order; only the callee's
-  spelling differs.  This is what justifies calling them return enumerations for the same
-  edge rather than unrelated relations --- and, since two of them are maps over the third,
-  it holds by construction and cannot lapse.\<close>
+text \<open>The return list is a map over \<^const>\<open>call_target_list\<close>, so the two carry the same call
+  sites in the same order by construction and that agreement cannot lapse.\<close>
 
 lemma return_call_action_list_eq_call_target_list:
   "return_call_action_list g v

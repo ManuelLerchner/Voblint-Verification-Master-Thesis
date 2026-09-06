@@ -225,13 +225,8 @@ text \<open>
 definition sg_st ::
     "(vname \<Rightarrow> bool) \<Rightarrow> (ivl exec_dg_st \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list
        \<Rightarrow> pp \<times> unit + (unit, unit) routed_gk \<Rightarrow> ivl exec_dg_st lifted" where
-  "sg_st gs empty_pred Pi ps k =
-     (case k of
-        Inl (v, ctx) \<Rightarrow>
-          (if (v, ctx) \<in> fst (sol gs empty_pred Pi ps)
-           then locals (snd (sol gs empty_pred Pi ps) (Inl (v, ctx)))
-           else Bot)
-      | Inr _ \<Rightarrow> Bot)"
+  "sg_st gs empty_pred Pi ps =
+     solved_local_reader (fst (sol gs empty_pred Pi ps)) (snd (sol gs empty_pred Pi ps))"
 
 context
   fixes gs :: "vname \<Rightarrow> bool" and empty_pred :: "ivl exec_dg_st \<Rightarrow> bool"
@@ -282,8 +277,8 @@ interpretation routed: unit_routed_context "interval_spec gs empty_pred" "interv
     "snd (sol gs empty_pred Pi ps)" "fst (sol gs empty_pred Pi ps)"
     "(cfg_exit (compile_prog Pi ps), ())" "sg_st gs empty_pred Pi ps" Activation_Seed
     "\<lambda>d. d = Bot" "\<lambda>m. gamma_state_lift (map_lift (fun_of_resolved_st_q_for gs) m)"
-proof (unfold_locales, goal_cases FinE PP SgCov SgUncov Fwd FinC SeedKey
-    IsBotBot IsBotSound EnterComplete CallFwd CombFwd EnterAgree)
+proof (unfold_locales, goal_cases FinE PP SgCov SgUncov Fwd FinC CallsUnique SeedKey
+    IsBotBot IsBotSound EnterComplete CallFwd CombFwd)
   case FinE show ?case by (rule fin)
 next
   case PP show ?case by (rule pp_routed[OF solves exact])
@@ -296,6 +291,9 @@ next
   case (Fwd u a v ctx) then show ?case by (rule fwd_ok)
 next
   case FinC show ?case by (rule finC)
+next
+  case CallsUnique
+  show ?case unfolding calls_source_unique_def using compile_prog_calls_source_unique by blast
 next
   case (SeedKey p ctx) show ?case by simp
 next
@@ -320,17 +318,10 @@ next
 next
   case (CombFwd cl c1 dst pars args p cont)
   show ?case using CombFwd(1,2) comb_fwd_ok by blast
-next
-  case (EnterAgree cl s es dst pars args p cont)
-  note ces = EnterAgree(1) and ce = EnterAgree(2)
-  obtain dst' pars' args' p' cont' where
-      ce': "(cl, CallEdge dst' pars' args', FunctionEntry p', cont') \<in> calls (compile_prog Pi ps)"
-    and es_eq: "es = call_enter gs (CallEdge dst' pars' args') s"
-    using ces unfolding call_enter_store_def by blast
-  have "CallEdge dst' pars' args' = CallEdge dst pars args"
-    using compile_prog_calls_source_unique[OF ce' ce] by simp
-  thus ?case using es_eq by simp
 qed
+
+subsubsection \<open>Activation-indexed collecting soundness\<close>
+
 
 subsubsection \<open>Activation-indexed collecting soundness\<close>
 
@@ -357,11 +348,12 @@ interpretation adapter: dg_analysis_adapter "interval_spec gs empty_pred" "inter
     "snd (sol gs empty_pred Pi ps)" "fst (sol gs empty_pred Pi ps)"
     "(cfg_exit (compile_prog Pi ps), ())" "sg_st gs empty_pred Pi ps"
     Activation_Seed "\<lambda>d. d = Bot"
-    "\<lambda>m. gamma_state_lift (map_lift (fun_of_resolved_st_q_for gs) m)" enterc_unit
+    "\<lambda>m. gamma_state_lift (map_lift (fun_of_resolved_st_q_for gs) m)"
+    "call_context_rel_of_fun enterc_unit"
     "map_lift (fun_of_resolved_st_q_for gs)" interval_classify_check
-proof (unfold_locales, goal_cases FinE PP SgCov SgUncov Fwd FinC SeedKey
+proof (unfold_locales, goal_cases FinE PP SgCov SgUncov Fwd FinC CallsUnique SeedKey
     IsBotBot IsBotSound ResolveSound
-    EnterCover CombFwd EnterAgree GammaRd ClProved ClRefuted VarsFin)
+    EnterCover EnterTotal CombFwd GammaRd ClProved ClRefuted VarsFin)
   case FinE show ?case by (rule fin)
 next
   case PP show ?case by (rule pp_routed[OF solves exact])
@@ -377,6 +369,9 @@ next
 next
   case FinC show ?case by (rule finC)
 next
+  case CallsUnique
+  show ?case unfolding calls_source_unique_def using compile_prog_calls_source_unique by blast
+next
   case (SeedKey p ctx) show ?case by simp
 next
   case IsBotBot show ?case by simp
@@ -386,7 +381,8 @@ next
   case (ResolveSound u ctx dst pars args p cont s)
   thus ?case by (simp add: static_resolve_iff[OF finC])
 next
-  case (EnterCover u ctx dst pars args p cont s)
+  case (EnterCover u ctx dst pars args p cont s ctx')
+  have ctx'_eq: "ctx' = ()" by simp
   let ?ci = "call_info_of (CallEdge dst pars args) p"
   let ?caller = "locals (snd (sol gs empty_pred Pi ps) (Inl (u, ctx)))"
   have cov: "entry_pairs_cover
@@ -395,23 +391,16 @@ next
       [(?caller, transfer_lift empty_pred (ivl_enter_st_for gs ?ci) ?caller)]"
     using interval_entry_cover_exec[OF exact EnterCover(3), where ci = ?ci] by simp
   show ?case
-    unfolding interval_spec_def dgs_enter_local_state_st_for_lifted
+    unfolding interval_spec_def dgs_enter_local_state_st_for_lifted ctx'_eq
     using enter_runs_local_enter_transfer enter_deps_local_enter_transfer cov
           call_fwd_ok[OF EnterCover(1,2)]
     by (fastforce simp: entry_pairs_cover_def)
 next
+  case (EnterTotal u ctx dst pars args p cont s)
+  show ?case by simp
+next
   case (CombFwd cl c1 dst pars args p cont)
   show ?case using CombFwd(1,2) comb_fwd_ok by blast
-next
-  case (EnterAgree cl s es dst pars args p cont)
-  note ces = EnterAgree(1) and ce = EnterAgree(2)
-  obtain dst' pars' args' p' cont' where
-      ce': "(cl, CallEdge dst' pars' args', FunctionEntry p', cont') \<in> calls (compile_prog Pi ps)"
-    and es_eq: "es = call_enter gs (CallEdge dst' pars' args') s"
-    using ces unfolding call_enter_store_def by blast
-  have "CallEdge dst' pars' args' = CallEdge dst pars args"
-    using compile_prog_calls_source_unique[OF ce' ce] by simp
-  thus ?case using es_eq by simp
 next
   case (GammaRd d g')
   show ?case by (simp add: interval_gamma_def)
@@ -1274,13 +1263,9 @@ text \<open>
 definition entry_state_sg_st ::
     "(vname \<Rightarrow> bool) \<Rightarrow> (ivl exec_dg_st \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list
        \<Rightarrow> pp \<times> ivl list + (unit, ivl list) routed_gk \<Rightarrow> ivl exec_dg_st lifted" where
-  "entry_state_sg_st gs empty_pred Pi ps k =
-     (case k of
-        Inl (v, ctx) \<Rightarrow>
-          (if (v, ctx) \<in> fst (entry_state_sol gs empty_pred Pi ps)
-           then locals (snd (entry_state_sol gs empty_pred Pi ps) (Inl (v, ctx)))
-           else Bot)
-      | Inr _ \<Rightarrow> Bot)"
+  "entry_state_sg_st gs empty_pred Pi ps =
+     solved_local_reader (fst (entry_state_sol gs empty_pred Pi ps))
+                          (snd (entry_state_sol gs empty_pred Pi ps))"
 
 context
   fixes gs :: "vname \<Rightarrow> bool" and empty_pred :: "ivl exec_dg_st \<Rightarrow> bool"
@@ -1309,21 +1294,6 @@ begin
 
 subsection \<open>The solver's table as the solved system\<close>
 
-text \<open>
-  The trace-semantic context function: ignores its store argument entirely and
-  recomputes the routed value from the caller's own solved state in the solver's table,
-  using \<^const>\<open>call_action_at_call_site\<close> for the one call at \<open>u\<close>. This is a total
-  context function, so coverage of infinitely many concrete stores comes from the
-  caller's own value being imprecise, not from \<open>entry_state_context\<close> being multi-valued.
-\<close>
-
-definition entry_state_context :: "cfg_node \<Rightarrow> ivl list \<Rightarrow> store \<Rightarrow> ivl list" where
-  "entry_state_context u ctx s =
-     (let ca = call_action_at_call_site (compile_prog Pi ps) u;
-          p = (case callee_entry_at_call_site (compile_prog Pi ps) u of FunctionEntry q \<Rightarrow> q | _ \<Rightarrow> undefined)
-      in entry_state_route_gen gs empty_pred u ctx
-          (transfer_lift empty_pred (ivl_enter_st_for gs (call_info_of ca p))
-             (locals (snd (entry_state_sol gs empty_pred Pi ps) (Inl (u, ctx))))) ca)"
 
 interpretation entry_state_compiled: compiled_cfg Pi ps "compile_prog Pi ps"
   by (unfold_locales; simp add: compile_prog_finite)
@@ -1355,9 +1325,9 @@ interpretation entry_state_routed: entry_state_routed_context "interval_spec gs 
     "snd (entry_state_sol gs empty_pred Pi ps)" "fst (entry_state_sol gs empty_pred Pi ps)"
     "(cfg_exit (compile_prog Pi ps), [])" "entry_state_sg_st gs empty_pred Pi ps" Activation_Seed
     "\<lambda>d. d = Bot" "\<lambda>m. gamma_state_lift (map_lift (fun_of_resolved_st_q_for gs) m)"
-    "\<lambda>ci. transfer_lift empty_pred (ivl_enter_st_for gs ci)"
+    "\<lambda>ci d. [(d, transfer_lift empty_pred (ivl_enter_st_for gs ci) d)]"
 proof (unfold_locales, goal_cases FinE PP SgCov SgUncov Fwd SeedNe
-    IsBotBot IsBotSound EnterSingleton EnterSoundAt CallFwd CombFwd)
+    IsBotBot IsBotSound EnterPure EnterCover CallFwd CombFwd)
   case FinE show ?case by (rule entry_state_fin)
 next
   case PP show ?case by (rule entry_state_pp_routed[OF solves exact])
@@ -1375,67 +1345,65 @@ next
 next
   case (IsBotSound d gv) then show ?case by (simp add: interval_gamma_def)
 next
-  case (EnterSingleton u ctx dst pars args p cont)
-  let ?m = "mk_dg_man (locals (snd (entry_state_sol gs empty_pred Pi ps) (Inl (u, ctx))))
-              (\<lambda>_. Analysis_Global ())"
-  let ?f = "\<lambda>d. [(d, transfer_lift empty_pred
-                       (ivl_enter_st_for gs (call_info_of (CallEdge dst pars args) p)) d)]"
-  show ?case
-    unfolding interval_spec_def dgs_enter_local_state_st_for_lifted
-    by blast
+  case (EnterPure ci) show ?case
+    unfolding interval_spec_def dgs_enter_local_state_st_for_lifted by (rule refl)
 next
-  case (EnterSoundAt u ctx dst pars args p cont s)
+  case (EnterCover u ctx dst pars args p cont s)
   show ?case
-    using interval_entry_cover_exec[OF exact EnterSoundAt(3),
+    using interval_entry_cover_exec[OF exact EnterCover(3),
         where ci = "call_info_of (CallEdge dst pars args) p"]
-    by (auto simp: entry_pairs_cover_def)
+    by simp
 next
-  case (CallFwd u ctx dst pars args p cont)
-  show ?case using CallFwd(1,2) by (rule call_fwd_ok)
+  case (CallFwd u ctx dst pars args p cont cont' entry)
+  then have "entry = transfer_lift empty_pred
+               (ivl_enter_st_for gs (call_info_of (CallEdge dst pars args) p))
+               (locals (snd (entry_state_sol gs empty_pred Pi ps) (Inl (u, ctx))))"
+    by simp
+  with CallFwd(1,2) show ?case using call_fwd_ok by simp
 next
   case (CombFwd cl c1 dst pars args p cont)
   show ?case using CombFwd(1,2) by (rule comb_fwd_ok)
 qed
 
 text \<open>
-  \<^const>\<open>entry_state_context\<close> -- ignore the store, recompute the route from the table at
-  \<^const>\<open>call_action_at_call_site\<close> -- is exactly \<^locale>\<open>entry_state_routed_context\<close>'s
-  own \<open>enterc\<close> (\<open>entry_state_context_of_solution\<close>).
+  The context relation this entry-state instance keys its collecting semantics by: an
+  abbreviation over the interpreted \<open>entry_state_routed.entry_context_rel\<close>, named at
+  Interval's carrier so downstream statements read as Interval vocabulary. Unlike the
+  retired deterministic context function it replaces, this makes no claim to pick one
+  context per concrete call -- only that whichever context an alternative of
+  \<^const>\<open>ivl_enter_st_for\<close> routes to, and whose two halves cover the call, is admitted.
 \<close>
 
-lemma entry_state_context_eq_of_solution:
-  "entry_state_context = entry_state_context_of_solution (entry_state_route_gen gs empty_pred)
-     (\<lambda>ci. transfer_lift empty_pred (ivl_enter_st_for gs ci))
-     (snd (entry_state_sol gs empty_pred Pi ps)) (compile_prog Pi ps)"
-  unfolding entry_state_context_def entry_state_context_of_solution_def by (rule refl)
+abbreviation entry_state_context_rel :: "ivl list call_context_rel" where
+  "entry_state_context_rel \<equiv> entry_state_routed.entry_context_rel"
 
-lemmas entry_state_routed_context_call =
-  entry_state_routed.routed_context_call[folded entry_state_context_eq_of_solution]
-lemmas entry_state_routed_context_comb =
-  entry_state_routed.routed_context_comb[folded entry_state_context_eq_of_solution]
+lemmas entry_state_routed_context_call = entry_state_routed.routed_context_call
+lemmas entry_state_routed_context_comb = entry_state_routed.routed_context_comb
 
 lemma entry_state_sg_seed:
   assumes "(u, CallEdge dst xs es, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps)"
     and "s \<in> gamma_state_lift (map_lift (fun_of_resolved_st_q_for gs)
                (entry_state_sg_st gs empty_pred Pi ps (Inl (u, ctx))))"
+    and "entry_state_context_rel u ctx (call_info_of (CallEdge dst xs es) p) s
+           (call_enter gs (CallEdge dst xs es) s) ctx'"
   shows "call_enter gs (CallEdge dst xs es) s
            \<in> gamma_state_lift (map_lift (fun_of_resolved_st_q_for gs)
-               (entry_state_sg_st gs empty_pred Pi ps
-                 (Inl (FunctionEntry p, entry_state_context u ctx (call_enter gs (CallEdge dst xs es) s)))))"
+               (entry_state_sg_st gs empty_pred Pi ps (Inl (FunctionEntry p, ctx'))))"
   by (rule entry_state_routed_context_call[OF assms])
 
 lemma entry_state_sg_comb:
   assumes "(cl, CallEdge dst pars args, FunctionEntry p, v) \<in> calls (compile_prog Pi ps)"
     and "s \<in> gamma_state_lift (map_lift (fun_of_resolved_st_q_for gs)
                (entry_state_sg_st gs empty_pred Pi ps (Inl (cl, c1))))"
+    and "admits_call_context gs (compile_prog Pi ps) entry_state_context_rel cl c1 p s es ctx'"
     and "t \<in> gamma_state_lift (map_lift (fun_of_resolved_st_q_for gs)
-               (entry_state_sg_st gs empty_pred Pi ps
-                 (Inl (FunctionResult p, entry_state_context cl c1 es))))"
-    and "call_enter_store gs (compile_prog Pi ps) cl s es"
+               (entry_state_sg_st gs empty_pred Pi ps (Inl (FunctionResult p, ctx'))))"
   shows "combine_collect gs dst s t
            \<in> gamma_state_lift (map_lift (fun_of_resolved_st_q_for gs)
                (entry_state_sg_st gs empty_pred Pi ps (Inl (v, c1))))"
   by (rule entry_state_routed_context_comb[OF assms])
+
+
 
 
 subsection \<open>Activation-indexed collecting soundness\<close>
@@ -1460,11 +1428,11 @@ interpretation entry_state_adapter: dg_analysis_adapter "interval_spec gs empty_
     "snd (entry_state_sol gs empty_pred Pi ps)" "fst (entry_state_sol gs empty_pred Pi ps)"
     "(cfg_exit (compile_prog Pi ps), [])" "entry_state_sg_st gs empty_pred Pi ps"
     Activation_Seed "\<lambda>d. d = Bot"
-    "\<lambda>m. gamma_state_lift (map_lift (fun_of_resolved_st_q_for gs) m)" entry_state_context
+    "\<lambda>m. gamma_state_lift (map_lift (fun_of_resolved_st_q_for gs) m)" entry_state_context_rel
     "map_lift (fun_of_resolved_st_q_for gs)" interval_classify_check
-proof (unfold_locales, goal_cases FinE PP SgCov SgUncov Fwd FinC SeedKey
+proof (unfold_locales, goal_cases FinE PP SgCov SgUncov Fwd FinC CallsUnique SeedKey
     IsBotBot IsBotSound ResolveSound
-    EnterCover CombFwd EnterAgree GammaRd ClProved ClRefuted VarsFin)
+    EnterCover EnterTotal CombFwd GammaRd ClProved ClRefuted VarsFin)
   case FinE show ?case by (rule entry_state_fin)
 next
   case PP show ?case by (rule entry_state_pp_routed[OF solves exact])
@@ -1480,6 +1448,9 @@ next
 next
   case FinC show ?case by (rule entry_state_finC)
 next
+  case CallsUnique
+  show ?case unfolding calls_source_unique_def using compile_prog_calls_source_unique by blast
+next
   case (SeedKey p ctx) show ?case by simp
 next
   case IsBotBot show ?case by simp
@@ -1489,24 +1460,14 @@ next
   case (ResolveSound u ctx dst pars args p cont s)
   thus ?case by (simp add: static_resolve_iff[OF entry_state_finC])
 next
-  case (EnterCover u ctx dst pars args p cont s)
-  show ?case
-    unfolding entry_state_context_eq_of_solution
-    using entry_state_routed.routed.routed_entry_cover[OF EnterCover(1,2,3)]
-    by (simp add: entry_state_context_eq_of_solution)
+  case (EnterCover u ctx dst pars args p cont s ctx')
+  show ?case using entry_state_routed.routed.routed_entry_cover[OF EnterCover(1,2,3,4)] .
+next
+  case (EnterTotal u ctx dst pars args p cont s)
+  show ?case using entry_state_routed.routed.routed_entry_total[OF EnterTotal(1,2,3)] .
 next
   case (CombFwd cl c1 dst pars args p cont)
   show ?case using CombFwd(1,2) by (rule comb_fwd_ok)
-next
-  case (EnterAgree cl s es dst pars args p cont)
-  note ces = EnterAgree(1) and ce = EnterAgree(2)
-  obtain dst' pars' args' p' cont' where
-      ce': "(cl, CallEdge dst' pars' args', FunctionEntry p', cont') \<in> calls (compile_prog Pi ps)"
-    and es_eq: "es = call_enter gs (CallEdge dst' pars' args') s"
-    using ces unfolding call_enter_store_def by blast
-  have "CallEdge dst' pars' args' = CallEdge dst pars args"
-    using compile_prog_calls_source_unique[OF ce' ce] by simp
-  thus ?case using es_eq by simp
 next
   case (GammaRd d g')
   show ?case by (simp add: interval_gamma_def)
@@ -1521,11 +1482,22 @@ next
 qed
 
 theorem entry_state_activation_collect_sound:
-  "activation_collect gs entry_state_context [] (compile_prog Pi ps) (cinit_stores gs) v ctx
+  "activation_collect gs entry_state_context_rel [] (compile_prog Pi ps) (cinit_stores gs) v ctx
      \<subseteq> gamma_state_lift (map_lift (fun_of_resolved_st_q_for gs)
            (entry_state_sg_st gs empty_pred Pi ps (Inl (v, ctx))))"
-  by (rule entry_state_adapter.activation_collect_dg_sound
+  by (rule entry_state_routed.routed.activation_collect_dg_sound
              [OF entry_cov entry_state_cinit_le_cinit_ivl_st])
+
+text \<open>Every valid trace over the entry-state routing admits some context: the existence half
+  \<open>activation_collect_dg_sound\<close> needs, re-exported so a source-level caller can name a
+  context witness without going through \<^locale>\<open>ltr_coverage\<close> itself.\<close>
+
+theorem entry_state_has_context:
+  assumes "t \<in> valid_ltr gs (compile_prog Pi ps) (cinit_stores gs)"
+  shows "\<exists>c. trace_context gs entry_state_context_rel [] (compile_prog Pi ps) t c"
+  by (rule entry_state_routed.routed.routed_valid_ltr_has_context
+             [OF entry_cov entry_state_cinit_le_cinit_ivl_st assms])
+
 
 end
 

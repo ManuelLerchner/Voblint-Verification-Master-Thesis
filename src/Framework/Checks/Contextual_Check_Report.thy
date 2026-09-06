@@ -281,7 +281,8 @@ lemma classify_checks_verdicts_mem_iff:
          \<and> vr = aggregate_verdicts
                   ((\<lambda>ctx. classify_point classify c (lookup_context ar v ctx)) ` contexts_at ar v)"
 proof -
-  have img: "snd ` (\<lambda>ctx. (ctx, classify_point classify c (lookup_context ar v ctx))) ` contexts_at ar v
+  have img: "snd ` (\<lambda>ctx. (ctx, classify_point classify c (lookup_context ar v ctx)))
+                 ` contexts_at ar v
            = (\<lambda>ctx. classify_point classify c (lookup_context ar v ctx)) ` contexts_at ar v"
     by (simp add: image_comp comp_def)
   have "(v, c, vr) \<in> set (classify_checks_verdicts g ar classify)
@@ -302,9 +303,10 @@ theorem classify_checks_ctx_decided_sound:
     and known: "r \<noteq> Check_Unknown"
   shows "classify c st = r"
 proof -
-  have agg: "aggregate_verdicts ((\<lambda>c'. classify_point classify c (lookup_context ar v c')) ` contexts_at ar v)
+  have agg: "aggregate_verdicts
+               ((\<lambda>c'. classify_point classify c (lookup_context ar v c')) ` contexts_at ar v)
                = Decided r"
-    using classify_checks_verdicts_mem_iff[OF fin, of v c "Decided r" ar classify] mem by metis
+    using classify_checks_verdicts_mem_iff[OF fin, of v c "Decided r" ar classify] mem by simp
   have covctx: "ctx \<in> contexts_at ar v" using reach by (rule lookup_context_LiftedD)
   have mem_img: "classify_point classify c (lookup_context ar v ctx)
           \<in> (\<lambda>c'. classify_point classify c (lookup_context ar v c')) ` contexts_at ar v"

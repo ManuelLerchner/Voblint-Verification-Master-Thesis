@@ -163,6 +163,12 @@ retired-identifiers = "python3 scripts/check_retired_identifiers.py"
 locale-parameters = "python3 scripts/check_locale_parameters.py"
 docs-overview = "python3 scripts/extract_definitions.py --dump docs/generated/DEFINITIONS_OVERVIEW.md"
 
+# Size and shape of the .thy corpus: lines per session, per theory, and per
+# proof, plus a watchlist of theories past the 1500-line / 100-symbol style
+# limits. Reporting only -- never gates a build, so it stays out of `ci`.
+# Views and formats: `pixi run stats -- --help`.
+stats = "python3 scripts/thy_stats.py"
+
 # Pins scripts/gen_vimp_isabelle.py's identifier id_position/markup shape
 # (see the test module's own docstring). Deliberately outside tests/property/
 # and property-build's CLI-build dependency: this only imports the generator

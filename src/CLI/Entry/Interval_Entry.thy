@@ -81,7 +81,7 @@ proof -
     using comb_fwd_ok unfolding sol_eq[symmetric] cfg_eq[symmetric] .
   have s0_sound: "cinit_stores pgs \<subseteq> interval_gamma pgs (Lifted cinit_ivl_st) Bot"
     by (rule interval_conf_cinit_le_cinit_ivl_st_warrow[OF solves' exact entry_cov' fwd_ok' call_fwd_ok' comb_fwd_ok'])
-  have node_sound: "activation_collect pgs enterc_unit ()
+  have node_sound: "activation_collect pgs (call_context_rel_of_fun enterc_unit) ()
         (compile_prog (prog_table p) (prog_procs p)) (cinit_stores pgs) v ()
       \<subseteq> \<lbrakk>case lookup_context
               (dg_analysis_adapter.analyse_result
@@ -93,7 +93,7 @@ proof -
     by (rule interval_conf_result_node_sound_warrow
           [OF solves' exact entry_cov' fwd_ok' call_fwd_ok' comb_fwd_ok' entry_cov' s0_sound])
   have ltr_eq: "ltr_collect pgs (prog_cfg p) (cinit_stores pgs) v
-      = activation_collect pgs enterc_unit ()
+      = activation_collect pgs (call_context_rel_of_fun enterc_unit) ()
           (compile_prog (prog_table p) (prog_procs p)) (cinit_stores pgs) v ()"
     unfolding cfg_eq by (rule activation_collect_unit_eq_ltr_collect[symmetric])
   have result_eq: "lookup_context (analyse_interval_td_result_for pgs p) v ()
@@ -350,7 +350,7 @@ proof -
   have s0_sound: "cinit_stores (declared_global p)
         \<subseteq> interval_gamma (declared_global p) (Lifted cinit_ivl_st) Bot"
     by (rule interval_conf_cinit_le_cinit_ivl_st[OF solves' exact entry_cov' fwd_ok' call_fwd_ok' comb_fwd_ok'])
-  have node_sound: "activation_collect (declared_global p) enterc_unit ()
+  have node_sound: "activation_collect (declared_global p) (call_context_rel_of_fun enterc_unit) ()
         (compile_prog (prog_table p) (prog_procs p)) (cinit_stores (declared_global p)) v ()
       \<subseteq> \<lbrakk>case lookup_context
               (dg_analysis_adapter.analyse_result
@@ -362,7 +362,7 @@ proof -
     by (rule interval_conf_result_node_sound
           [OF solves' exact entry_cov' fwd_ok' call_fwd_ok' comb_fwd_ok' entry_cov' s0_sound])
   have ltr_eq: "ltr_collect (declared_global p) (prog_cfg p) (cinit_stores (declared_global p)) v
-      = activation_collect (declared_global p) enterc_unit ()
+      = activation_collect (declared_global p) (call_context_rel_of_fun enterc_unit) ()
           (compile_prog (prog_table p) (prog_procs p)) (cinit_stores (declared_global p)) v ()"
     unfolding cfg_eq by (rule activation_collect_unit_eq_ltr_collect[symmetric])
   have result_eq: "lookup_context (analyse_interval_join_result_for (declared_global p) p) v ()
@@ -604,7 +604,7 @@ proof -
         \<subseteq> interval_gamma (declared_global p) (Lifted cinit_ivl_st) Bot"
     by (rule interval_conf_cinit_le_cinit_ivl_st_per_origin[OF solves' exact entry_cov' fwd_ok' call_fwd_ok'
                                                      comb_fwd_ok'])
-  have node_sound: "activation_collect (declared_global p) enterc_unit ()
+  have node_sound: "activation_collect (declared_global p) (call_context_rel_of_fun enterc_unit) ()
         (compile_prog (prog_table p) (prog_procs p)) (cinit_stores (declared_global p)) v ()
       \<subseteq> \<lbrakk>case lookup_context
               (dg_analysis_adapter.analyse_result
@@ -616,7 +616,7 @@ proof -
     by (rule interval_conf_result_node_sound_per_origin
           [OF solves' exact entry_cov' fwd_ok' call_fwd_ok' comb_fwd_ok' entry_cov' s0_sound])
   have ltr_eq: "ltr_collect (declared_global p) (prog_cfg p) (cinit_stores (declared_global p)) v
-      = activation_collect (declared_global p) enterc_unit ()
+      = activation_collect (declared_global p) (call_context_rel_of_fun enterc_unit) ()
           (compile_prog (prog_table p) (prog_procs p)) (cinit_stores (declared_global p)) v ()"
     unfolding cfg_eq by (rule activation_collect_unit_eq_ltr_collect[symmetric])
   have result_eq: "lookup_context (analyse_interval_per_origin_result_for (declared_global p) p) v ()

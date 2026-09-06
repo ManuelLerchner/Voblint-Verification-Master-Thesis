@@ -303,8 +303,8 @@ proof -
   interpret tfs: sound_transfer_for gs sk asn sp br bd rt en ev by (rule tf_sound)
   note mono = sound_dg_spec_core.gammaDG_mono[OF sound_dg_spec_core_st]
   show ?thesis
-proof (unfold_locales, goal_cases Mono Step Comb FinE PP SgCov SgUncov Fwd FinC SeedKey
-    IsBotBot IsBotSound EnterComplete CallFwd CombFwd EnterAgree)
+proof (unfold_locales, goal_cases Mono Step Comb FinE PP SgCov SgUncov Fwd FinC CallsUnique
+    SeedKey IsBotBot IsBotSound EnterComplete CallFwd CombFwd)
   case (Mono d d' g g') then show ?case by (rule base.gammaDG_mono)
 next
   case (Step a \<tau> src gk) show ?case by (rule base.step_sound)
@@ -322,6 +322,9 @@ next
   case (Fwd u a v c) then show ?case using cover by (cases c) auto
 next
   case FinC show ?case by (simp add: compile_prog_finite)
+next
+  case CallsUnique show ?case
+    unfolding calls_source_unique_def using compile_prog_calls_source_unique by blast
 next
   case (SeedKey p ctx) show ?case by simp
 next
@@ -409,22 +412,12 @@ next
 next
   case (CombFwd cl c1 dst pars args p cont)
   then show ?case using cover by (cases c1) auto
-next
-  case (EnterAgree cl s es dst pars args p cont)
-  obtain dst' pars' args' p' cont' where
-      ce': "(cl, CallEdge dst' pars' args', FunctionEntry p', cont')
-              \<in> calls (compile_prog Pi ps)"
-    and es_eq: "es = call_enter gs (CallEdge dst' pars' args') s"
-    using EnterAgree(1) unfolding call_enter_store_def by blast
-  have "CallEdge dst' pars' args' = CallEdge dst pars args"
-    using compile_prog_calls_source_unique[OF ce' EnterAgree(2)] by simp
-  then show ?case using es_eq by simp
 qed
 qed
 
 text \<open>
   The per-node collecting endpoint. \<^const>\<open>ltr_collect\<close> is the union over
-  contexts of \<^const>\<open>activation_collect\<close> (\<open>ltr_collect_eq_Union_activation\<close>),
+  contexts of \<^const>\<open>activation_collect\<close> (\<open>ltr_collect_eq_Union_activation_of_fun\<close>),
   and at the unit context that union has one member, so the routed cap
   \<open>activation_collect_dg_sound\<close> bounds it directly.
 \<close>
@@ -449,12 +442,12 @@ proof -
     by (rule unit_routed_context_of_solve[OF SOLVE[unfolded eqs_def]
           cover[unfolded eqs_def] finI])
   have "ltr_collect gs (compile_prog Pi ps) S0 v
-          = (\<Union>c. activation_collect gs enterc_unit () (compile_prog Pi ps) S0 v c)"
-    by (rule ltr_collect_eq_Union_activation)
+          = (\<Union>c. activation_collect gs (call_context_rel_of_fun enterc_unit) () (compile_prog Pi ps) S0 v c)"
+    by (rule ltr_collect_eq_Union_activation_of_fun)
   also have "\<dots> \<subseteq> gamma (fst (solve eqs x)) (snd (solve eqs x)) v"
   proof (rule UN_least)
     fix c :: unit
-    show "activation_collect gs enterc_unit () (compile_prog Pi ps) S0 v c
+    show "activation_collect gs (call_context_rel_of_fun enterc_unit) () (compile_prog Pi ps) S0 v c
             \<subseteq> gamma (fst (solve eqs x)) (snd (solve eqs x)) v"
       unfolding gamma_def
       using R.routed.activation_collect_dg_sound[OF vars_cover_entryD[OF cover] sound0]
@@ -643,8 +636,8 @@ lemma unit_routed_context_of_solve:
 proof -
   interpret base: sound_dg_spec_core spec_st gamma_exec gs by (rule sound_dg_spec_core_st[OF tf_sound])
   show ?thesis
-proof (unfold_locales, goal_cases Mono Step Comb FinE PP SgCov SgUncov Fwd FinC SeedKey
-    IsBotBot IsBotSound EnterComplete CallFwd CombFwd EnterAgree)
+proof (unfold_locales, goal_cases Mono Step Comb FinE PP SgCov SgUncov Fwd FinC CallsUnique
+    SeedKey IsBotBot IsBotSound EnterComplete CallFwd CombFwd)
   case (Mono d d' g g') then show ?case by (rule base.gammaDG_mono)
 next
   case (Step a \<tau> src gk) show ?case by (rule base.step_sound)
@@ -688,6 +681,9 @@ next
 next
   case FinC show ?case by (simp add: compile_prog_finite)
 next
+  case CallsUnique show ?case
+    unfolding calls_source_unique_def using compile_prog_calls_source_unique by blast
+next
   case (SeedKey p ctx) show ?case by simp
 next
   case IsBotBot show ?case by simp
@@ -714,22 +710,12 @@ next
 next
   case (CombFwd cl c1 dst pars args p cont)
   then show ?case using cover by (cases c1) auto
-next
-  case (EnterAgree cl s es dst pars args p cont)
-  obtain dst' pars' args' p' cont' where
-      ce': "(cl, CallEdge dst' pars' args', FunctionEntry p', cont')
-              \<in> calls (compile_prog Pi ps)"
-    and es_eq: "es = call_enter gs (CallEdge dst' pars' args') s"
-    using EnterAgree(1) unfolding call_enter_store_def by blast
-  have "CallEdge dst' pars' args' = CallEdge dst pars args"
-    using compile_prog_calls_source_unique[OF ce' EnterAgree(2)] by simp
-  then show ?case using es_eq by simp
 qed
 qed
 
 text \<open>
   The per-node collecting endpoint. \<^const>\<open>ltr_collect\<close> is the union over
-  contexts of \<^const>\<open>activation_collect\<close> (\<open>ltr_collect_eq_Union_activation\<close>),
+  contexts of \<^const>\<open>activation_collect\<close> (\<open>ltr_collect_eq_Union_activation_of_fun\<close>),
   and at the unit context that union has one member, so the routed cap
   \<open>activation_collect_dg_sound\<close> bounds it directly.
 \<close>
@@ -753,12 +739,12 @@ proof -
     by (rule unit_routed_context_of_solve[OF SOLVE[unfolded eqs_def]
           cover[unfolded eqs_def] finI])
   have "ltr_collect gs (compile_prog Pi ps) S0 v
-          = (\<Union>c. activation_collect gs enterc_unit () (compile_prog Pi ps) S0 v c)"
-    by (rule ltr_collect_eq_Union_activation)
+          = (\<Union>c. activation_collect gs (call_context_rel_of_fun enterc_unit) () (compile_prog Pi ps) S0 v c)"
+    by (rule ltr_collect_eq_Union_activation_of_fun)
   also have "\<dots> \<subseteq> gamma (fst (solve eqs x)) (snd (solve eqs x)) v"
   proof (rule UN_least)
     fix c :: unit
-    show "activation_collect gs enterc_unit () (compile_prog Pi ps) S0 v c
+    show "activation_collect gs (call_context_rel_of_fun enterc_unit) () (compile_prog Pi ps) S0 v c
             \<subseteq> gamma (fst (solve eqs x)) (snd (solve eqs x)) v"
       unfolding gamma_def
       using R.routed.activation_collect_dg_sound[OF vars_cover_entryD[OF cover] sound0]

@@ -256,7 +256,8 @@ proof -
   obtain n1 Eprocs Kprocs where procs: "compile_procs \<Pi> ps 0 = (n1, Eprocs, Kprocs)"
     by (rule prod_cases3)
   obtain n2 Emain Kmain
-    where mainc: "compile_proc \<Pi> prog_main_name \<lparr>formals = [], body = (main_body \<Pi>)\<rparr> n1 = (n2, Emain, Kmain)"
+    where mainc: "compile_proc \<Pi> prog_main_name \<lparr>formals = [], body = (main_body \<Pi>)\<rparr> n1
+                    = (n2, Emain, Kmain)"
     by (rule prod_cases3)
   show ?thesis
     by (rule that[OF procs mainc]) (simp_all add: compile_prog_def procs mainc Let_def)

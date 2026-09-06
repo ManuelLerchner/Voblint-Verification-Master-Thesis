@@ -30,9 +30,10 @@ text \<open>The equation-level route: push the call site, keep only the most rec
 definition cs_route :: "nat \<Rightarrow> pp \<Rightarrow> call_string \<Rightarrow> 'd \<Rightarrow> call_action \<Rightarrow> call_string" where
   "cs_route k u ctx d ca = take k (u # ctx)"
 
-text \<open>The trace-semantic context function \<open>routed_context_base_hetero\<close>'s \<open>enterc\<close> parameter needs
-  (\<open>LTR_Def\<close>'s \<open>key\<close>): same closed term as \<^const>\<open>cs_route\<close>, over the concrete
-  \<^typ>\<open>store\<close> \<open>key\<close> supplies instead of an abstract/executable \<open>'d\<close>.\<close>
+text \<open>The trace-semantic context function whose graph, \<open>call_context_rel_of_fun (cs_context k)\<close>,
+  instantiates \<open>routed_context_base_hetero\<close>'s \<open>R\<close>: same closed term as \<^const>\<open>cs_route\<close>,
+  over the concrete \<^typ>\<open>store\<close> the trace semantics supplies instead of an
+  abstract/executable \<open>'d\<close>.\<close>
 
 definition cs_context :: "nat \<Rightarrow> cfg_node \<Rightarrow> call_string \<Rightarrow> store \<Rightarrow> call_string" where
   "cs_context k u ctx s = take k (u # ctx)"
@@ -57,6 +58,9 @@ lemma cs_route_indep_of_data: "cs_route k u ctx d ca = cs_route k u ctx d' ca"
 
 subsection \<open>Bounded length\<close>
 
+text \<open>The one fact that makes this context space finite: routing truncates, so no context a
+  \<open>k\<close>-bounded run produces is longer than \<open>k\<close>.  Over a graph with finitely many nodes that
+  bounds the whole space before any solve is attempted, rather than per run.\<close>
 lemma cs_route_length: "length (cs_route k u ctx d ca) \<le> k"
   by (simp add: cs_route_def)
 

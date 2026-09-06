@@ -36,6 +36,10 @@ begin
 
 subsection \<open>Comparison judgments\<close>
 
+text \<open>A comparison is decided by narrowing against its own negation: if refining the two
+  values under \<open>\<not> a < b\<close> empties either side, no concrete pair can violate \<open>a < b\<close>, so the
+  judgment holds.  Nothing new is assumed of the domain -- the answer comes from the
+  narrowing operator it already supplies.\<close>
 definition less_true :: "'a \<Rightarrow> 'a \<Rightarrow> bool" where
   "less_true a b \<longleftrightarrow> is_empty (fst (inv_less False a b)) \<or> is_empty (snd (inv_less False a b))"
 

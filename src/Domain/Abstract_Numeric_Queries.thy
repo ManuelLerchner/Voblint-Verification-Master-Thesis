@@ -33,6 +33,10 @@ locale executable_numeric_queries =
   fixes less :: "'a::executable_domain \<Rightarrow> 'a \<Rightarrow> bool option"
     and eq   :: "'a \<Rightarrow> 'a \<Rightarrow> bool option"
 
+text \<open>The soundness obligation, stated so that a \<open>Some\<close> answer is exact rather than merely
+  one-sided: every concrete pair drawn from the two values must relate the way the answer
+  says.  \<open>None\<close> carries no obligation at all, which is what lets a domain answer it whenever
+  it cannot decide.\<close>
 locale abstract_numeric_queries = executable_numeric_queries less eq
   for less :: "'a::sound_domain \<Rightarrow> 'a \<Rightarrow> bool option"
     and eq :: "'a \<Rightarrow> 'a \<Rightarrow> bool option" +

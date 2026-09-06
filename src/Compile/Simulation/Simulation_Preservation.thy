@@ -297,6 +297,10 @@ qed
 
 section \<open>Intra-procedural preservation and callee fall-through\<close>
 
+text \<open>The bulk of the simulation: a step that stays inside one activation.  Either the callee
+  body still has work, in which case the step happens under the enclosing \<open>Restore\<close> and the
+  stack is untouched, or the body is finished and control falls through to that \<open>Restore\<close> --
+  the only place a callee reaches its own exit without a return statement.\<close>
 lemma intra_step_seq_after_seq_restore:
   "intra_step \<Pi> (seq_after (Seq inner Restore) afters, s, frs) src' \<Longrightarrow>
    (inner = SKIP \<and> src' = (seq_after Restore afters, s, frs))
@@ -531,6 +535,10 @@ qed
 
 section \<open>Return propagation and the frame pop\<close>
 
+text \<open>The half of the simulation where the two sides advance at different rates.  A source
+  return walks out of the nested residual one dead layer at a time while the graph stays at
+  the callee result node, and only the final pop takes a graph step -- so the correspondence
+  is a star, not a step-for-step match.\<close>
 lemma csim_returning_frames_nonempty:
   "csim \<Pi> g (c, s, frs) (v, t, stk) \<Longrightarrow> is_returning c \<Longrightarrow> frs \<noteq> [] \<and> stk \<noteq> []"
   by (erule csim.cases) (auto dest: control_at_not_returning)

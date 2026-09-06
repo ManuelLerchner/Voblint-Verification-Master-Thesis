@@ -893,8 +893,13 @@ an assumption into a statement about an arbitrary function.
 
 Deferred deliberately, because each is a rename or a migration rather than a
 deletion, and each touches proofs: `dg_spec_combine_transfer` -> `dgs_combine`
-(~50 sites), `compile_program` -> `prog_cfg` (an export root, needs
-`pixi run codegen`), `gamma_point` -> `gamma_state_lift`, `map_lift` ->
+(~50 sites), `gamma_point` -> `gamma_state_lift`, `map_lift` ->
 the BNF-generated `map_lifted` (244 sites), `normalize_point` -> `map_lift`
 (97 sites), and the Exec refinement locales.
 
+`compile_program` -> `prog_cfg` is done (2026-09-06). It was not a rename but a
+duplicate: the two definitions had the same body character for character, and
+`prog_cfg` was already exported, so the generated OCaml carried the function
+twice. The export root and `codegen/regression/ocaml/main.ml` now name
+`prog_cfg`; `pixi run codegen` still has to run for the generated module to drop
+the second copy.

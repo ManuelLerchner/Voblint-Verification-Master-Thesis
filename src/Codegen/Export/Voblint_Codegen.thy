@@ -69,7 +69,7 @@ export_code
   int_of_integer nat_of_integer integer_of_int integer_of_nat
   Statement FunctionEntry FunctionResult
   integer_of_char
-  compile_program cfg_intra_list cfg_calls_list prog_stmt_post_order
+  prog_cfg cfg_intra_list cfg_calls_list prog_stmt_post_order
   EA_Nop EA_Assign EA_Special EA_Assume EA_AssumeNot EA_Body EA_Ret EA_Check CallEdge Nondet_Int
   string_of_exp
   wf_program_compile_input_exec

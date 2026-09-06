@@ -43,10 +43,13 @@ layer without embedding line numbers that drift.
 | `valid_ltr` | Inductive concrete semantics over activation-local traces. | `src/CFG/Collecting/LTR_Def.thy` |
 | `caller_of` | Immediate caller stored structurally in a called or resumed trace. | `src/CFG/Collecting/LTR_Def.thy` |
 | `ltr_collect` | Reachable sink stores at each CFG node, forgetting trace structure. | `src/CFG/Collecting/LTR_Collect.thy` |
-| `activation_collect` | Reachable sink stores indexed by activation context (the key-grouped view of `ltr_collect`). | `src/CFG/Collecting/LTR_Def.thy` |
+| `activation_collect` | `activation_collect gs R startcontext g S v c`: reachable sink stores at `v` in context `c`, the `trace_context`-grouped view of `ltr_collect`. `R` is the `call_context_rel`. | `src/CFG/Collecting/LTR_Activation_Context.thy` |
 | `ltr_gamma` | Concretization interface relating abstract states to local-trace collecting semantics. | `src/CFG/Collecting/LTR_Abstract.thy` |
-| `key` | Functional describing-function reading a trace's admissible context, one context per position -- the paper's `beta` one-for-one. | `src/CFG/Collecting/LTR_Def.thy` |
-| `admiss` / `ctx_key` | `admiss` is a locale-fixed relation admitting possibly several target contexts per step; `ctx_key` lifts it over a trace. The *relational* generalization of `beta`, not `beta` itself -- needed where an instance may pick a context nondeterministically. `admiss_exact` is the functional (single-admissible-target) instance. | `src/CFG/Collecting/LTR_Def.thy` |
+| `trace_context` | Inductive `trace_context gs R startcontext g t c`: the context a valid trace carries. Its Call rule picks an edge in `calls g` at the call node that reproduces the entered store, so no compiler uniqueness invariant is needed. The relational form of the paper's `beta`. | `src/CFG/Collecting/LTR_Activation_Context.thy` |
+| `call_context_rel` | `'c call_context_rel = cfg_node => 'c => call_info => store => store => 'c => bool`: the admissible callee contexts of one concrete call, from call site, caller context, call info, caller store and entered store. Several contexts per call are allowed. | `src/CFG/Collecting/LTR_Activation_Context.thy` |
+| `call_context_rel_of_fun` | Embeds a functional policy (`unit`, call strings) as the relation admitting exactly the function's value. | `src/CFG/Collecting/LTR_Activation_Context.thy` |
+| `call_context_total_on` | `call_context_total_on cover R gs g`: conditional totality -- an empty relation is rejected only where a covered call exists. `activation_bucket_sound` (one bucket) needs no totality; `activation_collect_sound` (whole program) does. Buckets form a cover, not a partition. | `src/CFG/Collecting/LTR_Activation_Context.thy` |
+| `startcontext` | Context of the root activation, Goblint's `Spec.startcontext`. | `src/CFG/Collecting/LTR_Activation_Context.thy` |
 
 ## Abstract interpretation
 
@@ -110,13 +113,18 @@ carries the soundness proof -- notation does not rename the identifier.
 | `combine_assign#` | `dgs_combine_assign` (`dg_spec` field) | Specification, `DG_Spec.thy` |
 | `combine#` | `combine_collect_abs` (the fixed whole-state return merge) | Abstract-state algebra, `Transfer_Algebra.thy` |
 
-`route`'s semantic ground truth is `enterc` (`Routed_Context.thy`), which
-consumes a **concrete** `store` rather than an abstract state and is left
-unnotated, matching `call_enter` -- the concrete counterpart of `enter#` --
-staying unnotated. `route_enterc_agree` is the per-instance locale obligation proving
-the two agree on real call edges, not a blanket theorem. `context#`'s
-signature is currently stronger than Goblint's `Spec.context` -- see
-`docs/GOBLINT_ALIGNMENT_REGISTER.md` and issue #114.
+`route`'s semantic counterpart is the relation `call_context_rel`
+(`LTR_Activation_Context.thy`), which consumes **concrete** stores rather than
+an abstract state and is left unnotated, matching `call_enter` -- the concrete
+counterpart of `enter#` -- staying unnotated. `routed_entry_cover` is the
+per-instance locale obligation: at a real call edge, some `(cont, entry)`
+alternative of the spec's own `enter#` run covers the caller and entered
+stores, and `route` on that entry yields a context `routed_entry_context_rel`
+admits. Goblint's `Spec.context` is a function applied per `enter`
+alternative; since `enter` returns a list, one concrete call can land in
+several contexts, and Voblint's proof relation models exactly that whole-call
+nondeterminism (`enter` alternatives x `context`). `context` itself is an Isar
+outer keyword, hence `route` -- see `docs/GOBLINT_ALIGNMENT_REGISTER.md`.
 
 ### `sigma` / `sg`
 

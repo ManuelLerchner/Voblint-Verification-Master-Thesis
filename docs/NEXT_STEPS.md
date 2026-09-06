@@ -70,7 +70,9 @@ side rather than the termination side. #108's G1-G5 plan (in the issue):
    by callee. Proved at exact call sites (matching the flagship); the
    exactness precondition above is not lifted -- that's G2.
 2. **G2 -- abstract context coverage semantics. Done, batch-green
-   (2026-08-10).** G2a's `ctx_rep`-over-exact-`key` design (below, kept for
+   (2026-08-10).** *2026-09-05: the `admiss`/`ctx_key` layer described below
+   was removed in f0588428 and is superseded by `call_context_rel`/
+   `trace_context`; what follows is history.* G2a's `ctx_rep`-over-exact-`key` design (below, kept for
    the historical record) turned out not to compose through COMB: a
    trace's admitted context and the callee's admitted context were
    rediscovered independently, so nothing tied them together at the

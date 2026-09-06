@@ -131,6 +131,10 @@ definition sp_compile :: "('x,'g,'d,'d) strategy_program \<Rightarrow> ('x,'g,'d
 
 subsection \<open>Compiling programs to vendor trees\<close>
 
+text \<open>One rewrite per program constructor, each \<open>simp\<close>, so compiling a concrete program is
+  normalization rather than proof: the simplifier builds the tree from the program's own
+  syntax, and a transfer written against the program layer never has to name a tree
+  constructor.\<close>
 lemma sp_compile_with_bind_read_local [simp]:
   "sp_compile_with encode ((sp_read_local x) \<bind> f) = QueryL x (\<lambda>d. sp_compile_with encode (f d))"
   by (simp add: sp_compile_with_def sp_bind_def sp_read_local_def)
@@ -223,6 +227,10 @@ lemma sp_compile_with_bind: "sp_compile_with encode (m \<bind> f) = m (\<lambda>
 
 subsection \<open>Monad laws\<close>
 
+text \<open>The three laws, so a caller may rewrite a program before compiling it and know the
+  tree is unchanged.  All three hold by function extensionality alone -- a program is a
+  continuation transformer, and \<open>\<bind>\<close> is composition -- so no tree-level reasoning is
+  involved.\<close>
 lemma sp_bind_sp_return_left [simp]: "(sp_return a) \<bind> f = f a"
   by (rule ext) (simp add: sp_bind_def sp_return_def)
 

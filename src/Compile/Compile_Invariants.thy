@@ -62,7 +62,8 @@ lemma wf_compile_inputD:
     and "\<Pi> p = Some decl \<Longrightarrow> wf_proc_decl gs \<Pi> decl"
     and "\<Pi> p = Some decl \<Longrightarrow> special_table p = None"
     and "source_pi \<Pi>" and "source_com (main_body \<Pi>)"
-    and "distinct ps" and "set ps = {p. \<Pi> p \<noteq> None} - {prog_main_name}" and "prog_main_name \<notin> set ps"
+    and "distinct ps" and "set ps = {p. \<Pi> p \<noteq> None} - {prog_main_name}"
+    and "prog_main_name \<notin> set ps"
   using wf_source_programD[OF wf_compile_input_source_program[OF assms]]
     assms[unfolded wf_compile_input_def] by blast+
 
@@ -153,20 +154,21 @@ proof -
     unfolding gs_def[symmetric] pi_eq[symmetric] using wf_compile_input .
 qed
 
-definition compile_program :: "imp_prog => cfg" where
-  "compile_program p =
-    compile_prog (prog_table p) (prog_procs p)"
-
 text \<open>\<^const>\<open>compile_prog\<close> takes a \<^typ>\<open>proc_table\<close> and a \<^typ>\<open>pname list\<close>, so a
   domain holding only an \<^typ>\<open>imp_prog\<close> needs the two-projection wrapper below.  The entry
   name is \<^const>\<open>prog_main_name\<close> and its body is looked up, so neither is threaded through
-  as a parameter.\<close>
+  as a parameter.  This is also the name the OCaml export publishes: a second wrapper for
+  the export alone would put the same function in the generated module twice.\<close>
 
 definition prog_cfg :: "imp_prog => cfg" where
   "prog_cfg p = compile_prog (prog_table p) (prog_procs p)"
 
 subsection \<open>Syntactic occurrence predicates\<close>
 
+text \<open>\<open>returns_in\<close> asks a purely syntactic question -- does this command contain a
+  \<open>Return\<close> of exactly this expression -- which is the shape the compiler lemmas below need.
+  They induct over the source command, so their hypothesis has to be readable off the
+  syntax rather than off the graph the compiler produced from it.\<close>
 fun returns_in :: "exp option \<Rightarrow> com \<Rightarrow> bool" where
   "returns_in e (Return e') = (e = e')"
 | "returns_in e (Seq c1 c2) = (returns_in e c1 \<or> returns_in e c2)"
@@ -238,6 +240,10 @@ theorem compile_self_call_edge:
 
 section \<open>Where each statement index came from in the source\<close>
 
+text \<open>A source position is nowhere in the compiled graph, yet a report has to name one.
+  What follows supplies the missing link in two steps: an enumeration of the statement
+  indices a fragment allocates, ordered the way a front end completes its reductions, and
+  the lemmas pinning that enumeration to the compiler's own allocation.\<close>
 subsection \<open>Statement order in the source\<close>
 
 text \<open>
@@ -473,11 +479,13 @@ theorem compile_prog_entry_cfg_reaches_exit:
      (cfg_entry (compile_prog \<Pi> ps)) (cfg_exit (compile_prog \<Pi> ps))"
 proof -
   obtain n1 Eprocs Kprocs n2 Emain Kmain where
-      cmain: "compile_proc \<Pi> prog_main_name \<lparr>formals = [], body = (main_body \<Pi>)\<rparr> n1 = (n2, Emain, Kmain)"
+      cmain: "compile_proc \<Pi> prog_main_name \<lparr>formals = [], body = (main_body \<Pi>)\<rparr> n1
+                = (n2, Emain, Kmain)"
     and g: "intra (compile_prog \<Pi> ps) = Eprocs \<union> Emain"
            "calls (compile_prog \<Pi> ps) = Kprocs \<union> Kmain"
     by (rule compile_prog_intra_split)
-  have "cfg_reaches (compile_prog \<Pi> ps) (FunctionEntry prog_main_name) (FunctionResult prog_main_name)"
+  have "cfg_reaches (compile_prog \<Pi> ps)
+          (FunctionEntry prog_main_name) (FunctionResult prog_main_name)"
     using g by (intro compile_proc_reaches_result[OF cmain]) auto
   then show ?thesis by simp
 qed
