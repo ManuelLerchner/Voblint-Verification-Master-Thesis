@@ -42,6 +42,7 @@ the soundness theorems are proved about. The proof term is erased, as in any
 | `pixi run codegen` | regenerates `codegen/generated/` |
 | `pixi run codegen-check` | fails if the checked-in export has drifted from the theories |
 | `pixi run codegen-modules` | fails if the export emits any module but the three above — no Isabelle needed |
+| `pixi run codegen-api` | fails if handwritten OCaml names something the export hides — no Isabelle needed |
 | `pixi run codegen-regression` | compiles the generated OCaml with `ocamlfind ocamlopt` and runs a driver that builds a program purely through the exported constructors, checking results against values Isabelle already proves |
 
 The generated source is tracked. Regenerating it is part of any change that adds or

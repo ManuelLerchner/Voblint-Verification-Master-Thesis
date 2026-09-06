@@ -287,6 +287,16 @@ handwritten OCaml depends on -- `lifted`'s `Bot`/`Lifted`, which `cli/main.ml`
 matches to tell a dead point from a live verdict -- is an export root even
 though nothing calls it.
 
+The same applies to plain constants: `prog_table`/`prog_main`/`prog_procs` are
+roots because the property AST driver names them, not because anything calls
+them on the analysis path. This used to be slack -- under the old per-theory
+split a symbol also went public whenever a sibling generated module called it,
+and handwritten OCaml rode along on that. One module means one force: the root
+list. `pixi run codegen-api` (`scripts/check_generated_api.py`, and a
+pre-commit job) checks the consumers against the checked-in signature and names
+the missing root; compiling them is the exact check and still runs in
+`cli-build`, `codegen-regression` and `property-build`.
+
 Sessions and `pixi run build` do not catch a stale export: only
 `Voblint_Codegen` runs it, and it is the last session built. A change that
 lands a new theory without regenerating `codegen/generated/` leaves the

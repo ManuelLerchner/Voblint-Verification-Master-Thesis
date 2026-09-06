@@ -26,6 +26,20 @@ pre-commit:
         - "src/**/*.thy"
       run: pixi run python3 scripts/check_codegen_modules.py
 
+    # Merging the export into one module removed every inter-module boundary,
+    # and with it the incidental signature entries the handwritten OCaml used
+    # to ride on. Now only an export root exposes a name, so this fires on the
+    # export, its root list, and the consumers that name it.
+    - name: codegen-api
+      glob:
+        - "codegen/generated/ml/Voblint_CLI.ml"
+        - "src/Codegen/Export/Voblint_Codegen.thy"
+        - "cli/*.ml"
+        - "cli/*.mly"
+        - "codegen/regression/ocaml/*.ml"
+        - "tests/property/*.ml"
+      run: pixi run python3 scripts/check_generated_api.py
+
     # A rename that leaves prose naming a constant that no longer exists is
     # invisible to the document checker; this catches it at commit time.
     - name: thy-prose-refs

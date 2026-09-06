@@ -124,6 +124,10 @@ codegen-check = { cmd = "bash scripts/mk/check-clean.sh codegen/generated/", dep
 # Reads the checked-in export, so it needs no Isabelle and can run in the
 # pre-commit hook alongside the ASCII and grammar-drift guards.
 codegen-modules = "python3 scripts/check_codegen_modules.py"
+# Everything the export exposes is decided by its root list, and a missing
+# root breaks an OCaml consumer rather than the Isabelle build. Reads the
+# checked-in export too, so it costs a second and needs no toolchain.
+codegen-api = "python3 scripts/check_generated_api.py"
 codegen-regression = "bash scripts/mk/codegen-regression.sh"
 
 # voblint CLI
@@ -187,6 +191,7 @@ ci = { depends-on = [
   "locale-parameters",
   "build",
   "codegen-check",
+  "codegen-api",
   "regression-lint",
   "id-position-check",
   "cli-test",
