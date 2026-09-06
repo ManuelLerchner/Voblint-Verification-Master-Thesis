@@ -18,20 +18,29 @@ text \<open>
   around 8,400 duplicated generated lines. Naming the constants here instead and pointing
   the driver at this module keeps one generated artifact for one analysis.
 
-  This is emphatically not the project's public API boundary. \<^emph>\<open>Nothing\<close> about an
-  \<open>export_code\<close> list makes the emitted module narrow --- the serializer decides what comes
-  along --- so a supported external surface, if one is wanted, belongs in a hand-written
-  OCaml facade over this module rather than in the shape of this list.
+  This is still not the project's public API boundary, but it is not nothing either.
+  Three things are decided separately here:
+
+    \<^item> the roots decide what the emitted OCaml \<^emph>\<open>signature\<close> exposes, and how much of it
+      is transparent rather than abstract;
+    \<^item> their transitive closure decides what the \<^emph>\<open>implementation\<close> contains, which no
+      shortening of the root list reduces;
+    \<^item> \<open>module_name\<close> decides the \<^emph>\<open>packaging\<close>.
+
+  So trimming a root narrows what a client can name and match on, while leaving the
+  emitted code the same size. A supported external surface --- one that could rename a
+  constructor, or hide a representation behind an eliminator --- still belongs in a
+  hand-written OCaml facade over this module rather than in the shape of this list.
 \<close>
 
 text \<open>
   The roots below are the \<^emph>\<open>intended callable surface\<close>: what handwritten OCaml under
   \<open>cli/\<close>, \<open>codegen/regression/ocaml/\<close> and \<open>tests/property/\<close> actually calls. Everything else
-  in the emitted module is serializer-reachable implementation detail --- naming fewer
-  roots would not remove it, since Isabelle emits the transitive closure regardless. That
-  distinction is a documentation matter here, not one this project enforces at the type
-  level: the generated module \<^emph>\<open>is\<close> the API, with no handwritten re-export layer in
-  between that could reinterpret a constructor or a conversion.
+  in the emitted module is serializer-reachable implementation detail, still present and
+  still callable --- the signature narrows with the root list, the code does not. So the
+  intent recorded here is not enforced: the generated module \<^emph>\<open>is\<close> the API, with no
+  handwritten re-export layer in between that could reinterpret a constructor or a
+  conversion.
 
   Analysis entry goes through \<^const>\<open>analyse_config\<close>/\<^const>\<open>analyse_config_ctx\<close>/
   \<^const>\<open>analyse_config_with_state\<close>, which consult
@@ -40,6 +49,40 @@ text \<open>
   roots: nothing handwritten calls them, and the configuration path supersedes them.
   \<^const>\<open>analyse\<close> stays, because the external regression oracle calls it directly
   as its domain-dispatch check.
+
+  The last group of roots is there for signature visibility rather than for dispatch.
+  A constant the serializer does not consider public is emitted but left out of the
+  module signature, and a datatype it does not consider public stays abstract, which
+  makes it unmatchable. So anything handwritten OCaml names --- even only to take it
+  apart --- has to be a root: \<open>Bot\<close>/\<open>Lifted\<close>, which \<open>cli/main.ml\<close> matches to tell a
+  dead point from a live verdict, and \<open>prog_table\<close>/\<open>prog_main\<close>/\<open>prog_procs\<close>, which the
+  property-test AST driver passes to \<^const>\<open>pretty_string_of_program\<close> on a round trip.
+
+  Nothing calls these on the CLI's analysis path, so a reading of the list as "the
+  callable surface" alone would drop them, and the resulting break shows up not here but
+  in an OCaml consumer, as an unbound value or a match on an abstract type.
+\<close>
+
+text \<open>
+  \<open>module_name Generated\<close> puts the whole reachable program into one OCaml module rather
+  than one module per contributing Isabelle theory. The alternative --- letting the
+  serializer split by theory --- does not survive contact with this program: OCaml's
+  single-file output emits modules in dependency order and cannot express a cycle, and
+  the theories here are mutually dependent at code level (the executable state is
+  instantiated at the solver's own widening/narrowing classes, and the CFG-specific
+  solver instantiation needs \<open>cfg_node\<close> back). Even a split that Isabelle accepts can
+  fail later in \<^verbatim>\<open>ocamlfind ocamlopt\<close>, on a type-class dictionary field that
+  module-signature inference does not expose across a boundary the unsplit default never
+  had.
+
+  So the generated internals are monolithic, and this says so directly instead of
+  arriving there by remapping every contributing theory onto one name by hand. Modularity,
+  if wanted, belongs in a handwritten OCaml facade over \<open>Generated\<close> --- a layer this
+  project does not currently have.
+
+  Two further modules are emitted regardless: \<open>Bit_Shifts\<close> and \<open>Str_Literal\<close> are HOL's
+  own runtime support, injected as literal target code rather than generated from
+  constants here.
 \<close>
 
 export_code
@@ -62,6 +105,7 @@ export_code
   NS_Plain NS_Proved NS_Refuted NS_Unknown NS_Unreachable NS_Exit
   exp_vnames_list string_of_abstract_value
   mk_program proc_decl_ext declared_global_vars pretty_string_of_program
+  prog_table prog_main prog_procs
   SKIP com.Call com.If Assign Seq While Return Check
   N V Plus Minus Times
   exp.Not And Or Less exp.Eq
@@ -76,7 +120,8 @@ export_code
   Solver_Join Solver_PerOrigin Solver_Warrow Solver_WarrowPerOrigin
   mk_analysis_config valid_analysis_config
   analyse_config analyse_config_ctx analyse_config_with_state
-  in OCaml file_prefix "Voblint_CLI"
+  Bot Lifted
+  in OCaml module_name Generated file_prefix "Voblint_CLI"
 
 end
 

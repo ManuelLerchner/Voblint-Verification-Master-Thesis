@@ -11,7 +11,7 @@
    state lines, a node_status, an edge role and its payload. Every styling
    decision below is this file's own. *)
 
-module C = Voblint_CLI.Core
+module C = Voblint_CLI.Generated
 
 (* DOT's own line separator inside a quoted label: a literal backslash-n, not
    a newline. Matches join_gv_nl/graphviz_label_text. *)

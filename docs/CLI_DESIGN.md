@@ -68,11 +68,11 @@ FILE.vimp text
 imp_prog                              <- the same AST type the proved
     |                                     pipeline starts from
     v
-Voblint_CLI.Analysis_Config.mk_analysis_config / valid_analysis_config
+Voblint_CLI.Generated.mk_analysis_config / valid_analysis_config
     |
     v
-Voblint_CLI.Analyse_Dispatch.analyse_config / analyse_config_ctx
-                            / analyse_config_with_state
+Voblint_CLI.Generated.analyse_config / analyse_config_ctx
+                      / analyse_config_with_state
     |                                  <- Isabelle-generated (Voblint_Codegen
     |                                     session's export_code), the CLI's
     |                                     only production-facing entry points
@@ -80,7 +80,7 @@ Voblint_CLI.Analyse_Dispatch.analyse_config / analyse_config_ctx
 check_report_entry list, or a contextual_verdict report            (text)
     |                                                    (--dot/--dot-full/
     v                                                     --graph-snapshot)
-Voblint_CLI.State_Report_GraphViz.*_dot_auto / *_graph_snapshot_auto
+Voblint_CLI.Generated.*_dot_auto / *_graph_snapshot_auto
     -> DOT / canonical-text rendering, sourced from the same one
        analysis_result the text report reads (never a second solve)
 ```

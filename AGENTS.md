@@ -240,49 +240,52 @@ a batch build for contextual proof development.
 
 ## New theories and the code-export module map
 
-`export_code` in `src/Codegen/Export/Voblint_Codegen.thy` names no
-`module_name`, so the OCaml serializer would distribute output one module per
-contributing theory. `src/CLI/Analyse_Dispatch.thy` remaps almost every
-contributing theory onto `Core` through one `code_identifier` block, because
-the unsplit theories have real mutual code-level dependencies. Six modules are
-emitted -- four because the handwritten OCaml in `cli/` names them, and two
-that are HOL's own serializer preludes:
+`export_code` in `src/Codegen/Export/Voblint_Codegen.thy` declares
+`module_name Generated`, which puts the whole reachable program into one OCaml
+module. Three modules are emitted -- that one, plus two that are HOL's own
+serializer preludes, injected as literal target code rather than generated
+from constants here:
 
 ```text
-Core                   everything else, folded into one module
-Analysis_Config        mk_analysis_config, valid_analysis_config
-Analyse_Dispatch       analyse_config, analyse_config_ctx,
-                       analyse_config_with_state, abstract_value
-State_Report_GraphViz  the fifteen *_graph_snapshot_auto / *_export_auto /
-                       *_payload_auto renderer entry points
-Bit_Shifts             HOL runtime support, not a project theory
-Str_Literal            HOL runtime support, not a project theory
+Generated    the entire reachable program: entry points, domains, solver,
+             CFG, VIMP AST
+Bit_Shifts   HOL runtime support, not a project theory
+Str_Literal  HOL runtime support, not a project theory
 ```
 
-`scripts/check_codegen_modules.py` holds the same six names; keep the two in
+`scripts/check_codegen_modules.py` holds the same three names; keep the two in
 step.
 
-Adding a theory whose constants are reachable from an export root therefore
-requires adding it to that `code_identifier` list. Forget it and the new
-theory keeps its own generated module, which the already-merged `Core` may
-both depend on and be depended on by, and `export_code` fails with:
+The generated internals are monolithic and the export says so. Do not try to
+recover per-theory modules by dropping `module_name`: OCaml's single-file
+output emits modules in dependency order and cannot express a cycle, while the
+executable state, the solver and the CFG instantiation depend on each other at
+code level, so the serializer fails with
 
 ```text
-Dependency "<some_core_constant>" -> "<your_constant>" would result in module
+Dependency "<some_constant>" -> "<your_constant>" would result in module
 dependency cycle
 ```
 
-The error names two constants and no theory, so it reads like a layering bug
-in the new theory. It usually is not: check the `code_identifier` list first.
-The fix is one line there, not a `module_name` on the export -- that would
-collapse the four surviving modules together too and change the API `cli/`
-links against.
+naming two constants and no theory. Even a split Isabelle accepts can fail
+later under `ocamlfind ocamlopt`, on a type-class dictionary field that
+module-signature inference does not expose across the new boundary. Modularity,
+if wanted, belongs in a handwritten OCaml facade over `Generated` -- a layer
+this project does not have.
 
-`scripts/check_codegen_modules.py` (`pixi run codegen-modules`, and a
-pre-commit job) turns a missing entry into an immediate failure naming the
-theory, instead of a cycle error two edits later. It reads the checked-in
-export, so it needs no Isabelle. When it reports an unexpected module, add the
-mapping and re-run `pixi run codegen`.
+Because everything lands in one module, adding a theory whose constants are
+reachable from an export root needs no export-side bookkeeping at all. What it
+still needs is a regeneration: `scripts/check_codegen_modules.py`
+(`pixi run codegen-modules`, and a pre-commit job) reads the checked-in export,
+so it needs no Isabelle, and it reports theories that changed since the export
+was last regenerated.
+
+One thing does have to be named explicitly. The serializer keeps a datatype's
+constructors out of the emitted signature unless it considers them public, and
+an abstract type cannot be pattern-matched on. So a datatype whose *shape* the
+handwritten OCaml depends on -- `lifted`'s `Bot`/`Lifted`, which `cli/main.ml`
+matches to tell a dead point from a live verdict -- is an export root even
+though nothing calls it.
 
 Sessions and `pixi run build` do not catch a stale export: only
 `Voblint_Codegen` runs it, and it is the last session built. A change that

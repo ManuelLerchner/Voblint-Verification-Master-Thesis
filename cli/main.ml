@@ -5,8 +5,8 @@
           grammar/vimp.yaml by scripts/gen_vimp_menhir.py -- ocamllex +
           Menhir, NOT verified) via Vimp_frontend (hand-written glue)
        -> imp_prog
-       -> Voblint_CLI.Analysis_Config.mk_analysis_config (one config value)
-       -> Voblint_CLI.Analyse_Dispatch.analyse_config_ctx/analyse_config_with_state
+       -> Voblint_CLI.Generated.mk_analysis_config (one config value)
+       -> Voblint_CLI.Generated.analyse_config_ctx/analyse_config_with_state
           (Isabelle-generated; each consults Analysis_Config.resolve_analysis_config,
           the single domain/solver/context legality-and-defaults table, then
           dispatches to the matching typed report function -- state-carrying at
@@ -152,18 +152,18 @@ let usage =
   \  correctly. The analyzer core (parsing excluded) is generated from a\n\
   \  machine-checked Isabelle/HOL proof."
 
-let un_char c = Char.chr (Z.to_int (Voblint_CLI.Core.integer_of_char c))
+let un_char c = Char.chr (Z.to_int (Voblint_CLI.Generated.integer_of_char c))
 let un_string cs = String.concat "" (List.map (fun c -> String.make 1 (un_char c)) cs)
 
 let node_label = function
-  | Voblint_CLI.Core.Statement n -> "pp" ^ Z.to_string (Voblint_CLI.Core.integer_of_nat n)
-  | Voblint_CLI.Core.FunctionEntry s -> "entry_" ^ s
-  | Voblint_CLI.Core.FunctionResult s -> "result_" ^ s
+  | Voblint_CLI.Generated.Statement n -> "pp" ^ Z.to_string (Voblint_CLI.Generated.integer_of_nat n)
+  | Voblint_CLI.Generated.FunctionEntry s -> "entry_" ^ s
+  | Voblint_CLI.Generated.FunctionResult s -> "result_" ^ s
 
 let verdict_label = function
-  | Voblint_CLI.Core.Check_Proved -> "PROVED"
-  | Voblint_CLI.Core.Check_Refuted -> "REFUTED"
-  | Voblint_CLI.Core.Check_Unknown -> "UNKNOWN"
+  | Voblint_CLI.Generated.Check_Proved -> "PROVED"
+  | Voblint_CLI.Generated.Check_Refuted -> "REFUTED"
+  | Voblint_CLI.Generated.Check_Unknown -> "UNKNOWN"
 
 (* analyse_with_state's report carries an exact, proved unreachable flag per
    entry (resolved_st_q_lifted_is_bot_for, Exec_St.thy) instead of leaving
@@ -174,10 +174,10 @@ let verdict_label = function
    keeps "proved unreachable" distinguishable from "the compiler dropped this
    check", which a suppressed row cannot express. *)
 let render_text_report (report :
-      (Voblint_CLI.Core.cfg_node
-       * (Voblint_CLI.Core.exp
-          * (Voblint_CLI.Core.check_result
-             * (bool * (string -> Voblint_CLI.Analyse_Dispatch.abstract_value)))))
+      (Voblint_CLI.Generated.cfg_node
+       * (Voblint_CLI.Generated.exp
+          * (Voblint_CLI.Generated.check_result
+             * (bool * (string -> Voblint_CLI.Generated.abstract_value)))))
       list)
     (check_positions : (int * int) list) =
   let buf = Buffer.create 256 in
@@ -190,16 +190,16 @@ let render_text_report (report :
        let label, state =
          if unreachable then "DEAD", ""
          else
-           let vars = Voblint_CLI.State_Report_GraphViz.exp_vnames_list cond in
+           let vars = Voblint_CLI.Generated.exp_vnames_list cond in
            ( verdict_label verdict,
              vars
              |> List.map (fun x ->
-               x ^ "=" ^ un_string (Voblint_CLI.State_Report_GraphViz.string_of_abstract_value (f x)))
+               x ^ "=" ^ un_string (Voblint_CLI.Generated.string_of_abstract_value (f x)))
              |> String.concat ", " )
        in
        Buffer.add_string buf
          (Printf.sprintf "%d:%-2d %-10s %-20s %-8s %s\n" line col (node_label node)
-            (un_string (Voblint_CLI.Core.string_of_exp (Voblint_CLI.Core.nat_of_integer Z.zero) cond))
+            (un_string (Voblint_CLI.Generated.string_of_exp (Voblint_CLI.Generated.nat_of_integer Z.zero) cond))
             label state))
     report check_positions;
   Buffer.contents buf
@@ -207,7 +207,7 @@ let render_text_report (report :
 let report_row buf (line, col) node cond label =
   Buffer.add_string buf
     (Printf.sprintf "%d:%-2d %-10s %-20s %-8s\n" line col (node_label node)
-       (un_string (Voblint_CLI.Core.string_of_exp (Voblint_CLI.Core.nat_of_integer Z.zero) cond))
+       (un_string (Voblint_CLI.Generated.string_of_exp (Voblint_CLI.Generated.nat_of_integer Z.zero) cond))
        label)
 
 (* analyse_ctx's report distinguishes Dead -- every context covering the check
@@ -221,26 +221,26 @@ let report_row buf (line, col) node cond label =
    order, one entry per __voblint_check the parser saw. *)
 let render_ctx_report
     (report :
-      (Voblint_CLI.Core.cfg_node
-       * (Voblint_CLI.Core.exp * Voblint_CLI.Core.check_result Voblint_CLI.Core.lifted))
+      (Voblint_CLI.Generated.cfg_node
+       * (Voblint_CLI.Generated.exp * Voblint_CLI.Generated.check_result Voblint_CLI.Generated.lifted))
       list)
     (check_positions : (int * int) list) =
   let buf = Buffer.create 256 in
   List.iter2
     (fun (node, (cond, verdict)) (line, col) ->
        match verdict with
-       | Voblint_CLI.Core.Bot -> report_row buf (line, col) node cond "DEAD"
-       | Voblint_CLI.Core.Lifted v -> report_row buf (line, col) node cond (verdict_label v))
+       | Voblint_CLI.Generated.Bot -> report_row buf (line, col) node cond "DEAD"
+       | Voblint_CLI.Generated.Lifted v -> report_row buf (line, col) node cond (verdict_label v))
     report check_positions;
   Buffer.contents buf
 
 (* Names the analysis in the report's own <analysis name="..."> element, so a
    node document says which domain produced the state it shows. *)
 let analysis_label = function
-  | Voblint_CLI.Analysis_Config.Sign_Analysis -> "sign"
-  | Voblint_CLI.Analysis_Config.Interval_Analysis -> "interval"
-  | Voblint_CLI.Analysis_Config.Int_Analysis -> "int"
-  | Voblint_CLI.Analysis_Config.Parity_Analysis -> "parity"
+  | Voblint_CLI.Generated.Sign_Analysis -> "sign"
+  | Voblint_CLI.Generated.Interval_Analysis -> "interval"
+  | Voblint_CLI.Generated.Int_Analysis -> "int"
+  | Voblint_CLI.Generated.Parity_Analysis -> "parity"
 
 let rec mkdir_p dir =
   if dir <> "" && dir <> "/" && dir <> "." && not (Sys.file_exists dir) then begin
@@ -462,10 +462,10 @@ let () =
          "--analysis", so a single name behaves exactly as before. *)
       let kind_of name =
         match name with
-        | "sign" -> Voblint_CLI.Analysis_Config.Sign_Analysis
-        | "interval" -> Voblint_CLI.Analysis_Config.Interval_Analysis
-        | "int" -> Voblint_CLI.Analysis_Config.Int_Analysis
-        | "parity" -> Voblint_CLI.Analysis_Config.Parity_Analysis
+        | "sign" -> Voblint_CLI.Generated.Sign_Analysis
+        | "interval" -> Voblint_CLI.Generated.Interval_Analysis
+        | "int" -> Voblint_CLI.Generated.Int_Analysis
+        | "parity" -> Voblint_CLI.Generated.Parity_Analysis
         | _ -> prerr_endline ("unknown --analysis value: " ^ name); exit 1
       in
       let names = String.split_on_char ',' v |> List.filter (fun n -> n <> "") in
@@ -495,11 +495,11 @@ let () =
       parse_args rest
     | "--solver" :: v :: rest ->
       (match v with
-       | "join" -> solver := Some Voblint_CLI.Analysis_Config.Solver_Join
-       | "per-origin" -> solver := Some Voblint_CLI.Analysis_Config.Solver_PerOrigin
-       | "warrow" -> solver := Some Voblint_CLI.Analysis_Config.Solver_Warrow
+       | "join" -> solver := Some Voblint_CLI.Generated.Solver_Join
+       | "per-origin" -> solver := Some Voblint_CLI.Generated.Solver_PerOrigin
+       | "warrow" -> solver := Some Voblint_CLI.Generated.Solver_Warrow
        | "warrow-per-origin" ->
-         solver := Some Voblint_CLI.Analysis_Config.Solver_WarrowPerOrigin
+         solver := Some Voblint_CLI.Generated.Solver_WarrowPerOrigin
        | _ -> prerr_endline ("unknown --solver value: " ^ v); exit 1);
       parse_args rest
     | "--dot" :: rest -> dot := true; parse_args rest
@@ -528,10 +528,10 @@ let () =
      by valid_analysis_config below -- no second k >= 1 check here). *)
   let context =
     match !context_kind, !context_depth with
-    | CK_None, None -> Voblint_CLI.Analysis_Config.Ctx_None
-    | CK_EntryState, None -> Voblint_CLI.Analysis_Config.Ctx_EntryState
+    | CK_None, None -> Voblint_CLI.Generated.Ctx_None
+    | CK_EntryState, None -> Voblint_CLI.Generated.Ctx_EntryState
     | CK_CallString, Some k ->
-      Voblint_CLI.Analysis_Config.Ctx_CallString (Voblint_CLI.Core.nat_of_integer (Z.of_int k))
+      Voblint_CLI.Generated.Ctx_CallString (Voblint_CLI.Generated.nat_of_integer (Z.of_int k))
     | CK_CallString, None ->
       prerr_endline "voblint: --context call-string requires --context-depth K"; exit 1
     | (CK_None | CK_EntryState), Some _ ->
@@ -559,7 +559,7 @@ let () =
       exit 2
   in
   if !parse_only then exit 0;
-  if not (Voblint_CLI.Core.wf_program_compile_input_exec prog) then begin
+  if not (Voblint_CLI.Generated.wf_program_compile_input_exec prog) then begin
     Printf.eprintf "%s: program is not well-formed\n" path;
     exit 4
   end;
@@ -576,8 +576,8 @@ let () =
      --solver alongside either context, since the routed equation system
      underneath either one is solved under all three disciplines exactly like
      the flat one, while Sign/Int are proved at Solver_Join only. *)
-  let cfg = Voblint_CLI.Analysis_Config.mk_analysis_config kind !solver !context in
-  if not (Voblint_CLI.Analysis_Config.valid_analysis_config cfg) then begin
+  let cfg = Voblint_CLI.Generated.mk_analysis_config kind !solver !context in
+  if not (Voblint_CLI.Generated.valid_analysis_config cfg) then begin
     prerr_endline "voblint: unsupported --analysis/--context/--solver combination";
     exit 1
   end;
@@ -589,13 +589,13 @@ let () =
      avoids a second unwrapping of the same datatype at the call site. *)
   let cs_depth () =
     match !context_depth with
-    | Some k -> Voblint_CLI.Core.nat_of_integer (Z.of_int k)
-    | None -> Voblint_CLI.Core.nat_of_integer Z.zero
+    | Some k -> Voblint_CLI.Generated.nat_of_integer (Z.of_int k)
+    | None -> Voblint_CLI.Generated.nat_of_integer Z.zero
   in
   (* expanded is meaningless without a context to expand -- reject rather than
      silently rendering the collapsed graph a bare --context-graph expanded
      might otherwise appear to have requested. *)
-  if !context_graph = Some Expanded && !context = Voblint_CLI.Analysis_Config.Ctx_None then begin
+  if !context_graph = Some Expanded && !context = Voblint_CLI.Generated.Ctx_None then begin
     prerr_endline "voblint: --context-graph expanded requires --context entry-state";
     exit 1
   end;
@@ -608,8 +608,8 @@ let () =
      analysis's states, which is exactly the silent wrong output this check
      exists to prevent. *)
   if !context_graph = Some Expanded
-     && !context = Voblint_CLI.Analysis_Config.Ctx_EntryState
-     && kind <> Voblint_CLI.Analysis_Config.Interval_Analysis then begin
+     && !context = Voblint_CLI.Generated.Ctx_EntryState
+     && kind <> Voblint_CLI.Generated.Interval_Analysis then begin
     prerr_endline
       "voblint: --context-graph expanded is only supported by --analysis interval";
     exit 1
@@ -637,7 +637,7 @@ let () =
        --dot/--dot-full/--graph-snapshot";
     exit 1
   end;
-  if !solver <> None && !html && !context <> Voblint_CLI.Analysis_Config.Ctx_None then begin
+  if !solver <> None && !html && !context <> Voblint_CLI.Generated.Ctx_None then begin
     prerr_endline
       "voblint: --solver with --html requires --context none";
     exit 1
@@ -656,8 +656,8 @@ let () =
      above: defaulting to what the configuration supports is not the same as
      ignoring what the user asked for. *)
   let expanded_supported =
-    !context = Voblint_CLI.Analysis_Config.Ctx_EntryState
-    && kind = Voblint_CLI.Analysis_Config.Interval_Analysis
+    !context = Voblint_CLI.Generated.Ctx_EntryState
+    && kind = Voblint_CLI.Generated.Interval_Analysis
   in
   let context_graph =
     match !context_graph with
@@ -676,7 +676,7 @@ let () =
         "voblint: --analysis with several domains is only supported by --html";
       exit 1
     end;
-    if !context <> Voblint_CLI.Analysis_Config.Ctx_None then begin
+    if !context <> Voblint_CLI.Generated.Ctx_None then begin
       prerr_endline
         "voblint: --analysis with several domains requires --context none";
       exit 1
@@ -693,30 +693,30 @@ let () =
      chains where the coincidence was invisible. *)
   let graph_snapshot_for ~full =
     if !context_kind = CK_CallString then
-      Voblint_CLI.State_Report_GraphViz.cs_ctx_graph_snapshot_auto kind (cs_depth ()) prog
+      Voblint_CLI.Generated.cs_ctx_graph_snapshot_auto kind (cs_depth ()) prog
     else if !context_graph = Expanded then
-      Voblint_CLI.State_Report_GraphViz.entry_state_ctx_graph_snapshot_auto prog
-    else if !context <> Voblint_CLI.Analysis_Config.Ctx_None then
-      (if full then Voblint_CLI.State_Report_GraphViz.entry_state_full_state_graph_snapshot_auto
-       else Voblint_CLI.State_Report_GraphViz.entry_state_report_graph_snapshot_auto)
+      Voblint_CLI.Generated.entry_state_ctx_graph_snapshot_auto prog
+    else if !context <> Voblint_CLI.Generated.Ctx_None then
+      (if full then Voblint_CLI.Generated.entry_state_full_state_graph_snapshot_auto
+       else Voblint_CLI.Generated.entry_state_report_graph_snapshot_auto)
         kind prog
     else
-      (if full then Voblint_CLI.State_Report_GraphViz.full_state_graph_snapshot_auto
-       else Voblint_CLI.State_Report_GraphViz.state_report_graph_snapshot_auto)
+      (if full then Voblint_CLI.Generated.full_state_graph_snapshot_auto
+       else Voblint_CLI.Generated.state_report_graph_snapshot_auto)
         kind prog
   in
   let dot_export_for ~full =
     if !context_kind = CK_CallString then
-      Voblint_CLI.State_Report_GraphViz.cs_ctx_export_auto kind (cs_depth ()) prog
+      Voblint_CLI.Generated.cs_ctx_export_auto kind (cs_depth ()) prog
     else if !context_graph = Expanded then
-      Voblint_CLI.State_Report_GraphViz.entry_state_ctx_export_auto prog
-    else if !context <> Voblint_CLI.Analysis_Config.Ctx_None then
-      (if full then Voblint_CLI.State_Report_GraphViz.entry_state_full_state_export_auto
-       else Voblint_CLI.State_Report_GraphViz.entry_state_report_export_auto)
+      Voblint_CLI.Generated.entry_state_ctx_export_auto prog
+    else if !context <> Voblint_CLI.Generated.Ctx_None then
+      (if full then Voblint_CLI.Generated.entry_state_full_state_export_auto
+       else Voblint_CLI.Generated.entry_state_report_export_auto)
         kind prog
     else
-      (if full then Voblint_CLI.State_Report_GraphViz.full_state_export_auto
-       else Voblint_CLI.State_Report_GraphViz.state_report_export_auto)
+      (if full then Voblint_CLI.Generated.full_state_export_auto
+       else Voblint_CLI.Generated.state_report_export_auto)
         kind prog
   in
   if !html then prepare_report_dir !html_dir;
@@ -734,14 +734,14 @@ let () =
           match !solver with
           | Some sc ->
             (match
-               Voblint_CLI.State_Report_GraphViz.solver_checked_payload_auto k sc prog
+               Voblint_CLI.Generated.solver_checked_payload_auto k sc prog
              with
              | Some (g, (report, _)) ->
                (* solver_checked_payload_auto has no combined producer, so its
                   globals come from the same table it already solved. *)
                ( g,
                  Some report,
-                 Voblint_CLI.State_Report_GraphViz.solver_globals_for k sc prog )
+                 Voblint_CLI.Generated.solver_globals_for k sc prog )
              | None ->
                (* valid_analysis_config already rejected the combinations with
                   no table behind them, so this is unreachable rather than a
@@ -753,21 +753,20 @@ let () =
                callee entry's local is the seed routed_extra_g answered it
                with. Call-string contexts have no such reader yet. *)
             if !context_kind = CK_CallString then
-              ( Voblint_CLI.State_Report_GraphViz.cs_ctx_export_auto k (cs_depth ()) prog,
+              ( Voblint_CLI.Generated.cs_ctx_export_auto k (cs_depth ()) prog,
                 None,
-                Voblint_CLI.State_Report_GraphViz.cs_globals_for k (cs_depth ()) prog )
+                Voblint_CLI.Generated.cs_globals_for k (cs_depth ()) prog )
             else if !context_graph = Expanded then
-              ( Voblint_CLI.State_Report_GraphViz.entry_state_ctx_export_auto prog,
+              ( Voblint_CLI.Generated.entry_state_ctx_export_auto prog,
                 None,
-                Voblint_CLI.State_Report_GraphViz.entry_state_globals_for k prog )
-            else if !context <> Voblint_CLI.Analysis_Config.Ctx_None then
-              ( Voblint_CLI.State_Report_GraphViz
-                .entry_state_full_state_checked_export_auto k prog,
+                Voblint_CLI.Generated.entry_state_globals_for k prog )
+            else if !context <> Voblint_CLI.Generated.Ctx_None then
+              ( Voblint_CLI.Generated.entry_state_full_state_checked_export_auto k prog,
                 None,
-                Voblint_CLI.State_Report_GraphViz.entry_state_globals_for k prog )
+                Voblint_CLI.Generated.entry_state_globals_for k prog )
             else
               let g, (report, gvs) =
-                Voblint_CLI.State_Report_GraphViz.full_state_checked_payload_auto k prog
+                Voblint_CLI.Generated.full_state_checked_payload_auto k prog
               in
               (g, Some report, gvs)
         in
@@ -796,7 +795,7 @@ let () =
             verdict = verdict_label verdict;
             cond =
               un_string
-                (Voblint_CLI.Core.string_of_exp (Voblint_CLI.Core.nat_of_integer Z.zero) cond)
+                (Voblint_CLI.Generated.string_of_exp (Voblint_CLI.Generated.nat_of_integer Z.zero) cond)
           }
         in
         let checks =
@@ -812,15 +811,15 @@ let () =
                entry_state_checked_verdicts filters first, which would shorten the
                list and misalign every position after the first dead check. *)
             let verdicts =
-              Voblint_CLI.State_Report_GraphViz.entry_state_verdicts_for kind prog
+              Voblint_CLI.Generated.entry_state_verdicts_for kind prog
             in
             if List.length verdicts <> List.length check_positions then []
             else
               List.filter_map
                 (fun ((_, (cond, verdict)), pos) ->
                    match verdict with
-                   | Voblint_CLI.Core.Bot -> None
-                   | Voblint_CLI.Core.Lifted res -> Some (annotation pos res cond))
+                   | Voblint_CLI.Generated.Bot -> None
+                   | Voblint_CLI.Generated.Lifted res -> Some (annotation pos res cond))
                 (List.combine verdicts check_positions)
         in
         let files, nodes, dead =
@@ -834,8 +833,8 @@ let () =
       else if !graph_snapshot then Ok_graph (graph_snapshot_for ~full:!dot_full)
       else if !dot_full || !dot then
         Ok_dot (Dot_render.render (dot_export_for ~full:!dot_full))
-      else if !context <> Voblint_CLI.Analysis_Config.Ctx_None then
-        (match Voblint_CLI.Analyse_Dispatch.analyse_config_ctx cfg prog with
+      else if !context <> Voblint_CLI.Generated.Ctx_None then
+        (match Voblint_CLI.Generated.analyse_config_ctx cfg prog with
          | Some report -> Ok_text (render_ctx_report report check_positions)
          | None -> Unsupported_combo "unsupported --analysis/--context combination")
       else
@@ -844,7 +843,7 @@ let () =
            covers both: an explicit --solver now gets the same unreachable-flag
            suppression the default route always had, instead of printing a
            dead check's bottom state as a vacuous PROVED. *)
-        (match Voblint_CLI.Analyse_Dispatch.analyse_config_with_state cfg prog with
+        (match Voblint_CLI.Generated.analyse_config_with_state cfg prog with
          | Some report -> Ok_text (render_text_report report check_positions)
          | None -> Unsupported_combo "unsupported --analysis/--solver combination"))
   with

@@ -452,7 +452,7 @@ def gen_syntax_block(g: dict) -> str:
 # "..."` table already hand-written in VIMP_Notation.thy's parse_translation.
 # Genuinely project-specific (which theory/type each constructor lives in),
 # not derivable from grammar/vimp.yaml -- same status as
-# gen_vimp_menhir.py's `Voblint_CLI.Core.` qualification prefix.
+# gen_vimp_menhir.py's `Voblint_CLI.Generated.` qualification prefix.
 TR_CONST = {
     "N": "VIMP_Syntax.N",
     "V": "VIMP_Syntax.V",

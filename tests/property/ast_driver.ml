@@ -62,7 +62,7 @@ let parse_sexp (input : string) : sexp =
 
 (* -- sexp -> exported AST constructors ----------------------------------- *)
 
-open Voblint_CLI.Core
+open Voblint_CLI.Generated
 
 let int_of_atom s = Int_of_integer (Z.of_string s)
 

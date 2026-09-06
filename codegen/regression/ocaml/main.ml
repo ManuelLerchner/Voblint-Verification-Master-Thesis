@@ -16,8 +16,7 @@
    Do not hand-edit codegen/generated/ml/Voblint_CLI.ml; regenerate it with
    `pixi run codegen` instead. *)
 
-open Voblint_CLI.Core
-open Voblint_CLI.Analyse_Dispatch
+open Voblint_CLI.Generated
 
 (* `HOL-Library.Code_Target_Numeral` (imported by Example_Analysis_Dispatch)
    backs Isabelle's `int`/`nat` by the target language's native
