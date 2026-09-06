@@ -1,0 +1,24 @@
+session Voblint_Analysis_Sign in "." = "Voblint_Analysis_Base" +
+  description "The Sign domain: seven-element lattice, executable bridge, end-to-end soundness"
+  sessions
+    "Voblint_VIMP"
+    "Voblint_CFG"
+    "Voblint_Compile"
+    "Voblint_Domain"
+    "Voblint_Framework"
+    "Voblint_Solver"
+    "TD"
+  theories
+    Sign_Lattice
+    Sign_Arithmetic
+    Sign_Backward
+    Sign_Special
+    Sign_Numeric_Queries
+    Sign_Transfer
+    Sign_Domain
+    Sign_Exec
+    Sign_Sound
+    Sign_Exec_Sound
+    Sign_Analyses
+    Sign_Classify
+    Sign_Checks

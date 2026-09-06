@@ -7,7 +7,6 @@ split by concern.
 
 | File | Role | What |
 | --- | --- | --- |
-| `Exec_Interval_Run.thy` | precision comparison | `Example_Interval_Loop_Coverage`'s `loop_prog` under three fixpoint engines — bounded Kleene, warrowing TD, and every update rule at once (`join` / `per_origin` / `warrow`); interval narrowing plus the backward guard filter recover `[0,20]` under all of them. Imports the coverage theory rather than restating the program |
 | `Example_Interval_DG_Flagship.thy` | canonical spine | interval analysis of a counting loop, executed and certified on the D/G spine |
 | `Example_Interval_DG_IP_Flagship.thy` | canonical spine | interprocedural: `twice` compiled and analyzed end to end through `FunctionEntry`/`FunctionResult` |
 | `Example_Proc_Call.thy` | canonical spine | two procedures (`inc` / `sqr`) via a global; `main_prog_interval_analysis` + CFG combine structure |
@@ -16,16 +15,17 @@ split by concern.
 
 Backward-analysis arc: `Example_Guard_Refinement` (one guard) -> `Example_Interval_Loop_Coverage`
 (full CFG + trace soundness) -> `Exec_Interval_Run` (the same witness, executed).
+That last step and the store-only check trio's Interval member
+(`Example_Interval_Checks_Store_Only.thy`) both import `Voblint_CLI.Interval_Entry`,
+so they live in `CLI/` rather than here.
 
-Not tabled above, and grouped by what they pin rather than by domain concern:
-`Example_Interval_Checks_Store_Only.thy` (check discharge, the Interval
-analogue of Sign's). Role vocabulary: repository `README.md`.
+Role vocabulary: repository `README.md`.
 
 ## `Ctx/` — context routed by entered value
 
 `twice` analyzed context-sensitively, each call site's context the entry value
 of formal `p`, by the production entry-state analysis
-(`Voblint_Analysis.Interval_Ctx_Entry_State_Sound`). Import chain:
+(`Voblint_Analysis_Interval.Interval_Analyses`). Import chain:
 `Ctx_Flagship` -> `Ctx_Collect` -> `Source_Ctx`.
 
 | File | Role | What |

@@ -5,8 +5,8 @@ theory Example_Proc_Call
     "Voblint_VIMP.VIMP_Notation"
     "Voblint_CFG.CFG_Prune"
 
-    "Voblint_Analysis.Interval_Domain"
-    "Voblint_Analysis.Analysis_GraphViz"
+    "Voblint_Analysis_Interval.Interval_Domain"
+    "Voblint_Analysis_Base.Analysis_GraphViz"
 begin
 
 definition main_cfg_name :: pname where

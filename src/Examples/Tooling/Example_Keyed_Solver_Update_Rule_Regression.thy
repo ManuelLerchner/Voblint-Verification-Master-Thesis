@@ -3,7 +3,7 @@ theory Example_Keyed_Solver_Update_Rule_Regression
     "Voblint_Framework.DG_Keyed_Generator"
     "Voblint_Framework.Routed_Context"
     "Voblint_Solver.TD_Solver_Bridge"
-    "Voblint_Analysis.Ivl_Exec"
+    "Voblint_Analysis_Interval.Interval_Exec"
 begin
 
 section \<open>Minimal keyed update-rule regression: multiple Side writes per RHS evaluation (keyed)\<close>

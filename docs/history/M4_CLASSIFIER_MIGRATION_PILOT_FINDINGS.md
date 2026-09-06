@@ -56,7 +56,7 @@ direct, low-risk mirror of an already-proven sibling:
 
 | Layer | File | Missing `_for` | Fixed by |
 | --- | --- | --- | --- |
-| Executable transfer/enter commute | `Ivl_Exec.thy` | `ivl_tf_st_for_commute`, `ivl_enter_st_for_commute` | direct proof replay of the `is_global` originals, `gs` substituted throughout |
+| Executable transfer/enter commute | `Interval_Exec.thy` | `ivl_tf_st_for_commute`, `ivl_enter_st_for_commute` | direct proof replay of the `is_global` originals, `gs` substituted throughout |
 | D/G combine-assign | `Exec_DG_Bridge.thy` | `unit_combine_step_st_assign_for`, `unit_dg_spec_st_for` | same, using already-generic `combine_assign_resolved_q gs` |
 | Run-analysis Hstep/Henter/Hcomb | `Run_Analysis_Sound.thy` | `unit_dg_Hstep_for`, `unit_dg_Henter_for`, `unit_dg_Hcomb_for` | same, citing the two rows above |
 
@@ -184,7 +184,7 @@ newly grounds as the actual remaining M4.2 item, rather than a guess.
 
 **Landed, batch-clean, additive only (no existing caller touched):**
 
-- `Ivl_Exec.thy` — `ivl_tf_st_for_commute`, `ivl_enter_st_for_commute`, ret-shape lemmas
+- `Interval_Exec.thy` — `ivl_tf_st_for_commute`, `ivl_enter_st_for_commute`, ret-shape lemmas
 - `Exec_DG_Bridge.thy` — `unit_combine_step_st_assign_for`, `unit_dg_spec_st_for`,
   `unit_combine_step_st_commute_for`, `unit_step_st_commute_for`, `dg_spec_step_unit_st_for`
 - `Run_Analysis_Sound.thy` — `unit_dg_Hstep_for`, `unit_dg_Henter_for`, `unit_dg_Hcomb_for`

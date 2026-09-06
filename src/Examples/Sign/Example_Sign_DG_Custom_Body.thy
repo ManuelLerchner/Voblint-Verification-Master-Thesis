@@ -1,8 +1,8 @@
 theory Example_Sign_DG_Custom_Body
   imports
     "Voblint_Exec.Exec_DG_Generator"
-    "Voblint_Analysis.Sign_Exec"
-    "Voblint_Analysis.Sign_Transfer"
+    "Voblint_Analysis_Sign.Sign_Exec"
+    "Voblint_Analysis_Sign.Sign_Transfer"
     "Voblint_Solver.TD_Solver_Bridge"
     "Voblint_CFG.CFG_Prune"
     "Voblint_VIMP.VIMP_Notation" "Voblint_Compile.Compile_Wellformed"

@@ -1,0 +1,37 @@
+session Voblint_Examples_Interval in "." = "Voblint_Analysis_Interval" +
+  description
+    "Interval witnesses: the flagship certified runs and both context policies
+     (entry-value contexts under Ctx/, call strings under CallString/)"
+  sessions
+    "Voblint_Examples_CFG"
+    "Voblint_Soundness"
+  directories
+    "CallString"
+    "Ctx"
+  theories
+    (* An activation seed carrying every entered state of one recursive
+       callee: the seed is joined, never widened, and the callee's entry
+       unknown is exactly what the seed holds. *)
+    Example_Interval_DG_Seed_Join_Recursion
+    Example_Interval_DG_Flagship
+    Example_Interval_DG_IP_Flagship
+    Example_Interval_DG_Ctx_Flagship
+    Example_Interval_DG_Ctx_Collect
+    Example_Interval_DG_Ctx_Multi_Call_Regression
+    Example_Interval_DG_Ctx_Factorial_Regression
+    Example_Interval_DG_Ctx_Globals_Regression
+    Example_Interval_DG_EntryState_Base
+    Example_Interval_DG_EntryState_Ctx
+    Example_Interval_DG_EntryState_Collect
+    Example_Interval_DG_EntryState_Result_Regression
+    Example_Interval_DG_EntryState_Dead_Check_Regression
+    Example_Interval_DG_CallString_K1
+    Example_Interval_DG_CallString_K2
+    Example_Interval_Call_String_Generic_Parity
+    Call_String_Solver_Regression
+    Example_Interval_Source_Ctx
+    Example_Interval_Loop_Coverage
+    Example_Guard_Refinement
+    Example_Proc_Call
+  document_files
+    (in "../../Analyses/Base/document") "root.bib"

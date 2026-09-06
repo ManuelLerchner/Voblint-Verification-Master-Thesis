@@ -6,7 +6,7 @@ begin
 section \<open>A computed 2-call-string context, routed by truncated call history\<close>
 
 text \<open>
-  The \<open>k = 2\<close> sibling of \<^theory>\<open>Voblint_Examples.Example_Interval_DG_CallString_K1\<close>, same
+  The \<open>k = 2\<close> sibling of \<^theory>\<open>Voblint_Examples_Interval.Example_Interval_DG_CallString_K1\<close>, same
   \<open>nest\<close> program and same Base-style storage: \<open>g\<close>'s single call site is reached from two
   different \<open>f\<close> activations. At \<open>k = 1\<close> both collapse into one merged context; at \<open>k = 2\<close>
   the call string also records which \<open>f\<close> call led there, so the two stay separate. Only

@@ -159,7 +159,7 @@ Home: `src/Analysis/Generic/Domain/Exec_St.thy`, mirroring how
 handles backward filters generically.
 
 `Sign_Exec.thy`'s `fun_rep_enter_sign_rep`/`enter_sign_st`/
-`enter_frame_sign_st_commute` (~18 lines) and `Ivl_Exec.thy`'s equivalent are
+`enter_frame_sign_st_commute` (~18 lines) and `Interval_Exec.thy`'s equivalent are
 the executable-state twin of (A). Sketch (same caveat: verify against live
 `Exec_St.thy` before using):
 
@@ -318,7 +318,7 @@ file, 3 files.
 
 1. Re-read the live `Constraint_System.thy`, `Exec_St.thy`,
    `Sign_Transfer.thy`, `Interval_Transfer.thy`, `Sign_Exec.thy`,
-   `Ivl_Exec.thy`, `Sign_DG.thy`, `Interval_DG.thy`, `Mixed_Sign_Interval.thy`
+   `Interval_Exec.thy`, `Sign_DG.thy`, `Interval_DG.thy`, `Mixed_Sign_Interval.thy`
    via `mcp__isabelle-pide-mcp__read` (NOT host Read — these are tracked
    `.thy` files, see this repo's own `CLAUDE.md`/`AGENTS.md` theory-file
    boundary rule) to confirm every line/name cited above still matches

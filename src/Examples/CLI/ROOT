@@ -1,0 +1,26 @@
+session Voblint_Examples_CLI in "." = "Voblint_CLI" +
+  description
+    "Witnesses that reach the CLI layer: a domain's codegen entry point, the
+     AnalysisConfig dispatcher, or the GraphViz render surface.  They see every
+     domain because Voblint_CLI does, which is why they are not in the per-domain
+     example sessions"
+  sessions
+    "Voblint_Soundness"
+    "Voblint_Examples_CFG"
+    "Voblint_Examples_Interval"
+    "Voblint_Examples_Int"
+  theories
+    (* The AnalysisConfig dispatcher and the published result table *)
+    Example_Analysis_Dispatch_Regression
+    Example_Analysis_Result_Regression
+    Example_Min_Max_Regression
+
+    (* Check discharge against a computed post-solution, store-only, through
+       each domain's codegen entry point. *)
+    Example_Checks_Store_Only
+    Example_Interval_Checks_Store_Only
+    Example_Parity_Checks_Store_Only
+    Example_Side_Execute
+    Exec_Interval_Run
+    Example_Int_Refinement_Mode_Regression
+    Example_EntryState_GraphViz_Regression

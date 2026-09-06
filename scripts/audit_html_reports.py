@@ -97,6 +97,53 @@ def ensure_dot_renderers() -> None:
         subprocess.run(["dot", "-c"], capture_output=True, text=True)
 
 
+def live_check_lines(out: Path, source_text: str) -> set[int]:
+    """Source lines carrying at least one check whose own node is reachable.
+
+    Exemption is decided per node, not per line. `ded` greys a line out only
+    when *every* node on it is unreachable, which is right for rendering but
+    too coarse here: a one-line `void main() { f(); ...; __voblint_check(...) }`
+    whose prefix is live and whose check is dead is not a dead line, and
+    reading it as a live check made 03-procedures/01-proc_layout_recursion fail
+    on a check its own header documents as provably dead. Nodes carry both
+    their reachability and their column span, so match each check to the node
+    covering its column and ask that node.
+    """
+    spans = []
+    for node_doc in (out / "nodes").glob("*.xml"):
+        call = ET.parse(node_doc).getroot().find("call")
+        if call is None or call.get("column") is None:
+            continue
+        status = {
+            v.text
+            for a in call.findall("./path/analysis")
+            if a.get("name") == "status"
+            for v in a.findall("./value/set/value")
+        }
+        if "unreachable" not in status:
+            continue
+        spans.append((
+            int(call.get("line")), int(call.get("column")),
+            int(call.get("endLine")), int(call.get("endColumn")),
+        ))
+
+    def dead_at(nr: int, col: int) -> bool:
+        # col and the node spans are both 1-based.
+        return any(
+            ln <= nr <= eln and (nr != ln or col >= c) and (nr != eln or col <= ec)
+            for ln, c, eln, ec in spans
+        )
+
+    live = set()
+    for i, text_line in enumerate(source_text.splitlines()):
+        nr = i + 1
+        for m in re.finditer(r"__voblint_check", text_line):
+            if not dead_at(nr, m.start() + 1):
+                live.add(nr)
+                break
+    return live
+
+
 def audit_one(fixture: Path, out: Path) -> list[str]:
     """Returns a list of problems; empty means the report is coherent.
 
@@ -202,24 +249,15 @@ def audit_one(fixture: Path, out: Path) -> list[str]:
         #     verdict reader falls back to no annotations at all, and every
         #     structural check above still passes on the result.
         #
-        #     Dead checks are exempt: an unreachable check has no finding to
-        #     report, which is the same convention the text report follows.
+        #     Dead checks are exempt (see live_check_lines).
         annotated = {
             int(ET.parse(w).getroot().find("text").get("line"))
             for w in (out / "warn").glob("warn*.xml")
         }
-        dead_lines = {
-            int(ln.get("nr")) for ln in lines if ln.get("ded") == "true"
-        }
-        source_lines = fixture.read_text().splitlines()
-        for i, text_line in enumerate(source_lines):
-            nr = i + 1
-            if "__voblint_check" not in text_line or nr in dead_lines:
-                continue
-            if nr not in annotated:
-                problems.append(
-                    f"check on line {nr} produced no finding in the source view"
-                )
+        for nr in sorted(live_check_lines(out, fixture.read_text()) - annotated):
+            problems.append(
+                f"check on line {nr} produced no finding in the source view"
+            )
 
     # 8. The frontend itself has to be there, or none of the above is reachable.
     for asset in ("report.xsl", "node.xsl", "file.xsl", "frame.html", "script.js"):
@@ -299,24 +337,13 @@ def audit_combinations(verbose: bool) -> int:
                     # an empty list renders a page that passes every structural
                     # check above -- which is how a whole context mode shipped
                     # showing states and no findings.
-                    src_doc = next((out / "files").glob("*.xml"), None)
-                    dead = set()
-                    if src_doc is not None:
-                        dead = {
-                            int(ln.get("nr"))
-                            for ln in ET.parse(src_doc).getroot().findall("ln")
-                            if ln.get("ded") == "true"
-                        }
                     annotated = {
                         int(ET.parse(w).getroot().find("text").get("line"))
                         for w in (out / "warn").glob("warn*.xml")
                     }
-                    missing = [
-                        i + 1
-                        for i, t in enumerate(fixture.read_text().splitlines())
-                        if "__voblint_check" in t and i + 1 not in dead
-                        and i + 1 not in annotated
-                    ]
+                    missing = sorted(
+                        live_check_lines(out, fixture.read_text()) - annotated
+                    )
                     if missing:
                         faults.append(f"checks on {missing} produced no finding")
 

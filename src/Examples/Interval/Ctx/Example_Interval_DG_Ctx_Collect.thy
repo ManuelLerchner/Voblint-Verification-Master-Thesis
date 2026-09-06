@@ -1,7 +1,7 @@
 theory Example_Interval_DG_Ctx_Collect
   imports
     Example_Interval_DG_Ctx_Flagship
-    "Voblint_Analysis.Interval_Point_Digest"
+    "Voblint_Analysis_Interval.Interval_Point_Digest"
 begin
 
 section \<open>Activation-indexed collecting soundness for the routed interval solution\<close>

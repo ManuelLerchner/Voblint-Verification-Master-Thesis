@@ -1,7 +1,7 @@
 section \<open>Example: exact emptiness in the composite integer domain\<close>
 
 theory Example_Int_Domain
-  imports "Voblint_Analysis.Int_Arithmetic"
+  imports "Voblint_Analysis_Int.Int_Arithmetic"
 begin
 
 text \<open>

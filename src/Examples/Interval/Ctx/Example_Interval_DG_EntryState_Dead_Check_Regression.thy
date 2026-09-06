@@ -1,6 +1,6 @@
 theory Example_Interval_DG_EntryState_Dead_Check_Regression
   imports
-    "Voblint_Analysis.Interval_Analyses"
+    "Voblint_Analysis_Interval.Interval_Analyses"
     "Voblint_VIMP.VIMP_Notation"
 begin
 

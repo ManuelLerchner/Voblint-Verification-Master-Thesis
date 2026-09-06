@@ -1,6 +1,6 @@
 theory Example_Sign_DG_Overlapping_Enter
   imports
-    "Voblint_Analysis.Sign_Analyses"
+    "Voblint_Analysis_Sign.Sign_Analyses"
     "Voblint_VIMP.VIMP_Notation"
 begin
 

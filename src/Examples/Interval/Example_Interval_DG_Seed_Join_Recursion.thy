@@ -1,7 +1,7 @@
 theory Example_Interval_DG_Seed_Join_Recursion
   imports
     "Voblint_Exec.Exec_DG_Generator"
-    "Voblint_Analysis.Ivl_Exec"
+    "Voblint_Analysis_Interval.Interval_Exec"
     "Voblint_Solver.TD_Solver_Bridge"
     "Voblint_CFG.CFG_Prune"
     "Voblint_VIMP.VIMP_Notation" "Voblint_Compile.Compile_Wellformed"

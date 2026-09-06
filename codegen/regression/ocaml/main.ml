@@ -2,7 +2,7 @@
    Constructs a VIMP program purely through the exported AST constructors
    (never touching Isabelle), runs it through the exported `analyse`
    dispatcher for both domains, and checks the result against the values
-   src/Examples/Regression/Example_Analysis_Dispatch_Regression.thy's
+   src/Examples/CLI/Example_Analysis_Dispatch_Regression.thy's
    dispatch_demo_interval_precise proves and
    tests/regression/ carries as CLI fixtures. This driver is the layer that
    pins the *generated* module's agreement with both.

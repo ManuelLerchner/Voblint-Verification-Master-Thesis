@@ -1284,7 +1284,7 @@ session Voblint_Analysis_Instances in "src/Analysis" = "Voblint_Analysis_Goblint
     Interval_Print
     Interval_Domain
     Interval_Side_Soundness
-    Ivl_Exec
+    Interval_Exec
     Interval_DG
     Mixed_Sign_Interval
     Exec_DG_Bridge

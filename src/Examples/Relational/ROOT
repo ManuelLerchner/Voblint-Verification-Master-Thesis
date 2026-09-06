@@ -1,0 +1,8 @@
+session Voblint_Examples_Relational in "." = "Voblint_Analysis_Relational" +
+  description
+    "A carrier that is not a pointwise abstract state, run through the same
+     generator: the relational demo, over interval bounds"
+  sessions
+    "Voblint_Analysis_Interval"
+  theories
+    Example_Relational_DG_Demo

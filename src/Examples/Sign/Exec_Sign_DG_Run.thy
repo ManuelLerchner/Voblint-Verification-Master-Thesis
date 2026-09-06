@@ -22,14 +22,14 @@ text \<open>
 theory Exec_Sign_DG_Run
   imports
     "Voblint_Exec.DG_Local_State_Exec"
-    "Voblint_Analysis.Sign_Exec"
+    "Voblint_Analysis_Sign.Sign_Exec"
     "Voblint_Solver.TD_Solver_Bridge"
     "TD.TD_side_upd_rule"
     "Voblint_CFG.CFG_Prune"
     "Voblint_Compile.Compile_Invariants"
     "Voblint_VIMP.VIMP_Notation"
     "Voblint_Soundness.Run_Analysis_Sound"
-    Example_Compile_Call_Free
+    "Voblint_Examples_CFG.Example_Compile_Call_Free"
 begin
 
 (* Disambiguate our N constructor from the phase datatype constructor. *)

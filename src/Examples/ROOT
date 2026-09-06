@@ -1,113 +1,19 @@
-session Voblint_Examples in "." = "Voblint_CLI" +
-  description "Executable witnesses, flagship demonstrations, and the project capstone index"
+session Voblint_Examples in "." = "Voblint_Examples_CLI" +
+  description
+    "The project capstone index: one theory that imports every example session and
+     the CLI, so nothing it names is unbuilt"
   sessions
     "HOL-Library"
     "Voblint_Soundness"
-  directories
-    "Sign"
-    "Sign/CallString"
-    "Interval"
-    "Interval/CallString"
-    "Interval/Ctx"
-    "Congruence"
-    "Parity"
-    "Int"
-    "Relational"
-    "CFG"
-    "Tooling"
-    "Regression"
+    "Voblint_Examples_CFG"
+    "Voblint_Examples_Congruence"
+    "Voblint_Examples_Sign"
+    "Voblint_Examples_Interval"
+    "Voblint_Examples_Parity"
+    "Voblint_Examples_Int"
+    "Voblint_Examples_Relational"
+    "Voblint_Examples_Tooling"
   theories
-    (* CFG: cross-cutting compiler/collecting-semantics support and regressions *)
-    Example_Inc_Proc
-    Example_Compile_Call_Free
-    Example_Compile_Regression
-    Example_Control_Simulation_Regression
-    Example_LTR_Collect_Regression
-    Example_VIMP_Proc_Regression
-    Example_Analysis_Dispatch_Regression
-    Example_Analysis_Result_Regression
-    Example_Min_Max_Regression
-
-    (* Sign *)
-    Exec_Sign_DG_Run
-    (* Check discharge against a computed post-solution, store-only. *)
-    Example_Checks_Store_Only
-    Example_Side_Execute
-    Example_Sign_DG_Custom_Body
-    Example_Sign_DG_Custom_Combine
-    Example_Sign_DG_CallString_K1
-    Example_Sign_DG_CallString_K2
-    Example_Sign_Backward_Pollution_Regression
-    Example_Sign_DG_Overlapping_Enter
-
-    (* Interval *)
-    Exec_Interval_Run
-    (* The Interval analogue, inside a two-sided bound guard. *)
-    Example_Interval_Checks_Store_Only
-    (* An activation seed carrying every entered state of one recursive
-       callee: the seed is joined, never widened, and the callee's entry
-       unknown is exactly what the seed holds. *)
-    Example_Interval_DG_Seed_Join_Recursion
-    Example_Interval_DG_Flagship
-    Example_Interval_DG_IP_Flagship
-    Example_Interval_DG_Ctx_Flagship
-    Example_Interval_DG_Ctx_Collect
-    Example_Interval_DG_Ctx_Multi_Call_Regression
-    Example_Interval_DG_Ctx_Factorial_Regression
-    Example_Interval_DG_Ctx_Globals_Regression
-    Example_Interval_DG_EntryState_Base
-    Example_Interval_DG_EntryState_Ctx
-    Example_Interval_DG_EntryState_Collect
-    Example_Interval_DG_EntryState_Result_Regression
-    Example_Interval_DG_EntryState_Dead_Check_Regression
-    Example_Interval_DG_CallString_K1
-    Example_Interval_DG_CallString_K2
-    Example_Interval_Call_String_Generic_Parity
-    Call_String_Solver_Regression
-    Example_Interval_Source_Ctx
-    Example_Interval_Loop_Coverage
-    Example_Guard_Refinement
-    Example_Proc_Call
-
-    (* Congruence *)
-    Example_Congruence_Arithmetic
-    Example_Congruence_Backward
-
-    (* Parity *)
-    Example_Parity_DG_Flagship
-    Example_Parity_Checks_Store_Only
-
-    (* Composite and relational domains *)
-    Example_Int_Domain
-    Example_Int_Backward
-    Example_Int_Warrowing
-    Example_Int_Transfer
-    Exec_Int_DG_Run
-    Example_Relational_DG_Demo
-    Example_Int_Refinement_Mode_Regression
-
-    (* Solver, domain-independent *)
-    Example_Strategy_Tree
-
-    (* Tooling *)
-    Example_EntryState_GraphViz_Regression
-    (* Generator-layer Side buffering: the buffered RHS generator terminates
-       where issuing two Side writes per evaluation livelocks the solver. *)
-    Example_Keyed_Solver_Update_Rule_Regression
-    (* The direct and buffered routed generators, solved side by side on one
-       program that publishes an analysis global and an activation seed from
-       the same evaluation, under three update rules. *)
-    Example_Buffered_Encoding_Flush_Order
-    (* Two producers, one global: warrowing after the join loses the upper
-       bound that warrowing per origin keeps. *)
-    Example_Per_Origin_Widening_Precision
-    (* Tilscher's TDside lock-set running example, through the typed
-       strategy_program frontend. *)
-    Example_TD_Side_Program
-    (* Tilscher's TD must-be-initialized running example, through the same
-       frontend with no side effects. *)
-    Example_TD_Plain_Program
-
     Voblint
   document_files
-    (in "../Analysis/document") "root.bib"
+    (in "../Analyses/Base/document") "root.bib"

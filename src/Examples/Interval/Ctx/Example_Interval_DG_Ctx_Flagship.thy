@@ -1,15 +1,15 @@
 theory Example_Interval_DG_Ctx_Flagship
   imports
     Example_Interval_DG_IP_Flagship
-    "Voblint_Analysis.Interval_Analyses"
-    "Voblint_Analysis.Analysis_GraphViz"
+    "Voblint_Analysis_Interval.Interval_Analyses"
+    "Voblint_Analysis_Base.Analysis_GraphViz"
 begin
 
 section \<open>Context-sensitive interval analysis of \<open>twice\<close> (executable)\<close>
 
 text \<open>
   The production entry-state analysis
-  (\<^theory>\<open>Voblint_Analysis.Interval_Analyses\<close>) run on
+  (\<^theory>\<open>Voblint_Analysis_Interval.Interval_Analyses\<close>) run on
   \<^const>\<open>twice_program\<close>.  Each call to \<open>twice\<close> receives the abstract entry value
   of formal \<open>p\<close> as its context:
 
@@ -17,7 +17,7 @@ text \<open>
   \<^item> \<open>twice(10)\<close> uses context \<open>[10,10]\<close> and computes \<open>#ret = [20,20]\<close> and \<open>y = [20,20]\<close>.
 
   The two repeated calls stay separate, whereas the monovariant baseline of
-  \<^theory>\<open>Voblint_Examples.Example_Interval_DG_IP_Flagship\<close> forces one shared entry
+  \<^theory>\<open>Voblint_Examples_Interval.Example_Interval_DG_IP_Flagship\<close> forces one shared entry
   state and reports \<open>p = [3,10]\<close>, \<open>#ret = [6,20]\<close>, and \<open>x = y = [6,20]\<close>.  This
   entry-value key is finite for the two constant call sites.  A general interval
   analysis needs a finite canonical context representation because arbitrary interval

@@ -1,0 +1,21 @@
+session Voblint_Analysis_Parity in "." = "Voblint_Analysis_Base" +
+  description "The Parity domain: lattice, transfers, executable bridge"
+  sessions
+    "Voblint_VIMP"
+    "Voblint_CFG"
+    "Voblint_Compile"
+    "Voblint_Domain"
+    "Voblint_Framework"
+    "Voblint_Solver"
+    "TD"
+  theories
+    Parity_Domain
+    Parity_Special
+    Parity_Transfer
+    Parity_Exec
+    Parity_Numeric_Queries
+    Parity_Sound
+    Parity_Exec_Sound
+    Parity_Analyses
+    Parity_Classify
+    Parity_Checks

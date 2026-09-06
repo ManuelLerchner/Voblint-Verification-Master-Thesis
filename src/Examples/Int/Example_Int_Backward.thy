@@ -1,5 +1,5 @@
 theory Example_Int_Backward
-  imports Voblint_Analysis.Int_Backward
+  imports Voblint_Analysis_Int.Int_Backward
 begin
 
 section \<open>Composite integer-domain backward filtering: examples\<close>

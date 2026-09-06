@@ -1,0 +1,25 @@
+session Voblint_Examples_Tooling in "." = "Voblint_Analysis_Interval" +
+  description
+    "Solver- and generator-layer witnesses, stated over whichever domain makes the
+     effect visible rather than to demonstrate that domain"
+  sessions
+    "Voblint_Analysis_Sign"
+  theories
+    (* Generator-layer Side buffering: the buffered RHS generator terminates
+       where issuing two Side writes per evaluation livelocks the solver. *)
+    Example_Keyed_Solver_Update_Rule_Regression
+    (* The direct and buffered routed generators, solved side by side on one
+       program that publishes an analysis global and an activation seed from
+       the same evaluation, under three update rules. *)
+    Example_Buffered_Encoding_Flush_Order
+    (* Two producers, one global: warrowing after the join loses the upper
+       bound that warrowing per origin keeps. *)
+    Example_Per_Origin_Widening_Precision
+    (* Tilscher's TDside lock-set running example, through the typed
+       strategy_program frontend. *)
+    Example_TD_Side_Program
+    (* Tilscher's TD must-be-initialized running example, through the same
+       frontend with no side effects. *)
+    Example_TD_Plain_Program
+    (* Solver, domain-independent *)
+    Example_Strategy_Tree

@@ -37,20 +37,20 @@ text \<open>
   final subsection emits an analysis-annotated GraphViz rendering.
 
   It reuses, without duplicating: the executable interval transfer \<open>ivl_tf_st_for\<close>
-  (\<open>Ivl_Exec\<close>), the registration locale \<open>ownership_split_dg_exec_analysis\<close>
+  (\<open>Interval_Exec\<close>), the registration locale \<open>ownership_split_dg_exec_analysis\<close>
   (\<open>Run_Analysis_Sound\<close>), and the vendored warrowing solver.
 \<close>
 
 theory Example_Interval_DG_Flagship
   imports
-    "Voblint_Analysis.Interval_Transfer"
-    "Voblint_Analysis.Ivl_Exec"
+    "Voblint_Analysis_Interval.Interval_Transfer"
+    "Voblint_Analysis_Interval.Interval_Exec"
     "Voblint_Solver.TD_Solver_Bridge"
     "Voblint_CFG.CFG_Prune"
-    "Voblint_Analysis.Analysis_GraphViz"
+    "Voblint_Analysis_Base.Analysis_GraphViz"
     "Voblint_VIMP.VIMP_Notation"
     "Voblint_Soundness.Run_Analysis_Sound"
-    Example_Compile_Call_Free
+    "Voblint_Examples_CFG.Example_Compile_Call_Free"
 begin
 
 (* Disambiguate our N constructor from the phase datatype constructor. *)

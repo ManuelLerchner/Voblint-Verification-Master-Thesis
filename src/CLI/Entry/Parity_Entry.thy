@@ -1,5 +1,5 @@
 theory Parity_Entry
-  imports Voblint_Analysis.Parity_Checks "Voblint_Soundness.Run_Analysis_Sound"
+  imports Voblint_Analysis_Parity.Parity_Checks "Voblint_Soundness.Run_Analysis_Sound"
 begin
 
 hide_const phase.N

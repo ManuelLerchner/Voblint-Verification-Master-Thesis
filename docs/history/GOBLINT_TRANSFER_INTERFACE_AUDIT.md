@@ -179,7 +179,7 @@ assumption is renamed `etf_sound_combine_collect`, with a new
 `etf_sound_combine_env` assumption added alongside it (both proved at every
 concrete instantiation: `unit_etf_of_transfer`, `mixed_etf_of_transfer`,
 `named_etf` in `Sign_Named_Global_Eff.thy`, and the `_st` counterparts in
-`Exec_Bridge.thy`/`Sign_Exec.thy`/`Ivl_Exec.thy`/`Parity_Exec.thy`). The
+`Exec_Bridge.thy`/`Sign_Exec.thy`/`Interval_Exec.thy`/`Parity_Exec.thy`). The
 generic executable-fold, cone-compatibility, and RHS-generator lemma
 families in `src/Core/Solver/TD_Side/` were mechanically propagated from
 `etf_combine`/`etf_combine_st` to `etf_combine_collect`/`etf_combine_collect_st`

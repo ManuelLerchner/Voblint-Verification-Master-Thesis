@@ -1,5 +1,5 @@
 theory Example_Congruence_Arithmetic
-  imports Voblint_Analysis.Congruence_Arithmetic
+  imports Voblint_Analysis_Congruence.Congruence_Arithmetic
 begin
 
 section \<open>Executable Congruence arithmetic regressions\<close>

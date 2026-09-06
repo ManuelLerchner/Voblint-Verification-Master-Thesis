@@ -1,0 +1,29 @@
+session Voblint_Analysis_Int in "." = "Voblint_Analysis_Base" +
+  description "The int_dom analysis family: a reduced product of Sign, Interval, Parity and Congruence, with verified progressive and structural-fixpoint refinement"
+  sessions
+    "Voblint_VIMP"
+    "Voblint_CFG"
+    "Voblint_Compile"
+    "Voblint_Domain"
+    "Voblint_Framework"
+    "Voblint_Exec"
+    "Voblint_Solver"
+    "Voblint_Analysis_Sign"
+    "Voblint_Analysis_Interval"
+    "Voblint_Analysis_Parity"
+    "Voblint_Analysis_Congruence"
+    "TD"
+  theories
+    Int_Domain
+    Int_Refinement
+    Int_Arithmetic
+    Int_Backward
+    Int_Warrowing
+    Int_Transfer
+    Int_Exec
+    Int_Exec_Sound
+    Int_Sound
+    Int_Analyses
+    Int_Solver_Analyses
+    Int_Classify
+    Int_Checks

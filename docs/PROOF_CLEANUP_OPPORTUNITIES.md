@@ -369,7 +369,7 @@ files. Separate them:
 
 Same treatment for interval executable runs (`Exec_Ivl_*_Run` →
 `Formalization/Examples/Executable/Interval/`).
-`Ivl_Exec` earns the same split as `Sign_Exec`.
+`Interval_Exec` earns the same split as `Sign_Exec`.
 
 ### K.3 Smaller structural notes
 

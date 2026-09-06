@@ -1,7 +1,7 @@
 section \<open>Example: backward guard refinement vs identity assume\<close>
 
 theory Example_Guard_Refinement
-  imports "Voblint_Analysis.Interval_Domain"
+  imports "Voblint_Analysis_Interval.Interval_Domain"
 begin
 
 hide_const (open) Update_rules.N
