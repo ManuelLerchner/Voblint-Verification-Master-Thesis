@@ -173,5 +173,46 @@ lemma dispatch_demo_check_cond_rendered:
   "string_of_exp 0 (Less (N 0) (V (STR ''y''))) = ''0<y''"
   by eval
 
+subsection \<open>The pipeline theorem on a concrete program\<close>
+
+text \<open>
+  \<open>analyse_source_sound\<close> (\<^theory>\<open>Voblint_CLI.Analyse_Dispatch\<close>) reads the
+  report and a source run together, and leaves exactly one per-program
+  hypothesis: \<^const>\<open>analyse_certified\<close>. Discharging it here, by evaluation on
+  \<open>dispatch_demo_prog\<close>, shows the hypothesis is satisfiable and not a premise no
+  program meets --- what is left in the theorem below is the source run itself.
+\<close>
+
+lemma dispatch_demo_vars_cover_exec:
+  "vars_cover_exec (prog_cfg dispatch_demo_prog)
+     (fst (interval_conf_sol_prog_warrow (declared_global dispatch_demo_prog)
+             dispatch_demo_prog))"
+  by eval
+
+lemma dispatch_demo_reserved: "reserved_ret_var (declared_global dispatch_demo_prog)"
+  unfolding reserved_ret_var_def dispatch_demo_prog_def by (simp add: ret_var_def)
+
+lemma dispatch_demo_certified: "analyse_certified Interval_Analysis dispatch_demo_prog"
+  by (simp add: dispatch_demo_terminates
+        interval_conf_vars_cover_prog_of_exec
+          [OF dispatch_demo_reserved dispatch_demo_vars_cover_exec])
+
+lemma dispatch_demo_wf:
+  "wf_compile_input (declared_global dispatch_demo_prog) (prog_table dispatch_demo_prog)
+     (prog_procs dispatch_demo_prog)"
+  by (auto simp: wf_compile_input_simps dispatch_demo_prog_def split: if_splits)
+
+theorem dispatch_demo_source_certified:
+  assumes s0: "s0 \<in> cinit_stores (declared_global dispatch_demo_prog)"
+    and run: "star (pstep (declared_global dispatch_demo_prog) (prog_table dispatch_demo_prog))
+                (main_body (prog_table dispatch_demo_prog), s0, []) (residual, s, frs)"
+  shows "\<exists>v stk. csim (prog_table dispatch_demo_prog) (prog_cfg dispatch_demo_prog)
+                   (residual, s, frs) (v, s, stk)
+                 \<and> (\<forall>c. (v, c, Check_Proved) \<in> set (analyse Interval_Analysis dispatch_demo_prog)
+                        \<longrightarrow> truthy (aval c s))
+                 \<and> (\<forall>c. (v, c, Check_Refuted) \<in> set (analyse Interval_Analysis dispatch_demo_prog)
+                        \<longrightarrow> \<not> truthy (aval c s))"
+  by (rule analyse_source_sound[OF dispatch_demo_wf dispatch_demo_certified s0 run])
+
 end
 

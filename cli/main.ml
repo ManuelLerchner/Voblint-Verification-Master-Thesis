@@ -101,8 +101,8 @@ let usage =
   \                             discipline directly, bypassing the domain's\n\
   \                             production default (experimental; issue\n\
   \                             #131). warrow is supported by interval and\n\
-  \                             int; sign has no widen instance, and parity\n\
-  \                             has one but no solved table behind it yet.\n\
+  \                             int; sign and parity have a widen operator\n\
+  \                             but no solved table behind it yet.\n\
   \                             Supported by the plain text report and by\n\
   \                             --html, which reads the state table the chosen\n\
   \                             discipline solved. Not by --dot/--dot-full/\n\

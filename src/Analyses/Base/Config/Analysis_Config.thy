@@ -127,9 +127,11 @@ text \<open>
 
   Read by domain:
 
-  \<^item> \<open>Sign\<close>: \<open>Solver_Warrow\<close> is unsupported at every context (\<open>sign\<close> has no
-    \<open>widen\<close> instance, so nothing downstream of this resolver could execute
-    it even if accepted here). \<open>Ctx_EntryState\<close> and \<open>Ctx_CallString k\<close>
+  \<^item> \<open>Sign\<close>: \<open>Solver_Warrow\<close> is unsupported at every context. As with Parity
+    below, the rule is mechanically available --- \<open>sign\<close> is a finite lattice
+    whose \<open>warrowing\<close> instance sets \<open>widen = sup\<close> --- but no solved table or
+    soundness corollary stands behind it, and this resolver follows proved
+    capability rather than the instance. \<open>Ctx_EntryState\<close> and \<open>Ctx_CallString k\<close>
     (\<open>k \<ge> 1\<close>) are both supported at the one solver Sign's own routed
     soundness proves at each, \<open>Solver_Join\<close>; \<open>Solver_PerOrigin\<close> is
     genuinely unproven at either context (unlike at \<open>Ctx_None\<close>, where it

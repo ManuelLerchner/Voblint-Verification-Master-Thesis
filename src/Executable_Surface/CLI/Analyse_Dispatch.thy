@@ -1,9 +1,9 @@
 theory Analyse_Dispatch
   imports
-    Sign_Entry
-    Interval_Entry
-    Int_Entry
-    Parity_Entry
+    Voblint_Analysis_Sign.Sign_Entry
+    Voblint_Analysis_Interval.Interval_Entry
+    Voblint_Analysis_Int.Int_Entry
+    Voblint_Analysis_Parity.Parity_Entry
     Voblint_Analysis_Interval.Interval_Analyses
     Voblint_Analysis_Sign.Sign_Analyses
     Voblint_Analysis_Int.Int_Analyses
@@ -17,7 +17,7 @@ hide_const phase.N
 section \<open>A unified, verified check-report API across domains\<close>
 
 text \<open>
-  \<open>analyse_sign_report\<close> (\<^theory>\<open>Voblint_CLI.Sign_Entry\<close>) and
+  \<open>analyse_sign_report\<close> (\<^theory>\<open>Voblint_Analysis_Sign.Sign_Entry\<close>) and
   \<open>analyse_interval_td_report_for\<close>/\<open>analyse_interval_td_report\<close>
   (\<^theory>\<open>Voblint_Analysis_Interval.Interval_Checks\<close>) already share one observable
   result type, \<open>check_report_entry list\<close>
@@ -39,7 +39,8 @@ text \<open>
   is purely a loop-termination question now, not a global-specific one: a program whose global
   writes never occur inside a loop terminates identically under \<open>Solver_Join\<close> and
   \<open>Solver_Warrow\<close>, only a genuine unbounded loop still needs warrowing.
-  \<open>analyse_interval_td_report\<close>'s soundness theorems (\<^theory>\<open>Voblint_CLI.Interval_Entry\<close>'s
+  \<open>analyse_interval_td_report\<close>'s soundness theorems
+  (\<^theory>\<open>Voblint_Analysis_Interval.Interval_Entry\<close>'s
   \<open>analyse_interval_td_report_sound_proved\<close>/\<open>_refuted\<close>, built on the routed spine's own
   \<open>interval_conf_result_node_sound_warrow\<close>) make dispatching Interval's production default to the
   warrowing report a like-for-like swap for callers, not a precision or soundness downgrade.
@@ -88,20 +89,22 @@ text \<open>
   experiments and regression comparisons on the same generated equation
   system, without touching \<open>analyse\<close> or any domain's production entry point.
 
-  Not every combination is meaningful: only \<open>ivl\<close> has a \<open>widen\<close> type-class
-  instance (\<^theory>\<open>Voblint_Analysis_Interval.Interval_Warrowing\<close>), so \<open>Solver_Warrow\<close>
-  does not even type-check against Sign -- adding a pointless \<open>widen\<close>
-  instance for a finite-height domain that needs no widening would be
-  scope creep, not a fix. \<open>analyse_with_solver\<close> is therefore a curated,
+  Not every combination is meaningful, and the reason is a missing proof rather
+  than a missing instance. \<open>sign\<close> and \<open>parity\<close> are finite lattices that do carry
+  a \<open>widen\<close> (\<open>widen = sup\<close>, from their \<open>warrowing\<close> instantiations, which
+  \<open>int_dom\<close>'s own componentwise instance needs), so \<open>Solver_Warrow\<close> against them
+  type-checks; what neither has is a solved table or a soundness corollary
+  behind that rule, and exposing a pairing on the strength of the instance alone
+  is exactly what this resolver refuses to do. \<open>analyse_with_solver\<close> is therefore a curated,
   explicit list of the valid pairings, not a general compatibility
   predicate over an open solver/domain space: an unsupported pairing
   returns \<open>None\<close>, the same explicit-gap discipline \<open>resolve_analysis_config\<close>
-  applies on the context axis. \<open>int_dom\<close> has a
-  \<^theory>\<open>Voblint_Analysis_Int.Int_Warrowing\<close> instance already needed for its own
-  \<open>Solver_Warrow\<close> production route, so unlike Sign it has no type-level gap
-  left on this axis: every \<open>int_dom\<close> pairing is supported. Of the sixteen
+  applies on the context axis. \<open>int_dom\<close> carries the warrowing route through to
+  a proved result (\<^theory>\<open>Voblint_Analysis_Int.Int_Warrowing\<close>, its own
+  production default), so every \<open>int_dom\<close> pairing is supported. Of the sixteen
   \<open>analysis_domain \<times> solver_choice\<close> combinations the four \<open>None\<close>s are exactly the two
-  widening rules against the two finite-height domains, Sign and Parity.
+  widening rules against Sign and Parity, whose finite height means no analysis
+  here has needed that route enough to prove it.
 
   Each domain's own production default is exactly one of these pairings
   (\<open>Sign_Analysis\<close>/\<open>Solver_Join\<close>, \<open>Interval_Analysis\<close>/\<open>Solver_Warrow\<close>,
@@ -257,7 +260,8 @@ text \<open>
   soundness chain derives both unconditionally from \<open>compile_prog_finite\<close>, so unlike the
   Base-family route this corollary needs no finiteness premise of its own.
 
-  \<open>analyse_sign_report_sound_proved\<close>/\<open>_refuted\<close> (\<^theory>\<open>Voblint_CLI.Sign_Entry\<close>) are proved
+  \<open>analyse_sign_report_sound_proved\<close>/\<open>_refuted\<close>
+  (\<^theory>\<open>Voblint_Analysis_Sign.Sign_Entry\<close>) are proved
   about \<open>analyse_sign_report\<close> --- the exact constant \<open>analyse\<close> pattern-matches to, one
   \<open>analyse.simps\<close> equation away. Restating both domains' corollaries directly over \<open>analyse\<close>,
   the constant \<open>export_code\<close> exports, means connecting a runtime verdict to its soundness
@@ -430,6 +434,159 @@ corollary analyse_int_refuted_sound:
            \<not> truthy (aval c s)"
   by (rule analyse_int_report_sound_refuted
         [OF wf solve entry_cov fwd_ok call_fwd_ok comb_fwd_ok mem[unfolded analyse.simps]])
+
+subsection \<open>One statement over the whole pipeline\<close>
+
+text \<open>
+  The corollaries above are per domain and carry the four coverage facts one by one.
+  \<open>analyse_certified\<close> collapses both: it names, for each selectable domain, the two
+  facts about that domain's own solve that nothing here proves in general --- the
+  solver run completed, and it solved enough keys --- so a caller states one
+  predicate instead of picking the right pair of constants per domain. Both
+  conjuncts are decided per program by evaluation: \<^const>\<open>vars_cover\<close> through each
+  domain's \<open>vars_cover_exec\<close> bridge, solver success through that domain's
+  \<open>..._via_solve_c\<close> reflection.
+\<close>
+
+fun analyse_certified :: "analysis_domain \<Rightarrow> imp_prog \<Rightarrow> bool" where
+  "analyse_certified Sign_Analysis p =
+     (sctx_terminates_prog (declared_global p) p
+        \<and> vars_cover (prog_cfg p) (fst (sctx_sol_prog (declared_global p) p)))"
+| "analyse_certified Interval_Analysis p =
+     (interval_conf_terminates_prog_warrow (declared_global p) p
+        \<and> vars_cover (prog_cfg p)
+             (fst (interval_conf_sol_prog_warrow (declared_global p) p)))"
+| "analyse_certified Int_Analysis p =
+     (int_conf_terminates_prog_warrow Refine_Fixpoint (declared_global p) p
+        \<and> vars_cover (prog_cfg p)
+             (fst (int_conf_sol_prog_warrow Refine_Fixpoint (declared_global p) p)))"
+| "analyse_certified Parity_Analysis p =
+     (pctx_terminates_prog (declared_global p) p
+        \<and> vars_cover (prog_cfg p) (fst (pctx_sol_prog (declared_global p) p)))"
+
+lemma analyse_proved_sound:
+  fixes p :: imp_prog and v :: pp and c :: exp
+  assumes wf: "wf_compile_input (declared_global p) (prog_table p) (prog_procs p)"
+      and cert: "analyse_certified D p"
+      and mem: "(v, c, Check_Proved) \<in> set (analyse D p)"
+  shows "\<forall>s \<in> ltr_collect (declared_global p) (prog_cfg p) (cinit_stores (declared_global p)) v.
+           truthy (aval c s)"
+proof (cases D)
+  case Sign_Analysis
+  with cert have solve: "sctx_terminates_prog (declared_global p) p"
+    and cover: "vars_cover (prog_cfg p) (fst (sctx_sol_prog (declared_global p) p))"
+    by simp_all
+  from mem Sign_Analysis have m: "(v, c, Check_Proved) \<in> set (analyse Sign_Analysis p)" by simp
+  show ?thesis
+    by (rule analyse_sign_proved_sound[OF wf solve _ _ _ _ m]) (use cover in auto)
+next
+  case Interval_Analysis
+  with cert have solve: "interval_conf_terminates_prog_warrow (declared_global p) p"
+    and cover: "vars_cover (prog_cfg p) (fst (interval_conf_sol_prog_warrow (declared_global p) p))"
+    by simp_all
+  from mem Interval_Analysis have m: "(v, c, Check_Proved) \<in> set (analyse Interval_Analysis p)"
+    by simp
+  show ?thesis
+    by (rule analyse_interval_proved_sound[OF wf solve _ _ _ _ m]) (use cover in auto)
+next
+  case Int_Analysis
+  with cert have solve: "int_conf_terminates_prog_warrow Refine_Fixpoint (declared_global p) p"
+    and cover: "vars_cover (prog_cfg p)
+                  (fst (int_conf_sol_prog_warrow Refine_Fixpoint (declared_global p) p))"
+    by simp_all
+  from mem Int_Analysis have m: "(v, c, Check_Proved) \<in> set (analyse Int_Analysis p)" by simp
+  show ?thesis
+    by (rule analyse_int_proved_sound[OF wf solve _ _ _ _ m]) (use cover in auto)
+next
+  case Parity_Analysis
+  with cert have solve: "pctx_terminates_prog (declared_global p) p"
+    and cover: "vars_cover (prog_cfg p) (fst (pctx_sol_prog (declared_global p) p))"
+    by simp_all
+  from mem Parity_Analysis have m: "(v, c, Check_Proved) \<in> set (analyse_parity_report p)" by simp
+  show ?thesis
+    by (rule analyse_parity_report_sound_proved[OF wf solve _ _ _ _ m]) (use cover in auto)
+qed
+
+lemma analyse_refuted_sound:
+  fixes p :: imp_prog and v :: pp and c :: exp
+  assumes wf: "wf_compile_input (declared_global p) (prog_table p) (prog_procs p)"
+      and cert: "analyse_certified D p"
+      and mem: "(v, c, Check_Refuted) \<in> set (analyse D p)"
+  shows "\<forall>s \<in> ltr_collect (declared_global p) (prog_cfg p) (cinit_stores (declared_global p)) v.
+           \<not> truthy (aval c s)"
+proof (cases D)
+  case Sign_Analysis
+  with cert have solve: "sctx_terminates_prog (declared_global p) p"
+    and cover: "vars_cover (prog_cfg p) (fst (sctx_sol_prog (declared_global p) p))"
+    by simp_all
+  from mem Sign_Analysis have m: "(v, c, Check_Refuted) \<in> set (analyse Sign_Analysis p)" by simp
+  show ?thesis
+    by (rule analyse_sign_refuted_sound[OF wf solve _ _ _ _ m]) (use cover in auto)
+next
+  case Interval_Analysis
+  with cert have solve: "interval_conf_terminates_prog_warrow (declared_global p) p"
+    and cover: "vars_cover (prog_cfg p) (fst (interval_conf_sol_prog_warrow (declared_global p) p))"
+    by simp_all
+  from mem Interval_Analysis have m: "(v, c, Check_Refuted) \<in> set (analyse Interval_Analysis p)"
+    by simp
+  show ?thesis
+    by (rule analyse_interval_refuted_sound[OF wf solve _ _ _ _ m]) (use cover in auto)
+next
+  case Int_Analysis
+  with cert have solve: "int_conf_terminates_prog_warrow Refine_Fixpoint (declared_global p) p"
+    and cover: "vars_cover (prog_cfg p)
+                  (fst (int_conf_sol_prog_warrow Refine_Fixpoint (declared_global p) p))"
+    by simp_all
+  from mem Int_Analysis have m: "(v, c, Check_Refuted) \<in> set (analyse Int_Analysis p)" by simp
+  show ?thesis
+    by (rule analyse_int_refuted_sound[OF wf solve _ _ _ _ m]) (use cover in auto)
+next
+  case Parity_Analysis
+  with cert have solve: "pctx_terminates_prog (declared_global p) p"
+    and cover: "vars_cover (prog_cfg p) (fst (pctx_sol_prog (declared_global p) p))"
+    by simp_all
+  from mem Parity_Analysis have m: "(v, c, Check_Refuted) \<in> set (analyse_parity_report p)" by simp
+  show ?thesis
+    by (rule analyse_parity_report_sound_refuted[OF wf solve _ _ _ _ m]) (use cover in auto)
+qed
+
+text \<open>
+  The pipeline statement: compile the source program, generate its equations, solve
+  them, read the report --- and then run the source program itself and stop wherever
+  you like. The store in your hands sits at some graph node, and every verdict the
+  report printed for that node holds of it: a \<^const>\<open>Check_Proved\<close> condition is
+  true there, a \<^const>\<open>Check_Refuted\<close> one false. \<^const>\<open>csim\<close> is what names the
+  node --- a partly executed command together with its frame stack sits at one ---
+  so no separate reachability argument connects the run to the report.
+
+  Everything domain-specific has been absorbed: \<open>D\<close> ranges over every selectable
+  analysis, and the premises left are well-formed input, an initial store, and
+  \<^const>\<open>analyse_certified\<close>. It is stated over \<^const>\<open>analyse\<close>, the constant
+  \<open>export_code\<close> exports, so it constrains the analyzer's own output rather than an
+  internal solved system.
+\<close>
+
+theorem analyse_source_sound:
+  fixes p :: imp_prog and s0 s :: store
+  assumes wf: "wf_compile_input (declared_global p) (prog_table p) (prog_procs p)"
+      and cert: "analyse_certified D p"
+      and s0: "s0 \<in> cinit_stores (declared_global p)"
+      and run: "star (pstep (declared_global p) (prog_table p))
+                  (main_body (prog_table p), s0, []) (residual, s, frs)"
+  shows "\<exists>v stk. csim (prog_table p) (prog_cfg p) (residual, s, frs) (v, s, stk)
+                 \<and> (\<forall>c. (v, c, Check_Proved) \<in> set (analyse D p) \<longrightarrow> truthy (aval c s))
+                 \<and> (\<forall>c. (v, c, Check_Refuted) \<in> set (analyse D p) \<longrightarrow> \<not> truthy (aval c s))"
+proof -
+  have cfg: "prog_cfg p = compile_prog (prog_table p) (prog_procs p)"
+    by (rule prog_cfg_def)
+  from source_reaches_ltr_collect[OF wf s0 run]
+  obtain v stk where m: "csim (prog_table p) (prog_cfg p) (residual, s, frs) (v, s, stk)"
+    and mem: "s \<in> ltr_collect (declared_global p) (prog_cfg p)
+                     (cinit_stores (declared_global p)) v"
+    unfolding cfg by blast
+  show ?thesis
+    using m mem analyse_proved_sound[OF wf cert] analyse_refuted_sound[OF wf cert] by blast
+qed
 
 subsection \<open>Executable code generation\<close>
 

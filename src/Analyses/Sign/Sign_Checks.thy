@@ -270,8 +270,10 @@ subsection \<open>The published surface, one interpretation per discipline\<clos
 text \<open>
   Sign's two disciplines through the shared \<^locale>\<open>analysis_surface\<close>. There is no
   warrowing interpretation because there is no warrowing table to name: Sign's carrier has
-  finite height and carries no widen instance, so warrowing has nothing to accelerate and
-  no solved table of its own. The absent interpretation and the absent solver route agree
+  finite height, so warrowing has nothing to accelerate and no solved table of its own was
+  ever built. The \<open>widen\<close> operator itself exists (\<open>sign\<close>'s \<open>warrowing\<close> instance sets it
+  to \<open>sup\<close>, which \<open>int_dom\<close>'s componentwise instance needs); what is absent is the table
+  and the corollary, not the instance. The absent interpretation and the absent solver route agree
   by construction rather than by a separately maintained legality table.
 \<close>
 
