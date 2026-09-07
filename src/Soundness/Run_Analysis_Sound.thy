@@ -52,6 +52,131 @@ text \<open>
   graph, and an executable run names it through its interpretation.
 \<close>
 
+subsection \<open>Monovariant collecting soundness, once, in the unit-context locale\<close>
+
+text \<open>
+  Both registration locales below reach their own \<open>collect_sound\<close> by the same two steps: the
+  monovariant collector is the union over contexts of the activation collector, and at the unit
+  context that union has a single summand.  Neither step mentions a carrier or a specification,
+  so it is proved here in \<^locale>\<open>unit_routed_context\<close>'s own vocabulary and each registration
+  locale instantiates it at its concretization.
+\<close>
+
+context unit_routed_context
+begin
+
+lemma ltr_collect_sound:
+  assumes entry: "(cfg_entry g, ()) \<in> vars"
+    and sound0: "S0 \<subseteq> gammaDG s0d s0g"
+  shows "ltr_collect gs g S0 v \<subseteq> gammaM (sg (Inl (v, ())))"
+proof -
+  have "ltr_collect gs g S0 v
+          = (\<Union>c. activation_collect gs (call_context_rel_of_fun enterc_unit) () g S0 v c)"
+    by (rule ltr_collect_eq_Union_activation_of_fun)
+  also have "\<dots> \<subseteq> gammaM (sg (Inl (v, ())))"
+  proof (rule UN_least)
+    fix c :: unit
+    show "activation_collect gs (call_context_rel_of_fun enterc_unit) () g S0 v c
+            \<subseteq> gammaM (sg (Inl (v, ())))"
+      using routed.activation_collect_dg_sound[OF entry sound0]
+      by (cases c) simp
+  qed
+  finally show ?thesis .
+qed
+
+end
+
+
+subsection \<open>The compiled-program specialisation of the unit-context locale\<close>
+
+text \<open>
+  Eight of \<^locale>\<open>unit_routed_context\<close>'s sixteen obligations do not mention the carrier at
+  all: three follow from the specification's own soundness, two from the shape of any compiled
+  graph, and three from the solved variable set covering that graph.  Both registration locales
+  below discharged exactly those eight the same way, so they are discharged here once and only
+  the carrier-dependent obligations stay explicit premises.
+\<close>
+
+lemma unit_routed_context_compile_progI:
+  fixes S :: "(pp \<times> unit, 'k, unit, 'D::bounded_semilattice_sup_bot,
+                'G::bounded_semilattice_sup_bot) dg_spec"
+    and gammaDG :: "'D \<Rightarrow> 'G \<Rightarrow> store set"
+    and sg :: "pp \<times> unit + 'k \<Rightarrow> 'M" and gammaM :: "'M \<Rightarrow> store set"
+    and seed_key :: "pp \<Rightarrow> unit \<Rightarrow> 'k"
+  assumes core: "sound_dg_spec_core S gammaDG gs"
+    and finE: "finite (intra (compile_prog Pi ps))"
+    and cover: "vars_cover (compile_prog Pi ps) vars"
+    and pp: "part_post_solution
+               (routed_node_rhs intra_predecessor_addr_list (\<lambda>_. gk0) route_unit
+                  (\<lambda>c src a. dg_spec_edge_tree S a src (\<lambda>_. gk0))
+                  (routed_call_tree S gk0 seed_key (static_resolve (compile_prog Pi ps)) is_bot)
+                  (routed_entry_seed_tree seed_key)
+                  (compile_prog Pi ps) bot0 s0d s0g)
+               x0 sigma vars"
+    and sg_cov: "\<And>v c. (v, c) \<in> vars
+        \<Longrightarrow> gammaM (sg (Inl (v, c)))
+              = gammaDG (locals (sigma (Inl (v, c)))) (globs (sigma (Inr gk0)))"
+    and sg_uncov: "\<And>v c. (v, c) \<notin> vars \<Longrightarrow> gammaM (sg (Inl (v, c))) = {}"
+    and seed_key_ne: "\<And>p ctx. seed_key p ctx \<noteq> gk0"
+    and is_bot_bot: "is_bot bot"
+    and is_bot_sound: "\<And>d gv. is_bot d \<Longrightarrow> gammaDG d gv = {}"
+    and enter_complete:
+    "\<And>u ctx dst pars args p cont s.
+       (u, ctx) \<in> vars
+       \<Longrightarrow> (u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps)
+       \<Longrightarrow> s \<in> gammaDG (locals (sigma (Inl (u, ctx)))) (globs (sigma (Inr gk0)))
+       \<Longrightarrow> \<exists>pairs pub deps.
+             enter_runs (enter\<^sup># S (call_info_of (CallEdge dst pars args) p))
+               (mk_dg_man (locals (sigma (Inl (u, ctx)))) (\<lambda>_. gk0)) sigma pairs pub
+           \<and> enter_deps (enter\<^sup># S (call_info_of (CallEdge dst pars args) p))
+               (mk_dg_man (locals (sigma (Inl (u, ctx)))) (\<lambda>_. gk0)) sigma pairs deps
+           \<and> entry_pairs_cover (\<lambda>d. gammaDG d (globs (sigma (Inr gk0)))) s
+               (call_enter gs (CallEdge dst pars args) s) pairs"
+  shows "unit_routed_context S gammaDG gs (compile_prog Pi ps) gk0 bot0 s0d s0g
+           sigma vars x0 sg seed_key is_bot gammaM"
+proof -
+  interpret base: sound_dg_spec_core S gammaDG gs by (rule core)
+  show ?thesis
+  proof (unfold_locales, goal_cases Mono Step Comb FinE PP SgCov SgUncov Fwd FinC CallsUnique
+      SeedKey IsBotBot IsBotSound EnterComplete CallFwd CombFwd)
+    case (Mono d d' g g') then show ?case by (rule base.gammaDG_mono)
+  next
+    case (Step a \<tau> src gk) show ?case by (rule base.step_sound)
+  next
+    case (Comb s dc \<tau> gk t de ci) then show ?case by (rule base.combine_sound)
+  next
+    case FinE show ?case by (rule finE)
+  next
+    case PP show ?case by (rule pp)
+  next
+    case (SgCov v c) then show ?case by (rule sg_cov)
+  next
+    case (SgUncov v c) then show ?case by (rule sg_uncov)
+  next
+    case (Fwd u a v c) then show ?case using cover by (cases c) auto
+  next
+    case FinC show ?case by (simp add: compile_prog_finite)
+  next
+    case CallsUnique show ?case
+      unfolding calls_source_unique_def using compile_prog_calls_source_unique by blast
+  next
+    case (SeedKey p ctx) show ?case by (rule seed_key_ne)
+  next
+    case IsBotBot show ?case by (rule is_bot_bot)
+  next
+    case (IsBotSound d gv) then show ?case by (rule is_bot_sound)
+  next
+    case (EnterComplete u ctx dst pars args p cont s)
+    then show ?case by (rule enter_complete)
+  next
+    case (CallFwd u ctx dst pars args p cont)
+    then show ?case using cover by (cases "route_unit u ctx
+        (locals (sigma (Inl (u, ctx)))) (CallEdge dst pars args)") auto
+  next
+    case (CombFwd cl c1 dst pars args p cont)
+    then show ?case using cover by (cases c1) auto
+  qed
+qed
 
 
 subsection \<open>Registration locale for diagonal executable D/G analyses\<close>
@@ -94,7 +219,7 @@ locale ownership_split_dg_exec_analysis =
       "sound_transfer_for gs sk asn sp br bd rt en ev"
     and reserved:
       "reserved_ret_var gs"
-    and tf_commute[simp]:
+    and tf_commute:
       "\<And>a s.
         live_resolved_st_q gs s \<Longrightarrow>
         fun_of_exec_dg_st_for gs (tf_st a s) =
@@ -119,7 +244,8 @@ text \<open>
   caller.
 \<close>
 text \<open>
-  \<open>gamma_ownership_split_exec\<close> is the executable-carrier sibling of \<open>gamma_ownership_split gs\<close>, reading
+  \<open>gamma_ownership_split_exec\<close> is the executable-carrier sibling of
+  \<open>gamma_ownership_split gs\<close>, reading
   its two arguments back through \<open>fun_of_exec_dg_st_for\<close> first --- the diagonal
   analogue of \<^theory>\<open>Voblint_Exec.DG_Local_State_Exec_Refinement\<close>'s \<open>gamma_exec\<close>.
   \<open>run_source_sound\<close>/\<open>collect_sound\<close> read the solved system at this carrier
@@ -127,7 +253,8 @@ text \<open>
 \<close>
 
 definition gamma_ownership_split_exec :: "'a exec_dg_st \<Rightarrow> 'a exec_dg_st \<Rightarrow> store set" where
-  "gamma_ownership_split_exec d g = gamma_ownership_split gs (fun_of_exec_dg_st_for gs d) (fun_of_exec_dg_st_for gs g)"
+  "gamma_ownership_split_exec d g =
+     gamma_ownership_split gs (fun_of_exec_dg_st_for gs d) (fun_of_exec_dg_st_for gs g)"
 
 text \<open>
   Each obligation is the abstract one under the readback: the observation
@@ -137,7 +264,9 @@ text \<open>
   remains is exactly the transfer contract.
 \<close>
 
-theorem sound_dg_spec_core_st: "sound_dg_spec_core (ownership_split_dg_spec_st_for gs tf_st enter_st) gamma_ownership_split_exec gs"
+theorem sound_dg_spec_core_st:
+  "sound_dg_spec_core (ownership_split_dg_spec_st_for gs tf_st enter_st)
+     gamma_ownership_split_exec gs"
 proof -
   interpret tfs: sound_transfer_for gs sk asn sp br bd rt en ev by (rule tf_sound)
   show ?thesis
@@ -150,16 +279,22 @@ proof -
           rule fun_of_resolved_st_q_for_mono[OF 1(2)])
   next
     case (2 a \<tau> src gk)
+    note unf = dg_spec_step_ownership_split_st_for ownership_split_transfer_st_def
+      gamma_ownership_split_exec_def dg_spec_edge_tree_def fun_of_exec_dg_st_for_def
+      gamma_ownership_split_def
     show ?case
-      unfolding dg_spec_step_ownership_split_st_for ownership_split_transfer_st_def gamma_ownership_split_exec_def
-        dg_spec_edge_tree_def fun_of_exec_dg_st_for_def gamma_ownership_split_def
-      apply (simp add: fun_of_resolved_st_q_for_restrict_local_for
-            fun_of_resolved_st_q_for_restrict_global_for)
-      apply (cases "live_resolved_st_q gs (combine_resolved_st_q (locals (\<tau> src)) (globs (\<tau> (Inr gk))))")
-       apply (simp add: tf_commute[unfolded fun_of_exec_dg_st_for_def]
-              tfs.step_sound_for)
-      apply (simp add: live_resolved_st_q_def is_empty_state_gamma_state_empty edge_collect_empty_set)
-      done
+    proof (cases "live_resolved_st_q gs
+        (combine_resolved_st_q (locals (\<tau> src)) (globs (\<tau> (Inr gk))))")
+      case True
+      then show ?thesis
+        unfolding unf
+        by (simp add: tf_commute[unfolded fun_of_exec_dg_st_for_def] tfs.step_sound_for)
+    next
+      case False
+      then show ?thesis
+        unfolding unf
+        by (simp add: live_resolved_st_q_def is_empty_state_gamma_state_empty)
+    qed
   next
     case (3 s dc \<tau> gk t de ci)
     then show ?case
@@ -168,8 +303,6 @@ proof -
         fun_of_exec_dg_st_for_def gamma_ownership_split_def
       by (simp add: ownership_split_combine_transfer_gen_def local_combine_transfer_def
             mk_dg_man_def dg_read_global_def dg_sideg_def sp_bind_assoc
-            fun_of_resolved_st_q_for_restrict_local_for
-            fun_of_resolved_st_q_for_restrict_global_for
             fun_of_resolved_st_q_for_def[symmetric]
             reserved[unfolded reserved_ret_var_def]
             gamma_ownership_split_combine_assign[OF reserved, unfolded gamma_ownership_split_def])
@@ -247,7 +380,7 @@ proof -
   let ?S = "ownership_split_dg_spec_st_for gs tf_st enter_st"
   have finC: "finite (calls ?g)" by (simp add: compile_prog_finite)
   have res: "p \<in> set (static_resolve ?g cont u ?ca (locals (?sigma (Inl (u, ())))))"
-    using ce by (simp add: static_resolve_iff finC)
+    using ce by (simp add: finC)
   have site: "(u, ?ca) \<in> set (call_site_list ?g cont)"
     using ce by (auto simp: set_call_site_list[OF finC])
   have covcont: "(cont, ()) \<in> fst (solve eqs x)"
@@ -256,7 +389,7 @@ proof -
     by (rule solver_pps[OF SOLVE])
   have sides_sol: "sides_of_rhs (eqs (cont, ())) ?sigma \<le> ?sigma"
     using pp covcont
-    unfolding part_post_solution_iff_tree_covered_at by (blast dest: tree_covered_at_sides)
+    unfolding part_post_solution_iff_tree_covered_at by blast
   have "pub (Inr (Analysis_Global ()))
           \<le> sides_of_rhs (routed_callee_call_tree ?S (Analysis_Global ()) Activation_Seed
                 route_unit (\<lambda>d. d = bot) () ?ca u
@@ -299,34 +432,22 @@ lemma unit_routed_context_of_solve:
            (\<lambda>d. gamma_ownership_split_exec d
                   (globs (snd (solve eqs x) (Inr (Analysis_Global ())))))"
 proof -
-  interpret base: sound_dg_spec_core "ownership_split_dg_spec_st_for gs tf_st enter_st"
-      gamma_ownership_split_exec gs
-    by (rule sound_dg_spec_core_st)
   interpret tfs: sound_transfer_for gs sk asn sp br bd rt en ev by (rule tf_sound)
   note mono = sound_dg_spec_core.gammaDG_mono[OF sound_dg_spec_core_st]
   show ?thesis
-proof (unfold_locales, goal_cases Mono Step Comb FinE PP SgCov SgUncov Fwd FinC CallsUnique
-    SeedKey IsBotBot IsBotSound EnterComplete CallFwd CombFwd)
-  case (Mono d d' g g') then show ?case by (rule base.gammaDG_mono)
-next
-  case (Step a \<tau> src gk) show ?case by (rule base.step_sound)
-next
-  case (Comb s dc \<tau> gk t de ci) then show ?case by (rule base.combine_sound)
+proof (rule unit_routed_context_compile_progI, goal_cases Core FinE Cover PP SgCov SgUncov
+    SeedKey IsBotBot IsBotSound EnterComplete)
+  case Core show ?case by (rule sound_dg_spec_core_st)
 next
   case FinE show ?case by (rule finI)
+next
+  case Cover show ?case by (rule cover)
 next
   case PP show ?case using solver_pps[OF SOLVE] unfolding eqs_def unit_routed_eqs_def .
 next
   case (SgCov v c) then show ?case by simp
 next
   case (SgUncov v c) then show ?case by simp
-next
-  case (Fwd u a v c) then show ?case using cover by (cases c) auto
-next
-  case FinC show ?case by (simp add: compile_prog_finite)
-next
-  case CallsUnique show ?case
-    unfolding calls_source_unique_def using compile_prog_calls_source_unique by blast
 next
   case (SeedKey p ctx) show ?case by simp
 next
@@ -369,17 +490,14 @@ next
       using whole
       unfolding gamma_ownership_split_exec_def fun_of_exec_dg_st_for_def
         gamma_ownership_split_def
-      by (simp add: fun_of_resolved_st_q_for_restrict_local_for
-          combine_env_for_eq_restrictions)
+      by (simp add: combine_env_for_eq_restrictions)
     have entered: "call_enter gs (CallEdge dst pars args) s \<in> gamma_ownership_split_exec
         (restrict_local_resolved_q (enter_st ?ci ?dw))
         (restrict_global_resolved_q (enter_st ?ci ?dw))"
       unfolding gamma_ownership_split_exec_def fun_of_exec_dg_st_for_def
         gamma_ownership_split_def
       using tfs.tf_sound_enter_entry_for[OF whole, where ci = ?ci]
-      by (simp add: fun_of_resolved_st_q_for_restrict_local_for
-          fun_of_resolved_st_q_for_restrict_global_for call_enter_def
-          enter_binding_concrete
+      by (simp add: call_enter_def enter_binding_concrete
           enter_commute[unfolded fun_of_exec_dg_st_for_def])
     have cov: "entry_pairs_cover
         (\<lambda>e. gamma_ownership_split_exec e
@@ -407,13 +525,6 @@ next
         using entered mono[OF order_refl esides] by auto
     qed
     show ?case using runs deps cov by blast
-  next
-  case (CallFwd u ctx dst pars args p cont)
-  then show ?case using cover by (cases "route_unit u ctx
-      (locals (snd (solve eqs x) (Inl (u, ctx)))) (CallEdge dst pars args)") auto
-next
-  case (CombFwd cl c1 dst pars args p cont)
-  then show ?case using cover by (cases c1) auto
 qed
 qed
 
@@ -443,26 +554,16 @@ proof -
     unfolding eqs_def
     by (rule unit_routed_context_of_solve[OF SOLVE[unfolded eqs_def]
           cover[unfolded eqs_def] finI])
-  have "ltr_collect gs (compile_prog Pi ps) S0 v
-          = (\<Union>c. activation_collect gs (call_context_rel_of_fun enterc_unit) () (compile_prog Pi ps) S0 v c)"
-    by (rule ltr_collect_eq_Union_activation_of_fun)
-  also have "\<dots> \<subseteq> gamma (fst (solve eqs x)) (snd (solve eqs x)) v"
-  proof (rule UN_least)
-    fix c :: unit
-    show "activation_collect gs (call_context_rel_of_fun enterc_unit) () (compile_prog Pi ps) S0 v c
-            \<subseteq> gamma (fst (solve eqs x)) (snd (solve eqs x)) v"
-      unfolding gamma_def
-      using R.routed.activation_collect_dg_sound[OF vars_cover_entryD[OF cover] sound0]
-      by (cases c) simp
-  qed
-  finally show ?thesis .
+  show ?thesis
+    unfolding gamma_def
+    by (rule R.ltr_collect_sound[OF vars_cover_entryD[OF cover] sound0])
 qed
 
 text \<open>
   The source-level endpoint: one concrete run of the source program lands at a
   simulated program point whose solved value describes the store it reached.
-  \<open>collect_sound\<close> supplies the bound; \<open>source_reaches_ltr_collect\<close> supplies the
-  point.
+  \<open>collect_sound\<close> supplies the cap and \<open>source_sound_from_ltr_collecting_cap\<close>
+  consumes it, so no source-to-CFG reasoning is repeated here.
 \<close>
 
 theorem run_source_sound:
@@ -477,15 +578,12 @@ theorem run_source_sound:
     and run: "star (pstep gs Pi) (main_body Pi, s0, []) (residual, t, frs)"
   shows "\<exists>v stk. csim Pi (compile_prog Pi ps) (residual, t, frs) (v, t, stk)
                  \<and> t \<in> gamma (fst (solve eqs x)) (snd (solve eqs x)) v"
-proof -
-  from source_reaches_ltr_collect[OF wf s0mem run]
-  obtain v stk where m: "csim Pi (compile_prog Pi ps) (residual, t, frs) (v, t, stk)"
-    and coll: "t \<in> ltr_collect gs (compile_prog Pi ps) S0 v" by blast
-  have "ltr_collect gs (compile_prog Pi ps) S0 v
+proof (rule source_sound_from_ltr_collecting_cap[OF wf s0mem run])
+  fix v
+  show "ltr_collect gs (compile_prog Pi ps) S0 v
           \<subseteq> gamma (fst (solve eqs x)) (snd (solve eqs x)) v"
     unfolding eqs_def
     by (rule collect_sound[OF SOLVE[unfolded eqs_def] cover[unfolded eqs_def] finI sound0])
-  then show ?thesis using m coll by blast
 qed
 
 end
@@ -537,9 +635,7 @@ locale local_state_dg_exec_analysis =
                          ('a exec_dg_st lifted, 'a exec_dg_st lifted) dg_state)) option"
   assumes tf_sound:
       "sound_transfer_for gs sk asn sp br bd rt en ev"
-    and reserved:
-      "reserved_ret_var gs"
-    and tf_commute[simp]:
+    and tf_commute:
       "\<And>a s.
         live_resolved_st_q gs s \<Longrightarrow>
         fun_of_exec_dg_st_for gs (tf_st a s) =
@@ -582,7 +678,7 @@ text \<open>
 
 sublocale unit_buf: routed_domain_exec gs empty_pred tf_st enter_st sk asn sp br bd rt en ev
     "Analysis_Global ()" Activation_Seed route_unit route_unit static_resolve static_resolve
-  by unfold_locales (simp_all add: route_unit_def static_resolve_def)
+  by unfold_locales (simp_all add: static_resolve_def)
 
 text \<open>
   A context-insensitive analysis is the routed protocol at the unit context: the
@@ -635,18 +731,13 @@ lemma unit_routed_context_of_solve:
            (Analysis_Global ()) bot0 s0d s0g (snd (solve eqs x)) (fst (solve eqs x)) x
            (solved_local_reader (fst (solve eqs x)) (snd (solve eqs x)))
            Activation_Seed (\<lambda>d. d = bot) (\<lambda>d. gamma_exec d bot)"
-proof -
-  interpret base: sound_dg_spec_core spec_st gamma_exec gs by (rule sound_dg_spec_core_st[OF tf_sound])
-  show ?thesis
-proof (unfold_locales, goal_cases Mono Step Comb FinE PP SgCov SgUncov Fwd FinC CallsUnique
-    SeedKey IsBotBot IsBotSound EnterComplete CallFwd CombFwd)
-  case (Mono d d' g g') then show ?case by (rule base.gammaDG_mono)
-next
-  case (Step a \<tau> src gk) show ?case by (rule base.step_sound)
-next
-  case (Comb s dc \<tau> gk t de ci) then show ?case by (rule base.combine_sound)
+proof (rule unit_routed_context_compile_progI, goal_cases Core FinE Cover PP SgCov SgUncov
+    SeedKey IsBotBot IsBotSound EnterComplete)
+  case Core show ?case by (rule sound_dg_spec_core_st[OF tf_sound])
 next
   case FinE show ?case by (rule finI)
+next
+  case Cover show ?case by (rule cover)
 next
   case PP
   have pp_buf:
@@ -672,19 +763,12 @@ next
       "unit_buf.cmb_st (compile_prog Pi ps) =
         routed_call_tree spec_st (Analysis_Global ()) Activation_Seed
           (static_resolve (compile_prog Pi ps)) (\<lambda>d. d = bot)"
-    by (simp add: route_unit_def static_resolve_def)
+    by (simp add: static_resolve_def)
   then show ?case using pp_old by simp
 next
   case (SgCov v c) then show ?case by (simp add: gamma_exec_def)
 next
   case (SgUncov v c) then show ?case by (simp add: gamma_exec_def)
-next
-  case (Fwd u a v c) then show ?case using cover by (cases c) auto
-next
-  case FinC show ?case by (simp add: compile_prog_finite)
-next
-  case CallsUnique show ?case
-    unfolding calls_source_unique_def using compile_prog_calls_source_unique by blast
 next
   case (SeedKey p ctx) show ?case by simp
 next
@@ -705,14 +789,6 @@ next
     unfolding dgs_enter_local_state_st_for_lifted
     using enter_runs_local_enter_transfer enter_deps_local_enter_transfer cov
     by fastforce
-next
-  case (CallFwd u ctx dst pars args p cont)
-  then show ?case using cover by (cases "route_unit u ctx (locals (snd (solve eqs x)
-      (Inl (u, ctx)))) (CallEdge dst pars args)") auto
-next
-  case (CombFwd cl c1 dst pars args p cont)
-  then show ?case using cover by (cases c1) auto
-qed
 qed
 
 text \<open>
@@ -740,26 +816,16 @@ proof -
     unfolding eqs_def
     by (rule unit_routed_context_of_solve[OF SOLVE[unfolded eqs_def]
           cover[unfolded eqs_def] finI])
-  have "ltr_collect gs (compile_prog Pi ps) S0 v
-          = (\<Union>c. activation_collect gs (call_context_rel_of_fun enterc_unit) () (compile_prog Pi ps) S0 v c)"
-    by (rule ltr_collect_eq_Union_activation_of_fun)
-  also have "\<dots> \<subseteq> gamma (fst (solve eqs x)) (snd (solve eqs x)) v"
-  proof (rule UN_least)
-    fix c :: unit
-    show "activation_collect gs (call_context_rel_of_fun enterc_unit) () (compile_prog Pi ps) S0 v c
-            \<subseteq> gamma (fst (solve eqs x)) (snd (solve eqs x)) v"
-      unfolding gamma_def
-      using R.routed.activation_collect_dg_sound[OF vars_cover_entryD[OF cover] sound0]
-      by (cases c) simp
-  qed
-  finally show ?thesis .
+  show ?thesis
+    unfolding gamma_def
+    by (rule R.ltr_collect_sound[OF vars_cover_entryD[OF cover] sound0])
 qed
 
 text \<open>
   The source-level endpoint: one concrete run of the source program lands at a
   simulated program point whose solved value describes the store it reached.
-  \<open>collect_sound\<close> supplies the cap \<open>source_sound_from_collecting_cap\<close> consumes,
-  so this is the same bound read along an actual run.
+  \<open>collect_sound\<close> supplies the cap and \<open>source_sound_from_ltr_collecting_cap\<close>
+  consumes it, so this is the same bound read along an actual run.
 \<close>
 
 theorem run_source_sound:
@@ -775,15 +841,12 @@ theorem run_source_sound:
     and run: "star (pstep gs Pi) (main_body Pi, s0, []) (residual, t, frs)"
   shows "\<exists>v stk. csim Pi (compile_prog Pi ps) (residual, t, frs) (v, t, stk)
                  \<and> t \<in> gamma (fst (solve eqs x)) (snd (solve eqs x)) v"
-proof -
-  from source_reaches_ltr_collect[OF wf s0mem run]
-  obtain v stk where m: "csim Pi (compile_prog Pi ps) (residual, t, frs) (v, t, stk)"
-    and coll: "t \<in> ltr_collect gs (compile_prog Pi ps) S0 v" by blast
-  have "ltr_collect gs (compile_prog Pi ps) S0 v
+proof (rule source_sound_from_ltr_collecting_cap[OF wf s0mem run])
+  fix v
+  show "ltr_collect gs (compile_prog Pi ps) S0 v
           \<subseteq> gamma (fst (solve eqs x)) (snd (solve eqs x)) v"
     unfolding eqs_def
     by (rule collect_sound[OF SOLVE[unfolded eqs_def] cover[unfolded eqs_def] finI sound0])
-  then show ?thesis using m coll by blast
 qed
 
 end

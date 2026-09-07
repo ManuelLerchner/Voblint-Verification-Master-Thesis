@@ -125,7 +125,7 @@ lemma cmb_st_side_free_at_gk0: "sides_of_rhs (cmb_st g route' ctx' ca cc ex) \<t
   by (rule routed_call_tree_side_free_at_gk0)
      (auto simp: dgs_enter_local_state_st_for_lifted
         dg_spec_combine_transfer_local_state_st_for_lifted
-        local_transfer_def local_combine_transfer_def seed_key_ne_gk0 bot_fun_def
+        local_transfer_def local_combine_transfer_def
         dest!: enter_runs_local_pub_bot)
 
 theorem pp_st:

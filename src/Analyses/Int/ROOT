@@ -27,3 +27,4 @@ session Voblint_Analysis_Int in "." = "Voblint_Analysis_Base" +
     Int_Solver_Analyses
     Int_Classify
     Int_Checks
+    Int_Entry

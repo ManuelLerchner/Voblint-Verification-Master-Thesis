@@ -1,4 +1,4 @@
-session Voblint_Analysis_Base in "." = "Voblint_Exec" +
+session Voblint_Analysis_Base in "." = "Voblint_Soundness" +
   description "Domain-generic reuse locales, context routing, dispatch config, and reporting shared by every concrete analysis domain"
   sessions
     "Voblint_VIMP"

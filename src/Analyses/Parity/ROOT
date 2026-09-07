@@ -19,3 +19,4 @@ session Voblint_Analysis_Parity in "." = "Voblint_Analysis_Base" +
     Parity_Analyses
     Parity_Classify
     Parity_Checks
+    Parity_Entry

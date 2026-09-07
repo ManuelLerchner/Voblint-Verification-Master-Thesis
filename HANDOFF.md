@@ -56,7 +56,7 @@ no current VIMP transfer construct needs more than `tf_branch`'s binary
 split.
 
 **Not a scoped or acted-on task, but a live finding worth knowing about:** a
-background prototype (`src/Solver/Scratch_CPS_Prototype.thy`, untracked,
+background prototype (`src/Abstract_Interpreter/Solver/Scratch_CPS_Prototype.thy`, untracked,
 not in any `ROOT`, not committed) tested whether a CPS-encoded typed
 frontend (`strategy_program`, parametric in a fourth `'a` result type, with
 `sp_return`/`sp_bind`/`sp_global`/`sp_local`/`sp_sideg`/`sp_run` compiling

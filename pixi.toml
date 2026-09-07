@@ -32,7 +32,7 @@ pyyaml = "*"
 [feature.grammar.tasks]
 gen-grammar-isabelle = "python3 scripts/gen_vimp_isabelle.py"
 gen-grammar-menhir = "python3 scripts/gen_vimp_menhir.py"
-grammar-check-isabelle = "python3 scripts/gen_vimp_isabelle.py && bash scripts/mk/check-clean.sh src/VIMP/VIMP_Grammar_Generated.thy"
+grammar-check-isabelle = "python3 scripts/gen_vimp_isabelle.py && bash scripts/mk/check-clean.sh src/Program_Model/VIMP/VIMP_Grammar_Generated.thy"
 grammar-check-menhir = "python3 scripts/gen_vimp_menhir.py && bash scripts/mk/check-clean.sh cli/vimp_parser.mly cli/vimp_lexer.mll"
 grammar-check = { depends-on = ["grammar-check-isabelle", "grammar-check-menhir"] }
 

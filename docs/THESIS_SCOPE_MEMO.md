@@ -29,7 +29,7 @@ later simplifications; several new framework results were added.
    used them (full record: `docs/history/DIGEST_SPINE_REMOVAL_PLAN.md`). The original
    memo cites this precision result in the "History-sensitive globals (M4)"
    bullet and the "Recommendation" section below.
-2. `src/VIMP/IMP2_Bridge.thy` (456 lines) and `IMP2_VCG_Example.thy` — the
+2. `src/Program_Model/VIMP/IMP2_Bridge.thy` (456 lines) and `IMP2_VCG_Example.thy` — the
    backward-simulation bridge to AFP IMP2's big-step semantics and the
    VCG-interop demo the original memo cites as delivered evidence — were
    removed in commit `42b750d8` ("cleanups", 2026-07-20) with no explanatory
@@ -139,7 +139,7 @@ The soundness chain is closed end-to-end, `0 sorries`, full `isabelle build` gre
     **[Refresh 2026-08-04: this entire digest layer was deleted 2026-07-18. See
     "Refresh" section above.]**
 - **AFP IMP2 semantic anchor**
-  **[Refresh 2026-08-24: not in the tree. `src/VIMP/IMP2_Bridge.thy`, `to_imp2`
+  **[Refresh 2026-08-24: not in the tree. `src/Program_Model/VIMP/IMP2_Bridge.thy`, `to_imp2`
   and `backward_sim` do not exist, and the migration plan this entry cited is
   gone; `docs/history/AFP_IMP2_REUSE_DECISION.md` records the decision.
   Soundness is stated against VIMP's own semantics only.]**
@@ -147,7 +147,7 @@ The soundness chain is closed end-to-end, `0 sorries`, full `isabelle build` gre
   semantics, not only our bespoke small-step, via a one-way bridge and a
   backward simulation transferring soundness to the recognised reference
   semantics. A worked example
-  (`src/VIMP/IMP2_VCG_Example.thy`) verifies a scalar loop's translation with
+  (`src/Program_Model/VIMP/IMP2_VCG_Example.thy`) verifies a scalar loop's translation with
   IMP2's own VCG (`vcg_cs`) and pulls the result back via `backward_sim`,
   demonstrating that the verified abstract interpreter and a deductive verifier
   interoperate on one semantics. Significance and the trace-vs-big-step

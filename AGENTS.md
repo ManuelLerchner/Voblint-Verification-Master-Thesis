@@ -26,7 +26,7 @@ task at hand:
 - Before auditing or cleaning up a session, read
   `docs/SESSION_CLEANUP_PLAYBOOK.md`: the procedure, the patterns that paid
   off, and the traps that each cost a rebuild.
-- Before moving, splitting, or deleting anything in `src/Framework`, read
+- Before moving, splitting, or deleting anything in `src/Abstract_Interpreter/Framework`, read
   `docs/CORE_REFACTOR_PLAN.md` and work its step table in order; record
   what the build contradicts in its "Decisions and corrections" section.
 - For an area-specific task, read the nearest `README.md`.
@@ -76,10 +76,11 @@ The session dependency graph is:
 
 ```text
 VIMP -> Domain -+
-                +-> CFG -> Framework -> Compile -> Exec -> Analysis/* -+-> Soundness -+
-TD   -> Solver -+                                                      |              v
-                                                                       +----------> CLI -> Codegen
-                                                                                      +--> Examples/*
+                +-> CFG -> Framework -> Compile -> Exec -> Soundness -> Analysis/* -+
+TD   -> Solver -+                                                                   |
+                                                                                    v
+                                                                       CLI -> Codegen
+                                                                        +--> Examples/*
 ```
 
 (`CFG` depends on `VIMP` only; `Framework` on `CFG`, `Domain` and `Solver`;
@@ -121,19 +122,29 @@ domain session is parented on.
 and what remains to move.
 
 Cross-session theory imports use qualified names.
-`Voblint_Soundness` contains the reusable soundness endpoints and the
-per-domain, per-context instantiations the CLI dispatches to, so it is not a
-leaf: `Voblint_CLI` imports it, and the export in `Voblint_Codegen` reaches
-through it. The `Voblint_Examples_*` sessions contain executable runs, regressions and
+`Voblint_Soundness` contains the reusable soundness endpoints and nothing
+domain-specific, so it sits *below* the analysis family rather than after it:
+`Voblint_Analysis_Base` is parented on it, and every domain therefore inherits
+`run_source_sound`/`collect_sound` from an ancestor heap. Each domain's own
+instantiation of those endpoints -- the runtime API over an arbitrary
+`imp_prog` paired with its production soundness theorems -- is `<Domain>_Entry`
+in that domain's analysis session, because it depends on that domain and on
+`Voblint_Soundness` and on nothing else. `Voblint_CLI` is then only the
+dispatcher and the render surface: the soundness statements it does own are the
+corollaries over `analyse` itself, which cannot live above the theory that
+defines `analyse`.
+
+The `Voblint_Examples_*` sessions contain executable runs, regressions and
 GraphViz output, one session per folder under `src/Examples`. `Voblint_Examples`
-itself is the residue plus the `Voblint` capstone: the witnesses that reach a
-codegen entry point, the `AnalysisConfig` dispatcher, or the GraphViz render
-surface all import `Voblint_CLI` and therefore see every domain, so they live
-together in `Voblint_Examples_CLI` (`src/Examples/CLI`) instead of being spread
-back through the domain folders, where they would recouple each domain's session
-to all of them. That session is the capstone's *parent*, not a listed session:
-theories imported from an ancestor come from its heap, while theories from a
-merely listed session are re-elaborated in the importer.
+itself is the residue plus the `Voblint` capstone: the witnesses that reach the
+`AnalysisConfig` dispatcher or the GraphViz render surface import `Voblint_CLI`
+and therefore see every domain, so they live together in `Voblint_Examples_CLI`
+(`src/Examples/CLI`) instead of being spread back through the domain folders,
+where they would recouple each domain's session to all of them. The store-only
+check trio sits there too, so the three domains' witnesses read side by side.
+That session is the capstone's *parent*, not a listed session: theories imported
+from an ancestor come from its heap, while theories from a merely listed session
+are re-elaborated in the importer.
 
 `ROOTS` lists one directory per session. Isabelle rejects two sessions sharing
 a directory, so a new session means a new directory, and every directory under
@@ -148,9 +159,9 @@ tasks locally and in CI.
 The procedural language includes calls, explicit returns, and runtime-only
 restore/unwind commands. CFGs separate local `intra` edges from the `calls`
 relation and use `FunctionEntry` and `FunctionResult` nodes. Concrete transfer
-primitives live in `src/CFG/CFG_Transfer.thy`; activation-local semantics live
-under `src/CFG/Collecting/`. The compiler that produces such a graph from a
-VIMP program lives in `src/Compile/`; only `Procedure_Ownership` and
+primitives live in `src/Program_Model/CFG/CFG_Transfer.thy`; activation-local semantics live
+under `src/Program_Model/CFG/Collecting/`. The compiler that produces such a graph from a
+VIMP program lives in `src/Program_Model/Compile/`; only `Procedure_Ownership` and
 `Source_To_Trace` there mention both the compiler and the collecting
 semantics.
 
@@ -163,7 +174,7 @@ generators realize it for two unrelated parser targets:
 grammar/vimp.yaml
        |
        +-- scripts/gen_vimp_menhir.py   -> cli/vimp_parser.mly, cli/vimp_lexer.mll
-       +-- scripts/gen_vimp_isabelle.py -> src/VIMP/VIMP_Grammar_Generated.thy
+       +-- scripts/gen_vimp_isabelle.py -> src/Program_Model/VIMP/VIMP_Grammar_Generated.thy
 ```
 
 Two generators exist because the two consumers have unrelated parser
@@ -195,7 +206,7 @@ When changing VIMP syntax:
 
 1. Edit `grammar/vimp.yaml` only.
 2. Never hand-edit `cli/vimp_parser.mly`, `cli/vimp_lexer.mll`, or
-   `src/VIMP/VIMP_Grammar_Generated.thy` -- all three are generated.
+   `src/Program_Model/VIMP/VIMP_Grammar_Generated.thy` -- all three are generated.
 3. Regenerate: `pixi run gen-grammar-menhir` (Menhir/ocamllex) and
    `pixi run gen-grammar-isabelle` (Isabelle); load the regenerated
    `VIMP_Grammar_Generated.thy` through I/Q per the theory-file boundary
@@ -240,7 +251,7 @@ a batch build for contextual proof development.
 
 ## New theories and the code-export module map
 
-`export_code` in `src/Codegen/Export/Voblint_Codegen.thy` declares
+`export_code` in `src/Executable_Surface/Codegen/Export/Voblint_Codegen.thy` declares
 `module_name Generated`, which puts the whole reachable program into one OCaml
 module. Three modules are emitted -- that one, plus two that are HOL's own
 serializer preludes, injected as literal target code rather than generated

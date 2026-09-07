@@ -23,3 +23,4 @@ The interval domain threaded through the roles of the assembly map in
 | `Interval_Solver_Analyses.thy` | the same equations again under the PerOrigin update rule instead of always-join |
 | `Interval_Classify.thy` | Interval instance of the generic check-discharge interface |
 | `Interval_Checks.thy` | result tables and check reports off one solved run |
+| `Interval_Entry.thy` | the production endpoint: `analyse_interval_td_report` over an arbitrary `imp_prog`, and its soundness theorems — `run_source_sound`/`collect_sound` (`Voblint_Soundness`) applied at Interval |

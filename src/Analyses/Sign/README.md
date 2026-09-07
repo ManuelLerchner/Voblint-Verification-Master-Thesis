@@ -19,7 +19,9 @@ they demonstrate the domain, they are not part of the reusable instance.
 | `Sign_Analyses.thy` | the same `unit_routed_eqs` system derived a second time, through the routed spine's generic locales |
 | `Sign_Classify.thy` | Sign instance of the generic check-discharge interface |
 | `Sign_Checks.thy` | result tables and check reports off one solved context-insensitive run |
+| `Sign_Entry.thy` | the production endpoint: `analyse_sign_report` over an arbitrary `imp_prog`, and its soundness theorems — `run_source_sound`/`collect_sound` (`Voblint_Soundness`) applied at Sign |
 
-Sign's production endpoint is `Voblint_CLI.Sign_Entry`: unlike Interval and
-Int, Sign has no `_Exec_Sound` theory of its own, and the executable
-whole-program API the CLI dispatches to is assembled there.
+`Sign_Entry` is what `analyse` dispatches to, and it lives here rather than in
+`Voblint_CLI` because nothing in it needs to see another domain: it depends on
+Sign and on `Voblint_Soundness`, both of which this session already has. The
+dispatcher restates its theorems over `analyse`; it does not prove them.

@@ -64,7 +64,7 @@ text \<open>
 lemma dg_reader_commute_gen_lifted_for:
   "dg_reader_commute_gen
      (map_lift (fun_of_resolved_st_q_for gs)) (map_lift (fun_of_resolved_st_q_for gs))"
-  by unfold_locales (simp_all add: map_lift_sup fun_of_resolved_st_q_for_sup)
+  by unfold_locales (simp_all add: map_lift_sup)
 
 locale routed_dg_domain_exec =
   fixes gs :: "vname \<Rightarrow> bool"
@@ -292,7 +292,7 @@ proof -
       then have "gamma_state_lift (reader d) = {}"
         by (simp add: empty_pred_exact is_empty_state_gamma_state_empty)
       then show ?thesis
-        by (simp add: edge_collect_empty_set)
+        by (simp)
     qed
     then show ?case
       by (simp add: local_spec_step_transfer_lift_tf_st)

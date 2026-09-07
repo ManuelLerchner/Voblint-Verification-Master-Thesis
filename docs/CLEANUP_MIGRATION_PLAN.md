@@ -44,7 +44,7 @@ unfolds to `wf_compile_input (storage_global p prog_main_name) ...`; every
 soundness theorem assumes `wf_compile_input (declared_global p) ...`. No
 corollary connects them.
 
-- Where: `src/Compile/Compile_Invariants.thy`, beside
+- Where: `src/Program_Model/Compile/Compile_Invariants.thy`, beside
   `wf_program_compile_input_exec_sound`.
 - Shape: one corollary discharged by `storage_global_iff [simp]`
   (`VIMP_Notation.thy:90`), which already proves the two classifiers equal.
@@ -71,7 +71,7 @@ newly emitted file passes silently.
 
 **1.3 Make `codegen-modules` non-vacuous.** Audit §8.4. It reads the *checked-in*
 export, so it is green on a stale one. Live example, found while writing this
-plan: `a79862f3` added `src/Exec/DG_Coverage.thy` with no
+plan: `a79862f3` added `src/Abstract_Interpreter/Exec/DG_Coverage.thy` with no
 `code_identifier` entry, and `codegen-modules` passes because the checked-in
 export predates it by three commits. **Benign today** — verified that
 `DG_Coverage`'s constants are reached only from the Examples session, which no
@@ -109,7 +109,7 @@ over the routed `analyse_*_ctx_result_for` the CLI actually runs.
 `resolve_analysis_config` on `k = 0`, which is the argument for deleting rather
 than keeping), and the seven unconsumed export roots (§2.4). Move
 `Sign_Entry.thy:333-489` — 157 lines of demo programs and `by eval` lemmas, 32%
-of the file — into the Examples session, where `src/CLI/ROOT`'s own description
+of the file — into the Examples session, where `src/Executable_Surface/CLI/ROOT`'s own description
 says it belongs.
 
 **2.3 Analysis** — **partly done; partly reclassified.**

@@ -1,5 +1,5 @@
 theory Interval_Entry
-  imports Voblint_Analysis_Interval.Interval_Checks "Voblint_Soundness.Run_Analysis_Sound"
+  imports Interval_Checks "Voblint_Soundness.Run_Analysis_Sound"
 begin
 
 section \<open>Interval codegen API: an arbitrary VIMP program, and its production soundness\<close>
@@ -212,6 +212,105 @@ proof -
            OF finI mem[unfolded analyse_interval_td_report_for_def surface_unfold] interval_classify_check_refuted node_sound])
 qed
 
+subsection \<open>Coverage as one checkable side condition\<close>
+
+text \<open>
+  The four coverage facts the bridges above take apart are the four conjuncts of
+  \<^const>\<open>vars_cover\<close>, read at the one context this routed solve uses. Bundling
+  them is what makes the side condition decidable in a single step:
+  \<^const>\<open>vars_cover_exec\<close> walks the two edge enumerations, so a caller discharges
+  coverage \<open>by eval\<close> instead of by four hand-written case analyses over the
+  solved key set.
+\<close>
+
+lemma interval_conf_vars_cover_prog_of_exec:
+  assumes cover: "vars_cover_exec (prog_cfg p) (fst (interval_conf_sol_prog_warrow pgs p))"
+  shows "vars_cover (prog_cfg p) (fst (interval_conf_sol_prog_warrow pgs p))"
+  by (rule vars_cover_of_exec[OF _ _ cover])
+     (simp_all add: prog_cfg_def compile_prog_finite)
+
+lemma analyse_interval_td_result_node_sound_of_cover:
+  assumes solve: "interval_conf_terminates_prog_warrow pgs p"
+    and cover: "vars_cover (prog_cfg p) (fst (interval_conf_sol_prog_warrow pgs p))"
+  shows "ltr_collect pgs (prog_cfg p) (cinit_stores pgs) v
+           \<subseteq> \<lbrakk>case lookup_context (analyse_interval_td_result_for pgs p) v () of
+                             Bot \<Rightarrow> bot | Lifted st \<Rightarrow> st\<rbrakk>"
+proof (rule analyse_interval_td_result_node_sound_for[OF solve])
+  show "(cfg_entry (prog_cfg p), ()) \<in> fst (interval_conf_sol_prog_warrow pgs p)"
+    by (rule vars_cover_entryD[OF cover])
+next
+  fix u a w ctx
+  assume e: "(u, a, w) \<in> intra (prog_cfg p)"
+  show "(w, ctx) \<in> fst (interval_conf_sol_prog_warrow pgs p)"
+    using vars_cover_edgeD[OF cover e] by simp
+next
+  fix u ctx dst fs as q k
+  assume e: "(u, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg p)"
+  show "(FunctionEntry q, ()) \<in> fst (interval_conf_sol_prog_warrow pgs p)"
+    by (rule vars_cover_enterD[OF cover e])
+next
+  fix cl c1 dst fs as q k
+  assume e: "(cl, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg p)"
+  show "(k, c1) \<in> fst (interval_conf_sol_prog_warrow pgs p)"
+    using vars_cover_combineD[OF cover e] by simp
+qed
+
+subsection \<open>Source runs, in the vocabulary the runtime API returns\<close>
+
+text \<open>
+  Interval's counterparts of Sign's \<open>analyse_sign_source_sound_for\<close> and
+  \<open>analyse_sign_completed_run_sound_for\<close>: run the source program, stop anywhere, and
+  the store you are holding is described by the entry the analysis returned for the
+  program point you are standing at; a run that finishes lands in the entry at
+  \<^const>\<open>cfg_exit\<close>. The simulation \<^const>\<open>csim\<close> is what names that point.
+
+  No new reasoning happens here. \<open>source_sound_from_ltr_collecting_cap\<close> and
+  \<open>source_completes_ltr_collect_exit\<close>
+  (\<^theory>\<open>Voblint_Soundness.Source_Activation_Sound\<close>) supply the source side, and
+  \<open>analyse_interval_td_result_node_sound_of_cover\<close> is the per-node cap they take.
+\<close>
+
+theorem analyse_interval_td_source_sound_for:
+  fixes s0 s :: store
+  assumes solve: "interval_conf_terminates_prog_warrow pgs p"
+    and cover: "vars_cover (prog_cfg p) (fst (interval_conf_sol_prog_warrow pgs p))"
+    and wf: "wf_compile_input pgs (prog_table p) (prog_procs p)"
+    and s0: "s0 \<in> cinit_stores pgs"
+    and run: "star (pstep pgs (prog_table p))
+                (main_body (prog_table p), s0, []) (residual, s, frs)"
+  shows "\<exists>v stk. csim (prog_table p) (prog_cfg p) (residual, s, frs) (v, s, stk)
+                 \<and> s \<in> \<lbrakk>case lookup_context (analyse_interval_td_result_for pgs p) v () of
+                                     Bot \<Rightarrow> bot | Lifted st \<Rightarrow> st\<rbrakk>"
+proof -
+  have cfg_eq: "prog_cfg p = compile_prog (prog_table p) (prog_procs p)"
+    by (rule prog_cfg_def)
+  show ?thesis
+    unfolding cfg_eq
+    by (rule source_sound_from_ltr_collecting_cap[OF wf s0 run])
+       (use analyse_interval_td_result_node_sound_of_cover[OF solve cover] in
+          \<open>simp add: cfg_eq\<close>)
+qed
+
+theorem analyse_interval_td_completed_run_sound_for:
+  fixes s0 s :: store
+  assumes solve: "interval_conf_terminates_prog_warrow pgs p"
+    and cover: "vars_cover (prog_cfg p) (fst (interval_conf_sol_prog_warrow pgs p))"
+    and wf: "wf_compile_input pgs (prog_table p) (prog_procs p)"
+    and s0: "s0 \<in> cinit_stores pgs"
+    and run: "star (pstep pgs (prog_table p))
+                (main_body (prog_table p), s0, []) (SKIP, s, [])"
+  shows "s \<in> \<lbrakk>case lookup_context (analyse_interval_td_result_for pgs p)
+                            (cfg_exit (prog_cfg p)) () of
+                          Bot \<Rightarrow> bot | Lifted st \<Rightarrow> st\<rbrakk>"
+proof -
+  have cfg_eq: "prog_cfg p = compile_prog (prog_table p) (prog_procs p)"
+    by (rule prog_cfg_def)
+  have "s \<in> ltr_collect pgs (prog_cfg p) (cinit_stores pgs) (cfg_exit (prog_cfg p))"
+    using source_completes_ltr_collect_exit[OF wf s0 run] unfolding cfg_eq .
+  then show ?thesis
+    using analyse_interval_td_result_node_sound_of_cover[OF solve cover] by blast
+qed
+
 end
 
 text \<open>
@@ -267,6 +366,48 @@ corollary analyse_interval_td_report_sound_refuted:
   by (rule analyse_interval_td_report_sound_refuted_for
         [OF wf[THEN wf_compile_input_reserved_ret_var]
             solve entry_cov fwd_ok call_fwd_ok comb_fwd_ok mem[unfolded analyse_interval_td_report_def]])
+
+text \<open>
+  The headline pair, at \<^const>\<open>declared_global\<close> \<open>p\<close> and over
+  \<^const>\<open>analyse_interval_td_result\<close> --- the table the runtime API hands back on the
+  branch \<open>analyse\<close> takes for Interval, mirroring Sign's
+  \<open>analyse_sign_source_sound\<close>/\<open>analyse_sign_completed_run_sound\<close>.  Two side conditions
+  survive, and both are decided per program rather than proved once: the solver reached
+  a fixpoint (\<^const>\<open>interval_conf_terminates_prog_warrow\<close>), and it solved enough keys
+  (\<^const>\<open>vars_cover\<close>, decidable through \<open>interval_conf_vars_cover_prog_of_exec\<close>).
+\<close>
+
+corollary analyse_interval_td_source_sound:
+  fixes p :: imp_prog and s0 s :: store
+  assumes wf: "wf_compile_input (declared_global p) (prog_table p) (prog_procs p)"
+    and solve: "interval_conf_terminates_prog_warrow (declared_global p) p"
+    and cover: "vars_cover (prog_cfg p)
+                  (fst (interval_conf_sol_prog_warrow (declared_global p) p))"
+    and s0: "s0 \<in> cinit_stores (declared_global p)"
+    and run: "star (pstep (declared_global p) (prog_table p))
+                (main_body (prog_table p), s0, []) (residual, s, frs)"
+  shows "\<exists>v stk. csim (prog_table p) (prog_cfg p) (residual, s, frs) (v, s, stk)
+                 \<and> s \<in> \<lbrakk>case lookup_context (analyse_interval_td_result p) v () of
+                                     Bot \<Rightarrow> bot | Lifted st \<Rightarrow> st\<rbrakk>"
+  unfolding analyse_interval_td_result_def
+  by (rule analyse_interval_td_source_sound_for
+        [OF wf[THEN wf_compile_input_reserved_ret_var] solve cover wf s0 run])
+
+corollary analyse_interval_td_completed_run_sound:
+  fixes p :: imp_prog and s0 s :: store
+  assumes wf: "wf_compile_input (declared_global p) (prog_table p) (prog_procs p)"
+    and solve: "interval_conf_terminates_prog_warrow (declared_global p) p"
+    and cover: "vars_cover (prog_cfg p)
+                  (fst (interval_conf_sol_prog_warrow (declared_global p) p))"
+    and s0: "s0 \<in> cinit_stores (declared_global p)"
+    and run: "star (pstep (declared_global p) (prog_table p))
+                (main_body (prog_table p), s0, []) (SKIP, s, [])"
+  shows "s \<in> \<lbrakk>case lookup_context (analyse_interval_td_result p)
+                            (cfg_exit (prog_cfg p)) () of
+                          Bot \<Rightarrow> bot | Lifted st \<Rightarrow> st\<rbrakk>"
+  unfolding analyse_interval_td_result_def
+  by (rule analyse_interval_td_completed_run_sound_for
+        [OF wf[THEN wf_compile_input_reserved_ret_var] solve cover wf s0 run])
 
 section \<open>Solver-choice soundness: join and per-origin update rules\<close>
 

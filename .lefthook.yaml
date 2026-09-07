@@ -33,7 +33,7 @@ pre-commit:
     - name: codegen-api
       glob:
         - "codegen/generated/ml/Voblint_CLI.ml"
-        - "src/Codegen/Export/Voblint_Codegen.thy"
+        - "src/Executable_Surface/Codegen/Export/Voblint_Codegen.thy"
         - "cli/*.ml"
         - "cli/*.mly"
         - "codegen/regression/ocaml/*.ml"
@@ -64,7 +64,7 @@ pre-commit:
       glob:
         - "grammar/vimp.yaml"
         - "scripts/gen_vimp_isabelle.py"
-        - "src/VIMP/VIMP_Grammar_Generated.thy"
+        - "src/Program_Model/VIMP/VIMP_Grammar_Generated.thy"
       run: pixi run python3 scripts/gen_vimp_isabelle.py
 
     - name: vimp-menhir-grammar-drift

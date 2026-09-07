@@ -1,10 +1,10 @@
-src/VIMP
-src/Domain
-src/Solver
-src/CFG
-src/Compile
-src/Framework
-src/Exec
+src/Program_Model/VIMP
+src/Abstract_Interpreter/Domain
+src/Abstract_Interpreter/Solver
+src/Program_Model/CFG
+src/Program_Model/Compile
+src/Abstract_Interpreter/Framework
+src/Abstract_Interpreter/Exec
 src/Analyses/Base
 src/Analyses/Sign
 src/Analyses/Interval
@@ -13,7 +13,7 @@ src/Analyses/Congruence
 src/Analyses/Relational
 src/Analyses/Int
 src/Soundness
-src/CLI
+src/Executable_Surface/CLI
 src/Examples/CFG
 src/Examples/Congruence
 src/Examples/Sign
@@ -24,4 +24,4 @@ src/Examples/Relational
 src/Examples/Tooling
 src/Examples/CLI
 src/Examples
-src/Codegen
+src/Executable_Surface/Codegen

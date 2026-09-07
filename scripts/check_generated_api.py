@@ -2,7 +2,7 @@
 """Fail when handwritten OCaml names something the export no longer exposes.
 
 The generated OCaml is one module, ``Generated``, and its *signature* is
-decided by the export root list in ``src/Codegen/Export/Voblint_Codegen.thy``:
+decided by the export root list in ``src/Executable_Surface/Codegen/Export/Voblint_Codegen.thy``:
 Isabelle marks a constant ``Private`` unless a root reaches it, and marks a
 datatype ``Opaque`` -- name visible, constructors hidden, so unmatchable --
 unless a root names the constructors themselves.
@@ -36,7 +36,7 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
 GENERATED = REPO / "codegen" / "generated" / "ml" / "Voblint_CLI.ml"
-EXPORT_SOURCE = "src/Codegen/Export/Voblint_Codegen.thy"
+EXPORT_SOURCE = "src/Executable_Surface/Codegen/Export/Voblint_Codegen.thy"
 
 MODULE = "Generated"
 

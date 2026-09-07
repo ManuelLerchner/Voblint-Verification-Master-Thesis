@@ -27,12 +27,13 @@ Parity_Domain      the lattice, order, and its concretization
                                         solve, termination, result table
   -> Parity_Analyses                    the three context policies over that route
   -> Parity_Classify / Parity_Checks    check discharge and the published report
+  -> Parity_Entry                       the production endpoint and its soundness
 ```
 
 `Parity_Exec_Sound` is the same layer `Sign_Exec_Sound`, `Interval_Exec_Sound` and
 `Int_Exec_Sound` occupy in their own domains: it only *computes*. The soundness half
-that turns a computed solution into a statement about source runs is downstream, in
-`Voblint_CLI.Parity_Entry`.
+that turns a computed solution into a statement about source runs is `Parity_Entry`,
+the last theory in this session.
 
 ## Worked example
 
@@ -41,8 +42,8 @@ its equations through `pctx_eqs_prog`, solves them with the always-join solver, 
 closes with `parity_source_run_sound` — the same statement shape Sign's and Interval's
 flagships prove. Nothing in that chain is Parity-specific except the lattice.
 
-`Example_Parity_Checks_Store_Only` (Examples/CLI, because it goes through
-`Parity_Entry`) is the check-discharge witness: `y := x * 2` and `z := y + 1` land in
+`Example_Parity_Checks_Store_Only` (Examples/CLI, grouped with the other domains'
+members of the same store-only trio) is the check-discharge witness: `y := x * 2` and `z := y + 1` land in
 disjoint parity classes whatever the unconstrained `x` is, so one check is proved and
 one refuted. A third, against another unconstrained value, is unknown — Parity has no
 singleton, so it can never prove a positive equality.

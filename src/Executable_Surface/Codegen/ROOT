@@ -4,5 +4,5 @@ session Voblint_Codegen in "." = "Voblint_CLI" +
     "Export"
   theories
     Voblint_Codegen
-  export_files (in "../../codegen/generated/ml") [2]
+  export_files (in "../../../codegen/generated/ml") [2]
     "Voblint_Codegen.Voblint_Codegen:code/*.ocaml"

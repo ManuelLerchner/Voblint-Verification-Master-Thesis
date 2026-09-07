@@ -1,5 +1,5 @@
 theory Exec_Interval_Run
-  imports "Voblint_CLI.Interval_Entry"
+  imports "Voblint_Analysis_Interval.Interval_Entry"
             "Voblint_CFG.CFG_Prune"
             "Voblint_VIMP.VIMP_Notation"
             "Voblint_Examples_Interval.Example_Interval_Loop_Coverage"

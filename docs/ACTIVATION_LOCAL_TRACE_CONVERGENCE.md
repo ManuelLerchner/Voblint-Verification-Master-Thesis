@@ -601,7 +601,7 @@ This is the authoritative architectural document.
 
 Start from this document, not from the historical design records. The first implementation task is small and isolated:
 
-1. Create `src/CFG/Collecting/LTR_Def.thy` in the CFG session. It defines only `ltr`, observers (`sink_node`, `sink_store`, `entry_store`, `path`, `caller_of`), `extend`, `key`, and `valid_ltr`; it does not change any existing collecting definition.
+1. Create `src/Program_Model/CFG/Collecting/LTR_Def.thy` in the CFG session. It defines only `ltr`, observers (`sink_node`, `sink_store`, `entry_store`, `path`, `caller_of`), `extend`, `key`, and `valid_ltr`; it does not change any existing collecting definition.
 2. Use I/Q to check the four constructor goals individually: nonempty paths, `Call` entry equals the `edge_step` result, `extend` preserves entry/ancestry/`caller_of`, `caller_of` recovers the caller through a `Resume` (nested case), and `Resume` computes the concrete combine store.
 3. Add the new theory to the session ROOT and batch-build `Voblint_CFG`. Do not touch `trace_witness_act`, `Activation_Backbone`, or any solver theory in this first commit.
 4. Only after that green commit, prove the local-trace soundness induction against the existing four obligations. Keep it internal until it has exactly the public statement of `activation_collect_sound`.

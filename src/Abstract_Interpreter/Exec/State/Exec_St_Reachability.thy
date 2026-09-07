@@ -219,7 +219,8 @@ proof -
         show ?thesis
           unfolding resolved_st_is_bot_def canonical_location_def
           using True lookup_eq x loc_vname_eq s_eq
-          by (metis (mono_tags, lifting) case_prod_conv)
+          apply(auto split:option.split)
+          by force
       next
         case False
         then have mo: "map_of ps (Local_Location x) = None"
@@ -260,7 +261,8 @@ lemma eq_resolved_st_is_bot_for:
        = resolved_st_is_bot_for globals (\<lambda>x. x \<in> set globals) t"
 proof -
   have iff: "resolved_st_is_bot_for globals (\<lambda>x. x \<in> set globals) u
-      = is_empty_state (fun_of_resolved_st_for (\<lambda>x. x \<in> set globals) u)" for u
+      = is_empty_state (fun_of_resolved_st_for (\<lambda>x. x \<in> set globals) u)"
+    for u :: "'a resolved_st"
     by (rule resolved_st_is_bot_for_iff) simp
   have "fun_of_resolved_st_for (\<lambda>x. x \<in> set globals) s
           = fun_of_resolved_st_for (\<lambda>x. x \<in> set globals) t"

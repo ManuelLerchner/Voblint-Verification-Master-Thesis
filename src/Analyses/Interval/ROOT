@@ -26,3 +26,4 @@ session Voblint_Analysis_Interval in "." = "Voblint_Analysis_Base" +
     Interval_Solver_Analyses
     Interval_Classify
     Interval_Checks
+    Interval_Entry

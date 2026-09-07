@@ -1,8 +1,7 @@
 # Examples / CLI
 
-The witnesses that reach the CLI layer: a domain's codegen entry point
-(`Voblint_CLI.Sign_Entry` and its siblings), the `AnalysisConfig` dispatcher,
-or the GraphViz render surface.
+The witnesses that reach the CLI layer: the `AnalysisConfig` dispatcher, the
+GraphViz render surface, or more than one domain's entry point at once.
 
 This folder is its own session, `Voblint_Examples_CLI`, and it is the parent of
 `Voblint_Examples` — the capstone imports from here, so an ancestor relationship

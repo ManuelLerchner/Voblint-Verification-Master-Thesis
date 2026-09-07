@@ -31,6 +31,8 @@ Int_Refinement    exactness of reduction steps; the three refine modes
                                                      fixed at Refine_Fixpoint
   -> Int_Analyses                                    the context policies over that route
   -> Int_Classify / Int_Checks                       check discharge and the report
+  -> Int_Entry                                       the production endpoint, and its
+                                                     soundness at int_dom
 ```
 
 ## Worked example: `if (y + 1 == 3) { x := 1 } else { x := 0 }`

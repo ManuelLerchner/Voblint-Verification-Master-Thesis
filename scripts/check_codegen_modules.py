@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Fail when the OCaml export emits a module nobody asked for.
 
-The export in ``src/Codegen/Export/Voblint_Codegen.thy`` declares
+The export in ``src/Executable_Surface/Codegen/Export/Voblint_Codegen.thy`` declares
 ``module_name Generated``, which puts the whole reachable program into one
 OCaml module instead of one module per contributing Isabelle theory. Two more
 modules come along regardless: HOL injects ``Bit_Shifts`` and ``Str_Literal``
@@ -30,7 +30,7 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
 GENERATED = REPO / "codegen" / "generated" / "ml" / "Voblint_CLI.ml"
-EXPORT_SOURCE = REPO / "src" / "Codegen" / "Export" / "Voblint_Codegen.thy"
+EXPORT_SOURCE = REPO / "src" / "Executable_Surface" / "Codegen" / "Export" / "Voblint_Codegen.thy"
 
 MODULE_RE = re.compile(r"^module ([A-Za-z_][A-Za-z0-9_]*) : sig", re.MULTILINE)
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""M6: generates src/VIMP/VIMP_Grammar_Generated.thy -- nonterminals,
+"""M6: generates src/Program_Model/VIMP/VIMP_Grammar_Generated.thy -- nonterminals,
 `syntax` (Isabelle mixfix declarations), and the `Vimp_Grammar_Tr` ML
 structure (parse_translation's AST-lowering, exposed for VIMP_Notation.thy
 to call into) -- from the canonical grammar/vimp.yaml.
@@ -43,7 +43,7 @@ import yaml
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_GRAMMAR = REPO_ROOT / "grammar" / "vimp.yaml"
-DEFAULT_OUT = REPO_ROOT / "src" / "VIMP"
+DEFAULT_OUT = REPO_ROOT / "src" / "Program_Model" / "VIMP"
 
 # Isabelle mixfix escaping: '(' ')' '_' need a leading "'" so the mixfix
 # parser doesn't read them as argument-slot/grouping syntax.

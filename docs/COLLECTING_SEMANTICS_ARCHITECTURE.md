@@ -278,7 +278,7 @@ Concrete, independently actionable:
 3. **Add the missing `flatten` projection lemma** even under Option A — it
    documents that `trace_witness` is `valid_ltr`'s flat shadow and de-risks a
    later Option B.
-4. **README drift.** `src/CFG/Collecting/README.md` and
+4. **README drift.** `src/Program_Model/CFG/Collecting/README.md` and
    `src/Soundness/README.md` describe the trace layers as peers;
    state the dominance relation explicitly.
 5. **Public-API annotation.** Mark `trace_witness` / `cfg_collect_trace` as

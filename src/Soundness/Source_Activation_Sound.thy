@@ -1,6 +1,5 @@
 theory Source_Activation_Sound
   imports "Voblint_Framework.Activation_Backbone" "Voblint_Compile.Source_To_Trace"
-    "Voblint_CFG.CFG_Prune"
 begin
 
 section \<open>End-to-end source-level activation soundness\<close>
@@ -68,7 +67,7 @@ proof -
   then show ?thesis using m by blast
 qed
 
-subsection \<open>Backbone corollaries: discharge the four obligations to build the cap\<close>
+subsection \<open>Backbone corollaries: discharge the five coverage obligations to build the cap\<close>
 
 theorem source_activation_sound:
   fixes sg :: "pp \<times> 'c + 'g \<Rightarrow> 'a::sound_domain abs_state"
@@ -166,6 +165,7 @@ proof -
          [where f = "\<lambda>_ _ _. ()" and startcontext = "()",
           OF wf s0 run]
   obtain v stk t c where m: "csim Pi (compile_prog Pi ps) (residual, s, frs) (v, s, stk)"
+    and "key (\<lambda>_ _ _. ()) () t = c"
     and mem: "s \<in> activation_collect gs (call_context_rel_of_fun (\<lambda>_ _ _. ())) () ?g S v c"
     by blast
   have "s \<in> ltr_collect gs ?g S v"
@@ -173,6 +173,26 @@ proof -
   then show ?thesis using m by blast
 qed
 
+text \<open>The monovariant counterpart of \<open>source_sound_from_collecting_cap\<close>: the cap is stated on
+  \<^const>\<open>ltr_collect\<close> alone, so there is no context index for a caller to instantiate.  This is
+  the shape a whole-program analysis result supplies, whose per-node bound has already forgotten
+  the context.\<close>
+
+theorem source_sound_from_ltr_collecting_cap:
+  fixes G :: "pp \<Rightarrow> store set"
+  assumes wf: "wf_compile_input gs Pi ps"
+    and s0: "s0 \<in> S"
+    and run: "star (pstep gs Pi) (main_body Pi, s0, []) (residual, s, frs)"
+    and cap: "\<And>v. ltr_collect gs (compile_prog Pi ps) S v \<subseteq> G v"
+  shows "\<exists>v stk. csim Pi (compile_prog Pi ps) (residual, s, frs) (v, s, stk)
+                 \<and> s \<in> G v"
+proof -
+  from source_reaches_ltr_collect[OF wf s0 run]
+  obtain v stk where m: "csim Pi (compile_prog Pi ps) (residual, s, frs) (v, s, stk)"
+    and mem: "s \<in> ltr_collect gs (compile_prog Pi ps) S v" by blast
+  have "s \<in> G v" using cap[of v] mem by blast
+  then show ?thesis using m by blast
+qed
 
 subsection \<open>Completed runs reach a procedure result\<close>
 
@@ -247,8 +267,9 @@ proof -
 qed
 
 text \<open>Whole-program completion.  The completing activation is the root one, so it entered at
-  \<^term>\<open>FunctionEntry prog_main_name\<close>; activation procedure locality (\<open>valid_ltr_entry_result_eq\<close>) then
-  forces its result node to be \<^term>\<open>FunctionResult prog_main_name\<close> \<open>= cfg_exit\<close>.  No assumption about the
+  \<^term>\<open>FunctionEntry prog_main_name\<close>; activation procedure locality
+  (\<open>valid_ltr_entry_result_eq\<close>) then forces its result node to be
+  \<^term>\<open>FunctionResult prog_main_name\<close> \<open>= cfg_exit\<close>.  No assumption about the
   \<^emph>\<open>number\<close> of declared procedures is needed: a program may call as many as it likes.\<close>
 
 corollary source_completes_ltr_collect_exit:

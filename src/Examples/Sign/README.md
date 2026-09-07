@@ -17,7 +17,7 @@ concrete run to the abstract result.
 | `Example_Sign_DG_CallString_K2.thy` | canonical spine | the same at `k = 2`, keeping them apart at `SPos` and `SNeg`. Exactness makes a genuine strict-precision comparison possible here (`sign_k2_strictly_more_precise_than_k1_at_g`) that the Interval pair cannot state |
 
 Sign's two entry-point witnesses -- the smallest certified IP run and the
-store-only check trio -- import `Voblint_CLI.Sign_Entry` and so live in `CLI/`,
-which is where anything reaching the CLI layer goes.
+store-only check trio -- live in `CLI/`, grouped with the other domains' members
+of the same trio rather than by what they import.
 
 Role vocabulary: repository `README.md`.

@@ -22,3 +22,4 @@ session Voblint_Analysis_Sign in "." = "Voblint_Analysis_Base" +
     Sign_Analyses
     Sign_Classify
     Sign_Checks
+    Sign_Entry

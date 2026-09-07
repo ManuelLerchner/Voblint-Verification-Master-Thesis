@@ -68,7 +68,7 @@ as a bridge to the old `route_cs` file, and satisfies this prerequisite.
 ## 3. Historical precedent: the deleted architecture proved this at the trace level, not the solver level
 
 Checked `archive/relational-digest-experiment` (commit `4779e90f`,
-`src/CFG/Collecting/CFG_Collect_Trace.thy`) for how the now-deleted digest
+`src/Program_Model/CFG/Collecting/CFG_Collect_Trace.thy`) for how the now-deleted digest
 architecture handled exactly this comparison:
 
 ```isabelle

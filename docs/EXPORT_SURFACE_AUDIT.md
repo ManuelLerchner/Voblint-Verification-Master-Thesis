@@ -482,11 +482,11 @@ roots.
 | Area | Dead (delete) | Unification (net) |
 | --- | ---: | ---: |
 | Original sweep (§1–§3, §7) | 1,193 | 740–980 |
-| `src/Framework/Solver` (§9) | ~860 | ~250 |
-| `src/CFG` (§10) | ~550 | ~595 |
+| `src/Abstract_Interpreter/Framework/Solver` (§9) | ~860 | ~250 |
+| `src/Program_Model/CFG` (§10) | ~550 | ~595 |
 | `src/Analysis` (§12) | ~700 | ~4,440 |
-| `src/Framework/Domain` + `Equations` (§13) | ~2,700 | ~370 |
-| `src/VIMP` + `src/CLI` (§11) | ~200 | ~1,230 |
+| `src/Abstract_Interpreter/Framework/Domain` + `Equations` (§13) | ~2,700 | ~370 |
+| `src/Program_Model/VIMP` + `src/Executable_Surface/CLI` (§11) | ~200 | ~1,230 |
 | **Total** | **≈6,200** | **≈7,600** |
 
 **≈13,800 lines, or 16% of the 85,574-line tree.** Two caveats on that number:
@@ -659,7 +659,7 @@ already visible defects rather than hygiene.
 
 | Path | Evidence |
 | --- | --- |
-| `scripts/migrate_pcompletes.py` | zero inbound references; `:13-21` targets six files, five of which no longer exist (`src/VIMP/IMP2_Bridge.thy`, `src/VIMP/IMP2_VCG_Example.thy`, three under the deleted `src/Formalization/`). It cannot run. |
+| `scripts/migrate_pcompletes.py` | zero inbound references; `:13-21` targets six files, five of which no longer exist (`src/Program_Model/VIMP/IMP2_Bridge.thy`, `src/Program_Model/VIMP/IMP2_VCG_Example.thy`, three under the deleted `src/Formalization/`). It cannot run. |
 | `scripts/rename_greek_vars.py` | zero inbound references; a one-shot rename that landed 2026-06-15 |
 | `scripts/extract_vimp_grammar.py` | `:1-2` self-declares "Feasibility prototype" — extract the grammar IR *from* `VIMP_Notation.thy`. That question is settled: `grammar/vimp.yaml` is canonical. Only inbound reference is a comment in `gen_vimp_isabelle.py:50` |
 | `docs/generated/DEFINITIONS_OVERVIEW.md` | **tracked, 1.2 MB**, although `scripts/extract_definitions.py:8-9` says its output is "intended as a gitignored, regenerable index — not a source of truth". Indexes 194 of the 215 theories. Nothing regenerates or gates it. Gitignore it plus add a pixi task, or delete it |
@@ -850,7 +850,7 @@ rather than re-deriving the ordering, and fails closed on a length mismatch;
 reconstructed in OCaml, and the file documents that this was deliberately moved
 into the verified layer. That is the model the rest of `cli/` should follow.
 
-## 9. `src/Framework/Solver` (15,168 lines)
+## 9. `src/Abstract_Interpreter/Framework/Solver` (15,168 lines)
 
 ### 9.1 Confirmed dead — verified with prose stripped
 
@@ -898,7 +898,7 @@ Gaps not recorded:
 - **G4 — the supplied `combine_env#` may only move upward.** `Constraint_System.thy:837-839` states soundness against the fixed concrete split `λx. if gs x then t x else s x`. The field's own motivation names Goblint's `varEq`, "whose `combine_env` meets the callee exit with a taint-filtered caller state" — a *meet*, which this obligation does not admit. The hook is free; its soundness contract is not.
 - **G5 — the `enter`-returns-a-pair protocol is documented only by dead constants.** `dgs_enter_pair` and its flat twin `tf_enter_pair` (`Constraint_System.thy:674`) both state the pair shape and are both dead; the generator calls the halves separately.
 
-## 10. `src/CFG` (9,295 lines)
+## 10. `src/Program_Model/CFG` (9,295 lines)
 
 ### 10.1 The finding to act on first: the CLI's well-formedness gate is not connected to its own soundness premises
 
@@ -909,7 +909,7 @@ Gaps not recorded:
 
 Every soundness theorem in the project instead assumes
 `wf_compile_input (declared_global p) ...` — verified across all four
-`src/CLI/Entry/*_Entry.thy`, `Analyse_Dispatch.thy` (six sites), and
+`src/Executable_Surface/CLI/Entry/*_Entry.thy`, `Analyse_Dispatch.thy` (six sites), and
 `src/Soundness/` (sixteen sites).
 
 Searching all of `src/` for a bridge: `wf_program_compile_input_exec` appears only
@@ -938,7 +938,7 @@ conjunct verbatim. No soundness theorem takes `wf_cfg g` as a premise.
 **`frames_match` is not used by the simulation relation it was written for.**
 `csim` (`Control_Simulation.thy:1280-1298`) recurses structurally instead; the
 predicate's entire six-lemma inversion suite is uncited (~37 lines). Outside
-`src/CFG` it is consumed only by two regression witnesses.
+`src/Program_Model/CFG` it is consumed only by two regression witnesses.
 
 `control_at_call_edge` (`Control_Simulation.thy:132-190`, 59 lines) — the file's
 own prose says `control_at_seq_after_call_edge` "generalises" it; its five
@@ -1013,7 +1013,7 @@ checker does not resolve:
   ("once `activation_collect` itself is redefined against `ctx_key`") that already landed —
   and misplaces the definition, which is in the same session at `LTR_Def.thy:990`.
 
-## 11. `src/VIMP`, `src/CLI`, `src/Soundness`, `src/Codegen`
+## 11. `src/Program_Model/VIMP`, `src/Executable_Surface/CLI`, `src/Soundness`, `src/Executable_Surface/Codegen`
 
 ### 11.1 Dead
 
@@ -1066,7 +1066,7 @@ Two free wins that need no locale: 59 of the 71 lines separating Sign from Parit
 Sign restating eight already-named facts as explicit `show`s where the other three
 domains write `[OF ...]` — converting deletes **~48 lines from `Sign_Entry.thy` with no
 semantic change**. And `Sign_Entry.thy:333-489` is **157 lines (32% of the file) of demo
-programs and `by eval` lemmas that do not belong in this session**: `src/CLI/ROOT:3-7`
+programs and `by eval` lemmas that do not belong in this session**: `src/Executable_Surface/CLI/ROOT:3-7`
 describes `Voblint_CLI` as "independent of the demonstration and regression theories",
 and `src/Soundness/README.md` gives the reason ("Theorems only ... so this session builds
 without the slow codegen and `value` runs"). The other three Entry files have no such
@@ -1088,8 +1088,8 @@ Interval-only.
 ### 11.4 `Voblint_CLI`'s dependency on `Voblint_Soundness` is vestigial
 
 **Verified**: `Run_Analysis_Sound.thy` declares 19 names; **none of them occurs anywhere
-in `src/CLI`** with prose stripped. All four Entry theories import
-`Voblint_Soundness.Run_Analysis_Sound` and `src/CLI/ROOT` carries the session dependency
+in `src/Executable_Surface/CLI`** with prose stripped. All four Entry theories import
+`Voblint_Soundness.Run_Analysis_Sound` and `src/Executable_Surface/CLI/ROOT` carries the session dependency
 solely to resolve those imports. This falsifies `AGENTS.md`'s contract statement that
 `Voblint_Soundness` "contains ... the per-domain, per-context instantiations the CLI
 dispatches to, so it is not a leaf: `Voblint_CLI` imports it" — those instantiations live
@@ -1226,7 +1226,7 @@ is that `global_interpretation` needs ground arguments for its `defines`. One
 eight Ctx files takes `is_bot_pred` as a parameter, and every context reasoning
 about it carries `assumes exact: "is_bot_pred s = is_bot_state (fun_of_... gs s)"`
 — an assumption that determines the parameter extensionally from `gs`. Across
-`src/Analysis`, `src/Examples`, `src/CLI` and `src/Soundness` the **only** value
+`src/Analysis`, `src/Examples`, `src/Executable_Surface/CLI` and `src/Soundness` the **only** value
 ever passed is `resolved_st_q_is_bot_for (declared_global_vars p)`, at 27 sites.
 Caveat worth checking before removing it: the parameter may be hoisting
 `declared_global_vars p` out of the executable inner loop, in which case the fix
@@ -1306,7 +1306,7 @@ and actually reached. Congruence has no `_Transfer`, `_Exec`, `_DG`, `_Checks` o
 `_Ctx_*` layer at all, because it is only a product component — and it is the
 leanest domain per line of real mathematics in the directory.
 
-## 13. `src/Framework/Domain` and `src/Framework/Equations`
+## 13. `src/Abstract_Interpreter/Framework/Domain` and `src/Abstract_Interpreter/Framework/Equations`
 
 > **2026-08-31 correction.** The selector unification proposed in §13.2 has
 > landed. `combine_env` is generic in key and codomain; frame entry, abstract

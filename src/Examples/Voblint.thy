@@ -62,7 +62,7 @@ theory Voblint
     "Voblint_Examples_Int.Exec_Int_DG_Run"
     "Voblint_Examples_Congruence.Example_Congruence_Arithmetic"
     "Voblint_Examples_Congruence.Example_Congruence_Backward"
-    "Voblint_CLI.Sign_Entry"
+    "Voblint_Analysis_Sign.Sign_Entry"
     "Voblint_CLI.Analyse_Dispatch"
     "Voblint_CLI.State_Report_GraphViz"
 begin
@@ -461,7 +461,7 @@ text \<open>
   \<^bold>\<open>9. The CLI: configuration, dispatch, and code generation.\<close> A runtime-program entry point per domain,
     reusing the exact native D/G pipeline behind \<open>4b\<close>/\<open>5\<close> above rather than a
     parallel one, exported to OCaml.
-    \<^item> @{theory Voblint_CLI.Sign_Entry} --- \<^verbatim>\<open>analyse_sign\<close>
+    \<^item> @{theory Voblint_Analysis_Sign.Sign_Entry} --- \<^verbatim>\<open>analyse_sign\<close>
       takes an arbitrary \<^typ>\<open>imp_prog\<close> at runtime (not a fixed example
       program) and reuses \<^verbatim>\<open>ownership_split_dg_exec_analysis\<close>'s own \<^verbatim>\<open>run_source_sound\<close>
       and \<^verbatim>\<open>collect_sound\<close> (@{theory Voblint_Soundness.Run_Analysis_Sound})
@@ -470,7 +470,7 @@ text \<open>
       post-solution via \<^locale>\<open>abstract_check_domain\<close>'s
       \<^verbatim>\<open>classify_checks\<close>, so the report and the soundness theorem share one
       computation, not two.
-    \<^item> @{theory Voblint_CLI.Interval_Entry} --- \<^verbatim>\<open>analyse_interval_dg\<close>/
+    \<^item> @{theory Voblint_Analysis_Interval.Interval_Entry} --- \<^verbatim>\<open>analyse_interval_dg\<close>/
       \<^verbatim>\<open>analyse_interval_td_report\<close>, the Interval counterpart production \<^verbatim>\<open>analyse\<close> actually
       dispatches to, built the same way on \<^verbatim>\<open>local_state_dg_exec_analysis\<close>'s own \<^verbatim>\<open>run_source_sound\<close>/
       \<^verbatim>\<open>collect_sound\<close>. \<^verbatim>\<open>Interval_Checks\<close> additionally carries \<^verbatim>\<open>analyse_interval_report\<close>/
@@ -478,11 +478,11 @@ text \<open>
       \<^verbatim>\<open>analyse_with_solver\<close> (@{theory Voblint_CLI.Analyse_Dispatch}) compares against this
       same production default on the identical equation system, each with its own soundness
       theorems proved the same way, in @{theory
-      Voblint_CLI.Interval_Entry}.
-    \<^item> @{theory Voblint_CLI.Int_Entry} --- the \<^verbatim>\<open>int_dom\<close> counterpart,
+      Voblint_Analysis_Interval.Interval_Entry}.
+    \<^item> @{theory Voblint_Analysis_Int.Int_Entry} --- the \<^verbatim>\<open>int_dom\<close> counterpart,
       \<^verbatim>\<open>analyse_int_report\<close>, built the same way; the product's refinement mode is fixed
       inside the entry point, not exposed as a CLI axis.
-    \<^item> @{theory Voblint_CLI.Parity_Entry} --- \<^verbatim>\<open>analyse_parity_report\<close>, the fourth
+    \<^item> @{theory Voblint_Analysis_Parity.Parity_Entry} --- \<^verbatim>\<open>analyse_parity_report\<close>, the fourth
       selectable analysis, again on the same locale's \<^verbatim>\<open>run_source_sound\<close>/\<^verbatim>\<open>collect_sound\<close>.
     \<^item> @{theory Voblint_CLI.Analyse_Dispatch} --- \<^const>\<open>analyse\<close> dispatches
       \<^typ>\<open>analysis_domain\<close> to the four domains' report functions, all sharing the

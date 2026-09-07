@@ -20,18 +20,18 @@ the folder tree and the session graph are the same thing. `ROOTS` lists them all
 
 | Folder | Session | Role |
 | --- | --- | --- |
-| [`VIMP/`](VIMP/) | `Voblint_VIMP` | source syntax, small-step semantics, procedures, the globals/locals split |
-| [`Domain/`](Domain/) | `Voblint_Domain` | what an abstract value and an abstract state are: sound-domain classes, concretization, the dead-code lift, pointwise states |
-| [`Solver/`](Solver/) | `Voblint_Solver` | the strategy-tree equation language of the vendored solver, its monotonicity and post-solution vocabulary. Never sees a CFG. |
-| [`CFG/`](CFG/) | `Voblint_CFG` | the graph model and its activation-local collecting semantics — what a soundness claim is stated *about*. Never mentions the compiler. |
-| [`Compile/`](Compile/) | `Voblint_Compile` | the VIMP-to-CFG compiler, its structural invariants, forward simulation, and the bridge from a source run to a valid local trace |
-| [`Framework/`](Framework/) | `Voblint_Framework` | the D/G analysis framework: transfer contract, equation generator, collecting soundness for an arbitrary CFG. No domain, no compiler. |
-| [`Exec/`](Exec/) | `Voblint_Exec` | the executable carrier, and transport from the solver's association lists to the function-valued states soundness is stated over |
+| [`Program_Model/VIMP/`](Program_Model/VIMP/) | `Voblint_VIMP` | source syntax, small-step semantics, procedures, the globals/locals split |
+| [`Abstract_Interpreter/Domain/`](Abstract_Interpreter/Domain/) | `Voblint_Domain` | what an abstract value and an abstract state are: sound-domain classes, concretization, the dead-code lift, pointwise states |
+| [`Abstract_Interpreter/Solver/`](Abstract_Interpreter/Solver/) | `Voblint_Solver` | the strategy-tree equation language of the vendored solver, its monotonicity and post-solution vocabulary. Never sees a CFG. |
+| [`Program_Model/CFG/`](Program_Model/CFG/) | `Voblint_CFG` | the graph model and its activation-local collecting semantics — what a soundness claim is stated *about*. Never mentions the compiler. |
+| [`Program_Model/Compile/`](Program_Model/Compile/) | `Voblint_Compile` | the VIMP-to-CFG compiler, its structural invariants, forward simulation, and the bridge from a source run to a valid local trace |
+| [`Abstract_Interpreter/Framework/`](Abstract_Interpreter/Framework/) | `Voblint_Framework` | the D/G analysis framework: transfer contract, equation generator, collecting soundness for an arbitrary CFG. No domain, no compiler. |
+| [`Abstract_Interpreter/Exec/`](Abstract_Interpreter/Exec/) | `Voblint_Exec` | the executable carrier, and transport from the solver's association lists to the function-valued states soundness is stated over |
 | [`Analyses/`](Analyses/) | `Voblint_Analysis_*` | one session per domain over a shared base — see below |
 | [`Soundness/`](Soundness/) | `Voblint_Soundness` | the two end-to-end endpoints: `source_activation_sound` and the `run_source_sound`/`collect_sound` bundle |
-| [`CLI/`](CLI/) | `Voblint_CLI` | per-domain entry points, the `AnalysisConfig` dispatcher, the GraphViz render surface. Where the domains meet again. |
+| [`Executable_Surface/CLI/`](Executable_Surface/CLI/) | `Voblint_CLI` | the `AnalysisConfig` dispatcher over the domains' entry points, and the GraphViz render surface. Where the domains meet again. |
 | [`Examples/`](Examples/) | `Voblint_Examples_*` | one example session per domain, plus the CLI-coupled witnesses and the capstone |
-| [`Codegen/`](Codegen/) | `Voblint_Codegen` | the `export_code` boundary into OCaml |
+| [`Executable_Surface/Codegen/`](Executable_Surface/Codegen/) | `Voblint_Codegen` | the `export_code` boundary into OCaml |
 
 Dependency shape:
 

@@ -16,8 +16,9 @@ split by concern.
 Backward-analysis arc: `Example_Guard_Refinement` (one guard) -> `Example_Interval_Loop_Coverage`
 (full CFG + trace soundness) -> `Exec_Interval_Run` (the same witness, executed).
 That last step and the store-only check trio's Interval member
-(`Example_Interval_Checks_Store_Only.thy`) both import `Voblint_CLI.Interval_Entry`,
-so they live in `CLI/` rather than here.
+(`Example_Interval_Checks_Store_Only.thy`) live in `CLI/` rather than here: the
+check witness compares Interval against Sign on one program, and `Exec_Interval_Run`
+reads together with it.
 
 Role vocabulary: repository `README.md`.
 
