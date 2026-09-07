@@ -5,6 +5,7 @@ theory Interval_Analyses
     Interval_Transfer
     Interval_Exec_Sound
     "Voblint_Analysis_Base.DG_Result_Construction"
+    "Voblint_Framework.CFG_Enumeration"
     "Voblint_Exec.Routed_Exec_Refinement"
     "Voblint_Framework.Routed_Analysis_Sound"
     "Voblint_Framework.Routed_Context"

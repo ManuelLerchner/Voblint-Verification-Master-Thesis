@@ -3,6 +3,10 @@ session Voblint_Exec in "." = "Voblint_Framework" +
   sessions
     TD
     "Voblint_Compile"
+  directories
+    "State"
+    "Spec"
+    "Refinement"
   theories
     Exec_St_Base
     Exec_St_Algebra

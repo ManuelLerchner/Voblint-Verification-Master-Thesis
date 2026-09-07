@@ -1,10 +1,7 @@
 theory DG_Result_Construction
   imports
     "Voblint_Framework.Analysis_Result"
-    "Voblint_Framework.CFG_Enumeration"
-    "Voblint_Framework.Check_Report"
     "Voblint_Framework.Seed_Global_Keys"
-    "Voblint_Compile.Compile_Invariants"
     "Voblint_Exec.Exec_Result_Readback"
     "Voblint_Exec.Exec_DG_State"
     "Voblint_Exec.Exec_St_Reachability"

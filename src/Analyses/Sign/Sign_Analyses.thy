@@ -6,6 +6,7 @@ theory Sign_Analyses
     Sign_Transfer
     Sign_Exec
     "Voblint_Analysis_Base.DG_Result_Construction"
+    "Voblint_Framework.CFG_Enumeration"
     "Voblint_Exec.Routed_Exec_Refinement"
     "Voblint_Framework.Routed_Analysis_Sound"
     "Voblint_Framework.Routed_Context"

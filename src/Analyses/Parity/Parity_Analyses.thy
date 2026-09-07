@@ -5,6 +5,7 @@ theory Parity_Analyses
     Parity_Classify
     Parity_Exec
     "Voblint_Analysis_Base.DG_Result_Construction"
+    "Voblint_Framework.CFG_Enumeration"
     "Voblint_Exec.Routed_Exec_Refinement"
     "Voblint_Exec.DG_Local_State_Exec_Refinement"
     "Voblint_Framework.DG_Local_State_Spec"
