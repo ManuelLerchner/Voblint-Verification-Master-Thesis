@@ -35,7 +35,7 @@ text \<open>
   with \<open>activation_collect_unit_eq_ltr_collect\<close> (the unit-context collapse to
   \<^const>\<open>ltr_collect\<close>) and \<open>Sign_Checks.sctx_analyse_result_eq\<close> (identifying the
   adapter's own result reading with \<^const>\<open>analyse_sign_ctx_result_for\<close>'s
-  \<open>normalize_point\<close>/\<open>canonicalize_lift\<close> construction) rather than re-deriving
+  \<open>readback_result_value\<close>/\<open>canonicalize_lift\<close> construction) rather than re-deriving
   \<open>routed_context_base_hetero\<close>'s coverage argument by hand --- the
   routed spine needs no \<open>wf_compile_input\<close>/finiteness/node-membership premise,
   so this bridge only takes the four coverage-and-termination facts the
@@ -133,7 +133,7 @@ proof -
   qed
   have result_eq: "lookup_context (analyse_sign_result_for pgs p) v ()
       = (if (v, ()) \<in> fst (sctx_sol_prog pgs p)
-         then normalize_point pgs
+         then readback_result_value pgs
                 (canonicalize_lift empty_pred (locals (snd (sctx_sol_prog pgs p) (Inl (v, ())))))
          else Bot)"
     unfolding analyse_sign_result_for_def analyse_sign_ctx_result_for_def lookup_context_def empty_pred_def
@@ -145,7 +145,7 @@ proof -
              (map_lift (fun_of_resolved_st_q_for pgs)))
           v ()
       = (if (v, ()) \<in> fst (sctx_sol pgs empty_pred (prog_table p) (prog_procs p))
-         then normalize_point pgs
+         then readback_result_value pgs
                 (canonicalize_lift empty_pred
                   (locals (snd (sctx_sol pgs empty_pred (prog_table p) (prog_procs p))
                     (Inl (v, ())))))
@@ -174,7 +174,7 @@ proof -
       by (rule comb_fwd_ok')
   qed
   have adapter_eq: "(if (v, ()) \<in> fst (sctx_sol_prog pgs p)
-         then normalize_point pgs
+         then readback_result_value pgs
                 (canonicalize_lift empty_pred (locals (snd (sctx_sol_prog pgs p) (Inl (v, ())))))
          else Bot)
       = lookup_context

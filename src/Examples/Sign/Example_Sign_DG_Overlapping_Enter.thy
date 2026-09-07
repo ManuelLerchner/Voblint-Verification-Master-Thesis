@@ -27,7 +27,7 @@ text \<open>
   The executable half pins the solved table: two alternatives stay distinguishable through
   the whole call/combine machinery, and each is read back and joined correctly. The
   soundness half shows the same thing relationally: the existing generic routed soundness
-  bridge (\<^theory>\<open>Voblint_Exec.Routed_Domain_Exec\<close>) already supports list-valued,
+  bridge (\<^theory>\<open>Voblint_Exec.Routed_Exec_Refinement\<close>) already supports list-valued,
   non-deterministic entry without any change to it --- this example is what supplies and
   discharges the corresponding non-deterministic entry obligations for the first time, and
   goes on to show the one concrete caller activation genuinely admitted under both
@@ -179,7 +179,7 @@ definition ov_sol ::
 
 definition ov_result :: "(sign list, sign abs_state) analysis_result" where
   "ov_result = Analysis_Result (fst ov_sol)
-     (\<lambda>v ctx. normalize_point ov_gs (canonicalize_lift ov_ep (locals (snd ov_sol (Inl (v, ctx))))))"
+     (\<lambda>v ctx. readback_result_value ov_gs (canonicalize_lift ov_ep (locals (snd ov_sol (Inl (v, ctx))))))"
 
 abbreviation ov_read :: "cfg_node \<Rightarrow> sign list \<Rightarrow> vname \<Rightarrow> sign lifted" where
   "ov_read v ctx x \<equiv> map_lift (\<lambda>st. st x) (lookup_context ov_result v ctx)"
@@ -575,7 +575,7 @@ qed
 text \<open>The buffered post-solution reconciled with the unbuffered generator the routed
   locale is stated over. Only the entry differs from \<^const>\<open>sctx_spec\<close>, and none of the
   bridge's side-freeness obligations inspect what \<^const>\<open>dgs_enter\<close> answers with --- they
-  hold for any list of alternatives, exactly as \<^theory>\<open>Voblint_Exec.Routed_Domain_Exec\<close>
+  hold for any list of alternatives, exactly as \<^theory>\<open>Voblint_Exec.Routed_Exec_Refinement\<close>
   discharges them once for every deterministic instance.\<close>
 
 lemma ov_pp_routed:
@@ -852,7 +852,7 @@ text \<open>
   premise this override deliberately breaks, could not even state.
 
   Proven, relationally: the existing generic routed soundness bridge
-  (\<^theory>\<open>Voblint_Exec.Routed_Domain_Exec\<close>) already supports list-valued,
+  (\<^theory>\<open>Voblint_Exec.Routed_Exec_Refinement\<close>) already supports list-valued,
   non-deterministic entry without any change to it --- \<open>ov_pp_routed\<close> discharges the full
   buffered/unbuffered reconciliation for this override, since none of its side-freeness
   obligations inspect what the entry list contains, only that it is

@@ -1,6 +1,6 @@
 theory Exec_Int_DG_Run
   imports
-    "Voblint_Exec.DG_Local_State_Exec"
+    "Voblint_Exec.DG_Local_State_Exec_Refinement"
     "Voblint_Analysis_Int.Int_Exec"
     "Voblint_VIMP.VIMP_Notation"
     "Voblint_Soundness.Run_Analysis_Sound"

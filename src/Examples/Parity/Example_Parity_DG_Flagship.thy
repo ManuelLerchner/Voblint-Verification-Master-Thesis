@@ -28,7 +28,7 @@ text \<open>
 
 theory Example_Parity_DG_Flagship
   imports
-    "Voblint_Exec.DG_Local_State_Exec"
+    "Voblint_Exec.DG_Local_State_Exec_Refinement"
     "Voblint_Analysis_Parity.Parity_Exec"
     "Voblint_Solver.TD_Solver_Bridge"
     "Voblint_CFG.CFG_Prune"

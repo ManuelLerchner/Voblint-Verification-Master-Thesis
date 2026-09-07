@@ -3,9 +3,9 @@ theory Int_Analyses
     Int_Sound
     Int_Classify
     Int_Exec
-    "Voblint_Exec.Result_Normalization"
-    "Voblint_Exec.Routed_Domain_Exec"
-    "Voblint_Exec.DG_Local_State_Exec"
+    "Voblint_Analysis_Base.DG_Result_Construction"
+    "Voblint_Exec.Routed_Exec_Refinement"
+    "Voblint_Exec.DG_Local_State_Exec_Refinement"
     "Voblint_Framework.DG_Local_State_Spec"
     "Voblint_Framework.Routed_Analysis_Sound"
     "Voblint_Framework.Routed_Context"
@@ -447,12 +447,15 @@ text \<open>
 \<close>
 
 lemmas int_conf_result_node_sound = int_conf_adapter.analyse_result_node_sound
+lemmas int_conf_result_node_unreachable = int_conf_adapter.analyse_result_node_unreachable
+lemmas int_conf_report_flag_unreachable =
+  int_conf_result_node_unreachable[OF _ _ _ report_flag_imp_result_node_is_bottom]
 lemmas int_conf_activation_collect_sound = int_conf_routed.routed.activation_collect_dg_sound
 
 lemma int_conf_analyse_result_eq:
   "lookup_context int_conf_adapter.analyse_result v ctx =
      (if (v, ctx) \<in> fst (int_conf_sol mode empty_pred gs Pi ps)
-      then normalize_point gs
+      then readback_result_value gs
              (canonicalize_lift empty_pred (locals (snd (int_conf_sol mode empty_pred gs Pi ps) (Inl (v, ctx)))))
       else Bot)"
   unfolding int_conf_adapter.lookup_context_analyse_result
@@ -537,7 +540,7 @@ text \<open>
   same \<open>int_conf_sol_prog\<close> instance above, generic in \<open>mode\<close> to match
   \<open>int_conf_sol_prog\<close>'s own signature. The \<open>[code]\<close> swap avoids re-solving per
   lookup: \<^const>\<open>int_conf_sol_prog\<close> is bound once as \<open>sol\<close>, then read pointwise via
-  \<^const>\<open>normalize_point\<close>/\<^const>\<open>canonicalize_lift\<close>, the same
+  \<^const>\<open>readback_result_value\<close>/\<^const>\<open>canonicalize_lift\<close>, the same
   boundary every other domain's result table reads through.
 \<close>
 
@@ -546,7 +549,7 @@ definition analyse_int_ctx_result_for ::
   "analyse_int_ctx_result_for mode gs p =
      Analysis_Result
        (fst (int_conf_sol_prog mode gs p))
-       (\<lambda>v ctx. normalize_point gs
+       (\<lambda>v ctx. readback_result_value gs
                   (canonicalize_lift (resolved_st_q_is_bot_for (declared_global_vars p))
                     (locals (snd (int_conf_sol_prog mode gs p) (Inl (v, ctx))))))"
 
@@ -556,7 +559,7 @@ lemma analyse_int_ctx_result_for_code [code]:
   "analyse_int_ctx_result_for mode gs p =
      (let sol = int_conf_sol_prog mode gs p; gl = declared_global_vars p
       in Analysis_Result (fst sol)
-           (\<lambda>v ctx. normalize_point gs
+           (\<lambda>v ctx. readback_result_value gs
                       (canonicalize_lift (resolved_st_q_is_bot_for gl)
                         (locals (snd sol (Inl (v, ctx)))))))"
   unfolding analyse_int_ctx_result_for_def Let_def by (rule refl)
@@ -570,7 +573,7 @@ text \<open>
   derivation for a second domain: same \<^const>\<open>int_dom_spec\<close>/\<^const>\<open>int_dom_abs_spec\<close>
   D/G specification and the same domain-commute facts Int's own routed-unit
   instance already interprets (\<^locale>\<open>routed_dg_domain_exec\<close>,
-  \<^theory>\<open>Voblint_Exec.DG_Local_State_Exec\<close>) -- nothing here re-derives them, and the
+  \<^theory>\<open>Voblint_Exec.DG_Local_State_Exec_Refinement\<close>) -- nothing here re-derives them, and the
   \<^typ>\<open>refine_mode\<close> parameter Int threads throughout stays a genuine fixed
   argument exactly as it already is at Int's own \<^const>\<open>int_dom_spec\<close>. Only the
   routing policy changes, from \<^const>\<open>route_unit\<close> to
@@ -807,7 +810,7 @@ definition analyse_int_call_string_result_for ::
   "analyse_int_call_string_result_for k gs p =
      Analysis_Result
        (fst (ics_sol_prog k gs p))
-       (\<lambda>v ctx. normalize_point gs
+       (\<lambda>v ctx. readback_result_value gs
                   (canonicalize_lift (resolved_st_q_is_bot_for (declared_global_vars p))
                     (locals (snd (ics_sol_prog k gs p) (Inl (v, ctx))))))"
 
@@ -817,7 +820,7 @@ lemma analyse_int_call_string_result_for_code [code]:
   "analyse_int_call_string_result_for k gs p =
      (let sol = ics_sol_prog k gs p; gl = declared_global_vars p
       in Analysis_Result (fst sol)
-           (\<lambda>v ctx. normalize_point gs
+           (\<lambda>v ctx. readback_result_value gs
                       (canonicalize_lift (resolved_st_q_is_bot_for gl)
                         (locals (snd sol (Inl (v, ctx)))))))"
   unfolding analyse_int_call_string_result_for_def Let_def by (rule refl)
@@ -874,12 +877,12 @@ text \<open>
   acceptance test, after Sign's own call-string and entry-state derivations and Int's
   own call-string derivation: same \<^const>\<open>int_dom_spec\<close>/\<^const>\<open>int_dom_abs_spec\<close> D/G
   specification and the same domain-commute facts Int already interprets
-  (\<^locale>\<open>routed_dg_domain_exec\<close>, \<^theory>\<open>Voblint_Exec.DG_Local_State_Exec\<close>) -- nothing here
+  (\<^locale>\<open>routed_dg_domain_exec\<close>, \<^theory>\<open>Voblint_Exec.DG_Local_State_Exec_Refinement\<close>) -- nothing here
   re-derives them, and the \<^typ>\<open>refine_mode\<close> parameter Int threads throughout stays a
   genuine fixed argument exactly as it already is at Int's own \<^const>\<open>int_dom_spec\<close>. The
   routing policy is the same generic entry-state construction
   (\<open>entry_exec_route_gen\<close>/\<^const>\<open>formals_route_lifted_gen\<close>,
-  \<^theory>\<open>Voblint_Exec.DG_Local_State_Exec\<close>/\<^theory>\<open>Voblint_Framework.Routed_Context\<close>) Sign's own
+  \<^theory>\<open>Voblint_Exec.DG_Local_State_Exec_Refinement\<close>/\<^theory>\<open>Voblint_Framework.Routed_Context\<close>) Sign's own
   entry-state instance already uses: it needed only \<^locale>\<open>routed_dg_domain_exec\<close>'s
   own three primitive commute facts, which Int's own routed-unit instance has already
   established, so no new Int-domain mathematics is needed here either.
@@ -900,7 +903,7 @@ text \<open>
   \<open>sctx_entry_route\<close>/\<open>sctx_entry_route_gen\<close> exactly, at Int's own
   \<open>int_dom_enter_st_for mode gs\<close> instead of Sign's \<open>sign_enter_st_for gs\<close> -- this is
   precisely \<^locale>\<open>routed_dg_domain_exec\<close>'s own \<open>entry_exec_route\<close>/
-  \<open>entry_exec_route_gen\<close> (\<^theory>\<open>Voblint_Exec.DG_Local_State_Exec\<close>), restated here as
+  \<open>entry_exec_route_gen\<close> (\<^theory>\<open>Voblint_Exec.DG_Local_State_Exec_Refinement\<close>), restated here as
   unconditional top-level definitions so the equation-system definitions below need no
   \<open>exact\<close> premise to be stated, matching every other routed instance's convention. The
   routed generator enters the callee frame before it routes, so the route itself only
@@ -1378,7 +1381,7 @@ definition analyse_int_entry_state_result_for ::
   "analyse_int_entry_state_result_for gs p =
      Analysis_Result
        (fst (int_conf_entry_sol_prog gs p))
-       (\<lambda>v ctx. normalize_point gs
+       (\<lambda>v ctx. readback_result_value gs
                   (canonicalize_lift (resolved_st_q_is_bot_for (declared_global_vars p))
                     (locals (snd (int_conf_entry_sol_prog gs p) (Inl (v, ctx))))))"
 
@@ -1388,7 +1391,7 @@ lemma analyse_int_entry_state_result_for_code [code]:
   "analyse_int_entry_state_result_for gs p =
      (let sol = int_conf_entry_sol_prog gs p; gl = declared_global_vars p
       in Analysis_Result (fst sol)
-           (\<lambda>v ctx. normalize_point gs
+           (\<lambda>v ctx. readback_result_value gs
                       (canonicalize_lift (resolved_st_q_is_bot_for gl)
                         (locals (snd sol (Inl (v, ctx)))))))"
   unfolding analyse_int_entry_state_result_for_def Let_def by (rule refl)

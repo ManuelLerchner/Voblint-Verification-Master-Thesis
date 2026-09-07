@@ -14,7 +14,7 @@ definition test_gs :: "vname => bool" where
   "test_gs _ = False"
 
 definition test_env_top :: "int_dom abs_state" where
-  "test_env_top = (%_. top)"
+  "test_env_top = (\<lambda>_. top)"
 
 subsection \<open>Assignment and procedure entry through the registered operations\<close>
 

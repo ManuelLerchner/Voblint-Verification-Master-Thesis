@@ -2,7 +2,7 @@ theory Analysis_GraphViz
   imports
     "Voblint_Compile.Compile_Wellformed"
     "Voblint_VIMP.VIMP_Source_Print"
-    "Voblint_Exec.Exec_St"
+    "Voblint_Exec.Exec_St_Reachability"
     "Voblint_Domain.Abstract_Domain"
     "Voblint_Framework.Check_Report"
     "Voblint_Framework.Analysis_Result"

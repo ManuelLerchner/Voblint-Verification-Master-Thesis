@@ -31,7 +31,7 @@ theory Voblint
     "Voblint_Analysis_Interval.Interval_Transfer"
     "Voblint_Framework.Activation_Backbone"
     "Voblint_Framework.DG_Ctx_Activation"
-    "Voblint_Exec.Exec_St"
+    "Voblint_Exec.Exec_St_Reachability"
     "Voblint_Analysis_Sign.Sign_Exec"
     "Voblint_Examples_Sign.Exec_Sign_DG_Run"
     "Voblint_Examples_CLI.Example_Checks_Store_Only"
@@ -344,10 +344,15 @@ text \<open>
     \<^item> @{theory Voblint_Framework.DG_Ctx_Activation} --- DG-native discharge of those five obligations from a \<^verbatim>\<open>sound_dg_spec_core\<close> post-solution, so a computed D/G solution certifies the activation collecting.
 
   \<^bold>\<open>5. Executable frontend.\<close> Finite-map state representation and certified execution.
-    \<^item> @{theory Voblint_Exec.Exec_St} --- executable abstract-state maps for code generation.
-    \<^item> @{theory Voblint_Exec.Exec_Refinement} --- commutation bridge from executable states to function states.
-    \<^item> @{theory Voblint_Exec.Exec_DG_Generator} --- the executable D/G equation generator (\<^const>\<open>unit_routed_eqs\<close>, \<^const>\<open>fun_of_dg_st_gen\<close>): the verified solver \<^emph>\<open>runs\<close> on D/G equations.
-    \<^item> @{theory Voblint_Exec.DG_Local_State_Exec} --- \<^locale>\<open>routed_dg_domain_exec\<close> proves a registered domain's D/G spec sound directly at this executable carrier, with no separate abstract-carrier transport step.
+    \<^item> @{theory Voblint_Exec.Exec_St_Base} --- executable abstract-state maps for code
+      generation, layered as representation, algebra
+      (@{theory Voblint_Exec.Exec_St_Algebra}), refinement to variable-indexed states
+      (@{theory Voblint_Exec.Exec_St_Transfer}) and dead-code detection
+      (@{theory Voblint_Exec.Exec_St_Reachability}).
+    \<^item> @{theory Voblint_Exec.Exec_St_Restriction_Refinement} --- commutation bridge from executable states to function states.
+    \<^item> @{theory Voblint_Framework.Routed_Unit_Generator} --- the D/G equation generator (\<^const>\<open>unit_routed_eqs\<close>): the verified solver \<^emph>\<open>runs\<close> on D/G equations.
+    \<^item> @{theory Voblint_Framework.DG_Reader_Transport} --- reading a whole equation system through a pair of carrier-generic readers (\<^const>\<open>fun_of_dg_st_gen\<close>), which is what lets the executable run answer for the mathematical one.
+    \<^item> @{theory Voblint_Exec.DG_Local_State_Exec_Refinement} --- \<^locale>\<open>routed_dg_domain_exec\<close> proves a registered domain's D/G spec sound directly at this executable carrier, with no separate abstract-carrier transport step.
     \<^item> @{theory Voblint_Analysis_Sign.Sign_Exec} --- executable Sign transfer functions.
     \<^item> @{theory Voblint_Analysis_Sign.Sign_Analyses} --- the routed D/G runtime for Sign: the equation system, its solved table, and the termination hypothesis each solver discipline turns on.
     \<^item> @{theory Voblint_Analysis_Interval.Interval_Analyses} --- the Interval counterpart, with the join, per-origin and warrowing solver-choice siblings.

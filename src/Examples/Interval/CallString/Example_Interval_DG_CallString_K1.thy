@@ -2,7 +2,7 @@ theory Example_Interval_DG_CallString_K1
   imports
     "Voblint_Analysis_Interval.Interval_Transfer"
     "Voblint_Analysis_Interval.Interval_Exec"
-    "Voblint_Exec.DG_Local_State_Exec"
+    "Voblint_Exec.DG_Local_State_Exec_Refinement"
     "Voblint_Analysis_Base.Analysis_GraphViz"
     "Voblint_Analysis_Base.Call_String_Routed_Context"
     "Voblint_Framework.Activation_Backbone"

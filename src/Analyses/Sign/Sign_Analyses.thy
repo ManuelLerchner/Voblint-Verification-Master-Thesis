@@ -5,8 +5,8 @@ theory Sign_Analyses
     Sign_Classify
     Sign_Transfer
     Sign_Exec
-    "Voblint_Exec.Result_Normalization"
-    "Voblint_Exec.Routed_Domain_Exec"
+    "Voblint_Analysis_Base.DG_Result_Construction"
+    "Voblint_Exec.Routed_Exec_Refinement"
     "Voblint_Framework.Routed_Analysis_Sound"
     "Voblint_Framework.Routed_Context"
     "Voblint_Framework.Routed_Context_Unit"
@@ -286,7 +286,7 @@ text \<open>
   The call-string instance of the Sign analysis package in
   \<^theory>\<open>Voblint_Analysis_Sign.Sign_Sound\<close>: same \<^const>\<open>sctx_spec\<close>/\<^const>\<open>sctx_abs_spec\<close> D/G
   specification and the same domain-commute facts it already interprets
-  (\<^locale>\<open>routed_dg_domain_exec\<close>, \<^theory>\<open>Voblint_Exec.DG_Local_State_Exec\<close>) --
+  (\<^locale>\<open>routed_dg_domain_exec\<close>, \<^theory>\<open>Voblint_Exec.DG_Local_State_Exec_Refinement\<close>) --
   nothing here re-derives them. Only the routing policy changes, from
   \<^const>\<open>route_unit\<close> to \<^const>\<open>Call_String_Context.cs_route\<close> at a runtime bound
   \<open>k\<close>, and the routed-context locale interpreted changes from
@@ -592,7 +592,7 @@ definition analyse_sign_call_string_result_for ::
   "analyse_sign_call_string_result_for k gs p =
      Analysis_Result
        (fst (scs_sol_prog k gs p))
-       (\<lambda>v ctx. normalize_point gs
+       (\<lambda>v ctx. readback_result_value gs
                   (canonicalize_lift (resolved_st_q_is_bot_for (declared_global_vars p))
                     (locals (snd (scs_sol_prog k gs p) (Inl (v, ctx))))))"
 
@@ -602,7 +602,7 @@ lemma analyse_sign_call_string_result_for_code [code]:
   "analyse_sign_call_string_result_for k gs p =
      (let sol = scs_sol_prog k gs p; gl = declared_global_vars p
       in Analysis_Result (fst sol)
-           (\<lambda>v ctx. normalize_point gs
+           (\<lambda>v ctx. readback_result_value gs
                       (canonicalize_lift (resolved_st_q_is_bot_for gl)
                         (locals (snd sol (Inl (v, ctx)))))))"
   unfolding analyse_sign_call_string_result_for_def Let_def by (rule refl)
@@ -658,10 +658,10 @@ text \<open>
   The entry-state instance of the Sign analysis package in
   \<^theory>\<open>Voblint_Analysis_Sign.Sign_Sound\<close>, and the second architecture-milestone acceptance test
   after the call-string configuration above: same \<^const>\<open>sctx_spec\<close>/\<^const>\<open>sctx_abs_spec\<close>  D/G specification and the same domain-commute facts Sign already interprets
-  (\<^locale>\<open>routed_dg_domain_exec\<close>, \<^theory>\<open>Voblint_Exec.DG_Local_State_Exec\<close>) -- nothing here
+  (\<^locale>\<open>routed_dg_domain_exec\<close>, \<^theory>\<open>Voblint_Exec.DG_Local_State_Exec_Refinement\<close>) -- nothing here
   re-derives them. The routing policy is Interval's own entry-state construction
   (\<open>entry_exec_route_gen\<close>/\<^const>\<open>formals_route_lifted_gen\<close>,
-  \<^theory>\<open>Voblint_Exec.DG_Local_State_Exec\<close>/\<^theory>\<open>Voblint_Framework.Routed_Context\<close>), already
+  \<^theory>\<open>Voblint_Exec.DG_Local_State_Exec_Refinement\<close>/\<^theory>\<open>Voblint_Framework.Routed_Context\<close>), already
   generalized in a domain -- unlike \<open>cs_route\<close>, this route genuinely depends on
   its caller-state argument (the entered callee frame), which is exactly the "small
   additional domain capability" the routed-domain milestone anticipated for EntryState;
@@ -683,7 +683,7 @@ text \<open>
   \<open>entry_state_route_gen\<close> (\<open>Interval_Analyses\<close>) exactly, at
   Sign's own \<open>sign_enter_st_for\<close> instead of Interval's \<open>ivl_enter_st_for\<close> -- this is
   precisely \<^locale>\<open>routed_dg_domain_exec\<close>'s own \<open>entry_exec_route\<close>/
-  \<open>entry_exec_route_gen\<close> (\<^theory>\<open>Voblint_Exec.DG_Local_State_Exec\<close>), restated here as
+  \<open>entry_exec_route_gen\<close> (\<^theory>\<open>Voblint_Exec.DG_Local_State_Exec_Refinement\<close>), restated here as
   unconditional top-level definitions (rather than reached through an interpretation) so
   the equation-system definitions below need no \<open>exact\<close> premise to be stated, matching
   every other routed instance's convention. The routed generator enters the callee
@@ -1097,7 +1097,7 @@ definition analyse_sign_entry_state_result_for ::
   "analyse_sign_entry_state_result_for gs p =
      Analysis_Result
        (fst (sctx_entry_sol_prog gs p))
-       (\<lambda>v ctx. normalize_point gs
+       (\<lambda>v ctx. readback_result_value gs
                   (canonicalize_lift (resolved_st_q_is_bot_for (declared_global_vars p))
                     (locals (snd (sctx_entry_sol_prog gs p) (Inl (v, ctx))))))"
 
@@ -1107,7 +1107,7 @@ lemma analyse_sign_entry_state_result_for_code [code]:
   "analyse_sign_entry_state_result_for gs p =
      (let sol = sctx_entry_sol_prog gs p; gl = declared_global_vars p
       in Analysis_Result (fst sol)
-           (\<lambda>v ctx. normalize_point gs
+           (\<lambda>v ctx. readback_result_value gs
                       (canonicalize_lift (resolved_st_q_is_bot_for gl)
                         (locals (snd sol (Inl (v, ctx)))))))"
   unfolding analyse_sign_entry_state_result_for_def Let_def by (rule refl)

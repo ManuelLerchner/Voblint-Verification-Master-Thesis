@@ -96,7 +96,7 @@ definition result_demo_unnormalized :: "(unit, ivl abs_state) analysis_result" w
                   (declared_global result_demo_prog) result_demo_prog;
           gl = declared_global_vars result_demo_prog
       in Analysis_Result (fst sol)
-           (\<lambda>v ctx. normalize_point (declared_global result_demo_prog)
+           (\<lambda>v ctx. readback_result_value (declared_global result_demo_prog)
                       (canonicalize_lift (resolved_st_q_is_bot_for gl)
                         (locals (snd sol (Inl (v, ctx)))))))"
 
@@ -314,7 +314,7 @@ subsection \<open>Sign and int_dom: the same abstraction, one live and one dead 
 text \<open>
   Deliberately lighter than the Interval coverage above: these two only have
   to witness that their adapters feed the same generic
-  \<^const>\<open>normalize_point\<close>/\<^const>\<open>lookup_context\<close> surface, not to re-exercise
+  \<^const>\<open>readback_result_value\<close>/\<^const>\<open>lookup_context\<close> surface, not to re-exercise
   the reachability case analysis a third and fourth time.
 \<close>
 
@@ -359,10 +359,10 @@ text \<open>
   \<open>analyse_int_per_origin_result\<close> all have
   the same shape as the default-solver adapters above -- an
   \<^const>\<open>Analysis_Result\<close> over that discipline's own solve, read back through
-  \<^const>\<open>normalize_point\<close> -- differing only in the native solve function. \<open>result_demo_prog\<close> has no loop and no global feedback, so every
+  \<^const>\<open>readback_result_value\<close> -- differing only in the native solve function. \<open>result_demo_prog\<close> has no loop and no global feedback, so every
   update-rule discipline agrees with the default solver on it; these pins
   witness that each variant reaches the same generic
-  \<^const>\<open>normalize_point\<close>/\<^const>\<open>lookup_context\<close> surface with the same
+  \<^const>\<open>readback_result_value\<close>/\<^const>\<open>lookup_context\<close> surface with the same
   values the default-solver adapters above already established, not a
   second full reachability case analysis.
 \<close>

@@ -4,8 +4,8 @@ theory Interval_Analyses
     Interval_Classify
     Interval_Transfer
     Interval_Exec_Sound
-    "Voblint_Exec.Result_Normalization"
-    "Voblint_Exec.Routed_Domain_Exec"
+    "Voblint_Analysis_Base.DG_Result_Construction"
+    "Voblint_Exec.Routed_Exec_Refinement"
     "Voblint_Framework.Routed_Analysis_Sound"
     "Voblint_Framework.Routed_Context"
     "Voblint_Framework.Routed_Context_Unit"
@@ -433,11 +433,14 @@ text \<open>
 \<close>
 
 lemmas result_node_sound = adapter.analyse_result_node_sound
+lemmas result_node_unreachable = adapter.analyse_result_node_unreachable
+lemmas report_flag_unreachable =
+  result_node_unreachable[OF _ _ _ report_flag_imp_result_node_is_bottom]
 
 lemma analyse_result_eq:
   "lookup_context adapter.analyse_result v ctx =
      (if (v, ctx) \<in> fst (sol gs empty_pred Pi ps)
-      then normalize_point gs
+      then readback_result_value gs
              (canonicalize_lift empty_pred (locals (snd (sol gs empty_pred Pi ps) (Inl (v, ctx)))))
       else Bot)"
   unfolding adapter.lookup_context_analyse_result
@@ -515,7 +518,7 @@ definition analyse_interval_ctx_result_for ::
   "analyse_interval_ctx_result_for gs p =
      Analysis_Result
        (fst (interval_conf_sol_prog gs p))
-       (\<lambda>v ctx. normalize_point gs
+       (\<lambda>v ctx. readback_result_value gs
                   (canonicalize_lift (resolved_st_q_is_bot_for (declared_global_vars p))
                     (locals (snd (interval_conf_sol_prog gs p) (Inl (v, ctx))))))"
 
@@ -525,7 +528,7 @@ lemma analyse_interval_ctx_result_for_code [code]:
   "analyse_interval_ctx_result_for gs p =
      (let sol = interval_conf_sol_prog gs p; gl = declared_global_vars p
       in Analysis_Result (fst sol)
-           (\<lambda>v ctx. normalize_point gs
+           (\<lambda>v ctx. readback_result_value gs
                       (canonicalize_lift (resolved_st_q_is_bot_for gl)
                         (locals (snd sol (Inl (v, ctx)))))))"
   unfolding analyse_interval_ctx_result_for_def Let_def by (rule refl)
@@ -652,7 +655,7 @@ definition analyse_interval_call_string_result_for ::
   "analyse_interval_call_string_result_for k gs p =
      Analysis_Result
        (fst (cs_call_string_sol_prog k gs p))
-       (\<lambda>v ctx. normalize_point gs
+       (\<lambda>v ctx. readback_result_value gs
                   (canonicalize_lift (resolved_st_q_is_bot_for (declared_global_vars p))
                     (locals (snd (cs_call_string_sol_prog k gs p) (Inl (v, ctx))))))"
 
@@ -662,7 +665,7 @@ lemma analyse_interval_call_string_result_for_code [code]:
   "analyse_interval_call_string_result_for k gs p =
      (let sol = cs_call_string_sol_prog k gs p; gl = declared_global_vars p
       in Analysis_Result (fst sol)
-           (\<lambda>v ctx. normalize_point gs
+           (\<lambda>v ctx. readback_result_value gs
                       (canonicalize_lift (resolved_st_q_is_bot_for gl)
                         (locals (snd sol (Inl (v, ctx)))))))"
   unfolding analyse_interval_call_string_result_for_def Let_def by (rule refl)
@@ -822,7 +825,7 @@ text \<open>
 
   The type is \<^typ>\<open>ivl abs_state\<close>, not \<^typ>\<open>ivl abs_state lifted\<close>, on
   purpose: reachability is the caller's case split, decided once by
-  \<^const>\<open>normalize_point\<close> when the table was built, and an \<^const>\<open>Bot\<close>
+  \<^const>\<open>readback_result_value\<close> when the table was built, and an \<^const>\<open>Bot\<close>
   point has no call edge to route at all.
 
   A live caller can still enter a callee frame that is itself semantically
@@ -1123,10 +1126,10 @@ text \<open>
   assuming the live one.
 
   \<open>reach\<close> says the normalized state is the reader's image of the solved local
-  unknown -- what \<^const>\<open>normalize_point\<close> supplies for any point a result
+  unknown -- what \<^const>\<open>readback_result_value\<close> supplies for any point a result
   table answered \<^const>\<open>Lifted\<close>. \<open>not_bot\<close> says that
   normalized state is not itself \<^const>\<open>is_empty_state\<close>, which
-  \<open>normalize_point\<close>'s own witness-bottom test already guarantees for every
+  \<open>readback_result_value\<close>'s own witness-bottom test already guarantees for every
   \<^const>\<open>Lifted\<close> point a table built through it can produce.
 \<close>
 
@@ -1517,7 +1520,7 @@ text \<open>
   the key set verbatim -- the solver already knows exactly which
   \<open>(node, context)\<close> pairs it reached, so nothing here rescans the solved map
   or reconstructs coverage. Each local unknown goes through
-  \<^const>\<open>normalize_point\<close> exactly as it is stored, in its pre-conversion
+  \<^const>\<open>readback_result_value\<close> exactly as it is stored, in its pre-conversion
   \<^typ>\<open>ivl resolved_st_q lifted\<close> shape; no context is joined at construction
   time, and an uncovered context is answered by \<^const>\<open>lookup_context\<close>'s
   membership guard with \<^const>\<open>Bot\<close>, never by falling back to the
@@ -1536,7 +1539,7 @@ definition analyse_interval_entry_state_result_for ::
   "analyse_interval_entry_state_result_for gs p =
      Analysis_Result
        (fst (entry_state_sol_prog gs p))
-       (\<lambda>v ctx. normalize_point gs
+       (\<lambda>v ctx. readback_result_value gs
                   (canonicalize_lift (resolved_st_q_is_bot_for (declared_global_vars p))
                     (locals (snd (entry_state_sol_prog gs p) (Inl (v, ctx))))))"
 
@@ -1546,7 +1549,7 @@ lemma analyse_interval_entry_state_result_for_code [code]:
   "analyse_interval_entry_state_result_for gs p =
      (let sol = entry_state_sol_prog gs p; gl = declared_global_vars p
       in Analysis_Result (fst sol)
-           (\<lambda>v ctx. normalize_point gs
+           (\<lambda>v ctx. readback_result_value gs
                       (canonicalize_lift (resolved_st_q_is_bot_for gl)
                         (locals (snd sol (Inl (v, ctx)))))))"
   unfolding analyse_interval_entry_state_result_for_def Let_def by (rule refl)
@@ -1568,7 +1571,7 @@ text \<open>
   answer already witnesses that the solver stored this point --- and the
   \<open>not_bot\<close> premise \<open>entry_state_callee_ctx_eq_route_partial\<close> needs now
   comes from \<^const>\<open>canonicalize_lift\<close>'s own case split at the result
-  boundary, not from \<open>normalize_point\<close> inspecting the raw value itself:
+  boundary, not from \<open>readback_result_value\<close> inspecting the raw value itself:
   \<open>norm\<close> below is stated over \<open>canonicalize_lift (resolved_st_q_is_bot_for
   (declared_global_vars p))\<close> applied to the raw solved local unknown,
   matching exactly what \<open>analyse_interval_entry_state_result_for\<close> now
@@ -1592,7 +1595,7 @@ proof -
   have exact: "\<And>s::ivl resolved_st_q. resolved_st_q_is_bot_for (declared_global_vars p) s
                      = is_empty_state (fun_of_resolved_st_q_for (declared_global p) s)"
     by (rule resolved_st_q_is_bot_for_iff[OF globals])
-  have norm: "normalize_point (declared_global p)
+  have norm: "readback_result_value (declared_global p)
                 (canonicalize_lift (resolved_st_q_is_bot_for (declared_global_vars p))
                   (locals (snd (entry_state_sol_prog (declared_global p) p) (Inl (u, ctx)))))
               = Lifted st"
@@ -1644,7 +1647,7 @@ text \<open>
   \<^term>\<open>Some True\<close> and the check classifies \<^const>\<open>Check_Proved\<close> even though
   no execution reaches
   it. \<^const>\<open>lookup_context\<close> answers \<^const>\<open>Bot\<close> for both cases
-  instead --- the membership guard for the uncovered one, \<^const>\<open>normalize_point\<close>'s
+  instead --- the membership guard for the uncovered one, \<^const>\<open>readback_result_value\<close>'s
   witness-bottom test for the covered-but-dead one --- and
   \<^const>\<open>classify_point\<close> declines to classify against it at all.
 

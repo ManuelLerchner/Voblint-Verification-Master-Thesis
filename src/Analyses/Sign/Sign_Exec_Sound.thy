@@ -2,9 +2,9 @@ theory Sign_Exec_Sound
   imports
     Sign_Sound
     Sign_Exec
-    "Voblint_Exec.Result_Normalization"
-    "Voblint_Exec.DG_Local_State_Exec"
-    "Voblint_Exec.Routed_Domain_Exec"
+    "Voblint_Analysis_Base.DG_Result_Construction"
+    "Voblint_Exec.DG_Local_State_Exec_Refinement"
+    "Voblint_Exec.Routed_Exec_Refinement"
     "Voblint_Framework.Analysis_Result"
     "Voblint_Framework.Routed_Context_Unit"
     "Voblint_Solver.TD_Solver_Bridge"
@@ -82,13 +82,13 @@ section \<open>Solved-result table\<close>
 text \<open>
   Whole-program convenience layer, mirroring Interval's own \<open>entry_state_eqs_prog\<close>/
   \<open>entry_state_sol_prog\<close>/\<open>entry_state_terminates_prog\<close>. The result tables below read
-  the raw executable solve through the same \<^const>\<open>canonicalize_lift\<close>/\<^const>\<open>normalize_point\<close>
+  the raw executable solve through the same \<^const>\<open>canonicalize_lift\<close>/\<^const>\<open>readback_result_value\<close>
   boundary Interval's own \<open>analyse_interval_entry_state_result_for\<close> already uses, and are the tables Sign's public
   API (\<open>Sign_Checks\<close>) redirects onto in production. Their soundness is established there
   through a \<open>dg_analysis_adapter\<close> interpretation of this file's own \<open>sctx_routed\<close>
   context, bridged to these executable tables by composing
   \<^const>\<open>canonicalize_lift\<close>'s witness-bottom collapse with
-  \<^const>\<open>normalize_point\<close>'s readback.
+  \<^const>\<open>readback_result_value\<close>'s readback.
 \<close>
 
 definition sctx_eqs_prog ::
@@ -135,7 +135,7 @@ definition analyse_sign_ctx_result_for ::
   "analyse_sign_ctx_result_for gs p =
      Analysis_Result
        (fst (sctx_sol_prog gs p))
-       (\<lambda>v ctx. normalize_point gs
+       (\<lambda>v ctx. readback_result_value gs
                   (canonicalize_lift (resolved_st_q_is_bot_for (declared_global_vars p))
                     (locals (snd (sctx_sol_prog gs p) (Inl (v, ctx))))))"
 
@@ -160,7 +160,7 @@ lemma analyse_sign_ctx_result_for_code [code]:
   "analyse_sign_ctx_result_for gs p =
      (let sol = sctx_sol_prog gs p; gl = declared_global_vars p
       in Analysis_Result (fst sol)
-           (\<lambda>v ctx. normalize_point gs
+           (\<lambda>v ctx. readback_result_value gs
                       (canonicalize_lift (resolved_st_q_is_bot_for gl)
                         (locals (snd sol (Inl (v, ctx)))))))"
   unfolding analyse_sign_ctx_result_for_def Let_def by (rule refl)
@@ -177,7 +177,7 @@ definition analyse_sign_ctx_result_per_origin_for ::
   "analyse_sign_ctx_result_per_origin_for gs p =
      Analysis_Result
        (fst (sctx_sol_prog_per_origin gs p))
-       (\<lambda>v ctx. normalize_point gs
+       (\<lambda>v ctx. readback_result_value gs
                   (canonicalize_lift (resolved_st_q_is_bot_for (declared_global_vars p))
                     (locals (snd (sctx_sol_prog_per_origin gs p) (Inl (v, ctx))))))"
 
@@ -187,7 +187,7 @@ lemma analyse_sign_ctx_result_per_origin_for_code [code]:
   "analyse_sign_ctx_result_per_origin_for gs p =
      (let sol = sctx_sol_prog_per_origin gs p; gl = declared_global_vars p
       in Analysis_Result (fst sol)
-           (\<lambda>v ctx. normalize_point gs
+           (\<lambda>v ctx. readback_result_value gs
                       (canonicalize_lift (resolved_st_q_is_bot_for gl)
                         (locals (snd sol (Inl (v, ctx)))))))"
   unfolding analyse_sign_ctx_result_per_origin_for_def Let_def by (rule refl)

@@ -143,7 +143,7 @@ text \<open>
   (\<^theory>\<open>Voblint_Framework.DG_Analysis_Adapter\<close>), phrased against \<open>sctx_adapter.analyse_result\<close>.
   \<open>sctx_analyse_result_eq\<close> identifies that reading with the raw-tuple shape
   \<^const>\<open>analyse_sign_ctx_result_for\<close> (\<open>Sign_Analyses\<close>) already builds by hand from
-  \<^const>\<open>normalize_point\<close>/\<^const>\<open>canonicalize_lift\<close> directly: both collapse the same
+  \<^const>\<open>readback_result_value\<close>/\<^const>\<open>canonicalize_lift\<close> directly: both collapse the same
   \<^const>\<open>Bot\<close>/\<^const>\<open>Lifted\<close> case split on the same projected local unknown, one via
   \<open>is_empty_state\<close> after projecting (the adapter), the other via \<open>empty_pred\<close> before
   projecting (\<open>analyse_sign_ctx_result_for\<close>) --- \<open>exact\<close> is exactly what identifies the
@@ -153,11 +153,14 @@ text \<open>
 \<close>
 
 lemmas sctx_result_node_sound = sctx_adapter.analyse_result_node_sound
+lemmas sctx_result_node_unreachable = sctx_adapter.analyse_result_node_unreachable
+lemmas sctx_report_flag_unreachable =
+  sctx_result_node_unreachable[OF _ _ _ report_flag_imp_result_node_is_bottom]
 
 lemma sctx_analyse_result_eq:
   "lookup_context sctx_adapter.analyse_result v ctx =
      (if (v, ctx) \<in> fst (sctx_sol gs empty_pred Pi ps)
-      then normalize_point gs
+      then readback_result_value gs
              (canonicalize_lift empty_pred (locals (snd (sctx_sol gs empty_pred Pi ps) (Inl (v, ctx)))))
       else Bot)"
   unfolding sctx_adapter.lookup_context_analyse_result
@@ -294,12 +297,12 @@ text \<open>
   State-carrying sibling of \<open>analyse_sign_report_for\<close>/\<open>analyse_sign_report\<close>,
   via \<^const>\<open>classify_checks_with_state\<close>: same result table, with the
   per-check Sign environment attached to each report entry instead of
-  discarded, and an exact \<open>unreachable\<close> flag read straight off
-  \<^const>\<open>lookup_context\<close>'s \<^const>\<open>Bot\<close>/\<^const>\<open>Lifted\<close> case split --
-  exact because composing \<^const>\<open>canonicalize_lift\<close>'s witness-bottom
-  collapse with \<^const>\<open>normalize_point\<close>'s readback agrees with the older
-  \<^const>\<open>resolved_st_q_lifted_is_bot_for\<close> test on the same raw local
-  unknown.
+  discarded, and an \<open>unreachable\<close> flag read straight off
+  \<^const>\<open>lookup_context\<close>'s \<^const>\<open>Bot\<close>/\<^const>\<open>Lifted\<close> case split by
+  \<^const>\<open>report_lifted_state\<close>.  The flag is \<^term>\<open>True\<close> exactly when that
+  unknown is \<^const>\<open>Bot\<close> (@{thm report_lifted_state_unreachable_iff}); what
+  \<^const>\<open>Bot\<close> itself certifies about concrete reachability is the surrounding
+  soundness statement's business, not this definition's.
 \<close>
 
 definition analyse_sign_report_for_with_state ::
@@ -307,9 +310,7 @@ definition analyse_sign_report_for_with_state ::
   "analyse_sign_report_for_with_state gs p =
      (let r = analyse_sign_result_for gs p
       in classify_checks_with_state (prog_cfg p)
-           (\<lambda>v. case lookup_context r v () of
-                  Bot \<Rightarrow> (True, bot)
-                | Lifted st \<Rightarrow> (False, st))
+           (\<lambda>v. report_lifted_state (lookup_context r v ()))
            (\<lambda>c (_, s). sign_classify_check c s))"
 
 text \<open>Convenience instance at \<^const>\<open>declared_global\<close> \<open>p\<close>, matching

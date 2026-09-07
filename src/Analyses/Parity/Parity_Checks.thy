@@ -135,11 +135,14 @@ text \<open>
 lemmas pctx_report_ctx_proved_sound = pctx_adapter.analyse_report_ctx_proved_sound
 lemmas pctx_report_ctx_refuted_sound = pctx_adapter.analyse_report_ctx_refuted_sound
 lemmas pctx_result_node_sound = pctx_adapter.analyse_result_node_sound
+lemmas pctx_result_node_unreachable = pctx_adapter.analyse_result_node_unreachable
+lemmas pctx_report_flag_unreachable =
+  pctx_result_node_unreachable[OF _ _ _ report_flag_imp_result_node_is_bottom]
 
 text \<open>
   \<open>pctx_analyse_result_eq\<close> identifies the adapter's own result reading with the
   raw-tuple shape \<^const>\<open>analyse_parity_ctx_result_for\<close> (\<open>Parity_Analyses\<close>)
-  builds directly from \<^const>\<open>normalize_point\<close>/\<^const>\<open>canonicalize_lift\<close>: both
+  builds directly from \<^const>\<open>readback_result_value\<close>/\<^const>\<open>canonicalize_lift\<close>: both
   collapse the same \<^const>\<open>Bot\<close>/\<^const>\<open>Lifted\<close> case split on the same projected
   local unknown, one via \<open>is_empty_state\<close> after projecting, the other via
   \<open>empty_pred\<close> before projecting -- \<open>exact\<close> is what identifies the two orders.
@@ -151,7 +154,7 @@ text \<open>
 lemma pctx_analyse_result_eq:
   "lookup_context pctx_adapter.analyse_result v ctx =
      (if (v, ctx) \<in> fst (pctx_sol gs empty_pred Pi ps)
-      then normalize_point gs
+      then readback_result_value gs
              (canonicalize_lift empty_pred (locals (snd (pctx_sol gs empty_pred Pi ps) (Inl (v, ctx)))))
       else Bot)"
   unfolding pctx_adapter.lookup_context_analyse_result
@@ -238,8 +241,10 @@ lemma parity_report_per_origin_eq:
 text \<open>
   State-carrying sibling, via \<^const>\<open>classify_checks_with_state\<close>: the same result table,
   with the per-check Parity environment attached to each entry instead of discarded, and
-  an exact \<open>unreachable\<close> flag read straight off \<^const>\<open>lookup_context\<close>'s
-  \<^const>\<open>Bot\<close>/\<^const>\<open>Lifted\<close> case split. Mirrors
+  an \<open>unreachable\<close> flag read straight off \<^const>\<open>lookup_context\<close>'s
+  \<^const>\<open>Bot\<close>/\<^const>\<open>Lifted\<close> case split by \<^const>\<open>report_lifted_state\<close>,
+  \<^term>\<open>True\<close> exactly when that unknown is \<^const>\<open>Bot\<close>
+  (@{thm report_lifted_state_unreachable_iff}). Mirrors
   \<open>analyse_sign_report_for_with_state\<close> exactly.
 \<close>
 
@@ -248,9 +253,7 @@ definition analyse_parity_report_for_with_state ::
   "analyse_parity_report_for_with_state gs p =
      (let r = analyse_parity_result_for gs p
       in classify_checks_with_state (prog_cfg p)
-           (\<lambda>v. case lookup_context r v () of
-                  Bot \<Rightarrow> (True, bot)
-                | Lifted st \<Rightarrow> (False, st))
+           (\<lambda>v. report_lifted_state (lookup_context r v ()))
            (\<lambda>c (_, s). parity_classify_check c s))"
 
 definition analyse_parity_report_with_state ::

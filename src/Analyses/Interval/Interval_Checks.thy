@@ -120,13 +120,11 @@ text \<open>
   State-carrying sibling of \<open>analyse_interval_td_report_for\<close>/
   \<open>analyse_interval_td_report\<close>, via \<^const>\<open>classify_checks_with_state\<close>: same
   result table, with the per-check Interval environment attached to each
-  report entry instead of discarded, and an exact \<open>unreachable\<close> flag read
-  straight off \<^const>\<open>lookup_context\<close>'s \<^const>\<open>Bot\<close>/\<^const>\<open>Lifted\<close>
-  case split -- exact because composing \<^const>\<open>canonicalize_lift\<close>'s
-  witness-bottom collapse with \<^const>\<open>normalize_point\<close>'s readback agrees
-  with the older \<^const>\<open>resolved_st_q_lifted_is_bot_for\<close> test on the same
-  raw local unknown, the same argument
-  \<open>analyse_sign_report_for_with_state\<close>'s Sign counterpart uses.
+  report entry instead of discarded, and an \<open>unreachable\<close> flag read straight
+  off \<^const>\<open>lookup_context\<close>'s \<^const>\<open>Bot\<close>/\<^const>\<open>Lifted\<close> case split by
+  \<^const>\<open>report_lifted_state\<close>, \<^term>\<open>True\<close> exactly when that unknown is
+  \<^const>\<open>Bot\<close> (@{thm report_lifted_state_unreachable_iff}) -- the same
+  reading \<open>analyse_sign_report_for_with_state\<close>'s Sign counterpart uses.
 \<close>
 
 definition analyse_interval_td_report_for_with_state ::
@@ -134,9 +132,7 @@ definition analyse_interval_td_report_for_with_state ::
   "analyse_interval_td_report_for_with_state gs p =
      (let r = analyse_interval_td_result_for gs p
       in classify_checks_with_state (prog_cfg p)
-           (\<lambda>v. case lookup_context r v () of
-                  Bot \<Rightarrow> (True, bot)
-                | Lifted st \<Rightarrow> (False, st))
+           (\<lambda>v. report_lifted_state (lookup_context r v ()))
            (\<lambda>c (_, s). interval_classify_check c s))"
 
 text \<open>Convenience instance at \<^const>\<open>declared_global\<close> \<open>p\<close>, matching

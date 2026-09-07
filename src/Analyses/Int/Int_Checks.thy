@@ -111,12 +111,11 @@ text \<open>
   \<^const>\<open>classify_checks_with_state\<close>: same result table, with the per-check \<open>int_dom\<close>
   environment attached to each report entry instead of discarded -- needed so
   \<open>Analyse_Dispatch.analyse_with_state\<close> can stay total once \<open>Int_Analysis\<close> joins
-  \<open>analysis_domain\<close>. An exact \<open>unreachable\<close> flag is read straight off
-  \<^const>\<open>lookup_context\<close>'s \<^const>\<open>Bot\<close>/\<^const>\<open>Lifted\<close> case split -- exact because
-  composing \<^const>\<open>canonicalize_lift\<close>'s witness-bottom collapse with
-  \<^const>\<open>normalize_point\<close>'s readback agrees with the older
-  \<^const>\<open>resolved_st_q_lifted_is_bot_for\<close> test on the same raw local unknown, the same
-  argument \<open>analyse_sign_report_for_with_state\<close>'s Sign counterpart uses. Propagates the
+  \<open>analysis_domain\<close>. An \<open>unreachable\<close> flag is read straight off
+  \<^const>\<open>lookup_context\<close>'s \<^const>\<open>Bot\<close>/\<^const>\<open>Lifted\<close> case split by
+  \<^const>\<open>report_lifted_state\<close>, \<^term>\<open>True\<close> exactly when that unknown is
+  \<^const>\<open>Bot\<close> (@{thm report_lifted_state_unreachable_iff}) -- the same reading
+  \<open>analyse_sign_report_for_with_state\<close>'s Sign counterpart uses. Propagates the
   routed producer transitively through \<^const>\<open>analyse_int_result_for\<close>.
 \<close>
 
@@ -125,9 +124,7 @@ definition analyse_int_report_for_with_state ::
   "analyse_int_report_for_with_state gs p =
      (let r = analyse_int_result_for gs p
       in classify_checks_with_state (prog_cfg p)
-           (\<lambda>v. case lookup_context r v () of
-                  Bot \<Rightarrow> (True, bot)
-                | Lifted st \<Rightarrow> (False, st))
+           (\<lambda>v. report_lifted_state (lookup_context r v ()))
            (\<lambda>c (_, s). int_classify_check c s))"
 
 text \<open>Convenience instance at \<^const>\<open>declared_global\<close> \<open>p\<close>, matching

@@ -247,7 +247,7 @@ definition analyse_interval_ctx_result_per_origin_for ::
   "analyse_interval_ctx_result_per_origin_for gs p =
      Analysis_Result
        (fst (interval_conf_sol_prog_per_origin gs p))
-       (\<lambda>v ctx. normalize_point gs
+       (\<lambda>v ctx. readback_result_value gs
                   (canonicalize_lift (resolved_st_q_is_bot_for (declared_global_vars p))
                     (locals (snd (interval_conf_sol_prog_per_origin gs p) (Inl (v, ctx))))))"
 
@@ -257,7 +257,7 @@ lemma analyse_interval_ctx_result_per_origin_for_code [code]:
   "analyse_interval_ctx_result_per_origin_for gs p =
      (let sol = interval_conf_sol_prog_per_origin gs p; gl = declared_global_vars p
       in Analysis_Result (fst sol)
-           (\<lambda>v ctx. normalize_point gs
+           (\<lambda>v ctx. readback_result_value gs
                       (canonicalize_lift (resolved_st_q_is_bot_for gl)
                         (locals (snd sol (Inl (v, ctx)))))))"
   unfolding analyse_interval_ctx_result_per_origin_for_def Let_def by (rule refl)
@@ -291,7 +291,7 @@ definition analyse_interval_ctx_result_warrow_for ::
   "analyse_interval_ctx_result_warrow_for gs p =
      Analysis_Result
        (fst (interval_conf_sol_prog_warrow gs p))
-       (\<lambda>v ctx. normalize_point gs
+       (\<lambda>v ctx. readback_result_value gs
                   (canonicalize_lift (resolved_st_q_is_bot_for (declared_global_vars p))
                     (locals (snd (interval_conf_sol_prog_warrow gs p) (Inl (v, ctx))))))"
 
@@ -301,7 +301,7 @@ lemma analyse_interval_ctx_result_warrow_for_code [code]:
   "analyse_interval_ctx_result_warrow_for gs p =
      (let sol = interval_conf_sol_prog_warrow gs p; gl = declared_global_vars p
       in Analysis_Result (fst sol)
-           (\<lambda>v ctx. normalize_point gs
+           (\<lambda>v ctx. readback_result_value gs
                       (canonicalize_lift (resolved_st_q_is_bot_for gl)
                         (locals (snd sol (Inl (v, ctx)))))))"
   unfolding analyse_interval_ctx_result_warrow_for_def Let_def by (rule refl)
@@ -359,7 +359,7 @@ definition analyse_interval_ctx_result_wpo_for ::
   "analyse_interval_ctx_result_wpo_for gs p =
      Analysis_Result
        (fst (interval_conf_sol_prog_wpo gs p))
-       (\<lambda>v ctx. normalize_point gs
+       (\<lambda>v ctx. readback_result_value gs
                   (canonicalize_lift (resolved_st_q_is_bot_for (declared_global_vars p))
                     (locals (snd (interval_conf_sol_prog_wpo gs p) (Inl (v, ctx))))))"
 
@@ -369,7 +369,7 @@ lemma analyse_interval_ctx_result_wpo_for_code [code]:
   "analyse_interval_ctx_result_wpo_for gs p =
      (let sol = interval_conf_sol_prog_wpo gs p; gl = declared_global_vars p
       in Analysis_Result (fst sol)
-           (\<lambda>v ctx. normalize_point gs
+           (\<lambda>v ctx. readback_result_value gs
                       (canonicalize_lift (resolved_st_q_is_bot_for gl)
                         (locals (snd sol (Inl (v, ctx)))))))"
   unfolding analyse_interval_ctx_result_wpo_for_def Let_def by (rule refl)
@@ -410,7 +410,7 @@ definition analyse_interval_call_string_result_for_join ::
   "analyse_interval_call_string_result_for_join k gs p =
      Analysis_Result
        (fst (cs_call_string_sol_prog_join k gs p))
-       (\<lambda>v ctx. normalize_point gs
+       (\<lambda>v ctx. readback_result_value gs
                   (canonicalize_lift (resolved_st_q_is_bot_for (declared_global_vars p))
                     (locals (snd (cs_call_string_sol_prog_join k gs p) (Inl (v, ctx))))))"
 
@@ -420,7 +420,7 @@ lemma analyse_interval_call_string_result_for_join_code [code]:
   "analyse_interval_call_string_result_for_join k gs p =
      (let sol = cs_call_string_sol_prog_join k gs p; gl = declared_global_vars p
       in Analysis_Result (fst sol)
-           (\<lambda>v ctx. normalize_point gs
+           (\<lambda>v ctx. readback_result_value gs
                       (canonicalize_lift (resolved_st_q_is_bot_for gl)
                         (locals (snd sol (Inl (v, ctx)))))))"
   unfolding analyse_interval_call_string_result_for_join_def Let_def by (rule refl)
@@ -430,7 +430,7 @@ definition analyse_interval_call_string_result_for_per_origin ::
   "analyse_interval_call_string_result_for_per_origin k gs p =
      Analysis_Result
        (fst (cs_call_string_sol_prog_per_origin k gs p))
-       (\<lambda>v ctx. normalize_point gs
+       (\<lambda>v ctx. readback_result_value gs
                   (canonicalize_lift (resolved_st_q_is_bot_for (declared_global_vars p))
                     (locals (snd (cs_call_string_sol_prog_per_origin k gs p) (Inl (v, ctx))))))"
 
@@ -440,7 +440,7 @@ lemma analyse_interval_call_string_result_for_per_origin_code [code]:
   "analyse_interval_call_string_result_for_per_origin k gs p =
      (let sol = cs_call_string_sol_prog_per_origin k gs p; gl = declared_global_vars p
       in Analysis_Result (fst sol)
-           (\<lambda>v ctx. normalize_point gs
+           (\<lambda>v ctx. readback_result_value gs
                       (canonicalize_lift (resolved_st_q_is_bot_for gl)
                         (locals (snd sol (Inl (v, ctx)))))))"
   unfolding analyse_interval_call_string_result_for_per_origin_def Let_def by (rule refl)
@@ -481,7 +481,7 @@ definition analyse_interval_call_string_result_for_wpo ::
   "analyse_interval_call_string_result_for_wpo k gs p =
      Analysis_Result
        (fst (cs_call_string_sol_prog_wpo k gs p))
-       (\<lambda>v ctx. normalize_point gs
+       (\<lambda>v ctx. readback_result_value gs
                   (canonicalize_lift (resolved_st_q_is_bot_for (declared_global_vars p))
                     (locals (snd (cs_call_string_sol_prog_wpo k gs p) (Inl (v, ctx))))))"
 
@@ -491,7 +491,7 @@ lemma analyse_interval_call_string_result_for_wpo_code [code]:
   "analyse_interval_call_string_result_for_wpo k gs p =
      (let sol = cs_call_string_sol_prog_wpo k gs p; gl = declared_global_vars p
       in Analysis_Result (fst sol)
-           (\<lambda>v ctx. normalize_point gs
+           (\<lambda>v ctx. readback_result_value gs
                       (canonicalize_lift (resolved_st_q_is_bot_for gl)
                         (locals (snd sol (Inl (v, ctx)))))))"
   unfolding analyse_interval_call_string_result_for_wpo_def Let_def by (rule refl)
@@ -541,7 +541,7 @@ definition analyse_interval_entry_state_result_for_join ::
   "analyse_interval_entry_state_result_for_join gs p =
      Analysis_Result
        (fst (entry_state_sol_prog_join gs p))
-       (\<lambda>v ctx. normalize_point gs
+       (\<lambda>v ctx. readback_result_value gs
                   (canonicalize_lift (resolved_st_q_is_bot_for (declared_global_vars p))
                     (locals (snd (entry_state_sol_prog_join gs p) (Inl (v, ctx))))))"
 
@@ -551,7 +551,7 @@ lemma analyse_interval_entry_state_result_for_join_code [code]:
   "analyse_interval_entry_state_result_for_join gs p =
      (let sol = entry_state_sol_prog_join gs p; gl = declared_global_vars p
       in Analysis_Result (fst sol)
-           (\<lambda>v ctx. normalize_point gs
+           (\<lambda>v ctx. readback_result_value gs
                       (canonicalize_lift (resolved_st_q_is_bot_for gl)
                         (locals (snd sol (Inl (v, ctx)))))))"
   unfolding analyse_interval_entry_state_result_for_join_def Let_def by (rule refl)
@@ -561,7 +561,7 @@ definition analyse_interval_entry_state_result_for_per_origin ::
   "analyse_interval_entry_state_result_for_per_origin gs p =
      Analysis_Result
        (fst (entry_state_sol_prog_per_origin gs p))
-       (\<lambda>v ctx. normalize_point gs
+       (\<lambda>v ctx. readback_result_value gs
                   (canonicalize_lift (resolved_st_q_is_bot_for (declared_global_vars p))
                     (locals (snd (entry_state_sol_prog_per_origin gs p) (Inl (v, ctx))))))"
 
@@ -571,7 +571,7 @@ lemma analyse_interval_entry_state_result_for_per_origin_code [code]:
   "analyse_interval_entry_state_result_for_per_origin gs p =
      (let sol = entry_state_sol_prog_per_origin gs p; gl = declared_global_vars p
       in Analysis_Result (fst sol)
-           (\<lambda>v ctx. normalize_point gs
+           (\<lambda>v ctx. readback_result_value gs
                       (canonicalize_lift (resolved_st_q_is_bot_for gl)
                         (locals (snd sol (Inl (v, ctx)))))))"
   unfolding analyse_interval_entry_state_result_for_per_origin_def Let_def by (rule refl)
@@ -611,7 +611,7 @@ definition analyse_interval_entry_state_result_for_wpo ::
   "analyse_interval_entry_state_result_for_wpo gs p =
      Analysis_Result
        (fst (entry_state_sol_prog_wpo gs p))
-       (\<lambda>v ctx. normalize_point gs
+       (\<lambda>v ctx. readback_result_value gs
                   (canonicalize_lift (resolved_st_q_is_bot_for (declared_global_vars p))
                     (locals (snd (entry_state_sol_prog_wpo gs p) (Inl (v, ctx))))))"
 
@@ -621,7 +621,7 @@ lemma analyse_interval_entry_state_result_for_wpo_code [code]:
   "analyse_interval_entry_state_result_for_wpo gs p =
      (let sol = entry_state_sol_prog_wpo gs p; gl = declared_global_vars p
       in Analysis_Result (fst sol)
-           (\<lambda>v ctx. normalize_point gs
+           (\<lambda>v ctx. readback_result_value gs
                       (canonicalize_lift (resolved_st_q_is_bot_for gl)
                         (locals (snd sol (Inl (v, ctx)))))))"
   unfolding analyse_interval_entry_state_result_for_wpo_def Let_def by (rule refl)

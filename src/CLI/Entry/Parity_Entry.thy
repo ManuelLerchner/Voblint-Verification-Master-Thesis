@@ -89,7 +89,7 @@ proof -
               entry_cov' s0_sound])
   have result_eq: "lookup_context (analyse_parity_result_for pgs p) v ()
       = (if (v, ()) \<in> fst (pctx_sol_prog pgs p)
-         then normalize_point pgs
+         then readback_result_value pgs
                 (canonicalize_lift empty_pred (locals (snd (pctx_sol_prog pgs p) (Inl (v, ())))))
          else Bot)"
     unfolding analyse_parity_result_for_def analyse_parity_ctx_result_for_def lookup_context_def empty_pred_def
@@ -101,7 +101,7 @@ proof -
              (map_lift (fun_of_resolved_st_q_for pgs)))
           v ()
       = (if (v, ()) \<in> fst (pctx_sol pgs empty_pred (prog_table p) (prog_procs p))
-         then normalize_point pgs
+         then readback_result_value pgs
                 (canonicalize_lift empty_pred
                   (locals (snd (pctx_sol pgs empty_pred (prog_table p) (prog_procs p))
                     (Inl (v, ())))))
@@ -109,7 +109,7 @@ proof -
     by (rule pctx_analyse_result_eq
           [OF solves' exact entry_cov' fwd_ok' call_fwd_ok' comb_fwd_ok'])
   have adapter_eq: "(if (v, ()) \<in> fst (pctx_sol_prog pgs p)
-         then normalize_point pgs
+         then readback_result_value pgs
                 (canonicalize_lift empty_pred (locals (snd (pctx_sol_prog pgs p) (Inl (v, ())))))
          else Bot)
       = lookup_context

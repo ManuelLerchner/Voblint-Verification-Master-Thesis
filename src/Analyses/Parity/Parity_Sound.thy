@@ -1,6 +1,6 @@
 theory Parity_Sound
   imports
-    "Voblint_Exec.DG_Local_State_Exec"
+    "Voblint_Exec.DG_Local_State_Exec_Refinement"
     Parity_Exec
 begin
 

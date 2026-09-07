@@ -115,6 +115,175 @@ lemma lookup_context_absent [simp]:
   "(v, ctx) \<notin> result_keys r \<Longrightarrow> lookup_context r v ctx = Bot"
   unfolding lookup_context_def by simp
 
+subsection \<open>Telling ``analysed and dead'' from ``never analysed''\<close>
+
+text \<open>
+  \<^const>\<open>lookup_context\<close> answers \<^const>\<open>Bot\<close> for two unrelated reasons: the
+  solver covered the key and stored \<^const>\<open>Bot\<close> there, or it never covered the
+  key at all. The first is a proved statement about the program; the second is
+  the absence of one. A reader of the answer alone cannot tell which happened,
+  so a claim about concrete unreachability must not be stated over it.
+\<close>
+
+datatype (plugins del: quickcheck_narrowing) 'a context_result =
+    Uncovered
+  | Covered "'a lifted"
+
+text \<open>
+  \<^typ>\<open>'a context_result\<close> keeps the two apart at the lookup, rather than
+  pushing the distinction into \<^typ>\<open>'a lifted\<close>: making non-coverage a lattice
+  element would put solver bookkeeping into the abstract domain and raise
+  questions -- how it orders against \<^const>\<open>Bot\<close>, what a join with it means --
+  that have no semantic answer. Coverage is metadata about a solve; \<^const>\<open>Bot\<close>
+  is a statement about a program.
+\<close>
+
+definition lookup_context_result ::
+  "('ctx, 'a) analysis_result \<Rightarrow> pp \<Rightarrow> 'ctx \<Rightarrow> 'a context_result" where
+  "lookup_context_result r v ctx =
+     (if (v, ctx) \<in> result_keys r then Covered (result_at r v ctx) else Uncovered)"
+
+lemma lookup_context_result_covered [simp]:
+  "(v, ctx) \<in> result_keys r \<Longrightarrow>
+     lookup_context_result r v ctx = Covered (result_at r v ctx)"
+  unfolding lookup_context_result_def by simp
+
+lemma lookup_context_result_uncovered [simp]:
+  "(v, ctx) \<notin> result_keys r \<Longrightarrow> lookup_context_result r v ctx = Uncovered"
+  unfolding lookup_context_result_def by simp
+
+lemma lookup_context_result_eq_Uncovered_iff:
+  "lookup_context_result r v ctx = Uncovered \<longleftrightarrow> (v, ctx) \<notin> result_keys r"
+  unfolding lookup_context_result_def by simp
+
+lemma lookup_context_result_eq_Covered_iff:
+  "lookup_context_result r v ctx = Covered x \<longleftrightarrow>
+     (v, ctx) \<in> result_keys r \<and> result_at r v ctx = x"
+  unfolding lookup_context_result_def by auto
+
+text \<open>
+  Where the information is lost, named so that losing it is a visible step.
+  \<^const>\<open>lookup_context\<close> is exactly this totalization, which is why it is safe
+  to keep for callers that only ever read a covered key -- and why a soundness
+  claim may not be stated over it directly.
+\<close>
+
+fun context_result_or_bot :: "'a context_result \<Rightarrow> 'a lifted" where
+  "context_result_or_bot Uncovered = Bot"
+| "context_result_or_bot (Covered x) = x"
+
+lemma lookup_context_eq_or_bot:
+  "lookup_context r v ctx =
+     context_result_or_bot (lookup_context_result r v ctx)"
+  unfolding lookup_context_def lookup_context_result_def by simp
+
+text \<open>
+  The logical core of every ``the reported point is unreachable'' claim, stated
+  once here rather than per domain. It starts from \<^term>\<open>Covered Bot\<close>, so an
+  uncovered node cannot satisfy it however the caller obtained its inclusion.
+\<close>
+
+lemma reported_covered_unreachable_empty:
+  assumes lookup: "lookup_context_result r v ctx = Covered Bot"
+    and sound: "C \<subseteq> gamma_lift gam (lookup_context r v ctx)"
+  shows "C = {}"
+  using sound unfolding lookup_context_eq_or_bot lookup by simp
+
+text \<open>
+  The node-level reading, quantifying over the contexts at \<open>v\<close>. It asks only
+  that every \<^emph>\<open>stored\<close> result there is \<^const>\<open>Bot\<close>; an uncovered context is
+  permitted rather than required to be absent, since whatever an uncovered
+  context contributes is a question for the solve that produced the table, not
+  for this predicate. A single \<^term>\<open>Covered (Lifted s)\<close> at any context defeats
+  it, which is the whole point: that context may still carry executions.
+
+  Read the vacuous case before using this: a node with \<^emph>\<open>no\<close> stored context
+  satisfies it, since there is nothing to be non-\<^const>\<open>Bot\<close>. On its own that
+  would be a hole --- ``never analysed'' passing as ``proved dead''. It is not
+  one only where a caller separately knows that an unstored context contributes
+  nothing, which is a property of the solve, not of this table. Do not lift this
+  predicate out of a setting that establishes it.
+\<close>
+
+definition result_node_is_bottom ::
+  "('ctx, 'a) analysis_result \<Rightarrow> pp \<Rightarrow> bool" where
+  "result_node_is_bottom r v \<longleftrightarrow>
+     (\<forall>ctx a. lookup_context_result r v ctx = Covered a \<longrightarrow> a = Bot)"
+
+lemma result_node_is_bottomI:
+  assumes "\<And>ctx a. lookup_context_result r v ctx = Covered a \<Longrightarrow> a = Bot"
+  shows "result_node_is_bottom r v"
+  unfolding result_node_is_bottom_def using assms by blast
+
+lemma result_node_is_bottomD:
+  assumes bot: "result_node_is_bottom r v"
+    and covered: "(v, ctx) \<in> result_keys r"
+  shows "lookup_context_result r v ctx = Covered Bot"
+proof -
+  have eq: "lookup_context_result r v ctx = Covered (result_at r v ctx)"
+    using covered by simp
+  have "result_at r v ctx = Bot"
+    using bot eq unfolding result_node_is_bottom_def by blast
+  with eq show ?thesis by simp
+qed
+
+lemma result_node_is_bottom_iff_keys:
+  "result_node_is_bottom r v \<longleftrightarrow>
+     (\<forall>ctx. (v, ctx) \<in> result_keys r \<longrightarrow> result_at r v ctx = Bot)"
+  unfolding result_node_is_bottom_def
+  by (auto simp: lookup_context_result_eq_Covered_iff)
+
+lemma gamma_point_eq_gamma_lift:
+  "gamma_point p = gamma_lift (\<lambda>st. \<lbrakk>st\<rbrakk>) p"
+  unfolding gamma_point_def gamma_lift_def ..
+
+lemma reported_covered_unreachable_empty_point:
+  assumes lookup: "lookup_context_result r v ctx = Covered Bot"
+    and sound: "C \<subseteq> gamma_point (lookup_context r v ctx)"
+  shows "C = {}"
+  using sound unfolding gamma_point_eq_gamma_lift
+  by (rule reported_covered_unreachable_empty[OF lookup])
+
+text \<open>
+  What the report's own flag is worth: with coverage in hand it identifies
+  \<^term>\<open>Covered Bot\<close>, and without it, nothing. This is the intended way to
+  reach @{thm [source] reported_covered_unreachable_empty} from a report entry.
+\<close>
+
+text \<open>
+  For a context-insensitive result there is only one context to quantify over,
+  so the report's own flag already gives the node predicate --- no coverage
+  side condition, because the uncovered case is the vacuous one the predicate
+  permits. This is what connects a printed \<open>unreachable\<close> column to the
+  node-level theorems: the flag is what the CLI computes, and
+  \<^const>\<open>result_node_is_bottom\<close> is what they assume.
+\<close>
+
+lemma report_flag_imp_result_node_is_bottom:
+  fixes r :: "(unit, 'a::bot) analysis_result"
+  assumes flag: "fst (report_lifted_state (lookup_context r v ()))"
+  shows "result_node_is_bottom r v"
+proof (rule result_node_is_bottomI)
+  fix ctx :: unit and a
+  assume cov: "lookup_context_result r v ctx = Covered a"
+  then have keys: "(v, ctx) \<in> result_keys r" and val: "result_at r v ctx = a"
+    by (simp_all add: lookup_context_result_eq_Covered_iff)
+  have unit_bot: "lookup_context r v () = Bot"
+    using flag by (simp add: report_lifted_state_unreachable_iff)
+  then have "lookup_context r v ctx = Bot"
+    by (cases ctx) simp
+  then show "a = Bot"
+    using keys val unfolding lookup_context_def by simp
+qed
+
+lemma report_flag_covered_eq_Covered_Bot:
+  fixes r :: "('ctx, 'a::bot) analysis_result"
+  assumes covered: "(v, ctx) \<in> result_keys r"
+    and flag: "fst (report_lifted_state (lookup_context r v ctx))"
+  shows "lookup_context_result r v ctx = Covered Bot"
+  using covered flag
+  by (simp add: report_lifted_state_unreachable_iff lookup_context_def)
+
 lemma lookup_context_LiftedD [dest]:
   "lookup_context r v ctx = Lifted st \<Longrightarrow> ctx \<in> contexts_at r v"
   using lookup_context_absent by fastforce

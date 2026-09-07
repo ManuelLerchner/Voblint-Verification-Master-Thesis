@@ -1,8 +1,10 @@
 theory Run_Analysis_Sound
   imports
-    "Voblint_Exec.DG_Local_State_Exec"
-    "Voblint_Exec.Exec_DG_Generator"
-    "Voblint_Exec.Routed_Domain_Exec"
+    "Voblint_Exec.DG_Local_State_Exec_Refinement"
+    "Voblint_Framework.Routed_Unit_Generator"
+    "Voblint_Framework.DG_Reader_Transport"
+    "Voblint_Exec.Ownership_Split_Exec"
+    "Voblint_Exec.Routed_Exec_Refinement"
     "Voblint_Framework.Routed_Context_Unit"
     "Voblint_Framework.Routed_Analysis_Sound"
     "Voblint_Solver.TD_Solver_Bridge"
@@ -44,7 +46,7 @@ text \<open>
   A context-insensitive analysis is the routed protocol at the unit context:
   every call routes to \<^const>\<open>route_unit\<close>, the seed key is \<^const>\<open>Activation_Seed\<close>,
   the analysis global is \<^const>\<open>Analysis_Global\<close>, and targets resolve statically.
-  \<^const>\<open>unit_routed_eqs\<close> (\<^theory>\<open>Voblint_Exec.Exec_DG_Generator\<close>) is that generator
+  \<^const>\<open>unit_routed_eqs\<close> (\<^theory>\<open>Voblint_Framework.Routed_Unit_Generator\<close>) is that generator
   at an arbitrary specification. There is no second call protocol; both registration
   locales below name this one constant at their own specification and the compiled
   graph, and an executable run names it through its interpretation.
@@ -119,7 +121,7 @@ text \<open>
 text \<open>
   \<open>gamma_ownership_split_exec\<close> is the executable-carrier sibling of \<open>gamma_ownership_split gs\<close>, reading
   its two arguments back through \<open>fun_of_exec_dg_st_for\<close> first --- the diagonal
-  analogue of \<^theory>\<open>Voblint_Exec.DG_Local_State_Exec\<close>'s \<open>gamma_exec\<close>.
+  analogue of \<^theory>\<open>Voblint_Exec.DG_Local_State_Exec_Refinement\<close>'s \<open>gamma_exec\<close>.
   \<open>run_source_sound\<close>/\<open>collect_sound\<close> read the solved system at this carrier
   directly, so no solved system is ever transported to the abstract one.
 \<close>
@@ -498,7 +500,7 @@ text \<open>
   The canonical executable Base analysis: whole-state \<open>D\<close> lifted for reachability,
   \<open>G\<close> the same type as \<open>D\<close> -- the only shape either registered instance
   (Sign, Parity) actually needs, and the shape \<^locale>\<open>routed_dg_domain_exec\<close>
-  (\<^theory>\<open>Voblint_Exec.DG_Local_State_Exec\<close>) already proves sound at the executable
+  (\<^theory>\<open>Voblint_Exec.DG_Local_State_Exec_Refinement\<close>) already proves sound at the executable
   carrier. A registered domain supplies only its eight transfer operations,
   \<open>tf_st\<close>, \<open>enter_st\<close> and \<open>empty_pred\<close>
   and their three primitive commute facts; this locale's \<open>sublocale\<close> discharges
@@ -556,7 +558,7 @@ begin
 
 text \<open>
   The packaging correspondence and its executable-carrier soundness pullback
-  are \<open>routed_dg_domain_exec\<close>'s own content (\<open>Voblint_Exec.DG_Local_State_Exec\<close>):
+  are \<open>routed_dg_domain_exec\<close>'s own content (\<open>Voblint_Exec.DG_Local_State_Exec_Refinement\<close>):
   discharging its three assumptions from this locale's own commute facts gets
   \<open>sound_dg_spec_core_st\<close> for free, so no transport of a solved system between
   carriers is needed here at all -- the solver's own executable post-solution

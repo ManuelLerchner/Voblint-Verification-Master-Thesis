@@ -21,7 +21,7 @@ text \<open>
 
 theory Exec_Sign_DG_Run
   imports
-    "Voblint_Exec.DG_Local_State_Exec"
+    "Voblint_Exec.DG_Local_State_Exec_Refinement"
     "Voblint_Analysis_Sign.Sign_Exec"
     "Voblint_Solver.TD_Solver_Bridge"
     "TD.TD_side_upd_rule"

@@ -1,6 +1,8 @@
 theory Example_Interval_DG_Seed_Join_Recursion
   imports
-    "Voblint_Exec.Exec_DG_Generator"
+    "Voblint_Framework.Routed_Unit_Generator"
+    "Voblint_Framework.DG_Reader_Transport"
+    "Voblint_Exec.Ownership_Split_Exec"
     "Voblint_Analysis_Interval.Interval_Exec"
     "Voblint_Solver.TD_Solver_Bridge"
     "Voblint_CFG.CFG_Prune"

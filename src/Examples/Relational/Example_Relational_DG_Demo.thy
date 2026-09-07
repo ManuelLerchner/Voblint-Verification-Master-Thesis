@@ -1,6 +1,8 @@
 theory Example_Relational_DG_Demo
   imports
-    "Voblint_Exec.Exec_DG_Generator"
+    "Voblint_Framework.Routed_Unit_Generator"
+    "Voblint_Framework.DG_Reader_Transport"
+    "Voblint_Exec.Ownership_Split_Exec"
     "Voblint_Analysis_Relational.Rel_Order_Domain"
     "Voblint_Analysis_Interval.Interval_Transfer"
     "Voblint_Analysis_Interval.Interval_Exec"
@@ -93,7 +95,7 @@ lemma demo_ivl_terminates:
 subsection \<open>The relational analysis, on the very same CFG, generator, and solver\<close>
 
 text \<open>\<open>rel_order_spec\<close> is already both the sound \<^emph>\<open>and\<close> the executable
-  specification -- \<open>relc\<close> needed no \<open>Exec_St\<close>-style refinement layer,
+  specification -- \<open>relc\<close> needed no \<open>Exec_St_Transfer\<close>-style refinement layer,
   so \<open>unit_routed_eqs\<close> is applied to it directly, with no bridging step and no
   parallel generator.\<close>
 

@@ -1,5 +1,5 @@
 theory Interval_Exec
-  imports "Voblint_Exec.Exec_Refinement" "Voblint_Analysis_Base.Numeric_Ops" Interval_Domain
+  imports "Voblint_Exec.Exec_St_Restriction_Refinement" "Voblint_Analysis_Base.Numeric_Ops" Interval_Domain
 begin
 
 section \<open>Interval executable transfer mirror\<close>
@@ -10,7 +10,7 @@ instance ivl :: bounded_warrowing ..
 text \<open>
   Executable mirror of @{const ivl_tf_abs} on @{typ "ivl resolved_st_q"}, following
   the sign-domain pattern in \<open>Sign_Exec\<close>. Commutation lemmas hook
-  into the generic @{theory Voblint_Exec.Exec_Refinement} transport; the certified
+  into the generic @{theory Voblint_Exec.Exec_St_Restriction_Refinement} transport; the certified
   end-to-end soundness theory built on this mirror lives in
   \<open>Interval_Analyses\<close>, mirroring \<open>Sign_Analyses\<close>.
 \<close>
@@ -285,7 +285,7 @@ proof -
     case True
     then show ?thesis
       unfolding shape shape_abs True
-      by (simp add: val_agree location_of_def lookup_resolved_st_q_update_same)
+      by (simp add: val_agree location_of_def lookup_resolved_st_q_update)
   next
     case False
     then have neq_x: "location_vname location \<noteq> x"
@@ -293,7 +293,7 @@ proof -
     show ?thesis
       unfolding shape shape_abs
       using agree[OF location_in] False neq_x
-      by (simp add: lookup_resolved_st_q_update_diff)
+      by (simp add: lookup_resolved_st_q_update)
   qed
 qed
 

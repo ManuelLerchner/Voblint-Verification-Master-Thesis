@@ -112,7 +112,7 @@ proof -
     unfolding cfg_eq by (rule activation_collect_unit_eq_ltr_collect[symmetric])
   have result_eq: "lookup_context (analyse_int_ctx_result_warrow_for mode pgs p) v ()
       = (if (v, ()) \<in> fst (int_conf_sol_prog_warrow mode pgs p)
-         then normalize_point pgs
+         then readback_result_value pgs
                 (canonicalize_lift empty_pred
                   (locals (snd (int_conf_sol_prog_warrow mode pgs p) (Inl (v, ())))))
          else Bot)"
@@ -125,14 +125,14 @@ proof -
              (map_lift (fun_of_resolved_st_q_for pgs)))
           v ()
       = (if (v, ()) \<in> fst (int_conf_sol_warrow mode empty_pred pgs (prog_table p) (prog_procs p))
-         then normalize_point pgs
+         then readback_result_value pgs
                 (canonicalize_lift empty_pred
                   (locals (snd (int_conf_sol_warrow mode empty_pred pgs (prog_table p) (prog_procs p))
                     (Inl (v, ())))))
          else Bot)"
     by (rule int_conf_analyse_result_eq_warrow[OF solves' exact entry_cov' fwd_ok' call_fwd_ok' comb_fwd_ok'])
   have adapter_eq: "(if (v, ()) \<in> fst (int_conf_sol_prog_warrow mode pgs p)
-         then normalize_point pgs
+         then readback_result_value pgs
                 (canonicalize_lift empty_pred
                   (locals (snd (int_conf_sol_prog_warrow mode pgs p) (Inl (v, ())))))
          else Bot)

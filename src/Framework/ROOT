@@ -23,6 +23,8 @@ session Voblint_Framework in "." = "Voblint_CFG" +
     State_Restriction
     DG_Ownership_Split_Spec
     DG_Keyed_Generator
+    Routed_Unit_Generator
+    DG_Reader_Transport
     Activation_Backbone
     DG_Ctx_Activation
     Routed_Call_Trees
@@ -33,6 +35,7 @@ session Voblint_Framework in "." = "Voblint_CFG" +
     (* Domain-generic solved-result table: per-point reachability and the
        per-context/per-node lookup surface downstream consumers read. *)
     Analysis_Result
+    Seed_Global_Keys
     (* Ordinary __goblint_assert checks: store-only checks, with no
        ghost-domain or additional trace-projection dependency. *)
     Checks

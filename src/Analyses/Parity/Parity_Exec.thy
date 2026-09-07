@@ -1,5 +1,5 @@
 theory Parity_Exec
-  imports "Voblint_Exec.Exec_Refinement" "Voblint_Analysis_Base.Numeric_Ops" Parity_Transfer
+  imports "Voblint_Exec.Exec_St_Restriction_Refinement" "Voblint_Analysis_Base.Numeric_Ops" Parity_Transfer
 begin
 
 section \<open>Parity executable seam: transfer mirror and commutation\<close>

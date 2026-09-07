@@ -210,6 +210,125 @@ Spike before committing to it.
 
 ## Decisions and corrections
 
+- 2026-09-07: Step 8 renames landed except one, which was tried and reverted.
+  `normalize_point` -> `readback_result_value`, `Exec_Refinement` ->
+  `Exec_St_Restriction_Refinement`, `Routed_Domain_Exec` ->
+  `Routed_Exec_Refinement` (30 theory files). `Exec_Refinement` is a suffix
+  substring of `DG_Local_State_Exec_Refinement`, so the rename used
+  lookaround-guarded regex and was dry-run first; a plain `sed` would have
+  produced `DG_Local_State_Exec_St_Restriction_Refinement`.
+- 2026-09-07: **`fun_of_exec_dg_st_for` stays.** An external review proposed
+  deleting the alias (`fun_of_exec_dg_st_for gs = fun_of_resolved_st_q_for gs`)
+  as pointless indirection. It is not pointless: roughly fifty proofs cite
+  `fun_of_exec_dg_st_for_def` to unfold *the alias only*, and substituting the
+  constant turns those citations into `fun_of_resolved_st_q_for_def`, which
+  unfolds the real definition into a lambda over `location_of` and breaks the
+  proof. Removing the alias produced 18 errors in `Run_Analysis_Sound` alone,
+  with more downstream. The substitution is also not reversible by search: after
+  it runs, an alias-derived `fun_of_resolved_st_q_for` is indistinguishable from
+  a genuine one, so the revert had to be reconstructed from `git diff` hunk pairs
+  (72 lines, 9 files). If the alias is ever to go, the `_def` citations must be
+  removed first, one proof at a time, under a build -- not by renaming the
+  constant. `exec_dg_st` and the alias both stay.
+
+- 2026-09-07: `Result_Normalization` split three ways by what each part depends
+  on, not by where it happened to live. `seed_global_keys`/`unit_seed_global_keys`
+  are generic in key, context and carrier type -- they never inspect a state --
+  so they became `Voblint_Framework`'s `Result/Seed_Global_Keys.thy`.
+  `normalize_point` is the executable readback and stays in `Voblint_Exec` as
+  `Exec_Result_Readback.thy`. `dg_globals_for`/`ctx_solved_for`/
+  `fst_ctx_solved_for` build a published `analysis_result` and moved *up* to
+  `Voblint_Analysis_Base` as `Result/DG_Result_Construction.thy`. Step 2.7's
+  "cannot move before the carrier does" was about moving *down* into Core, below
+  Exec; moving up into a session whose parent is already `Voblint_Exec` is a
+  different direction and needs no carrier change. All ten importers are Analyses
+  theories, so they reach the new home directly. `DG_Result_Construction` keeps
+  `Result_Normalization`'s whole import list (`Check_Report`, `CFG_Enumeration`,
+  `Compile_Invariants`) deliberately: ten downstream theories reached names
+  *through* that hub, and narrowing it is the failure I/Q cannot see.
+- 2026-09-07: **An I/Q edit that is not saved dies with the session.** Import
+  fixes to `Exec_Result_Readback` and `Seed_Global_Keys` were made through
+  `write_file`, showed clean, and were lost when I/Q restarted -- the theories
+  reverted to their unbuildable first draft. The failure surfaced downstream as
+  `Undefined constant: "normalize_point"` in a theory whose own imports were
+  correct. Save immediately after an edit that another file depends on.
+- 2026-09-07: A `get_diagnostics` result whose `node_name` begins `Draft.`
+  is not a session check. `DG_Result_Construction` reported 0 errors as
+  `Draft.DG_Result_Construction` while its `Voblint_Exec` import was in fact
+  broken; the same file reported four errors once jEdit resolved it as
+  `Voblint_Analysis_Base.DG_Result_Construction`. Read the node name before
+  believing the count.
+
+- 2026-09-07: `DG_Local_State_Exec` split into executable definitions (107 lines)
+  and `DG_Local_State_Exec_Refinement` (375 lines: the readback of one return
+  combine, `dg_reader_commute_gen_lifted_for`, the `routed_dg_domain_exec`
+  locale and everything inside it). An external review listed `entry_exec_route`
+  and `entry_exec_route_gen` for the definitions half; they are locale-local
+  definitions inside `routed_dg_domain_exec`, so they cannot leave it, and they
+  stayed with the refinement. Blast radius was larger than the two files: 18
+  import sites plus 13 checked prose antiquotations across Analyses, Soundness
+  and Examples, all pointing at a theory that no longer held the locale. Two of
+  those prose citations correctly stay on the definitions theory because they
+  cite `local_state_dg_spec_st_for_lifted`, which did not move.
+- 2026-09-07: **Host-editing a `.thy` that is open in jEdit silently invalidates
+  I/Q as a gate.** Overwriting `DG_Local_State_Exec.thy` from the shell left the
+  jEdit buffer holding the pre-split 465-line content; `get_diagnostics`
+  cheerfully reported "0 errors, 178 commands" against text that no longer
+  existed on disk, and `open_file` on an already-open path did not reload it.
+  The tell was the command count not changing across a split that removed three
+  quarters of the file. Detected by reading the buffer back and comparing with
+  disk. The repair was to redo the deletion through I/Q on the buffer's own
+  coordinates so buffer and disk agree. Creating a *new* file from the shell and
+  then opening it is safe; overwriting an *open* one is not, which is exactly
+  what the theory-file boundary rule in AGENTS.md says.
+
+- 2026-09-07: `Exec_DG_Refines` split and the name retired. The theory had two
+  unrelated jobs: the executable D/G carrier with its readback, and the
+  ownership-splitting analysis instantiated at that carrier. They are now
+  `Exec_DG_State.thy` (62 lines: `exec_dg_st`, `fun_of_exec_dg_st_for`,
+  `fun_of_dg_st_for` and its `simps`/`bot` rules) and `Ownership_Split_Exec.thy`
+  (98 lines: the three `ownership_split_*_transfer_st` definitions,
+  `ownership_split_dg_spec_st_for`, and the three dispatch-point lemmas), the
+  second importing the first. The empty subsection "The combined warrowing arity
+  for the executable state" -- a heading and a one-line `text` with no
+  declaration under it -- is gone with the split. Consumers were repointed to
+  `Ownership_Split_Exec`, which transitively supplies everything the old name
+  did, so the substitution is name-preserving rather than a narrowing.
+  `fun_of_exec_dg_st_for` is a bare alias of `fun_of_resolved_st_q_for` and an
+  external review proposed deleting it; with 85 uses across nine files that is a
+  rename, and renames are the last step of this sequence, not part of a
+  structural move. Deferred deliberately, not overlooked.
+
+- 2026-09-07: **`Exec_DG_Generator` is carrier-generic after all, and is gone.**
+  Step 2.3's finding that it is "load-bearing and stays" rested on `dg_gen_of`
+  living there; that constant no longer exists anywhere in the tree, so the
+  objection lapsed with it. Measured against the source rather than the earlier
+  note, the whole 532-line file mentioned the executable carrier exactly once,
+  in a prose comment. It is split into two `Voblint_Framework` theories --
+  `Constraints/Routed_Unit_Generator.thy` (`unit_routed_eqs`,
+  `unit_routed_eqs_buffered`) and `Constraints/DG_Reader_Transport.thy`
+  (`fun_of_dg_st_gen`, the `dg_reader_commute_gen` locale and the whole
+  tree/enter/side commute development, 197 commands) -- both of which elaborate
+  with `Routed_Context_Unit` as their only import, which is the evidence that
+  nothing in them needed Exec. No facade was left: the nine consumers were
+  repointed to `Exec_DG_Refines` plus the two new theories, a strict superset of
+  what they saw through the old hub, so no name could be lost silently. The two
+  checked prose antiquotations (`Run_Analysis_Sound`, `Voblint.thy`) were
+  repointed too -- those fail loudly, unlike a bare cartouche, and are why the
+  move cannot half-land. `dep_aux_Side` travelled with the transport rather than
+  moving beside `dep_aux`, which lives in `vendor/td-verification/Basics_side.thy`
+  and is not ours to edit.
+- 2026-09-07: `location_vname_location_of` was declared `[simp]` twice, in
+  `Exec_St_Transfer` and again in `Exec_DG_Refines` which transitively imports
+  it; the duplicate is deleted. The restriction-readback pair was duplicated the
+  same way, but consolidating it toward the *downstream* copy (as an external
+  review proposed, on the grounds that the names read better) would have removed
+  a `[simp]` rule from the six theories that import `Exec_Refinement` without
+  reaching `Exec_DG_Refines` -- breakage no grep and no retired-identifier gate
+  can see, since none of them cite it by name. The pair keeps the `_for` names
+  but lives in `Exec_Refinement`. Lesson, again: pick the survivor by dependency
+  direction, not by which name reads better.
+
 Record here, dated, anything the build or a proof contradicted, and any
 step deliberately changed. Keep the original step text in the table above
 and mark it `superseded (see below)`.
@@ -903,3 +1022,26 @@ duplicate: the two definitions had the same body character for character, and
 twice. The export root and `codegen/regression/ocaml/main.ml` now name
 `prog_cfg`; `pixi run codegen` still has to run for the generated module to drop
 the second copy.
+
+### `Exec_St` split into four layers (2026-09-07)
+
+`Exec_St.thy` (1472 lines) interleaved four concerns and is now
+`Exec_St_Base` -> `Exec_St_Algebra` -> `Exec_St_Transfer` ->
+`Exec_St_Reachability`, each importing only what its own layer needs. Two
+things the split settled that the plan did not anticipate:
+
+- The umbrella theory was not kept. A façade re-exporting all four was written
+  first, on the reasoning that consumers should not have to change imports, but
+  there are only five importers and an empty theory carrying nothing but a
+  layer index is worse than each consumer naming the layer it uses.
+  `Exec_St.thy` is deleted; the layer index lives in `src/Exec/README.md`.
+- Two of those five importers (`Analysis_GraphViz`, `Congruence_Warrowing`)
+  reference nothing in the family at all -- they were importing it for
+  transitive dependencies. They now name `Exec_St_Reachability` to preserve
+  what they had, but both should probably drop the import entirely; that needs
+  a build to confirm and is not done here.
+
+`bot_le_resolved_st_q` and the `order_bot` instance moved into
+`Exec_St_Base` (they need nothing from Algebra), and the `semilattice_sup`
+instance now sits directly after the join rather than after all the warrowing
+machinery.

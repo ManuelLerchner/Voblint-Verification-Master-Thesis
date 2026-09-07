@@ -133,6 +133,29 @@ lemma is_empty_stateE [elim]:
   obtains x where "is_empty (\<sigma> x)"
   using assms unfolding is_empty_state_def by blast
 
+text \<open>
+  Overwriting one variable of a state that is not already empty can only make
+  it empty through the written element.  This is what lets an incremental
+  emptiness check inspect the freshly computed element alone instead of
+  searching the infinite variable space again.
+\<close>
+
+lemma is_empty_state_fun_upd_iff:
+  assumes "\<not> is_empty_state \<sigma>"
+  shows "is_empty_state (\<sigma>(x := a)) \<longleftrightarrow> is_empty a"
+proof
+  assume "is_empty_state (\<sigma>(x := a))"
+  then obtain y where "is_empty ((\<sigma>(x := a)) y)"
+    by (rule is_empty_stateE)
+  with assms show "is_empty a"
+    by (cases "y = x") auto
+next
+  assume "is_empty a"
+  then have "is_empty ((\<sigma>(x := a)) x)" by simp
+  then show "is_empty_state (\<sigma>(x := a))"
+    by (rule is_empty_stateI)
+qed
+
 lemma is_empty_state_gamma_state_empty:
   assumes "is_empty_state \<sigma>"
   shows "\<lbrakk>\<sigma>\<rbrakk> = {}"

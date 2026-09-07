@@ -1,5 +1,5 @@
 theory Numeric_Ops
-  imports "Voblint_Exec.Exec_Refinement"
+  imports "Voblint_Exec.Exec_St_Restriction_Refinement"
 begin
 
 section \<open>Generic executable branch/enter construction\<close>

@@ -98,7 +98,7 @@ proof -
     unfolding cfg_eq by (rule activation_collect_unit_eq_ltr_collect[symmetric])
   have result_eq: "lookup_context (analyse_interval_td_result_for pgs p) v ()
       = (if (v, ()) \<in> fst (interval_conf_sol_prog_warrow pgs p)
-         then normalize_point pgs
+         then readback_result_value pgs
                 (canonicalize_lift empty_pred (locals (snd (interval_conf_sol_prog_warrow pgs p) (Inl (v, ())))))
          else Bot)"
     unfolding analyse_interval_td_result_for_def analyse_interval_ctx_result_warrow_for_def lookup_context_def
@@ -111,7 +111,7 @@ proof -
              (map_lift (fun_of_resolved_st_q_for pgs)))
           v ()
       = (if (v, ()) \<in> fst (interval_conf_sol_warrow pgs empty_pred (prog_table p) (prog_procs p))
-         then normalize_point pgs
+         then readback_result_value pgs
                 (canonicalize_lift empty_pred
                   (locals (snd (interval_conf_sol_warrow pgs empty_pred (prog_table p) (prog_procs p))
                     (Inl (v, ())))))
@@ -119,7 +119,7 @@ proof -
     by (rule interval_conf_analyse_result_eq_warrow
           [OF solves' exact entry_cov' fwd_ok' call_fwd_ok' comb_fwd_ok'])
   have adapter_eq: "(if (v, ()) \<in> fst (interval_conf_sol_prog_warrow pgs p)
-         then normalize_point pgs
+         then readback_result_value pgs
                 (canonicalize_lift empty_pred (locals (snd (interval_conf_sol_prog_warrow pgs p) (Inl (v, ())))))
          else Bot)
       = lookup_context
@@ -367,7 +367,7 @@ proof -
     unfolding cfg_eq by (rule activation_collect_unit_eq_ltr_collect[symmetric])
   have result_eq: "lookup_context (analyse_interval_join_result_for (declared_global p) p) v ()
       = (if (v, ()) \<in> fst (interval_conf_sol_prog (declared_global p) p)
-         then normalize_point (declared_global p)
+         then readback_result_value (declared_global p)
                 (canonicalize_lift empty_pred
                   (locals (snd (interval_conf_sol_prog (declared_global p) p) (Inl (v, ())))))
          else Bot)"
@@ -381,14 +381,14 @@ proof -
              (map_lift (fun_of_resolved_st_q_for (declared_global p))))
           v ()
       = (if (v, ()) \<in> fst (interval_conf_sol (declared_global p) empty_pred (prog_table p) (prog_procs p))
-         then normalize_point (declared_global p)
+         then readback_result_value (declared_global p)
                 (canonicalize_lift empty_pred
                   (locals (snd (interval_conf_sol (declared_global p) empty_pred (prog_table p) (prog_procs p))
                     (Inl (v, ())))))
          else Bot)"
     by (rule interval_conf_analyse_result_eq[OF solves' exact entry_cov' fwd_ok' call_fwd_ok' comb_fwd_ok'])
   have adapter_eq: "(if (v, ()) \<in> fst (interval_conf_sol_prog (declared_global p) p)
-         then normalize_point (declared_global p)
+         then readback_result_value (declared_global p)
                 (canonicalize_lift empty_pred
                   (locals (snd (interval_conf_sol_prog (declared_global p) p) (Inl (v, ())))))
          else Bot)
@@ -621,7 +621,7 @@ proof -
     unfolding cfg_eq by (rule activation_collect_unit_eq_ltr_collect[symmetric])
   have result_eq: "lookup_context (analyse_interval_per_origin_result_for (declared_global p) p) v ()
       = (if (v, ()) \<in> fst (interval_conf_sol_prog_per_origin (declared_global p) p)
-         then normalize_point (declared_global p)
+         then readback_result_value (declared_global p)
                 (canonicalize_lift empty_pred
                   (locals (snd (interval_conf_sol_prog_per_origin (declared_global p) p) (Inl (v, ())))))
          else Bot)"
@@ -635,14 +635,14 @@ proof -
              (map_lift (fun_of_resolved_st_q_for (declared_global p))))
           v ()
       = (if (v, ()) \<in> fst (interval_conf_sol_per_origin (declared_global p) empty_pred (prog_table p) (prog_procs p))
-         then normalize_point (declared_global p)
+         then readback_result_value (declared_global p)
                 (canonicalize_lift empty_pred
                   (locals (snd (interval_conf_sol_per_origin (declared_global p) empty_pred (prog_table p) (prog_procs p))
                     (Inl (v, ())))))
          else Bot)"
     by (rule interval_conf_analyse_result_eq_per_origin[OF solves' exact entry_cov' fwd_ok' call_fwd_ok' comb_fwd_ok'])
   have adapter_eq: "(if (v, ()) \<in> fst (interval_conf_sol_prog_per_origin (declared_global p) p)
-         then normalize_point (declared_global p)
+         then readback_result_value (declared_global p)
                 (canonicalize_lift empty_pred
                   (locals (snd (interval_conf_sol_prog_per_origin (declared_global p) p) (Inl (v, ())))))
          else Bot)

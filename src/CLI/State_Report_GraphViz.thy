@@ -455,7 +455,8 @@ lemma snd_full_state_checked_payload_auto [simp]:
         analyse_int_report_with_state_def analyse_int_report_for_with_state_def
         analyse_int_result_def
         analyse_parity_report_with_state_def analyse_parity_report_for_with_state_def
-        analyse_parity_result_def analyse_with_state_default.simps tag_states_def)
+        analyse_parity_result_def analyse_with_state_default.simps tag_states_def
+        report_lifted_state_eq_case)
 
 text \<open>
   One render is one solve. The \<open>[code]\<close> equations bind the result table once,

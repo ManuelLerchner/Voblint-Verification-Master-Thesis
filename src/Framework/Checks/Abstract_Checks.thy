@@ -84,7 +84,7 @@ text \<open>
   procedure in this codebase, though: an \<open>'a abs_state\<close> is a raw function
   \<open>vname \<Rightarrow> 'a\<close> over the infinite type \<open>vname\<close>, so \<open>= bot\<close> at that level is not
   code-generable; the finite executable mirror \<open>'a resolved_st_q\<close>
-  (\<open>Voblint_Exec.Exec_St\<close>) is a \<open>quotient_type\<close> whose \<open>\<le>\<close>/\<open>=\<close> instance is a
+  (\<open>Voblint_Exec.Exec_St_Base\<close>) is a \<open>quotient_type\<close> whose \<open>\<le>\<close>/\<open>=\<close> instance is a
   \<open>lift_definition\<close> quantifying over \<open>location\<close>, with no \<open>[code]\<close> equation ---
   confirmed empirically: \<open>value \"cinit_sign_st = bot\"\<close> does not reduce, echoing
   the unevaluated term instead of \<open>True\<close>/\<open>False\<close>.

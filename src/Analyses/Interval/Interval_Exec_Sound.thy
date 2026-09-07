@@ -5,7 +5,7 @@ theory Interval_Exec_Sound
           "Voblint_CFG.CFG_Prune"
           "Voblint_VIMP.VIMP_Program"
           "Voblint_Compile.Compile_Invariants"
-          "Voblint_Exec.DG_Local_State_Exec"
+          "Voblint_Exec.DG_Local_State_Exec_Refinement"
 begin
 
 section \<open>Native D/G runtime API: an arbitrary VIMP program\<close>

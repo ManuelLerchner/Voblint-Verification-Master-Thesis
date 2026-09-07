@@ -1,6 +1,6 @@
 theory Interval_Sound
   imports
-    "Voblint_Exec.DG_Local_State_Exec"
+    "Voblint_Exec.DG_Local_State_Exec_Refinement"
     Interval_Transfer
     Interval_Exec_Sound
 begin

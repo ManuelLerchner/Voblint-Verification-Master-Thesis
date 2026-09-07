@@ -10,6 +10,7 @@ session Voblint_Analysis_Base in "." = "Voblint_Exec" +
     "Config"
     "Context"
     "Reporting"
+    "Result"
   theories
     (* Reuse: base-level locales every domain interprets *)
     Abstract_Arithmetic
@@ -29,5 +30,8 @@ session Voblint_Analysis_Base in "." = "Voblint_Exec" +
 
     (* Reporting: generic GraphViz rendering of an analysis result *)
     Analysis_GraphViz
+
+    (* Result: publishing a solved routed system as an analysis result *)
+    DG_Result_Construction
   document_files
     "root.bib"

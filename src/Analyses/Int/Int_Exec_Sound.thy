@@ -1,7 +1,7 @@
 theory Int_Exec_Sound
   imports
     "Voblint_Framework.DG_Local_State_Spec"
-    "Voblint_Exec.DG_Local_State_Exec"
+    "Voblint_Exec.DG_Local_State_Exec_Refinement"
     Int_Exec
     Int_Warrowing
     "Voblint_Compile.Compile_Invariants"

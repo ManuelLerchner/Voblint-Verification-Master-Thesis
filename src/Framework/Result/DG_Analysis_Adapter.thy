@@ -189,6 +189,85 @@ proof -
   finally show ?thesis by simp
 qed
 
+text \<open>
+  The same bridge in the vocabulary \<^theory>\<open>Voblint_Framework.Analysis_Result\<close>
+  states its lookup facts in: every covered lookup safely abstracts the
+  activation-collected stores at its key.  This is the general statement, with
+  no bottom case baked in --- the unreachability reading is one instantiation
+  of it, below.
+
+  Note what the coverage case split above establishes and this inherits: inside
+  this locale an \<^emph>\<open>uncovered\<close> key is not merely uninformative, since
+  \<^term>\<open>gammaM (sg (Inl (v, ctx)))\<close> is empty off \<^term>\<open>vars\<close> and the collect is
+  contained in it either way.  That is a property of a solve satisfying this
+  locale's assumptions, not of \<^const>\<open>lookup_context\<close>, which is why the
+  unreachability corollary still demands \<^term>\<open>Covered Bot\<close>: a caller reading a
+  result table without these assumptions in hand has no such guarantee.
+\<close>
+
+lemma analyse_result_lookup_sound:
+  fixes S0 :: "store set" and startcontext :: 'c
+  assumes entry_cov: "(cfg_entry g, startcontext) \<in> vars"
+    and s0_sound: "S0 \<subseteq> gammaDG s0d s0g"
+  shows "activation_collect gs R startcontext g S0 v ctx
+           \<subseteq> gamma_point (lookup_context analyse_result v ctx)"
+  using analyse_result_node_sound[OF entry_cov s0_sound] by simp
+
+lemma analyse_result_covered_unreachable:
+  fixes S0 :: "store set" and startcontext :: 'c
+  assumes entry_cov: "(cfg_entry g, startcontext) \<in> vars"
+    and s0_sound: "S0 \<subseteq> gammaDG s0d s0g"
+    and dead: "lookup_context_result analyse_result v ctx = Covered Bot"
+  shows "activation_collect gs R startcontext g S0 v ctx = {}"
+  by (rule reported_covered_unreachable_empty_point
+      [OF dead analyse_result_lookup_sound[OF entry_cov s0_sound]])
+
+lemma result_keys_analyse_result [simp]: "result_keys analyse_result = vars"
+  unfolding analyse_result_def by simp
+
+text \<open>
+  The node-level statement, one activation bucket at a time.  A covered context
+  is \<^const>\<open>Bot\<close> by the node predicate; an uncovered one reads \<^const>\<open>Bot\<close> from
+  \<^const>\<open>lookup_context\<close> anyway, and here that is not a shrug --- this locale's
+  own soundness already puts the collect inside an empty concretization there.
+  So every bucket is empty and so is their union.
+
+  \<^term>\<open>ltr_collect\<close> decomposes into those buckets only for a context relation
+  that comes from a function, which this locale does not assume of \<^term>\<open>R\<close>;
+  the decomposition is therefore a hypothesis, discharged by
+  \<open>ltr_collect_eq_Union_activation_of_fun\<close> at every instance whose relation has
+  that shape.
+\<close>
+
+lemma analyse_result_node_unreachable:
+  fixes S0 :: "store set" and startcontext :: 'c
+  assumes entry_cov: "(cfg_entry g, startcontext) \<in> vars"
+    and s0_sound: "S0 \<subseteq> gammaDG s0d s0g"
+    and union: "ltr_collect gs g S0 v
+                  = (\<Union>ctx. activation_collect gs R startcontext g S0 v ctx)"
+    and dead: "result_node_is_bottom analyse_result v"
+  shows "ltr_collect gs g S0 v = {}"
+proof -
+  have bucket: "activation_collect gs R startcontext g S0 v ctx = {}" for ctx
+  proof -
+    have bot: "lookup_context analyse_result v ctx = Bot"
+    proof (cases "(v, ctx) \<in> vars")
+      case True
+      have "lookup_context_result analyse_result v ctx = Covered Bot"
+        using True by (intro result_node_is_bottomD[OF dead]) simp
+      then show ?thesis unfolding lookup_context_eq_or_bot by simp
+    next
+      case False
+      then show ?thesis unfolding lookup_context_analyse_result by simp
+    qed
+    have "activation_collect gs R startcontext g S0 v ctx
+            \<subseteq> gamma_point (lookup_context analyse_result v ctx)"
+      by (rule analyse_result_lookup_sound[OF entry_cov s0_sound])
+    then show ?thesis unfolding bot by simp
+  qed
+  show ?thesis unfolding union using bucket by simp
+qed
+
 subsection \<open>The context-indexed check report\<close>
 
 text \<open>The report the CLI prints, defined at the context-indexed level rather than after the

@@ -4,9 +4,9 @@ theory Parity_Analyses
     Parity_Sound
     Parity_Classify
     Parity_Exec
-    "Voblint_Exec.Result_Normalization"
-    "Voblint_Exec.Routed_Domain_Exec"
-    "Voblint_Exec.DG_Local_State_Exec"
+    "Voblint_Analysis_Base.DG_Result_Construction"
+    "Voblint_Exec.Routed_Exec_Refinement"
+    "Voblint_Exec.DG_Local_State_Exec_Refinement"
     "Voblint_Framework.DG_Local_State_Spec"
     "Voblint_Framework.Routed_Analysis_Sound"
     "Voblint_Framework.Routed_Context"
@@ -588,7 +588,7 @@ definition analyse_parity_call_string_result_for ::
   "analyse_parity_call_string_result_for k gs p =
      Analysis_Result
        (fst (pcs_sol_prog k gs p))
-       (\<lambda>v ctx. normalize_point gs
+       (\<lambda>v ctx. readback_result_value gs
                   (canonicalize_lift (resolved_st_q_is_bot_for (declared_global_vars p))
                     (locals (snd (pcs_sol_prog k gs p) (Inl (v, ctx))))))"
 
@@ -598,7 +598,7 @@ lemma analyse_parity_call_string_result_for_code [code]:
   "analyse_parity_call_string_result_for k gs p =
      (let sol = pcs_sol_prog k gs p; gl = declared_global_vars p
       in Analysis_Result (fst sol)
-           (\<lambda>v ctx. normalize_point gs
+           (\<lambda>v ctx. readback_result_value gs
                       (canonicalize_lift (resolved_st_q_is_bot_for gl)
                         (locals (snd sol (Inl (v, ctx)))))))"
   unfolding analyse_parity_call_string_result_for_def Let_def by (rule refl)
@@ -666,7 +666,7 @@ subsection \<open>The routed equation system's own route, generic per compiled p
 
 text \<open>
   Parity's executable-carrier route: this is \<^locale>\<open>routed_dg_domain_exec\<close>'s own
-  \<open>entry_exec_route\<close>/\<open>entry_exec_route_gen\<close> (\<^theory>\<open>Voblint_Exec.DG_Local_State_Exec\<close>),
+  \<open>entry_exec_route\<close>/\<open>entry_exec_route_gen\<close> (\<^theory>\<open>Voblint_Exec.DG_Local_State_Exec_Refinement\<close>),
   restated as unconditional top-level definitions rather than reached through an
   interpretation, so the equation-system definitions below need no \<open>exact\<close> premise in
   order to be stated.
@@ -1059,7 +1059,7 @@ definition analyse_parity_entry_state_result_for ::
   "analyse_parity_entry_state_result_for gs p =
      Analysis_Result
        (fst (pctx_entry_sol_prog gs p))
-       (\<lambda>v ctx. normalize_point gs
+       (\<lambda>v ctx. readback_result_value gs
                   (canonicalize_lift (resolved_st_q_is_bot_for (declared_global_vars p))
                     (locals (snd (pctx_entry_sol_prog gs p) (Inl (v, ctx))))))"
 
@@ -1069,7 +1069,7 @@ lemma analyse_parity_entry_state_result_for_code [code]:
   "analyse_parity_entry_state_result_for gs p =
      (let sol = pctx_entry_sol_prog gs p; gl = declared_global_vars p
       in Analysis_Result (fst sol)
-           (\<lambda>v ctx. normalize_point gs
+           (\<lambda>v ctx. readback_result_value gs
                       (canonicalize_lift (resolved_st_q_is_bot_for gl)
                         (locals (snd sol (Inl (v, ctx)))))))"
   unfolding analyse_parity_entry_state_result_for_def Let_def by (rule refl)

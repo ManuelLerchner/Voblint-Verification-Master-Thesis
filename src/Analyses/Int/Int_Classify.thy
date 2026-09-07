@@ -2,7 +2,7 @@ theory Int_Classify
   imports Int_Exec_Sound "Voblint_Framework.Abstract_Checks"
     "Voblint_Domain.Backward_Numeric_Queries"
     "Voblint_Framework.Analysis_Result"
-    "Voblint_Exec.Result_Normalization"
+    "Voblint_Analysis_Base.DG_Result_Construction"
 begin
 
 hide_const phase.N

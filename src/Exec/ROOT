@@ -4,10 +4,14 @@ session Voblint_Exec in "." = "Voblint_Framework" +
     TD
     "Voblint_Compile"
   theories
-    Exec_St
-    Exec_Refinement
-    Exec_DG_Refines
-    Exec_DG_Generator
+    Exec_St_Base
+    Exec_St_Algebra
+    Exec_St_Transfer
+    Exec_St_Reachability
+    Exec_St_Restriction_Refinement
+    Exec_DG_State
+    Ownership_Split_Exec
     DG_Local_State_Exec
-    Routed_Domain_Exec
-    Result_Normalization
+    DG_Local_State_Exec_Refinement
+    Routed_Exec_Refinement
+    Exec_Result_Readback

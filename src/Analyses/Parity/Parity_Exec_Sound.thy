@@ -2,9 +2,9 @@ theory Parity_Exec_Sound
   imports
     Parity_Sound
     Parity_Exec
-    "Voblint_Exec.Result_Normalization"
-    "Voblint_Exec.DG_Local_State_Exec"
-    "Voblint_Exec.Routed_Domain_Exec"
+    "Voblint_Analysis_Base.DG_Result_Construction"
+    "Voblint_Exec.DG_Local_State_Exec_Refinement"
+    "Voblint_Exec.Routed_Exec_Refinement"
     "Voblint_Framework.Analysis_Result"
     "Voblint_Framework.Routed_Context_Unit"
     "Voblint_Solver.TD_Solver_Bridge"
@@ -80,7 +80,7 @@ section \<open>Solved-result table\<close>
 
 text \<open>
   The whole-program convenience layer, reading the raw executable solve through the same
-  \<^const>\<open>canonicalize_lift\<close>/\<^const>\<open>normalize_point\<close> boundary every other domain's result
+  \<^const>\<open>canonicalize_lift\<close>/\<^const>\<open>readback_result_value\<close> boundary every other domain's result
   table already uses. Nothing here is Parity-specific beyond the domain name: these are
   the thin monomorphic aliases the public API needs, not a second result construction.
 \<close>
@@ -125,7 +125,7 @@ definition analyse_parity_ctx_result_for ::
   "analyse_parity_ctx_result_for gs p =
      Analysis_Result
        (fst (pctx_sol_prog gs p))
-       (\<lambda>v ctx. normalize_point gs
+       (\<lambda>v ctx. readback_result_value gs
                   (canonicalize_lift (resolved_st_q_is_bot_for (declared_global_vars p))
                     (locals (snd (pctx_sol_prog gs p) (Inl (v, ctx))))))"
 
@@ -150,7 +150,7 @@ lemma analyse_parity_ctx_result_for_code [code]:
   "analyse_parity_ctx_result_for gs p =
      (let sol = pctx_sol_prog gs p; gl = declared_global_vars p
       in Analysis_Result (fst sol)
-           (\<lambda>v ctx. normalize_point gs
+           (\<lambda>v ctx. readback_result_value gs
                       (canonicalize_lift (resolved_st_q_is_bot_for gl)
                         (locals (snd sol (Inl (v, ctx)))))))"
   unfolding analyse_parity_ctx_result_for_def Let_def by (rule refl)
@@ -166,7 +166,7 @@ definition analyse_parity_ctx_result_per_origin_for ::
   "analyse_parity_ctx_result_per_origin_for gs p =
      Analysis_Result
        (fst (pctx_sol_prog_per_origin gs p))
-       (\<lambda>v ctx. normalize_point gs
+       (\<lambda>v ctx. readback_result_value gs
                   (canonicalize_lift (resolved_st_q_is_bot_for (declared_global_vars p))
                     (locals (snd (pctx_sol_prog_per_origin gs p) (Inl (v, ctx))))))"
 
@@ -176,7 +176,7 @@ lemma analyse_parity_ctx_result_per_origin_for_code [code]:
   "analyse_parity_ctx_result_per_origin_for gs p =
      (let sol = pctx_sol_prog_per_origin gs p; gl = declared_global_vars p
       in Analysis_Result (fst sol)
-           (\<lambda>v ctx. normalize_point gs
+           (\<lambda>v ctx. readback_result_value gs
                       (canonicalize_lift (resolved_st_q_is_bot_for gl)
                         (locals (snd sol (Inl (v, ctx)))))))"
   unfolding analyse_parity_ctx_result_per_origin_for_def Let_def by (rule refl)

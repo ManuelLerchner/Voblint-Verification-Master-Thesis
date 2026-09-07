@@ -1,5 +1,5 @@
 theory Int_Exec
-  imports "Voblint_Exec.Exec_Refinement" "Voblint_Analysis_Base.Numeric_Ops"
+  imports "Voblint_Exec.Exec_St_Restriction_Refinement" "Voblint_Analysis_Base.Numeric_Ops"
     Int_Transfer
 begin
 
@@ -30,7 +30,7 @@ lemma lookup_top_int_dom_st [simp]:
   by transfer (auto simp: location_of_def split: if_splits)
 
 lemma fun_of_st_top_int_dom_st:
-  "fun_of_resolved_st_q_for is_global top_int_dom_st = (%_. top)"
+  "fun_of_resolved_st_q_for is_global top_int_dom_st = (\<lambda>_. top)"
   by (rule ext) simp
 
 lift_definition cinit_int_dom_st :: "int_dom resolved_st_q" is "(top, int_dom_of_int 0, [])" .
@@ -43,7 +43,7 @@ lemma lookup_cinit_int_dom_st_for [simp]:
 
 lemma fun_of_st_cinit_int_dom_st_for:
   "fun_of_resolved_st_q_for gs cinit_int_dom_st =
-   (%x. if gs x then int_dom_of_int 0 else top)"
+   (\<lambda>x. if gs x then int_dom_of_int 0 else top)"
   by (rule ext) simp
 
 subsection \<open>Refine_Never\<close>
@@ -71,7 +71,7 @@ where
 lemma int_dom_enter_never_st_for_eq [simp]:
   "int_dom_enter_never_st_for gs ci s =
     bind_formals_resolved_q gs (ci_formals ci)
-      (map (%e. aval_int_dom Refine_Never e
+      (map (\<lambda>e. aval_int_dom Refine_Never e
         (fun_of_resolved_st_q_for gs s)) (ci_args ci))
       (enter_frame_D_resolved_q top s)"
   by (simp add: int_dom_enter_never_st_for_def generic_enter_st_for_def int_dom_ops_never_def)
@@ -178,7 +178,7 @@ where
 lemma int_dom_enter_once_st_for_eq [simp]:
   "int_dom_enter_once_st_for gs ci s =
     bind_formals_resolved_q gs (ci_formals ci)
-      (map (%e. aval_int_dom Refine_Once e
+      (map (\<lambda>e. aval_int_dom Refine_Once e
         (fun_of_resolved_st_q_for gs s)) (ci_args ci))
       (enter_frame_D_resolved_q top s)"
   by (simp add: int_dom_enter_once_st_for_def generic_enter_st_for_def int_dom_ops_once_def)
@@ -285,7 +285,7 @@ where
 lemma int_dom_enter_fixpoint_st_for_eq [simp]:
   "int_dom_enter_fixpoint_st_for gs ci s =
     bind_formals_resolved_q gs (ci_formals ci)
-      (map (%e. aval_int_dom Refine_Fixpoint e
+      (map (\<lambda>e. aval_int_dom Refine_Fixpoint e
         (fun_of_resolved_st_q_for gs s)) (ci_args ci))
       (enter_frame_D_resolved_q top s)"
   by (simp add: int_dom_enter_fixpoint_st_for_def generic_enter_st_for_def int_dom_ops_fixpoint_def)

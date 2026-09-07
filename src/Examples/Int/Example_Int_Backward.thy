@@ -11,7 +11,7 @@ text \<open>
 \<close>
 
 definition test_env_top :: "int_dom abs_state" where
-  "test_env_top = (%_. top)"
+  "test_env_top = (\<lambda>_. top)"
 
 subsection \<open>x + 1 = 3 ==> x = 2\<close>
 
@@ -78,7 +78,7 @@ lemma bfilter_int_dom_once_self_refine_exact:
   "bfilter_int_dom_once
      (Eq (V (STR ''x'')) (V (STR ''x'')))
      True
-     ((%_. top)((STR ''x'') := int_dom_sipc STop (Ivl (Fin (-1)) (Fin 0)) PEven top))
+     ((\<lambda>_. top)((STR ''x'') := int_dom_sipc STop (Ivl (Fin (-1)) (Fin 0)) PEven top))
      (STR ''x'') =
    int_dom_sipc SZero (Ivl (Fin 0) (Fin 0)) PEven (mk_congruence 0 2)"
   by eval
@@ -89,7 +89,7 @@ lemma bfilter_int_dom_once_congruence_tightens_interval:
   "bfilter_int_dom_once
      (Eq (V (STR ''x'')) (V (STR ''x'')))
      True
-     ((%_. top)
+     ((\<lambda>_. top)
        ((STR ''x'') :=
           int_dom_sipc STop (Ivl (Fin 0) (Fin 10)) PTop (mk_congruence 1 4)))
      (STR ''x'') =
@@ -106,7 +106,7 @@ lemma bfilter_int_dom_never_congruence_unused:
   "bfilter_int_dom_never
      (Eq (V (STR ''x'')) (V (STR ''x'')))
      True
-     ((%_. top)
+     ((\<lambda>_. top)
        ((STR ''x'') :=
           int_dom_sipc STop (Ivl (Fin 0) (Fin 10)) PTop (mk_congruence 1 4)))
      (STR ''x'') =

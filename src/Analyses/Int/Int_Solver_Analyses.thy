@@ -261,7 +261,7 @@ definition analyse_int_ctx_result_per_origin_for ::
   "analyse_int_ctx_result_per_origin_for mode gs p =
      Analysis_Result
        (fst (int_conf_sol_prog_per_origin mode gs p))
-       (\<lambda>v ctx. normalize_point gs
+       (\<lambda>v ctx. readback_result_value gs
                   (canonicalize_lift (resolved_st_q_is_bot_for (declared_global_vars p))
                     (locals (snd (int_conf_sol_prog_per_origin mode gs p) (Inl (v, ctx))))))"
 
@@ -271,7 +271,7 @@ lemma analyse_int_ctx_result_per_origin_for_code [code]:
   "analyse_int_ctx_result_per_origin_for mode gs p =
      (let sol = int_conf_sol_prog_per_origin mode gs p; gl = declared_global_vars p
       in Analysis_Result (fst sol)
-           (\<lambda>v ctx. normalize_point gs
+           (\<lambda>v ctx. readback_result_value gs
                       (canonicalize_lift (resolved_st_q_is_bot_for gl)
                         (locals (snd sol (Inl (v, ctx)))))))"
   unfolding analyse_int_ctx_result_per_origin_for_def Let_def by (rule refl)
@@ -301,7 +301,7 @@ definition analyse_int_ctx_result_warrow_for ::
   "analyse_int_ctx_result_warrow_for mode gs p =
      Analysis_Result
        (fst (int_conf_sol_prog_warrow mode gs p))
-       (\<lambda>v ctx. normalize_point gs
+       (\<lambda>v ctx. readback_result_value gs
                   (canonicalize_lift (resolved_st_q_is_bot_for (declared_global_vars p))
                     (locals (snd (int_conf_sol_prog_warrow mode gs p) (Inl (v, ctx))))))"
 
@@ -329,7 +329,7 @@ lemma analyse_int_ctx_result_warrow_for_code [code]:
   "analyse_int_ctx_result_warrow_for mode gs p =
      (let sol = int_conf_sol_prog_warrow mode gs p; gl = declared_global_vars p
       in Analysis_Result (fst sol)
-           (\<lambda>v ctx. normalize_point gs
+           (\<lambda>v ctx. readback_result_value gs
                       (canonicalize_lift (resolved_st_q_is_bot_for gl)
                         (locals (snd sol (Inl (v, ctx)))))))"
   unfolding analyse_int_ctx_result_warrow_for_def Let_def by (rule refl)
@@ -361,7 +361,7 @@ definition analyse_int_ctx_result_wpo_for ::
   "analyse_int_ctx_result_wpo_for mode gs p =
      Analysis_Result
        (fst (int_conf_sol_prog_wpo mode gs p))
-       (\<lambda>v ctx. normalize_point gs
+       (\<lambda>v ctx. readback_result_value gs
                   (canonicalize_lift (resolved_st_q_is_bot_for (declared_global_vars p))
                     (locals (snd (int_conf_sol_prog_wpo mode gs p) (Inl (v, ctx))))))"
 
@@ -371,7 +371,7 @@ lemma analyse_int_ctx_result_wpo_for_code [code]:
   "analyse_int_ctx_result_wpo_for mode gs p =
      (let sol = int_conf_sol_prog_wpo mode gs p; gl = declared_global_vars p
       in Analysis_Result (fst sol)
-           (\<lambda>v ctx. normalize_point gs
+           (\<lambda>v ctx. readback_result_value gs
                       (canonicalize_lift (resolved_st_q_is_bot_for gl)
                         (locals (snd sol (Inl (v, ctx)))))))"
   unfolding analyse_int_ctx_result_wpo_for_def Let_def by (rule refl)
@@ -422,7 +422,7 @@ definition analyse_int_call_string_result_for_warrow ::
   "analyse_int_call_string_result_for_warrow k gs p =
      Analysis_Result
        (fst (ics_sol_prog_warrow k gs p))
-       (\<lambda>v ctx. normalize_point gs
+       (\<lambda>v ctx. readback_result_value gs
                   (canonicalize_lift (resolved_st_q_is_bot_for (declared_global_vars p))
                     (locals (snd (ics_sol_prog_warrow k gs p) (Inl (v, ctx))))))"
 
@@ -432,7 +432,7 @@ lemma analyse_int_call_string_result_for_warrow_code [code]:
   "analyse_int_call_string_result_for_warrow k gs p =
      (let sol = ics_sol_prog_warrow k gs p; gl = declared_global_vars p
       in Analysis_Result (fst sol)
-           (\<lambda>v ctx. normalize_point gs
+           (\<lambda>v ctx. readback_result_value gs
                       (canonicalize_lift (resolved_st_q_is_bot_for gl)
                         (locals (snd sol (Inl (v, ctx)))))))"
   unfolding analyse_int_call_string_result_for_warrow_def Let_def by (rule refl)
@@ -500,7 +500,7 @@ definition analyse_int_entry_state_result_for_warrow ::
   "analyse_int_entry_state_result_for_warrow gs p =
      Analysis_Result
        (fst (int_conf_entry_sol_prog_warrow gs p))
-       (\<lambda>v ctx. normalize_point gs
+       (\<lambda>v ctx. readback_result_value gs
                   (canonicalize_lift (resolved_st_q_is_bot_for (declared_global_vars p))
                     (locals (snd (int_conf_entry_sol_prog_warrow gs p) (Inl (v, ctx))))))"
 
@@ -510,7 +510,7 @@ lemma analyse_int_entry_state_result_for_warrow_code [code]:
   "analyse_int_entry_state_result_for_warrow gs p =
      (let sol = int_conf_entry_sol_prog_warrow gs p; gl = declared_global_vars p
       in Analysis_Result (fst sol)
-           (\<lambda>v ctx. normalize_point gs
+           (\<lambda>v ctx. readback_result_value gs
                       (canonicalize_lift (resolved_st_q_is_bot_for gl)
                         (locals (snd sol (Inl (v, ctx)))))))"
   unfolding analyse_int_entry_state_result_for_warrow_def Let_def by (rule refl)
