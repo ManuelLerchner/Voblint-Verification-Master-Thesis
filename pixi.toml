@@ -165,6 +165,13 @@ retired-identifiers = "python3 scripts/check_retired_identifiers.py"
 # the assumption over it, so the locale keeps building while the assumption
 # stops saying anything.
 locale-parameters = "python3 scripts/check_locale_parameters.py"
+
+# Voblint_Analysis_Relational claims nothing below the domain layer needs a
+# pointwise abstract state. Nothing in the session graph enforces it:
+# Voblint_Analysis_Base is Relational's parent, so Base/Nonrelational/ is
+# already available to it and only the absence of an import keeps it out.
+# This makes that absence checkable, transitively.
+relational-boundary = "python3 scripts/check_relational_boundary.py"
 docs-overview = "python3 scripts/extract_definitions.py --dump docs/generated/DEFINITIONS_OVERVIEW.md"
 
 # Size and shape of the .thy corpus: lines per session, per theory, and per
@@ -189,6 +196,7 @@ ci = { depends-on = [
   "thy-prose-refs",
   "retired-identifiers",
   "locale-parameters",
+  "relational-boundary",
   "build",
   "codegen-check",
   "codegen-api",

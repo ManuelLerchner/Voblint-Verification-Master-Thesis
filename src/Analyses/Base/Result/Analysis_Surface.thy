@@ -54,15 +54,52 @@ definition report :: "imp_prog \<Rightarrow> check_report_entry list" where
   "report p = classify_checks (prog_cfg p) (state_at p) classify"
 
 text \<open>
-  The same table read with its reachability kept: \<open>True\<close> marks a node the solve never
-  covered, which a report consumer suppresses instead of printing the bottom state's
-  vacuous verdict. Exact for the same reason \<^const>\<open>state_at\<close> is -- it is the
-  \<^const>\<open>lookup_context\<close> case split itself, not a second test on the raw unknown.
+  The same table read with its \<^const>\<open>Bot\<close> entries kept visible: \<open>True\<close> marks a
+  point whose entry in \<open>table\<close> is \<^const>\<open>Bot\<close>, which a report consumer suppresses
+  instead of printing the bottom state's vacuous verdict. Exact for the same reason
+  \<^const>\<open>state_at\<close> is -- it is the \<^const>\<open>lookup_context\<close> case split itself, not a
+  second test on the raw unknown (\<open>fst_reach_state_at\<close> states exactly that).
+
+  The flag is a fact about the table and nothing more. This locale assumes nothing
+  whatever about \<open>table\<close>, so it cannot and does not say that such a point is one no
+  solver covered, or one no concrete run reaches. A caller wanting either reading owes
+  it from its own soundness theorem about the table it supplies.
 \<close>
 
 definition reach_state_at :: "imp_prog \<Rightarrow> pp \<Rightarrow> bool \<times> 'a" where
   "reach_state_at p v =
      (case lookup_context (table p) v () of Bot \<Rightarrow> (True, bot_state) | Lifted st \<Rightarrow> (False, st))"
+
+text \<open>
+  The two readings agree on the state: \<open>reach_state_at\<close> adds a column and changes no
+  verdict, so a report that shows reachability classifies exactly what
+  \<^const>\<open>report\<close> does. Without this the two definitions are only visibly similar,
+  and every caller reproves it by unfolding both.
+\<close>
+
+lemma state_at_Bot [simp]:
+  "lookup_context (table p) v () = Bot \<Longrightarrow> state_at p v = bot_state"
+  by (simp add: state_at_def)
+
+lemma state_at_Lifted [simp]:
+  "lookup_context (table p) v () = Lifted st \<Longrightarrow> state_at p v = st"
+  by (simp add: state_at_def)
+
+lemma reach_state_at_Bot [simp]:
+  "lookup_context (table p) v () = Bot \<Longrightarrow> reach_state_at p v = (True, bot_state)"
+  by (simp add: reach_state_at_def)
+
+lemma reach_state_at_Lifted [simp]:
+  "lookup_context (table p) v () = Lifted st \<Longrightarrow> reach_state_at p v = (False, st)"
+  by (simp add: reach_state_at_def)
+
+lemma snd_reach_state_at [simp]:
+  "snd (reach_state_at p v) = state_at p v"
+  by (simp add: reach_state_at_def state_at_def split: lifted.splits)
+
+lemma fst_reach_state_at [simp]:
+  "fst (reach_state_at p v) = (lookup_context (table p) v () = Bot)"
+  by (simp add: reach_state_at_def split: lifted.splits)
 
 definition report_with_state :: "imp_prog \<Rightarrow> (pp \<times> exp \<times> check_result \<times> bool \<times> 'a) list" where
   "report_with_state p =

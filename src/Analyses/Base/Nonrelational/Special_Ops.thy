@@ -26,45 +26,19 @@ record 'a special_ops =
 locale sound_special_ops =
   fixes ops :: "'a::sound_domain special_ops"
     and ev  :: "exp => (vname => 'a) => 'a"
-  assumes special_min_sound_for[intro]:
-    "\<forall>i j p q. i \<in> gamma p \<longrightarrow> j \<in> gamma q \<longrightarrow> min i j \<in> gamma (special_min ops p q)"
-  assumes special_max_sound_for[intro]:
-    "\<forall>i j p q. i \<in> gamma p \<longrightarrow> j \<in> gamma q \<longrightarrow> max i j \<in> gamma (special_max ops p q)"
-  assumes special_min_mono_for[intro]:
-    "\<forall>p1 p2 q1 q2. p1 \<le> p2 \<longrightarrow> q1 \<le> q2 \<longrightarrow> special_min ops p1 q1 \<le> special_min ops p2 q2"
-  assumes special_max_mono_for[intro]:
-    "\<forall>p1 p2 q1 q2. p1 \<le> p2 \<longrightarrow> q1 \<le> q2 \<longrightarrow> special_max ops p1 q1 \<le> special_max ops p2 q2"
-  assumes ev_sound_for[intro]:
-    "\<forall>(e::exp) s \<sigma>. (\<forall>x. s x \<in> gamma (\<sigma> x)) \<longrightarrow> aval e s \<in> gamma (ev e \<sigma>)"
-  assumes ev_mono_for[intro]:
-    "\<forall>(e::exp) \<sigma>1 \<sigma>2. \<sigma>1 \<le> \<sigma>2 \<longrightarrow> ev e \<sigma>1 \<le> ev e \<sigma>2"
-  assumes gamma_top:
-    "gamma (top :: 'a) = UNIV"
+  assumes special_min_sound[intro]:
+    "i \<in> gamma p \<Longrightarrow> j \<in> gamma q \<Longrightarrow> min i j \<in> gamma (special_min ops p q)"
+  assumes special_max_sound[intro]:
+    "i \<in> gamma p \<Longrightarrow> j \<in> gamma q \<Longrightarrow> max i j \<in> gamma (special_max ops p q)"
+  assumes special_min_mono[intro]:
+    "p1 \<le> p2 \<Longrightarrow> q1 \<le> q2 \<Longrightarrow> special_min ops p1 q1 \<le> special_min ops p2 q2"
+  assumes special_max_mono[intro]:
+    "p1 \<le> p2 \<Longrightarrow> q1 \<le> q2 \<Longrightarrow> special_max ops p1 q1 \<le> special_max ops p2 q2"
+  assumes ev_sound[intro]:
+    "(\<forall>x. s x \<in> gamma (\<sigma> x)) \<Longrightarrow> aval e s \<in> gamma (ev e \<sigma>)"
+  assumes ev_mono[intro]:
+    "\<sigma>1 \<le> \<sigma>2 \<Longrightarrow> ev e \<sigma>1 \<le> ev e \<sigma>2"
 begin
-
-lemma special_min_soundD [dest]:
-  "i \<in> gamma p \<Longrightarrow> j \<in> gamma q \<Longrightarrow> min i j \<in> gamma (special_min ops p q)"
-  using special_min_sound_for by blast
-
-lemma special_max_soundD [dest]:
-  "i \<in> gamma p \<Longrightarrow> j \<in> gamma q \<Longrightarrow> max i j \<in> gamma (special_max ops p q)"
-  using special_max_sound_for by blast
-
-lemma special_min_monoD [dest]:
-  "p1 \<le> p2 \<Longrightarrow> q1 \<le> q2 \<Longrightarrow> special_min ops p1 q1 \<le> special_min ops p2 q2"
-  using special_min_mono_for by blast
-
-lemma special_max_monoD [dest]:
-  "p1 \<le> p2 \<Longrightarrow> q1 \<le> q2 \<Longrightarrow> special_max ops p1 q1 \<le> special_max ops p2 q2"
-  using special_max_mono_for by blast
-
-lemma ev_soundD [dest]:
-  "(\<forall>x. s x \<in> gamma (\<sigma> x)) \<Longrightarrow> aval e s \<in> gamma (ev e \<sigma>)"
-  using ev_sound_for by blast
-
-lemma ev_monoD [dest]:
-  "\<sigma>1 \<le> \<sigma>2 \<Longrightarrow> ev e \<sigma>1 \<le> ev e \<sigma>2"
-  using ev_mono_for by blast
 
 definition special_transfer ::
     "special_call => vname => (vname => 'a) => (vname => 'a)"
@@ -101,19 +75,19 @@ proof safe
     from sr show ?thesis
     proof (cases sc)
       case Nondet_Int
-      with True show ?thesis by (simp add: gamma_top)
+      with True show ?thesis by simp
     next
       case (Min a b)
       with sr True have "v = min (aval a s) (aval b s)" by simp
       moreover from V have "aval a s \<in> gamma (ev a \<sigma>)" and "aval b s \<in> gamma (ev b \<sigma>)"
-        using ev_soundD by blast+
-      ultimately show ?thesis using Min True by (simp add: special_min_soundD)
+        using ev_sound by blast+
+      ultimately show ?thesis using Min True by (simp add: special_min_sound)
     next
       case (Max a b)
       with sr True have "v = max (aval a s) (aval b s)" by simp
       moreover from V have "aval a s \<in> gamma (ev a \<sigma>)" and "aval b s \<in> gamma (ev b \<sigma>)"
-        using ev_soundD by blast+
-      ultimately show ?thesis using Max True by (simp add: special_max_soundD)
+        using ev_sound by blast+
+      ultimately show ?thesis using Max True by (simp add: special_max_sound)
     qed
   next
     case False
@@ -131,13 +105,13 @@ next
   case (Min a b)
   have "special_min ops (ev a sigma1) (ev b sigma1)
           \<le> special_min ops (ev a sigma2) (ev b sigma2)"
-    using le by (intro special_min_monoD ev_monoD)
+    using le by (intro special_min_mono ev_mono)
   with le Min show ?thesis unfolding le_fun_def by auto
 next
   case (Max a b)
   have "special_max ops (ev a sigma1) (ev b sigma1)
           \<le> special_max ops (ev a sigma2) (ev b sigma2)"
-    using le by (intro special_max_monoD ev_monoD)
+    using le by (intro special_max_mono ev_mono)
   with le Max show ?thesis unfolding le_fun_def by auto
 qed
 

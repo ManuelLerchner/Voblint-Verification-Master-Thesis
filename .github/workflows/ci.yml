@@ -295,6 +295,14 @@ jobs:
       - name: Code-export module map (no build needed -- fail fast)
         run: pixi run codegen-modules
 
+      # Voblint_Analysis_Relational's claim -- that no layer below the domain
+      # assumes a pointwise vname => 'a state -- is not enforced by the session
+      # graph: Voblint_Analysis_Base is its parent, so Base/Nonrelational/ is
+      # already reachable and only an absent import keeps the claim true. A
+      # green build would say nothing about it. Reads only .thy headers.
+      - name: Relational/non-relational boundary (no build needed -- fail fast)
+        run: pixi run relational-boundary
+
       # check_thy_prose_refs resolves a cited name against every .thy under src/
       # AND vendor/, so prose naming a vendored TD constant
       # (update_global_warrowing_apinis, sides_of_rhs_local, ...) reads as

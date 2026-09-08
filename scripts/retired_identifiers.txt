@@ -288,7 +288,9 @@ bfilter_And_False_branch
 bfilter_Or_True_branch
 bfilter_lift_step
 bfilter_st_And_False_branch
+bfilter_st_And_False_unfold
 bfilter_st_Or_True_branch
+bfilter_st_Or_True_unfold
 bfilter_st_bot
 bfilter_st_locality
 branch_unfold
