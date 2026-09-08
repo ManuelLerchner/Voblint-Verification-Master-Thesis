@@ -1,6 +1,6 @@
 theory Parity_Domain
   imports "Voblint_Domain.Abstract_Domain" "Voblint_VIMP.VIMP_Expr" "TD.Update_rules"
-    "Voblint_Analysis_Base.Abstract_Arithmetic"
+    "Voblint_Nonrelational.Abstract_Arithmetic"
 begin
 
 section \<open>Parity domain: finite even/odd abstraction\<close>

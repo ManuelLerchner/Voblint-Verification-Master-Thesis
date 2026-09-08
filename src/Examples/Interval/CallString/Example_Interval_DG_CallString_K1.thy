@@ -3,8 +3,7 @@ theory Example_Interval_DG_CallString_K1
     "Voblint_Analysis_Interval.Interval_Transfer"
     "Voblint_Analysis_Interval.Interval_Exec"
     "Voblint_Exec.DG_Local_State_Exec_Refinement"
-    "Voblint_Analysis_Base.Analysis_GraphViz"
-    "Voblint_Analysis_Base.Call_String_Routed_Context"
+    "Voblint_Routing.Call_String_Routed_Context"
     "Voblint_Framework.Activation_Backbone"
     "Voblint_Solver.TD_Solver_Bridge"
     "Voblint_Soundness.Run_Analysis_Sound"
@@ -586,85 +585,6 @@ lemma nestg_1_after_third_return:
   unfolding nestg_1_sol_def nestg_1_eqs_def by eval
 
 
-
-section \<open>Call-string-context-expanded analysis graph\<close>
-
-definition nest_1_graph_config ::
-  "(cfg_node list, call_string_gk,
-     (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state, ivl exec_dg_st lifted)
-     analysis_graph_config" where
-  "nest_1_graph_config =
-    \<lparr> local_of = locals,
-      route = (\<lambda>u ctx action d. Some (cs_route 1 u ctx d action)),
-      context_key = String.implode o
-        (\<lambda>ctx. ''['' @ join_source '', '' (map string_of_cfg_node ctx) @ '']''),
-      show_context = (\<lambda>ctx. ''['' @ join_source '', '' (map string_of_cfg_node ctx) @ '']''),
-      locals_for_pp = (\<lambda>p.
-        let sc = compiled_procedure_scope nest_gs nest_pi nest_procs
-          nest_cfg p
-        in scope_formals sc @ scope_locals sc),
-      return_slot_for_pp = (\<lambda>p.
-        scope_return_slot (compiled_procedure_scope nest_gs nest_pi nest_procs
-          nest_cfg p)),
-      globals_to_show = [],
-      show_local = (\<lambda>p ctx vars d. map (\<lambda>x.
-        String.explode x @ ''='' @ string_of_ivl (nest_lookup d x)) vars),
-      format_return = (\<lambda>p ctx ret d.
-        if nest_lookup d ret = ivl_top then []
-        else [''ret='' @ string_of_ivl (nest_lookup d ret)]),
-      show_global = (\<lambda>k vars s. [''(none)'']),
-      show_global_key = (\<lambda>k. case k of Global \<Rightarrow> ''Global'' | Seed p ctx \<Rightarrow> ''Seed''),
-      is_shared_global = (\<lambda>k. case k of Global \<Rightarrow> True | Seed _ _ \<Rightarrow> False),
-      show_internal_globals = False,
-      owner_of = String.explode o compiled_owner_of nest_pi nest_procs,
-      cluster_label = (\<lambda>owner ctx.
-        if owner = ''main'' \<and> ctx = [] then ''main / root context''
-        else owner @ '' / call string='' @ ''['' @ join_source '', '' (map string_of_cfg_node ctx) @ '']''),
-      source_text = Some (pretty_string_of_program nest_pi nest_procs nest_main []),
-      node_annotation = (\<lambda>_ _. None)
-    \<rparr>"
-
-definition nest_1_contexts_for_pp :: "pp \<Rightarrow> cfg_node list list" where
-  "nest_1_contexts_for_pp p =
-    (let owner = compiled_owner_of nest_pi nest_procs p
-     in if owner = (STR ''main'') then [[]]
-        else if owner = (STR ''f'') then [[Statement 5], [Statement 6]]
-        else [[Statement 2]])"
-
-definition nest_1_local_graph_domain :: "(pp \<times> cfg_node list + call_string_gk) list" where
-  "nest_1_local_graph_domain =
-    contextual_graph_domain nest_cfg nest_1_contexts_for_pp"
-
-definition nest_1_seed_keys :: "call_string_gk list" where
-  "nest_1_seed_keys =
-     map (\<lambda>ctx. Seed (FunctionEntry (STR ''f'')) ctx) [[Statement 5], [Statement 6]]
-     @ [Seed (FunctionEntry (STR ''g'')) [Statement 2]]"
-
-definition nest_1_graph_domain :: "(pp \<times> cfg_node list + call_string_gk) list" where
-  "nest_1_graph_domain =
-    nest_1_local_graph_domain @ map Inr nest_1_seed_keys"
-
-definition nest_1_graph :: "(cfg_node list, call_string_gk) analysis_graph" where
-  "nest_1_graph =
-    build_analysis_graph nest_1_graph_config nest_cfg nest_1_graph_domain
-      (snd nest_1_sol)"
-
-definition nest_1_dot :: String.literal where
-  "nest_1_dot =
-    String.implode
-      (analysis_graph_to_dot nest_1_graph_config nest_cfg (snd nest_1_sol)
-        nest_1_graph)"
-
-lemma nest_1_graph_wf: "analysis_graph_wf nest_1_graph"
-  unfolding nest_1_graph_def nest_cfg_def
-  by (rule build_analysis_graph_wf
-        [OF calls_source_unique_compile_prog compile_prog_finite[THEN conjunct2]])
-
-lemma nest_1_graph_domain_is_covered:
-  "list_all (\<lambda>x. case x of Inl pc \<Rightarrow> pc \<in> fst nest_1_sol | Inr _ \<Rightarrow> True)
-    nest_1_graph_domain" by eval
-
-lemma nest_1_dot_nonempty: "String.explode nest_1_dot \<noteq> []" by eval
 
 
 end

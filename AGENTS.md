@@ -87,12 +87,22 @@ TD   -> Solver -+                                                               
 `Compile` on `CFG`; `Exec` on `Framework` and `Compile`.)
 
 `Analysis/*` and `Examples/*` are each a family of sessions, not one session.
-`Voblint_Analysis_Base` holds what every domain reuses and is the parent of
-`Voblint_Analysis_Sign`, `_Interval`, `_Parity`, `_Congruence`, `_Relational`
-and `_Int` (which is parented on Base and lists the four component domains it
-reduces). `Voblint_Examples_<Domain>` is parented on that domain's analysis
-session, so a domain's witnesses never pull a sibling domain into their
-closure.
+What every domain reuses lives under `src/Analyses/Shared/` as three chained
+sessions, `Voblint_Routing -> Voblint_Result -> Voblint_Nonrelational`: routing
+policies over a compiled program, the publication surface, and the reuse locales
+a non-relational domain interprets. They are mutually independent and chained
+only so a domain inherits all three from one heap instead of re-elaborating two.
+
+`Voblint_Nonrelational` is the parent of `Voblint_Analysis_Sign`, `_Interval`,
+`_Parity`, `_Congruence` and `_Int` (which also lists the four component domains
+it reduces). `Voblint_Analysis_Relational` is the exception: it is parented on
+`Voblint_Exec`, *below* the chain, so the pointwise reuse locales are
+unavailable to it rather than merely unimported -- which is what makes
+`Rel_Order_Domain`'s negative claim structural. Every theory under
+`Shared/Nonrelational/` fixes a store as one value per variable; nothing that
+does may move below this layer. `Voblint_Examples_<Domain>` is parented on that
+domain's analysis session, so a domain's witnesses never pull a sibling domain
+into their closure.
 
 `Voblint_CFG` is the graph model and its activation-local collecting
 semantics: what a soundness claim is stated *about*. It never mentions the
@@ -114,18 +124,20 @@ no compiler.
 `Voblint_Exec` is the executable carrier and the transport of a solved
 system from the solver's association-list states to the function-valued
 states the framework is stated over. The `Voblint_Analysis_*` sessions thread
-each concrete domain instance (Sign, Interval, ...) through them; the
-Base-level reuse locales, the dispatch config, the reporting layer and the
-compile-dependent routed contexts live in `Voblint_Analysis_Base`, which every
-domain session is parented on.
+each concrete domain instance (Sign, Interval, ...) through them; the reuse
+locales, the publication surface and the compile-dependent routed contexts live
+under `src/Analyses/Shared/`. The dispatch config and the graph export are not
+there -- no domain imports either, so both live in `Voblint_CLI` beside their
+only consumers.
 `docs/CORE_REFACTOR_PLAN.md` records why the split runs along these lines
 and what remains to move.
 
 Cross-session theory imports use qualified names.
 `Voblint_Soundness` contains the reusable soundness endpoints and nothing
 domain-specific, so it sits *below* the analysis family rather than after it:
-`Voblint_Analysis_Base` is parented on it, and every domain therefore inherits
-`run_source_sound`/`collect_sound` from an ancestor heap. Each domain's own
+`Voblint_Routing` is parented on it and the rest of `Analyses/Shared/` chains
+off that, so every domain inherits `run_source_sound`/`collect_sound` from an
+ancestor heap. Each domain's own
 instantiation of those endpoints -- the runtime API over an arbitrary
 `imp_prog` paired with its production soundness theorems -- is `<Domain>_Entry`
 in that domain's analysis session, because it depends on that domain and on

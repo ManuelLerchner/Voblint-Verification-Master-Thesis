@@ -4,7 +4,7 @@ theory Interval_Analyses
     Interval_Classify
     Interval_Transfer
     Interval_Exec_Sound
-    "Voblint_Analysis_Base.DG_Result_Construction"
+    "Voblint_Result.DG_Result_Construction"
     "Voblint_Framework.CFG_Enumeration"
     "Voblint_Exec.Routed_Exec_Refinement"
     "Voblint_Framework.Routed_Analysis_Sound"
@@ -18,8 +18,8 @@ theory Interval_Analyses
     "Voblint_CFG.CFG_Prune"
     "Voblint_VIMP.VIMP_Program"
     "TD.TD_side_upd_rule"
-    "Voblint_Analysis_Base.Call_String_Routed_Context"
-    "Voblint_Analysis_Base.Entry_State_Routed_Context"
+    "Voblint_Routing.Call_String_Routed_Context"
+    "Voblint_Routing.Entry_State_Routed_Context"
 begin
 chapter \<open>How Interval is run under each supported context policy\<close>
 
@@ -471,7 +471,15 @@ next
   case (VarsFin gs empty_pred Pi ps) thus ?case by (rule interval_conf_vars_finite)
 qed
 
+text \<open>
+  Each update rule publishes the same seven facts under its own suffix, so a
+  consumer switching solvers renames rather than hunts. \<open>Interval_Solver_Analyses\<close>
+  repeats this block verbatim at \<open>_per_origin\<close>, \<open>_warrow\<close> and \<open>_wpo\<close>.
+\<close>
+
 lemmas interval_conf_result_node_sound = interval_conf_join.result_node_sound
+lemmas interval_conf_result_node_unreachable = interval_conf_join.result_node_unreachable
+lemmas interval_conf_report_flag_unreachable = interval_conf_join.report_flag_unreachable
 lemmas interval_conf_analyse_result_eq = interval_conf_join.analyse_result_eq
 lemmas interval_conf_cinit_le_cinit_ivl_st = interval_conf_join.cinit_le_cinit_ivl_st
 lemmas interval_conf_report_ctx_proved_sound = interval_conf_join.report_ctx_proved_sound
@@ -1323,7 +1331,7 @@ interpretation entry_state_dg_base: sound_dg_spec_core "interval_spec gs empty_p
   by (rule interval_sound_exec[OF exact])
 
 
-interpretation entry_state_routed: entry_state_routed_context "interval_spec gs empty_pred"
+interpretation entry_state_routed: pure_entry_routed_context "interval_spec gs empty_pred"
     "interval_gamma gs" gs Pi ps "Analysis_Global ()" "entry_state_route_gen gs empty_pred"
     Bot "Lifted cinit_ivl_st" Bot
     "snd (entry_state_sol gs empty_pred Pi ps)" "fst (entry_state_sol gs empty_pred Pi ps)"

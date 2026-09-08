@@ -1,6 +1,6 @@
 theory Congruence_Arithmetic
   imports Congruence_Lattice "Voblint_VIMP.VIMP_Expr"
-    "Voblint_Analysis_Base.Abstract_Arithmetic"
+    "Voblint_Nonrelational.Abstract_Arithmetic"
 begin
 
 section \<open>Congruence arithmetic\<close>
@@ -705,8 +705,5 @@ interpretation congruence_arith: expression_domain_sound
   apply (blast intro: congruence_eqb_mono[unfolded is_empty_congruence])
   apply (blast intro: congruence_tobool_mono[unfolded is_empty_congruence])
   done
-
-lemmas aval_congruence_sound = congruence_arith.aval_dom_sound
-lemmas aval_congruence_mono = congruence_arith.aval_dom_mono
 
 end

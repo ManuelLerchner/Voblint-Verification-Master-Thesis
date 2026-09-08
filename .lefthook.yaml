@@ -60,14 +60,6 @@ pre-commit:
       glob: "src/**/*.thy"
       run: pixi run python3 scripts/check_locale_parameters.py
 
-    # Voblint_Analysis_Relational's whole point is a negative claim: no layer
-    # below assumes a pointwise vname => 'a store. Base is its parent session,
-    # so Base/Nonrelational/ is available to it and only an absent import keeps
-    # it true. Reads the whole tree, since the route may be transitive.
-    - name: relational-boundary
-      glob: "src/**/*.thy"
-      run: pixi run python3 scripts/check_relational_boundary.py
-
     - name: vimp-isabelle-grammar-drift
       glob:
         - "grammar/vimp.yaml"

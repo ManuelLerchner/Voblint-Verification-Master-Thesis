@@ -7,7 +7,7 @@ theory Analyse_Dispatch
     Voblint_Analysis_Interval.Interval_Analyses
     Voblint_Analysis_Sign.Sign_Analyses
     Voblint_Analysis_Int.Int_Analyses
-    Voblint_Analysis_Base.Analysis_Config
+    Analysis_Config
     "HOL-Library.Code_Target_Numeral"
     "HOL-Library.Code_Abstract_Char"
 begin
@@ -632,7 +632,7 @@ text \<open>
   \<^const>\<open>analyse\<close>/\<^const>\<open>analyse_with_solver\<close>/
   \<^const>\<open>analyse_with_state\<close> above each decide legality over exactly two of
   \<^type>\<open>analysis_config\<close>'s three axes at a time (domain+solver, ...) and stay
-  the lower-level, typed entry points every consumer keeps using. \<^const>\<open>resolve_analysis_config\<close> (\<^theory>\<open>Voblint_Analysis_Base.Analysis_Config\<close>)
+  the lower-level, typed entry points every consumer keeps using. \<^const>\<open>resolve_analysis_config\<close> (\<^theory>\<open>Voblint_CLI.Analysis_Config\<close>)
   is the one place all three axes' legality and defaults are decided
   together; the three wrappers below each consume its \<^type>\<open>analysis_plan\<close>
   result and pick the one existing dispatcher call that already produces

@@ -6,45 +6,48 @@ section \<open>Which routing policies can have a finite solved key set\<close>
 
 text \<open>
   A published result table is well formed only if its key set is finite
-  (\<open>wf_analysis_result\<close>, in the framework's result layer), and nothing
-  about a solved system supplies that: the solver hands back a plain
-  \<open>(pp \<times> 'c) set\<close>, so the argument has to come from bounding the space those
-  keys are drawn from. A key is a \<open>(node, context)\<close> pair, so bounding it means
-  bounding both halves, and the two halves are in very different shape.
+  (\<open>wf_analysis_result\<close>, in the framework's result layer). A key is a
+  \<open>(node, context)\<close> pair, so one way to get there is to exhibit a fixed finite set the
+  keys are drawn from and appeal to \<open>finite_subset\<close>. This theory builds that set, one per
+  routing policy.
 
-  The node half is one obligation shared by every policy below, and it is the
-  one this theory cannot discharge:
+  What it builds is a candidate space, not a reachability or a termination result. Nothing
+  below says which keys a solver run actually produces, and nothing below bounds how often
+  the value at one key is raised -- an interval unknown can ascend forever inside a
+  one-element key space. Both halves of the containment are therefore hypotheses of every
+  result here, not conclusions:
 
-    \<^item> \<open>fst ` vars \<subseteq> cfg_nodes (compile_prog Pi ps)\<close> --- the solver only ever
-      reached nodes of the program it was given. True of every run, but there
-      is no theorem here connecting the vendored solver's returned key set to
-      the unknowns its equation system mentions, so each result below carries
-      it as an assumption.
+    \<^item> \<open>fst ` vars \<subseteq> cfg_nodes (compile_prog Pi ps)\<close> --- the keys are nodes of the program
+      the solver was given. There is no theorem here connecting the vendored solver's
+      returned key set to the unknowns its equation system mentions.
+    \<^item> \<open>snd ` vars\<close> lies in the policy's context space --- routing never left it. For call
+      strings that is a length-and-alphabet condition, and truncation alone does not
+      establish it: a starting context whose elements are not nodes of this program stays
+      short under \<^const>\<open>cs_route\<close> without ever entering the space.
 
-  The context half is where the policies part company. Call strings get it for
-  free: \<^const>\<open>cs_route\<close> truncates every context to length at most \<open>k\<close>
-  (\<open>cs_route_length\<close>, \<^theory>\<open>Voblint_Framework.Call_String_Context\<close>), and a
+  What differs between policies is how cheaply the second hypothesis can be met. Call
+  strings bound the length for free: \<^const>\<open>cs_route\<close> truncates every context to length at
+  most \<open>k\<close> (\<open>cs_route_length\<close>, \<^theory>\<open>Voblint_Framework.Call_String_Context\<close>), and a
   compiled program's CFG has finitely many nodes (\<open>cfg_nodes_finite\<close>,
-  \<^theory>\<open>Voblint_CFG.CFG_Def\<close>). With the standard library's own
-  \<open>finite_lists_length_le\<close>, the set of contexts \<^emph>\<open>any\<close> \<open>k\<close>-bounded call-string
-  routing over a compiled program could ever produce is finite, independent of
-  which unknowns a particular run visits. The monovariant policy gets it more
-  cheaply still: its context type is \<^typ>\<open>unit\<close>, so there is no context space
-  to bound and the node obligation is the whole story.
+  \<^theory>\<open>Voblint_CFG.CFG_Def\<close>), so with the standard library's own
+  \<open>finite_lists_length_le\<close> the space is finite for every \<open>k\<close> and every domain alike. The
+  monovariant policy makes the hypothesis vacuous: its context type is \<^typ>\<open>unit\<close>, so
+  there is no context space to bound and the node half is the whole story.
 
-  That is a genuine strengthening over the \<open>solve_dom\<close> contract every routed
-  instance otherwise relies on (a per-run, empirical termination check): the
-  context bound holds before any solve is attempted, for every domain that
-  instantiates the policy alike -- nothing below is domain-specific.
+  An entry-state context is a domain value rather than a bounded-length list over a finite
+  alphabet, so it needs a separate argument. A finite value domain together with a fixed
+  formals count supplies one -- \<open>sign list\<close> at the callee's arity is a finite set -- but an
+  infinite-height domain such as \<open>ivl\<close> does not, and an ordinary widening policy bounds
+  values rather than the context identities keyed by them. Bounding those needs a policy
+  that controls key creation or merges keys (a gas budget, a tabulation cap), with real
+  precision consequences that nothing here specifies. This development stops at the two
+  policies whose context space needs no such decision.
 
-  Entry-state contexts get neither: an entry-state context is a domain value
-  (\<open>ivl list\<close>, \<open>sign list\<close>, ...) rather than a bounded-length list over a finite
-  alphabet, and for an infinite-height domain such as \<open>ivl\<close> the context space is
-  genuinely unbounded. Making \<^emph>\<open>that\<close> case "first-class" needs an actual bounding
-  policy (a gas budget, a widening threshold, ...) with real precision
-  consequences that nothing in the codebase specifies yet; this development
-  deliberately stops at the two policies whose context space needs no such
-  decision.
+  The concrete analyses reach a finite key set by an unrelated route: they discharge their
+  own obligation from the vendored solver's \<open>finite_stabl_solve\<close>, which yields a finite
+  stable set from a terminating solve. Neither argument implies the other -- a bounded
+  candidate space does not make a solve terminate, and a terminating solve says nothing
+  about the space its keys were drawn from.
 \<close>
 
 lemma call_strings_bounded_finite:

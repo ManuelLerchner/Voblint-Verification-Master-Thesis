@@ -148,7 +148,8 @@ text \<open>
     entry state, and \<^verbatim>\<open>twice_source_run_sound\<close> bounds the result.  This is the baseline
     the two policies below sharpen.
   \<^item> \<^bold>\<open>Entry state\<close> --- the context is the entered abstract value of the callee's declared
-    formals (partial tabulation, \<^cite>\<open>SeidlEtAl2026\<close> Example 8).
+    formals (partial tabulation, Seidl et al., \<^emph>\<open>Mixed Flow-Sensitive Static Analysis\<close>,
+    FM 2026, Example 8).
     \<^bold>\<open>@{theory Voblint_Examples_Interval.Example_Interval_DG_Ctx_Collect}\<close> instantiates the production
     entry-state analysis on that same \<open>twice\<close> program: the two calls route to the distinct
     contexts \<open>[3,3]\<close> and \<open>[10,10]\<close> and keep their entry and return values apart, where the
@@ -157,7 +158,7 @@ text \<open>
     witness on an unconstrained argument, where one wide context covers infinitely many
     concrete entries rather than separating two.
   \<^item> \<^bold>\<open>Call string\<close> --- the context is a bounded record of the call sites traversed to reach
-    the activation (\<^cite>\<open>SeidlEtAl2026\<close> Example 7 at \<open>k = 1\<close>).
+    the activation (Seidl et al., FM 2026, Example 7 at \<open>k = 1\<close>).
     \<^bold>\<open>@{theory Voblint_Examples_Interval.Example_Interval_DG_CallString_K1}\<close> and
     \<^bold>\<open>@{theory Voblint_Examples_Interval.Example_Interval_DG_CallString_K2}\<close> run one \<open>nest\<close> program at
     \<open>k = 1\<close> and \<open>k = 2\<close>, so the pair also measures what raising the bound buys.  This policy
@@ -255,7 +256,7 @@ text \<open>
   concrete domain.
 
   Two layers are families rather than single sessions.  Every abstract domain has its
-  own analysis session over the shared \<^verbatim>\<open>Voblint_Analysis_Base\<close> --- Sign, Interval,
+  own analysis session over the shared \<^verbatim>\<open>Analyses/Shared/\<close> chain --- Sign, Interval,
   Parity, Congruence, the \<^verbatim>\<open>int_dom\<close> product, and the relational carrier --- and its
   own example session over that, so a domain's witnesses cannot quietly depend on a
   sibling domain.  \<^verbatim>\<open>Voblint_CLI\<close> is where they meet again, because the dispatcher has
@@ -318,7 +319,7 @@ text \<open>
       result is independent of the raw lattice \<^const>\<open>inf\<close>.
 
   \<^bold>\<open>4. Concrete domains.\<close> One analysis session per domain, all over the shared
-    \<^verbatim>\<open>Voblint_Analysis_Base\<close>, all reaching the same spine.  Each pairs a lattice theory
+    \<^verbatim>\<open>Analyses/Shared/\<close> chain, all reaching the same spine.  Each pairs a lattice theory
     (order, transfers, soundness, monotonicity) with an \<^verbatim>\<open>_Analyses\<close> theory placing it at
     the routed D/G spine over \<^const>\<open>ltr_collect\<close>.
     \<^item> @{theory Voblint_Analysis_Sign.Sign_Domain} / @{theory Voblint_Analysis_Sign.Sign_Analyses} --- the seven-element sign lattice.  Finite, so the plain-join solver computes an exact solution and no widening is needed.
@@ -361,7 +362,7 @@ text \<open>
     renders or dispatches it.
     \<^item> @{theory Voblint_Framework.Analysis_Result} --- the domain-generic table: a covered key set of \<^typ>\<open>pp \<times> 'ctx\<close> pairs plus a total lookup.  \<^verbatim>\<open>wf_analysis_result\<close> asks for finitely many keys and canonical payloads; canonicality is unconditional because every publishing adapter canonicalizes, finiteness holds outright only where the context space is bounded in advance and is a hypothesis elsewhere.
     \<^item> @{theory Voblint_Framework.Check_Report} and @{theory Voblint_Framework.Contextual_Check_Report} --- the flat and per-context readings of that table.  They are genuinely different: a check can be \<^const>\<open>Dead\<close> in one context and decided in another, which a flat \<^typ>\<open>check_result\<close> cannot express, which is why the contextual report exists rather than a degraded flat view.
-    \<^item> @{theory Voblint_Analysis_Base.Analysis_Config} --- the selection surface: \<^typ>\<open>analysis_domain\<close>, \<^typ>\<open>solver_choice\<close>, \<^typ>\<open>context_mode\<close>, and \<^const>\<open>resolve_analysis_config\<close>, which decides once and centrally which combinations are legal.  Unsupported pairings answer \<^const>\<open>None\<close> rather than degrading silently.
+    \<^item> @{theory Voblint_CLI.Analysis_Config} --- the selection surface: \<^typ>\<open>analysis_domain\<close>, \<^typ>\<open>solver_choice\<close>, \<^typ>\<open>context_mode\<close>, and \<^const>\<open>resolve_analysis_config\<close>, which decides once and centrally which combinations are legal.  Unsupported pairings answer \<^const>\<open>None\<close> rather than degrading silently.
 
   \<^bold>\<open>6. End-to-end theorems.\<close> Headline soundness and the source bridge.
     \<^item> @{theory Voblint_Soundness.Source_Activation_Sound} --- the source-adequacy bridge: a reachable VIMP source configuration produces a \<^const>\<open>valid_ltr\<close> trace (\<^verbatim>\<open>source_run_has_ltr\<close>), bounded at its activation context (\<^verbatim>\<open>source_activation_sound\<close>) and monovariantly (\<^verbatim>\<open>source_reaches_ltr_collect\<close>).
@@ -436,10 +437,11 @@ text \<open>
       context's own \<open>gkey\<close>, and \<^const>\<open>dep_aux\<close> pins what a per-edge tree reads:
       @{thm dep_aux_dg_edge_tree_at} names the source address and the one
       global slot, nothing else.
-    \<^item> \<^bold>\<open>Rendering\<close> --- \<^const>\<open>raw_cfg_dot_lit\<close> and the \<open>_graph_snapshot_auto\<close> /
-      \<open>_export_auto\<close> family (@{theory Voblint_CLI.State_Report_GraphViz}) have no
-      Isabelle-side witness of
-      their own: rendering asserts nothing that a \<^verbatim>\<open>writeln\<close> could check, so the
+    \<^item> \<^bold>\<open>Rendering\<close> --- the \<open>_export_auto\<close> / \<open>_graph_snapshot_auto\<close> family
+      (@{theory Voblint_CLI.State_Report_GraphViz}) stops at a neutral
+      \<open>export_graph\<close>; DOT and HTML are produced from it by the OCaml renderers,
+      outside any theory. Neither half has an Isabelle-side witness of its own:
+      a rendering asserts nothing that a \<^verbatim>\<open>writeln\<close> could check, so the
       fixtures under \<^verbatim>\<open>tests/regression/\<close> carry it instead --- \<^verbatim>\<open>08-tooling\<close> for
       \<^verbatim>\<open>--dot\<close>, \<^verbatim>\<open>13-full-state-dot\<close> for the per-node state labels, and
       \<^verbatim>\<open>11-graph-snapshot\<close> for golden cluster/node/edge snapshots including a

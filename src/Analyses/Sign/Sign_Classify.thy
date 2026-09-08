@@ -1,7 +1,7 @@
 theory Sign_Classify
   imports Sign_Numeric_Queries "Voblint_Framework.Abstract_Checks"
     "Voblint_Framework.Analysis_Result" Sign_Exec
-    "Voblint_Analysis_Base.DG_Result_Construction"
+    "Voblint_Result.DG_Result_Construction"
 begin
 
 hide_const phase.N

@@ -215,26 +215,29 @@ stays invariant across whatever this lands as.
    instances behind one architecture, so auditing them together settles
    which one #77 is actually about:
 
-   - **Call-string contexts are already fully bounded, and now provably
-     so.** `cs_route k` truncates every context to length `<= k`
-     (`cs_route_length`, pre-existing); a compiled program's CFG has
-     finitely many nodes (`cfg_nodes_finite`, new, `CFG_Def.thy`); combined
-     with the standard library's own `finite_lists_length_le`, the entire
-     call-string-keyed context space any `k`-bounded call-string routing
-     over a compiled program could ever produce is finite --
+   - **Call-string contexts have a bounded candidate space; that is less
+     than "bounded".** `cs_route k` truncates every context to length
+     `<= k` (`cs_route_length`, pre-existing); a compiled program's CFG has
+     finitely many nodes (`cfg_nodes_finite`, `CFG_Def.thy`); combined with
+     the standard library's own `finite_lists_length_le`, the set of
+     contexts any `k`-bounded call-string routing over a compiled program
+     could produce is finite --
      `compiled_call_strings_finite`/`compiled_call_string_vars_finite`/
-     `compiled_call_string_gk_finite` (new, `Call_String_Context_Finite
-     .thy`, Core). This is a genuine strengthening over the `solve_dom`
-     contract every routed instance otherwise relies on (a per-run,
-     empirical termination check): finiteness holds for the whole context
-     space before any solve is attempted, for every domain that
-     instantiates `call_string_routed_context` alike, not just the one a
-     particular run happens to explore. Empirical companion:
+     `compiled_call_string_gk_finite` (`Context_Space_Finite.thy`,
+     `Voblint_Analysis_Base`). What those results do *not* establish is
+     that routing stays inside that space: containment of both the node and
+     the context half is a hypothesis of each of them, and truncation alone
+     does not give the second -- a starting context whose elements are not
+     nodes of this program stays short without ever entering the space.
+     Nor do they bear on `solve_dom`: a finite key space does not make a
+     solve terminate (one interval unknown can ascend forever), and a
+     terminating solve says nothing about the space its keys came from.
+     Closing the gap means proving key closure under routing, which is
+     substantive work, not a corollary. Empirical companion:
      `tests/regression/17-call-string/known-imprecision
      /01-deep_recursion_bounded_context.vimp` runs a self-recursive
      procedure 50 levels deep under `--context-depth 1` and completes
-     immediately -- one context per recursion level never materializes,
-     confirming the finiteness bound is not merely a paper fact.
+     immediately -- one context per recursion level never materializes.
    - **Entry-state contexts are the genuinely open half, and #77's "gas /
      widening" language is about them, not call-strings.** An entry-state
      context is a domain value (`ivl list`, `sign list`, ...), not a

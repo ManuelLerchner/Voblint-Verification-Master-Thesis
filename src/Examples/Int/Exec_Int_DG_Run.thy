@@ -41,8 +41,6 @@ interpretation gExI: compiled_cfg int_ex_pi "prog_procs int_ex_prog" gExI
   by (unfold_locales; unfold gExI_def; simp add: compile_prog_finite)
 
 lemmas gExI_entry = gExI.entry[unfolded prog_main_name_def]
-lemmas gExI_finE = gExI.finite_intra
-lemmas gExI_finC = gExI.finite_calls
 
 subsection \<open>Computed post-solution, one per refinement mode\<close>
 

@@ -10,10 +10,12 @@
 # --- Concretization helpers removed with the pair interface ---
 # --- Contribution-list membership rule with no consumer (2026-09-05) ---
 # --- Custom association-list deletion (2026-09-07) ---
+# --- Dead `lemmas` aliases with no consumer (2026-09-08) ---
 # --- Dead witness-bottom scan and combine lift (2026-09-06) ---
 # --- Dead-code lift (DG_Dead_Code_Lift.thy) ---
 # --- Entry-local bound moved next to its global twin (2026-09-05) ---
 # --- Fold generalization: renamed or absorbed into the generic fold (2026-09-05) ---
+# --- Isabelle-side DOT/HTML emitter, replaced by OCaml renderers over export_graph (2026-09-08) ---
 # --- Legacy representation-neutral keyed generator (2026-09-05) ---
 # --- Local-state / ownership-split cleanup (2026-09-05) ---
 # --- Manager and composed-combine aliases (DG_Manager.thy, DG_Spec.thy) ---
@@ -268,8 +270,15 @@
 Exec_Refinement
 Routed_Domain_Exec
 activation_collect_sound_gen
+afilter_ivl_st_commute
 afilter_st_locality
 analyse_report
+analysis_cluster_dot
+analysis_edge_attrs
+analysis_edge_dot
+analysis_graph_to_dot
+analysis_node_attrs
+annotation_style
 answer_local
 apply_dg_spec
 apply_dg_spec_at
@@ -278,6 +287,8 @@ apply_dg_spec_contribution_at
 apply_tf
 apply_tf_once_assign
 apply_tf_once_special_min
+aval_congruence_mono
+aval_congruence_sound
 base_dg_exec_analysis
 base_dg_spec_for
 base_dg_spec_for_lifted
@@ -293,6 +304,7 @@ bfilter_st_Or_True_branch
 bfilter_st_Or_True_unfold
 bfilter_st_bot
 bfilter_st_locality
+branch_int_dom_fixpoint_st_commute
 branch_unfold
 callee_entry_at_call_site
 callee_entry_at_call_site_eq
@@ -303,7 +315,10 @@ canonicalize_state_id
 canonicalize_state_idem
 canonicalize_state_le
 canonicalize_state_mono
+cfg_assigned_vars
 cfg_exit_covers
+check_report_dot_cluster
+check_report_html_label
 checks_proven_sound
 combine_global
 combine_local
@@ -313,6 +328,11 @@ combine_resolved_st_q_lift_Bot_right
 combine_resolved_st_q_lift_Lifted
 combine_transfer_of_comb
 compile_program
+compiled_global_vars
+context_keys_distinct
+context_keys_distinct_imp_inj_on
+contextual_analysis_dot
+contextual_node_label
 cs_project_gk
 cs_route_commute
 dead_code_lift
@@ -396,6 +416,7 @@ edge_collect_apply_tf_sound_for
 edge_collect_check_sound_for
 edge_transfer_of_step
 emits_no_sides
+ensure_trailing_nl
 enter_D
 enter_D_def
 enter_D_mono
@@ -404,6 +425,7 @@ enter_binding_ci
 enter_binding_ci_def
 enter_binding_ci_mono
 enter_binding_ci_sound
+enter_bindings
 enter_ci_D
 enter_ci_D_def
 enter_ci_D_mono
@@ -427,6 +449,7 @@ entered_interval_spec_eq_entry_state_entered
 entry_call_list_empty_if_not_entry
 entry_seed_at
 entry_state_context_eq_route_enterc_of_sigma
+entry_state_routed_context
 env_indep_deps_dg_combine_tree
 env_indep_deps_dg_edge_tree
 env_indep_deps_seqcomp
@@ -434,6 +457,9 @@ eq_hook_gen
 eq_resolved_st_defaults
 eq_resolved_st_is_bot_for_mono
 eq_routed_node_trees
+ex_multi_return
+ex_recursion
+ex_return_ignores_continuation
 filter_fst_eq_restrict
 finite_return_calls
 fold_rhs_contributions_side_rhs_fold_dg_global_char
@@ -448,6 +474,9 @@ fresh_vname_notin
 fun_of_resolved_st_q_for_restrict_global_abs
 fun_of_resolved_st_q_for_restrict_local_abs
 fun_of_st_enter_frame_D_resolved
+gExI_finC
+gExI_finE
+gEx_wf_cfg
 gammaM_exec
 gamma_bfilter_lifted
 gamma_branch_lifted
@@ -464,6 +493,11 @@ gamma_ownership_splitD
 gamma_ownership_split_eq
 gamma_state_witness_not_bot
 gamma_unit
+generic_branch_st_for
+graphviz_html_text
+graphviz_label_text
+graphviz_owner_of
+gv_style_of_status
 hook_acc
 hook_combine_tree_mem
 hook_edge_tree_mem
@@ -492,6 +526,9 @@ ictx_spec
 ictx_terminates
 ictx_terminates_prog
 indep_dg_spec
+insert_dot_cluster_before_close
+int_checks_provenI
+int_checks_proven_sound
 int_conf_analyse_report_def
 int_conf_analyse_report_per_origin_def
 int_conf_analyse_report_warrow_def
@@ -549,6 +586,7 @@ map_of_remove_resolved_key
 merge_split_spec
 merge_split_spec_exec
 mixed_ctx_graph_bottom_context_is_covered_but_unentered
+mode_once_ne_fixpoint
 monovariant_analysis_result_for
 normalize_point
 ownership_split_combine_transfer_unfold
@@ -568,10 +606,15 @@ probe_exp
 project_component
 project_placed_resolved
 publish_global
+raw_cfg_dot
+raw_cfg_dot_lit
+raw_cfg_dot_with_report
+raw_cfg_dot_with_report_lit
 read_at
 read_global
 read_local
 reads_only_source
+region_label
 remove_resolved_key
 remove_resolved_key_eq_delete
 resolved_st_q_lifted_is_bot_for
@@ -656,6 +699,7 @@ sound_dg_spec_st
 sound_dg_spec_unit_for
 sound_transfer_combine_envI
 sound_transfer_enter_cont_idI
+source_html_label
 sp_at
 sp_global
 sp_local
@@ -676,6 +720,8 @@ sp_run_with_read_local
 sp_run_with_return
 sp_sideg
 static_targets_nonempty
+string_of_call_action
+string_of_check_report
 tf_assign
 tf_body
 tf_branch
@@ -706,6 +752,7 @@ traverse_ownership_split_combine_transfer_gen
 traverse_ownership_split_transfer_gen
 traverse_rhs_seqcomp
 traverse_seqcomp
+twice_wf_cfg
 unit_combine_step_assign_for
 unit_combine_step_assign_placed
 unit_combine_step_env_for

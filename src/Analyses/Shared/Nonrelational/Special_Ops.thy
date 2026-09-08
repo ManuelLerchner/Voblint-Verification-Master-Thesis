@@ -61,37 +61,37 @@ lemma special_transfer_Max [simp]:
   "special_transfer (Max a b) x \<sigma> = \<sigma>(x := special_max ops (ev a \<sigma>) (ev b \<sigma>))"
   unfolding special_transfer_def by simp
 
+text \<open>
+  Each dispatch case writes one variable, so the whole proof is
+  \<^theory>\<open>Voblint_Framework.Transfer_Algebra\<close>'s \<open>gamma_state_upd\<close> --- a sound state
+  updated at \<open>x\<close> with a value sound for the new abstract element stays sound --- once
+  the case supplies that the written value is in the concretization. Only the three
+  \<open>v \<in> gamma _\<close> obligations are special-call specific; the per-variable reasoning is
+  entirely \<open>gamma_state_upd\<close>'s.
+\<close>
+
 lemma special_transfer_sound:
   assumes gs: "s \<in> \<lbrakk>\<sigma>\<rbrakk>" and sr: "special_result sc s v"
   shows "s(x := v) \<in> \<lbrakk>special_transfer sc x \<sigma>\<rbrakk>"
-  unfolding gamma_state_def
-proof safe
-  fix y
+proof -
   from gs have V: "\<forall>z. s z \<in> gamma (\<sigma> z)"
-    using gamma_stateD[OF gs] by simp
-  show "(s(x := v)) y \<in> gamma ((special_transfer sc x \<sigma>) y)"
-  proof (cases "y = x")
-    case True
-    from sr show ?thesis
-    proof (cases sc)
-      case Nondet_Int
-      with True show ?thesis by simp
-    next
-      case (Min a b)
-      with sr True have "v = min (aval a s) (aval b s)" by simp
-      moreover from V have "aval a s \<in> gamma (ev a \<sigma>)" and "aval b s \<in> gamma (ev b \<sigma>)"
-        using ev_sound by blast+
-      ultimately show ?thesis using Min True by (simp add: special_min_sound)
-    next
-      case (Max a b)
-      with sr True have "v = max (aval a s) (aval b s)" by simp
-      moreover from V have "aval a s \<in> gamma (ev a \<sigma>)" and "aval b s \<in> gamma (ev b \<sigma>)"
-        using ev_sound by blast+
-      ultimately show ?thesis using Max True by (simp add: special_max_sound)
-    qed
+    unfolding gamma_state_def by simp
+  show ?thesis
+  proof (cases sc)
+    case Nondet_Int
+    with sr gs show ?thesis by auto
   next
-    case False
-    with V show ?thesis by (cases sc) simp_all
+    case (Min a b)
+    with sr have "v = min (aval a s) (aval b s)" by simp
+    moreover from V have "aval a s \<in> gamma (ev a \<sigma>)" and "aval b s \<in> gamma (ev b \<sigma>)"
+      using ev_sound by blast+
+    ultimately show ?thesis using Min gs by auto
+  next
+    case (Max a b)
+    with sr have "v = max (aval a s) (aval b s)" by simp
+    moreover from V have "aval a s \<in> gamma (ev a \<sigma>)" and "aval b s \<in> gamma (ev b \<sigma>)"
+      using ev_sound by blast+
+    ultimately show ?thesis using Max gs by auto
   qed
 qed
 

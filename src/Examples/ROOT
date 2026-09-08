@@ -15,5 +15,3 @@ session Voblint_Examples in "." = "Voblint_Examples_CLI" +
     "Voblint_Examples_Tooling"
   theories
     Voblint
-  document_files
-    (in "../Analyses/Base/document") "root.bib"

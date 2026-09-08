@@ -1,4 +1,4 @@
-session Voblint_Analysis_Congruence in "." = "Voblint_Analysis_Base" +
+session Voblint_Analysis_Congruence in "." = "Voblint_Nonrelational" +
   description "The Congruence domain component: normalized lattice, arithmetic, backward filtering; consumed by Voblint_Analysis_Int, not independently runnable"
   sessions
     "Voblint_VIMP"

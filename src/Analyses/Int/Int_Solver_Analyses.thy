@@ -83,6 +83,8 @@ next
 qed
 
 lemmas int_conf_result_node_sound_per_origin = int_conf_po.int_conf_result_node_sound
+lemmas int_conf_result_node_unreachable_per_origin = int_conf_po.int_conf_result_node_unreachable
+lemmas int_conf_report_flag_unreachable_per_origin = int_conf_po.int_conf_report_flag_unreachable
 lemmas int_conf_analyse_result_eq_per_origin = int_conf_po.int_conf_analyse_result_eq
 lemmas int_conf_cinit_le_cinit_int_dom_st_per_origin = int_conf_po.int_conf_cinit_le_cinit_int_dom_st
 lemmas int_conf_activation_collect_sound_per_origin = int_conf_po.int_conf_activation_collect_sound
@@ -90,6 +92,7 @@ lemmas int_conf_analyse_report_ctx_proved_sound_per_origin = int_conf_po.int_con
 lemmas int_conf_analyse_report_ctx_refuted_sound_per_origin = int_conf_po.int_conf_analyse_report_ctx_refuted_sound
 lemmas int_conf_analyse_result_per_origin_def = int_conf_po.int_conf_analyse_result_def
 lemmas int_conf_analyse_report_ctx_per_origin_def = int_conf_po.int_conf_analyse_report_ctx_def
+lemmas int_conf_wf_analyse_result_per_origin = int_conf_po.int_conf_wf_analyse_result
 
 
 section \<open>Apinis warrowing solver instantiation, at the same routed unit-context spec\<close>
@@ -154,6 +157,8 @@ next
 qed
 
 lemmas int_conf_result_node_sound_warrow = int_conf_wa.int_conf_result_node_sound
+lemmas int_conf_result_node_unreachable_warrow = int_conf_wa.int_conf_result_node_unreachable
+lemmas int_conf_report_flag_unreachable_warrow = int_conf_wa.int_conf_report_flag_unreachable
 lemmas int_conf_analyse_result_eq_warrow = int_conf_wa.int_conf_analyse_result_eq
 lemmas int_conf_cinit_le_cinit_int_dom_st_warrow = int_conf_wa.int_conf_cinit_le_cinit_int_dom_st
 lemmas int_conf_activation_collect_sound_warrow = int_conf_wa.int_conf_activation_collect_sound
@@ -161,6 +166,7 @@ lemmas int_conf_analyse_report_ctx_proved_sound_warrow = int_conf_wa.int_conf_an
 lemmas int_conf_analyse_report_ctx_refuted_sound_warrow = int_conf_wa.int_conf_analyse_report_ctx_refuted_sound
 lemmas int_conf_analyse_result_warrow_def = int_conf_wa.int_conf_analyse_result_def
 lemmas int_conf_analyse_report_ctx_warrow_def = int_conf_wa.int_conf_analyse_report_ctx_def
+lemmas int_conf_wf_analyse_result_warrow = int_conf_wa.int_conf_wf_analyse_result
 
 section \<open>Warrowing-per-origin solver instantiation\<close>
 
@@ -216,6 +222,8 @@ next
 qed
 
 lemmas int_conf_result_node_sound_wpo = int_conf_wpo.int_conf_result_node_sound
+lemmas int_conf_result_node_unreachable_wpo = int_conf_wpo.int_conf_result_node_unreachable
+lemmas int_conf_report_flag_unreachable_wpo = int_conf_wpo.int_conf_report_flag_unreachable
 lemmas int_conf_analyse_result_eq_wpo = int_conf_wpo.int_conf_analyse_result_eq
 lemmas int_conf_cinit_le_cinit_int_dom_st_wpo = int_conf_wpo.int_conf_cinit_le_cinit_int_dom_st
 lemmas int_conf_activation_collect_sound_wpo = int_conf_wpo.int_conf_activation_collect_sound
@@ -223,6 +231,7 @@ lemmas int_conf_analyse_report_ctx_proved_sound_wpo = int_conf_wpo.int_conf_anal
 lemmas int_conf_analyse_report_ctx_refuted_sound_wpo = int_conf_wpo.int_conf_analyse_report_ctx_refuted_sound
 lemmas int_conf_analyse_result_wpo_def = int_conf_wpo.int_conf_analyse_result_def
 lemmas int_conf_analyse_report_ctx_wpo_def = int_conf_wpo.int_conf_analyse_report_ctx_def
+lemmas int_conf_wf_analyse_result_wpo = int_conf_wpo.int_conf_wf_analyse_result
 
 
 subsection \<open>Solved-result tables: PerOrigin and Apinis warrowing siblings\<close>

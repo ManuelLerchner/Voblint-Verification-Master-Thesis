@@ -32,7 +32,6 @@ theory Example_Parity_DG_Flagship
     "Voblint_Analysis_Parity.Parity_Exec"
     "Voblint_Solver.TD_Solver_Bridge"
     "Voblint_CFG.CFG_Prune"
-    "Voblint_Analysis_Base.Analysis_GraphViz"
     "Voblint_VIMP.VIMP_Notation"
     "Voblint_Soundness.Run_Analysis_Sound"
     "Voblint_Examples_CFG.Example_Compile_Call_Free"
@@ -278,62 +277,6 @@ lemma parity_head_excludes_odd:
   "n \<in> gamma_parity (parity_lookup (locals (snd parity_sol (Inl (Statement (Suc 0), ())))) (STR ''x''))
      \<Longrightarrow> even n"
   by (simp add: parity_head_computed)
-
-subsection \<open>10. Annotated GraphViz of the computed result\<close>
-
-text \<open>
-  A DOT rendering of \<open>parity_cfg\<close> with each node annotated by the computed
-  parity for \<open>x\<close>, \<open>Gcount\<close>, and \<open>total\<close> alike: the Base construction keeps
-  \<open>total\<close> inside the same reachability-lifted local unknown as every other
-  variable, so it is rendered per program point rather than through a
-  separate global summary node -- \<open>globals_to_show\<close> stays empty and
-  \<open>show_global\<close> renders nothing. The \<open>ML_val\<close> below prints the DOT as a
-  plain string; paste it into any GraphViz renderer (\<open>dot -Tpng\<close>) to view
-  the analysed loop, each node labelled with the loop-invariant parity the
-  verified solver computed.
-\<close>
-
-definition parity_graph_config ::
-  "(unit, (unit, unit) routed_gk, (parity exec_dg_st lifted, parity exec_dg_st lifted) dg_state, parity exec_dg_st lifted)
-     analysis_graph_config" where
-  "parity_graph_config =
-    \<lparr> local_of = locals,
-      route = (\<lambda>_ _ _ _. Some ()),
-      context_key = (\<lambda>_. STR ''unit''),
-      show_context = (\<lambda>_. ''unit''),
-      locals_for_pp = (\<lambda>p.
-        scope_locals (compiled_procedure_scope parity_gs parity_pi []
-          parity_cfg p) @ [STR ''total'']),
-      return_slot_for_pp = (\<lambda>p.
-        scope_return_slot (compiled_procedure_scope parity_gs parity_pi []
-          parity_cfg p)),
-      globals_to_show = [],
-      show_local = (\<lambda>_ _ vars d.
-        map (\<lambda>x.
-          String.explode x @ ''='' @ string_of_parity (parity_lookup d x)) vars),
-      format_return = (\<lambda>_ _ _ _. []),
-      show_global = (\<lambda>_ _ _. []),
-      show_global_key = (\<lambda>k. case k of Analysis_Global _ \<Rightarrow> ''Global'' | Activation_Seed _ _ \<Rightarrow> ''Seed''),
-      is_shared_global = (\<lambda>k. case k of Analysis_Global _ \<Rightarrow> False | Activation_Seed _ _ \<Rightarrow> False),
-      show_internal_globals = False,
-      owner_of = (\<lambda>_. ''main''),
-      cluster_label = (\<lambda>_ _. ''main / root context''),
-      source_text = Some (pretty_string_of_program parity_pi [] parity_prog []),
-      node_annotation = (\<lambda>_ _. None)
-    \<rparr>"
-
-definition parity_graph_domain :: "(pp \<times> unit + (unit, unit) routed_gk) list" where
-  "parity_graph_domain =
-    contextual_graph_domain parity_cfg (\<lambda>_. [()])
-    @ [Inr (Analysis_Global ())]"
-
-definition parity_dot :: String.literal where
-  "parity_dot =
-     String.implode
-       (case TD_side_always_join_Interp_solve_c parity_eqs (cfg_exit parity_cfg, ()) of
-          None \<Rightarrow> ''solver did not terminate''
-        | Some sol \<Rightarrow> contextual_analysis_dot parity_graph_config parity_cfg
-            parity_graph_domain (snd sol))"
 
 end
 

@@ -37,20 +37,29 @@ Dependency shape:
 
 ```text
 VIMP -> Domain -+
-                +-> CFG -> Framework -> Compile -> Exec -> Analyses/* -+-> Soundness -+
-TD   -> Solver -+                                                      |              v
-                                                                       +---------> CLI -> Codegen
-                                                                                     +--> Examples/*
+                +-> CFG -> Framework -> Compile -> Exec -> Soundness -> Analyses/* -+
+TD   -> Solver -+                                                                   |
+                                                                                    v
+                                                                       CLI -> Codegen
+                                                                        +--> Examples/*
 ```
+
+`Soundness` sits *below* the analysis family, not after it: `Voblint_Routing` is
+parented on it and the rest of `Analyses/Shared/` chains off that, so every domain
+inherits `run_source_sound`/`collect_sound` from an ancestor heap rather than
+re-deriving them.
 
 ## The analysis and example families
 
-[`Analyses/Base/`](Analyses/Base/) holds what every domain reuses — the reuse locales,
-the routing policies, the dispatch config, the reporting layer — and is the parent of
-every domain session: [`Sign/`](Analyses/Sign/), [`Interval/`](Analyses/Interval/),
-[`Parity/`](Analyses/Parity/), [`Congruence/`](Analyses/Congruence/),
-[`Relational/`](Analyses/Relational/) and [`Int/`](Analyses/Int/), the reduced product
-of the first four.
+[`Analyses/Shared/`](Analyses/Shared/) holds what every domain reuses, as three
+sessions chained `Routing -> Result -> Nonrelational`: the routing policies, the
+publication surface, and the reuse locales a *non-relational* domain interprets.
+`Voblint_Nonrelational` is the parent of [`Sign/`](Analyses/Sign/),
+[`Interval/`](Analyses/Interval/), [`Parity/`](Analyses/Parity/),
+[`Congruence/`](Analyses/Congruence/) and [`Int/`](Analyses/Int/), the reduced
+product of the first four. [`Relational/`](Analyses/Relational/) is the exception:
+it is parented on `Voblint_Exec`, below the chain, so the pointwise reuse locales
+are out of its reach by construction rather than by convention.
 
 Each domain follows the same layer chain, so a reader who knows one knows them all:
 

@@ -1,0 +1,11 @@
+session Voblint_Result in "." = "Voblint_Routing" +
+  description
+    "The output end: what a solved routed system publishes, and the surface a
+     caller reads it through"
+  sessions
+    "Voblint_Compile"
+    "Voblint_Framework"
+    "Voblint_Exec"
+  theories
+    DG_Result_Construction
+    Analysis_Surface

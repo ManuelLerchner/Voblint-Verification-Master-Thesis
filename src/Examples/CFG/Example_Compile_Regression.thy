@@ -15,10 +15,6 @@ lemma ex_return_before_dead:
   shows "\<exists>j. (Statement j, EA_Ret (Some e) p, FunctionResult p) \<in> E"
   using compile_return_edge[OF assms] by simp
 
-lemmas ex_return_ignores_continuation = compile_Return_ignores_continuation
-
-lemmas ex_multi_return = compile_multi_return_converge
-
 lemma ex_fallthrough:
   assumes "compile_proc \<Pi> p (\<lparr>formals = [], body = SKIP\<rparr>) n = (n', E, K)"
   shows "\<exists>bex. (bex, EA_Ret None p, FunctionResult p) \<in> E"
@@ -35,8 +31,6 @@ lemma ex_nested_calls:
             (Statement (Suc (Suc (Suc n)))) n)))
    \<and> Statement n \<noteq> Statement (Suc (Suc (Suc n)))"
   using assms by (simp add: Let_def)
-
-lemmas ex_recursion = compile_self_call_edge
 
 lemma compile_seq_call_edge:
   assumes "\<Pi> pin = Some decl" and "special_table pin = None"

@@ -1,18 +1,17 @@
 theory State_Report_GraphViz
   imports
-    "Voblint_Analysis_Base.Analysis_GraphViz"
+    Analysis_Graph_Export
     "Voblint_Analysis_Int.Int_Domain"
     Analyse_Dispatch
 begin
 
 text \<open>
-  \<open>raw_cfg_dot\<close>'s \<open>node_annotation\<close> hook already renders a verdict-only
+  \<^const>\<open>raw_cfg_export\<close>'s \<open>node_annotation\<close> hook already carries a verdict-only
   \<^const>\<open>classify_checks\<close> report through \<^const>\<open>check_report_node_annotation\<close>.
-  This is the same idea over \<open>analyse_with_state\<close>'s richer report: the
-  rendered label gains one line per queried variable, printed through the
-  same \<^const>\<open>to_string\<close> every \<^class>\<open>executable_domain\<close> instance already
-  carries, so the DOT rendering shows a real solved state rather than a
-  hand-built one.
+  This is the same idea over \<open>analyse_with_state\<close>'s richer report: the exported
+  label gains one line per queried variable, printed through the same
+  \<^const>\<open>to_string\<close> every \<^class>\<open>executable_domain\<close> instance already carries, so
+  a rendered graph shows a real solved state rather than a hand-built one.
 \<close>
 
 fun string_of_abstract_value :: "abstract_value \<Rightarrow> string" where
@@ -234,8 +233,8 @@ definition entry_state_point_env_for ::
 text \<open>
   \<^const>\<open>NS_Unreachable\<close> is a distinct status, not a shade of the undecided one:
   ``nothing reaches this node'' and ``something reaches it and the abstraction could not
-  decide'' are different findings, and \<^const>\<open>gv_style_of_status\<close> keeps them apart in
-  every renderer at once.
+  decide'' are different findings, and exporting the status rather than a rendered style
+  keeps them apart in every renderer at once.
 \<close>
 
 definition unreachable_state_annotation :: graphviz_node_annotation where
@@ -1129,7 +1128,7 @@ definition cs_ctx_check_annotation ::
 
 text \<open>
   The configuration itself: every context-specific field comes from
-  \<^theory>\<open>Voblint_Analysis_Base.Analysis_GraphViz\<close>'s own call-string presentation constants
+  \<^theory>\<open>Voblint_CLI.Analysis_Graph_Naming\<close>'s own call-string presentation constants
   (\<^const>\<open>cs_graph_route\<close>, \<^const>\<open>cs_context_key\<close>, \<^const>\<open>cs_show_context\<close>,
   \<^const>\<open>cs_cluster_label\<close>), and every state-rendering field is the \<^typ>\<open>abstract_value\<close>
   reading shared with \<^const>\<open>point_node_annotation\<close>. Nothing here mentions a domain,

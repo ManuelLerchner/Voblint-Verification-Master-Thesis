@@ -180,9 +180,73 @@ three parallel renderers:
 So the shipped CLI renders DOT in handwritten OCaml from the structured export,
 while the proof session carries a second, complete DOT-and-HTML string emitter
 that no shipped artifact ever runs. Its only consumers are `value`-printing
-example theories. Two honest options: keep it and say plainly in the theory text
-that it exists to render documentation figures from inside the session, or move
-those figures to the CLI and delete the emitter.
+example theories. Two honest options were open: keep it and say plainly in the
+theory text that it exists to render documentation figures from inside the
+session, or move those figures to the CLI and delete the emitter.
+
+**Decision: delete it.** Done so far, by reachability from the shipped roots
+(generated OCaml, every other `src` theory, and the example theories): seven
+constants and one lemma were reachable from *nothing* and are gone --- `region_label`,
+`graphviz_owner_of`, `cfg_assigned_vars`, `compiled_global_vars`,
+`context_keys_distinct` (+ `context_keys_distinct_imp_inj_on`), `enter_bindings`,
+`string_of_call_action`. All are in `scripts/retired_identifiers.txt`.
+
+What remains of the emitter is *not* free to delete: `raw_cfg_dot_lit`,
+`raw_cfg_dot_with_report_lit`, `analysis_graph_to_dot`, `contextual_analysis_dot`,
+`analysis_graph_nodes`/`_edges` and their private helpers form one closure reached
+from the example theories. `raw_cfg_dot_with_report_lit` alone pulls in
+`raw_cfg_dot_with_report`, `insert_dot_cluster_before_close`,
+`check_report_dot_cluster` and `check_report_html_label`, so deleting any member
+without porting its examples first breaks the rest --- confirmed by doing exactly
+that and reverting. Porting the example witnesses onto the structured export path
+is the remaining work, and it is gated on `codegen-check` plus the `08-tooling`,
+`11-graph-snapshot` and `13-full-state-dot` golden fixtures.
+
+### 2.3a Target architecture, and the sequence to reach it
+
+Decided: one spec, rendered outside Isabelle.
+
+```text
+Isabelle  ->  export_graph        nodes, edges, clusters, labels, state lines,
+                                  status.  No DOT.  No HTML.
+OCaml     ->  cli/dot_render.ml   GraphViz
+              cli/html_report.ml  HTML
+```
+
+Both renderers already consume `export_graph` and nothing else, so the spec
+exists; it is simply not yet the *only* thing Isabelle produces. `AGENTS.md`
+already requires the endpoint: witnesses reaching the GraphViz render surface
+belong in `Voblint_Examples_CLI`, "instead of being spread back through the
+domain folders". Eight of them are currently in `Examples/Interval` (6),
+`Examples/Parity` (1) and `Examples/Relational` (1), which is the violation that
+keeps `Analysis_GraphViz` below the CLI.
+
+Sequence, each step green before the next:
+
+1. Delete the eight DOT figures (`parity_dot`, `flagship_dot`, `twice_dot`,
+   `demo_dot`, `demo_rel_dot`, `nest_1_dot`, `nest_2_dot`, `twice_ctx_dot`) and
+   the `*_graph_config` / `*_graph_domain` definitions that exist only to feed
+   them. Verified: all eight have zero consumers outside their own file and none
+   reaches the generated OCaml. This is the accepted capability loss --- the
+   same pictures come out of `cli/dot_render.ml`.
+2. Repoint the imports those theories then no longer need. **Note:
+   `Example_Proc_Call` imports `Analysis_GraphViz` while using no constant from
+   it --- it is a conduit for `Analysis_GraphViz`'s own imports, and dropping the
+   line breaks seven commands. Replace it with the direct import instead.**
+3. Move the three witnesses that assert on graph *structure* rather than render
+   it (`Example_Interval_DG_Ctx_Flagship`, `Example_Interval_DG_CallString_K1`,
+   `_K2`, using `analysis_graph_wf` / `analysis_graph_nodes` / `_edges`) into
+   `src/Examples/CLI`, with the ROOT changes that implies.
+4. Move `Analysis_GraphViz` to `src/Executable_Surface/CLI/`; `Reporting/` then
+   disappears from `Voblint_Analysis_Base`.
+5. Delete the DOT/HTML emitter closure, which by then has no consumer.
+
+The gate for every step is `codegen-check` plus the `08-tooling`,
+`11-graph-snapshot` and `13-full-state-dot` golden fixtures. Reachability
+computed statically is *not* sufficient evidence here: repeated attempts to size
+this deletion from name-occurrence and regex closures gave answers spanning an
+order of magnitude, and the `Example_Proc_Call` conduit above is invisible to
+every one of them.
 
 What should not stand is the current bookkeeping. `AGENTS.md`'s module map still
 advertises `State_Report_GraphViz` as "the twelve `*_dot_auto` /

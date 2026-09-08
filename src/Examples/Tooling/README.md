@@ -14,15 +14,16 @@ which is why `Voblint_Examples_Tooling` is parented on
 | `Example_TD_Side_Program.thy` | demo | Tilscher's TDside lock-set running example, through the typed `strategy_program` frontend |
 | `Example_TD_Plain_Program.thy` | demo | the TD must-be-initialized running example, through the same frontend with no side effects |
 
-The context-expanded GraphViz regression needs
+The context-expanded graph regression needs
 `Voblint_CLI.State_Report_GraphViz`, so it lives in `CLI/`.
 
-Plain DOT rendering has no witness here. `raw_cfg_dot_lit` and
-`state_report_dot` (`Voblint_CLI.State_Report_GraphViz`) assert nothing a
-build-time render could check, so their coverage lives in the executable
-corpus instead: `tests/regression/08-tooling/` for `--dot`,
-`13-full-state-dot/` for per-node state labels, and `11-graph-snapshot/` for
-golden cluster/node/edge snapshots including a recursive procedure. Those
-compare output; a render into the build log only proves it did not crash.
+Rendering has no witness here. Isabelle stops at an `export_graph`; DOT and
+HTML are produced from it by `cli/dot_render.ml` and `cli/html_report.ml`,
+outside any theory. Neither half asserts anything a build-time render could
+check, so coverage lives in the executable corpus instead:
+`tests/regression/08-tooling/` for `--dot`, `13-full-state-dot/` for per-node
+state labels, and `11-graph-snapshot/` for golden cluster/node/edge snapshots
+including a recursive procedure. Those compare output; a render into the build
+log only proves it did not crash.
 
 Role vocabulary: repository `README.md` § Architecture.

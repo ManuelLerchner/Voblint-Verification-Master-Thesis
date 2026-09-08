@@ -1,7 +1,7 @@
 theory Interval_Classify
   imports Interval_Numeric_Queries Interval_Backward "Voblint_Framework.Abstract_Checks"
     "Voblint_Framework.Analysis_Result" Interval_Exec_Sound
-    "Voblint_Analysis_Base.DG_Result_Construction"
+    "Voblint_Result.DG_Result_Construction"
 begin
 
 hide_const phase.N

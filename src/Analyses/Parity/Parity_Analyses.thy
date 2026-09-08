@@ -4,7 +4,7 @@ theory Parity_Analyses
     Parity_Sound
     Parity_Classify
     Parity_Exec
-    "Voblint_Analysis_Base.DG_Result_Construction"
+    "Voblint_Result.DG_Result_Construction"
     "Voblint_Framework.CFG_Enumeration"
     "Voblint_Exec.Routed_Exec_Refinement"
     "Voblint_Exec.DG_Local_State_Exec_Refinement"
@@ -20,8 +20,8 @@ theory Parity_Analyses
     "Voblint_CFG.CFG_Prune"
     "Voblint_VIMP.VIMP_Program"
     "TD.TD_side_upd_rule"
-    "Voblint_Analysis_Base.Call_String_Routed_Context"
-    "Voblint_Analysis_Base.Entry_State_Routed_Context"
+    "Voblint_Routing.Call_String_Routed_Context"
+    "Voblint_Routing.Entry_State_Routed_Context"
 begin
 
 chapter \<open>How Parity is run under each supported context policy\<close>
@@ -891,7 +891,7 @@ subsection \<open>Instantiating the generic routed-context locale\<close>
 interpretation pctx_entry_dg_base: sound_dg_spec_core "pctx_spec gs empty_pred" "pctx_gamma gs" gs
   by (rule pctx_sound_exec[OF exact])
 
-interpretation pctx_entry_routed: entry_state_routed_context "pctx_spec gs empty_pred"
+interpretation pctx_entry_routed: pure_entry_routed_context "pctx_spec gs empty_pred"
     "pctx_gamma gs" gs Pi ps "Analysis_Global ()" "pctx_entry_route_gen gs empty_pred"
     Bot "Lifted cinit_parity_st" Bot
     "snd (pctx_entry_sol gs empty_pred Pi ps)" "fst (pctx_entry_sol gs empty_pred Pi ps)"

@@ -5,7 +5,7 @@ theory Sign_Analyses
     Sign_Classify
     Sign_Transfer
     Sign_Exec
-    "Voblint_Analysis_Base.DG_Result_Construction"
+    "Voblint_Result.DG_Result_Construction"
     "Voblint_Framework.CFG_Enumeration"
     "Voblint_Exec.Routed_Exec_Refinement"
     "Voblint_Framework.Routed_Analysis_Sound"
@@ -19,8 +19,8 @@ theory Sign_Analyses
     "Voblint_CFG.CFG_Prune"
     "Voblint_VIMP.VIMP_Program"
     "TD.TD_side_upd_rule"
-    "Voblint_Analysis_Base.Call_String_Routed_Context"
-    "Voblint_Analysis_Base.Entry_State_Routed_Context"
+    "Voblint_Routing.Call_String_Routed_Context"
+    "Voblint_Routing.Entry_State_Routed_Context"
 begin
 
 chapter \<open>How Sign is run under each supported context policy\<close>
@@ -292,7 +292,7 @@ text \<open>
   \<^const>\<open>route_unit\<close> to \<^const>\<open>Call_String_Context.cs_route\<close> at a runtime bound
   \<open>k\<close>, and the routed-context locale interpreted changes from
   \<^locale>\<open>unit_routed_context\<close> to \<^locale>\<open>call_string_routed_context\<close>
-  (\<^theory>\<open>Voblint_Analysis_Base.Call_String_Routed_Context\<close>), which is itself already
+  (\<^theory>\<open>Voblint_Routing.Call_String_Routed_Context\<close>), which is itself already
   generic in the domain and discharges four of its six routing obligations
   for any compiled program, leaving only \<open>call_fwd\<close>/\<open>comb_fwd\<close> as genuine
   per-instance premises -- exactly as Sign's own \<open>call_fwd_ok\<close>/\<open>comb_fwd_ok\<close>
@@ -667,8 +667,8 @@ text \<open>
   its caller-state argument (the entered callee frame), which is exactly the "small
   additional domain capability" the routed-domain milestone anticipated for EntryState;
   it needed only \<open>routed_dg_domain_exec\<close>'s own three primitive commute facts, no new
-  Sign-domain mathematics. \<^locale>\<open>entry_state_routed_context\<close>
-  (\<^theory>\<open>Voblint_Analysis_Base.Entry_State_Routed_Context\<close>) is the generic context-side counterpart,
+  Sign-domain mathematics. \<^locale>\<open>pure_entry_routed_context\<close>
+  (\<^theory>\<open>Voblint_Routing.Entry_State_Routed_Context\<close>) is the generic context-side counterpart,
   discharging \<open>FinC\<close>/\<open>RouteAgree\<close>/\<open>EnterAgree\<close> once and for all instances.
 
   Unlike Sign's own routed-unit-context and call-string instances, this development goes
@@ -920,7 +920,7 @@ interpretation sctx_entry_dg_base: sound_dg_spec_core "sctx_spec gs empty_pred" 
   by (rule sctx_sound_exec[OF exact])
 
 
-interpretation sctx_entry_routed: entry_state_routed_context "sctx_spec gs empty_pred"
+interpretation sctx_entry_routed: pure_entry_routed_context "sctx_spec gs empty_pred"
     "sctx_gamma gs" gs Pi ps "Analysis_Global ()" "sctx_entry_route_gen gs empty_pred"
     Bot "Lifted cinit_sign_st" Bot
     "snd (sctx_entry_sol gs empty_pred Pi ps)" "fst (sctx_entry_sol gs empty_pred Pi ps)"

@@ -165,8 +165,8 @@ coverage matrix).
 
 Which executable operation actually runs for `EA_Assume`/`EA_AssumeNot` is
 decided per domain by a record field, `ops.n_bfilter`
-(`'a numeric_ops`, `Core/Equations/Numeric_Ops.thy:38-47`), via a bare
-projection `generic_branch_st_for ops ... = n_bfilter ops ...`. For
+(`'a numeric_ops`, `src/Analyses/Base/Nonrelational/Numeric_Ops.thy`), which each
+domain's `branch_<domain>_st_for` reads directly off the record. For
 Interval and all three Int_dom modes this field is bound to the aligned
 `branch_<domain>_st`, and the corresponding `branch_<domain>_st_for_eq [simp]`
 lemma is the trivial identity `branch_X_st_for = branch_X_st`. For Sign, the

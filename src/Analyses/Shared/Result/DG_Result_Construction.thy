@@ -34,9 +34,9 @@ definition dg_globals_for ::
          keys"
 text \<open>
   Both halves of one routed unit-context solve: the locals table every check report
-  already reads, and the globals beside it. \<open>solve\<close> is a parameter because which solver discipline produced the pair is
-  an application-site choice, so each domain's instance is a partial application
-  rather than another copy of this body.
+  already reads, and the globals beside it. \<open>solve\<close> is a parameter because which
+  solver discipline produced the pair is an application-site choice, so each
+  domain's instance is a partial application rather than another copy of this body.
 
   Binding \<open>sol\<close> once is what keeps a report that shows both halves from solving twice.
 \<close>

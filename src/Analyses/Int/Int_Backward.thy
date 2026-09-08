@@ -4,7 +4,7 @@ theory Int_Backward
     "Voblint_Analysis_Sign.Sign_Backward"
     "Voblint_Analysis_Interval.Interval_Backward"
     "Voblint_Analysis_Congruence.Congruence_Backward"
-    "Voblint_Analysis_Base.Exec_Backward"
+    "Voblint_Nonrelational.Exec_Backward"
 begin
 
 section \<open>Composite integer-domain backward filtering\<close>
@@ -1470,7 +1470,5 @@ text \<open>
 \<close>
 
 lemmas branch_int_dom_fixpoint_sound [intro] = int_dom_backward_fixpoint.branch_sound
-
-lemmas branch_int_dom_fixpoint_st_commute = int_dom_backward_fixpoint.branch_st_commute
 
 end

@@ -100,39 +100,39 @@ module Generated : sig
   type check_result = Check_Proved | Check_Refuted | Check_Unknown
   type ('a, 'b) routed_gk
   type 'a int_dom_ext
+  type ('a, 'b) analysis_cluster
   type com = SKIP | Assign of string * exp | Check of exp | Seq of com * com |
     If of exp * com * com | While of exp * com |
     Call of string option * string * exp list | Return of exp option | Restore |
     Unwind
   type 'a proc_decl_ext = Proc_decl_ext of string list * com * 'a
-  type ('a, 'b) analysis_cluster
   type call_string_gk
   type 'a cfg_ext
   type special_desc
+  type node_status = NS_Plain | NS_Proved | NS_Refuted | NS_Unknown |
+    NS_Unreachable | NS_Exit
   type refine_mode
   type context_mode = Ctx_None | Ctx_EntryState | Ctx_CallString of nat
+  type ('a, 'b) analysis_node
   type solver_choice = Solver_Join | Solver_PerOrigin | Solver_Warrow |
     Solver_WarrowPerOrigin
   type analysis_plan
-  type node_status = NS_Plain | NS_Proved | NS_Refuted | NS_Unknown |
-    NS_Unreachable | NS_Exit
   type abstract_value
   type analysis_domain = Sign_Analysis | Interval_Analysis | Int_Analysis |
     Parity_Analysis
-  type ('a, 'b) analysis_node
   type ('a, 'b) analysis_result
+  type analysis_edge_kind
+  type 'a imp_prog_ext
   type export_edge_kind = XE_Intra | XE_Enter | XE_Combine | XE_CallToReturn |
     XE_GlobalRead | XE_GlobalWrite
   type export_node_kind = XN_Entry | XN_Exit | XN_ProcEntry | XN_ProcExit |
     XN_Point | XN_Global | XN_Source
-  type 'a imp_prog_ext
-  type analysis_edge_kind
   type graphviz_node_annotation
   type 'a export_edge_ext
   type 'a export_node_ext
+  type 'a analysis_config_ext
   type 'a export_cluster_ext
   type 'a export_graph_ext
-  type 'a analysis_config_ext
   type ('a, 'b, 'c, 'd, 'e) analysis_graph_config_ext
   val cfg_intra_list :
     unit cfg_ext -> (cfg_node * (edge_action * cfg_node)) list
@@ -153,9 +153,6 @@ module Generated : sig
     unit analysis_config_ext ->
       unit imp_prog_ext -> ((cfg_node * (exp * check_result)) list) option
   val string_of_exp : nat -> exp -> char list
-  val pretty_string_of_program :
-    (string -> unit proc_decl_ext option) ->
-      string list -> com -> string list -> char list
   val string_of_abstract_value : abstract_value -> char list
   val mk_analysis_config :
     analysis_domain ->
@@ -164,15 +161,30 @@ module Generated : sig
     unit analysis_config_ext ->
       unit imp_prog_ext ->
         ((cfg_node * (exp * check_result lifted)) list) option
-  val xn_id : 'a export_node_ext -> string
-  val xe_dst : 'a export_edge_ext -> string
-  val xe_src : 'a export_edge_ext -> string
+  val pretty_string_of_program :
+    (string -> unit proc_decl_ext option) ->
+      string list -> com -> string list -> char list
   val cs_globals_for :
     analysis_domain -> nat -> unit imp_prog_ext -> (string * string list) list
   val valid_analysis_config : unit analysis_config_ext -> bool
+  val exp_vnames_list : exp -> string list
+  val xn_id : 'a export_node_ext -> string
+  val prog_stmt_post_order : unit imp_prog_ext -> (string * cfg_node list) list
+  val xe_dst : 'a export_edge_ext -> string
+  val xe_src : 'a export_edge_ext -> string
+  val cs_ctx_export_auto :
+    analysis_domain -> nat -> unit imp_prog_ext -> unit export_graph_ext
+  val solver_globals_for :
+    analysis_domain ->
+      solver_choice -> unit imp_prog_ext -> (string * string list) list
   val xe_kind : 'a export_edge_ext -> export_edge_kind
   val xn_kind : 'a export_node_ext -> export_node_kind
-  val exp_vnames_list : exp -> string list
+  val analyse_config_with_state :
+    unit analysis_config_ext ->
+      unit imp_prog_ext ->
+        ((cfg_node *
+           (exp *
+             (check_result * (bool * (string -> abstract_value))))) list) option
   val xc_id : 'a export_cluster_ext -> string
   val xe_label : 'a export_edge_ext -> string
   val xn_label : 'a export_node_ext -> string
@@ -180,25 +192,13 @@ module Generated : sig
   val xg_edges : 'a export_graph_ext -> unit export_edge_ext list
   val xg_nodes : 'a export_graph_ext -> unit export_node_ext list
   val xn_status : 'a export_node_ext -> node_status option
-  val prog_stmt_post_order : unit imp_prog_ext -> (string * cfg_node list) list
-  val cs_ctx_export_auto :
-    analysis_domain -> nat -> unit imp_prog_ext -> unit export_graph_ext
-  val solver_globals_for :
-    analysis_domain ->
-      solver_choice -> unit imp_prog_ext -> (string * string list) list
-  val xc_label : 'a export_cluster_ext -> string
-  val xc_nodes : 'a export_cluster_ext -> string list
-  val analyse_config_with_state :
-    unit analysis_config_ext ->
-      unit imp_prog_ext ->
-        ((cfg_node *
-           (exp *
-             (check_result * (bool * (string -> abstract_value))))) list) option
-  val xg_clusters : 'a export_graph_ext -> unit export_cluster_ext list
   val full_state_export_auto :
     analysis_domain -> unit imp_prog_ext -> unit export_graph_ext
+  val xc_label : 'a export_cluster_ext -> string
+  val xc_nodes : 'a export_cluster_ext -> string list
   val entry_state_globals_for :
     analysis_domain -> unit imp_prog_ext -> (string * string list) list
+  val xg_clusters : 'a export_graph_ext -> unit export_cluster_ext list
   val entry_state_verdicts_for :
     analysis_domain ->
       unit imp_prog_ext -> (cfg_node * (exp * check_result lifted)) list
@@ -3163,6 +3163,24 @@ let rec executable_domain_int_dom_ext _A =
      to_string = to_string_int_dom_ext _A}
     : 'a int_dom_ext executable_domain);;
 
+type ('a, 'b) analysis_cluster = ContextCluster of char list * 'a |
+  GlobalCluster | SourceCluster;;
+
+let rec equal_analysis_clustera _A
+  x0 x1 = match x0, x1 with GlobalCluster, SourceCluster -> false
+    | SourceCluster, GlobalCluster -> false
+    | ContextCluster (x11, x12), SourceCluster -> false
+    | SourceCluster, ContextCluster (x11, x12) -> false
+    | ContextCluster (x11, x12), GlobalCluster -> false
+    | GlobalCluster, ContextCluster (x11, x12) -> false
+    | ContextCluster (x11, x12), ContextCluster (y11, y12) ->
+        equal_lista equal_char x11 y11 && eq _A x12 y12
+    | SourceCluster, SourceCluster -> true
+    | GlobalCluster, GlobalCluster -> true;;
+
+let rec equal_analysis_cluster _A =
+  ({equal = equal_analysis_clustera _A} : ('a, 'b) analysis_cluster equal);;
+
 type com = SKIP | Assign of string * exp | Check of exp | Seq of com * com |
   If of exp * com * com | While of exp * com |
   Call of string option * string * exp list | Return of exp option | Restore |
@@ -3285,24 +3303,6 @@ let rec equal_proc_decl_exta _A
 let rec equal_proc_decl_ext _A =
   ({equal = equal_proc_decl_exta _A} : 'a proc_decl_ext equal);;
 
-type ('a, 'b) analysis_cluster = ContextCluster of char list * 'a |
-  GlobalCluster | SourceCluster;;
-
-let rec equal_analysis_clustera _A
-  x0 x1 = match x0, x1 with GlobalCluster, SourceCluster -> false
-    | SourceCluster, GlobalCluster -> false
-    | ContextCluster (x11, x12), SourceCluster -> false
-    | SourceCluster, ContextCluster (x11, x12) -> false
-    | ContextCluster (x11, x12), GlobalCluster -> false
-    | GlobalCluster, ContextCluster (x11, x12) -> false
-    | ContextCluster (x11, x12), ContextCluster (y11, y12) ->
-        equal_lista equal_char x11 y11 && eq _A x12 y12
-    | SourceCluster, SourceCluster -> true
-    | GlobalCluster, GlobalCluster -> true;;
-
-let rec equal_analysis_cluster _A =
-  ({equal = equal_analysis_clustera _A} : ('a, 'b) analysis_cluster equal);;
-
 type call_string_gk = Global | Seed of cfg_node * cfg_node list;;
 
 let rec equal_call_string_gka
@@ -3348,6 +3348,9 @@ type ('a, 'b, 'c, 'd) state_ext =
       'd;;
 
 type special_desc = SD_Nondet_Int | SD_Min | SD_Max;;
+
+type node_status = NS_Plain | NS_Proved | NS_Refuted | NS_Unknown |
+  NS_Unreachable | NS_Exit;;
 
 type refine_mode = Refine_Never | Refine_Once | Refine_Fixpoint;;
 
@@ -3403,6 +3406,9 @@ type ('a, 'b, 'c, 'd, 'e, 'f) dg_spec_ext =
 
 type context_mode = Ctx_None | Ctx_EntryState | Ctx_CallString of nat;;
 
+type ('a, 'b) analysis_node = LocalNode of cfg_node * 'a | GlobalNode of 'b |
+  SourceNode of char list;;
+
 type solver_choice = Solver_Join | Solver_PerOrigin | Solver_Warrow |
   Solver_WarrowPerOrigin;;
 
@@ -3414,28 +3420,21 @@ type analysis_plan = Plan_Sign of solver_choice |
   Plan_Int_EntryState of solver_choice |
   Plan_Int_CallString of solver_choice * nat | Plan_Parity of solver_choice;;
 
-type node_status = NS_Plain | NS_Proved | NS_Refuted | NS_Unknown |
-  NS_Unreachable | NS_Exit;;
-
 type abstract_value = SignValue of sign | IntervalValue of ivl |
   IntDomValue of unit int_dom_ext | ParityValue of parity;;
 
 type analysis_domain = Sign_Analysis | Interval_Analysis | Int_Analysis |
   Parity_Analysis;;
 
-type ('a, 'b) analysis_node = LocalNode of cfg_node * 'a | GlobalNode of 'b |
-  SourceNode of char list;;
-
 type ('a, 'b) analysis_result =
   Analysis_Result of (cfg_node * 'a) set * (cfg_node -> 'a -> 'b lifted);;
 
 type ('a, 'b) state_exta = State_exta of 'a set * 'b;;
 
-type export_edge_kind = XE_Intra | XE_Enter | XE_Combine | XE_CallToReturn |
-  XE_GlobalRead | XE_GlobalWrite;;
-
-type export_node_kind = XN_Entry | XN_Exit | XN_ProcEntry | XN_ProcExit |
-  XN_Point | XN_Global | XN_Source;;
+type analysis_edge_kind = IntraEdge of edge_action |
+  EnterEdge of char list * call_action |
+  CombineEdge of cfg_node * string option * string option |
+  CallToReturnEdge of string | GlobalReadEdge | GlobalWriteEdge;;
 
 type ('a, 'b, 'c, 'd) ug_state_ext =
   Ug_state_ext of ('b -> ('a, 'c) fmap) * 'd;;
@@ -3443,10 +3442,13 @@ type ('a, 'b, 'c, 'd) ug_state_ext =
 type 'a imp_prog_ext =
   Imp_prog_ext of (string * unit proc_decl_ext) list * string list * 'a;;
 
-type analysis_edge_kind = IntraEdge of edge_action |
-  EnterEdge of char list * call_action |
-  CombineEdge of cfg_node * string option * string option |
-  CallToReturnEdge of string | GlobalReadEdge | GlobalWriteEdge;;
+type export_edge_kind = XE_Intra | XE_Enter | XE_Combine | XE_CallToReturn |
+  XE_GlobalRead | XE_GlobalWrite;;
+
+type export_node_kind = XN_Entry | XN_Exit | XN_ProcEntry | XN_ProcExit |
+  XN_Point | XN_Global | XN_Source;;
+
+type graphviz_node_annotation = Node_Annotation of char list * node_status;;
 
 type ('a, 'b) numeric_ops_ext =
   Numeric_ops_ext of
@@ -3454,8 +3456,6 @@ type ('a, 'b) numeric_ops_ext =
       ((string -> bool) ->
         exp -> bool -> 'a resolved_st_q -> 'a resolved_st_q) *
       'a * 'b;;
-
-type graphviz_node_annotation = Node_Annotation of char list * node_status;;
 
 type ('a, 'b, 'c, 'd) func_state =
   Q of ('a * ('a * (('a, 'b, 'c, ('a, unit) state_exta) state_ext *
@@ -3476,6 +3476,10 @@ type 'a export_node_ext =
   Export_node_ext of
     string * string * export_node_kind * node_status option * string list * 'a;;
 
+type 'a analysis_config_ext =
+  Analysis_config_ext of
+    analysis_domain * solver_choice option * context_mode * 'a;;
+
 type 'a export_cluster_ext =
   Export_cluster_ext of string * string * string list * 'a;;
 
@@ -3484,19 +3488,15 @@ type 'a export_graph_ext =
     unit export_cluster_ext list * unit export_node_ext list *
       unit export_edge_ext list * 'a;;
 
-type 'a analysis_config_ext =
-  Analysis_config_ext of
-    analysis_domain * solver_choice option * context_mode * 'a;;
-
-type 'a procedure_scope_ext =
-  Procedure_scope_ext of string list * string list * string option * 'a;;
-
 type ('a, 'b) backward_exec_ops_ext =
   Backward_exec_ops_ext of
     (exp -> (string -> 'a) -> 'a) * ('a -> bool option) *
       (bool -> 'a -> 'a -> 'a * 'a) * (bool -> 'a -> 'a -> 'a * 'a) *
       ('a -> 'a -> 'a -> 'a * 'a) * ('a -> 'a -> 'a -> 'a * 'a) *
       ('a -> 'a -> 'a -> 'a * 'a) * ('a -> 'a -> 'a) * 'b;;
+
+type 'a procedure_scope_ext =
+  Procedure_scope_ext of string list * string list * string option * 'a;;
 
 type ('a, 'b, 'c, 'd, 'e) analysis_graph_config_ext =
   Analysis_graph_config_ext of
@@ -3638,6 +3638,10 @@ let rec fset_of_list xa = Abs_fset (Set xa);;
 let rec fmdom (Fmap_of_list m) = fimage fst (fset_of_list m);;
 
 let rec fmupd _A k v m = fmadd _A m (Fmap_of_list [(k, v)]);;
+
+let char_0x0A : char = Chr (Z.of_int 10);;
+
+let nl : char list = [char_0x0A];;
 
 let rec calls (Cfg_ext (intra, calls, cfg_entry, checks, more)) = calls;;
 
@@ -4630,9 +4634,9 @@ let rec no_return = function Seq (c1, c2) -> no_return c1 && no_return c2
                     | Restore -> true
                     | Unwind -> true;;
 
-let char_0x0A : char = Chr (Z.of_int 10);;
+let char_0x5C : char = Chr (Z.of_int 92);;
 
-let nl : char list = [char_0x0A];;
+let gv_nl : char list = [char_0x5C; char_0x6E];;
 
 let rec fmlookup _A (Fmap_of_list m) = map_of _A m;;
 
@@ -6068,10 +6072,8 @@ let rec local_combine_transfer f m exit = sp_return (f (man_local m) exit);;
 let rec n_bfilter _A
   (Numeric_ops_ext (n_aval, n_bfilter, n_top, more)) = n_bfilter;;
 
-let rec generic_branch_st_for _A ops gs b pol s = n_bfilter _A ops gs b pol s;;
-
 let rec branch_int_dom_fixpoint_st_for
-  x = generic_branch_st_for (bot_int_dom_ext int_dom_record_lattice_unit)
+  x = n_bfilter (bot_int_dom_ext int_dom_record_lattice_unit)
         int_dom_ops_fixpoint x;;
 
 let rec ivl_min
@@ -6256,8 +6258,8 @@ let rec int_tf_st_fixpoint_for
     | gs, EA_Check cnd, s -> s;;
 
 let rec branch_int_dom_never_st_for
-  x = generic_branch_st_for (bot_int_dom_ext int_dom_record_lattice_unit)
-        int_dom_ops_never x;;
+  x = n_bfilter (bot_int_dom_ext int_dom_record_lattice_unit) int_dom_ops_never
+        x;;
 
 let rec int_tf_st_never_for
   gs x1 s = match gs, x1, s with gs, EA_Nop, s -> s
@@ -6301,8 +6303,8 @@ let rec int_tf_st_never_for
     | gs, EA_Check cnd, s -> s;;
 
 let rec branch_int_dom_once_st_for
-  x = generic_branch_st_for (bot_int_dom_ext int_dom_record_lattice_unit)
-        int_dom_ops_once x;;
+  x = n_bfilter (bot_int_dom_ext int_dom_record_lattice_unit) int_dom_ops_once
+        x;;
 
 let rec int_tf_st_once_for
   gs x1 s = match gs, x1, s with gs, EA_Nop, s -> s
@@ -6717,7 +6719,7 @@ let abort_empty_set _ = failwith "List.abort_empty_set";;
 
 let rec sign_enter_st_for x = generic_enter_st_for bot_sign sign_ops x;;
 
-let rec branch_sign_st_for x = generic_branch_st_for bot_sign sign_ops x;;
+let rec branch_sign_st_for x = n_bfilter bot_sign sign_ops x;;
 
 let rec sign_tf_st_for
   gs x1 s = match gs, x1, s with gs, EA_Nop, s -> s
@@ -7306,10 +7308,6 @@ let rec and_opt
                      equal_option equal_bool y (Some true)
                  then Some true else None));;
 
-let char_0x5C : char = Chr (Z.of_int 92);;
-
-let gv_nl : char list = [char_0x5C; char_0x6E];;
-
 let rec combine_env gs s t = (fun n -> (if gs n then t n else s n));;
 
 let rec enter_frame gs reset_val s = combine_env gs (fun _ -> reset_val) s;;
@@ -7522,7 +7520,7 @@ let rec route_unit u ctx d ca = ();;
 
 let rec ivl_enter_st_for x = generic_enter_st_for bot_ivl ivl_ops x;;
 
-let rec branch_ivl_st_for x = generic_branch_st_for bot_ivl ivl_ops x;;
+let rec branch_ivl_st_for x = n_bfilter bot_ivl ivl_ops x;;
 
 let rec ivl_tf_st_for
   gs x1 s = match gs, x1, s with gs, EA_Nop, s -> s
@@ -8207,6 +8205,10 @@ let rec analyse
     | Int_Analysis, p -> analyse_int_report p
     | Parity_Analysis, p -> analyse_parity_report p;;
 
+let rec join_gv_nl = function [] -> []
+                     | [s] -> s
+                     | s :: v :: va -> s @ gv_nl @ join_gv_nl (v :: va);;
+
 let rec ics_sol_prog
   k gs p =
     ics_sol k Refine_Fixpoint gs
@@ -8288,10 +8290,6 @@ let rec ics_sol_warrow
       (ics_eqs k mode gs empty_pred pi ps) (cfg_exit (compile_prog pi ps), []);;
 
 let source_nl : char list = [char_0x0A];;
-
-let rec join_gv_nl = function [] -> []
-                     | [s] -> s
-                     | s :: v :: va -> s @ gv_nl @ join_gv_nl (v :: va);;
 
 let char_0x21 : char = Chr (Z.of_int 33);;
 
@@ -8423,15 +8421,23 @@ let rec sctx_entry_sol
             (bounded_warrowing_resolved_st_q bounded_warrowing_sign))))
       (sctx_entry_eqs gs empty_pred pi ps) (cfg_exit (compile_prog pi ps), []);;
 
-let rec split_gv_nl_acc
-  acc x1 = match acc, x1 with acc, [] -> [rev acc]
-    | acc, [ch] -> [rev (ch :: acc)]
-    | acc, ch1 :: ch2 :: rest ->
-        (if equal_chara ch1 char_0x5C && equal_chara ch2 char_0x6E
-          then rev acc :: split_gv_nl_acc [] rest
-          else split_gv_nl_acc (ch1 :: acc) (ch2 :: rest));;
+let rec cfg_point_list
+  g = remdups equal_cfg_node
+        (cfg_entry g ::
+          maps (fun (u, (_, v)) -> [u; v]) (cfg_intra_list g) @
+            maps (fun (call, (_, (entry, cont))) ->
+                   call ::
+                     entry ::
+                       cont ::
+                         (match entry with Statement _ -> []
+                           | FunctionEntry p -> [FunctionResult p]
+                           | FunctionResult _ -> []))
+              (cfg_calls_list g));;
 
-let rec split_gv_nl s = split_gv_nl_acc [] s;;
+let rec ordered_by_key
+  key s =
+    map (fun k -> the_elem (filter (fun x -> (((key x) : string) = k)) s))
+      (sorted_list_of_set (equal_literal, linorder_literal) (image key s));;
 
 let rec analyse_int_result_for
   gs p = analyse_int_ctx_result_warrow_for Refine_Fixpoint gs p;;
@@ -9307,10 +9313,79 @@ let rec analyse_config
       | Some (Plan_Int_CallString (_, _)) -> None
       | Some (Plan_Parity s) -> analyse_with_solver Parity_Analysis s p);;
 
-let rec graphviz_exit
-  g = (match cfg_entry g with Statement a -> Statement a
-        | FunctionEntry a -> FunctionResult a
-        | FunctionResult a -> FunctionResult a);;
+let rec string_of_exp
+  min_prio e =
+    (let body =
+       (match e with N a -> string_of_int a | V a -> explode a
+         | Plus (a, b) ->
+           string_of_exp (nat_of_integer (Z.of_int 60)) a @
+             [char_0x2B] @ string_of_exp (nat_of_integer (Z.of_int 61)) b
+         | Minus (a, b) ->
+           string_of_exp (nat_of_integer (Z.of_int 60)) a @
+             [char_0x2D] @ string_of_exp (nat_of_integer (Z.of_int 61)) b
+         | Times (a, b) ->
+           string_of_exp (nat_of_integer (Z.of_int 70)) a @
+             [char_0x2A] @ string_of_exp (nat_of_integer (Z.of_int 71)) b
+         | Less (a, b) ->
+           string_of_exp (nat_of_integer (Z.of_int 51)) a @
+             [char_0x3C] @ string_of_exp (nat_of_integer (Z.of_int 51)) b
+         | Eq (a, b) ->
+           string_of_exp (nat_of_integer (Z.of_int 51)) a @
+             [char_0x3D; char_0x3D] @
+               string_of_exp (nat_of_integer (Z.of_int 51)) b
+         | Not a -> [char_0x21] @ string_of_exp (nat_of_integer (Z.of_int 80)) a
+         | And (a, b) ->
+           string_of_exp (nat_of_integer (Z.of_int 40)) a @
+             [char_0x26; char_0x26] @
+               string_of_exp (nat_of_integer (Z.of_int 41)) b
+         | Or (a, b) ->
+           string_of_exp (nat_of_integer (Z.of_int 30)) a @
+             [char_0x7C; char_0x7C] @
+               string_of_exp (nat_of_integer (Z.of_int 31)) b)
+       in
+      (if less_nat (exp_prio e) min_prio then [char_0x28] @ body @ [char_0x29]
+        else body));;
+
+let rec string_of_action
+  = function EA_Nop -> [char_0x6E; char_0x6F; char_0x70]
+    | EA_Assign (x, a) ->
+        explode x @
+          [char_0x20; char_0x3A; char_0x3D; char_0x20] @
+            string_of_exp zero_nat a
+    | EA_Special (Nondet_Int, x) ->
+        explode x @
+          [char_0x20; char_0x3A; char_0x3D; char_0x20; char_0x5F; char_0x5F;
+            char_0x76; char_0x6F; char_0x62; char_0x6C; char_0x69; char_0x6E;
+            char_0x74; char_0x5F; char_0x6E; char_0x6F; char_0x6E; char_0x64;
+            char_0x65; char_0x74; char_0x5F; char_0x69; char_0x6E; char_0x74;
+            char_0x28; char_0x29]
+    | EA_Special (Min (a, b), x) ->
+        explode x @
+          [char_0x20; char_0x3A; char_0x3D; char_0x20; char_0x6D; char_0x69;
+            char_0x6E; char_0x28] @
+            string_of_exp zero_nat a @
+              [char_0x2C; char_0x20] @ string_of_exp zero_nat b @ [char_0x29]
+    | EA_Special (Max (a, b), x) ->
+        explode x @
+          [char_0x20; char_0x3A; char_0x3D; char_0x20; char_0x6D; char_0x61;
+            char_0x78; char_0x28] @
+            string_of_exp zero_nat a @
+              [char_0x2C; char_0x20] @ string_of_exp zero_nat b @ [char_0x29]
+    | EA_Assume b -> [char_0x5B] @ string_of_exp zero_nat b @ [char_0x5D]
+    | EA_AssumeNot b ->
+        [char_0x21; char_0x5B] @ string_of_exp zero_nat b @ [char_0x5D]
+    | EA_Body p ->
+        [char_0x62; char_0x6F; char_0x64; char_0x79; char_0x28] @
+          explode p @ [char_0x29]
+    | EA_Ret (None, p) ->
+        [char_0x72; char_0x65; char_0x74; char_0x75; char_0x72; char_0x6E]
+    | EA_Ret (Some e, p) ->
+        [char_0x72; char_0x65; char_0x74; char_0x75; char_0x72; char_0x6E;
+          char_0x20] @
+          string_of_exp zero_nat e
+    | EA_Check cnd ->
+        [char_0x63; char_0x68; char_0x65; char_0x63; char_0x6B; char_0x28] @
+          string_of_exp zero_nat cnd @ [char_0x29];;
 
 let rec join_point_with j x1 y = match j, x1, y with j, Bot, y -> y
                           | j, Lifted v, Bot -> Lifted v
@@ -9428,39 +9503,6 @@ let rec source_indent
   n = (if equal_nata n zero_nat then []
         else [char_0x20; char_0x20] @ source_indent (minus_nat n one_nat));;
 
-let rec string_of_exp
-  min_prio e =
-    (let body =
-       (match e with N a -> string_of_int a | V a -> explode a
-         | Plus (a, b) ->
-           string_of_exp (nat_of_integer (Z.of_int 60)) a @
-             [char_0x2B] @ string_of_exp (nat_of_integer (Z.of_int 61)) b
-         | Minus (a, b) ->
-           string_of_exp (nat_of_integer (Z.of_int 60)) a @
-             [char_0x2D] @ string_of_exp (nat_of_integer (Z.of_int 61)) b
-         | Times (a, b) ->
-           string_of_exp (nat_of_integer (Z.of_int 70)) a @
-             [char_0x2A] @ string_of_exp (nat_of_integer (Z.of_int 71)) b
-         | Less (a, b) ->
-           string_of_exp (nat_of_integer (Z.of_int 51)) a @
-             [char_0x3C] @ string_of_exp (nat_of_integer (Z.of_int 51)) b
-         | Eq (a, b) ->
-           string_of_exp (nat_of_integer (Z.of_int 51)) a @
-             [char_0x3D; char_0x3D] @
-               string_of_exp (nat_of_integer (Z.of_int 51)) b
-         | Not a -> [char_0x21] @ string_of_exp (nat_of_integer (Z.of_int 80)) a
-         | And (a, b) ->
-           string_of_exp (nat_of_integer (Z.of_int 40)) a @
-             [char_0x26; char_0x26] @
-               string_of_exp (nat_of_integer (Z.of_int 41)) b
-         | Or (a, b) ->
-           string_of_exp (nat_of_integer (Z.of_int 30)) a @
-             [char_0x7C; char_0x7C] @
-               string_of_exp (nat_of_integer (Z.of_int 31)) b)
-       in
-      (if less_nat (exp_prio e) min_prio then [char_0x28] @ body @ [char_0x29]
-        else body));;
-
 let rec string_of_com
   = function SKIP -> [char_0x73; char_0x6B; char_0x69; char_0x70]
     | Assign (x, e) ->
@@ -9517,690 +9559,6 @@ let rec string_of_com
         [char_0x3C; char_0x75; char_0x6E; char_0x77; char_0x69; char_0x6E;
           char_0x64; char_0x3E];;
 
-let rec cfg_point_list
-  g = remdups equal_cfg_node
-        (cfg_entry g ::
-          maps (fun (u, (_, v)) -> [u; v]) (cfg_intra_list g) @
-            maps (fun (call, (_, (entry, cont))) ->
-                   call ::
-                     entry ::
-                       cont ::
-                         (match entry with Statement _ -> []
-                           | FunctionEntry p -> [FunctionResult p]
-                           | FunctionResult _ -> []))
-              (cfg_calls_list g));;
-
-let rec string_of_cfg_node
-  = function Statement n -> [char_0x70; char_0x70] @ string_of_nat n
-    | FunctionEntry p ->
-        [char_0x65; char_0x6E; char_0x74; char_0x72; char_0x79; char_0x5F] @
-          explode p
-    | FunctionResult p ->
-        [char_0x72; char_0x65; char_0x73; char_0x75; char_0x6C; char_0x74;
-          char_0x5F] @
-          explode p;;
-
-let rec cs_show_context
-  ctx = maps (fun u -> string_of_cfg_node u @ [char_0x20]) ctx;;
-
-let rec cs_context_key ctx = implode (cs_show_context ctx);;
-
-let rec cs_graph_route k u ctx ca d = Some (cs_route k u ctx d ca);;
-
-let rec annotation_status (Node_Annotation (x1, x2)) = x2;;
-
-let rec node_annotation
-  (Analysis_graph_config_ext
-    (local_of, route, context_key, show_context, locals_for_pp,
-      return_slot_for_pp, globals_to_show, show_local, format_return,
-      show_global, show_global_key, is_shared_global, show_internal_globals,
-      owner_of, cluster_label, source_text, node_annotation, more))
-    = node_annotation;;
-
-let rec annotation_label (Node_Annotation (x1, x2)) = x1;;
-
-let rec return_slot_for_pp
-  (Analysis_graph_config_ext
-    (local_of, route, context_key, show_context, locals_for_pp,
-      return_slot_for_pp, globals_to_show, show_local, format_return,
-      show_global, show_global_key, is_shared_global, show_internal_globals,
-      owner_of, cluster_label, source_text, node_annotation, more))
-    = return_slot_for_pp;;
-
-let rec show_global_key
-  (Analysis_graph_config_ext
-    (local_of, route, context_key, show_context, locals_for_pp,
-      return_slot_for_pp, globals_to_show, show_local, format_return,
-      show_global, show_global_key, is_shared_global, show_internal_globals,
-      owner_of, cluster_label, source_text, node_annotation, more))
-    = show_global_key;;
-
-let rec globals_to_show
-  (Analysis_graph_config_ext
-    (local_of, route, context_key, show_context, locals_for_pp,
-      return_slot_for_pp, globals_to_show, show_local, format_return,
-      show_global, show_global_key, is_shared_global, show_internal_globals,
-      owner_of, cluster_label, source_text, node_annotation, more))
-    = globals_to_show;;
-
-let rec locals_for_pp
-  (Analysis_graph_config_ext
-    (local_of, route, context_key, show_context, locals_for_pp,
-      return_slot_for_pp, globals_to_show, show_local, format_return,
-      show_global, show_global_key, is_shared_global, show_internal_globals,
-      owner_of, cluster_label, source_text, node_annotation, more))
-    = locals_for_pp;;
-
-let rec format_return
-  (Analysis_graph_config_ext
-    (local_of, route, context_key, show_context, locals_for_pp,
-      return_slot_for_pp, globals_to_show, show_local, format_return,
-      show_global, show_global_key, is_shared_global, show_internal_globals,
-      owner_of, cluster_label, source_text, node_annotation, more))
-    = format_return;;
-
-let rec show_global
-  (Analysis_graph_config_ext
-    (local_of, route, context_key, show_context, locals_for_pp,
-      return_slot_for_pp, globals_to_show, show_local, format_return,
-      show_global, show_global_key, is_shared_global, show_internal_globals,
-      owner_of, cluster_label, source_text, node_annotation, more))
-    = show_global;;
-
-let rec show_local
-  (Analysis_graph_config_ext
-    (local_of, route, context_key, show_context, locals_for_pp,
-      return_slot_for_pp, globals_to_show, show_local, format_return,
-      show_global, show_global_key, is_shared_global, show_internal_globals,
-      owner_of, cluster_label, source_text, node_annotation, more))
-    = show_local;;
-
-let rec local_of
-  (Analysis_graph_config_ext
-    (local_of, route, context_key, show_context, locals_for_pp,
-      return_slot_for_pp, globals_to_show, show_local, format_return,
-      show_global, show_global_key, is_shared_global, show_internal_globals,
-      owner_of, cluster_label, source_text, node_annotation, more))
-    = local_of;;
-
-let rec graphviz_point_label
-  g p = (match p with Statement _ -> string_of_cfg_node p
-          | FunctionEntry owner ->
-            [char_0x65; char_0x6E; char_0x74; char_0x72; char_0x79; char_0x5F] @
-              explode owner
-          | FunctionResult owner ->
-            [char_0x65; char_0x78; char_0x69; char_0x74; char_0x5F] @
-              explode owner);;
-
-let rec contextual_node_label_lines
-  cfg g sol n =
-    (match n
-      with LocalNode (p, ctx) ->
-        graphviz_point_label g p ::
-          show_local cfg p ctx (locals_for_pp cfg p)
-            (local_of cfg (sol (Inl (p, ctx)))) @
-            (match return_slot_for_pp cfg p with None -> []
-              | Some ret ->
-                format_return cfg p ctx ret
-                  (local_of cfg (sol (Inl (p, ctx))))) @
-              (match node_annotation cfg p ctx with None -> []
-                | Some ann ->
-                  (if null (annotation_label ann) then []
-                    else split_gv_nl (annotation_label ann)))
-      | GlobalNode k ->
-        show_global_key cfg k ::
-          show_global cfg k (globals_to_show cfg) (sol (Inr k))
-      | SourceNode src -> [src]);;
-
-let rec proc_entry_pps_list
-  g = map (fun (_, (_, (entry, _))) -> entry) (cfg_calls_list g);;
-
-let rec proc_exit_pps_list
-  g = map (fun (_, (_, (entry, _))) ->
-            (match entry with Statement _ -> entry
-              | FunctionEntry a -> FunctionResult a
-              | FunctionResult _ -> entry))
-        (cfg_calls_list g);;
-
-let rec export_node_kind_of
-  g n = (match n
-          with LocalNode (p, _) ->
-            (if equal_cfg_nodea p (cfg_entry g) then XN_Entry
-              else (if equal_cfg_nodea p (graphviz_exit g) then XN_Exit
-                     else (if membera equal_cfg_node (proc_entry_pps_list g) p
-                            then XN_ProcEntry
-                            else (if membera equal_cfg_node
-                                       (proc_exit_pps_list g) p
-                                   then XN_ProcExit else XN_Point))))
-          | GlobalNode _ -> XN_Global | SourceNode _ -> XN_Source);;
-
-let rec owner_of
-  (Analysis_graph_config_ext
-    (local_of, route, context_key, show_context, locals_for_pp,
-      return_slot_for_pp, globals_to_show, show_local, format_return,
-      show_global, show_global_key, is_shared_global, show_internal_globals,
-      owner_of, cluster_label, source_text, node_annotation, more))
-    = owner_of;;
-
-let rec equal_analysis_node _A _B
-  x0 x1 = match x0, x1 with GlobalNode x2, SourceNode x3 -> false
-    | SourceNode x3, GlobalNode x2 -> false
-    | LocalNode (x11, x12), SourceNode x3 -> false
-    | SourceNode x3, LocalNode (x11, x12) -> false
-    | LocalNode (x11, x12), GlobalNode x2 -> false
-    | GlobalNode x2, LocalNode (x11, x12) -> false
-    | SourceNode x3, SourceNode y3 -> equal_lista equal_char x3 y3
-    | GlobalNode x2, GlobalNode y2 -> eq _B x2 y2
-    | LocalNode (x11, x12), LocalNode (y11, y12) ->
-        equal_cfg_nodea x11 y11 && eq _A x12 y12;;
-
-let rec analysis_node_position _A _B
-  x0 n = match x0, n with [], n -> zero_nat
-    | m :: ms, n ->
-        (if equal_analysis_node _A _B n m then zero_nat
-          else suc (analysis_node_position _A _B ms n));;
-
-let rec context_position _A
-  x0 key = match x0, key with [], key -> zero_nat
-    | keya :: keys, key ->
-        (if eq _A key keya then zero_nat
-          else suc (context_position _A keys key));;
-
-let rec owner_contexts
-  cfg x1 = match cfg, x1 with cfg, [] -> []
-    | cfg, LocalNode (p, ctx) :: ns ->
-        (owner_of cfg p, ctx) :: owner_contexts cfg ns
-    | cfg, GlobalNode k :: ns -> owner_contexts cfg ns
-    | cfg, SourceNode src :: ns -> owner_contexts cfg ns;;
-
-let rec analysis_node_id _A _B
-  cfg ns n =
-    (match n
-      with LocalNode (p, ctx) ->
-        owner_of cfg p @
-          [char_0x5F] @
-            string_of_cfg_node p @
-              [char_0x5F; char_0x63; char_0x74; char_0x78] @
-                string_of_nat
-                  (context_position (equal_prod (equal_list equal_char) _A)
-                    (remdups (equal_prod (equal_list equal_char) _A)
-                      (owner_contexts cfg ns))
-                    (owner_of cfg p, ctx))
-      | GlobalNode _ ->
-        [char_0x67; char_0x6C; char_0x6F; char_0x62; char_0x61; char_0x6C;
-          char_0x5F] @
-          string_of_nat (analysis_node_position _A _B ns n)
-      | SourceNode _ ->
-        [char_0x73; char_0x6F; char_0x75; char_0x72; char_0x63; char_0x65]);;
-
-let rec export_node_of _A _B
-  cfg g sol ns n =
-    (let lines = contextual_node_label_lines cfg g sol n in
-     let status =
-       (match n
-         with LocalNode (p, ctx) ->
-           map_option annotation_status (node_annotation cfg p ctx)
-         | GlobalNode _ -> None | SourceNode _ -> None)
-       in
-     let named =
-       (match n with LocalNode (_, _) -> true | GlobalNode _ -> true
-         | SourceNode _ -> false)
-       in
-      Export_node_ext
-        (implode (analysis_node_id _A _B cfg ns n),
-          implode
-            (if named then (match lines with [] -> [] | l :: _ -> l) else []),
-          export_node_kind_of g n, status,
-          map implode
-            (if named then (match lines with [] -> [] | _ :: rest -> rest)
-              else lines),
-          ()));;
-
-let rec ordered_by_key
-  key s =
-    map (fun k -> the_elem (filter (fun x -> (((key x) : string) = k)) s))
-      (sorted_list_of_set (equal_literal, linorder_literal) (image key s));;
-
-let rec export_edge_kind_of
-  kind =
-    (match kind with IntraEdge _ -> XE_Intra | EnterEdge (_, _) -> XE_Enter
-      | CombineEdge (_, _, _) -> XE_Combine
-      | CallToReturnEdge _ -> XE_CallToReturn | GlobalReadEdge -> XE_GlobalRead
-      | GlobalWriteEdge -> XE_GlobalWrite);;
-
-let rec string_of_action
-  = function EA_Nop -> [char_0x6E; char_0x6F; char_0x70]
-    | EA_Assign (x, a) ->
-        explode x @
-          [char_0x20; char_0x3A; char_0x3D; char_0x20] @
-            string_of_exp zero_nat a
-    | EA_Special (Nondet_Int, x) ->
-        explode x @
-          [char_0x20; char_0x3A; char_0x3D; char_0x20; char_0x5F; char_0x5F;
-            char_0x76; char_0x6F; char_0x62; char_0x6C; char_0x69; char_0x6E;
-            char_0x74; char_0x5F; char_0x6E; char_0x6F; char_0x6E; char_0x64;
-            char_0x65; char_0x74; char_0x5F; char_0x69; char_0x6E; char_0x74;
-            char_0x28; char_0x29]
-    | EA_Special (Min (a, b), x) ->
-        explode x @
-          [char_0x20; char_0x3A; char_0x3D; char_0x20; char_0x6D; char_0x69;
-            char_0x6E; char_0x28] @
-            string_of_exp zero_nat a @
-              [char_0x2C; char_0x20] @ string_of_exp zero_nat b @ [char_0x29]
-    | EA_Special (Max (a, b), x) ->
-        explode x @
-          [char_0x20; char_0x3A; char_0x3D; char_0x20; char_0x6D; char_0x61;
-            char_0x78; char_0x28] @
-            string_of_exp zero_nat a @
-              [char_0x2C; char_0x20] @ string_of_exp zero_nat b @ [char_0x29]
-    | EA_Assume b -> [char_0x5B] @ string_of_exp zero_nat b @ [char_0x5D]
-    | EA_AssumeNot b ->
-        [char_0x21; char_0x5B] @ string_of_exp zero_nat b @ [char_0x5D]
-    | EA_Body p ->
-        [char_0x62; char_0x6F; char_0x64; char_0x79; char_0x28] @
-          explode p @ [char_0x29]
-    | EA_Ret (None, p) ->
-        [char_0x72; char_0x65; char_0x74; char_0x75; char_0x72; char_0x6E]
-    | EA_Ret (Some e, p) ->
-        [char_0x72; char_0x65; char_0x74; char_0x75; char_0x72; char_0x6E;
-          char_0x20] @
-          string_of_exp zero_nat e
-    | EA_Check cnd ->
-        [char_0x63; char_0x68; char_0x65; char_0x63; char_0x6B; char_0x28] @
-          string_of_exp zero_nat cnd @ [char_0x29];;
-
-let rec source_action_label
-  g a = (match a with EA_Nop -> string_of_action a
-          | EA_Assign (x, e) ->
-            (if ((x : string) = ret_var)
-              then [char_0x72; char_0x65; char_0x74; char_0x20; char_0x3A;
-                     char_0x3D; char_0x20] @
-                     string_of_exp zero_nat e
-              else string_of_action a)
-          | EA_Special (_, _) -> string_of_action a
-          | EA_Assume aa -> string_of_exp zero_nat aa
-          | EA_AssumeNot b ->
-            [char_0x6E; char_0x6F; char_0x74; char_0x20; char_0x28] @
-              string_of_exp zero_nat b @ [char_0x29]
-          | EA_Body _ -> string_of_action a
-          | EA_Ret (_, p) ->
-            (if equal_cfg_nodea (cfg_entry g) (FunctionEntry p)
-              then [char_0x74; char_0x65; char_0x72; char_0x6D; char_0x69;
-                     char_0x6E; char_0x61; char_0x74; char_0x65]
-              else string_of_action a)
-          | EA_Check _ -> string_of_action a);;
-
-let rec export_edge_label
-  g kind =
-    (match kind with IntraEdge a -> source_action_label g a
-      | EnterEdge (callee, a) ->
-        callee @
-          [char_0x28] @
-            (let CallEdge (_, _, es) = a in
-              join_source [char_0x2C; char_0x20]
-                (map (string_of_exp zero_nat) es)) @
-              [char_0x29]
-      | CombineEdge (_, dst, ret) ->
-        (match (dst, ret) with (None, _) -> [] | (Some xa, None) -> explode xa
-          | (Some xa, Some r) ->
-            explode xa @
-              [char_0x20; char_0x3A; char_0x3D; char_0x20] @ explode r)
-      | CallToReturnEdge a -> explode a | GlobalReadEdge -> []
-      | GlobalWriteEdge -> []);;
-
-let rec analysis_nodes_in_cluster _A _B
-  cfg cluster ns =
-    sort_key linorder_nat (analysis_node_position _A _B ns)
-      (filtera
-        (fun n ->
-          (match (cluster, n)
-            with (ContextCluster (owner, ctx), LocalNode (p, ctxa)) ->
-              equal_lista equal_char owner (owner_of cfg p) && eq _A ctx ctxa
-            | (ContextCluster (_, _), GlobalNode _) -> false
-            | (ContextCluster (_, _), SourceNode _) -> false
-            | (GlobalCluster, LocalNode (_, _)) -> false
-            | (GlobalCluster, GlobalNode _) -> true
-            | (GlobalCluster, SourceNode _) -> false
-            | (SourceCluster, LocalNode (_, _)) -> false
-            | (SourceCluster, GlobalNode _) -> false
-            | (SourceCluster, SourceNode _) -> true))
-        ns);;
-
-let rec cluster_label
-  (Analysis_graph_config_ext
-    (local_of, route, context_key, show_context, locals_for_pp,
-      return_slot_for_pp, globals_to_show, show_local, format_return,
-      show_global, show_global_key, is_shared_global, show_internal_globals,
-      owner_of, cluster_label, source_text, node_annotation, more))
-    = cluster_label;;
-
-let rec analysis_cluster_label
-  cfg cluster =
-    (match cluster with ContextCluster (a, b) -> cluster_label cfg a b
-      | GlobalCluster ->
-        [char_0x53; char_0x68; char_0x61; char_0x72; char_0x65; char_0x64;
-          char_0x20; char_0x67; char_0x6C; char_0x6F; char_0x62; char_0x61;
-          char_0x6C; char_0x73]
-      | SourceCluster ->
-        [char_0x53; char_0x6F; char_0x75; char_0x72; char_0x63; char_0x65]);;
-
-let rec analysis_cluster_position _A
-  x0 cluster = match x0, cluster with [], cluster -> zero_nat
-    | cluster0 :: clusters, cluster ->
-        (if equal_analysis_clustera _A cluster0 cluster then zero_nat
-          else suc (analysis_cluster_position _A clusters cluster));;
-
-let rec analysis_cluster_id _A
-  clusters cluster =
-    (match cluster
-      with ContextCluster (_, _) ->
-        [char_0x63; char_0x6C; char_0x75; char_0x73; char_0x74; char_0x65;
-          char_0x72; char_0x5F; char_0x63; char_0x74; char_0x78; char_0x5F] @
-          string_of_nat (analysis_cluster_position _A clusters cluster)
-      | GlobalCluster ->
-        [char_0x63; char_0x6C; char_0x75; char_0x73; char_0x74; char_0x65;
-          char_0x72; char_0x5F; char_0x67; char_0x6C; char_0x6F; char_0x62;
-          char_0x61; char_0x6C; char_0x73]
-      | SourceCluster ->
-        [char_0x63; char_0x6C; char_0x75; char_0x73; char_0x74; char_0x65;
-          char_0x72; char_0x5F; char_0x73; char_0x6F; char_0x75; char_0x72;
-          char_0x63; char_0x65]);;
-
-let rec export_cluster_of _A _B
-  cfg clusters ns cluster =
-    Export_cluster_ext
-      (implode (analysis_cluster_id _A clusters cluster),
-        implode (analysis_cluster_label cfg cluster),
-        map (fun n -> implode (analysis_node_id _A _B cfg ns n))
-          (analysis_nodes_in_cluster _A _B cfg cluster ns),
-        ());;
-
-let rec analysis_graph_to_export _A _B
-  cfg g sol graph =
-    (let (clusters, (ns, es)) = graph in
-      Export_graph_ext
-        (map (export_cluster_of _A _B cfg clusters ns) clusters,
-          map (export_node_of _A _B cfg g sol ns) ns,
-          map (fun (src, (kind, dst)) ->
-                Export_edge_ext
-                  (implode (analysis_node_id _A _B cfg ns src),
-                    implode (analysis_node_id _A _B cfg ns dst),
-                    export_edge_kind_of kind,
-                    implode (export_edge_label g kind), ()))
-            es,
-          ()));;
-
-let rec analysis_call_to_return_edges _A
-  cfg g covered =
-    map_filter
-      (fun a ->
-        (match a with (_, (_, (_, (Statement _, _)))) -> None
-          | (src_ctx, (call, (_, (FunctionEntry p, cont)))) ->
-            (if equal_cfg_nodea (fst src_ctx) call &&
-                  membera (equal_prod equal_cfg_node _A) covered
-                    (cont, snd src_ctx)
-              then Some (LocalNode (call, snd src_ctx),
-                          (CallToReturnEdge p, LocalNode (cont, snd src_ctx)))
-              else None)
-          | (_, (_, (_, (FunctionResult _, _)))) -> None))
-      (product covered (cfg_calls_list g));;
-
-let rec analysis_context_clusters _A
-  cfg covered =
-    remdups (equal_analysis_cluster _A)
-      (map (fun pc -> ContextCluster (owner_of cfg (fst pc), snd pc)) covered);;
-
-let rec analysis_source_cluster
-  ns = (if list_ex
-             (fun a ->
-               (match a with LocalNode (_, _) -> false | GlobalNode _ -> false
-                 | SourceNode _ -> true))
-             ns
-         then [SourceCluster] else []);;
-
-let rec analysis_global_cluster
-  ns = (if list_ex
-             (fun a ->
-               (match a with LocalNode (_, _) -> false | GlobalNode _ -> true
-                 | SourceNode _ -> false))
-             ns
-         then [GlobalCluster] else []);;
-
-let rec route
-  (Analysis_graph_config_ext
-    (local_of, route, context_key, show_context, locals_for_pp,
-      return_slot_for_pp, globals_to_show, show_local, format_return,
-      show_global, show_global_key, is_shared_global, show_internal_globals,
-      owner_of, cluster_label, source_text, node_annotation, more))
-    = route;;
-
-let rec analysis_combine_edges _A
-  cfg g covered sol =
-    map_filter
-      (fun a ->
-        (match a with (_, (_, (_, (Statement _, _)))) -> None
-          | (src_ctx, (call, (ca, (FunctionEntry p, cont)))) ->
-            (if equal_cfg_nodea (fst src_ctx) call
-              then (match
-                     route cfg call (snd src_ctx) ca
-                       (local_of cfg (sol (Inl src_ctx)))
-                     with None -> None
-                     | Some callee_ctx ->
-                       (if membera (equal_prod equal_cfg_node _A) covered
-                             (FunctionResult p, callee_ctx) &&
-                             membera (equal_prod equal_cfg_node _A) covered
-                               (cont, snd src_ctx)
-                         then Some (LocalNode (FunctionResult p, callee_ctx),
-                                     (CombineEdge
-(call, (let CallEdge (dst, _, _) = ca in dst),
-  return_slot_for_pp cfg (FunctionResult p)),
-                                       LocalNode (cont, snd src_ctx)))
-                         else None))
-              else None)
-          | (_, (_, (_, (FunctionResult _, _)))) -> None))
-      (product covered (cfg_calls_list g));;
-
-let rec source_text
-  (Analysis_graph_config_ext
-    (local_of, route, context_key, show_context, locals_for_pp,
-      return_slot_for_pp, globals_to_show, show_local, format_return,
-      show_global, show_global_key, is_shared_global, show_internal_globals,
-      owner_of, cluster_label, source_text, node_annotation, more))
-    = source_text;;
-
-let rec analysis_source_nodes
-  cfg = (match source_text cfg with None -> [] | Some src -> [SourceNode src]);;
-
-let rec show_internal_globals
-  (Analysis_graph_config_ext
-    (local_of, route, context_key, show_context, locals_for_pp,
-      return_slot_for_pp, globals_to_show, show_local, format_return,
-      show_global, show_global_key, is_shared_global, show_internal_globals,
-      owner_of, cluster_label, source_text, node_annotation, more))
-    = show_internal_globals;;
-
-let rec is_shared_global
-  (Analysis_graph_config_ext
-    (local_of, route, context_key, show_context, locals_for_pp,
-      return_slot_for_pp, globals_to_show, show_local, format_return,
-      show_global, show_global_key, is_shared_global, show_internal_globals,
-      owner_of, cluster_label, source_text, node_annotation, more))
-    = is_shared_global;;
-
-let rec visible_global
-  cfg k = is_shared_global cfg k || show_internal_globals cfg;;
-
-let rec rendered_global
-  cfg sol k =
-    visible_global cfg k &&
-      not (null (show_global cfg k (globals_to_show cfg) (sol (Inr k))));;
-
-let rec analysis_global_nodes _B
-  cfg sol keys =
-    map_filter
-      (fun x ->
-        (if rendered_global cfg sol x then Some (GlobalNode x) else None))
-      (remdups _B keys);;
-
-let rec analysis_intra_edges _A
-  g covered =
-    map_filter
-      (fun (src_ctx, (u, (a, v))) ->
-        (if equal_cfg_nodea (fst src_ctx) u &&
-              membera (equal_prod equal_cfg_node _A) covered (v, snd src_ctx)
-          then Some (LocalNode (u, snd src_ctx),
-                      (IntraEdge a, LocalNode (v, snd src_ctx)))
-          else None))
-      (product covered (cfg_intra_list g));;
-
-let rec analysis_enter_edges _A
-  cfg g covered sol =
-    map_filter
-      (fun (src_ctx, (u, (ca, (entry, _)))) ->
-        (if equal_cfg_nodea (fst src_ctx) u
-          then (match
-                 route cfg u (snd src_ctx) ca (local_of cfg (sol (Inl src_ctx)))
-                 with None -> None
-                 | Some callee_ctx ->
-                   (if membera (equal_prod equal_cfg_node _A) covered
-                         (entry, callee_ctx)
-                     then Some (LocalNode (u, snd src_ctx),
-                                 (EnterEdge (owner_of cfg entry, ca),
-                                   LocalNode (entry, callee_ctx)))
-                     else None))
-          else None))
-      (product covered (cfg_calls_list g));;
-
-let rec covered_local_nodes
-  covered = map (fun pc -> LocalNode (fst pc, snd pc)) covered;;
-
-let rec build_analysis_graph_parts _A _B
-  cfg g covered global_keys sol =
-    (let locals = covered_local_nodes covered in
-     let globals = analysis_global_nodes _B cfg sol global_keys in
-     let sources = analysis_source_nodes cfg in
-     let ns = locals @ globals @ sources in
-      (analysis_context_clusters _A cfg covered @
-         analysis_global_cluster ns @ analysis_source_cluster ns,
-        (ns, analysis_intra_edges _A g covered @
-               analysis_enter_edges _A cfg g covered sol @
-                 analysis_combine_edges _A cfg g covered sol @
-                   analysis_call_to_return_edges _A cfg g covered)));;
-
-let rec analysis_global_domain
-  = function [] -> []
-    | Inl pc :: domain -> analysis_global_domain domain
-    | Inr k :: domain -> k :: analysis_global_domain domain;;
-
-let rec analysis_local_domain
-  = function [] -> []
-    | Inl pc :: domain -> pc :: analysis_local_domain domain
-    | Inr k :: domain -> analysis_local_domain domain;;
-
-let rec build_analysis_graph _A _B
-  cfg g domain sol =
-    build_analysis_graph_parts _A _B cfg g
-      (analysis_local_domain
-        (remdups (equal_sum (equal_prod equal_cfg_node _A) _B) domain))
-      (analysis_global_domain
-        (remdups (equal_sum (equal_prod equal_cfg_node _A) _B) domain))
-      sol;;
-
-let rec contextual_analysis_export _A _B
-  cfg g domain sol =
-    analysis_graph_to_export _A _B cfg g sol
-      (build_analysis_graph _A _B cfg g domain sol);;
-
-let rec contextual_graph_domain
-  g contexts_for_pp =
-    maps (fun p -> map (fun ctx -> Inl (p, ctx)) (contexts_for_pp p))
-      (cfg_point_list g);;
-
-let rec pretty_source_lines_com
-  n x1 = match n, x1 with
-    n, SKIP -> [source_indent n @ [char_0x73; char_0x6B; char_0x69; char_0x70]]
-    | n, Assign (x, e) ->
-        [source_indent n @
-           explode x @
-             [char_0x20; char_0x3A; char_0x3D; char_0x20] @
-               string_of_exp zero_nat e]
-    | n, Check c ->
-        [source_indent n @
-           [char_0x5F; char_0x5F; char_0x76; char_0x6F; char_0x62; char_0x6C;
-             char_0x69; char_0x6E; char_0x74; char_0x5F; char_0x63; char_0x68;
-             char_0x65; char_0x63; char_0x6B; char_0x28] @
-             string_of_exp zero_nat c @ [char_0x29]]
-    | n, Seq (c1, c2) ->
-        append_last [char_0x3B] (pretty_source_lines_com n c1) @
-          pretty_source_lines_com n c2
-    | n, If (b, c1, c2) ->
-        [source_indent n @
-           [char_0x69; char_0x66; char_0x20; char_0x28] @
-             string_of_exp zero_nat b @ [char_0x29; char_0x20; char_0x7B]] @
-          pretty_source_lines_com (plus_nat n (nat_of_integer (Z.of_int 2)))
-            c1 @
-            [source_indent n @
-               [char_0x7D; char_0x20; char_0x65; char_0x6C; char_0x73;
-                 char_0x65; char_0x20; char_0x7B]] @
-              pretty_source_lines_com (plus_nat n (nat_of_integer (Z.of_int 2)))
-                c2 @
-                [source_indent n @ [char_0x7D]]
-    | n, While (b, c) ->
-        [source_indent n @
-           [char_0x77; char_0x68; char_0x69; char_0x6C; char_0x65; char_0x20;
-             char_0x28] @
-             string_of_exp zero_nat b @ [char_0x29; char_0x20; char_0x7B]] @
-          pretty_source_lines_com (plus_nat n (nat_of_integer (Z.of_int 2))) c @
-            [source_indent n @ [char_0x7D]]
-    | n, Call (dst, p, es) ->
-        [source_indent n @ string_of_com (Call (dst, p, es))]
-    | n, Return e -> [source_indent n @ string_of_com (Return e)]
-    | n, Restore ->
-        [source_indent n @
-           [char_0x72; char_0x65; char_0x73; char_0x74; char_0x6F; char_0x72;
-             char_0x65]]
-    | n, Unwind ->
-        [source_indent n @
-           [char_0x3C; char_0x75; char_0x6E; char_0x77; char_0x69; char_0x6E;
-             char_0x64; char_0x3E]];;
-
-let rec pretty_source_lines_proc
-  n p decl =
-    (source_indent n @
-      [char_0x76; char_0x6F; char_0x69; char_0x64; char_0x20] @
-        explode p @
-          [char_0x28] @
-            join_source [char_0x2C; char_0x20] (map explode (formals decl)) @
-              [char_0x29; char_0x20; char_0x7B]) ::
-      pretty_source_lines_com (plus_nat n (nat_of_integer (Z.of_int 2)))
-        (body decl) @
-        [source_indent n @ [char_0x7D]];;
-
-let rec pretty_string_of_program
-  pi ps main globals =
-    join_source source_nl
-      ((if null globals then []
-         else [[char_0x67; char_0x6C; char_0x6F; char_0x62; char_0x61;
-                 char_0x6C; char_0x20] @
-                 join_source [char_0x2C; char_0x20] (map explode globals) @
-                   [char_0x3B]]) @
-        maps (fun p ->
-               (match pi p
-                 with None ->
-                   [[char_0x70; char_0x72; char_0x6F; char_0x63; char_0x65;
-                      char_0x64; char_0x75; char_0x72; char_0x65; char_0x20] @
-                      explode p @
-                        [char_0x20; char_0x3C; char_0x6D; char_0x69; char_0x73;
-                          char_0x73; char_0x69; char_0x6E; char_0x67;
-                          char_0x3E]]
-                 | Some a -> pretty_source_lines_proc zero_nat p a))
-          ps @
-          [[char_0x76; char_0x6F; char_0x69; char_0x64; char_0x20; char_0x6D;
-             char_0x61; char_0x69; char_0x6E; char_0x28; char_0x29; char_0x20;
-             char_0x7B]] @
-            pretty_source_lines_com (nat_of_integer (Z.of_int 2)) main @
-              [[char_0x7D]]);;
-
 let rec compiled_proc_owner
   pi x1 n k = match pi, x1, n, k with pi, [], n, k -> None
     | pi, p :: ps, n, k ->
@@ -10217,24 +9575,6 @@ let rec compiled_owner_of
         (match compiled_proc_owner pi ps zero_nat k with None -> prog_main_name
           | Some owner -> owner)
       | FunctionEntry owner -> owner | FunctionResult owner -> owner);;
-
-let rec raw_cfg_graph_config
-  pi ps annotate =
-    Analysis_graph_config_ext
-      (id, (fun _ _ _ _ -> Some ()), (fun _ -> ""), (fun _ -> []),
-        (fun _ -> []), (fun _ -> None), [], (fun _ _ _ _ -> []),
-        (fun _ _ _ _ -> []), (fun _ _ _ -> []), (fun _ -> []), (fun _ -> false),
-        false, comp explode (compiled_owner_of pi ps), (fun owner _ -> owner),
-        Some (pretty_string_of_program pi ps (main_body pi) []),
-        (fun p _ -> annotate p), ());;
-
-let rec raw_cfg_export
-  pi ps annotate =
-    (let g = compile_prog pi ps in
-     let cfg = raw_cfg_graph_config pi ps annotate in
-     let domain = contextual_graph_domain g (fun _ -> [()]) in
-      contextual_analysis_export equal_unit equal_unit cfg g domain
-        (fun _ -> ()));;
 
 let rec join_abs_state_with j a b = (fun x -> j (a x) (b x));;
 
@@ -10266,6 +9606,33 @@ let rec ctx_key_of
 
 let rec state_line
   f x = explode x @ [char_0x3D] @ string_of_abstract_value (f x);;
+
+let rec proc_exit_pps_list
+  g = map (fun (_, (_, (entry, _))) ->
+            (match entry with Statement _ -> entry
+              | FunctionEntry a -> FunctionResult a
+              | FunctionResult _ -> entry))
+        (cfg_calls_list g);;
+
+let rec string_of_cfg_node
+  = function Statement n -> [char_0x70; char_0x70] @ string_of_nat n
+    | FunctionEntry p ->
+        [char_0x65; char_0x6E; char_0x74; char_0x72; char_0x79; char_0x5F] @
+          explode p
+    | FunctionResult p ->
+        [char_0x72; char_0x65; char_0x73; char_0x75; char_0x6C; char_0x74;
+          char_0x5F] @
+          explode p;;
+
+let rec split_gv_nl_acc
+  acc x1 = match acc, x1 with acc, [] -> [rev acc]
+    | acc, [ch] -> [rev (ch :: acc)]
+    | acc, ch1 :: ch2 :: rest ->
+        (if equal_chara ch1 char_0x5C && equal_chara ch2 char_0x6E
+          then rev acc :: split_gv_nl_acc [] rest
+          else split_gv_nl_acc (ch1 :: acc) (ch2 :: rest));;
+
+let rec split_gv_nl s = split_gv_nl_acc [] s;;
 
 let rec analyse_int_call_string_result_for
   k gs p =
@@ -10424,18 +9791,8 @@ let rec report_vars
 
 let rec mk_analysis_config d s c = Analysis_config_ext (d, s, c, ());;
 
-let rec cs_cluster_label
-  owner ctx =
-    (if null ctx
-      then owner @
-             [char_0x20; char_0x2F; char_0x20; char_0x72; char_0x6F; char_0x6F;
-               char_0x74; char_0x20; char_0x63; char_0x6F; char_0x6E; char_0x74;
-               char_0x65; char_0x78; char_0x74]
-      else owner @
-             [char_0x20; char_0x2F; char_0x20; char_0x63; char_0x61; char_0x6C;
-               char_0x6C; char_0x2D; char_0x73; char_0x74; char_0x72; char_0x69;
-               char_0x6E; char_0x67; char_0x3D] @
-               cs_show_context ctx);;
+let rec proc_entry_pps_list
+  g = map (fun (_, (_, (entry, _))) -> entry) (cfg_calls_list g);;
 
 let rec procs_stmt_next
   pi x1 n = match pi, x1, n with pi, [], n -> n
@@ -11243,9 +10600,29 @@ let rec analyse_with_state
     | Parity_Analysis, Solver_Warrow, p -> None
     | Parity_Analysis, Solver_WarrowPerOrigin, p -> None;;
 
-let rec xn_id
-  (Export_node_ext (xn_id, xn_label, xn_kind, xn_status, xn_lines, more)) =
-    xn_id;;
+let rec show_internal_globals
+  (Analysis_graph_config_ext
+    (local_of, route, context_key, show_context, locals_for_pp,
+      return_slot_for_pp, globals_to_show, show_local, format_return,
+      show_global, show_global_key, is_shared_global, show_internal_globals,
+      owner_of, cluster_label, source_text, node_annotation, more))
+    = show_internal_globals;;
+
+let rec is_shared_global
+  (Analysis_graph_config_ext
+    (local_of, route, context_key, show_context, locals_for_pp,
+      return_slot_for_pp, globals_to_show, show_local, format_return,
+      show_global, show_global_key, is_shared_global, show_internal_globals,
+      owner_of, cluster_label, source_text, node_annotation, more))
+    = is_shared_global;;
+
+let rec visible_global
+  cfg k = is_shared_global cfg k || show_internal_globals cfg;;
+
+let rec graphviz_exit
+  g = (match cfg_entry g with Statement a -> Statement a
+        | FunctionEntry a -> FunctionResult a
+        | FunctionResult a -> FunctionResult a);;
 
 let rec lookup_joined_state _A _B
   r v = join_states_over _B (lookup_context _A r v) (contexts_at r v);;
@@ -11258,22 +10635,609 @@ let rec check_cond_at
           (find (fun (u, (a, _)) -> equal_cfg_nodea u v && is_EA_Check a)
             (cfg_intra_list g));;
 
-let rec xe_dst
-  (Export_edge_ext (xe_src, xe_dst, xe_kind, xe_label, more)) = xe_dst;;
-
-let rec xe_src
-  (Export_edge_ext (xe_src, xe_dst, xe_kind, xe_label, more)) = xe_src;;
-
-let rec context_key
+let rec globals_to_show
   (Analysis_graph_config_ext
     (local_of, route, context_key, show_context, locals_for_pp,
       return_slot_for_pp, globals_to_show, show_local, format_return,
       show_global, show_global_key, is_shared_global, show_internal_globals,
       owner_of, cluster_label, source_text, node_annotation, more))
-    = context_key;;
+    = globals_to_show;;
 
-let rec result_contexts_at
-  cfg r p = ordered_by_key (context_key cfg) (contexts_at r p);;
+let rec show_global
+  (Analysis_graph_config_ext
+    (local_of, route, context_key, show_context, locals_for_pp,
+      return_slot_for_pp, globals_to_show, show_local, format_return,
+      show_global, show_global_key, is_shared_global, show_internal_globals,
+      owner_of, cluster_label, source_text, node_annotation, more))
+    = show_global;;
+
+let rec rendered_global
+  cfg sol k =
+    visible_global cfg k &&
+      not (null (show_global cfg k (globals_to_show cfg) (sol (Inr k))));;
+
+let rec annotation_status (Node_Annotation (x1, x2)) = x2;;
+
+let rec node_annotation
+  (Analysis_graph_config_ext
+    (local_of, route, context_key, show_context, locals_for_pp,
+      return_slot_for_pp, globals_to_show, show_local, format_return,
+      show_global, show_global_key, is_shared_global, show_internal_globals,
+      owner_of, cluster_label, source_text, node_annotation, more))
+    = node_annotation;;
+
+let rec annotation_label (Node_Annotation (x1, x2)) = x1;;
+
+let rec return_slot_for_pp
+  (Analysis_graph_config_ext
+    (local_of, route, context_key, show_context, locals_for_pp,
+      return_slot_for_pp, globals_to_show, show_local, format_return,
+      show_global, show_global_key, is_shared_global, show_internal_globals,
+      owner_of, cluster_label, source_text, node_annotation, more))
+    = return_slot_for_pp;;
+
+let rec show_global_key
+  (Analysis_graph_config_ext
+    (local_of, route, context_key, show_context, locals_for_pp,
+      return_slot_for_pp, globals_to_show, show_local, format_return,
+      show_global, show_global_key, is_shared_global, show_internal_globals,
+      owner_of, cluster_label, source_text, node_annotation, more))
+    = show_global_key;;
+
+let rec locals_for_pp
+  (Analysis_graph_config_ext
+    (local_of, route, context_key, show_context, locals_for_pp,
+      return_slot_for_pp, globals_to_show, show_local, format_return,
+      show_global, show_global_key, is_shared_global, show_internal_globals,
+      owner_of, cluster_label, source_text, node_annotation, more))
+    = locals_for_pp;;
+
+let rec format_return
+  (Analysis_graph_config_ext
+    (local_of, route, context_key, show_context, locals_for_pp,
+      return_slot_for_pp, globals_to_show, show_local, format_return,
+      show_global, show_global_key, is_shared_global, show_internal_globals,
+      owner_of, cluster_label, source_text, node_annotation, more))
+    = format_return;;
+
+let rec show_local
+  (Analysis_graph_config_ext
+    (local_of, route, context_key, show_context, locals_for_pp,
+      return_slot_for_pp, globals_to_show, show_local, format_return,
+      show_global, show_global_key, is_shared_global, show_internal_globals,
+      owner_of, cluster_label, source_text, node_annotation, more))
+    = show_local;;
+
+let rec local_of
+  (Analysis_graph_config_ext
+    (local_of, route, context_key, show_context, locals_for_pp,
+      return_slot_for_pp, globals_to_show, show_local, format_return,
+      show_global, show_global_key, is_shared_global, show_internal_globals,
+      owner_of, cluster_label, source_text, node_annotation, more))
+    = local_of;;
+
+let rec graphviz_point_label
+  g p = (match p with Statement _ -> string_of_cfg_node p
+          | FunctionEntry owner ->
+            [char_0x65; char_0x6E; char_0x74; char_0x72; char_0x79; char_0x5F] @
+              explode owner
+          | FunctionResult owner ->
+            [char_0x65; char_0x78; char_0x69; char_0x74; char_0x5F] @
+              explode owner);;
+
+let rec contextual_node_label_lines
+  cfg g sol n =
+    (match n
+      with LocalNode (p, ctx) ->
+        graphviz_point_label g p ::
+          show_local cfg p ctx (locals_for_pp cfg p)
+            (local_of cfg (sol (Inl (p, ctx)))) @
+            (match return_slot_for_pp cfg p with None -> []
+              | Some ret ->
+                format_return cfg p ctx ret
+                  (local_of cfg (sol (Inl (p, ctx))))) @
+              (match node_annotation cfg p ctx with None -> []
+                | Some ann ->
+                  (if null (annotation_label ann) then []
+                    else split_gv_nl (annotation_label ann)))
+      | GlobalNode k ->
+        show_global_key cfg k ::
+          show_global cfg k (globals_to_show cfg) (sol (Inr k))
+      | SourceNode src -> [src]);;
+
+let rec export_node_kind_of
+  g n = (match n
+          with LocalNode (p, _) ->
+            (if equal_cfg_nodea p (cfg_entry g) then XN_Entry
+              else (if equal_cfg_nodea p (graphviz_exit g) then XN_Exit
+                     else (if membera equal_cfg_node (proc_entry_pps_list g) p
+                            then XN_ProcEntry
+                            else (if membera equal_cfg_node
+                                       (proc_exit_pps_list g) p
+                                   then XN_ProcExit else XN_Point))))
+          | GlobalNode _ -> XN_Global | SourceNode _ -> XN_Source);;
+
+let rec owner_of
+  (Analysis_graph_config_ext
+    (local_of, route, context_key, show_context, locals_for_pp,
+      return_slot_for_pp, globals_to_show, show_local, format_return,
+      show_global, show_global_key, is_shared_global, show_internal_globals,
+      owner_of, cluster_label, source_text, node_annotation, more))
+    = owner_of;;
+
+let rec equal_analysis_node _A _B
+  x0 x1 = match x0, x1 with GlobalNode x2, SourceNode x3 -> false
+    | SourceNode x3, GlobalNode x2 -> false
+    | LocalNode (x11, x12), SourceNode x3 -> false
+    | SourceNode x3, LocalNode (x11, x12) -> false
+    | LocalNode (x11, x12), GlobalNode x2 -> false
+    | GlobalNode x2, LocalNode (x11, x12) -> false
+    | SourceNode x3, SourceNode y3 -> equal_lista equal_char x3 y3
+    | GlobalNode x2, GlobalNode y2 -> eq _B x2 y2
+    | LocalNode (x11, x12), LocalNode (y11, y12) ->
+        equal_cfg_nodea x11 y11 && eq _A x12 y12;;
+
+let rec analysis_node_position _A _B
+  x0 n = match x0, n with [], n -> zero_nat
+    | m :: ms, n ->
+        (if equal_analysis_node _A _B n m then zero_nat
+          else suc (analysis_node_position _A _B ms n));;
+
+let rec context_position _A
+  x0 key = match x0, key with [], key -> zero_nat
+    | keya :: keys, key ->
+        (if eq _A key keya then zero_nat
+          else suc (context_position _A keys key));;
+
+let rec owner_contexts
+  cfg x1 = match cfg, x1 with cfg, [] -> []
+    | cfg, LocalNode (p, ctx) :: ns ->
+        (owner_of cfg p, ctx) :: owner_contexts cfg ns
+    | cfg, GlobalNode k :: ns -> owner_contexts cfg ns
+    | cfg, SourceNode src :: ns -> owner_contexts cfg ns;;
+
+let rec analysis_node_id _A _B
+  cfg ns n =
+    (match n
+      with LocalNode (p, ctx) ->
+        owner_of cfg p @
+          [char_0x5F] @
+            string_of_cfg_node p @
+              [char_0x5F; char_0x63; char_0x74; char_0x78] @
+                string_of_nat
+                  (context_position (equal_prod (equal_list equal_char) _A)
+                    (remdups (equal_prod (equal_list equal_char) _A)
+                      (owner_contexts cfg ns))
+                    (owner_of cfg p, ctx))
+      | GlobalNode _ ->
+        [char_0x67; char_0x6C; char_0x6F; char_0x62; char_0x61; char_0x6C;
+          char_0x5F] @
+          string_of_nat (analysis_node_position _A _B ns n)
+      | SourceNode _ ->
+        [char_0x73; char_0x6F; char_0x75; char_0x72; char_0x63; char_0x65]);;
+
+let rec export_node_of _A _B
+  cfg g sol ns n =
+    (let lines = contextual_node_label_lines cfg g sol n in
+     let status =
+       (match n
+         with LocalNode (p, ctx) ->
+           map_option annotation_status (node_annotation cfg p ctx)
+         | GlobalNode _ -> None | SourceNode _ -> None)
+       in
+     let named =
+       (match n with LocalNode (_, _) -> true | GlobalNode _ -> true
+         | SourceNode _ -> false)
+       in
+      Export_node_ext
+        (implode (analysis_node_id _A _B cfg ns n),
+          implode
+            (if named then (match lines with [] -> [] | l :: _ -> l) else []),
+          export_node_kind_of g n, status,
+          map implode
+            (if named then (match lines with [] -> [] | _ :: rest -> rest)
+              else lines),
+          ()));;
+
+let rec export_edge_kind_of
+  kind =
+    (match kind with IntraEdge _ -> XE_Intra | EnterEdge (_, _) -> XE_Enter
+      | CombineEdge (_, _, _) -> XE_Combine
+      | CallToReturnEdge _ -> XE_CallToReturn | GlobalReadEdge -> XE_GlobalRead
+      | GlobalWriteEdge -> XE_GlobalWrite);;
+
+let rec source_action_label
+  g a = (match a with EA_Nop -> string_of_action a
+          | EA_Assign (x, e) ->
+            (if ((x : string) = ret_var)
+              then [char_0x72; char_0x65; char_0x74; char_0x20; char_0x3A;
+                     char_0x3D; char_0x20] @
+                     string_of_exp zero_nat e
+              else string_of_action a)
+          | EA_Special (_, _) -> string_of_action a
+          | EA_Assume aa -> string_of_exp zero_nat aa
+          | EA_AssumeNot b ->
+            [char_0x6E; char_0x6F; char_0x74; char_0x20; char_0x28] @
+              string_of_exp zero_nat b @ [char_0x29]
+          | EA_Body _ -> string_of_action a
+          | EA_Ret (_, p) ->
+            (if equal_cfg_nodea (cfg_entry g) (FunctionEntry p)
+              then [char_0x74; char_0x65; char_0x72; char_0x6D; char_0x69;
+                     char_0x6E; char_0x61; char_0x74; char_0x65]
+              else string_of_action a)
+          | EA_Check _ -> string_of_action a);;
+
+let rec export_edge_label
+  g kind =
+    (match kind with IntraEdge a -> source_action_label g a
+      | EnterEdge (callee, a) ->
+        callee @
+          [char_0x28] @
+            (let CallEdge (_, _, es) = a in
+              join_source [char_0x2C; char_0x20]
+                (map (string_of_exp zero_nat) es)) @
+              [char_0x29]
+      | CombineEdge (_, dst, ret) ->
+        (match (dst, ret) with (None, _) -> [] | (Some xa, None) -> explode xa
+          | (Some xa, Some r) ->
+            explode xa @
+              [char_0x20; char_0x3A; char_0x3D; char_0x20] @ explode r)
+      | CallToReturnEdge a -> explode a | GlobalReadEdge -> []
+      | GlobalWriteEdge -> []);;
+
+let rec analysis_nodes_in_cluster _A _B
+  cfg cluster ns =
+    sort_key linorder_nat (analysis_node_position _A _B ns)
+      (filtera
+        (fun n ->
+          (match (cluster, n)
+            with (ContextCluster (owner, ctx), LocalNode (p, ctxa)) ->
+              equal_lista equal_char owner (owner_of cfg p) && eq _A ctx ctxa
+            | (ContextCluster (_, _), GlobalNode _) -> false
+            | (ContextCluster (_, _), SourceNode _) -> false
+            | (GlobalCluster, LocalNode (_, _)) -> false
+            | (GlobalCluster, GlobalNode _) -> true
+            | (GlobalCluster, SourceNode _) -> false
+            | (SourceCluster, LocalNode (_, _)) -> false
+            | (SourceCluster, GlobalNode _) -> false
+            | (SourceCluster, SourceNode _) -> true))
+        ns);;
+
+let rec cluster_label
+  (Analysis_graph_config_ext
+    (local_of, route, context_key, show_context, locals_for_pp,
+      return_slot_for_pp, globals_to_show, show_local, format_return,
+      show_global, show_global_key, is_shared_global, show_internal_globals,
+      owner_of, cluster_label, source_text, node_annotation, more))
+    = cluster_label;;
+
+let rec analysis_cluster_label
+  cfg cluster =
+    (match cluster with ContextCluster (a, b) -> cluster_label cfg a b
+      | GlobalCluster ->
+        [char_0x53; char_0x68; char_0x61; char_0x72; char_0x65; char_0x64;
+          char_0x20; char_0x67; char_0x6C; char_0x6F; char_0x62; char_0x61;
+          char_0x6C; char_0x73]
+      | SourceCluster ->
+        [char_0x53; char_0x6F; char_0x75; char_0x72; char_0x63; char_0x65]);;
+
+let rec analysis_cluster_position _A
+  x0 cluster = match x0, cluster with [], cluster -> zero_nat
+    | cluster0 :: clusters, cluster ->
+        (if equal_analysis_clustera _A cluster0 cluster then zero_nat
+          else suc (analysis_cluster_position _A clusters cluster));;
+
+let rec analysis_cluster_id _A
+  clusters cluster =
+    (match cluster
+      with ContextCluster (_, _) ->
+        [char_0x63; char_0x6C; char_0x75; char_0x73; char_0x74; char_0x65;
+          char_0x72; char_0x5F; char_0x63; char_0x74; char_0x78; char_0x5F] @
+          string_of_nat (analysis_cluster_position _A clusters cluster)
+      | GlobalCluster ->
+        [char_0x63; char_0x6C; char_0x75; char_0x73; char_0x74; char_0x65;
+          char_0x72; char_0x5F; char_0x67; char_0x6C; char_0x6F; char_0x62;
+          char_0x61; char_0x6C; char_0x73]
+      | SourceCluster ->
+        [char_0x63; char_0x6C; char_0x75; char_0x73; char_0x74; char_0x65;
+          char_0x72; char_0x5F; char_0x73; char_0x6F; char_0x75; char_0x72;
+          char_0x63; char_0x65]);;
+
+let rec export_cluster_of _A _B
+  cfg clusters ns cluster =
+    Export_cluster_ext
+      (implode (analysis_cluster_id _A clusters cluster),
+        implode (analysis_cluster_label cfg cluster),
+        map (fun n -> implode (analysis_node_id _A _B cfg ns n))
+          (analysis_nodes_in_cluster _A _B cfg cluster ns),
+        ());;
+
+let rec analysis_graph_to_export _A _B
+  cfg g sol graph =
+    (let (clusters, (ns, es)) = graph in
+      Export_graph_ext
+        (map (export_cluster_of _A _B cfg clusters ns) clusters,
+          map (export_node_of _A _B cfg g sol ns) ns,
+          map (fun (src, (kind, dst)) ->
+                Export_edge_ext
+                  (implode (analysis_node_id _A _B cfg ns src),
+                    implode (analysis_node_id _A _B cfg ns dst),
+                    export_edge_kind_of kind,
+                    implode (export_edge_label g kind), ()))
+            es,
+          ()));;
+
+let rec analysis_call_to_return_edges _A
+  cfg g covered =
+    map_filter
+      (fun a ->
+        (match a with (_, (_, (_, (Statement _, _)))) -> None
+          | (src_ctx, (call, (_, (FunctionEntry p, cont)))) ->
+            (if equal_cfg_nodea (fst src_ctx) call &&
+                  membera (equal_prod equal_cfg_node _A) covered
+                    (cont, snd src_ctx)
+              then Some (LocalNode (call, snd src_ctx),
+                          (CallToReturnEdge p, LocalNode (cont, snd src_ctx)))
+              else None)
+          | (_, (_, (_, (FunctionResult _, _)))) -> None))
+      (product covered (cfg_calls_list g));;
+
+let rec analysis_context_clusters _A
+  cfg covered =
+    remdups (equal_analysis_cluster _A)
+      (map (fun pc -> ContextCluster (owner_of cfg (fst pc), snd pc)) covered);;
+
+let rec analysis_source_cluster
+  ns = (if list_ex
+             (fun a ->
+               (match a with LocalNode (_, _) -> false | GlobalNode _ -> false
+                 | SourceNode _ -> true))
+             ns
+         then [SourceCluster] else []);;
+
+let rec analysis_global_cluster
+  ns = (if list_ex
+             (fun a ->
+               (match a with LocalNode (_, _) -> false | GlobalNode _ -> true
+                 | SourceNode _ -> false))
+             ns
+         then [GlobalCluster] else []);;
+
+let rec route
+  (Analysis_graph_config_ext
+    (local_of, route, context_key, show_context, locals_for_pp,
+      return_slot_for_pp, globals_to_show, show_local, format_return,
+      show_global, show_global_key, is_shared_global, show_internal_globals,
+      owner_of, cluster_label, source_text, node_annotation, more))
+    = route;;
+
+let rec analysis_combine_edges _A
+  cfg g covered sol =
+    map_filter
+      (fun a ->
+        (match a with (_, (_, (_, (Statement _, _)))) -> None
+          | (src_ctx, (call, (ca, (FunctionEntry p, cont)))) ->
+            (if equal_cfg_nodea (fst src_ctx) call
+              then (match
+                     route cfg call (snd src_ctx) ca
+                       (local_of cfg (sol (Inl src_ctx)))
+                     with None -> None
+                     | Some callee_ctx ->
+                       (if membera (equal_prod equal_cfg_node _A) covered
+                             (FunctionResult p, callee_ctx) &&
+                             membera (equal_prod equal_cfg_node _A) covered
+                               (cont, snd src_ctx)
+                         then Some (LocalNode (FunctionResult p, callee_ctx),
+                                     (CombineEdge
+(call, (let CallEdge (dst, _, _) = ca in dst),
+  return_slot_for_pp cfg (FunctionResult p)),
+                                       LocalNode (cont, snd src_ctx)))
+                         else None))
+              else None)
+          | (_, (_, (_, (FunctionResult _, _)))) -> None))
+      (product covered (cfg_calls_list g));;
+
+let rec source_text
+  (Analysis_graph_config_ext
+    (local_of, route, context_key, show_context, locals_for_pp,
+      return_slot_for_pp, globals_to_show, show_local, format_return,
+      show_global, show_global_key, is_shared_global, show_internal_globals,
+      owner_of, cluster_label, source_text, node_annotation, more))
+    = source_text;;
+
+let rec analysis_source_nodes
+  cfg = (match source_text cfg with None -> [] | Some src -> [SourceNode src]);;
+
+let rec analysis_global_nodes _B
+  cfg sol keys =
+    map_filter
+      (fun x ->
+        (if rendered_global cfg sol x then Some (GlobalNode x) else None))
+      (remdups _B keys);;
+
+let rec analysis_intra_edges _A
+  g covered =
+    map_filter
+      (fun (src_ctx, (u, (a, v))) ->
+        (if equal_cfg_nodea (fst src_ctx) u &&
+              membera (equal_prod equal_cfg_node _A) covered (v, snd src_ctx)
+          then Some (LocalNode (u, snd src_ctx),
+                      (IntraEdge a, LocalNode (v, snd src_ctx)))
+          else None))
+      (product covered (cfg_intra_list g));;
+
+let rec analysis_enter_edges _A
+  cfg g covered sol =
+    map_filter
+      (fun (src_ctx, (u, (ca, (entry, _)))) ->
+        (if equal_cfg_nodea (fst src_ctx) u
+          then (match
+                 route cfg u (snd src_ctx) ca (local_of cfg (sol (Inl src_ctx)))
+                 with None -> None
+                 | Some callee_ctx ->
+                   (if membera (equal_prod equal_cfg_node _A) covered
+                         (entry, callee_ctx)
+                     then Some (LocalNode (u, snd src_ctx),
+                                 (EnterEdge (owner_of cfg entry, ca),
+                                   LocalNode (entry, callee_ctx)))
+                     else None))
+          else None))
+      (product covered (cfg_calls_list g));;
+
+let rec covered_local_nodes
+  covered = map (fun pc -> LocalNode (fst pc, snd pc)) covered;;
+
+let rec build_analysis_graph_parts _A _B
+  cfg g covered global_keys sol =
+    (let locals = covered_local_nodes covered in
+     let globals = analysis_global_nodes _B cfg sol global_keys in
+     let sources = analysis_source_nodes cfg in
+     let ns = locals @ globals @ sources in
+      (analysis_context_clusters _A cfg covered @
+         analysis_global_cluster ns @ analysis_source_cluster ns,
+        (ns, analysis_intra_edges _A g covered @
+               analysis_enter_edges _A cfg g covered sol @
+                 analysis_combine_edges _A cfg g covered sol @
+                   analysis_call_to_return_edges _A cfg g covered)));;
+
+let rec analysis_global_domain
+  = function [] -> []
+    | Inl pc :: domain -> analysis_global_domain domain
+    | Inr k :: domain -> k :: analysis_global_domain domain;;
+
+let rec analysis_local_domain
+  = function [] -> []
+    | Inl pc :: domain -> pc :: analysis_local_domain domain
+    | Inr k :: domain -> analysis_local_domain domain;;
+
+let rec build_analysis_graph _A _B
+  cfg g domain sol =
+    build_analysis_graph_parts _A _B cfg g
+      (analysis_local_domain
+        (remdups (equal_sum (equal_prod equal_cfg_node _A) _B) domain))
+      (analysis_global_domain
+        (remdups (equal_sum (equal_prod equal_cfg_node _A) _B) domain))
+      sol;;
+
+let rec contextual_analysis_export _A _B
+  cfg g domain sol =
+    analysis_graph_to_export _A _B cfg g sol
+      (build_analysis_graph _A _B cfg g domain sol);;
+
+let rec pretty_source_lines_com
+  n x1 = match n, x1 with
+    n, SKIP -> [source_indent n @ [char_0x73; char_0x6B; char_0x69; char_0x70]]
+    | n, Assign (x, e) ->
+        [source_indent n @
+           explode x @
+             [char_0x20; char_0x3A; char_0x3D; char_0x20] @
+               string_of_exp zero_nat e]
+    | n, Check c ->
+        [source_indent n @
+           [char_0x5F; char_0x5F; char_0x76; char_0x6F; char_0x62; char_0x6C;
+             char_0x69; char_0x6E; char_0x74; char_0x5F; char_0x63; char_0x68;
+             char_0x65; char_0x63; char_0x6B; char_0x28] @
+             string_of_exp zero_nat c @ [char_0x29]]
+    | n, Seq (c1, c2) ->
+        append_last [char_0x3B] (pretty_source_lines_com n c1) @
+          pretty_source_lines_com n c2
+    | n, If (b, c1, c2) ->
+        [source_indent n @
+           [char_0x69; char_0x66; char_0x20; char_0x28] @
+             string_of_exp zero_nat b @ [char_0x29; char_0x20; char_0x7B]] @
+          pretty_source_lines_com (plus_nat n (nat_of_integer (Z.of_int 2)))
+            c1 @
+            [source_indent n @
+               [char_0x7D; char_0x20; char_0x65; char_0x6C; char_0x73;
+                 char_0x65; char_0x20; char_0x7B]] @
+              pretty_source_lines_com (plus_nat n (nat_of_integer (Z.of_int 2)))
+                c2 @
+                [source_indent n @ [char_0x7D]]
+    | n, While (b, c) ->
+        [source_indent n @
+           [char_0x77; char_0x68; char_0x69; char_0x6C; char_0x65; char_0x20;
+             char_0x28] @
+             string_of_exp zero_nat b @ [char_0x29; char_0x20; char_0x7B]] @
+          pretty_source_lines_com (plus_nat n (nat_of_integer (Z.of_int 2))) c @
+            [source_indent n @ [char_0x7D]]
+    | n, Call (dst, p, es) ->
+        [source_indent n @ string_of_com (Call (dst, p, es))]
+    | n, Return e -> [source_indent n @ string_of_com (Return e)]
+    | n, Restore ->
+        [source_indent n @
+           [char_0x72; char_0x65; char_0x73; char_0x74; char_0x6F; char_0x72;
+             char_0x65]]
+    | n, Unwind ->
+        [source_indent n @
+           [char_0x3C; char_0x75; char_0x6E; char_0x77; char_0x69; char_0x6E;
+             char_0x64; char_0x3E]];;
+
+let rec pretty_source_lines_proc
+  n p decl =
+    (source_indent n @
+      [char_0x76; char_0x6F; char_0x69; char_0x64; char_0x20] @
+        explode p @
+          [char_0x28] @
+            join_source [char_0x2C; char_0x20] (map explode (formals decl)) @
+              [char_0x29; char_0x20; char_0x7B]) ::
+      pretty_source_lines_com (plus_nat n (nat_of_integer (Z.of_int 2)))
+        (body decl) @
+        [source_indent n @ [char_0x7D]];;
+
+let rec pretty_string_of_program
+  pi ps main globals =
+    join_source source_nl
+      ((if null globals then []
+         else [[char_0x67; char_0x6C; char_0x6F; char_0x62; char_0x61;
+                 char_0x6C; char_0x20] @
+                 join_source [char_0x2C; char_0x20] (map explode globals) @
+                   [char_0x3B]]) @
+        maps (fun p ->
+               (match pi p
+                 with None ->
+                   [[char_0x70; char_0x72; char_0x6F; char_0x63; char_0x65;
+                      char_0x64; char_0x75; char_0x72; char_0x65; char_0x20] @
+                      explode p @
+                        [char_0x20; char_0x3C; char_0x6D; char_0x69; char_0x73;
+                          char_0x73; char_0x69; char_0x6E; char_0x67;
+                          char_0x3E]]
+                 | Some a -> pretty_source_lines_proc zero_nat p a))
+          ps @
+          [[char_0x76; char_0x6F; char_0x69; char_0x64; char_0x20; char_0x6D;
+             char_0x61; char_0x69; char_0x6E; char_0x28; char_0x29; char_0x20;
+             char_0x7B]] @
+            pretty_source_lines_com (nat_of_integer (Z.of_int 2)) main @
+              [[char_0x7D]]);;
+
+let rec raw_cfg_graph_config
+  pi ps annotate =
+    Analysis_graph_config_ext
+      (id, (fun _ _ _ _ -> Some ()), (fun _ -> ""), (fun _ -> []),
+        (fun _ -> []), (fun _ -> None), [], (fun _ _ _ _ -> []),
+        (fun _ _ _ _ -> []), (fun _ _ _ -> []), (fun _ -> []), (fun _ -> false),
+        false, comp explode (compiled_owner_of pi ps), (fun owner _ -> owner),
+        Some (pretty_string_of_program pi ps (main_body pi) []),
+        (fun p _ -> annotate p), ());;
+
+let rec contextual_graph_domain
+  g contexts_for_pp =
+    maps (fun p -> map (fun ctx -> Inl (p, ctx)) (contexts_for_pp p))
+      (cfg_point_list g);;
+
+let rec raw_cfg_export
+  pi ps annotate =
+    (let g = compile_prog pi ps in
+     let cfg = raw_cfg_graph_config pi ps annotate in
+     let domain = contextual_graph_domain g (fun _ -> [()]) in
+      contextual_analysis_export equal_unit equal_unit cfg g domain
+        (fun _ -> ()));;
+
+let rec cs_show_context
+  ctx = maps (fun u -> string_of_cfg_node u @ [char_0x20]) ctx;;
+
+let rec cs_context_key ctx = implode (cs_show_context ctx);;
+
+let rec cs_graph_route k u ctx ca d = Some (cs_route k u ctx d ca);;
 
 let rec entered_is_bot_for
   pars ent = list_ex (fun x -> is_empty_ivl (ent x)) pars;;
@@ -11348,36 +11312,6 @@ let rec cs_globals_for
 let rec valid_analysis_config
   cfg = not (is_none (resolve_analysis_config cfg));;
 
-let rec xe_kind
-  (Export_edge_ext (xe_src, xe_dst, xe_kind, xe_label, more)) = xe_kind;;
-
-let rec xn_kind
-  (Export_node_ext (xn_id, xn_label, xn_kind, xn_status, xn_lines, more)) =
-    xn_kind;;
-
-let rec graphviz_action_defs = function EA_Assign (x, e) -> [x]
-                               | EA_Special (sc, x) -> [x]
-                               | EA_Nop -> []
-                               | EA_Assume v -> []
-                               | EA_AssumeNot v -> []
-                               | EA_Body v -> []
-                               | EA_Ret (v, va) -> []
-                               | EA_Check v -> [];;
-
-let rec owner_assigned_vars
-  g point_owner owner =
-    remdups equal_literal
-      (maps (fun (u, (a, _)) ->
-              (if (((point_owner u) : string) = owner)
-                then graphviz_action_defs a else []))
-         (cfg_intra_list g) @
-        maps (fun (call, (ca, (_, _))) ->
-               (if (((point_owner call) : string) = owner)
-                 then (match ca with CallEdge (None, _, _) -> []
-                        | CallEdge (Some x, _, _) -> [x])
-                 else []))
-          (cfg_calls_list g));;
-
 let rec dg_globals_for _C
   gs gl sigma keys =
     map (fun (k, (label, payload)) ->
@@ -11404,35 +11338,41 @@ let rec ctx_solved_for _B
 let rec exp_vnames_list
   b = sorted_list_of_set (equal_literal, linorder_literal) (exp_vnames b);;
 
-let rec canonical_node_block _A _B
-  cfg g sol ns n =
-    (match contextual_node_label_lines cfg g sol n
-      with [] ->
-        [char_0x20; char_0x20] @
-          analysis_node_id _A _B cfg ns n @ [char_0x3A] @ nl
-      | first :: rest ->
-        [char_0x20; char_0x20] @
-          analysis_node_id _A _B cfg ns n @
-            [char_0x3A; char_0x20] @
-              first @
-                nl @ maps (fun line ->
-                            [char_0x20; char_0x20; char_0x20; char_0x20;
-                              char_0x20; char_0x20] @
-                              line @ nl)
-                       rest);;
+let rec check_result_annotation
+  res cnd =
+    (match res
+      with Check_Proved ->
+        Node_Annotation
+          ([char_0x63; char_0x68; char_0x65; char_0x63; char_0x6B; char_0x20] @
+             string_of_exp zero_nat cnd,
+            NS_Proved)
+      | Check_Refuted ->
+        Node_Annotation
+          ([char_0x63; char_0x68; char_0x65; char_0x63; char_0x6B; char_0x20] @
+             string_of_exp zero_nat cnd @
+               [char_0x20; char_0x5B; char_0x52; char_0x45; char_0x46;
+                 char_0x55; char_0x54; char_0x45; char_0x44; char_0x5D],
+            NS_Refuted)
+      | Check_Unknown ->
+        Node_Annotation
+          ([char_0x63; char_0x68; char_0x65; char_0x63; char_0x6B; char_0x20] @
+             string_of_exp zero_nat cnd @
+               [char_0x20; char_0x5B; char_0x75; char_0x6E; char_0x6B;
+                 char_0x6E; char_0x6F; char_0x77; char_0x6E; char_0x5D],
+            NS_Unknown));;
 
-let rec xc_id (Export_cluster_ext (xc_id, xc_label, xc_nodes, more)) = xc_id;;
-
-let rec xe_label
-  (Export_edge_ext (xe_src, xe_dst, xe_kind, xe_label, more)) = xe_label;;
-
-let rec xn_label
-  (Export_node_ext (xn_id, xn_label, xn_kind, xn_status, xn_lines, more)) =
-    xn_label;;
-
-let rec xn_lines
-  (Export_node_ext (xn_id, xn_label, xn_kind, xn_status, xn_lines, more)) =
-    xn_lines;;
+let rec cs_cluster_label
+  owner ctx =
+    (if null ctx
+      then owner @
+             [char_0x20; char_0x2F; char_0x20; char_0x72; char_0x6F; char_0x6F;
+               char_0x74; char_0x20; char_0x63; char_0x6F; char_0x6E; char_0x74;
+               char_0x65; char_0x78; char_0x74]
+      else owner @
+             [char_0x20; char_0x2F; char_0x20; char_0x63; char_0x61; char_0x6C;
+               char_0x6C; char_0x2D; char_0x73; char_0x74; char_0x72; char_0x69;
+               char_0x6E; char_0x67; char_0x3D] @
+               cs_show_context ctx);;
 
 let rec com_stmt_post_order
   n x1 = match n, x1 with n, SKIP -> [Statement n]
@@ -11454,15 +11394,20 @@ let rec unit_seed_global_keys
   gk0 seed =
     seed_global_keys gk0 seed (fun _ -> [()]) (fun f _ -> "enter " ^ f);;
 
-let rec xg_edges
-  (Export_graph_ext (xg_clusters, xg_nodes, xg_edges, more)) = xg_edges;;
+let rec context_key
+  (Analysis_graph_config_ext
+    (local_of, route, context_key, show_context, locals_for_pp,
+      return_slot_for_pp, globals_to_show, show_local, format_return,
+      show_global, show_global_key, is_shared_global, show_internal_globals,
+      owner_of, cluster_label, source_text, node_annotation, more))
+    = context_key;;
 
-let rec xg_nodes
-  (Export_graph_ext (xg_clusters, xg_nodes, xg_edges, more)) = xg_nodes;;
+let rec result_contexts_at
+  cfg r p = ordered_by_key (context_key cfg) (contexts_at r p);;
 
-let rec xn_status
+let rec xn_id
   (Export_node_ext (xn_id, xn_label, xn_kind, xn_status, xn_lines, more)) =
-    xn_status;;
+    xn_id;;
 
 let rec defs_stmt_post_order
   pi x1 n = match pi, x1, n with pi, [], n -> []
@@ -11507,90 +11452,34 @@ let rec unit_seed_globals _A
         [char_0x72; char_0x6F; char_0x6F; char_0x74; char_0x20; char_0x63;
           char_0x6F; char_0x6E; char_0x74; char_0x65; char_0x78; char_0x74]);;
 
-let rec canonical_edge_kind_text
-  g kind =
-    (match kind with IntraEdge a -> source_action_label g a
-      | EnterEdge (callee, a) ->
-        [char_0x65; char_0x6E; char_0x74; char_0x65; char_0x72; char_0x20] @
-          callee @
-            [char_0x28] @
-              (let CallEdge (_, _, es) = a in
-                join_source [char_0x2C; char_0x20]
-                  (map (string_of_exp zero_nat) es)) @
-                [char_0x29]
-      | CombineEdge (_, dst, ret) ->
-        [char_0x63; char_0x6F; char_0x6D; char_0x62; char_0x69; char_0x6E;
-          char_0x65] @
-          (match (dst, ret) with (None, _) -> []
-            | (Some xa, None) -> [char_0x20] @ explode xa
-            | (Some xa, Some r) ->
-              [char_0x20] @
-                explode xa @
-                  [char_0x20; char_0x3A; char_0x3D; char_0x20] @ explode r)
-      | CallToReturnEdge callee ->
-        [char_0x63; char_0x61; char_0x6C; char_0x6C; char_0x2D; char_0x74;
-          char_0x6F; char_0x2D; char_0x72; char_0x65; char_0x74; char_0x75;
-          char_0x72; char_0x6E; char_0x20] @
-          explode callee
-      | GlobalReadEdge ->
-        [char_0x72; char_0x65; char_0x61; char_0x64; char_0x20; char_0x67;
-          char_0x6C; char_0x6F; char_0x62; char_0x61; char_0x6C]
-      | GlobalWriteEdge ->
-        [char_0x77; char_0x72; char_0x69; char_0x74; char_0x65; char_0x20;
-          char_0x67; char_0x6C; char_0x6F; char_0x62; char_0x61; char_0x6C]);;
+let rec graphviz_action_defs = function EA_Assign (x, e) -> [x]
+                               | EA_Special (sc, x) -> [x]
+                               | EA_Nop -> []
+                               | EA_Assume v -> []
+                               | EA_AssumeNot v -> []
+                               | EA_Body v -> []
+                               | EA_Ret (v, va) -> []
+                               | EA_Check v -> [];;
 
-let rec analysis_graph_to_canonical_text _A _B
-  cfg g sol graph =
-    (let (clusters, (ns, es)) = graph in
-     let clustersa =
-       filtera (fun c -> not (equal_analysis_clustera _A c SourceCluster))
-         clusters
-       in
-     let nsa =
-       filtera
-         (fun a ->
-           (match a with LocalNode (_, _) -> true | GlobalNode _ -> true
-             | SourceNode _ -> false))
-         ns
-       in
-      [char_0x63; char_0x6C; char_0x75; char_0x73; char_0x74; char_0x65;
-        char_0x72; char_0x73; char_0x3A] @
-        nl @ maps (fun c ->
-                    [char_0x20; char_0x20] @
-                      analysis_cluster_id _A clusters c @
-                        [char_0x3A] @
-                          nl @ maps (fun n ->
-                                      [char_0x20; char_0x20; char_0x20;
-char_0x20] @
-analysis_node_id _A _B cfg ns n @ nl)
-                                 (analysis_nodes_in_cluster _A _B cfg c ns))
-               clustersa @
-               nl @ [char_0x6E; char_0x6F; char_0x64; char_0x65; char_0x73;
-                      char_0x3A] @
-                      nl @ maps (canonical_node_block _A _B cfg g sol ns) nsa @
-                             nl @ [char_0x65; char_0x64; char_0x67; char_0x65;
-                                    char_0x73; char_0x3A] @
-                                    nl @ maps
-   (fun (src, (kind, dst)) ->
-     [char_0x20; char_0x20] @
-       analysis_node_id _A _B cfg ns src @
-         [char_0x20; char_0x2D; char_0x3E; char_0x20] @
-           analysis_node_id _A _B cfg ns dst @
-             [char_0x3A; char_0x20] @ canonical_edge_kind_text g kind @ nl)
-   es);;
+let rec owner_assigned_vars
+  g point_owner owner =
+    remdups equal_literal
+      (maps (fun (u, (a, _)) ->
+              (if (((point_owner u) : string) = owner)
+                then graphviz_action_defs a else []))
+         (cfg_intra_list g) @
+        maps (fun (call, (ca, (_, _))) ->
+               (if (((point_owner call) : string) = owner)
+                 then (match ca with CallEdge (None, _, _) -> []
+                        | CallEdge (Some x, _, _) -> [x])
+                 else []))
+          (cfg_calls_list g));;
 
-let rec contextual_analysis_canonical_text _A _B
-  cfg g domain sol =
-    analysis_graph_to_canonical_text _A _B cfg g sol
-      (build_analysis_graph _A _B cfg g domain sol);;
+let rec xe_dst
+  (Export_edge_ext (xe_src, xe_dst, xe_kind, xe_label, more)) = xe_dst;;
 
-let rec raw_cfg_canonical_text
-  pi ps annotate =
-    (let g = compile_prog pi ps in
-     let cfg = raw_cfg_graph_config pi ps annotate in
-     let domain = contextual_graph_domain g (fun _ -> [()]) in
-      contextual_analysis_canonical_text equal_unit equal_unit cfg g domain
-        (fun _ -> ()));;
+let rec xe_src
+  (Export_edge_ext (xe_src, xe_dst, xe_kind, xe_label, more)) = xe_src;;
 
 let rec entry_state_callee_ctx
   gs ca st =
@@ -11604,29 +11493,6 @@ let unreachable_state_annotation : graphviz_node_annotation
       ([char_0x75; char_0x6E; char_0x72; char_0x65; char_0x61; char_0x63;
          char_0x68; char_0x61; char_0x62; char_0x6C; char_0x65],
         NS_Unreachable);;
-
-let rec check_result_annotation
-  res cnd =
-    (match res
-      with Check_Proved ->
-        Node_Annotation
-          ([char_0x63; char_0x68; char_0x65; char_0x63; char_0x6B; char_0x20] @
-             string_of_exp zero_nat cnd,
-            NS_Proved)
-      | Check_Refuted ->
-        Node_Annotation
-          ([char_0x63; char_0x68; char_0x65; char_0x63; char_0x6B; char_0x20] @
-             string_of_exp zero_nat cnd @
-               [char_0x20; char_0x5B; char_0x52; char_0x45; char_0x46;
-                 char_0x55; char_0x54; char_0x45; char_0x44; char_0x5D],
-            NS_Refuted)
-      | Check_Unknown ->
-        Node_Annotation
-          ([char_0x63; char_0x68; char_0x65; char_0x63; char_0x6B; char_0x20] @
-             string_of_exp zero_nat cnd @
-               [char_0x20; char_0x5B; char_0x75; char_0x6E; char_0x6B;
-                 char_0x6E; char_0x6F; char_0x77; char_0x6E; char_0x5D],
-            NS_Unknown));;
 
 let rec full_state_checked_node_annotation
   vars env verdicts v =
@@ -11716,14 +11582,6 @@ let rec scope_locals
   (Procedure_scope_ext (scope_formals, scope_locals, scope_return_slot, more)) =
     scope_locals;;
 
-let rec is_top_abstract_value
-  = function SignValue s -> equal_signa s top_signa
-    | IntervalValue i -> equal_ivla i top_ivla
-    | IntDomValue d ->
-        equal_int_dom_exta equal_unit d
-          (top_int_dom_exta int_dom_record_lattice_unit)
-    | ParityValue v -> equal_paritya v top_paritya;;
-
 let rec compiled_procedure_scope
   gs pi ps g p =
     (let owner = compiled_owner_of pi ps p in
@@ -11742,6 +11600,14 @@ let rec compiled_procedure_scope
          (owner_assigned_vars g (compiled_owner_of pi ps) owner)
        in
       Procedure_scope_ext (fs, ls, ret, ()));;
+
+let rec is_top_abstract_value
+  = function SignValue s -> equal_signa s top_signa
+    | IntervalValue i -> equal_ivla i top_ivla
+    | IntDomValue d ->
+        equal_int_dom_exta equal_unit d
+          (top_int_dom_exta int_dom_record_lattice_unit)
+    | ParityValue v -> equal_paritya v top_paritya;;
 
 let rec cs_ctx_graph_config
   p k = Analysis_graph_config_ext
@@ -11855,11 +11721,12 @@ let rec solver_globals_for
       | (Parity_Analysis, Solver_Warrow) -> []
       | (Parity_Analysis, Solver_WarrowPerOrigin) -> []);;
 
-let rec xc_label
-  (Export_cluster_ext (xc_id, xc_label, xc_nodes, more)) = xc_label;;
+let rec xe_kind
+  (Export_edge_ext (xe_src, xe_dst, xe_kind, xe_label, more)) = xe_kind;;
 
-let rec xc_nodes
-  (Export_cluster_ext (xc_id, xc_label, xc_nodes, more)) = xc_nodes;;
+let rec xn_kind
+  (Export_node_ext (xn_id, xn_label, xn_kind, xn_status, xn_lines, more)) =
+    xn_kind;;
 
 let rec entry_state_ctx_sol
   r k = (match k with Inl (a, b) -> lookup_context (equal_list equal_ivl) r a b
@@ -11879,8 +11746,35 @@ let rec analyse_config_with_state
       | Some (Plan_Int_CallString (_, _)) -> None
       | Some (Plan_Parity s) -> analyse_with_state Parity_Analysis s p);;
 
-let rec xg_clusters
-  (Export_graph_ext (xg_clusters, xg_nodes, xg_edges, more)) = xg_clusters;;
+let rec canonical_node_block _A _B
+  cfg g sol ns n =
+    (match contextual_node_label_lines cfg g sol n
+      with [] ->
+        [char_0x20; char_0x20] @
+          analysis_node_id _A _B cfg ns n @ [char_0x3A] @ nl
+      | first :: rest ->
+        [char_0x20; char_0x20] @
+          analysis_node_id _A _B cfg ns n @
+            [char_0x3A; char_0x20] @
+              first @
+                nl @ maps (fun line ->
+                            [char_0x20; char_0x20; char_0x20; char_0x20;
+                              char_0x20; char_0x20] @
+                              line @ nl)
+                       rest);;
+
+let rec xc_id (Export_cluster_ext (xc_id, xc_label, xc_nodes, more)) = xc_id;;
+
+let rec xe_label
+  (Export_edge_ext (xe_src, xe_dst, xe_kind, xe_label, more)) = xe_label;;
+
+let rec xn_label
+  (Export_node_ext (xn_id, xn_label, xn_kind, xn_status, xn_lines, more)) =
+    xn_label;;
+
+let rec xn_lines
+  (Export_node_ext (xn_id, xn_label, xn_kind, xn_status, xn_lines, more)) =
+    xn_lines;;
 
 let rec analyse_with_state_default
   x0 p = match x0, p with
@@ -11894,6 +11788,16 @@ let rec analyse_with_state_default
     | Parity_Analysis, p ->
         tag_states (fun a -> ParityValue a)
           (analyse_parity_report_with_state p);;
+
+let rec xg_edges
+  (Export_graph_ext (xg_clusters, xg_nodes, xg_edges, more)) = xg_edges;;
+
+let rec xg_nodes
+  (Export_graph_ext (xg_clusters, xg_nodes, xg_edges, more)) = xg_nodes;;
+
+let rec xn_status
+  (Export_node_ext (xn_id, xn_label, xn_kind, xn_status, xn_lines, more)) =
+    xn_status;;
 
 let rec analyse_sign_ctx_solved_for
   x = ctx_solved_for executable_domain_sign sctx_sol_prog
@@ -11925,13 +11829,101 @@ let rec point_node_annotation
         Some (Node_Annotation
                (join_gv_nl (map (state_line st) vars), NS_Plain)));;
 
-let rec raw_cfg_canonical_text_lit
-  pi ps annotate = implode (raw_cfg_canonical_text pi ps annotate);;
+let rec canonical_edge_kind_text
+  g kind =
+    (match kind with IntraEdge a -> source_action_label g a
+      | EnterEdge (callee, a) ->
+        [char_0x65; char_0x6E; char_0x74; char_0x65; char_0x72; char_0x20] @
+          callee @
+            [char_0x28] @
+              (let CallEdge (_, _, es) = a in
+                join_source [char_0x2C; char_0x20]
+                  (map (string_of_exp zero_nat) es)) @
+                [char_0x29]
+      | CombineEdge (_, dst, ret) ->
+        [char_0x63; char_0x6F; char_0x6D; char_0x62; char_0x69; char_0x6E;
+          char_0x65] @
+          (match (dst, ret) with (None, _) -> []
+            | (Some xa, None) -> [char_0x20] @ explode xa
+            | (Some xa, Some r) ->
+              [char_0x20] @
+                explode xa @
+                  [char_0x20; char_0x3A; char_0x3D; char_0x20] @ explode r)
+      | CallToReturnEdge callee ->
+        [char_0x63; char_0x61; char_0x6C; char_0x6C; char_0x2D; char_0x74;
+          char_0x6F; char_0x2D; char_0x72; char_0x65; char_0x74; char_0x75;
+          char_0x72; char_0x6E; char_0x20] @
+          explode callee
+      | GlobalReadEdge ->
+        [char_0x72; char_0x65; char_0x61; char_0x64; char_0x20; char_0x67;
+          char_0x6C; char_0x6F; char_0x62; char_0x61; char_0x6C]
+      | GlobalWriteEdge ->
+        [char_0x77; char_0x72; char_0x69; char_0x74; char_0x65; char_0x20;
+          char_0x67; char_0x6C; char_0x6F; char_0x62; char_0x61; char_0x6C]);;
+
+let rec analysis_graph_to_canonical_text _A _B
+  cfg g sol graph =
+    (let (clusters, (ns, es)) = graph in
+     let clustersa =
+       filtera (fun c -> not (equal_analysis_clustera _A c SourceCluster))
+         clusters
+       in
+     let nsa =
+       filtera
+         (fun a ->
+           (match a with LocalNode (_, _) -> true | GlobalNode _ -> true
+             | SourceNode _ -> false))
+         ns
+       in
+      [char_0x63; char_0x6C; char_0x75; char_0x73; char_0x74; char_0x65;
+        char_0x72; char_0x73; char_0x3A] @
+        nl @ maps (fun c ->
+                    [char_0x20; char_0x20] @
+                      analysis_cluster_id _A clusters c @
+                        [char_0x3A] @
+                          nl @ maps (fun n ->
+                                      [char_0x20; char_0x20; char_0x20;
+char_0x20] @
+analysis_node_id _A _B cfg ns n @ nl)
+                                 (analysis_nodes_in_cluster _A _B cfg c ns))
+               clustersa @
+               nl @ [char_0x6E; char_0x6F; char_0x64; char_0x65; char_0x73;
+                      char_0x3A] @
+                      nl @ maps (canonical_node_block _A _B cfg g sol ns) nsa @
+                             nl @ [char_0x65; char_0x64; char_0x67; char_0x65;
+                                    char_0x73; char_0x3A] @
+                                    nl @ maps
+   (fun (src, (kind, dst)) ->
+     [char_0x20; char_0x20] @
+       analysis_node_id _A _B cfg ns src @
+         [char_0x20; char_0x2D; char_0x3E; char_0x20] @
+           analysis_node_id _A _B cfg ns dst @
+             [char_0x3A; char_0x20] @ canonical_edge_kind_text g kind @ nl)
+   es);;
+
+let rec contextual_analysis_canonical_text _A _B
+  cfg g domain sol =
+    analysis_graph_to_canonical_text _A _B cfg g sol
+      (build_analysis_graph _A _B cfg g domain sol);;
+
+let rec raw_cfg_canonical_text
+  pi ps annotate =
+    (let g = compile_prog pi ps in
+     let cfg = raw_cfg_graph_config pi ps annotate in
+     let domain = contextual_graph_domain g (fun _ -> [()]) in
+      contextual_analysis_canonical_text equal_unit equal_unit cfg g domain
+        (fun _ -> ()));;
 
 let rec full_state_export_auto
   kind p =
     raw_cfg_export (prog_table p) (prog_procs p)
       (point_node_annotation (program_vars p) (analyse_point_env_for kind p));;
+
+let rec xc_label
+  (Export_cluster_ext (xc_id, xc_label, xc_nodes, more)) = xc_label;;
+
+let rec xc_nodes
+  (Export_cluster_ext (xc_id, xc_label, xc_nodes, more)) = xc_nodes;;
 
 let rec analyse_sign_entry_state_result
   p = analyse_sign_entry_state_result_for (declared_global p) p;;
@@ -11963,6 +11955,9 @@ let rec entry_state_globals_for
           (ctx_show_of (fun a -> IntDomValue a))
           (analyse_int_entry_state_result_warrow p) p
       | Parity_Analysis -> []);;
+
+let rec xg_clusters
+  (Export_graph_ext (xg_clusters, xg_nodes, xg_edges, more)) = xg_clusters;;
 
 let rec entry_state_verdicts_for
   kind p =
@@ -12010,6 +12005,9 @@ let rec entry_state_point_env_for
           (equal_list (equal_int_dom_ext equal_unit)) (fun a -> IntDomValue a)
           (analyse_int_entry_state_result_warrow p)
       | Parity_Analysis -> (fun _ -> Bot));;
+
+let rec raw_cfg_canonical_text_lit
+  pi ps annotate = implode (raw_cfg_canonical_text pi ps annotate);;
 
 let rec wf_program_compile_input_exec
   p = (let procs = proc_rep p in

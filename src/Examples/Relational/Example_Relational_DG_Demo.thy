@@ -7,7 +7,7 @@ theory Example_Relational_DG_Demo
     "Voblint_Analysis_Interval.Interval_Transfer"
     "Voblint_Analysis_Interval.Interval_Exec"
     "Voblint_Solver.TD_Solver_Bridge"
-    "Voblint_Analysis_Base.Analysis_GraphViz"
+    "Voblint_Compile.Compile_Wellformed"
     "Voblint_CFG.CFG_Prune"
     "Voblint_VIMP.VIMP_Notation"
 begin
@@ -142,60 +142,6 @@ lemma demo_rel_learns_yx:
 text \<open>Side by side, the three lemmas above are the comparison: at \<open>Statement 1\<close>
   Interval's two bounds stay \<open>[-inf,+inf]\<close> while \<open>relc\<close> answers \<open>True\<close> for the
   pair \<open>(x,y)\<close>.\<close>
-
-subsection \<open>Rendering the CFG\<close>
-
-text \<open>The plain compiled CFG, rendered through the same GraphViz backend the
-  other examples use -- no analysis annotation, just the structure the
-  equation system above was generated from: entry, the guard's two branches,
-  the two assignments, and the merge into \<open>main\<close>'s exit.\<close>
-
-definition demo_dot :: String.literal where
-  "demo_dot = raw_cfg_dot_lit demo_pi (prog_procs demo_program)
-    (\<lambda>_. None)"
-
-subsection \<open>Rendering the CFG annotated with the computed relational result\<close>
-
-text \<open>Same CFG, same rendering backend, this time with each node labelled by
-  the \<open>relc\<close> value the solver computed there -- \<open>string_of_relc\<close> is the
-  \<open>relc\<close> analogue of \<open>string_of_ivl\<close>, and \<open>local_of = locals\<close> is the same
-  projection the flagship Interval example uses.\<close>
-
-definition demo_rel_graph_config ::
-  "(unit, (unit, unit) routed_gk, (relc, relc) dg_state, relc) analysis_graph_config" where
-  "demo_rel_graph_config =
-    \<lparr> local_of = locals,
-      route = (\<lambda>_ _ _ _. Some ()),
-      context_key = (\<lambda>_. STR ''unit''),
-      show_context = (\<lambda>_. ''unit''),
-      locals_for_pp = (\<lambda>p.
-        scope_locals (compiled_procedure_scope demo_gs demo_pi (prog_procs demo_program) demo_cfg p)),
-      return_slot_for_pp = (\<lambda>p.
-        scope_return_slot (compiled_procedure_scope demo_gs demo_pi (prog_procs demo_program) demo_cfg p)),
-      globals_to_show = [],
-      show_local = (\<lambda>_ _ _ d. [string_of_relc d]),
-      format_return = (\<lambda>_ _ _ _. []),
-      show_global = (\<lambda>_ _ _. [''(none)'']),
-      show_global_key = (\<lambda>k. case k of Analysis_Global _ \<Rightarrow> ''Global'' | Activation_Seed _ _ \<Rightarrow> ''Seed''),
-      is_shared_global = (\<lambda>k. case k of Analysis_Global _ \<Rightarrow> True | Activation_Seed _ _ \<Rightarrow> False),
-      show_internal_globals = False,
-      owner_of = (\<lambda>_. ''main''),
-      cluster_label = (\<lambda>_ _. ''main / relational''),
-      source_text = Some (pretty_string_of_program demo_pi (prog_procs demo_program)
-        (prog_main demo_program) []),
-      node_annotation = (\<lambda>_ _. None)
-    \<rparr>"
-
-definition demo_graph_domain :: "(pp \<times> unit + (unit, unit) routed_gk) list" where
-  "demo_graph_domain = contextual_graph_domain demo_cfg (\<lambda>_. [()])"
-
-definition demo_rel_dot :: String.literal where
-  "demo_rel_dot =
-    String.implode
-      (case TD_side_always_join_Interp_solve_c demo_rel_eqs (cfg_exit demo_cfg, ()) of
-         None \<Rightarrow> ''solver did not terminate''
-       | Some sol \<Rightarrow> contextual_analysis_dot demo_rel_graph_config demo_cfg
-           demo_graph_domain (snd sol))"
 
 end
 

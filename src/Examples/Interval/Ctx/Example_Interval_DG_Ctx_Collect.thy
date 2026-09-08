@@ -244,7 +244,8 @@ definition ivl_context :: "cfg_node \<Rightarrow> ivl list \<Rightarrow> store \
   "ivl_context = formals_context_sem twice_cfg ivl_decode"
 
 text \<open>\<^const>\<open>ivl_context\<close> is the \<^emph>\<open>semantic\<close> reading of the same partial-tabulation policy
-  (\<^cite>\<open>SeidlEtAl2026\<close> Example 8): it decodes the concrete entered store's formals
+  (Seidl et al., \<^emph>\<open>Mixed Flow-Sensitive Static Analysis\<close>, FM 2026, Example 8):
+  it decodes the concrete entered store's formals
   through \<^const>\<open>ivl_decode\<close>, looking its formals up from the call site via
   \<^const>\<open>formals_at_call_site\<close>.  \<^const>\<open>entry_state_context_rel\<close> instead ignores the store and
   recomputes the routed value from the caller's solved abstract state.  The two are

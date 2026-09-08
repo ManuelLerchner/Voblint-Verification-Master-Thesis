@@ -1,4 +1,4 @@
-session Voblint_Analysis_Interval in "." = "Voblint_Analysis_Base" +
+session Voblint_Analysis_Interval in "." = "Voblint_Nonrelational" +
   description "The Interval domain: bounds, lattice, widening, executable bridge, end-to-end soundness"
   sessions
     "Voblint_VIMP"

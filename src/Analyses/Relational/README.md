@@ -13,9 +13,11 @@ routed spine and the same vendored solver.
 
 The point is a negative one — that no layer below needs the pointwise structure —
 and a negative claim about layering is only convincing if the build enforces it.
-`Voblint_Analysis_Relational` is parented on `Voblint_Analysis_Base` and lists no
-other domain, so if the generic machinery ever grew a dependency on `abs_state`,
-this session would stop building.
+`Voblint_Analysis_Relational` is parented on `Voblint_Exec` and lists no other
+domain. That placement is the enforcement: the pointwise reuse locales live in
+`Voblint_Nonrelational`, which is *not* an ancestor of this session, so an import
+of one is not merely absent but unavailable. If the generic machinery below ever
+grew a dependency on `abs_state`, this session would stop building.
 
 ## Vocabulary
 

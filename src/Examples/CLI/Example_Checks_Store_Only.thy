@@ -3,7 +3,7 @@ section \<open>Example: checks_proven/checks_provenD alone, store-only\<close>
 theory Example_Checks_Store_Only
   imports "Voblint_Framework.Checks"
           "Voblint_Analysis_Sign.Sign_Entry" "Voblint_Analysis_Sign.Sign_Checks"
-          "Voblint_Analysis_Base.Analysis_GraphViz" "Voblint_VIMP.VIMP_Notation"
+          "Voblint_CLI.Analysis_Graph_Export" "Voblint_VIMP.VIMP_Notation"
           "Voblint_Examples_CFG.Example_Compile_Call_Free"
 begin
 
@@ -367,14 +367,14 @@ lemma checks_ex_report_rendered:
      [''pp1: 0<y  PROVED'', ''pp3: 0<y  REFUTED'', ''pp5: z==1  UNKNOWN'']"
   by eval
 
-subsection \<open>CFG rendering, checks colored by executable classification\<close>
+subsection \<open>Colouring checks by executable classification\<close>
 
 text \<open>
-  The compiled CFG is rendered through the same generic
-  \<^theory>\<open>Voblint_Analysis_Base.Analysis_GraphViz\<close> pipeline every other example uses
-  (\<^const>\<open>raw_cfg_dot_lit\<close>), not a bespoke renderer, through the same
-  check-agnostic \<^type>\<open>graphviz_node_annotation\<close> hook every other annotated
-  example uses. There is no manually maintained \<^typ>\<open>pp\<close>-to-\<^typ>\<open>exp\<close> table:
+  What a renderer needs from a solved analysis is one annotation per node, and
+  the check-agnostic \<^type>\<open>graphviz_node_annotation\<close> hook is where it comes
+  from. Drawing is not done here: the CLI's own renderer consumes the structured
+  export, so this theory demonstrates the annotation, not a picture.
+  There is no manually maintained \<^typ>\<open>pp\<close>-to-\<^typ>\<open>exp\<close> table:
   \<^const>\<open>check_report_node_annotation\<close> looks each node up directly in the
   computed \<^const>\<open>analyse_sign_report_for\<close>, so a change to the program or the
   solver result changes the rendered color automatically.
@@ -412,12 +412,6 @@ lemma checks_ex_annotation_unknown:
   "checks_ex_node_annotation (Statement 5) =
      Some (check_result_annotation Check_Unknown (Eq (V (STR ''z'')) (N 1)))"
   unfolding checks_ex_node_annotation_def by eval
-
-definition checks_ex_dot_lit :: String.literal where
-  "checks_ex_dot_lit =
-     raw_cfg_dot_with_report_lit (prog_table checks_ex_program) (prog_procs checks_ex_program)
-       checks_ex_node_annotation
-       (analyse_sign_report_for checks_ex_gs checks_ex_program)"
 
 end
 

@@ -1,5 +1,5 @@
 theory Interval_Exec
-  imports "Voblint_Exec.Exec_St_Restriction_Refinement" "Voblint_Analysis_Base.Numeric_Ops" Interval_Domain
+  imports "Voblint_Exec.Exec_St_Restriction_Refinement" "Voblint_Nonrelational.Numeric_Ops" Interval_Domain
 begin
 
 section \<open>Interval executable transfer mirror\<close>
@@ -27,11 +27,11 @@ text \<open>
 subsection \<open>Executable transfer function and seeds, generic in the classifier\<close>
 
 text \<open>
-  \<open>ivl_ops\<close> bundles Interval's own primitives for the generic
-  \<open>generic_branch_st_for\<close>/\<open>generic_enter_st_for\<close> construction
-  (\<^theory>\<open>Voblint_Analysis_Base.Numeric_Ops\<close>), the same way \<open>sign_ops\<close> does for Sign:
-  \<open>branch_ivl_st_for\<close>/\<open>ivl_enter_st_for\<close>
-  below are exactly those generic constructions instantiated at \<open>ivl_ops\<close>.
+  \<open>ivl_ops\<close> bundles Interval's own primitives
+  (\<^theory>\<open>Voblint_Nonrelational.Numeric_Ops\<close>), the same way \<open>sign_ops\<close> does for Sign:
+  \<open>ivl_enter_st_for\<close> below is \<open>generic_enter_st_for\<close> instantiated at \<open>ivl_ops\<close>, and
+  \<open>branch_ivl_st_for\<close> reads the backward filter straight out of the record, since a
+  branch transfer is that filter and needs no construction over it.
 \<close>
 
 definition ivl_ops :: "ivl numeric_ops" where
@@ -39,11 +39,11 @@ definition ivl_ops :: "ivl numeric_ops" where
 
 definition branch_ivl_st_for ::
   "(vname => bool) => exp => bool => ivl resolved_st_q => ivl resolved_st_q" where
-  "branch_ivl_st_for = generic_branch_st_for ivl_ops"
+  "branch_ivl_st_for = n_bfilter ivl_ops"
 
 lemma branch_ivl_st_for_eq [simp]:
   "branch_ivl_st_for gs b pol s = branch_ivl_st gs b pol s"
-  by (simp add: branch_ivl_st_for_def generic_branch_st_for_def ivl_ops_def)
+  by (simp add: branch_ivl_st_for_def ivl_ops_def)
 
 definition ivl_enter_st_for ::
   "(vname => bool) => call_info =>
@@ -247,7 +247,7 @@ text \<open>
   A per-location specialization of the two lemmas above for the single-
   variable guard shape \<open>Less (V x) (N n)\<close>: \<^const>\<open>bfilter_ivl_st\<close>/
   \<^const>\<open>bfilter_ivl\<close> for this shape reduce (via \<open>afilter_st\<close>'s own
-  recursive equations, \<^theory>\<open>Voblint_Analysis_Base.Exec_Backward\<close>) to a single
+  recursive equations, \<^theory>\<open>Voblint_Nonrelational.Exec_Backward\<close>) to a single
   \<^const>\<open>update_resolved_st_q\<close> at \<open>location_of gs x\<close> computed purely from
   \<open>x\<close>'s own value -- \<open>N n\<close> is a literal, so its own \<open>afilter_st\<close> case is the
   identity, and every location other than \<open>x\<close> is left untouched. A consumer

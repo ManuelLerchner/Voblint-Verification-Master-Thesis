@@ -93,7 +93,7 @@ routed_entry_seed_tree seed_key gk0 route ctx v =
 Both are hooks of the generator `routed_node_rhs[_buffered]`
 (`DG_Constraint_Trees.thy`). Three routing instances exist: `unit_routed_context`
 (`route_unit`), `call_string_routed_context` (`cs_route`),
-`entry_state_routed_context` (`formals_route_lifted_gen`).
+`pure_entry_routed_context` (`formals_route_lifted_gen`).
 
 **Reachability evidence, independent of any reading of the sources.** The
 checked-in export `codegen/generated/ml/Voblint_CLI.ml` (12,186 lines) contains

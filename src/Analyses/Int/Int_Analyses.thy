@@ -3,7 +3,7 @@ theory Int_Analyses
     Int_Sound
     Int_Classify
     Int_Exec
-    "Voblint_Analysis_Base.DG_Result_Construction"
+    "Voblint_Result.DG_Result_Construction"
     "Voblint_Framework.CFG_Enumeration"
     "Voblint_Exec.Routed_Exec_Refinement"
     "Voblint_Exec.DG_Local_State_Exec_Refinement"
@@ -19,8 +19,8 @@ theory Int_Analyses
     "Voblint_CFG.CFG_Prune"
     "Voblint_VIMP.VIMP_Program"
     "TD.TD_side_upd_rule"
-    "Voblint_Analysis_Base.Call_String_Routed_Context"
-    "Voblint_Analysis_Base.Entry_State_Routed_Context"
+    "Voblint_Routing.Call_String_Routed_Context"
+    "Voblint_Routing.Entry_State_Routed_Context"
 begin
 
 chapter \<open>How the Int product is run under each supported context policy\<close>
@@ -488,7 +488,15 @@ next
   case (VarsFin mode empty_pred gs Pi ps) thus ?case by (rule int_conf_vars_finite)
 qed
 
+text \<open>
+  Each update rule publishes the same eleven facts under its own suffix, so a
+  consumer switching solvers renames rather than hunts. \<open>Int_Solver_Analyses\<close>
+  repeats this block verbatim at \<open>_per_origin\<close>, \<open>_warrow\<close> and \<open>_wpo\<close>.
+\<close>
+
 lemmas int_conf_result_node_sound = int_conf_join.int_conf_result_node_sound
+lemmas int_conf_result_node_unreachable = int_conf_join.int_conf_result_node_unreachable
+lemmas int_conf_report_flag_unreachable = int_conf_join.int_conf_report_flag_unreachable
 lemmas int_conf_analyse_result_eq = int_conf_join.int_conf_analyse_result_eq
 lemmas int_conf_cinit_le_cinit_int_dom_st = int_conf_join.int_conf_cinit_le_cinit_int_dom_st
 lemmas int_conf_activation_collect_sound = int_conf_join.int_conf_activation_collect_sound
@@ -580,7 +588,7 @@ text \<open>
   routing policy changes, from \<^const>\<open>route_unit\<close> to
   \<^const>\<open>Call_String_Context.cs_route\<close> at a runtime bound \<open>k\<close>, and the routed-context
   locale interpreted changes from \<^locale>\<open>unit_routed_context\<close> to
-  \<^locale>\<open>call_string_routed_context\<close> (\<^theory>\<open>Voblint_Analysis_Base.Call_String_Routed_Context\<close>),
+  \<^locale>\<open>call_string_routed_context\<close> (\<^theory>\<open>Voblint_Routing.Call_String_Routed_Context\<close>),
   exactly as Sign's own call-string derivation already uses.
 
   This is the mission's stretch-goal acceptance test at a third domain: a second
@@ -887,7 +895,7 @@ text \<open>
   entry-state instance already uses: it needed only \<^locale>\<open>routed_dg_domain_exec\<close>'s
   own three primitive commute facts, which Int's own routed-unit instance has already
   established, so no new Int-domain mathematics is needed here either.
-  \<^locale>\<open>entry_state_routed_context\<close> (\<^theory>\<open>Voblint_Analysis_Base.Entry_State_Routed_Context\<close>) is
+  \<^locale>\<open>pure_entry_routed_context\<close> (\<^theory>\<open>Voblint_Routing.Entry_State_Routed_Context\<close>) is
   the generic context-side counterpart, discharging \<open>FinC\<close>/\<open>RouteAgree\<close>/\<open>EnterAgree\<close>
   once and for all instances.
 
@@ -1173,7 +1181,7 @@ subsection \<open>Instantiating the generic routed-context locale\<close>
 interpretation int_conf_entry_dg_base: sound_dg_spec_core "int_dom_spec mode empty_pred gs" "int_dom_gamma gs" gs
   by (rule int_dom_sound_exec[OF exact])
 
-interpretation int_conf_entry_routed: entry_state_routed_context "int_dom_spec mode empty_pred gs"
+interpretation int_conf_entry_routed: pure_entry_routed_context "int_dom_spec mode empty_pred gs"
     "int_dom_gamma gs" gs Pi ps "Analysis_Global ()" "int_conf_entry_route_gen mode gs empty_pred"
     Bot "Lifted cinit_int_dom_st" Bot
     "snd (int_conf_entry_sol mode gs empty_pred Pi ps)" "fst (int_conf_entry_sol mode gs empty_pred Pi ps)"

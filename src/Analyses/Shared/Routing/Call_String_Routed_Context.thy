@@ -1,15 +1,21 @@
 theory Call_String_Routed_Context
-  imports "Voblint_Framework.Routed_Context" "Voblint_Framework.Call_String_Context" "Voblint_Compile.Compile_Wellformed"
+  imports
+    "Voblint_Framework.Routed_Context"
+    "Voblint_Framework.Call_String_Context"
+    "Voblint_Compile.Compile_Wellformed"
 begin
 
-section \<open>Call-string routing as a routed-context instance\<close>
+section \<open>Telling activations apart by how they were called\<close>
 
 text \<open>
-  \<^locale>\<open>routed_context_base_hetero\<close> at \<open>route := cs_route k\<close>,
-  \<open>R := call_context_rel_of_fun (cs_context k)\<close>, \<open>gk0 := Global\<close> and \<open>seed_key := Seed\<close>,
-  over the CFG of a compiled program and at whichever carrier \<open>S\<close> is stated over. Five of
-  the obligations that specialization leaves are facts about the routing policy or about
-  \<^const>\<open>compile_prog\<close> alone and are discharged here once and for all \<open>k\<close>:
+  A call string is the last \<open>k\<close> call sites on the stack. Keying an analysis by one
+  means a procedure entered from two places is analysed twice, separately, instead
+  of once at the join of both --- and entered from more than \<open>k\<close> levels deep, the
+  oldest sites drop off and those activations merge again.
+
+  This theory says that policy is a legal routing for the generic spine, and pays
+  once, for every \<open>k\<close> and every domain, the part of that bill which depends only on
+  the policy and on the shape of a compiled program:
 
     \<^item> \<open>finC\<close> holds for every \<^const>\<open>compile_prog\<close> output (\<open>compile_prog_finite\<close>);
     \<^item> \<open>calls_unique\<close> is call-source uniqueness for every \<^const>\<open>compile_prog\<close>
@@ -95,7 +101,7 @@ next
     and "s \<in> gammaDG (locals (sigma (Inl (u, ctx)))) (globs (sigma (Inr Global)))"
   then show "p \<in> set (static_resolve (compile_prog Pi ps) cont u
                         (CallEdge dst pars args) (locals (sigma (Inl (u, ctx)))))"
-    by (simp add: static_resolve_iff compile_prog_finite)
+    by (simp add: compile_prog_finite)
 next
   fix u ctx dst pars args p cont s ctx'
   assume covV: "(u, ctx) \<in> vars"

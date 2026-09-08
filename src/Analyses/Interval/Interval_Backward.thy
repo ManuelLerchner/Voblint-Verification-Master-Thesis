@@ -1,6 +1,6 @@
 theory Interval_Backward
-  imports Interval_Arithmetic "Voblint_Analysis_Base.Exec_Backward" "Voblint_VIMP.VIMP_Expr"
-    "Voblint_Analysis_Base.Abstract_Arithmetic" Interval_Numeric_Queries
+  imports Interval_Arithmetic "Voblint_Nonrelational.Exec_Backward" "Voblint_VIMP.VIMP_Expr"
+    "Voblint_Nonrelational.Abstract_Arithmetic" Interval_Numeric_Queries
 begin
 
 section \<open>Interval backward filtering\<close>
@@ -11,7 +11,7 @@ text \<open>
   \<open>interval_lt\<close>/\<open>interval_eqb\<close>/\<open>interval_tobool\<close> restate
   \<open>Interval_Numeric_Queries\<close>'s \<open>interval_less_true\<close>/\<open>interval_less_false\<close>/
   \<open>interval_eq_true\<close>/\<open>interval_eq_false\<close> as the three-valued \<open>bool option\<close>
-  queries \<open>Voblint_Analysis_Base.Abstract_Arithmetic\<close>'s \<open>expression_domain_sound\<close>
+  queries \<open>Voblint_Nonrelational.Abstract_Arithmetic\<close>'s \<open>expression_domain_sound\<close>
   locale expects: \<open>Some True\<close>/\<open>Some False\<close> when the bound-based table decides
   it, \<open>None\<close> otherwise. \<open>interval_tobool\<close> is truthiness against the point
   interval \<open>[0,0]\<close>.
@@ -506,13 +506,14 @@ next
 qed
 
 text \<open>
-  Executable @{typ "ivl resolved_st_q"} mirror of \<open>afilter_ivl\<close> /
-  \<open>bfilter_ivl\<close>, and its commutation with the abstract filters through
+  Executable @{typ "ivl resolved_st_q"} mirror of \<open>bfilter_ivl\<close> and of the
+  branch split, and its commutation with the abstract filters through
   @{const fun_of_resolved_st_q_for}. Both come from the generic
-  @{locale backward_domain} executable mirror (\<open>Exec_Backward\<close>).
+  @{locale backward_domain} executable mirror (\<open>Exec_Backward\<close>); the
+  arithmetic-filter commutation stays reachable as
+  \<open>ivl_backward_domain.afilter_st_commute\<close>.
 \<close>
 
-lemmas afilter_ivl_st_commute = ivl_backward_domain.afilter_st_commute
 lemmas bfilter_ivl_st_commute = ivl_backward_domain.bfilter_st_commute
 lemmas branch_ivl_st_commute = ivl_backward_domain.branch_st_commute
 

@@ -2,23 +2,22 @@ theory Numeric_Ops
   imports "Voblint_Exec.Exec_St_Restriction_Refinement"
 begin
 
-section \<open>Generic executable branch/enter construction\<close>
+section \<open>Generic executable procedure entry\<close>
 
 text \<open>
-  Sign, Interval, and Parity each define their own \<open>branch_X_st_for\<close>
-  (Sign/Interval only -- Parity's branch transfer is the identity, so it has
-  none) and \<open>X_enter_st_for\<close> with an identical shape modulo the domain's own
-  \<open>aval_X\<close>/\<open>bfilter_X_st\<close>/\<open>top\<close>. This theory captures that shared
-  state-transformer structure once, mirroring \<open>Special_Ops\<close>'s
-  record-of-primitives shape: each domain supplies its own evaluator,
-  backward filter, and top value, and the two generic constructions below
-  are defined once against them.
+  Sign, Interval, Parity and \<open>int_dom\<close> each need an \<open>X_enter_st_for\<close> of identical
+  shape modulo the domain's own \<open>aval_X\<close> and \<open>top\<close>: evaluate the actuals in the
+  caller's state, reset the callee frame, bind the formals. \<open>numeric_ops\<close> packages
+  those primitives so the construction is written once, mirroring \<open>Special_Ops\<close>'s
+  record-of-primitives shape.
 
-  \<open>n_bfilter\<close> is not optional even for a domain like Parity whose branch
-  transfer degenerates to the identity: \<open>generic_branch_st_for\<close> stays
-  uniform by taking the identity function as Parity's own \<open>n_bfilter\<close>
-  value, the same way \<open>Special_Ops\<close> lets a domain with nothing special
-  to do supply a trivial primitive rather than needing an option type.
+  \<open>n_bfilter\<close> is a field but has no construction over it: each domain applies it
+  directly as its own \<open>branch_X_st_for\<close>, since a branch transfer *is* a backward
+  filter and wrapping that in a generic constant would only rename it. It is
+  carried here so a domain's primitives travel as one value, and so a domain
+  whose branch transfer degenerates to the identity -- Parity's does -- supplies
+  the identity rather than needing an option type, exactly as \<open>Special_Ops\<close> lets a
+  domain supply a trivial primitive.
 \<close>
 
 text \<open>
@@ -40,11 +39,6 @@ record 'a::bot numeric_ops =
   n_aval    :: "exp => (vname => 'a) => 'a"
   n_bfilter :: "(vname => bool) => exp => bool => 'a resolved_st_q => 'a resolved_st_q"
   n_top     :: "'a"
-
-definition generic_branch_st_for ::
-    "'a::bot numeric_ops => (vname => bool) => exp => bool =>
-       'a resolved_st_q => 'a resolved_st_q" where
-  "generic_branch_st_for ops gs b pol s = n_bfilter ops gs b pol s"
 
 definition generic_enter_st_for ::
     "'a::bot numeric_ops => (vname => bool) => call_info =>

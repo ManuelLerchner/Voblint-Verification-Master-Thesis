@@ -6,7 +6,7 @@ theory Example_Proc_Call
     "Voblint_CFG.CFG_Prune"
 
     "Voblint_Analysis_Interval.Interval_Domain"
-    "Voblint_Analysis_Base.Analysis_GraphViz"
+    "Voblint_Compile.Compile_Wellformed"
 begin
 
 definition main_cfg_name :: pname where

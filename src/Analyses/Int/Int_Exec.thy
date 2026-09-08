@@ -1,5 +1,5 @@
 theory Int_Exec
-  imports "Voblint_Exec.Exec_St_Restriction_Refinement" "Voblint_Analysis_Base.Numeric_Ops"
+  imports "Voblint_Exec.Exec_St_Restriction_Refinement" "Voblint_Nonrelational.Numeric_Ops"
     Int_Transfer
 begin
 
@@ -56,11 +56,11 @@ definition int_dom_ops_never :: "int_dom numeric_ops" where
 definition branch_int_dom_never_st_for ::
     "(vname => bool) => exp => bool => int_dom resolved_st_q => int_dom resolved_st_q"
 where
-  "branch_int_dom_never_st_for = generic_branch_st_for int_dom_ops_never"
+  "branch_int_dom_never_st_for = n_bfilter int_dom_ops_never"
 
 lemma branch_int_dom_never_st_for_eq [simp]:
   "branch_int_dom_never_st_for gs b pol s = branch_int_dom_never_st gs b pol s"
-  by (simp add: branch_int_dom_never_st_for_def generic_branch_st_for_def int_dom_ops_never_def)
+  by (simp add: branch_int_dom_never_st_for_def int_dom_ops_never_def)
 
 definition int_dom_enter_never_st_for ::
     "(vname => bool) => call_info =>
@@ -163,11 +163,11 @@ definition int_dom_ops_once :: "int_dom numeric_ops" where
 definition branch_int_dom_once_st_for ::
     "(vname => bool) => exp => bool => int_dom resolved_st_q => int_dom resolved_st_q"
 where
-  "branch_int_dom_once_st_for = generic_branch_st_for int_dom_ops_once"
+  "branch_int_dom_once_st_for = n_bfilter int_dom_ops_once"
 
 lemma branch_int_dom_once_st_for_eq [simp]:
   "branch_int_dom_once_st_for gs b pol s = branch_int_dom_once_st gs b pol s"
-  by (simp add: branch_int_dom_once_st_for_def generic_branch_st_for_def int_dom_ops_once_def)
+  by (simp add: branch_int_dom_once_st_for_def int_dom_ops_once_def)
 
 definition int_dom_enter_once_st_for ::
     "(vname => bool) => call_info =>
@@ -270,11 +270,11 @@ definition int_dom_ops_fixpoint :: "int_dom numeric_ops" where
 definition branch_int_dom_fixpoint_st_for ::
     "(vname => bool) => exp => bool => int_dom resolved_st_q => int_dom resolved_st_q"
 where
-  "branch_int_dom_fixpoint_st_for = generic_branch_st_for int_dom_ops_fixpoint"
+  "branch_int_dom_fixpoint_st_for = n_bfilter int_dom_ops_fixpoint"
 
 lemma branch_int_dom_fixpoint_st_for_eq [simp]:
   "branch_int_dom_fixpoint_st_for gs b pol s = branch_int_dom_fixpoint_st gs b pol s"
-  by (simp add: branch_int_dom_fixpoint_st_for_def generic_branch_st_for_def int_dom_ops_fixpoint_def)
+  by (simp add: branch_int_dom_fixpoint_st_for_def int_dom_ops_fixpoint_def)
 
 definition int_dom_enter_fixpoint_st_for ::
     "(vname => bool) => call_info =>

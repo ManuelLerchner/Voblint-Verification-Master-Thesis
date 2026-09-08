@@ -2,7 +2,7 @@ section \<open>Example: Parity check-discharge, node-local, store-only\<close>
 
 theory Example_Parity_Checks_Store_Only
   imports "Voblint_Framework.Checks" "Voblint_Analysis_Parity.Parity_Entry"
-          "Voblint_Analysis_Base.Analysis_GraphViz" "Voblint_VIMP.VIMP_Notation"
+          "Voblint_CLI.Analysis_Graph_Export" "Voblint_VIMP.VIMP_Notation"
           "Voblint_Examples_CFG.Example_Compile_Call_Free"
 begin
 
@@ -375,13 +375,13 @@ corollary parity_ex_report_proved_entry_sound:
               parity_ex_report_agrees_with_node_classification]
   by (simp add: prog_main_name_def)
 
-subsection \<open>CFG rendering, checks colored by executable classification\<close>
+subsection \<open>Colouring checks by executable classification\<close>
 
 text \<open>
-  The compiled CFG is rendered through the same generic
-  \<^theory>\<open>Voblint_Analysis_Base.Analysis_GraphViz\<close> pipeline every other example uses
-  (\<^const>\<open>raw_cfg_dot_lit\<close>), through the same check-agnostic
-  \<^type>\<open>graphviz_node_annotation\<close> hook. There is no manually maintained
+  What a renderer needs from a solved analysis is one annotation per node, and
+  the check-agnostic \<^type>\<open>graphviz_node_annotation\<close> hook is where it comes
+  from. Drawing is not done here: the CLI's own renderer consumes the structured
+  export. There is no manually maintained
   \<^typ>\<open>pp\<close>-to-\<^typ>\<open>exp\<close> table: \<^const>\<open>check_report_node_annotation\<close> looks
   each node up directly in the computed \<^const>\<open>analyse_parity_report_for\<close>.
   \<^term>\<open>Check_Proved\<close> renders dark green, \<^term>\<open>Check_Refuted\<close> red,
@@ -417,11 +417,5 @@ lemma parity_ex_annotation_unknown:
   "parity_ex_node_annotation (Statement 6) =
      Some (check_result_annotation Check_Unknown (Eq (V (STR ''y'')) (V (STR ''w''))))"
   unfolding parity_ex_node_annotation_def by eval
-
-definition parity_ex_dot_lit :: String.literal where
-  "parity_ex_dot_lit =
-     raw_cfg_dot_with_report_lit (prog_table parity_ex_program) (prog_procs parity_ex_program)
-       parity_ex_node_annotation
-       (analyse_parity_report_for parity_ex_gs parity_ex_program)"
 
 end

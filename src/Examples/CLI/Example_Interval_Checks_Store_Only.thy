@@ -3,7 +3,7 @@ section \<open>Example: checks_proven/checks_provenD alone, store-only, Interval
 theory Example_Interval_Checks_Store_Only
   imports "Voblint_Framework.Checks" "Voblint_Analysis_Interval.Interval_Entry"
           "Voblint_Analysis_Interval.Interval_Checks"
-          "Voblint_Analysis_Sign.Sign_Checks" "Voblint_Analysis_Base.Analysis_GraphViz"
+          "Voblint_Analysis_Sign.Sign_Checks" "Voblint_CLI.Analysis_Graph_Export"
           "Voblint_VIMP.VIMP_Notation"
           "Voblint_Examples_CFG.Example_Compile_Call_Free"
 begin
@@ -334,7 +334,7 @@ subsection \<open>CFG rendering, checks colored by executable classification\<cl
 
 text \<open>
   The compiled CFG is rendered through the same generic
-  \<^theory>\<open>Voblint_Analysis_Base.Analysis_GraphViz\<close> pipeline every other example uses,
+  \<^theory>\<open>Voblint_CLI.Analysis_Graph_Export\<close> pipeline every other example uses,
   through the same \<^const>\<open>check_result_annotation\<close> status-to-style mapping
   \<open>Example_Checks_Store_Only\<close> (Sign) uses --- shared there, not redefined
   here, confirming the mapping is analysis-independent: no Interval-specific
@@ -372,10 +372,6 @@ lemma checks_ivl_ex_annotation_unknown:
      Some (check_result_annotation Check_Unknown (Eq (V (STR ''x'')) (N 5)))"
   unfolding checks_ivl_ex_node_annotation_def by eval
 
-definition checks_ivl_ex_dot_lit :: String.literal where
-  "checks_ivl_ex_dot_lit =
-     raw_cfg_dot_with_report_lit (prog_table checks_ivl_ex_program) (prog_procs checks_ivl_ex_program)
-       checks_ivl_ex_node_annotation
-       (analyse_interval_report_for checks_ivl_ex_gs checks_ivl_ex_program)"
+
 
 end

@@ -4,7 +4,7 @@
 Congruence. It is the only domain here whose components can talk to each other, and
 that exchange — refinement — is what this session is about.
 
-It is parented on `Voblint_Analysis_Base` and lists the four component sessions, so it
+It is parented on `Voblint_Nonrelational` and lists the four component sessions, so it
 is the one analysis session that sees more than its own domain, by construction.
 
 ## Vocabulary

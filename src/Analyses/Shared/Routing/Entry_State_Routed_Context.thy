@@ -2,27 +2,36 @@ theory Entry_State_Routed_Context
   imports "Voblint_Framework.Routed_Context" "Voblint_Compile.Compile_Wellformed"
 begin
 
-section \<open>Entry-state routing as a routed-context instance\<close>
+section \<open>Routing when the entry operation is a pure list of alternatives\<close>
 
 text \<open>
-  \<^locale>\<open>routed_context_base_hetero\<close> at a route that reads the entered callee state, with
-  \<open>R := routed_entry_context_rel alts gammaDG sigma gk0 route\<close>, over the CFG of a compiled
-  program and at whichever carrier \<open>S\<close> is stated over.  The route is a parameter because one
-  policy is spelled differently per carrier: \<^const>\<open>formals_route_lifted_gen\<close> projects the
-  formals out of an abstract state, an executable instance projects them out of its own
-  quotient state.  Unlike \<open>Call_String_Routed_Context\<close>'s \<open>call_string_routed_context\<close>, no
-  single seed-key datatype is shared across entry-state instances: each is keyed by its own
-  carrier's value list, so \<open>gk0\<close> and \<open>seed_key\<close> stay genuine locale parameters.
+  A call can be answered with several possible entry states rather than one. This
+  theory covers the case where computing that list is a \<^emph>\<open>pure\<close> step: it reads no
+  solver unknown and publishes nothing to a global, so the entry run has an empty
+  dependency set and a bottom publication.
 
-  The entry operation is pure: \<open>alts ci d\<close> is the list of alternatives the specification
-  answers for call \<open>ci\<close> at caller state \<open>d\<close>, and \<open>enter_pure\<close> says the specification's own
-  \<open>enter\<^sup>#\<close> is exactly that list handed to its continuation.  Everything the routed locale
-  asks about \<open>R\<close> then reduces to two facts about \<open>alts\<close>: its alternatives cover every
-  concrete call at a covered call site (\<open>enter_cover\<close>), and the solver visited the callee
-  entry at every context an alternative routes to (\<open>call_fwd\<close>).  A one-alternative
-  specification instantiates \<open>alts ci d = [(d, en ci d)]\<close>; one that splits a call into
-  several alternatives, possibly overlapping, instantiates it with the longer list and
-  nothing else changes.
+  \<open>alts ci d\<close> is that list --- the alternatives the specification answers for call
+  \<open>ci\<close> at caller state \<open>d\<close> --- and \<open>enter_pure\<close> is the assumption that the
+  specification's own \<open>enter\<^sup>#\<close> is exactly that list handed to its continuation.
+  What the locale restricts is therefore the entry operation, not the route; hence
+  the name.
+
+  \<open>route\<close> itself stays unconstrained: it may read the call site, the caller's context and
+  the entered state, or ignore any of them.  Entry-state routing is its main application
+  and the reason the parameter is there --- \<^const>\<open>formals_route_lifted_gen\<close> projects the
+  formals out of an abstract state, an executable instance projects them out of its own
+  quotient state, and one policy spelled two ways is what a parameter is for --- but
+  nothing here forces a route to look at the entered value at all.  Unlike
+  \<open>Call_String_Routed_Context\<close>'s \<open>call_string_routed_context\<close>, no single seed-key datatype
+  is shared across instances: each is keyed by its own carrier's value list, so \<open>gk0\<close> and
+  \<open>seed_key\<close> stay genuine locale parameters too.
+
+  Everything the routed locale asks about \<open>R\<close> reduces to two facts about \<open>alts\<close>: its
+  alternatives cover every concrete call at a covered call site (\<open>enter_cover\<close>), and the
+  solver visited the callee entry at every context a live alternative routes to
+  (\<open>call_fwd\<close>).  A one-alternative specification instantiates \<open>alts ci d = [(d, en ci d)]\<close>;
+  one that splits a call into several alternatives, possibly overlapping, instantiates it
+  with the longer list and nothing else changes.
 
   Two of the routed obligations are facts about \<^const>\<open>compile_prog\<close> alone and are
   discharged here once: \<open>finC\<close> (\<open>compile_prog_finite\<close>) and \<open>calls_unique\<close>
@@ -32,7 +41,7 @@ text \<open>
   continuation, a property of the program together with what the solver explored.
 \<close>
 
-locale entry_state_routed_context =
+locale pure_entry_routed_context =
   dg_ctx_activation_base S gammaDG gs "compile_prog Pi ps" gk0 route
     "routed_call_tree S gk0 seed_key (static_resolve (compile_prog Pi ps)) is_bot"
     "routed_entry_seed_tree seed_key"
@@ -135,7 +144,6 @@ next
            \<and> route u ctx entry (CallEdge dst pars args) = ctx'
            \<and> (FunctionEntry p, ctx') \<in> vars"
     using Rr D mem ccov ecov req call_fwd[OF covV ce mem not_bot] by blast
-next
 next
   fix u ctx dst pars args p cont s
   assume covV: "(u, ctx) \<in> vars"

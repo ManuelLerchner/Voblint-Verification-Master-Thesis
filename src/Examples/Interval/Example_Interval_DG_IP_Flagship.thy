@@ -4,7 +4,7 @@ theory Example_Interval_DG_IP_Flagship
     "Voblint_Analysis_Interval.Interval_Exec"
     "Voblint_Solver.TD_Solver_Bridge"
     "Voblint_CFG.CFG_Prune"
-    "Voblint_Analysis_Base.Analysis_GraphViz"
+    "Voblint_Compile.Compile_Wellformed"
     "Voblint_VIMP.VIMP_Notation"
     "Voblint_Soundness.Run_Analysis_Sound"
 begin
@@ -177,8 +177,6 @@ text \<open>
   sites, the shared callee entry, and both continuations --- is decided by
   \<^const>\<open>vars_cover_exec\<close> over the two edge enumerations.\<close>
 
-lemmas twice_wf_cfg = twice.wf
-
 lemma twice_vars_cover: "vars_cover twice_cfg (fst twice_sol)"
   by (rule vars_cover_of_exec[OF twice_finE twice_finC]) eval
 lemma twice_sound0:
@@ -256,64 +254,6 @@ proof -
               init run'])
   show ?thesis using cert src' by blast
 qed
-
-subsection \<open>Annotated GraphViz of the computed result\<close>
-
-text \<open>
-  A DOT rendering of \<open>twice_cfg\<close> annotated with the solver-computed intervals.
-  The tooling renders the two \<^const>\<open>CallEdge\<close> entries \<^bold>\<open>distinctly\<close> (thick
-  purple, labelled \<open>enter\<close>) and the two combine/return edges as \<^bold>\<open>dashed blue\<close>
-  (labelled \<open>combine via call@N\<close>).  Each node is annotated with \<open>p\<close>, \<open>#ret\<close>,
-  \<open>x\<close>, \<open>y\<close>; in particular the shared callee entry \<open>FunctionEntry (STR ''twice'')\<close> shows
-  \<open>p in [3,10]\<close> and \<open>FunctionResult (STR ''twice'')\<close> shows \<open>#ret in [6,20]\<close>, while the
-  continuations \<open>3\<close> / \<open>4\<close> show \<open>x\<close> / \<open>y in [6,20]\<close>.
-\<close>
-
-definition twice_graph_config ::
-  "(unit, (unit, unit) routed_gk, (ivl exec_dg_st, ivl exec_dg_st) dg_state, ivl exec_dg_st)
-     analysis_graph_config" where
-  "twice_graph_config =
-    \<lparr> local_of = locals,
-      route = (\<lambda>_ _ _ _. Some ()),
-      context_key = (\<lambda>_. STR ''unit''),
-      show_context = (\<lambda>_. ''unit''),
-      locals_for_pp = (\<lambda>p.
-        let sc = compiled_procedure_scope twice_gs twice_pi twice_procs
-          twice_cfg p
-        in scope_formals sc @ scope_locals sc),
-      return_slot_for_pp = (\<lambda>p.
-        scope_return_slot (compiled_procedure_scope twice_gs twice_pi twice_procs
-          twice_cfg p)),
-      globals_to_show = [],
-      show_local = (\<lambda>p ctx vars d. map (\<lambda>x.
-        String.explode x @ ''='' @ string_of_ivl (twice_lookup d x)) vars),
-      format_return = (\<lambda>p ctx ret d.
-        if twice_lookup d ret = ivl_top then []
-        else [''ret='' @ string_of_ivl (twice_lookup d ret)]),
-      show_global = (\<lambda>_ vars s. [''(none)'']),
-      show_global_key = (\<lambda>k. case k of Analysis_Global _ \<Rightarrow> ''Global'' | Activation_Seed _ _ \<Rightarrow> ''Seed''),
-      is_shared_global = (\<lambda>k. case k of Analysis_Global _ \<Rightarrow> True | Activation_Seed _ _ \<Rightarrow> False),
-      show_internal_globals = False,
-      owner_of = String.explode o compiled_owner_of twice_pi twice_procs,
-      cluster_label = (\<lambda>owner _. owner @ '' / context=unit''),
-      source_text = Some (pretty_string_of_program twice_pi twice_procs twice_main []),
-      node_annotation = (\<lambda>_ _. None)
-    \<rparr>"
-
-definition twice_graph_domain :: "(pp \<times> unit + (unit, unit) routed_gk) list" where
-  "twice_graph_domain =
-    contextual_graph_domain twice_cfg (\<lambda>_. [()])"
-
-definition twice_dot :: String.literal where
-  "twice_dot =
-     String.implode
-       (case TD_side_seed_join_warrowing_Interp_solve_c is_activation_seed twice_eqs
-               (cfg_exit twice_cfg, ()) of
-          None \<Rightarrow> ''solver did not terminate''
-        | Some sol \<Rightarrow> contextual_analysis_dot twice_graph_config twice_cfg
-            twice_graph_domain (snd sol))"
-
-
 
 end
 

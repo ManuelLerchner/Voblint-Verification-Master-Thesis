@@ -1,5 +1,5 @@
 theory Sign_Exec
-  imports "Voblint_Exec.Exec_St_Restriction_Refinement" "Voblint_Analysis_Base.Numeric_Ops" Sign_Domain
+  imports "Voblint_Exec.Exec_St_Restriction_Refinement" "Voblint_Nonrelational.Numeric_Ops" Sign_Domain
 begin
 
 section \<open>Sign per-domain seam: executable transfer mirror and commutation\<close>
@@ -54,12 +54,12 @@ text \<open>The executable mirror of \<open>sign_tf_abs\<close>/\<open>enter_sig
   \<open>ivl_enter_st_for\<close> for the interval domain.\<close>
 
 text \<open>
-  \<open>sign_ops\<close> bundles Sign's own primitives for the generic
-  \<open>generic_branch_st_for\<close>/\<open>generic_enter_st_for\<close> construction
-  (\<^theory>\<open>Voblint_Analysis_Base.Numeric_Ops\<close>): \<open>branch_sign_st_for\<close>/\<open>sign_enter_st_for\<close>
-  below are exactly those generic constructions instantiated at \<open>sign_ops\<close>,
-  not independent definitions -- Interval and Parity instantiate the same
-  generic pair at their own primitives.
+  \<open>sign_ops\<close> bundles Sign's own primitives
+  (\<^theory>\<open>Voblint_Nonrelational.Numeric_Ops\<close>): \<open>sign_enter_st_for\<close> below is
+  \<open>generic_enter_st_for\<close> instantiated at \<open>sign_ops\<close>, not an independent definition,
+  and Interval and Parity instantiate the same construction at their own
+  primitives. \<open>branch_sign_st_for\<close> reads the backward filter straight out of the
+  record, since a branch transfer is that filter and needs no construction over it.
 \<close>
 
 definition sign_ops :: "sign numeric_ops" where
@@ -67,11 +67,11 @@ definition sign_ops :: "sign numeric_ops" where
 
 definition branch_sign_st_for ::
   "(vname => bool) => exp => bool => sign resolved_st_q => sign resolved_st_q" where
-  "branch_sign_st_for = generic_branch_st_for sign_ops"
+  "branch_sign_st_for = n_bfilter sign_ops"
 
 lemma branch_sign_st_for_eq [simp]:
   "branch_sign_st_for gs b pol s = branch_sign_st gs b pol s"
-  by (simp add: branch_sign_st_for_def generic_branch_st_for_def sign_ops_def)
+  by (simp add: branch_sign_st_for_def sign_ops_def)
 
 definition sign_enter_st_for ::
   "(vname => bool) => call_info =>

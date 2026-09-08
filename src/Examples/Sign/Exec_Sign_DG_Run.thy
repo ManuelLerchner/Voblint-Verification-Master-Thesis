@@ -73,7 +73,6 @@ interpretation gEx: compiled_cfg sign_ex_pi "prog_procs sign_ex_prog" gEx
   by (unfold_locales; unfold gEx_def; simp add: compile_prog_finite)
 
 lemmas gEx_entry = gEx.entry[unfolded prog_main_name_def]
-lemmas gEx_wf_cfg = gEx.wf
 lemmas gEx_finE = gEx.finite_intra
 lemmas gEx_finC = gEx.finite_calls
 

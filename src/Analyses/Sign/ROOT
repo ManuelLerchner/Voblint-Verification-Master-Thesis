@@ -1,4 +1,4 @@
-session Voblint_Analysis_Sign in "." = "Voblint_Analysis_Base" +
+session Voblint_Analysis_Sign in "." = "Voblint_Nonrelational" +
   description "The Sign domain: seven-element lattice, executable bridge, end-to-end soundness"
   sessions
     "Voblint_VIMP"

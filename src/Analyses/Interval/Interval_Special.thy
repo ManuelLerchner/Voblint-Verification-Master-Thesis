@@ -1,5 +1,5 @@
 theory Interval_Special
-  imports Interval_Backward "Voblint_Analysis_Base.Special_Ops"
+  imports Interval_Backward "Voblint_Nonrelational.Special_Ops"
 begin
 
 section \<open>Interval: special-call semantics\<close>

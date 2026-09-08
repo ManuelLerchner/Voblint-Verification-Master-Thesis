@@ -163,8 +163,8 @@ let show_entry (n, (b, r)) =
      | FunctionResult s -> "FunctionResult " ^ s)
     (show_exp b) (show_check_result r)
 
-(* Compact renderers matching string_of_cfg_node/string_of_action/
-   string_of_call_action in Analysis_GraphViz.thy exactly (no spaces around
+(* Compact renderers matching string_of_cfg_node/string_of_action
+   in Analysis_GraphViz.thy exactly (no spaces around
    infix operators, "pp"/"entry_"/"result_" node prefixes) -- deliberately
    not show_exp above, which uses the driver's own spaced format for the
    straight-line demo's own display purposes. *)

@@ -446,7 +446,7 @@ text \<open>
   so \<open>Refine_Fixpoint\<close> gets no matching monotonicity lemma here. The same
   gap means \<open>Never\<close>/\<open>Once\<close> alone get the pollution-fixed, shared \<open>branch\<close>
   (\<open>branch_int_dom_never\<close>/\<open>_once\<close>, backed by
-  \<^theory>\<open>Voblint_Analysis_Base.Exec_Backward\<close>'s \<open>bfilter_st_lift_correct\<close>, itself
+  \<^theory>\<open>Voblint_Nonrelational.Exec_Backward\<close>'s \<open>bfilter_st_lift_correct\<close>, itself
   only proved for \<^locale>\<open>backward_domain_refined\<close>): \<open>Refine_Fixpoint\<close>
   instead names its own, explicitly local \<open>branch_int_dom_fixpoint\<close>
   (\<open>Int_Backward.thy\<close>), since there is no executable correspondence theorem

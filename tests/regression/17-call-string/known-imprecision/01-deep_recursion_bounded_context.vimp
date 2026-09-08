@@ -6,7 +6,7 @@
 // most 2 distinct call-string contexts (length 0 and length 1) no matter
 // how deep the concrete recursion runs -- proved in general for any
 // compiled program by compiled_call_strings_finite
-// (Call_String_Context_Finite.thy), not just observed here. The CLI
+// (Context_Space_Finite.thy), not just observed here. The CLI
 // completes immediately rather than growing one context per recursion
 // level, which is exactly the context-explosion #77 is about. The
 // EXPECT-GRAPH block below now shows that directly: three clusters for a

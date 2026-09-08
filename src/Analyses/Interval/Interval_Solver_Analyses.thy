@@ -82,6 +82,8 @@ next
 qed
 
 lemmas interval_conf_result_node_sound_per_origin = interval_conf_po.result_node_sound
+lemmas interval_conf_result_node_unreachable_per_origin = interval_conf_po.result_node_unreachable
+lemmas interval_conf_report_flag_unreachable_per_origin = interval_conf_po.report_flag_unreachable
 lemmas interval_conf_analyse_result_eq_per_origin = interval_conf_po.analyse_result_eq
 lemmas interval_conf_cinit_le_cinit_ivl_st_per_origin = interval_conf_po.cinit_le_cinit_ivl_st
 lemmas interval_conf_report_ctx_proved_sound_per_origin = interval_conf_po.report_ctx_proved_sound
@@ -147,6 +149,8 @@ next
 qed
 
 lemmas interval_conf_result_node_sound_warrow = interval_conf_wa.result_node_sound
+lemmas interval_conf_result_node_unreachable_warrow = interval_conf_wa.result_node_unreachable
+lemmas interval_conf_report_flag_unreachable_warrow = interval_conf_wa.report_flag_unreachable
 lemmas interval_conf_analyse_result_eq_warrow = interval_conf_wa.analyse_result_eq
 lemmas interval_conf_cinit_le_cinit_ivl_st_warrow = interval_conf_wa.cinit_le_cinit_ivl_st
 lemmas interval_conf_report_ctx_proved_sound_warrow = interval_conf_wa.report_ctx_proved_sound
@@ -207,6 +211,8 @@ next
 qed
 
 lemmas interval_conf_result_node_sound_wpo = interval_conf_wpo.result_node_sound
+lemmas interval_conf_result_node_unreachable_wpo = interval_conf_wpo.result_node_unreachable
+lemmas interval_conf_report_flag_unreachable_wpo = interval_conf_wpo.report_flag_unreachable
 lemmas interval_conf_analyse_result_eq_wpo = interval_conf_wpo.analyse_result_eq
 lemmas interval_conf_cinit_le_cinit_ivl_st_wpo = interval_conf_wpo.cinit_le_cinit_ivl_st
 lemmas interval_conf_report_ctx_proved_sound_wpo = interval_conf_wpo.report_ctx_proved_sound

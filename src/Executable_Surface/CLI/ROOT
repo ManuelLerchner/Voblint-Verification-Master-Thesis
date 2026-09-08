@@ -1,15 +1,24 @@
 session Voblint_CLI in "." = "Voblint_Analysis_Int" +
   description
     "Production CLI-facing surface: the AnalysisConfig-driven dispatcher over
-     the four domains' entry points, and the GraphViz render entry points,
+     the four domains' entry points, and the graph export a renderer consumes,
      independent of the demonstration and regression theories in
      Voblint_Examples"
   sessions
-    "Voblint_Analysis_Base"
     "Voblint_Analysis_Sign"
     "Voblint_Analysis_Interval"
     "Voblint_Analysis_Parity"
     "HOL-Library"
   theories
+    Analysis_Config
     Analyse_Dispatch
+
+    (* A solved result as a graph, and the readings handed to a renderer.
+       Domain-independent, but used by no domain -- only by the surface below. *)
+    Analysis_Graph
+    Analysis_Graph_Build
+    Analysis_Graph_Wf
+    Analysis_Graph_Naming
+    Analysis_Graph_Export
+
     State_Report_GraphViz

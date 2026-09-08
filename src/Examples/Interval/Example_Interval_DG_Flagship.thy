@@ -47,7 +47,7 @@ theory Example_Interval_DG_Flagship
     "Voblint_Analysis_Interval.Interval_Exec"
     "Voblint_Solver.TD_Solver_Bridge"
     "Voblint_CFG.CFG_Prune"
-    "Voblint_Analysis_Base.Analysis_GraphViz"
+    "Voblint_Compile.Compile_Wellformed"
     "Voblint_VIMP.VIMP_Notation"
     "Voblint_Soundness.Run_Analysis_Sound"
     "Voblint_Examples_CFG.Example_Compile_Call_Free"
@@ -335,57 +335,6 @@ theorem flagship_head_bound_proper:
   apply (rule exI[of _ "(STR ''x'')"])
   using head_x_bound apply (simp add: fun_of_dg_st_for_simps combine_env_def)
   done
-
-subsection \<open>Annotated GraphViz of the computed result\<close>
-
-text \<open>
-  A DOT rendering of \<open>flagship_cfg\<close> with each node annotated by the computed
-  interval for \<open>x\<close>.  The \<^verbatim>\<open>ML_val\<close> below prints the DOT as a plain string; paste
-  it into any GraphViz renderer (\<^verbatim>\<open>dot -Tpng\<close>) to view the analysed loop, each
-  node labelled with the loop-invariant interval the verified solver computed.
-\<close>
-
-definition flagship_graph_config ::
-  "(unit, (unit, unit) routed_gk, (ivl exec_dg_st, ivl exec_dg_st) dg_state, ivl exec_dg_st)
-     analysis_graph_config" where
-  "flagship_graph_config =
-    \<lparr> local_of = locals,
-      route = (\<lambda>_ _ _ _. Some ()),
-      context_key = (\<lambda>_. STR ''unit''),
-      show_context = (\<lambda>_. ''unit''),
-      locals_for_pp = (\<lambda>p.
-        scope_locals (compiled_procedure_scope flagship_gs Map.empty []
-          flagship_cfg p)),
-      return_slot_for_pp = (\<lambda>p.
-        scope_return_slot (compiled_procedure_scope flagship_gs Map.empty []
-          flagship_cfg p)),
-      globals_to_show = [],
-      show_local = (\<lambda>_ _ vars d. map (\<lambda>x.
-        String.explode x @ ''='' @ string_of_ivl (flagship_lookup d x)) vars),
-      format_return = (\<lambda>_ _ _ _. []),
-      show_global = (\<lambda>_ _ _. [''(none)'']),
-      show_global_key = (\<lambda>k. case k of Analysis_Global _ \<Rightarrow> ''Global'' | Activation_Seed _ _ \<Rightarrow> ''Seed''),
-      is_shared_global = (\<lambda>k. case k of Analysis_Global _ \<Rightarrow> True | Activation_Seed _ _ \<Rightarrow> False),
-      show_internal_globals = False,
-      owner_of = (\<lambda>_. ''main''),
-      cluster_label = (\<lambda>_ _. ''main / root context''),
-      source_text = Some (pretty_string_of_program Map.empty [] (prog_main flagship_prog) []),
-      node_annotation = (\<lambda>_ _. None)
-    \<rparr>"
-
-definition flagship_graph_domain :: "(pp \<times> unit + (unit, unit) routed_gk) list" where
-  "flagship_graph_domain =
-    contextual_graph_domain flagship_cfg (\<lambda>_. [()])"
-
-definition flagship_dot :: String.literal where
-  "flagship_dot =
-     String.implode
-       (case TD_side_seed_join_warrowing_Interp_solve_c is_activation_seed flagship_eqs
-               (cfg_exit flagship_cfg, ()) of
-          None \<Rightarrow> ''solver did not terminate''
-        | Some sol \<Rightarrow> contextual_analysis_dot flagship_graph_config flagship_cfg
-            flagship_graph_domain (snd sol))"
-
 
 end
 

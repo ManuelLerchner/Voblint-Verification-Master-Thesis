@@ -261,7 +261,7 @@ table and a soundness corollary behind the widening rules, so the other
 `Solver_Warrow` pairings stay unsupported rather than being exposed on the
 strength of the instance alone. Unsupported `(domain, solver)` and
 `(domain, context)` pairings are rejected explicitly, answering `None` at
-[`resolve_analysis_config`](src/Analyses/Base/Config/Analysis_Config.thy) rather
+[`resolve_analysis_config`](src/Executable_Surface/CLI/Analysis_Config.thy) rather
 than falling back silently.
 
 ## The generic D/G framework

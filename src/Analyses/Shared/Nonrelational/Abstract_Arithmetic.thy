@@ -259,7 +259,7 @@ next
   show ?case
   proof (cases "is_empty (ev e1 sigma1) \<or> is_empty (ev e2 sigma1)")
     case True
-    then show ?thesis by (simp add: bot_least)
+    then show ?thesis by simp
   next
     case False
     then have nb1: "\<not> is_empty (ev e1 sigma1)" and nb2: "\<not> is_empty (ev e2 sigma1)" by auto
@@ -285,7 +285,7 @@ next
   show ?case
   proof (cases "is_empty (ev e1 sigma1) \<or> is_empty (ev e2 sigma1)")
     case True
-    then show ?thesis by (simp add: bot_least)
+    then show ?thesis by simp
   next
     case False
     then have nb1: "\<not> is_empty (ev e1 sigma1)" and nb2: "\<not> is_empty (ev e2 sigma1)" by auto
@@ -310,7 +310,7 @@ next
   show ?case
   proof (cases "is_empty (ev e sigma1)")
     case True
-    then show ?thesis by (simp add: bot_least)
+    then show ?thesis by simp
   next
     case False
     then have nb: "\<not> is_empty (ev e sigma1)" by auto
@@ -334,7 +334,7 @@ next
   show ?case
   proof (cases "is_empty (ev e1 sigma1) \<or> is_empty (ev e2 sigma1)")
     case True
-    then show ?thesis by (simp add: bot_least)
+    then show ?thesis by simp
   next
     case False
     then have nb1: "\<not> is_empty (ev e1 sigma1)" and nb2: "\<not> is_empty (ev e2 sigma1)" by auto
@@ -371,7 +371,7 @@ next
   show ?case
   proof (cases "is_empty (ev e1 sigma1) \<or> is_empty (ev e2 sigma1)")
     case True
-    then show ?thesis by (simp add: bot_least)
+    then show ?thesis by simp
   next
     case False
     then have nb1: "\<not> is_empty (ev e1 sigma1)" and nb2: "\<not> is_empty (ev e2 sigma1)" by auto

@@ -2,7 +2,7 @@ theory Sign_Checks
   imports Sign_Classify
     "Voblint_Framework.Check_Report"
     "Voblint_Framework.DG_Analysis_Adapter"
-    "Voblint_Analysis_Base.Analysis_Surface"
+    "Voblint_Result.Analysis_Surface"
     Sign_Analyses
 begin
 

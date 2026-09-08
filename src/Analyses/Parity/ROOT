@@ -1,4 +1,4 @@
-session Voblint_Analysis_Parity in "." = "Voblint_Analysis_Base" +
+session Voblint_Analysis_Parity in "." = "Voblint_Nonrelational" +
   description "The Parity domain: lattice, transfers, executable bridge"
   sessions
     "Voblint_VIMP"

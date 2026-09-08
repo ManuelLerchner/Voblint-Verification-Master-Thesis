@@ -33,5 +33,3 @@ session Voblint_Examples_Interval in "." = "Voblint_Analysis_Interval" +
     Example_Interval_Loop_Coverage
     Example_Guard_Refinement
     Example_Proc_Call
-  document_files
-    (in "../../Analyses/Base/document") "root.bib"

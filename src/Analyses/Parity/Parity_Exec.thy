@@ -1,5 +1,5 @@
 theory Parity_Exec
-  imports "Voblint_Exec.Exec_St_Restriction_Refinement" "Voblint_Analysis_Base.Numeric_Ops" Parity_Transfer
+  imports "Voblint_Exec.Exec_St_Restriction_Refinement" "Voblint_Nonrelational.Numeric_Ops" Parity_Transfer
 begin
 
 section \<open>Parity executable seam: transfer mirror and commutation\<close>
@@ -51,12 +51,11 @@ text \<open>The executable mirror of \<open>parity_tf_abs\<close>/\<open>enter_p
 
 text \<open>
   \<open>parity_ops\<close> bundles Parity's own primitives for the generic
-  \<open>generic_enter_st_for\<close> construction (\<^theory>\<open>Voblint_Analysis_Base.Numeric_Ops\<close>), the
+  \<open>generic_enter_st_for\<close> construction (\<^theory>\<open>Voblint_Nonrelational.Numeric_Ops\<close>), the
   same way \<open>sign_ops\<close>/\<open>ivl_ops\<close> do for Sign/Interval. Parity's branch
   transfer is the identity, so unlike Sign/Interval there is no
-  \<open>branch_parity_st_for\<close> to generalize -- only \<open>n_bfilter\<close>'s VALUE would be
-  the identity function, and nothing here needs to name that value
-  separately since \<open>generic_branch_st_for\<close> is never applied to Parity.
+  \<open>branch_parity_st_for\<close> at all -- \<open>n_bfilter\<close>'s value here is just the identity
+  function, and nothing needs to name it separately.
 \<close>
 
 definition parity_ops :: "parity numeric_ops" where

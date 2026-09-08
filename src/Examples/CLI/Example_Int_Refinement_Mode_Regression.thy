@@ -79,8 +79,6 @@ text \<open>
 
 lemmas mode_fixpoint_state = arithmetic_fixpoint_result
 
-lemmas mode_once_ne_fixpoint = arithmetic_once_not_fixpoint
-
 lemma mode_never_ne_fixpoint:
   "plus_int_dom Refine_Never arithmetic_left arithmetic_right \<noteq>
    plus_int_dom Refine_Fixpoint arithmetic_left arithmetic_right"

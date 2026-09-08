@@ -10,7 +10,7 @@ text \<open>
   context sensitivity. Presentation choices (DOT vs. a textual snapshot,
   collapsed vs. expanded context rendering) are deliberately absent -- they
   select how an already-computed result is drawn, never what the solver
-  computes, and stay owned by the CLI layer instead (\<open>Analysis_GraphViz\<close>).
+  computes, and stay owned by the CLI layer instead (\<open>Analysis_Graph_Export\<close>).
 
   This theory names \<open>Sign\<close>/\<open>Interval\<close>/\<open>Int\<close> explicitly by construction, so it
   sits in \<open>Voblint_Analysis\<close> rather than \<open>Voblint_Framework\<close>: \<open>Core\<close> carries no

@@ -136,6 +136,20 @@ next
   case (Or b1 b2) then show ?case by (cases res) simp_all
 qed simp_all
 
+text \<open>
+    \<open>map_lift_sup\<close>'s left-hand side is \<open>map_lift ?f (?x \<squnion> ?y)\<close>, so using it with a
+  schematic \<open>?f\<close> makes the simplifier search higher-order matches and, in the join
+  cases below, exceed its unification bound. Specializing \<open>f\<close> to the read-back once
+  leaves a first-order rewrite that needs no search --- and the specialization is
+  proved by the case split directly rather than through \<open>map_lift_sup\<close>, since
+  resolving against that rule is itself where the search happens.
+\<close>
+
+lemma map_lift_fun_of_resolved_st_q_for_sup [simp]:
+  "map_lift (fun_of_resolved_st_q_for gs) (x \<squnion> y) =
+     map_lift (fun_of_resolved_st_q_for gs) x \<squnion> map_lift (fun_of_resolved_st_q_for gs) y"
+  by (cases x; cases y) simp_all
+
 context backward_domain
 begin
 
@@ -284,15 +298,15 @@ next
 next
   case (Plus e1 e2)
   then show ?case
-    by (simp add: bfilter_st.simps bfilter.simps Let_def case_prod_beta afilter_st_commute)
+    by (simp add: Let_def case_prod_beta afilter_st_commute)
 next
   case (Minus e1 e2)
   then show ?case
-    by (simp add: bfilter_st.simps bfilter.simps Let_def case_prod_beta afilter_st_commute)
+    by (simp add: Let_def case_prod_beta afilter_st_commute)
 next
   case (Times e1 e2)
   then show ?case
-    by (simp add: bfilter_st.simps bfilter.simps Let_def case_prod_beta afilter_st_commute)
+    by (simp add: Let_def case_prod_beta afilter_st_commute)
 next
   case (Not b)
   then show ?case by simp
@@ -349,10 +363,9 @@ lemma bfilter_st_lift_Bot [simp]: "bfilter_st_lift gs b res Bot = Bot"
   by (simp add: bfilter_st_lift_def)
 
 text \<open>
-  The two names below are what the agreement between this locale's lifted filters and
-  the standalone recursion used to cost: an induction each. Defining the locale's
-  filters *as* that recursion at \<open>ops\<close> makes the agreement the defining equation read
-  backwards, so the names survive for callers while the proofs do not.
+    This locale's lifted filters are the standalone recursion at \<open>ops\<close>, so their
+  agreement with it is the defining equation read backwards. The two names below
+  state it in that direction, which is the one callers instantiate.
 \<close>
 
 lemmas afilter_st_lift_with_ops = afilter_st_lift_def [symmetric]
@@ -500,27 +513,27 @@ using assms proof (induction b arbitrary: res s)
   case (N n)
   show ?case
     using N.prems
-    by (simp add: bfilter_st_lift_simps bfilter.simps Let_def case_prod_beta bind_lift_left_identity
+    by (simp add: Let_def case_prod_beta bind_lift_left_identity
         afilter_st_lift_correct[OF N.prems] live_resolved_st_q_def)
 next
   case (V x)
   show ?case
-    by (simp add: bfilter_st_lift_simps bfilter.simps Let_def case_prod_beta bind_lift_left_identity
+    by (simp add: Let_def case_prod_beta bind_lift_left_identity
         update_resolved_st_q_lift_correct[OF V.prems] fun_upd_def)
 next
   case (Plus e1 e2)
   show ?case
-    by (simp add: bfilter_st_lift_simps bfilter.simps Let_def case_prod_beta bind_lift_left_identity
+    by (simp add: Let_def case_prod_beta bind_lift_left_identity
         afilter_lift_step[OF afilter_st_lift_correct afilter_st_lift_correct[OF Plus.prems]])
 next
   case (Minus e1 e2)
   show ?case
-    by (simp add: bfilter_st_lift_simps bfilter.simps Let_def case_prod_beta bind_lift_left_identity
+    by (simp add: Let_def case_prod_beta bind_lift_left_identity
         afilter_lift_step[OF afilter_st_lift_correct afilter_st_lift_correct[OF Minus.prems]])
 next
   case (Times e1 e2)
   show ?case
-    by (simp add: bfilter_st_lift_simps bfilter.simps Let_def case_prod_beta bind_lift_left_identity
+    by (simp add: Let_def case_prod_beta bind_lift_left_identity
         afilter_lift_step[OF afilter_st_lift_correct afilter_st_lift_correct[OF Times.prems]])
 next
   case (Not b)
@@ -549,7 +562,7 @@ next
       by (rule bfilter_lift_gate_step[OF And.IH(2)[OF And.prems]])
     show ?thesis
       using False
-      by (simp add: bind_lift_left_identity map_lift_sup[OF fun_of_resolved_st_q_for_sup] g1 g2)
+      by (simp add: g1 g2)
   qed
 next
   case (Or b1 b2)
@@ -570,7 +583,7 @@ next
       by (rule bfilter_lift_gate_step[OF Or.IH(2)[OF Or.prems]])
     show ?thesis
       using True
-      by (simp add: bind_lift_left_identity map_lift_sup[OF fun_of_resolved_st_q_for_sup] g1 g2)
+      by (simp add: g1 g2)
   next
     case False
     then show ?thesis
@@ -580,12 +593,12 @@ next
 next
     case (Less e1 e2)
   show ?case
-    by (simp add: bfilter_st_lift_simps bfilter.simps Let_def case_prod_beta bind_lift_left_identity
+    by (simp add: Let_def case_prod_beta bind_lift_left_identity
         afilter_lift_step[OF afilter_st_lift_correct afilter_st_lift_correct[OF Less.prems]])
 next
   case (Eq e1 e2)
     show ?case
-    by (simp add: bfilter_st_lift_simps bfilter.simps Let_def case_prod_beta bind_lift_left_identity
+    by (simp add: Let_def case_prod_beta bind_lift_left_identity
         afilter_lift_step[OF afilter_st_lift_correct afilter_st_lift_correct[OF Eq.prems]])
 qed
 
@@ -634,11 +647,11 @@ lemma branch_st_commute:
     finally show ?thesis
     using True
     by (simp add: branch_st_def branch_def branch_lifted_def
-        feasible_with_ops bfilter_st_lift_with_ops)
+        bfilter_st_lift_with_ops)
 next
   case False
   then show ?thesis
-    by (simp add: branch_st_def branch_def branch_lifted_def feasible_with_ops)
+    by (simp add: branch_st_def branch_def branch_lifted_def)
 qed
 
 text \<open>

@@ -1,5 +1,5 @@
 theory Int_Checks
-  imports Int_Classify Int_Solver_Analyses "Voblint_Analysis_Base.Analysis_Surface"
+  imports Int_Classify Int_Solver_Analyses "Voblint_Result.Analysis_Surface"
 begin
 
 hide_const phase.N

@@ -1,5 +1,5 @@
 theory Parity_Special
-  imports Parity_Domain "Voblint_Analysis_Base.Special_Ops"
+  imports Parity_Domain "Voblint_Nonrelational.Special_Ops"
 begin
 
 section \<open>Parity: special-call semantics\<close>

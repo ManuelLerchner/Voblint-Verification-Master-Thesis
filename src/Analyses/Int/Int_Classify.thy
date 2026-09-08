@@ -2,7 +2,7 @@ theory Int_Classify
   imports Int_Exec_Sound "Voblint_Framework.Abstract_Checks"
     "Voblint_Domain.Backward_Numeric_Queries"
     "Voblint_Framework.Analysis_Result"
-    "Voblint_Analysis_Base.DG_Result_Construction"
+    "Voblint_Result.DG_Result_Construction"
 begin
 
 hide_const phase.N
@@ -121,16 +121,14 @@ qed
 text \<open>
   Only the consumer-facing aliases get a short Int-prefixed name, the same choice
   \<open>Sign_Checks\<close>/\<open>Interval_Checks\<close> make: \<open>classify_check\<close>'s
-  two directions and the \<open>checks_proven\<close> bridge. The lower-level
-  \<open>check_query_sound\<close> fact \<open>classify_check\<close>'s own soundness is built from
-  stays reachable under the qualified \<open>int_check_domain.\<close> name instead of
-  a dedicated alias here.
+  two directions. Everything else the locale proves -- the \<open>checks_proven\<close>
+  bridge, and the lower-level \<open>check_query_sound\<close> fact \<open>classify_check\<close>'s own
+  soundness is built from -- stays reachable under the qualified
+  \<open>int_check_domain.\<close> name instead of a dedicated alias here.
 \<close>
 
 lemmas int_classify_check_proved = int_check_domain.classify_check_proved
 lemmas int_classify_check_refuted = int_check_domain.classify_check_refuted
-lemmas int_checks_provenI = int_check_domain.abstract_checks_provenI
-lemmas int_checks_proven_sound = int_check_domain.abstract_checks_proven_sound
 
 subsection \<open>Executable classification tests\<close>
 
