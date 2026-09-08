@@ -379,7 +379,7 @@ subsection \<open>Colouring checks by executable classification\<close>
 
 text \<open>
   What a renderer needs from a solved analysis is one annotation per node, and
-  the check-agnostic \<^type>\<open>graphviz_node_annotation\<close> hook is where it comes
+  the check-agnostic \<^type>\<open>graph_node_annotation\<close> hook is where it comes
   from. Drawing is not done here: the CLI's own renderer consumes the structured
   export. There is no manually maintained
   \<^typ>\<open>pp\<close>-to-\<^typ>\<open>exp\<close> table: \<^const>\<open>check_report_node_annotation\<close> looks
@@ -389,7 +389,7 @@ text \<open>
   node gets its own neutral-grey annotation through the same hook.
 \<close>
 
-definition parity_ex_node_annotation :: "pp \<Rightarrow> graphviz_node_annotation option" where
+definition parity_ex_node_annotation :: "pp \<Rightarrow> graph_node_annotation option" where
   "parity_ex_node_annotation v =
      (case check_report_node_annotation
              (analyse_parity_report_for parity_ex_gs parity_ex_program) v of

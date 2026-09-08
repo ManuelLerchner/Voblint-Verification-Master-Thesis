@@ -168,7 +168,7 @@ This is the single largest concentrated cleanup in the tree.
 ### 2.3 The Isabelle DOT emitter
 
 `Analysis_GraphViz.thy` (1,318 lines, **121 definitions, 2 lemmas**) and
-`State_Report_GraphViz.thy` (1,239 lines, 58 definitions, 6 lemmas) contain
+`State_Report_Graph.thy` (1,239 lines, 58 definitions, 6 lemmas) contain
 three parallel renderers:
 
 | Family | Reaches OCaml? | Consumer |
@@ -249,12 +249,12 @@ order of magnitude, and the `Example_Proc_Call` conduit above is invisible to
 every one of them.
 
 What should not stand is the current bookkeeping. `AGENTS.md`'s module map still
-advertises `State_Report_GraphViz` as "the twelve `*_dot_auto` /
+advertises `State_Report_Graph` as "the twelve `*_dot_auto` /
 `*_graph_snapshot_auto`", the export block names `*_graph_snapshot_auto` and
 `*_export_auto`, and `state_report_dot_auto` / `full_state_dot_auto` /
 `entry_state_full_state_dot_auto_code` **do not exist anywhere in the tree** —
 their only nine surviving occurrences are prose mentions inside
-`State_Report_GraphViz.thy`'s own `text` blocks, describing the theory as if
+`State_Report_Graph.thy`'s own `text` blocks, describing the theory as if
 those entry points were still there.
 
 `Analysis_GraphViz` also contributes 121 of the tree's definitions against 2
@@ -417,7 +417,7 @@ prose. The worst cases:
 | --- | --- | --- |
 | `fun_of_dg_st` | `Exec_DG_Bridge`, `Exec_DG_Refines`, `Exec_DG_Trees`, `Exec_Sign_DG_Run`, `Run_Analysis_Sound`, **`Voblint.thy`** | the constant is `fun_of_dg_st_gen` |
 | `part_post_solution_dg_st_to_abs`, `dg_post_solution_collect_sound_ltr` | **`Voblint.thy`** (×3), `Run_Analysis_Sound` | gone |
-| `state_report_dot_auto`, `full_state_dot_auto`, `entry_state_full_state_dot_auto_code` | `State_Report_GraphViz` (9 mentions) | gone; see §2.3 |
+| `state_report_dot_auto`, `full_state_dot_auto`, `entry_state_full_state_dot_auto_code` | `State_Report_Graph` (9 mentions) | gone; see §2.3 |
 | `sound_dg_spec_core_ltr` | `DG_LTR_Sound` | renamed `sound_dg_spec_core_ltr_for` |
 | `analyse_interval_td`, `analyse_interval_td_at`, `analyse_interval_td_terminates` | `Interval_Checks`, `Interval_Ctx_Entry_State_Sound` | only `analyse_interval_td_result`/`_report` exist |
 | `assume_sign_st`, `assume_not_sign_st`, `branch_parity_st_for` | `Sign_Backward`, `Parity_Exec` | gone |
@@ -481,7 +481,7 @@ Remaining markdown findings:
   routes through "`Sign_Exec_Sound` / `Interval_Exec_Sound`" and a
   `<domain>_exec_prog_at` constant. `exec_prog_at` does not exist anywhere in
   the tree; the live route is `*_Ctx_None_Sound` / `analyse_*_ctx_result_for`.
-- **`AGENTS.md` module map is stale** on `State_Report_GraphViz` (§2.3) and on
+- **`AGENTS.md` module map is stale** on `State_Report_Graph` (§2.3) and on
   the domain roster (§4).
 - **`docs/INDEX.md` does not mention `GOBLINT_ALIGNMENT_REGISTER.md`** — the
   index omits the living register.
@@ -901,7 +901,7 @@ every combination is decided by `valid_analysis_config`, "not by a second,
 hand-maintained OCaml compatibility table". But `:572-658` are seven
 hand-written rejection rules, and every graph and HTML path (`:673-713`,
 `:774-815`) bypasses the dispatcher entirely — those route on `!context_kind` /
-`!context_graph` directly into `State_Report_GraphViz.*_auto`, which take a bare
+`!context_graph` directly into `State_Report_Graph.*_auto`, which take a bare
 `analysis_domain`, not a config. The verified dispatcher covers only the three
 `analyse_config*` text paths at `:816-827`. Suspected consequence, not
 confirmed: `main.ml:689`'s `failwith "unsupported --analysis/--solver
@@ -1081,7 +1081,7 @@ checker does not resolve:
 
 ### 11.1 Dead
 
-`state_report_dot` (`State_Report_GraphViz.thy:157`) — confirms §2.3 from the other
+`state_report_dot` (`State_Report_Graph.thy:157`) — confirms §2.3 from the other
 direction. `is_bottom_abstract_value` (`:47`) — its sibling `is_top_abstract_value` is
 live and in the OCaml, so the asymmetry is real;
 `docs/VERIFICATION_CHAIN_AND_TRUST_BOUNDARY.md:314` records the CLI-side caller being
@@ -1137,7 +1137,7 @@ without the slow codegen and `value` runs"). The other three Entry files have no
 block, and the prose itself says these mirror `tests/regression/03-procedures/` fixtures
 that already exist.
 
-### 11.3 `State_Report_GraphViz.thy`
+### 11.3 `State_Report_Graph.thy`
 
 Six `_graph_snapshot_auto` / `_export_auto` pairs differ in **exactly one token**
 (`raw_cfg_canonical_text_lit` vs `raw_cfg_export`) — one `..._with` per family plus 12

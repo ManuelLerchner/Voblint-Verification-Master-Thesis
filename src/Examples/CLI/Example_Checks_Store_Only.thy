@@ -371,7 +371,7 @@ subsection \<open>Colouring checks by executable classification\<close>
 
 text \<open>
   What a renderer needs from a solved analysis is one annotation per node, and
-  the check-agnostic \<^type>\<open>graphviz_node_annotation\<close> hook is where it comes
+  the check-agnostic \<^type>\<open>graph_node_annotation\<close> hook is where it comes
   from. Drawing is not done here: the CLI's own renderer consumes the structured
   export, so this theory demonstrates the annotation, not a picture.
   There is no manually maintained \<^typ>\<open>pp\<close>-to-\<^typ>\<open>exp\<close> table:
@@ -384,7 +384,7 @@ text \<open>
   end-of-procedure node is not visually confused with a refuted check.
 \<close>
 
-definition checks_ex_node_annotation :: "pp \<Rightarrow> graphviz_node_annotation option" where
+definition checks_ex_node_annotation :: "pp \<Rightarrow> graph_node_annotation option" where
   "checks_ex_node_annotation v =
      (case check_report_node_annotation
              (analyse_sign_report_for checks_ex_gs checks_ex_program) v of

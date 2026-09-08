@@ -61,12 +61,12 @@ fun string_of_action :: "edge_action \<Rightarrow> string" where
 
 definition dq :: string where "dq = [CHR 0x22]"
 definition nl :: string where "nl = [CHR 0x0A]"
-definition gv_nl :: string where "gv_nl = [CHR 0x5C, CHR 0x6E]"
+definition esc_nl :: string where "esc_nl = [CHR 0x5C, CHR 0x6E]"
 
-fun join_gv_nl :: "string list \<Rightarrow> string" where
-  "join_gv_nl [] = []"
-| "join_gv_nl [s] = s"
-| "join_gv_nl (s # ss) = s @ gv_nl @ join_gv_nl ss"
+fun join_esc_nl :: "string list \<Rightarrow> string" where
+  "join_esc_nl [] = []"
+| "join_esc_nl [s] = s"
+| "join_esc_nl (s # ss) = s @ esc_nl @ join_esc_nl ss"
 
 
 definition proc_entry_pps_list :: "cfg \<Rightarrow> pp list" where
@@ -132,7 +132,7 @@ text \<open>
   belongs to whichever renderer consumes the export, outside this theory.
 \<close>
 
-datatype graphviz_node_annotation =
+datatype graph_node_annotation =
   Node_Annotation (annotation_label: string) (annotation_status: node_status)
 text \<open>
   Shared status mapping for a compiled \<^verbatim>\<open>__voblint_check(...)\<close>
@@ -142,7 +142,7 @@ text \<open>
   mapping instead of restating it.
 \<close>
 
-definition check_result_annotation :: "check_result \<Rightarrow> exp \<Rightarrow> graphviz_node_annotation" where
+definition check_result_annotation :: "check_result \<Rightarrow> exp \<Rightarrow> graph_node_annotation" where
   "check_result_annotation res cnd =
      (case res of
         Check_Proved \<Rightarrow>
@@ -181,7 +181,7 @@ record ('ctx, 'g, 'a, 'd) analysis_graph_config =
   owner_of :: "pp \<Rightarrow> string"
   cluster_label :: "string \<Rightarrow> 'ctx \<Rightarrow> string"
   source_text :: "string option"
-  node_annotation :: "pp \<Rightarrow> 'ctx \<Rightarrow> graphviz_node_annotation option"
+  node_annotation :: "pp \<Rightarrow> 'ctx \<Rightarrow> graph_node_annotation option"
 
 fun compiled_proc_owner ::
   "proc_table \<Rightarrow> pname list \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> pname option" where

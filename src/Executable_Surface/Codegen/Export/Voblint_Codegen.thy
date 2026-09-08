@@ -1,6 +1,6 @@
 theory Voblint_Codegen
   imports
-    "Voblint_CLI.State_Report_GraphViz"
+    "Voblint_CLI.State_Report_Graph"
 begin
 
 section "Code export surface"

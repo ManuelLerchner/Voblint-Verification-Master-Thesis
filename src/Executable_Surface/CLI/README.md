@@ -37,7 +37,7 @@ does see all four.
 | `Analysis_Graph_Wf.thy` | that what it builds is always well-formed --- distinct nodes, every edge between nodes that exist. The one theorem in the graph layer. |
 | `Analysis_Graph_Naming.thy` | positional identifiers for nodes and clusters, plus the call-string context presentation |
 | `Analysis_Graph_Export.thy` | the three readings handed out: canonical text snapshot, `export_graph`, check-report listing. The single import point for the four above. |
-| `State_Report_GraphViz.thy` | the entry points that pair a solved run with a graph: per-node state labels, context-expanded graphs, check annotations |
+| `State_Report_Graph.thy` | the entry points that pair a solved run with a graph: per-node state labels, context-expanded graphs, check annotations |
 
 The corollaries in `Analyse_Dispatch.thy` are the one kind of soundness statement
 that belongs here and nowhere else: a theorem about `analyse` cannot live above the

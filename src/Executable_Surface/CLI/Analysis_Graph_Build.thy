@@ -43,17 +43,17 @@ record procedure_scope =
   scope_locals :: "vname list"
   scope_return_slot :: "vname option"
 
-fun graphviz_action_defs :: "edge_action \<Rightarrow> vname list" where
-  "graphviz_action_defs (EA_Assign x e) = [x]"
-| "graphviz_action_defs (EA_Special sc x) = [x]"
-| "graphviz_action_defs _ = []"
+fun action_defined_vars :: "edge_action \<Rightarrow> vname list" where
+  "action_defined_vars (EA_Assign x e) = [x]"
+| "action_defined_vars (EA_Special sc x) = [x]"
+| "action_defined_vars _ = []"
 
 definition owner_assigned_vars ::
   "cfg \<Rightarrow> (pp \<Rightarrow> pname) \<Rightarrow> pname \<Rightarrow> vname list" where
   "owner_assigned_vars g point_owner owner =
     remdups
       (concat (map (\<lambda>(u, a, _).
-         if point_owner u = owner then graphviz_action_defs a else [])
+         if point_owner u = owner then action_defined_vars a else [])
          (cfg_intra_list g)) @
        concat (map (\<lambda>(call, ca, _, _).
          if point_owner call = owner then

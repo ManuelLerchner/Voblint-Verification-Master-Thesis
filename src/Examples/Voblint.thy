@@ -64,7 +64,7 @@ theory Voblint
     "Voblint_Examples_Congruence.Example_Congruence_Backward"
     "Voblint_Analysis_Sign.Sign_Entry"
     "Voblint_CLI.Analyse_Dispatch"
-    "Voblint_CLI.State_Report_GraphViz"
+    "Voblint_CLI.State_Report_Graph"
 begin
 
 text \<open>
@@ -438,7 +438,7 @@ text \<open>
       @{thm dep_aux_dg_edge_tree_at} names the source address and the one
       global slot, nothing else.
     \<^item> \<^bold>\<open>Rendering\<close> --- the \<open>_export_auto\<close> / \<open>_graph_snapshot_auto\<close> family
-      (@{theory Voblint_CLI.State_Report_GraphViz}) stops at a neutral
+      (@{theory Voblint_CLI.State_Report_Graph}) stops at a neutral
       \<open>export_graph\<close>; DOT and HTML are produced from it by the OCaml renderers,
       outside any theory. Neither half has an Isabelle-side witness of its own:
       a rendering asserts nothing that a \<^verbatim>\<open>writeln\<close> could check, so the

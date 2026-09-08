@@ -343,7 +343,7 @@ text \<open>
   node up directly in the computed \<^const>\<open>analyse_interval_report_for\<close>.
 \<close>
 
-definition checks_ivl_ex_node_annotation :: "pp \<Rightarrow> graphviz_node_annotation option" where
+definition checks_ivl_ex_node_annotation :: "pp \<Rightarrow> graph_node_annotation option" where
   "checks_ivl_ex_node_annotation v =
      (case check_report_node_annotation
              (analyse_interval_report_for checks_ivl_ex_gs checks_ivl_ex_program) v of

@@ -25,6 +25,6 @@ the assembled analyzer can.
 | `Example_Analysis_Dispatch_Regression.thy` | regression | `analyse_config` over the selectable domains and context policies |
 | `Example_Analysis_Result_Regression.thy` | regression | the published result table: per-point reachability and the per-context lookup surface |
 | `Example_Min_Max_Regression.thy` | acceptance | `Min`/`Max` special calls end to end through the dispatcher |
-| `Example_EntryState_GraphViz_Regression.thy` | regression | internal well-formedness (`analysis_graph_wf`) and result-table coverage for the context-expanded graph; the rendering itself is covered CLI-observably under `tests/regression/11-graph-snapshot/` |
+| `Example_EntryState_Graph_Regression.thy` | regression | internal well-formedness (`analysis_graph_wf`) and result-table coverage for the context-expanded graph; the rendering itself is covered CLI-observably under `tests/regression/11-graph-snapshot/` |
 
 Role vocabulary: repository `README.md`.

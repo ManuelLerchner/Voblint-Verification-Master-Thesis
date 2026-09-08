@@ -21,4 +21,4 @@ session Voblint_CLI in "." = "Voblint_Analysis_Int" +
     Analysis_Graph_Naming
     Analysis_Graph_Export
 
-    State_Report_GraphViz
+    State_Report_Graph

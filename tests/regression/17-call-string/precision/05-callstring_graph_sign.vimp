@@ -5,7 +5,7 @@
 // graph that existed was entry-state's, written for Interval alone.
 // A call-string context is a cfg_node list -- pure call history, no domain
 // content -- and every state here renders through abstract_value, so one
-// configuration (cs_ctx_graph_config, State_Report_GraphViz.thy) serves
+// configuration (cs_ctx_graph_config, State_Report_Graph.thy) serves
 // Sign, Interval and Int alike. This fixture pins that shared renderer at
 // Sign specifically: g is entered under two distinct call strings (via
 // f(3) and via f(-10)), so it gets two separate clusters whose enter and

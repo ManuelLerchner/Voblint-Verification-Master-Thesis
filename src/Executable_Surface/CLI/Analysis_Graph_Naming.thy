@@ -62,8 +62,8 @@ text \<open>
   content, so these work for any context type.
 \<close>
 
-definition graphviz_exit :: "cfg \<Rightarrow> cfg_node" where
-  "graphviz_exit g =
+definition entry_proc_exit :: "cfg \<Rightarrow> cfg_node" where
+  "entry_proc_exit g =
     (case cfg_entry g of FunctionEntry p \<Rightarrow> FunctionResult p | p \<Rightarrow> p)"
 fun analysis_node_position :: "('ctx, 'g) analysis_node list
   \<Rightarrow> ('ctx, 'g) analysis_node \<Rightarrow> nat" where
@@ -125,19 +125,19 @@ definition analysis_nodes_in_cluster ::
 
 
 
-definition graphviz_point_label :: "cfg \<Rightarrow> pp \<Rightarrow> string" where
-  "graphviz_point_label g p =
+definition point_label :: "cfg \<Rightarrow> pp \<Rightarrow> string" where
+  "point_label g p =
     (case p of
       FunctionEntry owner \<Rightarrow> ''entry_'' @ String.explode owner
     | FunctionResult owner \<Rightarrow> ''exit_'' @ String.explode owner
     | Statement _ \<Rightarrow> string_of_cfg_node p)"
 
 text \<open>
-  The inverse of \<^const>\<open>join_gv_nl\<close>: splits a string joined with the literal
+  The inverse of \<^const>\<open>join_esc_nl\<close>: splits a string joined with the literal
   \<open>\n\<close> separator back into its original lines. A caller with multi-line
-  content to attach as one \<^typ>\<open>graphviz_node_annotation\<close> (a single flat
+  content to attach as one \<^typ>\<open>graph_node_annotation\<close> (a single flat
   \<^const>\<open>annotation_label\<close> string, by design, so nothing here has to know
-  what an annotation means) already joins it with \<^const>\<open>join_gv_nl\<close> --- the
+  what an annotation means) already joins it with \<^const>\<open>join_esc_nl\<close> --- the
   same convention the per-node label-line builder below uses. A renderer
   consumes that joined form directly; the canonical snapshot needs the lines
   apart again, hence this being used only there.
@@ -150,19 +150,19 @@ text \<open>
   test in the body has no such restriction.
 \<close>
 
-fun split_gv_nl_acc :: "string \<Rightarrow> string \<Rightarrow> string list" where
-  "split_gv_nl_acc acc [] = [rev acc]"
-| "split_gv_nl_acc acc [ch] = [rev (ch # acc)]"
-| "split_gv_nl_acc acc (ch1 # ch2 # rest) =
+fun split_esc_nl_acc :: "string \<Rightarrow> string \<Rightarrow> string list" where
+  "split_esc_nl_acc acc [] = [rev acc]"
+| "split_esc_nl_acc acc [ch] = [rev (ch # acc)]"
+| "split_esc_nl_acc acc (ch1 # ch2 # rest) =
     (if ch1 = CHR 0x5C \<and> ch2 = CHR 0x6E
-     then rev acc # split_gv_nl_acc [] rest
-     else split_gv_nl_acc (ch1 # acc) (ch2 # rest))"
+     then rev acc # split_esc_nl_acc [] rest
+     else split_esc_nl_acc (ch1 # acc) (ch2 # rest))"
 
-definition split_gv_nl :: "string \<Rightarrow> string list" where
-  "split_gv_nl s = split_gv_nl_acc [] s"
+definition split_esc_nl :: "string \<Rightarrow> string list" where
+  "split_esc_nl s = split_esc_nl_acc [] s"
 
 text \<open>
-  The per-node label as a line list, before \<^const>\<open>join_gv_nl\<close> escapes it
+  The per-node label as a line list, before \<^const>\<open>join_esc_nl\<close> escapes it
   into one DOT-attribute string. Factored out so a non-DOT renderer (the
   canonical regression snapshot, below) can walk the same lines without
   re-deriving them from escaped DOT text.
@@ -174,7 +174,7 @@ definition contextual_node_label_lines ::
   "contextual_node_label_lines cfg g sol n =
     (case n of
       LocalNode p ctx \<Rightarrow>
-        graphviz_point_label g p #
+        point_label g p #
           show_local cfg p ctx (locals_for_pp cfg p)
             (local_of cfg (sol (Inl (p, ctx))))
           @ (case return_slot_for_pp cfg p of None \<Rightarrow> []
@@ -183,7 +183,7 @@ definition contextual_node_label_lines ::
           @ (case node_annotation cfg p ctx of
               None \<Rightarrow> []
             | Some ann \<Rightarrow>
-                if annotation_label ann = '''' then [] else split_gv_nl (annotation_label ann))
+                if annotation_label ann = '''' then [] else split_esc_nl (annotation_label ann))
     | GlobalNode k \<Rightarrow>
         show_global_key cfg k # show_global cfg k (globals_to_show cfg) (sol (Inr k))
     | SourceNode src \<Rightarrow> [src])"

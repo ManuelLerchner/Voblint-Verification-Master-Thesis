@@ -1,4 +1,4 @@
-theory State_Report_GraphViz
+theory State_Report_Graph
   imports
     Analysis_Graph_Export
     "Voblint_Analysis_Int.Int_Domain"
@@ -110,14 +110,14 @@ definition point_lines ::
 
 definition state_report_node_annotation ::
     "vname list \<Rightarrow> (pp \<times> exp \<times> check_result \<times> (vname \<Rightarrow> abstract_value)) list
-     \<Rightarrow> pp \<Rightarrow> graphviz_node_annotation option" where
+     \<Rightarrow> pp \<Rightarrow> graph_node_annotation option" where
   "state_report_node_annotation vars report v =
      (case find (\<lambda>entry. fst entry = v) report of
         None \<Rightarrow> None
       | Some (_, cnd, res, f) \<Rightarrow>
           (case check_result_annotation res cnd of
              Node_Annotation lbl status \<Rightarrow>
-               Some (Node_Annotation (join_gv_nl (lbl # map (state_line f) vars)) status)))"
+               Some (Node_Annotation (join_esc_nl (lbl # map (state_line f) vars)) status)))"
 
 text \<open>
   \<open>analyse_with_state\<close>'s report also carries an exact \<open>unreachable\<close> flag
@@ -237,10 +237,10 @@ text \<open>
   keeps them apart in every renderer at once.
 \<close>
 
-definition unreachable_state_annotation :: graphviz_node_annotation where
+definition unreachable_state_annotation :: graph_node_annotation where
   "unreachable_state_annotation = Node_Annotation ''unreachable'' NS_Unreachable"
 
-definition dead_check_annotation :: "exp \<Rightarrow> graphviz_node_annotation" where
+definition dead_check_annotation :: "exp \<Rightarrow> graph_node_annotation" where
   "dead_check_annotation cnd =
      Node_Annotation (''check '' @ string_of_exp 0 cnd @ '' [dead]'') NS_Unreachable"
 
@@ -255,12 +255,12 @@ text \<open>
 
 definition point_node_annotation ::
     "vname list \<Rightarrow> (pp \<Rightarrow> abstract_value abs_state lifted)
-       \<Rightarrow> pp \<Rightarrow> graphviz_node_annotation option" where
+       \<Rightarrow> pp \<Rightarrow> graph_node_annotation option" where
   "point_node_annotation vars env v =
      (case env v of
         Bot \<Rightarrow> Some unreachable_state_annotation
       | Lifted st \<Rightarrow>
-          Some (Node_Annotation (join_gv_nl (map (state_line st) vars)) NS_Plain))"
+          Some (Node_Annotation (join_esc_nl (map (state_line st) vars)) NS_Plain))"
 
 text \<open>
   \<open>analyse_point_env_for\<close> is the monovariant sibling of
@@ -336,18 +336,18 @@ text \<open>
 
 definition full_state_checked_node_annotation ::
     "vname list \<Rightarrow> (pp \<Rightarrow> abstract_value abs_state lifted)
-       \<Rightarrow> (pp \<times> exp \<times> check_result) list \<Rightarrow> pp \<Rightarrow> graphviz_node_annotation option" where
+       \<Rightarrow> (pp \<times> exp \<times> check_result) list \<Rightarrow> pp \<Rightarrow> graph_node_annotation option" where
   "full_state_checked_node_annotation vars env verdicts v =
      (case env v of
         Bot \<Rightarrow> Some unreachable_state_annotation
       | Lifted st \<Rightarrow>
           (let lines = map (state_line st) vars
            in case find (\<lambda>entry. fst entry = v) verdicts of
-                None \<Rightarrow> Some (Node_Annotation (join_gv_nl lines) NS_Plain)
+                None \<Rightarrow> Some (Node_Annotation (join_esc_nl lines) NS_Plain)
               | Some (_, cnd, res) \<Rightarrow>
                   (case check_result_annotation res cnd of
                      Node_Annotation lbl status \<Rightarrow>
-                       Some (Node_Annotation (join_gv_nl (lbl # lines)) status))))"
+                       Some (Node_Annotation (join_esc_nl (lbl # lines)) status))))"
 
 text \<open>
   One solve behind both views. A report browser needs a state at every point
@@ -648,7 +648,7 @@ text \<open>
 definition verdict_state_report_node_annotation ::
     "vname list
        \<Rightarrow> (pp \<times> exp \<times> contextual_verdict \<times> abstract_value abs_state lifted) list
-       \<Rightarrow> pp \<Rightarrow> graphviz_node_annotation option" where
+       \<Rightarrow> pp \<Rightarrow> graph_node_annotation option" where
   "verdict_state_report_node_annotation vars report v =
      (case find (\<lambda>entry. fst entry = v) report of
         None \<Rightarrow> None
@@ -657,7 +657,7 @@ definition verdict_state_report_node_annotation ::
                   (Decided res, Lifted f) \<Rightarrow>
                     (case check_result_annotation res cnd of
                        Node_Annotation lbl status \<Rightarrow>
-                         Node_Annotation (join_gv_nl (lbl # map (state_line f) vars)) status)
+                         Node_Annotation (join_esc_nl (lbl # map (state_line f) vars)) status)
                 | _ \<Rightarrow> dead_check_annotation cnd))"
 
 definition entry_state_report_graph_snapshot_auto ::
@@ -924,7 +924,7 @@ definition check_cond_at :: "cfg \<Rightarrow> pp \<Rightarrow> exp option" wher
 
 definition entry_state_ctx_check_annotation ::
     "cfg \<Rightarrow> (ivl list, ivl abs_state) analysis_result \<Rightarrow> pp \<Rightarrow> ivl list
-       \<Rightarrow> graphviz_node_annotation option" where
+       \<Rightarrow> graph_node_annotation option" where
   "entry_state_ctx_check_annotation g r v ctx =
      (case check_cond_at g v of
         None \<Rightarrow> None
@@ -1107,7 +1107,7 @@ text \<open>
 
 definition cs_ctx_check_annotation ::
     "analysis_domain \<Rightarrow> nat \<Rightarrow> imp_prog \<Rightarrow> cfg \<Rightarrow> pp \<Rightarrow> call_string
-       \<Rightarrow> graphviz_node_annotation option" where
+       \<Rightarrow> graph_node_annotation option" where
   "cs_ctx_check_annotation kind k p g v ctx =
      (case check_cond_at g v of
         None \<Rightarrow> None

@@ -25,6 +25,7 @@
 # --- Pure-pair spec application, superseded by compiled transfer trees ---
 # --- Pure-pair transfer combinators (DG_Transfer_Combinators.thy) ---
 # --- Renamed to say what they are (2026-09-05) ---
+# --- Renamed to say what they are, not which renderer they once fed (2026-09-08) ---
 # --- Routed call/generator formers renamed by abstraction level (2026-09-05) ---
 # --- Routed contribution hooks, folded into `routed_cmb_g` ---
 # --- Solution-induced entry context moved to its policy (2026-09-05) ---
@@ -494,9 +495,14 @@ gamma_ownership_split_eq
 gamma_state_witness_not_bot
 gamma_unit
 generic_branch_st_for
+graphviz_action_defs
+graphviz_exit
 graphviz_html_text
 graphviz_label_text
+graphviz_node_annotation
 graphviz_owner_of
+graphviz_point_label
+gv_nl
 gv_style_of_status
 hook_acc
 hook_combine_tree_mem
@@ -545,6 +551,7 @@ int_tf_once_for_mono
 is_bot_mono
 ivl_tf_for
 ivl_tf_for_mono
+join_gv_nl
 le_resolved_st_q_pointwise
 lift_dg_step
 lift_gamma
@@ -719,6 +726,8 @@ sp_run_with_read_global
 sp_run_with_read_local
 sp_run_with_return
 sp_sideg
+split_gv_nl
+split_gv_nl_acc
 static_targets_nonempty
 string_of_call_action
 string_of_check_report

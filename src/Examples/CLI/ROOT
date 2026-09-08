@@ -23,4 +23,4 @@ session Voblint_Examples_CLI in "." = "Voblint_CLI" +
     Example_Side_Execute
     Exec_Interval_Run
     Example_Int_Refinement_Mode_Regression
-    Example_EntryState_GraphViz_Regression
+    Example_EntryState_Graph_Regression

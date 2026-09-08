@@ -139,7 +139,7 @@ definition export_node_kind_of ::
     (case n of
       LocalNode p _ \<Rightarrow>
         (if p = cfg_entry g then XN_Entry
-         else if p = graphviz_exit g then XN_Exit
+         else if p = entry_proc_exit g then XN_Exit
          else if p \<in> set (proc_entry_pps_list g) then XN_ProcEntry
          else if p \<in> set (proc_exit_pps_list g) then XN_ProcExit
          else XN_Point)
@@ -241,7 +241,7 @@ definition contextual_analysis_export ::
     analysis_graph_to_export cfg g sol (build_analysis_graph cfg g domain sol)"
 
 definition raw_cfg_graph_config ::
-  "proc_table \<Rightarrow> pname list \<Rightarrow> (pp \<Rightarrow> graphviz_node_annotation option)
+  "proc_table \<Rightarrow> pname list \<Rightarrow> (pp \<Rightarrow> graph_node_annotation option)
     \<Rightarrow> (unit, unit, unit, unit) analysis_graph_config" where
   "raw_cfg_graph_config \<Pi> ps annotate =
     \<lparr> local_of = id,
@@ -265,7 +265,7 @@ definition raw_cfg_graph_config ::
 
 
 definition raw_cfg_canonical_text ::
-  "proc_table \<Rightarrow> pname list \<Rightarrow> (pp \<Rightarrow> graphviz_node_annotation option) \<Rightarrow> string" where
+  "proc_table \<Rightarrow> pname list \<Rightarrow> (pp \<Rightarrow> graph_node_annotation option) \<Rightarrow> string" where
   "raw_cfg_canonical_text \<Pi> ps annotate =
     (let g = compile_prog \<Pi> ps;
          cfg = raw_cfg_graph_config \<Pi> ps annotate;
@@ -273,7 +273,7 @@ definition raw_cfg_canonical_text ::
      in contextual_analysis_canonical_text cfg g domain (\<lambda>_. ()))"
 
 definition raw_cfg_canonical_text_lit ::
-  "proc_table \<Rightarrow> pname list \<Rightarrow> (pp \<Rightarrow> graphviz_node_annotation option)
+  "proc_table \<Rightarrow> pname list \<Rightarrow> (pp \<Rightarrow> graph_node_annotation option)
     \<Rightarrow> String.literal" where
   "raw_cfg_canonical_text_lit \<Pi> ps annotate =
     String.implode (raw_cfg_canonical_text \<Pi> ps annotate)"
@@ -286,7 +286,7 @@ text \<open>
 \<close>
 
 definition raw_cfg_export ::
-  "proc_table \<Rightarrow> pname list \<Rightarrow> (pp \<Rightarrow> graphviz_node_annotation option)
+  "proc_table \<Rightarrow> pname list \<Rightarrow> (pp \<Rightarrow> graph_node_annotation option)
     \<Rightarrow> export_graph" where
   "raw_cfg_export \<Pi> ps annotate =
     (let g = compile_prog \<Pi> ps;
@@ -325,7 +325,7 @@ text \<open>
 \<close>
 
 definition check_report_node_annotation ::
-    "check_report_entry list \<Rightarrow> pp \<Rightarrow> graphviz_node_annotation option" where
+    "check_report_entry list \<Rightarrow> pp \<Rightarrow> graph_node_annotation option" where
   "check_report_node_annotation report v =
      (case find (\<lambda>entry. fst entry = v) report of
         Some (_, cnd, res) \<Rightarrow> Some (check_result_annotation res cnd)

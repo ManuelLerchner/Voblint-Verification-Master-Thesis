@@ -130,7 +130,7 @@ emitted output can, and catches the same failure one edit earlier.
 
 The map now names 135 theories and four modules survive: `Core`, plus the
 three the handwritten OCaml calls into -- `Analysis_Config`,
-`Analyse_Dispatch`, `State_Report_GraphViz`. Folding cannot introduce a cycle
+`Analyse_Dispatch`, `State_Report_Graph`. Folding cannot introduce a cycle
 (a cycle needs two modules), so those three are a deliberate API surface
 rather than the residue of which edit happened to fail first.
 

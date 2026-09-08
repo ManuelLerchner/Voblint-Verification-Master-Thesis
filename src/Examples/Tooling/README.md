@@ -15,7 +15,7 @@ which is why `Voblint_Examples_Tooling` is parented on
 | `Example_TD_Plain_Program.thy` | demo | the TD must-be-initialized running example, through the same frontend with no side effects |
 
 The context-expanded graph regression needs
-`Voblint_CLI.State_Report_GraphViz`, so it lives in `CLI/`.
+`Voblint_CLI.State_Report_Graph`, so it lives in `CLI/`.
 
 Rendering has no witness here. Isabelle stops at an `export_graph`; DOT and
 HTML are produced from it by `cli/dot_render.ml` and `cli/html_report.ml`,
