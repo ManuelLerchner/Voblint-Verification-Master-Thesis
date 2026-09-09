@@ -70,6 +70,7 @@ domains:
     # registrations and exposes neither, so the two lists come apart and a
     # single key cannot say both. The emitter reads only this one.
     registrations:
+      adopted: true
       entry_state: {solvers: [always_join], default: always_join}
       call_string: {solvers: [always_join], default: always_join}
     legacy:

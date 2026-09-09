@@ -134,12 +134,18 @@ class Domain:
         # already on the search path. A domain with hand-written content left
         # names a separate theory for the generated half instead.
         self.ctx_theory = regs.pop("theory", f"{self.name}_Analyses")
+        # Adopted per domain, like the assembly: an unadopted contextual theory
+        # renders under `--out` and is neither written nor compared, so the
+        # migration moves one domain at a time.
+        self.ctx_adopted = regs.pop("adopted", False)
         self.registrations = regs
         legacy = entry.get("legacy", {})
         self.legacy = legacy
         self.impl = legacy.get("impl_prefix", self.name.lower())
         self.theory = f"{self.name}_Assembly"
         self.path = f"src/Analyses/{self.name}/generated/{self.theory}.thy"
+        self.ctx_path = (f"src/Analyses/{self.name}/generated/"
+                         f"{self.ctx_theory}.thy")
         self.constructor = f"{self.name}_Analysis"
         self.plan = f"Plan_{self.name}"
 
@@ -644,9 +650,19 @@ def render_contextual(dom, solvers):
     constants that registration publishes.
     """
     out = [f"theory {dom.ctx_theory}", "  imports"]
-    out += [f"    {dom.name}_{t}"
-            for t in ["Classify", "Transfer", "Sound", "Exec"]]
-    out += [f"    {i}" for i in CONTEXTUAL_IMPORTS] + ["begin", ""]
+    # Exactly what the hand-written theory imported, never less. A generated
+    # theory replacing a hand-written one inherits its consumers, and an import
+    # dropped here fails in those consumers rather than here -- `Sign_Assembly`
+    # went missing this way and took `Sign_Checks` and `Sign_Entry` with it,
+    # while the generated theory itself stayed clean. The lists differ per
+    # domain (Interval imports `_Exec_Sound`, Int imports neither its assembly
+    # nor its transfer), so this is registry data, captured per domain.
+    imports = dom.legacy.get("ctx_imports")
+    if imports is None:
+        imports = [f"{dom.name}_{t}"
+                   for t in ["Sound", "Assembly", "Classify", "Transfer", "Exec"]
+                   ] + CONTEXTUAL_IMPORTS
+    out += [f"    {i}" for i in imports] + ["begin", ""]
     out += text_block(GENERATED_NOTICE) + [""]
     for ctx in CONTEXT_ORDER:
         reg = dom.registrations.get(ctx)
@@ -996,9 +1012,12 @@ def main():
 
     rendered_assemblies = [(d, d.path, render_assembly(d, solvers))
                            for d in doms if d.has_assembly]
-    targets = [(path, text) for d, path, text in rendered_assemblies if d.adopted]
+    rendered_assemblies += [(d, d.ctx_path, render_contextual(d, solvers))
+                            for d in doms if d.registrations]
+    targets = [(path, text) for d, path, text in rendered_assemblies
+               if (d.adopted if path == d.path else d.ctx_adopted)]
     unadopted = [(path, text) for d, path, text in rendered_assemblies
-                 if not d.adopted]
+                 if not (d.adopted if path == d.path else d.ctx_adopted)]
     cli_targets = [(cli["path"], render_cli(doms, solvers, cli)),
                    (cfg["path"], render_config(doms, solvers, cfg))]
     # An unadopted output is a preview: renderable on demand, never written into
