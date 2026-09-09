@@ -163,6 +163,15 @@ a directory, so a new session means a new directory, and every directory under
 `src` that holds a `ROOT` owns exactly the theories beneath it that no nested
 session claims.
 
+A `theories` entry is a theory *name*, never a path: a slash there is a
+malformed import and fails the whole session at load, so jEdit does not start
+and the mistake presents as a dead editor rather than as an error in the file
+that caused it. A subdirectory goes on the search path through `directories`
+instead --- `directories "generated"` plus a bare `Sign_Assembly`.
+`pixi run root-entries` checks that, that every `directories` entry exists, and
+that every `.thy` on a session's search path is reached from something the
+session builds; it needs no Isabelle.
+
 The generated OCaml is compile-checked by actually compiling it: both
 `codegen-regression` and `cli-build` run `ocamlfind ocamlopt` over
 `codegen/generated/ml/Voblint_CLI.ml`, so a serializer defect fails those
@@ -256,6 +265,24 @@ phantom-proof failures.
   `scripts/normalize_isabelle_ascii.py`, reopen the file, and check diagnostics.
 - Write Isabelle symbols in ASCII source form. Unicode is allowed in comments,
   but not in theory syntax.
+
+**A diagnostics read describes the buffer, not the file.** Reopening a file is
+not evidence that jEdit reloaded it, so after any host write to a tracked
+theory, compare the buffer against disk -- one `read_file` at a line the write
+changed -- before believing any diagnostics. Both polarities of this have
+already happened here in one session: a bulk host substitution that jEdit had
+not picked up was certified clean and reached the user as two red theories, and
+a regenerated file was read as still failing at byte offsets whose content no
+longer existed. The result looks entirely normal in both directions, which is
+what makes the check worth its one call.
+
+**A theory that loads as `Draft.<name>` is not verified in its session.** A
+draft node resolves imports without consulting the session, so its diagnostics
+say nothing about whether the ROOT actually finds the file, and saving from one
+rewrites same-session imports into session-qualified form. A theory whose ROOT
+entry changed after jEdit loaded the session structure stays a draft until
+jEdit restarts. Report content and wiring separately until the node name says
+`<Session>.<Theory>`.
 
 If an actual I/Q or I/R call fails, report it and request
 `rtk ./scripts/start-both.sh` or `rtk ./scripts/start-ir.sh`. Do not substitute
