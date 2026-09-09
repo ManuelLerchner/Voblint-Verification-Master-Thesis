@@ -131,26 +131,30 @@ behaviour exactly.
 
 ## What this costs
 
-The tooling is 1290 lines -- registry, generator, ROOT lint, hand-written
-expectations, this document. It produces 845 lines of theory. Both numbers are
-in the repository, so the repository grows by about 1290 lines; generation
-replaces handwritten lines with generated ones rather than removing them.
+The tooling is about 1300 lines -- registry, generator, ROOT lint, hand-written
+expectations, this document. It produces about 1700 lines of theory across five
+domains and the two CLI tables. Both numbers are in the repository, so the
+repository grows; generation replaces handwritten lines with generated ones
+rather than removing them.
 
-The figure that matters for maintenance is different, and only holds once the
-handwritten originals are actually deleted: 1290 lines that are maintained
-against 845 that are not, a net increase of about 445 in source anyone edits.
-Generation is not a size reduction under any accounting, and no volume of output
-would make it one.
+What it removes is 393 manually maintained occurrences, counted against the
+tree as it stands rather than estimated:
 
-What it does remove is 225 manually maintained occurrences: eight
-interpretations discharging ten obligations each, a support matrix written out
-four separate times (16 + 16 + 4 dispatcher equations and 40 resolver
-equations), and 69 publication-name bindings. Those are repeated sites rather
-than independent decisions -- many follow from one choice, which is the point:
-they had to agree with each other and were kept in agreement by hand. They now
-follow from four registry entries. The `None` entries are the sharpest case: a
-pairing is unsupported because no route is published, which four handwritten
-tables previously stated separately and could disagree about silently.
+| | count |
+| --- | --- |
+| obligation discharges (14 interpretations x 10) | 140 |
+| publication-name bindings | 119 |
+| dispatcher equations across the four tables | 70 |
+| resolver equations | 55 |
+| equation-agreement lemmas | 9 |
+
+Those are repeated sites rather than independent decisions -- many follow from
+one choice, which is the point: they had to agree with each other and were kept
+in agreement by hand. They now follow from five registry entries. The `None`
+entries are the sharpest case: a pairing is unsupported because no route is
+published, which four handwritten tables previously stated separately and could
+disagree about silently -- and did, when a catch-all in one of them answered
+`None` for fifteen supported programs.
 
 So the value is consistent registration and cheap updates, not fewer lines.
 

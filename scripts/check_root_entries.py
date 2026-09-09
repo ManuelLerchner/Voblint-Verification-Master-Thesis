@@ -133,6 +133,21 @@ def check(root_file, all_roots):
             problems.append(f"{root_file}: theory entry '{t}' has no .thy on the "
                             f"session's search path")
 
+    # Two files of the same name on one search path. Isabelle resolves the
+    # entry to one of them and the other is silently never built, so the
+    # reachability check below cannot see it -- both share the stem, and the
+    # stem is listed. This bites when a theory is moved into `generated` and
+    # the hand-written original is not removed in the same change.
+    by_stem = {}
+    for thy in owned_theories(base, dirs, all_roots):
+        by_stem.setdefault(thy.stem, []).append(thy)
+    for stem, paths in sorted(by_stem.items()):
+        if len(paths) > 1:
+            where = ", ".join(str(p.relative_to(base)) for p in paths)
+            problems.append(
+                f"{root_file}: two theories named '{stem}' on this session's search "
+                f"path ({where}); Isabelle builds one and never reports the other")
+
     listed = reached(theories, search)
     for thy in owned_theories(base, dirs, all_roots):
         if thy.stem not in listed:

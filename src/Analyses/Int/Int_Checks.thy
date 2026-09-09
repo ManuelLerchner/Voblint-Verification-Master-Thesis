@@ -31,13 +31,8 @@ text \<open>
 
 lemma int_conf_sol_prog_warrow_eq_unit:
   "int_conf_sol_prog_warrow Refine_Fixpoint gs p = ictx_sol_prog gs p"
-  unfolding int_conf_sol_prog_warrow_def int_conf_sol_warrow_def
-    int_conf_eqs_prog_def int_conf_eqs_def int_dom_spec_def
-    int_unit_solution_def int_warrow_asm.solution_def
-    unit_dg_pipeline.solution_def unit_dg_pipeline.equations_def
-    unit_dg_pipeline.analysis_spec_def unit_dg_pipeline.root_query_def
-    prog_cfg_def
-  by simp
+  unfolding int_conf_sol_prog_warrow_def int_unit_solution_def
+  by (rule refl)
 
 text \<open>
   The same equation at an arbitrary mode, which is what a replacement of the
@@ -49,22 +44,12 @@ lemma int_conf_sol_prog_warrow_eq_pipeline:
   "int_conf_sol_prog_warrow mode gs p =
      unit_dg_pipeline.solution (int_tf_st_for mode) (int_dom_enter_st_for mode)
        cinit_int_dom_st TD_side_warrowing_apinis_Interp_solve gs p"
-  unfolding int_conf_sol_prog_warrow_def int_conf_sol_warrow_def
-    int_conf_eqs_prog_def int_conf_eqs_def int_dom_spec_def
-    unit_dg_pipeline.solution_def unit_dg_pipeline.equations_def
-    unit_dg_pipeline.analysis_spec_def unit_dg_pipeline.root_query_def
-    prog_cfg_def
-  by simp
+  unfolding int_conf_sol_prog_warrow_def by (rule refl)
 
 lemma int_conf_terminates_prog_warrow_eq_unit:
   "int_conf_terminates_prog_warrow Refine_Fixpoint gs p = ictx_terminates_prog gs p"
-  unfolding int_conf_terminates_prog_warrow_def int_conf_terminates_warrow_def
-    int_conf_eqs_prog_def int_conf_eqs_def int_dom_spec_def
-    int_unit_terminates_def int_warrow_asm.terminates_def
-    unit_dg_pipeline.terminates_def unit_dg_pipeline.equations_def
-    unit_dg_pipeline.analysis_spec_def unit_dg_pipeline.root_query_def
-    prog_cfg_def
-  by simp
+  unfolding int_conf_terminates_prog_warrow_def int_unit_terminates_def
+  by (rule refl)
 
 text \<open>
   The readback too, since the report and the globals are built on it: equal
@@ -94,7 +79,7 @@ text \<open>
   \<open>analyse_int_result_for\<close> is the canonical solved D/G system, read as a
   \<^typ>\<open>(unit, int_dom abs_state) analysis_result\<close>: a one-line partial application of
   \<^const>\<open>analyse_int_ctx_result_warrow_for\<close>
-  (\<^theory>\<open>Voblint_Analysis_Int.Int_Analyses\<close>), fixed at \<^const>\<open>Refine_Fixpoint\<close> and
+  (\<^theory>\<open>Voblint_Analysis_Int.Int_Solver_Analyses\<close>), fixed at \<^const>\<open>Refine_Fixpoint\<close> and
   \<^const>\<open>prog_main_name\<close>, which already binds the single routed-unit solve and
   canonicalizes/normalizes each local key -- Int's Apinis warrowing solver is its production
   default, mirroring \<open>Interval_Checks.analyse_interval_td_result_for\<close>. Every report below
@@ -117,10 +102,9 @@ subsection \<open>Solved-result table: always-join update rule\<close>
 
 text \<open>
   \<open>analyse_int_join_result\<close> is \<^const>\<open>analyse_int_result\<close>'s sibling under the
-  always-join update rule: a one-line partial application of
-  \<^const>\<open>analyse_int_ctx_result_for\<close> (\<^theory>\<open>Voblint_Analysis_Int.Int_Analyses\<close>), fixed at
-  \<^const>\<open>prog_main_name\<close>, reading \<^const>\<open>int_conf_sol_prog\<close> instead of
-  \<^const>\<open>int_conf_sol_prog_warrow\<close>. The CLI does not expose refinement mode as a separate
+  always-join update rule: the same assembly, applied to
+  \<^const>\<open>TD_side_always_join_Interp_solve\<close> instead of
+  \<^const>\<open>TD_side_warrowing_apinis_Interp_solve\<close>. The CLI does not expose refinement mode as a separate
   axis, so the convenience instance below stays pinned at \<^const>\<open>Refine_Fixpoint\<close> like
   every other exported \<open>int_dom\<close> entry point.
 \<close>
@@ -138,10 +122,10 @@ definition analyse_int_join_result ::
 subsection \<open>Solved-result table: per-origin update rule\<close>
 
 text \<open>
-  \<open>analyse_int_per_origin_result\<close> mirrors \<^const>\<open>analyse_int_join_result\<close> exactly, a
-  one-line partial application of \<^const>\<open>analyse_int_ctx_result_per_origin_for\<close>
-  (\<^theory>\<open>Voblint_Analysis_Int.Int_Analyses\<close>), fixed at \<^const>\<open>prog_main_name\<close>, reading
-  \<^const>\<open>int_conf_sol_prog_per_origin\<close> instead of \<^const>\<open>int_conf_sol_prog\<close>.
+  \<open>analyse_int_per_origin_result\<close> mirrors \<^const>\<open>analyse_int_join_result\<close> exactly:
+  the same assembly, applied to \<^const>\<open>TD_side_per_origin_Interp_solve\<close> instead of
+  \<^const>\<open>TD_side_always_join_Interp_solve\<close>. Which update rule a table reads is the
+  only choice separating the four.
 \<close>
 
 definition analyse_int_per_origin_result_for ::

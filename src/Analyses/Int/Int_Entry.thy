@@ -89,14 +89,15 @@ abbreviation pgs :: "vname \<Rightarrow> bool" where "pgs \<equiv> declared_glob
 text \<open>
   \<open>analyse_int_report_for\<close> reads its per-node state through
   \<^const>\<open>analyse_int_ctx_result_warrow_for\<close>'s \<^type>\<open>analysis_result\<close> table directly
-  (\<^theory>\<open>Voblint_Analysis_Int.Int_Analyses\<close>): the routed-unit producer's own solved
-  table, at \<open>mode\<close> and \<open>prog_main_name\<close>. \<open>analyse_int_ctx_result_warrow_node_sound_for\<close>
-  below is the node-soundness bridge for that table, built from
-  \<open>int_conf_activation_collect_sound_warrow\<close> (the routed spine's own activation-indexed
-  collecting soundness) composed with \<open>activation_collect_unit_eq_ltr_collect\<close> (the
-  unit-context collapse to \<^const>\<open>ltr_collect\<close>) --- the routed spine needs no
-  \<open>wf_compile_input\<close>/finiteness/node-membership premise, so this bridge only takes the
-  four coverage-and-termination facts the routed solve genuinely turns on.
+  (\<^theory>\<open>Voblint_Analysis_Int.Int_Solver_Analyses\<close>): the routed-unit producer's own
+  solved table, at \<open>mode\<close> and \<open>prog_main_name\<close>.
+  \<open>analyse_int_ctx_result_warrow_node_sound_for\<close> below is the node-soundness bridge for
+  that table, discharged by the assembly's own \<open>result_node_sound_closure\<close>
+  (\<^theory>\<open>Voblint_Result.Unit_DG_Analysis\<close>), which collapses the unit context to
+  \<^const>\<open>ltr_collect\<close> inside its own proof rather than at this site. The routed spine
+  needs no \<open>wf_compile_input\<close>/finiteness/node-membership premise, so the bridge takes
+  only the five facts the routed solve genuinely turns on: termination, entry coverage,
+  and the three forward-closure conditions.
 \<close>
 
 lemma analyse_int_ctx_result_warrow_node_sound_for:
