@@ -39,6 +39,23 @@ lemma int_conf_sol_prog_warrow_eq_unit:
     prog_cfg_def
   by simp
 
+text \<open>
+  The same equation at an arbitrary mode, which is what a replacement of the
+  mode-generic API would have to rest on. The production instance above is its
+  \<^const>\<open>Refine_Fixpoint\<close> case.
+\<close>
+
+lemma int_conf_sol_prog_warrow_eq_pipeline:
+  "int_conf_sol_prog_warrow mode gs p =
+     unit_dg_pipeline.solution (int_tf_st_for mode) (int_dom_enter_st_for mode)
+       cinit_int_dom_st TD_side_warrowing_apinis_Interp_solve gs p"
+  unfolding int_conf_sol_prog_warrow_def int_conf_sol_warrow_def
+    int_conf_eqs_prog_def int_conf_eqs_def int_dom_spec_def
+    unit_dg_pipeline.solution_def unit_dg_pipeline.equations_def
+    unit_dg_pipeline.analysis_spec_def unit_dg_pipeline.root_query_def
+    prog_cfg_def
+  by simp
+
 lemma int_conf_terminates_prog_warrow_eq_unit:
   "int_conf_terminates_prog_warrow Refine_Fixpoint gs p = ictx_terminates_prog gs p"
   unfolding int_conf_terminates_prog_warrow_def int_conf_terminates_warrow_def
@@ -48,6 +65,18 @@ lemma int_conf_terminates_prog_warrow_eq_unit:
     unit_dg_pipeline.analysis_spec_def unit_dg_pipeline.root_query_def
     prog_cfg_def
   by simp
+
+text \<open>
+  The readback too, since the report and the globals are built on it: equal
+  solves give equal result tables, at every mode.
+\<close>
+
+lemma analyse_int_ctx_result_warrow_for_eq_pipeline:
+  "analyse_int_ctx_result_warrow_for mode gs p =
+     unit_dg_pipeline.result (int_tf_st_for mode) (int_dom_enter_st_for mode)
+       cinit_int_dom_st TD_side_warrowing_apinis_Interp_solve gs p"
+  unfolding analyse_int_ctx_result_warrow_for_def unit_dg_pipeline.result_def
+  by (simp add: int_conf_sol_prog_warrow_eq_pipeline)
 
 lemmas ictx_terminates_prog_via_solve_c = int_warrow_asm.terminates_of_solve_c
 lemmas ictx_vars_finite = int_warrow_asm.vars_finite_of_terminates
