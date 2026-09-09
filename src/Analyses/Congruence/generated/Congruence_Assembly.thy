@@ -8,8 +8,6 @@ theory Congruence_Assembly
     "TD.TD_side_upd_rule"
 begin
 
-hide_const phase.N
-
 section \<open>Congruence through the shared unit-context assembly\<close>
 
 text \<open>
@@ -55,7 +53,8 @@ global_interpretation congruence_join: unit_dg_analysis
     and congruence_unit_state_at = congruence_join.state_at
     and congruence_unit_report = congruence_join.report
     and congruence_unit_report_with_state = congruence_join.report_with_state
-proof (rule unit_dg_analysis.intro, goal_cases)
+proof (rule unit_dg_analysis.intro, rule routed_dg_analysis.intro,
+       goal_cases)
   case (1 gs) show ?case by (rule congruence_is_sound_transfer_for)
 next
   case (2 gs a s) then show ?case
@@ -65,21 +64,25 @@ next
   case (3 gs ci s) show ?case
     unfolding fun_of_exec_dg_st_for_def by (rule congruence_enter_st_for_commute)
 next
-  case (4 eqs x) then show ?case
+  case (4 gs u ctx d ca) show ?case by simp
+next
+  case (5 v ctx) show ?case by simp
+next
+  case (6 eqs x) then show ?case
     by (rule TD_side_always_join_Interp.partial_post_solution[OF _ surjective_pairing])
 next
-  case (5 eqs x) then show ?case
+  case (7 eqs x) then show ?case
     by (rule TD_side_always_join_Interp.finite_stabl_solve)
 next
-  case (6 c d s) then show ?case by (rule congruence_classify_check_proved)
+  case (8 c d s) then show ?case by (rule congruence_classify_check_proved)
 next
-  case (7 c d s) then show ?case by (rule congruence_classify_check_refuted)
+  case (9 c d s) then show ?case by (rule congruence_classify_check_refuted)
 next
-  case 8 show ?case by (rule refl)
+  case 10 show ?case by (rule refl)
 next
-  case (9 gs) show ?case by (rule congruence_cinit_gamma)
+  case (11 gs) show ?case by (rule congruence_cinit_gamma)
 next
-  case (10 eqs x) then show ?case
+  case (12 eqs x) then show ?case
     by (rule TD_side_always_join_Interp.solve_dom_of_solve_c)
 qed
 
@@ -102,13 +105,15 @@ global_interpretation congruence_po_asm: unit_dg_analysis
     skip_congruence assign_congruence special_congruence branch_congruence body_congruence
     return_congruence enter_congruence_ci_for event_congruence TD_side_per_origin_Interp_solve_c
   defines
-    congruence_po_solution = congruence_po_asm.solution
+    congruence_po_root_query = congruence_po_asm.root_query
+    and congruence_po_solution = congruence_po_asm.solution
     and congruence_po_terminates = congruence_po_asm.terminates
     and congruence_po_vars = congruence_po_asm.sol_vars
     and congruence_po_result = congruence_po_asm.result
     and congruence_po_state_at = congruence_po_asm.state_at
     and congruence_po_report = congruence_po_asm.report
-proof (rule unit_dg_analysis.intro, goal_cases)
+proof (rule unit_dg_analysis.intro, rule routed_dg_analysis.intro,
+       goal_cases)
   case (1 gs) show ?case by (rule congruence_is_sound_transfer_for)
 next
   case (2 gs a s) then show ?case
@@ -118,21 +123,25 @@ next
   case (3 gs ci s) show ?case
     unfolding fun_of_exec_dg_st_for_def by (rule congruence_enter_st_for_commute)
 next
-  case (4 eqs x) then show ?case
+  case (4 gs u ctx d ca) show ?case by simp
+next
+  case (5 v ctx) show ?case by simp
+next
+  case (6 eqs x) then show ?case
     by (rule TD_side_per_origin_Interp.partial_post_solution[OF _ surjective_pairing])
 next
-  case (5 eqs x) then show ?case
+  case (7 eqs x) then show ?case
     by (rule TD_side_per_origin_Interp.finite_stabl_solve)
 next
-  case (6 c d s) then show ?case by (rule congruence_classify_check_proved)
+  case (8 c d s) then show ?case by (rule congruence_classify_check_proved)
 next
-  case (7 c d s) then show ?case by (rule congruence_classify_check_refuted)
+  case (9 c d s) then show ?case by (rule congruence_classify_check_refuted)
 next
-  case 8 show ?case by (rule refl)
+  case 10 show ?case by (rule refl)
 next
-  case (9 gs) show ?case by (rule congruence_cinit_gamma)
+  case (11 gs) show ?case by (rule congruence_cinit_gamma)
 next
-  case (10 eqs x) then show ?case
+  case (12 eqs x) then show ?case
     by (rule TD_side_per_origin_Interp.solve_dom_of_solve_c)
 qed
 

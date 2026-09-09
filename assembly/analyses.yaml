@@ -65,12 +65,18 @@ domains:
     contexts:
       entry_state: {solvers: [always_join], default: always_join}
       call_string: {solvers: [always_join], default: always_join, min_bound: 1}
+    # Which contextual registrations the theory layer carries. Distinct from
+    # `contexts:` above, which is what the CLI resolves: Parity carries both
+    # registrations and exposes neither, so the two lists come apart and a
+    # single key cannot say both. The emitter reads only this one.
+    registrations:
+      entry_state: {solvers: [always_join], default: always_join}
+      call_string: {solvers: [always_join], default: always_join}
     legacy:
       impl_prefix: sign
       classifier: sign_classify_check
       init_gamma: sign_cinit_gamma
       extra_imports: ['"Voblint_VIMP.VIMP_Notation"']
-      hide_consts: [phase.N]
       binders: {always_join: sign_join, per_origin: sign_po_asm}
       prefixes: {always_join: sign_unit, per_origin: sign_po}
       routes:
@@ -94,8 +100,40 @@ domains:
         solvers: [always_join, per_origin, warrowing_apinis, warrowing_per_origin]
         default: warrowing_apinis
         min_bound: 1
+    # Which contextual registrations the theory layer carries. Distinct from
+    # `contexts:` above, which is what the CLI resolves: Parity carries both
+    # registrations and exposes neither, so the two lists come apart and a
+    # single key cannot say both. The emitter reads only this one.
+    registrations:
+      # Interval is the one domain with hand-written content left to host the
+      # registrations next to -- the presentation-routing block, which is not
+      # derivable and must not be. So its generated theory is separate and
+      # `Interval_Analyses` stays hand-written and imports it. The mechanism is
+      # uniform across domains; only whether there is a hand-written host differs.
+      theory: Interval_Contextual_Assembly
+      entry_state: {solvers: [warrowing_apinis], default: warrowing_apinis}
+      call_string: {solvers: [warrowing_apinis], default: warrowing_apinis}
     legacy:
       impl_prefix: ivl
+      # Interval's entry-state constants predate the published convention:
+      # seven are spelled without the domain prefix, it publishes `reader`
+      # which no other domain does, and `context_rel` precedes the three
+      # `analyse_` names. Consumers and examples cite these, so the whole
+      # ordered list is given rather than a rename map.
+      ctx_defines:
+        entry_state:
+          - interval_entry_state_spec: analysis_spec
+          - interval_entry_state_root_query: root_query
+          - entry_state_eqs_prog: equations
+          - entry_state_sol_prog: solution
+          - entry_state_terminates_prog: terminates
+          - entry_state_vars_prog: sol_vars
+          - entry_state_env_prog: sol_env
+          - entry_state_sg_st_prog: reader
+          - entry_state_context_rel: admitted_contexts
+          - analyse_interval_entry_state_result_for: result
+          - analyse_interval_entry_state_report_for: verdict_report
+          - analyse_interval_entry_state_projection_for: check_projection
       classifier: interval_classify_check
       init_gamma: interval_cinit_gamma
       binders:
@@ -127,6 +165,13 @@ domains:
     value_type: parity
     tag: ParityValue
     routes: [always_join, per_origin]
+    # Which contextual registrations the theory layer carries. Distinct from
+    # `contexts:` above, which is what the CLI resolves: Parity carries both
+    # registrations and exposes neither, so the two lists come apart and a
+    # single key cannot say both. The emitter reads only this one.
+    registrations:
+      entry_state: {solvers: [always_join], default: always_join}
+      call_string: {solvers: [always_join], default: always_join}
     legacy:
       impl_prefix: parity
       classifier: parity_classify_check
@@ -169,6 +214,20 @@ domains:
         solvers: [always_join, warrowing_apinis]
         default: warrowing_apinis
         min_bound: 1
+    # Int's operations carry a refinement mode. The unit assembly pins it to
+    # the production value because a `global_interpretation` cannot leave a
+    # parameter free; the contextual registrations are plain interpretations,
+    # so they generalise that pin back to a fixed binder and stay mode-generic.
+    # The asymmetry is forced by the emission form, not chosen per domain.
+    registrations:
+      # Declared once for the domain, not per context: the rule is that
+      # contextual registrations generalise and the unit one pins, which
+      # follows from `global_interpretation` being unable to leave a parameter
+      # free. Per-context copies would invite one context to disagree with the
+      # other about what `Refine_Fixpoint` generalises to.
+      generalize: {Refine_Fixpoint: {binder: mode, type: refine_mode}}
+      entry_state: {solvers: [always_join, warrowing_apinis], default: warrowing_apinis}
+      call_string: {solvers: [always_join, warrowing_apinis], default: warrowing_apinis}
     legacy:
       impl_prefix: int
       classifier: int_classify_check
@@ -226,11 +285,17 @@ domains:
     contexts:
       entry_state: {solvers: [always_join], default: always_join}
       call_string: {solvers: [always_join], default: always_join, min_bound: 1}
+    # Which contextual registrations the theory layer carries. Distinct from
+    # `contexts:` above, which is what the CLI resolves: Parity carries both
+    # registrations and exposes neither, so the two lists come apart and a
+    # single key cannot say both. The emitter reads only this one.
+    registrations:
+      entry_state: {solvers: [always_join], default: always_join}
+      call_string: {solvers: [always_join], default: always_join}
     legacy:
       impl_prefix: congruence
       classifier: congruence_classify_check
       init_gamma: congruence_cinit_gamma
-      hide_consts: [phase.N]
       binders: {always_join: congruence_join, per_origin: congruence_po_asm}
       prefixes: {always_join: congruence_unit, per_origin: congruence_po}
       routes:

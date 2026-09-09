@@ -39,6 +39,9 @@ from pathlib import Path
 import yaml
 
 MAX_LINE = 100
+# What the operand packer fills to. Deliberately below MAX_LINE so a rename has
+# room to grow without pushing a generated line past the layout rule.
+PACK_WIDTH = 90
 
 SYMBOL = re.compile(r"\\<\^?[A-Za-z][A-Za-z0-9_']*>")
 
@@ -64,10 +67,15 @@ DEFINES_FULL = [
     ("report_with_state", "report_with_state"),
 ]
 DEFINES_SIBLING = [
+    ("root_query", "root_query"),
     ("solution", "solution"), ("terminates", "terminates"),
     ("vars", "sol_vars"), ("result", "result"),
     ("state_at", "state_at"), ("report", "report"),
 ]
+
+# How a second registration of the same context names itself.
+SOLVER_BINDER_SUFFIX = {"always_join": "join", "per_origin": "po",
+                        "warrowing_apinis": "warrow", "warrowing_per_origin": "wpo"}
 
 SOLVER_ORDER = ["always_join", "per_origin", "warrowing_apinis",
                 "warrowing_per_origin"]
@@ -112,6 +120,21 @@ class Domain:
         # that adds the generator does not demand files a later commit adds.
         self.adopted = entry.get("adopted", False)
         self.contexts = entry.get("contexts", {})
+        # What the theory layer registers, as opposed to what the CLI resolves.
+        # Parity registers both contexts and exposes neither, so a domain can
+        # have one without the other and the emitter must read only this.
+        regs = dict(entry.get("registrations", {}))
+        # Domain-level, not per context: which pinned role arguments a
+        # contextual registration leaves free. The unit registration cannot --
+        # a `global_interpretation` fixes every parameter -- so this applies to
+        # the contextual ones only, and applies to all of them alike.
+        self.generalize = regs.pop("generalize", {})
+        # Generated in place under the domain's existing theory name, so no
+        # importer and no ROOT entry changes: `directories "generated"` is
+        # already on the search path. A domain with hand-written content left
+        # names a separate theory for the generated half instead.
+        self.ctx_theory = regs.pop("theory", f"{self.name}_Analyses")
+        self.registrations = regs
         legacy = entry.get("legacy", {})
         self.legacy = legacy
         self.impl = legacy.get("impl_prefix", self.name.lower())
@@ -127,6 +150,38 @@ class Domain:
 
     def binder(self, route):
         return self.legacy.get("binders", {}).get(route, f"{self.impl}_{route}")
+
+    def ctx_binder(self, ctx, solver=None):
+        """The binder for one contextual registration.
+
+        A context's first published solver takes the plain name; a second is
+        distinguished by its solver, since both registrations coexist in one
+        theory and one `context` block.
+        """
+        override = self.legacy.get("ctx_binders", {}).get(ctx)
+        if override:
+            return override
+        base = f"{self.name.lower()}_{CONTEXT_PARAMS[ctx]['binder_suffix']}"
+        solvers = self.registrations.get(ctx, {}).get("solvers", [])
+        if solver is None or not solvers or solver == solvers[0]:
+            return base
+        return f"{base}_{SOLVER_BINDER_SUFFIX[solver]}"
+
+    def ctx_defines(self, ctx):
+        """The published names of a contextual registration.
+
+        Derived from the domain's lowercase name -- not `impl_prefix`, which is
+        the implementation's spelling and diverges from the published one
+        (Interval publishes `interval_entry_state_spec` while implementing as
+        `ivl`). A domain whose published names predate this convention gives the
+        whole ordered list in `legacy.ctx_defines`.
+        """
+        override = self.legacy.get("ctx_defines", {}).get(ctx)
+        if override:
+            return [(published, const) for entry in override
+                    for published, const in entry.items()]
+        return [(name.format(dom=self.name.lower()), const)
+                for name, const in ENTRY_STATE_DEFINES]
 
     def prefix(self, route):
         return self.legacy.get("prefixes", {}).get(route, f"{self.impl}_{route}")
@@ -190,15 +245,22 @@ def fill(body, width=85):
     return "\n".join(out[:-1])
 
 
-def role_term(role):
+def role_term(role, generalize=None):
     """A role in term position: a bare name, or a quoted application.
 
     An applied role must be one argument to the interpretation, and Isabelle
     reads a quoted term as one argument. Only `const` and `args` are honoured,
     so a role can never smuggle in arbitrary syntax.
+
+    `generalize` maps a pinned argument to the binder that replaces it, so a
+    registration that leaves a configuration parameter free renders the same
+    roles against that binder. The substitution is by value rather than by
+    position, so it does not depend on how many arguments a role takes.
     """
     if isinstance(role, dict):
-        args = " ".join(str(a) for a in role["args"])
+        subst = generalize or {}
+        args = " ".join(subst.get(str(a), {}).get("binder", str(a))
+                        for a in role["args"])
         return f'"{role["const"]} {args}"'
     return role
 
@@ -283,8 +345,31 @@ def interpretation(dom, route, solvers):
         out.append(f"    {'' if i == 0 else 'and '}{prefix}_{published}"
                    f" = {binder}.{const}")
 
+    out += obligations(f, interp, UNIT_HEADER, UNIT_CASE4)
+    return out
+
+
+# The unit locale adds no axioms of its own, so its `intro` leaves the parent's
+# predicate as one goal; the parent's own `intro` splits that into the twelve
+# assumptions. `unfold_locales` would go further and decompose the transfer
+# bundle per operation, which the domain's whole-bundle soundness rule cannot
+# discharge one goal at a time. A contextual registration interprets the parent
+# directly and so needs only the parent's `intro`.
+UNIT_HEADER = ["proof (rule unit_dg_analysis.intro, rule routed_dg_analysis.intro,",
+               "       goal_cases)"]
+ROUTED_HEADER = ["proof (rule routed_dg_analysis.intro, goal_cases)"]
+
+# Obligation 4 says the route reads only what the abstraction preserves. At the
+# unit context the route is constant, so it is trivial; elsewhere it is the one
+# obligation that carries the context's own content.
+UNIT_CASE4 = ["  case (4 gs u ctx d ca) show ?case by simp"]
+
+
+def obligations(f, interp, header, case4):
+    """The twelve routed obligations. Every registration discharges the same
+    twelve in the same order; only the header and obligation 4 vary."""
+    out = list(header)
     out += [
-        "proof (rule unit_dg_analysis.intro, goal_cases)",
         f"  case (1 gs) show ?case by (rule {role_name(f['transfer_sound'])})",
         "next",
         "  case (2 gs a s) then show ?case",
@@ -294,26 +379,297 @@ def interpretation(dom, route, solvers):
         "  case (3 gs ci s) show ?case",
         f"    unfolding fun_of_exec_dg_st_for_def by (rule {role_name(f['enter_commute'])})",
         "next",
-        "  case (4 eqs x) then show ?case",
+    ]
+    # Obligation 4 is the caller's: at the unit context the route ignores the
+    # state and it is trivial, elsewhere it carries the context's own content.
+    out += case4
+    out += [
+        "next",
+        # The seed key is a different constructor from the global one. Inherited
+        # from the routed parent and independent of the domain.
+        "  case (5 v ctx) show ?case by simp",
+        "next",
+        "  case (6 eqs x) then show ?case",
     ]
     out += rule_step(f"{interp}.partial_post_solution[OF _ surjective_pairing]")
-    out += ["next", "  case (5 eqs x) then show ?case"]
+    out += ["next", "  case (7 eqs x) then show ?case"]
     out += rule_step(f"{interp}.finite_stabl_solve")
     out += [
         "next",
-        f"  case (6 c d s) then show ?case by (rule {role_name(f['classifier'])}_proved)",
+        f"  case (8 c d s) then show ?case by (rule {role_name(f['classifier'])}_proved)",
         "next",
-        f"  case (7 c d s) then show ?case by (rule {role_name(f['classifier'])}_refuted)",
+        f"  case (9 c d s) then show ?case by (rule {role_name(f['classifier'])}_refuted)",
         "next",
-        "  case 8 show ?case by (rule refl)",
+        "  case 10 show ?case by (rule refl)",
         "next",
-        f"  case (9 gs) show ?case by (rule {role_name(f['init_gamma'])})",
+        f"  case (11 gs) show ?case by (rule {role_name(f['init_gamma'])})",
         "next",
-        "  case (10 eqs x) then show ?case",
+        "  case (12 eqs x) then show ?case",
     ]
     out += rule_step(f"{interp}.solve_dom_of_solve_c")
     out.append("qed")
     return out
+
+
+# A contextual registration differs from the unit one in seven positional
+# arguments and in obligation 4. `route` is the executable route and `route_abs`
+# the abstract one; they coincide everywhere except entry state, where the
+# difference between them is the whole content of obligation 4.
+CONTEXT_PARAMS = {
+    "entry_state": {
+        "binder_suffix": "es",
+        "gk": lambda vt: f"(unit, {vt} list) routed_gk",
+        "global": '"Analysis_Global ()"',
+        "seed": "Activation_Seed",
+        "route": "exec_formals_route",
+        "root_ctx": '"[]"',
+        "route_abs": '"\\<lambda>_. formals_route_lifted_gen"',
+        "case4": ["  case (4 gs u ctx d ca) show ?case",
+                  "    unfolding fun_of_exec_dg_st_for_def",
+                  "    by (rule exec_formals_route_commute[symmetric])"],
+        "ctx_type": lambda vt: f"{vt} list",
+        "arg": "",
+        "sound": "entry_state_activation_collect_sound",
+    },
+    "call_string": {
+        "binder_suffix": "cs",
+        "gk": lambda vt: "call_string_gk",
+        "global": "Call_String_Context.Global",
+        "seed": "Call_String_Context.Seed",
+        "route": '"\\<lambda>_. cs_route k"',
+        "root_ctx": '"[]"',
+        "route_abs": '"\\<lambda>_. cs_route k"',
+        "case4": ["  case (4 gs u ctx d ca) show ?case"
+                  " by (rule cs_route_indep_of_data)"],
+        "ctx_type": lambda vt: "call_string",
+        "arg": "k ",
+        "sound": "fun_route_activation_collect_sound[OF cs_route_context_agree]",
+    },
+}
+
+# Published name -> locale constant, for an entry-state registration. A domain
+# whose spellings predate this list overrides it wholesale in `legacy`, because
+# the overriding domain also reorders and adds a name; a rename map alone could
+# not express that.
+ENTRY_STATE_DEFINES = [
+    ("{dom}_entry_state_spec", "analysis_spec"),
+    ("{dom}_entry_state_root_query", "root_query"),
+    ("{dom}_entry_state_equations", "equations"),
+    ("{dom}_entry_state_solution", "solution"),
+    ("{dom}_entry_state_terminates_for", "terminates"),
+    ("{dom}_entry_state_vars", "sol_vars"),
+    ("{dom}_entry_state_env", "sol_env"),
+    ("analyse_{dom}_entry_state_result_for", "result"),
+    ("analyse_{dom}_entry_state_report_for", "verdict_report"),
+    ("analyse_{dom}_entry_state_projection_for", "check_projection"),
+    ("{dom}_entry_state_context_rel", "admitted_contexts"),
+]
+
+
+def pack_operands(groups):
+    """Lay out the operand lines, one line per group where that fits.
+
+    The groups are the reader's grouping -- the six local operations, then the
+    call and event operations with the route, then the solver's decision
+    procedure. A domain whose operations carry a configuration argument has
+    quoted, longer roles and will not fit that way, so fall back to filling by
+    width, which is what the layout rule actually requires.
+    """
+    lines = ["    " + " ".join(gs) for gs in groups if gs]
+    if all(symbol_len(l) <= MAX_LINE for l in lines):
+        return lines
+    # Fill to a narrower budget than the layout limit. A line filled exactly to
+    # the limit has no headroom: renaming a domain re-renders it one symbol too
+    # long, and nothing would catch that, because the drift gate compares
+    # generated against checked-in and both sides move together.
+    out, line = [], "   "
+    for op in [op for gs in groups for op in gs]:
+        if symbol_len(f"{line} {op}") > PACK_WIDTH:
+            out.append(line)
+            line = "   "
+        line = f"{line} {op}"
+    out.append(line)
+    return out
+
+
+def contextual_interpretation(dom, ctx, route, solvers, generalize=None):
+    """One contextual `global_interpretation` of `routed_dg_analysis`.
+
+    The unit registration interprets `unit_dg_analysis`, which fixes the
+    context to `unit`; here the context terms come from the registry's
+    `contexts:` entry and the locale is the parent directly.
+    """
+    f = dom.facts()
+    p = CONTEXT_PARAMS[ctx]
+    interp = solvers[route]["interp"]
+    binder = dom.ctx_binder(ctx, route)
+    term = {k: role_term(v, generalize) for k, v in f.items()}
+    vt = dom.value_type
+    # A `global_interpretation` cannot leave a parameter free, so any
+    # registration with a free parameter is a plain `interpretation` inside a
+    # `context fixes` block and publishes by direct application rather than by
+    # `defines` renaming. A call-string bound is always such a parameter; a
+    # domain that generalises a pinned configuration argument adds its own.
+    binders = [f"{v['binder']} :: {v['type']}" for v in (generalize or {}).values()]
+    if ctx == "call_string":
+        binders.append("k :: nat")
+    fixed = bool(binders)
+    out = []
+    if fixed:
+        out += ["context", "  fixes " + " and ".join(binders), "begin", ""]
+    out += [
+        f"{'' if fixed else 'global_'}interpretation {binder}: routed_dg_analysis",
+        f"    {term['tf_st']} {term['enter_st']} {term['init_st']}",
+        f"    {p['global']} {p['seed']} {p['route']} {p['root_ctx']}",
+        f"    {interp}_solve",
+        f'    "{interp}.solve_dom TYPE({p["gk"](vt)})',
+        f"       TYPE(({vt} exec_dg_st lifted, {vt} exec_dg_st lifted) dg_state)\"",
+        f"    bot {term['classifier']}",
+    ]
+    out += pack_operands([
+        [term[k] for k in ["skip", "assign", "special", "branch", "body", "return"]],
+        [term["enter_ci"], term["event"], p["route_abs"]],
+        [f"{interp}_solve_c"],
+    ])
+    if not fixed:
+        out += ["  defines"]
+        for i, (published, const) in enumerate(dom.ctx_defines(ctx)):
+            out.append(f"    {'' if i == 0 else 'and '}{published} = {binder}.{const}")
+    out += obligations(f, interp, ROUTED_HEADER, p["case4"])
+    return out
+
+
+def term_of(quoted):
+    """A registration argument in term position.
+
+    The interpretation takes each argument quoted, which is how Isabelle reads a
+    term as one argument; inside a definition body the same term is written
+    plainly, parenthesised when it is an application.
+    """
+    if not quoted.startswith('"'):
+        return quoted
+    inner = quoted[1:-1]
+    return f"({inner})" if " " in inner else inner
+
+
+def published_constants(dom, ctx, route, solvers):
+    """The domain's published contextual constants and soundness re-exports.
+
+    A context registered by `global_interpretation` has `defines` names, so its
+    published constants are thin instances of those at the program's own
+    declaration predicate. A context registered inside a `context fixes` block
+    has none, so its constants apply the pipeline directly -- the call site that
+    needs the pipeline's own code equations rather than defines-derived ones.
+    """
+    f = dom.facts()
+    p = CONTEXT_PARAMS[ctx]
+    interp = solvers[route]["interp"]
+    d, vt = dom.name.lower(), dom.value_type
+    binder = dom.ctx_binder(ctx, route)
+    term = {k: role_term(v) for k, v in f.items()}
+    arg, ctx_ty = p["arg"], p["ctx_type"](vt)
+    pipe = ["    " + " ".join([term["tf_st"], term["enter_st"], term["init_st"]]),
+            "      " + " ".join([term_of(p["global"]), term_of(p["seed"]),
+                                 term_of(p["route"]), term_of(p["root_ctx"])])]
+    out = []
+    if ctx == "entry_state":
+        for pub, src in [("result", "result_for"), ("report", "report_for")]:
+            out += [f"definition analyse_{d}_entry_state_{pub} ::",
+                    f'    "imp_prog \\<Rightarrow> '
+                    + (f'({ctx_ty}, {vt} abs_state) analysis_result" where'
+                       if pub == "result" else
+                       '(pp \\<times> exp \\<times> contextual_verdict) list" where'),
+                    f'  "analyse_{d}_entry_state_{pub} p =',
+                    f'     analyse_{d}_entry_state_{src} (declared_global p) p"', ""]
+        out += [f'definition analyse_{d}_entry_state_terminates :: '
+                f'"imp_prog \\<Rightarrow> bool" where',
+                f'  "analyse_{d}_entry_state_terminates p =',
+                f'     {d}_entry_state_terminates_for (declared_global p) p"', ""]
+    else:
+        for pub, op, extra, ty in [
+                ("result", "result", "", f"({ctx_ty}, {vt} abs_state) analysis_result"),
+                ("report", "verdict_report", f" {term['classifier']}",
+                 "(pp \\<times> exp \\<times> contextual_verdict) list")]:
+            out += [f"definition analyse_{d}_call_string_{pub} ::",
+                    f'    "nat \\<Rightarrow> imp_prog \\<Rightarrow> {ty}" where',
+                    f'  "analyse_{d}_call_string_{pub} {arg}p =',
+                    f"     routed_dg_pipeline.{op}"] + pipe + [
+                    f'       {interp}_solve{extra} (declared_global p) p"', ""]
+        out += [f"definition analyse_{d}_call_string_terminates ::",
+                '    "nat \\<Rightarrow> imp_prog \\<Rightarrow> bool" where',
+                f'  "analyse_{d}_call_string_terminates {arg}p =',
+                "     routed_dg_pipeline.terminates"] + pipe + [
+                f"       ({interp}.solve_dom TYPE({p['gk'](vt)})",
+                f"          TYPE(({vt} exec_dg_st lifted,"
+                f" {vt} exec_dg_st lifted) dg_state))",
+                '       (declared_global p) p"', ""]
+    return out
+
+
+def soundness_lemmas(dom, ctx, route, solvers):
+    """The re-exports. These must sit inside the registration's own block: an
+    `interpretation` does not export outside its context, so a `lemmas` citing
+    the binder is part of the registration rather than something beside it."""
+    p, d = CONTEXT_PARAMS[ctx], dom.name.lower()
+    binder = dom.ctx_binder(ctx, route)
+    out = [f"lemmas analyse_{d}_{ctx}_sound =", f"  {binder}.{p['sound']}", ""]
+    if ctx == "call_string":
+        out += [f"lemmas analyse_{d}_call_string_terminates_of_solve_c =",
+                f"  {binder}.terminates_of_solve_c", ""]
+    return out
+
+
+# Named explicitly rather than relied on transitively. `declared_global` comes
+# from VIMP_Program and `formals_route_lifted_gen` from Routed_Context; both
+# would resolve through the domain's own imports, but an implicit dependency is
+# what turns a later unrelated import prune into a failure nobody can place.
+CONTEXTUAL_IMPORTS = ['"Voblint_Result.Routed_DG_Analysis"',
+                      '"Voblint_Framework.Call_String_Context"',
+                      '"Voblint_Framework.Routed_Context"',
+                      '"Voblint_Solver.TD_Solver_Bridge"',
+                      '"Voblint_VIMP.VIMP_Program"',
+                      '"TD.TD_side_upd_rule"']
+
+CONTEXT_TITLE = {
+    "call_string": "call-string",
+    "entry_state": "entry-state",
+}
+
+
+def render_contextual(dom, solvers):
+    """A domain's contextual registrations, as one generated theory.
+
+    Ordered as the reader needs it and as the hand-written originals were: each
+    registration with the re-exports that must share its block, then the
+    constants that registration publishes.
+    """
+    out = [f"theory {dom.ctx_theory}", "  imports"]
+    out += [f"    {dom.name}_{t}"
+            for t in ["Classify", "Transfer", "Sound", "Exec"]]
+    out += [f"    {i}" for i in CONTEXTUAL_IMPORTS] + ["begin", ""]
+    out += text_block(GENERATED_NOTICE) + [""]
+    for ctx in CONTEXT_ORDER:
+        reg = dom.registrations.get(ctx)
+        if not reg:
+            continue
+        title = CONTEXT_TITLE[ctx]
+        out += [f"section \\<open>{dom.name} at the {title} context\\<close>", ""]
+        for solver in reg["solvers"]:
+            out += contextual_interpretation(
+                dom, ctx, solver, solvers, dom.generalize) + [""]
+            if ctx == "call_string":
+                out += soundness_lemmas(dom, ctx, solver, solvers)
+        if ctx == "call_string":
+            out += ["end", ""]
+        else:
+            out += [f"declare {dom.name.lower()}_entry_state_spec_def"
+                    " [code_unfold]", ""]
+        out += [f"subsection \\<open>The published {title} constants\\<close>", ""]
+        out += published_constants(dom, ctx, reg["default"], solvers)
+        if ctx == "entry_state":
+            out += soundness_lemmas(dom, ctx, reg["default"], solvers)
+    out.append("end")
+    return "\n".join(out) + "\n"
 
 
 def equations_eq_lemma(dom, route):

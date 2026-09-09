@@ -53,7 +53,8 @@ global_interpretation parity_join: unit_dg_analysis
     and parity_unit_state_at = parity_join.state_at
     and parity_unit_report = parity_join.report
     and parity_unit_report_with_state = parity_join.report_with_state
-proof (rule unit_dg_analysis.intro, goal_cases)
+proof (rule unit_dg_analysis.intro, rule routed_dg_analysis.intro,
+       goal_cases)
   case (1 gs) show ?case by (rule parity_is_sound_transfer_for)
 next
   case (2 gs a s) then show ?case
@@ -63,21 +64,25 @@ next
   case (3 gs ci s) show ?case
     unfolding fun_of_exec_dg_st_for_def by (rule parity_enter_st_for_commute)
 next
-  case (4 eqs x) then show ?case
+  case (4 gs u ctx d ca) show ?case by simp
+next
+  case (5 v ctx) show ?case by simp
+next
+  case (6 eqs x) then show ?case
     by (rule TD_side_always_join_Interp.partial_post_solution[OF _ surjective_pairing])
 next
-  case (5 eqs x) then show ?case
+  case (7 eqs x) then show ?case
     by (rule TD_side_always_join_Interp.finite_stabl_solve)
 next
-  case (6 c d s) then show ?case by (rule parity_classify_check_proved)
+  case (8 c d s) then show ?case by (rule parity_classify_check_proved)
 next
-  case (7 c d s) then show ?case by (rule parity_classify_check_refuted)
+  case (9 c d s) then show ?case by (rule parity_classify_check_refuted)
 next
-  case 8 show ?case by (rule refl)
+  case 10 show ?case by (rule refl)
 next
-  case (9 gs) show ?case by (rule parity_cinit_gamma)
+  case (11 gs) show ?case by (rule parity_cinit_gamma)
 next
-  case (10 eqs x) then show ?case
+  case (12 eqs x) then show ?case
     by (rule TD_side_always_join_Interp.solve_dom_of_solve_c)
 qed
 
@@ -100,13 +105,15 @@ global_interpretation parity_po_asm: unit_dg_analysis
     skip_parity assign_parity special_parity branch_parity body_parity return_parity
     enter_parity_ci_for event_parity TD_side_per_origin_Interp_solve_c
   defines
-    parity_po_solution = parity_po_asm.solution
+    parity_po_root_query = parity_po_asm.root_query
+    and parity_po_solution = parity_po_asm.solution
     and parity_po_terminates = parity_po_asm.terminates
     and parity_po_vars = parity_po_asm.sol_vars
     and parity_po_result = parity_po_asm.result
     and parity_po_state_at = parity_po_asm.state_at
     and parity_po_report = parity_po_asm.report
-proof (rule unit_dg_analysis.intro, goal_cases)
+proof (rule unit_dg_analysis.intro, rule routed_dg_analysis.intro,
+       goal_cases)
   case (1 gs) show ?case by (rule parity_is_sound_transfer_for)
 next
   case (2 gs a s) then show ?case
@@ -116,21 +123,25 @@ next
   case (3 gs ci s) show ?case
     unfolding fun_of_exec_dg_st_for_def by (rule parity_enter_st_for_commute)
 next
-  case (4 eqs x) then show ?case
+  case (4 gs u ctx d ca) show ?case by simp
+next
+  case (5 v ctx) show ?case by simp
+next
+  case (6 eqs x) then show ?case
     by (rule TD_side_per_origin_Interp.partial_post_solution[OF _ surjective_pairing])
 next
-  case (5 eqs x) then show ?case
+  case (7 eqs x) then show ?case
     by (rule TD_side_per_origin_Interp.finite_stabl_solve)
 next
-  case (6 c d s) then show ?case by (rule parity_classify_check_proved)
+  case (8 c d s) then show ?case by (rule parity_classify_check_proved)
 next
-  case (7 c d s) then show ?case by (rule parity_classify_check_refuted)
+  case (9 c d s) then show ?case by (rule parity_classify_check_refuted)
 next
-  case 8 show ?case by (rule refl)
+  case 10 show ?case by (rule refl)
 next
-  case (9 gs) show ?case by (rule parity_cinit_gamma)
+  case (11 gs) show ?case by (rule parity_cinit_gamma)
 next
-  case (10 eqs x) then show ?case
+  case (12 eqs x) then show ?case
     by (rule TD_side_per_origin_Interp.solve_dom_of_solve_c)
 qed
 

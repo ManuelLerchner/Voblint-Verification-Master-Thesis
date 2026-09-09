@@ -9,8 +9,6 @@ theory Sign_Assembly
     "Voblint_VIMP.VIMP_Notation"
 begin
 
-hide_const phase.N
-
 section \<open>Sign through the shared unit-context assembly\<close>
 
 text \<open>
@@ -56,7 +54,8 @@ global_interpretation sign_join: unit_dg_analysis
     and sign_unit_state_at = sign_join.state_at
     and sign_unit_report = sign_join.report
     and sign_unit_report_with_state = sign_join.report_with_state
-proof (rule unit_dg_analysis.intro, goal_cases)
+proof (rule unit_dg_analysis.intro, rule routed_dg_analysis.intro,
+       goal_cases)
   case (1 gs) show ?case by (rule sign_is_sound_transfer_for)
 next
   case (2 gs a s) then show ?case
@@ -66,21 +65,25 @@ next
   case (3 gs ci s) show ?case
     unfolding fun_of_exec_dg_st_for_def by (rule sign_enter_st_for_commute)
 next
-  case (4 eqs x) then show ?case
+  case (4 gs u ctx d ca) show ?case by simp
+next
+  case (5 v ctx) show ?case by simp
+next
+  case (6 eqs x) then show ?case
     by (rule TD_side_always_join_Interp.partial_post_solution[OF _ surjective_pairing])
 next
-  case (5 eqs x) then show ?case
+  case (7 eqs x) then show ?case
     by (rule TD_side_always_join_Interp.finite_stabl_solve)
 next
-  case (6 c d s) then show ?case by (rule sign_classify_check_proved)
+  case (8 c d s) then show ?case by (rule sign_classify_check_proved)
 next
-  case (7 c d s) then show ?case by (rule sign_classify_check_refuted)
+  case (9 c d s) then show ?case by (rule sign_classify_check_refuted)
 next
-  case 8 show ?case by (rule refl)
+  case 10 show ?case by (rule refl)
 next
-  case (9 gs) show ?case by (rule sign_cinit_gamma)
+  case (11 gs) show ?case by (rule sign_cinit_gamma)
 next
-  case (10 eqs x) then show ?case
+  case (12 eqs x) then show ?case
     by (rule TD_side_always_join_Interp.solve_dom_of_solve_c)
 qed
 
@@ -103,13 +106,15 @@ global_interpretation sign_po_asm: unit_dg_analysis
     skip_sign assign_sign special_sign branch_sign body_sign return_sign
     enter_sign_ci_for event_sign TD_side_per_origin_Interp_solve_c
   defines
-    sign_po_solution = sign_po_asm.solution
+    sign_po_root_query = sign_po_asm.root_query
+    and sign_po_solution = sign_po_asm.solution
     and sign_po_terminates = sign_po_asm.terminates
     and sign_po_vars = sign_po_asm.sol_vars
     and sign_po_result = sign_po_asm.result
     and sign_po_state_at = sign_po_asm.state_at
     and sign_po_report = sign_po_asm.report
-proof (rule unit_dg_analysis.intro, goal_cases)
+proof (rule unit_dg_analysis.intro, rule routed_dg_analysis.intro,
+       goal_cases)
   case (1 gs) show ?case by (rule sign_is_sound_transfer_for)
 next
   case (2 gs a s) then show ?case
@@ -119,21 +124,25 @@ next
   case (3 gs ci s) show ?case
     unfolding fun_of_exec_dg_st_for_def by (rule sign_enter_st_for_commute)
 next
-  case (4 eqs x) then show ?case
+  case (4 gs u ctx d ca) show ?case by simp
+next
+  case (5 v ctx) show ?case by simp
+next
+  case (6 eqs x) then show ?case
     by (rule TD_side_per_origin_Interp.partial_post_solution[OF _ surjective_pairing])
 next
-  case (5 eqs x) then show ?case
+  case (7 eqs x) then show ?case
     by (rule TD_side_per_origin_Interp.finite_stabl_solve)
 next
-  case (6 c d s) then show ?case by (rule sign_classify_check_proved)
+  case (8 c d s) then show ?case by (rule sign_classify_check_proved)
 next
-  case (7 c d s) then show ?case by (rule sign_classify_check_refuted)
+  case (9 c d s) then show ?case by (rule sign_classify_check_refuted)
 next
-  case 8 show ?case by (rule refl)
+  case 10 show ?case by (rule refl)
 next
-  case (9 gs) show ?case by (rule sign_cinit_gamma)
+  case (11 gs) show ?case by (rule sign_cinit_gamma)
 next
-  case (10 eqs x) then show ?case
+  case (12 eqs x) then show ?case
     by (rule TD_side_per_origin_Interp.solve_dom_of_solve_c)
 qed
 

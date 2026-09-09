@@ -54,7 +54,8 @@ global_interpretation interval_warrow_asm: unit_dg_analysis
     and interval_td_state_at = interval_warrow_asm.state_at
     and interval_td_report = interval_warrow_asm.report
     and interval_td_report_with_state = interval_warrow_asm.report_with_state
-proof (rule unit_dg_analysis.intro, goal_cases)
+proof (rule unit_dg_analysis.intro, rule routed_dg_analysis.intro,
+       goal_cases)
   case (1 gs) show ?case by (rule ivl_is_sound_transfer_for)
 next
   case (2 gs a s) then show ?case
@@ -64,21 +65,25 @@ next
   case (3 gs ci s) show ?case
     unfolding fun_of_exec_dg_st_for_def by (rule ivl_enter_st_for_commute)
 next
-  case (4 eqs x) then show ?case
+  case (4 gs u ctx d ca) show ?case by simp
+next
+  case (5 v ctx) show ?case by simp
+next
+  case (6 eqs x) then show ?case
     by (rule TD_side_warrowing_apinis_Interp.partial_post_solution[OF _ surjective_pairing])
 next
-  case (5 eqs x) then show ?case
+  case (7 eqs x) then show ?case
     by (rule TD_side_warrowing_apinis_Interp.finite_stabl_solve)
 next
-  case (6 c d s) then show ?case by (rule interval_classify_check_proved)
+  case (8 c d s) then show ?case by (rule interval_classify_check_proved)
 next
-  case (7 c d s) then show ?case by (rule interval_classify_check_refuted)
+  case (9 c d s) then show ?case by (rule interval_classify_check_refuted)
 next
-  case 8 show ?case by (rule refl)
+  case 10 show ?case by (rule refl)
 next
-  case (9 gs) show ?case by (rule interval_cinit_gamma)
+  case (11 gs) show ?case by (rule interval_cinit_gamma)
 next
-  case (10 eqs x) then show ?case
+  case (12 eqs x) then show ?case
     by (rule TD_side_warrowing_apinis_Interp.solve_dom_of_solve_c)
 qed
 
@@ -101,13 +106,15 @@ global_interpretation interval_join_asm: unit_dg_analysis
     skip_ivl assign_ivl special_ivl branch_ivl body_ivl return_ivl
     enter_ivl_ci_for event_ivl TD_side_always_join_Interp_solve_c
   defines
-    interval_join_solution = interval_join_asm.solution
+    interval_join_root_query = interval_join_asm.root_query
+    and interval_join_solution = interval_join_asm.solution
     and interval_join_terminates = interval_join_asm.terminates
     and interval_join_vars = interval_join_asm.sol_vars
     and interval_join_result = interval_join_asm.result
     and interval_join_state_at = interval_join_asm.state_at
     and interval_join_report = interval_join_asm.report
-proof (rule unit_dg_analysis.intro, goal_cases)
+proof (rule unit_dg_analysis.intro, rule routed_dg_analysis.intro,
+       goal_cases)
   case (1 gs) show ?case by (rule ivl_is_sound_transfer_for)
 next
   case (2 gs a s) then show ?case
@@ -117,21 +124,25 @@ next
   case (3 gs ci s) show ?case
     unfolding fun_of_exec_dg_st_for_def by (rule ivl_enter_st_for_commute)
 next
-  case (4 eqs x) then show ?case
+  case (4 gs u ctx d ca) show ?case by simp
+next
+  case (5 v ctx) show ?case by simp
+next
+  case (6 eqs x) then show ?case
     by (rule TD_side_always_join_Interp.partial_post_solution[OF _ surjective_pairing])
 next
-  case (5 eqs x) then show ?case
+  case (7 eqs x) then show ?case
     by (rule TD_side_always_join_Interp.finite_stabl_solve)
 next
-  case (6 c d s) then show ?case by (rule interval_classify_check_proved)
+  case (8 c d s) then show ?case by (rule interval_classify_check_proved)
 next
-  case (7 c d s) then show ?case by (rule interval_classify_check_refuted)
+  case (9 c d s) then show ?case by (rule interval_classify_check_refuted)
 next
-  case 8 show ?case by (rule refl)
+  case 10 show ?case by (rule refl)
 next
-  case (9 gs) show ?case by (rule interval_cinit_gamma)
+  case (11 gs) show ?case by (rule interval_cinit_gamma)
 next
-  case (10 eqs x) then show ?case
+  case (12 eqs x) then show ?case
     by (rule TD_side_always_join_Interp.solve_dom_of_solve_c)
 qed
 
@@ -146,13 +157,15 @@ global_interpretation interval_po_asm: unit_dg_analysis
     skip_ivl assign_ivl special_ivl branch_ivl body_ivl return_ivl
     enter_ivl_ci_for event_ivl TD_side_per_origin_Interp_solve_c
   defines
-    interval_po_solution = interval_po_asm.solution
+    interval_po_root_query = interval_po_asm.root_query
+    and interval_po_solution = interval_po_asm.solution
     and interval_po_terminates = interval_po_asm.terminates
     and interval_po_vars = interval_po_asm.sol_vars
     and interval_po_result = interval_po_asm.result
     and interval_po_state_at = interval_po_asm.state_at
     and interval_po_report = interval_po_asm.report
-proof (rule unit_dg_analysis.intro, goal_cases)
+proof (rule unit_dg_analysis.intro, rule routed_dg_analysis.intro,
+       goal_cases)
   case (1 gs) show ?case by (rule ivl_is_sound_transfer_for)
 next
   case (2 gs a s) then show ?case
@@ -162,21 +175,25 @@ next
   case (3 gs ci s) show ?case
     unfolding fun_of_exec_dg_st_for_def by (rule ivl_enter_st_for_commute)
 next
-  case (4 eqs x) then show ?case
+  case (4 gs u ctx d ca) show ?case by simp
+next
+  case (5 v ctx) show ?case by simp
+next
+  case (6 eqs x) then show ?case
     by (rule TD_side_per_origin_Interp.partial_post_solution[OF _ surjective_pairing])
 next
-  case (5 eqs x) then show ?case
+  case (7 eqs x) then show ?case
     by (rule TD_side_per_origin_Interp.finite_stabl_solve)
 next
-  case (6 c d s) then show ?case by (rule interval_classify_check_proved)
+  case (8 c d s) then show ?case by (rule interval_classify_check_proved)
 next
-  case (7 c d s) then show ?case by (rule interval_classify_check_refuted)
+  case (9 c d s) then show ?case by (rule interval_classify_check_refuted)
 next
-  case 8 show ?case by (rule refl)
+  case 10 show ?case by (rule refl)
 next
-  case (9 gs) show ?case by (rule interval_cinit_gamma)
+  case (11 gs) show ?case by (rule interval_cinit_gamma)
 next
-  case (10 eqs x) then show ?case
+  case (12 eqs x) then show ?case
     by (rule TD_side_per_origin_Interp.solve_dom_of_solve_c)
 qed
 
@@ -191,13 +208,15 @@ global_interpretation interval_wpo_asm: unit_dg_analysis
     skip_ivl assign_ivl special_ivl branch_ivl body_ivl return_ivl
     enter_ivl_ci_for event_ivl TD_side_warrowing_per_origin_Interp_solve_c
   defines
-    interval_wpo_solution = interval_wpo_asm.solution
+    interval_wpo_root_query = interval_wpo_asm.root_query
+    and interval_wpo_solution = interval_wpo_asm.solution
     and interval_wpo_terminates = interval_wpo_asm.terminates
     and interval_wpo_vars = interval_wpo_asm.sol_vars
     and interval_wpo_result = interval_wpo_asm.result
     and interval_wpo_state_at = interval_wpo_asm.state_at
     and interval_wpo_report = interval_wpo_asm.report
-proof (rule unit_dg_analysis.intro, goal_cases)
+proof (rule unit_dg_analysis.intro, rule routed_dg_analysis.intro,
+       goal_cases)
   case (1 gs) show ?case by (rule ivl_is_sound_transfer_for)
 next
   case (2 gs a s) then show ?case
@@ -207,21 +226,25 @@ next
   case (3 gs ci s) show ?case
     unfolding fun_of_exec_dg_st_for_def by (rule ivl_enter_st_for_commute)
 next
-  case (4 eqs x) then show ?case
+  case (4 gs u ctx d ca) show ?case by simp
+next
+  case (5 v ctx) show ?case by simp
+next
+  case (6 eqs x) then show ?case
     by (rule TD_side_warrowing_per_origin_Interp.partial_post_solution[OF _ surjective_pairing])
 next
-  case (5 eqs x) then show ?case
+  case (7 eqs x) then show ?case
     by (rule TD_side_warrowing_per_origin_Interp.finite_stabl_solve)
 next
-  case (6 c d s) then show ?case by (rule interval_classify_check_proved)
+  case (8 c d s) then show ?case by (rule interval_classify_check_proved)
 next
-  case (7 c d s) then show ?case by (rule interval_classify_check_refuted)
+  case (9 c d s) then show ?case by (rule interval_classify_check_refuted)
 next
-  case 8 show ?case by (rule refl)
+  case 10 show ?case by (rule refl)
 next
-  case (9 gs) show ?case by (rule interval_cinit_gamma)
+  case (11 gs) show ?case by (rule interval_cinit_gamma)
 next
-  case (10 eqs x) then show ?case
+  case (12 eqs x) then show ?case
     by (rule TD_side_warrowing_per_origin_Interp.solve_dom_of_solve_c)
 qed
 

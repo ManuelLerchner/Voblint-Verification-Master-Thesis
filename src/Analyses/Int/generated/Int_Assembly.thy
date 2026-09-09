@@ -55,7 +55,8 @@ global_interpretation int_warrow_asm: unit_dg_analysis
     and int_unit_state_at = int_warrow_asm.state_at
     and int_unit_report = int_warrow_asm.report
     and int_unit_report_with_state = int_warrow_asm.report_with_state
-proof (rule unit_dg_analysis.intro, goal_cases)
+proof (rule unit_dg_analysis.intro, rule routed_dg_analysis.intro,
+       goal_cases)
   case (1 gs) show ?case by (rule int_is_sound_transfer_for)
 next
   case (2 gs a s) then show ?case
@@ -65,21 +66,25 @@ next
   case (3 gs ci s) show ?case
     unfolding fun_of_exec_dg_st_for_def by (rule int_dom_enter_st_for_commute)
 next
-  case (4 eqs x) then show ?case
+  case (4 gs u ctx d ca) show ?case by simp
+next
+  case (5 v ctx) show ?case by simp
+next
+  case (6 eqs x) then show ?case
     by (rule TD_side_warrowing_apinis_Interp.partial_post_solution[OF _ surjective_pairing])
 next
-  case (5 eqs x) then show ?case
+  case (7 eqs x) then show ?case
     by (rule TD_side_warrowing_apinis_Interp.finite_stabl_solve)
 next
-  case (6 c d s) then show ?case by (rule int_classify_check_proved)
+  case (8 c d s) then show ?case by (rule int_classify_check_proved)
 next
-  case (7 c d s) then show ?case by (rule int_classify_check_refuted)
+  case (9 c d s) then show ?case by (rule int_classify_check_refuted)
 next
-  case 8 show ?case by (rule refl)
+  case 10 show ?case by (rule refl)
 next
-  case (9 gs) show ?case by (rule int_cinit_gamma)
+  case (11 gs) show ?case by (rule int_cinit_gamma)
 next
-  case (10 eqs x) then show ?case
+  case (12 eqs x) then show ?case
     by (rule TD_side_warrowing_apinis_Interp.solve_dom_of_solve_c)
 qed
 
@@ -103,13 +108,15 @@ global_interpretation int_join_asm: unit_dg_analysis
     "branch_int_dom_for Refine_Fixpoint" body_int_dom "return_int_dom Refine_Fixpoint"
     "enter_int_dom_ci_for Refine_Fixpoint" event_int_dom TD_side_always_join_Interp_solve_c
   defines
-    int_join_solution = int_join_asm.solution
+    int_join_root_query = int_join_asm.root_query
+    and int_join_solution = int_join_asm.solution
     and int_join_terminates = int_join_asm.terminates
     and int_join_vars = int_join_asm.sol_vars
     and int_join_result = int_join_asm.result
     and int_join_state_at = int_join_asm.state_at
     and int_join_report = int_join_asm.report
-proof (rule unit_dg_analysis.intro, goal_cases)
+proof (rule unit_dg_analysis.intro, rule routed_dg_analysis.intro,
+       goal_cases)
   case (1 gs) show ?case by (rule int_is_sound_transfer_for)
 next
   case (2 gs a s) then show ?case
@@ -119,21 +126,25 @@ next
   case (3 gs ci s) show ?case
     unfolding fun_of_exec_dg_st_for_def by (rule int_dom_enter_st_for_commute)
 next
-  case (4 eqs x) then show ?case
+  case (4 gs u ctx d ca) show ?case by simp
+next
+  case (5 v ctx) show ?case by simp
+next
+  case (6 eqs x) then show ?case
     by (rule TD_side_always_join_Interp.partial_post_solution[OF _ surjective_pairing])
 next
-  case (5 eqs x) then show ?case
+  case (7 eqs x) then show ?case
     by (rule TD_side_always_join_Interp.finite_stabl_solve)
 next
-  case (6 c d s) then show ?case by (rule int_classify_check_proved)
+  case (8 c d s) then show ?case by (rule int_classify_check_proved)
 next
-  case (7 c d s) then show ?case by (rule int_classify_check_refuted)
+  case (9 c d s) then show ?case by (rule int_classify_check_refuted)
 next
-  case 8 show ?case by (rule refl)
+  case 10 show ?case by (rule refl)
 next
-  case (9 gs) show ?case by (rule int_cinit_gamma)
+  case (11 gs) show ?case by (rule int_cinit_gamma)
 next
-  case (10 eqs x) then show ?case
+  case (12 eqs x) then show ?case
     by (rule TD_side_always_join_Interp.solve_dom_of_solve_c)
 qed
 
@@ -149,13 +160,15 @@ global_interpretation int_po_asm: unit_dg_analysis
     "branch_int_dom_for Refine_Fixpoint" body_int_dom "return_int_dom Refine_Fixpoint"
     "enter_int_dom_ci_for Refine_Fixpoint" event_int_dom TD_side_per_origin_Interp_solve_c
   defines
-    int_po_solution = int_po_asm.solution
+    int_po_root_query = int_po_asm.root_query
+    and int_po_solution = int_po_asm.solution
     and int_po_terminates = int_po_asm.terminates
     and int_po_vars = int_po_asm.sol_vars
     and int_po_result = int_po_asm.result
     and int_po_state_at = int_po_asm.state_at
     and int_po_report = int_po_asm.report
-proof (rule unit_dg_analysis.intro, goal_cases)
+proof (rule unit_dg_analysis.intro, rule routed_dg_analysis.intro,
+       goal_cases)
   case (1 gs) show ?case by (rule int_is_sound_transfer_for)
 next
   case (2 gs a s) then show ?case
@@ -165,21 +178,25 @@ next
   case (3 gs ci s) show ?case
     unfolding fun_of_exec_dg_st_for_def by (rule int_dom_enter_st_for_commute)
 next
-  case (4 eqs x) then show ?case
+  case (4 gs u ctx d ca) show ?case by simp
+next
+  case (5 v ctx) show ?case by simp
+next
+  case (6 eqs x) then show ?case
     by (rule TD_side_per_origin_Interp.partial_post_solution[OF _ surjective_pairing])
 next
-  case (5 eqs x) then show ?case
+  case (7 eqs x) then show ?case
     by (rule TD_side_per_origin_Interp.finite_stabl_solve)
 next
-  case (6 c d s) then show ?case by (rule int_classify_check_proved)
+  case (8 c d s) then show ?case by (rule int_classify_check_proved)
 next
-  case (7 c d s) then show ?case by (rule int_classify_check_refuted)
+  case (9 c d s) then show ?case by (rule int_classify_check_refuted)
 next
-  case 8 show ?case by (rule refl)
+  case 10 show ?case by (rule refl)
 next
-  case (9 gs) show ?case by (rule int_cinit_gamma)
+  case (11 gs) show ?case by (rule int_cinit_gamma)
 next
-  case (10 eqs x) then show ?case
+  case (12 eqs x) then show ?case
     by (rule TD_side_per_origin_Interp.solve_dom_of_solve_c)
 qed
 
@@ -195,13 +212,15 @@ global_interpretation int_wpo_asm: unit_dg_analysis
     "branch_int_dom_for Refine_Fixpoint" body_int_dom "return_int_dom Refine_Fixpoint"
     "enter_int_dom_ci_for Refine_Fixpoint" event_int_dom TD_side_warrowing_per_origin_Interp_solve_c
   defines
-    int_wpo_solution = int_wpo_asm.solution
+    int_wpo_root_query = int_wpo_asm.root_query
+    and int_wpo_solution = int_wpo_asm.solution
     and int_wpo_terminates = int_wpo_asm.terminates
     and int_wpo_vars = int_wpo_asm.sol_vars
     and int_wpo_result = int_wpo_asm.result
     and int_wpo_state_at = int_wpo_asm.state_at
     and int_wpo_report = int_wpo_asm.report
-proof (rule unit_dg_analysis.intro, goal_cases)
+proof (rule unit_dg_analysis.intro, rule routed_dg_analysis.intro,
+       goal_cases)
   case (1 gs) show ?case by (rule int_is_sound_transfer_for)
 next
   case (2 gs a s) then show ?case
@@ -211,21 +230,25 @@ next
   case (3 gs ci s) show ?case
     unfolding fun_of_exec_dg_st_for_def by (rule int_dom_enter_st_for_commute)
 next
-  case (4 eqs x) then show ?case
+  case (4 gs u ctx d ca) show ?case by simp
+next
+  case (5 v ctx) show ?case by simp
+next
+  case (6 eqs x) then show ?case
     by (rule TD_side_warrowing_per_origin_Interp.partial_post_solution[OF _ surjective_pairing])
 next
-  case (5 eqs x) then show ?case
+  case (7 eqs x) then show ?case
     by (rule TD_side_warrowing_per_origin_Interp.finite_stabl_solve)
 next
-  case (6 c d s) then show ?case by (rule int_classify_check_proved)
+  case (8 c d s) then show ?case by (rule int_classify_check_proved)
 next
-  case (7 c d s) then show ?case by (rule int_classify_check_refuted)
+  case (9 c d s) then show ?case by (rule int_classify_check_refuted)
 next
-  case 8 show ?case by (rule refl)
+  case 10 show ?case by (rule refl)
 next
-  case (9 gs) show ?case by (rule int_cinit_gamma)
+  case (11 gs) show ?case by (rule int_cinit_gamma)
 next
-  case (10 eqs x) then show ?case
+  case (12 eqs x) then show ?case
     by (rule TD_side_warrowing_per_origin_Interp.solve_dom_of_solve_c)
 qed
 
