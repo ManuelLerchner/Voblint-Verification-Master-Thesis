@@ -82,8 +82,8 @@ default-agreement lemmas exist.
 
 `Dispatch_Tables` needs `abstract_value` and `tag_states` in scope. Those are
 handwritten and stay so -- the datatype names each domain's abstract state
-type, which is not registration -- so adopting it means splitting them out of
-`Analyse_Dispatch` into a small carrier theory.
+type, which is not registration -- and they live in `Dispatch_Carrier`, split
+out of `Analyse_Dispatch` for exactly that reason.
 
 ## The resolver
 
@@ -205,12 +205,18 @@ pixi run assembly-check   # fail if the checked-in theories are stale
 `--check` diffs regenerated output against the checked-in files itself, so it
 needs neither git nor Isabelle, and it runs in `ci`.
 
-`cli_adopted: false` in the registry says the two CLI tables are generated but
-not adopted: `Analyse_Dispatch` and `Analysis_Config` still own those equations
-by hand. An unadopted output renders under `--out` and is never written into the
-tree or demanded by the drift check, so neither an accidental run nor the ci
-gate can plant a theory nobody decided to adopt. Flip the flag in the commit
-that checks them in.
+`cli_adopted` is now true: `Analyse_Dispatch` no longer defines the four
+dispatch tables and `Analysis_Config` no longer defines the resolver, and both
+read the generated theories instead. The flag still exists for the next output
+that is generated before it is adopted -- an unadopted output renders under
+`--out`, is never written into the tree, and is required by the drift check to
+be *absent*, so it can neither be planted accidentally nor escape freshness
+checking once it is real.
+
+The resolver's pinned expectations moved to `Config_Matrix`, which imports the
+generated table rather than living beside it. They are deliberately not derived
+from the registry: they are what the CLI is observed to answer, written by hand,
+so a registry change that alters a published surface fails them.
 
 Two hazards the adoption turned up, both now in the project contract rather than
 only here. A `theories` entry is a theory name, never a path -- a slash there

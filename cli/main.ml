@@ -26,12 +26,13 @@
    produced. See docs/CLI_DESIGN.md. *)
 
 let usage =
-  "voblint --analysis sign|interval|int|parity [--context none|entry-state|call-string] \
+  "voblint --analysis sign|interval|int|parity|congruence \
+   [--context none|entry-state|call-string] \
    [--context-depth K] [--context-graph collapsed|expanded] [--dot] \
    [--timeout SECONDS] FILE.vimp\n\
    voblint --parse-only FILE.vimp\n\n\
    Options:\n\
-  \  --analysis sign|interval|int|parity[,...]\n\
+  \  --analysis sign|interval|int|parity|congruence[,...]\n\
   \                             Abstract domain to run (required, unless\n\
   \                             --parse-only). int is the refining composite\n\
   \                             Sign x Interval x Parity x Congruence domain,\n\
@@ -41,6 +42,11 @@ let usage =
   \                             lattice; it decides equalities only by\n\
   \                             refuting them across differing parities, and\n\
   \                             is context-insensitive.\n\
+  \                             congruence is the residue-class domain, one\n\
+  \                             value constrained to x = r (mod m); m = 0\n\
+  \                             pins a single integer and m = 1 constrains\n\
+  \                             nothing. It decides no orderings and decides\n\
+  \                             equalities only between singletons.\n\
   \                             A comma list (e.g. int,interval) puts every\n\
   \                             named domain side by side in one --html\n\
   \                             report, one <analysis> block per node, so\n\
@@ -57,16 +63,17 @@ let usage =
   \                             contexts renders their joined state under\n\
   \                             --context-graph, which now defaults to drawing\n\
   \                             them separately);\n\
-  \                             supported by sign, interval and int.\n\
+  \                             supported by sign, interval, int and\n\
+  \                             congruence.\n\
   \                             call-string re-analyzes each callee per\n\
   \                             distinct bounded call history (requires\n\
   \                             --context-depth K, K >= 1), supported by\n\
-  \                             sign, interval and int, including under\n\
-  \                             --dot/--dot-full/--graph-snapshot. parity is\n\
-  \                             context-insensitive for now. Any other\n\
-  \                             --analysis/--context combination is a clear\n\
-  \                             configuration error, not a silent fallback to\n\
-  \                             --context none.\n\
+  \                             sign, interval, int and congruence, including\n\
+  \                             under --dot/--dot-full/--graph-snapshot.\n\
+  \                             parity is context-insensitive for now. Any\n\
+  \                             other --analysis/--context combination is a\n\
+  \                             clear configuration error, not a silent\n\
+  \                             fallback to --context none.\n\
   \  --context-depth K          Call-string bound (only valid with --context\n\
   \                             call-string; must be at least 1 -- a call\n\
   \                             string needs to keep at least one call site\n\
@@ -101,8 +108,8 @@ let usage =
   \                             discipline directly, bypassing the domain's\n\
   \                             production default (experimental; issue\n\
   \                             #131). warrow is supported by interval and\n\
-  \                             int; sign and parity have a widen operator\n\
-  \                             but no solved table behind it yet.\n\
+  \                             int; sign, parity and congruence have a widen\n\
+  \                             operator but no solved table behind it yet.\n\
   \                             Supported by the plain text report and by\n\
   \                             --html, which reads the state table the chosen\n\
   \                             discipline solved. Not by --dot/--dot-full/\n\
@@ -241,6 +248,7 @@ let analysis_label = function
   | Voblint_CLI.Generated.Interval_Analysis -> "interval"
   | Voblint_CLI.Generated.Int_Analysis -> "int"
   | Voblint_CLI.Generated.Parity_Analysis -> "parity"
+  | Voblint_CLI.Generated.Congruence_Analysis -> "congruence"
 
 let rec mkdir_p dir =
   if dir <> "" && dir <> "/" && dir <> "." && not (Sys.file_exists dir) then begin
@@ -466,6 +474,7 @@ let () =
         | "interval" -> Voblint_CLI.Generated.Interval_Analysis
         | "int" -> Voblint_CLI.Generated.Int_Analysis
         | "parity" -> Voblint_CLI.Generated.Parity_Analysis
+        | "congruence" -> Voblint_CLI.Generated.Congruence_Analysis
         | _ -> prerr_endline ("unknown --analysis value: " ^ name); exit 1
       in
       let names = String.split_on_char ',' v |> List.filter (fun n -> n <> "") in
@@ -566,7 +575,10 @@ let () =
   let kind =
     match !analysis with
     | Some k -> k
-    | None -> prerr_endline "missing --analysis sign|interval"; prerr_endline usage; exit 1
+    | None ->
+      prerr_endline "missing --analysis sign|interval|int|parity|congruence";
+      prerr_endline usage;
+      exit 1
   in
   (* One analysis_config value, one legality gate (Analysis_Config.thy's
      valid_analysis_config/resolve_analysis_config): every domain/solver/

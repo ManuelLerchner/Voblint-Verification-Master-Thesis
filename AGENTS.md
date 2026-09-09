@@ -67,10 +67,10 @@ Locked decisions:
 | State order | Pointwise `'a::ord` |
 
 The procedure-aware CFG and generic D/G route are the sole analysis path. Every
-instance uses the side-effecting verified solver. `analysis_domain` names four
+instance uses the side-effecting verified solver. `analysis_domain` names five
 selectable analyses -- `Sign_Analysis`, `Interval_Analysis`, `Int_Analysis`,
-`Parity_Analysis`. Congruence is not selectable on its own: it is the fourth
-component of `int_dom`, alongside sign, interval and parity.
+`Parity_Analysis`, `Congruence_Analysis`. Congruence is both selectable on its
+own and the fourth component of `int_dom`, alongside sign, interval and parity.
 
 The session dependency graph is:
 

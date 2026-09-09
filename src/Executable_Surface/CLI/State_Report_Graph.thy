@@ -19,6 +19,7 @@ fun string_of_abstract_value :: "abstract_value \<Rightarrow> string" where
 | "string_of_abstract_value (IntervalValue i) = to_string i"
 | "string_of_abstract_value (IntDomValue d) = to_string d"
 | "string_of_abstract_value (ParityValue v) = to_string v"
+| "string_of_abstract_value (CongruenceValue v) = to_string v"
 
 text \<open>
   Used only to suppress an uninformative return-slot line: a \<^const>\<open>top\<close>
@@ -39,6 +40,7 @@ fun is_top_abstract_value :: "abstract_value \<Rightarrow> bool" where
 | "is_top_abstract_value (IntervalValue i) = (i = top)"
 | "is_top_abstract_value (IntDomValue d) = (d = top)"
 | "is_top_abstract_value (ParityValue v) = (v = top)"
+| "is_top_abstract_value (CongruenceValue v) = (v = top)"
 
 text \<open>
   \<open>program_vars\<close> is the union of \<^const>\<open>scope_vnames_list\<close> over every
@@ -228,7 +230,8 @@ definition entry_state_point_env_for ::
           project_joined_env IntervalValue (analyse_interval_entry_state_result p)
       | Int_Analysis \<Rightarrow>
           project_joined_env IntDomValue (analyse_int_entry_state_result_warrow p)
-      | Parity_Analysis \<Rightarrow> (\<lambda>_. Bot))"
+      | Parity_Analysis \<Rightarrow> (\<lambda>_. Bot)
+      | Congruence_Analysis \<Rightarrow> (\<lambda>_. Bot))"
 
 text \<open>
   \<^const>\<open>NS_Unreachable\<close> is a distinct status, not a shade of the undecided one:
@@ -291,7 +294,9 @@ definition analyse_point_env_for ::
         Sign_Analysis \<Rightarrow> project_env SignValue (analyse_sign_result p)
       | Interval_Analysis \<Rightarrow> project_env IntervalValue (analyse_interval_td_result p)
       | Int_Analysis \<Rightarrow> project_env IntDomValue (analyse_int_result p)
-      | Parity_Analysis \<Rightarrow> project_env ParityValue (analyse_parity_result p))"
+      | Parity_Analysis \<Rightarrow> project_env ParityValue (analyse_parity_result p)
+      | Congruence_Analysis \<Rightarrow>
+          project_env CongruenceValue (analyse_congruence_result p))"
 
 text \<open>The whole-table counterpart of \<open>state_report_graph_snapshot_auto\<close>:
   the same DOT-free canonical text, over every point rather than check nodes
@@ -430,7 +435,11 @@ where
              (r, gvs) \<Rightarrow> checked_payload_of IntDomValue int_classify_check bot r gvs p)
       | Parity_Analysis \<Rightarrow>
           (case analyse_parity_ctx_solved_for (declared_global p) p of
-             (r, gvs) \<Rightarrow> checked_payload_of ParityValue parity_classify_check bot r gvs p))"
+             (r, gvs) \<Rightarrow> checked_payload_of ParityValue parity_classify_check bot r gvs p)
+      | Congruence_Analysis \<Rightarrow>
+          (case analyse_congruence_ctx_solved_for (declared_global p) p of
+             (r, gvs) \<Rightarrow>
+               checked_payload_of CongruenceValue congruence_classify_check bot r gvs p))"
 
 text \<open>
   The report half is exactly \<^const>\<open>analyse_with_state\<close>'s answer, so sharing one
@@ -445,6 +454,7 @@ lemma snd_full_state_checked_payload_auto [simp]:
      (simp_all add: full_state_checked_payload_auto_def checked_payload_of_def Let_def
         fst_analyse_sign_ctx_solved_for fst_analyse_parity_ctx_solved_for
         fst_analyse_interval_ctx_solved_warrow_for fst_analyse_int_ctx_solved_warrow_for
+        fst_analyse_congruence_ctx_solved_for
         case_prod_beta analyse_sign_result_for_def analyse_interval_td_result_for_def
         analyse_int_result_for_def analyse_parity_result_for_def
         analyse_interval_td_result_for_def [abs_def]
@@ -463,7 +473,14 @@ lemma snd_full_state_checked_payload_auto [simp]:
         analyse_int_report_with_state_def analyse_int_report_for_with_state_def
         analyse_int_result_def
         analyse_parity_report_with_state_def analyse_parity_report_for_with_state_def
-        analyse_parity_result_def analyse_with_state_default.simps tag_states_def
+        analyse_parity_result_def
+        analyse_congruence_report_with_state_def
+        analyse_congruence_report_for_with_state_def
+        analyse_congruence_result_def analyse_congruence_ctx_solved_for_def
+        congruence_unit_result_def congruence_unit_report_with_state_def
+        congruence_unit_solved_def unit_dg_pipeline.solved_eq
+        unit_dg_pipeline.result_def unit_dg_pipeline.report_with_state_def
+        analyse_with_state_default.simps tag_states_def
         report_lifted_state_eq_case)
 
 text \<open>
@@ -503,7 +520,8 @@ definition entry_state_verdicts_for ::
         Sign_Analysis \<Rightarrow> analyse_sign_entry_state_report p
       | Interval_Analysis \<Rightarrow> analyse_interval_entry_state p
       | Int_Analysis \<Rightarrow> analyse_int_entry_state_report_warrow p
-      | Parity_Analysis \<Rightarrow> [])"
+      | Parity_Analysis \<Rightarrow> []
+      | Congruence_Analysis \<Rightarrow> [])"
 
 subsection \<open>Global unknowns of a context-sensitive solve\<close>
 
@@ -575,7 +593,8 @@ definition entry_state_globals_for ::
       | Int_Analysis \<Rightarrow>
           ctx_seed_globals IntDomValue (ctx_key_of IntDomValue) (ctx_show_of IntDomValue)
             (analyse_int_entry_state_result_warrow p) p
-      | Parity_Analysis \<Rightarrow> [])"
+      | Parity_Analysis \<Rightarrow> []
+      | Congruence_Analysis \<Rightarrow> [])"
 
 text \<open>
   The same reading for a route that solved at one context. An explicit solver choice
@@ -612,7 +631,12 @@ definition solver_globals_for ::
           unit_seed_globals ParityValue (analyse_parity_result p) p
       | (Parity_Analysis, Solver_PerOrigin) \<Rightarrow>
           unit_seed_globals ParityValue (analyse_parity_result_per_origin p) p
-      | (Parity_Analysis, _) \<Rightarrow> [])"
+      | (Parity_Analysis, _) \<Rightarrow> []
+      | (Congruence_Analysis, Solver_Join) \<Rightarrow>
+          unit_seed_globals CongruenceValue (analyse_congruence_result p) p
+      | (Congruence_Analysis, Solver_PerOrigin) \<Rightarrow>
+          unit_seed_globals CongruenceValue (analyse_congruence_result_per_origin p) p
+      | (Congruence_Analysis, _) \<Rightarrow> [])"
 
 text \<open>
   The call-string reading, keyed and named by the same \<^const>\<open>cs_context_key\<close> and
@@ -634,7 +658,8 @@ definition cs_globals_for ::
       | Int_Analysis \<Rightarrow>
           ctx_seed_globals IntDomValue cs_context_key cs_show_context
             (analyse_int_call_string_result k p) p
-      | Parity_Analysis \<Rightarrow> [])"
+      | Parity_Analysis \<Rightarrow> []
+      | Congruence_Analysis \<Rightarrow> [])"
 
 definition entry_state_report_for_annotation ::
     "analysis_domain \<Rightarrow> imp_prog
@@ -782,7 +807,14 @@ where
       | (Parity_Analysis, Solver_PerOrigin) \<Rightarrow>
           Some (checked_payload_of ParityValue parity_classify_check bot
                   (analyse_parity_result_per_origin p) [] p)
-      | (Parity_Analysis, _) \<Rightarrow> None)"
+      | (Parity_Analysis, _) \<Rightarrow> None
+      | (Congruence_Analysis, Solver_Join) \<Rightarrow>
+          Some (checked_payload_of CongruenceValue congruence_classify_check bot
+                  (analyse_congruence_result p) [] p)
+      | (Congruence_Analysis, Solver_PerOrigin) \<Rightarrow>
+          Some (checked_payload_of CongruenceValue congruence_classify_check bot
+                  (analyse_congruence_result_per_origin p) [] p)
+      | (Congruence_Analysis, _) \<Rightarrow> None)"
 
 text \<open>
   Every branch's verdict column is the one \<^const>\<open>analyse_with_solver\<close> already
@@ -824,7 +856,16 @@ lemma solver_checked_payload_verdicts:
         interval_join_asm.report_def analyse_interval_join_result_for_def
         interval_po_asm.report_def analyse_interval_per_origin_result_for_def
         interval_warrow_asm.report_def analyse_interval_td_result_for_def
-        interval_wpo_asm.report_def analyse_interval_wpo_result_for_def)
+        interval_wpo_asm.report_def analyse_interval_wpo_result_for_def
+        analyse_congruence_report_def analyse_congruence_report_for_def
+        analyse_congruence_report_per_origin_def
+        analyse_congruence_report_per_origin_for_def
+        analyse_congruence_result_def analyse_congruence_result_per_origin_def
+        congruence_join.report_def analyse_congruence_result_for_def
+        congruence_po_asm.report_def analyse_congruence_result_per_origin_for_def
+        congruence_unit_report_def congruence_po_report_def
+        congruence_unit_result_def congruence_po_result_def
+        unit_dg_pipeline.report_def unit_dg_pipeline.result_def)
 
 text \<open>
   \<open>program_vars\<close> pulls \<^const>\<open>scope_vnames_list\<close> (hence \<open>VIMP_Notation\<close>,
@@ -1086,7 +1127,8 @@ definition cs_ctx_sol_for ::
            in (\<lambda>x. case x of Inl (v, ctx) \<Rightarrow>
                      map_lift (\<lambda>st. IntDomValue \<circ> st) (lookup_context r v ctx)
                    | Inr _ \<Rightarrow> Bot))
-      | Parity_Analysis \<Rightarrow> (\<lambda>_. Bot))"
+      | Parity_Analysis \<Rightarrow> (\<lambda>_. Bot)
+      | Congruence_Analysis \<Rightarrow> (\<lambda>_. Bot))"
 
 text \<open>
   The covered \<^term>\<open>(v, ctx)\<close> pairs, again read off whichever domain's table was selected.

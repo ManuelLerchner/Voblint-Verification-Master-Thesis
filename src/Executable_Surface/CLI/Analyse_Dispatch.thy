@@ -1,5 +1,8 @@
 theory Analyse_Dispatch
   imports
+    Dispatch_Carrier
+    "Voblint_CLI.Dispatch_Tables"
+    "Voblint_CLI.Config_Tables"
     Voblint_Analysis_Sign.Sign_Entry
     Voblint_Analysis_Interval.Interval_Entry
     Voblint_Analysis_Int.Int_Entry
@@ -8,6 +11,7 @@ theory Analyse_Dispatch
     Voblint_Analysis_Interval.Interval_Solver_Analyses
     Voblint_Analysis_Sign.Sign_Analyses
     Voblint_Analysis_Int.Int_Analyses
+    Voblint_Analysis_Congruence.Congruence_Analyses
     Analysis_Config
     "HOL-Library.Code_Target_Numeral"
     "HOL-Library.Code_Abstract_Char"
@@ -46,12 +50,6 @@ text \<open>
   assembly's own \<open>report_proved_sound_closure\<close>) make dispatching Interval's production default to the
   warrowing report a like-for-like swap for callers, not a precision or soundness downgrade.
 \<close>
-
-fun analyse :: "analysis_domain \<Rightarrow> imp_prog \<Rightarrow> check_report_entry list" where
-  "analyse Sign_Analysis p = analyse_sign_report p"
-| "analyse Interval_Analysis p = analyse_interval_td_report p"
-| "analyse Int_Analysis p = analyse_int_report p"
-| "analyse Parity_Analysis p = analyse_parity_report p"
 
 subsection \<open>Context-sensitivity dimension\<close>
 
@@ -134,37 +132,6 @@ text \<open>
   producer's own contribution ever moved --- where the per-origin rule reads \<open>[1,2]\<close>.
 \<close>
 
-fun analyse_with_solver ::
-    "analysis_domain \<Rightarrow> solver_choice \<Rightarrow> imp_prog \<Rightarrow> check_report_entry list option" where
-  "analyse_with_solver Sign_Analysis Solver_Join p = Some (analyse_sign_report p)"
-| "analyse_with_solver Sign_Analysis Solver_PerOrigin p = Some (analyse_sign_report_per_origin p)"
-| "analyse_with_solver Sign_Analysis Solver_Warrow p = None"
-| "analyse_with_solver Interval_Analysis Solver_Join p = Some (analyse_interval_report p)"
-| "analyse_with_solver Interval_Analysis Solver_PerOrigin p = Some (analyse_interval_report_per_origin p)"
-| "analyse_with_solver Interval_Analysis Solver_Warrow p = Some (analyse_interval_td_report p)"
-| "analyse_with_solver Int_Analysis Solver_Join p = Some (analyse_int_report_join p)"
-| "analyse_with_solver Int_Analysis Solver_PerOrigin p = Some (analyse_int_report_per_origin p)"
-| "analyse_with_solver Int_Analysis Solver_Warrow p = Some (analyse_int_report p)"
-| "analyse_with_solver Parity_Analysis Solver_Join p = Some (analyse_parity_report p)"
-| "analyse_with_solver Parity_Analysis Solver_PerOrigin p = Some (analyse_parity_report_per_origin p)"
-| "analyse_with_solver Parity_Analysis Solver_Warrow p = None"
-| "analyse_with_solver Sign_Analysis Solver_WarrowPerOrigin p = None"
-| "analyse_with_solver Interval_Analysis Solver_WarrowPerOrigin p = Some (analyse_interval_report_wpo p)"
-| "analyse_with_solver Int_Analysis Solver_WarrowPerOrigin p = Some (analyse_int_report_wpo p)"
-| "analyse_with_solver Parity_Analysis Solver_WarrowPerOrigin p = None"
-
-lemma analyse_with_solver_sign_default:
-  "analyse_with_solver Sign_Analysis Solver_Join p = Some (analyse Sign_Analysis p)"
-  by simp
-
-lemma analyse_with_solver_interval_default:
-  "analyse_with_solver Interval_Analysis Solver_Warrow p = Some (analyse Interval_Analysis p)"
-  by simp
-
-lemma analyse_with_solver_int_default:
-  "analyse_with_solver Int_Analysis Solver_Warrow p = Some (analyse Int_Analysis p)"
-  by simp
-
 subsection \<open>Domain-neutral state-carrying report\<close>
 
 text \<open>
@@ -179,74 +146,6 @@ text \<open>
   \<^theory>\<open>Voblint_Analysis_Interval.Interval_Checks\<close>) unchanged, just as \<open>analyse\<close> reuses
   their state-free counterparts.
 \<close>
-
-datatype abstract_value =
-  SignValue sign | IntervalValue ivl | IntDomValue int_dom | ParityValue parity
-
-definition tag_states ::
-    "('s \<Rightarrow> abstract_value) \<Rightarrow> (pp \<times> exp \<times> check_result \<times> bool \<times> 's abs_state) list
-       \<Rightarrow> (pp \<times> exp \<times> check_result \<times> bool \<times> abstract_value abs_state) list" where
-  "tag_states tag = map (\<lambda>(u, c, r, unreachable, s). (u, c, r, unreachable, tag \<circ> s))"
-
-text \<open>
-  One state-carrying report per \<open>analysis_domain \<times> solver_choice\<close> pairing that has a
-  solved table, \<^const>\<open>None\<close> at the pairings \<^const>\<open>analyse_with_solver\<close> also rejects.
-  Each domain's production default reads its own \<open>analyse_*_report_with_state\<close>
-  constant unchanged; the other solved tables are read through their
-  \<^locale>\<open>analysis_surface\<close> instance, which is the same \<^const>\<open>classify_checks_with_state\<close>
-  assembly over the table that solver produced. This is what lets an explicit
-  \<open>--solver\<close> keep the unreachable flag: a flat \<^const>\<open>analyse_with_solver\<close> report has
-  no deadness channel, so a check inside an infeasible branch would print the
-  bottom state's vacuous verdict instead of being suppressed.
-\<close>
-
-fun analyse_with_state ::
-    "analysis_domain \<Rightarrow> solver_choice \<Rightarrow> imp_prog
-       \<Rightarrow> (pp \<times> exp \<times> check_result \<times> bool \<times> abstract_value abs_state) list option" where
-  "analyse_with_state Sign_Analysis Solver_Join p = Some (tag_states SignValue (analyse_sign_report_with_state p))"
-| "analyse_with_state Sign_Analysis Solver_PerOrigin p = Some (tag_states SignValue (sign_per_origin.report_with_state p))"
-| "analyse_with_state Sign_Analysis Solver_Warrow p = None"
-| "analyse_with_state Sign_Analysis Solver_WarrowPerOrigin p = None"
-| "analyse_with_state Interval_Analysis Solver_Join p = Some (tag_states IntervalValue (interval_join.report_with_state p))"
-| "analyse_with_state Interval_Analysis Solver_PerOrigin p = Some (tag_states IntervalValue (interval_per_origin.report_with_state p))"
-| "analyse_with_state Interval_Analysis Solver_Warrow p = Some (tag_states IntervalValue (analyse_interval_td_report_with_state p))"
-| "analyse_with_state Interval_Analysis Solver_WarrowPerOrigin p = Some (tag_states IntervalValue (interval_wpo.report_with_state p))"
-| "analyse_with_state Int_Analysis Solver_Join p = Some (tag_states IntDomValue (int_join.report_with_state p))"
-| "analyse_with_state Int_Analysis Solver_PerOrigin p = Some (tag_states IntDomValue (int_per_origin.report_with_state p))"
-| "analyse_with_state Int_Analysis Solver_Warrow p = Some (tag_states IntDomValue (analyse_int_report_with_state p))"
-| "analyse_with_state Int_Analysis Solver_WarrowPerOrigin p = Some (tag_states IntDomValue (int_wpo.report_with_state p))"
-| "analyse_with_state Parity_Analysis Solver_Join p = Some (tag_states ParityValue (analyse_parity_report_with_state p))"
-| "analyse_with_state Parity_Analysis Solver_PerOrigin p = Some (tag_states ParityValue (parity_per_origin.report_with_state p))"
-| "analyse_with_state Parity_Analysis Solver_Warrow p = None"
-| "analyse_with_state Parity_Analysis Solver_WarrowPerOrigin p = None"
-
-lemma analyse_with_state_some_iff_with_solver:
-  "(analyse_with_state d s p = None) = (analyse_with_solver d s p = None)"
-  by (cases d; cases s) simp_all
-
-text \<open>
-  Each domain's own production default, context-free -- the GraphViz renderers'
-  one report per domain, with no solver axis of their own to expose. Its four
-  equations are exactly \<^const>\<open>analyse_with_state\<close>'s at each domain's default
-  solver (\<open>Solver_Join\<close> for Sign and Parity, \<open>Solver_Warrow\<close> for Interval and
-  Int, matching \<^const>\<open>resolve_analysis_config\<close>'s own implicit-default choice),
-  restated as a total function so a caller with no solver selection to offer
-  does not have to discharge an \<open>option\<close> it already knows is \<^const>\<open>Some\<close>.
-\<close>
-
-fun analyse_with_state_default ::
-    "analysis_domain \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> exp \<times> check_result \<times> bool \<times> abstract_value abs_state) list" where
-  "analyse_with_state_default Sign_Analysis p = tag_states SignValue (analyse_sign_report_with_state p)"
-| "analyse_with_state_default Interval_Analysis p = tag_states IntervalValue (analyse_interval_td_report_with_state p)"
-| "analyse_with_state_default Int_Analysis p = tag_states IntDomValue (analyse_int_report_with_state p)"
-| "analyse_with_state_default Parity_Analysis p = tag_states ParityValue (analyse_parity_report_with_state p)"
-
-lemma analyse_with_state_default_eq:
-  "analyse_with_state Sign_Analysis Solver_Join p = Some (analyse_with_state_default Sign_Analysis p)"
-  "analyse_with_state Interval_Analysis Solver_Warrow p = Some (analyse_with_state_default Interval_Analysis p)"
-  "analyse_with_state Int_Analysis Solver_Warrow p = Some (analyse_with_state_default Int_Analysis p)"
-  "analyse_with_state Parity_Analysis Solver_Join p = Some (analyse_with_state_default Parity_Analysis p)"
-  by simp_all
 
 subsection \<open>Public API: soundness corollaries stated over the runtime dispatcher\<close>
 
@@ -462,6 +361,9 @@ fun analyse_certified :: "analysis_domain \<Rightarrow> imp_prog \<Rightarrow> b
 | "analyse_certified Parity_Analysis p =
      (pctx_terminates_prog (declared_global p) p
         \<and> vars_cover (prog_cfg p) (fst (pctx_sol_prog (declared_global p) p)))"
+| "analyse_certified Congruence_Analysis p =
+     (cctx_terminates_prog (declared_global p) p
+        \<and> vars_cover (prog_cfg p) (fst (cctx_sol_prog (declared_global p) p)))"
 
 lemma analyse_proved_sound:
   fixes p :: imp_prog and v :: pp and c :: exp
@@ -504,6 +406,15 @@ next
   from mem Parity_Analysis have m: "(v, c, Check_Proved) \<in> set (analyse_parity_report p)" by simp
   show ?thesis
     by (rule analyse_parity_report_sound_proved[OF solve _ _ _ _ m]) (use cover in auto)
+next
+  case Congruence_Analysis
+  with cert have solve: "cctx_terminates_prog (declared_global p) p"
+    and cover: "vars_cover (prog_cfg p) (fst (cctx_sol_prog (declared_global p) p))"
+    by simp_all
+  from mem Congruence_Analysis
+  have m: "(v, c, Check_Proved) \<in> set (analyse_congruence_report p)" by simp
+  show ?thesis
+    by (rule analyse_congruence_report_sound_proved[OF solve _ _ _ _ m]) (use cover in auto)
 qed
 
 lemma analyse_refuted_sound:
@@ -547,6 +458,15 @@ next
   from mem Parity_Analysis have m: "(v, c, Check_Refuted) \<in> set (analyse_parity_report p)" by simp
   show ?thesis
     by (rule analyse_parity_report_sound_refuted[OF solve _ _ _ _ m]) (use cover in auto)
+next
+  case Congruence_Analysis
+  with cert have solve: "cctx_terminates_prog (declared_global p) p"
+    and cover: "vars_cover (prog_cfg p) (fst (cctx_sol_prog (declared_global p) p))"
+    by simp_all
+  from mem Congruence_Analysis
+  have m: "(v, c, Check_Refuted) \<in> set (analyse_congruence_report p)" by simp
+  show ?thesis
+    by (rule analyse_congruence_report_sound_refuted[OF solve _ _ _ _ m]) (use cover in auto)
 qed
 
 text \<open>
@@ -658,7 +578,10 @@ definition analyse_config :: "analysis_config \<Rightarrow> imp_prog \<Rightarro
       | Some (Plan_Sign_CallString _ _) \<Rightarrow> None
       | Some (Plan_Int_CallString _ _) \<Rightarrow> None
       | Some (Plan_Int_EntryState _) \<Rightarrow> None
-      | Some (Plan_Parity s) \<Rightarrow> analyse_with_solver Parity_Analysis s p)"
+      | Some (Plan_Parity s) \<Rightarrow> analyse_with_solver Parity_Analysis s p
+      | Some (Plan_Congruence s) \<Rightarrow> analyse_with_solver Congruence_Analysis s p
+      | Some (Plan_Congruence_EntryState _) \<Rightarrow> None
+      | Some (Plan_Congruence_CallString _ _) \<Rightarrow> None)"
 
 text \<open>
   \<open>Plan_Interval_EntryState\<close> answers \<^const>\<open>None\<close> here on purpose: entry-state
@@ -701,7 +624,15 @@ definition analyse_config_ctx ::
       | Some (Plan_Sign s) \<Rightarrow> map_option decided_report (analyse_with_solver Sign_Analysis s p)
       | Some (Plan_Interval s) \<Rightarrow> map_option decided_report (analyse_with_solver Interval_Analysis s p)
       | Some (Plan_Int s) \<Rightarrow> map_option decided_report (analyse_with_solver Int_Analysis s p)
-      | Some (Plan_Parity s) \<Rightarrow> map_option decided_report (analyse_with_solver Parity_Analysis s p))"
+      | Some (Plan_Parity s) \<Rightarrow> map_option decided_report (analyse_with_solver Parity_Analysis s p)
+      | Some (Plan_Congruence s) \<Rightarrow>
+          map_option decided_report (analyse_with_solver Congruence_Analysis s p)
+      | Some (Plan_Congruence_EntryState Solver_Join) \<Rightarrow>
+          Some (analyse_congruence_entry_state_report p)
+      | Some (Plan_Congruence_EntryState _) \<Rightarrow> None
+      | Some (Plan_Congruence_CallString Solver_Join k) \<Rightarrow>
+          Some (analyse_congruence_call_string_report k p)
+      | Some (Plan_Congruence_CallString _ _) \<Rightarrow> None)"
 
 text \<open>
   \<^const>\<open>analyse_with_state\<close> decides legality over the domain and solver axes
@@ -721,7 +652,16 @@ where
       | Some (Plan_Interval s) \<Rightarrow> analyse_with_state Interval_Analysis s p
       | Some (Plan_Int s) \<Rightarrow> analyse_with_state Int_Analysis s p
       | Some (Plan_Parity s) \<Rightarrow> analyse_with_state Parity_Analysis s p
-      | _ \<Rightarrow> None)"
+      | Some (Plan_Congruence s) \<Rightarrow> analyse_with_state Congruence_Analysis s p
+      | Some (Plan_Sign_EntryState _) \<Rightarrow> None
+      | Some (Plan_Sign_CallString _ _) \<Rightarrow> None
+      | Some (Plan_Interval_EntryState _) \<Rightarrow> None
+      | Some (Plan_Interval_CallString _ _) \<Rightarrow> None
+      | Some (Plan_Int_EntryState _) \<Rightarrow> None
+      | Some (Plan_Int_CallString _ _) \<Rightarrow> None
+      | Some (Plan_Congruence_EntryState _) \<Rightarrow> None
+      | Some (Plan_Congruence_CallString _ _) \<Rightarrow> None
+      | None \<Rightarrow> None)"
 
 subsection \<open>Config-driven dispatch agrees with each existing typed entry point\<close>
 

@@ -8,9 +8,16 @@ session Voblint_CLI in "." = "Voblint_Analysis_Int" +
     "Voblint_Analysis_Sign"
     "Voblint_Analysis_Interval"
     "Voblint_Analysis_Parity"
+    "Voblint_Analysis_Congruence"
     "HOL-Library"
+  directories
+    "generated"
   theories
     Analysis_Config
+    Dispatch_Carrier
+    Config_Tables
+    Dispatch_Tables
+    Config_Matrix
     Analyse_Dispatch
 
     (* A solved result as a graph, and the readings handed to a renderer.
