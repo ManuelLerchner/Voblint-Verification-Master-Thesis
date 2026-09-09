@@ -187,8 +187,7 @@ lemma dispatch_demo_reserved: "reserved_ret_var (declared_global dispatch_demo_p
 
 lemma dispatch_demo_certified: "analyse_certified Interval_Analysis dispatch_demo_prog"
   by (simp add: dispatch_demo_terminates
-        interval_conf_vars_cover_prog_of_exec
-          [OF dispatch_demo_reserved dispatch_demo_vars_cover_exec])
+        interval_conf_vars_cover_prog_of_exec[OF dispatch_demo_vars_cover_exec])
 
 lemma dispatch_demo_wf:
   "wf_compile_input (declared_global dispatch_demo_prog) (prog_table dispatch_demo_prog)

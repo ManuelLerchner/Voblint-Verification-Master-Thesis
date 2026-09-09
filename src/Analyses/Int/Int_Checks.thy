@@ -20,6 +20,35 @@ abbreviation ictx_sol_prog where "ictx_sol_prog \<equiv> int_unit_solution"
 abbreviation ictx_terminates_prog where
   "ictx_terminates_prog \<equiv> int_unit_terminates"
 
+text \<open>
+  Int's own production solve and the assembly's are the same solve. The two are
+  written differently --- Int roots its system at \<^const>\<open>prog_main_name\<close>'s
+  result node, the assembly at \<^const>\<open>cfg_exit\<close> of the compiled graph --- and
+  \<open>cfg_exit_compile_prog\<close> is what makes those the same unknown. Everything
+  Int publishes about the production route rests on this equation, so it is
+  stated once here rather than re-derived at each consumer.
+\<close>
+
+lemma int_conf_sol_prog_warrow_eq_unit:
+  "int_conf_sol_prog_warrow Refine_Fixpoint gs p = ictx_sol_prog gs p"
+  unfolding int_conf_sol_prog_warrow_def int_conf_sol_warrow_def
+    int_conf_eqs_prog_def int_conf_eqs_def int_dom_spec_def
+    int_unit_solution_def int_warrow_asm.solution_def
+    unit_dg_pipeline.solution_def unit_dg_pipeline.equations_def
+    unit_dg_pipeline.analysis_spec_def unit_dg_pipeline.root_query_def
+    prog_cfg_def
+  by simp
+
+lemma int_conf_terminates_prog_warrow_eq_unit:
+  "int_conf_terminates_prog_warrow Refine_Fixpoint gs p = ictx_terminates_prog gs p"
+  unfolding int_conf_terminates_prog_warrow_def int_conf_terminates_warrow_def
+    int_conf_eqs_prog_def int_conf_eqs_def int_dom_spec_def
+    int_unit_terminates_def int_warrow_asm.terminates_def
+    unit_dg_pipeline.terminates_def unit_dg_pipeline.equations_def
+    unit_dg_pipeline.analysis_spec_def unit_dg_pipeline.root_query_def
+    prog_cfg_def
+  by simp
+
 lemmas ictx_terminates_prog_via_solve_c = int_warrow_asm.terminates_of_solve_c
 lemmas ictx_vars_finite = int_warrow_asm.vars_finite_of_terminates
 
