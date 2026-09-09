@@ -8456,66 +8456,157 @@ let rec analyse_sign_report_for x = sign_unit_report x;;
 
 let rec analyse_sign_report p = analyse_sign_report_for (declared_global p) p;;
 
-let rec int_conf_eqs
-  mode empty_pred gs pi ps =
+let rec root_query p = (cfg_exit (prog_cfg p), ());;
+
+let rec equations (_A1, _A2)
+  tf_st enter_st init_st gs p =
     compiled_routed_eqs_for (equal_routed_gk equal_unit equal_unit)
       ((equal_lifted
          (equal_resolved_st_q
-           ((equal_int_dom_ext equal_unit),
-             (bounded_semilattice_sup_bot_int_dom_ext
-               int_dom_record_lattice_unit).order_bot_bounded_semilattice_sup_bot))),
+           (_A2, _A1.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot))),
         (bounded_semilattice_sup_bot_lifted
           (semilattice_sup_resolved_st_q
-            (bounded_semilattice_sup_bot_int_dom_ext
-              int_dom_record_lattice_unit))))
+            _A1.bounded_semilattice_sup_bot_executable_domain)))
       (bounded_semilattice_sup_bot_lifted
         (semilattice_sup_resolved_st_q
-          (bounded_semilattice_sup_bot_int_dom_ext
-            int_dom_record_lattice_unit)))
+          _A1.bounded_semilattice_sup_bot_executable_domain))
       (Analysis_Global ()) (fun a b -> Activation_Seed (a, b)) route_unit
-      (int_dom_spec mode empty_pred gs) (compile_prog pi ps)
-      (Lifted cinit_int_dom_st);;
+      (dgs_combine_assign_update
+        (fun _ ci ->
+          local_combine_transfer
+            (transfer_lift2
+              (resolved_st_q_is_bot_for _A1 (declared_global_vars p))
+              (fun env0 de0 ->
+                combine_assign_resolved_q
+                  _A1.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
+                  gs (ci_dst ci)
+                  (lookup_resolved_st_q
+                    _A1.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
+                    de0 (location_of gs ret_var))
+                  env0)))
+        (dgs_combine_env_update
+          (fun _ _ ->
+            local_combine_transfer
+              (fun dc de ->
+                (match dc with Bot -> Bot
+                  | Lifted x ->
+                    (match de with Bot -> Bot
+                      | Lifted y ->
+                        Lifted
+                          (combine_resolved_st_q
+                            _A1.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
+                            x y)))))
+          (dgs_event_update
+            (fun _ ev ->
+              local_transfer
+                (transfer_lift
+                  (resolved_st_q_is_bot_for _A1 (declared_global_vars p))
+                  (tf_st gs (let Check_Event a = ev in EA_Check a))))
+            (dgs_enter_update
+              (fun _ ci ->
+                local_enter_transfer
+                  (fun d ->
+                    [(d, transfer_lift
+                           (resolved_st_q_is_bot_for _A1
+                             (declared_global_vars p))
+                           (enter_st gs ci) d)]))
+              (dgs_return_update
+                (fun _ e pa ->
+                  local_transfer
+                    (transfer_lift
+                      (resolved_st_q_is_bot_for _A1 (declared_global_vars p))
+                      (tf_st gs (EA_Ret (e, pa)))))
+                (dgs_body_update
+                  (fun _ pa ->
+                    local_transfer
+                      (transfer_lift
+                        (resolved_st_q_is_bot_for _A1 (declared_global_vars p))
+                        (tf_st gs (EA_Body pa))))
+                  (dgs_branch_update
+                    (fun _ b pol ->
+                      local_transfer
+                        (transfer_lift
+                          (resolved_st_q_is_bot_for _A1
+                            (declared_global_vars p))
+                          (tf_st gs
+                            (if pol then EA_Assume b else EA_AssumeNot b))))
+                    (dgs_special_update
+                      (fun _ sc x ->
+                        local_transfer
+                          (transfer_lift
+                            (resolved_st_q_is_bot_for _A1
+                              (declared_global_vars p))
+                            (tf_st gs (EA_Special (sc, x)))))
+                      (dgs_assign_update
+                        (fun _ x e ->
+                          local_transfer
+                            (transfer_lift
+                              (resolved_st_q_is_bot_for _A1
+                                (declared_global_vars p))
+                              (tf_st gs (EA_Assign (x, e)))))
+                        (dgs_skip_update
+                          (fun _ ->
+                            local_transfer
+                              (transfer_lift
+                                (resolved_st_q_is_bot_for _A1
+                                  (declared_global_vars p))
+                                (tf_st gs EA_Nop)))
+                          (Dg_spec_ext
+                            (local_transfer id, (fun _ _ -> local_transfer id),
+                              (fun _ _ -> local_transfer id),
+                              (fun _ _ -> local_transfer id),
+                              (fun _ -> local_transfer id),
+                              (fun _ _ -> local_transfer id),
+                              (fun _ ->
+                                local_enter_transfer (fun d -> [(d, d)])),
+                              (fun _ -> local_transfer id),
+                              (fun _ -> local_combine_transfer (fun d _ -> d)),
+                              (fun _ -> local_combine_transfer (fun d _ -> d)),
+                              ()))))))))))))
+      (prog_cfg p) (Lifted init_st);;
 
-let rec int_conf_eqs_prog
-  mode gs p =
-    int_conf_eqs mode
-      (resolved_st_q_is_bot_for
-        (executable_domain_int_dom_ext int_dom_record_lattice_unit)
-        (declared_global_vars p))
-      gs (prog_table p) (prog_procs p);;
+let rec solution (_A1, _A2)
+  tf_st enter_st init_st solve gs p =
+    solve (equations (_A1, _A2) tf_st enter_st init_st gs p) (root_query p);;
 
 let rec int_conf_sol_prog_warrow
   mode gs p =
-    tD_side_warrowing_apinis_Interp_solve (equal_prod equal_cfg_node equal_unit)
-      (equal_routed_gk equal_unit equal_unit)
-      ((equal_dg_state
-         (equal_lifted
-           (equal_resolved_st_q
-             ((equal_int_dom_ext equal_unit),
-               (bounded_warrowing_int_dom_ext
-                 int_dom_record_warrowing_unit).bounded_semilattice_sup_bot_bounded_warrowing.order_bot_bounded_semilattice_sup_bot)))
-         (equal_lifted
-           (equal_resolved_st_q
-             ((equal_int_dom_ext equal_unit),
-               (bounded_warrowing_int_dom_ext
-                 int_dom_record_warrowing_unit).bounded_semilattice_sup_bot_bounded_warrowing.order_bot_bounded_semilattice_sup_bot)))),
-        (bounded_semilattice_sup_bot_dg_state
-          (bounded_warrowing_lifted
-            (bounded_warrowing_resolved_st_q
-              (bounded_warrowing_int_dom_ext
-                int_dom_record_warrowing_unit))).bounded_semilattice_sup_bot_bounded_warrowing
-          (bounded_warrowing_lifted
-            (bounded_warrowing_resolved_st_q
-              (bounded_warrowing_int_dom_ext
-                int_dom_record_warrowing_unit))).bounded_semilattice_sup_bot_bounded_warrowing),
-        (warrowing_dg_state
-          (bounded_warrowing_lifted
-            (bounded_warrowing_resolved_st_q
-              (bounded_warrowing_int_dom_ext int_dom_record_warrowing_unit)))
-          (bounded_warrowing_lifted
-            (bounded_warrowing_resolved_st_q
-              (bounded_warrowing_int_dom_ext int_dom_record_warrowing_unit)))))
-      (int_conf_eqs_prog mode gs p) (cfg_exit (prog_cfg p), ());;
+    solution
+      ((executable_domain_int_dom_ext int_dom_record_lattice_unit),
+        (equal_int_dom_ext equal_unit))
+      (int_tf_st_for mode) (int_dom_enter_st_for mode) cinit_int_dom_st
+      (tD_side_warrowing_apinis_Interp_solve
+        (equal_prod equal_cfg_node equal_unit)
+        (equal_routed_gk equal_unit equal_unit)
+        ((equal_dg_state
+           (equal_lifted
+             (equal_resolved_st_q
+               ((equal_int_dom_ext equal_unit),
+                 (bounded_warrowing_int_dom_ext
+                   int_dom_record_warrowing_unit).bounded_semilattice_sup_bot_bounded_warrowing.order_bot_bounded_semilattice_sup_bot)))
+           (equal_lifted
+             (equal_resolved_st_q
+               ((equal_int_dom_ext equal_unit),
+                 (bounded_warrowing_int_dom_ext
+                   int_dom_record_warrowing_unit).bounded_semilattice_sup_bot_bounded_warrowing.order_bot_bounded_semilattice_sup_bot)))),
+          (bounded_semilattice_sup_bot_dg_state
+            (bounded_warrowing_lifted
+              (bounded_warrowing_resolved_st_q
+                (bounded_warrowing_int_dom_ext
+                  int_dom_record_warrowing_unit))).bounded_semilattice_sup_bot_bounded_warrowing
+            (bounded_warrowing_lifted
+              (bounded_warrowing_resolved_st_q
+                (bounded_warrowing_int_dom_ext
+                  int_dom_record_warrowing_unit))).bounded_semilattice_sup_bot_bounded_warrowing),
+          (warrowing_dg_state
+            (bounded_warrowing_lifted
+              (bounded_warrowing_resolved_st_q
+                (bounded_warrowing_int_dom_ext int_dom_record_warrowing_unit)))
+            (bounded_warrowing_lifted
+              (bounded_warrowing_resolved_st_q
+                (bounded_warrowing_int_dom_ext
+                  int_dom_record_warrowing_unit))))))
+      gs p;;
 
 let rec analyse_int_ctx_result_warrow_for
   mode gs p =
@@ -9091,115 +9182,6 @@ let rec tD_side_per_origin_Interp_solve _A _B (_C1, _C2, _C3)
               (fun _ ->
                 tD_side_per_origin_Interp_solve _A _B (_C1, _C2, _C3) t x)
           | Some r -> r);;
-
-let rec root_query p = (cfg_exit (prog_cfg p), ());;
-
-let rec equations (_A1, _A2)
-  tf_st enter_st init_st gs p =
-    compiled_routed_eqs_for (equal_routed_gk equal_unit equal_unit)
-      ((equal_lifted
-         (equal_resolved_st_q
-           (_A2, _A1.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot))),
-        (bounded_semilattice_sup_bot_lifted
-          (semilattice_sup_resolved_st_q
-            _A1.bounded_semilattice_sup_bot_executable_domain)))
-      (bounded_semilattice_sup_bot_lifted
-        (semilattice_sup_resolved_st_q
-          _A1.bounded_semilattice_sup_bot_executable_domain))
-      (Analysis_Global ()) (fun a b -> Activation_Seed (a, b)) route_unit
-      (dgs_combine_assign_update
-        (fun _ ci ->
-          local_combine_transfer
-            (transfer_lift2
-              (resolved_st_q_is_bot_for _A1 (declared_global_vars p))
-              (fun env0 de0 ->
-                combine_assign_resolved_q
-                  _A1.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
-                  gs (ci_dst ci)
-                  (lookup_resolved_st_q
-                    _A1.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
-                    de0 (location_of gs ret_var))
-                  env0)))
-        (dgs_combine_env_update
-          (fun _ _ ->
-            local_combine_transfer
-              (fun dc de ->
-                (match dc with Bot -> Bot
-                  | Lifted x ->
-                    (match de with Bot -> Bot
-                      | Lifted y ->
-                        Lifted
-                          (combine_resolved_st_q
-                            _A1.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
-                            x y)))))
-          (dgs_event_update
-            (fun _ ev ->
-              local_transfer
-                (transfer_lift
-                  (resolved_st_q_is_bot_for _A1 (declared_global_vars p))
-                  (tf_st gs (let Check_Event a = ev in EA_Check a))))
-            (dgs_enter_update
-              (fun _ ci ->
-                local_enter_transfer
-                  (fun d ->
-                    [(d, transfer_lift
-                           (resolved_st_q_is_bot_for _A1
-                             (declared_global_vars p))
-                           (enter_st gs ci) d)]))
-              (dgs_return_update
-                (fun _ e pa ->
-                  local_transfer
-                    (transfer_lift
-                      (resolved_st_q_is_bot_for _A1 (declared_global_vars p))
-                      (tf_st gs (EA_Ret (e, pa)))))
-                (dgs_body_update
-                  (fun _ pa ->
-                    local_transfer
-                      (transfer_lift
-                        (resolved_st_q_is_bot_for _A1 (declared_global_vars p))
-                        (tf_st gs (EA_Body pa))))
-                  (dgs_branch_update
-                    (fun _ b pol ->
-                      local_transfer
-                        (transfer_lift
-                          (resolved_st_q_is_bot_for _A1
-                            (declared_global_vars p))
-                          (tf_st gs
-                            (if pol then EA_Assume b else EA_AssumeNot b))))
-                    (dgs_special_update
-                      (fun _ sc x ->
-                        local_transfer
-                          (transfer_lift
-                            (resolved_st_q_is_bot_for _A1
-                              (declared_global_vars p))
-                            (tf_st gs (EA_Special (sc, x)))))
-                      (dgs_assign_update
-                        (fun _ x e ->
-                          local_transfer
-                            (transfer_lift
-                              (resolved_st_q_is_bot_for _A1
-                                (declared_global_vars p))
-                              (tf_st gs (EA_Assign (x, e)))))
-                        (dgs_skip_update
-                          (fun _ ->
-                            local_transfer
-                              (transfer_lift
-                                (resolved_st_q_is_bot_for _A1
-                                  (declared_global_vars p))
-                                (tf_st gs EA_Nop)))
-                          (Dg_spec_ext
-                            (local_transfer id, (fun _ _ -> local_transfer id),
-                              (fun _ _ -> local_transfer id),
-                              (fun _ _ -> local_transfer id),
-                              (fun _ -> local_transfer id),
-                              (fun _ _ -> local_transfer id),
-                              (fun _ ->
-                                local_enter_transfer (fun d -> [(d, d)])),
-                              (fun _ -> local_transfer id),
-                              (fun _ -> local_combine_transfer (fun d _ -> d)),
-                              (fun _ -> local_combine_transfer (fun d _ -> d)),
-                              ()))))))))))))
-      (prog_cfg p) (Lifted init_st);;
 
 let rec sign_po_solution
   gs p =
@@ -9822,10 +9804,6 @@ let rec analyse_interval_report_wpo
 
 let rec analyse_sign_report_per_origin
   p = sign_po_report (declared_global p) p;;
-
-let rec solution (_A1, _A2)
-  tf_st enter_st init_st solve gs p =
-    solve (equations (_A1, _A2) tf_st enter_st init_st gs p) (root_query p);;
 
 let rec result (_A1, _A2)
   tf_st enter_st init_st solve gs p =

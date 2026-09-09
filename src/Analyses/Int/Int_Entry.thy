@@ -62,6 +62,8 @@ text \<open>
 \<close>
 
 lemmas int_any_result_node_sound = int_any.result_node_sound
+lemmas int_any_result_node_sound_closure = int_any.result_node_sound_closure
+lemmas int_any_state_at_unfold = int_any.state_at_unfold
 lemmas int_any_report_proved_sound = int_any.report_proved_sound
 lemmas int_any_report_refuted_sound = int_any.report_refuted_sound
 
@@ -114,90 +116,12 @@ lemma analyse_int_ctx_result_warrow_node_sound_for:
   shows "ltr_collect pgs (prog_cfg p) (cinit_stores pgs) v
            \<subseteq> \<lbrakk>case lookup_context (analyse_int_ctx_result_warrow_for mode pgs p) v () of
                              Bot \<Rightarrow> bot | Lifted st \<Rightarrow> st\<rbrakk>"
-proof -
-  define empty_pred :: "int_dom resolved_st_q \<Rightarrow> bool"
-    where "empty_pred = resolved_st_q_is_bot_for (declared_global_vars p)"
-  have exact: "\<And>s. empty_pred s = is_empty_state (fun_of_resolved_st_q_for pgs s)"
-    unfolding empty_pred_def by (rule resolved_st_q_is_bot_for_iff[OF declared_global_iff])
-  have sol_eq: "int_conf_sol_prog_warrow mode pgs p
-      = int_conf_sol_warrow mode empty_pred pgs (prog_table p) (prog_procs p)"
-    unfolding int_conf_sol_prog_warrow_def int_conf_eqs_prog_def int_conf_sol_warrow_def empty_pred_def prog_cfg_def by simp
-  have cfg_eq: "prog_cfg p = compile_prog (prog_table p) (prog_procs p)"
-    by (rule prog_cfg_def)
-  have solves': "int_conf_terminates_warrow mode empty_pred pgs (prog_table p) (prog_procs p)"
-    using solve unfolding int_conf_terminates_prog_warrow_def empty_pred_def .
-  have entry_cov': "(cfg_entry (compile_prog (prog_table p) (prog_procs p)), ())
-      \<in> fst (int_conf_sol_warrow mode empty_pred pgs (prog_table p) (prog_procs p))"
-    using entry_cov unfolding sol_eq[symmetric] cfg_eq[symmetric] .
-  have fwd_ok': "\<And>u a w ctx. (u, ctx) \<in> fst (int_conf_sol_warrow mode empty_pred pgs (prog_table p) (prog_procs p))
-      \<Longrightarrow> (u, a, w) \<in> intra (compile_prog (prog_table p) (prog_procs p))
-      \<Longrightarrow> (w, ctx) \<in> fst (int_conf_sol_warrow mode empty_pred pgs (prog_table p) (prog_procs p))"
-    using fwd_ok unfolding sol_eq[symmetric] cfg_eq[symmetric] .
-  have call_fwd_ok': "\<And>u ctx dst fs as q k.
-      (u, ctx) \<in> fst (int_conf_sol_warrow mode empty_pred pgs (prog_table p) (prog_procs p))
-      \<Longrightarrow> (u, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (compile_prog (prog_table p) (prog_procs p))
-      \<Longrightarrow> (FunctionEntry q, ()) \<in> fst (int_conf_sol_warrow mode empty_pred pgs (prog_table p) (prog_procs p))"
-    using call_fwd_ok unfolding sol_eq[symmetric] cfg_eq[symmetric] .
-  have comb_fwd_ok': "\<And>cl c1 dst fs as q k.
-      (cl, c1) \<in> fst (int_conf_sol_warrow mode empty_pred pgs (prog_table p) (prog_procs p))
-      \<Longrightarrow> (cl, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (compile_prog (prog_table p) (prog_procs p))
-      \<Longrightarrow> (k, c1) \<in> fst (int_conf_sol_warrow mode empty_pred pgs (prog_table p) (prog_procs p))"
-    using comb_fwd_ok unfolding sol_eq[symmetric] cfg_eq[symmetric] .
-  have s0_sound: "cinit_stores pgs \<subseteq> int_dom_gamma pgs (Lifted cinit_int_dom_st) Bot"
-    by (rule int_conf_cinit_le_cinit_int_dom_st_warrow[OF solves' exact entry_cov' fwd_ok' call_fwd_ok'
-                                                     comb_fwd_ok'])
-  have node_sound: "activation_collect pgs (call_context_rel_of_fun enterc_unit) ()
-        (compile_prog (prog_table p) (prog_procs p)) (cinit_stores pgs) v ()
-      \<subseteq> \<lbrakk>case lookup_context
-              (dg_analysis_adapter.analyse_result
-                 (snd (int_conf_sol_warrow mode empty_pred pgs (prog_table p) (prog_procs p)))
-                 (fst (int_conf_sol_warrow mode empty_pred pgs (prog_table p) (prog_procs p)))
-                 (map_lift (fun_of_resolved_st_q_for pgs)))
-              v () of
-            Bot \<Rightarrow> bot | Lifted st \<Rightarrow> st\<rbrakk>"
-    by (rule int_conf_result_node_sound_warrow
-          [OF solves' exact entry_cov' fwd_ok' call_fwd_ok' comb_fwd_ok' entry_cov' s0_sound])
-  have ltr_eq: "ltr_collect pgs (prog_cfg p) (cinit_stores pgs) v
-      = activation_collect pgs (call_context_rel_of_fun enterc_unit) ()
-          (compile_prog (prog_table p) (prog_procs p)) (cinit_stores pgs) v ()"
-    unfolding cfg_eq by (rule activation_collect_unit_eq_ltr_collect[symmetric])
-  have result_eq: "lookup_context (analyse_int_ctx_result_warrow_for mode pgs p) v ()
-      = (if (v, ()) \<in> fst (int_conf_sol_prog_warrow mode pgs p)
-         then readback_result_value pgs
-                (canonicalize_lift empty_pred
-                  (locals (snd (int_conf_sol_prog_warrow mode pgs p) (Inl (v, ())))))
-         else Bot)"
-    unfolding analyse_int_ctx_result_warrow_for_def empty_pred_def
-    by simp
-  have adapter_eq0: "lookup_context
-          (dg_analysis_adapter.analyse_result
-             (snd (int_conf_sol_warrow mode empty_pred pgs (prog_table p) (prog_procs p)))
-             (fst (int_conf_sol_warrow mode empty_pred pgs (prog_table p) (prog_procs p)))
-             (map_lift (fun_of_resolved_st_q_for pgs)))
-          v ()
-      = (if (v, ()) \<in> fst (int_conf_sol_warrow mode empty_pred pgs (prog_table p) (prog_procs p))
-         then readback_result_value pgs
-                (canonicalize_lift empty_pred
-                  (locals (snd (int_conf_sol_warrow mode empty_pred pgs (prog_table p) (prog_procs p))
-                    (Inl (v, ())))))
-         else Bot)"
-    by (rule int_conf_analyse_result_eq_warrow[OF solves' exact entry_cov' fwd_ok' call_fwd_ok' comb_fwd_ok'])
-  have adapter_eq: "(if (v, ()) \<in> fst (int_conf_sol_prog_warrow mode pgs p)
-         then readback_result_value pgs
-                (canonicalize_lift empty_pred
-                  (locals (snd (int_conf_sol_prog_warrow mode pgs p) (Inl (v, ())))))
-         else Bot)
-      = lookup_context
-          (dg_analysis_adapter.analyse_result
-             (snd (int_conf_sol_prog_warrow mode pgs p))
-             (fst (int_conf_sol_prog_warrow mode pgs p)) (map_lift (fun_of_resolved_st_q_for pgs)))
-          v ()"
-    using adapter_eq0[unfolded sol_eq[symmetric]]
-    by (rule sym)
-  show ?thesis
-    unfolding ltr_eq result_eq adapter_eq
-    using node_sound[unfolded sol_eq[symmetric]] by simp
-qed
+  using int_any_result_node_sound_closure
+          [unfolded unit_dg_pipeline.sol_vars_def
+             int_conf_sol_prog_warrow_def[symmetric]
+             int_conf_terminates_prog_warrow_def[symmetric],
+           OF solve entry_cov fwd_ok call_fwd_ok comb_fwd_ok]
+  unfolding int_any_state_at_unfold analyse_int_ctx_result_warrow_for_eq_pipeline .
 
 theorem analyse_int_report_sound_proved_for:
   fixes v :: pp and c :: exp

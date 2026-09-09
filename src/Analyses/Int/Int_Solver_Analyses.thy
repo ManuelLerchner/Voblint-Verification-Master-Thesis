@@ -1,5 +1,5 @@
 theory Int_Solver_Analyses
-  imports Int_Analyses
+  imports Int_Analyses "Voblint_Result.Unit_DG_Analysis"
 begin
 
 chapter \<open>The same Int configurations, at the alternative solver disciplines\<close>
@@ -274,12 +274,45 @@ definition int_conf_sol_prog_warrow ::
     "refine_mode \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog
        \<Rightarrow> (pp \<times> unit) set \<times> (pp \<times> unit + (unit, unit) routed_gk \<Rightarrow> (int_dom exec_dg_st lifted, int_dom exec_dg_st lifted) dg_state)" where
   "int_conf_sol_prog_warrow mode gs p =
-     TD_side_warrowing_apinis_Interp_solve (int_conf_eqs_prog mode gs p) (cfg_exit (prog_cfg p), ())"
+     unit_dg_pipeline.solution (int_tf_st_for mode) (int_dom_enter_st_for mode)
+       cinit_int_dom_st TD_side_warrowing_apinis_Interp_solve gs p"
 
 definition int_conf_terminates_prog_warrow :: "refine_mode \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> bool" where
   "int_conf_terminates_prog_warrow mode gs p =
+     unit_dg_pipeline.terminates (int_tf_st_for mode) (int_dom_enter_st_for mode)
+       cinit_int_dom_st
+       (TD_side_warrowing_apinis_Interp.solve_dom TYPE((unit, unit) routed_gk)
+          TYPE((int_dom exec_dg_st lifted, int_dom exec_dg_st lifted) dg_state))
+       gs p"
+
+text \<open>
+  The equation this constant used to be defined by. It is now a consequence
+  rather than a definition, because the constant reads the shared construction;
+  keeping it under a name lets the proofs that unfolded the old definition go on
+  saying what they said.
+\<close>
+
+lemma int_conf_terminates_prog_warrow_eq:
+  "int_conf_terminates_prog_warrow mode gs p =
      int_conf_terminates_warrow mode (resolved_st_q_is_bot_for (declared_global_vars p))
        gs (prog_table p) (prog_procs p)"
+  unfolding int_conf_terminates_prog_warrow_def int_conf_terminates_warrow_def
+    int_conf_eqs_def int_dom_spec_def
+    unit_dg_pipeline.terminates_def unit_dg_pipeline.equations_def
+    unit_dg_pipeline.analysis_spec_def unit_dg_pipeline.root_query_def
+    prog_cfg_def
+  by simp
+
+lemma int_conf_sol_prog_warrow_eq:
+  "int_conf_sol_prog_warrow mode gs p =
+     int_conf_sol_warrow mode (resolved_st_q_is_bot_for (declared_global_vars p))
+       gs (prog_table p) (prog_procs p)"
+  unfolding int_conf_sol_prog_warrow_def int_conf_sol_warrow_def
+    int_conf_eqs_def int_dom_spec_def
+    unit_dg_pipeline.solution_def unit_dg_pipeline.equations_def
+    unit_dg_pipeline.analysis_spec_def unit_dg_pipeline.root_query_def
+    prog_cfg_def
+  by simp
 
 lemma int_conf_terminates_prog_warrow_via_solve_c:
   assumes "TD_side_warrowing_apinis_Interp_solve_c
@@ -287,8 +320,11 @@ lemma int_conf_terminates_prog_warrow_via_solve_c:
                 gs (prog_table p) (prog_procs p))
              (cfg_exit (compile_prog (prog_table p) (prog_procs p)), ()) \<noteq> None"
   shows "int_conf_terminates_prog_warrow mode gs p"
-  unfolding int_conf_terminates_prog_warrow_def
-  using assms by (rule int_conf_terminates_warrow_via_solve_c)
+  unfolding int_conf_terminates_prog_warrow_def unit_dg_pipeline.terminates_def
+    unit_dg_pipeline.equations_def unit_dg_pipeline.analysis_spec_def
+    unit_dg_pipeline.root_query_def prog_cfg_def
+  using assms[unfolded int_conf_eqs_def int_dom_spec_def]
+  by (rule TD_side_warrowing_apinis_Interp.solve_dom_of_solve_c)
 
 definition analyse_int_ctx_result_warrow_for ::
     "refine_mode \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> (unit, int_dom abs_state) analysis_result" where
