@@ -82,6 +82,7 @@ def with_solver(text, domain, solver):
     ("Interval_Analysis", "Some (Plan_Interval Solver_Warrow)"),
     ("Int_Analysis", "Some (Plan_Int Solver_Warrow)"),
     ("Parity_Analysis", "Some (Plan_Parity Solver_Join)"),
+    ("Congruence_Analysis", "Some (Plan_Congruence Solver_Join)"),
 ])
 def test_implicit_default_per_domain(generated, domain, plan):
     assert resolve(generated["Config_Tables"], domain, None, "Ctx_None") == plan
@@ -89,10 +90,18 @@ def test_implicit_default_per_domain(generated, domain, plan):
 
 # --- Deliberate gaps --------------------------------------------------------
 
-@pytest.mark.parametrize("domain", ["Sign_Analysis", "Parity_Analysis"])
+@pytest.mark.parametrize("domain", ["Sign_Analysis", "Parity_Analysis",
+                                    "Congruence_Analysis"])
 @pytest.mark.parametrize("solver", ["Solver_Warrow", "Solver_WarrowPerOrigin"])
 def test_finite_lattices_reject_widening(generated, domain, solver):
-    """Sign and Parity carry a `widen`, but no solved table stands behind it."""
+    """Sign, Parity and Congruence carry a `widen`, but no solved table stands
+    behind it.
+
+    Congruence is here for a different reason than the other two. Its lattice is
+    not finite -- the modulus is unbounded -- but its `widen` is plain join, and a
+    strictly ascending chain of residue classes is a chain of proper divisors of
+    the modulus, so join alone already terminates and a warrowing route would
+    solve the same system by the same steps under a different name."""
     assert resolve(generated["Config_Tables"], domain, solver, "Ctx_None") == "None"
     assert with_solver(generated["Dispatch_Tables"], domain, solver) == "None"
 
@@ -111,6 +120,22 @@ def test_int_rejects_per_origin_at_a_context_but_not_at_none(generated, solver):
     assert resolve(cfg, "Int_Analysis", solver, "Ctx_CallString", 3) == "None"
 
 
+@pytest.mark.parametrize("context,k", [("Ctx_EntryState", None), ("Ctx_CallString", 3)])
+@pytest.mark.parametrize("solver", ["Solver_PerOrigin", "Solver_Warrow",
+                                    "Solver_WarrowPerOrigin"])
+def test_congruence_publishes_contexts_at_join_only(generated, context, solver, k):
+    """Congruence offers both context modes, but only under the always-join rule.
+
+    It publishes two disciplines at `Ctx_None` and one at each context, so
+    per-origin is a real gap here rather than an oversight: the routed
+    configurations in Congruence_Analyses are built over
+    `TD_side_always_join_Interp` alone, and no solved table stands behind any
+    other pairing."""
+    cfg = generated["Config_Tables"]
+    assert resolve(cfg, "Congruence_Analysis", solver, context, k) == "None"
+    assert resolve(cfg, "Congruence_Analysis", "Solver_Join", context, k) != "None"
+
+
 @pytest.mark.parametrize("solver", SOLVERS)
 def test_interval_supports_every_solver_at_every_context(generated, solver):
     cfg = generated["Config_Tables"]
@@ -120,7 +145,8 @@ def test_interval_supports_every_solver_at_every_context(generated, solver):
 
 
 @pytest.mark.parametrize("domain", ["Sign_Analysis", "Interval_Analysis",
-                                    "Int_Analysis", "Parity_Analysis"])
+                                    "Int_Analysis", "Parity_Analysis",
+                                    "Congruence_Analysis"])
 @pytest.mark.parametrize("solver", [None] + SOLVERS)
 def test_call_string_zero_is_not_published(generated, domain, solver):
     """Every domain publishes a shortest bound of one today, so a zero-length
@@ -134,7 +160,8 @@ def test_call_string_zero_is_not_published(generated, domain, solver):
     assert resolve(generated["Config_Tables"], domain, solver, "Ctx_CallString", 0) == "None"
 
 
-@pytest.mark.parametrize("domain", ["Sign_Analysis", "Interval_Analysis", "Int_Analysis"])
+@pytest.mark.parametrize("domain", ["Sign_Analysis", "Interval_Analysis", "Int_Analysis",
+                                    "Congruence_Analysis"])
 def test_call_string_above_the_bound_is_published(generated, domain):
     """The guard rejects only the bound below the published minimum."""
     assert resolve(generated["Config_Tables"], domain, None, "Ctx_CallString", 3) != "None"
@@ -180,7 +207,8 @@ def test_applied_roles_reach_isabelle_as_one_argument(generated):
 # --- The two tables agree ---------------------------------------------------
 
 @pytest.mark.parametrize("domain", ["Sign_Analysis", "Interval_Analysis",
-                                    "Int_Analysis", "Parity_Analysis"])
+                                    "Int_Analysis", "Parity_Analysis",
+                                    "Congruence_Analysis"])
 @pytest.mark.parametrize("solver", SOLVERS)
 def test_dispatcher_and_resolver_agree_on_support(generated, domain, solver):
     """The gap this generation exists to close: a pairing the CLI resolves must

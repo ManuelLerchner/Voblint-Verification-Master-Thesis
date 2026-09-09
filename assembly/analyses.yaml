@@ -212,3 +212,31 @@ domains:
         warrowing_per_origin:
           report: analyse_int_report_wpo
           report_with_state: int_wpo.report_with_state
+
+  # Congruence publishes on its own, alongside its role as the fourth component
+  # of `int_dom`. Its widening is plain join (the modulus only ever coarsens, so
+  # an ascending chain is a divisor chain and terminates), which is why it
+  # publishes the same two disciplines Sign and Parity do rather than a
+  # warrowing route: there is nothing for widening to accelerate.
+  - name: Congruence
+    adopted: true
+    value_type: congruence
+    tag: CongruenceValue
+    routes: [always_join, per_origin]
+    contexts:
+      entry_state: {solvers: [always_join], default: always_join}
+      call_string: {solvers: [always_join], default: always_join, min_bound: 1}
+    legacy:
+      impl_prefix: congruence
+      classifier: congruence_classify_check
+      init_gamma: congruence_cinit_gamma
+      hide_consts: [phase.N]
+      binders: {always_join: congruence_join, per_origin: congruence_po_asm}
+      prefixes: {always_join: congruence_unit, per_origin: congruence_po}
+      routes:
+        always_join:
+          report: analyse_congruence_report
+          report_with_state: analyse_congruence_report_with_state
+        per_origin:
+          report: analyse_congruence_report_per_origin
+          report_with_state: congruence_per_origin.report_with_state

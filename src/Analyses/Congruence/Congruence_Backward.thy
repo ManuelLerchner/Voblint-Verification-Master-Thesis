@@ -988,8 +988,11 @@ global_interpretation congruence_backward_domain:
     afilter_congruence = congruence_backward_domain.afilter
     and feasible_congruence = congruence_backward_domain.feasible
     and bfilter_congruence = congruence_backward_domain.bfilter
+    and branch_congruence = congruence_backward_domain.branch
+    and branch_lifted_congruence = congruence_backward_domain.branch_lifted
     and afilter_congruence_st = congruence_backward_domain.afilter_st
     and bfilter_congruence_st = congruence_backward_domain.bfilter_st
+    and branch_congruence_st = congruence_backward_domain.branch_st
 proof unfold_locales
   fix n :: int and a b :: congruence
   assume H1: "n : gamma a" and H2: "n : gamma b"
