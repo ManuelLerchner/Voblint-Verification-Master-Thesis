@@ -31,38 +31,38 @@ text \<open>The four coverage hypotheses are properties of the \<^emph>\<open>so
 
 lemma rc_entry_covered:
   "(cfg_entry (compile_prog rc_pi rc_procs), [])
-     \<in> fst (entry_state_sol rc_gs rc_empty_pred rc_pi rc_procs)"
+     \<in> fst (entry_state_sol_prog rc_gs rc_program)"
   unfolding rc_empty_pred_def by eval
 
 lemma rc_fwd_closed_all:
-  "\<forall>(u, c) \<in> fst (entry_state_sol rc_gs rc_empty_pred rc_pi rc_procs).
+  "\<forall>(u, c) \<in> fst (entry_state_sol_prog rc_gs rc_program).
      \<forall>(u', a, v) \<in> intra (compile_prog rc_pi rc_procs).
-       u = u' \<longrightarrow> (v, c) \<in> fst (entry_state_sol rc_gs rc_empty_pred rc_pi rc_procs)"
+       u = u' \<longrightarrow> (v, c) \<in> fst (entry_state_sol_prog rc_gs rc_program)"
   unfolding rc_empty_pred_def by eval
 
 lemma rc_fwd_ok:
-  assumes "(u, ctx) \<in> fst (entry_state_sol rc_gs rc_empty_pred rc_pi rc_procs)"
+  assumes "(u, ctx) \<in> fst (entry_state_sol_prog rc_gs rc_program)"
     and "(u, a, v) \<in> intra (compile_prog rc_pi rc_procs)"
-  shows "(v, ctx) \<in> fst (entry_state_sol rc_gs rc_empty_pred rc_pi rc_procs)"
+  shows "(v, ctx) \<in> fst (entry_state_sol_prog rc_gs rc_program)"
   using rc_fwd_closed_all assms by fastforce
 
 text \<open>The one call site is reached only under the root context: \<open>main\<close> is the root
   activation, and nothing routes back into it.\<close>
 
 lemma rc_call_caller_only_root:
-  "\<forall>(p, ctx) \<in> fst (entry_state_sol rc_gs rc_empty_pred rc_pi rc_procs).
+  "\<forall>(p, ctx) \<in> fst (entry_state_sol_prog rc_gs rc_program).
      p = Statement 3 \<longrightarrow> ctx = []"
   unfolding rc_empty_pred_def by eval
 
 lemma rc_covered_cont:
-  "(Statement 4, []) \<in> fst (entry_state_sol rc_gs rc_empty_pred rc_pi rc_procs)"
+  "(Statement 4, []) \<in> fst (entry_state_sol_prog rc_gs rc_program)"
   unfolding rc_empty_pred_def by eval
 
 lemma rc_comb_fwd_ok:
-  assumes "(cl, c1) \<in> fst (entry_state_sol rc_gs rc_empty_pred rc_pi rc_procs)"
+  assumes "(cl, c1) \<in> fst (entry_state_sol_prog rc_gs rc_program)"
     and "(cl, CallEdge dst pars args, FunctionEntry p, cont)
            \<in> calls (compile_prog rc_pi rc_procs)"
-  shows "(cont, c1) \<in> fst (entry_state_sol rc_gs rc_empty_pred rc_pi rc_procs)"
+  shows "(cont, c1) \<in> fst (entry_state_sol_prog rc_gs rc_program)"
   using assms rc_calls_shape[unfolded rc_cfg_def] rc_call_caller_only_root rc_covered_cont
   by fastforce
 
@@ -76,7 +76,7 @@ lemma rc_route_at_call:
         (ivl_enter_st_for rc_gs
            (call_info_of (CallEdge (Some (STR ''y'')) [(STR ''a'')] [V (STR ''x'')])
              (STR ''p'')))
-        (locals (snd (entry_state_sol rc_gs rc_empty_pred rc_pi rc_procs)
+        (locals (snd (entry_state_sol_prog rc_gs rc_program)
                    (Inl (Statement 3, [])))))
      (CallEdge (Some (STR ''y'')) [(STR ''a'')] [V (STR ''x'')])
    = ctx_call"
@@ -84,17 +84,17 @@ lemma rc_route_at_call:
   by (simp add: enter_st_interval_eq_entry_state_entered)
 
 lemma rc_call_fwd_ok:
-  assumes cov: "(u, ctx) \<in> fst (entry_state_sol rc_gs rc_empty_pred rc_pi rc_procs)"
+  assumes cov: "(u, ctx) \<in> fst (entry_state_sol_prog rc_gs rc_program)"
     and ce: "(u, CallEdge dst pars args, FunctionEntry p, cont)
                \<in> calls (compile_prog rc_pi rc_procs)"
   shows "(FunctionEntry p,
             entry_state_route_gen rc_gs rc_empty_pred u ctx
               (transfer_lift rc_empty_pred
                  (ivl_enter_st_for rc_gs (call_info_of (CallEdge dst pars args) p))
-                 (locals (snd (entry_state_sol rc_gs rc_empty_pred rc_pi rc_procs)
+                 (locals (snd (entry_state_sol_prog rc_gs rc_program)
                             (Inl (u, ctx)))))
               (CallEdge dst pars args))
-         \<in> fst (entry_state_sol rc_gs rc_empty_pred rc_pi rc_procs)"
+         \<in> fst (entry_state_sol_prog rc_gs rc_program)"
 proof -
   from ce rc_calls_shape[unfolded rc_cfg_def] have shape:
     "u = Statement 3" "dst = Some (STR ''y'')" "pars = [(STR ''a'')]" "args = [V (STR ''x'')]"
@@ -114,15 +114,26 @@ text \<open>The seven hypotheses \<open>entry_state_activation_collect_sound\<cl
   -- is conditional on exactly this bundle, so citing it once here makes each of
   them unconditional below.\<close>
 
+lemma rc_cfg_alt: "prog_cfg rc_program = compile_prog rc_pi rc_procs"
+  by (simp add: prog_cfg_def rc_pi_def rc_procs_def)
+
+lemmas rc_routed_hyps =
+  rc_ctx_terminates
+  rc_fwd_ok[folded entry_state_vars_prog_alt rc_cfg_alt]
+  rc_call_fwd_ok[unfolded entry_state_route_gen_eq_exec_formals_route rc_empty_pred_def,
+    folded entry_state_vars_prog_alt entry_state_env_prog_alt rc_cfg_alt]
+  rc_comb_fwd_ok[folded entry_state_vars_prog_alt rc_cfg_alt]
+
 lemmas rc_entry_state_hyps =
-  rc_ctx_terminates rc_exact rc_entry_covered rc_fwd_ok rc_call_fwd_ok rc_comb_fwd_ok
+  rc_routed_hyps rc_entry_covered[folded entry_state_vars_prog_alt rc_cfg_alt]
 
 theorem rc_activation_collect_sound:
   "activation_collect rc_gs
-     (entry_state_context_rel rc_gs rc_empty_pred rc_pi rc_procs)
+     (entry_state_context_rel rc_gs rc_program)
      [] (compile_prog rc_pi rc_procs) (cinit_stores rc_gs) v ctx
    \<subseteq> gamma_state_lift (map_lift (fun_of_resolved_st_q_for rc_gs)
-       (entry_state_sg_st rc_gs rc_empty_pred rc_pi rc_procs (Inl (v, ctx))))"
+       (entry_state_sg_st_prog rc_gs rc_program (Inl (v, ctx))))"
+  unfolding rc_cfg_alt[symmetric]
   by (rule entry_state_activation_collect_sound[OF rc_entry_state_hyps])
 
 subsection \<open>Acceptance witness: one context covers every \<open>__voblint_nondet_int()\<close> draw\<close>
@@ -144,34 +155,38 @@ proof (rule call_action_at_call_site_eq
 qed
 
 lemma rc_context_at_call:
-  assumes sin: "s \<in> interval_gamma rc_gs (locals (snd (entry_state_sol rc_gs rc_empty_pred rc_pi rc_procs)
+  assumes sin: "s \<in> interval_gamma rc_gs (locals (snd (entry_state_sol_prog rc_gs rc_program)
                   (Inl (Statement 3, []))))
-                  (globs (snd (entry_state_sol rc_gs rc_empty_pred rc_pi rc_procs) (Inr (Analysis_Global ()))))"
-  shows "entry_state_context_rel rc_gs rc_empty_pred rc_pi rc_procs
+                  (globs (snd (entry_state_sol_prog rc_gs rc_program) (Inr (Analysis_Global ()))))"
+  shows "entry_state_context_rel rc_gs rc_program
            (Statement 3) [] (call_info_of (CallEdge (Some (STR ''y'')) [(STR ''a'')] [V (STR ''x'')]) (STR ''p''))
            s (call_enter rc_gs (CallEdge (Some (STR ''y'')) [(STR ''a'')] [V (STR ''x'')]) s) ctx_call"
 proof -
   let ?ci = "call_info_of (CallEdge (Some (STR ''y'')) [(STR ''a'')] [V (STR ''x'')]) (STR ''p'')"
-  let ?d = "locals (snd (entry_state_sol rc_gs rc_empty_pred rc_pi rc_procs) (Inl (Statement 3, [])))"
+  let ?d = "locals (snd (entry_state_sol_prog rc_gs rc_program) (Inl (Statement 3, [])))"
   let ?entry = "transfer_lift rc_empty_pred (ivl_enter_st_for rc_gs ?ci) ?d"
   have cov: "entry_pairs_cover
-      (\<lambda>d'. interval_gamma rc_gs d' (globs (snd (entry_state_sol rc_gs rc_empty_pred rc_pi rc_procs)
+      (\<lambda>d'. interval_gamma rc_gs d' (globs (snd (entry_state_sol_prog rc_gs rc_program)
               (Inr (Analysis_Global ())))))
       s (call_enter rc_gs (CallEdge (Some (STR ''y'')) [(STR ''a'')] [V (STR ''x'')]) s)
       [(?d, ?entry)]"
     using interval_entry_cover_exec[OF rc_exact sin, where ci = ?ci] by simp
   have ecov: "call_enter rc_gs (CallEdge (Some (STR ''y'')) [(STR ''a'')] [V (STR ''x'')]) s
-                \<in> interval_gamma rc_gs ?entry (globs (snd (entry_state_sol rc_gs rc_empty_pred rc_pi rc_procs)
+                \<in> interval_gamma rc_gs ?entry (globs (snd (entry_state_sol_prog rc_gs rc_program)
                     (Inr (Analysis_Global ()))))"
     using cov unfolding entry_pairs_cover_def by simp
-  have base: "entry_state_context_rel rc_gs rc_empty_pred rc_pi rc_procs
+  have base: "entry_state_context_rel rc_gs rc_program
       (Statement 3) [] ?ci s
       (call_enter rc_gs (CallEdge (Some (STR ''y'')) [(STR ''a'')] [V (STR ''x'')]) s)
-      (entry_state_route_gen rc_gs rc_empty_pred (Statement 3) [] ?entry
+      (exec_formals_route rc_gs (Statement 3) [] ?entry
          (CallEdge (Some (STR ''y'')) [(STR ''a'')] [V (STR ''x'')]))"
-    unfolding routed_entry_context_rel_def
-    using sin ecov by auto
-  thus ?thesis by (simp add: rc_route_at_call)
+    unfolding rc_empty_pred_def entry_state_env_prog_alt[symmetric]
+    by (rule interval_es.admitted_contextsI_call)
+       (use sin ecov in
+          \<open>simp_all add: routed_dg_domain_exec.gamma_exec_def interval_gamma_def rc_empty_pred_def
+             entry_state_env_prog_alt\<close>)
+  thus ?thesis
+    by (simp add: rc_route_at_call[unfolded entry_state_route_gen_eq_exec_formals_route])
 qed
 
 text \<open>The crux corollary: for \<^emph>\<open>every\<close> concrete store \<open>s\<close> that reaches the call site
@@ -184,10 +199,10 @@ text \<open>The crux corollary: for \<^emph>\<open>every\<close> concrete store 
 
 corollary rc_entry_state_coverage:
   assumes sm: "s \<in> gamma_state_lift (map_lift (fun_of_resolved_st_q_for rc_gs)
-    (entry_state_sg_st rc_gs rc_empty_pred rc_pi rc_procs (Inl (Statement 3, []))))"
+    (entry_state_sg_st_prog rc_gs rc_program (Inl (Statement 3, []))))"
   shows "call_enter rc_gs (CallEdge (Some (STR ''y'')) [(STR ''a'')] [V (STR ''x'')]) s
            \<in> gamma_state_lift (map_lift (fun_of_resolved_st_q_for rc_gs)
-                (entry_state_sg_st rc_gs rc_empty_pred rc_pi rc_procs
+                (entry_state_sg_st_prog rc_gs rc_program
                   (Inl (FunctionEntry (STR ''p''), ctx_call))))"
 proof -
   have ce: "(Statement 3, CallEdge (Some (STR ''y'')) [(STR ''a'')] [V (STR ''x'')],
@@ -199,11 +214,14 @@ proof -
   have sin: "s \<in> interval_gamma rc_gs (locals (snd rc_ctx_sol (Inl (Statement 3, []))))
                (globs (snd rc_ctx_sol (Inr (Analysis_Global ()))))"
     using sm covd
-    unfolding interval_gamma_def entry_state_sg_st_def rc_ctx_sol_def[symmetric]
+    unfolding interval_gamma_def interval_es.reader_def
+      entry_state_vars_prog_alt entry_state_env_prog_alt rc_ctx_sol_def[symmetric]
     by simp
   show ?thesis
-    by (rule entry_state_sg_seed[OF rc_entry_state_hyps ce sm
-          rc_context_at_call[OF sin[unfolded rc_ctx_sol_def]]])
+    using entry_state_routed_context_call[OF rc_routed_hyps
+          ce[folded rc_cfg_alt] sm[unfolded interval_es.reader_def]
+          rc_context_at_call[OF sin[unfolded rc_ctx_sol_def]]]
+    by (simp add: interval_es.reader_def)
 qed
 
 text \<open>Unfolding \<^const>\<open>activation_collect\<close> at \<^const>\<open>ctx_call\<close> makes the
@@ -216,13 +234,13 @@ text \<open>Unfolding \<^const>\<open>activation_collect\<close> at \<^const>\<o
 
 corollary rc_activation_ctx_key:
   "activation_collect rc_gs
-     (entry_state_context_rel rc_gs rc_empty_pred rc_pi rc_procs)
+     (entry_state_context_rel rc_gs rc_program)
      [] (compile_prog rc_pi rc_procs) (cinit_stores rc_gs)
      (FunctionEntry (STR ''p'')) ctx_call
    = {sink_store t | t.
         t \<in> valid_ltr rc_gs (compile_prog rc_pi rc_procs) (cinit_stores rc_gs)
         \<and> sink_node t = FunctionEntry (STR ''p'')
-        \<and> trace_context rc_gs (entry_state_context_rel rc_gs rc_empty_pred rc_pi rc_procs) []
+        \<and> trace_context rc_gs (entry_state_context_rel rc_gs rc_program) []
             (compile_prog rc_pi rc_procs) t ctx_call}"
   unfolding activation_collect_def by (rule refl)
 

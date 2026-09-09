@@ -15,7 +15,7 @@ the floor under it.
 | Session | Directory | Holds |
 | --- | --- | --- |
 | `Voblint_Routing` | `Routing/` | compiled routed-equation construction, concrete routing policies (call-string, entry-state), and key-space finiteness arguments |
-| `Voblint_Result` | `Result/` | what a solved routed system publishes (`DG_Result_Construction`) and the surface a caller reads it through (`Analysis_Surface`); `unit_analysis_sound` composes publication with a unit-routed producer, and `Unit_DG_Analysis` assembles one whole context-insensitive analysis from a domain's four choices |
+| `Voblint_Result` | `Result/` | what a solved routed system publishes (`DG_Result_Construction`) and the surface a caller reads it through (`Analysis_Surface`); `Routed_DG_Analysis` assembles one whole analysis --- at any context policy --- from a domain's choices, and `Unit_DG_Analysis` does the same for the context-insensitive case |
 | `Voblint_Nonrelational` | `Nonrelational/` | what a non-relational domain reuses: expression evaluation and soundness, special-call dispatch, generic procedure entry, executable backward filtering |
 
 ## Vocabulary
@@ -37,15 +37,20 @@ value into generic executable procedure entry. Sign's numeric check queries
 remain in `Sign_Numeric_Queries`;
 `Routing/Compiled_Routed_Equations` assembles the common executable equation
 system from the chosen keys, route, specification, graph, and initial state.
-`Routing/Call_String_Routed_Context` supplies the routing policy
-`Sign_Analyses` instantiates for its `k`-bounded run;
 `Result/DG_Result_Construction` turns the solved system into a published table
 and `Result/Analysis_Surface` is what `Sign_Checks` reads it back through.
-For the context-insensitive route Sign skips even that assembly step:
-`Sign_Assembly` is one `global_interpretation` of
-`Result/Unit_DG_Analysis`'s `unit_dg_analysis`, and `Sign_Checks` binds the
-names it defines. Sign contributes the lattice and the transfer functions.
-Every other piece of that sentence is from here.
+
+Above those, `Result/Routed_DG_Analysis`'s `routed_dg_analysis` is what
+`Sign_Analyses` actually interprets, twice: once at the call-string routing pair
+and once at the entry-state one. That locale owns the equation system, the
+solve, the covered keys, the reader, the result table, the contextual report and
+the activation-indexed soundness endpoints, so a policy costs Sign an
+interpretation and a list of published names rather than a pipeline. The
+context-insensitive route is the same shape one layer over:
+`Sign_Assembly` is one `global_interpretation` of `Result/Unit_DG_Analysis`'s
+`unit_dg_analysis`, and `Sign_Checks` binds the names it defines. Sign
+contributes the lattice and the transfer functions. Every other piece of those
+sentences is from here.
 
 ## Why three sessions and not one
 
@@ -121,8 +126,12 @@ value becomes a sign or an interval.
 `Routing/Compiled_Routed_Equations` first for the executable construction,
 then `Call_String_Routed_Context` for the policy the flagships use;
 `Entry_State_Routed_Context` reads as a variation on it. Then
-`Result/DG_Result_Construction` for what a solve turns into, and
-`Result/Analysis_Surface` for how a caller reads that back. `Nonrelational/` is
+`Result/DG_Result_Construction` for what a solve turns into,
+`Result/Analysis_Surface` for how a caller reads that back, and
+`Result/Routed_DG_Analysis` for the assembly that puts all of it together ---
+its `routed_dg_pipeline` is the construction with no correctness assumptions and
+`routed_dg_analysis` the same objects under the domain and solver contracts.
+`Nonrelational/` is
 reference material a domain author reaches for rather than a narrative;
 `Abstract_Arithmetic` is the one to read first if you are adding a domain.
 

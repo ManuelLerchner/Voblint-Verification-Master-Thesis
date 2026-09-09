@@ -5,229 +5,181 @@ theory Interval_Analyses
     Interval_Classify
     Interval_Transfer
     Interval_Exec_Sound
-    "Voblint_Result.DG_Result_Construction"
-    "Voblint_Framework.CFG_Enumeration"
-    "Voblint_Exec.Routed_Exec_Refinement"
-    "Voblint_Framework.Routed_Analysis_Sound"
-    "Voblint_Framework.Routed_Context"
-    "Voblint_Framework.Routed_Context_Unit"
-    "Voblint_Framework.Activation_Backbone"
-    "Voblint_Framework.Analysis_Result"
+    "Voblint_Result.Routed_DG_Analysis"
     "Voblint_Framework.Call_String_Context"
     "Voblint_Solver.TD_Solver_Bridge"
-    "Voblint_Compile.Compile_Invariants"
-    "Voblint_CFG.CFG_Prune"
     "Voblint_VIMP.VIMP_Program"
     "TD.TD_side_upd_rule"
-    "Voblint_Routing.Call_String_Routed_Context"
-    "Voblint_Routing.Entry_State_Routed_Context"
 begin
-chapter \<open>How Interval is run under each supported context policy\<close>
+
+chapter \<open>How Interval is run under each context-sensitive policy\<close>
 
 text \<open>
   Interval's analysis package -- specification, concretization and soundness --
-  lives in \<^theory>\<open>Voblint_Analysis_Interval.Interval_Sound\<close> and mentions no context.
-  This theory supplies the configurations: for each supported context policy,
-  the equation system that pairing generates, its solved table, the coverage
-  premises the solver's reachable set must satisfy, and the result and report
-  tables a caller consumes.
+  lives in \<^theory>\<open>Voblint_Analysis_Interval.Interval_Sound\<close> and mentions no
+  context. This theory supplies the other half for the two policies that route a
+  call to more than one context: the call-string run, which truncates the caller's
+  string at a runtime bound, and the entry-state run, which keys a callee on the
+  abstract values its formals hold on entry.
 
-  Solver discipline is a second, independent axis. The base configuration uses
-  always-join; sibling interpretations cover PerOrigin, Apinis warrowing, and
-  warrowing-per-origin. Production reporting selects Apinis warrowing because
-  Interval has infinite ascending chains.
+  Neither policy has a pipeline of its own here. Both are interpretations of
+  \<^locale>\<open>routed_dg_analysis\<close>, the same one Sign, Parity and Congruence
+  interpret; the context-insensitive run is \<open>Interval_Assembly\<close>'s four
+  interpretations of the unit assembly, one per update rule. Production reporting
+  selects Apinis warrowing at both policies because Interval has infinite
+  ascending chains; the other three disciplines are in
+  \<open>Interval_Solver_Analyses\<close>, and differ from these by a solver name.
 
-  Global keys are \<^type>\<open>routed_gk\<close>, with \<^const>\<open>Analysis_Global\<close> at
-  \<^typ>\<open>unit\<close> since Interval publishes no named global of its own; the
-  call-string configuration uses the shared \<^typ>\<open>call_string_gk\<close>.
+  What is Interval's own, and stays here, is the presentation-side routing: the
+  question "which callee context does this call site route to, read off a solved
+  table rather than the solver's map" has an Interval-specific answer, because
+  deciding whether the entered callee frame is dead needs a bottom test on the
+  formals rather than the non-executable whole-state one.
 \<close>
+
+section \<open>Interval at the call-string context\<close>
 
 text \<open>
-  The unit context is not among them. That configuration lives in
-  \<^theory>\<open>Voblint_Analysis_Interval.Interval_Assembly\<close>, as four interpretations of the
-  shared \<^locale>\<open>unit_dg_analysis\<close> --- one per update rule. Each derives the equation
-  system, the solve, the result table, the report and every soundness endpoint from
-  Interval's transfer functions, its initial state, its check classifier and that
-  solver's own post-solution and finiteness contracts, and three lemmas there prove all
-  four solve the identical system. What remains here are the two configurations that
-  route calls to more than one context, which the assembly's fixed unit route cannot
-  express.
+  A call string is the last \<open>k\<close> call sites on the stack, so a procedure entered
+  from two places is analysed twice rather than once at the join.
+  \<^const>\<open>cs_route\<close> never reads the state it is handed, which is what makes
+  \<open>fun_route_activation_collect_sound\<close> --- the endpoint for a route that is a
+  function of the call site and the caller's context alone --- the applicable one,
+  at the trace-semantic counterpart \<^const>\<open>cs_context\<close>.
+
+  \<open>k\<close> is runtime data, so the interpretation is local to a context fixing it and
+  the published constants below are applications of the pipeline's own constants
+  at \<^term>\<open>cs_route k\<close>.
 \<close>
 
+context
+  fixes k :: nat
+begin
 
-section \<open>Generic executable call-string context analysis for Interval\<close>
+interpretation interval_cs: routed_dg_analysis
+    ivl_tf_st_for ivl_enter_st_for cinit_ivl_st
+    Call_String_Context.Global Call_String_Context.Seed "\<lambda>_. cs_route k" "[]"
+    TD_side_warrowing_apinis_Interp_solve
+    "TD_side_warrowing_apinis_Interp.solve_dom TYPE(call_string_gk)
+       TYPE((ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)"
+    bot interval_classify_check
+    skip_ivl assign_ivl special_ivl branch_ivl body_ivl return_ivl
+    enter_ivl_ci_for event_ivl "\<lambda>_. cs_route k"
+    TD_side_warrowing_apinis_Interp_solve_c
+proof (rule routed_dg_analysis.intro, goal_cases)
+  case (1 gs) show ?case by (rule ivl_is_sound_transfer_for)
+next
+  case (2 gs a s) then show ?case
+    unfolding fun_of_exec_dg_st_for_def
+    by (rule ivl_tf_st_for_commute[unfolded ivl_tf_abs_def])
+next
+  case (3 gs ci s) show ?case
+    unfolding fun_of_exec_dg_st_for_def by (rule ivl_enter_st_for_commute)
+next
+  case (4 gs u ctx d ca) show ?case by (rule cs_route_indep_of_data)
+next
+  case (5 v ctx) show ?case by simp
+next
+  case (6 eqs x) then show ?case
+    by (rule TD_side_warrowing_apinis_Interp.partial_post_solution
+          [OF _ surjective_pairing])
+next
+  case (7 eqs x) then show ?case
+    by (rule TD_side_warrowing_apinis_Interp.finite_stabl_solve)
+next
+  case (8 c d s) then show ?case by (rule interval_classify_check_proved)
+next
+  case (9 c d s) then show ?case by (rule interval_classify_check_refuted)
+next
+  case 10 show ?case by (rule refl)
+next
+  case (11 gs) show ?case by (rule interval_cinit_gamma)
+next
+  case (12 eqs x) then show ?case
+    by (rule TD_side_warrowing_apinis_Interp.solve_dom_of_solve_c)
+qed
 
-text \<open>
-  The call-string sibling of the entry-state configuration below's entry-state pipeline:
-  same \<open>interval_spec\<close> D/G specification, same executable Warrow solve, routed at
-  \<^const>\<open>Call_String_Context.cs_route\<close> with a runtime bound \<open>k\<close> instead of at the
-  entered callee formals. The packaging-correspondence facts the entry-state
-  pipeline needs come from interpreting \<^locale>\<open>routed_domain_exec\<close> once, as
-  \<open>ivl_es\<close>, giving \<open>ivl_es.sound_dg_spec_core_st\<close> directly at the executable
-  carrier; that interpretation is already generic in the routing policy, so
-  nothing here re-derives it.
+lemmas analyse_interval_call_string_sound =
+  interval_cs.fun_route_activation_collect_sound[OF cs_route_context_agree]
 
-  This covers only the executable/result/report path, mirroring exactly what
-  the entry-state configuration below's own unconditional section
-  (\<open>analyse_interval_entry_state_result_for\<close> onward) provides: no premise here
-  needs \<open>call_fwd\<close>/\<open>comb_fwd\<close> (\<open>Call_String_Routed_Context\<close>),
-  matching the entry-state pipeline's own current posture, where the shipped
-  \<open>analyse_interval_entry_state_result_for\<close> is likewise unconditional and
-  the generic activation-collecting-soundness theorem is separate, open work.
-\<close>
+lemmas cs_call_string_terminates_via_solve_c = interval_cs.terminates_of_solve_c
 
-subsection \<open>The routed equation system and its executable solution\<close>
+end
 
-text \<open>
-  \<^const>\<open>Call_String_Context.cs_route\<close>, applied to \<open>k\<close>, is already exactly the
-  four-argument \<open>pp \<Rightarrow> call_string \<Rightarrow> 'd \<Rightarrow> call_action \<Rightarrow> call_string\<close> route
-  \<^const>\<open>compiled_routed_eqs_for\<close> wants -- unlike entry-state's own
-  \<open>entry_state_route_gen\<close>, no wrapper is needed to reach that shape.
-\<close>
-
-definition cs_call_string_eqs ::
-    "nat \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> (ivl exec_dg_st \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> (pp \<times> call_string, call_string_gk, (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state) eqsT" where
-  "cs_call_string_eqs k gs empty_pred Pi ps =
-     call_string_eqs_for k (interval_spec gs empty_pred)
-       (compile_prog Pi ps) (Lifted cinit_ivl_st)"
-
-definition cs_call_string_sol ::
-    "nat \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> (ivl exec_dg_st \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> (pp \<times> call_string) set \<times> (pp \<times> call_string + call_string_gk \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)" where
-  "cs_call_string_sol k gs empty_pred Pi ps =
-     TD_side_warrowing_apinis_Interp_solve (cs_call_string_eqs k gs empty_pred Pi ps)
-       (cfg_exit (compile_prog Pi ps), [])"
-
-definition cs_call_string_terminates ::
-    "nat \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> (ivl exec_dg_st \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> bool" where
-  "cs_call_string_terminates k gs empty_pred Pi ps =
-     TD_side_warrowing_apinis_Interp.solve_dom TYPE(call_string_gk) TYPE((ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)
-       (cs_call_string_eqs k gs empty_pred Pi ps) (cfg_exit (compile_prog Pi ps), [])"
-
-lemma cs_call_string_terminates_via_solve_c:
-  assumes "TD_side_warrowing_apinis_Interp_solve_c (cs_call_string_eqs k gs empty_pred Pi ps)
-             (cfg_exit (compile_prog Pi ps), []) \<noteq> None"
-  shows "cs_call_string_terminates k gs empty_pred Pi ps"
-  unfolding cs_call_string_terminates_def
-  by (rule TD_side_warrowing_apinis_Interp.solve_dom_of_solve_c[OF assms])
-
-lemma cs_call_string_vars_finite:
-  assumes "cs_call_string_terminates k gs empty_pred Pi ps"
-  shows "finite (fst (cs_call_string_sol k gs empty_pred Pi ps))"
-  using TD_side_warrowing_apinis_Interp.finite_stabl_solve[
-      OF assms[unfolded cs_call_string_terminates_def]]
-  unfolding cs_call_string_sol_def TD_side_warrowing_apinis_Interp_solve_def
-  by simp
-
-subsection \<open>Whole-program convenience layer\<close>
+subsection \<open>The published call-string constants\<close>
 
 definition cs_call_string_eqs_prog ::
     "nat \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog
-       \<Rightarrow> (pp \<times> call_string, call_string_gk, (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state) eqsT" where
-  "cs_call_string_eqs_prog k gs p =
-     cs_call_string_eqs k gs (resolved_st_q_is_bot_for (declared_global_vars p))
-       (prog_table p) (prog_procs p)"
+       \<Rightarrow> (pp \<times> call_string, call_string_gk,
+            (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state) eqsT" where
+  "cs_call_string_eqs_prog k =
+     routed_dg_pipeline.equations ivl_tf_st_for ivl_enter_st_for cinit_ivl_st
+       Call_String_Context.Global Call_String_Context.Seed (\<lambda>_. cs_route k)"
 
 definition cs_call_string_sol_prog ::
     "nat \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog
-       \<Rightarrow> (pp \<times> call_string) set \<times> (pp \<times> call_string + call_string_gk \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)" where
-  "cs_call_string_sol_prog k gs p =
-     cs_call_string_sol k gs (resolved_st_q_is_bot_for (declared_global_vars p))
-       (prog_table p) (prog_procs p)"
+       \<Rightarrow> (pp \<times> call_string) set
+            \<times> (pp \<times> call_string + call_string_gk
+                 \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)" where
+  "cs_call_string_sol_prog k =
+     routed_dg_pipeline.solution ivl_tf_st_for ivl_enter_st_for cinit_ivl_st
+       Call_String_Context.Global Call_String_Context.Seed (\<lambda>_. cs_route k) []
+       TD_side_warrowing_apinis_Interp_solve"
 
-definition cs_call_string_terminates_prog :: "nat \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> bool" where
-  "cs_call_string_terminates_prog k gs p =
-     cs_call_string_terminates k gs (resolved_st_q_is_bot_for (declared_global_vars p))
-       (prog_table p) (prog_procs p)"
-
-lemma cs_call_string_terminates_prog_via_solve_c:
-  assumes "TD_side_warrowing_apinis_Interp_solve_c
-             (cs_call_string_eqs_prog k gs p)
-             (cfg_exit (compile_prog (prog_table p) (prog_procs p)), []) \<noteq> None"
-  shows "cs_call_string_terminates_prog k gs p"
-  using assms
-  unfolding cs_call_string_terminates_prog_def cs_call_string_eqs_prog_def
-  by (rule cs_call_string_terminates_via_solve_c)
-
-section \<open>Solved-result table\<close>
-
-text \<open>
-  The solved call-string D/G system, read as a
-  \<^typ>\<open>(call_string, ivl abs_state) analysis_result\<close> -- the exact construction
-  \<open>analyse_interval_entry_state_result_for\<close> already uses, at the
-  call-string solve instead of the entry-state one. \<open>result_keys\<close> is the
-  solver's own covered-key set, never an enumerated theoretical context space:
-  call-string contexts are dynamic and discovered, not statically bounded, the
-  same reason entry-state's own key set is solver-discovered rather than
-  enumerated.
-\<close>
+definition cs_call_string_terminates_prog ::
+    "nat \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> bool" where
+  "cs_call_string_terminates_prog k =
+     routed_dg_pipeline.terminates ivl_tf_st_for ivl_enter_st_for cinit_ivl_st
+       Call_String_Context.Global Call_String_Context.Seed (\<lambda>_. cs_route k) []
+       (TD_side_warrowing_apinis_Interp.solve_dom TYPE(call_string_gk)
+          TYPE((ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state))"
 
 definition analyse_interval_call_string_result_for ::
     "nat \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> (call_string, ivl abs_state) analysis_result" where
-  "analyse_interval_call_string_result_for k gs p =
-     dg_result_for gs (declared_global_vars p) (cs_call_string_sol_prog k gs p)"
-
-text \<open>Convenience instance at \<^const>\<open>declared_global\<close> \<open>p\<close> and
-  \<^const>\<open>prog_main_name\<close>, matching \<open>analyse_interval_entry_state_result\<close>'s
-  shape, with \<open>k\<close> as an explicit leading runtime argument.\<close>
+  "analyse_interval_call_string_result_for k =
+     routed_dg_pipeline.result ivl_tf_st_for ivl_enter_st_for cinit_ivl_st
+       Call_String_Context.Global Call_String_Context.Seed (\<lambda>_. cs_route k) []
+       TD_side_warrowing_apinis_Interp_solve"
 
 definition analyse_interval_call_string_result ::
     "nat \<Rightarrow> imp_prog \<Rightarrow> (call_string, ivl abs_state) analysis_result" where
   "analyse_interval_call_string_result k p =
      analyse_interval_call_string_result_for k (declared_global p) p"
 
-section \<open>Contextual check report\<close>
-
-text \<open>
-  Reuses \<^const>\<open>classify_checks_ctx\<close>/\<^const>\<open>classify_checks_verdicts\<close> unchanged
-  -- both are generic in the context type already, so nothing call-string-specific
-  is needed here beyond supplying the call-string result table, exactly mirroring
-  \<open>entry_state_check_projection\<close>/\<open>entry_state_verdict_report_prog\<close>.
-\<close>
-
 definition cs_call_string_check_projection ::
     "nat \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> exp \<times> (call_string \<times> contextual_verdict) set) list" where
   "cs_call_string_check_projection k p =
-     classify_checks_ctx (prog_cfg p)
-       (analyse_interval_call_string_result_for k (declared_global p) p)
-       interval_classify_check"
+     routed_dg_pipeline.check_projection ivl_tf_st_for ivl_enter_st_for cinit_ivl_st
+       Call_String_Context.Global Call_String_Context.Seed (\<lambda>_. cs_route k) []
+       TD_side_warrowing_apinis_Interp_solve interval_classify_check
+       (declared_global p) p"
 
 definition cs_call_string_verdict_report_prog ::
     "nat \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> exp \<times> contextual_verdict) list" where
   "cs_call_string_verdict_report_prog k p =
-     map (\<lambda>(u, c, vs). (u, c, aggregate_verdicts (snd ` vs)))
-       (cs_call_string_check_projection k p)"
-
-lemma cs_call_string_verdict_report_prog_eq:
-  "cs_call_string_verdict_report_prog k p =
-     classify_checks_verdicts (prog_cfg p)
-       (analyse_interval_call_string_result_for k (declared_global p) p)
-       interval_classify_check"
-  unfolding cs_call_string_verdict_report_prog_def cs_call_string_check_projection_def
-  by (rule classify_checks_verdicts_proj)
+     routed_dg_pipeline.verdict_report ivl_tf_st_for ivl_enter_st_for cinit_ivl_st
+       Call_String_Context.Global Call_String_Context.Seed (\<lambda>_. cs_route k) []
+       TD_side_warrowing_apinis_Interp_solve interval_classify_check
+       (declared_global p) p"
 
 definition analyse_interval_call_string_report ::
     "nat \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> exp \<times> contextual_verdict) list" where
   "analyse_interval_call_string_report k p = cs_call_string_verdict_report_prog k p"
 
-section \<open>Generic executable entry-state context analysis for Interval\<close>
+section \<open>Interval at the entry-state context\<close>
 
 text \<open>
-  Promotes the routed D/G machinery a fixed-program example (an entry-state
-  acceptance case such as \<open>void p(a) { return a }\<close> / \<open>void main() { x := __voblint_nondet_int();
-  y := p(x) }\<close>) exercises to an executable analysis over an arbitrary
-  \<^type>\<open>imp_prog\<close>: the context at a call is the entered abstract value of the
-  callee's declared formals (\<^const>\<open>formals_context\<close>),
-  never call-site history, so a call whose argument is unconstrained (e.g.
-  \<open>__voblint_nondet_int()\<close>) is analyzed once under one wide context rather than diverging over
-  every concrete value. Mirrors \<^theory>\<open>Voblint_Analysis_Interval.Interval_Exec_Sound\<close>'s
-  \<open>analyse_interval_td\<close> family and naming convention, adding one context
-  dimension: every quantity here is keyed on \<^typ>\<open>pp \<times> ivl list\<close>, not \<^typ>\<open>pp\<close>
-  alone.
+  Keying a callee on the abstract values its formals hold on entry.
+  \<^const>\<open>exec_formals_route\<close> genuinely reads the state it is handed --- the callee
+  frame the routed generator has already entered --- so the applicable endpoint is
+  \<open>entry_state_activation_collect_sound\<close>, whose admitted-context relation is the
+  one the entry answer induces rather than the graph of a function on stores.
+
+  The definitions in this section are Interval's presentation-side vocabulary:
+  what the entered callee frame is, when it is dead, and which context a call site
+  routes to when the answer is read off a published table rather than off the
+  solver's own map. None of them takes part in building the equation system.
 \<close>
-
-subsection \<open>Global key: real globals vs callee-entry seed slots\<close>
-
-
 subsection \<open>The routed context hooks, generic over the compiled program\<close>
 
 text \<open>
@@ -422,94 +374,87 @@ definition entry_state_callee_ctx ::
          in if entered_is_bot_for pars entered then None
             else Some (formals_context pars entered)))"
 
-subsection \<open>The routed equation system and its executable solution\<close>
 
-definition entry_state_eqs ::
-    "(vname \<Rightarrow> bool) \<Rightarrow> (ivl exec_dg_st \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> (pp \<times> ivl list, (unit, ivl list) routed_gk, (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state) eqsT" where
-  "entry_state_eqs gs empty_pred Pi ps =
-     compiled_routed_eqs_for (Analysis_Global ()) Activation_Seed
-       (entry_state_route_gen gs empty_pred) (interval_spec gs empty_pred)
-       (compile_prog Pi ps) (Lifted cinit_ivl_st)"
+subsection \<open>The entry-state pipeline\<close>
 
-definition entry_state_sol ::
-    "(vname \<Rightarrow> bool) \<Rightarrow> (ivl exec_dg_st \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> (pp \<times> ivl list) set \<times> (pp \<times> ivl list + (unit, ivl list) routed_gk \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)" where
-  "entry_state_sol gs empty_pred Pi ps =
-     TD_side_warrowing_apinis_Interp_solve (entry_state_eqs gs empty_pred Pi ps)
-       (cfg_exit (compile_prog Pi ps), [])"
+global_interpretation interval_es: routed_dg_analysis
+    ivl_tf_st_for ivl_enter_st_for cinit_ivl_st
+    "Analysis_Global ()" Activation_Seed exec_formals_route "[]"
+    TD_side_warrowing_apinis_Interp_solve
+    "TD_side_warrowing_apinis_Interp.solve_dom TYPE((unit, ivl list) routed_gk)
+       TYPE((ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)"
+    bot interval_classify_check
+    skip_ivl assign_ivl special_ivl branch_ivl body_ivl return_ivl
+    enter_ivl_ci_for event_ivl "\<lambda>_. formals_route_lifted_gen"
+    TD_side_warrowing_apinis_Interp_solve_c
+  defines
+    interval_entry_state_spec = interval_es.analysis_spec
+    and interval_entry_state_root_query = interval_es.root_query
+    and entry_state_eqs_prog = interval_es.equations
+    and entry_state_sol_prog = interval_es.solution
+    and entry_state_terminates_prog = interval_es.terminates
+    and entry_state_vars_prog = interval_es.sol_vars
+    and entry_state_env_prog = interval_es.sol_env
+    and entry_state_sg_st_prog = interval_es.reader
+    and entry_state_context_rel = interval_es.admitted_contexts
+    and analyse_interval_entry_state_result_for = interval_es.result
+    and analyse_interval_entry_state_report_for = interval_es.verdict_report
+    and analyse_interval_entry_state_projection_for = interval_es.check_projection
+proof (rule routed_dg_analysis.intro, goal_cases)
+  case (1 gs) show ?case by (rule ivl_is_sound_transfer_for)
+next
+  case (2 gs a s) then show ?case
+    unfolding fun_of_exec_dg_st_for_def
+    by (rule ivl_tf_st_for_commute[unfolded ivl_tf_abs_def])
+next
+  case (3 gs ci s) show ?case
+    unfolding fun_of_exec_dg_st_for_def by (rule ivl_enter_st_for_commute)
+next
+  case (4 gs u ctx d ca) show ?case
+    unfolding fun_of_exec_dg_st_for_def
+    by (rule exec_formals_route_commute[symmetric])
+next
+  case (5 v ctx) show ?case by simp
+next
+  case (6 eqs x) then show ?case
+    by (rule TD_side_warrowing_apinis_Interp.partial_post_solution
+          [OF _ surjective_pairing])
+next
+  case (7 eqs x) then show ?case
+    by (rule TD_side_warrowing_apinis_Interp.finite_stabl_solve)
+next
+  case (8 c d s) then show ?case by (rule interval_classify_check_proved)
+next
+  case (9 c d s) then show ?case by (rule interval_classify_check_refuted)
+next
+  case 10 show ?case by (rule refl)
+next
+  case (11 gs) show ?case by (rule interval_cinit_gamma)
+next
+  case (12 eqs x) then show ?case
+    by (rule TD_side_warrowing_apinis_Interp.solve_dom_of_solve_c)
+qed
 
-definition entry_state_terminates ::
-    "(vname \<Rightarrow> bool) \<Rightarrow> (ivl exec_dg_st \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> bool" where
-  "entry_state_terminates gs empty_pred Pi ps =
-     TD_side_warrowing_apinis_Interp.solve_dom TYPE((unit, ivl list) routed_gk) TYPE((ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)
-       (entry_state_eqs gs empty_pred Pi ps) (cfg_exit (compile_prog Pi ps), [])"
+declare interval_entry_state_spec_def [code_unfold]
+
+lemmas entry_state_terminates_via_solve_c = interval_es.terminates_of_solve_c
 
 text \<open>
-  Discharging termination by execution, exactly as
-  \<open>interval_conf_terminates_prog_via_solve_c\<close> discharges
-  \<open>interval_conf_terminates_prog\<close>.
+  The covered-key set and the solved map, spelled as projections of the solved
+  pair. A caller that established coverage by evaluating the pair -- which is
+  what every regression witness does -- states its facts about
+  \<^const>\<open>fst\<close>/\<^const>\<open>snd\<close> of that pair, while the endpoints are stated over the
+  two named readers; these two equations are the bridge, and are the only place
+  the two spellings meet.
 \<close>
 
-lemma entry_state_terminates_via_solve_c:
-  assumes "TD_side_warrowing_apinis_Interp_solve_c (entry_state_eqs gs empty_pred Pi ps)
-             (cfg_exit (compile_prog Pi ps), []) \<noteq> None"
-  shows "entry_state_terminates gs empty_pred Pi ps"
-  unfolding entry_state_terminates_def
-  by (rule TD_side_warrowing_apinis_Interp.solve_dom_of_solve_c[OF assms])
+lemma entry_state_vars_prog_alt:
+  "entry_state_vars_prog gs p = fst (entry_state_sol_prog gs p)"
+  by (rule interval_es.sol_vars_def)
 
-text \<open>Finiteness of the entry-state key set, from the solver's own invariant
-  (\<open>finite_stabl_solve\<close>, \<^theory>\<open>Voblint_Solver.TD_Solver_Bridge\<close>). That invariant
-  is proved for the \<open>TD_side_upd_rule\<close> locale rather than per update rule, so it
-  applies to Apinis warrowing here exactly as it does to always-join elsewhere.
-  It also depends on nothing about the context type, which is what makes the
-  entry-state case available at all: its contexts are \<^typ>\<open>ivl list\<close> values, a
-  space no bound could enumerate.\<close>
-
-lemma entry_state_vars_finite:
-  assumes "entry_state_terminates gs empty_pred Pi ps"
-  shows "finite (fst (entry_state_sol gs empty_pred Pi ps))"
-  using TD_side_warrowing_apinis_Interp.finite_stabl_solve[
-      OF assms[unfolded entry_state_terminates_def]]
-  unfolding entry_state_sol_def TD_side_warrowing_apinis_Interp_solve_def
-  by simp
-
-subsection \<open>Whole-program convenience layer\<close>
-
-text \<open>
-  \<open>Pi ps\<close> alone give no @{type imp_prog} to read a declared-global list off of, so
-  \<open>entry_state_eqs\<close> and friends keep \<open>empty_pred\<close> as an explicit parameter, mirroring
-  the context-insensitive run's own \<open>interval_conf_eqs_prog\<close>. The \<open>_prog\<close> wrappers do
-  have a program and instantiate \<open>empty_pred\<close> to \<^const>\<open>resolved_st_q_is_bot_for\<close> at its own
-  \<^const>\<open>declared_global_vars\<close>, mirroring \<open>interval_conf_sol_prog\<close>.
-\<close>
-
-definition entry_state_eqs_prog ::
-    "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog
-       \<Rightarrow> (pp \<times> ivl list, (unit, ivl list) routed_gk, (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state) eqsT" where
-  "entry_state_eqs_prog gs p =
-     entry_state_eqs gs (resolved_st_q_is_bot_for (declared_global_vars p))
-       (prog_table p) (prog_procs p)"
-
-definition entry_state_sol_prog ::
-    "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog
-       \<Rightarrow> (pp \<times> ivl list) set \<times> (pp \<times> ivl list + (unit, ivl list) routed_gk \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)" where
-  "entry_state_sol_prog gs p =
-     entry_state_sol gs (resolved_st_q_is_bot_for (declared_global_vars p))
-       (prog_table p) (prog_procs p)"
-
-definition entry_state_terminates_prog :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> bool" where
-  "entry_state_terminates_prog gs p =
-     entry_state_terminates gs (resolved_st_q_is_bot_for (declared_global_vars p))
-       (prog_table p) (prog_procs p)"
-
-lemma entry_state_terminates_prog_via_solve_c:
-  assumes "TD_side_warrowing_apinis_Interp_solve_c
-             (entry_state_eqs_prog gs p)
-             (cfg_exit (compile_prog (prog_table p) (prog_procs p)), []) \<noteq> None"
-  shows "entry_state_terminates_prog gs p"
-  using assms
-  unfolding entry_state_terminates_prog_def entry_state_eqs_prog_def
-  by (rule entry_state_terminates_via_solve_c)
-
+lemma entry_state_env_prog_alt:
+  "entry_state_env_prog gs p = snd (entry_state_sol_prog gs p)"
+  by (rule interval_es.sol_env_def)
 section \<open>The abstract-carrier route witness\<close>
 
 text \<open>
@@ -664,340 +609,60 @@ proof (cases ca)
   qed
 qed
 
-subsection \<open>Per-tree transport commutation\<close>
+
+subsection \<open>Interval's own route is the shared one\<close>
 
 text \<open>
-  The same interpretation Interval's unit-context instance makes, at the entry-state
-  routing policy. \<^locale>\<open>routed_domain_exec\<close> takes the routing functions and their
-  agreement as parameters; here the agreement is the route-consistency core just
-  proved, since the entry-state route reads the entered state.
+  \<^const>\<open>entry_state_route_gen\<close> reads the entered frame through
+  \<^const>\<open>lookup_resolved_st_q\<close> at each formal's location; \<^const>\<open>exec_formals_route\<close>
+  reads it through \<^const>\<open>fun_of_resolved_st_q_for\<close>, which is that same lookup.
+  The equation is what lets the presentation-side names above and the equation
+  system the assembly builds refer to one routing decision rather than two that
+  happen to agree.
 \<close>
 
-text \<open>The concretization the executable-carrier interpretations below use: a local
-  unknown means \<^const>\<open>gamma_state_lift\<close> of its readback, the global slot is ignored as
-  in \<^const>\<open>gamma_dg_local_state\<close>. Named at top level so a downstream theory can state it.\<close>
-
-context
-  fixes gs :: "vname \<Rightarrow> bool" and empty_pred :: "ivl exec_dg_st \<Rightarrow> bool"
-  assumes exact: "\<And>s. empty_pred s = is_empty_state (fun_of_resolved_st_q_for gs s)"
-begin
-
-interpretation ivl_es: routed_domain_exec
-  gs empty_pred "ivl_tf_st_for gs" "ivl_enter_st_for gs"
-  skip_ivl assign_ivl special_ivl branch_ivl body_ivl return_ivl
-  "enter_ivl_ci_for gs" event_ivl
-  "Analysis_Global ()" Activation_Seed "entry_state_route_gen gs empty_pred" "entry_state_route_abs_gen gs"
-  static_resolve static_resolve
-  by unfold_locales
-     (rule ivl_tf_st_for_commute[unfolded ivl_tf_abs_def], assumption,
-      rule ivl_enter_st_for_commute, rule exact, simp,
-
-      rule entry_state_route_commute_gen[OF exact], simp add: static_resolve_def)
-
-lemmas ivl_es_pp_st_gen = ivl_es.pp_st
-
-
-end
-
-
-subsection \<open>The certified executable post-solution, generic per compiled program\<close>
-
-context
-  fixes gs :: "vname \<Rightarrow> bool" and empty_pred :: "ivl exec_dg_st \<Rightarrow> bool"
-    and Pi :: proc_table and ps :: "pname list"
-  assumes solves: "entry_state_terminates gs empty_pred Pi ps"
-    and exact: "\<And>s. empty_pred s = is_empty_state (fun_of_resolved_st_q_for gs s)"
-begin
-
-lemma entry_state_solve_dom:
-  "TD_side_warrowing_apinis_Interp.solve_dom TYPE((unit, ivl list) routed_gk) TYPE((ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)
-     (entry_state_eqs gs empty_pred Pi ps) (cfg_exit (compile_prog Pi ps), [])"
-  using solves[unfolded entry_state_terminates_def] .
-
-lemma entry_state_pp_st:
-  "part_post_solution (entry_state_eqs gs empty_pred Pi ps) (cfg_exit (compile_prog Pi ps), [])
-     (snd (entry_state_sol gs empty_pred Pi ps)) (fst (entry_state_sol gs empty_pred Pi ps))"
-  using TD_side_warrowing_apinis_Interp.partial_post_solution
-          [OF entry_state_solve_dom, of "fst (entry_state_sol gs empty_pred Pi ps)"
-             "snd (entry_state_sol gs empty_pred Pi ps)"]
-  unfolding entry_state_sol_def by simp
-
-text \<open>The solver's post-solution, for the unbuffered routed generator at the executable
-  spec and Interval's executable route: the shape \<^locale>\<open>dg_ctx_activation_base\<close>
-  consumes.\<close>
-
-theorem entry_state_pp_routed:
-  "part_post_solution
-     (routed_node_rhs intra_predecessor_addr_list (\<lambda>_. Analysis_Global ())
-        (entry_state_route_gen gs empty_pred)
-        (\<lambda>ctx' src a. dg_spec_edge_tree (interval_spec gs empty_pred) a src (\<lambda>_. Analysis_Global ()))
-        (routed_call_tree (interval_spec gs empty_pred) (Analysis_Global ()) Activation_Seed (static_resolve (compile_prog Pi ps)) (\<lambda>d. d = Bot))
-        (routed_entry_seed_tree Activation_Seed)
-        (compile_prog Pi ps) Bot (Lifted cinit_ivl_st) Bot)
-     (cfg_exit (compile_prog Pi ps), [])
-     (snd (entry_state_sol gs empty_pred Pi ps)) (fst (entry_state_sol gs empty_pred Pi ps))"
-  using entry_state_pp_st
-  unfolding entry_state_eqs_def compiled_routed_eqs_for_def interval_spec_def bot_lifted_eq
-  by (rule ivl_es_pp_st_gen[OF exact])
-
-
-end
-
-
-section \<open>Activation-indexed collecting soundness, generic per compiled program\<close>
-
-text \<open>
-  The routed spine is interpreted at Interval's executable carrier and fed the solver's
-  own table: a local unknown concretizes to \<^const>\<open>gamma_state_lift\<close> of its readback
-  (\<^const>\<open>interval_gamma\<close>), the covered reader \<open>entry_state_sg_st\<close> hands the table's local
-  slot through unchanged, and the route is Interval's own executable
-  \<^const>\<open>entry_state_route_gen\<close>. The reader is unconditional so the code generator and
-  the examples can evaluate it; the soundness obligations below are hypotheses of the
-  context, not of the reader.
-\<close>
-
-definition entry_state_sg_st ::
-    "(vname \<Rightarrow> bool) \<Rightarrow> (ivl exec_dg_st \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list
-       \<Rightarrow> pp \<times> ivl list + (unit, ivl list) routed_gk \<Rightarrow> ivl exec_dg_st lifted" where
-  "entry_state_sg_st gs empty_pred Pi ps =
-     solved_local_reader (fst (entry_state_sol gs empty_pred Pi ps))
-                          (snd (entry_state_sol gs empty_pred Pi ps))"
-
-context
-  fixes gs :: "vname \<Rightarrow> bool" and empty_pred :: "ivl exec_dg_st \<Rightarrow> bool"
-    and Pi :: proc_table and ps :: "pname list"
-  assumes solves: "entry_state_terminates gs empty_pred Pi ps"
-    and exact: "\<And>s. empty_pred s = is_empty_state (fun_of_resolved_st_q_for gs s)"
-    and entry_cov: "(cfg_entry (compile_prog Pi ps), []) \<in> fst (entry_state_sol gs empty_pred Pi ps)"
-    and fwd_ok: "\<And>u a v ctx. (u, ctx) \<in> fst (entry_state_sol gs empty_pred Pi ps)
-                   \<Longrightarrow> (u, a, v) \<in> intra (compile_prog Pi ps)
-                   \<Longrightarrow> (v, ctx) \<in> fst (entry_state_sol gs empty_pred Pi ps)"
-    and call_fwd_ok: "\<And>u ctx dst pars args p cont.
-        (u, ctx) \<in> fst (entry_state_sol gs empty_pred Pi ps)
-        \<Longrightarrow> (u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps)
-        \<Longrightarrow> (FunctionEntry p,
-              entry_state_route_gen gs empty_pred u ctx
-                (transfer_lift empty_pred
-                   (ivl_enter_st_for gs (call_info_of (CallEdge dst pars args) p))
-                   (locals (snd (entry_state_sol gs empty_pred Pi ps) (Inl (u, ctx)))))
-                (CallEdge dst pars args))
-            \<in> fst (entry_state_sol gs empty_pred Pi ps)"
-    and comb_fwd_ok: "\<And>cl c1 dst pars args p cont.
-        (cl, c1) \<in> fst (entry_state_sol gs empty_pred Pi ps)
-        \<Longrightarrow> (cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps)
-        \<Longrightarrow> (cont, c1) \<in> fst (entry_state_sol gs empty_pred Pi ps)"
-begin
-
-subsection \<open>The solver's table as the solved system\<close>
-
-
-interpretation entry_state_compiled: compiled_cfg Pi ps "compile_prog Pi ps"
-  by (unfold_locales; simp add: compile_prog_finite)
-
-lemmas entry_state_fin = entry_state_compiled.finite_intra
-lemmas entry_state_finC = entry_state_compiled.finite_calls
-
-lemma entry_state_sg_st_covered:
-  "(v, ctx) \<in> fst (entry_state_sol gs empty_pred Pi ps)
-   \<Longrightarrow> entry_state_sg_st gs empty_pred Pi ps (Inl (v, ctx))
-         = locals (snd (entry_state_sol gs empty_pred Pi ps) (Inl (v, ctx)))"
-  by (simp add: entry_state_sg_st_def)
-
-lemma entry_state_sg_st_uncovered_empty:
-  "(v, ctx) \<notin> fst (entry_state_sol gs empty_pred Pi ps)
-     \<Longrightarrow> gamma_state_lift (map_lift (fun_of_resolved_st_q_for gs)
-           (entry_state_sg_st gs empty_pred Pi ps (Inl (v, ctx)))) = {}"
-  by (simp add: entry_state_sg_st_def)
-
-subsection \<open>Instantiating the generic routed-context locale\<close>
-
-interpretation entry_state_dg_base: sound_dg_spec_core "interval_spec gs empty_pred" "interval_gamma gs" gs
-  by (rule interval_sound_exec[OF exact])
-
-
-interpretation entry_state_routed: pure_entry_routed_context "interval_spec gs empty_pred"
-    "interval_gamma gs" gs Pi ps "Analysis_Global ()" "entry_state_route_gen gs empty_pred"
-    Bot "Lifted cinit_ivl_st" Bot
-    "snd (entry_state_sol gs empty_pred Pi ps)" "fst (entry_state_sol gs empty_pred Pi ps)"
-    "(cfg_exit (compile_prog Pi ps), [])" "entry_state_sg_st gs empty_pred Pi ps" Activation_Seed
-    "\<lambda>d. d = Bot" "\<lambda>m. gamma_state_lift (map_lift (fun_of_resolved_st_q_for gs) m)"
-    "\<lambda>ci d. [(d, transfer_lift empty_pred (ivl_enter_st_for gs ci) d)]"
-proof (unfold_locales, goal_cases FinE PP SgCov SgUncov Fwd SeedNe
-    IsBotBot IsBotSound EnterPure EnterCover CallFwd CombFwd)
-  case FinE show ?case by (rule entry_state_fin)
-next
-  case PP show ?case by (rule entry_state_pp_routed[OF solves exact])
-next
-  case (SgCov v ctx) then show ?case
-    by (simp add: entry_state_sg_st_def interval_gamma_def)
-next
-  case (SgUncov v ctx) then show ?case by (rule entry_state_sg_st_uncovered_empty)
-next
-  case (Fwd u a v ctx) then show ?case by (rule fwd_ok)
-next
-  case (SeedNe p ctx) show ?case by simp
-next
-  case IsBotBot show ?case by simp
-next
-  case (IsBotSound d gv) then show ?case by (simp add: interval_gamma_def)
-next
-  case (EnterPure ci) show ?case
-    unfolding interval_spec_def dgs_enter_local_state_st_for_lifted by (rule refl)
-next
-  case (EnterCover u ctx dst pars args p cont s)
-  show ?case
-    using interval_entry_cover_exec[OF exact EnterCover(3),
-        where ci = "call_info_of (CallEdge dst pars args) p"]
-    by simp
-next
-  case (CallFwd u ctx dst pars args p cont cont' entry)
-  then have "entry = transfer_lift empty_pred
-               (ivl_enter_st_for gs (call_info_of (CallEdge dst pars args) p))
-               (locals (snd (entry_state_sol gs empty_pred Pi ps) (Inl (u, ctx))))"
-    by simp
-  with CallFwd(1,2) show ?case using call_fwd_ok by simp
-next
-  case (CombFwd cl c1 dst pars args p cont)
-  show ?case using CombFwd(1,2) by (rule comb_fwd_ok)
+lemma entry_state_route_gen_eq_exec_formals_route:
+  "entry_state_route_gen gs empty_pred u ctx d ca = exec_formals_route gs u ctx d ca"
+proof -
+  have f: "(\<lambda>x. lookup_resolved_st_q s (location_of gs x)) = fun_of_resolved_st_q_for gs s"
+    for s :: "ivl resolved_st_q"
+    by (simp add: fun_eq_iff fun_of_resolved_st_q_for_def)
+  show ?thesis
+    by (cases ca)
+       (simp add: entry_state_route_gen_def entry_state_route_def
+          exec_formals_route_def f)
 qed
 
-text \<open>
-  The context relation this entry-state instance keys its collecting semantics by: an
-  abbreviation over the interpreted \<open>entry_state_routed.entry_context_rel\<close>, named at
-  Interval's carrier so downstream statements read as Interval vocabulary. Unlike the
-  retired deterministic context function it replaces, this makes no claim to pick one
-  context per concrete call -- only that whichever context an alternative of
-  \<^const>\<open>ivl_enter_st_for\<close> routes to, and whose two halves cover the call, is admitted.
-\<close>
-
-abbreviation entry_state_context_rel :: "ivl list call_context_rel" where
-  "entry_state_context_rel \<equiv> entry_state_routed.entry_context_rel"
-
-lemmas entry_state_routed_context_call = entry_state_routed.routed_context_call
-lemmas entry_state_routed_context_comb = entry_state_routed.routed_context_comb
-
-lemma entry_state_sg_seed:
-  assumes "(u, CallEdge dst xs es, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps)"
-    and "s \<in> gamma_state_lift (map_lift (fun_of_resolved_st_q_for gs)
-               (entry_state_sg_st gs empty_pred Pi ps (Inl (u, ctx))))"
-    and "entry_state_context_rel u ctx (call_info_of (CallEdge dst xs es) p) s
-           (call_enter gs (CallEdge dst xs es) s) ctx'"
-  shows "call_enter gs (CallEdge dst xs es) s
-           \<in> gamma_state_lift (map_lift (fun_of_resolved_st_q_for gs)
-               (entry_state_sg_st gs empty_pred Pi ps (Inl (FunctionEntry p, ctx'))))"
-  by (rule entry_state_routed_context_call[OF assms])
-
-lemma entry_state_sg_comb:
-  assumes "(cl, CallEdge dst pars args, FunctionEntry p, v) \<in> calls (compile_prog Pi ps)"
-    and "s \<in> gamma_state_lift (map_lift (fun_of_resolved_st_q_for gs)
-               (entry_state_sg_st gs empty_pred Pi ps (Inl (cl, c1))))"
-    and "admits_call_context gs (compile_prog Pi ps) entry_state_context_rel cl c1 p s es ctx'"
-    and "t \<in> gamma_state_lift (map_lift (fun_of_resolved_st_q_for gs)
-               (entry_state_sg_st gs empty_pred Pi ps (Inl (FunctionResult p, ctx'))))"
-  shows "combine_collect gs dst s t
-           \<in> gamma_state_lift (map_lift (fun_of_resolved_st_q_for gs)
-               (entry_state_sg_st gs empty_pred Pi ps (Inl (v, c1))))"
-  by (rule entry_state_routed_context_comb[OF assms])
-
-
-
-
-subsection \<open>Activation-indexed collecting soundness\<close>
-
-lemma entry_state_cinit_le_cinit_ivl_st:
-  "cinit_stores gs \<subseteq> interval_gamma gs (Lifted cinit_ivl_st) Bot"
-  by (auto simp: interval_gamma_def cinit_stores_def gamma_state_def fun_of_resolved_st_q_for_def
-                 fun_of_st_cinit_ivl_st_for)
+section \<open>Activation-indexed collecting soundness\<close>
 
 text \<open>
-  \<^locale>\<open>dg_analysis_adapter\<close> at the same executable solved system, handed the readback
-  as \<open>rd\<close> and Interval's classifier; its activation-collect soundness is the entry-state
-  soundness theorem, stated against the routed local unknown read back through
-  \<^const>\<open>gamma_state_lift\<close>. The four coverage hypotheses are properties of the
-  \<^emph>\<open>solved\<close> system -- which keys the executable solver actually covers -- and are
-  carried the same way \<^const>\<open>entry_state_terminates\<close> is: as \<open>by eval\<close>-checkable facts
-  about a concrete, terminated solve.
+  Every endpoint below is \<^locale>\<open>routed_dg_analysis\<close>'s, re-exported under the
+  name Interval publishes. The four coverage premises are properties of the
+  \<^emph>\<open>solved\<close> system --- which keys the executable solver actually covered --- and
+  are carried the way \<^const>\<open>entry_state_terminates_prog\<close> is: as
+  \<^theory_text>\<open>eval\<close>-checkable facts about a concrete, terminated solve.
 \<close>
 
-interpretation entry_state_adapter: dg_analysis_adapter "interval_spec gs empty_pred" "interval_gamma gs" gs
-    "compile_prog Pi ps" "Analysis_Global ()" "entry_state_route_gen gs empty_pred" Bot "Lifted cinit_ivl_st" Bot
-    "snd (entry_state_sol gs empty_pred Pi ps)" "fst (entry_state_sol gs empty_pred Pi ps)"
-    "(cfg_exit (compile_prog Pi ps), [])" "entry_state_sg_st gs empty_pred Pi ps"
-    Activation_Seed "\<lambda>d. d = Bot"
-    "\<lambda>m. gamma_state_lift (map_lift (fun_of_resolved_st_q_for gs) m)" entry_state_context_rel
-    "map_lift (fun_of_resolved_st_q_for gs)" interval_classify_check
-proof (unfold_locales, goal_cases FinE PP SgCov SgUncov Fwd FinC CallsUnique SeedKey
-    IsBotBot IsBotSound ResolveSound
-    EnterCover EnterTotal CombFwd GammaRd ClProved ClRefuted VarsFin)
-  case FinE show ?case by (rule entry_state_fin)
-next
-  case PP show ?case by (rule entry_state_pp_routed[OF solves exact])
-next
-  case (SgCov v c)
-  thus ?case by (simp add: entry_state_sg_st_def interval_gamma_def)
-next
-  case (SgUncov v c)
-  thus ?case by (simp add: entry_state_sg_st_def)
-next
-  case (Fwd u a v c)
-  thus ?case by (rule fwd_ok)
-next
-  case FinC show ?case by (rule entry_state_finC)
-next
-  case CallsUnique
-  show ?case unfolding calls_source_unique_def using compile_prog_calls_source_unique by blast
-next
-  case (SeedKey p ctx) show ?case by simp
-next
-  case IsBotBot show ?case by simp
-next
-  case (IsBotSound d g') then show ?case by (simp add: interval_gamma_def)
-next
-  case (ResolveSound u ctx dst pars args p cont s)
-  thus ?case by (simp add: static_resolve_iff[OF entry_state_finC])
-next
-  case (EnterCover u ctx dst pars args p cont s ctx')
-  show ?case using entry_state_routed.routed.routed_entry_cover[OF EnterCover(1,2,3,4)] .
-next
-  case (EnterTotal u ctx dst pars args p cont s)
-  show ?case using entry_state_routed.routed.routed_entry_total[OF EnterTotal(1,2,3)] .
-next
-  case (CombFwd cl c1 dst pars args p cont)
-  show ?case using CombFwd(1,2) by (rule comb_fwd_ok)
-next
-  case (GammaRd d g')
-  show ?case by (simp add: interval_gamma_def)
-next
-  case (ClProved c d s)
-  thus ?case by (rule interval_classify_check_proved)
-next
-  case (ClRefuted c d s)
-  thus ?case by (rule interval_classify_check_refuted)
-next
-  case VarsFin show ?case by (rule entry_state_vars_finite[OF solves])
-qed
+lemmas entry_state_routed_analysis_sound =
+  interval_es.entry_state_routed_analysis_sound
 
-theorem entry_state_activation_collect_sound:
-  "activation_collect gs entry_state_context_rel [] (compile_prog Pi ps) (cinit_stores gs) v ctx
-     \<subseteq> gamma_state_lift (map_lift (fun_of_resolved_st_q_for gs)
-           (entry_state_sg_st gs empty_pred Pi ps (Inl (v, ctx))))"
-  by (rule entry_state_routed.routed.activation_collect_dg_sound
-             [OF entry_cov entry_state_cinit_le_cinit_ivl_st])
+lemmas entry_state_activation_collect_sound =
+  interval_es.entry_state_activation_collect_sound
 
-text \<open>Every valid trace over the entry-state routing admits some context: the existence half
-  \<open>activation_collect_dg_sound\<close> needs, re-exported so a source-level caller can name a
-  context witness without going through \<^locale>\<open>ltr_coverage\<close> itself.\<close>
+lemmas entry_state_has_context = interval_es.entry_state_has_context
 
-theorem entry_state_has_context:
-  assumes "t \<in> valid_ltr gs (compile_prog Pi ps) (cinit_stores gs)"
-  shows "\<exists>c. trace_context gs entry_state_context_rel [] (compile_prog Pi ps) t c"
-  by (rule entry_state_routed.routed.routed_valid_ltr_has_context
-             [OF entry_cov entry_state_cinit_le_cinit_ivl_st assms])
+text \<open>
+  The two routed protocol facts a caller reasoning about one call needs: the
+  callee entry state published under an admitted context is sound, and a return
+  combine at the caller's own context is sound. Both are the routed spine's, at
+  the interpretation the four coverage premises establish.
+\<close>
 
+lemmas entry_state_routed_context_call =
+  interval_es.entry_state_routed_context_call
 
-end
-
-
+lemmas entry_state_routed_context_comb =
+  interval_es.entry_state_routed_context_comb
 
 section \<open>Solved-result table\<close>
 
@@ -1009,28 +674,11 @@ text \<open>
   entered abstract value of the callee's declared formals, so a node covered
   under several activations keeps one \<^type>\<open>lifted\<close> per activation.
 
-  Construction is mechanical. \<^const>\<open>entry_state_sol\<close>'s own first component is
-  the key set verbatim -- the solver already knows exactly which
-  \<open>(node, context)\<close> pairs it reached, so nothing here rescans the solved map
-  or reconstructs coverage. Each local unknown goes through
-  \<^const>\<open>readback_result_value\<close> exactly as it is stored, in its pre-conversion
-  \<^typ>\<open>ivl resolved_st_q lifted\<close> shape; no context is joined at construction
-  time, and an uncovered context is answered by \<^const>\<open>lookup_context\<close>'s
-  membership guard with \<^const>\<open>Bot\<close>, never by falling back to the
-  seeded default context \<open>[]\<close>.
-
-  The \<open>[code]\<close> rewrite is a single-solve fix: binding \<open>sol\<close> once, outside the
-  per-key closure, compiles to a single shared thunk, so neither building the
-  table nor querying it re-solves. \<^const>\<open>entry_state_sol_prog\<close> is fully
-  applied at that binding, so it is not the partially applied closure
-  \<^const>\<open>entry_state_sg_st\<close> would produce, whose body -- including its own
-  internal \<^const>\<open>entry_state_sol\<close> calls -- would re-run at every key.
+  The solver's own first component is the key set verbatim, so nothing rescans
+  the solved map or reconstructs coverage, and an uncovered context is answered
+  by \<^const>\<open>lookup_context\<close>'s membership guard with \<^const>\<open>Bot\<close> rather than by
+  falling back to the seeded default context \<open>[]\<close>.
 \<close>
-
-definition analyse_interval_entry_state_result_for ::
-    "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> (ivl list, ivl abs_state) analysis_result" where
-  "analyse_interval_entry_state_result_for gs p =
-     dg_result_for gs (declared_global_vars p) (entry_state_sol_prog gs p)"
 
 text \<open>Convenience instance at \<^const>\<open>declared_global\<close> \<open>p\<close> and
   \<^const>\<open>prog_main_name\<close>, the instantiation the production entry points use.\<close>
@@ -1078,7 +726,8 @@ proof -
                   (locals (snd (entry_state_sol_prog (declared_global p) p) (Inl (u, ctx)))))
               = Lifted st"
     using reach
-    by (simp add: analyse_interval_entry_state_result_for_def split: if_splits)
+    by (simp add: analyse_interval_entry_state_result_for_def
+        routed_dg_pipeline.result_def entry_state_sol_prog_def split: if_splits)
   have key: "map_lift (fun_of_resolved_st_q_for (declared_global p))
                (locals (snd (entry_state_sol_prog (declared_global p) p) (Inl (u, ctx))))
              = Lifted st

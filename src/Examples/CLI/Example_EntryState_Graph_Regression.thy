@@ -105,7 +105,7 @@ text \<open>
   per-origin global bookkeeping (\<open>update_global_warrowing_apinis\<close>) found no
   evident defect on inspection, so whether this is a genuine
   non-terminating instance of a solver whose termination is checked per
-  program rather than universally guaranteed (\<^const>\<open>entry_state_terminates\<close>
+  program rather than universally guaranteed (\<^const>\<open>entry_state_terminates_prog\<close>
   exists for exactly this reason), or a real, more subtle defect, is not
   established here and needs its own dedicated investigation rather than a
   same-session guess. \<open>dead_route_graph_wf\<close> above establishes the same

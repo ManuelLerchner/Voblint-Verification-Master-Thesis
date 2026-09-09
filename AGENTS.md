@@ -368,6 +368,25 @@ happens to unfold first -- is not worth reasoning about per domain. A
 redundant declaration costs nothing; a missing one fails in generated ML, far
 from the theory that caused it.
 
+A second, differently-shaped hole in the same wall. A locale constant whose own
+type does not mention the domain type variable carries a sort hypothesis the
+code generator cannot see, so `declare <locale>.<const>_def [code]` is rejected
+with a *warning* -- "Not a proper equation" -- and the equation is simply
+absent. Nothing fails until the first `by eval` that reaches it, which then
+reports "no code equations" naming a constant nobody wrote by hand.
+
+> **A pipeline constant whose type omits the domain type variable has its body
+> inlined into the code equations of the constants that use it, rather than a
+> `[code]` declaration of its own.**
+
+`routed_dg_pipeline.root_query :: 'c => imp_prog => pp * 'c` is the instance:
+`solution` and `terminates` carry `solution_code`/`terminates_code`, which
+spell the root query out. A registration that renames the pipeline's constants
+through `defines` never meets this, because each renamed constant gets its own
+equation from the interpretation; a call site that applies the pipeline
+directly -- which is what a runtime parameter such as a call-string bound
+forces, since no `global_interpretation` can fix it -- meets it immediately.
+
 ## Prose that claims a dependency must pin the theory
 
 A bare `\<open>name\<close>` cartouche is unchecked. `scripts/check_thy_prose_refs.py`
@@ -395,6 +414,15 @@ So distinguish the two kinds of citation:
 
 The distinction is what a reader needs anyway: a comparison is orientation, a
 dependency claim is something they may go on to rely on.
+
+The pin narrows the failure but does not close it. `\<^theory>\<open>S.T\<close>`
+is checked to be *in scope*, never to be the theory that owns the name beside
+it, so a dependency claim can pin a sibling theory of the real one and pass
+forever. `Int_Entry` pinned `Int_Analyses` for a constant defined in
+`Int_Solver_Analyses`, alongside a source fact that did not exist and a premise
+count that was one short. When a dependency claim names a constant, prefer
+`\<^const>` for the constant itself --- that is checked outright --- and read
+the pin as documentation of where to look rather than as a guarantee.
 
 ## Do not infer removability from local non-use
 

@@ -19,9 +19,10 @@ text \<open>
 
 subsection \<open>The executable bottom predicate\<close>
 
-text \<open>\<^const>\<open>entry_state_sol\<close> takes \<open>empty_pred\<close> as an explicit parameter.  At a
-  concrete program it is \<^const>\<open>resolved_st_q_is_bot_for\<close> on that program's own
-  declared globals, which is exact for \<^const>\<open>is_empty_state\<close>.\<close>
+text \<open>The equation system reads the program's own declared globals for its bottom
+  test, and \<^const>\<open>entry_state_route\<close> takes that predicate explicitly. At a concrete
+  program it is \<^const>\<open>resolved_st_q_is_bot_for\<close> on those globals, which is exact
+  for \<^const>\<open>is_empty_state\<close>.\<close>
 
 definition rc_empty_pred :: "ivl resolved_st_q \<Rightarrow> bool" where
   "rc_empty_pred = resolved_st_q_is_bot_for (declared_global_vars rc_program)"
@@ -35,18 +36,17 @@ text \<open>The main context is \<open>[]\<close> (\<open>main\<close> is the ro
 
 definition rc_ctx_sol ::
   "(pp \<times> ivl list) set \<times> (pp \<times> ivl list + (unit, ivl list) routed_gk \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)" where
-  "rc_ctx_sol = entry_state_sol rc_gs rc_empty_pred rc_pi rc_procs"
+  "rc_ctx_sol = entry_state_sol_prog rc_gs rc_program"
 
 lemma rc_ctx_terminates_c:
   "TD_side_warrowing_apinis_Interp_solve_c
-     (entry_state_eqs rc_gs rc_empty_pred rc_pi rc_procs)
-     (cfg_exit rc_cfg, []) \<noteq> None"
-  unfolding rc_cfg_def by eval
+     (entry_state_eqs_prog rc_gs rc_program)
+     (interval_entry_state_root_query rc_program) \<noteq> None"
+  by eval
 
 lemma rc_ctx_terminates:
-  "entry_state_terminates rc_gs rc_empty_pred rc_pi rc_procs"
-  using rc_ctx_terminates_c[unfolded rc_cfg_def]
-  by (rule entry_state_terminates_via_solve_c)
+  "entry_state_terminates_prog rc_gs rc_program"
+  by (rule entry_state_terminates_via_solve_c[OF rc_ctx_terminates_c])
 
 subsection \<open>The routed context is exactly \<open>Top\<close>\<close>
 

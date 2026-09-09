@@ -113,6 +113,12 @@ Use the repository interfaces so session arguments do not drift:
 rtk pixi run build
 ```
 
+`isabelle build -f` forces the named session's **ancestors** too, not just the
+session named. On this tree that means Pure and HOL, which rebuilds every heap
+below the project and turns a targeted check into a full-tree rebuild. To get a
+log rather than a cache hit for one session, delete that session's heap or use
+`-o` verbosity; do not reach for `-f`.
+
 On a fresh clone without parent heaps:
 
 ```bash
@@ -213,6 +219,25 @@ closed, and the batch log is green.
   change, confirm the buffer actually contains the expected text with
   `read_file` on the specific changed lines -- a passing diagnostic is not
   evidence the buffer was ever resynced.
+- The opposite direction is the more expensive one, because nothing reports
+  it: an I/Q `write_file` changes the **buffer**, not the file. A whole
+  session's work can be green in I/Q and absent from disk, so a batch build --
+  yours or another agent's -- reads the old text and fails on errors you
+  cannot reproduce. `get_diagnostics` will keep saying zero the whole time,
+  correctly, about the buffer.
+- `save_file` with a path returns `{"saved_files": []}` when that buffer is not
+  dirty. Do not read that as "already written": it is also what you get when
+  the save did not happen. Call `save_file` with **no** path, which saves every
+  dirty buffer and names them, and then verify against the file:
+
+  ```bash
+  rtk proxy wc -l <every file you touched>
+  ```
+
+  A line count that disagrees with what I/Q shows is the cheapest available
+  proof that the buffer and the file have diverged; a diagnostic result is not
+  evidence about the file at all. Do this before quoting any result to another
+  agent, before a build, and before a commit.
 
 ### Isar syntax
 

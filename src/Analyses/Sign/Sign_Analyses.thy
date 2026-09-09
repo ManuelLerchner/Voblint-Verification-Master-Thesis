@@ -5,890 +5,249 @@ theory Sign_Analyses
     Sign_Classify
     Sign_Transfer
     Sign_Exec
-    "Voblint_Result.DG_Result_Construction"
-    "Voblint_Framework.CFG_Enumeration"
-    "Voblint_Exec.Routed_Exec_Refinement"
-    "Voblint_Framework.Routed_Analysis_Sound"
-    "Voblint_Framework.Routed_Context"
-    "Voblint_Framework.Routed_Context_Unit"
-    "Voblint_Framework.Activation_Backbone"
-    "Voblint_Framework.Analysis_Result"
+    "Voblint_Result.Routed_DG_Analysis"
     "Voblint_Framework.Call_String_Context"
     "Voblint_Solver.TD_Solver_Bridge"
-    "Voblint_Compile.Compile_Invariants"
-    "Voblint_CFG.CFG_Prune"
     "Voblint_VIMP.VIMP_Program"
     "TD.TD_side_upd_rule"
-    "Voblint_Routing.Call_String_Routed_Context"
-    "Voblint_Routing.Entry_State_Routed_Context"
 begin
 
-chapter \<open>How Sign is run under each supported context policy\<close>
+chapter \<open>How Sign is run under each context-sensitive policy\<close>
 
 text \<open>
   Sign's analysis package -- its specification, concretization and soundness --
   lives in \<^theory>\<open>Voblint_Analysis_Sign.Sign_Sound\<close> and mentions no context. This
-  theory supplies the other half: for each context policy this development
-  supports, the equation system that pairing generates, its solved table, the
-  coverage premises the solver's reachable set must satisfy, and the result and
-  report tables a caller consumes.
+  theory supplies the other half for the two policies that route a call to more
+  than one context: the call-string run, which truncates the caller's string at a
+  runtime bound, and the entry-state run, which keys a callee on the abstract
+  values its formals hold on entry.
 
-  Three configurations live here, and they are independent of one another. The
-  context-insensitive run routes every call to \<^const>\<open>route_unit\<close>; the
-  call-string run truncates the caller's string at a runtime bound; the
-  entry-state run keys a callee on the abstract values its formals hold on entry.
-  Each names the same \<^const>\<open>sctx_spec\<close> and the same
-  \<open>sctx_sound_exec\<close>, and none derives a fact about sign arithmetic.
+  Neither policy has a pipeline of its own here. Both are interpretations of
+  \<^locale>\<open>routed_dg_analysis\<close>, which owns the equation system, the solve, the
+  covered keys, the reader, the result table, the contextual report and the
+  activation-indexed soundness endpoint for every domain at every policy. What
+  this theory supplies is Sign's own implementation and facts, the routing
+  functions, the solver, and the published names.
 
-  Global keys are \<^type>\<open>routed_gk\<close> throughout: \<^const>\<open>Analysis_Global\<close> at
-  \<^typ>\<open>unit\<close>, since Sign publishes no named global of its own, and
-  \<^const>\<open>Activation_Seed\<close> carrying a callee entry point with its routed context.
-  The call-string configuration uses \<^typ>\<open>call_string_gk\<close>, which is shared with
-  every other call-string-keyed instance.
+  The context-insensitive run is not here either: it is \<open>Sign_Assembly\<close>'s
+  \<^theory_text>\<open>global_interpretation\<close> of the shared unit-context assembly.
+
+  Global keys differ per policy and are therefore parameters, not a fixed shape:
+  the call-string run keys at \<^type>\<open>call_string_gk\<close>, shared with every other
+  call-string-keyed instance, while the entry-state run keys at
+  \<^type>\<open>routed_gk\<close> --- \<^const>\<open>Analysis_Global\<close> at \<^typ>\<open>unit\<close>, since Sign
+  publishes no named global of its own, and \<^const>\<open>Activation_Seed\<close> carrying a
+  callee entry point with its routed context.
 \<close>
 
-text \<open>
-  The unit context is not one of the configurations below. It is
-  \<open>Sign_Assembly\<close>'s single \<^theory_text>\<open>global_interpretation\<close> of the shared unit-context
-  assembly, which derives the equation system, the solve, the reader, the result
-  table and every soundness endpoint from Sign's transfer, entry state, solver
-  and classifier. What remains here is the two configurations the assembly does
-  not cover, because each routes calls to more than one context.
-\<close>
-
-section \<open>Sign at the routed spine, instantiated at the call-string context\<close>
+section \<open>Sign at the call-string context\<close>
 
 text \<open>
-  The call-string instance of the Sign analysis package in
-  \<^theory>\<open>Voblint_Analysis_Sign.Sign_Sound\<close>: same \<^const>\<open>sctx_spec\<close>/\<^const>\<open>sctx_abs_spec\<close> D/G
-  specification and the same domain-commute facts it already interprets
-  (\<^locale>\<open>routed_dg_domain_exec\<close>, \<^theory>\<open>Voblint_Exec.DG_Local_State_Exec_Refinement\<close>) --
-  nothing here re-derives them. Only the routing policy changes, from
-  \<^const>\<open>route_unit\<close> to \<^const>\<open>Call_String_Context.cs_route\<close> at a runtime bound
-  \<open>k\<close>, and the routed-context locale interpreted changes from
-  \<^locale>\<open>unit_routed_context\<close> to \<^locale>\<open>call_string_routed_context\<close>
-  (\<^theory>\<open>Voblint_Routing.Call_String_Routed_Context\<close>), which is itself already
-  generic in the domain and discharges four of its six routing obligations
-  for any compiled program, leaving only \<open>call_fwd\<close>/\<open>comb_fwd\<close> as genuine
-  per-instance premises -- exactly as Sign's own \<open>call_fwd_ok\<close>/\<open>comb_fwd_ok\<close>
-  already are at the unit context.
+  A call string is the last \<open>k\<close> call sites on the stack, so a procedure entered
+  from two places is analysed twice rather than once at the join. \<^const>\<open>cs_route\<close>
+  never reads the state it is handed, which is what makes
+  \<open>fun_route_activation_collect_sound\<close> --- the endpoint for a route that is a
+  function of the call site and the caller's context alone --- the applicable one,
+  at the trace-semantic counterpart \<^const>\<open>cs_context\<close>.
 
-  This is the architecture-milestone acceptance test: a second context for an
-  existing domain, exposed from the existing generic routed-domain
-  interpretation and the existing generic call-string context locale, with no
-  new Sign-domain mathematics.
-\<close>
-
-subsection \<open>The routed equation system and its executable solution\<close>
-
-definition scs_eqs ::
-    "nat \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> (sign exec_dg_st \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> (pp \<times> call_string, call_string_gk, (sign exec_dg_st lifted, sign exec_dg_st lifted) dg_state) eqsT" where
-  "scs_eqs k gs empty_pred Pi ps =
-     call_string_eqs_for k (sctx_spec gs empty_pred)
-       (compile_prog Pi ps) (Lifted cinit_sign_st)"
-
-definition scs_sol ::
-    "nat \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> (sign exec_dg_st \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> (pp \<times> call_string) set \<times> (pp \<times> call_string + call_string_gk \<Rightarrow> (sign exec_dg_st lifted, sign exec_dg_st lifted) dg_state)" where
-  "scs_sol k gs empty_pred Pi ps =
-     TD_side_always_join_Interp_solve (scs_eqs k gs empty_pred Pi ps)
-       (cfg_exit (compile_prog Pi ps), [])"
-
-definition scs_terminates ::
-    "nat \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> (sign exec_dg_st \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> bool" where
-  "scs_terminates k gs empty_pred Pi ps =
-     TD_side_always_join_Interp.solve_dom TYPE(call_string_gk) TYPE((sign exec_dg_st lifted, sign exec_dg_st lifted) dg_state)
-       (scs_eqs k gs empty_pred Pi ps) (cfg_exit (compile_prog Pi ps), [])"
-
-lemma scs_terminates_via_solve_c:
-  assumes "TD_side_always_join_Interp_solve_c (scs_eqs k gs empty_pred Pi ps)
-             (cfg_exit (compile_prog Pi ps), []) \<noteq> None"
-  shows "scs_terminates k gs empty_pred Pi ps"
-  unfolding scs_terminates_def
-  by (rule TD_side_always_join_Interp.solve_dom_of_solve_c[OF assms])
-
-lemma scs_vars_finite:
-  assumes "scs_terminates k gs empty_pred Pi ps"
-  shows "finite (fst (scs_sol k gs empty_pred Pi ps))"
-  using TD_side_always_join_Interp.finite_stabl_solve[
-      OF assms[unfolded scs_terminates_def]]
-  unfolding scs_sol_def TD_side_always_join_Interp_solve_def
-  by simp
-
-subsection \<open>Domain commute facts, at the call-string routed spec\<close>
-
-text \<open>
-  The same interpretation Sign's unit-context instance makes, at the call-string
-  routing policy: \<^locale>\<open>routed_domain_exec\<close> takes the routing functions as
-  parameters, so switching from \<^const>\<open>route_unit\<close> to \<^const>\<open>cs_route\<close> at a runtime
-  bound \<open>k\<close> is a different instantiation of one derivation, not a second one.
-  \<^const>\<open>cs_route\<close> reads only the call site and the incoming string, never the
-  incoming abstract value, so the routing-agreement obligation is as free here as it
-  is for \<^const>\<open>route_unit\<close>.
+  \<open>k\<close> is runtime data, so the interpretation is local to a context fixing it and
+  the published constants below are applications of the pipeline's own constants
+  at \<^term>\<open>cs_route k\<close>. Nothing about the construction changes with \<open>k\<close>.
 \<close>
 
 context
-  fixes gs :: "vname \<Rightarrow> bool" and empty_pred :: "sign exec_dg_st \<Rightarrow> bool" and k :: nat
-  assumes exact: "\<And>s. empty_pred s = is_empty_state (fun_of_resolved_st_q_for gs s)"
+  fixes k :: nat
 begin
 
-interpretation sign_cs: routed_domain_exec
-  gs empty_pred "sign_tf_st_for gs" "sign_enter_st_for gs"
-  skip_sign assign_sign special_sign branch_sign body_sign return_sign
-  "enter_sign_ci_for gs" event_sign
-  Call_String_Context.Global Call_String_Context.Seed "cs_route k" "cs_route k"
-  static_resolve static_resolve
-  by unfold_locales
-     (rule sign_tf_st_for_commute[unfolded sign_tf_abs_def], assumption,
-      rule sign_enter_st_for_commute, rule exact, simp,
-
-      rule cs_route_indep_of_data, simp add: static_resolve_def)
-
-lemmas sign_cs_pp_st_gen = sign_cs.pp_st
-
-end
-
-subsection \<open>The certified executable post-solution, generic per compiled program\<close>
-
-context
-  fixes gs :: "vname \<Rightarrow> bool" and empty_pred :: "sign exec_dg_st \<Rightarrow> bool"
-    and Pi :: proc_table and ps :: "pname list" and k :: nat
-  assumes solves: "scs_terminates k gs empty_pred Pi ps"
-    and exact: "\<And>s. empty_pred s = is_empty_state (fun_of_resolved_st_q_for gs s)"
-begin
-
-lemma scs_solve_dom:
-  "TD_side_always_join_Interp.solve_dom TYPE(call_string_gk) TYPE((sign exec_dg_st lifted, sign exec_dg_st lifted) dg_state)
-     (scs_eqs k gs empty_pred Pi ps) (cfg_exit (compile_prog Pi ps), [])"
-  using solves[unfolded scs_terminates_def] .
-
-lemma scs_pp_st:
-  "part_post_solution (scs_eqs k gs empty_pred Pi ps) (cfg_exit (compile_prog Pi ps), [])
-     (snd (scs_sol k gs empty_pred Pi ps)) (fst (scs_sol k gs empty_pred Pi ps))"
-  using TD_side_always_join_Interp.partial_post_solution
-          [OF scs_solve_dom, of "fst (scs_sol k gs empty_pred Pi ps)"
-             "snd (scs_sol k gs empty_pred Pi ps)"]
-  unfolding scs_sol_def by simp
-
-text \<open>The solver's post-solution, for the unbuffered routed generator at the executable
-  spec: the shape \<^locale>\<open>call_string_routed_context\<close> consumes directly.\<close>
-
-theorem scs_pp_routed:
-  "part_post_solution
-     (routed_node_rhs intra_predecessor_addr_list (\<lambda>_. Call_String_Context.Global)
-        (cs_route k)
-        (\<lambda>ctx' src a. dg_spec_edge_tree (sctx_spec gs empty_pred) a src
-           (\<lambda>_. Call_String_Context.Global))
-        (routed_call_tree (sctx_spec gs empty_pred) Call_String_Context.Global
-           Call_String_Context.Seed (static_resolve (compile_prog Pi ps)) (\<lambda>d. d = Bot))
-        (routed_entry_seed_tree Call_String_Context.Seed)
-        (compile_prog Pi ps) Bot (Lifted cinit_sign_st) Bot)
-     (cfg_exit (compile_prog Pi ps), [])
-     (snd (scs_sol k gs empty_pred Pi ps)) (fst (scs_sol k gs empty_pred Pi ps))"
-  using scs_pp_st
-  unfolding scs_eqs_def call_string_eqs_for_def compiled_routed_eqs_for_def sctx_spec_def
-    bot_lifted_eq
-  by (rule sign_cs_pp_st_gen[OF exact])
-end
-
-subsection \<open>The analysis-level result at the call-string context\<close>
-
-text \<open>
-  The call-string instance of \<^locale>\<open>routed_analysis_sound\<close>. Nothing below is
-  call-string-specific beyond the routing pair \<^const>\<open>cs_route\<close>/\<^const>\<open>cs_context\<close>
-  and the seed-key encoding: the solved-table reader, its two coverage
-  obligations and the published result all come from the generic composition,
-  which is why this context reaches the same activation-collect theorem the
-  unit and entry-state instances reach.
-\<close>
-
-definition scs_sg_st ::
-    "nat \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> (sign exec_dg_st \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list
-       \<Rightarrow> pp \<times> call_string + call_string_gk \<Rightarrow> sign exec_dg_st lifted" where
-  "scs_sg_st k gs empty_pred Pi ps =
-     solved_local_reader (fst (scs_sol k gs empty_pred Pi ps))
-                         (snd (scs_sol k gs empty_pred Pi ps))"
-
-context
-  fixes gs :: "vname \<Rightarrow> bool" and empty_pred :: "sign exec_dg_st \<Rightarrow> bool"
-    and Pi :: proc_table and ps :: "pname list" and k :: nat
-  assumes solves: "scs_terminates k gs empty_pred Pi ps"
-    and exact: "\<And>s. empty_pred s = is_empty_state (fun_of_resolved_st_q_for gs s)"
-    and entry_cov:
-      "(cfg_entry (compile_prog Pi ps), []) \<in> fst (scs_sol k gs empty_pred Pi ps)"
-    and fwd_ok: "\<And>u a v ctx. (u, ctx) \<in> fst (scs_sol k gs empty_pred Pi ps)
-                   \<Longrightarrow> (u, a, v) \<in> intra (compile_prog Pi ps)
-                   \<Longrightarrow> (v, ctx) \<in> fst (scs_sol k gs empty_pred Pi ps)"
-    and call_fwd_ok: "\<And>u ctx dst pars args p cont d.
-        (u, ctx) \<in> fst (scs_sol k gs empty_pred Pi ps)
-        \<Longrightarrow> (u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps)
-        \<Longrightarrow> (FunctionEntry p, cs_route k u ctx d (CallEdge dst pars args))
-              \<in> fst (scs_sol k gs empty_pred Pi ps)"
-    and comb_fwd_ok: "\<And>cl c1 dst pars args p cont.
-        (cl, c1) \<in> fst (scs_sol k gs empty_pred Pi ps)
-        \<Longrightarrow> (cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps)
-        \<Longrightarrow> (cont, c1) \<in> fst (scs_sol k gs empty_pred Pi ps)"
-begin
-
-lemma scs_cinit_le_cinit_sign_st:
-  "cinit_stores gs \<subseteq> sctx_gamma gs (Lifted cinit_sign_st) Bot"
-  by (auto simp: sctx_gamma_def cinit_stores_def gamma_state_def
-                 fun_of_resolved_st_q_for_def fun_of_st_cinit_sign_st_for)
-
-interpretation scs_dg_base: sound_dg_spec_core "sctx_spec gs empty_pred" "sctx_gamma gs" gs
-  by (rule sctx_sound_exec[OF exact])
-
-interpretation scs_adapter: routed_analysis_sound
-    "sctx_spec gs empty_pred" "sctx_gamma gs" gs
-    "compile_prog Pi ps" Call_String_Context.Global "cs_route k"
-    Bot "Lifted cinit_sign_st" Bot
-    "snd (scs_sol k gs empty_pred Pi ps)" "fst (scs_sol k gs empty_pred Pi ps)"
-    "(cfg_exit (compile_prog Pi ps), [])"
-    Call_String_Context.Seed "\<lambda>d. d = Bot" "call_context_rel_of_fun (cs_context k)"
-    "map_lift (fun_of_resolved_st_q_for gs)" sign_classify_check
-proof (unfold_locales, goal_cases FinE PP SgCov SgUncov Fwd FinC CallsUnique SeedKey
-    IsBotBot IsBotSound ResolveSound
-    EnterCover EnterTotal CombFwd GammaRd ClProved ClRefuted VarsFin)
-  case FinE show ?case using compile_prog_finite by auto
+interpretation sign_cs: routed_dg_analysis
+    sign_tf_st_for sign_enter_st_for cinit_sign_st
+    Call_String_Context.Global Call_String_Context.Seed "\<lambda>_. cs_route k" "[]"
+    TD_side_always_join_Interp_solve
+    "TD_side_always_join_Interp.solve_dom TYPE(call_string_gk)
+       TYPE((sign exec_dg_st lifted, sign exec_dg_st lifted) dg_state)"
+    bot sign_classify_check
+    skip_sign assign_sign special_sign branch_sign body_sign return_sign
+    enter_sign_ci_for event_sign "\<lambda>_. cs_route k"
+    TD_side_always_join_Interp_solve_c
+proof (rule routed_dg_analysis.intro, goal_cases)
+  case (1 gs) show ?case by (rule sign_is_sound_transfer_for)
 next
-  case PP show ?case by (rule scs_pp_routed[OF solves exact])
+  case (2 gs a s) then show ?case
+    unfolding fun_of_exec_dg_st_for_def
+    by (rule sign_tf_st_for_commute[unfolded sign_tf_abs_def])
 next
-  case (SgCov v c)
-  thus ?case by (simp add: sctx_gamma_def)
+  case (3 gs ci s) show ?case
+    unfolding fun_of_exec_dg_st_for_def by (rule sign_enter_st_for_commute)
 next
-  case (SgUncov v c)
-  thus ?case by simp
+  case (4 gs u ctx d ca) show ?case by (rule cs_route_indep_of_data)
 next
-  case (Fwd u a v c)
-  thus ?case by (rule fwd_ok)
+  case (5 v ctx) show ?case by simp
 next
-  case FinC show ?case by (simp add: compile_prog_finite)
+  case (6 eqs x) then show ?case
+    by (rule TD_side_always_join_Interp.partial_post_solution[OF _ surjective_pairing])
 next
-  case CallsUnique show ?case
-    unfolding calls_source_unique_def using compile_prog_calls_source_unique by blast
+  case (7 eqs x) then show ?case
+    by (rule TD_side_always_join_Interp.finite_stabl_solve)
 next
-  case (SeedKey p ctx) show ?case by simp
+  case (8 c d s) then show ?case by (rule sign_classify_check_proved)
 next
-  case IsBotBot show ?case by simp
+  case (9 c d s) then show ?case by (rule sign_classify_check_refuted)
 next
-  case (IsBotSound d g') then show ?case by (simp add: sctx_gamma_def)
+  case 10 show ?case by (rule refl)
 next
-  case (ResolveSound u ctx dst pars args p cont s)
-  thus ?case by (simp add: compile_prog_finite)
+  case (11 gs) show ?case by (rule sign_cinit_gamma)
 next
-  case (EnterCover u ctx dst pars args p cont s ctx')
-  let ?ci = "call_info_of (CallEdge dst pars args) p"
-  let ?caller = "locals (snd (scs_sol k gs empty_pred Pi ps) (Inl (u, ctx)))"
-  have cov: "entry_pairs_cover
-      (\<lambda>d. sctx_gamma gs d (globs (snd (scs_sol k gs empty_pred Pi ps) (Inr Call_String_Context.Global))))
-      s (call_enter gs (CallEdge dst pars args) s)
-      [(?caller, transfer_lift empty_pred (sign_enter_st_for gs ?ci) ?caller)]"
-    using sctx_entry_cover_exec[OF exact EnterCover(3), where ci = ?ci] by simp
-  have req: "cs_route k u ctx entry (CallEdge dst pars args) = ctx'"
-    for entry :: "sign exec_dg_st lifted"
-    using EnterCover(4)[unfolded call_context_rel_of_fun_iff]
-    by (simp add: cs_route_context_agree)
-  show ?case
-    unfolding sctx_spec_def dgs_enter_local_state_st_for_lifted
-    using enter_runs_local_enter_transfer enter_deps_local_enter_transfer cov
-          req call_fwd_ok[OF EnterCover(1,2)]
-    by (fastforce simp: entry_pairs_cover_def cs_route_def)
-next
-  case (EnterTotal u ctx dst pars args p cont s)
-  show ?case by simp
-next
-  case (CombFwd cl c1 dst pars args p cont)
-  show ?case using CombFwd(1,2) by (rule comb_fwd_ok)
-next
-  case (GammaRd d g') show ?case by (simp add: sctx_gamma_def)
-next
-  case (ClProved c d s) thus ?case by (rule sign_classify_check_proved)
-next
-  case (ClRefuted c d s) thus ?case by (rule sign_classify_check_refuted)
-next
-  case VarsFin show ?case by (rule scs_vars_finite[OF solves])
+  case (12 eqs x) then show ?case
+    by (rule TD_side_always_join_Interp.solve_dom_of_solve_c)
 qed
 
-theorem scs_activation_collect_sound:
-  "activation_collect gs (call_context_rel_of_fun (cs_context k)) [] (compile_prog Pi ps)
-       (cinit_stores gs) v ctx
-     \<subseteq> gamma_state_lift (map_lift (fun_of_resolved_st_q_for gs)
-           (scs_sg_st k gs empty_pred Pi ps (Inl (v, ctx))))"
-  unfolding scs_sg_st_def
-  by (rule scs_adapter.routed_activation_collect_sound
-        [OF entry_cov scs_cinit_le_cinit_sign_st])
+text \<open>
+  The published call-string endpoint: every activation the trace semantics admits
+  at a call string is described by the solved table's entry for that string.
+  \<^const>\<open>cs_route\<close>'s independence of the entered value is the whole of what this
+  policy owes the shared derivation.
+\<close>
+
+lemmas analyse_sign_call_string_sound =
+  sign_cs.fun_route_activation_collect_sound[OF cs_route_context_agree]
+
+lemmas analyse_sign_call_string_terminates_of_solve_c =
+  sign_cs.terminates_of_solve_c
 
 end
 
-subsection \<open>Whole-program convenience layer\<close>
-
-definition scs_eqs_prog ::
-    "nat \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog
-       \<Rightarrow> (pp \<times> call_string, call_string_gk, (sign exec_dg_st lifted, sign exec_dg_st lifted) dg_state) eqsT" where
-  "scs_eqs_prog k gs p =
-     scs_eqs k gs (resolved_st_q_is_bot_for (declared_global_vars p))
-       (prog_table p) (prog_procs p)"
-
-definition scs_sol_prog ::
-    "nat \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog
-       \<Rightarrow> (pp \<times> call_string) set \<times> (pp \<times> call_string + call_string_gk \<Rightarrow> (sign exec_dg_st lifted, sign exec_dg_st lifted) dg_state)" where
-  "scs_sol_prog k gs p =
-     scs_sol k gs (resolved_st_q_is_bot_for (declared_global_vars p))
-       (prog_table p) (prog_procs p)"
-
-definition scs_terminates_prog :: "nat \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> bool" where
-  "scs_terminates_prog k gs p =
-     scs_terminates k gs (resolved_st_q_is_bot_for (declared_global_vars p))
-       (prog_table p) (prog_procs p)"
-
-lemma scs_terminates_prog_via_solve_c:
-  assumes "TD_side_always_join_Interp_solve_c
-             (scs_eqs_prog k gs p)
-             (cfg_exit (compile_prog (prog_table p) (prog_procs p)), []) \<noteq> None"
-  shows "scs_terminates_prog k gs p"
-  using assms
-  unfolding scs_terminates_prog_def scs_eqs_prog_def
-  by (rule scs_terminates_via_solve_c)
-
-section \<open>Solved-result table\<close>
+subsection \<open>The published call-string constants\<close>
 
 text \<open>
-  The solved call-string D/G system, read as a \<^typ>\<open>(call_string, sign abs_state)
-  analysis_result\<close> -- the exact construction Interval's own call-string result table
-  already uses, at Sign's own solve instead of Interval's. The covered-key set is
-  the solver's own, never an enumerated theoretical context space, matching
-  Interval's own posture.
+  \<open>k\<close> is an explicit leading runtime argument, and each constant is the
+  corresponding \<^locale>\<open>routed_dg_pipeline\<close> constant applied to Sign's
+  implementation, the call-string routing pair and the always-join solver. They
+  are the assembly's own objects, not copies of them, so no equation relates the
+  two.
 \<close>
-
-definition analyse_sign_call_string_result_for ::
-    "nat \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> (call_string, sign abs_state) analysis_result" where
-  "analyse_sign_call_string_result_for k gs p =
-     dg_result_for gs (declared_global_vars p) (scs_sol_prog k gs p)"
-
-text \<open>Convenience instance at \<^const>\<open>declared_global\<close> \<open>p\<close> and \<^const>\<open>prog_main_name\<close>,
-  matching Interval's own \<open>analyse_interval_call_string_result\<close>'s shape, with \<open>k\<close> as an
-  explicit leading runtime argument.\<close>
 
 definition analyse_sign_call_string_result ::
     "nat \<Rightarrow> imp_prog \<Rightarrow> (call_string, sign abs_state) analysis_result" where
   "analyse_sign_call_string_result k p =
-     analyse_sign_call_string_result_for k (declared_global p) p"
-
-section \<open>Contextual check report\<close>
-
-text \<open>
-  Reuses \<^const>\<open>classify_checks_ctx\<close>/\<^const>\<open>classify_checks_verdicts\<close> unchanged --
-  both are generic in the context type already, so nothing call-string-specific is
-  needed here beyond supplying the call-string result table and Sign's own
-  \<open>sign_classify_check\<close>, exactly mirroring Interval's own
-  \<open>cs_call_string_check_projection\<close>/\<open>cs_call_string_verdict_report_prog\<close>.
-\<close>
-
-definition scs_check_projection ::
-    "nat \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> exp \<times> (call_string \<times> contextual_verdict) set) list" where
-  "scs_check_projection k p =
-     classify_checks_ctx (prog_cfg p)
-       (analyse_sign_call_string_result_for k (declared_global p) p)
-       sign_classify_check"
-
-definition scs_verdict_report_prog ::
-    "nat \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> exp \<times> contextual_verdict) list" where
-  "scs_verdict_report_prog k p =
-     map (\<lambda>(u, c, vs). (u, c, aggregate_verdicts (snd ` vs)))
-       (scs_check_projection k p)"
-
-lemma scs_verdict_report_prog_eq:
-  "scs_verdict_report_prog k p =
-     classify_checks_verdicts (prog_cfg p)
-       (analyse_sign_call_string_result_for k (declared_global p) p)
-       sign_classify_check"
-  unfolding scs_verdict_report_prog_def scs_check_projection_def
-  by (rule classify_checks_verdicts_proj)
+     routed_dg_pipeline.result sign_tf_st_for sign_enter_st_for cinit_sign_st
+       Call_String_Context.Global Call_String_Context.Seed (\<lambda>_. cs_route k) []
+       TD_side_always_join_Interp_solve (declared_global p) p"
 
 definition analyse_sign_call_string_report ::
     "nat \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> exp \<times> contextual_verdict) list" where
-  "analyse_sign_call_string_report k p = scs_verdict_report_prog k p"
+  "analyse_sign_call_string_report k p =
+     routed_dg_pipeline.verdict_report sign_tf_st_for sign_enter_st_for cinit_sign_st
+       Call_String_Context.Global Call_String_Context.Seed (\<lambda>_. cs_route k) []
+       TD_side_always_join_Interp_solve sign_classify_check (declared_global p) p"
 
+definition analyse_sign_call_string_terminates ::
+    "nat \<Rightarrow> imp_prog \<Rightarrow> bool" where
+  "analyse_sign_call_string_terminates k p =
+     routed_dg_pipeline.terminates sign_tf_st_for sign_enter_st_for cinit_sign_st
+       Call_String_Context.Global Call_String_Context.Seed (\<lambda>_. cs_route k) []
+       (TD_side_always_join_Interp.solve_dom TYPE(call_string_gk)
+          TYPE((sign exec_dg_st lifted, sign exec_dg_st lifted) dg_state))
+       (declared_global p) p"
 
-section \<open>Sign at the routed spine, instantiated at the entry-state context\<close>
-
-text \<open>
-  The entry-state instance of the Sign analysis package in
-  \<^theory>\<open>Voblint_Analysis_Sign.Sign_Sound\<close>, and the second architecture-milestone acceptance test
-  after the call-string configuration above: same \<^const>\<open>sctx_spec\<close>/\<^const>\<open>sctx_abs_spec\<close>  D/G specification and the same domain-commute facts Sign already interprets
-  (\<^locale>\<open>routed_dg_domain_exec\<close>, \<^theory>\<open>Voblint_Exec.DG_Local_State_Exec_Refinement\<close>) -- nothing here
-  re-derives them. The routing policy is Interval's own entry-state construction
-  (\<open>entry_exec_route_gen\<close>/\<^const>\<open>formals_route_lifted_gen\<close>,
-  \<^theory>\<open>Voblint_Exec.DG_Local_State_Exec_Refinement\<close>/\<^theory>\<open>Voblint_Framework.Routed_Context\<close>), already
-  generalized in a domain -- unlike \<open>cs_route\<close>, this route genuinely depends on
-  its caller-state argument (the entered callee frame), which is exactly the "small
-  additional domain capability" the routed-domain milestone anticipated for EntryState;
-  it needed only \<open>routed_dg_domain_exec\<close>'s own three primitive commute facts, no new
-  Sign-domain mathematics. \<^locale>\<open>pure_entry_routed_context\<close>
-  (\<^theory>\<open>Voblint_Routing.Entry_State_Routed_Context\<close>) is the generic context-side counterpart,
-  discharging \<open>FinC\<close>/\<open>RouteAgree\<close>/\<open>EnterAgree\<close> once and for all instances.
-
-  Unlike Sign's own routed-unit-context and call-string instances, this development goes
-  one section further, to activation-indexed collecting soundness -- matching Interval's
-  own EntryState pipeline's scope exactly (Interval's own CallString pipeline stops at the
-  executable result/report table, the same place the call-string configuration above stops).
-\<close>
-
-subsection \<open>The routed equation system's own route, generic per compiled program\<close>
+section \<open>Sign at the entry-state context\<close>
 
 text \<open>
-  Sign's own executable-carrier route, mirroring Interval's \<open>entry_state_route\<close>/
-  \<open>entry_state_route_gen\<close> (\<open>Interval_Analyses\<close>) exactly, at
-  Sign's own \<open>sign_enter_st_for\<close> instead of Interval's \<open>ivl_enter_st_for\<close> -- this is
-  precisely \<^locale>\<open>routed_dg_domain_exec\<close>'s own \<open>entry_exec_route\<close>/
-  \<open>entry_exec_route_gen\<close> (\<^theory>\<open>Voblint_Exec.DG_Local_State_Exec_Refinement\<close>), restated here as
-  unconditional top-level definitions (rather than reached through an interpretation) so
-  the equation-system definitions below need no \<open>exact\<close> premise to be stated, matching
-  every other routed instance's convention. The routed generator enters the callee
-  frame before it routes, so the route itself only projects the formals out of the
-  state it is handed.
+  Keying a callee on the abstract values its formals hold on entry.
+  \<^const>\<open>exec_formals_route\<close> genuinely reads the state it is handed --- the callee
+  frame the routed generator has already entered --- so the applicable endpoint is
+  \<open>entry_state_activation_collect_sound\<close>, whose admitted-context relation is the
+  one the entry answer induces rather than the graph of a function on stores.
+
+  Nothing here is Sign-specific beyond the domain package itself: the route, its
+  agreement with \<^const>\<open>formals_route_lifted_gen\<close> on read-back states, and the
+  entry coverage all come from the shared assembly.
 \<close>
 
-definition sctx_entry_route ::
-    "(vname \<Rightarrow> bool) \<Rightarrow> (sign exec_dg_st \<Rightarrow> bool) \<Rightarrow> sign exec_dg_st lifted \<Rightarrow> call_action \<Rightarrow> sign list" where
-  "sctx_entry_route gs empty_pred d ca =
-     (case ca of CallEdge dst pars args \<Rightarrow>
-        formals_context pars (fun_of_resolved_st_q_for gs
-          (case d of Bot \<Rightarrow> bot | Lifted d0 \<Rightarrow> d0)))"
-
-definition sctx_entry_route_gen ::
-    "(vname \<Rightarrow> bool) \<Rightarrow> (sign exec_dg_st \<Rightarrow> bool) \<Rightarrow> pp \<Rightarrow> sign list \<Rightarrow> sign exec_dg_st lifted \<Rightarrow> call_action \<Rightarrow> sign list" where
-  "sctx_entry_route_gen gs empty_pred u ctx d ca = sctx_entry_route gs empty_pred d ca"
-
-subsection \<open>The routed equation system and its executable solution\<close>
-
-definition sctx_entry_eqs ::
-    "(vname \<Rightarrow> bool) \<Rightarrow> (sign exec_dg_st \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> (pp \<times> sign list, (unit, sign list) routed_gk, (sign exec_dg_st lifted, sign exec_dg_st lifted) dg_state) eqsT" where
-  "sctx_entry_eqs gs empty_pred Pi ps =
-     compiled_routed_eqs_for (Analysis_Global ()) Activation_Seed
-       (sctx_entry_route_gen gs empty_pred) (sctx_spec gs empty_pred)
-       (compile_prog Pi ps) (Lifted cinit_sign_st)"
-
-definition sctx_entry_sol ::
-    "(vname \<Rightarrow> bool) \<Rightarrow> (sign exec_dg_st \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> (pp \<times> sign list) set \<times> (pp \<times> sign list + (unit, sign list) routed_gk \<Rightarrow> (sign exec_dg_st lifted, sign exec_dg_st lifted) dg_state)" where
-  "sctx_entry_sol gs empty_pred Pi ps =
-     TD_side_always_join_Interp_solve (sctx_entry_eqs gs empty_pred Pi ps)
-       (cfg_exit (compile_prog Pi ps), [])"
-
-definition sctx_entry_terminates ::
-    "(vname \<Rightarrow> bool) \<Rightarrow> (sign exec_dg_st \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> bool" where
-  "sctx_entry_terminates gs empty_pred Pi ps =
-     TD_side_always_join_Interp.solve_dom TYPE((unit, sign list) routed_gk) TYPE((sign exec_dg_st lifted, sign exec_dg_st lifted) dg_state)
-       (sctx_entry_eqs gs empty_pred Pi ps) (cfg_exit (compile_prog Pi ps), [])"
-
-lemma sctx_entry_terminates_via_solve_c:
-  assumes "TD_side_always_join_Interp_solve_c (sctx_entry_eqs gs empty_pred Pi ps)
-             (cfg_exit (compile_prog Pi ps), []) \<noteq> None"
-  shows "sctx_entry_terminates gs empty_pred Pi ps"
-  unfolding sctx_entry_terminates_def
-  by (rule TD_side_always_join_Interp.solve_dom_of_solve_c[OF assms])
-
-text \<open>Finiteness of the entry-state key set, from the solver's own invariant
-  (\<open>finite_stabl_solve\<close>, \<^theory>\<open>Voblint_Solver.TD_Solver_Bridge\<close>). Nothing here
-  depends on the context type, which is what makes the entry-state case
-  available at all: its contexts are \<^typ>\<open>sign list\<close> values, not a space any
-  bound could enumerate.\<close>
-
-lemma sctx_entry_vars_finite:
-  assumes "sctx_entry_terminates gs empty_pred Pi ps"
-  shows "finite (fst (sctx_entry_sol gs empty_pred Pi ps))"
-  using TD_side_always_join_Interp.finite_stabl_solve[
-      OF assms[unfolded sctx_entry_terminates_def]]
-  unfolding sctx_entry_sol_def TD_side_always_join_Interp_solve_def
-  by simp
-
-subsection \<open>Route agreement: the one genuinely domain-specific commute fact\<close>
-
-context
-  fixes gs :: "vname \<Rightarrow> bool" and empty_pred :: "sign exec_dg_st \<Rightarrow> bool"
-  assumes exact: "\<And>s. empty_pred s = is_empty_state (fun_of_resolved_st_q_for gs s)"
-begin
-
-interpretation sign_domain: routed_dg_domain_exec
-  gs empty_pred "sign_tf_st_for gs" "sign_enter_st_for gs"
-  skip_sign assign_sign special_sign branch_sign body_sign return_sign
-  "enter_sign_ci_for gs" event_sign
-  by unfold_locales
-     (rule sign_tf_st_for_commute[unfolded sign_tf_abs_def], assumption,
-      rule sign_enter_st_for_commute, rule exact)
-
-
-lemma sctx_entry_route_gen_eq_generic:
-  "sctx_entry_route_gen gs empty_pred u ctx d ca = sign_domain.entry_exec_route_gen u ctx d ca"
-  unfolding sctx_entry_route_gen_def sign_domain.entry_exec_route_gen_def
-    sctx_entry_route_def sign_domain.entry_exec_route_def
-  by (rule refl)
-
-lemma sctx_entry_route_gen_commute:
-  "formals_route_lifted_gen u ctx (map_lift (fun_of_resolved_st_q_for gs) d) ca
-     = sctx_entry_route_gen gs empty_pred u ctx d ca"
-  unfolding sctx_entry_route_gen_eq_generic
-  by (rule sign_domain.entry_exec_route_gen_commute)
-
-end
-
-subsection \<open>Per-tree transport commutation\<close>
-
-text \<open>
-  The same interpretation Sign's unit-context instance makes, at the entry-state
-  routing policy. Here the routing-agreement obligation is not free --- the route reads
-  the entered state --- but it is exactly the fact just proved, and
-  \<^locale>\<open>routed_domain_exec\<close> takes it as a parameter, so switching context policy stays
-  a different instantiation of one derivation rather than a second one.
-\<close>
-
-context
-  fixes gs :: "vname \<Rightarrow> bool" and empty_pred :: "sign exec_dg_st \<Rightarrow> bool"
-  assumes exact: "\<And>s. empty_pred s = is_empty_state (fun_of_resolved_st_q_for gs s)"
-begin
-
-interpretation sign_es: routed_domain_exec
-  gs empty_pred "sign_tf_st_for gs" "sign_enter_st_for gs"
-  skip_sign assign_sign special_sign branch_sign body_sign return_sign
-  "enter_sign_ci_for gs" event_sign
-  "Analysis_Global ()" Activation_Seed "sctx_entry_route_gen gs empty_pred"
-  formals_route_lifted_gen
-  static_resolve static_resolve
-  by unfold_locales
-     (rule sign_tf_st_for_commute[unfolded sign_tf_abs_def], assumption,
-      rule sign_enter_st_for_commute, rule exact, simp,
-
-      rule sctx_entry_route_gen_commute[OF exact, symmetric],
-      simp add: static_resolve_def)
-
-lemmas sign_es_pp_st_gen = sign_es.pp_st
-
-end
-
-subsection \<open>The certified executable post-solution, generic per compiled program\<close>
-
-context
-  fixes gs :: "vname \<Rightarrow> bool" and empty_pred :: "sign exec_dg_st \<Rightarrow> bool"
-    and Pi :: proc_table and ps :: "pname list"
-  assumes solves: "sctx_entry_terminates gs empty_pred Pi ps"
-    and exact: "\<And>s. empty_pred s = is_empty_state (fun_of_resolved_st_q_for gs s)"
-begin
-
-lemma sctx_entry_solve_dom:
-  "TD_side_always_join_Interp.solve_dom TYPE((unit, sign list) routed_gk) TYPE((sign exec_dg_st lifted, sign exec_dg_st lifted) dg_state)
-     (sctx_entry_eqs gs empty_pred Pi ps) (cfg_exit (compile_prog Pi ps), [])"
-  using solves[unfolded sctx_entry_terminates_def] .
-
-lemma sctx_entry_pp_st:
-  "part_post_solution (sctx_entry_eqs gs empty_pred Pi ps) (cfg_exit (compile_prog Pi ps), [])
-     (snd (sctx_entry_sol gs empty_pred Pi ps)) (fst (sctx_entry_sol gs empty_pred Pi ps))"
-  using TD_side_always_join_Interp.partial_post_solution
-          [OF sctx_entry_solve_dom, of "fst (sctx_entry_sol gs empty_pred Pi ps)"
-             "snd (sctx_entry_sol gs empty_pred Pi ps)"]
-  unfolding sctx_entry_sol_def by simp
-
-text \<open>The solver's post-solution, for the unbuffered routed generator at the executable
-  spec and Sign's executable route: the shape \<^locale>\<open>dg_ctx_activation_base\<close> consumes.\<close>
-
-theorem sctx_entry_pp_routed:
-  "part_post_solution
-     (routed_node_rhs intra_predecessor_addr_list (\<lambda>_. Analysis_Global ())
-        (sctx_entry_route_gen gs empty_pred)
-        (\<lambda>ctx' src a. dg_spec_edge_tree (sctx_spec gs empty_pred) a src (\<lambda>_. Analysis_Global ()))
-        (routed_call_tree (sctx_spec gs empty_pred) (Analysis_Global ()) Activation_Seed (static_resolve (compile_prog Pi ps)) (\<lambda>d. d = Bot))
-        (routed_entry_seed_tree Activation_Seed)
-        (compile_prog Pi ps) Bot (Lifted cinit_sign_st) Bot)
-     (cfg_exit (compile_prog Pi ps), [])
-     (snd (sctx_entry_sol gs empty_pred Pi ps)) (fst (sctx_entry_sol gs empty_pred Pi ps))"
-  using sctx_entry_pp_st
-  unfolding sctx_entry_eqs_def compiled_routed_eqs_for_def sctx_spec_def bot_lifted_eq
-  by (rule sign_es_pp_st_gen[OF exact])
-
-end
-
-section \<open>Activation-indexed collecting soundness, generic per compiled program\<close>
-
-text \<open>
-  The routed spine is interpreted at Sign's executable carrier and fed the solver's own
-  table, as the context-insensitive configuration above does at the unit context: a local unknown concretizes
-  to \<^const>\<open>gamma_state_lift\<close> of its readback (\<^const>\<open>sctx_gamma\<close>), the covered reader
-  \<open>sctx_entry_sg_st\<close> hands the table's local slot through unchanged, and the route is
-  Sign's own executable \<^const>\<open>sctx_entry_route_gen\<close>.
-\<close>
-
-definition sctx_entry_sg_st ::
-    "(vname \<Rightarrow> bool) \<Rightarrow> (sign exec_dg_st \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list
-       \<Rightarrow> pp \<times> sign list + (unit, sign list) routed_gk \<Rightarrow> sign exec_dg_st lifted" where
-  "sctx_entry_sg_st gs empty_pred Pi ps =
-     solved_local_reader (fst (sctx_entry_sol gs empty_pred Pi ps))
-                         (snd (sctx_entry_sol gs empty_pred Pi ps))"
-
-context
-  fixes gs :: "vname \<Rightarrow> bool" and empty_pred :: "sign exec_dg_st \<Rightarrow> bool"
-    and Pi :: proc_table and ps :: "pname list"
-  assumes solves: "sctx_entry_terminates gs empty_pred Pi ps"
-    and exact: "\<And>s. empty_pred s = is_empty_state (fun_of_resolved_st_q_for gs s)"
-    and entry_cov: "(cfg_entry (compile_prog Pi ps), []) \<in> fst (sctx_entry_sol gs empty_pred Pi ps)"
-    and fwd_ok: "\<And>u a v ctx. (u, ctx) \<in> fst (sctx_entry_sol gs empty_pred Pi ps)
-                   \<Longrightarrow> (u, a, v) \<in> intra (compile_prog Pi ps)
-                   \<Longrightarrow> (v, ctx) \<in> fst (sctx_entry_sol gs empty_pred Pi ps)"
-    and call_fwd_ok: "\<And>u ctx dst pars args p cont.
-        (u, ctx) \<in> fst (sctx_entry_sol gs empty_pred Pi ps)
-        \<Longrightarrow> (u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps)
-        \<Longrightarrow> (FunctionEntry p,
-               sctx_entry_route_gen gs empty_pred u ctx
-                 (transfer_lift empty_pred
-                    (sign_enter_st_for gs (call_info_of (CallEdge dst pars args) p))
-                    (locals (snd (sctx_entry_sol gs empty_pred Pi ps) (Inl (u, ctx)))))
-                 (CallEdge dst pars args))
-             \<in> fst (sctx_entry_sol gs empty_pred Pi ps)"
-    and comb_fwd_ok: "\<And>cl c1 dst pars args p cont.
-        (cl, c1) \<in> fst (sctx_entry_sol gs empty_pred Pi ps)
-        \<Longrightarrow> (cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps)
-        \<Longrightarrow> (cont, c1) \<in> fst (sctx_entry_sol gs empty_pred Pi ps)"
-begin
-
-subsection \<open>The solver's table as the solved system\<close>
-
-interpretation sctx_entry_compiled: compiled_cfg Pi ps "compile_prog Pi ps"
-  by (unfold_locales; simp add: compile_prog_finite)
-
-lemmas sctx_entry_fin = sctx_entry_compiled.finite_intra
-lemmas sctx_entry_finC = sctx_entry_compiled.finite_calls
-
-lemma sctx_entry_sg_st_covered:
-  "(v, ctx) \<in> fst (sctx_entry_sol gs empty_pred Pi ps)
-   \<Longrightarrow> sctx_entry_sg_st gs empty_pred Pi ps (Inl (v, ctx))
-         = locals (snd (sctx_entry_sol gs empty_pred Pi ps) (Inl (v, ctx)))"
-  by (simp add: sctx_entry_sg_st_def)
-
-lemma sctx_entry_sg_st_uncovered_empty:
-  "(v, ctx) \<notin> fst (sctx_entry_sol gs empty_pred Pi ps)
-     \<Longrightarrow> gamma_state_lift (map_lift (fun_of_resolved_st_q_for gs)
-           (sctx_entry_sg_st gs empty_pred Pi ps (Inl (v, ctx)))) = {}"
-  by (simp add: sctx_entry_sg_st_def)
-
-subsection \<open>Instantiating the generic routed-context locale\<close>
-
-interpretation sctx_entry_dg_base: sound_dg_spec_core "sctx_spec gs empty_pred" "sctx_gamma gs" gs
-  by (rule sctx_sound_exec[OF exact])
-
-
-interpretation sctx_entry_routed: pure_entry_routed_context "sctx_spec gs empty_pred"
-    "sctx_gamma gs" gs Pi ps "Analysis_Global ()" "sctx_entry_route_gen gs empty_pred"
-    Bot "Lifted cinit_sign_st" Bot
-    "snd (sctx_entry_sol gs empty_pred Pi ps)" "fst (sctx_entry_sol gs empty_pred Pi ps)"
-    "(cfg_exit (compile_prog Pi ps), [])" "sctx_entry_sg_st gs empty_pred Pi ps" Activation_Seed
-    "\<lambda>d. d = Bot" "\<lambda>m. gamma_state_lift (map_lift (fun_of_resolved_st_q_for gs) m)"
-    "\<lambda>ci d. [(d, transfer_lift empty_pred (sign_enter_st_for gs ci) d)]"
-proof (unfold_locales, goal_cases FinE PP SgCov SgUncov Fwd SeedNe
-    IsBotBot IsBotSound EnterPure EnterCover CallFwd CombFwd)
-  case FinE show ?case by (rule sctx_entry_fin)
+global_interpretation sign_es: routed_dg_analysis
+    sign_tf_st_for sign_enter_st_for cinit_sign_st
+    "Analysis_Global ()" Activation_Seed exec_formals_route "[]"
+    TD_side_always_join_Interp_solve
+    "TD_side_always_join_Interp.solve_dom TYPE((unit, sign list) routed_gk)
+       TYPE((sign exec_dg_st lifted, sign exec_dg_st lifted) dg_state)"
+    bot sign_classify_check
+    skip_sign assign_sign special_sign branch_sign body_sign return_sign
+    enter_sign_ci_for event_sign "\<lambda>_. formals_route_lifted_gen"
+    TD_side_always_join_Interp_solve_c
+  defines
+    sign_entry_state_spec = sign_es.analysis_spec
+    and sign_entry_state_root_query = sign_es.root_query
+    and sign_entry_state_equations = sign_es.equations
+    and sign_entry_state_solution = sign_es.solution
+    and sign_entry_state_terminates_for = sign_es.terminates
+    and sign_entry_state_vars = sign_es.sol_vars
+    and sign_entry_state_env = sign_es.sol_env
+    and analyse_sign_entry_state_result_for = sign_es.result
+    and analyse_sign_entry_state_report_for = sign_es.verdict_report
+    and analyse_sign_entry_state_projection_for = sign_es.check_projection
+    and sign_entry_state_context_rel = sign_es.admitted_contexts
+proof (rule routed_dg_analysis.intro, goal_cases)
+  case (1 gs) show ?case by (rule sign_is_sound_transfer_for)
 next
-  case PP show ?case by (rule sctx_entry_pp_routed[OF solves exact])
+  case (2 gs a s) then show ?case
+    unfolding fun_of_exec_dg_st_for_def
+    by (rule sign_tf_st_for_commute[unfolded sign_tf_abs_def])
 next
-  case (SgCov v ctx) then show ?case
-    by (simp add: sctx_entry_sg_st_def sctx_gamma_def)
+  case (3 gs ci s) show ?case
+    unfolding fun_of_exec_dg_st_for_def by (rule sign_enter_st_for_commute)
 next
-  case (SgUncov v ctx) then show ?case by (rule sctx_entry_sg_st_uncovered_empty)
+  case (4 gs u ctx d ca) show ?case
+    unfolding fun_of_exec_dg_st_for_def
+    by (rule exec_formals_route_commute[symmetric])
 next
-  case (Fwd u a v ctx) then show ?case by (rule fwd_ok)
+  case (5 v ctx) show ?case by simp
 next
-  case (SeedNe p ctx) show ?case by simp
+  case (6 eqs x) then show ?case
+    by (rule TD_side_always_join_Interp.partial_post_solution[OF _ surjective_pairing])
 next
-  case IsBotBot show ?case by simp
+  case (7 eqs x) then show ?case
+    by (rule TD_side_always_join_Interp.finite_stabl_solve)
 next
-  case (IsBotSound d gv) then show ?case by (simp add: sctx_gamma_def)
+  case (8 c d s) then show ?case by (rule sign_classify_check_proved)
 next
-  case (EnterPure ci) show ?case
-    unfolding sctx_spec_def dgs_enter_local_state_st_for_lifted by (rule refl)
+  case (9 c d s) then show ?case by (rule sign_classify_check_refuted)
 next
-  case (EnterCover u ctx dst pars args p cont s)
-  show ?case
-    using sctx_entry_cover_exec[OF exact EnterCover(3),
-        where ci = "call_info_of (CallEdge dst pars args) p"]
-    by simp
+  case 10 show ?case by (rule refl)
 next
-  case (CallFwd u ctx dst pars args p cont cont' entry)
-  then show ?case using call_fwd_ok by auto
+  case (11 gs) show ?case by (rule sign_cinit_gamma)
 next
-  case (CombFwd cl c1 dst pars args p cont)
-  show ?case using CombFwd(1,2) by (rule comb_fwd_ok)
-qed
-subsection \<open>Activation-indexed collecting soundness\<close>
-
-lemma sctx_entry_cinit_le_cinit_sign_st:
-  "cinit_stores gs \<subseteq> sctx_gamma gs (Lifted cinit_sign_st) Bot"
-  by (auto simp: sctx_gamma_def cinit_stores_def gamma_state_def fun_of_resolved_st_q_for_def
-                 fun_of_st_cinit_sign_st_for)
-
-text \<open>The context relation the routed table induces: a concrete call is admitted at
-  every context some covering alternative of the entry answer routes to.\<close>
-
-abbreviation sctx_entry_context_rel :: "sign list call_context_rel" where
-  "sctx_entry_context_rel \<equiv> sctx_entry_routed.entry_context_rel"
-
-lemmas sctx_entry_routed_context_call = sctx_entry_routed.routed_context_call
-lemmas sctx_entry_routed_context_comb = sctx_entry_routed.routed_context_comb
-
-text \<open>
-  \<^locale>\<open>dg_analysis_adapter\<close> at the same executable solved system, handed the readback
-  as \<open>rd\<close> and Sign's classifier; its activation-collect soundness is the entry-state
-  soundness theorem, stated against the routed local unknown read back through
-  \<^const>\<open>gamma_state_lift\<close>.
-\<close>
-
-interpretation sctx_entry_adapter: routed_analysis_sound
-    "sctx_spec gs empty_pred" "sctx_gamma gs" gs
-    "compile_prog Pi ps" "Analysis_Global ()" "sctx_entry_route_gen gs empty_pred" Bot "Lifted cinit_sign_st" Bot
-    "snd (sctx_entry_sol gs empty_pred Pi ps)" "fst (sctx_entry_sol gs empty_pred Pi ps)"
-    "(cfg_exit (compile_prog Pi ps), [])"
-    Activation_Seed "\<lambda>d. d = Bot" sctx_entry_context_rel
-    "map_lift (fun_of_resolved_st_q_for gs)" sign_classify_check
-proof (unfold_locales, goal_cases FinE PP SgCov SgUncov Fwd FinC CallsUnique SeedKey
-    IsBotBot IsBotSound ResolveSound
-    EnterCover EnterTotal CombFwd GammaRd ClProved ClRefuted VarsFin)
-  case FinE show ?case by (rule sctx_entry_fin)
-next
-  case PP show ?case by (rule sctx_entry_pp_routed[OF solves exact])
-next
-  case (SgCov v c)
-  thus ?case by (simp add: sctx_gamma_def)
-next
-  case (SgUncov v c)
-  thus ?case by simp
-next
-  case (Fwd u a v c)
-  thus ?case by (rule fwd_ok)
-next
-  case FinC show ?case by (rule sctx_entry_finC)
-next
-  case CallsUnique show ?case
-    unfolding calls_source_unique_def using compile_prog_calls_source_unique by blast
-next
-  case (SeedKey p ctx) show ?case by simp
-next
-  case IsBotBot show ?case by simp
-next
-  case (IsBotSound d g') then show ?case by (simp add: sctx_gamma_def)
-next
-  case (ResolveSound u ctx dst pars args p cont s)
-  thus ?case by (simp add: static_resolve_iff[OF sctx_entry_finC])
-next
-  case (EnterCover u ctx dst pars args p cont s ctx')
-  show ?case
-    using sctx_entry_routed.routed.routed_entry_cover[OF EnterCover(1,2,3,4)] .
-next
-  case (EnterTotal u ctx dst pars args p cont s)
-  show ?case
-    using sctx_entry_routed.routed.routed_entry_total[OF EnterTotal(1,2,3)] .
-next
-  case (CombFwd cl c1 dst pars args p cont)
-  show ?case using CombFwd(1,2) by (rule comb_fwd_ok)
-next
-  case (GammaRd d g')
-  show ?case by (simp add: sctx_gamma_def)
-next
-  case (ClProved c d s)
-  thus ?case by (rule sign_classify_check_proved)
-next
-  case (ClRefuted c d s)
-  thus ?case by (rule sign_classify_check_refuted)
-next
-  case VarsFin show ?case by (rule sctx_entry_vars_finite[OF solves])
+  case (12 eqs x) then show ?case
+    by (rule TD_side_always_join_Interp.solve_dom_of_solve_c)
 qed
 
-theorem sctx_entry_activation_collect_sound:
-  "activation_collect gs sctx_entry_context_rel [] (compile_prog Pi ps) (cinit_stores gs) v ctx
-     \<subseteq> gamma_state_lift (map_lift (fun_of_resolved_st_q_for gs)
-           (sctx_entry_sg_st gs empty_pred Pi ps (Inl (v, ctx))))"
-  unfolding sctx_entry_sg_st_def
-  by (rule sctx_entry_adapter.routed_activation_collect_sound
-        [OF entry_cov sctx_entry_cinit_le_cinit_sign_st])
-end
-
-subsection \<open>Whole-program convenience layer\<close>
-
-definition sctx_entry_eqs_prog ::
-    "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog
-       \<Rightarrow> (pp \<times> sign list, (unit, sign list) routed_gk, (sign exec_dg_st lifted, sign exec_dg_st lifted) dg_state) eqsT" where
-  "sctx_entry_eqs_prog gs p =
-     sctx_entry_eqs gs (resolved_st_q_is_bot_for (declared_global_vars p))
-       (prog_table p) (prog_procs p)"
-
-definition sctx_entry_sol_prog ::
-    "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog
-       \<Rightarrow> (pp \<times> sign list) set \<times> (pp \<times> sign list + (unit, sign list) routed_gk \<Rightarrow> (sign exec_dg_st lifted, sign exec_dg_st lifted) dg_state)" where
-  "sctx_entry_sol_prog gs p =
-     sctx_entry_sol gs (resolved_st_q_is_bot_for (declared_global_vars p))
-       (prog_table p) (prog_procs p)"
-
-definition sctx_entry_terminates_prog :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> bool" where
-  "sctx_entry_terminates_prog gs p =
-     sctx_entry_terminates gs (resolved_st_q_is_bot_for (declared_global_vars p))
-       (prog_table p) (prog_procs p)"
-
-lemma sctx_entry_terminates_prog_via_solve_c:
-  assumes "TD_side_always_join_Interp_solve_c
-             (sctx_entry_eqs_prog gs p)
-             (cfg_exit (compile_prog (prog_table p) (prog_procs p)), []) \<noteq> None"
-  shows "sctx_entry_terminates_prog gs p"
-  using assms
-  unfolding sctx_entry_terminates_prog_def sctx_entry_eqs_prog_def
-  by (rule sctx_entry_terminates_via_solve_c)
-
-section \<open>Solved-result table\<close>
-
 text \<open>
-  The solved entry-state D/G system, read as a \<^typ>\<open>(sign list, sign abs_state)
-  analysis_result\<close> -- the exact construction Interval's own entry-state result table
-  already uses (\<open>Interval_Analyses\<close>), at Sign's own solve instead of
-  Interval's. The covered-key set is the solver's own, never an enumerated theoretical
-  context space, matching Interval's own posture.
+  A named \<^type>\<open>dg_spec\<close> that code generation can reach declares its own
+  unfolding, next to the definition, so a specification never has to be given a
+  most general ML type.
 \<close>
 
-definition analyse_sign_entry_state_result_for ::
-    "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> (sign list, sign abs_state) analysis_result" where
-  "analyse_sign_entry_state_result_for gs p =
-     dg_result_for gs (declared_global_vars p) (sctx_entry_sol_prog gs p)"
+declare sign_entry_state_spec_def [code_unfold]
 
-text \<open>Convenience instance at \<^const>\<open>declared_global\<close> \<open>p\<close> and \<^const>\<open>prog_main_name\<close>,
-  matching \<open>analyse_sign_call_string_result\<close>'s shape.\<close>
+subsection \<open>The published entry-state constants\<close>
 
-definition analyse_sign_entry_state_result :: "imp_prog \<Rightarrow> (sign list, sign abs_state) analysis_result" where
+text \<open>Convenience instances at \<^const>\<open>declared_global\<close> \<open>p\<close>, matching the
+  call-string constants' shape.\<close>
+
+definition analyse_sign_entry_state_result ::
+    "imp_prog \<Rightarrow> (sign list, sign abs_state) analysis_result" where
   "analyse_sign_entry_state_result p =
      analyse_sign_entry_state_result_for (declared_global p) p"
 
-section \<open>Contextual check report\<close>
-
-text \<open>
-  Reuses \<^const>\<open>classify_checks_ctx\<close>/\<^const>\<open>classify_checks_verdicts\<close> unchanged --
-  both are generic in the context type already, so nothing entry-state-specific is
-  needed here beyond supplying the entry-state result table and Sign's own
-  \<open>sign_classify_check\<close>.
-\<close>
-
-definition sctx_entry_check_projection ::
-    "imp_prog \<Rightarrow> (pp \<times> exp \<times> (sign list \<times> contextual_verdict) set) list" where
-  "sctx_entry_check_projection p =
-     classify_checks_ctx (prog_cfg p)
-       (analyse_sign_entry_state_result_for (declared_global p) p)
-       sign_classify_check"
-
-definition sctx_entry_verdict_report_prog ::
+definition analyse_sign_entry_state_report ::
     "imp_prog \<Rightarrow> (pp \<times> exp \<times> contextual_verdict) list" where
-  "sctx_entry_verdict_report_prog p =
-     map (\<lambda>(u, c, vs). (u, c, aggregate_verdicts (snd ` vs)))
-       (sctx_entry_check_projection p)"
+  "analyse_sign_entry_state_report p =
+     analyse_sign_entry_state_report_for (declared_global p) p"
 
-lemma sctx_entry_verdict_report_prog_eq:
-  "sctx_entry_verdict_report_prog p =
-     classify_checks_verdicts (prog_cfg p)
-       (analyse_sign_entry_state_result_for (declared_global p) p)
-       sign_classify_check"
-  unfolding sctx_entry_verdict_report_prog_def sctx_entry_check_projection_def
-  by (rule classify_checks_verdicts_proj)
+definition analyse_sign_entry_state_terminates :: "imp_prog \<Rightarrow> bool" where
+  "analyse_sign_entry_state_terminates p =
+     sign_entry_state_terminates_for (declared_global p) p"
 
-definition analyse_sign_entry_state_report :: "imp_prog \<Rightarrow> (pp \<times> exp \<times> contextual_verdict) list" where
-  "analyse_sign_entry_state_report p = sctx_entry_verdict_report_prog p"
+lemmas analyse_sign_entry_state_sound =
+  sign_es.entry_state_activation_collect_sound
 
 end
+

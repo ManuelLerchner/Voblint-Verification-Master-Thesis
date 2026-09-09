@@ -94,8 +94,8 @@ text \<open>
   unchanged). \<open>Plan_Interval_EntryState\<close> and
   \<open>Plan_Interval_CallString\<close> both carry a \<^typ>\<open>solver_choice\<close>: the routed
   equation system underneath either context (\<open>Interval_Analyses\<close>'s
-  \<open>entry_state_eqs\<close>, \<open>Interval_Analyses\<close>'s
-  \<open>cs_call_string_eqs\<close>) names no solve function of its own -- only the
+  \<open>entry_state_eqs_prog\<close>, \<open>Interval_Analyses\<close>'s
+  \<open>cs_call_string_eqs_prog\<close>) names no solve function of its own -- only the
   shared D/G spec and the routing policy -- so it is solved under all three
   disciplines exactly as the flat \<open>Ctx_None\<close> equation system already is
   (\<open>Interval_Exec_Sound\<close>'s \<open>analyse_interval_dg_join_for\<close>/

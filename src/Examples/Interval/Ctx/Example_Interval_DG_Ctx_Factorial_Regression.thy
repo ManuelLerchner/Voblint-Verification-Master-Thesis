@@ -11,7 +11,7 @@ text \<open>
   keyed D/G generator's buffered same-key \<^const>\<open>Side\<close> publication: recursive
   \<open>factorial\<close>, called at \<open>n=3\<close> and \<open>n=4\<close> from \<open>main\<close>, exercises four distinct entry-state
   contexts (\<open>n=[1,1]\<close>, \<open>[2,2]\<close>, \<open>[3,3]\<close>, \<open>[4,4]\<close>). Before the buffering fix,
-  \<^const>\<open>entry_state_eqs\<close> never terminated on this program: two Side writes to the same
+  \<^const>\<open>entry_state_eqs_prog\<close> never terminated on this program: two Side writes to the same
   global key within one equation evaluation destabilized the update rule's per-origin gate.
   Before the reachability lift, the dead \<open>n<2\<close> base-case branch's own \<open>#ret := 1\<close>
   assignment still produced a non-bottom value from an already-unreachable predecessor,

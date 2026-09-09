@@ -24,7 +24,6 @@ lemma cs_generic_k1_g_entry_merged:
      (locals (snd (cs_call_string_sol_prog 1 nest_gs nest_program)
                 (Inl (FunctionEntry (STR ''g''), [Statement 2])))) (STR ''p'')
    = Ivl (Fin 3) PlusInf"
-  unfolding cs_call_string_sol_prog_def cs_call_string_sol_def cs_call_string_eqs_def
   by eval
 
 lemma cs_generic_k1_g_result_merged:
@@ -32,7 +31,6 @@ lemma cs_generic_k1_g_result_merged:
      (locals (snd (cs_call_string_sol_prog 1 nest_gs nest_program)
                 (Inl (FunctionResult (STR ''g''), [Statement 2])))) (STR ''#ret'')
    = Ivl (Fin 6) PlusInf"
-  unfolding cs_call_string_sol_prog_def cs_call_string_sol_def cs_call_string_eqs_def
   by eval
 
 lemma cs_generic_k1_x_after_first_return:
@@ -40,7 +38,6 @@ lemma cs_generic_k1_x_after_first_return:
      (locals (snd (cs_call_string_sol_prog 1 nest_gs nest_program)
                 (Inl (Statement 6, [])))) (STR ''x'')
    = Ivl (Fin 6) PlusInf"
-  unfolding cs_call_string_sol_prog_def cs_call_string_sol_def cs_call_string_eqs_def
   by eval
 
 lemma cs_generic_k1_y_after_second_return:
@@ -48,7 +45,6 @@ lemma cs_generic_k1_y_after_second_return:
      (locals (snd (cs_call_string_sol_prog 1 nest_gs nest_program)
                 (Inl (Statement 7, [])))) (STR ''y'')
    = Ivl (Fin 6) PlusInf"
-  unfolding cs_call_string_sol_prog_def cs_call_string_sol_def cs_call_string_eqs_def
   by eval
 
 subsection \<open>\<open>k = 2\<close>: the two activations of \<open>g\<close> stay exact and separate\<close>
@@ -58,7 +54,6 @@ lemma cs_generic_k2_g_entry_first:
      (locals (snd (cs_call_string_sol_prog 2 nest_gs nest_program)
                 (Inl (FunctionEntry (STR ''g''), [Statement 2, Statement 5])))) (STR ''p'')
    = Ivl (Fin 3) (Fin 3)"
-  unfolding cs_call_string_sol_prog_def cs_call_string_sol_def cs_call_string_eqs_def
   by eval
 
 lemma cs_generic_k2_g_entry_second:
@@ -66,7 +61,6 @@ lemma cs_generic_k2_g_entry_second:
      (locals (snd (cs_call_string_sol_prog 2 nest_gs nest_program)
                 (Inl (FunctionEntry (STR ''g''), [Statement 2, Statement 6])))) (STR ''p'')
    = Ivl (Fin 10) (Fin 10)"
-  unfolding cs_call_string_sol_prog_def cs_call_string_sol_def cs_call_string_eqs_def
   by eval
 
 lemma cs_generic_k2_g_result_first:
@@ -74,7 +68,6 @@ lemma cs_generic_k2_g_result_first:
      (locals (snd (cs_call_string_sol_prog 2 nest_gs nest_program)
                 (Inl (FunctionResult (STR ''g''), [Statement 2, Statement 5])))) (STR ''#ret'')
    = Ivl (Fin 6) (Fin 6)"
-  unfolding cs_call_string_sol_prog_def cs_call_string_sol_def cs_call_string_eqs_def
   by eval
 
 lemma cs_generic_k2_g_result_second:
@@ -82,7 +75,6 @@ lemma cs_generic_k2_g_result_second:
      (locals (snd (cs_call_string_sol_prog 2 nest_gs nest_program)
                 (Inl (FunctionResult (STR ''g''), [Statement 2, Statement 6])))) (STR ''#ret'')
    = Ivl (Fin 20) (Fin 20)"
-  unfolding cs_call_string_sol_prog_def cs_call_string_sol_def cs_call_string_eqs_def
   by eval
 
 lemma cs_generic_k2_x_after_first_return:
@@ -90,7 +82,6 @@ lemma cs_generic_k2_x_after_first_return:
      (locals (snd (cs_call_string_sol_prog 2 nest_gs nest_program)
                 (Inl (Statement 6, [])))) (STR ''x'')
    = Ivl (Fin 6) (Fin 6)"
-  unfolding cs_call_string_sol_prog_def cs_call_string_sol_def cs_call_string_eqs_def
   by eval
 
 lemma cs_generic_k2_y_after_second_return:
@@ -98,7 +89,6 @@ lemma cs_generic_k2_y_after_second_return:
      (locals (snd (cs_call_string_sol_prog 2 nest_gs nest_program)
                 (Inl (Statement 7, [])))) (STR ''y'')
    = Ivl (Fin 20) (Fin 20)"
-  unfolding cs_call_string_sol_prog_def cs_call_string_sol_def cs_call_string_eqs_def
   by eval
 
 text \<open>
@@ -134,7 +124,6 @@ theorem cs_generic_k2_strictly_more_precise_than_k1:
      < nest_lookup
          (locals (snd (cs_call_string_sol_prog 1 nest_gs nest_program)
                     (Inl (Statement 7, [])))) (STR ''y'')"
-  unfolding cs_call_string_sol_prog_def cs_call_string_sol_def cs_call_string_eqs_def
   by eval+
 
 subsection \<open>Runtime \<open>k\<close> beyond the historically hardcoded cases\<close>
@@ -154,7 +143,6 @@ lemma cs_generic_k3_g_entry_first:
      (locals (snd (cs_call_string_sol_prog 3 nest_gs nest_program)
                 (Inl (FunctionEntry (STR ''g''), [Statement 2, Statement 5])))) (STR ''p'')
    = Ivl (Fin 3) (Fin 3)"
-  unfolding cs_call_string_sol_prog_def cs_call_string_sol_def cs_call_string_eqs_def
   by eval
 
 lemma cs_generic_k3_g_entry_second:
@@ -162,7 +150,6 @@ lemma cs_generic_k3_g_entry_second:
      (locals (snd (cs_call_string_sol_prog 3 nest_gs nest_program)
                 (Inl (FunctionEntry (STR ''g''), [Statement 2, Statement 6])))) (STR ''p'')
    = Ivl (Fin 10) (Fin 10)"
-  unfolding cs_call_string_sol_prog_def cs_call_string_sol_def cs_call_string_eqs_def
   by eval
 
 end
