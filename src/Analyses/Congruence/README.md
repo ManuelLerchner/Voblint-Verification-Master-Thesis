@@ -59,7 +59,7 @@ is what makes it the component that still narrows under `Refine_Never`.
 | `Congruence_Sound.thy` | `cctx_spec`, its concretization and their soundness — an analysis before any context is chosen |
 | `Congruence_Classify.thy` | one interpretation of `abstract_check_domain`: the Boolean recursion over a check condition and its three-way verdict |
 | `generated/Congruence_Assembly.thy` | generated: two interpretations of the shared `unit_dg_analysis`, one per published solver discipline |
-| `Congruence_Analyses.thy` | the call-string and entry-state configurations — equation system, solved table, coverage premises and report per policy |
+| `generated/Congruence_Analyses.thy` | the call-string and entry-state configurations, as two interpretations of the shared routed assembly. Generated from `assembly/analyses.yaml`; see below |
 | `Congruence_Checks.thy` | the names a caller outside the session uses, as abbreviations for the assembly's own |
 | `Congruence_Entry.thy` | the codegen endpoint over an arbitrary `imp_prog`, and its production soundness under four coverage assumptions |
 
@@ -73,3 +73,42 @@ three components by refinement, which is how a congruence fact sharpens an inter
 see `Example_Int_Backward` for the composite version, and
 `Example_Congruence_Arithmetic` / `Example_Congruence_Backward` for this component on
 its own.
+
+## The two contextual configurations
+
+`generated/Congruence_Analyses.thy` is machine-written from `assembly/analyses.yaml`,
+so the orientation a reader needs lives here rather than in a header the
+generator owns.
+
+Neither contextual policy has a pipeline of its own. Both are interpretations
+of `routed_dg_analysis`, which owns the equation system, the solve, the covered
+keys, the reader, the result table, the contextual report and the
+activation-indexed soundness endpoint — for every domain at every policy. Congruence
+supplies its own implementation and facts, the routing functions, the solver,
+and the published names. Nothing else.
+
+A call string is the last `k` call sites on the stack, so a procedure entered
+from two places is analysed twice rather than once at the join. `cs_route`
+never reads the state it is handed, which is what makes
+`fun_route_activation_collect_sound` — the endpoint for a route that is a
+function of the call site and the caller's context alone — the applicable one.
+`k` is runtime data, so no `global_interpretation` can fix it: the registration
+is local to a context fixing `k`, and the published constants apply the
+pipeline's own constants at `cs_route k`.
+
+The entry-state run keys a callee on the abstract values its formals hold on
+entry. Here `exec_formals_route` does read the state it is handed — the callee
+frame the routed generator has already entered — so the applicable endpoint is
+`entry_state_activation_collect_sound`, whose admitted-context relation is the
+one the entry answer induces rather than the graph of a function on stores.
+That difference is why the executable route and its abstract counterpart
+`formals_route_lifted_gen` are separate parameters.
+
+The context-insensitive run is neither of these: it is `Congruence_Assembly`'s
+`global_interpretation` of the same assembly at the unit context.
+
+Global keys differ per policy and are therefore parameters, not a fixed shape.
+The call-string run keys at `call_string_gk`, shared with every other
+call-string-keyed instance. The entry-state run keys at `routed_gk` —
+`Analysis_Global` at `unit`, since Congruence publishes no named global of its own,
+and `Activation_Seed` carrying a callee entry point with its routed context.

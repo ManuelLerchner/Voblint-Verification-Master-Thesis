@@ -452,9 +452,6 @@ lemma snd_full_state_checked_payload_auto [simp]:
   "fst (snd (full_state_checked_payload_auto kind p)) = analyse_with_state_default kind p"
   by (cases kind)
      (simp_all add: full_state_checked_payload_auto_def checked_payload_of_def Let_def
-        fst_analyse_sign_ctx_solved_for fst_analyse_parity_ctx_solved_for
-        fst_analyse_interval_ctx_solved_warrow_for fst_analyse_int_ctx_solved_warrow_for
-        fst_analyse_congruence_ctx_solved_for
         case_prod_beta analyse_sign_result_for_def analyse_interval_td_result_for_def
         analyse_int_result_for_def analyse_parity_result_for_def
         analyse_interval_td_result_for_def [abs_def]
@@ -476,10 +473,8 @@ lemma snd_full_state_checked_payload_auto [simp]:
         analyse_parity_result_def
         analyse_congruence_report_with_state_def
         analyse_congruence_report_for_with_state_def
-        analyse_congruence_result_def analyse_congruence_ctx_solved_for_def
-        congruence_unit_result_def congruence_unit_report_with_state_def
-        congruence_unit_solved_def unit_dg_pipeline.solved_eq
-        unit_dg_pipeline.result_def unit_dg_pipeline.report_with_state_def
+        analyse_congruence_result_def analyse_congruence_result_for_def
+        congruence_join.report_with_state_def congruence_join.report_def
         analyse_with_state_default.simps tag_states_def
         report_lifted_state_eq_case)
 
@@ -862,10 +857,7 @@ lemma solver_checked_payload_verdicts:
         analyse_congruence_report_per_origin_for_def
         analyse_congruence_result_def analyse_congruence_result_per_origin_def
         congruence_join.report_def analyse_congruence_result_for_def
-        congruence_po_asm.report_def analyse_congruence_result_per_origin_for_def
-        congruence_unit_report_def congruence_po_report_def
-        congruence_unit_result_def congruence_po_result_def
-        unit_dg_pipeline.report_def unit_dg_pipeline.result_def)
+        congruence_po_asm.report_def analyse_congruence_result_per_origin_for_def)
 
 text \<open>
   \<open>program_vars\<close> pulls \<^const>\<open>scope_vnames_list\<close> (hence \<open>VIMP_Notation\<close>,

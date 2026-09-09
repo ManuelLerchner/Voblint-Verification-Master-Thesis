@@ -27,7 +27,8 @@ Parity_Domain      the lattice, order, and its concretization
   -> Parity_Classify                    classification of one check condition
   -> Parity_Assembly                    the context-insensitive route, as one
                                         interpretation of the shared unit_dg_analysis
-  -> Parity_Analyses                    the call-string and entry-state policies
+  -> generated/Parity_Analyses          the call-string and entry-state policies
+                                        (generated; see below)
   -> Parity_Checks                      the published result table and report
   -> Parity_Entry                       the production endpoint and its soundness
 ```
@@ -56,3 +57,42 @@ members of the same store-only trio) is the check-discharge witness: `y := x * 2
 disjoint parity classes whatever the unconstrained `x` is, so one check is proved and
 one refuted. A third, against another unconstrained value, is unknown — Parity has no
 singleton, so it can never prove a positive equality.
+
+## The two contextual configurations
+
+`generated/Parity_Analyses.thy` is machine-written from `assembly/analyses.yaml`,
+so the orientation a reader needs lives here rather than in a header the
+generator owns.
+
+Neither contextual policy has a pipeline of its own. Both are interpretations
+of `routed_dg_analysis`, which owns the equation system, the solve, the covered
+keys, the reader, the result table, the contextual report and the
+activation-indexed soundness endpoint — for every domain at every policy. Parity
+supplies its own implementation and facts, the routing functions, the solver,
+and the published names. Nothing else.
+
+A call string is the last `k` call sites on the stack, so a procedure entered
+from two places is analysed twice rather than once at the join. `cs_route`
+never reads the state it is handed, which is what makes
+`fun_route_activation_collect_sound` — the endpoint for a route that is a
+function of the call site and the caller's context alone — the applicable one.
+`k` is runtime data, so no `global_interpretation` can fix it: the registration
+is local to a context fixing `k`, and the published constants apply the
+pipeline's own constants at `cs_route k`.
+
+The entry-state run keys a callee on the abstract values its formals hold on
+entry. Here `exec_formals_route` does read the state it is handed — the callee
+frame the routed generator has already entered — so the applicable endpoint is
+`entry_state_activation_collect_sound`, whose admitted-context relation is the
+one the entry answer induces rather than the graph of a function on stores.
+That difference is why the executable route and its abstract counterpart
+`formals_route_lifted_gen` are separate parameters.
+
+The context-insensitive run is neither of these: it is `Parity_Assembly`'s
+`global_interpretation` of the same assembly at the unit context.
+
+Global keys differ per policy and are therefore parameters, not a fixed shape.
+The call-string run keys at `call_string_gk`, shared with every other
+call-string-keyed instance. The entry-state run keys at `routed_gk` —
+`Analysis_Global` at `unit`, since Parity publishes no named global of its own,
+and `Activation_Seed` carrying a callee entry point with its routed context.

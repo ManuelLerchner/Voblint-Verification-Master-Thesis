@@ -1,19 +1,18 @@
 theory Parity_Analyses
   imports
     Parity_Sound
-    Parity_Assembly
     Parity_Classify
     Parity_Transfer
     Parity_Exec
     "Voblint_Result.Routed_DG_Analysis"
     "Voblint_Framework.Call_String_Context"
+    "Voblint_Framework.Routed_Context"
     "Voblint_Solver.TD_Solver_Bridge"
     "Voblint_VIMP.VIMP_Program"
     "TD.TD_side_upd_rule"
 begin
 
 chapter \<open>How Parity is run under each context-sensitive policy\<close>
-
 text \<open>
   Parity's analysis package -- its specification, concretization and soundness --
   lives in \<^theory>\<open>Voblint_Analysis_Parity.Parity_Sound\<close> and mentions no context.

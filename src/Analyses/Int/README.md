@@ -28,7 +28,8 @@ Int_Refinement    exactness of reduction steps; the three refine modes
   -> Int_Transfer -> Int_Exec                        transfer bundles; executable carrier
   -> Int_Sound                                       the spec and its soundness
   -> Int_Exec_Sound                                  mode-parameterized raw runtime API
-  -> Int_Analyses                                    the context policies over that route
+  -> generated/Int_Analyses                          the context policies over that route
+                                                     (generated; see below)
   -> Int_Solver_Analyses                             alternative solver disciplines
   -> Int_Classify / Int_Checks                       check discharge and the report
   -> Int_Entry                                       the production endpoint, and its
@@ -61,3 +62,51 @@ witness where a further round still makes progress.
 surface through and no reduction runs afterwards. That is deliberate: a concrete
 counterexample there shows that running `refine` after `narrow` (which is Goblint's own
 choice) would break the solver's `narrow_ge` bracket.
+
+## The two contextual configurations
+
+`generated/Int_Analyses.thy` is machine-written from `assembly/analyses.yaml`,
+so the orientation a reader needs lives here rather than in a header the
+generator owns.
+
+Neither contextual policy has a pipeline of its own. Both are interpretations
+of `routed_dg_analysis`, which owns the equation system, the solve, the covered
+keys, the reader, the result table, the contextual report and the
+activation-indexed soundness endpoint. Int supplies its own implementation and
+facts, the routing functions, the solver, and the published names.
+
+Int is the domain where two axes meet, and they stay independent.
+
+`mode` is Int's refinement axis and it stays **free** in the registrations.
+Every obligation the assembly asks for is discharged by one of Int's own
+mode-generic facts — `int_is_sound_transfer_for`, `int_tf_st_for_commute`,
+`int_dom_enter_st_for_commute`, `int_cinit_gamma`, the two classifier laws — so
+each registration holds at an arbitrary `refine_mode`. Only the published
+constants pin `Refine_Fixpoint`, where a config-driven caller needs one
+concrete choice. That is what keeps the arbitrary-mode API from narrowing: it
+is not a second layer maintained alongside a pinned one, it is the same
+registration read at a free parameter.
+
+Solver discipline is the second axis. Each context is registered twice, at
+always-join and at Apinis warrowing, and the two differ in no argument but the
+solve.
+
+A call string is the last `k` call sites on the stack. `cs_route` never reads
+the state it is handed, which makes `fun_route_activation_collect_sound` the
+applicable endpoint. The entry-state run keys a callee on the abstract values
+its formals hold on entry, and `exec_formals_route` does read that state, so
+`entry_state_activation_collect_sound` applies there instead — its
+admitted-context relation is the one the entry answer induces rather than the
+graph of a function on stores.
+
+Because `mode` and `k` are both free, neither contextual registration can be a
+`global_interpretation`: that form cannot leave a parameter free. Both are
+plain interpretations inside a `context fixes` block, and the published
+constants apply the pipeline directly rather than renaming it through
+`defines`. The context-insensitive run is the opposite case — `Int_Assembly`
+pins the mode and therefore can use `global_interpretation` with `defines`.
+
+Int carries no emptiness predicate of its own. The shared assembly pins the
+bottom test to the program's declaration predicate and proves it agrees with
+the semantic emptiness test, so what was once a parameter with a side
+condition is now derived.

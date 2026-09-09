@@ -42,8 +42,9 @@ text \<open>
 
 lemma int_conf_sol_prog_warrow_eq_pipeline:
   "int_conf_sol_prog_warrow mode gs p =
-     unit_dg_pipeline.solution (int_tf_st_for mode) (int_dom_enter_st_for mode)
-       cinit_int_dom_st TD_side_warrowing_apinis_Interp_solve gs p"
+     routed_dg_pipeline.solution (int_tf_st_for mode) (int_dom_enter_st_for mode)
+       cinit_int_dom_st (Analysis_Global ()) Activation_Seed (\<lambda>_. route_unit) ()
+       TD_side_warrowing_apinis_Interp_solve gs p"
   unfolding int_conf_sol_prog_warrow_def by (rule refl)
 
 lemma int_conf_terminates_prog_warrow_eq_unit:
@@ -58,9 +59,10 @@ text \<open>
 
 lemma analyse_int_ctx_result_warrow_for_eq_pipeline:
   "analyse_int_ctx_result_warrow_for mode gs p =
-     unit_dg_pipeline.result (int_tf_st_for mode) (int_dom_enter_st_for mode)
-       cinit_int_dom_st TD_side_warrowing_apinis_Interp_solve gs p"
-  unfolding analyse_int_ctx_result_warrow_for_def unit_dg_pipeline.result_def
+     routed_dg_pipeline.result (int_tf_st_for mode) (int_dom_enter_st_for mode)
+       cinit_int_dom_st (Analysis_Global ()) Activation_Seed (\<lambda>_. route_unit) ()
+       TD_side_warrowing_apinis_Interp_solve gs p"
+  unfolding analyse_int_ctx_result_warrow_for_def routed_dg_pipeline.result_def
   by (simp add: int_conf_sol_prog_warrow_eq_pipeline)
 
 lemmas ictx_terminates_prog_via_solve_c = int_warrow_asm.terminates_of_solve_c
@@ -112,8 +114,9 @@ text \<open>
 definition analyse_int_join_result_for ::
     "refine_mode \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> (unit, int_dom abs_state) analysis_result" where
   "analyse_int_join_result_for mode gs p =
-     unit_dg_pipeline.result (int_tf_st_for mode) (int_dom_enter_st_for mode)
-       cinit_int_dom_st TD_side_always_join_Interp_solve gs p"
+     routed_dg_pipeline.result (int_tf_st_for mode) (int_dom_enter_st_for mode)
+       cinit_int_dom_st (Analysis_Global ()) Activation_Seed (\<lambda>_. route_unit) ()
+       TD_side_always_join_Interp_solve gs p"
 
 definition analyse_int_join_result ::
     "imp_prog \<Rightarrow> (unit, int_dom abs_state) analysis_result" where
@@ -131,8 +134,9 @@ text \<open>
 definition analyse_int_per_origin_result_for ::
     "refine_mode \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> (unit, int_dom abs_state) analysis_result" where
   "analyse_int_per_origin_result_for mode gs p =
-     unit_dg_pipeline.result (int_tf_st_for mode) (int_dom_enter_st_for mode)
-       cinit_int_dom_st TD_side_per_origin_Interp_solve gs p"
+     routed_dg_pipeline.result (int_tf_st_for mode) (int_dom_enter_st_for mode)
+       cinit_int_dom_st (Analysis_Global ()) Activation_Seed (\<lambda>_. route_unit) ()
+       TD_side_per_origin_Interp_solve gs p"
 
 definition analyse_int_per_origin_result ::
     "imp_prog \<Rightarrow> (unit, int_dom abs_state) analysis_result" where
@@ -241,8 +245,9 @@ text \<open>
 definition analyse_int_wpo_result_for ::
     "refine_mode \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> (unit, int_dom abs_state) analysis_result" where
   "analyse_int_wpo_result_for mode gs p =
-     unit_dg_pipeline.result (int_tf_st_for mode) (int_dom_enter_st_for mode)
-       cinit_int_dom_st TD_side_warrowing_per_origin_Interp_solve gs p"
+     routed_dg_pipeline.result (int_tf_st_for mode) (int_dom_enter_st_for mode)
+       cinit_int_dom_st (Analysis_Global ()) Activation_Seed (\<lambda>_. route_unit) ()
+       TD_side_warrowing_per_origin_Interp_solve gs p"
 
 definition analyse_int_report_wpo_for :: "refine_mode \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> check_report_entry list" where
   "analyse_int_report_wpo_for mode gs p =

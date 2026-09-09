@@ -173,6 +173,37 @@ class Domain:
             return base
         return f"{base}_{SOLVER_BINDER_SUFFIX[solver]}"
 
+    def solver_suffix(self, ctx, solver):
+        """A context's first published solver takes the plain name; a second is
+        suffixed by its solver, at the end of the whole name."""
+        solvers = self.registrations.get(ctx, {}).get("solvers", [])
+        if not solvers or solver == solvers[0]:
+            return ""
+        return f"_{SOLVER_BINDER_SUFFIX[solver]}"
+
+    def publishes(self, ctx):
+        """Which solvers publish their constants from this theory.
+
+        Registrations must all live here -- solvers of one context share a
+        `context fixes` block and an interpretation's re-exports cannot leave
+        it. Published constants are free-standing definitions, so a domain may
+        put an alternative discipline's in a theory of its own; Int does. Not
+        inferable from shape, so the registry says it.
+        """
+        reg = self.registrations.get(ctx, {})
+        return reg.get("publishes", reg.get("solvers", [])[:1])
+
+    def published(self, ctx):
+        """Which constants this domain publishes for a context.
+
+        Defaults to the shape Sign uses. Not derivable: the tree is not uniform
+        and neither difference has an external consumer, so a domain that
+        differs says so rather than having its surface changed by generation.
+        """
+        return self.registrations.get(ctx, {}).get(
+            "published",
+            ["result", "report", "terminates", "terminates_of_solve_c"])
+
     def ctx_defines(self, ctx):
         """The published names of a contextual registration.
 
@@ -498,6 +529,19 @@ def pack_operands(groups):
     return out
 
 
+def context_binders(dom, ctx):
+    """What the enclosing `context fixes` block binds, if anything.
+
+    One block per context, not per registration: a domain with two solvers at
+    one context puts both interpretations inside the same block, and opening a
+    second would fix the same binder twice.
+    """
+    binders = [f"{v['binder']} :: {v['type']}" for v in (dom.generalize or {}).values()]
+    if ctx == "call_string":
+        binders.append("k :: nat")
+    return binders
+
+
 def contextual_interpretation(dom, ctx, route, solvers, generalize=None):
     """One contextual `global_interpretation` of `routed_dg_analysis`.
 
@@ -516,14 +560,8 @@ def contextual_interpretation(dom, ctx, route, solvers, generalize=None):
     # `context fixes` block and publishes by direct application rather than by
     # `defines` renaming. A call-string bound is always such a parameter; a
     # domain that generalises a pinned configuration argument adds its own.
-    binders = [f"{v['binder']} :: {v['type']}" for v in (generalize or {}).values()]
-    if ctx == "call_string":
-        binders.append("k :: nat")
-    fixed = bool(binders)
-    out = []
-    if fixed:
-        out += ["context", "  fixes " + " and ".join(binders), "begin", ""]
-    out += [
+    fixed = bool(context_binders(dom, ctx))
+    out = [
         f"{'' if fixed else 'global_'}interpretation {binder}: routed_dg_analysis",
         f"    {term['tf_st']} {term['enter_st']} {term['init_st']}",
         f"    {p['global']} {p['seed']} {p['route']} {p['root_ctx']}",
@@ -559,68 +597,125 @@ def term_of(quoted):
 
 
 def published_constants(dom, ctx, route, solvers):
-    """The domain's published contextual constants and soundness re-exports.
+    """The constants a domain publishes for one registration.
 
-    A context registered by `global_interpretation` has `defines` names, so its
-    published constants are thin instances of those at the program's own
-    declaration predicate. A context registered inside a `context fixes` block
-    has none, so its constants apply the pipeline directly -- the call site that
-    needs the pipeline's own code equations rather than defines-derived ones.
+    Which ones is registry data, because it is not derivable and the tree is
+    not uniform: Sign publishes a `terminates` and no `_for` hop at call
+    strings, Int publishes the hop and no `terminates`. Neither difference has
+    an external consumer, so unifying them is a change worth making
+    deliberately rather than as a side effect of generating them.
+
+    How each is built *is* derivable. A `_for` hop applies the pipeline at an
+    explicit global predicate; a plain constant instantiates the hop at the
+    program's own, or applies the pipeline directly when there is no hop to
+    instantiate -- which is the case exactly when the registration has no
+    `defines` and the domain publishes no hop of its own.
     """
     f = dom.facts()
     p = CONTEXT_PARAMS[ctx]
     interp = solvers[route]["interp"]
     d, vt = dom.name.lower(), dom.value_type
-    binder = dom.ctx_binder(ctx, route)
-    term = {k: role_term(v) for k, v in f.items()}
+    # In term position inside a definition body, not as an interpretation
+    # argument: an applied role is quoted for the latter and must not be for
+    # the former, or the body's own quoting is broken by the nested pair.
+    term = {k: term_of(role_term(v)) for k, v in f.items()}
     arg, ctx_ty = p["arg"], p["ctx_type"](vt)
+    sfx = dom.solver_suffix(ctx, route)
+    lead = "nat \\<Rightarrow> " if ctx == "call_string" else ""
     pipe = ["    " + " ".join([term["tf_st"], term["enter_st"], term["init_st"]]),
             "      " + " ".join([term_of(p["global"]), term_of(p["seed"]),
                                  term_of(p["route"]), term_of(p["root_ctx"])])]
+    RESULT_TY = f"({ctx_ty}, {vt} abs_state) analysis_result"
+    REPORT_TY = "(pp \\<times> exp \\<times> contextual_verdict) list"
+    kinds = dom.published(ctx)
+    # A hop exists when the domain publishes one, or when a `defines` list
+    # already produced it -- an entry-state registration that is not
+    # generalised binds `analyse_<d>_entry_state_<k>_for` there.
+    def has_hop(k):
+        return (f"{k}_for" in kinds
+                or (ctx == "entry_state" and not dom.generalize))
+
     out = []
-    if ctx == "entry_state":
-        for pub, src in [("result", "result_for"), ("report", "report_for")]:
-            out += [f"definition analyse_{d}_entry_state_{pub} ::",
-                    f'    "imp_prog \\<Rightarrow> '
-                    + (f'({ctx_ty}, {vt} abs_state) analysis_result" where'
-                       if pub == "result" else
-                       '(pp \\<times> exp \\<times> contextual_verdict) list" where'),
-                    f'  "analyse_{d}_entry_state_{pub} p =',
-                    f'     analyse_{d}_entry_state_{src} (declared_global p) p"', ""]
-        out += [f'definition analyse_{d}_entry_state_terminates :: '
-                f'"imp_prog \\<Rightarrow> bool" where',
-                f'  "analyse_{d}_entry_state_terminates p =',
-                f'     {d}_entry_state_terminates_for (declared_global p) p"', ""]
-    else:
-        for pub, op, extra, ty in [
-                ("result", "result", "", f"({ctx_ty}, {vt} abs_state) analysis_result"),
-                ("report", "verdict_report", f" {term['classifier']}",
-                 "(pp \\<times> exp \\<times> contextual_verdict) list")]:
-            out += [f"definition analyse_{d}_call_string_{pub} ::",
-                    f'    "nat \\<Rightarrow> imp_prog \\<Rightarrow> {ty}" where',
-                    f'  "analyse_{d}_call_string_{pub} {arg}p =',
+    for kind in kinds:
+        if kind == "terminates_of_solve_c":
+            continue          # a `lemmas` re-export, rendered with the registration
+        base = f"analyse_{d}_{ctx}_{kind}"
+        if kind.endswith("_for"):
+            k = kind[:-4]
+            op = "result" if k == "result" else "verdict_report"
+            extra = "" if k == "result" else f" {term['classifier']}"
+            ty = RESULT_TY if k == "result" else REPORT_TY
+            out += [f"definition {base}{sfx} ::",
+                    f'    "{lead}(vname \\<Rightarrow> bool) \\<Rightarrow> imp_prog'
+                    f' \\<Rightarrow> {ty}" where',
+                    f'  "{base}{sfx} {arg}gs p =',
                     f"     routed_dg_pipeline.{op}"] + pipe + [
+                    f'       {interp}_solve{extra} gs p"', ""]
+        elif kind == "terminates":
+            if ctx == "entry_state" and not dom.generalize:
+                out += [f'definition {base}{sfx} :: "imp_prog \\<Rightarrow> bool" where',
+                        f'  "{base}{sfx} p =',
+                        f'     {d}_entry_state_terminates_for (declared_global p) p"', ""]
+            else:
+                out += [f"definition {base}{sfx} ::",
+                        f'    "{lead}imp_prog \\<Rightarrow> bool" where',
+                        f'  "{base}{sfx} {arg}p =',
+                        "     routed_dg_pipeline.terminates"] + pipe + [
+                        f"       ({interp}.solve_dom TYPE({p['gk'](vt)})",
+                        f"          TYPE(({vt} exec_dg_st lifted,"
+                        f" {vt} exec_dg_st lifted) dg_state))",
+                        '       (declared_global p) p"', ""]
+        else:
+            op = "result" if kind == "result" else "verdict_report"
+            extra = "" if kind == "result" else f" {term['classifier']}"
+            ty = RESULT_TY if kind == "result" else REPORT_TY
+            head = [f"definition {base}{sfx} ::",
+                    f'    "{lead}imp_prog \\<Rightarrow> {ty}" where',
+                    f'  "{base}{sfx} {arg}p =']
+            if has_hop(kind):
+                out += head + [
+                    f'     {base}_for{sfx} {arg}(declared_global p) p"', ""]
+            else:
+                out += head + [f"     routed_dg_pipeline.{op}"] + pipe + [
                     f'       {interp}_solve{extra} (declared_global p) p"', ""]
-        out += [f"definition analyse_{d}_call_string_terminates ::",
-                '    "nat \\<Rightarrow> imp_prog \\<Rightarrow> bool" where',
-                f'  "analyse_{d}_call_string_terminates {arg}p =',
-                "     routed_dg_pipeline.terminates"] + pipe + [
-                f"       ({interp}.solve_dom TYPE({p['gk'](vt)})",
-                f"          TYPE(({vt} exec_dg_st lifted,"
-                f" {vt} exec_dg_st lifted) dg_state))",
-                '       (declared_global p) p"', ""]
     return out
 
 
 def soundness_lemmas(dom, ctx, route, solvers):
-    """The re-exports. These must sit inside the registration's own block: an
-    `interpretation` does not export outside its context, so a `lemmas` citing
-    the binder is part of the registration rather than something beside it."""
+    """The re-exports, one set per registration.
+
+    These must sit inside the registration's own block: an `interpretation`
+    does not export outside its context, so a `lemmas` citing the binder is
+    part of the registration rather than something beside it. A second solver
+    gets its own set, suffixed the way the tree already spells the alternative
+    disciplines -- at the end of the whole name, after any `_for`.
+    """
     p, d = CONTEXT_PARAMS[ctx], dom.name.lower()
     binder = dom.ctx_binder(ctx, route)
-    out = [f"lemmas analyse_{d}_{ctx}_sound =", f"  {binder}.{p['sound']}", ""]
-    if ctx == "call_string":
-        out += [f"lemmas analyse_{d}_call_string_terminates_of_solve_c =",
+    sfx = dom.solver_suffix(ctx, route)
+    # A domain whose re-exports predate this convention names them. These have
+    # to travel with the registration -- an `interpretation` does not export
+    # outside its context -- so unlike the published constants they cannot be
+    # left hand-written, and naming them is not the registry carrying code.
+    reg = dom.registrations.get(ctx, {})
+    # Absent means the convention; present means exactly these, and an empty
+    # mapping means none -- which is what a domain says when its re-exports
+    # resolve from an importing theory and can stay hand-written.
+    names = reg.get("re_exports")
+    if names is None:
+        names = {"sound": f"analyse_{d}_{ctx}_sound"}
+        if ctx == "call_string" and "terminates_of_solve_c" in dom.published(ctx):
+            names["terminates_of_solve_c"] = (
+                f"analyse_{d}_call_string_terminates_of_solve_c")
+    out = []
+    if "sound" in names:
+        out += [f"lemmas {names['sound']}{sfx} =", f"  {binder}.{p['sound']}", ""]
+    # Listed, not derived. A domain could publish `terminates` without
+    # exporting its discharge rule, or export the rule for a `terminates` a
+    # downstream theory owns; nothing in the locale forbids either. Deriving
+    # the link would be the generator asserting a shape rather than reading one.
+    if "terminates_of_solve_c" in names:
+        out += [f"lemmas {names['terminates_of_solve_c']}{sfx} =",
                 f"  {binder}.terminates_of_solve_c", ""]
     return out
 
@@ -670,20 +765,39 @@ def render_contextual(dom, solvers):
             continue
         title = CONTEXT_TITLE[ctx]
         out += [f"section \\<open>{dom.name} at the {title} context\\<close>", ""]
+        # `generalize:` is one registry decision with four consequences, all
+        # of them here: the registration is a plain `interpretation` rather
+        # than a `global_interpretation`; it has no `defines`, so there is no
+        # `_spec` constant to declare `[code_unfold]`; its published constants
+        # apply the pipeline directly instead of wrapping renamed names; and
+        # its `_for` hop is a definition rather than a `defines` entry. They
+        # are listed together because finding them one at a time is what cost
+        # us Int.
+        binders = context_binders(dom, ctx)
+        if binders:
+            out += ["context", "  fixes " + " and ".join(binders), "begin", ""]
         for solver in reg["solvers"]:
             out += contextual_interpretation(
                 dom, ctx, solver, solvers, dom.generalize) + [""]
             if ctx == "call_string":
                 out += soundness_lemmas(dom, ctx, solver, solvers)
-        if ctx == "call_string":
+        if binders:
             out += ["end", ""]
-        else:
+        if not dom.generalize and ctx == "entry_state":
             out += [f"declare {dom.name.lower()}_entry_state_spec_def"
                     " [code_unfold]", ""]
-        out += [f"subsection \\<open>The published {title} constants\\<close>", ""]
-        out += published_constants(dom, ctx, reg["default"], solvers)
+        # Registrations are all here -- solvers of one context share a `context
+        # fixes` block. Published constants need not be: a domain may keep an
+        # alternative discipline's in a theory of its own, and Int does, so
+        # emitting them here would duplicate a definition its consumer owns.
+        for solver in (dom.publishes(ctx) if dom.published(ctx) else []):
+            out += [f"subsection \\<open>The published {title} constants"
+                    f"{dom.solver_suffix(ctx, solver) and ': ' + solvers[solver]['title'].lower()}"
+                    "\\<close>", ""]
+            out += published_constants(dom, ctx, solver, solvers)
         if ctx == "entry_state":
-            out += soundness_lemmas(dom, ctx, reg["default"], solvers)
+            for solver in reg["solvers"]:
+                out += soundness_lemmas(dom, ctx, solver, solvers)
     out.append("end")
     return "\n".join(out) + "\n"
 

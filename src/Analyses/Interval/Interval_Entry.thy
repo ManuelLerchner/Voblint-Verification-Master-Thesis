@@ -67,10 +67,11 @@ context
 begin
 
 lemmas interval_warrow_closure =
-  solve entry_cov[unfolded interval_warrow_asm.sol_vars_def[symmetric]]
+  solve
   fwd_ok[unfolded interval_warrow_asm.sol_vars_def[symmetric]]
   call_fwd_ok[unfolded interval_warrow_asm.sol_vars_def[symmetric]]
   comb_fwd_ok[unfolded interval_warrow_asm.sol_vars_def[symmetric]]
+  entry_cov[unfolded interval_warrow_asm.sol_vars_def[symmetric]]
 
 lemma analyse_interval_td_result_node_sound_for:
   "ltr_collect (declared_global p) (prog_cfg p) (cinit_stores (declared_global p)) v
@@ -302,10 +303,11 @@ context
 begin
 
 lemmas interval_join_closure =
-  solve entry_cov[unfolded interval_join_asm.sol_vars_def[symmetric]]
+  solve
   fwd_ok[unfolded interval_join_asm.sol_vars_def[symmetric]]
   call_fwd_ok[unfolded interval_join_asm.sol_vars_def[symmetric]]
   comb_fwd_ok[unfolded interval_join_asm.sol_vars_def[symmetric]]
+  entry_cov[unfolded interval_join_asm.sol_vars_def[symmetric]]
 
 lemma analyse_interval_join_result_node_sound_for:
   "ltr_collect (declared_global p) (prog_cfg p) (cinit_stores (declared_global p)) v
@@ -404,10 +406,11 @@ context
 begin
 
 lemmas interval_po_closure =
-  solve entry_cov[unfolded interval_po_asm.sol_vars_def[symmetric]]
+  solve
   fwd_ok[unfolded interval_po_asm.sol_vars_def[symmetric]]
   call_fwd_ok[unfolded interval_po_asm.sol_vars_def[symmetric]]
   comb_fwd_ok[unfolded interval_po_asm.sol_vars_def[symmetric]]
+  entry_cov[unfolded interval_po_asm.sol_vars_def[symmetric]]
 
 lemma analyse_interval_per_origin_result_node_sound_for:
   "ltr_collect (declared_global p) (prog_cfg p) (cinit_stores (declared_global p)) v

@@ -61,6 +61,70 @@ diagnostics. Save timeouts and buffer lag have produced phantom fixes.
 Do not run `isabelle build` to discover an error that I/Q already identifies.
 Use the final build procedure below after interactive development.
 
+## Six ways this environment misreports state
+
+Each of these looks like an ordinary correct result. All six have produced a
+wrong claim here, and the defence is the same for all of them: **a statement
+about state names what was read and when**, never what was true earlier in the
+session.
+
+**Empty diagnostics over zero commands.** `get_diagnostics` on a node the
+session has not parsed yet returns `count: 0`, `errors: 0`,
+`fully_processed: true` -- clean in every field a caller normally reads.
+`get_processing_status` on the same node showed 548 unprocessed. Check
+`total_commands` before believing `errors: 0`; zero commands is not a clean
+file, it is an unread one.
+
+**A line range computed from disk while the buffer is dirty.** An outline taken
+with `grep` is disk coordinates; unsaved I/Q edits shift the buffer under them.
+Deleting by those numbers removed 68 lines from the middle of a live proof.
+Save first, then outline, then edit -- and never mix a host read with an
+unsaved buffer.
+
+**A buffer that has not picked up a host write.** The older half of the same
+hazard: diagnostics describe the buffer, so a bulk host substitution jEdit has
+not reloaded reads as clean. Compare buffer against disk at one changed line
+before believing anything.
+
+**A regeneration in progress.** `pixi run codegen` removes `codegen/generated/`
+before writing it, so anything reading concurrently sees a *missing* file
+rather than a stale one. `git status` reported it deleted, and a checker
+reported it not found; both were reading mid-write.
+
+**A session that vanishes between calls.** I/Q can be killed by the host for
+memory pressure. Results obtained before it died stay valid for the revision on
+disk, but nothing is verified after it until a restart finishes.
+
+**A filtered check.** Most `pixi run` tasks here report failure as *output* and
+still exit 0. `root-entries` printed its error and `tail -1` ate it, which would
+have carried a change past the guard written for that exact hazard. **A check
+that reports failure as output rather than as exit status must never be
+filtered.** The same rule applies to counting instead of listing: print what
+matched, not how many.
+
+## A moved theory needs a restart, like a changed ROOT entry
+
+A theory whose ROOT entry changed loads as `Draft.<name>` until jEdit restarts.
+The file-set analogue is less obvious and bites harder: when a theory is
+**deleted and regenerated at a different path under the same name**, no ROOT
+entry changes, but the running session holds a buffer for the old file and
+resolves two nodes of that name at once:
+
+```text
+exception THEORY raised: Duplicate theory name {..., Int_Analyses}
+```
+
+Every later error is fallout from the session having no coherent theory
+context, so the count is meaningless. Restart, then read.
+
+Restarting is also the only way to check adoption at all. A `Draft.` node
+resolves imports without consulting the session, so its diagnostics say nothing
+about whether the ROOT finds the file. After adopting a generated theory,
+confirm the node reports `<Session>.<Theory>` -- and check its *consumers*, not
+only the theory itself. A generated theory that dropped an import its
+hand-written predecessor had is clean on its own and breaks everything
+downstream of it.
+
 ## I/R fallback
 
 - Initialize a REPL from a fully qualified import, such as

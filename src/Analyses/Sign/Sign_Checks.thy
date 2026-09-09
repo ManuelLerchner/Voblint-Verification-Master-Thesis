@@ -110,7 +110,7 @@ definition analyse_sign_ctx_solved_for ::
           \<times> (String.literal \<times> sign abs_state lifted) list" where
   "analyse_sign_ctx_solved_for = sign_unit_solved"
 
-lemma fst_analyse_sign_ctx_solved_for:
+lemma fst_analyse_sign_ctx_solved_for [simp]:
   "fst (analyse_sign_ctx_solved_for gs p) = analyse_sign_result_for gs p"
   by (simp add: analyse_sign_ctx_solved_for_def analyse_sign_result_for_def
       sign_join.solved_eq)

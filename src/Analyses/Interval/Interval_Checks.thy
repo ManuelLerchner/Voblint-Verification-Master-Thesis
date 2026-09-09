@@ -146,7 +146,7 @@ definition analyse_interval_ctx_solved_warrow_for ::
           \<times> (String.literal \<times> ivl abs_state lifted) list" where
   "analyse_interval_ctx_solved_warrow_for = interval_td_solved"
 
-lemma fst_analyse_interval_ctx_solved_warrow_for:
+lemma fst_analyse_interval_ctx_solved_warrow_for [simp]:
   "fst (analyse_interval_ctx_solved_warrow_for gs p) = analyse_interval_td_result_for gs p"
   by (simp add: analyse_interval_ctx_solved_warrow_for_def analyse_interval_td_result_for_def
       interval_warrow_asm.solved_eq)

@@ -108,7 +108,7 @@ definition analyse_congruence_ctx_solved_for ::
           \<times> (String.literal \<times> congruence abs_state lifted) list" where
   "analyse_congruence_ctx_solved_for = congruence_unit_solved"
 
-lemma fst_analyse_congruence_ctx_solved_for:
+lemma fst_analyse_congruence_ctx_solved_for [simp]:
   "fst (analyse_congruence_ctx_solved_for gs p) = analyse_congruence_result_for gs p"
   by (simp add: analyse_congruence_ctx_solved_for_def analyse_congruence_result_for_def
       congruence_join.solved_eq)

@@ -66,6 +66,24 @@ lemma exec_formals_route_commute:
      (simp_all add: formals_route_lifted_gen_def formals_route_lifted_def
         exec_formals_route_def fun_of_resolved_st_q_for_def)
 
+text \<open>
+  Reading a lifted abstract state as a plain one and concretizing agrees with
+  concretizing the lifted state directly, because the bottom store describes
+  nothing. Every result-table reading takes the first route and every routed
+  endpoint the second, so this is the equation between them.
+\<close>
+
+lemma gamma_state_case_eq_point:
+  fixes x :: "'a::sound_domain abs_state lifted"
+  shows "gamma_state (case x of Bot \<Rightarrow> bot | Lifted st \<Rightarrow> st) = gamma_point x"
+  by (cases x) (simp_all add: gamma_point_def)
+
+lemma gamma_point_canonicalize:
+  fixes x :: "'a::sound_domain abs_state lifted"
+  shows "gamma_point (canonicalize_lift is_empty_state x) = gamma_state_lift x"
+  by (cases x)
+     (simp_all add: gamma_point_def normalize_lift_def is_empty_state_gamma_state_empty)
+
 subsection \<open>The construction\<close>
 
 text \<open>
@@ -395,6 +413,28 @@ interpretation rtd: routed_domain_exec pgs pbot "tf_st pgs" "enter_st pgs"
 
 lemma spec_alt: "analysis_spec pgs p = dom.spec_st"
   unfolding analysis_spec_def by (rule refl)
+
+text \<open>
+  The published table and the solved reader describe the same stores at every
+  key. A caller states soundness against \<^const>\<open>lookup_context\<close> of the result
+  table, while the routed endpoints are stated against the reader; this is the
+  equation between them, and it needs no coverage premise. At a covered key it
+  is the readback commuting with the normalization; at an uncovered one it is
+  \<^const>\<open>Bot\<close> against \<^const>\<open>bot\<close>, and both describe nothing.
+\<close>
+
+lemma gamma_reader_eq_lookup:
+  "gamma_state_lift (map_lift (fun_of_resolved_st_q_for pgs) (reader pgs p (Inl (v, ctx))))
+     = gamma_point (lookup_context (result pgs p) v ctx)"
+proof (cases "(v, ctx) \<in> sol_vars pgs p")
+  case True
+  then show ?thesis
+    by (simp add: reader_def result_def sol_vars_def sol_env_def gamma_point_canonicalize
+        readback_canonicalize_lift_eq[OF empty_pred_exact])
+next
+  case False
+  then show ?thesis by (simp add: reader_def result_def sol_vars_def)
+qed
 
 subsubsection \<open>The solver's answer, in the shape the routed spine consumes\<close>
 
@@ -798,7 +838,6 @@ theorem fun_route_activation_collect_sound:
   fixes ctx_fun :: "cfg_node \<Rightarrow> 'c \<Rightarrow> store \<Rightarrow> 'c"
   assumes route_const: "\<And>u ctx d ca s. route pgs u ctx d ca = ctx_fun u ctx s"
     and solves: "terminates pgs p"
-    and entry_cov: "(cfg_entry (prog_cfg p), root_ctx) \<in> sol_vars pgs p"
     and fwd_ok: "\<And>u a v ctx. (u, ctx) \<in> sol_vars pgs p
         \<Longrightarrow> (u, a, v) \<in> intra (prog_cfg p) \<Longrightarrow> (v, ctx) \<in> sol_vars pgs p"
     and call_fwd_ok: "\<And>u ctx dst pars args q cont d. (u, ctx) \<in> sol_vars pgs p
@@ -808,6 +847,7 @@ theorem fun_route_activation_collect_sound:
     and comb_fwd_ok: "\<And>cl c1 dst pars args q cont. (cl, c1) \<in> sol_vars pgs p
         \<Longrightarrow> (cl, CallEdge dst pars args, FunctionEntry q, cont) \<in> calls (prog_cfg p)
         \<Longrightarrow> (cont, c1) \<in> sol_vars pgs p"
+    and entry_cov: "(cfg_entry (prog_cfg p), root_ctx) \<in> sol_vars pgs p"
   shows "activation_collect pgs (call_context_rel_of_fun ctx_fun) root_ctx (prog_cfg p)
            (cinit_stores pgs) v ctx
            \<subseteq> gamma_state_lift (map_lift (fun_of_resolved_st_q_for pgs)

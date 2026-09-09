@@ -26,7 +26,7 @@ interpretation int_any: unit_dg_analysis
     "branch_int_dom_for mode" body_int_dom "return_int_dom mode"
     "enter_int_dom_ci_for mode" event_int_dom
     TD_side_warrowing_apinis_Interp_solve_c
-proof (rule unit_dg_analysis.intro, goal_cases)
+proof (rule unit_dg_analysis.intro, rule routed_dg_analysis.intro, goal_cases)
   case (1 gs) show ?case by (rule int_is_sound_transfer_for)
 next
   case (2 gs a s) then show ?case
@@ -36,22 +36,26 @@ next
   case (3 gs ci s) show ?case
     unfolding fun_of_exec_dg_st_for_def by (rule int_dom_enter_st_for_commute)
 next
-  case (4 eqs x) then show ?case
+  case (4 gs u ctx d ca) show ?case by simp
+next
+  case (5 v ctx) show ?case by simp
+next
+  case (6 eqs x) then show ?case
     by (rule TD_side_warrowing_apinis_Interp.partial_post_solution
           [OF _ surjective_pairing])
 next
-  case (5 eqs x) then show ?case
+  case (7 eqs x) then show ?case
     by (rule TD_side_warrowing_apinis_Interp.finite_stabl_solve)
 next
-  case (6 c d s) then show ?case by (rule int_classify_check_proved)
+  case (8 c d s) then show ?case by (rule int_classify_check_proved)
 next
-  case (7 c d s) then show ?case by (rule int_classify_check_refuted)
+  case (9 c d s) then show ?case by (rule int_classify_check_refuted)
 next
-  case 8 show ?case by (rule refl)
+  case 10 show ?case by (rule refl)
 next
-  case (9 gs) show ?case by (rule int_cinit_gamma)
+  case (11 gs) show ?case by (rule int_cinit_gamma)
 next
-  case (10 eqs x) then show ?case
+  case (12 eqs x) then show ?case
     by (rule TD_side_warrowing_apinis_Interp.solve_dom_of_solve_c)
 qed
 
@@ -118,10 +122,10 @@ lemma analyse_int_ctx_result_warrow_node_sound_for:
            \<subseteq> \<lbrakk>case lookup_context (analyse_int_ctx_result_warrow_for mode pgs p) v () of
                              Bot \<Rightarrow> bot | Lifted st \<Rightarrow> st\<rbrakk>"
   using int_any_result_node_sound_closure
-          [unfolded unit_dg_pipeline.sol_vars_def
+          [unfolded routed_dg_pipeline.sol_vars_def
              int_conf_sol_prog_warrow_def[symmetric]
              int_conf_terminates_prog_warrow_def[symmetric],
-           OF solve entry_cov fwd_ok call_fwd_ok comb_fwd_ok]
+           OF solve fwd_ok call_fwd_ok comb_fwd_ok entry_cov]
   unfolding int_any_state_at_unfold analyse_int_ctx_result_warrow_for_eq_pipeline .
 
 theorem analyse_int_report_sound_proved_for:

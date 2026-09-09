@@ -110,7 +110,7 @@ definition analyse_parity_ctx_solved_for ::
           \<times> (String.literal \<times> parity abs_state lifted) list" where
   "analyse_parity_ctx_solved_for = parity_unit_solved"
 
-lemma fst_analyse_parity_ctx_solved_for:
+lemma fst_analyse_parity_ctx_solved_for [simp]:
   "fst (analyse_parity_ctx_solved_for gs p) = analyse_parity_result_for gs p"
   by (simp add: analyse_parity_ctx_solved_for_def analyse_parity_result_for_def
       parity_join.solved_eq)

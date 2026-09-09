@@ -46,10 +46,11 @@ context
 begin
 
 lemmas congruence_closure =
-  solve entry_cov[unfolded congruence_join.sol_vars_def[symmetric]]
+  solve
   fwd_ok[unfolded congruence_join.sol_vars_def[symmetric]]
   call_fwd_ok[unfolded congruence_join.sol_vars_def[symmetric]]
   comb_fwd_ok[unfolded congruence_join.sol_vars_def[symmetric]]
+  entry_cov[unfolded congruence_join.sol_vars_def[symmetric]]
 
 lemma analyse_congruence_result_node_sound_for:
   "ltr_collect (declared_global p) (prog_cfg p) (cinit_stores (declared_global p)) v

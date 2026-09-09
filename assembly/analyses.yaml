@@ -112,10 +112,43 @@ domains:
       # `Interval_Analyses` stays hand-written and imports it. The mechanism is
       # uniform across domains; only whether there is a hand-written host differs.
       theory: Interval_Contextual_Assembly
-      entry_state: {solvers: [warrowing_apinis], default: warrowing_apinis}
-      call_string: {solvers: [warrowing_apinis], default: warrowing_apinis}
+      # Interval's hand-written file survives, so adoption moves only the two
+      # registrations. Its twenty-six published constants and its six
+      # `entry_state_*` re-exports stay where they are: `interval_es` is a
+      # `global_interpretation`, so its binder is visible to an importing
+      # theory. The call-string re-exports cannot stay -- `interval_cs` is a
+      # plain `interpretation` and does not export outside its context -- so
+      # those two names travel with the registration and are named here.
+      entry_state:
+        solvers: [warrowing_apinis]
+        default: warrowing_apinis
+        published: []
+        re_exports: {}
+      call_string:
+        solvers: [warrowing_apinis]
+        default: warrowing_apinis
+        published: []
+        re_exports:
+          sound: analyse_interval_call_string_sound
+          terminates_of_solve_c: cs_call_string_terminates_via_solve_c
     legacy:
       impl_prefix: ivl
+      # Settled by cutting and looking. `Interval_Transfer` dropped;
+      # `Routed_Context` added explicitly. `Interval_Assembly` is required not
+      # by any constant but by a `\<^theory>` pin in a prose dependency claim
+      # at Interval_Solver_Analyses:24 -- dropping it left this file clean at
+      # 382/382 and broke its consumer.
+      ctx_imports:
+        - Interval_Sound
+        - Interval_Assembly
+        - Interval_Classify
+        - Interval_Exec_Sound
+        - '"Voblint_Result.Routed_DG_Analysis"'
+        - '"Voblint_Framework.Call_String_Context"'
+        - '"Voblint_Framework.Routed_Context"'
+        - '"Voblint_Solver.TD_Solver_Bridge"'
+        - '"Voblint_VIMP.VIMP_Program"'
+        - '"TD.TD_side_upd_rule"'
       # Interval's entry-state constants predate the published convention:
       # seven are spelled without the domain prefix, it publishes `reader`
       # which no other domain does, and `context_rel` precedes the three
@@ -227,10 +260,37 @@ domains:
       # free. Per-context copies would invite one context to disagree with the
       # other about what `Refine_Fixpoint` generalises to.
       generalize: {Refine_Fixpoint: {binder: mode, type: refine_mode}}
-      entry_state: {solvers: [always_join, warrowing_apinis], default: warrowing_apinis}
-      call_string: {solvers: [always_join, warrowing_apinis], default: warrowing_apinis}
+      # `published` read off the working file, not inferred. Int publishes a
+      # `_for` hop and no `terminates`; Sign publishes a `terminates` and no
+      # hop. Neither difference has an external consumer, so unifying them is
+      # a deliberate change rather than something generation should decide.
+      # Int keeps the hop because `Int_Solver_Analyses` publishes the
+      # warrowing half in the same idiom.
+      entry_state:
+        solvers: [always_join, warrowing_apinis]
+        default: warrowing_apinis
+        published: [result_for, result, report]
+      call_string:
+        solvers: [always_join, warrowing_apinis]
+        default: warrowing_apinis
+        published: [result_for, result, report]
     legacy:
       impl_prefix: int
+      # Settled by cutting to the minimum in the hand-written file and letting
+      # the session name what broke, not by reasoning about which of the old
+      # twenty-one were vestigial. Thirteen were: they served the hand-rolled
+      # chains and interpretations the migration deleted. No `Int_Assembly`
+      # here -- `Int_Checks` imports it directly rather than through this file.
+      ctx_imports:
+        - Int_Sound
+        - Int_Classify
+        - Int_Exec
+        - '"Voblint_Result.Routed_DG_Analysis"'
+        - '"Voblint_Framework.Call_String_Context"'
+        - '"Voblint_Framework.Routed_Context"'
+        - '"Voblint_Solver.TD_Solver_Bridge"'
+        - '"Voblint_VIMP.VIMP_Program"'
+        - '"TD.TD_side_upd_rule"'
       classifier: int_classify_check
       init_gamma: int_cinit_gamma
       facts:
