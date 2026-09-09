@@ -42,6 +42,11 @@ MAX_LINE = 100
 
 SYMBOL = re.compile(r"\\<\^?[A-Za-z][A-Za-z0-9_']*>")
 
+# What may appear in an applied role. A constant or constructor name, nothing
+# else: no spaces, no quotes, no cartouches, no application of its own. The
+# registry cannot express a term the generator did not build.
+ISABELLE_NAME = re.compile(r"^[A-Za-z][A-Za-z0-9_'.]*$")
+
 
 def symbol_len(line):
     """Length in Isabelle symbols, which is what the layout rule counts."""
@@ -140,6 +145,11 @@ class Domain:
         registration shape: the domain keeps the stronger statement and names a
         corollary here, which is what lets the generated proof text stay the
         same for every domain.
+
+        A role may also be an application rather than a bare name --
+        `{const: int_tf_st_for, args: [Refine_Fixpoint]}` -- for a domain whose
+        operations carry a configuration argument. The renderer quotes it so it
+        reaches Isabelle as one argument; nothing here is free proof text.
         """
         i = self.impl
         legacy = self.legacy
@@ -178,6 +188,27 @@ def fill(body, width=85):
             out.append(line)
         out.append("")
     return "\n".join(out[:-1])
+
+
+def role_term(role):
+    """A role in term position: a bare name, or a quoted application.
+
+    An applied role must be one argument to the interpretation, and Isabelle
+    reads a quoted term as one argument. Only `const` and `args` are honoured,
+    so a role can never smuggle in arbitrary syntax.
+    """
+    if isinstance(role, dict):
+        args = " ".join(str(a) for a in role["args"])
+        return f'"{role["const"]} {args}"'
+    return role
+
+
+def role_name(role):
+    """A role in fact position. Facts take no arguments, so an application here
+    is a registry error rather than something to render."""
+    if isinstance(role, dict):
+        raise ValueError(f"fact role cannot be applied: {role}")
+    return role
 
 
 def text_block(body, indent="  "):
@@ -219,17 +250,33 @@ def interpretation(dom, route, solvers):
     binder, prefix = dom.binder(route), dom.prefix(route)
     binds = DEFINES_FULL if route == dom.default else DEFINES_SIBLING
 
+    term = {k: role_term(v) for k, v in f.items()}
     out = [
         f"global_interpretation {binder}: unit_dg_analysis",
-        f"    {f['tf_st']} {f['enter_st']} {f['init_st']}",
+        f"    {term['tf_st']} {term['enter_st']} {term['init_st']}",
         f"    {interp}_solve",
         f'    "{interp}.solve_dom TYPE((unit, unit) routed_gk)',
         f"       TYPE(({dom.value_type} exec_dg_st lifted,"
         f" {dom.value_type} exec_dg_st lifted) dg_state)\"",
-        f"    bot {f['classifier']}",
-        f"    {f['skip']} {f['assign']} {f['special']} "
-        f"{f['branch']} {f['body']} {f['return']}",
-        f"    {f['enter_ci']} {f['event']} {interp}_solve_c",
+        f"    bot {term['classifier']}",
+    ]
+    # The operations. The two-line split reads best and is what a domain with
+    # bare names gets; a domain that configures its operations has quoted, longer
+    # roles, so fall back to packing at the layout limit.
+    step = [term[k] for k in ["skip", "assign", "special", "branch", "body", "return"]]
+    tail = [term["enter_ci"], term["event"], f"{interp}_solve_c"]
+    pair = ["    " + " ".join(step), "    " + " ".join(tail)]
+    if all(symbol_len(l) <= MAX_LINE for l in pair):
+        out += pair
+    else:
+        line = "   "
+        for op in step + tail:
+            if symbol_len(f"{line} {op}") > MAX_LINE:
+                out.append(line)
+                line = "   "
+            line = f"{line} {op}"
+        out.append(line)
+    out += [
         "  defines",
     ]
     for i, (published, const) in enumerate(binds):
@@ -238,14 +285,14 @@ def interpretation(dom, route, solvers):
 
     out += [
         "proof (rule unit_dg_analysis.intro, goal_cases)",
-        f"  case (1 gs) show ?case by (rule {f['transfer_sound']})",
+        f"  case (1 gs) show ?case by (rule {role_name(f['transfer_sound'])})",
         "next",
         "  case (2 gs a s) then show ?case",
         "    unfolding fun_of_exec_dg_st_for_def",
-        f"    by (rule {f['tf_commute']}[unfolded {f['tf_abs_def']}])",
+        f"    by (rule {role_name(f['tf_commute'])}[unfolded {role_name(f['tf_abs_def'])}])",
         "next",
         "  case (3 gs ci s) show ?case",
-        f"    unfolding fun_of_exec_dg_st_for_def by (rule {f['enter_commute']})",
+        f"    unfolding fun_of_exec_dg_st_for_def by (rule {role_name(f['enter_commute'])})",
         "next",
         "  case (4 eqs x) then show ?case",
     ]
@@ -254,13 +301,13 @@ def interpretation(dom, route, solvers):
     out += rule_step(f"{interp}.finite_stabl_solve")
     out += [
         "next",
-        f"  case (6 c d s) then show ?case by (rule {f['classifier']}_proved)",
+        f"  case (6 c d s) then show ?case by (rule {role_name(f['classifier'])}_proved)",
         "next",
-        f"  case (7 c d s) then show ?case by (rule {f['classifier']}_refuted)",
+        f"  case (7 c d s) then show ?case by (rule {role_name(f['classifier'])}_refuted)",
         "next",
         "  case 8 show ?case by (rule refl)",
         "next",
-        f"  case (9 gs) show ?case by (rule {f['init_gamma']})",
+        f"  case (9 gs) show ?case by (rule {role_name(f['init_gamma'])})",
         "next",
         "  case (10 eqs x) then show ?case",
     ]
@@ -538,6 +585,25 @@ def validate(manifest, doms):
             elif bound and name != "call_string":
                 problems.append(f"{d.name}/{name}: min_bound is meaningful only for"
                                 " a bounded context")
+        FACT_ROLES = {"transfer_sound", "tf_commute", "tf_abs_def",
+                      "enter_commute", "init_gamma", "classifier"}
+        for role, value in d.legacy.get("facts", {}).items():
+            if isinstance(value, dict):
+                if set(value) != {"const", "args"} or not value["args"]:
+                    problems.append(f"{d.name}: applied role {role} takes exactly"
+                                    " `const` and a non-empty `args`")
+                elif not all(isinstance(x, str) and ISABELLE_NAME.match(x)
+                             for x in [value["const"], *value["args"]]):
+                    problems.append(f"{d.name}: applied role {role} may name only"
+                                    " constants; `const` and each argument must be"
+                                    " a plain Isabelle name")
+                elif role in FACT_ROLES:
+                    problems.append(f"{d.name}: role {role} names a fact, and a fact"
+                                    " takes no arguments")
+            elif not isinstance(value, str):
+                problems.append(f"{d.name}: role {role} must be a name or an"
+                                " application")
+
         for route, spec in d.legacy.get("routes", {}).items():
             if route not in d.routes:
                 problems.append(f"{d.name}: legacy name for unpublished route {route}")

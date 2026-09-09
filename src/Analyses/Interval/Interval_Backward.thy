@@ -188,7 +188,7 @@ interpretation ivl_arith: expression_domain_sound
                      interval_lt_sound interval_eqb_sound
                      interval_tobool_sound[unfolded truthy_def]
                      interval_lt_mono interval_eqb_mono interval_tobool_mono
-                     sup_ivl_def join_ivl.simps truthy_def)
+                     sup_ivl_def)
 
 lemmas aval_ivl_sound = ivl_arith.aval_dom_sound[unfolded gamma_abs_ivl]
 
@@ -271,12 +271,10 @@ text \<open>
   branch is the sound identity: a precise refinement is possible in specific
   cases (e.g. excluding a known point value from one bound of the other
   operand when that point sits exactly at that bound), but @{typ ivl}'s
-  infinite domain makes proving that refinement's monotonicity
-  disproportionately more expensive than for the finite sign lattice ---
-  attempted and abandoned; the guard conditions needed access the interval's
-  own bound values, and a boundary-matching guard is not compatible with the
-  order-based case-split technique that closed the sign proof. This is a
-  documented precision gap, not a soundness one: \<open>bfilter\<close>'s @{text
+  order makes boundary-exclusion tests incompatible with the monotonicity shape
+  required by the backward-domain interface: widening an operand can invalidate
+  a test that matched its old endpoint. The false branch therefore remains the
+  identity. This is a documented precision gap, not a soundness one: \<open>bfilter\<close>'s @{text
   \<open>Eq _ _ False\<close>} case under this instance narrows exactly as much for
   Interval as it already does today (not at all), while Sign gains real
   precision from its own instance.
@@ -309,7 +307,7 @@ lemma inv_eq_ivl_mono:
 proof (cases r)
   case True
   have "a1 \<sqinter> a2 \<le> a1' \<sqinter> a2'" by (rule inf_mono[OF A1 A2])
-  then show ?thesis using True by (simp add: inf_ivl_def)
+  then show ?thesis using True by simp
 next
   case False
   then show ?thesis using A1 A2 by simp
@@ -348,9 +346,9 @@ proof -
     case False
     then have r: "res = False" by simp
     have aux3: "Ivl l2 PlusInf \<le> Ivl l2' PlusInf"
-      by (simp add: less_eq_ivl_def ord2(1) eint_le_refl)
+      by (simp add: less_eq_ivl_def ord2(1))
     have aux4: "Ivl MinInf u1 \<le> Ivl MinInf u1'"
-      by (simp add: less_eq_ivl_def ord1(2) eint_le_refl)
+      by (simp add: less_eq_ivl_def ord1(2))
     show ?thesis
       unfolding r ha1 ha2 ha1' ha2' inv_less_ivl.simps fst_conv snd_conv
     proof (intro conjI)
@@ -373,7 +371,7 @@ text \<open>
 lemma meet_ivl_le1: "meet_ivl a b \<le> a"
   by (cases a; cases b;
       simp add: less_eq_ivl_def;
-      metis eint_le_linear eint_le_trans eint_le_refl)
+      metis eint_le_linear)
 
 lemma meet_ivl_le2: "meet_ivl a b \<le> b"
   by (cases a; cases b;

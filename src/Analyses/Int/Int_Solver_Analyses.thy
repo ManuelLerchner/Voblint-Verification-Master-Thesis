@@ -5,17 +5,17 @@ begin
 chapter \<open>The same Int configurations, at the alternative solver disciplines\<close>
 
 text \<open>
-  Which solver runs an equation system is independent of which context policy
-  generated it. \<^theory>\<open>Voblint_Analysis_Int.Int_Analyses\<close> fixes the three context
-  policies at the default always-join solver; this theory re-runs those same
-  equation systems under the PerOrigin, Apinis-warrowing and
-  warrowing-per-origin disciplines, and publishes the result and report tables
-  each one yields.
+  Solver discipline is independent of context policy.
+  \<^theory>\<open>Voblint_Analysis_Int.Int_Analyses\<close> supplies the three context
+  configurations and their base always-join instances. This theory interprets
+  the same solver contracts for PerOrigin, Apinis warrowing, and
+  warrowing-per-origin and publishes their result and report tables.
 
-  The \<^typ>\<open>refine_mode\<close> parameter is a different axis again, and stays where it
-  is: it selects how far the product domain refines its components, which every
-  configuration here carries regardless of solver. Nothing in this theory is a
-  new analysis, and no fact about the product domain appears.
+  The \<^typ>\<open>refine_mode\<close> parameter remains an independent domain axis. Each
+  block reuses an existing equation system and discharges the selected solver's
+  post-solution and finite-key obligations; no product-domain reasoning is
+  repeated here. Production reporting selects Apinis warrowing with
+  \<^const>\<open>Refine_Fixpoint\<close>.
 \<close>
 
 section \<open>PerOrigin solver instantiation, at the same routed unit-context spec\<close>
@@ -268,22 +268,7 @@ lemma int_conf_terminates_prog_per_origin_via_solve_c:
 definition analyse_int_ctx_result_per_origin_for ::
     "refine_mode \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> (unit, int_dom abs_state) analysis_result" where
   "analyse_int_ctx_result_per_origin_for mode gs p =
-     Analysis_Result
-       (fst (int_conf_sol_prog_per_origin mode gs p))
-       (\<lambda>v ctx. readback_result_value gs
-                  (canonicalize_lift (resolved_st_q_is_bot_for (declared_global_vars p))
-                    (locals (snd (int_conf_sol_prog_per_origin mode gs p) (Inl (v, ctx))))))"
-
-declare analyse_int_ctx_result_per_origin_for_def [code del]
-
-lemma analyse_int_ctx_result_per_origin_for_code [code]:
-  "analyse_int_ctx_result_per_origin_for mode gs p =
-     (let sol = int_conf_sol_prog_per_origin mode gs p; gl = declared_global_vars p
-      in Analysis_Result (fst sol)
-           (\<lambda>v ctx. readback_result_value gs
-                      (canonicalize_lift (resolved_st_q_is_bot_for gl)
-                        (locals (snd sol (Inl (v, ctx)))))))"
-  unfolding analyse_int_ctx_result_per_origin_for_def Let_def by (rule refl)
+     dg_result_for gs (declared_global_vars p) (int_conf_sol_prog_per_origin mode gs p)"
 
 definition int_conf_sol_prog_warrow ::
     "refine_mode \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog
@@ -308,11 +293,7 @@ lemma int_conf_terminates_prog_warrow_via_solve_c:
 definition analyse_int_ctx_result_warrow_for ::
     "refine_mode \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> (unit, int_dom abs_state) analysis_result" where
   "analyse_int_ctx_result_warrow_for mode gs p =
-     Analysis_Result
-       (fst (int_conf_sol_prog_warrow mode gs p))
-       (\<lambda>v ctx. readback_result_value gs
-                  (canonicalize_lift (resolved_st_q_is_bot_for (declared_global_vars p))
-                    (locals (snd (int_conf_sol_prog_warrow mode gs p) (Inl (v, ctx))))))"
+     dg_result_for gs (declared_global_vars p) (int_conf_sol_prog_warrow mode gs p)"
 
 text \<open>\<^const>\<open>ctx_solved_for\<close> at this domain's warrowing solve, with \<^const>\<open>Analysis_Global\<close>
   and \<^const>\<open>Activation_Seed\<close> handed to \<^const>\<open>seed_global_keys\<close> the way \<^const>\<open>routed_entry_seed_tree\<close>
@@ -330,18 +311,7 @@ lemma fst_analyse_int_ctx_solved_warrow_for:
   "fst (analyse_int_ctx_solved_warrow_for mode gs p)
      = analyse_int_ctx_result_warrow_for mode gs p"
   by (simp add: analyse_int_ctx_solved_warrow_for_def fst_ctx_solved_for
-      analyse_int_ctx_result_warrow_for_def Let_def)
-
-declare analyse_int_ctx_result_warrow_for_def [code del]
-
-lemma analyse_int_ctx_result_warrow_for_code [code]:
-  "analyse_int_ctx_result_warrow_for mode gs p =
-     (let sol = int_conf_sol_prog_warrow mode gs p; gl = declared_global_vars p
-      in Analysis_Result (fst sol)
-           (\<lambda>v ctx. readback_result_value gs
-                      (canonicalize_lift (resolved_st_q_is_bot_for gl)
-                        (locals (snd sol (Inl (v, ctx)))))))"
-  unfolding analyse_int_ctx_result_warrow_for_def Let_def by (rule refl)
+      analyse_int_ctx_result_warrow_for_def)
 
 subsection \<open>Solved-result table: warrowing per origin\<close>
 
@@ -368,22 +338,7 @@ lemma int_conf_terminates_prog_wpo_via_solve_c:
 definition analyse_int_ctx_result_wpo_for ::
     "refine_mode \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> (unit, int_dom abs_state) analysis_result" where
   "analyse_int_ctx_result_wpo_for mode gs p =
-     Analysis_Result
-       (fst (int_conf_sol_prog_wpo mode gs p))
-       (\<lambda>v ctx. readback_result_value gs
-                  (canonicalize_lift (resolved_st_q_is_bot_for (declared_global_vars p))
-                    (locals (snd (int_conf_sol_prog_wpo mode gs p) (Inl (v, ctx))))))"
-
-declare analyse_int_ctx_result_wpo_for_def [code del]
-
-lemma analyse_int_ctx_result_wpo_for_code [code]:
-  "analyse_int_ctx_result_wpo_for mode gs p =
-     (let sol = int_conf_sol_prog_wpo mode gs p; gl = declared_global_vars p
-      in Analysis_Result (fst sol)
-           (\<lambda>v ctx. readback_result_value gs
-                      (canonicalize_lift (resolved_st_q_is_bot_for gl)
-                        (locals (snd sol (Inl (v, ctx)))))))"
-  unfolding analyse_int_ctx_result_wpo_for_def Let_def by (rule refl)
+     dg_result_for gs (declared_global_vars p) (int_conf_sol_prog_wpo mode gs p)"
 
 
 subsection \<open>The certified executable post-solution under warrowing\<close>
@@ -421,7 +376,10 @@ theorem ics_pp_routed_warrow:
      (cfg_exit (compile_prog Pi ps), [])
      (snd (ics_sol_warrow k mode gs empty_pred Pi ps))
      (fst (ics_sol_warrow k mode gs empty_pred Pi ps))"
-  using ics_pp_st_warrow unfolding ics_eqs_def int_dom_spec_def by (rule int_cs_pp_st_gen[OF exact])
+  using ics_pp_st_warrow
+  unfolding ics_eqs_def call_string_eqs_for_def compiled_routed_eqs_for_def
+    int_dom_spec_def bot_lifted_eq
+  by (rule int_cs_pp_st_gen[OF exact])
 end
 
 subsection \<open>Result table and report under warrowing\<close>
@@ -429,22 +387,7 @@ subsection \<open>Result table and report under warrowing\<close>
 definition analyse_int_call_string_result_for_warrow ::
     "nat \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> (call_string, int_dom abs_state) analysis_result" where
   "analyse_int_call_string_result_for_warrow k gs p =
-     Analysis_Result
-       (fst (ics_sol_prog_warrow k gs p))
-       (\<lambda>v ctx. readback_result_value gs
-                  (canonicalize_lift (resolved_st_q_is_bot_for (declared_global_vars p))
-                    (locals (snd (ics_sol_prog_warrow k gs p) (Inl (v, ctx))))))"
-
-declare analyse_int_call_string_result_for_warrow_def [code del]
-
-lemma analyse_int_call_string_result_for_warrow_code [code]:
-  "analyse_int_call_string_result_for_warrow k gs p =
-     (let sol = ics_sol_prog_warrow k gs p; gl = declared_global_vars p
-      in Analysis_Result (fst sol)
-           (\<lambda>v ctx. readback_result_value gs
-                      (canonicalize_lift (resolved_st_q_is_bot_for gl)
-                        (locals (snd sol (Inl (v, ctx)))))))"
-  unfolding analyse_int_call_string_result_for_warrow_def Let_def by (rule refl)
+     dg_result_for gs (declared_global_vars p) (ics_sol_prog_warrow k gs p)"
 
 definition analyse_int_call_string_result_warrow ::
     "nat \<Rightarrow> imp_prog \<Rightarrow> (call_string, int_dom abs_state) analysis_result" where
@@ -497,7 +440,8 @@ theorem int_conf_entry_pp_routed_warrow:
      (cfg_exit (compile_prog Pi ps), [])
      (snd (int_conf_entry_sol_warrow mode gs empty_pred Pi ps))
      (fst (int_conf_entry_sol_warrow mode gs empty_pred Pi ps))"
-  using int_conf_entry_pp_st_warrow unfolding int_conf_entry_eqs_def int_dom_spec_def
+  using int_conf_entry_pp_st_warrow
+  unfolding int_conf_entry_eqs_def compiled_routed_eqs_for_def int_dom_spec_def bot_lifted_eq
   by (rule int_es_pp_st_gen[OF exact])
 
 end
@@ -507,22 +451,7 @@ subsection \<open>Result table and report under warrowing\<close>
 definition analyse_int_entry_state_result_for_warrow ::
     "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> (int_dom list, int_dom abs_state) analysis_result" where
   "analyse_int_entry_state_result_for_warrow gs p =
-     Analysis_Result
-       (fst (int_conf_entry_sol_prog_warrow gs p))
-       (\<lambda>v ctx. readback_result_value gs
-                  (canonicalize_lift (resolved_st_q_is_bot_for (declared_global_vars p))
-                    (locals (snd (int_conf_entry_sol_prog_warrow gs p) (Inl (v, ctx))))))"
-
-declare analyse_int_entry_state_result_for_warrow_def [code del]
-
-lemma analyse_int_entry_state_result_for_warrow_code [code]:
-  "analyse_int_entry_state_result_for_warrow gs p =
-     (let sol = int_conf_entry_sol_prog_warrow gs p; gl = declared_global_vars p
-      in Analysis_Result (fst sol)
-           (\<lambda>v ctx. readback_result_value gs
-                      (canonicalize_lift (resolved_st_q_is_bot_for gl)
-                        (locals (snd sol (Inl (v, ctx)))))))"
-  unfolding analyse_int_entry_state_result_for_warrow_def Let_def by (rule refl)
+     dg_result_for gs (declared_global_vars p) (int_conf_entry_sol_prog_warrow gs p)"
 
 definition analyse_int_entry_state_result_warrow ::
     "imp_prog \<Rightarrow> (int_dom list, int_dom abs_state) analysis_result" where

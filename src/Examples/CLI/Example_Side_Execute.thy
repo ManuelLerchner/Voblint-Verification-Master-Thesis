@@ -75,7 +75,7 @@ lemma x1_node_sound:
      \<subseteq> \<lbrakk>case lookup_context (analyse_sign_result_for x1_gs x1_prog) v () of
             Bot \<Rightarrow> bot | Lifted st \<Rightarrow> st\<rbrakk>"
   by (rule analyse_sign_result_node_sound_for
-        [OF x1_reserved x1_terminates x1_entry_cov
+        [OF x1_terminates x1_entry_cov
             x1_fwd_ok x1_call_fwd_ok x1_comb_fwd_ok])
 
 definition x1_exit_env :: "sign abs_state" where

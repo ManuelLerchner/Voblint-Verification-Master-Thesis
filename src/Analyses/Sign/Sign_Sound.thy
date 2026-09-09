@@ -96,4 +96,21 @@ theorem sctx_entry_cover_exec:
 
 end
 
+subsection \<open>What the initial abstract state describes\<close>
+
+text \<open>
+  The initial-state contract, owned here rather than reproved at each assembly
+  instance: every concrete store a run may start in is described by
+  \<^const>\<open>cinit_sign_st\<close>. It holds because a declared global starts at zero, which
+  \<^const>\<open>SZero\<close> describes exactly, and a local starts unconstrained, which
+  \<^const>\<open>STop\<close> describes trivially --- so it is a fact about Sign's initial state
+  and its concretization, and about nothing else.
+\<close>
+
+lemma sign_cinit_gamma:
+  "cinit_stores gs
+     \<subseteq> gamma_state_lift (map_lift (fun_of_exec_dg_st_for gs) (Lifted cinit_sign_st))"
+  by (auto simp: cinit_stores_def gamma_state_def fun_of_exec_dg_st_for_def
+      fun_of_resolved_st_q_for_def fun_of_st_cinit_sign_st_for)
+
 end

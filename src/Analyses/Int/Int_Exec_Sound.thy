@@ -1,6 +1,7 @@
 theory Int_Exec_Sound
   imports
     "Voblint_Framework.DG_Local_State_Spec"
+    "Voblint_Result.DG_Result_Construction"
     "Voblint_Exec.DG_Local_State_Exec_Refinement"
     Int_Exec
     Int_Warrowing
@@ -11,22 +12,17 @@ theory Int_Exec_Sound
     "Voblint_Solver.TD_Solver_Bridge"
 begin
 
-section \<open>Native D/G runtime API: the composite integer domain, Refine_Fixpoint mode\<close>
+section \<open>Native D/G runtime API: the composite integer domain\<close>
 
 text \<open>
-  The production route for \<open>int_dom\<close>, mirroring \<open>analyse_interval_dg_eqs_for\<close>/
-  \<open>analyse_interval_dg_for\<close>/\<open>analyse_interval_dg_env_for\<close> (\<open>Interval_Exec_Sound\<close>) almost
-  verbatim: the local unknown carries the whole reachability-lifted \<open>int_dom exec_dg_st\<close>, so
-  a VIMP global lives exactly where a local does, with no separate flow-insensitive
-  solver-global summary to route it through.
+  The whole-state route for \<open>int_dom\<close> mirrors Interval's: the local unknown carries
+  the reachability-lifted \<open>int_dom exec_dg_st\<close>, so a VIMP global lives exactly where a
+  local does, with no separate flow-insensitive summary.
 
-  Fixed at \<open>Refine_Fixpoint\<close> (\<^const>\<open>int_tf_st_fixpoint_for\<close>,
-  \<^const>\<open>int_dom_enter_fixpoint_st_for\<close>, \<^theory>\<open>Voblint_Analysis_Int.Int_Exec\<close>): the most
-  precise of the three refinement modes (\<^const>\<open>refine\<close>, \<^theory>\<open>Voblint_Analysis_Int.Int_Refinement\<close>)
-  and this composite domain's own natural production default, the same one-pairing-per-domain
-  convention \<open>Sign_Analysis\<close>/\<open>Solver_Join\<close> and \<open>Interval_Analysis\<close>/\<open>Solver_Warrow\<close> already fix
-  (\<open>Analyse_Dispatch\<close>, Examples session, downstream): \<open>Refine_Never\<close>/\<open>Refine_Once\<close> stay
-  reachable through \<^theory>\<open>Voblint_Analysis_Int.Int_Exec\<close>'s own bundles, not exposed here.
+  The explicit \<^typ>\<open>refine_mode\<close> parameter keeps domain refinement orthogonal to
+  equation generation and solver choice. Public production reporting later selects
+  \<^const>\<open>Refine_Fixpoint\<close>; this lower runtime interface also supports
+  \<^const>\<open>Refine_Never\<close> and \<^const>\<open>Refine_Once\<close>.
 
   Solved via \<^const>\<open>TD_side_warrowing_apinis_Interp_solve\<close>, not plain join: \<open>int_dom\<close>'s
   \<open>int_ivl\<close> component has the same unbounded integer bound Interval's own carrier does, so a
@@ -92,33 +88,17 @@ definition analyse_int_dg_for :: "refine_mode \<Rightarrow> (int_dom exec_dg_st 
        (cfg_exit (prog_cfg p), ())"
 
 text \<open>
-  \<open>analyse_int_dg_env_for\<close> reads the local unknown at \<open>v\<close> (\<open>Inl (v, ())\<close>) straight back
-  through \<^const>\<open>fun_of_exec_dg_st_for\<close>/\<^const>\<open>map_lift\<close>, mirroring
-  \<open>analyse_interval_dg_env_for\<close> exactly: the whole abstract state already lives there, so
-  there is no locals-from-\<open>D\<close>/globals-from-\<open>G\<close> reconstruction to perform. A genuinely
-  unreachable local unknown (\<open>Bot\<close>) concretizes to \<open>bot\<close>, matching \<^const>\<open>gamma_state_lift\<close>'s
-  own \<open>Bot\<close> case.
-
-  The \<open>[code]\<close> rewrite below is point-free in \<open>v\<close>, the same single-solve-per-report fix
-  \<open>analyse_interval_dg_env_for_code\<close> uses: \<^const>\<open>analyse_int_dg_for\<close> is solved exactly
-  once per partial application to \<open>empty_pred gs p\<close>, reused for every \<open>v\<close> queried afterward
-  against the resulting closure.
+  The shared whole-state reader projects the solved local unknown at \<open>Inl (v, ())\<close>.
+  Passing the solved map to \<^const>\<open>dg_env_for\<close> preserves the single-solve generated
+  code shape for every refinement mode.
 \<close>
 
 definition analyse_int_dg_env_for ::
-    "refine_mode \<Rightarrow> (int_dom exec_dg_st \<Rightarrow> bool) \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> pp \<Rightarrow> int_dom abs_state" where
-  "analyse_int_dg_env_for mode empty_pred gs p v =
-     (case map_lift (fun_of_exec_dg_st_for gs) (locals (snd (analyse_int_dg_for mode empty_pred gs p) (Inl (v, ()))))
-      of Bot \<Rightarrow> bot | Lifted s \<Rightarrow> s)"
-
-declare analyse_int_dg_env_for_def [code del]
-
-lemma analyse_int_dg_env_for_code [code]:
+    "refine_mode \<Rightarrow> (int_dom exec_dg_st \<Rightarrow> bool) \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog
+       \<Rightarrow> pp \<Rightarrow> int_dom abs_state" where
   "analyse_int_dg_env_for mode empty_pred gs p =
-     (let sol = snd (analyse_int_dg_for mode empty_pred gs p)
-      in (\<lambda>v. case map_lift (fun_of_exec_dg_st_for gs) (locals (sol (Inl (v, ()))))
-              of Bot \<Rightarrow> bot | Lifted s \<Rightarrow> s))"
-  unfolding analyse_int_dg_env_for_def Let_def by (rule refl)
+     dg_env_for gs (snd (analyse_int_dg_for mode empty_pred gs p))"
+
 
 text \<open>
   Convenience instances at \<^const>\<open>declared_global\<close> \<open>p\<close>, matching \<open>analyse_interval_dg_eqs\<close>/
@@ -149,7 +129,7 @@ text \<open>
   solving the same \<^const>\<open>analyse_int_dg_eqs_for\<close> equation system (\<open>mode\<close> included)
   under \<^const>\<open>TD_side_always_join_Interp_solve\<close>/\<open>TD_side_per_origin_Interp_solve\<close>
   instead of \<^const>\<open>TD_side_warrowing_apinis_Interp_solve\<close>, so the \<open>Analyse_Dispatch\<close>
-  runtime dispatcher (Examples session, downstream) can compare update rules on the
+  runtime dispatcher (in the downstream CLI session) can compare update rules on the
   identical equation system, the same role Interval's own join/per-origin variants
   already play there.
 \<close>
@@ -162,19 +142,11 @@ definition analyse_int_dg_join_for :: "refine_mode \<Rightarrow> (int_dom exec_d
        (cfg_exit (prog_cfg p), ())"
 
 definition analyse_int_dg_join_env_for ::
-    "refine_mode \<Rightarrow> (int_dom exec_dg_st \<Rightarrow> bool) \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> pp \<Rightarrow> int_dom abs_state" where
-  "analyse_int_dg_join_env_for mode empty_pred gs p v =
-     (case map_lift (fun_of_exec_dg_st_for gs) (locals (snd (analyse_int_dg_join_for mode empty_pred gs p) (Inl (v, ()))))
-      of Bot \<Rightarrow> bot | Lifted s \<Rightarrow> s)"
-
-declare analyse_int_dg_join_env_for_def [code del]
-
-lemma analyse_int_dg_join_env_for_code [code]:
+    "refine_mode \<Rightarrow> (int_dom exec_dg_st \<Rightarrow> bool) \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog
+       \<Rightarrow> pp \<Rightarrow> int_dom abs_state" where
   "analyse_int_dg_join_env_for mode empty_pred gs p =
-     (let sol = snd (analyse_int_dg_join_for mode empty_pred gs p)
-      in (\<lambda>v. case map_lift (fun_of_exec_dg_st_for gs) (locals (sol (Inl (v, ()))))
-              of Bot \<Rightarrow> bot | Lifted s \<Rightarrow> s))"
-  unfolding analyse_int_dg_join_env_for_def Let_def by (rule refl)
+     dg_env_for gs (snd (analyse_int_dg_join_for mode empty_pred gs p))"
+
 
 definition analyse_int_dg_per_origin_for :: "refine_mode \<Rightarrow> (int_dom exec_dg_st \<Rightarrow> bool) \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow>
     (pp \<times> unit) set
@@ -184,18 +156,10 @@ definition analyse_int_dg_per_origin_for :: "refine_mode \<Rightarrow> (int_dom 
        (cfg_exit (prog_cfg p), ())"
 
 definition analyse_int_dg_per_origin_env_for ::
-    "refine_mode \<Rightarrow> (int_dom exec_dg_st \<Rightarrow> bool) \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> pp \<Rightarrow> int_dom abs_state" where
-  "analyse_int_dg_per_origin_env_for mode empty_pred gs p v =
-     (case map_lift (fun_of_exec_dg_st_for gs) (locals (snd (analyse_int_dg_per_origin_for mode empty_pred gs p) (Inl (v, ()))))
-      of Bot \<Rightarrow> bot | Lifted s \<Rightarrow> s)"
-
-declare analyse_int_dg_per_origin_env_for_def [code del]
-
-lemma analyse_int_dg_per_origin_env_for_code [code]:
+    "refine_mode \<Rightarrow> (int_dom exec_dg_st \<Rightarrow> bool) \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog
+       \<Rightarrow> pp \<Rightarrow> int_dom abs_state" where
   "analyse_int_dg_per_origin_env_for mode empty_pred gs p =
-     (let sol = snd (analyse_int_dg_per_origin_for mode empty_pred gs p)
-      in (\<lambda>v. case map_lift (fun_of_exec_dg_st_for gs) (locals (sol (Inl (v, ()))))
-              of Bot \<Rightarrow> bot | Lifted s \<Rightarrow> s))"
-  unfolding analyse_int_dg_per_origin_env_for_def Let_def by (rule refl)
+     dg_env_for gs (snd (analyse_int_dg_per_origin_for mode empty_pred gs p))"
+
 
 end

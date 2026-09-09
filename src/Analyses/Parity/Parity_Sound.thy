@@ -77,4 +77,22 @@ theorem pctx_entry_cover_exec:
 
 end
 
+subsection \<open>What the initial abstract state describes\<close>
+
+text \<open>
+  The initial-state contract, owned here rather than reproved at each assembly
+  instance: every concrete store a run may start in is described by
+  \<^const>\<open>cinit_parity_st\<close>. A declared global starts at zero, which is even, so
+  \<^const>\<open>PEven\<close> describes it exactly; a local starts unconstrained, which
+  \<^const>\<open>PTop\<close> describes trivially. Choosing \<^const>\<open>PEven\<close> rather than
+  \<^const>\<open>PTop\<close> for globals is what makes this a fact worth owning: it is the one
+  place the zero-initialization of globals is turned into a parity.
+\<close>
+
+lemma parity_cinit_gamma:
+  "cinit_stores gs
+     \<subseteq> gamma_state_lift (map_lift (fun_of_exec_dg_st_for gs) (Lifted cinit_parity_st))"
+  by (auto simp: cinit_stores_def gamma_state_def fun_of_exec_dg_st_for_def
+      fun_of_resolved_st_q_for_def fun_of_st_cinit_parity_st_for)
+
 end

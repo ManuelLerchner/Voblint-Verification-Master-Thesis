@@ -17,12 +17,9 @@ text \<open>
 \<close>
 
 text \<open>
-  That repetition was not free. The four solver disciplines were propagated by hand as each
-  was added, and the propagation thinned: the newest discipline reached fewer domains than
-  the oldest, and a solved table with no wrapper published for it is invisible to every
-  caller that reads the surface rather than the solver. An interpretation cannot be
-  partially present, so a discipline that is interpreted has its whole surface, or none of
-  it and a name that fails to resolve.
+  An interpretation publishes the complete surface for a solved table. Solver
+  disciplines therefore share one construction and cannot accidentally expose
+  only a subset of the result and report operations.
 
   \<^const>\<open>bot\<close> at an \<^const>\<open>Bot\<close> point is the reading every existing report function
   already makes: nothing reaches the point, so no store does, and \<^const>\<open>bot\<close> is the

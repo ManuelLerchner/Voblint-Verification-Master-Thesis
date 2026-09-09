@@ -61,7 +61,9 @@ not an extension point. Nothing outside `legacy:` names an identifier a
 convention could have produced.
 
 Int sits in the registry as `assembly: false` -- registered for dispatch, not
-migrated onto the shared assembly, so all of its route names are legacy.
+yet migrated onto the shared assembly, so all of its route names are legacy.
+That is a statement about where the migration has reached, not about whether
+Int can meet the interface.
 
 ## The dispatcher tables
 
@@ -152,12 +154,27 @@ tables previously stated separately and could disagree about silently.
 
 So the value is consistent registration and cheap updates, not fewer lines.
 
+Two different things are at work here and they are worth keeping apart. The
+*assembly* -- `unit_dg_analysis` itself -- removes repeated implementation and
+repeated reasoning: the equation system, the solve, the reader, the result
+table and the soundness transport are constructed and proved once. The
+*generator* removes repeated registration text. A new domain becomes cheaper to
+integrate through both, and neither removes the domain's own mathematics.
+
 The failure mode to watch is not a domain needing a shape of its own. A domain
-can legitimately fall outside the supported family -- Int does today, and its
-`assembly: false` entry says so without distorting anything. The warning sign is
-arbitrary exceptions accumulating *inside* the generator, one per domain, at
-which point the registry has become a second programming language and the
-uniform proof text is a fiction.
+can legitimately fall outside the supported family -- `unit_dg_analysis` states
+its own scope, and a relational carrier or a multi-context policy is outside it
+by construction. Nor is a growing `legacy:` block, by itself: stable public-name
+mappings grow with the number of supported domains, which is what they are for.
+The warning signs are semantic exceptions and per-domain overrides of the proof
+text or the template, accumulating *inside* the generator, at which point the
+registry has become a second programming language and the uniform shape is a
+fiction.
+
+`assembly: false` is not that. It records migration status: Int still runs its
+own pipeline and so has no generated assembly, which says nothing about whether
+Int could meet the interface. Only an inventory of Int's own facts can settle
+that, and `refine_mode` is the part most likely to decide it.
 
 ## Validation
 

@@ -1,8 +1,8 @@
 # Analyses / Parity
 
-`Voblint_Analysis_Parity` is the even/odd domain. It exists to prove a claim about
-the framework rather than about parity: registering a third domain required no new
-spine, no copied step or combine proof, and no change to the generator or solver.
+`Voblint_Analysis_Parity` is the even/odd domain. It reuses the shared
+non-relational evaluator and routed analysis spine while retaining its own
+lattice, arithmetic, queries, and classification.
 
 It also says things the other domains cannot. `y := x * 2` is even whatever `x` is
 — a fact neither Sign nor Interval can express, since neither tracks divisibility.
@@ -13,7 +13,7 @@ It also says things the other domains cannot. `y := x * 2` is even whatever `x` 
 | --- | --- |
 | `parity` | the flat lattice `PEven`/`POdd` with top and bottom. Finite height, so the always-join solver suffices and no widening is needed. |
 | `pctx_spec` | Parity's D/G specification at the routed spine (`Parity_Sound`), built from the generic ownership-split construction and Parity's own transfer functions |
-| `pctx_eqs` / `pctx_sol` | the equation system a compiled program generates under that spec, and the solver's solution for it (`Parity_Exec_Sound`) |
+| `pctx_eqs_prog` / `pctx_sol_prog` | the equation system a compiled program generates under that spec, and the solver's solution for it. Both are abbreviations for the assembly's own names (`Parity_Checks`) |
 | classify | turning a solved abstract value into `Check_Proved`/`Check_Refuted`/`Check_Unknown` for one check condition (`Parity_Classify`) |
 
 ## The layer chain
@@ -23,17 +23,26 @@ Parity_Domain      the lattice, order, and its concretization
   -> Parity_Special / Parity_Transfer   special calls; the transfer functions
   -> Parity_Exec                        executable transfer, on the finite-map carrier
   -> Parity_Sound                       pctx_spec and its soundness; no context yet
-  -> Parity_Exec_Sound                  the arbitrary-program runtime API: equations,
-                                        solve, termination, result table
-  -> Parity_Analyses                    the three context policies over that route
-  -> Parity_Classify / Parity_Checks    check discharge and the published report
+  -> Parity_Numeric_Queries             numeric queries used by check discharge
+  -> Parity_Classify                    classification of one check condition
+  -> Parity_Assembly                    the context-insensitive route, as one
+                                        interpretation of the shared unit_dg_analysis
+  -> Parity_Analyses                    the call-string and entry-state policies
+  -> Parity_Checks                      the published result table and report
   -> Parity_Entry                       the production endpoint and its soundness
 ```
 
-`Parity_Exec_Sound` is the same layer `Sign_Exec_Sound`, `Interval_Exec_Sound` and
-`Int_Exec_Sound` occupy in their own domains: it only *computes*. The soundness half
-that turns a computed solution into a statement about source runs is `Parity_Entry`,
-the last theory in this session.
+`Parity_Assembly` is a single `global_interpretation` of `unit_dg_analysis`
+(`Shared/Result/Unit_DG_Analysis.thy`). Parity supplies ten facts — its transfer
+contract, two commutation laws, the solver contract, the classifier contract and
+the initial-state contract — and gets back the equation system, the solve, the
+reader, the result table, the report and every soundness endpoint. Nothing in
+this session builds a second copy of that pipeline. `Parity_Analyses` keeps only
+the two configurations that route calls to more than one context, which the
+assembly's fixed unit route cannot express.
+
+Parity currently has no backward-domain interpretation. Branch transfer is the
+conservative identity, so guards do not refine parity facts.
 
 ## Worked example
 

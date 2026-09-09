@@ -1,7 +1,8 @@
 theory Parity_Analyses
   imports
-    Parity_Exec_Sound
+    Parity_Assembly
     Parity_Sound
+    "Voblint_Routing.Compiled_Routed_Equations"
     Parity_Classify
     Parity_Exec
     "Voblint_Result.DG_Result_Construction"
@@ -34,254 +35,23 @@ text \<open>
   premises the solver's reachable set must satisfy, and the result and report
   tables a caller consumes.
 
-  The three configurations are independent of one another and all name the same
-  \<open>pctx_spec\<close> and \<open>pctx_sound_exec\<close>; none derives a fact about parity
+  The two configurations here are independent of one another and both name the same
+  \<open>pctx_spec\<close> and \<open>pctx_sound_exec\<close>; neither derives a fact about parity
   arithmetic. Global keys are \<^type>\<open>routed_gk\<close>, with
   \<^const>\<open>Analysis_Global\<close> at \<^typ>\<open>unit\<close> since Parity publishes no named
   global of its own; the call-string configuration uses the shared
   \<^typ>\<open>call_string_gk\<close>.
 \<close>
-
-section \<open>Parity at the routed spine, instantiated at the unit context\<close>
-
 text \<open>
-  Parity's routed-unit-context instance, the fourth domain on the shared spine after
-  Sign, Interval and Int. It is also the architecture's own extensibility test: Parity
-  arrived with a complete domain stack --- lattice, transfer, numeric queries, checks,
-  a D/G specification and executable soundness --- but no routed-capability bridge, so
-  what this file needs to supply is exactly the measure of how much a mature domain
-  still owes the framework.
-
-  The answer is: the two primitive commute facts it already had.
-  \<^const>\<open>parity_tf_st_for\<close>/\<^const>\<open>parity_enter_st_for\<close>'s own
-  \<open>parity_tf_st_for_commute\<close>/\<open>parity_enter_st_for_commute\<close>
-  (\<^theory>\<open>Voblint_Analysis_Parity.Parity_Exec\<close>) already have precisely the shape
-  \<^locale>\<open>routed_dg_domain_exec\<close> assumes, so the interpretation below discharges by
-  citing them, and every Hstep/Henter/Hcomb fact the routed spine needs follows from the
-  locale rather than from new Parity mathematics. Nothing in this file reasons about
-  parity arithmetic at all.
+  The unit context is not among them. That configuration lives in
+  \<^theory>\<open>Voblint_Analysis_Parity.Parity_Assembly\<close>, as interpretations of the shared
+  \<^locale>\<open>unit_dg_analysis\<close> --- one per solver discipline. Each derives the equation
+  system, the solve, the result table, the report and every soundness endpoint from
+  Parity's transfer functions, its initial state, its check classifier and the chosen
+  solver's own post-solution and finiteness contracts. What remains here are the two
+  configurations that route calls to more than one context, which the assembly's fixed
+  unit route cannot express.
 \<close>
-
-subsection \<open>Global key: real globals vs callee-entry seed slots\<close>
-
-
-subsection \<open>The routed unit-context D/G spec\<close>
-
-text \<open>
-  A Base-style whole-state specification over
-  \<^const>\<open>parity_tf_st_for\<close>/\<^const>\<open>parity_enter_st_for\<close>
-  (\<^theory>\<open>Voblint_Analysis_Parity.Parity_Exec\<close>): the routed generator wraps around the
-  spec, and every domain-transfer soundness fact about the spec is untouched by
-  that wrapping.
-\<close>
-
-
-subsection \<open>Domain commute facts, at the routed unit spec\<close>
-
-text \<open>
-  The whole of Parity's obligation to the routed spine, in one interpretation.
-  \<^locale>\<open>routed_domain_exec\<close> adds only the seed-key pair, its distinctness, and the
-  two routing functions on top of \<^locale>\<open>routed_dg_domain_exec\<close>, so the interpretation
-  carries no Parity mathematics: the first three obligations are Parity's own
-  pre-existing commute lemmas, cited unchanged, and the last two are datatype
-  distinctness for \<^type>\<open>routed_gk\<close> and the free routing agreement \<^const>\<open>route_unit\<close> enjoys
-  by ignoring its \<open>'D\<close> argument outright.
-\<close>
-
-context
-  fixes gs :: "vname \<Rightarrow> bool" and empty_pred :: "parity exec_dg_st \<Rightarrow> bool"
-  assumes exact: "\<And>s. empty_pred s = is_empty_state (fun_of_resolved_st_q_for gs s)"
-begin
-
-interpretation parity_unit: routed_domain_exec
-  gs empty_pred "parity_tf_st_for gs" "parity_enter_st_for gs"
-  skip_parity assign_parity special_parity branch_parity body_parity return_parity
-  "enter_parity_ci_for gs" event_parity
-  "Analysis_Global ()" Activation_Seed route_unit route_unit static_resolve static_resolve
-  by unfold_locales
-     (rule parity_tf_st_for_commute[unfolded parity_tf_abs_def],
-      rule parity_enter_st_for_commute, rule exact, simp, simp,
-
-      simp add: static_resolve_def)
-
-lemmas parity_pp_st_gen = parity_unit.pp_st
-
-end
-
-subsection \<open>The certified executable post-solution, generic per compiled program\<close>
-
-context
-  fixes gs :: "vname \<Rightarrow> bool" and empty_pred :: "parity exec_dg_st \<Rightarrow> bool"
-    and Pi :: proc_table and ps :: "pname list"
-  assumes solves: "pctx_terminates gs empty_pred Pi ps"
-    and exact: "\<And>s. empty_pred s = is_empty_state (fun_of_resolved_st_q_for gs s)"
-begin
-
-lemma pctx_solve_dom:
-  "TD_side_always_join_Interp.solve_dom TYPE((unit, unit) routed_gk)
-     TYPE((parity exec_dg_st lifted, parity exec_dg_st lifted) dg_state)
-     (pctx_eqs gs empty_pred Pi ps) (cfg_exit (compile_prog Pi ps), ())"
-  using solves[unfolded pctx_terminates_def] .
-
-lemma pctx_pp_st:
-  "part_post_solution (pctx_eqs gs empty_pred Pi ps)
-     (cfg_exit (compile_prog Pi ps), ())
-     (snd (pctx_sol gs empty_pred Pi ps)) (fst (pctx_sol gs empty_pred Pi ps))"
-  using TD_side_always_join_Interp.partial_post_solution
-          [OF pctx_solve_dom, of "fst (pctx_sol gs empty_pred Pi ps)"
-             "snd (pctx_sol gs empty_pred Pi ps)"]
-  unfolding pctx_sol_def by simp
-
-text \<open>The solver's post-solution, for the unbuffered routed generator at the executable
-  spec: the shape \<^locale>\<open>dg_ctx_activation_base\<close> consumes directly.\<close>
-
-theorem pctx_pp_routed:
-  "part_post_solution
-     (routed_node_rhs intra_predecessor_addr_list (\<lambda>_. Analysis_Global ()) route_unit
-        (\<lambda>ctx' src a. dg_spec_edge_tree (pctx_spec gs empty_pred) a src (\<lambda>_. Analysis_Global ()))
-        (routed_call_tree (pctx_spec gs empty_pred) (Analysis_Global ()) Activation_Seed (static_resolve (compile_prog Pi ps)) (\<lambda>d. d = Bot))
-        (routed_entry_seed_tree Activation_Seed)
-        (compile_prog Pi ps) Bot (Lifted cinit_parity_st) Bot)
-     (cfg_exit (compile_prog Pi ps), ())
-     (snd (pctx_sol gs empty_pred Pi ps)) (fst (pctx_sol gs empty_pred Pi ps))"
-  using pctx_pp_st unfolding pctx_eqs_def pctx_spec_def by (rule parity_pp_st_gen[OF exact])
-end
-
-section \<open>Activation-indexed collecting soundness, generic per compiled program\<close>
-
-text \<open>
-  The routed spine is interpreted at Parity's executable carrier and fed the solver's own
-  table: a local unknown concretizes to \<^const>\<open>gamma_state_lift\<close> of its readback, the
-  covered reader \<open>pctx_sg_st\<close> hands the table's local slot through unchanged, and no
-  solved system is transported between carriers. \<open>pctx_gamma\<close> names that
-  concretization outside the interpretation so a downstream theory can state it.
-\<close>
-
-definition pctx_sg_st ::
-    "(vname \<Rightarrow> bool) \<Rightarrow> (parity exec_dg_st \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list
-       \<Rightarrow> pp \<times> unit + (unit, unit) routed_gk \<Rightarrow> parity exec_dg_st lifted" where
-  "pctx_sg_st gs empty_pred Pi ps =
-     solved_local_reader (fst (pctx_sol gs empty_pred Pi ps))
-                          (snd (pctx_sol gs empty_pred Pi ps))"
-
-context
-  fixes gs :: "vname \<Rightarrow> bool" and empty_pred :: "parity exec_dg_st \<Rightarrow> bool"
-  assumes exact: "\<And>s. empty_pred s = is_empty_state (fun_of_resolved_st_q_for gs s)"
-begin
-
-interpretation parity_unit: routed_domain_exec
-  gs empty_pred "parity_tf_st_for gs" "parity_enter_st_for gs"
-  skip_parity assign_parity special_parity branch_parity body_parity return_parity
-  "enter_parity_ci_for gs" event_parity
-  "Analysis_Global ()" Activation_Seed route_unit route_unit static_resolve static_resolve
-  by unfold_locales
-     (rule parity_tf_st_for_commute[unfolded parity_tf_abs_def],
-      rule parity_enter_st_for_commute, rule exact, simp, simp,
-
-      simp add: static_resolve_def)
-
-end
-
-context
-  fixes gs :: "vname \<Rightarrow> bool" and empty_pred :: "parity exec_dg_st \<Rightarrow> bool"
-    and Pi :: proc_table and ps :: "pname list"
-  assumes solves: "pctx_terminates gs empty_pred Pi ps"
-    and exact: "\<And>s. empty_pred s = is_empty_state (fun_of_resolved_st_q_for gs s)"
-    and entry_cov: "(cfg_entry (compile_prog Pi ps), ()) \<in> fst (pctx_sol gs empty_pred Pi ps)"
-    and fwd_ok: "\<And>u a v ctx. (u, ctx) \<in> fst (pctx_sol gs empty_pred Pi ps)
-                   \<Longrightarrow> (u, a, v) \<in> intra (compile_prog Pi ps)
-                   \<Longrightarrow> (v, ctx) \<in> fst (pctx_sol gs empty_pred Pi ps)"
-    and call_fwd_ok: "\<And>u ctx dst pars args p cont.
-        (u, ctx) \<in> fst (pctx_sol gs empty_pred Pi ps)
-        \<Longrightarrow> (u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps)
-        \<Longrightarrow> (FunctionEntry p, ()) \<in> fst (pctx_sol gs empty_pred Pi ps)"
-    and comb_fwd_ok: "\<And>cl c1 dst pars args p cont.
-        (cl, c1) \<in> fst (pctx_sol gs empty_pred Pi ps)
-        \<Longrightarrow> (cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps)
-        \<Longrightarrow> (cont, c1) \<in> fst (pctx_sol gs empty_pred Pi ps)"
-begin
-
-interpretation pctx_compiled: compiled_cfg Pi ps "compile_prog Pi ps"
-  by (unfold_locales; simp add: compile_prog_finite)
-
-lemmas pctx_fin = pctx_compiled.finite_intra
-lemmas pctx_finC = pctx_compiled.finite_calls
-
-lemma pctx_sg_st_covered:
-  "(v, ctx) \<in> fst (pctx_sol gs empty_pred Pi ps)
-   \<Longrightarrow> pctx_sg_st gs empty_pred Pi ps (Inl (v, ctx))
-         = locals (snd (pctx_sol gs empty_pred Pi ps) (Inl (v, ctx)))"
-  by (simp add: pctx_sg_st_def)
-
-lemma pctx_sg_st_uncovered_empty:
-  "(v, ctx) \<notin> fst (pctx_sol gs empty_pred Pi ps)
-     \<Longrightarrow> gamma_state_lift (map_lift (fun_of_resolved_st_q_for gs)
-           (pctx_sg_st gs empty_pred Pi ps (Inl (v, ctx)))) = {}"
-  by (simp add: pctx_sg_st_def)
-
-subsection \<open>Instantiating the generic DG-native activation discharge\<close>
-
-interpretation pctx_dg_base: sound_dg_spec_core "pctx_spec gs empty_pred" "pctx_gamma gs" gs
-  by (rule pctx_sound_exec[OF exact])
-
-interpretation pctx_routed: unit_routed_context "pctx_spec gs empty_pred" "pctx_gamma gs" gs
-    "compile_prog Pi ps" "Analysis_Global ()" Bot "Lifted cinit_parity_st" Bot
-    "snd (pctx_sol gs empty_pred Pi ps)" "fst (pctx_sol gs empty_pred Pi ps)"
-    "(cfg_exit (compile_prog Pi ps), ())" "pctx_sg_st gs empty_pred Pi ps" Activation_Seed
-    "\<lambda>d. d = Bot" "\<lambda>m. gamma_state_lift (map_lift (fun_of_resolved_st_q_for gs) m)"
-proof (unfold_locales, goal_cases FinE PP SgCov SgUncov Fwd FinC CallsUnique SeedKey
-    IsBotBot IsBotSound EnterComplete CallFwd CombFwd)
-  case FinE show ?case by (rule pctx_fin)
-next
-  case PP show ?case by (rule pctx_pp_routed[OF solves exact])
-next
-  case (SgCov v ctx) then show ?case
-    by (simp add: pctx_sg_st_def pctx_gamma_def)
-next
-  case (SgUncov v ctx) then show ?case by (rule pctx_sg_st_uncovered_empty)
-next
-  case (Fwd u a v ctx) then show ?case by (rule fwd_ok)
-next
-  case FinC show ?case by (rule pctx_finC)
-next
-  case CallsUnique show ?case
-    unfolding calls_source_unique_def using compile_prog_calls_source_unique by blast
-next
-  case (SeedKey p ctx) show ?case by simp
-next
-  case IsBotBot show ?case by simp
-next
-  case (IsBotSound d gv) then show ?case by (simp add: pctx_gamma_def)
-next
-  case (EnterComplete u ctx dst pars args p cont s)
-  let ?ci = "call_info_of (CallEdge dst pars args) p"
-  let ?caller = "locals (snd (pctx_sol gs empty_pred Pi ps) (Inl (u, ctx)))"
-  have cov: "entry_pairs_cover
-      (\<lambda>d. pctx_gamma gs d
-             (globs (snd (pctx_sol gs empty_pred Pi ps) (Inr (Analysis_Global ())))))
-      s (call_enter gs (CallEdge dst pars args) s)
-      [(?caller, transfer_lift empty_pred (parity_enter_st_for gs ?ci) ?caller)]"
-    using pctx_entry_cover_exec[OF exact EnterComplete(3), where ci = ?ci] by simp
-  show ?case
-    unfolding pctx_spec_def dgs_enter_local_state_st_for_lifted
-    using enter_runs_local_enter_transfer enter_deps_local_enter_transfer cov by fastforce
-next
-  case (CallFwd u ctx dst pars args p cont)
-  show ?case using CallFwd(1,2) call_fwd_ok unfolding route_unit_def by blast
-next
-  case (CombFwd cl c1 dst pars args p cont)
-  show ?case using CombFwd(1,2) comb_fwd_ok by blast
-qed
-
-subsection \<open>Activation-indexed collecting soundness\<close>
-
-lemma pctx_cinit_le_cinit_parity_st:
-  "cinit_stores gs \<subseteq> pctx_gamma gs (Lifted cinit_parity_st) Bot"
-  by (auto simp: pctx_gamma_def cinit_stores_def gamma_state_def fun_of_resolved_st_q_for_def
-                 fun_of_st_cinit_parity_st_for)
-
-end
-
 
 
 section \<open>Parity at the routed spine, instantiated at the call-string context\<close>
@@ -310,15 +80,8 @@ subsection \<open>The routed equation system and its executable solution\<close>
 definition pcs_eqs ::
     "nat \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> (parity exec_dg_st \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> (pp \<times> call_string, call_string_gk, (parity exec_dg_st lifted, parity exec_dg_st lifted) dg_state) eqsT" where
   "pcs_eqs k gs empty_pred Pi ps =
-     routed_node_rhs_buffered intra_predecessor_addr_list (\<lambda>_. Call_String_Context.Global)
-       (cs_route k)
-       (\<lambda>ctx' src a. dg_spec_edge_tree (pctx_spec gs empty_pred) a src
-          (\<lambda>_. Call_String_Context.Global))
-       (routed_call_tree (pctx_spec gs empty_pred)
-          Call_String_Context.Global Call_String_Context.Seed
-          (static_resolve (compile_prog Pi ps)) (\<lambda>d. d = Bot))
-       (routed_entry_seed_tree Call_String_Context.Seed)
-       (compile_prog Pi ps) Bot (Lifted cinit_parity_st) Bot"
+     call_string_eqs_for k (pctx_spec gs empty_pred)
+       (compile_prog Pi ps) (Lifted cinit_parity_st)"
 
 definition pcs_sol ::
     "nat \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> (parity exec_dg_st \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> (pp \<times> call_string) set \<times> (pp \<times> call_string + call_string_gk \<Rightarrow> (parity exec_dg_st lifted, parity exec_dg_st lifted) dg_state)" where
@@ -414,7 +177,10 @@ theorem pcs_pp_routed:
         (compile_prog Pi ps) Bot (Lifted cinit_parity_st) Bot)
      (cfg_exit (compile_prog Pi ps), [])
      (snd (pcs_sol k gs empty_pred Pi ps)) (fst (pcs_sol k gs empty_pred Pi ps))"
-  using pcs_pp_st unfolding pcs_eqs_def pctx_spec_def by (rule parity_cs_pp_st_gen[OF exact])
+  using pcs_pp_st
+  unfolding pcs_eqs_def call_string_eqs_for_def compiled_routed_eqs_for_def pctx_spec_def
+    bot_lifted_eq
+  by (rule parity_cs_pp_st_gen[OF exact])
 end
 
 subsection \<open>The analysis-level result at the call-string context\<close>
@@ -499,7 +265,7 @@ next
   case (IsBotSound d g') then show ?case by (simp add: pctx_gamma_def)
 next
   case (ResolveSound u ctx dst pars args p cont s)
-  thus ?case by (simp add: static_resolve_iff compile_prog_finite)
+  thus ?case by (simp add: compile_prog_finite)
 next
   case (EnterCover u ctx dst pars args p cont s ctx')
   let ?ci = "call_info_of (CallEdge dst pars args) p"
@@ -511,7 +277,7 @@ next
       [(?caller, transfer_lift empty_pred (parity_enter_st_for gs ?ci) ?caller)]"
     using pctx_entry_cover_exec[OF exact EnterCover(3), where ci = ?ci] by simp
   have req: "cs_route k u ctx entry (CallEdge dst pars args) = ctx'"
-    for entry
+    for entry :: "parity exec_dg_st lifted"
     using EnterCover(4)[unfolded call_context_rel_of_fun_iff]
     by (simp add: cs_route_context_agree)
   show ?case
@@ -587,22 +353,7 @@ text \<open>
 definition analyse_parity_call_string_result_for ::
     "nat \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> (call_string, parity abs_state) analysis_result" where
   "analyse_parity_call_string_result_for k gs p =
-     Analysis_Result
-       (fst (pcs_sol_prog k gs p))
-       (\<lambda>v ctx. readback_result_value gs
-                  (canonicalize_lift (resolved_st_q_is_bot_for (declared_global_vars p))
-                    (locals (snd (pcs_sol_prog k gs p) (Inl (v, ctx))))))"
-
-declare analyse_parity_call_string_result_for_def [code del]
-
-lemma analyse_parity_call_string_result_for_code [code]:
-  "analyse_parity_call_string_result_for k gs p =
-     (let sol = pcs_sol_prog k gs p; gl = declared_global_vars p
-      in Analysis_Result (fst sol)
-           (\<lambda>v ctx. readback_result_value gs
-                      (canonicalize_lift (resolved_st_q_is_bot_for gl)
-                        (locals (snd sol (Inl (v, ctx)))))))"
-  unfolding analyse_parity_call_string_result_for_def Let_def by (rule refl)
+     dg_result_for gs (declared_global_vars p) (pcs_sol_prog k gs p)"
 
 definition analyse_parity_call_string_result ::
     "nat \<Rightarrow> imp_prog \<Rightarrow> (call_string, parity abs_state) analysis_result" where
@@ -689,13 +440,9 @@ subsection \<open>The routed equation system and its executable solution\<close>
 definition pctx_entry_eqs ::
     "(vname \<Rightarrow> bool) \<Rightarrow> (parity exec_dg_st \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> (pp \<times> parity list, (unit, parity list) routed_gk, (parity exec_dg_st lifted, parity exec_dg_st lifted) dg_state) eqsT" where
   "pctx_entry_eqs gs empty_pred Pi ps =
-     routed_node_rhs_buffered intra_predecessor_addr_list (\<lambda>_. Analysis_Global ())
-       (pctx_entry_route_gen gs empty_pred)
-       (\<lambda>ctx' src a. dg_spec_edge_tree (pctx_spec gs empty_pred) a src (\<lambda>_. Analysis_Global ()))
-       (routed_call_tree (pctx_spec gs empty_pred) (Analysis_Global ()) Activation_Seed
-          (static_resolve (compile_prog Pi ps)) (\<lambda>d. d = Bot))
-       (routed_entry_seed_tree Activation_Seed)
-       (compile_prog Pi ps) Bot (Lifted cinit_parity_st) Bot"
+     compiled_routed_eqs_for (Analysis_Global ()) Activation_Seed
+       (pctx_entry_route_gen gs empty_pred) (pctx_spec gs empty_pred)
+       (compile_prog Pi ps) (Lifted cinit_parity_st)"
 
 definition pctx_entry_sol ::
     "(vname \<Rightarrow> bool) \<Rightarrow> (parity exec_dg_st \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> (pp \<times> parity list) set \<times> (pp \<times> parity list + (unit, parity list) routed_gk \<Rightarrow> (parity exec_dg_st lifted, parity exec_dg_st lifted) dg_state)" where
@@ -827,7 +574,8 @@ theorem pctx_entry_pp_routed:
         (compile_prog Pi ps) Bot (Lifted cinit_parity_st) Bot)
      (cfg_exit (compile_prog Pi ps), [])
      (snd (pctx_entry_sol gs empty_pred Pi ps)) (fst (pctx_entry_sol gs empty_pred Pi ps))"
-  using pctx_entry_pp_st unfolding pctx_entry_eqs_def pctx_spec_def
+  using pctx_entry_pp_st
+  unfolding pctx_entry_eqs_def compiled_routed_eqs_for_def pctx_spec_def bot_lifted_eq
   by (rule parity_es_pp_st_gen[OF exact])
 
 end
@@ -1058,22 +806,7 @@ section \<open>Solved-result table\<close>
 definition analyse_parity_entry_state_result_for ::
     "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> (parity list, parity abs_state) analysis_result" where
   "analyse_parity_entry_state_result_for gs p =
-     Analysis_Result
-       (fst (pctx_entry_sol_prog gs p))
-       (\<lambda>v ctx. readback_result_value gs
-                  (canonicalize_lift (resolved_st_q_is_bot_for (declared_global_vars p))
-                    (locals (snd (pctx_entry_sol_prog gs p) (Inl (v, ctx))))))"
-
-declare analyse_parity_entry_state_result_for_def [code del]
-
-lemma analyse_parity_entry_state_result_for_code [code]:
-  "analyse_parity_entry_state_result_for gs p =
-     (let sol = pctx_entry_sol_prog gs p; gl = declared_global_vars p
-      in Analysis_Result (fst sol)
-           (\<lambda>v ctx. readback_result_value gs
-                      (canonicalize_lift (resolved_st_q_is_bot_for gl)
-                        (locals (snd sol (Inl (v, ctx)))))))"
-  unfolding analyse_parity_entry_state_result_for_def Let_def by (rule refl)
+     dg_result_for gs (declared_global_vars p) (pctx_entry_sol_prog gs p)"
 
 definition analyse_parity_entry_state_result ::
     "imp_prog \<Rightarrow> (parity list, parity abs_state) analysis_result" where

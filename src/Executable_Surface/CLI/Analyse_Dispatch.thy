@@ -5,6 +5,7 @@ theory Analyse_Dispatch
     Voblint_Analysis_Int.Int_Entry
     Voblint_Analysis_Parity.Parity_Entry
     Voblint_Analysis_Interval.Interval_Analyses
+    Voblint_Analysis_Interval.Interval_Solver_Analyses
     Voblint_Analysis_Sign.Sign_Analyses
     Voblint_Analysis_Int.Int_Analyses
     Analysis_Config
@@ -41,8 +42,8 @@ text \<open>
   \<open>Solver_Warrow\<close>, only a genuine unbounded loop still needs warrowing.
   \<open>analyse_interval_td_report\<close>'s soundness theorems
   (\<^theory>\<open>Voblint_Analysis_Interval.Interval_Entry\<close>'s
-  \<open>analyse_interval_td_report_sound_proved\<close>/\<open>_refuted\<close>, built on the routed spine's own
-  \<open>interval_conf_result_node_sound_warrow\<close>) make dispatching Interval's production default to the
+  \<open>analyse_interval_td_report_sound_proved\<close>/\<open>_refuted\<close>, obtained from the shared
+  assembly's own \<open>report_proved_sound_closure\<close>) make dispatching Interval's production default to the
   warrowing report a like-for-like swap for callers, not a precision or soundness downgrade.
 \<close>
 
@@ -299,7 +300,7 @@ corollary analyse_interval_proved_sound:
   shows "\<forall>s \<in> ltr_collect (declared_global p) (prog_cfg p) (cinit_stores (declared_global p)) v.
            truthy (aval c s)"
   by (rule analyse_interval_td_report_sound_proved
-        [OF wf solve entry_cov fwd_ok call_fwd_ok comb_fwd_ok mem[unfolded analyse.simps]])
+        [OF solve entry_cov fwd_ok call_fwd_ok comb_fwd_ok mem[unfolded analyse.simps]])
 
 corollary analyse_interval_refuted_sound:
   fixes p :: imp_prog and v :: pp and c :: exp
@@ -321,7 +322,7 @@ corollary analyse_interval_refuted_sound:
   shows "\<forall>s \<in> ltr_collect (declared_global p) (prog_cfg p) (cinit_stores (declared_global p)) v.
            \<not> truthy (aval c s)"
   by (rule analyse_interval_td_report_sound_refuted
-        [OF wf solve entry_cov fwd_ok call_fwd_ok comb_fwd_ok mem[unfolded analyse.simps]])
+        [OF solve entry_cov fwd_ok call_fwd_ok comb_fwd_ok mem[unfolded analyse.simps]])
 
 
 text \<open>
@@ -337,8 +338,7 @@ text \<open>
 
 corollary analyse_sign_proved_sound:
   fixes p :: imp_prog and v :: pp and c :: exp
-  assumes wf: "wf_compile_input (declared_global p) (prog_table p) (prog_procs p)"
-      and solve: "sctx_terminates_prog (declared_global p) p"
+  assumes solve: "sctx_terminates_prog (declared_global p) p"
       and entry_cov: "(cfg_entry (prog_cfg p), ()) \<in> fst (sctx_sol_prog (declared_global p) p)"
       and fwd_ok:
         "\<And>u a w ctx. (u, ctx) \<in> fst (sctx_sol_prog (declared_global p) p)
@@ -354,12 +354,11 @@ corollary analyse_sign_proved_sound:
       and mem: "(v, c, Check_Proved) \<in> set (analyse Sign_Analysis p)"
   shows "\<forall>s \<in> ltr_collect (declared_global p) (prog_cfg p) (cinit_stores (declared_global p)) v. truthy (aval c s)"
   by (rule analyse_sign_report_sound_proved
-        [OF wf solve entry_cov fwd_ok call_fwd_ok comb_fwd_ok mem[unfolded analyse.simps]])
+        [OF solve entry_cov fwd_ok call_fwd_ok comb_fwd_ok mem[unfolded analyse.simps]])
 
 corollary analyse_sign_refuted_sound:
   fixes p :: imp_prog and v :: pp and c :: exp
-  assumes wf: "wf_compile_input (declared_global p) (prog_table p) (prog_procs p)"
-      and solve: "sctx_terminates_prog (declared_global p) p"
+  assumes solve: "sctx_terminates_prog (declared_global p) p"
       and entry_cov: "(cfg_entry (prog_cfg p), ()) \<in> fst (sctx_sol_prog (declared_global p) p)"
       and fwd_ok:
         "\<And>u a w ctx. (u, ctx) \<in> fst (sctx_sol_prog (declared_global p) p)
@@ -375,7 +374,7 @@ corollary analyse_sign_refuted_sound:
       and mem: "(v, c, Check_Refuted) \<in> set (analyse Sign_Analysis p)"
   shows "\<forall>s \<in> ltr_collect (declared_global p) (prog_cfg p) (cinit_stores (declared_global p)) v. \<not> truthy (aval c s)"
   by (rule analyse_sign_report_sound_refuted
-        [OF wf solve entry_cov fwd_ok call_fwd_ok comb_fwd_ok mem[unfolded analyse.simps]])
+        [OF solve entry_cov fwd_ok call_fwd_ok comb_fwd_ok mem[unfolded analyse.simps]])
 
 text \<open>
   \<open>analyse_int_proved_sound\<close>/\<open>analyse_int_refuted_sound\<close> restate
@@ -478,7 +477,7 @@ proof (cases D)
     by simp_all
   from mem Sign_Analysis have m: "(v, c, Check_Proved) \<in> set (analyse Sign_Analysis p)" by simp
   show ?thesis
-    by (rule analyse_sign_proved_sound[OF wf solve _ _ _ _ m]) (use cover in auto)
+    by (rule analyse_sign_proved_sound[OF solve _ _ _ _ m]) (use cover in auto)
 next
   case Interval_Analysis
   with cert have solve: "interval_conf_terminates_prog_warrow (declared_global p) p"
@@ -504,7 +503,7 @@ next
     by simp_all
   from mem Parity_Analysis have m: "(v, c, Check_Proved) \<in> set (analyse_parity_report p)" by simp
   show ?thesis
-    by (rule analyse_parity_report_sound_proved[OF wf solve _ _ _ _ m]) (use cover in auto)
+    by (rule analyse_parity_report_sound_proved[OF solve _ _ _ _ m]) (use cover in auto)
 qed
 
 lemma analyse_refuted_sound:
@@ -521,7 +520,7 @@ proof (cases D)
     by simp_all
   from mem Sign_Analysis have m: "(v, c, Check_Refuted) \<in> set (analyse Sign_Analysis p)" by simp
   show ?thesis
-    by (rule analyse_sign_refuted_sound[OF wf solve _ _ _ _ m]) (use cover in auto)
+    by (rule analyse_sign_refuted_sound[OF solve _ _ _ _ m]) (use cover in auto)
 next
   case Interval_Analysis
   with cert have solve: "interval_conf_terminates_prog_warrow (declared_global p) p"
@@ -547,7 +546,7 @@ next
     by simp_all
   from mem Parity_Analysis have m: "(v, c, Check_Refuted) \<in> set (analyse_parity_report p)" by simp
   show ?thesis
-    by (rule analyse_parity_report_sound_refuted[OF wf solve _ _ _ _ m]) (use cover in auto)
+    by (rule analyse_parity_report_sound_refuted[OF solve _ _ _ _ m]) (use cover in auto)
 qed
 
 text \<open>

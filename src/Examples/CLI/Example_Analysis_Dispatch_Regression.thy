@@ -108,14 +108,7 @@ text \<open>
 
 lemma dispatch_demo_terminates:
   "interval_conf_terminates_prog_warrow (declared_global dispatch_demo_prog) dispatch_demo_prog"
-proof (rule interval_conf_terminates_prog_warrow_via_solve_c)
-  show "TD_side_warrowing_apinis_Interp_solve_c
-          (interval_conf_eqs (declared_global dispatch_demo_prog)
-             (resolved_st_q_is_bot_for (declared_global_vars dispatch_demo_prog))
-             (prog_table dispatch_demo_prog) (prog_procs dispatch_demo_prog))
-          (cfg_exit (compile_prog (prog_table dispatch_demo_prog) (prog_procs dispatch_demo_prog)), ()) \<noteq> None"
-    by eval
-qed
+  by (rule interval_conf_terminates_prog_warrow_via_solve_c) eval
 
 lemma dispatch_demo_cover_edge_ball:
   "\<forall>(u, a, w) \<in> intra (prog_cfg dispatch_demo_prog).

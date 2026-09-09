@@ -6,7 +6,9 @@ session Voblint_Examples_Sign in "." = "Voblint_Analysis_Sign" +
   directories
     "CallString"
   theories
+    Example_Sign_Domain_Ops
     Exec_Sign_DG_Run
+    Example_Sign_Unit_Assembly
     Example_Sign_DG_Custom_Body
     Example_Sign_DG_Custom_Combine
     Example_Sign_Backward_Pollution_Regression

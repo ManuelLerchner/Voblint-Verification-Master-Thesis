@@ -8,6 +8,8 @@ session Voblint_Analysis_Sign in "." = "Voblint_Nonrelational" +
     "Voblint_Framework"
     "Voblint_Solver"
     "TD"
+  directories
+    "generated"
   theories
     Sign_Lattice
     Sign_Arithmetic
@@ -15,11 +17,10 @@ session Voblint_Analysis_Sign in "." = "Voblint_Nonrelational" +
     Sign_Special
     Sign_Numeric_Queries
     Sign_Transfer
-    Sign_Domain
     Sign_Exec
     Sign_Sound
-    Sign_Exec_Sound
-    Sign_Analyses
     Sign_Classify
+    Sign_Assembly
+    Sign_Analyses
     Sign_Checks
     Sign_Entry

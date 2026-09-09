@@ -1,212 +1,151 @@
 theory Parity_Checks
-  imports Parity_Classify
+  imports Parity_Assembly
     "Voblint_Framework.Check_Report"
-    "Voblint_Framework.DG_Analysis_Adapter"
     "Voblint_Result.Analysis_Surface"
-    Parity_Analyses
 begin
 
-section \<open>The generic report adapter, at the routed-unit context\<close>
+section \<open>What a whole-program Parity run reports\<close>
 
 text \<open>
-  What a whole-program Parity run reports. The three-way classifier itself is
-  \<^theory>\<open>Voblint_Analysis_Parity.Parity_Classify\<close>'s and says nothing about how the program
-  was solved; this theory pairs it with one particular solved system -- the
-  context-insensitive routed-unit run -- and publishes the result tables and check
-  reports a caller consumes.
+  Parity's public runtime API: the names a caller outside this session uses, each
+  bound to one of \<open>Parity_Assembly\<close>'s two instances of the shared unit-context
+  assembly. Those instances define the equation system, the solve, the result table
+  and the classified report; nothing is computed at this point, and nothing is
+  rebuilt here.
 
-  A context-sensitive run pairs the same classifier with a different solved system
-  instead, so it needs \<open>Parity_Classify\<close> alone and not the tables below.
+  This theory needs neither routing policy from \<open>Parity_Analyses\<close>: a
+  context-sensitive run pairs the same classifier with a different solved system
+  and reaches none of the names below.
 \<close>
 
+subsection \<open>The solved system, under the name the CLI already uses\<close>
 
 text \<open>
-  Interpreting \<^locale>\<open>dg_analysis_adapter\<close> at \<open>Parity_Analyses\<close>'s own routed-unit
-  solved system, mirroring \<open>Sign_Checks\<close>'s own interpretation exactly. Every obligation is
-  either one that theory's \<open>pctx_routed\<close> interpretation already discharges, or
-  one that collapses at \<^const>\<open>route_unit\<close>/\<^const>\<open>enterc_unit\<close>; only
-  \<open>classify_proved\<close>/\<open>classify_refuted\<close> are Parity's own, and both are the pre-existing
-  \<^const>\<open>parity_classify_check\<close> soundness facts above. No Parity-specific result, report,
-  or node-soundness construction appears anywhere below --- the adapter derives all three
-  generically.
+  These three are notation, not a layer: an \<^theory_text>\<open>abbreviation\<close> introduces no
+  constant, so nothing has to be unfolded to get back to the assembly and nothing
+  extra reaches the code generator.
 \<close>
 
-context
-  fixes gs :: "vname \<Rightarrow> bool" and empty_pred :: "parity exec_dg_st \<Rightarrow> bool"
-    and Pi :: proc_table and ps :: "pname list"
-  assumes solves: "pctx_terminates gs empty_pred Pi ps"
-    and exact: "\<And>s. empty_pred s = is_empty_state (fun_of_resolved_st_q_for gs s)"
-    and entry_cov: "(cfg_entry (compile_prog Pi ps), ())
-                      \<in> fst (pctx_sol gs empty_pred Pi ps)"
-    and fwd_ok: "\<And>u a v ctx. (u, ctx) \<in> fst (pctx_sol gs empty_pred Pi ps)
-                   \<Longrightarrow> (u, a, v) \<in> intra (compile_prog Pi ps)
-                   \<Longrightarrow> (v, ctx) \<in> fst (pctx_sol gs empty_pred Pi ps)"
-    and call_fwd_ok: "\<And>u ctx dst pars args p cont.
-        (u, ctx) \<in> fst (pctx_sol gs empty_pred Pi ps)
-        \<Longrightarrow> (u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps)
-        \<Longrightarrow> (FunctionEntry p, ()) \<in> fst (pctx_sol gs empty_pred Pi ps)"
-    and comb_fwd_ok: "\<And>cl c1 dst pars args p cont.
-        (cl, c1) \<in> fst (pctx_sol gs empty_pred Pi ps)
-        \<Longrightarrow> (cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps)
-        \<Longrightarrow> (cont, c1) \<in> fst (pctx_sol gs empty_pred Pi ps)"
-begin
+abbreviation pctx_eqs_prog ::
+    "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog
+       \<Rightarrow> (pp \<times> unit, (unit, unit) routed_gk,
+            (parity exec_dg_st lifted, parity exec_dg_st lifted) dg_state) eqsT" where
+  "pctx_eqs_prog \<equiv> parity_unit_equations"
 
-interpretation pctx_dg_base: sound_dg_spec_core "pctx_spec gs empty_pred" "pctx_gamma gs" gs
-  by (rule pctx_sound_exec[OF exact])
+abbreviation pctx_sol_prog ::
+    "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog
+       \<Rightarrow> (pp \<times> unit) set
+            \<times> (pp \<times> unit + (unit, unit) routed_gk
+                 \<Rightarrow> (parity exec_dg_st lifted, parity exec_dg_st lifted) dg_state)" where
+  "pctx_sol_prog \<equiv> parity_unit_solution"
 
-interpretation pctx_adapter: routed_analysis_sound
-    "pctx_spec gs empty_pred" "pctx_gamma gs" gs
-    "compile_prog Pi ps" "Analysis_Global ()" route_unit Bot "Lifted cinit_parity_st" Bot
-    "snd (pctx_sol gs empty_pred Pi ps)" "fst (pctx_sol gs empty_pred Pi ps)"
-    "(cfg_exit (compile_prog Pi ps), ())"
-    Activation_Seed "\<lambda>d. d = Bot" "call_context_rel_of_fun enterc_unit"
-    "map_lift (fun_of_resolved_st_q_for gs)" parity_classify_check
-proof (unfold_locales, goal_cases FinE PP SgCov SgUncov Fwd FinC CallsUnique SeedKey
-    IsBotBot IsBotSound ResolveSound
-    EnterCover EnterTotal CombFwd GammaRd ClProved ClRefuted VarsFin)
-  case FinE show ?case
-    using compile_prog_finite by auto
-next
-  case PP show ?case by (rule pctx_pp_routed[OF solves exact])
-next
-  case (SgCov v c)
-  thus ?case by (simp add: pctx_sg_st_def pctx_gamma_def)
-next
-  case (SgUncov v c)
-  thus ?case by (simp add: pctx_sg_st_def)
-next
-  case (Fwd u a v c)
-  thus ?case by (rule fwd_ok)
-next
-  case FinC show ?case
-    by (simp add: compile_prog_finite)
-next
-  case CallsUnique show ?case
-    unfolding calls_source_unique_def using compile_prog_calls_source_unique by blast
-next
-  case (SeedKey p ctx) show ?case by simp
-next
-  case IsBotBot show ?case by simp
-next
-  case (IsBotSound d g') then show ?case by (simp add: pctx_gamma_def)
-next
-  case (ResolveSound u ctx dst pars args p cont s)
-  thus ?case by (simp add: static_resolve_iff compile_prog_finite)
-next
-  case (EnterCover u ctx dst pars args p cont s ctx')
-  let ?ci = "call_info_of (CallEdge dst pars args) p"
-  let ?caller = "locals (snd (pctx_sol gs empty_pred Pi ps) (Inl (u, ctx)))"
-  have cov: "entry_pairs_cover
-      (\<lambda>d. pctx_gamma gs d
-             (globs (snd (pctx_sol gs empty_pred Pi ps) (Inr (Analysis_Global ())))))
-      s (call_enter gs (CallEdge dst pars args) s)
-      [(?caller, transfer_lift empty_pred (parity_enter_st_for gs ?ci) ?caller)]"
-    using pctx_entry_cover_exec[OF exact EnterCover(3), where ci = ?ci] by simp
-  show ?case
-    unfolding pctx_spec_def dgs_enter_local_state_st_for_lifted
-    using enter_runs_local_enter_transfer enter_deps_local_enter_transfer cov
-          call_fwd_ok[OF EnterCover(1,2)] EnterCover(4)
-    by (fastforce simp: entry_pairs_cover_def route_unit_def call_context_rel_of_fun_iff
-                        enterc_unit_def)
-next
-  case (EnterTotal u ctx dst pars args p cont s)
-  show ?case by simp
-next
-  case (CombFwd cl c1 dst pars args p cont)
-  show ?case using CombFwd(1,2) comb_fwd_ok by blast
-next
-  case (GammaRd d g')
-  show ?case by (simp add: pctx_gamma_def)
-next
-  case (ClProved c d s)
-  thus ?case by (rule parity_classify_check_proved)
-next
-  case (ClRefuted c d s)
-  thus ?case by (rule parity_classify_check_refuted)
-next
-  case VarsFin show ?case by (rule pctx_vars_finite[OF solves])
-qed
+abbreviation pctx_terminates_prog :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> bool" where
+  "pctx_terminates_prog \<equiv> parity_unit_terminates"
 
 text \<open>
-  The generic soundness corollaries \<^locale>\<open>dg_analysis_adapter\<close> derives once and for all,
-  re-exported so a caller cites them without naming the interpretation.
+  The one side condition a caller discharges per program. It is not a decision
+  procedure: \<^const>\<open>pctx_terminates_prog\<close> follows when the solver's own executable
+  entry point returns a result on this program's equations, and nothing here says
+  that entry point returns on every input.
 \<close>
 
-lemmas pctx_report_ctx_proved_sound = pctx_adapter.analyse_report_ctx_proved_sound
-lemmas pctx_report_ctx_refuted_sound = pctx_adapter.analyse_report_ctx_refuted_sound
-lemmas pctx_result_node_sound = pctx_adapter.analyse_result_node_sound
-lemmas pctx_result_node_unreachable = pctx_adapter.analyse_result_node_unreachable
-lemmas pctx_report_flag_unreachable =
-  pctx_result_node_unreachable[OF _ _ _ report_flag_imp_result_node_is_bottom]
+lemmas pctx_terminates_prog_via_solve_c = parity_join.terminates_of_solve_c
+lemmas pctx_vars_finite = parity_join.vars_finite_of_terminates
 
-text \<open>
-  \<open>pctx_analyse_result_eq\<close> identifies the adapter's own result reading with the
-  raw-tuple shape \<^const>\<open>analyse_parity_ctx_result_for\<close> (\<open>Parity_Analyses\<close>)
-  builds directly from \<^const>\<open>readback_result_value\<close>/\<^const>\<open>canonicalize_lift\<close>: both
-  collapse the same \<^const>\<open>Bot\<close>/\<^const>\<open>Lifted\<close> case split on the same projected
-  local unknown, one via \<open>is_empty_state\<close> after projecting, the other via
-  \<open>empty_pred\<close> before projecting -- \<open>exact\<close> is what identifies the two orders.
-  Composing it with \<open>pctx_result_node_sound\<close> gives
-  \<^const>\<open>analyse_parity_ctx_result_for\<close>'s node-soundness bridge without
-  re-deriving \<open>routed_context_base_hetero\<close>'s coverage argument.
-\<close>
-
-lemma pctx_analyse_result_eq:
-  "lookup_context pctx_adapter.analyse_result v ctx =
-     (if (v, ctx) \<in> fst (pctx_sol gs empty_pred Pi ps)
-      then readback_result_value gs
-             (canonicalize_lift empty_pred (locals (snd (pctx_sol gs empty_pred Pi ps) (Inl (v, ctx)))))
-      else Bot)"
-  unfolding pctx_adapter.lookup_context_analyse_result
-  by (cases "locals (snd (pctx_sol gs empty_pred Pi ps) (Inl (v, ctx)))")
-     (simp_all add: exact normalize_lift_def)
-
-end
-
-section \<open>Solved-result table and whole-program check report\<close>
-
-text \<open>
-  The public surface, in the same shape Sign's own
-  \<open>analyse_sign_result_for\<close>/\<open>analyse_sign_report_for\<close> take: one-line partial
-  applications of \<open>Parity_Analyses\<close>'s tables at \<^const>\<open>prog_main_name\<close>, and a report
-  reading per-node state through \<^const>\<open>lookup_context\<close> rather than a raw
-  solver-environment lookup. An \<^const>\<open>Bot\<close> point classifies at \<^const>\<open>bot\<close>, the
-  same value \<^const>\<open>classify_checks\<close> always fed such a node, so \<open>check_result\<close>'s existing
-  three-way verdict is preserved rather than gaining a fourth outcome.
-\<close>
+subsection \<open>Solved-result table and check report\<close>
 
 definition analyse_parity_result_for ::
     "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> (unit, parity abs_state) analysis_result" where
-  "analyse_parity_result_for gs p = analyse_parity_ctx_result_for gs p"
+  "analyse_parity_result_for = parity_unit_result"
+
+text \<open>Convenience instance at \<^const>\<open>declared_global\<close> \<open>p\<close>, the classifier every
+  caller with only an \<^typ>\<open>imp_prog\<close> in hand recomputes anyway.\<close>
 
 definition analyse_parity_result :: "imp_prog \<Rightarrow> (unit, parity abs_state) analysis_result" where
   "analyse_parity_result p = analyse_parity_result_for (declared_global p) p"
 
-definition analyse_parity_result_per_origin_for ::
-    "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> (unit, parity abs_state) analysis_result" where
-  "analyse_parity_result_per_origin_for gs p =
-     analyse_parity_ctx_result_per_origin_for gs p"
-
-definition analyse_parity_result_per_origin ::
-    "imp_prog \<Rightarrow> (unit, parity abs_state) analysis_result" where
-  "analyse_parity_result_per_origin p = analyse_parity_result_per_origin_for (declared_global p) p"
-
-text \<open>\<open>r\<close> is bound once, outside \<^const>\<open>classify_checks\<close>'s per-check closure, so the single
-  routed solve is shared across every check rather than repeated per check.\<close>
+text \<open>
+  The report the exported \<open>analyse\<close> API dispatches to. It reads its per-node state
+  through \<^const>\<open>analyse_parity_result_for\<close>'s \<^type>\<open>analysis_result\<close> table ---
+  \<^const>\<open>lookup_context\<close>, not a raw solver-environment lookup --- so a
+  \<^const>\<open>Lifted\<close> point classifies at its projected state and a \<^const>\<open>Bot\<close> one
+  (dead, or never covered; the two are not distinguishable here) classifies at
+  \<^const>\<open>bot\<close>. That preserves \<^type>\<open>check_result\<close>'s three-way verdict rather than
+  introducing a fourth, \<open>Dead\<close> outcome the type does not carry.
+\<close>
 
 definition analyse_parity_report_for ::
     "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> check_report_entry list" where
-  "analyse_parity_report_for gs p =
-     analysis_surface.report (analyse_parity_result_for gs) bot parity_classify_check p"
+  "analyse_parity_report_for = parity_unit_report"
 
 definition analyse_parity_report :: "imp_prog \<Rightarrow> check_report_entry list" where
   "analyse_parity_report p = analyse_parity_report_for (declared_global p) p"
 
+text \<open>
+  The state-carrying sibling: same table, with the per-check Parity environment
+  attached to each entry instead of discarded, and an \<open>unreachable\<close> flag read
+  straight off \<^const>\<open>lookup_context\<close>'s \<^const>\<open>Bot\<close>/\<^const>\<open>Lifted\<close> case split.
+  The flag is \<^term>\<open>True\<close> exactly when that unknown is \<^const>\<open>Bot\<close>; what
+  \<^const>\<open>Bot\<close> certifies about concrete reachability is the surrounding soundness
+  statement's business, not this definition's.
+\<close>
+
+definition analyse_parity_report_for_with_state ::
+    "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog
+       \<Rightarrow> (pp \<times> exp \<times> check_result \<times> bool \<times> parity abs_state) list" where
+  "analyse_parity_report_for_with_state = parity_unit_report_with_state"
+
+definition analyse_parity_report_with_state ::
+    "imp_prog \<Rightarrow> (pp \<times> exp \<times> check_result \<times> bool \<times> parity abs_state) list" where
+  "analyse_parity_report_with_state p =
+     analyse_parity_report_for_with_state (declared_global p) p"
+
+text \<open>Both halves of one solve: the locals table every check report already reads,
+  and the globals beside it. Binding the solve once is what keeps a report that
+  shows both from solving twice.\<close>
+
+definition analyse_parity_ctx_solved_for ::
+    "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog
+     \<Rightarrow> (unit, parity abs_state) analysis_result
+          \<times> (String.literal \<times> parity abs_state lifted) list" where
+  "analyse_parity_ctx_solved_for = parity_unit_solved"
+
+lemma fst_analyse_parity_ctx_solved_for:
+  "fst (analyse_parity_ctx_solved_for gs p) = analyse_parity_result_for gs p"
+  by (simp add: analyse_parity_ctx_solved_for_def analyse_parity_result_for_def
+      parity_join.solved_eq)
+
+subsection \<open>Solver-choice variant: the per-origin update rule\<close>
+
+text \<open>
+  The same equation system under the per-origin update rule instead of the
+  always-join rule production uses, so \<open>Analyse_Dispatch\<close>'s \<open>analyse_with_solver\<close>
+  can compare solver choices on one system (\<open>parity_po_equations_eq\<close> is what makes
+  "one system" a theorem rather than a claim). These are bindings onto
+  \<open>Parity_Assembly\<close>'s second instance, so the sibling carries the same soundness
+  endpoints the default does --- the update rule is a parameter of the assembly,
+  not a reason to leave it.
+\<close>
+
+abbreviation pctx_sol_prog_per_origin ::
+    "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog
+       \<Rightarrow> (pp \<times> unit) set
+            \<times> (pp \<times> unit + (unit, unit) routed_gk
+                 \<Rightarrow> (parity exec_dg_st lifted, parity exec_dg_st lifted) dg_state)" where
+  "pctx_sol_prog_per_origin \<equiv> parity_po_solution"
+
+definition analyse_parity_result_per_origin_for ::
+    "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> (unit, parity abs_state) analysis_result" where
+  "analyse_parity_result_per_origin_for = parity_po_result"
+
+definition analyse_parity_result_per_origin ::
+    "imp_prog \<Rightarrow> (unit, parity abs_state) analysis_result" where
+  "analyse_parity_result_per_origin p =
+     analyse_parity_result_per_origin_for (declared_global p) p"
+
 definition analyse_parity_report_per_origin_for ::
     "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> check_report_entry list" where
-  "analyse_parity_report_per_origin_for gs p =
-     analysis_surface.report (analyse_parity_result_per_origin_for gs) bot
-       parity_classify_check p"
+  "analyse_parity_report_per_origin_for = parity_po_report"
 
 definition analyse_parity_report_per_origin :: "imp_prog \<Rightarrow> check_report_entry list" where
   "analyse_parity_report_per_origin p =
@@ -215,12 +154,12 @@ definition analyse_parity_report_per_origin :: "imp_prog \<Rightarrow> check_rep
 subsection \<open>The published surface, one interpretation per discipline\<close>
 
 text \<open>
-  Parity's two disciplines through the shared \<^locale>\<open>analysis_surface\<close>. Like Sign, it has
-  no warrowing interpretation: the four-element lattice has finite height, so widening has
-  nothing to accelerate and no solved table of its own.
+  Parity's two disciplines through the shared \<^locale>\<open>analysis_surface\<close>. Like Sign,
+  it has no warrowing interpretation: the four-element lattice has finite height, so
+  widening has nothing to accelerate and no solved table of its own.
 \<close>
 
-interpretation parity_join: analysis_surface
+interpretation parity_join_surface: analysis_surface
   analyse_parity_result bot parity_classify_check
   by unfold_locales
 
@@ -228,36 +167,16 @@ interpretation parity_per_origin: analysis_surface
   analyse_parity_result_per_origin bot parity_classify_check
   by unfold_locales
 
-lemma parity_report_join_eq: "analyse_parity_report p = parity_join.report p"
+lemma parity_report_join_eq: "analyse_parity_report p = parity_join_surface.report p"
   by (simp add: analyse_parity_report_def analyse_parity_report_for_def
-      analyse_parity_result_def surface_unfold)
+      analyse_parity_result_def analyse_parity_result_for_def
+      parity_join.report_def surface_unfold)
 
 lemma parity_report_per_origin_eq:
   "analyse_parity_report_per_origin p = parity_per_origin.report p"
   by (simp add: analyse_parity_report_per_origin_def
       analyse_parity_report_per_origin_for_def analyse_parity_result_per_origin_def
-      surface_unfold)
-
-text \<open>
-  State-carrying sibling, via \<^const>\<open>classify_checks_with_state\<close>: the same result table,
-  with the per-check Parity environment attached to each entry instead of discarded, and
-  an \<open>unreachable\<close> flag read straight off \<^const>\<open>lookup_context\<close>'s
-  \<^const>\<open>Bot\<close>/\<^const>\<open>Lifted\<close> case split by \<^const>\<open>report_lifted_state\<close>,
-  \<^term>\<open>True\<close> exactly when that unknown is \<^const>\<open>Bot\<close>
-  (@{thm report_lifted_state_unreachable_iff}). Mirrors
-  \<open>analyse_sign_report_for_with_state\<close> exactly.
-\<close>
-
-definition analyse_parity_report_for_with_state ::
-    "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> exp \<times> check_result \<times> bool \<times> (vname \<Rightarrow> parity)) list" where
-  "analyse_parity_report_for_with_state gs p =
-     (let r = analyse_parity_result_for gs p
-      in classify_checks_with_state (prog_cfg p)
-           (\<lambda>v. report_lifted_state (lookup_context r v ()))
-           (\<lambda>c (_, s). parity_classify_check c s))"
-
-definition analyse_parity_report_with_state ::
-    "imp_prog \<Rightarrow> (pp \<times> exp \<times> check_result \<times> bool \<times> (vname \<Rightarrow> parity)) list" where
-  "analyse_parity_report_with_state p = analyse_parity_report_for_with_state (declared_global p) p"
+      analyse_parity_result_per_origin_for_def parity_po_asm.report_def surface_unfold)
 
 end
+

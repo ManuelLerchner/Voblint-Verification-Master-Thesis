@@ -79,4 +79,21 @@ theorem interval_entry_cover_exec:
 
 end
 
+subsection \<open>What the initial abstract state describes\<close>
+
+text \<open>
+  The initial-state contract, owned here rather than reproved at each of the four
+  assembly instances: every concrete store a run may start in is described by
+  \<^const>\<open>cinit_ivl_st\<close>. A declared global starts at zero, which the singleton
+  interval describes exactly; a local starts unconstrained, which the unbounded
+  interval describes trivially. The solver discipline does not enter into it, which
+  is why one lemma serves all four.
+\<close>
+
+lemma interval_cinit_gamma:
+  "cinit_stores gs
+     \<subseteq> gamma_state_lift (map_lift (fun_of_exec_dg_st_for gs) (Lifted cinit_ivl_st))"
+  by (auto simp: cinit_stores_def gamma_state_def fun_of_exec_dg_st_for_def
+      fun_of_resolved_st_q_for_def fun_of_st_cinit_ivl_st_for)
+
 end

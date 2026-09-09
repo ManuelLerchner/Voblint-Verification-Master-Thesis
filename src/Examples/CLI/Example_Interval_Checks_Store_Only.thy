@@ -149,7 +149,7 @@ text \<open>Node-local collecting soundness at each check node, from the routed 
   routed bridge turns on solved-key coverage, not on the query seed.\<close>
 
 lemmas checks_ivl_ex_node_sound =
-  analyse_interval_join_result_node_sound_for[OF checks_ivl_ex_reserved checks_ivl_ex_solver_terminates
+  analyse_interval_join_result_node_sound_for[OF checks_ivl_ex_solver_terminates
     checks_ivl_ex_entry_cov checks_ivl_ex_fwd_ok checks_ivl_ex_call_fwd_ok
     checks_ivl_ex_comb_fwd_ok]
 
@@ -312,7 +312,8 @@ lemma checks_ivl_ex_report_unfold:
   "analyse_interval_report_for checks_ivl_ex_gs checks_ivl_ex_program
      = classify_checks (prog_cfg checks_ivl_ex_program) checks_ivl_ex_env
          interval_classify_check"
-  unfolding analyse_interval_report_for_def surface_unfold checks_ivl_ex_env_def
+  unfolding analyse_interval_report_for_def interval_join_asm.report_def
+            analyse_interval_join_result_for_def surface_unfold checks_ivl_ex_env_def
   by (simp add: prog_main_name_def)
 
 text \<open>Agreement with the existing per-node classification: the first report

@@ -52,7 +52,10 @@ equation), or once for a type synonym, and nowhere else in the tree.
 
 The `analyse_*_ctx_result*` row is the notable one: the whole unparameterized
 convenience layer over `analyse_*_ctx_result_*_for` was written and never wired
-up. The CLI reaches the solver through the `_for` forms exclusively.
+up. The CLI reaches the solver through the `_for` forms exclusively. The
+`*_Ctx_None_Sound` theories named as the site were since renamed
+`<Domain>_Exec_Sound.thy`, and Sign's is deleted outright along with its pair in
+this row; the other six constants stand.
 
 Example-session-only — alive, but only as `value`/`eval` fodder:
 `analyse_sign_env`, `analyse_int_dg_join_for`, `analyse_int_dg_join_env_for`,
@@ -1118,13 +1121,19 @@ prose-stripped lines:
 | `..._result_node_sound_for` (Sign vs Parity) | 149 / 101 | 0.77 | 58 |
 
 Ten of the twelve corollaries are character-identical modulo the domain token. And the
-generic lemma the bundle needs **already exists**: `Sign_Checks.thy:191` is literally
-`lemmas sctx_result_node_sound = sctx_adapter.analyse_result_node_sound`, and
-`Int_Ctx_None_Sound.thy:574` re-exports the same `dg_analysis_adapter` fact. One locale
+generic lemma the bundle needs **already exists**:
+`dg_analysis_adapter.analyse_result_node_sound` (`DG_Analysis_Adapter.thy`), which each
+domain re-exported under a spine prefix of its own. One locale
 fixing the spine (`sol_prog`, `terminates_prog`, `sigma_abs`, `cinit_st`, `result_for`,
 `report_for`, `classify`) proves the bundle once; each domain contributes an
 `interpretation` supplying six facts it already has. Int's `mode` needs no special case —
-`ictx_sol_prog_warrow mode` is already the partially-applied spine. **~1,478 -> ~400.**
+`int_conf_sol_prog_warrow mode` is already the partially-applied spine. **~1,478 -> ~400.**
+
+That locale now exists as `unit_dg_analysis` (`Unit_DG_Analysis.thy`), and Sign has moved
+onto it: `Sign_Assembly.thy` is one `global_interpretation`, `Sign_Exec_Sound.thy` is
+deleted, and the node-soundness bundle is `unit_dg_analysis.result_node_sound_closure`
+proved once inside the locale. Interval and Parity interpret it beside their own
+`_Exec_Sound` construction; Int has not moved.
 
 Two free wins that need no locale: 59 of the 71 lines separating Sign from Parity are
 Sign restating eight already-named facts as explicit `show`s where the other three

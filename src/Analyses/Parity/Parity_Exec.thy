@@ -136,6 +136,21 @@ next
   then show ?thesis by (simp add: event_parity_def)
 qed
 
+text \<open>
+  The same commutation in the shape the shared assembly's transfer obligation is
+  stated in, which carries a liveness premise because a domain may need it. Parity
+  does not: \<^const>\<open>parity_tf_st_for\<close> commutes on every executable state, and
+  \<open>parity_tf_st_for_commute\<close> above remains the theorem this domain exports. This
+  corollary exists so registration can cite a registration-shaped fact without the
+  stronger one being weakened to meet it.
+\<close>
+
+lemma parity_tf_st_for_commute_if_live:
+  assumes "live_resolved_st_q gs s"
+  shows "fun_of_resolved_st_q_for gs (parity_tf_st_for gs a s) =
+         parity_tf_abs a (fun_of_resolved_st_q_for gs s)"
+  by (rule parity_tf_st_for_commute)
+
 lemma enter_frame_parity_st_for_commute:
   "fun_of_resolved_st_q_for gs (enter_frame_D_resolved_q PTop s) =
    enter_frame_parity_for gs (fun_of_resolved_st_q_for gs s)"

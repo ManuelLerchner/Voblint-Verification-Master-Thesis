@@ -12,8 +12,9 @@ text \<open>
     Odd   -- {n | odd n}
     Top   -- all integers
 
-  Four-element lattice (Bot \<sqsubseteq> Even,Odd \<sqsubseteq> Top).  Finite; widen = sup.
-  Guards do not refine parity, so the assume transfer is the identity.
+  Four-element lattice (Bot \<sqsubseteq> Even,Odd \<sqsubseteq> Top). Finite; widen = sup.
+  This analysis does not implement backward guard refinement. Its branch transfer
+  therefore preserves parity information from the incoming state.
 \<close>
 
 subsection \<open>Datatype and concretization\<close>
@@ -66,9 +67,10 @@ instance ..
 end
 
 text \<open>
-  \<open>PBot\<close> is the only empty value a finite enumerated domain can have, the
-  same reasoning as Sign's \<open>is_bottom_sign\<close>, so a direct equality test is
-  exact here too.
+  \<open>PBot\<close> is the only value with empty concretization, so a direct equality test
+  decides emptiness exactly. Finiteness of the carrier is not what settles this ---
+  a finite domain may perfectly well have two empty values. What settles it is the
+  four concretizations themselves: the other three are each inhabited.
 \<close>
 
 definition is_bottom_parity :: "parity \<Rightarrow> bool" where
@@ -76,7 +78,7 @@ definition is_bottom_parity :: "parity \<Rightarrow> bool" where
 
 lemma is_bottom_parity_correct: "is_bottom_parity p \<longleftrightarrow> gamma_parity p = {}"
   unfolding is_bottom_parity_def
-  by (cases p) (auto simp: gamma_parity.simps intro: exI[of _ "0"] exI[of _ "1"])
+  by (cases p) (auto intro: exI[of _ "0"] exI[of _ "1"])
 
 subsection \<open>Join\<close>
 
@@ -211,15 +213,15 @@ lemma parity_of_int_gamma: "n \<in> gamma_parity (parity_of_int n)" by auto
 
 lemma parity_plus_sound:
   "i \<in> gamma_parity a \<Longrightarrow> j \<in> gamma_parity b \<Longrightarrow> i + j \<in> gamma_parity (a + b)"
-  by (cases a; cases b; auto simp: even_add)
+  by (cases a; cases b; auto)
 
 lemma parity_minus_sound:
   "i \<in> gamma_parity a \<Longrightarrow> j \<in> gamma_parity b \<Longrightarrow> i - j \<in> gamma_parity (a - b)"
-  by (cases a; cases b; auto simp: even_diff)
+  by (cases a; cases b; auto)
 
 lemma parity_times_sound:
   "i \<in> gamma_parity a \<Longrightarrow> j \<in> gamma_parity b \<Longrightarrow> i * j \<in> gamma_parity (a * b)"
-  by (cases a; cases b; auto simp: even_mult_iff)
+  by (cases a; cases b; auto)
 
 subsection \<open>Monotonicity of arithmetic\<close>
 
@@ -376,7 +378,7 @@ interpretation parity_arith: expression_domain_sound
   apply (simp_all add: parity_of_int_gamma parity_plus_sound parity_minus_sound parity_times_sound
                         parity_plus_combine_mono parity_minus_combine_mono parity_times_combine_mono
                         parity_lt_sound parity_eqb_sound parity_tobool_sound[unfolded truthy_def]
-                        sup_parity_def join_parity.simps truthy_def
+                        sup_parity_def
                     del: parity_lt.simps parity_eqb.simps parity_tobool.simps)
   apply (blast intro: parity_lt_mono[unfolded is_empty_parity])
   apply (blast intro: parity_eqb_mono[unfolded is_empty_parity])

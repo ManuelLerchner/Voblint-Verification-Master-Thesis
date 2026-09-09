@@ -153,6 +153,30 @@ def test_resolver_tests_only_the_published_bound(generated):
     assert tests == {"k = 0"}, tests
 
 
+def test_applied_roles_reach_isabelle_as_one_argument(generated):
+    """A domain whose operations carry a configuration argument, like Int's
+    `refine_mode`, supplies the role as a constant and its arguments. The
+    renderer quotes it so the interpretation still receives one argument, and
+    the registry cannot express anything else -- there is no proof-text override
+    behind this."""
+    import subprocess
+    import yaml
+    manifest = yaml.safe_load((ROOT / "assembly/analyses.yaml").read_text())
+    sys.path.insert(0, str(ROOT / "scripts"))
+    import gen_analysis_assembly as gen
+
+    domain = dict(manifest["domains"][0])
+    domain["legacy"] = dict(domain["legacy"])
+    domain["legacy"]["facts"] = {"tf_st": {"const": "tf_for", "args": ["Some_Mode"]}}
+    rendered = gen.render_assembly(gen.Domain(domain), manifest["solvers"])
+    assert '"tf_for Some_Mode"' in rendered
+
+    # a fact takes no arguments, so applying one is a registry error
+    domain["legacy"]["facts"] = {"init_gamma": {"const": "g", "args": ["m"]}}
+    with pytest.raises(SystemExit):
+        gen.validate(manifest, [gen.Domain(domain)])
+
+
 # --- The two tables agree ---------------------------------------------------
 
 @pytest.mark.parametrize("domain", ["Sign_Analysis", "Interval_Analysis",

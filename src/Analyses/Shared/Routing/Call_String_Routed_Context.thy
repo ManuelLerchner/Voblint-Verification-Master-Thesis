@@ -1,8 +1,7 @@
 theory Call_String_Routed_Context
   imports
-    "Voblint_Framework.Routed_Context"
+    Compiled_Routed_Equations
     "Voblint_Framework.Call_String_Context"
-    "Voblint_Compile.Compile_Wellformed"
 begin
 
 section \<open>Telling activations apart by how they were called\<close>
@@ -32,6 +31,24 @@ text \<open>
   variable set covers a particular routed callee entry or return continuation, which is a
   property of the program together with what the solver actually explored. An instance
   supplies them; no generic argument can.
+\<close>
+
+definition call_string_eqs_for ::
+    "nat
+      \<Rightarrow> (pp \<times> call_string, call_string_gk, unit,
+           'D::bounded_semilattice_sup_bot, 'G::bounded_semilattice_sup_bot) dg_spec
+      \<Rightarrow> cfg
+      \<Rightarrow> 'D
+      \<Rightarrow> (pp \<times> call_string, call_string_gk, ('D, 'G) dg_state) eqsT"
+where
+  "call_string_eqs_for k S g initial =
+     compiled_routed_eqs_for Call_String_Context.Global
+       Call_String_Context.Seed (cs_route k) S g initial"
+
+text \<open>
+  The constructor fixes the call-string routing, global and seed keys,
+  compiled-program resolver, and bottom initialization. A domain supplies
+  only its specification, graph, and initial local state.
 \<close>
 
 locale call_string_routed_context =

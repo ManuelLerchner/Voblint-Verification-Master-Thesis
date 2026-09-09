@@ -1045,3 +1045,49 @@ things the split settled that the plan did not anticipate:
 `Exec_St_Base` (they need nothing from Algebra), and the `semilattice_sup`
 instance now sits directly after the join rather than after all the warrowing
 machinery.
+
+### Sign's context-insensitive pipeline is one interpretation (2026-09-09)
+
+Sign no longer builds its own unit-context route. `Sign_Assembly.thy` is a
+single `global_interpretation sign_join: unit_dg_analysis` over the shared
+assembly in `src/Analyses/Shared/Result/Unit_DG_Analysis.thy`, naming Sign's
+executable transfer, its callee entry, the state a run starts from, the
+always-join solver, and the check classifier; the `defines` clause publishes
+`sign_unit_equations`, `sign_unit_solution`, `sign_unit_result`,
+`sign_unit_state_at`, `sign_unit_report` and their siblings. `Sign_Checks.thy`
+binds those to the names the CLI already used -- `sctx_eqs_prog`,
+`sctx_sol_prog` and `sctx_terminates_prog` are `abbreviation`s now, so no
+constant stands between the CLI and the assembly -- and defines only what is
+Sign's own: the per-origin solver sibling and the published globals.
+`Sign_Exec_Sound.thy` is deleted, and its ~27 names are appended to
+`scripts/retired_identifiers.txt`. That retires the Sign spine the 2026-08-30
+step-2.6 entry above describes -- `sctx_sol`, `sctx_sg_st`, `sctx_pp_routed`,
+`sctx_analyse_result_eq` -- and `sign_pp_st_gen`, one of the four
+`*_pp_st_gen` citations the 2026-09-01 entry kept `pp_st` for; the other three
+still cite it, so that conclusion stands.
+
+`Unit_DG_Analysis.thy` splits along the assumption line. `unit_dg_pipeline` is
+the construction and carries no correctness assumptions, so its defining
+equations are unconditional and eligible as code equations; `unit_dg_analysis`
+adds the domain and solver contracts and derives the published soundness
+theorems, `result_node_sound_closure` and its `vars_cover` corollary
+`result_node_sound` among them. That is where the six-times-written Entry bundle
+`docs/EXPORT_SURFACE_AUDIT.md` §11.2 measured now lives, proved once.
+
+Two lemmas in `Run_Analysis_Sound.thy` had to be generalized before the assembly
+could state its endpoints from what a solver actually supplies.
+`unit_routed_context_compile_prog_closureI` and
+`unit_routed_context_of_solve_closure` take the three weak closure premises
+(`fwd_ok`, `call_fwd_ok`, `comb_fwd_ok`) in place of `vars_cover`: an edge out of
+an unknown the solve visited lands on one it also visited. The `vars_cover`
+readings stay under their established names,
+`unit_routed_context_compile_progI` and `unit_routed_context_of_solve`, as
+corollaries, so no existing caller changed.
+
+The line count does not pay off yet. Sign's production and example theories went
+2,129 -> 1,610 lines, saving 519, against a shared cost of 827 -- 675 for
+`Unit_DG_Analysis.thy`, 152 net in `Run_Analysis_Sound.thy`. The assembly earns
+that back when the second and third domains drop their own construction.
+Interval and Parity interpret it today beside `Interval_Exec_Sound` and
+`Parity_Exec_Sound` and prove the two routes agree; deleting those
+constructions is the step after this one.

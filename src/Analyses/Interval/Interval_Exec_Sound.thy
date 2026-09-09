@@ -1,5 +1,6 @@
 theory Interval_Exec_Sound
   imports Interval_Exec
+          "Voblint_Result.DG_Result_Construction"
           "Voblint_Solver.TD_Solver_Bridge"
           "TD.TD_side_upd_rule"
           "Voblint_CFG.CFG_Prune"
@@ -23,10 +24,9 @@ text \<open>
   \<open>Example_Interval_DG_Flagship\<close> demonstrates that solver terminating on a
   genuinely unbounded loop.
 
-  Only the raw computation lives here: soundness needs the
-  \<open>local_state_dg_exec_analysis\<close> locale (\<open>Run_Analysis_Sound\<close>, Formalization session),
-  one session later than Analysis in the locked six-session chain, so that half
-  stays downstream in \<open>Interval_Entry\<close> (CLI), mirroring \<open>Sign_Entry\<close>.
+  Only raw computation lives here. \<open>Interval_Entry\<close> later composes this runtime
+  interface with the reusable source-soundness endpoint; the CLI merely dispatches
+  to that public analysis entry point.
 
   \<open>G\<close> stays diagonal at \<open>ivl exec_dg_st lifted\<close>, matching what \<open>unit_routed_eqs\<close>
   needs; its content is never read, since every field of
@@ -61,31 +61,17 @@ definition analyse_interval_dg_for :: "(ivl exec_dg_st \<Rightarrow> bool) \<Rig
        (cfg_exit (prog_cfg p), ())"
 
 text \<open>
-  \<open>analyse_interval_dg_env_for\<close> reads the local unknown at \<open>v\<close> (\<open>Inl (v, ())\<close>) straight
-  back through \<^const>\<open>fun_of_exec_dg_st_for\<close>/\<^const>\<open>map_lift\<close>: the whole abstract
-  state already lives there, so there is no locals-from-\<open>D\<close>/globals-from-\<open>G\<close>
-  reconstruction to perform. A genuinely unreachable local unknown (\<open>Bot\<close>)
-  concretizes to \<open>bot\<close>, matching \<^const>\<open>gamma_state_lift\<close>'s own \<open>Bot\<close> case.
-
-  The \<open>[code]\<close> rewrite below is point-free in \<open>v\<close>, so
-  \<^const>\<open>analyse_interval_dg_for\<close> is solved exactly once per partial application
-  to \<open>empty_pred gs p\<close>, reused for every \<open>v\<close> queried afterward against the
-  resulting closure -- one solve per report rather than one per node.
+  The shared whole-state reader projects the solved local unknown at \<open>Inl (v, ())\<close>.
+  Passing the solved map to \<^const>\<open>dg_env_for\<close> preserves the single-solve generated
+  code shape: the call-by-value target evaluates that argument before returning the
+  per-node reader.
 \<close>
 
-definition analyse_interval_dg_env_for :: "(ivl exec_dg_st \<Rightarrow> bool) \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> pp \<Rightarrow> ivl abs_state" where
-  "analyse_interval_dg_env_for empty_pred gs p v =
-     (case map_lift (fun_of_exec_dg_st_for gs) (locals (snd (analyse_interval_dg_for empty_pred gs p) (Inl (v, ()))))
-      of Bot \<Rightarrow> bot | Lifted s \<Rightarrow> s)"
-
-declare analyse_interval_dg_env_for_def [code del]
-
-lemma analyse_interval_dg_env_for_code [code]:
+definition analyse_interval_dg_env_for ::
+    "(ivl exec_dg_st \<Rightarrow> bool) \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> pp \<Rightarrow> ivl abs_state" where
   "analyse_interval_dg_env_for empty_pred gs p =
-     (let sol = snd (analyse_interval_dg_for empty_pred gs p)
-      in (\<lambda>v. case map_lift (fun_of_exec_dg_st_for gs) (locals (sol (Inl (v, ()))))
-              of Bot \<Rightarrow> bot | Lifted s \<Rightarrow> s))"
-  unfolding analyse_interval_dg_env_for_def Let_def by (rule refl)
+     dg_env_for gs (snd (analyse_interval_dg_for empty_pred gs p))"
+
 
 text \<open>
   Convenience instances at \<^const>\<open>declared_global\<close> \<open>p\<close>, the classifier every

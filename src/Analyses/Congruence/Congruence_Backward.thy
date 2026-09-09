@@ -760,6 +760,14 @@ qed
 
 section \<open>Backward inverse operators\<close>
 
+text \<open>
+  Congruences carry divisibility information but no order, so less-than cannot
+  refine either operand. True equality is representable as intersection; false
+  equality remains the identity because a congruence generally cannot represent
+  a complement. Addition and subtraction use algebraic rearrangement, while
+  multiplication uses the preimage construction proved above.
+\<close>
+
 definition inv_less_congruence ::
     "bool => congruence => congruence => congruence * congruence"
 where

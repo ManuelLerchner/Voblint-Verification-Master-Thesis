@@ -8,6 +8,8 @@ session Voblint_Analysis_Parity in "." = "Voblint_Nonrelational" +
     "Voblint_Framework"
     "Voblint_Solver"
     "TD"
+  directories
+    "generated"
   theories
     Parity_Domain
     Parity_Special
@@ -15,8 +17,8 @@ session Voblint_Analysis_Parity in "." = "Voblint_Nonrelational" +
     Parity_Exec
     Parity_Numeric_Queries
     Parity_Sound
-    Parity_Exec_Sound
-    Parity_Analyses
     Parity_Classify
+    Parity_Assembly
+    Parity_Analyses
     Parity_Checks
     Parity_Entry

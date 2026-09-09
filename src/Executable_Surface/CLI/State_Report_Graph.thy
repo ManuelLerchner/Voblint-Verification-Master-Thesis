@@ -447,6 +447,15 @@ lemma snd_full_state_checked_payload_auto [simp]:
         fst_analyse_interval_ctx_solved_warrow_for fst_analyse_int_ctx_solved_warrow_for
         case_prod_beta analyse_sign_result_for_def analyse_interval_td_result_for_def
         analyse_int_result_for_def analyse_parity_result_for_def
+        analyse_interval_td_result_for_def [abs_def]
+        analyse_int_result_for_def [abs_def]
+        analysis_surface.report_with_state_def
+        analysis_surface.reach_state_at_def [abs_def]
+        sign_join.report_with_state_def sign_join.report_def
+        parity_join.report_with_state_def parity_join.report_def
+        analyse_parity_result_for_def [abs_def]
+        interval_warrow_asm.report_with_state_def interval_warrow_asm.report_def
+        analyse_interval_td_result_for_def [abs_def]
         analyse_sign_report_with_state_def analyse_sign_report_for_with_state_def
         analyse_sign_result_def
         analyse_interval_td_report_with_state_def analyse_interval_td_report_for_with_state_def
@@ -807,7 +816,15 @@ lemma solver_checked_payload_verdicts:
         analyse_int_result_def analyse_int_result_for_def analyse_int_wpo_result_def
         analyse_parity_report_def analyse_parity_report_for_def
         analyse_parity_report_per_origin_def analyse_parity_report_per_origin_for_def
-        analyse_parity_result_def analyse_parity_result_per_origin_def)
+        analyse_parity_result_def analyse_parity_result_per_origin_def
+        sign_join.report_def analyse_sign_result_for_def
+        parity_join.report_def analyse_parity_result_for_def
+        parity_po_asm.report_def analyse_parity_result_per_origin_for_def
+        sign_po_asm.report_def analyse_sign_result_per_origin_for_def
+        interval_join_asm.report_def analyse_interval_join_result_for_def
+        interval_po_asm.report_def analyse_interval_per_origin_result_for_def
+        interval_warrow_asm.report_def analyse_interval_td_result_for_def
+        interval_wpo_asm.report_def analyse_interval_wpo_result_for_def)
 
 text \<open>
   \<open>program_vars\<close> pulls \<^const>\<open>scope_vnames_list\<close> (hence \<open>VIMP_Notation\<close>,

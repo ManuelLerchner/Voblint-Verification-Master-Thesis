@@ -13,7 +13,7 @@ is the one analysis session that sees more than its own domain, by construction.
 | --- | --- |
 | reduced product | a product lattice where components may sharpen one another. Without that exchange it would be a plain product and no more precise than its parts run separately. |
 | reduction step | a function on `int_dom` that is *exact* — `int_reduction_step` requires it to preserve the concretization while descending the order, so a sharpened component never drops a concrete state |
-| `Refine_Never` | no exchange. Only Congruence still narrows, since it is the one component with a real arithmetic inverse. |
+| `Refine_Never` | disable cross-component reduction. Native component filters remain active; Congruence alone has nontrivial arithmetic inverses for addition, subtraction, and multiplication. |
 | `Refine_Once` | one reduction round per composite operation |
 | `Refine_Fixpoint` | iterate reduction to a fixpoint. The production default. |
 | distributed information | a fact no single component holds: Congruence's `6 (mod 0)` plus Interval's `[0,10]` pin a value neither pins alone |
@@ -27,13 +27,17 @@ Int_Refinement    exactness of reduction steps; the three refine modes
                                                      and componentwise widen/narrow
   -> Int_Transfer -> Int_Exec                        transfer bundles; executable carrier
   -> Int_Sound                                       the spec and its soundness
-  -> Int_Exec_Sound                                  the arbitrary-program runtime API,
-                                                     fixed at Refine_Fixpoint
+  -> Int_Exec_Sound                                  mode-parameterized raw runtime API
   -> Int_Analyses                                    the context policies over that route
+  -> Int_Solver_Analyses                             alternative solver disciplines
   -> Int_Classify / Int_Checks                       check discharge and the report
   -> Int_Entry                                       the production endpoint, and its
                                                      soundness at int_dom
 ```
+
+Public result and report entry points select `Refine_Fixpoint` with Apinis
+warrowing. Lower runtime layers retain the mode parameter for comparisons and
+regression witnesses.
 
 ## Worked example: `if (y + 1 == 3) { x := 1 } else { x := 0 }`
 

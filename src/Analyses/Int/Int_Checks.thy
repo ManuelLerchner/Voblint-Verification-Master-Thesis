@@ -1,8 +1,27 @@
 theory Int_Checks
-  imports Int_Classify Int_Solver_Analyses "Voblint_Result.Analysis_Surface"
+  imports Int_Classify Int_Assembly Int_Solver_Analyses "Voblint_Result.Analysis_Surface"
 begin
 
 hide_const phase.N
+
+subsection \<open>The solved system, under the name the CLI already uses\<close>
+
+text \<open>
+  The production route's equation system, solve and termination check, under
+  Int's own names. Abbreviations rather than definitions: they introduce no
+  constant, so nothing extra reaches code generation, and a proof about one of
+  them is a proof about the assembly's instance.
+\<close>
+
+abbreviation ictx_eqs_prog where "ictx_eqs_prog \<equiv> int_unit_equations"
+
+abbreviation ictx_sol_prog where "ictx_sol_prog \<equiv> int_unit_solution"
+
+abbreviation ictx_terminates_prog where
+  "ictx_terminates_prog \<equiv> int_unit_terminates"
+
+lemmas ictx_terminates_prog_via_solve_c = int_warrow_asm.terminates_of_solve_c
+lemmas ictx_vars_finite = int_warrow_asm.vars_finite_of_terminates
 
 text \<open>
   The check-classification machinery (\<open>int_classify_check\<close> and its soundness directions)
@@ -50,7 +69,9 @@ text \<open>
 
 definition analyse_int_join_result_for ::
     "refine_mode \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> (unit, int_dom abs_state) analysis_result" where
-  "analyse_int_join_result_for mode gs p = analyse_int_ctx_result_for mode gs p"
+  "analyse_int_join_result_for mode gs p =
+     unit_dg_pipeline.result (int_tf_st_for mode) (int_dom_enter_st_for mode)
+       cinit_int_dom_st TD_side_always_join_Interp_solve gs p"
 
 definition analyse_int_join_result ::
     "imp_prog \<Rightarrow> (unit, int_dom abs_state) analysis_result" where
@@ -67,7 +88,9 @@ text \<open>
 
 definition analyse_int_per_origin_result_for ::
     "refine_mode \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> (unit, int_dom abs_state) analysis_result" where
-  "analyse_int_per_origin_result_for mode gs p = analyse_int_ctx_result_per_origin_for mode gs p"
+  "analyse_int_per_origin_result_for mode gs p =
+     unit_dg_pipeline.result (int_tf_st_for mode) (int_dom_enter_st_for mode)
+       cinit_int_dom_st TD_side_per_origin_Interp_solve gs p"
 
 definition analyse_int_per_origin_result ::
     "imp_prog \<Rightarrow> (unit, int_dom abs_state) analysis_result" where
@@ -107,25 +130,19 @@ definition analyse_int_report :: "imp_prog \<Rightarrow> check_report_entry list
 subsection \<open>Whole-program check report with state: the native D/G runtime API\<close>
 
 text \<open>
-  State-carrying sibling of \<open>analyse_int_report_for\<close>/\<open>analyse_int_report\<close>, via
-  \<^const>\<open>classify_checks_with_state\<close>: same result table, with the per-check \<open>int_dom\<close>
-  environment attached to each report entry instead of discarded -- needed so
-  \<open>Analyse_Dispatch.analyse_with_state\<close> can stay total once \<open>Int_Analysis\<close> joins
-  \<open>analysis_domain\<close>. An \<open>unreachable\<close> flag is read straight off
-  \<^const>\<open>lookup_context\<close>'s \<^const>\<open>Bot\<close>/\<^const>\<open>Lifted\<close> case split by
-  \<^const>\<open>report_lifted_state\<close>, \<^term>\<open>True\<close> exactly when that unknown is
-  \<^const>\<open>Bot\<close> (@{thm report_lifted_state_unreachable_iff}) -- the same reading
-  \<open>analyse_sign_report_for_with_state\<close>'s Sign counterpart uses. Propagates the
-  routed producer transitively through \<^const>\<open>analyse_int_result_for\<close>.
+  The shared \<^const>\<open>analysis_surface.report_with_state\<close> construction pairs
+  the existing result table with each check's \<^typ>\<open>int_dom\<close> environment.
+  Its \<open>unreachable\<close> flag comes from \<^const>\<open>lookup_context\<close>'s
+  \<^const>\<open>Bot\<close>/\<^const>\<open>Lifted\<close> split through
+  \<^const>\<open>report_lifted_state\<close>
+  (@{thm report_lifted_state_unreachable_iff}).
 \<close>
 
 definition analyse_int_report_for_with_state ::
     "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> exp \<times> check_result \<times> bool \<times> int_dom abs_state) list" where
-  "analyse_int_report_for_with_state gs p =
-     (let r = analyse_int_result_for gs p
-      in classify_checks_with_state (prog_cfg p)
-           (\<lambda>v. report_lifted_state (lookup_context r v ()))
-           (\<lambda>c (_, s). int_classify_check c s))"
+  "analyse_int_report_for_with_state gs =
+     analysis_surface.report_with_state (analyse_int_result_for gs)
+       bot int_classify_check"
 
 text \<open>Convenience instance at \<^const>\<open>declared_global\<close> \<open>p\<close>, matching
   \<open>analyse_int_report\<close>'s shape.\<close>
@@ -181,7 +198,9 @@ text \<open>
 
 definition analyse_int_wpo_result_for ::
     "refine_mode \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> (unit, int_dom abs_state) analysis_result" where
-  "analyse_int_wpo_result_for mode gs p = analyse_int_ctx_result_wpo_for mode gs p"
+  "analyse_int_wpo_result_for mode gs p =
+     unit_dg_pipeline.result (int_tf_st_for mode) (int_dom_enter_st_for mode)
+       cinit_int_dom_st TD_side_warrowing_per_origin_Interp_solve gs p"
 
 definition analyse_int_report_wpo_for :: "refine_mode \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> check_report_entry list" where
   "analyse_int_report_wpo_for mode gs p =
@@ -238,7 +257,8 @@ lemma int_report_per_origin_eq:
 
 lemma int_report_warrow_eq: "analyse_int_report p = int_warrow.report p"
   by (simp add: analyse_int_report_def analyse_int_report_for_def
-      analyse_int_result_def analyse_int_result_for_def surface_unfold)
+      analyse_int_result_def analyse_int_result_for_def int_unit_result_def
+      surface_unfold)
 
 lemma int_report_wpo_eq: "analyse_int_report_wpo p = int_wpo.report p"
   by (simp add: analyse_int_report_wpo_def analyse_int_report_wpo_for_def

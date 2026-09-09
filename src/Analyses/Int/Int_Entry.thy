@@ -2,13 +2,78 @@ theory Int_Entry
   imports Int_Checks "Voblint_Soundness.Run_Analysis_Sound"
 begin
 
-section \<open>Int codegen API: an arbitrary VIMP program, and its production soundness\<close>
+context
+  fixes mode :: refine_mode
+begin
 
 text \<open>
-  \<open>analyse_int_dg_eqs_for\<close>/\<open>analyse_int_dg_for\<close>/\<open>analyse_int_dg_env_for\<close>
-  (\<^theory>\<open>Voblint_Analysis_Int.Int_Exec_Sound\<close>) and \<open>analyse_int_report_for\<close>/\<open>analyse_int_report\<close>
-  (\<^theory>\<open>Voblint_Analysis_Int.Int_Checks\<close>) are pure computation, so they live one session
-  earlier (Analysis).
+  The shared assembly at an arbitrary refinement mode. \<open>Int_Assembly\<close>'s four
+  \<^theory_text>\<open>global_interpretation\<close>s fix the production mode, because a
+  \<^theory_text>\<open>defines\<close> block needs closed terms. Soundness needs no such
+  fixing, so the same locale is interpreted here at the \<open>mode\<close> this context
+  fixes, and every obligation is discharged by the very fact the generated
+  instances cite --- each of Int's is already mode-generic. This is what keeps
+  Int's arbitrary-mode API as strong after the migration as before it.
+\<close>
+
+interpretation int_any: unit_dg_analysis
+    "int_tf_st_for mode" "int_dom_enter_st_for mode" cinit_int_dom_st
+    TD_side_warrowing_apinis_Interp_solve
+    "TD_side_warrowing_apinis_Interp.solve_dom TYPE((unit, unit) routed_gk)
+       TYPE((int_dom exec_dg_st lifted, int_dom exec_dg_st lifted) dg_state)"
+    bot int_classify_check
+    skip_int_dom "assign_int_dom mode" "special_int_dom mode"
+    "branch_int_dom_for mode" body_int_dom "return_int_dom mode"
+    "enter_int_dom_ci_for mode" event_int_dom
+    TD_side_warrowing_apinis_Interp_solve_c
+proof (rule unit_dg_analysis.intro, goal_cases)
+  case (1 gs) show ?case by (rule int_is_sound_transfer_for)
+next
+  case (2 gs a s) then show ?case
+    unfolding fun_of_exec_dg_st_for_def
+    by (rule int_tf_st_for_commute[unfolded int_tf_abs_def])
+next
+  case (3 gs ci s) show ?case
+    unfolding fun_of_exec_dg_st_for_def by (rule int_dom_enter_st_for_commute)
+next
+  case (4 eqs x) then show ?case
+    by (rule TD_side_warrowing_apinis_Interp.partial_post_solution
+          [OF _ surjective_pairing])
+next
+  case (5 eqs x) then show ?case
+    by (rule TD_side_warrowing_apinis_Interp.finite_stabl_solve)
+next
+  case (6 c d s) then show ?case by (rule int_classify_check_proved)
+next
+  case (7 c d s) then show ?case by (rule int_classify_check_refuted)
+next
+  case 8 show ?case by (rule refl)
+next
+  case (9 gs) show ?case by (rule int_cinit_gamma)
+next
+  case (10 eqs x) then show ?case
+    by (rule TD_side_warrowing_apinis_Interp.solve_dom_of_solve_c)
+qed
+
+text \<open>
+  The four endpoints the locale derives, under Int's own names and at an
+  arbitrary mode. Nothing is proved here: each is the assembly's theorem, and
+  the sibling disciplines get the same set from their own instances.
+\<close>
+
+lemmas int_any_result_node_sound = int_any.result_node_sound
+lemmas int_any_report_proved_sound = int_any.report_proved_sound
+lemmas int_any_report_refuted_sound = int_any.report_refuted_sound
+
+end
+
+section \<open>Int public runtime API and source-level soundness\<close>
+
+text \<open>
+  \<^theory>\<open>Voblint_Analysis_Int.Int_Exec_Sound\<close> owns raw executable
+  computation, while \<^theory>\<open>Voblint_Analysis_Int.Int_Checks\<close> constructs
+  published results and reports. This theory adds the public program-level entry
+  point and composes it with reusable source-level soundness.
 \<close>
 
 context
@@ -17,6 +82,7 @@ context
 begin
 
 abbreviation pgs :: "vname \<Rightarrow> bool" where "pgs \<equiv> declared_global p"
+
 
 text \<open>
   \<open>analyse_int_report_for\<close> reads its per-node state through
@@ -27,21 +93,6 @@ text \<open>
   \<open>int_conf_activation_collect_sound_warrow\<close> (the routed spine's own activation-indexed
   collecting soundness) composed with \<open>activation_collect_unit_eq_ltr_collect\<close> (the
   unit-context collapse to \<^const>\<open>ltr_collect\<close>) --- the routed spine needs no
-  \<open>wf_compile_input\<close>/finiteness/node-membership premise, so this bridge only takes the
-  four coverage-and-termination facts the routed solve genuinely turns on.
-\<close>
-
-
-text \<open>
-  \<open>analyse_int_report_for\<close> reads its per-node state through
-  \<^const>\<open>analyse_int_ctx_result_warrow_for\<close>'s \<^type>\<open>analysis_result\<close> table directly
-  (\<^theory>\<open>Voblint_Analysis_Int.Int_Analyses\<close>): the routed-unit producer's own solved
-  table, at \<open>mode\<close> and \<open>prog_main_name\<close>. \<open>analyse_int_ctx_result_warrow_node_sound_for\<close>
-  below is the node-soundness bridge for that table, built from
-  \<open>int_conf_activation_collect_sound_warrow\<close> (the routed spine's own activation-indexed
-  collecting soundness) composed with \<open>activation_collect_unit_eq_ltr_collect\<close> (the
-  unit-context collapse to \<^const>\<open>ltr_collect\<close>) rather than from
-  \<open>p_reg\<close>/\<open>analyse_int_dg_for\<close> --- the routed spine needs no
   \<open>wf_compile_input\<close>/finiteness/node-membership premise, so this bridge only takes the
   four coverage-and-termination facts the routed solve genuinely turns on.
 \<close>
@@ -116,7 +167,7 @@ proof -
                 (canonicalize_lift empty_pred
                   (locals (snd (int_conf_sol_prog_warrow mode pgs p) (Inl (v, ())))))
          else Bot)"
-    unfolding analyse_int_ctx_result_warrow_for_def lookup_context_def empty_pred_def
+    unfolding analyse_int_ctx_result_warrow_for_def empty_pred_def
     by simp
   have adapter_eq0: "lookup_context
           (dg_analysis_adapter.analyse_result

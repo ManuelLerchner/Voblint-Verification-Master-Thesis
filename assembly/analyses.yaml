@@ -56,7 +56,7 @@ solvers:
 # theorems, not in a table swap meant to preserve behaviour.
 domains:
   - name: Sign
-    adopted: false
+    adopted: true
     value_type: sign
     tag: SignValue
     # Ordered. The first route is the production instance: it publishes the
@@ -82,7 +82,7 @@ domains:
           report_with_state: sign_per_origin.report_with_state
 
   - name: Interval
-    adopted: false
+    adopted: true
     value_type: ivl
     tag: IntervalValue
     routes: [warrowing_apinis, always_join, per_origin, warrowing_per_origin]
@@ -123,7 +123,7 @@ domains:
           report_with_state: interval_wpo.report_with_state
 
   - name: Parity
-    adopted: false
+    adopted: true
     value_type: parity
     tag: ParityValue
     routes: [always_join, per_origin]
@@ -147,13 +147,19 @@ domains:
           report: analyse_parity_report_per_origin
           report_with_state: parity_per_origin.report_with_state
 
-  # Int is registered for dispatch only: it has not been migrated onto the
-  # shared assembly, so it has no generated assembly theory and its routes are
-  # named rather than derived. The `assembly: false` line is what says so.
+  # Int is registered for dispatch only. `assembly: false` records that the
+  # migration has not reached it yet -- it still runs its own pipeline, so it
+  # has no generated assembly theory and its routes are named rather than
+  # derived. It is not a claim that Int cannot meet the interface; nothing here
+  # has established that either way.
   - name: Int
+    # Int's operations carry a refinement mode, so its roles are applications
+    # rather than bare names. The published route interprets at the production
+    # mode; Int_Entry keeps a mode-generic layer of its own, so the arbitrary-mode
+    # API does not narrow.
+    adopted: true
     value_type: int_dom
     tag: IntDomValue
-    assembly: false
     routes: [warrowing_apinis, always_join, per_origin, warrowing_per_origin]
     contexts:
       entry_state:
@@ -165,6 +171,34 @@ domains:
         min_bound: 1
     legacy:
       impl_prefix: int
+      classifier: int_classify_check
+      init_gamma: int_cinit_gamma
+      facts:
+        tf_st: {const: int_tf_st_for, args: [Refine_Fixpoint]}
+        enter_st: {const: int_dom_enter_st_for, args: [Refine_Fixpoint]}
+        init_st: cinit_int_dom_st
+        skip: skip_int_dom
+        assign: {const: assign_int_dom, args: [Refine_Fixpoint]}
+        special: {const: special_int_dom, args: [Refine_Fixpoint]}
+        branch: {const: branch_int_dom_for, args: [Refine_Fixpoint]}
+        body: body_int_dom
+        return: {const: return_int_dom, args: [Refine_Fixpoint]}
+        enter_ci: {const: enter_int_dom_ci_for, args: [Refine_Fixpoint]}
+        event: event_int_dom
+        transfer_sound: int_is_sound_transfer_for
+        tf_commute: int_tf_st_for_commute
+        tf_abs_def: int_tf_abs_def
+        enter_commute: int_dom_enter_st_for_commute
+      binders:
+        warrowing_apinis: int_warrow_asm
+        always_join: int_join_asm
+        per_origin: int_po_asm
+        warrowing_per_origin: int_wpo_asm
+      prefixes:
+        warrowing_apinis: int_unit
+        always_join: int_join
+        per_origin: int_po
+        warrowing_per_origin: int_wpo
       routes:
         warrowing_apinis:
           report: analyse_int_report

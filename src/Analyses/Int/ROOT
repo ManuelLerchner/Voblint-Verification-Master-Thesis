@@ -13,6 +13,8 @@ session Voblint_Analysis_Int in "." = "Voblint_Nonrelational" +
     "Voblint_Analysis_Parity"
     "Voblint_Analysis_Congruence"
     "TD"
+  directories
+    "generated"
   theories
     Int_Domain
     Int_Refinement
@@ -26,5 +28,6 @@ session Voblint_Analysis_Int in "." = "Voblint_Nonrelational" +
     Int_Analyses
     Int_Solver_Analyses
     Int_Classify
+    Int_Assembly
     Int_Checks
     Int_Entry

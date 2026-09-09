@@ -5,7 +5,7 @@ begin
 section \<open>Generic expression soundness\<close>
 
 text \<open>
-  Sign, Interval, and Parity each prove an \<open>aval_<dom>_sound\<close> lemma with the
+  Sign, Interval, Parity, and Congruence each prove an \<open>aval_<dom>_sound\<close> lemma with the
   identical shape and proof script: structural induction on \<open>exp\<close>, discharged
   by the same per-operator soundness facts. Arithmetic
   (\<open>plus_sound\<close>/\<open>minus_sound\<close>/\<open>times_sound\<close>) and comparison/truthiness

@@ -18,8 +18,8 @@ text \<open>
   of the three possible outcomes: the first is \<^term>\<open>Check_Proved\<close>, the second
   --- checking \<open>0 < y\<close> again after \<open>y := 0\<close> --- is \<^term>\<open>Check_Refuted\<close>, and
   the third --- \<open>z = 1\<close> against an unconstrained \<open>z\<close> --- is \<^term>\<open>Check_Unknown\<close>.
-  \<open>sctx_result_node_sound\<close> (\<^theory>\<open>Voblint_Analysis_Sign.Sign_Checks\<close>), the
-  per-domain re-export of the adapter's generic node-soundness bridge, connects
+  \<open>analyse_sign_result_node_sound_for\<close>, Sign's reading of the shared
+  unit-context assembly's own node-soundness bridge, connects
   the computed table back to \<^const>\<open>ltr_collect\<close> at each check's own node ---
   every covered node, not only the solver's query seed. No ghost or trace-projection content: the check
   condition is a plain \<^typ>\<open>exp\<close>.
@@ -145,7 +145,7 @@ text \<open>Node-local collecting soundness at each check node, from the routed 
   routed bridge turns on solved-key coverage, not on the query seed.\<close>
 
 lemmas checks_ex_node_sound =
-  analyse_sign_result_node_sound_for[OF checks_ex_reserved checks_ex_solver_terminates
+  analyse_sign_result_node_sound_for[OF checks_ex_solver_terminates
     checks_ex_entry_cov checks_ex_fwd_ok checks_ex_call_fwd_ok checks_ex_comb_fwd_ok]
 
 lemma checks_ex_node_sound_1:
@@ -340,7 +340,8 @@ text \<open>The wrapper is exactly \<^const>\<open>classify_checks\<close> appli
 lemma checks_ex_report_unfold:
   "analyse_sign_report_for checks_ex_gs checks_ex_program
      = classify_checks (prog_cfg checks_ex_program) checks_ex_env sign_classify_check"
-  unfolding analyse_sign_report_for_def surface_unfold checks_ex_env_def
+  unfolding analyse_sign_report_for_def sign_join.report_def surface_unfold
+    analyse_sign_result_for_def checks_ex_env_def
   by (simp add: prog_main_name_def)
 
 text \<open>Agreement with the existing per-node classification: the first report

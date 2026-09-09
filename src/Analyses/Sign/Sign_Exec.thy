@@ -1,5 +1,5 @@
 theory Sign_Exec
-  imports "Voblint_Exec.Exec_St_Restriction_Refinement" "Voblint_Nonrelational.Numeric_Ops" Sign_Domain
+  imports "Voblint_Exec.Exec_St_Restriction_Refinement" "Voblint_Nonrelational.Numeric_Ops" Sign_Transfer
 begin
 
 section \<open>Sign per-domain seam: executable transfer mirror and commutation\<close>

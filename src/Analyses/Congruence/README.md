@@ -9,6 +9,25 @@ It exists as the fourth component of `int_dom`, the reduced product in
 `Voblint_Analysis_Int`. That is also why this session is small: a component needs a
 lattice, arithmetic, a widening/narrowing pair and a backward filter, and nothing else.
 
+## What the comparison operators do, and what they could do
+
+`congruence_lt` returns `None` for every pair, and `congruence_eqb` answers only when
+both sides are singletons (`m = 0`). Those are the current implementations, not the
+precision the domain can represent, and the distinction matters if anyone later
+decides to expose Congruence on its own:
+
+- an even integer never equals an odd one, so `congruence_eqb` can answer
+  `Some False` whenever the two residue classes are disjoint ---
+  `r1 != r2 (mod gcd m1 m2)` --- and not only when both collapse to a point;
+- `congruence_lt` can decide any pair of singletons exactly, and must answer `None`
+  for genuinely unbounded classes, which carry no order information;
+- `min` and `max` return one of their operands, so the join of the arguments is always
+  a sound answer for both. `top` is sometimes forced, never universally.
+
+Judging the domain by its comparison operators undervalues it in any case. Congruence
+is there to carry modular information --- alignment, stride, access patterns --- which
+is what makes it the component that still narrows under `Refine_Never`.
+
 ## Vocabulary
 
 | Term | Meaning |

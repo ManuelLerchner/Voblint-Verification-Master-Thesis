@@ -149,7 +149,7 @@ text \<open>Node-local collecting soundness at each check node, from the routed 
   routed bridge turns on solved-key coverage, not on the query seed.\<close>
 
 lemmas parity_ex_node_sound =
-  analyse_parity_result_node_sound_for[OF parity_ex_reserved parity_ex_solver_terminates
+  analyse_parity_result_node_sound_for[OF parity_ex_solver_terminates
     parity_ex_entry_cov parity_ex_fwd_ok parity_ex_call_fwd_ok parity_ex_comb_fwd_ok]
 
 lemma parity_ex_node_sound_3:
@@ -341,7 +341,8 @@ text \<open>The wrapper is exactly \<^const>\<open>classify_checks\<close> appli
 lemma parity_ex_report_unfold:
   "analyse_parity_report_for parity_ex_gs parity_ex_program
      = classify_checks (prog_cfg parity_ex_program) parity_ex_env parity_classify_check"
-  unfolding analyse_parity_report_for_def surface_unfold parity_ex_env_def
+  unfolding analyse_parity_report_for_def parity_join.report_def
+            analyse_parity_result_for_def surface_unfold parity_ex_env_def
             prog_main_name_def
   by simp
 
@@ -370,7 +371,7 @@ corollary parity_ex_report_proved_entry_sound:
   "\<forall>t \<in> parity_ex_reach (Statement 3). truthy (aval (Not (Eq (V (STR ''y'')) (V (STR ''z'')))) t)"
   unfolding parity_ex_reach_def
   using analyse_parity_report_sound_proved_for
-          [OF parity_ex_reserved parity_ex_solver_terminates parity_ex_entry_cov
+          [OF parity_ex_solver_terminates parity_ex_entry_cov
               parity_ex_fwd_ok parity_ex_call_fwd_ok parity_ex_comb_fwd_ok
               parity_ex_report_agrees_with_node_classification]
   by (simp add: prog_main_name_def)

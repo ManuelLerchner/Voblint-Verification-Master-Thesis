@@ -17,7 +17,6 @@ theory Voblint
     "Voblint_Framework.Check_Result"
     "Voblint_Framework.Abstract_Checks"
     "Voblint_Framework.Check_Report"
-    "Voblint_Analysis_Sign.Sign_Domain"
     "Voblint_Analysis_Sign.Sign_Analyses"
     "Voblint_Analysis_Sign.Sign_Checks"
     "Voblint_Analysis_Interval.Interval_Domain"
@@ -322,7 +321,7 @@ text \<open>
     \<^verbatim>\<open>Analyses/Shared/\<close> chain, all reaching the same spine.  Each pairs a lattice theory
     (order, transfers, soundness, monotonicity) with an \<^verbatim>\<open>_Analyses\<close> theory placing it at
     the routed D/G spine over \<^const>\<open>ltr_collect\<close>.
-    \<^item> @{theory Voblint_Analysis_Sign.Sign_Domain} / @{theory Voblint_Analysis_Sign.Sign_Analyses} --- the seven-element sign lattice.  Finite, so the plain-join solver computes an exact solution and no widening is needed.
+    \<^item> @{theory Voblint_Analysis_Sign.Sign_Transfer} / @{theory Voblint_Analysis_Sign.Sign_Analyses} --- the seven-element sign lattice.  Finite, so the plain-join solver computes an exact solution and no widening is needed.
     \<^item> @{theory Voblint_Analysis_Interval.Interval_Domain} / @{theory Voblint_Analysis_Interval.Interval_Analyses} --- intervals over the extended integers.  Infinite height, so this is the domain that needs widening and narrowing, and the one whose solver choice matters.
     \<^item> @{theory Voblint_Analysis_Parity.Parity_Domain} --- even/odd.  Finite like Sign, and expressible about values neither Sign nor Interval constrains: \<^verbatim>\<open>y := x * 2\<close> is even whatever \<^verbatim>\<open>x\<close> is.
     \<^item> @{theory Voblint_Analysis_Congruence.Congruence_Domain} --- residue classes, the one component with no analysis of its own: it is the fourth member of the product below, not a selectable analysis.

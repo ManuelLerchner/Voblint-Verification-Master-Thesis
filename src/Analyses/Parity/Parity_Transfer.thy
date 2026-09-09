@@ -28,14 +28,14 @@ qed
 text \<open>Nondeterministic and other special-call assignment (\<open>special_parity\<close>)
   lives in \<open>Parity_Special\<close>, reused below.\<close>
 
-subsection \<open>Branch: parity does not refine guards, so the transfer is the identity\<close>
+subsection \<open>Branch: no backward parity refinement\<close>
 
 text \<open>
-  No boolean guard in the language constrains the parity of a variable, so the
-  sound and most precise parity branch keeps the incoming state unchanged --
-  the identity is trivially polarity-independent, matching the framework's single
-  polarity-parametrized branch operation directly (no separate assume/assume-not
-  case, since both bodies coincide).
+  The current parity analysis leaves guards unchanged. This is sound but loses
+  useful facts that equality or arithmetic guards could establish, such as
+  \<open>x = 1\<close> implying odd \<open>x\<close>. The polarity-parametrized transfer remains explicit
+  so a future backward filter can improve precision without changing the framework
+  interface.
 \<close>
 
 

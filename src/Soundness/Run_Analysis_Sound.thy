@@ -97,7 +97,19 @@ text \<open>
   the carrier-dependent obligations stay explicit premises.
 \<close>
 
-lemma unit_routed_context_compile_progI:
+text \<open>
+  Coverage enters this construction at exactly three places, and each is a
+  closure property of the solved key set: an intra edge out of a covered
+  unknown lands on a covered unknown, and a call out of a covered unknown covers
+  both the callee entry and the return continuation. Stating those three
+  directly, rather than \<^const>\<open>vars_cover\<close>, is what keeps a caller who can only
+  establish closure \<^emph>\<open>from covered unknowns\<close> --- which is what a solver's
+  reachable set gives --- from having to prove the unconditional form.
+  \<^const>\<open>vars_cover\<close> implies all three by dropping their premises, so the
+  \<open>vars_cover\<close> reading below is a corollary rather than a second construction.
+\<close>
+
+lemma unit_routed_context_compile_prog_closureI:
   fixes S :: "(pp \<times> unit, 'k, unit, 'D::bounded_semilattice_sup_bot,
                 'G::bounded_semilattice_sup_bot) dg_spec"
     and gammaDG :: "'D \<Rightarrow> 'G \<Rightarrow> store set"
@@ -105,7 +117,16 @@ lemma unit_routed_context_compile_progI:
     and seed_key :: "pp \<Rightarrow> unit \<Rightarrow> 'k"
   assumes core: "sound_dg_spec_core S gammaDG gs"
     and finE: "finite (intra (compile_prog Pi ps))"
-    and cover: "vars_cover (compile_prog Pi ps) vars"
+    and fwd_ok: "\<And>u a v ctx. (u, ctx) \<in> vars
+        \<Longrightarrow> (u, a, v) \<in> intra (compile_prog Pi ps) \<Longrightarrow> (v, ctx) \<in> vars"
+    and call_fwd_ok: "\<And>u ctx dst pars args q cont. (u, ctx) \<in> vars
+        \<Longrightarrow> (u, CallEdge dst pars args, FunctionEntry q, cont)
+              \<in> calls (compile_prog Pi ps)
+        \<Longrightarrow> (FunctionEntry q, ()) \<in> vars"
+    and comb_fwd_ok: "\<And>cl c1 dst pars args q cont. (cl, c1) \<in> vars
+        \<Longrightarrow> (cl, CallEdge dst pars args, FunctionEntry q, cont)
+              \<in> calls (compile_prog Pi ps)
+        \<Longrightarrow> (cont, c1) \<in> vars"
     and pp: "part_post_solution
                (routed_node_rhs intra_predecessor_addr_list (\<lambda>_. gk0) route_unit
                   (\<lambda>c src a. dg_spec_edge_tree S a src (\<lambda>_. gk0))
@@ -153,7 +174,7 @@ proof -
   next
     case (SgUncov v c) then show ?case by (rule sg_uncov)
   next
-    case (Fwd u a v c) then show ?case using cover by (cases c) auto
+    case (Fwd u a v c) then show ?case by (rule fwd_ok)
   next
     case FinC show ?case by (simp add: compile_prog_finite)
   next
@@ -170,12 +191,82 @@ proof -
     then show ?case by (rule enter_complete)
   next
     case (CallFwd u ctx dst pars args p cont)
-    then show ?case using cover by (cases "route_unit u ctx
-        (locals (sigma (Inl (u, ctx)))) (CallEdge dst pars args)") auto
+    then have "(FunctionEntry p, ()) \<in> vars" by (rule call_fwd_ok)
+    then show ?case by simp
   next
     case (CombFwd cl c1 dst pars args p cont)
-    then show ?case using cover by (cases c1) auto
+    then show ?case by (rule comb_fwd_ok)
   qed
+qed
+
+text \<open>The \<^const>\<open>vars_cover\<close> reading, for a caller who has the unconditional
+  coverage fact rather than the three closure facts.\<close>
+
+lemma unit_routed_context_compile_progI:
+  fixes S :: "(pp \<times> unit, 'k, unit, 'D::bounded_semilattice_sup_bot,
+                'G::bounded_semilattice_sup_bot) dg_spec"
+    and gammaDG :: "'D \<Rightarrow> 'G \<Rightarrow> store set"
+    and sg :: "pp \<times> unit + 'k \<Rightarrow> 'M" and gammaM :: "'M \<Rightarrow> store set"
+    and seed_key :: "pp \<Rightarrow> unit \<Rightarrow> 'k"
+  assumes core: "sound_dg_spec_core S gammaDG gs"
+    and finE: "finite (intra (compile_prog Pi ps))"
+    and cover: "vars_cover (compile_prog Pi ps) vars"
+    and pp: "part_post_solution
+               (routed_node_rhs intra_predecessor_addr_list (\<lambda>_. gk0) route_unit
+                  (\<lambda>c src a. dg_spec_edge_tree S a src (\<lambda>_. gk0))
+                  (routed_call_tree S gk0 seed_key (static_resolve (compile_prog Pi ps)) is_bot)
+                  (routed_entry_seed_tree seed_key)
+                  (compile_prog Pi ps) bot0 s0d s0g)
+               x0 sigma vars"
+    and sg_cov: "\<And>v c. (v, c) \<in> vars
+        \<Longrightarrow> gammaM (sg (Inl (v, c)))
+              = gammaDG (locals (sigma (Inl (v, c)))) (globs (sigma (Inr gk0)))"
+    and sg_uncov: "\<And>v c. (v, c) \<notin> vars \<Longrightarrow> gammaM (sg (Inl (v, c))) = {}"
+    and seed_key_ne: "\<And>p ctx. seed_key p ctx \<noteq> gk0"
+    and is_bot_bot: "is_bot bot"
+    and is_bot_sound: "\<And>d gv. is_bot d \<Longrightarrow> gammaDG d gv = {}"
+    and enter_complete:
+    "\<And>u ctx dst pars args p cont s.
+       (u, ctx) \<in> vars
+       \<Longrightarrow> (u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps)
+       \<Longrightarrow> s \<in> gammaDG (locals (sigma (Inl (u, ctx)))) (globs (sigma (Inr gk0)))
+       \<Longrightarrow> \<exists>pairs pub deps.
+             enter_runs (enter\<^sup># S (call_info_of (CallEdge dst pars args) p))
+               (mk_dg_man (locals (sigma (Inl (u, ctx)))) (\<lambda>_. gk0)) sigma pairs pub
+           \<and> enter_deps (enter\<^sup># S (call_info_of (CallEdge dst pars args) p))
+               (mk_dg_man (locals (sigma (Inl (u, ctx)))) (\<lambda>_. gk0)) sigma pairs deps
+           \<and> entry_pairs_cover (\<lambda>d. gammaDG d (globs (sigma (Inr gk0)))) s
+               (call_enter gs (CallEdge dst pars args) s) pairs"
+  shows "unit_routed_context S gammaDG gs (compile_prog Pi ps) gk0 bot0 s0d s0g
+           sigma vars x0 sg seed_key is_bot gammaM"
+proof (rule unit_routed_context_compile_prog_closureI, goal_cases
+    Core FinE Fwd CallFwd CombFwd PP SgCov SgUncov SeedKey IsBotBot IsBotSound EnterComplete)
+  case Core show ?case by (rule core)
+next
+  case FinE show ?case by (rule finE)
+next
+  case (Fwd u a v ctx) then show ?case using cover by (cases ctx) auto
+next
+  case (CallFwd u ctx dst pars args q cont) then show ?case
+    using vars_cover_enterD[OF cover] by blast
+next
+  case (CombFwd cl c1 dst pars args q cont) then show ?case
+    using cover by (cases c1) auto
+next
+  case PP show ?case by (rule pp)
+next
+  case (SgCov v c) then show ?case by (rule sg_cov)
+next
+  case (SgUncov v c) then show ?case by (rule sg_uncov)
+next
+  case (SeedKey p ctx) show ?case by (rule seed_key_ne)
+next
+  case IsBotBot show ?case by (rule is_bot_bot)
+next
+  case (IsBotSound d gv) then show ?case by (rule is_bot_sound)
+next
+  case (EnterComplete u ctx dst pars args p cont s) then show ?case
+    by (rule enter_complete)
 qed
 
 
@@ -721,23 +812,44 @@ text \<open>
   \<^const>\<open>Bot\<close> --- the one bottom this carrier has.
 \<close>
 
-lemma unit_routed_context_of_solve:
+text \<open>
+  Stated from the three closure facts rather than \<^const>\<open>vars_cover\<close>, because
+  that is the shape a solver's own reachable set supplies: an edge out of an
+  unknown the solve actually visited lands on one it also visited. The
+  \<open>vars_cover\<close> reading follows and is kept under its established name.
+\<close>
+
+lemma unit_routed_context_of_solve_closure:
   fixes Pi :: proc_table and ps and bot0 s0d s0g :: "'a exec_dg_st lifted"
   defines "eqs \<equiv> routed_eqs Pi ps bot0 s0d s0g"
   assumes SOLVE: "solve_c eqs x \<noteq> None"
-    and cover: "vars_cover (compile_prog Pi ps) (fst (solve eqs x))"
+    and fwd_ok: "\<And>u a v ctx. (u, ctx) \<in> fst (solve eqs x)
+        \<Longrightarrow> (u, a, v) \<in> intra (compile_prog Pi ps)
+        \<Longrightarrow> (v, ctx) \<in> fst (solve eqs x)"
+    and call_fwd_ok: "\<And>u ctx dst pars args q cont. (u, ctx) \<in> fst (solve eqs x)
+        \<Longrightarrow> (u, CallEdge dst pars args, FunctionEntry q, cont)
+              \<in> calls (compile_prog Pi ps)
+        \<Longrightarrow> (FunctionEntry q, ()) \<in> fst (solve eqs x)"
+    and comb_fwd_ok: "\<And>cl c1 dst pars args q cont. (cl, c1) \<in> fst (solve eqs x)
+        \<Longrightarrow> (cl, CallEdge dst pars args, FunctionEntry q, cont)
+              \<in> calls (compile_prog Pi ps)
+        \<Longrightarrow> (cont, c1) \<in> fst (solve eqs x)"
     and finI: "finite (intra (compile_prog Pi ps))"
   shows "unit_routed_context spec_st gamma_exec gs (compile_prog Pi ps)
            (Analysis_Global ()) bot0 s0d s0g (snd (solve eqs x)) (fst (solve eqs x)) x
            (solved_local_reader (fst (solve eqs x)) (snd (solve eqs x)))
            Activation_Seed (\<lambda>d. d = bot) (\<lambda>d. gamma_exec d bot)"
-proof (rule unit_routed_context_compile_progI, goal_cases Core FinE Cover PP SgCov SgUncov
-    SeedKey IsBotBot IsBotSound EnterComplete)
+proof (rule unit_routed_context_compile_prog_closureI, goal_cases Core FinE Fwd CallFwd
+    CombFwd PP SgCov SgUncov SeedKey IsBotBot IsBotSound EnterComplete)
   case Core show ?case by (rule sound_dg_spec_core_st[OF tf_sound])
 next
   case FinE show ?case by (rule finI)
 next
-  case Cover show ?case by (rule cover)
+  case (Fwd u a v ctx) then show ?case by (rule fwd_ok)
+next
+  case (CallFwd u ctx dst pars args q cont) then show ?case by (rule call_fwd_ok)
+next
+  case (CombFwd cl c1 dst pars args q cont) then show ?case by (rule comb_fwd_ok)
 next
   case PP
   have pp_buf:
@@ -797,6 +909,46 @@ text \<open>
   and at the unit context that union has one member, so the routed cap
   \<open>activation_collect_dg_sound\<close> bounds it directly.
 \<close>
+
+text \<open>The \<^const>\<open>vars_cover\<close> reading, kept under its established name so
+  existing callers are unaffected.\<close>
+
+lemma unit_routed_context_of_solve:
+  fixes Pi :: proc_table and ps and bot0 s0d s0g :: "'a exec_dg_st lifted"
+  defines "eqs \<equiv> routed_eqs Pi ps bot0 s0d s0g"
+  assumes SOLVE: "solve_c eqs x \<noteq> None"
+    and cover: "vars_cover (compile_prog Pi ps) (fst (solve eqs x))"
+    and finI: "finite (intra (compile_prog Pi ps))"
+  shows "unit_routed_context spec_st gamma_exec gs (compile_prog Pi ps)
+           (Analysis_Global ()) bot0 s0d s0g (snd (solve eqs x)) (fst (solve eqs x)) x
+           (solved_local_reader (fst (solve eqs x)) (snd (solve eqs x)))
+           Activation_Seed (\<lambda>d. d = bot) (\<lambda>d. gamma_exec d bot)"
+  unfolding eqs_def
+proof (rule unit_routed_context_of_solve_closure)
+  show "solve_c (routed_eqs Pi ps bot0 s0d s0g) x \<noteq> None"
+    using SOLVE unfolding eqs_def .
+next
+  show "\<And>u a v ctx. (u, ctx) \<in> fst (solve (routed_eqs Pi ps bot0 s0d s0g) x)
+      \<Longrightarrow> (u, a, v) \<in> intra (compile_prog Pi ps)
+      \<Longrightarrow> (v, ctx) \<in> fst (solve (routed_eqs Pi ps bot0 s0d s0g) x)"
+    using cover[unfolded eqs_def] by (simp add: vars_cover_def)
+next
+  show "\<And>u ctx dst pars args q cont.
+      (u, ctx) \<in> fst (solve (routed_eqs Pi ps bot0 s0d s0g) x)
+      \<Longrightarrow> (u, CallEdge dst pars args, FunctionEntry q, cont)
+            \<in> calls (compile_prog Pi ps)
+      \<Longrightarrow> (FunctionEntry q, ()) \<in> fst (solve (routed_eqs Pi ps bot0 s0d s0g) x)"
+    using cover[unfolded eqs_def] by (simp add: vars_cover_def)
+next
+  show "\<And>cl c1 dst pars args q cont.
+      (cl, c1) \<in> fst (solve (routed_eqs Pi ps bot0 s0d s0g) x)
+      \<Longrightarrow> (cl, CallEdge dst pars args, FunctionEntry q, cont)
+            \<in> calls (compile_prog Pi ps)
+      \<Longrightarrow> (cont, c1) \<in> fst (solve (routed_eqs Pi ps bot0 s0d s0g) x)"
+    using cover[unfolded eqs_def] by (simp add: vars_cover_def)
+next
+  show "finite (intra (compile_prog Pi ps))" by (rule finI)
+qed
 
 theorem collect_sound:
   fixes Pi :: proc_table and ps and v :: pp

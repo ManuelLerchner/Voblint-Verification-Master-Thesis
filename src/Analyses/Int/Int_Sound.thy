@@ -70,6 +70,20 @@ definition int_dom_gamma ::
 lemma int_dom_gamma_Bot [simp]: "int_dom_gamma gs Bot g = {}"
   by (simp add: int_dom_gamma_def)
 
+text \<open>
+  The initial state, in the shape the shared assembly's obligation asks for: the
+  stores a run may start in are described by the entry state read back through
+  the executable bridge. Stated here rather than inside a solved-system context,
+  because it mentions neither a solver nor a coverage assumption --- only the
+  entry state and the global-variable predicate.
+\<close>
+
+lemma int_cinit_gamma:
+  "cinit_stores gs
+     \<subseteq> gamma_state_lift (map_lift (fun_of_exec_dg_st_for gs) (Lifted cinit_int_dom_st))"
+  by (auto simp: cinit_stores_def gamma_state_def fun_of_exec_dg_st_for_def
+      fun_of_resolved_st_q_for_def fun_of_st_cinit_int_dom_st_for gamma_int_dom_top)
+
 subsection \<open>Soundness of the specification against the concretization\<close>
 
 text \<open>

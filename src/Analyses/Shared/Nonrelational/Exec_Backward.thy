@@ -10,10 +10,9 @@ text \<open>
   for free, parameterized by an explicit location classifier \<open>gs\<close>:
   \<open>afilter_st\<close> / \<open>bfilter_st\<close> and their commutation with the abstract
   filters through @{const fun_of_resolved_st_q_for}, proved once here so no
-  domain needs to repeat the induction by hand. A concrete domain
-  names its own specialization via the \<open>defines\<close> clause of its existing
-  \<open>backward_domain\<close> interpretation (see \<open>Sign_Backward\<close>,
-  \<open>Interval_Backward\<close>); no per-domain proof is needed.
+    domain needs to repeat the induction by hand. Each concrete domain names its
+  specialization through its existing \<open>backward_domain\<close> interpretation; Sign,
+  Interval, Congruence, and the Int product all reuse the same correspondence.
 \<close>
 
 subsection \<open>Standalone executable recursion, outside the semantic locale\<close>

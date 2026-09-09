@@ -6,7 +6,6 @@ theory Exec_Interval_Run
 begin
 
 (* Disambiguate our N constructor from the phase datatype constructor. *)
-hide_const phase.N
 section \<open>Executable interval loop: backward filters + TD solver (eval only)\<close>
 
 text \<open>

@@ -1,11 +1,12 @@
 session Voblint_Routing in "." = "Voblint_Soundness" +
   description
-    "How a call site maps to a context: the concrete routing policies over a
-     compiled program, and the finiteness arguments their key spaces need"
+    "Shared equation construction and concrete context-routing policies over
+     compiled programs, including key-space finiteness arguments"
   sessions
     "Voblint_Compile"
     "Voblint_Framework"
   theories
+    Compiled_Routed_Equations
     Call_String_Routed_Context
     Entry_State_Routed_Context
     Context_Space_Finite
