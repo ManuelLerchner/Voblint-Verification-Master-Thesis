@@ -1,0 +1,28 @@
+// PARAM: --analysis congruence
+// The Chinese remainder construction, observable at the CLI. x is
+// 1 (mod 4) and y is 3 (mod 6); the guard x == y intersects them, and
+// intersect_congruence's Bezout branch computes the one shared residue
+// (9) with the least common multiple (12) as its period, so both sides
+// become 9 (mod 12).
+//
+// The inner guard is what makes that narrowing observable rather than
+// merely internal. 13 is 1 (mod 4), so it is compatible with everything x
+// knew on its own -- the inner branch would be live without the meet. It
+// is not 9 (mod 12), so after the meet the branch is proved dead. The
+// NOWARN therefore depends on the CRT step specifically, not on either
+// operand's own class.
+void main() {
+  n := __voblint_nondet_int();
+  m := __voblint_nondet_int();
+  x := 4 * n + 1;
+  y := 6 * m + 3;
+  if (x == y) {
+    if (x == 13) {
+      __voblint_check(false) // NOWARN (unreachable)
+    } else {
+      __voblint_check(true) // PROVED
+    }
+  } else {
+    __voblint_check(true) // PROVED
+  }
+}

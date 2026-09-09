@@ -1,0 +1,22 @@
+// PARAM: --analysis congruence
+// Congruence through the routed spine's enter and combine edges rather
+// than intra-procedural transfer alone. The guard pins n to 4 in the
+// caller; enter_congruence_ci_for binds that class to the formal p in a
+// fresh frame (locals default to top, so nothing else leaks in);
+// return_congruence publishes p * 3 to ret_var; and combine reads it back
+// as a, still a singleton.
+//
+// Context-insensitive by construction: triple has one call site, so
+// Ctx_None already gives it an exact entry class. The context-sensitive
+// counterpart is 07-entry_state_separates_calls.vimp.
+void triple(p) { return p * 3 }
+void main() {
+  n := __voblint_nondet_int();
+  if (n == 4) {
+    a := triple(n);
+    __voblint_check(a == 12); // PROVED
+    __voblint_check(!(a == 11)) // PROVED
+  } else {
+    __voblint_check(true) // PROVED
+  }
+}

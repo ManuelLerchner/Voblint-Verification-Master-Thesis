@@ -1,0 +1,21 @@
+// PARAM: --analysis congruence
+// Reachability from modular information alone: x is 0 (mod 2) for every
+// value n takes, 5 is 5 (mod 0), and the two classes are disjoint, so
+// intersect_congruence returns bottom and the then-branch is proved dead.
+//
+// The pairing with ../known-imprecision/01-eq_needs_singleton.vimp is the
+// point. The same disjointness that kills this branch is NOT available to
+// the check layer: congruence_eqb answers only when both sides are
+// singletons, while the guard goes through intersect_congruence, which
+// compares the classes properly. Congruence therefore refutes an
+// even-equals-odd claim when it appears as a guard and declines when the
+// identical claim appears as a check.
+void main() {
+  n := __voblint_nondet_int();
+  x := 2 * n;
+  if (x == 5) {
+    __voblint_check(false) // NOWARN (unreachable)
+  } else {
+    __voblint_check(true) // PROVED
+  }
+}

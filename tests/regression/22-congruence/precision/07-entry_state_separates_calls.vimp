@@ -1,0 +1,23 @@
+// PARAM: --analysis congruence --context entry-state
+// Context sensitivity for Congruence. Two call sites reach twice with the
+// singleton entry classes 3 and 5; keying the callee by its entry state
+// keeps them apart, so each activation returns a singleton and both checks
+// are decided.
+//
+// The context-insensitive run of this same program is the paired
+// imprecision case (../known-imprecision/05-context_join_loses_singleton
+// .vimp): one shared context joins 3 and 5 into 3 (mod 2), the return is
+// 2 (mod 4), and congruence_eqb declines on a non-singleton.
+//
+// The registry publishes Congruence under entry-state and call-string
+// contexts, both resolving to the always-join solver: widening for
+// congruence is plain join, and a strictly ascending chain of residue
+// classes is a chain of proper divisors of the modulus, so join alone
+// already terminates.
+void twice(p) { return p * 2 }
+void main() {
+  a := twice(3);
+  b := twice(5);
+  __voblint_check(a == 6); // PROVED
+  __voblint_check(b == 10) // PROVED
+}

@@ -1,0 +1,19 @@
+// PARAM: --analysis congruence
+// a is concretely 6. The context-insensitive run cannot say so.
+//
+// The concrete mechanism is the shared callee context. Ctx_None gives
+// twice one FunctionEntry slot for both call sites, so p is seeded with
+// the join of the singletons 3 and 5. That join is the smallest residue
+// class containing both, 3 (mod 2); p * 2 carries it to 2 (mod 4); and
+// congruence_eqb declines on a non-singleton. Nothing is lost inside the
+// callee -- the transfer is exact on the class it was given.
+//
+// ../precision/07-entry_state_separates_calls.vimp is the same program
+// under --context entry-state, where the two seeds stay apart and both
+// checks are decided.
+void twice(p) { return p * 2 }
+void main() {
+  a := twice(3);
+  b := twice(5);
+  __voblint_check(a == 6) // UNKNOWN
+}
