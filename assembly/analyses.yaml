@@ -204,10 +204,28 @@ domains:
     # registrations and exposes neither, so the two lists come apart and a
     # single key cannot say both. The emitter reads only this one.
     registrations:
+      adopted: true
       entry_state: {solvers: [always_join], default: always_join}
       call_string: {solvers: [always_join], default: always_join}
     legacy:
       impl_prefix: parity
+      # No `Parity_Assembly` here, unlike Sign's: `Parity_Checks` imports it
+      # directly, where `Sign_Checks` reaches it only through `Sign_Analyses`.
+      # Same rule, different consumer wiring -- the difference is correct.
+      # `TD.TD_side_upd_rule` is named though no constant of its appears: the
+      # solver obligations are discharged by locale-qualified facts, and a
+      # locale-qualified fact does not name its defining theory.
+      ctx_imports:
+        - Parity_Sound
+        - Parity_Classify
+        - Parity_Transfer
+        - Parity_Exec
+        - '"Voblint_Result.Routed_DG_Analysis"'
+        - '"Voblint_Framework.Call_String_Context"'
+        - '"Voblint_Framework.Routed_Context"'
+        - '"Voblint_Solver.TD_Solver_Bridge"'
+        - '"Voblint_VIMP.VIMP_Program"'
+        - '"TD.TD_side_upd_rule"'
       classifier: parity_classify_check
       init_gamma: parity_cinit_gamma
       # Parity's own commutation theorem is unconditional, which is stronger
@@ -254,6 +272,7 @@ domains:
     # so they generalise that pin back to a fixed binder and stay mode-generic.
     # The asymmetry is forced by the emission form, not chosen per domain.
     registrations:
+      adopted: true
       # Declared once for the domain, not per context: the rule is that
       # contextual registrations generalise and the unit one pins, which
       # follows from `global_interpretation` being unable to leave a parameter
@@ -351,10 +370,28 @@ domains:
     # registrations and exposes neither, so the two lists come apart and a
     # single key cannot say both. The emitter reads only this one.
     registrations:
+      adopted: true
       entry_state: {solvers: [always_join], default: always_join}
       call_string: {solvers: [always_join], default: always_join}
     legacy:
       impl_prefix: congruence
+      # No `Congruence_Assembly` here, unlike Sign's: `Congruence_Checks` imports it
+      # directly, where `Sign_Checks` reaches it only through `Sign_Analyses`.
+      # Same rule, different consumer wiring -- the difference is correct.
+      # `TD.TD_side_upd_rule` is named though no constant of its appears: the
+      # solver obligations are discharged by locale-qualified facts, and a
+      # locale-qualified fact does not name its defining theory.
+      ctx_imports:
+        - Congruence_Sound
+        - Congruence_Classify
+        - Congruence_Transfer
+        - Congruence_Exec
+        - '"Voblint_Result.Routed_DG_Analysis"'
+        - '"Voblint_Framework.Call_String_Context"'
+        - '"Voblint_Framework.Routed_Context"'
+        - '"Voblint_Solver.TD_Solver_Bridge"'
+        - '"Voblint_VIMP.VIMP_Program"'
+        - '"TD.TD_side_upd_rule"'
       classifier: congruence_classify_check
       init_gamma: congruence_cinit_gamma
       binders: {always_join: congruence_join, per_origin: congruence_po_asm}

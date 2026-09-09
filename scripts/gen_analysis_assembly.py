@@ -28,6 +28,16 @@ Usage:
 read and diffed without touching the tree. Without it, only what the registry
 marks adopted is written or compared, so the drift gate never demands a file
 the tree does not yet carry.
+
+This is a host writer, and a running Isabelle session does not notice it. That
+holds for a regeneration in place as much as for a file deleted and recreated
+elsewhere: same path, same theory name, no ROOT change, no `Duplicate theory
+name` exception -- nothing announces itself, and the session goes on serving
+the bytes it loaded. Diagnostics taken after a run of this generator describe
+the previous render until the session is restarted, and because a regeneration
+moves lines, they will cite offsets whose content has changed underneath.
+Restart before believing them, or compare the buffer against disk at a line
+the run changed.
 """
 
 import argparse
@@ -765,8 +775,14 @@ def render_contextual(dom, solvers):
             continue
         title = CONTEXT_TITLE[ctx]
         out += [f"section \\<open>{dom.name} at the {title} context\\<close>", ""]
-        # `generalize:` is one registry decision with four consequences, all
-        # of them here: the registration is a plain `interpretation` rather
+        # `generalize:` is one registry decision with seven consequences known
+        # so far, and expect an eighth: `defines` does four separate jobs --
+        # it names constants, exports a binder, supplies the `_for` hops, and
+        # makes a registration a `global_interpretation` -- so a registration
+        # without one loses four things at once, and each loss surfaces
+        # somewhere different. Seven symptoms, four causes, one overloaded
+        # mechanism. The consequences here are: the registration is a plain
+        # `interpretation` rather
         # than a `global_interpretation`; it has no `defines`, so there is no
         # `_spec` constant to declare `[code_unfold]`; its published constants
         # apply the pipeline directly instead of wrapping renamed names; and
@@ -779,7 +795,13 @@ def render_contextual(dom, solvers):
         for solver in reg["solvers"]:
             out += contextual_interpretation(
                 dom, ctx, solver, solvers, dom.generalize) + [""]
-            if ctx == "call_string":
+            # Inside the block whenever there is one. An `interpretation` does
+            # not export beyond its context, so a `lemmas` citing its binder
+            # must share it; only a `global_interpretation`, which has no
+            # enclosing block, can be re-exported from outside. Deciding this
+            # per context kind rather than per registration is right for a
+            # domain that pins and wrong for one that generalises.
+            if binders:
                 out += soundness_lemmas(dom, ctx, solver, solvers)
         if binders:
             out += ["end", ""]
@@ -795,7 +817,7 @@ def render_contextual(dom, solvers):
                     f"{dom.solver_suffix(ctx, solver) and ': ' + solvers[solver]['title'].lower()}"
                     "\\<close>", ""]
             out += published_constants(dom, ctx, solver, solvers)
-        if ctx == "entry_state":
+        if not binders:
             for solver in reg["solvers"]:
                 out += soundness_lemmas(dom, ctx, solver, solvers)
     out.append("end")

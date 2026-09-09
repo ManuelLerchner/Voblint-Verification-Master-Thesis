@@ -102,7 +102,7 @@ that reports failure as output rather than as exit status must never be
 filtered.** The same rule applies to counting instead of listing: print what
 matched, not how many.
 
-## A moved theory needs a restart, like a changed ROOT entry
+## Any `.thy` change that bypasses I/Q needs a restart
 
 A theory whose ROOT entry changed loads as `Draft.<name>` until jEdit restarts.
 The file-set analogue is less obvious and bites harder: when a theory is
@@ -116,6 +116,24 @@ exception THEORY raised: Duplicate theory name {..., Int_Analyses}
 
 Every later error is fallout from the session having no coherent theory
 context, so the count is meaningless. Restart, then read.
+
+**The quiet case is a regeneration in place, and it is the dangerous one.** The
+duplicate above at least announces itself. When a generator overwrites a theory
+at the *same* path under the *same* name -- no ROOT change, no duplicate, no
+exception -- nothing looks different: the node name is right, the file is where
+it belongs, and the session goes on serving the bytes it loaded. Diagnostics
+taken after `pixi run gen-assembly` describe the previous render, and because a
+regeneration moves lines they cite offsets whose content has changed
+underneath. This was caught once by comparing the buffer against disk at a line
+the run had changed, and would otherwise have produced a confident report about
+text that no longer existed.
+
+The reason it hides is that a generator run does not feel like editing -- nobody
+typed anything and no editor was involved. But `target.write_text(rendered)` is
+a host write like any other and the session cannot tell the difference. So the
+rule is not about editing: **any change to a `.thy` that does not go through
+I/Q needs a restart before its diagnostics mean anything** -- deleted, moved, or
+overwritten in place.
 
 Restarting is also the only way to check adoption at all. A `Draft.` node
 resolves imports without consulting the session, so its diagnostics say nothing
