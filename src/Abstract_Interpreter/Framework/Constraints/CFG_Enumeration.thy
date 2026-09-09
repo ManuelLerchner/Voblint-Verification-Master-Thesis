@@ -457,5 +457,86 @@ lemma vars_cover_of_exec:
   using cover unfolding vars_cover_exec_def vars_cover_def
   by (auto simp: list_all_iff set_cfg_intra_list[OF finE] set_cfg_calls_list[OF finC])
 
+
+subsection \<open>Coverage when the unknowns carry a context\<close>
+
+text \<open>
+  \<^const>\<open>vars_cover\<close> is fixed at the unit context: its unknowns are nodes, so it
+  can demand that every successor of every edge was solved.  A context-sensitive
+  system cannot demand that.  Its unknowns are node-context pairs, and which
+  contexts a node was solved at is decided by the run, so coverage becomes
+  \<^emph>\<open>closure\<close>: whenever a pair was solved, the pairs its edges lead to were
+  solved too.  Hence the conditional shape here against the unconditional shape
+  above.
+
+  Where a call leads is not a fact about the graph.  A routing policy computes
+  the callee's context from the call site, the caller's context, the callee, and
+  in general the state published at the call --- which is why \<open>succ_ctx\<close> is a
+  parameter rather than something read off \<open>g\<close>.  An instance supplies its own
+  route already applied to its own solved environment.
+
+  The return side takes no such argument: a combine resumes the caller's own
+  activation, so the continuation is covered at the context the call was made
+  in.
+\<close>
+
+definition ctx_vars_cover ::
+    "cfg \<Rightarrow> (cfg_node \<Rightarrow> 'c \<Rightarrow> call_action \<Rightarrow> pname \<Rightarrow> 'c) \<Rightarrow> 'c
+       \<Rightarrow> (cfg_node \<times> 'c) set \<Rightarrow> bool" where
+  "ctx_vars_cover g succ_ctx rc vars \<longleftrightarrow>
+     (cfg_entry g, rc) \<in> vars
+   \<and> (\<forall>u a v ctx. (u, ctx) \<in> vars \<longrightarrow> (u, a, v) \<in> intra g \<longrightarrow> (v, ctx) \<in> vars)
+   \<and> (\<forall>u ctx dst fs as q k. (u, ctx) \<in> vars
+        \<longrightarrow> (u, CallEdge dst fs as, FunctionEntry q, k) \<in> calls g
+        \<longrightarrow> (FunctionEntry q, succ_ctx u ctx (CallEdge dst fs as) q) \<in> vars
+          \<and> (k, ctx) \<in> vars)"
+
+lemma ctx_vars_coverI [intro]:
+  assumes "(cfg_entry g, rc) \<in> vars"
+    and "\<And>u a v ctx. (u, ctx) \<in> vars \<Longrightarrow> (u, a, v) \<in> intra g \<Longrightarrow> (v, ctx) \<in> vars"
+    and "\<And>u ctx dst fs as q k. (u, ctx) \<in> vars
+           \<Longrightarrow> (u, CallEdge dst fs as, FunctionEntry q, k) \<in> calls g
+           \<Longrightarrow> (FunctionEntry q, succ_ctx u ctx (CallEdge dst fs as) q) \<in> vars"
+    and "\<And>u ctx dst fs as q k. (u, ctx) \<in> vars
+           \<Longrightarrow> (u, CallEdge dst fs as, FunctionEntry q, k) \<in> calls g \<Longrightarrow> (k, ctx) \<in> vars"
+  shows "ctx_vars_cover g succ_ctx rc vars"
+  unfolding ctx_vars_cover_def using assms by blast
+
+lemma ctx_vars_cover_entryD [dest]:
+  "ctx_vars_cover g succ_ctx rc vars \<Longrightarrow> (cfg_entry g, rc) \<in> vars"
+  unfolding ctx_vars_cover_def by blast
+
+lemma ctx_vars_cover_edgeD [dest]:
+  "ctx_vars_cover g succ_ctx rc vars \<Longrightarrow> (u, ctx) \<in> vars \<Longrightarrow> (u, a, v) \<in> intra g
+     \<Longrightarrow> (v, ctx) \<in> vars"
+  unfolding ctx_vars_cover_def by blast
+
+lemma ctx_vars_cover_enterD [dest]:
+  assumes cover: "ctx_vars_cover g succ_ctx rc vars"
+  shows "\<And>u ctx dst fs as q k. (u, ctx) \<in> vars
+     \<Longrightarrow> (u, CallEdge dst fs as, FunctionEntry q, k) \<in> calls g
+     \<Longrightarrow> (FunctionEntry q, succ_ctx u ctx (CallEdge dst fs as) q) \<in> vars"
+  using cover unfolding ctx_vars_cover_def by blast
+
+lemma ctx_vars_cover_combineD [dest]:
+  assumes cover: "ctx_vars_cover g succ_ctx rc vars"
+  shows "\<And>u ctx dst fs as q k. (u, ctx) \<in> vars
+     \<Longrightarrow> (u, CallEdge dst fs as, FunctionEntry q, k) \<in> calls g \<Longrightarrow> (k, ctx) \<in> vars"
+  using cover unfolding ctx_vars_cover_def by blast
+
+text \<open>
+  The unit context is the degenerate instance, and the inclusion runs one way
+  only: \<^const>\<open>vars_cover\<close> covers a successor whether or not the source was
+  covered, which is strictly more than closure asks for.  A context-sensitive
+  system has no such statement to make, so this is a bridge for callers holding
+  the older premise, not a definition of one in terms of the other.
+\<close>
+
+lemma ctx_vars_cover_of_vars_cover:
+  assumes cover: "vars_cover g vars"
+  shows "ctx_vars_cover g (\<lambda>_ _ _ _. ()) () vars"
+  using cover unfolding vars_cover_def
+  by (intro ctx_vars_coverI) (auto simp: unit_eq)
+
 end
 

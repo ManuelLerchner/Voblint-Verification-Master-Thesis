@@ -106,6 +106,7 @@ domains:
     # registrations and exposes neither, so the two lists come apart and a
     # single key cannot say both. The emitter reads only this one.
     registrations:
+      adopted: true
       # Interval is the one domain with hand-written content left to host the
       # registrations next to -- the presentation-routing block, which is not
       # derivable and must not be. So its generated theory is separate and

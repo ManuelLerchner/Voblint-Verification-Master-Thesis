@@ -159,6 +159,19 @@ inductive csim :: "proc_table \<Rightarrow> cfg \<Rightarrow> com \<times> store
      compiled_at \<Pi> g pc c0c kc nc \<Longrightarrow>
      csim \<Pi> g (seq_after w afters, callee, [Frame caller dst])
               (FunctionResult p, callee, [(cont, dst, caller)])"
+text \<open>
+  \<^const>\<open>csim\<close> is a \<^emph>\<open>structural\<close> correspondence, not a reachability one, and it is not
+  functional.  \<open>compiled_at\<close> asks only that the body belongs to some procedure compiled into
+  the graph; it never asks whether that procedure is ever called.  So a program whose main
+  body is duplicated as an uncalled procedure relates one source configuration to two nodes,
+  one of them in dead code.  Do not try to prove a node unique, and do not read \<open>csim x v\<close> as
+  "the execution is at \<open>v\<close>": it says \<open>v\<close> \<^emph>\<open>can represent\<close> this control state.
+
+  A caller that needs the semantic node pairs this with membership in \<open>ltr_collect\<close> at the
+  same node, which the dead witness cannot satisfy --- no valid local trace reaches it.  That
+  pairing, not uniqueness, is what the source-level endpoints are stated over.
+\<close>
+
 text \<open>Inversion at an empty source frame stack.  Only \<open>Base\<close> can produce one --- \<open>Nested\<close> and
   \<open>Returning\<close> both append a caller frame --- so the CFG stack is empty too, the stores agree,
   and the whole activation certificate comes back.  \<open>csim\<close>'s introduction rules stay

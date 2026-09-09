@@ -121,30 +121,34 @@ theorem Union_activation_collect_le_ltr_collect:
   "(\<Union>c. activation_collect gs R startcontext g S v c) \<subseteq> ltr_collect gs g S v"
   using activation_collect_le_ltr_collect by blast
 
-text \<open>Bridge (2): the converse needs every valid trace to carry some context.  A functional
-  policy has that outright, since \<^const>\<open>key\<close> is total; a relational one earns it from
-  conditional totality, which is \<open>LTR_Abstract\<close>'s business.  No finiteness assumption either
-  way.\<close>
-theorem ltr_collect_eq_Union_activation_of_fun:
-  "ltr_collect gs g S v
-     = (\<Union>c. activation_collect gs (call_context_rel_of_fun f) startcontext g S v c)"
+text \<open>Bridge (2): the converse needs every valid trace to carry some context.  That premise is
+  the whole content of the direction -- a policy that leaves some trace uncontexted loses the
+  stores on it, and the union then falls short.  A functional policy has it outright, since
+  \<^const>\<open>key\<close> is total; a relational one earns it from conditional totality, which is
+  \<open>LTR_Abstract\<close>'s business.  No finiteness assumption either way.\<close>
+theorem ltr_collect_eq_Union_activation_of_has_context:
+  assumes has_ctx: "\<And>t. t \<in> valid_ltr gs g S \<Longrightarrow> \<exists>c. trace_context gs R startcontext g t c"
+  shows "ltr_collect gs g S v = (\<Union>c. activation_collect gs R startcontext g S v c)"
 proof
-  show "ltr_collect gs g S v
-          \<subseteq> (\<Union>c. activation_collect gs (call_context_rel_of_fun f) startcontext g S v c)"
+  show "ltr_collect gs g S v \<subseteq> (\<Union>c. activation_collect gs R startcontext g S v c)"
   proof
     fix x assume "x \<in> ltr_collect gs g S v"
     then obtain t where t: "t \<in> valid_ltr gs g S" "sink_node t = v" "sink_store t = x"
       by (rule ltr_collect_E)
-    then have "trace_context gs (call_context_rel_of_fun f) startcontext g t (key f startcontext t)"
-      by (simp add: trace_context_of_fun_iff)
-    with t show "x \<in> (\<Union>c. activation_collect gs (call_context_rel_of_fun f) startcontext g S v c)"
+    from has_ctx [OF t(1)] obtain c where "trace_context gs R startcontext g t c" ..
+    with t show "x \<in> (\<Union>c. activation_collect gs R startcontext g S v c)"
       by blast
   qed
 next
-  show "(\<Union>c. activation_collect gs (call_context_rel_of_fun f) startcontext g S v c)
-          \<subseteq> ltr_collect gs g S v"
+  show "(\<Union>c. activation_collect gs R startcontext g S v c) \<subseteq> ltr_collect gs g S v"
     by (rule Union_activation_collect_le_ltr_collect)
 qed
+
+theorem ltr_collect_eq_Union_activation_of_fun:
+  "ltr_collect gs g S v
+     = (\<Union>c. activation_collect gs (call_context_rel_of_fun f) startcontext g S v c)"
+  by (rule ltr_collect_eq_Union_activation_of_has_context)
+     (simp add: trace_context_of_fun_iff)
 
 
 section \<open>The collecting semantics is inhabited\<close>

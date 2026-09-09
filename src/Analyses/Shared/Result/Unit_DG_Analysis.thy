@@ -363,14 +363,14 @@ end
 subsection \<open>Executability of the unit-only surface\<close>
 
 text \<open>
-  The inherited objects already carry their code equations from
-  \<^locale>\<open>routed_dg_pipeline\<close>; only the five defined here need declaring.
+  Nothing is declared here, and that is deliberate. \<^locale>\<open>unit_dg_analysis\<close>
+  has assumptions, so \<open>globals_def\<close> and its four siblings come out carrying the
+  locale predicate as a premise; \<open>[code]\<close> rejects such a theorem with a warning
+  and silently adds no equation, which is exactly the trap of declaring them
+  anyway. Every executable use goes through a domain's
+  \<open>global_interpretation ... defines\<close>, and each renamed constant gets an
+  unconditional equation from that registration. The objects inherited from
+  \<^locale>\<open>routed_dg_pipeline\<close> keep the equations declared there.
 \<close>
-
-declare unit_dg_analysis.globals_def [code]
-declare unit_dg_analysis.solved_def [code]
-declare unit_dg_analysis.state_at_def [code]
-declare unit_dg_analysis.report_def [code]
-declare unit_dg_analysis.report_with_state_def [code]
 
 end

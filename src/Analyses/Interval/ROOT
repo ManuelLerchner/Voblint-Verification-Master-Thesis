@@ -26,6 +26,7 @@ session Voblint_Analysis_Interval in "." = "Voblint_Nonrelational" +
     Interval_Exec_Sound
     Interval_Classify
     Interval_Assembly
+    Interval_Contextual_Assembly
     Interval_Analyses
     Interval_Solver_Analyses
     Interval_Checks

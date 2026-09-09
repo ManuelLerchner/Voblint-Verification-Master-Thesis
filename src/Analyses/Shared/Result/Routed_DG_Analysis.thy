@@ -59,6 +59,42 @@ definition exec_formals_route ::
         formals_context pars
           (fun_of_resolved_st_q_for gs (case d of Bot \<Rightarrow> bot | Lifted d0 \<Rightarrow> d0)))"
 
+text \<open>
+  The same routing decision taken from a solved \<^emph>\<open>result\<close> instead of from the
+  solver's carrier. A rendering that draws one node per activation has to know
+  which callee context a call edge enters, and the table it draws from holds
+  \<^typ>\<open>'a abs_state\<close> rather than \<^typ>\<open>'a exec_dg_st\<close> --- so the projection
+  \<^const>\<open>exec_formals_route\<close> performs is unavailable to it, and the entered
+  state has to be recomputed from the caller's. \<open>enter\<close> is the domain's own
+  entry transfer and is the only domain-specific value involved; emptiness is
+  \<^const>\<open>is_empty\<close>, the \<^class>\<open>executable_domain\<close> operation every domain carries.
+
+  The witness search runs over the formals rather than over the whole state,
+  and it has to: \<^const>\<open>is_empty_state\<close> quantifies over every \<^typ>\<open>vname\<close>, so
+  its code equation would demand an \<^class>\<open>enum\<close> instance for
+  \<^typ>\<open>String.literal\<close> and this constant would not generate code at all.
+  Restricting to the formals is also exact rather than merely cheaper ---
+  procedure entry resets every non-global variable to top and leaves every
+  global at the caller's own value, so no name outside the formals can witness
+  emptiness that the caller did not already have.
+
+  \<^const>\<open>None\<close> means the call routes nowhere, because the entered state
+  represents no concrete store. It is not a sentinel context: an empty formal
+  list is a legitimate context in its own right --- a zero-formal callee's own
+  entry is genuinely keyed at \<open>[]\<close> --- so no \<^typ>\<open>'a list\<close> value could carry
+  that meaning without colliding with a real one.
+\<close>
+
+definition callee_ctx_of ::
+    "((vname \<Rightarrow> bool) \<Rightarrow> vname list \<Rightarrow> exp list \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state)
+       \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> call_action \<Rightarrow> ('a::executable_domain) abs_state
+       \<Rightarrow> 'a list option" where
+  "callee_ctx_of enter gs ca st =
+     (case ca of CallEdge dst pars args \<Rightarrow>
+        (let entered = enter gs pars args st
+         in if list_ex (\<lambda>x. is_empty (entered x)) pars then None
+            else Some (formals_context pars entered)))"
+
 lemma exec_formals_route_commute:
   "formals_route_lifted_gen u ctx (map_lift (fun_of_resolved_st_q_for gs) d) ca
      = exec_formals_route gs u ctx d ca"
@@ -176,6 +212,23 @@ definition reader :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog
 definition result :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog
     \<Rightarrow> ('c, 'a abs_state) analysis_result" where
   "result gs p = dg_result_for gs (declared_global_vars p) (solution gs p)"
+
+text \<open>
+  Where a call leads, as a function of the call site and the caller's context
+  alone: this route applied to the state this solve published at that site. It
+  names no concretization, so it belongs here rather than beside the soundness
+  endpoints -- which is what lets a registration that cannot export a binder
+  publish it by spelling this out, exactly as it publishes \<^const>\<open>result\<close>.
+\<close>
+
+definition ctx_succ :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> cfg_node \<Rightarrow> 'c
+    \<Rightarrow> call_action \<Rightarrow> pname \<Rightarrow> 'c" where
+  "ctx_succ gs p u ctx ca q =
+     route gs u ctx
+       (transfer_lift (resolved_st_q_is_bot_for (declared_global_vars p))
+          (enter_st gs (call_info_of ca q))
+          (locals (sol_env gs p (Inl (u, ctx)))))
+       ca"
 
 text \<open>
   The globals beside the table. Which contexts a procedure entry was solved at
@@ -824,7 +877,56 @@ theorem entry_state_has_context:
   shows "\<exists>c. trace_context pgs entry_context_rel root_ctx (prog_cfg p) t c"
   by (rule entry.routed_valid_ltr_has_context[OF entry_cov cinit_le_init trace])
 
+text \<open>
+  The two together: covering the entry is enough for the activation buckets to
+  exhaust the context-insensitive collection, so a caller holding only a
+  \<^const>\<open>ltr_collect\<close> membership -- which is what a source run delivers -- can
+  pass to the bucket its own call history produced.  Without this the per-context
+  bounds above say nothing about a run whose context is not known in advance.
+\<close>
+
+theorem entry_state_ltr_collect_eq_Union:
+  assumes entry_cov: "(cfg_entry (prog_cfg p), root_ctx) \<in> sol_vars pgs p"
+  shows "ltr_collect pgs (prog_cfg p) (cinit_stores pgs) v
+           = (\<Union>ctx. activation_collect pgs entry_context_rel root_ctx (prog_cfg p)
+                        (cinit_stores pgs) v ctx)"
+  by (rule ltr_collect_eq_Union_activation_of_has_context)
+     (rule entry_state_has_context [OF entry_cov])
+
 end
+
+text \<open>
+  The same two endpoints, with the four positional coverage assumptions replaced
+  by the one closure premise a caller can state on its own. Nothing is weakened:
+  \<^const>\<open>ctx_succ\<close> names where this solve's routing sends each call, so the
+  closure unfolds to those four assumptions and to nothing else. This is the
+  pair a source-level contextual statement consumes.
+\<close>
+
+theorem entry_state_activation_collect_sound_of_cover:
+  assumes solves: "terminates pgs p"
+    and cover: "ctx_vars_cover (prog_cfg p) (ctx_succ pgs p) root_ctx (sol_vars pgs p)"
+  shows "activation_collect pgs entry_context_rel root_ctx (prog_cfg p)
+           (cinit_stores pgs) v ctx
+           \<subseteq> gamma_state_lift (map_lift (fun_of_resolved_st_q_for pgs)
+                 (reader pgs p (Inl (v, ctx))))"
+  by (rule entry_state_activation_collect_sound
+        [OF solves ctx_vars_cover_edgeD [OF cover]
+            ctx_vars_cover_enterD [OF cover, unfolded ctx_succ_def]
+            ctx_vars_cover_combineD [OF cover]
+            ctx_vars_cover_entryD [OF cover]])
+
+theorem entry_state_ltr_collect_eq_Union_of_cover:
+  assumes solves: "terminates pgs p"
+    and cover: "ctx_vars_cover (prog_cfg p) (ctx_succ pgs p) root_ctx (sol_vars pgs p)"
+  shows "ltr_collect pgs (prog_cfg p) (cinit_stores pgs) v
+           = (\<Union>ctx. activation_collect pgs entry_context_rel root_ctx (prog_cfg p)
+                        (cinit_stores pgs) v ctx)"
+  by (rule entry_state_ltr_collect_eq_Union
+        [OF solves ctx_vars_cover_edgeD [OF cover]
+            ctx_vars_cover_enterD [OF cover, unfolded ctx_succ_def]
+            ctx_vars_cover_combineD [OF cover]
+            ctx_vars_cover_entryD [OF cover]])
 
 text \<open>
   A route that never reads the state it is handed is a function of the call site
@@ -874,6 +976,47 @@ next
                  (call_info_of (CallEdge dst pars args) q) s
                  (call_enter pgs (CallEdge dst pars args) s) ctx'"
     by simp
+qed
+
+text \<open>
+  The functional route's counterpart of the entry-state pair, and the reason a
+  source-level statement is available for it too. The union side needs nothing
+  at all: \<^const>\<open>key\<close> is total, so every valid trace carries a context without
+  any coverage having been established. Only the per-bucket bound depends on the
+  solve, and it takes the same single closure premise as the entry-state one.
+
+  The closure is stated at \<^const>\<open>ctx_succ\<close>, which applies the route to the
+  state published at the call site, while the bound below quantifies over every
+  state the route might have been handed. For a route that ignores that argument
+  those coincide, which is what \<open>route_const\<close> says and all this proof uses it for.
+\<close>
+
+theorem fun_route_ltr_collect_eq_Union:
+  "ltr_collect pgs (prog_cfg p) (cinit_stores pgs) v
+     = (\<Union>ctx. activation_collect pgs (call_context_rel_of_fun ctx_fun) root_ctx
+                  (prog_cfg p) (cinit_stores pgs) v ctx)"
+  by (rule ltr_collect_eq_Union_activation_of_fun)
+
+theorem fun_route_activation_collect_sound_of_cover:
+  fixes ctx_fun :: "cfg_node \<Rightarrow> 'c \<Rightarrow> store \<Rightarrow> 'c"
+  assumes route_const: "\<And>u ctx d ca s. route pgs u ctx d ca = ctx_fun u ctx s"
+    and solves: "terminates pgs p"
+    and cover: "ctx_vars_cover (prog_cfg p) (ctx_succ pgs p) root_ctx (sol_vars pgs p)"
+  shows "activation_collect pgs (call_context_rel_of_fun ctx_fun) root_ctx (prog_cfg p)
+           (cinit_stores pgs) v ctx
+           \<subseteq> gamma_state_lift (map_lift (fun_of_resolved_st_q_for pgs)
+                 (reader pgs p (Inl (v, ctx))))"
+proof (rule fun_route_activation_collect_sound
+         [OF route_const solves ctx_vars_cover_edgeD [OF cover] _
+             ctx_vars_cover_combineD [OF cover] ctx_vars_cover_entryD [OF cover]])
+  fix u ctx dst pars args q cont and d :: "'a exec_dg_st lifted"
+  assume covV: "(u, ctx) \<in> sol_vars pgs p"
+    and ce: "(u, CallEdge dst pars args, FunctionEntry q, cont) \<in> calls (prog_cfg p)"
+  have "(FunctionEntry q, ctx_succ pgs p u ctx (CallEdge dst pars args) q) \<in> sol_vars pgs p"
+    by (rule ctx_vars_cover_enterD [OF cover covV ce])
+  then show "(FunctionEntry q, route pgs u ctx d (CallEdge dst pars args)) \<in> sol_vars pgs p"
+    unfolding ctx_succ_def
+    by (simp only: route_const [of u ctx _ _ undefined])
 qed
 
 end
