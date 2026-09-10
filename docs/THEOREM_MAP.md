@@ -28,32 +28,33 @@ The *context* axis is not, and the closing note says where it stops.
 | The runtime dispatcher preserves each domain's proved and refuted verdicts | [`Voblint_CLI.Analyse_Dispatch:analyse_proved_sound`](../src/Executable_Surface/CLI/Analyse_Dispatch.thy), [`Voblint_CLI.Analyse_Dispatch:analyse_refuted_sound`](../src/Executable_Surface/CLI/Analyse_Dispatch.thy) | Covers all five selectable domains through the exported `analyse` function, which takes a domain and a program and no context. |
 | A certified dispatcher result is sound along arbitrary source executions | [`Voblint_CLI.Analyse_Dispatch:analyse_source_sound`](../src/Executable_Surface/CLI/Analyse_Dispatch.thy) | The verdict-list layer beneath the entry point, at the unit context `analyse_certified` names a solve for. |
 | A certified run of the exported entry point over-approximates the concrete run | [`Voblint_CLI.Analysis_Run_Sound:run_voblint_source_sound`](../src/Executable_Surface/CLI/Analysis_Run_Sound.thy) | Endpoint over `run_voblint`, the one operation code generation exports: the abstract state at the reached node contains the concrete store, and every rendered check row there is either a verdict that holds or not a dead marker. |
+| The same, at a context-sensitive configuration | [`Voblint_CLI.Analysis_Run_Ctx_Sound:ctx_source_sound_of_activation`](../src/Executable_Surface/CLI/Analysis_Run_Ctx_Sound.thy) | Stated once over an arbitrary context policy and instantiated per domain and policy. The store sits in the table entry filed under *one* context -- its own call history's -- and quantifying over every solved context would be false. |
+| Any accepted configuration's answer over-approximates the concrete run | [`Voblint_CLI.Analysis_Certified:run_voblint_certified_source_sound`](../src/Executable_Surface/CLI/Analysis_Certified.thy) | The headline: the domain, solver discipline and context policy are arguments. Legality and well-formedness are not premises, since an unsupported pairing answers `Unsupported_Configuration` and a malformed program `Malformed_Program`. |
+| A printed row is correct at the node it was printed for | [`Voblint_CLI.Analysis_Run_Ctx_Sound:ctx_rows_sound_at`](../src/Executable_Surface/CLI/Analysis_Run_Ctx_Sound.thy) | The endpoint's row claim without the source run, so the node is the caller's rather than the simulation's. What a caller supplies instead is a store the collecting semantics admits there. |
+| That headline is non-vacuous | [`Voblint_Examples_CLI.Example_End_To_End_Certificate:certificate_demo_source_certified`](../src/Examples/CLI/Example_End_To_End_Certificate.thy) | One program at `Int` + `Ctx_CallString 1` + explicit `Solver_Join`. `certificate_demo_full_certificate` names every witness the generic theorem leaves existential: the returned answer, its single `PROVED` row, the completed source run, the collecting-semantics membership at `Statement 4`, `analysis_result_covers` and `checks_sound_at` there, and the check's own truth. Well-formedness, termination, coverage and the answer are discharged by evaluation. |
 
 The `analyse` and `run_voblint` rows prove partial correctness. Solver termination and
 required key coverage remain explicit per-program premises; parsing, code
 generation, the OCaml compiler, and the handwritten CLI are outside the proved
 chain.
 
-The context axis stops earlier than the domain axis. Context-free is complete
-for all five domains, in each `<Domain>_Entry` theory:
-`analyse_<domain>_report_sound_proved`/`_refuted` conclude over `ltr_collect`,
-and `analyse_<domain>_source_sound`/`_completed_run_sound` place a source run's
-store in the published table at `lookup_context ... v ()`. The dispatcher rows
-above collect all five into one statement over `analyse`. Under
-`Ctx_EntryState` and `Ctx_CallString` what stands instead is the weaker
-per-context bound: one context's
-bucket of `activation_collect`, inside the concretization of the slot that
-solve published for it. It falls short in three separate ways. It bounds one
-bucket rather than everything reaching the node; it is stated against the
-solved reader rather than against the published table; and it never reaches a
-source execution. The contextual verdict report has no soundness statement in
-any shape, and `analyse_config_ctx`, the dispatcher the CLI reaches both
-policies through, has none either.
+The two axes now run equally far. Context-free is complete for all five domains
+in each `<Domain>_Entry` theory: `analyse_<domain>_report_sound_proved`/`_refuted`
+conclude over `ltr_collect`, and
+`analyse_<domain>_source_sound`/`_completed_run_sound` place a source run's store
+in the published table at `lookup_context ... v ()`. Under `Ctx_EntryState` and
+`Ctx_CallString` the same reaches a source run through
+`ctx_source_sound_of_activation`, which closes the three gaps the per-context
+bound left: it names the context the run's own call history produced rather than
+an arbitrary one, reads the published table rather than the solved reader, and
+starts from a source execution. What each policy owes is a termination fact and
+one `ctx_vars_cover`.
 
-Each of those three gaps has its closing lemma already proved and generic — the
-reader/table equation, the union over buckets, the source bridge, the last with
-one worked program behind it. What is missing at either policy is the
-instantiation, not the theory.
+The asymmetry that remains is precision of statement, not coverage. A contextual
+endpoint is existential in the context: the store sits in at least one bucket its
+call history is admitted at -- exactly one for a call string, possibly several for
+the relational entry-state routing -- while a statement over every context the
+node was solved at would be false.
 
 ## Configuration coverage of the source-level endpoint
 
@@ -64,44 +65,43 @@ per cell. Three outcomes exist in the dispatcher.
 **Row-producing** -- the answer is built by `flat_output_of`,
 `entry_state_output_of` or `cs_output_of`, so `out_checks` is
 `check_rows_of ... (classify_checks_verdicts ...)` and the endpoint's row
-argument applies. 26 configurations:
+argument applies. 32 configurations:
 
 | Context | Sign | Parity | Congruence | Interval | Int |
 | --- | --- | --- | --- | --- | --- |
 | `Ctx_None` | Join*, PerOrigin+ | Join*, PerOrigin+ | Join*, PerOrigin+ | Warrow*, Join+, PerOrigin+, WPO+ | Warrow*, Join+, PerOrigin+, WPO+ |
-| `Ctx_EntryState` | Join* | Join* | Join* | Warrow* | Warrow*, Join+ |
-| `Ctx_CallString k` | Join* | Join* | Join* | Warrow* | Warrow*, Join+ |
+| `Ctx_EntryState` | Join* | Join* | Join* | Warrow*, Join+, PerOrigin+, WPO+ | Warrow*, Join+ |
+| `Ctx_CallString k` | Join* | Join* | Join* | Warrow*, Join+, PerOrigin+, WPO+ | Warrow*, Join+ |
 
 `*` marks the discipline `None` selects; `+` marks a cell reached only by naming
-a solver. Every cell in the table carries the source-level theorem: 20 of the 26
-row-producing configurations. The unit cells instantiate
-`flat_source_sound_of_collect`, whose per-node bound each alternate discipline
-supplies from its own `unit_dg_analysis` registration; the contextual ones
-instantiate `ctx_source_sound_of_activation`.
+a solver. Every one of the 32 carries the source-level theorem. The unit cells
+instantiate `flat_source_sound_of_collect`, whose per-node bound each alternate
+discipline supplies from its own `unit_dg_analysis` registration; the contextual
+ones instantiate `ctx_source_sound_of_activation`.
 
-**Unregistered** -- Interval at `Join`, `PerOrigin` and `WarrowPerOrigin` under
-either context policy. These route to `verdict_report_answer`, which looks like
-a different output path but is not: its argument is a
-`(pp * exp * contextual_verdict) list`, and each of the six is
+The contextual cells at a named discipline live in
+[`Voblint_CLI.Analysis_Run_Solver_Sound`](../src/Executable_Surface/CLI/Analysis_Run_Solver_Sound.thy),
+those at each policy's default in
+[`Voblint_CLI.Analysis_Run_Ctx_Sound`](../src/Executable_Surface/CLI/Analysis_Run_Ctx_Sound.thy).
+The split is by discipline, not by argument: the two files prove the same thing
+and the second imports the first's endpoint.
+
+Six of them reach the endpoint by a different presentation. Interval at `Join`,
+`PerOrigin` and `WarrowPerOrigin` under either context policy routes to
+`verdict_report_answer`, which looks like a different output path but is not: its
+argument is a `(pp * exp * contextual_verdict) list`, and each of the six is
 `routed_dg_pipeline.verdict_report`, which is *defined* as
 `classify_checks_verdicts (prog_cfg p) (result gs p) classify`. Point, check
 expression and verdict all survive, so the rows are exactly what the contextual
-endpoint reads.
-
-What is missing is upstream. `routed_dg_analysis` is interpreted for Interval
-only at `interval_es` and `interval_cs`, both warrowing, so these six
-disciplines have no contextual soundness facts to instantiate. The registry
-already lists all four solvers for Interval's *unit* route and only
-`warrowing_apinis` for its contextual ones; Int shows the mechanism working with
-two disciplines per contextual route. Closing them is registry and generator
-work -- widen those solver lists, name the per-discipline re-exports, regenerate
--- followed by six ordinary instantiations. It is not a new bridge.
+endpoint reads; `out_checks_of_verdict_report_answer` is the one-line bridge that
+says so.
 
 **Rejected** -- every remaining combination answers
 `Unsupported_Configuration`, and there is nothing to prove.
 
-What remains is the 6 unregistered cells. They need a registration each before
-the existing endpoint applies, not a new theorem shape.
+Nothing row-producing remains. Closing the last six was registry and generator
+work -- widen Interval's contextual solver lists, name the per-discipline
+re-exports, regenerate -- followed by six ordinary instantiations.
 
 ## Dead rows
 

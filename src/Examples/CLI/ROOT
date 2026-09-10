@@ -24,3 +24,6 @@ session Voblint_Examples_CLI in "." = "Voblint_CLI" +
     Exec_Interval_Run
     Example_Int_Refinement_Mode_Regression
     Example_EntryState_Graph_Regression
+
+    (* Every premise of the configuration-generic endpoint, discharged *)
+    Example_End_To_End_Certificate

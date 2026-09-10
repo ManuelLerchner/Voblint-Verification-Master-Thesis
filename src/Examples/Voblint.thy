@@ -118,6 +118,25 @@ text \<open>
   not describe this store.  What a caller owes is a termination fact and one
   \<^const>\<open>ctx_vars_cover\<close> --- closure rather than blanket coverage, since which
   contexts a node was solved at is decided by the run and not by the graph.
+
+  \<^bold>\<open>One statement over every configuration.\<close>  Those endpoints are one per
+  configuration --- a domain, a solver discipline and a context policy --- and
+  every configuration the dispatcher answers with check rows has one, all 32 of
+  them.  \<open>run_voblint_certified_source_sound\<close> states the result once with the
+  configuration as an argument: what a caller owes is
+  \<open>certified_preconditions D solver ctx p\<close>, and neither configuration legality
+  nor well-formedness is a premise, because an unsupported pairing answers
+  \<open>Unsupported_Configuration\<close> and a malformed program answers
+  \<open>Malformed_Program\<close>.  The case split lives in that predicate and in
+  \<open>analysis_result_covers\<close> rather than in the statement, for the reason
+  \<^const>\<open>analyse_state_covers\<close> already is a function: an abstract state's type
+  is the domain's own carrier.
+
+  \<open>Example_End_To_End_Certificate\<close> is that theorem with nothing left to assume.
+  It fixes one program at the product domain, a call-string context of length
+  one and always-join named explicitly, evaluates the two per-program facts and
+  the answer, builds the source run step by step, and reads the printed
+  \<^const>\<open>Check_Proved\<close> row off the conclusion.
 \<close>
 
 section \<open>Complete end-to-end analyses\<close>

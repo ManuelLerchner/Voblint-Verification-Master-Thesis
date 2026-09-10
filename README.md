@@ -99,34 +99,74 @@ the collection on top of it: every store some valid trace holds when it sits at 
 contexts; `activation_collect` is the context-keyed variant the
 context-sensitive results are stated over.
 
-The chain ends at one statement over the CLI's own entry point
-([`run_voblint_source_sound`](src/Executable_Surface/CLI/Analysis_Run_Sound.thy)):
+The chain ends at a configuration-generic statement over the CLI's HOL entry
+point
+([`run_voblint_certified_source_sound`](src/Executable_Surface/CLI/Analysis_Certified.thy)):
 run the source program, stop wherever you like, and the analyzer's answer for the
 program point you are standing at describes the store in your hands -- the
-abstract state contains it, and every verdict printed beside it holds of it.
+abstract state contains it, and every definite verdict printed beside it is
+correct for that store. The domain, the solver discipline and the context policy are
+arguments, not parameters of the statement.
 
 ```isabelle
-theorem run_voblint_source_sound:
+theorem run_voblint_certified_source_sound:
   fixes p :: imp_prog and s0 s :: store
-  assumes wf: "wf_compile_input (declared_global p) (prog_table p) (prog_procs p)"
-      and cert: "analyse_certified D p"
-      and s0: "s0 ∈ cinit_stores (declared_global p)"
+  assumes s0: "s0 ∈ cinit_stores (declared_global p)"
       and run: "star (pstep (declared_global p) (prog_table p))
                   (main_body (prog_table p), s0, []) (residual, s, frs)"
-      and ans: "run_voblint D None Ctx_None view p = Analysed out"
+      and cert: "certified_preconditions D solver ctx p"
+      and ans: "run_voblint D solver ctx view p = Analysed out"
   shows "∃v stk. csim (prog_table p) (prog_cfg p) (residual, s, frs) (v, s, stk)
                ∧ s ∈ ltr_collect (declared_global p) (prog_cfg p)
                          (cinit_stores (declared_global p)) v
-               ∧ analyse_state_covers D p v s
-               ∧ (∀row ∈ set (out_checks out). row_point row = v ⟶
-                    (row_verdict row = Lifted Check_Proved ⟶ truthy (aval (row_exp row) s))
-                  ∧ (row_verdict row = Lifted Check_Refuted ⟶ ¬ truthy (aval (row_exp row) s))
-                  ∧ row_verdict row ≠ Bot)"
+               ∧ analysis_result_covers D solver ctx p v s
+               ∧ checks_sound_at out v s"
 ```
 
 `run_voblint` is the single operation `export_code` exports and `cli/main.ml`
-calls, and `D` ranges over every selectable domain, so this constrains the
-analyzer's own output rather than an internal solved system.
+calls, so this constrains the analyzer's own output rather than an internal
+solved system. Neither configuration legality nor well-formedness is a premise:
+an unsupported pairing answers `Unsupported_Configuration` and a malformed
+program answers `Malformed_Program`, so `Analysed out` already says the resolver
+accepted the configuration and the program passed its check. What a caller owes
+is `certified_preconditions D solver ctx p` -- that configuration's solver run
+completed, and it solved enough keys -- and nothing else.
+
+The two case splits the statement avoids live in the definitions instead:
+`certified_preconditions` names the obligations per configuration and
+`analysis_result_covers` names what that configuration's own table claims, both
+by recursion over the domain, the solver and the policy. They have to be
+definitions rather than parameters because an abstract state's type is the
+domain's own carrier, so nothing polymorphic holds all five.
+
+[`Example_End_To_End_Certificate`](src/Examples/CLI/Example_End_To_End_Certificate.thy)
+instantiates this theorem for an actual run -- the `Int` product domain, a
+call-string context of length one, and `Solver_Join` named explicitly rather than
+defaulted -- with well-formedness, solver termination, context coverage and the
+`Analysed` answer all discharged by evaluation. The source run is not assumed
+either: it is built step by step, both calls and the check, so the theorem's
+conclusion holds outright for a store the program really computes.
+
+It also closes the last gap the endpoint leaves open. `csim` is not functional,
+so the generic endpoint produces *some* sound witness node, and that existential
+witness need not be the check node whose printed row a reader wants to inspect.
+The example therefore establishes a second, explicit collecting-semantics witness
+at that node -- the semantics there really does contain the store the program
+computes, calls and all -- and reads
+[`ctx_rows_sound_at`](src/Executable_Surface/CLI/Analysis_Run_Ctx_Sound.thy)
+at that node: every store the semantics admits there satisfies the condition the
+report called `PROVED`. Printed verdict, named node, real execution.
+`certificate_demo_full_certificate` collects the whole thing with no existentials
+left -- the answer, its single row, the completed run, the membership at that node,
+`analysis_result_covers` and `checks_sound_at` there, and the check's own truth.
+
+The per-configuration endpoints stay underneath as the implementation level:
+[`Analysis_Run_Sound`](src/Executable_Surface/CLI/Analysis_Run_Sound.thy) for the
+context-free ones,
+[`Analysis_Run_Ctx_Sound`](src/Executable_Surface/CLI/Analysis_Run_Ctx_Sound.thy)
+for the contextual ones at each policy's default discipline, and
+[`Analysis_Run_Solver_Sound`](src/Executable_Surface/CLI/Analysis_Run_Solver_Sound.thy)
+for the contextual ones at an explicitly named discipline.
 
 `csim` gives a *structural* CFG correspondence for the current source control
 state, and that correspondence need not be unique. A procedure that is never
@@ -149,17 +189,21 @@ definite check verdict printed for it is correct.
 
 One asymmetry is deliberate. The check guarantee is stated over `out_checks
 out`, the analyzer's own returned rows, while the state guarantee is stated as
-`analyse_state_covers D p v s` rather than over `out`. That is because
-`analysis_output` keeps no abstract state: its snapshot, globals and per-row
-states are all `String.literal`, already rendered. An output-level state
+`analysis_result_covers D solver ctx p v s` rather than over `out`. That is
+because `analysis_output` keeps no abstract state: its snapshot, globals and
+per-row states are all `String.literal`, already rendered. An output-level state
 predicate could only be defined by inverting the renderer, so the honest split
 is a semantic guarantee about the computed result and an observable guarantee
 about the printed report.
-`analyse_state_covers` is the over-approximation itself: the concrete store lies
-in the concretization of the abstract state the analysis computed for that node.
-The last conjunct reads the printed check rows -- PROVED rows hold, REFUTED rows
-are violated, and no row at a node the run actually reaches is marked dead, so
-an unreachability claim can never be printed over a store that reached it.
+`analysis_result_covers` is the over-approximation itself: the concrete store
+lies in the concretization of the abstract state that configuration's own solve
+filed for that node -- under at least one context its call history is admitted at,
+when the policy keeps contexts. A call string is a function of that history, so
+there the context is unique; entry-state routing is relational and may admit more
+than one. `checks_sound_at` reads the printed check
+rows -- PROVED rows hold, REFUTED rows are violated, and no row at a node the
+run actually reaches is marked dead, so an unreachability claim can never be
+printed over a store that reached it.
 
 [`analyse_source_sound`](src/Executable_Surface/CLI/Analyse_Dispatch.thy) is the
 same statement one layer down, over the `analyse` verdict list rather than the
@@ -170,15 +214,16 @@ rendered rows, and without the coverage conjunct.
 For the HOL call
 
 ```isabelle
-run_voblint D None ctx view p = Analysed out
+run_voblint D solver ctx view p = Analysed out
 ```
 
 with the per-program premises established, a source-level soundness theorem
-covers these configurations:
+covers every configuration the dispatcher answers with check rows:
 
 ```text
-D   in {Sign, Interval, Parity, Congruence, Int}
-ctx in {Ctx_None, Ctx_EntryState, Ctx_CallString k}
+D      in {Sign, Interval, Parity, Congruence, Int}
+ctx    in {Ctx_None, Ctx_EntryState, Ctx_CallString k}
+solver = None, or any discipline that domain and policy accepts
 ```
 
 Every modeled source execution is over-approximated at a genuinely reachable
@@ -214,9 +259,10 @@ them back. A dead marker means nothing reaches the point, under any context.
 The same statement holds at the context-sensitive configurations, where the
 table has one entry per point *and* context
 ([`Analysis_Run_Ctx_Sound`](src/Executable_Surface/CLI/Analysis_Run_Ctx_Sound.thy)).
-The store then sits in the entry filed under *one* context -- the one its own
-call history produced -- and quantifying over every covered context instead
-would be false, since a different activation's entry need not describe this
+The store then sits in the entry filed under *at least one* context its own call
+history is admitted at -- unique for a call string, possibly several for
+entry-state routing -- and quantifying over every context the node was solved at
+instead would be false, since another activation's entry need not describe this
 store at all.
 
 ```isabelle
@@ -259,13 +305,21 @@ exactly one context by construction and there is no context-totality obligation
 at all: `fun_route_ltr_collect_eq_Union` is premise-free. What remains is the
 termination fact and the one closure premise.
 
-Two limits are worth naming. `None` is the solver argument: it selects each
-domain's certified default discipline. Explicitly selected alternatives are
-partially certified -- some already carry the same source-level endpoint, others
-have only the lower-level per-node bridge, and a few route through a different
-report path entirely; [`docs/THEOREM_MAP.md`](docs/THEOREM_MAP.md) records the
-exact matrix. And the guarantee is about `out_checks` -- the graph, snapshot and
-globals in the answer are rendered strings, with no theorem about them.
+`None` selects each domain's default discipline, and naming a solver instead
+changes nothing about what is proved: every configuration the dispatcher answers
+with rows carries the same source-level theorem, all 32 of them, whichever of
+always-join, per-origin, Apinis warrowing or warrowing-per-origin ran the system.
+The 32 are plans, not spellings: `None` and the discipline it defaults to resolve
+to one plan and share one theorem, so they count once.
+[`docs/THEOREM_MAP.md`](docs/THEOREM_MAP.md) is the cell-by-cell matrix, and
+[`Analysis_Run_Solver_Sound`](src/Executable_Surface/CLI/Analysis_Run_Solver_Sound.thy)
+holds the contextual cells at a named discipline. What the endpoint reads is the
+solved table, not the search that produced it, so a discipline costs one
+registration and one instantiation, never a new argument.
+
+One limit is worth naming: the guarantee is about `out_checks` -- the graph,
+snapshot and globals in the answer are rendered strings, with no theorem about
+them.
 
 [`analyse_certified D p`](src/Executable_Surface/CLI/Analyse_Dispatch.thy)
 bundles the two per-program facts nothing here proves in general. It is a
@@ -298,13 +352,13 @@ domain writes no source-level reasoning. See
 
 ### What the guarantee covers, and what it does not
 
-The theorem above is stated for each domain's **default, context-insensitive**
-configuration; `analyse_certified` names that configuration's solve per domain,
-and the per-domain corollaries read their tables at `lookup_context ... v ()`.
-Both context-sensitive policies now carry the same source-level statement for
-all five domains, over each one's own result table. The alternate solver update
-rules reachable through `analyse_with_solver` are covered cell by cell rather
-than as a class. Domain coverage is not configuration coverage; see
+The theorem above is stated for the configuration as an argument, so domain,
+solver discipline and context policy are all covered by one statement, and
+`certified_preconditions D solver ctx p` is what a caller owes per program. The
+per-configuration endpoints underneath it are what that predicate is assembled
+from, one per plan; `analyse_certified D p` is the unit-context specialization of
+the same pair of obligations, and the per-domain corollaries read their tables at
+`lookup_context ... v ()`. See
 [`docs/THEOREM_MAP.md`](docs/THEOREM_MAP.md) for each endpoint's exact shape.
 
 Read the two verdicts precisely. `PROVED` at a node says every execution that
@@ -314,8 +368,9 @@ at all, so a `REFUTED` line is not a verified counterexample: a check on a dead
 branch is reported dead, and `REFUTED` on a reachable one still comes with no
 witness run.
 
-`analyse_certified` is exactly the two side conditions that survive, and neither
-is discharged in general. Both can be established for an individual program by
+`certified_preconditions` -- and `analyse_certified`, its unit-context
+specialization -- is exactly the two side conditions that survive, and neither is
+discharged in general. Both can be established for an individual program by
 executable evaluation:
 
 * `solve`: the solver run completed. Per program: evaluate the solver-success
@@ -399,6 +454,7 @@ component *plus* cross-component reduction, not a better interval transfer
 | Sign | `sign` | `analyse_sign_result` | join | `none`, `entry-state`, `call-string` |
 | Interval | `interval` | `analyse_interval_td_result` | warrowing | `none`, `entry-state`, `call-string` |
 | Parity | `parity` | `analyse_parity_result` | join | `none`, `entry-state`, `call-string` |
+| Congruence | `congruence` | `analyse_congruence_result` | join | `none`, `entry-state`, `call-string` |
 | Int (Sign × Interval × Parity × Congruence) | `int` | `analyse_int_result` | warrowing | `none`, `entry-state`, `call-string` |
 
 Every domain supplies a `widen` operator; Sign and Parity are finite lattices

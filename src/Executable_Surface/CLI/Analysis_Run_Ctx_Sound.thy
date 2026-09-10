@@ -8,8 +8,10 @@ text \<open>
   The context-free endpoint reads one abstract state per program point. A
   context-sensitive configuration reads one per point \<^emph>\<open>and\<close> context, so a
   concrete store reaching a point is described by the entry the analysis filed
-  under \<^emph>\<open>some\<close> context -- the one the run's own call history produced -- and
-  by no other. That extra step is what this theory supplies, and it runs in the
+  under \<^emph>\<open>some\<close> context its own call history is admitted at --- exactly one for a
+  call string, possibly several for the relational entry-state routing, and in
+  general not every context the node was solved at. That extra step is what this
+  theory supplies, and it runs in the
   opposite direction to the published soundness: soundness bounds one bucket
   from above, while a store in hand needs a bucket to sit in at all.
 
@@ -19,7 +21,9 @@ text \<open>
   store known to reach a point sits in some context's entry of that table
   (\<open>lookup_context_covers_of_activation\<close>). And the two compose into a
   source-level endpoint, stated once over an arbitrary context policy and
-  instantiated at Sign's two contextual configurations.
+  instantiated at every domain's two contextual configurations, each at the
+  discipline its policy defaults to. The same endpoint at an explicitly named
+  discipline lives in \<open>Analysis_Run_Solver_Sound\<close>, which imports this one.
 \<close>
 
 subsection \<open>A decided row of a contextual answer is an entry of its verdict report\<close>
@@ -41,6 +45,19 @@ lemma out_checks_of_entry_state_output:
   by (cases view)
      (auto simp: entry_state_output_of_def contextual_output_def report_output_def
         collapsed_output_def Let_def)
+
+text \<open>
+  \<^const>\<open>verdict_report_answer\<close> looks like a different output path and is not
+  one: its argument is already the contextual verdict report, so the rows it
+  renders are the same \<^const>\<open>classify_checks_verdicts\<close> the other two build
+  internally.  Only the state column differs, and no theorem reads it.
+\<close>
+
+lemma out_checks_of_verdict_report_answer:
+  assumes "verdict_report_answer view rows = Analysed out"
+  shows "out_checks out = check_rows_of (\<lambda>_. Bot) rows"
+  using assms unfolding verdict_report_answer_def report_output_def
+  by (auto split: output_view.splits)
 
 lemma out_checks_of_cs_output:
   assumes "cs_output_of view into classify r k p = Analysed out"
@@ -137,10 +154,92 @@ text \<open>
   The state conclusion names the context, and that is the substance of the
   difference from the context-free endpoint. There the table has one entry per
   point and the store sits in it; here it has one per point and context, and the
-  store sits in \<^emph>\<open>one\<close> of them --- the one its own call history produced. A
-  statement quantifying over every covered context instead would be false: a
-  different activation's entry need not describe this store at all.
+  store sits in \<^emph>\<open>at least one\<close> of them --- a context its own call history is
+  admitted at, unique when the policy keys on that history alone. A statement
+  quantifying over every context the node was solved at instead would be false:
+  another activation's entry need not describe this store at all.
 \<close>
+
+text \<open>
+  The check column's claim at a node the caller names, rather than at the node a
+  source run happened to reach. This is the half of the endpoint below that does
+  not mention a source execution at all: given a store the collecting semantics
+  admits at \<open>v\<close>, every row printed for \<open>v\<close> is correct of it. A caller who can
+  exhibit that store --- by walking the graph, say --- gets the verdict claim at
+  the point it was printed for, which the existential witness below cannot give.
+\<close>
+
+lemma ctx_rows_sound_at:
+  fixes p :: imp_prog and s :: store
+    and r :: "('c, 'a::sound_domain abs_state) analysis_result"
+    and classify :: "exp \<Rightarrow> 'a abs_state \<Rightarrow> check_result"
+  assumes union: "\<And>u. ltr_collect (declared_global p) (prog_cfg p)
+                          (cinit_stores (declared_global p)) u
+                    \<subseteq> (\<Union>c. activation_collect (declared_global p) R rc (prog_cfg p)
+                                (cinit_stores (declared_global p)) u c)"
+      and sound: "\<And>u ctx. activation_collect (declared_global p) R rc (prog_cfg p)
+                              (cinit_stores (declared_global p)) u ctx
+                    \<subseteq> gamma_point (lookup_context r u ctx)"
+      and fin: "finite_analysis_result r"
+      and proved: "\<And>c d t. classify c d = Check_Proved \<Longrightarrow> t \<in> \<lbrakk>d\<rbrakk> \<Longrightarrow> truthy (aval c t)"
+      and refuted: "\<And>c d t. classify c d = Check_Refuted \<Longrightarrow> t \<in> \<lbrakk>d\<rbrakk>
+                        \<Longrightarrow> \<not> truthy (aval c t)"
+      and rows: "out_checks out
+                   = check_rows_of env (classify_checks_verdicts (prog_cfg p) r classify)"
+      and mem: "s \<in> ltr_collect (declared_global p) (prog_cfg p)
+                      (cinit_stores (declared_global p)) v"
+  shows "\<forall>row \<in> set (out_checks out). row_point row = v \<longrightarrow>
+           row_verdict row \<noteq> Dead
+         \<and> (row_verdict row = Decided Check_Proved \<longrightarrow> truthy (aval (row_exp row) s))
+         \<and> (row_verdict row = Decided Check_Refuted \<longrightarrow> \<not> truthy (aval (row_exp row) s))"
+proof -
+  have finI: "finite (intra (prog_cfg p))"
+    unfolding prog_cfg_def using compile_prog_finite by simp
+  obtain ctx st where act: "s \<in> activation_collect (declared_global p) R rc (prog_cfg p)
+                                  (cinit_stores (declared_global p)) v ctx"
+    and look: "lookup_context r v ctx = Lifted st" and gst: "s \<in> \<lbrakk>st\<rbrakk>"
+    by (rule lookup_context_covers_of_activation [OF union sound mem])
+  have decided: "(v, row_exp row, Decided res)
+                   \<in> set (classify_checks_verdicts (prog_cfg p) r classify)"
+    if "row \<in> set (out_checks out)" and "row_point row = v" and "row_verdict row = Decided res"
+    for row res
+    using decided_row_of_check_rows [OF that(1) [unfolded rows] that(3)] that(2) by simp
+  show ?thesis
+  proof (intro ballI impI conjI)
+    fix row
+    assume rm: "row \<in> set (out_checks out)" and at: "row_point row = v"
+    show "row_verdict row \<noteq> Dead"
+    proof
+      assume dead: "row_verdict row = Dead"
+      from row_in_check_rows [OF rm [unfolded rows]] at dead
+      have "(v, row_exp row, Dead) \<in> set (classify_checks_verdicts (prog_cfg p) r classify)"
+        by simp
+      then have agg: "aggregate_verdicts
+                        ((\<lambda>c'. classify_point classify (row_exp row) (lookup_context r v c'))
+                           ` contexts_at r v) = Dead"
+        using classify_checks_verdicts_mem_iff [OF finI] by metis
+      have "classify_point classify (row_exp row) (lookup_context r v ctx)
+              \<in> (\<lambda>c'. classify_point classify (row_exp row) (lookup_context r v c'))
+                  ` contexts_at r v"
+        using lookup_context_LiftedD [OF look] by blast
+      with agg aggregate_verdicts_eq_Dead_iff [OF finite_imageI [OF finite_contexts_at [OF fin]]]
+      have "classify_point classify (row_exp row) (lookup_context r v ctx) = Dead" by meson
+      with look show False by simp
+    qed
+  next
+    fix row
+    assume "row \<in> set (out_checks out)" and "row_point row = v"
+       and "row_verdict row = Decided Check_Proved"
+    from classify_checks_ctx_proved_sound [OF finI decided [OF this] look]
+    show "truthy (aval (row_exp row) s)" by (rule proved) (rule gst)
+  next
+    fix row
+    assume "row \<in> set (out_checks out)" and "row_point row = v"
+       and "row_verdict row = Decided Check_Refuted"
+    from classify_checks_ctx_refuted_sound [OF finI decided [OF this] look]
+    show "\<not> truthy (aval (row_exp row) s)" by (rule refuted) (rule gst)
+  qed
+qed
 
 theorem ctx_source_sound_of_activation:
   fixes p :: imp_prog and s0 s :: store
@@ -447,88 +546,6 @@ proof -
     show "finite_analysis_result (analyse_sign_call_string_result k p)"
       using analyse_sign_call_string_vars_finite [OF solves]
       by (simp add: finite_analysis_result_def analyse_sign_call_string_result_def
-          routed_dg_pipeline.result_def routed_dg_pipeline.sol_vars_def)
-  qed
-qed
-
-subsection \<open>Int at an explicitly chosen join discipline, call-string\<close>
-
-abbreviation int_cs_join_terminates where
-  "int_cs_join_terminates k \<equiv>
-     routed_dg_pipeline.terminates (int_tf_st_for Refine_Fixpoint)
-       (int_dom_enter_st_for Refine_Fixpoint) cinit_int_dom_st
-       Call_String_Context.Global Call_String_Context.Seed (\<lambda>_. cs_route k) []
-       (TD_side_upd_rule.solve_dom init_basic_ug_state update_global_always_join)"
-
-abbreviation int_cs_join_ctx_succ where
-  "int_cs_join_ctx_succ k \<equiv>
-     routed_dg_pipeline.ctx_succ (int_tf_st_for Refine_Fixpoint)
-       (int_dom_enter_st_for Refine_Fixpoint) cinit_int_dom_st
-       Call_String_Context.Global Call_String_Context.Seed (\<lambda>_. cs_route k) []
-       TD_side_always_join_Interp_solve"
-
-abbreviation int_cs_join_vars where
-  "int_cs_join_vars k \<equiv>
-     routed_dg_pipeline.sol_vars (int_tf_st_for Refine_Fixpoint)
-       (int_dom_enter_st_for Refine_Fixpoint) cinit_int_dom_st
-       Call_String_Context.Global Call_String_Context.Seed (\<lambda>_. cs_route k) []
-       TD_side_always_join_Interp_solve"
-
-theorem run_voblint_int_call_string_join_source_sound:
-  fixes p :: imp_prog and s0 s :: store and k :: nat
-  assumes wf: "wf_compile_input (declared_global p) (prog_table p) (prog_procs p)"
-      and s0: "s0 \<in> cinit_stores (declared_global p)"
-      and run: "star (pstep (declared_global p) (prog_table p))
-                  (main_body (prog_table p), s0, []) (residual, s, frs)"
-      and solves: "int_cs_join_terminates k (declared_global p) p"
-      and cover: "ctx_vars_cover (prog_cfg p) (int_cs_join_ctx_succ k (declared_global p) p) []
-                    (int_cs_join_vars k (declared_global p) p)"
-      and ans: "run_voblint Int_Analysis (Some Solver_Join) (Ctx_CallString k) view p
-                  = Analysed out"
-  shows "\<exists>v stk ctx st.
-           csim (prog_table p) (prog_cfg p) (residual, s, frs) (v, s, stk)
-         \<and> s \<in> activation_collect (declared_global p)
-                   (call_context_rel_of_fun (\<lambda>u c t. cs_context k u c t)) []
-                   (prog_cfg p) (cinit_stores (declared_global p)) v ctx
-         \<and> lookup_context (analyse_int_call_string_result k p) v ctx = Lifted st
-         \<and> s \<in> \<lbrakk>st\<rbrakk>
-         \<and> (\<forall>row \<in> set (out_checks out). row_point row = v \<longrightarrow>
-              row_verdict row \<noteq> Dead
-            \<and> (row_verdict row = Decided Check_Proved \<longrightarrow> truthy (aval (row_exp row) s))
-            \<and> (row_verdict row = Decided Check_Refuted \<longrightarrow> \<not> truthy (aval (row_exp row) s)))"
-proof -
-  note cov = solves cover
-  from ans
-  have "cs_output_of view IntDomValue int_classify_check
-          (analyse_int_call_string_result k p) k p = Analysed out"
-    by (simp add: run_voblint_def mk_analysis_config_def plan_answer_def split: if_splits)
-  note rows = out_checks_of_cs_output [OF this]
-  show ?thesis
-  proof (rule ctx_source_sound_of_activation
-      [OF wf s0 run _ _ _ int_classify_check_proved int_classify_check_refuted rows])
-    fix u
-    show "ltr_collect (declared_global p) (prog_cfg p) (cinit_stores (declared_global p)) u
-            \<subseteq> (\<Union>c. activation_collect (declared_global p)
-                       (call_context_rel_of_fun (\<lambda>u c t. cs_context k u c t)) []
-                       (prog_cfg p) (cinit_stores (declared_global p)) u c)"
-      by (rule equalityD1
-            [OF analyse_int_call_string_ltr_collect_eq_Union
-                  [where ctx_fun = "cs_context k"]])
-  next
-    fix u ctx
-    show "activation_collect (declared_global p)
-             (call_context_rel_of_fun (\<lambda>u c t. cs_context k u c t)) []
-             (prog_cfg p) (cinit_stores (declared_global p)) u ctx
-            \<subseteq> gamma_point (lookup_context (analyse_int_call_string_result k p) u ctx)"
-      using analyse_int_call_string_sound_of_cover [OF cov, where s = "\<lambda>u c t. t"]
-      unfolding analyse_int_call_string_result_def
-                analyse_int_call_string_result_for_def
-                analyse_int_call_string_gamma_reader_eq_lookup .
-  next
-    show "finite_analysis_result (analyse_int_call_string_result k p)"
-      using analyse_int_call_string_vars_finite [OF solves]
-      by (simp add: finite_analysis_result_def analyse_int_call_string_result_def
-          analyse_int_call_string_result_for_def
           routed_dg_pipeline.result_def routed_dg_pipeline.sol_vars_def)
   qed
 qed
@@ -845,101 +862,6 @@ proof -
       using analyse_int_call_string_vars_finite_warrow [OF solves]
       by (simp add: finite_analysis_result_def analyse_int_call_string_result_warrow_def
           analyse_int_call_string_result_for_warrow_def
-          routed_dg_pipeline.result_def routed_dg_pipeline.sol_vars_def)
-  qed
-qed
-
-subsection \<open>Int at an explicitly chosen join discipline\<close>
-
-text \<open>
-  The first configuration reached by naming a solver rather than taking the
-  default. Int publishes both disciplines, so its join registration carries the
-  same facts under unsuffixed names, and the argument is the warrowing one with
-  those names substituted --- which is the point: the discipline is sealed
-  inside the coverage endpoints and the endpoint proof never inspects it.
-\<close>
-
-abbreviation int_es_join_terminates where
-  "int_es_join_terminates \<equiv>
-     routed_dg_pipeline.terminates (int_tf_st_for Refine_Fixpoint)
-       (int_dom_enter_st_for Refine_Fixpoint) cinit_int_dom_st
-       (Analysis_Global ()) Activation_Seed exec_formals_route []
-       (TD_side_upd_rule.solve_dom init_basic_ug_state update_global_always_join)"
-
-abbreviation int_es_join_ctx_succ where
-  "int_es_join_ctx_succ \<equiv>
-     routed_dg_pipeline.ctx_succ (int_tf_st_for Refine_Fixpoint)
-       (int_dom_enter_st_for Refine_Fixpoint) cinit_int_dom_st
-       (Analysis_Global ()) Activation_Seed exec_formals_route []
-       TD_side_always_join_Interp_solve"
-
-abbreviation int_es_join_vars where
-  "int_es_join_vars \<equiv>
-     routed_dg_pipeline.sol_vars (int_tf_st_for Refine_Fixpoint)
-       (int_dom_enter_st_for Refine_Fixpoint) cinit_int_dom_st
-       (Analysis_Global ()) Activation_Seed exec_formals_route []
-       TD_side_always_join_Interp_solve"
-
-abbreviation int_es_join_ctx_rel where
-  "int_es_join_ctx_rel \<equiv>
-     routed_dg_analysis.admitted_contexts (int_tf_st_for Refine_Fixpoint)
-       (int_dom_enter_st_for Refine_Fixpoint) cinit_int_dom_st
-       (Analysis_Global ()) Activation_Seed exec_formals_route []
-       TD_side_always_join_Interp_solve"
-
-theorem run_voblint_int_entry_state_join_source_sound:
-  fixes p :: imp_prog and s0 s :: store
-  assumes wf: "wf_compile_input (declared_global p) (prog_table p) (prog_procs p)"
-      and s0: "s0 \<in> cinit_stores (declared_global p)"
-      and run: "star (pstep (declared_global p) (prog_table p))
-                  (main_body (prog_table p), s0, []) (residual, s, frs)"
-      and solves: "int_es_join_terminates (declared_global p) p"
-      and cover: "ctx_vars_cover (prog_cfg p) (int_es_join_ctx_succ (declared_global p) p) []
-                    (int_es_join_vars (declared_global p) p)"
-      and ans: "run_voblint Int_Analysis (Some Solver_Join) Ctx_EntryState view p
-                  = Analysed out"
-  shows "\<exists>v stk ctx st.
-           csim (prog_table p) (prog_cfg p) (residual, s, frs) (v, s, stk)
-         \<and> s \<in> activation_collect (declared_global p)
-                   (int_es_join_ctx_rel (declared_global p) p) [] (prog_cfg p)
-                   (cinit_stores (declared_global p)) v ctx
-         \<and> lookup_context (analyse_int_entry_state_result p) v ctx = Lifted st
-         \<and> s \<in> \<lbrakk>st\<rbrakk>
-         \<and> (\<forall>row \<in> set (out_checks out). row_point row = v \<longrightarrow>
-              row_verdict row \<noteq> Dead
-            \<and> (row_verdict row = Decided Check_Proved \<longrightarrow> truthy (aval (row_exp row) s))
-            \<and> (row_verdict row = Decided Check_Refuted \<longrightarrow> \<not> truthy (aval (row_exp row) s)))"
-proof -
-  note cov = solves cover
-  from ans
-  have "entry_state_output_of view (enter_int_dom_for Refine_Fixpoint) IntDomValue
-          int_classify_check (analyse_int_entry_state_result p) p = Analysed out"
-    by (simp add: run_voblint_def mk_analysis_config_def plan_answer_def split: if_splits)
-  note rows = out_checks_of_entry_state_output [OF this]
-  show ?thesis
-  proof (rule ctx_source_sound_of_activation
-      [OF wf s0 run _ _ _ int_classify_check_proved int_classify_check_refuted rows])
-    fix u
-    show "ltr_collect (declared_global p) (prog_cfg p) (cinit_stores (declared_global p)) u
-            \<subseteq> (\<Union>c. activation_collect (declared_global p)
-                       (int_es_join_ctx_rel (declared_global p) p) []
-                       (prog_cfg p) (cinit_stores (declared_global p)) u c)"
-      by (simp add: analyse_int_entry_state_ltr_collect_eq_Union_of_cover [OF cov])
-  next
-    fix u ctx
-    show "activation_collect (declared_global p)
-             (int_es_join_ctx_rel (declared_global p) p) []
-             (prog_cfg p) (cinit_stores (declared_global p)) u ctx
-            \<subseteq> gamma_point (lookup_context (analyse_int_entry_state_result p) u ctx)"
-      using analyse_int_entry_state_sound_of_cover [OF cov]
-      unfolding analyse_int_entry_state_result_def
-                analyse_int_entry_state_result_for_def
-                analyse_int_entry_state_gamma_reader_eq_lookup .
-  next
-    show "finite_analysis_result (analyse_int_entry_state_result p)"
-      using analyse_int_entry_state_vars_finite [OF solves]
-      by (simp add: finite_analysis_result_def analyse_int_entry_state_result_def
-          analyse_int_entry_state_result_for_def
           routed_dg_pipeline.result_def routed_dg_pipeline.sol_vars_def)
   qed
 qed
