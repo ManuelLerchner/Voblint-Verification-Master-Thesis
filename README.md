@@ -186,6 +186,31 @@ CFG node -- and, at the context-sensitive policies, under the analysis context
 its own call history produced. At that node every definite check verdict is
 correct for that execution, and no check row there is reported dead.
 
+What a `DEAD` row claims is a separate theorem, deliberately.
+[`dead_row_unreached`](src/Executable_Surface/CLI/Analysis_Run_Sound.thy) says
+that if a row at a point is dead then the collecting semantics there is empty --
+nothing reaches it at all:
+
+```isabelle
+theorem dead_row_unreached:
+  ... and dead: "row_verdict row = Bot"
+  shows "ltr_collect (declared_global p) (prog_cfg p)
+           (cinit_stores (declared_global p)) (row_point row) = {}"
+```
+
+That does not follow from reading the endpoint backwards. The endpoint is
+existential in its witness, so it constrains the rows at the one node it
+produced, not at an arbitrary node someone names; `csim` being non-unique is
+exactly what breaks the contraposition. It is proved forwards instead -- a
+store collected at the point would have to be covered there, and a dead row
+says nothing is.
+
+[`ctx_dead_row_unreached`](src/Executable_Surface/CLI/Analysis_Run_Ctx_Sound.thy)
+is the contextual counterpart, and it lands in the same shape rather than a
+context-indexed one: a dead aggregate means no context published a live entry
+at the point, so every bucket there is empty and the union equation collapses
+them back. A dead marker means nothing reaches the point, under any context.
+
 The same statement holds at the context-sensitive configurations, where the
 table has one entry per point *and* context
 ([`Analysis_Run_Ctx_Sound`](src/Executable_Surface/CLI/Analysis_Run_Ctx_Sound.thy)).
@@ -234,12 +259,13 @@ exactly one context by construction and there is no context-totality obligation
 at all: `fun_route_ltr_collect_eq_Union` is premise-free. What remains is the
 termination fact and the one closure premise.
 
-Two exclusions are deliberate rather than pending. `None` is the solver
-argument: it selects each domain's certified default discipline, and an
-explicitly chosen alternative goes through `analyse_with_solver`, which carries
-the per-node bridge but not this theorem. And the guarantee is about
-`out_checks` -- the graph, snapshot and globals in the answer are rendered
-strings, with no theorem about them.
+Two limits are worth naming. `None` is the solver argument: it selects each
+domain's certified default discipline. Explicitly selected alternatives are
+partially certified -- some already carry the same source-level endpoint, others
+have only the lower-level per-node bridge, and a few route through a different
+report path entirely; [`docs/THEOREM_MAP.md`](docs/THEOREM_MAP.md) records the
+exact matrix. And the guarantee is about `out_checks` -- the graph, snapshot and
+globals in the answer are rendered strings, with no theorem about them.
 
 [`analyse_certified D p`](src/Executable_Surface/CLI/Analyse_Dispatch.thy)
 bundles the two per-program facts nothing here proves in general. It is a
@@ -277,8 +303,8 @@ configuration; `analyse_certified` names that configuration's solve per domain,
 and the per-domain corollaries read their tables at `lookup_context ... v ()`.
 Both context-sensitive policies now carry the same source-level statement for
 all five domains, over each one's own result table. The alternate solver update
-rules reachable through `analyse_with_solver` carry the per-node bridge but not
-this theorem. Domain coverage is not configuration coverage; see
+rules reachable through `analyse_with_solver` are covered cell by cell rather
+than as a class. Domain coverage is not configuration coverage; see
 [`docs/THEOREM_MAP.md`](docs/THEOREM_MAP.md) for each endpoint's exact shape.
 
 Read the two verdicts precisely. `PROVED` at a node says every execution that

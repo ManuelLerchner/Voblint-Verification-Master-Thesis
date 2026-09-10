@@ -69,12 +69,12 @@ argument applies. 26 configurations:
 | Context | Sign | Parity | Congruence | Interval | Int |
 | --- | --- | --- | --- | --- | --- |
 | `Ctx_None` | Join*, PerOrigin | Join*, PerOrigin | Join*, PerOrigin | Warrow*, Join, PerOrigin, WPO | Warrow*, Join, PerOrigin, WPO |
-| `Ctx_EntryState` | Join* | Join* | Join* | Warrow* | Warrow*, Join |
+| `Ctx_EntryState` | Join* | Join* | Join* | Warrow* | Warrow*, Join+ |
 | `Ctx_CallString k` | Join* | Join* | Join* | Warrow* | Warrow*, Join |
 
-`*` marks the discipline `None` selects, and those 15 cells are the ones the
-source-level theorems currently cover. The 11 unstarred cells are reachable in
-principle: the alternate unit disciplines are `global_interpretation`s of
+`*` marks the discipline `None` selects; `+` marks a cell reached only by naming
+a solver that nonetheless carries the source-level theorem. So 16 of the 26 are
+covered. The remaining 10 are reachable in principle: the alternate unit disciplines are `global_interpretation`s of
 `unit_dg_analysis`, which publishes `source_sound_closure` and
 `result_node_sound_closure` alongside its own `terminates`/`sol_vars`/`result`;
 and Int's two `Join` contextual cells already have
@@ -91,6 +91,13 @@ one.
 **Rejected** -- every remaining combination answers
 `Unsupported_Configuration`, and there is nothing to prove.
 
-The distinction that matters for planning: the 11 are instantiation work, the 6
-are a new bridge.
+The distinction that matters for planning: the remaining 10 are instantiation
+work, the 6 are a new bridge.
+
+## Dead rows
+
+| Claim | Theorem | Note |
+| --- | --- | --- |
+| A dead row means nothing reaches that point | [`Voblint_CLI.Analysis_Run_Sound:dead_row_unreached`](../src/Executable_Surface/CLI/Analysis_Run_Sound.thy) | Per-node and universal over stores, so it does not follow from the endpoint by contraposition -- that one is existential in its CFG witness. |
+| Contextual coverage is decidable | [`Voblint_Framework.CFG_Enumeration:ctx_vars_cover_of_exec`](../src/Abstract_Interpreter/Framework/Constraints/CFG_Enumeration.thy) | Walks the solved keys against the two edge enumerations; sufficient, not equivalent, like its unit counterpart. |
 
