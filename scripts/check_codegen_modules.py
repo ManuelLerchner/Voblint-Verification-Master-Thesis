@@ -52,38 +52,39 @@ def _git(*args: str) -> str:
     return out.stdout.strip() if out.returncode == 0 else ""
 
 
-def theories_newer_than_export() -> list[str]:
-    """Theories added or changed since the export was last regenerated.
+def export_is_stale() -> bool:
+    """Whether the checked-in export no longer corresponds to the sources.
 
-    Uses git, not mtimes: a fresh clone has no useful mtimes, and a rebase
-    rewrites them all. Uncommitted theories count as newer.
+    Delegates to codegen-hash.sh, the one definition of "codegen's inputs"
+    that regenerate-codegen.sh writes and cli-build.sh checks. Defining it a
+    third way here is what the hash script's own header warns against: a git
+    heuristic over "commits touching codegen/generated/" cannot advance when a
+    proof-only change leaves the emitted OCaml byte-identical, so it reports
+    stale forever after the first such commit.
     """
-    export_rev = _git("log", "-1", "--format=%H", "--", str(GENERATED.relative_to(REPO)))
-    if not export_rev:
-        return []
-
-    changed: set[str] = set()
-    committed = _git("diff", "--name-only", f"{export_rev}..HEAD", "--", "src")
-    if committed:
-        changed.update(committed.splitlines())
-    dirty = _git("status", "--porcelain", "--", "src")
-    for line in dirty.splitlines():
-        path = line[3:].strip()
-        if path:
-            changed.add(path)
-    return sorted(p for p in changed if p.endswith(".thy"))
+    stamp = REPO / "codegen" / "generated" / ".source-hash"
+    if not stamp.exists():
+        return True
+    try:
+        out = subprocess.run(
+            [str(REPO / "scripts" / "mk" / "codegen-hash.sh")],
+            capture_output=True, text=True, cwd=REPO, check=False,
+        )
+    except OSError:
+        return False
+    if out.returncode != 0:
+        return False
+    return out.stdout.strip() != stamp.read_text().strip()
 
 
 def report_staleness() -> None:
     """Say so when a green result does not cover everything in the tree."""
-    newer = theories_newer_than_export()
-    if not newer:
+    if not export_is_stale():
         return
 
     print(
-        f"check_codegen_modules: note -- {len(newer)} theory file(s) changed since "
-        "the export was last regenerated, so the result above does not cover them. "
-        "Run `pixi run codegen` to refresh it."
+        "check_codegen_modules: note -- the export no longer matches the sources, "
+        "so the result above does not cover them. Run `pixi run codegen` to refresh it."
     )
 
 
