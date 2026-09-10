@@ -415,5 +415,34 @@ proof -
   from m mem covers rows show ?thesis by blast
 qed
 
+text \<open>
+  What a dead row claims, stated at the node rather than at a run.  The endpoint
+  above is existential in its witness, so reading it backwards --- "this row is
+  dead, therefore nothing reaches it" --- does not follow: it constrains the
+  rows at the one node it produced, not at an arbitrary node someone names.  The
+  statement people want is this one, and it is proved forwards instead: a store
+  collected at the point would have to be covered there, and a dead row says
+  nothing is.
+\<close>
+
+theorem dead_row_unreached:
+  fixes p :: imp_prog
+  assumes wf: "wf_compile_input (declared_global p) (prog_table p) (prog_procs p)"
+      and cert: "analyse_certified D p"
+      and ans: "run_voblint D None Ctx_None view p = Analysed out"
+      and row: "row \<in> set (out_checks out)"
+      and dead: "row_verdict row = Bot"
+  shows "ltr_collect (declared_global p) (prog_cfg p)
+           (cinit_stores (declared_global p)) (row_point row) = {}"
+proof (rule ccontr)
+  assume "ltr_collect (declared_global p) (prog_cfg p)
+            (cinit_stores (declared_global p)) (row_point row) \<noteq> {}"
+  then obtain s where mem: "s \<in> ltr_collect (declared_global p) (prog_cfg p)
+                                  (cinit_stores (declared_global p)) (row_point row)"
+    by blast
+  from analyse_state_node_sound [OF wf cert mem] dead_row_not_covered [OF ans row dead]
+  show False by blast
+qed
+
 
 end
