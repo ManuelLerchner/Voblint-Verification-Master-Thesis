@@ -242,6 +242,9 @@ lemmas analyse_int_call_string_gamma_reader_eq_lookup =
 lemmas analyse_int_call_string_vars_finite =
   int_cs.vars_finite_of_terminates
 
+lemmas int_call_string_terminates_via_solve_c =
+  int_cs.terminates_of_solve_c
+
 interpretation int_cs_warrow: routed_dg_analysis
     "int_tf_st_for mode" "int_dom_enter_st_for mode" cinit_int_dom_st
     Call_String_Context.Global Call_String_Context.Seed "\<lambda>_. cs_route k" "[]"
@@ -298,6 +301,9 @@ lemmas analyse_int_call_string_gamma_reader_eq_lookup_warrow =
 
 lemmas analyse_int_call_string_vars_finite_warrow =
   int_cs_warrow.vars_finite_of_terminates
+
+lemmas int_call_string_terminates_via_solve_c_warrow =
+  int_cs_warrow.terminates_of_solve_c
 
 end
 

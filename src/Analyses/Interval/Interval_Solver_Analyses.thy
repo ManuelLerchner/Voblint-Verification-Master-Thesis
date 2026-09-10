@@ -24,10 +24,11 @@ text \<open>
   \<^theory>\<open>Voblint_Analysis_Interval.Interval_Assembly\<close>'s four interpretations of
   \<^locale>\<open>unit_dg_analysis\<close>.
 
-  These routes publish reports and nothing else: no soundness endpoint is stated
-  for them, and none is claimed. A caller wanting a proved answer uses the
-  default discipline, whose endpoints \<^theory>\<open>Voblint_Analysis_Interval.Interval_Analyses\<close>
-  publishes.
+  These routes publish reports; the coverage endpoints each of them needs come
+  from its own registration in
+  \<^theory>\<open>Voblint_Analysis_Interval.Interval_Contextual_Assembly\<close>, and the
+  source-level soundness of an answer built from one is stated where the
+  configuration that dispatches to it is, above the CLI.
 \<close>
 
 section \<open>Call-string, at the alternative disciplines\<close>

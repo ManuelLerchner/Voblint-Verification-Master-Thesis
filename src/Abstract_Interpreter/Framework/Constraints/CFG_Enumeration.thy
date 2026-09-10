@@ -541,9 +541,9 @@ lemma ctx_vars_cover_of_vars_cover:
 text \<open>
   Contextual coverage is testable the way the unit one is, with one difference
   that decides the shape: closure quantifies over the pairs the run solved, and
-  those are not enumerable from the graph.  So the solved keys arrive as a list,
-  and the test walks that list against the two edge enumerations rather than
-  walking the graph alone.
+  those are not enumerable from the graph.  So the test walks the solved keys
+  against the two edge enumerations rather than walking the graph alone, which
+  is why it takes them as the set the solver returns and iterates over it.
 
   Sufficient rather than equivalent, and deliberately so.  At a call the test
   asks for the continuation at every action shape, while \<^const>\<open>ctx_vars_cover\<close>
@@ -553,41 +553,41 @@ text \<open>
 
 definition ctx_vars_cover_exec ::
     "cfg \<Rightarrow> (cfg_node \<Rightarrow> 'c \<Rightarrow> call_action \<Rightarrow> pname \<Rightarrow> 'c) \<Rightarrow> 'c
-       \<Rightarrow> (cfg_node \<times> 'c) list \<Rightarrow> bool" where
+       \<Rightarrow> (cfg_node \<times> 'c) set \<Rightarrow> bool" where
   "ctx_vars_cover_exec g succ_ctx rc vs \<longleftrightarrow>
-     (cfg_entry g, rc) \<in> set vs
-   \<and> list_all (\<lambda>(u, ctx).
-        list_all (\<lambda>(u', a, v). u' \<noteq> u \<or> (v, ctx) \<in> set vs) (cfg_intra_list g)
-      \<and> list_all (\<lambda>(c, ca, ce, k). c \<noteq> u \<or> ((k, ctx) \<in> set vs
-             \<and> (case ce of FunctionEntry q \<Rightarrow> (ce, succ_ctx u ctx ca q) \<in> set vs
+     (cfg_entry g, rc) \<in> vs
+   \<and> (\<forall>(u, ctx) \<in> vs.
+        list_all (\<lambda>(u', a, v). u' \<noteq> u \<or> (v, ctx) \<in> vs) (cfg_intra_list g)
+      \<and> list_all (\<lambda>(c, ca, ce, k). c \<noteq> u \<or> ((k, ctx) \<in> vs
+             \<and> (case ce of FunctionEntry q \<Rightarrow> (ce, succ_ctx u ctx ca q) \<in> vs
                   | _ \<Rightarrow> True)))
-          (cfg_calls_list g)) vs"
+          (cfg_calls_list g))"
 
 lemma ctx_vars_cover_of_exec:
   assumes finE: "finite (intra g)" and finC: "finite (calls g)"
-    and cover: "ctx_vars_cover_exec g succ_ctx rc (vs :: (cfg_node \<times> 'c) list)"
-  shows "ctx_vars_cover g succ_ctx rc (set vs)"
+    and cover: "ctx_vars_cover_exec g succ_ctx rc (vs :: (cfg_node \<times> 'c) set)"
+  shows "ctx_vars_cover g succ_ctx rc vs"
 proof (intro ctx_vars_coverI)
-  show "(cfg_entry g, rc) \<in> set vs"
+  show "(cfg_entry g, rc) \<in> vs"
     using cover unfolding ctx_vars_cover_exec_def by blast
 next
   fix u a v ctx
-  assume "(u, ctx) \<in> set vs" and "(u, a, v) \<in> intra g"
-  then show "(v, ctx) \<in> set vs"
+  assume "(u, ctx) \<in> vs" and "(u, a, v) \<in> intra g"
+  then show "(v, ctx) \<in> vs"
     using cover unfolding ctx_vars_cover_exec_def
     by (fastforce simp: list_all_iff set_cfg_intra_list [OF finE])
 next
   fix u ctx dst fs as q k
-  assume "(u, ctx) \<in> set vs"
+  assume "(u, ctx) \<in> vs"
     and "(u, CallEdge dst fs as, FunctionEntry q, k) \<in> calls g"
-  then show "(FunctionEntry q, succ_ctx u ctx (CallEdge dst fs as) q) \<in> set vs"
+  then show "(FunctionEntry q, succ_ctx u ctx (CallEdge dst fs as) q) \<in> vs"
     using cover unfolding ctx_vars_cover_exec_def
     by (fastforce simp: list_all_iff set_cfg_calls_list [OF finC])
 next
   fix u ctx dst fs as q k
-  assume "(u, ctx) \<in> set vs"
+  assume "(u, ctx) \<in> vs"
     and "(u, CallEdge dst fs as, FunctionEntry q, k) \<in> calls g"
-  then show "(k, ctx) \<in> set vs"
+  then show "(k, ctx) \<in> vs"
     using cover unfolding ctx_vars_cover_exec_def
     by (fastforce simp: list_all_iff set_cfg_calls_list [OF finC])
 qed

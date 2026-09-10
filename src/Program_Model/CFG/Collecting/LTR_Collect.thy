@@ -102,6 +102,43 @@ lemma valid_ltr_intra_path_extend:
     "caller_of t' = caller_of t" "fst (hd (path t')) = fst (hd (path t))"
   using valid_ltr_intra_path_extend_pair[OF p t] by auto
 
+text \<open>
+  A call and its matching return \<^emph>\<open>do\<close> compose, which is what makes the missing
+  single-step closure above harmless in practice.  The callee trace is built from
+  the caller's by \<open>valid_ltr.call\<close>, so \<open>valid_ltr.ret\<close>'s side condition --- that the
+  activation being popped is this trace's own caller --- holds by construction,
+  and running the callee to its \<^const>\<open>FunctionResult\<close> along \<^const>\<open>intra_path\<close>
+  preserves it.  What a caller supplies is the call edge and an intra path through
+  the callee; what it gets back is the continuation node with the combined store.
+\<close>
+
+lemma ltr_collect_call_return_step:
+  assumes s: "s \<in> ltr_collect gs g S u"
+      and ce: "(u, CallEdge dst pars args, FunctionEntry q, cont) \<in> calls g"
+      and body: "intra_path g (FunctionEntry q, call_enter gs (CallEdge dst pars args) s)
+                   (FunctionResult q, t)"
+  shows "combine_collect gs dst s t \<in> ltr_collect gs g S cont"
+proof -
+  from s obtain caller where cv: "caller \<in> valid_ltr gs g S"
+    and cn: "sink_node caller = u" and cs: "sink_store caller = s"
+    by (rule ltr_collect_E)
+  let ?entered = "Call caller [(FunctionEntry q, call_enter gs (CallEdge dst pars args) s)]"
+  have ev: "?entered \<in> valid_ltr gs g S"
+    using valid_ltr.call [OF cv, where dst = dst and pars = pars and args = args
+                            and p = q and cont = cont]
+      ce cn cs by simp
+  obtain callee where dv: "callee \<in> valid_ltr gs g S"
+    and dn: "sink_node callee = FunctionResult q" and ds: "sink_store callee = t"
+    and dc: "caller_of callee = caller_of ?entered"
+    by (rule valid_ltr_intra_path_extend [OF _ ev]) (use body in simp_all)
+  have "Resume caller callee
+          (path caller @ [(cont, combine_collect gs dst (sink_store caller) (sink_store callee))])
+          \<in> valid_ltr gs g S"
+    by (rule valid_ltr.ret [OF dv _ dn]) (use dc ce cn in simp_all)
+  from ltr_collect_I [OF this] show ?thesis
+    using cs ds by (simp add: sink_node_def sink_store_def)
+qed
+
 subsection \<open>Collecting equations\<close>
 
 text \<open>(1) Initial stores are collected at \<^const>\<open>cfg_entry\<close>.\<close>

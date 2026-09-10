@@ -441,6 +441,19 @@ domains:
         solvers: [always_join, warrowing_apinis]
         default: warrowing_apinis
         published: [result_for, result, report]
+        # `int_cs` is a plain `interpretation` inside the call-string bound's
+        # context, so nothing it proves can be reached by name from outside.
+        # Naming any re-export here replaces the convention rather than adding
+        # to it, so the conventional five are repeated: the sixth, the
+        # termination reflection, is what an executable certificate for a
+        # call-string configuration needs and the convention does not name.
+        re_exports:
+          sound: analyse_int_call_string_sound
+          sound_of_cover: analyse_int_call_string_sound_of_cover
+          union_of_cover: analyse_int_call_string_ltr_collect_eq_Union
+          gamma_reader: analyse_int_call_string_gamma_reader_eq_lookup
+          vars_finite: analyse_int_call_string_vars_finite
+          terminates_of_solve_c: int_call_string_terminates_via_solve_c
     # No `checks:` block either, for the same reason. `Int_Checks` is not a set
     # of bindings: it proves that the mode-generic `int_conf_*` names agree with
     # the unit assembly at `Refine_Fixpoint` and with the routed pipeline at an
