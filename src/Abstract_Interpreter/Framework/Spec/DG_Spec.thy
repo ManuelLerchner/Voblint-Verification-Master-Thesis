@@ -430,7 +430,7 @@ declare local_dg_spec_template_def [code_unfold]
 
 text \<open>
   This applies to every named specification, not only to the builders here. A
-  concrete one --- \<open>sctx_spec\<close>, \<open>rel_order_spec\<close>, a domain's own --- has the
+  concrete one --- \<open>sign_conf_spec\<close>, \<open>rel_order_spec\<close>, a domain's own --- has the
   same shape: its unknown and global-key types appear only inside its transfer
   programs, so it has no most general ML type either. Whether it survives into
   the generated program depends on whether the definition it was built from

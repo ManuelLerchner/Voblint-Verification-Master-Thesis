@@ -12,11 +12,15 @@ text \<open>
   pair can satisfy that assumption. Thus emptiness of the inverse result gives
   a sound entailment/refutation test, though an imprecise inverse may still
   answer "unknown" even when the relation is already concrete-semantically
-  fixed. Defined directly in @{locale backward_domain}'s own context rather
-  than through intermediate capability locales, so every interpretation of
-  @{locale backward_domain} -- and every existing @{command global_interpretation}
-  of it -- gets these with no restated proof obligation: the premises used
-  below are already assumptions of @{locale backward_domain} itself.
+  fixed. The four judgments are defined directly in
+  @{locale backward_domain}'s own context, so every interpretation of it --
+  and every existing @{command global_interpretation} of it -- gets them with
+  no restated proof obligation: the premises used below are already
+  assumptions of @{locale backward_domain} itself. Turning the four into the
+  two queries a caller asks for is not backward-specific and is not done
+  here: this file ends by interpreting
+  \<^locale>\<open>numeric_query_judgments\<close> at them, so every
+  @{locale backward_domain} instance is a numeric-query instance too.
 
   Classification tests @{const is_empty}, not canonical-\<open>bot\<close> equality: a value
   can denote \<open>{}\<close> without being the representation's chosen \<open>bot\<close> element
@@ -91,52 +95,21 @@ lemma eq_false_sound:
   unfolding eq_false_def
   by (fastforce simp: is_empty_correct)
 
-subsection \<open>Nonempty-operand consistency\<close>
-
-text \<open>
-  \<open>less_true\<close>/\<open>less_false\<close> (and \<open>eq_true\<close>/\<open>eq_false\<close>) can both hold at once
-  only when an operand is witness-bottom: a live witness pair on both sides
-  would have to satisfy \<open>i < j\<close> and \<open>\<not> i < j\<close> simultaneously. This is the
-  one situation the \<open>less\<close>/\<open>eq\<close> packaging below picks an answer for despite
-  both judgments agreeing; on any pair of feasible operands the \<open>if\<close> choice
-  between \<open>Some True\<close> and \<open>Some False\<close> below is never live.
-\<close>
-
-subsection \<open>Goblint-style optional-Boolean queries\<close>
-
-text \<open>
-  \<open>less\<close>/\<open>eq\<close> package the four judgments above into one optional-Boolean
-  answer per relation -- not equivalent on witness-bottom operands, where both
-  predicates in a pair can hold vacuously and \<open>less\<close>/\<open>eq\<close> pick one answer.
-\<close>
-
-definition less :: "'a \<Rightarrow> 'a \<Rightarrow> bool option" where
-  "less a b = (if less_true a b then Some True else if less_false a b then Some False else None)"
-
-definition eq :: "'a \<Rightarrow> 'a \<Rightarrow> bool option" where
-  "eq a b = (if eq_true a b then Some True else if eq_false a b then Some False else None)"
-
-lemma less_opt_sound:
-  assumes "less a b = Some r" and "i \<in> gamma a" and "j \<in> gamma b"
-  shows "(i < j) = r"
-  using assms less_true_sound less_false_sound unfolding less_def by (auto split: if_splits)
-
-lemma eq_opt_sound:
-  assumes "eq a b = Some r" and "i \<in> gamma a" and "j \<in> gamma b"
-  shows "(i = j) = r"
-  using assms eq_true_sound eq_false_sound unfolding eq_def by (auto split: if_splits)
-
 end
 
-sublocale backward_domain \<subseteq> abstract_numeric_queries less eq
-proof
-  fix a b r i j
-  assume "less a b = Some r" and "i \<in> gamma a" and "j \<in> gamma b"
-  then show "(i < j) = r" by (rule less_opt_sound)
-next
-  fix a b r i j
-  assume "eq a b = Some r" and "i \<in> gamma a" and "j \<in> gamma b"
-  then show "(i = j) = r" by (rule eq_opt_sound)
-qed
+subsection \<open>Packaging the derived judgments\<close>
+
+text \<open>
+  The qualifier is mandatory rather than cosmetic: the packaging locale
+  assumes the same four soundness statements this context proves, under the
+  same four names, so an unqualified registration would try to declare each
+  twice in every @{command global_interpretation} of
+  @{locale backward_domain}.
+\<close>
+
+sublocale backward_domain \<subseteq> queries:
+  numeric_query_judgments less_true less_false eq_true eq_false
+  by unfold_locales
+     (fact less_true_sound, fact less_false_sound, fact eq_true_sound, fact eq_false_sound)
 
 end
