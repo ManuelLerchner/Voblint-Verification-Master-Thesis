@@ -250,7 +250,7 @@ signature-only spike.
 - `Sign_Exec.thy` / `Sign_Exec_Sound.thy`: `sign_tf_st (EA_Havoc x) s =
   update_st s x STop`; soundness case expected near-trivial via
   `gamma_sign STop = UNIV`.
-- `Ivl_Exec.thy` / `Interval_Side_Soundness.thy`,
+- `Interval_Exec.thy` / `Interval_Side_Soundness.thy`,
   `Parity_Exec.thy`, `Exec_DG_Bridge.thy`, `Sign_Named_Global_Eff.thy`,
   `Sign_Local_Effects.thy`: same pattern per domain instance.
 

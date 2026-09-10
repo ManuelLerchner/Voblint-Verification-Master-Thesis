@@ -22,7 +22,7 @@ The removal has **no abort condition on the core soundness path**, and the two
 risks the handoff flagged both dissolve:
 
 1. **Retained core rides the `cmp` generator, but only functionally.**
-   `DG_Framework` and `Exec_DG_Bridge` (Category A) directly import
+   `DG_Constraint_Trees` and `Exec_DG_Bridge` (Category A) directly import
    `TD_Side_Eff_Cmp_Gen`. Its generator `side_cfg_T_eff_cmp` is **already
    functional** — parameters `gkey` (functional context key) and `cmb`
    (combine), no relation in the body. The load-bearing theorem
@@ -53,7 +53,7 @@ relational concrete semantics:
   `Digest_Global_Read`) — collapse `cmp`/`gcmp` read filter to exact-key equality;
 * the **Category-B examples** on `cfg_collect_trace` — restate over `cfg_collect`;
 * **relocating shared defs out of `CFG_Collect_Trace`** — the retained
-  `CFG_Local_Trace` imports it (see §4).
+  `LTR_Def` imports it (see §4).
 
 ---
 
@@ -80,9 +80,9 @@ Computed from parsed `imports` clauses (short-name graph over `src/**/*.thy`).
 
 | Target theory | Direct importers | Transitive count |
 | --- | --- | ---: |
-| `CFG_Collect_Trace` | CFG_Local_Trace, Compile_Invariants, Constraint_System_Sound, Ctx_Collect_Backbone, Example_Trace_Digest_Combine, Example_Trace_Digest_ReachingCompat, Sign_Exec_Sound, Trace_Analysis_Sound, Voblint | **86** |
+| `CFG_Collect_Trace` | LTR_Def, Compile_Invariants, Constraint_System_Sound, Ctx_Collect_Backbone, Example_Trace_Digest_Combine, Example_Trace_Digest_ReachingCompat, Sign_Exec_Sound, Trace_Analysis_Sound, Voblint | **86** |
 | `Ctx_Collect_Backbone` | DG_Route_Soundness, TD_Side_Eff_Cmp_Sound | 39 |
-| `TD_Side_Eff_Cmp_Gen` | **DG_Framework**, **Exec_DG_Bridge** | 32 |
+| `TD_Side_Eff_Cmp_Gen` | **DG_Constraint_Trees**, **Exec_DG_Bridge** | 32 |
 | `TD_Side_Eff_Cmp_Sound` | Clean_RRead_Sound, Digest_Global_Read, TD_Side_Eff_Cmp_Pull | 38 |
 | `DG_Route_Soundness` | Exec_Sign_Cmp_Keyed_DG_Run, Local_DG | 7 |
 | `Clean_RRead_Sound` | Seed_EnterMono_Lift | 4 |
@@ -105,7 +105,7 @@ call sites move).
 
 ### `TD_Side_Eff_Cmp_Gen` (42 decls) — **mostly D1**
 
-The generator DG_Framework rides. Body is functional (`gkey`, `cmb`); `cmp`/`gcmp`
+The generator DG_Constraint_Trees rides. Body is functional (`gkey`, `cmb`); `cmp`/`gcmp`
 enter only via the read side.
 
 | Decl(s) | Class | Action |
@@ -160,16 +160,16 @@ Fan-out is 86 transitively but the **direct** importers split cleanly:
 | --- | --- | --- |
 | `Compile_Invariants` | no digest symbols itself, **but re-exports `edge_step`** | **structural re-export dependency** (not placement-only) — see §4a; `Located_Reaches` reaches `CFG_Collect_Trace` only through it. Import restored; relocate `edge_step` in Stage 3. |
 | `Constraint_System_Sound` | no digest symbols, **but uses `edge_step`** | **structural shared-def dependency** (not placement-only) — see §4a; relocate `edge_step` first, then retarget |
-| `CFG_Local_Trace` (retained core) | **yes** — `imports CFG_Collect_Trace` | **structural** — relocate the shared def it consumes (`path`/`cfg_witness`/`alpha_last`) to a neutral home before deletion |
+| `LTR_Def` (retained core) | **yes** — `imports CFG_Collect_Trace` | **structural** — relocate the shared def it consumes (`path`/`cfg_witness`/`alpha_last`) to a neutral home before deletion |
 | `Sign_Exec_Sound` | yes (Category B) | Stage 2 rebase to `cfg_collect` |
 | `Trace_Analysis_Sound` | yes (Category B, digest + non-digest) | Stage 2 split |
 | `Ctx_Collect_Backbone` | yes | folded/deleted in Stage 5 |
 | `Example_Trace_Digest_Combine`, `Example_Trace_Digest_ReachingCompat` | yes (Category C) | delete Stage 5 |
 | `Voblint` (aggregate) | import list | Stage 6 |
 
-**Action:** the retained `CFG_Local_Trace → CFG_Collect_Trace` edge is the single
+**Action:** the retained `LTR_Def → CFG_Collect_Trace` edge is the single
 structural blocker for deleting `CFG_Collect_Trace`. Stage 5 must first inventory
-what `CFG_Local_Trace` pulls from it and move only the live shared definitions.
+what `LTR_Def` pulls from it and move only the live shared definitions.
 
 ### 4a. `edge_step` — shared non-digest helper (relocated to `CFG_Collect` in Stage 3)
 
@@ -180,7 +180,7 @@ before `edges_collect`). `CFG_Collect` already reached every dependency
 re-imports `CFG_Collect` and keeps its digest theorems unchanged.
 `Constraint_System_Sound` and `Compile_Invariants` dropped their
 `CFG_Collect_Trace` imports; `Located_Reaches`/`Located_LTR` now get `edge_step`
-from `CFG_Collect` (full build exit 0). `CFG_Local_Trace` keeps its
+from `CFG_Collect` (full build exit 0). `LTR_Def` keeps its
 `CFG_Collect_Trace` import for the trace-specific `call_enter_store`, but its
 `edge_step` now resolves to `CFG_Collect` — a candidate follow-up (`call_enter_store`
 relocation) noted, out of Stage-3 scope.
@@ -321,7 +321,7 @@ Category-B rebasing.
 executable/DG/activation soundness path carries **no live relational `cmp`/`gcmp`
 interface**. Verified:
 
-* `DG_Framework` and `DG_Soundness` contain **0** `gcmp`/`side_env_cmp` references.
+* `DG_Constraint_Trees` and `DG_Soundness` contain **0** `gcmp`/`side_env_cmp` references.
 * The retained DG generator is `side_cfg_T_eff_cmp` / `side_cfg_T_eff_cmp_seed_dg`,
   parameterised by `gkey` (functional context key) and `cmb` (combine) — **no `cmp`
   parameter**. The `_cmp` in the name is legacy, not a relation.
@@ -342,7 +342,7 @@ deletion cluster — none on the retained path):
 | `obs_digest*`, `glob_env_cmp_*` | `Digest_Global_Read` | Category-C digest | Stage 5 |
 | `read_ctx_*`, `ln (=) …` reads | `Example_Global_Ctx_Read_Precision` | Category-C digest example | Stage 5 |
 
-**Functional core to retain** (already used by `DG_Framework`, no `cmp`): the
+**Functional core to retain** (already used by `DG_Constraint_Trees`, no `cmp`): the
 generator algebra in `TD_Side_Eff_Cmp_Gen` — `side_cfg_T_eff_cmp`,
 `side_cfg_T_eff_cmp_seed`, `side_cfg_T_eff_cmp_seed_dg`, `pull_gk`, the
 `traverse`/`sides`/`side_rhs_fold` lemmas, `*_edge_le`/`*_enter_le`/`*_combine_le`,
@@ -354,6 +354,7 @@ envisioned is already realised in-tree — the retained path is functional and
 exposes no `cmp`/`gcmp` parameter. The only residual is splitting the *dead*
 relational scaffolding out of the mixed `TD_Side_Eff_Cmp_Gen`. That split is
 large, touches a core file feeding every DG flagship, and the scaffolding is dead
+
 * Category-C-coupled, so it is safest performed **as part of the Stage-5 deletion**
 of the relational/digest cluster rather than as a speculative Stage-4 refactor.
 Renaming the functional generator off `_cmp` is likewise best done at that point
@@ -362,9 +363,9 @@ either change to be `cmp`-free today.
 
 ## 8. Open items for the next stage
 
-* Confirm exactly which definition `CFG_Local_Trace` consumes from
+* Confirm exactly which definition `LTR_Def` consumes from
   `CFG_Collect_Trace` (§4) — read via I/Q before Stage 5. **(Done in Stage 4A:
-  it was `call_enter_store`, now relocated to `CFG_Collect`; `CFG_Local_Trace`
+  it was `call_enter_store`, now relocated to `CFG_Collect`; `LTR_Def`
   no longer imports `CFG_Collect_Trace`.)**
 * Verify `dg_postfix_c_collect_sound` has a functional keyed replacement path
   before deleting `DG_Route_Soundness` / the relational `Local_DG` endpoint.

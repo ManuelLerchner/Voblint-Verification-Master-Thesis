@@ -18,7 +18,11 @@ runs:
     - name: Checkout AFP
       uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       with:
-        repository: isabelle-prover/mirror-afp-2025-1
+        repository: isabelle-prover/mirror-afp-2025-2
+        # Pinned to an exact commit, like every action above: the mirror's
+        # master branch keeps moving, so an unpinned checkout silently changes
+        # the AFP a build was verified against.
+        ref: cfdc3d77e69e4a7d4497edd5c2eae39777980364
         path: afp
         persist-credentials: false
 
@@ -88,6 +92,6 @@ runs:
       uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
         path: ${{ env.ISABELLE_HOME_USER }}/heaps/
-        key: isabelle-heaps-${{ runner.os }}-${{ runner.arch }}-${{ env.ISABELLE_VERSION_SLUG }}-afp-mirror-2025-1-${{ github.sha }}
+        key: isabelle-heaps-${{ runner.os }}-${{ runner.arch }}-${{ env.ISABELLE_VERSION_SLUG }}-afp-mirror-2025-2-${{ github.sha }}
         restore-keys: |
-          isabelle-heaps-${{ runner.os }}-${{ runner.arch }}-${{ env.ISABELLE_VERSION_SLUG }}-afp-mirror-2025-1-
+          isabelle-heaps-${{ runner.os }}-${{ runner.arch }}-${{ env.ISABELLE_VERSION_SLUG }}-afp-mirror-2025-2-

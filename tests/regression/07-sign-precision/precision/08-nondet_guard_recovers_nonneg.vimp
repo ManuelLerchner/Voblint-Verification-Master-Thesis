@@ -1,0 +1,19 @@
+// PARAM: --analysis sign
+// x := __voblint_nondet_int() forgets everything known about x -- it goes
+// to Top regardless of the x := 0 just before it. But the branch guard on
+// x recovers precision downstream: the then-arm only runs when 0 < x
+// (x Positive) and assigns y := x, the else-arm only runs when x <= 0 and
+// assigns y := 0 - x (negating a non-positive value gives a non-negative
+// one), so both arms hand a non-negative sign to y and the join at the
+// merge point stays SNonNeg rather than collapsing to Top the way it would
+// if y had been assigned x directly, before the guard narrowed it.
+void main() {
+  x := 0;
+  x := __voblint_nondet_int();
+  if (0 < x) {
+    y := x
+  } else {
+    y := 0 - x
+  };
+  __voblint_check(!(y < 0)) // PROVED
+}

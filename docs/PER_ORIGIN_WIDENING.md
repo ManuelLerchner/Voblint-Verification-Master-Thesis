@@ -32,7 +32,7 @@ does: `base.ml` reads globals from local state without publication at all
 (`GOBLINT_ALIGNMENT_REGISTER.md`, D/G reconstruction and publication timing,
 source-checked 2026-08-10).
 
-The other choice is already formalized. `unit_dg_spec_placed` takes a
+The other choice is already formalized. `ownership_split_dg_spec_placed` takes a
 per-variable `keep_local`/`publish_side` placement and is proved sound via
 `gamma_join`, and `Example_Interval_Placement.thy` runs a program with one
 global on each side: `balance`, kept local, reads `[3,3]`; `request_count`,

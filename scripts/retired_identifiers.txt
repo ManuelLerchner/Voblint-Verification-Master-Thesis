@@ -1,0 +1,1635 @@
+
+#
+# "cone" is ordinary English throughout this tree -- "exit-cone", "cone guard",
+# "dependency cone" -- so a whole-word rule would reject correct prose. The
+# (dg_edge_tree_at, dg_edge_contribution_tree_at), so the specializations and
+# (the caller continuation is a specification field, so the entry operation
+# --- Activation backbone collapsed onto ltr_coverage (2026-09-05) ---
+# --- Bottom-detection respectfulness scaffolding (2026-09-07) ---
+# --- CFG_Enumeration's return side collapsed onto one canonical
+# --- Concretization helpers removed with the pair interface ---
+# --- Contribution-list membership rule with no consumer (2026-09-05) ---
+# --- Custom association-list deletion (2026-09-07) ---
+# --- Dead `lemmas` aliases with no consumer (2026-09-08) ---
+# --- Dead witness-bottom scan and combine lift (2026-09-06) ---
+# --- Dead-code lift (DG_Dead_Code_Lift.thy) ---
+# --- Entry-local bound moved next to its global twin (2026-09-05) ---
+# --- Fold generalization: renamed or absorbed into the generic fold (2026-09-05) ---
+# --- Isabelle-side DOT/HTML emitter, replaced by OCaml renderers over export_graph (2026-09-08) ---
+# --- Legacy representation-neutral keyed generator (2026-09-05) ---
+# --- Local-state / ownership-split cleanup (2026-09-05) ---
+# --- Manager and composed-combine aliases (DG_Manager.thy, DG_Spec.thy) ---
+# --- Old DG_Soundness vocabulary ---
+# --- Placement policy (removed; see docs/GOBLINT_ALIGNMENT_REGISTER.md) ---
+# --- Procedure entry is one definition, not a concrete one with an abstract
+# --- Pure-pair spec application, superseded by compiled transfer trees ---
+# --- Pure-pair transfer combinators (DG_Transfer_Combinators.thy) ---
+# --- Renamed to say what they are (2026-09-05) ---
+# --- Renamed to say what they are, not which renderer they once fed (2026-09-08) ---
+# --- Routed call/generator formers renamed by abstraction level (2026-09-05) ---
+# --- Routed contribution hooks, folded into `routed_cmb_g` ---
+# --- Solution-induced entry context moved to its policy (2026-09-05) ---
+# --- Solved-key coverage read off graph reachability (DG_Coverage.thy) ---
+# --- Source-level flat check report on dg_analysis_adapter (DG_Analysis_Adapter.thy) ---
+# --- Specialized association-list filter lemmas (2026-09-07) ---
+# --- The `domain_transfer` record and its `apply_tf` dispatcher were removed:
+# --- The call_info-packaged return enumeration (2026-09-06) ---
+# --- The exported duplicate of prog_cfg (2026-09-06) ---
+# --- The unrouted (monovariant) call generator and its LTR soundness bridge ---
+# --- Unit ownership split, before `ownership_split_transfer_gen` ---
+# --- Unused routed-context obligation (2026-09-05) ---
+# --- Update-lemma variants and two renames (2026-09-07) ---
+# --- branch/branch_st redefined via collapse_lift(branch_lifted ...): the
+# --- canonicalize_state removed: it existed only to fix bfilter's And/Or
+# --- fold_rhs_trees renamed to fold_rhs_contributions: the function returns
+# --- footprint_exp / probe_exp / afilter_st_locality / bfilter_st_bot /
+# --- gamma_bfilter_lifted / gamma_branch_lifted removed: bfilter_lifted is no
+# --- gamma_state_witness_not_bot renamed: the theory explicitly distinguishes
+# --- se_constraint_holds renamed to tree_covered_at: names the covering
+# --- solver_menu/run_menu removed: demo-only convenience for running all four
+# --- sound_dg_spec renamed to sound_dg_spec_core (DG_Spec_Sound.thy) ---
+# --- sp_run renamed to sp_compile: it compiles a program to a tree, it does
+# A bottom callee entry is dropped before routing, so no context is seeded for
+# A side condition on the monovariant generator that no theorem assumed. The
+# AList.restrict detour it went through is gone too.
+# All four were instances of map_of_filter_fst, which discharges their two use
+# Append a name here when you remove an API. Remove it again -- explicitly --
+# Both restated gamma_ownership_split's definition; the [dest] one added a
+# CFG_Enumeration's set_concat_call_site_static_targets. ---
+# Current Goblint exposes no analogous framework abstraction, so this was
+# DG_Ctx_Activation, beside pp_entry_s0g_bound: both depend only on
+# Dead: zero consumers outside their own definitions anywhere in src/.
+# Deliberately NOT listed: `caller_cont`, `combine_env`, `combine_assign`.
+# Deliberately NOT listed: `cone` (the deleted backward-reachability set).
+# Each name below was one half of a specialized/generic pair, or a one-line
+# Every registration locale, production entry point, and example now builds
+# Identifiers this tree has deliberately removed.
+# Matching is whole-word, so `dgs_caller_cont` does not match `caller_cont`.
+# Or-True equations now gate each arm to structural Bot before joining,
+# Prose across this tree names record fields by their role rather than by the
+# Re-exports naming the adapter's facts a second time; instances cite
+# Reinstating them is one map over call_target_list if a call_info-shaped
+# Renamed pp_entry_s0d_bound and moved from Routed_Context into
+# Renamed to checks_provenD: it is the one-step destruction dual of
+# Replaced by manager-native transfers: a spec's fields are `man_transfer`s,
+# Restated its own locale assumption sg_uncov verbatim; callers cite sg_uncov.
+# Seed-key addressing helpers with no consumer: the coverage statements they
+# Seed-key truncation for a k1 <= k2 projection theorem that was never stated.
+# Shallow definitions removed after a per-session audit: each was either an
+# The call answers correlated (continuation, callee-entry) pairs from one run
+# The call boundary answers correlated (continuation, callee-entry) pairs from
+# The call_info projection for entry is inlined at the four domain
+# The combine and extra rules and the eliminator do have consumers.
+# The intersection concretization and its five lemmas: nothing assumed it, and
+# The intra rule could not be applied where it was wanted: `it` is a lambda at
+# The join-generic lookup and the equation relating it to lookup_joined_state,
+# The locale dropped its context-collapsed `analyse_report` in favor of only
+# The locale never constrained a call's entry -- DG_Spec_Sound says so in its
+# The old names described implementation history rather than layer, and made
+# The ownership-split wrapper is stated over the generic carrier operations,
+# The pp/unit-specialized half of the raw D/G tree family. The manager-native
+# The report layer reads its unreachable flag off lookup_context's Bot/Lifted
+# The source-level projection of the context-indexed report, and the collapse
+# The surviving spine is `dg_hook_gamma` / `hook_gen` / `hook_postfix`.
+# The three "observable transfer property" predicates supported only their own
+# The three TD_side_mono discharges lost their redundant _gen suffix; the
+# The transfer record was replaced by eight explicit operations, so the
+# The unified lookup equations lookup_resolved_st_update / _q_update subsume
+# The unlifted formal-entry routing pair. Every routed instance uses the lifted
+# _eq lemma, still live) cover what callers actually needed.
+# _sound name invited the [dest] rationale the header used to give.
+# `analyse_report_ctx` (the context-indexed report). The `verdict_check_result`
+# `analysis_surface.report` instead, and Int_Checks.thy already does the same,
+# `dgs_`-prefixed field name, and `src/Abstract_Interpreter/Framework/README.md` documents that
+# `local_state_dg_spec_for`/`_lifted`), and `sound_transfer_for` fixes those
+# `scripts/check_retired_identifiers.py` fails the commit when any of these
+# `top`. The abstract-only `enter_D`/`enter_ci_D` pair is gone. ---
+# a strategy_program, not a tree ---
+# alias with no consumer, or a definition supporting only its own lemmas. None
+# alias. activation_collect_sound survives with the generic statement: it takes
+# already built their flat `check_report_entry list` reports through
+# already exists independently as analyse_with_solver (Analyse_Dispatch); the
+# an analysis now supplies a `dg_spec` (built from named pure operations by
+# analyse_result_node_sound and the analyse_report_ctx_* theorems directly.
+# and DG_Soundness.thy's hook-parametric spine (sound_dg_hooks) existed only to
+# and Exec_DG_Generator's local copy of the site-resolution set equality by
+# and a domain's entry operation is its instance at that domain's evaluator and
+# and fun_of_st_enter_frame_D_resolved did not follow its family's naming.
+# and the local-only compile-down equations say the same thing more directly.
+# and what these projected out of a `'dg \<times> 'dl` pair is now `entered` plus
+# are stated per alternative (routed_cmb_g_alt) rather than as bounds on a
+# back; DG_LTR_Sound.thy's whole-file soundness bridge (sound_dg_spec_ltr_for)
+# because Isabelle does not reject every surviving use of a removed name:
+# bfilter_st_locality removed (Exec_Backward.thy): this whole chain existed
+# branch_lifted_sound). An equality lemma of the old shape would be false. ---
+# branch_mono/branch_st/branch_st_commute/branch_le_bfilter keep their
+# buffered transport is now a part_post_solution_cong instance and named for
+# but no proof ever applied it. Removing an assumption only strengthens the
+# callee's entry is solved only once a caller actually publishes its seed, so
+# callee_entry_at_call_site's sibling call_action_at_call_site (and its
+# caller unknown, instead of publishing an activation seed the callee reads
+# checks_provenI off checks_proven_def, not a soundness theorem, and the
+# closed by removal rather than migrated.
+# compile_program had prog_cfg's body character for character, and prog_cfg is
+# condition it recorded is now stated in prose where the generator is defined.
+# constant is gone; grep for `\<^const>\<open>cone\<close>` to confirm no checked
+# consumer ever appears.
+# context-insensitive combine; that consumer is gone, and the routed generator
+# convention; those three are live vocabulary, not dead references.
+# copy: `enter_binding` (VIMP_Proc) is generic in the state's codomain, the
+# default_local_dg_spec is a construction scaffold, not Goblint's default.
+# definitions, matching how the return side writes combine^# gs (ci_dst ci).
+# depend on the non-executable is_empty_state. bfilter_lifted fixes the
+# derived names moved with it: sound_dg_spec_st, and the two lift/override
+# dg_ctx_activation_base, and only the pair together explains the entry seed.
+# dg_gen_of walked call sites and folded over static targets directly from the
+# directly -- canonicalize_state had no remaining consumer. ---
+# directly, so the manual monotonicity argument and the defaults lemma it
+# directly. TD_Solver_Menu.thy stays as a facade import for TD_Solver_Bridge. ---
+# do (Interval_Exec cites both by name) and are kept as derived corollaries.
+# down-conversion `analyse_report` relied on is gone too; Sign and Interval
+# edge_collect_check_sound_for was the EA_Check instance of step_sound_for and
+# enumeration: call_targets/call_target_list decode a call edge once and
+# establish and that it is the core, and the projected observations say which
+# evaluator and the reset value, so `call_enter` is its instance at `aval`/`0`
+# every instantiation, so the goal is already beta-reduced and `rule` cannot
+# every other return view is an image or a map of them. The one-way
+# exactly mirroring bfilter_lifted, so no probe is needed. ---
+# example call sites now name each concrete TD_side_<rule>_Interp_solve
+# executable coverage witness for a routed system's own solved key set.
+# export root and codegen/regression/ocaml/main.ml now name prog_cfg.
+# fold_rhs_projected algebra.
+# forwarded through every sublocale, and discharged by all 24 interpretations --
+# gamma_dg_local_state (still live) is the concretization instances actually use.
+# gamma_ownership_split_def, which is the same fact.
+# generator family is named for what it produces.
+# global proof-search branch that only unfolded it. Callers unfold
+# had no caller. combine_resolved_st_q_lift had none either. The three raw
+# had no consumer. The soundness theorems now say which construction they
+# half of the dg_state they project.
+# helpers that existed solely to state the old branch's own equational
+# if a later design deliberately reuses the name.
+# inside `assumes`, an unknown lowercase identifier silently becomes a free
+# instantiation rather than a second theorem. The trace-level result is
+# intra predecessors, return_call_action_list and entry_call_list, while
+# invert the redex. Those proofs unfold routed_contribution_trees_def instead.
+# is_bot_mono was assumed by routed_context_base_hetero and its three children,
+# it was the sole consumer of. Callers read classify_checks_verdicts directly.
+# it. Now entry_state_context_of_solution in Entry_State_Routed_Context, with
+# it: the graph regression asserts the absence of that context outright rather
+# its equation system from unit_routed_eqs (Exec_DG_Generator.thy) instead.
+# itself exported, so the generated OCaml carried the same function twice. The
+# join-arm pollution, which would have made plain bfilter's own equations
+# level) rather than two of different precision. branch/branch_sound/
+# live_resolved_st_qE derives a consequence rather than eliminating anything,
+# local_spec_sound concluded sound_dg_spec_core, not full analysis soundness;
+# longer bfilter's thin normalize_lift wrapper, so its concretization is no
+# longer equal to plain bfilter's -- only bounded by it (bfilter_lifted_sound,
+# ltr_coverage.valid_ltr_covered itself and needs no global-shape wrapper.
+# m(|man_local := d|); the update is now written out at its call sites, and
+# man_with_local m d was a pass-through for the record update
+# map2_resolved_st replaced.
+# map_of helpers were only used by the merge/widen/narrow lookup proofs that
+# mk_dg_man_local_update collapses it back into a built manager. dgs_combine
+# monadic combine_env-then-combine_assign body directly.
+# name suggested the latter. The lemma proves the former. ---
+# named `enter_local`, and every session stayed green.
+# names -- only their definitions changed -- so those are not retired; the
+# needed have no remaining consumer.
+# no consumer outside its own five lemmas.
+# non-emptiness lemma was replaced by the exact static_targets_neq_Nil_iff,
+# not execute one ---
+# not listed here because "entered" is ordinary prose throughout this tree, so a
+# obligation the tree states, not an unexplained abbreviation ---
+# of dgs_enter, so there is no separate caller-continuation field to leave
+# old feasible-gated-raw-bfilter branch and branch_st are strictly less
+# one run of dgs_enter, read back through enter_runs. The constant that re-ran
+# only by update_resolved_st; the library function is used directly now.
+# operations directly instead of a bundled record. The per-domain bundles and
+# outside CFG_Enumeration referenced either, and neither reached generated ML:
+# own prose -- so the bare name claimed a completeness it does not have. The
+# pair, which builds on formals_context directly and is still live.
+# parametric pair the keyed-solver Side-discipline regression drives directly
+# pollution instead, at the lifted level, by returning structural Bot
+# precise on And/Or conditions than the pollution-fixed branch_lifted, and
+# probe after a plain, possibly-polluted join. bfilter_st_lift's And-False/
+# program drivers say they build programs rather than trees, and the keyed
+# reads return_call_action_list, which keeps the call action whole. Nothing
+# record-application function and the lemmas phrased through it are gone.
+# reference survives.
+# remove_resolved_key was proved equal to AList.delete on the spot and used
+# resolved_st_is_bot_for_iff holds at executable_domain, not just sound_domain;
+# results, are now sound_dg_spec_core_st and sound_dg_spec_core_*.
+# return_calls/return_call_list were the return enumeration for the flat,
+# returns only the callee state) and `ownership_split_dg_spec_for`, replaced by
+# route_enterc_of_sigma named its implementation, not its meaning, and sat in
+# routed call-tree family, routed_extra_g the entry-seed tree, the two manager
+# routed_cmb_g_at now folds one alternative tree per pair, so its observations
+# routed_node_rhs builds the same system from intra/combine/extra hooks. It had
+# routed_node_trees predated the routed protocol: it decomposed a node from
+# semantic emptiness (gamma_state = {}) from structural bottom, and the old
+# several helpers read like competing generators. routed_cmb_g* became the
+# single seed/enter/combine leg.
+# sites directly; map_of_filter_fst in turn proves by plain induction, so the
+# so the "unfold at the pointwise instance" shortcuts have no consumers.
+# so these re-exports had no consumer left.
+# solely to support bfilter_st_lift's old whole-expression witness-bottom
+# spine is the analysis-facing interface; what survives is the address-
+# split (report_lifted_state, Reachability_Lift.thy); the lifted payload scan
+# state and compare that generator's post-fixpoint against the generic one.
+# still occurs in a tracked `.thy` file -- in code or in prose. It exists
+# than its presence without an enter edge.
+# that argument no longer holds; vars_cover_exec (DG_Soundness.thy) is the
+# the cover map ltr_coverage already fixes, so the abs_state reading is an
+# the entry against a solution to recover a single entered value is gone; it is
+# the monotonicity lemmas nothing consumed are gone.
+# the observations in DG_Spec.
+# the pair's only uses were each other and their own characterization lemmas.
+# the policy-generic Routed_Context although only the entry-state policy uses
+# the same/different pairs. The raw variants had no consumer; the quotient ones
+# the singleton-alternative premise still explicit.
+# the specification-to-specification lifter `ownership_split_lift`. ---
+# their record-field accessors went with it, as did the pair-shaped `enter`
+# theorems that remain.
+# this project keeps exactly one public plain-state branch operation (per
+# three `call_fwd_ok` assumptions into statements about an arbitrary function
+# unfold are gone with no replacement under the same name. ---
+# untouched, and no lemma saying an override left it untouched.
+# update rules at once, used only under Examples. Solver dispatch for the CLI
+# variable, so the locale keeps building while its assumption stops saying
+# vars_cover from the compiled graph's own connectivity to the exit. A routed
+# vars_cover_of_dg_gen_of_covers and cfg_exit_covers proved a routed system's
+# was an alias with one consumer: dg_spec_combine_transfer now carries the
+# was assumed by any theorem, so no proof lost a hypothesis.
+# were meant to make uniform read Inl/Inr directly.
+# what it transports; the rest became instances of Strategy_Tree_Fold's
+# what it was written to say. Deleting `DG_Transfer_Combinators.thy` turned
+# which is the only form any caller uses.
+# with the gs/globals pair fixed, eq_resolved_st respectfulness follows from it
+# witness lemmas: soundness is stated directly against traverse_rhs/sides_of_rhs
+# word-level guard on it would flag the wording rather than the constant.
+Exec_Refinement
+Routed_Domain_Exec
+activation_collect_sound_gen
+afilter_ivl_st_commute
+afilter_st_locality
+analyse_report
+analysis_cluster_dot
+analysis_edge_attrs
+analysis_edge_dot
+analysis_graph_to_dot
+analysis_node_attrs
+annotation_style
+answer_local
+apply_dg_spec
+apply_dg_spec_at
+apply_dg_spec_contribution
+apply_dg_spec_contribution_at
+apply_tf
+apply_tf_once_assign
+apply_tf_once_special_min
+aval_congruence_mono
+aval_congruence_sound
+base_dg_exec_analysis
+base_dg_spec_for
+base_dg_spec_for_lifted
+base_dg_spec_for_sound
+base_dg_spec_sound
+base_dg_spec_st_for_lifted
+bfilter_And_False_branch
+bfilter_Or_True_branch
+bfilter_lift_step
+bfilter_st_And_False_branch
+bfilter_st_And_False_unfold
+bfilter_st_Or_True_branch
+bfilter_st_Or_True_unfold
+bfilter_st_bot
+bfilter_st_locality
+branch_int_dom_fixpoint_st_commute
+branch_unfold
+callee_entry_at_call_site
+callee_entry_at_call_site_eq
+canonicalize_state
+canonicalize_state_bot
+canonicalize_state_gamma
+canonicalize_state_id
+canonicalize_state_idem
+canonicalize_state_le
+canonicalize_state_mono
+cfg_assigned_vars
+cfg_exit_covers
+check_report_dot_cluster
+check_report_html_label
+checks_proven_sound
+combine_global
+combine_local
+combine_resolved_st_q_lift
+combine_resolved_st_q_lift_Bot_left
+combine_resolved_st_q_lift_Bot_right
+combine_resolved_st_q_lift_Lifted
+combine_transfer_of_comb
+compile_program
+compiled_global_vars
+context_keys_distinct
+context_keys_distinct_imp_inj_on
+contextual_analysis_dot
+contextual_node_label
+cs_project_gk
+cs_route_commute
+dead_code_lift
+dead_code_normalize
+default_local_dg_spec
+default_local_dg_spec_def
+default_local_dg_spec_simps
+dep_aux_dg_combine_tree
+dep_aux_dg_combine_tree_at
+dep_aux_dg_edge_contribution_tree
+dep_aux_dg_edge_tree
+dep_aux_dg_gen_of_char
+dep_aux_dg_gen_of_extra_mem
+dep_aux_dg_gen_of_pred_mem
+dep_aux_dg_gen_of_site_mem
+dep_aux_fold_rhs_trees_char
+dep_aux_seqcomp
+dep_aux_side_rhs_fold_dg_commute
+dep_dg_gen_of_comb
+dep_dg_gen_of_entry
+dep_dg_gen_of_intra
+dg_acc
+dg_cmb
+dg_cmb_at
+dg_cmb_at_of
+dg_cmb_of
+dg_combine_tree
+dg_combine_tree_as_at
+dg_combine_tree_at
+dg_combine_tree_hook
+dg_combine_tree_man
+dg_combine_tree_mono
+dg_combine_tree_sides_mono
+dg_edge_contribution_tree
+dg_edge_contribution_tree_as_at
+dg_edge_contribution_tree_matches_global
+dg_edge_contribution_tree_matches_local
+dg_edge_tree
+dg_edge_tree_answer_pure_D
+dg_edge_tree_as_at
+dg_edge_tree_hook
+dg_edge_tree_man
+dg_edge_tree_mono
+dg_edge_tree_side_pure_G
+dg_edge_tree_sides_mono
+dg_enter
+dg_enter_tree_hook
+dg_extra
+dg_extra_of
+dg_extra_of_eq_ltr_enter_trees
+dg_gamma
+dg_gen
+dg_gen_of
+dg_gen_of_obs_hook_gen
+dg_hook_D
+dg_hook_G
+dg_hook_gamma
+dg_post_solution_collect_sound_ltr_for
+dg_postfix
+dg_postfix_collect_sound_ltr_for
+dg_spec_combine_transfer_ownership_split_dg_spec_for
+dg_spec_combine_tree_at
+dg_spec_commute
+dg_spec_step_ownership_split_for
+dg_trees
+dgs_caller_cont
+dgs_caller_cont_sign_dg_spec_callee_join
+dgs_caller_cont_sign_dg_spec_env_join
+dgs_caller_cont_update
+dgs_combine
+dgs_enter_ownership_split_dg_spec_for
+dgs_enter_pair
+domain_transfer
+ectx_abs_spec
+ectx_gamma
+ectx_gamma_Bot
+ectx_gamma_eq
+ectx_sound_exec
+ectx_spec
+edge_collect_apply_tf_sound_for
+edge_collect_check_sound_for
+edge_transfer_of_step
+emits_no_sides
+ensure_trailing_nl
+enter_D
+enter_D_def
+enter_D_mono
+enter_D_sound
+enter_binding_ci
+enter_binding_ci_def
+enter_binding_ci_mono
+enter_binding_ci_sound
+enter_bindings
+enter_ci_D
+enter_ci_D_def
+enter_ci_D_mono
+enter_ci_D_sound
+enter_global
+enter_local
+enter_pair_D
+enter_pair_D_mono
+enter_pair_D_sound
+enter_pair_int_dom_for
+enter_pair_int_dom_for_sound
+enter_pair_ivl_for
+enter_pair_ivl_for_sound
+enter_pair_parity_for
+enter_pair_parity_for_sound
+enter_pair_sign_for
+enter_pair_sign_for_sound
+enter_sound_ltr
+entered_ectx_spec_eq_entry_state_entered
+entered_interval_spec_eq_entry_state_entered
+entry_call_list_empty_if_not_entry
+entry_seed_at
+entry_state_context_eq_route_enterc_of_sigma
+entry_state_routed_context
+env_indep_deps_dg_combine_tree
+env_indep_deps_dg_edge_tree
+env_indep_deps_seqcomp
+eq_hook_gen
+eq_resolved_st_defaults
+eq_resolved_st_is_bot_for_mono
+eq_routed_node_trees
+ex_multi_return
+ex_recursion
+ex_return_ignores_continuation
+filter_fst_eq_restrict
+finite_return_calls
+fold_rhs_contributions_side_rhs_fold_dg_global_char
+fold_rhs_contributions_side_rhs_fold_dg_local_char
+fold_rhs_trees
+fold_rhs_trees_side_rhs_fold_dg_global_char
+fold_rhs_trees_side_rhs_fold_dg_local_char
+footprint_exp
+formals_route
+formals_route_gen
+fresh_vname_notin
+fun_of_resolved_st_q_for_restrict_global_abs
+fun_of_resolved_st_q_for_restrict_local_abs
+fun_of_st_enter_frame_D_resolved
+gExI_finC
+gExI_finE
+gEx_wf_cfg
+gammaM_exec
+gamma_bfilter_lifted
+gamma_branch_lifted
+gamma_dg
+gamma_dgD1
+gamma_dgD2
+gamma_dg_base
+gamma_dg_le_D
+gamma_dg_le_G
+gamma_dg_mono
+gamma_join
+gamma_join_exec
+gamma_ownership_splitD
+gamma_ownership_split_eq
+gamma_state_witness_not_bot
+gamma_unit
+generic_branch_st_for
+graphviz_action_defs
+graphviz_exit
+graphviz_html_text
+graphviz_label_text
+graphviz_node_annotation
+graphviz_owner_of
+graphviz_point_label
+gv_nl
+gv_style_of_status
+hook_acc
+hook_combine_tree_mem
+hook_edge_tree_mem
+hook_enter_tree_mem
+hook_gen
+hook_post_solution_collect_sound_ltr
+hook_post_solution_postfix
+hook_postfix
+hook_postfix_combine
+hook_postfix_edge
+hook_postfix_enter
+hook_postfix_entryD
+hook_postfix_entryG
+hook_postfix_gamma_entry
+hook_tree_local_le
+hook_tree_side_le
+hook_trees
+ics_route_commute
+ictx_abs_spec
+ictx_eqs
+ictx_gamma
+ictx_sol
+ictx_sound_exec
+ictx_spec
+ictx_terminates
+indep_dg_spec
+insert_dot_cluster_before_close
+int_checks_provenI
+int_checks_proven_sound
+int_conf_analyse_report_def
+int_conf_analyse_report_per_origin_def
+int_conf_analyse_report_warrow_def
+int_conf_analyse_report_wpo_def
+int_fixpoint_is_sound_transfer_for
+int_never_is_sound_transfer_for
+int_once_is_sound_transfer_for
+int_tf_fixpoint_for
+int_tf_for
+int_tf_never_for
+int_tf_never_for_mono
+int_tf_once_for
+int_tf_once_for_mono
+is_bot_mono
+ivl_tf_for
+ivl_tf_for_mono
+join_gv_nl
+le_resolved_st_q_pointwise
+lift_dg_step
+lift_gamma
+lift_probe_step
+live_resolved_st_qE
+local_result
+local_spec_sound
+local_spec_step_apply_tf
+local_spec_step_transfer_lift_apply_tf
+local_state_dg_spec_for_sound
+local_state_dg_spec_sound
+local_state_dg_spec_st_for
+local_transfer_emits_no_sides
+local_transfer_local_result
+local_transfer_reads_only_source
+locals_ge_s0d
+location_vname_imageI
+lookup_joined_state_eq_with
+lookup_joined_with
+lookup_joined_with_absent
+lookup_resolved_st_q_update_diff
+lookup_resolved_st_q_update_same
+lookup_resolved_st_update_diff
+lookup_resolved_st_update_same
+ltr_combine_tree
+ltr_combine_tree_eq_dg_cmb_at_of
+ltr_edge_tree
+ltr_enter_tree
+ltr_enter_tree_of
+man_with_local
+man_with_local_simps
+map_of_filter_global_global
+map_of_filter_global_local
+map_of_filter_local_global
+map_of_filter_local_local
+map_of_map_fst_lookup
+map_of_map_fst_lookup_append
+map_of_remove_resolved_key
+merge_split_spec
+merge_split_spec_exec
+mixed_ctx_graph_bottom_context_is_covered_but_unentered
+mode_once_ne_fixpoint
+monovariant_analysis_result_for
+normalize_point
+ownership_split_combine_transfer_unfold
+ownership_split_dg_spec_for
+ownership_split_dg_spec_placed
+ownership_split_dg_spec_placed_st
+ownership_split_step_for
+ownership_split_transfer_unfold
+parity_tf_for
+parity_tf_for_mono
+part_post_solution_dg_gen_of_iff
+part_post_solution_iff_se_constraint_holds
+part_post_solution_imp_se_constraint_holds
+part_post_solution_seed_dg_buffered_to_old
+placed_dg_exec_analysis
+probe_exp
+project_component
+project_placed_resolved
+publish_global
+raw_cfg_dot
+raw_cfg_dot_lit
+raw_cfg_dot_with_report
+raw_cfg_dot_with_report_lit
+read_at
+read_global
+read_local
+reads_only_source
+region_label
+remove_resolved_key
+remove_resolved_key_eq_delete
+resolved_st_q_lifted_is_bot_for
+return_call_list
+return_calls
+return_calls_iff
+route_enterc_of_sigma
+route_enterc_of_sigma_agree
+routed_cmb_g
+routed_cmb_g_alt
+routed_cmb_g_at
+routed_cmb_g_at_sides_le_combine
+routed_cmb_g_at_sides_le_enter
+routed_cmb_g_at_sides_le_seed
+routed_cmb_g_at_traverse
+routed_cmb_g_contribution
+routed_cmb_g_contribution_at
+routed_contribution_trees_intraI
+routed_extra_g
+routed_node_rhs_is_mono_eq_gen
+routed_node_rhs_mono_deps_gen
+routed_node_rhs_mono_sides_gen
+routed_node_trees
+routed_node_trees_entry
+routed_node_trees_single_combine
+routed_node_trees_single_edge
+routed_node_trees_single_enter
+routed_report_proved_sound
+routed_report_refuted_sound
+routed_result
+routed_result_node_sound
+run_menu
+se_constraint_holds
+se_constraint_holds_def
+se_constraint_holds_local
+se_constraint_holds_sides
+seed_addr
+seed_addr_FunctionEntry
+seed_addr_FunctionResult
+seed_addr_Statement
+seed_predecessor_addr_list
+seqcomp_Answer_right
+seqcomp_assoc
+seqcomp_mono
+seqcomp_tree
+set_concat_static_targets
+set_return_call_list
+sg_uncovered_empty
+side_acc_dg_eq_foldr
+side_cfg_T_eff_keyed_seed_dg
+side_cfg_T_eff_keyed_seed_dg_buffered
+side_cfg_T_eff_keyed_seed_trees
+side_effect
+side_rhs_fold_dg_val_mono
+side_solver
+sides_dg_combine_tree_Inl
+sides_dg_combine_tree_Inr
+sides_dg_combine_tree_at
+sides_dg_combine_tree_at_other
+sides_dg_edge_contribution_tree
+sides_dg_edge_tree_Inl
+sides_dg_edge_tree_Inr
+sides_fold_le_hook_gen
+sides_of_rhs_fold_rhs_trees_bot
+sides_of_rhs_fold_rhs_trees_char
+sides_of_rhs_seqcomp
+sides_ownership_split_combine_transfer_gen
+sides_ownership_split_transfer_gen
+sides_side_rhs_fold_dg_entry_answers
+sign_tf_for
+sign_tf_for_mono
+solver_menu
+sound_dg_hooks
+sound_dg_hooks_ltr
+sound_dg_spec
+sound_dg_spec_core_ownership_split_lift
+sound_dg_spec_ltr_for
+sound_dg_spec_ownership_split_for
+sound_dg_spec_ownership_split_lift
+sound_dg_spec_sign_dg_spec_env_join
+sound_dg_spec_st
+sound_dg_spec_unit_for
+sound_transfer_combine_envI
+sound_transfer_enter_cont_idI
+source_html_label
+sp_at
+sp_global
+sp_local
+sp_run
+sp_run_def
+sp_run_sp_lift_tree
+sp_run_with
+sp_run_with_bind
+sp_run_with_bind_publish
+sp_run_with_bind_read_at
+sp_run_with_bind_read_global
+sp_run_with_bind_read_local
+sp_run_with_def
+sp_run_with_publish
+sp_run_with_read_at
+sp_run_with_read_global
+sp_run_with_read_local
+sp_run_with_return
+sp_sideg
+split_gv_nl
+split_gv_nl_acc
+static_targets_nonempty
+string_of_call_action
+string_of_check_report
+tf_assign
+tf_body
+tf_branch
+tf_branch_never_is_branch_int_dom
+tf_branch_once_is_branch_int_dom
+tf_combine_collect_abs
+tf_combine_collect_abs_combine_env
+tf_combine_collect_abs_mono
+tf_combine_env
+tf_enter
+tf_enter_ivl_for_call_info_of_eq_entry_state_enter_abs
+tf_enter_once_binds_formal
+tf_event
+tf_return
+tf_skip
+tf_sound_combine_collect_at_call_for
+tf_sound_combine_collect_for
+tf_sound_combine_env_at_call_for
+tf_sound_combine_env_for
+tf_sound_enter_cont_for
+tf_special
+traverse_dg_combine_tree
+traverse_dg_combine_tree_at
+traverse_dg_edge_contribution_tree
+traverse_dg_edge_tree
+traverse_fold_rhs_trees_char
+traverse_ownership_split_combine_transfer_gen
+traverse_ownership_split_transfer_gen
+traverse_rhs_seqcomp
+traverse_seqcomp
+twice_wf_cfg
+unit_combine_step_assign_for
+unit_combine_step_assign_placed
+unit_combine_step_env_for
+unit_combine_step_env_placed
+unit_combine_step_placed_st_assign
+unit_combine_step_placed_st_env
+unit_combine_step_st_assign_for
+unit_combine_step_st_env
+unit_combine_transfer
+unit_dg_exec_analysis
+unit_dg_spec_for
+unit_dg_spec_st_for
+unit_step_placed
+unit_step_placed_st
+unit_step_st
+unit_transfer
+unit_transfer_gen
+unrouted_enter_compatible
+unrouted_enter_compatibleI
+val_at
+val_at_FunctionEntry
+val_at_not_entry
+valid_ltr_ctx_sound
+valid_ltr_ctx_sound_gen
+vars_cover_of_dg_gen_of_covers
+verdict_check_result
+sctx_eqs
+sctx_sol
+sctx_terminates
+sctx_terminates_via_solve_c
+sctx_sg_st
+sctx_pp_st
+sctx_pp_routed
+sctx_solve_dom
+sctx_result_node_sound
+sctx_result_node_unreachable
+sctx_report_flag_unreachable
+sctx_report_ctx_proved_sound
+sctx_report_ctx_refuted_sound
+sctx_analyse_result_eq
+sctx_cinit_le_cinit_sign_st
+sctx_fin
+sctx_finC
+sctx_sg_st_covered
+sctx_sg_st_uncovered_empty
+sign_pp_st_gen
+sctx_eqs_prog_def
+sctx_sol_prog_def
+sctx_terminates_prog_def
+analyse_sign_ctx_result_for
+analyse_sign_ctx_result
+analyse_sign_ctx_result_per_origin_for
+analyse_sign_ctx_result_per_origin
+pctx_eqs
+pctx_sol
+pctx_terminates
+pctx_terminates_via_solve_c
+pctx_sg_st
+pctx_pp_st
+pctx_pp_routed
+pctx_solve_dom
+pctx_result_node_sound
+pctx_result_node_unreachable
+pctx_report_flag_unreachable
+pctx_report_ctx_proved_sound
+pctx_report_ctx_refuted_sound
+pctx_analyse_result_eq
+pctx_cinit_le_cinit_parity_st
+pctx_fin
+pctx_finC
+pctx_sg_st_covered
+pctx_sg_st_uncovered_empty
+parity_pp_st_gen
+pctx_eqs_prog_def
+pctx_sol_prog_def
+pctx_terminates_prog_def
+analyse_parity_ctx_result_for
+analyse_parity_ctx_result
+analyse_parity_ctx_result_per_origin_for
+analyse_parity_ctx_result_per_origin
+interval_conf_eqs
+interval_conf_sol
+interval_conf_terminates
+interval_conf_terminates_via_solve_c
+interval_conf_vars_finite
+interval_conf_solved
+interval_conf_join
+interval_conf_po
+interval_conf_wa
+interval_conf_wpo
+interval_conf_join_pp_st
+interval_conf_per_origin_pp_st
+interval_conf_warrow_pp_st
+interval_conf_wpo_pp_st
+interval_conf_per_origin_vars_finite
+interval_conf_warrow_vars_finite
+interval_conf_wpo_vars_finite
+interval_conf_sol_per_origin
+interval_conf_terminates_per_origin
+interval_conf_terminates_per_origin_via_solve_c
+interval_conf_sol_warrow
+interval_conf_terminates_warrow
+interval_conf_terminates_warrow_via_solve_c
+interval_conf_sol_wpo
+interval_conf_terminates_wpo
+interval_conf_terminates_wpo_via_solve_c
+interval_conf_result_node_sound
+interval_conf_result_node_unreachable
+interval_conf_report_flag_unreachable
+interval_conf_analyse_result_eq
+interval_conf_cinit_le_cinit_ivl_st
+interval_conf_report_ctx_proved_sound
+interval_conf_report_ctx_refuted_sound
+interval_conf_result_node_sound_per_origin
+interval_conf_result_node_sound_warrow
+interval_conf_result_node_sound_wpo
+interval_conf_eqs_prog_def
+interval_conf_sol_prog_def
+interval_conf_terminates_prog_def
+analyse_interval_ctx_result_for
+analyse_interval_ctx_result
+analyse_interval_ctx_result_per_origin_for
+analyse_interval_ctx_result_per_origin
+analyse_interval_ctx_result_warrow_for
+analyse_interval_ctx_result_warrow
+analyse_interval_ctx_result_wpo_for
+analyse_interval_ctx_result_wpo
+ivl_pp_st_gen
+
+# --- Int's hand-built unit pipeline, superseded by the generated
+#     assembly (2026-09-09). The four solver disciplines are now four
+#     applications of one `unit_dg_pipeline` instance, so the per-solver
+#     equation systems, solves, termination predicates and their
+#     post-solution transports have no separate existence. ---
+#     Five of that block's names are deliberately reused: folding Int's
+#     `ictx_` abbreviations into `int_conf_` gives `int_conf_eqs_prog`,
+#     `int_conf_sol_prog`, `int_conf_terminates_prog`, its
+#     `_via_solve_c` lemma and `int_conf_vars_finite` back, now as
+#     notation for the generated assembly's production instance rather
+#     than constants of the pipeline that was removed.
+analyse_int_ctx_result_for
+analyse_int_ctx_result_per_origin_for
+analyse_int_ctx_result_wpo_for
+int_conf_analyse_result_eq
+int_conf_cinit_le_cinit_int_dom_st
+int_conf_eqs
+int_conf_join_pp_st
+int_conf_per_origin_pp_st
+int_conf_per_origin_vars_finite
+int_conf_pp_routed
+int_conf_sg_st
+int_conf_sg_st_covered
+int_conf_sg_st_uncovered_empty
+int_conf_sol
+int_conf_sol_per_origin
+int_conf_sol_prog_per_origin
+int_conf_sol_prog_warrow_eq
+int_conf_sol_prog_wpo
+int_conf_sol_warrow
+int_conf_sol_wpo
+int_conf_terminates
+int_conf_terminates_per_origin
+int_conf_terminates_per_origin_via_solve_c
+int_conf_terminates_prog_per_origin
+int_conf_terminates_prog_per_origin_via_solve_c
+int_conf_terminates_prog_warrow_eq
+int_conf_terminates_prog_warrow_via_solve_c
+int_conf_terminates_prog_wpo
+int_conf_terminates_prog_wpo_via_solve_c
+int_conf_terminates_via_solve_c
+int_conf_terminates_warrow
+int_conf_terminates_warrow_via_solve_c
+int_conf_terminates_wpo
+int_conf_terminates_wpo_via_solve_c
+int_conf_warrow_pp_st
+int_conf_warrow_vars_finite
+int_conf_wpo_pp_st
+int_conf_wpo_vars_finite
+
+# --- Per-domain contextual pipelines, absorbed into the shared routed
+#     assembly routed_dg_analysis (2026-09-09). Each domain's call-string and
+#     entry-state configuration had its own equation system, solve, reader,
+#     transport and eighteen-goal soundness interpretation; all four domains now
+#     interpret one locale. The published entry points are unchanged. ---
+analyse_congruence_call_string_result_for
+analyse_interval_call_string_result_for_join
+analyse_interval_call_string_result_for_per_origin
+analyse_interval_call_string_result_for_wpo
+analyse_interval_entry_state_result_for_join
+analyse_interval_entry_state_result_for_per_origin
+analyse_interval_entry_state_result_for_wpo
+analyse_parity_call_string_result_for
+analyse_sign_call_string_result_for
+ccs_activation_collect_sound
+ccs_check_projection
+ccs_cinit_le_cinit_congruence_st
+ccs_eqs
+ccs_eqs_prog
+ccs_pp_routed
+ccs_pp_st
+ccs_sg_st
+ccs_sol
+ccs_sol_prog
+ccs_solve_dom
+ccs_terminates
+ccs_terminates_prog
+ccs_terminates_prog_via_solve_c
+ccs_terminates_via_solve_c
+ccs_vars_finite
+ccs_verdict_report_prog
+ccs_verdict_report_prog_eq
+cctx_entry_activation_collect_sound
+cctx_entry_check_projection
+cctx_entry_cinit_le_cinit_congruence_st
+cctx_entry_context_rel
+cctx_entry_eqs
+cctx_entry_eqs_prog
+cctx_entry_fin
+cctx_entry_finC
+cctx_entry_pp_routed
+cctx_entry_pp_st
+cctx_entry_route
+cctx_entry_route_gen
+cctx_entry_route_gen_commute
+cctx_entry_route_gen_eq_generic
+cctx_entry_routed_context_call
+cctx_entry_routed_context_comb
+cctx_entry_sg_st
+cctx_entry_sg_st_covered
+cctx_entry_sg_st_uncovered_empty
+cctx_entry_sol
+cctx_entry_sol_prog
+cctx_entry_solve_dom
+cctx_entry_terminates
+cctx_entry_terminates_prog
+cctx_entry_terminates_prog_via_solve_c
+cctx_entry_terminates_via_solve_c
+cctx_entry_vars_finite
+cctx_entry_verdict_report_prog
+cctx_entry_verdict_report_prog_eq
+congruence_cs_pp_st_gen
+congruence_es_pp_st_gen
+cs_call_string_eqs
+cs_call_string_sol
+cs_call_string_sol_prog_join
+cs_call_string_sol_prog_per_origin
+cs_call_string_sol_prog_wpo
+cs_call_string_terminates
+cs_call_string_terminates_prog_via_solve_c
+cs_call_string_vars_finite
+cs_call_string_verdict_report_prog_eq
+cs_call_string_verdict_report_prog_join
+cs_call_string_verdict_report_prog_per_origin
+cs_call_string_verdict_report_prog_wpo
+entry_state_cinit_le_cinit_ivl_st
+entry_state_eqs
+entry_state_fin
+entry_state_finC
+entry_state_pp_routed
+entry_state_pp_st
+entry_state_sg_comb
+entry_state_sg_seed
+entry_state_sg_st
+entry_state_sg_st_covered
+entry_state_sg_st_uncovered_empty
+entry_state_sol
+entry_state_sol_prog_join
+entry_state_sol_prog_per_origin
+entry_state_sol_prog_wpo
+entry_state_solve_dom
+entry_state_terminates
+entry_state_terminates_prog_via_solve_c
+entry_state_vars_finite
+entry_state_verdict_report_prog_join
+entry_state_verdict_report_prog_per_origin
+entry_state_verdict_report_prog_wpo
+ivl_es_pp_st_gen
+parity_cs_pp_st_gen
+parity_es_pp_st_gen
+pcs_activation_collect_sound
+pcs_check_projection
+pcs_cinit_le_cinit_parity_st
+pcs_eqs
+pcs_eqs_prog
+pcs_pp_routed
+pcs_pp_st
+pcs_sg_st
+pcs_sol
+pcs_sol_prog
+pcs_solve_dom
+pcs_terminates
+pcs_terminates_prog
+pcs_terminates_prog_via_solve_c
+pcs_terminates_via_solve_c
+pcs_vars_finite
+pcs_verdict_report_prog
+pcs_verdict_report_prog_eq
+pctx_entry_activation_collect_sound
+pctx_entry_check_projection
+pctx_entry_cinit_le_cinit_parity_st
+pctx_entry_context_rel
+pctx_entry_eqs
+pctx_entry_eqs_prog
+pctx_entry_fin
+pctx_entry_finC
+pctx_entry_pp_routed
+pctx_entry_pp_st
+pctx_entry_route
+pctx_entry_route_gen
+pctx_entry_route_gen_commute
+pctx_entry_route_gen_eq_generic
+pctx_entry_routed_context_call
+pctx_entry_routed_context_comb
+pctx_entry_sg_st
+pctx_entry_sg_st_covered
+pctx_entry_sg_st_uncovered_empty
+pctx_entry_sol
+pctx_entry_sol_prog
+pctx_entry_solve_dom
+pctx_entry_terminates
+pctx_entry_terminates_prog
+pctx_entry_terminates_prog_via_solve_c
+pctx_entry_terminates_via_solve_c
+pctx_entry_vars_finite
+pctx_entry_verdict_report_prog
+pctx_entry_verdict_report_prog_eq
+scs_activation_collect_sound
+scs_check_projection
+scs_cinit_le_cinit_sign_st
+scs_eqs
+scs_eqs_prog
+scs_pp_routed
+scs_pp_st
+scs_sg_st
+scs_sol
+scs_sol_prog
+scs_solve_dom
+scs_terminates
+scs_terminates_prog
+scs_terminates_prog_via_solve_c
+scs_terminates_via_solve_c
+scs_vars_finite
+scs_verdict_report_prog
+scs_verdict_report_prog_eq
+sctx_entry_activation_collect_sound
+sctx_entry_check_projection
+sctx_entry_cinit_le_cinit_sign_st
+sctx_entry_context_rel
+sctx_entry_eqs
+sctx_entry_eqs_prog
+sctx_entry_fin
+sctx_entry_finC
+sctx_entry_pp_routed
+sctx_entry_pp_st
+sctx_entry_route
+sctx_entry_route_gen
+sctx_entry_route_gen_commute
+sctx_entry_route_gen_eq_generic
+sctx_entry_routed_context_call
+sctx_entry_routed_context_comb
+sctx_entry_sg_st
+sctx_entry_sg_st_covered
+sctx_entry_sg_st_uncovered_empty
+sctx_entry_sol
+sctx_entry_sol_prog
+sctx_entry_solve_dom
+sctx_entry_terminates
+sctx_entry_terminates_prog
+sctx_entry_terminates_prog_via_solve_c
+sctx_entry_terminates_via_solve_c
+sctx_entry_vars_finite
+sctx_entry_verdict_report_prog
+sctx_entry_verdict_report_prog_eq
+sign_cs_pp_st_gen
+sign_es_pp_st_gen
+int_conf_activation_collect_sound_warrow
+
+# --- Int's contextual pipelines collapsed onto the shared routed assembly (2026-09-09) ---
+# Int's call-string and entry-state configurations built their own equation
+# system, solve, post-solution certificate and report chain. Both were proved
+# identical to the shared assembly's -- the bridges closed by (rule refl) --
+# so the whole layer is a re-spelling of routed_dg_pipeline constants.
+ics_check_projection
+ics_eqs
+ics_eqs_prog
+ics_pp_routed
+ics_pp_routed_warrow
+ics_pp_st
+ics_pp_st_warrow
+ics_sol
+ics_sol_prog
+ics_sol_prog_warrow
+ics_sol_warrow
+ics_solve_dom
+ics_solve_dom_warrow
+ics_terminates
+ics_terminates_prog
+ics_terminates_prog_via_solve_c
+ics_terminates_prog_warrow
+ics_terminates_prog_warrow_via_solve_c
+ics_terminates_via_solve_c
+ics_terminates_warrow
+ics_terminates_warrow_via_solve_c
+ics_vars_finite
+ics_verdict_report_prog
+ics_verdict_report_prog_eq
+ics_verdict_report_prog_warrow
+int_conf_entry_activation_collect_sound
+int_conf_entry_adapter
+int_conf_entry_check_projection
+int_conf_entry_cinit_le_cinit_int_dom_st
+int_conf_entry_compiled
+int_conf_entry_context_rel
+int_conf_entry_dg_base
+int_conf_entry_eqs
+int_conf_entry_eqs_prog
+int_conf_entry_fin
+int_conf_entry_finC
+int_conf_entry_pp_routed
+int_conf_entry_pp_routed_warrow
+int_conf_entry_pp_st
+int_conf_entry_pp_st_warrow
+int_conf_entry_route
+int_conf_entry_route_gen
+int_conf_entry_route_gen_commute
+int_conf_entry_route_gen_eq_generic
+int_conf_entry_routed
+int_conf_entry_routed_context_call
+int_conf_entry_routed_context_comb
+int_conf_entry_sg_st
+int_conf_entry_sg_st_covered
+int_conf_entry_sg_st_uncovered_empty
+int_conf_entry_sol
+int_conf_entry_sol_prog
+int_conf_entry_sol_prog_warrow
+int_conf_entry_sol_warrow
+int_conf_entry_solve_dom
+int_conf_entry_solve_dom_warrow
+int_conf_entry_terminates
+int_conf_entry_terminates_prog
+int_conf_entry_terminates_prog_via_solve_c
+int_conf_entry_terminates_prog_warrow
+int_conf_entry_terminates_prog_warrow_via_solve_c
+int_conf_entry_terminates_via_solve_c
+int_conf_entry_terminates_warrow
+int_conf_entry_terminates_warrow_via_solve_c
+int_conf_entry_vars_finite
+int_conf_entry_verdict_report_prog
+int_conf_entry_verdict_report_prog_eq
+int_conf_entry_verdict_report_prog_warrow
+int_cs_pp_st_gen
+int_domain
+int_es_pp_st_gen
+
+# --- Interval call-string surface reduced to the generated three (2026-09-10) ---
+# `analyse_interval_call_string_{result_for,result,report}` are now generated
+# from assembly/analyses.yaml. `_verdict_report_prog` was the alias the
+# generated report replaced; the other two had no consumer at all.
+cs_call_string_check_projection
+cs_call_string_terminates_prog
+cs_call_string_verdict_report_prog
+
+# --- Parity_Sound reduced to its one live fact (2026-09-10) ---
+# The specification, the concretization and their soundness were a per-domain
+# restatement of `routed_dg_domain_exec`'s own `spec_st`/`gamma_exec`/
+# `sound_dg_spec_core_st`/`entry_pairs_cover_st`. The assembly discharges its
+# obligations from Parity_Exec's commute lemmas directly and never cited any of
+# these; nothing else in the tree did either. `parity_cinit_gamma` stays: it is
+# Parity's own claim that zero is even.
+pctx_spec
+pctx_abs_spec
+pctx_gamma
+pctx_gamma_Bot
+pctx_gamma_eq
+pctx_sound_exec
+pctx_entry_cover_exec
+
+# --- Congruence_Sound reduced to its one live fact (2026-09-10) ---
+# Same supersession as Parity: `routed_dg_analysis` and `unit_dg_analysis` take
+# the raw commute lemmas and build the specification, the concretization and
+# their soundness themselves, for the unit route and both contextual routes
+# alike. These per-domain restatements had no consumer.
+cctx_spec
+cctx_abs_spec
+cctx_gamma
+cctx_gamma_Bot
+cctx_gamma_eq
+cctx_sound_exec
+cctx_entry_cover_exec
+
+# --- Int_Sound reduced to its three live facts (2026-09-10) ---
+# Same supersession as Parity and Congruence: the specification, the
+# concretization and their soundness were a per-domain restatement of
+# `routed_dg_domain_exec`'s own constants. Int keeps the two commute lemmas and
+# `int_cinit_gamma`, which its assembly and registrations do cite.
+int_dom_spec
+int_dom_abs_spec
+int_dom_abs_spec_sound
+int_dom_gamma
+int_dom_gamma_Bot
+int_dom_gamma_eq
+int_dom_sound_exec
+int_dom_entry_cover_exec
+
+# --- Parity's contextual routes became CLI-selectable (2026-09-10) ---
+# These pinned the resolver and the contextual wrapper answering None for
+# Parity. Parity now declares `contexts:` like every other domain, so the
+# pins assert the plan each configuration resolves to instead, under names
+# that no longer say "invalid".
+resolver_parity_entrystate_invalid
+resolver_parity_callstring_invalid
+analyse_config_ctx_parity_entrystate_invalid
+analyse_config_ctx_parity_callstring_invalid
+
+# --- The entry-state renderer stopped being Interval-only (2026-09-10) ---
+# entry_state_point_env_at read a hard-wired (ivl list, ivl abs_state) table.
+# entry_state_point_env_for dispatches on analysis_domain and covers all five,
+# so the Interval-only reader has no caller left.
+entry_state_point_env_at
+
+# --- Explicit-solver output now comes from one solved table (2026-09-10) ---
+# The bundled solver_checked_payload_auto result already carries the graph,
+# verdicts, states, and globals derived from its single analysis_result.
+# Calling solver_globals_for from the CLI repeated the complete solve.
+solver_globals_for
+cs_ctx_sol_for
+cs_ctx_domain_for
+cs_ctx_check_annotation
+cs_ctx_annotated_config
+cs_globals_for
+
+# --- Per-domain transfer aliases folded into nonrelational_transfer (2026-09-10) ---
+# Sign, Interval, Parity and Congruence each restated the same fifteen
+# soundness and monotonicity lemmas about their transfer operations. Those
+# operations now come from one `global_interpretation` of
+# `nonrelational_transfer`, which proves each fact once for any domain giving
+# one abstract value per variable; the transfer functions keep their
+# domain-prefixed constant names, and the theorems are cited under the
+# interpretation prefix (`sign_tf.`, `ivl_tf.`, `parity_tf.`,
+# `congruence_tf.`) rather than re-exported under an alias.
+#
+# The four `<domain>_tf_abs_def` entries are the one case where the name still
+# resolves: `defines <domain>_tf_abs = <domain>_tf.tf_abs` produces a folding
+# equation of that name, pointing at the locale constant rather than at
+# `local_spec_step`. Every caller wants the unfolded reading, which is
+# `<domain>_tf.tf_abs_def`, so the spelling is kept on this list to reject the
+# one that quietly does something else.
+sign_is_sound_transfer_for
+ivl_is_sound_transfer_for
+parity_is_sound_transfer_for
+congruence_is_sound_transfer_for
+sign_tf_abs_def
+ivl_tf_abs_def
+parity_tf_abs_def
+congruence_tf_abs_def
+sign_tf_abs_simps
+ivl_tf_abs_simps
+parity_tf_abs_simps
+congruence_tf_abs_simps
+sign_tf_abs_mono
+ivl_tf_abs_mono
+parity_tf_abs_mono
+congruence_tf_abs_mono
+assign_sign_sound
+assign_ivl_sound
+assign_parity_sound
+assign_congruence_sound
+assign_sign_mono
+assign_ivl_mono
+assign_parity_mono
+assign_congruence_mono
+skip_sign_sound
+skip_ivl_sound
+skip_parity_sound
+skip_congruence_sound
+skip_sign_mono
+skip_ivl_mono
+skip_parity_mono
+skip_congruence_mono
+body_sign_sound
+body_ivl_sound
+body_parity_sound
+body_congruence_sound
+body_sign_mono
+body_ivl_mono
+body_parity_mono
+body_congruence_mono
+event_sign_sound
+event_ivl_sound
+event_parity_sound
+event_congruence_sound
+event_sign_mono
+event_ivl_mono
+event_parity_mono
+event_congruence_mono
+return_sign_sound
+return_ivl_sound
+return_parity_sound
+return_congruence_sound
+return_sign_mono
+return_ivl_mono
+return_parity_mono
+return_congruence_mono
+enter_frame_sign_for_sound
+enter_frame_ivl_for_sound
+enter_frame_parity_for_sound
+enter_frame_congruence_for_sound
+enter_frame_sign_for_mono
+enter_frame_ivl_for_mono
+enter_frame_parity_for_mono
+enter_frame_congruence_for_mono
+enter_sign_for_sound
+enter_ivl_for_sound
+enter_parity_for_sound
+enter_congruence_for_sound
+enter_sign_for_mono
+enter_ivl_for_mono
+enter_parity_for_mono
+enter_congruence_for_mono
+enter_sign_ci_for_sound
+enter_ivl_ci_for_sound
+enter_parity_ci_for_sound
+enter_congruence_ci_for_sound
+enter_sign_ci_for_mono
+enter_ivl_ci_for_mono
+enter_parity_ci_for_mono
+enter_congruence_ci_for_mono
+
+# --- Dead CLI graph constants and one misnamed lemma (2026-09-10) ---
+# analysis_graph_nodes/_edges were projections of the analysis_graph triple
+# that every consumer pattern-matched directly instead. The lemma's conclusion
+# is fst (snd ...), so it is now report_of_full_state_checked_payload_auto.
+# `dq` (a quote character no renderer used) went with them but is not listed:
+# a two-character name would match far too much to be a useful tripwire.
+analysis_graph_nodes
+analysis_graph_edges
+snd_full_state_checked_payload_auto
+
+# --- Per-domain optional-Boolean packaging soundness (2026-09-10) ---
+# The four domains each restated the same two lemmas about their own
+# `less`/`eq`. Both now come from `numeric_query_judgments` in
+# Backward_Numeric_Queries and are cited at the interpretation prefix
+# (`sign_numeric_queries.less_sound` et al.), so the eight domain-prefixed
+# names are gone. The queries themselves keep their names through `defines`.
+sign_less_sound
+sign_eq_sound
+interval_less_sound
+interval_eq_sound
+parity_less_sound
+parity_eq_sound
+int_less_sound
+int_eq_sound
+
+# --- Dead guard-transfer projections after the generic executable transfer (2026-09-10) ---
+# `branch_<domain>_st_for` was `n_bfilter <domain>_ops` under a domain-prefixed
+# name, back when each domain spelled out its own nine-equation `<d>_tf_st_for`
+# and called the projection by name. `generic_tf_st_for` reads `n_bfilter` off
+# the bundle directly, so nothing produces these terms any more and the
+# `[simp]` collapse lemmas beside them never fire. None of them was reachable
+# from an `export_code` root, so removing them leaves the generated ML
+# unchanged. Interval keeps its own -- `Interval_Exec` still cites
+# `branch_ivl_st_for` in a real agreement lemma -- which is why it is absent
+# from this list.
+branch_sign_st_for
+branch_sign_st_for_eq
+branch_congruence_st_for
+branch_congruence_st_for_eq
+branch_int_dom_never_st_for
+branch_int_dom_never_st_for_eq
+branch_int_dom_once_st_for
+branch_int_dom_once_st_for_eq
+branch_int_dom_fixpoint_st_for
+branch_int_dom_fixpoint_st_for_eq
+
+# --- Parity flagship: hand-rolled finiteness and a dead calls fact (2026-09-10) ---
+# `parity_finE`/`parity_finC` re-derived `finite (intra ...)`/`finite (calls ...)`
+# from `compile_prog_finite` by hand. The `compiled_cfg` interpretation supplies
+# both through its `finite_cfg` sublocale, so the flagship now uses
+# `parity_flagship.finite_intra`/`finite_calls` and the local copies are gone.
+# `parity_calls` had no consumer anywhere, including inside `assumes`.
+parity_finE
+parity_finC
+parity_calls
+
+# --- CFG examples: eval bridges and a dead demo graph (2026-09-10) ---
+# The `explode_*_hd` lemmas discharged `String.explode` on one literal each,
+# and existed only because `cr_gs`/`vpr_gs` classified globals by a `CHR ''G''`
+# prefix. Both classifiers are now set-shaped, so those goals are plain
+# equality decisions and the bridges are gone.
+explode_ret_hd
+explode_x_hd
+explode_y_hd
+explode_Gg_hd
+explode_Gx_hd
+# A second hand-built graph in Example_LTR_Collect_Regression that no lemma
+# outside its own block used; multi_return_join establishes what it advertised.
+# (`demo_cfg` is deliberately absent: Example_Relational_DG_Demo still defines
+# one under that name.)
+dmain
+dpf
+demo_defs
+demo_wf
+demo_returns_converge
+demo_shared_continuation
+# --- The pipeline prefix becomes the domain's own name (2026-09-10) ---
+# `sctx_`/`pctx_`/`cctx_`/`ictx_` named the abbreviations over one domain's
+# solved system by a letter, which Interval and Int cannot both have. Every
+# domain now spells that layer `<domain>_conf_`, which Interval and Int
+# already did.
+sctx_abs_spec
+sctx_abs_spec_def
+sctx_entry_cover_exec
+sctx_eqs_prog
+sctx_gamma
+sctx_gamma_Bot
+sctx_gamma_def
+sctx_gamma_eq
+sctx_sol_prog
+sctx_sol_prog_per_origin
+sctx_sound_exec
+sctx_spec
+sctx_spec_def
+sctx_terminates_prog
+sctx_terminates_prog_via_solve_c
+sctx_vars_cover_prog_of_exec
+sctx_vars_finite
+pctx_eqs_prog
+pctx_sol_prog
+pctx_sol_prog_per_origin
+pctx_terminates_prog
+pctx_terminates_prog_via_solve_c
+pctx_vars_cover_prog_of_exec
+pctx_vars_finite
+cctx_eqs_prog
+cctx_sol_prog
+cctx_sol_prog_per_origin
+cctx_terminates_prog
+cctx_terminates_prog_via_solve_c
+cctx_vars_cover_prog_of_exec
+cctx_vars_finite
+ictx_eqs_prog
+ictx_sol_prog
+ictx_terminates_prog
+ictx_terminates_prog_via_solve_c
+ictx_vars_finite
+# --- Interval's bare route name becomes the production one (2026-09-10) ---
+# Interval spelled its published API with the discipline as an infix and its
+# production route as `td`, so the bare `analyse_interval_result` did not
+# exist while its four siblings' did. The discipline is now a suffix and the
+# warrowing route carries no marker, so `analyse_interval_report` is the
+# report the dispatcher reaches -- it was the always-join one before, which
+# is now `analyse_interval_report_join`. The names below are the spellings
+# that carried the old scheme; `analyse_interval_td_demo2_env` and its
+# siblings are deliberately absent, being an example's own fixtures rather
+# than a route name.
+analyse_interval_ctx_solved_warrow_for
+analyse_interval_ctx_solved_warrow_for_def
+fst_analyse_interval_ctx_solved_warrow_for
+analyse_interval_join_result
+analyse_interval_join_result_def
+analyse_interval_join_result_for
+analyse_interval_join_result_for_def
+analyse_interval_join_result_node_sound_for
+analyse_interval_per_origin_result
+analyse_interval_per_origin_result_def
+analyse_interval_per_origin_result_for
+analyse_interval_per_origin_result_for_def
+analyse_interval_per_origin_result_node_sound_for
+analyse_interval_wpo_result
+analyse_interval_wpo_result_def
+analyse_interval_wpo_result_for
+analyse_interval_wpo_result_for_def
+analyse_interval_td_completed_run_sound
+analyse_interval_td_completed_run_sound_for
+analyse_interval_td_report
+analyse_interval_td_report_def
+analyse_interval_td_report_for
+analyse_interval_td_report_for_def
+analyse_interval_td_report_for_with_state
+analyse_interval_td_report_for_with_state_def
+analyse_interval_td_report_sound_proved
+analyse_interval_td_report_sound_proved_for
+analyse_interval_td_report_sound_refuted
+analyse_interval_td_report_sound_refuted_for
+analyse_interval_td_report_with_state
+analyse_interval_td_report_with_state_def
+analyse_interval_td_result
+analyse_interval_td_result_def
+analyse_interval_td_result_for
+analyse_interval_td_result_for_def
+analyse_interval_td_result_node_sound_for
+analyse_interval_td_result_node_sound_of_cover
+analyse_interval_td_source_sound
+analyse_interval_td_source_sound_for
+# --- Deduplicated Int example solver runs (2026-09-10) ---
+dgExI_never_sol
+dgExI_never_terminates_c
+dgExI_never_inspect_y_at_Statement_1
+dgExI_once_sol
+dgExI_once_terminates_c
+dgExI_once_inspect_y_at_Statement_1
+dgExI_fixpoint_eqs
+dgExI_fixpoint_sol
+dgExI_fixpoint_terminates_c
+dgExI_fixpoint_inspect_y_at_Statement_1
+dgExI_once_eq_fixpoint
+# --- Duplicated call-string globals witness replaced by the CLI regression (2026-09-10) ---
+nestg_program
+nestg_gs
+nestg_lookup
+nestg_cfg
+nestg_empty_pred
+nestg_1_eqs
+nestg_1_sol
+nestg_1_terminates
+nestg_1_call_contexts
+nestg_1_entry_first
+nestg_1_entry_second
+nestg_1_entry_third
+nestg_1_after_first_return
+nestg_1_after_second_return
+nestg_1_after_third_return
+# --- Redundant CLI example solver variants (2026-09-10) ---
+result_demo_sign_per_origin_stmt1_reachable
+result_demo_sign_per_origin_stmt2_not_reachable
+result_demo_sign_per_origin_stmt2_unreachable
+result_demo_sign_per_origin_absent_unreachable
+result_demo_interval_join_stmt1_reachable
+result_demo_interval_join_stmt2_not_reachable
+result_demo_interval_join_stmt2_unreachable
+result_demo_interval_join_absent_unreachable
+result_demo_interval_per_origin_stmt1_reachable
+result_demo_interval_per_origin_stmt2_not_reachable
+result_demo_interval_per_origin_stmt2_unreachable
+result_demo_interval_per_origin_absent_unreachable
+result_demo_int_join_stmt1_reachable
+result_demo_int_join_stmt2_not_reachable
+result_demo_int_join_stmt2_unreachable
+result_demo_int_join_absent_unreachable
+result_demo_int_per_origin_stmt1_reachable
+result_demo_int_per_origin_stmt2_not_reachable
+result_demo_int_per_origin_stmt2_unreachable
+result_demo_int_per_origin_absent_unreachable
+int_ex_empty_pred
+prod_int_ex_never_terminates
+prod_int_ex_once_terminates
+prod_int_ex_fixpoint_terminates
+prod_int_ex_never_y_at_Statement_1
+prod_int_ex_once_y_at_Statement_1
+prod_int_ex_fixpoint_y_at_Statement_1
+prod_int_ex_never_ne_once_y
+prod_int_ex_join_never_terminates
+prod_int_ex_join_once_terminates
+prod_int_ex_join_fixpoint_terminates
+prod_int_ex_join_never_y_at_Statement_1
+prod_int_ex_join_once_y_at_Statement_1
+prod_int_ex_join_fixpoint_y_at_Statement_1
+prod_int_ex_join_never_ne_once_y
+prod_int_ex_join_agrees_with_warrow_at_fixpoint
+prod_int_ex_per_origin_never_terminates
+prod_int_ex_per_origin_once_terminates
+prod_int_ex_per_origin_fixpoint_terminates
+prod_int_ex_per_origin_never_y_at_Statement_1
+prod_int_ex_per_origin_once_y_at_Statement_1
+prod_int_ex_per_origin_fixpoint_y_at_Statement_1
+# --- One payload per resolved plan: the per-column entry-state readers and the
+#     default-discipline payload table folded into solver_checked_payload_auto
+#     and entry_state_checked_payload_auto (2026-09-10) ---
+entry_state_globals_for
+entry_state_checked_verdicts
+entry_state_full_state_checked_export_auto
+full_state_checked_payload_auto
+report_of_full_state_checked_payload_auto

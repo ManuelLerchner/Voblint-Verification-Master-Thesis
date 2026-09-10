@@ -2,7 +2,7 @@
 
 > **Status:** DELIVERED. Grounded in Goblint master source (`analyses.ml`,
 > `base.ml`, `constraints.ml`). **Recommendation: leave the DG interface
-> unchanged.** The local-only context routing in `sound_dg_spec` faithfully models
+> unchanged.** The local-only context routing in `sound_dg_spec_core` faithfully models
 > Goblint; no minimal interface change is required.
 
 ## Primary-source evidence
@@ -89,7 +89,7 @@ flow-insensitive channel read on demand (E2), not in the context.
 may side-effect globals. There is no separate effectful-analysis type. This is the
 thesis of Goblint's side-effecting constraint systems.
 
-**5. Does `sound_dg_spec` faithfully model this?** **Yes.**
+**5. Does `sound_dg_spec_core` faithfully model this?** **Yes.**
 
 - D/G separation with a joint `gammaDG d g` matches E1/E2.
 - Side-effects are built into the interface, not bolted on: `dg_edge_tree` emits
@@ -111,7 +111,7 @@ avoids (E3), enlarging surface for no faithfulness gain.
 | Component | Goblint counterpart | Verdict |
 | --- | --- | --- |
 | `Ctx_Collect_Backbone` (generic `rd`, `rt`) | the context-sliced collecting semantics | Faithful, agnostic; accommodates local-only *and* wider readings. Unchanged. |
-| `sound_dg_spec` (D, G, `gammaDG`, `dgs_combine`, `rt` over `dg_D_c`) | `Spec` (D, G, C, `context man f v`, `sideg`) | **Faithful.** Local-only routing = E3; built-in `Side ()` = E2/E4. Unchanged. |
+| `sound_dg_spec_core` (D, G, `gammaDG`, `dgs_combine`, `rt` over `dg_D_c`) | `Spec` (D, G, C, `context man f v`, `sideg`) | **Faithful.** Local-only routing = E3; built-in `Side ()` = E2/E4. Unchanged. |
 | `Local_DG` (G = unit, `gammaDG d () = [[d]]`) | a globals-free `Spec` instance | Faithful specialization. Unchanged. |
 
 ### Correction to the prior `side_env_ctx` determination
@@ -126,7 +126,7 @@ over that shared context-collection backbone.
 
 ## Recommendation
 
-**Leave the DG interface unchanged.** `sound_dg_spec` faithfully models Goblint's
+**Leave the DG interface unchanged.** `sound_dg_spec_core` faithfully models Goblint's
 `Spec`: separate D/G lattices, context computed from local state with globals
 excluded, and side-effects as an ordinary (built-in) capability. No minimal interface
 change is warranted by the evidence.

@@ -1,7 +1,7 @@
 section \<open>Example: backward guard refinement vs identity assume\<close>
 
 theory Example_Guard_Refinement
-  imports "Voblint_Analysis.Interval_Domain"
+  imports "Voblint_Analysis_Interval.Interval_Domain"
 begin
 
 hide_const (open) Update_rules.N
@@ -27,7 +27,8 @@ definition assume_ivl_identity :: "exp \<Rightarrow> ivl abs_state \<Rightarrow>
 subsection \<open>One guard: @{text "x < 20"} narrows the upper bound\<close>
 
 lemma refine_x_lt_20:
-  "bfilter_ivl (Less (V (STR ''x'')) (N 20)) True sigma_loop_head (STR ''x'') = Ivl (Fin 0) (Fin 19)"
+  "bfilter_ivl (Less (V (STR ''x'')) (N 20)) True sigma_loop_head (STR ''x'') = Ivl (Fin 0)
+    (Fin 19)"
   unfolding sigma_x_def
   by eval
 
@@ -65,7 +66,7 @@ lemma body_step_refined:
 lemma body_step_identity:
   "body_after_identity (STR ''x'') = Ivl (Fin 1) (Fin 21)"
   unfolding body_after_identity_def sigma_x_def assume_ivl_identity_def
-  by (simp add: assign_ivl_def normalize_ivl_def)
+  by (simp add: ivl_tf.assign_def normalize_ivl_def)
 
 text \<open>
   Joining the initial @{text "[0,0]"} with the body exit is where the gap
@@ -73,14 +74,16 @@ text \<open>
   assume drifts upward and never closes at @{text "[0,20]"} without widening.
 \<close>
 lemma loop_join_refined:
-  "sigma_x (Ivl (Fin 0) (Fin 0)) (STR ''x'') \<squnion> body_after_refined (STR ''x'') = Ivl (Fin 0) (Fin 20)"
+  "sigma_x (Ivl (Fin 0) (Fin 0)) (STR ''x'') \<squnion> body_after_refined (STR ''x'') = Ivl (Fin 0)
+    (Fin 20)"
   unfolding body_after_refined_def sigma_x_def
   by eval
 
 lemma loop_join_identity:
-  "sigma_x (Ivl (Fin 0) (Fin 0)) (STR ''x'') \<squnion> body_after_identity (STR ''x'') = Ivl (Fin 0) (Fin 21)"
+  "sigma_x (Ivl (Fin 0) (Fin 0)) (STR ''x'') \<squnion> body_after_identity (STR ''x'') = Ivl (Fin 0)
+    (Fin 21)"
   unfolding body_after_identity_def sigma_x_def assume_ivl_identity_def
-  by (simp add: sup_ivl_def assign_ivl_def normalize_ivl_def)
+  by (simp add: sup_ivl_def ivl_tf.assign_def normalize_ivl_def)
 
 lemma backward_analysis_strictly_tighter:
   "Ivl (Fin 0) (Fin 20) \<le> Ivl (Fin 0) (Fin 21)"
@@ -146,9 +149,14 @@ lemma bfilter_keeps_infeasible_operand_guard:
      = Ivl (Fin 5) (Fin 5)"
   unfolding guard_cmp_eq_one_def sigma_x_def by eval
 
+lemma guard_cmp_eq_one_infeasible:
+  "\<not> feasible_ivl guard_cmp_eq_one True (sigma_x (Ivl (Fin 5) (Fin 5)))"
+  unfolding guard_cmp_eq_one_def sigma_x_def by eval
+
 lemma branch_kills_infeasible_operand_guard:
   "branch_ivl guard_cmp_eq_one True (sigma_x (Ivl (Fin 5) (Fin 5))) (STR ''x'') = bot"
-  unfolding guard_cmp_eq_one_def sigma_x_def by eval
+  using guard_cmp_eq_one_infeasible
+  by (simp add: ivl_backward_domain.branch_def ivl_backward_domain.branch_lifted_def)
 
 subsection \<open>An infeasible disjunct is dropped from the join\<close>
 
@@ -190,14 +198,63 @@ lemma bfilter_or_drops_infeasible_disjunct:
   "bfilter_ivl guard_disj True sigma_x5_y_unknown (STR ''y'') = Ivl (Fin 1) PlusInf"
   unfolding guard_disj_def guard_cmp_eq_one_def sigma_xy_def by eval
 
+lemma bfilter_feasible_disjunct_state:
+  "bfilter_ivl (Less (N 0) (V (STR ''y''))) True sigma_x5_y_unknown
+     = (\<lambda>_. Ivl MinInf PlusInf)(STR ''x'' := Ivl (Fin 5) (Fin 5), STR ''y'' := Ivl (Fin 1) PlusInf)"
+  unfolding sigma_xy_def by (simp add: normalize_ivl_def)
+
+lemma feasible_first_disjunct:
+  "feasible_ivl (Less (N 0) (V (STR ''y''))) True sigma_x5_y_unknown"
+  unfolding sigma_xy_def by eval
+
+lemma infeasible_second_disjunct:
+  "\<not> feasible_ivl guard_cmp_eq_one True sigma_x5_y_unknown"
+  unfolding guard_cmp_eq_one_def sigma_xy_def by eval
+
+lemma feasible_disj_guard:
+  "feasible_ivl guard_disj True sigma_x5_y_unknown"
+  unfolding guard_disj_def guard_cmp_eq_one_def sigma_xy_def by eval
+
+lemma not_empty_feasible_disjunct_state:
+  "\<not> is_empty_state (bfilter_ivl (Less (N 0) (V (STR ''y''))) True sigma_x5_y_unknown)"
+  unfolding bfilter_feasible_disjunct_state
+  by (auto simp: is_empty_state_def is_bottom_ivl_def split: if_splits)
+
+lemma bfilter_feasible_disjunct_y:
+  "bfilter_ivl (Less (N 0) (V (STR ''y''))) True sigma_x5_y_unknown (STR ''y'')
+     = Ivl (Fin 1) PlusInf"
+  using fun_cong[OF bfilter_feasible_disjunct_state, of "STR ''y''"] by simp
+
+lemma branch_disj_is_feasible_disjunct:
+  "branch_ivl guard_disj True sigma_x5_y_unknown
+     = bfilter_ivl (Less (N 0) (V (STR ''y''))) True sigma_x5_y_unknown"
+  using feasible_disj_guard feasible_first_disjunct infeasible_second_disjunct
+        not_empty_feasible_disjunct_state
+  by (simp add: guard_disj_def ivl_backward_domain.branch_def
+      ivl_backward_domain.branch_lifted_def)
+
 lemma branch_or_drops_infeasible_disjunct:
   "branch_ivl guard_disj True sigma_x5_y_unknown (STR ''y'') = Ivl (Fin 1) PlusInf"
-  unfolding guard_disj_def guard_cmp_eq_one_def sigma_xy_def by eval
+  unfolding branch_disj_is_feasible_disjunct by (rule bfilter_feasible_disjunct_y)
 
 lemma bfilter_or_is_the_gated_join:
   "(branch_ivl (Less (N 0) (V (STR ''y''))) True sigma_x5_y_unknown
      \<squnion> branch_ivl guard_cmp_eq_one True sigma_x5_y_unknown) (STR ''y'')
      = bfilter_ivl guard_disj True sigma_x5_y_unknown (STR ''y'')"
-  unfolding guard_disj_def guard_cmp_eq_one_def sigma_xy_def by eval
+proof -
+  have first: "branch_ivl (Less (N 0) (V (STR ''y''))) True sigma_x5_y_unknown
+                 = bfilter_ivl (Less (N 0) (V (STR ''y''))) True sigma_x5_y_unknown"
+    using feasible_first_disjunct not_empty_feasible_disjunct_state
+    by (simp add: ivl_backward_domain.branch_def ivl_backward_domain.branch_lifted_def)
+  have second: "branch_ivl guard_cmp_eq_one True sigma_x5_y_unknown = bot"
+    using infeasible_second_disjunct
+    by (simp add: ivl_backward_domain.branch_def ivl_backward_domain.branch_lifted_def)
+  have join: "(bfilter_ivl (Less (N 0) (V (STR ''y''))) True sigma_x5_y_unknown \<squnion> bot)
+                = bfilter_ivl (Less (N 0) (V (STR ''y''))) True sigma_x5_y_unknown"
+    by simp
+  show ?thesis
+    unfolding first second join
+    by (rule trans[OF bfilter_feasible_disjunct_y bfilter_or_drops_infeasible_disjunct[symmetric]])
+qed
 
 end

@@ -1,6 +1,6 @@
 # CFG compiler redesign: continuation-passing fragments
 
-Review of the `compile` / `compile_prog` pipeline in `src/CFG/`, with a
+Review of the `compile` / `compile_prog` pipeline in `src/Program_Model/CFG/`, with a
 concrete migration plan. Written against the working tree at
 `factorial-example-compilation-test` (`aa0f9d4d`).
 
@@ -8,6 +8,29 @@ Comparison target: Goblint-CIL `src/cfg.ml` at
 `3ade66d089b5c31bb0dc7ed75bedda8370c2371e` and Goblint
 `src/common/framework/cfgTools.ml` at
 `aab8d97333fb93922cb9f06bd4604b1aab623db7`.
+
+> **Names in this document are those of `aa0f9d4d` and have since changed.**
+> The redesign was implemented and the compiler then moved out of `Voblint_CFG`
+> into its own `Voblint_Compile` session, with every theory renamed after what
+> it states:
+>
+> | here | now |
+> | --- | --- |
+> | `src/Program_Model/CFG/Compiler/Control_Residual.thy` | `src/Program_Model/Compile/Simulation/Residual_Location.thy` |
+> | `src/Program_Model/CFG/Compiler/Control_Emit.thy` | `src/Program_Model/Compile/Simulation/Residual_Edges.thy` |
+> | `src/Program_Model/CFG/Compiler/Control_Simulation.thy` | `src/Program_Model/Compile/Simulation/Simulation_Relation.thy` |
+> | `src/Program_Model/CFG/Compiler/Control_Simulation_Forward.thy` | `src/Program_Model/Compile/Simulation/Simulation_Preservation.thy` |
+> | `src/Program_Model/CFG/Compiler/Compile_Locality.thy` | `src/Program_Model/Compile/Procedure_Ownership.thy` |
+> | `src/Program_Model/CFG/Compiler/Located_LTR.thy` | `src/Program_Model/Compile/Source_To_Trace.thy` |
+> | `src/Program_Model/CFG/Compiler/Located_Exec.thy` | `src/Program_Model/CFG/CFG_Exec.thy` |
+> | `src/Program_Model/CFG/Collecting/CFG_Local_Trace.thy` | `src/Program_Model/CFG/Collecting/LTR_Def.thy` |
+> | `Compile_Certificate` | folded into `Simulation_Preservation` |
+> | `Compile_Reaches` | folded into `Compile_Invariants` |
+> | `procs_compiled` | `procs_embedded` |
+> | `proc_activation` | folded into `compiled_at` |
+> | `source_wf` | `return_safe :: com => bool` |
+> | `source_global` | `gs` |
+> | `mnm` | `main_name` |
 
 ---
 
@@ -17,16 +40,16 @@ Comparison target: Goblint-CIL `src/cfg.ml` at
 
 | Layer | File | Role |
 | --- | --- | --- |
-| Graph | `src/CFG/CFG_Def.thy` | `cfg_node`, `edge_action`, `call_action`, `cfg` record, `edge_step`, `wf_cfg` |
-| Compiler | `src/CFG/VIMP_Proc_to_CFG.thy` | `compile`, `compile_proc`, `compile_procs`, `compile_prog`, range/finiteness/shape lemmas, `compile_prog_wf` |
-| Reachability | `src/CFG/CFG_Prune.thy` | `cfg_succ_rel`, `cfg_reaches`, `cone`, `cfg_exit`, `compile_reaches` |
-| Location | `src/CFG/Compiler/Control_Residual.thy` | `control_at`, `compile_entry_node`, `compile_control_at_SKIP_exit_path` |
-| Execution | `src/CFG/Compiler/Located_Exec.thy` | `cstep`, `frames_match` |
-| Simulation | `src/CFG/Compiler/Control_Simulation.thy` | `intra_step`, `compiled_at`, `csim`, `csim_step`, `csim_star` |
-| Locality | `src/CFG/Compiler/Compile_Locality.thy` | `pfn`, edge shapes, per-procedure ownership, fragment bounds, `valid_ltr_frag_callers` |
-| Invariants | `src/CFG/Compiler/Compile_Invariants.thy`, `Compile_Certificate.thy` | `inv1`..`inv16`, `compiled_cfg_wf`, `procs_compiled` |
-| Trace bridge | `src/CFG/Compiler/Located_LTR.thy` | `ltr_repr`, `stack_repr` |
-| Rendering | `src/Analysis/Instances/Tooling/Analysis_GraphViz.thy` | `raw_cfg_dot_lit`, `compiled_proc_owner`, `compiled_owner_of` |
+| Graph | `src/Program_Model/CFG/CFG_Def.thy` | `cfg_node`, `edge_action`, `call_action`, `cfg` record, `edge_step`, `wf_cfg` |
+| Compiler | `src/Program_Model/Compile/VIMP_Proc_to_CFG.thy` | `compile`, `compile_proc`, `compile_procs`, `compile_prog`, range/finiteness/shape lemmas, `compile_prog_wf` |
+| Reachability | `src/Program_Model/CFG/CFG_Prune.thy` | `cfg_succ_rel`, `cfg_reaches`, `cone`, `cfg_exit`, `compile_reaches` |
+| Location | `src/Program_Model/Compile/Control_Residual.thy` | `control_at`, `compile_entry_node`, `compile_control_at_SKIP_exit_path` |
+| Execution | `src/Program_Model/Compile/Located_Exec.thy` | `cstep`, `frames_match` |
+| Simulation | `src/Program_Model/Compile/Control_Simulation.thy` | `intra_step`, `compiled_at`, `csim`, `csim_step`, `csim_star` |
+| Locality | `src/Program_Model/Compile/Compile_Locality.thy` | `pfn`, edge shapes, per-procedure ownership, fragment bounds, `valid_ltr_frag_callers` |
+| Invariants | `src/Program_Model/Compile/Compile_Invariants.thy`, `Compile_Certificate.thy` | `inv1`..`inv16`, `compiled_cfg_wf`, `procs_compiled` |
+| Trace bridge | `src/Program_Model/Compile/Located_LTR.thy` | `ltr_repr`, `stack_repr` |
+| Rendering | `src/Analysis/Reporting/Analysis_GraphViz.thy` | `raw_cfg_dot_lit`, `compiled_proc_owner`, `compiled_owner_of` |
 
 ### The fragment interface
 
@@ -61,14 +84,14 @@ Established facts about the interface:
 `rg` over `src/` shows the 5-tuple is destructured in exactly nine theories:
 
 ```
-src/CFG/VIMP_Proc_to_CFG.thy              37 references
-src/CFG/Compiler/Control_Simulation.thy   65
-src/CFG/Compiler/Compile_Locality.thy     40
-src/CFG/Compiler/Control_Residual.thy     15
-src/CFG/Compiler/Compile_Invariants.thy   11
-src/CFG/CFG_Prune.thy                      6
-src/CFG/Compiler/Compile_Certificate.thy   2
-src/CFG/Compiler/Located_LTR.thy           2
+src/Program_Model/Compile/VIMP_Proc_to_CFG.thy              37 references
+src/Program_Model/Compile/Control_Simulation.thy   65
+src/Program_Model/Compile/Compile_Locality.thy     40
+src/Program_Model/Compile/Control_Residual.thy     15
+src/Program_Model/Compile/Compile_Invariants.thy   11
+src/Program_Model/CFG/CFG_Prune.thy                      6
+src/Program_Model/Compile/Compile_Certificate.thy   2
+src/Program_Model/Compile/Located_LTR.thy           2
 src/Soundness/Source_Activation_Sound.thy   1 (line 191)
 ```
 
@@ -619,12 +642,12 @@ src/Analysis/Generic/Equations/Constraint_System.thy   apply_tf, apply_etf, loca
 src/Analysis/Generic/Solver/Exec/Exec_Bridge.thy       apply_etf_st
 src/Analysis/Generic/Solver/Core/TD_Side_CFG.thy       two etf record literals
 src/Analysis/Instances/Sign/Sign_Exec.thy              sign_tf_st + etf_st literal
-src/Analysis/Instances/Interval/Ivl_Exec.thy           ivl_tf_st + etf_st literal
+src/Analysis/Instances/Interval/Interval_Exec.thy           ivl_tf_st + etf_st literal
 src/Analysis/Instances/Product/Mixed_Sign_Interval.thy   dgs literal
 src/Analysis/Instances/Product/Exec_DG_Bridge.thy        dgs literal
 src/Analysis/Instances/NamedGlobalSign/…               etf literal
-src/CFG/CFG_Def.thy, src/CFG/CFG_Transfer.thy          edge_step, edge_collect
-src/Analysis/Instances/Tooling/Analysis_GraphViz.thy   string_of_action (two sites)
+src/Program_Model/CFG/CFG_Def.thy, src/Program_Model/CFG/CFG_Transfer.thy          edge_step, edge_collect
+src/Analysis/Reporting/Analysis_GraphViz.thy   string_of_action (two sites)
 ```
 
 plus the exhaustive case analyses in `Constraint_System_Sound.thy:146` and
@@ -936,7 +959,7 @@ the dead-node problem and no part of the plan should touch it.
 Classification: **unchanged**, **local repair** (statement or proof adjusted
 mechanically), **substantial** (structure of the proof changes), **new**.
 
-### `src/CFG/VIMP_Proc_to_CFG.thy`
+### `src/Program_Model/Compile/VIMP_Proc_to_CFG.thy`
 
 | Item | Class | Note |
 | --- | --- | --- |
@@ -964,7 +987,7 @@ lemma compile_frag_stmts_range:
 or, more usably, keep the clean range for *sources* and handle targets through
 the `pfn` lemma below.
 
-### `src/CFG/Compiler/Compile_Locality.thy` — the main cost
+### `src/Program_Model/Compile/Compile_Locality.thy` — the main cost
 
 `pfn p n n'` is the fragment node set. Under CPS an edge target may be the
 continuation, which is outside it. The generalization is uniform:
@@ -1004,7 +1027,7 @@ uses.
 This file is 1529 lines and roughly 40 `compile` references. Expect it to
 dominate the migration effort. Nothing in it looks conceptually threatened.
 
-### `src/CFG/Compiler/Control_Residual.thy`
+### `src/Program_Model/Compile/Control_Residual.thy`
 
 `control_at` gains the continuation as an index:
 `control_at Pi p c k n residual v`.
@@ -1018,7 +1041,7 @@ dominate the migration effort. Nothing in it looks conceptually threatened.
 | `compile_control_at_SKIP_exit_path` | substantial, but *shrinks* | becomes "a located `SKIP` reaches `k`", which is `star.refl` in every case except source `SKIP`/`Restore` (one nop step). The `IfLeft`/`IfRight` join-hopping cases disappear |
 | `control_at_source_com`, `source_com_no_Restore/Unwind` | unchanged | |
 
-### `src/CFG/Compiler/Control_Simulation.thy`
+### `src/Program_Model/Compile/Control_Simulation.thy`
 
 65 `compile` references, but the shape of the argument is preserved because
 `cstep` is untouched.
@@ -1041,15 +1064,15 @@ dominate the migration effort. Nothing in it looks conceptually threatened.
 
 | File | Class | Note |
 | --- | --- | --- |
-| `src/CFG/CFG_Def.thy` | unchanged | no compiler dependency |
-| `src/CFG/CFG_Prune.thy` | local repair | `compile_reaches` becomes `cfg_reaches g (Statement n) k \| cfg_reaches g (Statement n) (FunctionResult p)`; the proof loses the nop hops. `compile_proc_reaches_result`, `compile_prog_entry_cfg_reaches_exit`, `cfg_exit_compile_prog` keep their statements |
-| `src/CFG/Compiler/Compile_Invariants.thy` | local repair | `has_call`, `returns_in`, `compile_return_edge`, `compile_no_call`, `compile_prog_flat`, range/disjointness lemmas adjust mechanically. `inv11_return_exit_unreached` is **deleted** and replaced by a statement that `Return` ignores its continuation. `inv13`, `inv14` restated with `k` |
-| `src/CFG/Compiler/Compile_Certificate.thy` | local repair | 2 references |
-| `src/CFG/Compiler/Located_Exec.thy` | unchanged | `cstep` is edge-driven |
-| `src/CFG/Compiler/Located_LTR.thy` | local repair | 2 references, both via `compiled_at` |
-| `src/CFG/Collecting/*` (`CFG_Local_Trace`, `LTR_Abstract`, `LTR_Collect`) | unchanged | defined over `cfg`, not over `compile` |
+| `src/Program_Model/CFG/CFG_Def.thy` | unchanged | no compiler dependency |
+| `src/Program_Model/CFG/CFG_Prune.thy` | local repair | `compile_reaches` becomes `cfg_reaches g (Statement n) k \| cfg_reaches g (Statement n) (FunctionResult p)`; the proof loses the nop hops. `compile_proc_reaches_result`, `compile_prog_entry_cfg_reaches_exit`, `cfg_exit_compile_prog` keep their statements |
+| `src/Program_Model/Compile/Compile_Invariants.thy` | local repair | `has_call`, `returns_in`, `compile_return_edge`, `compile_no_call`, `compile_prog_flat`, range/disjointness lemmas adjust mechanically. `inv11_return_exit_unreached` is **deleted** and replaced by a statement that `Return` ignores its continuation. `inv13`, `inv14` restated with `k` |
+| `src/Program_Model/Compile/Compile_Certificate.thy` | local repair | 2 references |
+| `src/Program_Model/Compile/Located_Exec.thy` | unchanged | `cstep` is edge-driven |
+| `src/Program_Model/Compile/Located_LTR.thy` | local repair | 2 references, both via `compiled_at` |
+| `src/Program_Model/CFG/Collecting/*` (`CFG_Local_Trace`, `LTR_Abstract`, `LTR_Collect`) | unchanged | defined over `cfg`, not over `compile` |
 | `src/Analysis/**` (equations, TD solver, DG, Sign, Interval, Mixed) | unchanged | consume `compile_prog` and the `cfg` record only; no dense-index assumptions found |
-| `src/Analysis/Instances/Tooling/Analysis_GraphViz.thy` | unchanged | `compiled_proc_owner` recomputes `compile_proc` ranges; the shape of that recursion is preserved |
+| `src/Analysis/Reporting/Analysis_GraphViz.thy` | unchanged | `compiled_proc_owner` recomputes `compile_proc` ranges; the shape of that recursion is preserved |
 | `src/Soundness/Run_Analysis_Sound.thy`, `Mixed_Flow_Sound.thy`, `DG_Domain_Registration.thy` | unchanged | |
 | `src/Soundness/Source_Activation_Sound.thy` | local repair | one `compiled_atE` destructuring at line 191; the `compile_control_at_SKIP_exit_path` + epilogue-edge composition still closes the same way |
 | `src/Examples/Interprocedural/Example_Compile_Regression.thy` | local repair | `ex_nested_calls`, `compile_seq_call_edge`, `example_nested_call_preserves_outer`, `example_normal_fallthrough` hardcode `Statement (Suc n)`; regenerate |
@@ -1575,8 +1598,8 @@ the compiled graph, not the rendered projection of it — approach 3 from the
 issue, not the continuation-passing approach this document commits to. Phase 6
 below removes the epilogue at the source instead.
 
-**Phase 3 — `csize` and `compile_next_id`.** `src/CFG/Compiler/Compile_Size.thy`,
-registered in `src/CFG/ROOT`. Proves
+**Phase 3 — `csize` and `compile_next_id`.** `src/Program_Model/Compile/Compile_Size.thy`,
+registered in `src/Program_Model/CFG/ROOT`. Proves
 `compile Pi p c n = (n', en, ex, E, K) ==> n' = n + csize c` for the current
 compiler, plus `compile_fst_next_id` and `compile_counter_mono_via_csize`
 (showing the existing inequality is a consequence).
@@ -1669,7 +1692,7 @@ with `-l Voblint_Soundness` and every repo theory sat inside the prebuilt
 base heap.
 
 Fix: base logic changed to `Voblint_VIMP`, which keeps the `Voblint_VIMP` heap
-warm while making `src/CFG`, `src/Analysis`, `src/Soundness` and
+warm while making `src/Program_Model/CFG`, `src/Analysis`, `src/Soundness` and
 `src/Examples` load dynamically. After the server restart the compiler theory is
 editable and Phase 4 proceeds.
 
@@ -1705,11 +1728,11 @@ stubs. That reading is wrong: the old clauses returned *entry = exit*, i.e. the
 fragment was transparent and control flowed through it. Under continuation
 passing, transparency is `Statement n --EA_Nop--> k`; emitting nothing makes the
 node a dead end instead. The difference is observable in `compile_reaches`, and
-through it in `compile_prog_entry_cfg_reaches_exit`, which is consumed
-unconditionally by the analysis layer (`LTR_TD_Side_Eff_Exit`,
-`Sign_Exec_Sound`). Emitting nothing would force a `source_com` hypothesis onto
-that theorem and ripple into the analysis — the outcome the plan exists to
-avoid. Both clauses remain unreachable for source programs, so this is a choice
+through it in `compile_prog_entry_cfg_reaches_exit`. That theorem has no proof
+consumer (the exit-cone coverage the D/G layer needs is discharged per node by
+`DG_Coverage`, not by whole-program connectivity), but it is the connectivity
+witness that pins the transparent encoding: emitting nothing would force a
+`source_com` hypothesis onto it. Both clauses remain unreachable for source programs, so this is a choice
 between two vacuous translations; the transparent one is the one that keeps the
 downstream statements intact.
 

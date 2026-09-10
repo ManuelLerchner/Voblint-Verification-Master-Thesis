@@ -5,8 +5,8 @@ theory Example_Proc_Call
     "Voblint_VIMP.VIMP_Notation"
     "Voblint_CFG.CFG_Prune"
 
-    "Voblint_Analysis.Interval_Domain"
-    "Voblint_Analysis.Analysis_GraphViz"
+    "Voblint_Analysis_Interval.Interval_Domain"
+    "Voblint_Compile.Compile_Wellformed"
 begin
 
 definition main_cfg_name :: pname where
@@ -34,15 +34,17 @@ definition inc_body :: "VIMP_Proc.com" where
 definition sqr_body :: "VIMP_Proc.com" where
   "sqr_body = imp \<lbrakk> Gx := Gx * Gx \<rbrakk>"
 
-definition proc_pi :: proc_table where
-  "proc_pi = (\<lambda>_. None)((STR ''inc'') := Some (proc_decl_of [] inc_body), (STR ''sqr'') := Some (proc_decl_of [] sqr_body))"
-
 definition main_prog :: "VIMP_Proc.com" where
   "main_prog = imp \<lbrakk>
      Gx := 4;
      inc();
      sqr()
    \<rbrakk>"
+
+definition proc_pi :: proc_table where
+  "proc_pi = (\<lambda>_. None)((STR ''inc'') := Some (\<lparr>formals = [], body = inc_body\<rparr>),
+                          (STR ''sqr'') := Some (\<lparr>formals = [], body = sqr_body\<rparr>),
+                          prog_main_name := Some (\<lparr>formals = [], body = main_prog\<rparr>))"
 
 definition main_procs :: "pname list" where
   "main_procs = [(STR ''inc''), (STR ''sqr'')]"
@@ -61,8 +63,8 @@ proof -
                 (VIMP_Globals.combine_env proc_call_gs s
                   ((enter_state proc_call_gs s)((STR ''Gx'') := s (STR ''Gx'') + 1)))"
   proof (rule pcompletes_Call_parameterless[where c = inc_body])
-    show "proc_pi (STR ''inc'') = Some (proc_decl_of [] inc_body)"
-      by (simp add: proc_pi_def)
+    show "proc_pi (STR ''inc'') = Some (\<lparr>formals = [], body = inc_body\<rparr>)"
+      by (simp add: proc_pi_def prog_main_name_def)
     show "pcompletes proc_call_gs proc_pi inc_body (enter_state proc_call_gs s)
              ((enter_state proc_call_gs s)((STR ''Gx'') := s (STR ''Gx'') + 1))"
     proof -
@@ -90,8 +92,8 @@ proof -
                 (VIMP_Globals.combine_env proc_call_gs s
                   ((enter_state proc_call_gs s)((STR ''Gx'') := s (STR ''Gx'') * s (STR ''Gx''))))"
   proof (rule pcompletes_Call_parameterless[where c = sqr_body])
-    show "proc_pi (STR ''sqr'') = Some (proc_decl_of [] sqr_body)"
-      by (simp add: proc_pi_def)
+    show "proc_pi (STR ''sqr'') = Some (\<lparr>formals = [], body = sqr_body\<rparr>)"
+      by (simp add: proc_pi_def prog_main_name_def)
     show "pcompletes proc_call_gs proc_pi sqr_body (enter_state proc_call_gs s)
              ((enter_state proc_call_gs s)((STR ''Gx'') := s (STR ''Gx'') * s (STR ''Gx'')))"
     proof -
@@ -122,7 +124,7 @@ theorem main_prog_result:
 proof -
   have step1: "pcompletes proc_call_gs proc_pi (imp \<lbrakk> Gx := 4 \<rbrakk>) s (s((STR ''Gx'') := 4))"
     using pcompletes_assign[where gs = proc_call_gs and \<Pi> = proc_pi and x = "(STR ''Gx'')" and a = "N 4" and s = s]
-    by (simp add: pcompletes_def)
+    by simp
   have step2: "pcompletes proc_call_gs proc_pi (imp \<lbrakk> inc() \<rbrakk>) (s((STR ''Gx'') := 4)) (s((STR ''Gx'') := 5))"
     using call_inc_result[where s = "s((STR ''Gx'') := 4)"]
     by simp
@@ -146,18 +148,18 @@ text \<open>
   @{text "5 -> inc, continue at 6"} and @{text "6 -> sqr, continue at 7"}.
 \<close>
 
-abbreviation "main_cfg \<equiv> compile_prog proc_pi [(STR ''inc''), (STR ''sqr'')] main_cfg_name main_prog"
+abbreviation "main_cfg \<equiv> compile_prog proc_pi [(STR ''inc''), (STR ''sqr'')]"
 
 lemma main_cfg_full:
   "main_cfg =
      \<lparr> intra =
-         {(FunctionEntry (STR ''inc''), EA_Nop, Statement 0),
+         {(FunctionEntry (STR ''inc''), EA_Body (STR ''inc''), Statement 0),
           (Statement 0, EA_Assign (STR ''Gx'') (Plus (V (STR ''Gx'')) (N 1)), Statement 1),
           (Statement 1, EA_Ret None (STR ''inc''), FunctionResult (STR ''inc'')),
-          (FunctionEntry (STR ''sqr''), EA_Nop, Statement 2),
+          (FunctionEntry (STR ''sqr''), EA_Body (STR ''sqr''), Statement 2),
           (Statement 2, EA_Assign (STR ''Gx'') (Times (V (STR ''Gx'')) (V (STR ''Gx''))), Statement 3),
           (Statement 3, EA_Ret None (STR ''sqr''), FunctionResult (STR ''sqr'')),
-          (FunctionEntry (STR ''main''), EA_Nop, Statement 4),
+          (FunctionEntry (STR ''main''), EA_Body (STR ''main''), Statement 4),
           (Statement 4, EA_Assign (STR ''Gx'') (N 4), Statement 5),
           (Statement 7, EA_Ret None (STR ''main''), FunctionResult (STR ''main''))},
        calls =
@@ -165,7 +167,7 @@ lemma main_cfg_full:
           (Statement 6, CallEdge None [] [], FunctionEntry (STR ''sqr''), Statement 7)},
        cfg_entry = FunctionEntry (STR ''main''),
        checks = {} \<rparr>"
-  by (simp add: main_cfg_name_def) eval
+  by eval
 
 lemma main_cfg_entry: "cfg_entry main_cfg = FunctionEntry (STR ''main'')"
   by (simp add: main_cfg_full)
@@ -173,13 +175,13 @@ lemma main_cfg_exit: "cfg_exit main_cfg = FunctionResult (STR ''main'')"
   by (simp add: main_cfg_full cfg_exit_def)
 lemma main_cfg_intra:
   "intra main_cfg =
-     {(FunctionEntry (STR ''inc''), EA_Nop, Statement 0),
+     {(FunctionEntry (STR ''inc''), EA_Body (STR ''inc''), Statement 0),
       (Statement 0, EA_Assign (STR ''Gx'') (Plus (V (STR ''Gx'')) (N 1)), Statement 1),
       (Statement 1, EA_Ret None (STR ''inc''), FunctionResult (STR ''inc'')),
-      (FunctionEntry (STR ''sqr''), EA_Nop, Statement 2),
+      (FunctionEntry (STR ''sqr''), EA_Body (STR ''sqr''), Statement 2),
       (Statement 2, EA_Assign (STR ''Gx'') (Times (V (STR ''Gx'')) (V (STR ''Gx''))), Statement 3),
       (Statement 3, EA_Ret None (STR ''sqr''), FunctionResult (STR ''sqr'')),
-      (FunctionEntry (STR ''main''), EA_Nop, Statement 4),
+      (FunctionEntry (STR ''main''), EA_Body (STR ''main''), Statement 4),
       (Statement 4, EA_Assign (STR ''Gx'') (N 4), Statement 5),
       (Statement 7, EA_Ret None (STR ''main''), FunctionResult (STR ''main''))}"
   by (simp add: main_cfg_full)
@@ -193,8 +195,8 @@ lemma main_cfg_calls:
 
 
 text \<open>
-  A certified Sign analysis of a shared-global increment call is
-  @{text "Example_Side_Proc_Global"};
+  A Sign analysis of the same shared-global increment call is
+  \<^verbatim>\<open>tests/regression/07-sign-precision/precision/10-single_call_global_increment.vimp\<close>;
   this theory's own contribution is the concrete run (@{thm [source]
   main_prog_result [no_vars]}) and the compiled interprocedural CFG above.
 \<close>

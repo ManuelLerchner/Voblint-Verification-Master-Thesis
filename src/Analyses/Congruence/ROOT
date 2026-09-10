@@ -1,0 +1,30 @@
+session Voblint_Analysis_Congruence in "." = "Voblint_Nonrelational" +
+  description "The Congruence domain: normalized residue-class lattice, arithmetic, backward filtering, transfers, executable bridge"
+  sessions
+    "Voblint_VIMP"
+    "Voblint_CFG"
+    "Voblint_Compile"
+    "Voblint_Domain"
+    "Voblint_Framework"
+    "Voblint_Solver"
+    "Voblint_Exec"
+    "HOL-Computational_Algebra"
+    "TD"
+  directories
+    "generated"
+  theories
+    Congruence_Domain
+    Congruence_Lattice
+    Congruence_Warrowing
+    Congruence_Arithmetic
+    Congruence_Backward
+    Congruence_Special
+    Congruence_Numeric_Queries
+    Congruence_Transfer
+    Congruence_Exec
+    Congruence_Sound
+    Congruence_Classify
+    Congruence_Assembly
+    Congruence_Analyses
+    Congruence_Checks
+    Congruence_Entry

@@ -478,7 +478,7 @@ def test_context_sensitive_globals_show_one_seed_per_context(tmp_path):
     """--context entry-state rendered an empty globals pane.
 
     The seeds are what context-sensitivity buys, and they are readable off the
-    table the run already solved: routed_extra_g answers a callee entry's local
+    table the run already solved: routed_entry_seed_tree answers a callee entry's local
     from its seed, so the entry's local *is* that seed. Two call sites with
     different arguments must therefore appear as two rows, each pinning the
     argument it was called with -- one joined row would mean the contexts were

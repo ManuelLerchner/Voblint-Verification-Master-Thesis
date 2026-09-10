@@ -1,4 +1,4 @@
-// PARAM: --analysis sign --context entry-state
+// PARAM: --analysis sign --context entry-state --context-graph collapsed
 // Regression for a silent wrong-output bug: the collapsed entry-state
 // GraphViz renderers took only an imp_prog and hard-wired Interval's own
 // result table, so --analysis sign --context entry-state --graph-snapshot
@@ -10,10 +10,10 @@
 // Collapsed rendering is domain-generic because lookup_joined_state joins
 // a point's covered contexts away before the renderer sees them, leaving
 // an ordinary per-node abs_state that projects into abstract_value -- the
-// same projection the monovariant renderer already used. The expanded
-// (--context-graph expanded) renderer is typed in the context type itself
-// and stays Interval-only, explicitly rejected for other domains rather
-// than silently reused.
+// same projection the monovariant renderer already used. --context-graph
+// collapsed is explicit here because an entry-state run is drawn expanded
+// by default; 14-expanded_sign_own_domain.vimp pins that rendering, and the
+// pair together keep both renderers reading the selected domain's table.
 // EXPECT-GRAPH-BEGIN
 // clusters:
 //   cluster_ctx_0:
@@ -50,9 +50,9 @@
 // edges:
 //   main_pp5_ctx0 -> main_pp6_ctx0: check(0<b)
 //   main_pp6_ctx0 -> main_result_main_ctx0: terminate
-//   main_entry_main_ctx0 -> main_pp2_ctx0: nop
+//   main_entry_main_ctx0 -> main_pp2_ctx0: body(main)
 //   square_pp0_ctx1 -> square_result_square_ctx1: return n*n
-//   square_entry_square_ctx1 -> square_pp0_ctx1: nop
+//   square_entry_square_ctx1 -> square_pp0_ctx1: body(square)
 //   main_pp4_ctx0 -> main_pp5_ctx0: check(0<a)
 //   main_pp2_ctx0 -> square_entry_square_ctx1: enter square(3)
 //   main_pp3_ctx0 -> square_entry_square_ctx1: enter square(4)

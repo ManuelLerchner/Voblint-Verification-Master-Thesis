@@ -1,0 +1,18 @@
+session Voblint_Examples_Sign in "." = "Voblint_Analysis_Sign" +
+  description "Sign witnesses: certified runs, custom transfer bodies, and call-string contexts"
+  sessions
+    "Voblint_Examples_CFG"
+    "Voblint_Soundness"
+  directories
+    "CallString"
+  theories
+    Example_Sign_Domain_Ops
+    Exec_Sign_DG_Run
+    Example_Sign_Unit_Assembly
+    Example_Sign_DG_Custom_Body
+    Example_Sign_DG_Custom_Combine
+    Example_Sign_Backward_Pollution_Regression
+    Example_Sign_DG_Overlapping_Enter
+    Example_Sign_DG_CallString_K1
+    Example_Sign_DG_CallString_K2
+    Example_Sign_Report_Regression

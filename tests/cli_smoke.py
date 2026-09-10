@@ -56,10 +56,12 @@ CASES = [
         "",
     ),
     (
-        "explicit --context-graph expanded with sign is still rejected",
+        # --context-graph selects a graph rendering, so it has nothing to say
+        # about a run that prints the text report.
+        "explicit --context-graph expanded still prints the text report",
         ["--analysis", "sign", "--context", "entry-state", "--context-graph", "expanded", SANITY_FILE],
-        1,
-        "only supported by --analysis interval",
+        0,
+        "PROVED",
     ),
     (
         "several domains without --html is rejected",
@@ -218,16 +220,16 @@ CASES = [
         "unsupported --analysis/--context/--solver combination",
     ),
     (
-        "parity + entry-state is rejected",
+        "parity + entry-state is accepted",
         ["--analysis", "parity", "--context", "entry-state", SANITY_FILE],
-        1,
-        "unsupported --analysis/--context/--solver combination",
+        0,
+        "",
     ),
     (
-        "parity + call-string is rejected",
+        "parity + call-string is accepted",
         ["--analysis", "parity", "--context", "call-string", "--context-depth", "2", SANITY_FILE],
-        1,
-        "unsupported --analysis/--context/--solver combination",
+        0,
+        "",
     ),
     (
         "sign + entry-state + --dot renders sign, not interval",
@@ -236,10 +238,12 @@ CASES = [
         "digraph",
     ),
     (
-        "--context-graph expanded with a non-interval domain is rejected",
+        # Every domain draws its own expanded graph; the renderer is no longer
+        # typed in one domain's context type.
+        "--context-graph expanded with a non-interval domain is accepted",
         ["--analysis", "sign", "--context", "entry-state", "--context-graph", "expanded", "--dot", SANITY_FILE],
-        1,
-        "--context-graph expanded is only supported by --analysis interval",
+        0,
+        "digraph",
     ),
     (
         "--context-graph with --context call-string is rejected",

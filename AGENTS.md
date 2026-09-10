@@ -23,6 +23,12 @@ task at hand:
   decisions already recorded there and mistake them for findings.
 - For scope and priorities, read `docs/ROADMAP.md`, `docs/NEXT_STEPS.md`, and
   `docs/NON_GOALS.md`.
+- Before auditing or cleaning up a session, read
+  `docs/SESSION_CLEANUP_PLAYBOOK.md`: the procedure, the patterns that paid
+  off, and the traps that each cost a rebuild.
+- Before moving, splitting, or deleting anything in `src/Abstract_Interpreter/Framework`, read
+  `docs/CORE_REFACTOR_PLAN.md` and work its step table in order; record
+  what the build contradicts in its "Decisions and corrections" section.
 - For an area-specific task, read the nearest `README.md`.
 - Use `.thy` files as the source of truth for definitions, theorem statements,
   and proof status. Do not copy drifting lemma inventories into this file.
@@ -61,32 +67,110 @@ Locked decisions:
 | State order | Pointwise `'a::ord` |
 
 The procedure-aware CFG and generic D/G route are the sole analysis path. Every
-instance uses the side-effecting verified solver. `analysis_domain` names four
+instance uses the side-effecting verified solver. `analysis_domain` names five
 selectable analyses -- `Sign_Analysis`, `Interval_Analysis`, `Int_Analysis`,
-`Parity_Analysis`. Congruence is not selectable on its own: it is the fourth
-component of `int_dom`, alongside sign, interval and parity.
+`Parity_Analysis`, `Congruence_Analysis`. Congruence is both selectable on its
+own and the fourth component of `int_dom`, alongside sign, interval and parity.
 
 The session dependency graph is:
 
 ```text
-VIMP -> CFG -> Core -> Analysis -+-> Formalization -+
-                                 |                  v
-                                 +----------------> CLI -> Codegen
-                                                     +---> Examples
+VIMP -> Domain -+
+                +-> CFG -> Framework -> Compile -> Exec -> Soundness -> Analysis/* -+
+TD   -> Solver -+                                                                   |
+                                                                                    v
+                                                                       CLI -> Codegen
+                                                                        +--> Examples/*
 ```
 
-`Voblint_Core` is the abstract framework: domains, constraint systems, and the
-TD solver bridge, with no domain-specific content. `Voblint_Analysis` threads
-each concrete domain instance (Sign, Interval, ...) through it.
+(`CFG` depends on `VIMP` only; `Framework` on `CFG`, `Domain` and `Solver`;
+`Compile` on `CFG`; `Exec` on `Framework` and `Compile`.)
+
+`Analysis/*` and `Examples/*` are each a family of sessions, not one session.
+What every domain reuses lives under `src/Analyses/Shared/` as three chained
+sessions, `Voblint_Routing -> Voblint_Result -> Voblint_Nonrelational`: routing
+policies over a compiled program, the publication surface, and the reuse locales
+a non-relational domain interprets. They are mutually independent and chained
+only so a domain inherits all three from one heap instead of re-elaborating two.
+
+`Voblint_Nonrelational` is the parent of `Voblint_Analysis_Sign`, `_Interval`,
+`_Parity`, `_Congruence` and `_Int` (which also lists the four component domains
+it reduces). `Voblint_Analysis_Relational` is the exception: it is parented on
+`Voblint_Exec`, *below* the chain, so the pointwise reuse locales are
+unavailable to it rather than merely unimported -- which is what makes
+`Rel_Order_Domain`'s negative claim structural. Every theory under
+`Shared/Nonrelational/` fixes a store as one value per variable; nothing that
+does may move below this layer. `Voblint_Examples_<Domain>` is parented on that
+domain's analysis session, so a domain's witnesses never pull a sibling domain
+into their closure.
+
+`Voblint_CFG` is the graph model and its activation-local collecting
+semantics: what a soundness claim is stated *about*. It never mentions the
+compiler, so the D/G soundness endpoints hold for an arbitrary CFG rather than
+only for compiled ones, and the session boundary is what keeps that true.
+`Voblint_Compile` is the VIMP-to-CFG compiler and its correctness (structural
+invariants, forward simulation, and the bridge from a source run to a valid
+local trace).
+
+`Voblint_Domain` is what an abstract value and an abstract state are: the
+sound-domain classes with their concretization, the dead-code lift, pointwise
+states, and the bridge between those constructions. `Voblint_Solver` is the
+strategy-tree equation language of the vendored side-effecting solver and its
+monotonicity and post-solution
+vocabulary; it never sees a CFG. `Voblint_Framework` is the D/G analysis framework:
+local/global state selection, the transfer contract, the equation generator, and
+collecting soundness for an arbitrary CFG, with no domain-specific content and
+no compiler.
+`Voblint_Exec` is the executable carrier and the transport of a solved
+system from the solver's association-list states to the function-valued
+states the framework is stated over. The `Voblint_Analysis_*` sessions thread
+each concrete domain instance (Sign, Interval, ...) through them; the reuse
+locales, the publication surface and the compile-dependent routed contexts live
+under `src/Analyses/Shared/`. The dispatch config and the graph export are not
+there -- no domain imports either, so both live in `Voblint_CLI` beside their
+only consumers.
+`docs/CORE_REFACTOR_PLAN.md` records why the split runs along these lines
+and what remains to move.
 
 Cross-session theory imports use qualified names.
-`Voblint_Soundness` contains the reusable soundness endpoints and the
-per-domain, per-context instantiations the CLI dispatches to, so it is not a
-leaf: `Voblint_CLI` imports it, and the export in `Voblint_Codegen` reaches
-through it. `Voblint_Examples` contains executable runs, regressions, GraphViz
-output, and the `Voblint` capstone.
+`Voblint_Soundness` contains the reusable soundness endpoints and nothing
+domain-specific, so it sits *below* the analysis family rather than after it:
+`Voblint_Routing` is parented on it and the rest of `Analyses/Shared/` chains
+off that, so every domain inherits `run_source_sound`/`collect_sound` from an
+ancestor heap. Each domain's own
+instantiation of those endpoints -- the runtime API over an arbitrary
+`imp_prog` paired with its production soundness theorems -- is `<Domain>_Entry`
+in that domain's analysis session, because it depends on that domain and on
+`Voblint_Soundness` and on nothing else. `Voblint_CLI` is then only the
+dispatcher and the render surface: the soundness statements it does own are the
+corollaries over `analyse` itself, which cannot live above the theory that
+defines `analyse`.
 
-`ROOTS` lists eight session directories, one per session in the graph above.
+The `Voblint_Examples_*` sessions contain executable runs, regressions and
+GraphViz output, one session per folder under `src/Examples`. `Voblint_Examples`
+itself is the residue plus the `Voblint` capstone: the witnesses that reach the
+`AnalysisConfig` dispatcher or the GraphViz render surface import `Voblint_CLI`
+and therefore see every domain, so they live together in `Voblint_Examples_CLI`
+(`src/Examples/CLI`) instead of being spread back through the domain folders,
+where they would recouple each domain's session to all of them. The store-only
+check trio sits there too, so the three domains' witnesses read side by side.
+That session is the capstone's *parent*, not a listed session: theories imported
+from an ancestor come from its heap, while theories from a merely listed session
+are re-elaborated in the importer.
+
+`ROOTS` lists one directory per session. Isabelle rejects two sessions sharing
+a directory, so a new session means a new directory, and every directory under
+`src` that holds a `ROOT` owns exactly the theories beneath it that no nested
+session claims.
+
+A `theories` entry is a theory *name*, never a path: a slash there is a
+malformed import and fails the whole session at load, so jEdit does not start
+and the mistake presents as a dead editor rather than as an error in the file
+that caused it. A subdirectory goes on the search path through `directories`
+instead --- `directories "generated"` plus a bare `Sign_Assembly`.
+`pixi run root-entries` checks that, that every `directories` entry exists, and
+that every `.thy` on a session's search path is reached from something the
+session builds; it needs no Isabelle.
 
 The generated OCaml is compile-checked by actually compiling it: both
 `codegen-regression` and `cli-build` run `ocamlfind ocamlopt` over
@@ -96,8 +180,11 @@ tasks locally and in CI.
 The procedural language includes calls, explicit returns, and runtime-only
 restore/unwind commands. CFGs separate local `intra` edges from the `calls`
 relation and use `FunctionEntry` and `FunctionResult` nodes. Concrete transfer
-primitives live in `src/CFG/CFG_Transfer.thy`; activation-local semantics live
-under `src/CFG/Collecting/`.
+primitives live in `src/Program_Model/CFG/CFG_Transfer.thy`; activation-local semantics live
+under `src/Program_Model/CFG/Collecting/`. The compiler that produces such a graph from a
+VIMP program lives in `src/Program_Model/Compile/`; only `Procedure_Ownership` and
+`Source_To_Trace` there mention both the compiler and the collecting
+semantics.
 
 ## VIMP grammar pipeline
 
@@ -108,7 +195,7 @@ generators realize it for two unrelated parser targets:
 grammar/vimp.yaml
        |
        +-- scripts/gen_vimp_menhir.py   -> cli/vimp_parser.mly, cli/vimp_lexer.mll
-       +-- scripts/gen_vimp_isabelle.py -> src/VIMP/VIMP_Grammar_Generated.thy
+       +-- scripts/gen_vimp_isabelle.py -> src/Program_Model/VIMP/VIMP_Grammar_Generated.thy
 ```
 
 Two generators exist because the two consumers have unrelated parser
@@ -140,7 +227,7 @@ When changing VIMP syntax:
 
 1. Edit `grammar/vimp.yaml` only.
 2. Never hand-edit `cli/vimp_parser.mly`, `cli/vimp_lexer.mll`, or
-   `src/VIMP/VIMP_Grammar_Generated.thy` -- all three are generated.
+   `src/Program_Model/VIMP/VIMP_Grammar_Generated.thy` -- all three are generated.
 3. Regenerate: `pixi run gen-grammar-menhir` (Menhir/ocamllex) and
    `pixi run gen-grammar-isabelle` (Isabelle); load the regenerated
    `VIMP_Grammar_Generated.thy` through I/Q per the theory-file boundary
@@ -154,10 +241,11 @@ When changing VIMP syntax:
 7. Run the Isabelle batch build (`AFP=/path/to/afp/thys pixi run build`) if
    generated syntax changed.
 
-`prog_main`'s separate HOL representation (`imp_prog`'s dedicated
-`prog_main :: com` field, instead of folding `main` into `proc_rep` as an
-ordinary entry) is a settled representation choice documented inline in
-`grammar/vimp.yaml`'s comments, not part of this grammar migration.
+The entry procedure is an ordinary `proc_rep` entry, not a separate field:
+`imp_prog` carries only `proc_rep` and `declared_global_vars`, `mk_program`
+conses `(prog_main_name, formals = [], body = m)` onto `proc_rep`, and
+`prog_main` is the lookup `main_body (prog_table p)`. This is a settled
+representation choice, not part of this grammar migration.
 
 ## Theory-file boundary
 
@@ -178,60 +266,242 @@ phantom-proof failures.
 - Write Isabelle symbols in ASCII source form. Unicode is allowed in comments,
   but not in theory syntax.
 
+**A diagnostics read describes the buffer, not the file.** Reopening a file is
+not evidence that jEdit reloaded it, so after any host write to a tracked
+theory, compare the buffer against disk -- one `read_file` at a line the write
+changed -- before believing any diagnostics. Both polarities of this have
+already happened here in one session: a bulk host substitution that jEdit had
+not picked up was certified clean and reached the user as two red theories, and
+a regenerated file was read as still failing at byte offsets whose content no
+longer existed. The result looks entirely normal in both directions, which is
+what makes the check worth its one call.
+
+**A theory that loads as `Draft.<name>` is not verified in its session.** A
+draft node resolves imports without consulting the session, so its diagnostics
+say nothing about whether the ROOT actually finds the file, and saving from one
+rewrites same-session imports into session-qualified form. A theory whose ROOT
+entry changed after jEdit loaded the session structure stays a draft until
+jEdit restarts. Report content and wiring separately until the node name says
+`<Session>.<Theory>`.
+
 If an actual I/Q or I/R call fails, report it and request
 `rtk ./scripts/start-both.sh` or `rtk ./scripts/start-ir.sh`. Do not substitute
 a batch build for contextual proof development.
 
 ## New theories and the code-export module map
 
-`export_code` in `src/Codegen/Export/Voblint_Codegen.thy` names no
-`module_name`, so the OCaml serializer would distribute output one module per
-contributing theory. `src/CLI/Analyse_Dispatch.thy` remaps almost every
-contributing theory onto `Core` through one `code_identifier` block, because
-the unsplit theories have real mutual code-level dependencies. Six modules are
-emitted -- four because the handwritten OCaml in `cli/` names them, and two
-that are HOL's own serializer preludes:
+`export_code` in `src/Executable_Surface/Codegen/Export/Voblint_Codegen.thy` declares
+`module_name Generated`, which puts the whole reachable program into one OCaml
+module. Three modules are emitted -- that one, plus two that are HOL's own
+serializer preludes, injected as literal target code rather than generated
+from constants here:
 
 ```text
-Core                   everything else, folded into one module
-Analysis_Config        mk_analysis_config, valid_analysis_config
-Analyse_Dispatch       analyse_config, analyse_config_ctx,
-                       analyse_config_with_state, abstract_value
-State_Report_GraphViz  the fifteen *_graph_snapshot_auto / *_export_auto /
-                       *_payload_auto renderer entry points
-Bit_Shifts             HOL runtime support, not a project theory
-Str_Literal            HOL runtime support, not a project theory
+Generated    the entire reachable program: entry points, domains, solver,
+             CFG, VIMP AST
+Bit_Shifts   HOL runtime support, not a project theory
+Str_Literal  HOL runtime support, not a project theory
 ```
 
-`scripts/check_codegen_modules.py` holds the same six names; keep the two in
+`scripts/check_codegen_modules.py` holds the same three names; keep the two in
 step.
 
-Adding a theory whose constants are reachable from an export root therefore
-requires adding it to that `code_identifier` list. Forget it and the new
-theory keeps its own generated module, which the already-merged `Core` may
-both depend on and be depended on by, and `export_code` fails with:
+The generated internals are monolithic and the export says so. Do not try to
+recover per-theory modules by dropping `module_name`: OCaml's single-file
+output emits modules in dependency order and cannot express a cycle, while the
+executable state, the solver and the CFG instantiation depend on each other at
+code level, so the serializer fails with
 
 ```text
-Dependency "<some_core_constant>" -> "<your_constant>" would result in module
+Dependency "<some_constant>" -> "<your_constant>" would result in module
 dependency cycle
 ```
 
-The error names two constants and no theory, so it reads like a layering bug
-in the new theory. It usually is not: check the `code_identifier` list first.
-The fix is one line there, not a `module_name` on the export -- that would
-collapse the four surviving modules together too and change the API `cli/`
-links against.
+naming two constants and no theory. Even a split Isabelle accepts can fail
+later under `ocamlfind ocamlopt`, on a type-class dictionary field that
+module-signature inference does not expose across the new boundary. Modularity,
+if wanted, belongs in a handwritten OCaml facade over `Generated` -- a layer
+this project does not have.
 
-`scripts/check_codegen_modules.py` (`pixi run codegen-modules`, and a
-pre-commit job) turns a missing entry into an immediate failure naming the
-theory, instead of a cycle error two edits later. It reads the checked-in
-export, so it needs no Isabelle. When it reports an unexpected module, add the
-mapping and re-run `pixi run codegen`.
+Because everything lands in one module, adding a theory whose constants are
+reachable from an export root needs no export-side bookkeeping at all. What it
+still needs is a regeneration: `scripts/check_codegen_modules.py`
+(`pixi run codegen-modules`, and a pre-commit job) reads the checked-in export,
+so it needs no Isabelle, and it reports theories that changed since the export
+was last regenerated.
+
+One thing does have to be named explicitly. The serializer keeps a datatype's
+constructors out of the emitted signature unless it considers them public, and
+an abstract type cannot be pattern-matched on. So a datatype whose *shape* the
+handwritten OCaml depends on -- `lifted`'s `Bot`/`Lifted`, which `cli/main.ml`
+matches to tell a dead point from a live verdict -- is an export root even
+though nothing calls it.
+
+The same applies to plain constants: `prog_table`/`prog_main`/`prog_procs` are
+roots because the property AST driver names them, not because anything calls
+them on the analysis path. This used to be slack -- under the old per-theory
+split a symbol also went public whenever a sibling generated module called it,
+and handwritten OCaml rode along on that. One module means one force: the root
+list. `pixi run codegen-api` (`scripts/check_generated_api.py`, and a
+pre-commit job) checks the consumers against the checked-in signature and names
+the missing root; compiling them is the exact check and still runs in
+`cli-build`, `codegen-regression` and `property-build`.
 
 Sessions and `pixi run build` do not catch a stale export: only
 `Voblint_Codegen` runs it, and it is the last session built. A change that
 lands a new theory without regenerating `codegen/generated/` leaves the
 breakage for whoever next runs a full build.
+
+A named `dg_spec` is a construction-time description, never an exported
+runtime value -- the Isabelle analogue of Goblint's `Spec` module. Its unknown
+and global-key types occur only inside its transfer programs, never in an
+argument that builds it, so it has no most general ML type and the serializer
+rejects it with `includes a free type variable`. The rule is therefore
+uniform, and applies to concrete domain specifications (`sign_conf_spec`,
+`rel_order_spec`) exactly as it does to the generic builders in `DG_Spec`:
+
+> **A named `dg_spec` that can reach code generation declares its own `_def`
+> `[code_unfold]`, next to the definition.**
+
+Whether a given spec would survive anyway -- because some enclosing definition
+happens to unfold first -- is not worth reasoning about per domain. A
+redundant declaration costs nothing; a missing one fails in generated ML, far
+from the theory that caused it.
+
+A second, differently-shaped hole in the same wall. A locale constant whose own
+type does not mention the domain type variable carries a sort hypothesis the
+code generator cannot see, so `declare <locale>.<const>_def [code]` is rejected
+with a *warning* -- "Not a proper equation" -- and the equation is simply
+absent. Nothing fails until the first `by eval` that reaches it, which then
+reports "no code equations" naming a constant nobody wrote by hand.
+
+> **A pipeline constant whose type omits the domain type variable has its body
+> inlined into the code equations of the constants that use it, rather than a
+> `[code]` declaration of its own.**
+
+`routed_dg_pipeline.root_query :: 'c => imp_prog => pp * 'c` is the instance:
+`solution` and `terminates` carry `solution_code`/`terminates_code`, which
+spell the root query out. A registration that renames the pipeline's constants
+through `defines` never meets this, because each renamed constant gets its own
+equation from the interpretation; a call site that applies the pipeline
+directly -- which is what a runtime parameter such as a call-string bound
+forces, since no `global_interpretation` can fix it -- meets it immediately.
+
+## Prose that claims a dependency must pin the theory
+
+A bare `\<open>name\<close>` cartouche is unchecked. `scripts/check_thy_prose_refs.py`
+only asks whether the name exists *somewhere* in the tree, which is all it can
+ask: prose here cites other domains' counterparts constantly and on purpose
+("mirroring Sign's own `analyse_sign_report_for`"), so a lint that demanded
+every reference resolve in the citing theory's own import closure would flag
+around a hundred correct sentences.
+
+That leaves one failure it cannot catch: prose stating that a proof is *built
+from* a fact the citing theory cannot see. `Interval_Entry` claimed its
+node-soundness bridges were built from `ictx_activation_collect_sound_warrow`
+for as long as `ictx_` was ambiguous -- a theorem only Int has, while the
+bridges actually use `interval_conf_result_node_sound_warrow`. The lint passed
+throughout, because the name existed in Int.
+
+So distinguish the two kinds of citation:
+
+- A **comparison** -- "mirroring", "as X does", "the counterpart of" -- may name
+  anything, in a bare cartouche.
+- A **dependency claim** -- "built from", "follows from", "discharged by" --
+  names the owning theory with `\<^theory>\<open>Session.Theory\<close>`, which
+  Isabelle checks and which therefore fails if the theory is not in scope. Use
+  `\<^const>` for a constant, since that is checked outright.
+
+The distinction is what a reader needs anyway: a comparison is orientation, a
+dependency claim is something they may go on to rely on.
+
+The pin narrows the failure but does not close it. `\<^theory>\<open>S.T\<close>`
+is checked to be *in scope*, never to be the theory that owns the name beside
+it, so a dependency claim can pin a sibling theory of the real one and pass
+forever. `Int_Entry` pinned `Int_Analyses` for a constant defined in
+`Int_Solver_Analyses`, alongside a source fact that did not exist and a premise
+count that was one short. When a dependency claim names a constant, prefer
+`\<^const>` for the constant itself --- that is checked outright --- and read
+the pin as documentation of where to look rather than as a guarantee.
+
+## Do not infer removability from local non-use
+
+Before removing a parameter, name, key component, or locale assumption, check
+three things:
+
+1. whether it occurs in the fully expanded statement or constructed value;
+2. whether it is consumed through locale inheritance, interpretation,
+   abbreviation, or another transitive dependency;
+3. whether callers use it to distinguish instantiated objects, even when the
+   current body does not inspect it.
+
+A component can be load-bearing as identity, routing information, or inherited
+configuration while the declaration in front of you never applies it. A lemma
+about `f gs x` needs `gs` whether or not the lemma inspects it, and a locale
+that forwards a parameter to a parent needs it whether or not its own body
+mentions it again. Local body inspection and raw occurrence counts are
+discovery signals, not evidence.
+
+The same failure mode produced three separate defects here: `enter_local`
+(a deleted constant left an assumption quantifying over an arbitrary
+function), `gk` (a deleted datatype let a signature silently rebind to another
+theory's type of the same name), and `gs` (an audit read "not applied in the
+body" as "removable" for a locale parameter its parent consumes nine times).
+
+## Where the global-variable predicate may appear
+
+`gs :: vname => bool` is VIMP's declaration of which names are global. It has
+three legitimate roles: naming the concrete call/return semantics an abstract
+answer must over-approximate (`call_enter`, `combine_collect`, `valid_ltr`),
+implementing the ownership-split specification, and keying the executable
+carrier's locations. It is not a framework parameter, and the invariant is:
+
+> `gs` exists only above or at the transfer boundary. Below it, operations may
+> consume an already-classified location but must never classify a name.
+
+The checkable form of that is narrower and has no exceptions:
+`Framework/Constraints` must not depend on ownership-split semantics.
+`CFG_Enumeration`, `DG_Constraint_Trees` and `DG_Keyed_Generator` mention `gs` zero
+times, as do `DG_Spec` and `DG_Manager`.
+
+The boundary statement above has exactly one known exception, and it is
+deliberate. `resolved_st_is_bot` classifies below the boundary because the
+quotient's equality observes every tagged location while the concretization
+reads back only the one `gs` selects for each name; a bottom test that must
+agree with the readback has to filter the others, which `canonical_location`
+names. A carrier holding `Local_Location` and `Global_Location` is not itself
+evidence of leakage -- a join, order or widening that needed `gs` to
+reconstruct the classification would be, and none does. The exception is
+expected to disappear when variables carry resolved declaration identities
+rather than textual names.
+
+## Deleting an API
+
+Isabelle does not reject every surviving use of a removed name. In a term it
+does; but inside `assumes`, `fixes`, and theorem statements an unknown
+lowercase identifier is a legal free variable, so a locale whose assumption
+cites a deleted constant keeps building -- while that assumption silently
+stops constraining anything and now holds for an arbitrary function of that
+name. Deleting `DG_Transfer_Combinators.thy` did exactly this to three
+`call_fwd_ok` assumptions via `enter_local`, and every session stayed green
+for several rebuilds afterwards. This is the `false abstraction` error of the
+autoformalization audit below, and no batch build can see it.
+
+So a deletion is not finished when the build is green:
+
+1. Search for consumers of every removed name *before* deleting, including
+   inside `assumes` and theorem statements.
+2. Append the removed names to `scripts/retired_identifiers.txt`.
+   `pixi run retired-identifiers` then fails on any that come back. Remove a
+   name from that list -- explicitly, in the same commit -- if a later design
+   deliberately reuses it.
+3. Run `pixi run locale-parameters`. It reports any identifier left free in a
+   locale assumption anywhere in `src/`, which is the general form of the same
+   defect and catches names that were never constants here at all.
+4. Run the full batch build over the leaf sessions, not just the session you
+   edited. A session that fails cancels the rest of its own theories, so one
+   red session hides every later one: a build that stops early has told you
+   nothing about what follows it.
 
 ## Regression discipline
 
@@ -276,101 +546,189 @@ just underdetermined), and it makes precision improvements look like they
 "fixed" a case that was never wrong. See `tests/run.py`'s module docstring
 for the full convention.
 
-## Proof development
+## Style
 
-Before each proof, decide whether it is short and simple.
+Baseline: the Isabelle Community Conventions
+(<https://isabelle.systems/conventions/>) and Gerwin Klein's style notes
+(<https://proofcraft.org/blog/isabelle-style.html>, `-part2`). The rules
+below restate the parts that matter here and record where this project
+deviates. When a rule here conflicts with the baseline, this file wins.
 
-- Short proofs: use `by ...` or apply-style Isar, one or two tactics at a time.
-- Longer proofs: sketch structured Isar top-down, isolate hard obligations, and
-  fill placeholders individually.
+### Layout
+
+- Lines <= 100 symbols. Three things are exempt because they cannot be broken:
+  generated theories (`VIMP_Grammar_Generated`), whose layout the generator
+  owns; URLs in comments; and `mixfix` annotation strings. Two-space indent. One blank line between top-level
+  declarations. `proof`, `next`, `qed` flush left within their block.
+- Theories <= 1500 lines. Split along a concern boundary (a domain, a proof
+  layer, a generator), never by line count alone. One concern per theory;
+  a theory that exists only to fix import order is merged into its consumer.
+- Function equations one per line; `|` consistently at line start.
+- A definition or `fun` header and its name share a line; the body is
+  indented under it.
+
+### Statements
+
+- `fixes`/`assumes`/`shows` over object-logic `\<forall>x. P x \<longrightarrow> Q x`, so
+  callers can instantiate with `[where ...]` and `[OF ...]`. A theorem with
+  `assumes` puts a line break after its name.
+- `obtains` for existential conclusions and case distinctions.
+- Do not mix object and meta logic in one statement.
+- Decide a normal form per concept and state every lemma in it (e.g. always
+  `le_fun_def`-unfolded pointwise order, or never).
+- Drop quantifiers, parentheses, and type annotations the reader and Isabelle
+  infer.
+
+### Naming
+
+- Constants, lemmas, locales: `lower_snake_case`. Datatype constructors and
+  theories: `Capitalized_Snake_Case`. Sessions: `Voblint_<Session>`.
+- A lemma name reads its conclusion left to right in the library vocabulary:
+  `_eq_`, `_le_`, `_iff_`, `_mono`, `_sound`, `_left`/`_right`, `_self`.
+  Hypotheses follow `_if_` (`le_if_lt`). Introduction, elimination and
+  destruction rules end in `I`, `E`, `D`.
+- Locale interpretations and `lemmas` re-exports name the concrete instance
+  (`ivl_exec_sound`, not `sound_1`).
+- Variables follow the library: `xs` for lists, `S`/`A` for sets, `P`/`Q` for
+  predicates, `f`/`g` for functions. Avoid `c`, `inv`, and other names that
+  resolve to imported constants.
+
+### Attributes
+
+Baseline: <https://isabelle.systems/conventions/theorem_attributes.html>.
+Its governing rule is *do not declare something `simp`/`intro`/etc. unless you
+are sure it is a good idea*: a declared rule must take an obvious step that
+does not surprise the reader, and classical rules matter less than `simp`
+rules because conceptually non-trivial reasoning reads better applied
+explicitly. Everything below refines that; the two deviations are marked.
+
+- Only named lemmas carry attributes.
+- A lemma is `[simp]` when its LHS is already in simp normal form and the
+  RHS is clearly simpler. Prefer unconditional equations; a conditional one is
+  worth tagging only when its precondition is cheap relative to how often the
+  rule fires. A one-step destruct or introduction off a definition is `[dest]`
+  or `[intro]`. Tag by default when the shape fits; leave bare when two rewrite
+  directions compete, the rule can loop, or the step is conceptually
+  non-trivial and should stay visible in proofs.
+- When a new constant is introduced, prove its simple `simp` rules with it.
+  When a family of rules recurs across theories, give it a named collection or
+  `lemmas` bundle (`call_info_of_simps`, `mk_program_simps`,
+  `wf_compile_input_simps`) rather than repeating the list per call site.
+- Before tagging `[simp]`, check for an existing simp rule with an
+  overlapping LHS that stops at a different normal form. Fix a
+  non-confluent pair at the algebra level with a bridging lemma; once
+  confluent, delete any lemma that only restated a special case.
+- **A rule named as a rule carries its attribute** (deviation: the baseline
+  would leave this to judgement). The naming convention below
+  ends introduction, elimination and destruction rules in `I`, `E`, `D`; a
+  lemma with one of those names and no `[intro]` / `[elim]` / `[dest]` is
+  either mis-named or withheld from the automation it was written for. Tag it,
+  or rename it to say what it really is. The one standing exception is a
+  multi-conclusion `D` bundle cited by index (`wf_compile_inputD(8)`): tagging
+  it `[dest]` would spawn every conclusion from every occurrence of its
+  premise, so those stay bare and stay explicitly cited.
+- **Every `inductive` predicate carries its inversion rules** (deviation: the
+  baseline states no such requirement). Give it one
+  `inductive_cases` per constructor shape the proofs case on, named
+  `<pred>_<Shape>E`, and tag it: `[elim!]` when inverting that shape is
+  deterministic, plain `[elim]` when a case recurses into a subterm (`Seq`,
+  `If`, `While`, `Call`) so the classical reasoner does not chase the nesting
+  eagerly. A predicate without them forces every consumer to hand-roll
+  `cases rule: <pred>.cases`, and turns proofs that should be one `auto` into
+  a case-per-constructor `proof` block --- `control_at_initial` was 25 lines
+  of exactly that before `control_at` had its rules.
+- **Declare `<pred>.intros [intro]` when the clauses are cheap to search** ---
+  their premises are memberships, equations, or smaller instances of the same
+  predicate (`pstep`, `intra_step`, `cstep`, `control_at`, `stack_repr`).
+  Leave them undeclared when picking the clause is the substance of the proof
+  rather than bookkeeping: `csim` and `valid_ltr` keep their introduction rules
+  explicit, because which constructor applies is what their theorems are
+  about.
+- Keep attribute changes local with `context`/`bundle`; avoid
+  `[simplified]`, `[rule_format]`, and global `declare ... [simp del]`.
+- Never check in `sorry`, `back`, or an unattributed `sledgehammer` call.
+
+### Proofs
+
+- Decide the shape first. One-step goals: `by ...`. Otherwise structured
+  Isar, sketched top-down with named subgoals, hard obligations hoisted
+  into helper lemmas. Do not switch from `apply` to `proof` mid-proof.
+- Target `by (induction ...) (auto simp: ...)` for structural inductions.
+  When cases need hand-picked rule sets, promote the recurring rules to
+  global `[simp]`/`[intro]`/`[dest]` lemmas instead of repeating them per
+  case. A case that still resists one line becomes a helper lemma; do not
+  widen `auto` or `simp` to force it.
+- Unrestricted `auto` only terminally. Prefer `simp only:` and `auto simp:`
+  with an explicit rule set over unbounded automation on large imported
+  sets.
+- Prefer named case-split or decomposition lemmas with `by (rule ...)` or
+  `cases rule:` over `auto elim!:` on inductive predicates.
+- Prefer structured Isar with explicit `show` subgoals over long
+  `[OF ...]` chains when facts must align exactly.
+- Sledgehammer on every non-trivial subgoal, timeout <= 15 s. Paste back
+  `blast`, `auto`, `meson`. Keep `metis` and `smt` only after the batch
+  build confirms fast reconstruction.
+- `unfolding` over `simp add: foo_def` to unfold a definition.
+- Comment any step that takes longer than about a minute.
 - If a valid obligation is difficult, repair the proof or strengthen its
   invariant. Before changing the architecture, establish that the intended
-  theorem is false and try to produce a small `nitpick [timeout=5]`
-  counterexample.
+  theorem is false with a small `nitpick [timeout=5]` counterexample.
 
-Comments explain the current theory and why a choice matters. Do not preserve
-project history in source comments: avoid references to removed theories,
-retired paths, former names, or migration alternatives. Use Isabelle document
-structure (`section`, `subsection`, and `text`) for exposition.
+### Locales
 
-- Comparisons to a still-existing sibling definition or lemma are valid.
-- Temporal language that describes the mathematics is valid (e.g. a compiler
-  phase, an activation's returning phase). Remove only project-history framing.
-- No links to files in comments: no raw or relative paths, no `\<^file>`
-  antiquotations, no `docs/*.md` citations. Reference another theory by name
-  via `@{theory Qualified.Name}` if needed; state everything else inline.
-- No development-stage or migration-plan language: no "Stage 0/1/2", "TODO",
-  "still needs", "so far only", or similar staged/future-work framing. A
-  comment describes the theory as it stands, not the plan to get there.
+- Theorems inside locales use locale-qualified constants; callers outside
+  need the fully applied global shape. Before `callee[OF ...]`, compare
+  interpretation-local premises with fully applied global premises.
+- Surface concrete corollaries through global definitions, small expansion
+  lemmas, or an `interpretation` block, not repeated unfolds.
+- A parameter threaded through many definitions and lemmas of one layer is
+  a locale parameter, not an explicit argument, unless the layer is
+  interpreted at many distinct values.
 
-## Batch-friendly proof habits
+### Comments
 
-These rules keep interactive development fast and make the final batch build a
-reliable one-shot gate.
+- **Every theory opens with an orientation block.** Three to ten lines, after
+  the `section` heading, answering: what question does this file settle, what
+  is its main result, and what local vocabulary must the reader already have.
+  This is the one `text` block exempt from the no-restating rule below, and
+  the only one a newcomer is guaranteed to read.
+  - Write it operationally, in plain words, the way `VIMP_Proc` does: "a call
+    evaluates its actuals in the caller store, binds them in a fresh
+    activation, and pushes a frame". Never open with a signature --- a reader
+    who does not yet know the argument order learns nothing from
+    `f a b c d relates ...`.
+  - Define a term the first time the session uses it, in the same sentence.
+    Words like *residual*, *fragment*, *located*, *activation* are local
+    jargon, not English; a header that explains one of them with the others
+    is circular.
+  - The `section` heading states the question, not the machinery: "Where a
+    partly executed command sits in the graph" over "Located control inside a
+    compiled procedure fragment".
+- Beyond that block, comment only what the definition or statement does not
+  already say: a non-obvious design decision, a Goblint-alignment rationale, a
+  proof step that surprises. A `text` block that restates the lemma it
+  precedes is deleted.
+- Explain why, not what. Timeless: describe the theory as it stands, not
+  project history, removed theories, former names, migration plans, or
+  staged/future work ("TODO", "still needs", "Stage 1").
+- No file links: no paths, no `\<^file>`, no `docs/*.md` citations. Name
+  another theory with `@{theory Qualified.Name}`; state everything else
+  inline. Comparisons to a still-existing sibling definition are fine.
+- Exposition uses `section`/`subsection`/`text`, one short `text` per
+  section at most; `(* *)` only inside proofs.
+- A session's `README.md` carries what no single theory can: the vocabulary
+  table, one worked example carried end to end, and the shape of the
+  dependency graph. A reader who cannot start from the README will not be
+  rescued by the theory headers.
 
 ### Workflow
 
 - **I/Q inner loop, batch outer gate.** Debug one failing command through
-  `get_diagnostics` and `explore`. Run the batch build once the complete task or
-  migration is file-clean, when the user requests it, or at the commit gate.
-  Do not build between stages or tactic changes.
-- **I/Q is not completion.** Interactive checking can finish a step while
-  subgoals remain or accept an invalid intro rule. Empty file diagnostics mean
-  ready for batch, not proved.
-- **Batch is completion.** Show the green verbose build log before calling proof
-  work done.
-
-### Automation that batch tolerates
-
-- Prefer small, named case-split or decomposition lemmas with
-  `by (rule ...)` or `cases rule: ...` over `auto elim!:` on inductive
-  predicates.
-- Prefer bounded tactics such as `simp only:` and `auto simp:` with an explicit
-  lemma set over unbounded automation on large imported rule sets. This governs
-  proof-site tactic calls, not whether a lemma itself carries an attribute.
-- Default to attributing a new lemma `[simp]`, `[dest]`, `[intro]`, or `[elim]`
-  when its shape naturally fits that role: a rewrite whose RHS is no more
-  complex than its LHS is `[simp]`; a one-step destruct or introduction off a
-  definition's unfolding is `[dest]` or `[intro]`. Tagging lets later call
-  sites cite the lemma by name or let `blast`/`auto` find it, instead of
-  re-unfolding the definition at each site. Leave a lemma bare only when
-  tagging it would be ambiguous or ill-suited: multiple competing rewrite
-  directions, a rule that risks looping with existing simp rules, or a fact
-  whose applicability is genuinely context-dependent.
-- Prefer structured Isar with explicit `show` subgoals over long `[OF ...]`
-  chains when facts must align exactly.
-- When a subgoal resists one line of automation, hoist a helper lemma. Do not
-  widen `auto` or `simp` to force it.
-- Before tagging a lemma `[simp]`, check whether its LHS pattern overlaps with
-  an existing lemma's LHS that serves a different normal form (a general
-  distributive/homomorphism law competing with a specific combine lemma over
-  the same redex is the classic case). Two rules that both match the same
-  term but stop at different points are non-confluent even when each is
-  individually true. When a batch build surfaces a real regression from such
-  a conflict, fix it at the algebra level: add the missing bridging lemma(s)
-  so every rewrite path reaches the same normal form, rather than reverting
-  the new tag. Once confluent, the general laws can carry `[simp]` again, and
-  any lemma that only restated a special case of that confluent set is dead
-  weight — delete it and its citations rather than keep it as an inert
-  corollary.
-
-### Locale and constant shapes
-
-- Theorems inside locales use locale-qualified constants. Callers outside often
-  need the same fully applied global shape as the target lemma.
-- Before `theorem_callee[OF ...]`, compare interpretation-local premises with
-  fully applied global premises. A shape mismatch fails even when the
-  mathematics agrees.
-- Surface concrete corollaries through global definitions, small expansion
-  lemmas, or an `interpretation` block instead of repeating fragile unfolds.
-
-### Sledgehammer in batch
-
-- Try Sledgehammer first on every non-trivial subgoal with a timeout of at most
-  15 seconds.
-- Prefer paste-backs using `blast`, `auto`, or `meson`.
-- Keep `metis` and `smt` only after the batch build confirms they reconstruct
-  quickly; they are a leading source of build hangs.
+  `get_diagnostics` and `explore`. Run the batch build once the complete
+  task is file-clean, when the user requests it, or at the commit gate.
+- **I/Q is not completion.** Empty diagnostics mean ready for batch, not
+  proved. **Batch is completion.** Show the green build log before calling
+  proof work done.
 
 ## ASCII-only `.thy` sources
 

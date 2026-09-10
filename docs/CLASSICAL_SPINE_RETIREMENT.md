@@ -42,7 +42,7 @@ Read first: `docs/history/UNIFIED_ANALYSIS_MIGRATION_HANDOFF.md` (U1–U4, done,
 The hard part — collapsing two `lfp(F)` skeletons and two post-fixpoint
 soundness proofs into one — is **finished**:
 
-- `src/CFG/Collecting/CFG_Collect_Unified.thy` — `collecting` locale, parameterised
+- `src/Program_Model/CFG/Collecting/CFG_Collect_Unified.thy` — `collecting` locale, parameterised
   by `combine_at :: cfg => cenv => pp => store set`. Proves `F`/`collect` lfp
   skeleton **once**. Two interpretations:
   - `intra` (`combine_at = (\<lambda>_ _ _. {})`) with `intra_collect_eq: intra.collect g S = cfg_collect g S`

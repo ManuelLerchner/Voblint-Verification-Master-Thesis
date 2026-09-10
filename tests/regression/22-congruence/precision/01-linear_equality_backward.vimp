@@ -1,0 +1,25 @@
+// PARAM: --analysis congruence
+// The acceptance case for Congruence as a public analysis: a fact no other
+// selectable domain here recovers, established by running the arithmetic
+// backwards out of a guard.
+//
+// n is unconstrained, so the forward direction learns nothing. The guard
+// n + 1 == 3 is where the domain earns its place: bfilter_congruence
+// (Congruence_Backward.thy) intersects the two sides -- top + 1 against the
+// singleton 3 -- and then pushes the result back through inv_plus_congruence,
+// subtracting the literal 1 to pin n to the single integer 2. Congruence is
+// the one component with a genuine arithmetic inverse, which is also why it
+// is the only one Int's Refine_Never mode still narrows.
+//
+// Once n is a singleton (modulus 0), congruence_eqb decides equality against
+// a literal in both directions, so the positive and the negated check are
+// both discharged.
+void main() {
+  n := __voblint_nondet_int();
+  if (n + 1 == 3) {
+    __voblint_check(n == 2); // PROVED
+    __voblint_check(!(n == 5)) // PROVED
+  } else {
+    __voblint_check(true) // PROVED
+  }
+}

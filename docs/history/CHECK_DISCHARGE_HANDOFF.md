@@ -207,7 +207,7 @@ tables.
 Second, independent full instance, mirroring the Sign pipeline end to end,
 not just the numeric-query interpretation recorded above:
 
-- `Ivl_Exec.thy` — three new lemmas (`ivl_etf_st_enter_tree`,
+- `Interval_Exec.thy` — three new lemmas (`ivl_etf_st_enter_tree`,
   `ivl_etf_st_enter_exists_unit`, `ivl_etf_st_exists_unit`), mirroring
   `Sign_Exec.thy`'s existing unit-transfer lemmas, closing the gap the
   Interval solver frontend needed.

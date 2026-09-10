@@ -1,0 +1,7 @@
+session Voblint_Examples_Parity in "." = "Voblint_Analysis_Parity" +
+  description "Parity witnesses: the flagship certified run"
+  sessions
+    "Voblint_Examples_CFG"
+    "Voblint_Soundness"
+  theories
+    Example_Parity_DG_Flagship

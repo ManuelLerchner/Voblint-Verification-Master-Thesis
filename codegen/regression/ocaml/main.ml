@@ -1,9 +1,9 @@
 (* Regression driver for the generated Voblint_CLI OCaml module.
    Constructs a VIMP program purely through the exported AST constructors
-   (never touching Isabelle), runs it through the exported `analyse`
-   dispatcher for both domains, and checks the result against the values
-   src/Examples/Regression/Example_Analysis_Dispatch_Regression.thy's
-   dispatch_demo_interval_precise proves and
+   (never touching Isabelle), runs it through the exported `run_voblint`
+   entry point for both domains, and checks the result against the values
+   src/Examples/CLI/Example_Analysis_Dispatch_Regression.thy's
+   dispatch_demo_* lemmas prove and
    tests/regression/ carries as CLI fixtures. This driver is the layer that
    pins the *generated* module's agreement with both.
 
@@ -16,8 +16,7 @@
    Do not hand-edit codegen/generated/ml/Voblint_CLI.ml; regenerate it with
    `pixi run codegen` instead. *)
 
-open Voblint_CLI.Core
-open Voblint_CLI.Analyse_Dispatch
+open Voblint_CLI.Generated
 
 (* `HOL-Library.Code_Target_Numeral` (imported by Example_Analysis_Dispatch)
    backs Isabelle's `int`/`nat` by the target language's native
@@ -30,17 +29,35 @@ let mk_nat n = nat_of_integer (Z.of_int n)
 
 (* `vname`/`pname` are Isabelle's `String.literal`, which is already OCaml's
    native `string` (see Example_Analysis_Dispatch_Regression.thy), so variable/procedure
-   names need no conversion at all. *)
+   names need no conversion at all. The same holds for a check row's rendered
+   condition and state slice, so nothing below needs a `char list` bridge. *)
 
-(* `string_of_exp` renders a check's condition directly, as an alternative
-   to pattern-matching the `exp` AST. Its Isabelle return type is `string`
-   (`char list`), and `char` is still the opaque Code_Abstract_Char type
-   here (only `vname`/`pname` moved to native `String.literal`), so the
-   result needs the same `integer_of_char` bridge as everywhere else `char`
-   is inspected directly -- and OCaml's `string`/`char list` are distinct
-   types besides, unlike Haskell's `type String = [Char]` pun. *)
-let un_char c = Char.chr (Z.to_int (integer_of_char c))
-let un_string cs = String.concat "" (List.map (fun c -> String.make 1 (un_char c)) cs)
+(* One analysis run, reduced to the column this driver compares: the check
+   point, the condition as the analyzer itself renders it, and the lifted
+   verdict. `View_Report` is the view that builds no graph, which is all this
+   driver reads; the state slice it leaves empty is not compared. A refusal is
+   not an outcome to compare against -- every configuration named here is one
+   the analyzer supports, so an answer other than `Analysed` is a defect in
+   the export rather than a failed expectation. *)
+let domain_label = function
+  | Sign_Analysis -> "Sign_Analysis"
+  | Interval_Analysis -> "Interval_Analysis"
+  | Int_Analysis -> "Int_Analysis"
+  | Parity_Analysis -> "Parity_Analysis"
+  | Congruence_Analysis -> "Congruence_Analysis"
+
+let report domain prog =
+  match run_voblint domain None Ctx_None View_Report prog with
+  | Malformed_Program ->
+    print_endline ("FAIL " ^ domain_label domain ^ ": program is not well-formed");
+    exit 1
+  | Unsupported_Configuration ->
+    print_endline ("FAIL " ^ domain_label domain ^ ": unsupported configuration");
+    exit 1
+  | Analysed out ->
+    List.map
+      (fun row -> (row_point row, (row_condition row, row_verdict row)))
+      (out_checks out)
 
 (* y := 1; check(0 < y); y := 0 - 1; check(0 < y)
    Same program as dispatch_demo_prog in Example_Analysis_Dispatch_Regression.thy. *)
@@ -55,30 +72,33 @@ let demo_prog =
        , Check check_cond))
     []
 
+(* A row's condition is rendered by the export, not by this driver: the
+   expected strings below are the check conditions above as the analyzer
+   prints them (minimally parenthesized, no spaces around infix operators). *)
 let expected_sign =
-  [ (Statement (mk_nat 1), (check_cond, Check_Proved));
-    (Statement (mk_nat 3), (check_cond, Check_Refuted)) ]
+  [ (Statement (mk_nat 1), ("0<y", Lifted Check_Proved));
+    (Statement (mk_nat 3), ("0<y", Lifted Check_Refuted)) ]
 
 let expected_interval =
-  [ (Statement (mk_nat 1), (check_cond, Check_Proved));
-    (Statement (mk_nat 3), (check_cond, Check_Refuted)) ]
+  [ (Statement (mk_nat 1), ("0<y", Lifted Check_Proved));
+    (Statement (mk_nat 3), ("0<y", Lifted Check_Refuted)) ]
 
 (* global `total`, procedure `inc` with formal `n`, two calls, two checks.
-   Exercises `mk_program`'s procedure list, `proc_decl_of`'s formals, and `Call`
+   Exercises `mk_program`'s procedure list, a procedure's formals, and `Call`
    together -- not just straight-line assignment/check.
    Same program as tests/regression/04-globals/precision/02-global_var.vimp and its
    known-imprecision sibling 01-repeated_call_site_widening.vimp; the CFG-shape
    expectations below have no fixture counterpart and live only here.
    Interval_Analysis on this program used to hang/segfault under the always-join backend (a
-   flow-insensitive global read-and-grow has no widening there); the exported `analyse`
-   dispatcher now routes Interval through the warrowing backend, which terminates. Since the
+   flow-insensitive global read-and-grow has no widening there); the exported entry point
+   now routes Interval through the warrowing backend, which terminates. Since the
    Base-style migration, total lives in the reachability-lifted local unknown flow-sensitively
    through both calls, so the first check (0 < total) is Check_Proved; the second
    (total < 100) stays Check_Unknown -- inc's entry is reached by two call sites, so warrowing
    widens the entered parameter's upper bound on the second visit. *)
 let proc_demo_prog =
   mk_program
-    [ ("inc", proc_decl_of ["n"] (Assign ("total", Plus (V "total", V "n")))) ]
+    [ ("inc", Proc_decl_ext (["n"], Assign ("total", Plus (V "total", V "n")), ())) ]
     (Seq
        (Seq
           (Seq
@@ -89,14 +109,14 @@ let proc_demo_prog =
     [ "total" ]
 
 let expected_proc_demo_sign =
-  [ (Statement (mk_nat 5), (Less (N (mk_int 0), V "total"), Check_Proved));
-    (Statement (mk_nat 6), (Less (V "total", N (mk_int 100)), Check_Unknown)) ]
+  [ (Statement (mk_nat 5), ("0<total", Lifted Check_Proved));
+    (Statement (mk_nat 6), ("total<100", Lifted Check_Unknown)) ]
 
 (* Same shape as expected_proc_demo_sign, but this is the case that used to hang: a global read
    and grown across two calls, now solved via warrowing. *)
 let expected_proc_demo_interval =
-  [ (Statement (mk_nat 5), (Less (N (mk_int 0), V "total"), Check_Proved));
-    (Statement (mk_nat 6), (Less (V "total", N (mk_int 100)), Check_Unknown)) ]
+  [ (Statement (mk_nat 5), ("0<total", Lifted Check_Proved));
+    (Statement (mk_nat 6), ("total<100", Lifted Check_Unknown)) ]
 
 (* Acceptance regression A (no-call global self-feedback): no procedure, no call, just a
    global write that reads its own prior value. Same program as
@@ -113,7 +133,7 @@ let no_call_global_self_ref_prog =
     [ "total" ]
 
 let expected_no_call_global_self_ref_interval =
-  [ (Statement (mk_nat 2), (Less (N (mk_int 0), V "total"), Check_Proved)) ]
+  [ (Statement (mk_nat 2), ("0<total", Lifted Check_Proved)) ]
 
 (* Acceptance regression B (interprocedural global self-feedback): a single call to a
    procedure that reads and grows the same global. Same program as
@@ -123,57 +143,49 @@ let expected_no_call_global_self_ref_interval =
    repeated-visit widening applies, and total's exact value survives the combine step. *)
 let one_call_prog =
   mk_program
-    [ ("inc", proc_decl_of ["n"] (Assign ("total", Plus (V "total", V "n")))) ]
+    [ ("inc", Proc_decl_ext (["n"], Assign ("total", Plus (V "total", V "n")), ())) ]
     (Seq
        (Seq (Assign ("total", N (mk_int 0)), Call (None, "inc", [ N (mk_int 3) ])),
         Check (Less (N (mk_int 0), V "total"))))
     [ "total" ]
 
 let expected_one_call_interval =
-  [ (Statement (mk_nat 4), (Less (N (mk_int 0), V "total"), Check_Proved)) ]
+  [ (Statement (mk_nat 4), ("0<total", Lifted Check_Proved)) ]
 
 let show_int i = Z.to_string (integer_of_int i)
 
-(* `exp` is one unified integer-valued expression language (no separate
-   aexp/bexp split -- see VIMP_Syntax.thy), so a single recursive renderer
-   covers arithmetic and comparison/logical constructors alike. *)
-let rec show_exp = function
-  | N i -> show_int i
-  | V s -> s
-  | Plus (a, b) -> "(" ^ show_exp a ^ " + " ^ show_exp b ^ ")"
-  | Minus (a, b) -> "(" ^ show_exp a ^ " - " ^ show_exp b ^ ")"
-  | Times (a, b) -> "(" ^ show_exp a ^ " * " ^ show_exp b ^ ")"
-  | Not b -> "!" ^ show_exp b
-  | And (a, b) -> "(" ^ show_exp a ^ " && " ^ show_exp b ^ ")"
-  | Or (a, b) -> "(" ^ show_exp a ^ " || " ^ show_exp b ^ ")"
-  | Less (a, b) -> "(" ^ show_exp a ^ " < " ^ show_exp b ^ ")"
-  | Eq (a, b) -> "(" ^ show_exp a ^ " == " ^ show_exp b ^ ")"
-
-let show_check_result = function
-  | Check_Proved -> "Check_Proved"
-  | Check_Refuted -> "Check_Refuted"
-  | Check_Unknown -> "Check_Unknown"
+(* Bot is the proved-unreachable verdict: no execution reaches the check, so
+   none was computed. Naming it keeps "proved unreachable" comparable rather
+   than collapsing it into one of the three decided answers. *)
+let show_verdict = function
+  | Bot -> "Bot"
+  | Lifted Check_Proved -> "Check_Proved"
+  | Lifted Check_Refuted -> "Check_Refuted"
+  | Lifted Check_Unknown -> "Check_Unknown"
 
 let show_nat n = Z.to_string (integer_of_nat n)
 
-let show_entry (n, (b, r)) =
+let show_entry (n, (cond, verdict)) =
   Printf.sprintf "(%s, %s, %s)"
     (match n with
      | Statement k -> "Statement " ^ show_nat k
      | FunctionEntry s -> "FunctionEntry " ^ s
      | FunctionResult s -> "FunctionResult " ^ s)
-    (show_exp b) (show_check_result r)
+    cond (show_verdict verdict)
 
-(* Compact renderers matching string_of_cfg_node/string_of_action/
-   string_of_call_action in Analysis_GraphViz.thy exactly (no spaces around
-   infix operators, "pp"/"entry_"/"result_" node prefixes) -- deliberately
-   not show_exp above, which uses the driver's own spaced format for the
-   straight-line demo's own display purposes. *)
+(* Compact renderers matching string_of_cfg_node/string_of_action
+   in Analysis_GraphViz.thy exactly (no spaces around
+   infix operators, "pp"/"entry_"/"result_" node prefixes). Unlike a check
+   row's condition, an edge label is not published as a rendered string, so
+   the CFG expectations below are rendered here. *)
 let show_cfg_node_compact = function
   | Statement n -> "pp" ^ show_nat n
   | FunctionEntry s -> "entry_" ^ s
   | FunctionResult s -> "result_" ^ s
 
+(* `exp` is one unified integer-valued expression language (no separate
+   aexp/bexp split -- see VIMP_Syntax.thy), so a single recursive renderer
+   covers arithmetic and comparison/logical constructors alike. *)
 let rec show_exp_compact = function
   | N i -> show_int i
   | V s -> s
@@ -194,6 +206,7 @@ let show_edge_action = function
     x ^ " := min(" ^ show_exp_compact a ^ ", " ^ show_exp_compact b ^ ")"
   | EA_Special (Max (a, b), x) ->
     x ^ " := max(" ^ show_exp_compact a ^ ", " ^ show_exp_compact b ^ ")"
+  | EA_Body p -> "body(" ^ p ^ ")"
   | EA_Assume b -> "[" ^ show_exp_compact b ^ "]"
   | EA_AssumeNot b -> "![" ^ show_exp_compact b ^ "]"
   | EA_Ret (None, _) -> "return"
@@ -225,7 +238,7 @@ let expected_proc_demo_intra =
   "pp0 --[total := (total+n)]--> pp1; pp1 --[return]--> result_inc; "
   ^ "pp2 --[total := 0]--> pp3; pp5 --[check(0<total)]--> pp6; "
   ^ "pp6 --[check(total<100)]--> pp7; pp7 --[return]--> result_main; "
-  ^ "entry_inc --[nop]--> pp0; entry_main --[nop]--> pp2"
+  ^ "entry_inc --[body(inc)]--> pp0; entry_main --[body(main)]--> pp2"
 
 let expected_proc_demo_calls =
   "pp3 --[call(3)]--> entry_inc ~cont~> pp4; pp4 --[call(4)]--> entry_inc ~cont~> pp5"
@@ -260,17 +273,17 @@ let check_case_str ~line label actual expected =
     false)
 
 let () =
-  let actual_sign = analyse Sign_Analysis demo_prog in
-  let actual_interval = analyse Interval_Analysis demo_prog in
-  let actual_proc_demo_sign = analyse Sign_Analysis proc_demo_prog in
-  let actual_proc_demo_interval = analyse Interval_Analysis proc_demo_prog in
-  let proc_demo_cfg = compile_program proc_demo_prog in
+  let actual_sign = report Sign_Analysis demo_prog in
+  let actual_interval = report Interval_Analysis demo_prog in
+  let actual_proc_demo_sign = report Sign_Analysis proc_demo_prog in
+  let actual_proc_demo_interval = report Interval_Analysis proc_demo_prog in
+  let proc_demo_cfg = prog_cfg proc_demo_prog in
   let actual_proc_demo_intra = show_intra_list (cfg_intra_list proc_demo_cfg) in
   let actual_proc_demo_calls = show_calls_list (cfg_calls_list proc_demo_cfg) in
   let actual_no_call_global_self_ref_interval =
-    analyse Interval_Analysis no_call_global_self_ref_prog
+    report Interval_Analysis no_call_global_self_ref_prog
   in
-  let actual_one_call_interval = analyse Interval_Analysis one_call_prog in
+  let actual_one_call_interval = report Interval_Analysis one_call_prog in
   let ok_sign = check_case ~line:__LINE__ "Sign_Analysis demo report" actual_sign expected_sign in
   let ok_interval =
     check_case ~line:__LINE__ "Interval_Analysis demo report" actual_interval expected_interval
@@ -299,9 +312,14 @@ let () =
     check_case ~line:__LINE__ "Interval_Analysis interprocedural global self-feedback (acceptance B)"
       actual_one_call_interval expected_one_call_interval
   in
+  (* The condition a report row carries is rendered by the export, so this
+     pins that rendering directly rather than through a row's other columns. *)
   let ok_check_cond_rendered =
-    check_case_str ~line:__LINE__ "string_of_exp check condition"
-      (un_string (string_of_exp (mk_nat 0) check_cond)) "0<y"
+    check_case_str ~line:__LINE__ "rendered check condition"
+      (match actual_sign with
+       | (_, (cond, _)) :: _ -> cond
+       | [] -> "<no check rows>")
+      "0<y"
   in
   if
     ok_sign && ok_interval && ok_proc_demo_sign && ok_proc_demo_interval && ok_proc_demo_intra

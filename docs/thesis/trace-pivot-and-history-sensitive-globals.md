@@ -26,7 +26,7 @@ The repository's collecting semantics is built on enumerated CFG paths
 of reachable stores" with "set of reaching *traces*" (store sequences) and proves
 that projecting each trace to its last store recovers the old semantics exactly:
 
-> **Lift lemma** (`src/CFG/Collecting/CFG_Collect_Trace.thy`, `lift`):
+> **Lift lemma** (`src/Program_Model/CFG/Collecting/CFG_Collect_Trace.thy`, `lift`):
 > `α_last (cfg_collect_trace g S v) = cfg_collect_paths g S v`.
 
 Because `lift` is an *equality*, every existing numeric-domain soundness proof
@@ -42,7 +42,7 @@ read is already determined by the last store.
 ## 3. Interprocedural traces
 
 Procedures split the store into locals and globals
-(`src/VIMP/VIMP_Globals.thy`: `is_global`, `enter_state`, `combine_states`).
+(`src/Program_Model/VIMP/VIMP_Globals.thy`: `is_global`, `enter_state`, `combine_states`).
 Calls are modelled with **enter edges** (a unary `EA_Enter`, `enter_state` keeps
 globals and zeroes locals) and **combine triples** `(call, callee_exit, return)`
 — *not* a flat combine edge, which would need a `⊤` the bounded-semilattice
@@ -140,10 +140,10 @@ in the present proof. The precision claim is *strict improvement*, not
 
 | Result | File | Anchor |
 | --- | --- | --- |
-| Lift lemma | `src/CFG/Collecting/CFG_Collect_Trace.thy` | `lift` |
-| Globals frame | `src/CFG/Collecting/CFG_Collect_Trace.thy` | `cfg_collect_trace_global_frame` |
-| IP trace projection | `src/CFG/Collecting/CFG_Collect_Trace_IP.thy` | `alpha_last_cfg_collect_trace_ip_le` |
-| Digest refinement (A) | `src/CFG/Collecting/CFG_Collect_Trace_IP.thy` | `cfg_collect_trace_ip_d_subset` |
+| Lift lemma | `src/Program_Model/CFG/Collecting/CFG_Collect_Trace.thy` | `lift` |
+| Globals frame | `src/Program_Model/CFG/Collecting/CFG_Collect_Trace.thy` | `cfg_collect_trace_global_frame` |
+| IP trace projection | `src/Program_Model/CFG/Collecting/CFG_Collect_Trace_IP.thy` | `alpha_last_cfg_collect_trace_ip_le` |
+| Digest refinement (A) | `src/Program_Model/CFG/Collecting/CFG_Collect_Trace_IP.thy` | `cfg_collect_trace_ip_d_subset` |
 | M4 core | `src/Pipeline/Trace_IP_Analysis_Sound.thy` | `reaching_global_read_sound` |
 | Digest contract (B) | `src/Pipeline/Trace_IP_Analysis_Sound.thy` | `digest_env_sound`, `digest_read_sound`, `flat_env_is_digest_sound` |
 | Strict precision (C) | `src/Examples/Example_Trace_Digest_Precision.thy` | `digest_beats_flat` |

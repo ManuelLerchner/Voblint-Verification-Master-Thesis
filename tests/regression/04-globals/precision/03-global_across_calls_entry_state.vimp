@@ -8,9 +8,7 @@
 // -- so bump is analyzed under three distinct entry-state contexts
 // ([5,5], [4,4], [19,19]) and n binds exactly in each. The third call also
 // locks in that a global-valued actual argument is evaluated against the
-// caller's real state at the call site, not a globals-bottomed one -- see
-// src/Examples/Interval/Ctx/Example_Interval_DG_Ctx_Globals_Regression.thy
-// for the same program with its per-context abstract states pinned.
+// caller's real state at the call site, not a globals-bottomed one.
 global g;
 void bump(n) {
   g := g + n;

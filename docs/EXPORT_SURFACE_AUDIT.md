@@ -25,7 +25,7 @@ diverges from Goblint.
 signal on its own. Isabelle emits the transitive closure of the export roots
 under the *registered code equations*, so a specification-side constant that a
 `[code]` lemma rewrites away vanishes from the OCaml while remaining load-bearing
-in the proof. `unit_dg_spec_for`, `dg_gen_of`, `fun_of_dg_st`, `gamma_unit` and
+in the proof. `ownership_split_dg_spec_for`, `dg_gen_of`, `fun_of_dg_st`, `gamma_ownership_split` and
 most of `Exec_DG_Generator` are in that category: absent from the OCaml, not
 legacy. The findings below are the cases where absence *plus* a use-graph check
 shows the construct is genuinely unreferenced or superseded.
@@ -52,7 +52,10 @@ equation), or once for a type synonym, and nowhere else in the tree.
 
 The `analyse_*_ctx_result*` row is the notable one: the whole unparameterized
 convenience layer over `analyse_*_ctx_result_*_for` was written and never wired
-up. The CLI reaches the solver through the `_for` forms exclusively.
+up. The CLI reaches the solver through the `_for` forms exclusively. The
+`*_Ctx_None_Sound` theories named as the site were since renamed
+`<Domain>_Exec_Sound.thy`, and Sign's is deleted outright along with its pair in
+this row; the other six constants stand.
 
 Example-session-only — alive, but only as `value`/`eval` fodder:
 `analyse_sign_env`, `analyse_int_dg_join_for`, `analyse_int_dg_join_env_for`,
@@ -95,7 +98,7 @@ a second, older family — `analyse_sign`, `analyse_sign_eqs`,
 the generated OCaml, and — once `text \<open>...\<close>` blocks are excluded — none is
 referenced from live code either.** The many hits a naive grep produces are all
 prose: `Analyse_Dispatch.thy:230`/`:304`, `Interval_Entry.thy`,
-`Monovariant_Analysis_Result.thy` and the `*_Ctx_*_Sound` theories mention these
+`Result_Normalization.thy` and the `*_Ctx_*_Sound` theories mention these
 names only to say they are *not* the path taken.
 
 After a nesting-aware strip of comments and `text` blocks, the complete
@@ -168,7 +171,7 @@ This is the single largest concentrated cleanup in the tree.
 ### 2.3 The Isabelle DOT emitter
 
 `Analysis_GraphViz.thy` (1,318 lines, **121 definitions, 2 lemmas**) and
-`State_Report_GraphViz.thy` (1,239 lines, 58 definitions, 6 lemmas) contain
+`State_Report_Graph.thy` (1,239 lines, 58 definitions, 6 lemmas) contain
 three parallel renderers:
 
 | Family | Reaches OCaml? | Consumer |
@@ -180,17 +183,81 @@ three parallel renderers:
 So the shipped CLI renders DOT in handwritten OCaml from the structured export,
 while the proof session carries a second, complete DOT-and-HTML string emitter
 that no shipped artifact ever runs. Its only consumers are `value`-printing
-example theories. Two honest options: keep it and say plainly in the theory text
-that it exists to render documentation figures from inside the session, or move
-those figures to the CLI and delete the emitter.
+example theories. Two honest options were open: keep it and say plainly in the
+theory text that it exists to render documentation figures from inside the
+session, or move those figures to the CLI and delete the emitter.
+
+**Decision: delete it.** Done so far, by reachability from the shipped roots
+(generated OCaml, every other `src` theory, and the example theories): seven
+constants and one lemma were reachable from *nothing* and are gone --- `region_label`,
+`graphviz_owner_of`, `cfg_assigned_vars`, `compiled_global_vars`,
+`context_keys_distinct` (+ `context_keys_distinct_imp_inj_on`), `enter_bindings`,
+`string_of_call_action`. All are in `scripts/retired_identifiers.txt`.
+
+What remains of the emitter is *not* free to delete: `raw_cfg_dot_lit`,
+`raw_cfg_dot_with_report_lit`, `analysis_graph_to_dot`, `contextual_analysis_dot`,
+`analysis_graph_nodes`/`_edges` and their private helpers form one closure reached
+from the example theories. `raw_cfg_dot_with_report_lit` alone pulls in
+`raw_cfg_dot_with_report`, `insert_dot_cluster_before_close`,
+`check_report_dot_cluster` and `check_report_html_label`, so deleting any member
+without porting its examples first breaks the rest --- confirmed by doing exactly
+that and reverting. Porting the example witnesses onto the structured export path
+is the remaining work, and it is gated on `codegen-check` plus the `08-tooling`,
+`11-graph-snapshot` and `13-full-state-dot` golden fixtures.
+
+### 2.3a Target architecture, and the sequence to reach it
+
+Decided: one spec, rendered outside Isabelle.
+
+```text
+Isabelle  ->  export_graph        nodes, edges, clusters, labels, state lines,
+                                  status.  No DOT.  No HTML.
+OCaml     ->  cli/dot_render.ml   GraphViz
+              cli/html_report.ml  HTML
+```
+
+Both renderers already consume `export_graph` and nothing else, so the spec
+exists; it is simply not yet the *only* thing Isabelle produces. `AGENTS.md`
+already requires the endpoint: witnesses reaching the GraphViz render surface
+belong in `Voblint_Examples_CLI`, "instead of being spread back through the
+domain folders". Eight of them are currently in `Examples/Interval` (6),
+`Examples/Parity` (1) and `Examples/Relational` (1), which is the violation that
+keeps `Analysis_GraphViz` below the CLI.
+
+Sequence, each step green before the next:
+
+1. Delete the eight DOT figures (`parity_dot`, `flagship_dot`, `twice_dot`,
+   `demo_dot`, `demo_rel_dot`, `nest_1_dot`, `nest_2_dot`, `twice_ctx_dot`) and
+   the `*_graph_config` / `*_graph_domain` definitions that exist only to feed
+   them. Verified: all eight have zero consumers outside their own file and none
+   reaches the generated OCaml. This is the accepted capability loss --- the
+   same pictures come out of `cli/dot_render.ml`.
+2. Repoint the imports those theories then no longer need. **Note:
+   `Example_Proc_Call` imports `Analysis_GraphViz` while using no constant from
+   it --- it is a conduit for `Analysis_GraphViz`'s own imports, and dropping the
+   line breaks seven commands. Replace it with the direct import instead.**
+3. Move the three witnesses that assert on graph *structure* rather than render
+   it (`Example_Interval_DG_Ctx_Flagship`, `Example_Interval_DG_CallString_K1`,
+   `_K2`, using `analysis_graph_wf` / `analysis_graph_nodes` / `_edges`) into
+   `src/Examples/CLI`, with the ROOT changes that implies.
+4. Move `Analysis_GraphViz` to `src/Executable_Surface/CLI/`; `Reporting/` then
+   disappears from `Voblint_Analysis_Base`.
+5. Delete the DOT/HTML emitter closure, which by then has no consumer.
+
+The gate for every step is `codegen-check` plus the `08-tooling`,
+`11-graph-snapshot` and `13-full-state-dot` golden fixtures. Reachability
+computed statically is *not* sufficient evidence here: repeated attempts to size
+this deletion from name-occurrence and regex closures gave answers spanning an
+order of magnitude, and the `Example_Proc_Call` conduit above is invisible to
+every one of them.
 
 What should not stand is the current bookkeeping. `AGENTS.md`'s module map still
-advertises `State_Report_GraphViz` as "the twelve `*_dot_auto` /
+advertises `State_Report_Graph` as "the twelve `*_dot_auto` /
 `*_graph_snapshot_auto`", the export block names `*_graph_snapshot_auto` and
 `*_export_auto`, and `state_report_dot_auto` / `full_state_dot_auto` /
 `entry_state_full_state_dot_auto_code` **do not exist anywhere in the tree** —
 their only nine surviving occurrences are prose mentions inside
-`State_Report_GraphViz.thy`'s own `text` blocks, describing the theory as if
+`State_Report_Graph.thy`'s own `text` blocks, describing the theory as if
 those entry points were still there.
 
 `Analysis_GraphViz` also contributes 121 of the tree's definitions against 2
@@ -224,7 +291,7 @@ exposes, not only through direct calls. Check both spellings.
 
 489 lines whose own header says "The purpose of this file is not a useful
 analysis". It demonstrates that a non-`abs_state` carrier discharges
-`sound_dg_spec` unchanged. That is a real result about the framework's
+`sound_dg_spec_core` unchanged. That is a real result about the framework's
 genericity and worth keeping — but it is a *demonstration*, and it sits in
 `src/Analysis/Instances/`, where every sibling is a shipped domain. It belongs
 next to its `Example_Relational_DG_Demo.thy`, not in the instance directory.
@@ -255,18 +322,18 @@ with their extra solver rules on top.
 
 The naming is also inconsistent in a way that hides the parallelism:
 `Sign_DG`/`Interval_DG` vs `Parity_Base_DG`/`Int_Base_DG` for the same role, and
-`Ivl_Exec` vs `Sign_Exec`/`Parity_Exec`/`Int_Exec`.
+`Interval_Exec` vs `Sign_Exec`/`Parity_Exec`/`Int_Exec`.
 
 ### 3.2 The `_lifted` mirror
 
-`unit_dg_spec_for` / `unit_dg_spec_for_lifted`, `unit_step_for` / `_lifted`,
+`ownership_split_dg_spec_for` / `ownership_split_dg_spec_for_lifted`, `ownership_split_step_for` / `_lifted`,
 `unit_combine_step_env_for` / `_lifted`, `unit_combine_step_assign_for` /
-`_lifted`, `gamma_unit` / `gamma_unit_lifted`, `formals_route` / `_lifted` /
+`_lifted`, `gamma_ownership_split` / `gamma_ownership_split_lifted`, `formals_route` / `_lifted` /
 `_gen` / `_lifted_gen`, `branch` / `branch_lifted` — each pair is structurally
 identical modulo the carrier (`'a abs_state` vs `'a abs_state lifted`) plus an
 `is_bot_pred`, and each pair is bridged by an explicit `*_agrees` lemma.
 
-Measured cost: blocks touching `lifted` are 252/2,473 lines of `DG_Framework`,
+Measured cost: blocks touching `lifted` are 252/2,473 lines of `DG_Constraint_Trees`,
 134/1,124 of `Routed_Context`, 203/2,318 of `DG_Soundness` — about 10% each.
 That is smaller than the shape suggests, so this is a medium-priority cleanup,
 not a large one. The right move is not a delete but a parameterization: the two
@@ -279,7 +346,7 @@ both, with the `*_agrees` lemmas becoming one generic lemma.
 `formals_route_lifted_gen` (38 uses) vs `formals_route_lifted` (7),
 `entry_state_route_gen` vs `entry_state_route`, `entry_exec_route_gen` vs
 `entry_exec_route`, `dg_tree_st_commute_for` vs `dg_tree_st_commute`,
-`sctx_entry_route_gen` / `ictx_entry_route_gen` vs their bases. In each case the
+`sign_conf_entry_route_gen` / `int_conf_entry_route_gen` vs their bases. In each case the
 generalized form carries the traffic and the base survives as a thin
 specialization — the "new API plus old-API shim" shape `AGENTS.md` calls a
 smell. Fold each base into the `_gen` form by instantiation and drop the name.
@@ -287,7 +354,7 @@ smell. Fold each base into the `_gen` form by instantiation and drop the name.
 ### 3.4 Misplaced size
 
 `src/Examples/Interval/Example_Interval_Placement.thy` is 2,903 lines — the
-largest file in the repository, larger than `DG_Framework` or `DG_Soundness`.
+largest file in the repository, larger than `DG_Constraint_Trees` or `DG_Soundness`.
 An example that outweighs the framework it exercises is doing something other
 than exemplifying.
 
@@ -353,9 +420,9 @@ prose. The worst cases:
 | --- | --- | --- |
 | `fun_of_dg_st` | `Exec_DG_Bridge`, `Exec_DG_Refines`, `Exec_DG_Trees`, `Exec_Sign_DG_Run`, `Run_Analysis_Sound`, **`Voblint.thy`** | the constant is `fun_of_dg_st_gen` |
 | `part_post_solution_dg_st_to_abs`, `dg_post_solution_collect_sound_ltr` | **`Voblint.thy`** (×3), `Run_Analysis_Sound` | gone |
-| `state_report_dot_auto`, `full_state_dot_auto`, `entry_state_full_state_dot_auto_code` | `State_Report_GraphViz` (9 mentions) | gone; see §2.3 |
-| `sound_dg_spec_ltr` | `DG_LTR_Sound` | renamed `sound_dg_spec_ltr_for` |
-| `analyse_interval_td`, `analyse_interval_td_at`, `analyse_interval_td_terminates` | `Interval_Checks`, `Interval_Ctx_Entry_State_Sound` | only `analyse_interval_td_result`/`_report` exist |
+| `state_report_dot_auto`, `full_state_dot_auto`, `entry_state_full_state_dot_auto_code` | `State_Report_Graph` (9 mentions) | gone; see §2.3 |
+| `sound_dg_spec_core_ltr` | `DG_LTR_Sound` | renamed `sound_dg_spec_core_ltr_for` |
+| `analyse_interval_td`, `analyse_interval_td_at`, `analyse_interval_td_terminates` | `Interval_Checks`, `Interval_Ctx_Entry_State_Sound` | only `analyse_interval_result`/`_report` exist |
 | `assume_sign_st`, `assume_not_sign_st`, `branch_parity_st_for` | `Sign_Backward`, `Parity_Exec` | gone |
 | `p_reg_join`, `p_reg_per_origin`, `analyse_sign_sound` | `Interval_Entry` | gone |
 | `collect_checks_prog`, `etf_combine_collect`, `gamma_eq_env`, `route_2_commute`, `csim_call_preservation`, `fun_of_st`, `fun_of_exec_dg_st` | various | gone |
@@ -417,7 +484,7 @@ Remaining markdown findings:
   routes through "`Sign_Exec_Sound` / `Interval_Exec_Sound`" and a
   `<domain>_exec_prog_at` constant. `exec_prog_at` does not exist anywhere in
   the tree; the live route is `*_Ctx_None_Sound` / `analyse_*_ctx_result_for`.
-- **`AGENTS.md` module map is stale** on `State_Report_GraphViz` (§2.3) and on
+- **`AGENTS.md` module map is stale** on `State_Report_Graph` (§2.3) and on
   the domain roster (§4).
 - **`docs/INDEX.md` does not mention `GOBLINT_ALIGNMENT_REGISTER.md`** — the
   index omits the living register.
@@ -482,11 +549,11 @@ roots.
 | Area | Dead (delete) | Unification (net) |
 | --- | ---: | ---: |
 | Original sweep (§1–§3, §7) | 1,193 | 740–980 |
-| `src/Core/Solver` (§9) | ~860 | ~250 |
-| `src/CFG` (§10) | ~550 | ~595 |
+| `src/Abstract_Interpreter/Framework/Solver` (§9) | ~860 | ~250 |
+| `src/Program_Model/CFG` (§10) | ~550 | ~595 |
 | `src/Analysis` (§12) | ~700 | ~4,440 |
-| `src/Core/Domain` + `Equations` (§13) | ~2,700 | ~370 |
-| `src/VIMP` + `src/CLI` (§11) | ~200 | ~1,230 |
+| `src/Abstract_Interpreter/Framework/Domain` + `Equations` (§13) | ~2,700 | ~370 |
+| `src/Program_Model/VIMP` + `src/Executable_Surface/CLI` (§11) | ~200 | ~1,230 |
 | **Total** | **≈6,200** | **≈7,600** |
 
 **≈13,800 lines, or 16% of the 85,574-line tree.** Two caveats on that number:
@@ -565,23 +632,21 @@ the domain name away and measuring line-level similarity:
 Compare `Sign_Ctx_None_Sound` vs `Parity_Ctx_None_Sound` at 0.83 (§3.1). The
 examples differentiate; the instances copy. No unification opportunity here.
 
-### 7.3 Duplicated example programs: two, both trivial
+### 7.3 Duplicated example programs: one remains
 
-Of 49 distinct `program { ... }` blocks in the tree, exactly two are defined
-twice:
+The audit found two duplicated `program { ... }` blocks:
 
 - `x := 0; while (x < 20) { x := x + 1 }` — `flagship_prog`
   (`Example_Interval_DG_Flagship`) and `loop_prog`
   (`Example_Interval_Loop_Coverage`).
-- the `global g; void bump(n) { g := g + n; return g }` program —
-  `nestg_program` (`Example_Interval_DG_CallString_K1`) and `gcall_prog`
-  (`Example_Interval_DG_Ctx_Globals_Regression`).
+- The duplicated `global g; void bump(n) { g := g + n; return g }` examples
+  were removed after equivalent CLI regressions covered the behavior.
 
-Cheap to share, low value either way.
+The remaining loop duplicate is cheap to share and low value to change.
 
 ### 7.4 `Example_Interval_Placement.thy` is not an example
 
-2,904 lines — the largest file in the repository, larger than `DG_Framework`
+2,904 lines — the largest file in the repository, larger than `DG_Constraint_Trees`
 (2,472) or `DG_Soundness` (2,318). 2,451 of those lines are `lemma`, against 48
 `by eval` and 49 structured `proof` blocks. Its sibling
 `Example_Sign_Placement.thy` (957) shares the section skeleton at 0.08
@@ -635,7 +700,7 @@ kept alive alongside the one the CLI uses.
 
 **They are not deletable.** `GOBLINT_ALIGNMENT_REGISTER.md`'s D/G-reconstruction
 row cites `Example_Sign_Placement.thy` and `Example_Interval_Placement.thy` as
-the concrete counterexamples distinguishing `gamma_unit gs` from `gamma_join` —
+the concrete counterexamples distinguishing `gamma_ownership_split gs` from `gamma_join` —
 they are load-bearing evidence for a documented architectural claim. The
 finding is that 3,861 lines is a disproportionate way to carry that evidence,
 and that ~1,500 of it is framework work misfiled as an example.
@@ -659,7 +724,7 @@ already visible defects rather than hygiene.
 
 | Path | Evidence |
 | --- | --- |
-| `scripts/migrate_pcompletes.py` | zero inbound references; `:13-21` targets six files, five of which no longer exist (`src/VIMP/IMP2_Bridge.thy`, `src/VIMP/IMP2_VCG_Example.thy`, three under the deleted `src/Formalization/`). It cannot run. |
+| `scripts/migrate_pcompletes.py` | zero inbound references; `:13-21` targets six files, five of which no longer exist (`src/Program_Model/VIMP/IMP2_Bridge.thy`, `src/Program_Model/VIMP/IMP2_VCG_Example.thy`, three under the deleted `src/Formalization/`). It cannot run. |
 | `scripts/rename_greek_vars.py` | zero inbound references; a one-shot rename that landed 2026-06-15 |
 | `scripts/extract_vimp_grammar.py` | `:1-2` self-declares "Feasibility prototype" — extract the grammar IR *from* `VIMP_Notation.thy`. That question is settled: `grammar/vimp.yaml` is canonical. Only inbound reference is a comment in `gen_vimp_isabelle.py:50` |
 | `docs/generated/DEFINITIONS_OVERVIEW.md` | **tracked, 1.2 MB**, although `scripts/extract_definitions.py:8-9` says its output is "intended as a gitignored, regenerable index — not a source of truth". Indexes 194 of the 215 theories. Nothing regenerates or gates it. Gitignore it plus add a pixi task, or delete it |
@@ -837,7 +902,7 @@ every combination is decided by `valid_analysis_config`, "not by a second,
 hand-maintained OCaml compatibility table". But `:572-658` are seven
 hand-written rejection rules, and every graph and HTML path (`:673-713`,
 `:774-815`) bypasses the dispatcher entirely — those route on `!context_kind` /
-`!context_graph` directly into `State_Report_GraphViz.*_auto`, which take a bare
+`!context_graph` directly into `State_Report_Graph.*_auto`, which take a bare
 `analysis_domain`, not a config. The verified dispatcher covers only the three
 `analyse_config*` text paths at `:816-827`. Suspected consequence, not
 confirmed: `main.ml:689`'s `failwith "unsupported --analysis/--solver
@@ -850,42 +915,42 @@ rather than re-deriving the ordering, and fails closed on a length mismatch;
 reconstructed in OCaml, and the file documents that this was deliberately moved
 into the verified layer. That is the model the rest of `cli/` should follow.
 
-## 9. `src/Core/Solver` (15,168 lines)
+## 9. `src/Abstract_Interpreter/Framework/Solver` (15,168 lines)
 
 ### 9.1 Confirmed dead — verified with prose stripped
 
 | Item | Site | Lines | Evidence |
 | --- | --- | --- | --- |
-| `TD_side_always_join_solve_Inr_rg` + its 4-way `pinduct` `TD_side_always_join_rg_ind` | `Solver_Side_RG.thy:143-318` | **176** | one code occurrence: the lemma line. Its mirror half (`..._warrowing_apinis_...`, `:477-702`) *is* live via `Interval_Warrowing.thy`. The theory's genuinely load-bearing content is the 12-line `solve_dom_of_solve_c`, cited from 18 files |
-| `td_cfg_side_solver_dg` locale | `DG_Framework.thy:2360-2463` | **104** | never interpreted, never `sublocale`d, named nowhere. Its header claims it gives a mechanical `TD_side_mono` interpretation "for any `side_cfg_T_eff_keyed_seed_dg` instance"; no instance takes it |
+| `TD_side_always_join_solve_Inr_rg` + its 4-way `pinduct` `TD_side_always_join_rg_ind` | `Solver_Side_RG.thy:143-318` | **176** | one code occurrence: the lemma line. Its mirror half (`..._warrowing_apinis_...`, `:477-702`) *is* live via `Interval_Warrowing.thy`. `solve_dom_of_solve_c` -- the theory's only cross-domain-cited fact at the time of this audit -- has since moved to `Voblint_Solver.Solver_Menu`, which now owns the generic `solve_c`/`part_post_solution` bridge; nothing left in this file is cited outside its own `..._warrowing_apinis_...` mirror half |
+| `td_cfg_side_solver_dg` locale | `DG_Constraint_Trees.thy:2360-2463` | **104** | never interpreted, never `sublocale`d, named nowhere. Its header claims it gives a mechanical `TD_side_mono` interpretation "for any `routed_node_rhs` instance"; no instance takes it |
 | `unit_routed_context_hetero` locale | `Routed_Context_Unit.thy:168-243` | 76 | never interpreted. Header claims domains reach the adapter theorems "by interpreting this locale instead of re-deriving them per domain" — no domain does |
 | ten `fst_/snd_dgs_*_for` shape lemmas | `Exec_DG_Refines.thy:655-731` | 77 | untagged, uncited. Header states the intended caller explicitly; there is none |
-| six mono/static-deps lemmas for the pre-`_at` tree formers | `DG_Framework.thy:466-553` | 88 | superseded by `apply_dg_spec_at`; no analysis cites any of the six |
+| six mono/static-deps lemmas for the pre-`_at` tree formers | `DG_Constraint_Trees.thy:388-463` (line range shifted by the `_at`-specialization reorder; content and dead-code status unchanged) | 76 | superseded by `apply_dg_spec_at`; no analysis cites any of the six |
 | `analyse_report_ctx` + `analyse_report` + two soundness theorems | `DG_Analysis_Adapter.thy:244-311` | 68 | `analyse_result` in the same locale is live; only the report projection is dead |
-| `pair_of_dg`/`dg_of_pair`/`merge_dg`/`split_dg` + six `[simp]` rules | `DG_Framework.thy:194-242` | 49 | the four constants occur only inside this window, so the six rewrite rules are permanently inert |
-| `monovariant_analysis_result_for` + 2 lemmas | `Monovariant_Analysis_Result.thy:170-210` | 41+34 | superseded *within its own file* by `ctx_solved_for`, which is what the adapters go through. Its 34-line header names three adapters as consumers; none references it |
-| `buffer_eqs` + 5 lemmas | `Side_Buffering.thy:131-136, 266-288` | 29 | the pipeline calls tree-level `buffer_sides` directly (`DG_Framework.thy:1681`); the buffered *system* wrapper is never applied |
-| `dgs_enter_pair` + 2 `[simp]` projections | `DG_Framework.thy:590-614` | 25 | see §9.3 G5 |
+| `pair_of_dg`/`dg_of_pair`/`merge_dg`/`split_dg` + six `[simp]` rules | `DG_Constraint_Trees.thy:194-242` | 49 | the four constants occur only inside this window, so the six rewrite rules are permanently inert |
+| `monovariant_analysis_result_for` + 2 lemmas | deleted | 41+34 | was superseded *within its own file* by `ctx_solved_for`, which is what the adapters go through; its 34-line header named three adapters as consumers and none referenced it. Removed once an audit showed zero executable uses, zero theorem uses and zero checked antiquotations |
+| `buffer_eqs` + 5 lemmas | `Side_Buffering.thy:131-136, 266-288` | 29 | the pipeline calls tree-level `buffer_sides` directly (`DG_Constraint_Trees.thy:1681`); the buffered *system* wrapper is never applied |
+| `dgs_enter_pair` + 2 `[simp]` projections | `DG_Constraint_Trees.thy:590-614` | 25 | see §9.3 G5 |
 | smaller: `cs_project_gk`, `seed_predecessor_addr_list`, `cs_route_project_ctx`, `proj_local_ge_refl`, `val_at` + 2, five `cs_route_*`/`cs_context_*` lemmas, `threefold_monoD_*` | various | ~90 | each uncited; several carry "any **future** …" or "should one ever be wanted" framing |
 
 **The one that is not merely dead — `publish_seed` encodes the opposite convention from the code.**
-`DG_Transfer_Combinators.thy:78-79` defines `publish_seed key x = depend_on key (DG bot x) (answer (DG bot bot))` — payload in the **`globs`** half. The actual seed publication (`Routed_Context.thy:87-88`) writes `depend_on (seed_key (FunctionEntry p) ctx') (DG entry bot) ...` — payload in the **`locals`** half, which is how `routed_extra_g` (`:136`) reads it back with `answer_local (locals seed_state)`. The surrounding 20-line doc block asserts the wrong convention twice and claims "a routed context-sensitive analysis uses one of each per call" — it uses `publish_global` and zero `publish_seed`. Also verified: `publish_global` and `publish_seed` are **textually identical** definitions, as are their `_cont` forms. Four names, two bodies, one wrong comment. Deleting the seed pair removes a trap for the next person who reaches for it.
+`DG_Transfer_Combinators.thy:78-79` defines `publish_seed key x = depend_on key (DG bot x) (answer (DG bot bot))` — payload in the **`globs`** half. The actual seed publication (`Routed_Context.thy:87-88`) writes `depend_on (seed_key (FunctionEntry p) ctx') (DG entry bot) ...` — payload in the **`locals`** half, which is how `routed_entry_seed_tree` (`:136`) reads it back with `answer_local (locals seed_state)`. The surrounding 20-line doc block asserts the wrong convention twice and claims "a routed context-sensitive analysis uses one of each per call" — it uses `publish_global` and zero `publish_seed`. Also verified: `publish_global` and `publish_seed` are **textually identical** definitions, as are their `_cont` forms. Four names, two bodies, one wrong comment. Deleting the seed pair removes a trap for the next person who reaches for it.
 
 ### 9.2 Unification
 
 - **`activation_collect_sound` vs `_gen`, `valid_ltr_ctx_sound` vs `_gen`** (`Activation_Backbone.thy:24-90`, `Activation_Local_Sound.thy:37-118`): identical proofs modulo `gamma_state` vs `gammaM`. The `_gen` header already says the specialization is "accidental". Both base names are used externally, so keep them — as `lemmas X = X_gen [where gammaM = gamma_state]`. **Saves ~84 of 211 lines.**
-- **Base tree formers vs `_at` formers** (`DG_Framework.thy`): four constant pairs, two full duplicated lemma sets (9 + 7 lemmas), and **four proved-but-uncited bridge lemmas** (`dg_edge_tree_as_at` `:428`, `apply_dg_spec_as_at` `:1555`, …). The collapse is already proved and nobody uses it. ~94 lines of parallel definition; the six inert mono lemmas above are the free half.
+- **Base tree formers vs `_at` formers** (`DG_Constraint_Trees.thy`): four constant pairs, two full duplicated lemma sets (9 + 7 lemmas), and **four proved-but-uncited bridge lemmas** (`dg_edge_tree_as_at` `:428`, `apply_dg_spec_as_at` `:1555`, …). The collapse is already proved and nobody uses it. ~94 lines of parallel definition; the six inert mono lemmas above are the free half.
 - **Twelve identical `metis` calls** — `by (metis map_prod_simp snd_conv surj_pair)` ×6 and the `fst_conv` variant ×6 across `Exec_DG_Generator.thy` and `Exec_DG_Trees.thy`. Two named `[simp]` lemmas (`fst (map_prod f g p) = f (fst p)`, `by (cases p) simp`) turn all twelve into `by simp`. This is the densest `metis` cluster in the project, in a file with 19 of the scope's 26 `metis` calls.
 - **`cs_route` and `cs_context` are the same function** (`Call_String_Context.thy:31, 39`) — both `take k (u # ctx)`, both ignoring their last argument. Six lemmas exist in mirrored pairs, five of them uncited.
 - **`proj_local_ge` / `proj_global_ge`** (`Call_String_Solver_Projection.thy:78-131`): identical `foldr`-domination inductions. One `foldr_guarded_sup_ge` lemma makes both one-liners. 54 -> ~14.
-- **Severable but load-bearing, not dead**: the `_placed` family (`unit_dg_spec_placed` and the `gamma_join` soundness section, ~210 lines) is absent from the OCaml and reached only from `Sign_DG.thy` and two Examples — but `sound_dg_spec_unit_placed` is a real theorem that `Sign_DG.thy:36` interprets. Treat as a demonstration family with a known cost.
+- **Severable but load-bearing, not dead**: the `_placed` family (`ownership_split_dg_spec_placed` and the `gamma_join` soundness section, ~210 lines) is absent from the OCaml and reached only from `Sign_DG.thy` and two Examples — but `sound_dg_spec_core_unit_placed` is a real theorem that `Sign_DG.thy:36` interprets. Treat as a demonstration family with a known cost.
 
 ### 9.3 Goblint findings beyond the register
 
 Drift (register statements no longer true), independently reproducing §4's D1 and adding four:
 `analysis-defined call contract missing` is superseded by the same three `dg_spec` fields;
 `the collecting-soundness certificate is the remaining proof` is contradicted by
-`sctx_entry_activation_collect_sound` and the `Int` counterpart, both proved;
+`sign_conf_entry_activation_collect_sound` and the `Int` counterpart, both proved;
 **`point_digest` / `ENTER_MONO`, cited as the closure path, occur nowhere in `src/`** — removed
 in the digest-removal commits; and `Update rules ... Default TD-side behavior only. Open`
 contradicts `Solver_Menu.thy:63-70`'s four rules and the register's own line 146.
@@ -898,7 +963,7 @@ Gaps not recorded:
 - **G4 — the supplied `combine_env#` may only move upward.** `Constraint_System.thy:837-839` states soundness against the fixed concrete split `λx. if gs x then t x else s x`. The field's own motivation names Goblint's `varEq`, "whose `combine_env` meets the callee exit with a taint-filtered caller state" — a *meet*, which this obligation does not admit. The hook is free; its soundness contract is not.
 - **G5 — the `enter`-returns-a-pair protocol is documented only by dead constants.** `dgs_enter_pair` and its flat twin `tf_enter_pair` (`Constraint_System.thy:674`) both state the pair shape and are both dead; the generator calls the halves separately.
 
-## 10. `src/CFG` (9,295 lines)
+## 10. `src/Program_Model/CFG` (9,295 lines)
 
 ### 10.1 The finding to act on first: the CLI's well-formedness gate is not connected to its own soundness premises
 
@@ -909,7 +974,7 @@ Gaps not recorded:
 
 Every soundness theorem in the project instead assumes
 `wf_compile_input (declared_global p) ...` — verified across all four
-`src/CLI/Entry/*_Entry.thy`, `Analyse_Dispatch.thy` (six sites), and
+`src/Executable_Surface/CLI/Entry/*_Entry.thy`, `Analyse_Dispatch.thy` (six sites), and
 `src/Soundness/` (sixteen sites).
 
 Searching all of `src/` for a bridge: `wf_program_compile_input_exec` appears only
@@ -938,7 +1003,7 @@ conjunct verbatim. No soundness theorem takes `wf_cfg g` as a premise.
 **`frames_match` is not used by the simulation relation it was written for.**
 `csim` (`Control_Simulation.thy:1280-1298`) recurses structurally instead; the
 predicate's entire six-lemma inversion suite is uncited (~37 lines). Outside
-`src/CFG` it is consumed only by two regression witnesses.
+`src/Program_Model/CFG` it is consumed only by two regression witnesses.
 
 `control_at_call_edge` (`Control_Simulation.thy:132-190`, 59 lines) — the file's
 own prose says `control_at_seq_after_call_edge` "generalises" it; its five
@@ -1007,17 +1072,17 @@ checker does not resolve:
   `etf_enter` and `etf_combine_collect`, constants from a deleted record that survive only
   in an untracked `.thy~` backup. The transfer bundle is now `dg_spec`, where the single
   combine is three fields. Structural note: `CFG_Prune` is in `Voblint_CFG`, *upstream* of
-  `Voblint_Core` — the prose cites downstream constants across a session boundary, which is
+  `Voblint_Framework` — the prose cites downstream constants across a session boundary, which is
   how it drifted unnoticed.
 - **`LTR_Abstract.thy:220-224`** names three deleted lemmas and describes a migration
   ("once `activation_collect` itself is redefined against `ctx_key`") that already landed —
-  and misplaces the definition, which is in the same session at `CFG_Local_Trace.thy:990`.
+  and misplaces the definition, which is in the same session at `LTR_Def.thy:990`.
 
-## 11. `src/VIMP`, `src/CLI`, `src/Soundness`, `src/Codegen`
+## 11. `src/Program_Model/VIMP`, `src/Executable_Surface/CLI`, `src/Soundness`, `src/Executable_Surface/Codegen`
 
 ### 11.1 Dead
 
-`state_report_dot` (`State_Report_GraphViz.thy:157`) — confirms §2.3 from the other
+`state_report_dot` (`State_Report_Graph.thy:157`) — confirms §2.3 from the other
 direction. `is_bottom_abstract_value` (`:47`) — its sibling `is_top_abstract_value` is
 live and in the OCaml, so the asymmetry is real;
 `docs/VERIFICATION_CHAIN_AND_TRUST_BOUNDARY.md:314` records the CLI-side caller being
@@ -1054,26 +1119,32 @@ prose-stripped lines:
 | `..._result_node_sound_for` (Sign vs Parity) | 149 / 101 | 0.77 | 58 |
 
 Ten of the twelve corollaries are character-identical modulo the domain token. And the
-generic lemma the bundle needs **already exists**: `Sign_Checks.thy:191` is literally
-`lemmas sctx_result_node_sound = sctx_adapter.analyse_result_node_sound`, and
-`Int_Ctx_None_Sound.thy:574` re-exports the same `dg_analysis_adapter` fact. One locale
+generic lemma the bundle needs **already exists**:
+`dg_analysis_adapter.analyse_result_node_sound` (`DG_Analysis_Adapter.thy`), which each
+domain re-exported under a spine prefix of its own. One locale
 fixing the spine (`sol_prog`, `terminates_prog`, `sigma_abs`, `cinit_st`, `result_for`,
 `report_for`, `classify`) proves the bundle once; each domain contributes an
 `interpretation` supplying six facts it already has. Int's `mode` needs no special case —
-`ictx_sol_prog_warrow mode` is already the partially-applied spine. **~1,478 -> ~400.**
+`int_conf_sol_prog_warrow mode` is already the partially-applied spine. **~1,478 -> ~400.**
+
+That locale now exists as `unit_dg_analysis` (`Unit_DG_Analysis.thy`), and Sign has moved
+onto it: `Sign_Assembly.thy` is one `global_interpretation`, `Sign_Exec_Sound.thy` is
+deleted, and the node-soundness bundle is `unit_dg_analysis.result_node_sound_closure`
+proved once inside the locale. Interval and Parity interpret it beside their own
+`_Exec_Sound` construction; Int has not moved.
 
 Two free wins that need no locale: 59 of the 71 lines separating Sign from Parity are
 Sign restating eight already-named facts as explicit `show`s where the other three
 domains write `[OF ...]` — converting deletes **~48 lines from `Sign_Entry.thy` with no
 semantic change**. And `Sign_Entry.thy:333-489` is **157 lines (32% of the file) of demo
-programs and `by eval` lemmas that do not belong in this session**: `src/CLI/ROOT:3-7`
+programs and `by eval` lemmas that do not belong in this session**: `src/Executable_Surface/CLI/ROOT:3-7`
 describes `Voblint_CLI` as "independent of the demonstration and regression theories",
 and `src/Soundness/README.md` gives the reason ("Theorems only ... so this session builds
 without the slow codegen and `value` runs"). The other three Entry files have no such
 block, and the prose itself says these mirror `tests/regression/03-procedures/` fixtures
 that already exist.
 
-### 11.3 `State_Report_GraphViz.thy`
+### 11.3 `State_Report_Graph.thy`
 
 Six `_graph_snapshot_auto` / `_export_auto` pairs differ in **exactly one token**
 (`raw_cfg_canonical_text_lit` vs `raw_cfg_export`) — one `..._with` per family plus 12
@@ -1085,11 +1156,17 @@ difference is not the context policy: **`cs_ctx_graph_config` is domain-generic 
 them saves ~120 lines *and* removes the only reason the entry-state renderer is
 Interval-only.
 
+The genericity half of that has landed: `entry_state_ctx_graph_config` takes the domain's
+entry transfer and its `abstract_value` injection as parameters, and
+`entry_state_ctx_export_auto`/`_graph_snapshot_auto` (`State_Report_Entry_Ctx.thy`) draw
+all five domains, each at the solver its own routed instance publishes. The
+`entry_state_ctx_*`/`cs_ctx_*` duplication itself stands.
+
 ### 11.4 `Voblint_CLI`'s dependency on `Voblint_Soundness` is vestigial
 
 **Verified**: `Run_Analysis_Sound.thy` declares 19 names; **none of them occurs anywhere
-in `src/CLI`** with prose stripped. All four Entry theories import
-`Voblint_Soundness.Run_Analysis_Sound` and `src/CLI/ROOT` carries the session dependency
+in `src/Executable_Surface/CLI`** with prose stripped. All four Entry theories import
+`Voblint_Soundness.Run_Analysis_Sound` and `src/Executable_Surface/CLI/ROOT` carries the session dependency
 solely to resolve those imports. This falsifies `AGENTS.md`'s contract statement that
 `Voblint_Soundness` "contains ... the per-domain, per-context instantiations the CLI
 dispatches to, so it is not a leaf: `Voblint_CLI` imports it" — those instantiations live
@@ -1132,16 +1209,16 @@ itself is correct — `check_codegen_modules.py` passes.
 `Parity_Base_DG.thy` (74), `Interval_DG.thy` (86, one Example consumer).
 
 The `<D>_Base_DG` pair (228 lines) is dead in an instructive way: each places an
-`interpretation ... : sound_dg_spec` **inside a `context fixes gs ... end` block**,
+`interpretation ... : sound_dg_spec_core` **inside a `context fixes gs ... end` block**,
 so the facts never escape the context — and neither file's own theorems cite them
-(they prove themselves from `base_dg_spec_st_for_lifted_dg_spec_step_commute`
-directly). The interpretations are inert *and* the twelve `*_base_dg_spec_*_commute`
+(they prove themselves from `local_state_dg_spec_st_for_lifted_dg_spec_step_commute`
+directly). The interpretations are inert *and* the twelve `*_local_state_dg_spec_*_commute`
 theorems beside them have zero citations. Both files exist only as import edges.
 
 The `<D>_DG` family (429 lines) is different: `sign_dg_api` / `ivl_dg_api` /
 `int_{never,once,fixpoint}_dg_api` are never interpreted and
 `<D>_dg_post_solution_collect_sound` is never cited, but these are *real terminal
-soundness theorems*. The shipped pipeline runs through `base_dg_spec_*` +
+soundness theorems*. The shipped pipeline runs through `local_state_dg_spec_*` +
 `dg_ctx_activation_base` and never reaches them. That is the project's own
 "instantiation gap" pattern in reverse — the abstract statement exists and no
 concrete path arrives at it. The `int_*_dg_api_trivial_gs` lemmas prove
@@ -1150,7 +1227,7 @@ non-vacuity, which suggests the authors already knew.
 Dead constants: five more in `Analysis_GraphViz.thy` beyond the ones in §1
 (`prog_cfg_edges`, `prog_cfg_calls`, `no_annotations`,
 `compiled_domain_graph_config`, `enter_action_label`); `congruence_fact_of_parity`
-+ its `[simp]` gamma lemma (`Int_Domain.thy:222-228`), superseded by
+- its `[simp]` gamma lemma (`Int_Domain.thy:222-228`), superseded by
 `restrict_congruence_by_parity` which is what `congruence_fact_of_int_dom`
 actually calls. Plus proved-and-never-consumed lemma families:
 `fun_of_st_top_<D>_st` ×4, `<D>_tf_st_for_reduces` ×5 (only Interval's is used —
@@ -1189,7 +1266,7 @@ domain already proves (`<D>_tf_st_for_commute`, `<D>_enter_st_for_commute`,
 `<D>_is_sound_transfer_for`, `fun_of_st_cinit_<D>_st_for`). Nothing else.
 
 **And the pattern is already in the codebase, on the other axis.**
-`Interval_Ctx_None_Sound.thy:152`'s `ictx_solved` locale factors the *solver* axis
+`Interval_Ctx_None_Sound.thy:152`'s `int_conf_solved` locale factors the *solver* axis
 correctly: four update rules contribute four `global_interpretation`s over one
 locale whose single assumption is `part_post_solution` of the shared system.
 Diffing its PerOrigin block against its warrowing block shows only the
@@ -1226,7 +1303,7 @@ is that `global_interpretation` needs ground arguments for its `defines`. One
 eight Ctx files takes `is_bot_pred` as a parameter, and every context reasoning
 about it carries `assumes exact: "is_bot_pred s = is_bot_state (fun_of_... gs s)"`
 — an assumption that determines the parameter extensionally from `gs`. Across
-`src/Analysis`, `src/Examples`, `src/CLI` and `src/Soundness` the **only** value
+`src/Analysis`, `src/Examples`, `src/Executable_Surface/CLI` and `src/Soundness` the **only** value
 ever passed is `resolved_st_q_is_bot_for (declared_global_vars p)`, at 27 sites.
 Caveat worth checking before removing it: the parameter may be hoisting
 `declared_global_vars p` out of the executable inner loop, in which case the fix
@@ -1306,7 +1383,13 @@ and actually reached. Congruence has no `_Transfer`, `_Exec`, `_DG`, `_Checks` o
 `_Ctx_*` layer at all, because it is only a product component — and it is the
 leanest domain per line of real mathematics in the directory.
 
-## 13. `src/Core/Domain` and `src/Core/Equations`
+## 13. `src/Abstract_Interpreter/Framework/Domain` and `src/Abstract_Interpreter/Framework/Equations`
+
+> **2026-08-31 correction.** The selector unification proposed in §13.2 has
+> landed. `combine_env` is generic in key and codomain; frame entry, abstract
+> restrictions, and executable projections derive from it. `Split_State` and
+> the unused `merge_dg`/`split_dg` conversion cluster were deleted. The audit
+> below records the pre-refactor evidence that motivated that change.
 
 Two of my open questions resolve **against** the suspicion: **`Exec_Placement.thy`
 and `Split_State.thy` are both genuinely proof-load-bearing** despite
@@ -1314,7 +1397,7 @@ contributing nothing to the export. `Exec_Placement`'s `scope_locations`,
 `project_resolved_on{,_strict}` and ~15 lemmas are consumed by `Exec_DG_Trees`,
 `Exec_DG_Generator`, `Exec_DG_Refines` and three Examples; `Split_State`'s
 `project_component`, `merge_state`, `split_state` and the classic split
-predicates are consumed by `DG_Framework`, `DG_Soundness` and `Sign_DG`. Their
+predicates are consumed by `DG_Constraint_Trees`, `DG_Soundness` and `Sign_DG`. Their
 OCaml absence is worth nothing as evidence — `project_component` and
 `restrict_local_for` are also absent and are core to the DG soundness proof.
 
@@ -1354,7 +1437,7 @@ OCaml absence is worth nothing as evidence — `project_component` and
 
 **Suspected, not settled:** `Exec_Refinement.thy` (173 lines) has zero external
 references to any of its 14 items, but eight are `[simp]` and may fire implicitly
-inside `Exec_DG_Refines`/`Ivl_Exec` proofs. The theory is imported by six others
+inside `Exec_DG_Refines`/`Interval_Exec` proofs. The theory is imported by six others
 purely as a path to `Exec_St` + `State_Restriction`. Settle it by stripping the
 `[simp]` tags and rebuilding.
 
@@ -1367,8 +1450,9 @@ purely as a path to `Exec_St` + `State_Restriction`. Settle it by stripping the
   identical modulo constructor names — `point_state` even copies `lifted`'s
   `(plugins del: quickcheck_narrowing)` workaround. Downstream, `gamma_point` ≈
   `gamma_lift`, `normalize_point` ≈ `normalize_lift`, and
-  `normalize_point_canonicalize_lift_eq_old` literally proves the two towers agree
-  — and is itself dead. Type synonyms plus constructor abbreviations let both
+  `normalize_point_canonicalize_lift_eq_old` (since deleted along with the rest
+  of the confirmed-dead `normalize_point_*` family below) literally proved the
+  two towers agree. Type synonyms plus constructor abbreviations let both
   inherit all eight instances instead of re-proving four each: **123 lines of
   instantiation plus ~116 of the `normalize_point_*` family.** A real refactor
   (pattern matching in `fun` definitions has to be rewritten), not a rename.
@@ -1411,7 +1495,7 @@ IMP2-vs-VIMP naming drift, and adds:
 - **The `D`/`G` payload split has landed at the type level, and the register still
   files it as an unstarted "high-cost stretch."** `('l,'g) split_state`,
   `datatype ('l,'g) dg_state`, `record ('dl,'dg) dg_spec` with every field typed
-  `... ⇒ 'dl ⇒ 'dg ⇒ 'dg × 'dl`, and `base_dg_spec_for_lifted` leaving `'g` free.
+  `... ⇒ 'dl ⇒ 'dg ⇒ 'dg × 'dl`, and `local_state_dg_spec_for_lifted` leaving `'g` free.
   What is *actually* still true is narrower and worth stating precisely: **no live
   instance varies the parameter** — every one pins `('a, 'a)` — and
   `merge_state`/`split_state`/`merge_dg`/`split_dg` are monotyped at `('a,'a)`, so
@@ -1435,7 +1519,7 @@ IMP2-vs-VIMP naming drift, and adds:
 - **The `combine_env`/`combine_assign` split is nominal — the work sits in the
   wrong halves.** Goblint: `combine_env` handles globals and effects with no
   result assignment; `combine_assign` writes only the destination. Here
-  `DG_Base.thy:47-51` sets `dgs_combine_env = (λci dc de g. (g, dc))` — the
+  `DG_Local_State_Spec.thy:47-51` sets `dgs_combine_env = (λci dc de g. (g, dc))` — the
   identity on the caller continuation — while `dgs_combine_assign` does *both* the
   global merge and the destination write. The record has Goblint's field names but
   not Goblint's factorization.
@@ -1466,7 +1550,7 @@ IMP2-vs-VIMP naming drift, and adds:
    `git status --porcelain` so a newly emitted file cannot pass silently.
 5. **U1: one Core locale for `<D>_Ctx_None_Sound`** (§12.2). The largest single
    win in the tree, and the pattern already exists one axis over in
-   `ictx_solved`.
+   `int_conf_solved`.
 6. **U5: collapse the `refine_mode` triplication** (§12.2) — byte-verified, and
    every underlying operation already takes `mode`.
 7. **Convert prose references to `\<^const>\<open>...\<close>`** (§5.1) so the

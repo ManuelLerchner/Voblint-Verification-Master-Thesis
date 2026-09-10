@@ -24,7 +24,7 @@ generically but cannot be assembled against the current trace semantics.
 
 ### 1.1 Trace witness — `EA_Enter` is folded into the generic edge rule
 
-`src/CFG/Collecting/CFG_Collect_Trace.thy:83`
+`src/Program_Model/CFG/Collecting/CFG_Collect_Trace.thy:83`
 
 ```
 inductive trace_witness g S where
@@ -147,7 +147,7 @@ side_cfg_T_eff_cmp_seed gkey cmb frame_seed g etf bot0 s0 = (λ(v, c).
 
 with `is_frame_entry g v = (enter_predecessor_list g v ≠ [])` and
 `non_enter_predecessor_list = filter (λ(u,a). a ≠ EA_Enter) ...`
-(`src/CFG/CFG_Def.thy:216`–`223`). At a frame entry:
+(`src/Program_Model/CFG/CFG_Def.thy:216`–`223`). At a frame entry:
 
 * the seed `frame_seed c` supplies the callee's entry abstraction at the **callee**
   context `c` (for the clean spine, `restrict_global` of the caller slot);
@@ -249,7 +249,7 @@ is a witness change. **Rejected, with the counterexample above.**
 Two theories, to keep the CFG session free of solver dependencies (mirrors how the
 pure `context_transfer` locale lives in `CFG_Collect_Trace`):
 
-* `src/CFG/Collecting/CFG_Collect_Activation.thy` — the **pure** activation witness,
+* `src/Program_Model/CFG/Collecting/CFG_Collect_Activation.thy` — the **pure** activation witness,
   parametric in an abstract context carrier; forgetful + collapse theorems. No
   solver, no domain.
 * `src/Analysis/Generic/Solver/Context/Seeded_Activation_Sound.thy` — the seeded
@@ -429,7 +429,7 @@ or CFG interfaces") is satisfied — it can.
 1. `feat(dgc): pure activation-separated collecting witness` — new
    `CFG_Collect_Activation.thy`: `trace_witness_act`, `cfg_collect_trace_act`,
    `cfg_collect_ctx_act`, `trace_witness_act_imp`, `cfg_collect_ctx_act_le_collect`.
-   Add to `src/CFG/ROOT`. Build `Voblint_CFG`. *(No soundness — pure semantics +
+   Add to `src/Program_Model/CFG/ROOT`. Build `Voblint_CFG`. *(No soundness — pure semantics +
    collapse. Low risk.)*
 2. `feat(dgc): generic seeded activation-collecting soundness` — new
    `Seeded_Activation_Sound.thy`: `seeded_activation_collecting_sound`, wiring the

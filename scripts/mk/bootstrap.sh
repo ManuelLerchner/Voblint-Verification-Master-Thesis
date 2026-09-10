@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# Bootstrap: build all 5 upstream sessions in topological order (fresh
-# clone, no heaps). Uses -d (not -D) per session to avoid validating
-# downstream sessions before upstream heaps exist.
+# Bootstrap: build the upstream sessions in topological order (fresh
+# clone, no heaps), one target session per invocation so each session is
+# validated only once its parents have heaps.
 set -euo pipefail
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/require-afp.sh"
-
-"$ISABELLE" build -v -N -d "$AFP" -d "$TD_DIR" -d "$REPO_ROOT/src/VIMP" Voblint_VIMP
-"$ISABELLE" build -v -N -d "$AFP" -d "$TD_DIR" -d "$REPO_ROOT/src/VIMP" -d "$REPO_ROOT/src/CFG" Voblint_CFG
-"$ISABELLE" build -v -N -d "$AFP" -d "$TD_DIR" -d "$REPO_ROOT/src/VIMP" -d "$REPO_ROOT/src/CFG" -d "$REPO_ROOT/src/Core" Voblint_Core
-"$ISABELLE" build -v -N -d "$AFP" -d "$TD_DIR" -d "$REPO_ROOT/src/VIMP" -d "$REPO_ROOT/src/CFG" -d "$REPO_ROOT/src/Core" -d "$REPO_ROOT/src/Analysis" Voblint_Analysis
-"$ISABELLE" build -v -N -d "$AFP" -d "$TD_DIR" -D "$REPO_ROOT" Voblint_Soundness
+# ROOTS order is topological, so building in it never asks for a heap that
+# does not exist yet.  The example and codegen leaves are left to `build`.
+while read -r session; do
+  case "$session" in Voblint_Examples*|Voblint_Codegen) continue ;; esac
+  "$ISABELLE" build -v -N -d "$AFP" -d "$TD_DIR" -D "$REPO_ROOT" "$session"
+done < <(bash "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/sessions.sh")

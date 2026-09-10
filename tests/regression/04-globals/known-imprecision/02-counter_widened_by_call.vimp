@@ -1,0 +1,24 @@
+// PARAM: --analysis interval
+// counter is called twice from the same call site, so its concrete value
+// at the check is fixed at 2 -- yet the analysis cannot bound it above.
+// Mechanism: a declared global's write inside a called procedure feeds the
+// shared unknown's own equation (the assignment reads the same slot it
+// writes), so the two contributions ascend ([0,0], then a self-referencing
+// [0,1], [0,2], ...) and warrowing must widen the upper bound to +inf to
+// terminate -- the same call-site widening as
+// 04-globals/known-imprecision/01-repeated_call_site_widening.vimp. A
+// single call to p, by contrast, needs no fixpoint iteration and resolves
+// counter exactly; it is the repetition, not the declaration itself, that
+// costs precision here. Contrast with
+// 04-globals/precision/05-glocal_not_global_by_name.vimp: same program,
+// same two calls, but Glocal is undeclared and stays exact throughout.
+global counter;
+void p() {
+  counter := counter + 1
+}
+void main() {
+  Glocal := 1;
+  p();
+  p();
+  __voblint_check(counter < 5) // UNKNOWN
+}

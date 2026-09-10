@@ -1,13 +1,13 @@
 # IMP Syntax → Nipkow Extension Plan
 
-> **Status (2026-05):** **Approach 1c implemented** in `src/VIMP/VIMP_Syntax.thy`
+> **Status (2026-05):** **Approach 1c implemented** in `src/Program_Model/VIMP/VIMP_Syntax.thy`
 > (hybrid `BaseN`/`BaseB` wrap over HOL-IMP leaf forms + native compound/ext
 > constructors). Semantics in `VIMP_Expr.thy`. The sections below record
 > the original decision process; Approach 2 (`to_hol_imp_aexp` projection) was
 > not pursued.
 
 **Decision pointer:** Meeting 3 §B (KB `wiki/meetings/2026-05-18-meeting3.md`) — supervisor (Alexandra) suggested extending Nipkow's HOL-IMP via nested constructor wrap + `abbreviation` sugar rather than redeclaring `aexp` / `bexp` from scratch.
-**Goal:** stop redeclaring `aexp` / `bexp` in `src/VIMP/VIMP_Syntax.thy`. Reuse `HOL-IMP.AExp` / `HOL-IMP.BExp` directly; extend with our additional constructors (`Minus`, `Times`, `Or`, `Eq`).
+**Goal:** stop redeclaring `aexp` / `bexp` in `src/Program_Model/VIMP/VIMP_Syntax.thy`. Reuse `HOL-IMP.AExp` / `HOL-IMP.BExp` directly; extend with our additional constructors (`Minus`, `Times`, `Or`, `Eq`).
 **Non-goal:** changing `com` (already structurally identical to `HOL-IMP.Com`), changing semantics, replacing big-step (separate doc), or adopting AFP `IMP2` (different beast — see Rejected).
 
 See also:
@@ -23,7 +23,7 @@ See also:
 
 ## Current state (implemented: Approach 1c)
 
-`src/VIMP/VIMP_Syntax.thy` uses a **hybrid wrap** (see file header comment):
+`src/Program_Model/VIMP/VIMP_Syntax.thy` uses a **hybrid wrap** (see file header comment):
 
 - Leaf forms `N`, `V`, `Bc` abbreviate `BaseN` / `BaseB` wraps over HOL-IMP
   `AExp` / `BExp`.
@@ -44,7 +44,7 @@ in pattern matches — leaf cases must spell `BaseN (AExp.N _)` etc.
 
 The following described the **from-scratch** syntax before Approach 1c landed:
 
-`src/VIMP/VIMP_Syntax.thy` redeclared **from scratch**:
+`src/Program_Model/VIMP/VIMP_Syntax.thy` redeclared **from scratch**:
 
 ```isabelle
 datatype aexp =
@@ -139,7 +139,7 @@ lemma aval_agrees_on_hol_imp:
 
 ### Approach 3 — Adopt AFP `IMP2` (Lammich/Wimmer)
 
-Rejected by Meeting 3 §B. AFP `IMP2` carries arrays, `PScope`, `Assign-Locals`, `combine-states` machinery — none needed; bridge re-statement would be expensive; no soundness payoff for sign / parity / interval. Naming collision (`src/VIMP/` ≠ AFP `IMP2`) also tracked separately.
+Rejected by Meeting 3 §B. AFP `IMP2` carries arrays, `PScope`, `Assign-Locals`, `combine-states` machinery — none needed; bridge re-statement would be expensive; no soundness payoff for sign / parity / interval. Naming collision (`src/Program_Model/VIMP/` ≠ AFP `IMP2`) also tracked separately.
 
 ---
 
@@ -165,7 +165,7 @@ Doing it standalone now = pure cost.
 
 ### Phase 1 — provenance comments + `to_hol_imp_aexp` projection (½ day)
 
-**Touches:** `src/VIMP/VIMP_Syntax.thy`, `src/VIMP/VIMP_Expr.thy`.
+**Touches:** `src/Program_Model/VIMP/VIMP_Syntax.thy`, `src/Program_Model/VIMP/VIMP_Expr.thy`.
 
 1. Add `imports "HOL-IMP.AExp" "HOL-IMP.BExp"` to `VIMP_Syntax.thy` (alongside existing imports).
 2. Add structural-correspondence `text` block citing Nipkow.
@@ -177,16 +177,16 @@ Doing it standalone now = pure cost.
 
 ### Phase 2 — naming-collision fix-up (½ day)
 
-**Touches:** `src/VIMP/` → rename or document.
+**Touches:** `src/Program_Model/VIMP/` → rename or document.
 
-Meeting 3 §B flagged: *"`src/VIMP/IMP2_*.thy` and `src/CFG/IMP2_*.thy` are not AFP IMP2. They are a homegrown HOL-IMP extension."* This is a separate concern but fits naturally with this migration. Options:
+Meeting 3 §B flagged: *"`src/Program_Model/VIMP/IMP2_*.thy` and `src/Program_Model/CFG/IMP2_*.thy` are not AFP IMP2. They are a homegrown HOL-IMP extension."* This is a separate concern but fits naturally with this migration. Options:
 
-- **A (rename)** — move `src/VIMP/` to `src/IMP_Extended/` or `src/Source_Lang/`. Updates `ROOT`, every `imports` clause, and `IMP2_to_CFG.thy` references. ~30 minutes of mechanical sed + build.
-- **B (document)** — leave names; add a `README.md` under `src/VIMP/` clarifying the collision.
+- **A (rename)** — move `src/Program_Model/VIMP/` to `src/IMP_Extended/` or `src/Source_Lang/`. Updates `ROOT`, every `imports` clause, and `IMP2_to_CFG.thy` references. ~30 minutes of mechanical sed + build.
+- **B (document)** — leave names; add a `README.md` under `src/Program_Model/VIMP/` clarifying the collision.
 
 **Lean B** for now; revisit A if AFP `IMP2` is ever pulled in.
 
-**Acceptance:** `src/VIMP/README.md` written; meeting note collision callout resolved.
+**Acceptance:** `src/Program_Model/VIMP/README.md` written; meeting note collision callout resolved.
 
 ### Phase 3 — KB log + cross-link (10 min)
 
@@ -214,9 +214,9 @@ Recorded for the day this becomes worth doing.
 
 | File | Change | Net LOC |
 | --- | --- | --- |
-| `src/VIMP/VIMP_Syntax.thy` | + `HOL-IMP.AExp` / `BExp` imports; comment block rewrite | +~15 |
-| `src/VIMP/VIMP_Expr.thy` | + `to_hol_imp_aexp`/`bexp` + agreement lemmas | +~30 |
-| `src/VIMP/README.md` | New — naming-collision callout | +~20 |
+| `src/Program_Model/VIMP/VIMP_Syntax.thy` | + `HOL-IMP.AExp` / `BExp` imports; comment block rewrite | +~15 |
+| `src/Program_Model/VIMP/VIMP_Expr.thy` | + `to_hol_imp_aexp`/`bexp` + agreement lemmas | +~30 |
+| `src/Program_Model/VIMP/README.md` | New — naming-collision callout | +~20 |
 | `~/voblint-formalization-kb/wiki/log.md` | Append entry | +1 |
 | `~/voblint-formalization-kb/wiki/concepts/imp-language.md` | Cross-link to agreement lemma | +1 line |
 
@@ -248,4 +248,4 @@ Recorded for the day this becomes worth doing.
 - Approach 1 (nested constructor wrap) — phase plan sketched, deferred to next syntax-touching migration.
 - Adopting AFP `IMP2` — rejected by Meeting 3 §B; tracked in `wiki/concepts/imp2.md`.
 - `com` extension (e.g. arrays, procedures) — no current driver.
-- Renaming `src/VIMP/` — handled via README callout for now.
+- Renaming `src/Program_Model/VIMP/` — handled via README callout for now.

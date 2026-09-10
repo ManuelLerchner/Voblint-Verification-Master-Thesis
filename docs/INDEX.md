@@ -9,6 +9,8 @@ These documents describe the supported architecture and its verification.
   contract, compiler, activation-local semantics, equations, D/G routing, and
   solver integration.
 - [Proof overview](PROOF_OVERVIEW.md) — end-to-end soundness chain.
+- [Theorem map](THEOREM_MAP.md) — thesis and pipeline claims mapped to checked
+  `Session.Theory:theorem` names.
 - [Check-discharge architecture](CHECK_ARCHITECTURE.md) — how a compiled check
   becomes a GraphViz-rendered proof status and a semantic soundness guarantee,
   and how a contextual `analysis_result` feeds checks, collapsed GraphViz, and
@@ -31,6 +33,9 @@ These documents describe the supported architecture and its verification.
   where definitions and proofs can be unified.
 - [Cleanup migration plan](CLEANUP_MIGRATION_PLAN.md) — the phased execution
   sequence for that audit.
+- [Core refactor plan](CORE_REFACTOR_PLAN.md) — the four-phase split of
+  `Voblint_Framework` along Goblint's library boundaries, with the measured
+  import evidence and a per-step status table.
 - [Roadmap](ROADMAP.md) — stable extension directions and completion criteria.
 - [Next work](NEXT_STEPS.md) — near-term technical directions.
 - [Open problems](OPEN_PROBLEMS.md) — research and engineering boundaries.

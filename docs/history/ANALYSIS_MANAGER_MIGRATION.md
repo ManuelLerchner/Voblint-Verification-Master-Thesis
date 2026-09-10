@@ -404,6 +404,7 @@ citations). No pivot to a manager record now.
 (b) `analysis_manager` as a one-field `gs` wrapper is over-engineering for
 this thesis's actual scope. Per `docs/THESIS_SCOPE_MEMO.md`, the recommended
 thesis scope ("Scope A") is already "essentially done -- proof side is polish
+
 - writing," with the supervisor sign-off gate about writing, not new
 architecture. Introducing it would touch the same ~470 call sites Stage 3
 already needs to touch, add record-projection syntax at every one of them,

@@ -69,9 +69,9 @@ next to the abstract framework they mirror:
 
 ```text
 Exec_DG_Bridge               carrier-generic executable/abstract transport
-DG_Base_Exec                 executable mirror of Core's DG_Base
+DG_Local_State_Exec                 executable mirror of Core's DG_Local_State_Spec
 Routed_Domain_Exec           the routing layer, renamed with the locale
-Monovariant_Analysis_Result  one executable AnalysisResult constructor
+Result_Normalization  one executable AnalysisResult constructor
 ```
 
 What remains of the directory is the `Int_*` product domain (Sign x Interval),
@@ -118,7 +118,7 @@ Regression: a program where `x <= y` survives from the caller (callee touches
 neither) while `g <= h` comes from the callee exit; prove both hold after
 return, and compare against a havoc/structural implementation that recovers
 only one. It must run through the canonical D/G generator and solver, not by
-evaluating the combine directly. Prove `sound_dg_spec` for the instance. Own
+evaluating the combine directly. Prove `sound_dg_spec_core` for the instance. Own
 commit.
 
 ## P8 - Guard the `code_identifier` module map
@@ -130,7 +130,7 @@ emitted output can, and catches the same failure one edit earlier.
 
 The map now names 135 theories and four modules survive: `Core`, plus the
 three the handwritten OCaml calls into -- `Analysis_Config`,
-`Analyse_Dispatch`, `State_Report_GraphViz`. Folding cannot introduce a cycle
+`Analyse_Dispatch`, `State_Report_Graph`. Folding cannot introduce a cycle
 (a cycle needs two modules), so those three are a deliberate API surface
 rather than the residue of which edit happened to fail first.
 
@@ -159,14 +159,20 @@ an artefact of a criterion that does not model how Isabelle names are used.
 - `Rel_Order_Domain` was called "entirely dead, 489 lines" by the first audit.
   `Example_Relational_DG_Demo` consumes it.
 
-Two theories in `Core/Solver/Context/DG/` still build without being imported,
-and both stay. `Call_String_Collecting_Refinement` proves that a coarser
-call-string bound never sees more activations than a finer one.
-`Call_String_Context_Finite` proves the whole call-string context space finite
-before any solve is attempted -- a genuine strengthening over the per-run
-`solve_dom` contract, and the answer to the bounding question in #77. Neither
-is dead; they are results nothing has needed to cite yet, which the queue's own
-classification says to retain.
+One theory in `Analyses/Base/Context/` still builds without being imported, and
+it stays. `Context_Space_Finite` bounds the candidate space a call-string or
+monovariant key set is drawn from, before any solve is attempted. Read what it
+proves precisely: both halves of the containment are its hypotheses, so it is
+not a reachability result, and a bounded key space does not make a solve
+terminate -- it neither implies nor is implied by the `solve_dom` contract the
+routed instances rely on. It is a result nothing has needed to cite yet, which
+the queue's own classification says to retain. The overlapping
+`Call_String_Context_Finite` did not stay: two independent developments of the
+same three theorems is not retention, it is drift. Not a verbatim copy --- the
+surviving `compiled_call_string_vars_finite` takes two projection hypotheses
+where the deleted one took a single product containment, and the monovariant
+`compiled_unit_vars_finite` has no counterpart there --- which is why the
+broader theory is the one that stayed.
 
 If a future sweep is wanted, the only defensible criterion is: a `definition`
 outside a class instantiation, never mentioned again anywhere, absent from the

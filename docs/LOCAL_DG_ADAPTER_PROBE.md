@@ -22,7 +22,7 @@ reusable adapter core):
 | --- | --- |
 | `local_dg_spec tf` | DG spec with trivial Side: every edge advances the local `D` by `tf`, `G` slot is `()`; combine is `combine_abs` on locals |
 | `local_gamma d () = [[d]]` | the joint concretization ignores `G` entirely |
-| `sound_dg_spec_local` | `sound_transfer tf ==> sound_dg_spec (local_dg_spec tf) local_gamma` — the two unused `G` obligations discharge by `simp` |
+| `sound_dg_spec_core_local` | `sound_transfer tf ==> sound_dg_spec_core (local_dg_spec tf) local_gamma` — the two unused `G` obligations discharge by `simp` |
 | `sound_transfer.local_dg` (sublocale) | the adapter instance, one per sound transfer |
 | `local_sigma loc` | lift a clean local solution `loc :: pp x 'c => 'a abs_state` to a DG solution (Side slot `()`) |
 | `local_sigma_D`, `local_sigma_gamma` | read-back: `dg_D_c (local_sigma loc) ctx v = loc (v,ctx)`, `dg_gamma_c ... = [[loc (v,ctx)]]` |
@@ -46,7 +46,7 @@ abstraction (unused `G`). The probe shows the adapter is **not** false abstracti
 unit` with `gammaDG d () = [[d]]` is an *honest* "no global fact" instance (the trivial
 one-element domain), and — crucially — the trivial `G` is **invisible at the client
 boundary**. The unused-obligation discharge (`edge`/`combine` global bounds) happens
-*once*, inside `sound_dg_spec_local`, by `simp` on `local_gamma`'s definition. Clients
+*once*, inside `sound_dg_spec_core_local`, by `simp` on `local_gamma`'s definition. Clients
 never see it. This is the difference between "unused parameter exposed to every client"
 (the false-abstraction failure mode) and "trivial instance proved once, hidden behind a
 same-shaped corollary" (this adapter).
@@ -54,7 +54,7 @@ same-shaped corollary" (this adapter).
 ## Overhead
 
 * One-time: ~85-line reusable adapter (`local_dg_spec` + `local_gamma` +
-  `sound_dg_spec_local` + `local_sigma` + 2 read lemmas).
+  `sound_dg_spec_core_local` + `local_sigma` + 2 read lemmas).
 * Per-theorem migration: the `clean_ctx_collect_rread` *body* (~30 lines of
   `context_analysis_soundness` interpretation with 8 goal cases) is replaced by the
   adapter's `dg_collect_ctx_sound` application (~45 lines, mostly mechanical
@@ -64,7 +64,7 @@ same-shaped corollary" (this adapter).
 ## Recommendation: GO
 
 The single-framework end state is reachable **honestly**: one canonical
-`Ctx_Collect_Backbone`, `sound_dg_spec` as the analysis interface, and the clean
+`Ctx_Collect_Backbone`, `sound_dg_spec_core` as the analysis interface, and the clean
 single-domain analysis as a `local_dg` instance whose trivial `G` never surfaces to
 clients. This supersedes the earlier "backbone-unified, keep readers separate"
 compromise: the readers need not stay a *separate foundation* — they become DG

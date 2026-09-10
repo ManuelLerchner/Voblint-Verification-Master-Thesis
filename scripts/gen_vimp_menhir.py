@@ -33,14 +33,14 @@ HEADER = (
 # -- `special: name` productions, keyed by that name (not by production
 # name -- grammar/vimp.yaml's header comment explains what each covers). ---
 SPECIAL_ACTIONS = {
-    "integer_literal": "Voblint_CLI.Core.N (Voblint_CLI.Core.Int_of_integer (Z.of_int v0))",
+    "integer_literal": "Voblint_CLI.Generated.N (Voblint_CLI.Generated.Int_of_integer (Z.of_int v0))",
     "unary_minus": """\
 match v1 with
-      | Voblint_CLI.Core.N (Voblint_CLI.Core.Int_of_integer z) ->
-        Voblint_CLI.Core.N (Voblint_CLI.Core.Int_of_integer (Z.neg z))
+      | Voblint_CLI.Generated.N (Voblint_CLI.Generated.Int_of_integer z) ->
+        Voblint_CLI.Generated.N (Voblint_CLI.Generated.Int_of_integer (Z.neg z))
       | _ ->
-        Voblint_CLI.Core.Minus
-          (Voblint_CLI.Core.N (Voblint_CLI.Core.Int_of_integer Z.zero), v1)""",
+        Voblint_CLI.Generated.Minus
+          (Voblint_CLI.Generated.N (Voblint_CLI.Generated.Int_of_integer Z.zero), v1)""",
 }
 
 
@@ -56,14 +56,14 @@ def render_lower_arg(arg: dict) -> str:
     if "literal" in arg:
         return "true" if arg["literal"] else "false"
     if "int" in arg:
-        return f"(Voblint_CLI.Core.Int_of_integer (Z.of_int {arg['int']}))"
+        return f"(Voblint_CLI.Generated.Int_of_integer (Z.of_int {arg['int']}))"
     raise ValueError(f"unrecognized lower arg shape: {arg}")
 
 
 def render_lower(lower: dict) -> str:
     if "tuple" in lower:
         return "(" + ", ".join(f"v{i}" for i in lower["tuple"]) + ")"
-    ctor = f"Voblint_CLI.Core.{lower['ctor']}"
+    ctor = f"Voblint_CLI.Generated.{lower['ctor']}"
     args = [render_lower_arg(a) for a in lower.get("args", [])]
     if not args:
         return ctor
@@ -135,17 +135,17 @@ rule token = parse
 # there's no --infer two-pass typechecking loop; every nonterminal's OCaml
 # type must be stated upfront instead.
 NONTERMINAL_TYPES = {
-    "exp": "Voblint_CLI.Core.exp",
-    "stmt": "Voblint_CLI.Core.com",
-    "stmts": "Voblint_CLI.Core.com",
-    "stmts_opt": "Voblint_CLI.Core.com",
-    "actuals": "Voblint_CLI.Core.exp list",
+    "exp": "Voblint_CLI.Generated.exp",
+    "stmt": "Voblint_CLI.Generated.com",
+    "stmts": "Voblint_CLI.Generated.com",
+    "stmts_opt": "Voblint_CLI.Generated.com",
+    "actuals": "Voblint_CLI.Generated.exp list",
     "formals": "string list",
     "ids": "string list",
     "globals_decl": "string list",
     "globals_opt": "string list",
-    "function_decl": "string * string list * Voblint_CLI.Core.com",
-    "function_decl_star": "(string * string list * Voblint_CLI.Core.com) list",
+    "function_decl": "string * string list * Voblint_CLI.Generated.com",
+    "function_decl_star": "(string * string list * Voblint_CLI.Generated.com) list",
 }
 
 
@@ -220,7 +220,7 @@ def gen_list_rule(prod: dict) -> str:
         # already-generated non-optional list nonterminal (`stmts`).
         base = prod["result"].removesuffix("_opt")
         empty = prod.get("empty", "[]")
-        empty_action = f"Voblint_CLI.Core.{empty}" if empty[0].isupper() else empty
+        empty_action = f"Voblint_CLI.Generated.{empty}" if empty[0].isupper() else empty
         return (
             f"{name}:\n"
             f"  | (* empty *)\n"
@@ -236,7 +236,7 @@ def gen_list_rule(prod: dict) -> str:
         # unambiguous LR (SEMI is a concrete token, not an operator needing
         # precedence resolution).
         single = f"  | x = {item}\n      {{ x }}"
-        multi = f"  | xs = {name} {prod['separator']} x = {item}\n      {{ Voblint_CLI.Core.{ctor} (xs, x) }}"
+        multi = f"  | xs = {name} {prod['separator']} x = {item}\n      {{ Voblint_CLI.Generated.{ctor} (xs, x) }}"
         return f"{name}:\n{single}\n{multi}"
 
     # Plain growing list (actuals/formals/ids).
@@ -264,8 +264,8 @@ def gen_program_rule() -> str:
           | [] -> failwith "missing 'void main() { ... }'"
           | _ -> failwith "more than one 'void main()'"
         in
-        Voblint_CLI.Core.mk_program
-          (List.map (fun (n, formals, b) -> (n, Voblint_CLI.Core.proc_decl_of formals b)) procs)
+        Voblint_CLI.Generated.mk_program
+          (List.map (fun (n, formals, b) -> (n, Voblint_CLI.Generated.Proc_decl_ext (formals, b, ()))) procs)
           main_body g }
 
 globals_opt:
@@ -342,7 +342,7 @@ let close_definition ((name, formals, body) as decl) =
 
 {type_decls()}
 
-%start <unit Voblint_CLI.Core.imp_prog_ext> program
+%start <unit Voblint_CLI.Generated.imp_prog_ext> program
 %%
 
 {chr(10).join("(* " + b.split(chr(10))[0] + " *)" + chr(10) + b for b in rule_blocks)}

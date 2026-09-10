@@ -29,8 +29,8 @@
 # (missing/duplicate `main`, wrong arity) rather than a deferred
 # well-formedness failure. `imp_prog`'s `proc_rep` carries `main` as an
 # ordinary entry -- nothing structural forces a `program { ... }`
-# construction to include one -- so `wf_program_source`'s own
-# `Pi mnm = Some (proc_decl_of [] main)` conjunct is what makes "main
+# construction to include one -- so `wf_source_program`'s own
+# `Pi mnm = Some (|formals = [], body = main|)` conjunct is what makes "main
 # present, with no formals" a proof obligation on a given `imp_prog` value;
 # the parser's checks are a UX convenience on top, not what discharges it.
 #

@@ -4,7 +4,7 @@ Decision record for [issue #28](https://github.com/ManuelLerchner/goblint-formal
 
 ## Current choice
 
-This repo uses **labelled edge triples** `(pp × edge_action × pp) set` in `src/CFG/CFG_Def.thy` (`cfg_edges`). The collecting semantics and `cfg_path` infrastructure are proved against that representation; the IMP2↔CFG bridge is closed.
+This repo uses **labelled edge triples** `(pp × edge_action × pp) set` in `src/Program_Model/CFG/CFG_Def.thy` (`cfg_edges`). The collecting semantics and `cfg_path` infrastructure are proved against that representation; the IMP2↔CFG bridge is closed.
 
 **Do not swap** to AFP `Graph_Theory` (Noschinski) unless a future proof needs `awalk`/`apath` lemmas that are cheaper to import than to reprove. See issue #27.
 
@@ -20,7 +20,7 @@ This repo uses **labelled edge triples** `(pp × edge_action × pp) set` in `src
 
 ## Reachability
 
-CFG reachability for soundness uses `cfg_path` / `cfg_path_node_in_reach` in `src/CFG/`
+CFG reachability for soundness uses `cfg_path` / `cfg_path_node_in_reach` in `src/Program_Model/CFG/`
 and the reach-cone machinery in `src/Analysis/Generic/Solver/Core/`. The former
 TD hypothesis `td_cfg_in_reach` (P2) was removed in favour of per-pp solve (Fix B);
 closed [issue #8](https://github.com/ManuelLerchner/goblint-formalization/issues/8).

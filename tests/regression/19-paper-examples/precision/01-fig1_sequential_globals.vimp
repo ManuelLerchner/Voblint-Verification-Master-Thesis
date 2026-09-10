@@ -83,9 +83,9 @@
 //   main_pp9_ctx0 -> main_pp10_ctx0: check(g<43)
 //   main_pp10_ctx0 -> main_result_main_ctx0: terminate
 //   f_pp0_ctx1 -> f_pp1_ctx1: h := h+1
-//   main_entry_main_ctx0 -> main_pp3_ctx0: nop
+//   main_entry_main_ctx0 -> main_pp3_ctx0: body(main)
 //   main_pp3_ctx0 -> main_pp4_ctx0: g := 1
-//   f_entry_f_ctx1 -> f_pp0_ctx1: nop
+//   f_entry_f_ctx1 -> f_pp0_ctx1: body(f)
 //   main_pp7_ctx0 -> main_pp8_ctx0: check(g==42)
 //   main_pp6_ctx0 -> f_entry_f_ctx1: enter f()
 //   f_result_f_ctx1 -> main_pp7_ctx0: combine

@@ -102,7 +102,7 @@ after the fact.
 
 This is evidence about where complexity sits in the *current* design, not a
 measurement of what a scoped-state redesign would cost. The core solver
-interface (`strategy_tree`, `eqsT`), the `dg_spec`/`sound_dg_spec` locales,
+interface (`strategy_tree`, `eqsT`), the `dg_spec`/`sound_dg_spec_core` locales,
 and every existing analysis instance are built on total, unscoped
 `abs_state`s as a locked decision; a scoped carrier would need to thread
 through all of that, not just this one example, and nothing here measures

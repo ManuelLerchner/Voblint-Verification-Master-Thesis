@@ -1,0 +1,21 @@
+// PARAM: --analysis sign --context entry-state
+// f is called twice from main with a positive and a negative literal
+// argument. Sign's own entry-state routing keys the two activations of f
+// by their entered p, so they stay two distinct contexts ([SPos] and
+// [SNeg]) at f's single FunctionEntry node rather than joining into one
+// shared summary. Each returned value propagates back per call site: x
+// gets what the SPos-context activation actually computed for p + p
+// (3 + 3, still SPos), y gets what the SNeg-context activation computed
+// (-10 + -10, still SNeg) -- not join(SPos, SNeg) = STop at either check,
+// which is what a context-insensitive analysis of the same program would
+// be forced to answer for both.
+void f(p) {
+  t := p + p;
+  return t
+}
+void main() {
+  x := f(3);
+  y := f(-10);
+  __voblint_check(0 < x); // PROVED
+  __voblint_check(y < 0) // PROVED
+}

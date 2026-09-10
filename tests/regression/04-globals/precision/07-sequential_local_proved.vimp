@@ -1,0 +1,11 @@
+// PARAM: --analysis interval
+// The contrasting baseline for 06-sequential_global_proved.vimp: the same
+// x := 0; x := 1; check(x == 1) sequence, but x is an ordinary local.
+// Tracked flow-sensitively per program point, so the second write's exact
+// value reaches the check with no join against the first -- identical
+// result to the global version, since no call ever crosses x in either.
+void main() {
+  x := 0;
+  x := 1;
+  __voblint_check(x == 1) // PROVED
+}

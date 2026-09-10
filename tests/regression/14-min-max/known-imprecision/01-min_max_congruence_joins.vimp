@@ -1,0 +1,26 @@
+// PARAM: --analysis congruence
+// min(3, 7) is 3 and max(3, 7) is 7, both fixed by the source.
+//
+// The concrete mechanism is congruence_min and congruence_max
+// (Congruence_Special.thy), which are both the join. A residue class
+// carries no order information -- congruence_lt is the constant None -- so
+// the domain cannot tell which operand is smaller, and the only sound
+// answer that is always available is a class containing both. Here that is
+// 3 (mod 4) for each, which congruence_eqb declines on because it is not a
+// singleton. Returning the join is not a shortcut: it is forced whenever
+// the operands are distinct classes.
+//
+// The two operands agreeing is the one case that stays exact, since the
+// join of a class with itself is that class. --analysis interval and
+// --analysis sign both decide this program (../precision/01, ../precision/
+// 02) from order information Congruence does not have.
+void main() {
+  x := 3;
+  y := 7;
+  z := min(x, y);
+  w := max(x, y);
+  __voblint_check(z == 3); // UNKNOWN
+  __voblint_check(w == 7); // UNKNOWN
+  v := min(x, x);
+  __voblint_check(v == 3) // PROVED
+}

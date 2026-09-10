@@ -61,10 +61,92 @@ diagnostics. Save timeouts and buffer lag have produced phantom fixes.
 Do not run `isabelle build` to discover an error that I/Q already identifies.
 Use the final build procedure below after interactive development.
 
+## Six ways this environment misreports state
+
+Each of these looks like an ordinary correct result. All six have produced a
+wrong claim here, and the defence is the same for all of them: **a statement
+about state names what was read and when**, never what was true earlier in the
+session.
+
+**Empty diagnostics over zero commands.** `get_diagnostics` on a node the
+session has not parsed yet returns `count: 0`, `errors: 0`,
+`fully_processed: true` -- clean in every field a caller normally reads.
+`get_processing_status` on the same node showed 548 unprocessed. Check
+`total_commands` before believing `errors: 0`; zero commands is not a clean
+file, it is an unread one.
+
+**A line range computed from disk while the buffer is dirty.** An outline taken
+with `grep` is disk coordinates; unsaved I/Q edits shift the buffer under them.
+Deleting by those numbers removed 68 lines from the middle of a live proof.
+Save first, then outline, then edit -- and never mix a host read with an
+unsaved buffer.
+
+**A buffer that has not picked up a host write.** The older half of the same
+hazard: diagnostics describe the buffer, so a bulk host substitution jEdit has
+not reloaded reads as clean. Compare buffer against disk at one changed line
+before believing anything.
+
+**A regeneration in progress.** `pixi run codegen` removes `codegen/generated/`
+before writing it, so anything reading concurrently sees a *missing* file
+rather than a stale one. `git status` reported it deleted, and a checker
+reported it not found; both were reading mid-write.
+
+**A session that vanishes between calls.** I/Q can be killed by the host for
+memory pressure. Results obtained before it died stay valid for the revision on
+disk, but nothing is verified after it until a restart finishes.
+
+**A filtered check.** Most `pixi run` tasks here report failure as *output* and
+still exit 0. `root-entries` printed its error and `tail -1` ate it, which would
+have carried a change past the guard written for that exact hazard. **A check
+that reports failure as output rather than as exit status must never be
+filtered.** The same rule applies to counting instead of listing: print what
+matched, not how many.
+
+## Any `.thy` change that bypasses I/Q needs a restart
+
+A theory whose ROOT entry changed loads as `Draft.<name>` until jEdit restarts.
+The file-set analogue is less obvious and bites harder: when a theory is
+**deleted and regenerated at a different path under the same name**, no ROOT
+entry changes, but the running session holds a buffer for the old file and
+resolves two nodes of that name at once:
+
+```text
+exception THEORY raised: Duplicate theory name {..., Int_Analyses}
+```
+
+Every later error is fallout from the session having no coherent theory
+context, so the count is meaningless. Restart, then read.
+
+**The quiet case is a regeneration in place, and it is the dangerous one.** The
+duplicate above at least announces itself. When a generator overwrites a theory
+at the *same* path under the *same* name -- no ROOT change, no duplicate, no
+exception -- nothing looks different: the node name is right, the file is where
+it belongs, and the session goes on serving the bytes it loaded. Diagnostics
+taken after `pixi run gen-assembly` describe the previous render, and because a
+regeneration moves lines they cite offsets whose content has changed
+underneath. This was caught once by comparing the buffer against disk at a line
+the run had changed, and would otherwise have produced a confident report about
+text that no longer existed.
+
+The reason it hides is that a generator run does not feel like editing -- nobody
+typed anything and no editor was involved. But `target.write_text(rendered)` is
+a host write like any other and the session cannot tell the difference. So the
+rule is not about editing: **any change to a `.thy` that does not go through
+I/Q needs a restart before its diagnostics mean anything** -- deleted, moved, or
+overwritten in place.
+
+Restarting is also the only way to check adoption at all. A `Draft.` node
+resolves imports without consulting the session, so its diagnostics say nothing
+about whether the ROOT finds the file. After adopting a generated theory,
+confirm the node reports `<Session>.<Theory>` -- and check its *consumers*, not
+only the theory itself. A generated theory that dropped an import its
+hand-written predecessor had is clean on its own and breaks everything
+downstream of it.
+
 ## I/R fallback
 
 - Initialize a REPL from a fully qualified import, such as
-  `Voblint_CFG.CFG_Local_Trace`.
+  `Voblint_CFG.LTR_Def`.
 - Send one Isar command per `step`.
 - After a theory edit, reload it with its fully qualified theory name.
 - `explore` is non-persistent; a REPL step changes the current state.
@@ -112,6 +194,12 @@ Use the repository interfaces so session arguments do not drift:
 ```bash
 rtk pixi run build
 ```
+
+`isabelle build -f` forces the named session's **ancestors** too, not just the
+session named. On this tree that means Pure and HOL, which rebuilds every heap
+below the project and turns a targeted check into a full-tree rebuild. To get a
+log rather than a cache hit for one session, delete that session's heap or use
+`-o` verbosity; do not reach for `-f`.
 
 On a fresh clone without parent heaps:
 
@@ -213,6 +301,25 @@ closed, and the batch log is green.
   change, confirm the buffer actually contains the expected text with
   `read_file` on the specific changed lines -- a passing diagnostic is not
   evidence the buffer was ever resynced.
+- The opposite direction is the more expensive one, because nothing reports
+  it: an I/Q `write_file` changes the **buffer**, not the file. A whole
+  session's work can be green in I/Q and absent from disk, so a batch build --
+  yours or another agent's -- reads the old text and fails on errors you
+  cannot reproduce. `get_diagnostics` will keep saying zero the whole time,
+  correctly, about the buffer.
+- `save_file` with a path returns `{"saved_files": []}` when that buffer is not
+  dirty. Do not read that as "already written": it is also what you get when
+  the save did not happen. Call `save_file` with **no** path, which saves every
+  dirty buffer and names them, and then verify against the file:
+
+  ```bash
+  rtk proxy wc -l <every file you touched>
+  ```
+
+  A line count that disagrees with what I/Q shows is the cheapest available
+  proof that the buffer and the file have diverged; a diagnostic result is not
+  evidence about the file at all. Do this before quoting any result to another
+  agent, before a build, and before a commit.
 
 ### Isar syntax
 

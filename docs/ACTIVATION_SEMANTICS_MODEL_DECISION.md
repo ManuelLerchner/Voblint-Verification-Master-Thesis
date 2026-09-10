@@ -83,7 +83,7 @@ separation lives entirely in the *index*, computed by a call-only reset.
 
 ### 2.1 Concrete collecting — `trace_witness` (inlined, correct)
 
-`src/CFG/Collecting/CFG_Collect_Trace.thy:83`. A call is the `edge` rule at
+`src/Program_Model/CFG/Collecting/CFG_Collect_Trace.thy:83`. A call is the `edge` rule at
 `EA_Enter`, extending the caller trace by `enter_state (last tr)`
 (`edge_step EA_Enter s = Some (enter_state s)`, `:41`). This is the **concrete**
 semantics: it collects exactly the reachable store sequences, and
@@ -257,7 +257,7 @@ untouched on intra edges (Goblint call-only), switched at the dedicated `enter` 
 to `context(callee_entry)`, restored at `combine` to the caller context — the direct
 image of `enter` → `context` → `combine_env`/`combine_assign`.
 
-### 5.1 New objects (pure layer, `src/CFG/Collecting/CFG_Collect_Activation.thy`)
+### 5.1 New objects (pure layer, `src/Program_Model/CFG/Collecting/CFG_Collect_Activation.thy`)
 
 ```
 inductive trace_witness_act ::
@@ -358,9 +358,9 @@ protocol step, with the concrete run delegated to the forgetful map into
 Buildable, independently green commits:
 
 1. `feat(dgc): call-only activation-indexed collecting witness` — new
-   `src/CFG/Collecting/CFG_Collect_Activation.thy`: `trace_witness_act`,
+   `src/Program_Model/CFG/Collecting/CFG_Collect_Activation.thy`: `trace_witness_act`,
    `cfg_collect_ctx_act`, `trace_witness_act_imp`, `cfg_collect_ctx_act_le_collect`.
-   Add to `src/CFG/ROOT`. Build `Voblint_CFG`. *(Pure semantics + collapse; low
+   Add to `src/Program_Model/CFG/ROOT`. Build `Voblint_CFG`. *(Pure semantics + collapse; low
    risk.)*
 2. `feat(dgc): generic seeded activation-collecting soundness` — new
    `src/Analysis/Generic/Solver/Context/Seeded_Activation_Sound.thy`:

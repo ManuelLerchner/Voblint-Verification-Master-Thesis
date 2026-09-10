@@ -1,0 +1,11 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it using the metadata below."
+title: >-
+  Voblint: A Generic, Executable, and Machine-Checked Framework for
+  Interprocedural Abstract Interpretation in Isabelle/HOL
+type: software
+authors:
+  - family-names: Lerchner
+    given-names: Manuel
+repository-code: >-
+  https://github.com/ManuelLerchner/Voblint-Verification-Master-Thesis

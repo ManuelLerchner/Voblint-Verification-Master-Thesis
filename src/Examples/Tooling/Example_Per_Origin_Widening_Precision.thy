@@ -1,7 +1,7 @@
 theory Example_Per_Origin_Widening_Precision
   imports
-    "Voblint_Core.Solver_Menu"
-    "Voblint_Analysis.Ivl_Exec"
+    "TD.TD_side_upd_rule"
+    "Voblint_Analysis_Interval.Interval_Exec"
 begin
 
 section \<open>Per-origin widening keeps a precision the joined-then-widened slot loses\<close>
@@ -13,8 +13,8 @@ text \<open>
   than that is losing precision to its own combination discipline rather than to the
   program.
 
-  This separates the two widening rules on \<^const>\<open>solver_menu\<close>, which agree everywhere a
-  global has a single producer:
+  This separates the two widening rules, which agree everywhere a global has a single
+  producer:
 
   \<^item> \<^const>\<open>update_global_warrowing_apinis\<close> widens the slot value \<^emph>\<open>after\<close> the join.  The
     left producer's write leaves the slot at \<open>[1, 1]\<close>.  The right producer's write then
@@ -23,7 +23,7 @@ text \<open>
     sharing one slot -- neither producer's own contribution ever moved.
   \<^item> \<^const>\<open>update_global_warrowing_per_origin\<close> widens each contribution against that
     origin's previous contribution and joins afterwards.  Both writes are first writes for
-    their origin, so the \<open>bot \<nabla> x = x\<close> law (\<^theory>\<open>Voblint_Analysis.Interval_Warrowing\<close>)
+    their origin, so the \<open>bot \<nabla> x = x\<close> law (\<^theory>\<open>Voblint_Analysis_Interval.Interval_Warrowing\<close>)
     keeps each exact, and the read joins them to \<open>[1, 2]\<close>.
 
   The narrowing half of warrowing cannot repair the joined rule here: once both producers
@@ -42,25 +42,24 @@ fun two_writer_eqs :: "(two_writer_unknown, two_writer_global, ivl) eqsT" where
 | "two_writer_eqs TW_Left = Side TW_Slot (Ivl (Fin 1) (Fin 1)) (Answer bot)"
 | "two_writer_eqs TW_Right = Side TW_Slot (Ivl (Fin 2) (Fin 2)) (Answer bot)"
 
-subsection \<open>The slot under every update rule at once\<close>
+subsection \<open>The slot under every update rule\<close>
 
 text \<open>\<open>join\<close> and \<open>per_origin\<close> agree at the exact \<open>[1, 2]\<close>: neither widens, and storing a
   contribution per origin then taking \<^const>\<open>sup_over_origins\<close> reconstructs the value
   accumulating them into one slot produces.  They are the precision ceiling on this
   system, and \<open>warrow_per_origin\<close> meets it while keeping the termination guarantee that
-  \<open>join\<close> and \<open>per_origin\<close> do not carry.\<close>
-lemma two_writer_slot_across_update_rules:
-  "run_menu id two_writer_eqs TW_Main (Inr TW_Slot)
-     = [(STR ''join'',              Ivl (Fin 1) (Fin 2)),
-        (STR ''per_origin'',        Ivl (Fin 1) (Fin 2)),
-        (STR ''warrow'',            Ivl (Fin 1) PlusInf),
-        (STR ''warrow_per_origin'', Ivl (Fin 1) (Fin 2))]"
+  \<open>join\<close> and \<open>per_origin\<close> do not carry. Pinned as one fact per update rule, so a change to
+  any single rule fails on the claim it breaks rather than on a list mismatch.\<close>
+
+lemma two_writer_slot_join:
+  "snd (TD_side_always_join_Interp_solve two_writer_eqs TW_Main) (Inr TW_Slot)
+     = Ivl (Fin 1) (Fin 2)"
   by eval
 
-subsection \<open>The two widening rules, named separately\<close>
-
-text \<open>The contrast the menu row above shows, pinned as its own pair of facts so a change to
-  either widening rule fails on the claim it breaks rather than on a list mismatch.\<close>
+lemma two_writer_slot_per_origin:
+  "snd (TD_side_per_origin_Interp_solve two_writer_eqs TW_Main) (Inr TW_Slot)
+     = Ivl (Fin 1) (Fin 2)"
+  by eval
 
 lemma two_writer_slot_warrow_loses_upper_bound:
   "snd (TD_side_warrowing_apinis_Interp_solve two_writer_eqs TW_Main) (Inr TW_Slot)

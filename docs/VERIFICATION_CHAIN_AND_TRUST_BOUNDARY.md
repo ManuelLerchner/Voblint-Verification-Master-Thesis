@@ -12,7 +12,7 @@ not duplicated here.
 ```text
  concrete VIMP semantics
         |
-        | sound_transfer_for (Sign_is_sound_transfer_for, ivl_is_sound_transfer_for, ...)
+        | sound_transfer_for (sign_tf.is_sound_transfer_for, ivl_tf.is_sound_transfer_for, ...)
         v
  mathematical abstract analyzer                     'a abs_state = vname => 'a
    apply_tf, branch, bfilter, afilter                (Core/Domain/Abstract_Domain.thy)
@@ -38,9 +38,9 @@ not duplicated here.
         | hand-written OCaml glue (unverified, outside the proved chain)
         v
  cli/main.ml  ->  Vimp_frontend.program (lexer/parser)
-              ->  Voblint_CLI.Core.wf_program_compile_input_exec  (gate)
-              ->  Voblint_CLI.Analysis_Config.mk_analysis_config  (one config value)
-              ->  Voblint_CLI.Analyse_Dispatch.analyse_config_with_state / analyse_config_ctx / analyse_config
+              ->  Voblint_CLI.Generated.wf_program_compile_input_exec  (gate)
+              ->  Voblint_CLI.Generated.mk_analysis_config  (one config value)
+              ->  Voblint_CLI.Generated.analyse_config_with_state / analyse_config_ctx / analyse_config
               ->  render_text_report  (hand-written OCaml; unreachable flag exported)
               ->  CLI output
 ```
@@ -51,10 +51,10 @@ Each domain's abstract transfer record (`'a domain_transfer`, `Core/Equations/Co
 is proved sound against VIMP's concrete semantics via a `sound_transfer_for`
 instance:
 
-- `sign_is_sound_transfer_for` (`Analysis/Instances/Sign/Sign_Transfer.thy:144`)
-- `ivl_is_sound_transfer_for` (`Analysis/Instances/Interval/Interval_Transfer.thy:155`)
-- `parity_is_sound_transfer_for` (`Analysis/Instances/Parity/Parity_Transfer.thy:159`)
-- `int_{never,once,fixpoint}_is_sound_transfer_for` (`Analysis/Instances/Product/Int_Transfer.thy:403,417,431`)
+- `sign_tf.is_sound_transfer_for` (`src/Analyses/Sign/Sign_Transfer.thy`)
+- `ivl_tf.is_sound_transfer_for` (`src/Analyses/Interval/Interval_Transfer.thy`)
+- `parity_tf.is_sound_transfer_for` (`src/Analyses/Parity/Parity_Transfer.thy`)
+- `int_{never,once,fixpoint}_is_sound_transfer_for` (`Analysis/Instances/Int/Int_Transfer.thy:403,417,431`)
 
 `apply_tf` dispatches an `edge_action` to the matching transfer-record field
 (`fun apply_tf`, `Core/Equations/Constraint_System.thy:89-99`); in particular
@@ -165,19 +165,21 @@ coverage matrix).
 
 Which executable operation actually runs for `EA_Assume`/`EA_AssumeNot` is
 decided per domain by a record field, `ops.n_bfilter`
-(`'a numeric_ops`, `Core/Equations/Numeric_Ops.thy:38-47`), via a bare
-projection `generic_branch_st_for ops ... = n_bfilter ops ...`. For
-Interval and all three Int_dom modes this field is bound to the aligned
-`branch_<domain>_st`, and the corresponding `branch_<domain>_st_for_eq [simp]`
-lemma is the trivial identity `branch_X_st_for = branch_X_st`. For Sign, the
-field is likewise bound to the aligned `branch_sign_st`
-(`Analysis/Instances/Sign/Sign_Exec.thy:65-66`), but the companion lemma
-states the stronger claim `branch_sign_st_for ... = bfilter_sign_st ...`
-(`Sign_Exec.thy:72-74`) -- i.e. that Sign's tobool-gated branch collapses to
-plain backward filtering. No lemma stating `branch_sign = bfilter_sign` (or
-its `_st` counterpart) at any generality was found elsewhere in the
-codebase, so this is a genuine, domain-specific mathematical claim rather
-than record-projection bookkeeping. It is plausible for a coarse domain like
+(`'a numeric_ops`, `src/Analyses/Shared/Nonrelational/Numeric_Ops.thy`). The
+guard transfer is no longer named per domain at all: `generic_tf_st_for` reads
+the `n_bfilter` field off the bundle directly, so there is no
+`branch_<domain>_st_for` projection to align. Interval alone keeps one, because
+`Interval_Exec` cites it in a real executable/abstract agreement lemma; the
+Sign, Congruence and Int_dom projections are retired.
+
+This closes a concern earlier revisions of this document raised here. It
+recorded that Sign's companion lemma stated the stronger claim
+`branch_sign_st_for ... = bfilter_sign_st ...` -- that Sign's tobool-gated
+branch collapses to plain backward filtering -- and flagged it as an unaudited
+domain-specific mathematical claim. That had already ceased to be true before
+the projection was removed: the lemma read `branch_sign_st_for ... =
+branch_sign_st ...`, the same trivial record-projection identity every other
+domain had. There is no outstanding claim of that kind. What follows was
 Sign (five values, one narrowing step), but it should be confirmed by an
 interactive re-check of exactly that lemma before being relied on in a
 written claim -- see "What must not currently be claimed," and issue #141
@@ -191,8 +193,8 @@ proved by case-splitting on `edge_action` and discharging each case with
 that domain's operation-level lemmas:
 
 - `sign_tf_st_for_commute` (`Sign_Exec.thy:178-222`)
-- `ivl_tf_st_for_commute` (`Analysis/Instances/Interval/Ivl_Exec.thy:381-425`)
-- `int_tf_st_{never,once,fixpoint}_for_commute` (`Analysis/Instances/Product/Int_Exec.thy:108,258,401`)
+- `ivl_tf_st_for_commute` (`Analysis/Instances/Interval/Interval_Exec.thy:381-425`)
+- `int_tf_st_{never,once,fixpoint}_for_commute` (`Analysis/Instances/Int/Int_Exec.thy:108,258,401`)
 - `parity_tf_st_for_commute` (`Analysis/Instances/Parity/Parity_Exec.thy:104`)
 
 each of the shape `fun_of_resolved_st_q_for gs (X_tf_st_for gs a s) = apply_tf (X_tf_for gs) a (fun_of_resolved_st_q_for gs s)`.
@@ -202,7 +204,7 @@ for the domain in play, not a universal fact.
 
 ## 6. Solver specification vs. executable `solve_c`
 
-`Voblint_Core` depends on session `TD` (`Core/ROOT`), an externally-authored
+`Voblint_Framework` depends on session `TD` (`Core/ROOT`), an externally-authored
 formalization of top-down solving vendored under `vendor/td-verification/`
 -- not a house-written, separately-tested mirror. The locale
 `TD_side_upd_rule` (`vendor/td-verification/TD_side_upd_rule.thy:18`) fixes
@@ -224,7 +226,7 @@ is proved, not assumed.
 `export_code` never names `solve`/`solve_c` directly. The exported entry
 point `analyse` (see section 8) reaches this same locale through
 `interpretation`, not reimplementation:
-`analyse Interval_Analysis` reduces to `analyse_interval_td_report`
+`analyse Interval_Analysis` reduces to `analyse_interval_report`
 (`Examples/Mixed/Analyse_Dispatch.thy:40-42`), built on
 `Solver_Side_RG.TD_side_warrowing_apinis_solve_Inr_rg`, one of the
 interpretations registered in `Core/Solver/Exec/Solver_Menu.thy`. Widening
@@ -313,7 +315,7 @@ back it:
 `cli/main.ml` now only reads this flag (`render_text_report`); it no longer
 probes any variable list or calls `is_bottom_abstract_value` itself. A
 regression witness (`state_wiring_ex_dead_at_check`,
-`Examples/Regression/Example_Analysis_Dispatch_Regression.thy`) locks in
+`Examples/CLI/Example_Analysis_Dispatch_Regression.thy`) locks in
 `unreachable = True` at a genuinely infeasible branch, checked by `eval`.
 
 That flag's exactness now reaches all the way to `ltr_collect`, for the
@@ -322,10 +324,10 @@ the older `side_cfg_T_eff_st` equation system `sign_exec_sound_collecting_at`/
 `ivl_exec_sound_collecting_at` are stated over, and not the mathematical
 `abs_state` generator the DG-native capstones `sign_dg_post_solution_collect_sound`/
 `ivl_dg_post_solution_collect_sound` are stated over). The connection reuses
-`base_dg_exec_analysis.collect_sound` (`Soundness/Run_Analysis_Sound.thy`)
+`local_state_dg_exec_analysis.collect_sound` (`Soundness/Run_Analysis_Sound.thy`)
 -- the same generic locale fact `analyse_sign_collect_sound_for`/
 `analyse_interval_dg_collect_sound_for` already cite to prove
-`analyse_sign_report_sound_proved_for`/`analyse_interval_td_report_sound_proved_for`
+`analyse_sign_report_sound_proved_for`/`analyse_interval_report_sound_proved_for`
 -- composed with `resolved_st_q_lifted_is_bot_for_iff` and
 `is_bot_state_lift_iff`:
 
@@ -341,7 +343,7 @@ genuinely no concrete execution reaches `v`, not merely a witness-bottom
 encoding. The CLI's suppression of unreachable check rows is therefore
 backed by a real theorem end to end, not a probe-and-prose heuristic.
 
-`wf_program_compile_input_exec` (`CFG/Compiler/Compile_Invariants.thy:68`) is
+`wf_program_compile_input_exec` (`Compile/Compile_Invariants.thy:68`) is
 the exported gate the CLI runs before analysis; its soundness theorem
 `wf_program_compile_input_exec_sound` (`:80-82`) is one-directional by
 design (`wf_program_compile_input_exec p ==> wf_program_compile_input p`) --
@@ -367,7 +369,7 @@ These are different claims, and only the first is currently supported:
 
 Voblint does not maintain a second, simplified constraint system alongside the
 production one. Every analysis is stated over the side-effecting D/G equation system
-(`Core/Solver/Context/DG/DG_Framework.thy`'s `dg_gen`, an instance of the vendored
+(`Core/Solver/Context/DG/DG_Constraint_Trees.thy`'s `dg_gen`, an instance of the vendored
 `eqsT` type), and the same generic certificate applies uniformly regardless of who
 produces it:
 
@@ -401,8 +403,8 @@ equivalent programs (`Exec_Interval_Run.thy`, `Example_Side_Proc_Global.thy`) wh
 certified bound is wanted.
 
 `domain_transfer`'s shared `tf_branch` field stays plain-state-valued (`branch`, not
-`branch_lifted`); `unit_dg_spec_for`'s diagonal D/G spec still dispatches branch through
-it (`dgs_branch = unit_step_for gs (branch# tf b pol)`). `branch` is intentionally the
+`branch_lifted`); `ownership_split_dg_spec_for`'s diagonal D/G spec still dispatches branch through
+it (`dgs_branch = ownership_split_transfer gs (branch# tf b pol)`). `branch` is intentionally the
 projection of the more expressive `branch_lifted`, which the TD-Side effectful
 architecture uses directly where it must preserve explicit Deadcode/reachability
 distinctions that `branch`'s whole-state-bottom encoding cannot make; the production D/G
@@ -417,10 +419,10 @@ correspondence entirely internal to the lifted TD-Side architecture.
 
 | Domain / mode | Math transfer soundness | Exec-mirror commute | End-to-end collecting-soundness | Exported (`analysis_kind`/`export_code`) | Classification |
 | --- | --- | --- | --- | --- | --- |
-| Sign | `sign_is_sound_transfer_for` | Per-op commute proved; `EA_Assume`/`EA_AssumeNot` case of `sign_tf_st_for_commute` closes via `bfilter_sign_st_commute` through the `branch_sign_st_for_eq` collapse (section 4) | `sign_exec_sound_collecting_at` | Yes | **FULLY CONNECTED**, one collapse lemma worth an interactive re-check |
-| Interval | `ivl_is_sound_transfer_for` | `ivl_tf_st_for_commute`, incl. `branch_ivl_st_commute` | `ivl_exec_sound_collecting_at` (+ TD-solver variant) | Yes | **FULLY CONNECTED** |
+| Sign | `sign_tf.is_sound_transfer_for` | Per-op commute proved; the `EA_Assume`/`EA_AssumeNot` case is discharged generically by `generic_tf_st_for_commute`, whose only guard hypothesis is `sign_backward_domain.branch_st_commute` (section 4) | `sign_exec_sound_collecting_at` | Yes | **FULLY CONNECTED** |
+| Interval | `ivl_tf.is_sound_transfer_for` | `ivl_tf_st_for_commute`, incl. `branch_ivl_st_commute` | `ivl_exec_sound_collecting_at` (+ TD-solver variant) | Yes | **FULLY CONNECTED** |
 | Congruence | Sound in isolated pieces (`inv_*_congruence_sound`); now has `congruence_tobool` (`Congruence_Backward.thy`) | `afilter_congruence_st_commute`, `bfilter_congruence_st_commute` exist; no `branch_congruence`/`branch_congruence_st` yet | None found | No | **GAP** -- branch layer and end-to-end theorem not yet built; not exported |
-| Parity | `parity_is_sound_transfer_for` | `parity_tf_st_for_commute` | `parity_exec_sound_collecting_at` | No -- absent from `analysis_kind` | **PARTIALLY CONNECTED / unreachable** -- proof-complete, unshipped |
+| Parity | `parity_tf.is_sound_transfer_for` | `parity_tf_st_for_commute` | `parity_exec_sound_collecting_at` | No -- absent from `analysis_kind` | **PARTIALLY CONNECTED / unreachable** -- proof-complete, unshipped |
 | Int_dom Refine_Never | `int_never_is_sound_transfer_for` | `int_tf_st_never_for_commute` | `int_never_dg_post_solution_collect_sound` | No | **PARTIALLY CONNECTED / unreachable** |
 | Int_dom Refine_Once | `int_once_is_sound_transfer_for` | `int_tf_st_once_for_commute` | `int_once_dg_post_solution_collect_sound` | No | **PARTIALLY CONNECTED / unreachable** |
 | Int_dom Refine_Fixpoint | `int_fixpoint_is_sound_transfer_for` | `int_tf_st_fixpoint_for_commute` | `int_fixpoint_dg_post_solution_collect_sound` | No | **PARTIALLY CONNECTED / unreachable** |
@@ -461,16 +463,18 @@ and issue #132 for the composite Int_dom domain's broader design.
 - That Congruence or Parity or any Int_dom mode is verified end-to-end in
   any user-facing sense: their proofs exist but nothing in the shipped CLI
   can invoke them.
+- That a `--context entry-state` or `--context call-string` run carries the
+  same guarantee as the default one. Every source-facing theorem here is
+  stated at the unit context. Those two routes prove a per-context bound on
+  `activation_collect` against the solved system, and neither reaches
+  `ltr_collect`, the published result table, or a source run
+  (`docs/THEOREM_MAP.md`).
 - That every value shown by the CLI is verified: the reachability-suppression
   flag (section 9) is now exported and proved exact all the way to
   `ltr_collect`, but the *rest* of a report row (the check verdict's own
   soundness, the rendered state text) has its own, separately-cited theorems
   (sections 1/4/5/6) -- do not conflate "the unreachable flag is proved" with
   "every field in a report entry is proved".
-- That Sign's branch alignment is verified with the same confidence as
-  Interval's: the `branch_sign_st_for_eq` collapse (section 4) is a real,
-  currently-unaudited mathematical claim, not settled record-projection
-  bookkeeping, until confirmed by an interactive re-check.
 - That the lexer/parser are covered by any soundness theorem: they are
   explicitly outside the proved pipeline by architecture, not by omission.
 

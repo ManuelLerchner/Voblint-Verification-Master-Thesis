@@ -1,0 +1,20 @@
+// PARAM: --analysis congruence
+// The guard relates two unconstrained variables rather than a variable and
+// a literal, so it fixes neither: n = 0, m = 1 satisfies the check and
+// n = 5, m = 6 violates it, both reaching the same program point. UNKNOWN
+// is the only sound answer.
+//
+// Congruence's backward filter is not weaker than the source here, it is
+// non-relational by construction. inv_eq_congruence intersects the two
+// sides' classes, and both are top, so the meet is top; inv_plus_congruence
+// then subtracts the literal 1 from top and gets top back. The domain
+// tracks one class per variable and has nowhere to record m - n = 1.
+void main() {
+  n := __voblint_nondet_int();
+  m := __voblint_nondet_int();
+  if (n + 1 == m) {
+    __voblint_check(n == 0) // UNKNOWN
+  } else {
+    skip
+  }
+}

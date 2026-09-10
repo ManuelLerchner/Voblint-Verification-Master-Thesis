@@ -80,9 +80,9 @@
 // edges:
 //   main_pp5_ctx0 -> main_pp6_ctx0: check(b==16)
 //   main_pp6_ctx0 -> main_result_main_ctx0: terminate
-//   main_entry_main_ctx0 -> main_pp2_ctx0: nop
+//   main_entry_main_ctx0 -> main_pp2_ctx0: body(main)
 //   square_pp0_ctx1 -> square_result_square_ctx1: return n*n
-//   square_entry_square_ctx1 -> square_pp0_ctx1: nop
+//   square_entry_square_ctx1 -> square_pp0_ctx1: body(square)
 //   main_pp4_ctx0 -> main_pp5_ctx0: check(a==9)
 //   main_pp2_ctx0 -> square_entry_square_ctx1: enter square(3)
 //   main_pp3_ctx0 -> square_entry_square_ctx1: enter square(4)

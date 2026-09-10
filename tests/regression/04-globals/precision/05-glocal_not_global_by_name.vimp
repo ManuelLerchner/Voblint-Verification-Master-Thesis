@@ -1,0 +1,19 @@
+// PARAM: --analysis interval
+// Glocal is spelled like a global-naming convention but is never declared
+// global, so declared_global_vars excludes it: it is an ordinary local,
+// routed flow-sensitively through every call like any other local, and its
+// exact value survives untouched no matter how many times p is called.
+// Declaration -- never spelling -- decides globality; see
+// 02-counter_widened_by_call.vimp for the properly declared global counter
+// in this same program (Example_Inc_Proc.thy's inc_program), which the
+// repeated call widens.
+global counter;
+void p() {
+  counter := counter + 1
+}
+void main() {
+  Glocal := 1;
+  p();
+  p();
+  __voblint_check(Glocal == 1) // PROVED
+}

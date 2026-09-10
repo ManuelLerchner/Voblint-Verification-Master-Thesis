@@ -20,10 +20,10 @@ VIMP source
     v
 CFG + checks : (pp * bexp) set     -- zero or more compiled checks per node
     |
-    | verified TD solver, per domain (<Domain>_Ctx_None_Sound)
+    | verified TD solver, per domain (<Domain>_Assembly / _Exec_Sound)
     v
-node-indexed analysis_result       -- analyse_<domain>_ctx_result_for
-                                   ::   (vname => bool) -> pname -> imp_prog
+node-indexed analysis_result       -- analyse_<domain>_result_for
+                                   ::   (vname => bool) -> imp_prog
                                      -> (unit, 'a abs_state) analysis_result
     |
     | domain-specific abstract_numeric_queries instance
@@ -57,7 +57,7 @@ frontend and `abstract_numeric_queries` instance below that line.
 `Sign_Checks.thy`, `Interval_Checks.thy`, `Parity_Checks.thy` and
 `Int_Checks.thy` are thin instantiations of the generic layers, not separate
 implementations of the pipeline. Each reads its per-node state through
-`analyse_<domain>_ctx_result_for`'s `analysis_result` table -- the routed
+`analyse_<domain>_result_for`'s `analysis_result` table -- the routed
 producer's own solved table at `prog_main_name` -- and interprets the generic
 `analysis_surface` locale over it.
 
@@ -130,22 +130,39 @@ They differ only in **which four query functions they feed in**:
 | `eq_true`/`eq_false` | derived from `sign_less_false` / semantic intersection (`meet_sign`) | specialized, compares interval bounds directly |
 | Source | `Sign_Numeric_Queries.thy` | `Interval_Numeric_Queries.thy` |
 
-### Solver frontends: `<Domain>_Ctx_None_Sound.thy`
+### Solver frontends: the unit-context assembly
 
-Domain-specific, not domain-generic: each routes its own transfer functions
-and executable mirror through the shared D/G generator, solves with the
-vendored `TD_side` solver, and exposes the result as
-`analyse_<domain>_ctx_result_for`, an `analysis_result` table indexed by
-`(node, context)`.
+Each domain routes its own transfer functions and executable mirror through
+the shared D/G generator, solves with the vendored `TD_side` solver, and
+exposes the result as `analyse_<domain>_result_for`, an `analysis_result`
+table indexed by `(node, context)`.
 
-The node-soundness bridge is generic and proved once:
-`dg_analysis_adapter.analyse_result_node_sound` (`DG_Analysis_Adapter.thy`),
-which each domain re-exports under its own spine prefix — e.g.
-`lemmas sctx_result_node_sound = sctx_adapter.analyse_result_node_sound`
-in `Sign_Checks.thy`. Composed with the unit-context collapse
-`activation_collect_unit_eq_ltr_collect` (`Routed_Context_Unit.thy`), it
-connects the solved table back to `ltr_collect` at *any* covered node — not
-only the solver's own query seed (`cfg_exit`). That is what lets a check be
+`Unit_DG_Analysis.thy` performs that assembly once. `unit_dg_pipeline` is the
+construction half — equation system, solve, covered keys, reader, result
+table, globals, report — and carries no correctness assumptions;
+`unit_dg_analysis` adds the domain and solver contracts and derives the
+published soundness theorems. A domain instantiates it by naming five things:
+its executable transfer, its callee entry, the state a run starts from, the
+solver, and the check classifier. `Sign_Assembly.thy` is one
+`global_interpretation sign_join: unit_dg_analysis ...` whose `defines` clause
+publishes `sign_unit_equations`, `sign_unit_solution`, `sign_unit_result`,
+`sign_unit_state_at`, `sign_unit_report` and their siblings; `Sign_Checks.thy`
+binds those to the names the CLI dispatches to (`analyse_sign_result_for`,
+`analyse_sign_report_for`) and defines only what is Sign's own — the
+per-origin solver sibling and the published globals. Interval and Parity carry
+the same interpretation in `Interval_Assembly.thy` and `Parity_Assembly.thy`
+alongside their own `_Exec_Sound` construction, with agreement lemmas between
+the two; Int's product domain still builds its own routed spine.
+
+The node-soundness bridge is generic and proved once inside
+`unit_dg_analysis`. `result_node_sound_closure` composes
+`dg_analysis_adapter.analyse_result_node_sound` (`DG_Analysis_Adapter.thy`)
+with the unit-context collapse `activation_collect_unit_eq_ltr_collect`
+(`Routed_Context_Unit.thy`), so it connects the solved table back to
+`ltr_collect` at *any* covered node — not only the solver's own query seed
+(`cfg_exit`); `result_node_sound` is its corollary under `vars_cover`. A
+domain inherits both from its interpretation rather than re-exporting the
+adapter lemma under a spine prefix of its own. That is what lets a check be
 discharged at its own CFG node without forwarding stores to the procedure
 exit.
 
@@ -208,9 +225,9 @@ alone cannot.
 ## Contextual result and GraphViz presentation (collapsed vs. expanded)
 
 The pipeline above is per-node and context-independent. A context-sensitive
-analysis (currently `--context entry-state`) produces a canonical,
-contextual `analysis_result` instead, and everything downstream of the
-solver -- checks, collapsed GraphViz, expanded GraphViz -- reads that one
+analysis -- `--context entry-state` or `--context call-string` -- produces a
+canonical, contextual `analysis_result` instead, and everything downstream of
+the solver -- checks, collapsed GraphViz, expanded GraphViz -- reads that one
 table, never the raw solver map:
 
 ```text
@@ -253,13 +270,16 @@ none of that changes what the solver computed.
 ```
 
 `--context-graph` only selects how an already-computed contextual result
-is drawn under `--dot`/`--dot-full`/`--graph-snapshot`; it never affects
-analysis precision, the solver, or which contexts get computed.
-`collapsed` (the default) joins every context's state per CFG node for
-rendering. `expanded` draws one node per `(pp, ctx)` pair instead, so a
-check that is `Dead` in one context and `Decided` in another -- or two
-live contexts that disagree on the same check's verdict -- stays visible
-as distinct nodes rather than collapsing into one rendering. See
+is drawn under `--dot`/`--dot-full`/`--graph-snapshot`/`--html`; it never
+affects analysis precision, the solver, or which contexts get computed.
+`collapsed` joins every context's state per CFG node for rendering.
+`expanded` draws one node per `(pp, ctx)` pair instead, so a check that is
+`Dead` in one context and `Decided` in another -- or two live contexts
+that disagree on the same check's verdict -- stays visible as distinct
+nodes rather than collapsing into one rendering. That is why `expanded`
+is the default under `--context entry-state`, for every domain: a run
+that paid for per-context precision should not have it joined away in the
+picture. See
 `tests/regression/11-graph-snapshot/06-collapsed_three_contexts.vimp`
 through `09-expanded_dead_route.vimp` for worked collapsed/expanded pairs.
 `--context-graph expanded` without `--context entry-state` is a CLI

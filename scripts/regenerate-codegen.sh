@@ -1,6 +1,6 @@
 #!/bin/sh
 # Regenerates codegen/generated/ from the export_files declarations in
-# src/Codegen/ROOT. Do not hand-edit files
+# src/Executable_Surface/Codegen/ROOT. Do not hand-edit files
 # under codegen/generated/ -- rerun this script instead.
 set -eu
 

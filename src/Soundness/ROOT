@@ -1,4 +1,4 @@
-session Voblint_Soundness in "." = "Voblint_Analysis" +
+session Voblint_Soundness in "." = "Voblint_Exec" +
   description "The two end-to-end soundness endpoints"
   theories
     Source_Activation_Sound

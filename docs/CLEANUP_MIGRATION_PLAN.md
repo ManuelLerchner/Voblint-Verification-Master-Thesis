@@ -44,7 +44,7 @@ unfolds to `wf_compile_input (storage_global p prog_main_name) ...`; every
 soundness theorem assumes `wf_compile_input (declared_global p) ...`. No
 corollary connects them.
 
-- Where: `src/CFG/Compiler/Compile_Invariants.thy`, beside
+- Where: `src/Program_Model/Compile/Compile_Invariants.thy`, beside
   `wf_program_compile_input_exec_sound`.
 - Shape: one corollary discharged by `storage_global_iff [simp]`
   (`VIMP_Notation.thy:90`), which already proves the two classifiers equal.
@@ -71,7 +71,7 @@ newly emitted file passes silently.
 
 **1.3 Make `codegen-modules` non-vacuous.** Audit §8.4. It reads the *checked-in*
 export, so it is green on a stale one. Live example, found while writing this
-plan: `a79862f3` added `src/Core/Solver/Context/DG/DG_Coverage.thy` with no
+plan: `a79862f3` added `src/Abstract_Interpreter/Exec/DG_Coverage.thy` with no
 `code_identifier` entry, and `codegen-modules` passes because the checked-in
 export predates it by three commits. **Benign today** — verified that
 `DG_Coverage`'s constants are reached only from the Examples session, which no
@@ -109,7 +109,7 @@ over the routed `analyse_*_ctx_result_for` the CLI actually runs.
 `resolve_analysis_config` on `k = 0`, which is the argument for deleting rather
 than keeping), and the seven unconsumed export roots (§2.4). Move
 `Sign_Entry.thy:333-489` — 157 lines of demo programs and `by eval` lemmas, 32%
-of the file — into the Examples session, where `src/CLI/ROOT`'s own description
+of the file — into the Examples session, where `src/Executable_Surface/CLI/ROOT`'s own description
 says it belongs.
 
 **2.3 Analysis** — **partly done; partly reclassified.**
@@ -131,7 +131,7 @@ not scaffolding.
   keep-all placement. `Example_Placement_Regression.thy:78` says it "validates
   concretely" the exact case that interpretation covers, and that example is one
   of the two the alignment register cites as evidence for the
-  `gamma_unit` / `gamma_join` row.
+  `gamma_ownership_split` / `gamma_join` row.
 - `Parity_Base_DG` / `Int_Base_DG` each export three `*_dg_spec_*_commute`
   theorems from a `context fixes gs` block. The inner `interpretation` really is
   inert (its facts never escape the context), but the theorems are not — they
@@ -170,6 +170,7 @@ subsystem (~173). Then the locales nobody interprets
 and the ~30 smaller items.
 
 Two judgment calls inside this batch, not mechanical:
+
 - `afilter_st_lift_correct` / `bfilter_st_lift_correct` are named *correctness*
   results. Deleting them removes stated theorems, not scaffolding.
 - `Exec_Refinement.thy` has zero external references but eight `[simp]` lemmas
@@ -197,7 +198,7 @@ which is why the omission was invisible. Add a CLI regression.
 
 **3.3 `publish_seed` encodes the opposite convention from the code.** §9.1.
 Definition puts the payload in the `globs` half; `Routed_Context` writes it in
-`locals` and `routed_extra_g` reads it back from `locals`. It is dead, its
+`locals` and `routed_entry_seed_tree` reads it back from `locals`. It is dead, its
 `_cont` twin is dead, both are textually identical to their `publish_global`
 counterparts, and the 20-line doc block above them asserts the wrong convention
 twice. Delete the pair and fix the comment.
@@ -248,7 +249,7 @@ domains. Strongest evidence in the audit: after normalising the domain name,
 differing** (re-measured after `8e78f3a6`). The locale fixes four things
 (executable transfer mirror, executable enter, abstract transfer record, initial
 store) and assumes exactly the four facts each domain already proves. **The
-pattern already exists one axis over** — `ictx_solved`
+pattern already exists one axis over** — `int_conf_solved`
 (`Interval_Ctx_None_Sound.thy:152`) factors the *solver* axis this way, with four
 `global_interpretation`s over one locale. Do Sign+Parity first as a two-domain
 proof of concept, then Interval and Int.

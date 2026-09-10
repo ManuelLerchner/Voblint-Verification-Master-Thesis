@@ -77,9 +77,9 @@
 //   main_pp6_ctx0 -> main_result_main_ctx0: terminate
 //   f_pp0_ctx1 -> f_result_f_ctx1: return p+p
 //   f_pp0_ctx2 -> f_result_f_ctx2: return p+p
-//   main_entry_main_ctx0 -> main_pp2_ctx0: nop
-//   f_entry_f_ctx1 -> f_pp0_ctx1: nop
-//   f_entry_f_ctx2 -> f_pp0_ctx2: nop
+//   main_entry_main_ctx0 -> main_pp2_ctx0: body(main)
+//   f_entry_f_ctx1 -> f_pp0_ctx1: body(f)
+//   f_entry_f_ctx2 -> f_pp0_ctx2: body(f)
 //   main_pp4_ctx0 -> main_pp5_ctx0: check(x==6)
 //   main_pp2_ctx0 -> f_entry_f_ctx1: enter f(3)
 //   main_pp3_ctx0 -> f_entry_f_ctx2: enter f(10)

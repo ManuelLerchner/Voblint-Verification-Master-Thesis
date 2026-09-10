@@ -1,0 +1,11 @@
+session Voblint_Examples_Int in "." = "Voblint_Analysis_Int" +
+  description "int_dom witnesses: the reduced product's arithmetic, refinement, and a certified run"
+  sessions
+    "Voblint_Examples_CFG"
+    "Voblint_Soundness"
+  theories
+    Example_Int_Domain
+    Example_Int_Backward
+    Example_Int_Warrowing
+    Example_Int_Transfer
+    Exec_Int_DG_Run

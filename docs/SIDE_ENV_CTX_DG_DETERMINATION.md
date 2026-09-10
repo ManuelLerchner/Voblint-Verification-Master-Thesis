@@ -14,7 +14,7 @@
 
 Can the remaining `TD_Side_Eff_Ctx_Sound` unit-context soundness endpoint
 (`post_fixpoint_sound_at_ctx_semantic` / `semantic_entry_store_ctx_analysis_sound`)
-become a derived `Local_DG` (or genuine multi-domain `sound_dg_spec`) instance,
+become a derived `Local_DG` (or genuine multi-domain `sound_dg_spec_core`) instance,
 removing another independent proof foundation?
 
 ## Verdict
@@ -22,9 +22,9 @@ removing another independent proof foundation?
 | Target | Verdict |
 | --- | --- |
 | Shares the canonical backbone induction | **YES — done.** |
-| Genuine multi-domain `sound_dg_spec` instance | **NO.** Routing incompatibility (below). |
+| Genuine multi-domain `sound_dg_spec_core` instance | **NO.** Routing incompatibility (below). |
 | Trivial `Local_DG` (`G = unit`) instance via the existing adapter | **NO.** `sound_transfer` coupling + non-vacuous DG axioms. |
-| Every context-sensitive endpoint derives from `sound_dg_spec` | **Already true up to naming** — see the inertness finding. |
+| Every context-sensitive endpoint derives from `sound_dg_spec_core` | **Already true up to naming** — see the inertness finding. |
 
 ## What was done
 
@@ -81,14 +81,14 @@ the existing adapter:
    (pure `tf`). `local_dg.dg_collect_ctx_sound` therefore demands a `sound_transfer
    tf` witness. The effectful endpoint has only `sound_effectful_transfer etf`; no
    pure `tf` is in scope, and manufacturing one is spurious coupling.
-2. **DG axioms are not vacuously inhabited.** `sound_dg_spec` requires `step_sound`
+2. **DG axioms are not vacuously inhabited.** `sound_dg_spec_core` requires `step_sound`
    / `combine_sound` for a real over-approximating step. `bounded_semilattice_sup_bot`
    has no top, so no trivial witness spec exists — the interpretation genuinely needs
    a sound transfer.
 
-## The load-bearing finding: `sound_dg_spec` is inert for context routing
+## The load-bearing finding: `sound_dg_spec_core` is inert for context routing
 
-`dg_collect_ctx_sound`'s proof uses **none** of the `sound_dg_spec` axioms
+`dg_collect_ctx_sound`'s proof uses **none** of the `sound_dg_spec_core` axioms
 (`gammaDG_mono`, `step_sound`, `combine_sound`). It is `collect_ctx_sound_meaning`
 plus definitional unfolding of `dg_gamma_c` / `dg_D_c`. The locale is a *naming
 layer* — supplying `dg_gamma_c` as the meaning — not a proof foundation for the
@@ -96,18 +96,18 @@ value-dependent endpoint. The axioms are load-bearing only in the single-context
 `dg_postfix_c_collect_sound` (plain `cfg_collect`, same-context combine).
 
 Consequence: for **every** context-sensitive (value-dependent-routing) endpoint,
-"derives from `sound_dg_spec`" is equivalent to "derives from
+"derives from `sound_dg_spec_core`" is equivalent to "derives from
 `Ctx_Collect_Backbone` with `dg_gamma_c` as the meaning." The canonical foundation
 is the backbone. The effectful spine now rides it directly — the *same* foundation
 the DG endpoint rides.
 
 ## Minimal interface extension (if uniform DG naming is still wanted)
 
-Split `sound_dg_spec` into two locales:
+Split `sound_dg_spec_core` into two locales:
 
 ```
 dg_meaning       fixes gammaDG only; hosts dg_gamma_c / dg_D_c / dg_collect_ctx_sound
-sound_dg_spec    extends dg_meaning with the 3 axioms; hosts dg_postfix_c_collect_sound
+sound_dg_spec_core    extends dg_meaning with the 3 axioms; hosts dg_postfix_c_collect_sound
 ```
 
 Then both the clean and effectful spines interpret `dg_meaning` with
@@ -156,7 +156,7 @@ Every soundness endpoint's context-sliced induction now flows through the single
 - digest → `obs_digest_collect_ctx_sound(_bot)` → backbone
 - **effectful unit-context → `post_fixpoint_sound_at_ctx_semantic` → backbone (historical)**
 
-The backbone is the canonical foundation; `sound_dg_spec` sits above it as the
+The backbone is the canonical foundation; `sound_dg_spec_core` sits above it as the
 two-domain naming layer, load-bearing only for the homogeneous single-context combine.
 
 ## Consumer matrix

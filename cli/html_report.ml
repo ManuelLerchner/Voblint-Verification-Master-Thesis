@@ -17,7 +17,7 @@
    Everything here is built from the export_graph the Isabelle side returns,
    so nothing re-derives the CFG or parses a rendered rendering back. *)
 
-module C = Voblint_CLI.Core
+module C = Voblint_CLI.Generated
 
 type file = { path : string; content : string }
 

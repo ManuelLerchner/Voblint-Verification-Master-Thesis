@@ -1,7 +1,7 @@
 (* GraphViz rendering of a solved analysis graph.
 
    Consumes the export_graph the Isabelle side returns
-   (State_Report_GraphViz's *_export_auto family) and produces the same DOT
+   (State_Report_Graph's *_export_auto family) and produces the same DOT
    the Isabelle renderer used to produce. Presentation is deliberately on this
    side of the trust boundary: no soundness theorem covers how a graph is
    drawn, and DOT syntax built inside Isabelle compiled to per-character
@@ -11,13 +11,14 @@
    state lines, a node_status, an edge role and its payload. Every styling
    decision below is this file's own. *)
 
-module C = Voblint_CLI.Core
+module C = Voblint_CLI.Generated
 
 (* DOT's own line separator inside a quoted label: a literal backslash-n, not
-   a newline. Matches join_gv_nl/graphviz_label_text. *)
-let gv_nl = "\\n"
+   a newline. The same two characters the export joins label lines with
+   (join_esc_nl), so a multi-line label survives the round trip. *)
+let esc_nl = "\\n"
 
-let label_text s = String.concat gv_nl (String.split_on_char '\n' s)
+let label_text s = String.concat esc_nl (String.split_on_char '\n' s)
 
 let html_text s =
   let buf = Buffer.create (String.length s * 2) in
@@ -92,7 +93,7 @@ let node_label node =
   | C.XN_Source -> source_html_label (String.concat "\n" (C.xn_lines node))
   | _ ->
     let lines = C.xn_label node :: C.xn_lines node in
-    "\"" ^ label_text (String.concat gv_nl lines) ^ "\""
+    "\"" ^ label_text (String.concat esc_nl lines) ^ "\""
 
 let has_duplicates xs =
   let seen = Hashtbl.create 64 in
@@ -113,8 +114,15 @@ let well_formed graph =
        (fun e -> Hashtbl.mem known (C.xe_src e) && Hashtbl.mem known (C.xe_dst e))
        (C.xg_edges graph)
 
+(* Raising rather than emitting a well-formed-looking placeholder: the only
+   assertion the suite makes about --dot is that stdout starts with
+   "digraph AnalysisCFG", which a placeholder satisfies at exit 0, so the
+   guard's failure was undetectable by the test that exists to check it. *)
 let render (graph : unit C.export_graph_ext) : string =
-  if not (well_formed graph) then "digraph AnalysisCFG { invalid_graph }\n"
+  if not (well_formed graph) then
+    failwith
+      "analysis graph is not well formed: duplicate node or cluster id, \
+       or an edge outside the node set"
   else begin
     let by_id = Hashtbl.create 64 in
     List.iter (fun n -> Hashtbl.replace by_id (C.xn_id n) n) (C.xg_nodes graph);

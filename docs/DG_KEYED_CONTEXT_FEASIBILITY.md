@@ -13,11 +13,11 @@ Historical note: the `TD_Side_Eff_Ctx_Sound` / `side_env_ctx` spine discussed in
 
 ## 0. Starting point
 
-`DG_Soundness` proves collecting soundness for `sound_dg_spec` but fixes the context
+`DG_Soundness` proves collecting soundness for `sound_dg_spec_core` but fixes the context
 to `unit`: `dg_gen`/`dg_D`/`dg_G`/`dg_postfix` read the single slots `Inl (v, ())` /
 `Inr ()`, and `dg_gen` is literally `side_cfg_T_eff_cmp_seed_dg` frozen at
 `(λ_. ())` (`DG_Soundness.thy:175`). The keyed DG generator
-`side_cfg_T_eff_cmp_seed_dg gkey cmb frame_seed …` (`DG_Framework.thy:311`) is fully
+`side_cfg_T_eff_cmp_seed_dg gkey cmb frame_seed …` (`DG_Constraint_Trees.thy:311`) is fully
 context/key-general but has **no** soundness theorem. Keyed/context soundness lives
 only on the homogeneous `abs_state` kernel.
 
@@ -39,7 +39,7 @@ So the port factors into two orthogonal generalisations:
 ## 2. Implemented slice
 
 `src/Analysis/Generic/Solver/Context/Goblint/DG/DG_Context_Soundness.thy`
-(inside `context sound_dg_spec`):
+(inside `context sound_dg_spec_core`):
 
 | Name | Statement | Role |
 | --- | --- | --- |
@@ -56,7 +56,7 @@ So the port factors into two orthogonal generalisations:
 | `sign_dg_two_context_sound` | one solution over `pp × bool + bool` unknowns soundly serves **both** contexts `True`/`False`, each reading its own slots, independently seeded |
 
 Proposed generalized theorem shape (**answers §2 of the goal**): keep the three
-`sound_dg_spec` assumptions (`gammaDG_mono`, `step_sound`, `combine_sound`) unchanged;
+`sound_dg_spec_core` assumptions (`gammaDG_mono`, `step_sound`, `combine_sound`) unchanged;
 the endpoint is `cfg_collect g S0 v ⊆ gammaDG (dD v) dG` where `dD`/`dG` read
 context-keyed slots. **No new locale assumption is required for the diagonal read.**
 
@@ -110,7 +110,7 @@ slots directly; no projection layer is needed.
 * **Where does the proof need `D`–`G` relations rather than separate concretizations?**
   Nowhere in the slice. `gammaDG` is used only through `gammaDG_mono` + the two
   step/combine soundness assumptions, which already package any D/G interaction inside
-  the analysis. The intersection `gamma_dg` and the `gamma_unit` merge are the only two
+  the analysis. The intersection `gamma_dg` and the `gamma_ownership_split` merge are the only two
   instantiations and neither needs a cross-carrier invariant. **The combine/return does
   not require a new cross-carrier invariant** for own-slot reads.
 * **Does `ENTER_MONO` stay expressible without strengthening the DG interface?** The
@@ -121,7 +121,7 @@ slots directly; no projection layer is needed.
   `gcmp = (=)` (own-slot), yes — that is `dg_G_c`, proved. General `gcmp` join is
   deferred (no consumer).
 * **New locale assumptions required?** **None** for the diagonal read. The generalized
-  theorem reuses `sound_dg_spec` verbatim.
+  theorem reuses `sound_dg_spec_core` verbatim.
 * **Realistic remaining size after this slice?** The full keyed DG spine (context
   selection + digest glue + one migrated keyed Sign example with `eval`) is **~500–700
   lines**, down from the ~2100-line homogeneous kernel, because (a) the within-context

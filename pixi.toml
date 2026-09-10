@@ -24,17 +24,28 @@ prompt_toolkit = ">=3.0"
 mcp = ">=1.0"
 
 # grammar/vimp.yaml -> scripts/gen_vimp_isabelle.py / gen_vimp_menhir.py
-# (see AGENTS.md's "VIMP grammar pipeline"). Only these two generators need
-# PyYAML; nothing else in the repo parses YAML.
+# (see AGENTS.md's "VIMP grammar pipeline"), and assembly/analyses.yaml ->
+# scripts/gen_analysis_assembly.py. These three generators are the only
+# things in the repo that parse YAML.
 [feature.grammar.dependencies]
 pyyaml = "*"
 
 [feature.grammar.tasks]
 gen-grammar-isabelle = "python3 scripts/gen_vimp_isabelle.py"
 gen-grammar-menhir = "python3 scripts/gen_vimp_menhir.py"
-grammar-check-isabelle = "python3 scripts/gen_vimp_isabelle.py && bash scripts/mk/check-clean.sh src/VIMP/VIMP_Grammar_Generated.thy"
+grammar-check-isabelle = "python3 scripts/gen_vimp_isabelle.py && bash scripts/mk/check-clean.sh src/Program_Model/VIMP/VIMP_Grammar_Generated.thy"
 grammar-check-menhir = "python3 scripts/gen_vimp_menhir.py && bash scripts/mk/check-clean.sh cli/vimp_parser.mly cli/vimp_lexer.mll"
 grammar-check = { depends-on = ["grammar-check-isabelle", "grammar-check-menhir"] }
+
+# assembly/analyses.yaml -> src/Analyses/<Domain>/generated/<Domain>_Assembly.thy.
+# Registration only: the generated interpretations cite handwritten lemmas, which
+# Isabelle still checks. `--check` diffs regenerated output against the checked-in
+# theories itself, so the drift gate needs neither git nor a toolchain.
+# The gate demands only what the registry has adopted; an unadopted output
+# renders under --out and is not compared, so ci cannot be red for a theory
+# nobody put in the tree.
+gen-assembly = "python3 scripts/gen_analysis_assembly.py"
+assembly-check = "python3 scripts/gen_analysis_assembly.py --check"
 
 # Hypothesis property-test suite (tests/property/).
 [feature.test.dependencies]
@@ -42,6 +53,9 @@ hypothesis = ">=6.100"
 pytest = ">=8.0"
 
 [feature.test.tasks]
+# Hand-written support expectations checked against generated output, so a
+# manifest edit that changes what the CLI offers has to be intended.
+registry-check = "python3 -m pytest tests/test_analysis_registry.py"
 property-build = "bash scripts/mk/property-build.sh"
 property = { cmd = "python3 -m pytest tests/property", depends-on = ["property-build"] }
 
@@ -124,6 +138,14 @@ codegen-check = { cmd = "bash scripts/mk/check-clean.sh codegen/generated/", dep
 # Reads the checked-in export, so it needs no Isabelle and can run in the
 # pre-commit hook alongside the ASCII and grammar-drift guards.
 codegen-modules = "python3 scripts/check_codegen_modules.py"
+# A slashed theory entry in a ROOT fails the whole session at load, so jEdit
+# will not start and the mistake presents as a dead editor rather than as an
+# error in the file that caused it. Needs no Isabelle.
+root-entries = "python3 scripts/check_root_entries.py"
+# Everything the export exposes is decided by its root list, and a missing
+# root breaks an OCaml consumer rather than the Isabelle build. Reads the
+# checked-in export too, so it costs a second and needs no toolchain.
+codegen-api = "python3 scripts/check_generated_api.py"
 codegen-regression = "bash scripts/mk/codegen-regression.sh"
 
 # voblint CLI
@@ -148,7 +170,27 @@ docs-lint = "python3 scripts/extract_definitions.py --lint"
 # cartouches, which Isabelle does not resolve -- so a rename leaves the comment
 # describing something that no longer exists. Gating: the backlog is cleared.
 thy-prose-refs = "python3 scripts/check_thy_prose_refs.py"
-docs-overview = "python3 scripts/extract_definitions.py --dump docs/generated/DEFINITIONS_OVERVIEW.md"
+
+# An identifier removed together with its theory stays legal inside `assumes`,
+# where Isabelle reads it as a free variable -- so a locale keeps building with
+# an assumption that has quietly stopped constraining anything. Only an
+# explicit list of retired names catches that; scripts/retired_identifiers.txt
+# holds it.
+retired-identifiers = "python3 scripts/check_retired_identifiers.py"
+
+# The general form of the same failure: any identifier left free in a locale
+# assumption, whether or not it was ever a constant here. Isabelle generalizes
+# the assumption over it, so the locale keeps building while the assumption
+# stops saying anything.
+locale-parameters = "python3 scripts/check_locale_parameters.py"
+
+docs-overview = "python3 scripts/extract_definitions.py --dump --out docs/generated/DEFINITIONS_OVERVIEW.md"
+
+# Size and shape of the .thy corpus: lines per session, per theory, and per
+# proof, plus a watchlist of theories past the 1500-line / 100-symbol style
+# limits. Reporting only -- never gates a build, so it stays out of `ci`.
+# Views and formats: `pixi run stats -- --help`.
+stats = "python3 scripts/thy_stats.py"
 
 # Pins scripts/gen_vimp_isabelle.py's identifier id_position/markup shape
 # (see the test module's own docstring). Deliberately outside tests/property/
@@ -163,9 +205,15 @@ id-position-check = "python3 -m pytest tests/test_gen_isabelle_id_position.py"
 ci = { depends-on = [
   "lint",
   "grammar-check",
+  "assembly-check",
+  "registry-check",
+  "root-entries",
   "thy-prose-refs",
+  "retired-identifiers",
+  "locale-parameters",
   "build",
   "codegen-check",
+  "codegen-api",
   "regression-lint",
   "id-position-check",
   "cli-test",

@@ -1,0 +1,90 @@
+// PARAM: --analysis int --context entry-state
+// The Int sibling of 14-expanded_sign_own_domain.vimp, and the reason the
+// expanded rendering is worth having: Int separates square(3) from square(4)
+// into two activations, so the graph carries two square clusters whose
+// states differ. The collapsed view of this same program joins them into one
+// box and reports the join -- see 11-entry_state_int_own_domain.vimp.
+// EXPECT-GRAPH-BEGIN
+// clusters:
+//   cluster_ctx_0:
+//     main_pp5_ctx0
+//     main_pp6_ctx0
+//     main_result_main_ctx0
+//     main_entry_main_ctx0
+//     main_pp2_ctx0
+//     main_pp3_ctx0
+//     main_pp4_ctx0
+//   cluster_ctx_1:
+//     square_pp0_ctx1
+//     square_entry_square_ctx1
+//     square_result_square_ctx1
+//   cluster_ctx_2:
+//     square_pp0_ctx2
+//     square_entry_square_ctx2
+//     square_result_square_ctx2
+//
+// nodes:
+//   main_pp5_ctx0: pp5
+//       a=sign=Positive, ivl=[9,9], parity=Odd, congruence==9
+//       b=sign=Positive, ivl=[16,16], parity=Even, congruence==16
+//       check 0<b
+//   main_pp6_ctx0: pp6
+//       a=sign=Positive, ivl=[9,9], parity=Odd, congruence==9
+//       b=sign=Positive, ivl=[16,16], parity=Even, congruence==16
+//   main_result_main_ctx0: exit_main
+//       a=sign=Positive, ivl=[9,9], parity=Odd, congruence==9
+//       b=sign=Positive, ivl=[16,16], parity=Even, congruence==16
+//   main_entry_main_ctx0: entry_main
+//       a=sign=Top, ivl=[-inf,+inf], parity=Top, congruence==0 (mod 1)
+//       b=sign=Top, ivl=[-inf,+inf], parity=Top, congruence==0 (mod 1)
+//   square_pp0_ctx1: pp0
+//       n=sign=Positive, ivl=[3,3], parity=Odd, congruence==3
+//   square_pp0_ctx2: pp0
+//       n=sign=Positive, ivl=[4,4], parity=Even, congruence==4
+//   main_pp2_ctx0: pp2
+//       a=sign=Top, ivl=[-inf,+inf], parity=Top, congruence==0 (mod 1)
+//       b=sign=Top, ivl=[-inf,+inf], parity=Top, congruence==0 (mod 1)
+//   main_pp3_ctx0: pp3
+//       a=sign=Positive, ivl=[9,9], parity=Odd, congruence==9
+//       b=sign=Top, ivl=[-inf,+inf], parity=Top, congruence==0 (mod 1)
+//   square_entry_square_ctx1: entry_square
+//       n=sign=Positive, ivl=[3,3], parity=Odd, congruence==3
+//   square_entry_square_ctx2: entry_square
+//       n=sign=Positive, ivl=[4,4], parity=Even, congruence==4
+//   main_pp4_ctx0: pp4
+//       a=sign=Positive, ivl=[9,9], parity=Odd, congruence==9
+//       b=sign=Positive, ivl=[16,16], parity=Even, congruence==16
+//       check 0<a
+//   square_result_square_ctx1: exit_square
+//       n=sign=Positive, ivl=[3,3], parity=Odd, congruence==3
+//       ret=sign=Positive, ivl=[9,9], parity=Odd, congruence==9
+//   square_result_square_ctx2: exit_square
+//       n=sign=Positive, ivl=[4,4], parity=Even, congruence==4
+//       ret=sign=Positive, ivl=[16,16], parity=Even, congruence==16
+//
+// edges:
+//   main_pp5_ctx0 -> main_pp6_ctx0: check(0<b)
+//   main_pp6_ctx0 -> main_result_main_ctx0: terminate
+//   main_entry_main_ctx0 -> main_pp2_ctx0: body(main)
+//   square_pp0_ctx1 -> square_result_square_ctx1: return n*n
+//   square_pp0_ctx2 -> square_result_square_ctx2: return n*n
+//   square_entry_square_ctx1 -> square_pp0_ctx1: body(square)
+//   square_entry_square_ctx2 -> square_pp0_ctx2: body(square)
+//   main_pp4_ctx0 -> main_pp5_ctx0: check(0<a)
+//   main_pp2_ctx0 -> square_entry_square_ctx1: enter square(3)
+//   main_pp3_ctx0 -> square_entry_square_ctx2: enter square(4)
+//   square_result_square_ctx1 -> main_pp3_ctx0: combine a := #ret
+//   square_result_square_ctx2 -> main_pp4_ctx0: combine b := #ret
+//   main_pp2_ctx0 -> main_pp3_ctx0: call-to-return square
+//   main_pp3_ctx0 -> main_pp4_ctx0: call-to-return square
+// EXPECT-GRAPH-END
+
+void square(n) {
+  return n * n
+}
+void main() {
+  a := square(3);
+  b := square(4);
+  __voblint_check(0 < a); // PROVED
+  __voblint_check(0 < b) // PROVED
+}

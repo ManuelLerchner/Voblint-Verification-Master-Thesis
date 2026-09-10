@@ -8,26 +8,24 @@
 
 [![CI](https://github.com/ManuelLerchner/Voblint-Verification-Master-Thesis/actions/workflows/ci.yml/badge.svg)](https://github.com/ManuelLerchner/Voblint-Verification-Master-Thesis/actions/workflows/ci.yml)
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/ManuelLerchner/Voblint-Verification-Master-Thesis)
-![Isabelle](https://img.shields.io/badge/Isabelle-2025-blue)
+![Isabelle](https://img.shields.io/badge/Isabelle-2025--2-blue)
 
-## Abstract
+Voblint is a machine-checked Isabelle/HOL framework for building, running and
+verifying interprocedural abstract interpreters, modelled on Goblint's D/G
+architecture. It chains verified CFG compilation, activation-local operational
+semantics, executable equation generation, and a vendored verified top-down
+solver into one soundness statement about the analyzer's own output.
 
-Voblint is a reusable, machine-checked Isabelle/HOL framework for constructing, executing, and verifying generic interprocedural abstract interpreters. Inspired by Goblint's modular D/G architecture, it combines verified compilation from VIMP programs, activation-local operational semantics, executable equation generation, a verified top-down solver, and end-to-end source-level soundness.
+The solver runs inside Isabelle/HOL and computes an abstract **post-solution**.
+With widening and narrowing in play that is not necessarily a least fixpoint.
+The end-to-end analyzer corollaries apply to that computed solution rather than to
+an externally supplied one; the generic framework theorems below them are
+stated for an arbitrary abstract bound.
 
-Unlike most existing formalizations, Voblint proves properties of the analysis result computed by a verified solver rather than an externally provided fixpoint.
-
-## Why Voblint?
-
-* **Computed results:** The verified solver computes the abstract fixpoint inside Isabelle/HOL. All soundness theorems apply directly to this computed result.
-* **Generic by design:** The framework is generic over abstract domains, transfer functions, widening strategies, D/G analyses, and context abstractions.
-* **Context-sensitive:** Analyses are parameterized by arbitrary context keys, enabling monovariant, activation-based, call-string, or custom context abstractions without changing the proof infrastructure.
-* **Executable:** Analyses are not just specified; they run directly inside Isabelle/HOL.
-* **Visualizable:** Executable GraphViz output for certified analysis results.
-
-## Tutorial
+## A first run
 
 Voblint programs are written in VIMP, a small IMP-style language with
-`__voblint_check(cond)` assertions. Given a counted loop:
+`__voblint_check(cond)` assertions:
 
 ```c
 void main() {
@@ -39,499 +37,595 @@ void main() {
 }
 ```
 
-running the Interval analysis over it (see "Running the CLI" below) proves
-the check on the widened/narrowed fixpoint:
-
 ```bash
 $ pixi run voblint --analysis interval tests/regression/02-control-flow/precision/02-while_loop.vimp
 8:3  pp3        0<x                  PROVED   x=[10,10]
 ```
 
-`--dot` renders the solved CFG as GraphViz, with the computed abstract state
-shown at each check node:
+`--dot` renders the same solved CFG as GraphViz instead: the source sits beside
+the graph, each check node carries its verdict and the state it was decided on,
+and dead nodes are shaded. `--dot-full` puts every node's own state on the graph
+rather than only the check nodes; under a context policy each context gets its
+own cluster (see the gallery below).
 
 ```bash
 pixi run voblint --analysis interval --dot tests/regression/02-control-flow/precision/02-while_loop.vimp \
-  | dot -Tpng -o while_loop_cfg.png
+  | dot -Tpng -o cfg.png
 ```
 
-![Solved CFG for the counted-loop example, showing the widened interval x=[10,10] at the check node](docs/images/while_loop_cfg.png)
+<p align="center">
+  <a href="docs/images/while_loop_cfg.png">
+    <img src="docs/images/while_loop_cfg.png" width="380" alt="Solved CFG for the counted-loop program: the source beside the graph, and the check node carrying the solved interval x=[10,10]">
+  </a>
+  <br><sub>The source travels with the graph; the check node carries its verdict and the state it was decided on.</sub>
+</p>
 
-The same rendering on a branch/join program shows the interval domain merging
-both arms:
+A product domain does not fit on a graph. One variable of the `int` domain
+prints as `sign=Positive, ivl=[1,1], parity=Odd, congruence==1`, and a whole
+program of those is unreadable. `--html` writes a browsable report instead: the
+graph stays sparse, each node's full state lives in its own document, and
+clicking a node or a source line shows it. `pixi run report` emits, serves and
+opens one.
 
-```bash
-pixi run voblint --analysis interval --dot tests/regression/02-control-flow/precision/01-if_else.vimp \
-  | dot -Tpng -o if_else_cfg.png
-```
+<p align="center">
+  <a href="docs/images/report-source-sign.png">
+    <img src="docs/images/report-source-sign.png" width="820" alt="Sign analysis in the HTML report: the checked line highlighted, with the abstract state at that point beside it">
+  </a>
+  <br><sub>Source view: click a line, get the verdict and the abstract state that decided it.</sub>
+</p>
 
-![Solved CFG for the if/else example, showing the joined interval y=[1,2] at the check node](docs/images/if_else_cfg.png)
+More views in [the gallery below](#reading-a-result); details and the
+browser-XSLT caveat in [`docs/HTML_REPORT.md`](docs/HTML_REPORT.md).
 
-Each rendering embeds the source alongside the CFG, splits nodes into
-per-activation clusters (context-sensitivity, see "Why Voblint?" above), and
-shades the checked node by its verdict. `--dot-full` renders every node with
-its own computed abstract state instead of only check nodes -- useful for
-inspecting the fixpoint at a program point with no check at all, e.g. mid-loop.
-See "Running the CLI" below for `--graph-snapshot` (a DOT-free textual
-alternative) and `--parse-only`.
-
-Inlining a whole abstract state into a node label stops working once the
-domain is a product. `--analysis int` renders one variable as
-`sign=Positive, ivl=[1,1], parity=Odd, congruence==1`, and a graph of those
-is unreadable. `--html` separates the two the way Goblint's own HTML output
-does: the CFG keeps short labels, and each node's full state lives in its own
-document you reach by clicking that node.
-
-```bash
-pixi run report
-```
-
-That emits `result/`, serves it on <http://localhost:8080/index.xml>, and
-opens it -- click the file, then `main`, then any node. `pixi run report
-FILE.vimp int` picks a different program and domain; `PORT=9000` moves the
-port and `NO_OPEN=1` skips the browser.
-
-`--analysis` also takes a comma list, which puts every named domain in the
-same report -- one `<analysis>` block per node, the element Goblint uses for
-exactly this. `--analysis int,interval,sign,parity` on the example above shows
-`int: PROVED` beside `interval: UNKNOWN` with `y` pinned to `[2,2]` in one and
-`Top` in the others, so the precision claim is readable in place instead of
-across four runs. It needs `--html` and `--context none`: node identifiers
-depend on the context, so they only agree across domains when the context does.
-
-The entry point is `index.xml`, not an `.html` file, and it renders only when
-served -- browsers refuse to apply its stylesheet over `file://`.
-
-The frontend is [g2html](https://github.com/goblint/g2html)'s `resources/`,
-vendored as the `vendor/g2html` submodule and used unmodified: Voblint emits
-the XML vocabulary its stylesheets already consume. A web server is required
-because browsers refuse the cross-document loads that frontend performs over
-`file://` -- the same reason Goblint's own documentation says to serve its
-result directory.
-
-### Browser XSLT is being removed
-
-Chrome removes XSLT in M155/M158 (November 2026); Firefox and Safari have
-announced the same direction. This frontend depends on it at every level:
-`index.xml` carries an `<?xml-stylesheet?>` processing instruction, and each
-pane is an `<iframe src="....xml">` whose stylesheet the browser applies on
-load. When XSLT goes, the report renders as raw XML.
-
-Nothing here works around it yet, and the workaround is not a script tag.
-Three routes, none free:
-
-* **Run g2html proper.** The vendored submodule is a *converter* -- "Goblint
-  XML result to HTML converter" -- and emitting static HTML is what it is for.
-  Deprecation-proof and uses the stylesheets unmodified, at the cost of a JDK
-  and `ant` in the toolchain.
-* **Pre-render here.** `xsltproc` (from `libxslt`) can transform each document,
-  but `script.js` sets iframe sources to `.xml` paths, so the frontend would
-  have to be patched rather than vendored unmodified -- which is the property
-  that makes it Goblint's viewer rather than a fork of it.
-* **Polyfill.** A WASM libxslt shim restores the browser API, at the cost of
-  committing a JavaScript/WASM blob -- the thing the submodule exists to avoid.
-
-Until then, any browser that still applies XSLT renders the report.
-
-## Foundations
-
-Voblint is inspired by several complementary lines of work:
-
-* **Goblint** ([Github](https://github.com/goblint/analyzer)) – modular interprocedural abstract interpretation and the D/G analysis architecture.
-* **Abstract Interpretation of Annotated Commands** ([ITP 2012](https://doi.org/10.1007/978-3-642-32347-8_9)) – reusable abstract interpretation in Isabelle/HOL.
-* **The Top-Down Solver Verified: Building Confidence in Static Analyzers** ([CAV 2024](https://doi.org/10.1007/978-3-031-65627-9_15)) – executable verified fixpoint solving.
-* **Mixed Flow-Sensitive Static Analysis: Engineering Modularity** ([FM 2026](https://doi.org/10.1007/978-3-032-26220-2_22)) – engineering modular heterogeneous analyses.
-
-## The Certified Execution Pipeline
-
-Voblint proves one continuous end-to-end execution story. The framework bridges the gap between the concrete source code and the computed mathematical fixpoint:
+## The certified pipeline
 
 ```text
-            VIMP Program
-                 │
-                 ▼
-       Verified CFG Compilation
-                 │
-                 ▼
-      Activation-local Semantics
-                 │
-                 ▼
-      Generic D/G Specification
-                 │
-                 ▼
-    Executable Equation Generation
-                 │
-                 ▼
-          Verified TD Solver
-                 │
-                 ▼
-      Computed Abstract Solution
-                 │
-                 ▼
-        Collecting Semantics
-                 │
-                 ▼
-       Source-Level Soundness
+Execution:  VIMP AST -> CFG -> equation system -> verified TD solver
+                     -> computed post-solution -> check report
 
+Proof:      source execution -> activation-local traces (valid_ltr)
+                             -> per-point collection (ltr_collect)
+                             included in the concretization of that result
 ```
 
-## Generic D/G Framework
+The reference meaning the computed result is proved sound against is a
+collecting semantics built on a *local trace* semantics, not a stage the solver
+produces. [`valid_ltr`](src/Program_Model/CFG/Collecting/LTR_Def.thy) is the trace
+layer: a trace is one procedure activation's own view of the run, so a call is entered and returned from without threading a
+global control stack through the semantics. Goblint's thread-modular local
+traces make the same move for threads; this takes it for activations.
+[`ltr_collect`](src/Program_Model/CFG/Collecting/LTR_Collect.thy) `gs g S v` is
+the collection on top of it: every store some valid trace holds when it sits at node `v`. `ltr_collect` is not indexed by analysis
+contexts; `activation_collect` is the context-keyed variant the
+context-sensitive results are stated over.
 
-Voblint's analyses are built on a reusable **D/G framework** inspired by Goblint's modular analysis architecture. Rather than implementing a separate solver and proof for every analysis, Voblint factors analyses into:
+The chain ends at a configuration-generic statement over the CLI's HOL entry
+point
+([`run_voblint_certified_source_sound`](src/Executable_Surface/CLI/Analysis_Certified.thy)):
+run the source program, stop wherever you like, and the analyzer's answer for the
+program point you are standing at describes the store in your hands -- the
+abstract state contains it, and every definite verdict printed beside it is
+correct for that store. The domain, the solver discipline and the context policy are
+arguments, not parameters of the statement.
 
-* **D** — abstract facts associated with program points,
-* **G** — globally shared analysis information published and consumed across program points.
+```isabelle
+theorem run_voblint_certified_source_sound:
+  fixes p :: imp_prog and s0 s :: store
+  assumes s0: "s0 ∈ cinit_stores (declared_global p)"
+      and run: "star (pstep (declared_global p) (prog_table p))
+                  (main_body (prog_table p), s0, []) (residual, s, frs)"
+      and cert: "certified_preconditions D solver ctx p"
+      and ans: "run_voblint D solver ctx view p = Analysed out"
+  shows "∃v stk. csim (prog_table p) (prog_cfg p) (residual, s, frs) (v, s, stk)
+               ∧ s ∈ ltr_collect (declared_global p) (prog_cfg p)
+                         (cinit_stores (declared_global p)) v
+               ∧ analysis_result_covers D solver ctx p v s
+               ∧ checks_sound_at out v s"
+```
 
-The central abstraction is the `sound_dg_spec` locale, an Isabelle/HOL formalization of Goblint's [`Spec`](https://github.com/goblint/analyzer/blob/1ab59c9c4d9859e9135885d3c9a9aa1a8f3b677e/src/framework/analyses.ml#L168-L263)-interface. An analysis instantiates this locale by providing domain-specific transfer, combine, and communication operations over abstract carriers. From this specification, the framework automatically derives:
+`run_voblint` is the single operation `export_code` exports and `cli/main.ml`
+calls, so this constrains the analyzer's own output rather than an internal
+solved system. Neither configuration legality nor well-formedness is a premise:
+an unsupported pairing answers `Unsupported_Configuration` and a malformed
+program answers `Malformed_Program`, so `Analysed out` already says the resolver
+accepted the configuration and the program passed its check. What a caller owes
+is `certified_preconditions D solver ctx p` -- that configuration's solver run
+completed, and it solved enough keys -- and nothing else.
 
-* executable equation generation,
-* integration with the verified top-down solver,
-* reusable collecting-semantics soundness theorems,
-* reusable source-level correctness theorems,
-* a complete executable analysis pipeline.
+The two case splits the statement avoids live in the definitions instead:
+`certified_preconditions` names the obligations per configuration and
+`analysis_result_covers` names what that configuration's own table claims, both
+by recursion over the domain, the solver and the policy. They have to be
+definitions rather than parameters because an abstract state's type is the
+domain's own carrier, so nothing polymorphic holds all five.
 
-This separation allows Sign, Interval, the composite Sign × Interval × Parity × Congruence domain, and future analyses to reuse the same verified infrastructure while varying only the domain-specific analysis logic.
+[`Example_End_To_End_Certificate`](src/Examples/CLI/Example_End_To_End_Certificate.thy)
+instantiates this theorem for an actual run -- the `Int` product domain, a
+call-string context of length one, and `Solver_Join` named explicitly rather than
+defaulted -- with well-formedness, solver termination, context coverage and the
+`Analysed` answer all discharged by evaluation. The source run is not assumed
+either: it is built step by step, both calls and the check, so the theorem's
+conclusion holds outright for a store the program really computes.
 
-The executable frontend is provided by `Exec_DG_Bridge.thy`, which implements:
+It also closes the last gap the endpoint leaves open. `csim` is not functional,
+so the generic endpoint produces *some* sound witness node, and that existential
+witness need not be the check node whose printed row a reader wants to inspect.
+The example therefore establishes a second, explicit collecting-semantics witness
+at that node -- the semantics there really does contain the store the program
+computes, calls and all -- and reads
+[`ctx_rows_sound_at`](src/Executable_Surface/CLI/Analysis_Run_Ctx_Sound.thy)
+at that node: every store the semantics admits there satisfies the condition the
+report called `PROVED`. Printed verdict, named node, real execution.
+`certificate_demo_full_certificate` collects the whole thing with no existentials
+left -- the answer, its single row, the completed run, the membership at that node,
+`analysis_result_covers` and `checks_sound_at` there, and the check's own truth.
 
-* executable finite-map representations of D/G states,
-* the refinement morphism `fun_of_dg_st`,
-* executable equation generation via `dg_gen_of`,
-* transport of solver-computed results to abstract post-solutions through
-  `part_post_solution_dg_st_to_abs`.
+The per-configuration endpoints stay underneath as the implementation level:
+[`Analysis_Run_Sound`](src/Executable_Surface/CLI/Analysis_Run_Sound.thy) for the
+context-free ones,
+[`Analysis_Run_Ctx_Sound`](src/Executable_Surface/CLI/Analysis_Run_Ctx_Sound.thy)
+for the contextual ones at each policy's default discipline, and
+[`Analysis_Run_Solver_Sound`](src/Executable_Surface/CLI/Analysis_Run_Solver_Sound.thy)
+for the contextual ones at an explicitly named discipline.
 
-Consequently, adding a new D/G analysis requires only instantiating `sound_dg_spec`; equation generation, solver execution, and the end-to-end correctness proof are inherited from the generic framework.
-
-## Extending Voblint
-
-The framework is designed to be highly extensible. Rather than proving a new analysis from scratch, you only need to provide domain-specific components:
-
-| Extension                     | Required work                         |
-| ----------------------------- | ------------------------------------- |
-| **Abstract domain**           | Define lattice and concretization (γ) |
-| **Transfer functions**        | Prove local soundness                 |
-| **Goblint D/G specification** | Instantiate the generic interface     |
-| **Context abstraction**       | Define a context key                  |
-| **Widening**                  | Provide widening/narrowing operators  |
-
-## Repository Structure
+`csim` gives a *structural* CFG correspondence for the current source control
+state, and that correspondence need not be unique. A procedure that is never
+called still has its body compiled into the graph, so
 
 ```text
-VIMP
- │   Source language
- ▼
-CFG
- │   Compilation & semantics
- ▼
-Core
- │   Generic D/G framework, domains, solver interface
- ▼
-Analysis
- │   Concrete domain instances (Sign, Interval, ...)
- ▼
-Formalization
- │   End-to-end soundness
- ▼
-Examples
-     Executable analyses & GraphViz
-
+main()   { x := 1; }
+unused() { x := 1; }
 ```
 
-* **`VIMP/`**: Syntax, procedures, globals/locals, small-step semantics
-* **`CFG/`**: Procedure-aware CFG compilation, activation-local traces, and collecting semantics
-* **`Core/`**: Generic D/G framework, domains, equations, and the TD solver bridge -- no domain-specific content
-* **`Analysis/`**: Concrete domain instances (Sign, Interval, Parity, Congruence, composite Sign × Interval × Parity × Congruence, ...) built on `Core/`
-* **`Formalization/`**: End-to-end solver, collecting-semantics, and source-level soundness
-* **`Examples/`**: Executable runs, flagship demos, and GraphViz tooling
-* **`vendor/`**: Verified TD solver submodule and Isabelle2025 patches
-* **`docs/`**: Proof overview, phase tracking, and agent workflow notes
+leaves the residual `x := 1` structurally matching two nodes -- one in `main`,
+which is running, and one in `unused`, which nothing reaches.
 
-## VIMP Grammar Pipeline
+The `ltr_collect` membership is what picks out a witness that is genuinely
+reachable carrying this store, and it is
+load-bearing rather than decorative -- at the dead witness the analysis
+computed bottom, so the coverage conjunct would be false there. At that
+reachable node the computed abstract state contains the store, and every
+definite check verdict printed for it is correct.
 
-VIMP source syntax has a single source of truth: **`grammar/vimp.yaml`**.
-Two generators realize it for two independent parser targets:
+One asymmetry is deliberate. The check guarantee is stated over `out_checks
+out`, the analyzer's own returned rows, while the state guarantee is stated as
+`analysis_result_covers D solver ctx p v s` rather than over `out`. That is
+because `analysis_output` keeps no abstract state: its snapshot, globals and
+per-row states are all `String.literal`, already rendered. An output-level state
+predicate could only be defined by inverting the renderer, so the honest split
+is a semantic guarantee about the computed result and an observable guarantee
+about the printed report.
+`analysis_result_covers` is the over-approximation itself: the concrete store
+lies in the concretization of the abstract state that configuration's own solve
+filed for that node -- under at least one context its call history is admitted at,
+when the policy keeps contexts. A call string is a function of that history, so
+there the context is unique; entry-state routing is relational and may admit more
+than one. `checks_sound_at` reads the printed check
+rows -- PROVED rows hold, REFUTED rows are violated, and no row at a node the
+run actually reaches is marked dead, so an unreachability claim can never be
+printed over a store that reached it.
+
+[`analyse_source_sound`](src/Executable_Surface/CLI/Analyse_Dispatch.thy) is the
+same statement one layer down, over the `analyse` verdict list rather than the
+rendered rows, and without the coverage conjunct.
+
+### What is certified
+
+For the HOL call
+
+```isabelle
+run_voblint D solver ctx view p = Analysed out
+```
+
+with the per-program premises established, a source-level soundness theorem
+covers every configuration the dispatcher answers with check rows:
+
+```text
+D      in {Sign, Interval, Parity, Congruence, Int}
+ctx    in {Ctx_None, Ctx_EntryState, Ctx_CallString k}
+solver = None, or any discipline that domain and policy accepts
+```
+
+Every modeled source execution is over-approximated at a genuinely reachable
+CFG node -- and, at the context-sensitive policies, under the analysis context
+its own call history produced. At that node every definite check verdict is
+correct for that execution, and no check row there is reported dead.
+
+What a `DEAD` row claims is a separate theorem, deliberately.
+[`dead_row_unreached`](src/Executable_Surface/CLI/Analysis_Run_Sound.thy) says
+that if a row at a point is dead then the collecting semantics there is empty --
+nothing reaches it at all:
+
+```isabelle
+theorem dead_row_unreached:
+  ... and dead: "row_verdict row = Bot"
+  shows "ltr_collect (declared_global p) (prog_cfg p)
+           (cinit_stores (declared_global p)) (row_point row) = {}"
+```
+
+That does not follow from reading the endpoint backwards. The endpoint is
+existential in its witness, so it constrains the rows at the one node it
+produced, not at an arbitrary node someone names; `csim` being non-unique is
+exactly what breaks the contraposition. It is proved forwards instead -- a
+store collected at the point would have to be covered there, and a dead row
+says nothing is.
+
+[`ctx_dead_row_unreached`](src/Executable_Surface/CLI/Analysis_Run_Ctx_Sound.thy)
+is the contextual counterpart, and it lands in the same shape rather than a
+context-indexed one: a dead aggregate means no context published a live entry
+at the point, so every bucket there is empty and the union equation collapses
+them back. A dead marker means nothing reaches the point, under any context.
+
+The same statement holds at the context-sensitive configurations, where the
+table has one entry per point *and* context
+([`Analysis_Run_Ctx_Sound`](src/Executable_Surface/CLI/Analysis_Run_Ctx_Sound.thy)).
+The store then sits in the entry filed under *at least one* context its own call
+history is admitted at -- unique for a call string, possibly several for
+entry-state routing -- and quantifying over every context the node was solved at
+instead would be false, since another activation's entry need not describe this
+store at all.
+
+```isabelle
+theorem run_voblint_sign_entry_state_source_sound:
+  ...
+      and solves: "sign_entry_state_terminates_for (declared_global p) p"
+      and cover: "ctx_vars_cover (prog_cfg p) (sign_es.ctx_succ (declared_global p) p) []
+                    (sign_entry_state_vars (declared_global p) p)"
+      and ans: "run_voblint Sign_Analysis None Ctx_EntryState view p = Analysed out"
+  shows "∃v stk ctx st.
+           csim (prog_table p) (prog_cfg p) (residual, s, frs) (v, s, stk)
+         ∧ s ∈ activation_collect (declared_global p)
+                   (sign_entry_state_context_rel (declared_global p) p) [] (prog_cfg p)
+                   (cinit_stores (declared_global p)) v ctx
+         ∧ lookup_context (analyse_sign_entry_state_result p) v ctx = Lifted st ∧ s ∈ ⟦st⟧
+         ∧ (∀row ∈ set (out_checks out). row_point row = v ⟶
+              row_verdict row ≠ Dead
+            ∧ (row_verdict row = Decided Check_Proved ⟶ truthy (aval (row_exp row) s))
+            ∧ (row_verdict row = Decided Check_Refuted ⟶ ¬ truthy (aval (row_exp row) s)))"
+```
+
+All five domains have this at the entry-state configuration. Its conclusion
+carries an `activation_collect` membership for the same reason the
+context-insensitive one carries `ltr_collect`: `csim` is structural and
+non-unique, so the witness needs a semantic conjunct to pin it to a node this
+store genuinely reaches under some context. The two premises are the
+contextual counterpart of what
+[`analyse_certified`](src/Executable_Surface/CLI/Analyse_Dispatch.thy) bundles:
+a termination fact and one coverage fact. The coverage is
+[`ctx_vars_cover`](src/Abstract_Interpreter/Framework/Constraints/CFG_Enumeration.thy)
+rather than `vars_cover`, whose key type is `unit`, and it is *closure* rather
+than blanket coverage -- if a node-context pair was solved, the pairs its edges
+lead to were solved too. A context-sensitive system cannot demand the
+unconditional form, because which contexts a node was solved at is decided by
+the run.
+
+Call-string carries a *smaller* certificate than entry state, not a larger one.
+A call string is a total function of the call history, so every activation has
+exactly one context by construction and there is no context-totality obligation
+at all: `fun_route_ltr_collect_eq_Union` is premise-free. What remains is the
+termination fact and the one closure premise.
+
+`None` selects each domain's default discipline, and naming a solver instead
+changes nothing about what is proved: every configuration the dispatcher answers
+with rows carries the same source-level theorem, all 32 of them, whichever of
+always-join, per-origin, Apinis warrowing or warrowing-per-origin ran the system.
+The 32 are plans, not spellings: `None` and the discipline it defaults to resolve
+to one plan and share one theorem, so they count once.
+[`docs/THEOREM_MAP.md`](docs/THEOREM_MAP.md) is the cell-by-cell matrix, and
+[`Analysis_Run_Solver_Sound`](src/Executable_Surface/CLI/Analysis_Run_Solver_Sound.thy)
+holds the contextual cells at a named discipline. What the endpoint reads is the
+solved table, not the search that produced it, so a discipline costs one
+registration and one instantiation, never a new argument.
+
+One limit is worth naming: the guarantee is about `out_checks` -- the graph,
+snapshot and globals in the answer are rendered strings, with no theorem about
+them.
+
+[`analyse_certified D p`](src/Executable_Surface/CLI/Analyse_Dispatch.thy)
+bundles the two per-program facts nothing here proves in general. It is a
+logical precondition of the theorem, not a certificate the CLI produces or
+checks: a caller establishes it for a specific program, by evaluation, before
+the theorem says anything about that program's report.
+
+Each domain also states the result over its own result table rather than over
+verdicts: [`analyse_sign_source_sound`](src/Analyses/Sign/generated/Sign_Entry.thy) says
+the store lies in the concretization of the entry
+`analyse_sign_result p` returned for that node, with a weaker completed-run
+reading (`analyse_<domain>_completed_run_sound`: final store at `cfg_exit`, no
+`csim` witness needed) beside it. Those live in each domain's entry theory:
+[Sign](src/Analyses/Sign/generated/Sign_Entry.thy),
+[Interval](src/Analyses/Interval/generated/Interval_Entry.thy),
+[Parity](src/Analyses/Parity/generated/Parity_Entry.thy),
+[Congruence](src/Analyses/Congruence/generated/Congruence_Entry.thy),
+[Int](src/Analyses/Int/Int_Entry.thy).
+
+Underneath, the source bridge is domain-free. It consumes only a
+collecting-semantics bound.
+[`source_sound_from_ltr_collecting_cap`](src/Soundness/Source_Activation_Sound.thy)
+takes any `G :: pp ⇒ store set` with `ltr_collect ... v ⊆ G v` and places the
+store of a source run inside `G` at the node it reached. Composing that
+inclusion with each domain's check soundness is what produces the verdict
+theorem above. Generic framework theorems establish the bound itself from an
+analysis's own soundness, solver-success and coverage obligations, so a new
+domain writes no source-level reasoning. See
+[`docs/PROOF_OVERVIEW.md`](docs/PROOF_OVERVIEW.md).
+
+### What the guarantee covers, and what it does not
+
+The theorem above is stated for the configuration as an argument, so domain,
+solver discipline and context policy are all covered by one statement, and
+`certified_preconditions D solver ctx p` is what a caller owes per program. The
+per-configuration endpoints underneath it are what that predicate is assembled
+from, one per plan; `analyse_certified D p` is the unit-context specialization of
+the same pair of obligations, and the per-domain corollaries read their tables at
+`lookup_context ... v ()`. See
+[`docs/THEOREM_MAP.md`](docs/THEOREM_MAP.md) for each endpoint's exact shape.
+
+Read the two verdicts precisely. `PROVED` at a node says every execution that
+reaches that node satisfies the condition; `REFUTED` says every execution that
+reaches it falsifies the condition. Neither says an execution reaches the node
+at all, so a `REFUTED` line is not a verified counterexample: a check on a dead
+branch is reported dead, and `REFUTED` on a reachable one still comes with no
+witness run.
+
+`certified_preconditions` -- and `analyse_certified`, its unit-context
+specialization -- is exactly the two side conditions that survive, and neither is
+discharged in general. Both can be established for an individual program by
+executable evaluation:
+
+* `solve`: the solver run completed. Per program: evaluate the solver-success
+  condition, then apply that domain's `..._via_solve_c` theorem. The evaluation
+  may itself fail to terminate, and no theorem here guarantees success for every
+  program; partial correctness is the scope.
+* `cover`: the solve visited enough keys. `vars_cover` bundles the entry,
+  intra-edge, call-entry and combine-target obligations into one predicate,
+  decided by `vars_cover_exec` and bridged by each domain's
+  `<x>_vars_cover_prog_of_exec`.
+
+Stated exactly: *successful analyses whose required coverage is established
+over-approximate all modeled source executions.* A `PROVED` verdict carries the
+formal guarantee once the solver-success and coverage premises are established
+for that invocation. The CLI does not validate coverage or emit a proof
+certificate: it returns a report.
+
+Two further steps separate the theorem from the binary, and no theorem covers
+either: the generated OCaml (`export_code` translates the same HOL functions,
+but the translation, the OCaml compiler and its runtime are trusted), and
+everything upstream of the AST (lexing and parsing sit outside the proved
+chain).
+
+`Example_Side_Execute.thy` (`src/Examples/CLI`) carries one complete instance
+with both conditions discharged and no assumption left open. See
+[`docs/VERIFICATION_CHAIN_AND_TRUST_BOUNDARY.md`](docs/VERIFICATION_CHAIN_AND_TRUST_BOUNDARY.md)
+for the full trust boundary.
+
+## Reading a result
+
+The report separates the graph from the state, and each view answers a different
+question.
+
+<table>
+  <tr>
+    <td width="50%" valign="top" align="center">
+      <a href="docs/images/report-graph-sign.png">
+        <img src="docs/images/report-graph-sign.png" width="420" alt="Sign analysis: CFG with proved checks in green and the dead branch in orange">
+      </a>
+      <br><b>Graph view, Sign</b>
+      <br><sub>Green nodes are proved checks, orange nodes are dead: <code>8 &lt; x</code> is infeasible on a <code>Negative</code> <code>x</code>, so the whole arm, its check included, drops out. The selected node's state is on the left.</sub>
+      <br><sub><a href="tests/regression/07-sign-precision/precision/06-tutorial_negative_join.vimp"><code>06-tutorial_negative_join.vimp</code></a> &middot; <code>--analysis sign --html</code></sub>
+    </td>
+    <td width="50%" valign="top" align="center">
+      <a href="docs/images/report-context-interval.png">
+        <img src="docs/images/report-context-interval.png" width="420" alt="Interval analysis with entry-state contexts: three call sites drawn as three clusters">
+      </a>
+      <br><b>Context-sensitive Interval</b>
+      <br><sub><code>--context entry-state</code> keeps a separate abstract state per distinct <em>abstract</em> argument context. Several concrete arguments can share one, and the solver may revisit a context. <code>--context-graph expanded</code> draws each as its own cluster: <code>[5,5]</code>, <code>[4,4]</code> and <code>[19,19]</code>, the last read from a global at the call site, instead of one cluster holding their join.</sub>
+      <br><sub><a href="tests/regression/11-graph-snapshot/04-expanded_three_contexts.vimp"><code>04-expanded_three_contexts.vimp</code></a> &middot; <code>--context entry-state --context-graph expanded --html</code></sub>
+    </td>
+  </tr>
+  <tr>
+    <td colspan="2" align="center">
+      <a href="docs/images/report-int-refinement.png">
+        <img src="docs/images/report-int-refinement.png" width="760" alt="The int product domain proving y == 2 where sign, interval and parity each report UNKNOWN">
+      </a>
+      <br><b>The refining <code>int</code> domain: four analyses in one report</b>
+      <br><sub><code>int: PROVED</code> beside <code>interval</code>, <code>sign</code> and <code>parity</code>, each UNKNOWN on the same program and the same node.</sub>
+      <br><sub><a href="tests/regression/16-composite-domain/precision/01-refinement_beats_components.vimp"><code>01-refinement_beats_components.vimp</code></a> &middot; <code>--analysis int,interval,sign,parity --context none --html</code></sub>
+    </td>
+  </tr>
+</table>
+
+Where that last gain comes from is worth stating precisely, because stronger
+precision alone does not identify its cause. Interval's own backward step for
+`+` is the conservative identity, so the guard `y + 1 == 3` tells it nothing;
+Sign and Parity likewise. Congruence carries the only real arithmetic
+inversion, and it is the fourth component, not selectable on its own. The
+composite's
+reduction step then re-derives the other three views from that tightened
+operand, giving `y = [2,2]`, `Positive`, `Even`, `==2`. The gain is the extra
+component *plus* cross-component reduction, not a better interval transfer
+([`Int_Backward.thy`](src/Analyses/Int/Int_Backward.thy),
+[`Int_Refinement.thy`](src/Analyses/Int/Int_Refinement.thy)).
+
+## Domains and configurations
+
+| Domain | `--analysis` | Result table | Default solver | Context policies |
+| --- | --- | --- | --- | --- |
+| Sign | `sign` | `analyse_sign_result` | join | `none`, `entry-state`, `call-string` |
+| Interval | `interval` | `analyse_interval_td_result` | warrowing | `none`, `entry-state`, `call-string` |
+| Parity | `parity` | `analyse_parity_result` | join | `none`, `entry-state`, `call-string` |
+| Congruence | `congruence` | `analyse_congruence_result` | join | `none`, `entry-state`, `call-string` |
+| Int (Sign × Interval × Parity × Congruence) | `int` | `analyse_int_result` | warrowing | `none`, `entry-state`, `call-string` |
+
+Every domain supplies a `widen` operator; Sign and Parity are finite lattices
+with `widen = sup`. What only Interval and the `int` product have is a solved
+table and a soundness corollary behind the widening rules, so the other
+`Solver_Warrow` pairings stay unsupported rather than being exposed on the
+strength of the instance alone. Unsupported `(domain, solver)` and
+`(domain, context)` pairings are rejected explicitly, answering `None` at
+[`resolve_analysis_config`](src/Executable_Surface/CLI/Analysis_Config.thy) rather
+than falling back silently.
+
+## The generic D/G framework
+
+Analyses are factored the way Goblint factors them:
+
+* **D**: abstract facts attached to program points;
+* **G**: globally shared information published and consumed across points.
+
+The central abstraction is the Isabelle counterpart of Goblint's
+[`Spec`](https://github.com/goblint/analyzer/blob/1ab59c9c4d9859e9135885d3c9a9aa1a8f3b677e/src/framework/analyses.ml#L168-L263)
+interface: an analysis provides domain-specific transfer, combine and
+communication operations, and inherits equation generation, solver integration,
+and the collecting- and source-level soundness theorems. The interface separates core
+transfer/combine soundness from the routed entry and coverage obligations:
+[`sound_dg_spec_core`](src/Abstract_Interpreter/Framework/Spec/DG_Spec_Sound.thy)
+signs the edge-transfer and return-combine obligations, which are independent of
+how a call is compiled, and
+[`dg_ctx_activation_base`](src/Abstract_Interpreter/Framework/Activation/DG_Ctx_Activation.thy)
+extends it with the entry obligation for the routed equation shape. The complete
+statement is the latter; interpreting the core alone leaves a call's entry
+unconstrained.
+
+| Responsibility | Owner |
+| --- | --- |
+| Generic unit-context equations | `Routed_Unit_Generator` |
+| Generic reader transport | `DG_Reader_Transport` |
+| Executable finite states | `Exec_St_*` |
+| Executable local specification | `DG_Local_State_Exec` |
+| Executable local refinement | `DG_Local_State_Exec_Refinement` |
+
+Adding a domain still costs more than one locale instantiation: the lattice and
+its concretization, transfer soundness, an executable representation and its
+refinement, entry/context coverage, and solver integration each carry
+obligations. What is *not* re-proved is any source-level reasoning; see
+[`docs/DG_ANALYSIS_AUTHORING.md`](docs/DG_ANALYSIS_AUTHORING.md).
+
+## Repository structure
+
+| Directory | Responsibility |
+| --- | --- |
+| `src/Program_Model/VIMP` | Source syntax and small-step semantics |
+| `src/Program_Model/CFG` | Graph model and activation-local collecting semantics; never mentions the compiler |
+| `src/Program_Model/Compile` | VIMP-to-CFG compiler, its invariants and forward simulation |
+| `src/Abstract_Interpreter/Domain` | Abstract values and states, concretization, dead-code lift |
+| `src/Abstract_Interpreter/Solver` | Strategy-tree equation language and the bridge to the vendored TD solver |
+| `src/Abstract_Interpreter/Framework` | Generic D/G specifications, routing, constraints, results |
+| `src/Abstract_Interpreter/Exec` | Executable finite states and their refinement |
+| `src/Soundness` | Domain-independent end-to-end endpoints (`run_source_sound`, `collect_sound`, `source_reaches_ltr_collect`) |
+| `src/Analyses` | Concrete domains over a shared `Base`; each selectable domain owns its `<Domain>_Entry.thy` |
+| `src/Executable_Surface/CLI` | The `analyse` dispatcher and the render surface; the one layer that sees every domain |
+| `src/Executable_Surface/Codegen` | `export_code` declarations (generated OCaml lands in `codegen/generated/`) |
+| `src/Examples` | Executable runs, flagship demos, regression proofs, one session per folder |
+| `vendor/` | TD solver, g2html and AutoCorrode submodules |
+
+Session dependencies run, in outline,
+`VIMP → CFG → Compile`, `Domain`/`Solver` → `Framework` → `Exec` → `Soundness` →
+`Analyses/*` → `CLI` → `Codegen`, with `Examples/*` hanging off the analysis
+sessions. That is a simplified overview. It omits cross-dependencies and the
+CLI-dependent example sessions; `ROOTS` lists one directory per session, and each
+`ROOT` states the real closure.
+
+## Build and verification
+
+Requirements: **Isabelle2025-2** (the version CI runs and `scripts/setup.sh`
+expects), an **[AFP](https://www.isa-afp.org/)** checkout, **[pixi](https://pixi.sh/)**,
+and, for the code-generation and CLI tasks, OCaml (`ocamlfind`, `menhir`,
+`ocamllex`, `zarith`) via opam.
+
+```bash
+pixi run vendor                        # init the TD solver submodule + Isabelle2025 patch
+AFP=/path/to/afp/thys pixi run build   # batch-build every session (the integration gate)
+AFP=/path/to/afp/thys pixi run jedit   # interactive development
+```
+
+`pixi.toml` is the single command surface; `pixi task list` shows all tasks.
+The ones that matter most often:
+
+| Task | Description |
+| --- | --- |
+| `build` | Batch-build every required session; the project's integration verification gate |
+| `codegen` / `codegen-check` | Regenerate `codegen/generated/`, or fail on drift |
+| `codegen-regression` | Compile and run the OCaml driver against Isabelle-proved expected output |
+| `cli-build` / `cli-test` | Build the `voblint` binary; run `tests/run.py` against it |
+| `grammar-check` | Regenerate both parser frontends and fail on any diff |
+| `property` | Hypothesis property tests (parser fuzzing, AST round-trip) |
+| `ci` | Everything CI runs |
+
+The generated OCaml is compile-checked by actually compiling it: both
+`codegen-regression` and `cli-build` run `ocamlfind ocamlopt` over
+`codegen/generated/ml/Voblint_CLI.ml`. `export_code` emits one `Generated`
+module for the whole reachable program (plus HOL's `Bit_Shifts` and
+`Str_Literal` preludes); do not hand-edit anything under `codegen/generated/`.
+
+> The vendored solver is pinned to a private fork of
+> [stilscher/td-verification](https://github.com/stilscher/td-verification); CI
+> needs a `SUBMODULES_TOKEN` secret to clone it. Making that fork public is the
+> outstanding step for a fully reproducible artifact.
+
+## Running the analyzer
+
+`voblint` (`cli/main.ml`) is a thin, unverified adapter over the exact generated
+`analyse` entry point.
+
+```bash
+# one line per __voblint_check, in source order
+pixi run voblint --analysis interval FILE.vimp
+
+# GraphViz of the solved CFG (--dot-full: every node, not only check nodes)
+pixi run voblint --analysis interval --dot FILE.vimp > cfg.dot && dot -Tsvg cfg.dot -o cfg.svg
+
+# deterministic textual CFG snapshot, no GraphViz dependency
+pixi run voblint --analysis interval --graph-snapshot FILE.vimp
+
+# parse-only syntax check (exit 0 on success, 2 on a parse error)
+pixi run voblint --parse-only FILE.vimp
+```
+
+`--context none|entry-state|call-string` selects the analysis;
+`--context-graph collapsed|expanded` only changes how a context-sensitive result
+is *drawn*, never what is computed. `pixi run voblint --help` has the full flag
+list, [`docs/CLI_DESIGN.md`](docs/CLI_DESIGN.md) the design and trust-boundary
+notes, and [`docs/CHECK_ARCHITECTURE.md`](docs/CHECK_ARCHITECTURE.md) the
+contextual result and rendering architecture.
+
+## VIMP grammar pipeline
+
+`grammar/vimp.yaml` is the sole source of truth for VIMP syntax. Two generators
+realize it for two unrelated parser targets:
 
 ```text
 grammar/vimp.yaml
-       │
-       ├── scripts/gen_vimp_menhir.py   ──▶ cli/vimp_parser.mly, cli/vimp_lexer.mll
-       │
-       └── scripts/gen_vimp_isabelle.py ──▶ src/VIMP/VIMP_Grammar_Generated.thy
-
+       |
+       +-- scripts/gen_vimp_menhir.py   -> cli/vimp_parser.mly, cli/vimp_lexer.mll
+       +-- scripts/gen_vimp_isabelle.py -> src/Program_Model/VIMP/VIMP_Grammar_Generated.thy
 ```
 
-Two generators exist because the CLI frontend and the Isabelle frontend have
-fundamentally different parser infrastructures -- Menhir/ocamllex for the
-former, Isabelle mixfix syntax and `parse_translation` for the latter (the
-generated `VIMP_Grammar_Generated.thy`, imported by `VIMP_Notation.thy`).
-Neither can express the other's grammar format, so each generator is
-responsible for realizing the shared, neutral grammar into its own idiom
-(precedence declarations, numeral decoding, and similar target-specific
-mechanics). Both generated outputs are committed, the same convention
-`codegen/generated/` uses for Isabelle's own code export; do not hand-edit
-`cli/vimp_parser.mly`, `cli/vimp_lexer.mll`, or `VIMP_Grammar_Generated.thy`.
+Never hand-edit the three generated files. **This pipeline sits outside the
+proved pipeline and is untrusted code**: no soundness theorem covers lexing or
+parsing, and the proved chain starts at an already-constructed `imp_prog`.
+Confidence comes from process instead: one canonical grammar, drift-checked
+generation (`pixi run grammar-check`, also a pre-commit hook), the `.vimp`
+regression corpus, AST round-trip and print-stability checks, and Hypothesis
+fuzzing under `tests/property/`.
 
-**This pipeline sits outside the proved pipeline above and is untrusted
-code.** No soundness theorem in this repository covers lexing or parsing --
-the certified pipeline starts at an already-constructed VIMP AST
-(`imp_prog`), regardless of whether that AST came from the CLI frontend, a
-test driver, or by hand. Confidence in the generated parsers comes from
-engineering process rather than proof:
+## Foundations
 
-* a single canonical grammar, with deterministic, drift-checked generation
-  (`git diff --exit-code` after regenerating);
-* the `.vimp` regression corpus (`tests/`);
-* AST round-trip and print-stability checks against an independently
-  constructed Isabelle AST (`tests/property/ast_driver.ml`);
-* Hypothesis-based property tests that fuzz both generated programs and
-  mutated source text (`tests/property/`, `pytest tests/property/`).
+* **Goblint** ([GitHub](https://github.com/goblint/analyzer)): modular interprocedural abstract interpretation and the D/G architecture.
+* **Abstract Interpretation of Annotated Commands** ([ITP 2012](https://doi.org/10.1007/978-3-642-32347-8_9)): reusable abstract interpretation in Isabelle/HOL.
+* **The Top-Down Solver Verified** ([CAV 2024](https://doi.org/10.1007/978-3-031-65627-9_15)): the vendored executable verified solver.
+* **Mixed Flow-Sensitive Static Analysis: Engineering Modularity** ([FM 2026](https://doi.org/10.1007/978-3-032-26220-2_22)).
+* **Data Race Detection by Digest-Driven Abstract Interpretation** ([arXiv:2511.11055](https://arxiv.org/abs/2511.11055)): thread-modular local-trace semantics, which Voblint's activation-local traces (`src/Program_Model/CFG/Collecting/`) adapt to procedure activations.
 
-A `lefthook` pre-commit hook (`.lefthook.yaml`, installed by `./scripts/setup.sh`
-or `pixi run lefthook-install`) regenerates both grammar artifacts on every
-commit that touches `grammar/vimp.yaml` or a generator script and fails the
-commit if that leaves the working tree dirty, so drift is caught locally
-before it reaches CI.
+## Documentation
 
-## Build Instructions
-
-### Requirements
-
-* **[Isabelle](https://isabelle.in.tum.de/)  2025** (or newer)
-* **[AFP](https://www.isa-afp.org/)** (Archive of Formal Proofs) checkout containing `Root_Balanced_Tree` and `Dijkstra_Shortest_Path`.
-* **[pixi](https://pixi.sh/)** -- the repository's task runner and Python-side dependency manager (I/R, the grammar generators, the property-test suite, `lefthook`). `pixi.toml` is the single command surface: `pixi run <task>`, `pixi task list` to see all of them.
-* `git`, `bash`, and standard POSIX tools.
-* OCaml (`ocamlfind`, `menhir`, `ocamllex`, `zarith`) via opam, for the code-generation regression driver -- see "Executable code generation" below. conda-forge's OCaml packages have no osx-arm64 build for `ocaml-findlib`/`ocaml-zarith`, so pixi does not manage this toolchain; opam does.
-
-### Pixi task reference
-
-`pixi.toml` is the single command surface (`pixi run <task>`, `pixi task list`
-for the live list). Tasks needing `AFP` fall back to `~/afp/thys` if unset.
-
-| Task | Requires | Description |
-| --- | --- | --- |
-| `vendor` | -- | Init/update the `td-verification` submodule and apply its Isabelle2025 patch |
-| `bootstrap` | Isabelle | One-shot session-root setup, depends on `vendor` |
-| `build` | Isabelle, `AFP` | Batch-build the main formalization session (the completion gate -- see "Status reporting" in `AGENTS.md`) |
-| `html` | Isabelle, `AFP` | Render the session's Isabelle HTML presentation |
-| `jedit` | Isabelle, `AFP` | Launch jEdit with session roots pre-loaded |
-| `isabelle-lint` | Isabelle | Run Isabelle's own linter over the session |
-| `codegen` | Isabelle, `AFP` | Regenerate `codegen/generated/` from the `export_code` declarations |
-| `codegen-check` | Isabelle, `AFP` | Fail if `codegen/generated/` has drifted from those declarations |
-| `codegen-regression` | opam | Run the OCaml driver under `codegen/regression/` against Isabelle-proved expected output |
-| `cli-build` | opam (`menhir`, `ocamllex`, `zarith`) | Build the `voblint` CLI binary (`cli/voblint`) from the generated OCaml plus the Menhir/ocamllex VIMP frontend |
-| `cli-test` | opam | Run `tests/run.py` against the built CLI, depends on `cli-build` |
-| `voblint` | opam | Rebuild (via `cli-build`) and run the CLI; extra arguments pass straight through, e.g. `pixi run voblint --analysis sign FILE.vimp` |
-| `bench` | opam | Benchmark the CLI with [hyperfine](https://github.com/sharkdp/hyperfine), one timed series per abstract domain over the same fixture, e.g. `pixi run bench FILE.vimp`; `--analysis a,b` narrows the sweep, `--plot[=OUT.png]` renders a per-domain whisker + histogram plot, other CLI flags pass through |
-| `gen-grammar-isabelle` / `gen-grammar-menhir` | -- | Regenerate one grammar target from `grammar/vimp.yaml` |
-| `grammar-check` | -- | Regenerate both targets and fail on any diff (drift check) |
-| `property` | -- | Run the Hypothesis property-test suite under `tests/property/`, depends on `property-build` |
-| `lefthook-install` | -- | Install the pre-commit hook (`.lefthook.yaml`) |
-| `lint` | -- | Run the pre-commit hook suite over all files |
-| `ci` | everything above | Everything CI runs, under one name |
-
-### Building
-
-Set `AFP` to your local AFP `thys/` directory (defaults to `~/afp/thys`):
-
-```bash
-# 1. Initialize the TD solver submodule and apply compatibility patches
-pixi run vendor
-
-# 2. Build the main formalization session (sorry-free)
-AFP=/path/to/afp/thys pixi run build
-
-# 3. Launch jEdit with session roots pre-loaded
-AFP=/path/to/afp/thys pixi run jedit
-
-```
-
-*Note: For details on agent-assisted development using Isabelle/Q and headless Isabelle/R, see `docs/ISABELLE_AGENT_NOTES.md` and the provided `./scripts/setup.sh`.*
-
-### Executable code generation
-
-Each domain exposes a runtime-program entry point -- `analyse_sign_report`
-(`Voblint_Examples.Example_Sign_Codegen`, the native D/G pipeline) and
-`analyse_interval_td_report` (`Voblint_Analysis.Interval_Checks`, the
-widening/warrowing-backed solver) -- reusing the exact functions the
-soundness theorems are proved about, not a parallel implementation. `analyse`
-(`Voblint_Examples.Example_Analysis_Dispatch`) dispatches on `analysis_domain`
-(`Sign_Analysis`/`Interval_Analysis`) to either domain's check report. All
-three, plus the VIMP AST constructors, are exported to OCaml so
-external code can build a program and call `analyse` without touching
-Isabelle: `export_code` translates the same executable equations the kernel
-checked, so the generated function is not a hand-written stand-in for a
-proved one.
-
-The downstream `Voblint_Codegen` session imports the executable facade and
-GraphViz surface, then owns their `export_code` declarations. Building
-`Voblint_Examples` therefore checks examples without materializing generated
-artifacts; `pixi run codegen` builds and exports the dedicated session.
-
-`analyse_interval_proved_sound`/`analyse_interval_refuted_sound` and
-`analyse_sign_proved_sound`/`analyse_sign_refuted_sound`
-(`Example_Analysis_Dispatch.thy`) restate the domains' soundness theorems
-directly over `analyse`, so a runtime verdict connects to its soundness proof
-without unfolding the dispatcher by hand. These theorems are conditional: a
-`Check_Proved`/`Check_Refuted` entry `analyse` returns is not itself a
-discharged certificate. Applying its soundness theorem additionally requires,
-for that program, a solver-termination witness (no result in this
-formalization proves either solver terminates on every input -- termination
-is checked per program, typically `by eval`) and a proof that the checked
-node reaches `cfg_exit`. `dispatch_demo_first_check_certified` is one
-complete, hypothesis-free instance of this chain: a concrete `Check_Proved`
-verdict `analyse` actually returns, with both facts discharged and no
-assumption left open.
-
-`code_identifier` declarations (`Example_Analysis_Dispatch.thy`) group the
-~60 contributing Isabelle theories into two named OCaml modules instead of
-one undifferentiated file: `Core` (VIMP/CFG/executable state/generic
-analysis plumbing/the vendored solver/both domains' lattices and transfer
-functions; these cannot be split further -- real mutual code-level
-dependencies, e.g. the executable state is generically instantiated at the
-solver's own `widening`/`narrowing` type classes) and `Analyse` (the public
-facade: `analysis_domain`, `analyse` itself, ~30 lines). OCaml's serializer
-only ever emits one file regardless of `module_name`/`code_identifier`, so
-the grouping instead organizes that one file into nested
-`module ... = struct ... end` blocks. Splitting `Sign`/`Interval` out of
-`Core` passes Isabelle's own `export_code` checks but `ocamlfind ocamlopt`
-then rejects an unbound type-class dictionary field the OCaml
-module-signature inference doesn't expose across that boundary -- not
-fixable by regrouping, so `Core`/`Analyse` is the finest split the OCaml
-compiler accepts.
-
-```bash
-# Regenerate codegen/generated/ from the export_code declarations
-AFP=/path/to/afp/thys pixi run codegen
-
-# Fail if codegen/generated/ has drifted from those declarations
-AFP=/path/to/afp/thys pixi run codegen-check
-
-# Compile and run the hand-written OCaml driver under
-# codegen/regression/ against codegen/generated/, and check its output
-# against the values already proved by Example_Analysis_Dispatch.thy's
-# dispatch_demo_sign_unknown / dispatch_demo_interval_precise
-pixi run codegen-regression
-```
-
-Generated sources are tracked under `codegen/generated/`; do not hand-edit
-them. `codegen/regression/ocaml/` holds the hand-written driver that
-exercises the generated code and compares it against the Isabelle-proved
-expected output -- so the generated OCaml is checked against the same
-theorems as the Isabelle source, not merely assumed to match it. Both `pixi run
-codegen-check` and `pixi run codegen-regression` run in CI
-(`.github/workflows/ci.yml`).
-
-### Running the analyzer (`voblint` CLI)
-
-`voblint` is a thin, unverified adapter (`cli/main.ml`) over the exact
-generated `analyse` entry point above -- see its trust-boundary note in
-`docs/CLI_DESIGN.md`. `pixi run voblint` rebuilds the binary from
-`codegen/generated/ml/Voblint_CLI.ml` via `cli-build` and then runs it, so any
-extra arguments after the task name go straight to `cli/voblint`, not to pixi:
-
-```bash
-# Check report: one line per __voblint_check, in source order
-pixi run voblint --analysis interval tests/regression/00-sanity/precision/01-straight_line_proved.vimp
-
-# Same analysis, GraphViz rendering of the solved, context-split CFG instead
-# (state shown at check nodes only)
-pixi run voblint --analysis interval --dot tests/regression/02-control-flow/precision/01-if_else.vimp > cfg.dot
-dot -Tsvg cfg.dot -o cfg.svg   # requires graphviz's `dot` on PATH
-
-# Same rendering, but every node carries its own computed abstract state,
-# not just check nodes -- useful with no check nearby, e.g. mid-loop
-pixi run voblint --analysis interval --dot-full tests/regression/02-control-flow/precision/02-while_loop.vimp > cfg.dot
-
-# Deterministic textual CFG snapshot (clusters/nodes/edges) with no GraphViz
-# dependency -- what the regression corpus embeds as expected --graph-snapshot output
-pixi run voblint --analysis interval --graph-snapshot tests/regression/02-control-flow/precision/01-if_else.vimp
-
-# Browsable HTML result directory: short CFG labels, full state per node in
-# nodes/<id>.xml, dead nodes and check verdicts shaded in the graph itself.
-# Needs `dot` on PATH and the vendor/g2html submodule; serve it to view it.
-pixi run voblint --analysis int --html tests/regression/16-composite-domain/precision/01-refinement_beats_components.vimp
-python3 -m http.server --directory result 8080   # then open /index.xml
-
-# --html writes result/ (as Goblint's own --html does); --html-out DIR overrides it
-
-# Parse-only syntax check, no --analysis needed (0 on success, 2 on a parse error)
-pixi run voblint --parse-only tests/regression/00-sanity/02-malformed.vimp
-```
-
-The "Context-sensitive" claim from "Why Voblint?" above, made concrete --
-`--context` controls the analysis, `--context-graph` only how an
-`entry-state` result is *drawn* by `--dot`/`--dot-full`/`--graph-snapshot`
-(same computed result, never a second analysis or a second solve). Every
-domain that supports a context policy renders under it, so
-`--analysis sign --context entry-state --dot` draws sign values, not
-interval ones:
-
-| Flag | Values (default first) | Effect |
-| --- | --- | --- |
-| `--context` | `none`, `entry-state`, `call-string` | `entry-state` re-analyzes each callee once per distinct entered-argument context, instead of once, flow- and call-site-insensitively, for the whole program. `call-string` splits it by bounded call history instead, and needs `--context-depth K` with `K >= 1`. Both are supported by `sign`, `interval` and `int`; `parity` is context-insensitive. |
-| `--context-graph` | `collapsed`, `expanded` | `expanded` draws one node per `(point, context)` pair with no join: a callee analyzed under three arguments renders as three clusters with their own state, and a check dead in one context but live in another is two distinct nodes, not one. `collapsed` draws one node per program point, every context's state joined for rendering (same CFG shape as `--context none`). **Defaults to `expanded` wherever the configuration supports it** -- a context-sensitive run is asked for because the contexts matter, so joining them away is the thing to opt into. The expanded renderer is typed in the context type itself and only `--analysis interval` has that configuration, so the other domains default to `collapsed`; asking for `expanded` there explicitly is still a configuration error, not a silent fallback, and so is `expanded` with `--context none` or `--context call-string` (whose renderer is always per-context and has no collapsed mode). |
-
-```bash
-# Text report: one row per __voblint_check, verdicts aggregated across every
-# context that reaches it (a check dead in every covering context is
-# suppressed entirely, matching the default's NOWARN convention)
-pixi run voblint --analysis interval --context entry-state tests/regression/11-graph-snapshot/03-two_call_sites_entry_state.vimp
-```
-
-```bash
-# --context-graph expanded: bump's three call sites render as three
-# clusters with their own un-joined state, not one cluster with a joined
-# interval -- collapsed's default rendering for the same program
-pixi run voblint --analysis interval --context entry-state --context-graph expanded --dot-full \
-  tests/regression/11-graph-snapshot/04-expanded_three_contexts.vimp > cfg.dot
-dot -Tsvg cfg.dot -o cfg.svg
-```
-
-See `docs/CHECK_ARCHITECTURE.md`'s "Contextual result and GraphViz
-presentation" section for the full architecture.
-
-Run `pixi run voblint --help` for the full flag list, including `--timeout`
-(the Interval backend is sound but not proved total, so the analysis itself
-runs in a killable subprocess -- see `docs/CLI_DESIGN.md`'s containment note).
-
-### Vendoring the TD solver
-
-Upstream: [stilscher/td-verification](https://github.com/stilscher/td-verification).
-Vendored as a submodule via the private fork
-[`ManuelLerchner/td-verification`](https://github.com/ManuelLerchner/td-verification)
-(CI + local access). GitHub Actions cannot clone the fork with the default
-`GITHUB_TOKEN`; add a classic PAT with `repo` scope as repository secret
-`SUBMODULES_TOKEN`, or make the fork public. `pixi run vendor` initializes the
-submodule at the pinned gitlink and is idempotent; every Isabelle task
-depends on it.
-
-`vendor/autocorrode` (the I/Q/I/R MCP servers, see "Agent-assisted
-development" below) is a separate submodule. To fast-forward it to upstream
-main: `git submodule update --remote --merge vendor/autocorrode`, then review
-and commit the pointer update.
-
-### Agent-assisted development
-
-Proof development experiments with
-[Isabelle/Q](https://github.com/awslabs/AutoCorrode/tree/main/iq) (I/Q), an MCP
-server for Isabelle/jEdit that lets coding agents edit theories, query proof
-states, run Sledgehammer, and explore tactics. Following the autoformalization
-workflow of Kappelmann et al.,
-[*Just Type It in Isabelle!*](https://arxiv.org/abs/2604.15713) (arXiv:2604.15713,
-2026), §6.1. See `AGENTS.md` and `docs/ISABELLE_AGENT_NOTES.md`.
-
-| Script | Role |
+| Document | Contents |
 | --- | --- |
-| `./scripts/setup.sh` | one-shot bootstrap: submodules, pixi environment + lefthook install, I/Q plugin (`--no-iq` to skip) |
-| `./scripts/start-iq.sh` | Isabelle/jEdit + I/Q on port 8765 |
-| `./scripts/start-ir.sh` | headless Isabelle/R MCP on port 9148 |
-| `./scripts/start-both.sh` | I/R background + I/Q foreground; Ctrl+C tears down both |
-
-`start-ir.sh` registers `vendor/td-verification` as an Isabelle component via
-`isabelle components -u`. This persistent, idempotent registration lets the
-I/R `ML_process` resolve the parent session `TD`; the I/R launcher accepts only
-one explicit session directory. Remove the registration, if needed, with:
-
-```bash
-isabelle components -x "$(pwd)/vendor/td-verification"
-```
+| [`AGENTS.md`](AGENTS.md) | Project contract, style rules, working agreements |
+| [`docs/PROOF_OVERVIEW.md`](docs/PROOF_OVERVIEW.md) | Proof architecture and intended claims |
+| [`docs/THEOREM_MAP.md`](docs/THEOREM_MAP.md) | Thesis claims mapped to checked Isabelle theorems |
+| [`docs/GLOSSARY.md`](docs/GLOSSARY.md) | Terminology and defining layers |
+| [`docs/VERIFICATION_CHAIN_AND_TRUST_BOUNDARY.md`](docs/VERIFICATION_CHAIN_AND_TRUST_BOUNDARY.md) | What is proved, what is trusted |
+| [`docs/GOBLINT_ALIGNMENT_REGISTER.md`](docs/GOBLINT_ALIGNMENT_REGISTER.md) | Where this formalization differs from upstream Goblint, and why |
+| [`docs/ISABELLE_AGENT_NOTES.md`](docs/ISABELLE_AGENT_NOTES.md) | Build commands, agent-assisted development (I/Q, I/R), `./scripts/setup.sh` |
+| [`docs/ROADMAP.md`](docs/ROADMAP.md), [`docs/NON_GOALS.md`](docs/NON_GOALS.md) | Scope and priorities |

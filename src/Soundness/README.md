@@ -3,12 +3,18 @@
 Sits directly above `Voblint_Analysis` and holds only the two theorems that
 close the chain. Everything domain-specific -- including each domain's routed
 instances at every context policy -- lives with its domain under
-`src/Analysis/Instances/<Domain>/Ctx/`, so this session says what is proved
+each domain's own `<Domain>_Analyses.thy`, so this session says what is proved
 about the pipeline rather than how each analysis reaches it.
 
 Theorems only. Executable demonstrations and the `Voblint` capstone live in the
 leaf session `Voblint_Examples` (`src/Examples/`), so this session builds
 without the slow codegen and `value` runs.
+
+The input to these is `Voblint_Framework`'s own question -- why a *solved
+equation system* covers the collecting semantics of an arbitrary CFG -- which
+is answered across `Framework/Constraints/` and `Framework/Context/`. This
+session is the step after: why a *source program's* run is covered, end to end,
+by a registered analysis.
 
 | Entry | Role |
 | --- | --- |

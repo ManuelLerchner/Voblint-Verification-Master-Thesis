@@ -1,0 +1,17 @@
+session Voblint_Nonrelational in "." = "Voblint_Result" +
+  description
+    "What a non-relational domain reuses: expression evaluation and soundness,
+     special-call dispatch, generic procedure entry and executable backward filtering.
+     Every theory here fixes an abstract state as one value per variable,
+     which is why a relational carrier must not be able to reach it"
+  sessions
+    "Voblint_VIMP"
+    "Voblint_Domain"
+    "Voblint_Framework"
+    "Voblint_Exec"
+  theories
+    Abstract_Arithmetic
+    Special_Ops
+    Nonrelational_Transfer
+    Numeric_Ops
+    Exec_Backward

@@ -1,0 +1,19 @@
+// PARAM: --analysis congruence --context entry-state
+// The context-sensitive counterpart 05-congruence_across_call.vimp names.
+// triple has two call sites carrying different singleton classes. Joined at
+// one context, p is the congruence join of 4 and 5 -- gcd(|4-5|) = 1, so
+// 1 (mod 1), every integer -- and return_congruence publishes p * 3 as
+// 0 (mod 3), which decides neither check: --analysis congruence alone
+// answers UNKNOWN twice with a==0 (mod 3), b==0 (mod 3).
+//
+// Under entry-state contexts the two call sites seed triple separately,
+// each with its own singleton, so combine reads back 12 and 15 exactly.
+// The entry-state route is the whole content of this case: the same
+// program, the same domain, decided only because the contexts stay apart.
+void triple(p) { return p * 3 }
+void main() {
+  a := triple(4);
+  b := triple(5);
+  __voblint_check(a == 12); // PROVED
+  __voblint_check(b == 15) // PROVED
+}
