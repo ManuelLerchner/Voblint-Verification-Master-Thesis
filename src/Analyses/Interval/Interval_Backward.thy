@@ -167,21 +167,26 @@ fun aval_ivl :: "exp => (vname => ivl) => ivl" where
         else Ivl (Fin 0) (Fin 1))"
   | "aval_ivl (And a b)    \<sigma> =
        (if is_empty (aval_ivl a \<sigma>) \<or> is_empty (aval_ivl b \<sigma>) then bot
-        else if interval_tobool (aval_ivl a \<sigma>) = Some False \<or> interval_tobool (aval_ivl b \<sigma>) = Some False
+        else if interval_tobool (aval_ivl a \<sigma>) = Some False
+             \<or> interval_tobool (aval_ivl b \<sigma>) = Some False
         then Ivl (Fin 0) (Fin 0)
-        else if interval_tobool (aval_ivl a \<sigma>) = Some True \<and> interval_tobool (aval_ivl b \<sigma>) = Some True
+        else if interval_tobool (aval_ivl a \<sigma>) = Some True
+             \<and> interval_tobool (aval_ivl b \<sigma>) = Some True
         then Ivl (Fin 1) (Fin 1)
         else Ivl (Fin 0) (Fin 1))"
   | "aval_ivl (Or a b)     \<sigma> =
        (if is_empty (aval_ivl a \<sigma>) \<or> is_empty (aval_ivl b \<sigma>) then bot
-        else if interval_tobool (aval_ivl a \<sigma>) = Some True \<or> interval_tobool (aval_ivl b \<sigma>) = Some True
+        else if interval_tobool (aval_ivl a \<sigma>) = Some True
+             \<or> interval_tobool (aval_ivl b \<sigma>) = Some True
         then Ivl (Fin 1) (Fin 1)
-        else if interval_tobool (aval_ivl a \<sigma>) = Some False \<and> interval_tobool (aval_ivl b \<sigma>) = Some False
+        else if interval_tobool (aval_ivl a \<sigma>) = Some False
+             \<and> interval_tobool (aval_ivl b \<sigma>) = Some False
         then Ivl (Fin 0) (Fin 0)
         else Ivl (Fin 0) (Fin 1))"
 
-interpretation ivl_arith: expression_domain_sound
-    aval_ivl "\<lambda>n. Ivl (Fin n) (Fin n)" interval_lt interval_eqb interval_tobool
+interpretation ivl_arith: expression_domain_mono
+    aval_ivl "\<lambda>n. Ivl (Fin n) (Fin n)" "(+)" "(-)" "(*)"
+    interval_lt interval_eqb interval_tobool
   by unfold_locales
      (simp_all add: ivl_plus_sound ivl_minus_sound ivl_times_sound
                      ivl_plus_mono ivl_minus_mono ivl_times_mono

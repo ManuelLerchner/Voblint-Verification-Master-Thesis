@@ -68,7 +68,8 @@ lemma gamma_sign_mono:
 
 instantiation sign :: ord begin
 definition less_eq_sign :: "sign => sign => bool" where "(a::sign) <= b = sign_le a b"
-definition less_sign    :: "sign => sign => bool" where "(a::sign) <  b = (sign_le a b \<and> \<not> sign_le b a)"
+definition less_sign    :: "sign => sign => bool" where
+  "(a::sign) <  b = (sign_le a b \<and> \<not> sign_le b a)"
 instance ..
 end
 
@@ -83,7 +84,11 @@ proof intro_classes
     unfolding less_eq_sign_def by (rule sign_le_trans)
 qed
 
-text \<open>The bottom instance lifts pointwise to abstract states and enables monotone least-upper-bound iteration.\<close>
+text \<open>
+  The bottom instance lifts pointwise to abstract states and enables monotone
+  least-upper-bound iteration.
+\<close>
+
 instantiation sign :: bot begin
 definition "bot_sign = SBot"
 instance ..
@@ -105,7 +110,7 @@ definition is_bottom_sign :: "sign \<Rightarrow> bool" where
 
 lemma is_bottom_sign_correct: "is_bottom_sign s \<longleftrightarrow> gamma_sign s = {}"
   unfolding is_bottom_sign_def
-  by (cases s) (auto simp: gamma_sign.simps intro: exI[of _ "-1"] exI[of _ "0"] exI[of _ "1"])
+  by (cases s) (auto intro: exI[of _ "-1"] exI[of _ "0"] exI[of _ "1"])
 
 
 
@@ -143,8 +148,11 @@ lemma join_sign_ub2: "sign_le b (join_sign a b)"
 
 lemma join_sign_least: "sign_le a csg \<Longrightarrow> sign_le b csg \<Longrightarrow> sign_le (join_sign a b) csg"
   by (cases a; cases b; cases csg; simp)
-lemma join_sign_comm:  "join_sign a b = join_sign b a"                 by (cases a; cases b) simp_all
-lemma join_sign_assoc: "join_sign a (join_sign b csg) = join_sign (join_sign a b) csg"  by (cases a; cases b; cases csg) simp_all
+lemma join_sign_comm: "join_sign a b = join_sign b a"
+  by (cases a; cases b) simp_all
+
+lemma join_sign_assoc: "join_sign a (join_sign b csg) = join_sign (join_sign a b) csg"
+  by (cases a; cases b; cases csg) simp_all
 
 subsection \<open>Abstract arithmetic operations\<close>
 
@@ -216,7 +224,11 @@ proof intro_classes
     unfolding sup_sign_def less_eq_sign_def by (rule join_sign_least)
 qed
 
-(* sign in order_bot + semilattice_sup -> bounded_semilattice_sup_bot for free *)
+text \<open>
+  \<open>sign\<close> is already an \<open>order_bot\<close> and a \<open>semilattice_sup\<close>, so the bounded
+  semilattice comes for free.
+\<close>
+
 instance sign :: bounded_semilattice_sup_bot ..
 
 
@@ -284,8 +296,6 @@ next
     by (simp add: is_top_sign_correct_gamma)
 qed
 end
-
-declare gamma_abs_sign [code del]
 
 instance sign :: widening_domain ..
 

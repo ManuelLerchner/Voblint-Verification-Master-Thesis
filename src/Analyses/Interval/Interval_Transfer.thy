@@ -1,19 +1,40 @@
 theory Interval_Transfer
-  imports Interval_Backward Interval_Special "Voblint_Framework.DG_Local_State_Spec"
-    "Voblint_VIMP.VIMP_Globals"
+  imports
+    Interval_Backward
+    Interval_Special
+    "Voblint_Nonrelational.Nonrelational_Transfer"
 begin
 
-section \<open>Interval transfer functions\<close>
-
-subsection \<open>Abstract branch and assignment\<close>
+section \<open>What each kind of CFG edge does to an interval store\<close>
 
 text \<open>
-  Guard refinement delegates to the generic @{text bfilter} proved sound in
-  @{locale backward_domain}. @{const bfilter_ivl} narrows on the branch selected
-  by its boolean polarity argument (@{text True} for @{text "truthy (aval b s)"},
-  @{text False} for @{text "\<not> truthy (aval b s)"}) -- this is Interval's branch
-  operation directly, matching Goblint's single polarity-parametrized
-  @{text Spec.branch}.
+  An interval store gives every variable a lower and an upper bound. How an edge
+  of a compiled graph moves such a store is not an Interval question --- an
+  assignment re-evaluates its right-hand side and overwrites the target, a return
+  writes the same into the return variable, procedure entry resets the callee
+  frame to \<^const>\<open>ivl_top\<close> and binds the formals, and skip, body entry and check
+  observation leave the store alone. That is \<^locale>\<open>nonrelational_transfer\<close>,
+  proved sound and monotone once for every domain that gives one abstract value
+  per variable.
+
+  What is Interval's own is the guard. \<^const>\<open>branch_ivl\<close> narrows on the branch
+  its polarity argument selects, so \<open>x < 8\<close> tightens \<open>x\<close>'s upper bound instead of
+  leaving it alone; it and \<^const>\<open>bfilter_ivl\<close> come from the
+  \<^locale>\<open>backward_domain\<close> interpretation in
+  \<^theory>\<open>Voblint_Analysis_Interval.Interval_Backward\<close>, and the two soundness
+  readings below are all this theory proves. The interpretation then rewrites the
+  locale's special-call dispatch to \<^const>\<open>special_ivl\<close>, Interval's own \<open>fun\<close>,
+  rather than introducing a second name for it.
+\<close>
+
+subsection \<open>Abstract branch\<close>
+
+text \<open>
+  Guard refinement delegates to the generic \<open>bfilter\<close> proved sound in
+  \<^locale>\<open>backward_domain\<close>. \<^const>\<open>bfilter_ivl\<close> narrows on the branch selected by
+  its boolean polarity argument (\<^const>\<open>True\<close> for \<open>truthy (aval b s)\<close>,
+  \<^const>\<open>False\<close> for its negation) --- this is Interval's branch operation directly,
+  matching Goblint's single polarity-parametrized \<open>Spec.branch\<close>.
 \<close>
 
 lemma bfilter_ivl_sound:
@@ -21,203 +42,84 @@ lemma bfilter_ivl_sound:
   using ivl_backward_domain.bfilter_sound by simp
 
 text \<open>
-  @{const branch_ivl} is Interval's registered branch operation: a forward
-  @{const interval_tobool} feasibility check ahead of @{const bfilter_ivl},
-  matching Goblint's \<open>Base.branch\<close> structure. Proved once, generically, as
-  @{thm [source] backward_domain.branch_sound}.
+  \<^const>\<open>branch_ivl\<close> is Interval's registered branch operation: a forward
+  \<^const>\<open>interval_tobool\<close> feasibility check ahead of \<^const>\<open>bfilter_ivl\<close>, matching
+  Goblint's \<open>Base.branch\<close> structure.
 \<close>
 
 lemma branch_ivl_sound:
   "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> truthy (aval b s) = res \<Longrightarrow> s \<in> \<lbrakk>branch_ivl b res \<sigma>\<rbrakk>"
   using ivl_backward_domain.branch_sound by simp
 
-definition assign_ivl ::
-    "vname => exp => (vname => ivl) => (vname => ivl)"
-where
-  "assign_ivl x a \<sigma> = \<sigma>(x := aval_ivl a \<sigma>)"
-
-lemma assign_ivl_sound:
-  "s \<in> \<lbrakk>\<sigma>\<rbrakk>
-   \<Longrightarrow> s(x := aval a s) \<in> \<lbrakk>assign_ivl x a \<sigma>\<rbrakk>"
-  unfolding gamma_state_def assign_ivl_def
-  by (auto simp: aval_ivl_sound)
-
-text \<open>Nondeterministic and other special-call assignment (\<open>special_ivl\<close>) lives
-  in \<open>Interval_Special\<close>, reused below.\<close>
-
-lemma assign_ivl_mono:
-  "sigma1 \<le> sigma2 \<Longrightarrow> assign_ivl x a sigma1 \<le> assign_ivl x a sigma2"
-  by (simp add: assign_ivl_def aval_ivl_mono le_funD le_funI)
-
-subsection \<open>Skip, body-entry, and return\<close>
-
-text \<open>Interval has no lifecycle-specific abstract information: skip and body entry
-  are the identity, and the return operation publishes the returned expression's value
-  to \<^const>\<open>ret_var\<close>, which is where the collecting semantics reads it back.\<close>
-
-
-definition skip_ivl :: "(vname => ivl) => (vname => ivl)" where
-  "skip_ivl \<sigma> = \<sigma>"
-
-definition body_ivl :: "pname => (vname => ivl) => (vname => ivl)" where
-  "body_ivl p \<sigma> = \<sigma>"
-
-definition return_ivl ::
-    "exp option => pname => (vname => ivl) => (vname => ivl)"
-where
-  "return_ivl e p \<sigma> = (case e of None \<Rightarrow> \<sigma> | Some a \<Rightarrow> assign_ivl ret_var a \<sigma>)"
-
-text \<open>A check observes its condition but never refines the state (that is
-  \<open>abstract_check_domain\<close>'s job): Interval has no notion of that observation
-  either, so \<open>event_ivl\<close> is the identity like \<open>skip_ivl\<close>/\<open>body_ivl\<close>.\<close>
-definition event_ivl :: "analysis_event => (vname => ivl) => (vname => ivl)" where
-  "event_ivl ev \<sigma> = \<sigma>"
-
-lemma skip_ivl_sound: "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> s \<in> \<lbrakk>skip_ivl \<sigma>\<rbrakk>"
-  by (simp add: skip_ivl_def)
-
-lemma body_ivl_sound: "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> s \<in> \<lbrakk>body_ivl p \<sigma>\<rbrakk>"
-  by (simp add: body_ivl_def)
-
-lemma event_ivl_sound: "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> s \<in> \<lbrakk>event_ivl ev \<sigma>\<rbrakk>"
-  by (simp add: event_ivl_def)
-
-lemma return_ivl_sound:
-  assumes gs: "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
-  shows "s(ret_var := (case e of None \<Rightarrow> s ret_var | Some a \<Rightarrow> aval a s)) \<in> \<lbrakk>return_ivl e p \<sigma>\<rbrakk>"
-  using assign_ivl_sound[OF gs] gs
-  by (cases e) (simp_all add: return_ivl_def)
-
-lemma skip_ivl_mono: "sigma1 \<le> sigma2 \<Longrightarrow> skip_ivl sigma1 \<le> skip_ivl sigma2"
-  by (simp add: skip_ivl_def)
-
-lemma body_ivl_mono: "sigma1 \<le> sigma2 \<Longrightarrow> body_ivl p sigma1 \<le> body_ivl p sigma2"
-  by (simp add: body_ivl_def)
-
-lemma event_ivl_mono: "sigma1 \<le> sigma2 \<Longrightarrow> event_ivl ev sigma1 \<le> event_ivl ev sigma2"
-  by (simp add: event_ivl_def)
-
-lemma return_ivl_mono:
-  "sigma1 \<le> sigma2 \<Longrightarrow> return_ivl e p sigma1 \<le> return_ivl e p sigma2"
-  by (cases e) (simp_all add: return_ivl_def assign_ivl_mono)
-
-subsection \<open>Classifier-parametric procedure entry and bundled transfer functions\<close>
-
-text \<open>Procedure entry: keep globals, reset locals to the full interval, then bind
-  the formals to the abstract values of the actuals evaluated in the caller.
-  Generic via \<open>enter_frame\<close>/\<^const>\<open>enter_binding\<close>, parameterised by
-  ivl_top as the domain's fully-imprecise reset value.  Entry and combine are
-  the only fields that consult a classifier, so the bundled transfer function
-  is parametric in the classifier throughout.\<close>
-
-definition enter_frame_ivl_for ::
-    "(vname => bool) => ivl abs_state => ivl abs_state" where
-  "enter_frame_ivl_for gs = enter_frame gs ivl_top"
-
-definition enter_ivl_for ::
-    "(vname => bool) => vname list => exp list =>
-      ivl abs_state => ivl abs_state" where
-  "enter_ivl_for gs = enter_binding gs ivl_top aval_ivl"
-
-lemma enter_frame_ivl_for_sound:
-  assumes gs: "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
-  shows "enter_state cls s \<in> \<lbrakk>enter_frame_ivl_for cls \<sigma>\<rbrakk>"
-  unfolding enter_frame_ivl_for_def
-proof (rule enter_frame_sound[OF gs])
-  show "gamma ivl_top = UNIV" by (simp add: gamma_ivl_top)
-qed
-
-lemma enter_ivl_for_sound:
-  assumes gs: "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
-  shows "bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state cls s)
-           \<in> \<lbrakk>enter_ivl_for cls xs es \<sigma>\<rbrakk>"
-  unfolding enter_ivl_for_def enter_binding_concrete[symmetric]
-proof (rule enter_binding_sound[OF gs])
-  show "gamma ivl_top = UNIV" by (simp add: gamma_ivl_top)
-next
-  fix e
-  have V: "\<forall>x. s x \<in> gamma_ivl (\<sigma> x)"
-    using gs unfolding gamma_state_def by simp
-  show "aval e s \<in> gamma (aval_ivl e \<sigma>)"
-    using V by (simp add: aval_ivl_sound)
-qed
-
-definition enter_ivl_ci_for ::
-    "(vname => bool) => call_info => ivl abs_state => ivl abs_state" where
-  "enter_ivl_ci_for gs ci = enter_ivl_for gs (ci_formals ci) (ci_args ci)"
-
-lemma enter_ivl_ci_for_sound:
-  assumes gs: "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
-  shows "bind_formals (ci_formals ci) (map (\<lambda>e. aval e s) (ci_args ci)) (enter_state cls s)
-           \<in> \<lbrakk>enter_ivl_ci_for cls ci \<sigma>\<rbrakk>"
-  using enter_ivl_for_sound[OF gs, of "ci_formals ci" "ci_args ci"]
-  by (simp add: enter_ivl_ci_for_def)
-
-lemma ivl_is_sound_transfer_for:
-  "sound_transfer_for gs skip_ivl assign_ivl special_ivl branch_ivl body_ivl return_ivl
-     (enter_ivl_ci_for gs) event_ivl"
-  by unfold_locales
-     (simp_all add: assign_ivl_sound special_ivl_sound
-        ivl_backward_domain.branch_sound
-        skip_ivl_sound body_ivl_sound return_ivl_sound enter_ivl_ci_for_sound
-        event_ivl_sound)
-
-definition ivl_tf_abs :: "edge_action => ivl abs_state => ivl abs_state" where
-  "ivl_tf_abs = local_spec_step skip_ivl assign_ivl special_ivl branch_ivl
-     body_ivl return_ivl event_ivl"
-
-lemma ivl_tf_abs_simps [simp]:
-  "ivl_tf_abs EA_Nop = skip_ivl"
-  "ivl_tf_abs (EA_Assign x e) = assign_ivl x e"
-  "ivl_tf_abs (EA_Special sc y) = special_ivl sc y"
-  "ivl_tf_abs (EA_Assume b) = branch_ivl b True"
-  "ivl_tf_abs (EA_AssumeNot b) = branch_ivl b False"
-  "ivl_tf_abs (EA_Body p) = body_ivl p"
-  "ivl_tf_abs (EA_Ret eo p) = return_ivl eo p"
-  "ivl_tf_abs (EA_Check c) = event_ivl (Check_Event c)"
-  by (simp_all add: ivl_tf_abs_def)
-
-lemma enter_frame_ivl_for_mono:
-  assumes "s1 \<le> s2"
-  shows "enter_frame_ivl_for gs s1 \<le> enter_frame_ivl_for gs s2"
-  unfolding enter_frame_ivl_for_def by (rule enter_frame_mono[OF assms])
-
-lemma enter_ivl_for_mono:
-  assumes "s1 \<le> s2"
-  shows "enter_ivl_for gs xs es s1 \<le> enter_ivl_for gs xs es s2"
-  unfolding enter_ivl_for_def
-proof (rule enter_binding_mono[OF assms])
-  fix e
-  show "aval_ivl e s1 \<le> aval_ivl e s2"
-    using assms by (simp add: aval_ivl_mono)
-qed
-
-lemma enter_ivl_ci_for_mono:
-  assumes "s1 \<le> s2"
-  shows "enter_ivl_ci_for gs ci s1 \<le> enter_ivl_ci_for gs ci s2"
-  using enter_ivl_for_mono[OF assms, of gs "ci_formals ci" "ci_args ci"]
-  by (simp add: enter_ivl_ci_for_def)
-
-lemma ivl_tf_abs_mono:
-  "s1 \<le> s2 \<Longrightarrow> ivl_tf_abs a s1 \<le> ivl_tf_abs a s2"
-  by (cases a)
-     (auto simp: ivl_tf_abs_def assign_ivl_mono special_ivl_mono
-                 ivl_backward_domain.branch_mono
-                 skip_ivl_mono body_ivl_mono return_ivl_mono
-                 event_ivl_mono)
+subsection \<open>Interval's instance of the generic transfer\<close>
 
 text \<open>
-  Reusable simp bundle for post-fixpoint proofs over the interval domain.
-  Covers the core evaluation rules shared by all interval examples.
-  Examples with multiplication also need @{thm [source] times_ivl_def},
-  @{thm [source] ivl_times_core.simps}, @{thm [source] ivl_nonempty.simps};
-  examples with branch edges also need @{thm [source] ivl_backward_domain.bfilter.simps};
-  examples with procedure calls also need @{thm [source] enter_ivl_for_def},
-  @{thm [source] enter_frame_ivl_for_def}, @{thm [source]},
-  @{thm [source] combine_env_def}.
+  \<open>ivl_ops\<close> is the primitive bundle both layers read: the locale below takes it,
+  and so does the executable mirror in \<open>Interval_Exec\<close>, so Interval's evaluator
+  and its top element are written once rather than once per layer.
+  \<^const>\<open>branch_ivl\<close> travels beside it, since an abstract branch is the one
+  primitive a bundle cannot carry through code generation.
 \<close>
+
+definition ivl_ops :: "ivl numeric_ops" where
+  "ivl_ops = \<lparr> n_aval = aval_ivl, n_special = ivl_special_ops,
+               n_bfilter = branch_ivl_st, n_top = ivl_top \<rparr>"
+
+lemma ivl_ops_simps [simp]:
+  "n_aval ivl_ops = aval_ivl"
+  "n_special ivl_ops = ivl_special_ops"
+  "n_bfilter ivl_ops = branch_ivl_st"
+  "n_top ivl_ops = ivl_top"
+  by (simp_all add: ivl_ops_def)
+
+global_interpretation ivl_tf:
+  nonrelational_transfer ivl_ops branch_ivl
+  rewrites "n_aval ivl_ops = aval_ivl"
+    and "n_special ivl_ops = ivl_special_ops"
+    and "n_top ivl_ops = ivl_top"
+    and "sound_special_ops.special_transfer ivl_special_ops aval_ivl = special_ivl"
+  defines assign_ivl = ivl_tf.assign
+    and skip_ivl = ivl_tf.skip
+    and body_ivl = ivl_tf.body
+    and event_ivl = ivl_tf.event
+    and return_ivl = ivl_tf.ret
+    and enter_frame_ivl_for = ivl_tf.enter_frame_for
+    and enter_ivl_for = ivl_tf.enter_for
+    and enter_ivl_ci_for = ivl_tf.enter_ci_for
+    and ivl_tf_abs = ivl_tf.tf_abs
+proof -
+  show "nonrelational_transfer ivl_ops branch_ivl"
+    by unfold_locales
+       (auto simp: top_ivl_def
+             intro: ivl_min_sound ivl_max_sound ivl_min_combine_mono ivl_max_combine_mono
+                    aval_ivl_sound ivl_arith.aval_dom_mono branch_ivl_sound
+                    ivl_backward_domain.branch_mono)
+  show "n_aval ivl_ops = aval_ivl" by simp
+  show "n_special ivl_ops = ivl_special_ops" by simp
+  show "n_top ivl_ops = ivl_top" by simp
+  show "sound_special_ops.special_transfer ivl_special_ops aval_ivl = special_ivl"
+    by (intro ext) (simp add: special_ivl_eq_transfer)
+qed
+
+text \<open>
+  No fact is renamed. The transfer functions get Interval-prefixed names above
+  because they are constants a caller applies, exported to OCaml and named in
+  registration data; the theorems about them stay under \<open>ivl_tf.\<close>, which is where
+  a reader looks to find out that they are the generic ones rather than
+  Interval's own. \<^const>\<open>skip_ivl\<close>'s soundness is \<open>ivl_tf.skip_sound\<close>, and the
+  framework's transfer contract at Interval is \<open>ivl_tf.is_sound_transfer_for\<close>.
+\<close>
+
+text \<open>
+  Reusable simp bundle for post-fixpoint proofs over the interval domain, covering
+  the core evaluation rules every interval example shares. Examples with
+  multiplication also need \<open>times_ivl_def\<close> and \<open>ivl_times_core.simps\<close>; ones with branch
+  edges also need \<open>ivl_backward_domain.bfilter.simps\<close>; examples with procedure
+  calls also need \<open>ivl_tf.op_defs\<close> and \<^const>\<open>combine_env\<close>'s definition.
+\<close>
+
 lemmas ivl_eval_simps =
-  ivl_tf_abs_def assign_ivl_def
+  ivl_tf.tf_abs_def ivl_tf.assign_def
   aval_ivl.simps
   plus_ivl.simps plus_eint.simps
   less_eq_ivl_def le_fun_def

@@ -49,7 +49,8 @@ lemma gamma_parity_mono: "parity_le s t \<Longrightarrow> gamma_parity s \<subse
 
 instantiation parity :: ord begin
 definition less_eq_parity :: "parity => parity => bool" where "(a::parity) \<le> b = parity_le a b"
-definition less_parity    :: "parity => parity => bool" where "(a::parity) <  b = (parity_le a b \<and> \<not> parity_le b a)"
+definition less_parity    :: "parity => parity => bool" where
+  "(a::parity) <  b = (parity_le a b \<and> \<not> parity_le b a)"
 instance ..
 end
 
@@ -150,7 +151,8 @@ proof
   fix x y z :: parity
   show "x \<le> x \<squnion> y" unfolding sup_parity_def less_eq_parity_def by (rule join_parity_ub1)
   show "y \<le> x \<squnion> y" unfolding sup_parity_def less_eq_parity_def by (rule join_parity_ub2)
-  show "y \<le> x \<Longrightarrow> z \<le> x \<Longrightarrow> y \<squnion> z \<le> x" unfolding sup_parity_def less_eq_parity_def by (rule join_parity_least)
+  show "y \<le> x \<Longrightarrow> z \<le> x \<Longrightarrow> y \<squnion> z \<le> x"
+    unfolding sup_parity_def less_eq_parity_def by (rule join_parity_least)
 qed
 
 instance parity :: bounded_semilattice_sup_bot ..
@@ -165,7 +167,8 @@ instance proof
   show "a \<le> widen a b" unfolding less_eq_parity_def widen_parity_def by (rule join_parity_ub1)
   show "b \<le> widen a b" unfolding less_eq_parity_def widen_parity_def by (rule join_parity_ub2)
   show "b \<le> a \<Longrightarrow> b \<le> narrow a b" unfolding narrow_parity_def by simp
-  show "b \<le> a \<Longrightarrow> narrow a b \<le> a" unfolding narrow_parity_def by (simp add: less_eq_parity_def parity_le_refl)
+  show "b \<le> a \<Longrightarrow> narrow a b \<le> a"
+    unfolding narrow_parity_def by (simp add: less_eq_parity_def)
 qed
 end
 
@@ -270,7 +273,8 @@ next
 next
   fix a b :: parity
   assume H: "a \<le> b"
-  have "gamma_parity a \<subseteq> gamma_parity b" using H unfolding less_eq_parity_def by (rule gamma_parity_mono)
+  have "gamma_parity a \<subseteq> gamma_parity b"
+    using H unfolding less_eq_parity_def by (rule gamma_parity_mono)
   then show "gamma a \<subseteq> gamma b" by simp
 next
   fix a :: parity
@@ -359,21 +363,26 @@ fun aval_parity :: "exp => (vname => parity) => parity" where
         else PTop)"
   | "aval_parity (And a b)    \<sigma> =
        (if is_empty (aval_parity a \<sigma>) \<or> is_empty (aval_parity b \<sigma>) then bot
-        else if parity_tobool (aval_parity a \<sigma>) = Some False \<or> parity_tobool (aval_parity b \<sigma>) = Some False
+        else if parity_tobool (aval_parity a \<sigma>) = Some False
+             \<or> parity_tobool (aval_parity b \<sigma>) = Some False
         then PEven
-        else if parity_tobool (aval_parity a \<sigma>) = Some True \<and> parity_tobool (aval_parity b \<sigma>) = Some True
+        else if parity_tobool (aval_parity a \<sigma>) = Some True
+             \<and> parity_tobool (aval_parity b \<sigma>) = Some True
         then POdd
         else PTop)"
   | "aval_parity (Or a b)     \<sigma> =
        (if is_empty (aval_parity a \<sigma>) \<or> is_empty (aval_parity b \<sigma>) then bot
-        else if parity_tobool (aval_parity a \<sigma>) = Some True \<or> parity_tobool (aval_parity b \<sigma>) = Some True
+        else if parity_tobool (aval_parity a \<sigma>) = Some True
+             \<or> parity_tobool (aval_parity b \<sigma>) = Some True
         then POdd
-        else if parity_tobool (aval_parity a \<sigma>) = Some False \<and> parity_tobool (aval_parity b \<sigma>) = Some False
+        else if parity_tobool (aval_parity a \<sigma>) = Some False
+             \<and> parity_tobool (aval_parity b \<sigma>) = Some False
         then PEven
         else PTop)"
 
-interpretation parity_arith: expression_domain_sound
-    aval_parity parity_of_int parity_lt parity_eqb parity_tobool
+interpretation parity_arith: expression_domain_mono
+    aval_parity parity_of_int "(+)" "(-)" "(*)"
+    parity_lt parity_eqb parity_tobool
   apply unfold_locales
   apply (simp_all add: parity_of_int_gamma parity_plus_sound parity_minus_sound parity_times_sound
                         parity_plus_combine_mono parity_minus_combine_mono parity_times_combine_mono

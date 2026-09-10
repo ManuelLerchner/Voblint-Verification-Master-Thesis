@@ -26,7 +26,7 @@ Executable witnesses live under
 | `Interval_Solver_Analyses.thy` | those two contextual configurations at the PerOrigin, Apinis-warrowing and warrowing-per-origin disciplines |
 | `Interval_Classify.thy` | Interval instance of the generic check-discharge interface |
 | `Interval_Checks.thy` | the public result tables and check reports, bound to the assembly's four instances |
-| `Interval_Entry.thy` | the production endpoint: `analyse_interval_td_report` over an arbitrary `imp_prog`, and its soundness theorems — `run_source_sound`/`collect_sound` (`Voblint_Soundness`) applied at Interval |
+| `Interval_Entry.thy` | the production endpoint: `analyse_interval_report` over an arbitrary `imp_prog`, and its soundness theorems — `run_source_sound`/`collect_sound` (`Voblint_Soundness`) applied at Interval |
 
 ## The two contextual configurations, and the one hand-written part
 

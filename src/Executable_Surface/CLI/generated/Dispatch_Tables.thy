@@ -20,7 +20,7 @@ text \<open>
 
 fun analyse :: "analysis_domain \<Rightarrow> imp_prog \<Rightarrow> check_report_entry list" where
   "analyse Sign_Analysis p = analyse_sign_report p"
-| "analyse Interval_Analysis p = analyse_interval_td_report p"
+| "analyse Interval_Analysis p = analyse_interval_report p"
 | "analyse Parity_Analysis p = analyse_parity_report p"
 | "analyse Int_Analysis p = analyse_int_report p"
 | "analyse Congruence_Analysis p = analyse_congruence_report p"
@@ -32,10 +32,10 @@ fun analyse_with_solver ::
 | "analyse_with_solver Sign_Analysis Solver_PerOrigin p = Some (analyse_sign_report_per_origin p)"
 | "analyse_with_solver Sign_Analysis Solver_Warrow p = None"
 | "analyse_with_solver Sign_Analysis Solver_WarrowPerOrigin p = None"
-| "analyse_with_solver Interval_Analysis Solver_Join p = Some (analyse_interval_report p)"
+| "analyse_with_solver Interval_Analysis Solver_Join p = Some (analyse_interval_report_join p)"
 | "analyse_with_solver Interval_Analysis Solver_PerOrigin p =
      Some (analyse_interval_report_per_origin p)"
-| "analyse_with_solver Interval_Analysis Solver_Warrow p = Some (analyse_interval_td_report p)"
+| "analyse_with_solver Interval_Analysis Solver_Warrow p = Some (analyse_interval_report p)"
 | "analyse_with_solver Interval_Analysis Solver_WarrowPerOrigin p =
      Some (analyse_interval_report_wpo p)"
 | "analyse_with_solver Parity_Analysis Solver_Join p = Some (analyse_parity_report p)"
@@ -88,7 +88,7 @@ fun analyse_with_state ::
 | "analyse_with_state Interval_Analysis Solver_PerOrigin p =
      Some (tag_states IntervalValue (interval_per_origin.report_with_state p))"
 | "analyse_with_state Interval_Analysis Solver_Warrow p =
-     Some (tag_states IntervalValue (analyse_interval_td_report_with_state p))"
+     Some (tag_states IntervalValue (analyse_interval_report_with_state p))"
 | "analyse_with_state Interval_Analysis Solver_WarrowPerOrigin p =
      Some (tag_states IntervalValue (interval_wpo.report_with_state p))"
 | "analyse_with_state Parity_Analysis Solver_Join p =
@@ -123,7 +123,7 @@ fun analyse_with_state_default ::
   "analyse_with_state_default Sign_Analysis p =
      tag_states SignValue (analyse_sign_report_with_state p)"
 | "analyse_with_state_default Interval_Analysis p =
-     tag_states IntervalValue (analyse_interval_td_report_with_state p)"
+     tag_states IntervalValue (analyse_interval_report_with_state p)"
 | "analyse_with_state_default Parity_Analysis p =
      tag_states ParityValue (analyse_parity_report_with_state p)"
 | "analyse_with_state_default Int_Analysis p =

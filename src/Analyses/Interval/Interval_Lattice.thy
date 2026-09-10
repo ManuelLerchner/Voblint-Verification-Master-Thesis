@@ -14,7 +14,12 @@ subsection \<open>Interval type and order\<close>
 
 datatype ivl = Ivl (ivl_lower: eint) (ivl_upper: eint)   \<comment> \<open>@{text "Ivl l u = [l, u]"}\<close>
 
-(* Named exhaustion, cited instead of `(cases x) auto` at every destructuring site. *)
+text \<open>
+  Named exhaustion, cited instead of \<open>(cases x) auto\<close> at every destructuring
+  site. It stays untagged on purpose: its conclusion matches any term, so the
+  classical reasoner would apply it to every goal.
+\<close>
+
 lemma ivl_exhaustE:
   obtains l u where "x = Ivl l u"
   by (cases x) auto
@@ -39,7 +44,7 @@ instance proof intro_classes
   show "(x < y) = (x \<le> y \<and> \<not> y \<le> x)"
     unfolding less_ivl_def by simp
   show "x \<le> x"
-    unfolding less_eq_ivl_def by (cases x) (simp add: eint_le_refl)
+    unfolding less_eq_ivl_def by (cases x) simp
   show "x \<le> y \<Longrightarrow> y \<le> z \<Longrightarrow> x \<le> z"
     unfolding less_eq_ivl_def by (cases x; cases y; cases z) (auto intro: eint_le_trans)
   show "x \<le> y \<Longrightarrow> y \<le> x \<Longrightarrow> x = y"
@@ -96,7 +101,8 @@ lemma is_top_ivl_correct: "is_top_ivl i \<longleftrightarrow> i = top"
   unfolding is_top_ivl_def top_ivl_def ..
 
 lemma is_top_ivl_correct_gamma: "is_top_ivl i \<longleftrightarrow> gamma_ivl i = UNIV"
-  by(cases i; case_tac x1; case_tac x2) (auto simp add:is_top_ivl_def ivl_top_def set_eq_iff; presburger)+
+  by (cases i; case_tac x1; case_tac x2)
+     (auto simp add: is_top_ivl_def ivl_top_def set_eq_iff; presburger)+
 
 text \<open>
   \<open>bot\<close> is one fixed empty interval (\<^term>\<open>Ivl PlusInf MinInf\<close>), but the
@@ -126,7 +132,7 @@ proof (cases i)
   case (Ivl l u)
   show ?thesis
     unfolding Ivl is_bottom_ivl_def
-    by (cases l; cases u) (auto simp: less_eq_eint_def eint_le.simps)
+    by (cases l; cases u) auto
 qed
 
 lemma gamma_ivl_mono:
@@ -155,7 +161,7 @@ proof (cases a; cases b)
   then show "a \<le> join_ivl a b"
     unfolding less_eq_ivl_def
     using eint_le_linear[of l1 l2] eint_le_linear[of u1 u2]
-    by (auto simp: eint_le_refl)
+    by auto
 qed
 
 lemma join_ivl_le_ub2: "(b :: ivl) \<le> join_ivl a b"
@@ -165,7 +171,7 @@ proof (cases a; cases b)
   then show "b \<le> join_ivl a b"
     unfolding less_eq_ivl_def
     using eint_le_linear[of l1 l2] eint_le_linear[of u1 u2]
-    by (auto simp: eint_le_refl)
+    by auto
 qed
 
 lemma join_ivl_le_least:
@@ -227,7 +233,7 @@ proof (cases a; cases b)
   assume h: "a = Ivl l1 u1" "b = Ivl l2 u2"
   show "a \<sqinter> b \<le> a"
     using h eint_le_linear[of l2 l1] eint_le_linear[of u1 u2]
-    by (auto simp: less_eq_ivl_def split: if_splits simp: eint_le_refl)
+    by (auto simp: less_eq_ivl_def split: if_splits)
 qed
 
 lemma meet_ivl_le_lb2: "(a :: ivl) \<sqinter> b \<le> b"
@@ -236,7 +242,7 @@ proof (cases a; cases b)
   assume h: "a = Ivl l1 u1" "b = Ivl l2 u2"
   show "a \<sqinter> b \<le> b"
     using h eint_le_linear[of l1 l2] eint_le_linear[of u1 u2]
-    by (auto simp: less_eq_ivl_def split: if_splits simp: eint_le_refl)
+    by (auto simp: less_eq_ivl_def split: if_splits)
 qed
 
 lemma meet_ivl_greatest: "(a :: ivl) \<le> c \<Longrightarrow> a \<le> b \<Longrightarrow> a \<le> c \<sqinter> b"
@@ -318,13 +324,13 @@ definition normalize_ivl :: "ivl \<Rightarrow> ivl" where
         if l \<le> u \<and> l \<noteq> PlusInf \<and> u \<noteq> MinInf then v else bot)"
 
 lemma normalize_ivl_gamma: "gamma_ivl (normalize_ivl v) = gamma_ivl v"
-  by (cases v) (auto simp: normalize_ivl_def bot_ivl_def eint_le.simps
+  by (cases v) (auto simp: normalize_ivl_def bot_ivl_def
         split: eint.splits if_splits intro: eint_le_trans)
 
 
 lemma normalize_ivl_mono: "x \<le> y \<Longrightarrow> normalize_ivl x \<le> normalize_ivl y"
   by (cases x; cases y)
-     (auto simp: normalize_ivl_def less_eq_ivl_def bot_ivl_def eint_le.simps
+     (auto simp: normalize_ivl_def less_eq_ivl_def bot_ivl_def
         eint_le_PlusInf_iff eint_le_MinInf_iff
         split: eint.splits if_splits intro: eint_le_trans)
 

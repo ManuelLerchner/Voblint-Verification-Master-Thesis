@@ -13,12 +13,12 @@ text \<open>
   them is a proof about the assembly's instance.
 \<close>
 
-abbreviation ictx_eqs_prog where "ictx_eqs_prog \<equiv> int_unit_equations"
+abbreviation int_conf_eqs_prog where "int_conf_eqs_prog \<equiv> int_unit_equations"
 
-abbreviation ictx_sol_prog where "ictx_sol_prog \<equiv> int_unit_solution"
+abbreviation int_conf_sol_prog where "int_conf_sol_prog \<equiv> int_unit_solution"
 
-abbreviation ictx_terminates_prog where
-  "ictx_terminates_prog \<equiv> int_unit_terminates"
+abbreviation int_conf_terminates_prog where
+  "int_conf_terminates_prog \<equiv> int_unit_terminates"
 
 text \<open>
   Int's own production solve and the assembly's are the same solve. The two are
@@ -30,7 +30,7 @@ text \<open>
 \<close>
 
 lemma int_conf_sol_prog_warrow_eq_unit:
-  "int_conf_sol_prog_warrow Refine_Fixpoint gs p = ictx_sol_prog gs p"
+  "int_conf_sol_prog_warrow Refine_Fixpoint gs p = int_conf_sol_prog gs p"
   unfolding int_conf_sol_prog_warrow_def int_unit_solution_def
   by (rule refl)
 
@@ -48,7 +48,7 @@ lemma int_conf_sol_prog_warrow_eq_pipeline:
   unfolding int_conf_sol_prog_warrow_def by (rule refl)
 
 lemma int_conf_terminates_prog_warrow_eq_unit:
-  "int_conf_terminates_prog_warrow Refine_Fixpoint gs p = ictx_terminates_prog gs p"
+  "int_conf_terminates_prog_warrow Refine_Fixpoint gs p = int_conf_terminates_prog gs p"
   unfolding int_conf_terminates_prog_warrow_def int_unit_terminates_def
   by (rule refl)
 
@@ -65,8 +65,8 @@ lemma analyse_int_ctx_result_warrow_for_eq_pipeline:
   unfolding analyse_int_ctx_result_warrow_for_def routed_dg_pipeline.result_def
   by (simp add: int_conf_sol_prog_warrow_eq_pipeline)
 
-lemmas ictx_terminates_prog_via_solve_c = int_warrow_asm.terminates_of_solve_c
-lemmas ictx_vars_finite = int_warrow_asm.vars_finite_of_terminates
+lemmas int_conf_terminates_prog_via_solve_c = int_warrow_asm.terminates_of_solve_c
+lemmas int_conf_vars_finite = int_warrow_asm.vars_finite_of_terminates
 
 text \<open>
   The check-classification machinery (\<open>int_classify_check\<close> and its soundness directions)
@@ -84,7 +84,7 @@ text \<open>
   (\<^theory>\<open>Voblint_Analysis_Int.Int_Solver_Analyses\<close>), fixed at \<^const>\<open>Refine_Fixpoint\<close> and
   \<^const>\<open>prog_main_name\<close>, which already binds the single routed-unit solve and
   canonicalizes/normalizes each local key -- Int's Apinis warrowing solver is its production
-  default, mirroring \<open>Interval_Checks.analyse_interval_td_result_for\<close>. Every report below
+  default, mirroring \<open>Interval_Checks.analyse_interval_result_for\<close>. Every report below
   reads through a result table via \<^const>\<open>lookup_context\<close> rather than a raw solver-environment
   lookup.
 \<close>
@@ -140,7 +140,8 @@ definition analyse_int_per_origin_result_for ::
 
 definition analyse_int_per_origin_result ::
     "imp_prog \<Rightarrow> (unit, int_dom abs_state) analysis_result" where
-  "analyse_int_per_origin_result p = analyse_int_per_origin_result_for Refine_Fixpoint (declared_global p) p"
+  "analyse_int_per_origin_result p =
+     analyse_int_per_origin_result_for Refine_Fixpoint (declared_global p) p"
 
 subsection \<open>Whole-program check report: the native D/G runtime API\<close>
 
@@ -159,7 +160,8 @@ text \<open>
   fed such a node -- rather than a fourth, \<open>Dead\<close> outcome \<open>check_result\<close> does not carry.
 \<close>
 
-definition analyse_int_report_for :: "refine_mode \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> check_report_entry list" where
+definition analyse_int_report_for ::
+    "refine_mode \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> check_report_entry list" where
   "analyse_int_report_for mode gs p =
      analysis_surface.report (analyse_int_ctx_result_warrow_for mode gs) bot
        int_classify_check p"
@@ -167,7 +169,7 @@ definition analyse_int_report_for :: "refine_mode \<Rightarrow> (vname \<Rightar
 text \<open>
   Convenience instance at \<^const>\<open>declared_global\<close> \<open>p\<close>, pinned at \<open>Refine_Fixpoint\<close>
   like \<^const>\<open>analyse_int_result\<close>: this is the report the production \<open>analyse\<close>
-  API reaches, matching \<open>analyse_interval_td_report\<close>'s shape.
+  API reaches, matching \<open>analyse_interval_report\<close>'s shape.
 \<close>
 
 definition analyse_int_report :: "imp_prog \<Rightarrow> check_report_entry list" where
@@ -203,14 +205,15 @@ text \<open>
   \<open>analyse_int_report_join_for\<close>'s sibling relationship to \<^const>\<open>analyse_int_report\<close>
   mirrors \<^const>\<open>analyse_int_join_result\<close>'s to \<^const>\<open>analyse_int_result\<close>: this route
   exists so \<open>analyse_with_solver\<close> can compare update rules on the identical equation
-  system, mirroring \<open>Interval_Checks.analyse_interval_report_for\<close>/
+  system, mirroring \<open>Interval_Checks.analyse_interval_report_join_for\<close>/
   \<open>Sign_Checks.analyse_sign_report_for\<close>'s own always-join default. The CLI does not
   expose refinement mode as a separate axis, so this convenience instance stays pinned
   at \<open>Refine_Fixpoint\<close> like \<^const>\<open>analyse_int_report\<close>. Propagates the routed producer
   transitively through \<^const>\<open>analyse_int_join_result_for\<close>.
 \<close>
 
-definition analyse_int_report_join_for :: "refine_mode \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> check_report_entry list" where
+definition analyse_int_report_join_for ::
+    "refine_mode \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> check_report_entry list" where
   "analyse_int_report_join_for mode gs p =
      analysis_surface.report (analyse_int_join_result_for mode gs) bot int_classify_check p"
 
@@ -225,7 +228,8 @@ text \<open>
   transitively through \<^const>\<open>analyse_int_per_origin_result_for\<close>.
 \<close>
 
-definition analyse_int_report_per_origin_for :: "refine_mode \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> check_report_entry list" where
+definition analyse_int_report_per_origin_for ::
+    "refine_mode \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> check_report_entry list" where
   "analyse_int_report_per_origin_for mode gs p =
      analysis_surface.report (analyse_int_per_origin_result_for mode gs) bot
        int_classify_check p"
@@ -249,7 +253,8 @@ definition analyse_int_wpo_result_for ::
        cinit_int_dom_st (Analysis_Global ()) Activation_Seed (\<lambda>_. route_unit) ()
        TD_side_warrowing_per_origin_Interp_solve gs p"
 
-definition analyse_int_report_wpo_for :: "refine_mode \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> check_report_entry list" where
+definition analyse_int_report_wpo_for ::
+    "refine_mode \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> check_report_entry list" where
   "analyse_int_report_wpo_for mode gs p =
      analysis_surface.report (analyse_int_wpo_result_for mode gs) bot int_classify_check p"
 

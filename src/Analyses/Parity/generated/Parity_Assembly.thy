@@ -55,11 +55,11 @@ global_interpretation parity_join: unit_dg_analysis
     and parity_unit_report_with_state = parity_join.report_with_state
 proof (rule unit_dg_analysis.intro, rule routed_dg_analysis.intro,
        goal_cases)
-  case (1 gs) show ?case by (rule parity_is_sound_transfer_for)
+  case (1 gs) show ?case by (rule parity_tf.is_sound_transfer_for)
 next
   case (2 gs a s) then show ?case
     unfolding fun_of_exec_dg_st_for_def
-    by (rule parity_tf_st_for_commute_if_live[unfolded parity_tf_abs_def])
+    by (rule parity_tf_st_for_commute_if_live[unfolded parity_tf.tf_abs_def])
 next
   case (3 gs ci s) show ?case
     unfolding fun_of_exec_dg_st_for_def by (rule parity_enter_st_for_commute)
@@ -114,11 +114,11 @@ global_interpretation parity_po_asm: unit_dg_analysis
     and parity_po_report = parity_po_asm.report
 proof (rule unit_dg_analysis.intro, rule routed_dg_analysis.intro,
        goal_cases)
-  case (1 gs) show ?case by (rule parity_is_sound_transfer_for)
+  case (1 gs) show ?case by (rule parity_tf.is_sound_transfer_for)
 next
   case (2 gs a s) then show ?case
     unfolding fun_of_exec_dg_st_for_def
-    by (rule parity_tf_st_for_commute_if_live[unfolded parity_tf_abs_def])
+    by (rule parity_tf_st_for_commute_if_live[unfolded parity_tf.tf_abs_def])
 next
   case (3 gs ci s) show ?case
     unfolding fun_of_exec_dg_st_for_def by (rule parity_enter_st_for_commute)

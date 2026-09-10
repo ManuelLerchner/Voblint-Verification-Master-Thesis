@@ -59,6 +59,19 @@ it is why the executable route and its abstract counterpart
 The context-insensitive run is neither of these: it is `Sign_Assembly`'s
 `global_interpretation` of the same assembly at the unit context.
 
+## Why Sign publishes no warrowing discipline
+
+Sign publishes `Solver_Join` and `Solver_PerOrigin`, and no warrowing route at
+either the unit or a contextual context. The seven-element lattice has finite
+height, so every ascending chain stabilises after a bounded number of steps and
+widening has nothing to accelerate — a warrowing rule would be mechanically
+available and would buy no termination that the plain join does not already
+give. The resolver follows proved capability, so it answers `None` there rather
+than offering a route with no solved table or soundness corollary behind it.
+This is the same reasoning Parity records for its own two disciplines; Interval
+and the Int product are the domains where widening earns its keep, because
+their carriers admit unbounded ascending chains.
+
 Global keys differ per policy and are therefore parameters, not a fixed shape.
 The call-string run keys at `call_string_gk`, shared with every other
 call-string-keyed instance. The entry-state run keys at `routed_gk` —

@@ -45,11 +45,11 @@ global_interpretation interval_es: routed_dg_analysis
     and analyse_interval_entry_state_report_for = interval_es.verdict_report
     and analyse_interval_entry_state_projection_for = interval_es.check_projection
 proof (rule routed_dg_analysis.intro, goal_cases)
-  case (1 gs) show ?case by (rule ivl_is_sound_transfer_for)
+  case (1 gs) show ?case by (rule ivl_tf.is_sound_transfer_for)
 next
   case (2 gs a s) then show ?case
     unfolding fun_of_exec_dg_st_for_def
-    by (rule ivl_tf_st_for_commute[unfolded ivl_tf_abs_def])
+    by (rule ivl_tf_st_for_commute[unfolded ivl_tf.tf_abs_def])
 next
   case (3 gs ci s) show ?case
     unfolding fun_of_exec_dg_st_for_def by (rule ivl_enter_st_for_commute)
@@ -97,11 +97,11 @@ interpretation interval_cs: routed_dg_analysis
     enter_ivl_ci_for event_ivl "\<lambda>_. cs_route k"
     TD_side_warrowing_apinis_Interp_solve_c
 proof (rule routed_dg_analysis.intro, goal_cases)
-  case (1 gs) show ?case by (rule ivl_is_sound_transfer_for)
+  case (1 gs) show ?case by (rule ivl_tf.is_sound_transfer_for)
 next
   case (2 gs a s) then show ?case
     unfolding fun_of_exec_dg_st_for_def
-    by (rule ivl_tf_st_for_commute[unfolded ivl_tf_abs_def])
+    by (rule ivl_tf_st_for_commute[unfolded ivl_tf.tf_abs_def])
 next
   case (3 gs ci s) show ?case
     unfolding fun_of_exec_dg_st_for_def by (rule ivl_enter_st_for_commute)
@@ -131,9 +131,44 @@ qed
 lemmas analyse_interval_call_string_sound =
   interval_cs.fun_route_activation_collect_sound[OF cs_route_context_agree]
 
+lemmas analyse_interval_call_string_sound_of_cover =
+  interval_cs.fun_route_activation_collect_sound_of_cover[OF cs_route_context_agree]
+
+lemmas analyse_interval_call_string_ltr_collect_eq_Union =
+  interval_cs.fun_route_ltr_collect_eq_Union
+
+lemmas analyse_interval_call_string_gamma_reader_eq_lookup =
+  interval_cs.gamma_reader_eq_lookup
+
+lemmas analyse_interval_call_string_vars_finite =
+  interval_cs.vars_finite_of_terminates
+
 lemmas cs_call_string_terminates_via_solve_c =
   interval_cs.terminates_of_solve_c
 
 end
+
+subsection \<open>The published call-string constants\<close>
+
+definition analyse_interval_call_string_result_for ::
+    "nat \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> (call_string, ivl abs_state) analysis_result" where
+  "analyse_interval_call_string_result_for k gs p =
+     routed_dg_pipeline.result
+    ivl_tf_st_for ivl_enter_st_for cinit_ivl_st
+      Call_String_Context.Global Call_String_Context.Seed (\<lambda>_. cs_route k) []
+       TD_side_warrowing_apinis_Interp_solve gs p"
+
+definition analyse_interval_call_string_result ::
+    "nat \<Rightarrow> imp_prog \<Rightarrow> (call_string, ivl abs_state) analysis_result" where
+  "analyse_interval_call_string_result k p =
+     analyse_interval_call_string_result_for k (declared_global p) p"
+
+definition analyse_interval_call_string_report ::
+    "nat \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> exp \<times> contextual_verdict) list" where
+  "analyse_interval_call_string_report k p =
+     routed_dg_pipeline.verdict_report
+    ivl_tf_st_for ivl_enter_st_for cinit_ivl_st
+      Call_String_Context.Global Call_String_Context.Seed (\<lambda>_. cs_route k) []
+       TD_side_warrowing_apinis_Interp_solve interval_classify_check (declared_global p) p"
 
 end

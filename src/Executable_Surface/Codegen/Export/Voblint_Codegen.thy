@@ -1,6 +1,7 @@
 theory Voblint_Codegen
   imports
-    "Voblint_CLI.State_Report_Graph"
+    "Voblint_CLI.State_Report_Call_String"
+    "Voblint_CLI.Analysis_Run"
 begin
 
 section "Code export surface"
@@ -85,17 +86,62 @@ text \<open>
   constants here.
 \<close>
 
+text \<open>
+  The list below is grouped by what each name is \<^emph>\<open>for\<close>, because the groups answer
+  different questions and only one of them is an operation.
+
+  \<^item> \<^bold>\<open>Run.\<close> \<^const>\<open>run_voblint\<close>, alone. Everything a caller can ask the analyser
+    to do goes through it.
+
+  \<^item> \<^bold>\<open>Ask.\<close> The values naming a request: which domain, which solver discipline,
+    which context policy, which drawing. A caller constructs these, so their
+    constructors are public.
+
+  \<^item> \<^bold>\<open>Answer.\<close> \<^type>\<open>analysis_answer\<close>'s three cases, which a caller must tell
+    apart, and the readers of a successful one. \<^type>\<open>analysis_output\<close> and
+    \<^type>\<open>check_row\<close> are deliberately \<^emph>\<open>not\<close> here as constructors: they reach
+    OCaml abstract, readable only through their selectors, so a field added later
+    cannot break a consumer that matched on field order.
+
+  \<^item> \<^bold>\<open>Graph.\<close> The rendered graph, as data. The prefixes are terse and worth
+    spelling out once: \<open>x\<close> is export, and the second letter names the record ---
+    \<open>xn_\<close> a node (identifier, label, kind, status, annotation lines), \<open>xe_\<close> an edge
+    (source, destination, kind, label), \<open>xc_\<close> a cluster (identifier, label, member
+    nodes), \<open>xg_\<close> the graph itself (its clusters, nodes and edges). \<open>XN_\<close>, \<open>XE_\<close>
+    and \<open>NS_\<close> are the corresponding tag datatypes: what kind of node, what kind of
+    edge, and what a check node's status is. A renderer reading \<^const>\<open>xn_kind\<close>
+    and \<^const>\<open>xn_status\<close> together has everything a styling decision needs, which
+    is why this stays data here and drawing stays in OCaml.
+
+  \<^item> \<^bold>\<open>Program.\<close> What the frontend builds an \<^type>\<open>imp_prog\<close> out of: the command
+    and expression constructors, the program builder, and the numeral and character
+    conversions that bridge OCaml's integers to HOL's.
+
+  \<^item> \<^bold>\<open>Inspect.\<close> Structural readers with no consumer on the CLI's analysis path.
+    They exist for the property-test AST driver and the CFG regressions, and are
+    listed apart so that reading the surface as ``what the CLI calls'' does not
+    quietly drop them.
+\<close>
+
 export_code
-  analyse Sign_Analysis Interval_Analysis Int_Analysis Parity_Analysis
+
+  \<comment> \<open>Run\<close>
+  run_voblint
+
+  \<comment> \<open>Ask: domain, solver, context, drawing\<close>
+  Sign_Analysis Interval_Analysis Int_Analysis Parity_Analysis Congruence_Analysis
+  Solver_Join Solver_PerOrigin Solver_Warrow Solver_WarrowPerOrigin
   Ctx_None Ctx_EntryState Ctx_CallString
-  state_report_graph_snapshot_auto full_state_graph_snapshot_auto
-  entry_state_report_graph_snapshot_auto entry_state_full_state_graph_snapshot_auto
-  entry_state_ctx_graph_snapshot_auto cs_ctx_graph_snapshot_auto
-  state_report_export_auto full_state_export_auto full_state_checked_payload_auto
-  entry_state_report_export_auto entry_state_full_state_export_auto
-  entry_state_full_state_checked_export_auto solver_checked_payload_auto
-  entry_state_verdicts_for entry_state_globals_for solver_globals_for cs_globals_for
-  entry_state_ctx_export_auto cs_ctx_export_auto
+  View_Report View_Checks View_States View_Checked_States View_Contexts
+
+  \<comment> \<open>Answer: the three outcomes, then the readers of a successful one\<close>
+  Malformed_Program Unsupported_Configuration Analysed
+  out_graph out_snapshot out_checks out_globals
+  row_point row_condition row_verdict row_state
+  Check_Proved Check_Refuted Check_Unknown
+  Bot Lifted
+
+  \<comment> \<open>Graph: node, edge, cluster, graph, and their tag datatypes\<close>
   xn_id xn_label xn_kind xn_status xn_lines
   xe_src xe_dst xe_kind xe_label
   xc_id xc_label xc_nodes
@@ -103,24 +149,22 @@ export_code
   XN_Entry XN_Exit XN_ProcEntry XN_ProcExit XN_Point XN_Global XN_Source
   XE_Intra XE_Enter XE_Combine XE_CallToReturn XE_GlobalRead XE_GlobalWrite
   NS_Plain NS_Proved NS_Refuted NS_Unknown NS_Unreachable NS_Exit
-  exp_vnames_list string_of_abstract_value
-  mk_program proc_decl_ext declared_global_vars pretty_string_of_program
-  prog_table prog_main prog_procs
-  SKIP com.Call com.If Assign Seq While Return Check
+
+  \<comment> \<open>Program: what the frontend builds an input out of\<close>
+  mk_program proc_decl_ext
+  SKIP Assign Seq com.If While Return Check com.Call
   N V Plus Minus Times
   exp.Not And Or Less exp.Eq
-  Check_Proved Check_Refuted Check_Unknown
-  int_of_integer nat_of_integer integer_of_int integer_of_nat
   Statement FunctionEntry FunctionResult
-  integer_of_char
+  int_of_integer nat_of_integer integer_of_int integer_of_nat integer_of_char
+
+  \<comment> \<open>Inspect: for the property AST driver and the CFG regressions, not the CLI\<close>
+  declared_global_vars pretty_string_of_program
+  prog_table prog_main prog_procs
   prog_cfg cfg_intra_list cfg_calls_list prog_stmt_post_order
-  EA_Nop EA_Assign EA_Special EA_Assume EA_AssumeNot EA_Body EA_Ret EA_Check CallEdge Nondet_Int
-  string_of_exp
-  wf_program_compile_input_exec
-  Solver_Join Solver_PerOrigin Solver_Warrow Solver_WarrowPerOrigin
-  mk_analysis_config valid_analysis_config
-  analyse_config analyse_config_ctx analyse_config_with_state
-  Bot Lifted
+  EA_Nop EA_Assign EA_Special EA_Assume EA_AssumeNot EA_Body EA_Ret EA_Check
+  CallEdge Nondet_Int
+
   in OCaml module_name Generated file_prefix "Voblint_CLI"
 
 end

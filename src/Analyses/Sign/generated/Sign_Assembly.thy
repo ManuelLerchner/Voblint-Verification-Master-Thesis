@@ -56,11 +56,11 @@ global_interpretation sign_join: unit_dg_analysis
     and sign_unit_report_with_state = sign_join.report_with_state
 proof (rule unit_dg_analysis.intro, rule routed_dg_analysis.intro,
        goal_cases)
-  case (1 gs) show ?case by (rule sign_is_sound_transfer_for)
+  case (1 gs) show ?case by (rule sign_tf.is_sound_transfer_for)
 next
   case (2 gs a s) then show ?case
     unfolding fun_of_exec_dg_st_for_def
-    by (rule sign_tf_st_for_commute[unfolded sign_tf_abs_def])
+    by (rule sign_tf_st_for_commute[unfolded sign_tf.tf_abs_def])
 next
   case (3 gs ci s) show ?case
     unfolding fun_of_exec_dg_st_for_def by (rule sign_enter_st_for_commute)
@@ -115,11 +115,11 @@ global_interpretation sign_po_asm: unit_dg_analysis
     and sign_po_report = sign_po_asm.report
 proof (rule unit_dg_analysis.intro, rule routed_dg_analysis.intro,
        goal_cases)
-  case (1 gs) show ?case by (rule sign_is_sound_transfer_for)
+  case (1 gs) show ?case by (rule sign_tf.is_sound_transfer_for)
 next
   case (2 gs a s) then show ?case
     unfolding fun_of_exec_dg_st_for_def
-    by (rule sign_tf_st_for_commute[unfolded sign_tf_abs_def])
+    by (rule sign_tf_st_for_commute[unfolded sign_tf.tf_abs_def])
 next
   case (3 gs ci s) show ?case
     unfolding fun_of_exec_dg_st_for_def by (rule sign_enter_st_for_commute)

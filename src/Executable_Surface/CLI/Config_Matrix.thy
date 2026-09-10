@@ -309,11 +309,11 @@ lemma resolver_int_callstring_warrow_valid:
 
 
 text \<open>
-  Parity, the fourth domain: supported at \<open>Ctx_None\<close> under the two solvers its own
-  routed-unit instance builds tables for, unsupported at every context it has no routed
-  instance for. Pinned individually rather than as one blanket lemma, so a later
-  \<open>Ctx_EntryState\<close>/\<open>Ctx_CallString\<close> instantiation has to update the specific line it
-  actually makes valid.
+  Parity: supported at every context under \<open>Solver_Join\<close>, and
+  additionally under \<open>Solver_PerOrigin\<close> at \<open>Ctx_None\<close> --- the solved tables its own
+  routed instances build. Unsupported wherever it has no such instance. Pinned
+  individually rather than as one blanket lemma, so a later instantiation has to
+  update the specific line it actually makes valid.
 \<close>
 
 lemma resolver_parity_default_valid:
@@ -338,12 +338,17 @@ lemma resolver_parity_warrow_invalid:
    = None"
   by simp
 
-lemma resolver_parity_entrystate_invalid:
-  "resolve_analysis_config (default_config Parity_Analysis Ctx_EntryState) = None"
+lemma resolver_parity_entrystate_valid:
+  "resolve_analysis_config (default_config Parity_Analysis Ctx_EntryState)
+   = Some (Plan_Parity_EntryState Solver_Join)"
   by (simp add: default_config_def mk_analysis_config_def)
 
-lemma resolver_parity_callstring_invalid:
-  "resolve_analysis_config (default_config Parity_Analysis (Ctx_CallString k)) = None"
+text \<open>A zero-length call string is the unit context spelled twice, so it is
+  rejected rather than silently answered by the flat route.\<close>
+
+lemma resolver_parity_callstring_valid:
+  "resolve_analysis_config (default_config Parity_Analysis (Ctx_CallString k))
+   = (if k = 0 then None else Some (Plan_Parity_CallString Solver_Join k))"
   by (simp add: default_config_def mk_analysis_config_def)
 
 lemma valid_analysis_config_eq_resolver:

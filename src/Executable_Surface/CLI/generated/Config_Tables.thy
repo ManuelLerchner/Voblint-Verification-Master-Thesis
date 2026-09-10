@@ -20,12 +20,15 @@ text \<open>
   The same list decides \<open>analyse_with_solver\<close>, so the two cannot disagree
   about what is supported.
 
-  The bound \<open>k\<close> carries no side condition. \<open>cs_route\<close> at
-  \<open>k = 0\<close> routes every activation to the context \<^term>\<open>[]\<close>, which is
-  as well-defined and as finite as any other bound, so the resolver treats it as
-  one more instantiation rather than as a case to reject. It is not
-  \<^const>\<open>Ctx_None\<close> in disguise: the equation system stays call-string
-  keyed, and the published result carries call-string contexts.
+  A call-string cell carries the shortest bound its domain publishes, and the
+  resolver rejects anything below it: every domain sets that to 1 today, so
+  \<open>k = 0\<close> answers \<^const>\<open>None\<close>. That is a usability decision
+  rather than a soundness one. \<open>cs_route\<close> at \<open>k = 0\<close> routes every
+  activation to the context \<^term>\<open>[]\<close>, as well-defined and as finite as
+  any other bound, and it is not \<^const>\<open>Ctx_None\<close> in disguise: the
+  equation system stays call-string keyed, and the published result carries
+  call-string contexts, all of them empty. Lowering the bound is a real
+  behaviour change, not a relaxation of a check.
 \<close>
 
 fun resolve_analysis_config ::
@@ -114,10 +117,39 @@ fun resolve_analysis_config ::
         cfg_context = Ctx_None \<rparr>
      = None"
 | "resolve_analysis_config
-     \<lparr> cfg_domain = Parity_Analysis, cfg_solver = _, cfg_context = Ctx_EntryState \<rparr>
+     \<lparr> cfg_domain = Parity_Analysis, cfg_solver = None, cfg_context = Ctx_EntryState \<rparr>
+     = Some (Plan_Parity_EntryState Solver_Join)"
+| "resolve_analysis_config
+     \<lparr> cfg_domain = Parity_Analysis, cfg_solver = Some Solver_Join, cfg_context = Ctx_EntryState \<rparr>
+     = Some (Plan_Parity_EntryState Solver_Join)"
+| "resolve_analysis_config
+     \<lparr> cfg_domain = Parity_Analysis, cfg_solver = Some Solver_PerOrigin,
+        cfg_context = Ctx_EntryState \<rparr>
      = None"
 | "resolve_analysis_config
-     \<lparr> cfg_domain = Parity_Analysis, cfg_solver = _, cfg_context = Ctx_CallString k \<rparr>
+     \<lparr> cfg_domain = Parity_Analysis, cfg_solver = Some Solver_Warrow, cfg_context = Ctx_EntryState \<rparr>
+     = None"
+| "resolve_analysis_config
+     \<lparr> cfg_domain = Parity_Analysis, cfg_solver = Some Solver_WarrowPerOrigin,
+        cfg_context = Ctx_EntryState \<rparr>
+     = None"
+| "resolve_analysis_config
+     \<lparr> cfg_domain = Parity_Analysis, cfg_solver = None, cfg_context = Ctx_CallString k \<rparr>
+     = (if k = 0 then None else Some (Plan_Parity_CallString Solver_Join k))"
+| "resolve_analysis_config
+     \<lparr> cfg_domain = Parity_Analysis, cfg_solver = Some Solver_Join, cfg_context = Ctx_CallString k \<rparr>
+     = (if k = 0 then None else Some (Plan_Parity_CallString Solver_Join k))"
+| "resolve_analysis_config
+     \<lparr> cfg_domain = Parity_Analysis, cfg_solver = Some Solver_PerOrigin,
+        cfg_context = Ctx_CallString k \<rparr>
+     = None"
+| "resolve_analysis_config
+     \<lparr> cfg_domain = Parity_Analysis, cfg_solver = Some Solver_Warrow,
+        cfg_context = Ctx_CallString k \<rparr>
+     = None"
+| "resolve_analysis_config
+     \<lparr> cfg_domain = Parity_Analysis, cfg_solver = Some Solver_WarrowPerOrigin,
+        cfg_context = Ctx_CallString k \<rparr>
      = None"
 | "resolve_analysis_config \<lparr> cfg_domain = Int_Analysis, cfg_solver = None, cfg_context = Ctx_None \<rparr>
      = Some (Plan_Int Solver_Warrow)"

@@ -563,7 +563,7 @@ proof -
     then have "a1 = bottom_congruence"
       by (simp only: Rep_congruence_inject[symmetric] Rep_bottom_congruence)
     with assms(1) show ?thesis
-      by (simp add: is_empty_congruence is_bottom_congruence_def bot_congruence_def)
+      by (simp add: is_bottom_congruence_def bot_congruence_def)
   next
     case (Some p)
     obtain c1 m1 where p: "p = (c1, m1)" by (cases p)
@@ -693,8 +693,9 @@ where
       then congruence_of_int 0
       else congruence_of_int 0 \<squnion> congruence_of_int 1)"
 
-interpretation congruence_arith: expression_domain_sound
-    aval_congruence congruence_of_int congruence_lt congruence_eqb congruence_tobool
+interpretation congruence_arith: expression_domain_mono
+    aval_congruence congruence_of_int "(+)" "(-)" "(*)"
+    congruence_lt congruence_eqb congruence_tobool
   apply unfold_locales
   apply (simp_all add: congruence_plus_sound congruence_minus_sound congruence_times_sound
                         congruence_plus_mono congruence_minus_mono congruence_times_mono

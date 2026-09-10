@@ -44,11 +44,11 @@ global_interpretation congruence_es: routed_dg_analysis
     and analyse_congruence_entry_state_projection_for = congruence_es.check_projection
     and congruence_entry_state_context_rel = congruence_es.admitted_contexts
 proof (rule routed_dg_analysis.intro, goal_cases)
-  case (1 gs) show ?case by (rule congruence_is_sound_transfer_for)
+  case (1 gs) show ?case by (rule congruence_tf.is_sound_transfer_for)
 next
   case (2 gs a s) then show ?case
     unfolding fun_of_exec_dg_st_for_def
-    by (rule congruence_tf_st_for_commute[unfolded congruence_tf_abs_def])
+    by (rule congruence_tf_st_for_commute[unfolded congruence_tf.tf_abs_def])
 next
   case (3 gs ci s) show ?case
     unfolding fun_of_exec_dg_st_for_def by (rule congruence_enter_st_for_commute)
@@ -98,6 +98,24 @@ definition analyse_congruence_entry_state_terminates :: "imp_prog \<Rightarrow> 
 lemmas analyse_congruence_entry_state_sound =
   congruence_es.entry_state_activation_collect_sound
 
+lemmas analyse_congruence_entry_state_has_context =
+  congruence_es.entry_state_has_context
+
+lemmas analyse_congruence_entry_state_ltr_collect_eq_Union =
+  congruence_es.entry_state_ltr_collect_eq_Union
+
+lemmas analyse_congruence_entry_state_sound_of_cover =
+  congruence_es.entry_state_activation_collect_sound_of_cover
+
+lemmas analyse_congruence_entry_state_ltr_collect_eq_Union_of_cover =
+  congruence_es.entry_state_ltr_collect_eq_Union_of_cover
+
+lemmas analyse_congruence_entry_state_gamma_reader_eq_lookup =
+  congruence_es.gamma_reader_eq_lookup
+
+lemmas analyse_congruence_entry_state_vars_finite =
+  congruence_es.vars_finite_of_terminates
+
 section \<open>Congruence at the call-string context\<close>
 
 context
@@ -115,11 +133,11 @@ interpretation congruence_cs: routed_dg_analysis
     return_congruence enter_congruence_ci_for event_congruence "\<lambda>_. cs_route k"
     TD_side_always_join_Interp_solve_c
 proof (rule routed_dg_analysis.intro, goal_cases)
-  case (1 gs) show ?case by (rule congruence_is_sound_transfer_for)
+  case (1 gs) show ?case by (rule congruence_tf.is_sound_transfer_for)
 next
   case (2 gs a s) then show ?case
     unfolding fun_of_exec_dg_st_for_def
-    by (rule congruence_tf_st_for_commute[unfolded congruence_tf_abs_def])
+    by (rule congruence_tf_st_for_commute[unfolded congruence_tf.tf_abs_def])
 next
   case (3 gs ci s) show ?case
     unfolding fun_of_exec_dg_st_for_def by (rule congruence_enter_st_for_commute)
@@ -148,6 +166,18 @@ qed
 
 lemmas analyse_congruence_call_string_sound =
   congruence_cs.fun_route_activation_collect_sound[OF cs_route_context_agree]
+
+lemmas analyse_congruence_call_string_sound_of_cover =
+  congruence_cs.fun_route_activation_collect_sound_of_cover[OF cs_route_context_agree]
+
+lemmas analyse_congruence_call_string_ltr_collect_eq_Union =
+  congruence_cs.fun_route_ltr_collect_eq_Union
+
+lemmas analyse_congruence_call_string_gamma_reader_eq_lookup =
+  congruence_cs.gamma_reader_eq_lookup
+
+lemmas analyse_congruence_call_string_vars_finite =
+  congruence_cs.vars_finite_of_terminates
 
 lemmas analyse_congruence_call_string_terminates_of_solve_c =
   congruence_cs.terminates_of_solve_c

@@ -96,7 +96,10 @@ lemma special_parity_eq_transfer:
   "special_parity sc x \<sigma> = parity_special.special_transfer sc x \<sigma>"
   by (cases sc) (simp_all add: top_parity_def)
 
-lemmas special_parity_sound = parity_special.special_transfer_sound[folded special_parity_eq_transfer]
-lemmas special_parity_mono  = parity_special.special_transfer_mono[folded special_parity_eq_transfer]
+lemmas special_parity_sound =
+  parity_special.special_transfer_sound[folded special_parity_eq_transfer]
+
+lemmas special_parity_mono =
+  parity_special.special_transfer_mono[folded special_parity_eq_transfer]
 
 end

@@ -56,7 +56,7 @@ is what makes it the component that still narrows under `Refine_Never`.
 | `Congruence_Transfer.thy` | one abstract operation per edge kind the framework can hand a domain, and their `sound_transfer_for` contract |
 | `Congruence_Exec.thy` | the same eight operations on the compact state the solver stores, each shown to agree with its abstract counterpart |
 | `Congruence_Numeric_Queries.thy` | interprets the generic query interface at `congruence_lt`/`congruence_eqb`, so the check layer reads Congruence like any other domain |
-| `Congruence_Sound.thy` | `cctx_spec`, its concretization and their soundness — an analysis before any context is chosen |
+| `Congruence_Sound.thy` | `congruence_cinit_gamma`: what the abstract state a run starts in describes |
 | `Congruence_Classify.thy` | one interpretation of `abstract_check_domain`: the Boolean recursion over a check condition and its three-way verdict |
 | `generated/Congruence_Assembly.thy` | generated: two interpretations of the shared `unit_dg_analysis`, one per published solver discipline |
 | `generated/Congruence_Analyses.thy` | the call-string and entry-state configurations, as two interpretations of the shared routed assembly. Generated from `assembly/analyses.yaml`; see below |

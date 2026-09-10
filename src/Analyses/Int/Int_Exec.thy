@@ -25,12 +25,12 @@ subsection \<open>Top and C-initial executable states\<close>
 lift_definition top_int_dom_st :: "int_dom resolved_st_q" is "(top, top, [])" .
 
 lemma lookup_top_int_dom_st [simp]:
-  "fun_of_resolved_st_q_for is_global top_int_dom_st x = top"
+  "fun_of_resolved_st_q_for gs top_int_dom_st x = top"
   unfolding fun_of_resolved_st_q_for_def
   by transfer (auto simp: location_of_def split: if_splits)
 
 lemma fun_of_st_top_int_dom_st:
-  "fun_of_resolved_st_q_for is_global top_int_dom_st = (\<lambda>_. top)"
+  "fun_of_resolved_st_q_for gs top_int_dom_st = (\<lambda>_. top)"
   by (rule ext) simp
 
 lift_definition cinit_int_dom_st :: "int_dom resolved_st_q" is "(top, int_dom_of_int 0, [])" .
@@ -46,21 +46,48 @@ lemma fun_of_st_cinit_int_dom_st_for:
    (\<lambda>x. if gs x then int_dom_of_int 0 else top)"
   by (rule ext) simp
 
+subsection \<open>The primitive bundle, per refinement mode\<close>
+
+text \<open>
+  \<open>Refine_Never\<close>, \<open>Refine_Once\<close> and \<open>Refine_Fixpoint\<close> differ only in the mode
+  their operations carry, so each gets its own \<^type>\<open>numeric_ops\<close> bundle and the
+  three executable constants per mode are
+  \<^theory>\<open>Voblint_Nonrelational.Numeric_Ops\<close>'s generic constructions instantiated
+  at it --- the same constructions Sign, Interval, Parity and Congruence use.
+  Only the bundles and the per-mode corollaries are written three times; the
+  transfer itself is written once, elsewhere.
+
+  Int's abstract operations stay its own (\<^theory>\<open>Voblint_Analysis_Int.Int_Transfer\<close>)
+  rather than a \<open>nonrelational_transfer\<close> interpretation, because they carry
+  the mode. Each \<open>_eq_generic\<close> lemma below records that they are nonetheless
+  exactly what the bundle determines, which is what lets the generic commutation
+  apply to them unchanged.
+\<close>
+
+definition int_dom_special_ops :: "refine_mode => int_dom special_ops" where
+  "int_dom_special_ops mode =
+     \<lparr> special_min = int_dom_min mode, special_max = int_dom_max mode \<rparr>"
+
+lemma int_dom_special_ops_simps [simp]:
+  "special_min (int_dom_special_ops mode) = int_dom_min mode"
+  "special_max (int_dom_special_ops mode) = int_dom_max mode"
+  by (simp_all add: int_dom_special_ops_def)
+
 subsection \<open>Refine_Never\<close>
 
 definition int_dom_ops_never :: "int_dom numeric_ops" where
-  "int_dom_ops_never = (| n_aval = aval_int_dom Refine_Never,
-                          n_bfilter = branch_int_dom_never_st,
-                          n_top = top |)"
+  "int_dom_ops_never = \<lparr> n_aval = aval_int_dom Refine_Never,
+                         n_special = int_dom_special_ops Refine_Never,
+                         n_bfilter = branch_int_dom_never_st,
+                         n_top = top \<rparr>"
 
-definition branch_int_dom_never_st_for ::
-    "(vname => bool) => exp => bool => int_dom resolved_st_q => int_dom resolved_st_q"
-where
-  "branch_int_dom_never_st_for = n_bfilter int_dom_ops_never"
+lemma int_dom_ops_never_simps [simp]:
+  "n_aval int_dom_ops_never = aval_int_dom Refine_Never"
+  "n_special int_dom_ops_never = int_dom_special_ops Refine_Never"
+  "n_bfilter int_dom_ops_never = branch_int_dom_never_st"
+  "n_top int_dom_ops_never = top"
+  by (simp_all add: int_dom_ops_never_def)
 
-lemma branch_int_dom_never_st_for_eq [simp]:
-  "branch_int_dom_never_st_for gs b pol s = branch_int_dom_never_st gs b pol s"
-  by (simp add: branch_int_dom_never_st_for_def int_dom_ops_never_def)
 
 definition int_dom_enter_never_st_for ::
     "(vname => bool) => call_info =>
@@ -74,100 +101,59 @@ lemma int_dom_enter_never_st_for_eq [simp]:
       (map (\<lambda>e. aval_int_dom Refine_Never e
         (fun_of_resolved_st_q_for gs s)) (ci_args ci))
       (enter_frame_D_resolved_q top s)"
-  by (simp add: int_dom_enter_never_st_for_def generic_enter_st_for_def int_dom_ops_never_def)
+  by (simp add: int_dom_enter_never_st_for_def generic_enter_st_for_def)
 
-fun int_tf_st_never_for ::
+definition int_tf_st_never_for ::
   "(vname => bool) => edge_action =>
    int_dom resolved_st_q => int_dom resolved_st_q" where
-    "int_tf_st_never_for gs EA_Nop s = s"
-  | "int_tf_st_never_for gs (EA_Assign x a) s =
-       update_resolved_st_q s (location_of gs x)
-         (aval_int_dom Refine_Never a (fun_of_resolved_st_q_for gs s))"
-  | "int_tf_st_never_for gs (EA_Special sc x) s =
-       update_resolved_st_q s (location_of gs x)
-         (case sc of
-            Nondet_Int => top
-          | Min a b => int_dom_min Refine_Never
-                         (aval_int_dom Refine_Never a (fun_of_resolved_st_q_for gs s))
-                         (aval_int_dom Refine_Never b (fun_of_resolved_st_q_for gs s))
-          | Max a b => int_dom_max Refine_Never
-                         (aval_int_dom Refine_Never a (fun_of_resolved_st_q_for gs s))
-                         (aval_int_dom Refine_Never b (fun_of_resolved_st_q_for gs s)))"
-  | "int_tf_st_never_for gs (EA_Assume b) s =
-       branch_int_dom_never_st_for gs b True s"
-  | "int_tf_st_never_for gs (EA_AssumeNot b) s =
-       branch_int_dom_never_st_for gs b False s"
-  | "int_tf_st_never_for gs (EA_Body p) s = s"
-  | "int_tf_st_never_for gs (EA_Ret None p) s = s"
-  | "int_tf_st_never_for gs (EA_Ret (Some a) p) s =
-       update_resolved_st_q s (location_of gs ret_var)
-         (aval_int_dom Refine_Never a (fun_of_resolved_st_q_for gs s))"
-  | "int_tf_st_never_for gs (EA_Check cnd) s = s"
+  "int_tf_st_never_for = generic_tf_st_for int_dom_ops_never"
+
+lemmas int_tf_st_never_for_simps [simp] =
+  generic_tf_st_for.simps [of int_dom_ops_never, folded int_tf_st_never_for_def]
+
+lemma int_tf_abs_never_eq_generic:
+  "int_tf_abs Refine_Never = generic_tf_abs int_dom_ops_never branch_int_dom_never"
+proof (rule ext, rule ext)
+  fix a :: edge_action and sigma :: "int_dom abs_state"
+  show "int_tf_abs Refine_Never a sigma =
+        generic_tf_abs int_dom_ops_never branch_int_dom_never a sigma"
+    by (cases a)
+       (simp_all add: skip_int_dom_def assign_int_dom_def body_int_dom_def
+          event_int_dom_def return_int_dom_def
+          split: special_call.splits option.splits)
+qed
 
 theorem int_tf_st_never_for_commute:
-  assumes "live_resolved_st_q gs s"
+  assumes live: "live_resolved_st_q gs s"
   shows
     "fun_of_resolved_st_q_for gs (int_tf_st_never_for gs a s) =
      int_tf_abs Refine_Never a (fun_of_resolved_st_q_for gs s)"
-proof (cases a)
-  case EA_Nop
-  then show ?thesis by (simp add: skip_int_dom_def)
-next
-  case (EA_Assign x e)
-  then show ?thesis by (simp add: assign_int_dom_def)
-next
-  case (EA_Special sc x)
-  then show ?thesis by (auto split: special_call.splits)
-next
-  case (EA_Assume b)
-  then show ?thesis
-    using assms by (simp add: int_dom_backward_never.branch_st_commute)
-next
-  case (EA_AssumeNot b)
-  then show ?thesis
-    using assms by (simp add: int_dom_backward_never.branch_st_commute)
-next
-  case (EA_Body p)
-  then show ?thesis by (simp add: body_int_dom_def)
-next
-  case (EA_Ret ea p)
-  then show ?thesis
-  proof (cases ea)
-    case None
-    then show ?thesis using \<open>a = EA_Ret ea p\<close>
-      by (simp add: return_int_dom_def)
-  next
-    case (Some av)
-    then show ?thesis using \<open>a = EA_Ret ea p\<close>
-      by (simp add: return_int_dom_def assign_int_dom_def)
-  qed
-next
-  case (EA_Check c)
-  then show ?thesis by (simp add: event_int_dom_def)
-qed
+  unfolding int_tf_st_never_for_def int_tf_abs_never_eq_generic
+  by (rule generic_tf_st_for_commute)
+     (simp add: int_dom_backward_never.branch_st_commute[OF live])
 
 lemma int_dom_enter_never_st_for_commute:
   "fun_of_resolved_st_q_for gs (int_dom_enter_never_st_for gs ci s) =
    enter_int_dom_ci_for Refine_Never gs ci (fun_of_resolved_st_q_for gs s)"
   by (simp add: enter_int_dom_ci_for_def enter_int_dom_for_def enter_binding_def
-                enter_frame_def enter_frame_int_dom_for_def fun_of_resolved_st_q_for_enter_frame)
+                enter_frame_def enter_frame_int_dom_for_def)
 
 
 subsection \<open>Refine_Once\<close>
 
 definition int_dom_ops_once :: "int_dom numeric_ops" where
-  "int_dom_ops_once = (| n_aval = aval_int_dom Refine_Once,
-                         n_bfilter = branch_int_dom_once_st,
-                         n_top = top |)"
+  "int_dom_ops_once = \<lparr> n_aval = aval_int_dom Refine_Once,
+                        n_special = int_dom_special_ops Refine_Once,
+                        n_bfilter = branch_int_dom_once_st,
+                        n_top = top \<rparr>"
 
-definition branch_int_dom_once_st_for ::
-    "(vname => bool) => exp => bool => int_dom resolved_st_q => int_dom resolved_st_q"
-where
-  "branch_int_dom_once_st_for = n_bfilter int_dom_ops_once"
+lemma int_dom_ops_once_simps [simp]:
+  "n_aval int_dom_ops_once = aval_int_dom Refine_Once"
+  "n_special int_dom_ops_once = int_dom_special_ops Refine_Once"
+  "n_bfilter int_dom_ops_once = branch_int_dom_once_st"
+  "n_top int_dom_ops_once = top"
+  by (simp_all add: int_dom_ops_once_def)
 
-lemma branch_int_dom_once_st_for_eq [simp]:
-  "branch_int_dom_once_st_for gs b pol s = branch_int_dom_once_st gs b pol s"
-  by (simp add: branch_int_dom_once_st_for_def int_dom_ops_once_def)
 
 definition int_dom_enter_once_st_for ::
     "(vname => bool) => call_info =>
@@ -181,100 +167,59 @@ lemma int_dom_enter_once_st_for_eq [simp]:
       (map (\<lambda>e. aval_int_dom Refine_Once e
         (fun_of_resolved_st_q_for gs s)) (ci_args ci))
       (enter_frame_D_resolved_q top s)"
-  by (simp add: int_dom_enter_once_st_for_def generic_enter_st_for_def int_dom_ops_once_def)
+  by (simp add: int_dom_enter_once_st_for_def generic_enter_st_for_def)
 
-fun int_tf_st_once_for ::
+definition int_tf_st_once_for ::
   "(vname => bool) => edge_action =>
    int_dom resolved_st_q => int_dom resolved_st_q" where
-    "int_tf_st_once_for gs EA_Nop s = s"
-  | "int_tf_st_once_for gs (EA_Assign x a) s =
-       update_resolved_st_q s (location_of gs x)
-         (aval_int_dom Refine_Once a (fun_of_resolved_st_q_for gs s))"
-  | "int_tf_st_once_for gs (EA_Special sc x) s =
-       update_resolved_st_q s (location_of gs x)
-         (case sc of
-            Nondet_Int => top
-          | Min a b => int_dom_min Refine_Once
-                         (aval_int_dom Refine_Once a (fun_of_resolved_st_q_for gs s))
-                         (aval_int_dom Refine_Once b (fun_of_resolved_st_q_for gs s))
-          | Max a b => int_dom_max Refine_Once
-                         (aval_int_dom Refine_Once a (fun_of_resolved_st_q_for gs s))
-                         (aval_int_dom Refine_Once b (fun_of_resolved_st_q_for gs s)))"
-  | "int_tf_st_once_for gs (EA_Assume b) s =
-       branch_int_dom_once_st_for gs b True s"
-  | "int_tf_st_once_for gs (EA_AssumeNot b) s =
-       branch_int_dom_once_st_for gs b False s"
-  | "int_tf_st_once_for gs (EA_Body p) s = s"
-  | "int_tf_st_once_for gs (EA_Ret None p) s = s"
-  | "int_tf_st_once_for gs (EA_Ret (Some a) p) s =
-       update_resolved_st_q s (location_of gs ret_var)
-         (aval_int_dom Refine_Once a (fun_of_resolved_st_q_for gs s))"
-  | "int_tf_st_once_for gs (EA_Check cnd) s = s"
+  "int_tf_st_once_for = generic_tf_st_for int_dom_ops_once"
+
+lemmas int_tf_st_once_for_simps [simp] =
+  generic_tf_st_for.simps [of int_dom_ops_once, folded int_tf_st_once_for_def]
+
+lemma int_tf_abs_once_eq_generic:
+  "int_tf_abs Refine_Once = generic_tf_abs int_dom_ops_once branch_int_dom_once"
+proof (rule ext, rule ext)
+  fix a :: edge_action and sigma :: "int_dom abs_state"
+  show "int_tf_abs Refine_Once a sigma =
+        generic_tf_abs int_dom_ops_once branch_int_dom_once a sigma"
+    by (cases a)
+       (simp_all add: skip_int_dom_def assign_int_dom_def body_int_dom_def
+          event_int_dom_def return_int_dom_def
+          split: special_call.splits option.splits)
+qed
 
 theorem int_tf_st_once_for_commute:
-  assumes "live_resolved_st_q gs s"
+  assumes live: "live_resolved_st_q gs s"
   shows
     "fun_of_resolved_st_q_for gs (int_tf_st_once_for gs a s) =
      int_tf_abs Refine_Once a (fun_of_resolved_st_q_for gs s)"
-proof (cases a)
-  case EA_Nop
-  then show ?thesis by (simp add: skip_int_dom_def)
-next
-  case (EA_Assign x e)
-  then show ?thesis by (simp add: assign_int_dom_def)
-next
-  case (EA_Special sc x)
-  then show ?thesis by (auto split: special_call.splits)
-next
-  case (EA_Assume b)
-  then show ?thesis
-    using assms by (simp add: int_dom_backward_once.branch_st_commute)
-next
-  case (EA_AssumeNot b)
-  then show ?thesis
-    using assms by (simp add: int_dom_backward_once.branch_st_commute)
-next
-  case (EA_Body p)
-  then show ?thesis by (simp add: body_int_dom_def)
-next
-  case (EA_Ret ea p)
-  then show ?thesis
-  proof (cases ea)
-    case None
-    then show ?thesis using \<open>a = EA_Ret ea p\<close>
-      by (simp add: return_int_dom_def)
-  next
-    case (Some av)
-    then show ?thesis using \<open>a = EA_Ret ea p\<close>
-      by (simp add: return_int_dom_def assign_int_dom_def)
-  qed
-next
-  case (EA_Check c)
-  then show ?thesis by (simp add: event_int_dom_def)
-qed
+  unfolding int_tf_st_once_for_def int_tf_abs_once_eq_generic
+  by (rule generic_tf_st_for_commute)
+     (simp add: int_dom_backward_once.branch_st_commute[OF live])
 
 lemma int_dom_enter_once_st_for_commute:
   "fun_of_resolved_st_q_for gs (int_dom_enter_once_st_for gs ci s) =
    enter_int_dom_ci_for Refine_Once gs ci (fun_of_resolved_st_q_for gs s)"
   by (simp add: enter_int_dom_ci_for_def enter_int_dom_for_def enter_binding_def
-                enter_frame_def enter_frame_int_dom_for_def fun_of_resolved_st_q_for_enter_frame)
+                enter_frame_def enter_frame_int_dom_for_def)
 
 
 subsection \<open>Refine_Fixpoint\<close>
 
 definition int_dom_ops_fixpoint :: "int_dom numeric_ops" where
-  "int_dom_ops_fixpoint = (| n_aval = aval_int_dom Refine_Fixpoint,
-                             n_bfilter = branch_int_dom_fixpoint_st,
-                             n_top = top |)"
+  "int_dom_ops_fixpoint = \<lparr> n_aval = aval_int_dom Refine_Fixpoint,
+                            n_special = int_dom_special_ops Refine_Fixpoint,
+                            n_bfilter = branch_int_dom_fixpoint_st,
+                            n_top = top \<rparr>"
 
-definition branch_int_dom_fixpoint_st_for ::
-    "(vname => bool) => exp => bool => int_dom resolved_st_q => int_dom resolved_st_q"
-where
-  "branch_int_dom_fixpoint_st_for = n_bfilter int_dom_ops_fixpoint"
+lemma int_dom_ops_fixpoint_simps [simp]:
+  "n_aval int_dom_ops_fixpoint = aval_int_dom Refine_Fixpoint"
+  "n_special int_dom_ops_fixpoint = int_dom_special_ops Refine_Fixpoint"
+  "n_bfilter int_dom_ops_fixpoint = branch_int_dom_fixpoint_st"
+  "n_top int_dom_ops_fixpoint = top"
+  by (simp_all add: int_dom_ops_fixpoint_def)
 
-lemma branch_int_dom_fixpoint_st_for_eq [simp]:
-  "branch_int_dom_fixpoint_st_for gs b pol s = branch_int_dom_fixpoint_st gs b pol s"
-  by (simp add: branch_int_dom_fixpoint_st_for_def int_dom_ops_fixpoint_def)
 
 definition int_dom_enter_fixpoint_st_for ::
     "(vname => bool) => call_info =>
@@ -288,83 +233,42 @@ lemma int_dom_enter_fixpoint_st_for_eq [simp]:
       (map (\<lambda>e. aval_int_dom Refine_Fixpoint e
         (fun_of_resolved_st_q_for gs s)) (ci_args ci))
       (enter_frame_D_resolved_q top s)"
-  by (simp add: int_dom_enter_fixpoint_st_for_def generic_enter_st_for_def int_dom_ops_fixpoint_def)
+  by (simp add: int_dom_enter_fixpoint_st_for_def generic_enter_st_for_def)
 
-fun int_tf_st_fixpoint_for ::
+definition int_tf_st_fixpoint_for ::
   "(vname => bool) => edge_action =>
    int_dom resolved_st_q => int_dom resolved_st_q" where
-    "int_tf_st_fixpoint_for gs EA_Nop s = s"
-  | "int_tf_st_fixpoint_for gs (EA_Assign x a) s =
-       update_resolved_st_q s (location_of gs x)
-         (aval_int_dom Refine_Fixpoint a (fun_of_resolved_st_q_for gs s))"
-  | "int_tf_st_fixpoint_for gs (EA_Special sc x) s =
-       update_resolved_st_q s (location_of gs x)
-         (case sc of
-            Nondet_Int => top
-          | Min a b => int_dom_min Refine_Fixpoint
-                         (aval_int_dom Refine_Fixpoint a (fun_of_resolved_st_q_for gs s))
-                         (aval_int_dom Refine_Fixpoint b (fun_of_resolved_st_q_for gs s))
-          | Max a b => int_dom_max Refine_Fixpoint
-                         (aval_int_dom Refine_Fixpoint a (fun_of_resolved_st_q_for gs s))
-                         (aval_int_dom Refine_Fixpoint b (fun_of_resolved_st_q_for gs s)))"
-  | "int_tf_st_fixpoint_for gs (EA_Assume b) s =
-       branch_int_dom_fixpoint_st_for gs b True s"
-  | "int_tf_st_fixpoint_for gs (EA_AssumeNot b) s =
-       branch_int_dom_fixpoint_st_for gs b False s"
-  | "int_tf_st_fixpoint_for gs (EA_Body p) s = s"
-  | "int_tf_st_fixpoint_for gs (EA_Ret None p) s = s"
-  | "int_tf_st_fixpoint_for gs (EA_Ret (Some a) p) s =
-       update_resolved_st_q s (location_of gs ret_var)
-         (aval_int_dom Refine_Fixpoint a (fun_of_resolved_st_q_for gs s))"
-  | "int_tf_st_fixpoint_for gs (EA_Check cnd) s = s"
+  "int_tf_st_fixpoint_for = generic_tf_st_for int_dom_ops_fixpoint"
+
+lemmas int_tf_st_fixpoint_for_simps [simp] =
+  generic_tf_st_for.simps [of int_dom_ops_fixpoint, folded int_tf_st_fixpoint_for_def]
+
+lemma int_tf_abs_fixpoint_eq_generic:
+  "int_tf_abs Refine_Fixpoint =
+     generic_tf_abs int_dom_ops_fixpoint branch_int_dom_fixpoint"
+proof (rule ext, rule ext)
+  fix a :: edge_action and sigma :: "int_dom abs_state"
+  show "int_tf_abs Refine_Fixpoint a sigma =
+        generic_tf_abs int_dom_ops_fixpoint branch_int_dom_fixpoint a sigma"
+    by (cases a)
+       (simp_all add: skip_int_dom_def assign_int_dom_def body_int_dom_def
+          event_int_dom_def return_int_dom_def
+          split: special_call.splits option.splits)
+qed
 
 theorem int_tf_st_fixpoint_for_commute:
-  assumes "live_resolved_st_q gs s"
+  assumes live: "live_resolved_st_q gs s"
   shows
     "fun_of_resolved_st_q_for gs (int_tf_st_fixpoint_for gs a s) =
      int_tf_abs Refine_Fixpoint a (fun_of_resolved_st_q_for gs s)"
-proof (cases a)
-  case EA_Nop
-  then show ?thesis by (simp add: skip_int_dom_def)
-next
-  case (EA_Assign x e)
-  then show ?thesis by (simp add: assign_int_dom_def)
-next
-  case (EA_Special sc x)
-  then show ?thesis by (auto split: special_call.splits)
-next
-  case (EA_Assume b)
-  then show ?thesis
-    using assms by (simp add: int_dom_backward_fixpoint.branch_st_commute)
-next
-  case (EA_AssumeNot b)
-  then show ?thesis
-    using assms by (simp add: int_dom_backward_fixpoint.branch_st_commute)
-next
-  case (EA_Body p)
-  then show ?thesis by (simp add: body_int_dom_def)
-next
-  case (EA_Ret ea p)
-  then show ?thesis
-  proof (cases ea)
-    case None
-    then show ?thesis using \<open>a = EA_Ret ea p\<close>
-      by (simp add: return_int_dom_def)
-  next
-    case (Some av)
-    then show ?thesis using \<open>a = EA_Ret ea p\<close>
-      by (simp add: return_int_dom_def assign_int_dom_def)
-  qed
-next
-  case (EA_Check c)
-  then show ?thesis by (simp add: event_int_dom_def)
-qed
+  unfolding int_tf_st_fixpoint_for_def int_tf_abs_fixpoint_eq_generic
+  by (rule generic_tf_st_for_commute)
+     (simp add: int_dom_backward_fixpoint.branch_st_commute[OF live])
 
 lemma int_dom_enter_fixpoint_st_for_commute:
   "fun_of_resolved_st_q_for gs (int_dom_enter_fixpoint_st_for gs ci s) =
    enter_int_dom_ci_for Refine_Fixpoint gs ci (fun_of_resolved_st_q_for gs s)"
   by (simp add: enter_int_dom_ci_for_def enter_int_dom_for_def enter_binding_def
-                enter_frame_def enter_frame_int_dom_for_def fun_of_resolved_st_q_for_enter_frame)
-
+                enter_frame_def enter_frame_int_dom_for_def)
 
 end

@@ -71,6 +71,24 @@ qed
 lemmas analyse_int_entry_state_sound =
   int_es.entry_state_activation_collect_sound
 
+lemmas analyse_int_entry_state_has_context =
+  int_es.entry_state_has_context
+
+lemmas analyse_int_entry_state_ltr_collect_eq_Union =
+  int_es.entry_state_ltr_collect_eq_Union
+
+lemmas analyse_int_entry_state_sound_of_cover =
+  int_es.entry_state_activation_collect_sound_of_cover
+
+lemmas analyse_int_entry_state_ltr_collect_eq_Union_of_cover =
+  int_es.entry_state_ltr_collect_eq_Union_of_cover
+
+lemmas analyse_int_entry_state_gamma_reader_eq_lookup =
+  int_es.gamma_reader_eq_lookup
+
+lemmas analyse_int_entry_state_vars_finite =
+  int_es.vars_finite_of_terminates
+
 interpretation int_es_warrow: routed_dg_analysis
     "int_tf_st_for mode" "int_dom_enter_st_for mode" cinit_int_dom_st
     "Analysis_Global ()" Activation_Seed exec_formals_route "[]"
@@ -117,6 +135,24 @@ qed
 
 lemmas analyse_int_entry_state_sound_warrow =
   int_es_warrow.entry_state_activation_collect_sound
+
+lemmas analyse_int_entry_state_has_context_warrow =
+  int_es_warrow.entry_state_has_context
+
+lemmas analyse_int_entry_state_ltr_collect_eq_Union_warrow =
+  int_es_warrow.entry_state_ltr_collect_eq_Union
+
+lemmas analyse_int_entry_state_sound_of_cover_warrow =
+  int_es_warrow.entry_state_activation_collect_sound_of_cover
+
+lemmas analyse_int_entry_state_ltr_collect_eq_Union_of_cover_warrow =
+  int_es_warrow.entry_state_ltr_collect_eq_Union_of_cover
+
+lemmas analyse_int_entry_state_gamma_reader_eq_lookup_warrow =
+  int_es_warrow.gamma_reader_eq_lookup
+
+lemmas analyse_int_entry_state_vars_finite_warrow =
+  int_es_warrow.vars_finite_of_terminates
 
 end
 
@@ -194,6 +230,18 @@ qed
 lemmas analyse_int_call_string_sound =
   int_cs.fun_route_activation_collect_sound[OF cs_route_context_agree]
 
+lemmas analyse_int_call_string_sound_of_cover =
+  int_cs.fun_route_activation_collect_sound_of_cover[OF cs_route_context_agree]
+
+lemmas analyse_int_call_string_ltr_collect_eq_Union =
+  int_cs.fun_route_ltr_collect_eq_Union
+
+lemmas analyse_int_call_string_gamma_reader_eq_lookup =
+  int_cs.gamma_reader_eq_lookup
+
+lemmas analyse_int_call_string_vars_finite =
+  int_cs.vars_finite_of_terminates
+
 interpretation int_cs_warrow: routed_dg_analysis
     "int_tf_st_for mode" "int_dom_enter_st_for mode" cinit_int_dom_st
     Call_String_Context.Global Call_String_Context.Seed "\<lambda>_. cs_route k" "[]"
@@ -238,6 +286,18 @@ qed
 
 lemmas analyse_int_call_string_sound_warrow =
   int_cs_warrow.fun_route_activation_collect_sound[OF cs_route_context_agree]
+
+lemmas analyse_int_call_string_sound_of_cover_warrow =
+  int_cs_warrow.fun_route_activation_collect_sound_of_cover[OF cs_route_context_agree]
+
+lemmas analyse_int_call_string_ltr_collect_eq_Union_warrow =
+  int_cs_warrow.fun_route_ltr_collect_eq_Union
+
+lemmas analyse_int_call_string_gamma_reader_eq_lookup_warrow =
+  int_cs_warrow.gamma_reader_eq_lookup
+
+lemmas analyse_int_call_string_vars_finite_warrow =
+  int_cs_warrow.vars_finite_of_terminates
 
 end
 

@@ -17,33 +17,37 @@
 # rename waiting to happen, not an extension point. Nothing outside `legacy:`
 # names an existing identifier that a convention could have produced.
 
-# The CLI tables are generated but not adopted: `Analyse_Dispatch` and
-# `Analysis_Config` still own those equations by hand, and adopting them needs a
-# handwritten carrier theory for `abstract_value` and `tag_states` first. Until
-# this says true, the generator renders them only under `--out` and the drift
-# check ignores them, so neither an accidental run nor the ci gate can put an
-# unadopted theory into the tree.
+# The CLI tables are generated and adopted: `Config_Tables` and `Dispatch_Tables`
+# under `CLI/generated/` are rendered from this file and compared by the drift
+# gate. `Dispatch_Carrier` is the handwritten carrier for `abstract_value` and
+# `tag_states` that adoption needed.
 # Adoption is per output. An unadopted one renders under `--out` and is neither
 # written into the tree nor compared by the drift gate, so a commit that adds
 # the generator does not turn ci red for files a later commit adds. Flip the
 # flag in the same commit that checks the output in.
 cli_adopted: true
 
+# `title` names the discipline in a table or a heading; `rule` names the update
+# rule inside a sentence, where the hyphenated adjective form is what reads.
 solvers:
   always_join:
     title: Always join
+    rule: always-join
     interp: TD_side_always_join_Interp
     constructor: Solver_Join
   per_origin:
     title: Per origin
+    rule: per-origin
     interp: TD_side_per_origin_Interp
     constructor: Solver_PerOrigin
   warrowing_apinis:
     title: Apinis warrowing
+    rule: Apinis-warrowing
     interp: TD_side_warrowing_apinis_Interp
     constructor: Solver_Warrow
   warrowing_per_origin:
     title: Warrowing per origin
+    rule: warrowing-per-origin
     interp: TD_side_warrowing_per_origin_Interp
     constructor: Solver_WarrowPerOrigin
 
@@ -66,13 +70,49 @@ domains:
       entry_state: {solvers: [always_join], default: always_join}
       call_string: {solvers: [always_join], default: always_join, min_bound: 1}
     # Which contextual registrations the theory layer carries. Distinct from
-    # `contexts:` above, which is what the CLI resolves: Parity carries both
-    # registrations and exposes neither, so the two lists come apart and a
-    # single key cannot say both. The emitter reads only this one.
+    # `contexts:` above, which is what the CLI resolves. The two can come apart
+    # -- a domain may carry a registration it does not expose -- so a single key
+    # cannot say both. The emitter reads only this one.
     registrations:
       adopted: true
       entry_state: {solvers: [always_join], default: always_join}
       call_string: {solvers: [always_join], default: always_join}
+    # The published runtime names. `ctx_prefix` and the surface binders are
+    # spellings that predate any convention: `sign_join_surface` carries the
+    # suffix because `sign_join` is already the unit assembly's binder, while
+    # Interval's and Int's assembly binders are `_asm`-suffixed and left the
+    # bare name free. Explainable, not derivable -- so recorded, not invented.
+    checks:
+      adopted: true
+      ctx_prefix: sign_conf
+      imports:
+        - Sign_Classify
+        - '"Voblint_Framework.Check_Report"'
+        - '"Voblint_Result.Analysis_Surface"'
+        - Sign_Analyses
+      routes:
+        always_join:
+          surface: sign_join_surface
+        per_origin:
+          surface: sign_per_origin
+          suffix: _per_origin
+          # Sign publishes no `_for` hop for the sibling report, where Parity and
+          # Congruence do. Read off the working file; no consumer depends on the
+          # difference, so unifying it is a change to make deliberately.
+          published: [sol, result_for, result, report]
+    entry:
+      adopted: true
+      routes:
+        always_join:
+          endpoints: full
+          terminates: sign_conf_terminates_prog
+          sol: sign_conf_sol_prog
+          cover: sign_conf_vars_cover_prog_of_exec
+          closure: sign_closure
+          result_for: analyse_sign_result_for
+          report_for: analyse_sign_report_for
+          result: analyse_sign_result
+          report: analyse_sign_report
     legacy:
       impl_prefix: sign
       classifier: sign_classify_check
@@ -80,13 +120,6 @@ domains:
       extra_imports: ['"Voblint_VIMP.VIMP_Notation"']
       binders: {always_join: sign_join, per_origin: sign_po_asm}
       prefixes: {always_join: sign_unit, per_origin: sign_po}
-      routes:
-        always_join:
-          report: analyse_sign_report
-          report_with_state: analyse_sign_report_with_state
-        per_origin:
-          report: analyse_sign_report_per_origin
-          report_with_state: sign_per_origin.report_with_state
 
   - name: Interval
     adopted: true
@@ -102,9 +135,9 @@ domains:
         default: warrowing_apinis
         min_bound: 1
     # Which contextual registrations the theory layer carries. Distinct from
-    # `contexts:` above, which is what the CLI resolves: Parity carries both
-    # registrations and exposes neither, so the two lists come apart and a
-    # single key cannot say both. The emitter reads only this one.
+    # `contexts:` above, which is what the CLI resolves. The two can come apart
+    # -- a domain may carry a registration it does not expose -- so a single key
+    # cannot say both. The emitter reads only this one.
     registrations:
       adopted: true
       # Interval is the one domain with hand-written content left to host the
@@ -113,13 +146,19 @@ domains:
       # `Interval_Analyses` stays hand-written and imports it. The mechanism is
       # uniform across domains; only whether there is a hand-written host differs.
       theory: Interval_Contextual_Assembly
-      # Interval's hand-written file survives, so adoption moves only the two
-      # registrations. Its twenty-six published constants and its six
-      # `entry_state_*` re-exports stay where they are: `interval_es` is a
-      # `global_interpretation`, so its binder is visible to an importing
-      # theory. The call-string re-exports cannot stay -- `interval_cs` is a
-      # plain `interpretation` and does not export outside its context -- so
-      # those two names travel with the registration and are named here.
+      # Interval's hand-written file survives, so what moves is decided name by
+      # name. The entry-state published constants and the six `entry_state_*`
+      # re-exports stay: `interval_es` is a `global_interpretation`, so its
+      # binder is visible to an importing theory. The call-string re-exports
+      # cannot -- `interval_cs` is a plain `interpretation` and does not export
+      # outside its context -- so those two names travel with the registration
+      # and are named here.
+      #
+      # The call-string `published:` list is the conventional three. What stays
+      # hand-written there is `cs_call_string_eqs_prog` and
+      # `cs_call_string_sol_prog`: the equation system and its raw solution,
+      # which no other domain publishes and which an example pins solved values
+      # against one unknown at a time. There is no shape for this file to name.
       entry_state:
         solvers: [warrowing_apinis]
         default: warrowing_apinis
@@ -128,10 +167,92 @@ domains:
       call_string:
         solvers: [warrowing_apinis]
         default: warrowing_apinis
-        published: []
+        published: [result_for, result, report]
         re_exports:
           sound: analyse_interval_call_string_sound
           terminates_of_solve_c: cs_call_string_terminates_via_solve_c
+          gamma_reader: analyse_interval_call_string_gamma_reader_eq_lookup
+          vars_finite: analyse_interval_call_string_vars_finite
+          sound_of_cover: analyse_interval_call_string_sound_of_cover
+          union_of_cover: analyse_interval_call_string_ltr_collect_eq_Union
+    # Interval's four disciplines all publish a solve and a report, so every
+    # route names the constants it publishes rather than taking the production
+    # or sibling default: a sibling here still publishes its own `terminates`
+    # and the lemma that discharges it, which Sign's and Parity's do not.
+    #
+    # The two suffixes come apart here and nowhere else. The published API
+    # leaves the production discipline unmarked, the way every other domain
+    # does, so `analyse_interval_report` is the warrowing report. The solved
+    # system still leaves always-join unmarked, so `interval_conf_sol_prog` is
+    # the join solve while `interval_conf_eqs_prog` beside it is production's
+    # system -- Interval's own inherited spelling, and not the one Int uses,
+    # where `int_conf_sol_prog` is the production solve. Closing that gap swaps
+    # two names that both stay live, so a consumer left behind would read the
+    # other discipline in silence rather than fail; it belongs in its own
+    # change, not in this one.
+    checks:
+      adopted: true
+      ctx_prefix: interval_conf
+      hide_consts: [phase.N]
+      imports:
+        - Interval_Assembly
+        - '"Voblint_Framework.Check_Report"'
+        - '"Voblint_Result.Analysis_Surface"'
+      routes:
+        warrowing_apinis:
+          surface: interval_warrow
+          suffix: ''
+          solved_suffix: _warrow
+        always_join:
+          surface: interval_join
+          suffix: _join
+          solved_suffix: ''
+          published: [sol, terminates, terminates_via_solve_c,
+                      result_for, result, report_for, report]
+        per_origin:
+          surface: interval_per_origin
+          suffix: _per_origin
+          published: [sol, terminates, terminates_via_solve_c,
+                      result_for, result, report_for, report]
+        warrowing_per_origin:
+          surface: interval_wpo
+          suffix: _wpo
+          published: [sol, terminates, terminates_via_solve_c,
+                      result_for, result, report_for, report]
+    # Three of the four routes publish endpoints, and only the production one
+    # publishes them in full: `endpoints: reports` says a discipline publishes
+    # the two check-report readings and stops there, which is what a sibling
+    # `analyse_with_solver` compares against needs and all it needs. The fourth,
+    # warrowing per origin, publishes no endpoint at all.
+    entry:
+      adopted: true
+      routes:
+        warrowing_apinis:
+          endpoints: full
+          terminates: interval_conf_terminates_prog_warrow
+          sol: interval_conf_sol_prog_warrow
+          cover: interval_conf_vars_cover_prog_of_exec
+          closure: interval_warrow_closure
+          result_for: analyse_interval_result_for
+          report_for: analyse_interval_report_for
+          result: analyse_interval_result
+          report: analyse_interval_report
+        always_join:
+          endpoints: reports
+          terminates: interval_conf_terminates_prog
+          sol: interval_conf_sol_prog
+          closure: interval_join_closure
+          result_for: analyse_interval_result_join_for
+          report_for: analyse_interval_report_join_for
+          report: analyse_interval_report_join
+        per_origin:
+          endpoints: reports
+          terminates: interval_conf_terminates_prog_per_origin
+          sol: interval_conf_sol_prog_per_origin
+          closure: interval_po_closure
+          result_for: analyse_interval_result_per_origin_for
+          report_for: analyse_interval_report_per_origin_for
+          report: analyse_interval_report_per_origin
     legacy:
       impl_prefix: ivl
       # Settled by cutting and looking. `Interval_Transfer` dropped;
@@ -181,33 +302,55 @@ domains:
         always_join: interval_join
         per_origin: interval_po
         warrowing_per_origin: interval_wpo
-      routes:
-        warrowing_apinis:
-          report: analyse_interval_td_report
-          report_with_state: analyse_interval_td_report_with_state
-        always_join:
-          report: analyse_interval_report
-          report_with_state: interval_join.report_with_state
-        per_origin:
-          report: analyse_interval_report_per_origin
-          report_with_state: interval_per_origin.report_with_state
-        warrowing_per_origin:
-          report: analyse_interval_report_wpo
-          report_with_state: interval_wpo.report_with_state
 
   - name: Parity
     adopted: true
     value_type: parity
     tag: ParityValue
     routes: [always_join, per_origin]
+    contexts:
+      entry_state: {solvers: [always_join], default: always_join}
+      call_string: {solvers: [always_join], default: always_join, min_bound: 1}
     # Which contextual registrations the theory layer carries. Distinct from
-    # `contexts:` above, which is what the CLI resolves: Parity carries both
-    # registrations and exposes neither, so the two lists come apart and a
-    # single key cannot say both. The emitter reads only this one.
+    # `contexts:` above, which is what the CLI resolves. The two can come apart
+    # -- a domain may carry a registration it does not expose -- so a single key
+    # cannot say both. The emitter reads only this one.
     registrations:
       adopted: true
       entry_state: {solvers: [always_join], default: always_join}
       call_string: {solvers: [always_join], default: always_join}
+    # The runtime API layer. One block per discipline whose soundness the domain
+    # publishes -- which is not every route it registers: Parity registers a
+    # per-origin instance and publishes endpoints only for the production one.
+    # Every name here is a check-report layer spelling that predates any
+    # convention, so the block reads as a map rather than as policy.
+    checks:
+      adopted: true
+      ctx_prefix: parity_conf
+      imports:
+        - Parity_Assembly
+        - '"Voblint_Framework.Check_Report"'
+        - '"Voblint_Result.Analysis_Surface"'
+      routes:
+        always_join:
+          surface: parity_join_surface
+        per_origin:
+          surface: parity_per_origin
+          suffix: _per_origin
+    entry:
+      adopted: true
+      hide_consts: [phase.N]
+      routes:
+        always_join:
+          endpoints: full
+          terminates: parity_conf_terminates_prog
+          sol: parity_conf_sol_prog
+          cover: parity_conf_vars_cover_prog_of_exec
+          closure: parity_closure
+          result_for: analyse_parity_result_for
+          report_for: analyse_parity_report_for
+          result: analyse_parity_result
+          report: analyse_parity_report
     legacy:
       impl_prefix: parity
       # No `Parity_Assembly` here, unlike Sign's: `Parity_Checks` imports it
@@ -237,13 +380,6 @@ domains:
         tf_commute: parity_tf_st_for_commute_if_live
       binders: {always_join: parity_join, per_origin: parity_po_asm}
       prefixes: {always_join: parity_unit, per_origin: parity_po}
-      routes:
-        always_join:
-          report: analyse_parity_report
-          report_with_state: analyse_parity_report_with_state
-        per_origin:
-          report: analyse_parity_report_per_origin
-          report_with_state: parity_per_origin.report_with_state
 
   # Int is registered for dispatch only. `assembly: false` records that the
   # migration has not reached it yet -- it still runs its own pipeline, so it
@@ -294,6 +430,17 @@ domains:
         solvers: [always_join, warrowing_apinis]
         default: warrowing_apinis
         published: [result_for, result, report]
+    # No `checks:` block either, for the same reason. `Int_Checks` is not a set
+    # of bindings: it proves that the mode-generic `int_conf_*` names agree with
+    # the unit assembly at `Refine_Fixpoint` and with the routed pipeline at an
+    # arbitrary mode. Those are derivations with proofs, not renamings.
+    # No `entry:` block, and Int is the only domain without one. `Int_Entry` is
+    # not transport: it re-interprets `unit_dg_analysis` at an
+    # arbitrary refinement mode, which the pinned unit assembly cannot, and its
+    # check-report bridges go through `classify_checks` by hand because
+    # `analyse_int_report_for` reads its table through a surface unfolding
+    # rather than through the locale's own report rule. Both are real content,
+    # so the theory stays hand-written.
     legacy:
       impl_prefix: int
       # Settled by cutting to the minimum in the hand-written file and letting
@@ -339,6 +486,11 @@ domains:
         always_join: int_join
         per_origin: int_po
         warrowing_per_origin: int_wpo
+      # Int is the only domain that still names its reports here. The other
+      # four publish them from a generated checks theory, so the dispatcher
+      # reads that spelling instead; `Int_Checks` is hand-written because it
+      # carries proofs rather than bindings, and there is nothing for the
+      # dispatcher to read them off.
       routes:
         warrowing_apinis:
           report: analyse_int_report
@@ -367,13 +519,39 @@ domains:
       entry_state: {solvers: [always_join], default: always_join}
       call_string: {solvers: [always_join], default: always_join, min_bound: 1}
     # Which contextual registrations the theory layer carries. Distinct from
-    # `contexts:` above, which is what the CLI resolves: Parity carries both
-    # registrations and exposes neither, so the two lists come apart and a
-    # single key cannot say both. The emitter reads only this one.
+    # `contexts:` above, which is what the CLI resolves. The two can come apart
+    # -- a domain may carry a registration it does not expose -- so a single key
+    # cannot say both. The emitter reads only this one.
     registrations:
       adopted: true
       entry_state: {solvers: [always_join], default: always_join}
       call_string: {solvers: [always_join], default: always_join}
+    checks:
+      adopted: true
+      ctx_prefix: congruence_conf
+      imports:
+        - Congruence_Assembly
+        - '"Voblint_Framework.Check_Report"'
+        - '"Voblint_Result.Analysis_Surface"'
+      routes:
+        always_join:
+          surface: congruence_join_surface
+        per_origin:
+          surface: congruence_per_origin
+          suffix: _per_origin
+    entry:
+      adopted: true
+      routes:
+        always_join:
+          endpoints: full
+          terminates: congruence_conf_terminates_prog
+          sol: congruence_conf_sol_prog
+          cover: congruence_conf_vars_cover_prog_of_exec
+          closure: congruence_closure
+          result_for: analyse_congruence_result_for
+          report_for: analyse_congruence_report_for
+          result: analyse_congruence_result
+          report: analyse_congruence_report
     legacy:
       impl_prefix: congruence
       # No `Congruence_Assembly` here, unlike Sign's: `Congruence_Checks` imports it
@@ -397,10 +575,3 @@ domains:
       init_gamma: congruence_cinit_gamma
       binders: {always_join: congruence_join, per_origin: congruence_po_asm}
       prefixes: {always_join: congruence_unit, per_origin: congruence_po}
-      routes:
-        always_join:
-          report: analyse_congruence_report
-          report_with_state: analyse_congruence_report_with_state
-        per_origin:
-          report: analyse_congruence_report_per_origin
-          report_with_state: congruence_per_origin.report_with_state

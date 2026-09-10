@@ -95,29 +95,24 @@ lemma parity_eq_false_sound:
 
 subsection \<open>Goblint-style optional-Boolean queries\<close>
 
-definition parity_less :: "parity \<Rightarrow> parity \<Rightarrow> bool option" where
-  "parity_less a b = (if parity_less_true a b then Some True
-                       else if parity_less_false a b then Some False else None)"
+text \<open>
+  \<open>parity_less\<close>/\<open>parity_eq\<close> are the generic packaging of the four judgments
+  above, so one interpretation both introduces them and discharges the query
+  interface. Nothing about that packaging is backward-specific: it asks only
+  for four judgments and their soundness, which is why parity can reuse it
+  while having no \<open>inv_less\<close> for the derivations beside it to read off. The
+  \<^theory_text>\<open>defines\<close> clause is what keeps the two queries ordinary
+  top-level constants, with the code equation the check layer needs.
+\<close>
 
-definition parity_eq :: "parity \<Rightarrow> parity \<Rightarrow> bool option" where
-  "parity_eq a b = (if parity_eq_true a b then Some True
-                     else if parity_eq_false a b then Some False else None)"
+global_interpretation parity_numeric_queries:
+  numeric_query_judgments
+    parity_less_true parity_less_false parity_eq_true parity_eq_false
+  defines parity_less = parity_numeric_queries.less
+    and parity_eq = parity_numeric_queries.eq
+  by unfold_locales
+     (auto intro: parity_less_true_sound parity_eq_true_sound
+            dest: parity_less_false_sound parity_eq_false_sound)
 
-lemma parity_less_sound:
-  assumes "parity_less a b = Some r" and "i \<in> gamma a" and "j \<in> gamma b"
-  shows "(i < j) = r"
-  using assms parity_less_true_sound parity_less_false_sound
-  unfolding parity_less_def by (auto split: if_splits)
-
-lemma parity_eq_sound:
-  assumes "parity_eq a b = Some r" and "i \<in> gamma a" and "j \<in> gamma b"
-  shows "(i = j) = r"
-  using assms parity_eq_true_sound parity_eq_false_sound
-  unfolding parity_eq_def by (auto split: if_splits)
-
-subsection \<open>Interpreting the generic numeric-query interface\<close>
-
-global_interpretation parity_numeric_queries: abstract_numeric_queries parity_less parity_eq
-  by unfold_locales (metis parity_less_sound parity_eq_sound)+
 
 end

@@ -114,8 +114,15 @@ let well_formed graph =
        (fun e -> Hashtbl.mem known (C.xe_src e) && Hashtbl.mem known (C.xe_dst e))
        (C.xg_edges graph)
 
+(* Raising rather than emitting a well-formed-looking placeholder: the only
+   assertion the suite makes about --dot is that stdout starts with
+   "digraph AnalysisCFG", which a placeholder satisfies at exit 0, so the
+   guard's failure was undetectable by the test that exists to check it. *)
 let render (graph : unit C.export_graph_ext) : string =
-  if not (well_formed graph) then "digraph AnalysisCFG { invalid_graph }\n"
+  if not (well_formed graph) then
+    failwith
+      "analysis graph is not well formed: duplicate node or cluster id, \
+       or an edge outside the node set"
   else begin
     let by_id = Hashtbl.create 64 in
     List.iter (fun n -> Hashtbl.replace by_id (C.xn_id n) n) (C.xg_nodes graph);

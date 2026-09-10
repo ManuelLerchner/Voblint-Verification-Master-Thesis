@@ -2,7 +2,23 @@ theory Congruence_Lattice
   imports Congruence_Domain "Voblint_VIMP.VIMP_Source_Print"
 begin
 
-section \<open>Congruence order and bounds\<close>
+section \<open>When is one residue class contained in another?\<close>
+
+text \<open>
+  A congruence value denotes a set of integers: \<open>None\<close> denotes none at all and
+  \<open>Some (c, m)\<close> the numbers congruent to \<open>c\<close> modulo \<open>m\<close>, with \<open>m = 0\<close> meaning
+  the single number \<open>c\<close>. Containment between two such sets is decidable
+  arithmetic: \<open>Some (c1, m1)\<close> sits inside \<open>Some (c2, m2)\<close> exactly when the
+  coarser modulus \<open>m2\<close> divides both \<open>m1\<close> and the offset \<open>c1 - c2\<close>. That test is
+  \<open>congruence_le_rep\<close> just below, and it is what everything else here is
+  built on.
+
+  From it come the order instance on the normalized type \<open>congruence\<close>, its
+  bottom (the empty class) and top (every integer, \<open>Some (0, 1)\<close>), the join ---
+  the coarsest class containing both arguments, computed through the gcd of the
+  moduli and the difference of the residues --- and the executable emptiness and
+  printing operations the abstract-domain interface asks for.
+\<close>
 
 fun congruence_le_rep :: "congruence_rep => congruence_rep => bool" where
   "congruence_le_rep None _ = True"

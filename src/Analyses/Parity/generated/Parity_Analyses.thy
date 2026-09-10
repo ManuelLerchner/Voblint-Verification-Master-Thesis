@@ -44,11 +44,11 @@ global_interpretation parity_es: routed_dg_analysis
     and analyse_parity_entry_state_projection_for = parity_es.check_projection
     and parity_entry_state_context_rel = parity_es.admitted_contexts
 proof (rule routed_dg_analysis.intro, goal_cases)
-  case (1 gs) show ?case by (rule parity_is_sound_transfer_for)
+  case (1 gs) show ?case by (rule parity_tf.is_sound_transfer_for)
 next
   case (2 gs a s) then show ?case
     unfolding fun_of_exec_dg_st_for_def
-    by (rule parity_tf_st_for_commute_if_live[unfolded parity_tf_abs_def])
+    by (rule parity_tf_st_for_commute_if_live[unfolded parity_tf.tf_abs_def])
 next
   case (3 gs ci s) show ?case
     unfolding fun_of_exec_dg_st_for_def by (rule parity_enter_st_for_commute)
@@ -98,6 +98,24 @@ definition analyse_parity_entry_state_terminates :: "imp_prog \<Rightarrow> bool
 lemmas analyse_parity_entry_state_sound =
   parity_es.entry_state_activation_collect_sound
 
+lemmas analyse_parity_entry_state_has_context =
+  parity_es.entry_state_has_context
+
+lemmas analyse_parity_entry_state_ltr_collect_eq_Union =
+  parity_es.entry_state_ltr_collect_eq_Union
+
+lemmas analyse_parity_entry_state_sound_of_cover =
+  parity_es.entry_state_activation_collect_sound_of_cover
+
+lemmas analyse_parity_entry_state_ltr_collect_eq_Union_of_cover =
+  parity_es.entry_state_ltr_collect_eq_Union_of_cover
+
+lemmas analyse_parity_entry_state_gamma_reader_eq_lookup =
+  parity_es.gamma_reader_eq_lookup
+
+lemmas analyse_parity_entry_state_vars_finite =
+  parity_es.vars_finite_of_terminates
+
 section \<open>Parity at the call-string context\<close>
 
 context
@@ -115,11 +133,11 @@ interpretation parity_cs: routed_dg_analysis
     enter_parity_ci_for event_parity "\<lambda>_. cs_route k"
     TD_side_always_join_Interp_solve_c
 proof (rule routed_dg_analysis.intro, goal_cases)
-  case (1 gs) show ?case by (rule parity_is_sound_transfer_for)
+  case (1 gs) show ?case by (rule parity_tf.is_sound_transfer_for)
 next
   case (2 gs a s) then show ?case
     unfolding fun_of_exec_dg_st_for_def
-    by (rule parity_tf_st_for_commute_if_live[unfolded parity_tf_abs_def])
+    by (rule parity_tf_st_for_commute_if_live[unfolded parity_tf.tf_abs_def])
 next
   case (3 gs ci s) show ?case
     unfolding fun_of_exec_dg_st_for_def by (rule parity_enter_st_for_commute)
@@ -148,6 +166,18 @@ qed
 
 lemmas analyse_parity_call_string_sound =
   parity_cs.fun_route_activation_collect_sound[OF cs_route_context_agree]
+
+lemmas analyse_parity_call_string_sound_of_cover =
+  parity_cs.fun_route_activation_collect_sound_of_cover[OF cs_route_context_agree]
+
+lemmas analyse_parity_call_string_ltr_collect_eq_Union =
+  parity_cs.fun_route_ltr_collect_eq_Union
+
+lemmas analyse_parity_call_string_gamma_reader_eq_lookup =
+  parity_cs.gamma_reader_eq_lookup
+
+lemmas analyse_parity_call_string_vars_finite =
+  parity_cs.vars_finite_of_terminates
 
 lemmas analyse_parity_call_string_terminates_of_solve_c =
   parity_cs.terminates_of_solve_c

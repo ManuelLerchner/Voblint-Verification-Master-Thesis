@@ -2,7 +2,20 @@ theory Interval_Bounds
   imports Main
 begin
 
-section \<open>Interval bounds\<close>
+section \<open>Numbers that may run off to infinity\<close>
+
+text \<open>
+  An interval needs endpoints that can say "no lower limit" and "no upper
+  limit", so \<open>eint\<close> adds \<open>MinInf\<close> and \<open>PlusInf\<close> to the integers. Ordering
+  puts \<open>MinInf\<close> below and \<open>PlusInf\<close> above everything, which makes \<open>eint\<close> a
+  linear order; addition and subtraction extend the integer operations, with
+  the mixed-infinity cases (\<open>PlusInf + MinInf\<close> and its mirror) pinned to a
+  fixed choice rather than left undefined, since a total function is what
+  interval arithmetic and code generation both need.
+
+  Nothing here knows about intervals. This theory only supplies the endpoint
+  type that \<open>Interval_Lattice\<close> later builds \<open>ivl\<close> from.
+\<close>
 
 subsection \<open>Extended integers as interval bounds\<close>
 
@@ -35,7 +48,8 @@ lemma eint_le_linear: "eint_le x y \<or> eint_le y x"
 
 instantiation eint :: ord begin
 definition less_eq_eint :: "eint => eint => bool" where "less_eq_eint = eint_le"
-definition less_eint    :: "eint => eint => bool" where "(a :: eint) < b = (eint_le a b \<and> \<not> eint_le b a)"
+definition less_eint    :: "eint => eint => bool" where
+  "(a :: eint) < b = (eint_le a b \<and> \<not> eint_le b a)"
 instance ..
 end
 

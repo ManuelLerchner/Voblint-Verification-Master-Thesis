@@ -31,7 +31,9 @@ text \<open>
 
 definition int_conf_sol_prog_warrow ::
     "refine_mode \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog
-       \<Rightarrow> (pp \<times> unit) set \<times> (pp \<times> unit + (unit, unit) routed_gk \<Rightarrow> (int_dom exec_dg_st lifted, int_dom exec_dg_st lifted) dg_state)" where
+       \<Rightarrow> (pp \<times> unit) set
+            \<times> (pp \<times> unit + (unit, unit) routed_gk
+                 \<Rightarrow> (int_dom exec_dg_st lifted, int_dom exec_dg_st lifted) dg_state)" where
   "int_conf_sol_prog_warrow mode gs p =
      routed_dg_pipeline.solution (int_tf_st_for mode) (int_dom_enter_st_for mode)
        cinit_int_dom_st (Analysis_Global ()) Activation_Seed (\<lambda>_. route_unit) ()
@@ -60,7 +62,8 @@ definition analyse_int_ctx_solved_warrow_for ::
      \<Rightarrow> (unit, int_dom abs_state) analysis_result
           \<times> (String.literal \<times> int_dom abs_state lifted) list" where
   "analyse_int_ctx_solved_warrow_for mode =
-     ctx_solved_for (int_conf_sol_prog_warrow mode) (unit_seed_global_keys (Analysis_Global ()) Activation_Seed)"
+     ctx_solved_for (int_conf_sol_prog_warrow mode)
+       (unit_seed_global_keys (Analysis_Global ()) Activation_Seed)"
 
 lemma fst_analyse_int_ctx_solved_warrow_for [simp]:
   "fst (analyse_int_ctx_solved_warrow_for mode gs p)

@@ -234,30 +234,23 @@ qed
 
 subsection \<open>Goblint-style optional-Boolean queries\<close>
 
-definition interval_less :: "ivl \<Rightarrow> ivl \<Rightarrow> bool option" where
-  "interval_less a b = (if interval_less_true a b then Some True
-                         else if interval_less_false a b then Some False else None)"
+text \<open>
+  \<open>interval_less\<close>/\<open>interval_eq\<close> are the generic packaging of the four
+  bound-comparison judgments above, so one interpretation both introduces
+  them and discharges the query interface. The
+  \<^theory_text>\<open>defines\<close> clause is what keeps them ordinary top-level
+  constants, with the code equation the check layer needs.
+\<close>
 
-definition interval_eq :: "ivl \<Rightarrow> ivl \<Rightarrow> bool option" where
-  "interval_eq a b = (if interval_eq_true a b then Some True
-                       else if interval_eq_false a b then Some False else None)"
+global_interpretation interval_numeric_queries:
+  numeric_query_judgments
+    interval_less_true interval_less_false interval_eq_true interval_eq_false
+  defines interval_less = interval_numeric_queries.less
+    and interval_eq = interval_numeric_queries.eq
+  by unfold_locales
+     (auto intro: interval_less_true_sound interval_eq_true_sound
+            dest: interval_less_false_sound interval_eq_false_sound)
 
-lemma interval_less_sound:
-  assumes "interval_less a b = Some r" and "i \<in> gamma a" and "j \<in> gamma b"
-  shows "(i < j) = r"
-  using assms interval_less_true_sound interval_less_false_sound
-  unfolding interval_less_def by (auto split: if_splits)
-
-lemma interval_eq_sound:
-  assumes "interval_eq a b = Some r" and "i \<in> gamma a" and "j \<in> gamma b"
-  shows "(i = j) = r"
-  using assms interval_eq_true_sound interval_eq_false_sound
-  unfolding interval_eq_def by (auto split: if_splits)
-
-subsection \<open>Interpreting the generic numeric-query interface\<close>
-
-global_interpretation interval_numeric_queries: abstract_numeric_queries interval_less interval_eq
-  by unfold_locales (metis interval_less_sound interval_eq_sound)+
 
 subsection \<open>Semantic intersection versus raw lattice meet\<close>
 
@@ -285,7 +278,7 @@ text \<open>
 
 lemma interval_eq_false_witness_disjoint:
   "interval_eq_false (Ivl (Fin 1) (Fin 2)) (Ivl (Fin 5) (Fin 6))"
-  by (simp add: less_eint_def less_eq_eint_def)
+  by (simp add: less_eint_def)
 
 lemma interval_meet_of_witness_not_bot:
   "meet_ivl (Ivl (Fin 1) (Fin 2)) (Ivl (Fin 5) (Fin 6)) \<noteq> bot"

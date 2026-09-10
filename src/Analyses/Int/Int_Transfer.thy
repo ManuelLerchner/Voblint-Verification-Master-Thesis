@@ -1,6 +1,11 @@
 theory Int_Transfer
-  imports Int_Backward Int_Warrowing "Voblint_Analysis_Sign.Sign_Special" "Voblint_Analysis_Parity.Parity_Special"
-    "Voblint_Framework.DG_Local_State_Spec" "Voblint_VIMP.VIMP_Globals"
+  imports
+    Int_Backward
+    Int_Warrowing
+    "Voblint_Analysis_Sign.Sign_Special"
+    "Voblint_Analysis_Parity.Parity_Special"
+    "Voblint_Framework.DG_Local_State_Spec"
+    "Voblint_VIMP.VIMP_Globals"
 begin
 
 section \<open>Composite integer-domain transfer functions\<close>

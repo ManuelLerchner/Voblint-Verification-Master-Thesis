@@ -2,7 +2,23 @@ theory Interval_Arithmetic
   imports Interval_Lattice
 begin
 
-section \<open>Interval arithmetic\<close>
+section \<open>Adding, subtracting and multiplying whole ranges\<close>
+
+text \<open>
+  Addition and subtraction of intervals move the two endpoints independently:
+  the sum of \<open>[a, b]\<close> and \<open>[c, d]\<close> runs from \<open>a + c\<close> to \<open>b + d\<close>. Multiplication
+  cannot, because a negative factor swaps which endpoint is larger, so
+  \<open>ivl_times_core\<close> multiplies all four corner pairs and keeps their minimum and
+  maximum. Every operation first \<open>normalize_ivl\<close>s its arguments --- an interval
+  whose lower bound exceeds its upper one denotes no number at all and collapses
+  to \<open>bot\<close> --- which is what keeps an unreachable operand from producing a
+  spurious range.
+
+  Each operation is proved sound (concrete values drawn from the operands land
+  in the computed interval) and monotone (widening either operand widens the
+  result). Those two facts are what \<open>Interval_Backward\<close> later needs to
+  interpret the shared \<open>expression_domain_sound\<close> locale at Interval.
+\<close>
 
 instantiation ivl :: plus begin
 fun plus_ivl :: "ivl => ivl => ivl" where
@@ -141,9 +157,11 @@ definition times_ivl :: "ivl => ivl => ivl" where
 instance ..
 end
 
-(* times_ivl_def is NOT declared [simp]: the conditional body would
-   cause simp to split on ivl_nonempty before ivl_times_sound / ivl_times_mono
-   can fire. Add it explicitly in proofs that must unfold * directly. *)
+text \<open>
+  \<open>times_ivl_def\<close> is deliberately not \<open>[simp]\<close>: its conditional body would make
+  \<open>simp\<close> split on \<open>ivl_nonempty\<close> before \<open>ivl_times_sound\<close> or \<open>ivl_times_mono\<close>
+  can fire. A proof that must unfold \<open>*\<close> directly adds it explicitly.
+\<close>
 
 lemma ivl_plus_sound:
   assumes "i \<in> gamma_ivl a" "j \<in> gamma_ivl b"

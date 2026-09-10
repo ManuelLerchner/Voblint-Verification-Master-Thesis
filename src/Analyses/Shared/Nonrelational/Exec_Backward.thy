@@ -187,11 +187,15 @@ where
   | "bfilter_st gs (And b1 b2) True s =
        bfilter_st gs b1 True (bfilter_st gs b2 True s)"
   | "bfilter_st gs (And b1 b2) False s =
-       (if feasible b1 False (fun_of_resolved_st_q_for gs s) then bfilter_st gs b1 False s else bot)
-       \<squnion> (if feasible b2 False (fun_of_resolved_st_q_for gs s) then bfilter_st gs b2 False s else bot)"
+       (if feasible b1 False (fun_of_resolved_st_q_for gs s)
+        then bfilter_st gs b1 False s else bot)
+       \<squnion> (if feasible b2 False (fun_of_resolved_st_q_for gs s)
+            then bfilter_st gs b2 False s else bot)"
   | "bfilter_st gs (Or b1 b2) True s =
-       (if feasible b1 True (fun_of_resolved_st_q_for gs s) then bfilter_st gs b1 True s else bot)
-       \<squnion> (if feasible b2 True (fun_of_resolved_st_q_for gs s) then bfilter_st gs b2 True s else bot)"
+       (if feasible b1 True (fun_of_resolved_st_q_for gs s)
+        then bfilter_st gs b1 True s else bot)
+       \<squnion> (if feasible b2 True (fun_of_resolved_st_q_for gs s)
+            then bfilter_st gs b2 True s else bot)"
   | "bfilter_st gs (Or b1 b2) False s =
        bfilter_st gs b1 False (bfilter_st gs b2 False s)"
   | "bfilter_st gs (Eq e1 e2) res s =
@@ -384,7 +388,8 @@ lemma afilter_lift_step:
                 normalize_lift is_empty_state (afilter e2 a2 (fun_of_resolved_st_q_for gs s))"
   shows "map_lift (fun_of_resolved_st_q_for gs)
            (afilter_st_lift gs e1 a1 (afilter_st_lift gs e2 a2 (Lifted s))) =
-         normalize_lift is_empty_state (afilter e1 a1 (afilter e2 a2 (fun_of_resolved_st_q_for gs s)))"
+         normalize_lift is_empty_state
+           (afilter e1 a1 (afilter e2 a2 (fun_of_resolved_st_q_for gs s)))"
 proof (cases "is_empty_state (afilter e2 a2 (fun_of_resolved_st_q_for gs s))")
   case True
   then have bot2: "afilter_st_lift gs e2 a2 (Lifted s) = Bot"
@@ -427,7 +432,8 @@ proof (cases "bfilter_st_lift gs b2 res (Lifted s)")
   then show ?thesis using IH2 by simp
 next
   case (Lifted t)
-  have eq: "Lifted (fun_of_resolved_st_q_for gs t) = bfilter_lifted b2 res (fun_of_resolved_st_q_for gs s)"
+    have eq: "Lifted (fun_of_resolved_st_q_for gs t)
+              = bfilter_lifted b2 res (fun_of_resolved_st_q_for gs s)"
     using IH2 Lifted by simp
   have live_t: "live_resolved_st_q gs t"
   proof -
@@ -476,19 +482,22 @@ next
 next
   case (Plus e1 e2)
   show ?case
-    unfolding afilter_st_lift_simps afilter_Plus_unfold bind_lift_left_identity Let_def case_prod_beta
+    unfolding afilter_st_lift_simps afilter_Plus_unfold
+              bind_lift_left_identity Let_def case_prod_beta
     using afilter_lift_step[OF Plus.IH(1) Plus.IH(2)[OF Plus.prems]]
     by simp
 next
   case (Minus e1 e2)
   show ?case
-    unfolding afilter_st_lift_simps afilter_Minus_unfold bind_lift_left_identity Let_def case_prod_beta
+    unfolding afilter_st_lift_simps afilter_Minus_unfold
+              bind_lift_left_identity Let_def case_prod_beta
     using afilter_lift_step[OF Minus.IH(1) Minus.IH(2)[OF Minus.prems]]
     by simp
 next
   case (Times e1 e2)
   show ?case
-    unfolding afilter_st_lift_simps afilter_Times_unfold bind_lift_left_identity Let_def case_prod_beta
+    unfolding afilter_st_lift_simps afilter_Times_unfold
+              bind_lift_left_identity Let_def case_prod_beta
     using afilter_lift_step[OF Times.IH(1) Times.IH(2)[OF Times.prems]]
     by simp
 next
@@ -638,7 +647,8 @@ lemma branch_st_commute:
               bfilter_lifted e pol (fun_of_resolved_st_q_for gs s)"
     by (rule bfilter_st_lift_correct[OF assms])
   have "fun_of_resolved_st_q_for gs (collapse_lift (bfilter_st_lift gs e pol (Lifted s)))
-          = collapse_lift (map_lift (fun_of_resolved_st_q_for gs) (bfilter_st_lift gs e pol (Lifted s)))"
+          = collapse_lift (map_lift (fun_of_resolved_st_q_for gs)
+                             (bfilter_st_lift gs e pol (Lifted s)))"
     by (rule collapse_lift_map_lift[where f = "fun_of_resolved_st_q_for gs",
           OF fun_of_resolved_st_q_for_bot, symmetric])
   also have "... = collapse_lift (bfilter_lifted e pol (fun_of_resolved_st_q_for gs s))"

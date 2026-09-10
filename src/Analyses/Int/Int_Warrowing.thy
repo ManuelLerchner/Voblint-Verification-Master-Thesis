@@ -1,5 +1,9 @@
 theory Int_Warrowing
-  imports Int_Domain "Voblint_Analysis_Interval.Interval_Warrowing" "Voblint_Analysis_Congruence.Congruence_Warrowing" "TD.Update_rules"
+  imports
+    Int_Domain
+    "Voblint_Analysis_Interval.Interval_Warrowing"
+    "Voblint_Analysis_Congruence.Congruence_Warrowing"
+    "TD.Update_rules"
 begin
 
 section \<open>Composite widening and narrowing\<close>
@@ -16,7 +20,7 @@ text \<open>
   Suppose componentwise narrowing gives \<open>b <= narrow_raw a b <= a\<close> and
   refinement is then applied on top, Goblint-style:
   \<open>refine mode (narrow_raw a b)\<close>. Refinement is reductive
-  (\<open>Int_Refinement.refine_reductive\<close>), so the result stays \<open><= narrow_raw a
+  (\<open>Int_Refinement_Control.refine_reductive\<close>), so the result stays \<open><= narrow_raw a
   b <= a\<close> and \<open>narrow_le\<close> survives -- but there is no general reason for
   \<open>b <= refine mode (narrow_raw a b)\<close> to hold. Refinement may push the
   result strictly below \<open>b\<close>.

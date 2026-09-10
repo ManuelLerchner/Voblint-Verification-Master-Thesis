@@ -22,7 +22,7 @@ proof (cases a; cases b)
   fix l1 u1 l2 u2 :: eint
   assume "a = Ivl l1 u1" "b = Ivl l2 u2"
   then show "a \<le> widen_ivl_core a b"
-    unfolding less_eq_ivl_def by (auto simp: eint_le_refl)
+    unfolding less_eq_ivl_def by auto
 qed
 
 lemma b_le_widen_ivl_core: "(b :: ivl) \<le> widen_ivl_core a b"
@@ -184,19 +184,21 @@ instance proof intro_classes
     case True thus ?thesis by (simp add: widen_ivl_def)
   next
     case False thus ?thesis
-      by (cases "b = bot") (simp_all add: widen_ivl_def a_le_widen_ivl_core bot.extremum)
+      by (cases "b = bot") (simp_all add: widen_ivl_def a_le_widen_ivl_core)
   qed
   show "b \<le> widen a b"
   proof (cases "a = bot")
     case True thus ?thesis by (simp add: widen_ivl_def)
   next
     case False thus ?thesis
-      by (cases "b = bot") (simp_all add: widen_ivl_def b_le_widen_ivl_core bot.extremum)
+      by (cases "b = bot") (simp_all add: widen_ivl_def b_le_widen_ivl_core)
   qed
   show "b \<le> a \<Longrightarrow> b \<le> narrow a b"
-    unfolding narrow_ivl_def by (cases a; cases b) (auto simp: less_eq_ivl_def eint_le_refl split: if_splits)
+    unfolding narrow_ivl_def
+    by (cases a; cases b) (auto simp: less_eq_ivl_def split: if_splits)
   show "b \<le> a \<Longrightarrow> narrow a b \<le> a"
-    unfolding narrow_ivl_def by (cases a; cases b) (auto simp: less_eq_ivl_def eint_le_refl split: if_splits)
+    unfolding narrow_ivl_def
+    by (cases a; cases b) (auto simp: less_eq_ivl_def split: if_splits)
 qed
 end
 

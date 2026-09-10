@@ -2,7 +2,23 @@ theory Sign_Arithmetic
   imports Sign_Lattice "Voblint_VIMP.VIMP_Expr" "Voblint_Nonrelational.Abstract_Arithmetic"
 begin
 
-section \<open>Sign arithmetic\<close>
+section \<open>What arithmetic does to a known sign\<close>
+
+text \<open>
+  Every operation here works on the seven-element lattice a variable's sign can
+  take, from \<open>SBot\<close> (no value at all) through \<open>SNeg\<close>, \<open>SNonPos\<close>, \<open>SZero\<close>,
+  \<open>SNonNeg\<close> and \<open>SPos\<close> to \<open>STop\<close> (any value). Addition and multiplication are
+  given as complete tables over those seven cases; a combination the lattice
+  cannot pin down --- a negative plus a positive, say --- lands on \<open>STop\<close>.
+
+  On top of the tables sit three queries that answer about the numbers a sign
+  denotes rather than about the sign itself: \<open>sign_lt\<close>, \<open>sign_eqb\<close> and
+  \<open>sign_tobool\<close> return \<open>Some b\<close> when every pair of concrete values agrees on
+  \<open>b\<close> and \<open>None\<close> when they do not. Each operation and query is proved sound and
+  monotone, which is exactly what the shared \<open>expression_domain_sound\<close> locale
+  needs; interpreting it at the end yields \<open>aval_sign_sound\<close> and
+  \<open>aval_sign_mono\<close> for whole expressions.
+\<close>
 
 instantiation sign :: plus begin
 fun plus_sign :: "sign => sign => sign" where
@@ -289,13 +305,13 @@ lemma sign_times_combine_mono:
   "\<lbrakk>a1 \<le> a2; b1 \<le> b2\<rbrakk> \<Longrightarrow> a1 * b1 \<le> a2 * (b2::sign)"
   by (meson order.trans sign_times_mono1 sign_times_mono2)
 
-interpretation sign_arith: expression_domain_sound
-    aval_sign sign_of_int sign_lt sign_eqb sign_tobool
+interpretation sign_arith: expression_domain_mono
+    aval_sign sign_of_int "(+)" "(-)" "(*)" sign_lt sign_eqb sign_tobool
   apply unfold_locales
   apply (simp_all add: sign_of_int_gamma sign_plus_sound sign_minus_sound sign_times_sound
                         sign_plus_combine_mono sign_minus_combine_mono sign_times_combine_mono
                         sign_lt_sound sign_eqb_sound sign_tobool_sound[unfolded truthy_def]
-                        sup_sign_def join_sign.simps truthy_def
+                        sup_sign_def
                     del: sign_lt.simps sign_eqb.simps sign_tobool.simps)
   apply (blast intro: sign_lt_mono[unfolded is_empty_sign])
   apply (blast intro: sign_eqb_mono[unfolded is_empty_sign])

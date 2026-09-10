@@ -248,14 +248,6 @@ definition build_analysis_graph ::
     build_analysis_graph_parts cfg g (analysis_local_domain (remdups domain))
       (analysis_global_domain (remdups domain)) sol"
 
-definition analysis_graph_nodes ::
-  "('ctx, 'g) analysis_graph \<Rightarrow> ('ctx, 'g) analysis_node list" where
-  "analysis_graph_nodes graph = (case graph of (_, ns, _) \<Rightarrow> ns)"
-
-definition analysis_graph_edges ::
-  "('ctx, 'g) analysis_graph \<Rightarrow>
-    (('ctx, 'g) analysis_node \<times> analysis_edge_kind \<times> ('ctx, 'g) analysis_node) list" where
-  "analysis_graph_edges graph = (case graph of (_, _, es) \<Rightarrow> es)"
 
 definition analysis_graph_wf ::
   "('ctx, 'g) analysis_graph \<Rightarrow> bool" where

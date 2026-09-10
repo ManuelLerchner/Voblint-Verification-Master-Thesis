@@ -1,15 +1,27 @@
 #!/usr/bin/env python3
 """Generates the analysis registration theories from assembly/analyses.yaml.
 
-Three outputs, one registry:
+Four kinds of output, one registry:
 
   src/Analyses/<Domain>/generated/<Domain>_Assembly.thy   the unit-context
       instances, one `global_interpretation` of `unit_dg_analysis` per
       published solver discipline
+  src/Analyses/<Domain>/generated/<Domain>_Analyses.thy   the contextual
+      registrations, one per context the domain registers
+  src/Analyses/<Domain>/generated/<Domain>_Entry.thy   the runtime API and its
+      production soundness: each discipline's endpoints, read through the
+      equation that renames the assembly's state reader to the published result
+      table
   src/Executable_Surface/CLI/generated/Dispatch_Tables.thy   `analyse` and the
       three domain/solver tables beside it
   src/Executable_Surface/CLI/generated/Config_Tables.thy     the resolver over
       domain, solver and context
+
+Every output lives under `generated/`, so the path itself says the file is not
+hand-editable. Nothing downstream sees that: an import names a theory, never a
+directory, and `directories "generated"` is already on each session's search
+path, so a generated theory keeps its bare name and its consumers and ROOT entry
+are untouched.
 
 What is generated is registration, never mathematics. Every obligation is
 discharged by citing a fact the manifest only names: the domain's own, or a
@@ -149,6 +161,33 @@ class Domain:
         # migration moves one domain at a time.
         self.ctx_adopted = regs.pop("adopted", False)
         self.registrations = regs
+        # The runtime API layer: one block of endpoints per solver discipline
+        # the domain publishes soundness for. Absent means the domain keeps a
+        # hand-written entry theory, which is what a domain with content that is
+        # not transport has to do.
+        ent = dict(entry.get("entry", {}))
+        self.entry_adopted = ent.pop("adopted", False)
+        self.entry_theory = ent.pop("theory", f"{self.name}_Entry")
+        self.entry_path = ent.pop(
+            "path", f"src/Analyses/{self.name}/generated/{self.entry_theory}.thy")
+        self.entry_imports = ent.pop(
+            "imports", [f"{self.name}_Checks",
+                        '"Voblint_Soundness.Run_Analysis_Sound"'])
+        self.entry_hide = ent.pop("hide_consts", [])
+        self.entry_routes = ent.pop("routes", {})
+        # The published runtime names: what the CLI and the entry layer call the
+        # assembly's instances. Absent means the domain keeps a hand-written
+        # checks theory, which is what a domain with content that is not a
+        # binding has to do.
+        chk = dict(entry.get("checks", {}))
+        self.checks_adopted = chk.pop("adopted", False)
+        self.checks_theory = chk.pop("theory", f"{self.name}_Checks")
+        self.checks_path = chk.pop(
+            "path", f"src/Analyses/{self.name}/generated/{self.checks_theory}.thy")
+        self.checks_prefix = chk.pop("ctx_prefix", "")
+        self.checks_imports = chk.pop("imports", [])
+        self.checks_hide = chk.pop("hide_consts", [])
+        self.checks_routes = chk.pop("routes", {})
         legacy = entry.get("legacy", {})
         self.legacy = legacy
         self.impl = legacy.get("impl_prefix", self.name.lower())
@@ -233,11 +272,34 @@ class Domain:
     def prefix(self, route):
         return self.legacy.get("prefixes", {}).get(route, f"{self.impl}_{route}")
 
+    def checks_names(self, route):
+        """One discipline's checks entry with its defaults filled in."""
+        names = self.checks_routes.get(route)
+        if names is None:
+            return None
+        first = route == self.routes[0]
+        return dict(names, ctx_prefix=self.checks_prefix,
+                    published=names.get(
+                        "published", CHECKS_FULL if first else CHECKS_SIBLING))
+
     def report(self, route, with_state=False):
+        """What the dispatcher calls for this discipline.
+
+        A domain that publishes its runtime names from a generated checks
+        theory names the report there, so the dispatcher reads that spelling
+        rather than a second copy of it. Only the state-carrying report needs a
+        case: a discipline that does not publish one of its own is read through
+        its \\<^locale>\\<open>analysis_surface\\<close> interpretation instead.
+        """
         spec = self.legacy.get("routes", {}).get(route)
         key = "report_with_state" if with_state else "report"
         if spec and key in spec:
             return spec[key]
+        names = self.checks_names(route)
+        if names:
+            if key in names["published"]:
+                return checks_spellings(self, route, names)[key]
+            return f"{names['surface']}.{key}"
         return f"{self.binder(route)}.{key}"
 
     def facts(self):
@@ -262,9 +324,13 @@ class Domain:
             "branch": f"branch_{i}", "body": f"body_{i}",
             "return": f"return_{i}", "enter_ci": f"enter_{i}_ci_for",
             "event": f"event_{i}",
-            "transfer_sound": f"{i}_is_sound_transfer_for",
+            # The transfer functions are the domain's own constants, but the
+            # theorems about them come from the `nonrelational_transfer`
+            # interpretation and are cited under its prefix rather than
+            # re-exported under a domain-prefixed alias.
+            "transfer_sound": f"{i}_tf.is_sound_transfer_for",
             "tf_commute": f"{i}_tf_st_for_commute",
-            "tf_abs_def": f"{i}_tf_abs_def",
+            "tf_abs_def": f"{i}_tf.tf_abs_def",
             "enter_commute": f"{i}_enter_st_for_commute",
             "classifier": legacy.get("classifier", f"{i}_classify_check"),
             "init_gamma": legacy.get("init_gamma", f"{i}_cinit_gamma"),
@@ -477,6 +543,18 @@ CONTEXT_PARAMS = {
         "ctx_type": lambda vt: f"{vt} list",
         "arg": "",
         "sound": "entry_state_activation_collect_sound",
+        # The two facts a source-level contextual statement needs beside the
+        # per-context bound: that every valid trace carries an admitted context,
+        # and the union equation that follows from it. Both rest on the same
+        # entry-coverage premise `sound` already carries.
+        "has_context": "entry_state_has_context",
+        "union": "entry_state_ltr_collect_eq_Union",
+        # The caller-facing pair: same two endpoints, but carrying one
+        # `ctx_vars_cover` closure premise instead of four positional ones.
+        "sound_of_cover": "entry_state_activation_collect_sound_of_cover",
+        "union_of_cover": "entry_state_ltr_collect_eq_Union_of_cover",
+        "gamma_reader": "gamma_reader_eq_lookup",
+        "vars_finite": "vars_finite_of_terminates",
     },
     "call_string": {
         "binder_suffix": "cs",
@@ -491,6 +569,15 @@ CONTEXT_PARAMS = {
         "ctx_type": lambda vt: "call_string",
         "arg": "k ",
         "sound": "fun_route_activation_collect_sound[OF cs_route_context_agree]",
+        # The call-string binder is a plain `interpretation` under `fixes k`, so
+        # a caller outside cannot name it; this alias is the only way out.
+        "gamma_reader": "gamma_reader_eq_lookup",
+        "vars_finite": "vars_finite_of_terminates",
+        # The functional route's source-level pair. The union side is
+        # unconditional here -- a total key needs no coverage to carry a context.
+        "sound_of_cover":
+            "fun_route_activation_collect_sound_of_cover[OF cs_route_context_agree]",
+        "union_of_cover": "fun_route_ltr_collect_eq_Union",
     },
 }
 
@@ -714,12 +801,30 @@ def soundness_lemmas(dom, ctx, route, solvers):
     names = reg.get("re_exports")
     if names is None:
         names = {"sound": f"analyse_{d}_{ctx}_sound"}
+        names["gamma_reader"] = f"analyse_{d}_{ctx}_gamma_reader_eq_lookup"
+        names["vars_finite"] = f"analyse_{d}_{ctx}_vars_finite"
+        if ctx == "call_string":
+            names["sound_of_cover"] = f"analyse_{d}_call_string_sound_of_cover"
+            names["union_of_cover"] = (
+                f"analyse_{d}_call_string_ltr_collect_eq_Union")
+        if ctx == "entry_state":
+            names["has_context"] = f"analyse_{d}_entry_state_has_context"
+            names["union"] = f"analyse_{d}_entry_state_ltr_collect_eq_Union"
+            names["sound_of_cover"] = f"analyse_{d}_entry_state_sound_of_cover"
+            names["union_of_cover"] = (
+                f"analyse_{d}_entry_state_ltr_collect_eq_Union_of_cover")
         if ctx == "call_string" and "terminates_of_solve_c" in dom.published(ctx):
             names["terminates_of_solve_c"] = (
                 f"analyse_{d}_call_string_terminates_of_solve_c")
     out = []
     if "sound" in names:
         out += [f"lemmas {names['sound']}{sfx} =", f"  {binder}.{p['sound']}", ""]
+    # Guarded on the route, not just on the name: only entry state has these,
+    # since a functional route earns its union equation without a witness.
+    for key in ("has_context", "union", "sound_of_cover", "union_of_cover",
+                "gamma_reader", "vars_finite"):
+        if key in names and key in p:
+            out += [f"lemmas {names[key]}{sfx} =", f"  {binder}.{p[key]}", ""]
     # Listed, not derived. A domain could publish `terminates` without
     # exporting its discharge rule, or export the rule for a `terminates` a
     # downstream theory owns; nothing in the locale forbids either. Deriving
@@ -887,6 +992,679 @@ def render_assembly(dom, solvers):
     return "\n".join(out) + "\n"
 
 
+# --- The runtime API and its production soundness ----------------------------
+
+# What a rendered entry line fills to. Below MAX_LINE for the same reason the
+# operand packer is: a longer domain name must have room to grow before the
+# layout rule is what fails.
+ENTRY_WIDTH = 95
+
+
+def either(one, wrapped):
+    """The one-line form where it fits the entry budget, the wrapped form
+    otherwise. Both spellings are written out, so a rename changes which one is
+    picked and never how the wrapped form reads."""
+    return [one] if symbol_len(one) <= ENTRY_WIDTH else list(wrapped)
+
+
+def closure_assumptions(names, and_ind):
+    """The five facts the routed solve turns on, as `assumes`.
+
+    Termination, entry coverage and the three forward-closure conditions. Stated
+    once per discipline rather than repeated on every theorem; `and_ind` is 4
+    inside a `context` and 6 inside a corollary, which is the only difference
+    between the two places they appear.
+    """
+    a, c = " " * and_ind, " " * (and_ind + 4)
+    fst = f"fst ({names['sol']} (declared_global p) p)"
+    out = [f'  assumes solve: "{names["terminates"]} (declared_global p) p"',
+           f'{a}and entry_cov: "(cfg_entry (prog_cfg p), ())',
+           f'{c}\\<in> {fst}"']
+    out += either(f'{a}and fwd_ok: "\\<And>u a w ctx. (u, ctx) \\<in> {fst}',
+                  [f'{a}and fwd_ok: "\\<And>u a w ctx.',
+                   f'{c}(u, ctx) \\<in> {fst}'])
+    out += [f"{c}\\<Longrightarrow> (u, a, w) \\<in> intra (prog_cfg p)",
+            f'{c}\\<Longrightarrow> (w, ctx) \\<in> {fst}"',
+            f'{a}and call_fwd_ok: "\\<And>u ctx dst fs as q k.',
+            f"{c}(u, ctx) \\<in> {fst}",
+            f"{c}\\<Longrightarrow> (u, CallEdge dst fs as, FunctionEntry q, k)"
+            " \\<in> calls (prog_cfg p)"]
+    out += either(f'{c}\\<Longrightarrow> (FunctionEntry q, ()) \\<in> {fst}"',
+                  [f"{c}\\<Longrightarrow> (FunctionEntry q, ())",
+                   f'{c}      \\<in> {fst}"'])
+    out += [f'{a}and comb_fwd_ok: "\\<And>cl c1 dst fs as q k.',
+            f"{c}(cl, c1) \\<in> {fst}",
+            f"{c}\\<Longrightarrow> (cl, CallEdge dst fs as, FunctionEntry q, k)"
+            " \\<in> calls (prog_cfg p)",
+            f'{c}\\<Longrightarrow> (k, c1) \\<in> {fst}"']
+    return out
+
+
+def result_cap(tbl, at, lead, cont, bot):
+    """The concretization of one node's table entry, as the right-hand side of a
+    subset or a membership.
+
+    `tbl` is the applied result table, `at` the node it is read at, `lead` the
+    text the first line opens with, and `cont`/`bot` the columns the wrapped
+    table and the dead-code case align to.
+    """
+    return either(f"{lead}\\<lbrakk>case lookup_context ({tbl}) {at} of",
+                  [f"{lead}\\<lbrakk>case lookup_context",
+                   f"{' ' * cont}({tbl}) {at} of"]) + [
+        f"{' ' * bot}Bot \\<Rightarrow> bot | Lifted st"
+        " \\<Rightarrow> st\\<rbrakk>\""]
+
+
+def entry_state_at(dom, route, names):
+    p, b = dom.prefix(route), dom.binder(route)
+    rf = names["result_for"]
+    return [f"lemma {p}_state_at_eq:",
+            f'  "{p}_state_at gs p v',
+            f"     = (case lookup_context ({rf} gs p) v () of",
+            "          Bot \\<Rightarrow> bot | Lifted st \\<Rightarrow> st)\"",
+            f"  by (simp add: {b}.state_at_unfold {rf}_def)"]
+
+
+def entry_reports(dom, route, names):
+    """The two check-report endpoints, inside the discipline's own block."""
+    b, cl = dom.binder(route), names["closure"]
+    rp = names["report_for"]
+    base = rp[:-len("_for")]
+    out = []
+    for verdict, sense in [("Proved", "truthy (aval c s)"),
+                           ("Refuted", "\\<not> truthy (aval c s)")]:
+        out += [f"theorem {base}_sound_{verdict.lower()}_for:",
+                "  fixes v :: pp and c :: exp"]
+        out += either(
+            f'  assumes mem: "(v, c, Check_{verdict})'
+            f' \\<in> set ({rp} (declared_global p) p)"',
+            [f'  assumes mem: "(v, c, Check_{verdict})',
+             f'      \\<in> set ({rp} (declared_global p) p)"'])
+        out += ['  shows "\\<forall>s \\<in> ltr_collect (declared_global p)'
+                " (prog_cfg p)",
+                f'                (cinit_stores (declared_global p)) v. {sense}"',
+                f"  by (rule {b}.report_{verdict.lower()}_sound_closure",
+                f"        [OF {cl} mem[unfolded {rp}_def]])", ""]
+    return out
+
+
+def entry_discipline(dom, route, names):
+    """One discipline's block: the closure bundle and the endpoints that read
+    the table it produces."""
+    b, cl, rf = dom.binder(route), names["closure"], names["result_for"]
+    out = ["context", "  fixes p :: imp_prog"]
+    out += closure_assumptions(names, 4) + ["begin", ""]
+    out += [f"lemmas {cl} =", "  solve"]
+    out += [f"  {f}[unfolded {b}.sol_vars_def[symmetric]]"
+            for f in ["fwd_ok", "call_fwd_ok", "comb_fwd_ok", "entry_cov"]]
+    out += ["", f"lemma {rf[:-len('_for')]}_node_sound_for:",
+            '  "ltr_collect (declared_global p) (prog_cfg p)'
+            " (cinit_stores (declared_global p)) v"]
+    out += result_cap(f"{rf} (declared_global p) p", "v ()",
+                      "     \\<subseteq> ", 14, 23)
+    out += [f"  using {b}.result_node_sound_closure[OF {cl}]",
+            f"  unfolding {dom.prefix(route)}_state_at_eq .", ""]
+    out += entry_reports(dom, route, names)
+    out += ["end", ""]
+    return out
+
+
+def entry_coverage(dom, route, names):
+    """The decidable side condition, and the two source-level readings that take
+    it. Only a discipline whose endpoints are published in full carries these."""
+    b, sol, rf = dom.binder(route), names["sol"], names["result_for"]
+    unfold = f"cover[unfolded {b}.sol_vars_def[symmetric]]"
+    fst = f"fst ({sol} (declared_global p) p)"
+    out = ["subsection \\<open>Coverage as one checkable side condition\\<close>", ""]
+    out += text_block(fill(COVERAGE_TEXT)) + ["", "context",
+                                              "  fixes p :: imp_prog", "begin", ""]
+    out += [f"lemma {names['cover']}:"]
+    out += either(f'  assumes cover: "vars_cover_exec (prog_cfg p) ({fst})"',
+                  ['  assumes cover: "vars_cover_exec (prog_cfg p)',
+                   f'      ({fst})"'])
+    out += either(f'  shows "vars_cover (prog_cfg p) ({fst})"',
+                  ['  shows "vars_cover (prog_cfg p)',
+                   f'      ({fst})"'])
+    out += ["  by (rule vars_cover_of_exec[OF _ _ cover])",
+            "     (simp_all add: prog_cfg_def compile_prog_finite)", ""]
+
+    out += [f"lemma {rf[:-len('_for')]}_node_sound_of_cover:",
+            f'  assumes solve: "{names["terminates"]} (declared_global p) p"']
+    out += either(f'    and cover: "vars_cover (prog_cfg p) ({fst})"',
+                  ['    and cover: "vars_cover (prog_cfg p)',
+                   f'                  ({fst})"'])
+    out += ['  shows "ltr_collect (declared_global p) (prog_cfg p)'
+            " (cinit_stores (declared_global p)) v"]
+    out += result_cap(f"{rf} (declared_global p) p", "v ()",
+                      "           \\<subseteq> ", 20, 29)
+    out += [f"  using {b}.result_node_sound", f"          [OF solve {unfold}]",
+            f"  unfolding {dom.prefix(route)}_state_at_eq .", ""]
+
+    out += ["subsection \\<open>Source runs, in the vocabulary the runtime API"
+            " returns\\<close>", ""]
+    out += text_block(fill(source_text(rf))) + [""]
+    base = rf[:-len("_result_for")]
+    tbl = f"{rf} (declared_global p) p"
+    for kind, final in [("source", "(residual, s, frs)"),
+                        ("completed_run", "(SKIP, s, [])")]:
+        if kind == "completed_run":
+            out += text_block(fill(COMPLETED_TEXT)) + [""]
+        out += [f"theorem {base}_{kind}_sound_for:", "  fixes s0 s :: store",
+                f'  assumes solve: "{names["terminates"]} (declared_global p) p"']
+        out += either(f'    and cover: "vars_cover (prog_cfg p) ({fst})"',
+                      ['    and cover: "vars_cover (prog_cfg p)',
+                       f'                  ({fst})"'])
+        out += ['    and wf: "wf_compile_input (declared_global p) (prog_table p)'
+                ' (prog_procs p)"',
+                '    and s0: "s0 \\<in> cinit_stores (declared_global p)"',
+                '    and run: "star (pstep (declared_global p) (prog_table p))',
+                f'                (main_body (prog_table p), s0, []) {final}"']
+        if kind == "source":
+            out += ['  shows "\\<exists>v stk. csim (prog_table p) (prog_cfg p)'
+                    " (residual, s, frs) (v, s, stk)"]
+            out += result_cap(tbl, "v ()",
+                              "                 \\<and> s \\<in> ", 32, 37)
+        else:
+            out += [f'  shows "s \\<in> \\<lbrakk>case lookup_context ({tbl})',
+                    "                            (cfg_exit (prog_cfg p)) () of",
+                    "                          Bot \\<Rightarrow> bot | Lifted st"
+                    " \\<Rightarrow> st\\<rbrakk>\""]
+        out += [f"  using {b}.{kind}_sound",
+                f"          [OF solve {unfold} wf s0 run]",
+                f"  unfolding {dom.prefix(route)}_state_at_eq .", ""]
+    out += ["end", ""]
+    return out
+
+
+def entry_corollaries(dom, route, names, full):
+    """The same endpoints at \\<^const>\\<open>declared_global\\<close>, which is what the
+    dispatcher and the CLI actually call."""
+    rp, rep = names["report_for"], names["report"]
+    base = rp[:-len("_for")]
+    out = text_block(fill(corollary_text(rep, base))) + [""]
+    for verdict, sense in [("Proved", "truthy (aval c s)"),
+                           ("Refuted", "\\<not> truthy (aval c s)")]:
+        out += [f"corollary {rep}_sound_{verdict.lower()}:",
+                "  fixes p :: imp_prog and v :: pp and c :: exp"]
+        out += closure_assumptions(names, 6)
+        out += [f'      and mem: "(v, c, Check_{verdict})'
+                f' \\<in> set ({rep} p)"',
+                '  shows "\\<forall>s \\<in> ltr_collect (declared_global p)'
+                " (prog_cfg p)",
+                f'                (cinit_stores (declared_global p)) v. {sense}"',
+                f"  by (rule {base}_sound_{verdict.lower()}_for",
+                "        [OF solve entry_cov fwd_ok call_fwd_ok comb_fwd_ok",
+                f"            mem[unfolded {rep}_def]])", ""]
+    if not full:
+        return out
+
+    res, rf = names["result"], names["result_for"]
+    fst = f"fst ({names['sol']} (declared_global p) p)"
+    sbase = rf[:-len("_result_for")]
+    out += text_block(fill(headline_text(res, names))) + [""]
+    for kind, final in [("source", "(residual, s, frs)"),
+                        ("completed_run", "(SKIP, s, [])")]:
+        out += [f"corollary {sbase}_{kind}_sound:",
+                "  fixes p :: imp_prog and s0 s :: store",
+                '  assumes wf: "wf_compile_input (declared_global p)'
+                ' (prog_table p) (prog_procs p)"',
+                f'    and solve: "{names["terminates"]} (declared_global p) p"']
+        out += either(f'    and cover: "vars_cover (prog_cfg p) ({fst})"',
+                      ['    and cover: "vars_cover (prog_cfg p)',
+                       f'                  ({fst})"'])
+        out += ['    and s0: "s0 \\<in> cinit_stores (declared_global p)"',
+                '    and run: "star (pstep (declared_global p) (prog_table p))',
+                f'                (main_body (prog_table p), s0, []) {final}"']
+        if kind == "source":
+            out += ['  shows "\\<exists>v stk. csim (prog_table p) (prog_cfg p)'
+                    " (residual, s, frs) (v, s, stk)"]
+            out += result_cap(f"{res} p", "v ()",
+                              "                 \\<and> s \\<in> ", 32, 37)
+        else:
+            out += result_cap(f"{res} p", "(cfg_exit (prog_cfg p)) ()",
+                              '  shows "s \\<in> ', 9, 26)
+        out += [f"  unfolding {res}_def",
+                f"  by (rule {sbase}_{kind}_sound_for[OF solve cover wf s0 run])",
+                ""]
+    return out
+
+
+COVERAGE_TEXT = """
+\\<^const>\\<open>vars_cover\\<close> implies the four closure facts above, at the one
+context this routed solve uses. Bundling them is what makes the side condition
+decidable in a single step: \\<^const>\\<open>vars_cover_exec\\<close> walks the two edge
+enumerations, so a caller discharges coverage
+\\<^theory_text>\\<open>by eval\\<close> instead of by four hand-written case analyses over
+the solved key set.
+"""
+
+COMPLETED_TEXT = """
+The completed-run reading of the same fact, and the one a reader meets first: a
+source run that finishes leaves its final store inside the analysis result at the
+program exit. It is weaker --- one point instead of all of them --- but it needs no
+\\<^const>\\<open>csim\\<close> witness to state.
+"""
+
+
+def source_text(rf):
+    return f"""
+What a caller of \\<^const>\\<open>{rf}\\<close> actually wants to know: run the source
+program, stop anywhere, and the store you are holding is described by the entry
+the analysis returned for the program point you are standing at. The simulation
+\\<^const>\\<open>csim\\<close> is what names that point --- a partly executed command and
+its frame stack sit at a graph node, and it is that node's table entry the store
+belongs to.
+"""
+
+
+def corollary_text(rep, base):
+    return f"""
+\\<^const>\\<open>{rep}\\<close>'s own soundness corollaries: the check-report layer's
+\\<^const>\\<open>declared_global\\<close> \\<open>p\\<close> convenience instances, matching
+\\<open>{base}_sound_proved_for\\<close>/\\<open>_refuted_for\\<close> above.
+"""
+
+
+def headline_text(res, names):
+    return f"""
+The headline pair, at \\<^const>\\<open>declared_global\\<close> \\<open>p\\<close> and over
+\\<^const>\\<open>{res}\\<close> --- the table the runtime API hands back. Two side
+conditions survive, and both are decided per program rather than proved once: the
+solver returned a partial post-solution for this program
+(\\<^const>\\<open>{names['terminates']}\\<close>; no result here proves the solver
+terminates on every input), and it solved enough keys
+(\\<^const>\\<open>vars_cover\\<close>, decidable through \\<open>{names['cover']}\\<close>).
+"""
+
+
+def entry_header(dom, disciplines):
+    """The orientation block: what the theory settles and what a reader needs."""
+    one = len(disciplines) == 1
+    return f"""
+{dom.name}'s public soundness, in the vocabulary its runtime API returns: the
+branch the unified dispatcher takes when the configured domain is {dom.name}.
+Nothing is derived here. Each published solver discipline has its own instance of
+the shared unit-context assembly, that instance already proves every statement
+below over the assembly's own names, and one equation per discipline is all it
+takes to say the same thing about the name a caller sees.
+
+{"The" if one else "In each block the"} four coverage facts are stated once, as
+context assumptions, rather than repeated on every theorem. They are requirements
+on the solved key set, assumed here and not derived from termination: an edge or
+call out of an unknown the solve visited must land on one it also visited. They
+are weaker than the unconditional \\<^const>\\<open>vars_cover\\<close>, so each statement
+below is exactly as applicable as an unconditional one would be. The
+\\<open>vars_cover\\<close> readings, which a caller can discharge
+\\<^theory_text>\\<open>by eval\\<close>, follow each discipline that publishes them.
+
+No per-domain \\<^theory_text>\\<open>export_code\\<close> here: a caller reaches the
+generic, already-sound report through the unified dispatcher \\<open>analyse\\<close>,
+which is the one thing exported to OCaml. A second, domain-specific export
+module would be a parallel, redundant API surface for the same computation.
+"""
+
+
+SIBLING_TEXT = """
+The siblings \\<open>analyse_with_solver\\<close> compares against the production
+default. Each reads its own instance's solved table, and each proves the same
+statements by the same route --- the update rule is a parameter of
+\\<^locale>\\<open>unit_dg_analysis\\<close>, so nothing below re-derives node soundness.
+"""
+
+
+def render_entry(dom, solvers):
+    """A domain's runtime API and its production soundness, as one theory.
+
+    Pure transport: every statement is the shared assembly's own theorem, read
+    through the equation that renames the assembly's state reader to the name the
+    published result table carries.
+    """
+    disciplines = [r for r in dom.routes if r in dom.entry_routes]
+    out = [f"theory {dom.entry_theory}", "  imports"]
+    out += [f"    {i}" for i in dom.entry_imports] + ["begin", ""]
+    for c in dom.entry_hide:
+        out += [f"hide_const {c}", ""]
+    out += [f"section \\<open>{dom.name} codegen API: an arbitrary VIMP program,"
+            " and its production soundness\\<close>", ""]
+    out += text_block(GENERATED_NOTICE + "\n"
+                      + fill(entry_header(dom, disciplines))) + [""]
+
+    for i, route in enumerate(disciplines):
+        names = dom.entry_routes[route]
+        full = names.get("endpoints", "full") == "full"
+        title = solvers[route]["title"]
+        if i == 1:
+            out += ["section \\<open>Solver-choice soundness: the sibling update"
+                    " rules\\<close>", ""]
+            out += text_block(fill(SIBLING_TEXT)) + [""]
+        out += [f"subsection \\<open>{title}"
+                f"{': the production default' if i == 0 else ''}\\<close>", ""]
+        out += entry_state_at(dom, route, names) + [""]
+        out += entry_discipline(dom, route, names)
+        if full:
+            out += entry_coverage(dom, route, names)
+        out += entry_corollaries(dom, route, names, full)
+    out.append("end")
+    return "\n".join(out) + "\n"
+
+
+# --- The published runtime names ---------------------------------------------
+
+# What the production route publishes, and what a sibling discipline does. Both
+# are defaults: a domain that publishes a different set says so, because the tree
+# is not uniform and no rule predicts which way it differs.
+CHECKS_FULL = ["eqs", "sol", "terminates", "terminates_via_solve_c", "vars_finite",
+               "result_for", "result", "report_for", "report",
+               "report_for_with_state", "report_with_state", "solved"]
+CHECKS_SIBLING = ["sol", "result_for", "result", "report_for", "report"]
+
+
+def defn_head(name, typ):
+    """A definition header, on one line where the budget allows."""
+    return either(f'definition {name} :: "{typ}" where',
+                  [f"definition {name} ::", f'    "{typ}" where'])
+
+
+def at_declared_global(name, hop):
+    """The convenience instance: the same constant at the program's own globals."""
+    return either(f'  "{name} p = {hop} (declared_global p) p"',
+                  [f'  "{name} p =', f'     {hop} (declared_global p) p"'])
+
+
+def checks_spellings(dom, route, names):
+    """Every name one discipline publishes, resolved once.
+
+    The equation system takes no discipline suffix: there is one system and
+    every discipline solves it, which is what the assembly's `_equations_eq`
+    lemmas make a theorem. Everything else carries the route's suffix, and the
+    solved system may carry a different one from the published API: Interval
+    leaves the solve's bare name to always-join while the published names it
+    dispatches on read bare as production, so `solved_suffix` says which
+    discipline each layer leaves unmarked. A route whose published names predate
+    the convention overrides them by key under `names`, and each such override
+    is a rename waiting to happen.
+    """
+    d, x = dom.name.lower(), names["ctx_prefix"]
+    sfx = names.get("suffix", "")
+    ssfx = names.get("solved_suffix", sfx)
+    tag = sfx.lstrip("_") or SOLVER_BINDER_SUFFIX[route]
+    spelled = {
+        "eqs": f"{x}_eqs_prog",
+        "sol": f"{x}_sol_prog{ssfx}",
+        "terminates": f"{x}_terminates_prog{ssfx}",
+        "terminates_via_solve_c": f"{x}_terminates_prog{ssfx}_via_solve_c",
+        "vars_finite": f"{x}_vars_finite{ssfx}",
+        "result_for": f"analyse_{d}_result{sfx}_for",
+        "result": f"analyse_{d}_result{sfx}",
+        "report_for": f"analyse_{d}_report{sfx}_for",
+        "report": f"analyse_{d}_report{sfx}",
+        "report_for_with_state": f"analyse_{d}_report{sfx}_for_with_state",
+        "report_with_state": f"analyse_{d}_report{sfx}_with_state",
+        "solved": f"analyse_{d}_ctx_solved{sfx}_for",
+        "report_eq": f"{d}_report_{tag}_eq",
+    }
+    spelled.update(names.get("names", {}))
+    return spelled
+
+
+def checks_solved_system(dom, route, names, vt, first):
+    """The abbreviations that give the assembly's solve the names the CLI uses,
+    and the two side conditions a caller discharges against that solve."""
+    p, b = dom.prefix(route), dom.binder(route)
+    pub, nm, out = names["published"], checks_spellings(dom, route, names), []
+    dg = (f"({vt} exec_dg_st lifted, {vt} exec_dg_st lifted) dg_state")
+    if "eqs" in pub:
+        out += [f"abbreviation {nm['eqs']} ::",
+                '    "(vname \\<Rightarrow> bool) \\<Rightarrow> imp_prog',
+                "       \\<Rightarrow> (pp \\<times> unit, (unit, unit) routed_gk,",
+                f'            {dg}) eqsT" where',
+                f'  "{nm["eqs"]} \\<equiv> {p}_equations"', ""]
+    if "sol" in pub:
+        out += [f"abbreviation {nm['sol']} ::",
+                '    "(vname \\<Rightarrow> bool) \\<Rightarrow> imp_prog',
+                "       \\<Rightarrow> (pp \\<times> unit) set",
+                "            \\<times> (pp \\<times> unit + (unit, unit) routed_gk",
+                f'                 \\<Rightarrow> {dg})" where',
+                f'  "{nm["sol"]} \\<equiv> {p}_solution"', ""]
+    if "terminates" in pub:
+        out += either(
+            f'abbreviation {nm["terminates"]} ::'
+            ' "(vname \\<Rightarrow> bool) \\<Rightarrow> imp_prog \\<Rightarrow> bool" where',
+            [f"abbreviation {nm['terminates']} ::",
+             '    "(vname \\<Rightarrow> bool) \\<Rightarrow> imp_prog'
+             ' \\<Rightarrow> bool" where'])
+        out += [f'  "{nm["terminates"]} \\<equiv> {p}_terminates"', ""]
+    lemmas = []
+    if "terminates_via_solve_c" in pub:
+        lemmas += either(f"lemmas {nm['terminates_via_solve_c']} ="
+                         f" {b}.terminates_of_solve_c",
+                         [f"lemmas {nm['terminates_via_solve_c']} =",
+                          f"  {b}.terminates_of_solve_c"])
+    if "vars_finite" in pub:
+        lemmas += either(f"lemmas {nm['vars_finite']} ="
+                         f" {b}.vars_finite_of_terminates",
+                         [f"lemmas {nm['vars_finite']} =",
+                          f"  {b}.vars_finite_of_terminates"])
+    if lemmas:
+        if first:
+            out += text_block(fill(side_condition_text(nm["terminates"]))) + [""]
+        out += lemmas + [""]
+    return out
+
+
+def checks_tables(dom, route, names, vt):
+    """The result table, the check report and the state-carrying sibling."""
+    b, p = dom.binder(route), dom.prefix(route)
+    pub, nm = names["published"], checks_spellings(dom, route, names)
+    res = f"(unit, {vt} abs_state) analysis_result"
+    rep = "check_report_entry list"
+    st = (f"(pp \\<times> exp \\<times> check_result \\<times> bool"
+          f" \\<times> {vt} abs_state) list")
+    out = []
+    # The state-carrying names put the discipline suffix before `_with_state`,
+    # which is where the tree already puts it, so a kind names both spellings
+    # rather than the renderer deriving one from the other.
+    for kind, for_key, const, typ, text in [
+            ("result", "result_for", "result", res, None),
+            ("report", "report_for", "report", rep, REPORT_TEXT),
+            ("report_with_state", "report_for_with_state",
+             "report_with_state", st, WITH_STATE_TEXT)]:
+        if for_key not in pub and kind not in pub:
+            continue
+        base, for_name = nm[kind], nm[for_key]
+        if text and for_key in pub:
+            out += text_block(fill(text(dom, nm["result_for"]))) + [""]
+        if for_key in pub:
+            out += defn_head(for_name, "(vname \\<Rightarrow> bool)"
+                             f" \\<Rightarrow> imp_prog \\<Rightarrow> {typ}")
+            out += [f'  "{for_name} = {p}_{const}"', ""]
+            if kind == "result":
+                out += text_block(fill(CONVENIENCE_TEXT)) + [""]
+        if kind in pub:
+            out += defn_head(base, f"imp_prog \\<Rightarrow> {typ}")
+            out += at_declared_global(
+                base, for_name if for_key in pub
+                else f"{p}_{const}") + [""]
+    if "solved" in pub:
+        out += text_block(fill(SOLVED_TEXT)) + [""]
+        name = nm["solved"]
+        out += [f"definition {name} ::",
+                "    \"(vname \\<Rightarrow> bool) \\<Rightarrow> imp_prog",
+                f"     \\<Rightarrow> (unit, {vt} abs_state) analysis_result",
+                f"          \\<times> (String.literal \\<times> {vt} abs_state lifted)"
+                ' list" where',
+                f'  "{name} = {p}_solved"', "",
+                f"lemma fst_{name} [simp]:",
+                f'  "fst ({name} gs p) = {nm["result_for"]} gs p"',
+                f"  by (simp add: {name}_def {nm['result_for']}_def",
+                f"      {b}.solved_eq)", ""]
+    return out
+
+
+def checks_surface(dom, routes, solvers):
+    """One \\<^locale>\\<open>analysis_surface\\<close> interpretation per discipline, and
+    the equation that reads each published report back through it."""
+    d, cls = dom.name.lower(), dom.facts()["classifier"]
+    out = ["subsection \\<open>The published surface, one interpretation per"
+           " discipline\\<close>", ""]
+    out += text_block(fill(surface_text(dom, len(routes)))) + [""]
+    for route, names in routes:
+        out += [f"interpretation {names['surface']}: analysis_surface",
+                f"  {checks_spellings(dom, route, names)['result']} bot {cls}",
+                "  by unfold_locales", ""]
+    for route, names in routes:
+        b, nm = dom.binder(route), checks_spellings(dom, route, names)
+        rep, res, eq = nm["report"], nm["result"], nm["report_eq"]
+        simps = [f"{rep}_def"]
+        if "report_for" in names["published"]:
+            simps.append(f"{nm['report_for']}_def")
+        simps += [f"{res}_def", f"{nm['result_for']}_def", f"{b}.report_def",
+                  "surface_unfold"]
+        out += either(f'lemma {eq}: "{rep} p'
+                      f' = {names["surface"]}.report p"',
+                      [f"lemma {eq}:",
+                       f'  "{rep} p = {names["surface"]}.report p"'])
+        line = "  by (simp add:"
+        for s in simps:
+            if symbol_len(f"{line} {s}") > ENTRY_WIDTH:
+                out.append(line)
+                line = "     "
+            line = f"{line} {s}"
+        out += [line + ")", ""]
+    return out
+
+
+CONVENIENCE_TEXT = """
+Convenience instance at \\<^const>\\<open>declared_global\\<close> \\<open>p\\<close>, the
+classifier every caller with only an \\<^typ>\\<open>imp_prog\\<close> in hand recomputes
+anyway.
+"""
+
+NOTATION_TEXT = """
+These are notation, not a layer: an \\<^theory_text>\\<open>abbreviation\\<close>
+introduces no constant, so nothing has to be unfolded to get back to the assembly
+and nothing extra reaches the code generator.
+"""
+
+SOLVED_TEXT = """
+Both halves of one solve: the locals table every check report already reads, and
+the globals beside it. Binding the solve once is what keeps a report that shows
+both from solving twice.
+"""
+
+
+def REPORT_TEXT(dom, result_for):
+    return f"""
+The report the exported \\<open>analyse\\<close> API dispatches to. It reads its per-node
+state through \\<^const>\\<open>{result_for}\\<close>'s
+\\<^type>\\<open>analysis_result\\<close> table --- \\<^const>\\<open>lookup_context\\<close>, not
+a raw solver-environment lookup --- so a \\<^const>\\<open>Lifted\\<close> point classifies
+at its projected state and a \\<^const>\\<open>Bot\\<close> one (dead, or never covered;
+the two are not distinguishable here) classifies at \\<^const>\\<open>bot\\<close>. That
+preserves \\<^type>\\<open>check_result\\<close>'s three-way verdict rather than
+introducing a fourth, \\<open>Dead\\<close> outcome the type does not carry.
+"""
+
+
+def WITH_STATE_TEXT(dom, result_for):
+    return f"""
+The state-carrying sibling: same table, with the per-check {dom.name} environment
+attached to each entry instead of discarded, and an \\<open>unreachable\\<close> flag
+read straight off \\<^const>\\<open>lookup_context\\<close>'s
+\\<^const>\\<open>Bot\\<close>/\\<^const>\\<open>Lifted\\<close> case split. The flag is
+\\<^term>\\<open>True\\<close> exactly when that unknown is \\<^const>\\<open>Bot\\<close>; what
+\\<^const>\\<open>Bot\\<close> certifies about concrete reachability is the surrounding
+soundness statement's business, not this definition's.
+"""
+
+
+def side_condition_text(terminates):
+    return f"""
+The one side condition a caller discharges per program. It is not a decision
+procedure: \\<^const>\\<open>{terminates}\\<close> follows when the solver's own
+executable entry point returns a result on this program's equations, and nothing
+here says that entry point returns on every input.
+"""
+
+
+def sibling_text(dom, eq_lemma, rule, production):
+    return f"""
+The same equation system solved under the {rule} update rule instead of the
+{production} rule production uses, so \\<open>analyse_with_solver\\<close> can compare
+solver choices on one system (\\<open>{eq_lemma}\\<close> is what makes "one system" a
+theorem rather than a claim). These are bindings onto the assembly's own
+instance for this rule, so the sibling carries the same soundness endpoints the
+default does --- the update rule is a parameter of the assembly, not a reason to
+leave it.
+"""
+
+
+def surface_text(dom, n):
+    return f"""
+{dom.name}'s {n} disciplines through the shared
+\\<^locale>\\<open>analysis_surface\\<close>. There is one interpretation for each
+discipline {dom.name} publishes and none for any it does not, so the absent
+interpretation and the absent solver route agree by construction rather than by a
+separately maintained legality table. Why {dom.name} publishes these disciplines
+and not others is recorded in its README, not here.
+"""
+
+
+def checks_header(dom, n):
+    return f"""
+{dom.name}'s public runtime API: the names a caller outside this session uses,
+each bound to one of the shared unit-context assembly's {n} instances. Those
+instances define the equation system, the solve, the result table and the
+classified report; nothing is computed at this point, and nothing is rebuilt
+here.
+
+A context-sensitive run pairs the same classifier with a different solved system
+and reaches none of the names below, so no routing policy is needed here.
+"""
+
+
+def render_checks(dom, solvers):
+    """A domain's published runtime names, as one generated theory.
+
+    Every name is a binding onto one of the assembly's instances: the equation
+    system, the solve and the classified report are already built there, and
+    nothing is recomputed at this point.
+    """
+    routes = [(r, dom.checks_routes[r]) for r in dom.routes
+              if r in dom.checks_routes]
+    vt, d, x = dom.value_type, dom.name.lower(), dom.checks_prefix
+    out = [f"theory {dom.checks_theory}", "  imports"]
+    out += [f"    {i}" for i in dom.checks_imports] + ["begin", ""]
+    for c in dom.checks_hide:
+        out += [f"hide_const {c}", ""]
+    out += [f"section \\<open>What a whole-program {dom.name} run reports\\<close>", ""]
+    out += text_block(GENERATED_NOTICE + "\n"
+                      + fill(checks_header(dom, len(routes)))) + [""]
+
+    routes = [(r, dom.checks_names(r)) for r, _ in routes]
+    for i, (route, names) in enumerate(routes):
+        if i == 0:
+            out += ["subsection \\<open>The solved system, under the name the CLI"
+                    " already uses\\<close>", ""]
+            out += text_block(fill(NOTATION_TEXT)) + [""]
+            out += checks_solved_system(dom, route, names, vt, True)
+            out += ["subsection \\<open>Solved-result table and check"
+                    " report\\<close>", ""]
+        else:
+            rule = solvers[route]["rule"]
+            out += [f"subsection \\<open>Solver-choice variant: the {rule} update"
+                    " rule\\<close>", ""]
+            out += text_block(fill(sibling_text(
+                dom, f"{dom.prefix(route)}_equations_eq", rule,
+                solvers[dom.routes[0]]["rule"]))) + [""]
+            out += checks_solved_system(dom, route, names, vt, False)
+        out += checks_tables(dom, route, names, vt)
+
+    out += checks_surface(dom, routes, solvers)
+    out.append("end")
+    return "\n".join(out) + "\n"
+
+
 # --- The dispatcher's tables -------------------------------------------------
 
 def render_cli(doms, solvers, cli):
@@ -998,12 +1776,15 @@ case.
 The same list decides \\<open>analyse_with_solver\\<close>, so the two cannot disagree
 about what is supported.
 
-The bound \\<open>k\\<close> carries no side condition. \\<open>cs_route\\<close> at
-\\<open>k = 0\\<close> routes every activation to the context \\<^term>\\<open>[]\\<close>, which is
-as well-defined and as finite as any other bound, so the resolver treats it as
-one more instantiation rather than as a case to reject. It is not
-\\<^const>\\<open>Ctx_None\\<close> in disguise: the equation system stays call-string
-keyed, and the published result carries call-string contexts.
+A call-string cell carries the shortest bound its domain publishes, and the
+resolver rejects anything below it: every domain sets that to 1 today, so
+\\<open>k = 0\\<close> answers \\<^const>\\<open>None\\<close>. That is a usability decision
+rather than a soundness one. \\<open>cs_route\\<close> at \\<open>k = 0\\<close> routes every
+activation to the context \\<^term>\\<open>[]\\<close>, as well-defined and as finite as
+any other bound, and it is not \\<^const>\\<open>Ctx_None\\<close> in disguise: the
+equation system stays call-string keyed, and the published result carries
+call-string contexts, all of them empty. Lowering the bound is a real
+behaviour change, not a relaxation of a check.
 """) + [""]
 
     out += ["fun resolve_analysis_config ::",
@@ -1112,6 +1893,38 @@ def validate(manifest, doms):
                 problems.append(f"{d.name}: role {role} must be a name or an"
                                 " application")
 
+        for route, spec in d.entry_routes.items():
+            if route not in d.routes:
+                problems.append(f"{d.name}: entry endpoints for the unpublished"
+                                f" route {route}")
+            kind = spec.get("endpoints", "full")
+            required = {"terminates", "sol", "result_for", "report_for",
+                        "report", "closure"}
+            if kind == "full":
+                required |= {"result", "cover"}
+            elif kind != "reports":
+                problems.append(f"{d.name}/{route}: endpoints is `full` or"
+                                " `reports`")
+            missing = required - set(spec)
+            if missing:
+                problems.append(f"{d.name}/{route}: the entry block does not name "
+                                + ", ".join(sorted(missing)))
+
+        if d.checks_routes and not d.checks_prefix:
+            problems.append(f"{d.name}: a checks block names the abbreviation"
+                            " prefix its solved system is published under")
+        for route, spec in d.checks_routes.items():
+            if route not in d.routes:
+                problems.append(f"{d.name}: published names for the unpublished"
+                                f" route {route}")
+            if "surface" not in spec:
+                problems.append(f"{d.name}/{route}: the checks block does not name"
+                                " the surface interpretation binder")
+            if route != d.default and "suffix" not in spec:
+                problems.append(f"{d.name}/{route}: a discipline other than the"
+                                " production one names the suffix its published"
+                                " constants carry")
+
         for route, spec in d.legacy.get("routes", {}).items():
             if route not in d.routes:
                 problems.append(f"{d.name}: legacy name for unpublished route {route}")
@@ -1146,14 +1959,21 @@ def main():
            "path": "src/Executable_Surface/CLI/generated/Config_Tables.thy",
            "imports": ["Analysis_Config"]}
 
-    rendered_assemblies = [(d, d.path, render_assembly(d, solvers))
-                           for d in doms if d.has_assembly]
-    rendered_assemblies += [(d, d.ctx_path, render_contextual(d, solvers))
-                            for d in doms if d.registrations]
-    targets = [(path, text) for d, path, text in rendered_assemblies
-               if (d.adopted if path == d.path else d.ctx_adopted)]
-    unadopted = [(path, text) for d, path, text in rendered_assemblies
-                 if not (d.adopted if path == d.path else d.ctx_adopted)]
+    rendered = []
+    for d in doms:
+        if d.has_assembly:
+            rendered.append((d.path, render_assembly(d, solvers), d.adopted))
+        if d.registrations:
+            rendered.append((d.ctx_path, render_contextual(d, solvers),
+                             d.ctx_adopted))
+        if d.checks_routes:
+            rendered.append((d.checks_path, render_checks(d, solvers),
+                             d.checks_adopted))
+        if d.entry_routes:
+            rendered.append((d.entry_path, render_entry(d, solvers),
+                             d.entry_adopted))
+    targets = [(path, text) for path, text, adopted in rendered if adopted]
+    unadopted = [(path, text) for path, text, adopted in rendered if not adopted]
     cli_targets = [(cli["path"], render_cli(doms, solvers, cli)),
                    (cfg["path"], render_config(doms, solvers, cfg))]
     # An unadopted output is a preview: renderable on demand, never written into

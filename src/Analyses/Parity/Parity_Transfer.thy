@@ -1,213 +1,107 @@
 theory Parity_Transfer
-  imports Parity_Domain Parity_Special "Voblint_Framework.DG_Local_State_Spec" "Voblint_VIMP.VIMP_Globals"
+  imports
+    Parity_Domain
+    Parity_Special
+    "Voblint_Nonrelational.Nonrelational_Transfer"
 begin
 
-section \<open>Parity transfer functions\<close>
+section \<open>What each kind of CFG edge does to a parity store\<close>
 
-subsection \<open>Abstract assignment\<close>
+text \<open>
+  A parity store records, for each variable, whether it is even, odd, either
+  (\<^const>\<open>PTop\<close>) or unreachable (\<^const>\<open>PBot\<close>). How an edge of a compiled graph
+  moves such a store is not a Parity question --- an assignment re-evaluates its
+  right-hand side and overwrites the target, a return writes the same into the
+  return variable, procedure entry resets the callee frame and binds the formals
+  --- so it is \<^locale>\<open>nonrelational_transfer\<close> that says it, once, for every
+  domain that gives one abstract value per variable.
 
-definition assign_parity ::
-    "vname => exp => (vname => parity) => (vname => parity)" where
-  "assign_parity x a \<sigma> = \<sigma>(x := aval_parity a \<sigma>)"
-
-lemma assign_parity_sound:
-  assumes gs: "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
-  shows "s(x := aval a s) \<in> \<lbrakk>assign_parity x a \<sigma>\<rbrakk>"
-  unfolding assign_parity_def gamma_state_def
-proof safe
-  fix y
-  from gs have V: "\<forall>z. s z \<in> gamma_parity (\<sigma> z)" unfolding gamma_state_def by simp
-  show "(s(x := aval a s)) y \<in> gamma ((\<sigma>(x := aval_parity a \<sigma>)) y)"
-  proof (cases "y = x")
-    case True with V show ?thesis by (simp add: aval_parity_sound)
-  next
-    case False with V show ?thesis by simp
-  qed
-qed
-
-text \<open>Nondeterministic and other special-call assignment (\<open>special_parity\<close>)
-  lives in \<open>Parity_Special\<close>, reused below.\<close>
+  Two things here are Parity's own. \<open>branch_parity\<close>, defined below, is the identity: a
+  guard that held or failed says nothing about anyone's parity, so the domain has
+  no backward filter to install and supplies the trivial one, which the locale
+  accepts like any other. And the interpretation rewrites the locale's
+  special-call dispatch to \<^const>\<open>special_parity\<close>, Parity's own \<open>fun\<close> in
+  \<^theory>\<open>Voblint_Analysis_Parity.Parity_Special\<close>, rather than introducing a
+  second name for it. Everything else is named and nothing else is proved.
+\<close>
 
 subsection \<open>Branch: no backward parity refinement\<close>
 
 text \<open>
   The current parity analysis leaves guards unchanged. This is sound but loses
-  useful facts that equality or arithmetic guards could establish, such as
-  \<open>x = 1\<close> implying odd \<open>x\<close>. The polarity-parametrized transfer remains explicit
-  so a future backward filter can improve precision without changing the framework
-  interface.
+  facts an equality or arithmetic guard could establish, such as \<open>x = 1\<close> implying
+  odd \<open>x\<close>. The polarity-parametrized operation stays explicit so a future backward
+  filter can improve precision without changing the framework interface.
 \<close>
 
-
-definition branch_parity :: "exp => bool => (vname => parity) => (vname => parity)" where
+definition branch_parity :: "exp \<Rightarrow> bool \<Rightarrow> parity abs_state \<Rightarrow> parity abs_state" where
   "branch_parity b pol \<sigma> = \<sigma>"
 
-lemma branch_parity_sound: "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> truthy (aval b s) = pol \<Longrightarrow> s \<in> \<lbrakk>branch_parity b pol \<sigma>\<rbrakk>"
+lemma branch_parity_sound:
+  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> truthy (aval b s) = pol \<Longrightarrow> s \<in> \<lbrakk>branch_parity b pol \<sigma>\<rbrakk>"
   by (simp add: branch_parity_def)
-
-subsection \<open>Bundled transfer functions\<close>
-
-lemma assign_parity_mono:
-  "sigma1 \<le> sigma2 \<Longrightarrow> assign_parity x a sigma1 \<le> assign_parity x a sigma2"
-  by (simp add: assign_parity_def aval_parity_mono le_funD le_funI)
 
 lemma branch_parity_mono:
-  "sigma1 \<le> sigma2 \<Longrightarrow> branch_parity b pol sigma1 \<le> branch_parity b pol sigma2"
+  "\<sigma>1 \<le> \<sigma>2 \<Longrightarrow> branch_parity b pol \<sigma>1 \<le> branch_parity b pol \<sigma>2"
   by (simp add: branch_parity_def)
 
-subsection \<open>Skip, body-entry, and return\<close>
-
-text \<open>Parity has no lifecycle-specific abstract information: skip and body entry are
-  the identity, and the return operation publishes the returned expression's value to
-  \<^const>\<open>ret_var\<close>, which is where the collecting semantics reads it back.\<close>
-
-definition skip_parity :: "(vname => parity) => (vname => parity)" where
-  "skip_parity \<sigma> = \<sigma>"
-
-definition body_parity :: "pname => (vname => parity) => (vname => parity)" where
-  "body_parity p \<sigma> = \<sigma>"
-
-definition return_parity ::
-    "exp option => pname => (vname => parity) => (vname => parity)"
-where
-  "return_parity e p \<sigma> = (case e of None \<Rightarrow> \<sigma> | Some a \<Rightarrow> assign_parity ret_var a \<sigma>)"
-
-text \<open>A check observes its condition but never refines the state (that is
-  \<open>abstract_check_domain\<close>'s job): Parity has no notion of that observation
-  either, so \<open>event_parity\<close> is the identity like \<open>skip_parity\<close>/\<open>body_parity\<close>.\<close>
-definition event_parity :: "analysis_event => (vname => parity) => (vname => parity)" where
-  "event_parity ev \<sigma> = \<sigma>"
-
-lemma skip_parity_sound: "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> s \<in> \<lbrakk>skip_parity \<sigma>\<rbrakk>"
-  by (simp add: skip_parity_def)
-
-lemma body_parity_sound: "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> s \<in> \<lbrakk>body_parity p \<sigma>\<rbrakk>"
-  by (simp add: body_parity_def)
-
-lemma event_parity_sound: "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> s \<in> \<lbrakk>event_parity ev \<sigma>\<rbrakk>"
-  by (simp add: event_parity_def)
-
-lemma return_parity_sound:
-  assumes gs: "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
-  shows "s(ret_var := (case e of None \<Rightarrow> s ret_var | Some a \<Rightarrow> aval a s)) \<in> \<lbrakk>return_parity e p \<sigma>\<rbrakk>"
-  using assign_parity_sound[OF gs] gs
-  by (cases e) (simp_all add: return_parity_def)
-
-lemma skip_parity_mono: "sigma1 \<le> sigma2 \<Longrightarrow> skip_parity sigma1 \<le> skip_parity sigma2"
-  by (simp add: skip_parity_def)
-
-lemma body_parity_mono: "sigma1 \<le> sigma2 \<Longrightarrow> body_parity p sigma1 \<le> body_parity p sigma2"
-  by (simp add: body_parity_def)
-
-lemma event_parity_mono: "sigma1 \<le> sigma2 \<Longrightarrow> event_parity ev sigma1 \<le> event_parity ev sigma2"
-  by (simp add: event_parity_def)
-
-lemma return_parity_mono:
-  "sigma1 \<le> sigma2 \<Longrightarrow> return_parity e p sigma1 \<le> return_parity e p sigma2"
-  by (cases e) (simp_all add: return_parity_def assign_parity_mono)
-
-subsection \<open>Classifier-parametric transfer\<close>
+subsection \<open>Parity's instance of the generic transfer\<close>
 
 text \<open>
-  Entry and combine are the only fields that consult a classifier (inside
-  \<^const>\<open>enter_frame\<close> and \<^const>\<open>combine_env\<close>); assignment and guard
-  transfer never do, so the bundled transfer function is parametric in the
-  classifier throughout (mirroring \<open>enter_sign_for\<close> for the sign domain).
+  \<open>parity_ops\<close> is the primitive bundle both layers read: the locale below takes
+  it, and so does the executable mirror in \<open>Parity_Exec\<close>. Its executable filter
+  is the identity, matching \<^const>\<open>branch_parity\<close>, which travels beside the
+  bundle.
 \<close>
 
-definition enter_frame_parity_for ::
-    "(vname => bool) => parity abs_state => parity abs_state" where
-  "enter_frame_parity_for gs = enter_frame gs PTop"
+definition parity_ops :: "parity numeric_ops" where
+  "parity_ops = \<lparr> n_aval = aval_parity, n_special = parity_special_ops,
+                  n_bfilter = (\<lambda>_ _ _ s. s), n_top = PTop \<rparr>"
 
-definition enter_parity_for ::
-    "(vname => bool) => vname list => exp list =>
-      parity abs_state => parity abs_state" where
-  "enter_parity_for gs = enter_binding gs PTop aval_parity"
+lemma parity_ops_simps [simp]:
+  "n_aval parity_ops = aval_parity"
+  "n_special parity_ops = parity_special_ops"
+  "n_bfilter parity_ops = (\<lambda>_ _ _ s. s)"
+  "n_top parity_ops = PTop"
+  by (simp_all add: parity_ops_def)
 
-lemma enter_frame_parity_for_sound:
-  assumes gs: "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
-  shows "enter_state cls s \<in> \<lbrakk>enter_frame_parity_for cls \<sigma>\<rbrakk>"
-  unfolding enter_frame_parity_for_def
-proof (rule enter_frame_sound[OF gs])
-  show "gamma PTop = UNIV" by simp
+global_interpretation parity_tf:
+  nonrelational_transfer parity_ops branch_parity
+  rewrites "n_aval parity_ops = aval_parity"
+    and "n_special parity_ops = parity_special_ops"
+    and "n_top parity_ops = PTop"
+    and "sound_special_ops.special_transfer parity_special_ops aval_parity = special_parity"
+  defines assign_parity = parity_tf.assign
+    and skip_parity = parity_tf.skip
+    and body_parity = parity_tf.body
+    and event_parity = parity_tf.event
+    and return_parity = parity_tf.ret
+    and enter_frame_parity_for = parity_tf.enter_frame_for
+    and enter_parity_for = parity_tf.enter_for
+    and enter_parity_ci_for = parity_tf.enter_ci_for
+    and parity_tf_abs = parity_tf.tf_abs
+proof -
+  show "nonrelational_transfer parity_ops branch_parity"
+    by unfold_locales
+       (auto simp: top_parity_def
+             intro: parity_min_sound parity_max_sound parity_min_combine_mono
+                    parity_max_combine_mono aval_parity_sound
+                    parity_arith.aval_dom_mono branch_parity_sound branch_parity_mono)
+  show "n_aval parity_ops = aval_parity" by simp
+  show "n_special parity_ops = parity_special_ops" by simp
+  show "n_top parity_ops = PTop" by simp
+  show "sound_special_ops.special_transfer parity_special_ops aval_parity = special_parity"
+    by (intro ext) (simp add: special_parity_eq_transfer)
 qed
 
-lemma enter_parity_for_sound:
-  assumes gs: "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
-  shows "bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state cls s)
-           \<in> \<lbrakk>enter_parity_for cls xs es \<sigma>\<rbrakk>"
-  unfolding enter_parity_for_def enter_binding_concrete[symmetric]
-proof (rule enter_binding_sound[OF gs])
-  show "gamma PTop = UNIV" by simp
-next
-  fix e
-  have V: "\<forall>z. s z \<in> gamma_parity (\<sigma> z)"
-    using gamma_stateD[OF gs] by simp
-  show "aval e s \<in> gamma (aval_parity e \<sigma>)"
-    using V by (simp add: aval_parity_sound)
-qed
-
-definition enter_parity_ci_for ::
-    "(vname => bool) => call_info => parity abs_state => parity abs_state" where
-  "enter_parity_ci_for gs ci = enter_parity_for gs (ci_formals ci) (ci_args ci)"
-
-lemma enter_parity_ci_for_sound:
-  assumes gs: "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
-  shows "bind_formals (ci_formals ci) (map (\<lambda>e. aval e s) (ci_args ci)) (enter_state cls s)
-           \<in> \<lbrakk>enter_parity_ci_for cls ci \<sigma>\<rbrakk>"
-  using enter_parity_for_sound[OF gs, of "ci_formals ci" "ci_args ci"]
-  by (simp add: enter_parity_ci_for_def)
-
-lemma parity_is_sound_transfer_for:
-  "sound_transfer_for gs skip_parity assign_parity special_parity branch_parity
-     body_parity return_parity (enter_parity_ci_for gs) event_parity"
-  by unfold_locales
-     (simp_all add: assign_parity_sound special_parity_sound branch_parity_sound
-        skip_parity_sound body_parity_sound return_parity_sound enter_parity_ci_for_sound
-        event_parity_sound)
-
-definition parity_tf_abs :: "edge_action => parity abs_state => parity abs_state" where
-  "parity_tf_abs = local_spec_step skip_parity assign_parity special_parity branch_parity
-     body_parity return_parity event_parity"
-
-lemma parity_tf_abs_simps [simp]:
-  "parity_tf_abs EA_Nop = skip_parity"
-  "parity_tf_abs (EA_Assign x e) = assign_parity x e"
-  "parity_tf_abs (EA_Special sc y) = special_parity sc y"
-  "parity_tf_abs (EA_Assume b) = branch_parity b True"
-  "parity_tf_abs (EA_AssumeNot b) = branch_parity b False"
-  "parity_tf_abs (EA_Body p) = body_parity p"
-  "parity_tf_abs (EA_Ret eo p) = return_parity eo p"
-  "parity_tf_abs (EA_Check c) = event_parity (Check_Event c)"
-  by (simp_all add: parity_tf_abs_def)
-
-lemma enter_frame_parity_for_mono:
-  assumes "s1 \<le> s2"
-  shows "enter_frame_parity_for gs s1 \<le> enter_frame_parity_for gs s2"
-  unfolding enter_frame_parity_for_def by (rule enter_frame_mono[OF assms])
-
-lemma enter_parity_for_mono:
-  assumes "s1 \<le> s2"
-  shows "enter_parity_for gs xs es s1 \<le> enter_parity_for gs xs es s2"
-  unfolding enter_parity_for_def
-proof (rule enter_binding_mono[OF assms])
-  fix e
-  show "aval_parity e s1 \<le> aval_parity e s2"
-    using assms by (simp add: aval_parity_mono)
-qed
-
-lemma enter_parity_ci_for_mono:
-  assumes "s1 \<le> s2"
-  shows "enter_parity_ci_for gs ci s1 \<le> enter_parity_ci_for gs ci s2"
-  using enter_parity_for_mono[OF assms, of gs "ci_formals ci" "ci_args ci"]
-  by (simp add: enter_parity_ci_for_def)
-
-lemma parity_tf_abs_mono:
-  "s1 \<le> s2 \<Longrightarrow> parity_tf_abs a s1 \<le> parity_tf_abs a s2"
-  by (cases a)
-     (auto simp: assign_parity_mono special_parity_mono branch_parity_mono
-                 skip_parity_mono body_parity_mono return_parity_mono
-                 event_parity_mono)
-
+text \<open>
+  No fact is renamed. The transfer functions get Parity-prefixed names above
+  because they are constants a caller applies, exported to OCaml and named in
+  registration data; the theorems about them stay under \<open>parity_tf.\<close>, which is
+  where a reader looks to find out that they are the generic ones rather than
+  Parity's own. \<^const>\<open>skip_parity\<close>'s soundness is \<open>parity_tf.skip_sound\<close>, and
+  the framework's transfer contract at Parity is
+  \<open>parity_tf.is_sound_transfer_for\<close>.
+\<close>
 
 end

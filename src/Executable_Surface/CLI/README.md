@@ -68,7 +68,8 @@ any soundness claim.
 ## Why the selection surface is here and not under `Analyses/Shared/`
 
 `analysis_domain`'s constructors are `Sign_Analysis`, `Interval_Analysis`,
-`Int_Analysis`, `Parity_Analysis` — it names all four domains, which is exactly what
+`Int_Analysis`, `Parity_Analysis`, `Congruence_Analysis` — it names all five
+domains, which is exactly what
 the shared layer forbids ("nothing here may mention a concrete domain"). That layer is also an *ancestor*
 of every domain session, so keeping it there put a datatype naming `Sign_Analysis`
 inside a session `Voblint_Analysis_Sign` inherits from: not a cycle, but upside down.

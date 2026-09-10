@@ -76,12 +76,15 @@ definition analyse_int_dg_eqs_for ::
        (int_dom exec_dg_st lifted, int_dom exec_dg_st lifted) dg_state) strategy_tree" where
   "analyse_int_dg_eqs_for mode empty_pred gs p =
      unit_routed_eqs
-       (local_state_dg_spec_st_for_lifted gs empty_pred (int_tf_st_for mode gs) (int_dom_enter_st_for mode gs))
+       (local_state_dg_spec_st_for_lifted gs empty_pred
+          (int_tf_st_for mode gs) (int_dom_enter_st_for mode gs))
        (prog_cfg p) bot (Lifted cinit_int_dom_st) (Lifted cinit_int_dom_st)"
 
-definition analyse_int_dg_for :: "refine_mode \<Rightarrow> (int_dom exec_dg_st \<Rightarrow> bool) \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow>
-    (pp \<times> unit) set
-     \<times> (pp \<times> unit + (unit, unit) routed_gk \<Rightarrow> (int_dom exec_dg_st lifted, int_dom exec_dg_st lifted) dg_state)" where
+definition analyse_int_dg_for ::
+    "refine_mode \<Rightarrow> (int_dom exec_dg_st \<Rightarrow> bool) \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow>
+     (pp \<times> unit) set
+       \<times> (pp \<times> unit + (unit, unit) routed_gk
+            \<Rightarrow> (int_dom exec_dg_st lifted, int_dom exec_dg_st lifted) dg_state)" where
   "analyse_int_dg_for mode empty_pred gs p =
      TD_side_seed_join_warrowing_Interp_solve is_activation_seed
        (analyse_int_dg_eqs_for mode empty_pred gs p)
@@ -107,21 +110,27 @@ text \<open>
   \<^const>\<open>is_empty_state\<close> by @{thm resolved_st_q_is_bot_for_iff} (@{thm declared_global_iff}).
 \<close>
 
-definition analyse_int_dg_eqs :: "refine_mode \<Rightarrow> imp_prog \<Rightarrow>
-    pp \<times> unit \<Rightarrow> (pp \<times> unit, (unit, unit) routed_gk,
-      (int_dom exec_dg_st lifted, int_dom exec_dg_st lifted) dg_state) strategy_tree" where
+definition analyse_int_dg_eqs ::
+    "refine_mode \<Rightarrow> imp_prog \<Rightarrow>
+     pp \<times> unit \<Rightarrow> (pp \<times> unit, (unit, unit) routed_gk,
+       (int_dom exec_dg_st lifted, int_dom exec_dg_st lifted) dg_state) strategy_tree" where
   "analyse_int_dg_eqs mode p =
-     analyse_int_dg_eqs_for mode (resolved_st_q_is_bot_for (declared_global_vars p)) (declared_global p) p"
+     analyse_int_dg_eqs_for mode
+       (resolved_st_q_is_bot_for (declared_global_vars p)) (declared_global p) p"
 
-definition analyse_int_dg :: "refine_mode \<Rightarrow> imp_prog \<Rightarrow>
-    (pp \<times> unit) set
-     \<times> (pp \<times> unit + (unit, unit) routed_gk \<Rightarrow> (int_dom exec_dg_st lifted, int_dom exec_dg_st lifted) dg_state)" where
+definition analyse_int_dg ::
+    "refine_mode \<Rightarrow> imp_prog \<Rightarrow>
+     (pp \<times> unit) set
+       \<times> (pp \<times> unit + (unit, unit) routed_gk
+            \<Rightarrow> (int_dom exec_dg_st lifted, int_dom exec_dg_st lifted) dg_state)" where
   "analyse_int_dg mode p =
-     analyse_int_dg_for mode (resolved_st_q_is_bot_for (declared_global_vars p)) (declared_global p) p"
+     analyse_int_dg_for mode
+       (resolved_st_q_is_bot_for (declared_global_vars p)) (declared_global p) p"
 
 definition analyse_int_dg_env :: "refine_mode \<Rightarrow> imp_prog \<Rightarrow> pp \<Rightarrow> int_dom abs_state" where
   "analyse_int_dg_env mode p =
-     analyse_int_dg_env_for mode (resolved_st_q_is_bot_for (declared_global_vars p)) (declared_global p) p"
+     analyse_int_dg_env_for mode
+       (resolved_st_q_is_bot_for (declared_global_vars p)) (declared_global p) p"
 
 text \<open>
   Solver-choice variants: always-join and per-origin update rules, mirroring
@@ -134,9 +143,11 @@ text \<open>
   already play there.
 \<close>
 
-definition analyse_int_dg_join_for :: "refine_mode \<Rightarrow> (int_dom exec_dg_st \<Rightarrow> bool) \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow>
-    (pp \<times> unit) set
-     \<times> (pp \<times> unit + (unit, unit) routed_gk \<Rightarrow> (int_dom exec_dg_st lifted, int_dom exec_dg_st lifted) dg_state)" where
+definition analyse_int_dg_join_for ::
+    "refine_mode \<Rightarrow> (int_dom exec_dg_st \<Rightarrow> bool) \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow>
+     (pp \<times> unit) set
+       \<times> (pp \<times> unit + (unit, unit) routed_gk
+            \<Rightarrow> (int_dom exec_dg_st lifted, int_dom exec_dg_st lifted) dg_state)" where
   "analyse_int_dg_join_for mode empty_pred gs p =
      TD_side_always_join_Interp_solve (analyse_int_dg_eqs_for mode empty_pred gs p)
        (cfg_exit (prog_cfg p), ())"
@@ -148,9 +159,11 @@ definition analyse_int_dg_join_env_for ::
      dg_env_for gs (snd (analyse_int_dg_join_for mode empty_pred gs p))"
 
 
-definition analyse_int_dg_per_origin_for :: "refine_mode \<Rightarrow> (int_dom exec_dg_st \<Rightarrow> bool) \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow>
-    (pp \<times> unit) set
-     \<times> (pp \<times> unit + (unit, unit) routed_gk \<Rightarrow> (int_dom exec_dg_st lifted, int_dom exec_dg_st lifted) dg_state)" where
+definition analyse_int_dg_per_origin_for ::
+    "refine_mode \<Rightarrow> (int_dom exec_dg_st \<Rightarrow> bool) \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow>
+     (pp \<times> unit) set
+       \<times> (pp \<times> unit + (unit, unit) routed_gk
+            \<Rightarrow> (int_dom exec_dg_st lifted, int_dom exec_dg_st lifted) dg_state)" where
   "analyse_int_dg_per_origin_for mode empty_pred gs p =
      TD_side_per_origin_Interp_solve (analyse_int_dg_eqs_for mode empty_pred gs p)
        (cfg_exit (prog_cfg p), ())"

@@ -59,7 +59,6 @@ fun string_of_action :: "edge_action \<Rightarrow> string" where
     ''return '' @ string_of_exp 0 e"
 | "string_of_action (EA_Check cnd) = ''check('' @ string_of_exp 0 cnd @ '')''"
 
-definition dq :: string where "dq = [CHR 0x22]"
 definition nl :: string where "nl = [CHR 0x0A]"
 definition esc_nl :: string where "esc_nl = [CHR 0x5C, CHR 0x6E]"
 

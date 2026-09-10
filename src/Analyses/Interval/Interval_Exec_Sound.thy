@@ -49,12 +49,15 @@ definition analyse_interval_dg_eqs_for ::
        (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state) strategy_tree" where
   "analyse_interval_dg_eqs_for empty_pred gs p =
      unit_routed_eqs
-       (local_state_dg_spec_st_for_lifted gs empty_pred (ivl_tf_st_for gs) (ivl_enter_st_for gs))
+       (local_state_dg_spec_st_for_lifted gs empty_pred
+          (ivl_tf_st_for gs) (ivl_enter_st_for gs))
        (prog_cfg p) bot (Lifted cinit_ivl_st) (Lifted cinit_ivl_st)"
 
-definition analyse_interval_dg_for :: "(ivl exec_dg_st \<Rightarrow> bool) \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow>
-    (pp \<times> unit) set
-     \<times> (pp \<times> unit + (unit, unit) routed_gk \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)" where
+definition analyse_interval_dg_for ::
+    "(ivl exec_dg_st \<Rightarrow> bool) \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow>
+     (pp \<times> unit) set
+       \<times> (pp \<times> unit + (unit, unit) routed_gk
+            \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)" where
   "analyse_interval_dg_for empty_pred gs p =
      TD_side_seed_join_warrowing_Interp_solve is_activation_seed
        (analyse_interval_dg_eqs_for empty_pred gs p)
@@ -84,17 +87,25 @@ text \<open>
 definition analyse_interval_dg_eqs :: "imp_prog \<Rightarrow>
     pp \<times> unit \<Rightarrow> (pp \<times> unit, (unit, unit) routed_gk,
       (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state) strategy_tree" where
-  "analyse_interval_dg_eqs p = analyse_interval_dg_eqs_for (resolved_st_q_is_bot_for (declared_global_vars p)) (declared_global p) p"
+  "analyse_interval_dg_eqs p =
+     analyse_interval_dg_eqs_for
+       (resolved_st_q_is_bot_for (declared_global_vars p)) (declared_global p) p"
 
-definition analyse_interval_dg :: "imp_prog \<Rightarrow>
-    (pp \<times> unit) set
-     \<times> (pp \<times> unit + (unit, unit) routed_gk \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)" where
-  "analyse_interval_dg p = analyse_interval_dg_for (resolved_st_q_is_bot_for (declared_global_vars p)) (declared_global p) p"
+definition analyse_interval_dg ::
+    "imp_prog \<Rightarrow>
+     (pp \<times> unit) set
+       \<times> (pp \<times> unit + (unit, unit) routed_gk
+            \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)" where
+  "analyse_interval_dg p =
+     analyse_interval_dg_for
+       (resolved_st_q_is_bot_for (declared_global_vars p)) (declared_global p) p"
 
 definition analyse_interval_dg_env :: "imp_prog \<Rightarrow> pp \<Rightarrow> ivl abs_state" where
-  "analyse_interval_dg_env p = analyse_interval_dg_env_for (resolved_st_q_is_bot_for (declared_global_vars p)) (declared_global p) p"
+  "analyse_interval_dg_env p =
+     analyse_interval_dg_env_for
+       (resolved_st_q_is_bot_for (declared_global_vars p)) (declared_global p) p"
 
-subsection \<open>Solver-choice variants: join and per-origin update rules, on the same equation system\<close>
+subsection \<open>Join and per-origin update rules, on the same equation system\<close>
 
 text \<open>
   \<open>analyse_interval_dg_join_for\<close>/\<open>analyse_interval_dg_per_origin_for\<close> are
@@ -109,16 +120,20 @@ text \<open>
   bespoke argument per update rule.
 \<close>
 
-definition analyse_interval_dg_join_for :: "(ivl exec_dg_st \<Rightarrow> bool) \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow>
-    (pp \<times> unit) set
-     \<times> (pp \<times> unit + (unit, unit) routed_gk \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)" where
+definition analyse_interval_dg_join_for ::
+    "(ivl exec_dg_st \<Rightarrow> bool) \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow>
+     (pp \<times> unit) set
+       \<times> (pp \<times> unit + (unit, unit) routed_gk
+            \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)" where
   "analyse_interval_dg_join_for empty_pred gs p =
      TD_side_always_join_Interp_solve (analyse_interval_dg_eqs_for empty_pred gs p)
        (cfg_exit (prog_cfg p), ())"
 
-definition analyse_interval_dg_per_origin_for :: "(ivl exec_dg_st \<Rightarrow> bool) \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow>
-    (pp \<times> unit) set
-     \<times> (pp \<times> unit + (unit, unit) routed_gk \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)" where
+definition analyse_interval_dg_per_origin_for ::
+    "(ivl exec_dg_st \<Rightarrow> bool) \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow>
+     (pp \<times> unit) set
+       \<times> (pp \<times> unit + (unit, unit) routed_gk
+            \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)" where
   "analyse_interval_dg_per_origin_for empty_pred gs p =
      TD_side_per_origin_Interp_solve (analyse_interval_dg_eqs_for empty_pred gs p)
        (cfg_exit (prog_cfg p), ())"

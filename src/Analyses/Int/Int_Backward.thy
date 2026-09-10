@@ -1469,6 +1469,6 @@ text \<open>
   (\<open>branch_mono\<close> and friends) stays out of its reach.
 \<close>
 
-lemmas branch_int_dom_fixpoint_sound [intro] = int_dom_backward_fixpoint.branch_sound
+lemmas branch_int_dom_fixpoint_sound = int_dom_backward_fixpoint.branch_sound
 
 end

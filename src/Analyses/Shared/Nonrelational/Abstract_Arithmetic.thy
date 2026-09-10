@@ -48,16 +48,19 @@ text \<open>
 \<close>
 
 locale expression_domain_sound =
-  fixes ev :: "exp \<Rightarrow> (vname \<Rightarrow> 'a::{sound_domain,plus,minus,times}) \<Rightarrow> 'a"
+  fixes ev :: "exp \<Rightarrow> (vname \<Rightarrow> 'a::sound_domain) \<Rightarrow> 'a"
     and lit :: "int \<Rightarrow> 'a"
+    and pls :: "'a \<Rightarrow> 'a \<Rightarrow> 'a"
+    and mns :: "'a \<Rightarrow> 'a \<Rightarrow> 'a"
+    and tms :: "'a \<Rightarrow> 'a \<Rightarrow> 'a"
     and lt :: "'a \<Rightarrow> 'a \<Rightarrow> bool option"
     and eqb :: "'a \<Rightarrow> 'a \<Rightarrow> bool option"
     and tobool :: "'a \<Rightarrow> bool option"
   assumes ev_N[simp]: "ev (N n) sigma = lit n"
     and ev_V[simp]: "ev (V x) sigma = sigma x"
-    and ev_Plus[simp]: "ev (Plus e1 e2) sigma = ev e1 sigma + ev e2 sigma"
-    and ev_Minus[simp]: "ev (Minus e1 e2) sigma = ev e1 sigma - ev e2 sigma"
-    and ev_Times[simp]: "ev (Times e1 e2) sigma = ev e1 sigma * ev e2 sigma"
+    and ev_Plus[simp]: "ev (Plus e1 e2) sigma = pls (ev e1 sigma) (ev e2 sigma)"
+    and ev_Minus[simp]: "ev (Minus e1 e2) sigma = mns (ev e1 sigma) (ev e2 sigma)"
+    and ev_Times[simp]: "ev (Times e1 e2) sigma = tms (ev e1 sigma) (ev e2 sigma)"
     and ev_Less[simp]: "ev (Less e1 e2) sigma =
          (if is_empty (ev e1 sigma) \<or> is_empty (ev e2 sigma) then bot
           else if lt (ev e1 sigma) (ev e2 sigma) = Some True then lit 1
@@ -88,23 +91,15 @@ locale expression_domain_sound =
           then lit 0
           else lit 0 \<squnion> lit 1)"
     and lit_sound[simp]: "n \<in> gamma (lit n)"
-    and plus_sound[intro]: "i \<in> gamma (p::'a) \<Longrightarrow> j \<in> gamma q \<Longrightarrow> i + j \<in> gamma (p + q)"
-    and minus_sound[intro]: "i \<in> gamma (p::'a) \<Longrightarrow> j \<in> gamma q \<Longrightarrow> i - j \<in> gamma (p - q)"
-    and times_sound[intro]: "i \<in> gamma (p::'a) \<Longrightarrow> j \<in> gamma q \<Longrightarrow> i * j \<in> gamma (p * q)"
-    and plus_mono[intro]: "p1 \<le> (p2::'a) \<Longrightarrow> q1 \<le> q2 \<Longrightarrow> p1 + q1 \<le> p2 + q2"
-    and minus_mono[intro]: "p1 \<le> (p2::'a) \<Longrightarrow> q1 \<le> q2 \<Longrightarrow> p1 - q1 \<le> p2 - q2"
-    and times_mono[intro]: "p1 \<le> (p2::'a) \<Longrightarrow> q1 \<le> q2 \<Longrightarrow> p1 * q1 \<le> p2 * q2"
+    and plus_sound[intro]:
+      "i \<in> gamma (p::'a) \<Longrightarrow> j \<in> gamma q \<Longrightarrow> i + j \<in> gamma (pls p q)"
+    and minus_sound[intro]:
+      "i \<in> gamma (p::'a) \<Longrightarrow> j \<in> gamma q \<Longrightarrow> i - j \<in> gamma (mns p q)"
+    and times_sound[intro]:
+      "i \<in> gamma (p::'a) \<Longrightarrow> j \<in> gamma q \<Longrightarrow> i * j \<in> gamma (tms p q)"
     and lt_sound: "lt p q = Some b \<Longrightarrow> i \<in> gamma (p::'a) \<Longrightarrow> j \<in> gamma q \<Longrightarrow> (i < j) = b"
     and eqb_sound: "eqb p q = Some b \<Longrightarrow> i \<in> gamma (p::'a) \<Longrightarrow> j \<in> gamma q \<Longrightarrow> (i = j) = b"
     and tobool_sound: "tobool p = Some b \<Longrightarrow> i \<in> gamma (p::'a) \<Longrightarrow> truthy i = b"
-    and lt_mono:
-      "\<not> is_empty (p1::'a) \<Longrightarrow> \<not> is_empty q1 \<Longrightarrow> p1 \<le> p2 \<Longrightarrow> q1 \<le> q2 \<Longrightarrow>
-       lt p2 q2 = Some b \<Longrightarrow> lt p1 q1 = Some b"
-    and eqb_mono:
-      "\<not> is_empty (p1::'a) \<Longrightarrow> \<not> is_empty q1 \<Longrightarrow> p1 \<le> p2 \<Longrightarrow> q1 \<le> q2 \<Longrightarrow>
-       eqb p2 q2 = Some b \<Longrightarrow> eqb p1 q1 = Some b"
-    and tobool_mono:
-      "\<not> is_empty (p1::'a) \<Longrightarrow> p1 \<le> p2 \<Longrightarrow> tobool p2 = Some b \<Longrightarrow> tobool p1 = Some b"
 begin
 
 lemma aval_dom_sound:
@@ -239,6 +234,34 @@ next
   qed
 qed
 
+end
+
+text \<open>
+  Monotonicity needs strictly more than soundness does, and one domain can
+  supply the first without the second: the composite integer domain's
+  arithmetic is monotone only away from \<open>Refine_Fixpoint\<close>, while its soundness
+  holds at every refinement mode. Splitting the two apart is what lets that
+  domain interpret the shared induction twice --- unconditionally for
+  \<open>aval_dom_sound\<close>, under its mode side condition for \<open>aval_dom_mono\<close> --- rather
+  than repeat both proofs by hand.
+\<close>
+
+locale expression_domain_mono = expression_domain_sound +
+  assumes plus_mono[intro]:
+      "p1 \<le> p2 \<Longrightarrow> q1 \<le> q2 \<Longrightarrow> pls p1 q1 \<le> pls p2 q2"
+    and minus_mono[intro]:
+      "p1 \<le> p2 \<Longrightarrow> q1 \<le> q2 \<Longrightarrow> mns p1 q1 \<le> mns p2 q2"
+    and times_mono[intro]:
+      "p1 \<le> p2 \<Longrightarrow> q1 \<le> q2 \<Longrightarrow> tms p1 q1 \<le> tms p2 q2"
+    and lt_mono:
+      "\<not> is_empty p1 \<Longrightarrow> \<not> is_empty q1 \<Longrightarrow> p1 \<le> p2 \<Longrightarrow> q1 \<le> q2 \<Longrightarrow>
+       lt p2 q2 = Some b \<Longrightarrow> lt p1 q1 = Some b"
+    and eqb_mono:
+      "\<not> is_empty p1 \<Longrightarrow> \<not> is_empty q1 \<Longrightarrow> p1 \<le> p2 \<Longrightarrow> q1 \<le> q2 \<Longrightarrow>
+       eqb p2 q2 = Some b \<Longrightarrow> eqb p1 q1 = Some b"
+    and tobool_mono:
+      "\<not> is_empty p1 \<Longrightarrow> p1 \<le> p2 \<Longrightarrow> tobool p2 = Some b \<Longrightarrow> tobool p1 = Some b"
+begin
 
 lemma aval_dom_mono:
   "sigma1 \<le> sigma2 \<Longrightarrow> ev a sigma1 \<le> ev a sigma2"

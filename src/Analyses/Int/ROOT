@@ -18,6 +18,7 @@ session Voblint_Analysis_Int in "." = "Voblint_Nonrelational" +
   theories
     Int_Domain
     Int_Refinement
+    Int_Refinement_Control
     Int_Arithmetic
     Int_Backward
     Int_Warrowing

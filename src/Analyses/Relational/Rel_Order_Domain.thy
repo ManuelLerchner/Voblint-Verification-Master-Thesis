@@ -278,7 +278,9 @@ text \<open>
   without one, behave like \<open>skip\<close>.
 \<close>
 definition dgs_return_rel :: "exp option \<Rightarrow> pname \<Rightarrow> relc \<Rightarrow> relc \<Rightarrow> relc \<times> relc" where
-  "dgs_return_rel e p d g = (case e of None \<Rightarrow> dgs_skip_rel d g | Some a \<Rightarrow> dgs_assign_rel ret_var a d g)"
+  "dgs_return_rel e p d g =
+     (case e of None \<Rightarrow> dgs_skip_rel d g
+      | Some a \<Rightarrow> dgs_assign_rel ret_var a d g)"
 
 definition dgs_special_rel :: "special_call \<Rightarrow> vname \<Rightarrow> relc \<Rightarrow> relc \<Rightarrow> relc \<times> relc" where
   "dgs_special_rel sc x d g = (forget_relc x g, forget_relc x d)"
@@ -559,7 +561,7 @@ lemma sides_rel_combine [simp]:
 
 subsection \<open>The interpretation\<close>
 
-interpretation rel_order: sound_dg_spec_core rel_order_spec gammaDG_rel is_global
+interpretation rel_order: sound_dg_spec_core rel_order_spec gammaDG_rel gs
 proof unfold_locales
   fix d d' :: relc and g g' :: relc
   show "d \<le> d' \<Longrightarrow> g \<le> g' \<Longrightarrow> gammaDG_rel d g \<subseteq> gammaDG_rel d' g'"
@@ -577,7 +579,7 @@ next
   fix s t dc de and \<tau> :: "'a + 'b \<Rightarrow> (relc, relc) dg_state" and gk ci
   show "\<lbrakk>s \<in> gammaDG_rel dc (globs (\<tau> (Inr gk)));
          t \<in> gammaDG_rel de (globs (\<tau> (Inr gk)))\<rbrakk> \<Longrightarrow>
-          combine_collect is_global (ci_dst ci) s t
+          combine_collect gs (ci_dst ci) s t
             \<in> gammaDG_rel
                 (locals (traverse_rhs (sp_compile_with (\<lambda>d. DG d bot)
                    (dg_spec_combine_transfer rel_order_spec ci
@@ -585,9 +587,8 @@ next
                 (globs (sides_of_rhs (sp_compile_with (\<lambda>d. DG d bot)
                    (dg_spec_combine_transfer rel_order_spec ci
                       (mk_dg_man dc (\<lambda>_. gk)) de)) \<tau> (Inr gk)))"
-    by (simp add: dg_spec_combine_transfer_rel_order_spec rel_combine_transfer_def
-        mk_dg_man_def dg_read_global_def dg_sideg_def sp_bind_assoc Let_def
-        dgs_combine_env_rel_def)
+    by (simp add: rel_combine_transfer_def mk_dg_man_def dg_read_global_def
+        dg_sideg_def sp_bind_assoc Let_def dgs_combine_env_rel_def)
 qed
 
 end

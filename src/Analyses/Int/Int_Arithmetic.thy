@@ -1,6 +1,6 @@
 theory Int_Arithmetic
   imports
-    Int_Refinement
+    Int_Refinement_Control
     "Voblint_Analysis_Sign.Sign_Arithmetic"
     "Voblint_Analysis_Interval.Interval_Backward"
     "Voblint_Analysis_Parity.Parity_Domain"
@@ -773,327 +773,55 @@ where
          then int_dom_of_int 0
          else int_dom_bool_unknown)"
 
-lemma aval_int_dom_sound:
-  assumes "\<forall>x. s x : gamma_int_dom (sigma x)"
-  shows "aval e s : gamma_int_dom (aval_int_dom mode e sigma)"
-  using assms
-proof (induction e arbitrary: s sigma)
-  case (Less e1 e2)
-  have h1: "aval e1 s \<in> gamma_int_dom (aval_int_dom mode e1 sigma)" using Less.IH(1) Less.prems by simp
-  have h2: "aval e2 s \<in> gamma_int_dom (aval_int_dom mode e2 sigma)" using Less.IH(2) Less.prems by simp
-  have nb1: "\<not> is_empty (aval_int_dom mode e1 sigma)" using h1 by (auto simp: is_bottom_int_dom_correct)
-  have nb2: "\<not> is_empty (aval_int_dom mode e2 sigma)" using h2 by (auto simp: is_bottom_int_dom_correct)
-  show ?case
-  proof (cases "int_dom_lt (aval_int_dom mode e1 sigma) (aval_int_dom mode e2 sigma) = Some True")
-    case True
-    with int_dom_lt_sound[OF True h1 h2] nb1 nb2 show ?thesis by simp
-  next
-    case False
-    show ?thesis
-    proof (cases "int_dom_lt (aval_int_dom mode e1 sigma) (aval_int_dom mode e2 sigma) = Some False")
-      case True
-      with int_dom_lt_sound[OF True h1 h2] nb1 nb2 False show ?thesis by simp
-    next
-      case False
-      with \<open>\<not> (int_dom_lt (aval_int_dom mode e1 sigma) (aval_int_dom mode e2 sigma) = Some True)\<close>
-        nb1 nb2
-      show ?thesis
-        by (auto intro: gamma_int_dom_sup_ub1[THEN subsetD] gamma_int_dom_sup_ub2[THEN subsetD])
-    qed
-  qed
-next
-  case (Eq e1 e2)
-  have h1: "aval e1 s \<in> gamma_int_dom (aval_int_dom mode e1 sigma)" using Eq.IH(1) Eq.prems by simp
-  have h2: "aval e2 s \<in> gamma_int_dom (aval_int_dom mode e2 sigma)" using Eq.IH(2) Eq.prems by simp
-  have nb1: "\<not> is_empty (aval_int_dom mode e1 sigma)" using h1 by (auto simp: is_bottom_int_dom_correct)
-  have nb2: "\<not> is_empty (aval_int_dom mode e2 sigma)" using h2 by (auto simp: is_bottom_int_dom_correct)
-  show ?case
-  proof (cases "int_dom_eqb (aval_int_dom mode e1 sigma) (aval_int_dom mode e2 sigma) = Some True")
-    case True
-    with int_dom_eqb_sound[OF True h1 h2] nb1 nb2 show ?thesis by simp
-  next
-    case False
-    show ?thesis
-    proof (cases "int_dom_eqb (aval_int_dom mode e1 sigma) (aval_int_dom mode e2 sigma) = Some False")
-      case True
-      with int_dom_eqb_sound[OF True h1 h2] nb1 nb2 False show ?thesis by simp
-    next
-      case False
-      with \<open>\<not> (int_dom_eqb (aval_int_dom mode e1 sigma) (aval_int_dom mode e2 sigma) = Some True)\<close>
-        nb1 nb2
-      show ?thesis
-        by (auto intro: gamma_int_dom_sup_ub1[THEN subsetD] gamma_int_dom_sup_ub2[THEN subsetD])
-    qed
-  qed
-next
-  case (Not e)
-  have h: "aval e s \<in> gamma_int_dom (aval_int_dom mode e sigma)" using Not.IH Not.prems by simp
-  have nb: "\<not> is_empty (aval_int_dom mode e sigma)" using h by (auto simp: is_bottom_int_dom_correct)
-  show ?case
-  proof (cases "int_dom_tobool (aval_int_dom mode e sigma) = Some True")
-    case True
-    with int_dom_tobool_sound[OF True h] nb show ?thesis by simp
-  next
-    case False
-    show ?thesis
-    proof (cases "int_dom_tobool (aval_int_dom mode e sigma) = Some False")
-      case True
-      with int_dom_tobool_sound[OF True h] nb False show ?thesis by simp
-    next
-      case False
-      with \<open>\<not> (int_dom_tobool (aval_int_dom mode e sigma) = Some True)\<close> nb
-      show ?thesis
-        by (auto intro: gamma_int_dom_sup_ub1[THEN subsetD] gamma_int_dom_sup_ub2[THEN subsetD])
-    qed
-  qed
-next
-  case (And e1 e2)
-  have h1: "aval e1 s \<in> gamma_int_dom (aval_int_dom mode e1 sigma)" using And.IH(1) And.prems by simp
-  have h2: "aval e2 s \<in> gamma_int_dom (aval_int_dom mode e2 sigma)" using And.IH(2) And.prems by simp
-  have nb1: "\<not> is_empty (aval_int_dom mode e1 sigma)" using h1 by (auto simp: is_bottom_int_dom_correct)
-  have nb2: "\<not> is_empty (aval_int_dom mode e2 sigma)" using h2 by (auto simp: is_bottom_int_dom_correct)
-  show ?case
-  proof (cases "int_dom_tobool (aval_int_dom mode e1 sigma) = Some False
-              \<or> int_dom_tobool (aval_int_dom mode e2 sigma) = Some False")
-    case True
-    then have "\<not> truthy (aval e1 s) \<or> \<not> truthy (aval e2 s)"
-      using int_dom_tobool_sound h1 h2 by fastforce
-    with True nb1 nb2 show ?thesis by (auto simp: truthy_def)
-  next
-    case False
-    show ?thesis
-    proof (cases "int_dom_tobool (aval_int_dom mode e1 sigma) = Some True
-                \<and> int_dom_tobool (aval_int_dom mode e2 sigma) = Some True")
-      case True
-      then have "truthy (aval e1 s) \<and> truthy (aval e2 s)"
-        using int_dom_tobool_sound h1 h2 by auto
-      with True False nb1 nb2 show ?thesis by (simp add: truthy_def)
-    next
-      case False
-      with \<open>\<not> (int_dom_tobool (aval_int_dom mode e1 sigma) = Some False
-              \<or> int_dom_tobool (aval_int_dom mode e2 sigma) = Some False)\<close>
-        nb1 nb2
-      show ?thesis
-        by (auto intro: gamma_int_dom_sup_ub1[THEN subsetD] gamma_int_dom_sup_ub2[THEN subsetD])
-    qed
-  qed
-next
-  case (Or e1 e2)
-  have h1: "aval e1 s \<in> gamma_int_dom (aval_int_dom mode e1 sigma)" using Or.IH(1) Or.prems by simp
-  have h2: "aval e2 s \<in> gamma_int_dom (aval_int_dom mode e2 sigma)" using Or.IH(2) Or.prems by simp
-  have nb1: "\<not> is_empty (aval_int_dom mode e1 sigma)" using h1 by (auto simp: is_bottom_int_dom_correct)
-  have nb2: "\<not> is_empty (aval_int_dom mode e2 sigma)" using h2 by (auto simp: is_bottom_int_dom_correct)
-  show ?case
-  proof (cases "int_dom_tobool (aval_int_dom mode e1 sigma) = Some True
-              \<or> int_dom_tobool (aval_int_dom mode e2 sigma) = Some True")
-    case True
-    then have "truthy (aval e1 s) \<or> truthy (aval e2 s)"
-      using int_dom_tobool_sound h1 h2 by fastforce
-    with True nb1 nb2 show ?thesis by (auto simp: truthy_def)
-  next
-    case False
-    show ?thesis
-    proof (cases "int_dom_tobool (aval_int_dom mode e1 sigma) = Some False
-                \<and> int_dom_tobool (aval_int_dom mode e2 sigma) = Some False")
-      case True
-      then have "\<not> truthy (aval e1 s) \<and> \<not> truthy (aval e2 s)"
-        using int_dom_tobool_sound h1 h2 by auto
-      with True False nb1 nb2 show ?thesis by (simp add: truthy_def)
-    next
-      case False
-      with \<open>\<not> (int_dom_tobool (aval_int_dom mode e1 sigma) = Some True
-              \<or> int_dom_tobool (aval_int_dom mode e2 sigma) = Some True)\<close>
-        nb1 nb2
-      show ?thesis
-        by (auto intro: gamma_int_dom_sup_ub1[THEN subsetD] gamma_int_dom_sup_ub2[THEN subsetD])
-    qed
-  qed
-qed (auto intro: plus_int_dom_sound minus_int_dom_sound times_int_dom_sound)
+text \<open>
+  \<open>aval_int_dom\<close> has exactly the shape \<open>expression_domain_sound\<close> assumes, once
+  that locale's \<open>pls\<close>/\<open>mns\<close>/\<open>tms\<close> parameters are instantiated at this domain's
+  mode-indexed operations instead of the type-class \<open>+\<close>/\<open>-\<close>/\<open>*\<close> the other four
+  domains pass. So the shared induction over \<open>exp\<close> is reused here rather than
+  repeated: what stays local is only the per-operation and per-query facts it
+  consumes.
 
-lemma aval_int_dom_mono:
-  assumes "mode ~= Refine_Fixpoint"
-      and "sigma1 <= sigma2"
-  shows "aval_int_dom mode e sigma1 <= aval_int_dom mode e sigma2"
-  using assms
-proof (induction e)
-  case (Less e1 e2)
-  have p_mono: "aval_int_dom mode e1 sigma1 \<le> aval_int_dom mode e1 sigma2"
-    using Less.IH(1) Less.prems by simp
-  have q_mono: "aval_int_dom mode e2 sigma1 \<le> aval_int_dom mode e2 sigma2"
-    using Less.IH(2) Less.prems by simp
-  show ?case
-  proof (cases "is_empty (aval_int_dom mode e1 sigma1) \<or> is_empty (aval_int_dom mode e2 sigma1)")
-    case True
-    then show ?thesis by (simp add: bot_least)
-  next
-    case False
-    then have nb1: "\<not> is_empty (aval_int_dom mode e1 sigma1)"
-      and nb2: "\<not> is_empty (aval_int_dom mode e2 sigma1)" by auto
-    have nb1': "\<not> is_empty (aval_int_dom mode e1 sigma2)" using nb1 p_mono is_empty_antimono by blast
-    have nb2': "\<not> is_empty (aval_int_dom mode e2 sigma2)" using nb2 q_mono is_empty_antimono by blast
-    show ?thesis
-    proof (cases "int_dom_lt (aval_int_dom mode e1 sigma2) (aval_int_dom mode e2 sigma2)")
-      case (Some b)
-      then have "int_dom_lt (aval_int_dom mode e1 sigma1) (aval_int_dom mode e2 sigma1) = Some b"
-        using int_dom_lt_mono[OF nb1 nb2 p_mono q_mono] by simp
-      then show ?thesis using Some nb1 nb2 nb1' nb2' by (cases b) simp_all
-    next
-      case None
-      then show ?thesis using nb1 nb2 nb1' nb2' sup_ge1 sup_ge2
-        by (cases "int_dom_lt (aval_int_dom mode e1 sigma1) (aval_int_dom mode e2 sigma1) = Some True";
-            cases "int_dom_lt (aval_int_dom mode e1 sigma1) (aval_int_dom mode e2 sigma1) = Some False")
-           auto
-    qed
-  qed
-next
-  case (Eq e1 e2)
-  have p_mono: "aval_int_dom mode e1 sigma1 \<le> aval_int_dom mode e1 sigma2"
-    using Eq.IH(1) Eq.prems by simp
-  have q_mono: "aval_int_dom mode e2 sigma1 \<le> aval_int_dom mode e2 sigma2"
-    using Eq.IH(2) Eq.prems by simp
-  show ?case
-  proof (cases "is_empty (aval_int_dom mode e1 sigma1) \<or> is_empty (aval_int_dom mode e2 sigma1)")
-    case True
-    then show ?thesis by (simp add: bot_least)
-  next
-    case False
-    then have nb1: "\<not> is_empty (aval_int_dom mode e1 sigma1)"
-      and nb2: "\<not> is_empty (aval_int_dom mode e2 sigma1)" by auto
-    have nb1': "\<not> is_empty (aval_int_dom mode e1 sigma2)" using nb1 p_mono is_empty_antimono by blast
-    have nb2': "\<not> is_empty (aval_int_dom mode e2 sigma2)" using nb2 q_mono is_empty_antimono by blast
-    show ?thesis
-    proof (cases "int_dom_eqb (aval_int_dom mode e1 sigma2) (aval_int_dom mode e2 sigma2)")
-      case (Some b)
-      then have "int_dom_eqb (aval_int_dom mode e1 sigma1) (aval_int_dom mode e2 sigma1) = Some b"
-        using int_dom_eqb_mono[OF nb1 nb2 p_mono q_mono] by simp
-      then show ?thesis using Some nb1 nb2 nb1' nb2' by (cases b) simp_all
-    next
-      case None
-      then show ?thesis using nb1 nb2 nb1' nb2' sup_ge1 sup_ge2
-        by (cases "int_dom_eqb (aval_int_dom mode e1 sigma1) (aval_int_dom mode e2 sigma1) = Some True";
-            cases "int_dom_eqb (aval_int_dom mode e1 sigma1) (aval_int_dom mode e2 sigma1) = Some False")
-           auto
-    qed
-  qed
-next
-  case (Not e)
-  have p_mono: "aval_int_dom mode e sigma1 \<le> aval_int_dom mode e sigma2"
-    using Not.IH Not.prems by simp
-  show ?case
-  proof (cases "is_empty (aval_int_dom mode e sigma1)")
-    case True
-    then show ?thesis by (simp add: bot_least)
-  next
-    case False
-    then have nb: "\<not> is_empty (aval_int_dom mode e sigma1)" by auto
-    have nb': "\<not> is_empty (aval_int_dom mode e sigma2)" using nb p_mono is_empty_antimono by blast
-    show ?thesis
-    proof (cases "int_dom_tobool (aval_int_dom mode e sigma2)")
-      case (Some b)
-      then have "int_dom_tobool (aval_int_dom mode e sigma1) = Some b"
-        using int_dom_tobool_mono[OF nb p_mono] by simp
-      then show ?thesis using Some nb nb' by (cases b) simp_all
-    next
-      case None
-      then show ?thesis using nb nb' sup_ge1 sup_ge2
-        by (cases "int_dom_tobool (aval_int_dom mode e sigma1) = Some True";
-            cases "int_dom_tobool (aval_int_dom mode e sigma1) = Some False") auto
-    qed
-  qed
-next
-  case (And e1 e2)
-  have p_mono: "aval_int_dom mode e1 sigma1 \<le> aval_int_dom mode e1 sigma2"
-    using And.IH(1) And.prems by simp
-  have q_mono: "aval_int_dom mode e2 sigma1 \<le> aval_int_dom mode e2 sigma2"
-    using And.IH(2) And.prems by simp
-  show ?case
-  proof (cases "is_empty (aval_int_dom mode e1 sigma1) \<or> is_empty (aval_int_dom mode e2 sigma1)")
-    case True
-    then show ?thesis by (simp add: bot_least)
-  next
-    case False
-    then have nb1: "\<not> is_empty (aval_int_dom mode e1 sigma1)"
-      and nb2: "\<not> is_empty (aval_int_dom mode e2 sigma1)" by auto
-    have nb1': "\<not> is_empty (aval_int_dom mode e1 sigma2)" using nb1 p_mono is_empty_antimono by blast
-    have nb2': "\<not> is_empty (aval_int_dom mode e2 sigma2)" using nb2 q_mono is_empty_antimono by blast
-    show ?thesis
-    proof (cases "int_dom_tobool (aval_int_dom mode e1 sigma2) = Some False
-                \<or> int_dom_tobool (aval_int_dom mode e2 sigma2) = Some False")
-      case True
-      then have "int_dom_tobool (aval_int_dom mode e1 sigma1) = Some False
-               \<or> int_dom_tobool (aval_int_dom mode e2 sigma1) = Some False"
-        using int_dom_tobool_mono[OF nb1 p_mono] int_dom_tobool_mono[OF nb2 q_mono] by auto
-      with True nb1 nb2 nb1' nb2' show ?thesis by simp
-    next
-      case False
-      show ?thesis
-      proof (cases "int_dom_tobool (aval_int_dom mode e1 sigma2) = Some True
-                  \<and> int_dom_tobool (aval_int_dom mode e2 sigma2) = Some True")
-        case True
-        then have "int_dom_tobool (aval_int_dom mode e1 sigma1) = Some True"
-          and "int_dom_tobool (aval_int_dom mode e2 sigma1) = Some True"
-          using int_dom_tobool_mono[OF nb1 p_mono] int_dom_tobool_mono[OF nb2 q_mono] by auto
-        with True False nb1 nb2 nb1' nb2' show ?thesis by simp
-      next
-        case False
-        with \<open>\<not> (int_dom_tobool (aval_int_dom mode e1 sigma2) = Some False
-                \<or> int_dom_tobool (aval_int_dom mode e2 sigma2) = Some False)\<close>
-          nb1 nb2 nb1' nb2' sup_ge1 sup_ge2
-        show ?thesis
-          by (cases "int_dom_tobool (aval_int_dom mode e1 sigma1) = Some False
-                   \<or> int_dom_tobool (aval_int_dom mode e2 sigma1) = Some False";
-              cases "int_dom_tobool (aval_int_dom mode e1 sigma1) = Some True
-                   \<and> int_dom_tobool (aval_int_dom mode e2 sigma1) = Some True") auto
-      qed
-    qed
-  qed
-next
-  case (Or e1 e2)
-  have p_mono: "aval_int_dom mode e1 sigma1 \<le> aval_int_dom mode e1 sigma2"
-    using Or.IH(1) Or.prems by simp
-  have q_mono: "aval_int_dom mode e2 sigma1 \<le> aval_int_dom mode e2 sigma2"
-    using Or.IH(2) Or.prems by simp
-  show ?case
-  proof (cases "is_empty (aval_int_dom mode e1 sigma1) \<or> is_empty (aval_int_dom mode e2 sigma1)")
-    case True
-    then show ?thesis by (simp add: bot_least)
-  next
-    case False
-    then have nb1: "\<not> is_empty (aval_int_dom mode e1 sigma1)"
-      and nb2: "\<not> is_empty (aval_int_dom mode e2 sigma1)" by auto
-    have nb1': "\<not> is_empty (aval_int_dom mode e1 sigma2)" using nb1 p_mono is_empty_antimono by blast
-    have nb2': "\<not> is_empty (aval_int_dom mode e2 sigma2)" using nb2 q_mono is_empty_antimono by blast
-    show ?thesis
-    proof (cases "int_dom_tobool (aval_int_dom mode e1 sigma2) = Some True
-                \<or> int_dom_tobool (aval_int_dom mode e2 sigma2) = Some True")
-      case True
-      then have "int_dom_tobool (aval_int_dom mode e1 sigma1) = Some True
-               \<or> int_dom_tobool (aval_int_dom mode e2 sigma1) = Some True"
-        using int_dom_tobool_mono[OF nb1 p_mono] int_dom_tobool_mono[OF nb2 q_mono] by auto
-      with True nb1 nb2 nb1' nb2' show ?thesis by simp
-    next
-      case False
-      show ?thesis
-      proof (cases "int_dom_tobool (aval_int_dom mode e1 sigma2) = Some False
-                  \<and> int_dom_tobool (aval_int_dom mode e2 sigma2) = Some False")
-        case True
-        then have "int_dom_tobool (aval_int_dom mode e1 sigma1) = Some False"
-          and "int_dom_tobool (aval_int_dom mode e2 sigma1) = Some False"
-          using int_dom_tobool_mono[OF nb1 p_mono] int_dom_tobool_mono[OF nb2 q_mono] by auto
-        with True False nb1 nb2 nb1' nb2' show ?thesis by simp
-      next
-        case False
-        with \<open>\<not> (int_dom_tobool (aval_int_dom mode e1 sigma2) = Some True
-                \<or> int_dom_tobool (aval_int_dom mode e2 sigma2) = Some True)\<close>
-          nb1 nb2 nb1' nb2' sup_ge1 sup_ge2
-        show ?thesis
-          by (cases "int_dom_tobool (aval_int_dom mode e1 sigma1) = Some True
-                   \<or> int_dom_tobool (aval_int_dom mode e2 sigma1) = Some True";
-              cases "int_dom_tobool (aval_int_dom mode e1 sigma1) = Some False
-                   \<and> int_dom_tobool (aval_int_dom mode e2 sigma1) = Some False") auto
-      qed
-    qed
-  qed
-qed (auto simp: le_funD intro: plus_int_dom_mono minus_int_dom_mono times_int_dom_mono)
+  Soundness holds at every \<open>mode\<close>. Monotonicity holds only away from
+  \<open>Refine_Fixpoint\<close>, so it is a second interpretation, inside a context that
+  carries that side condition --- which is what puts the condition on the
+  exported \<open>aval_int_dom_mono\<close> and keeps it off \<open>aval_int_dom_sound\<close>.
+\<close>
+
+context
+  fixes mode :: refine_mode
+begin
+
+interpretation int_arith: expression_domain_sound
+    "aval_int_dom mode" int_dom_of_int
+    "plus_int_dom mode" "minus_int_dom mode" "times_int_dom mode"
+    int_dom_lt int_dom_eqb int_dom_tobool
+  by unfold_locales
+     (simp_all add: Let_def plus_int_dom_sound minus_int_dom_sound times_int_dom_sound
+                    int_dom_lt_sound int_dom_eqb_sound int_dom_tobool_sound)
+
+lemmas aval_int_dom_sound = int_arith.aval_dom_sound[unfolded gamma_abs_int_dom_ext]
+
+end
+
+context
+  fixes mode :: refine_mode
+  assumes mode_nonfixpoint: "mode \<noteq> Refine_Fixpoint"
+begin
+
+interpretation int_arith_mono: expression_domain_mono
+    "aval_int_dom mode" int_dom_of_int
+    "plus_int_dom mode" "minus_int_dom mode" "times_int_dom mode"
+    int_dom_lt int_dom_eqb int_dom_tobool
+  by unfold_locales
+     (simp_all add: Let_def plus_int_dom_sound minus_int_dom_sound times_int_dom_sound
+                    int_dom_lt_sound int_dom_eqb_sound int_dom_tobool_sound
+                    plus_int_dom_mono[OF mode_nonfixpoint]
+                    minus_int_dom_mono[OF mode_nonfixpoint]
+                    times_int_dom_mono[OF mode_nonfixpoint]
+                    int_dom_lt_mono int_dom_eqb_mono int_dom_tobool_mono)
+
+lemmas aval_int_dom_mono = int_arith_mono.aval_dom_mono
+
+end
 
 end

@@ -12,8 +12,8 @@ text \<open>
   select how an already-computed result is drawn, never what the solver
   computes, and stay owned by the CLI layer instead (\<open>Analysis_Graph_Export\<close>).
 
-  This theory names \<open>Sign\<close>/\<open>Interval\<close>/\<open>Int\<close> explicitly by construction, so it
-  sits in \<open>Voblint_Analysis\<close> rather than \<open>Voblint_Framework\<close>: \<open>Core\<close> carries no
+  This theory names every domain explicitly by construction, so it sits in
+  \<open>Voblint_CLI\<close> rather than under \<open>Analyses/Shared/\<close>: the shared layer carries no
   domain-specific content, and a domain-naming enum is domain-specific
   content even though it carries no analysis logic of its own.
 
@@ -115,6 +115,8 @@ datatype analysis_plan =
   | Plan_Int_EntryState solver_choice
   | Plan_Int_CallString solver_choice nat
   | Plan_Parity solver_choice
+  | Plan_Parity_EntryState solver_choice
+  | Plan_Parity_CallString solver_choice nat
   | Plan_Congruence solver_choice
   | Plan_Congruence_EntryState solver_choice
   | Plan_Congruence_CallString solver_choice nat
@@ -126,9 +128,10 @@ text \<open>
   question about an \<^type>\<open>analysis_config\<close> -- is it valid at all, what plan
   does it resolve to -- is answered by consulting this function, never by a
   second, independently maintained case split: \<open>valid_analysis_config\<close>
-  below is stated directly in terms of it, and any config-driven dispatch
+  is stated directly in terms of it, and any config-driven dispatch
   wrapper built on top must go through \<open>resolve_analysis_config\<close>
-  rather than re-deciding legality itself.
+  rather than re-deciding legality itself. Both are generated from the
+  registry rather than written here; this describes what they decide.
 
   Read by domain:
 
@@ -154,14 +157,18 @@ text \<open>
     \<open>Ctx_None\<close>: always-join has no termination guarantee on the interval
     component once a collapsed context feeds a callee its own decremented
     formals) and \<open>Solver_Join\<close>.
-  \<^item> \<open>Parity\<close>: \<open>Ctx_None\<close> only, at \<open>Solver_Join\<close> (the default) and
-    \<open>Solver_PerOrigin\<close> --- the two solved tables Parity's own routed-unit
-    instance builds. \<open>Solver_Warrow\<close> is mechanically available (\<open>parity\<close> is a
-    finite lattice with \<open>widen = sup\<close>) but has no solved table or soundness
-    corollary yet, so it stays unsupported rather than being exposed on the
-    strength of the instance alone. \<open>Ctx_EntryState\<close>/\<open>Ctx_CallString\<close> likewise
-    await their own routed instances; neither is a framework gap, only
-    unwritten instantiation.
+  \<^item> \<open>Parity\<close>: \<open>Solver_Join\<close> (the default) at every context, and
+    \<open>Solver_PerOrigin\<close> additionally at \<open>Ctx_None\<close> --- the solved tables
+    Parity's own routed instances build. \<open>Solver_Warrow\<close> is mechanically
+    available (\<open>parity\<close> is a finite lattice with \<open>widen = sup\<close>) but has no
+    solved table or soundness corollary, so it stays unsupported rather than
+    being exposed on the strength of the instance alone. \<open>Ctx_CallString 0\<close>
+    is rejected: a zero-length call string is the unit context spelled twice.
+  \<^item> \<open>Congruence\<close>: \<open>Solver_Join\<close> (the default) at every context, and
+    \<open>Solver_PerOrigin\<close> additionally at \<open>Ctx_None\<close>, on the same reading as
+    Parity --- the solved tables its own routed instances build, not the
+    instances the lattice would admit. \<open>Ctx_CallString 0\<close> is rejected as
+    everywhere else.
 \<close>
 
 text \<open>

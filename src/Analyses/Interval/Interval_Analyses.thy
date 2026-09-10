@@ -55,14 +55,21 @@ text \<open>
 
 text \<open>
   The registration and the two re-exports that cite its binder are generated
-  --- \<open>Interval_Contextual_Assembly\<close>. They travel together because
-  \<open>interval_cs\<close> is a plain \<^theory_text>\<open>interpretation\<close> inside a context
-  fixing \<open>k\<close>, and such a binder does not escape it. The constants below do
-  not cite it, so they stay here.
+  --- \<^theory>\<open>Voblint_Analysis_Interval.Interval_Contextual_Assembly\<close>.
+  They travel together because \<open>interval_cs\<close> is a plain
+  \<^theory_text>\<open>interpretation\<close> inside a context fixing \<open>k\<close>, and such a
+  binder does not escape it. The three constants every domain publishes at a
+  routed context --- the \<open>_for\<close> hop, the result at the program's own
+  globals, and the verdict report --- are generated beside it.
+
+  The two below are not, because no other domain publishes them: the equation
+  system itself and its raw solution, which name no report and route through no
+  classifier. They are what an example pins a solved value against, one unknown
+  at a time, rather than what a caller reads a verdict off.
 \<close>
 
 
-subsection \<open>The published call-string constants\<close>
+subsection \<open>The call-string equation system and its solution\<close>
 
 definition cs_call_string_eqs_prog ::
     "nat \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog
@@ -81,46 +88,6 @@ definition cs_call_string_sol_prog ::
      routed_dg_pipeline.solution ivl_tf_st_for ivl_enter_st_for cinit_ivl_st
        Call_String_Context.Global Call_String_Context.Seed (\<lambda>_. cs_route k) []
        TD_side_warrowing_apinis_Interp_solve"
-
-definition cs_call_string_terminates_prog ::
-    "nat \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> bool" where
-  "cs_call_string_terminates_prog k =
-     routed_dg_pipeline.terminates ivl_tf_st_for ivl_enter_st_for cinit_ivl_st
-       Call_String_Context.Global Call_String_Context.Seed (\<lambda>_. cs_route k) []
-       (TD_side_warrowing_apinis_Interp.solve_dom TYPE(call_string_gk)
-          TYPE((ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state))"
-
-definition analyse_interval_call_string_result_for ::
-    "nat \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> (call_string, ivl abs_state) analysis_result" where
-  "analyse_interval_call_string_result_for k =
-     routed_dg_pipeline.result ivl_tf_st_for ivl_enter_st_for cinit_ivl_st
-       Call_String_Context.Global Call_String_Context.Seed (\<lambda>_. cs_route k) []
-       TD_side_warrowing_apinis_Interp_solve"
-
-definition analyse_interval_call_string_result ::
-    "nat \<Rightarrow> imp_prog \<Rightarrow> (call_string, ivl abs_state) analysis_result" where
-  "analyse_interval_call_string_result k p =
-     analyse_interval_call_string_result_for k (declared_global p) p"
-
-definition cs_call_string_check_projection ::
-    "nat \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> exp \<times> (call_string \<times> contextual_verdict) set) list" where
-  "cs_call_string_check_projection k p =
-     routed_dg_pipeline.check_projection ivl_tf_st_for ivl_enter_st_for cinit_ivl_st
-       Call_String_Context.Global Call_String_Context.Seed (\<lambda>_. cs_route k) []
-       TD_side_warrowing_apinis_Interp_solve interval_classify_check
-       (declared_global p) p"
-
-definition cs_call_string_verdict_report_prog ::
-    "nat \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> exp \<times> contextual_verdict) list" where
-  "cs_call_string_verdict_report_prog k p =
-     routed_dg_pipeline.verdict_report ivl_tf_st_for ivl_enter_st_for cinit_ivl_st
-       Call_String_Context.Global Call_String_Context.Seed (\<lambda>_. cs_route k) []
-       TD_side_warrowing_apinis_Interp_solve interval_classify_check
-       (declared_global p) p"
-
-definition analyse_interval_call_string_report ::
-    "nat \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> exp \<times> contextual_verdict) list" where
-  "analyse_interval_call_string_report k p = cs_call_string_verdict_report_prog k p"
 
 section \<open>Interval at the entry-state context\<close>
 
@@ -192,11 +159,12 @@ definition entry_state_enter_abs ::
 
 lemma enter_ivl_ci_for_call_info_of_eq_entry_state_enter_abs:
   "enter_ivl_ci_for gs (call_info_of ca p) s = entry_state_enter_abs gs ca s"
-  unfolding entry_state_enter_abs_def enter_ivl_ci_for_def enter_ivl_for_def
+  unfolding entry_state_enter_abs_def ivl_tf.enter_ci_for_def ivl_tf.enter_for_def
   by simp
 
 definition entry_state_entered ::
-    "(vname \<Rightarrow> bool) \<Rightarrow> (ivl exec_dg_st \<Rightarrow> bool) \<Rightarrow> ivl exec_dg_st lifted \<Rightarrow> call_action \<Rightarrow> ivl exec_dg_st lifted" where
+    "(vname \<Rightarrow> bool) \<Rightarrow> (ivl exec_dg_st \<Rightarrow> bool)
+       \<Rightarrow> ivl exec_dg_st lifted \<Rightarrow> call_action \<Rightarrow> ivl exec_dg_st lifted" where
   "entry_state_entered gs empty_pred d ca =
      transfer_lift empty_pred (entry_state_enter_exec gs ca) d"
 
@@ -208,7 +176,8 @@ lemma enter_st_interval_eq_entry_state_entered:
      (simp_all add: transfer_lift_def normalize_lift_def entry_state_enter_exec_def)
 
 definition entry_state_route ::
-    "(vname \<Rightarrow> bool) \<Rightarrow> (ivl exec_dg_st \<Rightarrow> bool) \<Rightarrow> ivl exec_dg_st lifted \<Rightarrow> call_action \<Rightarrow> ivl list" where
+    "(vname \<Rightarrow> bool) \<Rightarrow> (ivl exec_dg_st \<Rightarrow> bool)
+       \<Rightarrow> ivl exec_dg_st lifted \<Rightarrow> call_action \<Rightarrow> ivl list" where
   "entry_state_route gs empty_pred d ca =
      (case ca of CallEdge dst pars args \<Rightarrow>
         formals_context pars
@@ -217,7 +186,8 @@ definition entry_state_route ::
                  (location_of gs x)))"
 
 definition entry_state_route_gen ::
-    "(vname \<Rightarrow> bool) \<Rightarrow> (ivl exec_dg_st \<Rightarrow> bool) \<Rightarrow> pp \<Rightarrow> ivl list \<Rightarrow> ivl exec_dg_st lifted \<Rightarrow> call_action \<Rightarrow> ivl list" where
+    "(vname \<Rightarrow> bool) \<Rightarrow> (ivl exec_dg_st \<Rightarrow> bool) \<Rightarrow> pp \<Rightarrow> ivl list
+       \<Rightarrow> ivl exec_dg_st lifted \<Rightarrow> call_action \<Rightarrow> ivl list" where
   "entry_state_route_gen gs empty_pred u ctx d ca = entry_state_route gs empty_pred d ca"
 
 text \<open>
@@ -272,7 +242,7 @@ proof -
   define entered where "entered = bind_formals pars (map (\<lambda>e. aval_ivl e st) args) frame"
   have unfold: "entry_state_enter_abs gs (CallEdge dst pars args) st = entered"
     unfolding entry_state_enter_abs_def
-    by (simp add: enter_ivl_for_def enter_binding_def entered_def frame_def)
+    by (simp add: ivl_tf.enter_for_def enter_binding_def entered_def frame_def)
   have frame_not_bot: "\<not> is_empty (frame x)" for x
   proof (cases "gs x")
     case True
@@ -329,6 +299,19 @@ definition entry_state_callee_ctx ::
         (let entered = entry_state_enter_abs gs ca st
          in if entered_is_bot_for pars entered then None
             else Some (formals_context pars entered)))"
+
+text \<open>
+  \<^const>\<open>callee_ctx_of\<close> is this same decision written once for every domain.
+  The two coincide outright, with no side condition: both enter the callee with
+  this domain's own transfer and both look for an empty formal, so the equality
+  is the two definitions meeting rather than two conventions agreeing.
+\<close>
+
+lemma callee_ctx_of_enter_ivl_for_eq:
+  "callee_ctx_of enter_ivl_for gs ca st = entry_state_callee_ctx gs ca st"
+  by (cases ca)
+     (simp add: callee_ctx_of_def entry_state_callee_ctx_def entered_is_bot_for_def
+        entry_state_enter_abs_def Let_def)
 
 
 subsection \<open>The entry-state pipeline's published re-exports\<close>
@@ -450,7 +433,8 @@ lemma entry_state_route_commute_gen:
   assumes exact: "\<And>s. empty_pred s = is_empty_state (fun_of_resolved_st_q_for gs s)"
   shows "entry_state_route_gen gs empty_pred u ctx s ca
            = entry_state_route_abs_gen gs u ctx (map_lift (fun_of_resolved_st_q_for gs) s) ca"
-  by (simp add: entry_state_route_gen_def entry_state_route_abs_gen_def entry_state_route_commute[OF exact])
+  by (simp add: entry_state_route_gen_def entry_state_route_abs_gen_def
+        entry_state_route_commute[OF exact])
 
 text \<open>
   Presentation-side routing agrees with the routing that built the equation
@@ -553,6 +537,18 @@ lemmas entry_state_activation_collect_sound =
 
 lemmas entry_state_has_context = interval_es.entry_state_has_context
 
+lemmas entry_state_ltr_collect_eq_Union =
+  interval_es.entry_state_ltr_collect_eq_Union
+
+lemmas entry_state_gamma_reader_eq_lookup =
+  interval_es.gamma_reader_eq_lookup
+
+lemmas entry_state_activation_collect_sound_of_cover =
+  interval_es.entry_state_activation_collect_sound_of_cover
+
+lemmas entry_state_ltr_collect_eq_Union_of_cover =
+  interval_es.entry_state_ltr_collect_eq_Union_of_cover
+
 text \<open>
   The two routed protocol facts a caller reasoning about one call needs: the
   callee entry state published under an admitted context is sound, and a return
@@ -572,7 +568,7 @@ text \<open>
   The solved entry-state D/G system, read as a
   \<^typ>\<open>(ivl list, ivl abs_state) analysis_result\<close>. This is the
   context-sensitive counterpart of \<open>Interval_Checks\<close>'s monovariant
-  \<open>analyse_interval_td_result_for\<close>: the context type is \<^typ>\<open>ivl list\<close>, the
+  \<open>analyse_interval_result_for\<close>: the context type is \<^typ>\<open>ivl list\<close>, the
   entered abstract value of the callee's declared formals, so a node covered
   under several activations keeps one \<^type>\<open>lifted\<close> per activation.
 

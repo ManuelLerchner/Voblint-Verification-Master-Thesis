@@ -310,7 +310,7 @@ end
 text \<open>
   \<open>analyse_int_report\<close> (\<^theory>\<open>Voblint_Analysis_Int.Int_Checks\<close>) is the \<^const>\<open>declared_global\<close>
   \<open>p\<close> convenience instance the context above's \<open>_for\<close> layer already feeds, pinned at
-  \<^const>\<open>Refine_Fixpoint\<close>, matching \<open>analyse_interval_td_report_sound_proved\<close>'s own
+  \<^const>\<open>Refine_Fixpoint\<close>, matching \<open>analyse_interval_report_sound_proved\<close>'s own
   shape. \<open>wf[THEN wf_compile_input_reserved_ret_var]\<close> discharges the context's
   \<open>reserved\<close> assumption from the concrete program's own well-formedness fact --- the same
   instantiation step Interval's own corollary uses.

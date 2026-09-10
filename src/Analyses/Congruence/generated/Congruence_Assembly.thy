@@ -55,11 +55,11 @@ global_interpretation congruence_join: unit_dg_analysis
     and congruence_unit_report_with_state = congruence_join.report_with_state
 proof (rule unit_dg_analysis.intro, rule routed_dg_analysis.intro,
        goal_cases)
-  case (1 gs) show ?case by (rule congruence_is_sound_transfer_for)
+  case (1 gs) show ?case by (rule congruence_tf.is_sound_transfer_for)
 next
   case (2 gs a s) then show ?case
     unfolding fun_of_exec_dg_st_for_def
-    by (rule congruence_tf_st_for_commute[unfolded congruence_tf_abs_def])
+    by (rule congruence_tf_st_for_commute[unfolded congruence_tf.tf_abs_def])
 next
   case (3 gs ci s) show ?case
     unfolding fun_of_exec_dg_st_for_def by (rule congruence_enter_st_for_commute)
@@ -114,11 +114,11 @@ global_interpretation congruence_po_asm: unit_dg_analysis
     and congruence_po_report = congruence_po_asm.report
 proof (rule unit_dg_analysis.intro, rule routed_dg_analysis.intro,
        goal_cases)
-  case (1 gs) show ?case by (rule congruence_is_sound_transfer_for)
+  case (1 gs) show ?case by (rule congruence_tf.is_sound_transfer_for)
 next
   case (2 gs a s) then show ?case
     unfolding fun_of_exec_dg_st_for_def
-    by (rule congruence_tf_st_for_commute[unfolded congruence_tf_abs_def])
+    by (rule congruence_tf_st_for_commute[unfolded congruence_tf.tf_abs_def])
 next
   case (3 gs ci s) show ?case
     unfolding fun_of_exec_dg_st_for_def by (rule congruence_enter_st_for_commute)

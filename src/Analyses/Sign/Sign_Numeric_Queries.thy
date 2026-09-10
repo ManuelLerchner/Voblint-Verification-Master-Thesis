@@ -68,13 +68,13 @@ lemma sign_less_true_eq: "sign_less_true a b \<longleftrightarrow>
   (fst (inv_less_sign False a b) = SBot \<or> snd (inv_less_sign False a b) = SBot)"
   by (cases a; cases b;
       simp add: sign_less_true_def sign_backward_domain.less_true_def
-                inv_less_sign.simps bot_sign_def is_bottom_sign_def)
+                bot_sign_def is_bottom_sign_def)
 
 lemma sign_less_false_eq: "sign_less_false a b \<longleftrightarrow>
   (fst (inv_less_sign True a b) = SBot \<or> snd (inv_less_sign True a b) = SBot)"
   by (cases a; cases b;
       simp add: sign_less_false_def sign_backward_domain.less_false_def
-                inv_less_sign.simps bot_sign_def is_bottom_sign_def)
+                bot_sign_def is_bottom_sign_def)
 
 subsection \<open>Equality judgments\<close>
 
@@ -85,7 +85,7 @@ text \<open>Only \<open>SZero\<close> concretizes to a singleton, so equality is
   directions (integer trichotomy), and \<open>sign_eq_false\<close> is Sign's instance of
   the \<open>eq_false\<close> derivation off \<open>meet_sign\<close> collapsing to \<open>SBot\<close> (disjoint
   concretizations) --- both defined directly in \<open>backward_domain\<close>'s own
-  context (\<^theory>\<open>Voblint_Domain.Abstract_Numeric_Queries\<close>) with no extra
+  context (\<^theory>\<open>Voblint_Domain.Backward_Numeric_Queries\<close>) with no extra
   proof obligation, and exhaustive case analysis over the seven-element
   lattice confirms each classifies exactly the pairs a hand-written table
   would.\<close>
@@ -130,26 +130,21 @@ qed
 
 subsection \<open>Goblint-style optional-Boolean queries\<close>
 
-definition sign_less :: "sign \<Rightarrow> sign \<Rightarrow> bool option" where
-  "sign_less a b = (if sign_less_true a b then Some True else if sign_less_false a b then Some False else None)"
+text \<open>
+  \<open>sign_less\<close>/\<open>sign_eq\<close> are the generic packaging of the four judgments
+  above, so one interpretation both introduces them and discharges the query
+  interface. The \<^theory_text>\<open>defines\<close> clause is what keeps them ordinary
+  top-level constants, with the code equation the check layer needs.
+\<close>
 
-definition sign_eq :: "sign \<Rightarrow> sign \<Rightarrow> bool option" where
-  "sign_eq a b = (if sign_eq_true a b then Some True else if sign_eq_false a b then Some False else None)"
+global_interpretation sign_numeric_queries:
+  numeric_query_judgments sign_less_true sign_less_false sign_eq_true sign_eq_false
+  defines sign_less = sign_numeric_queries.less
+    and sign_eq = sign_numeric_queries.eq
+  by unfold_locales
+     (auto intro: sign_less_true_sound sign_eq_true_sound
+            dest: sign_less_false_sound sign_eq_false_sound)
 
-lemma sign_less_sound:
-  assumes "sign_less a b = Some r" and "i \<in> gamma a" and "j \<in> gamma b"
-  shows "(i < j) = r"
-  using assms sign_less_true_sound sign_less_false_sound unfolding sign_less_def by (auto split: if_splits)
-
-lemma sign_eq_sound:
-  assumes "sign_eq a b = Some r" and "i \<in> gamma a" and "j \<in> gamma b"
-  shows "(i = j) = r"
-  using assms sign_eq_true_sound sign_eq_false_sound unfolding sign_eq_def by (auto split: if_splits)
-
-subsection \<open>Interpreting the generic numeric-query interface\<close>
-
-global_interpretation sign_numeric_queries: abstract_numeric_queries sign_less sign_eq
-  by unfold_locales (metis sign_less_sound sign_eq_sound)+
 
 
 end
