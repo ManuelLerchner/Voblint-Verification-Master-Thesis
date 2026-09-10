@@ -894,13 +894,18 @@ ivl_pp_st_gen
 #     applications of one `unit_dg_pipeline` instance, so the per-solver
 #     equation systems, solves, termination predicates and their
 #     post-solution transports have no separate existence. ---
+#     Five of that block's names are deliberately reused: folding Int's
+#     `ictx_` abbreviations into `int_conf_` gives `int_conf_eqs_prog`,
+#     `int_conf_sol_prog`, `int_conf_terminates_prog`, its
+#     `_via_solve_c` lemma and `int_conf_vars_finite` back, now as
+#     notation for the generated assembly's production instance rather
+#     than constants of the pipeline that was removed.
 analyse_int_ctx_result_for
 analyse_int_ctx_result_per_origin_for
 analyse_int_ctx_result_wpo_for
 int_conf_analyse_result_eq
 int_conf_cinit_le_cinit_int_dom_st
 int_conf_eqs
-int_conf_eqs_prog
 int_conf_join_pp_st
 int_conf_per_origin_pp_st
 int_conf_per_origin_vars_finite
@@ -910,7 +915,6 @@ int_conf_sg_st_covered
 int_conf_sg_st_uncovered_empty
 int_conf_sol
 int_conf_sol_per_origin
-int_conf_sol_prog
 int_conf_sol_prog_per_origin
 int_conf_sol_prog_warrow_eq
 int_conf_sol_prog_wpo
@@ -919,10 +923,8 @@ int_conf_sol_wpo
 int_conf_terminates
 int_conf_terminates_per_origin
 int_conf_terminates_per_origin_via_solve_c
-int_conf_terminates_prog
 int_conf_terminates_prog_per_origin
 int_conf_terminates_prog_per_origin_via_solve_c
-int_conf_terminates_prog_via_solve_c
 int_conf_terminates_prog_warrow_eq
 int_conf_terminates_prog_warrow_via_solve_c
 int_conf_terminates_prog_wpo
@@ -932,7 +934,6 @@ int_conf_terminates_warrow
 int_conf_terminates_warrow_via_solve_c
 int_conf_terminates_wpo
 int_conf_terminates_wpo_via_solve_c
-int_conf_vars_finite
 int_conf_warrow_pp_st
 int_conf_warrow_vars_finite
 int_conf_wpo_pp_st
@@ -1212,3 +1213,423 @@ int_conf_entry_verdict_report_prog_warrow
 int_cs_pp_st_gen
 int_domain
 int_es_pp_st_gen
+
+# --- Interval call-string surface reduced to the generated three (2026-09-10) ---
+# `analyse_interval_call_string_{result_for,result,report}` are now generated
+# from assembly/analyses.yaml. `_verdict_report_prog` was the alias the
+# generated report replaced; the other two had no consumer at all.
+cs_call_string_check_projection
+cs_call_string_terminates_prog
+cs_call_string_verdict_report_prog
+
+# --- Parity_Sound reduced to its one live fact (2026-09-10) ---
+# The specification, the concretization and their soundness were a per-domain
+# restatement of `routed_dg_domain_exec`'s own `spec_st`/`gamma_exec`/
+# `sound_dg_spec_core_st`/`entry_pairs_cover_st`. The assembly discharges its
+# obligations from Parity_Exec's commute lemmas directly and never cited any of
+# these; nothing else in the tree did either. `parity_cinit_gamma` stays: it is
+# Parity's own claim that zero is even.
+pctx_spec
+pctx_abs_spec
+pctx_gamma
+pctx_gamma_Bot
+pctx_gamma_eq
+pctx_sound_exec
+pctx_entry_cover_exec
+
+# --- Congruence_Sound reduced to its one live fact (2026-09-10) ---
+# Same supersession as Parity: `routed_dg_analysis` and `unit_dg_analysis` take
+# the raw commute lemmas and build the specification, the concretization and
+# their soundness themselves, for the unit route and both contextual routes
+# alike. These per-domain restatements had no consumer.
+cctx_spec
+cctx_abs_spec
+cctx_gamma
+cctx_gamma_Bot
+cctx_gamma_eq
+cctx_sound_exec
+cctx_entry_cover_exec
+
+# --- Int_Sound reduced to its three live facts (2026-09-10) ---
+# Same supersession as Parity and Congruence: the specification, the
+# concretization and their soundness were a per-domain restatement of
+# `routed_dg_domain_exec`'s own constants. Int keeps the two commute lemmas and
+# `int_cinit_gamma`, which its assembly and registrations do cite.
+int_dom_spec
+int_dom_abs_spec
+int_dom_abs_spec_sound
+int_dom_gamma
+int_dom_gamma_Bot
+int_dom_gamma_eq
+int_dom_sound_exec
+int_dom_entry_cover_exec
+
+# --- Parity's contextual routes became CLI-selectable (2026-09-10) ---
+# These pinned the resolver and the contextual wrapper answering None for
+# Parity. Parity now declares `contexts:` like every other domain, so the
+# pins assert the plan each configuration resolves to instead, under names
+# that no longer say "invalid".
+resolver_parity_entrystate_invalid
+resolver_parity_callstring_invalid
+analyse_config_ctx_parity_entrystate_invalid
+analyse_config_ctx_parity_callstring_invalid
+
+# --- The entry-state renderer stopped being Interval-only (2026-09-10) ---
+# entry_state_point_env_at read a hard-wired (ivl list, ivl abs_state) table.
+# entry_state_point_env_for dispatches on analysis_domain and covers all five,
+# so the Interval-only reader has no caller left.
+entry_state_point_env_at
+
+# --- Explicit-solver output now comes from one solved table (2026-09-10) ---
+# The bundled solver_checked_payload_auto result already carries the graph,
+# verdicts, states, and globals derived from its single analysis_result.
+# Calling solver_globals_for from the CLI repeated the complete solve.
+solver_globals_for
+cs_ctx_sol_for
+cs_ctx_domain_for
+cs_ctx_check_annotation
+cs_ctx_annotated_config
+cs_globals_for
+
+# --- Per-domain transfer aliases folded into nonrelational_transfer (2026-09-10) ---
+# Sign, Interval, Parity and Congruence each restated the same fifteen
+# soundness and monotonicity lemmas about their transfer operations. Those
+# operations now come from one `global_interpretation` of
+# `nonrelational_transfer`, which proves each fact once for any domain giving
+# one abstract value per variable; the transfer functions keep their
+# domain-prefixed constant names, and the theorems are cited under the
+# interpretation prefix (`sign_tf.`, `ivl_tf.`, `parity_tf.`,
+# `congruence_tf.`) rather than re-exported under an alias.
+#
+# The four `<domain>_tf_abs_def` entries are the one case where the name still
+# resolves: `defines <domain>_tf_abs = <domain>_tf.tf_abs` produces a folding
+# equation of that name, pointing at the locale constant rather than at
+# `local_spec_step`. Every caller wants the unfolded reading, which is
+# `<domain>_tf.tf_abs_def`, so the spelling is kept on this list to reject the
+# one that quietly does something else.
+sign_is_sound_transfer_for
+ivl_is_sound_transfer_for
+parity_is_sound_transfer_for
+congruence_is_sound_transfer_for
+sign_tf_abs_def
+ivl_tf_abs_def
+parity_tf_abs_def
+congruence_tf_abs_def
+sign_tf_abs_simps
+ivl_tf_abs_simps
+parity_tf_abs_simps
+congruence_tf_abs_simps
+sign_tf_abs_mono
+ivl_tf_abs_mono
+parity_tf_abs_mono
+congruence_tf_abs_mono
+assign_sign_sound
+assign_ivl_sound
+assign_parity_sound
+assign_congruence_sound
+assign_sign_mono
+assign_ivl_mono
+assign_parity_mono
+assign_congruence_mono
+skip_sign_sound
+skip_ivl_sound
+skip_parity_sound
+skip_congruence_sound
+skip_sign_mono
+skip_ivl_mono
+skip_parity_mono
+skip_congruence_mono
+body_sign_sound
+body_ivl_sound
+body_parity_sound
+body_congruence_sound
+body_sign_mono
+body_ivl_mono
+body_parity_mono
+body_congruence_mono
+event_sign_sound
+event_ivl_sound
+event_parity_sound
+event_congruence_sound
+event_sign_mono
+event_ivl_mono
+event_parity_mono
+event_congruence_mono
+return_sign_sound
+return_ivl_sound
+return_parity_sound
+return_congruence_sound
+return_sign_mono
+return_ivl_mono
+return_parity_mono
+return_congruence_mono
+enter_frame_sign_for_sound
+enter_frame_ivl_for_sound
+enter_frame_parity_for_sound
+enter_frame_congruence_for_sound
+enter_frame_sign_for_mono
+enter_frame_ivl_for_mono
+enter_frame_parity_for_mono
+enter_frame_congruence_for_mono
+enter_sign_for_sound
+enter_ivl_for_sound
+enter_parity_for_sound
+enter_congruence_for_sound
+enter_sign_for_mono
+enter_ivl_for_mono
+enter_parity_for_mono
+enter_congruence_for_mono
+enter_sign_ci_for_sound
+enter_ivl_ci_for_sound
+enter_parity_ci_for_sound
+enter_congruence_ci_for_sound
+enter_sign_ci_for_mono
+enter_ivl_ci_for_mono
+enter_parity_ci_for_mono
+enter_congruence_ci_for_mono
+
+# --- Dead CLI graph constants and one misnamed lemma (2026-09-10) ---
+# analysis_graph_nodes/_edges were projections of the analysis_graph triple
+# that every consumer pattern-matched directly instead. The lemma's conclusion
+# is fst (snd ...), so it is now report_of_full_state_checked_payload_auto.
+# `dq` (a quote character no renderer used) went with them but is not listed:
+# a two-character name would match far too much to be a useful tripwire.
+analysis_graph_nodes
+analysis_graph_edges
+snd_full_state_checked_payload_auto
+
+# --- Per-domain optional-Boolean packaging soundness (2026-09-10) ---
+# The four domains each restated the same two lemmas about their own
+# `less`/`eq`. Both now come from `numeric_query_judgments` in
+# Backward_Numeric_Queries and are cited at the interpretation prefix
+# (`sign_numeric_queries.less_sound` et al.), so the eight domain-prefixed
+# names are gone. The queries themselves keep their names through `defines`.
+sign_less_sound
+sign_eq_sound
+interval_less_sound
+interval_eq_sound
+parity_less_sound
+parity_eq_sound
+int_less_sound
+int_eq_sound
+
+# --- Dead guard-transfer projections after the generic executable transfer (2026-09-10) ---
+# `branch_<domain>_st_for` was `n_bfilter <domain>_ops` under a domain-prefixed
+# name, back when each domain spelled out its own nine-equation `<d>_tf_st_for`
+# and called the projection by name. `generic_tf_st_for` reads `n_bfilter` off
+# the bundle directly, so nothing produces these terms any more and the
+# `[simp]` collapse lemmas beside them never fire. None of them was reachable
+# from an `export_code` root, so removing them leaves the generated ML
+# unchanged. Interval keeps its own -- `Interval_Exec` still cites
+# `branch_ivl_st_for` in a real agreement lemma -- which is why it is absent
+# from this list.
+branch_sign_st_for
+branch_sign_st_for_eq
+branch_congruence_st_for
+branch_congruence_st_for_eq
+branch_int_dom_never_st_for
+branch_int_dom_never_st_for_eq
+branch_int_dom_once_st_for
+branch_int_dom_once_st_for_eq
+branch_int_dom_fixpoint_st_for
+branch_int_dom_fixpoint_st_for_eq
+
+# --- Parity flagship: hand-rolled finiteness and a dead calls fact (2026-09-10) ---
+# `parity_finE`/`parity_finC` re-derived `finite (intra ...)`/`finite (calls ...)`
+# from `compile_prog_finite` by hand. The `compiled_cfg` interpretation supplies
+# both through its `finite_cfg` sublocale, so the flagship now uses
+# `parity_flagship.finite_intra`/`finite_calls` and the local copies are gone.
+# `parity_calls` had no consumer anywhere, including inside `assumes`.
+parity_finE
+parity_finC
+parity_calls
+
+# --- CFG examples: eval bridges and a dead demo graph (2026-09-10) ---
+# The `explode_*_hd` lemmas discharged `String.explode` on one literal each,
+# and existed only because `cr_gs`/`vpr_gs` classified globals by a `CHR ''G''`
+# prefix. Both classifiers are now set-shaped, so those goals are plain
+# equality decisions and the bridges are gone.
+explode_ret_hd
+explode_x_hd
+explode_y_hd
+explode_Gg_hd
+explode_Gx_hd
+# A second hand-built graph in Example_LTR_Collect_Regression that no lemma
+# outside its own block used; multi_return_join establishes what it advertised.
+# (`demo_cfg` is deliberately absent: Example_Relational_DG_Demo still defines
+# one under that name.)
+dmain
+dpf
+demo_defs
+demo_wf
+demo_returns_converge
+demo_shared_continuation
+# --- The pipeline prefix becomes the domain's own name (2026-09-10) ---
+# `sctx_`/`pctx_`/`cctx_`/`ictx_` named the abbreviations over one domain's
+# solved system by a letter, which Interval and Int cannot both have. Every
+# domain now spells that layer `<domain>_conf_`, which Interval and Int
+# already did.
+sctx_abs_spec
+sctx_abs_spec_def
+sctx_entry_cover_exec
+sctx_eqs_prog
+sctx_gamma
+sctx_gamma_Bot
+sctx_gamma_def
+sctx_gamma_eq
+sctx_sol_prog
+sctx_sol_prog_per_origin
+sctx_sound_exec
+sctx_spec
+sctx_spec_def
+sctx_terminates_prog
+sctx_terminates_prog_via_solve_c
+sctx_vars_cover_prog_of_exec
+sctx_vars_finite
+pctx_eqs_prog
+pctx_sol_prog
+pctx_sol_prog_per_origin
+pctx_terminates_prog
+pctx_terminates_prog_via_solve_c
+pctx_vars_cover_prog_of_exec
+pctx_vars_finite
+cctx_eqs_prog
+cctx_sol_prog
+cctx_sol_prog_per_origin
+cctx_terminates_prog
+cctx_terminates_prog_via_solve_c
+cctx_vars_cover_prog_of_exec
+cctx_vars_finite
+ictx_eqs_prog
+ictx_sol_prog
+ictx_terminates_prog
+ictx_terminates_prog_via_solve_c
+ictx_vars_finite
+# --- Interval's bare route name becomes the production one (2026-09-10) ---
+# Interval spelled its published API with the discipline as an infix and its
+# production route as `td`, so the bare `analyse_interval_result` did not
+# exist while its four siblings' did. The discipline is now a suffix and the
+# warrowing route carries no marker, so `analyse_interval_report` is the
+# report the dispatcher reaches -- it was the always-join one before, which
+# is now `analyse_interval_report_join`. The names below are the spellings
+# that carried the old scheme; `analyse_interval_td_demo2_env` and its
+# siblings are deliberately absent, being an example's own fixtures rather
+# than a route name.
+analyse_interval_ctx_solved_warrow_for
+analyse_interval_ctx_solved_warrow_for_def
+fst_analyse_interval_ctx_solved_warrow_for
+analyse_interval_join_result
+analyse_interval_join_result_def
+analyse_interval_join_result_for
+analyse_interval_join_result_for_def
+analyse_interval_join_result_node_sound_for
+analyse_interval_per_origin_result
+analyse_interval_per_origin_result_def
+analyse_interval_per_origin_result_for
+analyse_interval_per_origin_result_for_def
+analyse_interval_per_origin_result_node_sound_for
+analyse_interval_wpo_result
+analyse_interval_wpo_result_def
+analyse_interval_wpo_result_for
+analyse_interval_wpo_result_for_def
+analyse_interval_td_completed_run_sound
+analyse_interval_td_completed_run_sound_for
+analyse_interval_td_report
+analyse_interval_td_report_def
+analyse_interval_td_report_for
+analyse_interval_td_report_for_def
+analyse_interval_td_report_for_with_state
+analyse_interval_td_report_for_with_state_def
+analyse_interval_td_report_sound_proved
+analyse_interval_td_report_sound_proved_for
+analyse_interval_td_report_sound_refuted
+analyse_interval_td_report_sound_refuted_for
+analyse_interval_td_report_with_state
+analyse_interval_td_report_with_state_def
+analyse_interval_td_result
+analyse_interval_td_result_def
+analyse_interval_td_result_for
+analyse_interval_td_result_for_def
+analyse_interval_td_result_node_sound_for
+analyse_interval_td_result_node_sound_of_cover
+analyse_interval_td_source_sound
+analyse_interval_td_source_sound_for
+# --- Deduplicated Int example solver runs (2026-09-10) ---
+dgExI_never_sol
+dgExI_never_terminates_c
+dgExI_never_inspect_y_at_Statement_1
+dgExI_once_sol
+dgExI_once_terminates_c
+dgExI_once_inspect_y_at_Statement_1
+dgExI_fixpoint_eqs
+dgExI_fixpoint_sol
+dgExI_fixpoint_terminates_c
+dgExI_fixpoint_inspect_y_at_Statement_1
+dgExI_once_eq_fixpoint
+# --- Duplicated call-string globals witness replaced by the CLI regression (2026-09-10) ---
+nestg_program
+nestg_gs
+nestg_lookup
+nestg_cfg
+nestg_empty_pred
+nestg_1_eqs
+nestg_1_sol
+nestg_1_terminates
+nestg_1_call_contexts
+nestg_1_entry_first
+nestg_1_entry_second
+nestg_1_entry_third
+nestg_1_after_first_return
+nestg_1_after_second_return
+nestg_1_after_third_return
+# --- Redundant CLI example solver variants (2026-09-10) ---
+result_demo_sign_per_origin_stmt1_reachable
+result_demo_sign_per_origin_stmt2_not_reachable
+result_demo_sign_per_origin_stmt2_unreachable
+result_demo_sign_per_origin_absent_unreachable
+result_demo_interval_join_stmt1_reachable
+result_demo_interval_join_stmt2_not_reachable
+result_demo_interval_join_stmt2_unreachable
+result_demo_interval_join_absent_unreachable
+result_demo_interval_per_origin_stmt1_reachable
+result_demo_interval_per_origin_stmt2_not_reachable
+result_demo_interval_per_origin_stmt2_unreachable
+result_demo_interval_per_origin_absent_unreachable
+result_demo_int_join_stmt1_reachable
+result_demo_int_join_stmt2_not_reachable
+result_demo_int_join_stmt2_unreachable
+result_demo_int_join_absent_unreachable
+result_demo_int_per_origin_stmt1_reachable
+result_demo_int_per_origin_stmt2_not_reachable
+result_demo_int_per_origin_stmt2_unreachable
+result_demo_int_per_origin_absent_unreachable
+int_ex_empty_pred
+prod_int_ex_never_terminates
+prod_int_ex_once_terminates
+prod_int_ex_fixpoint_terminates
+prod_int_ex_never_y_at_Statement_1
+prod_int_ex_once_y_at_Statement_1
+prod_int_ex_fixpoint_y_at_Statement_1
+prod_int_ex_never_ne_once_y
+prod_int_ex_join_never_terminates
+prod_int_ex_join_once_terminates
+prod_int_ex_join_fixpoint_terminates
+prod_int_ex_join_never_y_at_Statement_1
+prod_int_ex_join_once_y_at_Statement_1
+prod_int_ex_join_fixpoint_y_at_Statement_1
+prod_int_ex_join_never_ne_once_y
+prod_int_ex_join_agrees_with_warrow_at_fixpoint
+prod_int_ex_per_origin_never_terminates
+prod_int_ex_per_origin_once_terminates
+prod_int_ex_per_origin_fixpoint_terminates
+prod_int_ex_per_origin_never_y_at_Statement_1
+prod_int_ex_per_origin_once_y_at_Statement_1
+prod_int_ex_per_origin_fixpoint_y_at_Statement_1
+# --- One payload per resolved plan: the per-column entry-state readers and the
+#     default-discipline payload table folded into solver_checked_payload_auto
+#     and entry_state_checked_payload_auto (2026-09-10) ---
+entry_state_globals_for
+entry_state_checked_verdicts
+entry_state_full_state_checked_export_auto
+full_state_checked_payload_auto
+report_of_full_state_checked_payload_auto

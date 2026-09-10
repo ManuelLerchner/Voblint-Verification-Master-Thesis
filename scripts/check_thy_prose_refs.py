@@ -29,10 +29,6 @@ ALLOWED = {
     "id_binary_log", "id_binary_pred", "id_unary_log",
     # Metavariable placeholders: X stands for a domain name.
     "bfilter_X_st", "branch_X_st_for",
-    # A naming-convention prefix, cited as "the <prefix> family" -- the family
-    # members exist (analyse_interval_td_result, _report, ...), the bare prefix
-    # is not itself a constant.
-    "analyse_interval_td",
     # A solver-menu label: `STR ''warrow_per_origin''` in Solver_Menu's table,
     # a string literal rather than an identifier.
     "warrow_per_origin",

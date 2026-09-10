@@ -267,7 +267,7 @@ def audit_one(fixture: Path, out: Path) -> list[str]:
     return problems
 
 
-DOMAINS = ["sign", "interval", "int", "parity"]
+DOMAINS = ["sign", "interval", "int", "parity", "congruence"]
 SOLVERS = [None, "join", "per-origin", "warrow", "warrow-per-origin"]
 CONTEXTS = [None, "entry-state", "call-string"]
 
@@ -294,7 +294,7 @@ def audit_combinations(verbose: bool) -> int:
     nothing checked that a surface existed behind the yes.
 
     This is behavioural on purpose. The surface names are not regular enough to
-    match on -- analyse_interval_td_result beside analyse_interval_wpo_result --
+    match on -- analyse_interval_result beside analyse_interval_result_wpo --
     so asking the binary is more robust than pattern-matching the theory.
     """
     fixture = CORPUS / COMBO_FIXTURE

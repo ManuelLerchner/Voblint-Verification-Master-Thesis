@@ -66,6 +66,7 @@ jobs:
           git submodule update --init --depth 1 vendor/td-verification
 
       - name: Setup Isabelle
+        id: setup-isabelle
         uses: ./.github/actions/setup-isabelle-action
 
       - name: Bridge AFP_COMPONENT_BASE to AFP
@@ -91,11 +92,98 @@ jobs:
         run: du -sh "$ISABELLE_HOME_USER/heaps/"
 
       - name: Upload heap state for same-run consumers
+        if: ${{ always() && steps.setup-isabelle.outcome == 'success' }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: isabelle-heaps
           path: ${{ env.ISABELLE_HOME_USER }}/heaps/
           retention-days: 1
+
+  # Isabelle cancels the remaining theories in a session after an error. If
+  # the integration build fails, retry each example leaf in its own build
+  # invocation so one red session cannot hide failures in its siblings. A
+  # single recovery runner shares partial heaps across the retries and runs
+  # only on failure, avoiding the repeated dependency builds of a permanent
+  # matrix.
+  diagnose-isabelle-failure:
+    needs: build-isabelle
+    if: ${{ always() && needs.build-isabelle.result == 'failure' }}
+    runs-on: ubuntu-latest
+    container:
+      image: makarius/isabelle:Isabelle2025-2
+      options: --user root
+    steps:
+      - name: Install git
+        run: apt-get update -qq && apt-get install -y -qq git > /dev/null
+
+      - name: Checkout Goblint Formalization
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 1
+          submodules: false
+          persist-credentials: false
+
+      - name: Trust the checked-out workspace
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+      - name: Initialize td-verification submodule
+        env:
+          SUBMODULES_TOKEN: ${{ secrets.SUBMODULES_TOKEN }}
+        run: |
+          git config --global url."https://x-access-token:${SUBMODULES_TOKEN}@github.com/".insteadOf "https://github.com/"
+          git submodule sync vendor/td-verification
+          git submodule update --init --depth 1 vendor/td-verification
+
+      - name: Setup Isabelle
+        uses: ./.github/actions/setup-isabelle-action
+        with:
+          use-cache: 'false'
+
+      - name: Bridge AFP_COMPONENT_BASE to AFP
+        run: echo "AFP=$AFP_COMPONENT_BASE" >> "$GITHUB_ENV"
+
+      - name: Set up pixi
+        uses: prefix-dev/setup-pixi@f00437f565399d418b0acc85936d12c1fb668347 # v0.10.1
+
+      - name: Apply td-verification compatibility patch
+        run: pixi run vendor
+
+      - name: Reuse partial heap state from the failed integration build
+        continue-on-error: true
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: isabelle-heaps
+          path: ${{ env.ISABELLE_HOME_USER }}/heaps/
+
+      - name: Diagnose example sessions independently
+        shell: bash
+        run: |
+          sessions=(
+            Voblint_Examples_CFG
+            Voblint_Examples_Congruence
+            Voblint_Examples_Sign
+            Voblint_Examples_Interval
+            Voblint_Examples_Parity
+            Voblint_Examples_Int
+            Voblint_Examples_Relational
+            Voblint_Examples_Tooling
+            Voblint_Examples_CLI
+            Voblint_Examples
+          )
+          failed=()
+          for session in "${sessions[@]}"; do
+            if SESSION="$session" pixi run build; then
+              printf 'PASS %s\n' "$session"
+            else
+              printf 'FAIL %s\n' "$session"
+              failed+=("$session")
+            fi
+          done
+          if (( ${#failed[@]} > 0 )); then
+            printf 'Failed example sessions:\n'
+            printf '  %s\n' "${failed[@]}"
+            exit 1
+          fi
 
   html:
     needs: build-isabelle
