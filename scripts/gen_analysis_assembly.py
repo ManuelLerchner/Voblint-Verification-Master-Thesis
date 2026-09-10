@@ -222,6 +222,34 @@ class Domain:
             return base
         return f"{base}_{SOLVER_BINDER_SUFFIX[solver]}"
 
+    def check_solver_order(self, ctx):
+        """The first listed solver owns the route's public names.
+
+        `ctx_binder` and `solver_suffix` both give the first entry the plain
+        name, so it is what `interval_es` and every alias defined from it mean.
+        Reordering the list therefore rebinds those names to another discipline
+        while every citation keeps typechecking -- a change no build catches.
+        Pinning the first entry to the declared default makes that mechanical.
+        """
+        reg = self.registrations.get(ctx, {})
+        solvers = reg.get("solvers", [])
+        default = reg.get("default")
+        if not solvers or default is None or solvers[0] == default:
+            return
+        # Only a route that publishes through `defines` can be harmed: there the
+        # first solver owns route-wide constant names. A route inside a
+        # `context fixes` block publishes none, so its first solver owns only
+        # alias spellings -- confusing to read, but nothing silently rebinds.
+        # Int is that case deliberately and predates this check.
+        if context_binders(self, ctx):
+            return
+        raise SystemExit(
+            f"{self.name}.{ctx}: solvers[0] is {solvers[0]!r} but default is "
+            f"{default!r}. The first solver owns the unsuffixed binder and the "
+            f"route's public names, so it must be the default; reordering it "
+            f"silently rebinds them."
+        )
+
     def solver_suffix(self, ctx, solver):
         """A context's first published solver takes the plain name; a second is
         suffixed by its solver, at the end of the whole name."""
@@ -672,7 +700,12 @@ def contextual_interpretation(dom, ctx, route, solvers, generalize=None):
         [term["enter_ci"], term["event"], p["route_abs"]],
         [f"{interp}_solve_c"],
     ])
-    if not fixed:
+    # The published names are route-wide, not per-discipline, so only the
+    # registration that owns the unsuffixed binder may claim them; a second
+    # discipline repeating the block would be a duplicate definition. The others
+    # are reached through their own binder, which a `global_interpretation`
+    # exports anyway.
+    if not fixed and not dom.solver_suffix(ctx, route):
         out += ["  defines"]
         for i, (published, const) in enumerate(dom.ctx_defines(ctx)):
             out.append(f"    {'' if i == 0 else 'and '}{published} = {binder}.{const}")
@@ -878,6 +911,7 @@ def render_contextual(dom, solvers):
         reg = dom.registrations.get(ctx)
         if not reg:
             continue
+        dom.check_solver_order(ctx)
         title = CONTEXT_TITLE[ctx]
         out += [f"section \\<open>{dom.name} at the {title} context\\<close>", ""]
         # `generalize:` is one registry decision with seven consequences known

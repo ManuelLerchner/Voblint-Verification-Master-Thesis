@@ -451,6 +451,88 @@ proof -
   qed
 qed
 
+subsection \<open>Int at an explicitly chosen join discipline, call-string\<close>
+
+abbreviation int_cs_join_terminates where
+  "int_cs_join_terminates k \<equiv>
+     routed_dg_pipeline.terminates (int_tf_st_for Refine_Fixpoint)
+       (int_dom_enter_st_for Refine_Fixpoint) cinit_int_dom_st
+       Call_String_Context.Global Call_String_Context.Seed (\<lambda>_. cs_route k) []
+       (TD_side_upd_rule.solve_dom init_basic_ug_state update_global_always_join)"
+
+abbreviation int_cs_join_ctx_succ where
+  "int_cs_join_ctx_succ k \<equiv>
+     routed_dg_pipeline.ctx_succ (int_tf_st_for Refine_Fixpoint)
+       (int_dom_enter_st_for Refine_Fixpoint) cinit_int_dom_st
+       Call_String_Context.Global Call_String_Context.Seed (\<lambda>_. cs_route k) []
+       TD_side_always_join_Interp_solve"
+
+abbreviation int_cs_join_vars where
+  "int_cs_join_vars k \<equiv>
+     routed_dg_pipeline.sol_vars (int_tf_st_for Refine_Fixpoint)
+       (int_dom_enter_st_for Refine_Fixpoint) cinit_int_dom_st
+       Call_String_Context.Global Call_String_Context.Seed (\<lambda>_. cs_route k) []
+       TD_side_always_join_Interp_solve"
+
+theorem run_voblint_int_call_string_join_source_sound:
+  fixes p :: imp_prog and s0 s :: store and k :: nat
+  assumes wf: "wf_compile_input (declared_global p) (prog_table p) (prog_procs p)"
+      and s0: "s0 \<in> cinit_stores (declared_global p)"
+      and run: "star (pstep (declared_global p) (prog_table p))
+                  (main_body (prog_table p), s0, []) (residual, s, frs)"
+      and solves: "int_cs_join_terminates k (declared_global p) p"
+      and cover: "ctx_vars_cover (prog_cfg p) (int_cs_join_ctx_succ k (declared_global p) p) []
+                    (int_cs_join_vars k (declared_global p) p)"
+      and ans: "run_voblint Int_Analysis (Some Solver_Join) (Ctx_CallString k) view p
+                  = Analysed out"
+  shows "\<exists>v stk ctx st.
+           csim (prog_table p) (prog_cfg p) (residual, s, frs) (v, s, stk)
+         \<and> s \<in> activation_collect (declared_global p)
+                   (call_context_rel_of_fun (\<lambda>u c t. cs_context k u c t)) []
+                   (prog_cfg p) (cinit_stores (declared_global p)) v ctx
+         \<and> lookup_context (analyse_int_call_string_result k p) v ctx = Lifted st
+         \<and> s \<in> \<lbrakk>st\<rbrakk>
+         \<and> (\<forall>row \<in> set (out_checks out). row_point row = v \<longrightarrow>
+              row_verdict row \<noteq> Dead
+            \<and> (row_verdict row = Decided Check_Proved \<longrightarrow> truthy (aval (row_exp row) s))
+            \<and> (row_verdict row = Decided Check_Refuted \<longrightarrow> \<not> truthy (aval (row_exp row) s)))"
+proof -
+  note cov = solves cover
+  from ans
+  have "cs_output_of view IntDomValue int_classify_check
+          (analyse_int_call_string_result k p) k p = Analysed out"
+    by (simp add: run_voblint_def mk_analysis_config_def plan_answer_def split: if_splits)
+  note rows = out_checks_of_cs_output [OF this]
+  show ?thesis
+  proof (rule ctx_source_sound_of_activation
+      [OF wf s0 run _ _ _ int_classify_check_proved int_classify_check_refuted rows])
+    fix u
+    show "ltr_collect (declared_global p) (prog_cfg p) (cinit_stores (declared_global p)) u
+            \<subseteq> (\<Union>c. activation_collect (declared_global p)
+                       (call_context_rel_of_fun (\<lambda>u c t. cs_context k u c t)) []
+                       (prog_cfg p) (cinit_stores (declared_global p)) u c)"
+      by (rule equalityD1
+            [OF analyse_int_call_string_ltr_collect_eq_Union
+                  [where ctx_fun = "cs_context k"]])
+  next
+    fix u ctx
+    show "activation_collect (declared_global p)
+             (call_context_rel_of_fun (\<lambda>u c t. cs_context k u c t)) []
+             (prog_cfg p) (cinit_stores (declared_global p)) u ctx
+            \<subseteq> gamma_point (lookup_context (analyse_int_call_string_result k p) u ctx)"
+      using analyse_int_call_string_sound_of_cover [OF cov, where s = "\<lambda>u c t. t"]
+      unfolding analyse_int_call_string_result_def
+                analyse_int_call_string_result_for_def
+                analyse_int_call_string_gamma_reader_eq_lookup .
+  next
+    show "finite_analysis_result (analyse_int_call_string_result k p)"
+      using analyse_int_call_string_vars_finite [OF solves]
+      by (simp add: finite_analysis_result_def analyse_int_call_string_result_def
+          analyse_int_call_string_result_for_def
+          routed_dg_pipeline.result_def routed_dg_pipeline.sol_vars_def)
+  qed
+qed
+
 subsection \<open>Parity, Congruence, Interval and Int at the call-string configuration\<close>
 
 text \<open>

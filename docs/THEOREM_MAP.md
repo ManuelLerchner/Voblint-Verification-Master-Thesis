@@ -68,31 +68,40 @@ argument applies. 26 configurations:
 
 | Context | Sign | Parity | Congruence | Interval | Int |
 | --- | --- | --- | --- | --- | --- |
-| `Ctx_None` | Join*, PerOrigin | Join*, PerOrigin | Join*, PerOrigin | Warrow*, Join, PerOrigin, WPO | Warrow*, Join, PerOrigin, WPO |
+| `Ctx_None` | Join*, PerOrigin+ | Join*, PerOrigin+ | Join*, PerOrigin+ | Warrow*, Join+, PerOrigin+, WPO+ | Warrow*, Join+, PerOrigin+, WPO+ |
 | `Ctx_EntryState` | Join* | Join* | Join* | Warrow* | Warrow*, Join+ |
-| `Ctx_CallString k` | Join* | Join* | Join* | Warrow* | Warrow*, Join |
+| `Ctx_CallString k` | Join* | Join* | Join* | Warrow* | Warrow*, Join+ |
 
 `*` marks the discipline `None` selects; `+` marks a cell reached only by naming
-a solver that nonetheless carries the source-level theorem. So 16 of the 26 are
-covered. The remaining 10 are reachable in principle: the alternate unit disciplines are `global_interpretation`s of
-`unit_dg_analysis`, which publishes `source_sound_closure` and
-`result_node_sound_closure` alongside its own `terminates`/`sol_vars`/`result`;
-and Int's two `Join` contextual cells already have
-`analyse_int_entry_state_sound_of_cover` and
-`analyse_int_call_string_sound_of_cover` published without the `_warrow` suffix.
+a solver. Every cell in the table carries the source-level theorem: 20 of the 26
+row-producing configurations. The unit cells instantiate
+`flat_source_sound_of_collect`, whose per-node bound each alternate discipline
+supplies from its own `unit_dg_analysis` registration; the contextual ones
+instantiate `ctx_source_sound_of_activation`.
 
-**Report-only** -- Interval at `Join`, `PerOrigin` and `WarrowPerOrigin` under
-either context policy routes to `verdict_report_answer`, which builds the answer
-from a verdict report rather than from `classify_checks_verdicts` over a result
-table. `out_checks_of_entry_state_output` and `out_checks_of_cs_output` do not
-apply, so these 6 need a different bridge, not a re-instantiation of the same
-one.
+**Unregistered** -- Interval at `Join`, `PerOrigin` and `WarrowPerOrigin` under
+either context policy. These route to `verdict_report_answer`, which looks like
+a different output path but is not: its argument is a
+`(pp * exp * contextual_verdict) list`, and each of the six is
+`routed_dg_pipeline.verdict_report`, which is *defined* as
+`classify_checks_verdicts (prog_cfg p) (result gs p) classify`. Point, check
+expression and verdict all survive, so the rows are exactly what the contextual
+endpoint reads.
+
+What is missing is upstream. `routed_dg_analysis` is interpreted for Interval
+only at `interval_es` and `interval_cs`, both warrowing, so these six
+disciplines have no contextual soundness facts to instantiate. The registry
+already lists all four solvers for Interval's *unit* route and only
+`warrowing_apinis` for its contextual ones; Int shows the mechanism working with
+two disciplines per contextual route. Closing them is registry and generator
+work -- widen those solver lists, name the per-discipline re-exports, regenerate
+-- followed by six ordinary instantiations. It is not a new bridge.
 
 **Rejected** -- every remaining combination answers
 `Unsupported_Configuration`, and there is nothing to prove.
 
-The distinction that matters for planning: the remaining 10 are instantiation
-work, the 6 are a new bridge.
+What remains is the 6 unregistered cells. They need a registration each before
+the existing endpoint applies, not a new theorem shape.
 
 ## Dead rows
 

@@ -159,13 +159,24 @@ domains:
       # `cs_call_string_sol_prog`: the equation system and its raw solution,
       # which no other domain publishes and which an example pins solved values
       # against one unknown at a time. There is no shape for this file to name.
+      # All four disciplines are registered on both contextual routes, so every
+      # row-producing configuration the dispatcher accepts has a soundness
+      # interpretation behind it. The alternates were previously spelled out at
+      # `routed_dg_pipeline.verdict_report` only, which needs no soundness and
+      # so left those cells uncertified.
+      #
+      # ORDER IS SEMANTIC. The first solver listed owns the unsuffixed binder
+      # and the route's public `defines` aliases, so it must stay the route's
+      # `default`. Reordering these lists as a tidy-up silently rebinds
+      # `interval_es` and every name defined from it to a different discipline,
+      # and every citation keeps typechecking while meaning something else.
       entry_state:
-        solvers: [warrowing_apinis]
+        solvers: [warrowing_apinis, always_join, per_origin, warrowing_per_origin]
         default: warrowing_apinis
         published: []
         re_exports: {}
       call_string:
-        solvers: [warrowing_apinis]
+        solvers: [warrowing_apinis, always_join, per_origin, warrowing_per_origin]
         default: warrowing_apinis
         published: [result_for, result, report]
         re_exports:

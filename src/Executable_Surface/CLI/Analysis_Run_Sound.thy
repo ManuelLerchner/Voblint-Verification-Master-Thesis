@@ -415,6 +415,482 @@ proof -
   from m mem covers rows show ?thesis by blast
 qed
 
+subsection \<open>The endpoint over an arbitrary unit-context solve\<close>
+
+text \<open>
+  \<open>run_voblint_source_sound\<close> is stated over \<^const>\<open>analyse\<close>, so it reaches
+  only the discipline each domain publishes as its default.  Naming a solver
+  instead lands on a different solved table with the same shape, and this is
+  what those configurations instantiate: everything but the solve is fixed
+  here, and a caller owes the per-node bound its own discipline proves.
+
+  What separates this from the contextual endpoint is the row builder, not the
+  verdict type: \<open>contextual_verdict\<close> is a synonym for
+  \<^typ>\<open>check_result lifted\<close>, and \<open>Dead\<close>/\<open>Decided\<close> abbreviate \<^const>\<open>Bot\<close> and
+  \<^const>\<open>Lifted\<close>.  The unit route reads \<^const>\<open>flat_rows_of\<close>, one verdict per
+  point off the table at the unit context; the contextual route reads
+  \<^const>\<open>classify_checks_verdicts\<close>, an aggregate over the contexts a point was
+  solved at.  The conclusion is the same shape as the dispatcher's, including
+  the reachability witness that pins the node.
+\<close>
+
+theorem flat_source_sound_of_collect:
+  fixes p :: imp_prog and s0 s :: store
+    and r :: "(unit, 'a::sound_domain abs_state) analysis_result"
+    and classify :: "exp \<Rightarrow> 'a abs_state \<Rightarrow> check_result"
+  assumes wf: "wf_compile_input (declared_global p) (prog_table p) (prog_procs p)"
+      and s0: "s0 \<in> cinit_stores (declared_global p)"
+      and run: "star (pstep (declared_global p) (prog_table p))
+                  (main_body (prog_table p), s0, []) (residual, s, frs)"
+      and cap: "\<And>u. ltr_collect (declared_global p) (prog_cfg p)
+                        (cinit_stores (declared_global p)) u
+                  \<subseteq> \<lbrakk>case lookup_context r u () of Bot \<Rightarrow> bot | Lifted st \<Rightarrow> st\<rbrakk>"
+      and proved: "\<And>c d t. classify c d = Check_Proved \<Longrightarrow> t \<in> \<lbrakk>d\<rbrakk> \<Longrightarrow> truthy (aval c t)"
+      and refuted: "\<And>c d t. classify c d = Check_Refuted \<Longrightarrow> t \<in> \<lbrakk>d\<rbrakk>
+                        \<Longrightarrow> \<not> truthy (aval c t)"
+      and rows: "out_checks out = check_rows_of env (flat_rows_of classify bot r p)"
+  shows "\<exists>v stk.
+           csim (prog_table p) (prog_cfg p) (residual, s, frs) (v, s, stk)
+         \<and> s \<in> ltr_collect (declared_global p) (prog_cfg p)
+                   (cinit_stores (declared_global p)) v
+         \<and> (\<forall>row \<in> set (out_checks out). row_point row = v \<longrightarrow>
+              (row_verdict row = Lifted Check_Proved \<longrightarrow> truthy (aval (row_exp row) s))
+            \<and> (row_verdict row = Lifted Check_Refuted \<longrightarrow> \<not> truthy (aval (row_exp row) s))
+            \<and> row_verdict row \<noteq> Bot)"
+proof -
+  have cfg: "prog_cfg p = compile_prog (prog_table p) (prog_procs p)" by (rule prog_cfg_def)
+  have finI: "finite (intra (prog_cfg p))"
+    unfolding prog_cfg_def using compile_prog_finite by simp
+  from source_reaches_ltr_collect [OF wf s0 run]
+  obtain v stk
+    where m: "csim (prog_table p) (prog_cfg p) (residual, s, frs) (v, s, stk)"
+      and mem: "s \<in> ltr_collect (declared_global p) (prog_cfg p)
+                      (cinit_stores (declared_global p)) v"
+    unfolding cfg by blast
+  have rows_at: "\<forall>row \<in> set (out_checks out). row_point row = v \<longrightarrow>
+                   (row_verdict row = Lifted Check_Proved \<longrightarrow> truthy (aval (row_exp row) s))
+                 \<and> (row_verdict row = Lifted Check_Refuted
+                      \<longrightarrow> \<not> truthy (aval (row_exp row) s))
+                 \<and> row_verdict row \<noteq> Bot"
+  proof (intro ballI impI conjI)
+    fix row
+    assume rm: "row \<in> set (out_checks out)" and at: "row_point row = v"
+       and dv: "row_verdict row = Lifted Check_Proved"
+    from decided_row_of_check_rows [OF rm [unfolded rows] dv] at
+    have flat: "(v, row_exp row, Lifted Check_Proved)
+                  \<in> set (flat_rows_of classify bot r p)"
+      by simp
+    have "\<forall>t \<in> ltr_collect (declared_global p) (prog_cfg p)
+                   (cinit_stores (declared_global p)) v. truthy (aval (row_exp row) t)"
+      by (rule classify_checks_proved_sound
+            [where gamma_state = "\<lambda>d :: 'a abs_state. \<lbrakk>d\<rbrakk>"
+               and env = "\<lambda>u. case lookup_context r u () of Bot \<Rightarrow> bot | Lifted st \<Rightarrow> st"
+               and reach = "ltr_collect (declared_global p) (prog_cfg p)
+                              (cinit_stores (declared_global p))"
+               and v = v,
+             OF finI decided_flat_row_in_classify_checks [OF flat] proved cap [of v]])
+    then show "truthy (aval (row_exp row) s)" using mem by blast
+  next
+    fix row
+    assume rm: "row \<in> set (out_checks out)" and at: "row_point row = v"
+       and dv: "row_verdict row = Lifted Check_Refuted"
+    from decided_row_of_check_rows [OF rm [unfolded rows] dv] at
+    have flat: "(v, row_exp row, Lifted Check_Refuted)
+                  \<in> set (flat_rows_of classify bot r p)"
+      by simp
+    have "\<forall>t \<in> ltr_collect (declared_global p) (prog_cfg p)
+                   (cinit_stores (declared_global p)) v. \<not> truthy (aval (row_exp row) t)"
+      by (rule classify_checks_refuted_sound
+            [where gamma_state = "\<lambda>d :: 'a abs_state. \<lbrakk>d\<rbrakk>"
+               and env = "\<lambda>u. case lookup_context r u () of Bot \<Rightarrow> bot | Lifted st \<Rightarrow> st"
+               and reach = "ltr_collect (declared_global p) (prog_cfg p)
+                              (cinit_stores (declared_global p))"
+               and v = v,
+             OF finI decided_flat_row_in_classify_checks [OF flat] refuted cap [of v]])
+    then show "\<not> truthy (aval (row_exp row) s)" using mem by blast
+  next
+    fix row
+    assume rm: "row \<in> set (out_checks out)" and at: "row_point row = v"
+    show "row_verdict row \<noteq> Bot"
+    proof
+      assume dead: "row_verdict row = Bot"
+      from dead_row_of_check_rows [OF rm [unfolded rows] dead] at
+      have "(v, row_exp row, Bot) \<in> set (flat_rows_of classify bot r p)" by simp
+      from dead_flat_row_lookup_bot [OF this] cap [of v] mem
+      show False by simp
+    qed
+  qed
+  from m mem rows_at show ?thesis by blast
+qed
+
+subsection \<open>Sign at an explicitly chosen per-origin discipline\<close>
+
+text \<open>
+  The first unit configuration reached by naming a solver.  Its registration is
+  a \<^theory_text>\<open>global_interpretation\<close> of \<open>unit_dg_analysis\<close>, so the per-node
+  bound comes from that locale's own two-premise endpoint and the endpoint above
+  consumes it unchanged.
+\<close>
+
+theorem run_voblint_sign_per_origin_source_sound:
+  fixes p :: imp_prog and s0 s :: store
+  assumes wf: "wf_compile_input (declared_global p) (prog_table p) (prog_procs p)"
+      and s0: "s0 \<in> cinit_stores (declared_global p)"
+      and run: "star (pstep (declared_global p) (prog_table p))
+                  (main_body (prog_table p), s0, []) (residual, s, frs)"
+      and solves: "sign_po_terminates (declared_global p) p"
+      and cover: "vars_cover (prog_cfg p) (sign_po_vars (declared_global p) p)"
+      and ans: "run_voblint Sign_Analysis (Some Solver_PerOrigin) Ctx_None view p
+                  = Analysed out"
+  shows "\<exists>v stk.
+           csim (prog_table p) (prog_cfg p) (residual, s, frs) (v, s, stk)
+         \<and> s \<in> ltr_collect (declared_global p) (prog_cfg p)
+                   (cinit_stores (declared_global p)) v
+         \<and> (\<forall>row \<in> set (out_checks out). row_point row = v \<longrightarrow>
+              (row_verdict row = Lifted Check_Proved \<longrightarrow> truthy (aval (row_exp row) s))
+            \<and> (row_verdict row = Lifted Check_Refuted \<longrightarrow> \<not> truthy (aval (row_exp row) s))
+            \<and> row_verdict row \<noteq> Bot)"
+proof -
+  from ans
+  have "flat_output_of view SignValue sign_classify_check bot
+          (analyse_sign_result_per_origin p)
+          (unit_seed_globals SignValue (analyse_sign_result_per_origin p) p) p
+          = Analysed out"
+    by (simp add: run_voblint_def mk_analysis_config_def plan_answer_def Let_def
+        split: if_splits)
+  note rows = out_checks_of_flat_output [OF this]
+  show ?thesis
+  proof (rule flat_source_sound_of_collect
+      [OF wf s0 run _ sign_classify_check_proved sign_classify_check_refuted rows])
+    fix u
+    show "ltr_collect (declared_global p) (prog_cfg p) (cinit_stores (declared_global p)) u
+            \<subseteq> \<lbrakk>case lookup_context (analyse_sign_result_per_origin p) u () of
+                  Bot \<Rightarrow> bot | Lifted st \<Rightarrow> st\<rbrakk>"
+      using sign_po_asm.result_node_sound [OF solves cover, of u]
+      by (simp add: sign_po_asm.state_at_unfold analyse_sign_result_per_origin_def
+          analyse_sign_result_per_origin_for_def)
+  qed
+qed
+
+theorem run_voblint_parity_per_origin_source_sound:
+  fixes p :: imp_prog and s0 s :: store
+  assumes wf: "wf_compile_input (declared_global p) (prog_table p) (prog_procs p)"
+      and s0: "s0 \<in> cinit_stores (declared_global p)"
+      and run: "star (pstep (declared_global p) (prog_table p))
+                  (main_body (prog_table p), s0, []) (residual, s, frs)"
+      and solves: "parity_po_terminates (declared_global p) p"
+      and cover: "vars_cover (prog_cfg p) (parity_po_vars (declared_global p) p)"
+      and ans: "run_voblint Parity_Analysis (Some Solver_PerOrigin) Ctx_None view p
+                  = Analysed out"
+  shows "\<exists>v stk.
+           csim (prog_table p) (prog_cfg p) (residual, s, frs) (v, s, stk)
+         \<and> s \<in> ltr_collect (declared_global p) (prog_cfg p)
+                   (cinit_stores (declared_global p)) v
+         \<and> (\<forall>row \<in> set (out_checks out). row_point row = v \<longrightarrow>
+              (row_verdict row = Lifted Check_Proved \<longrightarrow> truthy (aval (row_exp row) s))
+            \<and> (row_verdict row = Lifted Check_Refuted \<longrightarrow> \<not> truthy (aval (row_exp row) s))
+            \<and> row_verdict row \<noteq> Bot)"
+proof -
+  from ans
+  have "flat_output_of view ParityValue parity_classify_check bot
+          (analyse_parity_result_per_origin p)
+          (unit_seed_globals ParityValue (analyse_parity_result_per_origin p) p) p
+          = Analysed out"
+    by (simp add: run_voblint_def mk_analysis_config_def plan_answer_def Let_def
+        split: if_splits)
+  note rows = out_checks_of_flat_output [OF this]
+  show ?thesis
+  proof (rule flat_source_sound_of_collect
+      [OF wf s0 run _ parity_classify_check_proved parity_classify_check_refuted rows])
+    fix u
+    show "ltr_collect (declared_global p) (prog_cfg p) (cinit_stores (declared_global p)) u
+            \<subseteq> \<lbrakk>case lookup_context (analyse_parity_result_per_origin p) u () of
+                  Bot \<Rightarrow> bot | Lifted st \<Rightarrow> st\<rbrakk>"
+      using parity_po_asm.result_node_sound [OF solves cover, of u]
+      by (simp add: parity_po_asm.state_at_unfold analyse_parity_result_per_origin_def
+          analyse_parity_result_per_origin_for_def)
+  qed
+qed
+
+theorem run_voblint_congruence_per_origin_source_sound:
+  fixes p :: imp_prog and s0 s :: store
+  assumes wf: "wf_compile_input (declared_global p) (prog_table p) (prog_procs p)"
+      and s0: "s0 \<in> cinit_stores (declared_global p)"
+      and run: "star (pstep (declared_global p) (prog_table p))
+                  (main_body (prog_table p), s0, []) (residual, s, frs)"
+      and solves: "congruence_po_terminates (declared_global p) p"
+      and cover: "vars_cover (prog_cfg p) (congruence_po_vars (declared_global p) p)"
+      and ans: "run_voblint Congruence_Analysis (Some Solver_PerOrigin) Ctx_None view p
+                  = Analysed out"
+  shows "\<exists>v stk.
+           csim (prog_table p) (prog_cfg p) (residual, s, frs) (v, s, stk)
+         \<and> s \<in> ltr_collect (declared_global p) (prog_cfg p)
+                   (cinit_stores (declared_global p)) v
+         \<and> (\<forall>row \<in> set (out_checks out). row_point row = v \<longrightarrow>
+              (row_verdict row = Lifted Check_Proved \<longrightarrow> truthy (aval (row_exp row) s))
+            \<and> (row_verdict row = Lifted Check_Refuted \<longrightarrow> \<not> truthy (aval (row_exp row) s))
+            \<and> row_verdict row \<noteq> Bot)"
+proof -
+  from ans
+  have "flat_output_of view CongruenceValue congruence_classify_check bot
+          (analyse_congruence_result_per_origin p)
+          (unit_seed_globals CongruenceValue (analyse_congruence_result_per_origin p) p) p
+          = Analysed out"
+    by (simp add: run_voblint_def mk_analysis_config_def plan_answer_def Let_def
+        split: if_splits)
+  note rows = out_checks_of_flat_output [OF this]
+  show ?thesis
+  proof (rule flat_source_sound_of_collect
+      [OF wf s0 run _ congruence_classify_check_proved congruence_classify_check_refuted
+          rows])
+    fix u
+    show "ltr_collect (declared_global p) (prog_cfg p) (cinit_stores (declared_global p)) u
+            \<subseteq> \<lbrakk>case lookup_context (analyse_congruence_result_per_origin p) u () of
+                  Bot \<Rightarrow> bot | Lifted st \<Rightarrow> st\<rbrakk>"
+      using congruence_po_asm.result_node_sound [OF solves cover, of u]
+      by (simp add: congruence_po_asm.state_at_unfold
+          analyse_congruence_result_per_origin_def
+          analyse_congruence_result_per_origin_for_def)
+  qed
+qed
+
+theorem run_voblint_interval_join_source_sound:
+  fixes p :: imp_prog and s0 s :: store
+  assumes wf: "wf_compile_input (declared_global p) (prog_table p) (prog_procs p)"
+      and s0: "s0 \<in> cinit_stores (declared_global p)"
+      and run: "star (pstep (declared_global p) (prog_table p))
+                  (main_body (prog_table p), s0, []) (residual, s, frs)"
+      and solves: "interval_join_terminates (declared_global p) p"
+      and cover: "vars_cover (prog_cfg p) (interval_join_vars (declared_global p) p)"
+      and ans: "run_voblint Interval_Analysis (Some Solver_Join) Ctx_None view p
+                  = Analysed out"
+  shows "\<exists>v stk.
+           csim (prog_table p) (prog_cfg p) (residual, s, frs) (v, s, stk)
+         \<and> s \<in> ltr_collect (declared_global p) (prog_cfg p)
+                   (cinit_stores (declared_global p)) v
+         \<and> (\<forall>row \<in> set (out_checks out). row_point row = v \<longrightarrow>
+              (row_verdict row = Lifted Check_Proved \<longrightarrow> truthy (aval (row_exp row) s))
+            \<and> (row_verdict row = Lifted Check_Refuted \<longrightarrow> \<not> truthy (aval (row_exp row) s))
+            \<and> row_verdict row \<noteq> Bot)"
+proof -
+  from ans
+  have "flat_output_of view IntervalValue interval_classify_check bot
+          (analyse_interval_result_join p)
+          (unit_seed_globals IntervalValue (analyse_interval_result_join p) p) p
+          = Analysed out"
+    by (simp add: run_voblint_def mk_analysis_config_def plan_answer_def Let_def
+        split: if_splits)
+  note rows = out_checks_of_flat_output [OF this]
+  show ?thesis
+  proof (rule flat_source_sound_of_collect
+      [OF wf s0 run _ interval_classify_check_proved interval_classify_check_refuted rows])
+    fix u
+    show "ltr_collect (declared_global p) (prog_cfg p) (cinit_stores (declared_global p)) u
+            \<subseteq> \<lbrakk>case lookup_context (analyse_interval_result_join p) u () of
+                  Bot \<Rightarrow> bot | Lifted st \<Rightarrow> st\<rbrakk>"
+      using interval_join_asm.result_node_sound [OF solves cover, of u]
+      by (simp add: interval_join_asm.state_at_unfold analyse_interval_result_join_def
+          analyse_interval_result_join_for_def)
+  qed
+qed
+
+theorem run_voblint_interval_per_origin_source_sound:
+  fixes p :: imp_prog and s0 s :: store
+  assumes wf: "wf_compile_input (declared_global p) (prog_table p) (prog_procs p)"
+      and s0: "s0 \<in> cinit_stores (declared_global p)"
+      and run: "star (pstep (declared_global p) (prog_table p))
+                  (main_body (prog_table p), s0, []) (residual, s, frs)"
+      and solves: "interval_po_terminates (declared_global p) p"
+      and cover: "vars_cover (prog_cfg p) (interval_po_vars (declared_global p) p)"
+      and ans: "run_voblint Interval_Analysis (Some Solver_PerOrigin) Ctx_None view p
+                  = Analysed out"
+  shows "\<exists>v stk.
+           csim (prog_table p) (prog_cfg p) (residual, s, frs) (v, s, stk)
+         \<and> s \<in> ltr_collect (declared_global p) (prog_cfg p)
+                   (cinit_stores (declared_global p)) v
+         \<and> (\<forall>row \<in> set (out_checks out). row_point row = v \<longrightarrow>
+              (row_verdict row = Lifted Check_Proved \<longrightarrow> truthy (aval (row_exp row) s))
+            \<and> (row_verdict row = Lifted Check_Refuted \<longrightarrow> \<not> truthy (aval (row_exp row) s))
+            \<and> row_verdict row \<noteq> Bot)"
+proof -
+  from ans
+  have "flat_output_of view IntervalValue interval_classify_check bot
+          (analyse_interval_result_per_origin p)
+          (unit_seed_globals IntervalValue (analyse_interval_result_per_origin p) p) p
+          = Analysed out"
+    by (simp add: run_voblint_def mk_analysis_config_def plan_answer_def Let_def
+        split: if_splits)
+  note rows = out_checks_of_flat_output [OF this]
+  show ?thesis
+  proof (rule flat_source_sound_of_collect
+      [OF wf s0 run _ interval_classify_check_proved interval_classify_check_refuted rows])
+    fix u
+    show "ltr_collect (declared_global p) (prog_cfg p) (cinit_stores (declared_global p)) u
+            \<subseteq> \<lbrakk>case lookup_context (analyse_interval_result_per_origin p) u () of
+                  Bot \<Rightarrow> bot | Lifted st \<Rightarrow> st\<rbrakk>"
+      using interval_po_asm.result_node_sound [OF solves cover, of u]
+      by (simp add: interval_po_asm.state_at_unfold analyse_interval_result_per_origin_def
+          analyse_interval_result_per_origin_for_def)
+  qed
+qed
+
+theorem run_voblint_interval_wpo_source_sound:
+  fixes p :: imp_prog and s0 s :: store
+  assumes wf: "wf_compile_input (declared_global p) (prog_table p) (prog_procs p)"
+      and s0: "s0 \<in> cinit_stores (declared_global p)"
+      and run: "star (pstep (declared_global p) (prog_table p))
+                  (main_body (prog_table p), s0, []) (residual, s, frs)"
+      and solves: "interval_wpo_terminates (declared_global p) p"
+      and cover: "vars_cover (prog_cfg p) (interval_wpo_vars (declared_global p) p)"
+      and ans: "run_voblint Interval_Analysis (Some Solver_WarrowPerOrigin) Ctx_None view p
+                  = Analysed out"
+  shows "\<exists>v stk.
+           csim (prog_table p) (prog_cfg p) (residual, s, frs) (v, s, stk)
+         \<and> s \<in> ltr_collect (declared_global p) (prog_cfg p)
+                   (cinit_stores (declared_global p)) v
+         \<and> (\<forall>row \<in> set (out_checks out). row_point row = v \<longrightarrow>
+              (row_verdict row = Lifted Check_Proved \<longrightarrow> truthy (aval (row_exp row) s))
+            \<and> (row_verdict row = Lifted Check_Refuted \<longrightarrow> \<not> truthy (aval (row_exp row) s))
+            \<and> row_verdict row \<noteq> Bot)"
+proof -
+  from ans
+  have "flat_output_of view IntervalValue interval_classify_check bot
+          (analyse_interval_result_wpo p)
+          (unit_seed_globals IntervalValue (analyse_interval_result_wpo p) p) p
+          = Analysed out"
+    by (simp add: run_voblint_def mk_analysis_config_def plan_answer_def Let_def
+        split: if_splits)
+  note rows = out_checks_of_flat_output [OF this]
+  show ?thesis
+  proof (rule flat_source_sound_of_collect
+      [OF wf s0 run _ interval_classify_check_proved interval_classify_check_refuted rows])
+    fix u
+    show "ltr_collect (declared_global p) (prog_cfg p) (cinit_stores (declared_global p)) u
+            \<subseteq> \<lbrakk>case lookup_context (analyse_interval_result_wpo p) u () of
+                  Bot \<Rightarrow> bot | Lifted st \<Rightarrow> st\<rbrakk>"
+      using interval_wpo_asm.result_node_sound [OF solves cover, of u]
+      by (simp add: interval_wpo_asm.state_at_unfold analyse_interval_result_wpo_def
+          analyse_interval_result_wpo_for_def)
+  qed
+qed
+
+theorem run_voblint_int_join_source_sound:
+  fixes p :: imp_prog and s0 s :: store
+  assumes wf: "wf_compile_input (declared_global p) (prog_table p) (prog_procs p)"
+      and s0: "s0 \<in> cinit_stores (declared_global p)"
+      and run: "star (pstep (declared_global p) (prog_table p))
+                  (main_body (prog_table p), s0, []) (residual, s, frs)"
+      and solves: "int_join_terminates (declared_global p) p"
+      and cover: "vars_cover (prog_cfg p) (int_join_vars (declared_global p) p)"
+      and ans: "run_voblint Int_Analysis (Some Solver_Join) Ctx_None view p = Analysed out"
+  shows "\<exists>v stk.
+           csim (prog_table p) (prog_cfg p) (residual, s, frs) (v, s, stk)
+         \<and> s \<in> ltr_collect (declared_global p) (prog_cfg p)
+                   (cinit_stores (declared_global p)) v
+         \<and> (\<forall>row \<in> set (out_checks out). row_point row = v \<longrightarrow>
+              (row_verdict row = Lifted Check_Proved \<longrightarrow> truthy (aval (row_exp row) s))
+            \<and> (row_verdict row = Lifted Check_Refuted \<longrightarrow> \<not> truthy (aval (row_exp row) s))
+            \<and> row_verdict row \<noteq> Bot)"
+proof -
+  from ans
+  have "flat_output_of view IntDomValue int_classify_check bot
+          (analyse_int_join_result p)
+          (unit_seed_globals IntDomValue (analyse_int_join_result p) p) p = Analysed out"
+    by (simp add: run_voblint_def mk_analysis_config_def plan_answer_def Let_def
+        split: if_splits)
+  note rows = out_checks_of_flat_output [OF this]
+  show ?thesis
+  proof (rule flat_source_sound_of_collect
+      [OF wf s0 run _ int_classify_check_proved int_classify_check_refuted rows])
+    fix u
+    show "ltr_collect (declared_global p) (prog_cfg p) (cinit_stores (declared_global p)) u
+            \<subseteq> \<lbrakk>case lookup_context (analyse_int_join_result p) u () of
+                  Bot \<Rightarrow> bot | Lifted st \<Rightarrow> st\<rbrakk>"
+      using int_join_asm.result_node_sound [OF solves cover, of u]
+      by (simp add: int_join_asm.state_at_unfold analyse_int_join_result_def
+          analyse_int_join_result_for_def int_join_result_def)
+  qed
+qed
+
+theorem run_voblint_int_per_origin_source_sound:
+  fixes p :: imp_prog and s0 s :: store
+  assumes wf: "wf_compile_input (declared_global p) (prog_table p) (prog_procs p)"
+      and s0: "s0 \<in> cinit_stores (declared_global p)"
+      and run: "star (pstep (declared_global p) (prog_table p))
+                  (main_body (prog_table p), s0, []) (residual, s, frs)"
+      and solves: "int_po_terminates (declared_global p) p"
+      and cover: "vars_cover (prog_cfg p) (int_po_vars (declared_global p) p)"
+      and ans: "run_voblint Int_Analysis (Some Solver_PerOrigin) Ctx_None view p
+                  = Analysed out"
+  shows "\<exists>v stk.
+           csim (prog_table p) (prog_cfg p) (residual, s, frs) (v, s, stk)
+         \<and> s \<in> ltr_collect (declared_global p) (prog_cfg p)
+                   (cinit_stores (declared_global p)) v
+         \<and> (\<forall>row \<in> set (out_checks out). row_point row = v \<longrightarrow>
+              (row_verdict row = Lifted Check_Proved \<longrightarrow> truthy (aval (row_exp row) s))
+            \<and> (row_verdict row = Lifted Check_Refuted \<longrightarrow> \<not> truthy (aval (row_exp row) s))
+            \<and> row_verdict row \<noteq> Bot)"
+proof -
+  from ans
+  have "flat_output_of view IntDomValue int_classify_check bot
+          (analyse_int_per_origin_result p)
+          (unit_seed_globals IntDomValue (analyse_int_per_origin_result p) p) p
+          = Analysed out"
+    by (simp add: run_voblint_def mk_analysis_config_def plan_answer_def Let_def
+        split: if_splits)
+  note rows = out_checks_of_flat_output [OF this]
+  show ?thesis
+  proof (rule flat_source_sound_of_collect
+      [OF wf s0 run _ int_classify_check_proved int_classify_check_refuted rows])
+    fix u
+    show "ltr_collect (declared_global p) (prog_cfg p) (cinit_stores (declared_global p)) u
+            \<subseteq> \<lbrakk>case lookup_context (analyse_int_per_origin_result p) u () of
+                  Bot \<Rightarrow> bot | Lifted st \<Rightarrow> st\<rbrakk>"
+      using int_po_asm.result_node_sound [OF solves cover, of u]
+      by (simp add: int_po_asm.state_at_unfold analyse_int_per_origin_result_def
+          analyse_int_per_origin_result_for_def int_po_result_def)
+  qed
+qed
+
+theorem run_voblint_int_wpo_source_sound:
+  fixes p :: imp_prog and s0 s :: store
+  assumes wf: "wf_compile_input (declared_global p) (prog_table p) (prog_procs p)"
+      and s0: "s0 \<in> cinit_stores (declared_global p)"
+      and run: "star (pstep (declared_global p) (prog_table p))
+                  (main_body (prog_table p), s0, []) (residual, s, frs)"
+      and solves: "int_wpo_terminates (declared_global p) p"
+      and cover: "vars_cover (prog_cfg p) (int_wpo_vars (declared_global p) p)"
+      and ans: "run_voblint Int_Analysis (Some Solver_WarrowPerOrigin) Ctx_None view p
+                  = Analysed out"
+  shows "\<exists>v stk.
+           csim (prog_table p) (prog_cfg p) (residual, s, frs) (v, s, stk)
+         \<and> s \<in> ltr_collect (declared_global p) (prog_cfg p)
+                   (cinit_stores (declared_global p)) v
+         \<and> (\<forall>row \<in> set (out_checks out). row_point row = v \<longrightarrow>
+              (row_verdict row = Lifted Check_Proved \<longrightarrow> truthy (aval (row_exp row) s))
+            \<and> (row_verdict row = Lifted Check_Refuted \<longrightarrow> \<not> truthy (aval (row_exp row) s))
+            \<and> row_verdict row \<noteq> Bot)"
+proof -
+  from ans
+  have "flat_output_of view IntDomValue int_classify_check bot
+          (analyse_int_wpo_result p)
+          (unit_seed_globals IntDomValue (analyse_int_wpo_result p) p) p = Analysed out"
+    by (simp add: run_voblint_def mk_analysis_config_def plan_answer_def Let_def
+        split: if_splits)
+  note rows = out_checks_of_flat_output [OF this]
+  show ?thesis
+  proof (rule flat_source_sound_of_collect
+      [OF wf s0 run _ int_classify_check_proved int_classify_check_refuted rows])
+    fix u
+    show "ltr_collect (declared_global p) (prog_cfg p) (cinit_stores (declared_global p)) u
+            \<subseteq> \<lbrakk>case lookup_context (analyse_int_wpo_result p) u () of
+                  Bot \<Rightarrow> bot | Lifted st \<Rightarrow> st\<rbrakk>"
+      using int_wpo_asm.result_node_sound [OF solves cover, of u]
+      by (simp add: int_wpo_asm.state_at_unfold analyse_int_wpo_result_def
+          analyse_int_wpo_result_for_def int_wpo_result_def)
+  qed
+qed
+
 text \<open>
   What a dead row claims, stated at the node rather than at a run.  The endpoint
   above is existential in its witness, so reading it backwards --- "this row is
