@@ -48,7 +48,8 @@ lemma loop_cfg_exit [simp]: "cfg_exit loop_cfg = FunctionResult (STR ''main'')"
   by (simp add: loop_cfg_full cfg_exit_def)
 
 definition loop_ivl_eqs ::
-    "(pp \<times> unit, (unit, unit) routed_gk, (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state) eqsT" where
+    "(pp \<times> unit, (unit, unit) routed_gk,
+      (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state) eqsT" where
   "loop_ivl_eqs = interval_conf_eqs_prog loop_gs loop_prog"
 
 text \<open>One projection, reused by every engine below: take a solved D/G slot's local
@@ -60,20 +61,25 @@ definition loop_read_x ::
      case_lifted bot (\<lambda>q. lookup_resolved_st_q q (location_of loop_gs (STR ''x''))) (locals d)"
 
 definition loop_sig0 ::
-    "pp \<times> unit + (unit, unit) routed_gk \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state" where
+    "pp \<times> unit + (unit, unit) routed_gk
+       \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state" where
   "loop_sig0 = (\<lambda>_. bot)"
 
 definition loop_kleene_step ::
     "(pp \<times> unit + (unit, unit) routed_gk \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)
-       \<Rightarrow> (pp \<times> unit + (unit, unit) routed_gk \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)" where
+       \<Rightarrow> (pp \<times> unit + (unit, unit) routed_gk
+          \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)" where
   "loop_kleene_step sig =
      (\<lambda>k. case k of
         Inl v \<Rightarrow> eq loop_ivl_eqs v sig
       | Inr g \<Rightarrow> sig (Inr g))"
 
 fun loop_iter_sig ::
-    "nat \<Rightarrow> (pp \<times> unit + (unit, unit) routed_gk \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)
-       \<Rightarrow> (pp \<times> unit + (unit, unit) routed_gk \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)" where
+    "nat
+       \<Rightarrow> (pp \<times> unit + (unit, unit) routed_gk
+          \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)
+       \<Rightarrow> (pp \<times> unit + (unit, unit) routed_gk
+          \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)" where
   "loop_iter_sig 0 sig = sig"
 | "loop_iter_sig (Suc n) sig = loop_iter_sig n (loop_kleene_step sig)"
 
@@ -92,7 +98,8 @@ lemma loop_body_ivl:
 
 definition loop_ivl_td_sol ::
     "(pp \<times> unit) set
-       \<times> (pp \<times> unit + (unit, unit) routed_gk \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)" where
+       \<times> (pp \<times> unit + (unit, unit) routed_gk
+          \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)" where
   "loop_ivl_td_sol = interval_conf_sol_prog_warrow loop_gs loop_prog"
 
 definition loop_ivl_td_at :: "pp \<Rightarrow> ivl" where
@@ -144,7 +151,7 @@ lemma loop_head_warrow_per_origin:
 subsection \<open>Whole-program entry points, and a second program\<close>
 
 text \<open>
-  \<open>analyse_interval_join_result_for\<close> and \<open>analyse_interval_td_result_for\<close>
+  \<open>analyse_interval_result_join_for\<close> and \<open>analyse_interval_result_for\<close>
   (\<open>Interval_Checks\<close>) are the whole-program convenience layer over the very
   \<^const>\<open>interval_conf_eqs_prog\<close> system \<open>loop_ivl_eqs\<close> above is, under the join and the
   Apinis-warrowing update rule respectively. A different program from
@@ -162,7 +169,7 @@ lemma analyse_interval_demo2_terminates:
 definition analyse_interval_demo2_env :: "vname \<Rightarrow> ivl" where
   "analyse_interval_demo2_env =
      (case lookup_context
-             (analyse_interval_join_result analyse_interval_demo2_prog)
+             (analyse_interval_result_join analyse_interval_demo2_prog)
              (cfg_exit (prog_cfg analyse_interval_demo2_prog)) () of
         Bot \<Rightarrow> bot | Lifted st \<Rightarrow> st)"
 
@@ -171,7 +178,7 @@ lemma analyse_interval_demo2_result:
   by (simp add: analyse_interval_demo2_env_def) eval
 
 text \<open>
-  \<open>analyse_interval_td_result_for\<close> mirrors \<open>analyse_interval_join_result_for\<close>
+  \<open>analyse_interval_result_for\<close> mirrors \<open>analyse_interval_result_join_for\<close>
   but solves via the warrowing rule \<open>loop_ivl_td_sol\<close> uses above. On this
   program the two agree exactly.
 \<close>
@@ -179,7 +186,7 @@ text \<open>
 definition analyse_interval_td_demo2_env :: "vname \<Rightarrow> ivl" where
   "analyse_interval_td_demo2_env =
      (case lookup_context
-             (analyse_interval_td_result analyse_interval_demo2_prog)
+             (analyse_interval_result analyse_interval_demo2_prog)
              (cfg_exit (prog_cfg analyse_interval_demo2_prog)) () of
         Bot \<Rightarrow> bot | Lifted st \<Rightarrow> st)"
 
@@ -192,7 +199,7 @@ subsection \<open>Executable code generation\<close>
 text \<open>
   No per-domain \<open>export_code\<close> here.  External callers reach the Interval
   analysis through the unified dispatcher \<open>analyse\<close> (\<open>Analyse_Dispatch\<close>,
-  which routes \<open>Interval_Analysis\<close> to \<open>analyse_interval_td_report\<close>); a
+  which routes \<open>Interval_Analysis\<close> to \<open>analyse_interval_report\<close>); a
   second, domain-specific export module would just be a parallel, redundant
   API surface for the same computation.
 \<close>

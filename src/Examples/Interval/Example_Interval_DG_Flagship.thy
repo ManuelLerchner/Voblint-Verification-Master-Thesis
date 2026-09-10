@@ -1,44 +1,15 @@
 section \<open>Flagship: interval analysis of a counting loop, executed and certified on the D/G spine\<close>
 
 text \<open>
-  \<^bold>\<open>The complete story in one self-contained theory.\<close>  A VIMP program (given inline
-  below) is compiled to a CFG; the generic D/G framework generates an equation
-  system; the \<^emph>\<open>verified\<close> top-down solver \<^emph>\<open>computes\<close> an interval solution inside
-  Isabelle (with interval widening for termination); and the single registered
-  endpoint \<open>flagship_ex_reg.run_source_sound\<close> turns that computed solution directly
-  into a source-level guarantee.
-
-  \<^verbatim>\<open>
-       VIMP source
-            |  compile_prog
-            v
-          CFG
-            |  flagship_ex_reg.routed_eqs, executable D/G specification
-            v
-    D/G equation system
-            |  verified solver, by eval
-            v
-   computed interval solution  sigma
-            |  flagship_ex_reg.run_source_sound
-            v
-   every VIMP source run is bounded by sigma, read through flagship_ex_reg.gamma
-  \<close>
-
-  \<^bold>\<open>Every step is machine-checked, and the result is informative:\<close> the analysis
-  discovers the loop invariant \<open>x in [0,20]\<close>, the body bound \<open>x in [0,19]\<close>, and the
-  exact exit value \<open>x in [20,20]\<close> --- not \<open>top\<close>.  \<open>flagship_ex_reg.run_source_sound\<close>
-  bundles executable/pure commutation, D/G collecting soundness, and the
-  compiler-correctness simulation into one application, so none of those
-  intermediate obligations appear in this file's own proofs -- the solved
-  system is never transported to the abstract carrier; the registration
-  locale proves soundness directly at the executable one.  A later
-  subsection exhibits an explicit reachable state so the guarantee is visibly
-  \<^emph>\<open>not vacuous\<close>, reusing the native interval D/G locale from \<open>Interval_DG\<close>; the
-  final subsection emits an analysis-annotated GraphViz rendering.
-
-  It reuses, without duplicating: the executable interval transfer \<open>ivl_tf_st_for\<close>
-  (\<open>Interval_Exec\<close>), the registration locale \<open>ownership_split_dg_exec_analysis\<close>
-  (\<open>Run_Analysis_Sound\<close>), and the vendored warrowing solver.
+  A bounded counting loop is compiled to a CFG, the D/G framework turns that graph into
+  an equation system, the verified seed-joining warrowing solver computes an interval
+  solution for it inside Isabelle, and one registered endpoint turns that solution into
+  a statement about every VIMP run of the source: \<open>flagship_source_run_sound\<close> bounds
+  every store a run reaches by the computed interval at its matched program point.
+  The bound is informative --- \<open>x in [0,20]\<close> at the loop head, \<open>[0,19]\<close> in the body,
+  \<open>[20,20]\<close> on exit --- and \<open>flagship_head_bound_proper\<close> exhibits a store it rejects.
+  Nothing here is duplicated: the executable transfer \<open>ivl_tf_st_for\<close> and the
+  registration locale \<open>ownership_split_dg_exec_analysis\<close> are reused as they stand.
 \<close>
 
 theory Example_Interval_DG_Flagship
@@ -53,14 +24,19 @@ theory Example_Interval_DG_Flagship
     "Voblint_Examples_CFG.Example_Compile_Call_Free"
 begin
 
-(* Disambiguate our N constructor from the phase datatype constructor. *)
-hide_const phase.N
+text \<open>The phase datatype's constructor \<open>N\<close> would shadow the numeral
+  constructor the source program below is written with.\<close>
+hide_const (open) phase.N
+
 subsection \<open>The VIMP source program\<close>
 
 text \<open>
   A bounded counting loop: initialise \<open>x\<close> to \<open>0\<close>, increment while \<open>x < 20\<close>.  On
   exit \<open>x = 20\<close>.  No procedures, no globals; \<open>x\<close> is a single flow-sensitive local.
   The analysis must \<^emph>\<open>discover\<close> the bound, not assume it.
+  \<open>Example_Interval_Loop_Coverage\<close> carries the same loop under the name
+  \<open>loop_prog\<close> and reads it backwards through the guard instead of forwards
+  on the D/G spine.
 \<close>
 
 definition flagship_prog :: imp_prog where
@@ -81,7 +57,7 @@ text \<open>
   continuation-passing compiler needs no separate join node), the guard \<open>x < 20\<close> branches
   to body \<open>2\<close> or exit \<open>3\<close>, and the increment at \<open>2\<close> jumps back to \<open>1\<close>.  \<open>flagship_cfg\<close>
   is the compilation itself, so the shape lemmas below read off the compiled graph
-  rather than a hand-written one; the annotated rendering is in section 10.
+  rather than a hand-written one.
 \<close>
 
 text \<open>The declaration environment holds exactly \<open>main\<close>: there are no other procedures, and
@@ -117,7 +93,7 @@ text \<open>
   Intervals form the diagonal D/G analysis \<open>D = G = ivl abs_state\<close>, with executable
   mirror \<open>ownership_split_dg_spec_st_for flagship_gs (ivl_tf_st_for flagship_gs)\<close>.  The
   registration \<^locale>\<open>ownership_split_dg_exec_analysis\<close> --- interpreted as \<open>flagship_ex_reg\<close>
-  below, at this file's own classifier \<open>flagship_gs\<close>, from \<open>ivl_is_sound_transfer_for\<close>
+  below, at this file's own classifier \<open>flagship_gs\<close>, from \<open>ivl_tf.is_sound_transfer_for\<close>
   and \<open>ivl_tf_st_for_commute\<close> alone --- discharges the transport, soundness, and
   solver-crossing obligations generically.  This example supplies only the program,
   the executable solve, and the coverage witnesses.
@@ -147,7 +123,7 @@ proof -
   interpret flagship_ex_transfer: sound_transfer_for flagship_gs
       skip_ivl assign_ivl special_ivl branch_ivl body_ivl return_ivl
       "enter_ivl_ci_for flagship_gs" event_ivl
-    by (rule ivl_is_sound_transfer_for)
+    by (rule ivl_tf.is_sound_transfer_for)
   show "ownership_split_dg_exec_analysis flagship_gs
           skip_ivl assign_ivl special_ivl branch_ivl body_ivl return_ivl
           (enter_ivl_ci_for flagship_gs) event_ivl
@@ -160,7 +136,7 @@ proof -
              flagship_ex_transfer.tf_sound_assign_for flagship_ex_transfer.tf_sound_special_for
              flagship_ex_transfer.tf_sound_branch_for
              flagship_ex_transfer.tf_sound_enter_entry_for
-             ivl_tf_st_for_commute[unfolded ivl_tf_abs_def, folded fun_of_exec_dg_st_for_def]
+             ivl_tf_st_for_commute[unfolded ivl_tf.tf_abs_def, folded fun_of_exec_dg_st_for_def]
              ivl_enter_st_for_commute[folded fun_of_exec_dg_st_for_def]
              TD_side_seed_join_warrowing_Interp.part_post_solution_of_solve_c
         | assumption)+
@@ -180,7 +156,8 @@ text \<open>
 
 definition flagship_eqs ::
   "pp \<times> unit
-   \<Rightarrow> (pp \<times> unit, (unit, unit) routed_gk, (ivl exec_dg_st, ivl exec_dg_st) dg_state) strategy_tree" where
+   \<Rightarrow> (pp \<times> unit, (unit, unit) routed_gk,
+       (ivl exec_dg_st, ivl exec_dg_st) dg_state) strategy_tree" where
   "flagship_eqs = flagship_ex_reg.routed_eqs flagship_pi (prog_procs flagship_prog)
                     bot cinit_ivl_st (restrict_global_resolved_q cinit_ivl_st)"
 
@@ -229,9 +206,10 @@ proof -
           (fun_of_exec_dg_st_for flagship_gs (restrict_global_resolved_q cinit_ivl_st))
         = fun_of_exec_dg_st_for flagship_gs cinit_ivl_st"
     by (simp add: combine_env_def fun_of_exec_dg_st_for_def fun_of_st_cinit_ivl_st_for
-                  restrict_global_for_def declared_global_def fun_eq_iff)
+                  restrict_global_for_def fun_eq_iff)
   thus ?thesis
-    by (auto simp: cinit_stores_def gamma_state_def fun_of_exec_dg_st_for_def fun_of_st_cinit_ivl_st_for)
+    by (auto simp: cinit_stores_def gamma_state_def fun_of_exec_dg_st_for_def
+                   fun_of_st_cinit_ivl_st_for)
 qed
 
 text \<open>
@@ -243,15 +221,18 @@ text \<open>
 subsection \<open>Inspecting the certified result\<close>
 
 lemma flagship_head_computed:
-  "flagship_lookup (locals (snd flagship_sol (Inl (Statement 1, ())))) (STR ''x'') = Ivl (Fin 0) (Fin 20)"
+  "flagship_lookup (locals (snd flagship_sol (Inl (Statement 1, ())))) (STR ''x'')
+     = Ivl (Fin 0) (Fin 20)"
   unfolding flagship_sol_def flagship_eqs_def by eval
 
 lemma flagship_body_computed:
-  "flagship_lookup (locals (snd flagship_sol (Inl (Statement 2, ())))) (STR ''x'') = Ivl (Fin 0) (Fin 19)"
+  "flagship_lookup (locals (snd flagship_sol (Inl (Statement 2, ())))) (STR ''x'')
+     = Ivl (Fin 0) (Fin 19)"
   unfolding flagship_sol_def flagship_eqs_def by eval
 
 lemma flagship_exit_computed:
-  "flagship_lookup (locals (snd flagship_sol (Inl (Statement 3, ())))) (STR ''x'') = Ivl (Fin 20) (Fin 20)"
+  "flagship_lookup (locals (snd flagship_sol (Inl (Statement 3, ())))) (STR ''x'')
+     = Ivl (Fin 20) (Fin 20)"
   unfolding flagship_sol_def flagship_eqs_def by eval
 
 
@@ -268,12 +249,14 @@ lemma flagship_wf:
   by (auto simp: wf_compile_input_simps flagship_pi_def flagship_prog_def split: if_splits)
 
 theorem flagship_source_run_sound:
-  assumes run: "star (pstep flagship_gs flagship_pi) (prog_main flagship_prog, s, []) (residual, t, frs)"
+  assumes run: "star (pstep flagship_gs flagship_pi)
+                  (prog_main flagship_prog, s, []) (residual, t, frs)"
       and init: "s \<in> cinit_stores flagship_gs"
   shows "\<exists>v stk. csim flagship_pi flagship_cfg (residual, t, frs) (v, t, stk)
                  \<and> t \<in> flagship_ex_reg.gamma (fst flagship_sol) (snd flagship_sol) v"
 proof -
-  have run': "star (pstep flagship_gs flagship_pi) (main_body flagship_pi, s, []) (residual, t, frs)"
+  have run': "star (pstep flagship_gs flagship_pi)
+                (main_body flagship_pi, s, []) (residual, t, frs)"
     using run by (simp add: flagship_pi_def)
   show ?thesis
     unfolding flagship_sol_def flagship_eqs_def flagship_cfg_def
@@ -282,7 +265,8 @@ proof -
               flagship_wf
               flagship_vars_cover[unfolded flagship_sol_def flagship_eqs_def flagship_cfg_def]
               flagship.finite_intra[unfolded flagship_cfg_def]
-              flagship_sound0[folded gamma_ownership_split_def, folded flagship_ex_reg.gamma_ownership_split_exec_def]
+              flagship_sound0[folded gamma_ownership_split_def,
+                              folded flagship_ex_reg.gamma_ownership_split_exec_def]
               init run'])
 qed
 
@@ -304,7 +288,7 @@ lemma glob_x_at_head:
   unfolding flagship_sol_def flagship_eqs_def by eval
 
 lemma flagship_x_not_global: "\<not> flagship_gs (STR ''x'')"
-  unfolding flagship_pi_def flagship_prog_def by (simp add: declared_global_def)
+  unfolding flagship_pi_def flagship_prog_def by simp
 
 lemma head_x_bound:
   "combine_env flagship_gs
@@ -312,28 +296,31 @@ lemma head_x_bound:
      (globs ((fun_of_dg_st_for flagship_gs \<circ> snd flagship_sol) (Inr (Analysis_Global ()))))
        (STR ''x'') = Ivl (Fin 0) (Fin 20)"
 proof -
-  have L: "flagship_fun_of (locals (snd flagship_sol (Inl (Statement (Suc 0), ())))) (STR ''x'') = Ivl (Fin 0) (Fin 20)"
+  have L: "flagship_fun_of (locals (snd flagship_sol (Inl (Statement (Suc 0), ()))))
+             (STR ''x'') = Ivl (Fin 0) (Fin 20)"
     using flagship_head_computed
     by (simp add: fun_of_resolved_st_q_for_def)
   have C: "combine_env flagship_gs
              (flagship_fun_of (locals (snd flagship_sol (Inl (Statement (Suc 0), ())))))
-             (flagship_fun_of (globs (snd flagship_sol (Inr (Analysis_Global ()))))) (STR ''x'')
-           = flagship_fun_of (locals (snd flagship_sol (Inl (Statement (Suc 0), ())))) (STR ''x'')"
+             (flagship_fun_of (globs (snd flagship_sol (Inr (Analysis_Global ())))))
+               (STR ''x'')
+           = flagship_fun_of (locals (snd flagship_sol (Inl (Statement (Suc 0), ()))))
+               (STR ''x'')"
     by (rule combine_env_local_eq[where gs = flagship_gs and x = "STR ''x''",
           OF flagship_x_not_global])
   show ?thesis
-    by (metis (no_types, opaque_lifting) C L comp_apply fun_of_dg_st_for_simps(1,2)
-        fun_of_exec_dg_st_for_def)
+    by (simp only: comp_apply fun_of_dg_st_for_simps(1,2) fun_of_exec_dg_st_for_def C L)
 qed
 
 theorem flagship_head_bound_proper:
   "(\<lambda>_. 100) \<notin> flagship_ex_reg.gamma_ownership_split_exec
                  (locals (snd flagship_sol (Inl (Statement (Suc 0), ()))))
                  (globs (snd flagship_sol (Inr (Analysis_Global ()))))"
-  unfolding flagship_ex_reg.gamma_ownership_split_exec_def gamma_ownership_split_def gamma_state_def
+  unfolding flagship_ex_reg.gamma_ownership_split_exec_def gamma_ownership_split_def
+            gamma_state_def
   apply (simp only: mem_Collect_eq not_all)
   apply (rule exI[of _ "(STR ''x'')"])
-  using head_x_bound apply (simp add: fun_of_dg_st_for_simps combine_env_def)
+  using head_x_bound apply (simp add: combine_env_def)
   done
 
 end

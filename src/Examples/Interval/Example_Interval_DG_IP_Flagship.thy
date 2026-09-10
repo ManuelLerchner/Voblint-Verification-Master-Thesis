@@ -69,9 +69,11 @@ lemma twice_calls_shape:
   "\<forall>(u, ca, ce, cont) \<in> calls twice_cfg.
      case ca of CallEdge dst pars args \<Rightarrow>
        (case ce of FunctionEntry p \<Rightarrow>
-          (u = Statement 2 \<and> dst = Some (STR ''x'') \<and> pars = [(STR ''p'')] \<and> args = [VIMP_Syntax.N 3]
+          (u = Statement 2 \<and> dst = Some (STR ''x'') \<and> pars = [(STR ''p'')]
+             \<and> args = [VIMP_Syntax.N 3]
              \<and> p = (STR ''twice'') \<and> cont = Statement 3) \<or>
-          (u = Statement 3 \<and> dst = Some (STR ''y'') \<and> pars = [(STR ''p'')] \<and> args = [VIMP_Syntax.N 10]
+          (u = Statement 3 \<and> dst = Some (STR ''y'') \<and> pars = [(STR ''p'')]
+             \<and> args = [VIMP_Syntax.N 10]
              \<and> p = (STR ''twice'') \<and> cont = Statement 4)
         | _ \<Rightarrow> True)"
   unfolding twice_cfg_def by eval
@@ -91,7 +93,7 @@ text \<open>
   Intervals form the diagonal D/G analysis \<open>D = G = ivl abs_state\<close>, with executable
   mirror \<open>ownership_split_dg_spec_st_for twice_gs (ivl_tf_st_for twice_gs)\<close>.  The registration
   \<^locale>\<open>ownership_split_dg_exec_analysis\<close> --- interpreted as \<open>twice_ex_reg\<close> below, at this
-  file's own classifier \<open>twice_gs\<close>, from \<open>ivl_is_sound_transfer_for\<close> and
+  file's own classifier \<open>twice_gs\<close>, from \<open>ivl_tf.is_sound_transfer_for\<close> and
   \<open>ivl_tf_st_for_commute\<close> alone --- discharges the transport, soundness, and
   solver-crossing obligations generically.  This example supplies only the program,
   the executable solve, and the coverage witnesses.
@@ -120,7 +122,7 @@ proof -
   interpret twice_transfer: sound_transfer_for twice_gs
       skip_ivl assign_ivl special_ivl branch_ivl body_ivl return_ivl
       "enter_ivl_ci_for twice_gs" event_ivl
-    by (rule ivl_is_sound_transfer_for)
+    by (rule ivl_tf.is_sound_transfer_for)
   show "ownership_split_dg_exec_analysis twice_gs
           skip_ivl assign_ivl special_ivl branch_ivl body_ivl return_ivl
           (enter_ivl_ci_for twice_gs) event_ivl
@@ -133,7 +135,7 @@ proof -
              twice_transfer.tf_sound_assign_for twice_transfer.tf_sound_special_for
              twice_transfer.tf_sound_branch_for
              twice_transfer.tf_sound_enter_entry_for
-             ivl_tf_st_for_commute[unfolded ivl_tf_abs_def, folded fun_of_exec_dg_st_for_def]
+             ivl_tf_st_for_commute[unfolded ivl_tf.tf_abs_def, folded fun_of_exec_dg_st_for_def]
              ivl_enter_st_for_commute[folded fun_of_exec_dg_st_for_def]
              TD_side_seed_join_warrowing_Interp.part_post_solution_of_solve_c
         | assumption)+
@@ -148,7 +150,8 @@ text \<open>The registration locale owns the equation system: \<open>twice_eqs\<
 
 definition twice_eqs ::
   "pp \<times> unit
-   \<Rightarrow> (pp \<times> unit, (unit, unit) routed_gk, (ivl exec_dg_st, ivl exec_dg_st) dg_state) strategy_tree" where
+   \<Rightarrow> (pp \<times> unit, (unit, unit) routed_gk,
+       (ivl exec_dg_st, ivl exec_dg_st) dg_state) strategy_tree" where
   "twice_eqs = twice_ex_reg.routed_eqs twice_pi twice_procs
                  bot cinit_ivl_st (restrict_global_resolved_q cinit_ivl_st)"
 
@@ -188,9 +191,10 @@ proof -
           (fun_of_exec_dg_st_for twice_gs (restrict_global_resolved_q cinit_ivl_st))
         = fun_of_exec_dg_st_for twice_gs cinit_ivl_st"
     by (simp add: combine_env_def fun_of_exec_dg_st_for_def fun_of_st_cinit_ivl_st_for
-                  restrict_global_for_def declared_global_def fun_eq_iff)
+                  restrict_global_for_def fun_eq_iff)
   thus ?thesis
-    by (auto simp: cinit_stores_def gamma_state_def fun_of_exec_dg_st_for_def fun_of_st_cinit_ivl_st_for)
+    by (auto simp: cinit_stores_def gamma_state_def fun_of_exec_dg_st_for_def
+                   fun_of_st_cinit_ivl_st_for)
 qed
 
 text \<open>
@@ -250,7 +254,8 @@ proof -
               twice_wf
               twice_vars_cover[unfolded twice_sol_def twice_eqs_def twice_cfg_def]
               twice_finE[unfolded twice_cfg_def]
-              twice_sound0[folded gamma_ownership_split_def, folded twice_ex_reg.gamma_ownership_split_exec_def]
+              twice_sound0[folded gamma_ownership_split_def,
+                           folded twice_ex_reg.gamma_ownership_split_exec_def]
               init run'])
   show ?thesis using cert src' by blast
 qed

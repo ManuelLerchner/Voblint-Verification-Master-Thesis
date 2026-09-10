@@ -1,18 +1,31 @@
 theory Example_Int_Warrowing
-  imports Voblint_Analysis_Int.Int_Warrowing Voblint_Analysis_Int.Int_Refinement
+  imports
+    Voblint_Analysis_Int.Int_Warrowing
+    Voblint_Analysis_Int.Int_Refinement_Control
 begin
 
-section \<open>Composite widening and narrowing: examples\<close>
+section \<open>Where the composite widens and narrows, and where it must not refine\<close>
+
+text \<open>
+  Widening and narrowing on the product are the four components' own operators
+  applied side by side, with nothing run afterward to reconcile them. This
+  theory pins that by \<open>eval\<close> in both directions, cites the \<open>warrowing\<close> class
+  laws at \<open>int_dom\<close> so they hold for every pair rather than these examples, and
+  then exhibits the concrete state that makes the omission necessary: refining
+  after a narrow would break the solver's \<open>narrow_ge\<close> bracket. Vocabulary:
+  \<open>int_dom_sipc s i p c\<close> overwrites \<open>top\<close> in the order sign, interval, parity,
+  congruence, and \<open>mk_congruence c m\<close> is the residue class of \<open>c\<close> modulo \<open>m\<close>.
+\<close>
 
 subsection \<open>Widening is exactly componentwise\<close>
 
 text \<open>
   Each component's own accelerating \<open>widen\<close> surfaces through unchanged:
   Interval jumps a growing upper bound straight to \<open>PlusInf\<close>
-  (\<open>widen_ivl_core\<close>, \<open>Interval_Warrowing\<close>) rather than merely joining
-  to \<open>[1,3]\<close>, while Sign, Parity, and Congruence -- whose own widening is
-  plain join -- stay at their shared value. No cross-component step runs
-  afterward.
+  (\<^const>\<open>widen_ivl_core\<close>, \<^theory>\<open>Voblint_Analysis_Interval.Interval_Warrowing\<close>)
+  rather than merely joining to \<open>[1,3]\<close>, while Sign, Parity, and Congruence --
+  whose own widening is plain join -- stay at their shared value. No
+  cross-component step runs afterward.
 \<close>
 
 lemma widen_int_dom_componentwise_regression:
@@ -26,10 +39,12 @@ subsection \<open>Narrowing is exactly componentwise\<close>
 
 text \<open>
   Sign, Parity, and Congruence all choose the conservative \<open>narrow a b = a\<close>
-  (\<open>Sign_Lattice\<close>, \<open>Parity_Domain\<close>, \<open>Congruence_Warrowing\<close>):
+  (\<^theory>\<open>Voblint_Analysis_Sign.Sign_Lattice\<close>,
+  \<^theory>\<open>Voblint_Analysis_Parity.Parity_Domain\<close>,
+  \<^theory>\<open>Voblint_Analysis_Congruence.Congruence_Warrowing\<close>):
   once widened, they never narrow back, which trivially satisfies
   \<open>narrow_ge\<close>/\<open>narrow_le\<close> without needing anything about their own
-  structure. Interval's \<open>narrow_ivl_td\<close> does real work, recovering a
+  structure. Interval's \<^const>\<open>narrow_ivl_td\<close> does real work, recovering a
   finite bound from an infinite one. The composite record update runs no
   refinement afterward, so Sign and Parity stay exactly where widening
   left them even though Interval and the guard both already point at a
@@ -43,14 +58,14 @@ lemma narrow_int_dom_componentwise_regression:
    int_dom_sipc STop (Ivl (Fin (-1)) (Fin 0)) PTop (top :: congruence)"
   by eval
 
-subsection \<open>The composite \<open>bounded_warrowing\<close> laws hold generically\<close>
+subsection \<open>The composite \<open>warrowing\<close> laws hold generically\<close>
 
 text \<open>
   Not just spot-checked by \<open>eval\<close> at one instance: these cite the
   \<open>warrowing\<close> class facts directly at \<open>int_dom\<close>, witnessing that the
   \<open>instantiation int_dom_ext :: (int_dom_record_warrowing) warrowing\<close>
-  block in \<open>Int_Warrowing\<close> actually resolves and discharges its
-  obligations for every \<open>a\<close>, \<open>b\<close>, not only the examples above.
+  block in \<^theory>\<open>Voblint_Analysis_Int.Int_Warrowing\<close> actually resolves and
+  discharges its obligations for every \<open>a\<close>, \<open>b\<close>, not only the examples above.
 \<close>
 
 lemma int_dom_widen_ge1: "(a :: int_dom) \<le> widen a b"
@@ -68,18 +83,18 @@ lemma int_dom_narrow_le: "(b :: int_dom) \<le> a \<Longrightarrow> narrow a b \<
 subsection \<open>Why post-narrow refinement would break \<open>narrow_ge\<close>\<close>
 
 text \<open>
-  The concrete counterexample behind \<open>Int_Warrowing\<close>'s design comment.
-  \<open>a\<close> is a widened solver state (top); \<open>b\<close> is a newer, more precise result
-  that is not refinement-stable -- \<open>STop \<times> [-1,0] \<times> PEven \<times> top\<close> already
-  denotes only concrete values with even parity in \<open>[-1,0]\<close>, i.e. \<open>{0}\<close>,
-  but Sign has not caught up. Componentwise narrowing recovers Interval's
-  bound and leaves everything else at \<open>a\<close>'s value, satisfying \<open>b \<le> narrow
-  a b \<le> a\<close> exactly as required. Running \<open>Refine_Once\<close> on top of that
-  narrowing result -- the Goblint-style move this theory deliberately does
-  not make -- lets Sign's own cross-component derivation from the now-exact
-  Interval bound produce \<open>SNonPos\<close>, which sits strictly below \<open>b\<close>'s own
-  \<open>STop\<close>: exactly the \<open>narrow_ge\<close> violation
-  \<open>Int_Warrowing\<close>'s header comment describes in the abstract.
+  The concrete counterexample behind the design comment in
+  \<^theory>\<open>Voblint_Analysis_Int.Int_Warrowing\<close>. \<open>a\<close> is a widened solver state
+  (top); \<open>b\<close> is a newer, more precise result that is not refinement-stable --
+  \<open>STop\<close>, \<open>[-1,0]\<close>, \<open>PEven\<close>, \<open>top\<close> together already denote only the concrete
+  values with even parity in \<open>[-1,0]\<close>, i.e. \<open>{0}\<close>, but Sign has not caught up.
+  Componentwise narrowing recovers Interval's bound and leaves everything else
+  at \<open>a\<close>'s value, satisfying \<open>b \<le> narrow a b \<le> a\<close> exactly as required.
+  Running \<open>Refine_Once\<close> on top of that narrowing result -- the Goblint-style
+  move this theory deliberately does not make -- lets Sign's own
+  cross-component derivation from the now-exact Interval bound produce
+  \<open>SNonPos\<close>, which sits strictly below \<open>b\<close>'s own \<open>STop\<close>: exactly the
+  \<open>narrow_ge\<close> violation that header comment describes in the abstract.
 \<close>
 
 lemma post_narrow_refinement_would_violate_narrow_ge:

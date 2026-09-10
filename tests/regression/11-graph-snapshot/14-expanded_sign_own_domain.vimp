@@ -1,19 +1,14 @@
-// PARAM: --analysis sign --context entry-state --context-graph collapsed
-// Regression for a silent wrong-output bug: the collapsed entry-state
-// GraphViz renderers took only an imp_prog and hard-wired Interval's own
-// result table, so --analysis sign --context entry-state --graph-snapshot
-// rendered Interval's states under a Sign banner -- node labels read
-// a=[9,9] rather than a=Positive. The four collapsed renderers now take an
-// analysis_domain and read the selected domain's own entry-state table.
-// This fixture pins that the rendering is Sign's: the labels below are
-// Sign values, and no interval notation appears anywhere in the graph.
-// Collapsed rendering is domain-generic because lookup_joined_state joins
-// a point's covered contexts away before the renderer sees them, leaving
-// an ordinary per-node abs_state that projects into abstract_value -- the
-// same projection the monovariant renderer already used. --context-graph
-// collapsed is explicit here because an entry-state run is drawn expanded
-// by default; 14-expanded_sign_own_domain.vimp pins that rendering, and the
-// pair together keep both renderers reading the selected domain's table.
+// PARAM: --analysis sign --context entry-state
+// The expanded rendering at a domain other than Interval, and the default
+// one: an entry-state run draws one node per (point, context) unless
+// --context-graph collapsed asks for the joined view. The routing decision
+// behind the enter edges is callee_ctx_of, taken once for every domain from
+// the solved result table; before that it existed only as an Interval-typed
+// mirror and every other domain was rejected outright.
+// Sign gives square one context, not two: the entry-state context is the
+// tuple of formals' abstract values, and 3 and 4 are both Positive, so the
+// two call sites route to the same activation. 15-expanded_int_own_domain
+// is the same program under Int, where they do not.
 // EXPECT-GRAPH-BEGIN
 // clusters:
 //   cluster_ctx_0:
@@ -31,21 +26,35 @@
 //
 // nodes:
 //   main_pp5_ctx0: pp5
+//       a=Positive
+//       b=Positive
 //       check 0<b
-//       a=Positive
-//       b=Positive
 //   main_pp6_ctx0: pp6
-//   main_result_main_ctx0: exit_main
-//   main_entry_main_ctx0: entry_main
-//   square_pp0_ctx1: pp0
-//   main_pp2_ctx0: pp2
-//   main_pp3_ctx0: pp3
-//   square_entry_square_ctx1: entry_square
-//   main_pp4_ctx0: pp4
-//       check 0<a
 //       a=Positive
 //       b=Positive
+//   main_result_main_ctx0: exit_main
+//       a=Positive
+//       b=Positive
+//   main_entry_main_ctx0: entry_main
+//       a=Top
+//       b=Top
+//   square_pp0_ctx1: pp0
+//       n=Positive
+//   main_pp2_ctx0: pp2
+//       a=Top
+//       b=Top
+//   main_pp3_ctx0: pp3
+//       a=Positive
+//       b=Top
+//   square_entry_square_ctx1: entry_square
+//       n=Positive
+//   main_pp4_ctx0: pp4
+//       a=Positive
+//       b=Positive
+//       check 0<a
 //   square_result_square_ctx1: exit_square
+//       n=Positive
+//       ret=Positive
 //
 // edges:
 //   main_pp5_ctx0 -> main_pp6_ctx0: check(0<b)
@@ -56,8 +65,8 @@
 //   main_pp4_ctx0 -> main_pp5_ctx0: check(0<a)
 //   main_pp2_ctx0 -> square_entry_square_ctx1: enter square(3)
 //   main_pp3_ctx0 -> square_entry_square_ctx1: enter square(4)
-//   square_result_square_ctx1 -> main_pp3_ctx0: combine a
-//   square_result_square_ctx1 -> main_pp4_ctx0: combine b
+//   square_result_square_ctx1 -> main_pp3_ctx0: combine a := #ret
+//   square_result_square_ctx1 -> main_pp4_ctx0: combine b := #ret
 //   main_pp2_ctx0 -> main_pp3_ctx0: call-to-return square
 //   main_pp3_ctx0 -> main_pp4_ctx0: call-to-return square
 // EXPECT-GRAPH-END

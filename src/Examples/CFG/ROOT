@@ -1,7 +1,7 @@
 session Voblint_Examples_CFG in "." = "Voblint_Compile" +
   description
-    "Domain-independent compiler and CFG witnesses: the shared call-free program
-     every domain's flagship run is stated over, a worked procedure compilation,
+    "Domain-independent compiler and CFG witnesses: the call-free compilation
+     theorem every domain's flagship run reuses, a worked procedure compilation,
      and the compiler/collecting-semantics regressions"
   theories
     Example_Inc_Proc

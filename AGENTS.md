@@ -357,7 +357,7 @@ runtime value -- the Isabelle analogue of Goblint's `Spec` module. Its unknown
 and global-key types occur only inside its transfer programs, never in an
 argument that builds it, so it has no most general ML type and the serializer
 rejects it with `includes a free type variable`. The rule is therefore
-uniform, and applies to concrete domain specifications (`sctx_spec`,
+uniform, and applies to concrete domain specifications (`sign_conf_spec`,
 `rel_order_spec`) exactly as it does to the generic builders in `DG_Spec`:
 
 > **A named `dg_spec` that can reach code generation declares its own `_def`

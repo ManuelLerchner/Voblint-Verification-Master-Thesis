@@ -155,7 +155,15 @@ side rather than the termination side. #108's G1-G5 plan (in the issue):
    `Dead` and is suppressed at the CLI, instead of classifying vacuously
    against `bot` and reporting a fabricated `Check_Proved`.
 5. **G5 -- CLI exposure + precision witness. Done, batch-green
-   (2026-08-11).** `--analysis interval --context entry-state` (default
+   (2026-08-11).** *2026-09-10: two of the restrictions below have lifted.
+   Every domain has an entry-state and a call-string instance, so
+   `--analysis sign --context entry-state` is a supported configuration;
+   and `--context-graph expanded` draws one node per `(pp, ctx)` pair for
+   all five, defaulting on under `--context entry-state`, because
+   `contexts_at` enumerates the solved table's own covered contexts and
+   needs no order on the context type -- which is what #112 was waiting
+   for. The rest of the entry stands.* `--analysis interval --context
+   entry-state` (default
    `--context none`, byte-identical to prior behavior --
    `analyse_ctx_none_eq_analyse` pins the equivalence); `--analysis sign
    --context entry-state` is a checked, explicit unsupported-combination
@@ -334,11 +342,11 @@ classification (`Abstract_Numeric_Queries.thy`).
 Still open, and narrower than when it was written. The twelve-theory
 `Domain x Context` matrix it described is gone: each domain now has one
 `*_Sound` package and one `*_Analyses` configuration module, and the prefixes
-are `sctx_`, `interval_conf_`, `int_conf_` and `pctx_`. What remains is the
+are `sign_conf_`, `interval_conf_`, `int_conf_` and `parity_conf_`. What remains is the
 duplication this section is actually about -- the configuration family is still
 written out once per domain rather than derived once.
 
-`sctx_*`, `interval_conf_*`, `int_conf_*`, `pctx_*` and the `entry_state_*`
+`sign_conf_*`, `interval_conf_*`, `int_conf_*`, `parity_conf_*` and the `entry_state_*`
 family mirror each other across 23 suffixes -- `_eqs_prog`, `_sol_prog`,
 `_sol_prog_per_origin`, `_terminates_prog`, `_sg`, `_sg_covered`,
 `_sg_uncovered_empty`, `_sigma_abs`, `_fin`, `_finC` and the rest -- for a
@@ -349,9 +357,9 @@ copies. The bodies are character-identical modulo the domain type and the
 `_eqs_prog` they call:
 
 ```
-sctx_sol_prog          gs p = TD_side_always_join_Interp_solve (sctx_eqs_prog gs p)          (cfg_exit (prog_cfg p), ())
+sign_conf_sol_prog          gs p = TD_side_always_join_Interp_solve (sign_conf_eqs_prog gs p)          (cfg_exit (prog_cfg p), ())
 interval_conf_sol_prog gs p = TD_side_always_join_Interp_solve (interval_conf_eqs_prog gs p) (cfg_exit (prog_cfg p), ())
-pctx_sol_prog          gs p = TD_side_always_join_Interp_solve (pctx_eqs_prog gs p)          (cfg_exit (prog_cfg p), ())
+parity_conf_sol_prog          gs p = TD_side_always_join_Interp_solve (parity_conf_eqs_prog gs p)          (cfg_exit (prog_cfg p), ())
 ```
 
 A locale fixing `eqs_prog` and polymorphic in the domain would derive the

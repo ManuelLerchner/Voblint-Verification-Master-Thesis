@@ -2,13 +2,20 @@ theory Example_Compile_Regression
   imports "Voblint_Compile.Simulation_Relation" "Voblint_Compile.Compile_Invariants"
 begin
 
-section \<open>Examples: procedure-aware CFG compilation\<close>
+section \<open>What the compiler emits, and what it refuses to take\<close>
 
-text \<open>These witnesses build small hand-written commands rather than compiling a source
-  program, so there is no \<^const>\<open>declared_global\<close> table to read a classifier off; they
-  reuse the G-prefix convention directly as a fixed classifier.\<close>
+text \<open>
+  Two questions about the compiler, answered on hand-written commands.  Which node and
+  which edge does a source shape become: an early \<open>Return\<close> reaches the procedure result and
+  the code behind it gets no edge in, a call becomes a \<open>calls\<close> quadruple whose fourth
+  component is the caller's resume node, and a body that falls off its end still gets a
+  return edge.  And which programs does the input contract refuse outright: an unknown
+  callee, a mis-arity call, a reserved or global formal, a missing entry procedure, and the
+  runtime-only \<open>Restore\<close>/\<open>Unwind\<close> commands.  A hand-written command carries no
+  declared-globals table, so \<open>cr_gs\<close> names the one variable treated as global here.
+\<close>
 abbreviation cr_gs :: "vname \<Rightarrow> bool" where
-  "cr_gs \<equiv> (\<lambda>x. x \<noteq> STR '''' \<and> hd (String.explode x) = CHR ''G'')"
+  "cr_gs \<equiv> (\<lambda>x. x = STR ''Gx'')"
 
 lemma ex_return_before_dead:
   assumes "compile \<Pi> p (Seq (Return (Some e)) (Assign yv ay)) k n = (n', en, E, K)"
@@ -26,7 +33,9 @@ lemma ex_nested_calls:
   "(Statement n, CallEdge (Some r1) (call_formals \<Pi> p1) [], FunctionEntry p1, Statement (Suc n))
       \<in> snd (snd (snd (compile \<Pi> q (Seq (Call (Some r1) p1 []) (Call (Some r2) p2 []))
             (Statement (Suc (Suc (Suc n)))) n)))
-   \<and> (Statement (Suc n), CallEdge (Some r2) (call_formals \<Pi> p2) [], FunctionEntry p2, Statement (Suc (Suc (Suc n))))
+   \<and> (Statement (Suc n),
+        CallEdge (Some r2) (call_formals \<Pi> p2) [],
+        FunctionEntry p2, Statement (Suc (Suc (Suc n))))
       \<in> snd (snd (snd (compile \<Pi> q (Seq (Call (Some r1) p1 []) (Call (Some r2) p2 []))
             (Statement (Suc (Suc (Suc n)))) n)))
    \<and> Statement n \<noteq> Statement (Suc (Suc (Suc n)))"
@@ -163,12 +172,9 @@ definition fallthrough_pi :: proc_table where
   "fallthrough_pi p =
      (if p = (STR ''main'') then Some (\<lparr>formals = [], body = SKIP\<rparr>) else None)"
 
-lemma explode_ret_hd [simp]: "hd (String.explode (STR ''#ret'')) \<noteq> CHR ''G''" by eval
-
 lemma main_fallthrough_accepted:
   "wf_compile_input cr_gs fallthrough_pi []"
-  by (auto simp: wf_compile_input_simps wf_source_program_def fallthrough_pi_def
-        wf_proc_decl_def)
+  by (auto simp: wf_compile_input_simps fallthrough_pi_def)
 
 lemma missing_main_rejected:
   assumes "\<Pi> prog_main_name = None"
@@ -192,12 +198,12 @@ lemma unwind_not_source: "\<not> source_com Unwind"
 
 lemma restore_body_rejected:
   "\<Pi> prog_main_name = Some \<lparr>formals = [], body = Restore\<rparr>
-     \<Longrightarrow> ~ wf_compile_input is_global \<Pi> ps"
+     \<Longrightarrow> ~ wf_compile_input cr_gs \<Pi> ps"
   by (simp add: wf_compile_input_def wf_source_program_def main_body_def)
 
 lemma unwind_body_rejected:
   "\<Pi> prog_main_name = Some \<lparr>formals = [], body = Unwind\<rparr>
-     \<Longrightarrow> ~ wf_compile_input is_global \<Pi> ps"
+     \<Longrightarrow> ~ wf_compile_input cr_gs \<Pi> ps"
   by (simp add: wf_compile_input_def wf_source_program_def main_body_def)
 
 end

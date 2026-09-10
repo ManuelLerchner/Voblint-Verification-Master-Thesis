@@ -249,7 +249,7 @@ domains. Strongest evidence in the audit: after normalising the domain name,
 differing** (re-measured after `8e78f3a6`). The locale fixes four things
 (executable transfer mirror, executable enter, abstract transfer record, initial
 store) and assumes exactly the four facts each domain already proves. **The
-pattern already exists one axis over** — `ictx_solved`
+pattern already exists one axis over** — `int_conf_solved`
 (`Interval_Ctx_None_Sound.thy:152`) factors the *solver* axis this way, with four
 `global_interpretation`s over one locale. Do Sign+Parity first as a two-domain
 proof of concept, then Interval and Int.

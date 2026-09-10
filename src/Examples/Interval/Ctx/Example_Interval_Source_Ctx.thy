@@ -18,7 +18,8 @@ text \<open>
 
 text \<open>The analysis' own solved reader, abbreviated for the two statements below.\<close>
 
-abbreviation twice_ctx_sg :: "pp \<times> ivl list + (unit, ivl list) routed_gk \<Rightarrow> ivl exec_dg_st lifted" where
+abbreviation twice_ctx_sg ::
+  "pp \<times> ivl list + (unit, ivl list) routed_gk \<Rightarrow> ivl exec_dg_st lifted" where
   "twice_ctx_sg \<equiv> entry_state_sg_st_prog twice_gs twice_program"
 
 abbreviation twice_ctx_gamma :: "ivl exec_dg_st lifted \<Rightarrow> store set" where

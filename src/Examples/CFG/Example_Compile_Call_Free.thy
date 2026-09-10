@@ -73,7 +73,9 @@ theorem compile_prog_calls_empty:
 proof -
   obtain n1 Eprocs Kprocs n2 Emain Kmain where
       procs: "compile_procs \<Pi> ps 0 = (n1, Eprocs, Kprocs)"
-    and mainc: "compile_proc \<Pi> prog_main_name \<lparr>formals = [], body = main_body \<Pi>\<rparr> n1 = (n2, Emain, Kmain)"
+    and mainc: "compile_proc \<Pi> prog_main_name
+        \<lparr>formals = [], body = main_body \<Pi>\<rparr> n1
+      = (n2, Emain, Kmain)"
     and g: "calls (compile_prog \<Pi> ps) = Kprocs \<union> Kmain"
     by (rule compile_prog_intra_split)
   show ?thesis unfolding g

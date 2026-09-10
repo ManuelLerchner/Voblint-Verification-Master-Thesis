@@ -22,11 +22,10 @@ text \<open>
 subsection \<open>The demo program\<close>
 
 text \<open>
-  The Sign and Interval verdicts on this program (\<open>z < 0\<close>/\<open>0 < w\<close>, both proved) are
-  covered CLI-observably by \<^verbatim>\<open>tests/regression/14-min-max/precision/01-min_max_interval.vimp\<close>
-  and \<^verbatim>\<open>02-min_max_sign.vimp\<close>. What stays here is the parity claim below, which no
-  boolean check can express, and the wrong-arity rejection, which is a well-formedness
-  fact rather than an analysis verdict.
+  The CLI min/max regression group covers the proved Sign and Interval verdicts
+  for \<open>z < 0\<close> and \<open>0 < w\<close>. This theory retains the Parity claim, which no
+  boolean check can express, and wrong-arity rejection, which is a
+  well-formedness fact rather than an analysis verdict.
 \<close>
 
 definition min_max_demo_prog :: imp_prog where

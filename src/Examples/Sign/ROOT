@@ -15,3 +15,4 @@ session Voblint_Examples_Sign in "." = "Voblint_Analysis_Sign" +
     Example_Sign_DG_Overlapping_Enter
     Example_Sign_DG_CallString_K1
     Example_Sign_DG_CallString_K2
+    Example_Sign_Report_Regression

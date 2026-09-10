@@ -49,7 +49,7 @@ procedure call.
 | --- | --- | --- |
 | `Sign/` | Sign | codegen probes, procedure-call soundness spines |
 | `Interval/` | Interval | codegen probes, flagship D/G runs, context-sensitive (call-string) D/G, procedure-call spines, backward-analysis trace soundness |
-| `Congruence/` | Congruence | executable standalone arithmetic and backward-filtering regressions |
+| `Congruence/` | Congruence | end-to-end D/G run, arithmetic, and backward-filtering regressions |
 | `Parity/` | Parity | domain-registration validation flagship |
 | `Int/` | Sign x Interval x Parity x Congruence | composite-domain regressions and refinement-mode witnesses |
 | `Relational/` | relational | the generic pipeline and solver run against a non-`abs_state` order carrier |

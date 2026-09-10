@@ -80,6 +80,7 @@ text \<open>Selecting the first successor of the call site yields one fixed call
 lemma multi_call_naive_head_reconstruction_is_wrong_for_some_return:
   "let (_, ca, _) = hd (call_successor_list multi_call_cfg (Statement 0))
    in ca \<noteq> mc_ca1 \<or> ca \<noteq> mc_ca2"
-  using multi_call_shares_call_site(4) by (cases "hd (call_successor_list multi_call_cfg (Statement 0))") auto
+  using multi_call_shares_call_site(4) by (cases "hd (call_successor_list multi_call_cfg
+    (Statement 0))") auto
 
 end

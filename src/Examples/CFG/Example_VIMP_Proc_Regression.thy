@@ -2,21 +2,19 @@ theory Example_VIMP_Proc_Regression
   imports "Voblint_VIMP.VIMP_Notation"
 begin
 
-section \<open>Examples: native activation semantics\<close>
+section \<open>What a procedure call does to the caller's store\<close>
 
-text \<open>These witnesses build small hand-written commands rather than compiling a source
-  program, so there is no \<^const>\<open>declared_global\<close> table to read a classifier off; they
-  reuse the G-prefix convention directly as a fixed classifier.\<close>
+text \<open>
+  A call runs the callee on a store whose locals are reset and whose globals are carried
+  in; on completion the caller keeps its own locals, adopts the callee's globals, and
+  receives the returned value at the destination variable.  The witnesses below run that
+  story on hand-written commands: a caller local survives a callee writing the same name, a
+  global write propagates out, a return unwinds only its own activation, and a recursion
+  driven by a global terminates.  A hand-written command comes with no declared-globals
+  table, so \<open>vpr_gs\<close> names the two variables these witnesses treat as global.
+\<close>
 abbreviation vpr_gs :: "vname \<Rightarrow> bool" where
-  "vpr_gs \<equiv> (\<lambda>x. x \<noteq> STR '''' \<and> hd (String.explode x) = CHR ''G'')"
-
-text \<open>Ground facts bridging \<^const>\<open>String.explode\<close> on this file's concrete
-  variable names, for the \<open>simp\<close> steps below that unfold \<open>vpr_gs\<close> under
-  an otherwise-open store.\<close>
-lemma explode_x_hd [simp]: "hd (String.explode (STR ''x'')) \<noteq> CHR ''G''" by eval
-lemma explode_y_hd [simp]: "hd (String.explode (STR ''y'')) \<noteq> CHR ''G''" by eval
-lemma explode_Gg_hd [simp]: "hd (String.explode (STR ''Gg'')) = CHR ''G''" by eval
-lemma explode_Gx_hd [simp]: "hd (String.explode (STR ''Gx'')) = CHR ''G''" by eval
+  "vpr_gs \<equiv> (\<lambda>x. x = STR ''Gg'' \<or> x = STR ''Gx'')"
 
 theorem caller_local_isolated:
   assumes p: "\<Pi> pf = Some (\<lparr>formals = [], body = imp \<lbrakk> x := 9 \<rbrakk>\<rparr>)"
@@ -85,8 +83,10 @@ proof -
   have "pstep gs \<Pi> (Call (Some x) p [], s, frs)
           (Seq (Return (Some e)) Restore, enter_state gs s, Frame s (Some x) # frs)"
     using q by (rule pstep_Call_parameterless)
-  moreover have "pstep gs \<Pi> (Seq (Return (Some e)) Restore, enter_state gs s, Frame s (Some x) # frs)
-                   (Seq Unwind Restore, ?s', Frame s (Some x) # frs)"
+  moreover have "pstep gs \<Pi>
+      (Seq (Return (Some e)) Restore,
+       enter_state gs s, Frame s (Some x) # frs)
+      (Seq Unwind Restore, ?s', Frame s (Some x) # frs)"
     by (intro Seq2 ReturnSome)
   moreover have "pstep gs \<Pi> (Seq Unwind Restore, ?s', Frame s (Some x) # frs)
                    (SKIP, (combine_env gs s ?s')(x := aval e (enter_state gs s)), frs)"

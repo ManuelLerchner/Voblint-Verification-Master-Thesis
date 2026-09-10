@@ -49,19 +49,56 @@ text \<open>The full solved node set, computed once; every membership fact below
 
 definition nest_2_nodes :: "(pp \<times> cfg_node list) set" where
   "nest_2_nodes = {
-     (FunctionEntry (STR ''main''), []), (Statement 5, []), (Statement 6, []), (Statement 7, []),
-     (FunctionEntry (STR ''f''), [Statement 5]), (Statement 2, [Statement 5]),
-     (Statement 3, [Statement 5]), (FunctionResult (STR ''f''), [Statement 5]),
+     (FunctionEntry (STR ''main''), []), (Statement 5, []), (Statement 6, []),
+     (Statement 7, []), (FunctionEntry (STR ''f''), [Statement 5]),
+     (Statement 2, [Statement 5]), (Statement 3, [Statement 5]),
+     (FunctionResult (STR ''f''), [Statement 5]),
      (FunctionEntry (STR ''f''), [Statement 6]), (Statement 2, [Statement 6]),
      (Statement 3, [Statement 6]), (FunctionResult (STR ''f''), [Statement 6]),
-     (FunctionEntry (STR ''g''), [Statement 2, Statement 5]), (Statement 0, [Statement 2, Statement 5]),
+     (FunctionEntry (STR ''g''), [Statement 2, Statement 5]),
+     (Statement 0, [Statement 2, Statement 5]),
      (FunctionResult (STR ''g''), [Statement 2, Statement 5]),
-     (FunctionEntry (STR ''g''), [Statement 2, Statement 6]), (Statement 0, [Statement 2, Statement 6]),
+     (FunctionEntry (STR ''g''), [Statement 2, Statement 6]),
+     (Statement 0, [Statement 2, Statement 6]),
      (FunctionResult (STR ''g''), [Statement 2, Statement 6]),
      (FunctionResult (STR ''main''), [])}"
 
+definition nest_2_snapshot :: "(pp \<times> cfg_node list) set \<times> ivl list" where
+  "nest_2_snapshot =
+     (let sol = nest_2_sol in
+      (fst sol,
+       [nest_lookup
+          (locals (snd sol
+            (Inl (FunctionEntry (STR ''g''), [Statement 2, Statement 5]))))
+          (STR ''p''),
+        nest_lookup
+          (locals (snd sol
+            (Inl (FunctionEntry (STR ''g''), [Statement 2, Statement 6]))))
+          (STR ''p''),
+        nest_lookup
+          (locals (snd sol
+            (Inl (FunctionResult (STR ''g''), [Statement 2, Statement 5]))))
+          (STR ''#ret''),
+        nest_lookup
+          (locals (snd sol
+            (Inl (FunctionResult (STR ''g''), [Statement 2, Statement 6]))))
+          (STR ''#ret''),
+        nest_lookup (locals (snd sol (Inl (Statement 3, [Statement 5]))))
+          (STR ''t''),
+        nest_lookup (locals (snd sol (Inl (Statement 6, [])))) (STR ''x''),
+        nest_lookup (locals (snd sol (Inl (Statement 7, [])))) (STR ''y'')]))"
+
+lemma nest_2_snapshot_eq:
+  "nest_2_snapshot =
+     (nest_2_nodes,
+      [Ivl (Fin 3) (Fin 3), Ivl (Fin 10) (Fin 10), Ivl (Fin 6) (Fin 6),
+       Ivl (Fin 20) (Fin 20), Ivl (Fin 6) (Fin 6), Ivl (Fin 6) (Fin 6),
+       Ivl (Fin 20) (Fin 20)])"
+  unfolding nest_2_snapshot_def nest_2_sol_def nest_2_eqs_def nest_2_nodes_def
+  by eval
+
 lemma nest_2_nodes_eq: "fst nest_2_sol = nest_2_nodes"
-  unfolding nest_2_sol_def nest_2_eqs_def nest_2_nodes_def by eval
+  using nest_2_snapshot_eq by (simp add: nest_2_snapshot_def)
 
 lemma entry_covered_2: "(cfg_entry nest_cfg, []) \<in> fst nest_2_sol"
   unfolding nest_entry nest_2_nodes_eq nest_2_nodes_def by simp
@@ -69,7 +106,7 @@ lemma entry_covered_2: "(cfg_entry nest_cfg, []) \<in> fst nest_2_sol"
 lemma nest_fwd_closed_all_2:
   "\<forall>(u, c)\<in>fst nest_2_sol. \<forall>(u', a, v)\<in>intra nest_cfg.
       u = u' \<longrightarrow> (v, c) \<in> fst nest_2_sol"
-  unfolding nest_2_sol_def nest_2_eqs_def by eval
+  unfolding nest_2_nodes_eq nest_2_nodes_def nest_cfg_def by eval
 
 lemma nest_fwd_closed_2:
   assumes "(u, ctx) \<in> fst nest_2_sol" and "(u, a, v) \<in> intra nest_cfg"
@@ -182,7 +219,7 @@ next
       (call_enter nest_gs (CallEdge dst pars args) s)
       [(?caller, transfer_lift nest_empty_pred (ivl_enter_st_for nest_gs ?ci) ?caller)]"
     using nest_domain.entry_pairs_cover_st
-            [OF ivl_is_sound_transfer_for, where ci = ?ci and d = ?caller]
+            [OF ivl_tf.is_sound_transfer_for, where ci = ?ci and d = ?caller]
       EnterComplete(3)
     by (simp add: nest_gamma_eq nest_domain.gamma_exec_def)
   show ?case
@@ -284,37 +321,47 @@ text \<open>Both \<open>f\<close> activations reach \<open>g\<close> through the
   once, and every value below is exact.\<close>
 
 lemma nest_2_g_entry_first:
-  "nest_lookup (locals (snd nest_2_sol (Inl (FunctionEntry (STR ''g''), [Statement 2, Statement 5])))) (STR ''p'')
-     = Ivl (Fin 3) (Fin 3)"
-  unfolding nest_2_sol_def nest_2_eqs_def by eval
+  "nest_lookup
+     (locals (snd nest_2_sol
+       (Inl (FunctionEntry (STR ''g''), [Statement 2, Statement 5]))))
+     (STR ''p'') = Ivl (Fin 3) (Fin 3)"
+  using nest_2_snapshot_eq by (simp add: nest_2_snapshot_def)
 
 lemma nest_2_g_entry_second:
-  "nest_lookup (locals (snd nest_2_sol (Inl (FunctionEntry (STR ''g''), [Statement 2, Statement 6])))) (STR ''p'')
-     = Ivl (Fin 10) (Fin 10)"
-  unfolding nest_2_sol_def nest_2_eqs_def by eval
+  "nest_lookup
+     (locals (snd nest_2_sol
+       (Inl (FunctionEntry (STR ''g''), [Statement 2, Statement 6]))))
+     (STR ''p'') = Ivl (Fin 10) (Fin 10)"
+  using nest_2_snapshot_eq by (simp add: nest_2_snapshot_def)
 
 lemma nest_2_g_result_first:
-  "nest_lookup (locals (snd nest_2_sol (Inl (FunctionResult (STR ''g''), [Statement 2, Statement 5])))) (STR ''#ret'')
-     = Ivl (Fin 6) (Fin 6)"
-  unfolding nest_2_sol_def nest_2_eqs_def by eval
+  "nest_lookup
+     (locals (snd nest_2_sol
+       (Inl (FunctionResult (STR ''g''), [Statement 2, Statement 5]))))
+     (STR ''#ret'') = Ivl (Fin 6) (Fin 6)"
+  using nest_2_snapshot_eq by (simp add: nest_2_snapshot_def)
 
 lemma nest_2_g_result_second:
-  "nest_lookup (locals (snd nest_2_sol (Inl (FunctionResult (STR ''g''), [Statement 2, Statement 6])))) (STR ''#ret'')
-     = Ivl (Fin 20) (Fin 20)"
-  unfolding nest_2_sol_def nest_2_eqs_def by eval
+  "nest_lookup
+     (locals (snd nest_2_sol
+       (Inl (FunctionResult (STR ''g''), [Statement 2, Statement 6]))))
+     (STR ''#ret'') = Ivl (Fin 20) (Fin 20)"
+  using nest_2_snapshot_eq by (simp add: nest_2_snapshot_def)
 
 lemma nest_2_t_after_inner_return:
-  "nest_lookup (locals (snd nest_2_sol (Inl (Statement 3, [Statement 5])))) (STR ''t'')
-     = Ivl (Fin 6) (Fin 6)"
-  unfolding nest_2_sol_def nest_2_eqs_def by eval
+  "nest_lookup (locals (snd nest_2_sol (Inl (Statement 3, [Statement 5]))))
+     (STR ''t'') = Ivl (Fin 6) (Fin 6)"
+  using nest_2_snapshot_eq by (simp add: nest_2_snapshot_def)
 
 lemma nest_2_x_after_first_return:
-  "nest_lookup (locals (snd nest_2_sol (Inl (Statement 6, [])))) (STR ''x'') = Ivl (Fin 6) (Fin 6)"
-  unfolding nest_2_sol_def nest_2_eqs_def by eval
+  "nest_lookup (locals (snd nest_2_sol (Inl (Statement 6, [])))) (STR ''x'')
+     = Ivl (Fin 6) (Fin 6)"
+  using nest_2_snapshot_eq by (simp add: nest_2_snapshot_def)
 
 lemma nest_2_y_after_second_return:
-  "nest_lookup (locals (snd nest_2_sol (Inl (Statement 7, [])))) (STR ''y'') = Ivl (Fin 20) (Fin 20)"
-  unfolding nest_2_sol_def nest_2_eqs_def by eval
+  "nest_lookup (locals (snd nest_2_sol (Inl (Statement 7, [])))) (STR ''y'')
+     = Ivl (Fin 20) (Fin 20)"
+  using nest_2_snapshot_eq by (simp add: nest_2_snapshot_def)
 
 text \<open>The precision witness: at \<open>g\<close>'s entry and at both of \<open>main\<close>'s destinations the
   \<open>k = 2\<close> value is strictly below the \<open>k = 1\<close> value, so the second retained frame is not

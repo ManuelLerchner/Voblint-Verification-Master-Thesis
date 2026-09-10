@@ -56,7 +56,7 @@ the domain keeps the sharper one.
 `legacy:` is quarantined on purpose. It maps the uniform interface onto
 spellings that predate it: `ivl` where the interface says `Interval`, binders
 like `interval_warrow_asm`, published prefixes like `interval_td`, report names
-like `analyse_interval_td_report`. Every entry is a rename waiting to happen,
+like `analyse_interval_report`. Every entry is a rename waiting to happen,
 not an extension point. Nothing outside `legacy:` names an identifier a
 convention could have produced.
 

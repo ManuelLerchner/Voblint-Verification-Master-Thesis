@@ -45,7 +45,11 @@ stable gates for assessing a change.
 - the compiler input satisfies the static source contract;
 - the concrete initial store belongs to the abstract seed;
 - every explicit coverage premise follows from the solver domain;
-- the conclusion refers to the computed solution.
+- the conclusion refers to the computed solution;
+- the conclusion names its collector: `ltr_collect` at the unit context, one
+  `activation_collect` bucket at a routed one. A routed bound is not a
+  source-facing theorem until `source_sound_from_collecting_cap` is
+  instantiated at that policy.
 
 ## Repository checks
 

@@ -4,7 +4,6 @@ theory Example_Buffered_Encoding_Flush_Order
     "Voblint_Framework.DG_Reader_Transport"
     "Voblint_Exec.Ownership_Split_Exec"
     "Voblint_Analysis_Interval.Interval_Exec"
-    "Voblint_Analysis_Sign.Sign_Exec"
     "Voblint_Solver.TD_Solver_Bridge"
     "Voblint_CFG.CFG_Prune"
     "Voblint_VIMP.VIMP_Notation" "Voblint_Compile.Compile_Wellformed"
@@ -13,7 +12,7 @@ begin
 section \<open>Whether the two encodings solve alike\<close>
 
 text \<open>
-  A recursive callee that also writes a declared global. Each activation
+  A callee that also writes a declared global. Each activation
   publishes twice from one evaluation: to \<^const>\<open>Analysis_Global\<close>, because
   \<open>g\<close> is owned by the global channel, and to the callee's
   \<^const>\<open>Activation_Seed\<close>, because the call activates \<open>up\<close> again. The two
@@ -119,45 +118,36 @@ lemma fo_per_origin_seed_agrees:
      = fo_look (locals (fo_sol_po fo_buffered (Inr (Activation_Seed (FunctionEntry (STR ''up'')) ())))) (STR ''n'')"
   by eval
 
-subsection \<open>The same comparison at Sign, join-only\<close>
+subsection \<open>The same comparison under plain join\<close>
 
-definition fo_sign_spec ::
-  "(pp \<times> unit, (unit, unit) routed_gk, unit, sign exec_dg_st, sign exec_dg_st) dg_spec" where
-  "fo_sign_spec = ownership_split_dg_spec_st_for fo_gs (sign_tf_st_for fo_gs) (sign_enter_st_for fo_gs)"
+abbreviation fo_sol_join where
+  "fo_sol_join E \<equiv> snd (TD_side_always_join_Interp_solve E (cfg_exit fo_cfg, ()))"
 
-definition fo_sign_direct ::
-  "pp \<times> unit \<Rightarrow> (pp \<times> unit, (unit, unit) routed_gk, (sign exec_dg_st, sign exec_dg_st) dg_state) strategy_tree" where
-  "fo_sign_direct = unit_routed_eqs fo_sign_spec fo_cfg bot cinit_sign_st (restrict_global_resolved_q cinit_sign_st)"
-
-definition fo_sign_buffered ::
-  "pp \<times> unit \<Rightarrow> (pp \<times> unit, (unit, unit) routed_gk, (sign exec_dg_st, sign exec_dg_st) dg_state) strategy_tree" where
-  "fo_sign_buffered = unit_routed_eqs_buffered fo_sign_spec fo_cfg bot cinit_sign_st (restrict_global_resolved_q cinit_sign_st)"
-
-abbreviation fo_sign_sol where
-  "fo_sign_sol E \<equiv> snd (TD_side_always_join_Interp_solve E (cfg_exit fo_cfg, ()))"
-
-lemma fo_sign_terminates:
-  "TD_side_always_join_Interp_solve_c fo_sign_direct (cfg_exit fo_cfg, ()) \<noteq> None"
-  "TD_side_always_join_Interp_solve_c fo_sign_buffered (cfg_exit fo_cfg, ()) \<noteq> None"
+lemma fo_join_terminates:
+  "TD_side_always_join_Interp_solve_c fo_direct (cfg_exit fo_cfg, ()) \<noteq> None"
+  "TD_side_always_join_Interp_solve_c fo_buffered (cfg_exit fo_cfg, ()) \<noteq> None"
   by eval+
 
-lemma fo_sign_global_agrees:
-  "fo_look (globs (fo_sign_sol fo_sign_direct (Inr (Analysis_Global ())))) (STR ''g'')
-     = fo_look (globs (fo_sign_sol fo_sign_buffered (Inr (Analysis_Global ())))) (STR ''g'')"
+lemma fo_join_global_agrees:
+  "fo_look (globs (fo_sol_join fo_direct (Inr (Analysis_Global ())))) (STR ''g'')
+     = fo_look (globs (fo_sol_join fo_buffered (Inr (Analysis_Global ())))) (STR ''g'')"
   by eval
 
-lemma fo_sign_global_value:
-  "fo_look (globs (fo_sign_sol fo_sign_direct (Inr (Analysis_Global ())))) (STR ''g'') = SNonNeg"
+lemma fo_join_global_value:
+  "fo_look (globs (fo_sol_join fo_direct (Inr (Analysis_Global ())))) (STR ''g'')
+     = Ivl (Fin 0) (Fin 2)"
   by eval
 
-lemma fo_sign_seed_agrees:
-  "fo_look (locals (fo_sign_sol fo_sign_direct (Inr (Activation_Seed (FunctionEntry (STR ''up'')) ())))) (STR ''n'')
-     = fo_look (locals (fo_sign_sol fo_sign_buffered (Inr (Activation_Seed (FunctionEntry (STR ''up'')) ())))) (STR ''n'')"
+lemma fo_join_seed_agrees:
+  "fo_look (locals (fo_sol_join fo_direct
+       (Inr (Activation_Seed (FunctionEntry (STR ''up'')) ())))) (STR ''n'')
+     = fo_look (locals (fo_sol_join fo_buffered
+       (Inr (Activation_Seed (FunctionEntry (STR ''up'')) ())))) (STR ''n'')"
   by eval
 
 text \<open>
   Three update rules --- warrowing with joined seeds, per-origin, and plain
-  join at a finite domain --- and the two encodings answer alike at every
+  join --- and the two encodings answer alike at every
   observation, including the analysis global that a reordered flush would be
   the one to move.
 

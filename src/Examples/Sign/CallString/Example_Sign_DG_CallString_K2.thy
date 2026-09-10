@@ -193,7 +193,7 @@ next
       [(?caller, transfer_lift sign_nest_empty_pred (sign_enter_st_for sign_nest_gs ?ci)
                    ?caller)]"
     using sign_nest_domain.entry_pairs_cover_st
-            [OF sign_is_sound_transfer_for, where ci = ?ci and d = ?caller]
+            [OF sign_tf.is_sound_transfer_for, where ci = ?ci and d = ?caller]
       EnterComplete(3)
     by (simp add: sign_nest_gamma_eq sign_nest_domain.gamma_exec_def)
   show ?case

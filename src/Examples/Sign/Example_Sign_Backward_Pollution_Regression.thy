@@ -107,9 +107,9 @@ text \<open>
   it separately checks that code
   generation for the whole dependency chain still succeeds (no
   non-executable \<open>is_empty_state\<close> leaked into it) and that the concrete,
-  finite bottom test built into \<^const>\<open>update_resolved_st_q_lift\<close> actually
-  fires and produces structural \<open>Bot\<close> -- exactly the failure mode the old
-  whole-expression probe design would have missed.
+  finite bottom test built into \<^const>\<open>update_resolved_st_q_lift\<close> fires on
+  this state, producing structural \<open>Bot\<close> rather than a \<open>Lifted\<close> state that
+  only reads back as empty.
 \<close>
 
 lemma bfilter_sign_exec_pollution_fixed:
@@ -123,10 +123,10 @@ text \<open>
   answers every forward check as unknown), so \<^const>\<open>branch_lifted_sign\<close>
   reduces to \<open>sign_backward_domain.bfilter_lifted\<close> here and inherits its
   precision directly, exercising \<open>branch_lifted_sign\<close> itself rather than
-  only its internal filter. \<open>branch_lifted_sign\<close> is not yet the domain's
-  registered branch operation -- Sign still supplies plain
-  \<^const>\<open>branch_sign\<close> -- so this regression covers the fixed operation
-  itself, not yet a production analyzer run through it.
+  only its internal filter. Sign's registered branch operation is plain
+  \<^const>\<open>branch_sign\<close>, so what this regression covers is
+  \<open>branch_lifted_sign\<close> as an operation in its own right, not an analyzer
+  run that reaches it.
 \<close>
 
 lemma branch_sign_lifted_pollution_fixed:

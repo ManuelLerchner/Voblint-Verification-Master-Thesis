@@ -5,9 +5,8 @@
 // activations of g -- one from f(3), one from f(10) -- therefore collapse
 // onto the same routed context and widen together, so g's result, and
 // everything downstream that reads it, loses precision: both x and y come
-// back as [6,+inf) instead of their exact values 6 and 20. See
-// src/Examples/Interval/CallString/Example_Interval_Call_String_Generic_Parity.thy
-// for the same separation pinned directly against the solved AnalysisResult.
+// back as [6,+inf) instead of their exact values 6 and 20. The K1/K2
+// Isabelle witnesses pin the same separation on their solved states.
 // EXPECT-GRAPH-BEGIN
 // clusters:
 //   cluster_ctx_0:

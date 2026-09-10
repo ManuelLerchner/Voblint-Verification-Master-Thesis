@@ -323,8 +323,9 @@ text \<open>
 
 definition lock_full_valuation where
   "lock_full_valuation =
-     map (\<lambda>u. (u, Rep_D (snd (TD_side_always_join_Interp_solve lock_eqs u8) (Inl u))))
-       [u2, u3, u4, u5, u6, u7, u8, u11, u12, u13, u14, u15, u16]"
+     (let sol = snd (TD_side_always_join_Interp_solve lock_eqs u8)
+      in map (\<lambda>u. (u, Rep_D (sol (Inl u))))
+        [u2, u3, u4, u5, u6, u7, u8, u11, u12, u13, u14, u15, u16])"
 
 lemma lock_full_valuation_expected:
   "lock_full_valuation =

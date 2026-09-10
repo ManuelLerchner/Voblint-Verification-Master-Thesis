@@ -30,11 +30,11 @@ text \<open>
   which is the point: the two solved systems agree everywhere except inside the
   callee.
 
-  It is a regression in the strict sense. Both executable specification builders
-  once wired \<^const>\<open>dgs_body\<close> to the \<^emph>\<open>skip\<close> transfer, and no test could
-  see it: without an \<^const>\<open>EA_Body\<close> edge there was no transition to dispatch
-  on, so a specification's procedure-entry work was discarded silently. The
-  disagreement below is exactly what that defect suppressed.
+  It is a regression in the strict sense. Nothing else in the development would notice a
+  specification whose \<^const>\<open>dgs_body\<close> is discarded rather than run: every domain leaves
+  the field at the identity, so a generator that never dispatched on the
+  \<^const>\<open>EA_Body\<close> edge would agree with one that does, everywhere. The disagreement below
+  is the observation that separates them.
 \<close>
 
 subsection \<open>A procedure entry that forgets the formals\<close>
@@ -65,6 +65,7 @@ definition sign_dg_spec_body_forget ::
      (ownership_split_dg_spec_st_for gs tf_st enter_st)
        \<lparr> dgs_body := (\<lambda>p. sign_body_forget gs x) \<rparr>"
 
+declare sign_dg_spec_body_forget_def [code_unfold]
 text \<open>Only the procedure-entry transfer differs; every other field is the stock
   one, so any disagreement below is attributable to it alone.\<close>
 
@@ -104,6 +105,12 @@ text \<open>
   \<^const>\<open>dgs_body\<close> differs between them.
 \<close>
 
+text \<open>\<open>bf_program\<close> is byte-identical to \<open>Example_Sign_DG_Custom_Combine\<close>'s \<open>cj_program\<close>,
+  and \<open>bf_stock_eqs\<close> below to that theory's \<open>cj_stock_eqs\<close>. One call, one formal, and one
+  name that caller and callee both write is the smallest shape in which a single overridden
+  \<open>dg_spec\<close> field is observable, and both overrides need exactly that shape; each theory
+  keeps its own copy so neither witness inherits the other's imports.\<close>
+
 definition bf_program :: imp_prog where
   "bf_program = program {
      void mark(p) { r := 0 - 1; return p }
@@ -120,33 +127,48 @@ abbreviation bf_lookup :: "sign exec_dg_st \<Rightarrow> vname \<Rightarrow> sig
   "bf_lookup s x \<equiv> lookup_resolved_st_q s (location_of bf_prog_gs x)"
 
 definition bf_stock_eqs ::
-  "pp \<times> unit \<Rightarrow> (pp \<times> unit, (unit, unit) routed_gk, (sign exec_dg_st, sign exec_dg_st) dg_state) strategy_tree" where
+  "pp \<times> unit
+   \<Rightarrow> (pp \<times> unit, (unit, unit) routed_gk,
+        (sign exec_dg_st, sign exec_dg_st) dg_state) strategy_tree" where
   "bf_stock_eqs = unit_routed_eqs
-     (ownership_split_dg_spec_st_for bf_prog_gs (sign_tf_st_for bf_prog_gs) (sign_enter_st_for bf_prog_gs))
+     (ownership_split_dg_spec_st_for bf_prog_gs
+        (sign_tf_st_for bf_prog_gs) (sign_enter_st_for bf_prog_gs))
      bf_cfg bot cinit_sign_st (restrict_global_resolved_q cinit_sign_st)"
 
 definition bf_custom_eqs ::
-  "pp \<times> unit \<Rightarrow> (pp \<times> unit, (unit, unit) routed_gk, (sign exec_dg_st, sign exec_dg_st) dg_state) strategy_tree" where
+  "pp \<times> unit
+   \<Rightarrow> (pp \<times> unit, (unit, unit) routed_gk,
+        (sign exec_dg_st, sign exec_dg_st) dg_state) strategy_tree" where
   "bf_custom_eqs = unit_routed_eqs
      (sign_dg_spec_body_forget bf_prog_gs (STR ''p'')
         (sign_tf_st_for bf_prog_gs) (sign_enter_st_for bf_prog_gs))
      bf_cfg bot cinit_sign_st (restrict_global_resolved_q cinit_sign_st)"
 
 lemma bf_stock_terminates:
-  "TD_side_seed_join_warrowing_Interp_solve_c is_activation_seed bf_stock_eqs (cfg_exit bf_cfg, ()) \<noteq> None"
+  "TD_side_seed_join_warrowing_Interp_solve_c is_activation_seed bf_stock_eqs
+     (cfg_exit bf_cfg, ()) \<noteq> None"
   by eval
 
 lemma bf_custom_terminates:
-  "TD_side_seed_join_warrowing_Interp_solve_c is_activation_seed bf_custom_eqs (cfg_exit bf_cfg, ()) \<noteq> None"
+  "TD_side_seed_join_warrowing_Interp_solve_c is_activation_seed bf_custom_eqs
+     (cfg_exit bf_cfg, ()) \<noteq> None"
   by eval
 
 definition bf_stock_sol ::
-  "(pp \<times> unit) set \<times> (pp \<times> unit + (unit, unit) routed_gk \<Rightarrow> (sign exec_dg_st, sign exec_dg_st) dg_state)" where
-  "bf_stock_sol = TD_side_seed_join_warrowing_Interp_solve is_activation_seed bf_stock_eqs (cfg_exit bf_cfg, ())"
+  "(pp \<times> unit) set
+   \<times> (pp \<times> unit + (unit, unit) routed_gk
+        \<Rightarrow> (sign exec_dg_st, sign exec_dg_st) dg_state)" where
+  "bf_stock_sol =
+     TD_side_seed_join_warrowing_Interp_solve is_activation_seed bf_stock_eqs
+       (cfg_exit bf_cfg, ())"
 
 definition bf_custom_sol ::
-  "(pp \<times> unit) set \<times> (pp \<times> unit + (unit, unit) routed_gk \<Rightarrow> (sign exec_dg_st, sign exec_dg_st) dg_state)" where
-  "bf_custom_sol = TD_side_seed_join_warrowing_Interp_solve is_activation_seed bf_custom_eqs (cfg_exit bf_cfg, ())"
+  "(pp \<times> unit) set
+   \<times> (pp \<times> unit + (unit, unit) routed_gk
+        \<Rightarrow> (sign exec_dg_st, sign exec_dg_st) dg_state)" where
+  "bf_custom_sol =
+     TD_side_seed_join_warrowing_Interp_solve is_activation_seed bf_custom_eqs
+       (cfg_exit bf_cfg, ())"
 
 subsection \<open>The procedure-entry edge, and what runs on it\<close>
 
@@ -168,16 +190,18 @@ text \<open>
 \<close>
 
 lemma bf_entry_node_is_pre_body:
-  "bf_lookup (locals (snd bf_stock_sol (Inl (FunctionEntry (STR ''mark''), ())))) (STR ''p'') = SPos"
-  "bf_lookup (locals (snd bf_custom_sol (Inl (FunctionEntry (STR ''mark''), ())))) (STR ''p'') = SPos"
+  "bf_lookup (locals (snd bf_stock_sol (Inl (FunctionEntry (STR ''mark''), ()))))
+     (STR ''p'') = SPos"
+  "bf_lookup (locals (snd bf_custom_sol (Inl (FunctionEntry (STR ''mark''), ()))))
+     (STR ''p'') = SPos"
   by eval+
 
 text \<open>
-  Regression witness. One edge later --- across \<^const>\<open>EA_Body\<close> --- the two
-  solved systems disagree at the formal: the stock identity keeps
-  \<^const>\<open>SPos\<close>, the override publishes \<^const>\<open>STop\<close>. Nothing but
-  \<^const>\<open>dgs_body\<close> differs between the two specifications, so this equation is
-  the whole observable content of the field.
+  Regression witness. One edge later --- across \<^const>\<open>EA_Body\<close> --- the two solved systems
+  disagree at the formal: the stock identity keeps \<^const>\<open>SPos\<close>, the override publishes
+  \<^const>\<open>STop\<close>. \<open>Statement 0\<close> is \<open>mark\<close>'s own first command \<open>r := 0 - 1\<close>, the node the
+  \<^const>\<open>EA_Body\<close> edge leads to. Nothing but \<^const>\<open>dgs_body\<close> differs between the two
+  specifications, so this equation is the whole observable content of the field.
 \<close>
 
 lemma bf_stock_keeps_the_formal:
@@ -189,8 +213,8 @@ lemma bf_custom_forgets_the_formal:
   by eval
 
 text \<open>Outside the callee the two agree: the caller's own locals never meet the
-  procedure-entry transfer, so the call site and the resume point are unchanged
-  by the override.\<close>
+  procedure-entry transfer, so the call site and the resume point are unchanged by the
+  override. \<open>Statement 4\<close> is that call site in \<open>main\<close>, one command after \<open>r := 1\<close>.\<close>
 
 lemma bf_caller_unaffected:
   "bf_lookup (locals (snd bf_stock_sol (Inl (Statement 4, ())))) (STR ''r'') = SPos"

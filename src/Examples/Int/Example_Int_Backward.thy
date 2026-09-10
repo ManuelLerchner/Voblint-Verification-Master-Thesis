@@ -2,7 +2,19 @@ theory Example_Int_Backward
   imports Voblint_Analysis_Int.Int_Backward
 begin
 
-section \<open>Composite integer-domain backward filtering: examples\<close>
+section \<open>What a guard, read backwards, tells the four components\<close>
+
+text \<open>
+  A backward filter runs a boolean guard in reverse: given an abstract state and
+  the truth value the guard is assumed to take, it returns what each variable
+  must have been for the guard to come out that way. The three lemma families
+  below run one guard through \<open>bfilter_int_dom_never\<close>, \<open>bfilter_int_dom_once\<close>
+  and \<open>bfilter_int_dom_fixpoint\<close> and pin the results by \<open>eval\<close>, so the
+  difference between them is exactly what cross-component refinement buys.
+  Vocabulary: \<open>int_dom_sipc s i p c\<close> overwrites \<open>top\<close> in the order sign,
+  interval, parity, congruence; \<open>congruence_of_int n\<close> is the class containing
+  only \<open>n\<close>, and \<open>mk_congruence c m\<close> the class of \<open>c\<close> modulo \<open>m\<close>.
+\<close>
 
 text \<open>
   \<open>test_env_top\<close> is the composite domain's own top: every variable
@@ -69,9 +81,10 @@ text \<open>
   guard still runs the composite intersection/refinement machinery, which
   propagates the existing information until Sign, Interval, and Congruence
   all expose the same precision Parity and Interval jointly already implied.
-  This is \<open>refinement_round_is_progressive\<close>'s (\<open>Example_Int_Domain\<close>)
-  own witness, reached here through the guard machinery instead of a direct
-  \<open>refine_round\<close> call.
+  The starting state is the one \<open>Example_Int_Domain\<close>'s
+  \<open>refinement_round_is_progressive\<close> hands to a single \<open>refine_round\<close>, where the
+  sign component stops at \<open>SNonPos\<close>. The guard traversal invokes refinement at
+  several nodes instead of once, so it reaches \<open>SZero\<close> here.
 \<close>
 
 lemma bfilter_int_dom_once_self_refine_exact:

@@ -21,7 +21,7 @@ the assembled analyzer can.
 | `Example_Interval_Checks_Store_Only.thy` | acceptance | the Interval member of the same trio, inside a two-sided bound guard |
 | `Example_Parity_Checks_Store_Only.thy` | acceptance | the Parity member: `y := x * 2` is even and `z := y + 1` odd whatever `x` is, a fact neither Sign nor Interval expresses |
 | `Exec_Interval_Run.thy` | precision comparison | `Example_Interval_Loop_Coverage`'s `loop_prog` under three fixpoint engines — bounded Kleene, warrowing TD, and every update rule at once (`join` / `per_origin` / `warrow`); interval narrowing plus the backward guard filter recover `[0,20]` under all of them. Imports the coverage theory rather than restating the program |
-| `Example_Int_Refinement_Mode_Regression.thy` | regression | the `int_dom` refinement modes reached through `analyse_config`, not through the domain's own primitives |
+| `Example_Int_Refinement_Mode_Regression.thy` | regression | raw `int_dom` refinement interactions, their non-CLI solver-run counterparts, and production solver choices through the dispatcher |
 | `Example_Analysis_Dispatch_Regression.thy` | regression | `analyse_config` over the selectable domains and context policies |
 | `Example_Analysis_Result_Regression.thy` | regression | the published result table: per-point reachability and the per-context lookup surface |
 | `Example_Min_Max_Regression.thy` | acceptance | `Min`/`Max` special calls end to end through the dispatcher |

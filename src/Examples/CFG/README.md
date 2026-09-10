@@ -7,8 +7,8 @@ domain-specific procedure-call spines.
 
 | File | Role | What |
 | --- | --- | --- |
-| `Example_Compile_Call_Free.thy` | required support | the shared call-free program every domain's flagship run is stated over |
-| `Example_Inc_Proc.thy` | required support | shared global-increment procedure (`inc_program`) + its run-to-collecting witness lemmas; reused wherever an example needs a small interprocedural program with a concrete run-to-collecting witness |
+| `Example_Compile_Call_Free.thy` | required support | `no_proc_call`, the syntactic condition for a call-free source, and `compile_prog_calls_empty`, the theorem that such a source compiles to a graph with no call edges; each importer states its own program and reuses the theorem |
+| `Example_Inc_Proc.thy` | required support | shared global-increment program (`inc_program`) with its source-run and compiled-run witnesses; imported by the `Voblint` capstone |
 | `Example_Compile_Regression.thy` | regression | procedure layout, compiler invariants, and the rejection of runtime-only `Restore`/`Unwind` bodies |
 | `Example_Control_Simulation_Regression.thy` | regression | located execution and source/CFG control simulation |
 | `Example_LTR_Collect_Regression.thy` | regression | nested calls, multiple returns, recursion, and local-trace collecting semantics |

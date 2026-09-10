@@ -49,13 +49,13 @@ lemma sign_assembly_demo_report_with_state_verdicts:
   by eval
 
 lemma sign_assembly_demo_terminates:
-  "sctx_terminates_prog (declared_global sign_assembly_demo_prog)
+  "sign_conf_terminates_prog (declared_global sign_assembly_demo_prog)
      sign_assembly_demo_prog"
-  by (rule sctx_terminates_prog_via_solve_c) eval
+  by (rule sign_conf_terminates_prog_via_solve_c) eval
 
 lemma sign_assembly_demo_cover:
   "vars_cover_exec (prog_cfg sign_assembly_demo_prog)
-     (fst (sctx_sol_prog (declared_global sign_assembly_demo_prog)
+     (fst (sign_conf_sol_prog (declared_global sign_assembly_demo_prog)
              sign_assembly_demo_prog))"
   by eval
 

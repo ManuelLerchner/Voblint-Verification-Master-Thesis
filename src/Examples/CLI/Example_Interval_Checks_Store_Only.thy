@@ -98,7 +98,8 @@ lemma checks_ivl_ex_fwd_ok:
 lemma checks_ivl_ex_call_fwd_ok:
   assumes "(u, ctx) \<in> fst (interval_conf_sol_prog checks_ivl_ex_gs checks_ivl_ex_program)"
     and "(u, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg checks_ivl_ex_program)"
-  shows "(FunctionEntry q, ()) \<in> fst (interval_conf_sol_prog checks_ivl_ex_gs checks_ivl_ex_program)"
+  shows "(FunctionEntry q, ()) \<in>
+    fst (interval_conf_sol_prog checks_ivl_ex_gs checks_ivl_ex_program)"
   using assms by (simp add: checks_ivl_ex_calls_eval)
 
 lemma checks_ivl_ex_comb_fwd_ok:
@@ -108,15 +109,18 @@ lemma checks_ivl_ex_comb_fwd_ok:
   using assms by (simp add: checks_ivl_ex_calls_eval)
 
 definition checks_ivl_ex_reach :: "pp \<Rightarrow> store set" where
-  "checks_ivl_ex_reach v = ltr_collect checks_ivl_ex_gs (prog_cfg checks_ivl_ex_program) (cinit_stores checks_ivl_ex_gs) v"
+  "checks_ivl_ex_reach v =
+     ltr_collect checks_ivl_ex_gs (prog_cfg checks_ivl_ex_program)
+       (cinit_stores checks_ivl_ex_gs) v"
 
 text \<open>The computed Interval environment at an arbitrary node, read out of the
-  routed-unit solved table \<^const>\<open>analyse_interval_join_result_for\<close> the
+  routed-unit solved table \<^const>\<open>analyse_interval_result_join_for\<close> the
   always-join report also reads -- one solve, queried per node, with an
   unreachable node concretizing to \<^term>\<open>bot\<close>.\<close>
 definition checks_ivl_ex_env :: "pp \<Rightarrow> ivl abs_state" where
   "checks_ivl_ex_env v =
-     (case lookup_context (analyse_interval_join_result_for checks_ivl_ex_gs checks_ivl_ex_program) v () of
+     (case lookup_context
+       (analyse_interval_result_join_for checks_ivl_ex_gs checks_ivl_ex_program) v () of
         Bot \<Rightarrow> bot | Lifted st \<Rightarrow> st)"
 
 text \<open>The compiled edges, read off \<^const>\<open>prog_cfg\<close>'s own \<open>eval\<close>-computed
@@ -128,8 +132,12 @@ lemma checks_ivl_ex_intra_eval:
   "intra (prog_cfg checks_ivl_ex_program) =
      {(FunctionEntry (STR ''main''), EA_Body (STR ''main''), Statement 0),
       (Statement 0, EA_Special Nondet_Int (STR ''x''), Statement 1),
-      (Statement 1, EA_Assume (And (Less (N 0) (V (STR ''x''))) (Less (V (STR ''x'')) (N 10))), Statement 2),
-      (Statement 1, EA_AssumeNot (And (Less (N 0) (V (STR ''x''))) (Less (V (STR ''x'')) (N 10))), Statement 5),
+      (Statement 1,
+       EA_Assume (And (Less (N 0) (V (STR ''x''))) (Less (V (STR ''x'')) (N 10))),
+       Statement 2),
+      (Statement 1,
+       EA_AssumeNot (And (Less (N 0) (V (STR ''x''))) (Less (V (STR ''x'')) (N 10))),
+       Statement 5),
       (Statement 2, EA_Check (Less (V (STR ''x'')) (N 11)), Statement 3),
       (Statement 3, EA_Check (Less (V (STR ''x'')) (N 0)), Statement 4),
       (Statement 4, EA_Check (Eq (V (STR ''x'')) (N 5)), Statement 6),
@@ -137,10 +145,12 @@ lemma checks_ivl_ex_intra_eval:
       (Statement 6, EA_Ret None (STR ''main''), FunctionResult (STR ''main''))}"
   unfolding prog_cfg_def by eval
 
-lemma checks_ivl_ex_exit_eval: "cfg_exit (prog_cfg checks_ivl_ex_program) = FunctionResult (STR ''main'')"
+lemma checks_ivl_ex_exit_eval:
+  "cfg_exit (prog_cfg checks_ivl_ex_program) = FunctionResult (STR ''main'')"
   by (simp only: prog_cfg_def cfg_exit_compile_prog prog_main_name_def)
 
-lemma checks_ivl_ex_entry_eval: "cfg_entry (prog_cfg checks_ivl_ex_program) = FunctionEntry (STR ''main'')"
+lemma checks_ivl_ex_entry_eval:
+  "cfg_entry (prog_cfg checks_ivl_ex_program) = FunctionEntry (STR ''main'')"
   by (simp only: prog_cfg_def cfg_entry_compile_prog prog_main_name_def)
 
 text \<open>Node-local collecting soundness at each check node, from the routed D/G
@@ -149,7 +159,7 @@ text \<open>Node-local collecting soundness at each check node, from the routed 
   routed bridge turns on solved-key coverage, not on the query seed.\<close>
 
 lemmas checks_ivl_ex_node_sound =
-  analyse_interval_join_result_node_sound_for[OF checks_ivl_ex_solver_terminates
+  analyse_interval_result_join_node_sound_for[OF checks_ivl_ex_solver_terminates
     checks_ivl_ex_entry_cov checks_ivl_ex_fwd_ok checks_ivl_ex_call_fwd_ok
     checks_ivl_ex_comb_fwd_ok]
 
@@ -176,15 +186,18 @@ text \<open>Executable classification at each check's own node --- the guard
   proved and \<open>x < 0\<close> is refuted outright; \<open>x = 5\<close> stays unknown since \<open>x\<close>
   ranges over the whole \<open>[1,9]\<close> interval, not just \<open>5\<close>.\<close>
 lemma checks_ivl_ex_classify_2:
-  "interval_classify_check (Less (V (STR ''x'')) (N 11)) (checks_ivl_ex_env (Statement 2)) = Check_Proved"
+  "interval_classify_check (Less (V (STR ''x'')) (N 11))
+     (checks_ivl_ex_env (Statement 2)) = Check_Proved"
   unfolding checks_ivl_ex_env_def by eval
 
 lemma checks_ivl_ex_classify_3:
-  "interval_classify_check (Less (V (STR ''x'')) (N 0)) (checks_ivl_ex_env (Statement 3)) = Check_Refuted"
+  "interval_classify_check (Less (V (STR ''x'')) (N 0))
+     (checks_ivl_ex_env (Statement 3)) = Check_Refuted"
   unfolding checks_ivl_ex_env_def by eval
 
 lemma checks_ivl_ex_classify_4:
-  "interval_classify_check (Eq (V (STR ''x'')) (N 5)) (checks_ivl_ex_env (Statement 4)) = Check_Unknown"
+  "interval_classify_check (Eq (V (STR ''x'')) (N 5))
+     (checks_ivl_ex_env (Statement 4)) = Check_Unknown"
   unfolding checks_ivl_ex_env_def by eval
 
 text \<open>The precision comparison: Sign only ever tracks the sign of \<open>x\<close>, so
@@ -193,7 +206,8 @@ text \<open>The precision comparison: Sign only ever tracks the sign of \<open>x
   \<open>SPos\<close> value like \<open>1000000\<close> is not \<open>< 11\<close>). Interval proves it outright
   because it tracks the upper bound \<open>9\<close> directly, not merely the sign.\<close>
 lemma checks_ivl_ex_precision_over_sign:
-  "sign_classify_check (Less (V (STR ''x'')) (N 11)) ((\<lambda>_. STop)((STR ''x'') := SPos)) = Check_Unknown"
+  "sign_classify_check (Less (V (STR ''x'')) (N 11))
+     ((\<lambda>_. STop)((STR ''x'') := SPos)) = Check_Unknown"
   by eval
 
 text \<open>The payoff: the proved check's condition genuinely holds at every
@@ -258,30 +272,44 @@ proof -
   have zero_init: "(\<lambda>_. 0) \<in> cinit_stores checks_ivl_ex_gs" unfolding cinit_stores_def by simp
   have s0: "(\<lambda>_. 0) \<in> checks_ivl_ex_reach (FunctionEntry (STR ''main''))"
   proof -
-    have "(\<lambda>_. 0) \<in> ltr_collect checks_ivl_ex_gs (prog_cfg checks_ivl_ex_program) (cinit_stores checks_ivl_ex_gs)
+    have "(\<lambda>_. 0) \<in>
+      ltr_collect checks_ivl_ex_gs (prog_cfg checks_ivl_ex_program)
+        (cinit_stores checks_ivl_ex_gs)
             (cfg_entry (prog_cfg checks_ivl_ex_program))"
       by (rule ltr_collect_init[OF zero_init])
     then show ?thesis unfolding checks_ivl_ex_reach_def checks_ivl_ex_entry_eval .
   qed
-  have e0: "(FunctionEntry (STR ''main''), EA_Body (STR ''main''), Statement 0) \<in> intra (prog_cfg checks_ivl_ex_program)"
+  have e0:
+    "(FunctionEntry (STR ''main''), EA_Body (STR ''main''), Statement 0)
+      \<in> intra (prog_cfg checks_ivl_ex_program)"
     by (simp add: checks_ivl_ex_intra_eval)
   have s1: "(\<lambda>_. 0) \<in> checks_ivl_ex_reach (Statement 0)"
     using ltr_collect_intra_step[of "\<lambda>_. 0" checks_ivl_ex_gs "prog_cfg checks_ivl_ex_program"
-        "cinit_stores checks_ivl_ex_gs" "FunctionEntry (STR ''main'')" "EA_Body (STR ''main'')" "Statement 0"]
+        "cinit_stores checks_ivl_ex_gs" "FunctionEntry (STR ''main'')"
+        "EA_Body (STR ''main'')" "Statement 0"]
     using s0 e0 unfolding checks_ivl_ex_reach_def by simp
-  have e1: "(Statement 0, EA_Special Nondet_Int (STR ''x''), Statement 1) \<in> intra (prog_cfg checks_ivl_ex_program)"
+  have e1:
+    "(Statement 0, EA_Special Nondet_Int (STR ''x''), Statement 1)
+      \<in> intra (prog_cfg checks_ivl_ex_program)"
     by (simp add: checks_ivl_ex_intra_eval)
   have s2: "(\<lambda>_. 0)((STR ''x'') := 5) \<in> checks_ivl_ex_reach (Statement 1)"
     using ltr_collect_intra_step[of "\<lambda>_. 0" checks_ivl_ex_gs "prog_cfg checks_ivl_ex_program"
-        "cinit_stores checks_ivl_ex_gs" "Statement 0" "EA_Special Nondet_Int (STR ''x'')" "Statement 1"
+        "cinit_stores checks_ivl_ex_gs" "Statement 0"
+        "EA_Special Nondet_Int (STR ''x'')" "Statement 1"
         "(\<lambda>_. 0)((STR ''x'') := 5)"]
     using s1 e1 unfolding checks_ivl_ex_reach_def by force
-  have e2: "(Statement 1, EA_Assume (And (Less (N 0) (V (STR ''x''))) (Less (V (STR ''x'')) (N 10))), Statement 2)
+  have e2:
+    "(Statement 1,
+      EA_Assume (And (Less (N 0) (V (STR ''x''))) (Less (V (STR ''x'')) (N 10))),
+      Statement 2)
               \<in> intra (prog_cfg checks_ivl_ex_program)"
     by (simp add: checks_ivl_ex_intra_eval)
   have "(\<lambda>_. 0)((STR ''x'') := 5) \<in> checks_ivl_ex_reach (Statement 2)"
-    using ltr_collect_intra_step[of "(\<lambda>_. 0)((STR ''x'') := 5)" checks_ivl_ex_gs "prog_cfg checks_ivl_ex_program"
-        "cinit_stores checks_ivl_ex_gs" "Statement 1" "EA_Assume (And (Less (N 0) (V (STR ''x''))) (Less (V (STR ''x'')) (N 10)))"
+    using ltr_collect_intra_step
+      [of "(\<lambda>_. 0)((STR ''x'') := 5)" checks_ivl_ex_gs
+        "prog_cfg checks_ivl_ex_program"
+        "cinit_stores checks_ivl_ex_gs" "Statement 1"
+        "EA_Assume (And (Less (N 0) (V (STR ''x''))) (Less (V (STR ''x'')) (N 10)))"
         "Statement 2" "(\<lambda>_. 0)((STR ''x'') := 5)"]
     using s2 e2 unfolding checks_ivl_ex_reach_def by simp
   then show ?thesis by blast
@@ -298,7 +326,7 @@ text \<open>
 \<close>
 
 lemma checks_ivl_ex_report_eval:
-  "analyse_interval_report_for checks_ivl_ex_gs checks_ivl_ex_program =
+  "analyse_interval_report_join_for checks_ivl_ex_gs checks_ivl_ex_program =
      [(Statement 2, Less (V (STR ''x'')) (N 11), Check_Proved),
       (Statement 3, Less (V (STR ''x'')) (N 0), Check_Refuted),
       (Statement 4, Eq (V (STR ''x'')) (N 5), Check_Unknown)]"
@@ -309,11 +337,11 @@ text \<open>The wrapper is exactly \<^const>\<open>classify_checks\<close> appli
   representation to drift from the per-node facts above.\<close>
 
 lemma checks_ivl_ex_report_unfold:
-  "analyse_interval_report_for checks_ivl_ex_gs checks_ivl_ex_program
+  "analyse_interval_report_join_for checks_ivl_ex_gs checks_ivl_ex_program
      = classify_checks (prog_cfg checks_ivl_ex_program) checks_ivl_ex_env
          interval_classify_check"
-  unfolding analyse_interval_report_for_def interval_join_asm.report_def
-            analyse_interval_join_result_for_def surface_unfold checks_ivl_ex_env_def
+  unfolding analyse_interval_report_join_for_def interval_join_asm.report_def
+            analyse_interval_result_join_for_def surface_unfold checks_ivl_ex_env_def
   by (simp add: prog_main_name_def)
 
 text \<open>Agreement with the existing per-node classification: the first report
@@ -324,10 +352,11 @@ text \<open>Agreement with the existing per-node classification: the first repor
 
 corollary checks_ivl_ex_report_agrees_with_node_classification:
   "(Statement 2, Less (V (STR ''x'')) (N 11), Check_Proved)
-     \<in> set (analyse_interval_report_for checks_ivl_ex_gs checks_ivl_ex_program)"
+     \<in> set (analyse_interval_report_join_for checks_ivl_ex_gs checks_ivl_ex_program)"
   unfolding checks_ivl_ex_report_unfold
   using classify_checks_mem_iff[of "prog_cfg checks_ivl_ex_program"
-      "Statement 2" "Less (V (STR ''x'')) (N 11)" Check_Proved checks_ivl_ex_env interval_classify_check]
+      "Statement 2" "Less (V (STR ''x'')) (N 11)" Check_Proved
+      checks_ivl_ex_env interval_classify_check]
   using checks_ivl_ex_intra_eval checks_ivl_ex_classify_2
   by (auto simp: checks_ivl_ex_intra_eval)
 
@@ -341,13 +370,13 @@ text \<open>
   here, confirming the mapping is analysis-independent: no Interval-specific
   rendering code was needed. There is no manually maintained \<^typ>\<open>pp\<close>-to-
   \<^typ>\<open>exp\<close> table either: \<^const>\<open>check_report_node_annotation\<close> looks each
-  node up directly in the computed \<^const>\<open>analyse_interval_report_for\<close>.
+  node up directly in the computed \<^const>\<open>analyse_interval_report_join_for\<close>.
 \<close>
 
 definition checks_ivl_ex_node_annotation :: "pp \<Rightarrow> graph_node_annotation option" where
   "checks_ivl_ex_node_annotation v =
      (case check_report_node_annotation
-             (analyse_interval_report_for checks_ivl_ex_gs checks_ivl_ex_program) v of
+             (analyse_interval_report_join_for checks_ivl_ex_gs checks_ivl_ex_program) v of
         Some ann \<Rightarrow> Some ann
       | None \<Rightarrow>
           if v = FunctionResult (STR ''main'') then

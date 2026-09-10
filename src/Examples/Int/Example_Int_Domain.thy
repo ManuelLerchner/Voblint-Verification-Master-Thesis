@@ -1,8 +1,23 @@
-section \<open>Example: exact emptiness in the composite integer domain\<close>
-
 theory Example_Int_Domain
   imports "Voblint_Analysis_Int.Int_Arithmetic"
 begin
+
+section \<open>What the four components decide together\<close>
+
+text \<open>
+  Sign, interval, parity and congruence abstract the same integer side by side
+  in one record, and this theory pins by \<open>eval\<close> what standing side by side
+  buys them: when the product sees that no integer satisfies all four
+  constraints although every component alone is inhabited, what one
+  \<open>refine_round\<close> carries out of one component into the others, and how far the
+  modes \<open>Refine_Never\<close>, \<open>Refine_Once\<close> and \<open>Refine_Fixpoint\<close> take composite
+  arithmetic. Vocabulary: \<open>int_dom_sip s i p\<close> and \<open>int_dom_sipc s i p c\<close> build
+  a product value by overwriting \<open>top\<close> in that component order, and
+  \<open>mk_congruence c m\<close> is the residue class of \<open>c\<close> modulo \<open>m\<close>, where \<open>m = 0\<close>
+  means exactly \<open>c\<close> and \<open>m = 1\<close> means \<open>top\<close>.
+\<close>
+
+subsection \<open>Emptiness no single component can see\<close>
 
 text \<open>
   Componentwise bottom tests miss contradictions between individually inhabited
@@ -55,8 +70,9 @@ lemma compatible_components_witness:
 
 text \<open>
   Congruence can contradict the bounded range or Parity while every involved
-  component remains inhabited. Compatible constraints retain their common
-  witness.
+  component remains inhabited. \<open>mk_congruence 1 2\<close> below is the odd integers,
+  which is disjoint from both \<open>[0, 0]\<close> and \<open>PEven\<close>. Compatible constraints
+  retain their common witness.
 \<close>
 
 lemma interval_congruence_contradiction:
@@ -110,7 +126,20 @@ lemma compatible_four_components_witness:
 
 
 
-section \<open>Progressive integer-domain refinement\<close>
+subsection \<open>Progressive integer-domain refinement\<close>
+
+text \<open>
+  One \<^const>\<open>refine_round\<close> is \<^const>\<open>refine_interval\<close> followed by
+  \<^const>\<open>refine_congruence\<close>, in that fixed order, and only the first of the two
+  ever writes the sign component. A round therefore derives Sign from the
+  interval as it stood on entry, never from whatever the congruence step goes on
+  to tighten it to. That is what makes \<open>refinement_round_is_progressive\<close> below
+  stop at \<open>SNonPos\<close>: on entry the interval is \<open>[-1, 0]\<close>, whose sign fact is
+  non-positive, and only afterwards does the congruence step read \<open>PEven\<close> as
+  \<open>0 mod 2\<close> and cut the interval to \<open>[0, 0]\<close>. The next round reads that
+  \<open>[0, 0]\<close> and reaches \<open>SZero\<close>, which is why \<open>Refine_Fixpoint\<close> is strictly
+  sharper than \<open>Refine_Once\<close> here.
+\<close>
 
 lemma congruence_refines_interval_bounds:
   "int_ivl
@@ -192,7 +221,7 @@ lemma refinement_fixpoint_collapses_bottom:
   by eval
 
 
-section \<open>Composite integer arithmetic\<close>
+subsection \<open>Composite integer arithmetic\<close>
 
 definition arithmetic_left :: int_dom where
   "arithmetic_left =
@@ -245,9 +274,17 @@ lemma arithmetic_fixpoint_result:
   by eval
 
 lemma arithmetic_once_not_fixpoint:
-  "plus_int_dom Refine_Once arithmetic_left arithmetic_right ~=
+  "plus_int_dom Refine_Once arithmetic_left arithmetic_right \<noteq>
    plus_int_dom Refine_Fixpoint arithmetic_left arithmetic_right"
   by eval
+
+text \<open>
+  Adding two residue classes takes the gcd of their moduli: from \<open>1 mod 4\<close> and
+  \<open>3 mod 6\<close> the sum's modulus is \<open>gcd 4 6 = 2\<close> and its residue is
+  \<open>(1 + 3) mod 2 = 0\<close>, so the composite retains only that the sum is even.
+  Neither operand's own modulus survives the addition.
+\<close>
+
 
 lemma arithmetic_retains_congruence:
   "int_congruence
@@ -263,7 +300,7 @@ lemma arithmetic_literal_embedding:
      SNeg
      (Ivl (Fin (-3)) (Fin (-3)))
      POdd
-     (mk_congruence (-3) 0)"
+     (congruence_of_int (-3))"
   by eval
 
 definition arithmetic_env :: "vname => int_dom" where

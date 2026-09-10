@@ -9,6 +9,8 @@ These documents describe the supported architecture and its verification.
   contract, compiler, activation-local semantics, equations, D/G routing, and
   solver integration.
 - [Proof overview](PROOF_OVERVIEW.md) — end-to-end soundness chain.
+- [Theorem map](THEOREM_MAP.md) — thesis and pipeline claims mapped to checked
+  `Session.Theory:theorem` names.
 - [Check-discharge architecture](CHECK_ARCHITECTURE.md) — how a compiled check
   becomes a GraphViz-rendered proof status and a semantic soundness guarantee,
   and how a contextual `analysis_result` feeds checks, collapsed GraphViz, and

@@ -1,5 +1,6 @@
 session Voblint_Examples_Congruence in "." = "Voblint_Analysis_Congruence" +
-  description "Congruence component witnesses: arithmetic and backward filtering"
+  description "Congruence arithmetic, backward filtering and end-to-end D/G witnesses"
   theories
     Example_Congruence_Arithmetic
     Example_Congruence_Backward
+    Example_Congruence_DG_Run

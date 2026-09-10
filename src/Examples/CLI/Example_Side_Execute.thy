@@ -38,36 +38,36 @@ text \<open>
   domain.  The three closure facts are computed the same way.
 \<close>
 
-lemma x1_terminates: "sctx_terminates_prog x1_gs x1_prog"
-  by (rule sctx_terminates_prog_via_solve_c) eval
+lemma x1_terminates: "sign_conf_terminates_prog x1_gs x1_prog"
+  by (rule sign_conf_terminates_prog_via_solve_c) eval
 
 lemma x1_entry_cov:
   "(cfg_entry (prog_cfg x1_prog), ())
-     \<in> fst (sctx_sol_prog x1_gs x1_prog)"
+     \<in> fst (sign_conf_sol_prog x1_gs x1_prog)"
   by eval
 
 lemma x1_fwd_ok_ball:
   "\<forall>(u, a, w) \<in> intra (prog_cfg x1_prog).
-     (u, ()) \<in> fst (sctx_sol_prog x1_gs x1_prog) \<longrightarrow>
-     (w, ()) \<in> fst (sctx_sol_prog x1_gs x1_prog)"
+     (u, ()) \<in> fst (sign_conf_sol_prog x1_gs x1_prog) \<longrightarrow>
+     (w, ()) \<in> fst (sign_conf_sol_prog x1_gs x1_prog)"
   by eval
 
 lemma x1_fwd_ok:
-  assumes "(u, ctx) \<in> fst (sctx_sol_prog x1_gs x1_prog)"
+  assumes "(u, ctx) \<in> fst (sign_conf_sol_prog x1_gs x1_prog)"
     and "(u, a, w) \<in> intra (prog_cfg x1_prog)"
-  shows "(w, ctx) \<in> fst (sctx_sol_prog x1_gs x1_prog)"
+  shows "(w, ctx) \<in> fst (sign_conf_sol_prog x1_gs x1_prog)"
   using assms x1_fwd_ok_ball by (cases ctx) auto
 
 lemma x1_call_fwd_ok:
-  assumes "(u, ctx) \<in> fst (sctx_sol_prog x1_gs x1_prog)"
+  assumes "(u, ctx) \<in> fst (sign_conf_sol_prog x1_gs x1_prog)"
     and "(u, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg x1_prog)"
-  shows "(FunctionEntry q, ()) \<in> fst (sctx_sol_prog x1_gs x1_prog)"
+  shows "(FunctionEntry q, ()) \<in> fst (sign_conf_sol_prog x1_gs x1_prog)"
   using assms by (simp add: x1_calls_eval)
 
 lemma x1_comb_fwd_ok:
-  assumes "(cl, c1) \<in> fst (sctx_sol_prog x1_gs x1_prog)"
+  assumes "(cl, c1) \<in> fst (sign_conf_sol_prog x1_gs x1_prog)"
     and "(cl, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg x1_prog)"
-  shows "(k, c1) \<in> fst (sctx_sol_prog x1_gs x1_prog)"
+  shows "(k, c1) \<in> fst (sign_conf_sol_prog x1_gs x1_prog)"
   using assms by (simp add: x1_calls_eval)
 
 lemma x1_node_sound:
@@ -125,9 +125,7 @@ proof -
     by (simp add: x1_s0_def cinit_stores_def)
   have wf: "wf_compile_input x1_gs (prog_table x1_prog) (prog_procs x1_prog)"
     unfolding x1_prog_def
-    by (auto simp: wf_compile_input_simps wf_source_program_def wf_proc_decl_def
-          declared_global_def
-          split: if_splits)
+    by (auto simp: wf_compile_input_simps split: if_splits)
 
   have run:
     "star (pstep x1_gs (prog_table x1_prog)) (main_body (prog_table x1_prog), x1_s0, [])

@@ -99,29 +99,148 @@ the collection on top of it: every store some valid trace holds when it sits at 
 contexts; `activation_collect` is the context-keyed variant the
 context-sensitive results are stated over.
 
-The chain ends at one statement over the analyzer itself
-([`analyse_source_sound`](src/Executable_Surface/CLI/Analyse_Dispatch.thy)): run
-the source program, stop wherever you like, and every verdict the report printed
-for the program point you are standing at holds of the store in your hands.
+The chain ends at one statement over the CLI's own entry point
+([`run_voblint_source_sound`](src/Executable_Surface/CLI/Analysis_Run_Sound.thy)):
+run the source program, stop wherever you like, and the analyzer's answer for the
+program point you are standing at describes the store in your hands -- the
+abstract state contains it, and every verdict printed beside it holds of it.
 
 ```isabelle
-theorem analyse_source_sound:
+theorem run_voblint_source_sound:
   fixes p :: imp_prog and s0 s :: store
   assumes wf: "wf_compile_input (declared_global p) (prog_table p) (prog_procs p)"
       and cert: "analyse_certified D p"
       and s0: "s0 ∈ cinit_stores (declared_global p)"
       and run: "star (pstep (declared_global p) (prog_table p))
                   (main_body (prog_table p), s0, []) (residual, s, frs)"
+      and ans: "run_voblint D None Ctx_None view p = Analysed out"
   shows "∃v stk. csim (prog_table p) (prog_cfg p) (residual, s, frs) (v, s, stk)
-                 ∧ (∀c. (v, c, Check_Proved) ∈ set (analyse D p) ⟶ truthy (aval c s))
-                 ∧ (∀c. (v, c, Check_Refuted) ∈ set (analyse D p) ⟶ ¬ truthy (aval c s))"
+               ∧ s ∈ ltr_collect (declared_global p) (prog_cfg p)
+                         (cinit_stores (declared_global p)) v
+               ∧ analyse_state_covers D p v s
+               ∧ (∀row ∈ set (out_checks out). row_point row = v ⟶
+                    (row_verdict row = Lifted Check_Proved ⟶ truthy (aval (row_exp row) s))
+                  ∧ (row_verdict row = Lifted Check_Refuted ⟶ ¬ truthy (aval (row_exp row) s))
+                  ∧ row_verdict row ≠ Bot)"
 ```
 
-`analyse` is the dispatcher the CLI calls and `export_code` exports, and `D`
-ranges over every selectable domain, so this constrains the analyzer's own
-output rather than an internal solved system. `csim` names the program point: a
-partly executed command together with its frame stack sits at a graph node, and
-it is that node's verdicts the store must satisfy.
+`run_voblint` is the single operation `export_code` exports and `cli/main.ml`
+calls, and `D` ranges over every selectable domain, so this constrains the
+analyzer's own output rather than an internal solved system.
+
+`csim` gives a *structural* CFG correspondence for the current source control
+state, and that correspondence need not be unique. A procedure that is never
+called still has its body compiled into the graph, so
+
+```text
+main()   { x := 1; }
+unused() { x := 1; }
+```
+
+leaves the residual `x := 1` structurally matching two nodes -- one in `main`,
+which is running, and one in `unused`, which nothing reaches.
+
+The `ltr_collect` membership is what picks out a witness that is genuinely
+reachable carrying this store, and it is
+load-bearing rather than decorative -- at the dead witness the analysis
+computed bottom, so the coverage conjunct would be false there. At that
+reachable node the computed abstract state contains the store, and every
+definite check verdict printed for it is correct.
+
+One asymmetry is deliberate. The check guarantee is stated over `out_checks
+out`, the analyzer's own returned rows, while the state guarantee is stated as
+`analyse_state_covers D p v s` rather than over `out`. That is because
+`analysis_output` keeps no abstract state: its snapshot, globals and per-row
+states are all `String.literal`, already rendered. An output-level state
+predicate could only be defined by inverting the renderer, so the honest split
+is a semantic guarantee about the computed result and an observable guarantee
+about the printed report.
+`analyse_state_covers` is the over-approximation itself: the concrete store lies
+in the concretization of the abstract state the analysis computed for that node.
+The last conjunct reads the printed check rows -- PROVED rows hold, REFUTED rows
+are violated, and no row at a node the run actually reaches is marked dead, so
+an unreachability claim can never be printed over a store that reached it.
+
+[`analyse_source_sound`](src/Executable_Surface/CLI/Analyse_Dispatch.thy) is the
+same statement one layer down, over the `analyse` verdict list rather than the
+rendered rows, and without the coverage conjunct.
+
+### What is certified
+
+For the HOL call
+
+```isabelle
+run_voblint D None ctx view p = Analysed out
+```
+
+with the per-program premises established, a source-level soundness theorem
+covers these configurations:
+
+```text
+D   in {Sign, Interval, Parity, Congruence, Int}
+ctx in {Ctx_None, Ctx_EntryState, Ctx_CallString k}
+```
+
+Every modeled source execution is over-approximated at a genuinely reachable
+CFG node -- and, at the context-sensitive policies, under the analysis context
+its own call history produced. At that node every definite check verdict is
+correct for that execution, and no check row there is reported dead.
+
+The same statement holds at the context-sensitive configurations, where the
+table has one entry per point *and* context
+([`Analysis_Run_Ctx_Sound`](src/Executable_Surface/CLI/Analysis_Run_Ctx_Sound.thy)).
+The store then sits in the entry filed under *one* context -- the one its own
+call history produced -- and quantifying over every covered context instead
+would be false, since a different activation's entry need not describe this
+store at all.
+
+```isabelle
+theorem run_voblint_sign_entry_state_source_sound:
+  ...
+      and solves: "sign_entry_state_terminates_for (declared_global p) p"
+      and cover: "ctx_vars_cover (prog_cfg p) (sign_es.ctx_succ (declared_global p) p) []
+                    (sign_entry_state_vars (declared_global p) p)"
+      and ans: "run_voblint Sign_Analysis None Ctx_EntryState view p = Analysed out"
+  shows "∃v stk ctx st.
+           csim (prog_table p) (prog_cfg p) (residual, s, frs) (v, s, stk)
+         ∧ s ∈ activation_collect (declared_global p)
+                   (sign_entry_state_context_rel (declared_global p) p) [] (prog_cfg p)
+                   (cinit_stores (declared_global p)) v ctx
+         ∧ lookup_context (analyse_sign_entry_state_result p) v ctx = Lifted st ∧ s ∈ ⟦st⟧
+         ∧ (∀row ∈ set (out_checks out). row_point row = v ⟶
+              row_verdict row ≠ Dead
+            ∧ (row_verdict row = Decided Check_Proved ⟶ truthy (aval (row_exp row) s))
+            ∧ (row_verdict row = Decided Check_Refuted ⟶ ¬ truthy (aval (row_exp row) s)))"
+```
+
+All five domains have this at the entry-state configuration. Its conclusion
+carries an `activation_collect` membership for the same reason the
+context-insensitive one carries `ltr_collect`: `csim` is structural and
+non-unique, so the witness needs a semantic conjunct to pin it to a node this
+store genuinely reaches under some context. The two premises are the
+contextual counterpart of what
+[`analyse_certified`](src/Executable_Surface/CLI/Analyse_Dispatch.thy) bundles:
+a termination fact and one coverage fact. The coverage is
+[`ctx_vars_cover`](src/Abstract_Interpreter/Framework/Constraints/CFG_Enumeration.thy)
+rather than `vars_cover`, whose key type is `unit`, and it is *closure* rather
+than blanket coverage -- if a node-context pair was solved, the pairs its edges
+lead to were solved too. A context-sensitive system cannot demand the
+unconditional form, because which contexts a node was solved at is decided by
+the run.
+
+Call-string carries a *smaller* certificate than entry state, not a larger one.
+A call string is a total function of the call history, so every activation has
+exactly one context by construction and there is no context-totality obligation
+at all: `fun_route_ltr_collect_eq_Union` is premise-free. What remains is the
+termination fact and the one closure premise.
+
+Two exclusions are deliberate rather than pending. `None` is the solver
+argument: it selects each domain's certified default discipline, and an
+explicitly chosen alternative goes through `analyse_with_solver`, which carries
+the per-node bridge but not this theorem. And the guarantee is about
+`out_checks` -- the graph, snapshot and globals in the answer are rendered
+strings, with no theorem about them.
+
 [`analyse_certified D p`](src/Executable_Surface/CLI/Analyse_Dispatch.thy)
 bundles the two per-program facts nothing here proves in general. It is a
 logical precondition of the theorem, not a certificate the CLI produces or
@@ -129,15 +248,15 @@ checks: a caller establishes it for a specific program, by evaluation, before
 the theorem says anything about that program's report.
 
 Each domain also states the result over its own result table rather than over
-verdicts: [`analyse_sign_source_sound`](src/Analyses/Sign/Sign_Entry.thy) says
+verdicts: [`analyse_sign_source_sound`](src/Analyses/Sign/generated/Sign_Entry.thy) says
 the store lies in the concretization of the entry
 `analyse_sign_result p` returned for that node, with a weaker completed-run
-reading (`analyse_<domain>_completed_run_sound`, and
-`analyse_interval_td_completed_run_sound` for Interval: final store at
-`cfg_exit`, no `csim` witness needed) beside it. Those live in each domain's entry theory:
-[Sign](src/Analyses/Sign/Sign_Entry.thy),
-[Interval](src/Analyses/Interval/Interval_Entry.thy),
-[Parity](src/Analyses/Parity/Parity_Entry.thy),
+reading (`analyse_<domain>_completed_run_sound`: final store at `cfg_exit`, no
+`csim` witness needed) beside it. Those live in each domain's entry theory:
+[Sign](src/Analyses/Sign/generated/Sign_Entry.thy),
+[Interval](src/Analyses/Interval/generated/Interval_Entry.thy),
+[Parity](src/Analyses/Parity/generated/Parity_Entry.thy),
+[Congruence](src/Analyses/Congruence/generated/Congruence_Entry.thy),
 [Int](src/Analyses/Int/Int_Entry.thy).
 
 Underneath, the source bridge is domain-free. It consumes only a
@@ -156,10 +275,11 @@ domain writes no source-level reasoning. See
 The theorem above is stated for each domain's **default, context-insensitive**
 configuration; `analyse_certified` names that configuration's solve per domain,
 and the per-domain corollaries read their tables at `lookup_context ... v ()`.
-The entry-state and call-string context policies, and the alternate solver
-update rules reachable through `analyse_with_solver`, carry the per-node
-soundness bridge but not this theorem. Domain coverage is not configuration
-coverage.
+Both context-sensitive policies now carry the same source-level statement for
+all five domains, over each one's own result table. The alternate solver update
+rules reachable through `analyse_with_solver` carry the per-node bridge but not
+this theorem. Domain coverage is not configuration coverage; see
+[`docs/THEOREM_MAP.md`](docs/THEOREM_MAP.md) for each endpoint's exact shape.
 
 Read the two verdicts precisely. `PROVED` at a node says every execution that
 reaches that node satisfies the condition; `REFUTED` says every execution that
@@ -252,7 +372,7 @@ component *plus* cross-component reduction, not a better interval transfer
 | --- | --- | --- | --- | --- |
 | Sign | `sign` | `analyse_sign_result` | join | `none`, `entry-state`, `call-string` |
 | Interval | `interval` | `analyse_interval_td_result` | warrowing | `none`, `entry-state`, `call-string` |
-| Parity | `parity` | `analyse_parity_result` | join | `none` |
+| Parity | `parity` | `analyse_parity_result` | join | `none`, `entry-state`, `call-string` |
 | Int (Sign × Interval × Parity × Congruence) | `int` | `analyse_int_result` | warrowing | `none`, `entry-state`, `call-string` |
 
 Every domain supplies a `widen` operator; Sign and Parity are finite lattices
@@ -421,6 +541,7 @@ fuzzing under `tests/property/`.
 | --- | --- |
 | [`AGENTS.md`](AGENTS.md) | Project contract, style rules, working agreements |
 | [`docs/PROOF_OVERVIEW.md`](docs/PROOF_OVERVIEW.md) | Proof architecture and intended claims |
+| [`docs/THEOREM_MAP.md`](docs/THEOREM_MAP.md) | Thesis claims mapped to checked Isabelle theorems |
 | [`docs/GLOSSARY.md`](docs/GLOSSARY.md) | Terminology and defining layers |
 | [`docs/VERIFICATION_CHAIN_AND_TRUST_BOUNDARY.md`](docs/VERIFICATION_CHAIN_AND_TRUST_BOUNDARY.md) | What is proved, what is trusted |
 | [`docs/GOBLINT_ALIGNMENT_REGISTER.md`](docs/GOBLINT_ALIGNMENT_REGISTER.md) | Where this formalization differs from upstream Goblint, and why |

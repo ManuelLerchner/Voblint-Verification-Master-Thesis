@@ -1,8 +1,22 @@
 theory Example_Int_Transfer
-  imports Voblint_Analysis_Int.Int_Transfer
+  imports
+    Voblint_Analysis_Int.Int_Transfer
+    Example_Int_Backward
 begin
 
-section \<open>Composite integer-domain transfer functions: examples\<close>
+section \<open>Reaching the composite operations the way the analysis does\<close>
+
+text \<open>
+  Every abstract operation the pipeline runs is reached through a dispatcher --
+  \<open>int_tf_abs\<close> for an edge action, \<open>enter_int_dom_ci_for\<close> for a call's entry,
+  \<open>branch_int_dom_for\<close> for a guard -- rather than by naming the underlying
+  primitive. That a primitive is sound in isolation says nothing about whether
+  the dispatcher picks it, so the lemmas below go the long way round and pin
+  what comes out. Vocabulary: \<open>test_gs\<close> is the variable classifier,
+  \<open>int_dom_sipc s i p c\<close> overwrites \<open>top\<close> in the order sign, interval, parity,
+  congruence, and \<open>test_env_top\<close>, inherited from \<open>Example_Int_Backward\<close>, is the
+  everywhere-unconstrained starting state.
+\<close>
 
 text \<open>
   \<open>test_gs\<close> classifies every variable as local, so the entry operation resets
@@ -12,9 +26,6 @@ text \<open>
 
 definition test_gs :: "vname => bool" where
   "test_gs _ = False"
-
-definition test_env_top :: "int_dom abs_state" where
-  "test_env_top = (\<lambda>_. top)"
 
 subsection \<open>Assignment and procedure entry through the registered operations\<close>
 
@@ -45,16 +56,17 @@ lemma enter_int_dom_ci_for_once_binds_formal:
 subsection \<open>Guard refinement through the registered operations, mode contrast\<close>
 
 text \<open>
-  The same \<open>x + 1 = 3 ==> x = 2\<close> witness as
-  \<open>Example_Int_Backward.bfilter_int_dom_once_plus_eq_exact\<close>, in the two
-  halves that together say what a single dispatched branch step would: the
-  dispatcher's branch case is the mode's own \<open>branch_int_dom_*\<close>, and that
-  branch's filter narrows exactly. The dispatch half is an equation between
-  operations rather than a computation, because \<open>branch_int_dom_*\<close> collapses
-  the lifted filter and \<open>bfilter_lifted\<close> normalizes against
-  \<open>is_empty_state\<close>, which quantifies over an infinite \<open>vname\<close> and so has no
-  code equation --- only the executable \<open>resolved_st_q\<close> mirror
-  \<open>branch_int_dom_*_st\<close> runs.
+  What a dispatched branch step does splits into two halves, and only one of
+  them is a computation. The half proved here is that the dispatcher's branch
+  case is the mode's own \<open>branch_int_dom_*\<close> -- an equation between operations,
+  because \<open>branch_int_dom_*\<close> collapses the lifted filter and \<open>bfilter_lifted\<close>
+  normalizes against \<open>is_empty_state\<close>, which quantifies over an infinite
+  \<open>vname\<close> and so has no code equation; only the executable \<open>resolved_st_q\<close>
+  mirror \<open>branch_int_dom_*_st\<close> runs. The other half -- that the filter those
+  branches call narrows \<open>x + 1 = 3\<close> to exactly \<open>x = 2\<close> under \<open>Once\<close> and to the
+  congruence component alone under \<open>Never\<close> -- is proved in
+  \<^theory>\<open>Voblint_Examples_Int.Example_Int_Backward\<close>, which this theory
+  imports.
 \<close>
 
 lemma branch_int_dom_for_once_is_branch_int_dom:
@@ -64,18 +76,6 @@ lemma branch_int_dom_for_once_is_branch_int_dom:
 lemma branch_int_dom_for_never_is_branch_int_dom:
   "branch_int_dom_for Refine_Never = branch_int_dom_never"
   by simp
-
-lemma bfilter_once_assume_exact:
-  "bfilter_int_dom_once (Eq (Plus (V (STR ''x'')) (N 1)) (N 3)) True
-     test_env_top (STR ''x'') =
-   int_dom_sipc SPos (Ivl (Fin 2) (Fin 2)) PEven (congruence_of_int 2)"
-  by eval
-
-lemma bfilter_never_assume_congruence_only:
-  "bfilter_int_dom_never (Eq (Plus (V (STR ''x'')) (N 1)) (N 3)) True
-     test_env_top (STR ''x'') =
-   int_dom_sipc STop top PTop (congruence_of_int 2)"
-  by eval
 
 subsection \<open>Min/Max special-call dispatch through the registered bundle\<close>
 

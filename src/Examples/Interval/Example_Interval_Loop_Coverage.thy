@@ -134,6 +134,56 @@ lemma loop_body_entry_x:
   "loop_env loop_body_entry (STR ''x'') = Ivl (Fin 0) (Fin 19)"
   by (simp add: loop_env_def)
 
+subsection \<open>The environment is a post-fixpoint of this program's equations\<close>
+
+text \<open>
+  The negated guard is the one edge the lemmas above leave out: at the loop head
+  it narrows \<open>x\<close> to \<open>[20,20]\<close>, which the exit value \<open>[0,20]\<close> already contains.
+\<close>
+
+lemma loop_head_guard_feasible_neg:
+  "feasible_ivl (Less (V (STR ''x'')) (N 20)) False (loop_env (Statement 1))"
+  unfolding loop_env_def by simp eval
+
+lemma bfilter_loop_head_state_neg:
+  "bfilter_ivl (Less (V (STR ''x'')) (N 20)) False (loop_env (Statement 1))
+     = (\<lambda>_. Ivl MinInf PlusInf)((STR ''x'') := Ivl (Fin 20) (Fin 20))"
+  unfolding loop_env_def by (simp add: normalize_ivl_def)
+
+lemma bfilter_loop_head_live_neg:
+  "\<not> is_empty_state
+       (bfilter_ivl (Less (V (STR ''x'')) (N 20)) False (loop_env (Statement 1)))"
+  unfolding bfilter_loop_head_state_neg
+  by (auto simp: is_empty_state_def is_bottom_ivl_def split: if_splits)
+
+lemma loop_env_head:
+  "loop_env (Statement 1)
+     = (\<lambda>_. Ivl MinInf PlusInf)((STR ''x'') := Ivl (Fin 0) (Fin 20))"
+  by (simp add: loop_env_def)
+
+lemma branch_at_head_true:
+  "branch_ivl (Less (V (STR ''x'')) (N 20)) True
+     ((\<lambda>_. Ivl MinInf PlusInf)((STR ''x'') := Ivl (Fin 0) (Fin 20)))
+   = (\<lambda>_. Ivl MinInf PlusInf)((STR ''x'') := Ivl (Fin 0) (Fin 19))"
+  using loop_head_guard_feasible bfilter_loop_head_live
+  unfolding loop_env_head[symmetric] bfilter_loop_head_state[symmetric]
+  by (simp add: ivl_backward_domain.branch_def ivl_backward_domain.branch_lifted_def)
+
+lemma branch_at_head_false:
+  "branch_ivl (Less (V (STR ''x'')) (N 20)) False
+     ((\<lambda>_. Ivl MinInf PlusInf)((STR ''x'') := Ivl (Fin 0) (Fin 20)))
+   = (\<lambda>_. Ivl MinInf PlusInf)((STR ''x'') := Ivl (Fin 20) (Fin 20))"
+  using loop_head_guard_feasible_neg bfilter_loop_head_live_neg
+  unfolding loop_env_head[symmetric] bfilter_loop_head_state_neg[symmetric]
+  by (simp add: ivl_backward_domain.branch_def ivl_backward_domain.branch_lifted_def)
+
+theorem loop_env_post_fixpoint:
+  "\<forall>(u, a, v) \<in> intra loop_cfg. ivl_tf_abs a (loop_env u) \<le> loop_env v"
+  unfolding loop_cfg_intra
+  by (auto simp: loop_env_def branch_at_head_true branch_at_head_false
+                 ivl_tf.assign_def ivl_tf.body_def ivl_tf.ret_def
+                 le_fun_def less_eq_ivl_def normalize_ivl_def)
+
 end
 
 

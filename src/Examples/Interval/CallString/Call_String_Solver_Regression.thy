@@ -58,7 +58,8 @@ lemma nest_2_eqs_statement3:
              (\<lambda>res. Answer (DG (locals res) Bot)))"
   unfolding nest_2_eqs_def routed_node_rhs_def routed_contribution_trees_def
     routed_entry_seed_tree_def
-    routed_call_tree_def routed_callee_call_tree_def nest_S_st_def dgs_enter_local_state_st_for_lifted
+    routed_call_tree_def routed_callee_call_tree_def nest_S_st_def
+    dgs_enter_local_state_st_for_lifted
   by (simp add: intra_predecessor_addr_list_def statement3_no_intra statement3_comb
         statement3_targets statement3_no_calls nest_entry Let_def
         sp_compile_def sp_compile_with_bind sp_bind_def sp_return_def local_enter_transfer_def)
@@ -77,7 +78,8 @@ lemma nest_1_eqs_statement3:
              (\<lambda>res. Answer (DG (locals res) Bot)))"
   unfolding nest_1_eqs_def routed_node_rhs_def routed_contribution_trees_def
     routed_entry_seed_tree_def
-    routed_call_tree_def routed_callee_call_tree_def nest_S_st_def dgs_enter_local_state_st_for_lifted
+    routed_call_tree_def routed_callee_call_tree_def nest_S_st_def
+    dgs_enter_local_state_st_for_lifted
   by (simp add: intra_predecessor_addr_list_def statement3_no_intra statement3_comb
         statement3_targets statement3_no_calls nest_entry Let_def
         sp_compile_def sp_compile_with_bind sp_bind_def sp_return_def local_enter_transfer_def)

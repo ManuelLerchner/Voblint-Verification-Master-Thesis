@@ -346,7 +346,7 @@ both, with the `*_agrees` lemmas becoming one generic lemma.
 `formals_route_lifted_gen` (38 uses) vs `formals_route_lifted` (7),
 `entry_state_route_gen` vs `entry_state_route`, `entry_exec_route_gen` vs
 `entry_exec_route`, `dg_tree_st_commute_for` vs `dg_tree_st_commute`,
-`sctx_entry_route_gen` / `ictx_entry_route_gen` vs their bases. In each case the
+`sign_conf_entry_route_gen` / `int_conf_entry_route_gen` vs their bases. In each case the
 generalized form carries the traffic and the base survives as a thin
 specialization — the "new API plus old-API shim" shape `AGENTS.md` calls a
 smell. Fold each base into the `_gen` form by instantiation and drop the name.
@@ -422,7 +422,7 @@ prose. The worst cases:
 | `part_post_solution_dg_st_to_abs`, `dg_post_solution_collect_sound_ltr` | **`Voblint.thy`** (×3), `Run_Analysis_Sound` | gone |
 | `state_report_dot_auto`, `full_state_dot_auto`, `entry_state_full_state_dot_auto_code` | `State_Report_Graph` (9 mentions) | gone; see §2.3 |
 | `sound_dg_spec_core_ltr` | `DG_LTR_Sound` | renamed `sound_dg_spec_core_ltr_for` |
-| `analyse_interval_td`, `analyse_interval_td_at`, `analyse_interval_td_terminates` | `Interval_Checks`, `Interval_Ctx_Entry_State_Sound` | only `analyse_interval_td_result`/`_report` exist |
+| `analyse_interval_td`, `analyse_interval_td_at`, `analyse_interval_td_terminates` | `Interval_Checks`, `Interval_Ctx_Entry_State_Sound` | only `analyse_interval_result`/`_report` exist |
 | `assume_sign_st`, `assume_not_sign_st`, `branch_parity_st_for` | `Sign_Backward`, `Parity_Exec` | gone |
 | `p_reg_join`, `p_reg_per_origin`, `analyse_sign_sound` | `Interval_Entry` | gone |
 | `collect_checks_prog`, `etf_combine_collect`, `gamma_eq_env`, `route_2_commute`, `csim_call_preservation`, `fun_of_st`, `fun_of_exec_dg_st` | various | gone |
@@ -632,19 +632,17 @@ the domain name away and measuring line-level similarity:
 Compare `Sign_Ctx_None_Sound` vs `Parity_Ctx_None_Sound` at 0.83 (§3.1). The
 examples differentiate; the instances copy. No unification opportunity here.
 
-### 7.3 Duplicated example programs: two, both trivial
+### 7.3 Duplicated example programs: one remains
 
-Of 49 distinct `program { ... }` blocks in the tree, exactly two are defined
-twice:
+The audit found two duplicated `program { ... }` blocks:
 
 - `x := 0; while (x < 20) { x := x + 1 }` — `flagship_prog`
   (`Example_Interval_DG_Flagship`) and `loop_prog`
   (`Example_Interval_Loop_Coverage`).
-- the `global g; void bump(n) { g := g + n; return g }` program —
-  `nestg_program` (`Example_Interval_DG_CallString_K1`) and `gcall_prog`
-  (`Example_Interval_DG_Ctx_Globals_Regression`).
+- The duplicated `global g; void bump(n) { g := g + n; return g }` examples
+  were removed after equivalent CLI regressions covered the behavior.
 
-Cheap to share, low value either way.
+The remaining loop duplicate is cheap to share and low value to change.
 
 ### 7.4 `Example_Interval_Placement.thy` is not an example
 
@@ -952,7 +950,7 @@ into the verified layer. That is the model the rest of `cli/` should follow.
 Drift (register statements no longer true), independently reproducing §4's D1 and adding four:
 `analysis-defined call contract missing` is superseded by the same three `dg_spec` fields;
 `the collecting-soundness certificate is the remaining proof` is contradicted by
-`sctx_entry_activation_collect_sound` and the `Int` counterpart, both proved;
+`sign_conf_entry_activation_collect_sound` and the `Int` counterpart, both proved;
 **`point_digest` / `ENTER_MONO`, cited as the closure path, occur nowhere in `src/`** — removed
 in the digest-removal commits; and `Update rules ... Default TD-side behavior only. Open`
 contradicts `Solver_Menu.thy:63-70`'s four rules and the register's own line 146.
@@ -1158,6 +1156,12 @@ difference is not the context policy: **`cs_ctx_graph_config` is domain-generic 
 them saves ~120 lines *and* removes the only reason the entry-state renderer is
 Interval-only.
 
+The genericity half of that has landed: `entry_state_ctx_graph_config` takes the domain's
+entry transfer and its `abstract_value` injection as parameters, and
+`entry_state_ctx_export_auto`/`_graph_snapshot_auto` (`State_Report_Entry_Ctx.thy`) draw
+all five domains, each at the solver its own routed instance publishes. The
+`entry_state_ctx_*`/`cs_ctx_*` duplication itself stands.
+
 ### 11.4 `Voblint_CLI`'s dependency on `Voblint_Soundness` is vestigial
 
 **Verified**: `Run_Analysis_Sound.thy` declares 19 names; **none of them occurs anywhere
@@ -1262,7 +1266,7 @@ domain already proves (`<D>_tf_st_for_commute`, `<D>_enter_st_for_commute`,
 `<D>_is_sound_transfer_for`, `fun_of_st_cinit_<D>_st_for`). Nothing else.
 
 **And the pattern is already in the codebase, on the other axis.**
-`Interval_Ctx_None_Sound.thy:152`'s `ictx_solved` locale factors the *solver* axis
+`Interval_Ctx_None_Sound.thy:152`'s `int_conf_solved` locale factors the *solver* axis
 correctly: four update rules contribute four `global_interpretation`s over one
 locale whose single assumption is `part_post_solution` of the shared system.
 Diffing its PerOrigin block against its warrowing block shows only the
@@ -1546,7 +1550,7 @@ IMP2-vs-VIMP naming drift, and adds:
    `git status --porcelain` so a newly emitted file cannot pass silently.
 5. **U1: one Core locale for `<D>_Ctx_None_Sound`** (§12.2). The largest single
    win in the tree, and the pattern already exists one axis over in
-   `ictx_solved`.
+   `int_conf_solved`.
 6. **U5: collapse the `refine_mode` triplication** (§12.2) — byte-verified, and
    every underlying operation already takes `mode`.
 7. **Convert prose references to `\<^const>\<open>...\<close>`** (§5.1) so the

@@ -10,7 +10,7 @@ itself is documented in `grammar/vimp.yaml`, not here.
 ## Shape
 
 ```text
-voblint --analysis sign|interval|int|parity
+voblint --analysis sign|interval|int|parity|congruence
         [--context none|entry-state|call-string] [--context-depth K]
         [--context-graph collapsed|expanded]
         [--dot | --dot-full | --graph-snapshot]
@@ -20,29 +20,37 @@ voblint --parse-only FILE.vimp
 voblint --help
 ```
 
-- `--analysis sign|interval|int|parity` selects the domain (required unless
-  `--parse-only`). `int` is the refining composite Sign x Interval x Parity x
-  Congruence domain, fixed at its most precise refinement mode and the
+- `--analysis sign|interval|int|parity|congruence` selects the domain (required
+  unless `--parse-only`). `int` is the refining composite Sign x Interval x
+  Parity x Congruence domain, fixed at its most precise refinement mode and the
   warrowing solver, so it takes no `--solver`. `parity` is the four-element
   Bot/Even/Odd/Top lattice; it decides equalities only by refuting them
-  across differing parities.
+  across differing parities. `congruence` is the residue-class domain, one
+  value constrained to `x = r (mod m)`.
 - `--context none|entry-state|call-string` selects context sensitivity
   (default `none`). `entry-state` re-analyzes each callee per distinct
   entered-argument context; `call-string` splits it by bounded call history
-  instead and requires `--context-depth K` with `K >= 1`. Both are supported
-  by `sign`, `interval` and `int`; `parity` is context-insensitive. Any other
-  domain/context pairing is a configuration error, not a silent fallback.
+  instead and requires `--context-depth K` with `K >= 1`. Every domain has a
+  routed instance at both, though not at every `--solver`: the resolver follows
+  each pairing's proved capability, so an unproved solver/context pairing is a
+  configuration error, not a silent fallback.
+- Soundness does not follow the domain axis here. The theorem over `analyse`
+  covers all five domains at `--context none` only; under `entry-state` and
+  `call-string` what is proved is the weaker per-context bound. See
+  [`docs/THEOREM_MAP.md`](THEOREM_MAP.md) for the exact shape.
 - `--context-depth K` bounds the call string. Valid only with `--context
   call-string`; `K = 0` is rejected rather than treated as `--context none`.
 - `--context-graph collapsed|expanded` selects how `--dot`/`--dot-full`/
-  `--graph-snapshot` render an `entry-state` result (default `collapsed`).
+  `--graph-snapshot`/`--html` render an `entry-state` result, for every domain.
   This is a rendering choice over the same computed contextual result, not a
   different analysis — see `docs/CHECK_ARCHITECTURE.md`'s "Contextual result
   and GraphViz presentation" section for the full architecture and the CLI
-  contract. Requires `--context entry-state` and `--analysis interval` --
-  the expanded renderer is typed in the context type itself, whereas the
-  collapsed renderings join contexts away and work for every domain.
-  Anything else is a configuration error, not a silent fallback.
+  contract. `expanded` is the default under `--context entry-state`: a run
+  asked for per-context precision, and the collapsed view joins it away, so a
+  point dead in one activation and live in another reads as live. Requires
+  `--context entry-state`; `--context none` has one context to draw and
+  `--context call-string` renders per-context already, so the flag is a
+  configuration error at either, not a silent fallback.
 - `--dot` / `--dot-full` / `--graph-snapshot` pick an output mode in place of
   the default plain-text check report: `--dot` annotates check nodes only,
   `--dot-full` annotates every node with its computed abstract state,

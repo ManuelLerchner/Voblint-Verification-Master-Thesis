@@ -379,7 +379,7 @@ and mark it `superseded (see below)`.
   `gamma_exec d g = gamma_dg_local_state (readback d) (readback g)`, from the three
   commute facts alone -- and then interprets `sound_dg_spec_core`,
   `dg_ctx_activation_base` and `unit_routed_context` at
-  `sctx_spec gs is_bot_pred` with `sigma := snd (sctx_sol ...)`, the solver's
+  `sign_conf_spec gs is_bot_pred` with `sigma := snd (sign_conf_sol ...)`, the solver's
   own table. The post-solution of the unbuffered generator is the first half
   of `routed_domain_exec.pp_abs` (`part_post_solution_routed_node_rhs_buffered`
   plus the `routed_call_tree_contribution_*` facts); the second half, the
@@ -404,34 +404,34 @@ and mark it `superseded (see below)`.
   positionally gained the `id` argument. `routed_context_hetero` itself is
   untouched so far; step 2.4 removes it once no instance interprets it.
 - 2026-08-30: Sign at unit context is the first instance on the executable
-  carrier. `Sign_Ctx_None_Sound` defines `sctx_gamma gs d g =
-  gamma_state_lift (readback d)` and the covered reader `sctx_sg_st`, proves
-  `sctx_sound_exec` by `sound_dg_spec_core_st` and `sctx_pp_routed` by `pp_st`,
-  and interprets `unit_routed_context` at `sctx_spec` with
-  `sigma := snd (sctx_sol ...)`. `Sign_Checks` interprets the adapter with
-  `rd := map_lift (fun_of_resolved_st_q_for gs)`; `sctx_analyse_result_eq`
-  is now a one-line case split. `sctx_sigma_abs`, `sctx_sg`, `sctx_pp_abs`
+  carrier. `Sign_Ctx_None_Sound` defines `sign_conf_gamma gs d g =
+  gamma_state_lift (readback d)` and the covered reader `sign_conf_sg_st`, proves
+  `sign_conf_sound_exec` by `sound_dg_spec_core_st` and `sign_conf_pp_routed` by `pp_st`,
+  and interprets `unit_routed_context` at `sign_conf_spec` with
+  `sigma := snd (sign_conf_sol ...)`. `Sign_Checks` interprets the adapter with
+  `rd := map_lift (fun_of_resolved_st_q_for gs)`; `sign_conf_analyse_result_eq`
+  is now a one-line case split. `sign_conf_sigma_abs`, `sign_conf_sg`, `sign_conf_pp_abs`
   and `sign_pp_abs_gen` are gone, and the spike theory is deleted because
   the instance is its content. Recipe per remaining instance: replace the
   `*_sigma_abs`/`*_sg` section with `*_gamma`/`*_sg_st`, replace `*_pp_abs`
   with `*_pp_routed`, re-interpret `sound_dg_spec_core` and the routed locale at
   the executable spec, and hand the adapter `rd := map_lift readback`.
 - 2026-08-30: Parity, Interval and Int at unit context follow the recipe
-  unchanged. Interval and Int keep their solver-generic `ictx_solved`
+  unchanged. Interval and Int keep their solver-generic `int_conf_solved`
   locale; `pp_routed` and `sg_st` live in the locale, the four update-rule
   `global_interpretation`s lose their `sigma_abs`/`sg` `defines`, and the
-  `*_Entry` theories read `snd (ictx_sol_* ...)` directly. Int's hand-rolled
-  `ictx_activation_collect_sound`, `ictx_sg_seed`, `ictx_sg_comb` and
-  `ictx_locals_ge_s0d` are deleted; the theorem name survives as a
+  `*_Entry` theories read `snd (int_conf_sol_* ...)` directly. Int's hand-rolled
+  `int_conf_activation_collect_sound`, `int_conf_sg_seed`, `int_conf_sg_comb` and
+  `int_conf_locals_ge_s0d` are deleted; the theorem name survives as a
   re-export of the adapter's `activation_collect_dg_sound`, which is the
   same statement at the executable carrier. Int's per-mode
-  `ictx_abs_spec_sound` moves above the `int_unit` context so
-  `ictx_sound_exec` can pull it back along the readback.
+  `int_conf_abs_spec_sound` moves above the `int_unit` context so
+  `int_conf_sound_exec` can pull it back along the readback.
 - 2026-08-30: the contextual instances follow the recipe once the two policy
   locales are stated at a carrier parameter. `pure_entry_routed_context`
   additionally takes its route as a parameter (`formals_route_lifted_gen S`
   on the abstract carrier, a domain's own quotient route such as
-  `sctx_entry_route_gen gs is_bot_pred` on the executable one); its generic
+  `sign_conf_entry_route_gen gs is_bot_pred` on the executable one); its generic
   discharge of `resolve_sound`, `route_enterc_agree` and
   `call_enter_store_agree` does not depend on the carrier. Each entry-state
   instance now interprets `dg_analysis_adapter` at the executable spec with
@@ -911,7 +911,8 @@ and mark it `superseded (see below)`.
      violation caught by the batch build (Core does not, and must not,
      depend on Exec) rather than by the citation trace.
   This closes the `_at` half and the Solver-boundary half of
-  `docs/HANDOFF.md`'s two open tracks; the manager question was re-audited
+  `docs/history/CORE_CLEANUP_HANDOFF_2026-09-01.md`'s two open tracks; the
+  manager question was re-audited
   against a fresh clone of the real `goblint/analyzer` source (not memory)
   and reconfirmed **A -- no manager needed**, with one honest new gap noted
   (Goblint's `man.split` has no Voblint equivalent, because no current VIMP
@@ -962,8 +963,8 @@ and mark it `superseded (see below)`.
   facts once, under the first qualifier. `Int_Ctx_None_Sound` interprets
   `unit_routed_context` and then `dg_analysis_adapter` at the same
   `routed_context_base_hetero` instance, so the hoisted
-  `activation_collect_dg_sound` is `ictx_routed.routed.…`, not
-  `ictx_adapter.…`; the entry-state instances escape this only because their
+  `activation_collect_dg_sound` is `int_conf_routed.routed.…`, not
+  `int_conf_adapter.…`; the entry-state instances escape this only because their
   adapter names `enterc` by a definition the routed locale spells out. I/Q
   does not re-check a dependent theory after an edit to its Core ancestor
   until that theory is touched; the batch build does.
@@ -1055,14 +1056,14 @@ executable transfer, its callee entry, the state a run starts from, the
 always-join solver, and the check classifier; the `defines` clause publishes
 `sign_unit_equations`, `sign_unit_solution`, `sign_unit_result`,
 `sign_unit_state_at`, `sign_unit_report` and their siblings. `Sign_Checks.thy`
-binds those to the names the CLI already used -- `sctx_eqs_prog`,
-`sctx_sol_prog` and `sctx_terminates_prog` are `abbreviation`s now, so no
+binds those to the names the CLI already used -- `sign_conf_eqs_prog`,
+`sign_conf_sol_prog` and `sign_conf_terminates_prog` are `abbreviation`s now, so no
 constant stands between the CLI and the assembly -- and defines only what is
 Sign's own: the per-origin solver sibling and the published globals.
 `Sign_Exec_Sound.thy` is deleted, and its ~27 names are appended to
 `scripts/retired_identifiers.txt`. That retires the Sign spine the 2026-08-30
-step-2.6 entry above describes -- `sctx_sol`, `sctx_sg_st`, `sctx_pp_routed`,
-`sctx_analyse_result_eq` -- and `sign_pp_st_gen`, one of the four
+step-2.6 entry above describes -- `sign_conf_sol`, `sign_conf_sg_st`, `sign_conf_pp_routed`,
+`sign_conf_analyse_result_eq` -- and `sign_pp_st_gen`, one of the four
 `*_pp_st_gen` citations the 2026-09-01 entry kept `pp_st` for; the other three
 still cite it, so that conclusion stands.
 

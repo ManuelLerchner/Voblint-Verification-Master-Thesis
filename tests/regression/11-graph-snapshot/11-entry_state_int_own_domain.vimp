@@ -1,4 +1,4 @@
-// PARAM: --analysis int --context entry-state
+// PARAM: --analysis int --context entry-state --context-graph collapsed
 // The Int sibling of 10-entry_state_sign_own_domain.vimp, and the clearest
 // witness that the collapsed entry-state renderer now reads the selected
 // domain: Int's composite states print as a reduced tuple

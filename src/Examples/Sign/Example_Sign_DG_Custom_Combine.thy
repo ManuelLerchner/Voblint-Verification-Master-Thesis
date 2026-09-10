@@ -60,6 +60,7 @@ definition sign_dg_spec_callee_join ::
      (ownership_split_dg_spec_st_for gs tf_st enter_st)
        \<lparr> dgs_combine_env := (\<lambda>ci. sign_combine_env_callee_join) \<rparr>"
 
+declare sign_dg_spec_callee_join_def [code_unfold]
 text \<open>Only the environment merge differs; every other field is the stock one.\<close>
 
 lemma dgs_enter_sign_dg_spec_callee_join [simp]:
@@ -165,6 +166,7 @@ definition sign_dg_spec_env_join ::
      (ownership_split_lift gs (sign_base_spec gs))
        \<lparr> dgs_combine_env := (\<lambda>ci. combine_env_callee_join_abs gs) \<rparr>"
 
+declare sign_dg_spec_env_join_def [code_unfold]
 lemma dg_spec_step_sign_dg_spec_env_join [simp]:
   "dg_spec_step (sign_dg_spec_env_join gs) a
      = dg_spec_step (ownership_split_lift gs (sign_base_spec gs)) a"
@@ -300,7 +302,7 @@ proof -
   interpret sign_tf: sound_transfer_for gs
       skip_sign assign_sign special_sign branch_sign body_sign return_sign
       "enter_sign_ci_for gs" event_sign
-    by (rule sign_is_sound_transfer_for)
+    by (rule sign_tf.is_sound_transfer_for)
   interpret stock: sound_dg_spec_core
     "ownership_split_lift gs (sign_base_spec gs)" "gamma_ownership_split gs" gs
     by (rule sign_tf.ownership_split_lift_core_sound)
@@ -332,6 +334,12 @@ text \<open>
   \<^const>\<open>dgs_combine_env\<close> differs between them.
 \<close>
 
+text \<open>\<open>cj_program\<close> is byte-identical to \<open>Example_Sign_DG_Custom_Body\<close>'s \<open>bf_program\<close>, and
+  \<open>cj_stock_eqs\<close> below to that theory's \<open>bf_stock_eqs\<close>. One call, one formal, and one name
+  that caller and callee both write is the smallest shape in which a single overridden
+  \<open>dg_spec\<close> field is observable, and both overrides need exactly that shape; each theory
+  keeps its own copy so neither witness inherits the other's imports.\<close>
+
 definition cj_program :: imp_prog where
   "cj_program = program {
      void mark(p) { r := 0 - 1; return p }
@@ -348,32 +356,48 @@ abbreviation cj_lookup :: "sign exec_dg_st \<Rightarrow> vname \<Rightarrow> sig
   "cj_lookup s x \<equiv> lookup_resolved_st_q s (location_of cj_prog_gs x)"
 
 definition cj_stock_eqs ::
-  "pp \<times> unit \<Rightarrow> (pp \<times> unit, (unit, unit) routed_gk, (sign exec_dg_st, sign exec_dg_st) dg_state) strategy_tree" where
+  "pp \<times> unit
+   \<Rightarrow> (pp \<times> unit, (unit, unit) routed_gk,
+        (sign exec_dg_st, sign exec_dg_st) dg_state) strategy_tree" where
   "cj_stock_eqs = unit_routed_eqs
-     (ownership_split_dg_spec_st_for cj_prog_gs (sign_tf_st_for cj_prog_gs) (sign_enter_st_for cj_prog_gs))
+     (ownership_split_dg_spec_st_for cj_prog_gs
+        (sign_tf_st_for cj_prog_gs) (sign_enter_st_for cj_prog_gs))
      cj_cfg bot cinit_sign_st (restrict_global_resolved_q cinit_sign_st)"
 
 definition cj_custom_eqs ::
-  "pp \<times> unit \<Rightarrow> (pp \<times> unit, (unit, unit) routed_gk, (sign exec_dg_st, sign exec_dg_st) dg_state) strategy_tree" where
+  "pp \<times> unit
+   \<Rightarrow> (pp \<times> unit, (unit, unit) routed_gk,
+        (sign exec_dg_st, sign exec_dg_st) dg_state) strategy_tree" where
   "cj_custom_eqs = unit_routed_eqs
-     (sign_dg_spec_callee_join cj_prog_gs (sign_tf_st_for cj_prog_gs) (sign_enter_st_for cj_prog_gs))
+     (sign_dg_spec_callee_join cj_prog_gs
+        (sign_tf_st_for cj_prog_gs) (sign_enter_st_for cj_prog_gs))
      cj_cfg bot cinit_sign_st (restrict_global_resolved_q cinit_sign_st)"
 
 lemma cj_stock_terminates:
-  "TD_side_seed_join_warrowing_Interp_solve_c is_activation_seed cj_stock_eqs (cfg_exit cj_cfg, ()) \<noteq> None"
+  "TD_side_seed_join_warrowing_Interp_solve_c is_activation_seed cj_stock_eqs
+     (cfg_exit cj_cfg, ()) \<noteq> None"
   by eval
 
 lemma cj_custom_terminates:
-  "TD_side_seed_join_warrowing_Interp_solve_c is_activation_seed cj_custom_eqs (cfg_exit cj_cfg, ()) \<noteq> None"
+  "TD_side_seed_join_warrowing_Interp_solve_c is_activation_seed cj_custom_eqs
+     (cfg_exit cj_cfg, ()) \<noteq> None"
   by eval
 
 definition cj_stock_sol ::
-  "(pp \<times> unit) set \<times> (pp \<times> unit + (unit, unit) routed_gk \<Rightarrow> (sign exec_dg_st, sign exec_dg_st) dg_state)" where
-  "cj_stock_sol = TD_side_seed_join_warrowing_Interp_solve is_activation_seed cj_stock_eqs (cfg_exit cj_cfg, ())"
+  "(pp \<times> unit) set
+   \<times> (pp \<times> unit + (unit, unit) routed_gk
+        \<Rightarrow> (sign exec_dg_st, sign exec_dg_st) dg_state)" where
+  "cj_stock_sol =
+     TD_side_seed_join_warrowing_Interp_solve is_activation_seed cj_stock_eqs
+       (cfg_exit cj_cfg, ())"
 
 definition cj_custom_sol ::
-  "(pp \<times> unit) set \<times> (pp \<times> unit + (unit, unit) routed_gk \<Rightarrow> (sign exec_dg_st, sign exec_dg_st) dg_state)" where
-  "cj_custom_sol = TD_side_seed_join_warrowing_Interp_solve is_activation_seed cj_custom_eqs (cfg_exit cj_cfg, ())"
+  "(pp \<times> unit) set
+   \<times> (pp \<times> unit + (unit, unit) routed_gk
+        \<Rightarrow> (sign exec_dg_st, sign exec_dg_st) dg_state)" where
+  "cj_custom_sol =
+     TD_side_seed_join_warrowing_Interp_solve is_activation_seed cj_custom_eqs
+       (cfg_exit cj_cfg, ())"
 
 text \<open>The single call site is \<open>Statement 4\<close>, resuming at \<open>Statement 5\<close>.\<close>
 

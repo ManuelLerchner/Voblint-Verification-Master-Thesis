@@ -12,6 +12,10 @@
 // provably never reaches its else branch, never returns to main, and the
 // trailing check after inc() is therefore proved dead (NOWARN) -- a true
 // consequence of the ported source, not an artifact of the port. The
+// graph below marks that check [dead] at pp13, agreeing with the DEAD the
+// text report prints for it: both readings come from the same solved
+// table, so a check the analysis proves unreachable cannot read as decided
+// in one and dead in the other. The
 // graph snapshot below is the CLI-observable analogue of the .thy file's
 // calls/intra membership and block-layout by-eval lemmas; the call and
 // combine edges after f's call site still appear in it; only their
@@ -74,7 +78,7 @@
 //   main_pp12_ctx3: pp12
 //   inc_entry_inc_ctx4: entry_inc
 //   main_pp13_ctx3: pp13
-//       check 1
+//       check 1 [dead]
 //   inc_result_inc_ctx4: exit_inc
 //
 // edges:

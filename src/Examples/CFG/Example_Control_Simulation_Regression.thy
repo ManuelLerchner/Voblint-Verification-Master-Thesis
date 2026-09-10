@@ -2,7 +2,18 @@ theory Example_Control_Simulation_Regression
   imports "Voblint_Compile.Simulation_Relation"
 begin
 
-section \<open>Examples: source-to-CFG simulation\<close>
+section \<open>How a call, a return and a resume line up in source and in graph\<close>
+
+text \<open>
+  A source run steps a command over a store and a stack of \<open>Frame\<close>s; the compiled graph
+  steps a node over a store and a stack of resume triples.  \<open>frames_match\<close> says the two
+  stacks describe the same nesting.  Each lemma below takes one interprocedural moment ---
+  entering a callee, initiating a return, completing it back into the caller --- and puts
+  the source step, the graph step and the surviving \<open>frames_match\<close> side by side, so a
+  reader sees which graph edge each source rule needs.  The rest fixes what \<open>return_safe\<close>
+  admits: a bare \<open>Return\<close> in the entry procedure gets stuck and is rejected, while a
+  \<open>Return\<close> under a \<open>Restore\<close> is exactly the shape a call installs.
+\<close>
 
 lemma call_transition:
   assumes decl: "\<Pi> q = Some decl"
@@ -10,29 +21,29 @@ lemma call_transition:
       and distinct: "distinct (formals decl)"
       and edge: "(u, CallEdge dst (formals decl) actuals, FunctionEntry q, cont) \<in> calls g"
       and fm: "frames_match frs stk"
-  shows "pstep is_global \<Pi> (Call dst q actuals, s, frs)
+  shows "pstep gs \<Pi> (Call dst q actuals, s, frs)
            (Seq (body decl) Restore,
-            bind_formals (formals decl) (map (\<lambda>e. aval e s) actuals) (enter_state is_global s),
+            bind_formals (formals decl) (map (\<lambda>e. aval e s) actuals) (enter_state gs s),
             Frame s dst # frs)"
-    and "cstep is_global g (u, s, stk)
+    and "cstep gs g (u, s, stk)
            (FunctionEntry q,
-            call_enter is_global (CallEdge dst (formals decl) actuals) s, (cont, dst, s) # stk)"
-    and "call_enter is_global (CallEdge dst (formals decl) actuals) s
-           = bind_formals (formals decl) (map (\<lambda>e. aval e s) actuals) (enter_state is_global s)"
+            call_enter gs (CallEdge dst (formals decl) actuals) s, (cont, dst, s) # stk)"
+    and "call_enter gs (CallEdge dst (formals decl) actuals) s
+           = bind_formals (formals decl) (map (\<lambda>e. aval e s) actuals) (enter_state gs s)"
     and "frames_match (Frame s dst # frs) ((cont, dst, s) # stk)"
 proof -
-  show "pstep is_global \<Pi> (Call dst q actuals, s, frs)
+  show "pstep gs \<Pi> (Call dst q actuals, s, frs)
            (Seq (body decl) Restore,
-            bind_formals (formals decl) (map (\<lambda>e. aval e s) actuals) (enter_state is_global s),
+            bind_formals (formals decl) (map (\<lambda>e. aval e s) actuals) (enter_state gs s),
             Frame s dst # frs)"
     using decl arity distinct
     by (intro pstep.Call[where vals = "map (\<lambda>e. aval e s) actuals"]) auto
-  show "cstep is_global g (u, s, stk)
+  show "cstep gs g (u, s, stk)
            (FunctionEntry q,
-            call_enter is_global (CallEdge dst (formals decl) actuals) s, (cont, dst, s) # stk)"
+            call_enter gs (CallEdge dst (formals decl) actuals) s, (cont, dst, s) # stk)"
     by (rule cstep.Call[OF edge])
-  show "call_enter is_global (CallEdge dst (formals decl) actuals) s
-           = bind_formals (formals decl) (map (\<lambda>e. aval e s) actuals) (enter_state is_global s)"
+  show "call_enter gs (CallEdge dst (formals decl) actuals) s
+           = bind_formals (formals decl) (map (\<lambda>e. aval e s) actuals) (enter_state gs s)"
     by (rule call_enter_CallEdge)
   show "frames_match (Frame s dst # frs) ((cont, dst, s) # stk)"
     using fm by (simp add: frames_match_activation)
@@ -43,69 +54,69 @@ lemma return_initiation:
       and comp: "compile \<Pi> p c0 kk n = (n', en, E, K)"
       and sub: "E \<subseteq> intra g"
   obtains k where "v = Statement k"
-    and "pstep is_global \<Pi> (Return e, s, frs) (Unwind, ret_store e s, frs)"
-    and "cstep is_global g (Statement k, s, stk) (FunctionResult p, ret_store e s, stk)"
+    and "pstep gs \<Pi> (Return e, s, frs) (Unwind, ret_store e s, frs)"
+    and "cstep gs g (Statement k, s, stk) (FunctionResult p, ret_store e s, stk)"
 proof -
   from control_at_return_edge[OF loc refl comp] obtain k where
     k: "v = Statement k" "(Statement k, EA_Ret e p, FunctionResult p) \<in> E" by blast
   have edge: "(Statement k, EA_Ret e p, FunctionResult p) \<in> intra g" using k(2) sub by blast
-  have src: "pstep is_global \<Pi> (Return e, s, frs) (Unwind, ret_store e s, frs)"
+  have src: "pstep gs \<Pi> (Return e, s, frs) (Unwind, ret_store e s, frs)"
     by (cases e) (auto simp: ret_store_def)
-  have cfg: "cstep is_global g (Statement k, s, stk) (FunctionResult p, ret_store e s, stk)"
+  have cfg: "cstep gs g (Statement k, s, stk) (FunctionResult p, ret_store e s, stk)"
     using cstep.Intra[OF edge edge_step_EA_Ret_ret_store_mem] .
   show ?thesis by (rule that[OF k(1) src cfg])
 qed
 
 lemma return_completion_restore:
   assumes fm: "frames_match (Frame caller dst # frs) ((cont, dst, caller) # stk)"
-  shows "pstep is_global \<Pi> (Restore, callee, Frame caller dst # frs)
-           (SKIP, combine_collect is_global dst caller callee, frs)"
-    and "cstep is_global g (FunctionResult p, callee, (cont, dst, caller) # stk)
-           (cont, combine_collect is_global dst caller callee, stk)"
+  shows "pstep gs \<Pi> (Restore, callee, Frame caller dst # frs)
+           (SKIP, combine_collect gs dst caller callee, frs)"
+    and "cstep gs g (FunctionResult p, callee, (cont, dst, caller) # stk)
+           (cont, combine_collect gs dst caller callee, stk)"
     and "frames_match frs stk"
 proof -
-  show "pstep is_global \<Pi> (Restore, callee, Frame caller dst # frs)
-          (SKIP, combine_collect is_global dst caller callee, frs)"
+  show "pstep gs \<Pi> (Restore, callee, Frame caller dst # frs)
+          (SKIP, combine_collect gs dst caller callee, frs)"
     using pstep.RestoreStep by (simp add: combine_collect_def)
-  show "cstep is_global g (FunctionResult p, callee, (cont, dst, caller) # stk)
-           (cont, combine_collect is_global dst caller callee, stk)"
+  show "cstep gs g (FunctionResult p, callee, (cont, dst, caller) # stk)
+           (cont, combine_collect gs dst caller callee, stk)"
     by (rule cstep.Return)
   show "frames_match frs stk" using fm by (simp add: frames_match_activation)
 qed
 
 lemma return_completion_unwind:
   assumes fm: "frames_match (Frame caller dst # frs) ((cont, dst, caller) # stk)"
-  shows "pstep is_global \<Pi> (Seq Unwind Restore, callee, Frame caller dst # frs)
-           (SKIP, combine_collect is_global dst caller callee, frs)"
-    and "cstep is_global g (FunctionResult p, callee, (cont, dst, caller) # stk)
-           (cont, combine_collect is_global dst caller callee, stk)"
+  shows "pstep gs \<Pi> (Seq Unwind Restore, callee, Frame caller dst # frs)
+           (SKIP, combine_collect gs dst caller callee, frs)"
+    and "cstep gs g (FunctionResult p, callee, (cont, dst, caller) # stk)
+           (cont, combine_collect gs dst caller callee, stk)"
     and "frames_match frs stk"
 proof -
-  show "pstep is_global \<Pi> (Seq Unwind Restore, callee, Frame caller dst # frs)
-          (SKIP, combine_collect is_global dst caller callee, frs)"
+  show "pstep gs \<Pi> (Seq Unwind Restore, callee, Frame caller dst # frs)
+          (SKIP, combine_collect gs dst caller callee, frs)"
     using pstep.UnwindAct by (simp add: combine_collect_def)
-  show "cstep is_global g (FunctionResult p, callee, (cont, dst,caller) # stk)
-           (cont, combine_collect is_global dst caller callee, stk)"
+  show "cstep gs g (FunctionResult p, callee, (cont, dst, caller) # stk)
+           (cont, combine_collect gs dst caller callee, stk)"
     by (rule cstep.Return)
   show "frames_match frs stk" using fm by (simp add: frames_match_activation)
 qed
 
-lemma Unwind_not_pcompletes: "\<not> pcompletes is_global \<Pi> Unwind s t"
+lemma Unwind_not_pcompletes: "\<not> pcompletes gs \<Pi> Unwind s t"
 proof (rule notI)
-  assume "star (pstep is_global \<Pi>) (Unwind, s, []) (SKIP, t, [])"
+  assume "star (pstep gs \<Pi>) (Unwind, s, []) (SKIP, t, [])"
   then show False
     by (cases rule: star.cases) (auto simp: pstep_Unwind_stuck)
 qed
 
-lemma Return_empty_not_pcompletes: "\<not> pcompletes is_global \<Pi> (Return e) s t"
+lemma Return_empty_not_pcompletes: "\<not> pcompletes gs \<Pi> (Return e) s t"
 proof (rule notI)
-  assume "star (pstep is_global \<Pi>) (Return e, s, []) (SKIP, t, [])"
-  then obtain y where step: "pstep is_global \<Pi> (Return e, s, []) y"
-      and rest: "star (pstep is_global \<Pi>) y (SKIP, t, [])"
+  assume "star (pstep gs \<Pi>) (Return e, s, []) (SKIP, t, [])"
+  then obtain y where step: "pstep gs \<Pi> (Return e, s, []) y"
+      and rest: "star (pstep gs \<Pi>) y (SKIP, t, [])"
     by (cases rule: star.cases) auto
   from step have "y = (Unwind, ret_store e s, [])"
     by (cases e) (auto simp: ret_store_def)
-  with rest have "star (pstep is_global \<Pi>) (Unwind, ret_store e s, []) (SKIP, t, [])" by simp
+  with rest have "star (pstep gs \<Pi>) (Unwind, ret_store e s, []) (SKIP, t, [])" by simp
   then show False
     by (cases rule: star.cases) (auto simp: pstep_Unwind_stuck)
 qed
@@ -121,7 +132,7 @@ lemma return_safe_seq_return_main_rejected: "\<not> return_safe (Seq SKIP (Retur
   by (simp add: return_safe_def)
 
 lemma return_main_stuck_but_rejected:
-  "pstep is_global \<Pi> (Return e, s, []) (Unwind, ret_store e s, []) \<and> \<not> return_safe (Return e)"
+  "pstep gs \<Pi> (Return e, s, []) (Unwind, ret_store e s, []) \<and> ~ return_safe (Return e)"
   by (cases e) (auto simp: return_safe_def ret_store_def)
 
 lemma return_safe_return_in_callee:
@@ -130,7 +141,7 @@ lemma return_safe_return_in_callee:
 
 lemma return_safe_psteps:
   assumes "\<And>p decl. \<Pi> p = Some decl \<Longrightarrow> source_com (body decl)"
-      and "star (pstep is_global \<Pi>) sc sc'" and "return_safe (fst sc)"
+      and "star (pstep gs \<Pi>) sc sc'" and "return_safe (fst sc)"
   shows "return_safe (fst sc')"
   using assms(2,3)
 proof (induction rule: star.induct)

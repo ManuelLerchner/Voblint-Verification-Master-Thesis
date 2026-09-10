@@ -217,7 +217,7 @@ lemma initialized_eqs_X:
        else
          QueryL Z (\<lambda>d2. Answer (d1 \<squnion> d2)))"
   unfolding initialized_eqs_def sp_compile_def
-  by (auto split: if_splits intro!: ext)
+  by (auto split: if_splits simp: fun_eq_iff)
 
 lemma initialized_eqs_Z:
   "initialized_eqs Z =
@@ -230,7 +230,7 @@ lemma initialized_eqs_Z:
            then Answer (set_to_D {a})
            else Answer \<bottom>))"
   unfolding initialized_eqs_def sp_compile_def
-  by (auto split: if_splits intro!: ext)
+  by (auto split: if_splits simp: fun_eq_iff)
 
 subsection \<open>Solving under every update rule\<close>
 
@@ -261,8 +261,8 @@ text \<open>The value at every unknown, read from the \<open>join\<close> discip
 
 definition initialized_full_valuation where
   "initialized_full_valuation =
-     map (\<lambda>u. (u, Rep_D (snd (TD_side_always_join_Interp_solve initialized_eqs X) (Inl u))))
-       [X, Y, Z, W]"
+     (let sol = snd (TD_side_always_join_Interp_solve initialized_eqs X)
+      in map (\<lambda>u. (u, Rep_D (sol (Inl u)))) [X, Y, Z, W])"
 
 lemma initialized_full_valuation_expected:
   "initialized_full_valuation = [(X, {a}), (Y, {a, b}), (Z, {a}), (W, {})]"

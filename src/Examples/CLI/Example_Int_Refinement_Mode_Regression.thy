@@ -15,8 +15,9 @@ text \<open>
   modes (\<^const>\<open>Refine_Never\<close>, \<^const>\<open>Refine_Once\<close>, \<^const>\<open>Refine_Fixpoint\<close>,
   \<^theory>\<open>Voblint_Analysis_Int.Int_Refinement\<close>). Each lemma's doc comment
   states exactly which component teaches which other component what fact,
-  and why the weaker mode or component could not have derived it alone. \<^theory>\<open>Voblint_Examples_Int.Example_Int_Domain\<close>
-  already proves the raw-domain arithmetic this file draws on
+  and why the weaker mode or component could not have derived it alone.
+  \<^theory>\<open>Voblint_Examples_Int.Example_Int_Domain\<close> already proves the
+  raw-domain arithmetic this file draws on
   (\<open>arithmetic_left\<close>, \<open>arithmetic_right\<close>, \<open>progressive_refinement_input\<close>,
   \<open>refinement_round_is_progressive\<close>); this file cites those facts rather
   than re-deriving them, and adds the solver-run-level (compiled VIMP
@@ -160,227 +161,31 @@ lemma congruence_parity_mod4_narrows:
 section \<open>End-to-end VIMP precision\<close>
 
 text \<open>
-  \<open>Exec_Int_DG_Run\<close> already carries the solver-run-level (compiled VIMP
-  program through the real Base/DG equation system and
-  \<open>TD_side_always_join_Interp_solve\<close>) counterpart to this file's raw-domain
-  witnesses above: on \<open>if (y + 1 == 3) {x := 1} else {x := 0}\<close>,
-  \<open>dgExI_never_inspect_y_at_Statement_1\<close> reads \<open>y\<close> back at \<open>STop\<close>/top
-  interval/\<open>PTop\<close> (only Congruence narrows, to \<open>y \<equiv> 0 (mod 2)\<close>, from the
-  guard's own arithmetic), while \<open>dgExI_once_inspect_y_at_Statement_1\<close> and
-  \<open>dgExI_fixpoint_inspect_y_at_Statement_1\<close> both reach the exact singleton
-  \<open>SPos\<close>/\<open>[2,2]\<close>/\<open>PEven\<close>/\<open>y \<equiv> 0 (mod 2)\<close> -- the same
-  Never-differs-from-Once-and-Fixpoint pattern \<open>mode_never_ne_once\<close> proves
-  at the raw-domain level above, now reached through the parser, the
-  compiled CFG, and the vendored solver rather than a hand-built \<open>int_dom\<close>
-  value. \<open>dgExI_never_ne_once\<close>/\<open>dgExI_once_eq_fixpoint\<close> are the pinned
-  corollaries; this file does not restate them, since restating a fact
-  already proved end-to-end elsewhere would only risk drifting from it.
+  \<open>Exec_Int_DG_Run\<close> carries the two non-CLI refinement modes through a compiled
+  VIMP program and the real D/G solver. On
+  \<open>if (y + 1 == 3) {x := 1} else {x := 0}\<close>, \<open>dgExI_never_result\<close> leaves \<open>y\<close>
+  at \<open>STop\<close>/top/\<open>PTop\<close> and narrows only Congruence to \<open>y \<equiv> 0 (mod 2)\<close>.
+  \<open>dgExI_once_result\<close> reaches the exact singleton
+  \<open>SPos\<close>/\<open>[2,2]\<close>/\<open>PEven\<close>/\<open>y \<equiv> 0 (mod 2)\<close>. The corollary
+  \<open>dgExI_never_ne_once\<close> pins the mode-sensitive difference.
 
-  The CLI-level regression fixture
-  \<open>tests/regression/16-composite-domain/precision/01-refinement_beats_components.vimp\<close>
-  is the production-route sibling of the same scenario: \<open>voblint --analysis
-  int\<close> (fixed at \<open>Refine_Fixpoint\<close>) proves \<open>y == 2\<close> exactly on the
-  identical guard, while \<open>--analysis sign\<close>/\<open>--analysis interval\<close> alone
-  each leave it \<open>UNKNOWN\<close> -- the full pipeline's own confirmation that the
-  refinement machinery this file exercises in isolation survives parsing,
-  compilation, and the production report layer intact.
+  The CLI composite-domain regression group covers the production
+  \<open>Refine_Fixpoint\<close> route. It proves \<open>y == 2\<close> with \<open>--analysis int\<close> while
+  Sign and Interval alone return \<open>UNKNOWN\<close>, confirming that refinement
+  survives parsing, compilation, solving, and report generation.
 \<close>
 
-section \<open>All three modes through the production entry point\<close>
+section \<open>Production dispatcher coverage\<close>
 
 text \<open>
-  Everything above (and the CLI fixture cited above) reaches
-  \<^const>\<open>Refine_Fixpoint\<close> only: until now, \<open>Refine_Never\<close>/\<open>Refine_Once\<close>
-  stayed reachable exclusively through \<^theory>\<open>Voblint_Analysis_Int.Int_Exec\<close>'s
-  own bundles (\<^const>\<open>int_tf_st_never_for\<close> etc., exercised directly above by
-  \<^theory>\<open>Voblint_Examples_Int.Exec_Int_DG_Run\<close>), never through
-  \<^const>\<open>analyse_int_dg_eqs_for\<close>/\<^const>\<open>analyse_int_dg_env_for\<close>
-  (\<^theory>\<open>Voblint_Analysis_Int.Int_Exec_Sound\<close>) -- the actual production
-  equation-system/report layer \<open>Int_Checks\<close>'s \<open>analyse_int_report_for\<close>
-  is built on. Those two constants are now mode-parameterized, so this
-  reruns \<^theory>\<open>Voblint_Examples_Int.Exec_Int_DG_Run\<close>'s own
-  \<open>int_ex_prog\<close>/\<open>Statement 1\<close> witness through the production route for all
-  three modes, confirming the Never-differs-from-Once-and-Fixpoint pattern
-  survives the switch from \<^const>\<open>TD_side_always_join_Interp_solve\<close> (the
-  raw witness's plain-join solver) to the production route's own
-  \<^const>\<open>TD_side_warrowing_apinis_Interp_solve\<close> (Apinis warrowing): outside
-  any loop, \<open>int_ex_prog\<close> gives warrowing nothing to widen, so both solvers
-  reach the identical fixpoint on this program.
+  The CLI fixes \<open>Int_Analysis\<close> at \<open>Refine_Fixpoint\<close>. These witnesses check that
+  every published solver choice reaches the dispatcher. Mode-specific abstract
+  values stay in \<open>Exec_Int_DG_Run\<close>, avoiding repeated solves across the
+  refinement-mode and solver axes.
 \<close>
-
-abbreviation int_ex_empty_pred :: "int_dom exec_dg_st => bool" where
-  "int_ex_empty_pred == resolved_st_q_is_bot_for (declared_global_vars int_ex_prog)"
-
-lemma prod_int_ex_never_terminates:
-  "TD_side_warrowing_apinis_Interp_solve_c
-     (analyse_int_dg_eqs_for Refine_Never int_ex_empty_pred int_ex_gs int_ex_prog)
-     (cfg_exit (prog_cfg int_ex_prog), ()) ~= None"
-  by eval
-
-lemma prod_int_ex_once_terminates:
-  "TD_side_warrowing_apinis_Interp_solve_c
-     (analyse_int_dg_eqs_for Refine_Once int_ex_empty_pred int_ex_gs int_ex_prog)
-     (cfg_exit (prog_cfg int_ex_prog), ()) ~= None"
-  by eval
-
-lemma prod_int_ex_fixpoint_terminates:
-  "TD_side_warrowing_apinis_Interp_solve_c
-     (analyse_int_dg_eqs_for Refine_Fixpoint int_ex_empty_pred int_ex_gs int_ex_prog)
-     (cfg_exit (prog_cfg int_ex_prog), ()) ~= None"
-  by eval
-
-lemma prod_int_ex_never_y_at_Statement_1:
-  "analyse_int_dg_env_for Refine_Never int_ex_empty_pred int_ex_gs int_ex_prog
-     (Statement 1) (STR ''y'') =
-   int_dom_sipc STop top PTop (congruence_of_int 2)"
-  by eval
-
-lemma prod_int_ex_once_y_at_Statement_1:
-  "analyse_int_dg_env_for Refine_Once int_ex_empty_pred int_ex_gs int_ex_prog
-     (Statement 1) (STR ''y'') =
-   int_dom_sipc SPos (Ivl (Fin 2) (Fin 2)) PEven (congruence_of_int 2)"
-  by eval
-
-lemma prod_int_ex_fixpoint_y_at_Statement_1:
-  "analyse_int_dg_env_for Refine_Fixpoint int_ex_empty_pred int_ex_gs int_ex_prog
-     (Statement 1) (STR ''y'') =
-   int_dom_sipc SPos (Ivl (Fin 2) (Fin 2)) PEven (congruence_of_int 2)"
-  by eval
-
-lemma prod_int_ex_never_ne_once_y:
-  "analyse_int_dg_env_for Refine_Never int_ex_empty_pred int_ex_gs int_ex_prog
-     (Statement 1) (STR ''y'')
-   ~=
-   analyse_int_dg_env_for Refine_Once int_ex_empty_pred int_ex_gs int_ex_prog
-     (Statement 1) (STR ''y'')"
-  by eval
-
-section \<open>Join and per-origin, all three modes, the same production path\<close>
-
-text \<open>
-  int_dom's Solver_Join/Solver_PerOrigin support is pure wiring against the same
-  \<open>analyse_int_dg_eqs_for mode\<close> equation system Warrow already uses
-  (\<open>analyse_int_dg_join_for\<close>/\<open>analyse_int_dg_per_origin_for\<close>,
-  \<^theory>\<open>Voblint_Analysis_Int.Int_Exec_Sound\<close>): no new proof obligation, no
-  refinement-mode-dependent gap, matching Interval's own join/per-origin routes. This
-  reruns \<open>int_ex_prog\<close> through both update rules for all three modes, mirroring the
-  Warrow block above exactly, then checks the axis actually reaches
-  \<open>Analyse_Dispatch.analyse_with_solver\<close>.
-\<close>
-
-lemma prod_int_ex_join_never_terminates:
-  "TD_side_always_join_Interp_solve_c
-     (analyse_int_dg_eqs_for Refine_Never int_ex_empty_pred int_ex_gs int_ex_prog)
-     (cfg_exit (prog_cfg int_ex_prog), ()) ~= None"
-  by eval
-
-lemma prod_int_ex_join_once_terminates:
-  "TD_side_always_join_Interp_solve_c
-     (analyse_int_dg_eqs_for Refine_Once int_ex_empty_pred int_ex_gs int_ex_prog)
-     (cfg_exit (prog_cfg int_ex_prog), ()) ~= None"
-  by eval
-
-lemma prod_int_ex_join_fixpoint_terminates:
-  "TD_side_always_join_Interp_solve_c
-     (analyse_int_dg_eqs_for Refine_Fixpoint int_ex_empty_pred int_ex_gs int_ex_prog)
-     (cfg_exit (prog_cfg int_ex_prog), ()) ~= None"
-  by eval
-
-lemma prod_int_ex_join_never_y_at_Statement_1:
-  "analyse_int_dg_join_env_for Refine_Never int_ex_empty_pred int_ex_gs int_ex_prog
-     (Statement 1) (STR ''y'') =
-   int_dom_sipc STop top PTop (congruence_of_int 2)"
-  by eval
-
-lemma prod_int_ex_join_once_y_at_Statement_1:
-  "analyse_int_dg_join_env_for Refine_Once int_ex_empty_pred int_ex_gs int_ex_prog
-     (Statement 1) (STR ''y'') =
-   int_dom_sipc SPos (Ivl (Fin 2) (Fin 2)) PEven (congruence_of_int 2)"
-  by eval
-
-lemma prod_int_ex_join_fixpoint_y_at_Statement_1:
-  "analyse_int_dg_join_env_for Refine_Fixpoint int_ex_empty_pred int_ex_gs int_ex_prog
-     (Statement 1) (STR ''y'') =
-   int_dom_sipc SPos (Ivl (Fin 2) (Fin 2)) PEven (congruence_of_int 2)"
-  by eval
-
-text \<open>
-  Mode still distinguishes results under Join specifically (\<open>prod_int_ex_never_ne_once_y\<close>
-  above already covers Warrow), so the solver wrappers are not accidentally hardwired back
-  to a fixed mode: \<open>analyse_int_dg_join_for\<close> threads its own \<open>mode\<close> argument through, it
-  does not silently reuse \<open>p_reg\<close>'s.
-\<close>
-
-lemma prod_int_ex_join_never_ne_once_y:
-  "analyse_int_dg_join_env_for Refine_Never int_ex_empty_pred int_ex_gs int_ex_prog
-     (Statement 1) (STR ''y'')
-   ~=
-   analyse_int_dg_join_env_for Refine_Once int_ex_empty_pred int_ex_gs int_ex_prog
-     (Statement 1) (STR ''y'')"
-  by eval
-
-text \<open>
-  \<open>int_ex_prog\<close> has no loop, so per \<open>Analyse_Dispatch\<close>'s own header comment on the three
-  update rules being convergence strategies rather than alternative precision semantics,
-  Join and Warrow should reach the identical fixpoint here -- checked directly rather than
-  only via both matching the same literal above.
-\<close>
-
-lemma prod_int_ex_join_agrees_with_warrow_at_fixpoint:
-  "analyse_int_dg_join_env_for Refine_Fixpoint int_ex_empty_pred int_ex_gs int_ex_prog
-     (Statement 1) (STR ''y'')
-   =
-   analyse_int_dg_env_for Refine_Fixpoint int_ex_empty_pred int_ex_gs int_ex_prog
-     (Statement 1) (STR ''y'')"
-  by eval
-
-lemma prod_int_ex_per_origin_never_terminates:
-  "TD_side_per_origin_Interp_solve_c
-     (analyse_int_dg_eqs_for Refine_Never int_ex_empty_pred int_ex_gs int_ex_prog)
-     (cfg_exit (prog_cfg int_ex_prog), ()) ~= None"
-  by eval
-
-lemma prod_int_ex_per_origin_once_terminates:
-  "TD_side_per_origin_Interp_solve_c
-     (analyse_int_dg_eqs_for Refine_Once int_ex_empty_pred int_ex_gs int_ex_prog)
-     (cfg_exit (prog_cfg int_ex_prog), ()) ~= None"
-  by eval
-
-lemma prod_int_ex_per_origin_fixpoint_terminates:
-  "TD_side_per_origin_Interp_solve_c
-     (analyse_int_dg_eqs_for Refine_Fixpoint int_ex_empty_pred int_ex_gs int_ex_prog)
-     (cfg_exit (prog_cfg int_ex_prog), ()) ~= None"
-  by eval
-
-lemma prod_int_ex_per_origin_never_y_at_Statement_1:
-  "analyse_int_dg_per_origin_env_for Refine_Never int_ex_empty_pred int_ex_gs int_ex_prog
-     (Statement 1) (STR ''y'') =
-   int_dom_sipc STop top PTop (congruence_of_int 2)"
-  by eval
-
-lemma prod_int_ex_per_origin_once_y_at_Statement_1:
-  "analyse_int_dg_per_origin_env_for Refine_Once int_ex_empty_pred int_ex_gs int_ex_prog
-     (Statement 1) (STR ''y'') =
-   int_dom_sipc SPos (Ivl (Fin 2) (Fin 2)) PEven (congruence_of_int 2)"
-  by eval
-
-lemma prod_int_ex_per_origin_fixpoint_y_at_Statement_1:
-  "analyse_int_dg_per_origin_env_for Refine_Fixpoint int_ex_empty_pred int_ex_gs int_ex_prog
-     (Statement 1) (STR ''y'') =
-   int_dom_sipc SPos (Ivl (Fin 2) (Fin 2)) PEven (congruence_of_int 2)"
-  by eval
-
-subsection \<open>Reaching \<open>analyse_with_solver\<close>\<close>
-
-text \<open>
-  Pins \<open>Int_Analysis\<close>'s default (\<open>Refine_Fixpoint\<close> + Warrow) unchanged, and confirms the
-  dispatcher's two former \<open>None\<close> cases now return a real report, on \<open>dispatch_demo_prog\<close>-\
-  style \<open>int_ex_prog\<close> itself (no report entries expected: \<open>int_ex_prog\<close> has no
-  \<open>__voblint_check\<close>).
-\<close>
-
 lemma analyse_with_solver_int_default_unchanged:
-  "analyse_with_solver Int_Analysis Solver_Warrow int_ex_prog = Some (analyse Int_Analysis int_ex_prog)"
+  "analyse_with_solver Int_Analysis Solver_Warrow int_ex_prog =
+   Some (analyse Int_Analysis int_ex_prog)"
   by simp
 
 lemma analyse_with_solver_int_join_returns_result:

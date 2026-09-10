@@ -225,9 +225,9 @@ alone cannot.
 ## Contextual result and GraphViz presentation (collapsed vs. expanded)
 
 The pipeline above is per-node and context-independent. A context-sensitive
-analysis (currently `--context entry-state`) produces a canonical,
-contextual `analysis_result` instead, and everything downstream of the
-solver -- checks, collapsed GraphViz, expanded GraphViz -- reads that one
+analysis -- `--context entry-state` or `--context call-string` -- produces a
+canonical, contextual `analysis_result` instead, and everything downstream of
+the solver -- checks, collapsed GraphViz, expanded GraphViz -- reads that one
 table, never the raw solver map:
 
 ```text
@@ -270,13 +270,16 @@ none of that changes what the solver computed.
 ```
 
 `--context-graph` only selects how an already-computed contextual result
-is drawn under `--dot`/`--dot-full`/`--graph-snapshot`; it never affects
-analysis precision, the solver, or which contexts get computed.
-`collapsed` (the default) joins every context's state per CFG node for
-rendering. `expanded` draws one node per `(pp, ctx)` pair instead, so a
-check that is `Dead` in one context and `Decided` in another -- or two
-live contexts that disagree on the same check's verdict -- stays visible
-as distinct nodes rather than collapsing into one rendering. See
+is drawn under `--dot`/`--dot-full`/`--graph-snapshot`/`--html`; it never
+affects analysis precision, the solver, or which contexts get computed.
+`collapsed` joins every context's state per CFG node for rendering.
+`expanded` draws one node per `(pp, ctx)` pair instead, so a check that is
+`Dead` in one context and `Decided` in another -- or two live contexts
+that disagree on the same check's verdict -- stays visible as distinct
+nodes rather than collapsing into one rendering. That is why `expanded`
+is the default under `--context entry-state`, for every domain: a run
+that paid for per-context precision should not have it joined away in the
+picture. See
 `tests/regression/11-graph-snapshot/06-collapsed_three_contexts.vimp`
 through `09-expanded_dead_route.vimp` for worked collapsed/expanded pairs.
 `--context-graph expanded` without `--context entry-state` is a CLI

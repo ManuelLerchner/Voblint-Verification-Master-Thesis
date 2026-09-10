@@ -4,8 +4,28 @@ theory Exec_Int_DG_Run
     "Voblint_Analysis_Int.Int_Exec"
     "Voblint_VIMP.VIMP_Notation"
     "Voblint_Soundness.Run_Analysis_Sound"
-    "Voblint_Examples_CFG.Example_Compile_Call_Free"
 begin
+
+section \<open>The composite domain carried through a real solver run\<close>
+
+text \<open>
+  Everything else in this folder calls a composite operation directly. Here the
+  guard \<open>y + 1 = 3\<close> arrives the way it does in production: compiled from VIMP
+  source into a CFG, turned into a D/G equation system, and handed to the
+  vendored TD solver. The two runs cover the modes the CLI cannot select:
+  \<open>Refine_Never\<close> and \<open>Refine_Once\<close>. The production CLI fixes
+  \<open>Refine_Fixpoint\<close>, whose result is covered by its CLI regression.
+  Each lemma below projects its node result directly from \<open>solve_c\<close>, so
+  termination and the observed value require one solver evaluation together.
+  Vocabulary: an \<open>eqs\<close> constant is the equation system one mode generates,
+  \<open>int_ex_read\<close> projects one variable's abstract value out of a node's local
+  unknown, and \<open>Statement 1\<close> names the point after the true-branch guard.
+\<close>
+
+text \<open>
+  Disambiguate VIMP's numeral constructor \<open>N\<close> from the \<open>phase\<close> datatype's
+  constructor of the same name.
+\<close>
 
 hide_const phase.N
 
@@ -29,26 +49,24 @@ text \<open>
   unreachable local unknown (\<open>Bot\<close>) reads back as \<open>top\<close>, never spuriously
   observed here since every inspected node below is reachable.
 \<close>
+
 abbreviation int_ex_read :: "int_dom exec_dg_st lifted => vname => int_dom" where
-  "int_ex_read d x == (case map_lift (fun_of_exec_dg_st_for int_ex_gs) d of Lifted f => f x | Bot => top)"
+  "int_ex_read d x ==
+     (case map_lift (fun_of_exec_dg_st_for int_ex_gs) d of
+        Lifted f => f x | Bot => top)"
 
-lemma gExI_calls: "calls gExI = {}"
-  unfolding gExI_def int_ex_pi_def
-  by (rule compile_prog_calls_empty)
-     (simp_all add: int_ex_prog_def main_body_def prog_main_name_def)
+abbreviation int_ex_result where
+  "int_ex_result eqs ==
+     map_option
+       (\<lambda>(_, sol). int_ex_read (locals (sol (Inl (Statement 1, ())))) (STR ''y''))
+       (TD_side_always_join_Interp_solve_c eqs (cfg_exit gExI, ()))"
 
-interpretation gExI: compiled_cfg int_ex_pi "prog_procs int_ex_prog" gExI
-  by (unfold_locales; unfold gExI_def; simp add: compile_prog_finite)
-
-lemmas gExI_entry = gExI.entry[unfolded prog_main_name_def]
-
-subsection \<open>Computed post-solution, one per refinement mode\<close>
+subsection \<open>Computed post-solutions for the non-CLI modes\<close>
 
 text \<open>
   \<open>y + 1 = 3\<close> is the same composite guard as
-  \<open>Example_Int_Backward.bfilter_int_dom_once_plus_eq_exact\<close> and
-  \<open>Example_Int_Transfer.bfilter_once_assume_exact\<close>, now reached through a
-  real compiled \<open>if\<close> and the vendored solver instead of a direct
+  \<open>Example_Int_Backward.bfilter_int_dom_once_plus_eq_exact\<close>, now reached
+  through a real compiled \<open>if\<close> and the vendored solver instead of a direct
   \<open>bfilter\<close> call. \<open>Statement 1\<close> is the interior node right after
   the true branch's guard and before the branches rejoin at \<open>Statement 3\<close>
   (a join would erase the refinement, since the false branch never
@@ -67,23 +85,14 @@ definition dgExI_never_eqs ::
        (int_dom exec_dg_st lifted, int_dom exec_dg_st lifted) dg_state) strategy_tree"
 where
   "dgExI_never_eqs = unit_routed_eqs_buffered
-     (local_state_dg_spec_st_for_lifted int_ex_gs (resolved_st_q_is_bot_for (declared_global_vars int_ex_prog))
+     (local_state_dg_spec_st_for_lifted int_ex_gs
+       (resolved_st_q_is_bot_for (declared_global_vars int_ex_prog))
        (int_tf_st_never_for int_ex_gs) (int_dom_enter_never_st_for int_ex_gs))
      gExI bot (Lifted cinit_int_dom_st) (Lifted cinit_int_dom_st)"
 
-definition dgExI_never_sol ::
-    "(pp * unit) set
-     * (pp * unit + (unit, unit) routed_gk => (int_dom exec_dg_st lifted, int_dom exec_dg_st lifted) dg_state)"
-where
-  "dgExI_never_sol = TD_side_always_join_Interp_solve dgExI_never_eqs (cfg_exit gExI, ())"
-
-lemma dgExI_never_terminates_c:
-  "TD_side_always_join_Interp_solve_c dgExI_never_eqs (cfg_exit gExI, ()) ~= None"
-  by eval
-
-lemma dgExI_never_inspect_y_at_Statement_1:
-  "int_ex_read (locals (snd dgExI_never_sol (Inl (Statement 1, ())))) (STR ''y'') =
-   int_dom_sipc STop top PTop (congruence_of_int 2)"
+lemma dgExI_never_result:
+  "int_ex_result dgExI_never_eqs =
+   Some (int_dom_sipc STop top PTop (congruence_of_int 2))"
   by eval
 
 definition dgExI_once_eqs ::
@@ -91,85 +100,30 @@ definition dgExI_once_eqs ::
        (int_dom exec_dg_st lifted, int_dom exec_dg_st lifted) dg_state) strategy_tree"
 where
   "dgExI_once_eqs = unit_routed_eqs_buffered
-     (local_state_dg_spec_st_for_lifted int_ex_gs (resolved_st_q_is_bot_for (declared_global_vars int_ex_prog))
+     (local_state_dg_spec_st_for_lifted int_ex_gs
+       (resolved_st_q_is_bot_for (declared_global_vars int_ex_prog))
        (int_tf_st_once_for int_ex_gs) (int_dom_enter_once_st_for int_ex_gs))
      gExI bot (Lifted cinit_int_dom_st) (Lifted cinit_int_dom_st)"
 
-definition dgExI_once_sol ::
-    "(pp * unit) set
-     * (pp * unit + (unit, unit) routed_gk => (int_dom exec_dg_st lifted, int_dom exec_dg_st lifted) dg_state)"
-where
-  "dgExI_once_sol = TD_side_always_join_Interp_solve dgExI_once_eqs (cfg_exit gExI, ())"
-
-lemma dgExI_once_terminates_c:
-  "TD_side_always_join_Interp_solve_c dgExI_once_eqs (cfg_exit gExI, ()) ~= None"
-  by eval
-
-lemma dgExI_once_inspect_y_at_Statement_1:
-  "int_ex_read (locals (snd dgExI_once_sol (Inl (Statement 1, ())))) (STR ''y'') =
-   int_dom_sipc SPos (Ivl (Fin 2) (Fin 2)) PEven (congruence_of_int 2)"
-  by eval
-
-definition dgExI_fixpoint_eqs ::
-    "pp * unit => (pp * unit, (unit, unit) routed_gk,
-       (int_dom exec_dg_st lifted, int_dom exec_dg_st lifted) dg_state) strategy_tree"
-where
-  "dgExI_fixpoint_eqs = unit_routed_eqs_buffered
-     (local_state_dg_spec_st_for_lifted int_ex_gs (resolved_st_q_is_bot_for (declared_global_vars int_ex_prog))
-       (int_tf_st_fixpoint_for int_ex_gs) (int_dom_enter_fixpoint_st_for int_ex_gs))
-     gExI bot (Lifted cinit_int_dom_st) (Lifted cinit_int_dom_st)"
-
-definition dgExI_fixpoint_sol ::
-    "(pp * unit) set
-     * (pp * unit + (unit, unit) routed_gk => (int_dom exec_dg_st lifted, int_dom exec_dg_st lifted) dg_state)"
-where
-  "dgExI_fixpoint_sol = TD_side_always_join_Interp_solve dgExI_fixpoint_eqs (cfg_exit gExI, ())"
-
-lemma dgExI_fixpoint_terminates_c:
-  "TD_side_always_join_Interp_solve_c dgExI_fixpoint_eqs (cfg_exit gExI, ()) ~= None"
-  by eval
-
-lemma dgExI_fixpoint_inspect_y_at_Statement_1:
-  "int_ex_read (locals (snd dgExI_fixpoint_sol (Inl (Statement 1, ())))) (STR ''y'') =
-   int_dom_sipc SPos (Ivl (Fin 2) (Fin 2)) PEven (congruence_of_int 2)"
+lemma dgExI_once_result:
+  "int_ex_result dgExI_once_eqs =
+   Some (int_dom_sipc SPos (Ivl (Fin 2) (Fin 2)) PEven (congruence_of_int 2))"
   by eval
 
 text \<open>
-  The mode contrast, established through three real solver runs on the same
-  compiled program rather than three direct transfer calls:
-  \<open>Refine_Never\<close> only narrows the congruence component (Congruence's own
-  real inverse, not cross-component refinement), while \<open>Refine_Once\<close> and
-  \<open>Refine_Fixpoint\<close> both reach the exact singleton -- the sequence of
-  one-round refinements performed during this backward traversal already
-  suffices here, so \<open>Fixpoint\<close> finds nothing further beyond what \<open>Once\<close>
-  already computed.
+  The retained mode contrast comes from two real solver runs on the same
+  compiled program. \<open>Refine_Never\<close> narrows only the Congruence component
+  through its own inverse. \<open>Refine_Once\<close> propagates that information to
+  Sign, Interval, and Parity and reaches the exact singleton.
 \<close>
 
 corollary dgExI_never_ne_once:
-  "int_ex_read (locals (snd dgExI_never_sol (Inl (Statement 1, ())))) (STR ''y'') ~=
-   int_ex_read (locals (snd dgExI_once_sol (Inl (Statement 1, ())))) (STR ''y'')"
-  unfolding dgExI_never_inspect_y_at_Statement_1 dgExI_once_inspect_y_at_Statement_1
-  by eval
+  "int_ex_result dgExI_never_eqs \<noteq> int_ex_result dgExI_once_eqs"
+  apply (simp only: dgExI_never_result dgExI_once_result option.inject)
+  apply (rule notI)
+  apply (drule arg_cong[where f = int_sign])
+  by (simp add: int_dom_sipc_def)
 
-text \<open>
-  \<open>Once\<close> and \<open>Fixpoint\<close> compute the same result at this program point.
-  This does not mean that one standalone reduction round is generally
-  enough -- \<open>refinement_round_is_progressive\<close> (\<open>Example_Int_Domain\<close>)
-  is itself a witness where a single round is not exact and a further round
-  still makes progress. \<open>Refine_Once\<close> performs one round per invocation of
-  the composite operation, and recursive backward filtering invokes
-  refinement at multiple points: once while propagating the arithmetic
-  inverse through \<open>+\<close>, and again when the resulting candidate is
-  intersected into the \<open>y\<close> leaf. For this guard those successive one-round
-  reductions already expose the exact singleton, so \<open>Fixpoint\<close> has no
-  further precision to add here.
-\<close>
-
-corollary dgExI_once_eq_fixpoint:
-  "int_ex_read (locals (snd dgExI_once_sol (Inl (Statement 1, ())))) (STR ''y'') =
-   int_ex_read (locals (snd dgExI_fixpoint_sol (Inl (Statement 1, ())))) (STR ''y'')"
-  unfolding dgExI_once_inspect_y_at_Statement_1 dgExI_fixpoint_inspect_y_at_Statement_1
-  by eval
 
 end
 

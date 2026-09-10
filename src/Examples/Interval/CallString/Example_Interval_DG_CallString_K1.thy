@@ -127,7 +127,7 @@ interpretation nest_domain: routed_dg_domain_exec
   skip_ivl assign_ivl special_ivl branch_ivl body_ivl return_ivl
   "enter_ivl_ci_for nest_gs" event_ivl
   by unfold_locales
-     (rule ivl_tf_st_for_commute[unfolded ivl_tf_abs_def], assumption,
+     (rule ivl_tf_st_for_commute[unfolded ivl_tf.tf_abs_def], assumption,
       rule ivl_enter_st_for_commute, rule nest_exact)
 
 
@@ -136,7 +136,7 @@ lemma nest_gamma_eq: "nest_gamma = nest_domain.gamma_exec"
 
 interpretation nest_dg_sound: sound_dg_spec_core nest_S_st nest_gamma nest_gs
   unfolding nest_gamma_eq nest_S_st_def
-  by (rule nest_domain.sound_dg_spec_core_st[OF ivl_is_sound_transfer_for])
+  by (rule nest_domain.sound_dg_spec_core_st[OF ivl_tf.is_sound_transfer_for])
 
 subsection \<open>The routed equation system and its computed solution\<close>
 
@@ -173,16 +173,56 @@ text \<open>The full solved node set, computed once; every membership fact below
 
 definition nest_1_nodes :: "(pp \<times> cfg_node list) set" where
   "nest_1_nodes = {
-     (FunctionEntry (STR ''main''), []), (Statement 5, []), (Statement 6, []), (Statement 7, []),
-     (FunctionEntry (STR ''f''), [Statement 5]), (Statement 2, [Statement 5]),
-     (Statement 3, [Statement 5]), (FunctionResult (STR ''f''), [Statement 5]),
+     (FunctionEntry (STR ''main''), []), (Statement 5, []), (Statement 6, []),
+     (Statement 7, []), (FunctionEntry (STR ''f''), [Statement 5]),
+     (Statement 2, [Statement 5]), (Statement 3, [Statement 5]),
+     (FunctionResult (STR ''f''), [Statement 5]),
      (FunctionEntry (STR ''f''), [Statement 6]), (Statement 2, [Statement 6]),
      (Statement 3, [Statement 6]), (FunctionResult (STR ''f''), [Statement 6]),
      (FunctionEntry (STR ''g''), [Statement 2]), (Statement 0, [Statement 2]),
-     (FunctionResult (STR ''g''), [Statement 2]), (FunctionResult (STR ''main''), [])}"
+     (FunctionResult (STR ''g''), [Statement 2]),
+     (FunctionResult (STR ''main''), [])}"
+
+definition nest_1_snapshot :: "(pp \<times> cfg_node list) set \<times> ivl list" where
+  "nest_1_snapshot =
+     (let sol = nest_1_sol in
+      (fst sol,
+       [nest_lookup
+          (locals (snd sol (Inl (FunctionEntry (STR ''f''), [Statement 5]))))
+          (STR ''p''),
+        nest_lookup
+          (locals (snd sol (Inl (FunctionEntry (STR ''f''), [Statement 6]))))
+          (STR ''p''),
+        nest_lookup
+          (locals (snd sol (Inl (FunctionEntry (STR ''g''), [Statement 2]))))
+          (STR ''p''),
+        nest_lookup
+          (locals (snd sol (Inl (FunctionResult (STR ''g''), [Statement 2]))))
+          (STR ''#ret''),
+        nest_lookup (locals (snd sol (Inl (Statement 3, [Statement 5]))))
+          (STR ''t''),
+        nest_lookup (locals (snd sol (Inl (Statement 6, [])))) (STR ''x''),
+        nest_lookup (locals (snd sol (Inl (Statement 7, [])))) (STR ''y''),
+        nest_lookup
+          (locals (snd sol
+            (Inr (Seed (FunctionEntry (STR ''f'')) [Statement 5]))))
+          (STR ''p''),
+        nest_lookup
+          (locals (snd sol
+            (Inr (Seed (FunctionEntry (STR ''f'')) [Statement 6]))))
+          (STR ''p'')]))"
+
+lemma nest_1_snapshot_eq:
+  "nest_1_snapshot =
+     (nest_1_nodes,
+      [Ivl (Fin 3) (Fin 3), Ivl (Fin 10) (Fin 10), Ivl (Fin 3) PlusInf,
+       Ivl (Fin 6) PlusInf, Ivl (Fin 6) PlusInf, Ivl (Fin 6) PlusInf,
+       Ivl (Fin 6) PlusInf, Ivl (Fin 3) (Fin 3), Ivl (Fin 10) (Fin 10)])"
+  unfolding nest_1_snapshot_def nest_1_sol_def nest_1_eqs_def nest_1_nodes_def
+  by eval
 
 lemma nest_1_nodes_eq: "fst nest_1_sol = nest_1_nodes"
-  unfolding nest_1_sol_def nest_1_eqs_def nest_1_nodes_def by eval
+  using nest_1_snapshot_eq by (simp add: nest_1_snapshot_def)
 
 lemma entry_covered_1: "(cfg_entry nest_cfg, []) \<in> fst nest_1_sol"
   unfolding nest_entry nest_1_nodes_eq nest_1_nodes_def by simp
@@ -190,7 +230,7 @@ lemma entry_covered_1: "(cfg_entry nest_cfg, []) \<in> fst nest_1_sol"
 lemma nest_fwd_closed_all_1:
   "\<forall>(u, c)\<in>fst nest_1_sol. \<forall>(u', a, v)\<in>intra nest_cfg.
       u = u' \<longrightarrow> (v, c) \<in> fst nest_1_sol"
-  unfolding nest_1_sol_def nest_1_eqs_def by eval
+  unfolding nest_1_nodes_eq nest_1_nodes_def nest_cfg_def by eval
 
 lemma nest_fwd_closed_1:
   assumes "(u, ctx) \<in> fst nest_1_sol" and "(u, a, v) \<in> intra nest_cfg"
@@ -308,7 +348,7 @@ next
       (call_enter nest_gs (CallEdge dst pars args) s)
       [(?caller, transfer_lift nest_empty_pred (ivl_enter_st_for nest_gs ?ci) ?caller)]"
     using nest_domain.entry_pairs_cover_st
-            [OF ivl_is_sound_transfer_for, where ci = ?ci and d = ?caller]
+            [OF ivl_tf.is_sound_transfer_for, where ci = ?ci and d = ?caller]
       EnterComplete(3)
     by (simp add: nest_gamma_eq nest_domain.gamma_exec_def)
   show ?case
@@ -414,176 +454,60 @@ text \<open>\<open>f\<close>'s two activations are kept apart by their own call 
   therefore into both \<open>x\<close> and \<open>y\<close>.\<close>
 
 lemma nest_1_f_entry_first:
-  "nest_lookup (locals (snd nest_1_sol (Inl (FunctionEntry (STR ''f''), [Statement 5])))) (STR ''p'')
-     = Ivl (Fin 3) (Fin 3)"
-  unfolding nest_1_sol_def nest_1_eqs_def by eval
+  "nest_lookup
+     (locals (snd nest_1_sol (Inl (FunctionEntry (STR ''f''), [Statement 5]))))
+     (STR ''p'') = Ivl (Fin 3) (Fin 3)"
+  using nest_1_snapshot_eq by (simp add: nest_1_snapshot_def)
 
 lemma nest_1_f_entry_second:
-  "nest_lookup (locals (snd nest_1_sol (Inl (FunctionEntry (STR ''f''), [Statement 6])))) (STR ''p'')
-     = Ivl (Fin 10) (Fin 10)"
-  unfolding nest_1_sol_def nest_1_eqs_def by eval
+  "nest_lookup
+     (locals (snd nest_1_sol (Inl (FunctionEntry (STR ''f''), [Statement 6]))))
+     (STR ''p'') = Ivl (Fin 10) (Fin 10)"
+  using nest_1_snapshot_eq by (simp add: nest_1_snapshot_def)
 
 lemma nest_1_g_entry_merged:
-  "nest_lookup (locals (snd nest_1_sol (Inl (FunctionEntry (STR ''g''), [Statement 2])))) (STR ''p'')
-     = Ivl (Fin 3) PlusInf"
-  unfolding nest_1_sol_def nest_1_eqs_def by eval
+  "nest_lookup
+     (locals (snd nest_1_sol (Inl (FunctionEntry (STR ''g''), [Statement 2]))))
+     (STR ''p'') = Ivl (Fin 3) PlusInf"
+  using nest_1_snapshot_eq by (simp add: nest_1_snapshot_def)
 
 lemma nest_1_g_result_merged:
-  "nest_lookup (locals (snd nest_1_sol (Inl (FunctionResult (STR ''g''), [Statement 2])))) (STR ''#ret'')
-     = Ivl (Fin 6) PlusInf"
-  unfolding nest_1_sol_def nest_1_eqs_def by eval
+  "nest_lookup
+     (locals (snd nest_1_sol (Inl (FunctionResult (STR ''g''), [Statement 2]))))
+     (STR ''#ret'') = Ivl (Fin 6) PlusInf"
+  using nest_1_snapshot_eq by (simp add: nest_1_snapshot_def)
 
 lemma nest_1_t_after_inner_return:
-  "nest_lookup (locals (snd nest_1_sol (Inl (Statement 3, [Statement 5])))) (STR ''t'')
-     = Ivl (Fin 6) PlusInf"
-  unfolding nest_1_sol_def nest_1_eqs_def by eval
+  "nest_lookup (locals (snd nest_1_sol (Inl (Statement 3, [Statement 5]))))
+     (STR ''t'') = Ivl (Fin 6) PlusInf"
+  using nest_1_snapshot_eq by (simp add: nest_1_snapshot_def)
 
 lemma nest_1_x_after_first_return:
-  "nest_lookup (locals (snd nest_1_sol (Inl (Statement 6, [])))) (STR ''x'') = Ivl (Fin 6) PlusInf"
-  unfolding nest_1_sol_def nest_1_eqs_def by eval
+  "nest_lookup (locals (snd nest_1_sol (Inl (Statement 6, [])))) (STR ''x'')
+     = Ivl (Fin 6) PlusInf"
+  using nest_1_snapshot_eq by (simp add: nest_1_snapshot_def)
 
 lemma nest_1_y_after_second_return:
-  "nest_lookup (locals (snd nest_1_sol (Inl (Statement 7, [])))) (STR ''y'') = Ivl (Fin 6) PlusInf"
-  unfolding nest_1_sol_def nest_1_eqs_def by eval
-
+  "nest_lookup (locals (snd nest_1_sol (Inl (Statement 7, [])))) (STR ''y'')
+     = Ivl (Fin 6) PlusInf"
+  using nest_1_snapshot_eq by (simp add: nest_1_snapshot_def)
 
 text \<open>Each call publishes the entered store into its own context's seed slot, on the
   \<^const>\<open>locals\<close> half the callee entry reads it back from.\<close>
 
 lemma nest_1_seed_f_first:
-  "nest_lookup (locals (snd nest_1_sol (Inr (Seed (FunctionEntry (STR ''f'')) [Statement 5])))) (STR ''p'')
-     = Ivl (Fin 3) (Fin 3)"
-  unfolding nest_1_sol_def nest_1_eqs_def by eval
+  "nest_lookup
+     (locals (snd nest_1_sol
+       (Inr (Seed (FunctionEntry (STR ''f'')) [Statement 5]))))
+     (STR ''p'') = Ivl (Fin 3) (Fin 3)"
+  using nest_1_snapshot_eq by (simp add: nest_1_snapshot_def)
 
 lemma nest_1_seed_f_second:
-  "nest_lookup (locals (snd nest_1_sol (Inr (Seed (FunctionEntry (STR ''f'')) [Statement 6])))) (STR ''p'')
-     = Ivl (Fin 10) (Fin 10)"
-  unfolding nest_1_sol_def nest_1_eqs_def by eval
-
-
-section \<open>Globals across a call-string-routed call\<close>
-
-text \<open>
-  The whole-state carrier makes a declared global cross a call boundary in the same slot a
-  local does. \<open>bump\<close> reads the global \<open>g\<close> its caller wrote before the call, writes it, and
-  returns it; \<open>main\<close> then observes both the returned value and the callee's update. The
-  three call sites are syntactically distinct, so a 1-call-string already separates all
-  three activations, and the third one --- whose actual argument is the global \<open>g\<close> itself
-  --- locks in that a call argument is evaluated against the caller's real state, not a
-  globals-bottomed one.
-\<close>
-
-definition nestg_program :: imp_prog where
-  "nestg_program = program {
-     global g;
-     void bump(n) {
-       g := g + n;
-       return g
-     }
-     void main() {
-       g := 10;
-       a := bump(5);
-       b := bump(4);
-       __voblint_check(a == 15);
-       __voblint_check(b == 19);
-       __voblint_check(g == 19);
-       c := bump(g);
-       __voblint_check(c == 38);
-       __voblint_check(g == 38)
-     }
-   }"
-
-abbreviation nestg_gs :: "vname \<Rightarrow> bool" where "nestg_gs \<equiv> declared_global nestg_program"
-
-abbreviation nestg_lookup :: "ivl exec_dg_st lifted \<Rightarrow> vname \<Rightarrow> ivl" where
-  "nestg_lookup d x \<equiv>
-     (case d of Bot \<Rightarrow> bot | Lifted d0 \<Rightarrow> lookup_resolved_st_q d0 (location_of nestg_gs x))"
-
-definition nestg_cfg :: cfg where
-  "nestg_cfg = compile_prog (prog_table nestg_program) (prog_procs nestg_program)"
-
-definition nestg_empty_pred :: "ivl resolved_st_q \<Rightarrow> bool" where
-  "nestg_empty_pred = resolved_st_q_is_bot_for (declared_global_vars nestg_program)"
-
-definition nestg_1_eqs ::
-  "(pp \<times> cfg_node list, call_string_gk,
-     (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state) eqsT" where
-  "nestg_1_eqs =
-     routed_node_rhs intra_predecessor_addr_list (\<lambda>_. Global) (cs_route 1)
-      (\<lambda>ctx' src a. dg_spec_edge_tree
-         (local_state_dg_spec_st_for_lifted nestg_gs nestg_empty_pred
-            (ivl_tf_st_for nestg_gs) (ivl_enter_st_for nestg_gs)) a src (\<lambda>_. Global))
-      (routed_call_tree (local_state_dg_spec_st_for_lifted nestg_gs nestg_empty_pred
-                       (ivl_tf_st_for nestg_gs) (ivl_enter_st_for nestg_gs)) Global Seed
-         (static_resolve nestg_cfg) (\<lambda>d. d = Bot))
-      (routed_entry_seed_tree Seed)
-       nestg_cfg
-       Bot (Lifted cinit_ivl_st) Bot"
-
-definition nestg_1_sol ::
-  "(pp \<times> cfg_node list) set
-     \<times> (pp \<times> cfg_node list + call_string_gk
-          \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)" where
-  "nestg_1_sol = TD_side_warrowing_apinis_Interp_solve nestg_1_eqs (cfg_exit nestg_cfg, [])"
-
-lemma nestg_1_terminates:
-  "TD_side_warrowing_apinis_Interp_solve_c nestg_1_eqs (cfg_exit nestg_cfg, []) \<noteq> None"
-  by eval
-
-text \<open>Three call sites, three 1-call-strings: the activations never share a solver unknown.\<close>
-
-lemma nestg_1_call_contexts:
-  "(FunctionEntry (STR ''bump''), [Statement 4]) \<in> fst nestg_1_sol \<and>
-   (FunctionEntry (STR ''bump''), [Statement 5]) \<in> fst nestg_1_sol \<and>
-   (FunctionEntry (STR ''bump''), [Statement 9]) \<in> fst nestg_1_sol \<and>
-   (FunctionEntry (STR ''bump''), []) \<notin> fst nestg_1_sol"
-  unfolding nestg_1_sol_def nestg_1_eqs_def by eval
-
-text \<open>Callee entry, first activation: the formal \<open>n\<close> binds to the argument, and the global
-  \<open>g\<close> arrives at the value \<open>main\<close> wrote before the call.\<close>
-lemma nestg_1_entry_first:
-  "(nestg_lookup (locals (snd nestg_1_sol (Inl (FunctionEntry (STR ''bump''), [Statement 4])))) (STR ''g''),
-    nestg_lookup (locals (snd nestg_1_sol (Inl (FunctionEntry (STR ''bump''), [Statement 4])))) (STR ''n''))
-     = (Ivl (Fin 10) (Fin 10), Ivl (Fin 5) (Fin 5))"
-  unfolding nestg_1_sol_def nestg_1_eqs_def by eval
-
-text \<open>Callee entry, second activation: \<open>g\<close> is the value the first activation wrote and
-  returned through, so a callee global write survives the return into the next call.\<close>
-lemma nestg_1_entry_second:
-  "(nestg_lookup (locals (snd nestg_1_sol (Inl (FunctionEntry (STR ''bump''), [Statement 5])))) (STR ''g''),
-    nestg_lookup (locals (snd nestg_1_sol (Inl (FunctionEntry (STR ''bump''), [Statement 5])))) (STR ''n''))
-     = (Ivl (Fin 15) (Fin 15), Ivl (Fin 4) (Fin 4))"
-  unfolding nestg_1_sol_def nestg_1_eqs_def by eval
-
-text \<open>Callee entry, third activation: the global-valued argument is evaluated against the
-  caller's real state before entry, so the entered \<open>n\<close> carries the caller's live value.\<close>
-lemma nestg_1_entry_third:
-  "(nestg_lookup (locals (snd nestg_1_sol (Inl (FunctionEntry (STR ''bump''), [Statement 9])))) (STR ''g''),
-    nestg_lookup (locals (snd nestg_1_sol (Inl (FunctionEntry (STR ''bump''), [Statement 9])))) (STR ''n''))
-     = (Ivl (Fin 19) (Fin 19), Ivl (Fin 19) (Fin 19))"
-  unfolding nestg_1_sol_def nestg_1_eqs_def by eval
-
-text \<open>Caller state after each return: the callee's global write is visible, the caller's
-  own locals are preserved, and the return destination holds the callee's returned value.\<close>
-lemma nestg_1_after_first_return:
-  "(nestg_lookup (locals (snd nestg_1_sol (Inl (Statement 5, [])))) (STR ''g''),
-    nestg_lookup (locals (snd nestg_1_sol (Inl (Statement 5, [])))) (STR ''a''))
-     = (Ivl (Fin 15) (Fin 15), Ivl (Fin 15) (Fin 15))"
-  unfolding nestg_1_sol_def nestg_1_eqs_def by eval
-
-lemma nestg_1_after_second_return:
-  "(nestg_lookup (locals (snd nestg_1_sol (Inl (Statement 8, [])))) (STR ''g''),
-    nestg_lookup (locals (snd nestg_1_sol (Inl (Statement 8, [])))) (STR ''a''),
-    nestg_lookup (locals (snd nestg_1_sol (Inl (Statement 8, [])))) (STR ''b''))
-     = (Ivl (Fin 19) (Fin 19), Ivl (Fin 15) (Fin 15), Ivl (Fin 19) (Fin 19))"
-  unfolding nestg_1_sol_def nestg_1_eqs_def by eval
-
-lemma nestg_1_after_third_return:
-  "(nestg_lookup (locals (snd nestg_1_sol (Inl (Statement 10, [])))) (STR ''g''),
-    nestg_lookup (locals (snd nestg_1_sol (Inl (Statement 10, [])))) (STR ''c''))
-     = (Ivl (Fin 38) (Fin 38), Ivl (Fin 38) (Fin 38))"
-  unfolding nestg_1_sol_def nestg_1_eqs_def by eval
-
+  "nest_lookup
+     (locals (snd nest_1_sol
+       (Inr (Seed (FunctionEntry (STR ''f'')) [Statement 6]))))
+     (STR ''p'') = Ivl (Fin 10) (Fin 10)"
+  using nest_1_snapshot_eq by (simp add: nest_1_snapshot_def)
 
 
 

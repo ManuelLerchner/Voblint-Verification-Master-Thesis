@@ -129,14 +129,19 @@ text \<open>\<open>relc\<close>, at the very same point, has recorded the pair d
   The false branch is precise too: \<open>assume_not_step\<close> reads \<open>\<not>(x < y)\<close> as
   \<open>y \<le> x\<close>, the mirror image of the true branch's transfer -- Interval's
   guard transfer stays uninformative on both branches for the same reason
-  it was on the true one.\<close>
+  it was on the true one.  Each witness also excludes \<open>Bot\<close> explicitly, so
+  empty concretization cannot make the relation assertion hold vacuously.\<close>
 
 lemma demo_rel_learns_xy:
-  "relc_has (STR ''x'') (STR ''y'') (locals (snd demo_rel_sol (Inl (Statement 1, ()))))"
+  "locals (snd demo_rel_sol (Inl (Statement 1, ()))) \<noteq> Bot \<and>
+   relc_has (STR ''x'') (STR ''y'')
+     (locals (snd demo_rel_sol (Inl (Statement 1, ()))))"
   unfolding demo_rel_sol_def demo_rel_eqs_def by eval
 
 lemma demo_rel_learns_yx:
-  "relc_has (STR ''y'') (STR ''x'') (locals (snd demo_rel_sol (Inl (Statement 2, ()))))"
+  "locals (snd demo_rel_sol (Inl (Statement 2, ()))) \<noteq> Bot \<and>
+   relc_has (STR ''y'') (STR ''x'')
+     (locals (snd demo_rel_sol (Inl (Statement 2, ()))))"
   unfolding demo_rel_sol_def demo_rel_eqs_def by eval
 
 text \<open>Side by side, the three lemmas above are the comparison: at \<open>Statement 1\<close>

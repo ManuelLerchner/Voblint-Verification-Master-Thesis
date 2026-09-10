@@ -9,12 +9,12 @@ split by concern.
 | --- | --- | --- |
 | `Example_Interval_DG_Flagship.thy` | canonical spine | interval analysis of a counting loop, executed and certified on the D/G spine |
 | `Example_Interval_DG_IP_Flagship.thy` | canonical spine | interprocedural: `twice` compiled and analyzed end to end through `FunctionEntry`/`FunctionResult` |
-| `Example_Proc_Call.thy` | canonical spine | two procedures (`inc` / `sqr`) via a global; `main_prog_interval_analysis` + CFG combine structure |
-| `Example_Interval_Loop_Coverage.thy` | canonical spine | bounded loop; backward `assume_ivl` refines the body to `[0,19]`; certified trace soundness `[0,20]` at the loop head (`loop_head_x_bounded`) |
+| `Example_Proc_Call.thy` | canonical spine | two procedures (`inc` / `sqr`) via a global; `main_prog_result` and the compiled CFG's call/combine structure |
+| `Example_Interval_Loop_Coverage.thy` | canonical spine | bounded loop; backward `bfilter_ivl` refines the body to `[0,19]`; `loop_env_post_fixpoint` pins the exhibited `[0,20]` loop-head invariant |
 | `Example_Guard_Refinement.thy` | regression | backward guard refinement strictly tighter than identity assume (`backward_analysis_strictly_tighter`) — a precision negative result |
 
 Backward-analysis arc: `Example_Guard_Refinement` (one guard) -> `Example_Interval_Loop_Coverage`
-(full CFG + trace soundness) -> `Exec_Interval_Run` (the same witness, executed).
+(full CFG + exhibited post-fixpoint) -> `Exec_Interval_Run` (the same program, analyzed).
 That last step and the store-only check trio's Interval member
 (`Example_Interval_Checks_Store_Only.thy`) live in `CLI/` rather than here: the
 check witness compares Interval against Sign on one program, and `Exec_Interval_Run`
@@ -31,7 +31,7 @@ of formal `p`, by the production entry-state analysis
 
 | File | Role | What |
 | --- | --- | --- |
-| `Example_Interval_DG_Ctx_Flagship.thy` | canonical spine | the production entry-state analysis run on `twice`; each call site's context is the entry value of formal `p`, plus the context-expanded GraphViz export |
+| `Example_Interval_DG_Ctx_Flagship.thy` | canonical spine | the production entry-state analysis run on `twice`; each call site's context is the entry value of formal `p` |
 | `Example_Interval_DG_Ctx_Collect.thy` | canonical spine | activation-indexed collecting soundness: `twice` as a named instance of `entry_state_activation_collect_sound` |
 | `Example_Interval_DG_Ctx_Multi_Call_Regression.thy` | regression | a call site with more than one outgoing call edge |
 | `Example_Interval_Source_Ctx.thy` | canonical spine | the `twice` program called twice under distinct contexts — interprocedural, repeated-call, context-sensitive; not recursive |
@@ -51,7 +51,6 @@ chain: `EntryState_Base` -> `EntryState_Ctx` -> `EntryState_Collect`.
 | `Example_Interval_DG_EntryState_Result_Regression.thy` | regression | `analyse_interval_entry_state_result`, the context-sensitive reading of the solution as an `analysis_result` |
 | `Example_Interval_DG_EntryState_Dead_Check_Regression.thy` | regression | the three shapes a check node takes once contexts are kept apart: live, dead, and disagreeing across contexts |
 | `Example_Interval_DG_Ctx_Factorial_Regression.thy` | regression | recursive `factorial` at `n=3` and `n=4`, four distinct entry-state contexts |
-| `Example_Interval_DG_Ctx_Globals_Regression.thy` | regression | a declared global crossing a call boundary in the same slot a local does |
 
 ## `CallString/` — context routed by call site
 
@@ -62,5 +61,4 @@ the call-string bound `k`.
 | --- | --- | --- |
 | `Example_Interval_DG_CallString_K1.thy` | canonical spine | `cs_route`/`cs_context` instance at `k = 1` (Seidl et al. 2026, Example 7) |
 | `Example_Interval_DG_CallString_K2.thy` | canonical spine | `cs_route`/`cs_context` instance at `k = 2` |
-| `Example_Interval_Call_String_Generic_Parity.thy` | regression | the runtime-`k` generic pipeline (`cs_call_string_sol_prog`) solves the same equation system the hand-built `nest_1_eqs`/`nest_2_eqs` do — same `ectx_spec`, same `cs_route`, same seeds |
 | `Call_String_Solver_Regression.thy` | regression | exact-tree snapshots (`nest_1_eqs_statement3`, `nest_2_eqs_statement3`) locking in that `routed_call_tree_def`/`routed_entry_seed_tree_def`/`routed_node_rhs` still generate the expected equation shape at a genuine call continuation |

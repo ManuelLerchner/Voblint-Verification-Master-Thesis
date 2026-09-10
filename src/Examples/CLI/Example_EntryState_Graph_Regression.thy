@@ -1,6 +1,6 @@
 theory Example_EntryState_Graph_Regression
   imports
-    "Voblint_VIMP.VIMP_Notation" "Voblint_CLI.State_Report_Graph"
+    "Voblint_VIMP.VIMP_Notation" "Voblint_CLI.State_Report_Entry_Ctx"
     "Voblint_Examples_Interval.Example_Interval_DG_EntryState_Result_Regression"
     "Voblint_Examples_Interval.Example_Interval_DG_EntryState_Dead_Check_Regression"
 begin
@@ -8,17 +8,35 @@ begin
 section \<open>Regression: the context-expanded graph's well-formedness and coverage\<close>
 
 text \<open>
-  \<^const>\<open>entry_state_ctx_graph\<close> draws one node per covered \<^term>\<open>(v, ctx)\<close> pair.
-  Its rendering-observable behavior (which nodes/edges a real \<open>--graph-snapshot\<close> draws,
-  for a shared callee context, a mixed dead/live branch, and a dead call site) is covered
-  by \<^verbatim>\<open>tests/regression/11-graph-snapshot/\<close> fixtures directly. What survives here is the
-  internal well-formedness (\<^const>\<open>analysis_graph_wf\<close>) and result-table coverage
-  (\<^const>\<open>contextual_result_domain\<close>/\<^const>\<open>result_contexts_at\<close>) obligations, neither of
-  which a rendered graph's text output could check.
+  \<^const>\<open>entry_state_ctx_graph_of\<close> draws one node per covered \<^term>\<open>(v, ctx)\<close> pair.
+  The CLI graph-snapshot regressions cover rendering for shared callee contexts,
+  mixed dead/live branches, and dead call sites. This theory retains the internal
+  well-formedness (\<^const>\<open>analysis_graph_wf\<close>) and result-table coverage
+  (\<^const>\<open>contextual_result_domain\<close>/\<^const>\<open>result_contexts_at\<close>) obligations, which
+  rendered text cannot check.
 \<close>
 
+text \<open>
+  The expanded builder takes the domain's entry transfer, its injection into
+  \<^typ>\<open>abstract_value\<close> and its classifier, so that one renderer serves every
+  domain. Interval is the domain these regressions analyse; fixing its three
+  values once here keeps the obligations below about the graphs rather than
+  about the instantiation.
+\<close>
+
+abbreviation ivl_ctx_graph_config ::
+    "imp_prog \<Rightarrow> (ivl list, (unit, ivl list) routed_gk, ivl abs_state lifted, ivl abs_state lifted)
+       analysis_graph_config" where
+  "ivl_ctx_graph_config p \<equiv> entry_state_ctx_graph_config enter_ivl_for IntervalValue p"
+
+abbreviation ivl_ctx_graph ::
+    "imp_prog \<Rightarrow> (ivl list, (unit, ivl list) routed_gk) analysis_graph" where
+  "ivl_ctx_graph p \<equiv>
+     entry_state_ctx_graph_of enter_ivl_for IntervalValue interval_classify_check
+       (analyse_interval_entry_state_result p) p"
+
 definition gcall_ctx_graph :: "(ivl list, (unit, ivl list) routed_gk) analysis_graph" where
-  "gcall_ctx_graph = entry_state_ctx_graph gcall_prog"
+  "gcall_ctx_graph = ivl_ctx_graph gcall_prog"
 
 lemma gcall_ctx_graph_wf: "analysis_graph_wf gcall_ctx_graph"
   unfolding gcall_ctx_graph_def by (rule entry_state_ctx_graph_wf)
@@ -33,9 +51,9 @@ text \<open>
 \<close>
 
 lemma gcall_ctx_graph_contexts_are_the_covered_ones:
-  "set (result_contexts_at (entry_state_ctx_graph_config gcall_prog) gcall_result bump_entry)
+  "set (result_contexts_at (ivl_ctx_graph_config gcall_prog) gcall_result bump_entry)
      = contexts_at gcall_result bump_entry"
-  "set (result_contexts_at (entry_state_ctx_graph_config gcall_prog) gcall_result (Statement 4))
+  "set (result_contexts_at (ivl_ctx_graph_config gcall_prog) gcall_result (Statement 4))
      = contexts_at gcall_result (Statement 4)"
   by eval+
 
@@ -45,28 +63,26 @@ text \<open>And the domain the graph is built over never names a key the solver 
 
 lemma gcall_ctx_graph_domain_is_covered:
   "list_all (\<lambda>x. case x of Inl pc \<Rightarrow> pc \<in> result_keys gcall_result | Inr _ \<Rightarrow> True)
-     (contextual_result_domain (entry_state_ctx_graph_config gcall_prog)
+     (contextual_result_domain (ivl_ctx_graph_config gcall_prog)
         (prog_cfg gcall_prog) gcall_result)"
   by eval
 
 text \<open>
-  \<^const>\<open>mixed_ctx_prog\<close> checks \<open>n == 1\<close> inside the recursive base case, reached
-  only in the innermost activation; drawing it is
-  \<^verbatim>\<open>tests/regression/11-graph-snapshot/13-expanded_recursive_dead_branch.vimp\<close>'s job.
-  Its well-formedness stays here.
+  \<^const>\<open>mixed_ctx_prog\<close> checks \<open>n == 1\<close> inside the recursive base case,
+  reached only in the innermost activation. The expanded-recursion snapshot
+  regression covers its rendered shape; its well-formedness stays here.
 \<close>
 
 definition mixed_ctx_graph :: "(ivl list, (unit, ivl list) routed_gk) analysis_graph" where
-  "mixed_ctx_graph = entry_state_ctx_graph mixed_ctx_prog"
+  "mixed_ctx_graph = ivl_ctx_graph mixed_ctx_prog"
 
 lemma mixed_ctx_graph_wf: "analysis_graph_wf mixed_ctx_graph"
   unfolding mixed_ctx_graph_def by (rule entry_state_ctx_graph_wf)
 
 text \<open>
   \<open>dead_route_prog\<close> calls one callee from a dead call site and a live one,
-  both under real (non-\<open>None\<close>-sentinel) contexts; the routing/edge-absence
-  claims that distinguish them are
-  \<^verbatim>\<open>tests/regression/11-graph-snapshot/09-expanded_dead_route.vimp\<close>'s job.
+  both under real (non-\<open>None\<close>-sentinel) contexts. The expanded dead-route
+  snapshot regression covers the routing and edge-absence claims.
 \<close>
 
 definition dead_route_prog :: imp_prog where
@@ -85,32 +101,16 @@ definition dead_route_prog :: imp_prog where
    }"
 
 definition dead_route_graph :: "(ivl list, (unit, ivl list) routed_gk) analysis_graph" where
-  "dead_route_graph = entry_state_ctx_graph dead_route_prog"
+  "dead_route_graph = ivl_ctx_graph dead_route_prog"
 
 lemma dead_route_graph_wf: "analysis_graph_wf dead_route_graph"
   unfolding dead_route_graph_def by (rule entry_state_ctx_graph_wf)
 
 text \<open>
-  A record of a case that turned out not to be safely testable: a
-  zero-formal callee (\<open>void f() { ... }\<close>) called from two call sites, one
-  of them dead, routes both to the same context \<open>[]\<close> -- the same value the
-  program root itself is seeded at, since \<^const>\<open>formals_context\<close> on an
-  empty formal list is constant regardless of caller state. Evaluating
-  \<^const>\<open>analyse_interval_entry_state_result\<close> for that program did not
-  terminate in this session, confirmed both interactively and in an
-  isolated batch process with a generous timeout well past what a program
-  this size would otherwise need. Careful reading of
-  \<^const>\<open>routed_node_rhs_buffered\<close>, \<^const>\<open>routed_call_tree\<close>,
-  \<^const>\<open>routed_entry_seed_tree\<close>, and the vendored warrowing solver's own
-  per-origin global bookkeeping (\<open>update_global_warrowing_apinis\<close>) found no
-  evident defect on inspection, so whether this is a genuine
-  non-terminating instance of a solver whose termination is checked per
-  program rather than universally guaranteed (\<^const>\<open>entry_state_terminates_prog\<close>
-  exists for exactly this reason), or a real, more subtle defect, is not
-  established here and needs its own dedicated investigation rather than a
-  same-session guess. \<open>dead_route_graph_wf\<close> above establishes the same
-  design property -- partial routing draws no false edge -- on an input that
-  is known to terminate.
+  The witness uses one formal parameter so distinct caller states yield
+  distinct entry-state contexts. A zero-formal callee maps every call to the
+  same context \<open>[]\<close> and therefore cannot witness route separation.
+  \<open>dead_route_graph_wf\<close> establishes that partial routing draws no false edge.
 \<close>
 
 end

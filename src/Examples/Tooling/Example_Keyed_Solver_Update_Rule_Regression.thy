@@ -62,9 +62,9 @@ definition keyed_extra :: "(pp \<Rightarrow> unit \<Rightarrow> ivl \<Rightarrow
   "keyed_extra route ctx v = []"
 
 text \<open>The unbuffered generator: \<open>Statement 1\<close>'s equation issues two \<open>Side ()\<close>
-  writes -- \<open>EA_Nop\<close>'s and \<open>EA_Assign\<close>'s -- in one RHS evaluation. Not run: a
-  genuinely non-terminating \<open>by eval\<close> would hang the batch build (mirrors the
-  flat file's documented convention).\<close>
+  writes -- \<open>EA_Nop\<close>'s and \<open>EA_Assign\<close>'s -- in one RHS evaluation. This
+  equation is not evaluated because its non-termination would hang the session.\<close>
+
 definition keyed_multiwrite_eqs :: "(pp \<times> unit, unit, (ivl, ivl) dg_state) eqsT" where
   "keyed_multiwrite_eqs =
      routed_node_rhs keyed_pred_sel (\<lambda>_. ()) (\<lambda>_ _ _ _. ())

@@ -56,22 +56,22 @@ text \<open>
 
 lemma result_demo_interval_stmt1_reachable:
   "map_lift (\<lambda>st. st (STR ''x''))
-     (lookup_context (analyse_interval_td_result result_demo_prog) (Statement 1) ())
+     (lookup_context (analyse_interval_result result_demo_prog) (Statement 1) ())
    = Lifted (Ivl (Fin 5) (Fin 5))"
   by eval
 
 lemma result_demo_interval_stmt1_contexts:
-  "contexts_at (analyse_interval_td_result result_demo_prog) (Statement 1) = {()}"
+  "contexts_at (analyse_interval_result result_demo_prog) (Statement 1) = {()}"
   by eval
 
 lemma result_demo_interval_stmt1_joined:
   "map_lift (\<lambda>st. st (STR ''x''))
-     (lookup_joined_state (analyse_interval_td_result result_demo_prog) (Statement 1))
+     (lookup_joined_state (analyse_interval_result result_demo_prog) (Statement 1))
    = Lifted (Ivl (Fin 5) (Fin 5))"
   by eval
 
 lemma result_demo_interval_stmt1_live:
-  "node_live_ex (analyse_interval_td_result result_demo_prog) (Statement 1)"
+  "node_live_ex (analyse_interval_result result_demo_prog) (Statement 1)"
   by eval
 
 text \<open>
@@ -142,21 +142,21 @@ lemma result_demo_interval_stmt2_stored_bot:
   by eval
 
 lemma result_demo_interval_stmt2_covered:
-  "contexts_at (analyse_interval_td_result result_demo_prog) (Statement 2) = {()}"
+  "contexts_at (analyse_interval_result result_demo_prog) (Statement 2) = {()}"
   by eval
 
 lemma result_demo_interval_stmt2_not_reachable:
-  "\<not> is_reachable_point (lookup_context (analyse_interval_td_result result_demo_prog)
+  "\<not> is_reachable_point (lookup_context (analyse_interval_result result_demo_prog)
                           (Statement 2) ())"
   by eval
 
 lemma result_demo_interval_stmt2_unreachable:
-  "lookup_context (analyse_interval_td_result result_demo_prog) (Statement 2) () = Bot"
+  "lookup_context (analyse_interval_result result_demo_prog) (Statement 2) () = Bot"
   using result_demo_interval_stmt2_not_reachable
   by (simp add: is_reachable_point_iff)
 
 lemma result_demo_interval_stmt2_not_live:
-  "\<not> node_live_ex (analyse_interval_td_result result_demo_prog) (Statement 2)"
+  "\<not> node_live_ex (analyse_interval_result result_demo_prog) (Statement 2)"
   by eval
 
 text \<open>
@@ -167,24 +167,24 @@ text \<open>
 \<close>
 
 lemma result_demo_interval_absent_key:
-  "(Statement 99, ()) \<notin> result_keys (analyse_interval_td_result result_demo_prog)"
+  "(Statement 99, ()) \<notin> result_keys (analyse_interval_result result_demo_prog)"
   by eval
 
 lemma result_demo_interval_absent_unreachable:
-  "lookup_context (analyse_interval_td_result result_demo_prog) (Statement 99) () = Bot"
+  "lookup_context (analyse_interval_result result_demo_prog) (Statement 99) () = Bot"
   by (rule lookup_context_absent[OF result_demo_interval_absent_key])
 
 lemma result_demo_interval_absent_contexts:
-  "contexts_at (analyse_interval_td_result result_demo_prog) (Statement 99) = {}"
+  "contexts_at (analyse_interval_result result_demo_prog) (Statement 99) = {}"
   by eval
 
 lemma result_demo_interval_absent_joined:
-  "lookup_joined_state (analyse_interval_td_result result_demo_prog) (Statement 99)
+  "lookup_joined_state (analyse_interval_result result_demo_prog) (Statement 99)
    = Bot"
   by (rule lookup_joined_state_absent[OF result_demo_interval_absent_contexts])
 
 lemma result_demo_interval_absent_not_live:
-  "\<not> node_live_ex (analyse_interval_td_result result_demo_prog) (Statement 99)"
+  "\<not> node_live_ex (analyse_interval_result result_demo_prog) (Statement 99)"
   by eval
 
 text \<open>
@@ -351,116 +351,8 @@ lemma result_demo_int_absent_unreachable:
   "lookup_context (analyse_int_result result_demo_prog) (Statement 99) () = Bot"
   by (rule lookup_context_absent) eval
 
-subsection \<open>Solver-choice variants: the same generic constructor, off a different solve\<close>
-
-text \<open>
-  \<open>analyse_sign_result_per_origin\<close>, \<open>analyse_interval_join_result\<close>,
-  \<open>analyse_interval_per_origin_result\<close>, \<open>analyse_int_join_result\<close>, and
-  \<open>analyse_int_per_origin_result\<close> all have
-  the same shape as the default-solver adapters above -- an
-  \<^const>\<open>Analysis_Result\<close> over that discipline's own solve, read back through
-  \<^const>\<open>readback_result_value\<close> -- differing only in the native solve function. \<open>result_demo_prog\<close> has no loop and no global feedback, so every
-  update-rule discipline agrees with the default solver on it; these pins
-  witness that each variant reaches the same generic
-  \<^const>\<open>readback_result_value\<close>/\<^const>\<open>lookup_context\<close> surface with the same
-  values the default-solver adapters above already established, not a
-  second full reachability case analysis.
-\<close>
-
-lemma result_demo_sign_per_origin_stmt1_reachable:
-  "map_lift (\<lambda>st. st (STR ''x''))
-     (lookup_context (analyse_sign_result_per_origin result_demo_prog) (Statement 1) ())
-   = Lifted SPos"
-  by eval
-
-lemma result_demo_sign_per_origin_stmt2_not_reachable:
-  "\<not> is_reachable_point (lookup_context (analyse_sign_result_per_origin result_demo_prog) (Statement 2) ())"
-  by eval
-
-lemma result_demo_sign_per_origin_stmt2_unreachable:
-  "lookup_context (analyse_sign_result_per_origin result_demo_prog) (Statement 2) () = Bot"
-  using result_demo_sign_per_origin_stmt2_not_reachable
-  by (simp add: is_reachable_point_iff)
-
-lemma result_demo_sign_per_origin_absent_unreachable:
-  "lookup_context (analyse_sign_result_per_origin result_demo_prog) (Statement 99) () = Bot"
-  by (rule lookup_context_absent) eval
-
-lemma result_demo_interval_join_stmt1_reachable:
-  "map_lift (\<lambda>st. st (STR ''x''))
-     (lookup_context (analyse_interval_join_result result_demo_prog) (Statement 1) ())
-   = Lifted (Ivl (Fin 5) (Fin 5))"
-  by eval
-
-lemma result_demo_interval_join_stmt2_not_reachable:
-  "\<not> is_reachable_point (lookup_context (analyse_interval_join_result result_demo_prog) (Statement 2) ())"
-  by eval
-
-lemma result_demo_interval_join_stmt2_unreachable:
-  "lookup_context (analyse_interval_join_result result_demo_prog) (Statement 2) () = Bot"
-  using result_demo_interval_join_stmt2_not_reachable
-  by (simp add: is_reachable_point_iff)
-
-lemma result_demo_interval_join_absent_unreachable:
-  "lookup_context (analyse_interval_join_result result_demo_prog) (Statement 99) () = Bot"
-  by (rule lookup_context_absent) eval
-
-lemma result_demo_interval_per_origin_stmt1_reachable:
-  "map_lift (\<lambda>st. st (STR ''x''))
-     (lookup_context (analyse_interval_per_origin_result result_demo_prog) (Statement 1) ())
-   = Lifted (Ivl (Fin 5) (Fin 5))"
-  by eval
-
-lemma result_demo_interval_per_origin_stmt2_not_reachable:
-  "\<not> is_reachable_point (lookup_context (analyse_interval_per_origin_result result_demo_prog) (Statement 2) ())"
-  by eval
-
-lemma result_demo_interval_per_origin_stmt2_unreachable:
-  "lookup_context (analyse_interval_per_origin_result result_demo_prog) (Statement 2) () = Bot"
-  using result_demo_interval_per_origin_stmt2_not_reachable
-  by (simp add: is_reachable_point_iff)
-
-lemma result_demo_interval_per_origin_absent_unreachable:
-  "lookup_context (analyse_interval_per_origin_result result_demo_prog) (Statement 99) () = Bot"
-  by (rule lookup_context_absent) eval
-
-lemma result_demo_int_join_stmt1_reachable:
-  "map_lift (\<lambda>st. int_ivl (st (STR ''x'')))
-     (lookup_context (analyse_int_join_result result_demo_prog) (Statement 1) ())
-   = Lifted (Ivl (Fin 5) (Fin 5))"
-  by eval
-
-lemma result_demo_int_join_stmt2_not_reachable:
-  "\<not> is_reachable_point (lookup_context (analyse_int_join_result result_demo_prog) (Statement 2) ())"
-  by eval
-
-lemma result_demo_int_join_stmt2_unreachable:
-  "lookup_context (analyse_int_join_result result_demo_prog) (Statement 2) () = Bot"
-  using result_demo_int_join_stmt2_not_reachable
-  by (simp add: is_reachable_point_iff)
-
-lemma result_demo_int_join_absent_unreachable:
-  "lookup_context (analyse_int_join_result result_demo_prog) (Statement 99) () = Bot"
-  by (rule lookup_context_absent) eval
-
-lemma result_demo_int_per_origin_stmt1_reachable:
-  "map_lift (\<lambda>st. int_ivl (st (STR ''x'')))
-     (lookup_context (analyse_int_per_origin_result result_demo_prog) (Statement 1) ())
-   = Lifted (Ivl (Fin 5) (Fin 5))"
-  by eval
-
-lemma result_demo_int_per_origin_stmt2_not_reachable:
-  "\<not> is_reachable_point (lookup_context (analyse_int_per_origin_result result_demo_prog) (Statement 2) ())"
-  by eval
-
-lemma result_demo_int_per_origin_stmt2_unreachable:
-  "lookup_context (analyse_int_per_origin_result result_demo_prog) (Statement 2) () = Bot"
-  using result_demo_int_per_origin_stmt2_not_reachable
-  by (simp add: is_reachable_point_iff)
-
-lemma result_demo_int_per_origin_absent_unreachable:
-  "lookup_context (analyse_int_per_origin_result result_demo_prog) (Statement 99) () = Bot"
-  by (rule lookup_context_absent) eval
+text \<open>Solver-specific adapter routing is covered by the CLI solver-choice regression group.
+  The cases above exercise the solver-independent result API once.\<close>
 
 end
 

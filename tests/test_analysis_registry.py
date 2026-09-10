@@ -107,9 +107,14 @@ def test_finite_lattices_reject_widening(generated, domain, solver):
 
 
 @pytest.mark.parametrize("context,k", [("Ctx_EntryState", None), ("Ctx_CallString", 3)])
-@pytest.mark.parametrize("solver", [None] + SOLVERS)
-def test_parity_has_no_contextual_route(generated, context, solver, k):
-    assert resolve(generated["Config_Tables"], "Parity_Analysis", solver, context, k) == "None"
+@pytest.mark.parametrize("solver", ["Solver_PerOrigin", "Solver_Warrow",
+                                    "Solver_WarrowPerOrigin"])
+def test_parity_publishes_contexts_at_join_only(generated, context, solver, k):
+    """Parity offers both context modes, but only under the always-join rule."""
+    cfg = generated["Config_Tables"]
+    assert resolve(cfg, "Parity_Analysis", solver, context, k) == "None"
+    assert resolve(cfg, "Parity_Analysis", None, context, k) != "None"
+    assert resolve(cfg, "Parity_Analysis", "Solver_Join", context, k) != "None"
 
 
 @pytest.mark.parametrize("solver", ["Solver_PerOrigin", "Solver_WarrowPerOrigin"])
@@ -161,7 +166,7 @@ def test_call_string_zero_is_not_published(generated, domain, solver):
 
 
 @pytest.mark.parametrize("domain", ["Sign_Analysis", "Interval_Analysis", "Int_Analysis",
-                                    "Congruence_Analysis"])
+                                    "Parity_Analysis", "Congruence_Analysis"])
 def test_call_string_above_the_bound_is_published(generated, domain):
     """The guard rejects only the bound below the published minimum."""
     assert resolve(generated["Config_Tables"], domain, None, "Ctx_CallString", 3) != "None"

@@ -73,40 +73,42 @@ text \<open>The routed-unit solve terminates, and its solved key set is closed u
   turns on, each computed rather than argued.\<close>
 
 lemma parity_ex_solver_terminates:
-  "pctx_terminates_prog parity_ex_gs parity_ex_program"
-  by (rule pctx_terminates_prog_via_solve_c) eval
+  "parity_conf_terminates_prog parity_ex_gs parity_ex_program"
+  by (rule parity_conf_terminates_prog_via_solve_c) eval
 
 lemma parity_ex_entry_cov:
   "(cfg_entry (prog_cfg parity_ex_program), ())
-     \<in> fst (pctx_sol_prog parity_ex_gs parity_ex_program)"
+     \<in> fst (parity_conf_sol_prog parity_ex_gs parity_ex_program)"
   by eval
 
 lemma parity_ex_fwd_ok_ball:
   "\<forall>(u, a, w) \<in> intra (prog_cfg parity_ex_program).
-     (u, ()) \<in> fst (pctx_sol_prog parity_ex_gs parity_ex_program) \<longrightarrow>
-     (w, ()) \<in> fst (pctx_sol_prog parity_ex_gs parity_ex_program)"
+     (u, ()) \<in> fst (parity_conf_sol_prog parity_ex_gs parity_ex_program) \<longrightarrow>
+     (w, ()) \<in> fst (parity_conf_sol_prog parity_ex_gs parity_ex_program)"
   by eval
 
 lemma parity_ex_fwd_ok:
-  assumes "(u, ctx) \<in> fst (pctx_sol_prog parity_ex_gs parity_ex_program)"
+  assumes "(u, ctx) \<in> fst (parity_conf_sol_prog parity_ex_gs parity_ex_program)"
     and "(u, a, w) \<in> intra (prog_cfg parity_ex_program)"
-  shows "(w, ctx) \<in> fst (pctx_sol_prog parity_ex_gs parity_ex_program)"
+  shows "(w, ctx) \<in> fst (parity_conf_sol_prog parity_ex_gs parity_ex_program)"
   using assms parity_ex_fwd_ok_ball by (cases ctx) auto
 
 lemma parity_ex_call_fwd_ok:
-  assumes "(u, ctx) \<in> fst (pctx_sol_prog parity_ex_gs parity_ex_program)"
+  assumes "(u, ctx) \<in> fst (parity_conf_sol_prog parity_ex_gs parity_ex_program)"
     and "(u, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg parity_ex_program)"
-  shows "(FunctionEntry q, ()) \<in> fst (pctx_sol_prog parity_ex_gs parity_ex_program)"
+  shows "(FunctionEntry q, ()) \<in> fst (parity_conf_sol_prog parity_ex_gs parity_ex_program)"
   using assms by (simp add: parity_ex_calls_eval)
 
 lemma parity_ex_comb_fwd_ok:
-  assumes "(cl, c1) \<in> fst (pctx_sol_prog parity_ex_gs parity_ex_program)"
+  assumes "(cl, c1) \<in> fst (parity_conf_sol_prog parity_ex_gs parity_ex_program)"
     and "(cl, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg parity_ex_program)"
-  shows "(k, c1) \<in> fst (pctx_sol_prog parity_ex_gs parity_ex_program)"
+  shows "(k, c1) \<in> fst (parity_conf_sol_prog parity_ex_gs parity_ex_program)"
   using assms by (simp add: parity_ex_calls_eval)
 
 definition parity_ex_reach :: "pp \<Rightarrow> store set" where
-  "parity_ex_reach v = ltr_collect parity_ex_gs (prog_cfg parity_ex_program) (cinit_stores parity_ex_gs) v"
+  "parity_ex_reach v =
+     ltr_collect parity_ex_gs (prog_cfg parity_ex_program)
+       (cinit_stores parity_ex_gs) v"
 
 text \<open>The computed Parity environment at an arbitrary node, read out of the
   routed-unit solved table \<^const>\<open>analyse_parity_result_for\<close> the production
@@ -138,10 +140,10 @@ lemma parity_ex_intra_eval:
   unfolding prog_cfg_def by eval
 
 lemma parity_ex_exit_eval: "cfg_exit (prog_cfg parity_ex_program) = FunctionResult (STR ''main'')"
-  unfolding prog_cfg_def by (simp add: cfg_exit_compile_prog prog_main_name_def)
+  unfolding prog_cfg_def by (simp add: prog_main_name_def)
 
 lemma parity_ex_entry_eval: "cfg_entry (prog_cfg parity_ex_program) = FunctionEntry (STR ''main'')"
-  unfolding prog_cfg_def by (simp add: cfg_entry_compile_prog prog_main_name_def)
+  unfolding prog_cfg_def by (simp add: prog_main_name_def)
 
 text \<open>Node-local collecting soundness at each check node, from the routed D/G
   node-soundness bridge and the four computed coverage facts --- no store is
@@ -175,15 +177,18 @@ text \<open>Executable classification at each check's own node --- \<open>y\<clo
   change the store), and \<open>w\<close> is \<open>PTop\<close> at \<open>Statement 6\<close> (unconstrained by
   \<open>__voblint_nondet_int()\<close>).\<close>
 lemma parity_ex_classify_3:
-  "parity_classify_check (Not (Eq (V (STR ''y'')) (V (STR ''z'')))) (parity_ex_env (Statement 3)) = Check_Proved"
+  "parity_classify_check (Not (Eq (V (STR ''y'')) (V (STR ''z''))))
+     (parity_ex_env (Statement 3)) = Check_Proved"
   unfolding parity_ex_env_def by eval
 
 lemma parity_ex_classify_4:
-  "parity_classify_check (Eq (V (STR ''y'')) (V (STR ''z''))) (parity_ex_env (Statement 4)) = Check_Refuted"
+  "parity_classify_check (Eq (V (STR ''y'')) (V (STR ''z'')))
+     (parity_ex_env (Statement 4)) = Check_Refuted"
   unfolding parity_ex_env_def by eval
 
 lemma parity_ex_classify_6:
-  "parity_classify_check (Eq (V (STR ''y'')) (V (STR ''w''))) (parity_ex_env (Statement 6)) = Check_Unknown"
+  "parity_classify_check (Eq (V (STR ''y'')) (V (STR ''w'')))
+     (parity_ex_env (Statement 6)) = Check_Unknown"
   unfolding parity_ex_env_def by eval
 
 text \<open>The payoff: the proved check's condition genuinely holds at every
@@ -219,7 +224,9 @@ lemma parity_ex_proven_check_discharged:
 proof (rule parity_checks_provenI)
   fix v :: pp and cnd :: exp
   assume mem: "(v, cnd) \<in> {(Statement 3, Not (Eq (V (STR ''y'')) (V (STR ''z''))))}"
-  then have v_eq: "v = Statement 3" and cnd_eq: "cnd = Not (Eq (V (STR ''y'')) (V (STR ''z'')))" by auto
+  then have v_eq: "v = Statement 3"
+    and cnd_eq: "cnd = Not (Eq (V (STR ''y'')) (V (STR ''z'')))"
+    by auto
   show "parity_check_query cnd (parity_ex_env v) = Some True"
     unfolding v_eq cnd_eq parity_ex_env_def by eval
 qed
@@ -232,7 +239,8 @@ proof (rule parity_checks_proven_sound)
   then show "parity_ex_reach v \<le> \<lbrakk>parity_ex_env v\<rbrakk>"
     using parity_ex_node_sound_3 by auto
 next
-  show "parity_checks_proven {(Statement 3, Not (Eq (V (STR ''y'')) (V (STR ''z''))))} parity_ex_env"
+  show "parity_checks_proven
+    {(Statement 3, Not (Eq (V (STR ''y'')) (V (STR ''z''))))} parity_ex_env"
     by (rule parity_ex_proven_check_discharged)
 qed
 
@@ -247,18 +255,25 @@ proof -
   have zero_init: "(\<lambda>_. 0) \<in> cinit_stores parity_ex_gs" unfolding cinit_stores_def by simp
   have s0: "(\<lambda>_. 0) \<in> parity_ex_reach (FunctionEntry (STR ''main''))"
   proof -
-    have "(\<lambda>_. 0) \<in> ltr_collect parity_ex_gs (prog_cfg parity_ex_program) (cinit_stores parity_ex_gs)
+    have "(\<lambda>_. 0) \<in>
+      ltr_collect parity_ex_gs (prog_cfg parity_ex_program)
+        (cinit_stores parity_ex_gs)
             (cfg_entry (prog_cfg parity_ex_program))"
       by (rule ltr_collect_init[OF zero_init])
     then show ?thesis unfolding parity_ex_reach_def parity_ex_entry_eval .
   qed
-  have e0: "(FunctionEntry (STR ''main''), EA_Body (STR ''main''), Statement 0) \<in> intra (prog_cfg parity_ex_program)"
+  have e0:
+    "(FunctionEntry (STR ''main''), EA_Body (STR ''main''), Statement 0)
+      \<in> intra (prog_cfg parity_ex_program)"
     by (simp add: parity_ex_intra_eval)
   have s1: "(\<lambda>_. 0) \<in> parity_ex_reach (Statement 0)"
     using ltr_collect_intra_step[of "\<lambda>_. 0" parity_ex_gs "prog_cfg parity_ex_program"
-        "cinit_stores parity_ex_gs" "FunctionEntry (STR ''main'')" "EA_Body (STR ''main'')" "Statement 0"]
+        "cinit_stores parity_ex_gs" "FunctionEntry (STR ''main'')"
+        "EA_Body (STR ''main'')" "Statement 0"]
     using s0 e0 unfolding parity_ex_reach_def by simp
-  have e1: "(Statement 0, EA_Special Nondet_Int (STR ''x''), Statement 1) \<in> intra (prog_cfg parity_ex_program)"
+  have e1:
+    "(Statement 0, EA_Special Nondet_Int (STR ''x''), Statement 1)
+      \<in> intra (prog_cfg parity_ex_program)"
     by (simp add: parity_ex_intra_eval)
   have s2: "(\<lambda>_. 0)((STR ''x'') := 7) \<in> parity_ex_reach (Statement 1)"
     using ltr_collect_intra_step[of "\<lambda>_. 0" parity_ex_gs "prog_cfg parity_ex_program"
@@ -269,14 +284,17 @@ proof -
               \<in> intra (prog_cfg parity_ex_program)"
     by (simp add: parity_ex_intra_eval)
   have s3: "(\<lambda>_. 0)((STR ''x'') := 7, (STR ''y'') := 14) \<in> parity_ex_reach (Statement 2)"
-    using ltr_collect_intra_step[of "(\<lambda>_. 0)((STR ''x'') := 7)" parity_ex_gs "prog_cfg parity_ex_program"
-        "cinit_stores parity_ex_gs" "Statement 1" "EA_Assign (STR ''y'') (Times (V (STR ''x'')) (N 2))" "Statement 2"
+    using ltr_collect_intra_step
+      [of "(\<lambda>_. 0)((STR ''x'') := 7)" parity_ex_gs "prog_cfg parity_ex_program"
+        "cinit_stores parity_ex_gs" "Statement 1"
+        "EA_Assign (STR ''y'') (Times (V (STR ''x'')) (N 2))" "Statement 2"
         "(\<lambda>_. 0)((STR ''x'') := 7, (STR ''y'') := 14)"]
     using s2 e2 unfolding parity_ex_reach_def by force
   have e3: "(Statement 2, EA_Assign (STR ''z'') (Plus (V (STR ''y'')) (N 1)), Statement 3)
               \<in> intra (prog_cfg parity_ex_program)"
     by (simp add: parity_ex_intra_eval)
-  have "(\<lambda>_. 0)((STR ''x'') := 7, (STR ''y'') := 14, (STR ''z'') := 15) \<in> parity_ex_reach (Statement 3)"
+  have "(\<lambda>_. 0)((STR ''x'') := 7, (STR ''y'') := 14, (STR ''z'') := 15)
+      \<in> parity_ex_reach (Statement 3)"
     using ltr_collect_intra_step[of "(\<lambda>_. 0)((STR ''x'') := 7, (STR ''y'') := 14)" parity_ex_gs
         "prog_cfg parity_ex_program" "cinit_stores parity_ex_gs"
         "Statement 2" "EA_Assign (STR ''z'') (Plus (V (STR ''y'')) (N 1))" "Statement 3"
@@ -288,29 +306,41 @@ qed
 
 lemma parity_ex_reach6_nonempty: "parity_ex_reach (Statement 6) \<noteq> {}"
 proof -
-  have s3_ne: "(\<lambda>_. 0)((STR ''x'') := 7, (STR ''y'') := 14, (STR ''z'') := 15) \<in> parity_ex_reach (Statement 3)"
+  have s3_ne:
+    "(\<lambda>_. 0)((STR ''x'') := 7, (STR ''y'') := 14, (STR ''z'') := 15)
+      \<in> parity_ex_reach (Statement 3)"
     by (simp add: parity_ex_reach3_witness)
   have e4: "(Statement 3, EA_Check (Not (Eq (V (STR ''y'')) (V (STR ''z'')))), Statement 4)
               \<in> intra (prog_cfg parity_ex_program)"
     by (simp add: parity_ex_intra_eval)
-  have s4: "(\<lambda>_. 0)((STR ''x'') := 7, (STR ''y'') := 14, (STR ''z'') := 15) \<in> parity_ex_reach (Statement 4)"
-    using ltr_collect_intra_step[of "(\<lambda>_. 0)((STR ''x'') := 7, (STR ''y'') := 14, (STR ''z'') := 15)" parity_ex_gs
-        "prog_cfg parity_ex_program" "cinit_stores parity_ex_gs"
+  have s4:
+    "(\<lambda>_. 0)((STR ''x'') := 7, (STR ''y'') := 14, (STR ''z'') := 15)
+      \<in> parity_ex_reach (Statement 4)"
+    using ltr_collect_intra_step
+      [of "(\<lambda>_. 0)((STR ''x'') := 7, (STR ''y'') := 14, (STR ''z'') := 15)"
+        parity_ex_gs "prog_cfg parity_ex_program" "cinit_stores parity_ex_gs"
         "Statement 3" "EA_Check (Not (Eq (V (STR ''y'')) (V (STR ''z''))))" "Statement 4"]
     using s3_ne e4 unfolding parity_ex_reach_def by force
   have e5: "(Statement 4, EA_Check (Eq (V (STR ''y'')) (V (STR ''z''))), Statement 5)
               \<in> intra (prog_cfg parity_ex_program)"
     by (simp add: parity_ex_intra_eval)
-  have s5: "(\<lambda>_. 0)((STR ''x'') := 7, (STR ''y'') := 14, (STR ''z'') := 15) \<in> parity_ex_reach (Statement 5)"
-    using ltr_collect_intra_step[of "(\<lambda>_. 0)((STR ''x'') := 7, (STR ''y'') := 14, (STR ''z'') := 15)" parity_ex_gs
-        "prog_cfg parity_ex_program" "cinit_stores parity_ex_gs"
+  have s5:
+    "(\<lambda>_. 0)((STR ''x'') := 7, (STR ''y'') := 14, (STR ''z'') := 15)
+      \<in> parity_ex_reach (Statement 5)"
+    using ltr_collect_intra_step
+      [of "(\<lambda>_. 0)((STR ''x'') := 7, (STR ''y'') := 14, (STR ''z'') := 15)"
+        parity_ex_gs "prog_cfg parity_ex_program" "cinit_stores parity_ex_gs"
         "Statement 4" "EA_Check (Eq (V (STR ''y'')) (V (STR ''z'')))" "Statement 5"]
     using s4 e5 unfolding parity_ex_reach_def by force
-  have e6: "(Statement 5, EA_Special Nondet_Int (STR ''w''), Statement 6) \<in> intra (prog_cfg parity_ex_program)"
+  have e6:
+    "(Statement 5, EA_Special Nondet_Int (STR ''w''), Statement 6)
+      \<in> intra (prog_cfg parity_ex_program)"
     by (simp add: parity_ex_intra_eval)
-  have "(\<lambda>_. 0)((STR ''x'') := 7, (STR ''y'') := 14, (STR ''z'') := 15, (STR ''w'') := 99) \<in> parity_ex_reach (Statement 6)"
-    using ltr_collect_intra_step[of "(\<lambda>_. 0)((STR ''x'') := 7, (STR ''y'') := 14, (STR ''z'') := 15)" parity_ex_gs
-        "prog_cfg parity_ex_program" "cinit_stores parity_ex_gs"
+  have "(\<lambda>_. 0)((STR ''x'') := 7, (STR ''y'') := 14, (STR ''z'') := 15,
+      (STR ''w'') := 99) \<in> parity_ex_reach (Statement 6)"
+    using ltr_collect_intra_step
+      [of "(\<lambda>_. 0)((STR ''x'') := 7, (STR ''y'') := 14, (STR ''z'') := 15)"
+        parity_ex_gs "prog_cfg parity_ex_program" "cinit_stores parity_ex_gs"
         "Statement 5" "EA_Special Nondet_Int (STR ''w'')" "Statement 6"
         "(\<lambda>_. 0)((STR ''x'') := 7, (STR ''y'') := 14, (STR ''z'') := 15, (STR ''w'') := 99)"]
     using s5 e6 unfolding parity_ex_reach_def by force
@@ -357,7 +387,8 @@ corollary parity_ex_report_agrees_with_node_classification:
      \<in> set (analyse_parity_report_for parity_ex_gs parity_ex_program)"
   unfolding parity_ex_report_unfold
   using classify_checks_mem_iff[of "prog_cfg parity_ex_program"
-      "Statement 3" "Not (Eq (V (STR ''y'')) (V (STR ''z'')))" Check_Proved parity_ex_env parity_classify_check]
+      "Statement 3" "Not (Eq (V (STR ''y'')) (V (STR ''z'')))"
+      Check_Proved parity_ex_env parity_classify_check]
   using parity_ex_intra_eval parity_ex_classify_3
   by (auto simp: parity_ex_intra_eval)
 
