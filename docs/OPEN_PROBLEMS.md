@@ -24,8 +24,8 @@ separated from collecting-soundness claims.
 
 ## D/G products
 
-The mixed Sign/Interval analysis is a concrete heterogeneous instance. The
-repository has no generic product or reduced-product constructor. Such a
+`int_dom` is one concrete reduced product of Sign, Interval, Parity and
+Congruence. The repository has no generic product or reduced-product constructor. Such a
 constructor needs carrier, order, concretization, communication, and reduction
 laws.
 

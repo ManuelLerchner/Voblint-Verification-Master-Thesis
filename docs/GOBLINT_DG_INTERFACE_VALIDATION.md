@@ -92,14 +92,17 @@ thesis of Goblint's side-effecting constraint systems.
 **5. Does `sound_dg_spec_core` faithfully model this?** **Yes.**
 
 - D/G separation with a joint `gammaDG d g` matches E1/E2.
-- Side-effects are built into the interface, not bolted on: `dg_edge_tree` emits
-  `Side () (DG bot (fst (step l g)))` (a global contribution) alongside
-  `Answer (DG (snd (step l g)) bot)` (the local update). Every DG edge is
-  side-effecting by construction — the E4/E2 `sideg` discipline. Effectful analyses
-  are therefore ordinary DG instances, matching answer 4.
-- Context routing `rt cl ctx (dg_D_c sigma ctx cl)` reads `dg_D_c = locals (sigma (Inl …))`
-  — the **local slot only**, with the global slot `dg_G_c` excluded. This matches E3
-  exactly: context from local state, globals dropped.
+- Side-effects are built into the interface, not bolted on: a transfer is a
+  manager-native program that may call the `man` record's `man_global`/`man_sideg`
+  fields (`DG_Manager`), and
+  `dg_spec_edge_tree` compiles it to `QueryG`/`Side` nodes beside the local
+  `Answer`. Effectful analyses are therefore ordinary DG instances, matching
+  answer 4.
+- Context routing `route cc ctx entry ca` (`routed_call_alternative_tree`,
+  `Routed_Call_Trees`) reads `entry`, the callee-entry **local** value the
+  enter transfer produced from `locals (sigma (Inl (cc, ctx)))`; no global slot
+  reaches it. This matches E3 and E4: context from the entering local state,
+  globals dropped.
 
 **6. Minimal interface change if not faithful?** **None required.** The interface is
 faithful for the intended (base) model. Extending `rt` to `pp -> 'c -> 'D -> 'G -> 'c`
@@ -110,19 +113,17 @@ avoids (E3), enlarging surface for no faithfulness gain.
 
 | Component | Goblint counterpart | Verdict |
 | --- | --- | --- |
-| `Ctx_Collect_Backbone` (generic `rd`, `rt`) | the context-sliced collecting semantics | Faithful, agnostic; accommodates local-only *and* wider readings. Unchanged. |
-| `sound_dg_spec_core` (D, G, `gammaDG`, `dgs_combine`, `rt` over `dg_D_c`) | `Spec` (D, G, C, `context man f v`, `sideg`) | **Faithful.** Local-only routing = E3; built-in `Side ()` = E2/E4. Unchanged. |
-| `Local_DG` (G = unit, `gammaDG d () = [[d]]`) | a globals-free `Spec` instance | Faithful specialization. Unchanged. |
+| `sound_dg_spec_core` (D, G, `gammaDG`, edge and combine soundness) | `Spec` (D, G, `sideg`) | **Faithful.** Built-in `Side` = E2/E4. Unchanged. |
+| `routed_call_alternative_tree` (`route cc ctx entry ca`) | `context man f v` at the call | **Faithful.** Routing reads the entered local value = E3/E4. |
+| `local_state_dg_spec_for_lifted` (whole state in D, G inert) | a `Spec` instance that keeps globals in `D` | Faithful specialization. |
 
 ### Correction to the prior `side_env_ctx` determination
 
-`SIDE_ENV_CTX_DG_DETERMINATION.md` framed DG's local-only routing (`rt` over
-`dg_D_c`) as an *obstruction* to expressing the effectful `side_env_ctx` spine as a
-DG corollary. The Goblint evidence now settles the point the other way: **local-only
-routing is the faithful model** (E3/E4), and the effectful `side_env_ctx` path has
-been deleted. The shared helpers that used to sit under that path now live in
-`TD_Side_Eff_Ctx_Shared`; the current architecture is DG / keyed / digest / clean
-over that shared context-collection backbone.
+`history/SIDE_ENV_CTX_DG_DETERMINATION.md` framed DG's local-only routing as an
+*obstruction* to expressing the effectful `side_env_ctx` spine as a DG corollary.
+The Goblint evidence settles the point the other way: **local-only routing is the
+faithful model** (E3/E4), and the effectful `side_env_ctx` path has been deleted.
+Contexts are now `routed_dg_analysis` registrations over the routed call trees.
 
 ## Recommendation
 

@@ -15,8 +15,8 @@ Views (--view, repeatable, default `sessions files`):
 
 Line-based scanner sharing extract_definitions.py's comment/string masking.
 Good enough to rank and compare; not an Isabelle parser, so a proof span is
-"keyword to the next top-level command", which over-counts a trailing
-comment block and under-counts nothing.
+"keyword to the next top-level command", counting its non-blank lines with
+comments and text blocks masked out.
 """
 import argparse
 import csv
@@ -158,6 +158,9 @@ def scan_theory(path: Path) -> TheoryStats:
     text = path.read_text(encoding="utf-8", errors="replace")
     masked = mask_comments_and_strings(text)
     code_only = mask_docs(text, masked)
+    # Proof spans keep quoted statements but drop comments and text blocks.
+    proof_lines_src = mask_docs(
+        text, mask_comments_and_strings(text, strings=False)).splitlines()
 
     raw_lines = text.splitlines()
     code_lines = code_only.splitlines()
@@ -215,7 +218,7 @@ def scan_theory(path: Path) -> TheoryStats:
             continue
         end = boundaries[idx + 1][0] if idx + 1 < len(boundaries) else len(text)
         first, last = line_of(start), line_of(max(start, end - 1))
-        body = masked_lines[first - 1:last]
+        body = proof_lines_src[first - 1:last]
         span = len([l for l in body if l.strip()])
         statement = span
         for offset, l in enumerate(body):

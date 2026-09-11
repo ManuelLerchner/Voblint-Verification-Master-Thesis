@@ -1,6 +1,6 @@
 // PARAM: --analysis interval
 // Canonical CFG snapshot coverage: a self-recursive procedure (factorial).
-// The context-sensitive keyed-context solver collapses every recursive
+// The context-insensitive analysis keys every recursive
 // activation of fact into the same context (cluster_ctx_1), giving a small,
 // deterministic graph with a self-loop EnterEdge (fact_pp2_ctx1 back into
 // fact_entry_fact_ctx1) not exercised by 11-graph-snapshot/02-call_return.vimp's

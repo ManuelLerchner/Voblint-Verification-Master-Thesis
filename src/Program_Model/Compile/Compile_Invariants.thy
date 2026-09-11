@@ -13,10 +13,10 @@ text \<open>
   procedure table, which no generated code can enumerate, so the executable form walks the
   declaration list instead and is proved sufficient.
 
-  The remaining results are about the graph that comes out: each procedure's statement
-  indices form a range disjoint from every other procedure's, a source \<^const>\<open>Return\<close>
-  compiles to an edge into its own \<^term>\<open>FunctionResult\<close>, and the entry node reaches the
-  exit.
+  The remaining results are about the graph that comes out: a source \<^const>\<open>Return\<close>
+  compiles to an edge into its own \<^term>\<open>FunctionResult\<close>, every statement index is listed
+  in source post-order (\<open>prog_stmt_post_order\<close>) so a report can name its source command,
+  and the entry node reaches the exit.
 \<close>
 
 subsection \<open>Compiler input well-formedness\<close>
@@ -254,8 +254,7 @@ text \<open>
   counterpart does: a leaf takes \<open>n\<close>; \<^const>\<open>Seq\<close> hands \<open>c2\<close> the counter \<open>c1\<close> ends at;
   \<^const>\<open>If\<close> and \<^const>\<open>While\<close> take \<open>n\<close> for the guard and start the body at \<open>Suc n\<close>.
   A front end that records one position per reduction can pair its \<open>k\<close>th position with
-  this list's \<open>k\<close>th index without reproducing \<^const>\<open>compile\<close>'s counter arithmetic;
-  stating the order here keeps the two from drifting.
+  this list's \<open>k\<close>th index without reproducing \<^const>\<open>compile\<close>'s counter arithmetic.
 \<close>
 
 fun com_stmt_post_order :: "nat \<Rightarrow> com \<Rightarrow> cfg_node list" where
@@ -273,9 +272,8 @@ fun com_stmt_post_order :: "nat \<Rightarrow> com \<Rightarrow> cfg_node list" w
 | "com_stmt_post_order n Restore = [Statement n]"
 | "com_stmt_post_order n Unwind = [Statement n]"
 
-text \<open>The enumeration names exactly the indices the fragment allocates, each once: a
-  shorter or longer list, or a repeated index, would silently misalign every position
-  after it.\<close>
+text \<open>The enumeration has one entry per index the fragment allocates: a shorter or
+  longer list would silently misalign every position after it.\<close>
 
 lemma length_com_stmt_post_order [simp]: "length (com_stmt_post_order n c) = csize c"
   by (induction c arbitrary: n) auto
@@ -299,13 +297,6 @@ fun procs_stmt_next :: "proc_table \<Rightarrow> pname list \<Rightarrow> nat \<
      (case \<Pi> p of
         None \<Rightarrow> procs_stmt_next \<Pi> ps n
       | Some decl \<Rightarrow> procs_stmt_next \<Pi> ps (Suc (n + csize (body decl))))"
-
-text \<open>
-  The layout is the compiler's own, not a second copy of it. Without this the
-  arithmetic above would be a plausible restatement that no build could catch drifting
-  from \<^const>\<open>compile_procs\<close>, and every position in every procedure after the first
-  would move with it.
-\<close>
 
 text \<open>
   Each definition paired with the statement indices its body owns, in the order a

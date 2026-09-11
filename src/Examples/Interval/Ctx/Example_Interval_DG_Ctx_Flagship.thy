@@ -45,7 +45,8 @@ lemma twice_exact: "twice_empty_pred s = is_empty_state (fun_of_resolved_st_q_fo
 text \<open>Reading one variable off a lifted whole-state local unknown: an unreachable
   point (\<^const>\<open>Bot\<close>) reads \<open>bot\<close> at every variable.\<close>
 abbreviation twice_ctx_lookup :: "ivl exec_dg_st lifted \<Rightarrow> vname \<Rightarrow> ivl" where
-  "twice_ctx_lookup d x \<equiv> (case d of Bot \<Rightarrow> bot | Lifted d0 \<Rightarrow> twice_lookup d0 x)"
+  "twice_ctx_lookup d x \<equiv>
+     (case d of Bot \<Rightarrow> bot | Lifted d0 \<Rightarrow> lookup_resolved_st_q d0 (location_of twice_gs x))"
 
 subsection \<open>The routed equation system and its solution\<close>
 
@@ -133,12 +134,18 @@ text \<open>Each call publishes the entered store into its own context's seed sl
   carries that store in the seed unknown's \<^const>\<open>locals\<close> half, the same carrier the
   callee entry reads it back on.\<close>
 lemma seed_call1:
-  "twice_ctx_lookup (locals (snd twice_ctx_sol (Inr (Activation_Seed (FunctionEntry (STR ''twice'')) ctx_call1)))) (STR ''p'')
+  "twice_ctx_lookup
+     (locals (snd twice_ctx_sol
+       (Inr (Activation_Seed (FunctionEntry (STR ''twice'')) ctx_call1))))
+     (STR ''p'')
      = Ivl (Fin 3) (Fin 3)"
   unfolding twice_ctx_sol_def twice_empty_pred_def ctx_call1_def by eval
 
 lemma seed_call2:
-  "twice_ctx_lookup (locals (snd twice_ctx_sol (Inr (Activation_Seed (FunctionEntry (STR ''twice'')) ctx_call2)))) (STR ''p'')
+  "twice_ctx_lookup
+     (locals (snd twice_ctx_sol
+       (Inr (Activation_Seed (FunctionEntry (STR ''twice'')) ctx_call2))))
+     (STR ''p'')
      = Ivl (Fin 10) (Fin 10)"
   unfolding twice_ctx_sol_def twice_empty_pred_def ctx_call2_def by eval
 

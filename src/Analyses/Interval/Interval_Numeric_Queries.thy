@@ -24,9 +24,8 @@ lemma gamma_ivlD:
 lemma ivl_upper_lower_less:
   assumes "Fin i \<le> u" and "u < l" and "l \<le> Fin j"
   shows "i < j"
-  using assms
-  unfolding less_eq_eint_def less_eint_def
-  by (metis eint_le.simps(4) less_eq_eint_def nless_le order_trans)
+  using le_less_trans[OF assms(1) less_le_trans[OF assms(2,3)]]
+  by (simp add: less_eint_def less_eq_eint_def)
 
 lemma ivl_upper_lower_not_less:
   assumes "Fin j \<le> u" and "u < l" and "l \<le> Fin i"
@@ -37,9 +36,8 @@ lemma ivl_upper_lower_not_less:
 lemma ivl_upper_lower_less_eq:
   assumes "Fin i \<le> u" and "u \<le> l" and "l \<le> Fin j"
   shows "i \<le> j"
-  using assms
-  unfolding less_eq_eint_def
-  by (metis eint_le.simps(4) less_eq_eint_def order_trans)
+  using order_trans[OF assms(1) order_trans[OF assms(2,3)]]
+  by (simp add: less_eq_eint_def)
 
 lemma ivl_upper_lower_not_less_eq:
   assumes "Fin j \<le> u" and "u \<le> l" and "l \<le> Fin i"

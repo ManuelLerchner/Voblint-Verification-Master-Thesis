@@ -1,7 +1,6 @@
 theory Parity_Entry
   imports
     Parity_Checks
-    "Voblint_Soundness.Run_Analysis_Sound"
 begin
 
 hide_const phase.N
@@ -9,7 +8,7 @@ hide_const phase.N
 section \<open>Parity codegen API: an arbitrary VIMP program, and its production soundness\<close>
 
 text \<open>
-  GENERATED FILE. Source: \<^verbatim>\<open>assembly/analyses.yaml\<close>; generator:
+  GENERATED FILE. Source: \<^verbatim>\<open>manifests/analyses.yaml\<close>; generator:
   \<^verbatim>\<open>scripts/gen_analysis_assembly.py\<close>. Regenerate with the generator
   rather than hand-editing; a drift check compares regenerated output against
   this file.
@@ -111,8 +110,7 @@ lemma parity_conf_vars_cover_prog_of_exec:
   assumes cover: "vars_cover_exec (prog_cfg p)
       (fst (parity_conf_sol_prog (declared_global p) p))"
   shows "vars_cover (prog_cfg p) (fst (parity_conf_sol_prog (declared_global p) p))"
-  by (rule vars_cover_of_exec[OF _ _ cover])
-     (simp_all add: prog_cfg_def compile_prog_finite)
+  by (rule parity_join.vars_cover_of_exec_prog[unfolded parity_join.sol_vars_def, OF cover])
 
 lemma analyse_parity_result_node_sound_of_cover:
   assumes solve: "parity_conf_terminates_prog (declared_global p) p"

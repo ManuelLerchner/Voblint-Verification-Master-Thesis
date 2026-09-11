@@ -43,10 +43,10 @@ pcompletes (declared_global inc_program) inc_pi p() s
   (s(Gx := s Gx + 1))
 ```
 
-This witness already uses the declaration-driven classifier. During reduced
-M4 it remains the compatibility baseline for existing `Gx` programs; the thin
-validation slice will add the same behavior for a declared global without a
-`G` prefix and a `G`-named implicit local.
+This witness uses the declaration-driven classifier. The same behavior for a
+declared global without a `G` prefix and a `G`-named implicit local is pinned
+by `tests/regression/04-globals/precision/05-glocal_not_global_by_name.vimp`
+and by `Example_Parity_DG_Flagship.thy` (`total` declared, `Gcount` local).
 
 ## Baseline gate
 

@@ -3,7 +3,7 @@ theory VIMP_Grammar_Generated
 begin
 
 text \<open>
-  GENERATED FILE. Source: \<^verbatim>\<open>grammar/vimp.yaml\<close>; generator:
+  GENERATED FILE. Source: \<^verbatim>\<open>manifests/vimp-grammar.yaml\<close>; generator:
   \<^verbatim>\<open>scripts/gen_vimp_isabelle.py\<close>. Regenerate with the generator rather
   than hand-editing; a CI drift check compares regenerated output against
   this file.
@@ -19,7 +19,7 @@ text \<open>
   surrounding quotation ultimately builds.
 
   Two lowering rules stay hand-written inside \<open>Vimp_Grammar_Tr\<close> rather than
-  being generated from \<open>grammar/vimp.yaml\<close> directly: Isabelle's binary
+  being generated from \<open>manifests/vimp-grammar.yaml\<close> directly: Isabelle's binary
   \<open>Num\<close> literal decoding (\<open>dest_num\<close>/\<open>read_num_const\<close>, no Menhir analogue)
   and the compositional unary-minus rule (folds a numeral operand into a
   negative \<open>N\<close>, otherwise \<open>Minus (N 0) x\<close> -- deliberately does NOT cancel a

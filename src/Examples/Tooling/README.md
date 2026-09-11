@@ -7,7 +7,8 @@ which is why `Voblint_Examples_Tooling` is parented on
 
 | File | Role | What |
 | --- | --- | --- |
-| `Example_Keyed_Solver_Update_Rule_Regression.thy` | regression | the keyed-generator instance of the same, at `routed_node_rhs`'s interface |
+| `Example_Interval_DG_Ctx_Multi_Call_Regression.thy` | regression | Generic routed-call enumeration at one call site with two callees and distinct continuations |
+| `Example_Keyed_Solver_Update_Rule_Regression.thy` | regression | Side buffering at `routed_node_rhs`'s interface: the buffered RHS generator terminates where issuing two Side writes per evaluation livelocks the solver |
 | `Example_Buffered_Encoding_Flush_Order.thy` | regression | the direct and buffered routed generators solved side by side under three update rules, on one program publishing a global and an activation seed from the same evaluation |
 | `Example_Per_Origin_Widening_Precision.thy` | regression | two producers, one global: warrowing after the join loses the upper bound that warrowing per origin keeps |
 | `Example_Strategy_Tree.thy` | demo | `strategy_tree` as a small dependency/effect language with no abstract domain, CFG, or context in play |

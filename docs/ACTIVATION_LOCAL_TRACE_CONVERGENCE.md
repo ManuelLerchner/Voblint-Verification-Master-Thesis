@@ -1,7 +1,7 @@
 # From global witnesses to canonical activation-local semantics
 
 Status: **implemented and batch-green.** Stages 1–5 plus the concrete instantiation are landed
-(`Voblint_CFG` → `Voblint_Soundness` clean, no `sorry`). The activation-local trace semantics
+(`Voblint_CFG` through `Voblint_Result` clean, no `sorry`). The activation-local trace semantics
 `valid_ltr` is the concrete foundation, `cfg_collect_ctx_act` is its sink/`key` projection,
 `activation_collect_sound` rides the four generic obligations, and the recursive source bridge
 `source_activation_sound` closes `source pstep → cstep → valid_ltr → cfg_collect_ctx_act → γ`
@@ -9,6 +9,7 @@ Status: **implemented and batch-green.** Stages 1–5 plus the concrete instanti
 `trace_witness_act` is deleted. **Deliberately deferred:** `flatten` (whole-program trace view) and
 the `mono_collect` / digest reformulations that ride on it — optional, not on the soundness path.
 This document is retained as the architectural narrative; the "design" framing below is historical.
+`cfg_collect_ctx_act` has since been renamed `activation_collect` (`LTR_Activation_Context.thy`).
 
 ## Why the foundation changed
 
@@ -490,7 +491,7 @@ downstream result depended on behaviour present only in the old semantics. See t
 
 ### Stage 1 landed (`LTR_Def.thy`)
 
-Stage 1 is implemented and builds green through `Voblint_Soundness`. The design
+Stage 1 is implemented and builds green. The design
 invariants are theorems of `valid_ltr`, not comments:
 
 - `valid_ltr_Call_caller_valid` — a valid `Call` has a valid caller (survives the callee's
@@ -547,7 +548,7 @@ The activation-local semantics is now the *only* public activation collecting se
 **Old / new correspondence.** No equality or inclusion between the old `trace_witness_act`
 collecting and the new `valid_ltr`+`key` projection was established or required. The two use
 materially different witness structures: the old combine obtained a callee as an *independently
-re-rooted* callee derivation (see `ACTIVATION_WITNESS_RECONCILIATION.md`), whereas `valid_ltr`
+re-rooted* callee derivation (see `history/ACTIVATION_WITNESS_RECONCILIATION.md`), whereas `valid_ltr`
 requires explicit stack-faithful caller linkage (`caller_of callee = Some caller`). Whether either
 semantic inclusion holds would require a separate reconstruction theorem or a concrete
 counterexample — a direct syntactic node-for-node translation failing in one direction does not by
@@ -586,12 +587,12 @@ recursive source bridge) targets this sole `cfg_collect_ctx_act`.
 
 This is the authoritative architectural document.
 
-- `ACTIVATION_WITNESS_RECONCILIATION.md` preserves the mechanical correction that the second
+- `history/ACTIVATION_WITNESS_RECONCILIATION.md` preserves the mechanical correction that the second
   `twice` return is non-empty.
-- `SOURCE_ACTIVATION_BRIDGE_DESIGN.md`, `ORIGIN_WITNESS_DESIGN.md`, and
-  `LOCAL_ACTIVATION_TRACE_DESIGN.md` are historical design stages. Their alternatives are not
+- `history/SOURCE_ACTIVATION_BRIDGE_DESIGN.md`, `history/ORIGIN_WITNESS_DESIGN.md`, and
+  `history/LOCAL_ACTIVATION_TRACE_DESIGN.md` are historical design stages. Their alternatives are not
   implementation targets.
-- `ACTIVATION_SPINE_CONSOLIDATION.md` records the completed cleanup of the old activation
+- `history/ACTIVATION_SPINE_CONSOLIDATION.md` records the completed cleanup of the old activation
   family. Its description of `trace_witness_act` is a record of the currently implemented
   code, not the planned semantic endpoint.
 - `PROOF_OVERVIEW.md` distinguishes the current batch-green path from this planned

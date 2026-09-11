@@ -32,15 +32,11 @@ does: `base.ml` reads globals from local state without publication at all
 (`GOBLINT_ALIGNMENT_REGISTER.md`, D/G reconstruction and publication timing,
 source-checked 2026-08-10).
 
-The other choice is already formalized. `ownership_split_dg_spec_placed` takes a
-per-variable `keep_local`/`publish_side` placement and is proved sound via
-`gamma_join`, and `Example_Interval_Placement.thy` runs a program with one
-global on each side: `balance`, kept local, reads `[3,3]`; `request_count`,
-published to the side, reads `[0,+inf]` in the globals slot -- the paper's
-Example 3 result for `h`, by `eval`, for the paper's reason. What is missing
-is only a way to select a placement from VIMP source or a CLI flag; the CLI
-hardwires the exclusive local routing. That flag, not any solver or domain
-work, is what a source-level reproduction of Examples 2 and 3 needs.
+The other choice is formalized as a lifter. `ownership_split_lift`
+(`DG_Ownership_Split_Spec.thy`) takes a whole-state specification and puts
+every declared global on the shared channel, proved sound against the
+ownership-split concretization. What is missing is a way to select it from VIMP
+source or a CLI flag; the CLI hardwires the exclusive local routing.
 
 That single site is enough to reproduce the paper's own chain. With the paper's
 three contributions to `g` arriving in the paper's order:
@@ -55,9 +51,9 @@ Apinis warrowing reaches `[-inf,+inf]`, the paper's Example 2 result. Per origin
 each cell holds one constant, nothing widens, and the join is `[-17,42]` --
 the paper's Sect. 5.3 figure. Both are machine-checked at the CLI by
 `tests/regression/19-paper-examples/`, whose 02/03 pair pins both bounds, and at
-the solver level by `two_writer_slot_across_update_rules` in
-`src/Examples/Tooling/Example_Per_Origin_Widening_Precision.thy`, which evaluates
-one slot under all four update rules at once.
+the solver level by the four `two_writer_slot_*` lemmas in
+`src/Examples/Tooling/Example_Per_Origin_Widening_Precision.thy`, which evaluate
+one slot under each of the four update rules.
 
 Voblint answers the paper's Fig. 1 itself exactly -- `g == 42`, `h == 1` --
 because it never widens a global. That beats both the paper's Example 2 result

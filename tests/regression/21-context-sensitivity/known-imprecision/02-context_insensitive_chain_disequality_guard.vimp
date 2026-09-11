@@ -15,7 +15,7 @@
 // lower bound survives and the disequality guard is the gap. --analysis
 // int closes it: its Sign component refines !(i == 0) on NonNegative to
 // Positive, the product lifts the interval past 0, and the arm dies (see
-// 16-composite-domain/precision/10).
+// 16-composite-domain/precision/08).
 void h(i) {
   if (i == 0) { return 3 } else { skip };
   if (0 < i) { r := h(i - 1); return r } else { skip };

@@ -1,5 +1,5 @@
 // PARAM: --analysis interval --context call-string --context-depth 2
-// Same program as 01-depth1_merges_shared_callee.vimp. At depth 2, g's
+// Same program as known-imprecision/02-depth1_merges_shared_callee.vimp. At depth 2, g's
 // routed context additionally remembers which f activation called it --
 // distinguishing the call reached via f(3) from the one reached via
 // f(10), since each now carries its own two-frame call string instead of

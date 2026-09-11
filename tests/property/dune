@@ -1,0 +1,41 @@
+(rule
+ (targets Voblint_CLI.ml)
+ (deps ../../codegen/generated/ml/Voblint_CLI.ml)
+ (action (copy %{deps} %{targets})))
+
+(rule
+ (targets vimp_positions.ml)
+ (deps ../../cli/vimp_positions.ml)
+ (action (copy %{deps} %{targets})))
+
+(rule
+ (targets vimp_parser.mly)
+ (deps ../../cli/vimp_parser.mly)
+ (action (copy %{deps} %{targets})))
+
+(rule
+ (targets vimp_lexer.mll)
+ (deps ../../cli/vimp_lexer.mll)
+ (action (copy %{deps} %{targets})))
+
+(rule
+ (targets vimp_frontend.ml)
+ (deps ../../cli/vimp_frontend.ml)
+ (action (copy %{deps} %{targets})))
+
+(menhir
+ (modules vimp_parser))
+
+(ocamllex vimp_lexer)
+
+(executable
+ (name ast_driver)
+ (modules
+  Voblint_CLI
+  vimp_positions
+  vimp_parser
+  vimp_lexer
+  vimp_frontend
+  ast_driver)
+ (libraries str zarith)
+ (flags (:standard -w -8-11-20-27-32-37-39 -warn-error -A)))

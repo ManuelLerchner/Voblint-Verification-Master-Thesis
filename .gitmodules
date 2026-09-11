@@ -1,8 +1,3 @@
-[submodule "autocorrode"]
-	path = vendor/autocorrode
-	url = https://github.com/awslabs/AutoCorrode
-	branch = main
-	ignore = dirty
 [submodule "td-verification"]
 	path = vendor/td-verification
 	url = https://github.com/ManuelLerchner/td-verification

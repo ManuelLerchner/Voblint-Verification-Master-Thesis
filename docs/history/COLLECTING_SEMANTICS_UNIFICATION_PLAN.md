@@ -12,7 +12,7 @@ Status (original): decision document, no code changed. Verified against `src/` a
 `local-trace-semantic`. A large proof migration is assumed acceptable; the
 objective is **minimum final conceptual and proof complexity**, not minimum diff.
 
-Companion: `docs/COLLECTING_SEMANTICS_ARCHITECTURE.md` (the review that
+Companion: `docs/history/COLLECTING_SEMANTICS_ARCHITECTURE.md` (the review that
 established the current structure). This document is the actionable plan.
 
 ---

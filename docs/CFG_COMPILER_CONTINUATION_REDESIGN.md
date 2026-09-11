@@ -30,7 +30,7 @@ Comparison target: Goblint-CIL `src/cfg.ml` at
 > | `proc_activation` | folded into `compiled_at` |
 > | `source_wf` | `return_safe :: com => bool` |
 > | `source_global` | `gs` |
-> | `mnm` | `main_name` |
+> | `mnm` | `prog_main_name` |
 
 ---
 
@@ -1079,7 +1079,7 @@ dominate the migration effort. Nothing in it looks conceptually threatened.
 | `src/Examples/Interprocedural/Example_Control_Simulation_Regression.thy` | local repair | |
 | `src/Examples/Interprocedural/Example_Proc_Recursion_CFG.thy` | local repair | hardcoded indices 0–17; regenerate |
 | Other examples (14 files reference `Statement`) | local repair | index-only churn; `Example_LTR_Collect_Regression` (69 references) is the largest |
-| `src/Examples/Voblint.thy` | unchanged | prose |
+| `src/Examples/Capstone/Voblint.thy` | unchanged | prose |
 
 ### Unknown until attempted
 

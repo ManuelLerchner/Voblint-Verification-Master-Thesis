@@ -1,76 +1,92 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/evilmartians/lefthook/master/schema.json
 #
-# Install with `pixi run lefthook-install`. Guards three invariants documented
-# in AGENTS.md: .thy sources stay ASCII-only ("ASCII-only .thy sources"), the
-# two generated VIMP grammar frontends stay in sync with grammar/vimp.yaml
-# ("VIMP grammar pipeline"), and the OCaml export emits only the modules the
-# handwritten CLI names ("New theories and the code-export module map"). The generator jobs are
-# allowed to rewrite their generated file in place -- fail_on_changes then
-# blocks the commit so a real drift gets reviewed and re-staged rather than
-# silently committed stale.
+# Install with `pixi run hooks-install`. Guards invariants documented in
+# AGENTS.md: .thy sources stay ASCII-only ("ASCII-only .thy sources"), the
+# two generated VIMP grammar frontends stay in sync with manifests/vimp-grammar.yaml
+# ("VIMP grammar pipeline"), the OCaml export emits exactly its three modules
+# and exposes every name the handwritten OCaml uses ("New theories and the
+# code-export module map"), and theory prose and locale assumptions name only
+# identifiers that exist ("Deleting an API"). The generator jobs are
+# allowed to rewrite their generated file in place. The drift tasks compare
+# their result with the staged snapshot, so intentional staged regeneration
+# passes while a stale staged artifact is rejected.
 output: [summary]
 pre-commit:
   fail_on_changes: always
-  parallel: true
   jobs:
-    - name: isabelle-ascii
-      glob: "*.thy"
-      run: pixi run python3 scripts/check_isabelle_ascii.py {staged_files}
+    # Generators may rewrite tracked artifacts. Finish both before any reader
+    # checks the tree, while retaining parallelism between independent outputs.
+    - name: generated-artifacts
+      group:
+        parallel: true
+        jobs:
+          - name: vimp-isabelle-grammar-drift
+            glob:
+              - "manifests/vimp-grammar.yaml"
+              - "scripts/gen_vimp_isabelle.py"
+              - "src/Program_Model/VIMP/VIMP_Grammar_Generated.thy"
+            run: pixi run grammar-isabelle-check
 
-    # Any new theory can add a module to the export, so this fires on every
-    # staged .thy -- not just on the generated .ml and the mapping table.
-    # Committing a new theory alone used to trigger nothing.
-    - name: codegen-module-map
-      glob:
-        - "codegen/generated/ml/Voblint_CLI.ml"
-        - "src/**/*.thy"
-      run: pixi run python3 scripts/check_codegen_modules.py
+          - name: vimp-menhir-grammar-drift
+            glob:
+              - "manifests/vimp-grammar.yaml"
+              - "scripts/gen_vimp_menhir.py"
+              - "cli/vimp_parser.mly"
+              - "cli/vimp_lexer.mll"
+            run: pixi run grammar-menhir-check
 
-    # Merging the export into one module removed every inter-module boundary,
-    # and with it the incidental signature entries the handwritten OCaml used
-    # to ride on. Now only an export root exposes a name, so this fires on the
-    # export, its root list, and the consumers that name it.
-    - name: codegen-api
-      glob:
-        - "codegen/generated/ml/Voblint_CLI.ml"
-        - "src/Executable_Surface/Codegen/Export/Voblint_Codegen.thy"
-        - "cli/*.ml"
-        - "cli/*.mly"
-        - "codegen/regression/ocaml/*.ml"
-        - "tests/property/*.ml"
-      run: pixi run python3 scripts/check_generated_api.py
+    # These jobs are read-only and safe to run together after generation.
+    - name: invariant-checks
+      group:
+        parallel: true
+        jobs:
+          - name: verification-task-surface
+            glob:
+              - "**/*.md"
+              - "**/*.ml"
+              - "**/*.mli"
+              - "**/*.mll"
+              - "**/*.mly"
+              - "**/*.py"
+              - "**/*.sh"
+              - "**/*.thy"
+              - "**/*.toml"
+              - "**/*.yaml"
+              - "**/*.yml"
+            run: pixi run verification-surface-check
 
-    # A rename that leaves prose naming a constant that no longer exists is
-    # invisible to the document checker; this catches it at commit time.
-    - name: thy-prose-refs
-      glob: "src/**/*.thy"
-      run: pixi run python3 scripts/check_thy_prose_refs.py
+          - name: isabelle-ascii
+            glob: "*.thy"
+            run: pixi run isabelle-ascii-check -- {staged_files}
 
-    # An identifier removed with its theory keeps parsing inside `assumes` --
-    # as a free variable -- so a locale can go on building with an assumption
-    # that no longer says anything. The batch build cannot see that; this can.
-    - name: retired-identifiers
-      glob: "src/**/*.thy"
-      run: pixi run python3 scripts/check_retired_identifiers.py {staged_files}
+          # Fires on every staged .thy, not just on the generated .ml: the check
+          # also reports theories changed since the export was regenerated.
+          - name: codegen-module-map
+            glob:
+              - "codegen/generated/ml/Voblint_CLI.ml"
+              - "src/**/*.thy"
+            run: pixi run codegen-modules-check
 
-    # The general case: an identifier left free in a locale assumption. Reads
-    # the whole tree rather than the staged files, because whether a name is
-    # free depends on every other theory's declarations.
-    - name: locale-parameters
-      glob: "src/**/*.thy"
-      run: pixi run python3 scripts/check_locale_parameters.py
+          # The export root list decides what handwritten OCaml may name.
+          - name: codegen-api-check
+            glob:
+              - "codegen/generated/ml/Voblint_CLI.ml"
+              - "src/Executable_Surface/Codegen/Export/Voblint_Codegen.thy"
+              - "cli/*.ml"
+              - "cli/*.mly"
+              - "codegen/regression/ocaml/*.ml"
+              - "tests/property/*.ml"
+            run: pixi run codegen-api-check
 
-    - name: vimp-isabelle-grammar-drift
-      glob:
-        - "grammar/vimp.yaml"
-        - "scripts/gen_vimp_isabelle.py"
-        - "src/Program_Model/VIMP/VIMP_Grammar_Generated.thy"
-      run: pixi run python3 scripts/gen_vimp_isabelle.py
+          - name: theory-prose-check
+            glob: "src/**/*.thy"
+            run: pixi run theory-prose-check
 
-    - name: vimp-menhir-grammar-drift
-      glob:
-        - "grammar/vimp.yaml"
-        - "scripts/gen_vimp_menhir.py"
-        - "cli/vimp_parser.mly"
-        - "cli/vimp_lexer.mll"
-      run: pixi run python3 scripts/gen_vimp_menhir.py
+          - name: retired-identifiers-check
+            glob: "src/**/*.thy"
+            run: pixi run retired-identifiers-check -- {staged_files}
+
+          # Whether a locale name is free depends on the complete theory tree.
+          - name: locale-parameters-check
+            glob: "src/**/*.thy"
+            run: pixi run locale-parameters-check

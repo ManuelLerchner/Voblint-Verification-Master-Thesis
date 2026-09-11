@@ -52,8 +52,8 @@ text \<open>
   rendered because the alternative is worse: a caller outside this session
   would otherwise hold a \<^typ>\<open>abstract_value abs_state\<close> --- a function from
   names to values --- and could only read it by guessing which names to ask
-  about, which is why the handwritten OCaml used to reconstruct the row from
-  \<^const>\<open>exp_vnames_list\<close> and \<^const>\<open>string_of_exp\<close> itself.
+  about. Rendering the row here keeps \<^const>\<open>exp_vnames_list\<close> and
+  \<^const>\<open>string_of_exp\<close> out of the handwritten OCaml.
 
   \<open>row_verdict\<close> is a \<^typ>\<open>check_result lifted\<close> rather than a
   \<^typ>\<open>check_result\<close>, so one row type serves both a context-free and a

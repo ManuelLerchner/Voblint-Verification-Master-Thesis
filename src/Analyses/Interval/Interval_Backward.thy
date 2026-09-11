@@ -365,38 +365,6 @@ proof -
   qed
 qed
 
-text \<open>
-  Reductiveness: @{const inv_less_ivl}/@{const inv_eq_ivl} only ever narrow an
-  operand via @{const meet_ivl} or pass it through unchanged. \<open>meet_ivl_le_lb1\<close>/
-  \<open>meet_ivl_le_lb2\<close> are stated via \<open>(\<sqinter>)\<close>, not \<open>meet_ivl\<close> itself, so restate them
-  directly in terms of \<open>meet_ivl\<close> here (matching the case-split style already
-  used in the @{class semilattice_inf} instance proof) for direct use below.
-\<close>
-
-lemma meet_ivl_le1: "meet_ivl a b \<le> a"
-  by (cases a; cases b;
-      simp add: less_eq_ivl_def;
-      metis eint_le_linear)
-
-lemma meet_ivl_le2: "meet_ivl a b \<le> b"
-  by (cases a; cases b;
-      auto simp: less_eq_ivl_def split: if_splits intro: eint_le_trans eint_le_refl)
-
-lemma inv_less_ivl_reductive1: "fst (inv_less_ivl res a1 a2) \<le> a1"
-  apply (cases res; cases a1; cases a2)
-  using eint_le_linear less_eq_ivl_def by(auto)
-
-lemma inv_less_ivl_reductive2: "snd (inv_less_ivl res a1 a2) \<le> a2"
-  apply (cases res; cases a1; cases a2)
-  using eint_le_linear less_eq_ivl_def by(auto)
-
-lemma inv_eq_ivl_reductive1: "fst (inv_eq_ivl res a1 a2) \<le> a1"
-  by (cases res; simp add: meet_ivl_le1)
-
-lemma inv_eq_ivl_reductive2: "snd (inv_eq_ivl res a1 a2) \<le> a2"
-  by (cases res; simp add: meet_ivl_le2)
-
-
 subsection \<open>Backward-domain interpretation\<close>
 
 text \<open>
@@ -429,84 +397,20 @@ global_interpretation ivl_backward_domain:
     and branch_ivl_st = ivl_backward_domain.branch_st
 proof unfold_locales
   fix n :: int and a b :: ivl
-  assume H1: "n \<in> gamma a" and H2: "n \<in> gamma b"
-  have h1: "n \<in> gamma_ivl a" using H1 by simp
-  have h2: "n \<in> gamma_ivl b" using H2 by simp
-  show "n \<in> gamma (intersect_ivl a b)"
-    using intersect_ivl_gamma[OF h1 h2] by simp
+  assume "n \<in> gamma a" and "n \<in> gamma b"
+  then have "n \<in> gamma_ivl a" and "n \<in> gamma_ivl b" by simp_all
+  then show "n \<in> gamma (intersect_ivl a b)" using intersect_ivl_gamma by simp
 next
   fix s :: store and e :: exp and \<sigma> :: "vname \<Rightarrow> ivl"
   assume H: "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
   have h: "\<forall>x. s x \<in> gamma_ivl (\<sigma> x)" using gamma_stateD[OF H] by simp
   show "aval e s \<in> gamma (aval_ivl e \<sigma>)"
     using aval_ivl_sound[OF h] by simp
-next
-  fix n1 n2 :: int and a1 a2 :: ivl and res :: bool
-  assume H1: "n1 \<in> gamma a1" and H2: "n2 \<in> gamma a2" and H3: "(n1 < n2) = res"
-  have h1: "n1 \<in> gamma_ivl a1" using H1 by simp
-  have h2: "n2 \<in> gamma_ivl a2" using H2 by simp
-  show "n1 \<in> gamma (fst (inv_less_ivl res a1 a2)) \<and> n2 \<in> gamma (snd (inv_less_ivl res a1 a2))"
-    using inv_less_ivl_sound[OF h1 h2 H3] by simp
-next
-  fix n1 n2 :: int and a1 a2 :: ivl and res :: bool
-  assume H1: "n1 \<in> gamma a1" and H2: "n2 \<in> gamma a2" and H3: "(n1 = n2) = res"
-  have h1: "n1 \<in> gamma_ivl a1" using H1 by simp
-  have h2: "n2 \<in> gamma_ivl a2" using H2 by simp
-  show "n1 \<in> gamma (fst (inv_eq_ivl res a1 a2)) \<and> n2 \<in> gamma (snd (inv_eq_ivl res a1 a2))"
-    using inv_eq_ivl_sound[OF h1 h2 H3] by simp
-next
-  fix n1 n2 :: int and a1 a2 r :: ivl
-  assume H1: "n1 \<in> gamma a1" and H2: "n2 \<in> gamma a2" and H3: "n1 + n2 \<in> gamma r"
-  show "n1 \<in> gamma (fst (inv_conservative r a1 a2)) \<and> n2 \<in> gamma (snd (inv_conservative r a1 a2))"
-    using inv_conservative_sound[OF H1 H2] .
-next
-  fix n1 n2 :: int and a1 a2 r :: ivl
-  assume H1: "n1 \<in> gamma a1" and H2: "n2 \<in> gamma a2" and H3: "n1 - n2 \<in> gamma r"
-  show "n1 \<in> gamma (fst (inv_conservative r a1 a2)) \<and> n2 \<in> gamma (snd (inv_conservative r a1 a2))"
-    using inv_conservative_sound[OF H1 H2] .
-next
-  fix n1 n2 :: int and a1 a2 r :: ivl
-  assume H1: "n1 \<in> gamma a1" and H2: "n2 \<in> gamma a2" and H3: "n1 * n2 \<in> gamma r"
-  show "n1 \<in> gamma (fst (inv_conservative r a1 a2)) \<and> n2 \<in> gamma (snd (inv_conservative r a1 a2))"
-    using inv_conservative_sound[OF H1 H2] .
-next
-  fix p :: ivl and b :: bool and i :: int
-  assume "interval_tobool p = Some b" and "i \<in> gamma p"
-  then show "truthy i = b" using interval_tobool_sound by simp
-next
-  fix a1 a2 b1 b2 :: ivl
-  assume "a1 \<le> a2" and "b1 \<le> b2"
-  thus "intersect_ivl a1 b1 \<le> intersect_ivl a2 b2" by (rule intersect_ivl_mono)
-next
-  fix e :: exp and \<sigma>1 \<sigma>2 :: "vname \<Rightarrow> ivl"
-  assume "\<sigma>1 \<le> \<sigma>2"
-  thus "aval_ivl e \<sigma>1 \<le> aval_ivl e \<sigma>2" by (rule aval_ivl_mono)
-next
-  fix x1 x2 y1 y2 :: ivl and res :: bool
-  assume A: "x1 \<le> x2" and B: "y1 \<le> y2"
-  show "le_pair (inv_less_ivl res x1 y1) (inv_less_ivl res x2 y2)"
-    using inv_less_ivl_mono[OF A B] by simp
-next
-  fix x1 x2 y1 y2 :: ivl and res :: bool
-  assume A: "x1 \<le> x2" and B: "y1 \<le> y2"
-  show "le_pair (inv_eq_ivl res x1 y1) (inv_eq_ivl res x2 y2)"
-    using inv_eq_ivl_mono[OF A B] by simp
-next
-  fix r1 r2 x1 x2 y1 y2 :: ivl
-  assume A: "x1 \<le> x2" and B: "y1 \<le> y2"
-  show "le_pair (inv_conservative r1 x1 y1) (inv_conservative r2 x2 y2)"
-    using A B by (simp add: inv_conservative_def)
-next
-  fix a b :: ivl
-  show "intersect_ivl a b \<le> a" by (rule intersect_ivl_le1)
-next
-  fix a b :: ivl
-  show "intersect_ivl a b \<le> b" by (rule intersect_ivl_le2)
-next
-  fix p1 p2 :: ivl and bv :: bool
-  assume "\<not> is_empty p1" and "p1 \<le> p2" and "interval_tobool p2 = Some bv"
-  then show "interval_tobool p1 = Some bv" using interval_tobool_mono by simp
-qed
+qed (simp_all add: inv_less_ivl_sound inv_eq_ivl_sound
+       interval_tobool_sound[unfolded truthy_def] intersect_ivl_mono aval_ivl_mono
+       inv_less_ivl_mono inv_eq_ivl_mono inv_conservative_def
+       intersect_ivl_le1 intersect_ivl_le2 interval_tobool_mono
+     del: intersect_ivl_def)
 
 text \<open>
   Executable @{typ "ivl resolved_st_q"} mirror of \<open>bfilter_ivl\<close> and of the
@@ -519,19 +423,6 @@ text \<open>
 
 lemmas bfilter_ivl_st_commute = ivl_backward_domain.bfilter_st_commute
 lemmas branch_ivl_st_commute = ivl_backward_domain.branch_st_commute
-
-lemma afilter_ivl_mono:
-  "a1 \<le> (a2 :: ivl) \<Longrightarrow> sigma1 \<le> sigma2 \<Longrightarrow>
-   afilter_ivl e a1 sigma1 \<le> afilter_ivl e a2 sigma2"
-  using ivl_backward_domain.afilter_mono by (simp add: afilter_ivl_def)
-
-lemma bfilter_ivl_mono:
-  "sigma1 \<le> sigma2 \<Longrightarrow> bfilter_ivl b res sigma1 \<le> bfilter_ivl b res sigma2"
-  using ivl_backward_domain.bfilter_mono by (simp add: bfilter_ivl_def)
-
-lemma branch_ivl_mono:
-  "sigma1 \<le> sigma2 \<Longrightarrow> branch_ivl b res sigma1 \<le> branch_ivl b res sigma2"
-  using ivl_backward_domain.branch_mono by (simp add: branch_ivl_def)
 
 lemma branch_ivl_le_bfilter_ivl: "branch_ivl e pol \<sigma> \<le> bfilter_ivl e pol \<sigma>"
   using ivl_backward_domain.branch_le_bfilter by (simp add: branch_ivl_def bfilter_ivl_def)

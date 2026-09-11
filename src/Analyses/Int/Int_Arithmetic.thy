@@ -292,6 +292,31 @@ lemma first_deciding2_not_none_of_component:
   shows "first_deciding2 qs x y \<noteq> None"
   using assms by (induction qs) (auto split: option.splits)
 
+text \<open>
+  A component decision found at the wider operands survives at narrower ones, so
+  the whole query still decides there.
+\<close>
+
+lemma first_deciding_mono:
+  assumes "first_deciding qs x2 = Some c"
+    and "\<And>q. q \<in> set qs \<Longrightarrow> q x2 = Some c \<Longrightarrow> q x1 = Some c"
+  shows "first_deciding qs x1 \<noteq> None"
+proof -
+  obtain q where q: "q \<in> set qs" "q x2 = Some c"
+    using assms(1) by (rule first_deciding_SomeE)
+  show ?thesis using first_deciding_not_none_of_component[OF q(1) assms(2)[OF q]] .
+qed
+
+lemma first_deciding2_mono:
+  assumes "first_deciding2 qs x2 y2 = Some c"
+    and "\<And>q. q \<in> set qs \<Longrightarrow> q x2 y2 = Some c \<Longrightarrow> q x1 y1 = Some c"
+  shows "first_deciding2 qs x1 y1 \<noteq> None"
+proof -
+  obtain q where q: "q \<in> set qs" "q x2 y2 = Some c"
+    using assms(1) by (rule first_deciding2_SomeE)
+  show ?thesis using first_deciding2_not_none_of_component[OF q(1) assms(2)[OF q]] .
+qed
+
 definition int_dom_lt :: "int_dom => int_dom => bool option" where
   "int_dom_lt d1 d2 =
      first_deciding2
@@ -319,12 +344,6 @@ definition int_dom_tobool :: "int_dom => bool option" where
         \<lambda>a. congruence_tobool (int_congruence a)]
        d"
 
-lemma gamma_int_dom_sup_ub1: "gamma_int_dom a \<subseteq> gamma_int_dom (a \<squnion> b)"
-  using gamma_sup_ub1[of a b] by simp
-
-lemma gamma_int_dom_sup_ub2: "gamma_int_dom b \<subseteq> gamma_int_dom (a \<squnion> b)"
-  using gamma_sup_ub2[of b a] by simp
-
 lemma int_dom_not_bot_componentsE [elim]:
   assumes "\<not> is_empty (d::int_dom)"
   obtains n where "n \<in> gamma_sign (int_sign d)" "n \<in> gamma_ivl (int_ivl d)"
@@ -349,33 +368,12 @@ proof -
   have hy: "y \<in> gamma_sign (int_sign d2)" "y \<in> gamma_ivl (int_ivl d2)"
            "y \<in> gamma_parity (int_parity d2)" "y \<in> gamma_congruence (int_congruence d2)"
     using assms(3) by (simp_all add: gamma_int_dom_def)
-  show ?thesis
-  proof (cases "interval_lt (int_ivl d1) (int_ivl d2)")
-    case (Some b)
-    with assms(1) have "c = b" unfolding int_dom_lt_def by simp
-    then show ?thesis using interval_lt_sound[OF Some hx(2) hy(2)] by simp
-  next
-    case ivl_none: None
-    show ?thesis
-    proof (cases "sign_lt (int_sign d1) (int_sign d2)")
-      case (Some b)
-      with assms(1) ivl_none have "c = b" unfolding int_dom_lt_def by simp
-      then show ?thesis using sign_lt_sound[OF Some hx(1) hy(1)] by simp
-    next
-      case sign_none: None
-      show ?thesis
-      proof (cases "parity_lt (int_parity d1) (int_parity d2)")
-        case (Some b)
-        with assms(1) ivl_none sign_none have "c = b" unfolding int_dom_lt_def by simp
-        then show ?thesis using parity_lt_sound[OF Some hx(3) hy(3)] by simp
-      next
-        case None
-        with assms(1) ivl_none sign_none have "congruence_lt (int_congruence d1) (int_congruence d2) = Some c"
-          unfolding int_dom_lt_def by simp
-        then show ?thesis using congruence_lt_sound[OF _ hx(4) hy(4)] by simp
-      qed
-    qed
-  qed
+  from assms(1) show ?thesis
+    unfolding int_dom_lt_def
+    by (rule first_deciding2_SomeE)
+       (auto simp only: list.set insert_iff empty_iff
+          dest: interval_lt_sound[OF _ hx(2) hy(2)] sign_lt_sound[OF _ hx(1) hy(1)]
+          parity_lt_sound[OF _ hx(3) hy(3)] congruence_lt_sound[OF _ hx(4) hy(4)])
 qed
 
 lemma int_dom_eqb_sound:
@@ -388,33 +386,12 @@ proof -
   have hy: "y \<in> gamma_sign (int_sign d2)" "y \<in> gamma_ivl (int_ivl d2)"
            "y \<in> gamma_parity (int_parity d2)" "y \<in> gamma_congruence (int_congruence d2)"
     using assms(3) by (simp_all add: gamma_int_dom_def)
-  show ?thesis
-  proof (cases "interval_eqb (int_ivl d1) (int_ivl d2)")
-    case (Some b)
-    with assms(1) have "c = b" unfolding int_dom_eqb_def by simp
-    then show ?thesis using interval_eqb_sound[OF Some hx(2) hy(2)] by simp
-  next
-    case ivl_none: None
-    show ?thesis
-    proof (cases "sign_eqb (int_sign d1) (int_sign d2)")
-      case (Some b)
-      with assms(1) ivl_none have "c = b" unfolding int_dom_eqb_def by simp
-      then show ?thesis using sign_eqb_sound[OF Some hx(1) hy(1)] by simp
-    next
-      case sign_none: None
-      show ?thesis
-      proof (cases "parity_eqb (int_parity d1) (int_parity d2)")
-        case (Some b)
-        with assms(1) ivl_none sign_none have "c = b" unfolding int_dom_eqb_def by simp
-        then show ?thesis using parity_eqb_sound[OF Some hx(3) hy(3)] by simp
-      next
-        case None
-        with assms(1) ivl_none sign_none have "congruence_eqb (int_congruence d1) (int_congruence d2) = Some c"
-          unfolding int_dom_eqb_def by (auto split: option.splits)
-        then show ?thesis using congruence_eqb_sound[OF _ hx(4) hy(4)] by simp
-      qed
-    qed
-  qed
+  from assms(1) show ?thesis
+    unfolding int_dom_eqb_def
+    by (rule first_deciding2_SomeE)
+       (auto simp only: list.set insert_iff empty_iff
+          dest: interval_eqb_sound[OF _ hx(2) hy(2)] sign_eqb_sound[OF _ hx(1) hy(1)]
+          parity_eqb_sound[OF _ hx(3) hy(3)] congruence_eqb_sound[OF _ hx(4) hy(4)])
 qed
 
 lemma int_dom_tobool_sound:
@@ -424,33 +401,13 @@ proof -
   have hx: "x \<in> gamma_sign (int_sign d)" "x \<in> gamma_ivl (int_ivl d)"
            "x \<in> gamma_parity (int_parity d)" "x \<in> gamma_congruence (int_congruence d)"
     using assms(2) by (simp_all add: gamma_int_dom_def)
-  show ?thesis
-  proof (cases "interval_tobool (int_ivl d)")
-    case (Some b)
-    with assms(1) have "c = b" unfolding int_dom_tobool_def by simp
-    then show ?thesis using interval_tobool_sound[OF Some hx(2)] by simp
-  next
-    case ivl_none: None
-    show ?thesis
-    proof (cases "sign_tobool (int_sign d)")
-      case (Some b)
-      with assms(1) ivl_none have "c = b" unfolding int_dom_tobool_def by simp
-      then show ?thesis using sign_tobool_sound[OF Some hx(1)] by simp
-    next
-      case sign_none: None
-      show ?thesis
-      proof (cases "parity_tobool (int_parity d)")
-        case (Some b)
-        with assms(1) ivl_none sign_none have "c = b" unfolding int_dom_tobool_def by simp
-        then show ?thesis using parity_tobool_sound[OF Some hx(3)] by simp
-      next
-        case None
-        with assms(1) ivl_none sign_none have "congruence_tobool (int_congruence d) = Some c"
-          unfolding int_dom_tobool_def by (auto split: option.splits)
-        then show ?thesis using congruence_tobool_sound[OF _ hx(4)] by simp
-      qed
-    qed
-  qed
+  from assms(1) show ?thesis
+    unfolding int_dom_tobool_def
+    by (rule first_deciding_SomeE)
+       (auto simp only: list.set insert_iff empty_iff
+          dest: interval_tobool_sound[OF _ hx(2), unfolded truthy_def]
+            sign_tobool_sound[OF _ hx(1)]
+          parity_tobool_sound[OF _ hx(3)] congruence_tobool_sound[OF _ hx(4)])
 qed
 
 lemma int_dom_lt_mono:
@@ -471,75 +428,29 @@ proof -
   have le2: "int_sign e1 \<le> int_sign e2" "int_ivl e1 \<le> int_ivl e2"
             "int_parity e1 \<le> int_parity e2" "int_congruence e1 \<le> int_congruence e2"
     using he by (simp_all add: less_eq_int_dom_ext_def)
-  have nb1_sign: "\<not> is_empty (int_sign d1)" using hn(1) by (auto simp: is_bottom_sign_correct)
-  have nb1_ivl: "\<not> is_empty (int_ivl d1)" using hn(2) by (auto simp: is_bottom_ivl_correct)
-  have nb1_parity: "\<not> is_empty (int_parity d1)" using hn(3) by (auto simp: is_bottom_parity_correct)
-  have nb1_cong: "\<not> is_empty (int_congruence d1)" using hn(4) by (auto simp: is_bottom_congruence_correct)
-  have nb2_sign: "\<not> is_empty (int_sign e1)" using hm(1) by (auto simp: is_bottom_sign_correct)
-  have nb2_ivl: "\<not> is_empty (int_ivl e1)" using hm(2) by (auto simp: is_bottom_ivl_correct)
-  have nb2_parity: "\<not> is_empty (int_parity e1)" using hm(3) by (auto simp: is_bottom_parity_correct)
-  have nb2_cong: "\<not> is_empty (int_congruence e1)" using hm(4) by (auto simp: is_bottom_congruence_correct)
-  have m_ivl: "interval_lt (int_ivl d2) (int_ivl e2) = Some c \<Longrightarrow>
-               interval_lt (int_ivl d1) (int_ivl e1) = Some c"
-    by (rule interval_lt_mono[OF nb1_ivl nb2_ivl le1(2) le2(2)])
-  have m_sign: "sign_lt (int_sign d2) (int_sign e2) = Some c \<Longrightarrow>
-                sign_lt (int_sign d1) (int_sign e1) = Some c"
-    by (rule sign_lt_mono[OF nb1_sign nb2_sign le1(1) le2(1)])
-  have m_parity: "parity_lt (int_parity d2) (int_parity e2) = Some c \<Longrightarrow>
-                  parity_lt (int_parity d1) (int_parity e1) = Some c"
-    by (rule parity_lt_mono[OF nb1_parity nb2_parity le1(3) le2(3)])
-  have m_cong: "congruence_lt (int_congruence d2) (int_congruence e2) = Some c \<Longrightarrow>
-                congruence_lt (int_congruence d1) (int_congruence e1) = Some c"
-    by (rule congruence_lt_mono[OF nb1_cong nb2_cong le1(4) le2(4)])
-  have n_d1: "n \<in> gamma_int_dom d1" using hn by (simp add: gamma_int_dom_def)
-  have m_e1: "m \<in> gamma_int_dom e1" using hm by (simp add: gamma_int_dom_def)
-  have n_d2: "n \<in> gamma_int_dom d2" using n_d1 gamma_mono[OF hd] by auto
-  have m_e2: "m \<in> gamma_int_dom e2" using m_e1 gamma_mono[OF he] by auto
-  have not_none: "int_dom_lt d1 e1 \<noteq> None"
-  proof (cases "interval_lt (int_ivl d2) (int_ivl e2)")
-    case (Some b)
-    with hwide have "c = b" unfolding int_dom_lt_def by simp
-    with Some m_ivl have "interval_lt (int_ivl d1) (int_ivl e1) = Some c" by simp
-    then show ?thesis unfolding int_dom_lt_def by simp
-  next
-    case ivl_none: None
-    show ?thesis
-    proof (cases "sign_lt (int_sign d2) (int_sign e2)")
-      case (Some b)
-      with hwide ivl_none have "c = b" unfolding int_dom_lt_def by simp
-      with Some m_sign have "sign_lt (int_sign d1) (int_sign e1) = Some c" by simp
-      then show ?thesis
-        unfolding int_dom_lt_def by (cases "interval_lt (int_ivl d1) (int_ivl e1)") simp_all
-    next
-      case sign_none: None
-      show ?thesis
-      proof (cases "parity_lt (int_parity d2) (int_parity e2)")
-        case (Some b)
-        with hwide ivl_none sign_none have "c = b" unfolding int_dom_lt_def by simp
-        with Some m_parity have "parity_lt (int_parity d1) (int_parity e1) = Some c" by simp
-        then show ?thesis
-          unfolding int_dom_lt_def
-          by (cases "interval_lt (int_ivl d1) (int_ivl e1)";
-              cases "sign_lt (int_sign d1) (int_sign e1)") simp_all
-      next
-        case None
-        with hwide ivl_none sign_none
-          have "congruence_lt (int_congruence d2) (int_congruence e2) = Some c"
-          unfolding int_dom_lt_def by simp
-        with m_cong have "congruence_lt (int_congruence d1) (int_congruence e1) = Some c" by simp
-        then show ?thesis
-          unfolding int_dom_lt_def
-          by (cases "interval_lt (int_ivl d1) (int_ivl e1)";
-              cases "sign_lt (int_sign d1) (int_sign e1)";
-              cases "parity_lt (int_parity d1) (int_parity e1)") simp_all
-      qed
-    qed
-  qed
+  have nb1: "\<not> is_empty (int_sign d1)" "\<not> is_empty (int_ivl d1)"
+            "\<not> is_empty (int_parity d1)" "\<not> is_empty (int_congruence d1)"
+    using hn by (auto simp: is_bottom_sign_correct is_bottom_ivl_correct
+                   is_bottom_parity_correct is_bottom_congruence_correct)
+  have nb2: "\<not> is_empty (int_sign e1)" "\<not> is_empty (int_ivl e1)"
+            "\<not> is_empty (int_parity e1)" "\<not> is_empty (int_congruence e1)"
+    using hm by (auto simp: is_bottom_sign_correct is_bottom_ivl_correct
+                   is_bottom_parity_correct is_bottom_congruence_correct)
+  have "int_dom_lt d1 e1 \<noteq> None"
+    using hwide unfolding int_dom_lt_def
+    by (rule first_deciding2_mono)
+       (auto simp only: list.set insert_iff empty_iff
+          intro: interval_lt_mono[OF nb1(2) nb2(2) le1(2) le2(2)]
+          sign_lt_mono[OF nb1(1) nb2(1) le1(1) le2(1)]
+          parity_lt_mono[OF nb1(3) nb2(3) le1(3) le2(3)]
+          congruence_lt_mono[OF nb1(4) nb2(4) le1(4) le2(4)])
   then obtain x where hx: "int_dom_lt d1 e1 = Some x" by auto
-  have "(n < m) = c" using int_dom_lt_sound[OF hwide n_d2 m_e2] .
+  have n_d1: "n \<in> gamma_int_dom d1" and m_e1: "m \<in> gamma_int_dom e1"
+    using hn hm by (simp_all add: gamma_int_dom_def)
+  have "(n < m) = c"
+    using int_dom_lt_sound[OF hwide] n_d1 m_e1 gamma_mono[OF hd] gamma_mono[OF he] by auto
   moreover have "(n < m) = x" using int_dom_lt_sound[OF hx n_d1 m_e1] .
-  ultimately have "x = c" by simp
-  with hx show ?thesis by simp
+  ultimately show ?thesis using hx by simp
 qed
 
 lemma int_dom_eqb_mono:
@@ -560,75 +471,29 @@ proof -
   have le2: "int_sign e1 \<le> int_sign e2" "int_ivl e1 \<le> int_ivl e2"
             "int_parity e1 \<le> int_parity e2" "int_congruence e1 \<le> int_congruence e2"
     using he by (simp_all add: less_eq_int_dom_ext_def)
-  have nb1_sign: "\<not> is_empty (int_sign d1)" using hn(1) by (auto simp: is_bottom_sign_correct)
-  have nb1_ivl: "\<not> is_empty (int_ivl d1)" using hn(2) by (auto simp: is_bottom_ivl_correct)
-  have nb1_parity: "\<not> is_empty (int_parity d1)" using hn(3) by (auto simp: is_bottom_parity_correct)
-  have nb1_cong: "\<not> is_empty (int_congruence d1)" using hn(4) by (auto simp: is_bottom_congruence_correct)
-  have nb2_sign: "\<not> is_empty (int_sign e1)" using hm(1) by (auto simp: is_bottom_sign_correct)
-  have nb2_ivl: "\<not> is_empty (int_ivl e1)" using hm(2) by (auto simp: is_bottom_ivl_correct)
-  have nb2_parity: "\<not> is_empty (int_parity e1)" using hm(3) by (auto simp: is_bottom_parity_correct)
-  have nb2_cong: "\<not> is_empty (int_congruence e1)" using hm(4) by (auto simp: is_bottom_congruence_correct)
-  have m_ivl: "interval_eqb (int_ivl d2) (int_ivl e2) = Some c \<Longrightarrow>
-               interval_eqb (int_ivl d1) (int_ivl e1) = Some c"
-    by (rule interval_eqb_mono[OF nb1_ivl nb2_ivl le1(2) le2(2)])
-  have m_sign: "sign_eqb (int_sign d2) (int_sign e2) = Some c \<Longrightarrow>
-                sign_eqb (int_sign d1) (int_sign e1) = Some c"
-    by (rule sign_eqb_mono[OF nb1_sign nb2_sign le1(1) le2(1)])
-  have m_parity: "parity_eqb (int_parity d2) (int_parity e2) = Some c \<Longrightarrow>
-                  parity_eqb (int_parity d1) (int_parity e1) = Some c"
-    by (rule parity_eqb_mono[OF nb1_parity nb2_parity le1(3) le2(3)])
-  have m_cong: "congruence_eqb (int_congruence d2) (int_congruence e2) = Some c \<Longrightarrow>
-                congruence_eqb (int_congruence d1) (int_congruence e1) = Some c"
-    by (rule congruence_eqb_mono[OF nb1_cong nb2_cong le1(4) le2(4)])
-  have n_d1: "n \<in> gamma_int_dom d1" using hn by (simp add: gamma_int_dom_def)
-  have m_e1: "m \<in> gamma_int_dom e1" using hm by (simp add: gamma_int_dom_def)
-  have n_d2: "n \<in> gamma_int_dom d2" using n_d1 gamma_mono[OF hd] by auto
-  have m_e2: "m \<in> gamma_int_dom e2" using m_e1 gamma_mono[OF he] by auto
-  have not_none: "int_dom_eqb d1 e1 \<noteq> None"
-  proof (cases "interval_eqb (int_ivl d2) (int_ivl e2)")
-    case (Some b)
-    with hwide have "c = b" unfolding int_dom_eqb_def by simp
-    with Some m_ivl have "interval_eqb (int_ivl d1) (int_ivl e1) = Some c" by simp
-    then show ?thesis unfolding int_dom_eqb_def by simp
-  next
-    case ivl_none: None
-    show ?thesis
-    proof (cases "sign_eqb (int_sign d2) (int_sign e2)")
-      case (Some b)
-      with hwide ivl_none have "c = b" unfolding int_dom_eqb_def by simp
-      with Some m_sign have "sign_eqb (int_sign d1) (int_sign e1) = Some c" by simp
-      then show ?thesis
-        unfolding int_dom_eqb_def by (cases "interval_eqb (int_ivl d1) (int_ivl e1)") simp_all
-    next
-      case sign_none: None
-      show ?thesis
-      proof (cases "parity_eqb (int_parity d2) (int_parity e2)")
-        case (Some b)
-        with hwide ivl_none sign_none have "c = b" unfolding int_dom_eqb_def by simp
-        with Some m_parity have "parity_eqb (int_parity d1) (int_parity e1) = Some c" by simp
-        then show ?thesis
-          unfolding int_dom_eqb_def
-          by (cases "interval_eqb (int_ivl d1) (int_ivl e1)";
-              cases "sign_eqb (int_sign d1) (int_sign e1)") simp_all
-      next
-        case None
-        with hwide ivl_none sign_none
-          have "congruence_eqb (int_congruence d2) (int_congruence e2) = Some c"
-          unfolding int_dom_eqb_def by (auto split: option.splits)
-        with m_cong have "congruence_eqb (int_congruence d1) (int_congruence e1) = Some c" by simp
-        then show ?thesis
-          unfolding int_dom_eqb_def
-          by (cases "interval_eqb (int_ivl d1) (int_ivl e1)";
-              cases "sign_eqb (int_sign d1) (int_sign e1)";
-              cases "parity_eqb (int_parity d1) (int_parity e1)") simp_all
-      qed
-    qed
-  qed
+  have nb1: "\<not> is_empty (int_sign d1)" "\<not> is_empty (int_ivl d1)"
+            "\<not> is_empty (int_parity d1)" "\<not> is_empty (int_congruence d1)"
+    using hn by (auto simp: is_bottom_sign_correct is_bottom_ivl_correct
+                   is_bottom_parity_correct is_bottom_congruence_correct)
+  have nb2: "\<not> is_empty (int_sign e1)" "\<not> is_empty (int_ivl e1)"
+            "\<not> is_empty (int_parity e1)" "\<not> is_empty (int_congruence e1)"
+    using hm by (auto simp: is_bottom_sign_correct is_bottom_ivl_correct
+                   is_bottom_parity_correct is_bottom_congruence_correct)
+  have "int_dom_eqb d1 e1 \<noteq> None"
+    using hwide unfolding int_dom_eqb_def
+    by (rule first_deciding2_mono)
+       (auto simp only: list.set insert_iff empty_iff
+          intro: interval_eqb_mono[OF nb1(2) nb2(2) le1(2) le2(2)]
+          sign_eqb_mono[OF nb1(1) nb2(1) le1(1) le2(1)]
+          parity_eqb_mono[OF nb1(3) nb2(3) le1(3) le2(3)]
+          congruence_eqb_mono[OF nb1(4) nb2(4) le1(4) le2(4)])
   then obtain x where hx: "int_dom_eqb d1 e1 = Some x" by auto
-  have "(n = m) = c" using int_dom_eqb_sound[OF hwide n_d2 m_e2] .
+  have n_d1: "n \<in> gamma_int_dom d1" and m_e1: "m \<in> gamma_int_dom e1"
+    using hn hm by (simp_all add: gamma_int_dom_def)
+  have "(n = m) = c"
+    using int_dom_eqb_sound[OF hwide] n_d1 m_e1 gamma_mono[OF hd] gamma_mono[OF he] by auto
   moreover have "(n = m) = x" using int_dom_eqb_sound[OF hx n_d1 m_e1] .
-  ultimately have "x = c" by simp
-  with hx show ?thesis by simp
+  ultimately show ?thesis using hx by simp
 qed
 
 lemma int_dom_tobool_mono:
@@ -642,63 +507,22 @@ proof -
   have le1: "int_sign d1 \<le> int_sign d2" "int_ivl d1 \<le> int_ivl d2"
             "int_parity d1 \<le> int_parity d2" "int_congruence d1 \<le> int_congruence d2"
     using hd by (simp_all add: less_eq_int_dom_ext_def)
-  have nb1_sign: "\<not> is_empty (int_sign d1)" using hn(1) by (auto simp: is_bottom_sign_correct)
-  have nb1_ivl: "\<not> is_empty (int_ivl d1)" using hn(2) by (auto simp: is_bottom_ivl_correct)
-  have nb1_parity: "\<not> is_empty (int_parity d1)" using hn(3) by (auto simp: is_bottom_parity_correct)
-  have nb1_cong: "\<not> is_empty (int_congruence d1)" using hn(4) by (auto simp: is_bottom_congruence_correct)
-  have m_ivl: "interval_tobool (int_ivl d2) = Some c \<Longrightarrow> interval_tobool (int_ivl d1) = Some c"
-    by (rule interval_tobool_mono[OF nb1_ivl le1(2)])
-  have m_sign: "sign_tobool (int_sign d2) = Some c \<Longrightarrow> sign_tobool (int_sign d1) = Some c"
-    by (rule sign_tobool_mono[OF nb1_sign le1(1)])
-  have m_parity: "parity_tobool (int_parity d2) = Some c \<Longrightarrow> parity_tobool (int_parity d1) = Some c"
-    by (rule parity_tobool_mono[OF nb1_parity le1(3)])
-  have m_cong: "congruence_tobool (int_congruence d2) = Some c \<Longrightarrow>
-                congruence_tobool (int_congruence d1) = Some c"
-    by (rule congruence_tobool_mono[OF nb1_cong le1(4)])
-  have n_d1: "n \<in> gamma_int_dom d1" using hn by (simp add: gamma_int_dom_def)
-  have n_d2: "n \<in> gamma_int_dom d2" using n_d1 gamma_mono[OF hd] by auto
-  have not_none: "int_dom_tobool d1 \<noteq> None"
-  proof (cases "interval_tobool (int_ivl d2)")
-    case (Some b)
-    with hwide have "c = b" unfolding int_dom_tobool_def by simp
-    with Some m_ivl have "interval_tobool (int_ivl d1) = Some c" by simp
-    then show ?thesis unfolding int_dom_tobool_def by simp
-  next
-    case ivl_none: None
-    show ?thesis
-    proof (cases "sign_tobool (int_sign d2)")
-      case (Some b)
-      with hwide ivl_none have "c = b" unfolding int_dom_tobool_def by simp
-      with Some m_sign have "sign_tobool (int_sign d1) = Some c" by simp
-      then show ?thesis
-        unfolding int_dom_tobool_def by (cases "interval_tobool (int_ivl d1)") simp_all
-    next
-      case sign_none: None
-      show ?thesis
-      proof (cases "parity_tobool (int_parity d2)")
-        case (Some b)
-        with hwide ivl_none sign_none have "c = b" unfolding int_dom_tobool_def by simp
-        with Some m_parity have "parity_tobool (int_parity d1) = Some c" by simp
-        then show ?thesis
-          unfolding int_dom_tobool_def
-          by (cases "interval_tobool (int_ivl d1)"; cases "sign_tobool (int_sign d1)") simp_all
-      next
-        case None
-        with hwide ivl_none sign_none have "congruence_tobool (int_congruence d2) = Some c"
-          unfolding int_dom_tobool_def by (auto split: option.splits)
-        with m_cong have "congruence_tobool (int_congruence d1) = Some c" by simp
-        then show ?thesis
-          unfolding int_dom_tobool_def
-          by (cases "interval_tobool (int_ivl d1)"; cases "sign_tobool (int_sign d1)";
-              cases "parity_tobool (int_parity d1)") simp_all
-      qed
-    qed
-  qed
+  have nb1: "\<not> is_empty (int_sign d1)" "\<not> is_empty (int_ivl d1)"
+            "\<not> is_empty (int_parity d1)" "\<not> is_empty (int_congruence d1)"
+    using hn by (auto simp: is_bottom_sign_correct is_bottom_ivl_correct
+                   is_bottom_parity_correct is_bottom_congruence_correct)
+  have "int_dom_tobool d1 \<noteq> None"
+    using hwide unfolding int_dom_tobool_def
+    by (rule first_deciding_mono)
+       (auto simp only: list.set insert_iff empty_iff
+          intro: interval_tobool_mono[OF nb1(2) le1(2)] sign_tobool_mono[OF nb1(1) le1(1)]
+          parity_tobool_mono[OF nb1(3) le1(3)] congruence_tobool_mono[OF nb1(4) le1(4)])
   then obtain x where hx: "int_dom_tobool d1 = Some x" by auto
-  have "(n \<noteq> 0) = c" using int_dom_tobool_sound[OF hwide n_d2] .
+  have n_d1: "n \<in> gamma_int_dom d1" using hn by (simp add: gamma_int_dom_def)
+  have "(n \<noteq> 0) = c"
+    using int_dom_tobool_sound[OF hwide] n_d1 gamma_mono[OF hd] by auto
   moreover have "(n \<noteq> 0) = x" using int_dom_tobool_sound[OF hx n_d1] .
-  ultimately have "x = c" by simp
-  with hx show ?thesis by simp
+  ultimately show ?thesis using hx by simp
 qed
 
 subsection \<open>Arithmetic-expression evaluation\<close>

@@ -5,7 +5,7 @@
 # because cli-smoke and voblint also depend on cli-build and shouldn't be
 # blocked by it), but fails `pixi run cli-test` afterward if generated/ was
 # stale, so the suite's output stays visible while the mismatch is still
-# CI-visible (cli-test is one of the `ci` task's dependencies). Preserves a
+# CI-visible (cli-test is one of the `verify` task's dependencies). Preserves a
 # genuine test failure exit code over the staleness one.
 set -uo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

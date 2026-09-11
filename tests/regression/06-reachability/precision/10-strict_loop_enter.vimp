@@ -6,7 +6,7 @@
 // while the diverging inner loop keeps its widened x = [51,2147483647]; here
 // the TD solver re-evaluates the branch's dependents on narrowing, so the
 // inner loop head, its body and the check after it all end at bot and the
-// check is absent (Goblint: NOWARN (unreachable)). The x == 50 check pins
+// check is reported DEAD (Goblint: NOWARN (unreachable)). The x == 50 check pins
 // that the loop head was narrowed, not merely widened and joined.
 //
 // Solver-invariant: 15/16/17 in this directory are the same program under

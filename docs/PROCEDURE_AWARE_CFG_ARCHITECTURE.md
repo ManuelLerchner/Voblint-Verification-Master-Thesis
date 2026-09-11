@@ -121,8 +121,7 @@ encoding an unbounded stack in CFG nodes.
 ## 7. Collecting semantics
 
 `ltr_collect` forgets trace structure and collects sink stores at each CFG
-node. `ltr_collect_keyed` additionally groups stores by an abstract activation
-key. `activation_collect` retains the activation context required by
+node. `activation_collect` retains the activation context required by
 context-sensitive soundness results.
 
 These collectors are the semantic targets of the analyzer. They cover partial
@@ -212,7 +211,7 @@ equivalence with Retain is claimed.
   global reader.
 - Recursive solver examples remain sensitive to widening and context-domain
   design.
-- The framework proves the implemented scalar IMP2 fragment; arrays and richer
+- The framework proves the implemented scalar VIMP fragment; arrays and richer
   source types require separate language and compiler extensions.
 - D/G supplies heterogeneous carriers and routing, not a generic reduced
   product constructor.

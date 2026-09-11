@@ -20,6 +20,9 @@ session Voblint_Compile in "." = "Voblint_CFG" +
        valid_ltr_entry_result_eq, the activation procedure-locality theorem.
        Independent of Simulation/. *)
     Procedure_Ownership
+    (* The live statements of each procedure: edges out of them stay live, and
+       every live node reaches its procedure's result. *)
+    Live_Nodes
     (* The bridge, and the only theory that needs both branches: a source run
        becomes a valid local trace (csim -> valid_ltr). *)
     Source_To_Trace

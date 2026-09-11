@@ -1,0 +1,10 @@
+(rule
+ (targets Voblint_CLI.ml)
+ (deps ../../generated/ml/Voblint_CLI.ml)
+ (action (copy %{deps} %{targets})))
+
+(executable
+ (name main)
+ (modules Voblint_CLI main)
+ (libraries str zarith)
+ (flags (:standard -w -8-11-20-27-32-37-39 -warn-error -A)))

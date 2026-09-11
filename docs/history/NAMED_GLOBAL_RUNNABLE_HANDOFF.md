@@ -8,7 +8,7 @@
 >
 > **Uncommitted working note** (intentionally not in git). Task spec for a fresh
 > proof-engineering agent. Read this, then `docs/EFFECTFUL_TF_MIGRATION.md §9` and
-> `docs/SIDE_ENTRY_GLOBALS_SEEDING.md`, then start. Follow `CLAUDE.md` for the I/Q
+> `docs/history/SIDE_ENTRY_GLOBALS_SEEDING.md`, then start. Follow `CLAUDE.md` for the I/Q
 > MCP workflow and the build-green discipline — **never edit `.thy` via host
 > Read/Edit/Write; go through I/Q `write_file`.**
 
@@ -157,7 +157,7 @@ query skeleton (`QueryL`, `QueryG Gpos`, `QueryG Gneg`), so `static_deps` holds;
 at `Side`/`Answer` are monotone in σ, so `seqcomp_mono` applies. Budget real time here —
 this is the part with no shim shortcut.
 
-## 5. Precedent to copy: `docs/SIDE_ENTRY_GLOBALS_SEEDING.md`
+## 5. Precedent to copy: `docs/history/SIDE_ENTRY_GLOBALS_SEEDING.md`
 
 That migration did the *identical shape* at `unit`: it introduced the entry
 `Side () (restrict_global s0) t` wrap and proved `s0_le_side_env_entry_ip` without the

@@ -84,7 +84,7 @@ text \<open>
   activation at \<^const>\<open>cfg_entry\<close>; an \<open>intra\<close> step; a call; and a return.  Each rule reads
   exactly the relation for its phenomenon.  \<open>intra\<close> carries no side condition --- calls are
   not \<open>intra\<close> members, so they are untraversable by typing.  \<open>call\<close> enters the callee named
-  by the \<open>calls\<close> edge at the callee-entry store \<^const>\<open>enter_state\<close>.  \<open>ret\<close> matches the
+  by the \<open>calls\<close> edge at the callee-entry store \<^const>\<open>call_enter\<close>.  \<open>ret\<close> matches the
   callee's \<open>FunctionResult p\<close> against the \<open>FunctionEntry p\<close> of a concrete \<open>calls\<close> edge
   leaving the caller's node, and resumes at the continuation stored in that same edge; the
   resumed state is \<^const>\<open>combine_collect\<close>.  There is no \<open>combines\<close> lookup and no scan for a

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Emit an HTML result directory with `voblint --html` and serve it, for the
-# `report` pixi task.
+# `html-report-serve` pixi task.
 #
 # Goblint's frontend needs a web server: browsers refuse the cross-document
 # loads it performs over file://. This mirrors what Goblint's own docs tell
@@ -14,7 +14,7 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
 DEMO="tests/regression/16-composite-domain/precision/01-refinement_beats_components.vimp"
 PORT="${PORT:-8080}"
-OUTDIR="${OUTDIR:-$REPO_ROOT/result}"
+OUTDIR="${OUTDIR:-$REPO_ROOT/build/report}"
 
 source_file="${1:-$REPO_ROOT/$DEMO}"
 analysis="${2:-int}"

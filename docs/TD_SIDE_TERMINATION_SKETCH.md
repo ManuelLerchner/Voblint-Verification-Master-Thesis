@@ -1,5 +1,12 @@
 # `TD_side` termination — proof sketch
 
+> **Status:** the core claim still holds: vendored `TD_side` has no termination
+> theorem, so every run checks termination executably through
+> `src/Abstract_Interpreter/Solver/TD_Solver_Bridge.thy`. The plug-in points
+> below name retired theories (`Solver_Menu`, `Mixed_Flow_Sound`,
+> `Sign_Side_Soundness`), and `pp` is now `cfg_node` (`CFG_Def.thy`) rather
+> than `nat` -- still an infinite type.
+
 Status: **draft sketch, no proof started** (GitHub: relates to #14 / P1 / P5).
 This maps *why* the side-effecting solver has no termination theorem, sketches a
 route to one, justifies each step against the existing verified pieces, and shows

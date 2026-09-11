@@ -1,13 +1,17 @@
 #!/usr/bin/env python3
-"""Generates the analysis registration theories from assembly/analyses.yaml.
+"""Generates the analysis registration theories from manifests/analyses.yaml.
 
-Four kinds of output, one registry:
+Six kinds of output, one registry:
 
   src/Analyses/<Domain>/generated/<Domain>_Assembly.thy   the unit-context
       instances, one `global_interpretation` of `unit_dg_analysis` per
       published solver discipline
   src/Analyses/<Domain>/generated/<Domain>_Analyses.thy   the contextual
-      registrations, one per context the domain registers
+      registrations, one per context and solver the domain registers; a domain
+      with hand-written contextual content names another theory
+      (`registrations.theory`)
+  src/Analyses/<Domain>/generated/<Domain>_Checks.thy   the published runtime
+      names, bound to the assembly's instances
   src/Analyses/<Domain>/generated/<Domain>_Entry.thy   the runtime API and its
       production soundness: each discipline's endpoints, read through the
       equation that renames the assembly's state reader to the published result
@@ -114,7 +118,7 @@ ASSEMBLY_IMPORTS = ['"Voblint_Result.Unit_DG_Analysis"',
                     '"TD.TD_side_upd_rule"']
 
 GENERATED_NOTICE = (
-    "GENERATED FILE. Source: \\<^verbatim>\\<open>assembly/analyses.yaml\\<close>; generator:\n"
+    "GENERATED FILE. Source: \\<^verbatim>\\<open>manifests/analyses.yaml\\<close>; generator:\n"
     "\\<^verbatim>\\<open>scripts/gen_analysis_assembly.py\\<close>. Regenerate with the generator\n"
     "rather than hand-editing; a drift check compares regenerated output against\n"
     "this file.\n"
@@ -143,8 +147,8 @@ class Domain:
         self.adopted = entry.get("adopted", False)
         self.contexts = entry.get("contexts", {})
         # What the theory layer registers, as opposed to what the CLI resolves.
-        # Parity registers both contexts and exposes neither, so a domain can
-        # have one without the other and the emitter must read only this.
+        # A domain may register a context it does not expose, so the two can
+        # come apart and the emitter must read only this.
         regs = dict(entry.get("registrations", {}))
         # Domain-level, not per context: which pinned role arguments a
         # contextual registration leaves free. The unit registration cannot --
@@ -171,8 +175,7 @@ class Domain:
         self.entry_path = ent.pop(
             "path", f"src/Analyses/{self.name}/generated/{self.entry_theory}.thy")
         self.entry_imports = ent.pop(
-            "imports", [f"{self.name}_Checks",
-                        '"Voblint_Soundness.Run_Analysis_Sound"'])
+            "imports", [f"{self.name}_Checks"])
         self.entry_hide = ent.pop("hide_consts", [])
         self.entry_routes = ent.pop("routes", {})
         # The published runtime names: what the CLI and the entry layer call the
@@ -447,7 +450,7 @@ def statement(text, indent="  "):
 
 
 def interpretation(dom, route, solvers):
-    """One `global_interpretation`, with the same ten discharges every time."""
+    """One `global_interpretation`, with the same twelve discharges every time."""
     f = dom.facts()
     interp = solvers[route]["interp"]
     binder, prefix = dom.binder(route), dom.prefix(route)
@@ -581,6 +584,10 @@ CONTEXT_PARAMS = {
         # `ctx_vars_cover` closure premise instead of four positional ones.
         "sound_of_cover": "entry_state_activation_collect_sound_of_cover",
         "union_of_cover": "entry_state_ltr_collect_eq_Union_of_cover",
+        # The same pair with no coverage premise at all: the live keys of a
+        # terminating solve are closed by construction.
+        "sound_of_terminates": "entry_state_activation_collect_sound_of_terminates",
+        "union_of_terminates": "entry_state_ltr_collect_eq_Union_of_terminates",
         "gamma_reader": "gamma_reader_eq_lookup",
         "vars_finite": "vars_finite_of_terminates",
     },
@@ -605,6 +612,8 @@ CONTEXT_PARAMS = {
         # unconditional here -- a total key needs no coverage to carry a context.
         "sound_of_cover":
             "fun_route_activation_collect_sound_of_cover[OF cs_route_context_agree]",
+        "sound_of_terminates":
+            "fun_route_activation_collect_sound_of_terminates[OF cs_route_context_agree]",
         "union_of_cover": "fun_route_ltr_collect_eq_Union",
     },
 }
@@ -668,11 +677,13 @@ def context_binders(dom, ctx):
 
 
 def contextual_interpretation(dom, ctx, route, solvers, generalize=None):
-    """One contextual `global_interpretation` of `routed_dg_analysis`.
+    """One contextual interpretation of `routed_dg_analysis`.
 
     The unit registration interprets `unit_dg_analysis`, which fixes the
-    context to `unit`; here the context terms come from the registry's
-    `contexts:` entry and the locale is the parent directly.
+    context to `unit`; here the context terms come from `CONTEXT_PARAMS`, the
+    solvers from the registry's `registrations:` entry, and the locale is the
+    parent directly. It is a `global_interpretation` unless an enclosing
+    `context fixes` block leaves a parameter free.
     """
     f = dom.facts()
     p = CONTEXT_PARAMS[ctx]
@@ -838,6 +849,7 @@ def soundness_lemmas(dom, ctx, route, solvers):
         names["vars_finite"] = f"analyse_{d}_{ctx}_vars_finite"
         if ctx == "call_string":
             names["sound_of_cover"] = f"analyse_{d}_call_string_sound_of_cover"
+            names["sound_of_terminates"] = f"analyse_{d}_call_string_sound_of_terminates"
             names["union_of_cover"] = (
                 f"analyse_{d}_call_string_ltr_collect_eq_Union")
         if ctx == "entry_state":
@@ -846,6 +858,9 @@ def soundness_lemmas(dom, ctx, route, solvers):
             names["sound_of_cover"] = f"analyse_{d}_entry_state_sound_of_cover"
             names["union_of_cover"] = (
                 f"analyse_{d}_entry_state_ltr_collect_eq_Union_of_cover")
+            names["sound_of_terminates"] = f"analyse_{d}_entry_state_sound_of_terminates"
+            names["union_of_terminates"] = (
+                f"analyse_{d}_entry_state_ltr_collect_eq_Union_of_terminates")
         if ctx == "call_string" and "terminates_of_solve_c" in dom.published(ctx):
             names["terminates_of_solve_c"] = (
                 f"analyse_{d}_call_string_terminates_of_solve_c")
@@ -855,6 +870,7 @@ def soundness_lemmas(dom, ctx, route, solvers):
     # Guarded on the route, not just on the name: only entry state has these,
     # since a functional route earns its union equation without a witness.
     for key in ("has_context", "union", "sound_of_cover", "union_of_cover",
+                "sound_of_terminates", "union_of_terminates",
                 "gamma_reader", "vars_finite"):
         if key in names and key in p:
             out += [f"lemmas {names[key]}{sfx} =", f"  {binder}.{p[key]}", ""]
@@ -872,7 +888,7 @@ def soundness_lemmas(dom, ctx, route, solvers):
 # from VIMP_Program and `formals_route_lifted_gen` from Routed_Context; both
 # would resolve through the domain's own imports, but an implicit dependency is
 # what turns a later unrelated import prune into a failure nobody can place.
-CONTEXTUAL_IMPORTS = ['"Voblint_Result.Routed_DG_Analysis"',
+CONTEXTUAL_IMPORTS = ['"Voblint_Result.Routed_Live_Keys"',
                       '"Voblint_Framework.Call_String_Context"',
                       '"Voblint_Framework.Routed_Context"',
                       '"Voblint_Solver.TD_Solver_Bridge"',
@@ -1159,8 +1175,10 @@ def entry_coverage(dom, route, names):
     out += either(f'  shows "vars_cover (prog_cfg p) ({fst})"',
                   ['  shows "vars_cover (prog_cfg p)',
                    f'      ({fst})"'])
-    out += ["  by (rule vars_cover_of_exec[OF _ _ cover])",
-            "     (simp_all add: prog_cfg_def compile_prog_finite)", ""]
+    out += either(
+        f"  by (rule {b}.vars_cover_of_exec_prog[unfolded {b}.sol_vars_def, OF cover])",
+        [f"  by (rule {b}.vars_cover_of_exec_prog",
+         f"        [unfolded {b}.sol_vars_def, OF cover])"]) + [""]
 
     out += [f"lemma {rf[:-len('_for')]}_node_sound_of_cover:",
             f'  assumes solve: "{names["terminates"]} (declared_global p) p"']
@@ -1975,7 +1993,7 @@ def validate(manifest, doms):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("manifest", nargs="?", default="assembly/analyses.yaml")
+    ap.add_argument("manifest", nargs="?", default="manifests/analyses.yaml")
     ap.add_argument("--check", action="store_true", help="report drift, do not write")
     ap.add_argument("--out", help="write under this directory instead of in place")
     args = ap.parse_args()

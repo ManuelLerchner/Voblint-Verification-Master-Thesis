@@ -20,9 +20,7 @@ text \<open>
   \<^emph>\<open>descend to a base clause\<close> lemma would have to carry the residual down unchanged, and
   \<open>SeqLeft\<close> and \<open>WhileBody\<close> rebuild it --- they relate the outer residual \<^term>\<open>Seq r c2\<close> to
   the inner \<open>r\<close>.  So the descent survives only in the three clauses that pass the residual
-  through, which is half the cases in two of the six proofs and none of the rest.  What was
-  removable has been removed: \<open>emitted_action\<close> merged three of these inductions into one, and
-  the \<open>compile_Seq_rightE\<close> family cut each remaining descent from eight lines to four.
+  through, which is half the cases in two of the six proofs and none of the rest.
 \<close>
 
 subsection \<open>Located base residuals emit their compiled edge\<close>
@@ -43,8 +41,7 @@ fun emitted_action :: "com \<Rightarrow> edge_action option" where
 
 text \<open>Which action it is does not matter to the recursive \<open>control_at\<close> cases: they only carry
   an edge up through the enclosing fragment and re-locate the completed residual at the same
-  node.  So one induction serves every base shape, and the three named corollaries below are
-  this lemma read off at each of them.\<close>
+  node.  So one induction serves every base shape.\<close>
 lemma control_at_emitted_edge:
   "control_at \<Pi> p c0 k n r v \<Longrightarrow> emitted_action r = Some a \<Longrightarrow>
    compile \<Pi> p c0 k n = (n', en, E, K) \<Longrightarrow>
@@ -107,6 +104,53 @@ next
   have "control_at \<Pi> p (If b c1 c2) k n0 SKIP w" using control_at.IfRight[OF jw(3)] .
   then show ?case using jw sub by blast
 qed simp_all
+
+text \<open>The check a residual runs next, when its leftmost command is one.  A located residual
+  about to run a check sits at that check's \<^const>\<open>EA_Check\<close> edge, however much sequencing
+  wraps it.\<close>
+fun next_check :: "com \<Rightarrow> exp option" where
+  "next_check (VIMP_Proc.com.Check c) = Some c"
+| "next_check (Seq c1 c2) = next_check c1"
+| "next_check _ = None"
+
+lemma control_at_next_check_edge:
+  "control_at \<Pi> p c0 k n r v \<Longrightarrow> next_check r = Some c \<Longrightarrow>
+   compile \<Pi> p c0 k n = (n', en, E, K) \<Longrightarrow> \<exists>w. (v, EA_Check c, w) \<in> E"
+proof (induction arbitrary: n' en E K rule: control_at.induct)
+  case (SeqLeft c1 n0 r v c2 k)
+  from SeqLeft.prems(2) obtain m F L
+    where "compile \<Pi> p c1 (Statement (n0 + csize c1)) n0 = (m, Statement n0, F, L)"
+      and "F \<subseteq> E"
+    by (rule compile_Seq_leftE)
+  with SeqLeft.IH SeqLeft.prems(1) show ?case by auto
+next
+  case (SeqRight c1 c2 k n0 r v)
+  from SeqRight.prems(2) obtain m F L
+    where "compile \<Pi> p c2 k (n0 + csize c1) = (m, Statement (n0 + csize c1), F, L)"
+      and "F \<subseteq> E"
+    by (rule compile_Seq_rightE)
+  with SeqRight.IH SeqRight.prems(1) show ?case by blast
+next
+  case (IfLeft c1 k n0 r v b c2)
+  from IfLeft.prems(2) obtain m F L
+    where "compile \<Pi> p c1 k (Suc n0) = (m, Statement (Suc n0), F, L)" and "F \<subseteq> E"
+    by (rule compile_If_leftE)
+  with IfLeft.IH IfLeft.prems(1) show ?case by blast
+next
+  case (IfRight c2 k n0 c1 r v b)
+  from IfRight.prems(2) obtain m F L
+    where "compile \<Pi> p c2 k (Suc n0 + csize c1) = (m, Statement (Suc n0 + csize c1), F, L)"
+      and "F \<subseteq> E"
+    by (rule compile_If_rightE)
+  with IfRight.IH IfRight.prems(1) show ?case by blast
+next
+  case (WhileBody c n0 r v b k)
+  from WhileBody.prems(2) obtain m F L
+    where "compile \<Pi> p c (Statement n0) (Suc n0) = (m, Statement (Suc n0), F, L)"
+      and "F \<subseteq> E"
+    by (rule compile_While_bodyE)
+  with WhileBody.IH WhileBody.prems(1) show ?case by auto
+qed auto
 
 text \<open>A located conditional also arises from a loop unfolding (\<^const>\<open>While\<close> steps to
   \<open>If b (Seq c (While b c)) SKIP\<close>), so the \<open>WhileUnfolded\<close> case is real: the true branch
@@ -299,6 +343,9 @@ lemma seq_after_append: "seq_after (seq_after c xs) ys = seq_after c (xs @ ys)"
 
 lemma seq_after_snoc: "seq_after c (xs @ [a]) = Seq (seq_after c xs) a"
   by (simp add: seq_after_append[symmetric])
+
+lemma next_check_seq_after [simp]: "next_check (seq_after c afters) = next_check c"
+  by (induction afters arbitrary: c) auto
 
 text \<open>A \<^const>\<open>seq_after\<close> spine equals a non-\<^const>\<open>Seq\<close> atom only when its head does and the
   continuation list is empty.  These discriminators close the leaf cases of the spine
@@ -575,6 +622,59 @@ proof -
   then show ?thesis using jw(1) jw(3) that by auto
 qed
 
+text \<open>A located conditional takes whichever assume edge the store selects and lands on the
+  branch located at that edge's target.  \<^const>\<open>If\<close> heads and loop unfoldings both reach it.\<close>
+lemma control_at_if_step:
+  assumes loc: "control_at \<Pi> p c0 k n (If b c1 c2) v"
+      and stp: "intra_step \<Pi> (If b c1 c2, s, frs) (c', s', frs')"
+      and cmp: "compile \<Pi> p c0 k n = (n', en, E, K)"
+      and sub: "E \<subseteq> intra g"
+      and src: "source_com (If b c1 c2)"
+  shows "frs' = frs
+         \<and> (\<exists>v'. control_at \<Pi> p c0 k n c' v' \<and> star (cstep gs g) (v, s, stk) (v', s', stk))"
+proof -
+  from control_at_if_edges[OF loc refl src cmp] obtain j en1 en2 where
+    jj: "v = Statement j"
+       "(Statement j, EA_Assume b, en1) \<in> E" "(Statement j, EA_AssumeNot b, en2) \<in> E"
+       "control_at \<Pi> p c0 k n c1 en1" "control_at \<Pi> p c0 k n c2 en2" by blast
+  from intra_If_cases[OF stp] show ?thesis
+  proof (elim disjE conjE)
+    assume t: "truthy (aval b s)" "c' = c1" "s' = s" "frs' = frs"
+    have "(Statement j, EA_Assume b, en1) \<in> intra g" using jj(2) sub by blast
+    from star_step1[of "cstep gs g", OF cstep_assume[OF this t(1)]]
+    show ?thesis using t jj(1,4) by blast
+  next
+    assume f: "\<not> truthy (aval b s)" "c' = c2" "s' = s" "frs' = frs"
+    have "(Statement j, EA_AssumeNot b, en2) \<in> intra g" using jj(3) sub by blast
+    from star_step1[of "cstep gs g", OF cstep_assume_not[OF this f(1)]]
+    show ?thesis using f jj(1,5) by blast
+  qed
+qed
+
+text \<open>A located \<^term>\<open>Seq r c2\<close> either has finished its head, and relocates to \<open>c2\<close>, or
+  steps inside \<open>r\<close>.  Only the caller knows which sub-fragment \<open>r\<close> is located in, so it
+  supplies that second case.\<close>
+lemma control_at_seq_step:
+  assumes loc: "control_at \<Pi> p c0 k n (Seq r c2) v"
+      and stp: "intra_step \<Pi> (Seq r c2, s, frs) (c', s', frs')"
+      and cmp: "compile \<Pi> p c0 k n = (n', en, E, K)"
+      and sub: "E \<subseteq> intra g"
+      and src: "source_com c0"
+      and head: "\<And>r'. intra_step \<Pi> (r, s, frs) (r', s', frs) \<Longrightarrow>
+                   \<exists>v'. control_at \<Pi> p c0 k n (Seq r' c2) v'
+                        \<and> star (cstep gs g) (v, s, stk) (v', s', stk)"
+  shows "frs' = frs
+         \<and> (\<exists>v'. control_at \<Pi> p c0 k n c' v' \<and> star (cstep gs g) (v, s, stk) (v', s', stk))"
+  using intra_Seq_cases[OF stp]
+proof (elim disjE exE conjE)
+  assume r: "r = SKIP" and out: "c' = c2" "s' = s" "frs' = frs"
+  from control_at_seq_skip_reloc[OF loc[unfolded r] refl cmp sub src] show ?thesis
+    using out by blast
+next
+  fix r' assume "c' = Seq r' c2" "frs' = frs" "intra_step \<Pi> (r, s, frs) (r', s', frs)"
+  with head show ?thesis by blast
+qed
+
 text \<open>The theory's conclusion: an \<^const>\<open>intra_step\<close> of a located residual leaves the frame
   stack alone, and the graph follows it to a node at which the successor residual is located
   again.  This is the fact the simulation relation is preserved by.\<close>
@@ -615,33 +715,14 @@ next
   case (CheckDone b k n0) then show ?case by blast
 next
   case (SeqLeft c1 n0 r v c2 k)
-  from intra_Seq_cases[OF SeqLeft.prems(1)] consider
-      (s1) "r = SKIP" "c' = c2" "s' = s" "frs' = frs"
-    | (s2) r' where "c' = Seq r' c2" "frs' = frs" "intra_step \<Pi> (r, s, frs) (r', s', frs)"
-    by blast
-  then show ?case
-  proof cases
-    case s1
-    have loc: "control_at \<Pi> p (Seq c1 c2) k n0 (Seq SKIP c2) v"
-      using control_at.SeqLeft[OF SeqLeft.hyps] s1(1) by simp
-    from control_at_seq_skip_reloc[OF loc refl SeqLeft.prems(2,3,4)]
-    obtain v' where "control_at \<Pi> p (Seq c1 c2) k n0 c2 v'"
-      "star (cstep gs g) (v, s, stk) (v', s, stk)" by blast
-    then show ?thesis using s1 by auto
-  next
-    case s2
-    from SeqLeft.prems(2) obtain n1 E1 K1 where
-      c1c: "compile \<Pi> p c1 (Statement (n0 + csize c1)) n0 = (n1, Statement n0, E1, K1)"
-      and sub: "E1 \<subseteq> E"
-      by (rule compile_Seq_leftE)
-    have src1: "source_com c1" using SeqLeft.prems(4) by simp
-    from SeqLeft.IH[OF s2(3) c1c subset_trans[OF sub SeqLeft.prems(3)] src1]
-    obtain v' where v': "control_at \<Pi> p c1 (Statement (n0 + csize c1)) n0 r' v'"
-      "star (cstep gs g) (v, s, stk) (v', s', stk)" by auto
-    have "control_at \<Pi> p (Seq c1 c2) k n0 (Seq r' c2) v'"
-      using control_at.SeqLeft[OF v'(1)] .
-    then show ?thesis using s2 v'(2) by auto
-  qed
+  from SeqLeft.prems(2) obtain n1 E1 K1 where
+    c1c: "compile \<Pi> p c1 (Statement (n0 + csize c1)) n0 = (n1, Statement n0, E1, K1)"
+    and sub: "E1 \<subseteq> E"
+    by (rule compile_Seq_leftE)
+  have src1: "source_com c1" using SeqLeft.prems(4) by simp
+  show ?case
+    by (rule control_at_seq_step[OF control_at.SeqLeft[OF SeqLeft.hyps] SeqLeft.prems])
+       (use SeqLeft.IH[OF _ c1c subset_trans[OF sub SeqLeft.prems(3)] src1] in blast)
 next
   case (SeqRight c1 c2 k n0 r v)
   from SeqRight.prems(2) obtain n2 E2 K2 where
@@ -660,31 +741,7 @@ next
   with fr v'(2) show ?case by blast
 next
   case (IfHead b c1 c2 k n0)
-  have ca: "control_at \<Pi> p (If b c1 c2) k n0 (If b c1 c2) (Statement n0)"
-    by (rule control_at.IfHead)
-  from control_at_if_edges[OF ca refl IfHead.prems(4) IfHead.prems(2)] obtain j en1 en2 where
-    jj: "Statement n0 = Statement j"
-       "(Statement j, EA_Assume b, en1) \<in> E" "(Statement j, EA_AssumeNot b, en2) \<in> E"
-       "control_at \<Pi> p (If b c1 c2) k n0 c1 en1" "control_at \<Pi> p (If b c1 c2) k n0 c2 en2" by blast
-  from intra_If_cases[OF IfHead.prems(1)] consider
-      (t) "truthy (aval b s)" "c' = c1" "s' = s" "frs' = frs"
-    | (f) "\<not> truthy (aval b s)" "c' = c2" "s' = s" "frs' = frs" by blast
-  then show ?case
-  proof cases
-    case t
-    have "(Statement j, EA_Assume b, en1) \<in> intra g" using jj(2) IfHead.prems(3) by blast
-    from cstep_assume[OF this] t(1)
-    have "star (cstep gs g) (Statement n0, s, stk) (en1, s, stk)"
-      using jj(1) by simp
-    then show ?thesis using t jj(4) by auto
-  next
-    case f
-    have "(Statement j, EA_AssumeNot b, en2) \<in> intra g" using jj(3) IfHead.prems(3) by blast
-    from cstep_assume_not[OF this] f(1)
-    have "star (cstep gs g) (Statement n0, s, stk) (en2, s, stk)"
-      using jj(1) by simp
-    then show ?thesis using f jj(5) by auto
-  qed
+  show ?case by (rule control_at_if_step[OF control_at.IfHead IfHead.prems])
 next
   case (IfLeft c1 k n0 r v b c2)
   from IfLeft.prems(2) obtain n1 E1 K1 where
@@ -727,63 +784,19 @@ next
   then show ?case using out by auto
 next
   case (WhileUnfolded b cW k n0)
-  have ca: "control_at \<Pi> p (While b cW) k n0 (If b (Seq cW (While b cW)) SKIP) (Statement n0)"
-    by (rule control_at.WhileUnfolded)
   have srcif: "source_com (If b (Seq cW (While b cW)) SKIP)" using WhileUnfolded.prems(4) by simp
-  from control_at_if_edges[OF ca refl srcif WhileUnfolded.prems(2)]
-  obtain j en1 en2 where
-    jj: "Statement n0 = Statement j"
-       "(Statement j, EA_Assume b, en1) \<in> E" "(Statement j, EA_AssumeNot b, en2) \<in> E"
-       "control_at \<Pi> p (While b cW) k n0 (Seq cW (While b cW)) en1"
-       "control_at \<Pi> p (While b cW) k n0 SKIP en2" by blast
-  from intra_If_cases[OF WhileUnfolded.prems(1)] consider
-      (t) "truthy (aval b s)" "c' = Seq cW (While b cW)" "s' = s" "frs' = frs"
-    | (f) "\<not> truthy (aval b s)" "c' = SKIP" "s' = s" "frs' = frs" by blast
-  then show ?case
-  proof cases
-    case t
-    have "(Statement j, EA_Assume b, en1) \<in> intra g" using jj(2) WhileUnfolded.prems(3) by blast
-    from cstep_assume[OF this] t(1)
-    have "star (cstep gs g) (Statement n0, s, stk) (en1, s, stk)"
-      using jj(1) by simp
-    then show ?thesis using t jj(4) by auto
-  next
-    case f
-    have "(Statement j, EA_AssumeNot b, en2) \<in> intra g" using jj(3) WhileUnfolded.prems(3) by blast
-    from cstep_assume_not[OF this] f(1)
-    have "star (cstep gs g) (Statement n0, s, stk) (en2, s, stk)"
-      using jj(1) by simp
-    then show ?thesis using f jj(5) by auto
-  qed
+  show ?case
+    by (rule control_at_if_step[OF control_at.WhileUnfolded WhileUnfolded.prems(1-3) srcif])
 next
   case (WhileBody cW n0 r v b k)
-  from intra_Seq_cases[OF WhileBody.prems(1)] consider
-      (s1) "r = SKIP" "c' = While b cW" "s' = s" "frs' = frs"
-    | (s2) r' where "c' = Seq r' (While b cW)" "frs' = frs" "intra_step \<Pi> (r, s, frs) (r', s', frs)"
-    by blast
-  then show ?case
-  proof cases
-    case s1
-    have loc: "control_at \<Pi> p (While b cW) k n0 (Seq SKIP (While b cW)) v"
-      using control_at.WhileBody[OF WhileBody.hyps] s1(1) by simp
-    from control_at_seq_skip_reloc[OF loc refl WhileBody.prems(2,3,4)]
-    obtain v' where "control_at \<Pi> p (While b cW) k n0 (While b cW) v'"
-      "star (cstep gs g) (v, s, stk) (v', s, stk)" by blast
-    then show ?thesis using s1 by auto
-  next
-    case s2
-    from WhileBody.prems(2) obtain n1 E1 K1 where
-      cc: "compile \<Pi> p cW (Statement n0) (Suc n0) = (n1, Statement (Suc n0), E1, K1)"
-      and sub: "E1 \<subseteq> E"
-      by (rule compile_While_bodyE)
-    have srcW: "source_com cW" using WhileBody.prems(4) by simp
-    from WhileBody.IH[OF s2(3) cc subset_trans[OF sub WhileBody.prems(3)] srcW]
-    obtain v' where v': "control_at \<Pi> p cW (Statement n0) (Suc n0) r' v'"
-      "star (cstep gs g) (v, s, stk) (v', s', stk)" by auto
-    have "control_at \<Pi> p (While b cW) k n0 (Seq r' (While b cW)) v'"
-      using control_at.WhileBody[OF v'(1)] .
-    then show ?thesis using s2 v'(2) by auto
-  qed
+  from WhileBody.prems(2) obtain n1 E1 K1 where
+    cc: "compile \<Pi> p cW (Statement n0) (Suc n0) = (n1, Statement (Suc n0), E1, K1)"
+    and sub: "E1 \<subseteq> E"
+    by (rule compile_While_bodyE)
+  have srcW: "source_com cW" using WhileBody.prems(4) by simp
+  show ?case
+    by (rule control_at_seq_step[OF control_at.WhileBody[OF WhileBody.hyps] WhileBody.prems])
+       (use WhileBody.IH[OF _ cc subset_trans[OF sub WhileBody.prems(3)] srcW] in blast)
 next
   case (WhileDone b cW k n0) then show ?case by blast
 next

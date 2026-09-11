@@ -1,13 +1,12 @@
 theory Exec_Sign_DG_Run
   imports
-    "Voblint_Exec.DG_Local_State_Exec_Refinement"
+    "Voblint_Analysis_Sign.Sign_Assembly"
     "Voblint_Analysis_Sign.Sign_Exec"
     "Voblint_Solver.TD_Solver_Bridge"
     "TD.TD_side_upd_rule"
     "Voblint_CFG.CFG_Prune"
     "Voblint_Compile.Compile_Invariants"
     "Voblint_VIMP.VIMP_Notation"
-    "Voblint_Soundness.Run_Analysis_Sound"
     "Voblint_Examples_CFG.Example_Compile_Call_Free"
 begin
 
@@ -20,19 +19,16 @@ text \<open>
   A concrete call-free Sign program is compiled to a CFG, its equation system is handed to
   the vendored always-join TD-side solver, and what the solver computes is turned into a
   guarantee about every source run of that program: whatever store a run reaches, the
-  solved local unknown at the matching node describes it.
+  analysis result at the matching node describes it.
 
-  The chain is registered once, through the \<open>local_state_dg_exec_analysis\<close> locale
-  (interpreted below as \<open>sign_ex_reg\<close>, at this file's own storage classifier
-  \<open>sign_ex_gs\<close>). That registration owns the equation system: \<open>sign_ex_reg.routed_eqs\<close>,
-  with values in \<open>(sign exec_dg_st lifted, sign exec_dg_st lifted) dg_state\<close> --- the
-  whole abstract state routed through the local unknown, no separate global or side slot.
+  Nothing here is registered locally. The equation system, the solve and every soundness
+  endpoint are Sign's production always-join assembly, \<open>sign_join\<close>: the context-insensitive
+  instance of the routed analysis, at the unit context. This file supplies only the
+  program, one \<^verbatim>\<open>by eval\<close> termination fact and one coverage fact.
 
-  The final theorem \<open>dgEx_source_run_sound\<close> turns the single \<open>by eval\<close> solver success
-  directly into that source-level guarantee, matching the pattern in
-  \<open>Example_Interval_DG_Flagship\<close>: no transport lemma, \<open>part_post_solution\<close>, \<open>solve_dom\<close>
-  or \<open>fun_of_dg_st_for\<close> appears in this file's own proofs, and it rests on the
-  \<^emph>\<open>computed\<close> result \<open>snd dgEx_sol\<close>, not on a hand-written candidate solution.
+  The final theorem \<open>dgEx_source_run_sound\<close> turns that single solver success into the
+  source-level guarantee, and it rests on the \<^emph>\<open>computed\<close> table, not on a hand-written
+  candidate solution.
 \<close>
 
 subsection \<open>The concrete program and its compiled CFG\<close>
@@ -40,31 +36,25 @@ subsection \<open>The concrete program and its compiled CFG\<close>
 text \<open>
   A minimal call-free program \<^verbatim>\<open>x := 1; y := x\<close> inside \<open>main\<close>: the body occupies
   \<open>Statement 0\<close>--\<open>Statement 2\<close> between \<open>FunctionEntry (STR ''main'')\<close> and
-  \<open>FunctionResult (STR ''main'')\<close>, and \<open>calls\<close> is empty.  \<open>gEx_eq\<close> proves the compilation
-  equals the explicit graph, matching the source-soundness pattern in
-  \<open>Example_Interval_DG_Flagship\<close>.
+  \<open>FunctionResult (STR ''main'')\<close>, and \<open>calls\<close> is empty.
 \<close>
 
 definition sign_ex_prog :: imp_prog where
   "sign_ex_prog = program { void main() { x := 1; y := x } }"
 
 text \<open>The storage classifier: \<open>sign_ex_prog\<close> declares no globals, so \<open>sign_ex_gs\<close>
-  classifies every variable this chain touches as local. This validates
-  domain-independence of the generic transport, matching \<open>parity_gs\<close>'s role for the
-  parity flagship, rather than global/local separation.\<close>
+  classifies every variable this chain touches as local.\<close>
 abbreviation sign_ex_gs :: "vname \<Rightarrow> bool" where
   "sign_ex_gs \<equiv> declared_global sign_ex_prog"
-
-text \<open>Local shorthand for the executable state's lookup projection, fixed at this
-  file's own \<open>sign_ex_gs\<close> classifier.\<close>
-abbreviation sign_ex_lookup :: "('a::bot) exec_dg_st \<Rightarrow> vname \<Rightarrow> 'a" where
-  "sign_ex_lookup s x \<equiv> lookup_resolved_st_q s (location_of sign_ex_gs x)"
 
 definition sign_ex_pi :: proc_table where
   "sign_ex_pi = prog_table sign_ex_prog"
 
 definition gEx :: cfg where
   "gEx = compile_prog sign_ex_pi (prog_procs sign_ex_prog)"
+
+lemma gEx_prog_cfg: "gEx = prog_cfg sign_ex_prog"
+  by (simp add: gEx_def sign_ex_pi_def prog_cfg_def)
 
 lemma gEx_calls: "calls gEx = {}"
   unfolding gEx_def sign_ex_pi_def
@@ -77,96 +67,25 @@ lemmas gEx_entry = gEx.entry[unfolded prog_main_name_def]
 lemmas gEx_finE = gEx.finite_intra
 lemmas gEx_finC = gEx.finite_calls
 
-lemma dgEx_reserved: "reserved_ret_var sign_ex_gs"
-  by (auto simp: wf_compile_input_simps sign_ex_pi_def sign_ex_prog_def split: if_splits)
+subsection \<open>The equation system and its solve\<close>
 
-lemma dgEx_is_bot_exact:
-  "\<And>s::sign resolved_st_q. resolved_st_q_is_bot_for (declared_global_vars sign_ex_prog) s
-     = is_empty_state (fun_of_exec_dg_st_for sign_ex_gs s)"
-  by (rule resolved_st_q_is_bot_for_iff[OF declared_global_iff, folded fun_of_exec_dg_st_for_def])
-
-subsection \<open>Registration through the classifier-parametric registration locale\<close>
-
-text \<open>Interpret \<^locale>\<open>local_state_dg_exec_analysis\<close> once here at \<^const>\<open>sign_ex_gs\<close>
-  with the classifier-parametric transfer/enter functions and
-  \<^const>\<open>resolved_st_q_is_bot_for\<close> at this program's own declared globals -- the same five
-  domain facts \<^locale>\<open>ownership_split_dg_exec_analysis\<close> needs, plus one \<open>empty_pred\<close>
-  exactness obligation. \<open>G\<close> is instantiated at \<open>sign exec_dg_st lifted\<close> too (the plumbing
-  constraint \<^theory>\<open>Voblint_Soundness.Run_Analysis_Sound\<close>'s
-  \<open>local_state_dg_exec_analysis\<close> documents), not because \<open>G\<close>'s content matters here.\<close>
-
-interpretation sign_ex_reg:
-  local_state_dg_exec_analysis sign_ex_gs
-    skip_sign assign_sign special_sign branch_sign body_sign return_sign
-    "enter_sign_ci_for sign_ex_gs" event_sign
-    "sign_tf_st_for sign_ex_gs" "sign_enter_st_for sign_ex_gs"
-    "resolved_st_q_is_bot_for (declared_global_vars sign_ex_prog)"
-    "TD_side_always_join_Interp.solve" "TD_side_always_join_Interp.solve_c"
-proof -
-  interpret sign_ex_transfer: sound_transfer_for sign_ex_gs
-      skip_sign assign_sign special_sign branch_sign body_sign return_sign
-      "enter_sign_ci_for sign_ex_gs" event_sign
-    by (rule sign_tf.is_sound_transfer_for)
-  show "local_state_dg_exec_analysis sign_ex_gs
-          skip_sign assign_sign special_sign branch_sign body_sign return_sign
-          (enter_sign_ci_for sign_ex_gs) event_sign
-          (sign_tf_st_for sign_ex_gs)
-          (sign_enter_st_for sign_ex_gs)
-          (resolved_st_q_is_bot_for (declared_global_vars sign_ex_prog))
-          TD_side_always_join_Interp.solve TD_side_always_join_Interp.solve_c"
-    by unfold_locales
-       (rule dgEx_reserved
-             sign_ex_transfer.tf_sound_assign_for sign_ex_transfer.tf_sound_special_for
-             sign_ex_transfer.tf_sound_branch_for
-             sign_ex_transfer.tf_sound_enter_entry_for
-             sign_tf_st_for_commute[unfolded sign_tf.tf_abs_def,
-                                    folded fun_of_exec_dg_st_for_def]
-             sign_enter_st_for_commute[folded fun_of_exec_dg_st_for_def]
-             dgEx_is_bot_exact
-             TD_side_always_join_Interp.part_post_solution_of_solve_c
-        | assumption)+
-qed
-
-subsection \<open>The equation system\<close>
-
-text \<open>The registration locale owns the equation system: \<open>dgEx_eqs\<close> names
-  \<^const>\<open>sign_ex_reg.routed_eqs\<close> at this program, the routed generator at the unit
-  context, so there is no second call protocol to align with the locale's endpoints.\<close>
+text \<open>\<open>dgEx_eqs\<close> is the production equation system at this program. The executable
+  option-valued solver terminates on it --- a code-generated \<^verbatim>\<open>by eval\<close> fact --- which
+  is the solver-domain predicate the assembly's endpoints take.\<close>
 
 definition dgEx_eqs ::
   "pp \<times> unit
    \<Rightarrow> (pp \<times> unit, (unit, unit) routed_gk,
         (sign exec_dg_st lifted, sign exec_dg_st lifted) dg_state) strategy_tree" where
-  "dgEx_eqs = sign_ex_reg.routed_eqs sign_ex_pi (prog_procs sign_ex_prog)
-                bot (Lifted cinit_sign_st) (Lifted cinit_sign_st)"
-
-definition dgEx_sol ::
-  "(pp \<times> unit) set
-   \<times> (pp \<times> unit + (unit, unit) routed_gk
-        \<Rightarrow> (sign exec_dg_st lifted, sign exec_dg_st lifted) dg_state)" where
-  "dgEx_sol = TD_side_always_join_Interp_solve dgEx_eqs (cfg_exit gEx, ())"
-
-subsection \<open>The solver computes a partial post-solution\<close>
-
-text \<open>
-  The executable option-valued solver terminates on the D/G equation system --- a
-  code-generated \<open>by eval\<close> fact --- so the solver-domain predicate holds and the
-  vendored partial-post-solution theorem applies to the computed result.
-\<close>
+  "dgEx_eqs = sign_unit_equations sign_ex_gs sign_ex_prog"
 
 lemma dgEx_terminates_c: "TD_side_always_join_Interp_solve_c dgEx_eqs (cfg_exit gEx, ()) \<noteq> None"
   by eval
 
-lemma dgEx_solve_dom:
-  "TD_side_always_join_Interp.solve_dom TYPE((unit, unit) routed_gk)
-     TYPE((sign exec_dg_st lifted, sign exec_dg_st lifted) dg_state) dgEx_eqs (cfg_exit gEx, ())"
-  by (rule TD_side_always_join_Interp.solve_dom_of_solve_c[OF dgEx_terminates_c])
-
-lemma dgEx_pp_st:
-  "part_post_solution dgEx_eqs (cfg_exit gEx, ()) (snd dgEx_sol) (fst dgEx_sol)"
-  using TD_side_always_join_Interp.partial_post_solution[OF dgEx_solve_dom,
-      of "fst dgEx_sol" "snd dgEx_sol"]
-  unfolding dgEx_sol_def by simp
+lemma dgEx_terminates: "sign_unit_terminates sign_ex_gs sign_ex_prog"
+  unfolding sign_join.terminates_code
+  using TD_side_always_join_Interp.solve_dom_of_solve_c[OF dgEx_terminates_c]
+  by (simp add: dgEx_eqs_def gEx_prog_cfg)
 
 subsection \<open>Well-formedness of the compiled input\<close>
 
@@ -181,41 +100,30 @@ text \<open>Coverage is read off the solved key set. A routed callee entry is so
   about this run, decided by \<^const>\<open>vars_cover_exec\<close> over the two edge
   enumerations. \<open>gEx\<close> has no calls, so here it says every intra target was solved.\<close>
 
-lemma dgEx_vars_cover: "vars_cover gEx (fst dgEx_sol)"
-  by (rule vars_cover_of_exec[OF gEx_finE gEx_finC]) eval
-
-text \<open>The initial stores are covered by the registered concretization at the
-  initial local value. Stated in \<^const>\<open>sign_ex_reg.gamma_exec\<close> itself rather than in
-  its unfolding, because that is the vocabulary \<open>run_source_sound\<close> assumes.\<close>
-lemma dgEx_sound0:
-  "cinit_stores sign_ex_gs
-     \<subseteq> sign_ex_reg.gamma_exec (Lifted cinit_sign_st) (Lifted cinit_sign_st)"
-  by (simp add: sign_ex_reg.gamma_exec_def fun_of_exec_dg_st_for_def
-      fun_of_st_cinit_sign_st_for cinit_stores_def gamma_state_def)
+lemma dgEx_vars_cover:
+  "vars_cover (prog_cfg sign_ex_prog) (sign_unit_vars sign_ex_gs sign_ex_prog)"
+  by (rule sign_join.vars_cover_of_exec_prog) eval
 
 theorem dgEx_source_run_sound:
   assumes run: "star (pstep sign_ex_gs sign_ex_pi) (prog_main sign_ex_prog, s, [])
                      (residual, t, frs)"
       and init: "s \<in> cinit_stores sign_ex_gs"
   shows "\<exists>v stk. csim sign_ex_pi gEx (residual, t, frs) (v, t, stk)
-                 \<and> t \<in> sign_ex_reg.gamma (fst dgEx_sol) (snd dgEx_sol) v"
+                 \<and> t \<in> \<lbrakk>sign_unit_state_at sign_ex_gs sign_ex_prog v\<rbrakk>"
 proof -
-  have run': "star (pstep sign_ex_gs sign_ex_pi) (main_body sign_ex_pi, s, []) (residual, t, frs)"
+  have run': "star (pstep sign_ex_gs (prog_table sign_ex_prog))
+                (main_body (prog_table sign_ex_prog), s, []) (residual, t, frs)"
     using run by (simp add: sign_ex_pi_def)
+  have wf: "wf_compile_input sign_ex_gs (prog_table sign_ex_prog) (prog_procs sign_ex_prog)"
+    using dgEx_wf by (simp add: sign_ex_pi_def)
   show ?thesis
-    unfolding dgEx_sol_def dgEx_eqs_def gEx_def
-    by (rule sign_ex_reg.run_source_sound
-          [OF dgEx_terminates_c[unfolded dgEx_eqs_def gEx_def]
-              dgEx_wf
-              dgEx_vars_cover[unfolded dgEx_sol_def dgEx_eqs_def gEx_def]
-              gEx_finE[unfolded gEx_def]
-              dgEx_sound0
-              init run'])
+    using sign_join.source_sound[OF dgEx_terminates dgEx_vars_cover wf init run']
+    by (simp add: gEx_prog_cfg sign_ex_pi_def)
 qed
 
 subsection \<open>Inspecting the computed result\<close>
 
-text \<open>The Base instance routes the whole abstract state through the local unknown,
+text \<open>The unit instance routes the whole abstract state through the local unknown,
   reachability-lifted: the local answer at the exit is exactly \<open>Lifted\<close> of a state
   mapping \<open>x\<close> to \<open>SPos\<close>, with no separate global/side slot to inspect for a purely
   local name. Nothing further consumes this equation --- it is the readable form of what

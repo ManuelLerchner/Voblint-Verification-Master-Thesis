@@ -2,11 +2,11 @@ session Voblint_Examples_Sign in "." = "Voblint_Analysis_Sign" +
   description "Sign witnesses: certified runs, custom transfer bodies, and call-string contexts"
   sessions
     "Voblint_Examples_CFG"
-    "Voblint_Soundness"
   directories
     "CallString"
   theories
     Example_Sign_Domain_Ops
+    Example_Side_Execute
     Exec_Sign_DG_Run
     Example_Sign_Unit_Assembly
     Example_Sign_DG_Custom_Body

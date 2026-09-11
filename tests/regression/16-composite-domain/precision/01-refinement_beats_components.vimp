@@ -1,6 +1,6 @@
 // PARAM: --analysis int
 // The refining composite domain (Sign x Interval x Parity x Congruence,
-// Refine_Fixpoint mode -- Int_Refinement.thy/Int_Transfer.thy/Int_Base_DG.thy)
+// Refine_Fixpoint mode -- Int_Refinement.thy/Int_Transfer.thy/Int_Exec.thy)
 // proves y == 2 from y + 1 == 3 by backward-filtering the guard through all
 // four components together, reductively refining each against what the
 // others already pin down. Neither Sign nor Interval alone proves this on

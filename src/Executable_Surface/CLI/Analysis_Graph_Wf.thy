@@ -12,15 +12,14 @@ text \<open>
   configuration, CFG and solution, so no caller has to check it and no
   consumer has to handle the malformed case.
 
-  Clients used to check it by execution instead. It holds by construction.
-
-  Nodes are drawn from \<^const>\<open>remdups\<close> of the solved domain, so they are distinct, and
-  the three node constructors keep the groups apart. Every emitted edge is guarded on
-  both endpoints being covered keys, so it names only nodes in that list. Distinctness
-  of the edges is the one part that is not free: a rendered edge records the call
-  action's destination variable but not its formals or arguments, so two call edges out
-  of one call site could collapse onto the same edge. \<open>calls_source_unique\<close> rules that
-  out, and it is what \<^const>\<open>compile_prog\<close> already guarantees.
+  Nodes are drawn from \<^const>\<open>remdups\<close> of the solved domain, so they are
+  distinct, and the three node constructors keep the groups apart. Every emitted
+  edge is guarded on both endpoints being covered keys, so it names only nodes in
+  that list. Distinctness of the edges is the one part that is not free: a
+  rendered edge records the call action's destination variable but not its
+  formals or arguments, so two call edges out of one call site could collapse
+  onto the same edge. \<open>calls_source_unique\<close> rules that out, and it is what
+  \<^const>\<open>compile_prog\<close> already guarantees.
 \<close>
 
 

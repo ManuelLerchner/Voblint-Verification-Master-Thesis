@@ -1,19 +1,19 @@
 #!/usr/bin/env python3
-"""M6: generates src/Program_Model/VIMP/VIMP_Grammar_Generated.thy -- nonterminals,
+"""Generates src/Program_Model/VIMP/VIMP_Grammar_Generated.thy -- nonterminals,
 `syntax` (Isabelle mixfix declarations), and the `Vimp_Grammar_Tr` ML
 structure (parse_translation's AST-lowering, exposed for VIMP_Notation.thy
-to call into) -- from the canonical grammar/vimp.yaml.
+to call into) -- from the canonical manifests/vimp-grammar.yaml.
 
 Generated theory has no notion of `imp_prog`: whole-program assembly
 (`program { ... }`, main-selection, `imp_prog` construction) is
 VIMP_Notation.thy's own hand-written territory, matching
-`special: program_structure`'s scope in grammar/vimp.yaml and
+`special: program_structure`'s scope in manifests/vimp-grammar.yaml and
 gen_vimp_menhir.py's own hand-written gen_program_rule. VIMP_Notation.thy
 imports this theory and calls `Vimp_Grammar_Tr.stmts_opt_tr`/`exp_tr`/
 `formals_of`/etc. directly.
 
 Two lowering rules stay hand-written inside `Vimp_Grammar_Tr` (as fixed
-text this module emits, not derived from grammar/vimp.yaml's structured
+text this module emits, not derived from manifests/vimp-grammar.yaml's structured
 metadata): Isabelle's binary Num literal decoding (`dest_num`/
 `read_num_const`, no Menhir analogue, since Isabelle's own numeral literals
 compile to a binary One/Bit0/Bit1 encoding, not a plain digit string) and
@@ -22,10 +22,10 @@ the compositional unary-minus rule. `_exp_zero`/`_exp_one` and
 Isabelle-target realizations of a canonical rule Isabelle's own mixfix
 grammar can't express directly -- see those functions' comments.
 
-Nonterminal naming mirrors VIMP_Notation.thy's own pre-cutover `imp2_*`
-convention. IDENT/INT aren't generated terminals here: Isabelle's outer
+Nonterminals share the `imp2_*` prefix VIMP_Notation.thy's own nonterminals
+use. IDENT/INT aren't generated terminals here: Isabelle's outer
 lexer already provides `id`/`num_const` as built-in nonterminals, so
-grammar/vimp.yaml's `terminals:` section (which describes lexical
+manifests/vimp-grammar.yaml's `terminals:` section (which describes lexical
 *patterns* for target lexers that need them, i.e. Menhir/ocamllex) has no
 Isabelle-side equivalent to generate -- another instance of the schema's
 "target-specific lexical mechanics stay out of the neutral grammar"
@@ -33,7 +33,7 @@ principle.
 
 Requires PyYAML to regenerate; not to build (the .thy file is committed,
 same convention codegen/generated/ already uses).
-Usage: python3 scripts/gen_vimp_isabelle.py [grammar/vimp.yaml] [out_dir]
+Usage: python3 scripts/gen_vimp_isabelle.py [manifests/vimp-grammar.yaml] [out_dir]
 """
 
 import sys
@@ -42,7 +42,7 @@ from pathlib import Path
 import yaml
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-DEFAULT_GRAMMAR = REPO_ROOT / "grammar" / "vimp.yaml"
+DEFAULT_GRAMMAR = REPO_ROOT / "manifests" / "vimp-grammar.yaml"
 DEFAULT_OUT = REPO_ROOT / "src" / "Program_Model" / "VIMP"
 
 # Isabelle mixfix escaping: '(' ')' '_' need a leading "'" so the mixfix
@@ -74,8 +74,8 @@ def ident_role(rhs: list, i: int) -> str:
     callee name -- VIMP has no other IDENT-typed procedure-name occurrence
     in a generated production; function_decl's own name lives in
     VIMP_Notation.thy's hand-written territory), 'variable' for every other
-    IDENT occurrence (an expression use, an assignment/random/callret
-    target, or a formals/ids declaration list item). Same signal
+    IDENT occurrence (an expression use, an assignment/callret target, or
+    a formals/ids declaration list item). Same signal
     stmt_id_arg_priority already uses for a different purpose (argument
     priority); kept as one shared classifier so the two can't drift apart.
     Every IDENT position gets `id_position` regardless of role (see
@@ -199,7 +199,7 @@ def arg_types(g: dict, rhs: list) -> list:
 
 
 # -- Priority assignment -----------------------------------------------
-# grammar/vimp.yaml's precedence table is qualitative (ordered low->high,
+# manifests/vimp-grammar.yaml's precedence table is qualitative (ordered low->high,
 # with an associativity per level); Isabelle mixfix needs real numbers.
 # Levels are spaced 10 apart starting at 30 (leaving headroom below for
 # any future lower-precedence addition, and matching the rough magnitude
@@ -368,7 +368,7 @@ def gen_list_syntax(prod: dict) -> list:
 # generated theory has no notion of imp_prog at all.
 
 # -- Isabelle-target realizations of a canonical rule Isabelle's own mixfix
-# grammar can't express directly. Neither belongs in grammar/vimp.yaml:
+# grammar can't express directly. Neither belongs in manifests/vimp-grammar.yaml:
 # the canonical INT terminal already covers 0/1 uniformly (Menhir's actual
 # int parsing doesn't care), and `actuals`'s `min: 0` already covers a
 # zero-arg call for Menhir (its growing-list rule derives the empty case
@@ -441,7 +441,7 @@ def gen_syntax_block(g: dict) -> str:
 #
 # Scope: the generic `lower:`/`passthrough:` shape, plus list productions'
 # fold (Seq-accumulator or Cons-list, matching gen_list_syntax above). Kept
-# OUT, matching grammar/vimp.yaml's own `special:` boundary: integer_literal
+# OUT, matching manifests/vimp-grammar.yaml's own `special:` boundary: integer_literal
 # (Isabelle's binary Num decoding, dest_num/read_num_const -- no Menhir
 # analogue), unary_minus (same cancellation-vs-compositional judgment call
 # gen_vimp_menhir.py's SPECIAL_ACTIONS already makes), program_structure
@@ -451,7 +451,7 @@ def gen_syntax_block(g: dict) -> str:
 # lower.ctor name -> qualified Isabelle constant, mirroring the `val c_X =
 # "..."` table already hand-written in VIMP_Notation.thy's parse_translation.
 # Genuinely project-specific (which theory/type each constructor lives in),
-# not derivable from grammar/vimp.yaml -- same status as
+# not derivable from manifests/vimp-grammar.yaml -- same status as
 # gen_vimp_menhir.py's `Voblint_CLI.Generated.` qualification prefix.
 TR_CONST = {
     "N": "VIMP_Syntax.N",
@@ -591,7 +591,7 @@ def render_action_isabelle(prod: dict) -> str:
 
 def gen_tr_function(g: dict, result_nt: str, extra_clauses: list = None) -> str:
     """Assembles the _tr function for one nonterminal from every non-special,
-    non-list production targeting it, in grammar/vimp.yaml's own order, plus
+    non-list production targeting it, in manifests/vimp-grammar.yaml's own order, plus
     caller-supplied hand-written clauses (for that nonterminal's `special:`
     productions) spliced in first so they take priority the same way the
     hand-written original orders _imp2_uminus's nested-cancellation case
@@ -708,7 +708,7 @@ fun K name = Const (name, dummyT)"""
 # Numeral decoding (special: integer_literal) and the compositional
 # unary-minus rule (special: unary_minus) stay hand-written -- see the
 # theory header text this module also generates. Everything below them is
-# mechanical from grammar/vimp.yaml.
+# mechanical from manifests/vimp-grammar.yaml.
 DEST_NUM = """\
 (* Decode Isabelle's Num binary structure: One=1, Bit0 n=2n, Bit1 n=2n+1.
    Leaf may also be a decimal-string Const (e.g. Const("20",_)) from the
@@ -823,7 +823,7 @@ theory VIMP_Grammar_Generated
 begin
 
 text \\<open>
-  GENERATED FILE. Source: \\<^verbatim>\\<open>grammar/vimp.yaml\\<close>; generator:
+  GENERATED FILE. Source: \\<^verbatim>\\<open>manifests/vimp-grammar.yaml\\<close>; generator:
   \\<^verbatim>\\<open>scripts/gen_vimp_isabelle.py\\<close>. Regenerate with the generator rather
   than hand-editing; a CI drift check compares regenerated output against
   this file.
@@ -839,7 +839,7 @@ text \\<open>
   surrounding quotation ultimately builds.
 
   Two lowering rules stay hand-written inside \\<open>Vimp_Grammar_Tr\\<close> rather than
-  being generated from \\<open>grammar/vimp.yaml\\<close> directly: Isabelle's binary
+  being generated from \\<open>manifests/vimp-grammar.yaml\\<close> directly: Isabelle's binary
   \\<open>Num\\<close> literal decoding (\\<open>dest_num\\<close>/\\<open>read_num_const\\<close>, no Menhir analogue)
   and the compositional unary-minus rule (folds a numeral operand into a
   negative \\<open>N\\<close>, otherwise \\<open>Minus (N 0) x\\<close> -- deliberately does NOT cancel a

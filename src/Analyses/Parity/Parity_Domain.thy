@@ -132,9 +132,6 @@ text \<open>\<open>PTop\<close> is the unique top of a finite enumeration, the s
 definition is_top_parity :: "parity \<Rightarrow> bool" where
   "is_top_parity p = (p = PTop)"
 
-lemma is_top_parity_correct: "is_top_parity p \<longleftrightarrow> p = top"
-  unfolding is_top_parity_def top_parity_def ..
-
 lemma gamma_parity_top: "gamma_parity top = UNIV"
   unfolding top_parity_def by simp
  

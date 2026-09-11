@@ -7,7 +7,8 @@ concrete run to the abstract result.
 | File | Role | What |
 | --- | --- | --- |
 | `Example_Sign_Domain_Ops.thy` | worked example | the sign lattice and its arithmetic on concrete inputs -- abstraction of an integer, the four operations, the join, printing, expression evaluation, one assignment -- each a `by eval` equation rather than a `value` |
-| `Exec_Sign_DG_Run.thy` | required support | end-to-end certified run on the Base-style D/G equation system, registered through `local_state_dg_exec_analysis` as `sign_ex_reg` |
+| `Example_Side_Execute.thy` | canonical spine | the smallest certified Sign run, on `x := 1` (`x1_certified_sound`, `x1_explicit_completed_run_covered`) |
+| `Exec_Sign_DG_Run.thy` | required support | end-to-end certified run on the Base-style D/G equation system, through Sign's production always-join registration `sign_join` with no example-local registration |
 | `Example_Sign_Unit_Assembly.thy` | witness | Sign's instance of the shared unit-context assembly, executed: a callee writes a global, the caller checks its sign, and the assembled report decides the check -- a code-generation defect in the assembly fails here |
 | `Example_Sign_DG_Custom_Body.thy` | canonical spine | an analysis-supplied procedure-entry transfer (`dgs_body`) that forgets the callee's formals, carried through the same D/G generator and solver as the stock one; the two solved systems disagree only inside the callee |
 | `Example_Sign_DG_Custom_Combine.thy` | canonical spine | an analysis-supplied call-return environment merge that is *not* the stock one, carried through the same D/G generator and solver |
@@ -35,7 +36,7 @@ theory keeps its own copy so no witness inherits another's imports.
 | --- | --- |
 | **storage classifier** | the `gs :: vname => bool` saying which names are global. Every definition here is parametric in one; `sign_ex_gs`, `bf_prog_gs` and `ov_gs` are each *this* program's own classifier, not a fixed choice. |
 | **ownership split** | the carrier that keeps a local half and a global half of the abstract state apart, joined back only where the transfer contract says so. `ownership_split_dg_spec_st_for` is the stock executable specification built over it. |
-| **routed unit context** | context-insensitivity spelled as the degenerate routing policy: unknowns are keyed by `(node, ())`, so `unit_routed_eqs` is the same routed generator the call-string instances use, at the one-element context type. |
+| **routed unit context** | context-insensitivity spelled as the degenerate routing policy: unknowns are keyed by `(node, ())`, so `compiled_routed_eqs_for` at `route_unit` is the same routed generator the call-string instances use, at the one-element context type. |
 | **custom body / custom combine** | one field of the stock `dg_spec` replaced and nothing else: `dgs_body` (what runs on the `EA_Body` edge leaving a procedure entry) and `dgs_combine_env` (how the caller's and callee's environments merge on return). Each theory's point is that the field is genuinely free and genuinely reached. |
 | **overlapping enter** | `dgs_enter` answering a *list* of (continuation, callee entry) alternatives whose entries and continuations both cover the same concrete call, so the route materializes two contexts for one call site. |
 | **statement index** | `Statement n` numbering: source order, callee procedures before `main`, one index per command plus one epilogue index per procedure. |
@@ -45,10 +46,9 @@ theory keeps its own copy so no witness inherits another's imports.
 | File | Role | What |
 | --- | --- | --- |
 | `Example_Sign_DG_CallString_K1.thy` | canonical spine | the `nest` program at `k = 1`, solved by the plain-join solver: Sign is finite, so the computed solution is exact and `g`'s two activations collapse to `STop` |
-| `Example_Sign_DG_CallString_K2.thy` | canonical spine | the same at `k = 2`, keeping them apart at `SPos` and `SNeg`. Exactness makes a genuine strict-precision comparison possible here (`sign_k2_strictly_more_precise_than_k1_at_g`) that the Interval pair cannot state |
+| `Example_Sign_DG_CallString_K2.thy` | canonical spine | the same at `k = 2`, keeping them apart at `SPos` and `SNeg`. Exactness makes the strict-precision comparison (`sign_k2_strictly_more_precise_than_k1_at_g`) a statement about exact solutions |
 
-Sign's two entry-point witnesses -- the smallest certified IP run and the
-store-only check trio -- live in `CLI/`, grouped with the other domains' members
-of the same trio rather than by what they import.
+The store-only check witness lives in `CLI/`, grouped with the other domains'
+members of the same trio. The Sign-only executable run lives here.
 
 Role vocabulary: repository `README.md`.

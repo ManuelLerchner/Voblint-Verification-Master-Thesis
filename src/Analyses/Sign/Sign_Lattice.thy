@@ -148,11 +148,6 @@ lemma join_sign_ub2: "sign_le b (join_sign a b)"
 
 lemma join_sign_least: "sign_le a csg \<Longrightarrow> sign_le b csg \<Longrightarrow> sign_le (join_sign a b) csg"
   by (cases a; cases b; cases csg; simp)
-lemma join_sign_comm: "join_sign a b = join_sign b a"
-  by (cases a; cases b) simp_all
-
-lemma join_sign_assoc: "join_sign a (join_sign b csg) = join_sign (join_sign a b) csg"
-  by (cases a; cases b; cases csg) simp_all
 
 subsection \<open>Abstract arithmetic operations\<close>
 
@@ -197,9 +192,6 @@ text \<open>\<open>STop\<close> is likewise the unique top of a finite enumerati
 
 definition is_top_sign :: "sign \<Rightarrow> bool" where
   "is_top_sign s = (s = STop)"
-
-lemma is_top_sign_correct: "is_top_sign s \<longleftrightarrow> s = top"
-  unfolding is_top_sign_def top_sign_def ..
 
 lemma gamma_sign_top: "gamma_sign top = UNIV"
   unfolding top_sign_def by simp

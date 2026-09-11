@@ -16,15 +16,18 @@ the assembled analyzer can.
 
 | File | Role | What |
 | --- | --- | --- |
-| `Example_Side_Execute.thy` | canonical spine | the smallest certified sign IP run, on `x := 1` (`x1_certified_sound`, `x1_explicit_completed_run_covered`) |
+| `Config_Matrix.thy` | regression | The generated configuration resolver's public support matrix, pinned cell by cell |
+| `Dispatch_Matrix.thy` | regression | Config-driven dispatch agrees with every typed production entry point |
 | `Example_Checks_Store_Only.thy` | acceptance | `__voblint_check(...)` discharged node-locally against a computed Sign post-solution: one proved, one refuted, one unknown |
 | `Example_Interval_Checks_Store_Only.thy` | acceptance | the Interval member of the same trio, inside a two-sided bound guard |
 | `Example_Parity_Checks_Store_Only.thy` | acceptance | the Parity member: `y := x * 2` is even and `z := y + 1` odd whatever `x` is, a fact neither Sign nor Interval expresses |
-| `Exec_Interval_Run.thy` | precision comparison | `Example_Interval_Loop_Coverage`'s `loop_prog` under three fixpoint engines — bounded Kleene, warrowing TD, and every update rule at once (`join` / `per_origin` / `warrow`); interval narrowing plus the backward guard filter recover `[0,20]` under all of them. Imports the coverage theory rather than restating the program |
 | `Example_Int_Refinement_Mode_Regression.thy` | regression | raw `int_dom` refinement interactions, their non-CLI solver-run counterparts, and production solver choices through the dispatcher |
 | `Example_Analysis_Dispatch_Regression.thy` | regression | `analyse_config` over the selectable domains and context policies |
 | `Example_Analysis_Result_Regression.thy` | regression | the published result table: per-point reachability and the per-context lookup surface |
 | `Example_Min_Max_Regression.thy` | acceptance | `Min`/`Max` special calls end to end through the dispatcher |
 | `Example_EntryState_Graph_Regression.thy` | regression | internal well-formedness (`analysis_graph_wf`) and result-table coverage for the context-expanded graph; the rendering itself is covered CLI-observably under `tests/regression/11-graph-snapshot/` |
+
+The final fully discharged certificate lives in `../Capstone/`. Domain-only
+executable witnesses live with their domains.
 
 Role vocabulary: repository `README.md`.

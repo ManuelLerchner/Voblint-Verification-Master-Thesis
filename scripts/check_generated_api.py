@@ -24,7 +24,7 @@ Two checks, against the checked-in export:
   anything the file binds itself.
 
 Neither replaces compiling the consumers, which is the exact check and which
-``cli-build``, ``codegen-regression`` and ``property-build`` already run. This
+``cli-build``, ``codegen-regression`` and ``property-test`` already run. This
 runs in a second, needs no OCaml toolchain, and names the missing export root.
 """
 

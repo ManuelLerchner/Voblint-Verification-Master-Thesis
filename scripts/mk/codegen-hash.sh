@@ -11,6 +11,8 @@
 # "stale" is a wasted `pixi run codegen`; a false "fresh" would silently
 # compile-test old generated code against new source, the actual failure
 # mode this guards against -- so the safe direction to err is deliberate.
+# Example theories are downstream of Voblint_Codegen and .gitignore files are
+# not codegen inputs, so neither is included below.
 set -eu
 
 REPO_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
@@ -26,7 +28,8 @@ fi
 # differently on every machine that checks it out.
 cd "$REPO_ROOT"
 {
-  find src \( -name '*.thy' -o -name 'ROOT' \) -type f
+  find src -path 'src/Examples' -prune -o \
+    \( -name '*.thy' -o -name 'ROOT' \) -type f -print
   printf '%s\n' ROOTS scripts/regenerate-codegen.sh scripts/mk/codegen.sh
 } | LC_ALL=C sort | while IFS= read -r f; do
   HASH <"$f" | awk -v f="$f" '{print $1, f}'

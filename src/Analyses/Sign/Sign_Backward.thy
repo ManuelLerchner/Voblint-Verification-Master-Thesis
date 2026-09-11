@@ -160,8 +160,7 @@ qed
 lemma meet_sign_mono:
   assumes "x \<le> x'" and "y \<le> y'"
   shows "meet_sign x y \<le> meet_sign x' y'"
-  using assms
-  by (metis inf_mono inf_sign_def)
+  using inf_mono[OF assms] by simp
 
 text \<open>
   Reductiveness: @{const meet_sign} is exactly @{term "(\<sqinter>)"} for @{typ sign}
@@ -174,68 +173,21 @@ lemma meet_sign_le1: "meet_sign a b \<le> a"
 lemma meet_sign_le2: "meet_sign a b \<le> b"
   by (cases a; cases b; auto simp: less_eq_sign_def)
 
-lemma sbot_le: "SBot \<le> (a :: sign)"
-  by (cases a; auto simp: less_eq_sign_def)
-
-text \<open>
-  @{const inv_less_sign} only ever narrows an operand via @{const meet_sign} or
-  passes it through unchanged, so it is reductive in both components. Each branch
-  applies @{const meet_sign} with the bounded operand in either argument position
-  (e.g. \<open>meet_sign a1 SNeg\<close> for the first component, \<open>meet_sign a2 SPos\<close> for the
-  second), so both @{thm meet_sign_le1} and @{thm meet_sign_le2} are needed.
-\<close>
-
-lemma inv_less_sign_reductive1: "fst (inv_less_sign res a1 a2) \<le> a1"
-  by (cases res; auto simp: Let_def meet_sign_le1 meet_sign_le2 split: if_splits)
-
-lemma inv_less_sign_reductive2: "snd (inv_less_sign res a1 a2) \<le> a2"
-  by (cases res; auto simp: Let_def meet_sign_le1 meet_sign_le2 split: if_splits)
-
-text \<open>
-  @{const inv_eq_sign} narrows via @{const meet_sign}, collapses to @{const SBot}
-  (below every operand, @{thm sbot_le}), or passes an operand through unchanged.
-\<close>
-
-lemma inv_eq_sign_reductive1: "fst (inv_eq_sign res a1 a2) \<le> a1"
-  by (cases res; auto simp: Let_def meet_sign_le1 meet_sign_le2 sbot_le split: if_splits)
-
-lemma inv_eq_sign_reductive2: "snd (inv_eq_sign res a1 a2) \<le> a2"
-  by (cases res; auto simp: Let_def meet_sign_le1 meet_sign_le2 sbot_le split: if_splits)
-
-lemma inv_eq_sign_false_fst_mono:
-  assumes "a1 \<le> (a1' :: sign)" and "a2 \<le> a2'"
-  shows
-    "fst (inv_eq_sign False a1 a2)
-      \<le> fst (inv_eq_sign False a1' a2')"
-  using assms
-  by (auto simp only: inv_eq_sign.simps Let_def fst_conv snd_conv meet_sign_mono)
-     (smt (verit, ccfv_SIG)
-        gamma_sign.cases inf_sign_def inf_sup_ord(2)
-        join_sign.simps(4) join_sign_ub2 le_infI1 less_eq_sign_def
-        meet_sign.simps(19,21,31,33) order_eq_refl
-        sign_le.simps(18,24,36,40,42) sign_le_trans)
-
-lemma inv_eq_sign_false_snd_mono:
-  assumes "a1 \<le> (a1' :: sign)" and "a2 \<le> a2'"
-  shows
-    "snd (inv_eq_sign False a1 a2)
-      \<le> snd (inv_eq_sign False a1' a2')"
-  using assms
-  by (auto simp only: inv_eq_sign.simps Let_def fst_conv snd_conv meet_sign_mono)
-     (smt (verit, best)
-        bot.extremum bot_sign_def less_eq_sign_def
-        meet_sign.simps(19,21,31,33) order_eq_refl sign.exhaust
-        sign_le.simps(9,16,19,36,40,42) sign_le_trans)
-
 lemma inv_eq_sign_mono:
   assumes "a1 \<le> (a1' :: sign)"
       and "a2 \<le> a2'"
   shows
     "fst (inv_eq_sign r a1 a2) \<le> fst (inv_eq_sign r a1' a2') \<and>
      snd (inv_eq_sign r a1 a2) \<le> snd (inv_eq_sign r a1' a2')"
-  by (cases r)
-     (use assms inv_eq_sign_false_fst_mono inv_eq_sign_false_snd_mono
-        in \<open>auto simp add: meet_sign_mono\<close>)
+proof (cases r)
+  case True
+  then show ?thesis using assms by (simp add: meet_sign_mono)
+next
+  case False
+  then show ?thesis
+    using assms unfolding less_eq_sign_def
+    by (cases a1; cases a1'; simp; cases a2; cases a2'; simp add: Let_def)
+qed
 
 text \<open>
   Monotonicity of @{const inv_less_sign} needs a case split on both the guard's
@@ -364,79 +316,14 @@ global_interpretation sign_backward_domain:
     and sign_eq_true_of_less = sign_backward_domain.eq_true
     and sign_eq_false_of_intersection = sign_backward_domain.eq_false
 proof unfold_locales
-  fix n :: int and a b :: sign
-  assume H1: "n \<in> gamma a" and H2: "n \<in> gamma b"
-  show "n \<in> gamma (meet_sign a b)"
-    using meet_sign_sound[of n a b] H1 H2 by simp
-next
   fix s :: store and e :: exp and \<sigma> :: "vname \<Rightarrow> sign"
   assume H: "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
   have H': "\<forall>x. s x \<in> gamma (\<sigma> x)" using gamma_stateD[OF H] by blast
   show "aval e s \<in> gamma (aval_sign e \<sigma>)"
     using aval_sign_sound[of s \<sigma> e] H' by simp
-next
-  fix n1 n2 :: int and a1 a2 :: sign and res :: bool
-  assume H1: "n1 \<in> gamma a1" and H2: "n2 \<in> gamma a2" and H3: "(n1 < n2) = res"
-  show "n1 \<in> gamma (fst (inv_less_sign res a1 a2)) \<and> n2 \<in> gamma (snd (inv_less_sign res a1 a2))"
-    using inv_less_sign_sound[of n1 a1 n2 a2 res] H1 H2 H3 by simp
-next
-  fix n1 n2 :: int and a1 a2 :: sign and res :: bool
-  assume H1: "n1 \<in> gamma a1" and H2: "n2 \<in> gamma a2" and H3: "(n1 = n2) = res"
-  show "n1 \<in> gamma (fst (inv_eq_sign res a1 a2)) \<and> n2 \<in> gamma (snd (inv_eq_sign res a1 a2))"
-    using inv_eq_sign_sound[of n1 a1 n2 a2 res] H1 H2 H3 by simp
-next
-  fix n1 n2 :: int and a1 a2 r :: sign
-  assume H1: "n1 \<in> gamma a1" and H2: "n2 \<in> gamma a2" and H3: "n1 + n2 \<in> gamma r"
-  show "n1 \<in> gamma (fst (inv_conservative r a1 a2)) \<and> n2 \<in> gamma (snd (inv_conservative r a1 a2))"
-    using inv_conservative_sound[OF H1 H2] .
-next
-  fix n1 n2 :: int and a1 a2 r :: sign
-  assume H1: "n1 \<in> gamma a1" and H2: "n2 \<in> gamma a2" and H3: "n1 - n2 \<in> gamma r"
-  show "n1 \<in> gamma (fst (inv_conservative r a1 a2)) \<and> n2 \<in> gamma (snd (inv_conservative r a1 a2))"
-    using inv_conservative_sound[OF H1 H2] .
-next
-  fix n1 n2 :: int and a1 a2 r :: sign
-  assume H1: "n1 \<in> gamma a1" and H2: "n2 \<in> gamma a2" and H3: "n1 * n2 \<in> gamma r"
-  show "n1 \<in> gamma (fst (inv_conservative r a1 a2)) \<and> n2 \<in> gamma (snd (inv_conservative r a1 a2))"
-    using inv_conservative_sound[OF H1 H2] .
-next
-  fix p :: sign and b :: bool and i :: int
-  assume "sign_tobool p = Some b" and "i \<in> gamma p"
-  then show "truthy i = b" using sign_tobool_sound by simp
-next
-  fix a1 a2 b1 b2 :: sign
-  assume "a1 \<le> a2" and "b1 \<le> b2"
-  thus "meet_sign a1 b1 \<le> meet_sign a2 b2" using inf_mono[of a1 a2 b1 b2] by simp
-next
-  fix e :: exp and \<sigma>1 \<sigma>2 :: "vname \<Rightarrow> sign"
-  assume "\<sigma>1 \<le> \<sigma>2"
-  thus "aval_sign e \<sigma>1 \<le> aval_sign e \<sigma>2" by (rule aval_sign_mono)
-next
-  fix x1 x2 y1 y2 :: sign and res :: bool
-  assume A: "x1 \<le> x2" and B: "y1 \<le> y2"
-  show "le_pair (inv_less_sign res x1 y1) (inv_less_sign res x2 y2)"
-    using inv_less_sign_mono[OF A B] by simp
-next
-  fix x1 x2 y1 y2 :: sign and res :: bool
-  assume A: "x1 \<le> x2" and B: "y1 \<le> y2"
-  show "le_pair (inv_eq_sign res x1 y1) (inv_eq_sign res x2 y2)"
-    using inv_eq_sign_mono[OF A B] by simp
-next
-  fix r1 r2 x1 x2 y1 y2 :: sign
-  assume A: "x1 \<le> x2" and B: "y1 \<le> y2"
-  show "le_pair (inv_conservative r1 x1 y1) (inv_conservative r2 x2 y2)"
-    using A B by (simp add: inv_conservative_def)
-next
-  fix a b :: sign
-  show "meet_sign a b \<le> a" by (rule meet_sign_le1)
-next
-  fix a b :: sign
-  show "meet_sign a b \<le> b" by (rule meet_sign_le2)
-next
-  fix p1 p2 :: sign and bv :: bool
-  assume "\<not> is_empty p1" and "p1 \<le> p2" and "sign_tobool p2 = Some bv"
-  then show "sign_tobool p1 = Some bv" using sign_tobool_mono by simp
-qed
+qed (use sign_tobool_mono in \<open>simp_all add: meet_sign_sound inv_less_sign_sound
+       inv_eq_sign_sound inv_conservative_def sign_tobool_sound meet_sign_mono aval_sign_mono
+       inv_less_sign_mono inv_eq_sign_mono meet_sign_le1 meet_sign_le2\<close>)
 
 text \<open>
   Executable @{typ "sign resolved_st_q"} mirror of \<open>afilter_sign\<close> /
@@ -477,10 +364,6 @@ text \<open>
   matching Goblint's single polarity-parametrized @{text Spec.branch}.
 \<close>
 
-lemma bfilter_sign_sound:
-  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> truthy (aval b s) = res \<Longrightarrow> s \<in> \<lbrakk>bfilter_sign b res \<sigma>\<rbrakk>"
-  using sign_backward_domain.bfilter_sound by simp
-
 text \<open>
   @{const branch_sign} is Sign's registered branch operation: a forward
   @{const sign_tobool} feasibility check ahead of @{const bfilter_sign},
@@ -491,16 +374,6 @@ text \<open>
 lemma branch_sign_sound:
   "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> truthy (aval b s) = res \<Longrightarrow> s \<in> \<lbrakk>branch_sign b res \<sigma>\<rbrakk>"
   using sign_backward_domain.branch_sound by simp
-
-
-lemma afilter_sign_mono:
-  "a1 \<le> (a2::sign) \<Longrightarrow> sigma1 \<le> sigma2 \<Longrightarrow>
-   afilter_sign e a1 sigma1 \<le> afilter_sign e a2 sigma2"
-  using sign_backward_domain.afilter_mono by (simp add: afilter_sign_def)
-
-lemma bfilter_sign_mono:
-  "sigma1 \<le> sigma2 \<Longrightarrow> bfilter_sign b res sigma1 \<le> bfilter_sign b res sigma2"
-  using sign_backward_domain.bfilter_mono by (simp add: bfilter_sign_def)
 
 lemma branch_sign_mono:
   "sigma1 \<le> sigma2 \<Longrightarrow> branch_sign b res sigma1 \<le> branch_sign b res sigma2"

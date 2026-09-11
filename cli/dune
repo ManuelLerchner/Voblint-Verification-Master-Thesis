@@ -1,0 +1,24 @@
+(rule
+ (targets Voblint_CLI.ml)
+ (deps ../codegen/generated/ml/Voblint_CLI.ml)
+ (action (copy %{deps} %{targets})))
+
+(menhir
+ (modules vimp_parser)
+ (flags --unused-precedence-levels))
+
+(ocamllex vimp_lexer)
+
+(executable
+ (name main)
+ (modules
+  Voblint_CLI
+  vimp_positions
+  vimp_parser
+  vimp_lexer
+  vimp_frontend
+  dot_render
+  html_report
+  main)
+ (libraries str zarith unix)
+ (flags (:standard -w -8-11-20-27-32-37-39 -warn-error -A)))

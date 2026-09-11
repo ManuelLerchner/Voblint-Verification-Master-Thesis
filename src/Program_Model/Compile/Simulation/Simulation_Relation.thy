@@ -402,6 +402,27 @@ lemma unwinding_is_returning: "unwinding u \<Longrightarrow> is_returning u"
 lemma pop_ready_is_returning: "pop_ready w \<Longrightarrow> is_returning w"
   by (cases w rule: pop_ready.cases) (auto simp: unwinding_is_returning)
 
+lemma is_returning_next_check: "is_returning c \<Longrightarrow> next_check c = None"
+  by (induction c) auto
+
+text \<open>A source configuration about to run a check is, under \<^const>\<open>csim\<close>, at a node
+  whose \<^const>\<open>EA_Check\<close> edge carries that check.  Suspended callers only wrap the
+  running residual, and the frame-pop phase runs no check.\<close>
+lemma csim_next_check_edge:
+  assumes "csim \<Pi> g (c, s, frs) (v, t, stk)" and "next_check c = Some e"
+  shows "\<exists>w. (v, EA_Check e, w) \<in> intra g"
+  using assms
+proof (induction "(c, s, frs)" "(v, t, stk)" arbitrary: c s frs v t stk rule: csim.induct)
+  case (Base p c0 k n c v s)
+  from Base.hyps(2) obtain n' en E K
+    where "compile \<Pi> p c0 k n = (n', en, E, K)" and "E \<subseteq> intra g"
+    by blast
+  with control_at_next_check_edge [OF Base.hyps(1) Base.prems] show ?case by blast
+next
+  case (Returning w pc c0c kc nc afters cont callee caller dst p)
+  then show ?case by (simp add: is_returning_next_check pop_ready_is_returning)
+qed simp
+
 subsection \<open>Stepping the frame-pop phase\<close>
 
 text \<open>How the phase between a return and its frame pop behaves: it neither changes the store

@@ -21,8 +21,9 @@ is the one analysis session that sees more than its own domain, by construction.
 ## The layer chain
 
 ```text
-Int_Domain        the four-component record and its concretization
-Int_Refinement    exactness of reduction steps; the three refine modes
+Int_Domain              the four-component record and its concretization
+Int_Refinement          exactness of reduction steps; one refinement round
+Int_Refinement_Control  the three refine modes
   -> Int_Arithmetic / Int_Backward / Int_Warrowing   mode-aware forward, backward,
                                                      and componentwise widen/narrow
   -> Int_Transfer -> Int_Exec                        transfer bundles; executable carrier
@@ -30,11 +31,18 @@ Int_Refinement    exactness of reduction steps; the three refine modes
   -> Int_Exec_Sound                                  mode-parameterized raw runtime API
   -> generated/Int_Analyses                          the context policies over that route
                                                      (generated; see below)
-  -> Int_Solver_Analyses                             alternative solver disciplines
-  -> Int_Classify / Int_Checks                       check discharge and the report
+  -> Int_Solver_Analyses                             their reports at Apinis warrowing
+  -> Int_Classify                                    check discharge
+  -> generated/Int_Assembly                          the unit-context route, four
+                                                     disciplines, mode pinned
+  -> Int_Checks                                      the published names and the report
   -> Int_Entry                                       the production endpoint, and its
                                                      soundness at int_dom
 ```
+
+At the unit context Int publishes all four disciplines, as Interval does: its
+Interval component has infinite ascending chains, so a loop-carried value needs
+Apinis warrowing to terminate, and that is the production default.
 
 Public result and report entry points select `Refine_Fixpoint` with Apinis
 warrowing. Lower runtime layers retain the mode parameter for comparisons and
@@ -51,8 +59,9 @@ candidate. What each mode then does with it:
   `y` becomes `SPos`/`[2,2]`/`PEven`/`2 (mod 0)`: exact.
 - `Refine_Fixpoint` — the same, here. One round already sufficed *for this guard*.
 
-`Exec_Int_DG_Run` (Examples/Int) proves all three by real solver runs, and closes with
-`dgExI_never_ne_once` and `dgExI_once_eq_fixpoint`. That `Once` equals `Fixpoint` here
+`Exec_Int_DG_Run` (Examples/Int) proves the `Refine_Never` and `Refine_Once` results by
+real solver runs and closes with `dgExI_never_ne_once`; `Refine_Fixpoint` is the CLI's
+mode, so its result is pinned by the CLI regression. That `Once` equals `Fixpoint` here
 is not a general fact: `refinement_round_is_progressive` in `Example_Int_Domain` is a
 witness where a further round still makes progress.
 
@@ -65,7 +74,7 @@ choice) would break the solver's `narrow_ge` bracket.
 
 ## The two contextual configurations
 
-`generated/Int_Analyses.thy` is machine-written from `assembly/analyses.yaml`,
+`generated/Int_Analyses.thy` is machine-written from `manifests/analyses.yaml`,
 so the orientation a reader needs lives here rather than in a header the
 generator owns.
 
@@ -108,5 +117,4 @@ pins the mode and therefore can use `global_interpretation` with `defines`.
 
 Int carries no emptiness predicate of its own. The shared assembly pins the
 bottom test to the program's declaration predicate and proves it agrees with
-the semantic emptiness test, so what was once a parameter with a side
-condition is now derived.
+the semantic emptiness test.

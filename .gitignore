@@ -3,7 +3,7 @@
 
 # Isabelle
 .isabelle/
-docs/html/
+/build/
 
 # Editor backups / autosaves (Emacs, vim)
 *~
@@ -22,11 +22,15 @@ __pycache__/
 # pixi
 .pixi/
 
+# Dune build products
+_build/
+
 # Local OS files
 .DS_Store
 
 # Local tool settings
 .claude/settings.local.json
+/vendor/autocorrode/
 
 # codegen regression driver: build products and the generated module it
 # copies in from codegen/generated/ (the copy is a build step, not a source)
@@ -35,14 +39,7 @@ codegen/regression/ocaml/*.cm*
 codegen/regression/ocaml/*.o
 codegen/regression/ocaml/regression-ml
 
-# HTML result directories emitted by `voblint --html-out` (scripts/mk/report.sh)
-/result/
-
-# Default `pixi run bench --plot` outputs (scripts/mk/bench.sh)
-voblint-bench.png
-voblint-bench.json
-
-# Regenerable definitional index: `pixi run docs-overview`.
+# Regenerable definitional index: `pixi run docs-overview-generate`.
 # Its own generator calls it "a gitignored, regenerable index -- not a source
 # of truth (the .thy files are)".
 docs/generated/DEFINITIONS_OVERVIEW.md

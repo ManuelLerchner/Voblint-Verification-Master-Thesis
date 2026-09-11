@@ -14,6 +14,10 @@ workflow and project-specific traps.
 Start both with `rtk ./scripts/start-both.sh`. Use
 `rtk ./scripts/start-iq.sh` for jEdit and I/Q only, or
 `rtk ./scripts/start-ir.sh` for the headless REPL.
+`scripts/setup.sh` installs their pinned AutoCorrode sources under the ignored
+`vendor/autocorrode/` directory and registers I/Q in Isabelle's user component
+configuration. `AUTOCORRODE_HOME` may point I/R at another checkout.
+AutoCorrode is developer tooling, outside the proof dependencies.
 
 Authenticate I/Q or connect I/R with token `isabelle-local` before other server
 calls. Treat a failed real call as the availability check; do not make a
@@ -96,7 +100,7 @@ memory pressure. Results obtained before it died stay valid for the revision on
 disk, but nothing is verified after it until a restart finishes.
 
 **A filtered check.** Most `pixi run` tasks here report failure as *output* and
-still exit 0. `root-entries` printed its error and `tail -1` ate it, which would
+still exit 0. `sessions-check` printed its error and `tail -1` ate it, which would
 have carried a change past the guard written for that exact hazard. **A check
 that reports failure as output rather than as exit status must never be
 filtered.** The same rule applies to counting instead of listing: print what
@@ -122,7 +126,7 @@ duplicate above at least announces itself. When a generator overwrites a theory
 at the *same* path under the *same* name -- no ROOT change, no duplicate, no
 exception -- nothing looks different: the node name is right, the file is where
 it belongs, and the session goes on serving the bytes it loaded. Diagnostics
-taken after `pixi run gen-assembly` describe the previous render, and because a
+taken after `pixi run assembly-generate` describe the previous render, and because a
 regeneration moves lines they cite offsets whose content has changed
 underneath. This was caught once by comparing the buffer against disk at a line
 the run had changed, and would otherwise have produced a confident report about
@@ -192,7 +196,7 @@ Run a batch build when:
 Use the repository interfaces so session arguments do not drift:
 
 ```bash
-rtk pixi run build
+rtk pixi run isabelle-build
 ```
 
 `isabelle build -f` forces the named session's **ancestors** too, not just the
@@ -204,12 +208,13 @@ log rather than a cache hit for one session, delete that session's heap or use
 On a fresh clone without parent heaps:
 
 ```bash
-rtk pixi run bootstrap
+rtk pixi run isabelle-bootstrap
 ```
 
-`pixi run build` streams a verbose, parallel build of `Voblint_Examples`,
-which extends `Voblint_Soundness`, so both sessions are checked. Changes
-confined to `src/Examples/**` are covered by the same `rtk pixi run build` run.
+`pixi run isabelle-build` streams a verbose, parallel build of `Voblint_Examples`,
+whose closure is every session except `Voblint_Codegen`; `pixi run codegen`
+builds that one. Changes confined to `src/Examples/**` are covered by the same
+`rtk pixi run isabelle-build` run.
 
 ### Slow-build diagnosis
 
@@ -234,9 +239,8 @@ closed, and the batch log is green.
 
 ### Context and locales
 
-- Free variables can resolve to imported constants. The name `c` is risky
-  because `Dijkstra_Shortest_Path` imports an edge-cost constant with that name.
-  Bind variables explicitly or use names such as `ctx`, `cmd`, and `cost`.
+- Free variables can resolve to imported constants. Bind variables explicitly
+  or use names such as `ctx`, `cmd`, and `cost` rather than `c`.
 - A fact exported from `context fixes ... assumes A and B and C begin ... end`
   carries every enclosing `assumes` as an extra premise, even when its own
   proof or body used only some of them -- this applies to plain `definition`s
@@ -347,22 +351,20 @@ closed, and the batch log is green.
 ### Codegen module cycles
 
 - Splitting `export_code` targets by session/theory boundary can produce an
-  OCaml module dependency cycle (`Exec_St`'s executable state is generically
+  OCaml module dependency cycle (the `Exec_St_*` executable state is generically
   instantiated at the solver's own `widening`/`narrowing` type classes, and
   the CFG-specific solver instantiation needs `cfg_node` back -- a real,
   mutual code-level dependency, not an arbitrary grouping choice) or, even
   when `export_code` itself is clean, a rejection from `ocamlfind ocamlopt`
   over an unbound type-class dictionary record field once `code_identifier`
   introduces module boundaries the unsplit default did not have.
-- The project's fix is `code_identifier`/`code_module` remapping, already
-  used at scale in `Analyse_Dispatch.thy` (see the `code_module ... =>
-  (OCaml) Core` block and its preceding comment for the full case history).
-  Extend that existing two-way `Core`/`Analyse` split when a new dependency
-  edge reproduces the cycle; do not invent a separate remapping scheme.
+- The project's fix is not to split: `export_code` in `Voblint_Codegen.thy`
+  declares `module_name Generated`, and no `code_identifier`/`code_module`
+  remapping remains in `src/`. `AGENTS.md`'s "New theories and the code-export
+  module map" is the contract.
 - Diagnose with the actual `export_code`/`codegen-check` output, not by
   guessing from theory imports: a clean `export_code` does not guarantee a
-  clean `ocamlfind` link, and the two failure modes need different fixes
-  (regrouping the cycle vs. accepting the two-way split as final).
+  clean `ocamlfind` link.
 
 ### CFG shapes
 

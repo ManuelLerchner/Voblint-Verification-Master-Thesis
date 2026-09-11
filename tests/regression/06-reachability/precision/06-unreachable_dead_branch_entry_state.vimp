@@ -1,16 +1,16 @@
 // PARAM: --analysis interval --context entry-state
 // Entry-state sibling of 05-unreachable_dead_branch_literal.vimp: the same
 // infeasible branch, analyzed with --context entry-state instead of the
-// context-insensitive default. The two paths reach the NOWARN suppression by
+// context-insensitive default. The two paths reach the DEAD row by
 // different routes and must agree.
 //
 // Context-insensitively, analyse_with_state carries one is-unreachable flag
-// per check and the CLI drops those rows. Context-sensitively there is no
-// single flag to carry: one check node has one verdict per covered calling
-// context, and a node can be dead in some and live in others. The verdict is
-// therefore a contextual_verdict (Abstract_Checks.thy) -- Dead when every
-// covered context is unreachable there, Decided otherwise -- and the CLI
-// suppresses exactly the Dead rows.
+// per check and the CLI prints those rows as DEAD. Context-sensitively there
+// is no single flag to carry: one check node has one verdict per covered
+// calling context, and a node can be dead in some and live in others. The
+// verdict is therefore a contextual_verdict (Contextual_Check_Report.thy) --
+// Bot when every covered context is unreachable there, a lifted verdict
+// otherwise -- and the CLI prints exactly the Bot rows as DEAD.
 //
 // Without that distinction the row is not merely imprecise, it is wrong:
 // an unreachable point's abstract state is bottom, bottom satisfies every

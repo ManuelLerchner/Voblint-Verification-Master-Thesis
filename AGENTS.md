@@ -75,23 +75,29 @@ own and the fourth component of `int_dom`, alongside sign, interval and parity.
 The session dependency graph is:
 
 ```text
-VIMP -> Domain -+
-                +-> CFG -> Framework -> Compile -> Exec -> Soundness -> Analysis/* -+
-TD   -> Solver -+                                                                   |
-                                                                                    v
-                                                                       CLI -> Codegen
-                                                                        +--> Examples/*
+VIMP -+-> CFG ----+-> Compile ---------+
+      |           |                    v
+      |           +-> Framework ---> Exec -> Routing -> Result -> Nonrelational -> Analysis/* -+
+      +-> Domain -------^                                                                      |
+TD   ---> Solver -------^                                                                      v
+                                                                                  CLI -> Codegen
+                                                                                   +--> Examples/*
 ```
 
 (`CFG` depends on `VIMP` only; `Framework` on `CFG`, `Domain` and `Solver`;
-`Compile` on `CFG`; `Exec` on `Framework` and `Compile`.)
+`Compile` on `CFG`; `Exec` on `Framework` and `Compile`. `Routing`, `Result`
+and `Nonrelational` are the three `Analyses/Shared/` sessions described next.)
 
 `Analysis/*` and `Examples/*` are each a family of sessions, not one session.
 What every domain reuses lives under `src/Analyses/Shared/` as three chained
-sessions, `Voblint_Routing -> Voblint_Result -> Voblint_Nonrelational`: routing
-policies over a compiled program, the publication surface, and the reuse locales
-a non-relational domain interprets. They are mutually independent and chained
-only so a domain inherits all three from one heap instead of re-elaborating two.
+sessions, `Voblint_Routing -> Voblint_Result -> Voblint_Nonrelational`, with
+`Voblint_Routing` parented on `Voblint_Exec`: routing
+policies over a compiled program, the publication surface and source-level
+endpoints, and the reuse locales
+a non-relational domain interprets. `Voblint_Result` builds on `Voblint_Routing`'s
+equations and contexts; `Voblint_Nonrelational` imports neither, and is chained
+after them only so a domain inherits all three from one heap instead of
+re-elaborating two.
 
 `Voblint_Nonrelational` is the parent of `Voblint_Analysis_Sign`, `_Interval`,
 `_Parity`, `_Congruence` and `_Int` (which also lists the four component domains
@@ -133,15 +139,19 @@ only consumers.
 and what remains to move.
 
 Cross-session theory imports use qualified names.
-`Voblint_Soundness` contains the reusable soundness endpoints and nothing
-domain-specific, so it sits *below* the analysis family rather than after it:
-`Voblint_Routing` is parented on it and the rest of `Analyses/Shared/` chains
-off that, so every domain inherits `run_source_sound`/`collect_sound` from an
-ancestor heap. Each domain's own
+The reusable soundness endpoints contain nothing domain-specific, so they sit
+*below* the analysis family rather than after it, in `Voblint_Result`:
+`Source_Activation_Sound` holds the domain-free source bridges
+(`source_activation_sound`, `source_sound_from_ltr_collecting_cap`,
+`source_completes_ltr_collect_exit`), and `Unit_DG_Analysis`'s
+`unit_dg_analysis` states the context-insensitive endpoints (`source_sound`,
+`completed_run_sound`, `result_node_sound`) once, so every domain inherits them
+from an ancestor heap. Every context-insensitive result is an instance of that
+locale. Each domain's own
 instantiation of those endpoints -- the runtime API over an arbitrary
 `imp_prog` paired with its production soundness theorems -- is `<Domain>_Entry`
 in that domain's analysis session, because it depends on that domain and on
-`Voblint_Soundness` and on nothing else. `Voblint_CLI` is then only the
+the shared chain and on nothing else. `Voblint_CLI` is then only the
 dispatcher and the render surface: the soundness statements it does own are the
 corollaries over `analyse` itself, which cannot live above the theory that
 defines `analyse`.
@@ -168,14 +178,14 @@ malformed import and fails the whole session at load, so jEdit does not start
 and the mistake presents as a dead editor rather than as an error in the file
 that caused it. A subdirectory goes on the search path through `directories`
 instead --- `directories "generated"` plus a bare `Sign_Assembly`.
-`pixi run root-entries` checks that, that every `directories` entry exists, and
+`pixi run sessions-check` checks that, that every `directories` entry exists, and
 that every `.thy` on a session's search path is reached from something the
 session builds; it needs no Isabelle.
 
 The generated OCaml is compile-checked by actually compiling it: both
-`codegen-regression` and `cli-build` run `ocamlfind ocamlopt` over
-`codegen/generated/ml/Voblint_CLI.ml`, so a serializer defect fails those
-tasks locally and in CI.
+`codegen-regression` and `cli-build` run Dune builds over
+`codegen/generated/ml/Voblint_CLI.ml`, so a serializer defect fails those tasks
+locally and in CI.
 
 The procedural language includes calls, explicit returns, and runtime-only
 restore/unwind commands. CFGs separate local `intra` edges from the `calls`
@@ -188,11 +198,11 @@ semantics.
 
 ## VIMP grammar pipeline
 
-`grammar/vimp.yaml` is the sole source of truth for VIMP syntax. Two
+`manifests/vimp-grammar.yaml` is the sole source of truth for VIMP syntax. Two
 generators realize it for two unrelated parser targets:
 
 ```text
-grammar/vimp.yaml
+manifests/vimp-grammar.yaml
        |
        +-- scripts/gen_vimp_menhir.py   -> cli/vimp_parser.mly, cli/vimp_lexer.mll
        +-- scripts/gen_vimp_isabelle.py -> src/Program_Model/VIMP/VIMP_Grammar_Generated.thy
@@ -206,7 +216,7 @@ Each generator handles its own target-specific realization of the one
 canonical grammar: e.g. Isabelle numeral decoding, zero-argument call
 productions, and workarounds for `Num.num` having no `0`/`1` literal on the
 Isabelle side; `%left`/`%right` precedence declarations on the Menhir side.
-These realizations do not make `grammar/vimp.yaml` non-canonical, and none of
+These realizations do not make `manifests/vimp-grammar.yaml` non-canonical, and none of
 them may introduce grammar shape (new productions, new precedence) that the
 other generator does not also realize.
 
@@ -219,26 +229,26 @@ parsers instead comes from process, not proof: one canonical grammar,
 deterministic generation with a drift check, the `.vimp` regression corpus,
 AST round-trip and print-stability checks, and Hypothesis-based parser
 fuzzing under `tests/property/`. A `lefthook` pre-commit hook (`.lefthook.yaml`,
-installed by `./scripts/setup.sh` or `pixi run lefthook-install`) regenerates
+installed by `./scripts/setup.sh` or `pixi run hooks-install`) regenerates
 both grammar artifacts and blocks the commit if that leaves the working tree
 dirty, so the drift check runs locally, not only in CI.
 
 When changing VIMP syntax:
 
-1. Edit `grammar/vimp.yaml` only.
+1. Edit `manifests/vimp-grammar.yaml` only.
 2. Never hand-edit `cli/vimp_parser.mly`, `cli/vimp_lexer.mll`, or
    `src/Program_Model/VIMP/VIMP_Grammar_Generated.thy` -- all three are generated.
-3. Regenerate: `pixi run gen-grammar-menhir` (Menhir/ocamllex) and
-   `pixi run gen-grammar-isabelle` (Isabelle); load the regenerated
+3. Regenerate: `pixi run grammar-menhir-generate` (Menhir/ocamllex) and
+   `pixi run grammar-isabelle-generate` (Isabelle); load the regenerated
    `VIMP_Grammar_Generated.thy` through I/Q per the theory-file boundary
    rules below, not a host editor. (The pre-commit hook does this
    automatically; this step is for regenerating before that point.)
 4. Update or add fixtures in the `.vimp` regression corpus and, if the
    change affects generation strategies, `tests/property/strategies.py`.
-5. Run the property-test suite (`pixi run property`).
+5. Run the property-test suite (`pixi run property-test`).
 6. Run `pixi run grammar-check` (regenerates both frontends and fails on
    any diff) and `AFP=/path/to/afp/thys pixi run codegen-check`.
-7. Run the Isabelle batch build (`AFP=/path/to/afp/thys pixi run build`) if
+7. Run the Isabelle batch build (`AFP=/path/to/afp/thys pixi run isabelle-build`) if
    generated syntax changed.
 
 The entry procedure is an ordinary `proc_rep` entry, not a separate field:
@@ -326,7 +336,7 @@ this project does not have.
 Because everything lands in one module, adding a theory whose constants are
 reachable from an export root needs no export-side bookkeeping at all. What it
 still needs is a regeneration: `scripts/check_codegen_modules.py`
-(`pixi run codegen-modules`, and a pre-commit job) reads the checked-in export,
+(`pixi run codegen-modules-check`, and a pre-commit job) reads the checked-in export,
 so it needs no Isabelle, and it reports theories that changed since the export
 was last regenerated.
 
@@ -342,12 +352,12 @@ roots because the property AST driver names them, not because anything calls
 them on the analysis path. This used to be slack -- under the old per-theory
 split a symbol also went public whenever a sibling generated module called it,
 and handwritten OCaml rode along on that. One module means one force: the root
-list. `pixi run codegen-api` (`scripts/check_generated_api.py`, and a
+list. `pixi run codegen-api-check` (`scripts/check_generated_api.py`, and a
 pre-commit job) checks the consumers against the checked-in signature and names
 the missing root; compiling them is the exact check and still runs in
-`cli-build`, `codegen-regression` and `property-build`.
+`cli-build`, `codegen-regression` and `property-test`.
 
-Sessions and `pixi run build` do not catch a stale export: only
+Sessions and `pixi run isabelle-build` do not catch a stale export: only
 `Voblint_Codegen` runs it, and it is the last session built. A change that
 lands a new theory without regenerating `codegen/generated/` leaves the
 breakage for whoever next runs a full build.
@@ -492,10 +502,10 @@ So a deletion is not finished when the build is green:
 1. Search for consumers of every removed name *before* deleting, including
    inside `assumes` and theorem statements.
 2. Append the removed names to `scripts/retired_identifiers.txt`.
-   `pixi run retired-identifiers` then fails on any that come back. Remove a
+   `pixi run retired-identifiers-check` then fails on any that come back. Remove a
    name from that list -- explicitly, in the same commit -- if a later design
    deliberately reuses it.
-3. Run `pixi run locale-parameters`. It reports any identifier left free in a
+3. Run `pixi run locale-parameters-check`. It reports any identifier left free in a
    locale assumption anywhere in `src/`, which is the general form of the same
    defect and catches names that were never constants here at all.
 4. Run the full batch build over the leaf sessions, not just the session you
@@ -509,7 +519,7 @@ Whenever a change fixes a bug, changes semantics, or introduces a feature,
 add or update a regression test that locks in the new behavior -- an
 executable witness whose assertion pins the corrected/intended result, not
 the one it replaces. Use whichever regression layer the change actually
-touches: a `by eval` lemma in `Example_Analysis_Dispatch.thy` (or the nearest
+touches: a `by eval` lemma in `Example_Analysis_Dispatch_Regression.thy` (or the nearest
 sibling `Example_*.thy`) for solver/domain behavior, a `tests/regression/`
 `.vimp` fixture for CLI-observable behavior, or both when a fix is
 code-generated from Isabelle into `codegen/generated/` and therefore visible

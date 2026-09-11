@@ -7,4 +7,4 @@ between variables instantiates it unchanged.
 
 | File | Role | What |
 | --- | --- | --- |
-| `Example_Relational_DG_Demo.thy` | canonical spine + witness | `relc`, a relational (non-`abs_state`) order carrier (`Voblint_Analysis_Relational.Rel_Order_Domain`), run end to end through `dg_gen_of` and the vendored solver on `if (x < y) { z := 1 } else { z := 0 }` with `x`/`y` unconstrained at entry — the case where Interval learns nothing from the guard but `relc` records the `(x,y)` pair directly |
+| `Example_Relational_DG_Demo.thy` | canonical spine + witness | `relc`, a relational (non-`abs_state`) order carrier (`Voblint_Analysis_Relational.Rel_Order_Domain`), run end to end through `compiled_routed_eqs_for` at the unit route and the vendored solver on `if (x < y) { z := 1 } else { z := 0 }` with `x`/`y` unconstrained at entry — the case where Interval learns nothing from the guard but `relc` records the `(x,y)` pair directly |

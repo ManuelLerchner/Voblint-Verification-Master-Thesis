@@ -28,7 +28,7 @@ if [[ ! -f "$JAR" ]]; then
 fi
 
 # Session "TD" lives in the vendored td-verification submodule; jEdit must
-# see it to load Voblint_Soundness. Matches start-ir.sh.
+# see it to load Voblint_Result. Matches start-ir.sh.
 TD_COMPONENT_DIR="${TD_COMPONENT_DIR:-$REPO_ROOT/vendor/td-verification}"
 if [[ ! -f "$TD_COMPONENT_DIR/ROOT" ]]; then
   echo "ERROR: TD solver component not found at '$TD_COMPONENT_DIR' (expected ROOT)." >&2
@@ -51,7 +51,6 @@ echo "Once the splash clears, agent can call mcp__isabelle-iq__authenticate"
 echo "with token='$IQ_AUTH_TOKEN'."
 echo
 
-# iq session (Isar_Explore.thy) enables MCP `explore` query='proof'.
-IQ_COMPONENT_DIR="${IQ_COMPONENT_DIR:-$REPO_ROOT/vendor/autocorrode/iq}"
-
-exec "$ISABELLE" jedit -d "$TD_COMPONENT_DIR" -d "$IQ_COMPONENT_DIR" -d "$REPO_ROOT" "$@"
+# setup.sh registers the iq session in Isabelle's user component configuration;
+# that session provides Isar_Explore.thy for MCP `explore` queries.
+exec "$ISABELLE" jedit -d "$TD_COMPONENT_DIR" -d "$REPO_ROOT" "$@"

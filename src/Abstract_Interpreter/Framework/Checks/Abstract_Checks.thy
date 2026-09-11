@@ -52,8 +52,8 @@ text \<open>
   Adds the one capability every domain with an \<open>exp\<close> evaluator already has,
   on top of \<^locale>\<open>abstract_numeric_queries\<close>
   (\<^theory>\<open>Voblint_Domain.Abstract_Numeric_Queries\<close>): \<open>aval_abs_sound\<close>-shaped
-  soundness, the same reuse point \<^theory>\<open>Voblint_Domain.Abstract_Domain\<close>'s
-  \<open>backward_domain\<close> locale takes for its own \<open>aval_abs\<close> parameter. Extending
+  soundness, the same reuse point the \<open>backward_domain\<close> locale
+  (\<open>Voblint_Domain.Backward_Domain\<close>) takes for its own \<open>aval_abs\<close> parameter. Extending
   \<open>abstract_numeric_queries\<close> directly, rather than fixing four raw
   entailment/refutation predicates here, means there is exactly one relational
   query interface in this codebase -- \<open>less\<close>/\<open>eq\<close> -- and every check-discharge
@@ -73,21 +73,14 @@ locale abstract_expression_domain =
 section \<open>A domain-generic sound decision procedure for compiled checks\<close>
 
 text \<open>
-  Reusing the existing per-domain guard/branch machinery
-  (\<^theory>\<open>Voblint_Domain.Abstract_Domain\<close>'s \<open>backward_domain\<close> locale, its \<open>bfilter\<close>/
-  \<open>afilter\<close>, and the Sign instance \<open>bfilter_sign\<close>) was
-  investigated first: if \<open>bfilter c False \<sigma>\<close> represents no states, \<open>c\<close> is
-  soundly established on \<open>\<sigma>\<close>, whenever \<open>gamma bot = {}\<close> --- a sound sufficient
-  condition, not an iff, since no completeness result for \<open>bfilter\<close> is proved
-  here. This would give \<open>Not\<close>/\<open>And\<close>/\<open>Or\<close> for free from
-  \<open>bfilter\<close>'s own recursion. It is not usable as an executable decision
-  procedure in this codebase, though: an \<open>'a abs_state\<close> is a raw function
-  \<open>vname \<Rightarrow> 'a\<close> over the infinite type \<open>vname\<close>, so \<open>= bot\<close> at that level is not
-  code-generable; the finite executable mirror \<open>'a resolved_st_q\<close>
-  (\<open>Voblint_Exec.Exec_St_Base\<close>) is a \<open>quotient_type\<close> whose \<open>\<le>\<close>/\<open>=\<close> instance is a
-  \<open>lift_definition\<close> quantifying over \<open>location\<close>, with no \<open>[code]\<close> equation ---
-  confirmed empirically: \<open>value \"cinit_sign_st = bot\"\<close> does not reduce, echoing
-  the unevaluated term instead of \<open>True\<close>/\<open>False\<close>.
+  The per-domain guard machinery (the \<open>backward_domain\<close> locale's
+  \<open>bfilter\<close>/\<open>afilter\<close>) would also decide a check: if \<open>bfilter c False \<sigma>\<close>
+  represents no states, \<open>c\<close> is soundly established on \<open>\<sigma>\<close>, whenever
+  \<open>gamma bot = {}\<close> --- a sound sufficient condition, not an iff, since no
+  completeness result for \<open>bfilter\<close> is proved here. It is not usable as an
+  executable decision procedure over \<open>'a abs_state\<close>, though: that is a raw
+  function \<open>vname \<Rightarrow> 'a\<close> over the infinite type \<open>vname\<close>, so its emptiness test
+  is not code-generable.
 
   This layer decides entailment directly off \<open>aval_abs\<close> results via \<open>less\<close>/
   \<open>eq\<close>. The judgments are sound but intentionally incomplete: two atomic

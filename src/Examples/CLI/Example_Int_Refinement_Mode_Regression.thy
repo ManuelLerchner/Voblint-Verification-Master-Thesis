@@ -5,7 +5,6 @@ theory Example_Int_Refinement_Mode_Regression
     "Voblint_Analysis_Int.Int_Exec"
     "Voblint_Analysis_Int.Int_Exec_Sound"
     "Voblint_VIMP.VIMP_Notation"
-    "Voblint_Soundness.Run_Analysis_Sound"
     "Voblint_Examples_Int.Exec_Int_DG_Run"
     "Voblint_CLI.Analyse_Dispatch"
 begin

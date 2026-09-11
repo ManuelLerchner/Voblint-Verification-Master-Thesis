@@ -150,63 +150,6 @@ lemma gamma_int_dom_update_congruence [simp]:
    gamma_congruence c"
   by (simp add: gamma_int_dom_def)
 
-lemma update_sign_exact:
-  assumes
-    "gamma_sign s \<inter>
-     gamma_ivl (int_ivl d) \<inter>
-     gamma_parity (int_parity d) \<inter>
-     gamma_congruence (int_congruence d) = gamma_int_dom d"
-  shows "gamma_int_dom (d\<lparr>int_sign := s\<rparr>) = gamma_int_dom d"
-  using assms by simp
-
-lemma update_ivl_exact:
-  assumes
-    "gamma_sign (int_sign d) \<inter>
-     gamma_ivl i \<inter>
-     gamma_parity (int_parity d) \<inter>
-     gamma_congruence (int_congruence d) = gamma_int_dom d"
-  shows "gamma_int_dom (d\<lparr>int_ivl := i\<rparr>) = gamma_int_dom d"
-  using assms by simp
-
-lemma update_parity_exact:
-  assumes
-    "gamma_sign (int_sign d) \<inter>
-     gamma_ivl (int_ivl d) \<inter>
-     gamma_parity p \<inter>
-     gamma_congruence (int_congruence d) = gamma_int_dom d"
-  shows "gamma_int_dom (d\<lparr>int_parity := p\<rparr>) = gamma_int_dom d"
-  using assms by simp
-
-lemma update_congruence_exact:
-  assumes
-    "gamma_sign (int_sign d) \<inter>
-     gamma_ivl (int_ivl d) \<inter>
-     gamma_parity (int_parity d) \<inter>
-     gamma_congruence c = gamma_int_dom d"
-  shows "gamma_int_dom (d\<lparr>int_congruence := c\<rparr>) = gamma_int_dom d"
-  using assms by simp
-
-lemma update_sign_le:
-  "s <= int_sign d \<Longrightarrow>
-   d\<lparr>int_sign := s\<rparr> <= d"
-  by (simp add: less_eq_int_dom_ext_def)
-
-lemma update_ivl_le:
-  "i <= int_ivl d \<Longrightarrow>
-   d\<lparr>int_ivl := i\<rparr> <= d"
-  by (simp add: less_eq_int_dom_ext_def)
-
-lemma update_parity_le:
-  "p <= int_parity d \<Longrightarrow>
-   d\<lparr>int_parity := p\<rparr> <= d"
-  by (simp add: less_eq_int_dom_ext_def)
-
-lemma update_congruence_le:
-  "c <= int_congruence d \<Longrightarrow>
-   d\<lparr>int_congruence := c\<rparr> <= d"
-  by (simp add: less_eq_int_dom_ext_def)
-
-
 fun interval_fact_of_sign :: "sign \<Rightarrow> ivl" where
   "interval_fact_of_sign SBot = \<bottom>"
 | "interval_fact_of_sign SNeg = Ivl MinInf (Fin (-1))"
@@ -674,7 +617,7 @@ lemma gamma_restrict_congruence_by_parity [simp]:
 proof -
   have normalized:
     "normalized_congruence_rep (Rep_congruence c)"
-    using Rep_congruence[of c] by simp
+    by simp
   have raw:
     "gamma_congruence_rep
        (restrict_congruence_rep_by_parity p (Rep_congruence c)) =
@@ -697,7 +640,7 @@ lemma ivl_congruence_nonempty_correct:
 proof -
   have normalized:
     "normalized_congruence_rep (Rep_congruence c)"
-    using Rep_congruence[of c] by simp
+    by simp
   show ?thesis
     unfolding ivl_congruence_nonempty_def gamma_congruence_def
     by (rule ivl_congruence_rep_nonempty_correct[OF normalized])
@@ -784,7 +727,7 @@ proof -
     "gamma_congruence (int_congruence a) \<subseteq>
      gamma_congruence (int_congruence b)"
     using le(4)
-    unfolding less_eq_congruence_def congruence_le_iff_gamma .
+    unfolding less_eq_congruence_iff_gamma .
   show ?thesis
     unfolding gamma_int_dom_def using S I P C by auto
 qed

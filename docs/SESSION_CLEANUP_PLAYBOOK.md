@@ -14,8 +14,8 @@ this before auditing the next session (Core, then Analysis, ...).
 2. **Act on the ranked verdict**, VIMP-internal edits first, downstream
    ripple second. Every theory edit goes through I/Q; host tools only for
    closed, non-theory files and for generating exact hunks.
-3. **Gate.** `AFP=$HOME/afp/thys pixi run build`, then `pixi run codegen`,
-   `pixi run cli-test`, `pixi run property`. Commit only after all four.
+3. **Gate.** `AFP=$HOME/afp/thys pixi run isabelle-build`, then `pixi run codegen`,
+   `pixi run cli-test`, `pixi run property-test`. Commit only after all four.
 
 Scripts that helped (recreate under the scratchpad as needed):
 
@@ -227,7 +227,7 @@ import `VIMP_Program`.
 - **There is a second OCaml harness.** `cli-build`/`cli-test` compile `cli/`,
   but `codegen-regression` compiles `codegen/regression/ocaml/main.ml`.
   Deleting an Isabelle constant that only that harness used stayed green
-  through the Isabelle build, `cli-test` and `property`, and failed only in
+through the Isabelle build, `cli-test` and `property-test`, and failed only in
   `codegen-regression` -- one commit later.
 - **`fastforce` on an existential goal with arithmetic side conditions can
   fail to terminate.** Build the witness explicitly (`have "P a \<and> ..."`
@@ -321,8 +321,9 @@ Every `inductive` predicate carries tagged inversion rules, and every lemma
 named `...I` / `...E` / `...D` carries its attribute apart from the two
 multi-conclusion `D` bundles cited by index.
 
-The sessions after them do not, and this is the measured scope of their
-passes:
+The sessions after them did not when measured, before their passes; the table
+records that starting scope, not the current tree (no theory in `src/` now
+exceeds 1500 lines):
 
 | | Core | Analysis | CLI | Examples |
 | --- | --- | --- | --- | --- |
@@ -337,10 +338,9 @@ passes:
 | lines over 100 symbols | 381 | 458 | 470 | 486 |
 | theories with no orientation block | 3 | 6 | 2 | 6 |
 
-The largest theories are `Example_Interval_Placement` (2901),
+The largest theories then were `Example_Interval_Placement` (2901),
 `DG_Constraint_Trees` (2472), `DG_Soundness` (2317), `Exec_St` (2231) and
-`Abstract_Domain` (2110). Splitting those is the structural half of the Core
-pass; retiring `metis` and the apply scripts is the proof half.
+`Abstract_Domain` (2110); all have since been split or deleted.
 
 ## CFG and Compile status after the pass
 

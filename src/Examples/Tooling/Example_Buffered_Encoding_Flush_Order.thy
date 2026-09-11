@@ -1,6 +1,6 @@
 theory Example_Buffered_Encoding_Flush_Order
   imports
-    "Voblint_Framework.Routed_Unit_Generator"
+    "Voblint_Routing.Compiled_Routed_Equations"
     "Voblint_Framework.DG_Reader_Transport"
     "Voblint_Exec.Ownership_Split_Exec"
     "Voblint_Analysis_Interval.Interval_Exec"
@@ -40,13 +40,23 @@ definition fo_spec ::
   "(pp \<times> unit, (unit, unit) routed_gk, unit, ivl exec_dg_st, ivl exec_dg_st) dg_spec" where
   "fo_spec = ownership_split_dg_spec_st_for fo_gs (ivl_tf_st_for fo_gs) (ivl_enter_st_for fo_gs)"
 
+text \<open>The direct encoding is spelled as the unbuffered routed generator itself, at
+  the unit context; the buffered one is the constructor every analysis solves.\<close>
+
 definition fo_direct ::
   "pp \<times> unit \<Rightarrow> (pp \<times> unit, (unit, unit) routed_gk, (ivl exec_dg_st, ivl exec_dg_st) dg_state) strategy_tree" where
-  "fo_direct = unit_routed_eqs fo_spec fo_cfg bot cinit_ivl_st (restrict_global_resolved_q cinit_ivl_st)"
+  "fo_direct =
+     routed_node_rhs intra_predecessor_addr_list (\<lambda>_. Analysis_Global ()) route_unit
+       (\<lambda>c src a. dg_spec_edge_tree fo_spec a src (\<lambda>_. Analysis_Global ()))
+       (routed_call_tree fo_spec (Analysis_Global ()) Activation_Seed (static_resolve fo_cfg)
+          (\<lambda>d. d = bot))
+       (routed_entry_seed_tree Activation_Seed)
+       fo_cfg bot cinit_ivl_st (restrict_global_resolved_q cinit_ivl_st)"
 
 definition fo_buffered ::
   "pp \<times> unit \<Rightarrow> (pp \<times> unit, (unit, unit) routed_gk, (ivl exec_dg_st, ivl exec_dg_st) dg_state) strategy_tree" where
-  "fo_buffered = unit_routed_eqs_buffered fo_spec fo_cfg bot cinit_ivl_st (restrict_global_resolved_q cinit_ivl_st)"
+  "fo_buffered = compiled_routed_eqs_for (Analysis_Global ()) Activation_Seed route_unit fo_spec
+     fo_cfg cinit_ivl_st (restrict_global_resolved_q cinit_ivl_st)"
 
 abbreviation fo_sol where
   "fo_sol E \<equiv> snd (TD_side_seed_join_warrowing_Interp_solve is_activation_seed E (cfg_exit fo_cfg, ()))"

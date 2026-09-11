@@ -14,5 +14,5 @@ VOBLINT = CLI_DIR / "voblint"
 
 @pytest.fixture(scope="session", autouse=True)
 def built_binaries():
-    subprocess.run(["bash", str(MK_DIR / "cli-build.sh")], check=True, capture_output=True)
-    subprocess.run(["bash", str(MK_DIR / "property-build.sh")], check=True, capture_output=True)
+    subprocess.run(["bash", str(MK_DIR / "cli-build.sh")], check=True)
+    subprocess.run(["bash", str(MK_DIR / "property-build.sh")], check=True)

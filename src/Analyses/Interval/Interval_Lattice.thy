@@ -97,9 +97,6 @@ text \<open>
 definition is_top_ivl :: "ivl \<Rightarrow> bool" where
   "is_top_ivl i = (i = ivl_top)"
 
-lemma is_top_ivl_correct: "is_top_ivl i \<longleftrightarrow> i = top"
-  unfolding is_top_ivl_def top_ivl_def ..
-
 lemma is_top_ivl_correct_gamma: "is_top_ivl i \<longleftrightarrow> gamma_ivl i = UNIV"
   by (cases i; case_tac x1; case_tac x2)
      (auto simp add: is_top_ivl_def ivl_top_def set_eq_iff; presburger)+
@@ -221,11 +218,6 @@ declare inf_ivl_def [simp]
 lemma meet_ivl_gamma:
   "n \<in> gamma_ivl a \<Longrightarrow> n \<in> gamma_ivl b \<Longrightarrow> n \<in> gamma_ivl (a \<sqinter> b)"
   by (cases a; cases b; auto split: if_splits intro: eint_le_trans)
-
-lemma meet_ivl_mono1:
-  "(a1 :: ivl) \<le> a2 \<Longrightarrow> a1 \<sqinter> b \<le> a2 \<sqinter> b"
-  by (cases a1; cases a2; cases b; auto simp: less_eq_ivl_def split: if_splits
-        intro: eint_le_trans elim: eint_le.elims)
 
 lemma meet_ivl_le_lb1: "(a :: ivl) \<sqinter> b \<le> a"
 proof (cases a; cases b)
@@ -368,10 +360,6 @@ text \<open>
   recognised as empty.
 \<close>
 
-lemma is_bottom_ivl_iff_not_nonempty:
-  "is_bottom_ivl v \<longleftrightarrow> \<not> ivl_nonempty v"
-  by (cases v) (auto simp: is_bottom_ivl_def)
-
 lemma is_bottom_ivl_bot [simp]: "is_bottom_ivl bot"
   by (simp add: is_bottom_ivl_def bot_ivl_def)
 
@@ -418,9 +406,6 @@ lemma normalize_ivl_mk_ivl [simp]: "normalize_ivl (mk_ivl l u) = mk_ivl l u"
 lemma mk_ivl_mono:
   "Ivl l1 u1 \<le> Ivl l2 u2 \<Longrightarrow> mk_ivl l1 u1 \<le> mk_ivl l2 u2"
   by (simp add: normalize_ivl_mono)
-
-lemma mk_ivl_le: "mk_ivl l u \<le> Ivl l u"
-  by (simp add: normalize_ivl_le)
 
 text \<open>
   \<^const>\<open>inf\<close> is the one operation that is deliberately left un-normalised: it
@@ -504,10 +489,6 @@ qed
 
 lemma normalize_ivl_intersect_ivl [simp]:
   "normalize_ivl (intersect_ivl a b) = intersect_ivl a b"
-  by simp
-
-lemma is_bottom_ivl_intersect_ivl:
-  "is_bottom_ivl (intersect_ivl a b) \<longleftrightarrow> is_bottom_ivl (meet_ivl a b)"
   by simp
 
 lemma ivl_le_top: "(x::ivl) \<le> ivl_top"

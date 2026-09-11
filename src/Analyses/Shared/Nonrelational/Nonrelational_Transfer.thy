@@ -125,11 +125,6 @@ definition enter_ci_for ::
     "(vname \<Rightarrow> bool) \<Rightarrow> call_info \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state" where
   "enter_ci_for gs ci = enter_for gs (ci_formals ci) (ci_args ci)"
 
-lemma enter_frame_for_sound:
-  assumes gs: "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
-  shows "enter_state cls s \<in> \<lbrakk>enter_frame_for cls \<sigma>\<rbrakk>"
-  unfolding enter_frame_for_def by (rule enter_frame_sound[OF gs top_gamma])
-
 lemma enter_for_sound:
   assumes gs: "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
   shows "bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state cls s)
@@ -148,22 +143,11 @@ lemma enter_ci_for_sound:
   using enter_for_sound[OF gs, of \<open>ci_formals ci\<close> \<open>ci_args ci\<close>]
   by (simp add: enter_ci_for_def)
 
-lemma enter_frame_for_mono:
-  assumes "\<sigma>1 \<le> \<sigma>2"
-  shows "enter_frame_for gs \<sigma>1 \<le> enter_frame_for gs \<sigma>2"
-  unfolding enter_frame_for_def by (rule enter_frame_mono[OF assms])
-
 lemma enter_for_mono:
   assumes "\<sigma>1 \<le> \<sigma>2"
   shows "enter_for gs xs es \<sigma>1 \<le> enter_for gs xs es \<sigma>2"
   unfolding enter_for_def
   by (rule enter_binding_mono[OF assms]) (rule ev_mono[OF assms])
-
-lemma enter_ci_for_mono:
-  assumes "\<sigma>1 \<le> \<sigma>2"
-  shows "enter_ci_for gs ci \<sigma>1 \<le> enter_ci_for gs ci \<sigma>2"
-  using enter_for_mono[OF assms, of gs \<open>ci_formals ci\<close> \<open>ci_args ci\<close>]
-  by (simp add: enter_ci_for_def)
 
 subsection \<open>The transfer contract, and the per-edge dispatcher\<close>
 
@@ -202,11 +186,6 @@ text \<open>The bundle an executable mirror unfolds against. \<^const>\<open>tf_
 lemmas op_defs =
   assign_def skip_def body_def event_def ret_def
   enter_frame_for_def enter_for_def enter_ci_for_def
-
-lemma tf_abs_mono: "\<sigma>1 \<le> \<sigma>2 \<Longrightarrow> tf_abs a \<sigma>1 \<le> tf_abs a \<sigma>2"
-  by (cases a)
-     (auto simp: tf_abs_def assign_mono special_transfer_mono br_mono
-                 skip_mono body_mono ret_mono event_mono)
 
 subsection \<open>Agreement with the executable mirror\<close>
 

@@ -1,7 +1,7 @@
 // PARAM: --analysis interval --context entry-state --context-graph expanded
 // Two live (not dead) entry-state contexts disagree on the same source
 // check: f/[1] proves n==1, f/[2] refutes it. Neither activation is
-// unreachable, so aggregate_verdicts (Abstract_Checks.thy) combines two
+// unreachable, so aggregate_verdicts (Contextual_Check_Report.thy) combines two
 // Decided verdicts via check_result's own semilattice_sup, and
 // Check_Proved != Check_Refuted forces sup_check_result to its Check_Unknown
 // case -- distinct from the Dead-suppression path 06-reachability/precision/

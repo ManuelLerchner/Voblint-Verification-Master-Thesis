@@ -15,14 +15,14 @@ the floor under it.
 | Session | Directory | Holds |
 | --- | --- | --- |
 | `Voblint_Routing` | `Routing/` | compiled routed-equation construction, concrete routing policies (call-string, entry-state), and key-space finiteness arguments |
-| `Voblint_Result` | `Result/` | what a solved routed system publishes (`DG_Result_Construction`) and the surface a caller reads it through (`Analysis_Surface`); `Routed_DG_Analysis` assembles one whole analysis --- at any context policy --- from a domain's choices, and `Unit_DG_Analysis` does the same for the context-insensitive case |
+| `Voblint_Result` | `Result/` | the domain-free bridge from a source run to a collecting-semantics bound (`Source_Activation_Sound`); what a solved routed system publishes (`DG_Result_Construction`) and the surface a caller reads it through (`Analysis_Surface`); `Routed_DG_Analysis` assembles one whole analysis --- at any context policy --- from a domain's choices, and `Unit_DG_Analysis` does the same for the context-insensitive case, the only context-insensitive pipeline there is |
 | `Voblint_Nonrelational` | `Nonrelational/` | what a non-relational domain reuses: expression evaluation and soundness, special-call dispatch, generic procedure entry, executable backward filtering |
 
 ## Vocabulary
 
 | Term | Meaning |
 | --- | --- |
-| reuse locale | a locale a domain *interprets* to obtain a family of derived operations, rather than redefining them. `Abstract_Arithmetic`, `Special_Ops`, `Numeric_Ops`, `Exec_Backward` are these. |
+| reuse locale | a locale a domain *interprets* to obtain a family of derived operations, rather than redefining them. `expression_domain_sound` (`Abstract_Arithmetic`), `sound_special_ops` (`Special_Ops`) and `nonrelational_transfer` (`Nonrelational_Transfer`) are these; `Exec_Backward` extends `backward_domain` the same way. `Numeric_Ops` is the `numeric_ops` bundle they read. |
 | non-relational | a domain whose state is one abstract value per variable, independently --- a store of type `vname => 'a` |
 | routing policy | how a call site maps to a context: none, the entered abstract value, or a bounded call string |
 | context space | the candidate contexts a routing policy may choose. Its finiteness is separate from the solver's finite stabilized key set. |
@@ -55,24 +55,28 @@ sentences is from here.
 ## Why three sessions and not one
 
 The groups own distinct responsibilities: routing over compiled programs,
-publication of solved results, and pointwise non-relational reuse. They have no
-theory-import edges between them. Keeping those names explicit prevents shared
+publication of solved results, and pointwise non-relational reuse. One import edge
+crosses them: `Routed_DG_Analysis` imports `Compiled_Routed_Equations` and
+`Entry_State_Routed_Context` from `Routing/`. `Nonrelational/` imports nothing from
+either. Keeping those names explicit prevents shared
 code from becoming an undifferentiated analysis base; CLI-only dispatch and
 graph export stay beside their consumers in `Voblint_CLI`.
 
-## Why they are chained, even though they are independent
+## Why they are chained
 
-`Voblint_Routing <- Voblint_Result <- Voblint_Nonrelational` is an invented
-order. Isabelle gives a session one parent and one inherited heap: theories from
-an ancestor come from that heap, theories from a merely *listed* session are
-re-elaborated in the importer. Three independent siblings that each domain lists
-would re-elaborate two of the three in all five pointwise domain sessions ---
+`Voblint_Routing` is parented on `Voblint_Exec`, and
+`Voblint_Routing <- Voblint_Result <- Voblint_Nonrelational` is only half a
+dependency: `Result` needs `Routing`, but `Nonrelational` needs neither. Isabelle
+gives a session one parent and one inherited heap: theories from an ancestor come
+from that heap, theories from a merely *listed* session are re-elaborated in the
+importer. Siblings that each domain lists would re-elaborate two of the three in
+all five pointwise domain sessions ---
 `Exec_Backward` alone is around 680 lines, five times over. Linearising is the
 price of elaborating once.
 
-Read the chain as increasing commitment rather than as a dependency: program
-shape (`Routing`), then publication (`Result`), then store shape
-(`Nonrelational`). It does not claim `Result` needs `Routing`.
+Read the chain as increasing commitment: program shape (`Routing`), then
+publication (`Result`), then store shape (`Nonrelational`). It does not claim
+`Nonrelational` needs `Result`.
 
 ## Why `Nonrelational` is last, and what that buys
 
@@ -80,8 +84,9 @@ shape (`Routing`), then publication (`Result`), then store shape
 *below* this whole chain. That is deliberate and it is the load-bearing part of
 the layout.
 
-All four theories in `Nonrelational/` fix a pointwise store --- `ev :: exp =>
-(vname => 'a) => 'a` in the first two, `n_aval` in `Numeric_Ops`, an explicit
+All five theories in `Nonrelational/` fix a pointwise store --- `ev :: exp =>
+(vname => 'a) => 'a` in `Abstract_Arithmetic` and `Special_Ops`, `n_aval` in
+`Numeric_Ops`, `'a abs_state` throughout `Nonrelational_Transfer`, an explicit
 `gs :: vname => bool` classifier throughout `Exec_Backward`. `Rel_Order_Domain`
 exists to show that nothing below the domain layer assumes that structure, and
 it makes the claim by running an order carrier that is not an `abs_state`
@@ -124,7 +129,7 @@ value becomes a sign or an interval.
 ## Reading order
 
 `Routing/Compiled_Routed_Equations` first for the executable construction,
-then `Call_String_Routed_Context` for the policy the flagships use;
+then `Call_String_Routed_Context`, the policy whose route never reads the state;
 `Entry_State_Routed_Context` reads as a variation on it. Then
 `Result/DG_Result_Construction` for what a solve turns into,
 `Result/Analysis_Surface` for how a caller reads that back, and

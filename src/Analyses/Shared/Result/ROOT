@@ -7,7 +7,9 @@ session Voblint_Result in "." = "Voblint_Routing" +
     "Voblint_Framework"
     "Voblint_Exec"
   theories
+    Source_Activation_Sound
     DG_Result_Construction
     Analysis_Surface
     Routed_DG_Analysis
+    Routed_Live_Keys
     Unit_DG_Analysis

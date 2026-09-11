@@ -2,7 +2,7 @@
 
 Status: Steps 1–6 landed and batch-verified. Issue #45 is closed. This
 document records the completed investigation and its restart point for any
-follow-up work — see `docs/CALLSTRING_PRECISION_INVESTIGATION.md` section
+follow-up work — see `docs/history/CALLSTRING_PRECISION_INVESTIGATION.md` section
 9.6 for the full investigation history.
 
 **Primary source, confirmed against the PDF directly (not secondhand):**

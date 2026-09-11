@@ -5,11 +5,15 @@ session Voblint_Examples_CLI in "." = "Voblint_CLI" +
      domain because Voblint_CLI does, which is why they are not in the per-domain
      example sessions"
   sessions
-    "Voblint_Soundness"
     "Voblint_Examples_CFG"
     "Voblint_Examples_Interval"
     "Voblint_Examples_Int"
   theories
+    (* Hand-written regressions for the generated configuration tables and
+       their production dispatchers. *)
+    Config_Matrix
+    Dispatch_Matrix
+
     (* The AnalysisConfig dispatcher and the published result table *)
     Example_Analysis_Dispatch_Regression
     Example_Analysis_Result_Regression
@@ -20,10 +24,5 @@ session Voblint_Examples_CLI in "." = "Voblint_CLI" +
     Example_Checks_Store_Only
     Example_Interval_Checks_Store_Only
     Example_Parity_Checks_Store_Only
-    Example_Side_Execute
-    Exec_Interval_Run
     Example_Int_Refinement_Mode_Regression
     Example_EntryState_Graph_Regression
-
-    (* Every premise of the configuration-generic endpoint, discharged *)
-    Example_End_To_End_Certificate

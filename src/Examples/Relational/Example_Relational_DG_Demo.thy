@@ -1,6 +1,6 @@
 theory Example_Relational_DG_Demo
   imports
-    "Voblint_Framework.Routed_Unit_Generator"
+    "Voblint_Routing.Compiled_Routed_Equations"
     "Voblint_Framework.DG_Reader_Transport"
     "Voblint_Exec.Ownership_Split_Exec"
     "Voblint_Analysis_Relational.Rel_Order_Domain"
@@ -21,7 +21,7 @@ text \<open>
   \<^locale>\<open>sound_dg_spec_core\<close> over \<open>relc\<close>, a non-\<open>abs_state\<close> relational carrier,
   with zero DG-framework changes -- the mathematical half of the claim.
   This file is the executable half: the same CFG, the same generic
-  \<open>unit_routed_eqs\<close> generator, and the same vendored solver that runs Interval
+  \<open>compiled_routed_eqs_for\<close> generator, and the same vendored solver that runs Interval
   also run \<open>relc\<close>, end to end, with a genuinely different observable result.
 
   \<^bold>\<open>Program.\<close> \<open>if (x < y) { z := 1 } else { z := 0 }\<close>, with \<open>x\<close>/\<open>y\<close> left
@@ -81,8 +81,9 @@ subsection \<open>Interval, on the same CFG, same generator, same solver menu\<c
 definition demo_ivl_eqs ::
   "pp \<times> unit \<Rightarrow> (pp \<times> unit, (unit, unit) routed_gk, (ivl exec_dg_st, ivl exec_dg_st) dg_state) strategy_tree" where
   "demo_ivl_eqs =
-     unit_routed_eqs (ownership_split_dg_spec_st_for demo_gs (ivl_tf_st_for demo_gs) (ivl_enter_st_for demo_gs)) demo_cfg
-       bot top_ivl_st (restrict_global_resolved_q top_ivl_st)"
+     compiled_routed_eqs_for (Analysis_Global ()) Activation_Seed route_unit
+       (ownership_split_dg_spec_st_for demo_gs (ivl_tf_st_for demo_gs) (ivl_enter_st_for demo_gs))
+       demo_cfg top_ivl_st (restrict_global_resolved_q top_ivl_st)"
 
 definition demo_ivl_sol ::
   "(pp \<times> unit) set \<times> (pp \<times> unit + (unit, unit) routed_gk \<Rightarrow> (ivl exec_dg_st, ivl exec_dg_st) dg_state)" where
@@ -96,12 +97,13 @@ subsection \<open>The relational analysis, on the very same CFG, generator, and 
 
 text \<open>\<open>rel_order_spec\<close> is already both the sound \<^emph>\<open>and\<close> the executable
   specification -- \<open>relc\<close> needed no \<open>Exec_St_Transfer\<close>-style refinement layer,
-  so \<open>unit_routed_eqs\<close> is applied to it directly, with no bridging step and no
+  so \<open>compiled_routed_eqs_for\<close> is applied to it directly, with no bridging step and no
   parallel generator.\<close>
 
 definition demo_rel_eqs ::
   "pp \<times> unit \<Rightarrow> (pp \<times> unit, (unit, unit) routed_gk, (relc, relc) dg_state) strategy_tree" where
-  "demo_rel_eqs = unit_routed_eqs rel_order_spec demo_cfg bot top_relc top_relc"
+  "demo_rel_eqs = compiled_routed_eqs_for (Analysis_Global ()) Activation_Seed route_unit
+     rel_order_spec demo_cfg top_relc top_relc"
 
 definition demo_rel_sol ::
   "(pp \<times> unit) set \<times> (pp \<times> unit + (unit, unit) routed_gk \<Rightarrow> (relc, relc) dg_state)" where

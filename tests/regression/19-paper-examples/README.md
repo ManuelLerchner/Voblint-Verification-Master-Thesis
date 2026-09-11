@@ -61,9 +61,7 @@ the paper's own three contributions in the paper's order. The result is the
 paper's -- `[-inf,+inf]` under whole-value warrowing, `[-17,42]` per origin.
 
 The flow-insensitive placement itself is formalized, just not selectable from
-VIMP source or a CLI flag, so it has no fixture here.
-`ownership_split_dg_spec_placed` (`src/Abstract_Interpreter/Framework/Solver/Context/DG/DG_Constraint_Trees.thy`) takes a per-variable
-`keep_local`/`publish_side` placement, and `Example_Interval_Placement.thy`
-evaluates a program with one global on each side: the published one reads
-`[0,+inf]`, which is Example 3's answer for `h`, for Example 3's reason. See
-`docs/PER_ORIGIN_WIDENING.md`.
+VIMP source or a CLI flag, so it has no fixture here. The ownership split
+(`ownership_split_dg_spec_st_for`, `Ownership_Split_Exec.thy`) keeps declared
+globals in a flow-insensitive side slot, and `Example_Interval_DG_Flagship.thy`
+registers through it. See `docs/PER_ORIGIN_WIDENING.md`.

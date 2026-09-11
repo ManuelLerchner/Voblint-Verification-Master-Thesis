@@ -1,0 +1,22 @@
+opam-version: "2.0"
+synopsis: "Verified Goblint-style static analysis pipeline in Isabelle/HOL"
+description: """
+Voblint formalizes and extracts a procedure-aware abstract interpreter for
+VIMP. This package manifest declares the OCaml dependencies needed to build
+the extracted command-line interface and its executable tests.
+"""
+maintainer: "Manuel Lerchner"
+authors: ["Manuel Lerchner"]
+license: "BSD-3-Clause"
+homepage: "https://github.com/ManuelLerchner/Voblint-Verification-Master-Thesis"
+bug-reports: "https://github.com/ManuelLerchner/Voblint-Verification-Master-Thesis/issues"
+dev-repo: "git+https://github.com/ManuelLerchner/Voblint-Verification-Master-Thesis.git"
+depends: [
+  "ocaml" {>= "5.0"}
+  "dune" {>= "3.0" & build}
+  "menhir" {build}
+  "zarith"
+]
+build: [
+  ["dune" "build" "-j" jobs]
+]

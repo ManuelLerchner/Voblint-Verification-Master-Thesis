@@ -14,8 +14,7 @@ text \<open>
   global half and project each back out. The association-list carrier answers
   with \<^const>\<open>combine_resolved_st_q\<close> and the two \<open>restrict_\<dots>_resolved_q\<close>
   projections, so the executable analysis is that transfer at those three
-  arguments -- not a second definition of what the analysis does. The lemmas
-  just above are why the readback carries it to the function-valued instance.
+  arguments -- not a second definition of what the analysis does.
 \<close>
 
 definition ownership_split_transfer_st ::

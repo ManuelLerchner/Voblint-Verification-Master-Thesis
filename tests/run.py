@@ -55,9 +55,9 @@ and its own expected verdict inline next to each check:
                                    (unreachable)", but asserts more than
                                    Goblint's silence does: voblint carries
                                    an exact, proved per-check unreachable
-                                   flag (resolved_st_q_lifted_is_bot_for,
-                                   Exec_St.thy; contextual_verdict's Dead
-                                   under --context) and names it in the
+                                   flag (resolved_st_q_is_bot_for,
+                                   Exec_St_Reachability.thy;
+                                   contextual_verdict's Bot under --context) and names it in the
                                    report, so a NOWARN that fails because
                                    the compiler dropped the check entirely
                                    is distinguishable from one the analysis
@@ -69,18 +69,16 @@ error (see 00-sanity/02-malformed.vimp) or a well-formedness error (e.g. a
 wrong-arity special call, rejected before compilation reaches the analyzer)
 -- and is checked for one of those structured error messages instead of a
 report. A case whose solver genuinely does not terminate on its fixpoint
-dependency structure is the same shape, with --timeout bounding the wait;
-no live fixture currently exercises that path for Interval's non-default
-solver choices (Solver_Join's own known non-terminator, a self-referential
-global write with no source-level loop, was fixed by the Base-style
-migration -- see 15-solver-choice/precision/05-global_self_feedback_join_terminates.vimp).
+dependency structure is the same shape, with --timeout bounding the wait
+(21-context-sensitivity/01-unbounded_context_chain_diverges.vimp: entry-state
+keying creates a fresh context per recursion level).
 
 A case may also carry a canonical CFG snapshot, checked independently of its
 verdicts:
 
   // EXPECT-GRAPH-BEGIN / -END   delimits a `voblint --graph-snapshot`
                                   capture, one output line per "// "-prefixed
-                                  source line (see Analysis_GraphViz.thy's
+                                  source line (see Analysis_Graph_Export.thy's
                                   contextual_analysis_canonical_text -- a
                                   DOT-independent, cluster/node/edge textual
                                   rendering of the same solved CFG a --dot
@@ -136,7 +134,7 @@ Expected results are keyed by real source LINE NUMBER, the same way
 Goblint's own harness parses its analyzer's line-tagged warnings and
 matches them against the source -- not by check order within the file.
 voblint's own report lines carry the check's source "line:col" (see
-vimp_parser.ml's check_positions tracking, main.ml's render_text_report),
+vimp_frontend.ml's check_positions tracking and render_text_report),
 so this runner reads that back rather than re-deriving position from the
 report's row order. Robust to inserting/removing an unrelated check
 earlier in the file, unlike order-based matching.
@@ -198,11 +196,8 @@ TESTS_DIR = Path(__file__).resolve().parent
 REPO_ROOT = TESTS_DIR.parent
 CLI_DIR = REPO_ROOT / "cli"
 REGRESSION_DIR = TESTS_DIR / "regression"
-# VOBLINT_BIN lets an alternate binary (e.g. the generated-Menhir prototype's
-# voblint2, tests/menhir_prototype/voblint2) run against this corpus and its
-# verdict-matching logic without duplicating it -- see
-# tests/menhir_prototype/ for why: it has no --dot/--parse-only support, so
-# main()'s cli-build step is skipped when this is set.
+# VOBLINT_BIN runs an alternate binary against this corpus and its
+# verdict-matching logic; main()'s cli-build step is skipped when it is set.
 VOBLINT = Path(os.environ["VOBLINT_BIN"]) if "VOBLINT_BIN" in os.environ else CLI_DIR / "voblint"
 
 REACHABLE = "reachable"
@@ -669,7 +664,6 @@ def main() -> int:
         subprocess.run(
             ["bash", str(REPO_ROOT / "scripts" / "mk" / "cli-build.sh")],
             check=True,
-            capture_output=True,
         )
 
     sequential = "-s" in args

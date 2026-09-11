@@ -82,35 +82,48 @@ definition dg_tree_st_commute ::
     \<Rightarrow> ('u, 'k, ('a2,'b2) dg_state) strategy_tree \<Rightarrow> bool"
 where
   "dg_tree_st_commute \<sigma>_st t_st t_abs \<longleftrightarrow>
-     fun_of_dg_st_gen Floc Fglob (traverse_rhs t_st \<sigma>_st) = traverse_rhs t_abs (fun_of_dg_st_gen Floc Fglob \<circ> \<sigma>_st)
-   \<and> (\<forall>k. fun_of_dg_st_gen Floc Fglob (sides_of_rhs t_st \<sigma>_st k) = sides_of_rhs t_abs (fun_of_dg_st_gen Floc Fglob \<circ> \<sigma>_st) k)
-   \<and> dep_aux \<sigma>_st t_st = dep_aux (fun_of_dg_st_gen Floc Fglob \<circ> \<sigma>_st) t_abs"
+     fun_of_dg_st_gen Floc Fglob (traverse_rhs t_st \<sigma>_st) =
+       traverse_rhs t_abs (fun_of_dg_st_gen Floc Fglob \<circ> \<sigma>_st) \<and>
+     (\<forall>k. fun_of_dg_st_gen Floc Fglob (sides_of_rhs t_st \<sigma>_st k) =
+       sides_of_rhs t_abs (fun_of_dg_st_gen Floc Fglob \<circ> \<sigma>_st) k) \<and>
+     dep_aux \<sigma>_st t_st =
+       dep_aux (fun_of_dg_st_gen Floc Fglob \<circ> \<sigma>_st) t_abs"
 
 lemma dg_tree_st_commute_trav:
   "dg_tree_st_commute \<sigma>_st t_st t_abs
-     \<Longrightarrow> fun_of_dg_st_gen Floc Fglob (traverse_rhs t_st \<sigma>_st) = traverse_rhs t_abs (fun_of_dg_st_gen Floc Fglob \<circ> \<sigma>_st)"
+   \<Longrightarrow> fun_of_dg_st_gen Floc Fglob (traverse_rhs t_st \<sigma>_st) =
+       traverse_rhs t_abs (fun_of_dg_st_gen Floc Fglob \<circ> \<sigma>_st)"
   by (simp add: dg_tree_st_commute_def)
 
 lemma dg_tree_st_commute_sides:
   "dg_tree_st_commute \<sigma>_st t_st t_abs
-     \<Longrightarrow> fun_of_dg_st_gen Floc Fglob (sides_of_rhs t_st \<sigma>_st k) = sides_of_rhs t_abs (fun_of_dg_st_gen Floc Fglob \<circ> \<sigma>_st) k"
+   \<Longrightarrow> fun_of_dg_st_gen Floc Fglob (sides_of_rhs t_st \<sigma>_st k) =
+       sides_of_rhs t_abs (fun_of_dg_st_gen Floc Fglob \<circ> \<sigma>_st) k"
   by (simp add: dg_tree_st_commute_def)
 
 lemma dg_tree_st_commute_dep:
   "dg_tree_st_commute \<sigma>_st t_st t_abs
-     \<Longrightarrow> dep_aux \<sigma>_st t_st = dep_aux (fun_of_dg_st_gen Floc Fglob \<circ> \<sigma>_st) t_abs"
+   \<Longrightarrow> dep_aux \<sigma>_st t_st =
+       dep_aux (fun_of_dg_st_gen Floc Fglob \<circ> \<sigma>_st) t_abs"
   by (simp add: dg_tree_st_commute_def)
 
 lemma dg_list_commute_trav:
   "list_all2 (dg_tree_st_commute \<sigma>_st) ts_st ts_abs
-     \<Longrightarrow> list_all2 (\<lambda>t_st t_abs. fun_of_dg_st_gen Floc Fglob (traverse_rhs t_st \<sigma>_st)
-                    = traverse_rhs t_abs (fun_of_dg_st_gen Floc Fglob \<circ> \<sigma>_st)) ts_st ts_abs"
+   \<Longrightarrow> list_all2
+       (\<lambda>t_st t_abs. fun_of_dg_st_gen Floc Fglob (traverse_rhs t_st \<sigma>_st) =
+         traverse_rhs t_abs (fun_of_dg_st_gen Floc Fglob \<circ> \<sigma>_st))
+       ts_st ts_abs"
   by (erule list_all2_mono) (simp add: dg_tree_st_commute_def)
 
 lemma dg_list_commute_travsides:
   "list_all2 (dg_tree_st_commute \<sigma>_st) ts_st ts_abs
-     \<Longrightarrow> list_all2 (\<lambda>t_st t_abs. fun_of_dg_st_gen Floc Fglob (traverse_rhs t_st \<sigma>_st) = traverse_rhs t_abs (fun_of_dg_st_gen Floc Fglob \<circ> \<sigma>_st)
-              \<and> (\<forall>k. fun_of_dg_st_gen Floc Fglob (sides_of_rhs t_st \<sigma>_st k) = sides_of_rhs t_abs (fun_of_dg_st_gen Floc Fglob \<circ> \<sigma>_st) k)) ts_st ts_abs"
+   \<Longrightarrow> list_all2
+       (\<lambda>t_st t_abs.
+         fun_of_dg_st_gen Floc Fglob (traverse_rhs t_st \<sigma>_st) =
+           traverse_rhs t_abs (fun_of_dg_st_gen Floc Fglob \<circ> \<sigma>_st) \<and>
+         (\<forall>k. fun_of_dg_st_gen Floc Fglob (sides_of_rhs t_st \<sigma>_st k) =
+           sides_of_rhs t_abs (fun_of_dg_st_gen Floc Fglob \<circ> \<sigma>_st) k))
+       ts_st ts_abs"
   by (erule list_all2_mono) (simp add: dg_tree_st_commute_def)
 
 lemma dg_list_commute_dep:
@@ -123,11 +136,16 @@ lemma dg_list_commute_dep:
 subsubsection \<open>Classifier-parametric fold transport\<close>
 
 lemma side_acc_dg_commute:
-  assumes "list_all2 (\<lambda>t_st t_abs.
-             fun_of_dg_st_gen Floc Fglob (traverse_rhs t_st \<sigma>_st) = traverse_rhs t_abs (fun_of_dg_st_gen Floc Fglob \<circ> \<sigma>_st))
-           ts_st ts_abs"
-  shows "Floc (side_acc_dg acc_st \<sigma>_st ts_st)
-           = side_acc_dg (Floc acc_st) (fun_of_dg_st_gen Floc Fglob \<circ> \<sigma>_st) ts_abs"
+  assumes
+    "list_all2
+       (\<lambda>t_st t_abs.
+         fun_of_dg_st_gen Floc Fglob (traverse_rhs t_st \<sigma>_st) =
+           traverse_rhs t_abs (fun_of_dg_st_gen Floc Fglob \<circ> \<sigma>_st))
+       ts_st ts_abs"
+  shows
+    "Floc (side_acc_dg acc_st \<sigma>_st ts_st) =
+     side_acc_dg (Floc acc_st)
+       (fun_of_dg_st_gen Floc Fglob \<circ> \<sigma>_st) ts_abs"
   using assms
 proof (induction ts_st ts_abs arbitrary: acc_st rule: list_all2_induct)
   case Nil
@@ -145,25 +163,47 @@ next
 qed
 
 lemma sides_side_rhs_fold_dg_commute:
-  assumes "list_all2 (\<lambda>t_st t_abs.
-             fun_of_dg_st_gen Floc Fglob (traverse_rhs t_st \<sigma>_st) = traverse_rhs t_abs (fun_of_dg_st_gen Floc Fglob \<circ> \<sigma>_st)
-             \<and> (\<forall>k. fun_of_dg_st_gen Floc Fglob (sides_of_rhs t_st \<sigma>_st k) = sides_of_rhs t_abs (fun_of_dg_st_gen Floc Fglob \<circ> \<sigma>_st) k))
-           ts_st ts_abs"
-  shows "fun_of_dg_st_gen Floc Fglob (sides_of_rhs (sp_compile (side_rhs_fold_dg acc_st ts_st)) \<sigma>_st k)
-           = sides_of_rhs (sp_compile (side_rhs_fold_dg acc_abs ts_abs)) (fun_of_dg_st_gen Floc Fglob \<circ> \<sigma>_st) k"
+  assumes
+    "list_all2
+       (\<lambda>t_st t_abs.
+         fun_of_dg_st_gen Floc Fglob (traverse_rhs t_st \<sigma>_st) =
+           traverse_rhs t_abs (fun_of_dg_st_gen Floc Fglob \<circ> \<sigma>_st) \<and>
+         (\<forall>k. fun_of_dg_st_gen Floc Fglob (sides_of_rhs t_st \<sigma>_st k) =
+           sides_of_rhs t_abs (fun_of_dg_st_gen Floc Fglob \<circ> \<sigma>_st) k))
+       ts_st ts_abs"
+  shows
+    "fun_of_dg_st_gen Floc Fglob
+       (sides_of_rhs (sp_compile (side_rhs_fold_dg acc_st ts_st)) \<sigma>_st k) =
+     sides_of_rhs (sp_compile (side_rhs_fold_dg acc_abs ts_abs))
+       (fun_of_dg_st_gen Floc Fglob \<circ> \<sigma>_st) k"
   using assms
 proof (induction ts_st ts_abs arbitrary: acc_st acc_abs rule: list_all2_induct)
   case Nil
   thus ?case by (simp add: bot_fun_def)
 next
   case (Cons t_st ts_st t_abs ts_abs)
-  have sd: "fun_of_dg_st_gen Floc Fglob (sides_of_rhs t_st \<sigma>_st k) = sides_of_rhs t_abs (fun_of_dg_st_gen Floc Fglob \<circ> \<sigma>_st) k"
+  have sd:
+    "fun_of_dg_st_gen Floc Fglob (sides_of_rhs t_st \<sigma>_st k) =
+     sides_of_rhs t_abs (fun_of_dg_st_gen Floc Fglob \<circ> \<sigma>_st) k"
     using Cons.hyps(1) by simp
-  have ih: "fun_of_dg_st_gen Floc Fglob (sides_of_rhs (sp_compile (side_rhs_fold_dg (acc_st \<squnion> locals (traverse_rhs t_st \<sigma>_st)) ts_st)) \<sigma>_st k)
-          = sides_of_rhs (sp_compile (side_rhs_fold_dg (acc_abs \<squnion> locals (traverse_rhs t_abs (fun_of_dg_st_gen Floc Fglob \<circ> \<sigma>_st))) ts_abs)) (fun_of_dg_st_gen Floc Fglob \<circ> \<sigma>_st) k"
+  have ih:
+    "fun_of_dg_st_gen Floc Fglob
+       (sides_of_rhs
+         (sp_compile
+           (side_rhs_fold_dg
+             (acc_st \<squnion> locals (traverse_rhs t_st \<sigma>_st)) ts_st))
+         \<sigma>_st k)
+     = sides_of_rhs
+         (sp_compile
+           (side_rhs_fold_dg
+             (acc_abs \<squnion>
+               locals (traverse_rhs t_abs
+                 (fun_of_dg_st_gen Floc Fglob \<circ> \<sigma>_st)))
+             ts_abs))
+         (fun_of_dg_st_gen Floc Fglob \<circ> \<sigma>_st) k"
     by (rule Cons.IH)
   show ?case
-    by (simp add: sides_of_rhs_sp_lift_tree fun_of_dg_st_gen_sup sd
+    by (simp add: fun_of_dg_st_gen_sup sd
           ih[unfolded sp_compile_def] comp_def sp_compile_with_bind sp_compile_def)
 qed
 
@@ -171,8 +211,9 @@ qed
 subsubsection \<open>Routed heterogeneous CALL/COMB transport\<close>
 
 text \<open>
-  \<^const>\<open>routed_call_tree\<close>/\<^const>\<open>routed_entry_seed_tree\<close> (\<^theory>\<open>Voblint_Framework.Routed_Context\<close>)
-  are the canonical heterogeneous routing shape: parametric only in a routing
+  \<^const>\<open>routed_call_tree\<close>/\<^const>\<open>routed_entry_seed_tree\<close>
+  (\<^theory>\<open>Voblint_Framework.Routed_Call_Trees\<close>) are the canonical
+  heterogeneous routing shape: parametric only in a routing
   function \<open>route\<close> and a seed-key injection \<open>seed_key\<close>, with the seed payload
   carried on the \<open>locals\<close> half so \<open>'D\<close>/\<open>'G\<close> stay independent. The two lemmas
   below feed this generic engine's \<open>Hcmb\<close>/\<open>Hextra\<close> obligations directly, so any
@@ -180,9 +221,9 @@ text \<open>
   discharges CALL/COMB transport once here rather than re-deriving its own
   tree-commute reasoning.
 
-  The specification's own enter and combine now appear inside the routed tree as
+  The specification's own enter and combine appear inside the routed tree as
   compiled sub-trees, so their transport hypotheses are themselves tree commutes
-  rather than pair-shaped equations on a retired \<open>'dg \<times> 'dl\<close> transfer -- and
+  -- and
   \<open>caller_cont\<close> needs no hypothesis at all, since
   \<^const>\<open>dg_spec_combine_transfer\<close> already runs it inside the combine sub-tree.
   Sequencing them is what \<open>dg_tree_st_commute_seqcomp\<close> does: a bind commutes when
@@ -196,7 +237,7 @@ lemma dg_tree_st_commute_seqcomp:
   shows "dg_tree_st_commute \<sigma>_st (sp_lift_tree t_st k_st) (sp_lift_tree t_abs k_abs)"
   using head tail
   unfolding dg_tree_st_commute_def
-  by (simp add: dep_aux_sp_lift_tree fun_of_dg_st_gen_sup)
+  by (simp add: fun_of_dg_st_gen_sup)
 
 lemma dg_tree_st_commute_answer:
   "dg_tree_st_commute \<sigma>_st (Answer d) (Answer (fun_of_dg_st_gen Floc Fglob d))"
@@ -257,7 +298,8 @@ qed
 lemma dg_tree_st_commute_side_rhs_fold_dg:
   assumes la: "list_all2 (dg_tree_st_commute \<sigma>_st) ts_st ts_abs"
   shows "dg_tree_st_commute \<sigma>_st
-           (sp_compile (side_rhs_fold_dg acc_st ts_st)) (sp_compile (side_rhs_fold_dg (Floc acc_st) ts_abs))"
+           (sp_compile (side_rhs_fold_dg acc_st ts_st))
+           (sp_compile (side_rhs_fold_dg (Floc acc_st) ts_abs))"
 proof -
   have dep: "(\<Union>t\<in>set ts_st. dep_aux \<sigma>_st t)
       = (\<Union>t\<in>set ts_abs. dep_aux (fun_of_dg_st_gen Floc Fglob \<circ> \<sigma>_st) t)"
@@ -353,7 +395,8 @@ proof (cases alt)
     then have abs: "\<not> is_bot_abs (Floc entry)" by (simp add: Hbot)
     have r: "route_abs cc ctx (Floc entry) ca = route_st cc ctx entry ca"
       by (rule Hroute[symmetric])
-    have eq_st: "routed_call_alternative_tree S_st gk0 seed_key route_st is_bot_st ctx ca cc p (cont, entry)
+    have eq_st: "routed_call_alternative_tree
+        S_st gk0 seed_key route_st is_bot_st ctx ca cc p (cont, entry)
         = Side (seed_key (FunctionEntry p) (route_st cc ctx entry ca)) (DG entry bot)
             (QueryL (FunctionResult p, route_st cc ctx entry ca)
                (\<lambda>cs. sp_compile_with (\<lambda>x. DG x bot)
@@ -391,7 +434,8 @@ lemma dg_tree_st_commute_routed_callee_call_tree:
     and Hbot: "\<And>d. is_bot_abs (Floc d) = is_bot_st d"
   shows "dg_tree_st_commute \<sigma>_st
            (routed_callee_call_tree S_st gk0 seed_key route_st is_bot_st ctx ca cc caller p)
-           (routed_callee_call_tree S_abs gk0 seed_key route_abs is_bot_abs ctx ca cc (Floc caller) p)"
+           (routed_callee_call_tree S_abs gk0 seed_key route_abs is_bot_abs
+             ctx ca cc (Floc caller) p)"
   unfolding routed_callee_call_tree_def
 proof (rule dg_enter_st_commuteD[OF Henter])
   fix ps :: "'a enter_result list"
@@ -444,7 +488,9 @@ proof -
   have la: "list_all2 (dg_tree_st_commute \<sigma>_st)
       (map (routed_callee_call_tree S_st gk0 seed_key route_st is_bot_st ctx ca cc ?caller)
         (resolve_st v cc ca ?caller))
-      (map (routed_callee_call_tree S_abs gk0 seed_key route_abs is_bot_abs ctx ca cc (Floc ?caller))
+      (map
+        (routed_callee_call_tree S_abs gk0 seed_key route_abs is_bot_abs
+          ctx ca cc (Floc ?caller))
         (resolve_st v cc ca ?caller))"
     by (simp add: list_all2_conv_all_nth at)
   have body: "dg_tree_st_commute \<sigma>_st
@@ -452,7 +498,9 @@ proof -
         (map (routed_callee_call_tree S_st gk0 seed_key route_st is_bot_st ctx ca cc ?caller)
           (resolve_st v cc ca ?caller))))
       (sp_compile (side_rhs_fold_dg bot
-        (map (routed_callee_call_tree S_abs gk0 seed_key route_abs is_bot_abs ctx ca cc (Floc ?caller))
+        (map
+          (routed_callee_call_tree S_abs gk0 seed_key route_abs is_bot_abs
+            ctx ca cc (Floc ?caller))
           (resolve_st v cc ca ?caller))))"
     using dg_tree_st_commute_side_rhs_fold_dg[OF la, where acc_st = bot]
     by (simp add: Floc_bot)

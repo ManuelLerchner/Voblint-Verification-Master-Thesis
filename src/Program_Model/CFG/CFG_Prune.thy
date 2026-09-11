@@ -2,7 +2,7 @@ theory CFG_Prune
   imports CFG_Transfer
 begin
 
-section \<open>Procedure-aware structural reachability and dependency cone\<close>
+section \<open>Procedure-aware structural reachability\<close>
 
 text \<open>
   \<open>cfg_succ_rel\<close> is the derived structural dependency graph the analysis pruning and

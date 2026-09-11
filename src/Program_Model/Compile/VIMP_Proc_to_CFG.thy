@@ -24,10 +24,10 @@ text \<open>
        ignores its continuation, so an early return leaves no node behind.
 
   Control effects and their source counterparts:
-    \<^item> source lexical restoration (\<open>Scope\<close> / \<open>Restore\<close>) becomes ordinary intra flow;
-      \<open>Scope\<close> is represented by transparent \<open>EA_Nop\<close> brackets;
-    \<^item> source \<open>Return\<close> / \<open>Unwind\<close> become an explicit \<open>EA_Ret\<close> edge into \<open>FunctionResult\<close>;
-    \<^item> source activation handling becomes \<open>FunctionResult\<close> + the \<open>calls\<close>-edge continuation.
+    \<^item> source \<open>Return\<close> becomes an explicit \<open>EA_Ret\<close> edge into \<open>FunctionResult\<close>, which also
+      does the work the runtime \<open>Unwind\<close> does at source level;
+    \<^item> source activation handling (\<open>Restore\<close> and the frame pop) becomes
+      \<open>FunctionResult\<close> + the \<open>calls\<close>-edge continuation.
 
   Calls are emitted only into \<open>calls\<close>; a call never appears as an executable intra edge.
   \<open>Restore\<close> / \<open>Unwind\<close> are runtime-only (excluded by \<^const>\<open>source_com\<close>); their compile

@@ -6,7 +6,15 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-IR="$REPO_ROOT/vendor/autocorrode/ir/repl.py"
+AUTOCORRODE_HOME="${AUTOCORRODE_HOME:-$REPO_ROOT/vendor/autocorrode}"
+IR="$AUTOCORRODE_HOME/ir/repl.py"
+
+if [[ ! -f "$IR" ]]; then
+  echo "ERROR: I/R server not found at '$IR'."
+  echo "  Run: ./scripts/setup.sh"
+  echo "  Or set AUTOCORRODE_HOME to an AutoCorrode checkout."
+  exit 1
+fi
 
 # Session "TD" (theory TD.TD_side) vendor submodule ROOT
 TD_COMPONENT_DIR="${TD_COMPONENT_DIR:-$REPO_ROOT/vendor/td-verification}"
@@ -50,7 +58,7 @@ fi
 # Parallelism: unset IR_BUILD_JOBS => auto (-j hw.ncpu on macOS, nproc on Linux). On low RAM (e.g. 8 GB)
 # set IR_BUILD_JOBS=4 (or 2) to reduce memory spikes from many concurrent Poly/ML workers.
 if [[ "${IR_SKIP_HEAP_BUILD:-0}" != "1" ]]; then
-  echo "Ensuring session heap (Voblint_Soundness) ..."
+  echo "Ensuring session heap (Voblint_Result) ..."
   vb=()
   [[ "${IR_VERBOSE_BUILD:-1}" != "0" ]] && vb=(-v)
   jobs=()
@@ -67,7 +75,7 @@ if [[ "${IR_SKIP_HEAP_BUILD:-0}" != "1" ]]; then
         ;;
     esac
   fi
-  "$ISABELLE" build -b "${vb[@]}" "${jobs[@]}" -d "$TD_COMPONENT_DIR" -d "$REPO_ROOT" Voblint_Soundness
+  "$ISABELLE" build -b "${vb[@]}" "${jobs[@]}" -d "$TD_COMPONENT_DIR" -d "$REPO_ROOT" Voblint_Result
   echo ""
 else
   echo "Skipping heap build (IR_SKIP_HEAP_BUILD=1)."
@@ -80,6 +88,6 @@ echo ""
 
 exec env IR_AUTH_TOKEN=isabelle-local IR_DEBUG="${IR_DEBUG:-1}" "$PYTHON" "$IR" \
   --isabelle "$ISABELLE" \
-  --session Voblint_Soundness \
+  --session Voblint_Result \
   --dir "$REPO_ROOT" \
   --mcp

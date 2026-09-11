@@ -1,6 +1,6 @@
 """Independently written compatibility expectations for the generated registration.
 
-Everything else about the registration is derived from assembly/analyses.yaml, so
+Everything else about the registration is derived from manifests/analyses.yaml, so
 a check derived from that manifest too would only prove the generator is
 self-consistent. The expectations below are written out by hand, from the
 documented support policy: each domain's default, the pairings that are
@@ -193,7 +193,7 @@ def test_applied_roles_reach_isabelle_as_one_argument(generated):
     behind this."""
     import subprocess
     import yaml
-    manifest = yaml.safe_load((ROOT / "assembly/analyses.yaml").read_text())
+    manifest = yaml.safe_load((ROOT / "manifests/analyses.yaml").read_text())
     sys.path.insert(0, str(ROOT / "scripts"))
     import gen_analysis_assembly as gen
 

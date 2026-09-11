@@ -100,17 +100,23 @@ proof -
       have "pcompletes proc_call_gs proc_pi (imp \<lbrakk> Gx := Gx * Gx \<rbrakk>)
                (enter_state proc_call_gs s)
                ((enter_state proc_call_gs s)
-                 ((STR ''Gx'') := aval (Times (V (STR ''Gx'')) (V (STR ''Gx''))) (enter_state proc_call_gs s)))"
+                 ((STR ''Gx'') :=
+                   aval (Times (V (STR ''Gx'')) (V (STR ''Gx'')))
+                     (enter_state proc_call_gs s)))"
         by (rule pcompletes_assign)
       moreover have
-        "aval (Times (V (STR ''Gx'')) (V (STR ''Gx''))) (enter_state proc_call_gs s) = s (STR ''Gx'') * s (STR ''Gx'')"
+        "aval (Times (V (STR ''Gx'')) (V (STR ''Gx'')))
+           (enter_state proc_call_gs s) =
+         s (STR ''Gx'') * s (STR ''Gx'')"
         by (simp add: enter_state_def proc_call_gs_def)
       ultimately show ?thesis by (simp add: sqr_body_def)
     qed
   qed
   moreover have
     "VIMP_Globals.combine_env proc_call_gs s
-       ((enter_state proc_call_gs s)((STR ''Gx'') := s (STR ''Gx'') * s (STR ''Gx''))) = s((STR ''Gx'') := s (STR ''Gx'') * s (STR ''Gx''))"
+       ((enter_state proc_call_gs s)
+         ((STR ''Gx'') := s (STR ''Gx'') * s (STR ''Gx''))) =
+     s((STR ''Gx'') := s (STR ''Gx'') * s (STR ''Gx''))"
     by (rule ext) (simp add: enter_state_def proc_call_gs_def)
   ultimately show ?thesis by simp
 qed

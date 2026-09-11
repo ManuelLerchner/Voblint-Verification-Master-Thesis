@@ -23,7 +23,7 @@ type_synonym 'a exec_dg_st = "'a resolved_st_q"
 subsection \<open>Classifier-parametric readback\<close>
 
 text \<open>
-  The executable local/side readback, generic in the classifier: a placed
+  The executable local/side readback, generic in the classifier: an
   executable state is written with a declaration-driven classifier, so
   reading it back needs the same classifier or the readback consults the
   wrong slot.

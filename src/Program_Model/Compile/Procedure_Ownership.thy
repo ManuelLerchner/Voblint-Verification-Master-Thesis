@@ -556,6 +556,31 @@ lemma sink_in_path_nodes:
   "t \<in> valid_ltr gs g S \<Longrightarrow> sink_node t \<in> fst ` set (path t)"
   using valid_ltr_path_nonempty by (auto simp: sink_node_def)
 
+text \<open>Extending a fragment-local activation by one node keeps it fragment-local when the step
+  to that node stays inside every genuine fragment holding its sink and no step leaves a stub.
+  An intra step and the resumption after a call are the two such extensions.\<close>
+lemma frag_ok_snoc:
+  assumes t: "t \<in> valid_ltr gs (compile_prog \<Pi> ps) S" and ok: "frag_ok \<Pi> ps t"
+    and pu: "path u = path t @ [(v, s)]"
+    and stay: "\<And>r d m m' Ep Kp. \<Pi> r = Some d \<Longrightarrow> compile_proc \<Pi> r d m = (m', Ep, Kp) \<Longrightarrow>
+      (FunctionEntry r, EA_Body r, Statement m) \<in> intra (compile_prog \<Pi> ps) \<Longrightarrow>
+      sink_node t \<in> pfn r m m' \<Longrightarrow> v \<in> pfn r m m'"
+    and nostub: "\<And>q. sink_node t = FunctionEntry q \<Longrightarrow> \<Pi> q = None \<Longrightarrow> False"
+  shows "frag_ok \<Pi> ps u"
+  using ok
+proof (cases rule: frag_okE)
+  case (frag r d m m' Ep Kp)
+  have "sink_node t \<in> pfn r m m'" using sink_in_path_nodes[OF t] frag(5) by blast
+  from stay[OF frag(1,2,3) this] have v_in: "v \<in> pfn r m m'" .
+  show ?thesis
+    by (rule frag_okI_frag[OF frag(1,2,3)])
+       (use frag(4,5) valid_ltr_path_nonempty[OF t] v_in in \<open>auto simp: pu hd_append\<close>)
+next
+  case (stub q s0)
+  have "sink_node t = FunctionEntry q" using stub(1) by (simp add: sink_node_def)
+  from nostub[OF this stub(2)] show ?thesis ..
+qed
+
 text \<open>Every activation in the caller chain of a valid trace is fragment-local.  The property is
   carried over the whole \<^const>\<open>callers\<close> chain so that the return case, which resumes the caller,
   can read the caller's own fragment (\<open>caller \<in> callers callee\<close>).\<close>
@@ -583,20 +608,8 @@ proof -
       and e: "(sink_node t, a, v) \<in> intra ?g"
     have "frag_ok \<Pi> ps t" using ch callers_refl by blast
     then show "frag_ok \<Pi> ps (extend t (v, s'))"
-    proof (cases rule: frag_okE)
-      case (frag r d m m' Ep Kp)
-      have snk: "sink_node t \<in> pfn r m m'" using sink_in_path_nodes[OF ht] frag(5) by blast
-      have v_in: "v \<in> pfn r m m'" using frag_edge_intra[OF wf frag(1,2,3) snk e] .
-      have pne: "path t \<noteq> []" using valid_ltr_path_nonempty[OF ht] .
-      show ?thesis
-        by (rule frag_okI_frag[OF frag(1,2,3)])
-           (use frag(4,5) pne v_in in \<open>auto simp: hd_append\<close>)
-    next
-      case (stub q s)
-      have "sink_node t = FunctionEntry q" using stub(1) by (simp add: sink_node_def)
-      then have "(FunctionEntry q, a, v) \<in> intra ?g" using e by simp
-      from compile_prog_entry_declared[OF wf this] stub(2) show ?thesis by simp
-    qed
+      by (rule frag_ok_snoc[OF ht _ _ frag_edge_intra[OF wf _ _ _ _ e]])
+         (use e in \<open>auto dest: compile_prog_entry_declared[OF wf]\<close>)
   next
     fix caller dst pars args p cont
     assume e: "(sink_node caller, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls ?g"
@@ -625,21 +638,8 @@ proof -
     have "frag_ok \<Pi> ps caller" using ch cin by blast
     then show "frag_ok \<Pi> ps (Resume caller callee (path caller
             @ [(cont, combine_collect gs dst (sink_store caller) (sink_store callee))]))"
-    proof (cases rule: frag_okE)
-      case (frag r d m m' Ep Kp)
-      have snk: "sink_node caller \<in> pfn r m m'" using sink_in_path_nodes[OF cv] frag(5) by blast
-      have cont_in: "cont \<in> pfn r m m'" using frag_edge_calls[OF wf frag(1,2,3) snk e] .
-      have pne: "path caller \<noteq> []" using valid_ltr_path_nonempty[OF cv] .
-      show ?thesis
-        by (rule frag_okI_frag[OF frag(1,2,3)])
-           (use frag(4,5) pne cont_in in \<open>auto simp: hd_append\<close>)
-    next
-      case (stub q s)
-      have "sink_node caller = FunctionEntry q" using stub(1) by (simp add: sink_node_def)
-      then have "(FunctionEntry q, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls ?g"
-        using e by simp
-      with compile_prog_calls_source_stmt show ?thesis by blast
-    qed
+      by (rule frag_ok_snoc[OF cv _ _ frag_edge_calls[OF wf _ _ _ _ e]])
+         (use e in \<open>auto dest: compile_prog_calls_source_stmt\<close>)
   next
     show "t \<in> valid_ltr gs ?g S" by (rule t)
   qed

@@ -1,24 +1,21 @@
 (* Regression driver for the generated Voblint_CLI OCaml module.
    Constructs a VIMP program purely through the exported AST constructors
    (never touching Isabelle), runs it through the exported `run_voblint`
-   entry point for both domains, and checks the result against the values
+   entry point for every domain, and checks the result against the values
    src/Examples/CLI/Example_Analysis_Dispatch_Regression.thy's
    dispatch_demo_* lemmas prove and
    tests/regression/ carries as CLI fixtures. This driver is the layer that
    pins the *generated* module's agreement with both.
 
-   This reads the same generated module the CLI itself links against. It
-   used to read a second, separately exported one (Voblint_Analyse_OCaml),
-   which differed only by the CFG-inspection constants below -- those are
-   now named in the single export block, so there is one generated artifact
-   for one analysis rather than two near-copies of the same machinery.
+   This reads the same generated module the CLI itself links against; the
+   CFG-inspection constants below are export roots for this driver alone.
 
    Do not hand-edit codegen/generated/ml/Voblint_CLI.ml; regenerate it with
    `pixi run codegen` instead. *)
 
 open Voblint_CLI.Generated
 
-(* `HOL-Library.Code_Target_Numeral` (imported by Example_Analysis_Dispatch)
+(* `HOL-Library.Code_Target_Numeral` (imported by Analyse_Dispatch)
    backs Isabelle's `int`/`nat` by the target language's native
    arbitrary-precision integer -- Zarith's `Z.t` on the OCaml side -- so
    construction/inspection go through `Int_of_integer`/`nat_of_integer` and
@@ -89,11 +86,10 @@ let expected_interval =
    Same program as tests/regression/04-globals/precision/02-global_var.vimp and its
    known-imprecision sibling 01-repeated_call_site_widening.vimp; the CFG-shape
    expectations below have no fixture counterpart and live only here.
-   Interval_Analysis on this program used to hang/segfault under the always-join backend (a
-   flow-insensitive global read-and-grow has no widening there); the exported entry point
-   now routes Interval through the warrowing backend, which terminates. Since the
-   Base-style migration, total lives in the reachability-lifted local unknown flow-sensitively
-   through both calls, so the first check (0 < total) is Check_Proved; the second
+   Interval reaches this program through the warrowing backend: a global read and grown
+   across two calls has no termination guarantee under always-join. total lives in the
+   reachability-lifted local unknown, tracked flow-sensitively through both calls, so the
+   first check (0 < total) is Check_Proved; the second
    (total < 100) stays Check_Unknown -- inc's entry is reached by two call sites, so warrowing
    widens the entered parameter's upper bound on the second visit. *)
 let proc_demo_prog =
@@ -112,8 +108,8 @@ let expected_proc_demo_sign =
   [ (Statement (mk_nat 5), ("0<total", Lifted Check_Proved));
     (Statement (mk_nat 6), ("total<100", Lifted Check_Unknown)) ]
 
-(* Same shape as expected_proc_demo_sign, but this is the case that used to hang: a global read
-   and grown across two calls, now solved via warrowing. *)
+(* Same shape as expected_proc_demo_sign, reached through warrowing: a global read and grown
+   across two calls. *)
 let expected_proc_demo_interval =
   [ (Statement (mk_nat 5), ("0<total", Lifted Check_Proved));
     (Statement (mk_nat 6), ("total<100", Lifted Check_Unknown)) ]
@@ -174,7 +170,7 @@ let show_entry (n, (cond, verdict)) =
     cond (show_verdict verdict)
 
 (* Compact renderers matching string_of_cfg_node/string_of_action
-   in Analysis_GraphViz.thy exactly (no spaces around
+   in Analysis_Graph.thy exactly (no spaces around
    infix operators, "pp"/"entry_"/"result_" node prefixes). Unlike a check
    row's condition, an edge label is not published as a rendered string, so
    the CFG expectations below are rendered here. *)

@@ -13,7 +13,7 @@ separation, and a frame-stack small-step semantics.
 | `VIMP_Proc.thy` | Procedural commands, declarations, frames, small-step execution, well-formedness |
 | `VIMP_Program.thy` | The `imp_prog` record and program-level lookups |
 | `VIMP_Source_Print.thy` | Executable source pretty-printer |
-| `VIMP_Grammar_Generated.thy` | Generated from `grammar/vimp.yaml`; never edited by hand |
+| `VIMP_Grammar_Generated.thy` | Generated from `manifests/vimp-grammar.yaml`; never edited by hand |
 | `VIMP_Notation.thy` | The `imp` and `program` quotations |
 
 ## Procedure behavior

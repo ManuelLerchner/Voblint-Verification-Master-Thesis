@@ -3,9 +3,12 @@
 // main with opposite-sign inputs, followed by an arithmetic use of the
 // result. Language has no '/', so 100 / result is written as 100 * result.
 //
-// input is written 5 then -3 across the two calls: SPos join SNeg = STop,
-// so no single sign covers both writes -- UNKNOWN is the correct answer for
-// input, not a limitation.
+// input is concretely -3 at the check, but compute has no formals, so one
+// activation serves both calls: its entry joins input = SPos with SNeg to
+// STop, and combine reads that STop back into main (measured, also under
+// --context entry-state, which keys on formals). UNKNOWN is imprecision
+// here; --context call-string --context-depth 1 keeps the two call sites
+// apart and refutes the check.
 //
 // result is SPos regardless: both branches of compute assign a positive
 // local (1+1 and 1+2) to result, and every path to the check has run

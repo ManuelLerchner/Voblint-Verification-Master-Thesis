@@ -1,5 +1,5 @@
 theory Int_Entry
-  imports Int_Checks "Voblint_Soundness.Run_Analysis_Sound"
+  imports Int_Checks
 begin
 
 context
@@ -76,8 +76,8 @@ end
 section \<open>Int public runtime API and source-level soundness\<close>
 
 text \<open>
-  \<^theory>\<open>Voblint_Analysis_Int.Int_Exec_Sound\<close> owns raw executable
-  computation, while \<^theory>\<open>Voblint_Analysis_Int.Int_Checks\<close> constructs
+  \<^theory>\<open>Voblint_Analysis_Int.Int_Exec_Sound\<close> chooses the executable
+  transfer by refinement mode, while \<^theory>\<open>Voblint_Analysis_Int.Int_Checks\<close> constructs
   published results and reports. This theory adds the public program-level entry
   point and composes it with reusable source-level soundness.
 \<close>
@@ -160,7 +160,10 @@ proof -
   show ?thesis
     by (rule classify_checks_proved_sound
           [where g = "prog_cfg p"
-             and env = "\<lambda>v. case lookup_context (analyse_int_ctx_result_warrow_for mode pgs p) v () of Bot \<Rightarrow> bot | Lifted st \<Rightarrow> st"
+             and env =
+               "\<lambda>v. case lookup_context
+                  (analyse_int_ctx_result_warrow_for mode pgs p) v () of
+                    Bot \<Rightarrow> bot | Lifted st \<Rightarrow> st"
              and classify = int_classify_check
              and reach = "ltr_collect pgs (prog_cfg p) (cinit_stores pgs)"
              and v = v and gamma_state = "gamma_state :: int_dom abs_state \<Rightarrow> store set",
@@ -199,7 +202,10 @@ proof -
   show ?thesis
     by (rule classify_checks_refuted_sound
           [where g = "prog_cfg p"
-             and env = "\<lambda>v. case lookup_context (analyse_int_ctx_result_warrow_for mode pgs p) v () of Bot \<Rightarrow> bot | Lifted st \<Rightarrow> st"
+             and env =
+               "\<lambda>v. case lookup_context
+                  (analyse_int_ctx_result_warrow_for mode pgs p) v () of
+                    Bot \<Rightarrow> bot | Lifted st \<Rightarrow> st"
              and classify = int_classify_check
              and reach = "ltr_collect pgs (prog_cfg p) (cinit_stores pgs)"
              and v = v and gamma_state = "gamma_state :: int_dom abs_state \<Rightarrow> store set",
@@ -260,7 +266,7 @@ text \<open>
 
   No new reasoning happens here. \<open>source_sound_from_ltr_collecting_cap\<close> and
   \<open>source_completes_ltr_collect_exit\<close>
-  (\<^theory>\<open>Voblint_Soundness.Source_Activation_Sound\<close>) supply the source side, and
+  (\<^theory>\<open>Voblint_Result.Source_Activation_Sound\<close>) supply the source side, and
   \<open>analyse_int_ctx_result_warrow_node_sound_of_cover\<close> is the per-node cap they take.
 \<close>
 
@@ -320,10 +326,14 @@ corollary analyse_int_report_sound_proved:
   fixes p :: imp_prog and v :: pp and c :: exp
   assumes wf: "wf_compile_input (declared_global p) (prog_table p) (prog_procs p)"
       and solve: "int_conf_terminates_prog_warrow Refine_Fixpoint (declared_global p) p"
-      and entry_cov: "(cfg_entry (prog_cfg p), ()) \<in> fst (int_conf_sol_prog_warrow Refine_Fixpoint (declared_global p) p)"
+      and entry_cov:
+        "(cfg_entry (prog_cfg p), ()) \<in> fst (int_conf_sol_prog_warrow
+           Refine_Fixpoint (declared_global p) p)"
       and fwd_ok:
         "\<And>u a w ctx. (u, ctx) \<in> fst (int_conf_sol_prog_warrow Refine_Fixpoint (declared_global p) p)
-           \<Longrightarrow> (u, a, w) \<in> intra (prog_cfg p) \<Longrightarrow> (w, ctx) \<in> fst (int_conf_sol_prog_warrow Refine_Fixpoint (declared_global p) p)"
+           \<Longrightarrow> (u, a, w) \<in> intra (prog_cfg p)
+           \<Longrightarrow> (w, ctx) \<in> fst (int_conf_sol_prog_warrow
+                 Refine_Fixpoint (declared_global p) p)"
       and call_fwd_ok:
         "\<And>u ctx dst fs as q k. (u, ctx) \<in> fst (int_conf_sol_prog_warrow Refine_Fixpoint (declared_global p) p)
            \<Longrightarrow> (u, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg p)
@@ -344,10 +354,14 @@ corollary analyse_int_report_sound_refuted:
   fixes p :: imp_prog and v :: pp and c :: exp
   assumes wf: "wf_compile_input (declared_global p) (prog_table p) (prog_procs p)"
       and solve: "int_conf_terminates_prog_warrow Refine_Fixpoint (declared_global p) p"
-      and entry_cov: "(cfg_entry (prog_cfg p), ()) \<in> fst (int_conf_sol_prog_warrow Refine_Fixpoint (declared_global p) p)"
+      and entry_cov:
+        "(cfg_entry (prog_cfg p), ()) \<in> fst (int_conf_sol_prog_warrow
+           Refine_Fixpoint (declared_global p) p)"
       and fwd_ok:
         "\<And>u a w ctx. (u, ctx) \<in> fst (int_conf_sol_prog_warrow Refine_Fixpoint (declared_global p) p)
-           \<Longrightarrow> (u, a, w) \<in> intra (prog_cfg p) \<Longrightarrow> (w, ctx) \<in> fst (int_conf_sol_prog_warrow Refine_Fixpoint (declared_global p) p)"
+           \<Longrightarrow> (u, a, w) \<in> intra (prog_cfg p)
+           \<Longrightarrow> (w, ctx) \<in> fst (int_conf_sol_prog_warrow
+                 Refine_Fixpoint (declared_global p) p)"
       and call_fwd_ok:
         "\<And>u ctx dst fs as q k. (u, ctx) \<in> fst (int_conf_sol_prog_warrow Refine_Fixpoint (declared_global p) p)
            \<Longrightarrow> (u, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg p)

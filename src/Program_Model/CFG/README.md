@@ -12,7 +12,8 @@ compiler lives in `Voblint_Compile`.
 | --- | --- |
 | `CFG_Def.thy` | CFG nodes, local edge actions, call relation, graph well-formedness |
 | `CFG_Transfer.thy` | Concrete edge, call-entry, and caller/callee combination operations |
-| `CFG_Prune.thy` | The structural successor relation, reachability, and the dependency cone |
+| `CFG_Prune.thy` | The structural successor relation and reachability over it |
+| `CFG_Exec.thy` | `cstep`, small-step execution of an arbitrary CFG over a frame stack |
 
 `intra` contains local edges. `calls` records a call site, call action, callee
 entry, and continuation. `FunctionEntry p` and `FunctionResult p` are explicit
@@ -31,4 +32,4 @@ continuation, callee result to continuation) that execution never takes.
 | `Collecting/LTR_Collect.thy` | `ltr_collect`, introduction rules, and least-fixpoint characterization |
 | `Collecting/LTR_Abstract.thy` | The `ltr_coverage` locale and its generic postfix soundness theorem |
 
-Concrete CFGs and trace witnesses live in the `Voblint_Examples` session.
+Concrete CFGs and trace witnesses live in the `Voblint_Examples_CFG` session.

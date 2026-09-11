@@ -1,7 +1,7 @@
 """Property 1: AST -> print -> parse round-trips to a structurally equal AST.
 
 This is the primary correctness property. Hypothesis generates arbitrary exp
-trees (see strategies.py) -- grammar/vimp.yaml's exp_paren production and
+trees (see strategies.py) -- manifests/vimp-grammar.yaml's exp_paren production and
 VIMP_Source_Print.thy's precedence-climbing printer make every shape
 source-expressible -- so every generated example is expected to print to
 text that Vimp_parser reads back into the same tree; a mismatch here is a

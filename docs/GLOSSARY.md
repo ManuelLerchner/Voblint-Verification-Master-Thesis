@@ -44,11 +44,11 @@ layer without embedding line numbers that drift.
 | `caller_of` | Immediate caller stored structurally in a called or resumed trace. | `src/Program_Model/CFG/Collecting/LTR_Def.thy` |
 | `ltr_collect` | Reachable sink stores at each CFG node, forgetting trace structure. | `src/Program_Model/CFG/Collecting/LTR_Collect.thy` |
 | `activation_collect` | `activation_collect gs R startcontext g S v c`: reachable sink stores at `v` in context `c`, the `trace_context`-grouped view of `ltr_collect`. `R` is the `call_context_rel`. | `src/Program_Model/CFG/Collecting/LTR_Activation_Context.thy` |
-| `ltr_gamma` | Concretization interface relating abstract states to local-trace collecting semantics. | `src/Program_Model/CFG/Collecting/LTR_Abstract.thy` |
+| `ltr_coverage` | The five obligations (`INIT`, `INTRA`, `CALL`, `RETURN`, `TOTAL`) under which a per-node, per-context store-set claim covers every valid trace. | `src/Program_Model/CFG/Collecting/LTR_Abstract.thy` |
 | `trace_context` | Inductive `trace_context gs R startcontext g t c`: the context a valid trace carries. Its Call rule picks an edge in `calls g` at the call node that reproduces the entered store, so no compiler uniqueness invariant is needed. The relational form of the paper's `beta`. | `src/Program_Model/CFG/Collecting/LTR_Activation_Context.thy` |
 | `call_context_rel` | `'c call_context_rel = cfg_node => 'c => call_info => store => store => 'c => bool`: the admissible callee contexts of one concrete call, from call site, caller context, call info, caller store and entered store. Several contexts per call are allowed. | `src/Program_Model/CFG/Collecting/LTR_Activation_Context.thy` |
 | `call_context_rel_of_fun` | Embeds a functional policy (`unit`, call strings) as the relation admitting exactly the function's value. | `src/Program_Model/CFG/Collecting/LTR_Activation_Context.thy` |
-| `call_context_total_on` | `call_context_total_on cover R gs g`: conditional totality -- an empty relation is rejected only where a covered call exists. `activation_bucket_sound` (one bucket) needs no totality; `activation_collect_sound` (whole program) does. Buckets form a cover, not a partition. | `src/Program_Model/CFG/Collecting/LTR_Activation_Context.thy` |
+| `call_context_total_on` | `call_context_total_on cover R gs g`: conditional totality -- an empty relation is rejected only where a covered call exists. It is what makes the context-insensitive collection exactly the union of the buckets (`ltr_collect_eq_Union_activation_collect`). Buckets form a cover, not a partition. | `src/Program_Model/CFG/Collecting/LTR_Activation_Context.thy` |
 | `startcontext` | Context of the root activation, Goblint's `Spec.startcontext`. | `src/Program_Model/CFG/Collecting/LTR_Activation_Context.thy` |
 
 ## Abstract interpretation
@@ -68,7 +68,7 @@ layer without embedding line numbers that drift.
 | `G` | Analysis-chosen shared fact routed through global side effects. | `src/Abstract_Interpreter/Framework/Spec/DG_State.thy` |
 | `dg_spec` | D/G transfer, entry, combine, read, and publication interface. | `src/Abstract_Interpreter/Framework/Spec/DG_Spec.thy` |
 | `sound_dg_spec_core` | Concrete-soundness obligations for a D/G instance. | `src/Abstract_Interpreter/Framework/Spec/DG_Spec_Sound.thy` |
-| `dg_gen_of` | Executable D/G equation generator. | `src/Abstract_Interpreter/Exec/Exec_DG_Generator.thy` |
+| `routed_node_rhs` | D/G equation generator: one right-hand side per node and context, joining the local-edge trees, one tree per call site, and the analysis's extra trees (`routed_contribution_trees`). | `src/Abstract_Interpreter/Framework/Constraints/DG_Keyed_Generator.thy` |
 
 ### Correspondence to Goblint's `Spec` interface
 
@@ -82,8 +82,8 @@ and where the correspondence is inexact.
 | --- | --- | --- |
 | `D` | Opaque `'D` carrier (`dg_state.locals`) | Chosen by each `dg_spec`. Base analyses use a non-relational or executable state carrier; `Rel_Order_Domain` demonstrates a relational carrier. |
 | `G` | Opaque `'G` carrier (`dg_state.globs`) | Chosen independently by each `dg_spec`; homogeneous analyses may use the same type for `D` and `G`. See "Local/global payloads" in `docs/GOBLINT_ALIGNMENT_REGISTER.md`. |
-| `C` | `'c` (locale parameter of `dg_ctx_activation`/`routed_context`, `DG_Ctx_Activation.thy`) | Instantiated per analysis instance (`unit`, call-string, entry-state, ...). |
-| `V` | `'k` (locale parameter of `dg_ctx_activation`, `DG_Ctx_Activation.thy`) | The type of global-variable identities, matching Goblint's `S.V` (see `M1_CALLSTRING_CONTEXT_MIGRATION.md`'s `GVar = GVarF (S.V)` citation). Not the combined unknown space -- see below. |
+| `C` | `'c` (type parameter of `dg_ctx_activation_base`/`routed_context_base_hetero`, `DG_Ctx_Activation.thy`, `Routed_Context.thy`) | Instantiated per analysis instance (`unit`, call-string, entry-state, ...). |
+| `V` | `'v` (the `dg_spec` record's global-name parameter, `DG_Spec.thy`) | An analysis reaches shared state only through `man_global`/`man_sideg` at a `'v`; `mk_dg_man` embeds it into the solver's global-key type `'k` (`DG_Manager.thy`). Not the combined unknown space -- see below. |
 
 **The combined unknown space is not `V`.** The vendored solver's equation type
 (`vendor/td-verification/Basics_side.thy`) is generic over `'x` (local key)
@@ -108,7 +108,7 @@ carries the soundness proof -- notation does not rename the identifier.
 | Notation | Identifier | Layer |
 | --- | --- | --- |
 | `enter#` | `dgs_enter` (`dg_spec` field) | Specification, `DG_Spec.thy` |
-| `context#` | `route` (locale parameter of `routed_context_base_hetero`) | Generator, `Routed_Context.thy` |
+| `context#` | `route` (locale parameter of `dg_ctx_activation_base`, carrying the notation in `routed_context_base_hetero`) | Generator, `Routed_Context.thy` |
 | `combine_env#` | `dgs_combine_env` (`dg_spec` field) | Specification, `DG_Spec.thy` |
 | `combine_assign#` | `dgs_combine_assign` (`dg_spec` field) | Specification, `DG_Spec.thy` |
 | `combine#` | `combine_collect_abs` (the fixed whole-state return merge) | Abstract-state algebra, `Transfer_Algebra.thy` |
@@ -128,22 +128,23 @@ outer keyword, hence `route` -- see `docs/GOBLINT_ALIGNMENT_REGISTER.md`.
 
 ### `sigma` / `sg`
 
-Both fixed in `dg_ctx_activation` (`DG_Ctx_Activation.thy`) and genuinely
+Both fixed in `dg_ctx_activation_base` (`DG_Ctx_Activation.thy`) and genuinely
 different objects, not naming duplication:
 
 | Term | Meaning |
 | --- | --- |
-| `sigma` | Raw `dg_state` reader over the unknown space `pp \<times> 'c + 'k` -- the vendored solver's own solution shape (`sigma :: pp \<times> 'c + 'k => (D, G) dg_state`). |
-| `sg` | Concretization-facing reader over the same unknowns, one flat `'a abs_state` per point (`sg :: pp \<times> 'c + 'k => 'a abs_state`), satisfying `ENTRY_G`/`EDGE`/`CALL`/`COMB`. |
+| `sigma` | Raw `dg_state` reader over the unknown space `pp \<times> 'c + 'k` -- the vendored solver's own solution shape (`sigma :: pp \<times> 'c + 'k => ('D, 'G) dg_state`). |
+| `sg` | The reader an analysis publishes over the same unknowns (`sg :: pp \<times> 'c + 'k => 'M`), read as stores through `gammaM`. |
 
-`sg_cov` derives `sg` from `sigma` via `combine_env_abs` (`sg` at a covered
-point is `sigma`'s locals and globals combined through the local/global
-classifier `gs`); unifying the two names would make a proof step that needs
-both indistinguishable.
+The locale assumption `sg_cov` ties them: at a covered key,
+`gammaM (sg (Inl (v, c)))` is `gammaDG` of `sigma`'s local slot against its one
+shared global slot `Inr gk0`, and `sg_uncov` makes it empty off the solved keys.
+Unifying the two names would make a proof step that needs both
+indistinguishable.
 
 ## Source-facing endpoints
 
 | Term | Meaning | Source |
 | --- | --- | --- |
-| `source_activation_sound` | Compiler and activation-collecting bridge for accepted source executions. | `src/Soundness/Source_Activation_Sound.thy` |
-| `dg_exec_run_source_sound_for` | Reusable bundle connecting a computed D/G solver result to source execution. | `src/Soundness/Run_Analysis_Sound.thy` |
+| `source_activation_sound` | Compiler and activation-collecting bridge for accepted source executions. | `src/Analyses/Shared/Result/Source_Activation_Sound.thy` |
+| `unit_dg_analysis` | The context-insensitive analysis: `routed_dg_analysis` at the unit context, with the published `state_at`/`report` and the endpoints connecting a computed solve to source execution (`source_sound`, `completed_run_sound`, `result_node_sound`). Every domain's unit route interprets it. | `src/Analyses/Shared/Result/Unit_DG_Analysis.thy` |

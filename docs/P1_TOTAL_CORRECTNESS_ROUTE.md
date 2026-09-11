@@ -8,18 +8,22 @@ phase revisits the scope decision (`docs/THESIS_SCOPE_MEMO.md`).
 
 ## What P1 is
 
-The main pipeline theorems (`pipeline_invariant_sound`, `pipeline_sound_path`,
-`goblint_sign_sound`, `goblint_interval_sound`) carry one explicit TD hypothesis:
+The end-to-end endpoints (`unit_dg_analysis`'s `source_sound` and
+`result_node_sound_of_terminates` in `Unit_DG_Analysis.thy`, and the routed
+`*_of_terminates` theorems in `Routed_Live_Keys.thy`) carry one solver
+hypothesis:
 
 ```isabelle
-assumes td_solve_dom: "\<And>v. TD_plain.solve_dom (make_rhs_tree ...) v"   -- P1
+assumes solves: "terminates ugs p"
 ```
 
-`solve_dom x` (vendored `TD_plain.thy:67`) asserts the solver's `iterate_dom`
-reaches a fixpoint when rooted at `x`. It is an **operational termination
-obligation on the vendored solver**, not a gap in the soundness proofs:
-`td_analyse_collect_sound_at` already gives "if the solver terminates at `v`, its
-result is sound at `v`". P1 closes the "if".
+`terminates` is `solve_dom` at the program's root query (vendored
+`TD_plain.thy:67`: the solver's `iterate_dom` reaches a fixpoint). A caller
+derives it from the executable solver returning (`terminates_of_solve_c`), so
+for a concrete program it is discharged by evaluation. It is an **operational termination obligation on the vendored
+solver**, not a gap in the soundness proofs: the endpoints already give "if the
+solver returns at `x`, its result is sound". P1 would close the "if" for every
+program.
 
 ## Why it does not fall out
 
@@ -32,7 +36,8 @@ finite_vars: "finite (UNIV :: 'x set)"
 ```
 
 i.e. the **type** of unknowns must be finite. In this repository unknowns are
-program points, `pp = nat` (`CFG_Def.thy`), an infinite type. The CFG has only
+program points paired with a context, plus global keys; `pp = cfg_node`
+(`CFG_Def.thy`) numbers statements by `nat`, so the type is infinite. The CFG has only
 finitely many *reachable* points, but that is a finite *set*, not a finite
 *type* — so the locale cannot be instantiated as-is. This is **P5**, and P1 is
 gated on it.
@@ -42,24 +47,24 @@ gated on it.
 ### (a) Finite program-point type — principled
 
 Build the CFG and constraint system over a finite type of (reachable) program
-points instead of `nat`, then instantiate `TD_warrow_mono_term` directly.
+points instead of `cfg_node`, then instantiate `TD_warrow_mono_term` directly.
 
 - **Pro:** reuses the vendored termination theorem wholesale; gives a clean
   generic total-correctness statement.
-- **Con:** retypes `pp` across `CFG_Def`, the path/collecting layers, and the
-  solver bridge. `pp = nat` is currently load-bearing: `cfg_edges_list` uses
-  `sorted_list_of_set (edges g)` and the derived `predecessor_list` drives the TD
-  core (`rhs_eq_fold_predecessor_list`). A finite-type retype must re-establish
-  the linear order and the predecessor machinery. Multi-week, touches the spine.
+- **Con:** retypes `pp` across `CFG_Def`, the collecting layers, the equation
+  generator and the solver bridge, and must re-establish every executable
+  enumeration of nodes and edges over the new type. Multi-week, touches the
+  spine.
 - Building block (not yet proved): `finite (edges g) \<Longrightarrow>` the set of
   reachable points is finite — needed to justify carving out the finite subtype.
 
 ### (b) Direct `solve_dom` on the reachable subgraph — bespoke
 
-Prove `solve_dom (make_rhs_tree ...) v` directly by a well-founded argument over
-the finite reachable subgraph rooted at `v`, bypassing the global `finite UNIV`.
+Prove `solve_dom` for the generated equation system directly, by a well-founded
+argument over the finite reachable subgraph rooted at the query, bypassing the
+global `finite UNIV`.
 
-- **Pro:** no spine retype; stays in `nat`.
+- **Pro:** no spine retype; stays in `cfg_node`.
 - **Con:** re-derives, outside the vendored locale, the monotone-progress /
   destabilization-bounded argument the vendored proof already makes. Effectively
   re-proving solver termination for the specific RHS shape. High effort, fragile
@@ -87,5 +92,4 @@ leave a half-retyped spine — that is worse than a clean explicit hypothesis.
 
 If total correctness becomes a hard requirement, route (a) is preferred: it
 reuses the vendored termination theorem rather than re-proving it, and the
-finite-subtype refactor is reusable infrastructure (it also unblocks executable
-end-to-end runs, P9).
+finite-subtype refactor is reusable infrastructure.

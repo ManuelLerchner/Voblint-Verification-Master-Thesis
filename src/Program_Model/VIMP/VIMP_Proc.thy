@@ -459,7 +459,7 @@ definition wf_source_program :: "(vname \<Rightarrow> bool) \<Rightarrow> proc_t
      (\<forall>p decl. \<Pi> p = Some decl \<longrightarrow> wf_proc_decl gs \<Pi> decl) \<and>
      (\<forall>p. \<Pi> p \<noteq> None \<longrightarrow> special_table p = None)"
 
-text \<open>The compiler-input well-formedness defined in the CFG session unfolds
+text \<open>The compiler-input well-formedness defined in the compiler session unfolds
   through this pair before reaching \<^const>\<open>wf_source_com\<close>; every site
   discharging that obligation shares the unfold skeleton, so it is collected
   here and the downstream definition adds itself to the same collection.\<close>
@@ -490,7 +490,7 @@ lemma wf_source_programD:
 section \<open>The semantics is inhabited\<close>
 
 text \<open>
-  Every theorem above is conditional on a step or a run existing, so the session ends by
+  Every theorem above is conditional on a step or a run existing, so this theory ends by
   exhibiting one that exercises the parts most easily got wrong: a procedure call that pushes
   a frame, returns a value, and pops the frame again.  Globals are empty here, so nothing the
   callee wrote survives except the returned value --- which is what has to reach \<open>x\<close>.

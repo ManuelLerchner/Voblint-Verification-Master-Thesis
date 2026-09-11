@@ -4,7 +4,8 @@
 Batch `isabelle build` rejects unicode tokens that I/Q tolerates,
 so we keep .thy sources ASCII-only. Run from pre-commit hook.
 
-Usage: check_isabelle_ascii.py FILE...
+Usage: check_isabelle_ascii.py [FILE...]
+With no files, scans every .thy under src/.
 Exits 1 if any file contains non-ASCII bytes outside comments,
 listing the offending lines with suggested ASCII replacements.
 """
@@ -73,8 +74,10 @@ def scan(path: Path) -> list[str]:
 
 def main(argv: list[str]) -> int:
     failures: list[str] = []
-    for arg in argv[1:]:
-        p = Path(arg)
+    paths = [Path(arg) for arg in argv[1:]]
+    if not paths:
+        paths = sorted(Path("src").rglob("*.thy"))
+    for p in paths:
         if not p.is_file() or p.suffix != ".thy":
             continue
         failures.extend(scan(p))

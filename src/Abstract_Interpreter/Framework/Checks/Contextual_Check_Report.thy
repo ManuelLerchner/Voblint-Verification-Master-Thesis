@@ -26,8 +26,8 @@ text \<open>
 text \<open>
   \<open>contextual_verdict\<close> is literally \<^typ>\<open>check_result lifted\<close>
   (\<^theory>\<open>Voblint_Domain.Reachability_Lift\<close>): \<open>Dead\<close> is \<^const>\<open>Bot\<close>, \<open>Decided\<close>
-  is \<^const>\<open>Lifted\<close>, and the order/bottom/join this section used to
-  instantiate by hand agree with \<^typ>\<open>'a lifted\<close>'s own generic instance at
+  is \<^const>\<open>Lifted\<close>, and its order/bottom/join are \<^typ>\<open>'a lifted\<close>'s own
+  generic instance at
   \<^typ>\<open>check_result\<close> (itself \<^class>\<open>semilattice_sup\<close>, from
   \<^theory>\<open>Voblint_Framework.Check_Result\<close>) constructor for constructor: \<open>Dead \<le> _\<close>
   always, a \<open>Decided\<close> never sits below \<open>Dead\<close>, and two \<open>Decided\<close> verdicts

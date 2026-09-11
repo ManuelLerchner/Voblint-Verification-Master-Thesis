@@ -333,7 +333,7 @@ text \<open>
   \<open>rel_transfer\<close> is the adapter that turns one of this file's
   \<open>d \<Rightarrow> g \<Rightarrow> (g, d)\<close> operations into a manager transfer: query the shared
   relation, run the operation, publish its global half, answer with its local
-  half. That pairing shape used to be the only interface; here it survives as
+  half. The manager interface does not require that pairing shape; here it is
   one domain's private convenience, which is the point.
 \<close>
 

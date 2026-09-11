@@ -6,7 +6,7 @@ theory Example_Sign_DG_CallString_K1
     "Voblint_Routing.Call_String_Routed_Context"
     "Voblint_Framework.Activation_Backbone"
     "Voblint_Solver.TD_Solver_Bridge"
-    "Voblint_Soundness.Run_Analysis_Sound"
+    "Voblint_Framework.Routed_Analysis_Sound"
     "Voblint_VIMP.VIMP_Notation"
 begin
 
@@ -256,24 +256,9 @@ abbreviation sigma_1 ::
 
 section \<open>Activation-indexed collecting soundness for the 1-call-string-routed solution\<close>
 
-definition sign_ctx_sg_1 ::
+abbreviation sign_ctx_sg_1 ::
   "pp \<times> cfg_node list + call_string_gk \<Rightarrow> sign exec_dg_st lifted" where
-  "sign_ctx_sg_1 z =
-     (case z of
-        Inl (v, ctx) \<Rightarrow>
-          (if (v, ctx) \<in> fst sign_nest_1_sol then locals (sigma_1 (Inl (v, ctx))) else Bot)
-      | Inr _ \<Rightarrow> Bot)"
-
-lemma sign_ctx_sg_1_covered:
-  "(v, ctx) \<in> fst sign_nest_1_sol
-     \<Longrightarrow> sign_ctx_sg_1 (Inl (v, ctx)) = locals (sigma_1 (Inl (v, ctx)))"
-  by (simp add: sign_ctx_sg_1_def)
-
-lemma sign_ctx_sg_1_uncovered_empty:
-  "(v, ctx) \<notin> fst sign_nest_1_sol
-     \<Longrightarrow> gamma_state_lift (map_lift (fun_of_resolved_st_q_for sign_nest_gs)
-           (sign_ctx_sg_1 (Inl (v, ctx)))) = {}"
-  by (simp add: sign_ctx_sg_1_def)
+  "sign_ctx_sg_1 \<equiv> solved_local_reader (fst sign_nest_1_sol) sigma_1"
 
 text \<open>The call-string routing policy instantiated at \<open>k = 1\<close>. The generic locale
   discharges everything that is a fact about \<^const>\<open>cs_route\<close>/\<^const>\<open>cs_context\<close> or about
@@ -296,16 +281,18 @@ proof (unfold_locales, unfold sign_nest_cfg_compile,
   show ?case by (rule sign_nest_finE)
 next
   case PP
-  show ?case by (rule sign_nest_1_pp_st[unfolded sign_nest_1_eqs_def])
+  show ?case
+    by (rule post_bounded_of_part_post_solution
+          [OF sign_nest_1_pp_st[unfolded sign_nest_1_eqs_def]])
 next
   case (SgCov v c)
-  show ?case using SgCov by (simp add: sign_ctx_sg_1_covered sign_nest_gamma_def)
+  show ?case using SgCov by (simp add: sign_nest_gamma_def)
 next
   case (SgUncov v c)
-  show ?case using SgUncov by (rule sign_ctx_sg_1_uncovered_empty)
+  show ?case using SgUncov by simp
 next
   case (Fwd u a v c)
-  show ?case using Fwd by (rule sign_nest_fwd_closed_1)
+  show ?case using Fwd(1,3) by (rule sign_nest_fwd_closed_1)
 next
   case IsBotBot show ?case by simp
 next
@@ -358,47 +345,6 @@ next
           covered_ret3_fpos_1 covered_ret3_fneg_1 covered_ret6_1 covered_ret7_1
           sign_nest_calls_shape
     by fastforce
-qed
-
-text \<open>CALL and COMB at this program, re-exported from the routed interpretation.\<close>
-
-lemma sign_ctx_sg_1_seed:
-  assumes "(u, CallEdge dst xs es, FunctionEntry p, cont) \<in> calls sign_nest_cfg"
-    and "s \<in> gamma_state_lift (map_lift (fun_of_resolved_st_q_for sign_nest_gs)
-               (sign_ctx_sg_1 (Inl (u, ctx))))"
-  shows "call_enter sign_nest_gs (CallEdge dst xs es) s
-           \<in> gamma_state_lift (map_lift (fun_of_resolved_st_q_for sign_nest_gs)
-               (sign_ctx_sg_1 (Inl (FunctionEntry p,
-                 cs_context 1 u ctx (call_enter sign_nest_gs (CallEdge dst xs es) s)))))"
-proof (rule sign_nest_1_cs.routed_context_call[OF assms[unfolded sign_nest_cfg_def]])
-  show "call_context_rel_of_fun (cs_context 1) u ctx (call_info_of (CallEdge dst xs es) p) s
-          (call_enter sign_nest_gs (CallEdge dst xs es) s)
-          (cs_context 1 u ctx (call_enter sign_nest_gs (CallEdge dst xs es) s))"
-    by simp
-qed
-
-lemma sign_ctx_sg_1_comb:
-  assumes "(cl, CallEdge dst pars args, FunctionEntry p, v) \<in> calls sign_nest_cfg"
-    and "s \<in> gamma_state_lift (map_lift (fun_of_resolved_st_q_for sign_nest_gs)
-               (sign_ctx_sg_1 (Inl (cl, c1))))"
-    and "t \<in> gamma_state_lift (map_lift (fun_of_resolved_st_q_for sign_nest_gs)
-               (sign_ctx_sg_1 (Inl (FunctionResult p, cs_context 1 cl c1 es))))"
-    and "call_enter_store sign_nest_gs sign_nest_cfg cl s es"
-  shows "combine_collect sign_nest_gs dst s t
-           \<in> gamma_state_lift (map_lift (fun_of_resolved_st_q_for sign_nest_gs)
-               (sign_ctx_sg_1 (Inl (v, c1))))"
-proof -
-  from assms(4) obtain dst' pars' args' p' cont' where
-      ce': "(cl, CallEdge dst' pars' args', FunctionEntry p', cont') \<in> calls sign_nest_cfg"
-    and es_eq: "es = call_enter sign_nest_gs (CallEdge dst' pars' args') s"
-    unfolding call_enter_store_def by blast
-  have adm: "admits_call_context sign_nest_gs (compile_prog sign_nest_pi sign_nest_procs)
-          (call_context_rel_of_fun (cs_context 1)) cl c1 p' s es (cs_context 1 cl c1 es)"
-    unfolding admits_call_context_def call_context_rel_of_fun_iff
-    using ce'[unfolded sign_nest_cfg_def] es_eq by blast
-  show ?thesis
-    by (rule sign_nest_1_cs.routed_context_comb[OF assms(1)[unfolded sign_nest_cfg_def]
-          assms(2)[unfolded sign_nest_cfg_def] adm assms(3)[unfolded sign_nest_cfg_def]])
 qed
 
 section \<open>The headline theorem: 1-call-string activation collecting soundness\<close>

@@ -6,12 +6,8 @@ counterpart, and that is the point of naming it: Goblint's `D.t` is already
 executable, so it needs no second representation. Here the soundness theorems
 of `Voblint_Framework` are stated over function-valued states `vname => 'a`, the
 verified solver runs on the association-list quotient `'a resolved_st_q`,
-and every theory in this session exists to connect the two.
-
-`docs/CORE_REFACTOR_PLAN.md` Phase 2 states the framework at the quotient
-carrier directly (the design of HOL-IMP's `Abs_State`), after which the
-transport theories are deleted and this session dissolves. Until then, read
-it as a refinement layer, not as part of the framework.
+and every theory in this session exists to connect the two. Read it as a
+refinement layer, not as part of the framework.
 
 | File | Role |
 | --- | --- |
@@ -27,8 +23,7 @@ it as a refinement layer, not as part of the framework.
 | `Refinement/Routed_Exec_Refinement.thy` | The routed layer, once for every domain and context policy: `pp_st` reconciles the buffered generator a domain solves with the unbuffered one the framework is stated over |
 | `State/Exec_Result_Readback.thy` | `readback_result_value`: reading a solved local unknown back as an abstract state |
 
-Depends on `Voblint_Framework` and, through `Result_Normalization`'s use of
-`prog_cfg`, on `Voblint_Compile`.
+Parent: `Voblint_Framework`. No theory here imports `Voblint_Compile`.
 
 ## Layout
 
@@ -45,7 +40,8 @@ Dependencies run State -> Spec -> Refinement.
 
 ## Reading order
 
-The four `Exec_St_*` theories form a chain, each adding exactly one concern:
+Four of the five `Exec_St_*` theories form a chain, each adding exactly one
+concern; `Exec_St_Restriction_Refinement` branches off `Exec_St_Transfer`:
 
 ```text
 Exec_St_Base          representation, quotient, order      (no variable names)

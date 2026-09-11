@@ -6,7 +6,7 @@ theory Routed_DG_Analysis
     "Voblint_Framework.Routed_Analysis_Sound"
     "Voblint_Framework.Seed_Global_Keys"
     "Voblint_Exec.Routed_Exec_Refinement"
-    "Voblint_Soundness.Run_Analysis_Sound"
+    Source_Activation_Sound
     "Voblint_Routing.Compiled_Routed_Equations"
     "Voblint_Routing.Entry_State_Routed_Context"
 begin
@@ -180,7 +180,7 @@ definition equations :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog
          ('a exec_dg_st lifted, 'a exec_dg_st lifted) dg_state) eqsT" where
   "equations gs p =
      compiled_routed_eqs_for gk0 seed (route gs)
-       (analysis_spec gs p) (prog_cfg p) (Lifted init_st)"
+       (analysis_spec gs p) (prog_cfg p) (Lifted init_st) bot"
 
 definition solution :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog
     \<Rightarrow> (pp \<times> 'c) set
@@ -229,6 +229,20 @@ definition ctx_succ :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Righ
           (enter_st gs (call_info_of ca q))
           (locals (sol_env gs p (Inl (u, ctx)))))
        ca"
+
+
+text \<open>
+  Where a call leads when it contributes at all: \<open>None\<close> when the entered state is
+  bottom, which is exactly when the routed call tree drops the alternative, and
+  otherwise the context \<^const>\<open>ctx_succ\<close> names.
+\<close>
+
+definition live_succ :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> cfg_node \<Rightarrow> 'c
+    \<Rightarrow> call_action \<Rightarrow> pname \<Rightarrow> 'c option" where
+  "live_succ gs p u ctx ca q =
+     (if transfer_lift (resolved_st_q_is_bot_for (declared_global_vars p))
+           (enter_st gs (call_info_of ca q)) (locals (sol_env gs p (Inl (u, ctx)))) = Bot
+      then None else Some (ctx_succ gs p u ctx ca q))"
 
 text \<open>
   The globals beside the table. Which contexts a procedure entry was solved at
@@ -564,6 +578,103 @@ text \<open>
 interpretation dg_base: sound_dg_spec_core "analysis_spec pgs p" dom.gamma_exec pgs
   unfolding analysis_spec_def by (rule dom.sound_dg_spec_core_st[OF tf_sound])
 
+lemma routed_analysis_sound_of_live:
+  fixes R :: "'c call_context_rel"
+  assumes solves: "terminates pgs p"
+    and fwd_ok: "\<And>u a v ctx. (u, ctx) \<in> sol_vars pgs p
+        \<Longrightarrow> locals (sol_env pgs p (Inl (u, ctx))) \<noteq> Bot
+        \<Longrightarrow> (u, a, v) \<in> intra (prog_cfg p) \<Longrightarrow> (v, ctx) \<in> sol_vars pgs p"
+    and comb_fwd_ok: "\<And>cl c1 dst pars args q cont. (cl, c1) \<in> sol_vars pgs p
+        \<Longrightarrow> (cl, CallEdge dst pars args, FunctionEntry q, cont) \<in> calls (prog_cfg p)
+        \<Longrightarrow> (cont, c1) \<in> sol_vars pgs p"
+    and cover_R: "\<And>u ctx dst pars args q cont s ctx'.
+        (u, ctx) \<in> sol_vars pgs p
+        \<Longrightarrow> (u, CallEdge dst pars args, FunctionEntry q, cont) \<in> calls (prog_cfg p)
+        \<Longrightarrow> R u ctx (call_info_of (CallEdge dst pars args) q) s
+              (call_enter pgs (CallEdge dst pars args) s) ctx'
+        \<Longrightarrow> entered (call_info_of (CallEdge dst pars args) q)
+              (locals (sol_env pgs p (Inl (u, ctx)))) \<noteq> Bot
+        \<Longrightarrow> route pgs u ctx
+                (entered (call_info_of (CallEdge dst pars args) q)
+                   (locals (sol_env pgs p (Inl (u, ctx)))))
+                (CallEdge dst pars args) = ctx'
+            \<and> (FunctionEntry q, ctx') \<in> sol_vars pgs p"
+    and total_R: "\<And>u ctx dst pars args q cont s.
+        (u, ctx) \<in> sol_vars pgs p
+        \<Longrightarrow> (u, CallEdge dst pars args, FunctionEntry q, cont) \<in> calls (prog_cfg p)
+        \<Longrightarrow> s \<in> dom.gamma_exec (locals (sol_env pgs p (Inl (u, ctx))))
+                  (globs (sol_env pgs p (Inr gk0)))
+        \<Longrightarrow> \<exists>ctx'. R u ctx (call_info_of (CallEdge dst pars args) q) s
+                      (call_enter pgs (CallEdge dst pars args) s) ctx'"
+  shows "routed_analysis_sound (analysis_spec pgs p) dom.gamma_exec pgs (prog_cfg p) gk0
+     (route pgs) Bot (Lifted init_st) Bot (sol_env pgs p) (sol_vars pgs p) (root_query p)
+     seed (\<lambda>d. d = Bot) R (map_lift (fun_of_resolved_st_q_for pgs)) classify"
+proof (unfold_locales, goal_cases FinE PP SgCov SgUncov Fwd FinC CallsUnique SeedKey
+    IsBotBot IsBotSound ResolveSound EnterCover EnterTotal CombFwd GammaRd
+    ClProved ClRefuted VarsFin)
+  case FinE show ?case unfolding prog_cfg_def using compile_prog_finite by simp
+next
+  case PP show ?case by (rule post_bounded_of_part_post_solution[OF pp_routed[OF solves]])
+next
+  case (SgCov v c) then show ?case by (simp add: dom.gamma_exec_def)
+next
+  case (SgUncov v c) then show ?case by simp
+next
+  case (Fwd u a v c)
+  have "locals (sol_env pgs p (Inl (u, c))) \<noteq> Bot"
+    using Fwd(2) by (auto simp: dom.gamma_exec_def)
+  with Fwd(1,3) show ?case by (blast intro: fwd_ok)
+next
+  case FinC show ?case unfolding prog_cfg_def by (simp add: compile_prog_finite)
+next
+  case CallsUnique show ?case
+    unfolding calls_source_unique_def prog_cfg_def
+    using compile_prog_calls_source_unique by blast
+next
+  case (SeedKey q ctx) show ?case by (rule seed_ne_gk0)
+next
+  case IsBotBot show ?case by simp
+next
+  case (IsBotSound d g') then show ?case by (simp add: dom.gamma_exec_def)
+next
+  case (ResolveSound u ctx dst pars args q cont s)
+  then show ?case unfolding prog_cfg_def by (simp add: compile_prog_finite)
+next
+  case (EnterCover u ctx dst pars args q cont s ctx')
+  let ?ci = "call_info_of (CallEdge dst pars args) q"
+  let ?caller = "locals (sol_env pgs p (Inl (u, ctx)))"
+  have cov: "entry_pairs_cover
+      (\<lambda>d'. dom.gamma_exec d' (globs (sol_env pgs p (Inr gk0)))) s
+      (call_enter pgs (CallEdge dst pars args) s) [(?caller, entered ?ci ?caller)]"
+    using entry_cover[OF EnterCover(3), where ci = ?ci] by simp
+  have nbE: "entered ?ci ?caller \<noteq> Bot"
+  proof
+    assume "entered ?ci ?caller = Bot"
+    with cov show False by (simp add: entry_pairs_cover_def dom.gamma_exec_def)
+  qed
+  have req: "route pgs u ctx (entered ?ci ?caller) (CallEdge dst pars args) = ctx'"
+    and covE: "(FunctionEntry q, ctx') \<in> sol_vars pgs p"
+    using cover_R[OF EnterCover(1,2,4) nbE] by blast+
+  show ?case
+    unfolding analysis_spec_def dgs_enter_local_state_st_for_lifted
+    using enter_runs_local_enter_transfer enter_deps_local_enter_transfer cov req covE
+    by (fastforce simp: entry_pairs_cover_def)
+next
+  case (EnterTotal u ctx dst pars args q cont s)
+  then show ?case by (rule total_R)
+next
+  case (CombFwd cl c1 dst pars args q cont)
+  then show ?case by (rule comb_fwd_ok)
+next
+  case (GammaRd d g') show ?case by (simp add: dom.gamma_exec_def)
+next
+  case (ClProved c d s) then show ?case by (rule classify_proved)
+next
+  case (ClRefuted c d s) then show ?case by (rule classify_refuted)
+next
+  case VarsFin show ?case by (rule vars_finite_of_terminates[OF solves])
+qed
+
 lemma routed_analysis_sound_of:
   fixes R :: "'c call_context_rel"
   assumes solves: "terminates pgs p"
@@ -592,63 +703,8 @@ lemma routed_analysis_sound_of:
   shows "routed_analysis_sound (analysis_spec pgs p) dom.gamma_exec pgs (prog_cfg p) gk0
      (route pgs) Bot (Lifted init_st) Bot (sol_env pgs p) (sol_vars pgs p) (root_query p)
      seed (\<lambda>d. d = Bot) R (map_lift (fun_of_resolved_st_q_for pgs)) classify"
-proof (unfold_locales, goal_cases FinE PP SgCov SgUncov Fwd FinC CallsUnique SeedKey
-    IsBotBot IsBotSound ResolveSound EnterCover EnterTotal CombFwd GammaRd
-    ClProved ClRefuted VarsFin)
-  case FinE show ?case unfolding prog_cfg_def using compile_prog_finite by simp
-next
-  case PP show ?case by (rule pp_routed[OF solves])
-next
-  case (SgCov v c) then show ?case by (simp add: dom.gamma_exec_def)
-next
-  case (SgUncov v c) then show ?case by simp
-next
-  case (Fwd u a v c) then show ?case by (rule fwd_ok)
-next
-  case FinC show ?case unfolding prog_cfg_def by (simp add: compile_prog_finite)
-next
-  case CallsUnique show ?case
-    unfolding calls_source_unique_def prog_cfg_def
-    using compile_prog_calls_source_unique by blast
-next
-  case (SeedKey q ctx) show ?case by (rule seed_ne_gk0)
-next
-  case IsBotBot show ?case by simp
-next
-  case (IsBotSound d g') then show ?case by (simp add: dom.gamma_exec_def)
-next
-  case (ResolveSound u ctx dst pars args q cont s)
-  then show ?case unfolding prog_cfg_def by (simp add: compile_prog_finite)
-next
-  case (EnterCover u ctx dst pars args q cont s ctx')
-  let ?ci = "call_info_of (CallEdge dst pars args) q"
-  let ?caller = "locals (sol_env pgs p (Inl (u, ctx)))"
-  have cov: "entry_pairs_cover
-      (\<lambda>d'. dom.gamma_exec d' (globs (sol_env pgs p (Inr gk0)))) s
-      (call_enter pgs (CallEdge dst pars args) s) [(?caller, entered ?ci ?caller)]"
-    using entry_cover[OF EnterCover(3), where ci = ?ci] by simp
-  have req: "route pgs u ctx (entered ?ci ?caller) (CallEdge dst pars args) = ctx'"
-    and covE: "(FunctionEntry q, ctx') \<in> sol_vars pgs p"
-    using cover_R[OF EnterCover(1,2,4)] by blast+
-  show ?case
-    unfolding analysis_spec_def dgs_enter_local_state_st_for_lifted
-    using enter_runs_local_enter_transfer enter_deps_local_enter_transfer cov req covE
-    by (fastforce simp: entry_pairs_cover_def)
-next
-  case (EnterTotal u ctx dst pars args q cont s)
-  then show ?case by (rule total_R)
-next
-  case (CombFwd cl c1 dst pars args q cont)
-  then show ?case by (rule comb_fwd_ok)
-next
-  case (GammaRd d g') show ?case by (simp add: dom.gamma_exec_def)
-next
-  case (ClProved c d s) then show ?case by (rule classify_proved)
-next
-  case (ClRefuted c d s) then show ?case by (rule classify_refuted)
-next
-  case VarsFin show ?case by (rule vars_finite_of_terminates[OF solves])
-qed
+  by (rule routed_analysis_sound_of_live [where R = R, OF solves _ comb_fwd_ok _ total_R])
+     (blast intro: fwd_ok dest: cover_R)+
 
 subsubsection \<open>The published endpoint, under termination and coverage\<close>
 

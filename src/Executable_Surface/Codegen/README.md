@@ -29,10 +29,11 @@ in a handwritten OCaml facade over `Generated`, which this project does not yet 
 
 ## What the proof attaches to
 
-`export_code` translates the executable equations of `analyse` and everything it
+`export_code` translates the executable equations of `run_voblint` and everything it
 transitively calls, down to the solver. It is not proving one function and shipping a
-different hand-written one: the generated `analyse` *is* a translation of the equations
-the soundness theorems are proved about. The proof term is erased, as in any
+different hand-written one: the generated `run_voblint` *is* a translation of the
+equations the soundness theorems (`Analysis_Run_Sound` through `Analysis_Certified`) are
+proved about. The proof term is erased, as in any
 `export_code` use; what survives is the identity of the constant.
 
 ## Checks
@@ -41,8 +42,8 @@ the soundness theorems are proved about. The proof term is erased, as in any
 | --- | --- |
 | `pixi run codegen` | regenerates `codegen/generated/` |
 | `pixi run codegen-check` | fails if the checked-in export has drifted from the theories |
-| `pixi run codegen-modules` | fails if the export emits any module but the three above — no Isabelle needed |
-| `pixi run codegen-api` | fails if handwritten OCaml names something the export hides — no Isabelle needed |
+| `pixi run codegen-modules-check` | fails if the export emits any module but the three above — no Isabelle needed |
+| `pixi run codegen-api-check` | fails if handwritten OCaml names something the export hides — no Isabelle needed |
 | `pixi run codegen-regression` | compiles the generated OCaml with `ocamlfind ocamlopt` and runs a driver that builds a program purely through the exported constructors, checking results against values Isabelle already proves |
 
 The generated source is tracked. Regenerating it is part of any change that adds or

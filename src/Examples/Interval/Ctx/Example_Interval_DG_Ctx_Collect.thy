@@ -229,7 +229,10 @@ lemma twice_context_at_call2:
   assumes sin: "s \<in> interval_gamma twice_gs (locals (snd twice_ctx_sol (Inl (Statement 3, []))))
                   (globs (snd twice_ctx_sol (Inr (Analysis_Global ()))))"
   shows "entry_state_context_rel twice_gs twice_program
-           (Statement 3) [] (call_info_of (CallEdge (Some (STR ''y'')) [(STR ''p'')] [VIMP_Syntax.N 10]) (STR ''twice''))
+           (Statement 3) []
+           (call_info_of
+             (CallEdge (Some (STR ''y'')) [(STR ''p'')] [VIMP_Syntax.N 10])
+             (STR ''twice''))
            s (call_enter twice_gs (CallEdge (Some (STR ''y'')) [(STR ''p'')] [VIMP_Syntax.N 10]) s) ctx_call2"
 proof -
   let ?ci = "call_info_of (CallEdge (Some (STR ''y'')) [(STR ''p'')] [VIMP_Syntax.N 10]) (STR ''twice'')"
@@ -308,9 +311,9 @@ proof -
 qed
 
 text \<open>The semantic store-decode and the routed relation agree: the value \<^const>\<open>ivl_context\<close>
-  computes from the concrete entered store is itself an admitted context, at each call
-  site's own edge (the relation, unlike the retired function, genuinely depends on which
-  edge produced the entry, so this no longer generalizes over an arbitrary \<open>dst\<close>).\<close>
+  computes from the concrete entered store is itself an admitted context at each call
+  site's own edge. The relation depends on the edge that produced the entry, so the
+  statement fixes \<open>dst\<close> to that edge.\<close>
 
 theorem ivl_context_is_entry_state_context_call1:
   assumes cov: "s \<in> interval_gamma twice_gs (locals (snd twice_ctx_sol (Inl (Statement 2, []))))
@@ -330,7 +333,10 @@ theorem ivl_context_is_entry_state_context_call2:
                   (globs (snd twice_ctx_sol (Inr (Analysis_Global ()))))"
     and es: "s' = call_enter twice_gs (CallEdge (Some (STR ''y'')) [(STR ''p'')] [VIMP_Syntax.N 10]) s"
   shows "entry_state_context_rel twice_gs twice_program
-           (Statement 3) [] (call_info_of (CallEdge (Some (STR ''y'')) [(STR ''p'')] [VIMP_Syntax.N 10]) (STR ''twice''))
+           (Statement 3) []
+           (call_info_of
+             (CallEdge (Some (STR ''y'')) [(STR ''p'')] [VIMP_Syntax.N 10])
+             (STR ''twice''))
            s s' (ivl_context (Statement 3) [] s')"
 proof -
   have "ivl_context (Statement 3) [] s' = ctx_call2"

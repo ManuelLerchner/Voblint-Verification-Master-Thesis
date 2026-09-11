@@ -1,20 +1,17 @@
 # CLI: `voblint`
 
-Status: **implemented** (`cli/main.ml`, `cli/vimp_frontend.ml`). This document
-originally sketched a `voblint-verify --file test.voblint` design (issue #29)
-before implementation started; it now describes the actual, shipped CLI
-instead, so a reader does not have to reconcile a stale design against the
-real tool. Source file extension is `.vimp`, not `.voblint` — the grammar
-itself is documented in `grammar/vimp.yaml`, not here.
+Status: **implemented** (`cli/main.ml`, `cli/vimp_frontend.ml`). Source file
+extension is `.vimp`; the grammar itself is documented in `manifests/vimp-grammar.yaml`,
+not here.
 
 ## Shape
 
 ```text
-voblint --analysis sign|interval|int|parity|congruence
+voblint --analysis sign|interval|int|parity|congruence[,...]
         [--context none|entry-state|call-string] [--context-depth K]
         [--context-graph collapsed|expanded]
-        [--dot | --dot-full | --graph-snapshot]
-        [--solver join|per-origin|warrow]
+        [--dot | --dot-full | --graph-snapshot | --html | --html-out DIR]
+        [--solver join|per-origin|warrow|warrow-per-origin]
         [--timeout SECONDS] FILE.vimp
 voblint --parse-only FILE.vimp
 voblint --help
@@ -22,11 +19,12 @@ voblint --help
 
 - `--analysis sign|interval|int|parity|congruence` selects the domain (required
   unless `--parse-only`). `int` is the refining composite Sign x Interval x
-  Parity x Congruence domain, fixed at its most precise refinement mode and the
-  warrowing solver, so it takes no `--solver`. `parity` is the four-element
+  Parity x Congruence domain, fixed at its most precise refinement mode; its
+  default solver is warrowing. `parity` is the four-element
   Bot/Even/Odd/Top lattice; it decides equalities only by refuting them
   across differing parities. `congruence` is the residue-class domain, one
-  value constrained to `x = r (mod m)`.
+  value constrained to `x = r (mod m)`. A comma list puts several domains side
+  by side in one `--html` report and requires `--html` and `--context none`.
 - `--context none|entry-state|call-string` selects context sensitivity
   (default `none`). `entry-state` re-analyzes each callee per distinct
   entered-argument context; `call-string` splits it by bounded call history
@@ -47,21 +45,28 @@ voblint --help
   and GraphViz presentation" section for the full architecture and the CLI
   contract. `expanded` is the default under `--context entry-state`: a run
   asked for per-context precision, and the collapsed view joins it away, so a
-  point dead in one activation and live in another reads as live. Requires
-  `--context entry-state`; `--context none` has one context to draw and
-  `--context call-string` renders per-context already, so the flag is a
-  configuration error at either, not a silent fallback.
+  point dead in one activation and live in another reads as live. An explicit
+  `expanded` requires `--context entry-state`: `--context none` has one context
+  to draw and `--context call-string` renders per-context already, so asking
+  for `expanded` at either is a configuration error, not a silent fallback.
 - `--dot` / `--dot-full` / `--graph-snapshot` pick an output mode in place of
   the default plain-text check report: `--dot` annotates check nodes only,
   `--dot-full` annotates every node with its computed abstract state,
   `--graph-snapshot` emits a deterministic, DOT-free textual snapshot (used
-  as the regression corpus's structural oracle, see `tests/run.py`).
-- `--solver join|per-origin|warrow` bypasses the domain's production solver
-  choice to exercise the vendored solver's update-rule discipline directly
-  (experimental); incompatible with `--context`/`--dot`/`--dot-full`/
-  `--graph-snapshot`, and unavailable for `--analysis int`, which is fixed at
-  the warrowing solver.
-- `--parse-only` parses and exits without running any analysis.
+  as the regression corpus's structural oracle, see `tests/run.py`). `--html`
+  writes a browsable result directory instead (see `docs/HTML_REPORT.md`).
+- `--solver join|per-origin|warrow|warrow-per-origin` bypasses the domain's
+  production solver choice to exercise the vendored solver's update-rule
+  discipline directly (experimental). Which disciplines a domain accepts at
+  each context is the resolver's table (`Config_Tables.thy`): `interval` takes
+  all four everywhere; `int` all four at `--context none` and `join`/`warrow`
+  at the two context modes; `sign`, `parity` and `congruence` take `join`
+  everywhere and `per-origin` at `--context none` only. The text report and
+  `--html` display a chosen discipline; `--dot`/`--dot-full`/`--graph-snapshot`
+  do not, and `--html` with `--solver` requires `--context none`.
+- `--parse-only` parses and exits without running any analysis. A
+  syntactically valid but ill-formed program still exits 0 here; the full run
+  rejects it with exit 4.
 - `--timeout SECONDS` bounds the analysis subprocess (default 10).
 
 ## Architecture
@@ -69,28 +74,27 @@ voblint --help
 ```text
 FILE.vimp text
     |
-    |  Vimp_lexer/Vimp_parser (cli/, generated from grammar/vimp.yaml by
+    |  Vimp_lexer/Vimp_parser (cli/, generated from manifests/vimp-grammar.yaml by
     |  scripts/gen_vimp_menhir.py -- ocamllex + Menhir) via Vimp_frontend
     |  (hand-written glue); unverified adapter, not in the soundness scope
     v
 imp_prog                              <- the same AST type the proved
     |                                     pipeline starts from
     v
-Voblint_CLI.Generated.mk_analysis_config / valid_analysis_config
-    |
-    v
-Voblint_CLI.Generated.analyse_config / analyse_config_ctx
-                      / analyse_config_with_state
+Voblint_CLI.Generated.run_voblint domain solver context view prog
     |                                  <- Isabelle-generated (Voblint_Codegen
     |                                     session's export_code), the CLI's
-    |                                     only production-facing entry points
+    |                                     only analysis entry point: it checks
+    |                                     well-formedness, resolves the
+    |                                     configuration, and runs the plan
     v
-check_report_entry list, or a contextual_verdict report            (text)
-    |                                                    (--dot/--dot-full/
-    v                                                     --graph-snapshot)
-Voblint_CLI.Generated.*_dot_auto / *_graph_snapshot_auto
-    -> DOT / canonical-text rendering, sourced from the same one
-       analysis_result the text report reads (never a second solve)
+Malformed_Program | Unsupported_Configuration | Analysed out
+    |
+    v
+out_checks (text report) / out_graph (--dot, --dot-full, --html)
+                         / out_snapshot (--graph-snapshot)
+    -> DOT and HTML drawn by cli/dot_render.ml and cli/html_report.ml,
+       all sourced from the one solve that produced `out` (never a second)
 ```
 
 The parser is the only unverified component in this chain. Everything from
@@ -114,19 +118,21 @@ core.
 
 ## Known safety requirement: Interval containment
 
-Interval analysis is sound but not proven total: it can still
-diverge on a finite program whose global-writing transfer depends
-monotonically on the flow-insensitive global summary's own current value.
-Reproductions during development included process/backend crashes, not just
-long-running computation, so the containment mechanism is a killable
-subprocess (`run_contained` in `cli/main.ml`), not an in-process timeout:
+Interval analysis is sound but not proven total: no theorem shows the solver
+terminates on every program, so termination is a premise of each soundness
+theorem, discharged per program. Interval's carrier has infinite height, and
+the join-based disciplines (`--solver join`, `per-origin`) have no termination
+guarantee on it. Reproductions during development included process/backend
+crashes, not just long-running computation, so the containment mechanism is a
+killable subprocess (`run_contained` in `cli/main.ml`), not an in-process
+timeout:
 
 ```text
 CLI parent
     |
     +-- fork() analyzer worker
            |
-           +-- run the requested analyse_*/*_auto call, write result to a temp file
+           +-- run the requested run_voblint call, write result to a temp file
 ```
 
 The parent enforces a wall-clock timeout (`--timeout`, `SIGKILL` on expiry),

@@ -1,6 +1,6 @@
 # Architecture audit: Deadcode / reachability representation
 
-Read-only audit requested by `docs/HANDOVER_DEADCODE_REACHABILITY_REFACTOR.md`. No
+Read-only audit requested by `docs/history/HANDOVER_DEADCODE_REACHABILITY_REFACTOR.md`. No
 source files were changed while producing this report; the only edits made were to the
 handover document itself (adding its section 8, the Goblint reference-architecture
 writeup, and a cross-reference from section 17).
@@ -259,7 +259,7 @@ audited against this repo's own doc corpus, not a fresh source read):
 
 * **Independently corroborated**, with verbatim excerpts already present in this
   repo's docs from earlier sessions: the `local`/`global`/`sideg` three-channel manager
-  split (`docs/DGC_ALIGNMENT_ANALYSIS.md:34` and five other docs) and the literal `raise
+  split (`docs/history/DGC_ALIGNMENT_ANALYSIS.md:34` and five other docs) and the literal `raise
   Deadcode` exception (`docs/RELATIONAL_DOMAIN_ARCHITECTURE_DECISION.md:570`,
   `docs/GOBLINT_SPEC_FULL_ALIGNMENT_PLAN.md:83`).
 * **Asserted this session, not found verbatim in this repo's docs**: the specific

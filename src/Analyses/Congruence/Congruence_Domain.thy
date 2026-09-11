@@ -106,6 +106,17 @@ typedef congruence =
 
 setup_lifting type_definition_congruence
 
+lemma normalized_Rep_congruence [simp]:
+  "normalized_congruence_rep (Rep_congruence a)"
+  using Rep_congruence[of a] by simp
+
+lemma congruence_rep_cases [case_names Bot Class]:
+  obtains (Bot) "Rep_congruence a = None"
+    | (Class) c m where "Rep_congruence a = Some (c, m)"
+proof (cases "Rep_congruence a")
+  case (Some p)
+  then show thesis by (cases p) (auto intro: Class)
+qed (rule Bot)
 instantiation congruence :: equal
 begin
 
@@ -154,7 +165,7 @@ next
   obtain c m where p: "p = (c, m)"
     by (cases p)
   have normalized: "normalized_congruence_rep (Some (c, m))"
-    using Rep_congruence[of a] unfolding Some p by simp
+    using normalized_Rep_congruence[of a] unfolding Some p by simp
   then have fixed:
     "normalize_congruence_rep (Some (c, m)) = Some (c, m)"
     by (rule normalize_congruence_rep_fixed)
@@ -382,9 +393,9 @@ proof -
   have reps: "Rep_congruence a = Rep_congruence b"
   proof (rule gamma_congruence_rep_inject)
     show "normalized_congruence_rep (Rep_congruence a)"
-      using Rep_congruence[of a] by simp
+      by simp
     show "normalized_congruence_rep (Rep_congruence b)"
-      using Rep_congruence[of b] by simp
+      by simp
     show "gamma_congruence_rep (Rep_congruence a) =
       gamma_congruence_rep (Rep_congruence b)"
       using assms unfolding gamma_congruence_def .

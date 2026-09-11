@@ -34,7 +34,7 @@ subsection \<open>Low-level edge formers over a solution address\<close>
 
 text \<open>
   The two formers in this subsection take a step in the direct shape
-  \<open>'dl \<Rightarrow> 'dg \<Rightarrow> 'dg \<times> 'dl\<close>, which no analysis writes any more: a specification
+  \<open>'dl \<Rightarrow> 'dg \<Rightarrow> 'dg \<times> 'dl\<close>, which no analysis writes: a specification
   supplies manager-native transfers, and \<open>DG_Spec\<close> compiles those. They
   survive because the keyed-solver update-rule regression
   needs a step it can vary directly, without a \<open>dg_spec\<close> in the way, and that

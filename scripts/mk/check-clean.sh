@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
-# Fail if the given paths are dirty *or* carry untracked files.
+# Fail if the given paths differ from the staged snapshot or carry untracked
+# files.
 #
-# `git diff --exit-code` reports neither untracked files nor whole-directory
-# additions, so a generator that emits a new artifact into a directory the
-# build first `rm -rf`s passes it silently. `git status --porcelain` reports
-# both, which is what a drift gate needs.
+# Comparing against HEAD would reject an intentionally regenerated artifact
+# after it has been staged. A pre-commit drift gate instead asks whether the
+# generator changed the working tree relative to the index. `git diff` answers
+# that for tracked paths; `git ls-files --others` covers new artifacts.
 set -euo pipefail
 
 if [ "$#" -eq 0 ]; then
@@ -12,13 +13,19 @@ if [ "$#" -eq 0 ]; then
   exit 2
 fi
 
-status="$(git status --porcelain -- "$@")"
+modified="$(git diff --name-status -- "$@")"
+untracked="$(git ls-files --others --exclude-standard -- "$@")"
 
-if [ -n "$status" ]; then
+if [ -n "$modified" ] || [ -n "$untracked" ]; then
   echo "drift detected in: $*" >&2
-  echo "$status" >&2
+  if [ -n "$modified" ]; then
+    echo "$modified" >&2
+  fi
+  if [ -n "$untracked" ]; then
+    printf '?? %s\n' "$untracked" >&2
+  fi
   echo >&2
-  # Tracked modifications also get a diff; untracked files show up above only.
+  # Tracked modifications get a content diff; untracked files are named above.
   git --no-pager diff -- "$@" >&2 || true
   exit 1
 fi

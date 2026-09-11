@@ -1,5 +1,14 @@
 # Check-discharge architecture
 
+> **Status:** partly stale. "Pipeline", "Layer responsibilities" and "Why no
+> automatic sublocale" name retired pieces: `check_true`/`check_false` are one
+> `check_query`; the `derived_*` locales are `numeric_query_judgments`
+> (`Abstract_Numeric_Queries.thy`), interpreted for every `backward_domain` in
+> `Backward_Numeric_Queries.thy`; `backward_domain` lives in
+> `Backward_Domain.thy`; `unit_dg_pipeline` and `Analysis_GraphViz.thy` no
+> longer exist. The current inventory is the `Checks/` row of
+> `src/Abstract_Interpreter/Framework/README.md`.
+
 Overview of how a compiled `__voblint_check(...)` condition becomes both a
 GraphViz-rendered proof status and a semantic soundness guarantee. This is
 a map of responsibilities across layers, not a proof-status inventory —
@@ -217,8 +226,9 @@ tables because the generic derivation would be a real precision loss.
 `Example_Interval_Checks_Store_Only.thy` (Interval) compile a program,
 run the verified solver, and discharge checks at each check's own node —
 one proved, one refuted, one unknown, plus a `checks_proven` bridge
-exercised on the singleton that is actually true. The Interval example
-additionally demonstrates a precision gain: a bound Interval proves
+exercised on the singleton that is actually true.
+`Example_Parity_Checks_Store_Only.thy` runs the same trio for Parity. The
+Interval example additionally demonstrates a precision gain: a bound Interval proves
 outright (`x < 11` after narrowing `x` to `[1,9]`) that Sign's `SPos`
 alone cannot.
 
@@ -235,16 +245,16 @@ table, never the raw solver map:
                              |
                              v
                       analysis_result
-               (pp, ctx) -> Reachable abs_state | Unreachable
+               (pp, ctx) -> Lifted abs_state | Bot
                              |
            +-----------------+-----------------+
            |                 |                 |
            v                 v                 v
      contextual        collapsed graph    expanded graph
-       checks         (Analysis_GraphViz)  (Analysis_GraphViz)
-  (analyse_ctx,      one node per pp,     one node per (pp, ctx),
-   aggregate_         contextual states    states never joined
-   verdicts)           joined for
+       checks         (Analysis_Graph_Build, both modes)
+  (aggregate_        one node per pp,     one node per (pp, ctx),
+   verdicts)         contextual states    states never joined
+                       joined for
                         rendering
            |                 |                 |
            +-----------------+-----------------+
@@ -265,7 +275,7 @@ none of that changes what the solver computed.
 ### CLI contract
 
 ```text
---context none|entry-state          context sensitivity (analysis-level)
+--context none|entry-state|call-string  context sensitivity (analysis-level)
 --context-graph collapsed|expanded  rendering mode (presentation-level)
 ```
 
@@ -288,11 +298,11 @@ error, not a silent fallback to collapsed.
 ## Known limitations (not yet addressed)
 
 - The three checks compiled from `Example_Interval_Checks_Store_Only.thy`
-  still generate visible `nop` edges between them — zero-width check
-  compilation remains a possible, unstarted, later compiler milestone
-  (`docs/NEXT_STEPS.md`). The `checks` relation already permits multiple
+  generate visible `nop` edges between them: the compiler gives each check
+  its own node. The `checks` relation already permits multiple
   checks at one program point (`(pp * bexp) set`, not a function from
   `pp`); the compiler currently happens to allocate one node per check,
   but the data model does not require that.
-- No domain besides Sign and Interval has a check-discharge instance.
-  Parity is not wired up.
+- Every selectable domain has a check-discharge instance:
+  `Sign_Checks`, `Interval_Checks`, `Parity_Checks`, `Congruence_Checks` and
+  `Int_Checks`.

@@ -4,7 +4,7 @@
 // interprocedural (multi-cluster, call/combine/call-to-return edge) case.
 // This pair pins the two structural shapes -- single-cluster and
 // interprocedural -- as a regression lock on
-// contextual_analysis_canonical_text (Analysis_GraphViz.thy). Other groups
+// contextual_analysis_canonical_text (Analysis_Graph_Export.thy). Other groups
 // carry EXPECT-GRAPH blocks for their own reasons; these two exist to pin
 // the shape itself.
 // EXPECT-GRAPH-BEGIN
