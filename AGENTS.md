@@ -75,12 +75,13 @@ own and the fourth component of `int_dom`, alongside sign, interval and parity.
 The session dependency graph is:
 
 ```text
-VIMP -> Domain -+
-                +-> CFG -> Framework -> Compile -> Exec -> Soundness -> Analysis/* -+
-TD   -> Solver -+                                                                   |
-                                                                                    v
-                                                                       CLI -> Codegen
-                                                                        +--> Examples/*
+VIMP -+-> CFG ----+-> Compile ---------+
+      |           |                    v
+      |           +-> Framework ---> Exec -> Soundness -> Analysis/* -+
+      +-> Domain -------^                                             |
+TD   ---> Solver -------^                                             v
+                                                         CLI -> Codegen
+                                                          +--> Examples/*
 ```
 
 (`CFG` depends on `VIMP` only; `Framework` on `CFG`, `Domain` and `Solver`;
@@ -90,8 +91,10 @@ TD   -> Solver -+                                                               
 What every domain reuses lives under `src/Analyses/Shared/` as three chained
 sessions, `Voblint_Routing -> Voblint_Result -> Voblint_Nonrelational`: routing
 policies over a compiled program, the publication surface, and the reuse locales
-a non-relational domain interprets. They are mutually independent and chained
-only so a domain inherits all three from one heap instead of re-elaborating two.
+a non-relational domain interprets. `Voblint_Result` builds on `Voblint_Routing`'s
+equations and contexts; `Voblint_Nonrelational` imports neither, and is chained
+after them only so a domain inherits all three from one heap instead of
+re-elaborating two.
 
 `Voblint_Nonrelational` is the parent of `Voblint_Analysis_Sign`, `_Interval`,
 `_Parity`, `_Congruence` and `_Int` (which also lists the four component domains
@@ -509,7 +512,7 @@ Whenever a change fixes a bug, changes semantics, or introduces a feature,
 add or update a regression test that locks in the new behavior -- an
 executable witness whose assertion pins the corrected/intended result, not
 the one it replaces. Use whichever regression layer the change actually
-touches: a `by eval` lemma in `Example_Analysis_Dispatch.thy` (or the nearest
+touches: a `by eval` lemma in `Example_Analysis_Dispatch_Regression.thy` (or the nearest
 sibling `Example_*.thy`) for solver/domain behavior, a `tests/regression/`
 `.vimp` fixture for CLI-observable behavior, or both when a fix is
 code-generated from Isabelle into `codegen/generated/` and therefore visible

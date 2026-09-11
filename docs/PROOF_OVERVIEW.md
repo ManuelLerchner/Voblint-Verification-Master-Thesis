@@ -77,8 +77,10 @@ The D/G interface separates flow-sensitive local facts (`D`) from shared
 side-effect information (`G`). A sound instance supplies local transfer,
 callee-entry, return-combine, publication, and read obligations.
 
-Unit-context Sign and Interval analyses use the same carrier for `D` and `G`.
-The mixed Sign/Interval instance uses distinct carriers. Context-sensitive
+The shipped domains use the whole-state specification: the local unknown carries
+the entire abstract state, VIMP globals included, and the global channel stays
+inert. `Rel_Order_Domain` instantiates the same interface at a relational
+carrier. Context-sensitive
 instances index local facts by activation keys while routing shared information
 through the analysis-defined global interface.
 

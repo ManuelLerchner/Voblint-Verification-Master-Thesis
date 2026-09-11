@@ -5,274 +5,57 @@ directions are:
 
 ## Context abstractions
 
-Define finite executable context domains with a proved abstraction relation to
-concrete activations. Evaluate recursive and widening-heavy examples separately
-from repeated-call examples.
+Entry-state and call-string contexts are done for all five domains, from the
+collecting semantics to the CLI:
 
-Tracked in detail in #108 (references #66, #77); summary below, keep the
-two in sync if either changes.
+- **Semantics.** `call_context_rel` admits the contexts of one concrete call,
+  `trace_context` threads them over traces, and `activation_collect` is indexed
+  by them (`LTR_Activation_Context`). A functional policy embeds through
+  `call_context_rel_of_fun`.
+- **Routing.** `routed_context_base_hetero` (`Routed_Context`) discharges the call
+  and combine obligations once for any context type `'c`;
+  `Entry_State_Routed_Context` and `Call_String_Routed_Context`
+  (`Voblint_Routing`) instantiate it. `'c` carries no `finite` sort constraint:
+  termination is the per-run `solve_dom` premise, as for the flat analysis.
+- **Endpoints.** `routed_dg_analysis.entry_state_activation_collect_sound` and
+  `fun_route_activation_collect_sound` bound each bucket;
+  `sound_table_of_activation` and `sound_table.source_sound` (`Analysis_Run_Sound`)
+  reach a source run.
+- **Checks and rendering.** `classify_checks_verdicts` joins verdicts over the
+  contexts the solved table covers (`contexts_at`), with `Dead` kept apart from
+  the three check results; `--context-graph expanded` draws one node per
+  `(pp, ctx)` pair.
+- **Regressions.** `tests/regression/03-procedures/precision/04-two_call_sites_entry_state.vimp`
+  (precision), `tests/regression/03-procedures/soundness/01-entry_state_random_arg.vimp`
+  (one wide context), `tests/regression/13-full-state-dot/02-entry_state_context_join.vimp`
+  (the collapsed join).
 
-**Naming note (2026-08-11, issue #110):** the dated milestones below narrate
-each identifier as it was named at the time. Issue #110's terminology pass
-renamed the semantic context function per instance from `*_enterc` to
-`*_context` and gave the generic locale parameter `route` inline notation
-`context#`: `ivl_enterc` -> `ivl_context`, `entry_state_enterc` ->
-`entry_state_context`, `formals_enterc` -> `formals_context_sem`. `route`,
-`route_ivl`, `route_enterc_agree`, and `enterc` itself (the generic locale
-parameter these are all named relative to) are unchanged. Grep the current
-name if a mention below doesn't turn up a hit.
+Arbitrary `gs`/`--flow-insensitive` stays out of scope; `declared_global p` is
+the classifier everywhere.
 
-Post-#66, `routed_context` (`Routed_Context.thy`) is real Core-level
-infrastructure, not example-level: it discharges the CALL/COMB obligations
-once, generically in a `route`/`enterc` pair and context type `'c`. Four
-interpretations already exist, including `Example_Interval_DG_Ctx_Flagship
-.thy`'s `route_ivl`/`ivl_enterc` -- a genuinely value-derived context
-(`'c = ivl`, not call-site history), with `contexts_distinct` proved `by
-eval` for two calls with different argument values landing in separate,
-un-joined contexts. So the CALL/COMB soundness machinery this feature needs
-already exists and is reusable. What's still missing:
+### Open: context bounding
 
-**Finiteness dependency resolved (2026-08-10).** `'c` carries no
-`::finite` sort constraint anywhere in `routed_context`/`dg_ctx_activation`/
-the TD solver -- `solve_dom` is a per-run computational-domain predicate,
-not a type-class constraint, and `Interval_Exec_Sound.thy`'s
-`ivl_exec_terminates_via_solve_c` already discharges it empirically for the
-flat analysis, with soundness proved unconditionally from there. So #77
-("Context-bounding lifters") is not a termination blocker for G1: unbounded
-entry-state contexts can ship on the same "if the solver returns, the
-result is sound" contract the flat analysis already relies on.
-
-**Exactness boundary found while grounding G1 (2026-08-10).**
-`route_enterc_agree` (`Routed_Context.thy:101-107`) is a literal equality
-required across every concretization of the caller's entered abstract
-state. Since `enterc` decodes a concrete value to an exact point, the
-equality only holds when the caller's abstract value at each
-context-forming formal is itself exact -- true of the flagship's
-literal-constant calls, not guaranteed generally. #77 resurfaces here for a
-different reason than termination: making the equality hold for non-exact
-callers needs `'c` to carry an order with the solver monotone in it --
-structurally #77's "Context Widening", reached from the routing-soundness
-side rather than the termination side. #108's G1-G5 plan (in the issue):
-
-1. **G1 -- generic exact-entry context construction (infrastructure, not
-   yet a general CLI feature). Done, batch-green (2026-08-10).**
-   `route_ivl`/`ivl_enterc` were hardcoded to one formal name (`"p"`), built
-   for that one flagship program. Replaced with `formals_context`/
-   `formals_route`/`formals_route_gen`/`formals_at_call_site`/
-   `formals_enterc` (`Routed_Context.thy`, domain-generic, no `Ivl`
-   reference), reusing `CallEdge`'s own `pars` field -- no separate
-   `formals(Pi(q))` lookup needed -- and discharged via a `routed_context`
-   interpretation across `Example_Interval_DG_Ctx_Flagship.thy`,
-   `_Ctx_Sound.thy`, `_Ctx_Collect.thy`, and `Example_Interval_Source_Ctx.thy`
-   (the last caught only by the batch build, not interactive I/Q, since it
-   was never opened during development). No procedure identity folded into
-   `'c`: `vars`/`seed_key` already pair `'c` with `pp`, which disambiguates
-   by callee. Proved at exact call sites (matching the flagship); the
-   exactness precondition above is not lifted -- that's G2.
-2. **G2 -- abstract context coverage semantics. Done, batch-green
-   (2026-08-10).** *2026-09-05: the `admiss`/`ctx_key` layer described below
-   was removed in f0588428 and is superseded by `call_context_rel`/
-   `trace_context`; what follows is history.* G2a's `ctx_rep`-over-exact-`key` design (below, kept for
-   the historical record) turned out not to compose through COMB: a
-   trace's admitted context and the callee's admitted context were
-   rediscovered independently, so nothing tied them together at the
-   return. The fix was architectural, not a patch -- replace the
-   deterministic `enterc :: cfg_node => 'c => store => 'c` with a
-   relational `admiss :: cfg_node => 'c => store => 'c => bool`, and key
-   traces through it via a new inductive `ctx_key` (mirroring `key`'s own
-   recursion, `LTR_Def.thy`) instead of the old deterministic
-   `key`. This is the paper's own soundness argument (Erhard, Schinabeck,
-   Schwarz, Seidl, "Context Gas and friends," IJSTTT 2025, Section 10's
-   description function `beta`, rules D1-D3, Theorem 1/Theorem 2), not an
-   ad hoc analogy: the callee's admitted context is now *derived from* the
-   caller's own admiss-witnessed context (`ctx_key_entry_invariant_iff`),
-   never rediscovered, which is exactly what makes COMB provable.
-
-   `ltr_gamma` (`LTR_Abstract.thy`) is restated over `admiss`/`seedc` with
-   a new `ADMISS_TOTAL` assumption and `admiss`-relaxed CALL/COMB;
-   `activation_collect` (`LTR_Def.thy`) is redefined directly via
-   `ctx_key`, dropping G2a's `ctx_rep`/`MONO` machinery entirely (`ctx_key`
-   itself now does what `MONO` patched around). `admiss_exact enterc`
-   (`admiss_exact_def`: `c' = enterc u c s`) is the functional special case
-   recovering the old deterministic behavior exactly, proved via
-   `ctx_key_exact_iff`: `ctx_key (admiss_exact enterc) seedc t c <->
-   key enterc seedc t = c`. Every existing exact-context client --
-   `Call_String_Collecting_Refinement.thy`, all four CallString examples
-   (Interval K1/K2/flat, Sign K1/K2), both G1 Ctx examples
-   (`Example_Interval_DG_Ctx_Collect.thy`, `Example_Interval_Source_Ctx
-   .thy`) -- reduces to its previous behavior through that lemma, with no
-   change to `Routed_Context.thy`'s locale itself: `route_enterc_agree`
-   stays a plain equation, since an `admiss` instance that ignores its
-   `store` argument (using only the caller's already-solved abstract
-   state) is *already* `admiss_exact`-shaped.
-
-   The acceptance case is proved: `Example_Interval_DG_EntryState_{Base,
-   Ctx,Sound,Collect}.thy` compile `void p(a) { return a }` / `void main()
-   { x := random(); y := p(x) }`, route the call through the caller's
-   solved (necessarily `Top`) interval for `x`, and the executable solver
-   confirms `ctx_call = [ivl_top]` (`ctx_call_val`, `by eval`) -- one
-   context, not a family indexed by which concrete value `random()`
-   produced. `entry_state_coverage` (`Example_Interval_DG_EntryState_Collect
-   .thy`) is the crux corollary: for every concrete store reaching the
-   call site, the callee entry lands at the same fixed `ctx_call`, with no
-   `s`-dependence anywhere in the conclusion.
-
-   G2a's design, for reference: `activation_collect` took a coverage
-   relation `ctx_rep :: 'c => 'c => bool` (membership `ctx_rep (key enterc
-   seedc t) c`), and `activation_collect_sound` a `MONO` obligation
-   (`ctx_rep c1 c2 ==> sg-slot c1 <= sg-slot c2`) -- both now superseded by
-   `admiss`/`ctx_key` and removed from the codebase.
-3. **G3 -- executable context-sensitive Interval endpoint. Done, batch-green
-   (2026-08-11).** `entry_state_sol`/`entry_state_terminates`
-   (`Interval_Ctx_Entry_State_Sound.thy`, `src/Soundness/`)
-   generalize the acceptance example's fixed program to an arbitrary
-   `imp_prog`, keyed on `pp x ivl list` exactly as sketched below, same
-   `solve_dom`/`solve_c` convention as `analyse_interval_td_raw`. The
-   soundness chain reuses G2's generic `admiss_exact`/`ctx_key` theorems
-   directly: `entry_state_enterc` recovers the routed value from the
-   caller's own solved state via a new compiler invariant,
-   `compile_prog_calls_source_unique` (`VIMP_Proc_to_CFG.thy`) -- no CFG
-   node produced by `compile_prog` has two distinct outgoing call edges --
-   which lets `call_action_at_call_site`/`call_action_at_call_site_eq`
-   (`Routed_Context.thy`) resolve the one call at a node unconditionally,
-   for any program, not just the acceptance example's one call site.
-   Keystone: `entry_state_activation_collect_sound`.
-4. **G4 -- context-aware checks/reporting. Done, batch-green (2026-08-11).**
-   Not a bespoke combinator: `check_result` is a real `semilattice_sup`
-   instance (`Abstract_Checks.thy`) -- `Check_Unknown` top, `Proved`/
-   `Refuted` incomparable -- so aggregation across every context a node's
-   solver output covers is `Finite_Set.fold1`/`Sup_fin` over that lattice,
-   proved associative/commutative/idempotent by the typeclass laws, not a
-   hand-rolled "all Proved -> PROVED, all Refuted -> REFUTED" reduction.
-   `classify_checks_ctx`/`classify_checks_verdicts` (`Abstract_Checks.thy`)
-   read a solved `analysis_result` rather than a solver state, and enumerate
-   covered contexts via `contexts_at` over the solver's own already-finite
-   key set, never a raw comprehension (`ivl list` has no `enum` instance --
-   its only order is the non-total abstract-domain lattice). Deadness is a
-   fourth verdict, `contextual_verdict`'s `Dead`, not a `check_result`
-   value: a context whose stored state concretizes to nothing is excluded
-   from the join, and a check whose every covered context is dead reports
-   `Dead` and is suppressed at the CLI, instead of classifying vacuously
-   against `bot` and reporting a fabricated `Check_Proved`.
-5. **G5 -- CLI exposure + precision witness. Done, batch-green
-   (2026-08-11).** *2026-09-10: two of the restrictions below have lifted.
-   Every domain has an entry-state and a call-string instance, so
-   `--analysis sign --context entry-state` is a supported configuration;
-   and `--context-graph expanded` draws one node per `(pp, ctx)` pair for
-   all five, defaulting on under `--context entry-state`, because
-   `contexts_at` enumerates the solved table's own covered contexts and
-   needs no order on the context type -- which is what #112 was waiting
-   for. The rest of the entry stands.* `--analysis interval --context
-   entry-state` (default
-   `--context none`, byte-identical to prior behavior --
-   `analyse_ctx_none_eq_analyse` pins the equivalence); `--analysis sign
-   --context entry-state` is a checked, explicit unsupported-combination
-   error (exit 1), not a silent fallback. Regressions:
-   `tests/regression/03-procedures/precision/04-two_call_sites_entry_state
-   .vimp` is the precision witness (two calls at distinct exact argument
-   values, `--context none` -> UNKNOWN per the known-imprecision sibling,
-   `--context entry-state` -> PROVED);
-   `tests/regression/03-procedures/soundness/01-entry_state_random_arg.vimp`
-   is the random()-argument acceptance case (one wide context, terminates,
-   UNKNOWN is the sound verdict, not a false PROVED). `context_mode`/
-   `analyse_ctx` export through the same Haskell/OCaml `export_code`
-   pipeline as `analyse` (`Analyse_Dispatch.thy`,
-   `Example_State_Report_GraphViz.thy`). `--dot`/`--dot-full`/
-   `--graph-snapshot` also support `--context entry-state`
-   (`entry_state_report_dot_auto`/`entry_state_full_state_dot_auto` and
-   their `_graph_snapshot_auto` siblings, `Example_State_Report_GraphViz
-   .thy`): a rendered node can only carry one state, so a node reachable
-   under several contexts renders the `Sup_fin` join of each context's
-   reading through `ivl`'s own `semilattice_sup` -- the same aggregation
-   principle as G4's check verdicts, this time over the domain lattice
-   instead of `check_result`. This is a documented projection, not a
-   per-context breakdown: genuinely duplicated clusters (one `square`
-   cluster per context, mirroring the call-string K1/K2 examples' own
-   hand-written context lists) would need an executable enumeration of
-   the solver's own covered-context set, which isn't available for `ivl
-   list` today -- `sorted_list_of_set` needs a `linorder` `ivl` doesn't
-   and shouldn't have, `Finite_Set.fold (#) []` needs `ivl list ::
-   finite`, which it structurally isn't (confirmed by a direct spike, not
-   just reasoned about). Tracked as its own follow-up (#112), not worked
-   around with an artificial order on `ivl`; the check/report layer is
-   unaffected (it already preserves per-context precision internally).
-   Regression: `tests/regression/13-full-state-dot
-   /02-entry_state_context_join.vimp` shows the join directly (`n=[3,4]`
-   inside the shared callee, joining `[3,3]`/`[4,4]` from the two call
-   sites, while the caller's own checks stay context-separated and
-   PROVED); `tests/regression/11-graph-snapshot
-   /03-two_call_sites_entry_state.vimp` is the DOT-free sibling.
-
-Arbitrary `gs`/`--flow-insensitive` stays explicitly out of scope -- see
-# 66's M4 / `docs/history/SEIDL_CONTEXT_LIFECYCLE_MIGRATION.md`; `declared_global p`
-stays invariant across whatever this lands as.
-
-1. **G6 -- #77 scoping audit and call-string finiteness. Done, batch-green
-   (2026-08-21).** #77 ("Context-bounding lifters: Context Gas / Loopfree
-   Callstring / Context Widening") asks to make context-space bounding "a
-   first-class, terminating mechanism instead of relying on the ambient
-   finiteness assumption," but the issue itself flags that it isn't yet
-   actionable ("missing grounding," "recommend scoping this the way #66 is
-   scoped... before starting"). This entry is that scoping pass, done
-   directly against current source rather than the issue's own now-stale
-   premise (`'c::finite` is not a sort constraint anywhere in
-   `routed_context`/`dg_ctx_activation`/the TD solver interface -- see G1's
-   finiteness-dependency note above, still true).
-
-   The routed-domain migration (`docs/PROOF_PHASES.md`) put both context
-   instances behind one architecture, so auditing them together settles
-   which one #77 is actually about:
-
-   - **Call-string contexts have a bounded candidate space; that is less
-     than "bounded".** `cs_route k` truncates every context to length
-     `<= k` (`cs_route_length`, pre-existing); a compiled program's CFG has
-     finitely many nodes (`cfg_nodes_finite`, `CFG_Def.thy`); combined with
-     the standard library's own `finite_lists_length_le`, the set of
-     contexts any `k`-bounded call-string routing over a compiled program
-     could produce is finite --
-     `compiled_call_strings_finite`/`compiled_call_string_vars_finite`/
-     `compiled_call_string_gk_finite` (`Context_Space_Finite.thy`,
-     `Voblint_Analysis_Base`). What those results do *not* establish is
-     that routing stays inside that space: containment of both the node and
-     the context half is a hypothesis of each of them, and truncation alone
-     does not give the second -- a starting context whose elements are not
-     nodes of this program stays short without ever entering the space.
-     Nor do they bear on `solve_dom`: a finite key space does not make a
-     solve terminate (one interval unknown can ascend forever), and a
-     terminating solve says nothing about the space its keys came from.
-     Closing the gap means proving key closure under routing, which is
-     substantive work, not a corollary. Empirical companion:
-     `tests/regression/17-call-string/known-imprecision
-     /01-deep_recursion_bounded_context.vimp` runs a self-recursive
-     procedure 50 levels deep under `--context-depth 1` and completes
-     immediately -- one context per recursion level never materializes.
-   - **Entry-state contexts are the genuinely open half, and #77's "gas /
-     widening" language is about them, not call-strings.** An entry-state
-     context is a domain value (`ivl list`, `sign list`, ...), not a
-     bounded-length list over a finite alphabet; for an infinite-height
-     domain such as `ivl` the context space is genuinely unbounded, and
-     today's contract is the same empirical `solve_dom` guarantee the flat
-     (`Ctx_None`) analysis already ships with (G1's finiteness-dependency
-     note above). That is a deliberate, already-accepted design choice, not
-     a bug -- but it is exactly what #77 would need to change to be
-     "first-class" there.
-
-   **What's still missing before entry-state bounding is actionable:** a
-   concrete policy decision with real, user-visible precision consequences
-   that nothing in the codebase or #77 specifies -- e.g., a gas budget that
-   widens overflow entries into one shared per-callee context, versus a
-   loop-detecting variant, versus something else, and in either case what
-   the routed seed-key type and the `admiss`/`ctx_key` instance
-   (`docs/NEXT_STEPS.md` G2, `LTR_Abstract.thy`) look like for a
-   non-deterministic bounding relation. G2's `admiss` generalization
-   already covers this abstractly (any sound relation works, not just
-   `admiss_exact`), so no new Core soundness machinery is anticipated to be
-   needed -- only the concrete policy choice and its own instance. Do not
-   start implementation here without first picking one policy and writing
-   it up the way M1-M4/G1-G5 above are written up; reading Erhard,
-   Schinabeck, Schwarz, Seidl, "Context gas and friends: taming
-   context-sensitivity on the fly" first (the issue's own cited source) is
-   worthwhile before choosing.
+- **Call strings have a bounded candidate space, which is less than bounded.**
+  `cs_route k` truncates every context to length `<= k` (`cs_route_length`), a
+  compiled program has finitely many nodes (`cfg_nodes_finite`), and with
+  `finite_lists_length_le` the contexts a `k`-bounded routing over a compiled
+  program could produce form a finite set --
+  `compiled_call_strings_finite`/`compiled_call_string_vars_finite`/
+  `compiled_call_string_gk_finite` (`Context_Space_Finite.thy`, `Voblint_Routing`).
+  Containment of the node and context halves is a hypothesis of each of them,
+  and truncation alone does not give the second. Nor do they bear on
+  `solve_dom`: a finite key space does not make a solve terminate. Closing the
+  gap means proving key closure under routing. Empirical companion:
+  `tests/regression/17-call-string/known-imprecision/01-deep_recursion_bounded_context.vimp`
+  (50 levels of recursion under `--context-depth 1`).
+- **Entry-state contexts are unbounded.** An entry-state context is a domain
+  value (`ivl list`, `sign list`, ...); for an infinite-height domain such as
+  `ivl` the context space is unbounded, and the contract is the same `solve_dom`
+  premise the flat analysis ships with. Bounding it needs a policy decision
+  first -- a gas budget that widens overflow entries into one shared per-callee
+  context, a loop-detecting variant, or something else -- and then that policy's
+  `call_context_rel` instance. Erhard, Schinabeck, Schwarz, Seidl, "Context gas
+  and friends: taming context-sensitivity on the fly" is the reference.
 
 ## D/G communication
 
@@ -280,27 +63,11 @@ Improve analysis-defined shared-state reads and publications where a concrete
 precision example requires it. Preserve the generic separation between local
 `D` facts and shared `G` facts.
 
-## Placement-aware D/G generation (settled, no further action planned)
+## Placement-aware D/G generation (removed)
 
-`sound_dg_spec_core` is a proved `sublocale` of `sound_dg_hooks`
-(`DG_Soundness.thy`, `DG_LTR_Sound.thy`): one implementation, two abstraction
-levels. `sound_dg_spec_core` is the concise adapter every ordinary analysis
-interprets (one locale interpretation, no per-CFG-node proof burden);
-`sound_dg_hooks` is the framework-construction API for analyses whose D/G
-structure needs arbitrary hook trees, such as owner-sensitive placement.
-Sign, Interval, Parity, Mixed, CallString, and Ctx all stay on
-`sound_dg_spec_core`/`dg_ctx_activation`/`routed_context`; two examples,
-`Example_Interval_Placement.thy` and `Example_Sign_Placement.thy`, exercise
-`sound_dg_hooks` directly as framework validation, not as templates.
-
-This closes a prior migration attempt: two flagships
-(`Exec_Sign_DG_Run.thy`, `Example_Parity_DG_Flagship.thy`) were migrated onto
-`sound_dg_hooks` directly on the mistaken premise that `sound_dg_spec_core` was a
-duplicate implementation. Both grew 5-6x for no closed soundness/drift risk
-(`docs/reviews/M4_SPINE_BOUNDARY_AUDIT.md`) and were reverted. No further
-example migration to `sound_dg_hooks` is planned; do not propose one without
-new evidence that a specific analysis's D/G structure genuinely needs the
-hook-tree level `sound_dg_spec_core` cannot express.
+The hook-tree layer (`sound_dg_hooks`) and the placement examples built on it
+were removed; `docs/GOBLINT_ALIGNMENT_REGISTER.md` records why. No further
+action is planned.
 
 ## Domain composition
 
@@ -329,7 +96,7 @@ reference model.
 ## Equality backward narrowing (done)
 
 `inv_eq`, analogous to `inv_less`, is a `backward_domain` operator alongside
-`inv_less`/`inv_plus`/`inv_minus`/`inv_times` (`Abstract_Domain.thy`).
+`inv_less`/`inv_plus`/`inv_minus`/`inv_times` (`Backward_Domain.thy`).
 `bfilter`'s `Eq` case narrows through it on both branches, not only the true
 branch. Sign has a real, monotone instance (`inv_eq_sign`,
 `Sign_Backward.thy`); Interval keeps a sound identity fallback with the
@@ -337,40 +104,14 @@ precision gap documented in-theory (`Interval_Backward.thy`). This is
 separate from the boolean `eq_true`/`eq_false` query interface used for check
 classification (`Abstract_Numeric_Queries.thy`).
 
-## Per-domain configuration duplication in the Analysis session
+## Per-domain configuration duplication (done)
 
-Still open, and narrower than when it was written. The twelve-theory
-`Domain x Context` matrix it described is gone: each domain now has one
-`*_Sound` package and one `*_Analyses` configuration module, and the prefixes
-are `sign_conf_`, `interval_conf_`, `int_conf_` and `parity_conf_`. What remains is the
-duplication this section is actually about -- the configuration family is still
-written out once per domain rather than derived once.
-
-`sign_conf_*`, `interval_conf_*`, `int_conf_*`, `parity_conf_*` and the `entry_state_*`
-family mirror each other across 23 suffixes -- `_eqs_prog`, `_sol_prog`,
-`_sol_prog_per_origin`, `_terminates_prog`, `_sg`, `_sg_covered`,
-`_sg_uncovered_empty`, `_sigma_abs`, `_fin`, `_finC` and the rest -- for a
-combined 245 constants and lemmas across the four prefixes.
-
-These are not four instantiations of a shared abstraction; they are four
-copies. The bodies are character-identical modulo the domain type and the
-`_eqs_prog` they call:
-
-```
-sign_conf_sol_prog          gs p = TD_side_always_join_Interp_solve (sign_conf_eqs_prog gs p)          (cfg_exit (prog_cfg p), ())
-interval_conf_sol_prog gs p = TD_side_always_join_Interp_solve (interval_conf_eqs_prog gs p) (cfg_exit (prog_cfg p), ())
-parity_conf_sol_prog          gs p = TD_side_always_join_Interp_solve (parity_conf_eqs_prog gs p)          (cfg_exit (prog_cfg p), ())
-```
-
-A locale fixing `eqs_prog` and polymorphic in the domain would derive the
-whole family once, the way `compiled_cfg` (`Compile_Wellformed`) now derives
-`cfg_entry`/`cfg_exit`/finiteness/`wf_cfg` for a named compiled graph.
-
-Size this as a session-scale change, not a cleanup pass: this layer feeds
-`Voblint_CLI` and the code export, so it wants its own branch and its own
-gate run. `_wf` and most of `_reserved` are *not* part of it --- those
-discharge the same obligation for different concrete programs, and a locale
-would only rename the work.
+The per-domain `*_conf_*` families are no longer written out once per domain.
+`assembly/analyses.yaml` drives `scripts/gen_analysis_assembly.py`, which
+generates each domain's registrations of `unit_dg_analysis` and
+`routed_dg_analysis` (`Voblint_Result`); the equation system, solve, reader,
+result table, report and soundness endpoints come from those locales, and the
+generated theories only name a domain's own facts.
 
 ## Deferred from the Framework and Analysis restructure
 
@@ -384,8 +125,7 @@ Global_Location vname` admits entries at the tagging a name does not have.
 `resolved_st_is_bot` is the one carrier operation that must consult `gs`, and it
 does so only to filter those entries: the quotient's equality observes every
 tagged location while the concretization reads back only the one `gs` selects.
-`canonical_location` names that filter and `canonical_resolved_st` records that
-transfers only ever produce canonical states. The dependency disappears when
+`canonical_location` names that filter. The dependency disappears when
 elaboration resolves each declaration to its own identity -- one declaration,
 one cell, scope as metadata -- which also handles shadowing that a textual name
 cannot. Do not split the carrier into local and global maps first: keyed by raw
@@ -394,24 +134,12 @@ twice.
 
 **Names that still need a read before they are changed.** `State_Restriction`
 holds only ownership projections, so `Ownership_Restriction` would be more
-truthful. `DG_Soundness` and `DG_LTR_Sound` sit next to `DG_Spec_Sound` without
-saying how the three differ -- spec-level, generated-constraint and trace-level
-soundness respectively, if a read confirms it. `DG_Ctx_Activation` abbreviates a
+truthful. `DG_Ctx_Activation` abbreviates a
 word its own directory already supplies.
-
-**`Instances/Relational`.** `rel_order_spec` is a complete `dg_spec` with global
-access and side effects, so it belongs among the instances; but it has no
-`*_Analyses` wiring it to a context policy, which is why the directory looks
-thin next to the other four. Either wire it up or say in its README why it
-stops at the domain.
 
 **Refining the override list.** `resolved_st`'s association list is a candidate
 for an AFP `rbt` map. Keep it independent of the identity migration above, and
 benchmark the generated OCaml rather than Isabelle evaluation.
-
-**Examples layout.** `Examples/` still reflects the development order rather
-than what each example demonstrates. Low value relative to the churn; do it only
-alongside work that touches those files anyway.
 
 ## Source extensions
 

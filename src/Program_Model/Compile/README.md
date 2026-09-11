@@ -73,15 +73,16 @@ over-approximate.
 
 ## Shape of the session
 
-Two branches that meet only at the end. `Simulation/` never mentions traces;
-`Procedure_Ownership` never mentions the simulation. `Source_To_Trace` is the
-only theory needing both.
+Two branches that share `Compile_Invariants` and meet again only at the end.
+`Simulation/` never mentions traces; `Procedure_Ownership` never mentions the
+simulation. `Source_To_Trace` is the only theory needing both.
 
 ```text
-VIMP_Proc_to_CFG ──► Compile_Wellformed
- ├─► Compile_Invariants ──► Procedure_Ownership ─────────────┐
- └─► Simulation/Residual_Location ──► …Residual_Edges        │
-        └─► …Simulation_Relation ──► …Simulation_Preservation ┤
-                                                              ▼
-                                                       Source_To_Trace
+VIMP_Proc_to_CFG ──► Compile_Wellformed ──► Compile_Invariants
+ │                                           ├─► Procedure_Ownership ─────┐
+ │                                           └──────────────┐             │
+ └─► Simulation/Residual_Location ──► …Residual_Edges       ▼             │
+        └─► …Simulation_Relation ──────────► …Simulation_Preservation ────┤
+                                                                          ▼
+                                                                   Source_To_Trace
 ```

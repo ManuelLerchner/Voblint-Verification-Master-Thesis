@@ -25,16 +25,21 @@ Parity_Domain      the lattice, order, and its concretization
   -> Parity_Sound                       what the initial abstract state describes
   -> Parity_Numeric_Queries             numeric queries used by check discharge
   -> Parity_Classify                    classification of one check condition
-  -> Parity_Assembly                    the context-insensitive route, as one
+  -> generated/Parity_Assembly          the context-insensitive route, as one
                                         interpretation of the shared unit_dg_analysis
+                                        per solver discipline
   -> generated/Parity_Analyses          the call-string and entry-state policies
-                                        (generated; see below)
-  -> Parity_Checks                      the published result table and report
-  -> Parity_Entry                       the production endpoint and its soundness
+                                        (see below)
+  -> generated/Parity_Checks            the published result table and report
+  -> generated/Parity_Entry             the production endpoint and its soundness
 ```
 
-`Parity_Assembly` is a single `global_interpretation` of `unit_dg_analysis`
-(`Shared/Result/Unit_DG_Analysis.thy`). Parity supplies ten facts — its transfer
+The four `generated/` theories are written by `scripts/gen_analysis_assembly.py`
+from `assembly/analyses.yaml`.
+
+`Parity_Assembly` holds two `global_interpretation`s of `unit_dg_analysis`
+(`Shared/Result/Unit_DG_Analysis.thy`): `parity_join` (always-join, production)
+and `parity_po_asm` (per-origin). Each takes the same ten facts — its transfer
 contract, two commutation laws, the solver contract, the classifier contract and
 the initial-state contract — and gets back the equation system, the solve, the
 reader, the result table, the report and every soundness endpoint. Nothing in
@@ -48,9 +53,11 @@ conservative identity, so guards do not refine parity facts.
 ## Worked example
 
 `Example_Parity_DG_Flagship` (Examples/Parity) compiles an even-step loop, generates
-its equations through `parity_conf_eqs_prog`, solves them with the always-join solver, and
-closes with `parity_source_run_sound` — the same statement shape Sign's and Interval's
-flagships prove. Nothing in that chain is Parity-specific except the lattice.
+its equations through its own `local_state_dg_exec_analysis` registration
+(`parity_ex_reg.routed_eqs`), solves them with the always-join solver, and closes with
+`parity_source_run_sound` — the same statement shape as Sign's `dgEx_source_run_sound`
+(`Exec_Sign_DG_Run`) and Interval's `flagship_source_run_sound`. Nothing in that chain is
+Parity-specific except the lattice.
 
 `Example_Parity_Checks_Store_Only` (Examples/CLI, grouped with the other domains'
 members of the same store-only trio) is the check-discharge witness: `y := x * 2` and `z := y + 1` land in

@@ -2,8 +2,8 @@
 
 Index for the three remaining Goblint context-alignment migration plans. The
 `(node, context)` unknown mechanism itself is **already modeled and verified**
-(semantic entry-state contexts, `context_domain` locale, computed keyed/retain
-runs — see `docs/NEXT_STEPS.md` "Context-sensitivity status"). These three tracks
+(call-string and entry-state `routed_dg_analysis` registrations — see
+`docs/NEXT_STEPS.md` "Context abstractions"). These three tracks
 are the remaining breadth/fidelity/termination work, none a soundness
 prerequisite for the current pipeline.
 
@@ -12,9 +12,11 @@ The wider divergence inventory, rationale, and upstream evidence baseline live i
 
 | Track | Plan | One line |
 | --- | --- | --- |
-| **M1** | `M1_CALLSTRING_CONTEXT_MIGRATION.md` | Computed k-call-string contexts on the monotone solver |
-| **M2** | `M2_DGC_RREAD_BOUNDARY_MIGRATION.md` | `R_read` pre-loss routing; dissolve the `fctx` obstruction |
-| **M3** | `M3_CONTEXT_BOUNDING_TERMINATION_MIGRATION.md` | Sign termination (M3a) + context lifters (M3b) + widening termination (M3c, future) |
+| **M1** | `history/M1_CALLSTRING_CONTEXT_MIGRATION.md` | Computed k-call-string contexts on the monotone solver. Landed: `Call_String_Context`, registered for every domain in `assembly/analyses.yaml` |
+| **M2** | no plan document in the tree | `R_read` pre-loss routing; dissolve the `fctx` obstruction |
+| **M3** | `history/M3_CONTEXT_BOUNDING_TERMINATION_MIGRATION.md` | Sign termination (M3a) + context lifters (M3b) + widening termination (M3c, future) |
+
+The comparison and priority order below predate M1 landing; read them for M2 and M3.
 
 ## Cross-track comparison
 
@@ -75,9 +77,9 @@ constraint among the value-bearing tracks is M1 → M3b.
 
 ## See also
 
-- `docs/NEXT_STEPS.md` — "Context-sensitivity status" (what is already done)
-- `docs/DGC_ALIGNMENT_ANALYSIS.md` — the M2 obstruction audit (§6 layered change)
-- `docs/ROUTE_A7_GOBLINT_CONTEXT_DESIGN_STUDY.md` — corrected call-only Goblint model
+- `docs/NEXT_STEPS.md` — "Context abstractions" (what is already done)
+- `docs/history/DGC_ALIGNMENT_ANALYSIS.md` — the M2 obstruction audit (§6 layered change)
+- `docs/history/ROUTE_A7_GOBLINT_CONTEXT_DESIGN_STUDY.md` — corrected call-only Goblint model
 - `docs/history/TRACE_BASED_FORK_MIGRATION.md` — M1 fork detail (A1–A5, R1–R6)
 - `docs/history/GOBLINT_SPEC_FULL_ALIGNMENT_PLAN.md` — Gap inventory (Gap 6 = M3; Gap 7
   context-sensitivity is **partially stale** — the semantic-context half landed

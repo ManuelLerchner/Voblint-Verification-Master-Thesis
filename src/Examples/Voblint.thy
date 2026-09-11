@@ -139,122 +139,72 @@ text \<open>
   \<^const>\<open>Check_Proved\<close> row off the conclusion.
 \<close>
 
-section \<open>Complete end-to-end analyses\<close>
+section \<open>Flagship theorems\<close>
 
 text \<open>
-  Every theory below compiles a source program, generates its D/G equation system,
-  \<^emph>\<open>computes\<close> a solution with the verified solver (\<open>by eval\<close>), and closes with a soundness
-  theorem over that computed result --- no step is a precision demo, a raw execution
-  witness, or left as an unclosed obligation.  \<^bold>\<open>7. Examples and witnesses\<close> below holds
-  everything else: parallel-capability checks, precision witnesses, tooling, and research
-  demonstrations. Three capability axes, each with its own flagships: which domain, which
-  context policy, and --- for the product domain only --- how far its components refine
-  each other.
+  Each theory cited here compiles a source program, generates its D/G equation system,
+  \<^emph>\<open>computes\<close> a solution with the verified solver (\<open>by eval\<close>), and proves a soundness
+  theorem about that computed result.  The session READMEs carry each family's full witness
+  inventory; this index names only the headline results along three axes: which domain, which
+  context policy, and how far the product domain's components refine each other.
 \<close>
 
-subsection \<open>Basic capability: one domain, the whole pipeline, monovariant\<close>
+subsection \<open>One domain, the whole pipeline, monovariant\<close>
 
 text \<open>
-  One flagship per selectable domain, all five on the same generator and vendored
-  solver, with the same soundness shape.  Only the lattice differs.
+  One flagship per selectable domain, all on the same generator and vendored solver.  Only
+  the lattice differs.
 
-  \<^item> \<^bold>\<open>
-    @{theory Voblint_Examples_Interval.Example_Interval_DG_Flagship}
-  \<close> --- the Interval flagship: a counting loop, compiled, solved, and
-    certified. \<^verbatim>\<open>flagship_source_run_sound\<close> bounds
-    \<^emph>\<open>actual source runs\<close>.
-  \<^item> \<^bold>\<open>
-    @{theory Voblint_Examples_Sign.Exec_Sign_DG_Run}
-  \<close> --- the Sign flagship, using the same pipeline with the always-join
-    solver. \<^verbatim>\<open>dgEx_source_run_sound\<close> is the same source-run bound.
-  \<^item> \<^bold>\<open>
-    @{theory Voblint_Examples_Parity.Example_Parity_DG_Flagship}
-  \<close> --- the Parity flagship on an even-step loop.
-    \<^verbatim>\<open>parity_source_run_sound\<close> again gives that bound. Registering
-    this domain copied no step or combine proof.
-  \<^item> \<^bold>\<open>
-    @{theory Voblint_Examples_Congruence.Example_Congruence_DG_Run}
-  \<close> --- the Congruence flagship: a straight-line program whose computed
-    exit contains exact residue classes for two variables.
-  \<^item> \<^bold>\<open>
-    @{theory Voblint_Examples_Int.Exec_Int_DG_Run}
-  \<close> --- the \<^verbatim>\<open>int_dom\<close> reduced product of Sign, Interval,
-    Parity and Congruence on
-    \<^verbatim>\<open>if (y + 1 == 3) { x := 1 } else { x := 0 }\<close>.
-    See the refinement subsection below for what this run establishes.
+  \<^item> @{thm [source] flagship_source_run_sound}
+    (\<^theory>\<open>Voblint_Examples_Interval.Example_Interval_DG_Flagship\<close>) bounds actual source
+    runs of an interval counting loop.
+  \<^item> @{thm [source] dgEx_source_run_sound}
+    (\<^theory>\<open>Voblint_Examples_Sign.Exec_Sign_DG_Run\<close>) is the same bound for Sign, solved
+    with the always-join update rule.
+  \<^item> @{thm [source] parity_source_run_sound}
+    (\<^theory>\<open>Voblint_Examples_Parity.Example_Parity_DG_Flagship\<close>) is the Parity instance on
+    an even-step loop.
+  \<^item> \<^theory>\<open>Voblint_Examples_Congruence.Example_Congruence_DG_Run\<close> computes exact residue
+    classes at the exit of a straight-line program.
+  \<^item> \<^theory>\<open>Voblint_Examples_Int.Exec_Int_DG_Run\<close> runs the reduced product of Sign,
+    Interval, Parity and Congruence.  @{thm [source] dgExI_never_ne_once} separates
+    \<^const>\<open>Refine_Never\<close>, which narrows only the Congruence component, from
+    \<^const>\<open>Refine_Once\<close>, whose one reduction round reaches the exact singleton.  Refinement
+    is legal because \<^const>\<open>int_reduction_step\<close> preserves the concretization while
+    descending the order.
 \<close>
 
 subsection \<open>Context sensitivity: three storage policies for one axis\<close>
 
 text \<open>
-  Three storage policies, each certified against the same activation-indexed semantics
-  and by the same soundness shape --- \<^const>\<open>activation_collect\<close> bounded at every
-  \<open>(node, context)\<close> pair.  They differ only in what a context \<^emph>\<open>is\<close>.
+  All three are certified against the same activation-indexed semantics, bounding
+  \<^const>\<open>activation_collect\<close> at every \<open>(node, context)\<close> pair.  They differ only in what a
+  context \<^emph>\<open>is\<close>.
 
-  \<^item> \<^bold>\<open>Monovariant\<close> --- no context: one abstract state per program point.
-    \<^bold>\<open>@{theory Voblint_Examples_Interval.Example_Interval_DG_IP_Flagship}\<close> analyses \<open>twice\<close>, whose
-    single procedure is called from two sites with different arguments, under one shared
-    entry state, and \<^verbatim>\<open>twice_source_run_sound\<close> bounds the result.  This is the baseline
-    the two policies below sharpen.
-  \<^item> \<^bold>\<open>Entry state\<close> --- the context is the entered abstract value of the callee's declared
-    formals (partial tabulation, Seidl et al., \<^emph>\<open>Mixed Flow-Sensitive Static Analysis\<close>,
-    FM 2026, Example 8).
-    \<^bold>\<open>
-      @{theory Voblint_Examples_Interval.Example_Interval_DG_Ctx_Collect}
-    \<close> instantiates the production entry-state analysis on that same
-    \<open>twice\<close> program: the two calls route to the distinct
-    contexts \<open>[3,3]\<close> and \<open>[10,10]\<close> and keep their entry and return values apart, where the
-    monovariant baseline joins them.  \<^verbatim>\<open>twice_activation_collect_sound\<close> is the bound.
-    \<^bold>\<open>
-      @{theory Voblint_Examples_Interval.Example_Interval_DG_EntryState_Collect}
-    \<close> is the complementary witness on an unconstrained argument, where one
-    wide context covers infinitely many
-    concrete entries rather than separating two.
-  \<^item> \<^bold>\<open>Call string\<close> --- the context is a bounded record of the call sites traversed to reach
-    the activation (Seidl et al., FM 2026, Example 7 at \<open>k = 1\<close>).
-    \<^bold>\<open>@{theory Voblint_Examples_Interval.Example_Interval_DG_CallString_K1}\<close> and
-    \<^bold>\<open>
-      @{theory Voblint_Examples_Interval.Example_Interval_DG_CallString_K2}
-    \<close> run one \<open>nest\<close> program at \<open>k = 1\<close> and \<open>k = 2\<close>, so the
-    pair also measures what raising the bound buys.  This policy
-    needed \<open>enterc\<close> widened to see the call site to be expressible at all.
-
-  \<^bold>\<open>
-    @{theory Voblint_Examples_Interval.Example_Interval_Source_Ctx}
-  \<close> is the sharpest statement of the entry-state route: a bound against
-  \<^emph>\<open>actual source runs\<close> at each activation's own context,
-  not just the collecting semantics.
+  \<^item> \<^bold>\<open>Monovariant.\<close> @{thm [source] twice_source_run_sound} analyses \<open>twice\<close>, whose single
+    procedure is called from two sites with different arguments, under one shared entry state.
+  \<^item> \<^bold>\<open>Entry state\<close>, the entered abstract value of the callee's formals (Seidl et al.,
+    \<^emph>\<open>Mixed Flow-Sensitive Static Analysis\<close>, FM 2026, Example 8).
+    @{thm [source] twice_activation_collect_sound} keeps the two calls of \<open>twice\<close> in the
+    distinct contexts \<open>[3,3]\<close> and \<open>[10,10]\<close>, where the monovariant baseline joins them;
+    \<^theory>\<open>Voblint_Examples_Interval.Example_Interval_Source_Ctx\<close> lifts that bound to
+    source runs at each activation's own context.
+  \<^item> \<^bold>\<open>Call string\<close>, a bounded record of the call sites that led to the activation
+    (FM 2026, Example 7).  @{thm [source] nest_1_activation_collect_sound} and
+    @{thm [source] nest_2_activation_collect_sound} run one \<open>nest\<close> program at \<open>k = 1\<close> and
+    \<open>k = 2\<close>; on Sign, whose computed solution is exact,
+    @{thm [source] sign_k2_strictly_more_precise_than_k1_at_g} shows the longer string
+    strictly more precise at \<open>g\<close>'s entry.
 \<close>
 
-subsection \<open>Reduced product: what refinement between components buys\<close>
+subsection \<open>Checks\<close>
 
 text \<open>
-  \<^verbatim>\<open>int_dom\<close> is a reduced product, so it has a dimension the
-  single-lattice flagships lack: components may exchange facts.
-  \<^const>\<open>Refine_Never\<close> forbids that exchange,
-  \<^const>\<open>Refine_Once\<close> runs one reduction round per composite operation,
-  and \<^const>\<open>Refine_Fixpoint\<close> iterates to a fixpoint
-  (@{theory Voblint_Analysis_Int.Int_Refinement}). Refinement is legal because
-  \<^const>\<open>int_reduction_step\<close> preserves the concretization while descending
-  the order, so a sharper component value never loses a concrete state.
-
-  @{theory Voblint_Examples_Int.Exec_Int_DG_Run} compares the two non-CLI
-  modes through real solver runs on one compiled program.
-  \<^verbatim>\<open>dgExI_never_result\<close> records that
-  \<^const>\<open>Refine_Never\<close> narrows only the Congruence component.
-  \<^verbatim>\<open>dgExI_once_result\<close> records that one reduction round propagates
-  the residue-class fact to Sign, Interval, and Parity, reaching the exact
-  singleton on this guard. \<^verbatim>\<open>dgExI_never_ne_once\<close> states the
-  resulting mode distinction. The production CLI fixes
-  \<^const>\<open>Refine_Fixpoint\<close>; its computed behavior is covered by the CLI
-  regression corpus.
-
-  Congruence is also selectable as a standalone analysis. Its complete D/G
-  route is exercised by
-  @{theory Voblint_Examples_Congruence.Example_Congruence_DG_Run}; the
-  arithmetic and inverse operations are covered by
-  @{theory Voblint_Examples_Congruence.Example_Congruence_Arithmetic} and
-  @{theory Voblint_Examples_Congruence.Example_Congruence_Backward}.
+  \<^theory>\<open>Voblint_Examples_CLI.Example_Checks_Store_Only\<close> discharges compiled
+  \<open>__voblint_check(...)\<close> conditions against a computed Sign post-solution at each check's own
+  node: one proved, one refuted, one unknown.  Its Interval and Parity siblings reuse the
+  shape; @{thm [source] checks_ivl_ex_precision_over_sign} is a bound Interval proves and Sign
+  cannot.
 \<close>
 
 subsection \<open>Activation-local concrete semantics\<close>
@@ -270,7 +220,7 @@ text \<open>
   node, while \<^const>\<open>activation_collect\<close> keys the same collection by the
   structural activation context.  Both contain only stores from valid local traces.
 \<close>
- 
+
 subsection \<open>Procedure-aware source and CFG\<close>
 
 text \<open>

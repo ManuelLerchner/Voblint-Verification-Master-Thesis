@@ -26,7 +26,7 @@ The theory uses these as given; they are local jargon, not English.
 | classifier, `gs` | `vname => bool`, VIMP's own answer to *is this name a declared global*. `parity_gs` is `declared_global parity_program`: the program's `global` declaration decides, never the spelling of the name. |
 | placed state, `exec_dg_st` | the executable carrier. Locations are *tagged*, so one name can occupy a local and a global slot at once; the classifier picks which slot a readback sees. This is why `parity_is_bot_exact` is an obligation and not a triviality — the bottom test must ignore the slots the readback drops. |
 | local unknown | one solver variable per `(pp, ())`, holding a `parity exec_dg_st lifted`. The `lifted` wrapper adds `Bot` for *this point was never reached*. |
-| routed unit context | the trivial context policy: the unknown's context component is `()`, so every program point has exactly one abstract state. Parity is context-insensitive, so this is its only policy. |
+| routed unit context | the trivial context policy: the unknown's context component is `()`, so every program point has exactly one abstract state. The flagship runs at this policy only; the CLI also routes Parity through entry-state and call-string contexts. |
 | `parity_lookup` | read one variable out of a solved local unknown. `Bot` reads back as `PTop`, so a lookup is only informative at a node known to be reachable. |
 
 ## The program, carried end to end

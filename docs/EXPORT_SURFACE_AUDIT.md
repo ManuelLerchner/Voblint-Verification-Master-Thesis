@@ -476,7 +476,7 @@ Two of the moves need a content edit rather than a `git mv`, because a live file
 cites a doc heading for history:
 `tests/regression/11-graph-snapshot/known-imprecision/03-recursion.vimp:9` ->
 `CALLSTRING_CONTEXT_DESIGN.md`, and `NEXT_STEPS.md` ->
-`ROUTE_A7_GOBLINT_CONTEXT_DESIGN_STUDY.md`.
+`history/ROUTE_A7_GOBLINT_CONTEXT_DESIGN_STUDY.md`.
 
 Remaining markdown findings:
 

@@ -245,7 +245,7 @@ definition gamma_state :: "('a::sound_domain) abs_state => store set" ("[[_]]") 
   (`gamma_state_mono`, `gamma_state_bot`, `gamma_state_sup_ub1/2`,
   `gamma_state_upd`) is a one-line `unfold; auto`.
 - **Proof obligations**: the completion tax identified in
-  `docs/SCOPED_STATE_VS_COMPLETION_REVIEW.md` -- `complete_abs_on`,
+  `docs/history/SCOPED_STATE_VS_COMPLETION_REVIEW.md` -- `complete_abs_on`,
   `placement_local_bound`/`placement_side_bound`,
   `le_lift_if_dg_refines_on_and_le` -- exists precisely because this
   `gamma_state` quantifies over every `vname`, including ones a given
@@ -315,7 +315,7 @@ gamma_state_on U sigma = {s. ALL x : U. s x : gamma (sigma x)}
   something else?), and a join operation defined only for
   *compatible*-scope operands, needing an explicit policy for
   mismatched scopes (extend-then-join, or reject).
-  `docs/SCOPED_STATE_VS_COMPLETION_REVIEW.md` names this cost directly:
+  `docs/history/SCOPED_STATE_VS_COMPLETION_REVIEW.md` names this cost directly:
   "a scoped design would still need its own laws for scope transitions,
   split/recombination, joining states with different scopes ... this is
   not a lemma that simply disappears without replacement."

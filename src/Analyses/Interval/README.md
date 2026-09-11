@@ -20,20 +20,22 @@ Executable witnesses live under
 | `Interval_Point_Digest.thy` | the point abstraction: a slot is a point when it is a singleton interval |
 | `Interval_Sound.thy` | the `dg_spec` Interval supplies, its concretization, and `sound_dg_spec_core` — no context, no solver |
 | `Interval_Exec_Sound.thy` | raw unbuffered computation for an arbitrary VIMP program; no production soundness |
-| `Interval_Assembly.thy` | the context-insensitive route, as four interpretations of the shared `unit_dg_analysis` — one per update rule, with the lemmas proving all four solve the same system |
-| `generated/Interval_Contextual_Assembly.thy` | the call-string and entry-state routed configurations, at the always-join solver. Generated from `assembly/analyses.yaml`; see below |
+| `generated/Interval_Assembly.thy` | the context-insensitive route, as four interpretations of the shared `unit_dg_analysis` — one per update rule, with the lemmas proving all four solve the same system. Generated |
+| `generated/Interval_Contextual_Assembly.thy` | the call-string and entry-state routed configurations, each registered at all four disciplines with Apinis warrowing as the default. Generated from `assembly/analyses.yaml`; see below |
 | `Interval_Analyses.thy` | the presentation routing this domain publishes on top of them — the one part of Interval's contextual surface that is not derivable |
-| `Interval_Solver_Analyses.thy` | those two contextual configurations at the PerOrigin, Apinis-warrowing and warrowing-per-origin disciplines |
+| `Interval_Solver_Analyses.thy` | the verdict reports of those two contextual configurations at the always-join, per-origin and warrowing-per-origin disciplines |
 | `Interval_Classify.thy` | Interval instance of the generic check-discharge interface |
-| `Interval_Checks.thy` | the public result tables and check reports, bound to the assembly's four instances |
-| `Interval_Entry.thy` | the production endpoint: `analyse_interval_report` over an arbitrary `imp_prog`, and its soundness theorems — `run_source_sound`/`collect_sound` (`Voblint_Soundness`) applied at Interval |
+| `generated/Interval_Checks.thy` | the public result tables and check reports, bound to the assembly's four instances. Generated |
+| `generated/Interval_Entry.thy` | the production endpoint: `analyse_interval_report` over an arbitrary `imp_prog`, and its soundness theorems — `run_source_sound`/`collect_sound` (`Voblint_Soundness`) applied at Interval. Generated |
 
 ## The two contextual configurations, and the one hand-written part
 
 Interval is the one domain whose contextual surface does not generate
-completely. `generated/Interval_Contextual_Assembly.thy` holds the two
-registrations and their published constants, machine-written from
-`assembly/analyses.yaml`. `Interval_Analyses.thy` survives as a hand-written
+completely. `generated/Interval_Contextual_Assembly.thy` holds the
+registrations -- both contexts, each at all four disciplines -- and the
+call-string published constants, machine-written from `assembly/analyses.yaml`.
+The first discipline listed for a context owns its unsuffixed binder, so the
+generator refuses a list whose first entry is not the context's default. `Interval_Analyses.thy` survives as a hand-written
 file because Interval publishes presentation routing on top of them — reading a
 callee's context back out of a solved entry-state table — and that is not
 derivable from registration data and should not be.

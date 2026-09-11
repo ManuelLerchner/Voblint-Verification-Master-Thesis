@@ -45,7 +45,7 @@ theory keeps its own copy so no witness inherits another's imports.
 | File | Role | What |
 | --- | --- | --- |
 | `Example_Sign_DG_CallString_K1.thy` | canonical spine | the `nest` program at `k = 1`, solved by the plain-join solver: Sign is finite, so the computed solution is exact and `g`'s two activations collapse to `STop` |
-| `Example_Sign_DG_CallString_K2.thy` | canonical spine | the same at `k = 2`, keeping them apart at `SPos` and `SNeg`. Exactness makes a genuine strict-precision comparison possible here (`sign_k2_strictly_more_precise_than_k1_at_g`) that the Interval pair cannot state |
+| `Example_Sign_DG_CallString_K2.thy` | canonical spine | the same at `k = 2`, keeping them apart at `SPos` and `SNeg`. Exactness makes the strict-precision comparison (`sign_k2_strictly_more_precise_than_k1_at_g`) a statement about exact solutions |
 
 Sign's two entry-point witnesses -- the smallest certified IP run and the
 store-only check trio -- live in `CLI/`, grouped with the other domains' members

@@ -8,8 +8,8 @@ any more. It was a hand-rolled debug renderer for materializing a small,
 explicitly-supplied list of contexts (e.g. `[SZero, SPos]`) as duplicated CFG
 copies, predating the current contextual `analysis_result` architecture.
 
-The production replacement is `--context-graph expanded` in
-`src/Analysis/Reporting/Analysis_GraphViz.thy`: it renders every
+The production replacement is `--context-graph expanded`, built in
+`src/Executable_Surface/CLI/Analysis_Graph_Build.thy`: it renders every
 context a solved, context-sensitive `analysis_result` actually covers
 (`contexts_at`/`ordered_by_key`), not a hand-supplied list, sourced from the
 one canonical result table rather than a caller-assembled node/edge list.

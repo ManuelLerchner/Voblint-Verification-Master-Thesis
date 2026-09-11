@@ -110,7 +110,7 @@ likely needs per-`c` seeding (the piece AD-32 left at `unit`).
 > S1 context-indexed system on the **monotone** back-end for the finite-context special
 > case (Path A). The Path-B warrowing route stays the target for value-dependent
 > `enter#`. See `docs/KEYED_CONTEXT_ENTER_FRAMED_MIGRATION.md` and
-> `docs/GLOBAL_CONTEXT_REDESIGN.md`.
+> `docs/history/GLOBAL_CONTEXT_REDESIGN.md`.
 
 ### S2 — Semantic (entry-state) context instance
 

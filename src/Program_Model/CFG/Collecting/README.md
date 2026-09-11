@@ -15,7 +15,7 @@ of one thread.
 | `LTR_Collect.thy` | `ltr_collect`, introduction rules, and least-fixpoint characterization |
 | `LTR_Abstract.thy` | The `ltr_coverage` locale and its generic postfix soundness theorem |
 
-`valid_ltr` has root, call, and resume constructors. Each trace contains one
+`ltr` has root, call, and resume constructors. Each trace contains one
 activation-local path and links called activations to their immediate caller.
 Nested and recursive returns therefore resume structurally without encoding an
 unbounded call stack in CFG nodes.

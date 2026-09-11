@@ -33,7 +33,12 @@ where both sides pin a single integer.
 
 Judging the domain by its comparison operators undervalues it in any case. Congruence
 is there to carry modular information --- alignment, stride, access patterns --- which
-is what makes it the component that still narrows under `Refine_Never`.
+is what makes it the one component whose arithmetic inverses still narrow under
+`Refine_Never`.
+
+It publishes always-join and per-origin, and no warrowing route. Its widening is plain
+join: the modulus only ever coarsens, so an ascending chain is a divisor chain and
+terminates without acceleration.
 
 ## Vocabulary
 
@@ -41,7 +46,7 @@ is what makes it the component that still narrows under `Refine_Never`.
 | --- | --- |
 | congruence | a value constrained to one residue class: `x = r (mod m)`. `m = 0` pins a single integer; `m = 1` constrains nothing. |
 | normalized | the canonical representative of a class, so equal constraints have equal representations and the order is decidable (`Congruence_Lattice`) |
-| backward filter | narrowing a congruence from a known result, e.g. `x + 1 = 3` gives `x = 2`. Congruence is the component with a genuine arithmetic inverse, which is why it is the only one `Refine_Never` still narrows. |
+| backward filter | narrowing a congruence from a known result, e.g. `x + 1 = 3` gives `x = 2`. Congruence is the only component with genuine inverses for `+`, `-` and `*` --- Sign's and Interval's are the identity --- so under `Refine_Never` it is the only one that narrows through arithmetic. |
 
 ## Files
 
@@ -49,7 +54,7 @@ is what makes it the component that still narrows under `Refine_Never`.
 | --- | --- |
 | `Congruence_Domain.thy` | the type and its concretization |
 | `Congruence_Lattice.thy` | normalization, order, join and meet |
-| `Congruence_Warrowing.thy` | widening and narrowing, needed because the modulus is unbounded |
+| `Congruence_Warrowing.thy` | the `warrowing` instance the TD solver's sort requires: widening is join, narrowing keeps the left argument |
 | `Congruence_Arithmetic.thy` | modular `+`, `-`, `*` on residue classes |
 | `Congruence_Backward.thy` | the inverse direction: what a known result tells you about an operand |
 | `Congruence_Special.thy` | `Min`/`Max` return an operand, so both answer with the join of their arguments; `Nondet_Int` lands at `top` |
@@ -60,8 +65,8 @@ is what makes it the component that still narrows under `Refine_Never`.
 | `Congruence_Classify.thy` | one interpretation of `abstract_check_domain`: the Boolean recursion over a check condition and its three-way verdict |
 | `generated/Congruence_Assembly.thy` | generated: two interpretations of the shared `unit_dg_analysis`, one per published solver discipline |
 | `generated/Congruence_Analyses.thy` | the call-string and entry-state configurations, as two interpretations of the shared routed assembly. Generated from `assembly/analyses.yaml`; see below |
-| `Congruence_Checks.thy` | the names a caller outside the session uses, as abbreviations for the assembly's own |
-| `Congruence_Entry.thy` | the codegen endpoint over an arbitrary `imp_prog`, and its production soundness under four coverage assumptions |
+| `generated/Congruence_Checks.thy` | generated: the names a caller outside the session uses, as abbreviations for the assembly's own |
+| `generated/Congruence_Entry.thy` | generated: the codegen endpoint over an arbitrary `imp_prog`, and its production soundness under four coverage assumptions |
 
 ## Worked example
 

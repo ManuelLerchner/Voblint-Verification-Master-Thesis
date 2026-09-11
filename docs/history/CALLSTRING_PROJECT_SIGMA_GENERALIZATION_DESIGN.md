@@ -27,7 +27,7 @@
 > `_mono_sides_gen`/`_mono_deps_gen`/`_threefold_mono` (`DG_Framework.thy`),
 > mirroring `td_cfg_side_solver_eff_gen`'s reduction for the flat generator.
 > Batch green on `Voblint_Examples`, no `sorry`. See
-> `docs/CALLSTRING_PRECISION_INVESTIGATION.md` section 9.6. Not yet
+> `docs/history/CALLSTRING_PRECISION_INVESTIGATION.md` section 9.6. Not yet
 > instantiated at `nest_2_eqs` itself --- that instantiation, not this
 > design's T2/`fiber_join`, is the concrete next step toward the k=2-vs-k=1
 > precision claim. `threefold_mono` is a precondition, not a precision
@@ -102,7 +102,7 @@ obligation at a node reading a merged unknown is
 `f (\<Squnion>i d_i) \<le> \<Squnion>i f (d_i)`: the transfer function would have to be a join
 morphism. `combine_local`/`dg_spec_step` over `ivl st` are monotone, not
 completely additive, so this fails in general. Section 9.4 of
-`docs/CALLSTRING_PRECISION_INVESTIGATION.md` proposed the pure join and did
+`docs/history/CALLSTRING_PRECISION_INVESTIGATION.md` proposed the pure join and did
 not see this; the witness is the counterexample-in-practice. Any
 generalization must keep the recomputation, in some form.
 
@@ -399,14 +399,14 @@ needs.
 
 - Goblint solves over `(node, context)` unknowns and keeps flow-insensitive
   globals in a separate `V.t -> G.t` store
-  (`docs/ROUTE_A7_GOBLINT_CONTEXT_DESIGN_STUDY.md:7-19`, citing
+  (`docs/history/ROUTE_A7_GOBLINT_CONTEXT_DESIGN_STUDY.md:7-19`, citing
   `constraints.ml`'s `FromSpec`, `type lv = MyCFG.node * S.C.t`). The
   formalization's `('x = pp * cfg_node list, 'g = gk_1)` split mirrors that,
   and `seed_rhs` respects it: local seeding via `Answer`, global seeding via
   `Side`, never mixed.
 - Context changes only at calls (`ROUTE_A7...:31-43`, `120-127`), which is
   why every context-changing site in the generator funnels through exactly
-  one `route` call (`docs/CALLSTRING_PRECISION_INVESTIGATION.md:274-291`,
+  one `route` call (`docs/history/CALLSTRING_PRECISION_INVESTIGATION.md:274-291`,
   confirmed against `DG_Framework.thy:406`). This is what makes a single
   `rho`-commutation lemma sufficient for the whole system.
 - Goblint bounds contexts with *lifters over the constraint system*
@@ -439,7 +439,7 @@ call-string instance needs, for any `k1 \<le> k2`:
 
 - `cs_route_k_mono` (landed): `take k1 (cs_route k2 u ctx d ca) = cs_route k1 u ctx d ca`;
 - `cs_route k u (take k ctx) d ca = cs_route k u ctx d ca` (one line, checked
-  by hand in `docs/CALLSTRING_PRECISION_INVESTIGATION.md:21-27`, unlanded
+  by hand in `docs/history/CALLSTRING_PRECISION_INVESTIGATION.md:21-27`, unlanded
   because `Call_String_Context.thy` is frozen).
 
 Both are `k`-generic, so k=2 -> k=1 is not special. Composition
@@ -485,7 +485,7 @@ lives in `TD_side_mono = TD_side_opt True T` (`TD_side.thy:4277, 5284`), while
 `Example_Interval_DG_CallString_K2.thy:150`). Closing that would mean
 interpreting `TD_side_mono` at `nest_2_eqs`, which needs the threefold
 monotonicity for the keyed-seed DG generator (per
-`docs/CALLSTRING_PRECISION_INVESTIGATION.md:358-372`, never located for this
+`docs/history/CALLSTRING_PRECISION_INVESTIGATION.md:358-372`, never located for this
 generator) and a solver run without widening --- plausible on the loop-free
 `nest_cfg`, unproven. Flagged, not assumed.
 

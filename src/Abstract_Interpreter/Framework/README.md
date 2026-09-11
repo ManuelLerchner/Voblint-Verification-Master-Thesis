@@ -94,53 +94,51 @@ entry obligation, both through the shared `entry_pairs_cover`.
 | --- | --- | --- |
 | `Spec/` | What does an analysis supply, and when is it sound? | `DG_State` (the value a D/G unknown carries, and its lattice), `DG_Manager` (the Goblint-`man`-shaped record: `man_local` a value, `man_global`/`man_sideg` effectful capabilities that `mk_dg_man` closes the current routed global key into, with the projection rules that keep a built manager folded), `DG_Spec` (the record itself, the edge-action dispatch, the tree formers, and the local-only shapes whose compiled trees provably carry no `QueryG` and no `Side`), `DG_Spec_Sound` (`sound_dg_spec_core` stated against the compiled trees' own `traverse_rhs`/`sides_of_rhs` observations, never a reconstructed `'dg × 'dl` pair, plus `enter_runs`/`enter_deps`, which name what an entry program hands its continuation under a fixed solution), `DG_Local_State_Spec` (`sound_transfer_for`, and the two whole-state constructions built from it -- raw and reachability-lifted), `DG_Ownership_Split_Spec` (the `Spec2Spec` lifter that puts a whole-state analysis's global names on the shared channel) |
 | `State/` | What algebra does a whole-state transfer compute in? | `Transfer_Algebra` (the `abs_state` operations a Base-style transfer is assembled from -- entry frame reset and formal binding, the structural return combine -- with their soundness and monotonicity against `gamma_state`), `State_Restriction` (the local/global projections derived from the generic `combine_env` selector) |
-| `Constraints/` | What is a right-hand side, and how does the solver see the graph? | `CFG_Enumeration` (predecessors, call sites and returns as lists), `DG_Constraint_Trees` (edge formers over a solver address, and the fold that turns several right-hand sides for one unknown into one), `DG_Keyed_Generator` (the keyed equation generators and their buffered-generator correspondence -- spec-free: every equation is folded from supplied tree hooks, and the `TD_side_mono` discharge asks each hook only for traverse/sides monotonicity and `env_indep_deps`) |
-| `Activation/` | What does one activation see? | `Activation_Backbone` (`ltr_coverage` in global shape: four obligations on an arbitrary `cover` bound `activation_collect`), `DG_Ctx_Activation` (the D/G-native discharge of that backbone's obligations from a post-solution) |
+| `Constraints/` | What is a right-hand side, and how does the solver see the graph? | `CFG_Enumeration` (predecessors, call sites and returns as lists), `DG_Constraint_Trees` (edge formers over a solver address, and the fold that turns several right-hand sides for one unknown into one), `DG_Keyed_Generator` (the keyed equation generators and their buffered-generator correspondence -- spec-free: every equation is folded from supplied tree hooks, and the `TD_side_mono` discharge asks each hook only for traverse/sides monotonicity and `env_indep_deps`), `Routed_Unit_Generator` (`unit_routed_eqs` and its buffered sibling: the generator at the unit context), `DG_Reader_Transport` (`dg_reader_commute_gen`: a whole equation system read through a `bot`- and join-preserving reader pair) |
+| `Activation/` | What does one activation see? | `Activation_Backbone` (`ltr_coverage` in global shape: five obligations on an arbitrary `cover` bound `activation_collect`), `DG_Ctx_Activation` (the D/G-native discharge of that backbone's obligations from a post-solution) |
 | `Context/` | How is a call routed, which contexts exist, and what does a solved routed system say? | `Routed_Call_Trees` (the routed key space, and the trees one call action generates: seed publication, callee-exit read, return combine, plus what each reads and publishes), `Routed_Context` (the locale that fixes those trees and discharges CALL and COMB), `Routed_Context_Unit` (the context-insensitive instance), `Call_String_Context` (the data and its two projections), `Routed_Analysis_Sound` (a solved routed system composed with a context policy, once) |
-| `Result/` | What does a solved table publish? | `Analysis_Result`, `DG_Analysis_Adapter` |
+| `Result/` | What does a solved table publish? | `Analysis_Result`, `DG_Analysis_Adapter`, `Seed_Global_Keys` (the global unknowns a routed solve produces, with display labels) |
 | `Checks/` | How is a `__goblint_assert` discharged against that table? | `Check_Result` (the flat three-valued verdict), `Checks`, `Abstract_Checks`, `Check_Report`, `Contextual_Check_Report` |
 
 ## Layering
 
+Each line names a theory and the in-session theories it imports.
+
 ```text
-State/Transfer_Algebra   State/State_Restriction
-        |                        |
-        +----------+-------------+
-                   v
-Spec/DG_State -> Spec/DG_Manager -> Spec/DG_Spec -> Spec/DG_Spec_Sound
-     |                                                    |
-     v                                                    v
-Constraints/CFG_Enumeration -> Constraints/DG_Constraint_Trees
-                                     |
-                                     v
-                          Constraints/DG_Keyed_Generator
-                                     |
-                                     v
-                          Activation/DG_Ctx_Activation
-                                     |
-                                     v
-                          Context/Routed_Call_Trees
-                                                            |
-                                                            v
-                                                  Context/Routed_Context
-                                                            |
-                                                            v
-                                                Result/DG_Analysis_Adapter
+Spec/DG_State                   <- (Voblint_Domain.Abstract_Domain only)
+Spec/DG_Manager                 <- DG_State
+Spec/DG_Spec                    <- DG_Manager
+Spec/DG_Spec_Sound              <- DG_Spec
+Spec/DG_Local_State_Spec        <- DG_Spec_Sound, State/Transfer_Algebra
+Spec/DG_Ownership_Split_Spec    <- DG_Local_State_Spec, State/State_Restriction
+Constraints/DG_Constraint_Trees <- DG_State
+Constraints/DG_Keyed_Generator  <- DG_Constraint_Trees, CFG_Enumeration
+Activation/DG_Ctx_Activation    <- DG_Spec_Sound, DG_Keyed_Generator
+Context/Routed_Call_Trees       <- DG_Spec_Sound, DG_Keyed_Generator
+Context/Routed_Context          <- Routed_Call_Trees, DG_Ctx_Activation,
+                                   DG_Local_State_Spec, Activation_Backbone
+Context/Routed_Context_Unit     <- Routed_Context
+Constraints/Routed_Unit_Generator,
+Constraints/DG_Reader_Transport <- Routed_Context_Unit
+Result/DG_Analysis_Adapter      <- Routed_Context, Contextual_Check_Report,
+                                   Analysis_Result
+Context/Routed_Analysis_Sound   <- DG_Analysis_Adapter, Routed_Context_Unit
 ```
 
 `DG_State` imports only the type classes its lattice instances need; every
 other dependency in the session is stated where it is used. That is what keeps
-`Constraints/` free of any domain and `Spec/` free of any CFG generator.
+`DG_Constraint_Trees` and `DG_Keyed_Generator` free of any domain and `Spec/`
+free of any CFG generator.
 
 The routing policies that need a compiled program (`Call_String_Routed_Context`,
-`Entry_State_Routed_Context`, `Call_String_Context_Finite`) live in
-`Voblint_Analysis`, under `src/Analysis/Context/`; the executable carrier and
-its transport live in `Voblint_Exec`.
+`Entry_State_Routed_Context`, `Context_Space_Finite`) live in
+`Voblint_Routing`, under `src/Analyses/Shared/Routing/`; the executable carrier
+and its transport live in `Voblint_Exec`.
 
-## `Context/` appears twice in the tree
+## Two directories hold context theories
 
 `Framework/Context/` is what a routed call *is*: the trees one call action
 generates, and the policy-generic locale every context instantiates.
-`src/Analysis/Context/` holds the concrete policies -- call strings, entry
-states, and their finiteness -- which need a compiled program and so cannot
-live here. Neither is a duplicate of the other.
+`src/Analyses/Shared/Routing/` holds the concrete policies -- call strings,
+entry states, and their finiteness -- which need a compiled program and so
+cannot live here. Neither is a duplicate of the other.

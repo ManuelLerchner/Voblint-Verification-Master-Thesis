@@ -25,6 +25,28 @@ These documents describe the supported architecture and its verification.
   difference exists, and what would close it.
 - [Verification chain and trust boundary](VERIFICATION_CHAIN_AND_TRUST_BOUNDARY.md)
   — what is proved, what is generated, and what is handwritten.
+- [Activation-local trace semantics](ACTIVATION_LOCAL_TRACE_CONVERGENCE.md) —
+  why `valid_ltr` is the concrete foundation and how contexts project from it.
+- [Analysis registration generation](ANALYSIS_ASSEMBLY_GENERATION.md) — the
+  `assembly/analyses.yaml` registry and what it generates.
+- [HTML result viewer](HTML_REPORT.md) — `voblint --html` output and
+  `pixi run report`.
+
+## Design records
+
+Decisions behind implemented designs. Each states which of its sections still
+match the tree.
+
+- [Call-string context design](CALLSTRING_CONTEXT_DESIGN.md)
+- [Relational domain architecture decision](RELATIONAL_DOMAIN_ARCHITECTURE_DECISION.md)
+- [CFG compiler continuation redesign](CFG_COMPILER_CONTINUATION_REDESIGN.md)
+- [DG interface validation against Goblint](GOBLINT_DG_INTERFACE_VALIDATION.md)
+- [Side-effecting function entry audit](SIDE_EFFECTING_FUNCTION_ENTRY_AUDIT.md)
+- [Backward-filter sharing measurement](BACKWARD_FILTER_SHARING_MEASUREMENT.md)
+- [Context GraphViz debug renderer](CONTEXT_GRAPHVIZ_DEBUG_RENDERER.md) —
+  pointer to its `--context-graph expanded` replacement.
+- [M4 semantic baseline](M4_SEMANTIC_BASELINE.md) — observable results the
+  interval and global-across-call witnesses pin.
 
 ## Work and verification
 
@@ -41,11 +63,22 @@ These documents describe the supported architecture and its verification.
 - [Open problems](OPEN_PROBLEMS.md) — research and engineering boundaries.
 - [Proof verification gates](PROOF_PHASES.md) — checks required for each proof
   layer and for the repository.
+- [Post-deletion cleanup queue](POST_DELETION_CLEANUP_QUEUE.md) — the two
+  items still open, P7 and P10.
+- [Goblint-alignment tracks](GOBLINT_ALIGNMENT_TRACKS.md) — the remaining M2
+  and M3 context-alignment tracks.
+- [`solve_dom` total-correctness route](P1_TOTAL_CORRECTNESS_ROUTE.md) and
+  [`TD_side` termination sketch](TD_SIDE_TERMINATION_SKETCH.md) — why solver
+  termination stays a hypothesis.
+- [Thesis scope memo](THESIS_SCOPE_MEMO.md) and the
+  [trace-pivot chapter draft](thesis/trace-pivot-and-history-sensitive-globals.md).
 
 ## Isabelle development
 
 - [Isabelle agent notes](ISABELLE_AGENT_NOTES.md) — document-aware editing,
   diagnostics, proof-state inspection, and batch verification.
+- [Session cleanup playbook](SESSION_CLEANUP_PLAYBOOK.md) — the per-session
+  audit procedure and its traps.
 
 Migration logs, superseded designs, and deleted component descriptions live in
 [`history/`](history/README.md). They are kept for provenance and are not

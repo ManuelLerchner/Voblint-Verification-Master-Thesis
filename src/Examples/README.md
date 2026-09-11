@@ -17,7 +17,7 @@ would recouple each domain's session to all of them.
 `Voblint_Examples` itself holds only `Voblint.thy`. Making `Voblint_Examples_CLI`
 its parent rather than a listed session is not cosmetic: theories imported from an
 ancestor come from that session's heap, while theories imported from a merely
-listed session are re-elaborated in the importing one. The capstone imports ten
+listed session are re-elaborated in the importing one. The capstone imports seven
 CLI witnesses, so this is the difference between building them once and twice.
 
 | Session | Folder | Parent |
@@ -47,20 +47,19 @@ procedure call.
 
 | Folder | Domain | Contents |
 | --- | --- | --- |
-| `Sign/` | Sign | codegen probes, procedure-call soundness spines |
-| `Interval/` | Interval | codegen probes, flagship D/G runs, context-sensitive (call-string) D/G, procedure-call spines, backward-analysis trace soundness |
+| `Sign/` | Sign | certified D/G run, custom-transfer and overlapping-enter spines, call-string contexts, report regressions |
+| `Interval/` | Interval | flagship D/G runs, entry-state and call-string D/G, procedure-call spines, backward-analysis trace soundness |
 | `Congruence/` | Congruence | end-to-end D/G run, arithmetic, and backward-filtering regressions |
 | `Parity/` | Parity | domain-registration validation flagship |
 | `Int/` | Sign x Interval x Parity x Congruence | composite-domain regressions and refinement-mode witnesses |
 | `Relational/` | relational | the generic pipeline and solver run against a non-`abs_state` order carrier |
 | `CFG/` | domain-agnostic | compiler and collecting-semantics regressions; shared example programs |
 | `Tooling/` | domain-agnostic | solver buffering regressions, per-origin widening, the strategy-tree and TD-program demos |
-| `CLI/` | crosses every domain | codegen entry points, dispatcher and result-table witnesses, the contextual GraphViz regression |
+| `CLI/` | crosses every domain | codegen entry points, dispatcher and result-table witnesses, the contextual GraphViz regression, the end-to-end certificate |
 
-Regressions live in these sessions, not upstream, on purpose: `VIMP` -> `CFG` ->
-`Analysis` -> `Soundness` stay soundness-only, and concrete witness
-programs remain at the proof chain's leaf. The codegen session consumes their
-executable definitions without moving code export into the soundness chain.
+Regressions live in these sessions, not upstream, on purpose: the proof
+sessions stay free of concrete witness programs, which remain at the proof
+chain's leaf. `Voblint_Codegen` imports none of them.
 
 `Voblint.thy` imports the curated examples and presents the complete certified
 pipeline.

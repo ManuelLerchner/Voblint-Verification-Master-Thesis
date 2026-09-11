@@ -1,5 +1,13 @@
 # Audit — issue #142, side-effecting function entry
 
+> **Status:** partly superseded. Statement 3 and §5 no longer hold as written:
+> the call-site tree `routed_call_tree`
+> (`src/Abstract_Interpreter/Framework/Context/Routed_Call_Trees.thy`) asks a
+> `resolve` function for its targets at solve time, and `static_targets`
+> (`CFG_Enumeration.thy`) is the resolver that answers from the CFG. Call sites
+> still come from the statically enumerated `calls` relation. `DG_Soundness`,
+> `DG_LTR_Sound` and `Analysis_GraphViz` are retired theory names.
+
 Scope: feasibility of replacing structural call-entry propagation with a
 Goblint-style side-effecting function-entry model. Audit only; nothing outside
 this file was edited.

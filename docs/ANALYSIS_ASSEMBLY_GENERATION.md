@@ -13,6 +13,10 @@ assembly/analyses.yaml
        |
        +-- scripts/gen_analysis_assembly.py
              +-> src/Analyses/<Domain>/generated/<Domain>_Assembly.thy
+             +-> src/Analyses/<Domain>/generated/<Domain>_Analyses.thy
+                   (Interval: Interval_Contextual_Assembly.thy)
+             +-> src/Analyses/<Domain>/generated/<Domain>_Checks.thy   (not Int)
+             +-> src/Analyses/<Domain>/generated/<Domain>_Entry.thy    (not Int)
              +-> src/Executable_Surface/CLI/generated/Dispatch_Tables.thy
              +-> src/Executable_Surface/CLI/generated/Config_Tables.thy
 ```
@@ -29,7 +33,9 @@ height, why a solver choice matters here -- belongs in that domain's README.
 Generated: the `global_interpretation` of `unit_dg_analysis` per published
 route, its `defines` block, the `[code_unfold]` declaration a named `dg_spec`
 needs, the lemmas relating each sibling discipline's equation system to the
-production one, and the CLI's dispatch and resolver tables.
+production one, the contextual `routed_dg_analysis` registrations with their
+published constants and re-exports, the published runtime names and entry
+endpoints of every domain but Int, and the CLI's dispatch and resolver tables.
 
 Not generated, ever: the mathematics. Every obligation is discharged by citing
 a fact the registry only *names* -- the domain's own, or a `TD_side_upd_rule`
@@ -60,10 +66,9 @@ like `analyse_interval_report`. Every entry is a rename waiting to happen,
 not an extension point. Nothing outside `legacy:` names an identifier a
 convention could have produced.
 
-Int sits in the registry as `assembly: false` -- registered for dispatch, not
-yet migrated onto the shared assembly, so all of its route names are legacy.
-That is a statement about where the migration has reached, not about whether
-Int can meet the interface.
+Int has a generated assembly and generated contextual registrations, but no
+`checks:` or `entry:` block: `Int_Checks` and `Int_Entry` carry proofs rather
+than bindings, so its report names stay under `legacy.routes`.
 
 ## The dispatcher tables
 
@@ -113,10 +118,9 @@ the same `if k = 0 then None` guard the handwritten one uses.
 That guard is a usability decision, not a soundness one, and the registry says
 so where it is set. `cs_route k u ctx d ca = take k (u # ctx)`, so `k = 0`
 routes every activation to `[]` -- as well-defined as any other bound, and
-finite by the same `length (cs_route k ...) \<le> k`. `Analysis_Config`'s own
-prose already concedes this and rejects the value on usability grounds. Those
-seven guards, and the four `analyse_config_ctx` premises that follow from them,
-are the only nonzero-`k` hypotheses in the tree outside the CLI's two files;
+finite by the same `length (cs_route k ...) \<le> k`. The generated resolver's
+guards, and the `analyse_config_ctx` premises that follow from them, are the only
+nonzero-`k` hypotheses in the tree, all inside the CLI session;
 `Call_String_Context` and `Call_String_Routed_Context` have none.
 
 Lowering `min_bound` to 0 is therefore a behaviour change, not a table swap. A
@@ -131,14 +135,14 @@ behaviour exactly.
 
 ## What this costs
 
-The tooling is about 1300 lines -- registry, generator, ROOT lint, hand-written
-expectations, this document. It produces about 1700 lines of theory across five
+The tooling is about 3300 lines -- registry, generator, ROOT lint, hand-written
+expectations, this document. It produces about 5100 lines of theory across five
 domains and the two CLI tables. Both numbers are in the repository, so the
 repository grows; generation replaces handwritten lines with generated ones
 rather than removing them.
 
-What it removes is 393 manually maintained occurrences, counted against the
-tree as it stands rather than estimated:
+What it removed at adoption was 393 manually maintained occurrences, counted
+against the tree as it stood then rather than estimated:
 
 | | count |
 | --- | --- |
@@ -175,10 +179,11 @@ text or the template, accumulating *inside* the generator, at which point the
 registry has become a second programming language and the uniform shape is a
 fiction.
 
-`assembly: false` is not that. It records migration status: Int still runs its
-own pipeline and so has no generated assembly, which says nothing about whether
-Int could meet the interface. Only an inventory of Int's own facts can settle
-that, and `refine_mode` is the part most likely to decide it.
+Int shows the interface stretching without breaking. Its `refine_mode` enters
+the registry as applied roles (`{const, args}`) and one `generalize:` entry, both
+rendered by the same proof text; what stays hand-written (`Int_Checks`,
+`Int_Entry`) is there because it proves something, not because the template
+could not express it.
 
 ## Validation
 
@@ -186,17 +191,21 @@ The generator refuses a registry that is not valid policy: a duplicated domain
 name, value type, report tag, binder or published prefix; a domain publishing no
 route; a route naming an unknown solver; a context default outside its own
 supported set; a legacy name for an unpublished route; a route naming a report
-but no state report; a dispatch-only domain with no legacy names.
+but no state report; a dispatch-only domain with no legacy names. Rendering
+also refuses a contextual route that publishes through `defines` and lists a
+first solver other than its default, because that solver owns the unsuffixed
+binder and every alias defined from it.
 
 ## Independent expectations
 
 `tests/test_analysis_registry.py` is deliberately not derived from the registry.
-It writes the support policy out by hand -- each domain's default, Sign's and
-Parity's rejection of both widening rules, Parity's absence at both contexts,
-Int's per-origin gap at a context but not at `Ctx_None`, `k = 0` resolving like
-any other bound -- and checks the generated theories against it, including that
-the resolver and the dispatcher agree on which pairings are supported. Sixty-one
-expectations. A registry change that alters what the CLI offers fails them, and
+It writes the support policy out by hand -- each domain's default, Sign's,
+Parity's and Congruence's rejection of both widening rules, Parity and Congruence
+at both contexts under always-join only, Int's per-origin gap at a context but
+not at `Ctx_None`, Interval at every solver and context, `k = 0` resolving to
+`None` for every domain -- and checks the generated theories against it,
+including that the resolver and the dispatcher agree on which pairings are
+supported. Eighty-one parametrized cases. A registry change that alters what the CLI offers fails them, and
 the expectation is then updated deliberately.
 
 ## Drift

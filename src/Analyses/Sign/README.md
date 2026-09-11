@@ -16,10 +16,13 @@ they demonstrate the domain, they are not part of the reusable instance.
 | `Sign_Exec.thy` | executable transfer mirror + `tf_st_commute` commutation |
 | `Sign_Sound.thy` | the `dg_spec` Sign supplies, its concretization, and `sound_dg_spec_core` — no context, no solver |
 | `Sign_Classify.thy` | Sign instance of the generic check-discharge interface |
-| `Sign_Assembly.thy` | one `global_interpretation` of the shared `unit_dg_analysis`: Sign's transfer, entry state, always-join solver and classifier go in; the equation system, the solve, the reader, the result table, the report and every soundness endpoint come out |
-| `generated/Sign_Analyses.thy` | the call-string and entry-state routed configurations — the two the assembly does not cover, because each routes calls to more than one context. Generated from `assembly/analyses.yaml`; see below |
-| `Sign_Checks.thy` | the public runtime API: bindings onto the assembly, plus the per-origin solver sibling |
-| `Sign_Entry.thy` | the production endpoint: `analyse_sign_report` over an arbitrary `imp_prog`, and its soundness theorems — `run_source_sound`/`collect_sound` (`Voblint_Soundness`) applied at Sign |
+| `generated/Sign_Assembly.thy` | two `global_interpretation`s of the shared `unit_dg_analysis`, `sign_join` (always-join, production) and `sign_po_asm` (per-origin): Sign's transfer, entry state, solver and classifier go in; the equation system, the solve, the reader, the result table, the report and every soundness endpoint come out |
+| `generated/Sign_Analyses.thy` | the call-string and entry-state routed configurations — the two the assembly does not cover, because each routes calls to more than one context; see below |
+| `generated/Sign_Checks.thy` | the public runtime API: bindings onto the assembly, plus the per-origin solver sibling |
+| `generated/Sign_Entry.thy` | the production endpoint: `analyse_sign_report` over an arbitrary `imp_prog`, and its soundness theorems, restated from the `sign_join` instance's own endpoints |
+
+The four `generated/` theories are written by `scripts/gen_analysis_assembly.py`
+from `assembly/analyses.yaml`; edit those, not the theories.
 
 `Sign_Entry` is what `analyse` dispatches to, and it lives here rather than in
 `Voblint_CLI` because nothing in it needs to see another domain: it depends on

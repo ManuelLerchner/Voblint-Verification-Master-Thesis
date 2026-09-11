@@ -70,8 +70,8 @@ on its own):
   **placement** analyses (`Example_Sign_Placement.thy`,
   `Example_Interval_Placement.thy`) are a new capability class the original
   `dg_spec` record could not express. Full record:
-  `docs/reviews/M4_SPINE_BOUNDARY_AUDIT.md`,
-  `docs/reviews/M4_MIGRATION_CHECKLIST.md`.
+  `docs/history/M4_SPINE_BOUNDARY_AUDIT.md`,
+  `docs/history/M4_MIGRATION_CHECKLIST.md`.
 - **P1 renamed, not resolved.** The original memo's ask #3 names `solve_dom`;
   the current IP/side-effecting spine's analogous hypothesis is
   `side_cfg_solve_dom_eff` totality. Same open question, different name.

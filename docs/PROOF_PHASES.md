@@ -14,8 +14,10 @@ stable gates for assessing a change.
 ## Collecting semantics
 
 - `valid_ltr` handles root, call, local flow, procedure result, and resume;
-- `ltr_collect` is characterized by its least fixpoint;
-- keyed and activation collectors are projections of valid traces;
+- `valid_ltr` is an inductive set, and `ltr_collect` projects it to stores
+  (`ltr_collect_I`/`ltr_collect_E`);
+- `activation_collect` groups the same stores by the context `trace_context`
+  assigns;
 - abstract closure obligations imply collector coverage.
 
 ## Equation systems
@@ -48,8 +50,8 @@ stable gates for assessing a change.
 - the conclusion refers to the computed solution;
 - the conclusion names its collector: `ltr_collect` at the unit context, one
   `activation_collect` bucket at a routed one. A routed bound is not a
-  source-facing theorem until `source_sound_from_collecting_cap` is
-  instantiated at that policy.
+  source-facing theorem until a source run is placed in one of its buckets,
+  as `sound_table_of_activation` and `sound_table.source_sound` do together.
 
 ## Repository checks
 

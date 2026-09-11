@@ -30,7 +30,7 @@ Comparison target: Goblint-CIL `src/cfg.ml` at
 > | `proc_activation` | folded into `compiled_at` |
 > | `source_wf` | `return_safe :: com => bool` |
 > | `source_global` | `gs` |
-> | `mnm` | `main_name` |
+> | `mnm` | `prog_main_name` |
 
 ---
 

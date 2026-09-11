@@ -321,8 +321,9 @@ Every `inductive` predicate carries tagged inversion rules, and every lemma
 named `...I` / `...E` / `...D` carries its attribute apart from the two
 multi-conclusion `D` bundles cited by index.
 
-The sessions after them do not, and this is the measured scope of their
-passes:
+The sessions after them did not when measured, before their passes; the table
+records that starting scope, not the current tree (no theory in `src/` now
+exceeds 1500 lines):
 
 | | Core | Analysis | CLI | Examples |
 | --- | --- | --- | --- | --- |
@@ -337,10 +338,9 @@ passes:
 | lines over 100 symbols | 381 | 458 | 470 | 486 |
 | theories with no orientation block | 3 | 6 | 2 | 6 |
 
-The largest theories are `Example_Interval_Placement` (2901),
+The largest theories then were `Example_Interval_Placement` (2901),
 `DG_Constraint_Trees` (2472), `DG_Soundness` (2317), `Exec_St` (2231) and
-`Abstract_Domain` (2110). Splitting those is the structural half of the Core
-pass; retiring `metis` and the apply scripts is the proof half.
+`Abstract_Domain` (2110); all have since been split or deleted.
 
 ## CFG and Compile status after the pass
 

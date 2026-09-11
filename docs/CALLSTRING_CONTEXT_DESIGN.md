@@ -1,9 +1,14 @@
 # Design investigation: a proper Goblint-style bounded call-string context
 
-Not a migration plan yet — this is the architecture investigation requested
-before any implementation. Every claim below was checked against the current
-tree (2026-07-30), not assumed from the M1 doc's own status table, which is
-partly stale (see section 0).
+Status: implemented (Option B). Sections 0–7 record the pre-implementation
+investigation against the 2026-07-30 tree; their locale, lemma and file
+names (`routed_context`, `dg_ctx_activation`, `enterc`,
+`route_enterc_agree`, `DG_Soundness.thy`, `LTR_Def.thy`,
+`Example_Interval_DG_CallString.thy`) are not maintained. The current
+locales are `routed_context_base_hetero` and `dg_ctx_activation_base`
+(`Routed_Context.thy`, `DG_Ctx_Activation.thy`); `key` lives in
+`LTR_Activation_Context.thy`. Sections 8 and 9 and the theories are
+authoritative.
 
 Question: *if we wanted a real Goblint-style k-call-string context in this
 formalization, what is the smallest principled architecture that supports
@@ -503,23 +508,21 @@ monotone TD_side back-end") without needing anything M1's section 4
 and mechanical feasibility, not the precision claim, which needed a deeper
 witness program than `twice` (which cannot show any k=1/k=2 difference at
 all). Section 9 records that deeper witness, now landed: a nested-call
-program with an empirically confirmed strict precision difference. The
-precision *theorem* (section 4's two-stage plan) remains unstarted — the
-witness is the example a future proof would use, not the proof itself.
+program with a strict precision difference, proved as
+`nest_k2_strictly_more_precise_than_k1`. No general `k1 <= k2` refinement
+theorem (section 4's two-stage plan) exists.
 
 ## 8. Reusable API extraction (landed)
 
-`src/Analysis/Generic/Solver/Context/DG/Call_String_Context.thy`, alongside
-`Routed_Context.thy` in `src/Analysis/ROOT`. Verified via I/Q (0 errors, 0
+`src/Abstract_Interpreter/Framework/Context/Call_String_Context.thy`, alongside
+`Routed_Context.thy` in session `Voblint_Framework`. Verified via I/Q (0 errors, 0
 warnings, 23/23 commands) and the full tracked `Voblint_Examples` batch
 build (green). `Example_Interval_DG_CallString_K.thy` (the `twice`-based
 `k=2` POC, since superseded — section 9) consumed it instead of restating
 `route_2`/`enterc_2` locally (verified again after the refactor: I/Q 0
 errors/220/220 commands, batch build green). The nested-call witness pair
 that replaced it (`Example_Interval_DG_CallString_K1.thy`/`_K2.thy`,
-section 9) consumes the same library unchanged, at `cs_route 1`/`cs_route 2`.
-`Call_String_Context.thy` itself is unaffected by that replacement — it was
-frozen before the replacement happened and remains frozen.
+section 9) consumes the same library, at `cs_route 1`/`cs_route 2`.
 
 ### API chosen
 
@@ -529,21 +532,21 @@ type_synonym call_string = "cfg_node list"
 definition cs_route :: "nat => pp => call_string => 'd => call_action => call_string" where
   "cs_route k u ctx d ca = take k (u # ctx)"
 
-definition cs_enterc :: "nat => cfg_node => call_string => store => call_string" where
-  "cs_enterc k u ctx s = take k (u # ctx)"
+definition cs_context :: "nat => cfg_node => call_string => store => call_string" where
+  "cs_context k u ctx s = take k (u # ctx)"
 
-lemma cs_route_enterc_agree: "cs_route k u ctx d ca = cs_enterc k u ctx s"
+lemma cs_route_context_agree: "cs_route k u ctx d ca = cs_context k u ctx s"
 lemma cs_route_indep_of_data: "cs_route k u ctx d ca = cs_route k u ctx d' ca"
 lemma cs_route_length: "length (cs_route k u ctx d ca) <= k"
-lemma cs_enterc_length: "length (cs_enterc k u ctx s) <= k"
 
 (* below the bound, pushing is a plain cons, not a truncation *)
-lemma cs_route_no_truncation: "length ctx < k ==> cs_route k u ctx d ca = u # ctx"
-lemma cs_enterc_no_truncation: "length ctx < k ==> cs_enterc k u ctx s = u # ctx"
+lemma cs_route_below_bound: ...
+lemma cs_context_below_bound: ...
 
-(* the take k1 ctx_k2 = ctx_k1 fact any future k1<=k2 refinement theorem needs *)
+(* the take k1 ctx_k2 = ctx_k1 fact a k1<=k2 refinement theorem would need *)
 lemma cs_route_k_mono: "k1 <= k2 ==> take k1 (cs_route k2 u ctx d ca) = cs_route k1 u ctx d ca"
-lemma cs_enterc_k_mono: "k1 <= k2 ==> take k1 (cs_enterc k2 u ctx s) = cs_enterc k1 u ctx s"
+
+datatype call_string_gk = Global | Seed (seed_pp: pp) (seed_cs: "cfg_node list")
 ```
 
 `k` is a plain curried `nat` argument, not a locale field — `cs_route 2`
@@ -551,7 +554,7 @@ partially applies to exactly the 4-argument function `routed_context`'s
 `route` parameter expects, so an instance is one application, not one
 interpretation. No `call_string_context` locale was added: a locale earns
 its keep by bundling an `assumes` obligation, and there is none here —
-`cs_route_enterc_agree` is a plain, unconditionally true lemma, not a proof
+`cs_route_context_agree` is a plain, unconditionally true lemma, not a proof
 obligation tied to a fixed parameter. Wrapping it in a locale would add an
 `interpretation cs2: call_string_context 2` step that plain application
 already avoids for zero benefit, so it was left out per the task's own
@@ -568,8 +571,8 @@ better outcome than planned, not a compromise.
 
 ### Why it belongs above `routed_context` but below examples
 
-`cs_route`/`cs_enterc` need only `pp`/`cfg_node`/`call_action`/`store`
-(`Abstract_Domain.thy`, itself domain-agnostic) — no `dg_spec`, no
+`cs_route`/`cs_context` need only `pp`/`cfg_node`/`call_action`/`store`
+(`Voblint_CFG.CFG_Def`, its only import) — no `dg_spec`, no
 `sound_dg_spec_core`, no `routed_context`, no `TD_side` solver. Nothing about a
 call string requires knowing what a "sound domain" or a "routed context
 policy" *is*; it only needs the CFG-level vocabulary those things are later
@@ -581,8 +584,8 @@ a concrete analysis reads/writes it). It is "below examples" in the usual
 sense: `Example_Interval_DG_CallString_K1.thy`/`_K2.thy` (originally
 `Example_Interval_DG_CallString_K.thy`, section 9) are *consumers*,
 supplying the domain (`Sabs`/`Spoly`), the program (`nest_cfg`, originally
-`twice_cfg`), and the global-key type (`gk_1`/`gk_2`) that
-`Call_String_Context.thy` deliberately has no opinion about.
+`twice_cfg`); the global-key type `call_string_gk` is owned by
+`Call_String_Context.thy` itself.
 
 ### What was intentionally not abstracted
 
@@ -590,28 +593,15 @@ supplying the domain (`Sabs`/`Spoly`), the program (`nest_cfg`, originally
   `C.t` in spirit (a chosen bound) without paying Goblint's reason for
   needing it at the type level (section 3).
 - **No locale.** See above — nothing here needs `assumes`.
-- **No global-key type (`gk_2`-shaped).** That is domain/example-specific
-  (differs per analysis: `Global2`/`Seed2` here, `GlobalCS`/`SeedCS` in the
-  `k=1` file); the library only owns the context *value*, not how a
-  particular equation system publishes/reads it.
-- **No `k=1` refactor of the old file.** `Example_Interval_DG_CallString.thy`'s
-  `route_cs` uses a bare `cfg_node` context (not `call_string`/list) —
-  `take 1 (u # ctx) = [u]` is isomorphic to `route_cs`'s `u` but not the same
-  *type*, so unifying them would mean changing `route_cs`'s whole file's
-  context type from `cfg_node` to `cfg_node list` throughout (`gk_cs`,
-  `twice_cs_eqs`, every coverage lemma, both interpretations, the
-  graph-export section) — not "straightforward" by the task's own escape
-  clause, so left untouched; that file still stands as-is. A *separate*
-  `k=1` witness using `cs_route 1` directly was added later (section 9,
-  `Example_Interval_DG_CallString_K1.thy`) — a new instance on a new
-  program, not a refactor of `route_cs`.
+- **One global-key type for every `k`.** `call_string_gk` does not depend on
+  `k`, so the library owns it along with the context value.
 - **No `k=0`/collapse-to-flat lemma, no monotonic-precision or strictness
   theorem.** Explicitly out of scope for this task (see below).
 
 ### Implementation summary
 
-- **Added:** `src/Analysis/Generic/Solver/Context/DG/Call_String_Context.thy`
-  (69 lines: 1 type synonym, 2 definitions, 4 lemmas, no `sorry`).
+- **Added:** `src/Abstract_Interpreter/Framework/Context/Call_String_Context.thy`
+  (101 lines: 1 type synonym, 2 definitions, 6 lemmas, 1 datatype, no `sorry`).
 - **Changed (at the time, on the now-superseded `Example_Interval_DG_CallString_K.thy`):**
   `src/Analysis/ROOT` (+1 line); removed the local
   `route_2`/`route_2_commute`/`route_2_length`/`enterc_2` definitions; every
@@ -626,9 +616,7 @@ supplying the domain (`Sabs`/`Spoly`), the program (`nest_cfg`, originally
   nested-call replacement (section 9) could consume the same two lemmas
   unchanged.
 - **Examples now consuming this library:** `Example_Interval_DG_CallString_K1.thy`
-  and `_K2.thy` (`src/Examples/Interval/CallString/`, section 9); the old
-  flat `Example_Interval_DG_CallString.thy` (`route_cs`, `k=1`) deliberately
-  left alone throughout, see above.
+  and `_K2.thy` (`src/Examples/Interval/CallString/`, section 9).
 - **No duplicate definitions remain** — checked by grep across the whole
   `src/` tree for every new identifier (`cs_route`, `cs_enterc`,
   `call_string`, and all four lemma names): zero hits outside
@@ -651,8 +639,9 @@ generically over `'d`, since the analysis results being compared are
 domain-typed. Keeping it in this file would reintroduce exactly the
 DG/solver dependency this extraction deliberately avoided. This task
 delivered only the reusable call-string *data* layer, per its own explicit
-scope ("Do not implement precision separation yet") — Stage 3 remains a
-separate, unstarted piece of work.
+scope ("Do not implement precision separation yet"). The strictness
+witness later landed in the K2 example (section 9); no general refinement
+theorem exists.
 
 ## 9. Nested-call witness (landed, supersedes the flat `twice`-based Stage 1 POC)
 
@@ -660,8 +649,8 @@ separate, unstarted piece of work.
 `k=2` instance, sections 6-8) is deleted. It is replaced by a pair of
 theories in `src/Examples/Interval/CallString/`:
 
-- `Example_Interval_DG_CallString_K1.thy` -- `cs_route 1`/`cs_enterc 1`
-- `Example_Interval_DG_CallString_K2.thy` -- `cs_route 2`/`cs_enterc 2`,
+- `Example_Interval_DG_CallString_K1.thy` -- `cs_route 1`/`cs_context 1`
+- `Example_Interval_DG_CallString_K2.thy` -- `cs_route 2`/`cs_context 2`,
   imports the `k=1` file directly to reuse its program, domain spec, and
   commute lemmas rather than restating them
 
@@ -693,7 +682,7 @@ the call, and keeps them apart. This is exactly the mechanism
 facts describe, now exercised by an example where it actually bites.
 
 **Observed result**, read off the solved coverage sets and rendered DOT
-output for both theories (`nest_1_sol`/`nest_2_sol`, `nest_1_dot`/`nest_2_dot`):
+output for both theories (`nest_1_sol`/`nest_2_sol`):
 
 ```text
 k=1:
@@ -707,14 +696,16 @@ k=2:
 
 This is an empirical witness, not a general theorem: it demonstrates that a
 strict difference *can* occur, on this one program, at these two values of
-`k`. It is not a claim about solver precision in general, and no
-`gamma`-level comparison lemma between `nest_1_sol` and `nest_2_sol` has
-been proved -- see section 4's two-stage precision-theorem plan and
-`docs/CALLSTRING_PRECISION_INVESTIGATION.md` for what that would require.
+`k`. `nest_k2_strictly_more_precise_than_k1` (K2) proves it as a strict `<`
+on interval values at `g`'s entry and two points in `main`, and
+`cs_generic_k2_strictly_more_precise_than_k1`
+(`Example_Interval_Call_String_Generic_Parity`) restates it over the generic
+runtime-`k` interface. No `gamma`-level `k1 <= k2` refinement theorem exists
+-- see section 4's two-stage precision-theorem plan and
+`docs/history/CALLSTRING_PRECISION_INVESTIGATION.md` for what that would require.
 
 **Status of the rest of section 6-8 relative to this replacement.** The
 architecture claims (routed_context reuse, no locale changes,
-`route_enterc_agree` as reflexivity, the `Call_String_Context.thy` API) are
+routing agreement as reflexivity, the `Call_String_Context.thy` API) are
 unaffected -- the replacement changed the witness *program*, not the
-mechanism. `Call_String_Context.thy` remains frozen and untouched by this
-change.
+mechanism.

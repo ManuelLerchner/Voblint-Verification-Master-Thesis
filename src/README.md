@@ -36,13 +36,17 @@ the folder tree and the session graph are the same thing. `ROOTS` lists them all
 Dependency shape:
 
 ```text
-VIMP -> Domain -+
-                +-> CFG -> Framework -> Compile -> Exec -> Soundness -> Analyses/* -+
-TD   -> Solver -+                                                                   |
-                                                                                    v
-                                                                       CLI -> Codegen
-                                                                        +--> Examples/*
+VIMP -+-> CFG ----+-> Compile ---------+
+      |           |                    v
+      |           +-> Framework ---> Exec -> Soundness -> Analyses/* -+
+      +-> Domain -------^                                             |
+TD   ---> Solver -------^                                             v
+                                                         CLI -> Codegen
+                                                          +--> Examples/*
 ```
+
+(`CFG` depends on `VIMP` only; `Framework` on `CFG`, `Domain` and `Solver`;
+`Compile` on `CFG`; `Exec` on `Framework` and `Compile`.)
 
 `Soundness` sits *below* the analysis family, not after it: `Voblint_Routing` is
 parented on it and the rest of `Analyses/Shared/` chains off that, so every domain
@@ -64,18 +68,23 @@ are out of its reach by construction rather than by convention.
 Each domain follows the same layer chain, so a reader who knows one knows them all:
 
 ```text
-<Domain>_Domain      the lattice and its concretization
+<Domain>_Domain      the lattice and its concretization (Sign's is Sign_Lattice)
 <Domain>_Transfer    the transfer functions
 <Domain>_Exec        the executable mirror, on the finite-map carrier
 <Domain>_Sound       the D/G spec and its soundness; no context, no solver
-<Domain>_Exec_Sound  the arbitrary-program runtime API: equations, solve, result table
-<Domain>_Analyses    the context policies over that route
-<Domain>_Checks      check discharge and the published report
+<Domain>_Assembly    the context-insensitive route, one registration per solver discipline
+<Domain>_Analyses    the entry-state and call-string policies over the same spec
+<Domain>_Checks      the runtime API over an arbitrary program: solve, result table, report
+<Domain>_Entry       that API's soundness theorems
 ```
 
-`Congruence` stops after the lattice, arithmetic and backward filter: it is a product
-component, not a selectable analysis. `Relational` is a single theory, kept to prove the
-generic pipeline never assumed pointwise abstract states.
+The last four are generated from `assembly/analyses.yaml` (each domain's `generated/`
+folder); Interval and Int write some of them by hand and add `_Exec_Sound` and
+`_Solver_Analyses` for their widening routes and alternative solver disciplines.
+
+`Congruence` is both a selectable analysis and the fourth component of `Int`.
+`Relational` is a single theory, kept to prove the generic pipeline never assumed
+pointwise abstract states.
 
 [`Examples/`](Examples/) mirrors that split one-for-one, so a domain's witnesses cannot
 depend on a sibling domain. Its `CLI/` folder is the residue that genuinely reaches the

@@ -72,16 +72,23 @@ class ParsedTheory:
     decls: list = field(default_factory=list)
 
 
-def mask_comments_and_strings(text: str) -> str:
+def mask_comments_and_strings(text: str, strings: bool = True) -> str:
     """Blank out (* ... *) comment bodies and "..." string bodies so command
     keywords appearing in prose or as quoted type names (e.g. instance "fun")
     are not mistaken for actual commands. Preserves length and newlines so
-    line numbers and \\<open>/\\<close> cartouche offsets stay valid."""
+    line numbers and \\<open>/\\<close> cartouche offsets stay valid.
+
+    A cartouche is skipped whole and left unmasked: a quote or comment
+    delimiter inside prose (\\"nonzero\\" in a text block) is not one in
+    Isabelle, and treating it as one would blank every command up to the
+    next stray quote."""
     out = list(text)
     n = len(text)
     i = 0
     while i < n:
-        if text.startswith("(*", i):
+        if text.startswith("\\<open>", i):
+            i = find_matching_close(text, i)
+        elif text.startswith("(*", i):
             depth = 1
             j = i + 2
             while j < n and depth > 0:
@@ -107,9 +114,10 @@ def mask_comments_and_strings(text: str) -> str:
                     j += 1
                     break
                 j += 1
-            for k in range(i, j):
-                if out[k] != "\n":
-                    out[k] = " "
+            if strings:
+                for k in range(i, j):
+                    if out[k] != "\n":
+                        out[k] = " "
             i = j
         else:
             i += 1

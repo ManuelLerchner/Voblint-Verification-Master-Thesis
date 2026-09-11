@@ -2,7 +2,7 @@
 
 # Voblint
 
-> **A Generic, Executable, and Machine-Checked Framework for Interprocedural Abstract Interpretation in Isabelle/HOL**
+> **A Verified Goblint-Style Static Analysis Pipeline in Isabelle/HOL**
 
 > Master's thesis. Manuel Lerchner, supervised by [@AlexandraGrass](https://github.com/AlexandraGrass)
 
@@ -123,14 +123,27 @@ theorem run_voblint_certified_source_sound:
                ∧ checks_sound_at out v s"
 ```
 
+The four premises, and who has to establish each:
+
+| Premise | What it says | How it is discharged |
+| --- | --- | --- |
+| `s0` | The run starts from a store in which every declared global is `0`; locals are unconstrained. | Nothing to discharge: it fixes which executions the theorem talks about. |
+| `run` | `residual, s, frs` is reachable by any finite number of VIMP small-step (`pstep`) steps from `main`'s body with an empty frame stack: `residual` is the command still to run, `s` the current store, `frs` the pending callers' frames. The run need not terminate; any prefix counts. | Nothing to discharge: this is the arbitrary execution being quantified over. |
+| `cert` | Two facts about *this configuration's* solve of `p`. **Termination:** the verified TD solver terminates on the program's root query (`..._terminates`, membership in the solver's termination domain `solve_dom`). **Coverage:** the unknowns it solved include the CFG entry, the target of every intra edge, and every callee entry and call continuation (`vars_cover`; under a context policy `ctx_vars_cover`, for every context reachable from the root context). | Per program, by evaluation: the domain's `..._via_solve_c` theorem for termination, `vars_cover_exec` / `ctx_vars_cover_of_exec` for coverage. Neither holds for every program -- the solver may diverge -- so the theorem is partial correctness. |
+| `ans` | The analyzer accepted the configuration and the program and returned the report `out`. Because an illegal configuration answers `Unsupported_Configuration` and an ill-formed program `Malformed_Program`, this premise already implies legality and well-formedness. `view` (which rendering was asked for) is arbitrary. | Running the exported function, i.e. the CLI. |
+
+and what the conclusion gives back, at some CFG node `v`:
+
+| Conjunct | What it says |
+| --- | --- |
+| `csim ... (v, s, stk)` | The source state corresponds to node `v` with a matching CFG call stack `stk`: the compiler's forward simulation. |
+| `s ∈ ltr_collect ... v` | The collecting semantics admits `s` at `v`, so `v` is a node the run really reaches rather than a structurally matching dead copy. |
+| `analysis_result_covers D solver ctx p v s` | The abstract state the analysis filed for `v` -- under at least one context the run's call history admits -- contains `s`. |
+| `checks_sound_at out v s` | Every printed check row at `v` is not `DEAD`; a `PROVED` row's condition holds in `s`; a `REFUTED` row's condition fails in `s`. |
+
 `run_voblint` is the single operation `export_code` exports and `cli/main.ml`
 calls, so this constrains the analyzer's own output rather than an internal
-solved system. Neither configuration legality nor well-formedness is a premise:
-an unsupported pairing answers `Unsupported_Configuration` and a malformed
-program answers `Malformed_Program`, so `Analysed out` already says the resolver
-accepted the configuration and the program passed its check. What a caller owes
-is `certified_preconditions D solver ctx p` -- that configuration's solver run
-completed, and it solved enough keys -- and nothing else.
+solved system.
 
 The two case splits the statement avoids live in the definitions instead:
 `certified_preconditions` names the obligations per configuration and
@@ -153,20 +166,20 @@ witness need not be the check node whose printed row a reader wants to inspect.
 The example therefore establishes a second, explicit collecting-semantics witness
 at that node -- the semantics there really does contain the store the program
 computes, calls and all -- and reads
-[`ctx_rows_sound_at`](src/Executable_Surface/CLI/Analysis_Run_Ctx_Sound.thy)
+[`ctx_rows_sound_at`](src/Executable_Surface/CLI/Analysis_Run_Sound.thy)
 at that node: every store the semantics admits there satisfies the condition the
 report called `PROVED`. Printed verdict, named node, real execution.
 `certificate_demo_full_certificate` collects the whole thing with no existentials
 left -- the answer, its single row, the completed run, the membership at that node,
 `analysis_result_covers` and `checks_sound_at` there, and the check's own truth.
 
-The per-configuration endpoints stay underneath as the implementation level:
-[`Analysis_Run_Sound`](src/Executable_Surface/CLI/Analysis_Run_Sound.thy) for the
-context-free ones,
+The per-configuration work stays underneath as the implementation level:
+[`Analysis_Run_Sound`](src/Executable_Surface/CLI/Analysis_Run_Sound.thy) states
+the endpoint once, as the locale `sound_table`, and proves the context-free cells;
 [`Analysis_Run_Ctx_Sound`](src/Executable_Surface/CLI/Analysis_Run_Ctx_Sound.thy)
-for the contextual ones at each policy's default discipline, and
+proves the contextual cells at each policy's default discipline, and
 [`Analysis_Run_Solver_Sound`](src/Executable_Surface/CLI/Analysis_Run_Solver_Sound.thy)
-for the contextual ones at an explicitly named discipline.
+those at an explicitly named discipline.
 
 `csim` gives a *structural* CFG correspondence for the current source control
 state, and that correspondence need not be unique. A procedure that is never
@@ -232,13 +245,16 @@ its own call history produced. At that node every definite check verdict is
 correct for that execution, and no check row there is reported dead.
 
 What a `DEAD` row claims is a separate theorem, deliberately.
-[`dead_row_unreached`](src/Executable_Surface/CLI/Analysis_Run_Sound.thy) says
-that if a row at a point is dead then the collecting semantics there is empty --
-nothing reaches it at all:
+[`run_voblint_dead_row_unreached`](src/Executable_Surface/CLI/Analysis_Certified.thy)
+says that if a printed row is dead then the collecting semantics at its point is
+empty -- nothing reaches it at all, at any configuration:
 
 ```isabelle
-theorem dead_row_unreached:
-  ... and dead: "row_verdict row = Bot"
+corollary run_voblint_dead_row_unreached:
+  assumes cert: "certified_preconditions D solver ctx p"
+      and ans: "run_voblint D solver ctx view p = Analysed out"
+      and row: "row ∈ set (out_checks out)"
+      and dead: "row_verdict row = Dead"
   shows "ltr_collect (declared_global p) (prog_cfg p)
            (cinit_stores (declared_global p)) (row_point row) = {}"
 ```
@@ -246,50 +262,27 @@ theorem dead_row_unreached:
 That does not follow from reading the endpoint backwards. The endpoint is
 existential in its witness, so it constrains the rows at the one node it
 produced, not at an arbitrary node someone names; `csim` being non-unique is
-exactly what breaks the contraposition. It is proved forwards instead -- a
-store collected at the point would have to be covered there, and a dead row
-says nothing is.
+exactly what breaks the contraposition. It is proved forwards instead, from
+`run_voblint_sound_at`: a store collected at the point would have to be covered
+there, and no row at a covered point is dead. Under a context policy the row is
+the aggregate over every context the point was solved at, so a dead marker means
+nothing reaches the point under any context.
 
-[`ctx_dead_row_unreached`](src/Executable_Surface/CLI/Analysis_Run_Ctx_Sound.thy)
-is the contextual counterpart, and it lands in the same shape rather than a
-context-indexed one: a dead aggregate means no context published a live entry
-at the point, so every bucket there is empty and the union equation collapses
-them back. A dead marker means nothing reaches the point, under any context.
+Every configuration reaches the endpoint through one locale,
+[`sound_table`](src/Executable_Surface/CLI/Analysis_Run_Sound.thy): a result table
+that covers, under at least one context, every store the collecting semantics
+admits at a point, together with a check classifier whose `PROVED` and
+`REFUTED` answers are sound. Each of the 32 row-producing configurations proves
+one `*_table` lemma instantiating it. At the context-sensitive ones the table has
+one entry per point *and* context, and `sound_table_of_activation` derives the
+locale from the routed bound on each `activation_collect` bucket together with
+the fact that the buckets exhaust `ltr_collect`. The store then sits in the entry
+filed under *at least one* context its own call history is admitted at -- unique
+for a call string, possibly several for entry-state routing -- and quantifying
+over every context the node was solved at instead would be false, since another
+activation's entry need not describe this store at all.
 
-The same statement holds at the context-sensitive configurations, where the
-table has one entry per point *and* context
-([`Analysis_Run_Ctx_Sound`](src/Executable_Surface/CLI/Analysis_Run_Ctx_Sound.thy)).
-The store then sits in the entry filed under *at least one* context its own call
-history is admitted at -- unique for a call string, possibly several for
-entry-state routing -- and quantifying over every context the node was solved at
-instead would be false, since another activation's entry need not describe this
-store at all.
-
-```isabelle
-theorem run_voblint_sign_entry_state_source_sound:
-  ...
-      and solves: "sign_entry_state_terminates_for (declared_global p) p"
-      and cover: "ctx_vars_cover (prog_cfg p) (sign_es.ctx_succ (declared_global p) p) []
-                    (sign_entry_state_vars (declared_global p) p)"
-      and ans: "run_voblint Sign_Analysis None Ctx_EntryState view p = Analysed out"
-  shows "∃v stk ctx st.
-           csim (prog_table p) (prog_cfg p) (residual, s, frs) (v, s, stk)
-         ∧ s ∈ activation_collect (declared_global p)
-                   (sign_entry_state_context_rel (declared_global p) p) [] (prog_cfg p)
-                   (cinit_stores (declared_global p)) v ctx
-         ∧ lookup_context (analyse_sign_entry_state_result p) v ctx = Lifted st ∧ s ∈ ⟦st⟧
-         ∧ (∀row ∈ set (out_checks out). row_point row = v ⟶
-              row_verdict row ≠ Dead
-            ∧ (row_verdict row = Decided Check_Proved ⟶ truthy (aval (row_exp row) s))
-            ∧ (row_verdict row = Decided Check_Refuted ⟶ ¬ truthy (aval (row_exp row) s)))"
-```
-
-All five domains have this at the entry-state configuration. Its conclusion
-carries an `activation_collect` membership for the same reason the
-context-insensitive one carries `ltr_collect`: `csim` is structural and
-non-unique, so the witness needs a semantic conjunct to pin it to a node this
-store genuinely reaches under some context. The two premises are the
-contextual counterpart of what
+The two premises a contextual cell owes are the contextual counterpart of what
 [`analyse_certified`](src/Executable_Surface/CLI/Analyse_Dispatch.thy) bundles:
 a termination fact and one coverage fact. The coverage is
 [`ctx_vars_cover`](src/Abstract_Interpreter/Framework/Constraints/CFG_Enumeration.thy)
@@ -439,7 +432,7 @@ Where that last gain comes from is worth stating precisely, because stronger
 precision alone does not identify its cause. Interval's own backward step for
 `+` is the conservative identity, so the guard `y + 1 == 3` tells it nothing;
 Sign and Parity likewise. Congruence carries the only real arithmetic
-inversion, and it is the fourth component, not selectable on its own. The
+inversion, and it is the fourth component. The
 composite's
 reduction step then re-derives the other three views from that tightened
 operand, giving `y = [2,2]`, `Positive`, `Even`, `==2`. The gain is the extra
@@ -498,8 +491,10 @@ unconstrained.
 Adding a domain still costs more than one locale instantiation: the lattice and
 its concretization, transfer soundness, an executable representation and its
 refinement, entry/context coverage, and solver integration each carry
-obligations. What is *not* re-proved is any source-level reasoning; see
-[`docs/DG_ANALYSIS_AUTHORING.md`](docs/DG_ANALYSIS_AUTHORING.md).
+obligations. What is *not* re-proved is any source-level reasoning; see "One
+generator, six layers" in
+[`src/Abstract_Interpreter/Framework/README.md`](src/Abstract_Interpreter/Framework/README.md)
+and [`docs/ANALYSIS_ASSEMBLY_GENERATION.md`](docs/ANALYSIS_ASSEMBLY_GENERATION.md).
 
 ## Repository structure
 
@@ -513,7 +508,7 @@ obligations. What is *not* re-proved is any source-level reasoning; see
 | `src/Abstract_Interpreter/Framework` | Generic D/G specifications, routing, constraints, results |
 | `src/Abstract_Interpreter/Exec` | Executable finite states and their refinement |
 | `src/Soundness` | Domain-independent end-to-end endpoints (`run_source_sound`, `collect_sound`, `source_reaches_ltr_collect`) |
-| `src/Analyses` | Concrete domains over a shared `Base`; each selectable domain owns its `<Domain>_Entry.thy` |
+| `src/Analyses` | Concrete domains over the shared sessions in `Analyses/Shared`; each selectable domain owns its `<Domain>_Entry.thy` |
 | `src/Executable_Surface/CLI` | The `analyse` dispatcher and the render surface; the one layer that sees every domain |
 | `src/Executable_Surface/Codegen` | `export_code` declarations (generated OCaml lands in `codegen/generated/`) |
 | `src/Examples` | Executable runs, flagship demos, regression proofs, one session per folder |
@@ -534,8 +529,8 @@ and, for the code-generation and CLI tasks, OCaml (`ocamlfind`, `menhir`,
 `ocamllex`, `zarith`) via opam.
 
 ```bash
-pixi run vendor                        # init the TD solver submodule + Isabelle2025 patch
-AFP=/path/to/afp/thys pixi run build   # batch-build every session (the integration gate)
+pixi run vendor                        # init the TD solver submodule
+AFP=/path/to/afp/thys pixi run build   # batch-build Voblint_Examples (the integration gate)
 AFP=/path/to/afp/thys pixi run jedit   # interactive development
 ```
 
@@ -544,7 +539,7 @@ The ones that matter most often:
 
 | Task | Description |
 | --- | --- |
-| `build` | Batch-build every required session; the project's integration verification gate |
+| `build` | Batch-build `Voblint_Examples`, which reaches every session except `Voblint_Codegen`; the project's integration verification gate |
 | `codegen` / `codegen-check` | Regenerate `codegen/generated/`, or fail on drift |
 | `codegen-regression` | Compile and run the OCaml driver against Isabelle-proved expected output |
 | `cli-build` / `cli-test` | Build the `voblint` binary; run `tests/run.py` against it |

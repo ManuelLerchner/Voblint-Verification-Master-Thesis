@@ -103,5 +103,5 @@ keep it and structural tags are forced.
 
 - `docs/AFP_IMP2_REBASE_MIGRATION.md` - the migration plan implementing part 2
   (the one-way bridge + soundness re-anchoring).
-- `docs/IP_ONLY_CONSOLIDATION.md` - where the real duplication (~3500 lines,
+- `docs/history/IP_ONLY_CONSOLIDATION.md` - where the real duplication (~3500 lines,
   intra spine vs IP spine) actually lives. The expression layer is not it.

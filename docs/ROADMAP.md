@@ -20,7 +20,7 @@ individual work items, dependencies, and scheduling.
 The supported pipeline is:
 
 ```text
-IMP2 source
+VIMP source
   -> procedure-aware CFG
   -> activation-local collecting semantics
   -> generic D/G equations
@@ -39,8 +39,9 @@ edges, procedure entry, and return combination.
 
 The generic D/G interface is the supported modular-analysis architecture. It
 permits different local (`D`) and global (`G`) carriers, context-indexed local
-unknowns, and analysis-defined shared-state routing. Sign, Interval, and mixed
-Sign/Interval instances use the same solver and soundness infrastructure.
+unknowns, and analysis-defined shared-state routing. Sign, Interval, Parity,
+Congruence and the `int_dom` product use the same solver and soundness
+infrastructure.
 
 ## Intentionally retired components
 
@@ -75,56 +76,20 @@ Extend the analysis-defined reader and publisher interfaces where examples need
 more precise shared-state communication. Keep routing generic over the `D` and
 `G` carriers.
 
-### Placement-aware D/G generation (settled architecture)
+### Placement-aware D/G generation (removed)
 
-The D/G spine has two abstraction levels over one implementation, not two
-competing implementations:
-
-```text
-sound_dg_spec_core / sound_dg_spec_core_ltr        <- concise adapter, ordinary analyses
-        |  sublocale (DG_Soundness.thy, DG_LTR_Sound.thy)
-        v
-sound_dg_hooks / sound_dg_hooks_ltr      <- framework-construction API
-```
-
-`sound_dg_hooks`/`sound_dg_hooks_ltr` (`src/Abstract_Interpreter/Framework/DG/DG_Soundness.thy`,
-`DG_LTR_Sound.thy`) generate D/G equations from arbitrary hook trees and prove
-them sound generically. `sound_dg_spec_core` is `sound_dg_hooks` specialized to
-`dg_spec`-record trees: one locale interpretation per analysis instance
-(`step_sound`/`combine_sound`/`enter_sound`), no per-CFG-node proof
-obligations. Since `sound_dg_spec_core <= hooks: sound_dg_hooks` is now a proved
-sublocale, `sound_dg_spec_core`'s three obligations *derive* `sound_dg_hooks`'s
-three hook obligations rather than re-proving the same soundness shape
-independently — `dg_gen = hook_gen` is proved outright for this instance, not
-merely approximated. Sign, Interval, Parity, Mixed, CallString, and Ctx all
-stay on `sound_dg_spec_core`/`dg_ctx_activation`/`routed_context` permanently; none
-of them needs migration to `sound_dg_hooks` directly, and none is planned.
-
-`sound_dg_hooks` remains the right route only for analyses whose D/G equation
-structure genuinely cannot be expressed as a `dg_spec` record — e.g. custom
-owner-sensitive placement, where an edge's contribution depends on projecting
-a joined D/G read by ownership rather than applying one fixed transfer. Two
-worked examples exercise this directly:
-`src/Examples/Interval/Example_Interval_Placement.thy` and
-`src/Examples/Sign/Example_Sign_Placement.thy`. Treat them as framework
-validation, not as templates for an ordinary analysis.
-
-This settles an earlier, incorrect hypothesis: two example flagships
-(`src/Examples/Sign/Exec_Sign_DG_Run.thy`,
-`src/Examples/Parity/Example_Parity_DG_Flagship.thy`) were migrated onto
-`sound_dg_hooks` directly, on the assumption that `sound_dg_spec_core` was a
-duplicate implementation worth retiring. Both grew 5-6x (158->997,
-269->1336 lines) for no closed soundness or drift risk — `sound_dg_spec_core` was
-already classifier-generic, and the per-CFG-node proof burden `sound_dg_hooks`
-requires is not needed by ordinary analyses. `docs/reviews/M4_SPINE_BOUNDARY_AUDIT.md`
-documents the audit that found this; both flagships were reverted back to
-`sound_dg_spec_core`. Do not propose migrating any further classic-route example
-to `sound_dg_hooks` without new evidence that its D/G structure genuinely
-needs the hook-tree level.
+The hook-tree layer (`sound_dg_hooks`) and the owner-sensitive placement
+examples built on it were removed; `docs/GOBLINT_ALIGNMENT_REGISTER.md` ("D/G
+reconstruction and publication timing") records why. Every analysis interprets
+`sound_dg_spec_core` through `dg_ctx_activation_base` and
+`routed_context_base_hetero`. An analysis-specific sharing policy belongs in that
+analysis's own semantics over the keyed manager, not in a generic placement
+layer.
 
 ### Domain composition
 
-The mixed Sign/Interval instance demonstrates heterogeneous carriers.
+`int_dom` is one concrete reduced product, and `Rel_Order_Domain.thy`
+demonstrates a non-pointwise carrier.
 `docs/RELATIONAL_DOMAIN_ARCHITECTURE_DECISION.md` (Option 4) settled this: no
 shared product/reduction layer is planned. `sound_dg_spec_core`'s carriers are
 already opaque, so new heterogeneous or relational analyses (e.g.
@@ -149,7 +114,7 @@ and interval execution examples without changing the semantic reference model.
 
 Arrays and richer types require explicit syntax, operational semantics,
 compiler, and transfer extensions. They are not implicit consequences of the
-scalar IMP2 proofs.
+scalar VIMP proofs.
 
 ## Completion criteria
 

@@ -11,11 +11,11 @@ The following claims are outside the supported framework.
   verified solver.
 - No parallel classical intra-procedural pipeline.
 - No unconditional termination proof. Soundness theorems are conditional on
-  the explicit `solve_dom`/`side_solve_dom` hypothesis; discharging that
+  the explicit solver-success hypothesis (`solve_dom`); discharging that
   hypothesis (e.g. via lattice-height induction for Sign, or a widening
   termination argument for Interval) is out of scope.
-- No generic reduced-product constructor. The mixed Sign/Interval instance is a
-  concrete D/G analysis.
+- No generic reduced-product constructor. `int_dom` is one concrete reduced
+  product of four fixed components.
 - No guarantee that every abstract context choice is finite or precise.
 - No implicit arrays, pointers, heap, C, or CIL semantics.
 - No backward compiler equivalence. The source compiler theorem is a forward
