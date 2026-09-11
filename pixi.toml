@@ -56,7 +56,9 @@ pytest = ">=8.0"
 # Hand-written support expectations checked against generated output, so a
 # manifest edit that changes what the CLI offers has to be intended.
 registry-check = "python3 -m pytest tests/test_analysis_registry.py"
-property-build = "bash scripts/mk/property-build.sh"
+# Dune and the OCaml compiler live in the active opam switch; entering it here
+# keeps `pixi run property` self-contained for callers.
+property-build = "opam exec -- bash scripts/mk/property-build.sh"
 property = { cmd = "python3 -m pytest tests/property", depends-on = ["property-build"] }
 
 # HTML result viewer (`voblint --html`). graphviz supplies `dot`, which
@@ -146,14 +148,14 @@ root-entries = "python3 scripts/check_root_entries.py"
 # root breaks an OCaml consumer rather than the Isabelle build. Reads the
 # checked-in export too, so it costs a second and needs no toolchain.
 codegen-api = "python3 scripts/check_generated_api.py"
-codegen-regression = "bash scripts/mk/codegen-regression.sh"
+codegen-regression = "opam exec -- bash scripts/mk/codegen-regression.sh"
 
 # voblint CLI
-cli-build = "bash scripts/mk/cli-build.sh"
-cli-test = { cmd = "bash scripts/mk/cli-test-run.sh", depends-on = ["cli-build"] }
+cli-build = "opam exec -- bash scripts/mk/cli-build.sh"
+cli-test = { cmd = "opam exec -- bash scripts/mk/cli-test-run.sh", depends-on = ["cli-build"] }
 # CLI plumbing (exit codes, --help, argument errors) that isn't expressible
 # as a .vimp fixture's verdict report -- see tests/cli_smoke.py's docstring.
-cli-smoke = { cmd = "python3 tests/cli_smoke.py", depends-on = ["cli-build"] }
+cli-smoke = { cmd = "opam exec -- python3 tests/cli_smoke.py", depends-on = ["cli-build"] }
 voblint = { cmd = "bash scripts/mk/voblint-run.sh", depends-on = ["cli-build"] }
 # Static checks over tests/regression/ fixture source -- no CLI build, no
 # OCaml, so this fails fast before cli-test's build cost. See tests/run.py's

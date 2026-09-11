@@ -22,6 +22,9 @@ __pycache__/
 # pixi
 .pixi/
 
+# Dune build products
+_build/
+
 # Local OS files
 .DS_Store
 

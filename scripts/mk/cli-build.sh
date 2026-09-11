@@ -5,9 +5,17 @@
 # block), plus the Menhir/ocamllex frontend generated from
 # grammar/vimp.yaml (scripts/gen_vimp_menhir.py; only needed if that
 # changed -- cli/vimp_parser.mly and cli/vimp_lexer.mll are committed).
-# Requires ocamlfind + menhir + ocamllex + the zarith/unix findlib packages
-# on PATH; does not require Isabelle or Python to build.
+# Requires dune + menhir + ocamllex + the zarith/unix OCaml libraries on PATH;
+# does not require Isabelle or Python to build.
 set -euo pipefail
+
+# Property and smoke tests invoke this script directly from Pixi's Python
+# environment. Always select the opam switch when one is available, avoiding
+# accidental mixing with a different system OCaml installation.
+if [ "${VOBLINT_OPAM_EXEC:-0}" != "1" ] && command -v opam >/dev/null 2>&1; then
+  exec env VOBLINT_OPAM_EXEC=1 opam exec -- "$0" "$@"
+fi
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 CLI_DIR="$REPO_ROOT/cli"
@@ -29,17 +37,14 @@ if [ ! -f "$stamp" ] || [ "$(cat "$stamp")" != "$current_hash" ]; then
   echo "Run 'pixi run codegen' to refresh it; building with the checked-in copy anyway." >&2
 fi
 
-# Copied in (not symlinked) so ocamlopt can infer the module name
-# "Voblint_CLI" from the filename, matching codegen/regression/ocaml's own
-# convention. Do not hand-edit the copy; rerun `pixi run codegen` and this
-# script instead.
-cp "$REPO_ROOT/codegen/generated/ml/Voblint_CLI.ml" "$CLI_DIR/Voblint_CLI.ml"
+# Dune owns generated OCaml, parser, and lexer outputs in `_build/`.
+rm -f "$CLI_DIR/vimp_parser.ml" "$CLI_DIR/vimp_parser.mli" "$CLI_DIR/vimp_lexer.ml"
 
 # `pixi run voblint` chains this build directly ahead of voblint's own
 # stdout in the same pipe (e.g. `pixi run voblint -- --dot ... | dot
 # -Tsvg`), so any build-tool banner on stdout here corrupts every piped
 # consumer downstream -- ocamllex's automaton-stats banner was one such
-# case. menhir/ocamlfind are silent on success; assert the whole build
+# case. Dune is silent on success; assert the whole build
 # stays silent (captured via a temp file, not `$()`, so a lone trailing
 # blank line can't slip past an empty-string check) so a future regression
 # here fails loudly at the source instead of corrupting output elsewhere.
@@ -47,21 +52,8 @@ build_out="$(mktemp)"
 trap 'rm -f "$build_out"' EXIT
 (
   cd "$CLI_DIR"
-  # --unused-precedence-levels: LT/EQEQ's %nonassoc level is real (the
-  # Isabelle mixfix generator and the property-test printer both key off
-  # grammar/vimp.yaml's precedence table for it) but VIMP comparisons don't
-  # chain, so no shift/reduce conflict in Menhir's automaton ever consults
-  # it -- an expected, not a signal-carrying, warning.
-  menhir --unused-precedence-levels vimp_parser.mly
-  # Its automaton-stats banner is routine, expected stdout on every
-  # successful run -- redirect it inline so only genuinely unexpected
-  # output from any step trips the silence assertion below.
-  ocamllex vimp_lexer.mll >/dev/null
-  # -8/-11/-20: routine artifacts of Isabelle's OCaml serializer (see
-  # codegen-regression.sh for the same suppression), not
-  # signs of a real problem in the generated Voblint_CLI.ml.
-  ocamlfind ocamlopt -w -8-11-20 -package str,zarith,unix -linkpkg \
-    Voblint_CLI.ml vimp_positions.ml vimp_parser.mli vimp_parser.ml vimp_lexer.ml vimp_frontend.ml dot_render.ml html_report.ml main.ml -o voblint
+  dune build ./main.exe
+  cp "$REPO_ROOT/_build/default/cli/main.exe" voblint
 ) >"$build_out"
 if [ -s "$build_out" ]; then
   echo "cli-build.sh wrote to stdout (would corrupt piped voblint output):" >&2

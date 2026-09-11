@@ -5,7 +5,7 @@ real ocamllex lexer (vimp_lexer.mll) -- from the canonical grammar/vimp.yaml.
 This is the source of cli/vimp_parser.mly and cli/vimp_lexer.mll. The
 generated .mly/.mll are committed, the same convention codegen/generated/
 already uses for Isabelle-generated sources: `pixi run cli-build`
-(scripts/mk/cli-build.sh) needs only menhir/ocamllex/ocamlfind, not Python,
+(scripts/mk/cli-build.sh) needs only Dune/Menhir/ocamllex, not Python,
 extending its "does not require Isabelle" framing to "does not require
 regenerating the frontend either, unless grammar/vimp.yaml changed."
 
@@ -130,9 +130,8 @@ rule token = parse
 # Parser generation
 # ---------------------------------------------------------------------------
 
-# Explicit %type declarations: this repo builds Menhir without dune, so
-# there's no --infer two-pass typechecking loop; every nonterminal's OCaml
-# type must be stated upfront instead.
+# Explicit %type declarations keep the generated interface stable across
+# Dune/Menhir versions; every nonterminal's OCaml type is stated upfront.
 NONTERMINAL_TYPES = {
     "exp": "Voblint_CLI.Generated.exp",
     "stmt": "Voblint_CLI.Generated.com",
