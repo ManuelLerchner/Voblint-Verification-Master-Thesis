@@ -663,28 +663,6 @@ next
     by (simp add: branch_st_def branch_def branch_lifted_def)
 qed
 
-text \<open>
-  The unconditional consequence, for callers that cannot establish liveness
-  where they need it: on a live input the two sides agree exactly, and on a
-  dead one \<open>branch\<close> collapses to \<open>bot\<close> (\<open>branch_witness_bottom\<close>) while
-  \<open>branch_st\<close> returns whatever residual its leaf updates left. Soundness is
-  upward closed, so this inequality carries every concretization argument the
-  equality would have.
-\<close>
-
-lemma branch_st_le:
-  "branch e pol (fun_of_resolved_st_q_for gs s)
-     \<le> fun_of_resolved_st_q_for gs (branch_st gs e pol s)"
-proof (cases "live_resolved_st_q gs s")
-  case True
-  then show ?thesis by (simp add: branch_st_commute)
-next
-  case False
-  then have "is_empty_state (fun_of_resolved_st_q_for gs s)"
-    by (simp add: live_resolved_st_q_def)
-  then show ?thesis by (simp add: branch_witness_bottom)
-qed
-
 end
 
 end

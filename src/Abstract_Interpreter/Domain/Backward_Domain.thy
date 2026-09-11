@@ -306,30 +306,35 @@ proof -
     by simp
 qed
 
+text \<open>
+  Soundness of a feasibility-gated join, the shape of \<open>bfilter\<close>'s
+  \<open>And _ _ False\<close> and \<open>Or _ _ True\<close> cases: a store taking the polarity on
+  one side makes that side feasible, so the gate keeps it and the join
+  admits the store through it.
+\<close>
+
+lemma gated_join_sound:
+  assumes st: "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
+    and "truthy (aval b1 s) = pol \<or> truthy (aval b2 s) = pol"
+    and f1: "truthy (aval b1 s) = pol \<Longrightarrow> s \<in> \<lbrakk>f1\<rbrakk>"
+    and f2: "truthy (aval b2 s) = pol \<Longrightarrow> s \<in> \<lbrakk>f2\<rbrakk>"
+  shows "s \<in> \<lbrakk>(if feasible b1 pol \<sigma> then f1 else bot)
+                \<squnion> (if feasible b2 pol \<sigma> then f2 else bot)\<rbrakk>"
+  using assms(2)
+proof
+  assume h: "truthy (aval b1 s) = pol"
+  have "feasible b1 pol \<sigma>" by (rule feasible_of_concrete[OF st h])
+  with f1[OF h] show ?thesis by (simp add: gamma_state_supI1)
+next
+  assume h: "truthy (aval b2 s) = pol"
+  have "feasible b2 pol \<sigma>" by (rule feasible_of_concrete[OF st h])
+  with f2[OF h] show ?thesis by (simp add: gamma_state_supI2)
+qed
+
 lemma bfilter_sound [intro]:
   assumes "s \<in> \<lbrakk>\<sigma>\<rbrakk>" "truthy (aval e s) = res"
   shows "s \<in> \<lbrakk>bfilter e res \<sigma>\<rbrakk>"
 using assms proof (induction e arbitrary: res \<sigma>)
-  case (N n)
-  then show ?case by simp
-next
-  case (V x)
-  then show ?case
-    using bfilter_default_sound[OF V.prems(1) V.prems(2)]
-    by (simp add: case_prod_beta fun_upd_def)
-next
-  case (Plus e1 e2)
-  show ?case
-    using bfilter_default_sound[OF Plus.prems(1) Plus.prems(2)] by (simp add: case_prod_beta)
-next
-  case (Minus e1 e2)
-  show ?case
-    using bfilter_default_sound[OF Minus.prems(1) Minus.prems(2)] by (simp add: case_prod_beta)
-next
-  case (Times e1 e2)
-  show ?case
-    using bfilter_default_sound[OF Times.prems(1) Times.prems(2)] by (simp add: case_prod_beta)
-next
   case (Not e)
   have bv': "truthy (aval e s) = (\<not> res)" using Not.prems(2) by (auto split: if_splits)
   from Not.IH[OF Not.prems(1) bv'] show ?case by simp
@@ -344,59 +349,24 @@ next
       using And.IH(1)[OF And.IH(2)[OF And.prems(1) v2] v1] by (simp add: True)
   next
     case False
-    have disj: "\<not> truthy (aval e1 s) \<or> \<not> truthy (aval e2 s)"
-      using And.prems(2) False by (auto split: if_splits)
-    show ?thesis
-    proof (cases "truthy (aval e1 s)")
-      case b1F: False
-      have v1: "truthy (aval e1 s) = False" using b1F by simp
-      have h': "s \<in> \<lbrakk>bfilter e1 False \<sigma>\<rbrakk>" using And.IH(1)[OF And.prems(1) v1] .
-      have g: "feasible e1 False \<sigma>" by (rule feasible_of_concrete[OF And.prems(1) v1])
-      have eqb: "bfilter (And e1 e2) res \<sigma>
-                   = bfilter e1 False \<sigma>
-                     \<squnion> (if feasible e2 False \<sigma> then bfilter e2 False \<sigma> else bot)"
-        using False g by simp
-      show ?thesis unfolding eqb using h' by (rule gamma_state_supI1)
-    next
-      case b1T: True
-      have v2: "truthy (aval e2 s) = False" using disj b1T by simp
-      have h': "s \<in> \<lbrakk>bfilter e2 False \<sigma>\<rbrakk>" using And.IH(2)[OF And.prems(1) v2] .
-      have g: "feasible e2 False \<sigma>" by (rule feasible_of_concrete[OF And.prems(1) v2])
-      have eqb: "bfilter (And e1 e2) res \<sigma>
-                   = (if feasible e1 False \<sigma> then bfilter e1 False \<sigma> else bot)
-                     \<squnion> bfilter e2 False \<sigma>"
-        using False g by simp
-      show ?thesis unfolding eqb using h' by (rule gamma_state_supI2)
-    qed
+    then have res: "res = False" by simp
+    have "truthy (aval e1 s) = False \<or> truthy (aval e2 s) = False"
+      using And.prems(2) res by (auto split: if_splits)
+    then show ?thesis
+      unfolding res bfilter.simps
+      by (rule gated_join_sound[OF And.prems(1) _ And.IH[OF And.prems(1)]])
   qed
 next
   case (Or e1 e2)
   show ?case
   proof (cases res)
     case True
-    have disj: "truthy (aval e1 s) \<or> truthy (aval e2 s)"
-      using Or.prems(2) True by (auto split: if_splits)
-    show ?thesis proof (cases "truthy (aval e1 s)")
-      case b1T: True
-      have v1: "truthy (aval e1 s) = True" using b1T by simp
-      have h': "s \<in> \<lbrakk>bfilter e1 True \<sigma>\<rbrakk>" using Or.IH(1)[OF Or.prems(1) v1] .
-      have g: "feasible e1 True \<sigma>" by (rule feasible_of_concrete[OF Or.prems(1) v1])
-      have eqb: "bfilter (Or e1 e2) res \<sigma>
-                   = bfilter e1 True \<sigma>
-                     \<squnion> (if feasible e2 True \<sigma> then bfilter e2 True \<sigma> else bot)"
-        using True g by simp
-      show ?thesis unfolding eqb using h' by (rule gamma_state_supI1)
-    next
-      case b1F: False
-      have v2: "truthy (aval e2 s) = True" using disj b1F by simp
-      have h': "s \<in> \<lbrakk>bfilter e2 True \<sigma>\<rbrakk>" using Or.IH(2)[OF Or.prems(1) v2] .
-      have g: "feasible e2 True \<sigma>" by (rule feasible_of_concrete[OF Or.prems(1) v2])
-      have eqb: "bfilter (Or e1 e2) res \<sigma>
-                   = (if feasible e1 True \<sigma> then bfilter e1 True \<sigma> else bot)
-                     \<squnion> bfilter e2 True \<sigma>"
-        using True g by simp
-      show ?thesis unfolding eqb using h' by (rule gamma_state_supI2)
-    qed
+    then have res: "res = True" by simp
+    have "truthy (aval e1 s) = True \<or> truthy (aval e2 s) = True"
+      using Or.prems(2) res by auto
+    then show ?thesis
+      unfolding res bfilter.simps
+      by (rule gated_join_sound[OF Or.prems(1) _ Or.IH[OF Or.prems(1)]])
   next
     case False
     have v1: "truthy (aval e1 s) = False" and v2: "truthy (aval e2 s) = False"
@@ -421,7 +391,7 @@ next
   show ?case
     unfolding bfilter.simps Let_def case_prod_beta
     by (blast intro: Eq.prems(1) inv_eq_sound_fst[OF e1a e2a eq] inv_eq_sound_snd[OF e1a e2a eq])
-qed
+qed (simp_all only: bfilter.simps Let_def case_prod_beta bfilter_default_sound)
 
 text \<open>
   \<open>branch_lifted\<close> is the Goblint-aligned branch semantics: the forward
@@ -449,29 +419,7 @@ text \<open>
   \<open>branch_lifted\<close> is always \<^const>\<open>normalized_lift\<close>
   (\<open>branch_lifted_normalized\<close>), so a caller can rely on structural \<open>Bot\<close>
   alone rather than re-testing \<open>is_empty_state\<close> on a \<open>Lifted\<close> result.
-
-  \<open>bfilter\<close>'s two join cases, restated directly against \<open>feasible\<close> and raw
-  \<open>bfilter\<close>, matching \<open>bfilter\<close>'s own join-case equations: a disjunct
-  feasible by the forward gate can still have its own \<open>bfilter\<close> narrowing
-  discover a stronger backward-only contradiction, landing on a
-  witness-bottom, non-canonical \<open>abs_state\<close> (@{const is_empty_state} without
-  being the literal pointwise \<open>bot\<close>) that pollutes the pointwise join with
-  its unrefined other locations. \<open>bfilter_lifted\<close> is where this is
-  corrected; these two are restatements of \<open>bfilter\<close>'s own primitive
-  equations, not a claim that this join is precise.
 \<close>
-
-lemma bfilter_And_False_unfold:
-  "bfilter (And b1 b2) False \<sigma> =
-     (if feasible b1 False \<sigma> then bfilter b1 False \<sigma> else bot)
-     \<squnion> (if feasible b2 False \<sigma> then bfilter b2 False \<sigma> else bot)"
-  by simp
-
-lemma bfilter_Or_True_unfold:
-  "bfilter (Or b1 b2) True \<sigma> =
-     (if feasible b1 True \<sigma> then bfilter b1 True \<sigma> else bot)
-     \<squnion> (if feasible b2 True \<sigma> then bfilter b2 True \<sigma> else bot)"
-  by simp
 
 text \<open>
   \<open>bfilter_lifted\<close> is not \<open>bfilter\<close>'s wrapper: a wrapper can only test the
@@ -497,8 +445,7 @@ text \<open>
 \<close>
 
 fun bfilter_lifted :: "exp => bool => 'a abs_state => 'a abs_state lifted" where
-    "bfilter_lifted (Less e1 e2) res \<sigma> = normalize_lift is_empty_state (bfilter (Less e1 e2) res \<sigma>)"
-  | "bfilter_lifted (Not b) res \<sigma> = bfilter_lifted b (\<not> res) \<sigma>"
+    "bfilter_lifted (Not b) res \<sigma> = bfilter_lifted b (\<not> res) \<sigma>"
   | "bfilter_lifted (And b1 b2) True  \<sigma> =
        bind_lift (bfilter_lifted b2 True \<sigma>) (bfilter_lifted b1 True)"
   | "bfilter_lifted (And b1 b2) False \<sigma> =
@@ -524,31 +471,30 @@ next
     by (cases pol) (auto intro: normalized_lift_bind)
 qed simp_all
 
+text \<open>\<open>gated_join_sound\<close> for \<open>bfilter_lifted\<close>'s join cases, against \<^const>\<open>Bot\<close>.\<close>
+
+lemma gated_join_lifted_sound:
+  assumes st: "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
+    and "truthy (aval b1 s) = pol \<or> truthy (aval b2 s) = pol"
+    and f1: "truthy (aval b1 s) = pol \<Longrightarrow> s \<in> gamma_state_lift f1"
+    and f2: "truthy (aval b2 s) = pol \<Longrightarrow> s \<in> gamma_state_lift f2"
+  shows "s \<in> gamma_state_lift
+           ((if feasible b1 pol \<sigma> then f1 else Bot) \<squnion> (if feasible b2 pol \<sigma> then f2 else Bot))"
+  using assms(2)
+proof
+  assume h: "truthy (aval b1 s) = pol"
+  have "feasible b1 pol \<sigma>" by (rule feasible_of_concrete[OF st h])
+  with f1[OF h] show ?thesis by (simp add: gamma_state_lift_supI1)
+next
+  assume h: "truthy (aval b2 s) = pol"
+  have "feasible b2 pol \<sigma>" by (rule feasible_of_concrete[OF st h])
+  with f2[OF h] show ?thesis by (simp add: gamma_state_lift_supI2)
+qed
+
 lemma bfilter_lifted_sound [intro]:
   assumes "s \<in> \<lbrakk>\<sigma>\<rbrakk>" "truthy (aval e s) = res"
   shows "s \<in> gamma_state_lift (bfilter_lifted e res \<sigma>)"
 using assms proof (induction e arbitrary: res \<sigma>)
-  case (N n)
-  show ?case using bfilter_sound[OF N.prems] by simp
-next
-  case (V x)
-  show ?case using bfilter_sound[OF V.prems] by simp
-next
-  case (Plus e1 e2)
-  show ?case using bfilter_sound[OF Plus.prems] by simp
-next
-  case (Minus e1 e2)
-  show ?case using bfilter_sound[OF Minus.prems] by simp
-next
-  case (Times e1 e2)
-  show ?case using bfilter_sound[OF Times.prems] by simp
-next
-  case (Less e1 e2)
-  show ?case using bfilter_sound[OF Less.prems] by simp
-next
-  case (Eq e1 e2)
-  show ?case using bfilter_sound[OF Eq.prems] by simp
-next
   case (Not e)
   have bv': "truthy (aval e s) = (\<not> res)" using Not.prems(2) by (auto split: if_splits)
   from Not.IH[OF Not.prems(1) bv'] show ?case by simp
@@ -567,62 +513,20 @@ next
       using h2 v1 by (blast intro: And.IH(1))
   next
     case False
-    have disj: "\<not> truthy (aval e1 s) \<or> \<not> truthy (aval e2 s)"
+    have "truthy (aval e1 s) = False \<or> truthy (aval e2 s) = False"
       using And.prems(2) False by (auto split: if_splits)
-    show ?thesis proof (cases "truthy (aval e1 s)")
-      case b1F: False
-      have v1: "truthy (aval e1 s) = False" using b1F by simp
-      have h': "s \<in> gamma_state_lift (bfilter_lifted e1 False \<sigma>)"
-        using And.IH(1)[OF And.prems(1) v1] .
-      have g: "feasible e1 False \<sigma>" by (rule feasible_of_concrete[OF And.prems(1) v1])
-      have eqb: "bfilter_lifted (And e1 e2) res \<sigma>
-                   = bfilter_lifted e1 False \<sigma>
-                     \<squnion> (if feasible e2 False \<sigma> then bfilter_lifted e2 False \<sigma> else Bot)"
-        using False g by simp
-      show ?thesis unfolding eqb using h' by (rule gamma_state_lift_supI1)
-    next
-      case b1T: True
-      have v2: "truthy (aval e2 s) = False" using disj b1T by simp
-      have h': "s \<in> gamma_state_lift (bfilter_lifted e2 False \<sigma>)"
-        using And.IH(2)[OF And.prems(1) v2] .
-      have g: "feasible e2 False \<sigma>" by (rule feasible_of_concrete[OF And.prems(1) v2])
-      have eqb: "bfilter_lifted (And e1 e2) res \<sigma>
-                   = (if feasible e1 False \<sigma> then bfilter_lifted e1 False \<sigma> else Bot)
-                     \<squnion> bfilter_lifted e2 False \<sigma>"
-        using False g by simp
-      show ?thesis unfolding eqb using h' by (rule gamma_state_lift_supI2)
-    qed
+    from gated_join_lifted_sound[OF And.prems(1) this And.IH[OF And.prems(1)]] False
+    show ?thesis by (simp split del: if_split)
   qed
 next
   case (Or e1 e2)
   show ?case
   proof (cases res)
     case True
-    have disj: "truthy (aval e1 s) \<or> truthy (aval e2 s)"
-      using Or.prems(2) True by (auto split: if_splits)
-    show ?thesis proof (cases "truthy (aval e1 s)")
-      case b1T: True
-      have v1: "truthy (aval e1 s) = True" using b1T by simp
-      have h': "s \<in> gamma_state_lift (bfilter_lifted e1 True \<sigma>)"
-        using Or.IH(1)[OF Or.prems(1) v1] .
-      have g: "feasible e1 True \<sigma>" by (rule feasible_of_concrete[OF Or.prems(1) v1])
-      have eqb: "bfilter_lifted (Or e1 e2) res \<sigma>
-                   = bfilter_lifted e1 True \<sigma>
-                     \<squnion> (if feasible e2 True \<sigma> then bfilter_lifted e2 True \<sigma> else Bot)"
-        using True g by simp
-      show ?thesis unfolding eqb using h' by (rule gamma_state_lift_supI1)
-    next
-      case b1F: False
-      have v2: "truthy (aval e2 s) = True" using disj b1F by simp
-      have h': "s \<in> gamma_state_lift (bfilter_lifted e2 True \<sigma>)"
-        using Or.IH(2)[OF Or.prems(1) v2] .
-      have g: "feasible e2 True \<sigma>" by (rule feasible_of_concrete[OF Or.prems(1) v2])
-      have eqb: "bfilter_lifted (Or e1 e2) res \<sigma>
-                   = (if feasible e1 True \<sigma> then bfilter_lifted e1 True \<sigma> else Bot)
-                     \<squnion> bfilter_lifted e2 True \<sigma>"
-        using True g by simp
-      show ?thesis unfolding eqb using h' by (rule gamma_state_lift_supI2)
-    qed
+    have "truthy (aval e1 s) = True \<or> truthy (aval e2 s) = True"
+      using Or.prems(2) True by auto
+    from gated_join_lifted_sound[OF Or.prems(1) this Or.IH[OF Or.prems(1)]] True
+    show ?thesis by (simp split del: if_split)
   next
     case False
     have v1: "truthy (aval e1 s) = False" and v2: "truthy (aval e2 s) = False"
@@ -634,7 +538,7 @@ next
       unfolding res_eq bfilter_lifted.simps
       using h2 v1 by (blast intro: Or.IH(1))
   qed
-qed
+qed (simp_all only: bfilter_lifted.simps gamma_state_normalize_lift bfilter_sound)
 
 text \<open>
   \<open>branch_lifted\<close> is \<open>branch\<close>'s reachability wrapper, now routed through
@@ -719,15 +623,5 @@ lemma inv_conservative_sound:
   assumes "n1 \<in> gamma a1" and "n2 \<in> gamma a2"
   shows "n1 \<in> gamma (fst (inv_conservative r a1 a2)) \<and> n2 \<in> gamma (snd (inv_conservative r a1 a2))"
   using assms by (simp add: inv_conservative_def)
-
-lemma inv_conservative_reductive1:
-  fixes a1 a2 :: "'a::sound_domain"
-  shows "fst (inv_conservative r a1 a2) \<le> a1"
-  by (simp add: inv_conservative_def)
-
-lemma inv_conservative_reductive2:
-  fixes a1 a2 :: "'a::sound_domain"
-  shows "snd (inv_conservative r a1 a2) \<le> a2"
-  by (simp add: inv_conservative_def)
 
 end

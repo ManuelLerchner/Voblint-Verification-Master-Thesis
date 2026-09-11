@@ -568,15 +568,15 @@ proof -
     "gamma_congruence (int_congruence d) \<subseteq>
      gamma_congruence (int_congruence e)"
     using congruence
-    unfolding less_eq_congruence_def congruence_le_iff_gamma .
+    unfolding less_eq_congruence_iff_gamma .
   show ?thesis
-    unfolding less_eq_congruence_def congruence_le_iff_gamma
+    unfolding less_eq_congruence_iff_gamma
     using parity_gamma congruence_gamma by auto
 qed
 
 lemma congruence_fact_of_int_dom_le_congruence:
   "congruence_fact_of_int_dom d <= int_congruence d"
-  unfolding less_eq_congruence_def congruence_le_iff_gamma
+  unfolding less_eq_congruence_iff_gamma
   by auto
 
 lemma congruence_lower_bound_le:
@@ -586,17 +586,9 @@ lemma congruence_lower_bound_le:
       and congruent: "m dvd n - c"
   shows "l + ((c - l) mod m) <= n"
 proof -
-  obtain k where difference: "n - c = m * k"
-    using congruent unfolding dvd_def by blast
-  have reverse: "m dvd c - n"
-    unfolding dvd_def
-  proof
-    show "c - n = m * (- k)"
-      using difference by simp
-  qed
   have residues:
     "(c - l) mod m = (n - l) mod m"
-    using reverse by (simp add: mod_eq_dvd_iff)
+    using congruent by (simp add: mod_eq_dvd_iff dvd_diff_commute)
   have nonnegative: "0 <= n - l"
     using lower by simp
   have remainder: "(n - l) mod m <= n - l"
@@ -632,7 +624,7 @@ proof
     by (rule ivl_exhaustE)
   have normalized:
     "normalized_congruence_rep (Rep_congruence fct)"
-    using Rep_congruence[of fct] by simp
+    by simp
   show
     "n \<in> gamma_ivl (refine_ivl_with_congruence fct i)"
   proof (cases "Rep_congruence fct")
@@ -958,10 +950,10 @@ proof -
     unfolding less_eq_congruence_def congruence_le_def .
   have normalized1:
     "normalized_congruence_rep (Rep_congruence fct1)"
-    using Rep_congruence[of fct1] by simp
+    by simp
   have normalized2:
     "normalized_congruence_rep (Rep_congruence fct2)"
-    using Rep_congruence[of fct2] by simp
+    by simp
   obtain l1 u1 where i1: "i1 = Ivl l1 u1"
     by (rule ivl_exhaustE)
   obtain l2 u2 where i2: "i2 = Ivl l2 u2"

@@ -102,137 +102,53 @@ locale expression_domain_sound =
     and tobool_sound: "tobool p = Some b \<Longrightarrow> i \<in> gamma (p::'a) \<Longrightarrow> truthy i = b"
 begin
 
+text \<open>
+  Every comparison and connective evaluates to the same guarded choice between
+  the literals \<open>0\<close>/\<open>1\<close> and their join. \<open>bool_lit_sound\<close> and
+  \<open>bool_lit_mono\<close> discharge that shape once, so each induction case supplies
+  only its own query facts.
+\<close>
+
+lemma bool_lit_sound:
+  assumes "\<not> E" and "C1 \<Longrightarrow> v = t1" and "C2 \<Longrightarrow> v = t2" and "v \<in> {0, 1}"
+  shows "v \<in> gamma
+    (if E then bot else if C1 then lit t1 else if C2 then lit t2 else lit 0 \<squnion> lit 1)"
+  using assms by (auto intro: gamma_sup_ub1[THEN subsetD] gamma_sup_ub2[THEN subsetD])
+
 lemma aval_dom_sound:
   "(\<forall>x. s x \<in> gamma (sigma x)) \<Longrightarrow> aval a s \<in> gamma (ev a sigma)"
 proof (induction a arbitrary: s sigma)
-  case (N n) then show ?case by auto
-next
-  case (V x) then show ?case by auto
-next
-  case (Plus e1 e2) then show ?case by auto
-next
-  case (Minus e1 e2) then show ?case by auto
-next
-  case (Times e1 e2) then show ?case by auto
-next
   case (Less e1 e2)
-  have h1: "aval e1 s \<in> gamma (ev e1 sigma)" using Less.IH(1) Less.prems by simp
-  have h2: "aval e2 s \<in> gamma (ev e2 sigma)" using Less.IH(2) Less.prems by simp
-  have nb1: "\<not> is_empty (ev e1 sigma)" using h1 is_empty_correct by auto
-  have nb2: "\<not> is_empty (ev e2 sigma)" using h2 is_empty_correct by auto
-  show ?case
-  proof (cases "lt (ev e1 sigma) (ev e2 sigma) = Some True")
-    case True
-    with lt_sound[OF True h1 h2] nb1 nb2 show ?thesis by simp
-  next
-    case False
-    show ?thesis
-    proof (cases "lt (ev e1 sigma) (ev e2 sigma) = Some False")
-      case True
-      with lt_sound[OF True h1 h2] nb1 nb2 False show ?thesis by simp
-    next
-      case False
-      with \<open>\<not> (lt (ev e1 sigma) (ev e2 sigma) = Some True)\<close> nb1 nb2
-      show ?thesis by (auto intro: gamma_sup_ub1[THEN subsetD] gamma_sup_ub2[THEN subsetD])
-    qed
-  qed
+  have h1: "aval e1 s \<in> gamma (ev e1 sigma)" and h2: "aval e2 s \<in> gamma (ev e2 sigma)"
+    using Less by simp_all
+  show ?case unfolding ev_Less aval.simps
+    by (rule bool_lit_sound) (use h1 h2 is_empty_correct lt_sound[OF _ h1 h2] in auto)
 next
   case (Eq e1 e2)
-  have h1: "aval e1 s \<in> gamma (ev e1 sigma)" using Eq.IH(1) Eq.prems by simp
-  have h2: "aval e2 s \<in> gamma (ev e2 sigma)" using Eq.IH(2) Eq.prems by simp
-  have nb1: "\<not> is_empty (ev e1 sigma)" using h1 is_empty_correct by auto
-  have nb2: "\<not> is_empty (ev e2 sigma)" using h2 is_empty_correct by auto
-  show ?case
-  proof (cases "eqb (ev e1 sigma) (ev e2 sigma) = Some True")
-    case True
-    with eqb_sound[OF True h1 h2] nb1 nb2 show ?thesis by simp
-  next
-    case False
-    show ?thesis
-    proof (cases "eqb (ev e1 sigma) (ev e2 sigma) = Some False")
-      case True
-      with eqb_sound[OF True h1 h2] nb1 nb2 False show ?thesis by simp
-    next
-      case False
-      with \<open>\<not> (eqb (ev e1 sigma) (ev e2 sigma) = Some True)\<close> nb1 nb2
-      show ?thesis by (auto intro: gamma_sup_ub1[THEN subsetD] gamma_sup_ub2[THEN subsetD])
-    qed
-  qed
+  have h1: "aval e1 s \<in> gamma (ev e1 sigma)" and h2: "aval e2 s \<in> gamma (ev e2 sigma)"
+    using Eq by simp_all
+  show ?case unfolding ev_Eq aval.simps
+    by (rule bool_lit_sound) (use h1 h2 is_empty_correct eqb_sound[OF _ h1 h2] in auto)
 next
   case (Not e)
-  have h: "aval e s \<in> gamma (ev e sigma)" using Not.IH Not.prems by simp
-  have nb: "\<not> is_empty (ev e sigma)" using h is_empty_correct by auto
-  show ?case
-  proof (cases "tobool (ev e sigma) = Some True")
-    case True
-    with tobool_sound[OF True h] nb show ?thesis by simp
-  next
-    case False
-    show ?thesis
-    proof (cases "tobool (ev e sigma) = Some False")
-      case True
-      with tobool_sound[OF True h] nb False show ?thesis by simp
-    next
-      case False
-      with \<open>\<not> (tobool (ev e sigma) = Some True)\<close> nb
-      show ?thesis by (auto intro: gamma_sup_ub1[THEN subsetD] gamma_sup_ub2[THEN subsetD])
-    qed
-  qed
+  have h: "aval e s \<in> gamma (ev e sigma)" using Not by simp
+  show ?case unfolding ev_Not aval.simps
+    by (rule bool_lit_sound) (use h is_empty_correct tobool_sound[OF _ h] in auto)
 next
   case (And e1 e2)
-  have h1: "aval e1 s \<in> gamma (ev e1 sigma)" using And.IH(1) And.prems by simp
-  have h2: "aval e2 s \<in> gamma (ev e2 sigma)" using And.IH(2) And.prems by simp
-  have nb1: "\<not> is_empty (ev e1 sigma)" using h1 is_empty_correct by auto
-  have nb2: "\<not> is_empty (ev e2 sigma)" using h2 is_empty_correct by auto
-  show ?case
-  proof (cases "tobool (ev e1 sigma) = Some False \<or> tobool (ev e2 sigma) = Some False")
-    case True
-    then have "\<not> truthy (aval e1 s) \<or> \<not> truthy (aval e2 s)"
-      using tobool_sound h1 h2 by fastforce
-    with True nb1 nb2 show ?thesis by auto
-  next
-    case False
-    show ?thesis
-    proof (cases "tobool (ev e1 sigma) = Some True \<and> tobool (ev e2 sigma) = Some True")
-      case True
-      then have "truthy (aval e1 s) \<and> truthy (aval e2 s)"
-        using tobool_sound h1 h2 by auto
-      with True False nb1 nb2 show ?thesis by simp
-    next
-      case False
-      with \<open>\<not> (tobool (ev e1 sigma) = Some False \<or> tobool (ev e2 sigma) = Some False)\<close>
-        nb1 nb2
-      show ?thesis by (auto intro: gamma_sup_ub1[THEN subsetD] gamma_sup_ub2[THEN subsetD])
-    qed
-  qed
+  have h1: "aval e1 s \<in> gamma (ev e1 sigma)" and h2: "aval e2 s \<in> gamma (ev e2 sigma)"
+    using And by simp_all
+  show ?case unfolding ev_And aval.simps
+    by (rule bool_lit_sound)
+       (use h1 h2 is_empty_correct tobool_sound[OF _ h1] tobool_sound[OF _ h2] in auto)
 next
   case (Or e1 e2)
-  have h1: "aval e1 s \<in> gamma (ev e1 sigma)" using Or.IH(1) Or.prems by simp
-  have h2: "aval e2 s \<in> gamma (ev e2 sigma)" using Or.IH(2) Or.prems by simp
-  have nb1: "\<not> is_empty (ev e1 sigma)" using h1 is_empty_correct by auto
-  have nb2: "\<not> is_empty (ev e2 sigma)" using h2 is_empty_correct by auto
-  show ?case
-  proof (cases "tobool (ev e1 sigma) = Some True \<or> tobool (ev e2 sigma) = Some True")
-    case True
-    then have "truthy (aval e1 s) \<or> truthy (aval e2 s)"
-      using tobool_sound h1 h2 by fastforce
-    with True nb1 nb2 show ?thesis by auto
-  next
-    case False
-    show ?thesis
-    proof (cases "tobool (ev e1 sigma) = Some False \<and> tobool (ev e2 sigma) = Some False")
-      case True
-      then have "\<not> truthy (aval e1 s) \<and> \<not> truthy (aval e2 s)"
-        using tobool_sound h1 h2 by auto
-      with True False nb1 nb2 show ?thesis by simp
-    next
-      case False
-      with \<open>\<not> (tobool (ev e1 sigma) = Some True \<or> tobool (ev e2 sigma) = Some True)\<close>
-        nb1 nb2
-      show ?thesis by (auto intro: gamma_sup_ub1[THEN subsetD] gamma_sup_ub2[THEN subsetD])
-    qed
-  qed
-qed
+  have h1: "aval e1 s \<in> gamma (ev e1 sigma)" and h2: "aval e2 s \<in> gamma (ev e2 sigma)"
+    using Or by simp_all
+  show ?case unfolding ev_Or aval.simps
+    by (rule bool_lit_sound)
+       (use h1 h2 is_empty_correct tobool_sound[OF _ h1] tobool_sound[OF _ h2] in auto)
+qed auto
 
 end
 
@@ -263,168 +179,51 @@ locale expression_domain_mono = expression_domain_sound +
       "\<not> is_empty p1 \<Longrightarrow> p1 \<le> p2 \<Longrightarrow> tobool p2 = Some b \<Longrightarrow> tobool p1 = Some b"
 begin
 
+lemma bool_lit_mono:
+  assumes "E2 \<Longrightarrow> E1" and "\<not> E1 \<Longrightarrow> D1 \<Longrightarrow> C1" and "\<not> E1 \<Longrightarrow> D2 \<Longrightarrow> C2"
+    and "C1 \<Longrightarrow> \<not> C2" and "t1 \<in> {0, 1}" and "t2 \<in> {0, 1}"
+  shows "(if E1 then bot else if C1 then lit t1 else if C2 then lit t2 else lit 0 \<squnion> lit 1)
+    \<le> (if E2 then bot else if D1 then lit t1 else if D2 then lit t2 else lit 0 \<squnion> lit 1)"
+  using assms by auto
+
 lemma aval_dom_mono:
   "sigma1 \<le> sigma2 \<Longrightarrow> ev a sigma1 \<le> ev a sigma2"
 proof (induction a arbitrary: sigma1 sigma2)
-  case (N n) then show ?case by auto
-next
-  case (V x) then show ?case by (auto simp add: le_funD)
-next
-  case (Plus e1 e2) then show ?case by auto
-next
-  case (Minus e1 e2) then show ?case by auto
-next
-  case (Times e1 e2) then show ?case by auto
-next
   case (Less e1 e2)
-  have p_mono: "ev e1 sigma1 \<le> ev e1 sigma2" using Less.IH(1) Less.prems by simp
-  have q_mono: "ev e2 sigma1 \<le> ev e2 sigma2" using Less.IH(2) Less.prems by simp
-  show ?case
-  proof (cases "is_empty (ev e1 sigma1) \<or> is_empty (ev e2 sigma1)")
-    case True
-    then show ?thesis by simp
-  next
-    case False
-    then have nb1: "\<not> is_empty (ev e1 sigma1)" and nb2: "\<not> is_empty (ev e2 sigma1)" by auto
-    have nb1': "\<not> is_empty (ev e1 sigma2)" using nb1 p_mono is_empty_antimono by blast
-    have nb2': "\<not> is_empty (ev e2 sigma2)" using nb2 q_mono is_empty_antimono by blast
-    show ?thesis
-    proof (cases "lt (ev e1 sigma2) (ev e2 sigma2)")
-      case (Some b)
-      then have "lt (ev e1 sigma1) (ev e2 sigma1) = Some b"
-        using lt_mono[OF nb1 nb2 p_mono q_mono] by simp
-      then show ?thesis using Some nb1 nb2 nb1' nb2' by (cases b) simp_all
-    next
-      case None
-      then show ?thesis using nb1 nb2 nb1' nb2' sup_ge1 sup_ge2
-        by (cases "lt (ev e1 sigma1) (ev e2 sigma1) = Some True";
-            cases "lt (ev e1 sigma1) (ev e2 sigma1) = Some False") auto
-    qed
-  qed
+  have p: "ev e1 sigma1 \<le> ev e1 sigma2" and q: "ev e2 sigma1 \<le> ev e2 sigma2"
+    using Less by simp_all
+  show ?case unfolding ev_Less
+    by (rule bool_lit_mono)
+       (use is_empty_antimono[OF p] is_empty_antimono[OF q] lt_mono[OF _ _ p q] in auto)
 next
   case (Eq e1 e2)
-  have p_mono: "ev e1 sigma1 \<le> ev e1 sigma2" using Eq.IH(1) Eq.prems by simp
-  have q_mono: "ev e2 sigma1 \<le> ev e2 sigma2" using Eq.IH(2) Eq.prems by simp
-  show ?case
-  proof (cases "is_empty (ev e1 sigma1) \<or> is_empty (ev e2 sigma1)")
-    case True
-    then show ?thesis by simp
-  next
-    case False
-    then have nb1: "\<not> is_empty (ev e1 sigma1)" and nb2: "\<not> is_empty (ev e2 sigma1)" by auto
-    have nb1': "\<not> is_empty (ev e1 sigma2)" using nb1 p_mono is_empty_antimono by blast
-    have nb2': "\<not> is_empty (ev e2 sigma2)" using nb2 q_mono is_empty_antimono by blast
-    show ?thesis
-    proof (cases "eqb (ev e1 sigma2) (ev e2 sigma2)")
-      case (Some b)
-      then have "eqb (ev e1 sigma1) (ev e2 sigma1) = Some b"
-        using eqb_mono[OF nb1 nb2 p_mono q_mono] by simp
-      then show ?thesis using Some nb1 nb2 nb1' nb2' by (cases b) simp_all
-    next
-      case None
-      then show ?thesis using nb1 nb2 nb1' nb2' sup_ge1 sup_ge2
-        by (cases "eqb (ev e1 sigma1) (ev e2 sigma1) = Some True";
-            cases "eqb (ev e1 sigma1) (ev e2 sigma1) = Some False") auto
-    qed
-  qed
+  have p: "ev e1 sigma1 \<le> ev e1 sigma2" and q: "ev e2 sigma1 \<le> ev e2 sigma2"
+    using Eq by simp_all
+  show ?case unfolding ev_Eq
+    by (rule bool_lit_mono)
+       (use is_empty_antimono[OF p] is_empty_antimono[OF q] eqb_mono[OF _ _ p q] in auto)
 next
   case (Not e)
-  have p_mono: "ev e sigma1 \<le> ev e sigma2" using Not.IH Not.prems by simp
-  show ?case
-  proof (cases "is_empty (ev e sigma1)")
-    case True
-    then show ?thesis by simp
-  next
-    case False
-    then have nb: "\<not> is_empty (ev e sigma1)" by auto
-    have nb': "\<not> is_empty (ev e sigma2)" using nb p_mono is_empty_antimono by blast
-    show ?thesis
-    proof (cases "tobool (ev e sigma2)")
-      case (Some b)
-      then have "tobool (ev e sigma1) = Some b" using tobool_mono[OF nb p_mono] by simp
-      then show ?thesis using Some nb nb' by (cases b) simp_all
-    next
-      case None
-      then show ?thesis using nb nb' sup_ge1 sup_ge2
-        by (cases "tobool (ev e sigma1) = Some True";
-            cases "tobool (ev e sigma1) = Some False") auto
-    qed
-  qed
+  have p: "ev e sigma1 \<le> ev e sigma2" using Not by simp
+  show ?case unfolding ev_Not
+    by (rule bool_lit_mono) (use is_empty_antimono[OF p] tobool_mono[OF _ p] in auto)
 next
   case (And e1 e2)
-  have p_mono: "ev e1 sigma1 \<le> ev e1 sigma2" using And.IH(1) And.prems by simp
-  have q_mono: "ev e2 sigma1 \<le> ev e2 sigma2" using And.IH(2) And.prems by simp
-  show ?case
-  proof (cases "is_empty (ev e1 sigma1) \<or> is_empty (ev e2 sigma1)")
-    case True
-    then show ?thesis by simp
-  next
-    case False
-    then have nb1: "\<not> is_empty (ev e1 sigma1)" and nb2: "\<not> is_empty (ev e2 sigma1)" by auto
-    have nb1': "\<not> is_empty (ev e1 sigma2)" using nb1 p_mono is_empty_antimono by blast
-    have nb2': "\<not> is_empty (ev e2 sigma2)" using nb2 q_mono is_empty_antimono by blast
-    show ?thesis
-    proof (cases "tobool (ev e1 sigma2) = Some False \<or> tobool (ev e2 sigma2) = Some False")
-      case True
-      then have "tobool (ev e1 sigma1) = Some False \<or> tobool (ev e2 sigma1) = Some False"
-        using tobool_mono[OF nb1 p_mono] tobool_mono[OF nb2 q_mono] by auto
-      with True nb1 nb2 nb1' nb2' show ?thesis by simp
-    next
-      case False
-      show ?thesis
-      proof (cases "tobool (ev e1 sigma2) = Some True \<and> tobool (ev e2 sigma2) = Some True")
-        case True
-        then have "tobool (ev e1 sigma1) = Some True" and "tobool (ev e2 sigma1) = Some True"
-          using tobool_mono[OF nb1 p_mono] tobool_mono[OF nb2 q_mono] by auto
-        with True False nb1 nb2 nb1' nb2' show ?thesis by simp
-      next
-        case False
-        with \<open>\<not> (tobool (ev e1 sigma2) = Some False \<or> tobool (ev e2 sigma2) = Some False)\<close>
-          nb1 nb2 nb1' nb2' sup_ge1 sup_ge2
-        show ?thesis
-          by (cases "tobool (ev e1 sigma1) = Some False \<or> tobool (ev e2 sigma1) = Some False";
-              cases "tobool (ev e1 sigma1) = Some True \<and> tobool (ev e2 sigma1) = Some True") auto
-      qed
-    qed
-  qed
+  have p: "ev e1 sigma1 \<le> ev e1 sigma2" and q: "ev e2 sigma1 \<le> ev e2 sigma2"
+    using And by simp_all
+  show ?case unfolding ev_And
+    by (rule bool_lit_mono)
+       (use is_empty_antimono[OF p] is_empty_antimono[OF q]
+          tobool_mono[OF _ p] tobool_mono[OF _ q] in auto)
 next
   case (Or e1 e2)
-  have p_mono: "ev e1 sigma1 \<le> ev e1 sigma2" using Or.IH(1) Or.prems by simp
-  have q_mono: "ev e2 sigma1 \<le> ev e2 sigma2" using Or.IH(2) Or.prems by simp
-  show ?case
-  proof (cases "is_empty (ev e1 sigma1) \<or> is_empty (ev e2 sigma1)")
-    case True
-    then show ?thesis by simp
-  next
-    case False
-    then have nb1: "\<not> is_empty (ev e1 sigma1)" and nb2: "\<not> is_empty (ev e2 sigma1)" by auto
-    have nb1': "\<not> is_empty (ev e1 sigma2)" using nb1 p_mono is_empty_antimono by blast
-    have nb2': "\<not> is_empty (ev e2 sigma2)" using nb2 q_mono is_empty_antimono by blast
-    show ?thesis
-    proof (cases "tobool (ev e1 sigma2) = Some True \<or> tobool (ev e2 sigma2) = Some True")
-      case True
-      then have "tobool (ev e1 sigma1) = Some True \<or> tobool (ev e2 sigma1) = Some True"
-        using tobool_mono[OF nb1 p_mono] tobool_mono[OF nb2 q_mono] by auto
-      with True nb1 nb2 nb1' nb2' show ?thesis by simp
-    next
-      case False
-      show ?thesis
-      proof (cases "tobool (ev e1 sigma2) = Some False \<and> tobool (ev e2 sigma2) = Some False")
-        case True
-        then have "tobool (ev e1 sigma1) = Some False" and "tobool (ev e2 sigma1) = Some False"
-          using tobool_mono[OF nb1 p_mono] tobool_mono[OF nb2 q_mono] by auto
-        with True False nb1 nb2 nb1' nb2' show ?thesis by simp
-      next
-        case False
-        with \<open>\<not> (tobool (ev e1 sigma2) = Some True \<or> tobool (ev e2 sigma2) = Some True)\<close>
-          nb1 nb2 nb1' nb2' sup_ge1 sup_ge2
-        show ?thesis
-          by (cases "tobool (ev e1 sigma1) = Some True \<or> tobool (ev e2 sigma1) = Some True";
-              cases "tobool (ev e1 sigma1) = Some False \<and> tobool (ev e2 sigma1) = Some False") auto
-      qed
-    qed
-  qed
-qed
+  have p: "ev e1 sigma1 \<le> ev e1 sigma2" and q: "ev e2 sigma1 \<le> ev e2 sigma2"
+    using Or by simp_all
+  show ?case unfolding ev_Or
+    by (rule bool_lit_mono)
+       (use is_empty_antimono[OF p] is_empty_antimono[OF q]
+          tobool_mono[OF _ p] tobool_mono[OF _ q] in auto)
+qed (auto simp add: le_funD)
 
 end
 

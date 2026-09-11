@@ -617,7 +617,7 @@ lemma gamma_restrict_congruence_by_parity [simp]:
 proof -
   have normalized:
     "normalized_congruence_rep (Rep_congruence c)"
-    using Rep_congruence[of c] by simp
+    by simp
   have raw:
     "gamma_congruence_rep
        (restrict_congruence_rep_by_parity p (Rep_congruence c)) =
@@ -640,7 +640,7 @@ lemma ivl_congruence_nonempty_correct:
 proof -
   have normalized:
     "normalized_congruence_rep (Rep_congruence c)"
-    using Rep_congruence[of c] by simp
+    by simp
   show ?thesis
     unfolding ivl_congruence_nonempty_def gamma_congruence_def
     by (rule ivl_congruence_rep_nonempty_correct[OF normalized])
@@ -727,7 +727,7 @@ proof -
     "gamma_congruence (int_congruence a) \<subseteq>
      gamma_congruence (int_congruence b)"
     using le(4)
-    unfolding less_eq_congruence_def congruence_le_iff_gamma .
+    unfolding less_eq_congruence_iff_gamma .
   show ?thesis
     unfolding gamma_int_dom_def using S I P C by auto
 qed

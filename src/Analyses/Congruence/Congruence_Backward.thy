@@ -166,59 +166,12 @@ next
             "{n. lcm m1 m2 dvd n - ?z} =
              {n. m1 dvd n - c1} \<inter>
              {n. m2 dvd n - c2}"
-          proof
-            show
-              "{n. lcm m1 m2 dvd n - ?z} \<subseteq>
-               {n. m1 dvd n - c1} \<inter>
-               {n. m2 dvd n - c2}"
-            proof
-              fix n
-              assume n: "n : {n. lcm m1 m2 dvd n - ?z}"
-              have lcm_dvd: "lcm m1 m2 dvd n - ?z"
-                using n by simp
-              have n1: "m1 dvd n - ?z"
-                using dvd_lcm1 lcm_dvd by (rule dvd_trans)
-              have n2: "m2 dvd n - ?z"
-                using dvd_lcm2 lcm_dvd by (rule dvd_trans)
-              have "m1 dvd (n - ?z) + (?z - c1)"
-                by (rule dvd_add[OF n1 shared[THEN conjunct1]])
-              moreover have "m2 dvd (n - ?z) + (?z - c2)"
-                by (rule dvd_add[OF n2 shared[THEN conjunct2]])
-              ultimately show
-                "n : {n. m1 dvd n - c1} \<inter>
-                     {n. m2 dvd n - c2}"
-                by simp
-            qed
-            show
-              "{n. m1 dvd n - c1} \<inter>
-               {n. m2 dvd n - c2} \<subseteq>
-               {n. lcm m1 m2 dvd n - ?z}"
-            proof
-              fix n
-              assume n:
-                "n : {n. m1 dvd n - c1} \<inter>
-                     {n. m2 dvd n - c2}"
-              have n1: "m1 dvd n - c1"
-                using n by simp
-              have n2: "m2 dvd n - c2"
-                using n by simp
-              have z1: "m1 dvd ?z - c1"
-                using shared by simp
-              have z2: "m2 dvd ?z - c2"
-                using shared by simp
-              have d1: "m1 dvd (n - c1) - (?z - c1)"
-                by (rule dvd_diff[OF n1 z1])
-              have d2: "m2 dvd (n - c2) - (?z - c2)"
-                by (rule dvd_diff[OF n2 z2])
-              have d1': "m1 dvd n - ?z"
-                using d1 by (simp add: algebra_simps)
-              have d2': "m2 dvd n - ?z"
-                using d2 by (simp add: algebra_simps)
-              have "lcm m1 m2 dvd n - ?z"
-                by (rule lcm_least[OF d1' d2'])
-              then show "n : {n. lcm m1 m2 dvd n - ?z}"
-                by simp
-            qed
+          proof -
+            have "m1 dvd n - ?z \<longleftrightarrow> m1 dvd n - c1" "m2 dvd n - ?z \<longleftrightarrow> m2 dvd n - c2" for n
+              using shared dvd_add_left_iff[of m1 "?z - c1" "n - ?z"]
+                dvd_add_left_iff[of m2 "?z - c2" "n - ?z"]
+              by simp_all
+            then show ?thesis by auto
           qed
           have normalized_gamma:
             "gamma_congruence_rep
@@ -243,9 +196,9 @@ lemma gamma_intersect_congruence [simp]:
    gamma_congruence a \<inter> gamma_congruence b"
 proof -
   have norm_a: "normalized_congruence_rep (Rep_congruence a)"
-    using Rep_congruence[of a] by simp
+    by simp
   have norm_b: "normalized_congruence_rep (Rep_congruence b)"
-    using Rep_congruence[of b] by simp
+    by simp
   show ?thesis
     using gamma_intersect_congruence_rep[OF norm_a norm_b]
     by (simp add: gamma_congruence_def intersect_congruence.rep_eq)
@@ -259,12 +212,12 @@ lemma intersect_congruence_sound:
 
 lemma intersect_congruence_le1:
   "intersect_congruence a b <= a"
-  unfolding less_eq_congruence_def congruence_le_iff_gamma
+  unfolding less_eq_congruence_iff_gamma
   by simp
 
 lemma intersect_congruence_le2:
   "intersect_congruence a b <= b"
-  unfolding less_eq_congruence_def congruence_le_iff_gamma
+  unfolding less_eq_congruence_iff_gamma
   by simp
 
 lemma intersect_congruence_mono:
@@ -273,7 +226,7 @@ lemma intersect_congruence_mono:
     "intersect_congruence a1 b1 <=
      intersect_congruence a2 b2"
   using assms
-  unfolding less_eq_congruence_def congruence_le_iff_gamma
+  unfolding less_eq_congruence_iff_gamma
   by auto
 
 
@@ -551,7 +504,7 @@ lemma gamma_preimage_times_const [simp]:
 proof -
   have norm_r:
     "normalized_congruence_rep (Rep_congruence r)"
-    using Rep_congruence[of r] by simp
+    by simp
   show ?thesis
     using gamma_preimage_times_const_rep[OF norm_r, of k]
     by (simp add: gamma_congruence_def preimage_times_const.rep_eq)
@@ -561,7 +514,7 @@ lemma preimage_times_const_mono:
   assumes "r1 <= r2"
   shows "preimage_times_const r1 k <= preimage_times_const r2 k"
   using assms
-  unfolding less_eq_congruence_def congruence_le_iff_gamma
+  unfolding less_eq_congruence_iff_gamma
   by auto
 
 fun inverse_times_candidate_rep ::
@@ -647,16 +600,16 @@ proof -
   have r_subset:
     "gamma_congruence r1 \<subseteq> gamma_congruence r2"
     using assms(1)
-    unfolding less_eq_congruence_def congruence_le_iff_gamma .
+    unfolding less_eq_congruence_iff_gamma .
   have factor_subset:
     "gamma_congruence factor1 \<subseteq> gamma_congruence factor2"
     using assms(2)
-    unfolding less_eq_congruence_def congruence_le_iff_gamma .
+    unfolding less_eq_congruence_iff_gamma .
   show ?thesis
   proof (cases "Rep_congruence r1")
     case None
     then show ?thesis
-      unfolding less_eq_congruence_def congruence_le_iff_gamma
+      unfolding less_eq_congruence_iff_gamma
         gamma_congruence_def
       by (simp add: inverse_times_candidate.rep_eq)
   next
@@ -671,7 +624,7 @@ proof -
     proof (cases "Rep_congruence factor1")
       case None
       with r1_some rp1 show ?thesis
-        unfolding less_eq_congruence_def congruence_le_iff_gamma
+        unfolding less_eq_congruence_iff_gamma
           gamma_congruence_def
         by (simp add: inverse_times_candidate.rep_eq)
     next
@@ -739,7 +692,7 @@ proof -
               r2_some factor2_some rp2 fp2 n1_zero
               factor2_singleton
             show ?thesis
-              unfolding less_eq_congruence_def congruence_le_iff_gamma
+              unfolding less_eq_congruence_iff_gamma
                 gamma_congruence_def
               by (simp add: inverse_times_candidate.rep_eq
                   preimage_times_const.rep_eq)
@@ -747,7 +700,7 @@ proof -
             case factor2_nonsingleton: False
             with r2_some factor2_some rp2 fp2
             show ?thesis
-              unfolding less_eq_congruence_def congruence_le_iff_gamma
+              unfolding less_eq_congruence_iff_gamma
                 gamma_congruence_def
               by (simp add: inverse_times_candidate.rep_eq)
           qed

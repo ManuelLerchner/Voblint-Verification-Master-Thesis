@@ -132,21 +132,6 @@ qed simp_all
 
 lemma bfilter_reductive: "bfilter b res \<sigma> \<le> \<sigma>"
 proof (induction b arbitrary: res \<sigma>)
-  case (N n) then show ?case
-    unfolding bfilter.simps Let_def split_beta by (rule afilter_reductive)
-next
-  case (V x) then show ?case
-    unfolding bfilter.simps Let_def split_beta by (rule afilter_reductive)
-next
-  case (Plus e1 e2) then show ?case
-    unfolding bfilter.simps Let_def split_beta by (blast intro: afilter_reductive)
-next
-  case (Minus e1 e2) then show ?case
-    unfolding bfilter.simps Let_def split_beta by (blast intro: afilter_reductive)
-next
-  case (Times e1 e2) then show ?case
-    unfolding bfilter.simps Let_def split_beta by (blast intro: afilter_reductive)
-next
   case (Not b)
   show ?case unfolding bfilter.simps by (rule Not.IH)
 next
@@ -154,52 +139,31 @@ next
   show ?case
   proof (cases res)
     case True
-    have c: "bfilter b2 True \<sigma> \<le> \<sigma>" by (rule And.IH(2))
-    have "bfilter b1 True (bfilter b2 True \<sigma>) \<le> bfilter b2 True \<sigma>" by (rule And.IH(1))
-    also have "... \<le> \<sigma>" by (rule c)
-    finally show ?thesis using True by simp
+    have "bfilter b1 True (bfilter b2 True \<sigma>) \<le> \<sigma>"
+      by (rule order_trans[OF And.IH(1) And.IH(2)])
+    then show ?thesis using True by simp
   next
     case False
-    have c1: "(if feasible b1 False \<sigma> then bfilter b1 False \<sigma> else bot) \<le> \<sigma>"
-      by (cases "feasible b1 False \<sigma>") (simp_all add: And.IH(1))
-    have c2: "(if feasible b2 False \<sigma> then bfilter b2 False \<sigma> else bot) \<le> \<sigma>"
-      by (cases "feasible b2 False \<sigma>") (simp_all add: And.IH(2))
-    have e1: "bfilter (And b1 b2) res \<sigma>
-                = (if feasible b1 False \<sigma> then bfilter b1 False \<sigma> else bot)
-                  \<squnion> (if feasible b2 False \<sigma> then bfilter b2 False \<sigma> else bot)"
-      using False by simp
-    show ?thesis unfolding e1 by (rule sup_least[OF c1 c2])
+    then have res: "res = False" by simp
+    show ?thesis unfolding res bfilter.simps
+      by (intro sup_least) (simp_all add: And.IH)
   qed
 next
   case (Or b1 b2)
   show ?case
   proof (cases res)
     case True
-    have c1: "(if feasible b1 True \<sigma> then bfilter b1 True \<sigma> else bot) \<le> \<sigma>"
-      by (cases "feasible b1 True \<sigma>") (simp_all add: Or.IH(1))
-    have c2: "(if feasible b2 True \<sigma> then bfilter b2 True \<sigma> else bot) \<le> \<sigma>"
-      by (cases "feasible b2 True \<sigma>") (simp_all add: Or.IH(2))
-    have e1: "bfilter (Or b1 b2) res \<sigma>
-                = (if feasible b1 True \<sigma> then bfilter b1 True \<sigma> else bot)
-                  \<squnion> (if feasible b2 True \<sigma> then bfilter b2 True \<sigma> else bot)"
-      using True by simp
-    show ?thesis unfolding e1 by (rule sup_least[OF c1 c2])
+    then have res: "res = True" by simp
+    show ?thesis unfolding res bfilter.simps
+      by (intro sup_least) (simp_all add: Or.IH)
   next
     case False
-    have c: "bfilter b2 False \<sigma> \<le> \<sigma>" by (rule Or.IH(2))
-    have "bfilter b1 False (bfilter b2 False \<sigma>) \<le> bfilter b2 False \<sigma>" by (rule Or.IH(1))
-    also have "... \<le> \<sigma>" by (rule c)
-    finally show ?thesis using False by simp
+    have "bfilter b1 False (bfilter b2 False \<sigma>) \<le> \<sigma>"
+      by (rule order_trans[OF Or.IH(1) Or.IH(2)])
+    then show ?thesis using False by simp
   qed
-next
-  case (Less e1 e2)
-  show ?case unfolding bfilter_Less_unfold
-    by (rule order_trans[OF afilter_reductive afilter_reductive])
-next
-  case (Eq e1 e2)
-  show ?case unfolding bfilter_Eq_unfold
-    by (rule order_trans[OF afilter_reductive afilter_reductive])
-qed
+qed (simp_all only: bfilter.simps Let_def split_beta afilter_reductive
+       order_trans[OF afilter_reductive afilter_reductive])
 
 text \<open>
   A witness-bottom incoming state forces \<open>bfilter_lifted\<close> to \<open>Bot\<close>
@@ -215,67 +179,10 @@ lemma bfilter_lifted_witness_bottom:
   assumes "is_empty_state sigma"
   shows "bfilter_lifted e pol sigma = Bot"
 using assms proof (induction e arbitrary: pol)
-  case (N n)
-  then show ?case by (simp add: is_empty_state_antimono[OF bfilter_reductive])
+  case (And b1 b2) then show ?case by (cases pol) simp_all
 next
-  case (V x)
-  have "is_empty_state (bfilter (V x) pol sigma)"
-    using is_empty_state_antimono[OF bfilter_reductive V.prems] .
-  then show ?case by simp
-next
-  case (Plus e1 e2)
-  have "is_empty_state (bfilter (Plus e1 e2) pol sigma)"
-    using is_empty_state_antimono[OF bfilter_reductive Plus.prems] .
-  then show ?case by simp
-next
-  case (Minus e1 e2)
-  have "is_empty_state (bfilter (Minus e1 e2) pol sigma)"
-    using is_empty_state_antimono[OF bfilter_reductive Minus.prems] .
-  then show ?case by simp
-next
-  case (Times e1 e2)
-  have "is_empty_state (bfilter (Times e1 e2) pol sigma)"
-    using is_empty_state_antimono[OF bfilter_reductive Times.prems] .
-  then show ?case by simp
-next
-  case (Less e1 e2)
-  have "is_empty_state (bfilter (Less e1 e2) pol sigma)"
-    using is_empty_state_antimono[OF bfilter_reductive Less.prems] .
-  then show ?case by simp
-next
-  case (Eq e1 e2)
-  have "is_empty_state (bfilter (Eq e1 e2) pol sigma)"
-    using is_empty_state_antimono[OF bfilter_reductive Eq.prems] .
-  then show ?case by simp
-next
-  case (Not b) then show ?case by simp
-next
-  case (And b1 b2)
-  show ?case
-  proof (cases pol)
-    case True
-    have "bfilter_lifted b2 True sigma = Bot" by (rule And.IH(2)[OF And.prems])
-    then show ?thesis using True by simp
-  next
-    case False
-    have h1: "bfilter_lifted b1 False sigma = Bot" by (rule And.IH(1)[OF And.prems])
-    have h2: "bfilter_lifted b2 False sigma = Bot" by (rule And.IH(2)[OF And.prems])
-    show ?thesis using False h1 h2 by simp
-  qed
-next
-  case (Or b1 b2)
-  show ?case
-  proof (cases pol)
-    case True
-    have h1: "bfilter_lifted b1 True sigma = Bot" by (rule Or.IH(1)[OF Or.prems])
-    have h2: "bfilter_lifted b2 True sigma = Bot" by (rule Or.IH(2)[OF Or.prems])
-    show ?thesis using True h1 h2 by simp
-  next
-    case False
-    have "bfilter_lifted b2 False sigma = Bot" by (rule Or.IH(2)[OF Or.prems])
-    then show ?thesis using False by simp
-  qed
-qed
+  case (Or b1 b2) then show ?case by (cases pol) simp_all
+qed (simp_all add: is_empty_state_antimono[OF bfilter_reductive] del: bfilter.simps)
 
 lemma branch_lifted_witness_bottom:
   assumes "is_empty_state sigma"
@@ -464,41 +371,25 @@ lemma if_bot_mono:
   using assms by auto
 
 text \<open>
-  Monotonicity of a single gated disjunct -- the shape \<open>bfilter\<close>'s two join
-  cases actually compute. An infeasible disjunct contributes \<open>bot\<close>, which is
-  below everything; a feasible one stays feasible in the larger state, and
-  the recursive monotonicity fact carries through unchanged.
+  Monotonicity of the feasibility-gated join \<open>bfilter\<close>'s two join cases
+  compute. An infeasible disjunct contributes \<open>bot\<close>, which is below
+  everything; a feasible one stays feasible in the larger state, and the
+  recursive monotonicity fact carries through unchanged.
 \<close>
 
-lemma gate_mono:
-  assumes "sigma1 \<le> sigma2" and "bfilter e pol sigma1 \<le> bfilter e pol sigma2"
-  shows "(if feasible e pol sigma1 then bfilter e pol sigma1 else bot)
-           \<le> (if feasible e pol sigma2 then bfilter e pol sigma2 else bot)"
-  by (rule if_bot_mono[OF feasible_mono[OF assms(1)] assms(2)])
+lemma gated_join_mono:
+  assumes "sigma1 \<le> sigma2"
+    and "bfilter b1 pol sigma1 \<le> bfilter b1 pol sigma2"
+    and "bfilter b2 pol sigma1 \<le> bfilter b2 pol sigma2"
+  shows "(if feasible b1 pol sigma1 then bfilter b1 pol sigma1 else bot)
+           \<squnion> (if feasible b2 pol sigma1 then bfilter b2 pol sigma1 else bot)
+         \<le> (if feasible b1 pol sigma2 then bfilter b1 pol sigma2 else bot)
+           \<squnion> (if feasible b2 pol sigma2 then bfilter b2 pol sigma2 else bot)"
+  by (intro sup_mono if_bot_mono feasible_mono[OF assms(1)] assms(2,3))
 
 lemma bfilter_mono:
   "\<sigma>1 \<le> \<sigma>2 \<Longrightarrow> bfilter b res \<sigma>1 \<le> bfilter b res \<sigma>2"
 proof (induction b arbitrary: res \<sigma>1 \<sigma>2)
-  case (N n) show ?case
-    using bfilter_default_mono[where e = "N n" and res = res, OF N.prems]
-    by (simp add: Let_def case_prod_beta)
-next
-  case (V x) show ?case
-    using bfilter_default_mono[where e = "V x" and res = res, OF V.prems]
-    by (simp add: Let_def case_prod_beta fun_upd_def)
-next
-  case (Plus e1 e2) show ?case
-    using bfilter_default_mono[where e = "Plus e1 e2" and res = res, OF Plus.prems]
-    by (simp add: Let_def case_prod_beta)
-next
-  case (Minus e1 e2) show ?case
-    using bfilter_default_mono[where e = "Minus e1 e2" and res = res, OF Minus.prems]
-    by (simp add: Let_def case_prod_beta)
-next
-  case (Times e1 e2) show ?case
-    using bfilter_default_mono[where e = "Times e1 e2" and res = res, OF Times.prems]
-    by (simp add: Let_def case_prod_beta)
-next
   case (Not b) show ?case unfolding bfilter.simps by (rule Not.IH[OF Not.prems])
 next
   case (And b1 b2)
@@ -511,42 +402,20 @@ next
     thus ?thesis using True by simp
   next
     case False
-    have c1: "(if feasible b1 False \<sigma>1 then bfilter b1 False \<sigma>1 else bot)
-                \<le> (if feasible b1 False \<sigma>2 then bfilter b1 False \<sigma>2 else bot)"
-      by (rule gate_mono[OF And.prems And.IH(1)[OF And.prems]])
-    have c2: "(if feasible b2 False \<sigma>1 then bfilter b2 False \<sigma>1 else bot)
-                \<le> (if feasible b2 False \<sigma>2 then bfilter b2 False \<sigma>2 else bot)"
-      by (rule gate_mono[OF And.prems And.IH(2)[OF And.prems]])
-    have eq1: "bfilter (And b1 b2) res \<sigma>1
-                 = (if feasible b1 False \<sigma>1 then bfilter b1 False \<sigma>1 else bot)
-                   \<squnion> (if feasible b2 False \<sigma>1 then bfilter b2 False \<sigma>1 else bot)"
-      using False by simp
-    have eq2: "bfilter (And b1 b2) res \<sigma>2
-                 = (if feasible b1 False \<sigma>2 then bfilter b1 False \<sigma>2 else bot)
-                   \<squnion> (if feasible b2 False \<sigma>2 then bfilter b2 False \<sigma>2 else bot)"
-      using False by simp
-    show ?thesis unfolding eq1 eq2 by (rule sup_mono[OF c1 c2])
+    then have res: "res = False" by simp
+    show ?thesis
+      unfolding res bfilter.simps
+      by (rule gated_join_mono[OF And.prems And.IH[OF And.prems]])
   qed
 next
   case (Or b1 b2)
   show ?case
   proof (cases res)
     case True
-    have c1: "(if feasible b1 True \<sigma>1 then bfilter b1 True \<sigma>1 else bot)
-                \<le> (if feasible b1 True \<sigma>2 then bfilter b1 True \<sigma>2 else bot)"
-      by (rule gate_mono[OF Or.prems Or.IH(1)[OF Or.prems]])
-    have c2: "(if feasible b2 True \<sigma>1 then bfilter b2 True \<sigma>1 else bot)
-                \<le> (if feasible b2 True \<sigma>2 then bfilter b2 True \<sigma>2 else bot)"
-      by (rule gate_mono[OF Or.prems Or.IH(2)[OF Or.prems]])
-    have eq1: "bfilter (Or b1 b2) res \<sigma>1
-                 = (if feasible b1 True \<sigma>1 then bfilter b1 True \<sigma>1 else bot)
-                   \<squnion> (if feasible b2 True \<sigma>1 then bfilter b2 True \<sigma>1 else bot)"
-      using True by simp
-    have eq2: "bfilter (Or b1 b2) res \<sigma>2
-                 = (if feasible b1 True \<sigma>2 then bfilter b1 True \<sigma>2 else bot)
-                   \<squnion> (if feasible b2 True \<sigma>2 then bfilter b2 True \<sigma>2 else bot)"
-      using True by simp
-    show ?thesis unfolding eq1 eq2 by (rule sup_mono[OF c1 c2])
+    then have res: "res = True" by simp
+    show ?thesis
+      unfolding res bfilter.simps
+      by (rule gated_join_mono[OF Or.prems Or.IH[OF Or.prems]])
   next
     case False
     have c: "bfilter b2 False \<sigma>1 \<le> bfilter b2 False \<sigma>2" by (rule Or.IH(2)[OF Or.prems])
@@ -567,75 +436,30 @@ next
     using aval_abs_mono[OF Eq.prems] by simp_all
   show ?case unfolding bfilter_Eq_unfold
     by (rule afilter_pair_mono[OF inv_eq_mono_fst[OF v1 v2] inv_eq_mono_snd[OF v1 v2] Eq.prems])
-qed
-
+qed (simp_all only: bfilter.simps Let_def case_prod_beta bfilter_default_mono)
 
 text \<open>
-  \<open>bfilter_lifted\<close>'s two non-join shapes reduce to \<open>bfilter_mono\<close> lifted
-  through \<^const>\<open>normalize_lift\<close>, exactly as \<open>branch_lifted_mono\<close> lifts
-  \<open>branch_mono\<close>; the sequential \<open>And\<close>/\<open>Or\<close> cases lift @{const bind_lift}'s own
-  premise (case \<open>Bot\<close> is trivial, case \<open>Lifted\<close> is the head recursion's own
-  monotonicity fact). \<open>gate_lifted_mono\<close> is \<open>gate_mono\<close> restated for a single
-  \<open>bfilter_lifted\<close> disjunct against \<^const>\<open>Bot\<close>, feeding the join cases the
-  same shape \<open>gate_mono\<close> feeds \<open>bfilter_mono\<close>'s.
+  \<open>bfilter_lifted\<close>'s atomic shapes reduce to \<open>bfilter_mono\<close> lifted
+  through \<^const>\<open>normalize_lift\<close>; the sequential \<open>And\<close>/\<open>Or\<close> cases lift
+  @{const bind_lift}'s own premise (case \<open>Bot\<close> is trivial, case \<open>Lifted\<close> is
+  the head recursion's own monotonicity fact), and the join cases are
+  \<open>gated_join_mono\<close> restated against \<^const>\<open>Bot\<close>.
 \<close>
 
-lemma gate_lifted_mono:
-  assumes "sigma1 \<le> sigma2" and "bfilter_lifted e pol sigma1 \<le> bfilter_lifted e pol sigma2"
-  shows "(if feasible e pol sigma1 then bfilter_lifted e pol sigma1 else Bot)
-           \<le> (if feasible e pol sigma2 then bfilter_lifted e pol sigma2 else Bot)"
+lemma gated_join_lifted_mono:
+  assumes "sigma1 \<le> sigma2"
+    and "bfilter_lifted b1 pol sigma1 \<le> bfilter_lifted b1 pol sigma2"
+    and "bfilter_lifted b2 pol sigma1 \<le> bfilter_lifted b2 pol sigma2"
+  shows "(if feasible b1 pol sigma1 then bfilter_lifted b1 pol sigma1 else Bot)
+           \<squnion> (if feasible b2 pol sigma1 then bfilter_lifted b2 pol sigma1 else Bot)
+         \<le> (if feasible b1 pol sigma2 then bfilter_lifted b1 pol sigma2 else Bot)
+           \<squnion> (if feasible b2 pol sigma2 then bfilter_lifted b2 pol sigma2 else Bot)"
   unfolding bot_lifted_eq[symmetric]
-proof (rule if_bot_mono)
-  show "feasible e pol sigma1 \<Longrightarrow> feasible e pol sigma2" by (rule feasible_mono[OF assms(1)])
-next
-  show "bfilter_lifted e pol sigma1 \<le> bfilter_lifted e pol sigma2" by (rule assms(2))
-qed
+  by (intro sup_mono if_bot_mono feasible_mono[OF assms(1)] assms(2,3))
 
 lemma bfilter_lifted_mono:
   "sigma1 \<le> sigma2 \<Longrightarrow> bfilter_lifted e pol sigma1 \<le> bfilter_lifted e pol sigma2"
 proof (induction e arbitrary: pol sigma1 sigma2)
-  case (N n)
-  show ?case
-    using normalize_state_lift_mono[OF bfilter_mono[where b = "N n" and res = pol, OF N.prems]]
-    by simp
-next
-  case (V x)
-  show ?case
-    using normalize_state_lift_mono[OF bfilter_mono[where b = "V x" and res = pol, OF V.prems]]
-    by simp
-next
-  case (Plus e1 e2)
-  show ?case
-    using normalize_state_lift_mono[
-            OF bfilter_mono[where b = "Plus e1 e2" and res = pol, OF Plus.prems]]
-    by simp
-next
-  case (Minus e1 e2)
-  show ?case
-    using normalize_state_lift_mono[
-            OF bfilter_mono[where b = "Minus e1 e2" and res = pol, OF Minus.prems]]
-    by simp
-next
-  case (Times e1 e2)
-  show ?case
-    using normalize_state_lift_mono[
-            OF bfilter_mono[where b = "Times e1 e2" and res = pol, OF Times.prems]]
-    by simp
-next
-  case (Less e1 e2)
-  show ?case
-    using normalize_state_lift_mono[
-            OF bfilter_mono[where b = "Less e1 e2" and res = pol, OF Less.prems]]
-    by simp
-next
-  case (Eq e1 e2)
-  show ?case
-    using normalize_state_lift_mono
-            [OF bfilter_mono[where b = "Eq e1 e2" and res = pol, OF Eq.prems]]
-    by simp
-next
-  case (Not b) then show ?case by simp
-next
   case (And b1 b2)
   show ?case
   proof (cases pol)
@@ -647,42 +471,20 @@ next
     show ?thesis using True by (simp add: bind_lift_mono2[OF step ih1])
   next
     case False
-    have c1: "(if feasible b1 False sigma1 then bfilter_lifted b1 False sigma1 else Bot)
-                \<le> (if feasible b1 False sigma2 then bfilter_lifted b1 False sigma2 else Bot)"
-      by (rule gate_lifted_mono[OF And.prems And.IH(1)[OF And.prems]])
-    have c2: "(if feasible b2 False sigma1 then bfilter_lifted b2 False sigma1 else Bot)
-                \<le> (if feasible b2 False sigma2 then bfilter_lifted b2 False sigma2 else Bot)"
-      by (rule gate_lifted_mono[OF And.prems And.IH(2)[OF And.prems]])
-    have eq1: "bfilter_lifted (And b1 b2) pol sigma1
-                 = (if feasible b1 False sigma1 then bfilter_lifted b1 False sigma1 else Bot)
-                   \<squnion> (if feasible b2 False sigma1 then bfilter_lifted b2 False sigma1 else Bot)"
-      using False by simp
-    have eq2: "bfilter_lifted (And b1 b2) pol sigma2
-                 = (if feasible b1 False sigma2 then bfilter_lifted b1 False sigma2 else Bot)
-                   \<squnion> (if feasible b2 False sigma2 then bfilter_lifted b2 False sigma2 else Bot)"
-      using False by simp
-    show ?thesis unfolding eq1 eq2 by (rule sup_mono[OF c1 c2])
+    then have pol: "pol = False" by simp
+    show ?thesis
+      unfolding pol bfilter_lifted.simps
+      by (rule gated_join_lifted_mono[OF And.prems And.IH[OF And.prems]])
   qed
 next
   case (Or b1 b2)
   show ?case
   proof (cases pol)
     case True
-    have c1: "(if feasible b1 True sigma1 then bfilter_lifted b1 True sigma1 else Bot)
-                \<le> (if feasible b1 True sigma2 then bfilter_lifted b1 True sigma2 else Bot)"
-      by (rule gate_lifted_mono[OF Or.prems Or.IH(1)[OF Or.prems]])
-    have c2: "(if feasible b2 True sigma1 then bfilter_lifted b2 True sigma1 else Bot)
-                \<le> (if feasible b2 True sigma2 then bfilter_lifted b2 True sigma2 else Bot)"
-      by (rule gate_lifted_mono[OF Or.prems Or.IH(2)[OF Or.prems]])
-    have eq1: "bfilter_lifted (Or b1 b2) pol sigma1
-                 = (if feasible b1 True sigma1 then bfilter_lifted b1 True sigma1 else Bot)
-                   \<squnion> (if feasible b2 True sigma1 then bfilter_lifted b2 True sigma1 else Bot)"
-      using True by simp
-    have eq2: "bfilter_lifted (Or b1 b2) pol sigma2
-                 = (if feasible b1 True sigma2 then bfilter_lifted b1 True sigma2 else Bot)
-                   \<squnion> (if feasible b2 True sigma2 then bfilter_lifted b2 True sigma2 else Bot)"
-      using True by simp
-    show ?thesis unfolding eq1 eq2 by (rule sup_mono[OF c1 c2])
+    then have pol: "pol = True" by simp
+    show ?thesis
+      unfolding pol bfilter_lifted.simps
+      by (rule gated_join_lifted_mono[OF Or.prems Or.IH[OF Or.prems]])
   next
     case False
     have step: "bfilter_lifted b2 False sigma1 \<le> bfilter_lifted b2 False sigma2"
@@ -691,7 +493,7 @@ next
       using Or.IH(1) by simp
     show ?thesis using False by (simp add: bind_lift_mono2[OF step ih1])
   qed
-qed
+qed (simp_all only: bfilter_lifted.simps normalize_state_lift_mono bfilter_mono)
 
 lemma branch_lifted_mono:
   assumes "sigma1 \<le> sigma2"
@@ -723,29 +525,15 @@ text \<open>
   \<open>branch\<close>'s definition.
 \<close>
 
+lemma gated_join_lifted_le_raw:
+  fixes y1 y2 :: "'a abs_state"
+  assumes "x1 \<le> Lifted y1" and "x2 \<le> Lifted y2"
+  shows "(if p1 then x1 else Bot) \<squnion> (if p2 then x2 else Bot)
+    \<le> Lifted ((if p1 then y1 else bot) \<squnion> (if p2 then y2 else bot))"
+  using assms sup_mono[OF assms] by (cases p1; cases p2) simp_all
+
 lemma bfilter_lifted_le_raw: "bfilter_lifted e pol sigma \<le> Lifted (bfilter e pol sigma)"
 proof (induction e arbitrary: pol sigma)
-  case (N n) then show ?case by (cases "is_empty_state (bfilter (N n) pol sigma)") simp_all
-next
-  case (V x) then show ?case by (cases "is_empty_state (bfilter (V x) pol sigma)") simp_all
-next
-  case (Plus e1 e2)
-  then show ?case by (cases "is_empty_state (bfilter (Plus e1 e2) pol sigma)") simp_all
-next
-  case (Minus e1 e2)
-  then show ?case by (cases "is_empty_state (bfilter (Minus e1 e2) pol sigma)") simp_all
-next
-  case (Times e1 e2)
-  then show ?case by (cases "is_empty_state (bfilter (Times e1 e2) pol sigma)") simp_all
-next
-  case (Less e1 e2)
-  then show ?case by (cases "is_empty_state (bfilter (Less e1 e2) pol sigma)") simp_all
-next
-  case (Eq e1 e2)
-  then show ?case by (cases "is_empty_state (bfilter (Eq e1 e2) pol sigma)") simp_all
-next
-  case (Not b) then show ?case by simp
-next
   case (And b1 b2)
   show ?case
   proof (cases pol)
@@ -766,46 +554,20 @@ next
     qed
   next
     case False
-    have c1: "(if feasible b1 False sigma then bfilter_lifted b1 False sigma else Bot)
-                \<le> Lifted (if feasible b1 False sigma then bfilter b1 False sigma else bot)"
-      using And.IH(1)[of False sigma] by simp
-    have c2: "(if feasible b2 False sigma then bfilter_lifted b2 False sigma else Bot)
-                \<le> Lifted (if feasible b2 False sigma then bfilter b2 False sigma else bot)"
-      using And.IH(2)[of False sigma] by simp
-    have "(if feasible b1 False sigma then bfilter_lifted b1 False sigma else Bot)
-            \<squnion> (if feasible b2 False sigma then bfilter_lifted b2 False sigma else Bot)
-          \<le> Lifted (if feasible b1 False sigma then bfilter b1 False sigma else bot)
-              \<squnion> Lifted (if feasible b2 False sigma then bfilter b2 False sigma else bot)"
-      by (rule sup_mono[OF c1 c2])
-    also have "\<dots> = Lifted (bfilter (And b1 b2) False sigma)" by simp
-    finally have result: "bfilter_lifted (And b1 b2) False sigma
-                            \<le> Lifted (bfilter (And b1 b2) False sigma)"
-      by simp
-    have pol_eq: "pol = False" using False by simp
-    show ?thesis unfolding pol_eq by (rule result)
+    then have pol: "pol = False" by simp
+    show ?thesis
+      unfolding pol bfilter_lifted.simps bfilter.simps
+      by (rule gated_join_lifted_le_raw[OF And.IH])
   qed
 next
   case (Or b1 b2)
   show ?case
   proof (cases pol)
     case True
-    have c1: "(if feasible b1 True sigma then bfilter_lifted b1 True sigma else Bot)
-                \<le> Lifted (if feasible b1 True sigma then bfilter b1 True sigma else bot)"
-      using Or.IH(1)[of True sigma] by simp
-    have c2: "(if feasible b2 True sigma then bfilter_lifted b2 True sigma else Bot)
-                \<le> Lifted (if feasible b2 True sigma then bfilter b2 True sigma else bot)"
-      using Or.IH(2)[of True sigma] by simp
-    have "(if feasible b1 True sigma then bfilter_lifted b1 True sigma else Bot)
-            \<squnion> (if feasible b2 True sigma then bfilter_lifted b2 True sigma else Bot)
-          \<le> Lifted (if feasible b1 True sigma then bfilter b1 True sigma else bot)
-              \<squnion> Lifted (if feasible b2 True sigma then bfilter b2 True sigma else bot)"
-      by (rule sup_mono[OF c1 c2])
-    also have "\<dots> = Lifted (bfilter (Or b1 b2) True sigma)" by simp
-    finally have result: "bfilter_lifted (Or b1 b2) True sigma
-                            \<le> Lifted (bfilter (Or b1 b2) True sigma)"
-      by simp
-    have pol_eq: "pol = True" using True by simp
-    show ?thesis unfolding pol_eq by (rule result)
+    then have pol: "pol = True" by simp
+    show ?thesis
+      unfolding pol bfilter_lifted.simps bfilter.simps
+      by (rule gated_join_lifted_le_raw[OF Or.IH])
   next
     case False
     show ?thesis
@@ -823,7 +585,7 @@ next
       finally show ?thesis using False Lifted by simp
     qed
   qed
-qed
+qed (simp_all add: normalize_lift_def)
 
 lemma branch_lifted_le_raw: "branch_lifted e pol sigma \<le> Lifted (bfilter e pol sigma)"
   unfolding branch_lifted_def

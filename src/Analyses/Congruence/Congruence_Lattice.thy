@@ -88,24 +88,29 @@ instance ..
 
 end
 
+lemma less_eq_congruence_iff_gamma:
+  "a \<le> b \<longleftrightarrow> gamma_congruence a \<subseteq> gamma_congruence b"
+  for a b :: congruence
+  unfolding less_eq_congruence_def by (rule congruence_le_iff_gamma)
+
 instance congruence :: order
 proof intro_classes
   fix a b c :: congruence
   show "(a < b) = (a <= b \<and> \<not> b <= a)"
     unfolding less_congruence_def ..
   show "a <= a"
-    unfolding less_eq_congruence_def congruence_le_iff_gamma by simp
+    unfolding less_eq_congruence_iff_gamma by simp
   assume ab: "a <= b" and bc: "b <= c"
   show "a <= c"
     using ab bc
-    unfolding less_eq_congruence_def congruence_le_iff_gamma
+    unfolding less_eq_congruence_iff_gamma
     by blast
 next
   fix a b :: congruence
   assume ab: "a <= b" and ba: "b <= a"
   have gamma_eq: "gamma_congruence a = gamma_congruence b"
     using ab ba
-    unfolding less_eq_congruence_def congruence_le_iff_gamma
+    unfolding less_eq_congruence_iff_gamma
     by blast
   show "a = b"
     by (rule gamma_congruence_inject[OF gamma_eq])
@@ -125,8 +130,7 @@ instance congruence :: order_bot
 proof intro_classes
   fix a :: congruence
   show "bot <= a"
-    unfolding less_eq_congruence_def congruence_le_iff_gamma
-      bot_congruence_def
+    unfolding less_eq_congruence_iff_gamma bot_congruence_def
     by simp
 qed
 
@@ -156,7 +160,7 @@ instance congruence :: order_top
 proof intro_classes
   fix a :: congruence
   show "a <= top"
-    unfolding less_eq_congruence_def congruence_le_iff_gamma
+    unfolding less_eq_congruence_iff_gamma
     by simp
 qed
 
@@ -246,11 +250,7 @@ next
     have offset_forward: "?g dvd c1 - c2"
       by (rule dvd_trans[OF gcd_dvd2 gcd_dvd2])
     have offset: "?g dvd c2 - c1"
-    proof -
-      have "?g dvd -(c1 - c2)"
-        using offset_forward by (simp only: dvd_minus_iff)
-      then show ?thesis by simp
-    qed
+      by (subst dvd_diff_commute) (rule offset_forward)
     show ?thesis
       unfolding x_rep y_rep
       apply (simp only: join_congruence_rep.simps gamma_congruence_rep.simps)
@@ -335,14 +335,14 @@ qed
 
 lemma join_congruence_ub1:
   "a <= join_congruence a b"
-  unfolding less_eq_congruence_def congruence_le_iff_gamma
+  unfolding less_eq_congruence_iff_gamma
     gamma_congruence_def
   apply (simp only: Rep_join_congruence gamma_normalize_congruence_rep)
   by (rule gamma_join_congruence_rep_ub1)
 
 lemma join_congruence_ub2:
   "b <= join_congruence a b"
-  unfolding less_eq_congruence_def congruence_le_iff_gamma
+  unfolding less_eq_congruence_iff_gamma
     gamma_congruence_def
   apply (simp only: Rep_join_congruence gamma_normalize_congruence_rep)
   by (rule gamma_join_congruence_rep_ub2)
@@ -351,7 +351,7 @@ lemma join_congruence_least:
   assumes "a <= c" and "b <= c"
   shows "join_congruence a b <= c"
   using assms
-  unfolding less_eq_congruence_def congruence_le_iff_gamma
+  unfolding less_eq_congruence_iff_gamma
     gamma_congruence_def
   apply (simp only: Rep_join_congruence gamma_normalize_congruence_rep)
   by (rule gamma_join_congruence_rep_least)
@@ -446,7 +446,7 @@ next
   fix a b :: congruence
   assume "a <= b"
   then show "gamma a \<subseteq> gamma b"
-    unfolding less_eq_congruence_def congruence_le_iff_gamma
+    unfolding less_eq_congruence_iff_gamma
     by simp
 next
   fix a :: congruence

@@ -117,106 +117,53 @@ lemma congruence_of_int_gamma [simp]:
 
 subsection \<open>Semantic soundness\<close>
 
+text \<open>
+  Each operation's soundness reduces to one divisibility fact about the two
+  operand classes; \<open>congruence_binop_sound\<close> discharges the bottom operands
+  and the representation plumbing once.
+\<close>
+
+lemma congruence_binop_sound:
+  assumes "i \<in> gamma_congruence a" and "j \<in> gamma_congruence b"
+    and "\<And>c1 m1 c2 m2. Rep_congruence a = Some (c1, m1) \<Longrightarrow>
+           Rep_congruence b = Some (c2, m2) \<Longrightarrow> m1 dvd i - c1 \<Longrightarrow> m2 dvd j - c2 \<Longrightarrow>
+           k \<in> gamma_congruence r"
+  shows "k \<in> gamma_congruence r"
+  using assms unfolding gamma_congruence_def
+  by (cases rule: congruence_rep_cases[of a]; cases rule: congruence_rep_cases[of b]) auto
+
 lemma congruence_plus_sound:
-  assumes "i \<in> gamma_congruence a"
-      and "j \<in> gamma_congruence b"
+  assumes "i \<in> gamma_congruence a" and "j \<in> gamma_congruence b"
   shows "i + j \<in> gamma_congruence (a + b)"
-proof -
-  have ai:
-    "i \<in> gamma_congruence_rep (Rep_congruence a)"
-    using assms(1) unfolding gamma_congruence_def .
-  have bj:
-    "j \<in> gamma_congruence_rep (Rep_congruence b)"
-    using assms(2) unfolding gamma_congruence_def .
-  show ?thesis
-  proof (cases "Rep_congruence a")
-    case None
-    with ai show ?thesis by simp
-  next
-    case (Some p1)
-    obtain c1 m1 where p1: "p1 = (c1, m1)"
-      by (cases p1)
-    show ?thesis
-    proof (cases "Rep_congruence b")
-      case None
-      with bj show ?thesis by simp
-    next
-      case (Some p2)
-      obtain c2 m2 where p2: "p2 = (c2, m2)"
-        by (cases p2)
-      have mi: "m1 dvd i - c1"
-        using ai unfolding \<open>Rep_congruence a = Some p1\<close> p1 by simp
-      have mj: "m2 dvd j - c2"
-        using bj unfolding Some p2 by simp
-      have gi: "gcd m1 m2 dvd i - c1"
-        by (rule dvd_trans[OF gcd_dvd1 mi])
-      have gj: "gcd m1 m2 dvd j - c2"
-        by (rule dvd_trans[OF gcd_dvd2 mj])
-      have sum_eq:
-        "(i - c1) + (j - c2) = (i + j) - (c1 + c2)"
-        by simp
-      have "gcd m1 m2 dvd (i + j) - (c1 + c2)"
-        using dvd_add[OF gi gj] unfolding sum_eq .
-      then show ?thesis
-        unfolding gamma_congruence_def
-          plus_congruence.rep_eq
-          \<open>Rep_congruence a = Some p1\<close> Some p1 p2
-        by (simp only: plus_congruence_rep.simps
-            gamma_normalize_congruence_rep
-            gamma_congruence_rep.simps Set.mem_Collect_eq)
-    qed
-  qed
+  using assms
+proof (rule congruence_binop_sound)
+  fix c1 m1 c2 m2
+  assume a: "Rep_congruence a = Some (c1, m1)" and b: "Rep_congruence b = Some (c2, m2)"
+    and mi: "m1 dvd i - c1" and mj: "m2 dvd j - c2"
+  have "gcd m1 m2 dvd (i - c1) + (j - c2)"
+    by (rule dvd_add[OF dvd_trans[OF gcd_dvd1 mi] dvd_trans[OF gcd_dvd2 mj]])
+  then have "gcd m1 m2 dvd (i + j) - (c1 + c2)" by (simp add: algebra_simps)
+  then show "i + j \<in> gamma_congruence (a + b)"
+    unfolding gamma_congruence_def plus_congruence.rep_eq a b
+    by (simp only: plus_congruence_rep.simps gamma_normalize_congruence_rep
+        gamma_congruence_rep.simps mem_Collect_eq)
 qed
 
 lemma congruence_minus_sound:
-  assumes "i \<in> gamma_congruence a"
-      and "j \<in> gamma_congruence b"
+  assumes "i \<in> gamma_congruence a" and "j \<in> gamma_congruence b"
   shows "i - j \<in> gamma_congruence (a - b)"
-proof -
-  have ai:
-    "i \<in> gamma_congruence_rep (Rep_congruence a)"
-    using assms(1) unfolding gamma_congruence_def .
-  have bj:
-    "j \<in> gamma_congruence_rep (Rep_congruence b)"
-    using assms(2) unfolding gamma_congruence_def .
-  show ?thesis
-  proof (cases "Rep_congruence a")
-    case None
-    with ai show ?thesis by simp
-  next
-    case (Some p1)
-    obtain c1 m1 where p1: "p1 = (c1, m1)"
-      by (cases p1)
-    show ?thesis
-    proof (cases "Rep_congruence b")
-      case None
-      with bj show ?thesis by simp
-    next
-      case (Some p2)
-      obtain c2 m2 where p2: "p2 = (c2, m2)"
-        by (cases p2)
-      have mi: "m1 dvd i - c1"
-        using ai unfolding \<open>Rep_congruence a = Some p1\<close> p1 by simp
-      have mj: "m2 dvd j - c2"
-        using bj unfolding Some p2 by simp
-      have gi: "gcd m1 m2 dvd i - c1"
-        by (rule dvd_trans[OF gcd_dvd1 mi])
-      have gj: "gcd m1 m2 dvd j - c2"
-        by (rule dvd_trans[OF gcd_dvd2 mj])
-      have diff_eq:
-        "(i - c1) - (j - c2) = (i - j) - (c1 - c2)"
-        by simp
-      have "gcd m1 m2 dvd (i - j) - (c1 - c2)"
-        using dvd_diff[OF gi gj] unfolding diff_eq .
-      then show ?thesis
-        unfolding gamma_congruence_def
-          minus_congruence.rep_eq
-          \<open>Rep_congruence a = Some p1\<close> Some p1 p2
-        by (simp only: minus_congruence_rep.simps
-            gamma_normalize_congruence_rep
-            gamma_congruence_rep.simps Set.mem_Collect_eq)
-    qed
-  qed
+  using assms
+proof (rule congruence_binop_sound)
+  fix c1 m1 c2 m2
+  assume a: "Rep_congruence a = Some (c1, m1)" and b: "Rep_congruence b = Some (c2, m2)"
+    and mi: "m1 dvd i - c1" and mj: "m2 dvd j - c2"
+  have "gcd m1 m2 dvd (i - c1) - (j - c2)"
+    by (rule dvd_diff[OF dvd_trans[OF gcd_dvd1 mi] dvd_trans[OF gcd_dvd2 mj]])
+  then have "gcd m1 m2 dvd (i - j) - (c1 - c2)" by (simp add: algebra_simps)
+  then show "i - j \<in> gamma_congruence (a - b)"
+    unfolding gamma_congruence_def minus_congruence.rep_eq a b
+    by (simp only: minus_congruence_rep.simps gamma_normalize_congruence_rep
+        gamma_congruence_rep.simps mem_Collect_eq)
 qed
 
 lemma congruence_product_divisible:
@@ -262,49 +209,18 @@ proof -
 qed
 
 lemma congruence_times_sound:
-  assumes "i \<in> gamma_congruence a"
-      and "j \<in> gamma_congruence b"
+  assumes "i \<in> gamma_congruence a" and "j \<in> gamma_congruence b"
   shows "i * j \<in> gamma_congruence (a * b)"
-proof -
-  have ai:
-    "i \<in> gamma_congruence_rep (Rep_congruence a)"
-    using assms(1) unfolding gamma_congruence_def .
-  have bj:
-    "j \<in> gamma_congruence_rep (Rep_congruence b)"
-    using assms(2) unfolding gamma_congruence_def .
-  show ?thesis
-  proof (cases "Rep_congruence a")
-    case None
-    with ai show ?thesis by simp
-  next
-    case (Some p1)
-    obtain c1 m1 where p1: "p1 = (c1, m1)"
-      by (cases p1)
-    show ?thesis
-    proof (cases "Rep_congruence b")
-      case None
-      with bj show ?thesis by simp
-    next
-      case (Some p2)
-      obtain c2 m2 where p2: "p2 = (c2, m2)"
-        by (cases p2)
-      have mi: "m1 dvd i - c1"
-        using ai unfolding \<open>Rep_congruence a = Some p1\<close> p1 by simp
-      have mj: "m2 dvd j - c2"
-        using bj unfolding Some p2 by simp
-      have
-        "gcd (c1 * m2) (gcd (m1 * c2) (m1 * m2))
-           dvd i * j - c1 * c2"
-        by (rule congruence_product_divisible[OF mi mj])
-      then show ?thesis
-        unfolding gamma_congruence_def
-          times_congruence.rep_eq
-          \<open>Rep_congruence a = Some p1\<close> Some p1 p2
-        by (simp only: times_congruence_rep.simps
-            gamma_normalize_congruence_rep
-            gamma_congruence_rep.simps Set.mem_Collect_eq)
-    qed
-  qed
+  using assms
+proof (rule congruence_binop_sound)
+  fix c1 m1 c2 m2
+  assume a: "Rep_congruence a = Some (c1, m1)" and b: "Rep_congruence b = Some (c2, m2)"
+    and mi: "m1 dvd i - c1" and mj: "m2 dvd j - c2"
+  from congruence_product_divisible[OF mi mj]
+  show "i * j \<in> gamma_congruence (a * b)"
+    unfolding gamma_congruence_def times_congruence.rep_eq a b
+    by (simp only: times_congruence_rep.simps gamma_normalize_congruence_rep
+        gamma_congruence_rep.simps mem_Collect_eq)
 qed
 
 subsection \<open>Monotonicity\<close>
@@ -317,29 +233,12 @@ lemma plus_congruence_rep_mono_nonbottom:
     "congruence_le_rep
        (plus_congruence_rep (Some (c1, m1)) (Some (d1, n1)))
        (plus_congruence_rep (Some (c2, m2)) (Some (d2, n2)))"
-proof -
-  have modulus: "gcd m2 n2 dvd gcd m1 n1"
-    by (rule gcd_mono[OF m(1) n(1)])
-  have first: "gcd m2 n2 dvd c1 - c2"
-    by (rule dvd_trans[OF gcd_dvd1 m(2)])
-  have second: "gcd m2 n2 dvd d1 - d2"
-    by (rule dvd_trans[OF gcd_dvd2 n(2)])
-  have offset:
-    "gcd m2 n2 dvd (c1 + d1) - (c2 + d2)"
-  proof -
-    have sum_eq:
-      "(c1 - c2) + (d1 - d2) =
-       (c1 + d1) - (c2 + d2)"
-      by simp
-    show ?thesis using dvd_add[OF first second] unfolding sum_eq .
-  qed
-  show ?thesis
-    unfolding congruence_le_rep_iff
-    using modulus offset
-    by (simp only: plus_congruence_rep.simps
-        gamma_normalize_congruence_rep
+  unfolding congruence_le_rep_iff
+  by (simp only: plus_congruence_rep.simps gamma_normalize_congruence_rep
         gamma_congruence_rep.simps congruence_class_subset_iff)
-qed
+     (use gcd_mono[OF m(1) n(1)]
+        dvd_add[OF dvd_trans[OF gcd_dvd1 m(2)] dvd_trans[OF gcd_dvd2 n(2)]]
+      in \<open>simp add: algebra_simps\<close>)
 
 lemma plus_congruence_rep_mono:
   assumes "congruence_le_rep a1 a2"
@@ -370,29 +269,12 @@ lemma minus_congruence_rep_mono_nonbottom:
     "congruence_le_rep
        (minus_congruence_rep (Some (c1, m1)) (Some (d1, n1)))
        (minus_congruence_rep (Some (c2, m2)) (Some (d2, n2)))"
-proof -
-  have modulus: "gcd m2 n2 dvd gcd m1 n1"
-    by (rule gcd_mono[OF m(1) n(1)])
-  have first: "gcd m2 n2 dvd c1 - c2"
-    by (rule dvd_trans[OF gcd_dvd1 m(2)])
-  have second: "gcd m2 n2 dvd d1 - d2"
-    by (rule dvd_trans[OF gcd_dvd2 n(2)])
-  have offset:
-    "gcd m2 n2 dvd (c1 - d1) - (c2 - d2)"
-  proof -
-    have diff_eq:
-      "(c1 - c2) - (d1 - d2) =
-       (c1 - d1) - (c2 - d2)"
-      by simp
-    show ?thesis using dvd_diff[OF first second] unfolding diff_eq .
-  qed
-  show ?thesis
-    unfolding congruence_le_rep_iff
-    using modulus offset
-    by (simp only: minus_congruence_rep.simps
-        gamma_normalize_congruence_rep
+  unfolding congruence_le_rep_iff
+  by (simp only: minus_congruence_rep.simps gamma_normalize_congruence_rep
         gamma_congruence_rep.simps congruence_class_subset_iff)
-qed
+     (use gcd_mono[OF m(1) n(1)]
+        dvd_diff[OF dvd_trans[OF gcd_dvd1 m(2)] dvd_trans[OF gcd_dvd2 n(2)]]
+      in \<open>simp add: algebra_simps\<close>)
 
 lemma minus_congruence_rep_mono:
   assumes "congruence_le_rep a1 a2"
