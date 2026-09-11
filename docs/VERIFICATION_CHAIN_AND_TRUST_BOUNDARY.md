@@ -112,8 +112,7 @@ One `export_code` declaration (`Voblint_Codegen.thy`) targets OCaml with
 roots are the constructors and selectors a caller needs to build a program, ask
 for a configuration and read the answer. All five domains, the four solver
 choices and the three context modes are reachable through `run_voblint`.
-`codegen-regression` and `cli-build` compile the output with
-`ocamlfind ocamlopt`.
+`codegen-regression` and `cli-build` compile and link the output through Dune.
 
 No `code_printing`, `code_datatype`, `code_reserved` or `code_abbrev` appears in
 `src/`. The `[code]` attributes that do appear sit on proved lemmas or on a

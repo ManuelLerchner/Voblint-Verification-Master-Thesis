@@ -593,10 +593,15 @@ expects), an **[AFP](https://www.isa-afp.org/)** checkout, **[pixi](https://pixi
 and, for the code-generation and CLI tasks, OCaml (Dune, Menhir, `ocamllex`,
 and Zarith) via opam.
 
+```bash
+pixi run ocaml-deps-install  # install the dependencies declared in voblint.opam
+```
+
 `scripts/setup.sh` installs the optional I/Q and I/R developer tooling from a
 pinned AutoCorrode revision under the ignored `vendor/autocorrode/` directory
-and registers I/Q in Isabelle's user component configuration. Normal builds do
-not fetch it.
+and registers I/Q in Isabelle's user component configuration. It also installs
+the Pixi and OCaml environments, so a fresh development checkout needs only
+that one setup command. Normal builds do not fetch AutoCorrode.
 
 ```bash
 pixi run vendor-init                         # init the TD solver submodule

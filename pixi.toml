@@ -119,6 +119,11 @@ bench = ["bench"]
 # --------------------------------------------------------------------------
 
 [tasks]
+# OCaml packages remain in opam because conda-forge does not provide the full
+# toolchain on every supported platform. Pixi is the shared installation
+# interface; voblint.opam is the dependency source of truth.
+ocaml-deps-install = { cmd = "opam install . --deps-only --with-test", description = "Install the OCaml build and test dependencies declared in voblint.opam." }
+
 # Vendoring. AutoCorrode is optional developer tooling installed into the
 # ignored vendor/autocorrode/ directory, outside the repository's submodule set.
 vendor-init = { cmd = "bash scripts/mk/vendor.sh", description = "Initialize the pinned td-verification submodule when absent." }

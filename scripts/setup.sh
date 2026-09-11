@@ -3,8 +3,8 @@
 #   - init the td-verification submodule
 #   - install a pinned local AutoCorrode checkout under vendor/ (ir/, iq/)
 #     and register its I/Q component in Isabelle's user configuration
-#   - install the pixi environment (I/R's Python deps, grammar generators,
-#     property-test suite, lefthook) and the lefthook git hooks
+#   - install the pixi environment, the voblint.opam OCaml dependencies, and
+#     the lefthook git hooks
 #   - build + install the I/Q jEdit plugin (skip with --no-iq)
 #
 # Re-run safe. An existing AutoCorrode checkout is never reset or updated.
@@ -60,8 +60,13 @@ fi
 echo "Registering the I/Q component in Isabelle's user configuration ..."
 "$ISABELLE" components -u "$AC_DIR/iq"
 
-echo "Installing pixi environment (see pixi.toml) ..."
-( cd "$REPO_ROOT" && pixi install && pixi run hooks-install )
+echo "Installing pixi and OCaml environments ..."
+(
+  cd "$REPO_ROOT"
+  pixi install
+  pixi run ocaml-deps-install
+  pixi run hooks-install
+)
 
 if [[ "$WITH_IQ" == "1" ]]; then
   echo

@@ -183,9 +183,9 @@ that every `.thy` on a session's search path is reached from something the
 session builds; it needs no Isabelle.
 
 The generated OCaml is compile-checked by actually compiling it: both
-`codegen-regression` and `cli-build` run `ocamlfind ocamlopt` over
-`codegen/generated/ml/Voblint_CLI.ml`, so a serializer defect fails those
-tasks locally and in CI.
+`codegen-regression` and `cli-build` run Dune builds over
+`codegen/generated/ml/Voblint_CLI.ml`, so a serializer defect fails those tasks
+locally and in CI.
 
 The procedural language includes calls, explicit returns, and runtime-only
 restore/unwind commands. CFGs separate local `intra` edges from the `calls`

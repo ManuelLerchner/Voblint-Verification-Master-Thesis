@@ -664,7 +664,6 @@ def main() -> int:
         subprocess.run(
             ["bash", str(REPO_ROOT / "scripts" / "mk" / "cli-build.sh")],
             check=True,
-            capture_output=True,
         )
 
     sequential = "-s" in args

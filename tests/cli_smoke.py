@@ -280,7 +280,7 @@ def run(args: list[str]) -> subprocess.CompletedProcess:
 
 def main() -> int:
     if "VOBLINT_BIN" not in os.environ:
-        subprocess.run(["bash", str(REPO_ROOT / "scripts" / "mk" / "cli-build.sh")], check=True, capture_output=True)
+        subprocess.run(["bash", str(REPO_ROOT / "scripts" / "mk" / "cli-build.sh")], check=True)
 
     failed = 0
     for desc, args, expected_code, needle in CASES:

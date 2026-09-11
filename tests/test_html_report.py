@@ -600,7 +600,10 @@ def test_rerun_clears_the_previous_programs_nodes(tmp_path):
         [str(VOBLINT), *args, "--html-out", str(out), str(src)],
         capture_output=True, text=True, check=True)
 
-    run(other, "--analysis", "interval", "--context", "call-string", "--context-depth", "60")
+    # Depth 1 already produces more node documents than FIXTURE. A depth above
+    # the program's recursion bound makes this cleanup test depend on analyzer
+    # runtime and can exhaust the CLI's independent 10-second timeout.
+    run(other, "--analysis", "interval", "--context", "call-string", "--context-depth", "1")
     many = len(list((out / "nodes").glob("*.xml")))
     run(FIXTURE, "--analysis", "interval")
     few = len(list((out / "nodes").glob("*.xml")))

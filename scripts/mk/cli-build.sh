@@ -49,11 +49,16 @@ rm -f "$CLI_DIR/vimp_parser.ml" "$CLI_DIR/vimp_parser.mli" "$CLI_DIR/vimp_lexer.
 # blank line can't slip past an empty-string check) so a future regression
 # here fails loudly at the source instead of corrupting output elsewhere.
 build_out="$(mktemp)"
-trap 'rm -f "$build_out"' EXIT
+publish_tmp="$(mktemp "$CLI_DIR/.voblint.XXXXXX")"
+trap 'rm -f "$build_out" "$publish_tmp"' EXIT
 (
   cd "$CLI_DIR"
   dune build ./main.exe
-  cp "$REPO_ROOT/_build/default/cli/main.exe" voblint
+  # Publish through a fresh inode. Linux refuses an in-place overwrite while
+  # another process still maps the previous executable; rename keeps that
+  # process on the old inode and makes the new build visible atomically.
+  cp -p "$REPO_ROOT/_build/default/cli/main.exe" "$publish_tmp"
+  mv -f "$publish_tmp" voblint
 ) >"$build_out"
 if [ -s "$build_out" ]; then
   echo "cli-build.sh wrote to stdout (would corrupt piped voblint output):" >&2

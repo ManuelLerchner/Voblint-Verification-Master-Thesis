@@ -18,6 +18,13 @@ REPO = Path(__file__).resolve().parent.parent
 MANIFEST = REPO / "pixi.toml"
 WORKFLOW = REPO / ".github" / "workflows" / "ci.yml"
 
+# Pixi also exposes setup operations so local bootstrap and CI share one
+# command surface. They prepare verification jobs but are not verification
+# gates themselves.
+CI_SETUP_TASKS = {
+    "ocaml-deps-install",
+}
+
 RETIRED_TASKS = {
     "bench",
     "bootstrap",
@@ -140,7 +147,7 @@ def main() -> int:
     else:
         verify_tasks = set(verify.get("depends-on", []))
 
-    ci_tasks = workflow_tasks()
+    ci_tasks = workflow_tasks() - CI_SETUP_TASKS
     missing_ci = sorted(verify_tasks - ci_tasks)
     extra_ci = sorted(ci_tasks - verify_tasks)
     if missing_ci:
