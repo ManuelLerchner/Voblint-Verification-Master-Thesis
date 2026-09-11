@@ -173,6 +173,29 @@ proof -
   with src' show ?thesis using that by blast
 qed
 
+text \<open>The \<open>Nested\<close> step shared by every completion theorem: the inner activation's run lifts
+  under the caller frame and its relation re-wraps as \<open>Nested\<close>.  \<open>csim\<close> pins the graph store
+  to the source store, so the lifted run ends at the source store.\<close>
+lemma csim_Nested_lift:
+  assumes run: "\<exists>cfg'. star (cstep gs g) (v0, s0, stk0) cfg' \<and> csim \<Pi> g (inner', s', fz') cfg'"
+      and loc: "control_at \<Pi> pc c0c kc nc (seq_after SKIP afters) cont"
+      and cacc: "compiled_at \<Pi> g pc c0c kc nc"
+  shows "\<exists>cfg'. star (cstep gs g) (v0, s0, stk0 @ [(cont, dst, caller)]) cfg'
+              \<and> csim \<Pi> g (seq_after (Seq inner' Restore) afters, s', fz' @ [Frame caller dst]) cfg'"
+proof -
+  from run obtain v' t' stk' where
+    inner: "star (cstep gs g) (v0, s0, stk0) (v', t', stk')"
+      and sim: "csim \<Pi> g (inner', s', fz') (v', t', stk')" by auto
+  have teq: "t' = s'" using csim_store_eq[OF sim] by simp
+  have "star (cstep gs g) (v0, s0, stk0 @ [(cont, dst, caller)])
+                         (v', s', stk' @ [(cont, dst, caller)])"
+    using cstep_star_frame_extend[OF inner, of "[(cont, dst, caller)]"] teq by simp
+  moreover have "csim \<Pi> g (seq_after (Seq inner' Restore) afters, s', fz' @ [Frame caller dst])
+                          (v', s', stk' @ [(cont, dst, caller)])"
+    by (rule csim.Nested[OF sim[unfolded teq] loc cacc])
+  ultimately show ?thesis by blast
+qed
+
 section \<open>Call preservation\<close>
 
 text \<open>
@@ -281,19 +304,8 @@ next
   from pstep_call_frame_restrict[OF stepin headinner refl] obtain fz' where
     fz: "fz = fz' @ [Frame caller dst]"
       and stepin': "pstep gs \<Pi> (inner, s0, frs0) (inner', s', fz')" by blast
-  from Nested.hyps(2)[OF Nested.prems(1) headinner stepin'] obtain v' t' stk' where
-    cstepin: "star (cstep gs g) (v0, s0, stk0) (v', t', stk')"
-      and csimin: "csim \<Pi> g (inner', s', fz') (v', t', stk')" by auto
-  have teq: "t' = s'" using csim_store_eq[OF csimin] by simp
-  have cstepN: "star (cstep gs g) (v0, s0, stk0 @ [(cont, dst, caller)])
-                               (v', s', stk' @ [(cont, dst, caller)])"
-    using cstep_star_frame_extend[OF cstepin, of "[(cont, dst, caller)]"] teq by simp
-  have "csim \<Pi> g (seq_after (Seq inner' Restore) afters, s', fz' @ [Frame caller dst])
-                 (v', s', stk' @ [(cont, dst, caller)])"
-    by (rule csim.Nested[OF csimin[unfolded teq] Nested.hyps(3) Nested.hyps(4)])
-  then have "csim \<Pi> g src' (v', s', stk' @ [(cont, dst, caller)])"
-    by (simp add: src' fz)
-  with cstepN show ?case by blast
+  from csim_Nested_lift[OF Nested.hyps(2)[OF Nested.prems(1) headinner stepin'] Nested.hyps(3,4)]
+  show ?case by (simp add: src' fz)
 qed
 
 section \<open>Intra-procedural preservation and callee fall-through\<close>
@@ -413,18 +425,8 @@ next
       by blast
     from intra_step_any_frame[OF stepin]
     have stepin': "intra_step \<Pi> (inner, s0, frs0) (inner', s', frs0)" .
-    from Nested.hyps(2)[OF Nested.prems(1) stepin'] obtain v' t' stk' where
-      cstepin: "star (cstep gs g) (v0, s0, stk0) (v', t', stk')"
-        and csimin: "csim \<Pi> g (inner', s', frs0) (v', t', stk')" by auto
-    have teq: "t' = s'" using csim_store_eq[OF csimin] by simp
-    have cstepN: "star (cstep gs g) (v0, s0, stk0 @ [(cont, dst, caller)])
-                                 (v', s', stk' @ [(cont, dst, caller)])"
-      using cstep_star_frame_extend[OF cstepin, of "[(cont, dst, caller)]"] teq by simp
-    have "csim \<Pi> g (seq_after (Seq inner' Restore) afters, s', frs0 @ [Frame caller dst])
-                   (v', s', stk' @ [(cont, dst, caller)])"
-      by (rule csim.Nested[OF csimin[unfolded teq] Nested.hyps(3) Nested.hyps(4)])
-    then have "csim \<Pi> g src' (v', s', stk' @ [(cont, dst, caller)])" by (simp add: src')
-    with cstepN show ?case by blast
+    from csim_Nested_lift[OF Nested.hyps(2)[OF Nested.prems(1) stepin'] Nested.hyps(3,4)]
+    show ?case by (simp add: src')
   qed
 qed
 
@@ -519,18 +521,9 @@ next
     from pstep_frame_restrict[OF stepin refl False] obtain fz' where
       fz: "fz = fz' @ [Frame caller dst]"
         and stepin': "pstep gs \<Pi> (inner, s0, frs0) (inner', s', fz')" by blast
-    from Nested.hyps(2)[OF Nested.prems(1) False hr_inner stepin'] obtain v' t' stk' where
-      cstepin: "star (cstep gs g) (v0, s0, stk0) (v', t', stk')"
-        and csimin: "csim \<Pi> g (inner', s', fz') (v', t', stk')" by auto
-    have teq: "t' = s'" using csim_store_eq[OF csimin] by simp
-    have cstepN: "star (cstep gs g) (v0, s0, stk0 @ [(cont, dst, caller)])
-                                 (v', s', stk' @ [(cont, dst, caller)])"
-      using cstep_star_frame_extend[OF cstepin, of "[(cont, dst, caller)]"] teq by simp
-    have "csim \<Pi> g (seq_after (Seq inner' Restore) afters, s', fz' @ [Frame caller dst])
-                   (v', s', stk' @ [(cont, dst, caller)])"
-      by (rule csim.Nested[OF csimin[unfolded teq] Nested.hyps(3) Nested.hyps(4)])
-    then have "csim \<Pi> g src' (v', s', stk' @ [(cont, dst, caller)])" by (simp add: src' fz)
-    with cstepN show ?thesis by blast
+    from csim_Nested_lift[OF Nested.hyps(2)[OF Nested.prems(1) False hr_inner stepin']
+                             Nested.hyps(3,4)]
+    show ?thesis by (simp add: src' fz)
   qed
 qed
 
@@ -627,19 +620,8 @@ next
   from pstep_frame_restrict[OF stepin refl frsne] obtain fz' where
     fz: "fz = fz' @ [Frame caller dst]"
       and stepin': "pstep gs \<Pi> (inner, s0, frs0) (inner', s', fz')" by blast
-  from Nested.hyps(2)[OF retinner stepin'] obtain v' t' stk' where
-    cstepin: "star (cstep gs g) (v0, s0, stk0) (v', t', stk')"
-      and csimin: "csim \<Pi> g (inner', s', fz') (v', t', stk')" by auto
-  have teq: "t' = s'" using csim_store_eq[OF csimin] by simp
-  have cstepN: "star (cstep gs g) (v0, s0, stk0 @ [(cont, dst, caller)])
-                               (v', s', stk' @ [(cont, dst, caller)])"
-    using cstep_star_frame_extend[OF cstepin, of "[(cont, dst, caller)]"] teq by simp
-  have "csim \<Pi> g (seq_after (Seq inner' Restore) afters, s', fz' @ [Frame caller dst])
-                 (v', s', stk' @ [(cont, dst, caller)])"
-    by (rule csim.Nested[OF csimin[unfolded teq] Nested.hyps(3) Nested.hyps(4)])
-  then have "csim \<Pi> g src' (v', s', stk' @ [(cont, dst, caller)])"
-    by (simp add: src' fz)
-  with cstepN show ?case by blast
+  from csim_Nested_lift[OF Nested.hyps(2)[OF retinner stepin'] Nested.hyps(3,4)]
+  show ?case by (simp add: src' fz)
 qed
 
 section \<open>Single-step and finite-execution forward simulation\<close>
