@@ -163,6 +163,44 @@ by recursion over the domain, the solver and the policy. They have to be
 definitions rather than parameters because an abstract state's type is the
 domain's own carrier, so nothing polymorphic holds all five.
 
+The endpoint is existential in its node, so reading one printed check off it
+still means connecting the source `Check` to that node. The corollary
+[`run_voblint_check_sound`](src/Executable_Surface/CLI/Analysis_Certified.thy)
+makes that connection once, with no `csim` in its statement:
+
+```isabelle
+theorem run_voblint_check_sound:
+  fixes p :: imp_prog and s0 s :: store
+  assumes s0: "s0 ∈ cinit_stores (declared_global p)"
+      and run: "star (pstep (declared_global p) (prog_table p))
+                  (main_body (prog_table p), s0, []) (residual, s, frs)"
+      and chk: "next_check residual = Some e"
+      and terminates: "config_terminates D solver ctx p"
+      and ans: "run_voblint D solver ctx view p = Analysed out"
+  shows "∃row ∈ set (out_checks out). row_exp row = e
+           ∧ s ∈ ltr_collect (declared_global p) (prog_cfg p)
+                   (cinit_stores (declared_global p)) (row_point row)
+           ∧ row_verdict row ≠ Dead
+           ∧ (row_verdict row = Decided Check_Proved ⟶ truthy (aval e s))
+           ∧ (row_verdict row = Decided Check_Refuted ⟶ ¬ truthy (aval e s))"
+```
+
+If a modeled source execution is about to execute `Check e` (`next_check` reads
+the command a residual runs next), the returned report contains a row for `e` at
+a CFG node that execution reaches, and any definite verdict in that row is
+correct for the current store. The row is existential because a source state
+does not determine its node: two procedures with identical bodies, called on the
+two branches of one conditional, leave the same source state inside either, and
+each body's check has its own row. Membership in `ltr_collect` at the row's node
+is what keeps the witness from being some unrelated copy of the same expression.
+
+Which printed line shows that row is outside the theorem.
+[`run_voblint_check_sites`](src/Executable_Surface/CLI/Analysis_Certified.thy)
+proves that the report has exactly one row per compiled `EA_Check` edge, at the
+edge's node and with its condition, in graph order. `cli/main.ml` then pairs
+those rows with the parser's check positions by order, and that pairing is not
+proved.
+
 [`Example_End_To_End_Certificate`](src/Examples/CLI/Example_End_To_End_Certificate.thy)
 instantiates this theorem for an actual run -- the `Int` product domain, a
 call-string context of length one, and `Solver_Join` named explicitly rather than
@@ -171,18 +209,17 @@ all discharged by evaluation. The source run is not assumed
 either: it is built step by step, both calls and the check, so the theorem's
 conclusion holds outright for a store the program really computes.
 
-It also closes the last gap the endpoint leaves open. `csim` is not functional,
-so the generic endpoint produces *some* sound witness node, and that existential
-witness need not be the check node whose printed row a reader wants to inspect.
-The example therefore establishes a second, explicit collecting-semantics witness
-at that node -- the semantics there really does contain the store the program
-computes, calls and all -- and reads
-[`ctx_rows_sound_at`](src/Executable_Surface/CLI/Analysis_Run_Sound.thy)
-at that node: every store the semantics admits there satisfies the condition the
-report called `PROVED`. Printed verdict, named node, real execution.
-`certificate_demo_full_certificate` collects the whole thing with no existentials
-left -- the answer, its single row, the completed run, the membership at that node,
-`analysis_result_covers` and `checks_sound_at` there, and the check's own truth.
+It also instantiates `run_voblint_check_sound` for the same run stopped
+immediately before its check: `certificate_demo_check_row_sound` obtains a
+printed row for the checked condition, at a node the concrete store reaches,
+whose `PROVED` is true of that store -- without exposing `csim`. Separately, the
+example proves the stronger program-specific fact that the concrete store is
+collected at the named node `Statement 4`, and reads
+[`ctx_rows_sound_at`](src/Executable_Surface/CLI/Analysis_Run_Sound.thy) there.
+`certificate_demo_full_certificate` collects that version with every witness
+named -- the answer, its single row, the completed run, the membership at that
+node, `analysis_result_covers` and `checks_sound_at` there, and the check's own
+truth.
 
 The per-configuration work stays underneath as the implementation level:
 [`Analysis_Run_Sound`](src/Executable_Surface/CLI/Analysis_Run_Sound.thy) states
@@ -251,8 +288,9 @@ solver = None, or any discipline that domain and policy accepts
 ```
 
 Every modeled source execution is over-approximated at a genuinely reachable
-CFG node -- and, at the context-sensitive policies, under the analysis context
-its own call history produced. At that node every definite check verdict is
+CFG node -- and, at the context-sensitive policies, under at least one context
+its own call history is admitted at: exactly one for a call string, possibly
+several under entry-state routing. At that node every definite check verdict is
 correct for that execution, and no check row there is reported dead.
 
 What a `DEAD` row claims is a separate theorem, deliberately.

@@ -101,6 +101,51 @@ lemma out_checks_of_verdict_report_answer:
   using assms unfolding verdict_report_answer_def report_output_def
   by (auto split: output_view.splits)
 
+text \<open>
+  Where a report has rows: one per compiled \<^const>\<open>EA_Check\<close> edge, at that edge's
+  source node and with its condition, in the order the graph lists its edges.  Every
+  builder renders one \<^const>\<open>classify_checks_verdicts\<close> call, so no table can drop a
+  row or add one.
+\<close>
+
+definition check_sites :: "cfg \<Rightarrow> (pp \<times> exp) list" where
+  "check_sites g =
+     map (\<lambda>(u, a, v). (u, ea_check_cond a))
+       (filter (\<lambda>(u, a, v). is_EA_Check a) (cfg_intra_list g))"
+
+lemma check_rows_of_sites:
+  "map (\<lambda>row. (row_point row, row_exp row))
+       (check_rows_of env (classify_checks_verdicts g r classify))
+     = check_sites g"
+  unfolding check_rows_of_def classify_checks_verdicts_def classify_checks_ctx_def
+    check_sites_def
+  by (simp add: comp_def case_prod_beta)
+
+lemma check_sites_memI [intro]:
+  assumes "finite (intra g)" and "(v, EA_Check cnd, w) \<in> intra g"
+  shows "(v, cnd) \<in> set (check_sites g)"
+  using assms unfolding check_sites_def by force
+
+lemma flat_output_check_sites:
+  "flat_output_of view into classify bot_state r globals p = Analysed out \<Longrightarrow>
+   map (\<lambda>row. (row_point row, row_exp row)) (out_checks out) = check_sites (prog_cfg p)"
+  by (simp add: out_checks_of_flat_output check_rows_of_sites)
+
+lemma entry_state_output_check_sites:
+  "entry_state_output_of view enter into classify r p = Analysed out \<Longrightarrow>
+   map (\<lambda>row. (row_point row, row_exp row)) (out_checks out) = check_sites (prog_cfg p)"
+  by (simp add: out_checks_of_entry_state_output check_rows_of_sites)
+
+lemma cs_output_check_sites:
+  "cs_output_of view into classify r k p = Analysed out \<Longrightarrow>
+   map (\<lambda>row. (row_point row, row_exp row)) (out_checks out) = check_sites (prog_cfg p)"
+  by (simp add: out_checks_of_cs_output check_rows_of_sites)
+
+lemma verdict_report_answer_check_sites:
+  "verdict_report_answer view (classify_checks_verdicts (prog_cfg p) r classify) = Analysed out
+   \<Longrightarrow> map (\<lambda>row. (row_point row, row_exp row)) (out_checks out) = check_sites (prog_cfg p)"
+  by (simp add: out_checks_of_verdict_report_answer check_rows_of_sites)
+
 subsection \<open>What a row claims at the point it was printed for\<close>
 
 definition checks_sound_at :: "analysis_output \<Rightarrow> pp \<Rightarrow> store \<Rightarrow> bool" where

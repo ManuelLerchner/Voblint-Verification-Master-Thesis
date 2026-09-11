@@ -105,6 +105,53 @@ next
   then show ?case using jw sub by blast
 qed simp_all
 
+text \<open>The check a residual runs next, when its leftmost command is one.  A located residual
+  about to run a check sits at that check's \<^const>\<open>EA_Check\<close> edge, however much sequencing
+  wraps it.\<close>
+fun next_check :: "com \<Rightarrow> exp option" where
+  "next_check (VIMP_Proc.com.Check c) = Some c"
+| "next_check (Seq c1 c2) = next_check c1"
+| "next_check _ = None"
+
+lemma control_at_next_check_edge:
+  "control_at \<Pi> p c0 k n r v \<Longrightarrow> next_check r = Some c \<Longrightarrow>
+   compile \<Pi> p c0 k n = (n', en, E, K) \<Longrightarrow> \<exists>w. (v, EA_Check c, w) \<in> E"
+proof (induction arbitrary: n' en E K rule: control_at.induct)
+  case (SeqLeft c1 n0 r v c2 k)
+  from SeqLeft.prems(2) obtain m F L
+    where "compile \<Pi> p c1 (Statement (n0 + csize c1)) n0 = (m, Statement n0, F, L)"
+      and "F \<subseteq> E"
+    by (rule compile_Seq_leftE)
+  with SeqLeft.IH SeqLeft.prems(1) show ?case by auto
+next
+  case (SeqRight c1 c2 k n0 r v)
+  from SeqRight.prems(2) obtain m F L
+    where "compile \<Pi> p c2 k (n0 + csize c1) = (m, Statement (n0 + csize c1), F, L)"
+      and "F \<subseteq> E"
+    by (rule compile_Seq_rightE)
+  with SeqRight.IH SeqRight.prems(1) show ?case by blast
+next
+  case (IfLeft c1 k n0 r v b c2)
+  from IfLeft.prems(2) obtain m F L
+    where "compile \<Pi> p c1 k (Suc n0) = (m, Statement (Suc n0), F, L)" and "F \<subseteq> E"
+    by (rule compile_If_leftE)
+  with IfLeft.IH IfLeft.prems(1) show ?case by blast
+next
+  case (IfRight c2 k n0 c1 r v b)
+  from IfRight.prems(2) obtain m F L
+    where "compile \<Pi> p c2 k (Suc n0 + csize c1) = (m, Statement (Suc n0 + csize c1), F, L)"
+      and "F \<subseteq> E"
+    by (rule compile_If_rightE)
+  with IfRight.IH IfRight.prems(1) show ?case by blast
+next
+  case (WhileBody c n0 r v b k)
+  from WhileBody.prems(2) obtain m F L
+    where "compile \<Pi> p c (Statement n0) (Suc n0) = (m, Statement (Suc n0), F, L)"
+      and "F \<subseteq> E"
+    by (rule compile_While_bodyE)
+  with WhileBody.IH WhileBody.prems(1) show ?case by auto
+qed auto
+
 text \<open>A located conditional also arises from a loop unfolding (\<^const>\<open>While\<close> steps to
   \<open>If b (Seq c (While b c)) SKIP\<close>), so the \<open>WhileUnfolded\<close> case is real: the true branch
   re-locates the loop body followed by the loop, the false branch re-locates \<^const>\<open>SKIP\<close> at
@@ -296,6 +343,9 @@ lemma seq_after_append: "seq_after (seq_after c xs) ys = seq_after c (xs @ ys)"
 
 lemma seq_after_snoc: "seq_after c (xs @ [a]) = Seq (seq_after c xs) a"
   by (simp add: seq_after_append[symmetric])
+
+lemma next_check_seq_after [simp]: "next_check (seq_after c afters) = next_check c"
+  by (induction afters arbitrary: c) auto
 
 text \<open>A \<^const>\<open>seq_after\<close> spine equals a non-\<^const>\<open>Seq\<close> atom only when its head does and the
   continuation list is empty.  These discriminators close the leaf cases of the spine

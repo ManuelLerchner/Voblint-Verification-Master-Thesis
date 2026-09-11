@@ -144,10 +144,11 @@ lemma certificate_demo_call:
            OF certificate_demo_table]
   by (simp add: certificate_demo_no_globals enter_state_def combine_env_def)
 
-lemma certificate_demo_run:
+lemma certificate_demo_calls:
   "pcompletes (declared_global certificate_demo_prog) (prog_table certificate_demo_prog)
-     (main_body (prog_table certificate_demo_prog)) (\<lambda>_. 0)
-     ((\<lambda>_. 0)(STR ''a'' := 2, STR ''b'' := 42))"
+     (VIMP_Proc.com.Seq (VIMP_Proc.com.Call (Some (STR ''a'')) (STR ''bump'') [N 1])
+        (VIMP_Proc.com.Call (Some (STR ''b'')) (STR ''bump'') [N 41]))
+     (\<lambda>_. 0) ((\<lambda>_. 0)(STR ''a'' := 2, STR ''b'' := 42))"
 proof -
   have c1: "pcompletes (declared_global certificate_demo_prog)
               (prog_table certificate_demo_prog)
@@ -162,10 +163,26 @@ proof -
     using certificate_demo_call
             [where x = "STR ''b''" and k = 41 and s = "(\<lambda>_. 0)(STR ''a'' := 2)"]
     by simp
-  show ?thesis
-    unfolding certificate_demo_main
-    by (rule pcompletes_Seq [OF pcompletes_Seq [OF c1 c2] pcompletes_Check])
+  show ?thesis by (rule pcompletes_Seq [OF c1 c2])
 qed
+
+lemma certificate_demo_run:
+  "pcompletes (declared_global certificate_demo_prog) (prog_table certificate_demo_prog)
+     (main_body (prog_table certificate_demo_prog)) (\<lambda>_. 0)
+     ((\<lambda>_. 0)(STR ''a'' := 2, STR ''b'' := 42))"
+  unfolding certificate_demo_main
+  by (rule pcompletes_Seq [OF certificate_demo_calls pcompletes_Check])
+
+text \<open>The same run stopped one step short of the check: both calls are done and
+  \<^const>\<open>VIMP_Proc.com.Check\<close> is the command about to run.\<close>
+
+lemma certificate_demo_to_check:
+  "star (pstep (declared_global certificate_demo_prog) (prog_table certificate_demo_prog))
+     (main_body (prog_table certificate_demo_prog), \<lambda>_. 0, [])
+     (VIMP_Proc.com.Check (Less (N 0) (V (STR ''b''))),
+      (\<lambda>_. 0)(STR ''a'' := 2, STR ''b'' := 42), [])"
+  unfolding certificate_demo_main
+  using psteps_Seq2 [OF certificate_demo_calls] by (meson Seq1 star.step star.refl star_trans)
 
 lemma certificate_demo_init: "(\<lambda>_. 0) \<in> cinit_stores (declared_global certificate_demo_prog)"
   by (simp add: cinit_stores_def)
@@ -567,6 +584,49 @@ proof (cases "run_voblint Int_Analysis (Some Solver_Join) (Ctx_CallString 1) Vie
          [OF certificate_demo_init certificate_demo_run certificate_demo_config_terminates
              Analysed]
   show ?thesis using Analysed rows by meson
+qed (use certificate_demo_report in simp_all)
+
+text \<open>
+  The check theorem, with nothing left to assume.  The run stopped just before the
+  check finds the report's row for the checked condition at a node that store
+  reaches, and the \<^const>\<open>Check_Proved\<close> in it is true of the store.
+\<close>
+
+theorem certificate_demo_check_row_sound:
+  "\<exists>out. run_voblint Int_Analysis (Some Solver_Join) (Ctx_CallString 1) View_Report
+           certificate_demo_prog = Analysed out
+     \<and> (\<exists>row \<in> set (out_checks out). row_exp row = Less (N 0) (V (STR ''b''))
+          \<and> (\<lambda>_. 0)(STR ''a'' := 2, STR ''b'' := 42)
+              \<in> ltr_collect (declared_global certificate_demo_prog)
+                   (prog_cfg certificate_demo_prog)
+                   (cinit_stores (declared_global certificate_demo_prog)) (row_point row)
+          \<and> row_verdict row = Decided Check_Proved
+          \<and> truthy (aval (Less (N 0) (V (STR ''b'')))
+                     ((\<lambda>_. 0)(STR ''a'' := 2, STR ''b'' := 42))))"
+proof (cases "run_voblint Int_Analysis (Some Solver_Join) (Ctx_CallString 1) View_Report
+                certificate_demo_prog")
+  case (Analysed out)
+  have rows: "map (\<lambda>row. (row_point row, row_verdict row)) (out_checks out)
+                = [(Statement 4, Decided Check_Proved)]"
+    using certificate_demo_report Analysed by simp
+  from run_voblint_check_sound
+         [OF certificate_demo_init certificate_demo_to_check next_check.simps(1)
+             certificate_demo_config_terminates Analysed]
+  obtain row
+    where row: "row \<in> set (out_checks out)"
+      and re: "row_exp row = Less (N 0) (V (STR ''b''))"
+      and mem: "(\<lambda>_. 0)(STR ''a'' := 2, STR ''b'' := 42)
+                  \<in> ltr_collect (declared_global certificate_demo_prog)
+                       (prog_cfg certificate_demo_prog)
+                       (cinit_stores (declared_global certificate_demo_prog)) (row_point row)"
+      and pr: "row_verdict row = Decided Check_Proved
+                 \<longrightarrow> truthy (aval (Less (N 0) (V (STR ''b'')))
+                            ((\<lambda>_. 0)(STR ''a'' := 2, STR ''b'' := 42)))"
+    by blast
+  have "(row_point row, row_verdict row) \<in> set [(Statement 4, Decided Check_Proved)]"
+    unfolding rows [symmetric] using row by auto
+  then have "row_verdict row = Decided Check_Proved" by simp
+  with Analysed row re mem pr show ?thesis by blast
 qed (use certificate_demo_report in simp_all)
 
 end

@@ -174,15 +174,17 @@ text \<open>
   plan's functions read at the same plan.
 \<close>
 
-lemmas plan_answer_unfold =
-  plan_terminates.simps plan_covers.simps plan_answer_def
-  analysis_plan.case solver_choice.case Let_def
+lemmas plan_answer_report_defs =
   analyse_interval_entry_state_join_def analyse_interval_entry_state_per_origin_def
   analyse_interval_entry_state_wpo_def interval_es_join.verdict_report_def
   interval_es_po.verdict_report_def interval_es_wpo.verdict_report_def
   analyse_interval_call_string_report_join_def
   analyse_interval_call_string_report_per_origin_def
   analyse_interval_call_string_report_wpo_def routed_dg_pipeline.verdict_report_def
+
+lemmas plan_answer_unfold =
+  plan_terminates.simps plan_covers.simps plan_answer_def
+  analysis_plan.case solver_choice.case Let_def plan_answer_report_defs
 
 subsection \<open>Every plan's answer is sound at every collected store\<close>
 
@@ -503,6 +505,21 @@ next
 qed
 
 text \<open>
+  Which rows an answer has does not depend on the table behind it: every plan's
+  check column has one row per compiled check, whatever it concluded there.
+\<close>
+
+lemma plan_answer_check_sites:
+  assumes "plan_answer pl view p = Analysed out"
+  shows "map (\<lambda>row. (row_point row, row_exp row)) (out_checks out) = check_sites (prog_cfg p)"
+  using assms
+  by (cases pl)
+     (auto simp: plan_answer_def plan_answer_report_defs Let_def
+        split: solver_choice.splits prod.splits
+        dest!: flat_output_check_sites entry_state_output_check_sites cs_output_check_sites
+          verdict_report_answer_check_sites)
+
+text \<open>
   The same claim read through \<^const>\<open>run_voblint\<close>: an \<^const>\<open>Analysed\<close>
   answer names the plan and was only given for a well-formed program, and the
   configuration's termination is its plan's.
@@ -526,6 +543,17 @@ proof -
   show ?thesis
     unfolding analysis_result_covers_def pl option.case .
 qed
+
+text \<open>
+  Whatever the configuration, the report has one row per compiled check, at the
+  check's node and with its condition, in graph order.  Pairing those rows with
+  source positions happens outside this development.
+\<close>
+
+corollary run_voblint_check_sites:
+  assumes "run_voblint D solver ctx view p = Analysed out"
+  shows "map (\<lambda>row. (row_point row, row_exp row)) (out_checks out) = check_sites (prog_cfg p)"
+  using assms by (blast intro: plan_answer_check_sites)
 
 subsection \<open>The endpoint\<close>
 
@@ -560,6 +588,46 @@ proof -
                       (cinit_stores (declared_global p)) v"
     unfolding cfg by blast
   with run_voblint_sound_at [OF terminates ans mem] show ?thesis by blast
+qed
+
+text \<open>
+  The same endpoint, read at a check.  A run about to execute \<open>Check e\<close> finds a row
+  for \<open>e\<close> in the report, printed at a node this very store reaches, and that row's
+  verdict holds of the store.  The row is existential and cannot be otherwise: a
+  source state does not determine its node.  Two procedures with the same body,
+  called on the two branches of a conditional, leave the same source state inside
+  either, and each body's check has its own row; only the node the store reaches
+  says which row is this execution's.
+\<close>
+
+theorem run_voblint_check_sound:
+  fixes p :: imp_prog and s0 s :: store
+  assumes s0: "s0 \<in> cinit_stores (declared_global p)"
+      and run: "star (pstep (declared_global p) (prog_table p))
+                  (main_body (prog_table p), s0, []) (residual, s, frs)"
+      and chk: "next_check residual = Some e"
+      and terminates: "config_terminates D solver ctx p"
+      and ans: "run_voblint D solver ctx view p = Analysed out"
+  shows "\<exists>row \<in> set (out_checks out). row_exp row = e
+           \<and> s \<in> ltr_collect (declared_global p) (prog_cfg p)
+                   (cinit_stores (declared_global p)) (row_point row)
+           \<and> row_verdict row \<noteq> Dead
+           \<and> (row_verdict row = Decided Check_Proved \<longrightarrow> truthy (aval e s))
+           \<and> (row_verdict row = Decided Check_Refuted \<longrightarrow> \<not> truthy (aval e s))"
+proof -
+  from run_voblint_certified_source_sound [OF s0 run terminates ans]
+  obtain v stk
+    where m: "csim (prog_table p) (prog_cfg p) (residual, s, frs) (v, s, stk)"
+      and mem: "s \<in> ltr_collect (declared_global p) (prog_cfg p)
+                      (cinit_stores (declared_global p)) v"
+      and sound: "checks_sound_at out v s"
+    by blast
+  from csim_next_check_edge [OF m chk]
+  have "(v, e) \<in> set (check_sites (prog_cfg p))" by auto
+  then obtain row
+    where "row \<in> set (out_checks out)" and "row_point row = v" and "row_exp row = e"
+    unfolding run_voblint_check_sites [OF ans, symmetric] by auto
+  with mem sound show ?thesis unfolding checks_sound_at_def by blast
 qed
 
 text \<open>
