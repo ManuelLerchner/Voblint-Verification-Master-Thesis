@@ -98,8 +98,8 @@ text \<open>
   \<open>cs_call_string_eqs_prog\<close>) names no solve function of its own -- only the
   shared D/G spec and the routing policy -- so it is solved under all three
   disciplines exactly as the flat \<open>Ctx_None\<close> equation system already is
-  (\<open>Interval_Exec_Sound\<close>'s \<open>analyse_interval_dg_join_for\<close>/
-  \<open>_per_origin_for\<close>/default). Warrow stays each context's implicit default
+  (\<open>Interval_Assembly\<close>'s join, per-origin and warrowing registrations). Warrow stays
+  each context's implicit default
   (\<open>cfg_solver = None\<close>), matching the behavior already shipped before this
   generalization.
 \<close>

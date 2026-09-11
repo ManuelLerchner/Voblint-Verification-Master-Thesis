@@ -5417,7 +5417,7 @@ let rec dg_spec_edge_tree _D _E
   s a src key = transfer_tree _D _E (dg_spec_step s a) src key;;
 
 let rec compiled_routed_eqs_for _A (_C1, _C2) _D
-  global seed route s g initial =
+  global seed route s g initial initial_global =
     routed_node_rhs_buffered _A _C2 _D intra_predecessor_addr_list
       (fun _ -> global) route
       (fun _ src a ->
@@ -5431,7 +5431,7 @@ let rec compiled_routed_eqs_for _A (_C1, _C2) _D
             (bot _C2.order_bot_bounded_semilattice_sup_bot.bot_order_bot)))
       (routed_entry_seed_tree _C2 _D seed) g
       (bot _C2.order_bot_bounded_semilattice_sup_bot.bot_order_bot) initial
-      (bot _D.order_bot_bounded_semilattice_sup_bot.bot_order_bot);;
+      initial_global;;
 
 let rec location_vname = function Local_Location x1 -> x1
                          | Global_Location x2 -> x2;;
@@ -5945,7 +5945,10 @@ let rec equations (_A1, _A2) _B
                               (fun _ -> local_combine_transfer (fun d _ -> d)),
                               (fun _ -> local_combine_transfer (fun d _ -> d)),
                               ()))))))))))))
-      (prog_cfg p) (Lifted init_st);;
+      (prog_cfg p) (Lifted init_st)
+      (bot_lifteda
+        (semilattice_sup_resolved_st_q
+          _A1.bounded_semilattice_sup_bot_executable_domain));;
 
 let rec solution (_A1, _A2) _B
   tf_st enter_st init_st gk0 seed route root_ctx solve gs p =
@@ -8052,7 +8055,10 @@ let rec congruence_entry_state_equations
                               (fun _ -> local_combine_transfer (fun d _ -> d)),
                               (fun _ -> local_combine_transfer (fun d _ -> d)),
                               ()))))))))))))
-      (prog_cfg p) (Lifted cinit_congruence_st);;
+      (prog_cfg p) (Lifted cinit_congruence_st)
+      (bot_lifteda
+        (semilattice_sup_resolved_st_q
+          bounded_semilattice_sup_bot_congruence));;
 
 let rec congruence_entry_state_solution
   gs p =
@@ -8273,7 +8279,9 @@ let rec entry_state_eqs_prog
                               (fun _ -> local_combine_transfer (fun d _ -> d)),
                               (fun _ -> local_combine_transfer (fun d _ -> d)),
                               ()))))))))))))
-      (prog_cfg p) (Lifted cinit_ivl_st);;
+      (prog_cfg p) (Lifted cinit_ivl_st)
+      (bot_lifteda
+        (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_ivl));;
 
 let rec entry_state_sol_prog
   gs p =
@@ -8498,7 +8506,10 @@ let rec congruence_unit_equations
                               (fun _ -> local_combine_transfer (fun d _ -> d)),
                               (fun _ -> local_combine_transfer (fun d _ -> d)),
                               ()))))))))))))
-      (prog_cfg p) (Lifted cinit_congruence_st);;
+      (prog_cfg p) (Lifted cinit_congruence_st)
+      (bot_lifteda
+        (semilattice_sup_resolved_st_q
+          bounded_semilattice_sup_bot_congruence));;
 
 let rec congruence_unit_solution
   gs p =
@@ -8775,7 +8786,9 @@ let rec parity_entry_state_equations
                               (fun _ -> local_combine_transfer (fun d _ -> d)),
                               (fun _ -> local_combine_transfer (fun d _ -> d)),
                               ()))))))))))))
-      (prog_cfg p) (Lifted cinit_parity_st);;
+      (prog_cfg p) (Lifted cinit_parity_st)
+      (bot_lifteda
+        (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_parity));;
 
 let rec parity_entry_state_solution
   gs p =
@@ -8946,7 +8959,9 @@ let rec interval_td_equations
                               (fun _ -> local_combine_transfer (fun d _ -> d)),
                               (fun _ -> local_combine_transfer (fun d _ -> d)),
                               ()))))))))))))
-      (prog_cfg p) (Lifted cinit_ivl_st);;
+      (prog_cfg p) (Lifted cinit_ivl_st)
+      (bot_lifteda
+        (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_ivl));;
 
 let rec interval_td_solution
   gs p =
@@ -9138,7 +9153,9 @@ let rec sign_entry_state_equations
                               (fun _ -> local_combine_transfer (fun d _ -> d)),
                               (fun _ -> local_combine_transfer (fun d _ -> d)),
                               ()))))))))))))
-      (prog_cfg p) (Lifted cinit_sign_st);;
+      (prog_cfg p) (Lifted cinit_sign_st)
+      (bot_lifteda
+        (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_sign));;
 
 let rec sign_entry_state_solution
   gs p =
@@ -9378,7 +9395,9 @@ let rec parity_unit_equations
                               (fun _ -> local_combine_transfer (fun d _ -> d)),
                               (fun _ -> local_combine_transfer (fun d _ -> d)),
                               ()))))))))))))
-      (prog_cfg p) (Lifted cinit_parity_st);;
+      (prog_cfg p) (Lifted cinit_parity_st)
+      (bot_lifteda
+        (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_parity));;
 
 let rec parity_unit_solution
   gs p =
@@ -9744,7 +9763,9 @@ let rec sign_unit_equations
                               (fun _ -> local_combine_transfer (fun d _ -> d)),
                               (fun _ -> local_combine_transfer (fun d _ -> d)),
                               ()))))))))))))
-      (prog_cfg p) (Lifted cinit_sign_st);;
+      (prog_cfg p) (Lifted cinit_sign_st)
+      (bot_lifteda
+        (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_sign));;
 
 let rec sign_unit_solution
   gs p =

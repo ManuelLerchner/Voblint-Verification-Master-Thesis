@@ -391,7 +391,7 @@ reading (`analyse_<domain>_completed_run_sound`: final store at `cfg_exit`, no
 
 Underneath, the source bridge is domain-free. It consumes only a
 collecting-semantics bound.
-[`source_sound_from_ltr_collecting_cap`](src/Soundness/Source_Activation_Sound.thy)
+[`source_sound_from_ltr_collecting_cap`](src/Analyses/Shared/Result/Source_Activation_Sound.thy)
 takes any `G :: pp ⇒ store set` with `ltr_collect ... v ⊆ G v` and places the
 store of a source run inside `G` at the node it reached. Composing that
 inclusion with each domain's check soundness is what produces the verdict
@@ -539,7 +539,8 @@ unconstrained.
 
 | Responsibility | Owner |
 | --- | --- |
-| Generic unit-context equations | `Routed_Unit_Generator` |
+| Generic compiled equations, at every context policy | `Compiled_Routed_Equations` |
+| Context-insensitive analysis and its source-level endpoints | `Unit_DG_Analysis` |
 | Generic reader transport | `DG_Reader_Transport` |
 | Executable finite states | `Exec_St_*` |
 | Executable local specification | `DG_Local_State_Exec` |
@@ -564,16 +565,22 @@ and [`docs/ANALYSIS_ASSEMBLY_GENERATION.md`](docs/ANALYSIS_ASSEMBLY_GENERATION.m
 | `src/Abstract_Interpreter/Solver` | Strategy-tree equation language and the bridge to the vendored TD solver |
 | `src/Abstract_Interpreter/Framework` | Generic D/G specifications, routing, constraints, results |
 | `src/Abstract_Interpreter/Exec` | Executable finite states and their refinement |
-| `src/Soundness` | Domain-independent end-to-end endpoints (`run_source_sound`, `collect_sound`, `source_reaches_ltr_collect`) |
-| `src/Analyses` | Concrete domains over the shared sessions in `Analyses/Shared`; each selectable domain owns its `<Domain>_Entry.thy` |
+| `src/Analyses` | Concrete domains over the shared sessions in `Analyses/Shared`, which also hold the domain-independent end-to-end endpoints (`source_reaches_ltr_collect`, `unit_dg_analysis`); each selectable domain owns its `<Domain>_Entry.thy` |
 | `src/Executable_Surface/CLI` | The `analyse` dispatcher and the render surface; the one layer that sees every domain |
 | `src/Executable_Surface/Codegen` | `export_code` declarations (generated OCaml lands in `codegen/generated/`) |
 | `src/Examples` | Executable runs, flagship demos, regression proofs, one session per folder |
 | `vendor/` | TD solver, g2html and AutoCorrode submodules |
 
+`Abstract_Interpreter/Framework` is the generic D/G framework, stated for an
+arbitrary CFG. `Analyses/Shared` instantiates it over compiled programs for the
+concrete analyses: routing policies, the published result with its source-level
+endpoints, and the reuse locales of non-relational domains. The same split
+separates `Framework/Result` (what a solved table is) from `Analyses/Shared/Result`
+(what a compiled program's solved table proves about its source runs).
+
 Session dependencies run, in outline,
-`VIMP → CFG → Compile`, `Domain`/`Solver` → `Framework` → `Exec` → `Soundness` →
-`Analyses/*` → `CLI` → `Codegen`, with `Examples/*` hanging off the analysis
+`VIMP → CFG → Compile`, `Domain`/`Solver` → `Framework` → `Exec` → `Routing` →
+`Result` → `Nonrelational` → `Analyses/*` → `CLI` → `Codegen`, with `Examples/*` hanging off the analysis
 sessions. That is a simplified overview. It omits cross-dependencies and the
 CLI-dependent example sessions; `ROOTS` lists one directory per session, and each
 `ROOT` states the real closure.

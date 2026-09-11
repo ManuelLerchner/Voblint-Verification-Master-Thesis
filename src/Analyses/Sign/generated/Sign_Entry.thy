@@ -1,7 +1,6 @@
 theory Sign_Entry
   imports
     Sign_Checks
-    "Voblint_Soundness.Run_Analysis_Sound"
 begin
 
 section \<open>Sign codegen API: an arbitrary VIMP program, and its production soundness\<close>
@@ -109,8 +108,7 @@ lemma sign_conf_vars_cover_prog_of_exec:
   assumes cover: "vars_cover_exec (prog_cfg p)
       (fst (sign_conf_sol_prog (declared_global p) p))"
   shows "vars_cover (prog_cfg p) (fst (sign_conf_sol_prog (declared_global p) p))"
-  by (rule vars_cover_of_exec[OF _ _ cover])
-     (simp_all add: prog_cfg_def compile_prog_finite)
+  by (rule sign_join.vars_cover_of_exec_prog[unfolded sign_join.sol_vars_def, OF cover])
 
 lemma analyse_sign_result_node_sound_of_cover:
   assumes solve: "sign_conf_terminates_prog (declared_global p) p"

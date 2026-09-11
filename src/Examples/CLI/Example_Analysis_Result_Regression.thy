@@ -90,10 +90,27 @@ text \<open>
   alone would call it live.
 \<close>
 
+text \<open>The unit-context equation system at this program, with the bottom test the
+  equation system threads left as a parameter, solved by the seed-joining warrowing
+  rule.\<close>
+
+definition result_demo_ivl_sol ::
+    "(ivl exec_dg_st \<Rightarrow> bool)
+     \<Rightarrow> (pp \<times> unit) set
+       \<times> (pp \<times> unit + (unit, unit) routed_gk
+            \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)" where
+  "result_demo_ivl_sol empty_pred =
+     TD_side_seed_join_warrowing_Interp_solve is_activation_seed
+       (compiled_routed_eqs_for (Analysis_Global ()) Activation_Seed route_unit
+          (local_state_dg_spec_st_for_lifted (declared_global result_demo_prog) empty_pred
+             (ivl_tf_st_for (declared_global result_demo_prog))
+             (ivl_enter_st_for (declared_global result_demo_prog)))
+          (prog_cfg result_demo_prog) (Lifted cinit_ivl_st) (Lifted cinit_ivl_st))
+       (cfg_exit (prog_cfg result_demo_prog), ())"
+
 definition result_demo_unnormalized :: "(unit, ivl abs_state) analysis_result" where
   "result_demo_unnormalized =
-     (let sol = analyse_interval_dg_for (\<lambda>_. False)
-                  (declared_global result_demo_prog) result_demo_prog;
+     (let sol = result_demo_ivl_sol (\<lambda>_. False);
           gl = declared_global_vars result_demo_prog
       in Analysis_Result (fst sol)
            (\<lambda>v ctx. readback_result_value (declared_global result_demo_prog)
@@ -101,9 +118,7 @@ definition result_demo_unnormalized :: "(unit, ivl abs_state) analysis_result" w
                         (locals (snd sol (Inl (v, ctx)))))))"
 
 lemma result_demo_unnormalized_stmt2_stored_lifted_bottom:
-  "(case locals (snd (analyse_interval_dg_for (\<lambda>_. False)
-                        (declared_global result_demo_prog) result_demo_prog)
-                  (Inl (Statement 2, ()))) of
+  "(case locals (snd (result_demo_ivl_sol (\<lambda>_. False)) (Inl (Statement 2, ()))) of
       Bot \<Rightarrow> False
     | Lifted s \<Rightarrow> resolved_st_q_is_bot_for (declared_global_vars result_demo_prog) s)"
   by eval
@@ -134,9 +149,8 @@ text \<open>
 \<close>
 
 lemma result_demo_interval_stmt2_stored_bot:
-  "(case locals (snd (analyse_interval_dg_for
-                        (resolved_st_q_is_bot_for (declared_global_vars result_demo_prog))
-                        (declared_global result_demo_prog) result_demo_prog)
+  "(case locals (snd (result_demo_ivl_sol
+                        (resolved_st_q_is_bot_for (declared_global_vars result_demo_prog)))
                   (Inl (Statement 2, ()))) of
       Bot \<Rightarrow> True | Lifted _ \<Rightarrow> False)"
   by eval

@@ -28,7 +28,6 @@ the folder tree and the session graph are the same thing. `ROOTS` lists them all
 | [`Abstract_Interpreter/Framework/`](Abstract_Interpreter/Framework/) | `Voblint_Framework` | the D/G analysis framework: transfer contract, equation generator, collecting soundness for an arbitrary CFG. No domain, no compiler. |
 | [`Abstract_Interpreter/Exec/`](Abstract_Interpreter/Exec/) | `Voblint_Exec` | the executable carrier, and transport from the solver's association lists to the function-valued states soundness is stated over |
 | [`Analyses/`](Analyses/) | `Voblint_Analysis_*` | one session per domain over a shared base — see below |
-| [`Soundness/`](Soundness/) | `Voblint_Soundness` | the two end-to-end endpoints: `source_activation_sound` and the `run_source_sound`/`collect_sound` bundle |
 | [`Executable_Surface/CLI/`](Executable_Surface/CLI/) | `Voblint_CLI` | the `AnalysisConfig` dispatcher over the domains' entry points, and the GraphViz render surface. Where the domains meet again. |
 | [`Examples/`](Examples/) | `Voblint_Examples_*` | one example session per domain, plus the CLI-coupled witnesses and the capstone |
 | [`Executable_Surface/Codegen/`](Executable_Surface/Codegen/) | `Voblint_Codegen` | the `export_code` boundary into OCaml |
@@ -38,26 +37,28 @@ Dependency shape:
 ```text
 VIMP -+-> CFG ----+-> Compile ---------+
       |           |                    v
-      |           +-> Framework ---> Exec -> Soundness -> Analyses/* -+
-      +-> Domain -------^                                             |
-TD   ---> Solver -------^                                             v
-                                                         CLI -> Codegen
-                                                          +--> Examples/*
+      |           +-> Framework ---> Exec -> Routing -> Result -> Nonrelational -> Analyses/* -+
+      +-> Domain -------^                                                                      |
+TD   ---> Solver -------^                                                                      v
+                                                                                  CLI -> Codegen
+                                                                                   +--> Examples/*
 ```
 
 (`CFG` depends on `VIMP` only; `Framework` on `CFG`, `Domain` and `Solver`;
 `Compile` on `CFG`; `Exec` on `Framework` and `Compile`.)
 
-`Soundness` sits *below* the analysis family, not after it: `Voblint_Routing` is
-parented on it and the rest of `Analyses/Shared/` chains off that, so every domain
-inherits `run_source_sound`/`collect_sound` from an ancestor heap rather than
-re-deriving them.
+The source-level endpoints sit *below* the analysis family, not after it:
+`Voblint_Result` holds the domain-free source bridge (`Source_Activation_Sound`)
+and the context-insensitive assembly `unit_dg_analysis` whose `source_sound` and
+`completed_run_sound` every domain instantiates, so each domain inherits them
+from an ancestor heap rather than re-deriving them.
 
 ## The analysis and example families
 
 [`Analyses/Shared/`](Analyses/Shared/) holds what every domain reuses, as three
-sessions chained `Routing -> Result -> Nonrelational`: the routing policies, the
-publication surface, and the reuse locales a *non-relational* domain interprets.
+sessions chained `Routing -> Result -> Nonrelational` on top of `Voblint_Exec`: the
+routing policies, the publication surface with the source-level endpoints, and the
+reuse locales a *non-relational* domain interprets.
 `Voblint_Nonrelational` is the parent of [`Sign/`](Analyses/Sign/),
 [`Interval/`](Analyses/Interval/), [`Parity/`](Analyses/Parity/),
 [`Congruence/`](Analyses/Congruence/) and [`Int/`](Analyses/Int/), the reduced
@@ -79,8 +80,14 @@ Each domain follows the same layer chain, so a reader who knows one knows them a
 ```
 
 The last four are generated from `assembly/analyses.yaml` (each domain's `generated/`
-folder); Interval and Int write some of them by hand and add `_Exec_Sound` and
-`_Solver_Analyses` for their widening routes and alternative solver disciplines.
+folder); Interval and Int write some of them by hand and add `_Solver_Analyses`
+for their widening routes and alternative solver disciplines, and Int adds
+`Int_Exec_Sound` to choose its transfer by refinement mode.
+
+Everything under a `generated/` folder is emitted by
+`scripts/gen_analysis_assembly.py`: change the yaml or the generator, never the
+file. A theory outside `generated/` is hand-written, which is why the folders are
+not symmetric across domains.
 
 `Congruence` is both a selectable analysis and the fourth component of `Int`.
 `Relational` is a single theory, kept to prove the generic pipeline never assumed

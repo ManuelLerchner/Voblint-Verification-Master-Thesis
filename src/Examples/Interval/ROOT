@@ -4,7 +4,6 @@ session Voblint_Examples_Interval in "." = "Voblint_Analysis_Interval" +
      (entry-value contexts under Ctx/, call strings under CallString/)"
   sessions
     "Voblint_Examples_CFG"
-    "Voblint_Soundness"
   directories
     "CallString"
     "Ctx"

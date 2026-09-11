@@ -109,43 +109,6 @@ proof -
           OF wf s0 run has_ctx cap])
 qed
 
-text \<open>The witness-free specialisation at top-level program points: a store reached with an empty
-  source frame stack is bounded at the fixed seed context, with no \<^typ>\<open>ltr\<close> witness and no
-  context existential exposed.\<close>
-theorem source_activation_sound_toplevel:
-  fixes sg :: "pp \<times> 'c + 'g \<Rightarrow> 'a::sound_domain abs_state"
-    and R :: "'c call_context_rel" and startcontext :: 'c
-  assumes wf: "wf_compile_input gs Pi ps"
-    and s0: "s0 \<in> S"
-    and run: "star (pstep gs Pi) (main_body Pi, s0, []) (residual, s, [])"
-    and ENTRY_G: "\<And>x. x \<in> S \<Longrightarrow> x \<in> \<lbrakk>sg (Inl (cfg_entry (compile_prog Pi ps), startcontext))\<rbrakk>"
-    and EDGE: "\<And>u a v c x x'. (u, a, v) \<in> intra (compile_prog Pi ps)
-        \<Longrightarrow> x \<in> \<lbrakk>sg (Inl (u, c))\<rbrakk> \<Longrightarrow> x' \<in> edge_step a x
-        \<Longrightarrow> x' \<in> \<lbrakk>sg (Inl (v, c))\<rbrakk>"
-    and CALL: "\<And>u dst pars args p cont c c' x.
-        (u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps)
-        \<Longrightarrow> x \<in> \<lbrakk>sg (Inl (u, c))\<rbrakk>
-        \<Longrightarrow> R u c (call_info_of (CallEdge dst pars args) p) x
-              (call_enter gs (CallEdge dst pars args) x) c'
-        \<Longrightarrow> call_enter gs (CallEdge dst pars args) x \<in> \<lbrakk>sg (Inl (FunctionEntry p, c'))\<rbrakk>"
-    and COMB: "\<And>cl dst pars args p cont c1 c' p' x t es.
-        (cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps)
-        \<Longrightarrow> x \<in> \<lbrakk>sg (Inl (cl, c1))\<rbrakk>
-        \<Longrightarrow> admits_call_context gs (compile_prog Pi ps) R cl c1 p' x es c'
-        \<Longrightarrow> t \<in> \<lbrakk>sg (Inl (FunctionResult p, c'))\<rbrakk>
-        \<Longrightarrow> combine_collect gs dst x t \<in> \<lbrakk>sg (Inl (cont, c1))\<rbrakk>"
-    and TOTAL: "call_context_total_on (\<lambda>v c. \<lbrakk>sg (Inl (v, c))\<rbrakk>) R gs (compile_prog Pi ps)"
-  shows "\<exists>v. csim Pi (compile_prog Pi ps) (residual, s, []) (v, s, [])
-             \<and> s \<in> \<lbrakk>sg (Inl (v, startcontext))\<rbrakk>"
-proof -
-  have cap: "\<And>v ctx. activation_collect gs R startcontext (compile_prog Pi ps) S v ctx
-                     \<subseteq> \<lbrakk>sg (Inl (v, ctx))\<rbrakk>"
-    by (rule activation_collect_sound[OF ENTRY_G EDGE CALL COMB TOTAL])
-  show ?thesis
-    by (rule source_sound_toplevel_from_collecting_cap[where gammaM=gamma_state,
-          OF wf s0 run cap])
-qed
-
 subsection \<open>Monovariant source bridge into the trace collecting\<close>
 
 text \<open>

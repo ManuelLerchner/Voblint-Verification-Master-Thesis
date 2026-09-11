@@ -1,6 +1,6 @@
 theory Example_Interval_DG_Seed_Join_Recursion
   imports
-    "Voblint_Framework.Routed_Unit_Generator"
+    "Voblint_Routing.Compiled_Routed_Equations"
     "Voblint_Framework.DG_Reader_Transport"
     "Voblint_Exec.Ownership_Split_Exec"
     "Voblint_Analysis_Interval.Interval_Exec"
@@ -71,9 +71,9 @@ abbreviation sj_at :: "(pp \<times> unit) set \<times>
 definition sj_eqs ::
   "pp \<times> unit \<Rightarrow> (pp \<times> unit, (unit, unit) routed_gk, (ivl exec_dg_st, ivl exec_dg_st) dg_state) strategy_tree"
 where
-  "sj_eqs = unit_routed_eqs
+  "sj_eqs = compiled_routed_eqs_for (Analysis_Global ()) Activation_Seed route_unit
      (ownership_split_dg_spec_st_for sj_gs (ivl_tf_st_for sj_gs) (ivl_enter_st_for sj_gs))
-     sj_cfg bot cinit_ivl_st (restrict_global_resolved_q cinit_ivl_st)"
+     sj_cfg cinit_ivl_st (restrict_global_resolved_q cinit_ivl_st)"
 
 definition sj_sol ::
   "(pp \<times> unit) set \<times> (pp \<times> unit + (unit, unit) routed_gk \<Rightarrow> (ivl exec_dg_st, ivl exec_dg_st) dg_state)" where

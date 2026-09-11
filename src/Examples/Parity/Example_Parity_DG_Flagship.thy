@@ -1,16 +1,15 @@
 section \<open>Flagship: parity analysis of an even-step loop, executed and certified on the D/G spine\<close>
 
 text \<open>
-  \<^bold>\<open>Second domain, same registration.\<close>  Parity is the second domain to reuse
-  the domain-registration API without copying any of it: it registers through
-  the \<open>local_state_dg_exec_analysis\<close> locale (as \<open>parity_ex_reg\<close> below, at this
-  file's own storage classifier \<open>parity_gs\<close>) with \<^emph>\<open>no\<close> copied \<open>Hstep\<close>,
-  \<open>Hcomb\<close>, \<open>strategy_tree\<close>, \<open>Inl\<close>/\<open>Inr\<close>, or manual post-solution transport
-  lemmas.  A VIMP program is compiled to a CFG; the generic D/G framework
-  generates the equation system; the \<^emph>\<open>verified\<close> always-join solver
+  \<^bold>\<open>Second domain, same assembly.\<close>  Parity reaches source-level soundness through
+  its own production always-join registration \<open>parity_join\<close> --- the
+  context-insensitive instance of the routed analysis, at the unit context --- with
+  \<^emph>\<open>no\<close> example-local registration, \<open>strategy_tree\<close>, \<open>Inl\<close>/\<open>Inr\<close>, or manual
+  post-solution transport lemmas.  A VIMP program is compiled to a CFG; the generic
+  D/G framework generates the equation system; the \<^emph>\<open>verified\<close> always-join solver
   \<^emph>\<open>computes\<close> a parity solution inside Isabelle (the lattice is finite, so no
-  widening is needed); and the single registered endpoint
-  \<open>parity_ex_reg.run_source_sound\<close> lifts that result to actual source runs.
+  widening is needed); and the assembly's \<open>source_sound\<close> endpoint lifts that result
+  to actual source runs.
 
   The result is informative: the analysis \<^emph>\<open>discovers\<close> that \<open>x\<close> is even at
   every program point (\<open>x = 0\<close> initially, then \<open>x := x + 2\<close> preserves parity),
@@ -19,23 +18,20 @@ text \<open>
   joins to \<open>PTop\<close>; the two locals therefore separate what the loop preserves
   from what it destroys.
 
-  Registration is on the generic Base construction (\<open>DG_Local_State_Exec\<close>),
-  matching Sign's own production route: the local unknown carries the whole
-  reachability-lifted \<open>parity exec_dg_st\<close>, locals and \<open>total\<close> (the one
-  declared global) alike, with no separate flow-insensitive \<open>G\<close> slot to
-  reconstruct through.  \<open>total\<close> is therefore read back exactly as \<open>x\<close> and
-  \<open>Gcount\<close> are: through the local unknown at a program point, not through a
-  global summary.
+  The local unknown carries the whole reachability-lifted \<open>parity exec_dg_st\<close>,
+  locals and \<open>total\<close> (the one declared global) alike, with no separate
+  flow-insensitive \<open>G\<close> slot to reconstruct through.  \<open>total\<close> is therefore read back
+  exactly as \<open>x\<close> and \<open>Gcount\<close> are: through the local unknown at a program point,
+  not through a global summary.
 \<close>
 
 theory Example_Parity_DG_Flagship
   imports
-    "Voblint_Exec.DG_Local_State_Exec_Refinement"
+    "Voblint_Analysis_Parity.Parity_Assembly"
     "Voblint_Analysis_Parity.Parity_Exec"
     "Voblint_Solver.TD_Solver_Bridge"
     "Voblint_Compile.Compile_Wellformed"
     "Voblint_VIMP.VIMP_Notation"
-    "Voblint_Soundness.Run_Analysis_Sound"
 begin
 
 text \<open>The vendored solver's \<open>phase\<close> datatype and VIMP's expression syntax both
@@ -126,97 +122,33 @@ text \<open>Interpreting \<^locale>\<open>compiled_cfg\<close> at that defining 
 interpretation parity_flagship: compiled_cfg parity_pi "[]" parity_cfg
   by (unfold_locales; unfold parity_cfg_def; simp add: compile_prog_finite)
 
-subsection \<open>Executable parity D/G specification\<close>
-
-text \<open>
-  Parity forms the Base D/G analysis, with executable mirror
-  \<^const>\<open>local_state_dg_spec_st_for_lifted\<close> \<open>parity_gs\<close> over
-  \<open>parity_tf_st_for\<close>/\<open>parity_enter_st_for\<close>.  The registration
-  \<^locale>\<open>local_state_dg_exec_analysis\<close> --- interpreted as \<open>parity_ex_reg\<close>
-  below, at this file's own classifier \<open>parity_gs\<close>, from
-  \<open>parity_tf.is_sound_transfer_for\<close> and \<open>parity_tf_st_for_commute\<close> alone ---
-  discharges the transport, soundness, and solver-crossing obligations
-  generically.  This example supplies only the program, the executable solve,
-  and the coverage witnesses.
-
-  Two of those obligations are about this program rather than about parity, so
-  they are proved first.  \<open>parity_wf\<close> is the compiler's well-formedness
-  precondition on \<open>parity_pi\<close>.  \<open>parity_is_bot_exact\<close> is the
-  emptiness-exactness obligation: the executable bottom test on a placed state
-  must agree with emptiness of the state read back through \<open>parity_gs\<close>.  That
-  is not automatic --- a placed state carries a value at both the local and the
-  global tag of every name, while the readback keeps only the tag the
-  classifier selects --- so the test has to filter the others out.
-\<close>
+lemma parity_cfg_prog_cfg: "parity_cfg = prog_cfg parity_program"
+  by (simp add: parity_cfg_def parity_pi_def prog_cfg_def parity_program_def)
 
 lemma parity_wf: "wf_compile_input parity_gs parity_pi []"
   by (auto simp: wf_compile_input_simps parity_pi_def parity_prog_def parity_program_def
       split: if_splits)
 
-lemma parity_is_bot_exact:
-  fixes s :: "parity resolved_st_q"
-  shows "resolved_st_q_is_bot_for (declared_global_vars parity_program) s
-           = is_empty_state (fun_of_exec_dg_st_for parity_gs s)"
-  by (rule resolved_st_q_is_bot_for_iff[OF declared_global_iff,
-        folded fun_of_exec_dg_st_for_def])
+subsection \<open>Equation generation and the executable solve\<close>
 
-subsection \<open>Registration through the classifier-parametric registration locale\<close>
-
-text \<open>Interpret \<^locale>\<open>local_state_dg_exec_analysis\<close> once here at
-  \<^const>\<open>parity_gs\<close> with the classifier-parametric transfer/enter functions,
-  matching the pattern in \<open>Exec_Sign_DG_Run\<close>.  The interpretation absorbs the
-  sound-transfer, primitive-commutation, and \<open>empty_pred\<close>-exactness obligations
-  once, so \<open>parity_source_run_sound\<close> below only supplies the compiled-input and
-  solver facts.\<close>
-
-interpretation parity_ex_reg:
-  local_state_dg_exec_analysis parity_gs
-    skip_parity assign_parity special_parity branch_parity body_parity return_parity
-    "enter_parity_ci_for parity_gs" event_parity
-    "parity_tf_st_for parity_gs" "parity_enter_st_for parity_gs"
-    "resolved_st_q_is_bot_for (declared_global_vars parity_program)"
-    "TD_side_always_join_Interp.solve" "TD_side_always_join_Interp.solve_c"
-proof -
-  interpret parity_ex_transfer: sound_transfer_for parity_gs
-      skip_parity assign_parity special_parity branch_parity body_parity return_parity
-      "enter_parity_ci_for parity_gs" event_parity
-    by (rule parity_tf.is_sound_transfer_for)
-  show "local_state_dg_exec_analysis parity_gs
-          skip_parity assign_parity special_parity branch_parity body_parity return_parity
-          (enter_parity_ci_for parity_gs) event_parity
-          (parity_tf_st_for parity_gs) (parity_enter_st_for parity_gs)
-          (resolved_st_q_is_bot_for (declared_global_vars parity_program))
-          TD_side_always_join_Interp.solve TD_side_always_join_Interp.solve_c"
-    by unfold_locales
-       (rule parity_wf[THEN wf_compile_input_reserved_ret_var]
-             parity_ex_transfer.tf_sound_assign_for parity_ex_transfer.tf_sound_special_for
-             parity_ex_transfer.tf_sound_branch_for
-             parity_ex_transfer.tf_sound_enter_entry_for
-             parity_tf_st_for_commute[unfolded parity_tf.tf_abs_def,
-                                      folded fun_of_exec_dg_st_for_def]
-             parity_enter_st_for_commute[folded fun_of_exec_dg_st_for_def]
-             parity_is_bot_exact
-             TD_side_always_join_Interp.part_post_solution_of_solve_c)+
-qed
-
-subsection \<open>Equation generation\<close>
-
-text \<open>The registration locale owns the equation system: \<open>parity_eqs\<close> names
-  \<^const>\<open>parity_ex_reg.routed_eqs\<close> at this program, the routed generator at the
-  unit context.\<close>
+text \<open>The equation system is \<^const>\<open>parity_unit_equations\<close> at this program: the
+  routed generator at the unit context, over the local-state specification.  The
+  always-join solver suffices because parity has finite height.\<close>
 
 definition parity_eqs ::
   "pp \<times> unit
    \<Rightarrow> (pp \<times> unit, (unit, unit) routed_gk,
         (parity exec_dg_st lifted, parity exec_dg_st lifted) dg_state) strategy_tree" where
-  "parity_eqs = parity_ex_reg.routed_eqs parity_pi [] bot
-                  (Lifted cinit_parity_st) (Lifted cinit_parity_st)"
-
-subsection \<open>Executable solve (always-join; parity is finite-height)\<close>
+  "parity_eqs = parity_unit_equations parity_gs parity_program"
 
 lemma parity_terminates_c:
   "TD_side_always_join_Interp_solve_c parity_eqs (cfg_exit parity_cfg, ()) \<noteq> None"
   by eval
+
+lemma parity_terminates: "parity_unit_terminates parity_gs parity_program"
+  unfolding parity_join.terminates_code
+  using TD_side_always_join_Interp.solve_dom_of_solve_c[OF parity_terminates_c]
+  by (simp add: parity_eqs_def parity_cfg_prog_cfg)
 
 definition parity_sol ::
   "(pp \<times> unit) set
@@ -224,7 +156,7 @@ definition parity_sol ::
         \<Rightarrow> (parity exec_dg_st lifted, parity exec_dg_st lifted) dg_state)" where
   "parity_sol = TD_side_always_join_Interp_solve parity_eqs (cfg_exit parity_cfg, ())"
 
-subsection \<open>Soundness premises for the registered endpoint\<close>
+subsection \<open>Coverage\<close>
 
 text \<open>Coverage is read off the solved key set: a routed callee entry is solved
   only once a caller publishes its seed, so which nodes this run visited is a
@@ -233,9 +165,9 @@ text \<open>Coverage is read off the solved key set: a routed callee entry is so
   compiled, so \<open>parity_cfg\<close> carries no call edges at all and the fact says
   every intra target was solved.\<close>
 
-lemma parity_vars_cover: "vars_cover parity_cfg (fst parity_sol)"
-  by (rule vars_cover_of_exec[OF parity_flagship.finite_intra parity_flagship.finite_calls])
-     eval
+lemma parity_vars_cover:
+  "vars_cover (prog_cfg parity_program) (parity_unit_vars parity_gs parity_program)"
+  by (rule parity_join.vars_cover_of_exec_prog) eval
 
 subsection \<open>Inspecting the certified result\<close>
 
@@ -263,61 +195,44 @@ lemma parity_exit_total_computed:
   "parity_lookup (locals (snd parity_sol (Inl (Statement 5, ())))) (STR ''total'') = PEven"
   unfolding parity_sol_def parity_eqs_def by eval
 
-subsection \<open>Source-level soundness through the registered analysis\<close>
+subsection \<open>Source-level soundness through the production assembly\<close>
 
 text \<open>
-  The registered endpoint \<open>parity_ex_reg.run_source_sound\<close> turns the single
-  \<open>by eval\<close> solver success \<open>parity_terminates_c\<close> directly into a source-level
-  guarantee: every reachable VIMP store is bounded by the computed parity at
-  its matched program point, read through the semantic accessor
-  \<open>parity_ex_reg.gamma\<close>.  No transport lemma, \<^const>\<open>part_post_solution\<close>,
-  \<open>solve_dom\<close>, or \<open>fun_of_dg_st_for\<close> appears in this proof.
+  \<open>parity_join.source_sound\<close> turns the single \<^verbatim>\<open>by eval\<close> solver success
+  \<open>parity_terminates_c\<close> into a source-level guarantee: every reachable VIMP store
+  is described by the published state at its matched program point.  No transport
+  lemma, \<^const>\<open>part_post_solution\<close>, or readback appears in this proof.
 \<close>
 
 lemma parity_main_body [simp]: "main_body parity_pi = parity_prog"
   by (simp add: main_body_def prog_main_name_def parity_pi_def parity_program_def
         parity_prog_def)
 
-text \<open>The initial stores are covered by the registered concretization at the
-  initial local value. Stated in \<^const>\<open>parity_ex_reg.gamma_exec\<close> itself rather
-  than in its unfolding, because that is the vocabulary \<open>run_source_sound\<close>
-  assumes.\<close>
-lemma parity_sound0:
-  "cinit_stores parity_gs
-     \<subseteq> parity_ex_reg.gamma_exec (Lifted cinit_parity_st) (Lifted cinit_parity_st)"
-  by (auto simp add: parity_ex_reg.gamma_exec_def fun_of_exec_dg_st_for_def
-      fun_of_st_cinit_parity_st_for cinit_stores_def gamma_state_def)
-
 theorem parity_source_run_sound:
   assumes run: "star (pstep parity_gs parity_pi) (parity_prog, s, []) (residual, t, frs)"
       and init: "s \<in> cinit_stores parity_gs"
   shows "\<exists>v stk. csim parity_pi parity_cfg (residual, t, frs) (v, t, stk)
-                 \<and> t \<in> parity_ex_reg.gamma (fst parity_sol) (snd parity_sol) v"
+                 \<and> t \<in> \<lbrakk>parity_unit_state_at parity_gs parity_program v\<rbrakk>"
 proof -
-  have run': "star (pstep parity_gs parity_pi) (main_body parity_pi, s, []) (residual, t, frs)"
-    using run by simp
+  have run': "star (pstep parity_gs (prog_table parity_program))
+                (main_body (prog_table parity_program), s, []) (residual, t, frs)"
+    using run by (simp flip: parity_pi_def)
+  have wf: "wf_compile_input parity_gs (prog_table parity_program) (prog_procs parity_program)"
+    using parity_wf parity_cfg_prog_cfg
+    by (simp add: parity_pi_def parity_program_def)
   show ?thesis
-    unfolding parity_sol_def parity_eqs_def parity_cfg_def
-    by (rule parity_ex_reg.run_source_sound
-          [OF parity_terminates_c[unfolded parity_eqs_def parity_cfg_def]
-              parity_wf
-              parity_vars_cover[unfolded parity_sol_def parity_eqs_def parity_cfg_def]
-              parity_flagship.finite_intra[unfolded parity_cfg_def]
-              parity_sound0
-              init run'])
+    using parity_join.source_sound[OF parity_terminates parity_vars_cover wf init run']
+    by (simp add: parity_cfg_prog_cfg parity_pi_def)
 qed
 
 subsection \<open>The result is not vacuous\<close>
 
 text \<open>
-  \<open>parity_source_run_sound\<close> would say nothing if the concretization it reads
-  through were all of \<^const>\<open>UNIV\<close>.  It is not, and the three steps below
-  descend from the computed domain element to a concrete store: \<open>PEven\<close> is
-  strictly below \<open>PTop\<close>, its concretization holds no odd integer, and so the
-  loop head's own concretization --- stated in \<^const>\<open>parity_ex_reg.gamma_exec\<close>,
-  the vocabulary \<open>parity_sound0\<close> and \<open>run_source_sound\<close> use --- rejects the
-  constant store \<open>\<lambda>_. 1\<close>.  A store is therefore genuinely excluded, which is
-  what makes the guarantee informative.
+  \<open>parity_source_run_sound\<close> would say nothing if the state it reads through
+  concretized to all of \<^const>\<open>UNIV\<close>.  It does not: the published state at the
+  loop head maps \<open>x\<close> to \<open>PEven\<close>, whose concretization holds no odd integer, so
+  it rejects the constant store \<open>\<lambda>_. 1\<close>.  A store is therefore genuinely
+  excluded, which is what makes the guarantee informative.
 \<close>
 
 lemma parity_head_proper:
@@ -331,24 +246,18 @@ lemma parity_head_excludes_odd:
   shows "even n"
   using assms by (simp add: parity_head_computed)
 
-lemma parity_gamma_exec_pointwise:
-  assumes "s \<in> parity_ex_reg.gamma_exec d g"
-  shows "s x \<in> gamma_parity (parity_lookup d x)"
-  using assms
-  by (cases "map_lift (fun_of_exec_dg_st_for parity_gs) d")
-     (auto simp: parity_ex_reg.gamma_exec_def fun_of_exec_dg_st_for_def gamma_state_def)
+lemma parity_state_at_head_x:
+  "parity_unit_state_at parity_gs parity_program (Statement 2) (STR ''x'') = PEven"
+  by eval
 
 theorem parity_head_excludes_odd_store:
-  "(\<lambda>_. 1) \<notin> parity_ex_reg.gamma_exec
-                 (locals (snd parity_sol (Inl (Statement 2, ())))) bot"
+  "(\<lambda>_. 1) \<notin> \<lbrakk>parity_unit_state_at parity_gs parity_program (Statement 2)\<rbrakk>"
 proof
-  assume "(\<lambda>_. 1) \<in> parity_ex_reg.gamma_exec
-                      (locals (snd parity_sol (Inl (Statement 2, ())))) bot"
-  from parity_gamma_exec_pointwise[OF this, where x = "STR ''x''"]
-  have "(1::int) \<in> gamma_parity
-      (parity_lookup (locals (snd parity_sol (Inl (Statement 2, ())))) (STR ''x''))"
-    by simp
-  from parity_head_excludes_odd[OF this] show False by simp
+  assume "(\<lambda>_. 1) \<in> \<lbrakk>parity_unit_state_at parity_gs parity_program (Statement 2)\<rbrakk>"
+  then have "(1::int) \<in> gamma_parity
+      (parity_unit_state_at parity_gs parity_program (Statement 2) (STR ''x''))"
+    by (simp add: gamma_state_def)
+  then show False by (simp add: parity_state_at_head_x)
 qed
 
 end

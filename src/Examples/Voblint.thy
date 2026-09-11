@@ -22,7 +22,6 @@ theory Voblint
     "Voblint_Analysis_Interval.Interval_Domain"
     "Voblint_Analysis_Interval.Interval_Analyses"
     "Voblint_Analysis_Interval.Interval_Checks"
-    "Voblint_Analysis_Interval.Interval_Exec_Sound"
     "Voblint_Framework.DG_Constraint_Trees"
     "Voblint_Framework.DG_Spec_Sound"
     "Voblint_Framework.CFG_Enumeration"
@@ -41,7 +40,7 @@ theory Voblint
     "Voblint_Examples_CLI.Example_Analysis_Result_Regression"
     "Voblint_Examples_CLI.Example_End_To_End_Certificate"
     "Voblint_Examples_Interval.Example_Interval_DG_Flagship"
-    "Voblint_Soundness.Source_Activation_Sound"
+    "Voblint_Result.Source_Activation_Sound"
     "Voblint_Examples_Interval.Example_Interval_DG_Ctx_Collect"
     "Voblint_Examples_Interval.Example_Interval_DG_EntryState_Collect"
     "Voblint_Examples_Interval.Example_Interval_DG_CallString_K1"
@@ -444,9 +443,9 @@ text \<open>
       (@{theory Voblint_Exec.Exec_St_Reachability}).
     \<^item> @{theory Voblint_Exec.Exec_St_Restriction_Refinement} ---
       commutation from executable states to function states.
-    \<^item> @{theory Voblint_Framework.Routed_Unit_Generator} --- the D/G
-      equation generator (\<^const>\<open>unit_routed_eqs\<close>), on which the
-      verified solver \<^emph>\<open>runs\<close>.
+    \<^item> @{theory Voblint_Routing.Compiled_Routed_Equations} --- the D/G
+      equation generator (\<^const>\<open>compiled_routed_eqs_for\<close>) every analysis,
+      context-insensitive or not, is solved over; the verified solver \<^emph>\<open>runs\<close> on it.
     \<^item> @{theory Voblint_Framework.DG_Reader_Transport} --- reads a
       whole equation system through carrier-generic readers
       (\<^const>\<open>fun_of_dg_st_gen\<close>), letting the executable run answer
@@ -485,13 +484,14 @@ text \<open>
       \<^const>\<open>None\<close> instead of degrading silently.
 
   \<^bold>\<open>6. End-to-end theorems.\<close> Headline soundness and the source bridge.
-    \<^item> @{theory Voblint_Soundness.Source_Activation_Sound} --- the
+    \<^item> @{theory Voblint_Result.Source_Activation_Sound} --- the
       source-adequacy bridge. A reachable VIMP source configuration produces a
       \<^const>\<open>valid_ltr\<close> trace
       (\<^verbatim>\<open>source_run_has_ltr\<close>), bounded at its activation
       context (\<^verbatim>\<open>source_activation_sound\<close>) and monovariantly
       (\<^verbatim>\<open>source_reaches_ltr_collect\<close>).
-    \<^item> @{theory Voblint_Soundness.Run_Analysis_Sound} --- the bundle every
+    \<^item> @{theory Voblint_Result.Unit_DG_Analysis} --- the context-insensitive
+      analysis as the routed one at the unit context; its endpoints are what every
       flagship and codegen entry point applies: one
       \<^verbatim>\<open>solve_c ... \<noteq> None\<close> fact in, source-level soundness out.
       Solver correctness, executable-to-pure commutation, post-solution
@@ -579,7 +579,7 @@ text \<open>
     \<^item> @{theory Voblint_Examples_Relational.Example_Relational_DG_Demo} --- an execution
       witness, not a soundness-certified result: a compiled full-program
       `if (x < y) { z := 1 } else { z := 0 }` runs through the *same*
-      \<^verbatim>\<open>unit_routed_eqs\<close>/vendored-solver pipeline as Sign/Interval, this time
+      \<^verbatim>\<open>compiled_routed_eqs_for\<close>/vendored-solver pipeline as Sign/Interval, this time
       over \<^verbatim>\<open>Voblint_Analysis_Relational.Rel_Order_Domain\<close>'s non-\<^verbatim>\<open>abs_state\<close>
       relational carrier; the computed result is compared against
       Interval's on the identical program and rendered, raw and
@@ -620,19 +620,18 @@ text \<open>
     parallel one, exported to OCaml.
     \<^item> @{theory Voblint_Analysis_Sign.Sign_Entry} --- \<^verbatim>\<open>analyse_sign\<close>
       takes an arbitrary \<^typ>\<open>imp_prog\<close> at runtime (not a fixed example
-      program) and reuses \<^verbatim>\<open>ownership_split_dg_exec_analysis\<close>'s own \<^verbatim>\<open>run_source_sound\<close>
-      and \<^verbatim>\<open>collect_sound\<close> (@{theory Voblint_Soundness.Run_Analysis_Sound})
-      for its soundness theorems. \<^verbatim>\<open>analyse_sign_report\<close> classifies every
+      program) and reuses the always-join \<^verbatim>\<open>unit_dg_analysis\<close> registration's own
+      \<^verbatim>\<open>source_sound\<close> and \<^verbatim>\<open>result_node_sound\<close>
+      (@{theory Voblint_Result.Unit_DG_Analysis}) for its soundness theorems.
+      \<^verbatim>\<open>analyse_sign_report\<close> classifies every
       compiled \<^verbatim>\<open>__voblint_check(...)\<close> against that same computed
       post-solution via \<^locale>\<open>abstract_check_domain\<close>'s
       \<^verbatim>\<open>classify_checks\<close>, so the report and the soundness theorem share one
       computation, not two.
-    \<^item> @{theory Voblint_Analysis_Interval.Interval_Entry} --- \<^verbatim>\<open>analyse_interval_dg\<close>/
+    \<^item> @{theory Voblint_Analysis_Interval.Interval_Entry} ---
       \<^verbatim>\<open>analyse_interval_report\<close>, the Interval counterpart production \<^verbatim>\<open>analyse\<close> actually
-      dispatches to. It is built on
-      \<^verbatim>\<open>local_state_dg_exec_analysis\<close>'s own
-      \<^verbatim>\<open>run_source_sound\<close>/
-      \<^verbatim>\<open>collect_sound\<close>. \<^verbatim>\<open>Interval_Checks\<close> additionally carries \<^verbatim>\<open>analyse_interval_report_join\<close>/
+      dispatches to, built on the same assembly endpoints. \<^verbatim>\<open>Interval_Checks\<close>
+      additionally carries \<^verbatim>\<open>analyse_interval_report_join\<close>/
       \<^verbatim>\<open>analyse_interval_report_per_origin\<close>, the always-join and per-origin update-rule siblings
       \<^verbatim>\<open>analyse_with_solver\<close> (@{theory Voblint_CLI.Analyse_Dispatch}) compares against this
       same production default on the identical equation system, each with its own soundness
@@ -643,8 +642,7 @@ text \<open>
       inside the entry point, not exposed as a CLI axis.
     \<^item> @{theory Voblint_Analysis_Parity.Parity_Entry} ---
       \<^verbatim>\<open>analyse_parity_report\<close>, the fourth selectable
-      analysis, with the same \<^verbatim>\<open>run_source_sound\<close>/
-      \<^verbatim>\<open>collect_sound\<close> endpoints.
+      analysis, with the same assembly endpoints.
     \<^item> @{theory Voblint_Analysis_Congruence.Congruence_Entry} ---
       \<^verbatim>\<open>analyse_congruence_report\<close>, the fifth selectable
       analysis and the standalone route exercised by the Congruence flagship.
@@ -723,11 +721,12 @@ text \<open>
   \<^emph>\<open>computed\<close> analysis result:
 
     \<^item> VIMP source \<^verbatim>\<open>compile_prog\<close> to a CFG;
-    \<^item> the generic D/G generator \<^verbatim>\<open>unit_routed_eqs\<close> emits the equation system;
+    \<^item> the generic D/G generator \<^verbatim>\<open>compiled_routed_eqs_for\<close> emits the equation system;
     \<^item> the verified solver \<^emph>\<open>computes\<close> a solution (\<^verbatim>\<open>solve_c ... = Some sigma\<close>, \<^verbatim>\<open>by eval\<close>);
-    \<^item> the registered endpoint \<open>flagship_ex_reg.run_source_sound\<close>
-      (@{theory Voblint_Soundness.Run_Analysis_Sound}'s \<^verbatim>\<open>ownership_split_dg_exec_analysis\<close>
-      locale) bundles solver correctness, executable/pure commutation,
+    \<^item> the endpoint \<open>interval_seed_join.source_sound\<close>
+      (@{theory Voblint_Result.Unit_DG_Analysis}'s \<^verbatim>\<open>unit_dg_analysis\<close> locale, the
+      routed analysis at the unit context) bundles solver correctness,
+      executable/pure commutation,
       post-solution transport, and D/G collecting soundness into one
       application, bounding \<open>ltr_collect g S v\<close> at every program point.
 

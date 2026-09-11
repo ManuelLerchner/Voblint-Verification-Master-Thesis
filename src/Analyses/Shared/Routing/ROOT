@@ -1,4 +1,4 @@
-session Voblint_Routing in "." = "Voblint_Soundness" +
+session Voblint_Routing in "." = "Voblint_Exec" +
   description
     "Shared equation construction and concrete context-routing policies over
      compiled programs, including key-space finiteness arguments"

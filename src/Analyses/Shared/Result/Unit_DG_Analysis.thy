@@ -301,9 +301,6 @@ lemma cover_comb_fwd:
      \<Longrightarrow> (cont, c1) \<in> sol_vars ugs p"
   by (simp add: vars_cover_def)
 
-lemmas cover_closure =
-  cover_entry cover_fwd cover_call_fwd cover_comb_fwd
-
 theorem result_node_sound:
   assumes solves: "terminates ugs p"
     and cover: "vars_cover (prog_cfg p) (sol_vars ugs p)"

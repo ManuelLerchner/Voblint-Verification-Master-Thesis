@@ -2,7 +2,6 @@ session Voblint_Examples_Sign in "." = "Voblint_Analysis_Sign" +
   description "Sign witnesses: certified runs, custom transfer bodies, and call-string contexts"
   sessions
     "Voblint_Examples_CFG"
-    "Voblint_Soundness"
   directories
     "CallString"
   theories

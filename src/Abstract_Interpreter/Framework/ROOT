@@ -23,7 +23,6 @@ session Voblint_Framework in "." = "Voblint_CFG" +
     State_Restriction
     DG_Ownership_Split_Spec
     DG_Keyed_Generator
-    Routed_Unit_Generator
     DG_Reader_Transport
     Activation_Backbone
     DG_Ctx_Activation

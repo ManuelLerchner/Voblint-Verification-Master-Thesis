@@ -4,6 +4,13 @@ Audit date: 2026-08-24. Baseline: working tree at `10a98af3`
 (`refactor/address-based-pred-sel`), `codegen/generated/ml/Voblint_CLI.ml`
 (12,638 lines) as checked in.
 
+Status: a dated snapshot; names and line numbers below are as of that baseline.
+Executed since: §2.1's Sign and Interval strata (`Sign_Exec_Sound.thy`,
+`Interval_Exec_Sound.thy` and every `analyse_interval_dg*`/`analyse_int_dg*`
+constant are deleted; `Int_Exec_Sound` survives as the refinement-mode transfer
+dispatcher), and §11.4 (`Voblint_Soundness` is dissolved: `Run_Analysis_Sound.thy`
+is deleted and `Source_Activation_Sound` sits in `Voblint_Result`).
+
 Question asked: which formalization constructs never reach the exported code,
 which of those are legacy rather than proof-carrying, where the definitions and
 proofs are more complicated than the result needs, and where the model still

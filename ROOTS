@@ -14,7 +14,6 @@ src/Analyses/Parity
 src/Analyses/Congruence
 src/Analyses/Relational
 src/Analyses/Int
-src/Soundness
 src/Executable_Surface/CLI
 src/Examples/CFG
 src/Examples/Congruence

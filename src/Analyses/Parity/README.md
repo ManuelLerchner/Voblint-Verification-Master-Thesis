@@ -53,8 +53,8 @@ conservative identity, so guards do not refine parity facts.
 ## Worked example
 
 `Example_Parity_DG_Flagship` (Examples/Parity) compiles an even-step loop, generates
-its equations through its own `local_state_dg_exec_analysis` registration
-(`parity_ex_reg.routed_eqs`), solves them with the always-join solver, and closes with
+its equations through Parity's production registration `parity_join`
+(`parity_unit_equations`), solves them with the always-join solver, and closes with
 `parity_source_run_sound` — the same statement shape as Sign's `dgEx_source_run_sound`
 (`Exec_Sign_DG_Run`) and Interval's `flagship_source_run_sound`. Nothing in that chain is
 Parity-specific except the lattice.

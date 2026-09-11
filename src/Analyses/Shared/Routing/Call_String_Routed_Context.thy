@@ -43,7 +43,7 @@ definition call_string_eqs_for ::
 where
   "call_string_eqs_for k S g initial =
      compiled_routed_eqs_for Call_String_Context.Global
-       Call_String_Context.Seed (cs_route k) S g initial"
+       Call_String_Context.Seed (cs_route k) S g initial bot"
 
 text \<open>
   The constructor fixes the call-string routing, global and seed keys,

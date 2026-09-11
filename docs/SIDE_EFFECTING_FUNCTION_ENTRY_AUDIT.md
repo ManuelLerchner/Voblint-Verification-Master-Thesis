@@ -6,7 +6,9 @@
 > `resolve` function for its targets at solve time, and `static_targets`
 > (`CFG_Enumeration.thy`) is the resolver that answers from the CFG. Call sites
 > still come from the statically enumerated `calls` relation. `DG_Soundness`,
-> `DG_LTR_Sound` and `Analysis_GraphViz` are retired theory names.
+> `DG_LTR_Sound`, `Analysis_GraphViz` and `Run_Analysis_Sound` are retired theory
+> names, and the `unit_routed_context` locale is retired: `Routed_Context_Unit`
+> keeps only `route_unit` and `enterc_unit`.
 
 Scope: feasibility of replacing structural call-entry propagation with a
 Goblint-style side-effecting function-entry model. Audit only; nothing outside

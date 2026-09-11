@@ -26,7 +26,8 @@ from `assembly/analyses.yaml`; edit those, not the theories.
 
 `Sign_Entry` is what `analyse` dispatches to, and it lives here rather than in
 `Voblint_CLI` because nothing in it needs to see another domain: it depends on
-Sign and on `Voblint_Soundness`, both of which this session already has. The
+Sign and on the `unit_dg_analysis` endpoints of `Voblint_Result`, both of which
+this session already has. The
 dispatcher restates its theorems over `analyse`; it does not prove them.
 
 ## The two contextual configurations

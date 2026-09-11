@@ -10,7 +10,8 @@ needs all of them.
 
 Soundness is not one of those things. Each domain's entry point -- its runtime
 API over an arbitrary `imp_prog`, paired with its production soundness theorems
--- depends on that domain and on `Voblint_Soundness`, never on a sibling, so it
+-- depends on that domain and on the shared `Voblint_Result` endpoints, never on
+a sibling, so it
 lives in that domain's own analysis session (`Sign_Entry` in
 `Voblint_Analysis_Sign`, and so on). What is left here is the part that really
 does see all five.

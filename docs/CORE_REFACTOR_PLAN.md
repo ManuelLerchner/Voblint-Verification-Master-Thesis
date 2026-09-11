@@ -1094,3 +1094,44 @@ that back when the second and third domains drop their own construction.
 Interval and Parity interpret it today beside `Interval_Exec_Sound` and
 `Parity_Exec_Sound` and prove the two routes agree; deleting those
 constructions is the step after this one.
+
+### One context-insensitive pipeline (2026-09-11)
+
+The second context-insensitive pipeline is deleted, and with it the step the
+entry above deferred. Gone: `Run_Analysis_Sound.thy` (the
+`ownership_split_dg_exec_analysis` and `local_state_dg_exec_analysis` locales,
+their `run_source_sound`, `collect_sound` and `unit_routed_context_of_solve`,
+and the two closure lemmas generalized for the assembly),
+`Constraints/Routed_Unit_Generator.thy` (`unit_routed_eqs`,
+`unit_routed_eqs_buffered`), `Interval_Exec_Sound.thy`, the `unit_routed_context`
+locale, `unit_analysis_sound`, `compiled_routed_sol_for`,
+`compiled_routed_terminates_for`, `compiled_unit_analysis`, the
+`analyse_interval_dg*` and `analyse_int_dg*` families, and
+`source_activation_sound_toplevel`. `Routed_Context_Unit` keeps `route_unit`,
+`enterc_unit` and `activation_collect_unit_eq_ltr_collect`.
+
+Every context-insensitive result is now a `unit_dg_analysis` instance -- that
+is, `routed_dg_analysis` at context `unit` -- over the single generator
+`compiled_routed_eqs_for`, which gained an initial-global argument so the unit
+and routed callers share one signature. The Sign and Parity flagships use the
+assembly's always-join registrations `sign_join` and `parity_join`; the two
+Interval flagships share a local `global_interpretation interval_seed_join:
+unit_dg_analysis` at the seed-join warrowing solver, which no production
+registration publishes.
+
+The ownership-split specification no longer has a certified executable
+instance. Both Interval flagships reached source soundness through
+`ownership_split_dg_exec_analysis`; at `unit_dg_analysis` they run the
+local-state specification every registration uses, and nothing else needed the
+split certified. `DG_Ownership_Split_Spec` and `Ownership_Split_Exec` stay, with
+their soundness at the specification level, and execution-only witnesses
+(`Example_Sign_DG_Custom_Body`, `Example_Sign_DG_Custom_Combine`,
+`Example_Buffered_Encoding_Flush_Order`, `Example_Interval_DG_Seed_Join_Recursion`,
+`Example_Relational_DG_Demo`)
+keep them exercised. Certifying the split again means registering it as a
+`routed_dg_analysis` instance, not restoring the parallel locale.
+
+`Voblint_Soundness` is dissolved. With `Run_Analysis_Sound` gone its only theory
+was `Source_Activation_Sound`, which moves to `src/Analyses/Shared/Result/` as
+the first theory of `Voblint_Result`; `Voblint_Routing` is parented on
+`Voblint_Exec` directly, and `src/Soundness/` is gone.

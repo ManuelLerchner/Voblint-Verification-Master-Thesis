@@ -5,7 +5,6 @@ session Voblint_Examples_CLI in "." = "Voblint_CLI" +
      domain because Voblint_CLI does, which is why they are not in the per-domain
      example sessions"
   sessions
-    "Voblint_Soundness"
     "Voblint_Examples_CFG"
     "Voblint_Examples_Interval"
     "Voblint_Examples_Int"

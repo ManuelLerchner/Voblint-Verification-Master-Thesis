@@ -175,8 +175,7 @@ class Domain:
         self.entry_path = ent.pop(
             "path", f"src/Analyses/{self.name}/generated/{self.entry_theory}.thy")
         self.entry_imports = ent.pop(
-            "imports", [f"{self.name}_Checks",
-                        '"Voblint_Soundness.Run_Analysis_Sound"'])
+            "imports", [f"{self.name}_Checks"])
         self.entry_hide = ent.pop("hide_consts", [])
         self.entry_routes = ent.pop("routes", {})
         # The published runtime names: what the CLI and the entry layer call the
@@ -1176,8 +1175,10 @@ def entry_coverage(dom, route, names):
     out += either(f'  shows "vars_cover (prog_cfg p) ({fst})"',
                   ['  shows "vars_cover (prog_cfg p)',
                    f'      ({fst})"'])
-    out += ["  by (rule vars_cover_of_exec[OF _ _ cover])",
-            "     (simp_all add: prog_cfg_def compile_prog_finite)", ""]
+    out += either(
+        f"  by (rule {b}.vars_cover_of_exec_prog[unfolded {b}.sol_vars_def, OF cover])",
+        [f"  by (rule {b}.vars_cover_of_exec_prog",
+         f"        [unfolded {b}.sol_vars_def, OF cover])"]) + [""]
 
     out += [f"lemma {rf[:-len('_for')]}_node_sound_of_cover:",
             f'  assumes solve: "{names["terminates"]} (declared_global p) p"']

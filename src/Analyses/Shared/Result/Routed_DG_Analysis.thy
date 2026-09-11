@@ -6,7 +6,7 @@ theory Routed_DG_Analysis
     "Voblint_Framework.Routed_Analysis_Sound"
     "Voblint_Framework.Seed_Global_Keys"
     "Voblint_Exec.Routed_Exec_Refinement"
-    "Voblint_Soundness.Run_Analysis_Sound"
+    Source_Activation_Sound
     "Voblint_Routing.Compiled_Routed_Equations"
     "Voblint_Routing.Entry_State_Routed_Context"
 begin
@@ -180,7 +180,7 @@ definition equations :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog
          ('a exec_dg_st lifted, 'a exec_dg_st lifted) dg_state) eqsT" where
   "equations gs p =
      compiled_routed_eqs_for gk0 seed (route gs)
-       (analysis_spec gs p) (prog_cfg p) (Lifted init_st)"
+       (analysis_spec gs p) (prog_cfg p) (Lifted init_st) bot"
 
 definition solution :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog
     \<Rightarrow> (pp \<times> 'c) set

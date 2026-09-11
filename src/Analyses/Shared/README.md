@@ -15,7 +15,7 @@ the floor under it.
 | Session | Directory | Holds |
 | --- | --- | --- |
 | `Voblint_Routing` | `Routing/` | compiled routed-equation construction, concrete routing policies (call-string, entry-state), and key-space finiteness arguments |
-| `Voblint_Result` | `Result/` | what a solved routed system publishes (`DG_Result_Construction`) and the surface a caller reads it through (`Analysis_Surface`); `Routed_DG_Analysis` assembles one whole analysis --- at any context policy --- from a domain's choices, and `Unit_DG_Analysis` does the same for the context-insensitive case |
+| `Voblint_Result` | `Result/` | the domain-free bridge from a source run to a collecting-semantics bound (`Source_Activation_Sound`); what a solved routed system publishes (`DG_Result_Construction`) and the surface a caller reads it through (`Analysis_Surface`); `Routed_DG_Analysis` assembles one whole analysis --- at any context policy --- from a domain's choices, and `Unit_DG_Analysis` does the same for the context-insensitive case, the only context-insensitive pipeline there is |
 | `Voblint_Nonrelational` | `Nonrelational/` | what a non-relational domain reuses: expression evaluation and soundness, special-call dispatch, generic procedure entry, executable backward filtering |
 
 ## Vocabulary
@@ -64,6 +64,7 @@ graph export stay beside their consumers in `Voblint_CLI`.
 
 ## Why they are chained
 
+`Voblint_Routing` is parented on `Voblint_Exec`, and
 `Voblint_Routing <- Voblint_Result <- Voblint_Nonrelational` is only half a
 dependency: `Result` needs `Routing`, but `Nonrelational` needs neither. Isabelle
 gives a session one parent and one inherited heap: theories from an ancestor come

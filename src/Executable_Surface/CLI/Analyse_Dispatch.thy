@@ -38,9 +38,8 @@ text \<open>
   local carrier has infinite height (an unbounded integer bound), so a genuine loop that grows a
   local or global value without bound still needs widening for termination, warrowing's own
   guarantee, unlike plain join. All three reports (\<open>analyse_interval_report\<close>,
-  \<open>analyse_interval_report_join\<close>, \<open>analyse_interval_report_per_origin\<close>) now read through the routed
-  D/G spine (\<^theory>\<open>Voblint_Analysis_Interval.Interval_Analyses\<close>, mirroring Sign's own
-  migration) instead of the Base-family \<open>analyse_interval_dg_*\<close> pipeline: VIMP globals live in a
+  \<open>analyse_interval_report_join\<close>, \<open>analyse_interval_report_per_origin\<close>) read through the routed
+  D/G spine (\<^theory>\<open>Voblint_Analysis_Interval.Interval_Analyses\<close>): VIMP globals live in a
   keyed seed slot rather than a separate flow-insensitive summary, so \<open>Solver_Join\<close>'s own hazard
   is purely a loop-termination question now, not a global-specific one: a program whose global
   writes never occur inside a loop terminates identically under \<open>Solver_Join\<close> and
@@ -155,8 +154,7 @@ text \<open>
   \<open>analyse_interval_report_sound_proved\<close>/\<open>_refuted\<close> (\<open>Interval_Entry\<close>) over \<open>analyse\<close>,
   matching the routed-unit producer \<open>analyse Interval_Analysis\<close> now dispatches to: solver
   termination and coverage are stated over \<open>interval_conf_sol_prog_warrow\<close>/\<open>interval_conf_terminates_prog_warrow\<close>
-  (\<open>Interval_Analyses\<close>) rather than the Base family's \<open>analyse_interval_dg\<close>/
-  \<open>analyse_interval_dg_eqs\<close>. \<open>finite (intra (prog_cfg prog_main_name p))\<close>/
+  (\<open>Interval_Analyses\<close>). \<open>finite (intra (prog_cfg prog_main_name p))\<close>/
   \<open>finite (calls ...)\<close> are no longer separate hypotheses here: the routed spine's own
   soundness chain derives both unconditionally from \<open>compile_prog_finite\<close>, so unlike the
   Base-family route this corollary needs no finiteness premise of its own.
@@ -245,8 +243,7 @@ text \<open>
   termination and coverage are stated over
   \<^const>\<open>int_conf_sol_prog_warrow\<close>/\<^const>\<open>int_conf_terminates_prog_warrow\<close>
   (\<^theory>\<open>Voblint_Analysis_Int.Int_Analyses\<close>), pinned at \<^const>\<open>Refine_Fixpoint\<close> --
-  the CLI does not expose refinement mode as a separate axis -- rather than the Base
-  family's \<open>analyse_int_dg\<close>/\<open>analyse_int_dg_eqs\<close>. \<open>int_conf_sol_prog_warrow\<close>/
+  the CLI does not expose refinement mode as a separate axis. \<open>int_conf_sol_prog_warrow\<close>/
   \<open>int_conf_terminates_prog_warrow\<close> need no qualification: each domain's
   configuration names carry their own prefix, so every domain's routed producer can
   be reachable from this one file without collision.

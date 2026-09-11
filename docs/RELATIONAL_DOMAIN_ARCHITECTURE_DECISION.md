@@ -5,7 +5,8 @@ validation (completed)" and "Executable validation (completed)" at the end
 of this document, which describe the current implementation.
 `Rel_Order_Domain.thy` is a `sound_dg_spec_core` interpretation over a
 non-`abs_state` relational carrier, with zero changes to the DG framework,
-and it runs end to end through the generic `unit_routed_eqs` generator and
+and it runs end to end through the generic `compiled_routed_eqs_for` generator
+at the unit route and
 the vendored solver on a compiled VIMP program
 (`Example_Relational_DG_Demo.thy`). The option analysis from the executive
 summary through "Minimal Isabelle design sketch" records the tree the
@@ -1141,7 +1142,7 @@ real solver, not just `value` on hand-built examples, before trusting it.
 if (x < y) { z := 1 } else { z := 0 } } }` block (not an inline `imp`
 stub — the same `compile_prog`/`prog_table`/`prog_main` route every other
 full-program example uses), builds its equation system with the generic
-`unit_routed_eqs rel_order_spec` (the generator Interval uses in the same
+`compiled_routed_eqs_for` at `route_unit` and `rel_order_spec` (the generator Interval uses in the same
 file, applied to a different `dg_spec` value — no new generator, no new
 bridge file), and solves it with `TD_side_always_join_Interp_solve`
 (`Voblint_Solver.TD_Solver_Bridge`). The one type-class gap

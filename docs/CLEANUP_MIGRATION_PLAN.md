@@ -1,8 +1,9 @@
 # Cleanup migration plan
 
 Status: largely executed. Landed: Phase 0.1 (`wf_program_compile_input_exec_sound`), the Phase 1
-CI gates and script deletions, the Phase 2.1/2.2 deletions, Phase 3.1 and 3.3, the `docs/history/`
-move, and decisions 4 and 5 (the `<D>_DG` theories and both placement examples are gone). Open:
+CI gates and script deletions, the Phase 2.1/2.2 deletions, Phase 2.6's Sign and Interval halves
+(`Sign_Exec_Sound.thy` and `Interval_Exec_Sound.thy` are deleted), Phase 3.1 and 3.3, the
+`docs/history/` move, and decisions 4 and 5 (the `<D>_DG` theories and both placement examples are gone). Open:
 decision 2 (`int_parity` is still an `int_dom` field) and decision 3 (no soundness theorem assumes
 `wf_cfg`).
 

@@ -1,8 +1,9 @@
 # Post-deletion cleanup queue (P3-P12)
 
 Status: executed except P7 and P10, and the layout recorded below has since moved again: `ROOTS`
-lists 29 session directories, the export emits one `Generated` module, and `Context_Space_Finite`
-lives in `src/Analyses/Shared/Routing/`. P7's relational combine is still absent:
+lists 28 session directories, the export emits one `Generated` module, `Context_Space_Finite`
+lives in `src/Analyses/Shared/Routing/`, and `Voblint_Soundness` no longer exists -- its source
+bridge is `Voblint_Result.Source_Activation_Sound`. P7's relational combine is still absent:
 `dgs_combine_env_rel` in `Rel_Order_Domain.thy` returns `(top_relc, top_relc)`.
 
 Picked up once Slice C/D (obsolete TD/etf spine deletion) is complete and the

@@ -1,6 +1,6 @@
 theory Example_Sign_DG_Custom_Body
   imports
-    "Voblint_Framework.Routed_Unit_Generator"
+    "Voblint_Routing.Compiled_Routed_Equations"
     "Voblint_Framework.DG_Reader_Transport"
     "Voblint_Exec.Ownership_Split_Exec"
     "Voblint_Analysis_Sign.Sign_Exec"
@@ -24,7 +24,7 @@ text \<open>
   This theory witnesses that the field is genuinely free and genuinely reached.
   It takes the ordinary executable Sign specification, overrides \<^emph>\<open>only\<close>
   \<^const>\<open>dgs_body\<close>, and runs the result through the same
-  \<^const>\<open>unit_routed_eqs\<close> generator and the same vendored solver a production
+  \<^const>\<open>compiled_routed_eqs_for\<close> generator and the same vendored solver a production
   analysis uses. The override forgets the callee's formal on entry, which is
   sound --- it only moves the entry state up the lattice --- and observable,
   which is the point: the two solved systems agree everywhere except inside the
@@ -101,7 +101,7 @@ text \<open>
   \<open>bf_program\<close>'s callee takes a positive actual, so its formal is \<^const>\<open>SPos\<close>
   at the procedure entry node under either specification. Both compile the same
   program to the same CFG, generate equations with the same
-  \<^const>\<open>unit_routed_eqs\<close>, and are solved by the same vendored solver; only
+  \<^const>\<open>compiled_routed_eqs_for\<close>, and are solved by the same vendored solver; only
   \<^const>\<open>dgs_body\<close> differs between them.
 \<close>
 
@@ -130,19 +130,19 @@ definition bf_stock_eqs ::
   "pp \<times> unit
    \<Rightarrow> (pp \<times> unit, (unit, unit) routed_gk,
         (sign exec_dg_st, sign exec_dg_st) dg_state) strategy_tree" where
-  "bf_stock_eqs = unit_routed_eqs
+  "bf_stock_eqs = compiled_routed_eqs_for (Analysis_Global ()) Activation_Seed route_unit
      (ownership_split_dg_spec_st_for bf_prog_gs
         (sign_tf_st_for bf_prog_gs) (sign_enter_st_for bf_prog_gs))
-     bf_cfg bot cinit_sign_st (restrict_global_resolved_q cinit_sign_st)"
+     bf_cfg cinit_sign_st (restrict_global_resolved_q cinit_sign_st)"
 
 definition bf_custom_eqs ::
   "pp \<times> unit
    \<Rightarrow> (pp \<times> unit, (unit, unit) routed_gk,
         (sign exec_dg_st, sign exec_dg_st) dg_state) strategy_tree" where
-  "bf_custom_eqs = unit_routed_eqs
+  "bf_custom_eqs = compiled_routed_eqs_for (Analysis_Global ()) Activation_Seed route_unit
      (sign_dg_spec_body_forget bf_prog_gs (STR ''p'')
         (sign_tf_st_for bf_prog_gs) (sign_enter_st_for bf_prog_gs))
-     bf_cfg bot cinit_sign_st (restrict_global_resolved_q cinit_sign_st)"
+     bf_cfg cinit_sign_st (restrict_global_resolved_q cinit_sign_st)"
 
 lemma bf_stock_terminates:
   "TD_side_seed_join_warrowing_Interp_solve_c is_activation_seed bf_stock_eqs

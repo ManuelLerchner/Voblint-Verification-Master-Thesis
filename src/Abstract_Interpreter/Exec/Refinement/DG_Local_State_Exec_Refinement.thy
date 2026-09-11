@@ -1,7 +1,7 @@
 theory DG_Local_State_Exec_Refinement
   imports
     DG_Local_State_Exec
-    "Voblint_Framework.Routed_Unit_Generator"
+    "Voblint_Framework.CFG_Enumeration"
     "Voblint_Framework.DG_Reader_Transport"
 begin
 

@@ -77,20 +77,23 @@ The session dependency graph is:
 ```text
 VIMP -+-> CFG ----+-> Compile ---------+
       |           |                    v
-      |           +-> Framework ---> Exec -> Soundness -> Analysis/* -+
-      +-> Domain -------^                                             |
-TD   ---> Solver -------^                                             v
-                                                         CLI -> Codegen
-                                                          +--> Examples/*
+      |           +-> Framework ---> Exec -> Routing -> Result -> Nonrelational -> Analysis/* -+
+      +-> Domain -------^                                                                      |
+TD   ---> Solver -------^                                                                      v
+                                                                                  CLI -> Codegen
+                                                                                   +--> Examples/*
 ```
 
 (`CFG` depends on `VIMP` only; `Framework` on `CFG`, `Domain` and `Solver`;
-`Compile` on `CFG`; `Exec` on `Framework` and `Compile`.)
+`Compile` on `CFG`; `Exec` on `Framework` and `Compile`. `Routing`, `Result`
+and `Nonrelational` are the three `Analyses/Shared/` sessions described next.)
 
 `Analysis/*` and `Examples/*` are each a family of sessions, not one session.
 What every domain reuses lives under `src/Analyses/Shared/` as three chained
-sessions, `Voblint_Routing -> Voblint_Result -> Voblint_Nonrelational`: routing
-policies over a compiled program, the publication surface, and the reuse locales
+sessions, `Voblint_Routing -> Voblint_Result -> Voblint_Nonrelational`, with
+`Voblint_Routing` parented on `Voblint_Exec`: routing
+policies over a compiled program, the publication surface and source-level
+endpoints, and the reuse locales
 a non-relational domain interprets. `Voblint_Result` builds on `Voblint_Routing`'s
 equations and contexts; `Voblint_Nonrelational` imports neither, and is chained
 after them only so a domain inherits all three from one heap instead of
@@ -136,15 +139,19 @@ only consumers.
 and what remains to move.
 
 Cross-session theory imports use qualified names.
-`Voblint_Soundness` contains the reusable soundness endpoints and nothing
-domain-specific, so it sits *below* the analysis family rather than after it:
-`Voblint_Routing` is parented on it and the rest of `Analyses/Shared/` chains
-off that, so every domain inherits `run_source_sound`/`collect_sound` from an
-ancestor heap. Each domain's own
+The reusable soundness endpoints contain nothing domain-specific, so they sit
+*below* the analysis family rather than after it, in `Voblint_Result`:
+`Source_Activation_Sound` holds the domain-free source bridges
+(`source_activation_sound`, `source_sound_from_ltr_collecting_cap`,
+`source_completes_ltr_collect_exit`), and `Unit_DG_Analysis`'s
+`unit_dg_analysis` states the context-insensitive endpoints (`source_sound`,
+`completed_run_sound`, `result_node_sound`) once, so every domain inherits them
+from an ancestor heap. Every context-insensitive result is an instance of that
+locale. Each domain's own
 instantiation of those endpoints -- the runtime API over an arbitrary
 `imp_prog` paired with its production soundness theorems -- is `<Domain>_Entry`
 in that domain's analysis session, because it depends on that domain and on
-`Voblint_Soundness` and on nothing else. `Voblint_CLI` is then only the
+the shared chain and on nothing else. `Voblint_CLI` is then only the
 dispatcher and the render surface: the soundness statements it does own are the
 corollaries over `analyse` itself, which cannot live above the theory that
 defines `analyse`.

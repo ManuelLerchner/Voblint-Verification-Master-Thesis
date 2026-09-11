@@ -8,17 +8,19 @@ phase revisits the scope decision (`docs/THESIS_SCOPE_MEMO.md`).
 
 ## What P1 is
 
-The end-to-end endpoints (`collect_sound`, `run_source_sound` in
-`Run_Analysis_Sound.thy`) carry one solver hypothesis:
+The end-to-end endpoints (`unit_dg_analysis`'s `source_sound` and
+`result_node_sound_of_terminates` in `Unit_DG_Analysis.thy`, and the routed
+`*_of_terminates` theorems in `Routed_Live_Keys.thy`) carry one solver
+hypothesis:
 
 ```isabelle
-assumes SOLVE: "solve_c eqs x \<noteq> None"
+assumes solves: "terminates ugs p"
 ```
 
-It says the executable solver returns when rooted at `x`; the endpoints derive
-`solve_dom x` (vendored `TD_plain.thy:67`: the solver's `iterate_dom` reaches a
-fixpoint) from it. For a concrete program a caller discharges it by
-evaluation. It is an **operational termination obligation on the vendored
+`terminates` is `solve_dom` at the program's root query (vendored
+`TD_plain.thy:67`: the solver's `iterate_dom` reaches a fixpoint). A caller
+derives it from the executable solver returning (`terminates_of_solve_c`), so
+for a concrete program it is discharged by evaluation. It is an **operational termination obligation on the vendored
 solver**, not a gap in the soundness proofs: the endpoints already give "if the
 solver returns at `x`, its result is sound". P1 would close the "if" for every
 program.

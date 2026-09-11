@@ -4,7 +4,6 @@ theory Interval_Analyses
     Interval_Assembly
     Interval_Contextual_Assembly
     Interval_Classify
-    Interval_Exec_Sound
     "Voblint_Result.Routed_Live_Keys"
     "Voblint_Framework.Call_String_Context"
     "Voblint_Framework.Routed_Context"
@@ -112,7 +111,7 @@ text \<open>
 text \<open>
   \<open>interval_spec\<close> is the Base-style whole-state specification
   (\<^const>\<open>local_state_dg_spec_st_for_lifted\<close>), the same one context-insensitive Interval already
-  solves over in \<^const>\<open>analyse_interval_dg_eqs_for\<close>, at the same
+  solves over in \<^const>\<open>interval_td_equations\<close>, at the same
   \<^const>\<open>ivl_tf_st_for\<close>/\<^const>\<open>ivl_enter_st_for\<close> primitives: the local unknown
   \<^typ>\<open>ivl exec_dg_st lifted\<close> carries every VIMP variable, global and local alike, so a
   global is read and written exactly where a local is. The solver-global carrier stays
@@ -122,8 +121,7 @@ text \<open>
   \<open>Inr (Analysis_Global ())\<close> is never read back to reconstruct program state.
 
   \<open>interval_spec\<close> carries an explicit executable bottom predicate and solves over the lifted
-  carrier, mirroring \<open>interval_conf_eqs_prog\<close>'s convention
-  (\<^theory>\<open>Voblint_Analysis_Interval.Interval_Exec_Sound\<close>) of taking \<open>empty_pred\<close> as a
+  carrier, mirroring \<open>interval_conf_eqs_prog\<close>'s convention of taking \<open>empty_pred\<close> as a
   caller-supplied parameter rather than deriving it internally. Callers with a concrete
   program supply \<open>resolved_st_q_is_bot_for (declared_global_vars p)\<close>, exact for
   \<^const>\<open>is_empty_state\<close> (\<open>resolved_st_q_is_bot_for_iff\<close>).\<close>

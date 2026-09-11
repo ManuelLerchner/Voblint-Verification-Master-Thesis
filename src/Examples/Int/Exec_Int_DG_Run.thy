@@ -3,7 +3,8 @@ theory Exec_Int_DG_Run
     "Voblint_Exec.DG_Local_State_Exec_Refinement"
     "Voblint_Analysis_Int.Int_Exec"
     "Voblint_VIMP.VIMP_Notation"
-    "Voblint_Soundness.Run_Analysis_Sound"
+    "Voblint_Solver.TD_Solver_Bridge"
+    "Voblint_Routing.Compiled_Routed_Equations"
 begin
 
 section \<open>The composite domain carried through a real solver run\<close>
@@ -45,7 +46,7 @@ text \<open>
   The Base construction routes the whole abstract state through the local
   unknown, reachability-lifted: \<open>int_ex_read\<close> reads a computed \<open>exec_dg_st
   lifted\<close> value back through \<^const>\<open>fun_of_exec_dg_st_for\<close>, matching
-  \<open>sign_ex_lookup\<close>'s role in Sign's own DG flagship -- a genuinely
+  \<open>parity_lookup\<close>'s role in Parity's own DG flagship -- a genuinely
   unreachable local unknown (\<open>Bot\<close>) reads back as \<open>top\<close>, never spuriously
   observed here since every inspected node below is reachable.
 \<close>
@@ -84,11 +85,11 @@ definition dgExI_never_eqs ::
     "pp * unit => (pp * unit, (unit, unit) routed_gk,
        (int_dom exec_dg_st lifted, int_dom exec_dg_st lifted) dg_state) strategy_tree"
 where
-  "dgExI_never_eqs = unit_routed_eqs_buffered
+  "dgExI_never_eqs = compiled_routed_eqs_for (Analysis_Global ()) Activation_Seed route_unit
      (local_state_dg_spec_st_for_lifted int_ex_gs
        (resolved_st_q_is_bot_for (declared_global_vars int_ex_prog))
        (int_tf_st_never_for int_ex_gs) (int_dom_enter_never_st_for int_ex_gs))
-     gExI bot (Lifted cinit_int_dom_st) (Lifted cinit_int_dom_st)"
+     gExI (Lifted cinit_int_dom_st) (Lifted cinit_int_dom_st)"
 
 lemma dgExI_never_result:
   "int_ex_result dgExI_never_eqs =
@@ -99,11 +100,11 @@ definition dgExI_once_eqs ::
     "pp * unit => (pp * unit, (unit, unit) routed_gk,
        (int_dom exec_dg_st lifted, int_dom exec_dg_st lifted) dg_state) strategy_tree"
 where
-  "dgExI_once_eqs = unit_routed_eqs_buffered
+  "dgExI_once_eqs = compiled_routed_eqs_for (Analysis_Global ()) Activation_Seed route_unit
      (local_state_dg_spec_st_for_lifted int_ex_gs
        (resolved_st_q_is_bot_for (declared_global_vars int_ex_prog))
        (int_tf_st_once_for int_ex_gs) (int_dom_enter_once_st_for int_ex_gs))
-     gExI bot (Lifted cinit_int_dom_st) (Lifted cinit_int_dom_st)"
+     gExI (Lifted cinit_int_dom_st) (Lifted cinit_int_dom_st)"
 
 lemma dgExI_once_result:
   "int_ex_result dgExI_once_eqs =

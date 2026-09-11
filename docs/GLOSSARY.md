@@ -146,5 +146,5 @@ indistinguishable.
 
 | Term | Meaning | Source |
 | --- | --- | --- |
-| `source_activation_sound` | Compiler and activation-collecting bridge for accepted source executions. | `src/Soundness/Source_Activation_Sound.thy` |
-| `ownership_split_dg_exec_analysis`, `local_state_dg_exec_analysis` | Reusable locales connecting a computed D/G solver result to source execution (`run_source_sound`, `collect_sound`). | `src/Soundness/Run_Analysis_Sound.thy` |
+| `source_activation_sound` | Compiler and activation-collecting bridge for accepted source executions. | `src/Analyses/Shared/Result/Source_Activation_Sound.thy` |
+| `unit_dg_analysis` | The context-insensitive analysis: `routed_dg_analysis` at the unit context, with the published `state_at`/`report` and the endpoints connecting a computed solve to source execution (`source_sound`, `completed_run_sound`, `result_node_sound`). Every domain's unit route interprets it. | `src/Analyses/Shared/Result/Unit_DG_Analysis.thy` |

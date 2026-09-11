@@ -2,14 +2,16 @@
 
 One theory, one program, one end-to-end claim. `Example_Parity_DG_Flagship.thy`
 is the evidence that the domain-registration API is reusable rather than
-Sign-shaped: it instantiates the same registration locale Sign uses in
-production, at Parity, without copying a proof step out of Sign's file. Nothing
+Sign-shaped: it reaches source-level soundness through Parity's own production
+registration `parity_join`, an instance of the same `unit_dg_analysis` assembly
+Sign's production route interprets, without copying a proof step out of Sign's
+file. Nothing
 else lives here, because nothing else has to — a second domain that needed a
 second copy of the plumbing would be the negative result.
 
 | File | Role | What |
 | --- | --- | --- |
-| `Example_Parity_DG_Flagship.thy` | canonical spine | parity analysis of an even-step loop, executed and certified on the D/G spine; registers through `local_state_dg_exec_analysis` as `parity_ex_reg` with no copied `Hstep`/`Hcomb`, `strategy_tree`, or post-solution transport proofs |
+| `Example_Parity_DG_Flagship.thy` | canonical spine | parity analysis of an even-step loop, executed and certified on the D/G spine through the production always-join registration `parity_join`, with no example-local registration, `strategy_tree`, or post-solution transport proofs |
 
 The Parity member of the store-only check trio
 (`Example_Parity_Checks_Store_Only.thy`) lives in `CLI/` alongside Sign's and
@@ -21,10 +23,10 @@ The theory uses these as given; they are local jargon, not English.
 
 | Term | Meaning |
 | --- | --- |
-| Base construction | the D/G shape in which one local unknown per program point carries the *whole* abstract state — every VIMP variable, declared global or not — with no separate flow-insensitive `G` slot to reconstruct through. `local_state_dg_exec_analysis` is its registration locale. |
-| ownership split | the other shape, and the other locale (`ownership_split_dg_exec_analysis`): locals in the local unknown, declared globals in a flow-insensitive side slot, recombined by `combine_env`. Interval's flagship registers that way. Parity does not, which is the point of reading the two files side by side. |
+| Base construction | the D/G shape in which one local unknown per program point carries the *whole* abstract state — every VIMP variable, declared global or not — with no separate flow-insensitive `G` slot to reconstruct through. Every registration of the shared `unit_dg_analysis` assembly builds its equation system in this shape. |
+| ownership split | the other shape (`DG_Ownership_Split_Spec`, executable as `Ownership_Split_Exec`): locals in the local unknown, declared globals in a flow-insensitive side slot, recombined by `combine_env`. No certified analysis uses it; execution-only witnesses such as `Example_Sign_DG_Custom_Combine` exercise it. |
 | classifier, `gs` | `vname => bool`, VIMP's own answer to *is this name a declared global*. `parity_gs` is `declared_global parity_program`: the program's `global` declaration decides, never the spelling of the name. |
-| placed state, `exec_dg_st` | the executable carrier. Locations are *tagged*, so one name can occupy a local and a global slot at once; the classifier picks which slot a readback sees. This is why `parity_is_bot_exact` is an obligation and not a triviality — the bottom test must ignore the slots the readback drops. |
+| placed state, `exec_dg_st` | the executable carrier. Locations are *tagged*, so one name can occupy a local and a global slot at once; the classifier picks which slot a readback sees. |
 | local unknown | one solver variable per `(pp, ())`, holding a `parity exec_dg_st lifted`. The `lifted` wrapper adds `Bot` for *this point was never reached*. |
 | routed unit context | the trivial context policy: the unknown's context component is `()`, so every program point has exactly one abstract state. The flagship runs at this policy only; the CLI also routes Parity through entry-state and call-string contexts. |
 | `parity_lookup` | read one variable out of a solved local unknown. `Bot` reads back as `PTop`, so a lookup is only informative at a node known to be reachable. |
@@ -70,17 +72,18 @@ The chain the theory then walks, one section each:
 parity_program              the VIMP source above, in program notation
   -> parity_pi              its procedure table
   -> parity_cfg             compile_prog; compiled_cfg gives finiteness and entry/exit
-  -> parity_ex_reg          the registration, interpreted once at parity_gs
-  -> parity_eqs             the routed equation system the locale owns
+  -> parity_join            the production registration, reused as is
+  -> parity_eqs             parity_unit_equations at this program
   -> parity_sol             what the vendored always-join solver computes, by eval
   -> parity_head_computed   x = PEven at 2, and three more readings
   -> parity_source_run_sound  every reachable VIMP store, at its matched point
 ```
 
-Only two steps are this program's own work: `parity_wf` (the compiler's
-well-formedness precondition) and `parity_is_bot_exact` (emptiness exactness on
-the placed carrier). Everything between the equation system and the source-level
-theorem is the locale's.
+Only three steps are this program's own work: `parity_wf` (the compiler's
+well-formedness precondition), `parity_terminates` (the solver returns, by
+evaluation) and `parity_vars_cover` (the solved key set is closed, by
+evaluation). Everything between the equation system and the source-level
+theorem is the assembly's.
 
 The solver is the plain always-join rule, with no widening: `parity` is a
 four-element lattice, so the ascending chain terminates on its own. That is the
@@ -88,22 +91,22 @@ one place where reading this file next to Interval's flagship — which needs
 warrowing — shows a real difference rather than a naming one.
 
 `parity_head_excludes_odd_store` closes the file by rejecting a concrete store
-from `parity_ex_reg`'s own concretization, the same one `parity_source_run_sound`
-reads through. Without it the theorem could be true and empty.
+from `parity_unit_state_at`, the same state `parity_source_run_sound` reads
+through. Without it the theorem could be true and empty.
 
 ## Session shape
 
 ```text
 Voblint_Nonrelational
         |
-Voblint_Analysis_Parity        parity_tf, parity_tf_st_for, cinit_parity_st
+Voblint_Analysis_Parity        parity_join, parity_tf_st_for, cinit_parity_st
         |
 Voblint_Examples_Parity        this directory
 ```
 
 Everything else the theory imports comes from ancestors of that parent:
-`Voblint_Soundness` (`Run_Analysis_Sound`: both registration locales and
-`run_source_sound`), `Voblint_Compile` (`compile_prog`, `compiled_cfg`),
+`Voblint_Result` (`Unit_DG_Analysis`: the `unit_dg_analysis` locale and its
+`source_sound`), `Voblint_Compile` (`compile_prog`, `compiled_cfg`),
 `Voblint_Exec` (the placed carrier and `gamma_exec`), `Voblint_Solver` (the
 vendored always-join solver), and `Voblint_VIMP` (the `program { ... }`
 notation). No sibling domain is in the closure, which is why a Parity witness

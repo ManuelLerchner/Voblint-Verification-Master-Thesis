@@ -19,14 +19,13 @@ Executable witnesses live under
 | `Interval_Numeric_Queries.thy` | Interval's instance of `abstract_numeric_queries` |
 | `Interval_Point_Digest.thy` | the point abstraction: a slot is a point when it is a singleton interval |
 | `Interval_Sound.thy` | the `dg_spec` Interval supplies, its concretization, and `sound_dg_spec_core` — no context, no solver |
-| `Interval_Exec_Sound.thy` | raw unbuffered computation for an arbitrary VIMP program; no production soundness |
 | `generated/Interval_Assembly.thy` | the context-insensitive route, as four interpretations of the shared `unit_dg_analysis` — one per update rule, with the lemmas proving all four solve the same system. Generated |
 | `generated/Interval_Contextual_Assembly.thy` | the call-string and entry-state routed configurations, each registered at all four disciplines with Apinis warrowing as the default. Generated from `assembly/analyses.yaml`; see below |
 | `Interval_Analyses.thy` | the presentation routing this domain publishes on top of them — the one part of Interval's contextual surface that is not derivable |
 | `Interval_Solver_Analyses.thy` | the verdict reports of those two contextual configurations at the always-join, per-origin and warrowing-per-origin disciplines |
 | `Interval_Classify.thy` | Interval instance of the generic check-discharge interface |
 | `generated/Interval_Checks.thy` | the public result tables and check reports, bound to the assembly's four instances. Generated |
-| `generated/Interval_Entry.thy` | the production endpoint: `analyse_interval_report` over an arbitrary `imp_prog`, and its soundness theorems — `run_source_sound`/`collect_sound` (`Voblint_Soundness`) applied at Interval. Generated |
+| `generated/Interval_Entry.thy` | the production endpoint: `analyse_interval_report` over an arbitrary `imp_prog`, and its soundness theorems, restated from each assembly instance's own `unit_dg_analysis` endpoints. Generated |
 
 ## The two contextual configurations, and the one hand-written part
 

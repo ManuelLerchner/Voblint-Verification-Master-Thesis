@@ -1,5 +1,5 @@
 theory Int_Entry
-  imports Int_Checks "Voblint_Soundness.Run_Analysis_Sound"
+  imports Int_Checks
 begin
 
 context
@@ -76,8 +76,8 @@ end
 section \<open>Int public runtime API and source-level soundness\<close>
 
 text \<open>
-  \<^theory>\<open>Voblint_Analysis_Int.Int_Exec_Sound\<close> owns raw executable
-  computation, while \<^theory>\<open>Voblint_Analysis_Int.Int_Checks\<close> constructs
+  \<^theory>\<open>Voblint_Analysis_Int.Int_Exec_Sound\<close> chooses the executable
+  transfer by refinement mode, while \<^theory>\<open>Voblint_Analysis_Int.Int_Checks\<close> constructs
   published results and reports. This theory adds the public program-level entry
   point and composes it with reusable source-level soundness.
 \<close>
@@ -260,7 +260,7 @@ text \<open>
 
   No new reasoning happens here. \<open>source_sound_from_ltr_collecting_cap\<close> and
   \<open>source_completes_ltr_collect_exit\<close>
-  (\<^theory>\<open>Voblint_Soundness.Source_Activation_Sound\<close>) supply the source side, and
+  (\<^theory>\<open>Voblint_Result.Source_Activation_Sound\<close>) supply the source side, and
   \<open>analyse_int_ctx_result_warrow_node_sound_of_cover\<close> is the per-node cap they take.
 \<close>
 

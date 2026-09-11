@@ -1,6 +1,6 @@
 theory Example_Sign_DG_Custom_Combine
   imports
-    "Voblint_Framework.Routed_Unit_Generator"
+    "Voblint_Routing.Compiled_Routed_Equations"
     "Voblint_Framework.DG_Reader_Transport"
     "Voblint_Exec.Ownership_Split_Exec"
     "Voblint_Analysis_Sign.Sign_Exec"
@@ -20,7 +20,7 @@ text \<open>
   before handing the merged environment to \<^const>\<open>dgs_combine_assign\<close>.  This
   theory witnesses that the field is genuinely free.  It takes the ordinary
   executable Sign specification, overrides \<^emph>\<open>only\<close> that one field, and runs
-  the result through the same \<^const>\<open>unit_routed_eqs\<close> generator and the same vendored solver a
+  the result through the same \<^const>\<open>compiled_routed_eqs_for\<close> generator and the same vendored solver a
   production analysis uses.  Every other field --- the caller continuation, the
   edge transfers, \<^const>\<open>dgs_enter\<close>, and \<^const>\<open>dgs_combine_assign\<close> --- is the
   stock one, so the observed difference isolates exactly that degree of
@@ -330,7 +330,7 @@ text \<open>
   \<open>cj_program\<close>'s callee writes \<^const>\<open>SNeg\<close> to \<open>r\<close>, a name the caller already
   holds as \<^const>\<open>SPos\<close> across the call.  Both specifications compile the same
   program to the same CFG, generate equations with the same
-  \<^const>\<open>unit_routed_eqs\<close>, and are solved by the same vendored solver; only
+  \<^const>\<open>compiled_routed_eqs_for\<close>, and are solved by the same vendored solver; only
   \<^const>\<open>dgs_combine_env\<close> differs between them.
 \<close>
 
@@ -359,19 +359,19 @@ definition cj_stock_eqs ::
   "pp \<times> unit
    \<Rightarrow> (pp \<times> unit, (unit, unit) routed_gk,
         (sign exec_dg_st, sign exec_dg_st) dg_state) strategy_tree" where
-  "cj_stock_eqs = unit_routed_eqs
+  "cj_stock_eqs = compiled_routed_eqs_for (Analysis_Global ()) Activation_Seed route_unit
      (ownership_split_dg_spec_st_for cj_prog_gs
         (sign_tf_st_for cj_prog_gs) (sign_enter_st_for cj_prog_gs))
-     cj_cfg bot cinit_sign_st (restrict_global_resolved_q cinit_sign_st)"
+     cj_cfg cinit_sign_st (restrict_global_resolved_q cinit_sign_st)"
 
 definition cj_custom_eqs ::
   "pp \<times> unit
    \<Rightarrow> (pp \<times> unit, (unit, unit) routed_gk,
         (sign exec_dg_st, sign exec_dg_st) dg_state) strategy_tree" where
-  "cj_custom_eqs = unit_routed_eqs
+  "cj_custom_eqs = compiled_routed_eqs_for (Analysis_Global ()) Activation_Seed route_unit
      (sign_dg_spec_callee_join cj_prog_gs
         (sign_tf_st_for cj_prog_gs) (sign_enter_st_for cj_prog_gs))
-     cj_cfg bot cinit_sign_st (restrict_global_resolved_q cinit_sign_st)"
+     cj_cfg cinit_sign_st (restrict_global_resolved_q cinit_sign_st)"
 
 lemma cj_stock_terminates:
   "TD_side_seed_join_warrowing_Interp_solve_c is_activation_seed cj_stock_eqs

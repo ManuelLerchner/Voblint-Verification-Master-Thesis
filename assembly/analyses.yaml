@@ -274,7 +274,6 @@ domains:
         - Interval_Sound
         - Interval_Assembly
         - Interval_Classify
-        - Interval_Exec_Sound
         - '"Voblint_Result.Routed_Live_Keys"'
         - '"Voblint_Framework.Call_String_Context"'
         - '"Voblint_Framework.Routed_Context"'
