@@ -38,4 +38,4 @@
   vimp_frontend
   ast_driver)
  (libraries str zarith)
- (flags (:standard -w -8-11-20 -warn-error -A)))
+ (flags (:standard -w -8-11-20-27-32-37-39 -warn-error -A)))

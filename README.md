@@ -64,7 +64,7 @@ A product domain does not fit on a graph. One variable of the `int` domain
 prints as `sign=Positive, ivl=[1,1], parity=Odd, congruence==1`, and a whole
 program of those is unreadable. `--html` writes a browsable report instead: the
 graph stays sparse, each node's full state lives in its own document, and
-clicking a node or a source line shows it. `pixi run report` emits, serves and
+clicking a node or a source line shows it. `pixi run html-report-serve` emits, serves and
 opens one.
 
 <p align="center">
@@ -569,7 +569,8 @@ and [`docs/ANALYSIS_ASSEMBLY_GENERATION.md`](docs/ANALYSIS_ASSEMBLY_GENERATION.m
 | `src/Executable_Surface/CLI` | The `analyse` dispatcher and the render surface; the one layer that sees every domain |
 | `src/Executable_Surface/Codegen` | `export_code` declarations (generated OCaml lands in `codegen/generated/`) |
 | `src/Examples` | Executable runs, flagship demos, regression proofs, one session per folder |
-| `vendor/` | TD solver, g2html and AutoCorrode submodules |
+| `manifests/` | Canonical YAML inputs for analysis registration and VIMP grammar generation |
+| `vendor/` | TD solver and g2html submodules |
 
 `Abstract_Interpreter/Framework` is the generic D/G framework, stated for an
 arbitrary CFG. `Analyses/Shared` instantiates it over compiled programs for the
@@ -592,10 +593,15 @@ expects), an **[AFP](https://www.isa-afp.org/)** checkout, **[pixi](https://pixi
 and, for the code-generation and CLI tasks, OCaml (Dune, Menhir, `ocamllex`,
 and Zarith) via opam.
 
+`scripts/setup.sh` installs the optional I/Q and I/R developer tooling from a
+pinned AutoCorrode revision under the ignored `vendor/autocorrode/` directory
+and registers I/Q in Isabelle's user component configuration. Normal builds do
+not fetch it.
+
 ```bash
-pixi run vendor                        # init the TD solver submodule
-AFP=/path/to/afp/thys pixi run build   # batch-build Voblint_Examples (the integration gate)
-AFP=/path/to/afp/thys pixi run jedit   # interactive development
+pixi run vendor-init                         # init the TD solver submodule
+AFP=/path/to/afp/thys pixi run isabelle-build # batch-build the Isabelle integration target
+AFP=/path/to/afp/thys pixi run isabelle-jedit # interactive development
 ```
 
 `pixi.toml` is the single command surface; `pixi task list` shows all tasks.
@@ -603,13 +609,13 @@ The ones that matter most often:
 
 | Task | Description |
 | --- | --- |
-| `build` | Batch-build `Voblint_Examples`, which reaches every session except `Voblint_Codegen`; the project's integration verification gate |
+| `isabelle-build` | Batch-build `Voblint_Examples`, which reaches every session except `Voblint_Codegen` |
 | `codegen` / `codegen-check` | Regenerate `codegen/generated/`, or fail on drift |
 | `codegen-regression` | Compile and run the OCaml driver against Isabelle-proved expected output |
 | `cli-build` / `cli-test` | Build the `voblint` binary; run `tests/run.py` against it |
 | `grammar-check` | Regenerate both parser frontends and fail on any diff |
-| `property` | Hypothesis property tests (parser fuzzing, AST round-trip) |
-| `ci` | Everything CI runs |
+| `property-test` | Hypothesis property tests (parser fuzzing, AST round-trip) |
+| `verify` | Run the supported local verification gate; GitHub CI runs the same leaf checks separately |
 
 The generated OCaml is compile-checked by actually compiling it: both
 `codegen-regression` and `cli-build` run Dune over
@@ -650,11 +656,11 @@ contextual result and rendering architecture.
 
 ## VIMP grammar pipeline
 
-`grammar/vimp.yaml` is the sole source of truth for VIMP syntax. Two generators
+`manifests/vimp-grammar.yaml` is the sole source of truth for VIMP syntax. Two generators
 realize it for two unrelated parser targets:
 
 ```text
-grammar/vimp.yaml
+manifests/vimp-grammar.yaml
        |
        +-- scripts/gen_vimp_menhir.py   -> cli/vimp_parser.mly, cli/vimp_lexer.mll
        +-- scripts/gen_vimp_isabelle.py -> src/Program_Model/VIMP/VIMP_Grammar_Generated.thy

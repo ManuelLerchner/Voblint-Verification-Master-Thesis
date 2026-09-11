@@ -129,7 +129,7 @@ about code that is not an exported constant.
 ## 7. Parser and hand-written CLI
 
 The lexer and parser (`cli/vimp_lexer.mll`, `cli/vimp_parser.mly`, generated
-from `grammar/vimp.yaml`) carry no soundness theorem; the proved chain starts at
+from `manifests/vimp-grammar.yaml`) carry no soundness theorem; the proved chain starts at
 an already-constructed `imp_prog`. `cli/main.ml` calls `Generated.run_voblint`
 and reads its answer through the exported selectors. A malformed program answers
 `Malformed_Program`, which the CLI reports with exit code 4.

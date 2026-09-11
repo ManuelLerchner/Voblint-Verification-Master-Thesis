@@ -24,6 +24,7 @@ SANITY_FILE = "tests/regression/00-sanity/precision/01-straight_line_proved.vimp
 
 CASES = [
     ("--help exits 0 with usage", ["--help"], 0, "voblint --analysis sign|interval"),
+    ("--help names the default HTML output", ["--help"], 0, "build/report/"),
     ("unknown --analysis value is rejected", ["--analysis", "bogus", SANITY_FILE], 1, "unknown --analysis value"),
     ("missing --analysis is rejected", [SANITY_FILE], 1, "missing --analysis"),
     ("missing FILE.vimp is rejected", ["--analysis", "sign"], 1, "missing FILE.vimp"),

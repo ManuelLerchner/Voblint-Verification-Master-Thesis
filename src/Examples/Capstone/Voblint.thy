@@ -138,7 +138,7 @@ text \<open>
   \<^const>\<open>analyse_state_covers\<close> already is a function: an abstract state's type
   is the domain's own carrier.
 
-  \<^theory>\<open>Example_End_To_End_Certificate\<close> is that theorem
+  \<^theory>\<open>Voblint_Examples.Example_End_To_End_Certificate\<close> is that theorem
   with nothing left to assume.  It fixes one program at the product domain, a
   call-string context of length one and always-join named explicitly, evaluates
   the solve's termination and the answer, builds the source run step by step,
@@ -503,7 +503,7 @@ text \<open>
       (@{thm [source] run_voblint_certified_source_sound}), and the dead-row
       guarantee at the same entry point
       (@{thm [source] run_voblint_dead_row_unreached}).
-    \<^item> @{theory Voblint_Examples_CLI.Example_End_To_End_Certificate} --- that
+    \<^item> @{theory Voblint_Examples.Example_End_To_End_Certificate} --- that
       statement instantiated at one program, with every premise discharged.
 
   \<^bold>\<open>7. Examples and witnesses.\<close> Executable demos, precision
@@ -534,14 +534,14 @@ text \<open>
       @{theory Voblint_Examples_Int.Exec_Int_DG_Run}, whose two non-CLI modes
       run through the compiled solver pipeline. In the direct-operation
       witness, \<^const>\<open>Refine_Once\<close> has not reached the fixpoint.
-    \<^item> @{theory Voblint_Examples_CLI.Exec_Interval_Run} --- the same
+    \<^item> @{theory Voblint_Examples_Interval.Exec_Interval_Run} --- the same
       bounded loop under Kleene iteration, warrowing TD, and every update rule.
       Interval narrowing and the backward guard filter recover \<open>[0,20]\<close>;
       the update rule does not affect that bound.
     \<^item> @{theory Voblint_Examples_CLI.Example_Analysis_Result_Regression} --- the published result
       table and its per-context lookup surface.
     \<^item> @{theory Voblint_Examples_CFG.Example_Inc_Proc} --- shared global-increment procedure witness.
-    \<^item> @{theory Voblint_Examples_CLI.Example_Side_Execute} ---
+    \<^item> @{theory Voblint_Examples_Sign.Example_Side_Execute} ---
       minimal certified Sign interprocedural example with annotated CFG DOT.
     \<^item> @{theory Voblint_Examples_Interval.Example_Proc_Call} ---
       concrete-semantics witness for \<^verbatim>\<open>inc\<close> and

@@ -74,7 +74,7 @@ choice) would break the solver's `narrow_ge` bracket.
 
 ## The two contextual configurations
 
-`generated/Int_Analyses.thy` is machine-written from `assembly/analyses.yaml`,
+`generated/Int_Analyses.thy` is machine-written from `manifests/analyses.yaml`,
 so the orientation a reader needs lives here rather than in a header the
 generator owns.
 

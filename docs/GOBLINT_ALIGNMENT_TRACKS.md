@@ -12,7 +12,7 @@ The wider divergence inventory, rationale, and upstream evidence baseline live i
 
 | Track | Plan | One line |
 | --- | --- | --- |
-| **M1** | `history/M1_CALLSTRING_CONTEXT_MIGRATION.md` | Computed k-call-string contexts on the monotone solver. Landed: `Call_String_Context`, registered for every domain in `assembly/analyses.yaml` |
+| **M1** | `history/M1_CALLSTRING_CONTEXT_MIGRATION.md` | Computed k-call-string contexts on the monotone solver. Landed: `Call_String_Context`, registered for every domain in `manifests/analyses.yaml` |
 | **M2** | no plan document in the tree | `R_read` pre-loss routing; dissolve the `fctx` obstruction |
 | **M3** | `history/M3_CONTEXT_BOUNDING_TERMINATION_MIGRATION.md` | Sign termination (M3a) + context lifters (M3b) + widening termination (M3c, future) |
 

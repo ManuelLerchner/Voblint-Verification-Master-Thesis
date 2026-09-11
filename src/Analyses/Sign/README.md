@@ -22,7 +22,7 @@ they demonstrate the domain, they are not part of the reusable instance.
 | `generated/Sign_Entry.thy` | the production endpoint: `analyse_sign_report` over an arbitrary `imp_prog`, and its soundness theorems, restated from the `sign_join` instance's own endpoints |
 
 The four `generated/` theories are written by `scripts/gen_analysis_assembly.py`
-from `assembly/analyses.yaml`; edit those, not the theories.
+from `manifests/analyses.yaml`; edit those, not the theories.
 
 `Sign_Entry` is what `analyse` dispatches to, and it lives here rather than in
 `Voblint_CLI` because nothing in it needs to see another domain: it depends on

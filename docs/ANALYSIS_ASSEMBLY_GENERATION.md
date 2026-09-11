@@ -1,6 +1,6 @@
 # Analysis registration generation
 
-`assembly/analyses.yaml` is the registry. It answers four questions and nothing
+`manifests/analyses.yaml` is the registry. It answers four questions and nothing
 else:
 
 1. Which verified implementation is this domain?
@@ -9,7 +9,7 @@ else:
 4. Which API capabilities does each published combination expose?
 
 ```text
-assembly/analyses.yaml
+manifests/analyses.yaml
        |
        +-- scripts/gen_analysis_assembly.py
              +-> src/Analyses/<Domain>/generated/<Domain>_Assembly.thy
@@ -211,12 +211,12 @@ the expectation is then updated deliberately.
 ## Drift
 
 ```bash
-pixi run gen-assembly     # regenerate
+pixi run assembly-generate # regenerate
 pixi run assembly-check   # fail if the checked-in theories are stale
 ```
 
 `--check` diffs regenerated output against the checked-in files itself, so it
-needs neither git nor Isabelle, and it runs in `ci`.
+needs neither git nor Isabelle, and it runs in `verify` and GitHub CI.
 
 `cli_adopted` is now true: `Analyse_Dispatch` no longer defines the four
 dispatch tables and `Analysis_Config` no longer defines the resolver, and both
@@ -234,7 +234,7 @@ so a registry change that alters a published surface fails them.
 Two hazards the adoption turned up, both now in the project contract rather than
 only here. A `theories` entry is a theory name, never a path -- a slash there
 fails the whole session at load, so jEdit does not start and the mistake looks
-like a dead editor; `pixi run root-entries` catches it without Isabelle. And a
+like a dead editor; `pixi run sessions-check` catches it without Isabelle. And a
 theory that loads as `Draft.<name>` is not verified in its session: a draft node
 resolves imports without consulting the session, and saving from one rewrites
 same-session imports into session-qualified form, which the drift check catches

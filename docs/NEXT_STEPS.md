@@ -107,7 +107,7 @@ classification (`Abstract_Numeric_Queries.thy`).
 ## Per-domain configuration duplication (done)
 
 The per-domain `*_conf_*` families are no longer written out once per domain.
-`assembly/analyses.yaml` drives `scripts/gen_analysis_assembly.py`, which
+`manifests/analyses.yaml` drives `scripts/gen_analysis_assembly.py`, which
 generates each domain's registrations of `unit_dg_analysis` and
 `routed_dg_analysis` (`Voblint_Result`); the equation system, solve, reader,
 result table, report and soundness endpoints come from those locales, and the

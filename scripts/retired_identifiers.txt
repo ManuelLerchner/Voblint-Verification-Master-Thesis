@@ -1216,7 +1216,7 @@ int_es_pp_st_gen
 
 # --- Interval call-string surface reduced to the generated three (2026-09-10) ---
 # `analyse_interval_call_string_{result_for,result,report}` are now generated
-# from assembly/analyses.yaml. `_verdict_report_prog` was the alias the
+# from manifests/analyses.yaml. `_verdict_report_prog` was the alias the
 # generated report replaced; the other two had no consumer at all.
 cs_call_string_check_projection
 cs_call_string_terminates_prog

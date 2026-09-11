@@ -58,8 +58,8 @@ stable gates for assessing a change.
 ```bash
 rg -n '^\s*(sorry|oops)\b' src/
 python3 scripts/check_isabelle_ascii.py
-pixi run vendor
-AFP=/path/to/afp/thys pixi run build
+pixi run vendor-init
+AFP=/path/to/afp/thys pixi run isabelle-build
 ```
 
 Completion requires all affected sessions and the example session to pass the

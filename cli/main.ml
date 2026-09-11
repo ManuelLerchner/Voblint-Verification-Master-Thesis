@@ -2,7 +2,7 @@
 
    source text (unverified adapter)
        -> Vimp_lexer/Vimp_parser (this directory, generated from
-          grammar/vimp.yaml by scripts/gen_vimp_menhir.py -- ocamllex +
+          manifests/vimp-grammar.yaml by scripts/gen_vimp_menhir.py -- ocamllex +
           Menhir, NOT verified) via Vimp_frontend (hand-written glue)
        -> imp_prog
        -> Voblint_CLI.Generated.run_voblint domain solver context view
@@ -119,13 +119,13 @@ let usage =
   \                             --context-graph expanded: those views already\n\
   \                             annotate every node with its per-context state.\n\
   \  --html                     Write a browsable HTML result directory (default:\n\
-  \                             result/, as Goblint's own --html does)\n\
+  \                             build/report/)\n\
   \                             (abstract states live in per-node documents, so\n\
   \                             the CFG stays readable where --dot-full does\n\
   \                             not). Needs `dot` on PATH for the graph pane,\n\
   \                             and the vendor/g2html submodule for the\n\
   \                             frontend. Serve it and open index.xml:\n\
-  \                               python3 -m http.server --directory result 8080\n\
+  \                               python3 -m http.server --directory build/report 8080\n\
   \  --html-out DIR             Write that directory to DIR instead. Implies\n\
   \                             --html.\n\
   \  --graph-snapshot           Emit a deterministic, DOT-free textual snapshot\n\
@@ -437,10 +437,10 @@ let () =
   let dot_full = ref false in
   let graph_snapshot = ref false in
   let html = ref false in
-  (* Goblint's --html writes a fixed "result" directory; --html-out is the
-     override. Taking no argument is what keeps `--html FILE.vimp` from reading
-     the program as the output directory. *)
-  let html_dir = ref "result" in
+  (* Generated report output stays under build/; --html-out is the override.
+     Taking no argument keeps `--html FILE.vimp` from reading the program as
+     the output directory. *)
+  let html_dir = ref "build/report" in
   let parse_only = ref false in
   let timeout = ref 10.0 in
   let file = ref None in
@@ -776,7 +776,7 @@ let () =
        The entry point is %s/index.xml -- an .html file to open directly does not\n\
        exist, and file:// will not render it. Serve the directory first:\n\
       \  python3 -m http.server --directory %s 8080\n\
-       then open http://localhost:8080/index.xml (or use `pixi run report`,\n\
+       then open http://localhost:8080/index.xml (or use `pixi run html-report-serve`,\n\
        which serves and opens it for you).\n\
        Needs a browser that still applies XSLT: Chrome removes it in M155/M158\n\
        (November 2026), and this frontend uses it for the entry point and for\n\

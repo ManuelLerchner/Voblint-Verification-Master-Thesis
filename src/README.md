@@ -79,7 +79,7 @@ Each domain follows the same layer chain, so a reader who knows one knows them a
 <Domain>_Entry       that API's soundness theorems
 ```
 
-The last four are generated from `assembly/analyses.yaml` (each domain's `generated/`
+The last four are generated from `manifests/analyses.yaml` (each domain's `generated/`
 folder); Interval and Int write some of them by hand and add `_Solver_Analyses`
 for their widening routes and alternative solver disciplines, and Int adds
 `Int_Exec_Sound` to choose its transfer by refinement mode.

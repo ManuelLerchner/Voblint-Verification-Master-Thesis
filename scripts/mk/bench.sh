@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Benchmarks cli/voblint with hyperfine for the `bench` pixi task: one timed
+# Benchmarks cli/voblint with hyperfine for the `voblint-bench` pixi task: one timed
 # series per abstract domain over the same FILE.vimp, so domain/solver cost
 # can be compared in place. Non-FILE arguments pass through to cli/voblint
 # unchanged (e.g. --context entry-state); pass --analysis yourself (comma
@@ -20,17 +20,17 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 VOBLINT="$REPO_ROOT/cli/voblint"
 
 usage() {
-  echo "usage: pixi run bench [--plot[=OUT.png]] [voblint flags...] FILE.vimp"
+  echo "usage: pixi run voblint-bench [--plot[=OUT.png]] [voblint flags...] FILE.vimp"
   echo "       default domain sweep: sign,interval,int,parity"
   echo "       --analysis a[,b,...] narrows the sweep; other flags pass through"
-  echo "       --plot renders a per-domain whisker + histogram plot (default: voblint-bench.png)"
+  echo "       --plot renders a per-domain whisker + histogram plot (default: build/bench/voblint-bench.png)"
 }
 
 domains="sign,interval,int,parity"
 passthrough=()
 file=""
 plot=0
-plot_out="voblint-bench.png"
+plot_out="$REPO_ROOT/build/bench/voblint-bench.png"
 
 # Flag-arity-aware walk (mirrors cli/main.ml's parse_args) so a flag value
 # like `--context entry-state` is not misread as the FILE positional.
@@ -98,6 +98,7 @@ if [ "$plot" -eq 0 ]; then
 fi
 
 plot_json="${plot_out%.png}.json"
+mkdir -p "$(dirname "$plot_out")"
 hyperfine -N -L analysis "$valid" --export-json "$plot_json" \
   "$(printf '%q' "$VOBLINT") --analysis {analysis}$quoted" || exit $?
 

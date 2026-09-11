@@ -12,7 +12,7 @@ theory Int_Analyses
 begin
 
 text \<open>
-  GENERATED FILE. Source: \<^verbatim>\<open>assembly/analyses.yaml\<close>; generator:
+  GENERATED FILE. Source: \<^verbatim>\<open>manifests/analyses.yaml\<close>; generator:
   \<^verbatim>\<open>scripts/gen_analysis_assembly.py\<close>. Regenerate with the generator
   rather than hand-editing; a drift check compares regenerated output against
   this file.

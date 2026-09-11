@@ -165,9 +165,9 @@ what a later phase deletes.
 | 0.7 | Delete the other zero-use definitions in `DG_Constraint_Trees` and `DG_Soundness` one at a time; keep any the build wants (grep cannot see simp-set uses). | closed: every candidate named here has since been deleted, and `DG_Soundness` with them. Recorded at the time: open -- every candidate has internal users (it is a self-contained cluster with no external consumer, e.g. `pair_of_dg`/`dg_of_pair`/`merge_dg`/`split_dg`, `dgs_enter_pair`, `apply_dg_spec_contribution_at`, `indep_dg_spec`, `dg_trees`/`dg_acc`, `hook_trees`/`hook_acc`, `gamma_ownership_split_lifted`); deciding per cluster is Phase 3 work. `gamma_dg` is closed (2026-09-04 decision entry): it was a self-contained cluster whose five lemmas nothing outside `DG_Soundness` cited, and it is deleted |
 | 0.8 | Run `partition_check.py` with the target assignment: zero violating edges is the exit criterion. | landed |
 
-Gate: `AFP=$HOME/afp/thys pixi run build`, `pixi run codegen`,
-`pixi run codegen-modules`, `pixi run cli-test`, `pixi run codegen-regression`,
-`pixi run property`.
+Gate: `AFP=$HOME/afp/thys pixi run isabelle-build`, `pixi run codegen`,
+`pixi run codegen-modules-check`, `pixi run cli-test`, `pixi run codegen-regression`,
+`pixi run property-test`.
 
 ### Phase 1 -- sessions
 
@@ -181,7 +181,7 @@ Mechanical once Phase 0 is green.
 | 1.4 | Create `src/Abstract_Interpreter/Domain/ROOT`, `src/Abstract_Interpreter/Solver/ROOT`, `src/Abstract_Interpreter/Exec/ROOT`; rewrite `src/Abstract_Interpreter/Framework/ROOT`; add the four directories to `ROOTS`. | landed |
 | 1.5 | Move the seven Base-level and compile-dependent theories into `src/Analysis/` (`Common/` for the four reuse locales, `Context/` for the three routed contexts, or wherever the Analysis README's layout puts them). | landed |
 | 1.6 | Repoint every qualified import across Analysis, Soundness, CLI, Codegen, Examples. Check by arity where a locale header changed, not by grep. | landed |
-| 1.7 | Extend the `code_identifier` block in `Analyse_Dispatch.thy` for every new session whose constants reach an export root; run `pixi run codegen-modules`. | landed, then superseded: the export is one `module_name Generated`, and no `code_identifier` remains in `src/` |
+| 1.7 | Extend the `code_identifier` block in `Analyse_Dispatch.thy` for every new session whose constants reach an export root; run `pixi run codegen-modules-check`. | landed, then superseded: the export is one `module_name Generated`, and no `code_identifier` remains in `src/` |
 | 1.8 | Rewrite the READMEs from the final tree: `src/Abstract_Interpreter/Domain`, `src/Abstract_Interpreter/Solver`, `src/Abstract_Interpreter/Framework`, `src/Abstract_Interpreter/Exec`; delete `Solver/Context/Activation/README.md` and `Solver/Context/DG/README.md` (both list theories that do not exist). Fix `GLOSSARY.md`'s `dg_gen_of` path and the session graph in `AGENTS.md`. | landed |
 
 ### Phase 2 -- one carrier
@@ -1009,7 +1009,7 @@ including `assumes`, `lemmas` and `interpretation` positions before removal:
   prose, so a whole-word rule would reject correct sentences.
 
 Every other name is appended to `scripts/retired_identifiers.txt`.
-`pixi run locale-parameters` reports no free identifier left in any locale
+`pixi run locale-parameters-check` reports no free identifier left in any locale
 assumption, which is the check that catches a deleted constant silently turning
 an assumption into a statement about an arbitrary function.
 

@@ -51,7 +51,6 @@ echo "Once the splash clears, agent can call mcp__isabelle-iq__authenticate"
 echo "with token='$IQ_AUTH_TOKEN'."
 echo
 
-# iq session (Isar_Explore.thy) enables MCP `explore` query='proof'.
-IQ_COMPONENT_DIR="${IQ_COMPONENT_DIR:-$REPO_ROOT/vendor/autocorrode/iq}"
-
-exec "$ISABELLE" jedit -d "$TD_COMPONENT_DIR" -d "$IQ_COMPONENT_DIR" -d "$REPO_ROOT" "$@"
+# setup.sh registers the iq session in Isabelle's user component configuration;
+# that session provides Isar_Explore.thy for MCP `explore` queries.
+exec "$ISABELLE" jedit -d "$TD_COMPONENT_DIR" -d "$REPO_ROOT" "$@"

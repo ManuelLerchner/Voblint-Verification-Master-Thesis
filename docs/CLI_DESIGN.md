@@ -1,7 +1,7 @@
 # CLI: `voblint`
 
 Status: **implemented** (`cli/main.ml`, `cli/vimp_frontend.ml`). Source file
-extension is `.vimp`; the grammar itself is documented in `grammar/vimp.yaml`,
+extension is `.vimp`; the grammar itself is documented in `manifests/vimp-grammar.yaml`,
 not here.
 
 ## Shape
@@ -74,7 +74,7 @@ voblint --help
 ```text
 FILE.vimp text
     |
-    |  Vimp_lexer/Vimp_parser (cli/, generated from grammar/vimp.yaml by
+    |  Vimp_lexer/Vimp_parser (cli/, generated from manifests/vimp-grammar.yaml by
     |  scripts/gen_vimp_menhir.py -- ocamllex + Menhir) via Vimp_frontend
     |  (hand-written glue); unverified adapter, not in the soundness scope
     v

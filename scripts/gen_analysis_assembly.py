@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generates the analysis registration theories from assembly/analyses.yaml.
+"""Generates the analysis registration theories from manifests/analyses.yaml.
 
 Six kinds of output, one registry:
 
@@ -118,7 +118,7 @@ ASSEMBLY_IMPORTS = ['"Voblint_Result.Unit_DG_Analysis"',
                     '"TD.TD_side_upd_rule"']
 
 GENERATED_NOTICE = (
-    "GENERATED FILE. Source: \\<^verbatim>\\<open>assembly/analyses.yaml\\<close>; generator:\n"
+    "GENERATED FILE. Source: \\<^verbatim>\\<open>manifests/analyses.yaml\\<close>; generator:\n"
     "\\<^verbatim>\\<open>scripts/gen_analysis_assembly.py\\<close>. Regenerate with the generator\n"
     "rather than hand-editing; a drift check compares regenerated output against\n"
     "this file.\n"
@@ -1993,7 +1993,7 @@ def validate(manifest, doms):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("manifest", nargs="?", default="assembly/analyses.yaml")
+    ap.add_argument("manifest", nargs="?", default="manifests/analyses.yaml")
     ap.add_argument("--check", action="store_true", help="report drift, do not write")
     ap.add_argument("--out", help="write under this directory instead of in place")
     args = ap.parse_args()

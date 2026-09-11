@@ -3,7 +3,7 @@
 # Isabelle-generated Voblint_CLI OCaml module
 # (src/Executable_Surface/Codegen/Export/Voblint_Codegen.thy's export_code
 # block), plus the Menhir/ocamllex frontend generated from
-# grammar/vimp.yaml (scripts/gen_vimp_menhir.py; only needed if that
+# manifests/vimp-grammar.yaml (scripts/gen_vimp_menhir.py; only needed if that
 # changed -- cli/vimp_parser.mly and cli/vimp_lexer.mll are committed).
 # Requires dune + menhir + ocamllex + the zarith/unix OCaml libraries on PATH;
 # does not require Isabelle or Python to build.

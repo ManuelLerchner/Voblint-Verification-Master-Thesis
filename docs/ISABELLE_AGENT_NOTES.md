@@ -14,6 +14,10 @@ workflow and project-specific traps.
 Start both with `rtk ./scripts/start-both.sh`. Use
 `rtk ./scripts/start-iq.sh` for jEdit and I/Q only, or
 `rtk ./scripts/start-ir.sh` for the headless REPL.
+`scripts/setup.sh` installs their pinned AutoCorrode sources under the ignored
+`vendor/autocorrode/` directory and registers I/Q in Isabelle's user component
+configuration. `AUTOCORRODE_HOME` may point I/R at another checkout.
+AutoCorrode is developer tooling, outside the proof dependencies.
 
 Authenticate I/Q or connect I/R with token `isabelle-local` before other server
 calls. Treat a failed real call as the availability check; do not make a
@@ -96,7 +100,7 @@ memory pressure. Results obtained before it died stay valid for the revision on
 disk, but nothing is verified after it until a restart finishes.
 
 **A filtered check.** Most `pixi run` tasks here report failure as *output* and
-still exit 0. `root-entries` printed its error and `tail -1` ate it, which would
+still exit 0. `sessions-check` printed its error and `tail -1` ate it, which would
 have carried a change past the guard written for that exact hazard. **A check
 that reports failure as output rather than as exit status must never be
 filtered.** The same rule applies to counting instead of listing: print what
@@ -122,7 +126,7 @@ duplicate above at least announces itself. When a generator overwrites a theory
 at the *same* path under the *same* name -- no ROOT change, no duplicate, no
 exception -- nothing looks different: the node name is right, the file is where
 it belongs, and the session goes on serving the bytes it loaded. Diagnostics
-taken after `pixi run gen-assembly` describe the previous render, and because a
+taken after `pixi run assembly-generate` describe the previous render, and because a
 regeneration moves lines they cite offsets whose content has changed
 underneath. This was caught once by comparing the buffer against disk at a line
 the run had changed, and would otherwise have produced a confident report about
@@ -192,7 +196,7 @@ Run a batch build when:
 Use the repository interfaces so session arguments do not drift:
 
 ```bash
-rtk pixi run build
+rtk pixi run isabelle-build
 ```
 
 `isabelle build -f` forces the named session's **ancestors** too, not just the
@@ -204,13 +208,13 @@ log rather than a cache hit for one session, delete that session's heap or use
 On a fresh clone without parent heaps:
 
 ```bash
-rtk pixi run bootstrap
+rtk pixi run isabelle-bootstrap
 ```
 
-`pixi run build` streams a verbose, parallel build of `Voblint_Examples`,
+`pixi run isabelle-build` streams a verbose, parallel build of `Voblint_Examples`,
 whose closure is every session except `Voblint_Codegen`; `pixi run codegen`
 builds that one. Changes confined to `src/Examples/**` are covered by the same
-`rtk pixi run build` run.
+`rtk pixi run isabelle-build` run.
 
 ### Slow-build diagnosis
 

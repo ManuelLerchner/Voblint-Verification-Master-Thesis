@@ -3,7 +3,7 @@ for ast_driver.ml's build_program/build_com/build_exp (see ast_driver.ml).
 
 VIMP has one unified `exp` type -- arithmetic, comparison, and logical
 operators are ordinary exp constructors, not a separate aexp/bexp split
-(see VIMP_Expr.thy's `aval`/`truthy`). grammar/vimp.yaml's `exp_paren`
+(see VIMP_Expr.thy's `aval`/`truthy`). manifests/vimp-grammar.yaml's `exp_paren`
 production (`LPAREN exp RPAREN`, passthrough) means any exp tree is
 source-expressible: VIMP_Source_Print.thy's string_of_exp is a uniform
 precedence-climbing printer (exp_prio) that parenthesizes a subexpression

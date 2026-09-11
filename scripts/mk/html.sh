@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 # HTML browser info for all session theories (see Isabelle System Manual,
-# browser_info). Output is copied to docs/html/ for a repo-local entry
+# browser_info). Output is copied to build/isabelle-html/ for a repo-local entry
 # point; Isabelle also keeps a copy under ISABELLE_HOME_USER/browser_info/.
 # See https://stackoverflow.com/questions/17833567/
 set -euo pipefail
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/require-afp.sh"
 
-HTML_DIR="$REPO_ROOT/docs/html"
+HTML_DIR="$REPO_ROOT/build/isabelle-html"
 SESSIONS="$(bash "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/sessions.sh" | tr '\n' ' ')"
 ISABELLE_HOME_USER="${ISABELLE_HOME_USER:-$("$ISABELLE" getenv -b ISABELLE_HOME_USER 2>/dev/null)}"
 test -n "$ISABELLE_HOME_USER" || { echo "ERROR: could not resolve ISABELLE_HOME_USER." >&2; exit 1; }

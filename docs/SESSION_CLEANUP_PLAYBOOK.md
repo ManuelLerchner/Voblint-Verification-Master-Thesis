@@ -14,8 +14,8 @@ this before auditing the next session (Core, then Analysis, ...).
 2. **Act on the ranked verdict**, VIMP-internal edits first, downstream
    ripple second. Every theory edit goes through I/Q; host tools only for
    closed, non-theory files and for generating exact hunks.
-3. **Gate.** `AFP=$HOME/afp/thys pixi run build`, then `pixi run codegen`,
-   `pixi run cli-test`, `pixi run property`. Commit only after all four.
+3. **Gate.** `AFP=$HOME/afp/thys pixi run isabelle-build`, then `pixi run codegen`,
+   `pixi run cli-test`, `pixi run property-test`. Commit only after all four.
 
 Scripts that helped (recreate under the scratchpad as needed):
 
@@ -227,7 +227,7 @@ import `VIMP_Program`.
 - **There is a second OCaml harness.** `cli-build`/`cli-test` compile `cli/`,
   but `codegen-regression` compiles `codegen/regression/ocaml/main.ml`.
   Deleting an Isabelle constant that only that harness used stayed green
-  through the Isabelle build, `cli-test` and `property`, and failed only in
+through the Isabelle build, `cli-test` and `property-test`, and failed only in
   `codegen-regression` -- one commit later.
 - **`fastforce` on an existential goal with arithmetic side conditions can
   fail to terminate.** Build the witness explicitly (`have "P a \<and> ..."`

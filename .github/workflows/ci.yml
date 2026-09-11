@@ -17,18 +17,6 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  check-isabelle-ascii:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-
-      - name: Check Isabelle ASCII-only sources
-        run: |
-          find src -name '*.thy' -print0 | xargs -0 python3 scripts/check_isabelle_ascii.py
-
   # build-isabelle is the sole cross-run heap-cache writer (see #103): a
   # plain incremental build (no -c) that both validates and warms the
   # cache, then hands its exact heap state to the jobs below as a
@@ -75,9 +63,6 @@ jobs:
       - name: Set up pixi
         uses: prefix-dev/setup-pixi@f00437f565399d418b0acc85936d12c1fb668347 # v0.10.1
 
-      - name: Apply td-verification compatibility patch
-        run: pixi run vendor
-
       # Plain incremental build (no -c): the actual cache writer and the
       # thing that validates/warms the heap cache. html.sh's -c flag
       # forces a clean rebuild of every session regardless of cache state
@@ -86,7 +71,7 @@ jobs:
       # single run. html generation is its own downstream consumer job
       # below, which pays that -c cost only when actually needed.
       - name: Build (incremental, populates the heap cache)
-        run: pixi run build
+        run: pixi run isabelle-build
 
       - name: Report heap store size
         run: du -sh "$ISABELLE_HOME_USER/heaps/"
@@ -145,9 +130,6 @@ jobs:
       - name: Set up pixi
         uses: prefix-dev/setup-pixi@f00437f565399d418b0acc85936d12c1fb668347 # v0.10.1
 
-      - name: Apply td-verification compatibility patch
-        run: pixi run vendor
-
       - name: Reuse partial heap state from the failed integration build
         continue-on-error: true
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
@@ -172,7 +154,7 @@ jobs:
           )
           failed=()
           for session in "${sessions[@]}"; do
-            if SESSION="$session" pixi run build; then
+            if SESSION="$session" pixi run isabelle-build; then
               printf 'PASS %s\n' "$session"
             else
               printf 'FAIL %s\n' "$session"
@@ -224,9 +206,6 @@ jobs:
       - name: Set up pixi
         uses: prefix-dev/setup-pixi@f00437f565399d418b0acc85936d12c1fb668347 # v0.10.1
 
-      - name: Apply td-verification compatibility patch
-        run: pixi run vendor
-
       - name: Download exact heap state from build-isabelle
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
@@ -238,14 +217,14 @@ jobs:
       # heaps here doesn't avoid that, it just keeps that cost isolated
       # to this job instead of gating the fast validation jobs on it.
       - name: Build HTML docs (clean build of every session)
-        run: pixi run html
+        run: pixi run isabelle-docs-build
 
       - name: Upload GitHub Pages site
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: html-docs
-          path: docs/html
+          path: build/isabelle-html
           retention-days: 1
 
   isabelle-lint:
@@ -286,9 +265,6 @@ jobs:
 
       - name: Set up pixi
         uses: prefix-dev/setup-pixi@f00437f565399d418b0acc85936d12c1fb668347 # v0.10.1
-
-      - name: Apply td-verification compatibility patch
-        run: pixi run vendor
 
       - name: Download exact heap state from build-isabelle
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
@@ -338,9 +314,6 @@ jobs:
       - name: Set up pixi
         uses: prefix-dev/setup-pixi@f00437f565399d418b0acc85936d12c1fb668347 # v0.10.1
 
-      - name: Apply td-verification compatibility patch
-        run: pixi run vendor
-
       - name: Download exact heap state from build-isabelle
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
@@ -363,13 +336,31 @@ jobs:
       - name: Set up pixi
         uses: prefix-dev/setup-pixi@f00437f565399d418b0acc85936d12c1fb668347 # v0.10.1
 
+      - name: Verification task surface
+        run: pixi run verification-surface-check
+
+      - name: Isabelle ASCII-only sources
+        run: pixi run isabelle-ascii-check
+
+      - name: Session ROOT structure and theory reachability
+        run: pixi run sessions-check
+
+      - name: Generated analysis assembly drift
+        run: pixi run assembly-check
+
+      - name: Analysis registry support policy
+        run: pixi run analysis-registry-check
+
+      - name: Generated OCaml public API
+        run: pixi run codegen-api-check
+
       - name: Regression fixture conventions (no build needed -- fail fast)
         run: pixi run regression-lint
 
       - name: VIMP identifier id_position/markup shape (no build needed -- fail fast)
-        run: pixi run id-position-check
+        run: pixi run grammar-id-position-check
 
-      # grammar/vimp.yaml is the sole source of truth for VIMP syntax, and both
+        # manifests/vimp-grammar.yaml is the sole source of truth for VIMP syntax, and both
       # generated frontends must agree with it. The lefthook pre-commit hook
       # enforces this locally; without a CI job a hand-edited .mly, or a
       # vimp.yaml change committed with LEFTHOOK=0, reaches main green.
@@ -382,7 +373,7 @@ jobs:
       # theory. Reads the checked-in export, so it
       # needs no Isabelle.
       - name: Code-export module map (no build needed -- fail fast)
-        run: pixi run codegen-modules
+        run: pixi run codegen-modules-check
 
       # check_thy_prose_refs resolves a cited name against every .thy under src/
       # AND vendor/, so prose naming a vendored TD constant
@@ -404,7 +395,13 @@ jobs:
       # Isabelle does not resolve a plain \<open>name\<close> cartouche, so a rename
       # leaves prose describing a constant that no longer exists.
       - name: Theory prose references (no build needed -- fail fast)
-        run: pixi run thy-prose-refs
+        run: pixi run theory-prose-check
+
+      - name: Retired Isabelle identifiers
+        run: pixi run retired-identifiers-check
+
+      - name: Locale assumption parameters
+        run: pixi run locale-parameters-check
 
       - name: Setup OCaml
         uses: ocaml/setup-ocaml@605a7e998e76e035b82c14d618a6e1010732c4ce # v3.7.1
@@ -425,34 +422,30 @@ jobs:
       - name: Compile and run codegen/regression drivers against codegen/generated/
         # ocaml/setup-ocaml@v3 puts `opam` itself on PATH but does not export the
         # switch's own bin dir (ocamlfind, ocamlopt) into later run steps' shells --
-        # a plain `pixi run codegen-regression` sub-shell then can't find ocamlfind
-        # even though opam install (also just `opam`, not a switch binary) succeeded
-        # one step earlier. `opam exec --` activates the switch environment for
-        # this invocation.
-        run: opam exec -- pixi run codegen-regression
+        # Each OCaml build adapter activates the selected opam switch itself.
+        run: pixi run codegen-regression
 
       - name: External .vimp regression corpus (source -> parser -> analyse -> checks)
-        run: opam exec -- pixi run cli-test
+        run: pixi run cli-test
 
       - name: CLI plumbing smoke tests (exit codes, --help, argument errors)
-        run: opam exec -- pixi run cli-smoke
+        run: pixi run cli-smoke
 
       - name: Parser/printer property tests (round-trip + mutation fuzzing)
-        run: opam exec -- pixi run property
+        run: pixi run property-test
 
       # The report is a contract with a frontend this repository does not own,
       # and its faults are quiet ones: a renamed element, a repeated span, an
-      # empty findings list all render a page that looks fine. `pixi run ci`
-      # has covered these locally for a while; running them here is what stops
-      # a change reaching main without them.
+      # empty findings list all render a page that looks fine. `pixi run verify`
+      # and these CI leaves intentionally use the same named tasks.
       - name: HTML report structure (element shapes g2html's stylesheets read)
-        run: opam exec -- pixi run html-report-check
+        run: pixi run html-report-structure-check
 
       - name: HTML report sweep over the regression corpus
-        run: opam exec -- pixi run html-report-audit
+        run: pixi run html-report-corpus-audit
 
       - name: HTML report sweep over the domain/solver/context space
-        run: opam exec -- pixi run html-config-audit
+        run: pixi run html-report-config-audit
 
   deploy-pages:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -469,7 +462,7 @@ jobs:
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: html-docs
-          path: docs/html
+          path: build/isabelle-html
 
       - name: Setup Pages
         uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
@@ -477,7 +470,7 @@ jobs:
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:
-          path: docs/html
+          path: build/isabelle-html
 
       - name: Deploy to GitHub Pages
         id: deployment

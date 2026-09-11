@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Build the top-level session (incremental; requires `pixi run vendor` and
+# Build the top-level session (incremental; requires `pixi run vendor-init` and
 # bootstrap heaps to already exist).
 set -euo pipefail
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/require-afp.sh"

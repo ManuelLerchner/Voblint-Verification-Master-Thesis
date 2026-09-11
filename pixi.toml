@@ -8,14 +8,14 @@ platforms = ["osx-arm64", "osx-64", "linux-64"]
 # by task grouping. The OCaml toolchain stays on opam:
 # conda-forge's ocaml-findlib and ocaml-zarith have no osx-arm64 build, so
 # pixi cannot be the sole toolchain manager for those on Apple Silicon.
-# Tasks that call into them (codegen-regression, cli-build, property-build, ...)
+# Tasks that call into them (codegen-regression, cli-build, property-test, ...)
 # are plain shell/OCaml invocations that rely on those tools already being
 # on PATH, not on a pixi-managed OCaml environment.
 
 [dependencies]
 python = ">=3.10"
 
-# I/R: autocorrode's headless REPL MCP server (scripts/start-ir.sh). Not a
+# I/R: AutoCorrode's headless REPL MCP server (scripts/start-ir.sh). Not a
 # lint/test/grammar concern -- its own dependency pair, needed by every
 # environment a contributor would actually install, so it stays composed
 # into default rather than requiring a separate opt-in.
@@ -23,29 +23,29 @@ python = ">=3.10"
 prompt_toolkit = ">=3.0"
 mcp = ">=1.0"
 
-# grammar/vimp.yaml -> scripts/gen_vimp_isabelle.py / gen_vimp_menhir.py
-# (see AGENTS.md's "VIMP grammar pipeline"), and assembly/analyses.yaml ->
+# manifests/vimp-grammar.yaml -> scripts/gen_vimp_isabelle.py / gen_vimp_menhir.py
+# (see AGENTS.md's "VIMP grammar pipeline"), and manifests/analyses.yaml ->
 # scripts/gen_analysis_assembly.py. These three generators are the only
 # things in the repo that parse YAML.
 [feature.grammar.dependencies]
 pyyaml = "*"
 
 [feature.grammar.tasks]
-gen-grammar-isabelle = "python3 scripts/gen_vimp_isabelle.py"
-gen-grammar-menhir = "python3 scripts/gen_vimp_menhir.py"
-grammar-check-isabelle = "python3 scripts/gen_vimp_isabelle.py && bash scripts/mk/check-clean.sh src/Program_Model/VIMP/VIMP_Grammar_Generated.thy"
-grammar-check-menhir = "python3 scripts/gen_vimp_menhir.py && bash scripts/mk/check-clean.sh cli/vimp_parser.mly cli/vimp_lexer.mll"
-grammar-check = { depends-on = ["grammar-check-isabelle", "grammar-check-menhir"] }
+grammar-isabelle-generate = { cmd = "python3 scripts/gen_vimp_isabelle.py", description = "Regenerate Isabelle syntax from manifests/vimp-grammar.yaml." }
+grammar-menhir-generate = { cmd = "python3 scripts/gen_vimp_menhir.py", description = "Regenerate the Menhir and ocamllex frontends from manifests/vimp-grammar.yaml." }
+grammar-isabelle-check = { cmd = "python3 scripts/gen_vimp_isabelle.py && bash scripts/mk/check-clean.sh src/Program_Model/VIMP/VIMP_Grammar_Generated.thy", description = "Regenerate the Isabelle grammar and fail if the tracked theory changes." }
+grammar-menhir-check = { cmd = "python3 scripts/gen_vimp_menhir.py && bash scripts/mk/check-clean.sh cli/vimp_parser.mly cli/vimp_lexer.mll", description = "Regenerate the Menhir frontend and fail if tracked parser files change." }
+grammar-check = { depends-on = ["grammar-isabelle-check", "grammar-menhir-check"], description = "Check both generated VIMP parser frontends for drift." }
 
-# assembly/analyses.yaml -> src/Analyses/<Domain>/generated/<Domain>_Assembly.thy.
+# manifests/analyses.yaml -> src/Analyses/<Domain>/generated/<Domain>_Assembly.thy.
 # Registration only: the generated interpretations cite handwritten lemmas, which
 # Isabelle still checks. `--check` diffs regenerated output against the checked-in
 # theories itself, so the drift gate needs neither git nor a toolchain.
 # The gate demands only what the registry has adopted; an unadopted output
-# renders under --out and is not compared, so ci cannot be red for a theory
+# renders under --out and is not compared, so verification cannot be red for a theory
 # nobody put in the tree.
-gen-assembly = "python3 scripts/gen_analysis_assembly.py"
-assembly-check = "python3 scripts/gen_analysis_assembly.py --check"
+assembly-generate = { cmd = "python3 scripts/gen_analysis_assembly.py", description = "Regenerate analysis assembly theories from manifests/analyses.yaml." }
+assembly-check = { cmd = "python3 scripts/gen_analysis_assembly.py --check", description = "Check generated analysis assembly theories against manifests/analyses.yaml." }
 
 # Hypothesis property-test suite (tests/property/).
 [feature.test.dependencies]
@@ -55,32 +55,29 @@ pytest = ">=8.0"
 [feature.test.tasks]
 # Hand-written support expectations checked against generated output, so a
 # manifest edit that changes what the CLI offers has to be intended.
-registry-check = "python3 -m pytest tests/test_analysis_registry.py"
-# Dune and the OCaml compiler live in the active opam switch; entering it here
-# keeps `pixi run property` self-contained for callers.
-property-build = "opam exec -- bash scripts/mk/property-build.sh"
-property = { cmd = "python3 -m pytest tests/property", depends-on = ["property-build"] }
+analysis-registry-check = { cmd = "python3 -m pytest tests/test_analysis_registry.py", description = "Check generated dispatcher support against the hand-written analysis policy." }
+property-test = { cmd = "python3 -m pytest tests/property", description = "Build the test drivers and run parser, printer, and AST property tests." }
 
 # HTML result viewer (`voblint --html`). graphviz supplies `dot`, which
 # renders the CFG the viewer's graph pane loads; the frontend itself is the
-# vendor/g2html submodule, initialized by the report task rather than by
+# vendor/g2html submodule, initialized by html-report-serve rather than by
 # vendor.sh so build/codegen never fetch it.
 [feature.report.dependencies]
 graphviz = "*"
 
 [feature.report.tasks]
-report = { cmd = "bash scripts/mk/report.sh", depends-on = ["cli-build"] }
+html-report-serve = { cmd = "bash scripts/mk/report.sh", depends-on = ["cli-build"], description = "Generate an HTML analysis report, serve it, and open it in a browser." }
 # Pins the emitted directory's shape, which is a contract with a frontend this
 # repository does not own -- see the test module's own docstring.
-html-report-check = { cmd = "python3 -m pytest tests/test_html_report.py", depends-on = ["cli-build"] }
+html-report-structure-check = { cmd = "python3 -m pytest tests/test_html_report.py", depends-on = ["cli-build"], description = "Check the emitted report structure consumed by the g2html frontend." }
 # Sweeps the whole fixture corpus, each under its own PARAM line, for the
 # faults that only show up on particular programs -- see the script's docstring.
-html-report-audit = { cmd = "python3 scripts/audit_html_reports.py", depends-on = ["cli-build"] }
+html-report-corpus-audit = { cmd = "python3 scripts/audit_html_reports.py", depends-on = ["cli-build"], description = "Generate reports for the regression corpus and check cross-file invariants." }
 # Sweeps the domain/solver/context space rather than the corpus: a
 # configuration the legality table accepts must have a surface behind it.
-html-config-audit = { cmd = "python3 scripts/audit_html_reports.py --combinations", depends-on = ["cli-build"] }
+html-report-config-audit = { cmd = "python3 scripts/audit_html_reports.py --combinations", depends-on = ["cli-build"], description = "Check report generation across supported domain, solver, and context combinations." }
 
-# Benchmarking (`pixi run bench`). hyperfine times cli/voblint once per
+# Benchmarking (`pixi run voblint-bench`). hyperfine times cli/voblint once per
 # abstract domain over the same fixture so domain/solver cost can be
 # compared in place -- see scripts/mk/bench.sh's header for the sweep and
 # probe behavior. matplotlib backs the --plot whisker-plot rendering
@@ -92,15 +89,15 @@ hyperfine = "*"
 matplotlib-base = ">=3.10"
 
 [feature.bench.tasks]
-bench = { cmd = "bash scripts/mk/bench.sh", depends-on = ["cli-build"] }
+voblint-bench = { cmd = "bash scripts/mk/bench.sh", depends-on = ["cli-build"], description = "Benchmark selected abstract domains over one VIMP program." }
 
 # Git hooks (.lefthook.yaml).
 [feature.lint.dependencies]
 lefthook = "*"
 
 [feature.lint.tasks]
-lefthook-install = "lefthook install"
-lint = "lefthook run pre-commit --all-files"
+hooks-install = { cmd = "lefthook install", description = "Install the repository's Lefthook Git hooks." }
+pre-commit = { cmd = "lefthook run pre-commit --all-files", description = "Run every pre-commit hook against the full repository." }
 
 [environments]
 default = ["ir", "grammar", "test", "lint", "report", "bench"]
@@ -118,111 +115,118 @@ bench = ["bench"]
 # build invocations, submodule vendoring, OCaml link steps) lives in
 # small versioned scripts under scripts/mk/ that these tasks call.
 # ISABELLE/AFP/SESSION are honored as env-var overrides, e.g.
-# `AFP=/path/to/afp/thys pixi run build`.
+# `AFP=/path/to/afp/thys pixi run isabelle-build`.
 # --------------------------------------------------------------------------
 
 [tasks]
-# Vendoring. Rarer maintenance actions (bumping vendor/autocorrode to
-# upstream main) are plain git commands, not tasks -- see "Build and
-# verification" in README.md.
-vendor = "bash scripts/mk/vendor.sh"
+# Vendoring. AutoCorrode is optional developer tooling installed into the
+# ignored vendor/autocorrode/ directory, outside the repository's submodule set.
+vendor-init = { cmd = "bash scripts/mk/vendor.sh", description = "Initialize the pinned td-verification submodule when absent." }
 
 # Isabelle build
-bootstrap = { cmd = "bash scripts/mk/bootstrap.sh", depends-on = ["vendor"] }
-build = { cmd = "bash scripts/mk/build.sh", depends-on = ["vendor"] }
-html = { cmd = "bash scripts/mk/html.sh", depends-on = ["vendor"] }
-isabelle-lint = { cmd = "bash scripts/mk/isabelle-lint.sh", depends-on = ["vendor"] }
-jedit = { cmd = "bash scripts/mk/jedit.sh", depends-on = ["vendor"] }
+isabelle-bootstrap = { cmd = "bash scripts/mk/bootstrap.sh", depends-on = ["vendor-init"], description = "Build foundational Isabelle sessions in topological order on a fresh checkout." }
+isabelle-build = { cmd = "bash scripts/mk/build.sh", depends-on = ["vendor-init"], description = "Build Voblint_Examples and its complete Isabelle dependency closure." }
+isabelle-docs-build = { cmd = "bash scripts/mk/html.sh", depends-on = ["vendor-init"], description = "Clean-build Isabelle browser documentation for every session into build/isabelle-html/." }
+isabelle-lint = { cmd = "bash scripts/mk/isabelle-lint.sh", depends-on = ["vendor-init"], description = "Run the Isabelle community linter over all project sessions." }
+isabelle-jedit = { cmd = "bash scripts/mk/jedit.sh", depends-on = ["vendor-init"], description = "Launch Isabelle/jEdit with the AFP, solver, and project session roots." }
 
 # Codegen (Isabelle export_code -> codegen/generated/)
-codegen = { cmd = "bash scripts/mk/codegen.sh", depends-on = ["vendor"] }
-codegen-check = { cmd = "bash scripts/mk/check-clean.sh codegen/generated/", depends-on = ["codegen"] }
+codegen = { cmd = "bash scripts/mk/codegen.sh", depends-on = ["vendor-init"], description = "Regenerate the checked-in OCaml export from Voblint_Codegen." }
+codegen-check = { cmd = "bash scripts/mk/check-clean.sh codegen/generated/", depends-on = ["codegen"], description = "Regenerate the OCaml export and fail if the tracked output changes." }
 # Reads the checked-in export, so it needs no Isabelle and can run in the
 # pre-commit hook alongside the ASCII and grammar-drift guards.
-codegen-modules = "python3 scripts/check_codegen_modules.py"
+codegen-modules-check = { cmd = "python3 scripts/check_codegen_modules.py", description = "Check that the OCaml export contains exactly the expected generated modules." }
 # A slashed theory entry in a ROOT fails the whole session at load, so jEdit
 # will not start and the mistake presents as a dead editor rather than as an
 # error in the file that caused it. Needs no Isabelle.
-root-entries = "python3 scripts/check_root_entries.py"
+sessions-check = { cmd = "python3 scripts/check_root_entries.py", description = "Check session ROOT entries, search paths, and owned-theory reachability." }
 # Everything the export exposes is decided by its root list, and a missing
 # root breaks an OCaml consumer rather than the Isabelle build. Reads the
 # checked-in export too, so it costs a second and needs no toolchain.
-codegen-api = "python3 scripts/check_generated_api.py"
-codegen-regression = "opam exec -- bash scripts/mk/codegen-regression.sh"
+codegen-api-check = { cmd = "python3 scripts/check_generated_api.py", description = "Check handwritten OCaml consumers against the generated public export surface." }
+codegen-regression = { cmd = "bash scripts/mk/codegen-regression.sh", description = "Compile and run the OCaml regression driver against the checked-in export." }
 
 # voblint CLI
-cli-build = "opam exec -- bash scripts/mk/cli-build.sh"
-cli-test = { cmd = "opam exec -- bash scripts/mk/cli-test-run.sh", depends-on = ["cli-build"] }
+cli-build = { cmd = "bash scripts/mk/cli-build.sh", description = "Build the voblint CLI from the checked-in generated OCaml and frontend sources." }
+cli-test = { cmd = "bash scripts/mk/cli-test-run.sh", description = "Build the CLI and run the external VIMP regression corpus." }
 # CLI plumbing (exit codes, --help, argument errors) that isn't expressible
 # as a .vimp fixture's verdict report -- see tests/cli_smoke.py's docstring.
-cli-smoke = { cmd = "opam exec -- python3 tests/cli_smoke.py", depends-on = ["cli-build"] }
-voblint = { cmd = "bash scripts/mk/voblint-run.sh", depends-on = ["cli-build"] }
+cli-smoke = { cmd = "python3 tests/cli_smoke.py", description = "Build the CLI and test help, errors, exit codes, and output plumbing." }
+voblint = { cmd = "bash scripts/mk/voblint-run.sh", depends-on = ["cli-build"], description = "Build and run the Voblint analyzer, with an optional interactive fixture picker." }
 # Static checks over tests/regression/ fixture source -- no CLI build, no
 # OCaml, so this fails fast before cli-test's build cost. See tests/run.py's
 # lint_case for what it enforces (mirrors AGENTS.md's "Regression discipline").
-regression-lint = "python3 tests/run.py --lint"
+regression-lint = { cmd = "python3 tests/run.py --lint", description = "Check regression fixture placement, headers, expectations, and metadata." }
 
 # Documentation coverage over .thy headings and locales. Regenerable index +
-# a lint; deliberately NOT in `ci` yet -- there is a standing backlog of
+# a lint; deliberately not in `verify` yet -- there is a standing backlog of
 # undocumented headings, and gating on it today would just be a red build.
-# Add it to `ci` once that backlog is cleared.
-docs-lint = "python3 scripts/extract_definitions.py --lint"
+# Add it to `verify` once that backlog is cleared.
+docs-coverage-check = { cmd = "python3 scripts/extract_definitions.py --lint", description = "Check documentation coverage for Isabelle theories, headings, and locales." }
 
 # Prose in .thy comments cites constants and lemmas with plain \<open>name\<close>
 # cartouches, which Isabelle does not resolve -- so a rename leaves the comment
 # describing something that no longer exists. Gating: the backlog is cleared.
-thy-prose-refs = "python3 scripts/check_thy_prose_refs.py"
+theory-prose-check = { cmd = "python3 scripts/check_thy_prose_refs.py", description = "Check that identifiers cited in Isabelle prose still exist." }
 
 # An identifier removed together with its theory stays legal inside `assumes`,
 # where Isabelle reads it as a free variable -- so a locale keeps building with
 # an assumption that has quietly stopped constraining anything. Only an
 # explicit list of retired names catches that; scripts/retired_identifiers.txt
 # holds it.
-retired-identifiers = "python3 scripts/check_retired_identifiers.py"
+retired-identifiers-check = { cmd = "python3 scripts/check_retired_identifiers.py", description = "Check that deliberately retired Isabelle identifiers remain absent." }
 
 # The general form of the same failure: any identifier left free in a locale
 # assumption, whether or not it was ever a constant here. Isabelle generalizes
 # the assumption over it, so the locale keeps building while the assumption
 # stops saying anything.
-locale-parameters = "python3 scripts/check_locale_parameters.py"
+locale-parameters-check = { cmd = "python3 scripts/check_locale_parameters.py", description = "Check locale assumptions for accidentally free identifiers." }
 
-docs-overview = "python3 scripts/extract_definitions.py --dump --out docs/generated/DEFINITIONS_OVERVIEW.md"
+docs-overview-generate = { cmd = "python3 scripts/extract_definitions.py --dump --out docs/generated/DEFINITIONS_OVERVIEW.md", description = "Regenerate the local Isabelle definitions and theorem overview." }
 
 # Size and shape of the .thy corpus: lines per session, per theory, and per
 # proof, plus a watchlist of theories past the 1500-line / 100-symbol style
-# limits. Reporting only -- never gates a build, so it stays out of `ci`.
-# Views and formats: `pixi run stats -- --help`.
-stats = "python3 scripts/thy_stats.py"
+# limits. Reporting only -- never gates a build, so it stays out of `verify`.
+# Views and formats: `pixi run theory-stats -- --help`.
+theory-stats = { cmd = "python3 scripts/thy_stats.py", description = "Report theory, session, proof, and line-length statistics." }
 
 # Pins scripts/gen_vimp_isabelle.py's identifier id_position/markup shape
 # (see the test module's own docstring). Deliberately outside tests/property/
-# and property-build's CLI-build dependency: this only imports the generator
-# and grammar/vimp.yaml directly, no CLI binary needed, so it stays as fast
+# and property-test's binary builds: this only imports the generator
+# and manifests/vimp-grammar.yaml directly, no CLI binary needed, so it stays as fast
 # and fail-fast as regression-lint above.
-id-position-check = "python3 -m pytest tests/test_gen_isabelle_id_position.py"
+grammar-id-position-check = { cmd = "python3 -m pytest tests/test_gen_isabelle_id_position.py", description = "Check Isabelle grammar identifier position and markup generation." }
 
-# Everything CI runs, under one name. Spans four features (lint, grammar,
-# test, report) plus the common isabelle/ocaml tasks, so this only
-# resolves from an environment that composes all of them -- i.e. default.
-ci = { depends-on = [
-  "lint",
+# Fast repository checks used directly by hooks and CI.
+isabelle-ascii-check = { cmd = "python3 scripts/check_isabelle_ascii.py", description = "Check Isabelle theory sources for forbidden Unicode syntax." }
+verification-surface-check = { cmd = "python3 scripts/check_verification_surface.py", description = "Check task descriptions, retired task names, and verify/GitHub CI parity." }
+
+# Supported local verification gate. GitHub CI invokes the same named leaf
+# tasks in separately scheduled jobs; verification-surface-check prevents drift.
+# This only resolves from the default environment, which composes every feature.
+verify = { depends-on = [
+  "isabelle-ascii-check",
   "grammar-check",
   "assembly-check",
-  "registry-check",
-  "root-entries",
-  "thy-prose-refs",
-  "retired-identifiers",
-  "locale-parameters",
-  "build",
+  "analysis-registry-check",
+  "sessions-check",
+  "theory-prose-check",
+  "retired-identifiers-check",
+  "locale-parameters-check",
+  "isabelle-build",
+  "isabelle-docs-build",
+  "isabelle-lint",
   "codegen-check",
-  "codegen-api",
+  "codegen-modules-check",
+  "codegen-api-check",
   "regression-lint",
-  "id-position-check",
+  "grammar-id-position-check",
   "cli-test",
   "cli-smoke",
-  "html-report-check",
-  "html-report-audit",
-  "html-config-audit",
+  "html-report-structure-check",
+  "html-report-corpus-audit",
+  "html-report-config-audit",
   "codegen-regression",
-  "property",
-] }
+  "property-test",
+  "verification-surface-check",
+], description = "Run the supported local verification gate; GitHub CI runs the same leaf checks separately." }

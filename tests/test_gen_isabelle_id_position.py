@@ -23,7 +23,7 @@ import pytest
 import yaml
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-GRAMMAR_PATH = REPO_ROOT / "grammar" / "vimp.yaml"
+GRAMMAR_PATH = REPO_ROOT / "manifests" / "vimp-grammar.yaml"
 GENERATOR_PATH = REPO_ROOT / "scripts" / "gen_vimp_isabelle.py"
 
 
@@ -40,7 +40,7 @@ GRAMMAR = yaml.safe_load(GRAMMAR_PATH.read_text())
 
 # (production name, rhs index) for every generated IDENT slot this test
 # cares about, paired with its expected role. Hand-picked from
-# grammar/vimp.yaml's productions rather than derived generically, so a
+# manifests/vimp-grammar.yaml's productions rather than derived generically, so a
 # production that silently starts/stops carrying an IDENT slot is caught
 # by a KeyError/IndexError here rather than by this test quietly checking
 # nothing.
@@ -62,7 +62,9 @@ def _rhs_of(name):
     for prod in GRAMMAR["productions"]:
         if prod["name"] == name:
             return prod["rhs"]
-    raise AssertionError(f"no production named {name!r} in grammar/vimp.yaml")
+    raise AssertionError(
+        f"no production named {name!r} in manifests/vimp-grammar.yaml"
+    )
 
 
 @pytest.mark.parametrize("name,index", VARIABLE_ROLE_SLOTS)

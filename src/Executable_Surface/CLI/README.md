@@ -32,8 +32,8 @@ does see all five.
 | File | What |
 | --- | --- |
 | `Analysis_Config.thy` | `analysis_config` (domain/solver/context selection) and the `analysis_plan` a configuration resolves to |
-| `generated/Config_Tables.thy` | the resolver's support matrix: `resolve_analysis_config` and `valid_analysis_config` derived from it. Generated from `assembly/analyses.yaml`. |
-| `generated/Dispatch_Tables.thy` | `analyse_with_solver`, the per-domain solver-discipline table, with its default-pairing lemmas. Generated from `assembly/analyses.yaml`. |
+| `generated/Config_Tables.thy` | the resolver's support matrix: `resolve_analysis_config` and `valid_analysis_config` derived from it. Generated from `manifests/analyses.yaml`. |
+| `generated/Dispatch_Tables.thy` | `analyse_with_solver`, the per-domain solver-discipline table, with its default-pairing lemmas. Generated from `manifests/analyses.yaml`. |
 | `Dispatch_Carrier.thy` | one value type wide enough for every domain's state-carrying report |
 | `Analyse_Dispatch.thy` | `analyse` and the public soundness corollaries restated over it |
 | `Dispatch_Config.thy` | config-driven dispatch: `analyse_config`, `analyse_config_ctx`, `analyse_config_with_state` |

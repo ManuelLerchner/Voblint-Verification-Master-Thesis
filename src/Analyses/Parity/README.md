@@ -35,7 +35,7 @@ Parity_Domain      the lattice, order, and its concretization
 ```
 
 The four `generated/` theories are written by `scripts/gen_analysis_assembly.py`
-from `assembly/analyses.yaml`.
+from `manifests/analyses.yaml`.
 
 `Parity_Assembly` holds two `global_interpretation`s of `unit_dg_analysis`
 (`Shared/Result/Unit_DG_Analysis.thy`): `parity_join` (always-join, production)
@@ -67,7 +67,7 @@ singleton, so it can never prove a positive equality.
 
 ## The two contextual configurations
 
-`generated/Parity_Analyses.thy` is machine-written from `assembly/analyses.yaml`,
+`generated/Parity_Analyses.thy` is machine-written from `manifests/analyses.yaml`,
 so the orientation a reader needs lives here rather than in a header the
 generator owns.
 

@@ -28,9 +28,9 @@ These documents describe the supported architecture and its verification.
 - [Activation-local trace semantics](ACTIVATION_LOCAL_TRACE_CONVERGENCE.md) —
   why `valid_ltr` is the concrete foundation and how contexts project from it.
 - [Analysis registration generation](ANALYSIS_ASSEMBLY_GENERATION.md) — the
-  `assembly/analyses.yaml` registry and what it generates.
+  `manifests/analyses.yaml` registry and what it generates.
 - [HTML result viewer](HTML_REPORT.md) — `voblint --html` output and
-  `pixi run report`.
+  `pixi run html-report-serve`.
 
 ## Design records
 
