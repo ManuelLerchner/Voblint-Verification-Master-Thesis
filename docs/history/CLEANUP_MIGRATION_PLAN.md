@@ -7,7 +7,7 @@ CI gates and script deletions, the Phase 2.1/2.2 deletions, Phase 2.6's Sign and
 decision 2 (`int_parity` is still an `int_dom` field) and decision 3 (no soundness theorem assumes
 `wf_cfg`).
 
-Execution plan for `docs/EXPORT_SURFACE_AUDIT.md`. That document is the evidence;
+Execution plan for `docs/history/EXPORT_SURFACE_AUDIT.md`. That document is the evidence;
 this one is the sequence. Every item names its gate and its risk. Line figures
 come from the audit and are measured unless marked *est.*
 

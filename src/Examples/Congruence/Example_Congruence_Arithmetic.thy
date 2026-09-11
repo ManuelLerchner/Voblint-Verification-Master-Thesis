@@ -2,6 +2,12 @@ theory Example_Congruence_Arithmetic
   imports Voblint_Analysis_Congruence.Congruence_Arithmetic
 begin
 
+text \<open>
+  These executable equalities pin literal normalization, lattice boundaries,
+  modular arithmetic, and expression evaluation. They exercise the code
+  equations used by the analysis without duplicating their soundness proofs.
+\<close>
+
 section \<open>Executable Congruence arithmetic regressions\<close>
 
 lemma congruence_literal_regression:

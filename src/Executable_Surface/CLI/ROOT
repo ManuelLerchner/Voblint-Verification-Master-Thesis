@@ -17,10 +17,8 @@ session Voblint_CLI in "." = "Voblint_Analysis_Int" +
     Dispatch_Carrier
     Config_Tables
     Dispatch_Tables
-    Config_Matrix
     Analyse_Dispatch
     Dispatch_Config
-    Dispatch_Matrix
 
     (* A solved result as a graph, and the readings handed to a renderer.
        Domain-independent, but used by no domain -- only by the surface below. *)

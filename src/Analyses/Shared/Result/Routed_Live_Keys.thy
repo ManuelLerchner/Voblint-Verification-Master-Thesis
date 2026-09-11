@@ -297,8 +297,8 @@ text \<open>
   The routed soundness at the live keys, for any relation admitting call contexts.
   Beyond termination and well-formedness a policy owes only its own two facts: an
   admitted context is the one this pipeline routes the entered state to, and every
-  concrete call at a live key is admitted somewhere.  Membership of the callee entry is
-  no longer among them --- \<open>live_keys_cover\<close> supplies it.
+  concrete call at a live key is admitted somewhere. \<open>live_keys_cover\<close> supplies
+  callee-entry membership.
 \<close>
 
 lemma routed_analysis_sound_live_keys:

@@ -35,10 +35,10 @@ theory Voblint
     "Voblint_Examples_CLI.Example_Checks_Store_Only"
     "Voblint_Examples_CLI.Example_Interval_Checks_Store_Only"
     "Voblint_Examples_CLI.Example_Parity_Checks_Store_Only"
-    "Voblint_Examples_CLI.Exec_Interval_Run"
+    "Voblint_Examples_Interval.Exec_Interval_Run"
     "Voblint_Examples_CLI.Example_Int_Refinement_Mode_Regression"
     "Voblint_Examples_CLI.Example_Analysis_Result_Regression"
-    "Voblint_Examples_CLI.Example_End_To_End_Certificate"
+    Example_End_To_End_Certificate
     "Voblint_Examples_Interval.Example_Interval_DG_Flagship"
     "Voblint_Result.Source_Activation_Sound"
     "Voblint_Examples_Interval.Example_Interval_DG_Ctx_Collect"
@@ -49,7 +49,7 @@ theory Voblint
     "Voblint_Examples_Sign.Example_Sign_DG_CallString_K2"
     "Voblint_Examples_Interval.Example_Interval_Source_Ctx"
     "Voblint_Examples_CFG.Example_Inc_Proc"
-    "Voblint_Examples_CLI.Example_Side_Execute"
+    "Voblint_Examples_Sign.Example_Side_Execute"
     "Voblint_Examples_Interval.Example_Proc_Call"
     "Voblint_Examples_Interval.Example_Interval_Loop_Coverage"
     "Voblint_Examples_Interval.Example_Guard_Refinement"
@@ -63,7 +63,7 @@ theory Voblint
     "Voblint_Examples_Congruence.Example_Congruence_Backward"
     "Voblint_Examples_Congruence.Example_Congruence_DG_Run"
     "Voblint_Analysis_Sign.Sign_Entry"
-    "Voblint_CLI.Dispatch_Matrix"
+    "Voblint_Examples_CLI.Dispatch_Matrix"
     "Voblint_CLI.State_Report_Graph"
 begin
 
@@ -138,7 +138,7 @@ text \<open>
   \<^const>\<open>analyse_state_covers\<close> already is a function: an abstract state's type
   is the domain's own carrier.
 
-  \<^theory>\<open>Voblint_Examples_CLI.Example_End_To_End_Certificate\<close> is that theorem
+  \<^theory>\<open>Example_End_To_End_Certificate\<close> is that theorem
   with nothing left to assume.  It fixes one program at the product domain, a
   call-string context of length one and always-join named explicitly, evaluates
   the solve's termination and the answer, builds the source run step by step,

@@ -41,20 +41,12 @@ match the tree.
 - [Relational domain architecture decision](RELATIONAL_DOMAIN_ARCHITECTURE_DECISION.md)
 - [CFG compiler continuation redesign](CFG_COMPILER_CONTINUATION_REDESIGN.md)
 - [DG interface validation against Goblint](GOBLINT_DG_INTERFACE_VALIDATION.md)
-- [Side-effecting function entry audit](SIDE_EFFECTING_FUNCTION_ENTRY_AUDIT.md)
 - [Backward-filter sharing measurement](BACKWARD_FILTER_SHARING_MEASUREMENT.md)
-- [Context GraphViz debug renderer](CONTEXT_GRAPHVIZ_DEBUG_RENDERER.md) —
-  pointer to its `--context-graph expanded` replacement.
 - [M4 semantic baseline](M4_SEMANTIC_BASELINE.md) — observable results the
   interval and global-across-call witnesses pin.
 
 ## Work and verification
 
-- [Export-surface audit](EXPORT_SURFACE_AUDIT.md) — what the formalization
-  defines that the exported OCaml never reaches, which of it is legacy, and
-  where definitions and proofs can be unified.
-- [Cleanup migration plan](CLEANUP_MIGRATION_PLAN.md) — the phased execution
-  sequence for that audit.
 - [Core refactor plan](CORE_REFACTOR_PLAN.md) — the four-phase split of
   `Voblint_Framework` along Goblint's library boundaries, with the measured
   import evidence and a per-step status table.
@@ -63,8 +55,6 @@ match the tree.
 - [Open problems](OPEN_PROBLEMS.md) — research and engineering boundaries.
 - [Proof verification gates](PROOF_PHASES.md) — checks required for each proof
   layer and for the repository.
-- [Post-deletion cleanup queue](POST_DELETION_CLEANUP_QUEUE.md) — the two
-  items still open, P7 and P10.
 - [Goblint-alignment tracks](GOBLINT_ALIGNMENT_TRACKS.md) — the remaining M2
   and M3 context-alignment tracks.
 - [`solve_dom` total-correctness route](P1_TOTAL_CORRECTNESS_ROUTE.md) and
@@ -83,3 +73,11 @@ match the tree.
 Migration logs, superseded designs, and deleted component descriptions live in
 [`history/`](history/README.md). They are kept for provenance and are not
 maintained against the current tree.
+
+Recent archived records:
+
+- [Export-surface audit](history/EXPORT_SURFACE_AUDIT.md)
+- [Cleanup migration plan](history/CLEANUP_MIGRATION_PLAN.md)
+- [Post-deletion cleanup queue](history/POST_DELETION_CLEANUP_QUEUE.md)
+- [Side-effecting function entry audit](history/SIDE_EFFECTING_FUNCTION_ENTRY_AUDIT.md)
+- [Superseded context GraphViz renderer](history/CONTEXT_GRAPHVIZ_DEBUG_RENDERER.md)

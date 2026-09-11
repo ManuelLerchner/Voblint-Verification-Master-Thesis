@@ -171,9 +171,9 @@ text \<open>
   changes, that update is again a manager built at the new value. These are the
   rules the proofs need; \<^const>\<open>mk_dg_man\<close> itself stays folded, so a manager
   travels through a goal as one term instead of a three-field record literal.
-  That matters beyond term size: an assumption about a built manager stops
-  matching a goal once the goal has decayed into a literal, which is what
-  unfolding \<^const>\<open>mk_dg_man\<close> by default used to cause.
+  Keeping \<^const>\<open>mk_dg_man\<close> folded also preserves matching: an assumption
+  about a built manager would stop matching if the goal decayed into a record
+  literal.
 
   The two capability rules are stated unapplied. Applying one is the same rule
   plus a beta step, so the unapplied form subsumes the applied one and also

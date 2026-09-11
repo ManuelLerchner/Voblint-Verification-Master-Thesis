@@ -8,9 +8,10 @@ text \<open>
   \<^const>\<open>analyse\<close>/\<^const>\<open>analyse_with_solver\<close>/
   \<^const>\<open>analyse_with_state\<close> above each decide legality over exactly two of
   \<^type>\<open>analysis_config\<close>'s three axes at a time (domain+solver, ...) and stay
-  the lower-level, typed entry points every consumer keeps using. \<^const>\<open>resolve_analysis_config\<close> (\<^theory>\<open>Voblint_CLI.Analysis_Config\<close>)
-  is the one place all three axes' legality and defaults are decided
-  together; the three wrappers below each consume its \<^type>\<open>analysis_plan\<close>
+  the lower-level, typed entry points every consumer keeps using.
+  \<^const>\<open>resolve_analysis_config\<close>
+  (\<^theory>\<open>Voblint_CLI.Analysis_Config\<close>) decides all three axes' legality
+  and defaults together; the three wrappers below each consume its \<^type>\<open>analysis_plan\<close>
   result and pick the one existing dispatcher call that already produces
   their report shape, rather than re-deciding legality or re-implementing
   a domain/solver/context case split of their own. None of the three
@@ -58,12 +59,18 @@ definition analyse_config_ctx ::
         None \<Rightarrow> None
       | Some (Plan_Interval_EntryState Solver_Warrow) \<Rightarrow> Some (analyse_interval_entry_state p)
       | Some (Plan_Interval_EntryState Solver_Join) \<Rightarrow> Some (analyse_interval_entry_state_join p)
-      | Some (Plan_Interval_EntryState Solver_PerOrigin) \<Rightarrow> Some (analyse_interval_entry_state_per_origin p)
-      | Some (Plan_Interval_CallString Solver_Warrow k) \<Rightarrow> Some (analyse_interval_call_string_report k p)
-      | Some (Plan_Interval_CallString Solver_Join k) \<Rightarrow> Some (analyse_interval_call_string_report_join k p)
-      | Some (Plan_Interval_CallString Solver_PerOrigin k) \<Rightarrow> Some (analyse_interval_call_string_report_per_origin k p)
-      | Some (Plan_Interval_EntryState Solver_WarrowPerOrigin) \<Rightarrow> Some (analyse_interval_entry_state_wpo p)
-      | Some (Plan_Interval_CallString Solver_WarrowPerOrigin k) \<Rightarrow> Some (analyse_interval_call_string_report_wpo k p)
+      | Some (Plan_Interval_EntryState Solver_PerOrigin) \<Rightarrow>
+          Some (analyse_interval_entry_state_per_origin p)
+      | Some (Plan_Interval_CallString Solver_Warrow k) \<Rightarrow>
+          Some (analyse_interval_call_string_report k p)
+      | Some (Plan_Interval_CallString Solver_Join k) \<Rightarrow>
+          Some (analyse_interval_call_string_report_join k p)
+      | Some (Plan_Interval_CallString Solver_PerOrigin k) \<Rightarrow>
+          Some (analyse_interval_call_string_report_per_origin k p)
+      | Some (Plan_Interval_EntryState Solver_WarrowPerOrigin) \<Rightarrow>
+          Some (analyse_interval_entry_state_wpo p)
+      | Some (Plan_Interval_CallString Solver_WarrowPerOrigin k) \<Rightarrow>
+          Some (analyse_interval_call_string_report_wpo k p)
       | Some (Plan_Sign_CallString Solver_Join k) \<Rightarrow> Some (analyse_sign_call_string_report k p)
       | Some (Plan_Sign_CallString Solver_PerOrigin _) \<Rightarrow> None
       | Some (Plan_Sign_CallString Solver_Warrow _) \<Rightarrow> None
@@ -74,14 +81,16 @@ definition analyse_config_ctx ::
       | Some (Plan_Sign_EntryState Solver_WarrowPerOrigin) \<Rightarrow> None
       | Some (Plan_Int_CallString Solver_Join k) \<Rightarrow> Some (analyse_int_call_string_report k p)
       | Some (Plan_Int_CallString Solver_PerOrigin _) \<Rightarrow> None
-      | Some (Plan_Int_CallString Solver_Warrow k) \<Rightarrow> Some (analyse_int_call_string_report_warrow k p)
+      | Some (Plan_Int_CallString Solver_Warrow k) \<Rightarrow>
+          Some (analyse_int_call_string_report_warrow k p)
       | Some (Plan_Int_CallString Solver_WarrowPerOrigin _) \<Rightarrow> None
       | Some (Plan_Int_EntryState Solver_Join) \<Rightarrow> Some (analyse_int_entry_state_report p)
       | Some (Plan_Int_EntryState Solver_PerOrigin) \<Rightarrow> None
       | Some (Plan_Int_EntryState Solver_Warrow) \<Rightarrow> Some (analyse_int_entry_state_report_warrow p)
       | Some (Plan_Int_EntryState Solver_WarrowPerOrigin) \<Rightarrow> None
       | Some (Plan_Sign s) \<Rightarrow> map_option decided_report (analyse_with_solver Sign_Analysis s p)
-      | Some (Plan_Interval s) \<Rightarrow> map_option decided_report (analyse_with_solver Interval_Analysis s p)
+      | Some (Plan_Interval s) \<Rightarrow>
+          map_option decided_report (analyse_with_solver Interval_Analysis s p)
       | Some (Plan_Int s) \<Rightarrow> map_option decided_report (analyse_with_solver Int_Analysis s p)
       | Some (Plan_Parity s) \<Rightarrow> map_option decided_report (analyse_with_solver Parity_Analysis s p)
       | Some (Plan_Parity_EntryState Solver_Join) \<Rightarrow>
@@ -109,7 +118,8 @@ text \<open>
 \<close>
 
 fun analyse_config_with_state ::
-    "analysis_config \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> exp \<times> check_result \<times> bool \<times> abstract_value abs_state) list option"
+    "analysis_config \<Rightarrow> imp_prog \<Rightarrow>
+      (pp \<times> exp \<times> check_result \<times> bool \<times> abstract_value abs_state) list option"
 where
   "analyse_config_with_state cfg p =
      (case resolve_analysis_config cfg of

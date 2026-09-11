@@ -7,6 +7,7 @@ concrete run to the abstract result.
 | File | Role | What |
 | --- | --- | --- |
 | `Example_Sign_Domain_Ops.thy` | worked example | the sign lattice and its arithmetic on concrete inputs -- abstraction of an integer, the four operations, the join, printing, expression evaluation, one assignment -- each a `by eval` equation rather than a `value` |
+| `Example_Side_Execute.thy` | canonical spine | the smallest certified Sign run, on `x := 1` (`x1_certified_sound`, `x1_explicit_completed_run_covered`) |
 | `Exec_Sign_DG_Run.thy` | required support | end-to-end certified run on the Base-style D/G equation system, through Sign's production always-join registration `sign_join` with no example-local registration |
 | `Example_Sign_Unit_Assembly.thy` | witness | Sign's instance of the shared unit-context assembly, executed: a callee writes a global, the caller checks its sign, and the assembled report decides the check -- a code-generation defect in the assembly fails here |
 | `Example_Sign_DG_Custom_Body.thy` | canonical spine | an analysis-supplied procedure-entry transfer (`dgs_body`) that forgets the callee's formals, carried through the same D/G generator and solver as the stock one; the two solved systems disagree only inside the callee |
@@ -47,8 +48,7 @@ theory keeps its own copy so no witness inherits another's imports.
 | `Example_Sign_DG_CallString_K1.thy` | canonical spine | the `nest` program at `k = 1`, solved by the plain-join solver: Sign is finite, so the computed solution is exact and `g`'s two activations collapse to `STop` |
 | `Example_Sign_DG_CallString_K2.thy` | canonical spine | the same at `k = 2`, keeping them apart at `SPos` and `SNeg`. Exactness makes the strict-precision comparison (`sign_k2_strictly_more_precise_than_k1_at_g`) a statement about exact solutions |
 
-Sign's two entry-point witnesses -- the smallest certified IP run and the
-store-only check trio -- live in `CLI/`, grouped with the other domains' members
-of the same trio rather than by what they import.
+The store-only check witness lives in `CLI/`, grouped with the other domains'
+members of the same trio. The Sign-only executable run lives here.
 
 Role vocabulary: repository `README.md`.

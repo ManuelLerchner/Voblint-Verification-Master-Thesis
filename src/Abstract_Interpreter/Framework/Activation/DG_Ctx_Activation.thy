@@ -6,17 +6,20 @@ begin
 section \<open>What a solved routed system says about one program point\<close>
 
 text \<open>
-  A post-solution bounds a right-hand side by the value at its own unknown, and bounds every
-  side effect it publishes by the value at the key it publishes to.  \<open>dg_ctx_activation_base\<close>
-  fixes such a solution over the routed generator, a set \<open>vars\<close> of keys at which it bounds its
-  own equation --- every key the solver visited, or any subset of them --- and a reader \<open>sg\<close> that answers the empty set off \<open>vars\<close>; from those it derives the
-  EDGE and COMB obligations the activation backbone asks for.  Entry and callee-seed coverage
-  are left to the concrete analysis.
+  A post-solution bounds a right-hand side by the value at its own unknown and
+  every published side effect by the value at its target key.
+  \<open>dg_ctx_activation_base\<close> fixes such a solution over the routed generator, a
+  set \<open>vars\<close> of keys whose own equations it bounds, and a reader \<open>sg\<close> that
+  answers the empty set off \<open>vars\<close>. The set may contain every key the solver
+  visited or any subset. These facts derive the EDGE and COMB obligations the
+  activation backbone asks for. Entry and callee-seed coverage remain with the
+  concrete analysis.
 
-  Both carriers are parameters: \<open>gammaDG\<close> interprets a D/G pair, \<open>gammaM\<close> interprets whatever
-  \<open>sg\<close> returns, so an analysis whose reader is not an \<open>abs_state\<close> instantiates this locale
-  directly.  Solutions carry one shared global slot \<open>Inr gk0\<close>, and \<open>sg_cov\<close> ties the reader
-  at a covered key to \<open>gammaDG\<close> of the local slot against that global.
+  Both carriers are parameters: \<open>gammaDG\<close> interprets a D/G pair, while
+  \<open>gammaM\<close> interprets whatever \<open>sg\<close> returns. An analysis whose reader is not an
+  \<open>abs_state\<close> therefore instantiates this locale directly. Solutions carry one
+  shared global slot \<open>Inr gk0\<close>, and \<open>sg_cov\<close> ties the reader at a covered key
+  to \<open>gammaDG\<close> of the local slot against that global.
 \<close>
 
 locale dg_ctx_activation_base = sound_dg_spec_core S gammaDG gs

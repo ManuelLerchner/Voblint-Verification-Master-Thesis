@@ -1,7 +1,7 @@
 session Voblint_Examples in "." = "Voblint_Examples_CLI" +
   description
-    "The project capstone index: one theory that imports every example session and
-     the CLI, so nothing it names is unbuilt"
+    "The project capstone: a fully discharged end-to-end certificate and the
+     narrative index that imports every example session"
   sessions
     "HOL-Library"
     "Voblint_Examples_CFG"
@@ -13,4 +13,5 @@ session Voblint_Examples in "." = "Voblint_Examples_CLI" +
     "Voblint_Examples_Relational"
     "Voblint_Examples_Tooling"
   theories
+    Example_End_To_End_Certificate
     Voblint

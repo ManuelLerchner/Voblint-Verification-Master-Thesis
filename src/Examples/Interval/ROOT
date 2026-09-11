@@ -16,7 +16,6 @@ session Voblint_Examples_Interval in "." = "Voblint_Analysis_Interval" +
     Example_Interval_DG_IP_Flagship
     Example_Interval_DG_Ctx_Flagship
     Example_Interval_DG_Ctx_Collect
-    Example_Interval_DG_Ctx_Multi_Call_Regression
     Example_Interval_DG_Ctx_Factorial_Regression
     Example_Interval_DG_Ctx_Globals_Regression
     Example_Interval_DG_EntryState_Base
@@ -30,5 +29,6 @@ session Voblint_Examples_Interval in "." = "Voblint_Analysis_Interval" +
     Call_String_Solver_Regression
     Example_Interval_Source_Ctx
     Example_Interval_Loop_Coverage
+    Exec_Interval_Run
     Example_Guard_Refinement
     Example_Proc_Call

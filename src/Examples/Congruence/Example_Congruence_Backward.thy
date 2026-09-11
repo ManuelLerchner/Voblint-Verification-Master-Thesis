@@ -2,6 +2,12 @@ theory Example_Congruence_Backward
   imports Voblint_Analysis_Congruence.Congruence_Backward
 begin
 
+text \<open>
+  These executable equalities pin CRT intersection and backward arithmetic
+  refinement, including solvable, inconsistent, definite, and fallback
+  multiplication cases.
+\<close>
+
 section \<open>Executable Congruence backward-analysis regressions\<close>
 
 lemma congruence_intersection_crt_regression:

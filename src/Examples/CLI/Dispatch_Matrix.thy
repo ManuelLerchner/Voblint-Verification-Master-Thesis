@@ -1,5 +1,5 @@
 theory Dispatch_Matrix
-  imports Dispatch_Config
+  imports "Voblint_CLI.Dispatch_Config"
 begin
 
 section \<open>Config-driven dispatch agrees with each existing typed entry point\<close>

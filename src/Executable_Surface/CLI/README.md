@@ -35,10 +35,8 @@ does see all five.
 | `generated/Config_Tables.thy` | the resolver's support matrix: `resolve_analysis_config` and `valid_analysis_config` derived from it. Generated from `assembly/analyses.yaml`. |
 | `generated/Dispatch_Tables.thy` | `analyse_with_solver`, the per-domain solver-discipline table, with its default-pairing lemmas. Generated from `assembly/analyses.yaml`. |
 | `Dispatch_Carrier.thy` | one value type wide enough for every domain's state-carrying report |
-| `Config_Matrix.thy` | what the resolver answers, pinned cell by cell |
 | `Analyse_Dispatch.thy` | `analyse` and the public soundness corollaries restated over it |
 | `Dispatch_Config.thy` | config-driven dispatch: `analyse_config`, `analyse_config_ctx`, `analyse_config_with_state` |
-| `Dispatch_Matrix.thy` | that config-driven dispatch agrees with each typed entry point |
 | `Analysis_Graph.thy` | the graph vocabulary: cluster/node/edge datatypes, the config record of caller hooks, node status and annotation, and the chosen context ordering |
 | `Analysis_Graph_Build.thy` | `build_analysis_graph`: a solved result becomes clusters, nodes and routed edges |
 | `Analysis_Graph_Wf.thy` | that what it builds is always well-formed --- distinct nodes, every edge between nodes that exist. The one theorem in the graph layer. |
@@ -51,6 +49,9 @@ does see all five.
 | `Analysis_Run_Ctx_Sound.thy` | the same at the entry-state and call-string configurations |
 | `Analysis_Run_Solver_Sound.thy` | the same at an explicitly chosen solver discipline |
 | `Analysis_Certified.thy` | one soundness statement over every configuration the CLI answers |
+
+The hand-written configuration and dispatch matrices are regression theories,
+so they live in `src/Examples/CLI/` rather than this production session.
 
 The soundness statements here are the ones that belong nowhere else: a theorem about
 `analyse` or `run_voblint` cannot live above the theory that defines it, and

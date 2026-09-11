@@ -126,16 +126,58 @@ lemma ivl_max_combine_mono:
 lemma int_mult_in_corners_lo:
   fixes l1 u1 l2 u2 i j :: int
   assumes "l1 \<le> i" "i \<le> u1" "l2 \<le> j" "j \<le> u2"
-  shows "min (l1*l2) (min (l1*u2) (min (u1*l2) (u1*u2))) \<le> i * j"
-  using assms
-  by (smt (verit) mult_left_mono mult_right_mono mult_left_mono_neg mult_right_mono_neg min_def)
+  shows "min (l1*l2) (min (l1*u2) (min (u1*l2) (u1*u2))) \<le> i*j"
+proof -
+  consider (A) "0 \<le> i" "0 \<le> l2"
+    | (B) "0 \<le> i" "l2 < 0"
+    | (C) "i < 0" "0 \<le> u2"
+    | (D) "i < 0" "u2 < 0"
+    by linarith
+  then show ?thesis
+  proof cases
+    case A
+    have "l1*l2 \<le> i*l2"
+      using assms(1) A(2)
+      by (simp add: mult_right_mono)
+    also have "\<dots> \<le> i*j"
+      by (simp add: A(1) assms(3) mult_left_mono)
+    finally show ?thesis by simp
+  next
+    case B
+    have "u1*l2 \<le> i*l2"
+      using assms(2) B(2) by simp
+    also have "\<dots> \<le> i*j"
+      using assms(3) B(1) by (rule mult_left_mono)
+    finally show ?thesis by simp
+  next
+    case C
+    have "l1*u2 \<le> i*u2"
+      using assms(1) C(2) by (rule mult_right_mono)
+    also have "\<dots> \<le> i*j"
+      using assms(4) C(1) by simp
+    finally show ?thesis by simp
+  next
+    case D
+    have "u1*u2 \<le> i*u2"
+      using assms(2) D(2) by simp
+    also have "\<dots> \<le> i*j"
+      using assms(4) D(1) by simp
+    finally show ?thesis by simp
+  qed
+qed
 
 lemma int_mult_in_corners_hi:
   fixes l1 u1 l2 u2 i j :: int
   assumes "l1 \<le> i" "i \<le> u1" "l2 \<le> j" "j \<le> u2"
   shows "i * j \<le> max (l1*l2) (max (l1*u2) (max (u1*l2) (u1*u2)))"
-  using assms
-  by (smt (verit) mult_left_mono mult_right_mono mult_left_mono_neg mult_right_mono_neg max_def)
+proof -
+  have negated:
+    "min ((-u1)*l2) (min ((-u1)*u2) (min ((-l1)*l2) ((-l1)*u2)))
+       \<le> (-i)*j"
+    by (rule int_mult_in_corners_lo) (use assms in simp_all)
+  from negated show ?thesis
+    by (simp add: min_def max_def; linarith)
+qed
 
 text \<open>
   Precise multiplication on non-empty intervals.  For all-finite operands the

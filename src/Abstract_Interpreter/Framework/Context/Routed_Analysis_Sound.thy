@@ -54,9 +54,8 @@ text \<open>
   Everything a routed analysis needs above its solved system, in one place: the
   domain enters through \<open>S\<close> and \<open>gammaDG\<close>, the context policy through \<open>route\<close>,
   \<open>R\<close> and \<open>seed_key\<close>, and the solved system through \<open>sigma\<close>/\<open>vars\<close>. The
-  reader is no longer an instance's own definition -- it is
-  \<^const>\<open>solved_local_reader\<close> -- so its two coverage obligations are the
-  one-line lemmas above rather than a per-instance proof.
+  fixed reader is \<^const>\<open>solved_local_reader\<close>, so its two coverage
+  obligations are the one-line lemmas above.
 
   An instance is then a single \<^theory_text>\<open>interpretation\<close>, and the theorems below are
   what it gets: a published result table, its per-node soundness, and the

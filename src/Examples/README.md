@@ -14,11 +14,11 @@ GraphViz render surface reach `Voblint_CLI`, which is parented on
 together rather than being spread back through the domain folders, where they
 would recouple each domain's session to all of them.
 
-`Voblint_Examples` itself holds only `Voblint.thy`. Making `Voblint_Examples_CLI`
-its parent rather than a listed session is not cosmetic: theories imported from an
-ancestor come from that session's heap, while theories imported from a merely
-listed session are re-elaborated in the importing one. The capstone imports seven
-CLI witnesses, so this is the difference between building them once and twice.
+`Capstone/` holds the final certificate and `Voblint.thy`. Making
+`Voblint_Examples_CLI` its parent rather than a listed session is not cosmetic:
+theories imported from an ancestor come from that session's heap, while theories
+from a merely listed session are re-elaborated in the importer. The narrative
+index imports CLI witnesses, so this avoids building them twice.
 
 | Session | Folder | Parent |
 | --- | --- | --- |
@@ -31,7 +31,7 @@ CLI witnesses, so this is the difference between building them once and twice.
 | `Voblint_Examples_Relational` | `Relational/` | `Voblint_Analysis_Relational` |
 | `Voblint_Examples_Tooling` | `Tooling/` | `Voblint_Analysis_Interval` |
 | `Voblint_Examples_CLI` | `CLI/` | `Voblint_CLI` |
-| `Voblint_Examples` | `Voblint.thy` | `Voblint_Examples_CLI` |
+| `Voblint_Examples` | `Capstone/` | `Voblint_Examples_CLI` |
 
 `Voblint_Examples_Tooling` is parented on Interval because its solver- and
 generator-layer witnesses need *some* domain to make the effect visible, not
@@ -55,14 +55,15 @@ procedure call.
 | `Relational/` | relational | the generic pipeline and solver run against a non-`abs_state` order carrier |
 | `CFG/` | domain-agnostic | compiler and collecting-semantics regressions; shared example programs |
 | `Tooling/` | domain-agnostic | solver buffering regressions, per-origin widening, the strategy-tree and TD-program demos |
-| `CLI/` | crosses every domain | codegen entry points, dispatcher and result-table witnesses, the contextual GraphViz regression, the end-to-end certificate |
+| `CLI/` | crosses every domain | configuration matrices, dispatcher and result-table witnesses, and the contextual GraphViz regression |
+| `Capstone/` | complete development | the fully discharged product certificate and narrative index |
 
 Regressions live in these sessions, not upstream, on purpose: the proof
 sessions stay free of concrete witness programs, which remain at the proof
 chain's leaf. `Voblint_Codegen` imports none of them.
 
-`Voblint.thy` imports the curated examples and presents the complete certified
-pipeline.
+`Capstone/Voblint.thy` imports the curated examples and presents the complete
+certified pipeline.
 
 ## What does not live here
 

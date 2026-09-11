@@ -4,6 +4,7 @@ title: >-
   Voblint: A Verified Goblint-Style Static Analysis Pipeline in
   Isabelle/HOL
 type: software
+license: BSD-3-Clause
 authors:
   - family-names: Lerchner
     given-names: Manuel

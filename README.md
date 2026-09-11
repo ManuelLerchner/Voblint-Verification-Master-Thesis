@@ -201,7 +201,7 @@ edge's node and with its condition, in graph order. `cli/main.ml` then pairs
 those rows with the parser's check positions by order, and that pairing is not
 proved.
 
-[`Example_End_To_End_Certificate`](src/Examples/CLI/Example_End_To_End_Certificate.thy)
+[`Example_End_To_End_Certificate`](src/Examples/Capstone/Example_End_To_End_Certificate.thy)
 instantiates this theorem for an actual run -- the `Int` product domain, a
 call-string context of length one, and `Solver_Join` named explicitly rather than
 defaulted -- with well-formedness, solver termination and the `Analysed` answer
@@ -444,7 +444,7 @@ but the translation, the OCaml compiler and its runtime are trusted), and
 everything upstream of the AST (lexing and parsing sit outside the proved
 chain).
 
-`Example_Side_Execute.thy` (`src/Examples/CLI`) carries one complete instance
+`Example_Side_Execute.thy` (`src/Examples/Sign`) carries one complete instance
 with both conditions discharged and no assumption left open. See
 [`docs/VERIFICATION_CHAIN_AND_TRUST_BOUNDARY.md`](docs/VERIFICATION_CHAIN_AND_TRUST_BOUNDARY.md)
 for the full trust boundary.
@@ -688,3 +688,8 @@ fuzzing under `tests/property/`.
 | [`docs/GOBLINT_ALIGNMENT_REGISTER.md`](docs/GOBLINT_ALIGNMENT_REGISTER.md) | Where this formalization differs from upstream Goblint, and why |
 | [`docs/ISABELLE_AGENT_NOTES.md`](docs/ISABELLE_AGENT_NOTES.md) | Build commands, agent-assisted development (I/Q, I/R), `./scripts/setup.sh` |
 | [`docs/ROADMAP.md`](docs/ROADMAP.md), [`docs/NON_GOALS.md`](docs/NON_GOALS.md) | Scope and priorities |
+
+## License
+
+Voblint is available under the [`BSD-3-Clause`](LICENSE) license. Vendored
+dependencies retain their own licenses.

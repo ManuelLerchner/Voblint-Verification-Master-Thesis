@@ -1004,7 +1004,7 @@ including `assumes`, `lemmas` and `interpretation` positions before removal:
 - `cs_project_gk` (`Call_String_Context`): seed-key truncation for a
   `k1 \<le> k2` projection theorem that was never stated.
 - `cone` (`CFG_Prune`): the backward-reachability set, already recorded as dead
-  in `docs/EXPORT_SURFACE_AUDIT.md`. Not added to
+  in `docs/history/EXPORT_SURFACE_AUDIT.md`. Not added to
   `scripts/retired_identifiers.txt` -- "cone" is ordinary English in this tree's
   prose, so a whole-word rule would reject correct sentences.
 
@@ -1075,7 +1075,7 @@ equations are unconditional and eligible as code equations; `unit_dg_analysis`
 adds the domain and solver contracts and derives the published soundness
 theorems, `result_node_sound_closure` and its `vars_cover` corollary
 `result_node_sound` among them. That is where the six-times-written Entry bundle
-`docs/EXPORT_SURFACE_AUDIT.md` §11.2 measured now lives, proved once.
+`docs/history/EXPORT_SURFACE_AUDIT.md` §11.2 measured now lives, proved once.
 
 Two lemmas in `Run_Analysis_Sound.thy` had to be generalized before the assembly
 could state its endpoints from what a solver actually supplies.

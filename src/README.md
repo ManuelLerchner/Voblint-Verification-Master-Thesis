@@ -10,7 +10,7 @@ VIMP source -> CFG -> activation-local trace -> collecting semantics
 ```
 
 Each arrow is a theorem. The vendored solver is `vendor/td-verification` (session `TD`).
-`src/Examples/Voblint.thy` is the capstone: it imports every example session and the
+`src/Examples/Capstone/Voblint.thy` is the capstone: it imports every example session and the
 CLI, and indexes the whole development.
 
 ## Sessions
@@ -100,7 +100,7 @@ dispatcher or an entry point.
 ## Where to start
 
 Read a session's own `README.md` first — each carries its vocabulary, one worked example
-carried end to end, and the shape of its dependencies. `src/Examples/Voblint.thy` indexes
+carried end to end, and the shape of its dependencies. `src/Examples/Capstone/Voblint.thy` indexes
 every layer above with checked theory references.
 
 Proof status and plans: `docs/PROOF_OVERVIEW.md`, `docs/PROOF_PHASES.md`.

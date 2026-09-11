@@ -5,6 +5,8 @@ session Voblint_Examples_Tooling in "." = "Voblint_Analysis_Interval" +
   sessions
     "Voblint_Analysis_Sign"
   theories
+    (* Generic routed-call enumeration: one call site, two callees. *)
+    Example_Interval_DG_Ctx_Multi_Call_Regression
     (* Generator-layer Side buffering: the buffered RHS generator terminates
        where issuing two Side writes per evaluation livelocks the solver. *)
     Example_Keyed_Solver_Update_Rule_Regression
