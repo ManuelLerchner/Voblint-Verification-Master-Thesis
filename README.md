@@ -22,7 +22,7 @@ The end-to-end analyzer corollaries apply to that computed solution rather than 
 an externally supplied one; the generic framework theorems below them are
 stated for an arbitrary abstract bound.
 
-## A first run
+## Running Voblint
 
 Voblint programs are written in VIMP, a small IMP-style language with
 `__voblint_check(cond)` assertions:
@@ -77,7 +77,24 @@ opens one.
 More views in [the gallery below](#reading-a-result); details and the
 browser-XSLT caveat in [`docs/HTML_REPORT.md`](docs/HTML_REPORT.md).
 
-## The certified pipeline
+Other useful modes:
+
+```bash
+# deterministic textual CFG snapshot, no GraphViz dependency
+pixi run voblint --analysis interval --graph-snapshot FILE.vimp
+
+# parse-only syntax check (exit 0 on success, 2 on a parse error)
+pixi run voblint --parse-only FILE.vimp
+```
+
+`--context none|entry-state|call-string` selects the analysis context.
+`--context-graph collapsed|expanded` changes only how a context-sensitive
+result is drawn. `pixi run voblint --help` lists every flag;
+[`docs/CLI_DESIGN.md`](docs/CLI_DESIGN.md) describes the CLI trust boundary,
+and [`docs/CHECK_ARCHITECTURE.md`](docs/CHECK_ARCHITECTURE.md) the contextual
+result and rendering architecture.
+
+## What Voblint proves
 
 ```text
 Execution:  VIMP AST -> CFG -> equation system -> verified TD solver
@@ -88,29 +105,22 @@ Proof:      source execution -> activation-local traces (valid_ltr)
                              included in the concretization of that result
 ```
 
-The reference meaning the computed result is proved sound against is a
-collecting semantics built on a *local trace* semantics, not a stage the solver
-produces. [`valid_ltr`](src/Program_Model/CFG/Collecting/LTR_Def.thy) is the trace
-layer: a trace is one procedure activation's own view of the run, so a call is entered and returned from without threading a
-global control stack through the semantics. Goblint's thread-modular local
-traces make the same move for threads; this takes it for activations.
-[`ltr_collect`](src/Program_Model/CFG/Collecting/LTR_Collect.thy) `gs g S v` is
-the collection on top of it: every store some valid trace holds when it sits at node `v`. `ltr_collect` is not indexed by analysis
-contexts; `activation_collect` is the context-keyed variant the
-context-sensitive results are stated over.
+The computed result is compared with an activation-local collecting semantics.
+A [`valid_ltr`](src/Program_Model/CFG/Collecting/LTR_Def.thy) records one
+procedure activation's view of an execution; calls enter and return without
+threading a global control stack through the semantics.
+[`ltr_collect`](src/Program_Model/CFG/Collecting/LTR_Collect.thy) collects
+every store held by a valid trace at each CFG node. Context-sensitive analyses
+use `activation_collect`, which groups those stores by admitted activation
+context. This adapts Goblint's thread-modular local-trace construction from
+threads to procedure activations.
 
-The chain ends at a configuration-generic statement over the CLI's HOL entry
-point
-([`run_voblint_certified_source_sound`](src/Executable_Surface/CLI/Analysis_Certified.thy)).
-If the verified solver terminates and `run_voblint` returns an analysis result,
-that result over-approximates every modeled execution of the source program:
-run the program, stop wherever you like, and the answer describes the store at
-some CFG node corresponding to where the execution stopped -- an abstract-state
-entry filed at that node, under at least one admitted context when contexts are
-used, contains it, every definite verdict printed at that node is correct for
-that store, and no row there is marked dead. The domain, the solver discipline and the context policy
-are arguments, not parameters of the statement. "Certified" names the theorem;
-the CLI emits a report, not a certificate.
+### End-to-end soundness
+
+The headline theorem is
+[`run_voblint_certified_source_sound`](src/Executable_Surface/CLI/Analysis_Certified.thy).
+It ranges over the same `run_voblint` entry point exported to OCaml and over
+every accepted domain, solver discipline, and context policy:
 
 ```isabelle
 theorem run_voblint_certified_source_sound:
@@ -127,46 +137,57 @@ theorem run_voblint_certified_source_sound:
                ∧ checks_sound_at out v s"
 ```
 
-`s0` and `run` choose an arbitrary execution prefix, and `ans` names the result
-being read; `terminates` is the only proof obligation about the analyzer. The
-theorem does not assume the demand-driven solver visited enough unknowns. That
-coverage is proved for every terminating solve, from the dependencies of the
-generated equations and the structure of the compiled graph, so it is neither a
-premise nor a runtime check.
-
-The four premises, and who has to establish each:
-
-| Premise | What it says | How it is discharged |
-| --- | --- | --- |
-| `s0` | The run starts from a store in which every declared global is `0`; locals are unconstrained. | Nothing to discharge: it fixes which executions the theorem talks about. |
-| `run` | `residual, s, frs` is reachable by any finite number of VIMP small-step (`pstep`) steps from `main`'s body with an empty frame stack: `residual` is the command still to run, `s` the current store, `frs` the pending callers' frames. The run need not terminate; any prefix counts. | Nothing to discharge: this is the arbitrary execution being quantified over. |
-| `terminates` | The verified TD solver terminates on *this configuration's* root query for `p` (`..._terminates`, membership in the solver's termination domain `solve_dom`). | Per program, by evaluation: the domain's `..._via_solve_c` theorem. It does not hold for every program -- the solver may diverge -- so the theorem is partial correctness. |
-| `ans` | The analyzer accepted the configuration and the program and returned the report `out`. An illegal configuration answers `Unsupported_Configuration` and an ill-formed program `Malformed_Program`, so this premise already implies legality and well-formedness. Coverage is no premise either: a terminating solve has visited the CFG entry, the target of every intra edge out of a live point, the continuation of every live call site, and every callee entry reached with a live state (`live_keys_cover`, over `ctx_vars_cover_live`), so it is proved from `terminates` rather than checked. `view` (which rendering was asked for) is arbitrary. | Running the exported function, i.e. the CLI. |
-
-and what the conclusion gives back, at some CFG node `v`:
-
-| Conjunct | What it says |
+| Premise | Meaning |
 | --- | --- |
-| `csim ... (v, s, stk)` | The source state corresponds to node `v` with a matching CFG call stack `stk`: the compiler's forward simulation. |
-| `s ∈ ltr_collect ... v` | The collecting semantics admits `s` at `v`, so `v` is a node the run really reaches rather than a structurally matching dead copy. |
-| `analysis_result_covers D solver ctx p v s` | The abstract state the analysis filed for `v` -- under at least one context the run's call history admits -- contains `s`. |
-| `checks_sound_at out v s` | Every printed check row at `v` is not `DEAD`; a `PROVED` row's condition holds in `s`; a `REFUTED` row's condition fails in `s`. |
+| `s0` | Initial store. Declared globals start at `0`; locals are unconstrained. |
+| `run` | An arbitrary finite VIMP execution prefix from `main`, with the residual command, current store, and pending caller frames made explicit. Source termination is not required. |
+| `terminates` | The selected verified-solver run terminates for this program. This is the sole analyzer-side proof obligation. |
+| `ans` | `run_voblint` accepted the program and configuration and returned `Analysed out`. It therefore supplies configuration legality and well-formedness. The requested rendering `view` is arbitrary. |
 
-`run_voblint` is the single operation `export_code` exports and `cli/main.ml`
-calls, so this constrains the analyzer's own output rather than an internal
-solved system.
+The conclusion supplies a CFG node `v` and matching call stack `stk`:
 
-The two case splits the statement avoids live in the definitions instead:
-`config_terminates` names the obligation per configuration and
-`analysis_result_covers` names what that configuration's own table claims, both
-by recursion over the domain, the solver and the policy. They have to be
-definitions rather than parameters because an abstract state's type is the
-domain's own carrier, so nothing polymorphic holds all five.
+| Conjunct | Guarantee |
+| --- | --- |
+| `csim ... (v, s, stk)` | The compiler's forward simulation relates the source state to `v`. |
+| `s ∈ ltr_collect ... v` | A valid trace genuinely reaches `v` with store `s`. |
+| `analysis_result_covers ... v s` | The abstract state filed for `v`, under an admitted context when contexts are used, contains `s`. |
+| `checks_sound_at out v s` | No row at `v` is `DEAD`; every `PROVED` or `REFUTED` verdict there is correct for `s`. |
 
-The endpoint is existential in its node, so reading one printed check off it
-still means connecting the source `Check` to that node. The corollary
+`config_terminates` and `analysis_result_covers` dispatch over the selected
+plan. They cannot store every domain behind one polymorphic abstract-state
+value because each domain has its own carrier type. “Certified” names the
+theorem; the CLI returns a report, not a proof certificate.
+
+The theorem covers every row-producing configuration:
+
+```text
+D      in {Sign, Interval, Parity, Congruence, Int}
+ctx    in {Ctx_None, Ctx_EntryState, Ctx_CallString k}
+solver = None, or any discipline accepted for that domain and policy
+```
+
+There are 32 accepted plans. `None` selects a domain's default discipline;
+naming another accepted discipline changes how the equations are solved, not
+the guarantee. Unsupported combinations return `Unsupported_Configuration`;
+ill-formed programs return `Malformed_Program`.
+
+All 32 plans discharge the same [`sound_table`](src/Executable_Surface/CLI/Analysis_Run_Sound.thy)
+interface. `Analysis_Run_Sound` establishes the generic endpoint,
+`Analysis_Run_Ctx_Sound` lifts contextual results through
+[`sound_table_of_activation`](src/Executable_Surface/CLI/Analysis_Run_Sound.thy),
+and `Analysis_Run_Solver_Sound` registers explicitly selected disciplines. A
+new supported discipline therefore needs an analysis registration and
+instantiation, not new source-level reasoning.
+
+### Checks and dead code
+
 [`run_voblint_check_sound`](src/Executable_Surface/CLI/Analysis_Certified.thy)
-makes that connection once, with no `csim` in its statement:
+specializes the headline to the next source check. If an execution is about to
+run `Check e`, the report contains a row for `e` at a node reached with the
+current store. That row is live, and every definite verdict is correct.
+
+<details>
+<summary>Exact check theorem</summary>
 
 ```isabelle
 theorem run_voblint_check_sound:
@@ -185,118 +206,14 @@ theorem run_voblint_check_sound:
            ∧ (row_verdict row = Decided Check_Refuted ⟶ ¬ truthy (aval e s))"
 ```
 
-If a modeled source execution is about to execute `Check e` (`next_check` reads
-the command a residual runs next), the returned report contains a row for `e` at
-a CFG node that execution reaches, and any definite verdict in that row is
-correct for the current store. The row is existential because a source state
-does not determine its node: two procedures with identical bodies, called on the
-two branches of one conditional, leave the same source state inside either, and
-each body's check has its own row. Membership in `ltr_collect` at the row's node
-is what keeps the witness from being some unrelated copy of the same expression.
+</details>
 
-Which printed line shows that row is outside the theorem.
-[`run_voblint_check_sites`](src/Executable_Surface/CLI/Analysis_Certified.thy)
-proves that the report has exactly one row per compiled `EA_Check` edge, at the
-edge's node and with its condition, in graph order. `cli/main.ml` then pairs
-those rows with the parser's check positions by order, and that pairing is not
-proved.
-
-[`Example_End_To_End_Certificate`](src/Examples/Capstone/Example_End_To_End_Certificate.thy)
-instantiates this theorem for an actual run -- the `Int` product domain, a
-call-string context of length one, and `Solver_Join` named explicitly rather than
-defaulted -- with well-formedness, solver termination and the `Analysed` answer
-all discharged by evaluation. The source run is not assumed
-either: it is built step by step, both calls and the check, so the theorem's
-conclusion holds outright for a store the program really computes.
-
-It also instantiates `run_voblint_check_sound` for the same run stopped
-immediately before its check: `certificate_demo_check_row_sound` obtains a
-printed row for the checked condition, at a node the concrete store reaches,
-whose `PROVED` is true of that store -- without exposing `csim`. Separately, the
-example proves the stronger program-specific fact that the concrete store is
-collected at the named node `Statement 4`, and reads
-[`ctx_rows_sound_at`](src/Executable_Surface/CLI/Analysis_Run_Sound.thy) there.
-`certificate_demo_full_certificate` collects that version with every witness
-named -- the answer, its single row, the completed run, the membership at that
-node, `analysis_result_covers` and `checks_sound_at` there, and the check's own
-truth.
-
-The per-configuration work stays underneath as the implementation level:
-[`Analysis_Run_Sound`](src/Executable_Surface/CLI/Analysis_Run_Sound.thy) states
-the endpoint once, as the locale `sound_table`, and proves the context-free cells;
-[`Analysis_Run_Ctx_Sound`](src/Executable_Surface/CLI/Analysis_Run_Ctx_Sound.thy)
-proves the contextual cells at each policy's default discipline, and
-[`Analysis_Run_Solver_Sound`](src/Executable_Surface/CLI/Analysis_Run_Solver_Sound.thy)
-those at an explicitly named discipline.
-
-`csim` gives a *structural* CFG correspondence for the current source control
-state, and that correspondence need not be unique. A procedure that is never
-called still has its body compiled into the graph, so
-
-```text
-main()   { x := 1; }
-unused() { x := 1; }
-```
-
-leaves the residual `x := 1` structurally matching two nodes -- one in `main`,
-which is running, and one in `unused`, which nothing reaches.
-
-The `ltr_collect` membership is what picks out a witness that is genuinely
-reachable carrying this store, and it is
-load-bearing rather than decorative -- at the dead witness the analysis
-computed bottom, so the `analysis_result_covers` conjunct would be false there. At that
-reachable node the computed abstract state contains the store, and every
-definite check verdict printed for it is correct.
-
-One asymmetry is deliberate. The check guarantee is stated over `out_checks
-out`, the analyzer's own returned rows, while the state guarantee is stated as
-`analysis_result_covers D solver ctx p v s` rather than over `out`. That is
-because `analysis_output` keeps no abstract state: its snapshot, globals and
-per-row states are all `String.literal`, already rendered. An output-level state
-predicate could only be defined by inverting the renderer, so the honest split
-is a semantic guarantee about the computed result and an observable guarantee
-about the printed report.
-`analysis_result_covers` is the over-approximation itself: the concrete store
-lies in the concretization of the abstract state that configuration's own solve
-filed for that node -- under at least one context its call history is admitted at,
-when the policy keeps contexts. A call string is a function of that history, so
-there the context is unique; entry-state routing is relational and may admit more
-than one. `checks_sound_at` reads the printed check
-rows -- PROVED rows hold, REFUTED rows are violated, and no row at a node the
-run actually reaches is marked dead, so an unreachability claim can never be
-printed over a store that reached it.
-
-[`analyse_source_sound`](src/Executable_Surface/CLI/Analyse_Dispatch.thy) is the
-same statement one layer down, over the `analyse` verdict list rather than the
-rendered rows, and without the `analysis_result_covers` conjunct.
-
-### What is certified
-
-For the HOL call
-
-```isabelle
-run_voblint D solver ctx view p = Analysed out
-```
-
-with the per-program premises established, a source-level soundness theorem
-covers every configuration the dispatcher answers with check rows:
-
-```text
-D      in {Sign, Interval, Parity, Congruence, Int}
-ctx    in {Ctx_None, Ctx_EntryState, Ctx_CallString k}
-solver = None, or any discipline that domain and policy accepts
-```
-
-Every modeled source execution is over-approximated at a genuinely reachable
-CFG node -- and, at the context-sensitive policies, under at least one context
-its own call history is admitted at: exactly one for a call string, possibly
-several under entry-state routing. At that node every definite check verdict is
-correct for that execution, and no check row there is reported dead.
-
-What a `DEAD` row claims is a separate theorem, deliberately.
 [`run_voblint_dead_row_unreached`](src/Executable_Surface/CLI/Analysis_Certified.thy)
-says that if a printed row is dead then the collecting semantics at its point is
-empty -- nothing reaches it at all, at any configuration:
+states the guarantee needed for dead code: a `DEAD` row's point has an empty
+collecting semantics.
+
+<details>
+<summary>Exact dead-row theorem</summary>
 
 ```isabelle
 corollary run_voblint_dead_row_unreached:
@@ -308,146 +225,132 @@ corollary run_voblint_dead_row_unreached:
            (cinit_stores (declared_global p)) (row_point row) = {}"
 ```
 
-That does not follow from reading the endpoint backwards. The endpoint is
-existential in its witness, so it constrains the rows at the one node it
-produced, not at an arbitrary node someone names; `csim` being non-unique is
-exactly what breaks the contraposition. It is proved forwards instead, from
-`run_voblint_sound_at`: a store collected at the point would have to be covered
-there, and no row at a covered point is dead. Under a context policy the row is
-the aggregate over every context the point was solved at, so a dead marker means
-nothing reaches the point under any context.
+</details>
 
-Every configuration reaches the endpoint through one locale,
-[`sound_table`](src/Executable_Surface/CLI/Analysis_Run_Sound.thy): a result table
-that covers, under at least one context, every store the collecting semantics
-admits at a point, together with a check classifier whose `PROVED` and
-`REFUTED` answers are sound. Each of the 32 row-producing configurations proves
-one `*_table` lemma instantiating it. At the context-sensitive ones the table has
-one entry per point *and* context, and `sound_table_of_activation` derives the
-locale from the routed bound on each `activation_collect` bucket together with
-the fact that the buckets exhaust `ltr_collect`. The store then sits in the entry
-filed under *at least one* context its own call history is admitted at -- unique
-for a call string, possibly several for entry-state routing -- and quantifying
-over every context the node was solved at instead would be false, since another
-activation's entry need not describe this store at all.
+This result is proved directly at the named point. It does not follow by
+contraposing the existential end-to-end theorem. Under a context policy, the
+printed row aggregates the contexts solved at that point, so `DEAD` means no
+admitted context reaches it.
 
-Every cell owes one fact: termination. The soundness proof also reads a coverage
-property,
-[`ctx_vars_cover_live`](src/Abstract_Interpreter/Framework/Constraints/CFG_Enumeration.thy),
-and it is *closure along live dependencies* rather than blanket coverage: if a
-node-context pair was solved to a live state, the pairs its edges lead to were
-solved too, and a call enters its callee only when the entered state is live. A
-context-sensitive system cannot demand the unconditional form, because which
-contexts a node was solved at is decided by the run. Nor can the unit context:
-a procedure nothing calls is compiled into the graph but never solved, and a
-call on a dead branch is never entered. The closure is proved, not assumed:
-[`live_keys_cover`](src/Analyses/Shared/Result/Routed_Live_Keys.thy) derives it
-from termination alone, over the solved keys whose node reaches a solved
-procedure result. The restriction matters because a key after a `return` is
-solved but never read, so its successors need not be.
+[`run_voblint_check_sites`](src/Executable_Surface/CLI/Analysis_Certified.thy)
+proves that returned rows correspond exactly, in graph order, to the compiled
+`EA_Check` edges. The handwritten CLI pairs them with parser source positions
+by order; that pairing is outside the proof.
 
-Call-string carries a *smaller* obligation than entry state, not a larger one.
-A call string is a total function of the call history, so every activation has
-exactly one context by construction and there is no context-totality obligation
-at all: `fun_route_ltr_collect_eq_Union` is premise-free. Only the termination
-fact remains, and the closure follows from it.
+### Why the node and context are existential
 
-`None` selects each domain's default discipline, and naming a solver instead
-changes nothing about what is proved: every configuration the dispatcher answers
-with rows carries the same source-level theorem, all 32 of them, whichever of
-always-join, per-origin, Apinis warrowing or warrowing-per-origin ran the system.
-The 32 are plans, not spellings: `None` and the discipline it defaults to resolve
-to one plan and share one theorem, so they count once.
-[`docs/THEOREM_MAP.md`](docs/THEOREM_MAP.md) is the cell-by-cell matrix, and
-[`Analysis_Run_Solver_Sound`](src/Executable_Surface/CLI/Analysis_Run_Solver_Sound.thy)
-holds the contextual cells at a named discipline. What the endpoint reads is the
-solved table, not the search that produced it, so a discipline costs one
-registration and one instantiation, never a new argument.
+A source control state need not determine one CFG node. The compiler can create
+structurally matching nodes for identical commands in different procedures.
+The `csim` conjunct records structural correspondence; the
+`ltr_collect` conjunct selects a witness that is actually reachable with the
+current store.
 
-One limit is worth naming: the guarantee is about `out_checks` -- the graph,
-snapshot and globals in the answer are rendered strings, with no theorem about
-them.
-
-`config_terminates D solver ctx p` is the one per-program fact nothing here
-proves in general. It is a logical precondition of the theorem, not something the
-CLI checks: a caller establishes it for a specific program, by evaluation, before
-the theorem says anything about that program's report. One layer down, the
-`analyse` API has no coverage check of its own, so
-[`analyse_certified D p`](src/Executable_Surface/CLI/Analyse_Dispatch.thy)
-bundles termination with the unconditional `vars_cover` for the statements over
-`analyse`.
-
-Each domain also states the result over its own result table rather than over
-verdicts: [`analyse_sign_source_sound`](src/Analyses/Sign/generated/Sign_Entry.thy) says
-the store lies in the concretization of the entry
-`analyse_sign_result p` returned for that node, with a weaker completed-run
-reading (`analyse_<domain>_completed_run_sound`: final store at `cfg_exit`, no
-`csim` witness needed) beside it. Those live in each domain's entry theory:
-[Sign](src/Analyses/Sign/generated/Sign_Entry.thy),
-[Interval](src/Analyses/Interval/generated/Interval_Entry.thy),
-[Parity](src/Analyses/Parity/generated/Parity_Entry.thy),
-[Congruence](src/Analyses/Congruence/generated/Congruence_Entry.thy),
-[Int](src/Analyses/Int/Int_Entry.thy).
-
-Underneath, the source bridge is domain-free. It consumes only a
-collecting-semantics bound.
-[`source_sound_from_ltr_collecting_cap`](src/Analyses/Shared/Result/Source_Activation_Sound.thy)
-takes any `G :: pp ⇒ store set` with `ltr_collect ... v ⊆ G v` and places the
-store of a source run inside `G` at the node it reached. Composing that
-inclusion with each domain's check soundness is what produces the verdict
-theorem above. Generic framework theorems establish the bound itself from an
-analysis's own soundness, solver-success and coverage obligations, so a new
-domain writes no source-level reasoning. See
-[`docs/PROOF_OVERVIEW.md`](docs/PROOF_OVERVIEW.md).
-
-### What the guarantee covers, and what it does not
-
-The theorem above is stated for the configuration as an argument, so domain,
-solver discipline and context policy are all covered by one statement, and
-`config_terminates D solver ctx p` is what a caller owes per program. The
-per-configuration endpoints underneath it are what that predicate is assembled
-from, one per plan, and the per-domain corollaries over `analyse` read their
-tables at `lookup_context ... v ()`. See
-[`docs/THEOREM_MAP.md`](docs/THEOREM_MAP.md) for each endpoint's exact shape.
-
-Read the two verdicts precisely. `PROVED` at a node says every execution that
-reaches that node satisfies the condition; `REFUTED` says every execution that
-reaches it falsifies the condition. Neither says an execution reaches the node
-at all, so a `REFUTED` line is not a verified counterexample: a check on a dead
-branch is reported dead, and `REFUTED` on a reachable one still comes with no
-witness run.
-
-One logical premise remains per program: solver termination
-(`config_terminates`). Per program, evaluate the solver-success condition, then
-apply that domain's `..._via_solve_c` theorem. The evaluation may itself fail to
-terminate, and no theorem here guarantees success for every program; partial
-correctness is the scope.
-
-Live coverage follows from termination. The remaining conditions are checked by
-`run_voblint` before it returns `Analysed`:
+<details>
+<summary>Example: structural correspondence is not unique</summary>
 
 ```text
-termination        theorem premise
-live coverage      proved from termination  (live_keys_cover)
-well-formedness    checked by run_voblint    (Malformed_Program)
-configuration      checked by run_voblint    (Unsupported_Configuration)
+main()   { x := 1; }
+unused() { x := 1; }
 ```
 
-Stated exactly: *every report the analyzer prints for a terminating solve
-over-approximates all modeled source executions.* A `PROVED` verdict carries the
-formal guarantee once termination is established for that invocation. The CLI
-does not emit a proof certificate: it returns a report.
+The residual command `x := 1` structurally matches a node in each procedure.
+Only the node in `main` has a valid trace carrying the running store. The
+unused procedure's corresponding state is bottom.
 
-Two further steps separate the theorem from the binary, and no theorem covers
-either: the generated OCaml (`export_code` translates the same HOL functions,
-but the translation, the OCaml compiler and its runtime are trusted), and
-everything upstream of the AST (lexing and parsing sit outside the proved
-chain).
+</details>
 
-`Example_Side_Execute.thy` (`src/Examples/Sign`) carries one complete instance
-with both conditions discharged and no assumption left open. See
-[`docs/VERIFICATION_CHAIN_AND_TRUST_BOUNDARY.md`](docs/VERIFICATION_CHAIN_AND_TRUST_BOUNDARY.md)
-for the full trust boundary.
+Context-sensitive coverage is existential for the same semantic reason. The
+store lies in at least one context admitted by its call history. A call string
+is a function of that history, so its context is unique. Entry-state routing is
+relational and may admit several contexts; another activation's entry need not
+describe this store. Functional call-string routing therefore needs no separate
+context-totality premise; relational entry-state routing proves the required
+coverage of admitted contexts.
+
+The state and check claims live at different representations.
+`analysis_output` retains check rows, but renders snapshots, globals, and
+per-row states as `String.literal`. Check soundness can therefore refer to
+`out_checks out` directly. State soundness refers to the semantic result via
+`analysis_result_covers`; recovering an abstract state from rendered text
+would require inverting the renderer.
+
+### Coverage, termination, and trust
+
+Demand-driven solving does not add a coverage premise to the headline theorem.
+For an accepted answer, well-formedness comes from `ans`; together with
+`terminates`, the supporting `live_keys_cover` theorem proves closure along
+the dependencies a reachable execution can follow: live intra-edge targets,
+call continuations, and callee entries reached with live states. Structurally
+dead procedures and calls on dead branches need not be solved. Keys after a
+`return` may be solved but unread, so the closure is deliberately over live
+keys rather than every solved key.
+
+Termination remains a per-program logical premise. A caller can establish a
+specific solve's termination by evaluation and then apply the corresponding
+solver-success theorem; logically, this is membership in the solver's
+termination domain. Nothing proves termination for every program, and the
+evaluation may itself diverge. The result is partial correctness:
+
+> Every report returned for a terminating accepted solve over-approximates all
+> modeled source executions.
+
+Read verdicts accordingly. `PROVED` says every execution reaching the row's
+node satisfies the condition; `REFUTED` says every execution reaching it
+falsifies the condition. Neither establishes reachability, so `REFUTED` is
+not a verified counterexample.
+
+The proof covers:
+
+- VIMP execution from an already-constructed AST;
+- compilation to the procedure-aware CFG;
+- equation generation and the computed verified-solver post-solution;
+- semantic abstract states and returned check rows.
+
+The executable `cli/main.ml` is a thin, unverified adapter around the generated
+`run_voblint` entry point.
+
+It does not cover:
+
+- solver termination for arbitrary programs;
+- lexing or parsing;
+- Isabelle code generation, the OCaml compiler, or its runtime;
+- the handwritten CLI's source-position pairing;
+- rendered graph, snapshot, globals, or state strings;
+- completeness or precision.
+
+Lower-level collector, D/G, solver-transport, per-domain, and
+per-configuration statements remain in
+[`docs/THEOREM_MAP.md`](docs/THEOREM_MAP.md). The README keeps the three
+configuration-generic, reader-facing results above.
+
+Those lower layers retain the same content in more specialized forms: the
+context-free dispatcher states verdict soundness over its verdict list; each
+domain states source and completed-run soundness over its own result table; and
+the domain-free source bridge turns any `ltr_collect` bound into a source-run
+claim. New domains reuse that source reasoning.
+
+<details>
+<summary>Lower-level API ladder</summary>
+
+`analyse_certified` packages the context-free analysis obligations. Domains
+expose `analyse_<domain>_source_sound` and
+`analyse_<domain>_completed_run_sound`; the domain-independent
+`source_sound_from_ltr_collecting_cap` turns any `ltr_collect` bound into a
+source-execution claim.
+
+</details>
+
+[`Example_End_To_End_Certificate`](src/Examples/Capstone/Example_End_To_End_Certificate.thy)
+shows the headline is non-vacuous. It evaluates well-formedness, solver
+termination, and the answer for one program using the `Int` product, a
+length-one call string, and an explicit always-join solver. It also constructs
+the source run through both calls and its check. Its full certificate names the
+returned answer, the `PROVED` row, the completed run, collection at `Statement
+4`, result coverage, row soundness, and the checked condition's truth.
+The example names those witnesses `certificate_demo_check_row_sound` and
+`certificate_demo_full_certificate`.
+[`Example_Side_Execute`](src/Examples/Sign/Example_Side_Execute.thy) provides a
+smaller Sign instance with every premise discharged.
 
 ## Reading a result
 
@@ -502,7 +405,7 @@ component *plus* cross-component reduction, not a better interval transfer
 | Domain | `--analysis` | Result table | Default solver | Context policies |
 | --- | --- | --- | --- | --- |
 | Sign | `sign` | `analyse_sign_result` | join | `none`, `entry-state`, `call-string` |
-| Interval | `interval` | `analyse_interval_td_result` | warrowing | `none`, `entry-state`, `call-string` |
+| Interval | `interval` | `analyse_interval_result` | warrowing | `none`, `entry-state`, `call-string` |
 | Parity | `parity` | `analyse_parity_result` | join | `none`, `entry-state`, `call-string` |
 | Congruence | `congruence` | `analyse_congruence_result` | join | `none`, `entry-state`, `call-string` |
 | Int (Sign × Interval × Parity × Congruence) | `int` | `analyse_int_result` | warrowing | `none`, `entry-state`, `call-string` |
@@ -525,26 +428,24 @@ Analyses are factored the way Goblint factors them:
 
 The central abstraction is the Isabelle counterpart of Goblint's
 [`Spec`](https://github.com/goblint/analyzer/blob/1ab59c9c4d9859e9135885d3c9a9aa1a8f3b677e/src/framework/analyses.ml#L168-L263)
-interface: an analysis provides domain-specific transfer, combine and
-communication operations, and inherits equation generation, solver integration,
-and the collecting- and source-level soundness theorems. The interface separates core
-transfer/combine soundness from the routed entry and coverage obligations:
-[`sound_dg_spec_core`](src/Abstract_Interpreter/Framework/Spec/DG_Spec_Sound.thy)
-signs the edge-transfer and return-combine obligations, which are independent of
-how a call is compiled, and
-[`dg_ctx_activation_base`](src/Abstract_Interpreter/Framework/Activation/DG_Ctx_Activation.thy)
-extends it with the entry obligation for the routed equation shape. The complete
-statement is the latter; interpreting the core alone leaves a call's entry
-unconstrained.
+interface. An analysis provides transfer, entry, combine, and communication
+operations. The framework supplies routed equation generation, solver
+integration, and the collecting- and source-level soundness lifting.
 
-| Responsibility | Owner |
+| Layer | Responsibility |
 | --- | --- |
-| Generic compiled equations, at every context policy | `Compiled_Routed_Equations` |
-| Context-insensitive analysis and its source-level endpoints | `Unit_DG_Analysis` |
-| Generic reader transport | `DG_Reader_Transport` |
-| Executable finite states | `Exec_St_*` |
-| Executable local specification | `DG_Local_State_Exec` |
-| Executable local refinement | `DG_Local_State_Exec_Refinement` |
+| `DG_Spec` / `DG_Spec_Sound` | Transfer, entry, combine, and communication contracts |
+| `DG_Ctx_Activation` | Routed activation and context obligations |
+| `Compiled_Routed_Equations` | One equation generator for every context policy |
+| `Unit_DG_Analysis` | Context-insensitive instance and source endpoints |
+| `DG_Reader_Transport` | Generic solved-state transport |
+| `Exec_St_*` / `DG_Local_State_Exec*` | Executable finite states and refinement |
+
+[`sound_dg_spec_core`](src/Abstract_Interpreter/Framework/Spec/DG_Spec_Sound.thy)
+covers transfer and return-combine independently of routing;
+[`dg_ctx_activation_base`](src/Abstract_Interpreter/Framework/Activation/DG_Ctx_Activation.thy)
+adds the routed call-entry obligation. Interpreting the core alone therefore
+does not constrain interprocedural entry.
 
 Adding a domain still costs more than one locale instantiation: the lattice and
 its concretization, transfer soundness, an executable representation and its
@@ -632,32 +533,6 @@ module for the whole reachable program (plus HOL's `Bit_Shifts` and
 > [stilscher/td-verification](https://github.com/stilscher/td-verification); CI
 > needs a `SUBMODULES_TOKEN` secret to clone it. Making that fork public is the
 > outstanding step for a fully reproducible artifact.
-
-## Running the analyzer
-
-`voblint` (`cli/main.ml`) is a thin, unverified adapter over the exact generated
-`analyse` entry point.
-
-```bash
-# one line per __voblint_check, in source order
-pixi run voblint --analysis interval FILE.vimp
-
-# GraphViz of the solved CFG (--dot-full: every node, not only check nodes)
-pixi run voblint --analysis interval --dot FILE.vimp > cfg.dot && dot -Tsvg cfg.dot -o cfg.svg
-
-# deterministic textual CFG snapshot, no GraphViz dependency
-pixi run voblint --analysis interval --graph-snapshot FILE.vimp
-
-# parse-only syntax check (exit 0 on success, 2 on a parse error)
-pixi run voblint --parse-only FILE.vimp
-```
-
-`--context none|entry-state|call-string` selects the analysis;
-`--context-graph collapsed|expanded` only changes how a context-sensitive result
-is *drawn*, never what is computed. `pixi run voblint --help` has the full flag
-list, [`docs/CLI_DESIGN.md`](docs/CLI_DESIGN.md) the design and trust-boundary
-notes, and [`docs/CHECK_ARCHITECTURE.md`](docs/CHECK_ARCHITECTURE.md) the
-contextual result and rendering architecture.
 
 ## VIMP grammar pipeline
 
