@@ -585,6 +585,10 @@ CONTEXT_PARAMS = {
         # `ctx_vars_cover` closure premise instead of four positional ones.
         "sound_of_cover": "entry_state_activation_collect_sound_of_cover",
         "union_of_cover": "entry_state_ltr_collect_eq_Union_of_cover",
+        # The same pair with no coverage premise at all: the live keys of a
+        # terminating solve are closed by construction.
+        "sound_of_terminates": "entry_state_activation_collect_sound_of_terminates",
+        "union_of_terminates": "entry_state_ltr_collect_eq_Union_of_terminates",
         "gamma_reader": "gamma_reader_eq_lookup",
         "vars_finite": "vars_finite_of_terminates",
     },
@@ -609,6 +613,8 @@ CONTEXT_PARAMS = {
         # unconditional here -- a total key needs no coverage to carry a context.
         "sound_of_cover":
             "fun_route_activation_collect_sound_of_cover[OF cs_route_context_agree]",
+        "sound_of_terminates":
+            "fun_route_activation_collect_sound_of_terminates[OF cs_route_context_agree]",
         "union_of_cover": "fun_route_ltr_collect_eq_Union",
     },
 }
@@ -844,6 +850,7 @@ def soundness_lemmas(dom, ctx, route, solvers):
         names["vars_finite"] = f"analyse_{d}_{ctx}_vars_finite"
         if ctx == "call_string":
             names["sound_of_cover"] = f"analyse_{d}_call_string_sound_of_cover"
+            names["sound_of_terminates"] = f"analyse_{d}_call_string_sound_of_terminates"
             names["union_of_cover"] = (
                 f"analyse_{d}_call_string_ltr_collect_eq_Union")
         if ctx == "entry_state":
@@ -852,6 +859,9 @@ def soundness_lemmas(dom, ctx, route, solvers):
             names["sound_of_cover"] = f"analyse_{d}_entry_state_sound_of_cover"
             names["union_of_cover"] = (
                 f"analyse_{d}_entry_state_ltr_collect_eq_Union_of_cover")
+            names["sound_of_terminates"] = f"analyse_{d}_entry_state_sound_of_terminates"
+            names["union_of_terminates"] = (
+                f"analyse_{d}_entry_state_ltr_collect_eq_Union_of_terminates")
         if ctx == "call_string" and "terminates_of_solve_c" in dom.published(ctx):
             names["terminates_of_solve_c"] = (
                 f"analyse_{d}_call_string_terminates_of_solve_c")
@@ -861,6 +871,7 @@ def soundness_lemmas(dom, ctx, route, solvers):
     # Guarded on the route, not just on the name: only entry state has these,
     # since a functional route earns its union equation without a witness.
     for key in ("has_context", "union", "sound_of_cover", "union_of_cover",
+                "sound_of_terminates", "union_of_terminates",
                 "gamma_reader", "vars_finite"):
         if key in names and key in p:
             out += [f"lemmas {names[key]}{sfx} =", f"  {binder}.{p[key]}", ""]
@@ -878,7 +889,7 @@ def soundness_lemmas(dom, ctx, route, solvers):
 # from VIMP_Program and `formals_route_lifted_gen` from Routed_Context; both
 # would resolve through the domain's own imports, but an implicit dependency is
 # what turns a later unrelated import prune into a failure nobody can place.
-CONTEXTUAL_IMPORTS = ['"Voblint_Result.Routed_DG_Analysis"',
+CONTEXTUAL_IMPORTS = ['"Voblint_Result.Routed_Live_Keys"',
                       '"Voblint_Framework.Call_String_Context"',
                       '"Voblint_Framework.Routed_Context"',
                       '"Voblint_Solver.TD_Solver_Bridge"',

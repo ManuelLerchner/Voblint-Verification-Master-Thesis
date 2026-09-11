@@ -53,6 +53,33 @@ lemma part_post_solution_imp_tree_covered_at:
   shows "tree_covered_at (T u) \<sigma> u"
   using assms part_post_solution_iff_tree_covered_at by blast
 
+subsection \<open>The bounds without the closure\<close>
+
+text \<open>
+  \<^const>\<open>part_post_solution\<close> also asks that every dependency of a covered unknown is
+  itself covered.  An argument about the solved values never reads that conjunct: it needs
+  the two bounds at the keys it reasons about, and the root among them.  So a caller may
+  keep only the keys it can say something about and still discharge \<open>post_bounded\<close> for
+  them from the solver's own answer.
+\<close>
+
+definition post_bounded ::
+  "('x,'g,'d::bounded_semilattice_sup_bot) eqsT \<Rightarrow> 'x \<Rightarrow> ('x + 'g \<Rightarrow> 'd) \<Rightarrow> 'x set \<Rightarrow> bool"
+where
+  "post_bounded T x \<sigma> vars \<longleftrightarrow> x \<in> vars \<and> (\<forall>u \<in> vars. tree_covered_at (T u) \<sigma> u)"
+
+lemma post_boundedD [dest]:
+  "post_bounded T x \<sigma> vars \<Longrightarrow> u \<in> vars \<Longrightarrow> tree_covered_at (T u) \<sigma> u"
+  unfolding post_bounded_def by blast
+
+lemma post_bounded_of_part_post_solution:
+  "part_post_solution T x \<sigma> vars \<Longrightarrow> post_bounded T x \<sigma> vars"
+  unfolding post_bounded_def part_post_solution_iff_tree_covered_at by blast
+
+lemma post_bounded_subset:
+  "post_bounded T x \<sigma> vars \<Longrightarrow> x \<in> V \<Longrightarrow> V \<subseteq> vars \<Longrightarrow> post_bounded T x \<sigma> V"
+  unfolding post_bounded_def by blast
+
 subsection \<open>Two systems the solution cannot tell apart\<close>
 
 text \<open>

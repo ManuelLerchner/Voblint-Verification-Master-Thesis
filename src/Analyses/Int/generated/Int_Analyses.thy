@@ -3,7 +3,7 @@ theory Int_Analyses
     Int_Sound
     Int_Classify
     Int_Exec
-    "Voblint_Result.Routed_DG_Analysis"
+    "Voblint_Result.Routed_Live_Keys"
     "Voblint_Framework.Call_String_Context"
     "Voblint_Framework.Routed_Context"
     "Voblint_Solver.TD_Solver_Bridge"
@@ -83,6 +83,12 @@ lemmas analyse_int_entry_state_sound_of_cover =
 lemmas analyse_int_entry_state_ltr_collect_eq_Union_of_cover =
   int_es.entry_state_ltr_collect_eq_Union_of_cover
 
+lemmas analyse_int_entry_state_sound_of_terminates =
+  int_es.entry_state_activation_collect_sound_of_terminates
+
+lemmas analyse_int_entry_state_ltr_collect_eq_Union_of_terminates =
+  int_es.entry_state_ltr_collect_eq_Union_of_terminates
+
 lemmas analyse_int_entry_state_gamma_reader_eq_lookup =
   int_es.gamma_reader_eq_lookup
 
@@ -147,6 +153,12 @@ lemmas analyse_int_entry_state_sound_of_cover_warrow =
 
 lemmas analyse_int_entry_state_ltr_collect_eq_Union_of_cover_warrow =
   int_es_warrow.entry_state_ltr_collect_eq_Union_of_cover
+
+lemmas analyse_int_entry_state_sound_of_terminates_warrow =
+  int_es_warrow.entry_state_activation_collect_sound_of_terminates
+
+lemmas analyse_int_entry_state_ltr_collect_eq_Union_of_terminates_warrow =
+  int_es_warrow.entry_state_ltr_collect_eq_Union_of_terminates
 
 lemmas analyse_int_entry_state_gamma_reader_eq_lookup_warrow =
   int_es_warrow.gamma_reader_eq_lookup
@@ -236,6 +248,9 @@ lemmas analyse_int_call_string_sound_of_cover =
 lemmas analyse_int_call_string_ltr_collect_eq_Union =
   int_cs.fun_route_ltr_collect_eq_Union
 
+lemmas analyse_int_call_string_sound_of_terminates =
+  int_cs.fun_route_activation_collect_sound_of_terminates[OF cs_route_context_agree]
+
 lemmas analyse_int_call_string_gamma_reader_eq_lookup =
   int_cs.gamma_reader_eq_lookup
 
@@ -295,6 +310,9 @@ lemmas analyse_int_call_string_sound_of_cover_warrow =
 
 lemmas analyse_int_call_string_ltr_collect_eq_Union_warrow =
   int_cs_warrow.fun_route_ltr_collect_eq_Union
+
+lemmas analyse_int_call_string_sound_of_terminates_warrow =
+  int_cs_warrow.fun_route_activation_collect_sound_of_terminates[OF cs_route_context_agree]
 
 lemmas analyse_int_call_string_gamma_reader_eq_lookup_warrow =
   int_cs_warrow.gamma_reader_eq_lookup

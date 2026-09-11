@@ -4,7 +4,7 @@ theory Interval_Contextual_Assembly
     Interval_Assembly
     Interval_Classify
     Interval_Exec_Sound
-    "Voblint_Result.Routed_DG_Analysis"
+    "Voblint_Result.Routed_Live_Keys"
     "Voblint_Framework.Call_String_Context"
     "Voblint_Framework.Routed_Context"
     "Voblint_Solver.TD_Solver_Bridge"
@@ -269,6 +269,9 @@ lemmas analyse_interval_call_string_sound_of_cover =
 lemmas analyse_interval_call_string_ltr_collect_eq_Union =
   interval_cs.fun_route_ltr_collect_eq_Union
 
+lemmas analyse_interval_call_string_sound_of_terminates =
+  interval_cs.fun_route_activation_collect_sound_of_terminates[OF cs_route_context_agree]
+
 lemmas analyse_interval_call_string_gamma_reader_eq_lookup =
   interval_cs.gamma_reader_eq_lookup
 
@@ -328,6 +331,9 @@ lemmas analyse_interval_call_string_sound_of_cover_join =
 
 lemmas analyse_interval_call_string_ltr_collect_eq_Union_join =
   interval_cs_join.fun_route_ltr_collect_eq_Union
+
+lemmas analyse_interval_call_string_sound_of_terminates_join =
+  interval_cs_join.fun_route_activation_collect_sound_of_terminates[OF cs_route_context_agree]
 
 lemmas analyse_interval_call_string_gamma_reader_eq_lookup_join =
   interval_cs_join.gamma_reader_eq_lookup
@@ -389,6 +395,9 @@ lemmas analyse_interval_call_string_sound_of_cover_po =
 lemmas analyse_interval_call_string_ltr_collect_eq_Union_po =
   interval_cs_po.fun_route_ltr_collect_eq_Union
 
+lemmas analyse_interval_call_string_sound_of_terminates_po =
+  interval_cs_po.fun_route_activation_collect_sound_of_terminates[OF cs_route_context_agree]
+
 lemmas analyse_interval_call_string_gamma_reader_eq_lookup_po =
   interval_cs_po.gamma_reader_eq_lookup
 
@@ -448,6 +457,9 @@ lemmas analyse_interval_call_string_sound_of_cover_wpo =
 
 lemmas analyse_interval_call_string_ltr_collect_eq_Union_wpo =
   interval_cs_wpo.fun_route_ltr_collect_eq_Union
+
+lemmas analyse_interval_call_string_sound_of_terminates_wpo =
+  interval_cs_wpo.fun_route_activation_collect_sound_of_terminates[OF cs_route_context_agree]
 
 lemmas analyse_interval_call_string_gamma_reader_eq_lookup_wpo =
   interval_cs_wpo.gamma_reader_eq_lookup

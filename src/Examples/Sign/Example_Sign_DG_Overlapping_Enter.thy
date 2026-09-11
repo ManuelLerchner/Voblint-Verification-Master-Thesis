@@ -832,7 +832,7 @@ proof (rule routed_context_base_hetero.intro
     SeedKey IsBotBot IsBotSound ResolveSound EnterCover EnterTotal CombFwd)
   case FinE show ?case unfolding ov_cfg_def by (simp add: compile_prog_finite)
 next
-  case PP show ?case by (rule ov_pp_routed)
+  case PP show ?case by (rule post_bounded_of_part_post_solution[OF ov_pp_routed])
 next
   case (SgCov v ctx)
   thus ?case by (simp add: solved_local_reader_def sign_conf_gamma_def)
@@ -841,7 +841,7 @@ next
   thus ?case by (simp add: solved_local_reader_def)
 next
   case (Fwd u a v ctx)
-  thus ?case by (rule ov_fwd_ok)
+  show ?case by (rule ov_fwd_ok [OF Fwd(1) Fwd(3)])
 next
   case FinC show ?case unfolding ov_cfg_def by (simp add: compile_prog_finite)
 next

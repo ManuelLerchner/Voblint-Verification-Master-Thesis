@@ -5,7 +5,7 @@ theory Interval_Analyses
     Interval_Contextual_Assembly
     Interval_Classify
     Interval_Exec_Sound
-    "Voblint_Result.Routed_DG_Analysis"
+    "Voblint_Result.Routed_Live_Keys"
     "Voblint_Framework.Call_String_Context"
     "Voblint_Framework.Routed_Context"
     "Voblint_Solver.TD_Solver_Bridge"
@@ -548,6 +548,12 @@ lemmas entry_state_activation_collect_sound_of_cover =
 
 lemmas entry_state_ltr_collect_eq_Union_of_cover =
   interval_es.entry_state_ltr_collect_eq_Union_of_cover
+
+lemmas entry_state_activation_collect_sound_of_terminates =
+  interval_es.entry_state_activation_collect_sound_of_terminates
+
+lemmas entry_state_ltr_collect_eq_Union_of_terminates =
+  interval_es.entry_state_ltr_collect_eq_Union_of_terminates
 
 text \<open>
   The two routed protocol facts a caller reasoning about one call needs: the

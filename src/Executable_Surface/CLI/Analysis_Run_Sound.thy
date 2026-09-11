@@ -406,136 +406,128 @@ qed (fact proved, fact refuted)
 subsection \<open>The context-free configurations\<close>
 
 text \<open>
-  Each domain's default discipline reads the table \<^const>\<open>analyse\<close> classifies, so
-  its node soundness is \<open>analyse_state_node_sound\<close> under
-  \<^const>\<open>analyse_certified\<close>. A named discipline's registration is a
-  \<^verbatim>\<open>global_interpretation\<close> of \<open>unit_dg_analysis\<close>, whose own two-premise
-  \<open>result_node_sound\<close> bounds the point.
+  Every discipline's registration is a \<^verbatim>\<open>global_interpretation\<close> of
+  \<open>unit_dg_analysis\<close>, whose \<open>result_node_sound_of_terminates\<close> bounds a point
+  once the program is well-formed and the solve terminated, so each table below asks
+  for those two facts and nothing else.
 \<close>
 
 lemma sign_table:
-  assumes "wf_compile_input (declared_global p) (prog_table p) (prog_procs p)"
-      and "analyse_certified Sign_Analysis p"
+  assumes "wf_program_compile_input p" and "sign_join.terminates (declared_global p) p"
   shows "sound_table p (analyse_sign_result p) sign_classify_check"
   by (rule sound_table_of_unit [OF _ sign_classify_check_proved sign_classify_check_refuted])
-     (auto dest: analyse_state_node_sound [OF assms])
+     (auto dest: sign_join.result_node_sound_of_terminates [OF assms, THEN subsetD]
+        simp: sign_join.state_at_unfold analyse_sign_result_def analyse_sign_result_for_def)
 
 lemma interval_table:
-  assumes "wf_compile_input (declared_global p) (prog_table p) (prog_procs p)"
-      and "analyse_certified Interval_Analysis p"
+  assumes "wf_program_compile_input p" and "interval_warrow_asm.terminates (declared_global p) p"
   shows "sound_table p (analyse_interval_result p) interval_classify_check"
   by (rule sound_table_of_unit
         [OF _ interval_classify_check_proved interval_classify_check_refuted])
-     (auto dest: analyse_state_node_sound [OF assms])
+     (auto dest: interval_warrow_asm.result_node_sound_of_terminates [OF assms, THEN subsetD]
+        simp: interval_warrow_asm.state_at_unfold analyse_interval_result_def
+          analyse_interval_result_for_def)
 
 lemma int_table:
-  assumes "wf_compile_input (declared_global p) (prog_table p) (prog_procs p)"
-      and "analyse_certified Int_Analysis p"
+  assumes "wf_program_compile_input p" and "int_warrow_asm.terminates (declared_global p) p"
   shows "sound_table p (analyse_int_result p) int_classify_check"
   by (rule sound_table_of_unit [OF _ int_classify_check_proved int_classify_check_refuted])
-     (auto dest: analyse_state_node_sound [OF assms])
+     (auto dest: int_warrow_asm.result_node_sound_of_terminates [OF assms, THEN subsetD]
+        simp: int_warrow_asm.state_at_unfold analyse_int_result_def analyse_int_result_for_def
+          analyse_int_ctx_result_warrow_for_eq_pipeline int_unit_result_def)
 
 lemma parity_table:
-  assumes "wf_compile_input (declared_global p) (prog_table p) (prog_procs p)"
-      and "analyse_certified Parity_Analysis p"
+  assumes "wf_program_compile_input p" and "parity_join.terminates (declared_global p) p"
   shows "sound_table p (analyse_parity_result p) parity_classify_check"
   by (rule sound_table_of_unit
         [OF _ parity_classify_check_proved parity_classify_check_refuted])
-     (auto dest: analyse_state_node_sound [OF assms])
+     (auto dest: parity_join.result_node_sound_of_terminates [OF assms, THEN subsetD]
+        simp: parity_join.state_at_unfold analyse_parity_result_def analyse_parity_result_for_def)
 
 lemma congruence_table:
-  assumes "wf_compile_input (declared_global p) (prog_table p) (prog_procs p)"
-      and "analyse_certified Congruence_Analysis p"
+  assumes "wf_program_compile_input p" and "congruence_join.terminates (declared_global p) p"
   shows "sound_table p (analyse_congruence_result p) congruence_classify_check"
   by (rule sound_table_of_unit
         [OF _ congruence_classify_check_proved congruence_classify_check_refuted])
-     (auto dest: analyse_state_node_sound [OF assms])
+     (auto dest: congruence_join.result_node_sound_of_terminates [OF assms, THEN subsetD]
+        simp: congruence_join.state_at_unfold analyse_congruence_result_def
+          analyse_congruence_result_for_def)
 
 lemma sign_po_table:
-  assumes "sign_po_terminates (declared_global p) p"
-      and "vars_cover (prog_cfg p) (sign_po_vars (declared_global p) p)"
+  assumes "wf_program_compile_input p" and "sign_po_asm.terminates (declared_global p) p"
   shows "sound_table p (analyse_sign_result_per_origin p) sign_classify_check"
   by (rule sound_table_of_unit [OF _ sign_classify_check_proved sign_classify_check_refuted])
-     (auto dest: sign_po_asm.result_node_sound [OF assms, THEN subsetD]
+     (auto dest: sign_po_asm.result_node_sound_of_terminates [OF assms, THEN subsetD]
         simp: sign_po_asm.state_at_unfold analyse_sign_result_per_origin_def
           analyse_sign_result_per_origin_for_def)
 
 lemma parity_po_table:
-  assumes "parity_po_terminates (declared_global p) p"
-      and "vars_cover (prog_cfg p) (parity_po_vars (declared_global p) p)"
+  assumes "wf_program_compile_input p" and "parity_po_asm.terminates (declared_global p) p"
   shows "sound_table p (analyse_parity_result_per_origin p) parity_classify_check"
   by (rule sound_table_of_unit
         [OF _ parity_classify_check_proved parity_classify_check_refuted])
-     (auto dest: parity_po_asm.result_node_sound [OF assms, THEN subsetD]
+     (auto dest: parity_po_asm.result_node_sound_of_terminates [OF assms, THEN subsetD]
         simp: parity_po_asm.state_at_unfold analyse_parity_result_per_origin_def
           analyse_parity_result_per_origin_for_def)
 
 lemma congruence_po_table:
-  assumes "congruence_po_terminates (declared_global p) p"
-      and "vars_cover (prog_cfg p) (congruence_po_vars (declared_global p) p)"
+  assumes "wf_program_compile_input p" and "congruence_po_asm.terminates (declared_global p) p"
   shows "sound_table p (analyse_congruence_result_per_origin p) congruence_classify_check"
   by (rule sound_table_of_unit
         [OF _ congruence_classify_check_proved congruence_classify_check_refuted])
-     (auto dest: congruence_po_asm.result_node_sound [OF assms, THEN subsetD]
+     (auto dest: congruence_po_asm.result_node_sound_of_terminates [OF assms, THEN subsetD]
         simp: congruence_po_asm.state_at_unfold analyse_congruence_result_per_origin_def
           analyse_congruence_result_per_origin_for_def)
 
 lemma interval_join_table:
-  assumes "interval_join_terminates (declared_global p) p"
-      and "vars_cover (prog_cfg p) (interval_join_vars (declared_global p) p)"
+  assumes "wf_program_compile_input p" and "interval_join_asm.terminates (declared_global p) p"
   shows "sound_table p (analyse_interval_result_join p) interval_classify_check"
   by (rule sound_table_of_unit
         [OF _ interval_classify_check_proved interval_classify_check_refuted])
-     (auto dest: interval_join_asm.result_node_sound [OF assms, THEN subsetD]
+     (auto dest: interval_join_asm.result_node_sound_of_terminates [OF assms, THEN subsetD]
         simp: interval_join_asm.state_at_unfold analyse_interval_result_join_def
           analyse_interval_result_join_for_def)
 
 lemma interval_po_table:
-  assumes "interval_po_terminates (declared_global p) p"
-      and "vars_cover (prog_cfg p) (interval_po_vars (declared_global p) p)"
+  assumes "wf_program_compile_input p" and "interval_po_asm.terminates (declared_global p) p"
   shows "sound_table p (analyse_interval_result_per_origin p) interval_classify_check"
   by (rule sound_table_of_unit
         [OF _ interval_classify_check_proved interval_classify_check_refuted])
-     (auto dest: interval_po_asm.result_node_sound [OF assms, THEN subsetD]
+     (auto dest: interval_po_asm.result_node_sound_of_terminates [OF assms, THEN subsetD]
         simp: interval_po_asm.state_at_unfold analyse_interval_result_per_origin_def
           analyse_interval_result_per_origin_for_def)
 
 lemma interval_wpo_table:
-  assumes "interval_wpo_terminates (declared_global p) p"
-      and "vars_cover (prog_cfg p) (interval_wpo_vars (declared_global p) p)"
+  assumes "wf_program_compile_input p" and "interval_wpo_asm.terminates (declared_global p) p"
   shows "sound_table p (analyse_interval_result_wpo p) interval_classify_check"
   by (rule sound_table_of_unit
         [OF _ interval_classify_check_proved interval_classify_check_refuted])
-     (auto dest: interval_wpo_asm.result_node_sound [OF assms, THEN subsetD]
+     (auto dest: interval_wpo_asm.result_node_sound_of_terminates [OF assms, THEN subsetD]
         simp: interval_wpo_asm.state_at_unfold analyse_interval_result_wpo_def
           analyse_interval_result_wpo_for_def)
 
 lemma int_join_table:
-  assumes "int_join_terminates (declared_global p) p"
-      and "vars_cover (prog_cfg p) (int_join_vars (declared_global p) p)"
+  assumes "wf_program_compile_input p" and "int_join_asm.terminates (declared_global p) p"
   shows "sound_table p (analyse_int_join_result p) int_classify_check"
   by (rule sound_table_of_unit [OF _ int_classify_check_proved int_classify_check_refuted])
-     (auto dest: int_join_asm.result_node_sound [OF assms, THEN subsetD]
+     (auto dest: int_join_asm.result_node_sound_of_terminates [OF assms, THEN subsetD]
         simp: int_join_asm.state_at_unfold analyse_int_join_result_def
           analyse_int_join_result_for_def int_join_result_def)
 
 lemma int_po_table:
-  assumes "int_po_terminates (declared_global p) p"
-      and "vars_cover (prog_cfg p) (int_po_vars (declared_global p) p)"
+  assumes "wf_program_compile_input p" and "int_po_asm.terminates (declared_global p) p"
   shows "sound_table p (analyse_int_per_origin_result p) int_classify_check"
   by (rule sound_table_of_unit [OF _ int_classify_check_proved int_classify_check_refuted])
-     (auto dest: int_po_asm.result_node_sound [OF assms, THEN subsetD]
+     (auto dest: int_po_asm.result_node_sound_of_terminates [OF assms, THEN subsetD]
         simp: int_po_asm.state_at_unfold analyse_int_per_origin_result_def
           analyse_int_per_origin_result_for_def int_po_result_def)
 
 lemma int_wpo_table:
-  assumes "int_wpo_terminates (declared_global p) p"
-      and "vars_cover (prog_cfg p) (int_wpo_vars (declared_global p) p)"
+  assumes "wf_program_compile_input p" and "int_wpo_asm.terminates (declared_global p) p"
   shows "sound_table p (analyse_int_wpo_result p) int_classify_check"
   by (rule sound_table_of_unit [OF _ int_classify_check_proved int_classify_check_refuted])
-     (auto dest: int_wpo_asm.result_node_sound [OF assms, THEN subsetD]
+     (auto dest: int_wpo_asm.result_node_sound_of_terminates [OF assms, THEN subsetD]
         simp: int_wpo_asm.state_at_unfold analyse_int_wpo_result_def
           analyse_int_wpo_result_for_def int_wpo_result_def)
-
 end
 

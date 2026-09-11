@@ -47,8 +47,8 @@ in the published table at `lookup_context ... v ()`. Under `Ctx_EntryState` and
 `sound_table_of_activation` and `sound_table.source_sound`, which together close
 the three gaps the per-context bound left: it names the context the run's own call history produced rather than
 an arbitrary one, reads the published table rather than the solved reader, and
-starts from a source execution. What each policy owes is a termination fact and
-one `ctx_vars_cover`.
+starts from a source execution. What each policy owes is a termination fact; the
+coverage the proof reads follows from it.
 
 The asymmetry that remains is precision of statement, not coverage. A contextual
 endpoint is existential in the context: the store sits in at least one bucket its
@@ -110,6 +110,7 @@ re-exports, regenerate -- followed by six ordinary instantiations.
 
 | Claim | Theorem | Note |
 | --- | --- | --- |
-| A dead row means nothing reaches that point | [`Voblint_CLI.Analysis_Certified:run_voblint_dead_row_unreached`](../src/Executable_Surface/CLI/Analysis_Certified.thy) | Over `certified_preconditions`, so at every configuration. Per-node and universal over stores, so it does not follow from the endpoint by contraposition -- that one is existential in its CFG witness. |
+| A dead row means nothing reaches that point | [`Voblint_CLI.Analysis_Certified:run_voblint_dead_row_unreached`](../src/Executable_Surface/CLI/Analysis_Certified.thy) | Over `config_terminates`, so at every configuration. Per-node and universal over stores, so it does not follow from the endpoint by contraposition -- that one is existential in its CFG witness. |
 | Contextual coverage is decidable | [`Voblint_Framework.CFG_Enumeration:ctx_vars_cover_of_exec`](../src/Abstract_Interpreter/Framework/Constraints/CFG_Enumeration.thy) | Walks the solved keys against the two edge enumerations; sufficient, not equivalent, like its unit counterpart. |
+| A terminating solve is closed along live dependencies | [`Voblint_Result.Routed_Live_Keys:routed_dg_analysis.live_keys_cover`](../src/Analyses/Shared/Result/Routed_Live_Keys.thy) | Needs well-formedness and termination only. States `ctx_vars_cover_live` over `live_keys`, the solved keys whose node reaches a solved procedure result; code after a `return` is solved but never read, so the unrestricted key set is not closed. |
 

@@ -150,57 +150,56 @@ abbreviation int_es_ctx_rel where
 subsection \<open>Entry state\<close>
 
 lemma sign_es_table:
-  assumes cov: "sign_entry_state_terminates_for (declared_global p) p"
-      "ctx_vars_cover (prog_cfg p) (sign_es.ctx_succ (declared_global p) p) []
-         (sign_entry_state_vars (declared_global p) p)"
+  assumes wf: "wf_program_compile_input p"
+    and cov: "sign_entry_state_terminates_for (declared_global p) p"
   shows "sound_table p (analyse_sign_entry_state_result p) sign_classify_check"
 proof (rule sound_table_of_activation
     [where R = "sign_entry_state_context_rel (declared_global p) p" and rc = "[]",
      OF _ _ _ sign_classify_check_proved sign_classify_check_refuted], goal_cases)
   case (1 u)
-  show ?case by (simp add: analyse_sign_entry_state_ltr_collect_eq_Union_of_cover [OF cov])
+  show ?case
+    by (simp add: analyse_sign_entry_state_ltr_collect_eq_Union_of_terminates [OF wf cov])
 next
   case (2 u ctx)
   show ?case
-    using analyse_sign_entry_state_sound_of_cover [OF cov]
+    using analyse_sign_entry_state_sound_of_terminates [OF wf cov]
     unfolding analyse_sign_entry_state_result_def
       analyse_sign_entry_state_gamma_reader_eq_lookup .
 next
   case 3
   show ?case
-    using sign_es.vars_finite_of_terminates [OF cov(1)]
+    using sign_es.vars_finite_of_terminates [OF cov]
     by (simp add: finite_analysis_result_def analyse_sign_entry_state_result_def
         sign_es.result_def sign_es.sol_vars_def)
 qed
 
 lemma parity_es_table:
-  assumes cov: "parity_entry_state_terminates_for (declared_global p) p"
-      "ctx_vars_cover (prog_cfg p) (parity_es.ctx_succ (declared_global p) p) []
-         (parity_entry_state_vars (declared_global p) p)"
+  assumes wf: "wf_program_compile_input p"
+    and cov: "parity_entry_state_terminates_for (declared_global p) p"
   shows "sound_table p (analyse_parity_entry_state_result p) parity_classify_check"
 proof (rule sound_table_of_activation
     [where R = "parity_entry_state_context_rel (declared_global p) p" and rc = "[]",
      OF _ _ _ parity_classify_check_proved parity_classify_check_refuted], goal_cases)
   case (1 u)
-  show ?case by (simp add: analyse_parity_entry_state_ltr_collect_eq_Union_of_cover [OF cov])
+  show ?case
+    by (simp add: analyse_parity_entry_state_ltr_collect_eq_Union_of_terminates [OF wf cov])
 next
   case (2 u ctx)
   show ?case
-    using analyse_parity_entry_state_sound_of_cover [OF cov]
+    using analyse_parity_entry_state_sound_of_terminates [OF wf cov]
     unfolding analyse_parity_entry_state_result_def
       analyse_parity_entry_state_gamma_reader_eq_lookup .
 next
   case 3
   show ?case
-    using parity_es.vars_finite_of_terminates [OF cov(1)]
+    using parity_es.vars_finite_of_terminates [OF cov]
     by (simp add: finite_analysis_result_def analyse_parity_entry_state_result_def
         parity_es.result_def parity_es.sol_vars_def)
 qed
 
 lemma congruence_es_table:
-  assumes cov: "congruence_entry_state_terminates_for (declared_global p) p"
-      "ctx_vars_cover (prog_cfg p) (congruence_es.ctx_succ (declared_global p) p) []
-         (congruence_entry_state_vars (declared_global p) p)"
+  assumes wf: "wf_program_compile_input p"
+    and cov: "congruence_entry_state_terminates_for (declared_global p) p"
   shows "sound_table p (analyse_congruence_entry_state_result p) congruence_classify_check"
 proof (rule sound_table_of_activation
     [where R = "congruence_entry_state_context_rel (declared_global p) p" and rc = "[]",
@@ -208,65 +207,64 @@ proof (rule sound_table_of_activation
     goal_cases)
   case (1 u)
   show ?case
-    by (simp add: analyse_congruence_entry_state_ltr_collect_eq_Union_of_cover [OF cov])
+    by (simp add: analyse_congruence_entry_state_ltr_collect_eq_Union_of_terminates [OF wf cov])
 next
   case (2 u ctx)
   show ?case
-    using analyse_congruence_entry_state_sound_of_cover [OF cov]
+    using analyse_congruence_entry_state_sound_of_terminates [OF wf cov]
     unfolding analyse_congruence_entry_state_result_def
       analyse_congruence_entry_state_gamma_reader_eq_lookup .
 next
   case 3
   show ?case
-    using congruence_es.vars_finite_of_terminates [OF cov(1)]
+    using congruence_es.vars_finite_of_terminates [OF cov]
     by (simp add: finite_analysis_result_def analyse_congruence_entry_state_result_def
         congruence_es.result_def congruence_es.sol_vars_def)
 qed
 
 lemma interval_es_table:
-  assumes cov: "entry_state_terminates_prog (declared_global p) p"
-      "ctx_vars_cover (prog_cfg p) (interval_es.ctx_succ (declared_global p) p) []
-         (entry_state_vars_prog (declared_global p) p)"
+  assumes wf: "wf_program_compile_input p"
+    and cov: "entry_state_terminates_prog (declared_global p) p"
   shows "sound_table p (analyse_interval_entry_state_result p) interval_classify_check"
 proof (rule sound_table_of_activation
     [where R = "entry_state_context_rel (declared_global p) p" and rc = "[]",
      OF _ _ _ interval_classify_check_proved interval_classify_check_refuted], goal_cases)
   case (1 u)
-  show ?case by (simp add: entry_state_ltr_collect_eq_Union_of_cover [OF cov])
+  show ?case
+    by (simp add: entry_state_ltr_collect_eq_Union_of_terminates [OF wf cov])
 next
   case (2 u ctx)
   show ?case
-    using entry_state_activation_collect_sound_of_cover [OF cov]
+    using entry_state_activation_collect_sound_of_terminates [OF wf cov]
     unfolding analyse_interval_entry_state_result_def entry_state_gamma_reader_eq_lookup .
 next
   case 3
   show ?case
-    using interval_es.vars_finite_of_terminates [OF cov(1)]
+    using interval_es.vars_finite_of_terminates [OF cov]
     by (simp add: finite_analysis_result_def analyse_interval_entry_state_result_def
         interval_es.result_def interval_es.sol_vars_def)
 qed
 
 lemma int_es_table:
-  assumes cov: "int_es_terminates (declared_global p) p"
-      "ctx_vars_cover (prog_cfg p) (int_es_ctx_succ (declared_global p) p) []
-         (int_es_vars (declared_global p) p)"
+  assumes wf: "wf_program_compile_input p"
+    and cov: "int_es_terminates (declared_global p) p"
   shows "sound_table p (analyse_int_entry_state_result_warrow p) int_classify_check"
 proof (rule sound_table_of_activation
     [where R = "int_es_ctx_rel (declared_global p) p" and rc = "[]",
      OF _ _ _ int_classify_check_proved int_classify_check_refuted], goal_cases)
   case (1 u)
   show ?case
-    by (simp add: analyse_int_entry_state_ltr_collect_eq_Union_of_cover_warrow [OF cov])
+    by (simp add: analyse_int_entry_state_ltr_collect_eq_Union_of_terminates_warrow [OF wf cov])
 next
   case (2 u ctx)
   show ?case
-    using analyse_int_entry_state_sound_of_cover_warrow [OF cov]
+    using analyse_int_entry_state_sound_of_terminates_warrow [OF wf cov]
     by (simp add: analyse_int_entry_state_gamma_reader_eq_lookup_warrow
         analyse_int_entry_state_result_for_warrow_def analyse_int_entry_state_result_warrow_def)
 next
   case 3
   show ?case
-    using analyse_int_entry_state_vars_finite_warrow [OF cov(1)]
+    using analyse_int_entry_state_vars_finite_warrow [OF cov]
     by (simp add: finite_analysis_result_def analyse_int_entry_state_result_warrow_def
         analyse_int_entry_state_result_for_warrow_def
         routed_dg_pipeline.result_def routed_dg_pipeline.sol_vars_def)
@@ -275,9 +273,8 @@ qed
 subsection \<open>Call string\<close>
 
 lemma sign_cs_table:
-  assumes cov: "sign_cs_terminates k (declared_global p) p"
-      "ctx_vars_cover (prog_cfg p) (sign_cs_ctx_succ k (declared_global p) p) []
-         (sign_cs_vars k (declared_global p) p)"
+  assumes wf: "wf_program_compile_input p"
+    and cov: "sign_cs_terminates k (declared_global p) p"
   shows "sound_table p (analyse_sign_call_string_result k p) sign_classify_check"
 proof (rule sound_table_of_activation
     [where R = "call_context_rel_of_fun (\<lambda>u c t. cs_context k u c t)" and rc = "[]",
@@ -289,21 +286,21 @@ proof (rule sound_table_of_activation
 next
   case (2 u ctx)
   show ?case
-    using analyse_sign_call_string_sound_of_cover [OF cov, where s = "\<lambda>u c t. t"]
+    using analyse_sign_call_string_sound_of_terminates [OF wf cov,
+       where s = "\<lambda>u c t. t"]
     unfolding analyse_sign_call_string_result_def
       analyse_sign_call_string_gamma_reader_eq_lookup .
 next
   case 3
   show ?case
-    using analyse_sign_call_string_vars_finite [OF cov(1)]
+    using analyse_sign_call_string_vars_finite [OF cov]
     by (simp add: finite_analysis_result_def analyse_sign_call_string_result_def
         routed_dg_pipeline.result_def routed_dg_pipeline.sol_vars_def)
 qed
 
 lemma parity_cs_table:
-  assumes cov: "parity_cs_terminates k (declared_global p) p"
-      "ctx_vars_cover (prog_cfg p) (parity_cs_ctx_succ k (declared_global p) p) []
-         (parity_cs_vars k (declared_global p) p)"
+  assumes wf: "wf_program_compile_input p"
+    and cov: "parity_cs_terminates k (declared_global p) p"
   shows "sound_table p (analyse_parity_call_string_result k p) parity_classify_check"
 proof (rule sound_table_of_activation
     [where R = "call_context_rel_of_fun (\<lambda>u c t. cs_context k u c t)" and rc = "[]",
@@ -315,21 +312,21 @@ proof (rule sound_table_of_activation
 next
   case (2 u ctx)
   show ?case
-    using analyse_parity_call_string_sound_of_cover [OF cov, where s = "\<lambda>u c t. t"]
+    using analyse_parity_call_string_sound_of_terminates [OF wf cov,
+       where s = "\<lambda>u c t. t"]
     unfolding analyse_parity_call_string_result_def
       analyse_parity_call_string_gamma_reader_eq_lookup .
 next
   case 3
   show ?case
-    using analyse_parity_call_string_vars_finite [OF cov(1)]
+    using analyse_parity_call_string_vars_finite [OF cov]
     by (simp add: finite_analysis_result_def analyse_parity_call_string_result_def
         routed_dg_pipeline.result_def routed_dg_pipeline.sol_vars_def)
 qed
 
 lemma congruence_cs_table:
-  assumes cov: "congruence_cs_terminates k (declared_global p) p"
-      "ctx_vars_cover (prog_cfg p) (congruence_cs_ctx_succ k (declared_global p) p) []
-         (congruence_cs_vars k (declared_global p) p)"
+  assumes wf: "wf_program_compile_input p"
+    and cov: "congruence_cs_terminates k (declared_global p) p"
   shows "sound_table p (analyse_congruence_call_string_result k p) congruence_classify_check"
 proof (rule sound_table_of_activation
     [where R = "call_context_rel_of_fun (\<lambda>u c t. cs_context k u c t)" and rc = "[]",
@@ -343,21 +340,21 @@ proof (rule sound_table_of_activation
 next
   case (2 u ctx)
   show ?case
-    using analyse_congruence_call_string_sound_of_cover [OF cov, where s = "\<lambda>u c t. t"]
+    using analyse_congruence_call_string_sound_of_terminates [OF wf cov,
+       where s = "\<lambda>u c t. t"]
     unfolding analyse_congruence_call_string_result_def
       analyse_congruence_call_string_gamma_reader_eq_lookup .
 next
   case 3
   show ?case
-    using analyse_congruence_call_string_vars_finite [OF cov(1)]
+    using analyse_congruence_call_string_vars_finite [OF cov]
     by (simp add: finite_analysis_result_def analyse_congruence_call_string_result_def
         routed_dg_pipeline.result_def routed_dg_pipeline.sol_vars_def)
 qed
 
 lemma interval_cs_table:
-  assumes cov: "interval_cs_terminates k (declared_global p) p"
-      "ctx_vars_cover (prog_cfg p) (interval_cs_ctx_succ k (declared_global p) p) []
-         (interval_cs_vars k (declared_global p) p)"
+  assumes wf: "wf_program_compile_input p"
+    and cov: "interval_cs_terminates k (declared_global p) p"
   shows "sound_table p (analyse_interval_call_string_result k p) interval_classify_check"
 proof (rule sound_table_of_activation
     [where R = "call_context_rel_of_fun (\<lambda>u c t. cs_context k u c t)" and rc = "[]",
@@ -370,23 +367,23 @@ proof (rule sound_table_of_activation
 next
   case (2 u ctx)
   show ?case
-    using analyse_interval_call_string_sound_of_cover [OF cov, where s = "\<lambda>u c t. t"]
+    using analyse_interval_call_string_sound_of_terminates [OF wf cov,
+       where s = "\<lambda>u c t. t"]
     unfolding analyse_interval_call_string_result_def
       analyse_interval_call_string_result_for_def
       analyse_interval_call_string_gamma_reader_eq_lookup .
 next
   case 3
   show ?case
-    using analyse_interval_call_string_vars_finite [OF cov(1)]
+    using analyse_interval_call_string_vars_finite [OF cov]
     by (simp add: finite_analysis_result_def analyse_interval_call_string_result_def
         analyse_interval_call_string_result_for_def
         routed_dg_pipeline.result_def routed_dg_pipeline.sol_vars_def)
 qed
 
 lemma int_cs_table:
-  assumes cov: "int_cs_terminates k (declared_global p) p"
-      "ctx_vars_cover (prog_cfg p) (int_cs_ctx_succ k (declared_global p) p) []
-         (int_cs_vars k (declared_global p) p)"
+  assumes wf: "wf_program_compile_input p"
+    and cov: "int_cs_terminates k (declared_global p) p"
   shows "sound_table p (analyse_int_call_string_result_warrow k p) int_classify_check"
 proof (rule sound_table_of_activation
     [where R = "call_context_rel_of_fun (\<lambda>u c t. cs_context k u c t)" and rc = "[]",
@@ -399,18 +396,18 @@ proof (rule sound_table_of_activation
 next
   case (2 u ctx)
   show ?case
-    using analyse_int_call_string_sound_of_cover_warrow [OF cov, where s = "\<lambda>u c t. t"]
+    using analyse_int_call_string_sound_of_terminates_warrow [OF wf cov,
+       where s = "\<lambda>u c t. t"]
     unfolding analyse_int_call_string_result_warrow_def
       analyse_int_call_string_result_for_warrow_def
       analyse_int_call_string_gamma_reader_eq_lookup_warrow .
 next
   case 3
   show ?case
-    using analyse_int_call_string_vars_finite_warrow [OF cov(1)]
+    using analyse_int_call_string_vars_finite_warrow [OF cov]
     by (simp add: finite_analysis_result_def analyse_int_call_string_result_warrow_def
         analyse_int_call_string_result_for_warrow_def
         routed_dg_pipeline.result_def routed_dg_pipeline.sol_vars_def)
 qed
-
 end
 

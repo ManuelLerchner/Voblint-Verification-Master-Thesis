@@ -4,7 +4,7 @@ theory Parity_Analyses
     Parity_Classify
     Parity_Transfer
     Parity_Exec
-    "Voblint_Result.Routed_DG_Analysis"
+    "Voblint_Result.Routed_Live_Keys"
     "Voblint_Framework.Call_String_Context"
     "Voblint_Framework.Routed_Context"
     "Voblint_Solver.TD_Solver_Bridge"
@@ -110,6 +110,12 @@ lemmas analyse_parity_entry_state_sound_of_cover =
 lemmas analyse_parity_entry_state_ltr_collect_eq_Union_of_cover =
   parity_es.entry_state_ltr_collect_eq_Union_of_cover
 
+lemmas analyse_parity_entry_state_sound_of_terminates =
+  parity_es.entry_state_activation_collect_sound_of_terminates
+
+lemmas analyse_parity_entry_state_ltr_collect_eq_Union_of_terminates =
+  parity_es.entry_state_ltr_collect_eq_Union_of_terminates
+
 lemmas analyse_parity_entry_state_gamma_reader_eq_lookup =
   parity_es.gamma_reader_eq_lookup
 
@@ -172,6 +178,9 @@ lemmas analyse_parity_call_string_sound_of_cover =
 
 lemmas analyse_parity_call_string_ltr_collect_eq_Union =
   parity_cs.fun_route_ltr_collect_eq_Union
+
+lemmas analyse_parity_call_string_sound_of_terminates =
+  parity_cs.fun_route_activation_collect_sound_of_terminates[OF cs_route_context_agree]
 
 lemmas analyse_parity_call_string_gamma_reader_eq_lookup =
   parity_cs.gamma_reader_eq_lookup

@@ -76,6 +76,22 @@ next
   with While.IH[OF c1] show ?case unfolding n' by auto
 qed (auto split: prod.splits option.splits)
 
+text \<open>Two call sets whose sources lie on either side of one counter value cannot share a
+  source, so each being source-unique makes their union source-unique.  Both compound
+  commands that split the counter, \<^const>\<open>Seq\<close> and \<^const>\<open>If\<close>, close
+  their case with it.\<close>
+lemma calls_source_unique_Un:
+  assumes u1: "(u, ca1, ce1, af1) \<in> K1 \<Longrightarrow> (u, ca2, ce2, af2) \<in> K1
+                 \<Longrightarrow> ca1 = ca2 \<and> ce1 = ce2 \<and> af1 = af2"
+    and u2: "(u, ca1, ce1, af1) \<in> K2 \<Longrightarrow> (u, ca2, ce2, af2) \<in> K2
+                 \<Longrightarrow> ca1 = ca2 \<and> ce1 = ce2 \<and> af1 = af2"
+    and lo: "\<And>u ca ce af. (u, ca, ce, af) \<in> K1 \<Longrightarrow> \<exists>j. u = Statement j \<and> j < m"
+    and hi: "\<And>u ca ce af. (u, ca, ce, af) \<in> K2 \<Longrightarrow> \<exists>j. u = Statement j \<and> m \<le> j"
+    and e1: "(u, ca1, ce1, af1) \<in> K1 \<union> K2" and e2: "(u, ca2, ce2, af2) \<in> K1 \<union> K2"
+  shows "ca1 = ca2 \<and> ce1 = ce2 \<and> af1 = af2"
+  using u1 u2 lo hi e1
+  by (metis Un_iff cfg_node.inject(1) e2 leD)
+
 lemma compile_calls_source_unique:
   "compile \<Pi> p c k n = (n', en, E, K) \<Longrightarrow> (u, ca1, ce1, af1) \<in> K \<Longrightarrow> (u, ca2, ce2, af2) \<in> K
    \<Longrightarrow> ca1 = ca2 \<and> ce1 = ce2 \<and> af1 = af2"
@@ -87,31 +103,10 @@ proof (induction c arbitrary: k n n' en E K rule: com.induct)
     and K: "K = K1 \<union> K2"
     by (auto simp: Let_def split: prod.splits)
   have i1: "n1 = n + csize c1" using compile_next_id[OF cc1] .
-  have low: "\<And>u' act' ce' af'. (u', act', ce', af') \<in> K1 \<Longrightarrow> \<exists>j. u' = Statement j \<and> j < n1"
-    using compile_calls_source_range[OF cc1] i1 by blast
-  have high: "\<And>u' act' ce' af'. (u', act', ce', af') \<in> K2 \<Longrightarrow> \<exists>j. u' = Statement j \<and> n1 \<le> j"
-    using compile_calls_source_range[OF cc2]
-    using i1 by blast
-  have not_both: "\<And>u' act1' ce1' af1' act2' ce2' af2'.
-      (u', act1', ce1', af1') \<in> K1 \<Longrightarrow> (u', act2', ce2', af2') \<in> K2 \<Longrightarrow> False"
-    using low high by fastforce
-  from Seq.prems(2) K have m1: "(u, ca1, ce1, af1) \<in> K1 \<or> (u, ca1, ce1, af1) \<in> K2" by auto
-  from Seq.prems(3) K have m2: "(u, ca2, ce2, af2) \<in> K1 \<or> (u, ca2, ce2, af2) \<in> K2" by auto
-  consider (LL) "(u, ca1, ce1, af1) \<in> K1" "(u, ca2, ce2, af2) \<in> K1"
-         | (RR) "(u, ca1, ce1, af1) \<in> K2" "(u, ca2, ce2, af2) \<in> K2"
-         | (LR) "(u, ca1, ce1, af1) \<in> K1" "(u, ca2, ce2, af2) \<in> K2"
-         | (RL) "(u, ca1, ce1, af1) \<in> K2" "(u, ca2, ce2, af2) \<in> K1"
-    using m1 m2 by blast
-  then show ?case
-  proof cases
-    case LL then show ?thesis using Seq.IH(1)[OF cc1] by blast
-  next
-    case RR then show ?thesis using Seq.IH(2)[OF cc2] by blast
-  next
-    case LR then show ?thesis using not_both by blast
-  next
-    case RL then show ?thesis using not_both by blast
-  qed
+  show ?case
+    by (rule calls_source_unique_Un[OF Seq.IH(1)[OF cc1] Seq.IH(2)[OF cc2], where m = n1])
+       (use compile_calls_source_range[OF cc1] compile_calls_source_range[OF cc2] i1
+            Seq.prems(2,3) K in \<open>fastforce+\<close>)
 next
   case (If b c1 c2)
   from If.prems(1) obtain n1 en1 E1 K1 n2 en2 E2 K2 where
@@ -119,30 +114,10 @@ next
     and cc2: "compile \<Pi> p c2 k n1 = (n2, en2, E2, K2)"
     and K: "K = K1 \<union> K2"
     by (auto split: prod.splits)
-  have low: "\<And>u' act' ce' af'. (u', act', ce', af') \<in> K1 \<Longrightarrow> \<exists>j. u' = Statement j \<and> j < n1"
-    using compile_calls_source_range[OF cc1] by fastforce
-  have high: "\<And>u' act' ce' af'. (u', act', ce', af') \<in> K2 \<Longrightarrow> \<exists>j. u' = Statement j \<and> n1 \<le> j"
-    using compile_calls_source_range[OF cc2] by fastforce
-  have not_both: "\<And>u' act1' ce1' af1' act2' ce2' af2'.
-      (u', act1', ce1', af1') \<in> K1 \<Longrightarrow> (u', act2', ce2', af2') \<in> K2 \<Longrightarrow> False"
-    using low high by fastforce
-  from If.prems(2) K have m1: "(u, ca1, ce1, af1) \<in> K1 \<or> (u, ca1, ce1, af1) \<in> K2" by auto
-  from If.prems(3) K have m2: "(u, ca2, ce2, af2) \<in> K1 \<or> (u, ca2, ce2, af2) \<in> K2" by auto
-  consider (LL) "(u, ca1, ce1, af1) \<in> K1" "(u, ca2, ce2, af2) \<in> K1"
-         | (RR) "(u, ca1, ce1, af1) \<in> K2" "(u, ca2, ce2, af2) \<in> K2"
-         | (LR) "(u, ca1, ce1, af1) \<in> K1" "(u, ca2, ce2, af2) \<in> K2"
-         | (RL) "(u, ca1, ce1, af1) \<in> K2" "(u, ca2, ce2, af2) \<in> K1"
-    using m1 m2 by blast
-  then show ?case
-  proof cases
-    case LL then show ?thesis using If.IH(1)[OF cc1] by blast
-  next
-    case RR then show ?thesis using If.IH(2)[OF cc2] by blast
-  next
-    case LR then show ?thesis using not_both by blast
-  next
-    case RL then show ?thesis using not_both by blast
-  qed
+  show ?case
+    by (rule calls_source_unique_Un[OF If.IH(1)[OF cc1] If.IH(2)[OF cc2], where m = n1])
+       (use compile_calls_source_range[OF cc1] compile_calls_source_range[OF cc2]
+            If.prems(2,3) K in \<open>fastforce+\<close>)
 next
   case (While b c)
   from While.prems(1) obtain n1 en1 E1 K1 where

@@ -8,8 +8,8 @@ section \<open>What a solved routed system says about one program point\<close>
 text \<open>
   A post-solution bounds a right-hand side by the value at its own unknown, and bounds every
   side effect it publishes by the value at the key it publishes to.  \<open>dg_ctx_activation_base\<close>
-  fixes such a solution over the routed generator, the set \<open>vars\<close> of keys the solver actually
-  visited, and a reader \<open>sg\<close> that answers the empty set off \<open>vars\<close>; from those it derives the
+  fixes such a solution over the routed generator, a set \<open>vars\<close> of keys at which it bounds its
+  own equation --- every key the solver visited, or any subset of them --- and a reader \<open>sg\<close> that answers the empty set off \<open>vars\<close>; from those it derives the
   EDGE and COMB obligations the activation backbone asks for.  Entry and callee-seed coverage
   are left to the concrete analysis.
 
@@ -37,7 +37,7 @@ locale dg_ctx_activation_base = sound_dg_spec_core S gammaDG gs
     and sg :: "pp \<times> 'c + 'k \<Rightarrow> 'M"
     and gammaM :: "'M \<Rightarrow> store set"
   assumes finE: "finite (intra g)"
-    and pp: "part_post_solution
+    and pp: "post_bounded
                (routed_node_rhs intra_predecessor_addr_list (\<lambda>_. gk0)
                   route (\<lambda>c src a. dg_spec_edge_tree S a src (\<lambda>_. gk0)) cmb extra g bot0 s0d s0g)
                x0 sigma vars"
@@ -47,6 +47,7 @@ locale dg_ctx_activation_base = sound_dg_spec_core S gammaDG gs
     and sg_uncov[simp]: "\<And>v c. (v, c) \<notin> vars
         \<Longrightarrow> gammaM (sg (Inl (v, c))) = {}"
     and fwd: "\<And>u a v c. (u, c) \<in> vars
+        \<Longrightarrow> gammaDG (locals (sigma (Inl (u, c)))) (globs (sigma (Inr gk0))) \<noteq> {}
         \<Longrightarrow> (u, a, v) \<in> intra g
         \<Longrightarrow> (v, c) \<in> vars"
 begin
@@ -72,13 +73,11 @@ text \<open>The solver hypothesis, unpacked once into the two bounds every later
   \<^const>\<open>part_post_solution\<close>.\<close>
 lemma pp_eq_bound:
   "(v, ctx) \<in> vars \<Longrightarrow> eq Gen (v, ctx) sigma \<le> sigma (Inl (v, ctx))"
-  using tree_covered_at_local[OF part_post_solution_imp_tree_covered_at[OF pp]]
-  by blast
+  by (rule tree_covered_at_local[OF post_boundedD[OF pp]])
 
 lemma pp_sides_bound:
   "(v, ctx) \<in> vars \<Longrightarrow> sides_of_rhs (Gen (v, ctx)) sigma \<le> sigma"
-  using tree_covered_at_sides[OF part_post_solution_imp_tree_covered_at[OF pp]]
-  by blast
+  by (rule tree_covered_at_sides[OF post_boundedD[OF pp]])
 
 lemma pp_entry_s0g_bound:
   assumes cov: "(cfg_entry g, ctx) \<in> vars"
@@ -181,11 +180,12 @@ proof (cases "(u, ctx) \<in> vars")
   thus ?thesis using sin by simp
 next
   case True
-  hence cov_v: "(v, ctx) \<in> vars" using e by (rule fwd)
   let ?d = "locals (sigma (Inl (u, ctx)))"
   let ?g = "globs (sigma (Inr gk0))"
   have sin': "s \<in> gammaDG ?d ?g"
     using sin True by simp
+  have cov_v: "(v, ctx) \<in> vars"
+    using True _ e by (rule fwd) (use sin' in blast)
   have "{s} \<subseteq> gammaDG ?d ?g" using sin' by simp
   hence "edge_collect a {s} \<subseteq> edge_collect a (gammaDG ?d ?g)" by (rule edge_collect_mono)
   moreover have "s' \<in> edge_collect a {s}" using st by (simp add: edge_collect_single)

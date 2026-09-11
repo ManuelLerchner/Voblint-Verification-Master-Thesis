@@ -39,6 +39,7 @@ theory Voblint
     "Voblint_Examples_CLI.Exec_Interval_Run"
     "Voblint_Examples_CLI.Example_Int_Refinement_Mode_Regression"
     "Voblint_Examples_CLI.Example_Analysis_Result_Regression"
+    "Voblint_Examples_CLI.Example_End_To_End_Certificate"
     "Voblint_Examples_Interval.Example_Interval_DG_Flagship"
     "Voblint_Soundness.Source_Activation_Sound"
     "Voblint_Examples_Interval.Example_Interval_DG_Ctx_Collect"
@@ -104,8 +105,8 @@ text \<open>
   \<^bold>\<open>Where the chain ends.\<close>  At the operation the CLI actually calls and code
   generation actually exports, not at an internal solved system.
   \<open>run_voblint_source_sound\<close> says: run the source program, stop wherever you
-  like, and the answer for the point you are standing at describes the store in
-  your hands.  Three conjuncts, because a report makes three claims --- there is
+  like, and the answer describes your store at some graph node corresponding to
+  where you stopped.  Three conjuncts, because a report makes three claims --- there is
   a graph node and frame stack for where you stopped, the abstract state filed
   for that node contains your store, and every check row printed beside it holds
   of that store, with no row there marked unreachable.
@@ -113,30 +114,36 @@ text \<open>
   \<open>Analysis_Run_Ctx_Sound\<close> carries the same statement to the
   context-sensitive configurations, where the table has one entry per point
   \<^emph>\<open>and\<close> context.  A store reaching a point then sits in the entry filed under
-  \<^emph>\<open>one\<close> context, the one its own call history produced; quantifying over
+  at least one context its own call history is admitted at --- exactly one for a
+  call string, possibly several under entry-state routing; quantifying over
   every covered context would be false, since another activation's entry need
-  not describe this store.  What a caller owes is a termination fact and one
-  \<^const>\<open>ctx_vars_cover\<close> --- closure rather than blanket coverage, since which
-  contexts a node was solved at is decided by the run and not by the graph.
+  not describe this store.  What a caller owes is a termination fact.  The solve
+  must also be closed under every edge out of a live solved point --- closure
+  rather than blanket coverage, since which contexts a node was solved at is
+  decided by the run and not by the graph --- and a terminating solve is: every
+  key a live reader reads was visited, so the closure is proved rather than
+  checked.
 
   \<^bold>\<open>One statement over every configuration.\<close>  Those endpoints are one per
   configuration --- a domain, a solver discipline and a context policy --- and
   every configuration the dispatcher answers with check rows has one, all 32 of
-  them.  \<open>run_voblint_certified_source_sound\<close> states the result once with the
+  them.  @{thm [source] run_voblint_certified_source_sound}, in
+  \<^theory>\<open>Voblint_CLI.Analysis_Certified\<close>, states the result once with the
   configuration as an argument: what a caller owes is
-  \<open>certified_preconditions D solver ctx p\<close>, and neither configuration legality
-  nor well-formedness is a premise, because an unsupported pairing answers
+  \<open>config_terminates D solver ctx p\<close>, and neither coverage, configuration
+  legality nor well-formedness is a premise, because a terminating solve is
+  closed along its live dependencies, an unsupported pairing answers
   \<open>Unsupported_Configuration\<close> and a malformed program answers
   \<open>Malformed_Program\<close>.  The case split lives in that predicate and in
   \<open>analysis_result_covers\<close> rather than in the statement, for the reason
   \<^const>\<open>analyse_state_covers\<close> already is a function: an abstract state's type
   is the domain's own carrier.
 
-  \<open>Example_End_To_End_Certificate\<close> is that theorem with nothing left to assume.
-  It fixes one program at the product domain, a call-string context of length
-  one and always-join named explicitly, evaluates the two per-program facts and
-  the answer, builds the source run step by step, and reads the printed
-  \<^const>\<open>Check_Proved\<close> row off the conclusion.
+  \<^theory>\<open>Voblint_Examples_CLI.Example_End_To_End_Certificate\<close> is that theorem
+  with nothing left to assume.  It fixes one program at the product domain, a
+  call-string context of length one and always-join named explicitly, evaluates
+  the solve's termination and the answer, builds the source run step by step,
+  and reads the printed \<^const>\<open>Check_Proved\<close> row off the conclusion.
 \<close>
 
 section \<open>Flagship theorems\<close>
@@ -491,6 +498,13 @@ text \<open>
       transport, and D/G collecting soundness are discharged inside. It is
       partial correctness: the caller supplies that the solver
       \<^emph>\<open>returns\<close>, typically \<^theory_text>\<open>by eval\<close>.
+    \<^item> @{theory Voblint_CLI.Analysis_Certified} --- one soundness statement for
+      every configuration the dispatcher answers with check rows
+      (@{thm [source] run_voblint_certified_source_sound}), and the dead-row
+      guarantee at the same entry point
+      (@{thm [source] run_voblint_dead_row_unreached}).
+    \<^item> @{theory Voblint_Examples_CLI.Example_End_To_End_Certificate} --- that
+      statement instantiated at one program, with every premise discharged.
 
   \<^bold>\<open>7. Examples and witnesses.\<close> Executable demos, precision
     witnesses, and tooling. The five domain flagships

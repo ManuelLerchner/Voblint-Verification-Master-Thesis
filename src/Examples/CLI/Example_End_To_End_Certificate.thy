@@ -7,7 +7,7 @@ section \<open>One configuration, one program, no premise left standing\<close>
 text \<open>
   \<open>run_voblint_certified_source_sound\<close> is stated for an arbitrary configuration
   and an arbitrary program, so on its own it says nothing about any particular
-  run: a caller still owes the two per-program facts and the answer. This theory
+  run: a caller still owes the solve's termination and the answer. This theory
   pays all of them, by evaluation, for one program at one configuration --- the
   product domain, a call-string context of length one, and always-join named
   explicitly rather than defaulted --- and reads the theorem's conclusion off
@@ -308,7 +308,7 @@ proof -
 qed
 
 
-subsection \<open>The two per-program facts\<close>
+subsection \<open>What the solve owes\<close>
 
 text \<open>
   The solver's own run is the first. \<^const>\<open>routed_dg_pipeline.root_query\<close> has no
@@ -332,33 +332,15 @@ lemma certificate_demo_terminates:
   by (rule int_call_string_terminates_via_solve_c [OF certificate_demo_solve_c])
 
 text \<open>
-  Coverage is the second, and it is decided the same way: walk the keys the run
-  solved against the graph's two edge enumerations.
-  \<^const>\<open>routed_dg_pipeline.ctx_succ\<close> is inlined for the same reason
-  \<open>root_query\<close> was.
+  Nothing about which keys the solve reached is owed: the keys a run can reach are
+  closed once the solve terminates, so termination is the one fact about the solve
+  this theory evaluates.
 \<close>
 
-lemma certificate_demo_cover_exec:
-  "ctx_vars_cover_exec (prog_cfg certificate_demo_prog)
-     (int_cs_join_ctx_succ 1 (declared_global certificate_demo_prog) certificate_demo_prog) []
-     (int_cs_join_vars 1 (declared_global certificate_demo_prog) certificate_demo_prog)"
-  unfolding routed_dg_pipeline.ctx_succ_def by eval
-
-lemma certificate_demo_cover:
-  "ctx_vars_cover (prog_cfg certificate_demo_prog)
-     (int_cs_join_ctx_succ 1 (declared_global certificate_demo_prog) certificate_demo_prog) []
-     (int_cs_join_vars 1 (declared_global certificate_demo_prog) certificate_demo_prog)"
-  using compile_prog_finite [of "prog_table certificate_demo_prog"
-                                "prog_procs certificate_demo_prog"]
-  by (intro ctx_vars_cover_of_exec [OF _ _ certificate_demo_cover_exec])
-     (simp_all add: prog_cfg_def)
-
-lemma certificate_demo_certified:
-  "certified_preconditions Int_Analysis (Some Solver_Join) (Ctx_CallString 1)
-     certificate_demo_prog"
+lemma certificate_demo_config_terminates:
+  "config_terminates Int_Analysis (Some Solver_Join) (Ctx_CallString 1) certificate_demo_prog"
   by (simp del: One_nat_def
-        add: certified_preconditions_def mk_analysis_config_def
-          certificate_demo_terminates certificate_demo_cover)
+        add: config_terminates_def mk_analysis_config_def certificate_demo_terminates)
 
 subsection \<open>What the printed verdict means at that node\<close>
 
@@ -412,8 +394,10 @@ lemma certificate_demo_sound:
        (cinit_stores (declared_global certificate_demo_prog)) u ctx
      \<subseteq> gamma_point
           (lookup_context (analyse_int_call_string_result 1 certificate_demo_prog) u ctx)"
-  using analyse_int_call_string_sound_of_cover
-          [OF certificate_demo_terminates certificate_demo_cover, where s = "\<lambda>u c t. t"]
+  using analyse_int_call_string_sound_of_terminates
+          [OF wf_program_compile_input_exec_sound [OF certificate_demo_wf]
+              certificate_demo_terminates,
+           where s = "\<lambda>u c t. t"]
   unfolding analyse_int_call_string_result_def
             analyse_int_call_string_result_for_def
             analyse_int_call_string_gamma_reader_eq_lookup .
@@ -550,7 +534,7 @@ subsection \<open>The endpoint, with nothing left to assume\<close>
 
 text \<open>
   Nothing is left to assume. The run is the one built above, the answer is the one
-  computed above, and the two per-program facts are the ones evaluated above, so
+  computed above, and the solve's termination is the fact evaluated above, so
   the endpoint's conclusion holds outright: the store the program actually ends
   with sits in the entry the always-join solve filed under that activation's own
   call string, and the \<^const>\<open>Check_Proved\<close> row the configuration printed is true
@@ -580,7 +564,8 @@ proof (cases "run_voblint Int_Analysis (Some Solver_Join) (Ctx_CallString 1) Vie
                      = [(Statement 4, Decided Check_Proved)]"
     using certificate_demo_report by simp
   from run_voblint_certified_source_sound
-         [OF certificate_demo_init certificate_demo_run certificate_demo_certified Analysed]
+         [OF certificate_demo_init certificate_demo_run certificate_demo_config_terminates
+             Analysed]
   show ?thesis using Analysed rows by meson
 qed (use certificate_demo_report in simp_all)
 

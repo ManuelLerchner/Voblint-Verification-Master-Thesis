@@ -98,10 +98,11 @@ for every configuration the dispatcher answers with check rows, a source run's
 store lies in the analysis result at a genuinely reachable node, and every
 definite verdict printed there holds for that store.
 `run_voblint_dead_row_unreached`, beside it, states separately that a dead row's
-point is unreachable, at every configuration. The caller owes `certified_preconditions D solver ctx p` -- the
-solver run completed and solved enough keys -- and nothing proves that in
-general; it is established per program by evaluation. The root `README.md`
-states the theorem in full.
+point is unreachable, at every configuration. The caller owes `config_terminates D solver ctx p` -- the
+solver run completed -- and nothing proves that in general; it is established per
+program by evaluation. That the run solved enough keys is no premise:
+`live_keys_cover` (`Routed_Live_Keys.thy`) proves it from termination. The
+root `README.md` states the theorem in full.
 
 ## 6. `export_code` and the code-generation trust boundary
 
@@ -141,13 +142,14 @@ the snapshot and globals strings -- is presentation with no theorem about it.
 ## 8. What may be claimed
 
 Proved, for every row-producing configuration (all 32, `docs/THEOREM_MAP.md`):
-if `certified_preconditions` holds for the program, every modeled source
+if `config_terminates` holds for the program, every modeled source
 execution is over-approximated at a reachable node, and every `PROVED` or
 `REFUTED` row printed there is correct for that execution.
 
 Not proved:
 
-- solver termination or key coverage for an arbitrary program;
+- solver termination for an arbitrary program (key coverage is checked at run
+  time rather than proved);
 - anything about the rendered graph, snapshot or globals strings;
 - the lexer and parser;
 - Isabelle's code generator, the OCaml compiler and its runtime.

@@ -155,7 +155,9 @@ proof (unfold_locales, unfold sign_nest_cfg_compile,
   show ?case by (rule sign_nest_finE)
 next
   case PP
-  show ?case by (rule sign_nest_2_pp_st[unfolded sign_nest_2_eqs_def])
+  show ?case
+    by (rule post_bounded_of_part_post_solution
+          [OF sign_nest_2_pp_st[unfolded sign_nest_2_eqs_def]])
 next
   case (SgCov v c)
   show ?case using SgCov by (simp add: sign_nest_gamma_def)
@@ -164,7 +166,7 @@ next
   show ?case using SgUncov by simp
 next
   case (Fwd u a v c)
-  show ?case using Fwd by (rule sign_nest_fwd_closed_2)
+  show ?case using Fwd(1,3) by (rule sign_nest_fwd_closed_2)
 next
   case IsBotBot show ?case by simp
 next

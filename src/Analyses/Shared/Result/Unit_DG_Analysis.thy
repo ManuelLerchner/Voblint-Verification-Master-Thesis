@@ -1,5 +1,5 @@
 theory Unit_DG_Analysis
-  imports Routed_DG_Analysis
+  imports Routed_Live_Keys
 begin
 
 section \<open>The context-insensitive analysis, as the routed one at a single context\<close>
@@ -355,6 +355,29 @@ theorem completed_run_sound:
   by (rule completed_run_sound_closure[OF solves cover_fwd[OF cover]
         cover_call_fwd[OF cover] cover_comb_fwd[OF cover] cover_entry[OF cover]
         wf s0 run])
+
+subsubsection \<open>The table of any terminating solve\<close>
+
+theorem result_node_sound_of_terminates:
+  assumes wf: "wf_program_compile_input p" and solves: "terminates ugs p"
+  shows "ltr_collect ugs (prog_cfg p) (cinit_stores ugs) v \<subseteq> \<lbrakk>state_at ugs p v\<rbrakk>"
+proof -
+  have "ltr_collect ugs (prog_cfg p) (cinit_stores ugs) v
+      = activation_collect ugs (call_context_rel_of_fun enterc_unit) ()
+          (prog_cfg p) (cinit_stores ugs) v ()"
+    by (rule activation_collect_unit_eq_ltr_collect[symmetric])
+  also have "\<dots> \<subseteq> gamma_state_lift (map_lift (fun_of_resolved_st_q_for ugs)
+                     (reader ugs p (Inl (v, ()))))"
+    by (rule fun_route_activation_collect_sound_of_terminates
+          [where ctx_fun = enterc_unit, OF _ wf solves]) simp
+  finally have "ltr_collect ugs (prog_cfg p) (cinit_stores ugs) v
+      \<subseteq> gamma_point (lookup_context (result ugs p) v ())"
+    unfolding gamma_reader_eq_lookup .
+  then show ?thesis
+    unfolding state_at_unfold
+    unfolding bot_state_eq
+    by (simp add: gamma_state_case_eq_point)
+qed
 
 end
 

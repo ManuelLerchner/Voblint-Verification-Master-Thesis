@@ -183,6 +183,7 @@ domains:
           gamma_reader: analyse_interval_call_string_gamma_reader_eq_lookup
           vars_finite: analyse_interval_call_string_vars_finite
           sound_of_cover: analyse_interval_call_string_sound_of_cover
+          sound_of_terminates: analyse_interval_call_string_sound_of_terminates
           union_of_cover: analyse_interval_call_string_ltr_collect_eq_Union
     # Interval's four disciplines all publish a solve and a report, so every
     # route names the constants it publishes rather than taking the production
@@ -274,7 +275,7 @@ domains:
         - Interval_Assembly
         - Interval_Classify
         - Interval_Exec_Sound
-        - '"Voblint_Result.Routed_DG_Analysis"'
+        - '"Voblint_Result.Routed_Live_Keys"'
         - '"Voblint_Framework.Call_String_Context"'
         - '"Voblint_Framework.Routed_Context"'
         - '"Voblint_Solver.TD_Solver_Bridge"'
@@ -373,7 +374,7 @@ domains:
         - Parity_Classify
         - Parity_Transfer
         - Parity_Exec
-        - '"Voblint_Result.Routed_DG_Analysis"'
+        - '"Voblint_Result.Routed_Live_Keys"'
         - '"Voblint_Framework.Call_String_Context"'
         - '"Voblint_Framework.Routed_Context"'
         - '"Voblint_Solver.TD_Solver_Bridge"'
@@ -446,6 +447,7 @@ domains:
         re_exports:
           sound: analyse_int_call_string_sound
           sound_of_cover: analyse_int_call_string_sound_of_cover
+          sound_of_terminates: analyse_int_call_string_sound_of_terminates
           union_of_cover: analyse_int_call_string_ltr_collect_eq_Union
           gamma_reader: analyse_int_call_string_gamma_reader_eq_lookup
           vars_finite: analyse_int_call_string_vars_finite
@@ -471,7 +473,7 @@ domains:
         - Int_Sound
         - Int_Classify
         - Int_Exec
-        - '"Voblint_Result.Routed_DG_Analysis"'
+        - '"Voblint_Result.Routed_Live_Keys"'
         - '"Voblint_Framework.Call_String_Context"'
         - '"Voblint_Framework.Routed_Context"'
         - '"Voblint_Solver.TD_Solver_Bridge"'
@@ -584,7 +586,7 @@ domains:
         - Congruence_Classify
         - Congruence_Transfer
         - Congruence_Exec
-        - '"Voblint_Result.Routed_DG_Analysis"'
+        - '"Voblint_Result.Routed_Live_Keys"'
         - '"Voblint_Framework.Call_String_Context"'
         - '"Voblint_Framework.Routed_Context"'
         - '"Voblint_Solver.TD_Solver_Bridge"'

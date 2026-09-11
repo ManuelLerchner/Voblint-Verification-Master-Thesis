@@ -592,5 +592,71 @@ next
     by (fastforce simp: list_all_iff set_cfg_calls_list [OF finC])
 qed
 
+
+subsection \<open>Coverage along live dependencies\<close>
+
+text \<open>
+  \<^const>\<open>ctx_vars_cover\<close> demands closure from every solved pair, including pairs
+  whose solved state is bottom and calls whose entered state is bottom.  A
+  demand-driven solver never solves what such a pair would lead to, so the
+  unconditional closure fails on dead call sites and on procedures nothing calls,
+  while soundness only ever follows a dependency from a state that holds a
+  concrete store.  The live form asks for exactly that much.
+
+  \<open>live u ctx\<close> says the state solved at \<open>(u, ctx)\<close> may hold a store; an intra
+  successor is demanded only from a live pair.  \<open>succ u ctx ca q\<close> is the callee
+  context a call routes to, or \<open>None\<close> when the entered state is bottom and the
+  call contributes nothing; the callee entry is demanded only when it is
+  \<open>Some\<close>.  The continuation stays unconditional: a call site is queried only by
+  its own continuation's call tree, so a solver never solves the one without the
+  other.
+\<close>
+
+definition ctx_vars_cover_live ::
+    "cfg \<Rightarrow> (cfg_node \<Rightarrow> 'c \<Rightarrow> bool) \<Rightarrow> (cfg_node \<Rightarrow> 'c \<Rightarrow> call_action \<Rightarrow> pname \<Rightarrow> 'c option)
+       \<Rightarrow> 'c \<Rightarrow> (cfg_node \<times> 'c) set \<Rightarrow> bool" where
+  "ctx_vars_cover_live g live succ rc vars \<longleftrightarrow>
+     (cfg_entry g, rc) \<in> vars
+   \<and> (\<forall>u a v ctx. (u, ctx) \<in> vars \<longrightarrow> live u ctx \<longrightarrow> (u, a, v) \<in> intra g
+        \<longrightarrow> (v, ctx) \<in> vars)
+   \<and> (\<forall>u ctx dst fs as q k. (u, ctx) \<in> vars
+        \<longrightarrow> (u, CallEdge dst fs as, FunctionEntry q, k) \<in> calls g
+        \<longrightarrow> (k, ctx) \<in> vars
+          \<and> (\<forall>ctx'. succ u ctx (CallEdge dst fs as) q = Some ctx'
+               \<longrightarrow> (FunctionEntry q, ctx') \<in> vars))"
+
+lemma ctx_vars_cover_liveI [intro]:
+  assumes "(cfg_entry g, rc) \<in> vars"
+    and "\<And>u a v ctx. (u, ctx) \<in> vars \<Longrightarrow> live u ctx \<Longrightarrow> (u, a, v) \<in> intra g
+           \<Longrightarrow> (v, ctx) \<in> vars"
+    and "\<And>u ctx dst fs as q k ctx'. (u, ctx) \<in> vars
+           \<Longrightarrow> (u, CallEdge dst fs as, FunctionEntry q, k) \<in> calls g
+           \<Longrightarrow> succ u ctx (CallEdge dst fs as) q = Some ctx'
+           \<Longrightarrow> (FunctionEntry q, ctx') \<in> vars"
+    and "\<And>u ctx dst fs as q k. (u, ctx) \<in> vars
+           \<Longrightarrow> (u, CallEdge dst fs as, FunctionEntry q, k) \<in> calls g \<Longrightarrow> (k, ctx) \<in> vars"
+  shows "ctx_vars_cover_live g live succ rc vars"
+  unfolding ctx_vars_cover_live_def using assms by blast
+
+lemma ctx_vars_cover_live_entryD [dest]:
+  "ctx_vars_cover_live g live succ rc vars \<Longrightarrow> (cfg_entry g, rc) \<in> vars"
+  unfolding ctx_vars_cover_live_def by blast
+
+lemma ctx_vars_cover_live_edgeD [dest]:
+  "ctx_vars_cover_live g live succ rc vars \<Longrightarrow> (u, ctx) \<in> vars \<Longrightarrow> live u ctx
+     \<Longrightarrow> (u, a, v) \<in> intra g \<Longrightarrow> (v, ctx) \<in> vars"
+  unfolding ctx_vars_cover_live_def by blast
+
+lemma ctx_vars_cover_live_enterD [dest]:
+  "ctx_vars_cover_live g live succ rc vars \<Longrightarrow> (u, ctx) \<in> vars
+     \<Longrightarrow> (u, CallEdge dst fs as, FunctionEntry q, k) \<in> calls g
+     \<Longrightarrow> succ u ctx (CallEdge dst fs as) q = Some ctx' \<Longrightarrow> (FunctionEntry q, ctx') \<in> vars"
+  unfolding ctx_vars_cover_live_def by blast
+
+lemma ctx_vars_cover_live_combineD [dest]:
+  "ctx_vars_cover_live g live succ rc vars \<Longrightarrow> (u, ctx) \<in> vars
+     \<Longrightarrow> (u, CallEdge dst fs as, FunctionEntry q, k) \<in> calls g \<Longrightarrow> (k, ctx) \<in> vars"
+  unfolding ctx_vars_cover_live_def by blast
+
 end
 

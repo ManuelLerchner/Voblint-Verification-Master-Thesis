@@ -101,12 +101,16 @@ context-sensitive results are stated over.
 
 The chain ends at a configuration-generic statement over the CLI's HOL entry
 point
-([`run_voblint_certified_source_sound`](src/Executable_Surface/CLI/Analysis_Certified.thy)):
-run the source program, stop wherever you like, and the analyzer's answer for the
-program point you are standing at describes the store in your hands -- the
-abstract state contains it, and every definite verdict printed beside it is
-correct for that store. The domain, the solver discipline and the context policy are
-arguments, not parameters of the statement.
+([`run_voblint_certified_source_sound`](src/Executable_Surface/CLI/Analysis_Certified.thy)).
+If the verified solver terminates and `run_voblint` returns an analysis result,
+that result over-approximates every modeled execution of the source program:
+run the program, stop wherever you like, and the answer describes the store at
+some CFG node corresponding to where the execution stopped -- an abstract-state
+entry filed at that node, under at least one admitted context when contexts are
+used, contains it, every definite verdict printed at that node is correct for
+that store, and no row there is marked dead. The domain, the solver discipline and the context policy
+are arguments, not parameters of the statement. "Certified" names the theorem;
+the CLI emits a report, not a certificate.
 
 ```isabelle
 theorem run_voblint_certified_source_sound:
@@ -114,7 +118,7 @@ theorem run_voblint_certified_source_sound:
   assumes s0: "s0 ∈ cinit_stores (declared_global p)"
       and run: "star (pstep (declared_global p) (prog_table p))
                   (main_body (prog_table p), s0, []) (residual, s, frs)"
-      and cert: "certified_preconditions D solver ctx p"
+      and terminates: "config_terminates D solver ctx p"
       and ans: "run_voblint D solver ctx view p = Analysed out"
   shows "∃v stk. csim (prog_table p) (prog_cfg p) (residual, s, frs) (v, s, stk)
                ∧ s ∈ ltr_collect (declared_global p) (prog_cfg p)
@@ -123,14 +127,21 @@ theorem run_voblint_certified_source_sound:
                ∧ checks_sound_at out v s"
 ```
 
+`s0` and `run` choose an arbitrary execution prefix, and `ans` names the result
+being read; `terminates` is the only proof obligation about the analyzer. The
+theorem does not assume the demand-driven solver visited enough unknowns. That
+coverage is proved for every terminating solve, from the dependencies of the
+generated equations and the structure of the compiled graph, so it is neither a
+premise nor a runtime check.
+
 The four premises, and who has to establish each:
 
 | Premise | What it says | How it is discharged |
 | --- | --- | --- |
 | `s0` | The run starts from a store in which every declared global is `0`; locals are unconstrained. | Nothing to discharge: it fixes which executions the theorem talks about. |
 | `run` | `residual, s, frs` is reachable by any finite number of VIMP small-step (`pstep`) steps from `main`'s body with an empty frame stack: `residual` is the command still to run, `s` the current store, `frs` the pending callers' frames. The run need not terminate; any prefix counts. | Nothing to discharge: this is the arbitrary execution being quantified over. |
-| `cert` | Two facts about *this configuration's* solve of `p`. **Termination:** the verified TD solver terminates on the program's root query (`..._terminates`, membership in the solver's termination domain `solve_dom`). **Coverage:** the unknowns it solved include the CFG entry, the target of every intra edge, and every callee entry and call continuation (`vars_cover`; under a context policy `ctx_vars_cover`, for every context reachable from the root context). | Per program, by evaluation: the domain's `..._via_solve_c` theorem for termination, `vars_cover_exec` / `ctx_vars_cover_of_exec` for coverage. Neither holds for every program -- the solver may diverge -- so the theorem is partial correctness. |
-| `ans` | The analyzer accepted the configuration and the program and returned the report `out`. Because an illegal configuration answers `Unsupported_Configuration` and an ill-formed program `Malformed_Program`, this premise already implies legality and well-formedness. `view` (which rendering was asked for) is arbitrary. | Running the exported function, i.e. the CLI. |
+| `terminates` | The verified TD solver terminates on *this configuration's* root query for `p` (`..._terminates`, membership in the solver's termination domain `solve_dom`). | Per program, by evaluation: the domain's `..._via_solve_c` theorem. It does not hold for every program -- the solver may diverge -- so the theorem is partial correctness. |
+| `ans` | The analyzer accepted the configuration and the program and returned the report `out`. An illegal configuration answers `Unsupported_Configuration` and an ill-formed program `Malformed_Program`, so this premise already implies legality and well-formedness. Coverage is no premise either: a terminating solve has visited the CFG entry, the target of every intra edge out of a live point, the continuation of every live call site, and every callee entry reached with a live state (`live_keys_cover`, over `ctx_vars_cover_live`), so it is proved from `terminates` rather than checked. `view` (which rendering was asked for) is arbitrary. | Running the exported function, i.e. the CLI. |
 
 and what the conclusion gives back, at some CFG node `v`:
 
@@ -146,7 +157,7 @@ calls, so this constrains the analyzer's own output rather than an internal
 solved system.
 
 The two case splits the statement avoids live in the definitions instead:
-`certified_preconditions` names the obligations per configuration and
+`config_terminates` names the obligation per configuration and
 `analysis_result_covers` names what that configuration's own table claims, both
 by recursion over the domain, the solver and the policy. They have to be
 definitions rather than parameters because an abstract state's type is the
@@ -155,8 +166,8 @@ domain's own carrier, so nothing polymorphic holds all five.
 [`Example_End_To_End_Certificate`](src/Examples/CLI/Example_End_To_End_Certificate.thy)
 instantiates this theorem for an actual run -- the `Int` product domain, a
 call-string context of length one, and `Solver_Join` named explicitly rather than
-defaulted -- with well-formedness, solver termination, context coverage and the
-`Analysed` answer all discharged by evaluation. The source run is not assumed
+defaulted -- with well-formedness, solver termination and the `Analysed` answer
+all discharged by evaluation. The source run is not assumed
 either: it is built step by step, both calls and the check, so the theorem's
 conclusion holds outright for a store the program really computes.
 
@@ -196,7 +207,7 @@ which is running, and one in `unused`, which nothing reaches.
 The `ltr_collect` membership is what picks out a witness that is genuinely
 reachable carrying this store, and it is
 load-bearing rather than decorative -- at the dead witness the analysis
-computed bottom, so the coverage conjunct would be false there. At that
+computed bottom, so the `analysis_result_covers` conjunct would be false there. At that
 reachable node the computed abstract state contains the store, and every
 definite check verdict printed for it is correct.
 
@@ -220,7 +231,7 @@ printed over a store that reached it.
 
 [`analyse_source_sound`](src/Executable_Surface/CLI/Analyse_Dispatch.thy) is the
 same statement one layer down, over the `analyse` verdict list rather than the
-rendered rows, and without the coverage conjunct.
+rendered rows, and without the `analysis_result_covers` conjunct.
 
 ### What is certified
 
@@ -251,7 +262,7 @@ empty -- nothing reaches it at all, at any configuration:
 
 ```isabelle
 corollary run_voblint_dead_row_unreached:
-  assumes cert: "certified_preconditions D solver ctx p"
+  assumes terminates: "config_terminates D solver ctx p"
       and ans: "run_voblint D solver ctx view p = Analysed out"
       and row: "row ∈ set (out_checks out)"
       and dead: "row_verdict row = Dead"
@@ -282,21 +293,26 @@ for a call string, possibly several for entry-state routing -- and quantifying
 over every context the node was solved at instead would be false, since another
 activation's entry need not describe this store at all.
 
-The two premises a contextual cell owes are the contextual counterpart of what
-[`analyse_certified`](src/Executable_Surface/CLI/Analyse_Dispatch.thy) bundles:
-a termination fact and one coverage fact. The coverage is
-[`ctx_vars_cover`](src/Abstract_Interpreter/Framework/Constraints/CFG_Enumeration.thy)
-rather than `vars_cover`, whose key type is `unit`, and it is *closure* rather
-than blanket coverage -- if a node-context pair was solved, the pairs its edges
-lead to were solved too. A context-sensitive system cannot demand the
-unconditional form, because which contexts a node was solved at is decided by
-the run.
+Every cell owes one fact: termination. The soundness proof also reads a coverage
+property,
+[`ctx_vars_cover_live`](src/Abstract_Interpreter/Framework/Constraints/CFG_Enumeration.thy),
+and it is *closure along live dependencies* rather than blanket coverage: if a
+node-context pair was solved to a live state, the pairs its edges lead to were
+solved too, and a call enters its callee only when the entered state is live. A
+context-sensitive system cannot demand the unconditional form, because which
+contexts a node was solved at is decided by the run. Nor can the unit context:
+a procedure nothing calls is compiled into the graph but never solved, and a
+call on a dead branch is never entered. The closure is proved, not assumed:
+[`live_keys_cover`](src/Analyses/Shared/Result/Routed_Live_Keys.thy) derives it
+from termination alone, over the solved keys whose node reaches a solved
+procedure result. The restriction matters because a key after a `return` is
+solved but never read, so its successors need not be.
 
-Call-string carries a *smaller* certificate than entry state, not a larger one.
+Call-string carries a *smaller* obligation than entry state, not a larger one.
 A call string is a total function of the call history, so every activation has
 exactly one context by construction and there is no context-totality obligation
-at all: `fun_route_ltr_collect_eq_Union` is premise-free. What remains is the
-termination fact and the one closure premise.
+at all: `fun_route_ltr_collect_eq_Union` is premise-free. Only the termination
+fact remains, and the closure follows from it.
 
 `None` selects each domain's default discipline, and naming a solver instead
 changes nothing about what is proved: every configuration the dispatcher answers
@@ -314,11 +330,14 @@ One limit is worth naming: the guarantee is about `out_checks` -- the graph,
 snapshot and globals in the answer are rendered strings, with no theorem about
 them.
 
+`config_terminates D solver ctx p` is the one per-program fact nothing here
+proves in general. It is a logical precondition of the theorem, not something the
+CLI checks: a caller establishes it for a specific program, by evaluation, before
+the theorem says anything about that program's report. One layer down, the
+`analyse` API has no coverage check of its own, so
 [`analyse_certified D p`](src/Executable_Surface/CLI/Analyse_Dispatch.thy)
-bundles the two per-program facts nothing here proves in general. It is a
-logical precondition of the theorem, not a certificate the CLI produces or
-checks: a caller establishes it for a specific program, by evaluation, before
-the theorem says anything about that program's report.
+bundles termination with the unconditional `vars_cover` for the statements over
+`analyse`.
 
 Each domain also states the result over its own result table rather than over
 verdicts: [`analyse_sign_source_sound`](src/Analyses/Sign/generated/Sign_Entry.thy) says
@@ -347,11 +366,10 @@ domain writes no source-level reasoning. See
 
 The theorem above is stated for the configuration as an argument, so domain,
 solver discipline and context policy are all covered by one statement, and
-`certified_preconditions D solver ctx p` is what a caller owes per program. The
+`config_terminates D solver ctx p` is what a caller owes per program. The
 per-configuration endpoints underneath it are what that predicate is assembled
-from, one per plan; `analyse_certified D p` is the unit-context specialization of
-the same pair of obligations, and the per-domain corollaries read their tables at
-`lookup_context ... v ()`. See
+from, one per plan, and the per-domain corollaries over `analyse` read their
+tables at `lookup_context ... v ()`. See
 [`docs/THEOREM_MAP.md`](docs/THEOREM_MAP.md) for each endpoint's exact shape.
 
 Read the two verdicts precisely. `PROVED` at a node says every execution that
@@ -361,25 +379,26 @@ at all, so a `REFUTED` line is not a verified counterexample: a check on a dead
 branch is reported dead, and `REFUTED` on a reachable one still comes with no
 witness run.
 
-`certified_preconditions` -- and `analyse_certified`, its unit-context
-specialization -- is exactly the two side conditions that survive, and neither is
-discharged in general. Both can be established for an individual program by
-executable evaluation:
+One logical premise remains per program: solver termination
+(`config_terminates`). Per program, evaluate the solver-success condition, then
+apply that domain's `..._via_solve_c` theorem. The evaluation may itself fail to
+terminate, and no theorem here guarantees success for every program; partial
+correctness is the scope.
 
-* `solve`: the solver run completed. Per program: evaluate the solver-success
-  condition, then apply that domain's `..._via_solve_c` theorem. The evaluation
-  may itself fail to terminate, and no theorem here guarantees success for every
-  program; partial correctness is the scope.
-* `cover`: the solve visited enough keys. `vars_cover` bundles the entry,
-  intra-edge, call-entry and combine-target obligations into one predicate,
-  decided by `vars_cover_exec` and bridged by each domain's
-  `<x>_vars_cover_prog_of_exec`.
+Live coverage follows from termination. The remaining conditions are checked by
+`run_voblint` before it returns `Analysed`:
 
-Stated exactly: *successful analyses whose required coverage is established
-over-approximate all modeled source executions.* A `PROVED` verdict carries the
-formal guarantee once the solver-success and coverage premises are established
-for that invocation. The CLI does not validate coverage or emit a proof
-certificate: it returns a report.
+```text
+termination        theorem premise
+live coverage      proved from termination  (live_keys_cover)
+well-formedness    checked by run_voblint    (Malformed_Program)
+configuration      checked by run_voblint    (Unsupported_Configuration)
+```
+
+Stated exactly: *every report the analyzer prints for a terminating solve
+over-approximates all modeled source executions.* A `PROVED` verdict carries the
+formal guarantee once termination is established for that invocation. The CLI
+does not emit a proof certificate: it returns a report.
 
 Two further steps separate the theorem from the binary, and no theorem covers
 either: the generated OCaml (`export_code` translates the same HOL functions,
@@ -525,8 +544,8 @@ CLI-dependent example sessions; `ROOTS` lists one directory per session, and eac
 
 Requirements: **Isabelle2025-2** (the version CI runs and `scripts/setup.sh`
 expects), an **[AFP](https://www.isa-afp.org/)** checkout, **[pixi](https://pixi.sh/)**,
-and, for the code-generation and CLI tasks, OCaml (`ocamlfind`, `menhir`,
-`ocamllex`, `zarith`) via opam.
+and, for the code-generation and CLI tasks, OCaml (Dune, Menhir, `ocamllex`,
+and Zarith) via opam.
 
 ```bash
 pixi run vendor                        # init the TD solver submodule
@@ -548,7 +567,7 @@ The ones that matter most often:
 | `ci` | Everything CI runs |
 
 The generated OCaml is compile-checked by actually compiling it: both
-`codegen-regression` and `cli-build` run `ocamlfind ocamlopt` over
+`codegen-regression` and `cli-build` run Dune over
 `codegen/generated/ml/Voblint_CLI.ml`. `export_code` emits one `Generated`
 module for the whole reachable program (plus HOL's `Bit_Shifts` and
 `Str_Literal` preludes); do not hand-edit anything under `codegen/generated/`.

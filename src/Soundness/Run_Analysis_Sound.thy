@@ -168,13 +168,13 @@ proof -
   next
     case FinE show ?case by (rule finE)
   next
-    case PP show ?case by (rule pp)
+    case PP show ?case by (rule post_bounded_of_part_post_solution[OF pp])
   next
     case (SgCov v c) then show ?case by (rule sg_cov)
   next
     case (SgUncov v c) then show ?case by (rule sg_uncov)
   next
-    case (Fwd u a v c) then show ?case by (rule fwd_ok)
+    case (Fwd u a v c) show ?case by (rule fwd_ok [OF Fwd(1) Fwd(3)])
   next
     case FinC show ?case by (simp add: compile_prog_finite)
   next
