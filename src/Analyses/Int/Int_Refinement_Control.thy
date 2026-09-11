@@ -90,13 +90,6 @@ next
 qed
 
 
-lemma canonical_refine_step_collapses_bottom:
-  assumes "is_empty (refine_round d)"
-  shows "canonical_refine_step d = bot"
-  using assms
-  unfolding canonical_refine_step_def Let_def
-  by simp
-
 lemma refine_fix_option_exact:
   assumes result: "refine_fix_option d = Some r"
   shows "gamma_int_dom r = gamma_int_dom d"
@@ -233,11 +226,6 @@ proof -
     by (simp add: refine_round_reduction_step)
 qed
 
-lemma refine_once_exact:
-  "gamma_int_dom (refine Refine_Once d) = gamma_int_dom d"
-  by (rule int_reduction_step_exact[
-        OF refine_once_reduction_step])
-
 lemma refine_once_reductive:
   "refine Refine_Once d <= d"
   by (rule int_reduction_step_reductive[
@@ -247,18 +235,6 @@ lemma refine_once_mono:
   "mono (refine Refine_Once)"
   by (rule int_reduction_step_mono[
         OF refine_once_reduction_step])
-
-lemma refine_fixpoint_exact:
-  "gamma_int_dom (refine Refine_Fixpoint d) =
-   gamma_int_dom d"
-  by simp
-
-lemma refine_fixpoint_round_stable:
-  assumes "refine_fix_option d = Some r"
-  shows
-    "refine_round (refine Refine_Fixpoint d) =
-     refine Refine_Fixpoint d"
-  using refine_fix_round_stable[OF assms] by simp
 
 lemma refine_exact:
   "gamma_int_dom (refine mode d) = gamma_int_dom d"
@@ -334,10 +310,6 @@ next
   with Some show ?thesis
     unfolding refine_fix_def by simp
 qed
-
-lemma refine_fixpoint_reductive:
-  "refine Refine_Fixpoint d <= d"
-  by simp
 
 lemma refine_reductive:
   "refine mode d <= d"

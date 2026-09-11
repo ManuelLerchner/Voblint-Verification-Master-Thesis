@@ -68,11 +68,6 @@ fun apply_reduction_steps ::
 | "apply_reduction_steps (step # steps) d =
      apply_reduction_steps steps (step d)"
 
-lemma apply_reduction_steps_append:
-  "apply_reduction_steps (xs @ ys) =
-   apply_reduction_steps ys o apply_reduction_steps xs"
-  by (induction xs) (auto simp: fun_eq_iff)
-
 lemma int_reduction_steps:
   assumes "\<forall>step \<in> set steps. int_reduction_step step"
   shows "int_reduction_step (apply_reduction_steps steps)"

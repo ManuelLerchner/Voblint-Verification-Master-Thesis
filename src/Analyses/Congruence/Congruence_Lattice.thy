@@ -407,10 +407,6 @@ lemma is_top_congruence_regression:
    \<not> is_top_congruence (mk_congruence 0 2)"
   by eval
 
-lemma is_top_congruence_correct:
-  "is_top_congruence a \<longleftrightarrow> a = top"
-  unfolding is_top_congruence_def ..
-
 lemma is_top_congruence_correct_gamma:
   "is_top_congruence a \<longleftrightarrow> gamma_congruence a = UNIV"
   unfolding is_top_congruence_def

@@ -949,35 +949,6 @@ lemma inv_times_congruence_mono:
   using assms inverse_times_candidate_mono intersect_congruence_mono
   by (auto simp: inv_times_congruence_def)
 
-lemma inv_less_congruence_reductive:
-  "le_pair (inv_less_congruence result a b) (a, b)"
-  by (simp add: inv_less_congruence_def)
-
-lemma inv_eq_congruence_reductive:
-  "le_pair (inv_eq_congruence result a b) (a, b)"
-  using intersect_congruence_le1 intersect_congruence_le2
-  by (cases result) auto
-
-lemma inv_plus_congruence_reductive:
-  "le_pair (inv_plus_congruence r a b) (a, b)"
-  by (simp add: inv_plus_congruence_def
-        intersect_congruence_le1)
-
-lemma inv_minus_congruence_reductive:
-  "le_pair (inv_minus_congruence r a b) (a, b)"
-  by (simp add: inv_minus_congruence_def
-        intersect_congruence_le1)
-
-lemma inv_times_congruence_reductive:
-  "le_pair (inv_times_congruence r a b) (a, b)"
-  by (simp add: inv_times_congruence_def
-        intersect_congruence_le1)
-
-
-
-
-
-
 subsection \<open>Backward-domain interpretation\<close>
 
 global_interpretation congruence_backward_domain:
@@ -994,162 +965,21 @@ global_interpretation congruence_backward_domain:
     and bfilter_congruence_st = congruence_backward_domain.bfilter_st
     and branch_congruence_st = congruence_backward_domain.branch_st
 proof unfold_locales
-  fix n :: int and a b :: congruence
-  assume H1: "n : gamma a" and H2: "n : gamma b"
-  have h1: "n : gamma_congruence a" using H1 by simp
-  have h2: "n : gamma_congruence b" using H2 by simp
-  show "n : gamma (intersect_congruence a b)"
-    using intersect_congruence_sound[OF h1 h2] by simp
-next
-  fix s :: store and e :: exp
-    and sigma :: "vname => congruence"
-  assume H: "s \<in> \<lbrakk>sigma\<rbrakk>"
-  have H': "\<forall>x. s x : gamma (sigma x)" using gamma_stateD[OF H] by blast
-  show "aval e s : gamma (aval_congruence e sigma)"
-    by (rule congruence_arith.aval_dom_sound[OF H'])
-next
-  fix n1 n2 :: int and a1 a2 :: congruence and result :: bool
-  assume H1: "n1 : gamma a1"
-      and H2: "n2 : gamma a2"
-      and H3: "(n1 < n2) = result"
-  have h1: "n1 : gamma_congruence a1" using H1 by simp
-  have h2: "n2 : gamma_congruence a2" using H2 by simp
-  show
-    "n1 : gamma (fst (inv_less_congruence result a1 a2)) \<and>
-     n2 : gamma (snd (inv_less_congruence result a1 a2))"
-    using inv_less_congruence_sound[OF h1 h2] by simp
-next
-  fix n1 n2 :: int and a1 a2 :: congruence and result :: bool
-  assume H1: "n1 : gamma a1"
-      and H2: "n2 : gamma a2"
-      and H3: "(n1 = n2) = result"
-  have h1: "n1 : gamma_congruence a1" using H1 by simp
-  have h2: "n2 : gamma_congruence a2" using H2 by simp
-  show
-    "n1 : gamma (fst (inv_eq_congruence result a1 a2)) \<and>
-     n2 : gamma (snd (inv_eq_congruence result a1 a2))"
-    using inv_eq_congruence_sound[OF h1 h2 H3] by simp
-next
-  fix n1 n2 :: int and a1 a2 r :: congruence
-  assume H1: "n1 : gamma a1"
-      and H2: "n2 : gamma a2"
-      and H3: "n1 + n2 : gamma r"
-  have h1: "n1 : gamma_congruence a1" using H1 by simp
-  have h2: "n2 : gamma_congruence a2" using H2 by simp
-  have h3: "n1 + n2 : gamma_congruence r" using H3 by simp
-  show
-    "n1 : gamma (fst (inv_plus_congruence r a1 a2)) \<and>
-     n2 : gamma (snd (inv_plus_congruence r a1 a2))"
-    using inv_plus_congruence_sound[OF h1 h2 h3] by simp
-next
-  fix n1 n2 :: int and a1 a2 r :: congruence
-  assume H1: "n1 : gamma a1"
-      and H2: "n2 : gamma a2"
-      and H3: "n1 - n2 : gamma r"
-  have h1: "n1 : gamma_congruence a1" using H1 by simp
-  have h2: "n2 : gamma_congruence a2" using H2 by simp
-  have h3: "n1 - n2 : gamma_congruence r" using H3 by simp
-  show
-    "n1 : gamma (fst (inv_minus_congruence r a1 a2)) \<and>
-     n2 : gamma (snd (inv_minus_congruence r a1 a2))"
-    using inv_minus_congruence_sound[OF h1 h2 h3] by simp
-next
-  fix n1 n2 :: int and a1 a2 r :: congruence
-  assume H1: "n1 : gamma a1"
-      and H2: "n2 : gamma a2"
-      and H3: "n1 * n2 : gamma r"
-  have h1: "n1 : gamma_congruence a1" using H1 by simp
-  have h2: "n2 : gamma_congruence a2" using H2 by simp
-  have h3: "n1 * n2 : gamma_congruence r" using H3 by simp
-  show
-    "n1 : gamma (fst (inv_times_congruence r a1 a2)) \<and>
-     n2 : gamma (snd (inv_times_congruence r a1 a2))"
-    using inv_times_congruence_sound[OF h1 h2 h3] by simp
-next
-  fix p :: congruence and b :: bool and i :: int
-  assume "congruence_tobool p = Some b" and "i : gamma p"
-  then show "truthy i = b" using congruence_tobool_sound by simp
-next
-  fix a1 a2 b1 b2 :: congruence
-  assume "a1 <= a2" and "b1 <= b2"
-  then show
-    "intersect_congruence a1 b1 <=
-     intersect_congruence a2 b2"
-    by (rule intersect_congruence_mono)
-next
-  fix e :: exp and sigma1 sigma2 :: "vname => congruence"
-  assume "sigma1 <= sigma2"
-  then show "aval_congruence e sigma1 <= aval_congruence e sigma2"
-    by (rule congruence_arith.aval_dom_mono)
-next
-  fix x1 x2 y1 y2 :: congruence and result :: bool
-  assume "x1 <= x2" and "y1 <= y2"
-  then show
-    "le_pair
-      (inv_less_congruence result x1 y1)
-      (inv_less_congruence result x2 y2)"
-    by (rule inv_less_congruence_mono)
-next
-  fix x1 x2 y1 y2 :: congruence and result :: bool
-  assume "x1 <= x2" and "y1 <= y2"
-  then show
-    "le_pair
-      (inv_eq_congruence result x1 y1)
-      (inv_eq_congruence result x2 y2)"
-    by (rule inv_eq_congruence_mono)
-next
-  fix r1 r2 x1 x2 y1 y2 :: congruence
-  assume "r1 <= r2" and "x1 <= x2" and "y1 <= y2"
-  then show
-    "le_pair
-      (inv_plus_congruence r1 x1 y1)
-      (inv_plus_congruence r2 x2 y2)"
-    by (rule inv_plus_congruence_mono)
-next
-  fix r1 r2 x1 x2 y1 y2 :: congruence
-  assume "r1 <= r2" and "x1 <= x2" and "y1 <= y2"
-  then show
-    "le_pair
-      (inv_minus_congruence r1 x1 y1)
-      (inv_minus_congruence r2 x2 y2)"
-    by (rule inv_minus_congruence_mono)
-next
-  fix r1 r2 x1 x2 y1 y2 :: congruence
-  assume "r1 <= r2" and "x1 <= x2" and "y1 <= y2"
-  then show
-    "le_pair
-      (inv_times_congruence r1 x1 y1)
-      (inv_times_congruence r2 x2 y2)"
-    by (rule inv_times_congruence_mono)
-next
-  fix a b :: congruence
-  show "intersect_congruence a b <= a"
-    by (rule intersect_congruence_le1)
-next
-  fix a b :: congruence
-  show "intersect_congruence a b <= b"
-    by (rule intersect_congruence_le2)
-next
-  fix p1 p2 :: congruence and bv :: bool
-  assume "\<not> is_empty p1" and "p1 <= p2" and "congruence_tobool p2 = Some bv"
-  then show "congruence_tobool p1 = Some bv" using congruence_tobool_mono by simp
-qed
+  fix s :: store and e :: exp and sigma :: "vname => congruence"
+  assume "s \<in> \<lbrakk>sigma\<rbrakk>"
+  then have "\<forall>x. s x : gamma (sigma x)" using gamma_stateD by blast
+  then show "aval e s : gamma (aval_congruence e sigma)"
+    by (rule congruence_arith.aval_dom_sound)
+qed (simp_all add: intersect_congruence_sound inv_less_congruence_sound inv_eq_congruence_sound
+       inv_plus_congruence_sound inv_minus_congruence_sound inv_times_congruence_sound
+       congruence_tobool_sound intersect_congruence_mono congruence_arith.aval_dom_mono
+       inv_less_congruence_mono inv_eq_congruence_mono inv_plus_congruence_mono
+       inv_minus_congruence_mono inv_times_congruence_mono
+       intersect_congruence_le1 intersect_congruence_le2 congruence_tobool_mono)
 
 lemmas afilter_congruence_st_commute =
   congruence_backward_domain.afilter_st_commute
 lemmas bfilter_congruence_st_commute =
   congruence_backward_domain.bfilter_st_commute
 
-lemma afilter_congruence_mono:
-  "a1 <= (a2 :: congruence) \<Longrightarrow> sigma1 <= sigma2 \<Longrightarrow>
-   afilter_congruence e a1 sigma1 <= afilter_congruence e a2 sigma2"
-  using congruence_backward_domain.afilter_mono
-  by (simp add: afilter_congruence_def)
-
-lemma bfilter_congruence_mono:
-  "sigma1 <= sigma2 \<Longrightarrow>
-   bfilter_congruence b result sigma1 <=
-   bfilter_congruence b result sigma2"
-  using congruence_backward_domain.bfilter_mono
-  by (simp add: bfilter_congruence_def)
 end
