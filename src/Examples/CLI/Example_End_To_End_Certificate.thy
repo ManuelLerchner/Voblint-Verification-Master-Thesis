@@ -356,7 +356,9 @@ lemma certificate_demo_cover:
 lemma certificate_demo_certified:
   "certified_preconditions Int_Analysis (Some Solver_Join) (Ctx_CallString 1)
      certificate_demo_prog"
-  by (simp del: One_nat_def add: certificate_demo_terminates certificate_demo_cover)
+  by (simp del: One_nat_def
+        add: certified_preconditions_def mk_analysis_config_def
+          certificate_demo_terminates certificate_demo_cover)
 
 subsection \<open>What the printed verdict means at that node\<close>
 
@@ -440,7 +442,11 @@ proof -
       and "(\<lambda>_. 0)(STR ''a'' := 2, STR ''b'' := 42) \<in> \<lbrakk>st\<rbrakk>"
     by (rule lookup_context_covers_of_activation
           [OF certificate_demo_union certificate_demo_sound certificate_demo_reaches_check])
-  then show ?thesis by (simp del: One_nat_def) blast
+  then have "table_covers (analyse_int_call_string_result 1 certificate_demo_prog) (Statement 4)
+               ((\<lambda>_. 0)(STR ''a'' := 2, STR ''b'' := 42))"
+    by (rule table_coversI)
+  then show ?thesis
+    by (simp del: One_nat_def add: analysis_result_covers_def mk_analysis_config_def)
 qed
 
 text \<open>
@@ -452,19 +458,27 @@ text \<open>
 lemma certificate_demo_checks_sound_at_check:
   assumes ans: "run_voblint Int_Analysis (Some Solver_Join) (Ctx_CallString 1) View_Report
                   certificate_demo_prog = Analysed out"
-  shows "checks_sound_at out (Statement 4) ((\<lambda>_. 0)(STR ''a'' := 2, STR ''b'' := 42))"
+      and mem: "s \<in> ltr_collect (declared_global certificate_demo_prog)
+                      (prog_cfg certificate_demo_prog)
+                      (cinit_stores (declared_global certificate_demo_prog)) (Statement 4)"
+  shows "checks_sound_at out (Statement 4) s"
 proof -
   from ans
   have out_eq: "cs_output_of View_Report IntDomValue int_classify_check
                   (analyse_int_call_string_result 1 certificate_demo_prog) 1
                   certificate_demo_prog = Analysed out"
     by (simp add: run_voblint_def mk_analysis_config_def plan_answer_def split: if_splits)
-  show ?thesis
-    unfolding checks_sound_at_def
+  obtain ctx st
+    where "lookup_context (analyse_int_call_string_result 1 certificate_demo_prog)
+             (Statement 4) ctx = Lifted st"
+      and "s \<in> \<lbrakk>st\<rbrakk>"
+    by (rule lookup_context_covers_of_activation
+          [OF certificate_demo_union certificate_demo_sound mem])
+  then show ?thesis
     by (rule ctx_rows_sound_at
-          [OF certificate_demo_union certificate_demo_sound certificate_demo_result_finite
+          [OF finite_contexts_at [OF certificate_demo_result_finite] _ _
               int_classify_check_proved int_classify_check_refuted
-              out_checks_of_cs_output [OF out_eq] certificate_demo_reaches_check])
+              out_checks_of_cs_output [OF out_eq]])
 qed
 
 theorem certificate_demo_check_semantically_true:
@@ -479,25 +493,13 @@ proof (intro ballI)
   assume mem: "s \<in> ltr_collect (declared_global certificate_demo_prog)
                      (prog_cfg certificate_demo_prog)
                      (cinit_stores (declared_global certificate_demo_prog)) (Statement 4)"
-  from ans
-  have out_eq: "cs_output_of View_Report IntDomValue int_classify_check
-                  (analyse_int_call_string_result 1 certificate_demo_prog) 1
-                  certificate_demo_prog = Analysed out"
-    by (simp add: run_voblint_def mk_analysis_config_def plan_answer_def split: if_splits)
   obtain row where r: "out_checks out = [row]" and rp: "row_point row = Statement 4"
     and re: "row_exp row = Less (N 0) (V (STR ''b''))"
     and rv: "row_verdict row = Decided Check_Proved"
     using certificate_demo_row [OF ans] by blast
-  have claim: "\<forall>row \<in> set (out_checks out). row_point row = Statement 4 \<longrightarrow>
-                 row_verdict row \<noteq> Dead
-               \<and> (row_verdict row = Decided Check_Proved \<longrightarrow> truthy (aval (row_exp row) s))
-               \<and> (row_verdict row = Decided Check_Refuted
-                    \<longrightarrow> \<not> truthy (aval (row_exp row) s))"
-    by (rule ctx_rows_sound_at
-          [OF certificate_demo_union certificate_demo_sound certificate_demo_result_finite
-              int_classify_check_proved int_classify_check_refuted
-              out_checks_of_cs_output [OF out_eq] mem])
-  from claim r rp re rv show "truthy (aval (Less (N 0) (V (STR ''b''))) s)" by simp
+  from certificate_demo_checks_sound_at_check [OF ans mem] r rp re rv
+  show "truthy (aval (Less (N 0) (V (STR ''b''))) s)"
+    unfolding checks_sound_at_def by simp
 qed
 
 text \<open>
@@ -540,7 +542,8 @@ proof (cases "run_voblint Int_Analysis (Some Solver_Join) (Ctx_CallString 1) Vie
   show thesis
     by (rule that [OF Analysed rows certificate_demo_run certificate_demo_reaches_check
                       certificate_demo_result_covers_at_check
-                      certificate_demo_checks_sound_at_check [OF Analysed] true_here])
+                      certificate_demo_checks_sound_at_check
+                        [OF Analysed certificate_demo_reaches_check] true_here])
 qed (use certificate_demo_report in simp_all)
 
 subsection \<open>The endpoint, with nothing left to assume\<close>
