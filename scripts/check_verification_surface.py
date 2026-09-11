@@ -25,6 +25,14 @@ CI_SETUP_TASKS = {
     "ocaml-deps-install",
 }
 
+# These jobs depend on an external or generated site and therefore cannot be
+# part of the local aggregate. They still run in GitHub CI where their inputs
+# are produced by earlier jobs.
+CI_ONLY_TASKS = {
+    "thesis-links-live",
+    "thesis-links-write",
+}
+
 RETIRED_TASKS = {
     "bench",
     "bootstrap",
@@ -147,7 +155,7 @@ def main() -> int:
     else:
         verify_tasks = set(verify.get("depends-on", []))
 
-    ci_tasks = workflow_tasks() - CI_SETUP_TASKS
+    ci_tasks = workflow_tasks() - CI_SETUP_TASKS - CI_ONLY_TASKS
     missing_ci = sorted(verify_tasks - ci_tasks)
     extra_ci = sorted(ci_tasks - verify_tasks)
     if missing_ci:
