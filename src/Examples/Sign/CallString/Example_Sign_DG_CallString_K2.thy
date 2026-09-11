@@ -133,24 +133,9 @@ abbreviation sigma_2 ::
 
 section \<open>Activation-indexed collecting soundness for the 2-call-string-routed solution\<close>
 
-definition sign_ctx_sg_2 ::
+abbreviation sign_ctx_sg_2 ::
   "pp \<times> cfg_node list + call_string_gk \<Rightarrow> sign exec_dg_st lifted" where
-  "sign_ctx_sg_2 z =
-     (case z of
-        Inl (v, ctx) \<Rightarrow>
-          (if (v, ctx) \<in> fst sign_nest_2_sol then locals (sigma_2 (Inl (v, ctx))) else Bot)
-      | Inr _ \<Rightarrow> Bot)"
-
-lemma sign_ctx_sg_2_covered:
-  "(v, ctx) \<in> fst sign_nest_2_sol
-     \<Longrightarrow> sign_ctx_sg_2 (Inl (v, ctx)) = locals (sigma_2 (Inl (v, ctx)))"
-  by (simp add: sign_ctx_sg_2_def)
-
-lemma sign_ctx_sg_2_uncovered_empty:
-  "(v, ctx) \<notin> fst sign_nest_2_sol
-     \<Longrightarrow> gamma_state_lift (map_lift (fun_of_resolved_st_q_for sign_nest_gs)
-           (sign_ctx_sg_2 (Inl (v, ctx)))) = {}"
-  by (simp add: sign_ctx_sg_2_def)
+  "sign_ctx_sg_2 \<equiv> solved_local_reader (fst sign_nest_2_sol) sigma_2"
 
 text \<open>Unlike \<open>k = 1\<close>, \<open>call_fwd\<close>'s \<open>Statement 2\<close> case now genuinely splits: \<open>g\<close>'s call site
   is covered at two distinct one-element contexts, and \<open>take 2\<close> keeps them apart after
@@ -173,10 +158,10 @@ next
   show ?case by (rule sign_nest_2_pp_st[unfolded sign_nest_2_eqs_def])
 next
   case (SgCov v c)
-  show ?case using SgCov by (simp add: sign_ctx_sg_2_covered sign_nest_gamma_def)
+  show ?case using SgCov by (simp add: sign_nest_gamma_def)
 next
   case (SgUncov v c)
-  show ?case using SgUncov by (rule sign_ctx_sg_2_uncovered_empty)
+  show ?case using SgUncov by simp
 next
   case (Fwd u a v c)
   show ?case using Fwd by (rule sign_nest_fwd_closed_2)
@@ -240,45 +225,6 @@ next
           covered_ret3_fpos_2 covered_ret3_fneg_2 covered_ret6_2 covered_ret7_2
           sign_nest_calls_shape
     by fastforce
-qed
-
-lemma sign_ctx_sg_2_seed:
-  assumes "(u, CallEdge dst xs es, FunctionEntry p, cont) \<in> calls sign_nest_cfg"
-    and "s \<in> gamma_state_lift (map_lift (fun_of_resolved_st_q_for sign_nest_gs)
-               (sign_ctx_sg_2 (Inl (u, ctx))))"
-  shows "call_enter sign_nest_gs (CallEdge dst xs es) s
-           \<in> gamma_state_lift (map_lift (fun_of_resolved_st_q_for sign_nest_gs)
-               (sign_ctx_sg_2 (Inl (FunctionEntry p,
-                 cs_context 2 u ctx (call_enter sign_nest_gs (CallEdge dst xs es) s)))))"
-proof (rule sign_nest_2_cs.routed_context_call[OF assms[unfolded sign_nest_cfg_def]])
-  show "call_context_rel_of_fun (cs_context 2) u ctx (call_info_of (CallEdge dst xs es) p) s
-          (call_enter sign_nest_gs (CallEdge dst xs es) s)
-          (cs_context 2 u ctx (call_enter sign_nest_gs (CallEdge dst xs es) s))"
-    by simp
-qed
-
-lemma sign_ctx_sg_2_comb:
-  assumes "(cl, CallEdge dst pars args, FunctionEntry p, v) \<in> calls sign_nest_cfg"
-    and "s \<in> gamma_state_lift (map_lift (fun_of_resolved_st_q_for sign_nest_gs)
-               (sign_ctx_sg_2 (Inl (cl, c1))))"
-    and "t \<in> gamma_state_lift (map_lift (fun_of_resolved_st_q_for sign_nest_gs)
-               (sign_ctx_sg_2 (Inl (FunctionResult p, cs_context 2 cl c1 es))))"
-    and "call_enter_store sign_nest_gs sign_nest_cfg cl s es"
-  shows "combine_collect sign_nest_gs dst s t
-           \<in> gamma_state_lift (map_lift (fun_of_resolved_st_q_for sign_nest_gs)
-               (sign_ctx_sg_2 (Inl (v, c1))))"
-proof -
-  from assms(4) obtain dst' pars' args' p' cont' where
-      ce': "(cl, CallEdge dst' pars' args', FunctionEntry p', cont') \<in> calls sign_nest_cfg"
-    and es_eq: "es = call_enter sign_nest_gs (CallEdge dst' pars' args') s"
-    unfolding call_enter_store_def by blast
-  have adm: "admits_call_context sign_nest_gs (compile_prog sign_nest_pi sign_nest_procs)
-          (call_context_rel_of_fun (cs_context 2)) cl c1 p' s es (cs_context 2 cl c1 es)"
-    unfolding admits_call_context_def call_context_rel_of_fun_iff
-    using ce'[unfolded sign_nest_cfg_def] es_eq by blast
-  show ?thesis
-    by (rule sign_nest_2_cs.routed_context_comb[OF assms(1)[unfolded sign_nest_cfg_def]
-          assms(2)[unfolded sign_nest_cfg_def] adm assms(3)[unfolded sign_nest_cfg_def]])
 qed
 
 section \<open>The headline theorem: 2-call-string activation collecting soundness\<close>

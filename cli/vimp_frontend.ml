@@ -1,15 +1,13 @@
 (* Hand-written glue between the generated frontend (Vimp_parser/Vimp_lexer
    -- both generated from grammar/vimp.yaml by scripts/gen_vimp_menhir.py;
-   see cli/vimp_parser.mly, cli/vimp_lexer.mll) and what callers need: a
-   single `program` entrypoint of the shape they already expect --
-   (file, source text) -> (imp_prog, check_positions) -- so main.ml and
-   tests/property/ast_driver.ml need only rename their call site
-   (Vimp_parser.program -> Vimp_frontend.program), not restructure around
-   Menhir's own lexbuf-driven interface.
+   see cli/vimp_parser.mly, cli/vimp_lexer.mll) and its callers: a single
+   `program` entry point, (file, source text) -> (imp_prog, check_positions,
+   stmt_positions), so main.ml and tests/property/ast_driver.ml need not
+   drive Menhir's own lexbuf-driven interface.
 
    check_positions is a CLI reporting concern (each "__voblint_check(...)"
    occurrence's source position, in encounter order, for the text report's
-   line:col column -- see main.ml's render_text_report), not a language
+   line:col column -- see main.ml's render_report), not a language
    one, so it doesn't belong in the generated grammar; tracked here by
    wrapping the token function to note each CHECK token's position as it's
    consumed. *)

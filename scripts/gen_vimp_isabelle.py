@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""M6: generates src/Program_Model/VIMP/VIMP_Grammar_Generated.thy -- nonterminals,
+"""Generates src/Program_Model/VIMP/VIMP_Grammar_Generated.thy -- nonterminals,
 `syntax` (Isabelle mixfix declarations), and the `Vimp_Grammar_Tr` ML
 structure (parse_translation's AST-lowering, exposed for VIMP_Notation.thy
 to call into) -- from the canonical grammar/vimp.yaml.
@@ -22,8 +22,8 @@ the compositional unary-minus rule. `_exp_zero`/`_exp_one` and
 Isabelle-target realizations of a canonical rule Isabelle's own mixfix
 grammar can't express directly -- see those functions' comments.
 
-Nonterminal naming mirrors VIMP_Notation.thy's own pre-cutover `imp2_*`
-convention. IDENT/INT aren't generated terminals here: Isabelle's outer
+Nonterminals share the `imp2_*` prefix VIMP_Notation.thy's own nonterminals
+use. IDENT/INT aren't generated terminals here: Isabelle's outer
 lexer already provides `id`/`num_const` as built-in nonterminals, so
 grammar/vimp.yaml's `terminals:` section (which describes lexical
 *patterns* for target lexers that need them, i.e. Menhir/ocamllex) has no
@@ -74,8 +74,8 @@ def ident_role(rhs: list, i: int) -> str:
     callee name -- VIMP has no other IDENT-typed procedure-name occurrence
     in a generated production; function_decl's own name lives in
     VIMP_Notation.thy's hand-written territory), 'variable' for every other
-    IDENT occurrence (an expression use, an assignment/random/callret
-    target, or a formals/ids declaration list item). Same signal
+    IDENT occurrence (an expression use, an assignment/callret target, or
+    a formals/ids declaration list item). Same signal
     stmt_id_arg_priority already uses for a different purpose (argument
     priority); kept as one shared classifier so the two can't drift apart.
     Every IDENT position gets `id_position` regardless of role (see

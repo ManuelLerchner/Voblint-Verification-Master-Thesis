@@ -83,9 +83,8 @@ text \<open>
   \<^item> \<open>pred_sel g v ctx\<close> selects the intra predecessors folded as Answers into a node,
     each paired with the \<^emph>\<open>address\<close> in the solver's valuation space that carries its
     value.  \<open>intra_predecessor_addr_list\<close> over \<^const>\<open>intra\<close> addresses every
-    predecessor at its own \<open>(pp, 'c)\<close> local unknown; a callee entry over
-    \<^const>\<open>calls\<close> merges into the single callee context, while the
-    context-sensitive instance instead publishes routed callee seeds.
+    predecessor at its own \<open>(pp, 'c)\<close> local unknown. Callee entries are not
+    predecessors: every routed instance reaches them through published seeds.
   \<^item> \<open>it c src a\<close> is the intra edge tree itself -- an instantiator supplies the
     compiled right-hand side for one edge action at one source address, e.g.
     a spec's compiled \<open>dg_spec_edge_tree\<close> at the routed key. Which unknowns it

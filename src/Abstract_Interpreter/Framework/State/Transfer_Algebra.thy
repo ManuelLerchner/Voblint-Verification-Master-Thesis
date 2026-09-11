@@ -16,7 +16,7 @@ text \<open>
   It defines no interface. What an analysis supplies to the framework is a
   \<open>dg_spec\<close>: one manager-native transfer per edge action, taking the manager and
   returning a program. This theory is the algebra those transfers compute in,
-  stated once so that Sign, Interval, Parity and Int do not each re-prove it.
+  stated once so that no whole-state domain re-proves it.
 
   Most of the operations themselves live lower still, in the language session,
   because they are generic in the state's codomain and the concrete semantics

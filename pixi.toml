@@ -115,14 +115,14 @@ bench = ["bench"]
 # rather than living under any one feature. Nontrivial shell (Isabelle
 # build invocations, submodule vendoring, OCaml link steps) lives in
 # small versioned scripts under scripts/mk/ that these tasks call.
-# ISABELLE/AFP/SESSION honor the same env-var overrides the old Makefile's
-# `?=` defaults did, e.g. `AFP=/path/to/afp/thys pixi run build`.
+# ISABELLE/AFP/SESSION are honored as env-var overrides, e.g.
+# `AFP=/path/to/afp/thys pixi run build`.
 # --------------------------------------------------------------------------
 
 [tasks]
 # Vendoring. Rarer maintenance actions (bumping vendor/autocorrode to
-# upstream main) are plain git commands, not tasks -- see "Vendoring the TD
-# solver" in README.md.
+# upstream main) are plain git commands, not tasks -- see "Build and
+# verification" in README.md.
 vendor = "bash scripts/mk/vendor.sh"
 
 # Isabelle build
@@ -199,8 +199,8 @@ stats = "python3 scripts/thy_stats.py"
 # and fail-fast as regression-lint above.
 id-position-check = "python3 -m pytest tests/test_gen_isabelle_id_position.py"
 
-# Everything CI runs, under one name. Spans all four features (lint,
-# grammar, test, and build's plain isabelle/ocaml calls), so this only
+# Everything CI runs, under one name. Spans four features (lint, grammar,
+# test, report) plus the common isabelle/ocaml tasks, so this only
 # resolves from an environment that composes all of them -- i.e. default.
 ci = { depends-on = [
   "lint",

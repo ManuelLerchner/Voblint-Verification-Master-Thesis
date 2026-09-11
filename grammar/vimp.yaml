@@ -1,4 +1,4 @@
-# Canonical VIMP source grammar (M2 of the grammar-unification investigation).
+# Canonical VIMP source grammar.
 #
 # This is a *language* description, not a Menhir grammar: precedence and
 # associativity are declared once, generically, and each target (Menhir,
@@ -9,35 +9,31 @@
 # realizable in Menhir via %left/%right instead), not part of the language.
 #
 # `program { ... }` is not part of this grammar. A standalone source file is
-# EOF-delimited; wrapping VIMP inside a HOL term (e.g. an Isabelle
-# `vimp_program \<lbrakk> ... \<rbrakk>` quotation) is a target-specific
-# embedding concern, layered on top of `program` by the Isabelle generator
-# only.
+# EOF-delimited; wrapping VIMP inside a HOL term (the Isabelle
+# `program { ... }` quotation) is a target-specific embedding concern,
+# hand-written in VIMP_Notation.thy on top of the generated nonterminals.
 #
-# `main` is NOT a reserved keyword: both existing systems already agree on
-# this -- VIMP_Notation.thy's parse_translation (prog_tr) and
-# cli/vimp_parser.ml's `program` both parse every function uniformly as an
-# ordinary identifier and pick out "main" by string equality afterward
-# (`List.partition (fn (n,_,_,_) => n = "main")` / the OCaml equivalent), not
-# via a distinct lexical token. An earlier draft of this grammar introduced
-# `main: MAIN` and a structural `main_decl` production, which was a genuine
-# deviation from both existing parsers, not a simplification of them; fixed
-# to match.
+# `main` is not a reserved keyword: VIMP_Notation.thy's parse_translation
+# (prog_tr) and the generated Menhir `program` rule both parse every function
+# uniformly as an ordinary identifier and pick out "main" by string equality
+# afterward (`List.partition (fn (n,_,_,_) => n = "main")` / the OCaml
+# equivalent), not via a distinct lexical token.
 #
 # Locating `main` is nonetheless still done during parsing/lowering here
 # (`special: program_structure`), for early, precise parse-time diagnostics
-# (missing/duplicate `main`, wrong arity) rather than a deferred
+# (missing/duplicate `main`, `main` declared with formals) rather than a deferred
 # well-formedness failure. `imp_prog`'s `proc_rep` carries `main` as an
 # ordinary entry -- nothing structural forces a `program { ... }`
 # construction to include one -- so `wf_source_program`'s own
-# `Pi mnm = Some (|formals = [], body = main|)` conjunct is what makes "main
-# present, with no formals" a proof obligation on a given `imp_prog` value;
-# the parser's checks are a UX convenience on top, not what discharges it.
+# `Pi prog_main_name = Some (|formals = [], body = main|)` conjunct is what
+# makes "main present, with no formals" a proof obligation on a given
+# `imp_prog` value; the parser's checks are a UX convenience on top, not what
+# discharges it.
 #
-# Old semantic validation that has no structural encoding (duplicate
-# procedure/global/formal names, global/formal collisions, main-formals,
-# main-return) is not preserved: it was never part of the grammar in the
-# first place, and this investigation's scope note says not to keep it.
+# Semantic validation that has no structural encoding (duplicate
+# procedure/global/formal names, global/formal collisions, main-return) is not
+# part of this grammar. VIMP_Notation.thy's prog_tr checks it at parse time;
+# the CLI relies on the well-formedness gate `wf_program_compile_input_exec`.
 #
 # Every production's AST-construction is exactly one of three shapes:
 #
@@ -71,20 +67,15 @@
 #     needed, not worth a general conversion mechanism in `lower:` for one
 #     call site.
 #   - unary minus: folds into N(-n) for a numeral operand, Minus(N 0, x)
-#     otherwise. This is the canonical lowering rule (settled during M4):
-#     compositional, no algebraic simplification at parse time, so it
-#     deliberately does NOT special-case a nested uminus the way Isabelle's
-#     current parse_translation does (`_imp2_uminus (_imp2_uminus b) =>
-#     exp_tr b`, cancelling `--x` to `x`) -- under this rule `--x` lowers
-#     to `Minus (N 0) (Minus (N 0) (V x))` instead, same integer semantics,
-#     just not re-simplified during parsing. When Isabelle generation lands
-#     (M6), that cancellation case should be deleted from parse_translation
-#     to match, not replicated here. Grammar and algebraic normalization
-#     are kept as separate concerns; if AST normalization is wanted later,
-#     it belongs in its own explicit pass, not hidden inside one frontend.
+#     otherwise. The rule is compositional, with no algebraic
+#     simplification at parse time: it deliberately does NOT cancel a nested
+#     uminus, so `--x` lowers to `Minus (N 0) (Minus (N 0) (V x))`, not to
+#     `x` -- same integer semantics, just not re-simplified during parsing.
+#     Both generated frontends realize exactly this rule. Grammar and
+#     algebraic normalization are kept as separate concerns; AST
+#     normalization, if wanted, belongs in its own explicit pass.
 #   - program: partitions the uniformly-parsed function_decl* list into
-#     "main" and everything else by string equality, matching both existing
-#     parsers (see below).
+#     "main" and everything else by string equality (see below).
 
 terminals:
   ident:
@@ -162,11 +153,8 @@ productions:
      lower: {ctor: Or, args: [{rhs: 0}, {rhs: 2}]}}
   # Transparent grouping (no AST constructor), so the precedence table alone
   # determines both what a printer must parenthesize and what the
-  # property-test generator may produce: any exp tree is now
-  # source-expressible, not just left-associated ones. Isabelle's own exp
-  # grammar (VIMP_Notation.thy) and the shipped cli/vimp_parser.ml still have
-  # no such production -- extending those is a real language-cutover
-  # decision (M6+), not part of this prototype.
+  # property-test generator may produce: any exp tree is
+  # source-expressible, not just left-associated ones.
   - {name: exp_paren,  result: exp, rhs: [LPAREN, exp, RPAREN],   passthrough: 1}
 
   # -- stmt --
@@ -184,7 +172,7 @@ productions:
   - {name: stmt_while,    result: stmt, rhs: [WHILE, LPAREN, exp, RPAREN, LBRACE, stmts_opt, RBRACE],
      lower: {ctor: While, args: [{rhs: 2}, {rhs: 5}]}}
   # No separate call0/callret0 (zero-arg) productions: unlike Isabelle's
-  # imp2_actuals (which has no empty derivation, forcing _imp2_call0 as a
+  # imp2_actuals (which has no empty derivation, forcing _stmt_call0 as a
   # workaround), this grammar's `actuals` already allows `min: 0`, so
   # `f()`/`x := f()` already parse via `stmt_call`/`stmt_callret` with an
   # empty actuals list. A separate call0/callret0 would just be ambiguous
@@ -208,8 +196,7 @@ productions:
      lower: {tuple: [1, 3, 6]}}   # (name, formals, body) -- "main" is just an IDENT here, same as every other name
 
   # Every function parses uniformly via function_decl*; "main" is picked out
-  # of the resulting list by string equality during lowering (matching both
-  # existing parsers -- see this file's header), not by a grammar-level
-  # main_decl production.
+  # of the resulting list by string equality during lowering (see this
+  # file's header), not by a grammar-level main_decl production.
   - {name: program, result: program, rhs: [globals_opt, function_decl_star, EOF],
      special: program_structure}

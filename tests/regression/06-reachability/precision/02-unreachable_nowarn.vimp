@@ -1,11 +1,9 @@
 // PARAM: --analysis interval
 // Code after 'return' is unreachable: mirrors Goblint's
 // "__goblint_check(0); // NOWARN (unreachable)". The dead check's report
-// entry is suppressed entirely -- program_vars probes every in-scope
-// variable (not just one fixed name) for is_bottom_abstract_value, an
-// exact reachability test for non-relational domains like Interval (see
-// Example_State_Report_GraphViz.thy) -- so it never reaches the report,
-// the same way Goblint emits no warning for code it proves unreachable.
+// row carries DEAD in place of a verdict: the analysis proves the point
+// unreachable and says so, where Goblint only stays silent, and never
+// prints the vacuous PROVED a bottom state would otherwise satisfy.
 // main itself may not contain a return (wf_source_program's no_return
 // conjunct), so the return lives in a helper procedure p instead, called
 // destination-less.

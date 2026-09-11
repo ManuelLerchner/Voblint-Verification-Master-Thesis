@@ -202,7 +202,7 @@ subsection \<open>The initial main activation\<close>
 
 text \<open>The program entry \<^term>\<open>FunctionEntry prog_main_name\<close> is an ordinary \<open>csim.Base\<close>
   activation: the distinguished main procedure is declared in \<open>\<Pi>\<close> (\<open>wf_compile_input\<close>), so its
-  body fragment is certified by \<open>procs_embedded_compile_prog\<close>.  One \<^term>\<open>EA_Nop\<close> edge crosses
+  body fragment is certified by \<open>procs_embedded_compile_prog\<close>.  One \<^term>\<open>EA_Body\<close> edge crosses
   from \<^term>\<open>FunctionEntry prog_main_name\<close> to the body entry \<open>en\<close>, where the \<open>Base\<close> activation
   simulates the source \<open>main_body \<Pi>\<close>.\<close>
 lemma compile_prog_main_base:

@@ -50,7 +50,7 @@ CASES = [
     (
         # The default resolves to what the configuration supports; only an
         # explicit request for something unsupported is an error.
-        "entry-state with sign still runs (expanded is interval-only)",
+        "entry-state with sign still runs",
         ["--analysis", "sign", "--context", "entry-state", "--graph-snapshot", SANITY_FILE],
         0,
         "",

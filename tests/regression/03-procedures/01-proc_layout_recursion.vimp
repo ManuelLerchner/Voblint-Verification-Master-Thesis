@@ -1,7 +1,5 @@
 // PARAM: --analysis interval
-// Procedure layout regression, ported from
-// Example_Proc_Recursion_CFG.thy's proc_layout_regression_prog: the
-// procedure list is known before any body is compiled, so a call may
+// Procedure layout regression: the procedure list is known before any body is compiled, so a call may
 // target the current procedure (f's direct self-recursion), a sibling
 // declared later (g calling h, a forward reference needing no second
 // pass), or a mutually recursive pair (g and h calling each other). The
@@ -11,13 +9,13 @@
 // it, so f's own condition G<1 holds at every recursive re-entry: f
 // provably never reaches its else branch, never returns to main, and the
 // trailing check after inc() is therefore proved dead (NOWARN) -- a true
-// consequence of the ported source, not an artifact of the port. The
+// consequence of the source. The
 // graph below marks that check [dead] at pp13, agreeing with the DEAD the
 // text report prints for it: both readings come from the same solved
 // table, so a check the analysis proves unreachable cannot read as decided
 // in one and dead in the other. The
-// graph snapshot below is the CLI-observable analogue of the .thy file's
-// calls/intra membership and block-layout by-eval lemmas; the call and
+// graph snapshot below pins which callee each call edge targets and each
+// procedure's block layout; the call and
 // combine edges after f's call site still appear in it; only their
 // solved state is dead.
 // EXPECT-GRAPH-BEGIN

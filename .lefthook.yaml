@@ -1,10 +1,12 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/evilmartians/lefthook/master/schema.json
 #
-# Install with `pixi run lefthook-install`. Guards three invariants documented
-# in AGENTS.md: .thy sources stay ASCII-only ("ASCII-only .thy sources"), the
+# Install with `pixi run lefthook-install`. Guards invariants documented in
+# AGENTS.md: .thy sources stay ASCII-only ("ASCII-only .thy sources"), the
 # two generated VIMP grammar frontends stay in sync with grammar/vimp.yaml
-# ("VIMP grammar pipeline"), and the OCaml export emits only the modules the
-# handwritten CLI names ("New theories and the code-export module map"). The generator jobs are
+# ("VIMP grammar pipeline"), the OCaml export emits exactly its three modules
+# and exposes every name the handwritten OCaml uses ("New theories and the
+# code-export module map"), and theory prose and locale assumptions name only
+# identifiers that exist ("Deleting an API"). The generator jobs are
 # allowed to rewrite their generated file in place -- fail_on_changes then
 # blocks the commit so a real drift gets reviewed and re-staged rather than
 # silently committed stale.
@@ -17,19 +19,18 @@ pre-commit:
       glob: "*.thy"
       run: pixi run python3 scripts/check_isabelle_ascii.py {staged_files}
 
-    # Any new theory can add a module to the export, so this fires on every
-    # staged .thy -- not just on the generated .ml and the mapping table.
-    # Committing a new theory alone used to trigger nothing.
+    # Fires on every staged .thy, not just on the generated .ml: the check
+    # also reports theories that changed since the export was last
+    # regenerated.
     - name: codegen-module-map
       glob:
         - "codegen/generated/ml/Voblint_CLI.ml"
         - "src/**/*.thy"
       run: pixi run python3 scripts/check_codegen_modules.py
 
-    # Merging the export into one module removed every inter-module boundary,
-    # and with it the incidental signature entries the handwritten OCaml used
-    # to ride on. Now only an export root exposes a name, so this fires on the
-    # export, its root list, and the consumers that name it.
+    # The export is one module, so only an export root puts a name in its
+    # signature. This fires on the export, its root list, and the consumers
+    # that name it.
     - name: codegen-api
       glob:
         - "codegen/generated/ml/Voblint_CLI.ml"

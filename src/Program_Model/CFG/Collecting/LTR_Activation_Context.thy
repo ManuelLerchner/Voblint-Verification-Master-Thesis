@@ -304,7 +304,7 @@ proof -
   then show ?thesis unfolding P_def using callers_refl by blast
 qed
 
-subsection \<open>Context entry invariant\<close>
+subsection \<open>Functional context entry invariant\<close>
 
 text \<open>Every ancestor of a valid trace is itself valid: \<open>caller_chain_closure\<close>'s own
   four cases are exactly \<^const>\<open>valid_ltr\<close>'s four introduction rules, so the closure fact

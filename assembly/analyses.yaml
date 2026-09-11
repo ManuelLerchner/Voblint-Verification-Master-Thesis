@@ -161,9 +161,7 @@ domains:
       # against one unknown at a time. There is no shape for this file to name.
       # All four disciplines are registered on both contextual routes, so every
       # row-producing configuration the dispatcher accepts has a soundness
-      # interpretation behind it. The alternates were previously spelled out at
-      # `routed_dg_pipeline.verdict_report` only, which needs no soundness and
-      # so left those cells uncertified.
+      # interpretation behind it.
       #
       # ORDER IS SEMANTIC. The first solver listed owns the unsuffixed binder
       # and the route's public `defines` aliases, so it must stay the route's
@@ -330,11 +328,9 @@ domains:
       adopted: true
       entry_state: {solvers: [always_join], default: always_join}
       call_string: {solvers: [always_join], default: always_join}
-    # The runtime API layer. One block per discipline whose soundness the domain
-    # publishes -- which is not every route it registers: Parity registers a
-    # per-origin instance and publishes endpoints only for the production one.
-    # Every name here is a check-report layer spelling that predates any
-    # convention, so the block reads as a map rather than as policy.
+    # The runtime API layer: one binder and prefix per discipline the check
+    # report publishes. Every name here is a check-report layer spelling that
+    # predates any convention, so the block reads as a map rather than as policy.
     checks:
       adopted: true
       ctx_prefix: parity_conf
@@ -348,6 +344,8 @@ domains:
         per_origin:
           surface: parity_per_origin
           suffix: _per_origin
+    # Endpoints are published for the production discipline only: the
+    # per-origin instance is registered and reported, not given endpoints.
     entry:
       adopted: true
       hide_consts: [phase.N]
@@ -392,11 +390,9 @@ domains:
       binders: {always_join: parity_join, per_origin: parity_po_asm}
       prefixes: {always_join: parity_unit, per_origin: parity_po}
 
-  # Int is registered for dispatch only. `assembly: false` records that the
-  # migration has not reached it yet -- it still runs its own pipeline, so it
-  # has no generated assembly theory and its routes are named rather than
-  # derived. It is not a claim that Int cannot meet the interface; nothing here
-  # has established that either way.
+  # Int has a generated assembly and generated contextual registrations. Its
+  # checks and entry theories stay hand-written because they carry proofs;
+  # `legacy:` names what they publish.
   - name: Int
     # Int's operations carry a refinement mode, so its roles are applications
     # rather than bare names. The published route interprets at the production
@@ -454,8 +450,7 @@ domains:
           gamma_reader: analyse_int_call_string_gamma_reader_eq_lookup
           vars_finite: analyse_int_call_string_vars_finite
           terminates_of_solve_c: int_call_string_terminates_via_solve_c
-    # No `checks:` block either, for the same reason. `Int_Checks` is not a set
-    # of bindings: it proves that the mode-generic `int_conf_*` names agree with
+    # No `checks:` block. `Int_Checks` is not a set of bindings: it proves that the mode-generic `int_conf_*` names agree with
     # the unit assembly at `Refine_Fixpoint` and with the routed pipeline at an
     # arbitrary mode. Those are derivations with proofs, not renamings.
     # No `entry:` block, and Int is the only domain without one. `Int_Entry` is

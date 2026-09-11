@@ -147,7 +147,7 @@ lemma special_step_nonempty [simp]: "special_step sc x s \<noteq> {}"
   by (cases sc) auto
 
 text \<open>\<open>edge_step\<close> is the single primitive semantics of an intra action.  It is defined for
-  every constructor and has no call case; guards are the only source of \<open>None\<close>.\<close>
+  every constructor and has no call case; guards are the only source of an empty result.\<close>
 
 fun edge_step :: "edge_action \<Rightarrow> store \<Rightarrow> store set" where
   "edge_step EA_Nop s = {s}"
@@ -303,8 +303,8 @@ text \<open>Stable list views for the TD bridge: the intra and call edge sets so
   structural order. Both guard on \<^term>\<open>finite (intra g)\<close>/\<^term>\<open>finite (calls g)\<close>:
   every compiled graph satisfies it, so the \<^const>\<open>Code.abort\<close> branch never fires in
   practice, and names the violation instead of failing on an uninformative
-  \<^const>\<open>sorted_list_of_set\<close> pattern-match error. Placed here rather than in the Core
-  session's own equation-generation enumerations, so any consumer of this session alone
+  \<^const>\<open>sorted_list_of_set\<close> pattern-match error. Placed here rather than in the
+  framework session's own equation-generation enumerations, so any consumer of this session alone
   --- a compiled graph's \<open>finite_cfg\<close> interpretation among them --- gets them for free.\<close>
 
 definition cfg_intra_list :: "cfg \<Rightarrow> (cfg_node \<times> edge_action \<times> cfg_node) list" where

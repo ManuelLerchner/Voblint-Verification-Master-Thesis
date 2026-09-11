@@ -188,7 +188,7 @@ text \<open>
 
   So \<open>sound_dg_spec_core\<close> is the common core and not a complete soundness statement:
   interpreting it alone leaves a call's entry entirely unconstrained.
-  \<open>dg_ctx_activation_base\<close> (\<open>Routed_Context\<close>, downstream in this session) is
+  \<open>routed_context_base_hetero\<close> (\<open>Routed_Context\<close>, downstream in this session) is
   the complete statement, extending this core with that entry obligation for
   the routed equation shape, and is what an analysis should be asked to
   establish.
@@ -213,7 +213,7 @@ text \<open>
   Both levels earn their place, which is why there are two of them.
   \<open>combine_transfer_tree\<close> is used at an arbitrary
   \<^type>\<open>man_combine_transfer\<close> --- by the ownership-split observation
-  equations here, and by the relational domain's --- while
+  equations in \<open>DG_Ownership_Split_Spec\<close>, and by the relational domain's --- while
   \<open>dg_spec_combine_tree\<close> is used at a selected specification, by
   \<open>DG_Ctx_Activation\<close>'s own \<open>dg_ctx_act_comb_covered\<close> downstream, whose two
   bounds are assumptions about this tree at two \<^emph>\<open>solver addresses\<close>.

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Builds the voblint CLI: a thin, unverified adapter over the
 # Isabelle-generated Voblint_CLI OCaml module
-# (src/Examples/Tooling/Example_State_Report_GraphViz.thy's export_code
+# (src/Executable_Surface/Codegen/Export/Voblint_Codegen.thy's export_code
 # block), plus the Menhir/ocamllex frontend generated from
 # grammar/vimp.yaml (scripts/gen_vimp_menhir.py; only needed if that
 # changed -- cli/vimp_parser.mly and cli/vimp_lexer.mll are committed).
@@ -58,7 +58,7 @@ trap 'rm -f "$build_out"' EXIT
   # output from any step trips the silence assertion below.
   ocamllex vimp_lexer.mll >/dev/null
   # -8/-11/-20: routine artifacts of Isabelle's OCaml serializer (see
-  # codegen/regression's regression.sh for the same suppression), not
+  # codegen-regression.sh for the same suppression), not
   # signs of a real problem in the generated Voblint_CLI.ml.
   ocamlfind ocamlopt -w -8-11-20 -package str,zarith,unix -linkpkg \
     Voblint_CLI.ml vimp_positions.ml vimp_parser.mli vimp_parser.ml vimp_lexer.ml vimp_frontend.ml dot_render.ml html_report.ml main.ml -o voblint

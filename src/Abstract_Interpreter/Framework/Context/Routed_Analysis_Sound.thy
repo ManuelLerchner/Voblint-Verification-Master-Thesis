@@ -13,7 +13,7 @@ text \<open>
   facts and interprets this once, rather than repeating the derivation per
   (domain, policy) pair.
 
-  \<open>solved_local_reader\<close> is the reader every instance was defining by hand: at a
+  \<open>solved_local_reader\<close> is the one reader every instance uses: at a
   covered unknown it hands back the solution's local half, and elsewhere
   \<open>bot\<close>. Reading a global key gives \<open>bot\<close> too -- the routed seed keys carry
   entry contributions, not program-point values, and a result table never

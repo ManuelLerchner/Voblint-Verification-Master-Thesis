@@ -826,18 +826,10 @@ interpretation ov_routed: routed_context_base_hetero
   "solved_local_reader (fst ov_sol) (snd ov_sol)" Activation_Seed
   "static_resolve ov_cfg" "\<lambda>d. d = Bot"
   "\<lambda>m. gamma_state_lift (map_lift (fun_of_resolved_st_q_for ov_gs) m)" ov_R
-proof (unfold_locales, goal_cases Mono Step Comb FinE PP SgCov SgUncov Fwd FinC CallsUnique
+proof (rule routed_context_base_hetero.intro
+    [OF dg_ctx_activation_base.intro[OF sound_dg_spec_core_ov_spec[OF ov_exact]]],
+  unfold_locales, goal_cases FinE PP SgCov SgUncov Fwd FinC CallsUnique
     SeedKey IsBotBot IsBotSound ResolveSound EnterCover EnterTotal CombFwd)
-  case (Mono d1 d2 g1 g2) then show ?case by (rule ov_core.gammaDG_mono)
-next
-  case (Step a1 tau1 src1 gk1)
-  show ?case using ov_core.step_sound by (simp add: dg_spec_edge_tree_def)
-next
-  case (Comb s1 dc1 tau1 gk1 t1 de1 ci1)
-  show ?case using ov_core.combine_sound[where ci = ci1 and dc = dc1 and de = de1
-        and \<tau> = tau1 and gk = gk1, OF Comb(1) Comb(2)]
-    by (simp add: dg_spec_combine_transfer_def)
-next
   case FinE show ?case unfolding ov_cfg_def by (simp add: compile_prog_finite)
 next
   case PP show ?case by (rule ov_pp_routed)

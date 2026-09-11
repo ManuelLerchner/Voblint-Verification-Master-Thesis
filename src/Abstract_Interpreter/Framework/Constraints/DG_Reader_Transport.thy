@@ -171,7 +171,7 @@ qed
 subsubsection \<open>Routed heterogeneous CALL/COMB transport\<close>
 
 text \<open>
-  \<^const>\<open>routed_call_tree\<close>/\<^const>\<open>routed_entry_seed_tree\<close> (\<^theory>\<open>Voblint_Framework.Routed_Context\<close>)
+  \<^const>\<open>routed_call_tree\<close>/\<^const>\<open>routed_entry_seed_tree\<close> (\<^theory>\<open>Voblint_Framework.Routed_Call_Trees\<close>)
   are the canonical heterogeneous routing shape: parametric only in a routing
   function \<open>route\<close> and a seed-key injection \<open>seed_key\<close>, with the seed payload
   carried on the \<open>locals\<close> half so \<open>'D\<close>/\<open>'G\<close> stay independent. The two lemmas
@@ -180,9 +180,9 @@ text \<open>
   discharges CALL/COMB transport once here rather than re-deriving its own
   tree-commute reasoning.
 
-  The specification's own enter and combine now appear inside the routed tree as
+  The specification's own enter and combine appear inside the routed tree as
   compiled sub-trees, so their transport hypotheses are themselves tree commutes
-  rather than pair-shaped equations on a retired \<open>'dg \<times> 'dl\<close> transfer -- and
+  -- and
   \<open>caller_cont\<close> needs no hypothesis at all, since
   \<^const>\<open>dg_spec_combine_transfer\<close> already runs it inside the combine sub-tree.
   Sequencing them is what \<open>dg_tree_st_commute_seqcomp\<close> does: a bind commutes when

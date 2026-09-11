@@ -15,7 +15,7 @@
           from another.
        -> proved analysis results, subject to the Isabelle theorem
           assumptions (solver termination and check reachability -- see
-          Example_Analysis_Dispatch.thy's soundness corollaries)
+          Analyse_Dispatch.thy's soundness corollaries)
 
    Trust boundary: soundness applies to the imp_prog the parser produces, not
    to the claim that this imp_prog faithfully represents the text file the
@@ -40,8 +40,7 @@ let usage =
   \                             (Refine_Fixpoint) and the warrowing solver.\n\
   \                             parity is the four-element Bot/Even/Odd/Top\n\
   \                             lattice; it decides equalities only by\n\
-  \                             refuting them across differing parities, and\n\
-  \                             is context-insensitive.\n\
+  \                             refuting them across differing parities.\n\
   \                             congruence is the residue-class domain, one\n\
   \                             value constrained to x = r (mod m); m = 0\n\
   \                             pins a single integer and m = 1 constrains\n\
@@ -54,9 +53,9 @@ let usage =
   \                             Requires --html and --context none; every\n\
   \                             other output path uses the first domain only.\n\
   \  --context none|entry-state|call-string\n\
-  \                             Context sensitivity (default: none, today's\n\
-  \                             flow-insensitive, call-site-insensitive\n\
-  \                             behaviour). entry-state re-analyzes each\n\
+  \                             Context sensitivity (default: none, one\n\
+  \                             context per callee regardless of call\n\
+  \                             site). entry-state re-analyzes each\n\
   \                             callee per distinct entered-argument context,\n\
   \                             including under --dot/--dot-full/\n\
   \                             --graph-snapshot (a node covered by several\n\
@@ -139,9 +138,8 @@ let usage =
   \                             checking and parser conformance testing.\n\
   \                             A syntactically valid but ill-formed program\n\
   \                             (e.g. a wrong-arity special call) still exits\n\
-  \                             4 with no message here -- well-formedness is\n\
-  \                             checked only on the full run below, after\n\
-  \                             --parse-only's own early exit.\n\
+  \                             0 here: well-formedness is checked only on a\n\
+  \                             full run, which rejects it with exit 4.\n\
   \  --timeout SECONDS          Wall-clock budget for the analysis subprocess\n\
   \                             (default 10). The analyzer is proved sound but\n\
   \                             not proved total (see CLI_DESIGN.md's Interval\n\
@@ -565,9 +563,9 @@ let () =
     prerr_endline "voblint: --context-graph expanded requires --context entry-state";
     exit 1
   end;
-  (* --context-graph has no effect on a call-string graph: that renderer is
-     always per-context (it has no collapsed mode), so accepting the flag here
-     would silently ignore it. *)
+  (* A call-string graph is always rendered per context (the renderer has no
+     collapsed mode), so --context-graph expanded is rejected rather than
+     silently ignored. --context-graph collapsed passes and has no effect. *)
   if !context_graph = Some Expanded && !context_kind = CK_CallString then begin
     prerr_endline
       "voblint: --context-graph is not supported with --context call-string";

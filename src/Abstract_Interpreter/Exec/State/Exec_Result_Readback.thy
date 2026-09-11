@@ -23,8 +23,7 @@ text \<open>
   \<^const>\<open>Lifted\<close> payload to \<^const>\<open>Bot\<close>, and every public result adapter
   routes its raw solver value through \<open>canonicalize_lift\<close> first, so
   \<open>readback_result_value\<close> itself never needs the declared globals as a list, nor
-  \<^class>\<open>executable_domain\<close>'s executable witness-bottom test -- both were
-  needed only for that test, which now lives one layer earlier.
+  \<^class>\<open>executable_domain\<close>'s executable witness-bottom test.
 \<close>
 
 fun readback_result_value ::

@@ -10,14 +10,11 @@ text \<open>
   This session owns executable exports; the examples session proves and demonstrates the
   exported definitions without materializing generated code.
 
-  One export block, deliberately. There used to be a second, narrower one
-  (\<open>Voblint_Analyse_OCaml\<close>) whose only consumer was the external OCaml regression driver
-  under \<open>codegen/regression/ocaml/\<close>, which needs a handful of CFG-inspection constants
-  the CLI itself never calls. Two blocks did not make that surface any narrower: Isabelle
-  emits the reachable transitive closure of whatever is named, so both files carried
-  essentially the same machinery, differing by exactly those CFG constants and costing
-  around 8,400 duplicated generated lines. Naming the constants here instead and pointing
-  the driver at this module keeps one generated artifact for one analysis.
+  One export block, deliberately. The external OCaml regression driver under
+  \<open>codegen/regression/ocaml/\<close> needs a handful of CFG-inspection constants the CLI
+  never calls; a second, narrower block would not make any surface narrower, because
+  Isabelle emits the reachable transitive closure of whatever is named. Those constants
+  are named here instead, so there is one generated artifact for one analysis.
 
   This is still not the project's public API boundary, but it is not nothing either.
   Three things are decided separately here:
@@ -43,13 +40,10 @@ text \<open>
   handwritten re-export layer in between that could reinterpret a constructor or a
   conversion.
 
-  Analysis entry goes through \<^const>\<open>analyse_config\<close>/\<^const>\<open>analyse_config_ctx\<close>/
-  \<^const>\<open>analyse_config_with_state\<close>, which consult
-  \<^const>\<open>resolve_analysis_config\<close> internally, so the CLI never re-decides legality. The
-  pre-configuration entry points \<open>analyse_with_state\<close>/\<open>analyse_with_solver\<close> are not
-  roots: nothing handwritten calls them, and the configuration path supersedes them.
-  \<^const>\<open>analyse\<close> stays, because the external regression oracle calls it directly
-  as its domain-dispatch check.
+  Analysis entry goes through \<^const>\<open>run_voblint\<close> alone, which consults
+  \<^const>\<open>resolve_analysis_config\<close> internally, so the CLI never re-decides legality.
+  The typed and config-level dispatchers (\<open>analyse\<close>, \<open>analyse_config\<close>,
+  \<open>analyse_with_solver\<close>, ...) are not roots: nothing handwritten calls them.
 
   The last group of roots is there for signature visibility rather than for dispatch.
   A constant the serializer does not consider public is emitted but left out of the

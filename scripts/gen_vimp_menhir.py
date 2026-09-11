@@ -2,8 +2,7 @@
 """Generates the VIMP frontend -- a Menhir parser (vimp_parser.mly) and a
 real ocamllex lexer (vimp_lexer.mll) -- from the canonical grammar/vimp.yaml.
 
-This is the source of cli/vimp_parser.mly and cli/vimp_lexer.mll (M5 of the
-grammar-unification investigation: the production CLI cutover). The
+This is the source of cli/vimp_parser.mly and cli/vimp_lexer.mll. The
 generated .mly/.mll are committed, the same convention codegen/generated/
 already uses for Isabelle-generated sources: `pixi run cli-build`
 (scripts/mk/cli-build.sh) needs only menhir/ocamllex/ocamlfind, not Python,
@@ -250,8 +249,8 @@ def gen_list_rule(prod: dict) -> str:
 
 def gen_program_rule() -> str:
     # Every function parses uniformly via function_decl*; "main" is picked
-    # out by string equality in this action, matching both existing parsers
-    # (VIMP_Notation.thy's prog_tr, cli/vimp_parser.ml's `program`) -- see
+    # out by string equality in this action, matching VIMP_Notation.thy's
+    # prog_tr -- see
     # grammar/vimp.yaml's header comment on why this stays a parse-time
     # diagnostic rather than a deferred well-formedness check.
     return """program:

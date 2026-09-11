@@ -153,9 +153,10 @@ parse_translation \<open>
 
 subsection \<open>Smoke tests\<close>
 
-text \<open>Four \<open>value\<close> calls, one per construct whose parse translation is hand-written here
-  rather than generated: a branch, a check, a program with a global, and a program with a
-  procedure taking arguments.  They fail at load time if a translation stops elaborating,
+text \<open>Four \<open>value\<close> calls: a branch and a check through the generated statement
+  translation, and a program with a global and one with a procedure taking arguments through
+  the whole-program translation hand-written here.  They fail at load time if a translation
+  stops elaborating,
   which no theorem elsewhere would notice -- nothing in the proved pipeline reads concrete
   syntax.\<close>
 value "imp \<lbrakk> if (x < 10) { x := 0 } else { x := 1 } \<rbrakk>"

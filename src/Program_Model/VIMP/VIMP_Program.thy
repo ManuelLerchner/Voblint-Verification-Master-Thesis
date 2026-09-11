@@ -23,7 +23,8 @@ lemma declared_global_iff [simp]:
   by (simp add: declared_global_def)
 
 text \<open>The \<open>program\<close> parser fixes the entry name and rejects formals on it, so
-  \<open>main\<close> is an ordinary \<open>proc_rep\<close> entry. \<open>prog_main\<close> is total through \<open>the\<close>;
+  \<open>main\<close> is an ordinary \<open>proc_rep\<close> entry. \<open>prog_main\<close> is total through
+  \<^const>\<open>main_body\<close>'s aborting fallback;
   \<open>wf_source_program\<close>'s entry conjunct is what makes the lookup meaningful.\<close>
 
 definition prog_table :: "imp_prog \<Rightarrow> proc_table" where

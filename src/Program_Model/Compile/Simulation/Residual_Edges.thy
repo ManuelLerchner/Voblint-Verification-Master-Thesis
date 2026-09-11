@@ -20,9 +20,7 @@ text \<open>
   \<^emph>\<open>descend to a base clause\<close> lemma would have to carry the residual down unchanged, and
   \<open>SeqLeft\<close> and \<open>WhileBody\<close> rebuild it --- they relate the outer residual \<^term>\<open>Seq r c2\<close> to
   the inner \<open>r\<close>.  So the descent survives only in the three clauses that pass the residual
-  through, which is half the cases in two of the six proofs and none of the rest.  What was
-  removable has been removed: \<open>emitted_action\<close> merged three of these inductions into one, and
-  the \<open>compile_Seq_rightE\<close> family cut each remaining descent from eight lines to four.
+  through, which is half the cases in two of the six proofs and none of the rest.
 \<close>
 
 subsection \<open>Located base residuals emit their compiled edge\<close>
@@ -43,8 +41,7 @@ fun emitted_action :: "com \<Rightarrow> edge_action option" where
 
 text \<open>Which action it is does not matter to the recursive \<open>control_at\<close> cases: they only carry
   an edge up through the enclosing fragment and re-locate the completed residual at the same
-  node.  So one induction serves every base shape, and the three named corollaries below are
-  this lemma read off at each of them.\<close>
+  node.  So one induction serves every base shape.\<close>
 lemma control_at_emitted_edge:
   "control_at \<Pi> p c0 k n r v \<Longrightarrow> emitted_action r = Some a \<Longrightarrow>
    compile \<Pi> p c0 k n = (n', en, E, K) \<Longrightarrow>

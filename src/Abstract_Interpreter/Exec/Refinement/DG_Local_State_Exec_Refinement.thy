@@ -38,7 +38,7 @@ lemma fun_of_resolved_st_q_for_combine_assign:
 subsection \<open>Routed-domain compatibility, independent of any routing context\<close>
 
 text \<open>
-  Every current routed instance (Sign, Interval, Int) reproves the same shapes
+  Every routed domain instance needs the same shapes
   -- the compiled edge, enter and combine trees commuting under
   \<^const>\<open>fun_of_resolved_st_q_for\<close>, plus \<^locale>\<open>dg_reader_commute_gen\<close> at that
   same reader -- from its own executable/abstract transfer-commute facts,
@@ -164,8 +164,8 @@ qed
 subsection \<open>Tree-level transport of the two specifications\<close>
 
 text \<open>
-  The routed spine's transport hypotheses are commutes of compiled sub-trees,
-  not equations on a retired pair-shaped transfer. Both specifications are
+  The routed spine's transport hypotheses are commutes of compiled sub-trees.
+  Both specifications are
   local-only, so each such commute reduces to the corresponding field equation
   above -- and \<open>caller_cont\<close> needs no hypothesis at all, since
   \<^const>\<open>dg_spec_combine_transfer\<close> already runs it inside the combine sub-tree.
@@ -227,7 +227,7 @@ lemma gamma_exec_Bot [simp]: "gamma_exec Bot g = {}"
   by (simp add: gamma_exec_def)
 
 text \<open>
-  Entry is no longer part of \<^locale>\<open>sound_dg_spec_core\<close>, so a routed instance needs it
+  Entry is not part of \<^locale>\<open>sound_dg_spec_core\<close>, so a routed instance needs it
   separately. This is the same fact the collapse below proves for its own entry
   obligation, exported once because every routed instance over this carrier
   discharges its entry coverage from it.

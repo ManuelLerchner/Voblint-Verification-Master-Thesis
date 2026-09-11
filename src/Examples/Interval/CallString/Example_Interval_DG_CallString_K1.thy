@@ -288,23 +288,9 @@ text \<open>The solver's own table is the solved system the routed spine is inte
 
 section \<open>Activation-indexed collecting soundness for the 1-call-string-routed solution\<close>
 
-definition nest_1_sg ::
+abbreviation nest_1_sg ::
   "pp \<times> cfg_node list + call_string_gk \<Rightarrow> ivl exec_dg_st lifted" where
-  "nest_1_sg z =
-     (case z of
-        Inl (v, ctx) \<Rightarrow>
-          (if (v, ctx) \<in> fst nest_1_sol then locals (snd nest_1_sol (Inl (v, ctx))) else Bot)
-      | Inr _ \<Rightarrow> Bot)"
-
-lemma nest_1_sg_covered:
-  "(v, ctx) \<in> fst nest_1_sol
-     \<Longrightarrow> nest_1_sg (Inl (v, ctx)) = locals (snd nest_1_sol (Inl (v, ctx)))"
-  by (simp add: nest_1_sg_def)
-
-lemma nest_1_sg_uncovered_empty:
-  "(v, ctx) \<notin> fst nest_1_sol
-     \<Longrightarrow> gamma_state_lift (map_lift (fun_of_resolved_st_q_for nest_gs) (nest_1_sg (Inl (v, ctx)))) = {}"
-  by (simp add: nest_1_sg_def)
+  "nest_1_sg \<equiv> solved_local_reader (fst nest_1_sol) (snd nest_1_sol)"
 
 text \<open>The call-string routing policy instantiated at \<open>k = 1\<close>. The generic locale
   discharges everything that is a fact about \<^const>\<open>cs_route\<close>/\<^const>\<open>cs_context\<close> or about
@@ -329,10 +315,10 @@ next
   show ?case by (rule nest_1_pp_st[unfolded nest_1_eqs_def])
 next
   case (SgCov v c)
-  show ?case using SgCov by (simp add: nest_1_sg_covered nest_gamma_def)
+  show ?case using SgCov by (simp add: nest_gamma_def)
 next
   case (SgUncov v c)
-  show ?case using SgUncov by (rule nest_1_sg_uncovered_empty)
+  show ?case using SgUncov by simp
 next
   case (Fwd u a v c)
   show ?case using Fwd by (rule nest_fwd_closed_1)
@@ -387,44 +373,6 @@ next
           covered_ret3_f3_1 covered_ret3_f10_1 covered_ret6_1 covered_ret7_1
           nest_calls_shape
     by fastforce
-qed
-
-text \<open>CALL and COMB at this program, re-exported from the routed interpretation.\<close>
-
-lemma nest_1_sg_seed:
-  assumes "(u, CallEdge dst xs es, FunctionEntry p, cont) \<in> calls nest_cfg"
-    and "s \<in> gamma_state_lift (map_lift (fun_of_resolved_st_q_for nest_gs) (nest_1_sg (Inl (u, ctx))))"
-  shows "call_enter nest_gs (CallEdge dst xs es) s
-           \<in> gamma_state_lift (map_lift (fun_of_resolved_st_q_for nest_gs)
-               (nest_1_sg (Inl (FunctionEntry p,
-                 cs_context 1 u ctx (call_enter nest_gs (CallEdge dst xs es) s)))))"
-proof (rule nest_1_cs.routed_context_call[OF assms[unfolded nest_cfg_def]])
-  show "call_context_rel_of_fun (cs_context 1) u ctx (call_info_of (CallEdge dst xs es) p) s
-          (call_enter nest_gs (CallEdge dst xs es) s)
-          (cs_context 1 u ctx (call_enter nest_gs (CallEdge dst xs es) s))"
-    by simp
-qed
-
-lemma nest_1_sg_comb:
-  assumes "(cl, CallEdge dst pars args, FunctionEntry p, v) \<in> calls nest_cfg"
-    and "s \<in> gamma_state_lift (map_lift (fun_of_resolved_st_q_for nest_gs) (nest_1_sg (Inl (cl, c1))))"
-    and "t \<in> gamma_state_lift (map_lift (fun_of_resolved_st_q_for nest_gs)
-               (nest_1_sg (Inl (FunctionResult p, cs_context 1 cl c1 es))))"
-    and "call_enter_store nest_gs nest_cfg cl s es"
-  shows "combine_collect nest_gs dst s t
-           \<in> gamma_state_lift (map_lift (fun_of_resolved_st_q_for nest_gs) (nest_1_sg (Inl (v, c1))))"
-proof -
-  from assms(4) obtain dst' pars' args' p' cont' where
-      ce': "(cl, CallEdge dst' pars' args', FunctionEntry p', cont') \<in> calls nest_cfg"
-    and es_eq: "es = call_enter nest_gs (CallEdge dst' pars' args') s"
-    unfolding call_enter_store_def by blast
-  have adm: "admits_call_context nest_gs (compile_prog nest_pi nest_procs)
-          (call_context_rel_of_fun (cs_context 1)) cl c1 p' s es (cs_context 1 cl c1 es)"
-    unfolding admits_call_context_def call_context_rel_of_fun_iff
-    using ce'[unfolded nest_cfg_def] es_eq by blast
-  show ?thesis
-    by (rule nest_1_cs.routed_context_comb[OF assms(1)[unfolded nest_cfg_def]
-          assms(2)[unfolded nest_cfg_def] adm assms(3)[unfolded nest_cfg_def]])
 qed
 
 section \<open>The headline theorem: 1-call-string activation collecting soundness\<close>

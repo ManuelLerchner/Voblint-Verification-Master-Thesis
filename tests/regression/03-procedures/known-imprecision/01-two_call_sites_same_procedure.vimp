@@ -12,9 +12,9 @@
 // this repeated evaluation widens the entered parameter's bound on the
 // second visit, so neither call's own exact argument (9 or 16) survives
 // -- both checks come back UNKNOWN, not a narrower sound join. A
-// call-string- or entry-state-context-sensitive analysis (see
-// Interval_Ctx_Entry_State_Sound, out of scope here) would key the entry per
-// call site instead.
+// call-string- or entry-state-context-sensitive analysis keys the entry per
+// call site or per entered value instead (see
+// precision/04-two_call_sites_entry_state.vimp).
 void square(n) {
   return n * n
 }

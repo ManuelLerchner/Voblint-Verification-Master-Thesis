@@ -376,9 +376,10 @@ jobs:
       - name: VIMP grammar drift, both frontends (no build needed -- fail fast)
         run: pixi run grammar-check
 
-      # Every theory reachable from an export root needs a code_identifier
-      # entry; a missing one surfaces later as a module dependency cycle that
-      # names two constants and no theory. Reads the checked-in export, so it
+      # The export must emit exactly Generated, Bit_Shifts and Str_Literal; a
+      # per-theory split means `module_name Generated` was lost, and surfaces
+      # later as a module dependency cycle that names two constants and no
+      # theory. Reads the checked-in export, so it
       # needs no Isabelle.
       - name: Code-export module map (no build needed -- fail fast)
         run: pixi run codegen-modules

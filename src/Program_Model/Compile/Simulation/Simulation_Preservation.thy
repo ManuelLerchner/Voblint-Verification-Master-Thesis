@@ -11,8 +11,9 @@ text \<open>
   return already in progress, or an ordinary step inside the activation --- and there is one
   completion theorem per case, which \<open>csim_step\<close> dispatches to.
 
-  \<open>procs_embedded\<close> is the static side condition the first two share: every declared
-  procedure's body has been compiled into this graph, with its entry and exit wiring present.
+  \<open>procs_embedded\<close> is the static side condition every case but the returning phase
+  needs: every declared procedure's body has been compiled into this graph, with its entry
+  and exit wiring present.
   It is deliberately not part of \<open>csim\<close>, which says only how two configurations correspond,
   so that the returning phase can proceed without it.  \<open>procs_embedded_compile_prog\<close>
   discharges it for any graph \<^const>\<open>compile_prog\<close> actually produced.
@@ -53,7 +54,7 @@ lemma procs_embedded_special_table_none:
   using assms by (blast elim: procs_embedded_proc)
 
 text \<open>Everything needed to start a fresh activation of \<open>p\<close>, in one step: the certificate its
-  \<open>csim\<close> layer will carry, the initial location of its body, and the \<^term>\<open>EA_Nop\<close> edge from
+  \<open>csim\<close> layer will carry, the initial location of its body, and the \<^term>\<open>EA_Body\<close> edge from
   \<^term>\<open>FunctionEntry p\<close> that reaches that location.  Call preservation is otherwise the same
   destructuring written out by hand.\<close>
 lemma procs_embedded_activation:
@@ -756,7 +757,7 @@ lemma wf_compile_input_return_safe:
 
 text \<open>
   \<^const>\<open>procs_embedded\<close> is the static certificate \<^const>\<open>csim\<close> reads: every procedure declared
-  in \<open>\<Pi>\<close> has its body fragment, entry \<open>EA_Nop\<close> wiring and \<open>EA_Ret None\<close> exit wiring in the
+  in \<open>\<Pi>\<close> has its body fragment, entry \<open>EA_Body\<close> wiring and \<open>EA_Ret None\<close> exit wiring in the
   target graph.  It covers the entry procedure too, since
   \<open>\<Pi> prog_main_name = Some \<lparr>formals = [], body = main_body \<Pi>\<rparr>\<close> makes
   \<^term>\<open>FunctionEntry prog_main_name\<close> an ordinary

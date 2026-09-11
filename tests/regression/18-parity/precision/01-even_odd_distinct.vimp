@@ -13,7 +13,7 @@
 // --analysis parity to Plan_Parity Solver_Join, Analyse_Dispatch routes it
 // to analyse_parity_report, and that report reads the routed-unit solved
 // AnalysisResult through lookup_context -- the same generic pipeline the
-// other three domains use, with no Parity-specific result or report
+// other domains use, with no Parity-specific result or report
 // construction anywhere in it.
 void main() {
   n := __voblint_nondet_int();

@@ -677,7 +677,7 @@ lemma compile_procs_ret_wf:
 
 subsection \<open>The compiled program is well-formed\<close>
 
-text \<open>The five per-pass shape facts above, collected into the single predicate the CFG layer
+text \<open>The per-pass shape facts above, collected into the single predicate the CFG layer
   states its own theorems over.  Nothing after this point has to know that a graph was
   compiled rather than written by hand.\<close>
 theorem compile_prog_wf: "wf_cfg (compile_prog \<Pi> ps)"
