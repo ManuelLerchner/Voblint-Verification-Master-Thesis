@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Voblint</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <img class="banner" src="assets/banner.png" alt="Voblint repository banner">
+
+  <h1>Voblint</h1>
+  <p class="lead">
+    A verified Goblint-style static analysis pipeline in Isabelle/HOL.
+    Explore the formalization, generated analyzer, Isabelle documentation,
+    and accompanying master thesis.
+  </p>
+
+  <nav class="actions" aria-label="Project links">
+    <a class="primary" href="Unsorted/index.html">Browse formalization</a>
+    <a href="thesis.pdf">Read thesis</a>
+    <a href="https://github.com/ManuelLerchner/Voblint-Verification-Master-Thesis">GitHub</a>
+  </nav>
+
+  <section class="feature">
+    <div>
+      <p class="eyebrow">Run the analyzer</p>
+      <h2>A thin CLI around verified code</h2>
+      <p>
+        <code>pixi run voblint</code> builds a small command-line harness around
+        the formally verified OCaml export. The parser and file handling live
+        in the CLI; analysis and reporting run through the generated
+        <code>Voblint_CLI</code> module.
+      </p>
+    </div>
+    <pre><code>pixi run voblint \
+  --analysis int FILE.vimp</code></pre>
+  </section>
+
+  <p class="notice">
+    The same generated code powers the regression suite, GraphViz output, and
+    browsable HTML reports. The repository's VIMP fixtures show concrete
+    commands and expected results.
+  </p>
+
+  <h2>Visual tour</h2>
+  <div class="gallery">
+    <figure>
+      <a href="assets/while_loop_cfg.png">
+        <img src="assets/while_loop_cfg.png" alt="Solved CFG for the counted-loop program">
+      </a>
+      <figcaption>Interval proof on a counted loop.</figcaption>
+    </figure>
+    <figure>
+      <a href="assets/reports/report-graph-sign.png">
+        <img src="assets/reports/report-graph-sign.png" alt="Sign analysis graph report">
+      </a>
+      <figcaption>Sign analysis and dead-branch pruning.</figcaption>
+    </figure>
+    <figure>
+      <a href="assets/reports/report-context-interval.png">
+        <img src="assets/reports/report-context-interval.png" alt="Context-sensitive interval report">
+      </a>
+      <figcaption>Entry-state contexts in an interval report.</figcaption>
+    </figure>
+    <figure>
+      <a href="assets/reports/report-int-refinement.png">
+        <img src="assets/reports/report-int-refinement.png" alt="Int product refinement report">
+      </a>
+      <figcaption>Product-domain refinement.</figcaption>
+    </figure>
+    <figure>
+      <a href="assets/reports/report-arithmetic-definite.png">
+        <img src="assets/reports/report-arithmetic-definite.png" alt="Definite zero-divisor report">
+      </a>
+      <figcaption>Definite zero-divisor diagnostics.</figcaption>
+    </figure>
+    <figure>
+      <a href="assets/reports/report-arithmetic-possible.png">
+        <img src="assets/reports/report-arithmetic-possible.png" alt="Possible zero-divisor report">
+      </a>
+      <figcaption>Possible zero-divisor diagnostics.</figcaption>
+    </figure>
+  </div>
+
+  <h2>Project resources</h2>
+  <ul class="link-list">
+    <li>
+      <a href="Unsorted/index.html">Interactive Isabelle documentation</a>
+      <p>
+        Browse every theory in the formalization with cross-linked definitions,
+        lemmas, and proof states.
+      </p>
+    </li>
+    <li>
+      <a href="formalization.pdf">Formalization PDF</a>
+      <p>
+        Isabelle-generated printout of the development, including the
+        certificate appendix.
+      </p>
+    </li>
+    <li>
+      <a href="thesis.pdf">Master thesis (PDF)</a>
+      <p>
+        The written thesis; citations link back into the Isabelle HTML above.
+      </p>
+    </li>
+    <li>
+      <a href="https://github.com/ManuelLerchner/Voblint-Verification-Master-Thesis/tree/main/codegen/generated/ml">
+        Exported OCaml code
+      </a>
+      <p>
+        The generated native implementation behind the verified analyzer entry
+        point, compiled and exercised by the repository's CLI checks.
+      </p>
+    </li>
+  </ul>
+
+  <p class="meta">
+    Source code:
+    <a href="https://github.com/ManuelLerchner/Voblint-Verification-Master-Thesis">
+      github.com/ManuelLerchner/Voblint-Verification-Master-Thesis
+    </a>
+  </p>
+</body>
+</html>

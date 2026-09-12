@@ -126,6 +126,7 @@ vendor-init = { cmd = "bash scripts/mk/vendor.sh", description = "Initialize the
 isabelle-bootstrap = { cmd = "bash scripts/mk/bootstrap.sh", depends-on = ["vendor-init"], description = "Build foundational Isabelle sessions in topological order on a fresh checkout." }
 isabelle-build = { cmd = "bash scripts/mk/build.sh", depends-on = ["vendor-init"], description = "Build Voblint_Examples and its complete Isabelle dependency closure." }
 isabelle-docs-build = { cmd = "bash scripts/mk/html.sh", depends-on = ["vendor-init"], description = "Clean-build Isabelle browser documentation for every session into build/isabelle-html/." }
+pages-site-build = { cmd = "bash scripts/mk/pages-site.sh", description = "Assemble the GitHub Pages site from rendered HTML and PDF artifacts." }
 isabelle-pdf-build = { cmd = "bash scripts/mk/pdf.sh", depends-on = ["vendor-init"], description = "Render the formalization with a certificate appendix into output/document.pdf." }
 isabelle-pdf-full-build = { cmd = "bash scripts/mk/pdf.sh --include-examples", depends-on = ["vendor-init"], description = "Render all theories and example sessions into output/document-full.pdf." }
 isabelle-pdf-selection-check = { cmd = "python3 tests/test_pdf_session.py", description = "Check PDF theory selection, certificate inclusion, and preserved proof imports." }
