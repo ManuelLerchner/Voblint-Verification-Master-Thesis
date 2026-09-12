@@ -1,0 +1,18 @@
+// PARAM: --analysis parity
+// An odd dividend modulo any even divisor stays odd, including divisor zero
+// under VIMP's totalization. Neither operand needs a known magnitude.
+fun odd_remainder(n, d) {
+  dividend = n * 4 + 1;
+  divisor = d * 2;
+  r = dividend % divisor;
+  return r;
+}
+
+fun main() {
+  n = __voblint_nondet_int();
+  d = __voblint_nondet_int();
+  r = odd_remainder(n, d);
+  __voblint_check(r != 0); // PROVED
+  __voblint_check(r != 2); // PROVED
+  __voblint_check(r == 0); // REFUTED
+}

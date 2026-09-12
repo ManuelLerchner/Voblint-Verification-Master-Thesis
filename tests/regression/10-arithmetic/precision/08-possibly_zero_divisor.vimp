@@ -1,0 +1,14 @@
+// PARAM: --analysis interval
+// Both divisors are feasible: zero contributes quotient 0 and remainder 7;
+// one contributes quotient 7 and remainder 0 under VIMP's total semantics.
+fun main() {
+  d = __voblint_nondet_int();
+  if (0 <= d && d <= 1) {
+    q = 7 / d;
+    r = 7 % d;
+    __voblint_check(q >= 0); // PROVED
+    __voblint_check(q <= 7); // PROVED
+    __voblint_check(r >= 0); // PROVED
+    __voblint_check(r <= 7); // PROVED
+  }
+}

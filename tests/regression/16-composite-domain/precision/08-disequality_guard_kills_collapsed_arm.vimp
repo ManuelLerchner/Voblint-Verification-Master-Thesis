@@ -2,12 +2,12 @@
 // Same f -> g -> h chain as 21-context-sensitivity/precision/04 (Goblint
 // 80-context_gas/12 and 13), under a depth-2 call string and the composite
 // Int domain. Interval alone answers UNKNOWN for every check whose chain
-// exceeds the depth (the collapsed h seed is [0,k] and !(i == 0) cannot
+// exceeds the depth (the collapsed h seed is [0,k] and (i != 0) cannot
 // strip its endpoint, so the fall-through `return 13` arm is live; see
 // 21-context-sensitivity/known-imprecision/02). Int proves all of them at
-// this same depth: the Sign component refines !(i == 0) on NonNegative to
+// this same depth: the Sign component refines (i != 0) on NonNegative to
 // Positive, the product refinement lifts the interval to [1,k], the
-// !(0 < i) arm is dead, and the collapsed exit is the singleton 3
+// (i <= 0) arm is dead, and the collapsed exit is the singleton 3
 // (--graph-snapshot: h's collapsed context enters with sign=NonNegative,
 // ivl=[0,3] and exits with ret=[3,3]). Interval alone needs
 // --context entry-state for the same result.

@@ -45,8 +45,8 @@ text \<open>
   What Congruence can and cannot decide, pinned as executable witnesses. A
   residue class with modulus \<open>0\<close> is a single integer, so equality against a
   literal is decided in both directions. A class with a larger modulus is not,
-  and order is never decided at all --- knowing a value modulo \<open>2\<close> places no
-  bound on it.
+  and ordering a non-singleton remains undecided: knowing a value modulo \<open>2\<close>
+  places no bound on it.
 \<close>
 
 definition test_env_four :: "congruence abs_state" where
@@ -60,11 +60,10 @@ lemma congruence_classify_eq_refuted:
   "congruence_classify_check (Eq (V (STR ''x'')) (N 5)) test_env_four = Check_Refuted"
   unfolding test_env_four_def by eval
 
-text \<open>Order carries no information even at a singleton, because
-  \<^const>\<open>congruence_lt\<close> answers \<^const>\<open>None\<close> everywhere.\<close>
+text \<open>Singleton ordering is exact, including values produced by arithmetic.\<close>
 
-lemma congruence_classify_less_unknown:
-  "congruence_classify_check (Less (V (STR ''x'')) (N 9)) test_env_four = Check_Unknown"
+lemma congruence_classify_less_proved:
+  "congruence_classify_check (Less (V (STR ''x'')) (N 9)) test_env_four = Check_Proved"
   unfolding test_env_four_def by eval
 
 text \<open>

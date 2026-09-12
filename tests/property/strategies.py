@@ -54,6 +54,8 @@ def exps(max_leaves=5):
             st.tuples(st.just("Plus"), children, children),
             st.tuples(st.just("Minus"), children, children),
             st.tuples(st.just("Times"), children, children),
+            st.tuples(st.just("Div"), children, children),
+            st.tuples(st.just("Mod"), children, children),
             st.tuples(st.just("Less"), children, children),
             st.tuples(st.just("LessEq"), children, children),
             st.tuples(st.just("Greater"), children, children),

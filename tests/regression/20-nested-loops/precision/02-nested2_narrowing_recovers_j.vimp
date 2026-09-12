@@ -20,6 +20,6 @@ fun main() {
       j = j + 1;
     }
     i = i + 11 - j;
-    __voblint_check(!(i < 0)); // PROVED
+    __voblint_check(i >= 0); // PROVED
   }
 }

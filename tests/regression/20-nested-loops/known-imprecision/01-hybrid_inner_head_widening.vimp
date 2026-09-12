@@ -6,7 +6,7 @@
 // under the sl4 solver: the inner widening point must be restarted from
 // bottom once the outer head narrows.
 //
-// Voblint answers !(10 < i) UNKNOWN. Mechanism: the inner head is its
+// Voblint answers (i <= 10) UNKNOWN. Mechanism: the inner head is its
 // own widening point, and i flows around the inner back-edge unrefined
 // (the inner guard j < 10 says nothing about i). On the outer head's
 // first widening, i := i + 1 delivers [1,+inf] to the inner head; the
@@ -24,8 +24,8 @@ fun main() {
     i = i + 1;
     j = 0;
     while (j < 10) {
-      __voblint_check(!(i < 0)); // PROVED
-      __voblint_check(!(10 < i)); // UNKNOWN
+      __voblint_check(i >= 0); // PROVED
+      __voblint_check(i <= 10); // UNKNOWN
       j = j + 1;
     }
     if (9 < i) {

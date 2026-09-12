@@ -43,6 +43,24 @@ definition times_int_dom_raw :: "int_dom => int_dom => int_dom" where
        int_congruence := int_congruence a * int_congruence b
      \<rparr>"
 
+definition div_int_dom_raw :: "int_dom => int_dom => int_dom" where
+  "div_int_dom_raw a b =
+     (top :: int_dom)\<lparr>
+       int_sign := sign_div (int_sign a) (int_sign b),
+       int_ivl := ivl_div (int_ivl a) (int_ivl b),
+       int_parity := parity_div (int_parity a) (int_parity b),
+       int_congruence := congruence_div (int_congruence a) (int_congruence b)
+     \<rparr>"
+
+definition mod_int_dom_raw :: "int_dom => int_dom => int_dom" where
+  "mod_int_dom_raw a b =
+     (top :: int_dom)\<lparr>
+       int_sign := sign_mod (int_sign a) (int_sign b),
+       int_ivl := ivl_mod (int_ivl a) (int_ivl b),
+       int_parity := parity_mod (int_parity a) (int_parity b),
+       int_congruence := congruence_mod (int_congruence a) (int_congruence b)
+     \<rparr>"
+
 definition plus_int_dom ::
     "refine_mode => int_dom => int_dom => int_dom"
 where
@@ -60,6 +78,20 @@ definition times_int_dom ::
 where
   "times_int_dom mode a b =
      refine mode (times_int_dom_raw a b)"
+
+
+definition div_int_dom ::
+    "refine_mode => int_dom => int_dom => int_dom"
+where
+  "div_int_dom mode a b =
+     refine mode (div_int_dom_raw a b)"
+
+
+definition mod_int_dom ::
+    "refine_mode => int_dom => int_dom => int_dom"
+where
+  "mod_int_dom mode a b =
+     refine mode (mod_int_dom_raw a b)"
 
 
 subsection \<open>Literal embedding\<close>
@@ -108,6 +140,24 @@ lemma times_int_dom_raw_sound:
         intro: sign_times_sound ivl_times_sound
           parity_times_sound congruence_times_sound)
 
+lemma div_int_dom_raw_sound:
+  assumes "x : gamma_int_dom a"
+      and "y : gamma_int_dom b"
+  shows "c_div x y : gamma_int_dom (div_int_dom_raw a b)"
+  using assms
+  by (auto simp: gamma_int_dom_def div_int_dom_raw_def
+        intro: sign_div_sound ivl_div_sound
+          parity_div_sound congruence_div_sound)
+
+lemma mod_int_dom_raw_sound:
+  assumes "x : gamma_int_dom a"
+      and "y : gamma_int_dom b"
+  shows "c_mod x y : gamma_int_dom (mod_int_dom_raw a b)"
+  using assms
+  by (auto simp: gamma_int_dom_def mod_int_dom_raw_def
+        intro: sign_mod_sound ivl_mod_sound
+          parity_mod_sound congruence_mod_sound)
+
 lemma plus_int_dom_raw_mono:
   assumes "a1 <= a2" and "b1 <= b2"
   shows "plus_int_dom_raw a1 b1 <= plus_int_dom_raw a2 b2"
@@ -131,6 +181,24 @@ lemma times_int_dom_raw_mono:
   by (auto simp: times_int_dom_raw_def less_eq_int_dom_ext_def
         intro: sign_times_combine_mono ivl_times_mono
           parity_times_combine_mono congruence_times_mono)
+
+
+lemma div_int_dom_raw_mono:
+  assumes "a1 <= a2" and "b1 <= b2"
+  shows "div_int_dom_raw a1 b1 <= div_int_dom_raw a2 b2"
+  using assms
+  by (auto simp: div_int_dom_raw_def less_eq_int_dom_ext_def
+        intro: sign_div_mono ivl_div_mono
+          parity_div_mono congruence_div_mono)
+
+
+lemma mod_int_dom_raw_mono:
+  assumes "a1 <= a2" and "b1 <= b2"
+  shows "mod_int_dom_raw a1 b1 <= mod_int_dom_raw a2 b2"
+  using assms
+  by (auto simp: mod_int_dom_raw_def less_eq_int_dom_ext_def
+        intro: sign_mod_mono ivl_mod_mono
+          parity_mod_mono congruence_mod_mono)
 
 
 subsection \<open>Mode-aware operation laws\<close>
@@ -168,6 +236,30 @@ proof -
     by (rule times_int_dom_raw_sound[OF assms])
   then show ?thesis
     unfolding times_int_dom_def
+    using refine_exact by simp
+qed
+
+lemma div_int_dom_sound:
+  assumes "x : gamma_int_dom a"
+      and "y : gamma_int_dom b"
+  shows "c_div x y : gamma_int_dom (div_int_dom mode a b)"
+proof -
+  have "c_div x y : gamma_int_dom (div_int_dom_raw a b)"
+    by (rule div_int_dom_raw_sound[OF assms])
+  then show ?thesis
+    unfolding div_int_dom_def
+    using refine_exact by simp
+qed
+
+lemma mod_int_dom_sound:
+  assumes "x : gamma_int_dom a"
+      and "y : gamma_int_dom b"
+  shows "c_mod x y : gamma_int_dom (mod_int_dom mode a b)"
+proof -
+  have "c_mod x y : gamma_int_dom (mod_int_dom_raw a b)"
+    by (rule mod_int_dom_raw_sound[OF assms])
+  then show ?thesis
+    unfolding mod_int_dom_def
     using refine_exact by simp
 qed
 
@@ -228,6 +320,34 @@ proof -
     by (rule times_int_dom_raw_mono[OF assms(2,3)])
   show ?thesis
     unfolding times_int_dom_def
+    by (rule monoD[OF refine_nonfixpoint_mono[OF assms(1)] raw])
+qed
+
+
+lemma div_int_dom_mono:
+  assumes "mode ~= Refine_Fixpoint"
+      and "a1 <= a2" and "b1 <= b2"
+  shows "div_int_dom mode a1 b1 <= div_int_dom mode a2 b2"
+proof -
+  have raw:
+    "div_int_dom_raw a1 b1 <= div_int_dom_raw a2 b2"
+    by (rule div_int_dom_raw_mono[OF assms(2,3)])
+  show ?thesis
+    unfolding div_int_dom_def
+    by (rule monoD[OF refine_nonfixpoint_mono[OF assms(1)] raw])
+qed
+
+
+lemma mod_int_dom_mono:
+  assumes "mode ~= Refine_Fixpoint"
+      and "a1 <= a2" and "b1 <= b2"
+  shows "mod_int_dom mode a1 b1 <= mod_int_dom mode a2 b2"
+proof -
+  have raw:
+    "mod_int_dom_raw a1 b1 <= mod_int_dom_raw a2 b2"
+    by (rule mod_int_dom_raw_mono[OF assms(2,3)])
+  show ?thesis
+    unfolding mod_int_dom_def
     by (rule monoD[OF refine_nonfixpoint_mono[OF assms(1)] raw])
 qed
 
@@ -551,6 +671,7 @@ lemma int_dom_of_bool_option_unfold [simp]:
                                 else int_dom_bool_unknown)"
   by (cases r rule: int_dom_of_bool_option.cases) simp_all
 
+
 fun aval_int_dom ::
     "refine_mode => exp => (vname => int_dom) => int_dom"
 where
@@ -568,9 +689,38 @@ where
      times_int_dom mode
        (aval_int_dom mode e1 sigma)
        (aval_int_dom mode e2 sigma)"
+| "aval_int_dom mode (Div e1 e2) sigma =
+     div_int_dom mode
+       (aval_int_dom mode e1 sigma)
+       (aval_int_dom mode e2 sigma)"
+| "aval_int_dom mode (Mod e1 e2) sigma =
+     mod_int_dom mode
+       (aval_int_dom mode e1 sigma)
+       (aval_int_dom mode e2 sigma)"
 | "aval_int_dom mode (Less e1 e2) sigma =
      (let a = aval_int_dom mode e1 sigma; b = aval_int_dom mode e2 sigma
       in if is_empty a \<or> is_empty b then bot else int_dom_of_bool_option (int_dom_lt a b))"
+| "aval_int_dom mode (LessEq e1 e2) sigma =
+     (let a = aval_int_dom mode e2 sigma; b = aval_int_dom mode e1 sigma
+      in if is_empty a \<or> is_empty b then bot
+         else (if int_dom_lt a b = Some False then int_dom_of_int 1
+               else if int_dom_lt a b = Some True then int_dom_of_int 0
+               else int_dom_bool_unknown))"
+| "aval_int_dom mode (Greater e1 e2) sigma =
+     (let a = aval_int_dom mode e2 sigma; b = aval_int_dom mode e1 sigma
+      in if is_empty a \<or> is_empty b then bot else int_dom_of_bool_option (int_dom_lt a b))"
+| "aval_int_dom mode (GreaterEq e1 e2) sigma =
+     (let a = aval_int_dom mode e1 sigma; b = aval_int_dom mode e2 sigma
+      in if is_empty a \<or> is_empty b then bot
+         else (if int_dom_lt a b = Some False then int_dom_of_int 1
+               else if int_dom_lt a b = Some True then int_dom_of_int 0
+               else int_dom_bool_unknown))"
+| "aval_int_dom mode (NotEq e1 e2) sigma =
+     (let a = aval_int_dom mode e1 sigma; b = aval_int_dom mode e2 sigma
+      in if is_empty a \<or> is_empty b then bot
+         else (if int_dom_eqb a b = Some False then int_dom_of_int 1
+               else if int_dom_eqb a b = Some True then int_dom_of_int 0
+               else int_dom_bool_unknown))"
 | "aval_int_dom mode (exp.Eq e1 e2) sigma =
      (let a = aval_int_dom mode e1 sigma; b = aval_int_dom mode e2 sigma
       in if is_empty a \<or> is_empty b then bot else int_dom_of_bool_option (int_dom_eqb a b))"
@@ -617,10 +767,10 @@ begin
 
 interpretation int_arith: expression_domain_sound
     "aval_int_dom mode" int_dom_of_int
-    "plus_int_dom mode" "minus_int_dom mode" "times_int_dom mode"
+    "plus_int_dom mode" "minus_int_dom mode" "times_int_dom mode" "div_int_dom mode" "mod_int_dom mode"
     int_dom_lt int_dom_eqb int_dom_tobool
   by unfold_locales
-     (simp_all add: Let_def plus_int_dom_sound minus_int_dom_sound times_int_dom_sound
+     (simp_all add: Let_def plus_int_dom_sound minus_int_dom_sound times_int_dom_sound div_int_dom_sound mod_int_dom_sound
                     int_dom_lt_sound int_dom_eqb_sound int_dom_tobool_sound)
 
 lemmas aval_int_dom_sound = int_arith.aval_dom_sound[unfolded gamma_abs_int_dom_ext]
@@ -634,14 +784,16 @@ begin
 
 interpretation int_arith_mono: expression_domain_mono
     "aval_int_dom mode" int_dom_of_int
-    "plus_int_dom mode" "minus_int_dom mode" "times_int_dom mode"
+    "plus_int_dom mode" "minus_int_dom mode" "times_int_dom mode" "div_int_dom mode" "mod_int_dom mode"
     int_dom_lt int_dom_eqb int_dom_tobool
   by unfold_locales
-     (simp_all add: Let_def plus_int_dom_sound minus_int_dom_sound times_int_dom_sound
+     (simp_all add: Let_def plus_int_dom_sound minus_int_dom_sound times_int_dom_sound div_int_dom_sound mod_int_dom_sound
                     int_dom_lt_sound int_dom_eqb_sound int_dom_tobool_sound
                     plus_int_dom_mono[OF mode_nonfixpoint]
                     minus_int_dom_mono[OF mode_nonfixpoint]
                     times_int_dom_mono[OF mode_nonfixpoint]
+                    div_int_dom_mono[OF mode_nonfixpoint]
+                    mod_int_dom_mono[OF mode_nonfixpoint]
                     int_dom_lt_mono int_dom_eqb_mono int_dom_tobool_mono)
 
 lemmas aval_int_dom_mono = int_arith_mono.aval_dom_mono

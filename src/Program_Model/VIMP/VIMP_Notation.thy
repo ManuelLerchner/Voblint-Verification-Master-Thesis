@@ -18,10 +18,11 @@ text \<open>
   - bare identifiers become @{const V} literals (HOL string literals via @{type vname})
   - numerals become @{const N}
   - arithmetic:
-      +, -, * map to @{const Plus}, @{const Minus}, @{const Times}
+      +, -, *, /, % map to @{const Plus}, @{const Minus}, @{const Times},
+      @{const Div}, @{const Mod}
       unary minus @{text "-n"} on numerals becomes @{const N} with a negative int
   - comparisons:
-      <, == map to @{const Less}, @{const Eq}, evaluating to an @{typ int} 0/1
+      <, <=, >, >=, ==, != evaluate to an @{typ int} 0/1
   - constants:
       true/false lower to @{const N} 1/@{const N} 0
 
@@ -208,6 +209,86 @@ lemma notation_fun_call_return:
     Seq (Call (Some (STR ''x'')) (STR ''id'') [N 1])
       (Call None (STR ''ping'') [])"
   by simp
+
+lemma notation_comparison_less:
+  "imp \<lbrakk> __voblint_check(x < y); \<rbrakk> =
+    Check (Less (V (STR ''x'')) (V (STR ''y'')))"
+  by simp
+
+lemma notation_comparison_less_eq:
+  "imp \<lbrakk> __voblint_check(x <= y); \<rbrakk> =
+    Check (LessEq (V (STR ''x'')) (V (STR ''y'')))"
+  by simp
+
+lemma notation_comparison_greater:
+  "imp \<lbrakk> __voblint_check(x > y); \<rbrakk> =
+    Check (Greater (V (STR ''x'')) (V (STR ''y'')))"
+  by simp
+
+lemma notation_comparison_greater_eq:
+  "imp \<lbrakk> __voblint_check(x >= y); \<rbrakk> =
+    Check (GreaterEq (V (STR ''x'')) (V (STR ''y'')))"
+  by simp
+
+lemma notation_comparison_eq:
+  "imp \<lbrakk> __voblint_check(x == y); \<rbrakk> =
+    Check (Eq (V (STR ''x'')) (V (STR ''y'')))"
+  by simp
+
+lemma notation_comparison_not_eq:
+  "imp \<lbrakk> __voblint_check(x != y); \<rbrakk> =
+    Check (NotEq (V (STR ''x'')) (V (STR ''y'')))"
+  by simp
+
+lemma notation_comparison_precedence:
+  "imp \<lbrakk> __voblint_check(x + 1 <= y * 2 && x != y); \<rbrakk> =
+    Check (And
+      (LessEq (Plus (V (STR ''x'')) (N 1)) (Times (V (STR ''y'')) (N 2)))
+      (NotEq (V (STR ''x'')) (V (STR ''y''))))"
+  by simp
+
+lemma notation_relational_before_equality:
+  "imp \<lbrakk> __voblint_check(x == y < z); \<rbrakk> =
+    imp \<lbrakk> __voblint_check(x == (y < z)); \<rbrakk>"
+  "imp \<lbrakk> __voblint_check(x < y != z); \<rbrakk> =
+    imp \<lbrakk> __voblint_check((x < y) != z); \<rbrakk>"
+  "imp \<lbrakk> __voblint_check(x + 1 >= y == z <= w * 2); \<rbrakk> =
+    imp \<lbrakk> __voblint_check((x + 1 >= y) == (z <= w * 2)); \<rbrakk>"
+  by simp_all
+
+lemma comparison_signed_boundaries:
+  "map (\<lambda>e. aval e s)
+    [Less (N (-1)) (N 0), LessEq (N (-1)) (N (-1)),
+     Greater (N 0) (N (-1)), GreaterEq (N (-1)) (N (-1)),
+     Eq (N (-1)) (N (-1)), NotEq (N (-1)) (N 0)] = [1, 1, 1, 1, 1, 1]"
+  "map (\<lambda>e. aval e s)
+    [Less (N (-1)) (N (-1)), LessEq (N 0) (N (-1)),
+     Greater (N (-1)) (N (-1)), GreaterEq (N (-1)) (N 0),
+     Eq (N (-1)) (N 0), NotEq (N (-1)) (N (-1))] = [0, 0, 0, 0, 0, 0]"
+  by simp_all
+
+lemma notation_division_remainder:
+  "imp \<lbrakk> x = a / b; y = a % b; \<rbrakk> =
+    Seq (Assign (STR ''x'') (Div (V (STR ''a'')) (V (STR ''b''))))
+      (Assign (STR ''y'') (Mod (V (STR ''a'')) (V (STR ''b''))))"
+  by simp
+
+lemma notation_multiplicative_precedence:
+  "imp \<lbrakk> x = 20 / 3 % 4 * 2 + 1; \<rbrakk> =
+    imp \<lbrakk> x = (((20 / 3) % 4) * 2) + 1; \<rbrakk>"
+  "imp \<lbrakk> x = -7 / 3; \<rbrakk> = Assign (STR ''x'') (Div (N (-7)) (N 3))"
+  "imp \<lbrakk> __voblint_check(1 == 20 / 3 % 4 < 3); \<rbrakk> =
+    imp \<lbrakk> __voblint_check(1 == (((20 / 3) % 4) < 3)); \<rbrakk>"
+  by simp_all
+
+lemma aval_division_remainder:
+  "map (\<lambda>e. aval e s)
+    [Div (N 7) (N 3), Div (N (-7)) (N 3),
+     Div (N 7) (N (-3)), Div (N (-7)) (N (-3)),
+     Mod (N 7) (N 3), Mod (N (-7)) (N 3),
+     Mod (N 7) (N (-3)), Mod (N (-7)) (N (-3)),
+     Div (N 7) (N 0), Mod (N (-7)) (N 0)] = [2, -2, -2, 2, 1, -1, 1, -1, 0, -7]"
+  by (simp add: c_div_def c_mod_def)
 
 end
 

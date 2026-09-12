@@ -13,12 +13,12 @@ fun main() {
   x = __voblint_nondet_int();
   z = __voblint_nondet_int();
   if (i) {
-    __voblint_check(!(i < 1)); // UNKNOWN
+    __voblint_check(i >= 1); // UNKNOWN
   }
   if (!!x) {
     __voblint_check(x == 1); // UNKNOWN
   }
-  if (!(z == 0)) {
+  if (z != 0) {
     a = 8;
     b = 9;
   } else {

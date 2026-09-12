@@ -31,6 +31,8 @@ rule token = parse
   | "+"                 { PLUS }
   | "-"                 { MINUS }
   | "*"                 { STAR }
+  | "/"                 { SLASH }
+  | "%"                 { PERCENT }
   | "<"                 { LT }
   | "<="                { LE }
   | ">"                 { GT }

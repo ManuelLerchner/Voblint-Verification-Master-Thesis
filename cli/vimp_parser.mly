@@ -31,6 +31,8 @@ let close_definition ((name, formals, body) as decl) =
 %token PLUS
 %token MINUS
 %token STAR
+%token SLASH
+%token PERCENT
 %token LT
 %token LE
 %token GT
@@ -50,9 +52,10 @@ let close_definition ((name, formals, body) as decl) =
 
 %left OR
 %left AND
-%nonassoc LT LE GT GE EQEQ NEQ
+%nonassoc EQEQ NEQ
+%nonassoc LT LE GT GE
 %left PLUS MINUS
-%left STAR
+%left STAR SLASH PERCENT
 %right NOT UMINUS
 
 %type <Voblint_CLI.Generated.exp> exp
@@ -90,6 +93,10 @@ exp:
       { Voblint_CLI.Generated.Minus (v0, v2) }
   | v0 = exp v1 = STAR v2 = exp
       { Voblint_CLI.Generated.Times (v0, v2) }
+  | v0 = exp v1 = SLASH v2 = exp
+      { Voblint_CLI.Generated.Div (v0, v2) }
+  | v0 = exp v1 = PERCENT v2 = exp
+      { Voblint_CLI.Generated.Mod (v0, v2) }
   | v0 = BOOL_TRUE
       { Voblint_CLI.Generated.N (Voblint_CLI.Generated.Int_of_integer (Z.of_int 1)) }
   | v0 = BOOL_FALSE

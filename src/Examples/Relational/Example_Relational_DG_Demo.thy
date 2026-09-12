@@ -24,7 +24,7 @@ text \<open>
   \<open>compiled_routed_eqs_for\<close> generator, and the same vendored solver that runs Interval
   also run \<open>relc\<close>, end to end, with a genuinely different observable result.
 
-  \<^bold>\<open>Program.\<close> \<open>if (x < y) { z := 1 } else { z := 0 }\<close>, with \<open>x\<close>/\<open>y\<close> left
+  \<^bold>\<open>Program.\<close> \<open>if (x < y) { z = 1; } else { z = 0; }\<close>, with \<open>x\<close>/\<open>y\<close> left
   entirely unconstrained at entry (no prior assignment).  This is deliberately
   the case where Interval learns nothing from the guard: \<open>x < y\<close> narrows
   \<open>x\<close>'s interval only using \<open>y\<close>'s \<^emph>\<open>current\<close> upper bound, and vice versa;
@@ -149,6 +149,13 @@ lemma demo_rel_learns_yx:
 text \<open>Side by side, the three lemmas above are the comparison: at \<open>Statement 1\<close>
   Interval's two bounds stay \<open>[-inf,+inf]\<close> while \<open>relc\<close> answers \<open>True\<close> for the
   pair \<open>(x,y)\<close>.\<close>
+
+lemma direct_relational_order_guards:
+  "assume_step (Greater (V x) (V y)) (RelC {}) = RelC {(y, x)}"
+  "assume_step (LessEq (V x) (V y)) (RelC {}) = RelC {(x, y)}"
+  "assume_not_step (GreaterEq (V x) (V y)) (RelC {}) = RelC {(x, y)}"
+  "assume_not_step (NotEq (V x) (V y)) (RelC {}) = RelC {(x, y), (y, x)}"
+  by (simp_all add: assume_step_def assume_not_step_def)
 
 end
 

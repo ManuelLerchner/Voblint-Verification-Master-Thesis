@@ -7,14 +7,14 @@
 // "everything except 0": the sign lattice has no NonZero element (its
 // non-trivial elements are Neg, NonPos, Zero, NonNeg, Pos), an interval is
 // convex, parity and congruence cannot carve a single point out of Top. The
-// guard refines x to Top in every component and !(x == 0) stays UNKNOWN.
+// guard refines x to Top in every component and (x != 0) stays UNKNOWN.
 // interval and sign alone answer the same.
 fun main() {
   x = __voblint_nondet_int();
   if (x) {
-    __voblint_check(!(x == 0)); // UNKNOWN
+    __voblint_check(x != 0); // UNKNOWN
   }
   if (!!x) {
-    __voblint_check(!(x == 0)); // UNKNOWN
+    __voblint_check(x != 0); // UNKNOWN
   }
 }

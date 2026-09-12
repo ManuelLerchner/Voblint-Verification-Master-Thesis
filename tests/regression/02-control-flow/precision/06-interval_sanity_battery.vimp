@@ -5,11 +5,10 @@
 // known-imprecision/02-nonrelational_join.vimp, the nondet-decided a == 8 and
 // b == 8 in soundness/01-truthiness_guard_underdetermined.vimp. What stays:
 // truthiness guards (if (!x), !!t, !f, dead arms of if (a) and if (!a)),
-// constants joined into [8,9] and every <, <=, >, >= threshold on them written
-// with <, ==, and !, comparisons as int values, a counted loop with x == 10
+// constants joined into [8,9] and every <, <=, >, >= threshold on them,
+// comparisons as int values, a counted loop with x == 10
 // after it, and the tail after Goblint's early return restructured as nesting
-// because main may not return. Comparison operators C offers and VIMP does
-// not are written as: a <= 9 is !(9 < a), b > 7 is 7 < b, b >= 8 is !(b < 8).
+// because main may not return.
 // int gives the same verdicts.
 fun main() {
   a = 1;
@@ -34,7 +33,7 @@ fun main() {
   } else {
     a = a;
   }
-  if (!(z == 0)) {
+  if (z != 0) {
     a = 8;
     b = 9;
   } else {
@@ -43,22 +42,22 @@ fun main() {
   }
   __voblint_check(a); // PROVED
   __voblint_check(a < 10); // PROVED
-  __voblint_check(!(9 < a)); // PROVED
-  __voblint_check(!(a < 8)); // PROVED
+  __voblint_check(a <= 9); // PROVED
+  __voblint_check(a >= 8); // PROVED
   __voblint_check(7 < b); // PROVED
-  __voblint_check(!(b < 8)); // PROVED
+  __voblint_check(b >= 8); // PROVED
   __voblint_check((a < 10) == 1); // PROVED
   __voblint_check((9 < a) == 0); // PROVED
-  __voblint_check(!((a == b) < 0)); // PROVED
-  __voblint_check(!(1 < (a == b))); // PROVED
+  __voblint_check(((a == b) >= 0)); // PROVED
+  __voblint_check(((a == b) <= 1)); // PROVED
   x = 0;
   while (x < 10) {
-    __voblint_check(!(x < 0)); // PROVED
-    __voblint_check(!(9 < x)); // PROVED
+    __voblint_check(x >= 0); // PROVED
+    __voblint_check(x <= 9); // PROVED
     x = x + 1;
   }
   __voblint_check(x == 10); // PROVED
-  if (!(w < 0)) {
+  if (w >= 0) {
     if (0 < w) {
       __voblint_check(true); // PROVED
     }

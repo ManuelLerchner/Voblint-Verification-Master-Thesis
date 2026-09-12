@@ -93,6 +93,27 @@ where
              (be_aval ops e2 (fun_of_resolved_st_q_for gs s));
        afilter_st_lift_with ops gs e1 a1 (afilter_st_lift_with ops gs e2 a2 (Lifted s))
      }"
+  | "bfilter_st_lift_with ops gs (GreaterEq e1 e2) res x_lift = do {
+       s <- x_lift;
+       let (a1, a2) = be_inv_less ops (\<not> res)
+             (be_aval ops e1 (fun_of_resolved_st_q_for gs s))
+             (be_aval ops e2 (fun_of_resolved_st_q_for gs s));
+       afilter_st_lift_with ops gs e1 a1 (afilter_st_lift_with ops gs e2 a2 (Lifted s))
+     }"
+  | "bfilter_st_lift_with ops gs (Greater e1 e2) res x_lift = do {
+       s <- x_lift;
+       let (a1, a2) = be_inv_less ops res
+             (be_aval ops e2 (fun_of_resolved_st_q_for gs s))
+             (be_aval ops e1 (fun_of_resolved_st_q_for gs s));
+       afilter_st_lift_with ops gs e2 a1 (afilter_st_lift_with ops gs e1 a2 (Lifted s))
+     }"
+  | "bfilter_st_lift_with ops gs (LessEq e1 e2) res x_lift = do {
+       s <- x_lift;
+       let (a1, a2) = be_inv_less ops (\<not> res)
+             (be_aval ops e2 (fun_of_resolved_st_q_for gs s))
+             (be_aval ops e1 (fun_of_resolved_st_q_for gs s));
+       afilter_st_lift_with ops gs e2 a1 (afilter_st_lift_with ops gs e1 a2 (Lifted s))
+     }"
   | "bfilter_st_lift_with ops gs (Not b) res x_lift =
        bfilter_st_lift_with ops gs b (\<not> res) x_lift"
   | "bfilter_st_lift_with ops gs (And b1 b2) True x_lift =
@@ -116,6 +137,13 @@ where
   | "bfilter_st_lift_with ops gs (Eq e1 e2) res x_lift = do {
        s <- x_lift;
        let (a1, a2) = be_inv_eq ops res
+             (be_aval ops e1 (fun_of_resolved_st_q_for gs s))
+             (be_aval ops e2 (fun_of_resolved_st_q_for gs s));
+       afilter_st_lift_with ops gs e1 a1 (afilter_st_lift_with ops gs e2 a2 (Lifted s))
+     }"
+  | "bfilter_st_lift_with ops gs (NotEq e1 e2) res x_lift = do {
+       s <- x_lift;
+       let (a1, a2) = be_inv_eq ops (\<not> res)
              (be_aval ops e1 (fun_of_resolved_st_q_for gs s))
              (be_aval ops e2 (fun_of_resolved_st_q_for gs s));
        afilter_st_lift_with ops gs e1 a1 (afilter_st_lift_with ops gs e2 a2 (Lifted s))
@@ -183,6 +211,21 @@ where
               (aval_abs e1 (fun_of_resolved_st_q_for gs s))
               (aval_abs e2 (fun_of_resolved_st_q_for gs s))
         in afilter_st gs e1 a1 (afilter_st gs e2 a2 s))"
+  | "bfilter_st gs (GreaterEq e1 e2) res s =
+       (let (a1, a2) = inv_less (\<not> res)
+              (aval_abs e1 (fun_of_resolved_st_q_for gs s))
+              (aval_abs e2 (fun_of_resolved_st_q_for gs s))
+        in afilter_st gs e1 a1 (afilter_st gs e2 a2 s))"
+  | "bfilter_st gs (Greater e1 e2) res s =
+       (let (a1, a2) = inv_less res
+              (aval_abs e2 (fun_of_resolved_st_q_for gs s))
+              (aval_abs e1 (fun_of_resolved_st_q_for gs s))
+        in afilter_st gs e2 a1 (afilter_st gs e1 a2 s))"
+  | "bfilter_st gs (LessEq e1 e2) res s =
+       (let (a1, a2) = inv_less (\<not> res)
+              (aval_abs e2 (fun_of_resolved_st_q_for gs s))
+              (aval_abs e1 (fun_of_resolved_st_q_for gs s))
+        in afilter_st gs e2 a1 (afilter_st gs e1 a2 s))"
   | "bfilter_st gs (Not b) res s = bfilter_st gs b (\<not> res) s"
   | "bfilter_st gs (And b1 b2) True s =
        bfilter_st gs b1 True (bfilter_st gs b2 True s)"
@@ -200,6 +243,11 @@ where
        bfilter_st gs b1 False (bfilter_st gs b2 False s)"
   | "bfilter_st gs (Eq e1 e2) res s =
        (let (a1, a2) = inv_eq res
+              (aval_abs e1 (fun_of_resolved_st_q_for gs s))
+              (aval_abs e2 (fun_of_resolved_st_q_for gs s))
+        in afilter_st gs e1 a1 (afilter_st gs e2 a2 s))"
+  | "bfilter_st gs (NotEq e1 e2) res s =
+       (let (a1, a2) = inv_eq (\<not> res)
               (aval_abs e1 (fun_of_resolved_st_q_for gs s))
               (aval_abs e2 (fun_of_resolved_st_q_for gs s))
         in afilter_st gs e1 a1 (afilter_st gs e2 a2 s))"
@@ -278,7 +326,19 @@ next
 next
   case (Less e1 e2) then show ?case by simp
 next
+  case (Div e1 e2) then show ?case by simp
+next
+  case (Mod e1 e2) then show ?case by simp
+next
+  case (LessEq e1 e2) then show ?case by simp
+next
+  case (Greater e1 e2) then show ?case by simp
+next
+  case (GreaterEq e1 e2) then show ?case by simp
+next
   case (Eq e1 e2) then show ?case by simp
+next
+  case (NotEq e1 e2) then show ?case by simp
 next
   case (Not e) then show ?case by simp
 next
@@ -311,6 +371,14 @@ next
   then show ?case
     by (simp add: Let_def case_prod_beta afilter_st_commute)
 next
+  case (Div e1 e2)
+  then show ?case
+    by (simp add: Let_def case_prod_beta afilter_st_commute)
+next
+  case (Mod e1 e2)
+  then show ?case
+    by (simp add: Let_def case_prod_beta afilter_st_commute)
+next
   case (Not b)
   then show ?case by simp
 next
@@ -337,7 +405,19 @@ next
   case (Less e1 e2)
   then show ?case by (simp add: afilter_st_commute split: prod.splits)
 next
+  case (LessEq e1 e2)
+  then show ?case by (simp add: afilter_st_commute split: prod.splits)
+next
+  case (Greater e1 e2)
+  then show ?case by (simp add: afilter_st_commute split: prod.splits)
+next
+  case (GreaterEq e1 e2)
+  then show ?case by (simp add: afilter_st_commute split: prod.splits)
+next
   case (Eq e1 e2)
+  then show ?case by (simp add: afilter_st_commute split: prod.splits)
+next
+  case (NotEq e1 e2)
   then show ?case by (simp add: afilter_st_commute split: prod.splits)
 qed
 
@@ -503,7 +583,19 @@ next
 next
   case (Less e1 e2) then show ?case by (simp add: live_resolved_st_q_def)
 next
+  case (Div e1 e2) then show ?case by (simp add: live_resolved_st_q_def)
+next
+  case (Mod e1 e2) then show ?case by (simp add: live_resolved_st_q_def)
+next
+  case (LessEq e1 e2) then show ?case by (simp add: live_resolved_st_q_def)
+next
+  case (Greater e1 e2) then show ?case by (simp add: live_resolved_st_q_def)
+next
+  case (GreaterEq e1 e2) then show ?case by (simp add: live_resolved_st_q_def)
+next
   case (Eq e1 e2) then show ?case by (simp add: live_resolved_st_q_def)
+next
+  case (NotEq e1 e2) then show ?case by (simp add: live_resolved_st_q_def)
 next
   case (Not e) then show ?case by (simp add: live_resolved_st_q_def)
 next
@@ -543,6 +635,14 @@ next
   show ?case
     by (simp add: Let_def case_prod_beta bind_lift_left_identity
         afilter_lift_step[OF afilter_st_lift_correct afilter_st_lift_correct[OF Times.prems]])
+next
+  case (Div e1 e2)
+  then show ?case
+    by (simp add: Let_def case_prod_beta bind_lift_left_identity live_resolved_st_q_def)
+next
+  case (Mod e1 e2)
+  then show ?case
+    by (simp add: Let_def case_prod_beta bind_lift_left_identity live_resolved_st_q_def)
 next
   case (Not b)
   then show ?case by (simp add: Not.IH)
@@ -604,10 +704,30 @@ next
     by (simp add: Let_def case_prod_beta bind_lift_left_identity
         afilter_lift_step[OF afilter_st_lift_correct afilter_st_lift_correct[OF Less.prems]])
 next
+  case (LessEq e1 e2)
+  show ?case
+    by (simp add: Let_def case_prod_beta bind_lift_left_identity
+        afilter_lift_step[OF afilter_st_lift_correct afilter_st_lift_correct[OF LessEq.prems]])
+next
+  case (Greater e1 e2)
+  show ?case
+    by (simp add: Let_def case_prod_beta bind_lift_left_identity
+        afilter_lift_step[OF afilter_st_lift_correct afilter_st_lift_correct[OF Greater.prems]])
+next
+  case (GreaterEq e1 e2)
+  show ?case
+    by (simp add: Let_def case_prod_beta bind_lift_left_identity
+        afilter_lift_step[OF afilter_st_lift_correct afilter_st_lift_correct[OF GreaterEq.prems]])
+next
   case (Eq e1 e2)
     show ?case
     by (simp add: Let_def case_prod_beta bind_lift_left_identity
         afilter_lift_step[OF afilter_st_lift_correct afilter_st_lift_correct[OF Eq.prems]])
+next
+  case (NotEq e1 e2)
+    show ?case
+    by (simp add: Let_def case_prod_beta bind_lift_left_identity
+        afilter_lift_step[OF afilter_st_lift_correct afilter_st_lift_correct[OF NotEq.prems]])
 qed
 
 text \<open>

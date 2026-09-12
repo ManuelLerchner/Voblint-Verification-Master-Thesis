@@ -7,13 +7,13 @@
 // activation shared by all its call sites, so h's entry is seeded by the
 // join of every argument reaching it; --dot-full shows that entry as
 // i=[0,+inf] (the upper bound widened, the lower bound 0 kept). The loss
-// is downstream of the seed: Interval's guard refinement for !(i == 0)
-// cannot strip the endpoint 0 from [0,+inf], the following !(0 < i) arm
+// is downstream of the seed: Interval's guard refinement for (i != 0)
+// cannot strip the endpoint 0 from [0,+inf], the following (i <= 0) arm
 // keeps i=[0,0], its fall-through `return 13` is live, and every result
 // joins to [3,13]. Goblint's narrow-globs recovers a widened lower bound
 // on the entry unknown; that is not what voblint loses here, since the
 // lower bound survives and the disequality guard is the gap. --analysis
-// int closes it: its Sign component refines !(i == 0) on NonNegative to
+// int closes it: its Sign component refines (i != 0) on NonNegative to
 // Positive, the product lifts the interval past 0, and the arm dies (see
 // 16-composite-domain/precision/08).
 fun h(i) {

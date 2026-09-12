@@ -150,10 +150,32 @@ fun aval_ivl :: "exp => (vname => ivl) => ivl" where
   | "aval_ivl (Plus  a b)  \<sigma> = aval_ivl a \<sigma> + aval_ivl b \<sigma>"
   | "aval_ivl (Minus a b)  \<sigma> = aval_ivl a \<sigma> - aval_ivl b \<sigma>"
   | "aval_ivl (Times a b)  \<sigma> = aval_ivl a \<sigma> * aval_ivl b \<sigma>"
+  | "aval_ivl (Div a b)  \<sigma> = ivl_div (aval_ivl a \<sigma>) (aval_ivl b \<sigma>)"
+  | "aval_ivl (Mod a b)  \<sigma> = ivl_mod (aval_ivl a \<sigma>) (aval_ivl b \<sigma>)"
   | "aval_ivl (Less a b)   \<sigma> =
        (if is_empty (aval_ivl a \<sigma>) \<or> is_empty (aval_ivl b \<sigma>) then bot
         else if interval_lt (aval_ivl a \<sigma>) (aval_ivl b \<sigma>) = Some True then Ivl (Fin 1) (Fin 1)
         else if interval_lt (aval_ivl a \<sigma>) (aval_ivl b \<sigma>) = Some False then Ivl (Fin 0) (Fin 0)
+        else Ivl (Fin 0) (Fin 1))"
+  | "aval_ivl (LessEq a b)   \<sigma> =
+       (if is_empty (aval_ivl b \<sigma>) \<or> is_empty (aval_ivl a \<sigma>) then bot
+        else if interval_lt (aval_ivl b \<sigma>) (aval_ivl a \<sigma>) = Some False then Ivl (Fin 1) (Fin 1)
+        else if interval_lt (aval_ivl b \<sigma>) (aval_ivl a \<sigma>) = Some True then Ivl (Fin 0) (Fin 0)
+        else Ivl (Fin 0) (Fin 1))"
+  | "aval_ivl (Greater a b)   \<sigma> =
+       (if is_empty (aval_ivl b \<sigma>) \<or> is_empty (aval_ivl a \<sigma>) then bot
+        else if interval_lt (aval_ivl b \<sigma>) (aval_ivl a \<sigma>) = Some True then Ivl (Fin 1) (Fin 1)
+        else if interval_lt (aval_ivl b \<sigma>) (aval_ivl a \<sigma>) = Some False then Ivl (Fin 0) (Fin 0)
+        else Ivl (Fin 0) (Fin 1))"
+  | "aval_ivl (GreaterEq a b)   \<sigma> =
+       (if is_empty (aval_ivl a \<sigma>) \<or> is_empty (aval_ivl b \<sigma>) then bot
+        else if interval_lt (aval_ivl a \<sigma>) (aval_ivl b \<sigma>) = Some False then Ivl (Fin 1) (Fin 1)
+        else if interval_lt (aval_ivl a \<sigma>) (aval_ivl b \<sigma>) = Some True then Ivl (Fin 0) (Fin 0)
+        else Ivl (Fin 0) (Fin 1))"
+  | "aval_ivl (NotEq a b) \<sigma> =
+       (if is_empty (aval_ivl a \<sigma>) \<or> is_empty (aval_ivl b \<sigma>) then bot
+        else if interval_eqb (aval_ivl a \<sigma>) (aval_ivl b \<sigma>) = Some False then Ivl (Fin 1) (Fin 1)
+        else if interval_eqb (aval_ivl a \<sigma>) (aval_ivl b \<sigma>) = Some True then Ivl (Fin 0) (Fin 0)
         else Ivl (Fin 0) (Fin 1))"
   | "aval_ivl (exp.Eq a b) \<sigma> =
        (if is_empty (aval_ivl a \<sigma>) \<or> is_empty (aval_ivl b \<sigma>) then bot
@@ -185,11 +207,11 @@ fun aval_ivl :: "exp => (vname => ivl) => ivl" where
         else Ivl (Fin 0) (Fin 1))"
 
 interpretation ivl_arith: expression_domain_mono
-    aval_ivl "\<lambda>n. Ivl (Fin n) (Fin n)" "(+)" "(-)" "(*)"
+    aval_ivl "\<lambda>n. Ivl (Fin n) (Fin n)" "(+)" "(-)" "(*)" ivl_div ivl_mod
     interval_lt interval_eqb interval_tobool
   by unfold_locales
-     (simp_all add: ivl_plus_sound ivl_minus_sound ivl_times_sound
-                     ivl_plus_mono ivl_minus_mono ivl_times_mono
+     (simp_all add: ivl_plus_sound ivl_minus_sound ivl_times_sound ivl_div_sound ivl_mod_sound
+                     ivl_plus_mono ivl_minus_mono ivl_times_mono ivl_div_mono ivl_mod_mono
                      interval_lt_sound interval_eqb_sound
                      interval_tobool_sound[unfolded truthy_def]
                      interval_lt_mono interval_eqb_mono interval_tobool_mono

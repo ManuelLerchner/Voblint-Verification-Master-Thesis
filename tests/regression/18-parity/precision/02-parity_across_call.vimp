@@ -13,5 +13,5 @@ fun main() {
   n = __voblint_nondet_int();
   a = double(n);
   b = double(a);
-  __voblint_check(!(a == b + 1)); // PROVED
+  __voblint_check(a != b + 1); // PROVED
 }

@@ -30,11 +30,17 @@ text \<open>\<open>exp_prio\<close> mirrors the grammar's mixfix priorities leve
 fun exp_prio :: "exp \<Rightarrow> nat" where
   "exp_prio (N _) = 1000"
 | "exp_prio (V _) = 1000"
-| "exp_prio (Not _) = 80"
-| "exp_prio (Times _ _) = 70"
-| "exp_prio (Plus _ _) = 60"
-| "exp_prio (Minus _ _) = 60"
-| "exp_prio (Less _ _) = 50"
+| "exp_prio (Not _) = 90"
+| "exp_prio (Times _ _) = 80"
+| "exp_prio (Div _ _) = 80"
+| "exp_prio (Mod _ _) = 80"
+| "exp_prio (Plus _ _) = 70"
+| "exp_prio (Minus _ _) = 70"
+| "exp_prio (Less _ _) = 60"
+| "exp_prio (LessEq _ _) = 60"
+| "exp_prio (Greater _ _) = 60"
+| "exp_prio (GreaterEq _ _) = 60"
+| "exp_prio (NotEq _ _) = 50"
 | "exp_prio (Eq _ _) = 50"
 | "exp_prio (And _ _) = 40"
 | "exp_prio (Or _ _) = 30"
@@ -45,15 +51,28 @@ fun string_of_exp :: "nat \<Rightarrow> exp \<Rightarrow> string" where
         (case e of
            N n \<Rightarrow> string_of_int n
          | V x \<Rightarrow> String.explode x
-         | Plus a b \<Rightarrow> string_of_exp 60 a @ ''+'' @ string_of_exp 61 b
-         | Minus a b \<Rightarrow> string_of_exp 60 a @ ''-'' @ string_of_exp 61 b
-         | Times a b \<Rightarrow> string_of_exp 70 a @ ''*'' @ string_of_exp 71 b
-         | Less a b \<Rightarrow> string_of_exp 51 a @ ''<'' @ string_of_exp 51 b
+         | Plus a b \<Rightarrow> string_of_exp 70 a @ ''+'' @ string_of_exp 71 b
+         | Minus a b \<Rightarrow> string_of_exp 70 a @ ''-'' @ string_of_exp 71 b
+         | Times a b \<Rightarrow> string_of_exp 80 a @ ''*'' @ string_of_exp 81 b
+         | Div a b \<Rightarrow> string_of_exp 80 a @ ''/'' @ string_of_exp 81 b
+         | Mod a b \<Rightarrow> string_of_exp 80 a @ ''%'' @ string_of_exp 81 b
+         | Less a b \<Rightarrow> string_of_exp 61 a @ ''<'' @ string_of_exp 61 b
+         | LessEq a b \<Rightarrow> string_of_exp 61 a @ ''<='' @ string_of_exp 61 b
+         | Greater a b \<Rightarrow> string_of_exp 61 a @ ''>'' @ string_of_exp 61 b
+         | GreaterEq a b \<Rightarrow> string_of_exp 61 a @ ''>='' @ string_of_exp 61 b
+         | NotEq a b \<Rightarrow> string_of_exp 51 a @ ''!='' @ string_of_exp 51 b
          | Eq a b \<Rightarrow> string_of_exp 51 a @ ''=='' @ string_of_exp 51 b
-         | Not a \<Rightarrow> ''!'' @ string_of_exp 80 a
+         | Not a \<Rightarrow> ''!'' @ string_of_exp 90 a
          | And a b \<Rightarrow> string_of_exp 40 a @ ''&&'' @ string_of_exp 41 b
          | Or a b \<Rightarrow> string_of_exp 30 a @ ''||'' @ string_of_exp 31 b)
       in if exp_prio e < min_prio then ''('' @ body @ '')'' else body)"
+
+lemma string_of_exp_comparison_precedence:
+  "string_of_exp 0 (Eq (N 2) (Less (N 3) (N 4))) = ''2==3<4''"
+  "string_of_exp 0 (Less (Eq (N 2) (N 3)) (N 4)) = ''(2==3)<4''"
+  "string_of_exp 0 (NotEq (GreaterEq (N 2) (N 3)) (N 0)) = ''2>=3!=0''"
+  "string_of_exp 0 (GreaterEq (N 2) (NotEq (N 3) (N 0))) = ''2>=(3!=0)''"
+  by eval+
 
 definition source_nl :: string where "source_nl = [CHR 0x0A]"
 
@@ -77,7 +96,7 @@ fun string_of_com :: "com \<Rightarrow> string" where
     (case dst of
       None \<Rightarrow> String.explode p @ ''('' @ join_source '', '' (map (string_of_exp 0) es) @ '');''
     | Some x \<Rightarrow> String.explode x @ '' = '' @ String.explode p @ ''(''
-        @ join_source '', '' (map (string_of_exp 0) es) @ '')'')"
+        @ join_source '', '' (map (string_of_exp 0) es) @ '');'')"
 | "string_of_com (Return (Some e)) = ''return '' @ string_of_exp 0 e @ '';''"
 | "string_of_com (Return None) = ''return;''"
 | "string_of_com Restore = ''restore''"

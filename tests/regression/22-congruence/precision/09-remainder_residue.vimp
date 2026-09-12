@@ -1,0 +1,18 @@
+// PARAM: --analysis congruence
+// Remainder retains the dividend's residue modulo six. The result can be
+// either 1 or -5, but never 4; backward intersection removes that branch.
+// A linear equality on the remainder also recovers its exact negative value.
+fun main() {
+  n = __voblint_nondet_int();
+  dividend = n * 6 + 1;
+  r = dividend % 6;
+  if (r == 4) {
+    __voblint_check(false); // NOWARN
+  }
+  if (r + 5 == 0) {
+    __voblint_check(r == -5); // PROVED
+    __voblint_check(r < 0); // PROVED
+  }
+  q = -7 / 3;
+  __voblint_check(q == -2); // PROVED
+}

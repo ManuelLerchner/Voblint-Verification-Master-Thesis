@@ -56,6 +56,28 @@ An `if` may omit its `else`, and `else if` chains may end with or without an
 `else` block. Missing branches lower to `SKIP` in the core command language;
 the compiler bypasses those branches without emitting a no-op node.
 
+Comparisons are `<`, `<=`, `>`, `>=`, `==`, and `!=`, each represented by its
+own expression constructor and evaluated to integer `0` or `1`. Relational
+operators (`<`, `<=`, `>`, `>=`) bind more tightly than equality (`==`, `!=`),
+as in C. Arithmetic binds more tightly, and `&&`/`||` less tightly. Each
+comparison group is non-associative: chains within a group require parentheses.
+The numeric domains handle each operator in expression evaluation, check
+queries, and backward guard refinement.
+
+Arithmetic supports `+`, `-`, `*`, `/`, and `%` over unbounded integers.
+Multiplication, division, and remainder share one left-associative precedence
+level. Division truncates toward zero; a nonzero remainder has the dividend's
+sign. VIMP keeps expressions total with `a / 0 = 0` and `a % 0 = a`.
+These zero-divisor cases are VIMP conventions, not C semantics.
+
+The domains evaluate division and remainder directly. Interval computes endpoint
+bounds for finite division ranges and refines remainder ranges using the dividend
+and divisor. Unbounded division ranges can return top. Sign retains weak signs;
+Parity preserves parity for remainder by even divisors. Congruence computes exact
+singleton results and retains modular information in other remainders. Int combines
+and reduces these component results. Backward filtering checks forward feasibility
+but does not invert division or remainder into constraints on their operands.
+
 `global x, y;` declares shared variables. Every other variable name is local
 to its activation, including an assignment's destination; local declarations
 are implicit. `main` completes by falling through and cannot contain a return.

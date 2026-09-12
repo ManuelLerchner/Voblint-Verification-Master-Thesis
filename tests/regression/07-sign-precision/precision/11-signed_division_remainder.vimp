@@ -1,0 +1,28 @@
+// PARAM: --analysis sign
+// Sign proves weak signs after truncation without knowing either magnitude.
+// A nonzero remainder then refines its weak sign to a strict sign.
+fun main() {
+  n = __voblint_nondet_int();
+  d = __voblint_nondet_int();
+  if (n < 0 && d > 0) {
+    q = n / d;
+    r = n % d;
+    __voblint_check(q <= 0); // PROVED
+    __voblint_check(r <= 0); // PROVED
+    __voblint_check(q > 0); // REFUTED
+    if (r != 0) {
+      __voblint_check(r < 0); // PROVED
+    }
+  } else if (n > 0 && d < 0) {
+    q = n / d;
+    r = n % d;
+    __voblint_check(q <= 0); // PROVED
+    __voblint_check(r >= 0); // PROVED
+    if (r != 0) {
+      __voblint_check(r > 0); // PROVED
+    }
+  } else if (d == 0) {
+    q = n / d;
+    __voblint_check(q == 0); // PROVED
+  }
+}

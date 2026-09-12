@@ -1,5 +1,5 @@
 // PARAM: --analysis congruence
-// The else-branch is reached exactly when n is not 4, so !(n == 4) is a
+// The else-branch is reached exactly when n is not 4, so (n != 4) is a
 // fixed fact there.
 //
 // Two mechanisms stack, and only the outer one is a lattice limit. The
@@ -18,6 +18,6 @@ fun main() {
   if (n == 4) {
     __voblint_check(true); // PROVED
   } else {
-    __voblint_check(!(n == 4)); // UNKNOWN
+    __voblint_check(n != 4); // UNKNOWN
   }
 }

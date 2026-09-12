@@ -17,13 +17,13 @@ fun main() {
   x = 0;
   y = 0;
   while (x < 100) {
-    __voblint_check(!(y < 0)); // PROVED
-    __voblint_check(!(1 < y)); // UNKNOWN
+    __voblint_check(y >= 0); // PROVED
+    __voblint_check(y <= 1); // UNKNOWN
     if (5 < x) {
       y = 1;
     }
     x = x + 4;
   }
-  __voblint_check(!(y < 0)); // PROVED
-  __voblint_check(!(1 < y)); // UNKNOWN
+  __voblint_check(y >= 0); // PROVED
+  __voblint_check(y <= 1); // UNKNOWN
 }

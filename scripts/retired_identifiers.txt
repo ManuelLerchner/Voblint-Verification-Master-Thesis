@@ -1855,3 +1855,4 @@ enter_frame_for_sound
 enter_frame_for_mono
 enter_ci_for_mono
 tf_abs_mono
+congruence_classify_less_unknown

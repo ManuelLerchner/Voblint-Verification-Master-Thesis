@@ -454,8 +454,11 @@ proof -
   qed
 qed
 
-fun congruence_lt :: "congruence => congruence => bool option" where
-  "congruence_lt _ _ = None"
+definition congruence_lt :: "congruence => congruence => bool option" where
+  "congruence_lt a b =
+     (case (congruence_singleton a, congruence_singleton b) of
+        (Some c1, Some c2) => Some (c1 < c2)
+      | _ => None)"
 
 definition congruence_eqb :: "congruence => congruence => bool option" where
   "congruence_eqb a b =
@@ -468,8 +471,16 @@ definition congruence_tobool :: "congruence => bool option" where
      (case congruence_singleton a of Some c => Some (c \<noteq> 0) | None => None)"
 
 lemma congruence_lt_sound:
-  "congruence_lt a b = Some c \<Longrightarrow> i \<in> gamma_congruence a \<Longrightarrow> j \<in> gamma_congruence b \<Longrightarrow> (i < j) = c"
-  by simp
+  assumes "congruence_lt a b = Some c" and "i \<in> gamma_congruence a" and "j \<in> gamma_congruence b"
+  shows "(i < j) = c"
+proof -
+  obtain c1 c2 where s1: "congruence_singleton a = Some c1" and s2: "congruence_singleton b = Some c2"
+      and c_def: "c = (c1 < c2)"
+    using assms(1) unfolding congruence_lt_def by (auto split: option.splits)
+  have "i = c1" using congruence_singleton_sound[OF s1 assms(2)] .
+  moreover have "j = c2" using congruence_singleton_sound[OF s2 assms(3)] .
+  ultimately show ?thesis using c_def by simp
+qed
 
 lemma congruence_eqb_sound:
   assumes "congruence_eqb a b = Some c" and "i \<in> gamma_congruence a" and "j \<in> gamma_congruence b"
@@ -494,9 +505,19 @@ proof -
 qed
 
 lemma congruence_lt_mono:
-  "\<not> is_empty (a1::congruence) \<Longrightarrow> \<not> is_empty b1 \<Longrightarrow> a1 \<le> a2 \<Longrightarrow> b1 \<le> b2 \<Longrightarrow>
-   congruence_lt a2 b2 = Some c \<Longrightarrow> congruence_lt a1 b1 = Some c"
-  by simp
+  assumes "\<not> is_empty (a1::congruence)" and "\<not> is_empty b1" and "a1 \<le> a2" and "b1 \<le> b2"
+      and "congruence_lt a2 b2 = Some c"
+  shows "congruence_lt a1 b1 = Some c"
+proof -
+  obtain c1 c2 where s1: "congruence_singleton a2 = Some c1" and s2: "congruence_singleton b2 = Some c2"
+      and c_def: "c = (c1 < c2)"
+    using assms(5) unfolding congruence_lt_def by (auto split: option.splits)
+  have "congruence_singleton a1 = Some c1"
+    using congruence_singleton_le[OF assms(1,3) s1] .
+  moreover have "congruence_singleton b1 = Some c2"
+    using congruence_singleton_le[OF assms(2,4) s2] .
+  ultimately show ?thesis unfolding congruence_lt_def using c_def by simp
+qed
 
 lemma congruence_eqb_mono:
   assumes "\<not> is_empty (a1::congruence)" and "\<not> is_empty b1" and "a1 \<le> a2" and "b1 \<le> b2"
@@ -524,6 +545,127 @@ proof -
   then show ?thesis unfolding congruence_tobool_def using c_def by simp
 qed
 
+
+definition congruence_exact_binop ::
+    "(int \<Rightarrow> int \<Rightarrow> int) \<Rightarrow> (congruence \<Rightarrow> congruence \<Rightarrow> congruence) \<Rightarrow>
+      congruence \<Rightarrow> congruence \<Rightarrow> congruence" where
+  "congruence_exact_binop f fallback a b =
+    (if is_empty a \<or> is_empty b then bot
+     else case (congruence_singleton a, congruence_singleton b) of
+       (Some x, Some y) \<Rightarrow> congruence_of_int (f x y)
+     | _ \<Rightarrow> fallback a b)"
+
+lemma congruence_exact_binop_sound:
+  assumes "i \<in> gamma_congruence a" "j \<in> gamma_congruence b"
+    and sound: "\<And>a b i j. i \<in> gamma_congruence a \<Longrightarrow> j \<in> gamma_congruence b \<Longrightarrow>
+      f i j \<in> gamma_congruence (fallback a b)"
+  shows "f i j \<in> gamma_congruence (congruence_exact_binop f fallback a b)"
+  using assms congruence_singleton_sound
+  unfolding congruence_exact_binop_def
+  by (auto simp: is_bottom_congruence_correct congruence_of_int_def
+      split: option.splits dest: congruence_singleton_sound)
+
+lemma congruence_exact_binop_mono:
+  assumes "a1 \<le> a2" "b1 \<le> b2"
+    and sound: "\<And>a b i j. i \<in> gamma_congruence a \<Longrightarrow> j \<in> gamma_congruence b \<Longrightarrow>
+      f i j \<in> gamma_congruence (fallback a b)"
+    and mono: "\<And>a1 a2 b1 b2. a1 \<le> a2 \<Longrightarrow> b1 \<le> b2 \<Longrightarrow>
+      fallback a1 b1 \<le> fallback a2 b2"
+  shows "congruence_exact_binop f fallback a1 b1 \<le>
+    congruence_exact_binop f fallback a2 b2"
+proof (cases "is_empty a1 \<or> is_empty b1")
+  case True
+  then show ?thesis by (simp add: congruence_exact_binop_def)
+next
+  case False
+  have ne: "\<not> is_empty a1" "\<not> is_empty b1" "\<not> is_empty a2" "\<not> is_empty b2"
+    using False is_empty_antimono assms(1,2) by blast+
+  have singleton_le:
+    "\<And>a x. congruence_singleton a = Some x \<Longrightarrow>
+      gamma_congruence a = {x}"
+    unfolding congruence_singleton_def gamma_congruence_def
+    by (auto split: option.splits if_splits)
+  show ?thesis
+    unfolding congruence_exact_binop_def
+    using ne congruence_singleton_le[OF ne(1) assms(1)]
+      congruence_singleton_le[OF ne(2) assms(2)]
+      assms(1,2) mono[OF assms(1,2)] sound singleton_le
+    by (auto simp: less_eq_congruence_iff_gamma congruence_of_int_def
+        split: option.splits)
+qed
+
+
+definition congruence_div_fallback :: "congruence \<Rightarrow> congruence \<Rightarrow> congruence" where
+  "congruence_div_fallback a b =
+    (if is_empty a \<or> is_empty b then bot
+     else case congruence_singleton b of
+       Some c \<Rightarrow> (if c = 0 then congruence_of_int 0 else if c = 1 then a
+         else if c = -1 then congruence_of_int 0 - a else top)
+     | None \<Rightarrow> top)"
+
+lemma congruence_div_fallback_sound:
+  assumes "i \<in> gamma_congruence a" "j \<in> gamma_congruence b"
+  shows "c_div i j \<in> gamma_congruence (congruence_div_fallback a b)"
+  using assms congruence_singleton_sound[OF _ assms(2)]
+    congruence_minus_sound[OF congruence_of_int_gamma assms(1), of 0]
+  unfolding congruence_div_fallback_def
+  by (auto simp: is_bottom_congruence_correct split: option.splits
+      dest: congruence_singleton_sound intro: congruence_minus_sound)
+
+lemma congruence_div_fallback_mono:
+  assumes "a1 \<le> a2" "b1 \<le> b2"
+  shows "congruence_div_fallback a1 b1 \<le> congruence_div_fallback a2 b2"
+proof (cases "is_empty a1 \<or> is_empty b1")
+  case True
+  then show ?thesis by (simp add: congruence_div_fallback_def)
+next
+  case False
+  have ne: "\<not> is_empty a1" "\<not> is_empty b1" "\<not> is_empty a2" "\<not> is_empty b2"
+    using False is_empty_antimono assms by blast+
+  show ?thesis unfolding congruence_div_fallback_def
+    using ne assms congruence_singleton_le[OF ne(2) assms(2)]
+    by (auto split: option.splits intro: congruence_minus_mono)
+qed
+
+definition congruence_div :: "congruence \<Rightarrow> congruence \<Rightarrow> congruence" where
+  "congruence_div = congruence_exact_binop c_div congruence_div_fallback"
+
+definition congruence_mod :: "congruence \<Rightarrow> congruence \<Rightarrow> congruence" where
+  "congruence_mod = congruence_exact_binop c_mod (\<lambda>a b. a - top * b)"
+
+lemma congruence_mod_fallback_sound:
+  assumes "i \<in> gamma_congruence a" "j \<in> gamma_congruence b"
+  shows "c_mod i j \<in> gamma_congruence (a - top * b)"
+proof -
+  have "i - c_div i j * j \<in> gamma_congruence (a - top * b)"
+    by (intro congruence_minus_sound assms congruence_times_sound) simp_all
+  then show ?thesis by (cases "j = 0") (simp_all add: c_mod_def)
+qed
+
+lemma congruence_div_sound:
+  "i \<in> gamma_congruence a \<Longrightarrow> j \<in> gamma_congruence b \<Longrightarrow>
+    c_div i j \<in> gamma_congruence (congruence_div a b)"
+  unfolding congruence_div_def
+  by (rule congruence_exact_binop_sound) (auto intro: congruence_div_fallback_sound)
+
+lemma congruence_mod_sound:
+  "i \<in> gamma_congruence a \<Longrightarrow> j \<in> gamma_congruence b \<Longrightarrow>
+    c_mod i j \<in> gamma_congruence (congruence_mod a b)"
+  unfolding congruence_mod_def
+  by (rule congruence_exact_binop_sound) (auto intro: congruence_mod_fallback_sound)
+
+lemma congruence_div_mono:
+  "a1 \<le> a2 \<Longrightarrow> b1 \<le> b2 \<Longrightarrow> congruence_div a1 b1 \<le> congruence_div a2 b2"
+  unfolding congruence_div_def
+  by (rule congruence_exact_binop_mono)
+     (auto intro: congruence_div_fallback_sound congruence_div_fallback_mono)
+
+lemma congruence_mod_mono:
+  "a1 \<le> a2 \<Longrightarrow> b1 \<le> b2 \<Longrightarrow> congruence_mod a1 b1 \<le> congruence_mod a2 b2"
+  unfolding congruence_mod_def
+  by (rule congruence_exact_binop_mono)
+     (auto intro: congruence_mod_fallback_sound congruence_minus_mono congruence_times_mono)
+
 subsection \<open>Abstract expression evaluation\<close>
 
 fun aval_congruence ::
@@ -537,11 +679,41 @@ where
      aval_congruence e1 sigma - aval_congruence e2 sigma"
 | "aval_congruence (Times e1 e2) sigma =
      aval_congruence e1 sigma * aval_congruence e2 sigma"
+  | "aval_congruence (Div e1 e2) sigma = congruence_div (aval_congruence e1 sigma) (aval_congruence e2 sigma)"
+  | "aval_congruence (Mod e1 e2) sigma = congruence_mod (aval_congruence e1 sigma) (aval_congruence e2 sigma)"
 | "aval_congruence (Less e1 e2) sigma =
      (if is_empty (aval_congruence e1 sigma) \<or> is_empty (aval_congruence e2 sigma) then bot
       else if congruence_lt (aval_congruence e1 sigma) (aval_congruence e2 sigma) = Some True
       then congruence_of_int 1
       else if congruence_lt (aval_congruence e1 sigma) (aval_congruence e2 sigma) = Some False
+      then congruence_of_int 0
+      else congruence_of_int 0 \<squnion> congruence_of_int 1)"
+| "aval_congruence (LessEq e1 e2) sigma =
+     (if is_empty (aval_congruence e2 sigma) \<or> is_empty (aval_congruence e1 sigma) then bot
+      else if congruence_lt (aval_congruence e2 sigma) (aval_congruence e1 sigma) = Some False
+      then congruence_of_int 1
+      else if congruence_lt (aval_congruence e2 sigma) (aval_congruence e1 sigma) = Some True
+      then congruence_of_int 0
+      else congruence_of_int 0 \<squnion> congruence_of_int 1)"
+| "aval_congruence (Greater e1 e2) sigma =
+     (if is_empty (aval_congruence e2 sigma) \<or> is_empty (aval_congruence e1 sigma) then bot
+      else if congruence_lt (aval_congruence e2 sigma) (aval_congruence e1 sigma) = Some True
+      then congruence_of_int 1
+      else if congruence_lt (aval_congruence e2 sigma) (aval_congruence e1 sigma) = Some False
+      then congruence_of_int 0
+      else congruence_of_int 0 \<squnion> congruence_of_int 1)"
+| "aval_congruence (GreaterEq e1 e2) sigma =
+     (if is_empty (aval_congruence e1 sigma) \<or> is_empty (aval_congruence e2 sigma) then bot
+      else if congruence_lt (aval_congruence e1 sigma) (aval_congruence e2 sigma) = Some False
+      then congruence_of_int 1
+      else if congruence_lt (aval_congruence e1 sigma) (aval_congruence e2 sigma) = Some True
+      then congruence_of_int 0
+      else congruence_of_int 0 \<squnion> congruence_of_int 1)"
+| "aval_congruence (NotEq e1 e2) sigma =
+     (if is_empty (aval_congruence e1 sigma) \<or> is_empty (aval_congruence e2 sigma) then bot
+      else if congruence_eqb (aval_congruence e1 sigma) (aval_congruence e2 sigma) = Some False
+      then congruence_of_int 1
+      else if congruence_eqb (aval_congruence e1 sigma) (aval_congruence e2 sigma) = Some True
       then congruence_of_int 0
       else congruence_of_int 0 \<squnion> congruence_of_int 1)"
 | "aval_congruence (exp.Eq e1 e2) sigma =
@@ -576,14 +748,13 @@ where
       else congruence_of_int 0 \<squnion> congruence_of_int 1)"
 
 interpretation congruence_arith: expression_domain_mono
-    aval_congruence congruence_of_int "(+)" "(-)" "(*)"
+    aval_congruence congruence_of_int "(+)" "(-)" "(*)" congruence_div congruence_mod
     congruence_lt congruence_eqb congruence_tobool
   apply unfold_locales
-  apply (simp_all add: congruence_plus_sound congruence_minus_sound congruence_times_sound
-                        congruence_plus_mono congruence_minus_mono congruence_times_mono
+  apply (simp_all add: congruence_plus_sound congruence_minus_sound congruence_times_sound congruence_div_sound congruence_mod_sound
+                        congruence_plus_mono congruence_minus_mono congruence_times_mono congruence_div_mono congruence_mod_mono
                         congruence_lt_sound congruence_eqb_sound
-                        congruence_tobool_sound[unfolded truthy_def]
-                    del: congruence_lt.simps)
+                        congruence_tobool_sound[unfolded truthy_def])
   apply (blast intro: congruence_lt_mono[unfolded is_empty_congruence])
   apply (blast intro: congruence_eqb_mono[unfolded is_empty_congruence])
   apply (blast intro: congruence_tobool_mono[unfolded is_empty_congruence])

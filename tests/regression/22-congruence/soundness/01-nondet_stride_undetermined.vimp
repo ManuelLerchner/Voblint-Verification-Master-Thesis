@@ -5,7 +5,7 @@
 // the only sound answer -- there is no mechanism losing information here.
 //
 // The companion refutation is what separates this from the imprecision
-// cases: !(x == 3) next door in ../known-imprecision/01 is concretely
+// cases: (x != 3) next door in ../known-imprecision/01 is concretely
 // fixed and still comes back UNKNOWN. Same abstract value for x, different
 // reason for the same verdict.
 fun main() {

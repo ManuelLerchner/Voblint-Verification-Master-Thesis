@@ -104,6 +104,8 @@ punctuation:
   "+": PLUS
   "-": MINUS
   "*": STAR
+  "/": SLASH
+  "%": PERCENT
   "<": LT
   "<=": LE
   ">": GT
@@ -127,9 +129,10 @@ punctuation:
 precedence:
   - {assoc: left,  tokens: ["OR"]}
   - {assoc: left,  tokens: ["AND"]}
-  - {assoc: none,  tokens: ["LT", "LE", "GT", "GE", "EQEQ", "NEQ"]}
+  - {assoc: none,  tokens: ["EQEQ", "NEQ"]}
+  - {assoc: none,  tokens: ["LT", "LE", "GT", "GE"]}
   - {assoc: left,  tokens: ["PLUS", "MINUS"]}
-  - {assoc: left,  tokens: ["STAR"]}
+  - {assoc: left,  tokens: ["STAR", "SLASH", "PERCENT"]}
   - {assoc: right, tokens: ["NOT", "UMINUS"]}
 
 productions:
@@ -146,6 +149,10 @@ productions:
      lower: {ctor: Minus, args: [{rhs: 0}, {rhs: 2}]}}
   - {name: exp_times, result: exp, rhs: [exp, STAR, exp],  precedence: STAR,
      lower: {ctor: Times, args: [{rhs: 0}, {rhs: 2}]}}
+  - {name: exp_div, result: exp, rhs: [exp, SLASH, exp], precedence: SLASH,
+     lower: {ctor: Div, args: [{rhs: 0}, {rhs: 2}]}}
+  - {name: exp_mod, result: exp, rhs: [exp, PERCENT, exp], precedence: PERCENT,
+     lower: {ctor: Mod, args: [{rhs: 0}, {rhs: 2}]}}
   - {name: exp_true,  result: exp, rhs: [BOOL_TRUE],  lower: {ctor: N, args: [{int: 1}]}}
   - {name: exp_false, result: exp, rhs: [BOOL_FALSE], lower: {ctor: N, args: [{int: 0}]}}
   - {name: exp_less,  result: exp, rhs: [exp, LT, exp],   lower: {ctor: Less, args: [{rhs: 0}, {rhs: 2}]}}

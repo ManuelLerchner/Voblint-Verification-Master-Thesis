@@ -147,7 +147,7 @@ export_code
   \<comment> \<open>Program: what the frontend builds an input out of\<close>
   mk_program proc_decl_ext
   SKIP Assign Seq com.If While Return Check com.Call
-  N V Plus Minus Times
+  N V Plus Minus Times Div Mod
   exp.Not And Or Less exp.Eq
   Statement FunctionEntry FunctionResult
   int_of_integer nat_of_integer integer_of_int integer_of_nat integer_of_char

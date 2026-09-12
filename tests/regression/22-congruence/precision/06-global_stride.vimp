@@ -13,5 +13,5 @@ fun main() {
   g = 1;
   bump();
   __voblint_check(g == 5); // PROVED
-  __voblint_check(!(g == 4)); // PROVED
+  __voblint_check(g != 4); // PROVED
 }

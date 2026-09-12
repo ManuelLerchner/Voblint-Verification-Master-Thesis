@@ -18,7 +18,7 @@ fun main() {
   n = __voblint_nondet_int();
   if (n + 1 == 3) {
     __voblint_check(n == 2); // PROVED
-    __voblint_check(!(n == 5)); // PROVED
+    __voblint_check(n != 5); // PROVED
   } else {
     __voblint_check(true); // PROVED
   }

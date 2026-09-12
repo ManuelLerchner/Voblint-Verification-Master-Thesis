@@ -49,4 +49,31 @@ lemma assign_sign_regression:
   "assign_sign (STR ''x'') (N 1) (\<lambda>_. SBot) (STR ''x'') = SPos"
   by eval
 
+lemma sign_direct_comparisons:
+  "map (\<lambda>c. aval_sign (c (V (STR ''x'')) (N 0)) (\<lambda>_. SNeg))
+    [LessEq, Greater, GreaterEq, NotEq] = [SPos, SZero, SZero, SPos]"
+  by eval
+
+lemma sign_direct_guard_refinement:
+  "bfilter_sign (Greater (V (STR ''x'')) (N 0)) True
+    (\<lambda>_. STop) (STR ''x'') = SPos"
+  "bfilter_sign (LessEq (V (STR ''x'')) (N 0)) True
+    (\<lambda>_. STop) (STR ''x'') = SNonPos"
+  "bfilter_sign (GreaterEq (V (STR ''x'')) (N 0)) True
+    (\<lambda>_. STop) (STR ''x'') = SNonNeg"
+  "bfilter_sign (NotEq (V (STR ''x'')) (N 0)) False
+    (\<lambda>_. STop) (STR ''x'') = SZero"
+  by eval+
+
+
+lemma sign_division_remainder_regression:
+  "sign_div SPos SPos = SNonNeg"
+  "sign_div SNeg SPos = SNonPos"
+  "sign_div SPos SZero = SZero"
+  "sign_mod SNeg SPos = SNonPos"
+  "sign_mod SNeg SZero = SNeg"
+  "sign_div SBot SPos = SBot"
+  "sign_mod SPos SBot = SBot"
+  by eval+
+
 end

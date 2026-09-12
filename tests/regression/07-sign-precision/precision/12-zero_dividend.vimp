@@ -1,0 +1,9 @@
+// PARAM: --analysis sign
+// Zero divided by any integer remains zero, including VIMP's zero case.
+fun main() {
+  d = __voblint_nondet_int();
+  q = 0 / d;
+  r = 0 % d;
+  __voblint_check(q == 0); // PROVED
+  __voblint_check(r == 0); // PROVED
+}

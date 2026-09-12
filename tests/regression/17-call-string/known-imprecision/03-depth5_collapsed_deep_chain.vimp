@@ -12,11 +12,11 @@
 // (--graph-snapshot: a's collapsed context enters with i=[0,2] for a(7)).
 // What each family then loses, measured:
 // - a/b/c and k/h: the joined seed contains 0 next to positive values.
-//   Interval's guard refinement for !(i == 0) cannot strip the endpoint 0
-//   from [0,2], so the following !(0 < i) arm keeps i=[0,0] and its
+//   Interval's guard refinement for (i != 0) cannot strip the endpoint 0
+//   from [0,2], so the following (i <= 0) arm keeps i=[0,0] and its
 //   fall-through `return 1` becomes live; the collapsed exit joins to
 //   [1,11]. --analysis int proves a(7), a(8), c(11) and b(21) at this same
-//   depth: its Sign component refines !(i == 0) on NonNegative to Positive
+//   depth: its Sign component refines (i != 0) on NonNegative to Positive
 //   and the product refinement lifts the interval to [1,2], which kills the
 //   arm. k(9) stays UNKNOWN under int too, because the joined seed admits
 //   i=0 through the recursive arm (k(1) -> k(0)) that the concrete run

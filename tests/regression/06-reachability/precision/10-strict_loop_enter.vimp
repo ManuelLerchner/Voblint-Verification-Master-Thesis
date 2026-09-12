@@ -22,7 +22,7 @@ fun main() {
   __voblint_check(x == 50); // PROVED
   if (50 < x) {
     i = 0;
-    while (!(0 < i)) {
+    while (i <= 0) {
       g = 57;
       i = i - 1;
     }

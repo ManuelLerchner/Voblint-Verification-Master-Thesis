@@ -257,4 +257,38 @@ proof -
     by (rule trans[OF bfilter_feasible_disjunct_y bfilter_or_drops_infeasible_disjunct[symmetric]])
 qed
 
+subsection \<open>Direct comparisons in both branch polarities\<close>
+
+lemma refine_direct_comparisons_true:
+  "map (\<lambda>c. bfilter_ivl (c (V (STR ''x'')) (N 10)) True
+      sigma_loop_head (STR ''x''))
+    [LessEq, Greater, GreaterEq, NotEq] =
+   [Ivl (Fin 0) (Fin 10), Ivl (Fin 11) (Fin 20),
+    Ivl (Fin 10) (Fin 20), Ivl (Fin 0) (Fin 20)]"
+  unfolding sigma_x_def by eval
+
+lemma refine_direct_comparisons_false:
+  "map (\<lambda>c. bfilter_ivl (c (V (STR ''x'')) (N 10)) False
+      sigma_loop_head (STR ''x''))
+    [LessEq, Greater, GreaterEq, NotEq] =
+   [Ivl (Fin 11) (Fin 20), Ivl (Fin 0) (Fin 10),
+    Ivl (Fin 0) (Fin 9), Ivl (Fin 10) (Fin 10)]"
+  unfolding sigma_x_def by eval
+
+
+lemma interval_division_remainder_regression:
+  "ivl_div (Ivl (Fin 7) (Fin 9)) (Ivl (Fin 2) (Fin 3)) = Ivl (Fin 2) (Fin 4)"
+  "ivl_div (Ivl (Fin (-9)) (Fin (-7))) (Ivl (Fin 2) (Fin 3)) =
+    Ivl (Fin (-4)) (Fin (-2))"
+  "ivl_div (Ivl (Fin 7) (Fin 9)) (Ivl (Fin (-1)) (Fin 1)) = Ivl (Fin (-9)) (Fin 9)"
+  "ivl_div top (Ivl (Fin 0) (Fin 0)) = Ivl (Fin 0) (Fin 0)"
+  "ivl_mod (Ivl (Fin 0) (Fin 20)) (Ivl (Fin 3) (Fin 3)) = Ivl (Fin 0) (Fin 2)"
+  "ivl_mod (Ivl (Fin (-20)) (Fin (-1))) (Ivl (Fin 3) (Fin 3)) =
+    Ivl (Fin (-2)) (Fin 0)"
+  "ivl_mod (Ivl (Fin (-7)) (Fin (-7))) (Ivl (Fin 0) (Fin 0)) =
+    Ivl (Fin (-7)) (Fin (-7))"
+  "ivl_div bot (Ivl (Fin 1) (Fin 2)) = bot"
+  "ivl_mod (Ivl (Fin 1) (Fin 2)) bot = bot"
+  by eval+
+
 end

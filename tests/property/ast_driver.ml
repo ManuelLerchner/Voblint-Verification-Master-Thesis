@@ -72,6 +72,8 @@ let rec build_exp = function
   | Slist [ Atom "Plus"; a; b ] -> Plus (build_exp a, build_exp b)
   | Slist [ Atom "Minus"; a; b ] -> Minus (build_exp a, build_exp b)
   | Slist [ Atom "Times"; a; b ] -> Times (build_exp a, build_exp b)
+  | Slist [ Atom "Div"; a; b ] -> Div (build_exp a, build_exp b)
+  | Slist [ Atom "Mod"; a; b ] -> Mod (build_exp a, build_exp b)
   | Slist [ Atom "Less"; a; b ] -> Less (build_exp a, build_exp b)
   | Slist [ Atom "LessEq"; a; b ] -> LessEq (build_exp a, build_exp b)
   | Slist [ Atom "Greater"; a; b ] -> Greater (build_exp a, build_exp b)

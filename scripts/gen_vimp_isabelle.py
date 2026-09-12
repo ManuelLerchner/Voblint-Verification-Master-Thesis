@@ -47,7 +47,7 @@ DEFAULT_OUT = REPO_ROOT / "src" / "Program_Model" / "VIMP"
 
 # Isabelle mixfix escaping: '(' ')' '_' need a leading "'" so the mixfix
 # parser doesn't read them as argument-slot/grouping syntax.
-MIXFIX_ESCAPE = {"(": "'(", ")": "')", "_": "'_"}
+MIXFIX_ESCAPE = {"(": "'(", ")": "')", "_": "'_", "/": "'/"}
 
 # result nonterminal -> imp2_* name. `program`/`globals`/`function` aren't
 # here: they're handled by the hand-written top-level wrapper (see
@@ -463,6 +463,8 @@ TR_CONST = {
     "Plus": "VIMP_Syntax.exp.Plus",
     "Minus": "VIMP_Syntax.exp.Minus",
     "Times": "VIMP_Syntax.exp.Times",
+    "Div": "VIMP_Syntax.exp.Div",
+    "Mod": "VIMP_Syntax.exp.Mod",
     "Less": "VIMP_Syntax.exp.Less",
     "LessEq": "VIMP_Syntax.exp.LessEq",
     "Greater": "VIMP_Syntax.exp.Greater",
@@ -488,6 +490,7 @@ TR_CONST = {
 # constructor spelled identically, one string constant per constructor.
 CTOR_VAL = {
     "N": "c_N", "V": "c_V", "Plus": "c_Plus", "Minus": "c_Minus", "Times": "c_Times",
+    "Div": "c_Div", "Mod": "c_Mod",
     "Less": "c_Less", "Eq": "c_Eq", "Not": "c_Not",
     "LessEq": "c_LessEq", "Greater": "c_Greater",
     "GreaterEq": "c_GreaterEq", "NotEq": "c_NotEq",
@@ -698,6 +701,8 @@ val c_V      = "VIMP_Syntax.V"
 val c_Plus   = "VIMP_Syntax.exp.Plus"
 val c_Minus  = "VIMP_Syntax.exp.Minus"
 val c_Times  = "VIMP_Syntax.exp.Times"
+val c_Div = "VIMP_Syntax.exp.Div"
+val c_Mod = "VIMP_Syntax.exp.Mod"
 
 val c_Less   = "VIMP_Syntax.exp.Less"
 val c_LessEq = "VIMP_Syntax.exp.LessEq"

@@ -18,6 +18,6 @@ fun main() {
   while (-10 < a && a < 10) {
     a = -2 * (a - 1);
   }
-  __voblint_check(!(a < -16)); // PROVED
-  __voblint_check(!(20 < a)); // PROVED
+  __voblint_check(a >= -16); // PROVED
+  __voblint_check(a <= 20); // PROVED
 }

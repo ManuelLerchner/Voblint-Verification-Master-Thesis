@@ -89,6 +89,38 @@ fun times_sign :: "sign => sign => sign" where
 instance ..
 end
 
+
+definition sign_div :: "sign \<Rightarrow> sign \<Rightarrow> sign" where
+  "sign_div a b = (if a = SBot \<or> b = SBot then SBot else (a * b) \<squnion> SZero)"
+
+definition sign_mod :: "sign \<Rightarrow> sign \<Rightarrow> sign" where
+  "sign_mod a b =
+    (if a = SBot \<or> b = SBot then SBot else if b = SZero then a else a \<squnion> SZero)"
+
+lemma sign_div_sound:
+  assumes "i \<in> gamma_sign a" "j \<in> gamma_sign b"
+  shows "c_div i j \<in> gamma_sign (sign_div a b)"
+  using assms
+  by (cases a; cases b; auto simp: sign_div_def sup_sign_def
+      intro: c_div_nonneg c_div_nonpos)
+
+lemma sign_mod_sound:
+  assumes "i \<in> gamma_sign a" "j \<in> gamma_sign b"
+  shows "c_mod i j \<in> gamma_sign (sign_mod a b)"
+  using assms
+  by (cases a; cases b; auto simp: sign_mod_def sup_sign_def
+      intro: c_mod_nonneg c_mod_nonpos)
+
+lemma sign_div_mono:
+  "a1 \<le> a2 \<Longrightarrow> b1 \<le> b2 \<Longrightarrow> sign_div a1 b1 \<le> sign_div a2 b2"
+  by (cases a1; cases a2; cases b1; cases b2;
+      simp add: sign_div_def sup_sign_def less_eq_sign_def)
+
+lemma sign_mod_mono:
+  "a1 \<le> a2 \<Longrightarrow> b1 \<le> b2 \<Longrightarrow> sign_mod a1 b1 \<le> sign_mod a2 b2"
+  by (cases a1; cases a2; cases b1; cases b2;
+      simp add: sign_mod_def sup_sign_def less_eq_sign_def)
+
 fun sign_of_int :: "int => sign" where
   "sign_of_int n = (if n < 0 then SNeg else if n = 0 then SZero else SPos)"
 
@@ -217,10 +249,32 @@ fun aval_sign :: "exp => (vname => sign) => sign" where
   | "aval_sign (Plus  a b)  \<sigma> = aval_sign a \<sigma> + aval_sign b \<sigma>"
   | "aval_sign (Minus a b)  \<sigma> = aval_sign a \<sigma> - aval_sign b \<sigma>"
   | "aval_sign (Times a b)  \<sigma> = aval_sign a \<sigma> * aval_sign b \<sigma>"
+  | "aval_sign (Div a b)  \<sigma> = sign_div (aval_sign a \<sigma>) (aval_sign b \<sigma>)"
+  | "aval_sign (Mod a b)  \<sigma> = sign_mod (aval_sign a \<sigma>) (aval_sign b \<sigma>)"
   | "aval_sign (Less a b)   \<sigma> =
        (if is_empty (aval_sign a \<sigma>) \<or> is_empty (aval_sign b \<sigma>) then bot
         else if sign_lt (aval_sign a \<sigma>) (aval_sign b \<sigma>) = Some True then SPos
         else if sign_lt (aval_sign a \<sigma>) (aval_sign b \<sigma>) = Some False then SZero
+        else SNonNeg)"
+  | "aval_sign (LessEq a b)   \<sigma> =
+       (if is_empty (aval_sign b \<sigma>) \<or> is_empty (aval_sign a \<sigma>) then bot
+        else if sign_lt (aval_sign b \<sigma>) (aval_sign a \<sigma>) = Some False then SPos
+        else if sign_lt (aval_sign b \<sigma>) (aval_sign a \<sigma>) = Some True then SZero
+        else SNonNeg)"
+  | "aval_sign (Greater a b)   \<sigma> =
+       (if is_empty (aval_sign b \<sigma>) \<or> is_empty (aval_sign a \<sigma>) then bot
+        else if sign_lt (aval_sign b \<sigma>) (aval_sign a \<sigma>) = Some True then SPos
+        else if sign_lt (aval_sign b \<sigma>) (aval_sign a \<sigma>) = Some False then SZero
+        else SNonNeg)"
+  | "aval_sign (GreaterEq a b)   \<sigma> =
+       (if is_empty (aval_sign a \<sigma>) \<or> is_empty (aval_sign b \<sigma>) then bot
+        else if sign_lt (aval_sign a \<sigma>) (aval_sign b \<sigma>) = Some False then SPos
+        else if sign_lt (aval_sign a \<sigma>) (aval_sign b \<sigma>) = Some True then SZero
+        else SNonNeg)"
+  | "aval_sign (NotEq a b) \<sigma> =
+       (if is_empty (aval_sign a \<sigma>) \<or> is_empty (aval_sign b \<sigma>) then bot
+        else if sign_eqb (aval_sign a \<sigma>) (aval_sign b \<sigma>) = Some False then SPos
+        else if sign_eqb (aval_sign a \<sigma>) (aval_sign b \<sigma>) = Some True then SZero
         else SNonNeg)"
   | "aval_sign (exp.Eq a b) \<sigma> =
        (if is_empty (aval_sign a \<sigma>) \<or> is_empty (aval_sign b \<sigma>) then bot
@@ -306,10 +360,10 @@ lemma sign_times_combine_mono:
   by (meson order.trans sign_times_mono1 sign_times_mono2)
 
 interpretation sign_arith: expression_domain_mono
-    aval_sign sign_of_int "(+)" "(-)" "(*)" sign_lt sign_eqb sign_tobool
+    aval_sign sign_of_int "(+)" "(-)" "(*)" sign_div sign_mod sign_lt sign_eqb sign_tobool
   apply unfold_locales
-  apply (simp_all add: sign_of_int_gamma sign_plus_sound sign_minus_sound sign_times_sound
-                        sign_plus_combine_mono sign_minus_combine_mono sign_times_combine_mono
+  apply (simp_all add: sign_of_int_gamma sign_plus_sound sign_minus_sound sign_times_sound sign_div_sound sign_mod_sound
+                        sign_plus_combine_mono sign_minus_combine_mono sign_times_combine_mono sign_div_mono sign_mod_mono
                         sign_lt_sound sign_eqb_sound sign_tobool_sound[unfolded truthy_def]
                         sup_sign_def
                     del: sign_lt.simps sign_eqb.simps sign_tobool.simps)

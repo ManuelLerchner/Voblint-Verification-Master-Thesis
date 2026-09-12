@@ -19,5 +19,5 @@ fun main() {
   n = __voblint_nondet_int();
   x = 2 * n;
   y = 2 * n + 1;
-  __voblint_check(!(x == y)); // PROVED
+  __voblint_check(x != y); // PROVED
 }

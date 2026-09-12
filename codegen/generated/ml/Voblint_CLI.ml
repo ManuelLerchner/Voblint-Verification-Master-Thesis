@@ -83,8 +83,10 @@ module Generated : sig
   type char
   val integer_of_char : char -> Z.t
   type exp = N of int | V of string | Plus of exp * exp | Minus of exp * exp |
-    Times of exp * exp | Less of exp * exp | Eq of exp * exp | Not of exp |
-    And of exp * exp | Or of exp * exp
+    Times of exp * exp | Div of exp * exp | Mod of exp * exp | Less of exp * exp
+    | LessEq of exp * exp | Greater of exp * exp | GreaterEq of exp * exp |
+    NotEq of exp * exp | Eq of exp * exp | Not of exp | And of exp * exp |
+    Or of exp * exp
   type cfg_node = Statement of nat | FunctionEntry of string |
     FunctionResult of string
   type call_action = CallEdge of string option * string list * exp list
@@ -1016,92 +1018,244 @@ let order_literal = ({preorder_order = preorder_literal} : string order);;
 let linorder_literal = ({order_linorder = order_literal} : string linorder);;
 
 type exp = N of int | V of string | Plus of exp * exp | Minus of exp * exp |
-  Times of exp * exp | Less of exp * exp | Eq of exp * exp | Not of exp |
-  And of exp * exp | Or of exp * exp;;
+  Times of exp * exp | Div of exp * exp | Mod of exp * exp | Less of exp * exp |
+  LessEq of exp * exp | Greater of exp * exp | GreaterEq of exp * exp |
+  NotEq of exp * exp | Eq of exp * exp | Not of exp | And of exp * exp |
+  Or of exp * exp;;
 
 let rec equal_expa
-  x0 x1 = match x0, x1 with And (x91, x92), Or (x101, x102) -> false
-    | Or (x101, x102), And (x91, x92) -> false
-    | Not x8, Or (x101, x102) -> false
-    | Or (x101, x102), Not x8 -> false
-    | Not x8, And (x91, x92) -> false
-    | And (x91, x92), Not x8 -> false
-    | Eq (x71, x72), Or (x101, x102) -> false
-    | Or (x101, x102), Eq (x71, x72) -> false
-    | Eq (x71, x72), And (x91, x92) -> false
-    | And (x91, x92), Eq (x71, x72) -> false
-    | Eq (x71, x72), Not x8 -> false
-    | Not x8, Eq (x71, x72) -> false
-    | Less (x61, x62), Or (x101, x102) -> false
-    | Or (x101, x102), Less (x61, x62) -> false
-    | Less (x61, x62), And (x91, x92) -> false
-    | And (x91, x92), Less (x61, x62) -> false
-    | Less (x61, x62), Not x8 -> false
-    | Not x8, Less (x61, x62) -> false
-    | Less (x61, x62), Eq (x71, x72) -> false
-    | Eq (x71, x72), Less (x61, x62) -> false
-    | Times (x51, x52), Or (x101, x102) -> false
-    | Or (x101, x102), Times (x51, x52) -> false
-    | Times (x51, x52), And (x91, x92) -> false
-    | And (x91, x92), Times (x51, x52) -> false
-    | Times (x51, x52), Not x8 -> false
-    | Not x8, Times (x51, x52) -> false
-    | Times (x51, x52), Eq (x71, x72) -> false
-    | Eq (x71, x72), Times (x51, x52) -> false
-    | Times (x51, x52), Less (x61, x62) -> false
-    | Less (x61, x62), Times (x51, x52) -> false
-    | Minus (x41, x42), Or (x101, x102) -> false
-    | Or (x101, x102), Minus (x41, x42) -> false
-    | Minus (x41, x42), And (x91, x92) -> false
-    | And (x91, x92), Minus (x41, x42) -> false
-    | Minus (x41, x42), Not x8 -> false
-    | Not x8, Minus (x41, x42) -> false
-    | Minus (x41, x42), Eq (x71, x72) -> false
-    | Eq (x71, x72), Minus (x41, x42) -> false
-    | Minus (x41, x42), Less (x61, x62) -> false
-    | Less (x61, x62), Minus (x41, x42) -> false
+  x0 x1 = match x0, x1 with And (x151, x152), Or (x161, x162) -> false
+    | Or (x161, x162), And (x151, x152) -> false
+    | Not x14, Or (x161, x162) -> false
+    | Or (x161, x162), Not x14 -> false
+    | Not x14, And (x151, x152) -> false
+    | And (x151, x152), Not x14 -> false
+    | Eq (x131, x132), Or (x161, x162) -> false
+    | Or (x161, x162), Eq (x131, x132) -> false
+    | Eq (x131, x132), And (x151, x152) -> false
+    | And (x151, x152), Eq (x131, x132) -> false
+    | Eq (x131, x132), Not x14 -> false
+    | Not x14, Eq (x131, x132) -> false
+    | NotEq (x121, x122), Or (x161, x162) -> false
+    | Or (x161, x162), NotEq (x121, x122) -> false
+    | NotEq (x121, x122), And (x151, x152) -> false
+    | And (x151, x152), NotEq (x121, x122) -> false
+    | NotEq (x121, x122), Not x14 -> false
+    | Not x14, NotEq (x121, x122) -> false
+    | NotEq (x121, x122), Eq (x131, x132) -> false
+    | Eq (x131, x132), NotEq (x121, x122) -> false
+    | GreaterEq (x111, x112), Or (x161, x162) -> false
+    | Or (x161, x162), GreaterEq (x111, x112) -> false
+    | GreaterEq (x111, x112), And (x151, x152) -> false
+    | And (x151, x152), GreaterEq (x111, x112) -> false
+    | GreaterEq (x111, x112), Not x14 -> false
+    | Not x14, GreaterEq (x111, x112) -> false
+    | GreaterEq (x111, x112), Eq (x131, x132) -> false
+    | Eq (x131, x132), GreaterEq (x111, x112) -> false
+    | GreaterEq (x111, x112), NotEq (x121, x122) -> false
+    | NotEq (x121, x122), GreaterEq (x111, x112) -> false
+    | Greater (x101, x102), Or (x161, x162) -> false
+    | Or (x161, x162), Greater (x101, x102) -> false
+    | Greater (x101, x102), And (x151, x152) -> false
+    | And (x151, x152), Greater (x101, x102) -> false
+    | Greater (x101, x102), Not x14 -> false
+    | Not x14, Greater (x101, x102) -> false
+    | Greater (x101, x102), Eq (x131, x132) -> false
+    | Eq (x131, x132), Greater (x101, x102) -> false
+    | Greater (x101, x102), NotEq (x121, x122) -> false
+    | NotEq (x121, x122), Greater (x101, x102) -> false
+    | Greater (x101, x102), GreaterEq (x111, x112) -> false
+    | GreaterEq (x111, x112), Greater (x101, x102) -> false
+    | LessEq (x91, x92), Or (x161, x162) -> false
+    | Or (x161, x162), LessEq (x91, x92) -> false
+    | LessEq (x91, x92), And (x151, x152) -> false
+    | And (x151, x152), LessEq (x91, x92) -> false
+    | LessEq (x91, x92), Not x14 -> false
+    | Not x14, LessEq (x91, x92) -> false
+    | LessEq (x91, x92), Eq (x131, x132) -> false
+    | Eq (x131, x132), LessEq (x91, x92) -> false
+    | LessEq (x91, x92), NotEq (x121, x122) -> false
+    | NotEq (x121, x122), LessEq (x91, x92) -> false
+    | LessEq (x91, x92), GreaterEq (x111, x112) -> false
+    | GreaterEq (x111, x112), LessEq (x91, x92) -> false
+    | LessEq (x91, x92), Greater (x101, x102) -> false
+    | Greater (x101, x102), LessEq (x91, x92) -> false
+    | Less (x81, x82), Or (x161, x162) -> false
+    | Or (x161, x162), Less (x81, x82) -> false
+    | Less (x81, x82), And (x151, x152) -> false
+    | And (x151, x152), Less (x81, x82) -> false
+    | Less (x81, x82), Not x14 -> false
+    | Not x14, Less (x81, x82) -> false
+    | Less (x81, x82), Eq (x131, x132) -> false
+    | Eq (x131, x132), Less (x81, x82) -> false
+    | Less (x81, x82), NotEq (x121, x122) -> false
+    | NotEq (x121, x122), Less (x81, x82) -> false
+    | Less (x81, x82), GreaterEq (x111, x112) -> false
+    | GreaterEq (x111, x112), Less (x81, x82) -> false
+    | Less (x81, x82), Greater (x101, x102) -> false
+    | Greater (x101, x102), Less (x81, x82) -> false
+    | Less (x81, x82), LessEq (x91, x92) -> false
+    | LessEq (x91, x92), Less (x81, x82) -> false
+    | Mod (x71, x72), Or (x161, x162) -> false
+    | Or (x161, x162), Mod (x71, x72) -> false
+    | Mod (x71, x72), And (x151, x152) -> false
+    | And (x151, x152), Mod (x71, x72) -> false
+    | Mod (x71, x72), Not x14 -> false
+    | Not x14, Mod (x71, x72) -> false
+    | Mod (x71, x72), Eq (x131, x132) -> false
+    | Eq (x131, x132), Mod (x71, x72) -> false
+    | Mod (x71, x72), NotEq (x121, x122) -> false
+    | NotEq (x121, x122), Mod (x71, x72) -> false
+    | Mod (x71, x72), GreaterEq (x111, x112) -> false
+    | GreaterEq (x111, x112), Mod (x71, x72) -> false
+    | Mod (x71, x72), Greater (x101, x102) -> false
+    | Greater (x101, x102), Mod (x71, x72) -> false
+    | Mod (x71, x72), LessEq (x91, x92) -> false
+    | LessEq (x91, x92), Mod (x71, x72) -> false
+    | Mod (x71, x72), Less (x81, x82) -> false
+    | Less (x81, x82), Mod (x71, x72) -> false
+    | Div (x61, x62), Or (x161, x162) -> false
+    | Or (x161, x162), Div (x61, x62) -> false
+    | Div (x61, x62), And (x151, x152) -> false
+    | And (x151, x152), Div (x61, x62) -> false
+    | Div (x61, x62), Not x14 -> false
+    | Not x14, Div (x61, x62) -> false
+    | Div (x61, x62), Eq (x131, x132) -> false
+    | Eq (x131, x132), Div (x61, x62) -> false
+    | Div (x61, x62), NotEq (x121, x122) -> false
+    | NotEq (x121, x122), Div (x61, x62) -> false
+    | Div (x61, x62), GreaterEq (x111, x112) -> false
+    | GreaterEq (x111, x112), Div (x61, x62) -> false
+    | Div (x61, x62), Greater (x101, x102) -> false
+    | Greater (x101, x102), Div (x61, x62) -> false
+    | Div (x61, x62), LessEq (x91, x92) -> false
+    | LessEq (x91, x92), Div (x61, x62) -> false
+    | Div (x61, x62), Less (x81, x82) -> false
+    | Less (x81, x82), Div (x61, x62) -> false
+    | Div (x61, x62), Mod (x71, x72) -> false
+    | Mod (x71, x72), Div (x61, x62) -> false
+    | Times (x51, x52), Or (x161, x162) -> false
+    | Or (x161, x162), Times (x51, x52) -> false
+    | Times (x51, x52), And (x151, x152) -> false
+    | And (x151, x152), Times (x51, x52) -> false
+    | Times (x51, x52), Not x14 -> false
+    | Not x14, Times (x51, x52) -> false
+    | Times (x51, x52), Eq (x131, x132) -> false
+    | Eq (x131, x132), Times (x51, x52) -> false
+    | Times (x51, x52), NotEq (x121, x122) -> false
+    | NotEq (x121, x122), Times (x51, x52) -> false
+    | Times (x51, x52), GreaterEq (x111, x112) -> false
+    | GreaterEq (x111, x112), Times (x51, x52) -> false
+    | Times (x51, x52), Greater (x101, x102) -> false
+    | Greater (x101, x102), Times (x51, x52) -> false
+    | Times (x51, x52), LessEq (x91, x92) -> false
+    | LessEq (x91, x92), Times (x51, x52) -> false
+    | Times (x51, x52), Less (x81, x82) -> false
+    | Less (x81, x82), Times (x51, x52) -> false
+    | Times (x51, x52), Mod (x71, x72) -> false
+    | Mod (x71, x72), Times (x51, x52) -> false
+    | Times (x51, x52), Div (x61, x62) -> false
+    | Div (x61, x62), Times (x51, x52) -> false
+    | Minus (x41, x42), Or (x161, x162) -> false
+    | Or (x161, x162), Minus (x41, x42) -> false
+    | Minus (x41, x42), And (x151, x152) -> false
+    | And (x151, x152), Minus (x41, x42) -> false
+    | Minus (x41, x42), Not x14 -> false
+    | Not x14, Minus (x41, x42) -> false
+    | Minus (x41, x42), Eq (x131, x132) -> false
+    | Eq (x131, x132), Minus (x41, x42) -> false
+    | Minus (x41, x42), NotEq (x121, x122) -> false
+    | NotEq (x121, x122), Minus (x41, x42) -> false
+    | Minus (x41, x42), GreaterEq (x111, x112) -> false
+    | GreaterEq (x111, x112), Minus (x41, x42) -> false
+    | Minus (x41, x42), Greater (x101, x102) -> false
+    | Greater (x101, x102), Minus (x41, x42) -> false
+    | Minus (x41, x42), LessEq (x91, x92) -> false
+    | LessEq (x91, x92), Minus (x41, x42) -> false
+    | Minus (x41, x42), Less (x81, x82) -> false
+    | Less (x81, x82), Minus (x41, x42) -> false
+    | Minus (x41, x42), Mod (x71, x72) -> false
+    | Mod (x71, x72), Minus (x41, x42) -> false
+    | Minus (x41, x42), Div (x61, x62) -> false
+    | Div (x61, x62), Minus (x41, x42) -> false
     | Minus (x41, x42), Times (x51, x52) -> false
     | Times (x51, x52), Minus (x41, x42) -> false
-    | Plus (x31, x32), Or (x101, x102) -> false
-    | Or (x101, x102), Plus (x31, x32) -> false
-    | Plus (x31, x32), And (x91, x92) -> false
-    | And (x91, x92), Plus (x31, x32) -> false
-    | Plus (x31, x32), Not x8 -> false
-    | Not x8, Plus (x31, x32) -> false
-    | Plus (x31, x32), Eq (x71, x72) -> false
-    | Eq (x71, x72), Plus (x31, x32) -> false
-    | Plus (x31, x32), Less (x61, x62) -> false
-    | Less (x61, x62), Plus (x31, x32) -> false
+    | Plus (x31, x32), Or (x161, x162) -> false
+    | Or (x161, x162), Plus (x31, x32) -> false
+    | Plus (x31, x32), And (x151, x152) -> false
+    | And (x151, x152), Plus (x31, x32) -> false
+    | Plus (x31, x32), Not x14 -> false
+    | Not x14, Plus (x31, x32) -> false
+    | Plus (x31, x32), Eq (x131, x132) -> false
+    | Eq (x131, x132), Plus (x31, x32) -> false
+    | Plus (x31, x32), NotEq (x121, x122) -> false
+    | NotEq (x121, x122), Plus (x31, x32) -> false
+    | Plus (x31, x32), GreaterEq (x111, x112) -> false
+    | GreaterEq (x111, x112), Plus (x31, x32) -> false
+    | Plus (x31, x32), Greater (x101, x102) -> false
+    | Greater (x101, x102), Plus (x31, x32) -> false
+    | Plus (x31, x32), LessEq (x91, x92) -> false
+    | LessEq (x91, x92), Plus (x31, x32) -> false
+    | Plus (x31, x32), Less (x81, x82) -> false
+    | Less (x81, x82), Plus (x31, x32) -> false
+    | Plus (x31, x32), Mod (x71, x72) -> false
+    | Mod (x71, x72), Plus (x31, x32) -> false
+    | Plus (x31, x32), Div (x61, x62) -> false
+    | Div (x61, x62), Plus (x31, x32) -> false
     | Plus (x31, x32), Times (x51, x52) -> false
     | Times (x51, x52), Plus (x31, x32) -> false
     | Plus (x31, x32), Minus (x41, x42) -> false
     | Minus (x41, x42), Plus (x31, x32) -> false
-    | V x2, Or (x101, x102) -> false
-    | Or (x101, x102), V x2 -> false
-    | V x2, And (x91, x92) -> false
-    | And (x91, x92), V x2 -> false
-    | V x2, Not x8 -> false
-    | Not x8, V x2 -> false
-    | V x2, Eq (x71, x72) -> false
-    | Eq (x71, x72), V x2 -> false
-    | V x2, Less (x61, x62) -> false
-    | Less (x61, x62), V x2 -> false
+    | V x2, Or (x161, x162) -> false
+    | Or (x161, x162), V x2 -> false
+    | V x2, And (x151, x152) -> false
+    | And (x151, x152), V x2 -> false
+    | V x2, Not x14 -> false
+    | Not x14, V x2 -> false
+    | V x2, Eq (x131, x132) -> false
+    | Eq (x131, x132), V x2 -> false
+    | V x2, NotEq (x121, x122) -> false
+    | NotEq (x121, x122), V x2 -> false
+    | V x2, GreaterEq (x111, x112) -> false
+    | GreaterEq (x111, x112), V x2 -> false
+    | V x2, Greater (x101, x102) -> false
+    | Greater (x101, x102), V x2 -> false
+    | V x2, LessEq (x91, x92) -> false
+    | LessEq (x91, x92), V x2 -> false
+    | V x2, Less (x81, x82) -> false
+    | Less (x81, x82), V x2 -> false
+    | V x2, Mod (x71, x72) -> false
+    | Mod (x71, x72), V x2 -> false
+    | V x2, Div (x61, x62) -> false
+    | Div (x61, x62), V x2 -> false
     | V x2, Times (x51, x52) -> false
     | Times (x51, x52), V x2 -> false
     | V x2, Minus (x41, x42) -> false
     | Minus (x41, x42), V x2 -> false
     | V x2, Plus (x31, x32) -> false
     | Plus (x31, x32), V x2 -> false
-    | N x1, Or (x101, x102) -> false
-    | Or (x101, x102), N x1 -> false
-    | N x1, And (x91, x92) -> false
-    | And (x91, x92), N x1 -> false
-    | N x1, Not x8 -> false
-    | Not x8, N x1 -> false
-    | N x1, Eq (x71, x72) -> false
-    | Eq (x71, x72), N x1 -> false
-    | N x1, Less (x61, x62) -> false
-    | Less (x61, x62), N x1 -> false
+    | N x1, Or (x161, x162) -> false
+    | Or (x161, x162), N x1 -> false
+    | N x1, And (x151, x152) -> false
+    | And (x151, x152), N x1 -> false
+    | N x1, Not x14 -> false
+    | Not x14, N x1 -> false
+    | N x1, Eq (x131, x132) -> false
+    | Eq (x131, x132), N x1 -> false
+    | N x1, NotEq (x121, x122) -> false
+    | NotEq (x121, x122), N x1 -> false
+    | N x1, GreaterEq (x111, x112) -> false
+    | GreaterEq (x111, x112), N x1 -> false
+    | N x1, Greater (x101, x102) -> false
+    | Greater (x101, x102), N x1 -> false
+    | N x1, LessEq (x91, x92) -> false
+    | LessEq (x91, x92), N x1 -> false
+    | N x1, Less (x81, x82) -> false
+    | Less (x81, x82), N x1 -> false
+    | N x1, Mod (x71, x72) -> false
+    | Mod (x71, x72), N x1 -> false
+    | N x1, Div (x61, x62) -> false
+    | Div (x61, x62), N x1 -> false
     | N x1, Times (x51, x52) -> false
     | Times (x51, x52), N x1 -> false
     | N x1, Minus (x41, x42) -> false
@@ -1110,13 +1264,25 @@ let rec equal_expa
     | Plus (x31, x32), N x1 -> false
     | N x1, V x2 -> false
     | V x2, N x1 -> false
-    | Or (x101, x102), Or (y101, y102) ->
+    | Or (x161, x162), Or (y161, y162) ->
+        equal_expa x161 y161 && equal_expa x162 y162
+    | And (x151, x152), And (y151, y152) ->
+        equal_expa x151 y151 && equal_expa x152 y152
+    | Not x14, Not y14 -> equal_expa x14 y14
+    | Eq (x131, x132), Eq (y131, y132) ->
+        equal_expa x131 y131 && equal_expa x132 y132
+    | NotEq (x121, x122), NotEq (y121, y122) ->
+        equal_expa x121 y121 && equal_expa x122 y122
+    | GreaterEq (x111, x112), GreaterEq (y111, y112) ->
+        equal_expa x111 y111 && equal_expa x112 y112
+    | Greater (x101, x102), Greater (y101, y102) ->
         equal_expa x101 y101 && equal_expa x102 y102
-    | And (x91, x92), And (y91, y92) -> equal_expa x91 y91 && equal_expa x92 y92
-    | Not x8, Not y8 -> equal_expa x8 y8
-    | Eq (x71, x72), Eq (y71, y72) -> equal_expa x71 y71 && equal_expa x72 y72
-    | Less (x61, x62), Less (y61, y62) ->
-        equal_expa x61 y61 && equal_expa x62 y62
+    | LessEq (x91, x92), LessEq (y91, y92) ->
+        equal_expa x91 y91 && equal_expa x92 y92
+    | Less (x81, x82), Less (y81, y82) ->
+        equal_expa x81 y81 && equal_expa x82 y82
+    | Mod (x71, x72), Mod (y71, y72) -> equal_expa x71 y71 && equal_expa x72 y72
+    | Div (x61, x62), Div (y61, y62) -> equal_expa x61 y61 && equal_expa x62 y62
     | Times (x51, x52), Times (y51, y52) ->
         equal_expa x51 y51 && equal_expa x52 y52
     | Minus (x41, x42), Minus (y41, y42) ->
@@ -1731,21 +1897,33 @@ let rec comparator_exp
     | N x, Plus (yb, yc) -> Lt
     | N x, Minus (yd, ye) -> Lt
     | N x, Times (yf, yg) -> Lt
-    | N x, Less (yh, yi) -> Lt
-    | N x, Eq (yj, yk) -> Lt
-    | N x, Not yl -> Lt
-    | N x, And (ym, yn) -> Lt
-    | N x, Or (yo, yp) -> Lt
+    | N x, Div (yh, yi) -> Lt
+    | N x, Mod (yj, yk) -> Lt
+    | N x, Less (yl, ym) -> Lt
+    | N x, LessEq (yn, yo) -> Lt
+    | N x, Greater (yp, yq) -> Lt
+    | N x, GreaterEq (yr, ys) -> Lt
+    | N x, NotEq (yt, yu) -> Lt
+    | N x, Eq (yv, yw) -> Lt
+    | N x, Not yx -> Lt
+    | N x, And (yy, yz) -> Lt
+    | N x, Or (za, zb) -> Lt
     | V x, N y -> Gt
     | V x, V ya -> comparator_of (equal_literal, linorder_literal) x ya
     | V x, Plus (yb, yc) -> Lt
     | V x, Minus (yd, ye) -> Lt
     | V x, Times (yf, yg) -> Lt
-    | V x, Less (yh, yi) -> Lt
-    | V x, Eq (yj, yk) -> Lt
-    | V x, Not yl -> Lt
-    | V x, And (ym, yn) -> Lt
-    | V x, Or (yo, yp) -> Lt
+    | V x, Div (yh, yi) -> Lt
+    | V x, Mod (yj, yk) -> Lt
+    | V x, Less (yl, ym) -> Lt
+    | V x, LessEq (yn, yo) -> Lt
+    | V x, Greater (yp, yq) -> Lt
+    | V x, GreaterEq (yr, ys) -> Lt
+    | V x, NotEq (yt, yu) -> Lt
+    | V x, Eq (yv, yw) -> Lt
+    | V x, Not yx -> Lt
+    | V x, And (yy, yz) -> Lt
+    | V x, Or (za, zb) -> Lt
     | Plus (x, xa), N y -> Gt
     | Plus (x, xa), V ya -> Gt
     | Plus (x, xa), Plus (yb, yc) ->
@@ -1753,11 +1931,17 @@ let rec comparator_exp
           | Gt -> Gt)
     | Plus (x, xa), Minus (yd, ye) -> Lt
     | Plus (x, xa), Times (yf, yg) -> Lt
-    | Plus (x, xa), Less (yh, yi) -> Lt
-    | Plus (x, xa), Eq (yj, yk) -> Lt
-    | Plus (x, xa), Not yl -> Lt
-    | Plus (x, xa), And (ym, yn) -> Lt
-    | Plus (x, xa), Or (yo, yp) -> Lt
+    | Plus (x, xa), Div (yh, yi) -> Lt
+    | Plus (x, xa), Mod (yj, yk) -> Lt
+    | Plus (x, xa), Less (yl, ym) -> Lt
+    | Plus (x, xa), LessEq (yn, yo) -> Lt
+    | Plus (x, xa), Greater (yp, yq) -> Lt
+    | Plus (x, xa), GreaterEq (yr, ys) -> Lt
+    | Plus (x, xa), NotEq (yt, yu) -> Lt
+    | Plus (x, xa), Eq (yv, yw) -> Lt
+    | Plus (x, xa), Not yx -> Lt
+    | Plus (x, xa), And (yy, yz) -> Lt
+    | Plus (x, xa), Or (za, zb) -> Lt
     | Minus (x, xa), N y -> Gt
     | Minus (x, xa), V ya -> Gt
     | Minus (x, xa), Plus (yb, yc) -> Gt
@@ -1765,11 +1949,17 @@ let rec comparator_exp
         (match comparator_exp x yd with Eqa -> comparator_exp xa ye | Lt -> Lt
           | Gt -> Gt)
     | Minus (x, xa), Times (yf, yg) -> Lt
-    | Minus (x, xa), Less (yh, yi) -> Lt
-    | Minus (x, xa), Eq (yj, yk) -> Lt
-    | Minus (x, xa), Not yl -> Lt
-    | Minus (x, xa), And (ym, yn) -> Lt
-    | Minus (x, xa), Or (yo, yp) -> Lt
+    | Minus (x, xa), Div (yh, yi) -> Lt
+    | Minus (x, xa), Mod (yj, yk) -> Lt
+    | Minus (x, xa), Less (yl, ym) -> Lt
+    | Minus (x, xa), LessEq (yn, yo) -> Lt
+    | Minus (x, xa), Greater (yp, yq) -> Lt
+    | Minus (x, xa), GreaterEq (yr, ys) -> Lt
+    | Minus (x, xa), NotEq (yt, yu) -> Lt
+    | Minus (x, xa), Eq (yv, yw) -> Lt
+    | Minus (x, xa), Not yx -> Lt
+    | Minus (x, xa), And (yy, yz) -> Lt
+    | Minus (x, xa), Or (za, zb) -> Lt
     | Times (x, xa), N y -> Gt
     | Times (x, xa), V ya -> Gt
     | Times (x, xa), Plus (yb, yc) -> Gt
@@ -1777,68 +1967,212 @@ let rec comparator_exp
     | Times (x, xa), Times (yf, yg) ->
         (match comparator_exp x yf with Eqa -> comparator_exp xa yg | Lt -> Lt
           | Gt -> Gt)
-    | Times (x, xa), Less (yh, yi) -> Lt
-    | Times (x, xa), Eq (yj, yk) -> Lt
-    | Times (x, xa), Not yl -> Lt
-    | Times (x, xa), And (ym, yn) -> Lt
-    | Times (x, xa), Or (yo, yp) -> Lt
+    | Times (x, xa), Div (yh, yi) -> Lt
+    | Times (x, xa), Mod (yj, yk) -> Lt
+    | Times (x, xa), Less (yl, ym) -> Lt
+    | Times (x, xa), LessEq (yn, yo) -> Lt
+    | Times (x, xa), Greater (yp, yq) -> Lt
+    | Times (x, xa), GreaterEq (yr, ys) -> Lt
+    | Times (x, xa), NotEq (yt, yu) -> Lt
+    | Times (x, xa), Eq (yv, yw) -> Lt
+    | Times (x, xa), Not yx -> Lt
+    | Times (x, xa), And (yy, yz) -> Lt
+    | Times (x, xa), Or (za, zb) -> Lt
+    | Div (x, xa), N y -> Gt
+    | Div (x, xa), V ya -> Gt
+    | Div (x, xa), Plus (yb, yc) -> Gt
+    | Div (x, xa), Minus (yd, ye) -> Gt
+    | Div (x, xa), Times (yf, yg) -> Gt
+    | Div (x, xa), Div (yh, yi) ->
+        (match comparator_exp x yh with Eqa -> comparator_exp xa yi | Lt -> Lt
+          | Gt -> Gt)
+    | Div (x, xa), Mod (yj, yk) -> Lt
+    | Div (x, xa), Less (yl, ym) -> Lt
+    | Div (x, xa), LessEq (yn, yo) -> Lt
+    | Div (x, xa), Greater (yp, yq) -> Lt
+    | Div (x, xa), GreaterEq (yr, ys) -> Lt
+    | Div (x, xa), NotEq (yt, yu) -> Lt
+    | Div (x, xa), Eq (yv, yw) -> Lt
+    | Div (x, xa), Not yx -> Lt
+    | Div (x, xa), And (yy, yz) -> Lt
+    | Div (x, xa), Or (za, zb) -> Lt
+    | Mod (x, xa), N y -> Gt
+    | Mod (x, xa), V ya -> Gt
+    | Mod (x, xa), Plus (yb, yc) -> Gt
+    | Mod (x, xa), Minus (yd, ye) -> Gt
+    | Mod (x, xa), Times (yf, yg) -> Gt
+    | Mod (x, xa), Div (yh, yi) -> Gt
+    | Mod (x, xa), Mod (yj, yk) ->
+        (match comparator_exp x yj with Eqa -> comparator_exp xa yk | Lt -> Lt
+          | Gt -> Gt)
+    | Mod (x, xa), Less (yl, ym) -> Lt
+    | Mod (x, xa), LessEq (yn, yo) -> Lt
+    | Mod (x, xa), Greater (yp, yq) -> Lt
+    | Mod (x, xa), GreaterEq (yr, ys) -> Lt
+    | Mod (x, xa), NotEq (yt, yu) -> Lt
+    | Mod (x, xa), Eq (yv, yw) -> Lt
+    | Mod (x, xa), Not yx -> Lt
+    | Mod (x, xa), And (yy, yz) -> Lt
+    | Mod (x, xa), Or (za, zb) -> Lt
     | Less (x, xa), N y -> Gt
     | Less (x, xa), V ya -> Gt
     | Less (x, xa), Plus (yb, yc) -> Gt
     | Less (x, xa), Minus (yd, ye) -> Gt
     | Less (x, xa), Times (yf, yg) -> Gt
-    | Less (x, xa), Less (yh, yi) ->
-        (match comparator_exp x yh with Eqa -> comparator_exp xa yi | Lt -> Lt
+    | Less (x, xa), Div (yh, yi) -> Gt
+    | Less (x, xa), Mod (yj, yk) -> Gt
+    | Less (x, xa), Less (yl, ym) ->
+        (match comparator_exp x yl with Eqa -> comparator_exp xa ym | Lt -> Lt
           | Gt -> Gt)
-    | Less (x, xa), Eq (yj, yk) -> Lt
-    | Less (x, xa), Not yl -> Lt
-    | Less (x, xa), And (ym, yn) -> Lt
-    | Less (x, xa), Or (yo, yp) -> Lt
+    | Less (x, xa), LessEq (yn, yo) -> Lt
+    | Less (x, xa), Greater (yp, yq) -> Lt
+    | Less (x, xa), GreaterEq (yr, ys) -> Lt
+    | Less (x, xa), NotEq (yt, yu) -> Lt
+    | Less (x, xa), Eq (yv, yw) -> Lt
+    | Less (x, xa), Not yx -> Lt
+    | Less (x, xa), And (yy, yz) -> Lt
+    | Less (x, xa), Or (za, zb) -> Lt
+    | LessEq (x, xa), N y -> Gt
+    | LessEq (x, xa), V ya -> Gt
+    | LessEq (x, xa), Plus (yb, yc) -> Gt
+    | LessEq (x, xa), Minus (yd, ye) -> Gt
+    | LessEq (x, xa), Times (yf, yg) -> Gt
+    | LessEq (x, xa), Div (yh, yi) -> Gt
+    | LessEq (x, xa), Mod (yj, yk) -> Gt
+    | LessEq (x, xa), Less (yl, ym) -> Gt
+    | LessEq (x, xa), LessEq (yn, yo) ->
+        (match comparator_exp x yn with Eqa -> comparator_exp xa yo | Lt -> Lt
+          | Gt -> Gt)
+    | LessEq (x, xa), Greater (yp, yq) -> Lt
+    | LessEq (x, xa), GreaterEq (yr, ys) -> Lt
+    | LessEq (x, xa), NotEq (yt, yu) -> Lt
+    | LessEq (x, xa), Eq (yv, yw) -> Lt
+    | LessEq (x, xa), Not yx -> Lt
+    | LessEq (x, xa), And (yy, yz) -> Lt
+    | LessEq (x, xa), Or (za, zb) -> Lt
+    | Greater (x, xa), N y -> Gt
+    | Greater (x, xa), V ya -> Gt
+    | Greater (x, xa), Plus (yb, yc) -> Gt
+    | Greater (x, xa), Minus (yd, ye) -> Gt
+    | Greater (x, xa), Times (yf, yg) -> Gt
+    | Greater (x, xa), Div (yh, yi) -> Gt
+    | Greater (x, xa), Mod (yj, yk) -> Gt
+    | Greater (x, xa), Less (yl, ym) -> Gt
+    | Greater (x, xa), LessEq (yn, yo) -> Gt
+    | Greater (x, xa), Greater (yp, yq) ->
+        (match comparator_exp x yp with Eqa -> comparator_exp xa yq | Lt -> Lt
+          | Gt -> Gt)
+    | Greater (x, xa), GreaterEq (yr, ys) -> Lt
+    | Greater (x, xa), NotEq (yt, yu) -> Lt
+    | Greater (x, xa), Eq (yv, yw) -> Lt
+    | Greater (x, xa), Not yx -> Lt
+    | Greater (x, xa), And (yy, yz) -> Lt
+    | Greater (x, xa), Or (za, zb) -> Lt
+    | GreaterEq (x, xa), N y -> Gt
+    | GreaterEq (x, xa), V ya -> Gt
+    | GreaterEq (x, xa), Plus (yb, yc) -> Gt
+    | GreaterEq (x, xa), Minus (yd, ye) -> Gt
+    | GreaterEq (x, xa), Times (yf, yg) -> Gt
+    | GreaterEq (x, xa), Div (yh, yi) -> Gt
+    | GreaterEq (x, xa), Mod (yj, yk) -> Gt
+    | GreaterEq (x, xa), Less (yl, ym) -> Gt
+    | GreaterEq (x, xa), LessEq (yn, yo) -> Gt
+    | GreaterEq (x, xa), Greater (yp, yq) -> Gt
+    | GreaterEq (x, xa), GreaterEq (yr, ys) ->
+        (match comparator_exp x yr with Eqa -> comparator_exp xa ys | Lt -> Lt
+          | Gt -> Gt)
+    | GreaterEq (x, xa), NotEq (yt, yu) -> Lt
+    | GreaterEq (x, xa), Eq (yv, yw) -> Lt
+    | GreaterEq (x, xa), Not yx -> Lt
+    | GreaterEq (x, xa), And (yy, yz) -> Lt
+    | GreaterEq (x, xa), Or (za, zb) -> Lt
+    | NotEq (x, xa), N y -> Gt
+    | NotEq (x, xa), V ya -> Gt
+    | NotEq (x, xa), Plus (yb, yc) -> Gt
+    | NotEq (x, xa), Minus (yd, ye) -> Gt
+    | NotEq (x, xa), Times (yf, yg) -> Gt
+    | NotEq (x, xa), Div (yh, yi) -> Gt
+    | NotEq (x, xa), Mod (yj, yk) -> Gt
+    | NotEq (x, xa), Less (yl, ym) -> Gt
+    | NotEq (x, xa), LessEq (yn, yo) -> Gt
+    | NotEq (x, xa), Greater (yp, yq) -> Gt
+    | NotEq (x, xa), GreaterEq (yr, ys) -> Gt
+    | NotEq (x, xa), NotEq (yt, yu) ->
+        (match comparator_exp x yt with Eqa -> comparator_exp xa yu | Lt -> Lt
+          | Gt -> Gt)
+    | NotEq (x, xa), Eq (yv, yw) -> Lt
+    | NotEq (x, xa), Not yx -> Lt
+    | NotEq (x, xa), And (yy, yz) -> Lt
+    | NotEq (x, xa), Or (za, zb) -> Lt
     | Eq (x, xa), N y -> Gt
     | Eq (x, xa), V ya -> Gt
     | Eq (x, xa), Plus (yb, yc) -> Gt
     | Eq (x, xa), Minus (yd, ye) -> Gt
     | Eq (x, xa), Times (yf, yg) -> Gt
-    | Eq (x, xa), Less (yh, yi) -> Gt
-    | Eq (x, xa), Eq (yj, yk) ->
-        (match comparator_exp x yj with Eqa -> comparator_exp xa yk | Lt -> Lt
+    | Eq (x, xa), Div (yh, yi) -> Gt
+    | Eq (x, xa), Mod (yj, yk) -> Gt
+    | Eq (x, xa), Less (yl, ym) -> Gt
+    | Eq (x, xa), LessEq (yn, yo) -> Gt
+    | Eq (x, xa), Greater (yp, yq) -> Gt
+    | Eq (x, xa), GreaterEq (yr, ys) -> Gt
+    | Eq (x, xa), NotEq (yt, yu) -> Gt
+    | Eq (x, xa), Eq (yv, yw) ->
+        (match comparator_exp x yv with Eqa -> comparator_exp xa yw | Lt -> Lt
           | Gt -> Gt)
-    | Eq (x, xa), Not yl -> Lt
-    | Eq (x, xa), And (ym, yn) -> Lt
-    | Eq (x, xa), Or (yo, yp) -> Lt
+    | Eq (x, xa), Not yx -> Lt
+    | Eq (x, xa), And (yy, yz) -> Lt
+    | Eq (x, xa), Or (za, zb) -> Lt
     | Not x, N y -> Gt
     | Not x, V ya -> Gt
     | Not x, Plus (yb, yc) -> Gt
     | Not x, Minus (yd, ye) -> Gt
     | Not x, Times (yf, yg) -> Gt
-    | Not x, Less (yh, yi) -> Gt
-    | Not x, Eq (yj, yk) -> Gt
-    | Not x, Not yl -> comparator_exp x yl
-    | Not x, And (ym, yn) -> Lt
-    | Not x, Or (yo, yp) -> Lt
+    | Not x, Div (yh, yi) -> Gt
+    | Not x, Mod (yj, yk) -> Gt
+    | Not x, Less (yl, ym) -> Gt
+    | Not x, LessEq (yn, yo) -> Gt
+    | Not x, Greater (yp, yq) -> Gt
+    | Not x, GreaterEq (yr, ys) -> Gt
+    | Not x, NotEq (yt, yu) -> Gt
+    | Not x, Eq (yv, yw) -> Gt
+    | Not x, Not yx -> comparator_exp x yx
+    | Not x, And (yy, yz) -> Lt
+    | Not x, Or (za, zb) -> Lt
     | And (x, xa), N y -> Gt
     | And (x, xa), V ya -> Gt
     | And (x, xa), Plus (yb, yc) -> Gt
     | And (x, xa), Minus (yd, ye) -> Gt
     | And (x, xa), Times (yf, yg) -> Gt
-    | And (x, xa), Less (yh, yi) -> Gt
-    | And (x, xa), Eq (yj, yk) -> Gt
-    | And (x, xa), Not yl -> Gt
-    | And (x, xa), And (ym, yn) ->
-        (match comparator_exp x ym with Eqa -> comparator_exp xa yn | Lt -> Lt
+    | And (x, xa), Div (yh, yi) -> Gt
+    | And (x, xa), Mod (yj, yk) -> Gt
+    | And (x, xa), Less (yl, ym) -> Gt
+    | And (x, xa), LessEq (yn, yo) -> Gt
+    | And (x, xa), Greater (yp, yq) -> Gt
+    | And (x, xa), GreaterEq (yr, ys) -> Gt
+    | And (x, xa), NotEq (yt, yu) -> Gt
+    | And (x, xa), Eq (yv, yw) -> Gt
+    | And (x, xa), Not yx -> Gt
+    | And (x, xa), And (yy, yz) ->
+        (match comparator_exp x yy with Eqa -> comparator_exp xa yz | Lt -> Lt
           | Gt -> Gt)
-    | And (x, xa), Or (yo, yp) -> Lt
+    | And (x, xa), Or (za, zb) -> Lt
     | Or (x, xa), N y -> Gt
     | Or (x, xa), V ya -> Gt
     | Or (x, xa), Plus (yb, yc) -> Gt
     | Or (x, xa), Minus (yd, ye) -> Gt
     | Or (x, xa), Times (yf, yg) -> Gt
-    | Or (x, xa), Less (yh, yi) -> Gt
-    | Or (x, xa), Eq (yj, yk) -> Gt
-    | Or (x, xa), Not yl -> Gt
-    | Or (x, xa), And (ym, yn) -> Gt
-    | Or (x, xa), Or (yo, yp) ->
-        (match comparator_exp x yo with Eqa -> comparator_exp xa yp | Lt -> Lt
+    | Or (x, xa), Div (yh, yi) -> Gt
+    | Or (x, xa), Mod (yj, yk) -> Gt
+    | Or (x, xa), Less (yl, ym) -> Gt
+    | Or (x, xa), LessEq (yn, yo) -> Gt
+    | Or (x, xa), Greater (yp, yq) -> Gt
+    | Or (x, xa), GreaterEq (yr, ys) -> Gt
+    | Or (x, xa), NotEq (yt, yu) -> Gt
+    | Or (x, xa), Eq (yv, yw) -> Gt
+    | Or (x, xa), Not yx -> Gt
+    | Or (x, xa), And (yy, yz) -> Gt
+    | Or (x, xa), Or (za, zb) ->
+        (match comparator_exp x za with Eqa -> comparator_exp xa zb | Lt -> Lt
           | Gt -> Gt);;
 
 let rec comparator_call_action
@@ -3635,6 +3969,15 @@ let rec map_filter
 
 let rec c (State_ext (c, infl, stabl, sigma, more)) = c;;
 
+let rec c_div
+  a b = (if equal_inta b zero_inta then zero_inta
+          else times_inta (times_inta (sgn_int a) (sgn_int b))
+                 (divide_inta (abs_int a) (abs_int b)));;
+
+let rec c_mod
+  a b = (if equal_inta b zero_inta then a
+          else minus_inta a (times_inta (c_div a b) b));;
+
 let rec cfg_entry
   (Cfg_ext (intra, calls, cfg_entry, checks, more)) = cfg_entry;;
 
@@ -4184,7 +4527,13 @@ let rec exp_vnames
     | Plus (a, b) -> sup_set equal_literal (exp_vnames a) (exp_vnames b)
     | Minus (a, b) -> sup_set equal_literal (exp_vnames a) (exp_vnames b)
     | Times (a, b) -> sup_set equal_literal (exp_vnames a) (exp_vnames b)
+    | Div (a, b) -> sup_set equal_literal (exp_vnames a) (exp_vnames b)
+    | Mod (a, b) -> sup_set equal_literal (exp_vnames a) (exp_vnames b)
     | Less (a, b) -> sup_set equal_literal (exp_vnames a) (exp_vnames b)
+    | LessEq (a, b) -> sup_set equal_literal (exp_vnames a) (exp_vnames b)
+    | Greater (a, b) -> sup_set equal_literal (exp_vnames a) (exp_vnames b)
+    | GreaterEq (a, b) -> sup_set equal_literal (exp_vnames a) (exp_vnames b)
+    | NotEq (a, b) -> sup_set equal_literal (exp_vnames a) (exp_vnames b)
     | Eq (a, b) -> sup_set equal_literal (exp_vnames a) (exp_vnames b)
     | Not b -> exp_vnames b
     | And (b1, b2) -> sup_set equal_literal (exp_vnames b1) (exp_vnames b2)
@@ -4538,7 +4887,13 @@ let rec afilter_st_lift_with _A
               afilter_st_lift_with _A ops gs e1 a1
                 (afilter_st_lift_with _A ops gs e2 a2 (Lifted s))))
     | ops, gs, N v, a, x_lift -> x_lift
+    | ops, gs, Div (v, va), a, x_lift -> x_lift
+    | ops, gs, Mod (v, va), a, x_lift -> x_lift
     | ops, gs, Less (v, va), a, x_lift -> x_lift
+    | ops, gs, LessEq (v, va), a, x_lift -> x_lift
+    | ops, gs, Greater (v, va), a, x_lift -> x_lift
+    | ops, gs, GreaterEq (v, va), a, x_lift -> x_lift
+    | ops, gs, NotEq (v, va), a, x_lift -> x_lift
     | ops, gs, Eq (v, va), a, x_lift -> x_lift
     | ops, gs, Not v, a, x_lift -> x_lift
     | ops, gs, And (v, va), a, x_lift -> x_lift
@@ -4574,6 +4929,54 @@ let rec bfilter_st_lift_with _A
              in
             afilter_st_lift_with _A ops gs e1 a1
               (afilter_st_lift_with _A ops gs e2 a2 (Lifted s))))
+    | ops, gs, GreaterEq (e1, e2), res, x_lift ->
+        bind_lift x_lift
+          (fun s ->
+            (let (a1, a2) =
+               be_inv_less ops (not res)
+                 (be_aval ops e1
+                   (fun_of_resolved_st_q_for
+                     _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
+                     gs s))
+                 (be_aval ops e2
+                   (fun_of_resolved_st_q_for
+                     _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
+                     gs s))
+               in
+              afilter_st_lift_with _A ops gs e1 a1
+                (afilter_st_lift_with _A ops gs e2 a2 (Lifted s))))
+    | ops, gs, Greater (e1, e2), res, x_lift ->
+        bind_lift x_lift
+          (fun s ->
+            (let (a1, a2) =
+               be_inv_less ops res
+                 (be_aval ops e2
+                   (fun_of_resolved_st_q_for
+                     _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
+                     gs s))
+                 (be_aval ops e1
+                   (fun_of_resolved_st_q_for
+                     _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
+                     gs s))
+               in
+              afilter_st_lift_with _A ops gs e2 a1
+                (afilter_st_lift_with _A ops gs e1 a2 (Lifted s))))
+    | ops, gs, LessEq (e1, e2), res, x_lift ->
+        bind_lift x_lift
+          (fun s ->
+            (let (a1, a2) =
+               be_inv_less ops (not res)
+                 (be_aval ops e2
+                   (fun_of_resolved_st_q_for
+                     _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
+                     gs s))
+                 (be_aval ops e1
+                   (fun_of_resolved_st_q_for
+                     _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
+                     gs s))
+               in
+              afilter_st_lift_with _A ops gs e2 a1
+                (afilter_st_lift_with _A ops gs e1 a2 (Lifted s))))
     | ops, gs, Not b, res, x_lift ->
         bfilter_st_lift_with _A ops gs b (not res) x_lift
     | ops, gs, And (b1, b2), true, x_lift ->
@@ -4622,6 +5025,22 @@ let rec bfilter_st_lift_with _A
           (fun s ->
             (let (a1, a2) =
                be_inv_eq ops res
+                 (be_aval ops e1
+                   (fun_of_resolved_st_q_for
+                     _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
+                     gs s))
+                 (be_aval ops e2
+                   (fun_of_resolved_st_q_for
+                     _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
+                     gs s))
+               in
+              afilter_st_lift_with _A ops gs e1 a1
+                (afilter_st_lift_with _A ops gs e2 a2 (Lifted s))))
+    | ops, gs, NotEq (e1, e2), res, x_lift ->
+        bind_lift x_lift
+          (fun s ->
+            (let (a1, a2) =
+               be_inv_eq ops (not res)
                  (be_aval ops e1
                    (fun_of_resolved_st_q_for
                      _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
@@ -4707,7 +5126,37 @@ let rec bfilter_st_lift_with _A
                      _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
                      gs s))
                in
-              afilter_st_lift_with _A ops gs (Times (v, va)) a1 (Lifted s)));;
+              afilter_st_lift_with _A ops gs (Times (v, va)) a1 (Lifted s)))
+    | ops, gs, Div (v, va), res, x_lift ->
+        bind_lift x_lift
+          (fun s ->
+            (let (a1, _) =
+               be_inv_eq ops (not res)
+                 (be_aval ops (Div (v, va))
+                   (fun_of_resolved_st_q_for
+                     _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
+                     gs s))
+                 (be_aval ops (N zero_inta)
+                   (fun_of_resolved_st_q_for
+                     _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
+                     gs s))
+               in
+              afilter_st_lift_with _A ops gs (Div (v, va)) a1 (Lifted s)))
+    | ops, gs, Mod (v, va), res, x_lift ->
+        bind_lift x_lift
+          (fun s ->
+            (let (a1, _) =
+               be_inv_eq ops (not res)
+                 (be_aval ops (Mod (v, va))
+                   (fun_of_resolved_st_q_for
+                     _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
+                     gs s))
+                 (be_aval ops (N zero_inta)
+                   (fun_of_resolved_st_q_for
+                     _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
+                     gs s))
+               in
+              afilter_st_lift_with _A ops gs (Mod (v, va)) a1 (Lifted s)));;
 
 let rec inv_conservative r a1 a2 = (a1, a2);;
 
@@ -4874,6 +5323,10 @@ let rec sign_of_int
   n = (if less_int n zero_inta then SNeg
         else (if equal_inta n zero_inta then SZero else SPos));;
 
+let rec sign_mod
+  a b = (if equal_signa a SBot || equal_signa b SBot then SBot
+          else (if equal_signa b SZero then a else sup_signa a SZero));;
+
 let rec sign_eqb
   a b = (if equal_signa a SZero && equal_signa b SZero then Some true
           else (if sign_le a SNeg && sign_le b SNonNeg ||
@@ -4881,6 +5334,10 @@ let rec sign_eqb
                        (sign_le a SPos && sign_le b SNonPos ||
                          sign_le b SPos && sign_le a SNonPos))
                  then Some false else None));;
+
+let rec sign_div
+  a b = (if equal_signa a SBot || equal_signa b SBot then SBot
+          else sup_signa (times_sign a b) SZero);;
 
 let rec sign_lt
   a b = (if sign_le a SNeg && sign_le b SNonNeg then Some true
@@ -4895,6 +5352,8 @@ let rec aval_sign
     | Plus (a, b), sigma -> plus_sign (aval_sign a sigma) (aval_sign b sigma)
     | Minus (a, b), sigma -> minus_sign (aval_sign a sigma) (aval_sign b sigma)
     | Times (a, b), sigma -> times_sign (aval_sign a sigma) (aval_sign b sigma)
+    | Div (a, b), sigma -> sign_div (aval_sign a sigma) (aval_sign b sigma)
+    | Mod (a, b), sigma -> sign_mod (aval_sign a sigma) (aval_sign b sigma)
     | Less (a, b), sigma ->
         (if is_empty_sign (aval_sign a sigma) ||
               is_empty_sign (aval_sign b sigma)
@@ -4906,6 +5365,54 @@ let rec aval_sign
                  else (if equal_option equal_bool
                             (sign_lt (aval_sign a sigma) (aval_sign b sigma))
                             (Some false)
+                        then SZero else SNonNeg)))
+    | LessEq (a, b), sigma ->
+        (if is_empty_sign (aval_sign b sigma) ||
+              is_empty_sign (aval_sign a sigma)
+          then bot_signa
+          else (if equal_option equal_bool
+                     (sign_lt (aval_sign b sigma) (aval_sign a sigma))
+                     (Some false)
+                 then SPos
+                 else (if equal_option equal_bool
+                            (sign_lt (aval_sign b sigma) (aval_sign a sigma))
+                            (Some true)
+                        then SZero else SNonNeg)))
+    | Greater (a, b), sigma ->
+        (if is_empty_sign (aval_sign b sigma) ||
+              is_empty_sign (aval_sign a sigma)
+          then bot_signa
+          else (if equal_option equal_bool
+                     (sign_lt (aval_sign b sigma) (aval_sign a sigma))
+                     (Some true)
+                 then SPos
+                 else (if equal_option equal_bool
+                            (sign_lt (aval_sign b sigma) (aval_sign a sigma))
+                            (Some false)
+                        then SZero else SNonNeg)))
+    | GreaterEq (a, b), sigma ->
+        (if is_empty_sign (aval_sign a sigma) ||
+              is_empty_sign (aval_sign b sigma)
+          then bot_signa
+          else (if equal_option equal_bool
+                     (sign_lt (aval_sign a sigma) (aval_sign b sigma))
+                     (Some false)
+                 then SPos
+                 else (if equal_option equal_bool
+                            (sign_lt (aval_sign a sigma) (aval_sign b sigma))
+                            (Some true)
+                        then SZero else SNonNeg)))
+    | NotEq (a, b), sigma ->
+        (if is_empty_sign (aval_sign a sigma) ||
+              is_empty_sign (aval_sign b sigma)
+          then bot_signa
+          else (if equal_option equal_bool
+                     (sign_eqb (aval_sign a sigma) (aval_sign b sigma))
+                     (Some false)
+                 then SPos
+                 else (if equal_option equal_bool
+                            (sign_eqb (aval_sign a sigma) (aval_sign b sigma))
+                            (Some true)
                         then SZero else SNonNeg)))
     | Eq (a, b), sigma ->
         (if is_empty_sign (aval_sign a sigma) ||
@@ -6256,12 +6763,71 @@ let rec interval_lt
   a b = (if interval_less_true a b then Some true
           else (if interval_less_false a b then Some false else None));;
 
+let rec ivl_mod_bound
+  = function
+    Ivl (Fin l, Fin u) ->
+      (if less_int zero_inta l || less_int u zero_inta
+        then Ivl (Fin (minus_inta one_inta
+                        (max ord_int (abs_int l) (abs_int u))),
+                   Fin (minus_inta (max ord_int (abs_int l) (abs_int u))
+                         one_inta))
+        else ivl_top)
+    | Ivl (MinInf, va) -> ivl_top
+    | Ivl (PlusInf, va) -> ivl_top
+    | Ivl (v, MinInf) -> ivl_top
+    | Ivl (v, PlusInf) -> ivl_top;;
+
+let rec ivl_positive_part a = intersect_ivl a (Ivl (Fin one_inta, PlusInf));;
+
+let rec ivl_div_positive_core
+  uu uv = match uu, uv with
+    Ivl (Fin l, Fin u), Ivl (Fin c, Fin d) ->
+      (if less_int zero_inta c
+        then Ivl (Fin (min ord_int (c_div l c) (c_div l d)),
+                   Fin (max ord_int (c_div u c) (c_div u d)))
+        else ivl_top)
+    | Ivl (MinInf, va), uv -> ivl_top
+    | Ivl (PlusInf, va), uv -> ivl_top
+    | Ivl (v, MinInf), uv -> ivl_top
+    | Ivl (v, PlusInf), uv -> ivl_top
+    | uu, Ivl (MinInf, va) -> ivl_top
+    | uu, Ivl (PlusInf, va) -> ivl_top
+    | uu, Ivl (v, MinInf) -> ivl_top
+    | uu, Ivl (v, PlusInf) -> ivl_top;;
+
+let rec ivl_div_positive
+  a b = (if ivl_nonempty a && ivl_nonempty b
+          then normalize_ivl (ivl_div_positive_core a b) else bot_ivla);;
+
+let rec ivl_zero_part a = intersect_ivl a (Ivl (Fin zero_inta, Fin zero_inta));;
+
+let rec ivl_div
+  a b = (if ivl_nonempty a && ivl_nonempty b
+          then sup_ivla
+                 (sup_ivla (ivl_div_positive a (ivl_positive_part b))
+                   (ivl_div_positive
+                     (minus_ivl (Ivl (Fin zero_inta, Fin zero_inta)) a)
+                     (ivl_positive_part
+                       (minus_ivl (Ivl (Fin zero_inta, Fin zero_inta)) b))))
+                 (ivl_zero_part b)
+          else bot_ivla);;
+
+let rec ivl_mod
+  a b = (if ivl_nonempty a && ivl_nonempty b
+          then intersect_ivl (minus_ivl a (times_ivl (ivl_div a b) b))
+                 (intersect_ivl
+                   (sup_ivla a (Ivl (Fin zero_inta, Fin zero_inta)))
+                   (ivl_mod_bound b))
+          else bot_ivla);;
+
 let rec aval_ivl
   x0 sigma = match x0, sigma with N n, sigma -> Ivl (Fin n, Fin n)
     | V x, sigma -> sigma x
     | Plus (a, b), sigma -> plus_ivl (aval_ivl a sigma) (aval_ivl b sigma)
     | Minus (a, b), sigma -> minus_ivl (aval_ivl a sigma) (aval_ivl b sigma)
     | Times (a, b), sigma -> times_ivl (aval_ivl a sigma) (aval_ivl b sigma)
+    | Div (a, b), sigma -> ivl_div (aval_ivl a sigma) (aval_ivl b sigma)
+    | Mod (a, b), sigma -> ivl_mod (aval_ivl a sigma) (aval_ivl b sigma)
     | Less (a, b), sigma ->
         (if is_empty_ivl (aval_ivl a sigma) || is_empty_ivl (aval_ivl b sigma)
           then bot_ivla
@@ -6272,6 +6838,54 @@ let rec aval_ivl
                  else (if equal_option equal_bool
                             (interval_lt (aval_ivl a sigma) (aval_ivl b sigma))
                             (Some false)
+                        then Ivl (Fin zero_inta, Fin zero_inta)
+                        else Ivl (Fin zero_inta, Fin one_inta))))
+    | LessEq (a, b), sigma ->
+        (if is_empty_ivl (aval_ivl b sigma) || is_empty_ivl (aval_ivl a sigma)
+          then bot_ivla
+          else (if equal_option equal_bool
+                     (interval_lt (aval_ivl b sigma) (aval_ivl a sigma))
+                     (Some false)
+                 then Ivl (Fin one_inta, Fin one_inta)
+                 else (if equal_option equal_bool
+                            (interval_lt (aval_ivl b sigma) (aval_ivl a sigma))
+                            (Some true)
+                        then Ivl (Fin zero_inta, Fin zero_inta)
+                        else Ivl (Fin zero_inta, Fin one_inta))))
+    | Greater (a, b), sigma ->
+        (if is_empty_ivl (aval_ivl b sigma) || is_empty_ivl (aval_ivl a sigma)
+          then bot_ivla
+          else (if equal_option equal_bool
+                     (interval_lt (aval_ivl b sigma) (aval_ivl a sigma))
+                     (Some true)
+                 then Ivl (Fin one_inta, Fin one_inta)
+                 else (if equal_option equal_bool
+                            (interval_lt (aval_ivl b sigma) (aval_ivl a sigma))
+                            (Some false)
+                        then Ivl (Fin zero_inta, Fin zero_inta)
+                        else Ivl (Fin zero_inta, Fin one_inta))))
+    | GreaterEq (a, b), sigma ->
+        (if is_empty_ivl (aval_ivl a sigma) || is_empty_ivl (aval_ivl b sigma)
+          then bot_ivla
+          else (if equal_option equal_bool
+                     (interval_lt (aval_ivl a sigma) (aval_ivl b sigma))
+                     (Some false)
+                 then Ivl (Fin one_inta, Fin one_inta)
+                 else (if equal_option equal_bool
+                            (interval_lt (aval_ivl a sigma) (aval_ivl b sigma))
+                            (Some true)
+                        then Ivl (Fin zero_inta, Fin zero_inta)
+                        else Ivl (Fin zero_inta, Fin one_inta))))
+    | NotEq (a, b), sigma ->
+        (if is_empty_ivl (aval_ivl a sigma) || is_empty_ivl (aval_ivl b sigma)
+          then bot_ivla
+          else (if equal_option equal_bool
+                     (interval_eqb (aval_ivl a sigma) (aval_ivl b sigma))
+                     (Some false)
+                 then Ivl (Fin one_inta, Fin one_inta)
+                 else (if equal_option equal_bool
+                            (interval_eqb (aval_ivl a sigma) (aval_ivl b sigma))
+                            (Some true)
                         then Ivl (Fin zero_inta, Fin zero_inta)
                         else Ivl (Fin zero_inta, Fin one_inta))))
     | Eq (a, b), sigma ->
@@ -6341,12 +6955,21 @@ let rec interval_check_query
     | Or (b1, b2), d ->
         or_opt (interval_check_query b1 d) (interval_check_query b2 d)
     | Less (a, b), d -> interval_less (aval_ivl a d) (aval_ivl b d)
+    | LessEq (a, b), d ->
+        map_option not (interval_less (aval_ivl b d) (aval_ivl a d))
+    | Greater (a, b), d -> interval_less (aval_ivl b d) (aval_ivl a d)
+    | GreaterEq (a, b), d ->
+        map_option not (interval_less (aval_ivl a d) (aval_ivl b d))
     | Eq (a, b), d -> interval_eq (aval_ivl a d) (aval_ivl b d)
+    | NotEq (a, b), d ->
+        map_option not (interval_eq (aval_ivl a d) (aval_ivl b d))
     | N v, d -> interval_truthy_query (N v) d
     | V v, d -> interval_truthy_query (V v) d
     | Plus (v, va), d -> interval_truthy_query (Plus (v, va)) d
     | Minus (v, va), d -> interval_truthy_query (Minus (v, va)) d
-    | Times (v, va), d -> interval_truthy_query (Times (v, va)) d;;
+    | Times (v, va), d -> interval_truthy_query (Times (v, va)) d
+    | Div (v, va), d -> interval_truthy_query (Div (v, va)) d
+    | Mod (v, va), d -> interval_truthy_query (Mod (v, va)) d;;
 
 let rec interval_classify_check
   c d = (match interval_check_query c d with None -> Check_Unknown
@@ -7432,6 +8055,31 @@ let rec plus_int_dom_raw
 
 let rec plus_int_dom mode a b = refine mode (plus_int_dom_raw a b);;
 
+let rec congruence_exact_binop
+  f fallback a b =
+    (if is_empty_congruence a || is_empty_congruence b then bot_congruencea
+      else (match (congruence_singleton a, congruence_singleton b)
+             with (None, _) -> fallback a b | (Some _, None) -> fallback a b
+             | (Some x, Some y) -> congruence_of_int (f x y)));;
+
+let rec congruence_mod
+  x = congruence_exact_binop c_mod
+        (fun a b -> minus_congruence a (times_congruence top_congruencea b)) x;;
+
+let rec parity_mod
+  a b = (if equal_paritya a PBot || equal_paritya b PBot then PBot
+          else (if equal_paritya b PEven then a else PTop));;
+
+let rec mod_int_dom_raw
+  a b = int_congruence_update
+          (fun _ -> congruence_mod (int_congruence a) (int_congruence b))
+          (int_parity_update (fun _ -> parity_mod (int_parity a) (int_parity b))
+            (int_ivl_update (fun _ -> ivl_mod (int_ivl a) (int_ivl b))
+              (int_sign_update (fun _ -> sign_mod (int_sign a) (int_sign b))
+                (top_int_dom_exta int_dom_record_lattice_unit))));;
+
+let rec mod_int_dom mode a b = refine mode (mod_int_dom_raw a b);;
+
 let rec congruence_eqb
   a b = (match (congruence_singleton a, congruence_singleton b)
           with (None, _) -> None | (Some _, None) -> None
@@ -7462,7 +8110,37 @@ let rec int_dom_eqb
         (fun a b -> congruence_eqb (int_congruence a) (int_congruence b))]
       d1 d2;;
 
-let rec congruence_lt uu uv = None;;
+let rec congruence_div_fallback
+  a b = (if is_empty_congruence a || is_empty_congruence b then bot_congruencea
+          else (match congruence_singleton b with None -> top_congruencea
+                 | Some c ->
+                   (if equal_inta c zero_inta then congruence_of_int zero_inta
+                     else (if equal_inta c one_inta then a
+                            else (if equal_inta c (uminus_inta one_inta)
+                                   then minus_congruence
+  (congruence_of_int zero_inta) a
+                                   else top_congruencea)))));;
+
+let rec congruence_div
+  x = congruence_exact_binop c_div congruence_div_fallback x;;
+
+let rec parity_div
+  a b = (if equal_paritya a PBot || equal_paritya b PBot then PBot else PTop);;
+
+let rec div_int_dom_raw
+  a b = int_congruence_update
+          (fun _ -> congruence_div (int_congruence a) (int_congruence b))
+          (int_parity_update (fun _ -> parity_div (int_parity a) (int_parity b))
+            (int_ivl_update (fun _ -> ivl_div (int_ivl a) (int_ivl b))
+              (int_sign_update (fun _ -> sign_div (int_sign a) (int_sign b))
+                (top_int_dom_exta int_dom_record_lattice_unit))));;
+
+let rec div_int_dom mode a b = refine mode (div_int_dom_raw a b);;
+
+let rec congruence_lt
+  a b = (match (congruence_singleton a, congruence_singleton b)
+          with (None, _) -> None | (Some _, None) -> None
+          | (Some c1, Some c2) -> Some (less_int c1 c2));;
 
 let rec int_dom_lt
   d1 d2 =
@@ -7486,6 +8164,12 @@ let rec aval_int_dom
     | mode, Times (e1, e2), sigma ->
         times_int_dom mode (aval_int_dom mode e1 sigma)
           (aval_int_dom mode e2 sigma)
+    | mode, Div (e1, e2), sigma ->
+        div_int_dom mode (aval_int_dom mode e1 sigma)
+          (aval_int_dom mode e2 sigma)
+    | mode, Mod (e1, e2), sigma ->
+        mod_int_dom mode (aval_int_dom mode e1 sigma)
+          (aval_int_dom mode e2 sigma)
     | mode, Less (e1, e2), sigma ->
         (let a = aval_int_dom mode e1 sigma in
          let b = aval_int_dom mode e2 sigma in
@@ -7493,6 +8177,47 @@ let rec aval_int_dom
                 is_empty_int_dom_ext int_dom_record_lattice_unit b
             then bot_int_dom_exta int_dom_record_lattice_unit
             else int_dom_of_bool_option (int_dom_lt a b)))
+    | mode, LessEq (e1, e2), sigma ->
+        (let a = aval_int_dom mode e2 sigma in
+         let b = aval_int_dom mode e1 sigma in
+          (if is_empty_int_dom_ext int_dom_record_lattice_unit a ||
+                is_empty_int_dom_ext int_dom_record_lattice_unit b
+            then bot_int_dom_exta int_dom_record_lattice_unit
+            else (if equal_option equal_bool (int_dom_lt a b) (Some false)
+                   then int_dom_of_int one_inta
+                   else (if equal_option equal_bool (int_dom_lt a b) (Some true)
+                          then int_dom_of_int zero_inta
+                          else int_dom_bool_unknown))))
+    | mode, Greater (e1, e2), sigma ->
+        (let a = aval_int_dom mode e2 sigma in
+         let b = aval_int_dom mode e1 sigma in
+          (if is_empty_int_dom_ext int_dom_record_lattice_unit a ||
+                is_empty_int_dom_ext int_dom_record_lattice_unit b
+            then bot_int_dom_exta int_dom_record_lattice_unit
+            else int_dom_of_bool_option (int_dom_lt a b)))
+    | mode, GreaterEq (e1, e2), sigma ->
+        (let a = aval_int_dom mode e1 sigma in
+         let b = aval_int_dom mode e2 sigma in
+          (if is_empty_int_dom_ext int_dom_record_lattice_unit a ||
+                is_empty_int_dom_ext int_dom_record_lattice_unit b
+            then bot_int_dom_exta int_dom_record_lattice_unit
+            else (if equal_option equal_bool (int_dom_lt a b) (Some false)
+                   then int_dom_of_int one_inta
+                   else (if equal_option equal_bool (int_dom_lt a b) (Some true)
+                          then int_dom_of_int zero_inta
+                          else int_dom_bool_unknown))))
+    | mode, NotEq (e1, e2), sigma ->
+        (let a = aval_int_dom mode e1 sigma in
+         let b = aval_int_dom mode e2 sigma in
+          (if is_empty_int_dom_ext int_dom_record_lattice_unit a ||
+                is_empty_int_dom_ext int_dom_record_lattice_unit b
+            then bot_int_dom_exta int_dom_record_lattice_unit
+            else (if equal_option equal_bool (int_dom_eqb a b) (Some false)
+                   then int_dom_of_int one_inta
+                   else (if equal_option equal_bool (int_dom_eqb a b)
+                              (Some true)
+                          then int_dom_of_int zero_inta
+                          else int_dom_bool_unknown))))
     | mode, Eq (e1, e2), sigma ->
         (let a = aval_int_dom mode e1 sigma in
          let b = aval_int_dom mode e2 sigma in
@@ -7834,6 +8559,10 @@ let rec aval_congruence
         minus_congruence (aval_congruence e1 sigma) (aval_congruence e2 sigma)
     | Times (e1, e2), sigma ->
         times_congruence (aval_congruence e1 sigma) (aval_congruence e2 sigma)
+    | Div (e1, e2), sigma ->
+        congruence_div (aval_congruence e1 sigma) (aval_congruence e2 sigma)
+    | Mod (e1, e2), sigma ->
+        congruence_mod (aval_congruence e1 sigma) (aval_congruence e2 sigma)
     | Less (e1, e2), sigma ->
         (if is_empty_congruence (aval_congruence e1 sigma) ||
               is_empty_congruence (aval_congruence e2 sigma)
@@ -7847,6 +8576,70 @@ let rec aval_congruence
                             (congruence_lt (aval_congruence e1 sigma)
                               (aval_congruence e2 sigma))
                             (Some false)
+                        then congruence_of_int zero_inta
+                        else sup_congruencea (congruence_of_int zero_inta)
+                               (congruence_of_int one_inta))))
+    | LessEq (e1, e2), sigma ->
+        (if is_empty_congruence (aval_congruence e2 sigma) ||
+              is_empty_congruence (aval_congruence e1 sigma)
+          then bot_congruencea
+          else (if equal_option equal_bool
+                     (congruence_lt (aval_congruence e2 sigma)
+                       (aval_congruence e1 sigma))
+                     (Some false)
+                 then congruence_of_int one_inta
+                 else (if equal_option equal_bool
+                            (congruence_lt (aval_congruence e2 sigma)
+                              (aval_congruence e1 sigma))
+                            (Some true)
+                        then congruence_of_int zero_inta
+                        else sup_congruencea (congruence_of_int zero_inta)
+                               (congruence_of_int one_inta))))
+    | Greater (e1, e2), sigma ->
+        (if is_empty_congruence (aval_congruence e2 sigma) ||
+              is_empty_congruence (aval_congruence e1 sigma)
+          then bot_congruencea
+          else (if equal_option equal_bool
+                     (congruence_lt (aval_congruence e2 sigma)
+                       (aval_congruence e1 sigma))
+                     (Some true)
+                 then congruence_of_int one_inta
+                 else (if equal_option equal_bool
+                            (congruence_lt (aval_congruence e2 sigma)
+                              (aval_congruence e1 sigma))
+                            (Some false)
+                        then congruence_of_int zero_inta
+                        else sup_congruencea (congruence_of_int zero_inta)
+                               (congruence_of_int one_inta))))
+    | GreaterEq (e1, e2), sigma ->
+        (if is_empty_congruence (aval_congruence e1 sigma) ||
+              is_empty_congruence (aval_congruence e2 sigma)
+          then bot_congruencea
+          else (if equal_option equal_bool
+                     (congruence_lt (aval_congruence e1 sigma)
+                       (aval_congruence e2 sigma))
+                     (Some false)
+                 then congruence_of_int one_inta
+                 else (if equal_option equal_bool
+                            (congruence_lt (aval_congruence e1 sigma)
+                              (aval_congruence e2 sigma))
+                            (Some true)
+                        then congruence_of_int zero_inta
+                        else sup_congruencea (congruence_of_int zero_inta)
+                               (congruence_of_int one_inta))))
+    | NotEq (e1, e2), sigma ->
+        (if is_empty_congruence (aval_congruence e1 sigma) ||
+              is_empty_congruence (aval_congruence e2 sigma)
+          then bot_congruencea
+          else (if equal_option equal_bool
+                     (congruence_eqb (aval_congruence e1 sigma)
+                       (aval_congruence e2 sigma))
+                     (Some false)
+                 then congruence_of_int one_inta
+                 else (if equal_option equal_bool
+                            (congruence_eqb (aval_congruence e1 sigma)
+                              (aval_congruence e2 sigma))
+                            (Some true)
                         then congruence_of_int zero_inta
                         else sup_congruencea (congruence_of_int zero_inta)
                                (congruence_of_int one_inta))))
@@ -8611,6 +9404,10 @@ let rec aval_parity
         minus_parity (aval_parity a sigma) (aval_parity b sigma)
     | Times (a, b), sigma ->
         times_parity (aval_parity a sigma) (aval_parity b sigma)
+    | Div (a, b), sigma ->
+        parity_div (aval_parity a sigma) (aval_parity b sigma)
+    | Mod (a, b), sigma ->
+        parity_mod (aval_parity a sigma) (aval_parity b sigma)
     | Less (a, b), sigma ->
         (if is_empty_parity (aval_parity a sigma) ||
               is_empty_parity (aval_parity b sigma)
@@ -8623,6 +9420,58 @@ let rec aval_parity
                             (parity_lt (aval_parity a sigma)
                               (aval_parity b sigma))
                             (Some false)
+                        then PEven else PTop)))
+    | LessEq (a, b), sigma ->
+        (if is_empty_parity (aval_parity b sigma) ||
+              is_empty_parity (aval_parity a sigma)
+          then bot_paritya
+          else (if equal_option equal_bool
+                     (parity_lt (aval_parity b sigma) (aval_parity a sigma))
+                     (Some false)
+                 then POdd
+                 else (if equal_option equal_bool
+                            (parity_lt (aval_parity b sigma)
+                              (aval_parity a sigma))
+                            (Some true)
+                        then PEven else PTop)))
+    | Greater (a, b), sigma ->
+        (if is_empty_parity (aval_parity b sigma) ||
+              is_empty_parity (aval_parity a sigma)
+          then bot_paritya
+          else (if equal_option equal_bool
+                     (parity_lt (aval_parity b sigma) (aval_parity a sigma))
+                     (Some true)
+                 then POdd
+                 else (if equal_option equal_bool
+                            (parity_lt (aval_parity b sigma)
+                              (aval_parity a sigma))
+                            (Some false)
+                        then PEven else PTop)))
+    | GreaterEq (a, b), sigma ->
+        (if is_empty_parity (aval_parity a sigma) ||
+              is_empty_parity (aval_parity b sigma)
+          then bot_paritya
+          else (if equal_option equal_bool
+                     (parity_lt (aval_parity a sigma) (aval_parity b sigma))
+                     (Some false)
+                 then POdd
+                 else (if equal_option equal_bool
+                            (parity_lt (aval_parity a sigma)
+                              (aval_parity b sigma))
+                            (Some true)
+                        then PEven else PTop)))
+    | NotEq (a, b), sigma ->
+        (if is_empty_parity (aval_parity a sigma) ||
+              is_empty_parity (aval_parity b sigma)
+          then bot_paritya
+          else (if equal_option equal_bool
+                     (parity_eqb (aval_parity a sigma) (aval_parity b sigma))
+                     (Some false)
+                 then POdd
+                 else (if equal_option equal_bool
+                            (parity_eqb (aval_parity a sigma)
+                              (aval_parity b sigma))
+                            (Some true)
                         then PEven else PTop)))
     | Eq (a, b), sigma ->
         (if is_empty_parity (aval_parity a sigma) ||
@@ -9241,12 +10090,25 @@ let rec congruence_check_query
         or_opt (congruence_check_query b1 d) (congruence_check_query b2 d)
     | Less (a, b), d ->
         congruence_lt (aval_congruence a d) (aval_congruence b d)
+    | LessEq (a, b), d ->
+        map_option not
+          (congruence_lt (aval_congruence b d) (aval_congruence a d))
+    | Greater (a, b), d ->
+        congruence_lt (aval_congruence b d) (aval_congruence a d)
+    | GreaterEq (a, b), d ->
+        map_option not
+          (congruence_lt (aval_congruence a d) (aval_congruence b d))
     | Eq (a, b), d -> congruence_eqb (aval_congruence a d) (aval_congruence b d)
+    | NotEq (a, b), d ->
+        map_option not
+          (congruence_eqb (aval_congruence a d) (aval_congruence b d))
     | N v, d -> congruence_truthy_query (N v) d
     | V v, d -> congruence_truthy_query (V v) d
     | Plus (v, va), d -> congruence_truthy_query (Plus (v, va)) d
     | Minus (v, va), d -> congruence_truthy_query (Minus (v, va)) d
-    | Times (v, va), d -> congruence_truthy_query (Times (v, va)) d;;
+    | Times (v, va), d -> congruence_truthy_query (Times (v, va)) d
+    | Div (v, va), d -> congruence_truthy_query (Div (v, va)) d
+    | Mod (v, va), d -> congruence_truthy_query (Mod (v, va)) d;;
 
 let rec congruence_classify_check
   c d = (match congruence_check_query c d with None -> Check_Unknown
@@ -9849,12 +10711,21 @@ let rec parity_check_query
     | Or (b1, b2), d ->
         or_opt (parity_check_query b1 d) (parity_check_query b2 d)
     | Less (a, b), d -> parity_less (aval_parity a d) (aval_parity b d)
+    | LessEq (a, b), d ->
+        map_option not (parity_less (aval_parity b d) (aval_parity a d))
+    | Greater (a, b), d -> parity_less (aval_parity b d) (aval_parity a d)
+    | GreaterEq (a, b), d ->
+        map_option not (parity_less (aval_parity a d) (aval_parity b d))
     | Eq (a, b), d -> parity_eq (aval_parity a d) (aval_parity b d)
+    | NotEq (a, b), d ->
+        map_option not (parity_eq (aval_parity a d) (aval_parity b d))
     | N v, d -> parity_truthy_query (N v) d
     | V v, d -> parity_truthy_query (V v) d
     | Plus (v, va), d -> parity_truthy_query (Plus (v, va)) d
     | Minus (v, va), d -> parity_truthy_query (Minus (v, va)) d
-    | Times (v, va), d -> parity_truthy_query (Times (v, va)) d;;
+    | Times (v, va), d -> parity_truthy_query (Times (v, va)) d
+    | Div (v, va), d -> parity_truthy_query (Div (v, va)) d
+    | Mod (v, va), d -> parity_truthy_query (Mod (v, va)) d;;
 
 let rec parity_classify_check
   c d = (match parity_check_query c d with None -> Check_Unknown
@@ -9965,46 +10836,79 @@ let rec analyse_int_join_result
 
 let char_0x7C : char = Chr (Z.of_int 124);;
 
+let char_0x3E : char = Chr (Z.of_int 62);;
+
 let char_0x3C : char = Chr (Z.of_int 60);;
+
+let char_0x2F : char = Chr (Z.of_int 47);;
 
 let char_0x2A : char = Chr (Z.of_int 42);;
 
 let char_0x26 : char = Chr (Z.of_int 38);;
 
+let char_0x25 : char = Chr (Z.of_int 37);;
+
 let char_0x21 : char = Chr (Z.of_int 33);;
 
 let rec exp_prio = function N uu -> nat_of_integer (Z.of_int 1000)
                    | V uv -> nat_of_integer (Z.of_int 1000)
-                   | Not uw -> nat_of_integer (Z.of_int 80)
-                   | Times (ux, uy) -> nat_of_integer (Z.of_int 70)
-                   | Plus (uz, va) -> nat_of_integer (Z.of_int 60)
-                   | Minus (vb, vc) -> nat_of_integer (Z.of_int 60)
-                   | Less (vd, ve) -> nat_of_integer (Z.of_int 50)
-                   | Eq (vf, vg) -> nat_of_integer (Z.of_int 50)
-                   | And (vh, vi) -> nat_of_integer (Z.of_int 40)
-                   | Or (vj, vk) -> nat_of_integer (Z.of_int 30);;
+                   | Not uw -> nat_of_integer (Z.of_int 90)
+                   | Times (ux, uy) -> nat_of_integer (Z.of_int 80)
+                   | Div (uz, va) -> nat_of_integer (Z.of_int 80)
+                   | Mod (vb, vc) -> nat_of_integer (Z.of_int 80)
+                   | Plus (vd, ve) -> nat_of_integer (Z.of_int 70)
+                   | Minus (vf, vg) -> nat_of_integer (Z.of_int 70)
+                   | Less (vh, vi) -> nat_of_integer (Z.of_int 60)
+                   | LessEq (vj, vk) -> nat_of_integer (Z.of_int 60)
+                   | Greater (vl, vm) -> nat_of_integer (Z.of_int 60)
+                   | GreaterEq (vn, vo) -> nat_of_integer (Z.of_int 60)
+                   | NotEq (vp, vq) -> nat_of_integer (Z.of_int 50)
+                   | Eq (vr, vs) -> nat_of_integer (Z.of_int 50)
+                   | And (vt, vu) -> nat_of_integer (Z.of_int 40)
+                   | Or (vv, vw) -> nat_of_integer (Z.of_int 30);;
 
 let rec string_of_exp
   min_prio e =
     (let body =
        (match e with N a -> string_of_int a | V a -> explode a
          | Plus (a, b) ->
-           string_of_exp (nat_of_integer (Z.of_int 60)) a @
-             [char_0x2B] @ string_of_exp (nat_of_integer (Z.of_int 61)) b
-         | Minus (a, b) ->
-           string_of_exp (nat_of_integer (Z.of_int 60)) a @
-             [char_0x2D] @ string_of_exp (nat_of_integer (Z.of_int 61)) b
-         | Times (a, b) ->
            string_of_exp (nat_of_integer (Z.of_int 70)) a @
-             [char_0x2A] @ string_of_exp (nat_of_integer (Z.of_int 71)) b
+             [char_0x2B] @ string_of_exp (nat_of_integer (Z.of_int 71)) b
+         | Minus (a, b) ->
+           string_of_exp (nat_of_integer (Z.of_int 70)) a @
+             [char_0x2D] @ string_of_exp (nat_of_integer (Z.of_int 71)) b
+         | Times (a, b) ->
+           string_of_exp (nat_of_integer (Z.of_int 80)) a @
+             [char_0x2A] @ string_of_exp (nat_of_integer (Z.of_int 81)) b
+         | Div (a, b) ->
+           string_of_exp (nat_of_integer (Z.of_int 80)) a @
+             [char_0x2F] @ string_of_exp (nat_of_integer (Z.of_int 81)) b
+         | Mod (a, b) ->
+           string_of_exp (nat_of_integer (Z.of_int 80)) a @
+             [char_0x25] @ string_of_exp (nat_of_integer (Z.of_int 81)) b
          | Less (a, b) ->
+           string_of_exp (nat_of_integer (Z.of_int 61)) a @
+             [char_0x3C] @ string_of_exp (nat_of_integer (Z.of_int 61)) b
+         | LessEq (a, b) ->
+           string_of_exp (nat_of_integer (Z.of_int 61)) a @
+             [char_0x3C; char_0x3D] @
+               string_of_exp (nat_of_integer (Z.of_int 61)) b
+         | Greater (a, b) ->
+           string_of_exp (nat_of_integer (Z.of_int 61)) a @
+             [char_0x3E] @ string_of_exp (nat_of_integer (Z.of_int 61)) b
+         | GreaterEq (a, b) ->
+           string_of_exp (nat_of_integer (Z.of_int 61)) a @
+             [char_0x3E; char_0x3D] @
+               string_of_exp (nat_of_integer (Z.of_int 61)) b
+         | NotEq (a, b) ->
            string_of_exp (nat_of_integer (Z.of_int 51)) a @
-             [char_0x3C] @ string_of_exp (nat_of_integer (Z.of_int 51)) b
+             [char_0x21; char_0x3D] @
+               string_of_exp (nat_of_integer (Z.of_int 51)) b
          | Eq (a, b) ->
            string_of_exp (nat_of_integer (Z.of_int 51)) a @
              [char_0x3D; char_0x3D] @
                string_of_exp (nat_of_integer (Z.of_int 51)) b
-         | Not a -> [char_0x21] @ string_of_exp (nat_of_integer (Z.of_int 80)) a
+         | Not a -> [char_0x21] @ string_of_exp (nat_of_integer (Z.of_int 90)) a
          | And (a, b) ->
            string_of_exp (nat_of_integer (Z.of_int 40)) a @
              [char_0x26; char_0x26] @
@@ -10221,8 +11125,6 @@ let char_0x62 : char = Chr (Z.of_int 98);;
 
 let char_0x5F : char = Chr (Z.of_int 95);;
 
-let char_0x3E : char = Chr (Z.of_int 62);;
-
 let char_0x3B : char = Chr (Z.of_int 59);;
 
 let source_nl : char list = [char_0x0A];;
@@ -10270,7 +11172,7 @@ let rec string_of_com
                   [char_0x28] @
                     join_source [char_0x2C; char_0x20]
                       (map (string_of_exp zero_nat) es) @
-                      [char_0x29])
+                      [char_0x29; char_0x3B])
     | Return (Some e) ->
         [char_0x72; char_0x65; char_0x74; char_0x75; char_0x72; char_0x6E;
           char_0x20] @
@@ -10403,8 +11305,6 @@ let rec ctx_key_of
       (maps (fun x -> string_of_abstract_value (into x) @ [char_0x20]) ctx);;
 
 let char_0x47 : char = Chr (Z.of_int 71);;
-
-let char_0x2F : char = Chr (Z.of_int 47);;
 
 let rec entry_state_ctx_graph_config _A
   enter into p =
@@ -11397,12 +12297,21 @@ let rec sign_check_query
     | And (b1, b2), d -> and_opt (sign_check_query b1 d) (sign_check_query b2 d)
     | Or (b1, b2), d -> or_opt (sign_check_query b1 d) (sign_check_query b2 d)
     | Less (a, b), d -> sign_less (aval_sign a d) (aval_sign b d)
+    | LessEq (a, b), d ->
+        map_option not (sign_less (aval_sign b d) (aval_sign a d))
+    | Greater (a, b), d -> sign_less (aval_sign b d) (aval_sign a d)
+    | GreaterEq (a, b), d ->
+        map_option not (sign_less (aval_sign a d) (aval_sign b d))
     | Eq (a, b), d -> sign_eq (aval_sign a d) (aval_sign b d)
+    | NotEq (a, b), d ->
+        map_option not (sign_eq (aval_sign a d) (aval_sign b d))
     | N v, d -> sign_truthy_query (N v) d
     | V v, d -> sign_truthy_query (V v) d
     | Plus (v, va), d -> sign_truthy_query (Plus (v, va)) d
     | Minus (v, va), d -> sign_truthy_query (Minus (v, va)) d
-    | Times (v, va), d -> sign_truthy_query (Times (v, va)) d;;
+    | Times (v, va), d -> sign_truthy_query (Times (v, va)) d
+    | Div (v, va), d -> sign_truthy_query (Div (v, va)) d
+    | Mod (v, va), d -> sign_truthy_query (Mod (v, va)) d;;
 
 let rec sign_classify_check
   c d = (match sign_check_query c d with None -> Check_Unknown
@@ -11468,14 +12377,31 @@ let rec int_check_query
     | Less (a, b), d ->
         int_less (aval_int_dom Refine_Fixpoint a d)
           (aval_int_dom Refine_Fixpoint b d)
+    | LessEq (a, b), d ->
+        map_option not
+          (int_less (aval_int_dom Refine_Fixpoint b d)
+            (aval_int_dom Refine_Fixpoint a d))
+    | Greater (a, b), d ->
+        int_less (aval_int_dom Refine_Fixpoint b d)
+          (aval_int_dom Refine_Fixpoint a d)
+    | GreaterEq (a, b), d ->
+        map_option not
+          (int_less (aval_int_dom Refine_Fixpoint a d)
+            (aval_int_dom Refine_Fixpoint b d))
     | Eq (a, b), d ->
         int_eq (aval_int_dom Refine_Fixpoint a d)
           (aval_int_dom Refine_Fixpoint b d)
+    | NotEq (a, b), d ->
+        map_option not
+          (int_eq (aval_int_dom Refine_Fixpoint a d)
+            (aval_int_dom Refine_Fixpoint b d))
     | N v, d -> int_truthy_query (N v) d
     | V v, d -> int_truthy_query (V v) d
     | Plus (v, va), d -> int_truthy_query (Plus (v, va)) d
     | Minus (v, va), d -> int_truthy_query (Minus (v, va)) d
-    | Times (v, va), d -> int_truthy_query (Times (v, va)) d;;
+    | Times (v, va), d -> int_truthy_query (Times (v, va)) d
+    | Div (v, va), d -> int_truthy_query (Div (v, va)) d
+    | Mod (v, va), d -> int_truthy_query (Mod (v, va)) d;;
 
 let rec int_classify_check
   c d = (match int_check_query c d with None -> Check_Unknown

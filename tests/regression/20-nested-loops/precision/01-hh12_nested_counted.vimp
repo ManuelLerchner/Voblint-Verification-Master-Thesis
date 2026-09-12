@@ -17,11 +17,11 @@ fun main() {
     j = 0;
     while (j < 10) {
       j = j + 1;
-      __voblint_check(!(10 < j)); // PROVED
+      __voblint_check(j <= 10); // PROVED
     }
     __voblint_check(j == 10); // PROVED
     i = i + 1;
-    __voblint_check(!(10 < i)); // PROVED
+    __voblint_check(i <= 10); // PROVED
   }
   __voblint_check(i == 10); // PROVED
 }

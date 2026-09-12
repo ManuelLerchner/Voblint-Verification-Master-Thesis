@@ -31,9 +31,9 @@ fun main() {
     c = e + d;
   }
   __voblint_check(c == 4); // UNKNOWN
-  __voblint_check(!(d == 1)); // PROVED
-  __voblint_check(!(d == 2)); // PROVED
-  __voblint_check(!(d == 3)); // PROVED
+  __voblint_check(d != 1); // PROVED
+  __voblint_check(d != 2); // PROVED
+  __voblint_check(d != 3); // PROVED
   __voblint_check(d == 12); // PROVED
   __voblint_check(e == -8); // UNKNOWN
 }

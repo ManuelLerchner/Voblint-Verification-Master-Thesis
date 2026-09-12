@@ -12,7 +12,7 @@
 // The post-loop j == 17 is UNKNOWN by a non-relational join, not by
 // widening: the outer head joins the entry state j = 0 with the back-edge
 // state j = 17, giving j = [0,17] (measured), and the outer exit guard
-// !(i < 42) refines only i. Recovering j == 17 there needs the relation
+// (i >= 42) refines only i. Recovering j == 17 there needs the relation
 // "i > 0 implies j = 17", which no interval can carry.
 // Solver-invariant across join, per-origin, warrow, warrow-per-origin.
 fun main() {
@@ -25,8 +25,8 @@ fun main() {
       j = j + 1;
     }
     __voblint_check(j == 17); // PROVED
-    __voblint_check(!(i < 0)); // PROVED
-    __voblint_check(!(41 < i)); // PROVED
+    __voblint_check(i >= 0); // PROVED
+    __voblint_check(i <= 41); // PROVED
     i = i + 1;
   }
   __voblint_check(i == 42); // PROVED

@@ -40,7 +40,7 @@ fun p(i) { r = l(i - 1); return r; }
 fun s(i) { r = p(i - 1); return r; }
 fun r(i) { t = q(i - 1); return t; }
 fun o(i) {
-  if (!(0 < i)) { t = r(4); return t; } else { t = o(i - 1); return t; }
+  if (i <= 0) { t = r(4); return t; } else { t = o(i - 1); return t; }
 }
 fun q(i) {
   if (i == 4) { t = o(3); return t; }

@@ -46,19 +46,21 @@ nonterminal imp2_ids
 syntax
   "_exp_var" :: "id_position => imp2_exp" ("_" 1000)
   "_exp_num" :: "num_const => imp2_exp" ("_" 1000)
-  "_exp_uminus" :: "imp2_exp => imp2_exp" ("- _" [80] 80)
-  "_exp_plus" :: "imp2_exp => imp2_exp => imp2_exp" ("_ + _" [60, 61] 60)
-  "_exp_minus" :: "imp2_exp => imp2_exp => imp2_exp" ("_ - _" [60, 61] 60)
-  "_exp_times" :: "imp2_exp => imp2_exp => imp2_exp" ("_ * _" [70, 71] 70)
+  "_exp_uminus" :: "imp2_exp => imp2_exp" ("- _" [90] 90)
+  "_exp_plus" :: "imp2_exp => imp2_exp => imp2_exp" ("_ + _" [70, 71] 70)
+  "_exp_minus" :: "imp2_exp => imp2_exp => imp2_exp" ("_ - _" [70, 71] 70)
+  "_exp_times" :: "imp2_exp => imp2_exp => imp2_exp" ("_ * _" [80, 81] 80)
+  "_exp_div" :: "imp2_exp => imp2_exp => imp2_exp" ("_ '/ _" [80, 81] 80)
+  "_exp_mod" :: "imp2_exp => imp2_exp => imp2_exp" ("_ % _" [80, 81] 80)
   "_exp_true" :: imp2_exp ("true" 1000)
   "_exp_false" :: imp2_exp ("false" 1000)
-  "_exp_less" :: "imp2_exp => imp2_exp => imp2_exp" ("_ < _" [51, 51] 50)
-  "_exp_less_eq" :: "imp2_exp => imp2_exp => imp2_exp" ("_ <= _" [51, 51] 50)
-  "_exp_greater" :: "imp2_exp => imp2_exp => imp2_exp" ("_ > _" [51, 51] 50)
-  "_exp_greater_eq" :: "imp2_exp => imp2_exp => imp2_exp" ("_ >= _" [51, 51] 50)
+  "_exp_less" :: "imp2_exp => imp2_exp => imp2_exp" ("_ < _" [61, 61] 60)
+  "_exp_less_eq" :: "imp2_exp => imp2_exp => imp2_exp" ("_ <= _" [61, 61] 60)
+  "_exp_greater" :: "imp2_exp => imp2_exp => imp2_exp" ("_ > _" [61, 61] 60)
+  "_exp_greater_eq" :: "imp2_exp => imp2_exp => imp2_exp" ("_ >= _" [61, 61] 60)
   "_exp_eq" :: "imp2_exp => imp2_exp => imp2_exp" ("_ == _" [51, 51] 50)
   "_exp_not_eq" :: "imp2_exp => imp2_exp => imp2_exp" ("_ != _" [51, 51] 50)
-  "_exp_not" :: "imp2_exp => imp2_exp" ("! _" [80] 80)
+  "_exp_not" :: "imp2_exp => imp2_exp" ("! _" [90] 90)
   "_exp_and" :: "imp2_exp => imp2_exp => imp2_exp" ("_ && _" [40, 41] 40)
   "_exp_or" :: "imp2_exp => imp2_exp => imp2_exp" ("_ || _" [30, 31] 30)
   "_exp_paren" :: "imp2_exp => imp2_exp" ("'( _ ')" [0] 1000)
@@ -97,6 +99,8 @@ struct
   val c_Plus   = "VIMP_Syntax.exp.Plus"
   val c_Minus  = "VIMP_Syntax.exp.Minus"
   val c_Times  = "VIMP_Syntax.exp.Times"
+  val c_Div = "VIMP_Syntax.exp.Div"
+  val c_Mod = "VIMP_Syntax.exp.Mod"
 
   val c_Less   = "VIMP_Syntax.exp.Less"
   val c_LessEq = "VIMP_Syntax.exp.LessEq"
@@ -184,6 +188,8 @@ struct
          | (Const ("_exp_plus", _), [a0, a2]) => K c_Plus $ (exp_tr ctxt a0) $ (exp_tr ctxt a2)
          | (Const ("_exp_minus", _), [a0, a2]) => K c_Minus $ (exp_tr ctxt a0) $ (exp_tr ctxt a2)
          | (Const ("_exp_times", _), [a0, a2]) => K c_Times $ (exp_tr ctxt a0) $ (exp_tr ctxt a2)
+         | (Const ("_exp_div", _), [a0, a2]) => K c_Div $ (exp_tr ctxt a0) $ (exp_tr ctxt a2)
+         | (Const ("_exp_mod", _), [a0, a2]) => K c_Mod $ (exp_tr ctxt a0) $ (exp_tr ctxt a2)
          | (Const ("_exp_true", _), []) => K c_N $ (HOLogic.mk_number HOLogic.intT 1)
          | (Const ("_exp_false", _), []) => K c_N $ (HOLogic.mk_number HOLogic.intT 0)
          | (Const ("_exp_less", _), [a0, a2]) => K c_Less $ (exp_tr ctxt a0) $ (exp_tr ctxt a2)

@@ -16,11 +16,11 @@
 fun main() {
   v = 1;
   while (v < 51) {
-    __voblint_check(!(v < 1)); // PROVED
+    __voblint_check(v >= 1); // PROVED
     v = v + 2;
-    __voblint_check(!(52 < v)); // PROVED
+    __voblint_check(v <= 52); // PROVED
   }
-  __voblint_check(!(v < 51)); // PROVED
-  __voblint_check(!(52 < v)); // PROVED
+  __voblint_check(v >= 51); // PROVED
+  __voblint_check(v <= 52); // PROVED
   __voblint_check(v == 51); // PROVED
 }

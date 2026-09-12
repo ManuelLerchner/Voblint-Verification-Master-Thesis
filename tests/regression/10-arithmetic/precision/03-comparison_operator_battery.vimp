@@ -1,8 +1,7 @@
 // PARAM: --analysis interval
 // Adapted from Goblint tests/regression/31-ikind-aware-ints/16-enums-compare.c.
-// x and y are each 0 or 1 by a nondet branch, so x = [0,1] exactly. Every C
-// comparison operator is written with <, == and !: x <= c is !(c < x),
-// x > c is c < x, x >= c is !(x < c), x != c is !(x == c). Thresholds walk
+// x and y are each 0 or 1 by a nondet branch, so x = [0,1] exactly. All six
+// comparison operators use their direct VIMP syntax. Thresholds walk
 // across the interval so each operator is exercised at PROVED, UNKNOWN and
 // REFUTED (Goblint: bare, UNKNOWN!, FAIL).
 //
@@ -29,27 +28,27 @@ fun main() {
   __voblint_check(x < 2); // PROVED
   __voblint_check(x < 1); // UNKNOWN
   __voblint_check(x < 0); // REFUTED
-  __voblint_check(!(2 < x)); // PROVED
-  __voblint_check(!(1 < x)); // PROVED
-  __voblint_check(!(0 < x)); // UNKNOWN
-  __voblint_check(!(-1 < x)); // REFUTED
-  __voblint_check(-1 < x); // PROVED
-  __voblint_check(0 < x); // UNKNOWN
-  __voblint_check(1 < x); // REFUTED
-  __voblint_check(!(x < -1)); // PROVED
-  __voblint_check(!(x < 0)); // PROVED
-  __voblint_check(!(x < 1)); // UNKNOWN
-  __voblint_check(!(x < 2)); // REFUTED
+  __voblint_check(x <= 2); // PROVED
+  __voblint_check(x <= 1); // PROVED
+  __voblint_check(x <= 0); // UNKNOWN
+  __voblint_check(x <= -1); // REFUTED
+  __voblint_check(x > -1); // PROVED
+  __voblint_check(x > 0); // UNKNOWN
+  __voblint_check(x > 1); // REFUTED
+  __voblint_check(x >= -1); // PROVED
+  __voblint_check(x >= 0); // PROVED
+  __voblint_check(x >= 1); // UNKNOWN
+  __voblint_check(x >= 2); // REFUTED
   __voblint_check(x == y); // UNKNOWN
   __voblint_check(x == 1); // UNKNOWN
   __voblint_check(x == 2); // REFUTED
-  __voblint_check(!(x == y)); // UNKNOWN
-  __voblint_check(!(x == 1)); // UNKNOWN
-  __voblint_check(!(x == 2)); // PROVED
+  __voblint_check(x != y); // UNKNOWN
+  __voblint_check(x != 1); // UNKNOWN
+  __voblint_check(x != 2); // PROVED
   z = __voblint_nondet_int();
   y = 3;
   if (z == 3) {
     __voblint_check(y == z); // PROVED
-    __voblint_check(!(y == z)); // REFUTED
+    __voblint_check(y != z); // REFUTED
   }
 }

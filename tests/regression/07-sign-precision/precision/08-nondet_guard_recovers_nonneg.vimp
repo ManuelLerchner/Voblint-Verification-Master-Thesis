@@ -15,5 +15,5 @@ fun main() {
   } else {
     y = 0 - x;
   }
-  __voblint_check(!(y < 0)); // PROVED
+  __voblint_check(y >= 0); // PROVED
 }

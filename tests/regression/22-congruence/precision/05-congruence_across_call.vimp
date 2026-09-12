@@ -15,7 +15,7 @@ fun main() {
   if (n == 4) {
     a = triple(n);
     __voblint_check(a == 12); // PROVED
-    __voblint_check(!(a == 11)); // PROVED
+    __voblint_check(a != 11); // PROVED
   } else {
     __voblint_check(true); // PROVED
   }

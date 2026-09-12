@@ -29,7 +29,7 @@ grew a dependency on `abs_state`, this session would stop building.
 ## Worked example
 
 `Example_Relational_DG_Demo` (Examples/Relational) compiles
-`if (x < y) { z := 1 } else { z := 0 }`, runs it through `compiled_routed_eqs_for`
+`if (x < y) { z = 1; } else { z = 0; }`, runs it through `compiled_routed_eqs_for`
 at the unit route and the
 vendored solver over this carrier, and compares the computed result against
 Interval's on the identical program. It is an execution witness, not a

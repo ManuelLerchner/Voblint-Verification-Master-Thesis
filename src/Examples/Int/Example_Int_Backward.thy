@@ -126,5 +126,29 @@ lemma bfilter_int_dom_never_congruence_unused:
    int_dom_sipc STop (Ivl (Fin 0) (Fin 10)) PTop (mk_congruence 1 4)"
   by eval
 
+lemma int_direct_comparisons_all_modes:
+  "map (\<lambda>mode. map (\<lambda>c. aval_int_dom mode (c (V (STR ''x'')) (N 0))
+      (\<lambda>_. int_dom_of_int (-1))) [LessEq, Greater, GreaterEq, NotEq])
+    [Refine_Never, Refine_Once, Refine_Fixpoint] =
+   replicate 3 [int_dom_of_int 1, int_dom_of_int 0,
+                int_dom_of_int 0, int_dom_of_int 1]"
+  by eval
+
+lemma int_false_disequality_refines:
+  "bfilter_int_dom_once (NotEq (Plus (V (STR ''x'')) (N 1)) (N 3))
+    False test_env_top (STR ''x'') =
+   int_dom_sipc SPos (Ivl (Fin 2) (Fin 2)) PEven (congruence_of_int 2)"
+  by eval
+
+
+lemma int_division_remainder_modes:
+  "map (\<lambda>mode. aval_int_dom mode (Div (N (-7)) (N 3)) (\<lambda>_. top))
+      [Refine_Never, Refine_Once, Refine_Fixpoint] =
+    [div_int_dom Refine_Never (int_dom_of_int (-7)) (int_dom_of_int 3),
+     int_dom_of_int (-2), int_dom_of_int (-2)]"
+  "map (\<lambda>mode. aval_int_dom mode (Mod (N (-7)) (N 3)) (\<lambda>_. top))
+      [Refine_Once, Refine_Fixpoint] = [int_dom_of_int (-1), int_dom_of_int (-1)]"
+  by eval+
+
 end
 
