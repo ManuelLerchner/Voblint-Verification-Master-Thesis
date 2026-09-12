@@ -1,6 +1,8 @@
 """The print inventory must neither omit helpers nor duplicate nested sessions."""
 
 import re
+import shutil
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -9,6 +11,7 @@ from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 import gen_pdf_session
+import build_readme_pdf
 
 
 class PdfInventoryTests(unittest.TestCase):
@@ -80,6 +83,7 @@ class PdfInventoryTests(unittest.TestCase):
             full_root.split('  document_theories')[0])
         self.assertNotIn("document_tags", main_root)
         self.assertIn('document_variants = "document=+proof,+ML,+invisible"', main_root)
+        self.assertIn('    "readme.pdf"', main_root)
         self.assertIn('"Voblint_Examples_Sign.Example_Sign"', main_root)
         main_contents = (main / "document/contents.tex").read_text()
         full_contents = (full / "document/contents.tex").read_text()
@@ -106,6 +110,61 @@ class PdfInventoryTests(unittest.TestCase):
     def test_missing_certificate_is_reported(self):
         with self.assertRaisesRegex(ValueError, "certificate appendix"):
             gen_pdf_session.presentation(gen_pdf_session.inventory())
+
+
+class ReadmeBuildTests(unittest.TestCase):
+    def test_failed_render_preserves_previous_pdf(self):
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / "readme.pdf"
+            output.write_bytes(b"previous PDF")
+            with patch.object(shutil, "which", return_value="tool"), \
+                 patch.object(subprocess, "check_output", side_effect=["/isabelle", "--syntax-highlighting"]), \
+                 patch.object(subprocess, "run", side_effect=subprocess.CalledProcessError(3, "pandoc")) as run:
+                with self.assertRaises(subprocess.CalledProcessError):
+                    build_readme_pdf.build(output)
+            self.assertEqual(output.read_bytes(), b"previous PDF")
+
+
+@unittest.skipUnless(shutil.which("pandoc"), "Pandoc is required for README conversion")
+class ReadmeConversionTests(unittest.TestCase):
+    def test_github_content_survives_print_conversion(self):
+        source = '''<img src="https://github.com/user-attachments/assets/banner" alt="Banner">
+
+# Guide
+
+[Source](src/Example.thy)
+
+[![CI](https://example.org/badge.svg)](https://example.org/ci)
+
+<p><img src="docs/figure.png" alt="Local figure"><br>Gallery caption</p>
+
+<details><summary>Exact theorem</summary>
+
+```isabelle
+lemma example: "x = x" by simp
+```
+
+</details>
+
+| Name | Meaning |
+| --- | --- |
+| `long_identifier` | A description that needs a wrapping column. |
+'''
+        converted = subprocess.check_output([
+            "pandoc", "--from=gfm", "--to=latex", "--no-highlight",
+            "--lua-filter", str(Path(__file__).resolve().parents[1] / "scripts/pdf_readme.lua"),
+        ], input=source, text=True)
+        self.assertIn('/blob/main/src/Example.thy', converted)
+        self.assertIn('https://example.org/ci', converted)
+        self.assertIn('badge.svg', converted)
+        self.assertIn('https://github.com/user-attachments/assets/banner', converted)
+        self.assertIn('height=4mm', converted)
+        self.assertIn('docs/figure.png', converted)
+        self.assertIn('Gallery caption', converted)
+        self.assertIn('Exact theorem', converted)
+        self.assertIn('lemma example:', converted)
+        self.assertIn('\\allowbreak', converted)
+        self.assertIn('0.3600', converted)
 
 
 if __name__ == "__main__":

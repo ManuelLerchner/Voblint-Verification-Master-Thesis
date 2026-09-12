@@ -96,6 +96,11 @@ result and rendering architecture.
 
 ### Arithmetic diagnostics
 
+Executable Isabelle witnesses live in
+[Example_Arithmetic_Diagnostics_Regression.thy](src/Examples/CLI/Example_Arithmetic_Diagnostics_Regression.thy),
+also imported by the `Voblint.thy` capstone. They cover guard deduplication,
+dead-branch silence, contextual aggregation, and both Boolean operands.
+
 Every analysis also checks divisors in `/` and `%` expressions using the solved
 state before the containing statement. A divisor that may be zero produces a
 `warning`; a divisor that is zero in every represented live context produces an
@@ -593,7 +598,13 @@ The ones that matter most often:
 
 To export the formalization as a PDF, run `pixi run isabelle-pdf-build`
 (or `AFP=/path/to/afp/thys pixi run isabelle-pdf-build`). This requires Isabelle's
-LaTeX toolchain. Open `output/document.pdf` after the build succeeds.
+LaTeX toolchain, Pandoc, and `rsvg-convert` (librsvg). Open `output/document.pdf` after the build succeeds.
+The current `README.md` is converted automatically and included starting on
+page 2, followed by the abstract and theory contents. Its local figures, tables,
+code blocks, and expanded detail sections are retained. Remote images, including
+the banner and badges, are downloaded and embedded when available; unavailable
+images retain their alt text. The build uses network access when it can fetch
+images. CI installs Pandoc and librsvg alongside LaTeX.
 The document groups the core theories by session, including generated theories
 and code export. Example sessions are omitted from presentation, except for
 `Example_End_To_End_Certificate`, which appears in an appendix. To include every

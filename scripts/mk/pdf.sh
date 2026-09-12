@@ -15,6 +15,8 @@ if [ "$#" -gt 1 ]; then
   exit 2
 fi
 python3 "$REPO_ROOT/scripts/gen_pdf_session.py" "$@"
+python3 "$REPO_ROOT/scripts/build_readme_pdf.py" \
+  --output "$REPO_ROOT/build/pdf-session/document/readme.pdf"
 "$ISABELLE" build -v -j2 -o threads=12 \
   -d "$AFP" -d "$TD_DIR" -d "$REPO_ROOT" \
   -D "$REPO_ROOT/build/pdf-session" Voblint_Document

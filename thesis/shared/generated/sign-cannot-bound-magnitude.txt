@@ -1,1 +1,9 @@
-22:3  pp5        total<100            UNKNOWN  total=Positive
+tests/regression/07-sign-precision/known-imprecision/01-sign_cannot_bound_magnitude.vimp [sign]
+
+Arithmetic diagnostics
+None
+
+Assertion checks
+Location  Point  Condition  Verdict  State
+--------  -----  ---------  -------  --------------
+22:3      pp5    total<100  UNKNOWN  total=Positive

@@ -683,9 +683,10 @@ that is gone.
   listing(read("/shared/generated/sign-cannot-bound-magnitude.txt")),
   kind: image,
   caption: [Output of `voblint --analysis sign` on the known-imprecision case.
-    Sign tracks #signval("Positive") exactly, but the lattice has no magnitude,
-    so `total < 100` is genuinely undecidable here --- `UNKNOWN` is the correct
-    answer, not a regression.],
+    The listing includes the command's report header and table. Sign tracks
+    #signval("Positive") exactly, but the lattice has no magnitude, so `total <
+    100` is genuinely undecidable here --- `UNKNOWN` is the correct answer, not
+    a regression.],
 ) <fig:claim>
 
 == Evaluation
