@@ -1,21 +1,28 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/evilmartians/lefthook/master/schema.json
 #
-# Install with `pixi run hooks-install`. Guards invariants documented in
-# AGENTS.md: .thy sources stay ASCII-only ("ASCII-only .thy sources"), the
-# two generated VIMP grammar frontends stay in sync with manifests/vimp-grammar.yaml
-# ("VIMP grammar pipeline"), the OCaml export emits exactly its three modules
-# and exposes every name the handwritten OCaml uses ("New theories and the
-# code-export module map"), and theory prose and locale assumptions name only
-# identifiers that exist ("Deleting an API"). The generator jobs are
-# allowed to rewrite their generated file in place. The drift tasks compare
-# their result with the staged snapshot, so intentional staged regeneration
-# passes while a stale staged artifact is rejected.
+# Install with `pixi run hooks-install`.
+#
+# Pre-commit:
+#   Fast/static repository invariants and generated-artifact drift checks.
+#
+# Pre-push:
+#   Heavier checks that make sure thesis material still agrees with the
+#   formalization, generated analyzer, and rendered document.
+#
+# The full supported verification gate remains `pixi run verify`.
+
 output: [summary]
+
 pre-commit:
   fail_on_changes: always
+
   jobs:
-    # Generators may rewrite tracked artifacts. Finish both before any reader
-    # checks the tree, while retaining parallelism between independent outputs.
+    # ----------------------------------------------------------------------
+    # Generated artifacts
+    #
+    # These checks may regenerate tracked artifacts in place. Run them before
+    # read-only checks so the latter always inspect the resulting tree.
+    # ----------------------------------------------------------------------
     - name: generated-artifacts
       group:
         parallel: true
@@ -35,7 +42,16 @@ pre-commit:
               - "cli/vimp_lexer.mll"
             run: pixi run grammar-menhir-check
 
-    # These jobs are read-only and safe to run together after generation.
+          - name: analysis-assembly-drift
+            glob:
+              - "manifests/analyses.yaml"
+              - "scripts/gen_analysis_assembly.py"
+              - "src/Analyses/**/*.thy"
+            run: pixi run assembly-check
+
+    # ----------------------------------------------------------------------
+    # Fast repository invariants
+    # ----------------------------------------------------------------------
     - name: invariant-checks
       group:
         parallel: true
@@ -59,6 +75,38 @@ pre-commit:
             glob: "*.thy"
             run: pixi run isabelle-ascii-check -- {staged_files}
 
+          # ROOT mistakes are cheap to detect and can otherwise make jEdit or
+          # Isabelle fail far away from the actual edit.
+          - name: sessions
+            glob:
+              - "**/ROOT"
+              - "**/ROOTS"
+              - "src/**/*.thy"
+            run: pixi run sessions-check
+
+          # Guard the generated Isabelle grammar's source-position/markup
+          # contract independently of the generated-file drift check.
+          - name: grammar-id-position
+            glob:
+              - "manifests/vimp-grammar.yaml"
+              - "scripts/gen_vimp_isabelle.py"
+              - "tests/test_gen_isabelle_id_position.py"
+            run: pixi run grammar-id-position-check
+
+          # The manifest controls supported analysis configurations; make sure
+          # the handwritten support policy still agrees with it.
+          - name: analysis-registry
+            glob:
+              - "manifests/analyses.yaml"
+              - "tests/test_analysis_registry.py"
+              - "src/Analyses/**/*.thy"
+              - "cli/**/*.ml"
+            run: pixi run analysis-registry-check
+
+          # ----------------------------------------------------------------
+          # Thesis: cheap source-level freshness checks
+          # ----------------------------------------------------------------
+
           # A rename in the theories can leave the thesis naming something
           # that no longer exists. Either side can break the pairing.
           - name: thesis-refs
@@ -67,6 +115,8 @@ pre-commit:
               - "src/**/*.thy"
             run: pixi run thesis-refs
 
+          # Isabelle declarations shown in the thesis are extracted by name.
+          # Reject commits where the checked-in snippets are stale.
           - name: thesis-snippets
             glob:
               - "thesis/shared/snippets.toml"
@@ -74,8 +124,23 @@ pre-commit:
               - "src/**/*.thy"
             run: pixi run thesis-snippets
 
-          # Fires on every staged .thy, not just on the generated .ml: the check
-          # also reports theories changed since the export was regenerated.
+          # Link-map consistency can be checked opportunistically against
+          # locally available generated documentation. The lenient task is
+          # intentionally used here because pre-commit does not build HTML.
+          - name: thesis-links
+            glob:
+              - "thesis/**/*.typ"
+              - "thesis/**/*.toml"
+              - "src/**/*.thy"
+              - "scripts/check_thesis_links.py"
+            run: pixi run thesis-links
+
+          # ----------------------------------------------------------------
+          # Generated OCaml interface
+          # ----------------------------------------------------------------
+
+          # Fires on every staged .thy, not just on the generated .ml: the
+          # check also reports theories changed since export regeneration.
           - name: codegen-module-map
             glob:
               - "codegen/generated/ml/Voblint_CLI.ml"
@@ -93,6 +158,10 @@ pre-commit:
               - "tests/property/*.ml"
             run: pixi run codegen-api-check
 
+          # ----------------------------------------------------------------
+          # Isabelle source/API invariants
+          # ----------------------------------------------------------------
+
           - name: theory-prose-check
             glob: "src/**/*.thy"
             run: pixi run theory-prose-check
@@ -105,3 +174,31 @@ pre-commit:
           - name: locale-parameters-check
             glob: "src/**/*.thy"
             run: pixi run locale-parameters-check
+
+
+# --------------------------------------------------------------------------
+# Expensive freshness checks
+#
+# These are deliberately pre-push rather than pre-commit:
+#
+# - thesis-claims builds/uses the CLI and compares analyzer-derived figures.
+# - thesis-facts queries a built Isabelle session.
+# - thesis-typst rebuilds the thesis PDF and treats warnings as errors.
+#
+# Running them here catches stale thesis material before it reaches CI without
+# turning every small commit into a full build.
+# --------------------------------------------------------------------------
+pre-push:
+  jobs:
+    - name: thesis-current
+      group:
+        parallel: true
+        jobs:
+          - name: thesis-analyzer-claims
+            run: pixi run thesis-claims
+
+          - name: thesis-theorem-facts
+            run: pixi run thesis-facts
+
+          - name: thesis-build
+            run: pixi run thesis-typst

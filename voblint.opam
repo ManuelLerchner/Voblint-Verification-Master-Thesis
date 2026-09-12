@@ -16,6 +16,8 @@ depends: [
   "dune" {>= "3.0" & build}
   "menhir" {build}
   "zarith"
+  "js_of_ocaml" {build}
+  "zarith_stubs_js" {build}
 ]
 build: [
   ["dune" "build" "-j" jobs]

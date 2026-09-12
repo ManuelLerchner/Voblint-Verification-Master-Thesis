@@ -9,16 +9,30 @@
 
 (ocamllex vimp_lexer)
 
-(executable
- (name main)
+(library
+ (name voblint_frontend)
+ (wrapped false)
  (modules
   Voblint_CLI
   vimp_positions
   vimp_parser
   vimp_lexer
-  vimp_frontend
+  vimp_frontend)
+ (libraries str zarith)
+ (flags (:standard -w -8-11-20-27-32-37-39 -warn-error -A)))
+
+(executable
+ (name main)
+ (modules
   dot_render
   html_report
   main)
- (libraries str zarith unix)
+ (libraries voblint_frontend str zarith unix)
+ (flags (:standard -w -8-11-20-27-32-37-39 -warn-error -A)))
+
+(executable
+ (name browser_main)
+ (modules browser_main)
+ (modes js)
+ (libraries voblint_frontend js_of_ocaml zarith zarith_stubs_js)
  (flags (:standard -w -8-11-20-27-32-37-39 -warn-error -A)))

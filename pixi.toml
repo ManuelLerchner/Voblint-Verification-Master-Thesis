@@ -34,7 +34,10 @@ grammar-isabelle-generate = { cmd = "python3 scripts/gen_vimp_isabelle.py", desc
 grammar-menhir-generate = { cmd = "python3 scripts/gen_vimp_menhir.py", description = "Regenerate the Menhir and ocamllex frontends from manifests/vimp-grammar.yaml." }
 grammar-isabelle-check = { cmd = "python3 scripts/gen_vimp_isabelle.py && bash scripts/mk/check-clean.sh src/Program_Model/VIMP/VIMP_Grammar_Generated.thy", description = "Regenerate the Isabelle grammar and fail if the tracked theory changes." }
 grammar-menhir-check = { cmd = "python3 scripts/gen_vimp_menhir.py && bash scripts/mk/check-clean.sh cli/vimp_parser.mly cli/vimp_lexer.mll", description = "Regenerate the Menhir frontend and fail if tracked parser files change." }
-grammar-check = { depends-on = ["grammar-isabelle-check", "grammar-menhir-check"], description = "Check both generated VIMP parser frontends for drift." }
+grammar-check = { depends-on = [
+  "grammar-isabelle-check",
+  "grammar-menhir-check",
+], description = "Check both generated VIMP parser frontends for drift." }
 
 # manifests/analyses.yaml -> src/Analyses/<Domain>/generated/<Domain>_Assembly.thy.
 # Registration only: the generated interpretations cite handwritten lemmas, which
@@ -55,7 +58,9 @@ pytest = ">=8.0"
 # manifest edit that changes what the CLI offers has to be intended.
 analysis-registry-check = { cmd = "python3 -m pytest tests/test_analysis_registry.py", description = "Check generated dispatcher support against the hand-written analysis policy." }
 property-test = { cmd = "python3 -m pytest tests/property", description = "Build the test drivers and run parser, printer, and AST property tests." }
-arithmetic-diagnostics-check = { cmd = "python3 -m pytest tests/test_regression_arithmetic.py tests/test_arithmetic_diagnostics.py", depends-on = ["cli-build"], description = "Check arithmetic warnings, source annotations, and HTML findings." }
+arithmetic-diagnostics-check = { cmd = "python3 -m pytest tests/test_regression_arithmetic.py tests/test_arithmetic_diagnostics.py", depends-on = [
+  "cli-build",
+], description = "Check arithmetic warnings, source annotations, and HTML findings." }
 
 # HTML result viewer (`voblint --html`). graphviz supplies `dot`, which
 # renders the CFG the viewer's graph pane loads; the frontend itself is the
@@ -66,13 +71,19 @@ graphviz = "*"
 html-report-serve = { cmd = "bash scripts/mk/report.sh", description = "Serve an existing HTML analysis report and open it in a browser." }
 # Pins the emitted directory's shape, which is a contract with a frontend this
 # repository does not own -- see the test module's own docstring.
-html-report-structure-check = { cmd = "python3 -m pytest tests/test_html_report.py", depends-on = ["cli-build"], description = "Check the emitted report structure consumed by the g2html frontend." }
+html-report-structure-check = { cmd = "python3 -m pytest tests/test_html_report.py", depends-on = [
+  "cli-build",
+], description = "Check the emitted report structure consumed by the g2html frontend." }
 # Sweeps the whole fixture corpus, each under its own PARAM line, for the
 # faults that only show up on particular programs -- see the script's docstring.
-html-report-corpus-audit = { cmd = "python3 scripts/audit_html_reports.py", depends-on = ["cli-build"], description = "Generate reports for the regression corpus and check cross-file invariants." }
+html-report-corpus-audit = { cmd = "python3 scripts/audit_html_reports.py", depends-on = [
+  "cli-build",
+], description = "Generate reports for the regression corpus and check cross-file invariants." }
 # Sweeps the domain/solver/context space rather than the corpus: a
 # configuration the legality table accepts must have a surface behind it.
-html-report-config-audit = { cmd = "python3 scripts/audit_html_reports.py --combinations", depends-on = ["cli-build"], description = "Check report generation across supported domain, solver, and context combinations." }
+html-report-config-audit = { cmd = "python3 scripts/audit_html_reports.py --combinations", depends-on = [
+  "cli-build",
+], description = "Check report generation across supported domain, solver, and context combinations." }
 
 # Benchmarking (`pixi run voblint-bench`). hyperfine times cli/voblint once per
 # abstract domain over the same fixture so domain/solver cost can be
@@ -85,7 +96,9 @@ html-report-config-audit = { cmd = "python3 scripts/audit_html_reports.py --comb
 hyperfine = "*"
 matplotlib-base = ">=3.10"
 [feature.bench.tasks]
-voblint-bench = { cmd = "bash scripts/mk/bench.sh", depends-on = ["cli-build"], description = "Benchmark selected abstract domains over one VIMP program." }
+voblint-bench = { cmd = "bash scripts/mk/bench.sh", depends-on = [
+  "cli-build",
+], description = "Benchmark selected abstract domains over one VIMP program." }
 
 # Git hooks (.lefthook.yaml).
 [feature.lint.dependencies]
@@ -123,18 +136,39 @@ ocaml-deps-install = { cmd = "opam install . --deps-only --with-test", descripti
 vendor-init = { cmd = "bash scripts/mk/vendor.sh", description = "Initialize the pinned td-verification submodule when absent." }
 
 # Isabelle build
-isabelle-bootstrap = { cmd = "bash scripts/mk/bootstrap.sh", depends-on = ["vendor-init"], description = "Build foundational Isabelle sessions in topological order on a fresh checkout." }
-isabelle-build = { cmd = "bash scripts/mk/build.sh", depends-on = ["vendor-init"], description = "Build Voblint_Examples and its complete Isabelle dependency closure." }
-isabelle-docs-build = { cmd = "bash scripts/mk/html.sh", depends-on = ["vendor-init"], description = "Clean-build Isabelle browser documentation for every session into build/isabelle-html/." }
-isabelle-pdf-build = { cmd = "bash scripts/mk/pdf.sh", depends-on = ["vendor-init"], description = "Render the formalization with a certificate appendix into output/document.pdf." }
-isabelle-pdf-full-build = { cmd = "bash scripts/mk/pdf.sh --include-examples", depends-on = ["vendor-init"], description = "Render all theories and example sessions into output/document-full.pdf." }
+isabelle-bootstrap = { cmd = "bash scripts/mk/bootstrap.sh", depends-on = [
+  "vendor-init",
+], description = "Build foundational Isabelle sessions in topological order on a fresh checkout." }
+isabelle-build = { cmd = "bash scripts/mk/build.sh", depends-on = [
+  "vendor-init",
+], description = "Build Voblint_Examples and its complete Isabelle dependency closure." }
+isabelle-docs-build = { cmd = "bash scripts/mk/html.sh", depends-on = [
+  "vendor-init",
+], description = "Clean-build Isabelle browser documentation for every session into build/isabelle-html/." }
+pages-site-build = { cmd = "bash scripts/mk/pages-site.sh", depends-on = [
+  "browser-build",
+], description = "Assemble the GitHub Pages site from rendered HTML, PDFs, and the browser analyzer." }
+isabelle-pdf-build = { cmd = "bash scripts/mk/pdf.sh", depends-on = [
+  "vendor-init",
+], description = "Render the formalization with a certificate appendix into output/document.pdf." }
+isabelle-pdf-full-build = { cmd = "bash scripts/mk/pdf.sh --include-examples", depends-on = [
+  "vendor-init",
+], description = "Render all theories and example sessions into output/document-full.pdf." }
 isabelle-pdf-selection-check = { cmd = "python3 tests/test_pdf_session.py", description = "Check PDF theory selection, certificate inclusion, and preserved proof imports." }
-isabelle-lint = { cmd = "bash scripts/mk/isabelle-lint.sh", depends-on = ["vendor-init"], description = "Run the Isabelle community linter over all project sessions." }
-isabelle-jedit = { cmd = "bash scripts/mk/jedit.sh", depends-on = ["vendor-init"], description = "Launch Isabelle/jEdit with the AFP, solver, and project session roots." }
+isabelle-lint = { cmd = "bash scripts/mk/isabelle-lint.sh", depends-on = [
+  "vendor-init",
+], description = "Run the Isabelle community linter over all project sessions." }
+isabelle-jedit = { cmd = "bash scripts/mk/jedit.sh", depends-on = [
+  "vendor-init",
+], description = "Launch Isabelle/jEdit with the AFP, solver, and project session roots." }
 
 # Codegen (Isabelle export_code -> codegen/generated/)
-codegen = { cmd = "bash scripts/mk/codegen.sh", depends-on = ["vendor-init"], description = "Regenerate the checked-in OCaml export from Voblint_Codegen." }
-codegen-check = { cmd = "bash scripts/mk/check-clean.sh codegen/generated/", depends-on = ["codegen"], description = "Regenerate the OCaml export and fail if the tracked output changes." }
+codegen = { cmd = "bash scripts/mk/codegen.sh", depends-on = [
+  "vendor-init",
+], description = "Regenerate the checked-in OCaml export from Voblint_Codegen." }
+codegen-check = { cmd = "bash scripts/mk/check-clean.sh codegen/generated/", depends-on = [
+  "codegen",
+], description = "Regenerate the OCaml export and fail if the tracked output changes." }
 # Reads the checked-in export, so it needs no Isabelle and can run in the
 # pre-commit hook alongside the ASCII and grammar-drift guards.
 codegen-modules-check = { cmd = "python3 scripts/check_codegen_modules.py", description = "Check that the OCaml export contains exactly the expected generated modules." }
@@ -150,11 +184,14 @@ codegen-regression = { cmd = "bash scripts/mk/codegen-regression.sh", descriptio
 
 # voblint CLI
 cli-build = { cmd = "bash scripts/mk/cli-build.sh", description = "Build the voblint CLI from the checked-in generated OCaml and frontend sources." }
+browser-build = { cmd = "bash scripts/mk/browser-build.sh", description = "Compile the generated analyzer and browser adapter to JavaScript." }
 cli-test = { cmd = "bash scripts/mk/cli-test-run.sh", description = "Build the CLI and run the external VIMP regression corpus." }
 # CLI plumbing (exit codes, --help, argument errors) that isn't expressible
 # as a .vimp fixture's verdict report -- see tests/cli_smoke.py's docstring.
 cli-smoke = { cmd = "python3 tests/cli_smoke.py", description = "Build the CLI and test help, errors, exit codes, and output plumbing." }
-voblint = { cmd = "bash scripts/mk/voblint-run.sh", depends-on = ["cli-build"], description = "Build and run the Voblint analyzer, with an optional interactive fixture picker." }
+voblint = { cmd = "bash scripts/mk/voblint-run.sh", depends-on = [
+  "cli-build",
+], description = "Build and run the Voblint analyzer, with an optional interactive fixture picker." }
 # Static checks over tests/regression/ fixture source -- no CLI build, no
 # OCaml, so this fails fast before cli-test's build cost. See tests/run.py's
 # lint_case for what it enforces (mirrors AGENTS.md's "Regression discipline").
@@ -251,8 +288,12 @@ thesis-refs = { cmd = "python3 scripts/check_thesis_refs.py", description = "Che
 
 # Figures built from analyzer output are regenerated and diffed, so a thesis
 # claim cannot outlive the behaviour it describes.
-thesis-claims = { cmd = "python3 thesis/tools/claims.py --check", depends-on = ["cli-build"], description = "Check thesis analyzer figures against current CLI output." }
-thesis-claims-write = { cmd = "python3 thesis/tools/claims.py --write", depends-on = ["cli-build"], description = "Regenerate thesis analyzer figures from current CLI output." }
+thesis-claims = { cmd = "python3 thesis/tools/claims.py --check", depends-on = [
+  "cli-build",
+], description = "Check thesis analyzer figures against current CLI output." }
+thesis-claims-write = { cmd = "python3 thesis/tools/claims.py --write", depends-on = [
+  "cli-build",
+], description = "Regenerate thesis analyzer figures from current CLI output." }
 
 # Declarations the thesis shows are lifted out of the theories by name, never
 # retyped. Pure text extraction -- no Isabelle needed, so this runs fail-fast.
@@ -279,12 +320,18 @@ thesis-symbols = { cmd = "python3 thesis/tools/gen_isabelle_symbols.py > thesis/
 
 # Everything the thesis quotes from the formalization or the analyzer.
 thesis-generated = { depends-on = [
-  "thesis-snippets-write", "thesis-claims-write", "thesis-facts-write",
+  "thesis-snippets-write",
+  "thesis-claims-write",
+  "thesis-facts-write",
 ], description = "Regenerate all thesis artifacts from the current sources and build outputs." }
 
 # Every drift check, in one name.
 thesis-check = { depends-on = [
-  "thesis-refs", "thesis-snippets", "thesis-claims", "thesis-facts", "thesis-typst",
+  "thesis-refs",
+  "thesis-snippets",
+  "thesis-claims",
+  "thesis-facts",
+  "thesis-typst",
   "thesis-links",
 ], description = "Run all thesis drift and theorem checks." }
 
