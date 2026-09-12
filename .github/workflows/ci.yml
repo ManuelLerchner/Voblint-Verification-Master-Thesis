@@ -76,7 +76,14 @@ jobs:
               case "$path" in *.thy) changed=true; break ;; esac
             done <<< "$files"
           else
-            files=$(git diff --name-only "$GITHUB_EVENT_BEFORE" "$GITHUB_SHA")
+            # The before SHA is absent on some main-branch runs (notably an
+            # initial push), so inspect the commit itself in that case.
+            if [[ -n "$GITHUB_EVENT_BEFORE" ]] \
+              && git cat-file -e "$GITHUB_EVENT_BEFORE^{commit}" 2>/dev/null; then
+              files=$(git diff --name-only "$GITHUB_EVENT_BEFORE" "$GITHUB_SHA")
+            else
+              files=$(git diff-tree --root --no-commit-id --name-only -r -m "$GITHUB_SHA")
+            fi
             while IFS= read -r path; do
               case "$path" in *.thy) changed=true; break ;; esac
             done <<< "$files"
