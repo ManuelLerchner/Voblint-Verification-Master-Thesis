@@ -13,28 +13,24 @@
 // while the composite reports k = [7,7] and l = [37,37]. The nondet
 // branch is on a fresh variable so that r itself is not refined by the
 // condition; only its two constant assignments reach the join.
-void main() {
-  c := __voblint_nondet_int();
+fun main() {
+  c = __voblint_nondet_int();
   if (c == 0) {
-    r := 2
+    r = 2;
   } else {
-    r := 7
-  };
-  k := r;
+    r = 7;
+  }
+  k = r;
   if (!(k < 3)) {
-    __voblint_check(k < 7) // REFUTED
-  } else {
-    skip
-  };
-  m := __voblint_nondet_int();
+    __voblint_check(k < 7); // REFUTED
+  }
+  m = __voblint_nondet_int();
   if (m == 0) {
-    l := 37
+    l = 37;
   } else {
-    l := 42
-  };
+    l = 42;
+  }
   if (!(41 < l)) {
-    __voblint_check(37 < l) // REFUTED
-  } else {
-    skip
+    __voblint_check(37 < l); // REFUTED
   }
 }

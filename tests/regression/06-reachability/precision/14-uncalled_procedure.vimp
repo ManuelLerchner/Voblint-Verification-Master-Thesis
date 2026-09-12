@@ -4,10 +4,10 @@
 // FunctionEntry has no call edge feeding it, so its seed is bot, every point
 // inside foo is unreachable, and its check is reported DEAD. main's
 // own check is still live.
-void foo() {
-  __voblint_check(true) // NOWARN (unreachable)
+fun foo() {
+  __voblint_check(true); // NOWARN (unreachable)
 }
-void main() {
-  x := 0;
-  __voblint_check(x == 0) // PROVED
+fun main() {
+  x = 0;
+  __voblint_check(x == 0); // PROVED
 }

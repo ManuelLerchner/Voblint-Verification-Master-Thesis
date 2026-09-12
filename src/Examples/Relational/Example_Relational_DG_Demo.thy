@@ -38,11 +38,11 @@ subsection \<open>The VIMP source program -- a full program block, not an inline
 
 definition demo_program :: imp_prog where
   "demo_program = program { 
-   void main() { 
+   fun main() { 
      if (x < y) 
-        { z := 1 } 
+        { z = 1; } 
      else 
-        { z := 0 }
+        { z = 0; }
      } 
 }"
 

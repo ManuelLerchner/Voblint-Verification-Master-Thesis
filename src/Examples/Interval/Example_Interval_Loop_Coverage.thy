@@ -35,7 +35,7 @@ text \<open>
 
 definition loop_prog :: imp_prog where
   "loop_prog = program {
-     void main() { x := 0; while (x < 20) { x := x + 1 } }
+     fun main() { x = 0; while (x < 20) { x = x + 1; } }
    }"
 
 subsection \<open>The compiled CFG\<close>

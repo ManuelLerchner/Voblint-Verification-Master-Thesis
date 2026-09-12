@@ -42,42 +42,42 @@ text \<open>\<open>x\<close> is exactly \<open>5\<close>, so the \<open>x < 2\<c
 
 definition dead_check_prog :: imp_prog where
   "dead_check_prog = program {
-     void main() {
-       x := 5;
+     fun main() {
+       x = 5;
        if (x < 2) {
-         __voblint_check(x == 99)
+         __voblint_check(x == 99);
        } else {
-         __voblint_check(x == 5)
+         __voblint_check(x == 5);
        }
      }
    }"
 
 definition mixed_ctx_prog :: imp_prog where
   "mixed_ctx_prog = program {
-     void f(n) {
+     fun f(n) {
        if (n < 2) {
          __voblint_check(n == 1);
-         return 1
+         return 1;
        } else {
-         r := f(n - 1);
-         return n * r
+         r = f(n - 1);
+         return n * r;
        }
      }
-     void main() {
-       a := f(3);
-       __voblint_check(a == 6)
+     fun main() {
+       a = f(3);
+       __voblint_check(a == 6);
      }
    }"
 
 definition disagree_prog :: imp_prog where
   "disagree_prog = program {
-     void g(n) {
+     fun g(n) {
        __voblint_check(n < 3);
-       return n
+       return n;
      }
-     void main() {
-       a := g(1);
-       b := g(5)
+     fun main() {
+       a = g(1);
+       b = g(5);
      }
    }"
 

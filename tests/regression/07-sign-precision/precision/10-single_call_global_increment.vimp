@@ -6,11 +6,11 @@
 // whole-state summary that cannot separate "before the call" from "after"
 // would be stuck with.
 global counter;
-void p() {
-  counter := counter + 1
+fun p() {
+  counter = counter + 1;
 }
-void main() {
-  local := 1;
+fun main() {
+  local = 1;
   p();
-  __voblint_check(0 < counter) // PROVED
+  __voblint_check(0 < counter); // PROVED
 }

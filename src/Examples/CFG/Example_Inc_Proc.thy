@@ -19,8 +19,8 @@ text \<open>
 definition inc_program :: imp_prog where
   "inc_program = program {
      global counter;
-     void p() { counter := counter + 1 }
-     void main() { Glocal := 1; p() }
+     fun p() { counter = counter + 1; }
+     fun main() { Glocal = 1; p(); }
    }"
 
 definition inc_pi :: proc_table where
@@ -29,9 +29,9 @@ definition inc_pi :: proc_table where
 lemma inc_program_parts:
   shows "prog_procs inc_program = [(STR ''p'')]"
     and "prog_table inc_program =
-           [(STR ''p'') \<mapsto> \<lparr>formals = [], body = imp \<lbrakk> counter := counter + 1 \<rbrakk>\<rparr>,
-            prog_main_name \<mapsto> \<lparr>formals = [], body = imp \<lbrakk> Glocal := 1 ; p() \<rbrakk>\<rparr>]"
-    and "prog_main inc_program = imp \<lbrakk> Glocal := 1 ; p() \<rbrakk>"
+           [(STR ''p'') \<mapsto> \<lparr>formals = [], body = imp \<lbrakk> counter = counter + 1; \<rbrakk>\<rparr>,
+            prog_main_name \<mapsto> \<lparr>formals = [], body = imp \<lbrakk> Glocal = 1 ; p(); \<rbrakk>\<rparr>]"
+    and "prog_main inc_program = imp \<lbrakk> Glocal = 1 ; p(); \<rbrakk>"
   by (simp_all add: inc_program_def prog_main_name_def)
 
 text \<open>\<open>declared_global_vars\<close> for the concrete program: the entry point where the
@@ -81,12 +81,12 @@ text \<open>
 \<close>
 lemma pcompletes_inc_pcall_declared:
   fixes s :: store
-  shows "pcompletes (declared_global inc_program) inc_pi (imp \<lbrakk> p() \<rbrakk>) s
+  shows "pcompletes (declared_global inc_program) inc_pi (imp \<lbrakk> p(); \<rbrakk>) s
            (s((STR ''counter'') := s (STR ''counter'') + 1))"
 proof -
-  let ?body = "imp \<lbrakk> counter := counter + 1 \<rbrakk>"
+  let ?body = "imp \<lbrakk> counter = counter + 1; \<rbrakk>"
   have g: "declared_global inc_program (STR ''counter'')" by simp
-  have run: "pcompletes (declared_global inc_program) inc_pi (imp \<lbrakk> p() \<rbrakk>) s
+  have run: "pcompletes (declared_global inc_program) inc_pi (imp \<lbrakk> p(); \<rbrakk>) s
                 (combine_env (declared_global inc_program) s
                   ((enter_state (declared_global inc_program) s)
                     ((STR ''counter'') := s (STR ''counter'') + 1)))"
@@ -118,7 +118,7 @@ qed
 
 lemma prog_pcompletes_inc_pcall:
   fixes s :: store
-  shows "pcompletes (declared_global inc_program) (prog_table inc_program) (imp \<lbrakk> p() \<rbrakk>) s
+  shows "pcompletes (declared_global inc_program) (prog_table inc_program) (imp \<lbrakk> p(); \<rbrakk>) s
           (s((STR ''counter'') := s (STR ''counter'') + 1))"
   using pcompletes_inc_pcall_declared unfolding inc_pi_def .
 

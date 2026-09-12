@@ -14,12 +14,12 @@
 // Once n is a singleton (modulus 0), congruence_eqb decides equality against
 // a literal in both directions, so the positive and the negated check are
 // both discharged.
-void main() {
-  n := __voblint_nondet_int();
+fun main() {
+  n = __voblint_nondet_int();
   if (n + 1 == 3) {
     __voblint_check(n == 2); // PROVED
-    __voblint_check(!(n == 5)) // PROVED
+    __voblint_check(!(n == 5)); // PROVED
   } else {
-    __voblint_check(true) // PROVED
+    __voblint_check(true); // PROVED
   }
 }

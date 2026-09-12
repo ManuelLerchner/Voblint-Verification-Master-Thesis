@@ -14,12 +14,12 @@
 // Solver-invariant across join, per-origin, warrow, warrow-per-origin.
 // The same program under --analysis int (16-composite-domain/precision/
 // 04-mine_ex46_sign_zero_threshold.vimp) proves all three.
-void main() {
-  x := 40;
+fun main() {
+  x = 40;
   while (!(x == 0)) {
     __voblint_check(!(40 < x)); // PROVED
-    x := x - 1;
-    __voblint_check(!(x < 0)) // UNKNOWN
-  };
-  __voblint_check(x == 0) // PROVED
+    x = x - 1;
+    __voblint_check(!(x < 0)); // UNKNOWN
+  }
+  __voblint_check(x == 0); // PROVED
 }

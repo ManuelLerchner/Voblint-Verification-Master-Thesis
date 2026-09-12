@@ -11,15 +11,15 @@
 // driven by real multiplication instead of an equality guard, so the
 // congruence fact comes from arithmetic (Int_Arithmetic.thy's Times case)
 // rather than from a solved linear equation.
-void main() {
-  y := x * 2;
+fun main() {
+  y = x * 2;
   if (0 < y) {
     if (y < 3) {
-      __voblint_check(y == 2) // PROVED
+      __voblint_check(y == 2); // PROVED
     } else {
-      z := 0
+      z = 0;
     }
   } else {
-    z := 0
+    z = 0;
   }
 }

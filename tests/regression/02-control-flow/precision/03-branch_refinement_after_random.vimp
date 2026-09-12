@@ -10,11 +10,11 @@
 // interval_less_false required a STRICT upper<lower separation (u2 < l1)
 // to refute "0<x", missing the touching-boundary case x=[-inf,0] where
 // u2=l1=0 -- sound but needlessly conservative, now u2<=l1.
-void main() {
-  x := __voblint_nondet_int();
+fun main() {
+  x = __voblint_nondet_int();
   if (0 < x) {
-    __voblint_check(0 < x) // PROVED
+    __voblint_check(0 < x); // PROVED
   } else {
-    __voblint_check(!(0 < x)) // PROVED
+    __voblint_check(!(0 < x)); // PROVED
   }
 }

@@ -450,31 +450,25 @@ proof (induction c arbitrary: k n n' en E K rule: com.induct)
     unfolding E K n' by (simp only: frag_stmts_Un) auto
 next
   case (If b c1 c2)
-  from If.prems obtain n1 en1 E1 K1 n2 en2 E2 K2 where
-    c1: "compile \<Pi> p c1 k (Suc n) = (n1, en1, E1, K1)"
-    and c2: "compile \<Pi> p c2 k n1 = (n2, en2, E2, K2)"
-    and n': "n' = n2"
-    and E: "E = {(Statement n, EA_Assume b, en1), (Statement n, EA_AssumeNot b, en2)}
-                  \<union> (E1 \<union> E2)"
-    and K: "K = {} \<union> (K1 \<union> K2)"
-    by (auto split: prod.splits)
-  have e1: "en1 = Statement (Suc n)" using compile_entry[OF c1] .
-  have e2: "en2 = Statement n1" using compile_entry[OF c2] .
-  have i1: "n1 = Suc n + csize c1" using compile_next_id[OF c1] .
-  have i2: "n2 = n1 + csize c2" using compile_next_id[OF c2] .
-  have r1: "frag_stmts E1 K1 \<subseteq> {Suc n..<n1} \<union> kstmt k" using If.IH(1)[OF c1] .
-  have r2: "frag_stmts E2 K2 \<subseteq> {n1..<n2} \<union> kstmt k" using If.IH(2)[OF c2] .
-  have guard: "frag_stmts {(Statement n, EA_Assume b, en1),
-                           (Statement n, EA_AssumeNot b, en2)} {} \<subseteq> {n..<n2}"
-    using e1 e2 i1 i2 csize_pos[of c1] csize_pos[of c2] by (auto simp: frag_stmts_def)
-  have dec: "frag_stmts E K
-               = frag_stmts {(Statement n, EA_Assume b, en1),
-                             (Statement n, EA_AssumeNot b, en2)} {}
-                 \<union> frag_stmts (E1 \<union> E2) (K1 \<union> K2)"
-    unfolding E K by (rule frag_stmts_Un)
-  have body: "frag_stmts (E1 \<union> E2) (K1 \<union> K2) \<subseteq> {n..<n2} \<union> kstmt k"
-    using r1 r2 i1 i2 csize_pos[of c1] by (simp only: frag_stmts_Un) auto
-  show ?case unfolding n' dec using guard body by blast
+  from If.prems obtain n1 E1 K1 n2 E2 K2 where
+    c1: "compile \<Pi> p c1 k (Suc n) = (n1, Statement (Suc n), E1, K1)"
+    and c2: "compile \<Pi> p c2 k (Suc n + csize c1) =
+      (n2, Statement (Suc n + csize c1), E2, K2)"
+    and E: "E = {(Statement n, EA_Assume b, if c1 = SKIP then k else Statement (Suc n)),
+      (Statement n, EA_AssumeNot b, if c2 = SKIP then k else Statement (Suc n + csize c1))}
+      \<union> (if c1 = SKIP then {} else E1) \<union> (if c2 = SKIP then {} else E2)"
+    and K: "K = K1 \<union> K2"
+    by (rule compile_IfE)
+  have ids: "n1 = Suc n + csize c1" "n2 = Suc n + csize c1 + csize c2"
+    "n' = n + csize (If b c1 c2)"
+    using compile_next_id[OF c1] compile_next_id[OF c2] compile_next_id[OF If.prems]
+    by simp_all
+  have sub: "frag_stmts E K \<subseteq> frag_stmts E1 K1 \<union> frag_stmts E2 K2
+      \<union> {n, Suc n, Suc n + csize c1} \<union> kstmt k"
+    unfolding E K frag_stmts_def by auto
+  show ?case
+    using sub If.IH(1)[OF c1] If.IH(2)[OF c2] ids csize_pos[of c1] csize_pos[of c2]
+    by fastforce
 next
   case (While b c)
   from While.prems obtain n1 en1 E1 K1 where
@@ -576,18 +570,18 @@ next
   then obtain n1 en1 E1 K1 n2 en2 E2 K2 where
     c1: "compile \<Pi> p c1 k (Suc n) = (n1, en1, E1, K1)"
     and c2: "compile \<Pi> p c2 k n1 = (n2, en2, E2, K2)"
-    and E: "E = {(Statement n, EA_Assume b, en1), (Statement n, EA_AssumeNot b, en2)}
-                  \<union> E1 \<union> E2"
+    and E: "E = {(Statement n, EA_Assume b, if c1 = SKIP then k else en1), (Statement n, EA_AssumeNot b, if c2 = SKIP then k else en2)}
+                  \<union> (if c1 = SKIP then {} else E1) \<union> (if c2 = SKIP then {} else E2)"
     by (auto split: prod.splits)
   have e1: "en1 = Statement (Suc n)" using compile_entry[OF c1] .
   have e2: "en2 = Statement n1" using compile_entry[OF c2] .
-  consider (Guard) "(u, a, v) \<in> {(Statement n, EA_Assume b, en1),
-                                 (Statement n, EA_AssumeNot b, en2)}"
+  consider (Guard) "(u, a, v) \<in> {(Statement n, EA_Assume b, if c1 = SKIP then k else en1),
+                                 (Statement n, EA_AssumeNot b, if c2 = SKIP then k else en2)}"
     | (L) "(u, a, v) \<in> E1" | (R) "(u, a, v) \<in> E2"
-    using If.prems(2) E by auto
+    using If.prems(2) E by (auto split: if_splits)
   then show ?case
   proof cases
-    case Guard then show ?thesis using e1 e2 by auto
+    case Guard then show ?thesis using e1 e2 by (auto split: if_splits)
   next
     case L from If.IH(1)[OF c1 L] show ?thesis by auto
   next

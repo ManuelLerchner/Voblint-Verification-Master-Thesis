@@ -6,14 +6,15 @@ node.
 
 ```bash
 pixi run voblint --analysis int --html FILE.vimp
-python3 -m http.server --directory build/report 8080   # then open /index.xml
+pixi run html-report-serve
 ```
 
-`pixi run html-report-serve` does all of that in one step: emit `build/report/`, serve
-it on <http://localhost:8080/index.xml>, and open it.
-`pixi run html-report-serve FILE.vimp int`
-picks a different program and domain; `PORT=9000` moves the port, `NO_OPEN=1`
-skips the browser.
+`pixi run html-report-serve` serves the existing `build/report/` on
+<http://localhost:8080/index.xml> and opens it without changing its contents.
+`pixi run html-report-serve DIR` serves a custom report directory;
+`OUTDIR=DIR` also overrides the default. `PORT=9000` moves the port,
+and `NO_OPEN=1` skips the browser. If no report exists, the task asks you to
+generate one first.
 
 `--html` writes `build/report/`; `--html-out DIR`
 overrides the location. It needs `dot` on PATH and the `vendor/g2html`

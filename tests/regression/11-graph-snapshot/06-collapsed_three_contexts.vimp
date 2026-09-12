@@ -165,16 +165,16 @@
 
 global g;
 
-void bump(n) {
-  m := n + 1;
-  return m
+fun bump(n) {
+  m = n + 1;
+  return m;
 }
-void main() {
-  g := 19;
-  a := bump(5);
-  b := bump(4);
-  c := bump(g);
+fun main() {
+  g = 19;
+  a = bump(5);
+  b = bump(4);
+  c = bump(g);
   __voblint_check(a == 6); // PROVED
   __voblint_check(b == 5); // PROVED
-  __voblint_check(c == 20) // PROVED
+  __voblint_check(c == 20); // PROVED
 }

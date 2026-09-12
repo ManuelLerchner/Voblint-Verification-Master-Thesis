@@ -11,10 +11,10 @@
 // annotations: the runner expects the rejection, not a report). A bounded
 // call string keeps the same program finite; see
 // 17-call-string/precision/13-depth2_unbounded_context_chain_dead_check.vimp.
-void f(x) {
-  if (!(x == 0)) { r := f(x + 1); return r } else { return x }
+fun f(x) {
+  if (!(x == 0)) { r = f(x + 1); return r; } else { return x; }
 }
-void main() {
-  a := f(1);
-  __voblint_check(a == 0)
+fun main() {
+  a = f(1);
+  __voblint_check(a == 0);
 }

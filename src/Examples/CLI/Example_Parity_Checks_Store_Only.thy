@@ -32,10 +32,10 @@ definition parity_ex_program :: imp_prog where
   "parity_ex_program = mk_program []
      (Seq (Seq (Seq
        (VIMP_Proc.com.Call (Some (STR ''x'')) special_pname_nondet_int [])
-       (imp \<lbrakk> y := x * 2; z := y + 1;
-              __voblint_check(! (y == z)); __voblint_check(y == z) \<rbrakk>))
+       (imp \<lbrakk> y = x * 2; z = y + 1;
+              __voblint_check(! (y == z)); __voblint_check(y == z); \<rbrakk>))
        (VIMP_Proc.com.Call (Some (STR ''w'')) special_pname_nondet_int []))
-       (imp \<lbrakk> __voblint_check(y == w) \<rbrakk>))
+       (imp \<lbrakk> __voblint_check(y == w); \<rbrakk>))
      []"
 
 text \<open>Computed, not asserted: the three \<open>__voblint_check(...)\<close> statements

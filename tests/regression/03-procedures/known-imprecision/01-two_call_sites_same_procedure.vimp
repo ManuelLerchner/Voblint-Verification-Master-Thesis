@@ -15,12 +15,12 @@
 // call-string- or entry-state-context-sensitive analysis keys the entry per
 // call site or per entered value instead (see
 // precision/04-two_call_sites_entry_state.vimp).
-void square(n) {
-  return n * n
+fun square(n) {
+  return n * n;
 }
-void main() {
-  a := square(3);
-  b := square(4);
+fun main() {
+  a = square(3);
+  b = square(4);
   __voblint_check(a == 9); // UNKNOWN
-  __voblint_check(b == 16) // UNKNOWN
+  __voblint_check(b == 16); // UNKNOWN
 }

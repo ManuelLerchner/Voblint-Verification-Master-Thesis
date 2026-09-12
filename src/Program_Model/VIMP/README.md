@@ -46,3 +46,16 @@ other identifier is implicitly local to the active procedure, and
 independent of abstract D/G placement. `enter_state` keeps globals and clears
 locals. `combine_env caller callee` restores caller locals and keeps callee
 globals.
+
+## Source syntax
+
+Functions use `fun name(parameters) { ... }`. Assignments use `=`, while
+`==` compares integer values. Assignments, calls, checks, `skip`, and returns
+end in `;`; braced `if` and `while` statements do not. Braces are mandatory.
+An `if` may omit its `else`, and `else if` chains may end with or without an
+`else` block. Missing branches lower to `SKIP` in the core command language;
+the compiler bypasses those branches without emitting a no-op node.
+
+`global x, y;` declares shared variables. Every other variable name is local
+to its activation, including an assignment's destination; local declarations
+are implicit. `main` completes by falling through and cannot contain a return.

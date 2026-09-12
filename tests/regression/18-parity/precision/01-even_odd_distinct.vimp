@@ -15,9 +15,9 @@
 // AnalysisResult through lookup_context -- the same generic pipeline the
 // other domains use, with no Parity-specific result or report
 // construction anywhere in it.
-void main() {
-  n := __voblint_nondet_int();
-  x := 2 * n;
-  y := 2 * n + 1;
-  __voblint_check(!(x == y)) // PROVED
+fun main() {
+  n = __voblint_nondet_int();
+  x = 2 * n;
+  y = 2 * n + 1;
+  __voblint_check(!(x == y)); // PROVED
 }

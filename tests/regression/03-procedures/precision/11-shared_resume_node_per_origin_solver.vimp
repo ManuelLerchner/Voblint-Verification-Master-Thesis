@@ -8,15 +8,15 @@
 // 09 pins the default configuration; this pins the update rule the mechanism
 // actually names, so a regression in the aggregation cannot hide behind
 // whichever rule the default happens to select.
-void f(n) {
-  return n
+fun f(n) {
+  return n;
 }
-void main() {
-  x := 5;
+fun main() {
+  x = 5;
   if (x < 2) {
-    a := f(1)
+    a = f(1);
   } else {
-    a := f(1)
-  };
-  __voblint_check(x == 5) // PROVED
+    a = f(1);
+  }
+  __voblint_check(x == 5); // PROVED
 }

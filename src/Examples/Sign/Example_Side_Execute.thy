@@ -15,7 +15,7 @@ text \<open>
 \<close>
 
 definition x1_prog :: imp_prog where
-  "x1_prog = program { void main() { x := 1 } }"
+  "x1_prog = program { fun main() { x = 1; } }"
 
 text \<open>No \<open>global\<close> declarations, so the classifier this program's own source
   gives is trivially false everywhere -- \<open>x\<close> and \<open>y\<close> are both local.\<close>

@@ -31,7 +31,7 @@ text \<open>
 hide_const phase.N
 
 definition int_ex_prog :: imp_prog where
-  "int_ex_prog = program { void main() { if (y + 1 == 3) { x := 1 } else { x := 0 } } }"
+  "int_ex_prog = program { fun main() { if (y + 1 == 3) { x = 1; } else { x = 0; } } }"
 
 abbreviation int_ex_gs :: "vname => bool" where
   "int_ex_gs == declared_global int_ex_prog"

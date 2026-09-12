@@ -109,7 +109,7 @@ text \<open>
 \<close>
 
 definition flagship_prog :: imp_prog where
-  "flagship_prog = program { void main() { x := 0; while (x < 20) { x := x + 1 } } }"
+  "flagship_prog = program { fun main() { x = 0; while (x < 20) { x = x + 1; } } }"
 
 text \<open>The storage classifier: \<open>flagship_prog\<close> declares no globals, so \<open>flagship_gs\<close>
   classifies \<open>x\<close> as local.\<close>

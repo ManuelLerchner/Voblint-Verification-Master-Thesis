@@ -17,11 +17,11 @@
 // strings, and each carries its own singleton through dbl, so combine
 // reads back 12 and 18 exactly. Context-insensitively both are UNKNOWN at
 // 0 (mod 3) -- the two call sites join to 3 (mod 3) at mid's entry.
-void dbl(p) { return p + p }
-void mid(p) { t := dbl(p); return t }
-void main() {
-  x := mid(6);
-  y := mid(9);
+fun dbl(p) { return p + p; }
+fun mid(p) { t = dbl(p); return t; }
+fun main() {
+  x = mid(6);
+  y = mid(9);
   __voblint_check(x == 12); // PROVED
-  __voblint_check(y == 18) // PROVED
+  __voblint_check(y == 18); // PROVED
 }

@@ -13,11 +13,11 @@
 // This is why the case sits here rather than reading as a fixable gap.
 // --analysis interval has the same shape and the same answer; recovering
 // it needs a disjunctive or exclusion domain, which no domain here is.
-void main() {
-  n := __voblint_nondet_int();
+fun main() {
+  n = __voblint_nondet_int();
   if (n == 4) {
-    __voblint_check(true) // PROVED
+    __voblint_check(true); // PROVED
   } else {
-    __voblint_check(!(n == 4)) // UNKNOWN
+    __voblint_check(!(n == 4)); // UNKNOWN
   }
 }

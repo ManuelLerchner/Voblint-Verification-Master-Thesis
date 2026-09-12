@@ -2,7 +2,7 @@
 // Same program as 00-sanity/precision/01-straight_line_proved.vimp, under Sign
 // instead of Interval. Locks in the fix for #99: a purely local write no
 // longer loses precision through the global slot.
-void main() {
-  x := 5;
-  __voblint_check(0 < x) // PROVED
+fun main() {
+  x = 5;
+  __voblint_check(0 < x); // PROVED
 }

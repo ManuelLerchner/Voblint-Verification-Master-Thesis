@@ -68,14 +68,16 @@ next
   from If.prems(1) obtain n1 E1 K1 n2 E2 K2 where
       c1: "compile \<Pi> p c1 k (Suc n) = (n1, Statement (Suc n), E1, K1)"
     and c2: "compile \<Pi> p c2 k (Suc n + csize c1) = (n2, Statement (Suc n + csize c1), E2, K2)"
-    and E: "E = {(Statement n, EA_Assume b, Statement (Suc n)),
-                 (Statement n, EA_AssumeNot b, Statement (Suc n + csize c1))} \<union> E1 \<union> E2"
+    and E: "E = {(Statement n, EA_Assume b, if c1 = SKIP then k else Statement (Suc n)),
+                 (Statement n, EA_AssumeNot b, if c2 = SKIP then k else Statement (Suc n + csize c1))} \<union> (if c1 = SKIP then {} else E1) \<union> (if c2 = SKIP then {} else E2)"
     by (rule compile_IfE)
-  have "n1 = Suc n + csize c1" "n2 = Suc n + csize c1 + csize c2"
+  have ids: "n1 = Suc n + csize c1" "n2 = Suc n + csize c1 + csize c2"
     "n' = n + csize (If b c1 c2)"
     using compile_next_id[OF c1] compile_next_id[OF c2] compile_next_id[OF If.prems(1)]
     by simp_all
-  then show ?case using If.prems(2) E If.IH(1)[OF c1] If.IH(2)[OF c2] by fastforce
+  have "u = Statement n \<or> (u, a, v) \<in> E1 \<or> (u, a, v) \<in> E2"
+    using If.prems(2) E by (auto split: if_splits)
+  then show ?case using ids If.IH(1)[OF c1] If.IH(2)[OF c2] by fastforce
 next
   case (While b c)
   from While.prems(1) obtain n1 E1 K1 where
@@ -101,7 +103,8 @@ fun live_stmts :: "com \<Rightarrow> nat \<Rightarrow> cfg_node set" where
   "live_stmts (Seq c1 c2) n =
      live_stmts c1 n \<union> (if falls_through c1 then live_stmts c2 (n + csize c1) else {})"
 | "live_stmts (If b c1 c2) n =
-     insert (Statement n) (live_stmts c1 (Suc n) \<union> live_stmts c2 (Suc n + csize c1))"
+     insert (Statement n) ((if c1 = SKIP then {} else live_stmts c1 (Suc n))
+       \<union> (if c2 = SKIP then {} else live_stmts c2 (Suc n + csize c1)))"
 | "live_stmts (While b c) n = insert (Statement n) (live_stmts c (Suc n))"
 | "live_stmts c n = {Statement n}"
 
@@ -175,8 +178,8 @@ next
   from If.prems(1) obtain n1 E1 K1 n2 E2 K2 where
       c1: "compile \<Pi> p c1 k (Suc n) = (n1, Statement (Suc n), E1, K1)"
     and c2: "compile \<Pi> p c2 k (Suc n + csize c1) = (n2, Statement (Suc n + csize c1), E2, K2)"
-    and E: "E = {(Statement n, EA_Assume b, Statement (Suc n)),
-                 (Statement n, EA_AssumeNot b, Statement (Suc n + csize c1))} \<union> E1 \<union> E2"
+    and E: "E = {(Statement n, EA_Assume b, if c1 = SKIP then k else Statement (Suc n)),
+                 (Statement n, EA_AssumeNot b, if c2 = SKIP then k else Statement (Suc n + csize c1))} \<union> (if c1 = SKIP then {} else E1) \<union> (if c2 = SKIP then {} else E2)"
     and K: "K = K1 \<union> K2"
     by (rule compile_IfE)
   have i1: "n1 = Suc n + csize c1" using compile_next_id[OF c1] .
@@ -192,25 +195,25 @@ next
   have e1: "Statement (Suc n) \<in> live_stmts c1 (Suc n)" by (rule live_stmts_entry)
   have e2: "Statement (Suc n + csize c1) \<in> live_stmts c2 (Suc n + csize c1)"
     by (rule live_stmts_entry)
-  from If.prems(2) consider (H) "x = Statement n" | (L) "x \<in> live_stmts c1 (Suc n)"
-    | (R) "x \<in> live_stmts c2 (Suc n + csize c1)"
-    by auto
+  from If.prems(2) consider (H) "x = Statement n" | (L) "c1 \<noteq> SKIP" "x \<in> live_stmts c1 (Suc n)"
+    | (R) "c2 \<noteq> SKIP" "x \<in> live_stmts c2 (Suc n + csize c1)"
+    by (auto split: if_splits)
   then show ?case
   proof cases
     case H
-    show ?thesis unfolding E K H using e1 e2 srcE1 srcE2 srcK1 srcK2 by fastforce
+    show ?thesis unfolding E K H using e1 e2 srcE1 srcE2 srcK1 srcK2 by (fastforce split: if_splits)
   next
     case L
     obtain j where xj: "x = Statement j" "Suc n \<le> j" "j < Suc n + csize c1"
-      using live_stmts_range[OF L] by blast
-    note ih = If.IH(1)[OF c1 L]
-    show ?thesis unfolding E K using ih xj srcE2 srcK2 by fastforce
+      using live_stmts_range[OF L(2)] by blast
+    note ih = If.IH(1)[OF c1 L(2)]
+    show ?thesis unfolding E K using ih xj srcE2 srcK2 L(1) by (fastforce split: if_splits)
   next
     case R
     obtain j where xj: "x = Statement j" "Suc n + csize c1 \<le> j"
-      using live_stmts_range[OF R] by blast
-    note ih = If.IH(2)[OF c2 R]
-    show ?thesis unfolding E K using ih xj srcE1 srcK1 by fastforce
+      using live_stmts_range[OF R(2)] by blast
+    note ih = If.IH(2)[OF c2 R(2)]
+    show ?thesis unfolding E K using ih xj srcE1 srcK1 R(1) by (fastforce split: if_splits)
   qed
 next
   case (While b c)
@@ -278,7 +281,17 @@ proof (induction c arbitrary: k n n' en E K x)
     proof
       assume a: "falls_through c1 \<and> local_reaches g x (Statement (n + csize c1))"
       from ih2[OF live_stmts_entry] show ?thesis
-        using a local_reaches_trans by fastforce
+      proof
+        assume b: "falls_through c2 \<and> local_reaches g (Statement (n + csize c1)) k"
+        have "local_reaches g x k"
+          by (rule local_reaches_trans[OF a[THEN conjunct2] b[THEN conjunct2]])
+        with a b show ?thesis by simp
+      next
+        assume b: "local_reaches g (Statement (n + csize c1)) (FunctionResult p)"
+        have "local_reaches g x (FunctionResult p)"
+          by (rule local_reaches_trans[OF a[THEN conjunct2] b])
+        then show ?thesis by simp
+      qed
     qed simp
   next
     case R
@@ -289,24 +302,38 @@ next
   from If.prems(1) obtain n1 E1 K1 n2 E2 K2 where
       c1: "compile \<Pi> p c1 k (Suc n) = (n1, Statement (Suc n), E1, K1)"
     and c2: "compile \<Pi> p c2 k (Suc n + csize c1) = (n2, Statement (Suc n + csize c1), E2, K2)"
-    and E: "E = {(Statement n, EA_Assume b, Statement (Suc n)),
-                 (Statement n, EA_AssumeNot b, Statement (Suc n + csize c1))} \<union> E1 \<union> E2"
+    and E: "E = {(Statement n, EA_Assume b, if c1 = SKIP then k else Statement (Suc n)),
+                 (Statement n, EA_AssumeNot b, if c2 = SKIP then k else Statement (Suc n + csize c1))} \<union> (if c1 = SKIP then {} else E1) \<union> (if c2 = SKIP then {} else E2)"
     and K: "K = K1 \<union> K2"
     by (rule compile_IfE)
-  have sub: "E1 \<subseteq> intra g" "K1 \<subseteq> calls g" "E2 \<subseteq> intra g" "K2 \<subseteq> calls g"
+  have sub: "c1 \<noteq> SKIP \<Longrightarrow> E1 \<subseteq> intra g" "K1 \<subseteq> calls g"
+    "c2 \<noteq> SKIP \<Longrightarrow> E2 \<subseteq> intra g" "K2 \<subseteq> calls g"
     using If.prems(2,3) E K by auto
-  note ih1 = If.IH(1)[OF c1 sub(1,2)] and ih2 = If.IH(2)[OF c2 sub(3,4)]
-  have edge1: "(Statement n, EA_Assume b, Statement (Suc n)) \<in> intra g"
-    and edge2: "(Statement n, EA_AssumeNot b, Statement (Suc n + csize c1)) \<in> intra g"
+  have ih1: "\<And>y. c1 \<noteq> SKIP \<Longrightarrow> y \<in> live_stmts c1 (Suc n) \<Longrightarrow>
+      (falls_through c1 \<and> local_reaches g y k) \<or> local_reaches g y (FunctionResult p)"
+    using If.IH(1)[OF c1] sub(1,2) by blast
+  have ih2: "\<And>y. c2 \<noteq> SKIP \<Longrightarrow> y \<in> live_stmts c2 (Suc n + csize c1) \<Longrightarrow>
+      (falls_through c2 \<and> local_reaches g y k) \<or> local_reaches g y (FunctionResult p)"
+    using If.IH(2)[OF c2] sub(3,4) by blast
+  have edge1: "(Statement n, EA_Assume b,
+      if c1 = SKIP then k else Statement (Suc n)) \<in> intra g"
     using If.prems(2) E by auto
-  from If.prems(4) consider (H) "x = Statement n" | (L) "x \<in> live_stmts c1 (Suc n)"
-    | (R) "x \<in> live_stmts c2 (Suc n + csize c1)"
-    by auto
+  from If.prems(4) consider (H) "x = Statement n"
+    | (L) "c1 \<noteq> SKIP" "x \<in> live_stmts c1 (Suc n)"
+    | (R) "c2 \<noteq> SKIP" "x \<in> live_stmts c2 (Suc n + csize c1)"
+    by (auto split: if_splits)
   then show ?case
   proof cases
     case H
-    from ih1[OF live_stmts_entry] show ?thesis
-      unfolding H using local_reaches_intra_step[OF edge1] by auto
+    show ?thesis
+    proof (cases "c1 = SKIP")
+      case True
+      with edge1 H show ?thesis by (auto intro: local_reaches_intra_step)
+    next
+      case False
+      from ih1[OF False live_stmts_entry] show ?thesis
+        using edge1 H False local_reaches_intra_step by auto
+    qed
   next
     case L from ih1[OF L] show ?thesis by auto
   next

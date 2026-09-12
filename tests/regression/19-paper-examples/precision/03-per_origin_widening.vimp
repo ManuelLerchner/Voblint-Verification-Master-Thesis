@@ -17,12 +17,12 @@
 // two together is what distinguishes the recovered [-17,42] from any
 // interval merely narrow enough to decide the error condition.
 
-void f(x) {
+fun f(x) {
   __voblint_check(x < 43);      // PROVED
-  __voblint_check(-18 < x)      // PROVED
+  __voblint_check(-18 < x);      // PROVED
 }
-void main() {
+fun main() {
   f(1);
   f(-17);
-  f(42)
+  f(42);
 }

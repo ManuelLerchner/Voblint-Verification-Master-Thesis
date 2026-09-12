@@ -11,18 +11,18 @@
 // is not 9 (mod 12), so after the meet the branch is proved dead. The
 // NOWARN therefore depends on the CRT step specifically, not on either
 // operand's own class.
-void main() {
-  n := __voblint_nondet_int();
-  m := __voblint_nondet_int();
-  x := 4 * n + 1;
-  y := 6 * m + 3;
+fun main() {
+  n = __voblint_nondet_int();
+  m = __voblint_nondet_int();
+  x = 4 * n + 1;
+  y = 6 * m + 3;
   if (x == y) {
     if (x == 13) {
-      __voblint_check(false) // NOWARN (unreachable)
+      __voblint_check(false); // NOWARN (unreachable)
     } else {
-      __voblint_check(true) // PROVED
+      __voblint_check(true); // PROVED
     }
   } else {
-    __voblint_check(true) // PROVED
+    __voblint_check(true); // PROVED
   }
 }

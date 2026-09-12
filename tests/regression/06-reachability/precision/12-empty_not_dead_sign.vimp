@@ -4,11 +4,11 @@
 // an empty variable set is domain-generic, so a program with no variables
 // stays live under Sign as well. int and parity give the same three PROVED
 // rows.
-void p() {
-  __voblint_check(true) // PROVED
+fun p() {
+  __voblint_check(true); // PROVED
 }
-void main() {
+fun main() {
   __voblint_check(true); // PROVED
   p();
-  __voblint_check(true) // PROVED
+  __voblint_check(true); // PROVED
 }

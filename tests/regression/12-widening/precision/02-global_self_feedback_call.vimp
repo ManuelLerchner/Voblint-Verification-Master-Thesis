@@ -10,11 +10,11 @@
 // the fix holds across the interprocedural global-summary path, not only
 // the intraprocedural one 01-global_self_feedback.vimp isolates.
 global total;
-void inc(n) {
-  total := total + n
+fun inc(n) {
+  total = total + n;
 }
-void main() {
-  total := 0;
+fun main() {
+  total = 0;
   inc(3);
-  __voblint_check(0 < total) // PROVED
+  __voblint_check(0 < total); // PROVED
 }

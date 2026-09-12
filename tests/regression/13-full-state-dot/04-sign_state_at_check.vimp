@@ -55,8 +55,8 @@
 //   main_pp0_ctx0 -> main_pp1_ctx0: x := 5
 // EXPECT-GRAPH-END
 
-void main() {
-  x := 5;
-  y := 1;
-  __voblint_check(0 < x)
+fun main() {
+  x = 5;
+  y = 1;
+  __voblint_check(0 < x);
 }

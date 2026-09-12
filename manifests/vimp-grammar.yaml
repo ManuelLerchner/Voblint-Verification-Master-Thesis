@@ -41,6 +41,7 @@
 #     Structured constructor application. Each entry in `args` is one of:
 #       {rhs: N}         -- the parsed value at rhs position N
 #       {some: <arg>}    -- that arg wrapped in `Some`
+#       {ctor: Name, args: [...]} -- a nested constructor (implicit SKIP)
 #       {none: true}     -- literal `None`
 #       {literal: true|false} -- a literal boolean
 #       {int: N}         -- a literal int (used by exp_true/exp_false to
@@ -88,7 +89,7 @@ terminals:
 
 keywords:
   global: GLOBAL
-  void: VOID
+  fun: FUN
   skip: SKIP
   return: RETURN
   __voblint_check: CHECK
@@ -99,12 +100,16 @@ keywords:
   "false": BOOL_FALSE
 
 punctuation:
-  ":=": ASSIGN
+  "=": ASSIGN
   "+": PLUS
   "-": MINUS
   "*": STAR
   "<": LT
+  "<=": LE
+  ">": GT
+  ">=": GE
   "==": EQEQ
+  "!=": NEQ
   "&&": AND
   "||": OR
   "!": NOT
@@ -122,7 +127,7 @@ punctuation:
 precedence:
   - {assoc: left,  tokens: ["OR"]}
   - {assoc: left,  tokens: ["AND"]}
-  - {assoc: none,  tokens: ["LT", "EQEQ"]}
+  - {assoc: none,  tokens: ["LT", "LE", "GT", "GE", "EQEQ", "NEQ"]}
   - {assoc: left,  tokens: ["PLUS", "MINUS"]}
   - {assoc: left,  tokens: ["STAR"]}
   - {assoc: right, tokens: ["NOT", "UMINUS"]}
@@ -144,7 +149,11 @@ productions:
   - {name: exp_true,  result: exp, rhs: [BOOL_TRUE],  lower: {ctor: N, args: [{int: 1}]}}
   - {name: exp_false, result: exp, rhs: [BOOL_FALSE], lower: {ctor: N, args: [{int: 0}]}}
   - {name: exp_less,  result: exp, rhs: [exp, LT, exp],   lower: {ctor: Less, args: [{rhs: 0}, {rhs: 2}]}}
+  - {name: exp_less_eq, result: exp, rhs: [exp, LE, exp], lower: {ctor: LessEq, args: [{rhs: 0}, {rhs: 2}]}}
+  - {name: exp_greater, result: exp, rhs: [exp, GT, exp], lower: {ctor: Greater, args: [{rhs: 0}, {rhs: 2}]}}
+  - {name: exp_greater_eq, result: exp, rhs: [exp, GE, exp], lower: {ctor: GreaterEq, args: [{rhs: 0}, {rhs: 2}]}}
   - {name: exp_eq,    result: exp, rhs: [exp, EQEQ, exp], lower: {ctor: Eq,  args: [{rhs: 0}, {rhs: 2}]}}
+  - {name: exp_not_eq, result: exp, rhs: [exp, NEQ, exp], lower: {ctor: NotEq, args: [{rhs: 0}, {rhs: 2}]}}
   - {name: exp_not,   result: exp, rhs: [NOT, exp], precedence: NOT,
      lower: {ctor: Not, args: [{rhs: 1}]}}
   - {name: exp_and,   result: exp, rhs: [exp, AND, exp], precedence: AND,
@@ -157,42 +166,49 @@ productions:
   # source-expressible, not just left-associated ones.
   - {name: exp_paren,  result: exp, rhs: [LPAREN, exp, RPAREN],   passthrough: 1}
 
+  # Simple statements consume SEMI; braced statements need no terminator.
+  # A missing else lowers to SKIP, preserving the command AST.
   # -- stmt --
-  - {name: stmt_skip,     result: stmt, rhs: [SKIP], lower: {ctor: SKIP, args: []}}
-  - {name: stmt_assign,   result: stmt, rhs: [IDENT, ASSIGN, exp],
+  - {name: stmt_skip,     result: stmt, rhs: [SKIP, SEMI], lower: {ctor: SKIP, args: []}}
+  - {name: stmt_assign,   result: stmt, rhs: [IDENT, ASSIGN, exp, SEMI],
      lower: {ctor: Assign, args: [{rhs: 0}, {rhs: 2}]}}
-  - {name: stmt_return,   result: stmt, rhs: [RETURN, exp],
+  - {name: stmt_return,   result: stmt, rhs: [RETURN, exp, SEMI],
      lower: {ctor: Return, args: [{some: {rhs: 1}}]}}
-  - {name: stmt_return0,  result: stmt, rhs: [RETURN],
+  - {name: stmt_return0,  result: stmt, rhs: [RETURN, SEMI],
      lower: {ctor: Return, args: [{none: true}]}}
-  - {name: stmt_check,    result: stmt, rhs: [CHECK, LPAREN, exp, RPAREN],
+  - {name: stmt_check,    result: stmt, rhs: [CHECK, LPAREN, exp, RPAREN, SEMI],
      lower: {ctor: Check, args: [{rhs: 2}]}}
-  - {name: stmt_if,       result: stmt, rhs: [IF, LPAREN, exp, RPAREN, LBRACE, stmts_opt, RBRACE, ELSE, LBRACE, stmts_opt, RBRACE],
+  - {name: stmt_if,       result: if_stmt, rhs: [IF, LPAREN, exp, RPAREN, LBRACE, stmts_opt, RBRACE, ELSE, LBRACE, stmts_opt, RBRACE],
      lower: {ctor: If, args: [{rhs: 2}, {rhs: 5}, {rhs: 9}]}}
+  - {name: stmt_if_then, result: if_stmt, rhs: [IF, LPAREN, exp, RPAREN, LBRACE, stmts_opt, RBRACE],
+     lower: {ctor: If, args: [{rhs: 2}, {rhs: 5}, {ctor: SKIP, args: []}]}}
+  - {name: stmt_if_chain, result: if_stmt, rhs: [IF, LPAREN, exp, RPAREN, LBRACE, stmts_opt, RBRACE, ELSE, if_stmt],
+     lower: {ctor: If, args: [{rhs: 2}, {rhs: 5}, {rhs: 8}]}}
+  - {name: stmt_conditional, result: stmt, rhs: [if_stmt], passthrough: 0}
   - {name: stmt_while,    result: stmt, rhs: [WHILE, LPAREN, exp, RPAREN, LBRACE, stmts_opt, RBRACE],
      lower: {ctor: While, args: [{rhs: 2}, {rhs: 5}]}}
   # No separate call0/callret0 (zero-arg) productions: unlike Isabelle's
   # imp2_actuals (which has no empty derivation, forcing _stmt_call0 as a
   # workaround), this grammar's `actuals` already allows `min: 0`, so
-  # `f()`/`x := f()` already parse via `stmt_call`/`stmt_callret` with an
+  # `f()`/`x = f()` already parse via `stmt_call`/`stmt_callret` with an
   # empty actuals list. A separate call0/callret0 would just be ambiguous
   # with that (confirmed empirically: Menhir reported exactly this as a
   # shift/reduce conflict on RPAREN when both were present).
-  - {name: stmt_call,     result: stmt, rhs: [IDENT, LPAREN, actuals, RPAREN],
+  - {name: stmt_call,     result: stmt, rhs: [IDENT, LPAREN, actuals, RPAREN, SEMI],
      lower: {ctor: Call, args: [{none: true}, {rhs: 0}, {rhs: 2}]}}
-  - {name: stmt_callret,  result: stmt, rhs: [IDENT, ASSIGN, IDENT, LPAREN, actuals, RPAREN],
+  - {name: stmt_callret,  result: stmt, rhs: [IDENT, ASSIGN, IDENT, LPAREN, actuals, RPAREN, SEMI],
      lower: {ctor: Call, args: [{some: {rhs: 0}}, {rhs: 2}, {rhs: 4}]}}
 
   # -- statement sequences, actuals, formals, ids: standard left-recursive lists --
-  - {name: stmts, result: stmts, list_of: stmt, separator: SEMI, constructor: Seq, min: 1}
-  - {name: stmts_opt, result: stmts_opt, optional_list_of: stmt, separator: SEMI, constructor: Seq, empty: SKIP}
+  - {name: stmts, result: stmts, list_of: stmt, constructor: Seq, min: 1}
+  - {name: stmts_opt, result: stmts_opt, optional_list_of: stmt, constructor: Seq, empty: SKIP}
   - {name: actuals, result: actuals, list_of: exp, separator: COMMA, min: 0}
   - {name: formals, result: formals, list_of: IDENT, separator: COMMA, min: 0}
   - {name: ids,      result: ids,     list_of: IDENT, separator: COMMA, min: 1}
 
   # -- globals, functions, program --
   - {name: globals_decl, result: globals, rhs: [GLOBAL, ids, SEMI], passthrough: 1}
-  - {name: function_decl, result: function, rhs: [VOID, IDENT, LPAREN, formals, RPAREN, LBRACE, stmts_opt, RBRACE],
+  - {name: function_decl, result: function, rhs: [FUN, IDENT, LPAREN, formals, RPAREN, LBRACE, stmts_opt, RBRACE],
      lower: {tuple: [1, 3, 6]}}   # (name, formals, body) -- "main" is just an IDENT here, same as every other name
 
   # Every function parses uniformly via function_decl*; "main" is picked out

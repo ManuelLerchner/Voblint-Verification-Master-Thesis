@@ -30,11 +30,12 @@ text \<open>
 definition dispatch_demo_prog :: imp_prog where
   "dispatch_demo_prog =
      program {
-       void main() {
-         y := 1;
+       fun main() {
+         y = 1;
          __voblint_check(0 < y);
-         y := 0 - 1;
-         __voblint_check(0 < y)
+         y = 0 - 1;
+         __voblint_check(0 < y);
+
        }
      }"
 

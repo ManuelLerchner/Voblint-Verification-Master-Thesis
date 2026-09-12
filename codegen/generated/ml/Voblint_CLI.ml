@@ -5681,13 +5681,17 @@ let rec compile
                       (insert
                         (equal_prod equal_cfg_node
                           (equal_prod equal_edge_action equal_cfg_node))
-                        (Statement n, (EA_Assume b, en1))
+                        (Statement n,
+                          (EA_Assume b, (if equal_com c1 SKIP then k else en1)))
                         (insert
                           (equal_prod equal_cfg_node
                             (equal_prod equal_edge_action equal_cfg_node))
-                          (Statement n, (EA_AssumeNot b, en2)) bot_set))
-                      e1)
-                    e2,
+                          (Statement n,
+                            (EA_AssumeNot b,
+                              (if equal_com c2 SKIP then k else en2)))
+                          bot_set))
+                      (if equal_com c1 SKIP then bot_set else e1))
+                    (if equal_com c2 SKIP then bot_set else e2),
                    sup_set
                      (equal_prod equal_cfg_node
                        (equal_prod equal_call_action
@@ -10221,31 +10225,30 @@ let char_0x3E : char = Chr (Z.of_int 62);;
 
 let char_0x3B : char = Chr (Z.of_int 59);;
 
-let char_0x3A : char = Chr (Z.of_int 58);;
-
 let source_nl : char list = [char_0x0A];;
 
 let rec string_of_com
-  = function SKIP -> [char_0x73; char_0x6B; char_0x69; char_0x70]
+  = function SKIP -> [char_0x73; char_0x6B; char_0x69; char_0x70; char_0x3B]
     | Assign (x, e) ->
         explode x @
-          [char_0x20; char_0x3A; char_0x3D; char_0x20] @
-            string_of_exp zero_nat e
+          [char_0x20; char_0x3D; char_0x20] @
+            string_of_exp zero_nat e @ [char_0x3B]
     | Check c ->
         [char_0x5F; char_0x5F; char_0x76; char_0x6F; char_0x62; char_0x6C;
           char_0x69; char_0x6E; char_0x74; char_0x5F; char_0x63; char_0x68;
           char_0x65; char_0x63; char_0x6B; char_0x28] @
-          string_of_exp zero_nat c @ [char_0x29]
-    | Seq (c1, c2) ->
-        string_of_com c1 @ [char_0x3B] @ source_nl @ string_of_com c2
+          string_of_exp zero_nat c @ [char_0x29; char_0x3B]
+    | Seq (c1, c2) -> string_of_com c1 @ source_nl @ string_of_com c2
     | If (b, c1, c2) ->
         [char_0x69; char_0x66; char_0x20; char_0x28] @
           string_of_exp zero_nat b @
             [char_0x29; char_0x20; char_0x7B; char_0x20] @
               string_of_com c1 @
-                [char_0x20; char_0x7D; char_0x20; char_0x65; char_0x6C;
-                  char_0x73; char_0x65; char_0x20; char_0x7B; char_0x20] @
-                  string_of_com c2 @ [char_0x20; char_0x7D]
+                (if equal_com c2 SKIP then [char_0x20; char_0x7D]
+                  else [char_0x20; char_0x7D; char_0x20; char_0x65; char_0x6C;
+                         char_0x73; char_0x65; char_0x20; char_0x7B;
+                         char_0x20] @
+                         string_of_com c2 @ [char_0x20; char_0x7D])
     | While (b, c) ->
         [char_0x77; char_0x68; char_0x69; char_0x6C; char_0x65; char_0x20;
           char_0x28] @
@@ -10259,10 +10262,10 @@ let rec string_of_com
               [char_0x28] @
                 join_source [char_0x2C; char_0x20]
                   (map (string_of_exp zero_nat) es) @
-                  [char_0x29]
+                  [char_0x29; char_0x3B]
           | Some x ->
             explode x @
-              [char_0x20; char_0x3A; char_0x3D; char_0x20] @
+              [char_0x20; char_0x3D; char_0x20] @
                 explode p @
                   [char_0x28] @
                     join_source [char_0x2C; char_0x20]
@@ -10271,9 +10274,10 @@ let rec string_of_com
     | Return (Some e) ->
         [char_0x72; char_0x65; char_0x74; char_0x75; char_0x72; char_0x6E;
           char_0x20] @
-          string_of_exp zero_nat e
+          string_of_exp zero_nat e @ [char_0x3B]
     | Return None ->
-        [char_0x72; char_0x65; char_0x74; char_0x75; char_0x72; char_0x6E]
+        [char_0x72; char_0x65; char_0x74; char_0x75; char_0x72; char_0x6E;
+          char_0x3B]
     | Restore ->
         [char_0x72; char_0x65; char_0x73; char_0x74; char_0x6F; char_0x72;
           char_0x65]
@@ -10285,40 +10289,37 @@ let rec source_indent
   n = (if equal_nata n zero_nat then []
         else [char_0x20; char_0x20] @ source_indent (minus_nat n one_nat));;
 
-let rec append_last
-  suffix x1 = match suffix, x1 with suffix, [] -> []
-    | suffix, [s] -> [s @ suffix]
-    | suffix, s :: v :: va -> s :: append_last suffix (v :: va);;
-
 let rec pretty_source_lines_com
   n x1 = match n, x1 with
-    n, SKIP -> [source_indent n @ [char_0x73; char_0x6B; char_0x69; char_0x70]]
+    n, SKIP ->
+      [source_indent n @
+         [char_0x73; char_0x6B; char_0x69; char_0x70; char_0x3B]]
     | n, Assign (x, e) ->
         [source_indent n @
            explode x @
-             [char_0x20; char_0x3A; char_0x3D; char_0x20] @
-               string_of_exp zero_nat e]
+             [char_0x20; char_0x3D; char_0x20] @
+               string_of_exp zero_nat e @ [char_0x3B]]
     | n, Check c ->
         [source_indent n @
            [char_0x5F; char_0x5F; char_0x76; char_0x6F; char_0x62; char_0x6C;
              char_0x69; char_0x6E; char_0x74; char_0x5F; char_0x63; char_0x68;
              char_0x65; char_0x63; char_0x6B; char_0x28] @
-             string_of_exp zero_nat c @ [char_0x29]]
+             string_of_exp zero_nat c @ [char_0x29; char_0x3B]]
     | n, Seq (c1, c2) ->
-        append_last [char_0x3B] (pretty_source_lines_com n c1) @
-          pretty_source_lines_com n c2
+        pretty_source_lines_com n c1 @ pretty_source_lines_com n c2
     | n, If (b, c1, c2) ->
         [source_indent n @
            [char_0x69; char_0x66; char_0x20; char_0x28] @
              string_of_exp zero_nat b @ [char_0x29; char_0x20; char_0x7B]] @
           pretty_source_lines_com (plus_nat n (nat_of_integer (Z.of_int 2)))
             c1 @
-            [source_indent n @
-               [char_0x7D; char_0x20; char_0x65; char_0x6C; char_0x73;
-                 char_0x65; char_0x20; char_0x7B]] @
-              pretty_source_lines_com (plus_nat n (nat_of_integer (Z.of_int 2)))
-                c2 @
-                [source_indent n @ [char_0x7D]]
+            (if equal_com c2 SKIP then []
+              else [source_indent n @
+                      [char_0x7D; char_0x20; char_0x65; char_0x6C; char_0x73;
+                        char_0x65; char_0x20; char_0x7B]] @
+                     pretty_source_lines_com
+                       (plus_nat n (nat_of_integer (Z.of_int 2))) c2) @
+              [source_indent n @ [char_0x7D]]
     | n, While (b, c) ->
         [source_indent n @
            [char_0x77; char_0x68; char_0x69; char_0x6C; char_0x65; char_0x20;
@@ -10341,7 +10342,7 @@ let rec pretty_source_lines_com
 let rec pretty_source_lines_proc
   n p decl =
     (source_indent n @
-      [char_0x76; char_0x6F; char_0x69; char_0x64; char_0x20] @
+      [char_0x66; char_0x75; char_0x6E; char_0x20] @
         explode p @
           [char_0x28] @
             join_source [char_0x2C; char_0x20] (map explode (formals decl)) @
@@ -10369,8 +10370,8 @@ let rec pretty_string_of_program
                           char_0x3E]]
                  | Some a -> pretty_source_lines_proc zero_nat p a))
           ps @
-          [[char_0x76; char_0x6F; char_0x69; char_0x64; char_0x20; char_0x6D;
-             char_0x61; char_0x69; char_0x6E; char_0x28; char_0x29; char_0x20;
+          [[char_0x66; char_0x75; char_0x6E; char_0x20; char_0x6D; char_0x61;
+             char_0x69; char_0x6E; char_0x28; char_0x29; char_0x20;
              char_0x7B]] @
             pretty_source_lines_com (nat_of_integer (Z.of_int 2)) main @
               [[char_0x7D]]);;
@@ -10496,6 +10497,8 @@ let rec analysis_nodes_in_cluster _A _B
             | (SourceCluster, GlobalNode _) -> false
             | (SourceCluster, SourceNode _) -> true))
         ns);;
+
+let char_0x3A : char = Chr (Z.of_int 58);;
 
 let rec string_of_action
   = function EA_Nop -> [char_0x6E; char_0x6F; char_0x70]

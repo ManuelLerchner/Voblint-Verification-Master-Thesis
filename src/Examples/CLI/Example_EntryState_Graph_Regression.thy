@@ -87,16 +87,14 @@ text \<open>
 
 definition dead_route_prog :: imp_prog where
   "dead_route_prog = program {
-     void f(n) { return n }
-     void main() {
-       x := 5;
+     fun f(n) { return n; }
+     fun main() {
+       x = 5;
        if (x < 2) {
-         a := f(3)
-       } else {
-         skip
-       };
-       b := f(7);
-       __voblint_check(b == 7)
+         a = f(3);
+       }
+       b = f(7);
+       __voblint_check(b == 7);
      }
    }"
 

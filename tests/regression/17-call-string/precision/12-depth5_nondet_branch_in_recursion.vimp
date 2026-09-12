@@ -10,17 +10,17 @@
 // depth 5 every f activation keeps its own key and a == 0 is exact. At
 // depth 2 the deeper activations f(1,1) and f(0,0) share a key
 // (known-imprecision/04). --context none proves neither check.
-void nr(x, y) {
-  __voblint_check(x == y) // PROVED
+fun nr(x, y) {
+  __voblint_check(x == y); // PROVED
 }
-void f(x, y) {
-  if (x == 0) { return y } else { skip };
-  top := __voblint_nondet_int();
-  if (0 < top) { nr(5, 5) } else { nr(6, 6) };
-  r := f(x - 1, y - 1);
-  return r
+fun f(x, y) {
+  if (x == 0) { return y; }
+  top = __voblint_nondet_int();
+  if (0 < top) { nr(5, 5); } else { nr(6, 6); }
+  r = f(x - 1, y - 1);
+  return r;
 }
-void main() {
-  a := f(3, 3);
-  __voblint_check(a == 0) // PROVED
+fun main() {
+  a = f(3, 3);
+  __voblint_check(a == 0); // PROVED
 }

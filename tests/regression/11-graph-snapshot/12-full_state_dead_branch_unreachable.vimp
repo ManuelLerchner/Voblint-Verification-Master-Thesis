@@ -51,11 +51,11 @@
 //   main_pp0_ctx0 -> main_pp1_ctx0: x := 5
 // EXPECT-GRAPH-END
 
-void main() {
-  x := 5;
+fun main() {
+  x = 5;
   if (x < 2) {
-    __voblint_check(x == 99) // NOWARN (unreachable)
+    __voblint_check(x == 99); // NOWARN (unreachable)
   } else {
-    __voblint_check(x == 5) // PROVED
+    __voblint_check(x == 5); // PROVED
   }
 }

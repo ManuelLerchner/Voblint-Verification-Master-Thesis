@@ -57,6 +57,7 @@ MIXFIX_ESCAPE = {"(": "'(", ")": "')", "_": "'_"}
 NONTERMINAL = {
     "exp": "imp2_exp",
     "stmt": "imp2_stmt",
+    "if_stmt": "imp2_if_stmt",
     "stmts": "imp2_stmts",
     "stmts_opt": "imp2_stmts_opt",
     "actuals": "imp2_actuals",
@@ -184,9 +185,8 @@ def mixfix_template(g: dict, rhs: list) -> str:
 # proven-working spacing for exactly the productions that need it is
 # sufficient and lower-risk than a broader heuristic.
 TEMPLATE_OVERRIDE = {
-    "stmt_random": "_ := random'(')",
-    "stmt_call": "_'( _ ')",
-    "stmt_callret": "_ := _'( _ ')",
+    "stmt_call": "_'( _ ') ;",
+    "stmt_callret": "_ = _'( _ ') ;",
 }
 
 
@@ -282,7 +282,11 @@ def render_syntax_line(g: dict, prod: dict) -> str:
     if len(prec_tokens) == 1:
         assoc, level = precedence_of(g, prec_tokens[0])
         if len(arg_positions) == 2 and rhs[arg_positions[0]] == result_nt == rhs[arg_positions[1]]:
-            left, right = (level, level + 1) if assoc == "left" else (level + 1, level)
+            left, right = {
+                "left": (level, level + 1),
+                "right": (level + 1, level),
+                "none": (level + 1, level + 1),
+            }[assoc]
             prio = f" [{left}, {right}] {level}"
         elif len(arg_positions) == 1:
             prio = f" [{level}] {level}"
@@ -298,7 +302,7 @@ def render_syntax_line(g: dict, prod: dict) -> str:
             prio = f" [{', '.join('0' for _ in recursive_args)}] {ATOM_PRIORITY}"
         else:
             prio = f" {ATOM_PRIORITY}"
-    elif result_nt == "stmt":
+    elif result_nt in ("stmt", "if_stmt"):
         arg_priorities = [stmt_id_arg_priority(rhs, i) if rhs[i] == "IDENT" else 0 for i in arg_positions]
         prio = f" [{', '.join(map(str, arg_priorities))}] {STMT_LEVEL}" if arg_priorities else f" {STMT_LEVEL}"
     else:
@@ -342,7 +346,7 @@ def gen_list_syntax(prod: dict) -> list:
     # list, so the IDENT fallback is id_position, not plain id -- same
     # variable-role treatment as any other declaration/use occurrence.
     item = NONTERMINAL.get(prod.get("list_of") or prod.get("optional_list_of"), "id_position")
-    sep = {"SEMI": ";", "COMMA": ","}[prod.get("separator", "COMMA")]
+    sep = {"SEMI": ";", "COMMA": ",", None: ""}[prod.get("separator")]
     if "optional_list_of" in prod:
         base = NONTERMINAL[prod["result"].removesuffix("_opt")]
         return [
@@ -393,8 +397,8 @@ def gen_isabelle_extra_syntax() -> list:
         # first is the zero-arg callret's return TARGET (variable role),
         # second the callee (callee role) -- both carry position, only
         # dest_id_position's markup argument differs per role.
-        "  \"_stmt_call0\" :: \"id_position => imp2_stmt\" (\"_'(')\" [1000] 61)",
-        "  \"_stmt_callret0\" :: \"id_position => id_position => imp2_stmt\" (\"_ := _'(')\" [900, 1000] 61)",
+        "  \"_stmt_call0\" :: \"id_position => imp2_stmt\" (\"_'(') ;\" [1000] 61)",
+        "  \"_stmt_callret0\" :: \"id_position => id_position => imp2_stmt\" (\"_ = _'(') ;\" [900, 1000] 61)",
     ]
 
 
@@ -460,6 +464,10 @@ TR_CONST = {
     "Minus": "VIMP_Syntax.exp.Minus",
     "Times": "VIMP_Syntax.exp.Times",
     "Less": "VIMP_Syntax.exp.Less",
+    "LessEq": "VIMP_Syntax.exp.LessEq",
+    "Greater": "VIMP_Syntax.exp.Greater",
+    "GreaterEq": "VIMP_Syntax.exp.GreaterEq",
+    "NotEq": "VIMP_Syntax.exp.NotEq",
     "Eq": "VIMP_Syntax.exp.Eq",
     "Not": "VIMP_Syntax.exp.Not",
     "And": "VIMP_Syntax.exp.And",
@@ -481,6 +489,8 @@ TR_CONST = {
 CTOR_VAL = {
     "N": "c_N", "V": "c_V", "Plus": "c_Plus", "Minus": "c_Minus", "Times": "c_Times",
     "Less": "c_Less", "Eq": "c_Eq", "Not": "c_Not",
+    "LessEq": "c_LessEq", "Greater": "c_Greater",
+    "GreaterEq": "c_GreaterEq", "NotEq": "c_NotEq",
     "And": "c_And", "Or": "c_Or",
     "SKIP": "c_SKIP", "Seq": "c_Seq", "Assign": "c_Assign",
     "Return": "c_Return", "Check": "c_Check", "If": "c_If", "While": "c_While",
@@ -495,6 +505,7 @@ CTOR_VAL = {
 TR_FN = {
     "exp": "exp_tr",
     "stmt": "stmt_tr",
+    "if_stmt": "if_stmt_tr",
     "stmts": "stmts_tr",
     "stmts_opt": "stmts_opt_tr",
     "actuals": "actuals_tr",
@@ -546,6 +557,11 @@ def render_lower_arg_isabelle(prod: dict, arg: dict, binds: dict, raw_idents: bo
             name_expr = f"dest_id_position ({markup}) ctxt {binds[i]}"
             return name_expr if raw_idents else f"HOLogic.mk_literal ({name_expr})"
         return f"{TR_FN[sym]} ctxt {binds[i]}"
+    if "ctor" in arg:
+        ctor = CTOR_VAL[arg["ctor"]]
+        args = [render_lower_arg_isabelle(prod, a, binds, raw_idents)
+                for a in arg.get("args", [])]
+        return f"K {ctor}" + "".join(f" $ ({a})" for a in args)
     if "some" in arg:
         return f"(K c_Some $ ({render_lower_arg_isabelle(prod, arg['some'], binds, raw_idents)}))"
     if "none" in arg:
@@ -569,7 +585,7 @@ def render_action_isabelle(prod: dict) -> str:
         # parens): recurse through this nonterminal's own _tr, don't just
         # rebind -- the parsed value is still a raw parse-tree Const, not a
         # HOL term, until translated.
-        rhs = f"{TR_FN[prod['result']]} ctxt {binds[prod['passthrough']]}"
+        rhs = f"{TR_FN[prod['rhs'][prod['passthrough']]]} ctxt {binds[prod['passthrough']]}"
         return f"{pattern} => {rhs}"
     lower = prod["lower"]
     if "tuple" in lower:
@@ -684,6 +700,10 @@ val c_Minus  = "VIMP_Syntax.exp.Minus"
 val c_Times  = "VIMP_Syntax.exp.Times"
 
 val c_Less   = "VIMP_Syntax.exp.Less"
+val c_LessEq = "VIMP_Syntax.exp.LessEq"
+val c_Greater = "VIMP_Syntax.exp.Greater"
+val c_GreaterEq = "VIMP_Syntax.exp.GreaterEq"
+val c_NotEq = "VIMP_Syntax.exp.NotEq"
 val c_Eq     = "VIMP_Syntax.exp.Eq"
 val c_Not    = "VIMP_Syntax.exp.Not"
 val c_And    = "VIMP_Syntax.exp.And"
@@ -795,6 +815,7 @@ def gen_grammar_tr_structure(g: dict) -> str:
     extra_actions = gen_isabelle_extra_actions()
     exp_body = gen_tr_function(g, "exp", EXP_SPECIALS + extra_actions["exp"])
     stmt_body = gen_tr_function(g, "stmt", extra_actions["stmt"])
+    if_stmt_body = gen_tr_function(g, "if_stmt")
 
     list_by_name = {p["name"]: p for p in g["productions"] if p.get("list_of") or p.get("optional_list_of")}
     actuals_body = gen_list_tr(list_by_name["actuals"])
@@ -803,7 +824,7 @@ def gen_grammar_tr_structure(g: dict) -> str:
     formals_body = gen_list_tr(list_by_name["formals"], fn_name="formals_of")
     names_body = gen_list_tr(list_by_name["ids"], fn_name="names_of")
 
-    stmt_chain = "fun " + "\nand ".join([stmts_body, stmts_opt_body, stmt_body])
+    stmt_chain = "fun " + "\nand ".join([stmts_body, stmts_opt_body, stmt_body, if_stmt_body])
 
     return "\n\n".join([
         VAL_DECLS,

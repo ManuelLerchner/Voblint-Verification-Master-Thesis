@@ -57,14 +57,14 @@ definition parity_program :: imp_prog where
 
       global total;
 
-      void main() {
-        x := 0;
-        Gcount:=1;
+      fun main() {
+        x = 0;
+        Gcount=1;
         while (x < 20) {
-          x := x + 2;
-          Gcount:=Gcount + 1
-        };
-        total:= x + Gcount
+          x = x + 2;
+          Gcount=Gcount + 1;
+        }
+        total= x + Gcount;
       }
 }"
 

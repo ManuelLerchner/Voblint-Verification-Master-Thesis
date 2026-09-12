@@ -24,8 +24,8 @@ text \<open>
 
 definition twice_program :: imp_prog where
   "twice_program = program {
-     void twice(p) { return p + p }
-     void main() { x := twice(3); y := twice(10) }
+     fun twice(p) { return p + p; }
+     fun main() { x = twice(3); y = twice(10); }
    }"
 
 definition twice_pi :: proc_table where "twice_pi = prog_table twice_program"

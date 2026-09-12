@@ -4,6 +4,6 @@
 // exactly -- see also 02-global_var.vimp (Interval), which locks in a
 // declared global's value after it is actually written.
 global g;
-void main() {
-  __voblint_check(g == 0) // PROVED
+fun main() {
+  __voblint_check(g == 0); // PROVED
 }

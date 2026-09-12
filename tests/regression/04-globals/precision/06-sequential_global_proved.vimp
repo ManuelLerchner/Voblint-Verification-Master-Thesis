@@ -10,8 +10,8 @@
 // which is the point -- declaring x global costs nothing as long as no call
 // crosses it.
 global x;
-void main() {
-  x := 0;
-  x := 1;
-  __voblint_check(x == 1) // PROVED
+fun main() {
+  x = 0;
+  x = 1;
+  __voblint_check(x == 1); // PROVED
 }

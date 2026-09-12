@@ -81,7 +81,7 @@ let edge_attrs edge =
     let text = if payload = "" then "resume" else "resume / " ^ payload in
     Printf.sprintf "style=dashed,color=blue,constraint=false,xlabel=\"%s\"" text
   | C.XE_CallToReturn ->
-    "style=dotted,color=gray40,constraint=false,label=\"resume-site\""
+    "style=dashed,color=gray40,constraint=false,label=\"continuation\""
   | C.XE_GlobalRead -> "style=dotted,color=gray,label=\"read global\""
   | C.XE_GlobalWrite -> "style=dotted,color=gray,label=\"write global\""
 

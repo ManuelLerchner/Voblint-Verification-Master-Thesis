@@ -12,8 +12,8 @@
 //
 // --analysis interval proves the order check; the reduced product in
 // --analysis int gets both from its interval component.
-void main() {
-  x := 2 + 2;
+fun main() {
+  x = 2 + 2;
   __voblint_check(x == 4); // PROVED
-  __voblint_check(x < 9) // UNKNOWN
+  __voblint_check(x < 9); // UNKNOWN
 }

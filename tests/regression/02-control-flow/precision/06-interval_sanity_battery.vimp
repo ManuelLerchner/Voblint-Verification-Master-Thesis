@@ -4,45 +4,43 @@
 // a/b correlation live in known-imprecision/01-no_exclusion_set.vimp and
 // known-imprecision/02-nonrelational_join.vimp, the nondet-decided a == 8 and
 // b == 8 in soundness/01-truthiness_guard_underdetermined.vimp. What stays:
-// truthiness guards (if (x), !!t, !f, dead arms of if (a) and if (!a)),
+// truthiness guards (if (!x), !!t, !f, dead arms of if (a) and if (!a)),
 // constants joined into [8,9] and every <, <=, >, >= threshold on them written
 // with <, ==, and !, comparisons as int values, a counted loop with x == 10
 // after it, and the tail after Goblint's early return restructured as nesting
 // because main may not return. Comparison operators C offers and VIMP does
 // not are written as: a <= 9 is !(9 < a), b > 7 is 7 < b, b >= 8 is !(b < 8).
 // int gives the same verdicts.
-void main() {
-  a := 1;
-  b := 2;
-  x := __voblint_nondet_int();
-  z := __voblint_nondet_int();
-  w := __voblint_nondet_int();
-  f := 0;
-  t := 42;
-  if (x) {
-    skip
-  } else {
-    __voblint_check(x == 0) // PROVED
-  };
+fun main() {
+  a = 1;
+  b = 2;
+  x = __voblint_nondet_int();
+  z = __voblint_nondet_int();
+  w = __voblint_nondet_int();
+  f = 0;
+  t = 42;
+  if (!x) {
+    __voblint_check(x == 0); // PROVED
+  }
   __voblint_check(!!t); // PROVED
   __voblint_check(!f); // PROVED
   if (a) {
-    a := a
+    a = a;
   } else {
-    __voblint_check(false) // NOWARN (unreachable)
-  };
+    __voblint_check(false); // NOWARN (unreachable)
+  }
   if (!a) {
-    __voblint_check(false) // NOWARN (unreachable)
+    __voblint_check(false); // NOWARN (unreachable)
   } else {
-    a := a
-  };
+    a = a;
+  }
   if (!(z == 0)) {
-    a := 8;
-    b := 9
+    a = 8;
+    b = 9;
   } else {
-    a := 9;
-    b := 8
-  };
+    a = 9;
+    b = 8;
+  }
   __voblint_check(a); // PROVED
   __voblint_check(a < 10); // PROVED
   __voblint_check(!(9 < a)); // PROVED
@@ -53,20 +51,16 @@ void main() {
   __voblint_check((9 < a) == 0); // PROVED
   __voblint_check(!((a == b) < 0)); // PROVED
   __voblint_check(!(1 < (a == b))); // PROVED
-  x := 0;
+  x = 0;
   while (x < 10) {
     __voblint_check(!(x < 0)); // PROVED
     __voblint_check(!(9 < x)); // PROVED
-    x := x + 1
-  };
+    x = x + 1;
+  }
   __voblint_check(x == 10); // PROVED
   if (!(w < 0)) {
     if (0 < w) {
-      __voblint_check(true) // PROVED
-    } else {
-      skip
+      __voblint_check(true); // PROVED
     }
-  } else {
-    skip
   }
 }

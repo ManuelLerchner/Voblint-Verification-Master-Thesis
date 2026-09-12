@@ -8,10 +8,10 @@
 // Context-insensitive (the default --context none): one shared callee
 // context suffices here, since both calls agree on the
 // callee's parity result.
-void double(p) { return 2 * p }
-void main() {
-  n := __voblint_nondet_int();
-  a := double(n);
-  b := double(a);
-  __voblint_check(!(a == b + 1)) // PROVED
+fun double(p) { return 2 * p; }
+fun main() {
+  n = __voblint_nondet_int();
+  a = double(n);
+  b = double(a);
+  __voblint_check(!(a == b + 1)); // PROVED
 }

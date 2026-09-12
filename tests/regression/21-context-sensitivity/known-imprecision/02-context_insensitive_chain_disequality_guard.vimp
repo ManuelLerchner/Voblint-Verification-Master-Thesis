@@ -16,27 +16,27 @@
 // int closes it: its Sign component refines !(i == 0) on NonNegative to
 // Positive, the product lifts the interval past 0, and the arm dies (see
 // 16-composite-domain/precision/08).
-void h(i) {
-  if (i == 0) { return 3 } else { skip };
-  if (0 < i) { r := h(i - 1); return r } else { skip };
-  return 13
+fun h(i) {
+  if (i == 0) { return 3; }
+  if (0 < i) { r = h(i - 1); return r; }
+  return 13;
 }
-void g(i) {
-  if (i == 0) { return 2 } else { skip };
-  if (0 < i) { r := h(i - 1); return r } else { skip };
-  return 12
+fun g(i) {
+  if (i == 0) { return 2; }
+  if (0 < i) { r = h(i - 1); return r; }
+  return 12;
 }
-void f(i) {
-  if (i == 0) { return 1 } else { skip };
-  if (0 < i) { r := g(i - 1); return r } else { skip };
-  return 11
+fun f(i) {
+  if (i == 0) { return 1; }
+  if (0 < i) { r = g(i - 1); return r; }
+  return 11;
 }
-void main() {
-  a := f(11); __voblint_check(a == 3);  // UNKNOWN
-  b := g(12); __voblint_check(b == 3);  // UNKNOWN
-  c := g(20); __voblint_check(c == 3);  // UNKNOWN
-  d := f(20); __voblint_check(d == 3);  // UNKNOWN
-  e := h(40); __voblint_check(e == 3);  // UNKNOWN
-  x := h(300); __voblint_check(x == 3); // UNKNOWN
-  y := f(300); __voblint_check(y == 3)  // UNKNOWN
+fun main() {
+  a = f(11); __voblint_check(a == 3);  // UNKNOWN
+  b = g(12); __voblint_check(b == 3);  // UNKNOWN
+  c = g(20); __voblint_check(c == 3);  // UNKNOWN
+  d = f(20); __voblint_check(d == 3);  // UNKNOWN
+  e = h(40); __voblint_check(e == 3);  // UNKNOWN
+  x = h(300); __voblint_check(x == 3); // UNKNOWN
+  y = f(300); __voblint_check(y == 3);  // UNKNOWN
 }

@@ -117,15 +117,15 @@
 //   main_pp5_ctx0 -> main_pp6_ctx0: call-to-return fact
 // EXPECT-GRAPH-END
 
-void fact(n) {
+fun fact(n) {
   if (n < 2) {
-    return 1
+    return 1;
   } else {
-    tmp := fact(n - 1);
-    return n * tmp
+    tmp = fact(n - 1);
+    return n * tmp;
   }
 }
-void main() {
-  r := fact(50);
-  __voblint_check(0 < r) // UNKNOWN
+fun main() {
+  r = fact(50);
+  __voblint_check(0 < r); // UNKNOWN
 }

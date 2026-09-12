@@ -14,16 +14,16 @@
 //
 // x is unconstrained, so nothing here claims a value for a -- the check is on
 // the caller's own local, which the call cannot touch.
-void f(n) {
-  return n
+fun f(n) {
+  return n;
 }
-void main() {
-  x := __voblint_nondet_int();
-  y := 7;
+fun main() {
+  x = __voblint_nondet_int();
+  y = 7;
   if (x < 2) {
-    a := f(1)
+    a = f(1);
   } else {
-    a := f(2)
-  };
-  __voblint_check(y == 7) // PROVED
+    a = f(2);
+  }
+  __voblint_check(y == 7); // PROVED
 }

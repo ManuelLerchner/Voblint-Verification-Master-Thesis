@@ -18,20 +18,18 @@
 // body -- measures i = [1,10] and PROVED x2, so the loss is the inner
 // widening point, not the outer narrowing.
 // Solver-invariant across join, per-origin, warrow, warrow-per-origin.
-void main() {
-  i := 0;
+fun main() {
+  i = 0;
   while (true) {
-    i := i + 1;
-    j := 0;
+    i = i + 1;
+    j = 0;
     while (j < 10) {
       __voblint_check(!(i < 0)); // PROVED
       __voblint_check(!(10 < i)); // UNKNOWN
-      j := j + 1
-    };
+      j = j + 1;
+    }
     if (9 < i) {
-      i := 0
-    } else {
-      skip
+      i = 0;
     }
   }
 }

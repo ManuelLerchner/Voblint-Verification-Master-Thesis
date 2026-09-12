@@ -10,7 +10,7 @@
 // it can never confirm one, since equal parity is necessary but nowhere
 // near sufficient for equal values. --analysis interval proves this same
 // check outright.
-void main() {
-  x := 2 + 2;
-  __voblint_check(x == 4) // UNKNOWN
+fun main() {
+  x = 2 + 2;
+  __voblint_check(x == 4); // UNKNOWN
 }

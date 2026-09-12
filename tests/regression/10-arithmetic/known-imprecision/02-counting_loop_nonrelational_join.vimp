@@ -10,23 +10,21 @@
 // !(X < N) only bounds each side. Both equality arms then look live, N becomes
 // [8,42], and N == 8 is UNKNOWN for the same reason. An octagon or a
 // polyhedron would recover X = N; int agrees with interval.
-void main() {
-  X := 0;
-  N := __voblint_nondet_int();
+fun main() {
+  X = 0;
+  N = __voblint_nondet_int();
   if (N < 0) {
-    N := 0
-  } else {
-    skip
-  };
+    N = 0;
+  }
   while (X < N) {
-    X := X + 1
-  };
+    X = X + 1;
+  }
   __voblint_check(X - N == 0); // UNKNOWN
   __voblint_check(X == N); // UNKNOWN
   if (X == N) {
-    N := 8
+    N = 8;
   } else {
-    N := 42
-  };
-  __voblint_check(N == 8) // UNKNOWN
+    N = 42;
+  }
+  __voblint_check(N == 8); // UNKNOWN
 }

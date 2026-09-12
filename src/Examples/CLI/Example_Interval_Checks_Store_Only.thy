@@ -30,9 +30,9 @@ definition checks_ivl_ex_program :: imp_prog where
           (imp \<lbrakk> if (0 < x && x < 10) {
                    __voblint_check(x < 11);
                    __voblint_check(x < 0);
-                   __voblint_check(x == 5)
+                   __voblint_check(x == 5);
                  } else {
-                   y := 0
+                   y = 0;
                  } \<rbrakk>))
      []"
 

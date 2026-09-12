@@ -19,7 +19,7 @@ to read. A name with no verified anchor is a build failure, not a dead link.
     scripts/check_thesis_links.py --live    fetch the deployed pages and verify
     scripts/check_thesis_links.py --list    show what is linked
 
-`--write` and `--check` read the rendered theories under docs/html, which a
+`--write` and `--check` read the rendered theories under build/isabelle-html, which a
 working copy usually does not have (or has stale). `--lenient` turns that from
 a failure into a warning, which is what the local hook and the day-to-day
 `make check` want: a link cannot be validated before the theories are built,
@@ -45,7 +45,7 @@ import urllib.request
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
-HTML = REPO / "docs" / "html"
+HTML = REPO / "build" / "isabelle-html"
 OUT = REPO / "thesis" / "shared" / "generated" / "links.json"
 
 # Isabelle's anchor kinds, per macro kind the thesis uses.
@@ -87,7 +87,7 @@ def index_live(base: str, retries: int,
                sessions: str = "Voblint") -> dict[tuple[str, str], str]:
     """Index anchors from the published site, which is what a reader clicks.
 
-    A working copy's docs/html and the deployed site drift apart in both
+    A working copy's build/isabelle-html and the deployed site drift apart in both
     directions, so resolving against the deployment is the only way to produce
     a map whose links are known to work today.
     """
@@ -119,7 +119,7 @@ def index_live(base: str, retries: int,
 
 
 def index_anchors() -> dict[tuple[str, str], str]:
-    """Map (entity name, anchor kind) -> path#anchor, relative to docs/html."""
+    """Map (entity name, anchor kind) -> path#anchor, relative to build/isabelle-html."""
     index: dict[tuple[str, str], str] = {}
     for path in HTML.rglob("*.html"):
         rel = path.relative_to(HTML).as_posix()
@@ -253,7 +253,7 @@ def main() -> int:
                     help="--live: attempts per URL while Pages propagates")
     ap.add_argument("--from-live", action="store_true",
                     help="resolve against the published site instead of "
-                         "docs/html")
+                         "build/isabelle-html")
     args = ap.parse_args()
 
     if args.live:
@@ -266,14 +266,14 @@ def main() -> int:
         index = None
         if not HTML.is_dir() or not any(HTML.rglob("*.html")):
             return skip_or_fail(
-                "no rendered theories under docs/html -- build them with "
+                "no rendered theories under build/isabelle-html -- build them with "
                 "`pixi run isabelle-docs-build`", args.lenient)
 
     links, unresolved = resolve(index)
     if unresolved:
         detail = (f"{len(unresolved)} cited entity/entities have no definition "
                   "anchor:\n" + "\n".join(unresolved) +
-                  "\nEither the name is stale, or docs/html predates it "
+                  "\nEither the name is stale, or build/isabelle-html predates it "
                   "(rebuild with: pixi run isabelle-docs-build)")
         return skip_or_fail(detail, args.lenient)
 

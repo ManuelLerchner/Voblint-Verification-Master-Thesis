@@ -3,7 +3,7 @@
 // 06-reachability's check(false) sentinels, this location is not dead
 // code, so the check actually executes and its condition is decidably
 // false every time.
-void main() {
-  x := 5;
-  __voblint_check(false) // REFUTED
+fun main() {
+  x = 5;
+  __voblint_check(false); // REFUTED
 }

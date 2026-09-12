@@ -13,16 +13,14 @@
 // through a variable the loop never checks. Solver-invariant across join,
 // per-origin, warrow, warrow-per-origin.
 global g;
-void main() {
-  i := 0;
-  g := 0;
+fun main() {
+  i = 0;
+  g = 0;
   while (!(i == 10)) {
     if (11 < i) {
-      g := 42
-    } else {
-      skip
-    };
-    i := i + 1
-  };
-  __voblint_check(!(g == 42)) // UNKNOWN
+      g = 42;
+    }
+    i = i + 1;
+  }
+  __voblint_check(!(g == 42)); // UNKNOWN
 }

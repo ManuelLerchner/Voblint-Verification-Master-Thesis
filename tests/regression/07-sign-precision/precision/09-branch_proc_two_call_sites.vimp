@@ -17,26 +17,26 @@
 // 100 / result would need. out is then SPos * SPos = SPos, and r (a local
 // call counter: 0 then two increments) is also SPos, both exact.
 global input, result, out;
-void compute() {
-  local := 1;
+fun compute() {
+  local = 1;
   if (0 < input) {
-    local := local + 1
+    local = local + 1;
   } else {
-    local := local + 2
-  };
-  result := local
+    local = local + 2;
+  }
+  result = local;
 }
-void main() {
-  r := 0;
-  input := 5;
+fun main() {
+  r = 0;
+  input = 5;
   compute();
-  r := r + 1;
-  input := 0 - 3;
+  r = r + 1;
+  input = 0 - 3;
   compute();
-  r := r + 1;
-  out := 100 * result;
+  r = r + 1;
+  out = 100 * result;
   __voblint_check(0 < input); // UNKNOWN
   __voblint_check(0 < result); // PROVED
   __voblint_check(0 < out); // PROVED
-  __voblint_check(0 < r) // PROVED
+  __voblint_check(0 < r); // PROVED
 }

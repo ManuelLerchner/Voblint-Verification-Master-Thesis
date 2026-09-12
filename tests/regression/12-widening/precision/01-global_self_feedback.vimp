@@ -13,8 +13,8 @@
 // into in the first place. Termination and precision now coincide -- the
 // mechanism that used to cost both is gone, not merely worked around.
 global total;
-void main() {
-  total := 0;
-  total := total + 3;
-  __voblint_check(0 < total) // PROVED
+fun main() {
+  total = 0;
+  total = total + 3;
+  __voblint_check(0 < total); // PROVED
 }

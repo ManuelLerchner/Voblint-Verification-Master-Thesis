@@ -5,14 +5,14 @@
 // each become [8,9] and the state no longer records that a = 8 pairs with
 // b = 9. An interval domain has no way to relate two variables, so
 // !(a == b) over [8,9] x [8,9] is UNKNOWN. int agrees.
-void main() {
-  z := __voblint_nondet_int();
+fun main() {
+  z = __voblint_nondet_int();
   if (!(z == 0)) {
-    a := 8;
-    b := 9
+    a = 8;
+    b = 9;
   } else {
-    a := 9;
-    b := 8
-  };
-  __voblint_check(!(a == b)) // UNKNOWN
+    a = 9;
+    b = 8;
+  }
+  __voblint_check(!(a == b)); // UNKNOWN
 }

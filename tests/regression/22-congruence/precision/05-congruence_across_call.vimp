@@ -9,14 +9,14 @@
 // Context-insensitive by construction: triple has one call site, so
 // Ctx_None already gives it an exact entry class. The context-sensitive
 // counterpart is 07-entry_state_separates_calls.vimp.
-void triple(p) { return p * 3 }
-void main() {
-  n := __voblint_nondet_int();
+fun triple(p) { return p * 3; }
+fun main() {
+  n = __voblint_nondet_int();
   if (n == 4) {
-    a := triple(n);
+    a = triple(n);
     __voblint_check(a == 12); // PROVED
-    __voblint_check(!(a == 11)) // PROVED
+    __voblint_check(!(a == 11)); // PROVED
   } else {
-    __voblint_check(true) // PROVED
+    __voblint_check(true); // PROVED
   }
 }

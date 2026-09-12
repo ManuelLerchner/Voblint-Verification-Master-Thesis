@@ -159,7 +159,7 @@ text \<open>
   hard-coded example.\<close>
 
 definition analyse_interval_demo2_prog :: imp_prog where
-  "analyse_interval_demo2_prog = program { void main() { a := 3; b := a + 1 } }"
+  "analyse_interval_demo2_prog = program { fun main() { a = 3; b = a + 1; } }"
 
 lemma analyse_interval_demo2_terminates:
   "interval_conf_terminates_prog (declared_global analyse_interval_demo2_prog)

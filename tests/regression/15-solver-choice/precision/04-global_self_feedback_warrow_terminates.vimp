@@ -11,8 +11,8 @@
 // global summary left for the write to fold back into, so the exact
 // value now reaches the check: termination and precision coincide.
 global total;
-void main() {
-  total := 0;
-  total := total + 3;
-  __voblint_check(0 < total) // PROVED
+fun main() {
+  total = 0;
+  total = total + 3;
+  __voblint_check(0 < total); // PROVED
 }

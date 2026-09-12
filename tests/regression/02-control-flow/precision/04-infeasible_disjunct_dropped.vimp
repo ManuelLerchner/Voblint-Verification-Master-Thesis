@@ -21,12 +21,12 @@
 // (bfilter_or_drops_infeasible_disjunct) and states the join identity
 // (bfilter_or_is_the_gated_join). The conjunctive half of the gate is
 // 05-infeasible_conjunct_dropped.vimp.
-void main() {
-  x := 5;
-  y := __voblint_nondet_int();
+fun main() {
+  x = 5;
+  y = __voblint_nondet_int();
   if (0 < y || (x < 0) == 1) {
-    __voblint_check(0 < y) // PROVED
+    __voblint_check(0 < y); // PROVED
   } else {
-    __voblint_check(y < 1) // PROVED
+    __voblint_check(y < 1); // PROVED
   }
 }

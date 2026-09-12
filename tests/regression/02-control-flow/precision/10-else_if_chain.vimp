@@ -1,0 +1,26 @@
+// PARAM: --analysis interval
+// Exactly one arm executes; a chain may omit or include its final else.
+fun choose(x) {
+  if (x < 0) {
+    return -1;
+  } else if (x == 0) {
+    return 0;
+  } else {
+    return 1;
+  }
+}
+
+fun main() {
+  x = 0;
+  y = 9;
+  if (x < 0) {
+    y = -1;
+  } else if (x == 0) {
+    y = 0;
+  } else if (x < 10) {
+    y = 1;
+  }
+  __voblint_check(y == 0); // PROVED
+  z = choose(x);
+  __voblint_check(z == 0); // PROVED
+}

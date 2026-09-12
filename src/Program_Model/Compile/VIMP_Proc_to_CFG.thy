@@ -137,8 +137,9 @@ where
      (let (n1, en1, E1, K1) = compile \<Pi> p c1 k (Suc n);
           (n2, en2, E2, K2) = compile \<Pi> p c2 k n1
       in (n2, Statement n,
-          {(Statement n, EA_Assume b, en1), (Statement n, EA_AssumeNot b, en2)}
-            \<union> E1 \<union> E2,
+          {(Statement n, EA_Assume b, if c1 = SKIP then k else en1),
+           (Statement n, EA_AssumeNot b, if c2 = SKIP then k else en2)}
+            \<union> (if c1 = SKIP then {} else E1) \<union> (if c2 = SKIP then {} else E2),
           K1 \<union> K2))"
 | "compile \<Pi> p (While b c) k n =
      (let (n1, en1, E1, K1) = compile \<Pi> p c (Statement n) (Suc n)
@@ -345,8 +346,8 @@ lemma compile_IfE [elim]:
     "compile \<Pi> p c1 k (Suc n) = (n1, Statement (Suc n), E1, K1)"
     "compile \<Pi> p c2 k (Suc n + csize c1) = (n2, Statement (Suc n + csize c1), E2, K2)"
     "en = Statement n"
-    "E = {(Statement n, EA_Assume b, Statement (Suc n)),
-          (Statement n, EA_AssumeNot b, Statement (Suc n + csize c1))} \<union> E1 \<union> E2"
+    "E = {(Statement n, EA_Assume b, if c1 = SKIP then k else Statement (Suc n)),
+          (Statement n, EA_AssumeNot b, if c2 = SKIP then k else Statement (Suc n + csize c1))} \<union> (if c1 = SKIP then {} else E1) \<union> (if c2 = SKIP then {} else E2)"
     "K = K1 \<union> K2"
 proof -
   obtain n1 en1 E1 K1 where c1: "compile \<Pi> p c1 k (Suc n) = (n1, en1, E1, K1)"
@@ -358,8 +359,8 @@ proof -
   have e2: "en2 = Statement (Suc n + csize c1)" using compile_entry[OF c2] i1 by simp
   from assms c1 c2 e1 e2
   have "en = Statement n"
-    "E = {(Statement n, EA_Assume b, Statement (Suc n)),
-          (Statement n, EA_AssumeNot b, Statement (Suc n + csize c1))} \<union> E1 \<union> E2"
+    "E = {(Statement n, EA_Assume b, if c1 = SKIP then k else Statement (Suc n)),
+          (Statement n, EA_AssumeNot b, if c2 = SKIP then k else Statement (Suc n + csize c1))} \<union> (if c1 = SKIP then {} else E1) \<union> (if c2 = SKIP then {} else E2)"
     "K = K1 \<union> K2"
     by (auto simp: Let_def)
   with c1 c2 e1 e2 i1 show ?thesis by (auto intro: that)
@@ -424,36 +425,38 @@ qed
 
 lemma compile_If_leftE [elim]:
   assumes "compile \<Pi> p (If b c1 c2) k n = (n', en, E, K)"
+      and "c1 \<noteq> SKIP"
   obtains m F L where
     "compile \<Pi> p c1 k (Suc n) = (m, Statement (Suc n), F, L)"
     "F \<subseteq> E" "L \<subseteq> K"
 proof -
-  from assms obtain n1 E1 K1 n2 E2 K2 where
+  from assms(1) obtain n1 E1 K1 n2 E2 K2 where
     "compile \<Pi> p c1 k (Suc n) = (n1, Statement (Suc n), E1, K1)"
     "compile \<Pi> p c2 k (Suc n + csize c1) = (n2, Statement (Suc n + csize c1), E2, K2)"
     "en = Statement n"
-    "E = {(Statement n, EA_Assume b, Statement (Suc n)),
-          (Statement n, EA_AssumeNot b, Statement (Suc n + csize c1))} \<union> E1 \<union> E2"
+    "E = {(Statement n, EA_Assume b, if c1 = SKIP then k else Statement (Suc n)),
+          (Statement n, EA_AssumeNot b, if c2 = SKIP then k else Statement (Suc n + csize c1))} \<union> (if c1 = SKIP then {} else E1) \<union> (if c2 = SKIP then {} else E2)"
     "K = K1 \<union> K2"
     by (rule compile_IfE)
-  then show ?thesis by (intro that) auto
+  with assms(2) show ?thesis by (intro that) auto
 qed
 
 lemma compile_If_rightE [elim]:
   assumes "compile \<Pi> p (If b c1 c2) k n = (n', en, E, K)"
+      and "c2 \<noteq> SKIP"
   obtains m F L where
     "compile \<Pi> p c2 k (Suc n + csize c1) = (m, Statement (Suc n + csize c1), F, L)"
     "F \<subseteq> E" "L \<subseteq> K"
 proof -
-  from assms obtain n1 E1 K1 n2 E2 K2 where
+  from assms(1) obtain n1 E1 K1 n2 E2 K2 where
     "compile \<Pi> p c1 k (Suc n) = (n1, Statement (Suc n), E1, K1)"
     "compile \<Pi> p c2 k (Suc n + csize c1) = (n2, Statement (Suc n + csize c1), E2, K2)"
     "en = Statement n"
-    "E = {(Statement n, EA_Assume b, Statement (Suc n)),
-          (Statement n, EA_AssumeNot b, Statement (Suc n + csize c1))} \<union> E1 \<union> E2"
+    "E = {(Statement n, EA_Assume b, if c1 = SKIP then k else Statement (Suc n)),
+          (Statement n, EA_AssumeNot b, if c2 = SKIP then k else Statement (Suc n + csize c1))} \<union> (if c1 = SKIP then {} else E1) \<union> (if c2 = SKIP then {} else E2)"
     "K = K1 \<union> K2"
     by (rule compile_IfE)
-  then show ?thesis by (intro that) auto
+  with assms(2) show ?thesis by (intro that) auto
 qed
 
 lemma compile_While_bodyE [elim]:
@@ -478,19 +481,19 @@ text \<open>A branching fragment's own two edges, for the callers that want them
 
 lemma compile_If_assume_edges:
   assumes "compile \<Pi> p (If b c1 c2) k n = (n', en, E, K)"
-  shows "(Statement n, EA_Assume b, Statement (Suc n)) \<in> E"
-        "(Statement n, EA_AssumeNot b, Statement (Suc n + csize c1)) \<in> E"
+  shows "(Statement n, EA_Assume b, if c1 = SKIP then k else Statement (Suc n)) \<in> E"
+        "(Statement n, EA_AssumeNot b, if c2 = SKIP then k else Statement (Suc n + csize c1)) \<in> E"
 proof -
   from assms obtain n1 E1 K1 n2 E2 K2 where
     "compile \<Pi> p c1 k (Suc n) = (n1, Statement (Suc n), E1, K1)"
     "compile \<Pi> p c2 k (Suc n + csize c1) = (n2, Statement (Suc n + csize c1), E2, K2)"
     "en = Statement n"
-    and E: "E = {(Statement n, EA_Assume b, Statement (Suc n)),
-                 (Statement n, EA_AssumeNot b, Statement (Suc n + csize c1))} \<union> E1 \<union> E2"
+    and E: "E = {(Statement n, EA_Assume b, if c1 = SKIP then k else Statement (Suc n)),
+                 (Statement n, EA_AssumeNot b, if c2 = SKIP then k else Statement (Suc n + csize c1))} \<union> (if c1 = SKIP then {} else E1) \<union> (if c2 = SKIP then {} else E2)"
     "K = K1 \<union> K2"
     by (rule compile_IfE)
-  show "(Statement n, EA_Assume b, Statement (Suc n)) \<in> E" using E by blast
-  show "(Statement n, EA_AssumeNot b, Statement (Suc n + csize c1)) \<in> E" using E by blast
+  show "(Statement n, EA_Assume b, if c1 = SKIP then k else Statement (Suc n)) \<in> E" using E by blast
+  show "(Statement n, EA_AssumeNot b, if c2 = SKIP then k else Statement (Suc n + csize c1)) \<in> E" using E by blast
 qed
 
 lemma compile_While_assume_edges:

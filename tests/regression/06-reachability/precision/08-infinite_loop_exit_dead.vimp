@@ -7,11 +7,11 @@
 // reported DEAD (Goblint: NOWARN (unreachable), formerly NONTERM). The
 // second trailing check reads x so the DEAD row is seen to hold for a
 // check over a bound variable, not only for the literal sentinel.
-void main() {
-  x := 0;
+fun main() {
+  x = 0;
   while (true) {
-    __voblint_check(false) // REFUTED
-  };
+    __voblint_check(false); // REFUTED
+  }
   __voblint_check(false); // NOWARN (unreachable)
-  __voblint_check(x == 0) // NOWARN (unreachable)
+  __voblint_check(x == 0); // NOWARN (unreachable)
 }

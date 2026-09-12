@@ -9,13 +9,13 @@
 // (-10 + -10, still SNeg) -- not join(SPos, SNeg) = STop at either check,
 // which is what a context-insensitive analysis of the same program would
 // be forced to answer for both.
-void f(p) {
-  t := p + p;
-  return t
+fun f(p) {
+  t = p + p;
+  return t;
 }
-void main() {
-  x := f(3);
-  y := f(-10);
+fun main() {
+  x = f(3);
+  y = f(-10);
   __voblint_check(0 < x); // PROVED
-  __voblint_check(y < 0) // PROVED
+  __voblint_check(y < 0); // PROVED
 }

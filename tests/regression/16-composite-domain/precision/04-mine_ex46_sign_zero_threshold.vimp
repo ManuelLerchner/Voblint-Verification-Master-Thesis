@@ -16,12 +16,12 @@
 // that --analysis sign alone proves only x == 0 (bounds UNKNOWN, x = Top)
 // and --analysis interval alone loses !(x < 0), so neither component
 // proves this without the other.
-void main() {
-  x := 40;
+fun main() {
+  x = 40;
   while (!(x == 0)) {
     __voblint_check(!(40 < x)); // PROVED
-    x := x - 1;
-    __voblint_check(!(x < 0)) // PROVED
-  };
-  __voblint_check(x == 0) // PROVED
+    x = x - 1;
+    __voblint_check(!(x < 0)); // PROVED
+  }
+  __voblint_check(x == 0); // PROVED
 }

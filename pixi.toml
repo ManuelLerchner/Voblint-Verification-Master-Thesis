@@ -58,12 +58,11 @@ property-test = { cmd = "python3 -m pytest tests/property", description = "Build
 
 # HTML result viewer (`voblint --html`). graphviz supplies `dot`, which
 # renders the CFG the viewer's graph pane loads; the frontend itself is the
-# vendor/g2html submodule, initialized by html-report-serve rather than by
-# vendor.sh so build/codegen never fetch it.
+# vendor/g2html submodule, needed when generating a report.
 [feature.report.dependencies]
 graphviz = "*"
 [feature.report.tasks]
-html-report-serve = { cmd = "bash scripts/mk/report.sh", depends-on = ["cli-build"], description = "Generate an HTML analysis report, serve it, and open it in a browser." }
+html-report-serve = { cmd = "bash scripts/mk/report.sh", description = "Serve an existing HTML analysis report and open it in a browser." }
 # Pins the emitted directory's shape, which is a contract with a frontend this
 # repository does not own -- see the test module's own docstring.
 html-report-structure-check = { cmd = "python3 -m pytest tests/test_html_report.py", depends-on = ["cli-build"], description = "Check the emitted report structure consumed by the g2html frontend." }
@@ -284,7 +283,7 @@ thesis-check = { depends-on = [
 
 # Entity citations link to their definition in the rendered theories, anchor by
 # anchor. Locally this is advisory: a working copy rarely has a current
-# docs/html, and a link cannot be validated before the theories are built.
+# build/isabelle-html, and a link cannot be validated before the theories are built.
 thesis-links = { cmd = "python3 scripts/check_thesis_links.py --check --lenient", description = "Check thesis entity links against available generated HTML." }
 thesis-links-strict = { cmd = "python3 scripts/check_thesis_links.py --check", description = "Strictly check thesis entity links against generated HTML." }
 thesis-links-write = { cmd = "python3 scripts/check_thesis_links.py --write", description = "Regenerate the thesis entity link map from generated HTML." }

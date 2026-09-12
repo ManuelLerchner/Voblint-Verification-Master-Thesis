@@ -1,0 +1,14 @@
+// PARAM: --analysis interval
+// A false branch leaves x unchanged and reaches the following statement.
+// A true branch executes its body and reaches the same continuation.
+fun main() {
+  x = 4;
+  if (x < 0) {
+    x = 9;
+  }
+  __voblint_check(x == 4); // PROVED
+  if (0 < x) {
+    x = 5;
+  }
+  __voblint_check(x == 5); // PROVED
+}

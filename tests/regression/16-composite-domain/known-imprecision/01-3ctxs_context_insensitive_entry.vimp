@@ -19,14 +19,14 @@
 // known-imprecision/01-two_call_sites_same_procedure.vimp, which merges
 // two call sites; here a single call site loses to widening on the entry
 // unknown that the caller's own narrowing never reaches.
-void f(j) {
-  return j + 1
+fun f(j) {
+  return j + 1;
 }
-void main() {
-  i := 0;
+fun main() {
+  i = 0;
   while (i < 10) {
-    t := f(i);
-    i := 1 + t
-  };
-  __voblint_check(i == 10) // UNKNOWN
+    t = f(i);
+    i = 1 + t;
+  }
+  __voblint_check(i == 10); // UNKNOWN
 }

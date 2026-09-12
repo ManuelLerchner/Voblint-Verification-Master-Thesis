@@ -16,8 +16,8 @@
 // instead of a check (../precision/03-residue_guard_kills_branch.vimp),
 // since the guard path goes through intersect_congruence, which does
 // compare the classes.
-void main() {
-  n := __voblint_nondet_int();
-  x := 2 * n;
-  __voblint_check(!(x == 3)) // UNKNOWN
+fun main() {
+  n = __voblint_nondet_int();
+  x = 2 * n;
+  __voblint_check(!(x == 3)); // UNKNOWN
 }

@@ -13,14 +13,14 @@
 // (measured at the post-loop checks). Verified that --analysis parity
 // alone knows only Odd and --analysis sign only Positive, so the exact
 // value comes from the reduction, not from any single component.
-void main() {
-  v := 1;
+fun main() {
+  v = 1;
   while (v < 51) {
     __voblint_check(!(v < 1)); // PROVED
-    v := v + 2;
-    __voblint_check(!(52 < v)) // PROVED
-  };
+    v = v + 2;
+    __voblint_check(!(52 < v)); // PROVED
+  }
   __voblint_check(!(v < 51)); // PROVED
   __voblint_check(!(52 < v)); // PROVED
-  __voblint_check(v == 51) // PROVED
+  __voblint_check(v == 51); // PROVED
 }

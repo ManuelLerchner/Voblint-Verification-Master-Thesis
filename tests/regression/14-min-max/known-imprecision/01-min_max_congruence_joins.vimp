@@ -14,13 +14,13 @@
 // join of a class with itself is that class. --analysis interval and
 // --analysis sign both decide this program (../precision/01, ../precision/
 // 02) from order information Congruence does not have.
-void main() {
-  x := 3;
-  y := 7;
-  z := min(x, y);
-  w := max(x, y);
+fun main() {
+  x = 3;
+  y = 7;
+  z = min(x, y);
+  w = max(x, y);
   __voblint_check(z == 3); // UNKNOWN
   __voblint_check(w == 7); // UNKNOWN
-  v := min(x, x);
-  __voblint_check(v == 3) // PROVED
+  v = min(x, x);
+  __voblint_check(v == 3); // PROVED
 }

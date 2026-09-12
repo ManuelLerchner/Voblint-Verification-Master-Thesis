@@ -11,10 +11,10 @@
 // creates a fresh context per x value and diverges, which
 // 21-context-sensitivity/01-unbounded_context_chain_diverges.vimp pins
 // through --timeout.
-void f(x) {
-  if (!(x == 0)) { r := f(x + 1); return r } else { return x }
+fun f(x) {
+  if (!(x == 0)) { r = f(x + 1); return r; } else { return x; }
 }
-void main() {
-  a := f(1);
-  __voblint_check(a == 0) // NOWARN
+fun main() {
+  a = f(1);
+  __voblint_check(a == 0); // NOWARN
 }

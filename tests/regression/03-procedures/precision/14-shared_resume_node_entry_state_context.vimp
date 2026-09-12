@@ -5,15 +5,15 @@
 // context sensitivity precisely when the two calls agree on the entered
 // formals, which is the case a per-call-site keying would otherwise be assumed
 // to separate.
-void f(n) {
-  return n
+fun f(n) {
+  return n;
 }
-void main() {
-  x := 5;
+fun main() {
+  x = 5;
   if (x < 2) {
-    a := f(1)
+    a = f(1);
   } else {
-    a := f(1)
-  };
-  __voblint_check(x == 5) // PROVED
+    a = f(1);
+  }
+  __voblint_check(x == 5); // PROVED
 }

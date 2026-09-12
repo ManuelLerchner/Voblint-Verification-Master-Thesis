@@ -8,7 +8,7 @@
 // this exercises aval's nested-boolean-as-value path independently of the
 // top-level branch/assume gate (branch_lifted's own case split, exercised
 // separately by the 06-reachability fixtures).
-void main() {
-  x := 0 - 1;
-  __voblint_check((x < 0) == 1) // PROVED
+fun main() {
+  x = 0 - 1;
+  __voblint_check((x < 0) == 1); // PROVED
 }

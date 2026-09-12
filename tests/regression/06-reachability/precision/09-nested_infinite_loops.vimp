@@ -6,16 +6,16 @@
 // reported DEAD. The check at the top of the outer body runs on every entry of the
 // outer loop, and since the outer loop's back edge is itself dead, x is still
 // exactly 0 there -- the head sees only its entry state.
-void main() {
-  x := 0;
+fun main() {
+  x = 0;
   while (true) {
     __voblint_check(x == 0); // PROVED
     while (true) {
-      x := x + 1
-    };
-    x := x - 1;
-    __voblint_check(false) // NOWARN (unreachable)
-  };
-  x := x - 1;
-  __voblint_check(false) // NOWARN (unreachable)
+      x = x + 1;
+    }
+    x = x - 1;
+    __voblint_check(false); // NOWARN (unreachable)
+  }
+  x = x - 1;
+  __voblint_check(false); // NOWARN (unreachable)
 }

@@ -6,15 +6,15 @@
 // the solver visits unknowns in, and narrowing is order-sensitive -- a mode
 // that was already healthy is exactly where an ordering-induced precision
 // regression would show up unexplained.
-void f(n) {
-  return n
+fun f(n) {
+  return n;
 }
-void main() {
-  x := 5;
+fun main() {
+  x = 5;
   if (x < 2) {
-    a := f(1)
+    a = f(1);
   } else {
-    a := f(1)
-  };
-  __voblint_check(x == 5) // PROVED
+    a = f(1);
+  }
+  __voblint_check(x == 5); // PROVED
 }

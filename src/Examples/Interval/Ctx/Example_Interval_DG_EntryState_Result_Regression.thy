@@ -280,14 +280,14 @@ text \<open>
 
 definition twin_prog :: imp_prog where
   "twin_prog = program {
-     void idf(n) {
-       return n + 1
+     fun idf(n) {
+       return n + 1;
      }
-     void main() {
-       a := idf(5);
-       b := idf(5);
+     fun main() {
+       a = idf(5);
+       b = idf(5);
        __voblint_check(a == 6);
-       __voblint_check(b == 6)
+       __voblint_check(b == 6);
      }
    }"
 

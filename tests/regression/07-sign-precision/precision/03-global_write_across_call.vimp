@@ -16,14 +16,14 @@
 // property isolated without any call machinery at all.
 
 global g;
-void foo() {
-  g := 5;
-  return 2
+fun foo() {
+  g = 5;
+  return 2;
 }
-void main() {
-  x := 1;
-  y := foo();
+fun main() {
+  x = 1;
+  y = foo();
   __voblint_check(0 < x); // PROVED
   __voblint_check(0 < g); // PROVED
-  __voblint_check(0 < y)  // PROVED
+  __voblint_check(0 < y);  // PROVED
 }

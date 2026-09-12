@@ -116,10 +116,10 @@
 // EXPECT-GRAPH-END
 
 global G;
-void f() {
-  if (G < 1) { f() } else { G := G }
+fun f() {
+  if (G < 1) { f(); } else { G = G; }
 }
-void g() { h() }
-void h() { g() }
-void inc() { G := G + 1 }
-void main() { f(); g(); inc(); __voblint_check(true) } // NOWARN
+fun g() { h(); }
+fun h() { g(); }
+fun inc() { G = G + 1; }
+fun main() { f(); g(); inc(); __voblint_check(true); } // NOWARN

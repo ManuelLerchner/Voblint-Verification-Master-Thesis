@@ -17,10 +17,10 @@
 // this same loop under --analysis int, where the interval narrows v to
 // [51,52] and the congruence-to-interval reduction rounds that
 // class-aligned to [51,51].
-void main() {
-  v := 1;
+fun main() {
+  v = 1;
   while (v < 51) {
-    v := v + 2
-  };
-  __voblint_check(v == 51) // UNKNOWN
+    v = v + 2;
+  }
+  __voblint_check(v == 51); // UNKNOWN
 }

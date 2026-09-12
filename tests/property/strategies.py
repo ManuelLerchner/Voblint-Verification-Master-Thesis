@@ -9,11 +9,11 @@ source-expressible: VIMP_Source_Print.thy's string_of_exp is a uniform
 precedence-climbing printer (exp_prio) that parenthesizes a subexpression
 exactly when its own constructor binds looser than the calling position
 requires, for every constructor alike. `exps` below therefore generates
-arbitrary trees over all ten constructors, not just left-associated
+arbitrary trees over all expression constructors, not just left-associated
 arithmetic -- the printer's parens make any shape round-trip.
 
 com's Seq is under a different restriction, for a different reason:
-vimp_parser.ml's `stmts` left-folds a ';'-chained statement list into nested
+vimp_parser.ml's `stmts` left-folds a list of terminated simple statements and braced statements into nested
 Seq (matching VIMP_Notation.thy's stmts_tr), so only left-nested Seq trees
 -- never Seq(s1, Seq(s2, s3)) -- round-trip. `atomic_com`/`coms` below use
 a left-fold-over-a-list shape to stay within that restriction.
@@ -55,6 +55,10 @@ def exps(max_leaves=5):
             st.tuples(st.just("Minus"), children, children),
             st.tuples(st.just("Times"), children, children),
             st.tuples(st.just("Less"), children, children),
+            st.tuples(st.just("LessEq"), children, children),
+            st.tuples(st.just("Greater"), children, children),
+            st.tuples(st.just("GreaterEq"), children, children),
+            st.tuples(st.just("NotEq"), children, children),
             st.tuples(st.just("Eq"), children, children),
             children.map(lambda e: ("Not", e)),
             st.tuples(st.just("And"), children, children),

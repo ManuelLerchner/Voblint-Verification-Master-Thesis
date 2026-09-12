@@ -20,21 +20,21 @@ text \<open>
 
 definition fact_prog :: imp_prog where
   "fact_prog = program {
-     void factorial(n) {
+     fun factorial(n) {
        __voblint_check(0 < n);
        if (n < 2) {
-         return 1
+         return 1;
        } else {
-         r := factorial(n - 1);
+         r = factorial(n - 1);
          __voblint_check(0 < r);
-         return n * r
+         return n * r;
        }
      }
-     void main() {
-       a := factorial(3);
-       b := factorial(4);
+     fun main() {
+       a = factorial(3);
+       b = factorial(4);
        __voblint_check(a == 6);
-       __voblint_check(b == 24)
+       __voblint_check(b == 24);
      }
    }"
 
