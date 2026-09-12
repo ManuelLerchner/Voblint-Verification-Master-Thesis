@@ -522,6 +522,68 @@ jobs:
       - name: HTML report sweep over the domain/solver/context space
         run: pixi run html-report-config-audit
 
+  formalization-pdf:
+    needs: build-isabelle
+    runs-on: ubuntu-latest
+    container:
+      image: makarius/isabelle:Isabelle2025-2
+      options: --user root
+    steps:
+      - name: Install git and LaTeX toolchain
+        run: |
+          apt-get update -qq
+          apt-get install -y -qq git latexmk texlive-luatex texlive-latex-extra \
+            texlive-fonts-recommended texlive-science > /dev/null
+
+      - name: Checkout Goblint Formalization
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 1
+          submodules: false
+          persist-credentials: false
+
+      - name: Trust the checked-out workspace
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+      - name: Initialize td-verification submodule
+        env:
+          SUBMODULES_TOKEN: ${{ secrets.SUBMODULES_TOKEN }}
+        run: |
+          git config --global url."https://x-access-token:${SUBMODULES_TOKEN}@github.com/".insteadOf "https://github.com/"
+          git submodule sync vendor/td-verification
+          git submodule update --init --depth 1 vendor/td-verification
+
+      - name: Setup Isabelle
+        uses: $/.github/actions/setup-isabelle-action
+        with:
+          use-cache: 'false'
+
+      - name: Bridge AFP_COMPONENT_BASE to AFP
+        run: echo "AFP=$AFP_COMPONENT_BASE" >> "$GITHUB_ENV"
+
+      - name: Set up pixi
+        uses: prefix-dev/setup-pixi@d3f436a425481402e6a95a1d1fc10331c708cd9e # v0.10.2
+
+      - name: Download exact heap state from build-isabelle
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: isabelle-heaps
+          path: ${{ env.ISABELLE_HOME_USER }}/heaps/
+
+      - name: Check PDF theory selection
+        run: pixi run isabelle-pdf-selection-check
+
+      - name: Build formalization PDF with certificate appendix
+        run: pixi run isabelle-pdf-build
+
+      - name: Upload formalization PDF
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: formalization-pdf
+          path: output/document.pdf
+          retention-days: 7
+          if-no-files-found: error
+
   thesis-pdf:
     runs-on: ubuntu-latest
     steps:

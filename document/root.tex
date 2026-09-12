@@ -1,0 +1,59 @@
+\documentclass[10pt,a4paper,oneside]{report}
+\usepackage[T1]{fontenc}
+\usepackage[margin=20mm]{geometry}
+\usepackage{amssymb,stmaryrd,textcomp}
+\usepackage{isabelle,isabellesym}
+\usepackage{pdfsetup}
+\hypersetup{
+  pdftitle={Voblint: A Verified Goblint-Style Static Analysis Pipeline in Isabelle/HOL},
+  pdfauthor={Manuel Lerchner}
+}
+
+\urlstyle{rm}
+\isabellestyle{tt}
+\renewcommand{\isastyle}{\footnotesize\ttfamily}
+\setcounter{tocdepth}{1}
+\setcounter{secnumdepth}{1}
+% Session and theory headings own the document's top two levels.
+\renewcommand{\isamarkupchapter}[1]{\subsection*{#1}}
+\renewcommand{\isamarkupsection}[1]{\subsection*{#1}}
+\renewcommand{\isamarkupsubsection}[1]{\subsubsection*{#1}}
+\renewcommand{\isamarkupsubsubsection}[1]{\paragraph{#1}}
+
+\begin{document}
+\title{Voblint\\[1ex]\large
+  A Verified Goblint-Style Static Analysis Pipeline in Isabelle/HOL}
+\author{Manuel Lerchner}
+\date{\today}
+\maketitle
+\begin{abstract}
+Voblint formalizes an executable interprocedural static analysis pipeline in
+Isabelle/HOL, following Goblint's D/G architecture. The development connects
+programs in VIMP, a procedural imperative language, to sound abstract results
+through a verified control-flow graph compiler, an equation generator, and a
+verified side-effecting top-down solver. The soundness argument applies to the
+result computed by the analyzer.
+
+The framework separates program semantics, abstract domains, transfer
+operations, and solver integration. Its D/G interface distinguishes local
+analysis states from shared information communicated through side effects.
+Reusable soundness results support context-insensitive and context-sensitive
+analyses. Concrete instances include sign, interval, parity, and congruence
+analyses, together with a reduced product of these four domains.
+
+The main soundness theorem relates every finite source-execution prefix to a
+corresponding control-flow graph state, establishes coverage by the computed
+abstract result, and proves the correctness of reported check verdicts. It
+applies to accepted programs and configurations under a solver-termination
+assumption; source-program termination is unnecessary. The verified pipeline
+begins with a VIMP abstract syntax tree. Parsing, code generation, and the
+external compilation and runtime toolchain remain outside the proved
+guarantees. This document presents the formalization by session, together with
+an executable end-to-end certificate and the code-export boundary.
+\end{abstract}
+\tableofcontents
+\clearpage
+\parindent 0pt
+\parskip 0.5ex
+\input{contents}
+\end{document}

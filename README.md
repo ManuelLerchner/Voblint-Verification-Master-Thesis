@@ -516,12 +516,37 @@ The ones that matter most often:
 | Task | Description |
 | --- | --- |
 | `isabelle-build` | Batch-build `Voblint_Examples`, which reaches every session except `Voblint_Codegen` |
+| `isabelle-pdf-build` | Render the formalization and certificate appendix into `output/document.pdf` |
+| `isabelle-pdf-full-build` | Include all example sessions in `output/document-full.pdf` |
 | `codegen` / `codegen-check` | Regenerate `codegen/generated/`, or fail on drift |
 | `codegen-regression` | Compile and run the OCaml driver against Isabelle-proved expected output |
 | `cli-build` / `cli-test` | Build the `voblint` binary; run `tests/run.py` against it |
 | `grammar-check` | Regenerate both parser frontends and fail on any diff |
 | `property-test` | Hypothesis property tests (parser fuzzing, AST round-trip) |
 | `verify` | Run the supported local verification gate; GitHub CI runs the same leaf checks separately |
+
+To export the formalization as a PDF, run `pixi run isabelle-pdf-build`
+(or `AFP=/path/to/afp/thys pixi run isabelle-pdf-build`). This requires Isabelle's
+LaTeX toolchain. Open `output/document.pdf` after the build succeeds.
+The document groups the core theories by session, including generated theories
+and code export. Example sessions are omitted from presentation, except for
+`Example_End_To_End_Certificate`, which appears in an appendix. To include every
+example session, run `pixi run isabelle-pdf-full-build`; its output is
+`output/document-full.pdf`. Both PDFs stay in the ignored `output/` directory.
+CI builds the default PDF and uploads it as the `formalization-pdf` workflow
+artifact, retained for seven days, alongside the separate `thesis-pdf` artifact.
+Isabelle/HOL, AFP, and vendored dependencies are checked but are not printed.
+
+The task generates a separate `Voblint_Document` session under `build/pdf-session/`
+and an `inventory.json` listing every included source file. It checks that every
+theory under `src/` belongs to the full inventory before selecting what to print.
+Both variants retain all theory imports and proof dependencies. This session
+starts from HOL so project theories can be presented; the first PDF build checks them again and can
+take substantially longer than an incremental proof build. Subsequent builds
+are incremental; switching variants changes the presentation configuration.
+The session stays outside `ROOTS` so regular builds do not require LaTeX.
+Do not run `isabelle mkroot` in the repository: that creates an empty session
+template rather than a document of the existing sessions.
 
 The generated OCaml is compile-checked by actually compiling it: both
 `codegen-regression` and `cli-build` run Dune over
