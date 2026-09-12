@@ -642,6 +642,7 @@ jobs:
         uses: ocaml/setup-ocaml@e89b2ded52a6e13f50162220cf5fe47290162032 # v3.8.0
         with:
           ocaml-compiler: '5'
+          opam-pin: false
 
       - name: Install OCaml dependencies
         run: pixi run ocaml-deps-install
