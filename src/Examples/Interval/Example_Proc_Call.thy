@@ -29,16 +29,16 @@ definition proc_call_gs :: "vname \<Rightarrow> bool" where
   "proc_call_gs x \<longleftrightarrow> x = (STR ''Gx'')"
 
 definition inc_body :: "VIMP_Proc.com" where
-  "inc_body = imp \<lbrakk> Gx := Gx + 1 \<rbrakk>"
+  "inc_body = imp \<lbrakk> Gx = Gx + 1; \<rbrakk>"
 
 definition sqr_body :: "VIMP_Proc.com" where
-  "sqr_body = imp \<lbrakk> Gx := Gx * Gx \<rbrakk>"
+  "sqr_body = imp \<lbrakk> Gx = Gx * Gx; \<rbrakk>"
 
 definition main_prog :: "VIMP_Proc.com" where
   "main_prog = imp \<lbrakk>
-     Gx := 4;
+     Gx = 4;
      inc();
-     sqr()
+     sqr();
    \<rbrakk>"
 
 definition proc_pi :: proc_table where
@@ -57,9 +57,9 @@ text \<open>
 \<close>
 
 lemma call_inc_result:
-  "pcompletes proc_call_gs proc_pi (imp \<lbrakk> inc() \<rbrakk>) s (s((STR ''Gx'') := s (STR ''Gx'') + 1))"
+  "pcompletes proc_call_gs proc_pi (imp \<lbrakk> inc(); \<rbrakk>) s (s((STR ''Gx'') := s (STR ''Gx'') + 1))"
 proof -
-  have run: "pcompletes proc_call_gs proc_pi (imp \<lbrakk> inc() \<rbrakk>) s
+  have run: "pcompletes proc_call_gs proc_pi (imp \<lbrakk> inc(); \<rbrakk>) s
                 (VIMP_Globals.combine_env proc_call_gs s
                   ((enter_state proc_call_gs s)((STR ''Gx'') := s (STR ''Gx'') + 1)))"
   proof (rule pcompletes_Call_parameterless[where c = inc_body])
@@ -68,7 +68,7 @@ proof -
     show "pcompletes proc_call_gs proc_pi inc_body (enter_state proc_call_gs s)
              ((enter_state proc_call_gs s)((STR ''Gx'') := s (STR ''Gx'') + 1))"
     proof -
-      have "pcompletes proc_call_gs proc_pi (imp \<lbrakk> Gx := Gx + 1 \<rbrakk>)
+      have "pcompletes proc_call_gs proc_pi (imp \<lbrakk> Gx = Gx + 1; \<rbrakk>)
                (enter_state proc_call_gs s)
                ((enter_state proc_call_gs s)
                  ((STR ''Gx'') := aval (Plus (V (STR ''Gx'')) (N 1)) (enter_state proc_call_gs s)))"
@@ -86,9 +86,9 @@ proof -
 qed
 
 lemma call_sqr_result:
-  "pcompletes proc_call_gs proc_pi (imp \<lbrakk> sqr() \<rbrakk>) s (s((STR ''Gx'') := s (STR ''Gx'') * s (STR ''Gx'')))"
+  "pcompletes proc_call_gs proc_pi (imp \<lbrakk> sqr(); \<rbrakk>) s (s((STR ''Gx'') := s (STR ''Gx'') * s (STR ''Gx'')))"
 proof -
-  have run: "pcompletes proc_call_gs proc_pi (imp \<lbrakk> sqr() \<rbrakk>) s
+  have run: "pcompletes proc_call_gs proc_pi (imp \<lbrakk> sqr(); \<rbrakk>) s
                 (VIMP_Globals.combine_env proc_call_gs s
                   ((enter_state proc_call_gs s)((STR ''Gx'') := s (STR ''Gx'') * s (STR ''Gx''))))"
   proof (rule pcompletes_Call_parameterless[where c = sqr_body])
@@ -97,7 +97,7 @@ proof -
     show "pcompletes proc_call_gs proc_pi sqr_body (enter_state proc_call_gs s)
              ((enter_state proc_call_gs s)((STR ''Gx'') := s (STR ''Gx'') * s (STR ''Gx'')))"
     proof -
-      have "pcompletes proc_call_gs proc_pi (imp \<lbrakk> Gx := Gx * Gx \<rbrakk>)
+      have "pcompletes proc_call_gs proc_pi (imp \<lbrakk> Gx = Gx * Gx; \<rbrakk>)
                (enter_state proc_call_gs s)
                ((enter_state proc_call_gs s)
                  ((STR ''Gx'') :=
@@ -128,13 +128,13 @@ text \<open>
 theorem main_prog_result:
   "pcompletes proc_call_gs proc_pi main_prog s (s((STR ''Gx'') := 25))"
 proof -
-  have step1: "pcompletes proc_call_gs proc_pi (imp \<lbrakk> Gx := 4 \<rbrakk>) s (s((STR ''Gx'') := 4))"
+  have step1: "pcompletes proc_call_gs proc_pi (imp \<lbrakk> Gx = 4; \<rbrakk>) s (s((STR ''Gx'') := 4))"
     using pcompletes_assign[where gs = proc_call_gs and \<Pi> = proc_pi and x = "(STR ''Gx'')" and a = "N 4" and s = s]
     by simp
-  have step2: "pcompletes proc_call_gs proc_pi (imp \<lbrakk> inc() \<rbrakk>) (s((STR ''Gx'') := 4)) (s((STR ''Gx'') := 5))"
+  have step2: "pcompletes proc_call_gs proc_pi (imp \<lbrakk> inc(); \<rbrakk>) (s((STR ''Gx'') := 4)) (s((STR ''Gx'') := 5))"
     using call_inc_result[where s = "s((STR ''Gx'') := 4)"]
     by simp
-  have step3: "pcompletes proc_call_gs proc_pi (imp \<lbrakk> sqr() \<rbrakk>) (s((STR ''Gx'') := 5)) (s((STR ''Gx'') := 25))"
+  have step3: "pcompletes proc_call_gs proc_pi (imp \<lbrakk> sqr(); \<rbrakk>) (s((STR ''Gx'') := 5)) (s((STR ''Gx'') := 25))"
     using call_sqr_result[where s = "s((STR ''Gx'') := 5)"]
     by simp
   show ?thesis

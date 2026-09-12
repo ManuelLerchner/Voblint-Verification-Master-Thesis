@@ -9,12 +9,10 @@
 // sides' classes, and both are top, so the meet is top; inv_plus_congruence
 // then subtracts the literal 1 from top and gets top back. The domain
 // tracks one class per variable and has nowhere to record m - n = 1.
-void main() {
-  n := __voblint_nondet_int();
-  m := __voblint_nondet_int();
+fun main() {
+  n = __voblint_nondet_int();
+  m = __voblint_nondet_int();
   if (n + 1 == m) {
-    __voblint_check(n == 0) // UNKNOWN
-  } else {
-    skip
+    __voblint_check(n == 0); // UNKNOWN
   }
 }

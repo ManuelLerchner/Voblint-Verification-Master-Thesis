@@ -95,6 +95,13 @@ text \<open>
   internally. Only the state column differs, and no theorem reads it.
 \<close>
 
+lemma out_checks_of_table_report_answer:
+  assumes "table_report_answer view r classify p = Analysed out"
+  shows "out_checks out =
+    check_rows_of (\<lambda>_. Bot) (classify_checks_verdicts (prog_cfg p) r classify)"
+  using assms unfolding table_report_answer_def report_output_def
+  by (auto split: output_view.splits)
+
 lemma out_checks_of_verdict_report_answer:
   assumes "verdict_report_answer view rows = Analysed out"
   shows "out_checks out = check_rows_of (\<lambda>_. Bot) rows"
@@ -140,6 +147,11 @@ lemma cs_output_check_sites:
   "cs_output_of view into classify r k p = Analysed out \<Longrightarrow>
    map (\<lambda>row. (row_point row, row_exp row)) (out_checks out) = check_sites (prog_cfg p)"
   by (simp add: out_checks_of_cs_output check_rows_of_sites)
+
+lemma table_report_answer_check_sites:
+  "table_report_answer view r classify p = Analysed out \<Longrightarrow>
+   map (\<lambda>row. (row_point row, row_exp row)) (out_checks out) = check_sites (prog_cfg p)"
+  by (simp add: out_checks_of_table_report_answer check_rows_of_sites)
 
 lemma verdict_report_answer_check_sites:
   "verdict_report_answer view (classify_checks_verdicts (prog_cfg p) r classify) = Analysed out
@@ -295,6 +307,42 @@ text \<open>
   directions.
 \<close>
 
+lemma out_diagnostics_of_flat_output:
+  "flat_output_of view into classify bot_state r globals p = Analysed out \<Longrightarrow>
+   out_diagnostics out = arithmetic_diagnostics (prog_cfg p) r classify"
+  by (cases view)
+    (auto simp: flat_output_of_def report_output_def collapsed_output_def Let_def)
+
+lemma out_diagnostics_of_entry_state_output:
+  "entry_state_output_of view enter into classify r p = Analysed out \<Longrightarrow>
+   out_diagnostics out = arithmetic_diagnostics (prog_cfg p) r classify"
+  by (cases view)
+    (auto simp: entry_state_output_of_def report_output_def collapsed_output_def
+      contextual_output_def Let_def)
+
+lemma out_diagnostics_of_cs_output:
+  "cs_output_of view into classify r k p = Analysed out \<Longrightarrow>
+   out_diagnostics out = arithmetic_diagnostics (prog_cfg p) r classify"
+  by (cases view)
+    (auto simp: cs_output_of_def report_output_def collapsed_output_def
+      contextual_output_def Let_def)
+
+lemma out_diagnostics_of_table_report_answer:
+  "table_report_answer view r classify p = Analysed out \<Longrightarrow>
+   out_diagnostics out = arithmetic_diagnostics (prog_cfg p) r classify"
+  by (cases view) (auto simp: table_report_answer_def report_output_def)
+
+definition arithmetic_safe_at :: "cfg \<Rightarrow> pp \<Rightarrow> store \<Rightarrow> bool" where
+  "arithmetic_safe_at g v s \<longleftrightarrow>
+     (\<forall>es. (v, es) \<in> set (arithmetic_expression_sites g) \<longrightarrow>
+       (\<forall>e \<in> set es. \<forall>divisor \<in> expression_divisors e. aval divisor s \<noteq> 0))"
+
+definition diagnostics_sound_at :: "analysis_output \<Rightarrow> imp_prog \<Rightarrow> pp \<Rightarrow> store \<Rightarrow> bool"
+where
+  "diagnostics_sound_at out p v s \<longleftrightarrow>
+     ((\<forall>d \<in> set (out_diagnostics out). diagnostic_point d \<noteq> v) \<longrightarrow>
+       arithmetic_safe_at (prog_cfg p) v s)"
+
 locale sound_table =
   fixes p :: imp_prog
     and r :: "('c, 'a::sound_domain abs_state) analysis_result"
@@ -329,6 +377,49 @@ proof -
     by (rule ctx_rows_sound_at [OF finite_contexts look gst proved refuted rows])
   with covers [OF mem] show ?thesis ..
 qed
+
+lemma arithmetic_safe:
+  assumes absent: "\<forall>d \<in> set (arithmetic_diagnostics (prog_cfg p) r classify).
+      diagnostic_point d \<noteq> v"
+    and mem: "s \<in> ltr_collect (declared_global p) (prog_cfg p)
+      (cinit_stores (declared_global p)) v"
+  shows "arithmetic_safe_at (prog_cfg p) v s"
+proof -
+  from covers[OF mem] obtain ctx st where
+    look: "lookup_context r v ctx = Lifted st" and gst: "s \<in> \<lbrakk>st\<rbrakk>"
+    unfolding table_covers_def by blast
+  have safe: "\<And>es e divisor. (v, es) \<in> set (arithmetic_expression_sites (prog_cfg p)) \<Longrightarrow>
+      e \<in> set es \<Longrightarrow> divisor \<in> expression_divisors e \<Longrightarrow> aval divisor s \<noteq> 0"
+  proof -
+    fix es e divisor
+    assume site: "(v, es) \<in> set (arithmetic_expression_sites (prog_cfg p))"
+      and expr: "e \<in> set es" and div: "divisor \<in> expression_divisors e"
+    obtain obligations obligation where
+      obs: "(v, obligations) \<in> set (arithmetic_sites (prog_cfg p))"
+      and ob: "obligation \<in> set obligations"
+      and divisor: "arithmetic_divisor obligation = divisor"
+      by (rule arithmetic_sites_divisor[OF site expr div])
+    have verdict: "arithmetic_site_verdict r classify v obligation = Lifted Check_Proved"
+      using arithmetic_diagnostics_absent[OF obs ob absent]
+        arithmetic_site_verdict_not_bot[OF finite_contexts look, of classify obligation]
+      by blast
+    have classified: "classify (arithmetic_condition obligation) st = Check_Proved"
+      by (rule arithmetic_site_verdict_classify[OF verdict _ look]) simp
+    from proved[OF classified gst] show "aval divisor s \<noteq> 0"
+      by (auto simp: arithmetic_condition_def divisor split: if_splits)
+  qed
+  show ?thesis unfolding arithmetic_safe_at_def using safe by blast
+qed
+
+lemma output_sound_at:
+  assumes rows: "out_checks out =
+      check_rows_of env (classify_checks_verdicts (prog_cfg p) r classify)"
+    and diagnostics: "out_diagnostics out = arithmetic_diagnostics (prog_cfg p) r classify"
+    and mem: "s \<in> ltr_collect (declared_global p) (prog_cfg p)
+      (cinit_stores (declared_global p)) v"
+  shows "table_covers r v s \<and> checks_sound_at out v s \<and> diagnostics_sound_at out p v s"
+  using sound_at[OF rows mem] arithmetic_safe[OF _ mem]
+  unfolding diagnostics_sound_at_def diagnostics by blast
 
 text \<open>
   Compile the program, solve, take the answer --- then run the source program

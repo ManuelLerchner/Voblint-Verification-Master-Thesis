@@ -4,7 +4,7 @@
 // PROVED and REFUTED witnesses for one mechanism (exact assignment),
 // rather than leaving REFUTED coverage to a single case buried inside a
 // mixed-verdict file.
-void main() {
-  x := 0 - 5;
-  __voblint_check(0 < x) // REFUTED
+fun main() {
+  x = 0 - 5;
+  __voblint_check(0 < x); // REFUTED
 }

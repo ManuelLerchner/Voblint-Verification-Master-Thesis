@@ -17,23 +17,23 @@
 // bound to -inf, and no guard mentions e, so e = [-inf,0] survives
 // narrowing; c := e + d inherits that as c = [-inf,8]. Recovering them
 // needs the relation c = e + d = 4 the product does not track.
-void main() {
-  a := 1;
-  b := 2;
-  c := 3;
-  d := 4;
-  e := 0;
+fun main() {
+  a = 1;
+  b = 2;
+  c = 3;
+  d = 4;
+  e = 0;
   while (d < 9) {
-    b := 2 * a;
-    d := d + 4;
-    e := e - 4 * a;
-    a := b - a;
-    c := e + d
-  };
+    b = 2 * a;
+    d = d + 4;
+    e = e - 4 * a;
+    a = b - a;
+    c = e + d;
+  }
   __voblint_check(c == 4); // UNKNOWN
-  __voblint_check(!(d == 1)); // PROVED
-  __voblint_check(!(d == 2)); // PROVED
-  __voblint_check(!(d == 3)); // PROVED
+  __voblint_check(d != 1); // PROVED
+  __voblint_check(d != 2); // PROVED
+  __voblint_check(d != 3); // PROVED
   __voblint_check(d == 12); // PROVED
-  __voblint_check(e == -8) // UNKNOWN
+  __voblint_check(e == -8); // UNKNOWN
 }

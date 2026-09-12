@@ -133,6 +133,42 @@ def test_states_stay_out_of_node_labels(report):
             assert "\\n" not in line, f"multi-line node label: {line.strip()}"
 
 
+@pytest.mark.parametrize("dead_call, displayed_call", [
+    ("a = f(3);", "a = f(3);"),
+    ("a = f(\n  3\n);", "a = f( 3 );"),
+    ("f(3);", "f(3);"),
+])
+def test_dead_calls_keep_their_operation_without_a_callee_context(
+    tmp_path, dead_call, displayed_call
+):
+    source = tmp_path / "dead_call.vimp"
+    source.write_text(
+        "fun f(n) { return n; }\n"
+        "fun main() { x = 5; if (x < 2) { " + dead_call + " } "
+        "b = f(7); __voblint_check(b == 7); }\n"
+    )
+    out = tmp_path / "result"
+    proc = subprocess.run(
+        [str(VOBLINT), "--analysis", "interval", "--context", "entry-state",
+         "--html-out", str(out), str(source)],
+        capture_output=True, text=True,
+    )
+    assert proc.returncode == 0, proc.stderr
+    dot = (out / "dot" / source.name / "main.dot").read_text()
+    dead = re.search(
+        r'(\w+) \[shape=box,fillcolor="orange",label="pp\d+\\n'
+        + re.escape(displayed_call) + r'"\];', dot
+    )
+    assert dead, "unrouted call lost its source annotation or dead coloring"
+    assert "b = f(7);" not in dot, "routed call redundantly annotated"
+    edges = [line for line in dot.splitlines() if f"{dead[1]} ->" in line]
+    assert len(edges) == 1 and 'style=dashed,color=gray40,label="continuation"' in edges[0]
+    assert 'label="call f(3)"' not in dot, "dead call created a routed callee edge"
+    assert 'label="call f(7)"' in dot
+    assert re.search(r'label="resume / b (?::=|=) #ret"', dot), "resume lost its destination"
+    assert len(re.findall(r'label="entry_f"', dot)) == 1, "dead callee context created"
+
+
 def test_source_view_has_exactly_the_files_lines(report):
     """A trailing newline ends the last line; it does not begin another one.
     An extra empty line renders as a numbered line that is not in the file."""
@@ -337,9 +373,9 @@ def test_a_seed_carries_the_state_pushed_into_that_callee(tmp_path):
     """
     src = tmp_path / "seeded.vimp"
     src.write_text(
-        "void bump(n) {\n  m := n + 1;\n  return m\n}\n\n"
-        "void never() {\n  return 0\n}\n\n"
-        "void main() {\n  x := 7;\n  y := bump(x);\n  __voblint_check(y == 8)\n}\n"
+        "fun bump(n) {\n  m = n + 1;\n  return m;\n}\n\n"
+        "fun never() {\n  return 0;\n}\n\n"
+        "fun main() {\n  x = 7;\n  y = bump(x);\n  __voblint_check(y == 8);\n}\n"
     )
     out = _run(tmp_path, "--analysis", "interval", str(src))
     rows = {
@@ -414,12 +450,12 @@ def test_verdicts_pair_with_positions_before_dead_rows_are_dropped(tmp_path):
     """
     src = tmp_path / "dead_then_live.vimp"
     src.write_text(
-        "void main() {\n"
-        "  x := 5;\n"
+        "fun main() {\n"
+        "  x = 5;\n"
         "  if (x < 0) {\n"
-        "    __voblint_check(x == 99)\n"
+        "    __voblint_check(x == 99);\n"
         "  } else {\n"
-        "    __voblint_check(x == 5)\n"
+        "    __voblint_check(x == 5);\n"
         "  }\n"
         "}\n"
     )

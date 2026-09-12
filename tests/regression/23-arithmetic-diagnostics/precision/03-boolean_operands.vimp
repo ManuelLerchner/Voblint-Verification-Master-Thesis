@@ -1,0 +1,9 @@
+// PARAM: --analysis interval
+// EXPECT-ARITHMETIC
+// Diagnostics inspect both operands of Boolean expressions.
+fun main() {
+  __voblint_check(0 && 1 / 0); // REFUTED // ARITH: ERROR division-by-zero
+  __voblint_check(1 || 1 / 0); // PROVED // ARITH: ERROR division-by-zero
+  __voblint_check(1 && 1 / 0); // REFUTED // ARITH: ERROR division-by-zero
+  __voblint_check(0 || 1 / 0); // REFUTED // ARITH: ERROR division-by-zero
+}

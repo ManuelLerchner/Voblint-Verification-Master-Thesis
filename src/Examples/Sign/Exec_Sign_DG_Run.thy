@@ -40,7 +40,7 @@ text \<open>
 \<close>
 
 definition sign_ex_prog :: imp_prog where
-  "sign_ex_prog = program { void main() { x := 1; y := x } }"
+  "sign_ex_prog = program { fun main() { x = 1; y = x; } }"
 
 text \<open>The storage classifier: \<open>sign_ex_prog\<close> declares no globals, so \<open>sign_ex_gs\<close>
   classifies every variable this chain touches as local.\<close>

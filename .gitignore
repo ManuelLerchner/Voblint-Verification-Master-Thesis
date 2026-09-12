@@ -4,6 +4,10 @@
 # Isabelle
 .isabelle/
 /build/
+/output/
+/document/*.aux
+/document/*.fls
+/document/*.fdb_latexmk
 
 # Editor backups / autosaves (Emacs, vim)
 *~

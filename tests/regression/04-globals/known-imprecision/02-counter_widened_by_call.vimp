@@ -13,12 +13,12 @@
 // 04-globals/precision/05-glocal_not_global_by_name.vimp: same program,
 // same two calls, but Glocal is undeclared and stays exact throughout.
 global counter;
-void p() {
-  counter := counter + 1
+fun p() {
+  counter = counter + 1;
 }
-void main() {
-  Glocal := 1;
+fun main() {
+  Glocal = 1;
   p();
   p();
-  __voblint_check(counter < 5) // UNKNOWN
+  __voblint_check(counter < 5); // UNKNOWN
 }

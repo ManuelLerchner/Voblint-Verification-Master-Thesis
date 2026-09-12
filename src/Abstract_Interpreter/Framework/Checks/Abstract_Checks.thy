@@ -126,7 +126,11 @@ fun check_query :: "exp \<Rightarrow> 'd \<Rightarrow> bool option" where
   | "check_query (And b1 b2) d = and_opt (check_query b1 d) (check_query b2 d)"
   | "check_query (Or b1 b2) d = or_opt (check_query b1 d) (check_query b2 d)"
   | "check_query (Less a b) d = less (aval_abs a d) (aval_abs b d)"
+  | "check_query (LessEq a b) d = map_option HOL.Not (less (aval_abs b d) (aval_abs a d))"
+  | "check_query (Greater a b) d = less (aval_abs b d) (aval_abs a d)"
+  | "check_query (GreaterEq a b) d = map_option HOL.Not (less (aval_abs a d) (aval_abs b d))"
   | "check_query (Eq a b) d = eq (aval_abs a d) (aval_abs b d)"
+  | "check_query (NotEq a b) d = map_option HOL.Not (eq (aval_abs a d) (aval_abs b d))"
   | "check_query e d = truthy_query e d"
 
 text \<open>Soundness of the arithmetic fallback, proved once and cited by every
@@ -158,6 +162,34 @@ next
 next
   case (Eq a b)
   then show ?case using aval_abs_sound mem eq_sound by auto
+next
+  case (LessEq a b)
+  have query: "less (aval_abs b d) (aval_abs a d) = Some (\<not> r)"
+    using LessEq.prems by (auto split: option.splits)
+  have relation: "(aval b s < aval a s) = (\<not> r)"
+    by (rule less_sound[OF query aval_abs_sound[OF mem] aval_abs_sound[OF mem]])
+  show ?case using relation by auto
+next
+  case (Greater a b)
+  have query: "less (aval_abs b d) (aval_abs a d) = Some r"
+    using Greater.prems by simp
+  have relation: "(aval b s < aval a s) = r"
+    by (rule less_sound[OF query aval_abs_sound[OF mem] aval_abs_sound[OF mem]])
+  show ?case using relation by simp
+next
+  case (GreaterEq a b)
+  have query: "less (aval_abs a d) (aval_abs b d) = Some (\<not> r)"
+    using GreaterEq.prems by (auto split: option.splits)
+  have relation: "(aval a s < aval b s) = (\<not> r)"
+    by (rule less_sound[OF query aval_abs_sound[OF mem] aval_abs_sound[OF mem]])
+  show ?case using relation by auto
+next
+  case (NotEq a b)
+  have query: "eq (aval_abs a d) (aval_abs b d) = Some (\<not> r)"
+    using NotEq.prems by (auto split: option.splits)
+  have relation: "(aval a s = aval b s) = (\<not> r)"
+    by (rule eq_sound[OF query aval_abs_sound[OF mem] aval_abs_sound[OF mem]])
+  show ?case using relation by auto
 qed (fastforce+)
 
 

@@ -1,6 +1,6 @@
 // PARAM: --analysis congruence
 // x is 0 (mod 2) whatever n is, so x == 3 is concretely false at every
-// execution and !(x == 3) is a fixed fact.
+// execution and (x != 3) is a fixed fact.
 //
 // The concrete mechanism is congruence_eqb (Congruence_Arithmetic.thy): it
 // reads congruence_singleton off both sides and answers only when both
@@ -16,8 +16,8 @@
 // instead of a check (../precision/03-residue_guard_kills_branch.vimp),
 // since the guard path goes through intersect_congruence, which does
 // compare the classes.
-void main() {
-  n := __voblint_nondet_int();
-  x := 2 * n;
-  __voblint_check(!(x == 3)) // UNKNOWN
+fun main() {
+  n = __voblint_nondet_int();
+  x = 2 * n;
+  __voblint_check(x != 3); // UNKNOWN
 }

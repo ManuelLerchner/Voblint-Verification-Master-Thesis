@@ -6,11 +6,11 @@
 // is the reachability probe over program_vars: with nothing to probe it must
 // answer "live", not vacuously "bottom". Every check(true) is PROVED, in main
 // and across a call into an equally empty procedure.
-void p() {
-  __voblint_check(true) // PROVED
+fun p() {
+  __voblint_check(true); // PROVED
 }
-void main() {
+fun main() {
   __voblint_check(true); // PROVED
   p();
-  __voblint_check(true) // PROVED
+  __voblint_check(true); // PROVED
 }

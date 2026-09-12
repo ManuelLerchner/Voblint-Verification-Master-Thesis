@@ -93,16 +93,16 @@
 // EXPECT-GRAPH-END
 
 global g, h;
-void f() {
-  h := h + 1;
-  g := 42
+fun f() {
+  h = h + 1;
+  g = 42;
 }
-void main() {
-  g := 1;
-  h := 0;
-  g := -17;
+fun main() {
+  g = 1;
+  h = 0;
+  g = -17;
   f();
   __voblint_check(g == 42);   // PROVED
   __voblint_check(h == 1);    // PROVED
-  __voblint_check(g < 43)     // PROVED
+  __voblint_check(g < 43);     // PROVED
 }

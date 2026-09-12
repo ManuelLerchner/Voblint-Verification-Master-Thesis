@@ -69,12 +69,12 @@
 //   main_pp3_ctx0 -> main_pp4_ctx0: call-to-return idf
 // EXPECT-GRAPH-END
 
-void idf(n) {
-  return n + 1
+fun idf(n) {
+  return n + 1;
 }
-void main() {
-  a := idf(5);
-  b := idf(5);
+fun main() {
+  a = idf(5);
+  b = idf(5);
   __voblint_check(a == 6); // PROVED
-  __voblint_check(b == 6) // PROVED
+  __voblint_check(b == 6); // PROVED
 }

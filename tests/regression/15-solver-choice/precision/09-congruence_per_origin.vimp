@@ -6,7 +6,7 @@
 // warrowing routes would solve the same system by the same steps -- both
 // are rejected at the CLI with exit code 1, the way Solver_Warrow is for
 // Sign (03-sign_per_origin.vimp).
-void main() {
-  x := 2 + 2;
-  __voblint_check(x == 4) // PROVED
+fun main() {
+  x = 2 + 2;
+  __voblint_check(x == 4); // PROVED
 }

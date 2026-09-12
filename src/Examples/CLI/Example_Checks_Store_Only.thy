@@ -35,9 +35,9 @@ text \<open>\<open>special_pname_nondet_int\<close> is an ordinary identifier, n
   user identifier that begins with one.  The call is spliced in directly instead.\<close>
 definition checks_ex_program :: imp_prog where
   "checks_ex_program = mk_program []
-     (Seq (Seq (imp \<lbrakk> y := 5; __voblint_check(0 < y); y := 0; __voblint_check(0 < y) \<rbrakk>)
+     (Seq (Seq (imp \<lbrakk> y = 5; __voblint_check(0 < y); y = 0; __voblint_check(0 < y); \<rbrakk>)
                 (VIMP_Proc.com.Call (Some (STR ''z'')) special_pname_nondet_int []))
-          (imp \<lbrakk> __voblint_check(z == 1) \<rbrakk>))
+          (imp \<lbrakk> __voblint_check(z == 1); \<rbrakk>))
      []"
 
 text \<open>Computed, not asserted: the three \<open>check(...)\<close> statements land at the

@@ -10,12 +10,12 @@
 // over the flat default, not a different claim about the concrete program
 // (both checks are true for the same reason in both files: 3*3=9,
 // 4*4=16).
-void square(n) {
-  return n * n
+fun square(n) {
+  return n * n;
 }
-void main() {
-  a := square(3);
-  b := square(4);
+fun main() {
+  a = square(3);
+  b = square(4);
   __voblint_check(a == 9); // PROVED
-  __voblint_check(b == 16) // PROVED
+  __voblint_check(b == 16); // PROVED
 }

@@ -10,10 +10,10 @@
 // each with its own singleton, so combine reads back 12 and 15 exactly.
 // The entry-state route is the whole content of this case: the same
 // program, the same domain, decided only because the contexts stay apart.
-void triple(p) { return p * 3 }
-void main() {
-  a := triple(4);
-  b := triple(5);
+fun triple(p) { return p * 3; }
+fun main() {
+  a = triple(4);
+  b = triple(5);
   __voblint_check(a == 12); // PROVED
-  __voblint_check(b == 15) // PROVED
+  __voblint_check(b == 15); // PROVED
 }

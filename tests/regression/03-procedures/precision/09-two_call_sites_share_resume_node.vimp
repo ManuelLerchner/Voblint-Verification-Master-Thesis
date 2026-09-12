@@ -16,15 +16,15 @@
 // Reversing the branch polarity hides the ordering entirely, so this case pins
 // the polarity that exercised it, under --context none, where the default
 // Interval configuration reaches this shape.
-void f(n) {
-  return n
+fun f(n) {
+  return n;
 }
-void main() {
-  x := 5;
+fun main() {
+  x = 5;
   if (x < 2) {
-    a := f(1)
+    a = f(1);
   } else {
-    a := f(1)
-  };
-  __voblint_check(x == 5) // PROVED
+    a = f(1);
+  }
+  __voblint_check(x == 5); // PROVED
 }

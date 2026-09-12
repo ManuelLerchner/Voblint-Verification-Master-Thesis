@@ -39,7 +39,7 @@ locale semantic_intersection =
 text \<open>
   Extends @{class sound_domain} with the infrastructure for backward
   (inverse) evaluation of guards and arithmetic expressions. Per-domain:
-  provide a @{locale semantic_intersection} instance, aval_abs, and inv_*
+  provide a @{locale semantic_intersection} instance, \<open>aval_abs\<close>, and \<open>inv_*\<close>
   operators; the generic afilter / bfilter and their soundness theorems
   follow by induction.
 \<close>
@@ -196,6 +196,15 @@ fun bfilter :: "exp => bool => 'a abs_state => 'a abs_state" where
     "bfilter (Less e1 e2) res \<sigma> =
        (let (a1, a2) = inv_less res (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>)
         in afilter e1 a1 (afilter e2 a2 \<sigma>))"
+  | "bfilter (GreaterEq e1 e2) res \<sigma> =
+       (let (a1, a2) = inv_less (\<not> res) (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>)
+        in afilter e1 a1 (afilter e2 a2 \<sigma>))"
+  | "bfilter (Greater e1 e2) res \<sigma> =
+       (let (a1, a2) = inv_less res (aval_abs e2 \<sigma>) (aval_abs e1 \<sigma>)
+        in afilter e2 a1 (afilter e1 a2 \<sigma>))"
+  | "bfilter (LessEq e1 e2) res \<sigma> =
+       (let (a1, a2) = inv_less (\<not> res) (aval_abs e2 \<sigma>) (aval_abs e1 \<sigma>)
+        in afilter e2 a1 (afilter e1 a2 \<sigma>))"
   | "bfilter (Not b) res \<sigma> = bfilter b (\<not> res) \<sigma>"
   | "bfilter (And b1 b2) True  \<sigma> = bfilter b1 True  (bfilter b2 True  \<sigma>)"
   | "bfilter (And b1 b2) False \<sigma> =
@@ -207,6 +216,9 @@ fun bfilter :: "exp => bool => 'a abs_state => 'a abs_state" where
   | "bfilter (Or  b1 b2) False \<sigma> = bfilter b1 False (bfilter b2 False \<sigma>)"
   | "bfilter (Eq  e1 e2) res  \<sigma> =
        (let (a1, a2) = inv_eq res (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>)
+        in afilter e1 a1 (afilter e2 a2 \<sigma>))"
+  | "bfilter (NotEq  e1 e2) res  \<sigma> =
+       (let (a1, a2) = inv_eq (\<not> res) (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>)
         in afilter e1 a1 (afilter e2 a2 \<sigma>))"
   | "bfilter e res \<sigma> =
        (let (a1, a2) = inv_eq (\<not> res) (aval_abs e \<sigma>) (aval_abs (N 0) \<sigma>)
@@ -384,6 +396,33 @@ next
     by (blast intro: Less.prems(1) inv_less_sound_fst[OF e1a e2a less]
                       inv_less_sound_snd[OF e1a e2a less])
 next
+  case (GreaterEq e1 e2)
+  have e1a: "aval e1 s \<in> gamma (aval_abs e1 \<sigma>)" and e2a: "aval e2 s \<in> gamma (aval_abs e2 \<sigma>)"
+    using aval_abs_sound[OF GreaterEq.prems(1)] by simp_all
+  have less: "(aval e1 s < aval e2 s) = (\<not> res)" using GreaterEq.prems(2) by (auto split: if_splits)
+  show ?case
+    unfolding bfilter.simps Let_def case_prod_beta
+    by (blast intro: GreaterEq.prems(1) inv_less_sound_fst[OF e1a e2a less]
+                      inv_less_sound_snd[OF e1a e2a less])
+next
+  case (Greater e1 e2)
+  have e1a: "aval e1 s \<in> gamma (aval_abs e1 \<sigma>)" and e2a: "aval e2 s \<in> gamma (aval_abs e2 \<sigma>)"
+    using aval_abs_sound[OF Greater.prems(1)] by simp_all
+  have less: "(aval e2 s < aval e1 s) = res" using Greater.prems(2) by (auto split: if_splits)
+  show ?case
+    unfolding bfilter.simps Let_def case_prod_beta
+    by (blast intro: Greater.prems(1) inv_less_sound_fst[OF e2a e1a less]
+                      inv_less_sound_snd[OF e2a e1a less])
+next
+  case (LessEq e1 e2)
+  have e1a: "aval e1 s \<in> gamma (aval_abs e1 \<sigma>)" and e2a: "aval e2 s \<in> gamma (aval_abs e2 \<sigma>)"
+    using aval_abs_sound[OF LessEq.prems(1)] by simp_all
+  have less: "(aval e2 s < aval e1 s) = (\<not> res)" using LessEq.prems(2) by (auto split: if_splits)
+  show ?case
+    unfolding bfilter.simps Let_def case_prod_beta
+    by (blast intro: LessEq.prems(1) inv_less_sound_fst[OF e2a e1a less]
+                      inv_less_sound_snd[OF e2a e1a less])
+next
   case (Eq e1 e2)
   have e1a: "aval e1 s \<in> gamma (aval_abs e1 \<sigma>)" and e2a: "aval e2 s \<in> gamma (aval_abs e2 \<sigma>)"
     using aval_abs_sound[OF Eq.prems(1)] by simp_all
@@ -391,6 +430,15 @@ next
   show ?case
     unfolding bfilter.simps Let_def case_prod_beta
     by (blast intro: Eq.prems(1) inv_eq_sound_fst[OF e1a e2a eq] inv_eq_sound_snd[OF e1a e2a eq])
+
+next
+  case (NotEq e1 e2)
+  have e1a: "aval e1 s \<in> gamma (aval_abs e1 \<sigma>)" and e2a: "aval e2 s \<in> gamma (aval_abs e2 \<sigma>)"
+    using aval_abs_sound[OF NotEq.prems(1)] by simp_all
+  have eq: "(aval e1 s = aval e2 s) = (\<not> res)" using NotEq.prems(2) by (auto split: if_splits)
+  show ?case
+    unfolding bfilter.simps Let_def case_prod_beta
+    by (blast intro: NotEq.prems(1) inv_eq_sound_fst[OF e1a e2a eq] inv_eq_sound_snd[OF e1a e2a eq])
 qed (simp_all only: bfilter.simps Let_def case_prod_beta bfilter_default_sound)
 
 text \<open>

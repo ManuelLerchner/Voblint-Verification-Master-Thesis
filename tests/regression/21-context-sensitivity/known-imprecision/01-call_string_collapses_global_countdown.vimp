@@ -11,18 +11,18 @@
 // chains (6 and 9 sites) and proves those two; o(25) stays UNKNOWN at any
 // depth below 26.
 global m;
-void o(i) {
-  if (0 < i) { i := i - 1; m := i; o(i) } else { skip };
-  return 0
+fun o(i) {
+  if (0 < i) { i = i - 1; m = i; o(i); }
+  return 0;
 }
-void main() {
-  m := 20;
+fun main() {
+  m = 20;
   o(5);
   __voblint_check(m == 0); // UNKNOWN
-  m := 20;
+  m = 20;
   o(8);
   __voblint_check(m == 0); // UNKNOWN
-  m := 20;
+  m = 20;
   o(25);
-  __voblint_check(m == 0)  // UNKNOWN
+  __voblint_check(m == 0);  // UNKNOWN
 }

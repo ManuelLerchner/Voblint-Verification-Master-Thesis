@@ -8,11 +8,11 @@
 // it is not a precision regression, and "fixing" it to PROVED or REFUTED
 // would be unsound. The standalone version is
 // 01-random/soundness/01-unknown_after_random.vimp.
-void main() {
-  x := 5;
+fun main() {
+  x = 5;
   __voblint_check(0 < x); // PROVED
-  x := 0 - 1;
+  x = 0 - 1;
   __voblint_check(0 < x); // REFUTED
-  y := __voblint_nondet_int();
-  __voblint_check(0 < y) // UNKNOWN
+  y = __voblint_nondet_int();
+  __voblint_check(0 < y); // UNKNOWN
 }

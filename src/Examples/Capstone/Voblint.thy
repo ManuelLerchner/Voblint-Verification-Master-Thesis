@@ -38,6 +38,7 @@ theory Voblint
     "Voblint_Examples_Interval.Exec_Interval_Run"
     "Voblint_Examples_CLI.Example_Int_Refinement_Mode_Regression"
     "Voblint_Examples_CLI.Example_Analysis_Result_Regression"
+    "Voblint_Examples_CLI.Example_Arithmetic_Diagnostics_Regression"
     Example_End_To_End_Certificate
     "Voblint_Examples_Interval.Example_Interval_DG_Flagship"
     "Voblint_Result.Source_Activation_Sound"
@@ -540,6 +541,9 @@ text \<open>
       the update rule does not affect that bound.
     \<^item> @{theory Voblint_Examples_CLI.Example_Analysis_Result_Regression} --- the published result
       table and its per-context lookup surface.
+    \<^item> @{theory Voblint_Examples_CLI.Example_Arithmetic_Diagnostics_Regression} ---
+      arithmetic findings through the public CLI operation: one finding per guard,
+      silence in dead branches, conservative context aggregation, and total Boolean operands.
     \<^item> @{theory Voblint_Examples_CFG.Example_Inc_Proc} --- shared global-increment procedure witness.
     \<^item> @{theory Voblint_Examples_Sign.Example_Side_Execute} ---
       minimal certified Sign interprocedural example with annotated CFG DOT.

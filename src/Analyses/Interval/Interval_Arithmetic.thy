@@ -401,6 +401,370 @@ next
     using ivl_times_core_mono[OF _ _ assms] True by simp
 qed
 
+
+subsection \<open>Truncating division\<close>
+
+lemma c_mod_modulus_bound:
+  assumes "b \<noteq> 0"
+  shows "abs (c_mod a b) < abs b"
+proof -
+  have "0 \<le> abs a mod abs b" "abs a mod abs b < abs b"
+    using assms by (auto intro: pos_mod_sign pos_mod_bound)
+  then show ?thesis unfolding c_mod_abs
+    by (auto simp: sgn_if abs_mult)
+qed
+
+
+lemma c_mod_dividend_bound:
+  "abs (c_mod a b) \<le> abs a"
+  unfolding c_mod_abs
+  using zmod_le_nonneg_dividend[of "abs a" "abs b"]
+  by (cases "b = 0") (auto simp: sgn_if abs_mult intro: pos_mod_sign)
+
+
+lemma c_div_nonneg_divisor:
+  assumes "0 < b"
+  shows "c_div a b = (if a < 0 then - ((-a) div b) else a div b)"
+  using assms by (auto simp: c_div_def sgn_if)
+
+
+lemma c_div_mono_dividend:
+  assumes "a1 \<le> a2" "0 < b"
+  shows "c_div a1 b \<le> c_div a2 b"
+proof (cases "a1 < 0 \<and> 0 \<le> a2")
+  case True
+  have "c_div a1 b \<le> 0" "0 \<le> c_div a2 b"
+    using True assms c_div_nonpos(1) c_div_nonneg(1) by auto
+  then show ?thesis by linarith
+next
+  case False
+  show ?thesis unfolding c_div_nonneg_divisor[OF assms(2)]
+    using False assms
+    by (auto split: if_splits intro: zdiv_mono1)
+qed
+
+
+lemma c_div_antimono_divisor:
+  assumes "0 \<le> a" "0 < b1" "b1 \<le> b2"
+  shows "c_div a b2 \<le> c_div a b1"
+  using assms
+  by (simp add: c_div_nonneg_divisor zdiv_mono2)
+
+
+
+lemma c_div_positive_divisor_bounds:
+  assumes "0 < l" "l \<le> b" "b \<le> u"
+  shows "min (c_div a l) (c_div a u) \<le> c_div a b \<and>
+    c_div a b \<le> max (c_div a l) (c_div a u)"
+proof (cases "0 \<le> a")
+  case True
+  have "c_div a u \<le> c_div a b" "c_div a b \<le> c_div a l"
+    using assms True by (auto intro: c_div_antimono_divisor)
+  then show ?thesis by auto
+next
+  case False
+  have "c_div (-a) u \<le> c_div (-a) b" "c_div (-a) b \<le> c_div (-a) l"
+    using assms False by (auto intro: c_div_antimono_divisor)
+  then show ?thesis
+    by (simp_all add: c_div_neg_dividend min_le_iff_disj le_max_iff_disj)
+qed
+
+
+lemma c_div_positive_corners:
+  assumes "l \<le> i" "i \<le> u" "0 < c" "c \<le> j" "j \<le> d"
+  shows "min (c_div l c) (c_div l d) \<le> c_div i j"
+    and "c_div i j \<le> max (c_div u c) (c_div u d)"
+proof -
+  have "min (c_div l c) (c_div l d) \<le> c_div l j"
+    using c_div_positive_divisor_bounds[OF assms(3-5), THEN conjunct1] .
+  also have "c_div l j \<le> c_div i j"
+    using assms by (auto intro: c_div_mono_dividend)
+  finally show "min (c_div l c) (c_div l d) \<le> c_div i j" .
+  have "c_div i j \<le> c_div u j"
+    using assms by (auto intro: c_div_mono_dividend)
+  also have "c_div u j \<le> max (c_div u c) (c_div u d)"
+    using c_div_positive_divisor_bounds[OF assms(3-5), THEN conjunct2] .
+  finally show "c_div i j \<le> max (c_div u c) (c_div u d)" .
+qed
+
+
+fun ivl_div_positive_core :: "ivl \<Rightarrow> ivl \<Rightarrow> ivl" where
+  "ivl_div_positive_core (Ivl (Fin l) (Fin u)) (Ivl (Fin c) (Fin d)) =
+    (if 0 < c then
+      Ivl (Fin (min (c_div l c) (c_div l d))) (Fin (max (c_div u c) (c_div u d)))
+     else ivl_top)"
+| "ivl_div_positive_core a b = (if b = Ivl (Fin 1) (Fin 1) then a else ivl_top)"
+
+definition ivl_div_positive :: "ivl \<Rightarrow> ivl \<Rightarrow> ivl" where
+  "ivl_div_positive a b =
+    (if ivl_nonempty a \<and> ivl_nonempty b
+     then normalize_ivl (ivl_div_positive_core a b) else bot)"
+
+lemma ivl_div_positive_core_sound:
+  assumes "i \<in> gamma_ivl a" "j \<in> gamma_ivl b"
+  shows "c_div i j \<in> gamma_ivl (ivl_div_positive_core a b)"
+  using assms
+  by (cases "(a, b)" rule: ivl_div_positive_core.cases)
+     (auto simp: gamma_ivl_top intro: c_div_positive_corners)
+
+lemma ivl_div_positive_sound:
+  "i \<in> gamma_ivl a \<Longrightarrow> j \<in> gamma_ivl b \<Longrightarrow>
+    c_div i j \<in> gamma_ivl (ivl_div_positive a b)"
+  unfolding ivl_div_positive_def
+  by (auto simp: normalize_ivl_gamma
+      intro: ivl_div_positive_core_sound dest: gamma_ivl_nonempty)
+
+lemma ivl_div_positive_core_one:
+  "ivl_div_positive_core a (Ivl (Fin 1) (Fin 1)) = a"
+  by (cases "(a, Ivl (Fin 1) (Fin 1))" rule: ivl_div_positive_core.cases) auto
+
+lemma ivl_div_positive_core_top:
+  "\<not> (\<exists>l u c d. a = Ivl (Fin l) (Fin u) \<and> b = Ivl (Fin c) (Fin d) \<and> 0 < c)
+    \<Longrightarrow> b \<noteq> Ivl (Fin 1) (Fin 1) \<Longrightarrow> ivl_div_positive_core a b = ivl_top"
+  by (cases "(a, b)" rule: ivl_div_positive_core.cases) auto
+
+lemma ivl_div_positive_core_mono:
+  assumes ne: "ivl_nonempty a1" "ivl_nonempty b1"
+    and le: "a1 \<le> a2" "b1 \<le> b2"
+  shows "ivl_div_positive_core a1 b1 \<le> ivl_div_positive_core a2 b2"
+proof (cases "b2 = Ivl (Fin 1) (Fin 1)")
+  case True
+  have b1: "b1 = Ivl (Fin 1) (Fin 1)"
+    using ivl_nonempty_le_fin[OF ne(2) le(2)[unfolded True]] le(2) ne(2)
+    by (auto simp: True less_eq_ivl_def)
+  show ?thesis using le(1) by (simp add: True b1 ivl_div_positive_core_one)
+next
+  case not_one: False
+  show ?thesis
+  proof (cases "\<exists>l u c d. a2 = Ivl (Fin l) (Fin u) \<and> b2 = Ivl (Fin c) (Fin d) \<and> 0 < c")
+    case False
+    then show ?thesis using not_one by (simp add: ivl_div_positive_core_top ivl_le_top)
+  next
+    case True
+    then obtain l2 u2 c2 d2 where
+      a2: "a2 = Ivl (Fin l2) (Fin u2)" and b2: "b2 = Ivl (Fin c2) (Fin d2)"
+      and pos: "0 < c2" by blast
+    obtain l1 u1 where a1: "a1 = Ivl (Fin l1) (Fin u1)"
+      using ivl_nonempty_le_fin[OF ne(1) le(1)[unfolded a2]] by blast
+    obtain c1 d1 where b1: "b1 = Ivl (Fin c1) (Fin d1)"
+      using ivl_nonempty_le_fin[OF ne(2) le(2)[unfolded b2]] by blast
+    have bounds: "l2 \<le> l1" "u1 \<le> u2" "c2 \<le> c1" "d1 \<le> d2" "l1 \<le> u1" "c1 \<le> d1"
+      using le ne unfolding a1 a2 b1 b2 by (auto simp: less_eq_ivl_def)
+    have lo:
+      "min (c_div l2 c2) (c_div l2 d2) \<le> c_div l1 c1"
+      "min (c_div l2 c2) (c_div l2 d2) \<le> c_div l1 d1"
+      using bounds pos by (auto intro: c_div_positive_corners(1))
+    have hi:
+      "c_div u1 c1 \<le> max (c_div u2 c2) (c_div u2 d2)"
+      "c_div u1 d1 \<le> max (c_div u2 c2) (c_div u2 d2)"
+      using bounds pos by (auto intro: c_div_positive_corners(2))
+    show ?thesis unfolding a1 a2 b1 b2
+      using lo hi pos bounds by (simp add: less_eq_ivl_def)
+  qed
+qed
+
+
+lemma ivl_div_positive_mono:
+  assumes "a1 \<le> a2" "b1 \<le> b2"
+  shows "ivl_div_positive a1 b1 \<le> ivl_div_positive a2 b2"
+  using assms
+  unfolding ivl_div_positive_def
+  by (auto intro: normalize_ivl_mono ivl_div_positive_core_mono
+      dest: ivl_nonempty_mono)
+
+definition ivl_positive_part :: "ivl \<Rightarrow> ivl" where
+  "ivl_positive_part a = intersect_ivl a (Ivl (Fin 1) PlusInf)"
+
+definition ivl_zero_part :: "ivl \<Rightarrow> ivl" where
+  "ivl_zero_part a = intersect_ivl a (Ivl (Fin 0) (Fin 0))"
+
+definition ivl_div :: "ivl \<Rightarrow> ivl \<Rightarrow> ivl" where
+  "ivl_div a b =
+    (if ivl_nonempty a \<and> ivl_nonempty b then
+      ivl_div_positive a (ivl_positive_part b) \<squnion>
+      ivl_div_positive (Ivl (Fin 0) (Fin 0) - a)
+        (ivl_positive_part (Ivl (Fin 0) (Fin 0) - b)) \<squnion> ivl_zero_part b
+     else bot)"
+
+
+lemma ivl_div_join_left:
+  "x \<in> gamma_ivl a \<Longrightarrow> x \<in> gamma_ivl (a \<squnion> b)"
+  using gamma_ivl_mono[OF le_supI1] by blast
+
+lemma ivl_div_join_right:
+  "x \<in> gamma_ivl b \<Longrightarrow> x \<in> gamma_ivl (a \<squnion> b)"
+  using gamma_ivl_mono[OF le_supI2] by blast
+
+lemma ivl_div_sound:
+  assumes "i \<in> gamma_ivl a" "j \<in> gamma_ivl b"
+  shows "c_div i j \<in> gamma_ivl (ivl_div a b)"
+proof -
+  have ne: "ivl_nonempty a" "ivl_nonempty b"
+    using assms by (auto dest: gamma_ivl_nonempty)
+  show ?thesis
+  proof (cases "j = 0")
+    case True
+    then have "c_div i j \<in> gamma_ivl (ivl_zero_part b)"
+      unfolding ivl_zero_part_def using assms True
+      by (intro intersect_ivl_gamma) auto
+    then show ?thesis unfolding ivl_div_def using ne
+      by (auto intro: ivl_div_join_right)
+  next
+    case nz: False
+    show ?thesis
+    proof (cases "0 < j")
+      case True
+      have "j \<in> gamma_ivl (ivl_positive_part b)"
+        unfolding ivl_positive_part_def using assms True
+        by (intro intersect_ivl_gamma) auto
+      then have "c_div i j \<in> gamma_ivl (ivl_div_positive a (ivl_positive_part b))"
+        using assms(1) by (auto intro: ivl_div_positive_sound)
+      then show ?thesis unfolding ivl_div_def using ne
+        by (auto intro: ivl_div_join_left)
+    next
+      case False
+      have ni: "-i \<in> gamma_ivl (Ivl (Fin 0) (Fin 0) - a)"
+        using ivl_minus_sound[of 0 _ i a] assms(1) by simp
+      have nj: "-j \<in> gamma_ivl (ivl_positive_part (Ivl (Fin 0) (Fin 0) - b))"
+        unfolding ivl_positive_part_def
+        apply (rule intersect_ivl_gamma)
+         apply (use ivl_minus_sound[of 0 "Ivl (Fin 0) (Fin 0)" j b] assms(2) in simp)
+        using False nz by auto
+      have "c_div i j \<in> gamma_ivl
+        (ivl_div_positive (Ivl (Fin 0) (Fin 0) - a)
+          (ivl_positive_part (Ivl (Fin 0) (Fin 0) - b)))"
+        using ivl_div_positive_sound[OF ni nj]
+        by (simp add: c_div_neg_dividend c_div_neg_divisor)
+      then show ?thesis unfolding ivl_div_def using ne
+        by (auto intro: ivl_div_join_left
+            ivl_div_join_right)
+    qed
+  qed
+qed
+
+lemma ivl_div_mono:
+  assumes "a1 \<le> a2" "b1 \<le> b2"
+  shows "ivl_div a1 b1 \<le> ivl_div a2 b2"
+proof -
+  have pos: "ivl_positive_part b1 \<le> ivl_positive_part b2"
+    unfolding ivl_positive_part_def
+    by (intro intersect_ivl_mono assms order_refl)
+  have neg_a: "Ivl (Fin 0) (Fin 0) - a1 \<le> Ivl (Fin 0) (Fin 0) - a2"
+    by (intro ivl_minus_mono assms order_refl)
+  have neg_b: "ivl_positive_part (Ivl (Fin 0) (Fin 0) - b1) \<le>
+    ivl_positive_part (Ivl (Fin 0) (Fin 0) - b2)"
+    unfolding ivl_positive_part_def
+    by (intro intersect_ivl_mono ivl_minus_mono assms order_refl)
+  have zero: "ivl_zero_part b1 \<le> ivl_zero_part b2"
+    unfolding ivl_zero_part_def
+    by (intro intersect_ivl_mono assms order_refl)
+  have joined:
+    "ivl_div_positive a1 (ivl_positive_part b1) \<squnion>
+      ivl_div_positive (Ivl (Fin 0) (Fin 0) - a1)
+        (ivl_positive_part (Ivl (Fin 0) (Fin 0) - b1)) \<squnion> ivl_zero_part b1 \<le>
+     ivl_div_positive a2 (ivl_positive_part b2) \<squnion>
+      ivl_div_positive (Ivl (Fin 0) (Fin 0) - a2)
+        (ivl_positive_part (Ivl (Fin 0) (Fin 0) - b2)) \<squnion> ivl_zero_part b2"
+    by (intro sup_mono ivl_div_positive_mono assms pos neg_a neg_b zero)
+  show ?thesis unfolding ivl_div_def
+    using joined ivl_nonempty_mono assms by auto
+qed
+
+
+subsection \<open>Remainder bounds\<close>
+
+fun ivl_mod_bound :: "ivl \<Rightarrow> ivl" where
+  "ivl_mod_bound (Ivl (Fin l) (Fin u)) =
+    (if 0 < l \<or> u < 0 then
+      Ivl (Fin (1 - max (abs l) (abs u))) (Fin (max (abs l) (abs u) - 1))
+     else ivl_top)"
+| "ivl_mod_bound _ = ivl_top"
+
+lemma abs_between_bounds:
+  fixes l i u :: int
+  assumes "l \<le> i" "i \<le> u"
+  shows "abs i \<le> max (abs l) (abs u)"
+  using assms by (auto simp: abs_if)
+
+lemma ivl_mod_bound_sound:
+  assumes "j \<in> gamma_ivl b"
+  shows "c_mod i j \<in> gamma_ivl (ivl_mod_bound b)"
+proof (cases b rule: ivl_mod_bound.cases)
+  case (1 l u)
+  with assms have bounds: "l \<le> j" "j \<le> u" by simp_all
+  have magnitude: "abs j \<le> max (abs l) (abs u)"
+    by (rule abs_between_bounds[OF bounds])
+  show ?thesis unfolding 1 ivl_mod_bound.simps
+    using bounds magnitude c_mod_modulus_bound[of j i]
+    by (auto simp: gamma_ivl_top; linarith)
+qed (simp_all add: gamma_ivl_top)
+
+lemma ivl_mod_bound_mono:
+  assumes "ivl_nonempty b1" "b1 \<le> b2"
+  shows "ivl_mod_bound b1 \<le> ivl_mod_bound b2"
+proof (cases b2 rule: ivl_mod_bound.cases)
+  case (1 l2 u2)
+  obtain l1 u1 where b1: "b1 = Ivl (Fin l1) (Fin u1)"
+    using ivl_nonempty_le_fin[OF assms(1) assms(2)[unfolded 1]] by blast
+  have bounds: "l2 \<le> l1" "u1 \<le> u2" "l1 \<le> u1"
+    using assms unfolding 1 b1 by (auto simp: less_eq_ivl_def)
+  have "max (abs l1) (abs u1) \<le> max (abs l2) (abs u2)"
+    using abs_between_bounds[of l2 l1 u2] abs_between_bounds[of l2 u1 u2] bounds by auto
+  then show ?thesis unfolding 1 b1 ivl_mod_bound.simps
+    using bounds by (auto simp: less_eq_ivl_def ivl_top_def)
+qed (simp_all add: ivl_le_top)
+
+lemma ivl_mod_dividend_sound:
+  assumes "i \<in> gamma_ivl a"
+  shows "c_mod i j \<in> gamma_ivl (a \<squnion> Ivl (Fin 0) (Fin 0))"
+proof -
+  have range: "min 0 i \<le> c_mod i j \<and> c_mod i j \<le> max 0 i"
+    using c_mod_dividend_bound[of i j] c_mod_nonneg[of i j] c_mod_nonpos[of i j]
+    by (auto simp: abs_if min_def max_def split: if_splits; linarith)
+  obtain l u where a: "a = Ivl l u" by (cases a)
+  show ?thesis using assms range
+    unfolding a sup_ivl_def
+    by (cases l; cases u; auto simp: min_def max_def split: if_splits)
+qed
+
+definition ivl_mod :: "ivl \<Rightarrow> ivl \<Rightarrow> ivl" where
+  "ivl_mod a b =
+    (if ivl_nonempty a \<and> ivl_nonempty b then
+      intersect_ivl (a - ivl_div a b * b)
+        (intersect_ivl (a \<squnion> Ivl (Fin 0) (Fin 0)) (ivl_mod_bound b))
+     else bot)"
+
+lemma ivl_mod_sound:
+  assumes "i \<in> gamma_ivl a" "j \<in> gamma_ivl b"
+  shows "c_mod i j \<in> gamma_ivl (ivl_mod a b)"
+proof -
+  have ne: "ivl_nonempty a" "ivl_nonempty b"
+    using assms by (auto dest: gamma_ivl_nonempty)
+  have residual: "i - c_div i j * j \<in> gamma_ivl (a - ivl_div a b * b)"
+    by (intro ivl_minus_sound ivl_times_sound ivl_div_sound assms)
+  have "c_mod i j \<in> gamma_ivl (a - ivl_div a b * b)"
+    using residual by (cases "j = 0") (simp_all add: c_mod_def)
+  then show ?thesis unfolding ivl_mod_def
+    using assms(1,2) intersect_ivl_gamma ivl_mod_bound_sound ivl_mod_dividend_sound ne(1,2)
+    by presburger
+qed
+
+lemma ivl_mod_mono:
+  assumes "a1 \<le> a2" "b1 \<le> b2"
+  shows "ivl_mod a1 b1 \<le> ivl_mod a2 b2"
+proof (cases "ivl_nonempty a1 \<and> ivl_nonempty b1")
+  case False
+  then show ?thesis unfolding ivl_mod_def by (simp only: False if_False bot_least)
+next
+  case True
+  have ne: "ivl_nonempty a2" "ivl_nonempty b2"
+    using True assms ivl_nonempty_mono by blast+
+  show ?thesis unfolding ivl_mod_def
+    apply (simp only: True ne simp_thms if_True)
+    by (intro intersect_ivl_mono ivl_minus_mono ivl_times_mono ivl_div_mono
+        sup_mono ivl_mod_bound_mono assms order_refl) (use True in auto)
+qed
+
 subsection \<open>Results are canonical\<close>
 
 text \<open>

@@ -83,8 +83,10 @@ module Generated : sig
   type char
   val integer_of_char : char -> Z.t
   type exp = N of int | V of string | Plus of exp * exp | Minus of exp * exp |
-    Times of exp * exp | Less of exp * exp | Eq of exp * exp | Not of exp |
-    And of exp * exp | Or of exp * exp
+    Times of exp * exp | Div of exp * exp | Mod of exp * exp | Less of exp * exp
+    | LessEq of exp * exp | Greater of exp * exp | GreaterEq of exp * exp |
+    NotEq of exp * exp | Eq of exp * exp | Not of exp | And of exp * exp |
+    Or of exp * exp
   type cfg_node = Statement of nat | FunctionEntry of string |
     FunctionResult of string
   type call_action = CallEdge of string option * string list * exp list
@@ -114,6 +116,8 @@ module Generated : sig
     XE_GlobalRead | XE_GlobalWrite
   type 'a export_edge_ext
   type 'a export_graph_ext
+  type arithmetic_obligation
+  type arithmetic_diagnostic
   type analysis_output
   type analysis_answer = Malformed_Program | Unsupported_Configuration |
     Analysed of analysis_output
@@ -143,6 +147,8 @@ module Generated : sig
     analysis_domain ->
       solver_choice option ->
         context_mode -> output_view -> unit imp_prog_ext -> analysis_answer
+  val diagnostic_verdict : arithmetic_diagnostic -> check_result
+  val diagnostic_message : arithmetic_diagnostic -> string
   val row_point : check_row -> cfg_node
   val row_state : check_row -> string
   val row_verdict : check_row -> check_result lifted
@@ -164,9 +170,11 @@ module Generated : sig
   val xg_edges : 'a export_graph_ext -> unit export_edge_ext list
   val xg_nodes : 'a export_graph_ext -> unit export_node_ext list
   val xn_status : 'a export_node_ext -> node_status option
+  val out_diagnostics : analysis_output -> arithmetic_diagnostic list
   val xc_label : 'a export_cluster_ext -> string
   val xc_nodes : 'a export_cluster_ext -> string list
   val xg_clusters : 'a export_graph_ext -> unit export_cluster_ext list
+  val diagnostic_point : arithmetic_diagnostic -> cfg_node
 end = struct
 
 type int = Int_of_integer of Z.t;;
@@ -1016,92 +1024,244 @@ let order_literal = ({preorder_order = preorder_literal} : string order);;
 let linorder_literal = ({order_linorder = order_literal} : string linorder);;
 
 type exp = N of int | V of string | Plus of exp * exp | Minus of exp * exp |
-  Times of exp * exp | Less of exp * exp | Eq of exp * exp | Not of exp |
-  And of exp * exp | Or of exp * exp;;
+  Times of exp * exp | Div of exp * exp | Mod of exp * exp | Less of exp * exp |
+  LessEq of exp * exp | Greater of exp * exp | GreaterEq of exp * exp |
+  NotEq of exp * exp | Eq of exp * exp | Not of exp | And of exp * exp |
+  Or of exp * exp;;
 
 let rec equal_expa
-  x0 x1 = match x0, x1 with And (x91, x92), Or (x101, x102) -> false
-    | Or (x101, x102), And (x91, x92) -> false
-    | Not x8, Or (x101, x102) -> false
-    | Or (x101, x102), Not x8 -> false
-    | Not x8, And (x91, x92) -> false
-    | And (x91, x92), Not x8 -> false
-    | Eq (x71, x72), Or (x101, x102) -> false
-    | Or (x101, x102), Eq (x71, x72) -> false
-    | Eq (x71, x72), And (x91, x92) -> false
-    | And (x91, x92), Eq (x71, x72) -> false
-    | Eq (x71, x72), Not x8 -> false
-    | Not x8, Eq (x71, x72) -> false
-    | Less (x61, x62), Or (x101, x102) -> false
-    | Or (x101, x102), Less (x61, x62) -> false
-    | Less (x61, x62), And (x91, x92) -> false
-    | And (x91, x92), Less (x61, x62) -> false
-    | Less (x61, x62), Not x8 -> false
-    | Not x8, Less (x61, x62) -> false
-    | Less (x61, x62), Eq (x71, x72) -> false
-    | Eq (x71, x72), Less (x61, x62) -> false
-    | Times (x51, x52), Or (x101, x102) -> false
-    | Or (x101, x102), Times (x51, x52) -> false
-    | Times (x51, x52), And (x91, x92) -> false
-    | And (x91, x92), Times (x51, x52) -> false
-    | Times (x51, x52), Not x8 -> false
-    | Not x8, Times (x51, x52) -> false
-    | Times (x51, x52), Eq (x71, x72) -> false
-    | Eq (x71, x72), Times (x51, x52) -> false
-    | Times (x51, x52), Less (x61, x62) -> false
-    | Less (x61, x62), Times (x51, x52) -> false
-    | Minus (x41, x42), Or (x101, x102) -> false
-    | Or (x101, x102), Minus (x41, x42) -> false
-    | Minus (x41, x42), And (x91, x92) -> false
-    | And (x91, x92), Minus (x41, x42) -> false
-    | Minus (x41, x42), Not x8 -> false
-    | Not x8, Minus (x41, x42) -> false
-    | Minus (x41, x42), Eq (x71, x72) -> false
-    | Eq (x71, x72), Minus (x41, x42) -> false
-    | Minus (x41, x42), Less (x61, x62) -> false
-    | Less (x61, x62), Minus (x41, x42) -> false
+  x0 x1 = match x0, x1 with And (x151, x152), Or (x161, x162) -> false
+    | Or (x161, x162), And (x151, x152) -> false
+    | Not x14, Or (x161, x162) -> false
+    | Or (x161, x162), Not x14 -> false
+    | Not x14, And (x151, x152) -> false
+    | And (x151, x152), Not x14 -> false
+    | Eq (x131, x132), Or (x161, x162) -> false
+    | Or (x161, x162), Eq (x131, x132) -> false
+    | Eq (x131, x132), And (x151, x152) -> false
+    | And (x151, x152), Eq (x131, x132) -> false
+    | Eq (x131, x132), Not x14 -> false
+    | Not x14, Eq (x131, x132) -> false
+    | NotEq (x121, x122), Or (x161, x162) -> false
+    | Or (x161, x162), NotEq (x121, x122) -> false
+    | NotEq (x121, x122), And (x151, x152) -> false
+    | And (x151, x152), NotEq (x121, x122) -> false
+    | NotEq (x121, x122), Not x14 -> false
+    | Not x14, NotEq (x121, x122) -> false
+    | NotEq (x121, x122), Eq (x131, x132) -> false
+    | Eq (x131, x132), NotEq (x121, x122) -> false
+    | GreaterEq (x111, x112), Or (x161, x162) -> false
+    | Or (x161, x162), GreaterEq (x111, x112) -> false
+    | GreaterEq (x111, x112), And (x151, x152) -> false
+    | And (x151, x152), GreaterEq (x111, x112) -> false
+    | GreaterEq (x111, x112), Not x14 -> false
+    | Not x14, GreaterEq (x111, x112) -> false
+    | GreaterEq (x111, x112), Eq (x131, x132) -> false
+    | Eq (x131, x132), GreaterEq (x111, x112) -> false
+    | GreaterEq (x111, x112), NotEq (x121, x122) -> false
+    | NotEq (x121, x122), GreaterEq (x111, x112) -> false
+    | Greater (x101, x102), Or (x161, x162) -> false
+    | Or (x161, x162), Greater (x101, x102) -> false
+    | Greater (x101, x102), And (x151, x152) -> false
+    | And (x151, x152), Greater (x101, x102) -> false
+    | Greater (x101, x102), Not x14 -> false
+    | Not x14, Greater (x101, x102) -> false
+    | Greater (x101, x102), Eq (x131, x132) -> false
+    | Eq (x131, x132), Greater (x101, x102) -> false
+    | Greater (x101, x102), NotEq (x121, x122) -> false
+    | NotEq (x121, x122), Greater (x101, x102) -> false
+    | Greater (x101, x102), GreaterEq (x111, x112) -> false
+    | GreaterEq (x111, x112), Greater (x101, x102) -> false
+    | LessEq (x91, x92), Or (x161, x162) -> false
+    | Or (x161, x162), LessEq (x91, x92) -> false
+    | LessEq (x91, x92), And (x151, x152) -> false
+    | And (x151, x152), LessEq (x91, x92) -> false
+    | LessEq (x91, x92), Not x14 -> false
+    | Not x14, LessEq (x91, x92) -> false
+    | LessEq (x91, x92), Eq (x131, x132) -> false
+    | Eq (x131, x132), LessEq (x91, x92) -> false
+    | LessEq (x91, x92), NotEq (x121, x122) -> false
+    | NotEq (x121, x122), LessEq (x91, x92) -> false
+    | LessEq (x91, x92), GreaterEq (x111, x112) -> false
+    | GreaterEq (x111, x112), LessEq (x91, x92) -> false
+    | LessEq (x91, x92), Greater (x101, x102) -> false
+    | Greater (x101, x102), LessEq (x91, x92) -> false
+    | Less (x81, x82), Or (x161, x162) -> false
+    | Or (x161, x162), Less (x81, x82) -> false
+    | Less (x81, x82), And (x151, x152) -> false
+    | And (x151, x152), Less (x81, x82) -> false
+    | Less (x81, x82), Not x14 -> false
+    | Not x14, Less (x81, x82) -> false
+    | Less (x81, x82), Eq (x131, x132) -> false
+    | Eq (x131, x132), Less (x81, x82) -> false
+    | Less (x81, x82), NotEq (x121, x122) -> false
+    | NotEq (x121, x122), Less (x81, x82) -> false
+    | Less (x81, x82), GreaterEq (x111, x112) -> false
+    | GreaterEq (x111, x112), Less (x81, x82) -> false
+    | Less (x81, x82), Greater (x101, x102) -> false
+    | Greater (x101, x102), Less (x81, x82) -> false
+    | Less (x81, x82), LessEq (x91, x92) -> false
+    | LessEq (x91, x92), Less (x81, x82) -> false
+    | Mod (x71, x72), Or (x161, x162) -> false
+    | Or (x161, x162), Mod (x71, x72) -> false
+    | Mod (x71, x72), And (x151, x152) -> false
+    | And (x151, x152), Mod (x71, x72) -> false
+    | Mod (x71, x72), Not x14 -> false
+    | Not x14, Mod (x71, x72) -> false
+    | Mod (x71, x72), Eq (x131, x132) -> false
+    | Eq (x131, x132), Mod (x71, x72) -> false
+    | Mod (x71, x72), NotEq (x121, x122) -> false
+    | NotEq (x121, x122), Mod (x71, x72) -> false
+    | Mod (x71, x72), GreaterEq (x111, x112) -> false
+    | GreaterEq (x111, x112), Mod (x71, x72) -> false
+    | Mod (x71, x72), Greater (x101, x102) -> false
+    | Greater (x101, x102), Mod (x71, x72) -> false
+    | Mod (x71, x72), LessEq (x91, x92) -> false
+    | LessEq (x91, x92), Mod (x71, x72) -> false
+    | Mod (x71, x72), Less (x81, x82) -> false
+    | Less (x81, x82), Mod (x71, x72) -> false
+    | Div (x61, x62), Or (x161, x162) -> false
+    | Or (x161, x162), Div (x61, x62) -> false
+    | Div (x61, x62), And (x151, x152) -> false
+    | And (x151, x152), Div (x61, x62) -> false
+    | Div (x61, x62), Not x14 -> false
+    | Not x14, Div (x61, x62) -> false
+    | Div (x61, x62), Eq (x131, x132) -> false
+    | Eq (x131, x132), Div (x61, x62) -> false
+    | Div (x61, x62), NotEq (x121, x122) -> false
+    | NotEq (x121, x122), Div (x61, x62) -> false
+    | Div (x61, x62), GreaterEq (x111, x112) -> false
+    | GreaterEq (x111, x112), Div (x61, x62) -> false
+    | Div (x61, x62), Greater (x101, x102) -> false
+    | Greater (x101, x102), Div (x61, x62) -> false
+    | Div (x61, x62), LessEq (x91, x92) -> false
+    | LessEq (x91, x92), Div (x61, x62) -> false
+    | Div (x61, x62), Less (x81, x82) -> false
+    | Less (x81, x82), Div (x61, x62) -> false
+    | Div (x61, x62), Mod (x71, x72) -> false
+    | Mod (x71, x72), Div (x61, x62) -> false
+    | Times (x51, x52), Or (x161, x162) -> false
+    | Or (x161, x162), Times (x51, x52) -> false
+    | Times (x51, x52), And (x151, x152) -> false
+    | And (x151, x152), Times (x51, x52) -> false
+    | Times (x51, x52), Not x14 -> false
+    | Not x14, Times (x51, x52) -> false
+    | Times (x51, x52), Eq (x131, x132) -> false
+    | Eq (x131, x132), Times (x51, x52) -> false
+    | Times (x51, x52), NotEq (x121, x122) -> false
+    | NotEq (x121, x122), Times (x51, x52) -> false
+    | Times (x51, x52), GreaterEq (x111, x112) -> false
+    | GreaterEq (x111, x112), Times (x51, x52) -> false
+    | Times (x51, x52), Greater (x101, x102) -> false
+    | Greater (x101, x102), Times (x51, x52) -> false
+    | Times (x51, x52), LessEq (x91, x92) -> false
+    | LessEq (x91, x92), Times (x51, x52) -> false
+    | Times (x51, x52), Less (x81, x82) -> false
+    | Less (x81, x82), Times (x51, x52) -> false
+    | Times (x51, x52), Mod (x71, x72) -> false
+    | Mod (x71, x72), Times (x51, x52) -> false
+    | Times (x51, x52), Div (x61, x62) -> false
+    | Div (x61, x62), Times (x51, x52) -> false
+    | Minus (x41, x42), Or (x161, x162) -> false
+    | Or (x161, x162), Minus (x41, x42) -> false
+    | Minus (x41, x42), And (x151, x152) -> false
+    | And (x151, x152), Minus (x41, x42) -> false
+    | Minus (x41, x42), Not x14 -> false
+    | Not x14, Minus (x41, x42) -> false
+    | Minus (x41, x42), Eq (x131, x132) -> false
+    | Eq (x131, x132), Minus (x41, x42) -> false
+    | Minus (x41, x42), NotEq (x121, x122) -> false
+    | NotEq (x121, x122), Minus (x41, x42) -> false
+    | Minus (x41, x42), GreaterEq (x111, x112) -> false
+    | GreaterEq (x111, x112), Minus (x41, x42) -> false
+    | Minus (x41, x42), Greater (x101, x102) -> false
+    | Greater (x101, x102), Minus (x41, x42) -> false
+    | Minus (x41, x42), LessEq (x91, x92) -> false
+    | LessEq (x91, x92), Minus (x41, x42) -> false
+    | Minus (x41, x42), Less (x81, x82) -> false
+    | Less (x81, x82), Minus (x41, x42) -> false
+    | Minus (x41, x42), Mod (x71, x72) -> false
+    | Mod (x71, x72), Minus (x41, x42) -> false
+    | Minus (x41, x42), Div (x61, x62) -> false
+    | Div (x61, x62), Minus (x41, x42) -> false
     | Minus (x41, x42), Times (x51, x52) -> false
     | Times (x51, x52), Minus (x41, x42) -> false
-    | Plus (x31, x32), Or (x101, x102) -> false
-    | Or (x101, x102), Plus (x31, x32) -> false
-    | Plus (x31, x32), And (x91, x92) -> false
-    | And (x91, x92), Plus (x31, x32) -> false
-    | Plus (x31, x32), Not x8 -> false
-    | Not x8, Plus (x31, x32) -> false
-    | Plus (x31, x32), Eq (x71, x72) -> false
-    | Eq (x71, x72), Plus (x31, x32) -> false
-    | Plus (x31, x32), Less (x61, x62) -> false
-    | Less (x61, x62), Plus (x31, x32) -> false
+    | Plus (x31, x32), Or (x161, x162) -> false
+    | Or (x161, x162), Plus (x31, x32) -> false
+    | Plus (x31, x32), And (x151, x152) -> false
+    | And (x151, x152), Plus (x31, x32) -> false
+    | Plus (x31, x32), Not x14 -> false
+    | Not x14, Plus (x31, x32) -> false
+    | Plus (x31, x32), Eq (x131, x132) -> false
+    | Eq (x131, x132), Plus (x31, x32) -> false
+    | Plus (x31, x32), NotEq (x121, x122) -> false
+    | NotEq (x121, x122), Plus (x31, x32) -> false
+    | Plus (x31, x32), GreaterEq (x111, x112) -> false
+    | GreaterEq (x111, x112), Plus (x31, x32) -> false
+    | Plus (x31, x32), Greater (x101, x102) -> false
+    | Greater (x101, x102), Plus (x31, x32) -> false
+    | Plus (x31, x32), LessEq (x91, x92) -> false
+    | LessEq (x91, x92), Plus (x31, x32) -> false
+    | Plus (x31, x32), Less (x81, x82) -> false
+    | Less (x81, x82), Plus (x31, x32) -> false
+    | Plus (x31, x32), Mod (x71, x72) -> false
+    | Mod (x71, x72), Plus (x31, x32) -> false
+    | Plus (x31, x32), Div (x61, x62) -> false
+    | Div (x61, x62), Plus (x31, x32) -> false
     | Plus (x31, x32), Times (x51, x52) -> false
     | Times (x51, x52), Plus (x31, x32) -> false
     | Plus (x31, x32), Minus (x41, x42) -> false
     | Minus (x41, x42), Plus (x31, x32) -> false
-    | V x2, Or (x101, x102) -> false
-    | Or (x101, x102), V x2 -> false
-    | V x2, And (x91, x92) -> false
-    | And (x91, x92), V x2 -> false
-    | V x2, Not x8 -> false
-    | Not x8, V x2 -> false
-    | V x2, Eq (x71, x72) -> false
-    | Eq (x71, x72), V x2 -> false
-    | V x2, Less (x61, x62) -> false
-    | Less (x61, x62), V x2 -> false
+    | V x2, Or (x161, x162) -> false
+    | Or (x161, x162), V x2 -> false
+    | V x2, And (x151, x152) -> false
+    | And (x151, x152), V x2 -> false
+    | V x2, Not x14 -> false
+    | Not x14, V x2 -> false
+    | V x2, Eq (x131, x132) -> false
+    | Eq (x131, x132), V x2 -> false
+    | V x2, NotEq (x121, x122) -> false
+    | NotEq (x121, x122), V x2 -> false
+    | V x2, GreaterEq (x111, x112) -> false
+    | GreaterEq (x111, x112), V x2 -> false
+    | V x2, Greater (x101, x102) -> false
+    | Greater (x101, x102), V x2 -> false
+    | V x2, LessEq (x91, x92) -> false
+    | LessEq (x91, x92), V x2 -> false
+    | V x2, Less (x81, x82) -> false
+    | Less (x81, x82), V x2 -> false
+    | V x2, Mod (x71, x72) -> false
+    | Mod (x71, x72), V x2 -> false
+    | V x2, Div (x61, x62) -> false
+    | Div (x61, x62), V x2 -> false
     | V x2, Times (x51, x52) -> false
     | Times (x51, x52), V x2 -> false
     | V x2, Minus (x41, x42) -> false
     | Minus (x41, x42), V x2 -> false
     | V x2, Plus (x31, x32) -> false
     | Plus (x31, x32), V x2 -> false
-    | N x1, Or (x101, x102) -> false
-    | Or (x101, x102), N x1 -> false
-    | N x1, And (x91, x92) -> false
-    | And (x91, x92), N x1 -> false
-    | N x1, Not x8 -> false
-    | Not x8, N x1 -> false
-    | N x1, Eq (x71, x72) -> false
-    | Eq (x71, x72), N x1 -> false
-    | N x1, Less (x61, x62) -> false
-    | Less (x61, x62), N x1 -> false
+    | N x1, Or (x161, x162) -> false
+    | Or (x161, x162), N x1 -> false
+    | N x1, And (x151, x152) -> false
+    | And (x151, x152), N x1 -> false
+    | N x1, Not x14 -> false
+    | Not x14, N x1 -> false
+    | N x1, Eq (x131, x132) -> false
+    | Eq (x131, x132), N x1 -> false
+    | N x1, NotEq (x121, x122) -> false
+    | NotEq (x121, x122), N x1 -> false
+    | N x1, GreaterEq (x111, x112) -> false
+    | GreaterEq (x111, x112), N x1 -> false
+    | N x1, Greater (x101, x102) -> false
+    | Greater (x101, x102), N x1 -> false
+    | N x1, LessEq (x91, x92) -> false
+    | LessEq (x91, x92), N x1 -> false
+    | N x1, Less (x81, x82) -> false
+    | Less (x81, x82), N x1 -> false
+    | N x1, Mod (x71, x72) -> false
+    | Mod (x71, x72), N x1 -> false
+    | N x1, Div (x61, x62) -> false
+    | Div (x61, x62), N x1 -> false
     | N x1, Times (x51, x52) -> false
     | Times (x51, x52), N x1 -> false
     | N x1, Minus (x41, x42) -> false
@@ -1110,13 +1270,25 @@ let rec equal_expa
     | Plus (x31, x32), N x1 -> false
     | N x1, V x2 -> false
     | V x2, N x1 -> false
-    | Or (x101, x102), Or (y101, y102) ->
+    | Or (x161, x162), Or (y161, y162) ->
+        equal_expa x161 y161 && equal_expa x162 y162
+    | And (x151, x152), And (y151, y152) ->
+        equal_expa x151 y151 && equal_expa x152 y152
+    | Not x14, Not y14 -> equal_expa x14 y14
+    | Eq (x131, x132), Eq (y131, y132) ->
+        equal_expa x131 y131 && equal_expa x132 y132
+    | NotEq (x121, x122), NotEq (y121, y122) ->
+        equal_expa x121 y121 && equal_expa x122 y122
+    | GreaterEq (x111, x112), GreaterEq (y111, y112) ->
+        equal_expa x111 y111 && equal_expa x112 y112
+    | Greater (x101, x102), Greater (y101, y102) ->
         equal_expa x101 y101 && equal_expa x102 y102
-    | And (x91, x92), And (y91, y92) -> equal_expa x91 y91 && equal_expa x92 y92
-    | Not x8, Not y8 -> equal_expa x8 y8
-    | Eq (x71, x72), Eq (y71, y72) -> equal_expa x71 y71 && equal_expa x72 y72
-    | Less (x61, x62), Less (y61, y62) ->
-        equal_expa x61 y61 && equal_expa x62 y62
+    | LessEq (x91, x92), LessEq (y91, y92) ->
+        equal_expa x91 y91 && equal_expa x92 y92
+    | Less (x81, x82), Less (y81, y82) ->
+        equal_expa x81 y81 && equal_expa x82 y82
+    | Mod (x71, x72), Mod (y71, y72) -> equal_expa x71 y71 && equal_expa x72 y72
+    | Div (x61, x62), Div (y61, y62) -> equal_expa x61 y61 && equal_expa x62 y62
     | Times (x51, x52), Times (y51, y52) ->
         equal_expa x51 y51 && equal_expa x52 y52
     | Minus (x41, x42), Minus (y41, y42) ->
@@ -1731,21 +1903,33 @@ let rec comparator_exp
     | N x, Plus (yb, yc) -> Lt
     | N x, Minus (yd, ye) -> Lt
     | N x, Times (yf, yg) -> Lt
-    | N x, Less (yh, yi) -> Lt
-    | N x, Eq (yj, yk) -> Lt
-    | N x, Not yl -> Lt
-    | N x, And (ym, yn) -> Lt
-    | N x, Or (yo, yp) -> Lt
+    | N x, Div (yh, yi) -> Lt
+    | N x, Mod (yj, yk) -> Lt
+    | N x, Less (yl, ym) -> Lt
+    | N x, LessEq (yn, yo) -> Lt
+    | N x, Greater (yp, yq) -> Lt
+    | N x, GreaterEq (yr, ys) -> Lt
+    | N x, NotEq (yt, yu) -> Lt
+    | N x, Eq (yv, yw) -> Lt
+    | N x, Not yx -> Lt
+    | N x, And (yy, yz) -> Lt
+    | N x, Or (za, zb) -> Lt
     | V x, N y -> Gt
     | V x, V ya -> comparator_of (equal_literal, linorder_literal) x ya
     | V x, Plus (yb, yc) -> Lt
     | V x, Minus (yd, ye) -> Lt
     | V x, Times (yf, yg) -> Lt
-    | V x, Less (yh, yi) -> Lt
-    | V x, Eq (yj, yk) -> Lt
-    | V x, Not yl -> Lt
-    | V x, And (ym, yn) -> Lt
-    | V x, Or (yo, yp) -> Lt
+    | V x, Div (yh, yi) -> Lt
+    | V x, Mod (yj, yk) -> Lt
+    | V x, Less (yl, ym) -> Lt
+    | V x, LessEq (yn, yo) -> Lt
+    | V x, Greater (yp, yq) -> Lt
+    | V x, GreaterEq (yr, ys) -> Lt
+    | V x, NotEq (yt, yu) -> Lt
+    | V x, Eq (yv, yw) -> Lt
+    | V x, Not yx -> Lt
+    | V x, And (yy, yz) -> Lt
+    | V x, Or (za, zb) -> Lt
     | Plus (x, xa), N y -> Gt
     | Plus (x, xa), V ya -> Gt
     | Plus (x, xa), Plus (yb, yc) ->
@@ -1753,11 +1937,17 @@ let rec comparator_exp
           | Gt -> Gt)
     | Plus (x, xa), Minus (yd, ye) -> Lt
     | Plus (x, xa), Times (yf, yg) -> Lt
-    | Plus (x, xa), Less (yh, yi) -> Lt
-    | Plus (x, xa), Eq (yj, yk) -> Lt
-    | Plus (x, xa), Not yl -> Lt
-    | Plus (x, xa), And (ym, yn) -> Lt
-    | Plus (x, xa), Or (yo, yp) -> Lt
+    | Plus (x, xa), Div (yh, yi) -> Lt
+    | Plus (x, xa), Mod (yj, yk) -> Lt
+    | Plus (x, xa), Less (yl, ym) -> Lt
+    | Plus (x, xa), LessEq (yn, yo) -> Lt
+    | Plus (x, xa), Greater (yp, yq) -> Lt
+    | Plus (x, xa), GreaterEq (yr, ys) -> Lt
+    | Plus (x, xa), NotEq (yt, yu) -> Lt
+    | Plus (x, xa), Eq (yv, yw) -> Lt
+    | Plus (x, xa), Not yx -> Lt
+    | Plus (x, xa), And (yy, yz) -> Lt
+    | Plus (x, xa), Or (za, zb) -> Lt
     | Minus (x, xa), N y -> Gt
     | Minus (x, xa), V ya -> Gt
     | Minus (x, xa), Plus (yb, yc) -> Gt
@@ -1765,11 +1955,17 @@ let rec comparator_exp
         (match comparator_exp x yd with Eqa -> comparator_exp xa ye | Lt -> Lt
           | Gt -> Gt)
     | Minus (x, xa), Times (yf, yg) -> Lt
-    | Minus (x, xa), Less (yh, yi) -> Lt
-    | Minus (x, xa), Eq (yj, yk) -> Lt
-    | Minus (x, xa), Not yl -> Lt
-    | Minus (x, xa), And (ym, yn) -> Lt
-    | Minus (x, xa), Or (yo, yp) -> Lt
+    | Minus (x, xa), Div (yh, yi) -> Lt
+    | Minus (x, xa), Mod (yj, yk) -> Lt
+    | Minus (x, xa), Less (yl, ym) -> Lt
+    | Minus (x, xa), LessEq (yn, yo) -> Lt
+    | Minus (x, xa), Greater (yp, yq) -> Lt
+    | Minus (x, xa), GreaterEq (yr, ys) -> Lt
+    | Minus (x, xa), NotEq (yt, yu) -> Lt
+    | Minus (x, xa), Eq (yv, yw) -> Lt
+    | Minus (x, xa), Not yx -> Lt
+    | Minus (x, xa), And (yy, yz) -> Lt
+    | Minus (x, xa), Or (za, zb) -> Lt
     | Times (x, xa), N y -> Gt
     | Times (x, xa), V ya -> Gt
     | Times (x, xa), Plus (yb, yc) -> Gt
@@ -1777,68 +1973,212 @@ let rec comparator_exp
     | Times (x, xa), Times (yf, yg) ->
         (match comparator_exp x yf with Eqa -> comparator_exp xa yg | Lt -> Lt
           | Gt -> Gt)
-    | Times (x, xa), Less (yh, yi) -> Lt
-    | Times (x, xa), Eq (yj, yk) -> Lt
-    | Times (x, xa), Not yl -> Lt
-    | Times (x, xa), And (ym, yn) -> Lt
-    | Times (x, xa), Or (yo, yp) -> Lt
+    | Times (x, xa), Div (yh, yi) -> Lt
+    | Times (x, xa), Mod (yj, yk) -> Lt
+    | Times (x, xa), Less (yl, ym) -> Lt
+    | Times (x, xa), LessEq (yn, yo) -> Lt
+    | Times (x, xa), Greater (yp, yq) -> Lt
+    | Times (x, xa), GreaterEq (yr, ys) -> Lt
+    | Times (x, xa), NotEq (yt, yu) -> Lt
+    | Times (x, xa), Eq (yv, yw) -> Lt
+    | Times (x, xa), Not yx -> Lt
+    | Times (x, xa), And (yy, yz) -> Lt
+    | Times (x, xa), Or (za, zb) -> Lt
+    | Div (x, xa), N y -> Gt
+    | Div (x, xa), V ya -> Gt
+    | Div (x, xa), Plus (yb, yc) -> Gt
+    | Div (x, xa), Minus (yd, ye) -> Gt
+    | Div (x, xa), Times (yf, yg) -> Gt
+    | Div (x, xa), Div (yh, yi) ->
+        (match comparator_exp x yh with Eqa -> comparator_exp xa yi | Lt -> Lt
+          | Gt -> Gt)
+    | Div (x, xa), Mod (yj, yk) -> Lt
+    | Div (x, xa), Less (yl, ym) -> Lt
+    | Div (x, xa), LessEq (yn, yo) -> Lt
+    | Div (x, xa), Greater (yp, yq) -> Lt
+    | Div (x, xa), GreaterEq (yr, ys) -> Lt
+    | Div (x, xa), NotEq (yt, yu) -> Lt
+    | Div (x, xa), Eq (yv, yw) -> Lt
+    | Div (x, xa), Not yx -> Lt
+    | Div (x, xa), And (yy, yz) -> Lt
+    | Div (x, xa), Or (za, zb) -> Lt
+    | Mod (x, xa), N y -> Gt
+    | Mod (x, xa), V ya -> Gt
+    | Mod (x, xa), Plus (yb, yc) -> Gt
+    | Mod (x, xa), Minus (yd, ye) -> Gt
+    | Mod (x, xa), Times (yf, yg) -> Gt
+    | Mod (x, xa), Div (yh, yi) -> Gt
+    | Mod (x, xa), Mod (yj, yk) ->
+        (match comparator_exp x yj with Eqa -> comparator_exp xa yk | Lt -> Lt
+          | Gt -> Gt)
+    | Mod (x, xa), Less (yl, ym) -> Lt
+    | Mod (x, xa), LessEq (yn, yo) -> Lt
+    | Mod (x, xa), Greater (yp, yq) -> Lt
+    | Mod (x, xa), GreaterEq (yr, ys) -> Lt
+    | Mod (x, xa), NotEq (yt, yu) -> Lt
+    | Mod (x, xa), Eq (yv, yw) -> Lt
+    | Mod (x, xa), Not yx -> Lt
+    | Mod (x, xa), And (yy, yz) -> Lt
+    | Mod (x, xa), Or (za, zb) -> Lt
     | Less (x, xa), N y -> Gt
     | Less (x, xa), V ya -> Gt
     | Less (x, xa), Plus (yb, yc) -> Gt
     | Less (x, xa), Minus (yd, ye) -> Gt
     | Less (x, xa), Times (yf, yg) -> Gt
-    | Less (x, xa), Less (yh, yi) ->
-        (match comparator_exp x yh with Eqa -> comparator_exp xa yi | Lt -> Lt
+    | Less (x, xa), Div (yh, yi) -> Gt
+    | Less (x, xa), Mod (yj, yk) -> Gt
+    | Less (x, xa), Less (yl, ym) ->
+        (match comparator_exp x yl with Eqa -> comparator_exp xa ym | Lt -> Lt
           | Gt -> Gt)
-    | Less (x, xa), Eq (yj, yk) -> Lt
-    | Less (x, xa), Not yl -> Lt
-    | Less (x, xa), And (ym, yn) -> Lt
-    | Less (x, xa), Or (yo, yp) -> Lt
+    | Less (x, xa), LessEq (yn, yo) -> Lt
+    | Less (x, xa), Greater (yp, yq) -> Lt
+    | Less (x, xa), GreaterEq (yr, ys) -> Lt
+    | Less (x, xa), NotEq (yt, yu) -> Lt
+    | Less (x, xa), Eq (yv, yw) -> Lt
+    | Less (x, xa), Not yx -> Lt
+    | Less (x, xa), And (yy, yz) -> Lt
+    | Less (x, xa), Or (za, zb) -> Lt
+    | LessEq (x, xa), N y -> Gt
+    | LessEq (x, xa), V ya -> Gt
+    | LessEq (x, xa), Plus (yb, yc) -> Gt
+    | LessEq (x, xa), Minus (yd, ye) -> Gt
+    | LessEq (x, xa), Times (yf, yg) -> Gt
+    | LessEq (x, xa), Div (yh, yi) -> Gt
+    | LessEq (x, xa), Mod (yj, yk) -> Gt
+    | LessEq (x, xa), Less (yl, ym) -> Gt
+    | LessEq (x, xa), LessEq (yn, yo) ->
+        (match comparator_exp x yn with Eqa -> comparator_exp xa yo | Lt -> Lt
+          | Gt -> Gt)
+    | LessEq (x, xa), Greater (yp, yq) -> Lt
+    | LessEq (x, xa), GreaterEq (yr, ys) -> Lt
+    | LessEq (x, xa), NotEq (yt, yu) -> Lt
+    | LessEq (x, xa), Eq (yv, yw) -> Lt
+    | LessEq (x, xa), Not yx -> Lt
+    | LessEq (x, xa), And (yy, yz) -> Lt
+    | LessEq (x, xa), Or (za, zb) -> Lt
+    | Greater (x, xa), N y -> Gt
+    | Greater (x, xa), V ya -> Gt
+    | Greater (x, xa), Plus (yb, yc) -> Gt
+    | Greater (x, xa), Minus (yd, ye) -> Gt
+    | Greater (x, xa), Times (yf, yg) -> Gt
+    | Greater (x, xa), Div (yh, yi) -> Gt
+    | Greater (x, xa), Mod (yj, yk) -> Gt
+    | Greater (x, xa), Less (yl, ym) -> Gt
+    | Greater (x, xa), LessEq (yn, yo) -> Gt
+    | Greater (x, xa), Greater (yp, yq) ->
+        (match comparator_exp x yp with Eqa -> comparator_exp xa yq | Lt -> Lt
+          | Gt -> Gt)
+    | Greater (x, xa), GreaterEq (yr, ys) -> Lt
+    | Greater (x, xa), NotEq (yt, yu) -> Lt
+    | Greater (x, xa), Eq (yv, yw) -> Lt
+    | Greater (x, xa), Not yx -> Lt
+    | Greater (x, xa), And (yy, yz) -> Lt
+    | Greater (x, xa), Or (za, zb) -> Lt
+    | GreaterEq (x, xa), N y -> Gt
+    | GreaterEq (x, xa), V ya -> Gt
+    | GreaterEq (x, xa), Plus (yb, yc) -> Gt
+    | GreaterEq (x, xa), Minus (yd, ye) -> Gt
+    | GreaterEq (x, xa), Times (yf, yg) -> Gt
+    | GreaterEq (x, xa), Div (yh, yi) -> Gt
+    | GreaterEq (x, xa), Mod (yj, yk) -> Gt
+    | GreaterEq (x, xa), Less (yl, ym) -> Gt
+    | GreaterEq (x, xa), LessEq (yn, yo) -> Gt
+    | GreaterEq (x, xa), Greater (yp, yq) -> Gt
+    | GreaterEq (x, xa), GreaterEq (yr, ys) ->
+        (match comparator_exp x yr with Eqa -> comparator_exp xa ys | Lt -> Lt
+          | Gt -> Gt)
+    | GreaterEq (x, xa), NotEq (yt, yu) -> Lt
+    | GreaterEq (x, xa), Eq (yv, yw) -> Lt
+    | GreaterEq (x, xa), Not yx -> Lt
+    | GreaterEq (x, xa), And (yy, yz) -> Lt
+    | GreaterEq (x, xa), Or (za, zb) -> Lt
+    | NotEq (x, xa), N y -> Gt
+    | NotEq (x, xa), V ya -> Gt
+    | NotEq (x, xa), Plus (yb, yc) -> Gt
+    | NotEq (x, xa), Minus (yd, ye) -> Gt
+    | NotEq (x, xa), Times (yf, yg) -> Gt
+    | NotEq (x, xa), Div (yh, yi) -> Gt
+    | NotEq (x, xa), Mod (yj, yk) -> Gt
+    | NotEq (x, xa), Less (yl, ym) -> Gt
+    | NotEq (x, xa), LessEq (yn, yo) -> Gt
+    | NotEq (x, xa), Greater (yp, yq) -> Gt
+    | NotEq (x, xa), GreaterEq (yr, ys) -> Gt
+    | NotEq (x, xa), NotEq (yt, yu) ->
+        (match comparator_exp x yt with Eqa -> comparator_exp xa yu | Lt -> Lt
+          | Gt -> Gt)
+    | NotEq (x, xa), Eq (yv, yw) -> Lt
+    | NotEq (x, xa), Not yx -> Lt
+    | NotEq (x, xa), And (yy, yz) -> Lt
+    | NotEq (x, xa), Or (za, zb) -> Lt
     | Eq (x, xa), N y -> Gt
     | Eq (x, xa), V ya -> Gt
     | Eq (x, xa), Plus (yb, yc) -> Gt
     | Eq (x, xa), Minus (yd, ye) -> Gt
     | Eq (x, xa), Times (yf, yg) -> Gt
-    | Eq (x, xa), Less (yh, yi) -> Gt
-    | Eq (x, xa), Eq (yj, yk) ->
-        (match comparator_exp x yj with Eqa -> comparator_exp xa yk | Lt -> Lt
+    | Eq (x, xa), Div (yh, yi) -> Gt
+    | Eq (x, xa), Mod (yj, yk) -> Gt
+    | Eq (x, xa), Less (yl, ym) -> Gt
+    | Eq (x, xa), LessEq (yn, yo) -> Gt
+    | Eq (x, xa), Greater (yp, yq) -> Gt
+    | Eq (x, xa), GreaterEq (yr, ys) -> Gt
+    | Eq (x, xa), NotEq (yt, yu) -> Gt
+    | Eq (x, xa), Eq (yv, yw) ->
+        (match comparator_exp x yv with Eqa -> comparator_exp xa yw | Lt -> Lt
           | Gt -> Gt)
-    | Eq (x, xa), Not yl -> Lt
-    | Eq (x, xa), And (ym, yn) -> Lt
-    | Eq (x, xa), Or (yo, yp) -> Lt
+    | Eq (x, xa), Not yx -> Lt
+    | Eq (x, xa), And (yy, yz) -> Lt
+    | Eq (x, xa), Or (za, zb) -> Lt
     | Not x, N y -> Gt
     | Not x, V ya -> Gt
     | Not x, Plus (yb, yc) -> Gt
     | Not x, Minus (yd, ye) -> Gt
     | Not x, Times (yf, yg) -> Gt
-    | Not x, Less (yh, yi) -> Gt
-    | Not x, Eq (yj, yk) -> Gt
-    | Not x, Not yl -> comparator_exp x yl
-    | Not x, And (ym, yn) -> Lt
-    | Not x, Or (yo, yp) -> Lt
+    | Not x, Div (yh, yi) -> Gt
+    | Not x, Mod (yj, yk) -> Gt
+    | Not x, Less (yl, ym) -> Gt
+    | Not x, LessEq (yn, yo) -> Gt
+    | Not x, Greater (yp, yq) -> Gt
+    | Not x, GreaterEq (yr, ys) -> Gt
+    | Not x, NotEq (yt, yu) -> Gt
+    | Not x, Eq (yv, yw) -> Gt
+    | Not x, Not yx -> comparator_exp x yx
+    | Not x, And (yy, yz) -> Lt
+    | Not x, Or (za, zb) -> Lt
     | And (x, xa), N y -> Gt
     | And (x, xa), V ya -> Gt
     | And (x, xa), Plus (yb, yc) -> Gt
     | And (x, xa), Minus (yd, ye) -> Gt
     | And (x, xa), Times (yf, yg) -> Gt
-    | And (x, xa), Less (yh, yi) -> Gt
-    | And (x, xa), Eq (yj, yk) -> Gt
-    | And (x, xa), Not yl -> Gt
-    | And (x, xa), And (ym, yn) ->
-        (match comparator_exp x ym with Eqa -> comparator_exp xa yn | Lt -> Lt
+    | And (x, xa), Div (yh, yi) -> Gt
+    | And (x, xa), Mod (yj, yk) -> Gt
+    | And (x, xa), Less (yl, ym) -> Gt
+    | And (x, xa), LessEq (yn, yo) -> Gt
+    | And (x, xa), Greater (yp, yq) -> Gt
+    | And (x, xa), GreaterEq (yr, ys) -> Gt
+    | And (x, xa), NotEq (yt, yu) -> Gt
+    | And (x, xa), Eq (yv, yw) -> Gt
+    | And (x, xa), Not yx -> Gt
+    | And (x, xa), And (yy, yz) ->
+        (match comparator_exp x yy with Eqa -> comparator_exp xa yz | Lt -> Lt
           | Gt -> Gt)
-    | And (x, xa), Or (yo, yp) -> Lt
+    | And (x, xa), Or (za, zb) -> Lt
     | Or (x, xa), N y -> Gt
     | Or (x, xa), V ya -> Gt
     | Or (x, xa), Plus (yb, yc) -> Gt
     | Or (x, xa), Minus (yd, ye) -> Gt
     | Or (x, xa), Times (yf, yg) -> Gt
-    | Or (x, xa), Less (yh, yi) -> Gt
-    | Or (x, xa), Eq (yj, yk) -> Gt
-    | Or (x, xa), Not yl -> Gt
-    | Or (x, xa), And (ym, yn) -> Gt
-    | Or (x, xa), Or (yo, yp) ->
-        (match comparator_exp x yo with Eqa -> comparator_exp xa yp | Lt -> Lt
+    | Or (x, xa), Div (yh, yi) -> Gt
+    | Or (x, xa), Mod (yj, yk) -> Gt
+    | Or (x, xa), Less (yl, ym) -> Gt
+    | Or (x, xa), LessEq (yn, yo) -> Gt
+    | Or (x, xa), Greater (yp, yq) -> Gt
+    | Or (x, xa), GreaterEq (yr, ys) -> Gt
+    | Or (x, xa), NotEq (yt, yu) -> Gt
+    | Or (x, xa), Eq (yv, yw) -> Gt
+    | Or (x, xa), Not yx -> Gt
+    | Or (x, xa), And (yy, yz) -> Gt
+    | Or (x, xa), Or (za, zb) ->
+        (match comparator_exp x za with Eqa -> comparator_exp xa zb | Lt -> Lt
           | Gt -> Gt);;
 
 let rec comparator_call_action
@@ -3430,10 +3770,16 @@ type 'a export_graph_ext =
     unit export_cluster_ext list * unit export_node_ext list *
       unit export_edge_ext list * 'a;;
 
+type arithmetic_obligation = Arithmetic_Obligation of exp * exp;;
+
+type arithmetic_diagnostic =
+  Arithmetic_Diagnostic of
+    cfg_node * nat * arithmetic_obligation * check_result;;
+
 type analysis_output =
   Analysis_Output of
     unit export_graph_ext option * string option * check_row list *
-      (string * string list) list;;
+      (string * string list) list * arithmetic_diagnostic list;;
 
 type analysis_answer = Malformed_Program | Unsupported_Configuration |
   Analysed of analysis_output;;
@@ -3546,6 +3892,8 @@ let rec nth
 
 let rec rev xs = fold (fun a b -> a :: b) xs [];;
 
+let rec upt i j = (if less_nat i j then i :: upt (suc i) j else []);;
+
 let rec zip xs ys = match xs, ys with [], ys -> []
               | xs, [] -> []
               | x :: xs, y :: ys -> (x, y) :: zip xs ys;;
@@ -3634,6 +3982,15 @@ let rec map_filter
           | Some y -> y :: map_filter f xs);;
 
 let rec c (State_ext (c, infl, stabl, sigma, more)) = c;;
+
+let rec c_div
+  a b = (if equal_inta b zero_inta then zero_inta
+          else times_inta (times_inta (sgn_int a) (sgn_int b))
+                 (divide_inta (abs_int a) (abs_int b)));;
+
+let rec c_mod
+  a b = (if equal_inta b zero_inta then a
+          else minus_inta a (times_inta (c_div a b) b));;
 
 let rec cfg_entry
   (Cfg_ext (intra, calls, cfg_entry, checks, more)) = cfg_entry;;
@@ -4184,7 +4541,13 @@ let rec exp_vnames
     | Plus (a, b) -> sup_set equal_literal (exp_vnames a) (exp_vnames b)
     | Minus (a, b) -> sup_set equal_literal (exp_vnames a) (exp_vnames b)
     | Times (a, b) -> sup_set equal_literal (exp_vnames a) (exp_vnames b)
+    | Div (a, b) -> sup_set equal_literal (exp_vnames a) (exp_vnames b)
+    | Mod (a, b) -> sup_set equal_literal (exp_vnames a) (exp_vnames b)
     | Less (a, b) -> sup_set equal_literal (exp_vnames a) (exp_vnames b)
+    | LessEq (a, b) -> sup_set equal_literal (exp_vnames a) (exp_vnames b)
+    | Greater (a, b) -> sup_set equal_literal (exp_vnames a) (exp_vnames b)
+    | GreaterEq (a, b) -> sup_set equal_literal (exp_vnames a) (exp_vnames b)
+    | NotEq (a, b) -> sup_set equal_literal (exp_vnames a) (exp_vnames b)
     | Eq (a, b) -> sup_set equal_literal (exp_vnames a) (exp_vnames b)
     | Not b -> exp_vnames b
     | And (b1, b2) -> sup_set equal_literal (exp_vnames b1) (exp_vnames b2)
@@ -4538,7 +4901,13 @@ let rec afilter_st_lift_with _A
               afilter_st_lift_with _A ops gs e1 a1
                 (afilter_st_lift_with _A ops gs e2 a2 (Lifted s))))
     | ops, gs, N v, a, x_lift -> x_lift
+    | ops, gs, Div (v, va), a, x_lift -> x_lift
+    | ops, gs, Mod (v, va), a, x_lift -> x_lift
     | ops, gs, Less (v, va), a, x_lift -> x_lift
+    | ops, gs, LessEq (v, va), a, x_lift -> x_lift
+    | ops, gs, Greater (v, va), a, x_lift -> x_lift
+    | ops, gs, GreaterEq (v, va), a, x_lift -> x_lift
+    | ops, gs, NotEq (v, va), a, x_lift -> x_lift
     | ops, gs, Eq (v, va), a, x_lift -> x_lift
     | ops, gs, Not v, a, x_lift -> x_lift
     | ops, gs, And (v, va), a, x_lift -> x_lift
@@ -4574,6 +4943,54 @@ let rec bfilter_st_lift_with _A
              in
             afilter_st_lift_with _A ops gs e1 a1
               (afilter_st_lift_with _A ops gs e2 a2 (Lifted s))))
+    | ops, gs, GreaterEq (e1, e2), res, x_lift ->
+        bind_lift x_lift
+          (fun s ->
+            (let (a1, a2) =
+               be_inv_less ops (not res)
+                 (be_aval ops e1
+                   (fun_of_resolved_st_q_for
+                     _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
+                     gs s))
+                 (be_aval ops e2
+                   (fun_of_resolved_st_q_for
+                     _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
+                     gs s))
+               in
+              afilter_st_lift_with _A ops gs e1 a1
+                (afilter_st_lift_with _A ops gs e2 a2 (Lifted s))))
+    | ops, gs, Greater (e1, e2), res, x_lift ->
+        bind_lift x_lift
+          (fun s ->
+            (let (a1, a2) =
+               be_inv_less ops res
+                 (be_aval ops e2
+                   (fun_of_resolved_st_q_for
+                     _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
+                     gs s))
+                 (be_aval ops e1
+                   (fun_of_resolved_st_q_for
+                     _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
+                     gs s))
+               in
+              afilter_st_lift_with _A ops gs e2 a1
+                (afilter_st_lift_with _A ops gs e1 a2 (Lifted s))))
+    | ops, gs, LessEq (e1, e2), res, x_lift ->
+        bind_lift x_lift
+          (fun s ->
+            (let (a1, a2) =
+               be_inv_less ops (not res)
+                 (be_aval ops e2
+                   (fun_of_resolved_st_q_for
+                     _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
+                     gs s))
+                 (be_aval ops e1
+                   (fun_of_resolved_st_q_for
+                     _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
+                     gs s))
+               in
+              afilter_st_lift_with _A ops gs e2 a1
+                (afilter_st_lift_with _A ops gs e1 a2 (Lifted s))))
     | ops, gs, Not b, res, x_lift ->
         bfilter_st_lift_with _A ops gs b (not res) x_lift
     | ops, gs, And (b1, b2), true, x_lift ->
@@ -4622,6 +5039,22 @@ let rec bfilter_st_lift_with _A
           (fun s ->
             (let (a1, a2) =
                be_inv_eq ops res
+                 (be_aval ops e1
+                   (fun_of_resolved_st_q_for
+                     _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
+                     gs s))
+                 (be_aval ops e2
+                   (fun_of_resolved_st_q_for
+                     _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
+                     gs s))
+               in
+              afilter_st_lift_with _A ops gs e1 a1
+                (afilter_st_lift_with _A ops gs e2 a2 (Lifted s))))
+    | ops, gs, NotEq (e1, e2), res, x_lift ->
+        bind_lift x_lift
+          (fun s ->
+            (let (a1, a2) =
+               be_inv_eq ops (not res)
                  (be_aval ops e1
                    (fun_of_resolved_st_q_for
                      _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
@@ -4707,7 +5140,37 @@ let rec bfilter_st_lift_with _A
                      _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
                      gs s))
                in
-              afilter_st_lift_with _A ops gs (Times (v, va)) a1 (Lifted s)));;
+              afilter_st_lift_with _A ops gs (Times (v, va)) a1 (Lifted s)))
+    | ops, gs, Div (v, va), res, x_lift ->
+        bind_lift x_lift
+          (fun s ->
+            (let (a1, _) =
+               be_inv_eq ops (not res)
+                 (be_aval ops (Div (v, va))
+                   (fun_of_resolved_st_q_for
+                     _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
+                     gs s))
+                 (be_aval ops (N zero_inta)
+                   (fun_of_resolved_st_q_for
+                     _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
+                     gs s))
+               in
+              afilter_st_lift_with _A ops gs (Div (v, va)) a1 (Lifted s)))
+    | ops, gs, Mod (v, va), res, x_lift ->
+        bind_lift x_lift
+          (fun s ->
+            (let (a1, _) =
+               be_inv_eq ops (not res)
+                 (be_aval ops (Mod (v, va))
+                   (fun_of_resolved_st_q_for
+                     _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
+                     gs s))
+                 (be_aval ops (N zero_inta)
+                   (fun_of_resolved_st_q_for
+                     _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
+                     gs s))
+               in
+              afilter_st_lift_with _A ops gs (Mod (v, va)) a1 (Lifted s)));;
 
 let rec inv_conservative r a1 a2 = (a1, a2);;
 
@@ -4874,6 +5337,10 @@ let rec sign_of_int
   n = (if less_int n zero_inta then SNeg
         else (if equal_inta n zero_inta then SZero else SPos));;
 
+let rec sign_mod
+  a b = (if equal_signa a SBot || equal_signa b SBot then SBot
+          else (if equal_signa b SZero then a else sup_signa a SZero));;
+
 let rec sign_eqb
   a b = (if equal_signa a SZero && equal_signa b SZero then Some true
           else (if sign_le a SNeg && sign_le b SNonNeg ||
@@ -4881,6 +5348,10 @@ let rec sign_eqb
                        (sign_le a SPos && sign_le b SNonPos ||
                          sign_le b SPos && sign_le a SNonPos))
                  then Some false else None));;
+
+let rec sign_div
+  a b = (if equal_signa a SBot || equal_signa b SBot then SBot
+          else sup_signa (times_sign a b) SZero);;
 
 let rec sign_lt
   a b = (if sign_le a SNeg && sign_le b SNonNeg then Some true
@@ -4895,6 +5366,8 @@ let rec aval_sign
     | Plus (a, b), sigma -> plus_sign (aval_sign a sigma) (aval_sign b sigma)
     | Minus (a, b), sigma -> minus_sign (aval_sign a sigma) (aval_sign b sigma)
     | Times (a, b), sigma -> times_sign (aval_sign a sigma) (aval_sign b sigma)
+    | Div (a, b), sigma -> sign_div (aval_sign a sigma) (aval_sign b sigma)
+    | Mod (a, b), sigma -> sign_mod (aval_sign a sigma) (aval_sign b sigma)
     | Less (a, b), sigma ->
         (if is_empty_sign (aval_sign a sigma) ||
               is_empty_sign (aval_sign b sigma)
@@ -4906,6 +5379,54 @@ let rec aval_sign
                  else (if equal_option equal_bool
                             (sign_lt (aval_sign a sigma) (aval_sign b sigma))
                             (Some false)
+                        then SZero else SNonNeg)))
+    | LessEq (a, b), sigma ->
+        (if is_empty_sign (aval_sign b sigma) ||
+              is_empty_sign (aval_sign a sigma)
+          then bot_signa
+          else (if equal_option equal_bool
+                     (sign_lt (aval_sign b sigma) (aval_sign a sigma))
+                     (Some false)
+                 then SPos
+                 else (if equal_option equal_bool
+                            (sign_lt (aval_sign b sigma) (aval_sign a sigma))
+                            (Some true)
+                        then SZero else SNonNeg)))
+    | Greater (a, b), sigma ->
+        (if is_empty_sign (aval_sign b sigma) ||
+              is_empty_sign (aval_sign a sigma)
+          then bot_signa
+          else (if equal_option equal_bool
+                     (sign_lt (aval_sign b sigma) (aval_sign a sigma))
+                     (Some true)
+                 then SPos
+                 else (if equal_option equal_bool
+                            (sign_lt (aval_sign b sigma) (aval_sign a sigma))
+                            (Some false)
+                        then SZero else SNonNeg)))
+    | GreaterEq (a, b), sigma ->
+        (if is_empty_sign (aval_sign a sigma) ||
+              is_empty_sign (aval_sign b sigma)
+          then bot_signa
+          else (if equal_option equal_bool
+                     (sign_lt (aval_sign a sigma) (aval_sign b sigma))
+                     (Some false)
+                 then SPos
+                 else (if equal_option equal_bool
+                            (sign_lt (aval_sign a sigma) (aval_sign b sigma))
+                            (Some true)
+                        then SZero else SNonNeg)))
+    | NotEq (a, b), sigma ->
+        (if is_empty_sign (aval_sign a sigma) ||
+              is_empty_sign (aval_sign b sigma)
+          then bot_signa
+          else (if equal_option equal_bool
+                     (sign_eqb (aval_sign a sigma) (aval_sign b sigma))
+                     (Some false)
+                 then SPos
+                 else (if equal_option equal_bool
+                            (sign_eqb (aval_sign a sigma) (aval_sign b sigma))
+                            (Some true)
                         then SZero else SNonNeg)))
     | Eq (a, b), sigma ->
         (if is_empty_sign (aval_sign a sigma) ||
@@ -5150,55 +5671,208 @@ let rec prog_procs
   p = filtera (fun n -> not ((n : string) = prog_main_name))
         (map fst (proc_rep p));;
 
-let rec classify_point
-  classify c x2 = match classify, c, x2 with classify, c, Bot -> Bot
-    | classify, c, Lifted st -> Lifted (classify c st);;
+let rec warrow _A
+  a b = (if less_eq
+              _A.widening_warrowing.order_widening.preorder_order.ord_preorder b
+              a
+          then narrow _A.narrowing_warrowing a b
+          else widen _A.widening_warrowing a b);;
 
-let rec ea_check_cond (EA_Check x8) = x8;;
+let rec rho_update
+  rhoa (Ug_state_ext (rho, more)) = Ug_state_ext (rhoa rho, more);;
 
-let rec is_EA_Check = function EA_Nop -> false
-                      | EA_Assign (x21, x22) -> false
-                      | EA_Special (x31, x32) -> false
-                      | EA_Assume x4 -> false
-                      | EA_AssumeNot x5 -> false
-                      | EA_Body x6 -> false
-                      | EA_Ret (x71, x72) -> false
-                      | EA_Check x8 -> true;;
+let rec rho (Ug_state_ext (rho, more)) = rho;;
 
-let rec result_keys (Analysis_Result (x1, x2)) = x1;;
+let rec sup_over_origins _A _C
+  state g =
+    sup_fset _C.semilattice_sup_bounded_semilattice_sup_bot
+      (fimage
+        (fmlookup_default _A (rho state g)
+          (bot _C.order_bot_bounded_semilattice_sup_bot.bot_order_bot))
+        (fmdom (rho state g)));;
 
-let rec result_at (Analysis_Result (x1, x2)) = x2;;
+let rec update_global_warrowing_apinis (_A1, _A2, _A3) _B _C
+  da orig g d state =
+    (if eq _A1
+          (fmlookup_default _B (rho state g)
+            (bot _A2.order_bot_bounded_semilattice_sup_bot.bot_order_bot) orig)
+          d
+      then (None, state)
+      else (let statea =
+              rho_update
+                (fun _ ->
+                  fun_upd _C (rho state) g (fmupd _B orig d (rho state g)))
+                state
+              in
+            let db = warrow _A3 da (sup_over_origins _B _A2 statea g) in
+             (Some db, statea)));;
 
-let rec lookup_context _A
-  r v ctx =
-    (if member (equal_prod equal_cfg_node _A) (v, ctx) (result_keys r)
-      then result_at r v ctx else Bot);;
+let rec point_update
+  pointa (State_ext (c, infl, stabl, sigma, State_exta (point, more))) =
+    State_ext (c, infl, stabl, sigma, State_exta (pointa point, more));;
 
-let rec contexts_at
-  r v = image snd
-          (filter (fun (va, _) -> equal_cfg_nodea va v) (result_keys r));;
+let rec destab_opt _A _B
+  x i s c =
+    destab_iter_opt _A _B (fmlookup_default (equal_sum _A _B) i [] x)
+      (fmdrop (equal_sum _A _B) x i) s c
+and destab_iter_opt _A _B
+  x0 i s c = match x0, i, s, c with [], i, s, c -> (i, s)
+    | y :: ys, i, s, c ->
+        (let (ia, sa) =
+           (if member _A y c then (i, remove _A y s)
+             else destab_opt _A _B (Inl y) i (remove _A y s) c)
+           in
+          destab_iter_opt _A _B ys ia sa c);;
 
-let rec classify_checks_ctx _A
-  g r classify =
-    map_filter
-      (fun x ->
-        (if (let (_, (a, _)) = x in is_EA_Check a)
-          then Some (let (u, (a, _)) = x in
-                      (u, (ea_check_cond a,
-                            image (fun ctx ->
-                                    (ctx, classify_point classify
-    (ea_check_cond a) (lookup_context _A r u ctx)))
-                              (contexts_at r u))))
-          else None))
-      (cfg_intra_list g);;
+let rec sigma_update
+  sigmaa (State_ext (c, infl, stabl, sigma, more)) =
+    State_ext (c, infl, stabl, sigmaa sigma, more);;
 
-let rec aggregate_verdicts
-  (Set vs) = fold (sup_lifteda semilattice_sup_check_result) vs Bot;;
+let rec point
+  (State_ext (c, infl, stabl, sigma, State_exta (point, more))) = point;;
 
-let rec classify_checks_verdicts _A
-  g r classify =
-    map (fun (u, (c, vs)) -> (u, (c, aggregate_verdicts (image snd vs))))
-      (classify_checks_ctx _A g r classify);;
+let rec stabl_update
+  stabla (State_ext (c, infl, stabl, sigma, more)) =
+    State_ext (c, infl, stabla stabl, sigma, more);;
+
+let rec infl_update
+  infla (State_ext (c, infl, stabl, sigma, more)) =
+    State_ext (c, infla infl, stabl, sigma, more);;
+
+let rec tD_side_warrowing_apinis_Interp_solve_rec_c _A _B (_C1, _C2, _C3)
+  t s = (match s
+          with Q (y, (x, (state, ug_state))) ->
+            bind (if member _A x (c state)
+                   then Some (sigma state (Inl x),
+                               (point_update
+                                  (fun _ -> insert _A x (point state)) state,
+                                 ug_state))
+                   else tD_side_warrowing_apinis_Interp_solve_rec_c _A _B
+                          (_C1, _C2, _C3) t
+                          (I (x, (c_update (fun _ -> insert _A x (c state))
+                                    state,
+                                   ug_state))))
+              (fun (xd, (statea, ug_statea)) ->
+                Some (xd, (infl_update
+                             (fun _ ->
+                               fminsert (equal_sum _A _B) (infl statea) (Inl x)
+                                 y)
+                             statea,
+                            ug_statea)))
+          | I (x, (state, ug_state)) ->
+            (if not (member _A x (stabl state))
+              then bind (tD_side_warrowing_apinis_Interp_solve_rec_c _A _B
+                          (_C1, _C2, _C3) t (R (x, (state, ug_state))))
+                     (fun (d_new, (state1, ug_state1)) ->
+                       (let d_newa =
+                          (if member _A x (point state)
+                            then warrow _C3 (sigma state1 (Inl x)) d_new
+                            else d_new)
+                          in
+                         (if eq _C1 (sigma state1 (Inl x)) d_newa
+                           then Some (d_newa,
+                                       (point_update
+  (fun _ -> remove _A x (point state1))
+  (c_update (fun _ -> remove _A x (c state1)) state1),
+ ug_state1))
+                           else (let (infl1, stabl1) =
+                                   destab_opt _A _B (Inl x) (infl state1)
+                                     (stabl state1) (c state1)
+                                   in
+                                  tD_side_warrowing_apinis_Interp_solve_rec_c _A
+                                    _B (_C1, _C2, _C3) t
+                                    (I (x,
+ (sigma_update
+    (fun _ -> fun_upd (equal_sum _A _B) (sigma state1) (Inl x) d_newa)
+    (stabl_update (fun _ -> stabl1) (infl_update (fun _ -> infl1) state1)),
+   ug_state1)))))))
+              else Some (sigma state (Inl x),
+                          (point_update (fun _ -> remove _A x (point state))
+                             (c_update (fun _ -> remove _A x (c state)) state),
+                            ug_state)))
+          | R (x, (state, ug_state)) ->
+            bind (tD_side_warrowing_apinis_Interp_solve_rec_c _A _B
+                   (_C1, _C2, _C3) t
+                   (E (x, (t x, ((fun _ ->
+                                   bot _C2.order_bot_bounded_semilattice_sup_bot.bot_order_bot),
+                                  (stabl_update
+                                     (fun _ -> insert _A x (stabl state)) state,
+                                    ug_state))))))
+              (fun (xd, (statea, ug_statea)) ->
+                (if member _A x (stabl statea)
+                  then Some (xd, (statea, ug_statea))
+                  else tD_side_warrowing_apinis_Interp_solve_rec_c _A _B
+                         (_C1, _C2, _C3) t (R (x, (statea, ug_statea)))))
+          | E (_, (Answer d, (_, (state, ug_state)))) ->
+            Some (d, (state, ug_state))
+          | E (x, (QueryL (y, g), (sides_a_c_c, (state, ug_state)))) ->
+            bind (tD_side_warrowing_apinis_Interp_solve_rec_c _A _B
+                   (_C1, _C2, _C3) t (Q (x, (y, (state, ug_state)))))
+              (fun (yd, (statea, ug_statea)) ->
+                tD_side_warrowing_apinis_Interp_solve_rec_c _A _B
+                  (_C1, _C2, _C3) t
+                  (E (x, (g yd, (sides_a_c_c, (statea, ug_statea))))))
+          | E (x, (QueryG (y, g), (sides_a_c_c, (state, ug_state)))) ->
+            tD_side_warrowing_apinis_Interp_solve_rec_c _A _B (_C1, _C2, _C3) t
+              (E (x, (g (sigma state (Inr y)),
+                       (sides_a_c_c,
+                         (infl_update
+                            (fun _ ->
+                              fminsert (equal_sum _A _B) (infl state) (Inr y) x)
+                            state,
+                           ug_state)))))
+          | E (x, (Side (y, d, ta), (sides_a_c_c, (state, ug_state)))) ->
+            (let da =
+               sup _C2.semilattice_sup_bounded_semilattice_sup_bot.sup_semilattice_sup
+                 (sides_a_c_c y) d
+               in
+             let sides_a_c_ca = fun_upd _B sides_a_c_c y da in
+              (match
+                update_global_warrowing_apinis (_C1, _C2, _C3) _A _B
+                  (sigma state (Inr y)) x y da ug_state
+                with (None, ug_statea) ->
+                  tD_side_warrowing_apinis_Interp_solve_rec_c _A _B
+                    (_C1, _C2, _C3) t
+                    (E (x, (ta, (sides_a_c_ca, (state, ug_statea)))))
+                | (Some db, ug_statea) ->
+                  (let (infla, stabla) =
+                     destab_opt _A _B (Inr y) (infl state) (stabl state)
+                       (c state)
+                     in
+                    tD_side_warrowing_apinis_Interp_solve_rec_c _A _B
+                      (_C1, _C2, _C3) t
+                      (E (x, (ta, (sides_a_c_ca,
+                                    (sigma_update
+                                       (fun _ ->
+ fun_upd (equal_sum _A _B) (sigma state) (Inr y) db)
+                                       (stabl_update (fun _ -> stabla)
+ (infl_update (fun _ -> infla) state)),
+                                      ug_statea)))))))));;
+
+let rec init_state (_C1, _C2)
+  = State_ext
+      (bot_set, fmempty, bot_set,
+        (fun _ -> bot _C1.order_bot_bounded_semilattice_sup_bot.bot_order_bot),
+        State_exta (bot_set, ()));;
+
+let rec init_basic_ug_state _C = Ug_state_ext ((fun _ -> fmempty), ());;
+
+let rec tD_side_warrowing_apinis_Interp_solve_c _A _B (_C1, _C2, _C3)
+  t x = bind (tD_side_warrowing_apinis_Interp_solve_rec_c _A _B (_C1, _C2, _C3)
+               t (I (x, (c_update
+                           (fun _ -> insert _A x (c (init_state (_C2, _C3))))
+                           (init_state (_C2, _C3)),
+                          init_basic_ug_state
+                            _C2.order_bot_bounded_semilattice_sup_bot))))
+          (fun (_, (state, _)) -> Some (stabl state, sigma state));;
+
+let rec tD_side_warrowing_apinis_Interp_solve _A _B (_C1, _C2, _C3)
+  t x = (match tD_side_warrowing_apinis_Interp_solve_c _A _B (_C1, _C2, _C3) t x
+          with None ->
+            failwith "Input not in domain"
+              (fun _ ->
+                tD_side_warrowing_apinis_Interp_solve _A _B (_C1, _C2, _C3) t x)
+          | Some r -> r);;
 
 let rec intra_predecessor_list
   g v = map_filter
@@ -5610,6 +6284,17 @@ let rec local_combine_transfer f m exit = sp_return (f (man_local m) exit);;
 
 let rec local_enter_transfer f m = sp_return (f (man_local m));;
 
+let rec ea_check_cond (EA_Check x8) = x8;;
+
+let rec is_EA_Check = function EA_Nop -> false
+                      | EA_Assign (x21, x22) -> false
+                      | EA_Special (x31, x32) -> false
+                      | EA_Assume x4 -> false
+                      | EA_AssumeNot x5 -> false
+                      | EA_Body x6 -> false
+                      | EA_Ret (x71, x72) -> false
+                      | EA_Check x8 -> true;;
+
 let rec falls_through
   = function SKIP -> true
     | Assign (x, a) -> true
@@ -5681,13 +6366,17 @@ let rec compile
                       (insert
                         (equal_prod equal_cfg_node
                           (equal_prod equal_edge_action equal_cfg_node))
-                        (Statement n, (EA_Assume b, en1))
+                        (Statement n,
+                          (EA_Assume b, (if equal_com c1 SKIP then k else en1)))
                         (insert
                           (equal_prod equal_cfg_node
                             (equal_prod equal_edge_action equal_cfg_node))
-                          (Statement n, (EA_AssumeNot b, en2)) bot_set))
-                      e1)
-                    e2,
+                          (Statement n,
+                            (EA_AssumeNot b,
+                              (if equal_com c2 SKIP then k else en2)))
+                          bot_set))
+                      (if equal_com c1 SKIP then bot_set else e1))
+                    (if equal_com c2 SKIP then bot_set else e2),
                    sup_set
                      (equal_prod equal_cfg_node
                        (equal_prod equal_call_action
@@ -5977,203 +6666,52 @@ let rec result (_A1, _A2) _B
       (solution (_A1, _A2) _B tf_st enter_st init_st gk0 seed route root_ctx
         solve gs p);;
 
-let rec verdict_report (_A1, _A2) _B _C
-  tf_st enter_st init_st gk0 seed route root_ctx solve classify gs p =
-    classify_checks_verdicts _C (prog_cfg p)
-      (result (_A1, _A2) _B tf_st enter_st init_st gk0 seed route root_ctx solve
-        gs p)
-      classify;;
+let rec enter_frame_D_resolved _A
+  top_val s =
+    (let (_, (dg, ps)) = s in
+      (top_val, (dg, filtera (fun p -> location_is_global (fst p)) ps)));;
 
-let rec rho_update
-  rhoa (Ug_state_ext (rho, more)) = Ug_state_ext (rhoa rho, more);;
+let rec enter_frame_D_resolved_q _A
+  xa (Abs_resolved_st x) = Abs_resolved_st (enter_frame_D_resolved _A xa x);;
 
-let rec rho (Ug_state_ext (rho, more)) = rho;;
+let rec bind_formals_resolved _A
+  gs xs avs s =
+    fold (fun (x, a) t -> update_resolved_st _A t (location_of gs x) a)
+      (zip xs avs) s;;
 
-let rec sup_over_origins _A _C
-  state g =
-    sup_fset _C.semilattice_sup_bounded_semilattice_sup_bot
-      (fimage
-        (fmlookup_default _A (rho state g)
-          (bot _C.order_bot_bounded_semilattice_sup_bot.bot_order_bot))
-        (fmdom (rho state g)));;
+let rec bind_formals_resolved_q _A
+  xc xb xa (Abs_resolved_st x) =
+    Abs_resolved_st (bind_formals_resolved _A xc xb xa x);;
 
-let rec update_global_per_origin (_A1, _A2) _B _C
-  da orig g d state =
-    (let statea =
-       rho_update
-         (fun _ -> fun_upd _C (rho state) g (fmupd _B orig d (rho state g)))
-         state
-       in
-     let db = sup_over_origins _B _A2 statea g in
-      (if eq _A1 db da then (None, statea) else (Some db, statea)));;
+let rec n_aval _A
+  (Numeric_ops_ext (n_aval, n_special, n_bfilter, n_top, more)) = n_aval;;
 
-let rec warrow _A
-  a b = (if less_eq
-              _A.widening_warrowing.order_widening.preorder_order.ord_preorder b
-              a
-          then narrow _A.narrowing_warrowing a b
-          else widen _A.widening_warrowing a b);;
+let rec n_top _A
+  (Numeric_ops_ext (n_aval, n_special, n_bfilter, n_top, more)) = n_top;;
 
-let rec point_update
-  pointa (State_ext (c, infl, stabl, sigma, State_exta (point, more))) =
-    State_ext (c, infl, stabl, sigma, State_exta (pointa point, more));;
+let rec ci_formals
+  (Call_info_ext (ci_dst, ci_callee, ci_formals, ci_args, more)) = ci_formals;;
 
-let rec destab_opt _A _B
-  x i s c =
-    destab_iter_opt _A _B (fmlookup_default (equal_sum _A _B) i [] x)
-      (fmdrop (equal_sum _A _B) x i) s c
-and destab_iter_opt _A _B
-  x0 i s c = match x0, i, s, c with [], i, s, c -> (i, s)
-    | y :: ys, i, s, c ->
-        (let (ia, sa) =
-           (if member _A y c then (i, remove _A y s)
-             else destab_opt _A _B (Inl y) i (remove _A y s) c)
-           in
-          destab_iter_opt _A _B ys ia sa c);;
+let rec ci_args
+  (Call_info_ext (ci_dst, ci_callee, ci_formals, ci_args, more)) = ci_args;;
 
-let rec sigma_update
-  sigmaa (State_ext (c, infl, stabl, sigma, more)) =
-    State_ext (c, infl, stabl, sigmaa sigma, more);;
+let rec generic_enter_st_for _A
+  ops gs ci s =
+    bind_formals_resolved_q _A gs (ci_formals ci)
+      (map (fun e -> n_aval _A ops e (fun_of_resolved_st_q_for _A gs s))
+        (ci_args ci))
+      (enter_frame_D_resolved_q _A (n_top _A ops) s);;
 
-let rec point
-  (State_ext (c, infl, stabl, sigma, State_exta (point, more))) = point;;
+let rec ivl_min
+  (Ivl (l1, u1)) (Ivl (l2, u2)) =
+    normalize_ivl (Ivl (min ord_eint l1 l2, min ord_eint u1 u2));;
 
-let rec stabl_update
-  stabla (State_ext (c, infl, stabl, sigma, more)) =
-    State_ext (c, infl, stabla stabl, sigma, more);;
+let rec ivl_max
+  (Ivl (l1, u1)) (Ivl (l2, u2)) =
+    normalize_ivl (Ivl (max ord_eint l1 l2, max ord_eint u1 u2));;
 
-let rec infl_update
-  infla (State_ext (c, infl, stabl, sigma, more)) =
-    State_ext (c, infla infl, stabl, sigma, more);;
-
-let rec tD_side_per_origin_Interp_solve_rec_c _A _B (_C1, _C2, _C3)
-  t s = (match s
-          with Q (y, (x, (state, ug_state))) ->
-            bind (if member _A x (c state)
-                   then Some (sigma state (Inl x),
-                               (point_update
-                                  (fun _ -> insert _A x (point state)) state,
-                                 ug_state))
-                   else tD_side_per_origin_Interp_solve_rec_c _A _B
-                          (_C1, _C2, _C3) t
-                          (I (x, (c_update (fun _ -> insert _A x (c state))
-                                    state,
-                                   ug_state))))
-              (fun (xd, (statea, ug_statea)) ->
-                Some (xd, (infl_update
-                             (fun _ ->
-                               fminsert (equal_sum _A _B) (infl statea) (Inl x)
-                                 y)
-                             statea,
-                            ug_statea)))
-          | I (x, (state, ug_state)) ->
-            (if not (member _A x (stabl state))
-              then bind (tD_side_per_origin_Interp_solve_rec_c _A _B
-                          (_C1, _C2, _C3) t (R (x, (state, ug_state))))
-                     (fun (d_new, (state1, ug_state1)) ->
-                       (let d_newa =
-                          (if member _A x (point state)
-                            then warrow _C3 (sigma state1 (Inl x)) d_new
-                            else d_new)
-                          in
-                         (if eq _C1 (sigma state1 (Inl x)) d_newa
-                           then Some (d_newa,
-                                       (point_update
-  (fun _ -> remove _A x (point state1))
-  (c_update (fun _ -> remove _A x (c state1)) state1),
- ug_state1))
-                           else (let (infl1, stabl1) =
-                                   destab_opt _A _B (Inl x) (infl state1)
-                                     (stabl state1) (c state1)
-                                   in
-                                  tD_side_per_origin_Interp_solve_rec_c _A _B
-                                    (_C1, _C2, _C3) t
-                                    (I (x,
- (sigma_update
-    (fun _ -> fun_upd (equal_sum _A _B) (sigma state1) (Inl x) d_newa)
-    (stabl_update (fun _ -> stabl1) (infl_update (fun _ -> infl1) state1)),
-   ug_state1)))))))
-              else Some (sigma state (Inl x),
-                          (point_update (fun _ -> remove _A x (point state))
-                             (c_update (fun _ -> remove _A x (c state)) state),
-                            ug_state)))
-          | R (x, (state, ug_state)) ->
-            bind (tD_side_per_origin_Interp_solve_rec_c _A _B (_C1, _C2, _C3) t
-                   (E (x, (t x, ((fun _ ->
-                                   bot _C2.order_bot_bounded_semilattice_sup_bot.bot_order_bot),
-                                  (stabl_update
-                                     (fun _ -> insert _A x (stabl state)) state,
-                                    ug_state))))))
-              (fun (xd, (statea, ug_statea)) ->
-                (if member _A x (stabl statea)
-                  then Some (xd, (statea, ug_statea))
-                  else tD_side_per_origin_Interp_solve_rec_c _A _B
-                         (_C1, _C2, _C3) t (R (x, (statea, ug_statea)))))
-          | E (_, (Answer d, (_, (state, ug_state)))) ->
-            Some (d, (state, ug_state))
-          | E (x, (QueryL (y, g), (sides_a_c_c, (state, ug_state)))) ->
-            bind (tD_side_per_origin_Interp_solve_rec_c _A _B (_C1, _C2, _C3) t
-                   (Q (x, (y, (state, ug_state)))))
-              (fun (yd, (statea, ug_statea)) ->
-                tD_side_per_origin_Interp_solve_rec_c _A _B (_C1, _C2, _C3) t
-                  (E (x, (g yd, (sides_a_c_c, (statea, ug_statea))))))
-          | E (x, (QueryG (y, g), (sides_a_c_c, (state, ug_state)))) ->
-            tD_side_per_origin_Interp_solve_rec_c _A _B (_C1, _C2, _C3) t
-              (E (x, (g (sigma state (Inr y)),
-                       (sides_a_c_c,
-                         (infl_update
-                            (fun _ ->
-                              fminsert (equal_sum _A _B) (infl state) (Inr y) x)
-                            state,
-                           ug_state)))))
-          | E (x, (Side (y, d, ta), (sides_a_c_c, (state, ug_state)))) ->
-            (let da =
-               sup _C2.semilattice_sup_bounded_semilattice_sup_bot.sup_semilattice_sup
-                 (sides_a_c_c y) d
-               in
-             let sides_a_c_ca = fun_upd _B sides_a_c_c y da in
-              (match
-                update_global_per_origin (_C1, _C2) _A _B (sigma state (Inr y))
-                  x y da ug_state
-                with (None, ug_statea) ->
-                  tD_side_per_origin_Interp_solve_rec_c _A _B (_C1, _C2, _C3) t
-                    (E (x, (ta, (sides_a_c_ca, (state, ug_statea)))))
-                | (Some db, ug_statea) ->
-                  (let (infla, stabla) =
-                     destab_opt _A _B (Inr y) (infl state) (stabl state)
-                       (c state)
-                     in
-                    tD_side_per_origin_Interp_solve_rec_c _A _B (_C1, _C2, _C3)
-                      t (E (x, (ta, (sides_a_c_ca,
-                                      (sigma_update
- (fun _ -> fun_upd (equal_sum _A _B) (sigma state) (Inr y) db)
- (stabl_update (fun _ -> stabla) (infl_update (fun _ -> infla) state)),
-ug_statea)))))))));;
-
-let rec init_state (_C1, _C2)
-  = State_ext
-      (bot_set, fmempty, bot_set,
-        (fun _ -> bot _C1.order_bot_bounded_semilattice_sup_bot.bot_order_bot),
-        State_exta (bot_set, ()));;
-
-let rec init_basic_ug_state _C = Ug_state_ext ((fun _ -> fmempty), ());;
-
-let rec tD_side_per_origin_Interp_solve_c _A _B (_C1, _C2, _C3)
-  t x = bind (tD_side_per_origin_Interp_solve_rec_c _A _B (_C1, _C2, _C3) t
-               (I (x, (c_update
-                         (fun _ -> insert _A x (c (init_state (_C2, _C3))))
-                         (init_state (_C2, _C3)),
-                        init_basic_ug_state
-                          _C2.order_bot_bounded_semilattice_sup_bot))))
-          (fun (_, (state, _)) -> Some (stabl state, sigma state));;
-
-let rec tD_side_per_origin_Interp_solve _A _B (_C1, _C2, _C3)
-  t x = (match tD_side_per_origin_Interp_solve_c _A _B (_C1, _C2, _C3) t x
-          with None ->
-            failwith "Input not in domain"
-              (fun _ ->
-                tD_side_per_origin_Interp_solve _A _B (_C1, _C2, _C3) t x)
-          | Some r -> r);;
+let ivl_special_ops : (ivl, unit) special_ops_ext
+  = Special_ops_ext (ivl_min, ivl_max, ());;
 
 let rec interval_eq_false
   (Ivl (l1, u1)) (Ivl (l2, u2)) =
@@ -6186,9 +6724,16 @@ let rec interval_eq_true
       (not (less_eq_eint l2 u2) ||
         equal_eint l1 u1 && (equal_eint l2 u2 && equal_eint l1 l2));;
 
-let rec interval_eq
-  a b = (if interval_eq_true a b then Some true
-          else (if interval_eq_false a b then Some false else None));;
+let rec interval_tobool
+  a = (if interval_eq_false a (Ivl (Fin zero_inta, Fin zero_inta))
+        then Some true
+        else (if interval_eq_true a (Ivl (Fin zero_inta, Fin zero_inta))
+               then Some false else None));;
+
+let rec inv_eq_ivl
+  x0 a1 a2 = match x0, a1, a2 with
+    true, a1, a2 -> (meet_ivl a1 a2, meet_ivl a1 a2)
+    | false, a1, a2 -> (a1, a2);;
 
 let rec ivl_times_core
   uu uv = match uu, uv with
@@ -6229,12 +6774,6 @@ let rec plus_ivl
        (normalize_ivl (Ivl (l1, u1)), normalize_ivl (Ivl (l2, u2))) in
       normalize_ivl (Ivl (plus_eint a c, plus_eint b d)));;
 
-let rec interval_tobool
-  a = (if interval_eq_false a (Ivl (Fin zero_inta, Fin zero_inta))
-        then Some true
-        else (if interval_eq_true a (Ivl (Fin zero_inta, Fin zero_inta))
-               then Some false else None));;
-
 let rec interval_eqb
   a b = (if interval_eq_true a b then Some true
           else (if interval_eq_false a b then Some false else None));;
@@ -6252,12 +6791,87 @@ let rec interval_lt
   a b = (if interval_less_true a b then Some true
           else (if interval_less_false a b then Some false else None));;
 
+let rec ivl_mod_bound
+  = function
+    Ivl (Fin l, Fin u) ->
+      (if less_int zero_inta l || less_int u zero_inta
+        then Ivl (Fin (minus_inta one_inta
+                        (max ord_int (abs_int l) (abs_int u))),
+                   Fin (minus_inta (max ord_int (abs_int l) (abs_int u))
+                         one_inta))
+        else ivl_top)
+    | Ivl (MinInf, va) -> ivl_top
+    | Ivl (PlusInf, va) -> ivl_top
+    | Ivl (v, MinInf) -> ivl_top
+    | Ivl (v, PlusInf) -> ivl_top;;
+
+let rec ivl_positive_part a = intersect_ivl a (Ivl (Fin one_inta, PlusInf));;
+
+let rec ivl_div_positive_core
+  a b = match a, b with
+    Ivl (Fin l, Fin u), Ivl (Fin c, Fin d) ->
+      (if less_int zero_inta c
+        then Ivl (Fin (min ord_int (c_div l c) (c_div l d)),
+                   Fin (max ord_int (c_div u c) (c_div u d)))
+        else ivl_top)
+    | Ivl (MinInf, va), b ->
+        (if equal_ivla b (Ivl (Fin one_inta, Fin one_inta))
+          then Ivl (MinInf, va) else ivl_top)
+    | Ivl (PlusInf, va), b ->
+        (if equal_ivla b (Ivl (Fin one_inta, Fin one_inta))
+          then Ivl (PlusInf, va) else ivl_top)
+    | Ivl (v, MinInf), b ->
+        (if equal_ivla b (Ivl (Fin one_inta, Fin one_inta)) then Ivl (v, MinInf)
+          else ivl_top)
+    | Ivl (v, PlusInf), b ->
+        (if equal_ivla b (Ivl (Fin one_inta, Fin one_inta))
+          then Ivl (v, PlusInf) else ivl_top)
+    | a, Ivl (MinInf, va) ->
+        (if equal_ivla (Ivl (MinInf, va)) (Ivl (Fin one_inta, Fin one_inta))
+          then a else ivl_top)
+    | a, Ivl (PlusInf, va) ->
+        (if equal_ivla (Ivl (PlusInf, va)) (Ivl (Fin one_inta, Fin one_inta))
+          then a else ivl_top)
+    | a, Ivl (v, MinInf) ->
+        (if equal_ivla (Ivl (v, MinInf)) (Ivl (Fin one_inta, Fin one_inta))
+          then a else ivl_top)
+    | a, Ivl (v, PlusInf) ->
+        (if equal_ivla (Ivl (v, PlusInf)) (Ivl (Fin one_inta, Fin one_inta))
+          then a else ivl_top);;
+
+let rec ivl_div_positive
+  a b = (if ivl_nonempty a && ivl_nonempty b
+          then normalize_ivl (ivl_div_positive_core a b) else bot_ivla);;
+
+let rec ivl_zero_part a = intersect_ivl a (Ivl (Fin zero_inta, Fin zero_inta));;
+
+let rec ivl_div
+  a b = (if ivl_nonempty a && ivl_nonempty b
+          then sup_ivla
+                 (sup_ivla (ivl_div_positive a (ivl_positive_part b))
+                   (ivl_div_positive
+                     (minus_ivl (Ivl (Fin zero_inta, Fin zero_inta)) a)
+                     (ivl_positive_part
+                       (minus_ivl (Ivl (Fin zero_inta, Fin zero_inta)) b))))
+                 (ivl_zero_part b)
+          else bot_ivla);;
+
+let rec ivl_mod
+  a b = (if ivl_nonempty a && ivl_nonempty b
+          then intersect_ivl (minus_ivl a (times_ivl (ivl_div a b) b))
+                 (intersect_ivl
+                   (sup_ivla a (Ivl (Fin zero_inta, Fin zero_inta)))
+                   (ivl_mod_bound b))
+          else bot_ivla);;
+
 let rec aval_ivl
   x0 sigma = match x0, sigma with N n, sigma -> Ivl (Fin n, Fin n)
     | V x, sigma -> sigma x
     | Plus (a, b), sigma -> plus_ivl (aval_ivl a sigma) (aval_ivl b sigma)
     | Minus (a, b), sigma -> minus_ivl (aval_ivl a sigma) (aval_ivl b sigma)
     | Times (a, b), sigma -> times_ivl (aval_ivl a sigma) (aval_ivl b sigma)
+    | Div (a, b), sigma -> ivl_div (aval_ivl a sigma) (aval_ivl b sigma)
+    | Mod (a, b), sigma -> ivl_mod (aval_ivl a sigma) (aval_ivl b sigma)
     | Less (a, b), sigma ->
         (if is_empty_ivl (aval_ivl a sigma) || is_empty_ivl (aval_ivl b sigma)
           then bot_ivla
@@ -6268,6 +6882,54 @@ let rec aval_ivl
                  else (if equal_option equal_bool
                             (interval_lt (aval_ivl a sigma) (aval_ivl b sigma))
                             (Some false)
+                        then Ivl (Fin zero_inta, Fin zero_inta)
+                        else Ivl (Fin zero_inta, Fin one_inta))))
+    | LessEq (a, b), sigma ->
+        (if is_empty_ivl (aval_ivl b sigma) || is_empty_ivl (aval_ivl a sigma)
+          then bot_ivla
+          else (if equal_option equal_bool
+                     (interval_lt (aval_ivl b sigma) (aval_ivl a sigma))
+                     (Some false)
+                 then Ivl (Fin one_inta, Fin one_inta)
+                 else (if equal_option equal_bool
+                            (interval_lt (aval_ivl b sigma) (aval_ivl a sigma))
+                            (Some true)
+                        then Ivl (Fin zero_inta, Fin zero_inta)
+                        else Ivl (Fin zero_inta, Fin one_inta))))
+    | Greater (a, b), sigma ->
+        (if is_empty_ivl (aval_ivl b sigma) || is_empty_ivl (aval_ivl a sigma)
+          then bot_ivla
+          else (if equal_option equal_bool
+                     (interval_lt (aval_ivl b sigma) (aval_ivl a sigma))
+                     (Some true)
+                 then Ivl (Fin one_inta, Fin one_inta)
+                 else (if equal_option equal_bool
+                            (interval_lt (aval_ivl b sigma) (aval_ivl a sigma))
+                            (Some false)
+                        then Ivl (Fin zero_inta, Fin zero_inta)
+                        else Ivl (Fin zero_inta, Fin one_inta))))
+    | GreaterEq (a, b), sigma ->
+        (if is_empty_ivl (aval_ivl a sigma) || is_empty_ivl (aval_ivl b sigma)
+          then bot_ivla
+          else (if equal_option equal_bool
+                     (interval_lt (aval_ivl a sigma) (aval_ivl b sigma))
+                     (Some false)
+                 then Ivl (Fin one_inta, Fin one_inta)
+                 else (if equal_option equal_bool
+                            (interval_lt (aval_ivl a sigma) (aval_ivl b sigma))
+                            (Some true)
+                        then Ivl (Fin zero_inta, Fin zero_inta)
+                        else Ivl (Fin zero_inta, Fin one_inta))))
+    | NotEq (a, b), sigma ->
+        (if is_empty_ivl (aval_ivl a sigma) || is_empty_ivl (aval_ivl b sigma)
+          then bot_ivla
+          else (if equal_option equal_bool
+                     (interval_eqb (aval_ivl a sigma) (aval_ivl b sigma))
+                     (Some false)
+                 then Ivl (Fin one_inta, Fin one_inta)
+                 else (if equal_option equal_bool
+                            (interval_eqb (aval_ivl a sigma) (aval_ivl b sigma))
+                            (Some true)
                         then Ivl (Fin zero_inta, Fin zero_inta)
                         else Ivl (Fin zero_inta, Fin one_inta))))
     | Eq (a, b), sigma ->
@@ -6320,86 +6982,6 @@ let rec aval_ivl
                         then Ivl (Fin zero_inta, Fin zero_inta)
                         else Ivl (Fin zero_inta, Fin one_inta))));;
 
-let rec map_option f x1 = match f, x1 with f, None -> None
-                     | f, Some x2 -> Some (f x2);;
-
-let rec interval_truthy_query
-  e d = map_option not (interval_eq (aval_ivl e d) (aval_ivl (N zero_inta) d));;
-
-let rec interval_less
-  a b = (if interval_less_true a b then Some true
-          else (if interval_less_false a b then Some false else None));;
-
-let rec interval_check_query
-  x0 d = match x0, d with Not b, d -> map_option not (interval_check_query b d)
-    | And (b1, b2), d ->
-        and_opt (interval_check_query b1 d) (interval_check_query b2 d)
-    | Or (b1, b2), d ->
-        or_opt (interval_check_query b1 d) (interval_check_query b2 d)
-    | Less (a, b), d -> interval_less (aval_ivl a d) (aval_ivl b d)
-    | Eq (a, b), d -> interval_eq (aval_ivl a d) (aval_ivl b d)
-    | N v, d -> interval_truthy_query (N v) d
-    | V v, d -> interval_truthy_query (V v) d
-    | Plus (v, va), d -> interval_truthy_query (Plus (v, va)) d
-    | Minus (v, va), d -> interval_truthy_query (Minus (v, va)) d
-    | Times (v, va), d -> interval_truthy_query (Times (v, va)) d;;
-
-let rec interval_classify_check
-  c d = (match interval_check_query c d with None -> Check_Unknown
-          | Some true -> Check_Proved | Some false -> Check_Refuted);;
-
-let rec enter_frame_D_resolved _A
-  top_val s =
-    (let (_, (dg, ps)) = s in
-      (top_val, (dg, filtera (fun p -> location_is_global (fst p)) ps)));;
-
-let rec enter_frame_D_resolved_q _A
-  xa (Abs_resolved_st x) = Abs_resolved_st (enter_frame_D_resolved _A xa x);;
-
-let rec bind_formals_resolved _A
-  gs xs avs s =
-    fold (fun (x, a) t -> update_resolved_st _A t (location_of gs x) a)
-      (zip xs avs) s;;
-
-let rec bind_formals_resolved_q _A
-  xc xb xa (Abs_resolved_st x) =
-    Abs_resolved_st (bind_formals_resolved _A xc xb xa x);;
-
-let rec n_aval _A
-  (Numeric_ops_ext (n_aval, n_special, n_bfilter, n_top, more)) = n_aval;;
-
-let rec n_top _A
-  (Numeric_ops_ext (n_aval, n_special, n_bfilter, n_top, more)) = n_top;;
-
-let rec ci_formals
-  (Call_info_ext (ci_dst, ci_callee, ci_formals, ci_args, more)) = ci_formals;;
-
-let rec ci_args
-  (Call_info_ext (ci_dst, ci_callee, ci_formals, ci_args, more)) = ci_args;;
-
-let rec generic_enter_st_for _A
-  ops gs ci s =
-    bind_formals_resolved_q _A gs (ci_formals ci)
-      (map (fun e -> n_aval _A ops e (fun_of_resolved_st_q_for _A gs s))
-        (ci_args ci))
-      (enter_frame_D_resolved_q _A (n_top _A ops) s);;
-
-let rec ivl_min
-  (Ivl (l1, u1)) (Ivl (l2, u2)) =
-    normalize_ivl (Ivl (min ord_eint l1 l2, min ord_eint u1 u2));;
-
-let rec ivl_max
-  (Ivl (l1, u1)) (Ivl (l2, u2)) =
-    normalize_ivl (Ivl (max ord_eint l1 l2, max ord_eint u1 u2));;
-
-let ivl_special_ops : (ivl, unit) special_ops_ext
-  = Special_ops_ext (ivl_min, ivl_max, ());;
-
-let rec inv_eq_ivl
-  x0 a1 a2 = match x0, a1, a2 with
-    true, a1, a2 -> (meet_ivl a1 a2, meet_ivl a1 a2)
-    | false, a1, a2 -> (a1, a2);;
-
 let rec branch_ivl_st
   gs e pol s =
     (if feasible_with executable_domain_ivl
@@ -6421,8 +7003,6 @@ let ivl_ops : (ivl, unit) numeric_ops_ext
   = Numeric_ops_ext (aval_ivl, ivl_special_ops, branch_ivl_st, ivl_top, ());;
 
 let rec ivl_enter_st_for x = generic_enter_st_for bot_ivl ivl_ops x;;
-
-let rec declared_global p x = membera equal_literal (declared_global_vars p) x;;
 
 let rec cs_route k u ctx d ca = take k (u :: ctx);;
 
@@ -6469,240 +7049,41 @@ let cinit_ivl_st : ivl resolved_st_q
   = Abs_resolved_st
       (Ivl (MinInf, PlusInf), (Ivl (Fin zero_inta, Fin zero_inta), []));;
 
-let rec analyse_interval_call_string_report_per_origin
-  k p = verdict_report (executable_domain_ivl, equal_ivl) equal_call_string_gk
-          (equal_list equal_cfg_node) ivl_tf_st_for ivl_enter_st_for
-          cinit_ivl_st Global (fun a b -> Seed (a, b)) (fun _ -> cs_route k) []
-          (tD_side_per_origin_Interp_solve
-            (equal_prod equal_cfg_node (equal_list equal_cfg_node))
-            equal_call_string_gk
-            ((equal_dg_state
-               (equal_lifted
-                 (equal_resolved_st_q
-                   (equal_ivl,
-                     bounded_warrowing_ivl.bounded_semilattice_sup_bot_bounded_warrowing.order_bot_bounded_semilattice_sup_bot)))
-               (equal_lifted
-                 (equal_resolved_st_q
-                   (equal_ivl,
-                     bounded_warrowing_ivl.bounded_semilattice_sup_bot_bounded_warrowing.order_bot_bounded_semilattice_sup_bot)))),
-              (bounded_semilattice_sup_bot_dg_state
-                (bounded_warrowing_lifted
-                  (bounded_warrowing_resolved_st_q
-                    bounded_warrowing_ivl)).bounded_semilattice_sup_bot_bounded_warrowing
-                (bounded_warrowing_lifted
-                  (bounded_warrowing_resolved_st_q
-                    bounded_warrowing_ivl)).bounded_semilattice_sup_bot_bounded_warrowing),
-              (warrowing_dg_state
-                (bounded_warrowing_lifted
-                  (bounded_warrowing_resolved_st_q bounded_warrowing_ivl))
-                (bounded_warrowing_lifted
-                  (bounded_warrowing_resolved_st_q bounded_warrowing_ivl)))))
-          interval_classify_check (declared_global p) p;;
+let rec analyse_interval_call_string_result_for
+  k gs p =
+    result (executable_domain_ivl, equal_ivl) equal_call_string_gk ivl_tf_st_for
+      ivl_enter_st_for cinit_ivl_st Global (fun a b -> Seed (a, b))
+      (fun _ -> cs_route k) []
+      (tD_side_warrowing_apinis_Interp_solve
+        (equal_prod equal_cfg_node (equal_list equal_cfg_node))
+        equal_call_string_gk
+        ((equal_dg_state
+           (equal_lifted
+             (equal_resolved_st_q
+               (equal_ivl,
+                 bounded_warrowing_ivl.bounded_semilattice_sup_bot_bounded_warrowing.order_bot_bounded_semilattice_sup_bot)))
+           (equal_lifted
+             (equal_resolved_st_q
+               (equal_ivl,
+                 bounded_warrowing_ivl.bounded_semilattice_sup_bot_bounded_warrowing.order_bot_bounded_semilattice_sup_bot)))),
+          (bounded_semilattice_sup_bot_dg_state
+            (bounded_warrowing_lifted
+              (bounded_warrowing_resolved_st_q
+                bounded_warrowing_ivl)).bounded_semilattice_sup_bot_bounded_warrowing
+            (bounded_warrowing_lifted
+              (bounded_warrowing_resolved_st_q
+                bounded_warrowing_ivl)).bounded_semilattice_sup_bot_bounded_warrowing),
+          (warrowing_dg_state
+            (bounded_warrowing_lifted
+              (bounded_warrowing_resolved_st_q bounded_warrowing_ivl))
+            (bounded_warrowing_lifted
+              (bounded_warrowing_resolved_st_q bounded_warrowing_ivl)))))
+      gs p;;
 
-let rec update_global_always_join (_A1, _A2) _B _C
-  da orig g d state =
-    (let statea =
-       rho_update
-         (fun _ -> fun_upd _C (rho state) g (fmupd _B orig d (rho state g)))
-         state
-       in
-     let db =
-       sup _A2.semilattice_sup_bounded_semilattice_sup_bot.sup_semilattice_sup
-         da d
-       in
-      (if eq _A1 db da then (None, statea) else (Some db, statea)));;
+let rec declared_global p x = membera equal_literal (declared_global_vars p) x;;
 
-let rec tD_side_always_join_Interp_solve_rec_c _A _B (_C1, _C2, _C3)
-  t s = (match s
-          with Q (y, (x, (state, ug_state))) ->
-            bind (if member _A x (c state)
-                   then Some (sigma state (Inl x),
-                               (point_update
-                                  (fun _ -> insert _A x (point state)) state,
-                                 ug_state))
-                   else tD_side_always_join_Interp_solve_rec_c _A _B
-                          (_C1, _C2, _C3) t
-                          (I (x, (c_update (fun _ -> insert _A x (c state))
-                                    state,
-                                   ug_state))))
-              (fun (xd, (statea, ug_statea)) ->
-                Some (xd, (infl_update
-                             (fun _ ->
-                               fminsert (equal_sum _A _B) (infl statea) (Inl x)
-                                 y)
-                             statea,
-                            ug_statea)))
-          | I (x, (state, ug_state)) ->
-            (if not (member _A x (stabl state))
-              then bind (tD_side_always_join_Interp_solve_rec_c _A _B
-                          (_C1, _C2, _C3) t (R (x, (state, ug_state))))
-                     (fun (d_new, (state1, ug_state1)) ->
-                       (let d_newa =
-                          (if member _A x (point state)
-                            then warrow _C3 (sigma state1 (Inl x)) d_new
-                            else d_new)
-                          in
-                         (if eq _C1 (sigma state1 (Inl x)) d_newa
-                           then Some (d_newa,
-                                       (point_update
-  (fun _ -> remove _A x (point state1))
-  (c_update (fun _ -> remove _A x (c state1)) state1),
- ug_state1))
-                           else (let (infl1, stabl1) =
-                                   destab_opt _A _B (Inl x) (infl state1)
-                                     (stabl state1) (c state1)
-                                   in
-                                  tD_side_always_join_Interp_solve_rec_c _A _B
-                                    (_C1, _C2, _C3) t
-                                    (I (x,
- (sigma_update
-    (fun _ -> fun_upd (equal_sum _A _B) (sigma state1) (Inl x) d_newa)
-    (stabl_update (fun _ -> stabl1) (infl_update (fun _ -> infl1) state1)),
-   ug_state1)))))))
-              else Some (sigma state (Inl x),
-                          (point_update (fun _ -> remove _A x (point state))
-                             (c_update (fun _ -> remove _A x (c state)) state),
-                            ug_state)))
-          | R (x, (state, ug_state)) ->
-            bind (tD_side_always_join_Interp_solve_rec_c _A _B (_C1, _C2, _C3) t
-                   (E (x, (t x, ((fun _ ->
-                                   bot _C2.order_bot_bounded_semilattice_sup_bot.bot_order_bot),
-                                  (stabl_update
-                                     (fun _ -> insert _A x (stabl state)) state,
-                                    ug_state))))))
-              (fun (xd, (statea, ug_statea)) ->
-                (if member _A x (stabl statea)
-                  then Some (xd, (statea, ug_statea))
-                  else tD_side_always_join_Interp_solve_rec_c _A _B
-                         (_C1, _C2, _C3) t (R (x, (statea, ug_statea)))))
-          | E (_, (Answer d, (_, (state, ug_state)))) ->
-            Some (d, (state, ug_state))
-          | E (x, (QueryL (y, g), (sides_a_c_c, (state, ug_state)))) ->
-            bind (tD_side_always_join_Interp_solve_rec_c _A _B (_C1, _C2, _C3) t
-                   (Q (x, (y, (state, ug_state)))))
-              (fun (yd, (statea, ug_statea)) ->
-                tD_side_always_join_Interp_solve_rec_c _A _B (_C1, _C2, _C3) t
-                  (E (x, (g yd, (sides_a_c_c, (statea, ug_statea))))))
-          | E (x, (QueryG (y, g), (sides_a_c_c, (state, ug_state)))) ->
-            tD_side_always_join_Interp_solve_rec_c _A _B (_C1, _C2, _C3) t
-              (E (x, (g (sigma state (Inr y)),
-                       (sides_a_c_c,
-                         (infl_update
-                            (fun _ ->
-                              fminsert (equal_sum _A _B) (infl state) (Inr y) x)
-                            state,
-                           ug_state)))))
-          | E (x, (Side (y, d, ta), (sides_a_c_c, (state, ug_state)))) ->
-            (let da =
-               sup _C2.semilattice_sup_bounded_semilattice_sup_bot.sup_semilattice_sup
-                 (sides_a_c_c y) d
-               in
-             let sides_a_c_ca = fun_upd _B sides_a_c_c y da in
-              (match
-                update_global_always_join (_C1, _C2) _A _B (sigma state (Inr y))
-                  x y da ug_state
-                with (None, ug_statea) ->
-                  tD_side_always_join_Interp_solve_rec_c _A _B (_C1, _C2, _C3) t
-                    (E (x, (ta, (sides_a_c_ca, (state, ug_statea)))))
-                | (Some db, ug_statea) ->
-                  (let (infla, stabla) =
-                     destab_opt _A _B (Inr y) (infl state) (stabl state)
-                       (c state)
-                     in
-                    tD_side_always_join_Interp_solve_rec_c _A _B (_C1, _C2, _C3)
-                      t (E (x, (ta, (sides_a_c_ca,
-                                      (sigma_update
- (fun _ -> fun_upd (equal_sum _A _B) (sigma state) (Inr y) db)
- (stabl_update (fun _ -> stabla) (infl_update (fun _ -> infla) state)),
-ug_statea)))))))));;
-
-let rec tD_side_always_join_Interp_solve_c _A _B (_C1, _C2, _C3)
-  t x = bind (tD_side_always_join_Interp_solve_rec_c _A _B (_C1, _C2, _C3) t
-               (I (x, (c_update
-                         (fun _ -> insert _A x (c (init_state (_C2, _C3))))
-                         (init_state (_C2, _C3)),
-                        init_basic_ug_state
-                          _C2.order_bot_bounded_semilattice_sup_bot))))
-          (fun (_, (state, _)) -> Some (stabl state, sigma state));;
-
-let rec tD_side_always_join_Interp_solve _A _B (_C1, _C2, _C3)
-  t x = (match tD_side_always_join_Interp_solve_c _A _B (_C1, _C2, _C3) t x
-          with None ->
-            failwith "Input not in domain"
-              (fun _ ->
-                tD_side_always_join_Interp_solve _A _B (_C1, _C2, _C3) t x)
-          | Some r -> r);;
-
-let rec analyse_interval_call_string_report_join
-  k p = verdict_report (executable_domain_ivl, equal_ivl) equal_call_string_gk
-          (equal_list equal_cfg_node) ivl_tf_st_for ivl_enter_st_for
-          cinit_ivl_st Global (fun a b -> Seed (a, b)) (fun _ -> cs_route k) []
-          (tD_side_always_join_Interp_solve
-            (equal_prod equal_cfg_node (equal_list equal_cfg_node))
-            equal_call_string_gk
-            ((equal_dg_state
-               (equal_lifted
-                 (equal_resolved_st_q
-                   (equal_ivl,
-                     bounded_warrowing_ivl.bounded_semilattice_sup_bot_bounded_warrowing.order_bot_bounded_semilattice_sup_bot)))
-               (equal_lifted
-                 (equal_resolved_st_q
-                   (equal_ivl,
-                     bounded_warrowing_ivl.bounded_semilattice_sup_bot_bounded_warrowing.order_bot_bounded_semilattice_sup_bot)))),
-              (bounded_semilattice_sup_bot_dg_state
-                (bounded_warrowing_lifted
-                  (bounded_warrowing_resolved_st_q
-                    bounded_warrowing_ivl)).bounded_semilattice_sup_bot_bounded_warrowing
-                (bounded_warrowing_lifted
-                  (bounded_warrowing_resolved_st_q
-                    bounded_warrowing_ivl)).bounded_semilattice_sup_bot_bounded_warrowing),
-              (warrowing_dg_state
-                (bounded_warrowing_lifted
-                  (bounded_warrowing_resolved_st_q bounded_warrowing_ivl))
-                (bounded_warrowing_lifted
-                  (bounded_warrowing_resolved_st_q bounded_warrowing_ivl)))))
-          interval_classify_check (declared_global p) p;;
-
-let rec formals_context pars d = map d pars;;
-
-let rec exec_formals_route _A
-  gs u ctx d ca =
-    (let CallEdge (_, pars, _) = ca in
-      formals_context pars
-        (fun_of_resolved_st_q_for _A gs
-          (match d with Bot -> bot_resolved_st_qa _A | Lifted d0 -> d0)));;
-
-let rec analyse_interval_entry_state_per_origin
-  p = verdict_report (executable_domain_ivl, equal_ivl)
-        (equal_routed_gk equal_unit (equal_list equal_ivl))
-        (equal_list equal_ivl) ivl_tf_st_for ivl_enter_st_for cinit_ivl_st
-        (Analysis_Global ()) (fun a b -> Activation_Seed (a, b))
-        (exec_formals_route bot_ivl) []
-        (tD_side_per_origin_Interp_solve
-          (equal_prod equal_cfg_node (equal_list equal_ivl))
-          (equal_routed_gk equal_unit (equal_list equal_ivl))
-          ((equal_dg_state
-             (equal_lifted
-               (equal_resolved_st_q
-                 (equal_ivl,
-                   bounded_warrowing_ivl.bounded_semilattice_sup_bot_bounded_warrowing.order_bot_bounded_semilattice_sup_bot)))
-             (equal_lifted
-               (equal_resolved_st_q
-                 (equal_ivl,
-                   bounded_warrowing_ivl.bounded_semilattice_sup_bot_bounded_warrowing.order_bot_bounded_semilattice_sup_bot)))),
-            (bounded_semilattice_sup_bot_dg_state
-              (bounded_warrowing_lifted
-                (bounded_warrowing_resolved_st_q
-                  bounded_warrowing_ivl)).bounded_semilattice_sup_bot_bounded_warrowing
-              (bounded_warrowing_lifted
-                (bounded_warrowing_resolved_st_q
-                  bounded_warrowing_ivl)).bounded_semilattice_sup_bot_bounded_warrowing),
-            (warrowing_dg_state
-              (bounded_warrowing_lifted
-                (bounded_warrowing_resolved_st_q bounded_warrowing_ivl))
-              (bounded_warrowing_lifted
-                (bounded_warrowing_resolved_st_q bounded_warrowing_ivl)))))
-        interval_classify_check (declared_global p) p;;
+let rec analyse_interval_call_string_result
+  k p = analyse_interval_call_string_result_for k (declared_global p) p;;
 
 let rec update_global_warrowing_per_origin (_A1, _A2, _A3) _B _C
   da orig g d state =
@@ -6859,276 +7240,14 @@ let rec tD_side_warrowing_per_origin_Interp_solve _A _B (_C1, _C2, _C3)
                   t x)
           | Some r -> r);;
 
-let rec analyse_interval_call_string_report_wpo
-  k p = verdict_report (executable_domain_ivl, equal_ivl) equal_call_string_gk
-          (equal_list equal_cfg_node) ivl_tf_st_for ivl_enter_st_for
-          cinit_ivl_st Global (fun a b -> Seed (a, b)) (fun _ -> cs_route k) []
-          (tD_side_warrowing_per_origin_Interp_solve
-            (equal_prod equal_cfg_node (equal_list equal_cfg_node))
-            equal_call_string_gk
-            ((equal_dg_state
-               (equal_lifted
-                 (equal_resolved_st_q
-                   (equal_ivl,
-                     bounded_warrowing_ivl.bounded_semilattice_sup_bot_bounded_warrowing.order_bot_bounded_semilattice_sup_bot)))
-               (equal_lifted
-                 (equal_resolved_st_q
-                   (equal_ivl,
-                     bounded_warrowing_ivl.bounded_semilattice_sup_bot_bounded_warrowing.order_bot_bounded_semilattice_sup_bot)))),
-              (bounded_semilattice_sup_bot_dg_state
-                (bounded_warrowing_lifted
-                  (bounded_warrowing_resolved_st_q
-                    bounded_warrowing_ivl)).bounded_semilattice_sup_bot_bounded_warrowing
-                (bounded_warrowing_lifted
-                  (bounded_warrowing_resolved_st_q
-                    bounded_warrowing_ivl)).bounded_semilattice_sup_bot_bounded_warrowing),
-              (warrowing_dg_state
-                (bounded_warrowing_lifted
-                  (bounded_warrowing_resolved_st_q bounded_warrowing_ivl))
-                (bounded_warrowing_lifted
-                  (bounded_warrowing_resolved_st_q bounded_warrowing_ivl)))))
-          interval_classify_check (declared_global p) p;;
+let rec formals_context pars d = map d pars;;
 
-let rec update_global_warrowing_apinis (_A1, _A2, _A3) _B _C
-  da orig g d state =
-    (if eq _A1
-          (fmlookup_default _B (rho state g)
-            (bot _A2.order_bot_bounded_semilattice_sup_bot.bot_order_bot) orig)
-          d
-      then (None, state)
-      else (let statea =
-              rho_update
-                (fun _ ->
-                  fun_upd _C (rho state) g (fmupd _B orig d (rho state g)))
-                state
-              in
-            let db = warrow _A3 da (sup_over_origins _B _A2 statea g) in
-             (Some db, statea)));;
-
-let rec tD_side_warrowing_apinis_Interp_solve_rec_c _A _B (_C1, _C2, _C3)
-  t s = (match s
-          with Q (y, (x, (state, ug_state))) ->
-            bind (if member _A x (c state)
-                   then Some (sigma state (Inl x),
-                               (point_update
-                                  (fun _ -> insert _A x (point state)) state,
-                                 ug_state))
-                   else tD_side_warrowing_apinis_Interp_solve_rec_c _A _B
-                          (_C1, _C2, _C3) t
-                          (I (x, (c_update (fun _ -> insert _A x (c state))
-                                    state,
-                                   ug_state))))
-              (fun (xd, (statea, ug_statea)) ->
-                Some (xd, (infl_update
-                             (fun _ ->
-                               fminsert (equal_sum _A _B) (infl statea) (Inl x)
-                                 y)
-                             statea,
-                            ug_statea)))
-          | I (x, (state, ug_state)) ->
-            (if not (member _A x (stabl state))
-              then bind (tD_side_warrowing_apinis_Interp_solve_rec_c _A _B
-                          (_C1, _C2, _C3) t (R (x, (state, ug_state))))
-                     (fun (d_new, (state1, ug_state1)) ->
-                       (let d_newa =
-                          (if member _A x (point state)
-                            then warrow _C3 (sigma state1 (Inl x)) d_new
-                            else d_new)
-                          in
-                         (if eq _C1 (sigma state1 (Inl x)) d_newa
-                           then Some (d_newa,
-                                       (point_update
-  (fun _ -> remove _A x (point state1))
-  (c_update (fun _ -> remove _A x (c state1)) state1),
- ug_state1))
-                           else (let (infl1, stabl1) =
-                                   destab_opt _A _B (Inl x) (infl state1)
-                                     (stabl state1) (c state1)
-                                   in
-                                  tD_side_warrowing_apinis_Interp_solve_rec_c _A
-                                    _B (_C1, _C2, _C3) t
-                                    (I (x,
- (sigma_update
-    (fun _ -> fun_upd (equal_sum _A _B) (sigma state1) (Inl x) d_newa)
-    (stabl_update (fun _ -> stabl1) (infl_update (fun _ -> infl1) state1)),
-   ug_state1)))))))
-              else Some (sigma state (Inl x),
-                          (point_update (fun _ -> remove _A x (point state))
-                             (c_update (fun _ -> remove _A x (c state)) state),
-                            ug_state)))
-          | R (x, (state, ug_state)) ->
-            bind (tD_side_warrowing_apinis_Interp_solve_rec_c _A _B
-                   (_C1, _C2, _C3) t
-                   (E (x, (t x, ((fun _ ->
-                                   bot _C2.order_bot_bounded_semilattice_sup_bot.bot_order_bot),
-                                  (stabl_update
-                                     (fun _ -> insert _A x (stabl state)) state,
-                                    ug_state))))))
-              (fun (xd, (statea, ug_statea)) ->
-                (if member _A x (stabl statea)
-                  then Some (xd, (statea, ug_statea))
-                  else tD_side_warrowing_apinis_Interp_solve_rec_c _A _B
-                         (_C1, _C2, _C3) t (R (x, (statea, ug_statea)))))
-          | E (_, (Answer d, (_, (state, ug_state)))) ->
-            Some (d, (state, ug_state))
-          | E (x, (QueryL (y, g), (sides_a_c_c, (state, ug_state)))) ->
-            bind (tD_side_warrowing_apinis_Interp_solve_rec_c _A _B
-                   (_C1, _C2, _C3) t (Q (x, (y, (state, ug_state)))))
-              (fun (yd, (statea, ug_statea)) ->
-                tD_side_warrowing_apinis_Interp_solve_rec_c _A _B
-                  (_C1, _C2, _C3) t
-                  (E (x, (g yd, (sides_a_c_c, (statea, ug_statea))))))
-          | E (x, (QueryG (y, g), (sides_a_c_c, (state, ug_state)))) ->
-            tD_side_warrowing_apinis_Interp_solve_rec_c _A _B (_C1, _C2, _C3) t
-              (E (x, (g (sigma state (Inr y)),
-                       (sides_a_c_c,
-                         (infl_update
-                            (fun _ ->
-                              fminsert (equal_sum _A _B) (infl state) (Inr y) x)
-                            state,
-                           ug_state)))))
-          | E (x, (Side (y, d, ta), (sides_a_c_c, (state, ug_state)))) ->
-            (let da =
-               sup _C2.semilattice_sup_bounded_semilattice_sup_bot.sup_semilattice_sup
-                 (sides_a_c_c y) d
-               in
-             let sides_a_c_ca = fun_upd _B sides_a_c_c y da in
-              (match
-                update_global_warrowing_apinis (_C1, _C2, _C3) _A _B
-                  (sigma state (Inr y)) x y da ug_state
-                with (None, ug_statea) ->
-                  tD_side_warrowing_apinis_Interp_solve_rec_c _A _B
-                    (_C1, _C2, _C3) t
-                    (E (x, (ta, (sides_a_c_ca, (state, ug_statea)))))
-                | (Some db, ug_statea) ->
-                  (let (infla, stabla) =
-                     destab_opt _A _B (Inr y) (infl state) (stabl state)
-                       (c state)
-                     in
-                    tD_side_warrowing_apinis_Interp_solve_rec_c _A _B
-                      (_C1, _C2, _C3) t
-                      (E (x, (ta, (sides_a_c_ca,
-                                    (sigma_update
-                                       (fun _ ->
- fun_upd (equal_sum _A _B) (sigma state) (Inr y) db)
-                                       (stabl_update (fun _ -> stabla)
- (infl_update (fun _ -> infla) state)),
-                                      ug_statea)))))))));;
-
-let rec tD_side_warrowing_apinis_Interp_solve_c _A _B (_C1, _C2, _C3)
-  t x = bind (tD_side_warrowing_apinis_Interp_solve_rec_c _A _B (_C1, _C2, _C3)
-               t (I (x, (c_update
-                           (fun _ -> insert _A x (c (init_state (_C2, _C3))))
-                           (init_state (_C2, _C3)),
-                          init_basic_ug_state
-                            _C2.order_bot_bounded_semilattice_sup_bot))))
-          (fun (_, (state, _)) -> Some (stabl state, sigma state));;
-
-let rec tD_side_warrowing_apinis_Interp_solve _A _B (_C1, _C2, _C3)
-  t x = (match tD_side_warrowing_apinis_Interp_solve_c _A _B (_C1, _C2, _C3) t x
-          with None ->
-            failwith "Input not in domain"
-              (fun _ ->
-                tD_side_warrowing_apinis_Interp_solve _A _B (_C1, _C2, _C3) t x)
-          | Some r -> r);;
-
-let rec analyse_interval_call_string_result_for
-  k gs p =
-    result (executable_domain_ivl, equal_ivl) equal_call_string_gk ivl_tf_st_for
-      ivl_enter_st_for cinit_ivl_st Global (fun a b -> Seed (a, b))
-      (fun _ -> cs_route k) []
-      (tD_side_warrowing_apinis_Interp_solve
-        (equal_prod equal_cfg_node (equal_list equal_cfg_node))
-        equal_call_string_gk
-        ((equal_dg_state
-           (equal_lifted
-             (equal_resolved_st_q
-               (equal_ivl,
-                 bounded_warrowing_ivl.bounded_semilattice_sup_bot_bounded_warrowing.order_bot_bounded_semilattice_sup_bot)))
-           (equal_lifted
-             (equal_resolved_st_q
-               (equal_ivl,
-                 bounded_warrowing_ivl.bounded_semilattice_sup_bot_bounded_warrowing.order_bot_bounded_semilattice_sup_bot)))),
-          (bounded_semilattice_sup_bot_dg_state
-            (bounded_warrowing_lifted
-              (bounded_warrowing_resolved_st_q
-                bounded_warrowing_ivl)).bounded_semilattice_sup_bot_bounded_warrowing
-            (bounded_warrowing_lifted
-              (bounded_warrowing_resolved_st_q
-                bounded_warrowing_ivl)).bounded_semilattice_sup_bot_bounded_warrowing),
-          (warrowing_dg_state
-            (bounded_warrowing_lifted
-              (bounded_warrowing_resolved_st_q bounded_warrowing_ivl))
-            (bounded_warrowing_lifted
-              (bounded_warrowing_resolved_st_q bounded_warrowing_ivl)))))
-      gs p;;
-
-let rec analyse_interval_call_string_result
-  k p = analyse_interval_call_string_result_for k (declared_global p) p;;
-
-let rec analyse_interval_entry_state_join
-  p = verdict_report (executable_domain_ivl, equal_ivl)
-        (equal_routed_gk equal_unit (equal_list equal_ivl))
-        (equal_list equal_ivl) ivl_tf_st_for ivl_enter_st_for cinit_ivl_st
-        (Analysis_Global ()) (fun a b -> Activation_Seed (a, b))
-        (exec_formals_route bot_ivl) []
-        (tD_side_always_join_Interp_solve
-          (equal_prod equal_cfg_node (equal_list equal_ivl))
-          (equal_routed_gk equal_unit (equal_list equal_ivl))
-          ((equal_dg_state
-             (equal_lifted
-               (equal_resolved_st_q
-                 (equal_ivl,
-                   bounded_warrowing_ivl.bounded_semilattice_sup_bot_bounded_warrowing.order_bot_bounded_semilattice_sup_bot)))
-             (equal_lifted
-               (equal_resolved_st_q
-                 (equal_ivl,
-                   bounded_warrowing_ivl.bounded_semilattice_sup_bot_bounded_warrowing.order_bot_bounded_semilattice_sup_bot)))),
-            (bounded_semilattice_sup_bot_dg_state
-              (bounded_warrowing_lifted
-                (bounded_warrowing_resolved_st_q
-                  bounded_warrowing_ivl)).bounded_semilattice_sup_bot_bounded_warrowing
-              (bounded_warrowing_lifted
-                (bounded_warrowing_resolved_st_q
-                  bounded_warrowing_ivl)).bounded_semilattice_sup_bot_bounded_warrowing),
-            (warrowing_dg_state
-              (bounded_warrowing_lifted
-                (bounded_warrowing_resolved_st_q bounded_warrowing_ivl))
-              (bounded_warrowing_lifted
-                (bounded_warrowing_resolved_st_q bounded_warrowing_ivl)))))
-        interval_classify_check (declared_global p) p;;
-
-let rec analyse_interval_entry_state_wpo
-  p = verdict_report (executable_domain_ivl, equal_ivl)
-        (equal_routed_gk equal_unit (equal_list equal_ivl))
-        (equal_list equal_ivl) ivl_tf_st_for ivl_enter_st_for cinit_ivl_st
-        (Analysis_Global ()) (fun a b -> Activation_Seed (a, b))
-        (exec_formals_route bot_ivl) []
-        (tD_side_warrowing_per_origin_Interp_solve
-          (equal_prod equal_cfg_node (equal_list equal_ivl))
-          (equal_routed_gk equal_unit (equal_list equal_ivl))
-          ((equal_dg_state
-             (equal_lifted
-               (equal_resolved_st_q
-                 (equal_ivl,
-                   bounded_warrowing_ivl.bounded_semilattice_sup_bot_bounded_warrowing.order_bot_bounded_semilattice_sup_bot)))
-             (equal_lifted
-               (equal_resolved_st_q
-                 (equal_ivl,
-                   bounded_warrowing_ivl.bounded_semilattice_sup_bot_bounded_warrowing.order_bot_bounded_semilattice_sup_bot)))),
-            (bounded_semilattice_sup_bot_dg_state
-              (bounded_warrowing_lifted
-                (bounded_warrowing_resolved_st_q
-                  bounded_warrowing_ivl)).bounded_semilattice_sup_bot_bounded_warrowing
-              (bounded_warrowing_lifted
-                (bounded_warrowing_resolved_st_q
-                  bounded_warrowing_ivl)).bounded_semilattice_sup_bot_bounded_warrowing),
-            (warrowing_dg_state
-              (bounded_warrowing_lifted
-                (bounded_warrowing_resolved_st_q bounded_warrowing_ivl))
-              (bounded_warrowing_lifted
-                (bounded_warrowing_resolved_st_q bounded_warrowing_ivl)))))
-        interval_classify_check (declared_global p) p;;
+let rec exec_formals_route _A
+  gs u ctx d ca =
+    (let CallEdge (_, pars, _) = ca in
+      formals_context pars
+        (fun_of_resolved_st_q_for _A gs
+          (match d with Bot -> bot_resolved_st_qa _A | Lifted d0 -> d0)));;
 
 let rec preimage_times_const_rep
   x0 k = match x0, k with None, k -> None
@@ -7428,6 +7547,31 @@ let rec plus_int_dom_raw
 
 let rec plus_int_dom mode a b = refine mode (plus_int_dom_raw a b);;
 
+let rec congruence_exact_binop
+  f fallback a b =
+    (if is_empty_congruence a || is_empty_congruence b then bot_congruencea
+      else (match (congruence_singleton a, congruence_singleton b)
+             with (None, _) -> fallback a b | (Some _, None) -> fallback a b
+             | (Some x, Some y) -> congruence_of_int (f x y)));;
+
+let rec congruence_mod
+  x = congruence_exact_binop c_mod
+        (fun a b -> minus_congruence a (times_congruence top_congruencea b)) x;;
+
+let rec parity_mod
+  a b = (if equal_paritya a PBot || equal_paritya b PBot then PBot
+          else (if equal_paritya b PEven then a else PTop));;
+
+let rec mod_int_dom_raw
+  a b = int_congruence_update
+          (fun _ -> congruence_mod (int_congruence a) (int_congruence b))
+          (int_parity_update (fun _ -> parity_mod (int_parity a) (int_parity b))
+            (int_ivl_update (fun _ -> ivl_mod (int_ivl a) (int_ivl b))
+              (int_sign_update (fun _ -> sign_mod (int_sign a) (int_sign b))
+                (top_int_dom_exta int_dom_record_lattice_unit))));;
+
+let rec mod_int_dom mode a b = refine mode (mod_int_dom_raw a b);;
+
 let rec congruence_eqb
   a b = (match (congruence_singleton a, congruence_singleton b)
           with (None, _) -> None | (Some _, None) -> None
@@ -7458,7 +7602,45 @@ let rec int_dom_eqb
         (fun a b -> congruence_eqb (int_congruence a) (int_congruence b))]
       d1 d2;;
 
-let rec congruence_lt uu uv = None;;
+let rec congruence_divides
+  d a = (match rep_congruence a with None -> true
+          | Some (c, m) ->
+            dvd (equal_int, semidom_modulo_int) d c &&
+              dvd (equal_int, semidom_modulo_int) d m);;
+
+let rec congruence_div_const
+  a d = (match rep_congruence a with None -> bot_congruencea
+          | Some (c, m) ->
+            (if equal_inta d zero_inta then congruence_of_int zero_inta
+              else (if congruence_divides d a
+                     then mk_congruence (divide_inta c d) (divide_inta m d)
+                     else top_congruencea)));;
+
+let rec congruence_div_fallback
+  a b = (if is_empty_congruence a || is_empty_congruence b then bot_congruencea
+          else (match congruence_singleton b with None -> top_congruencea
+                 | Some ba -> congruence_div_const a ba));;
+
+let rec congruence_div
+  x = congruence_exact_binop c_div congruence_div_fallback x;;
+
+let rec parity_div
+  a b = (if equal_paritya a PBot || equal_paritya b PBot then PBot else PTop);;
+
+let rec div_int_dom_raw
+  a b = int_congruence_update
+          (fun _ -> congruence_div (int_congruence a) (int_congruence b))
+          (int_parity_update (fun _ -> parity_div (int_parity a) (int_parity b))
+            (int_ivl_update (fun _ -> ivl_div (int_ivl a) (int_ivl b))
+              (int_sign_update (fun _ -> sign_div (int_sign a) (int_sign b))
+                (top_int_dom_exta int_dom_record_lattice_unit))));;
+
+let rec div_int_dom mode a b = refine mode (div_int_dom_raw a b);;
+
+let rec congruence_lt
+  a b = (match (congruence_singleton a, congruence_singleton b)
+          with (None, _) -> None | (Some _, None) -> None
+          | (Some c1, Some c2) -> Some (less_int c1 c2));;
 
 let rec int_dom_lt
   d1 d2 =
@@ -7482,6 +7664,12 @@ let rec aval_int_dom
     | mode, Times (e1, e2), sigma ->
         times_int_dom mode (aval_int_dom mode e1 sigma)
           (aval_int_dom mode e2 sigma)
+    | mode, Div (e1, e2), sigma ->
+        div_int_dom mode (aval_int_dom mode e1 sigma)
+          (aval_int_dom mode e2 sigma)
+    | mode, Mod (e1, e2), sigma ->
+        mod_int_dom mode (aval_int_dom mode e1 sigma)
+          (aval_int_dom mode e2 sigma)
     | mode, Less (e1, e2), sigma ->
         (let a = aval_int_dom mode e1 sigma in
          let b = aval_int_dom mode e2 sigma in
@@ -7489,6 +7677,47 @@ let rec aval_int_dom
                 is_empty_int_dom_ext int_dom_record_lattice_unit b
             then bot_int_dom_exta int_dom_record_lattice_unit
             else int_dom_of_bool_option (int_dom_lt a b)))
+    | mode, LessEq (e1, e2), sigma ->
+        (let a = aval_int_dom mode e2 sigma in
+         let b = aval_int_dom mode e1 sigma in
+          (if is_empty_int_dom_ext int_dom_record_lattice_unit a ||
+                is_empty_int_dom_ext int_dom_record_lattice_unit b
+            then bot_int_dom_exta int_dom_record_lattice_unit
+            else (if equal_option equal_bool (int_dom_lt a b) (Some false)
+                   then int_dom_of_int one_inta
+                   else (if equal_option equal_bool (int_dom_lt a b) (Some true)
+                          then int_dom_of_int zero_inta
+                          else int_dom_bool_unknown))))
+    | mode, Greater (e1, e2), sigma ->
+        (let a = aval_int_dom mode e2 sigma in
+         let b = aval_int_dom mode e1 sigma in
+          (if is_empty_int_dom_ext int_dom_record_lattice_unit a ||
+                is_empty_int_dom_ext int_dom_record_lattice_unit b
+            then bot_int_dom_exta int_dom_record_lattice_unit
+            else int_dom_of_bool_option (int_dom_lt a b)))
+    | mode, GreaterEq (e1, e2), sigma ->
+        (let a = aval_int_dom mode e1 sigma in
+         let b = aval_int_dom mode e2 sigma in
+          (if is_empty_int_dom_ext int_dom_record_lattice_unit a ||
+                is_empty_int_dom_ext int_dom_record_lattice_unit b
+            then bot_int_dom_exta int_dom_record_lattice_unit
+            else (if equal_option equal_bool (int_dom_lt a b) (Some false)
+                   then int_dom_of_int one_inta
+                   else (if equal_option equal_bool (int_dom_lt a b) (Some true)
+                          then int_dom_of_int zero_inta
+                          else int_dom_bool_unknown))))
+    | mode, NotEq (e1, e2), sigma ->
+        (let a = aval_int_dom mode e1 sigma in
+         let b = aval_int_dom mode e2 sigma in
+          (if is_empty_int_dom_ext int_dom_record_lattice_unit a ||
+                is_empty_int_dom_ext int_dom_record_lattice_unit b
+            then bot_int_dom_exta int_dom_record_lattice_unit
+            else (if equal_option equal_bool (int_dom_eqb a b) (Some false)
+                   then int_dom_of_int one_inta
+                   else (if equal_option equal_bool (int_dom_eqb a b)
+                              (Some true)
+                          then int_dom_of_int zero_inta
+                          else int_dom_bool_unknown))))
     | mode, Eq (e1, e2), sigma ->
         (let a = aval_int_dom mode e1 sigma in
          let b = aval_int_dom mode e2 sigma in
@@ -7830,6 +8059,10 @@ let rec aval_congruence
         minus_congruence (aval_congruence e1 sigma) (aval_congruence e2 sigma)
     | Times (e1, e2), sigma ->
         times_congruence (aval_congruence e1 sigma) (aval_congruence e2 sigma)
+    | Div (e1, e2), sigma ->
+        congruence_div (aval_congruence e1 sigma) (aval_congruence e2 sigma)
+    | Mod (e1, e2), sigma ->
+        congruence_mod (aval_congruence e1 sigma) (aval_congruence e2 sigma)
     | Less (e1, e2), sigma ->
         (if is_empty_congruence (aval_congruence e1 sigma) ||
               is_empty_congruence (aval_congruence e2 sigma)
@@ -7843,6 +8076,70 @@ let rec aval_congruence
                             (congruence_lt (aval_congruence e1 sigma)
                               (aval_congruence e2 sigma))
                             (Some false)
+                        then congruence_of_int zero_inta
+                        else sup_congruencea (congruence_of_int zero_inta)
+                               (congruence_of_int one_inta))))
+    | LessEq (e1, e2), sigma ->
+        (if is_empty_congruence (aval_congruence e2 sigma) ||
+              is_empty_congruence (aval_congruence e1 sigma)
+          then bot_congruencea
+          else (if equal_option equal_bool
+                     (congruence_lt (aval_congruence e2 sigma)
+                       (aval_congruence e1 sigma))
+                     (Some false)
+                 then congruence_of_int one_inta
+                 else (if equal_option equal_bool
+                            (congruence_lt (aval_congruence e2 sigma)
+                              (aval_congruence e1 sigma))
+                            (Some true)
+                        then congruence_of_int zero_inta
+                        else sup_congruencea (congruence_of_int zero_inta)
+                               (congruence_of_int one_inta))))
+    | Greater (e1, e2), sigma ->
+        (if is_empty_congruence (aval_congruence e2 sigma) ||
+              is_empty_congruence (aval_congruence e1 sigma)
+          then bot_congruencea
+          else (if equal_option equal_bool
+                     (congruence_lt (aval_congruence e2 sigma)
+                       (aval_congruence e1 sigma))
+                     (Some true)
+                 then congruence_of_int one_inta
+                 else (if equal_option equal_bool
+                            (congruence_lt (aval_congruence e2 sigma)
+                              (aval_congruence e1 sigma))
+                            (Some false)
+                        then congruence_of_int zero_inta
+                        else sup_congruencea (congruence_of_int zero_inta)
+                               (congruence_of_int one_inta))))
+    | GreaterEq (e1, e2), sigma ->
+        (if is_empty_congruence (aval_congruence e1 sigma) ||
+              is_empty_congruence (aval_congruence e2 sigma)
+          then bot_congruencea
+          else (if equal_option equal_bool
+                     (congruence_lt (aval_congruence e1 sigma)
+                       (aval_congruence e2 sigma))
+                     (Some false)
+                 then congruence_of_int one_inta
+                 else (if equal_option equal_bool
+                            (congruence_lt (aval_congruence e1 sigma)
+                              (aval_congruence e2 sigma))
+                            (Some true)
+                        then congruence_of_int zero_inta
+                        else sup_congruencea (congruence_of_int zero_inta)
+                               (congruence_of_int one_inta))))
+    | NotEq (e1, e2), sigma ->
+        (if is_empty_congruence (aval_congruence e1 sigma) ||
+              is_empty_congruence (aval_congruence e2 sigma)
+          then bot_congruencea
+          else (if equal_option equal_bool
+                     (congruence_eqb (aval_congruence e1 sigma)
+                       (aval_congruence e2 sigma))
+                     (Some false)
+                 then congruence_of_int one_inta
+                 else (if equal_option equal_bool
+                            (congruence_eqb (aval_congruence e1 sigma)
+                              (aval_congruence e2 sigma))
+                            (Some true)
                         then congruence_of_int zero_inta
                         else sup_congruencea (congruence_of_int zero_inta)
                                (congruence_of_int one_inta))))
@@ -8060,6 +8357,140 @@ let rec congruence_entry_state_equations
         (semilattice_sup_resolved_st_q
           bounded_semilattice_sup_bot_congruence));;
 
+let rec update_global_always_join (_A1, _A2) _B _C
+  da orig g d state =
+    (let statea =
+       rho_update
+         (fun _ -> fun_upd _C (rho state) g (fmupd _B orig d (rho state g)))
+         state
+       in
+     let db =
+       sup _A2.semilattice_sup_bounded_semilattice_sup_bot.sup_semilattice_sup
+         da d
+       in
+      (if eq _A1 db da then (None, statea) else (Some db, statea)));;
+
+let rec tD_side_always_join_Interp_solve_rec_c _A _B (_C1, _C2, _C3)
+  t s = (match s
+          with Q (y, (x, (state, ug_state))) ->
+            bind (if member _A x (c state)
+                   then Some (sigma state (Inl x),
+                               (point_update
+                                  (fun _ -> insert _A x (point state)) state,
+                                 ug_state))
+                   else tD_side_always_join_Interp_solve_rec_c _A _B
+                          (_C1, _C2, _C3) t
+                          (I (x, (c_update (fun _ -> insert _A x (c state))
+                                    state,
+                                   ug_state))))
+              (fun (xd, (statea, ug_statea)) ->
+                Some (xd, (infl_update
+                             (fun _ ->
+                               fminsert (equal_sum _A _B) (infl statea) (Inl x)
+                                 y)
+                             statea,
+                            ug_statea)))
+          | I (x, (state, ug_state)) ->
+            (if not (member _A x (stabl state))
+              then bind (tD_side_always_join_Interp_solve_rec_c _A _B
+                          (_C1, _C2, _C3) t (R (x, (state, ug_state))))
+                     (fun (d_new, (state1, ug_state1)) ->
+                       (let d_newa =
+                          (if member _A x (point state)
+                            then warrow _C3 (sigma state1 (Inl x)) d_new
+                            else d_new)
+                          in
+                         (if eq _C1 (sigma state1 (Inl x)) d_newa
+                           then Some (d_newa,
+                                       (point_update
+  (fun _ -> remove _A x (point state1))
+  (c_update (fun _ -> remove _A x (c state1)) state1),
+ ug_state1))
+                           else (let (infl1, stabl1) =
+                                   destab_opt _A _B (Inl x) (infl state1)
+                                     (stabl state1) (c state1)
+                                   in
+                                  tD_side_always_join_Interp_solve_rec_c _A _B
+                                    (_C1, _C2, _C3) t
+                                    (I (x,
+ (sigma_update
+    (fun _ -> fun_upd (equal_sum _A _B) (sigma state1) (Inl x) d_newa)
+    (stabl_update (fun _ -> stabl1) (infl_update (fun _ -> infl1) state1)),
+   ug_state1)))))))
+              else Some (sigma state (Inl x),
+                          (point_update (fun _ -> remove _A x (point state))
+                             (c_update (fun _ -> remove _A x (c state)) state),
+                            ug_state)))
+          | R (x, (state, ug_state)) ->
+            bind (tD_side_always_join_Interp_solve_rec_c _A _B (_C1, _C2, _C3) t
+                   (E (x, (t x, ((fun _ ->
+                                   bot _C2.order_bot_bounded_semilattice_sup_bot.bot_order_bot),
+                                  (stabl_update
+                                     (fun _ -> insert _A x (stabl state)) state,
+                                    ug_state))))))
+              (fun (xd, (statea, ug_statea)) ->
+                (if member _A x (stabl statea)
+                  then Some (xd, (statea, ug_statea))
+                  else tD_side_always_join_Interp_solve_rec_c _A _B
+                         (_C1, _C2, _C3) t (R (x, (statea, ug_statea)))))
+          | E (_, (Answer d, (_, (state, ug_state)))) ->
+            Some (d, (state, ug_state))
+          | E (x, (QueryL (y, g), (sides_a_c_c, (state, ug_state)))) ->
+            bind (tD_side_always_join_Interp_solve_rec_c _A _B (_C1, _C2, _C3) t
+                   (Q (x, (y, (state, ug_state)))))
+              (fun (yd, (statea, ug_statea)) ->
+                tD_side_always_join_Interp_solve_rec_c _A _B (_C1, _C2, _C3) t
+                  (E (x, (g yd, (sides_a_c_c, (statea, ug_statea))))))
+          | E (x, (QueryG (y, g), (sides_a_c_c, (state, ug_state)))) ->
+            tD_side_always_join_Interp_solve_rec_c _A _B (_C1, _C2, _C3) t
+              (E (x, (g (sigma state (Inr y)),
+                       (sides_a_c_c,
+                         (infl_update
+                            (fun _ ->
+                              fminsert (equal_sum _A _B) (infl state) (Inr y) x)
+                            state,
+                           ug_state)))))
+          | E (x, (Side (y, d, ta), (sides_a_c_c, (state, ug_state)))) ->
+            (let da =
+               sup _C2.semilattice_sup_bounded_semilattice_sup_bot.sup_semilattice_sup
+                 (sides_a_c_c y) d
+               in
+             let sides_a_c_ca = fun_upd _B sides_a_c_c y da in
+              (match
+                update_global_always_join (_C1, _C2) _A _B (sigma state (Inr y))
+                  x y da ug_state
+                with (None, ug_statea) ->
+                  tD_side_always_join_Interp_solve_rec_c _A _B (_C1, _C2, _C3) t
+                    (E (x, (ta, (sides_a_c_ca, (state, ug_statea)))))
+                | (Some db, ug_statea) ->
+                  (let (infla, stabla) =
+                     destab_opt _A _B (Inr y) (infl state) (stabl state)
+                       (c state)
+                     in
+                    tD_side_always_join_Interp_solve_rec_c _A _B (_C1, _C2, _C3)
+                      t (E (x, (ta, (sides_a_c_ca,
+                                      (sigma_update
+ (fun _ -> fun_upd (equal_sum _A _B) (sigma state) (Inr y) db)
+ (stabl_update (fun _ -> stabla) (infl_update (fun _ -> infla) state)),
+ug_statea)))))))));;
+
+let rec tD_side_always_join_Interp_solve_c _A _B (_C1, _C2, _C3)
+  t x = bind (tD_side_always_join_Interp_solve_rec_c _A _B (_C1, _C2, _C3) t
+               (I (x, (c_update
+                         (fun _ -> insert _A x (c (init_state (_C2, _C3))))
+                         (init_state (_C2, _C3)),
+                        init_basic_ug_state
+                          _C2.order_bot_bounded_semilattice_sup_bot))))
+          (fun (_, (state, _)) -> Some (stabl state, sigma state));;
+
+let rec tD_side_always_join_Interp_solve _A _B (_C1, _C2, _C3)
+  t x = (match tD_side_always_join_Interp_solve_c _A _B (_C1, _C2, _C3) t x
+          with None ->
+            failwith "Input not in domain"
+              (fun _ ->
+                tD_side_always_join_Interp_solve _A _B (_C1, _C2, _C3) t x)
+          | Some r -> r);;
+
 let rec congruence_entry_state_solution
   gs p =
     tD_side_always_join_Interp_solve
@@ -8129,6 +8560,137 @@ let rec analyse_congruence_call_string_result
                   (bounded_warrowing_resolved_st_q
                     bounded_warrowing_congruence)))))
           (declared_global p) p;;
+
+let rec update_global_per_origin (_A1, _A2) _B _C
+  da orig g d state =
+    (let statea =
+       rho_update
+         (fun _ -> fun_upd _C (rho state) g (fmupd _B orig d (rho state g)))
+         state
+       in
+     let db = sup_over_origins _B _A2 statea g in
+      (if eq _A1 db da then (None, statea) else (Some db, statea)));;
+
+let rec tD_side_per_origin_Interp_solve_rec_c _A _B (_C1, _C2, _C3)
+  t s = (match s
+          with Q (y, (x, (state, ug_state))) ->
+            bind (if member _A x (c state)
+                   then Some (sigma state (Inl x),
+                               (point_update
+                                  (fun _ -> insert _A x (point state)) state,
+                                 ug_state))
+                   else tD_side_per_origin_Interp_solve_rec_c _A _B
+                          (_C1, _C2, _C3) t
+                          (I (x, (c_update (fun _ -> insert _A x (c state))
+                                    state,
+                                   ug_state))))
+              (fun (xd, (statea, ug_statea)) ->
+                Some (xd, (infl_update
+                             (fun _ ->
+                               fminsert (equal_sum _A _B) (infl statea) (Inl x)
+                                 y)
+                             statea,
+                            ug_statea)))
+          | I (x, (state, ug_state)) ->
+            (if not (member _A x (stabl state))
+              then bind (tD_side_per_origin_Interp_solve_rec_c _A _B
+                          (_C1, _C2, _C3) t (R (x, (state, ug_state))))
+                     (fun (d_new, (state1, ug_state1)) ->
+                       (let d_newa =
+                          (if member _A x (point state)
+                            then warrow _C3 (sigma state1 (Inl x)) d_new
+                            else d_new)
+                          in
+                         (if eq _C1 (sigma state1 (Inl x)) d_newa
+                           then Some (d_newa,
+                                       (point_update
+  (fun _ -> remove _A x (point state1))
+  (c_update (fun _ -> remove _A x (c state1)) state1),
+ ug_state1))
+                           else (let (infl1, stabl1) =
+                                   destab_opt _A _B (Inl x) (infl state1)
+                                     (stabl state1) (c state1)
+                                   in
+                                  tD_side_per_origin_Interp_solve_rec_c _A _B
+                                    (_C1, _C2, _C3) t
+                                    (I (x,
+ (sigma_update
+    (fun _ -> fun_upd (equal_sum _A _B) (sigma state1) (Inl x) d_newa)
+    (stabl_update (fun _ -> stabl1) (infl_update (fun _ -> infl1) state1)),
+   ug_state1)))))))
+              else Some (sigma state (Inl x),
+                          (point_update (fun _ -> remove _A x (point state))
+                             (c_update (fun _ -> remove _A x (c state)) state),
+                            ug_state)))
+          | R (x, (state, ug_state)) ->
+            bind (tD_side_per_origin_Interp_solve_rec_c _A _B (_C1, _C2, _C3) t
+                   (E (x, (t x, ((fun _ ->
+                                   bot _C2.order_bot_bounded_semilattice_sup_bot.bot_order_bot),
+                                  (stabl_update
+                                     (fun _ -> insert _A x (stabl state)) state,
+                                    ug_state))))))
+              (fun (xd, (statea, ug_statea)) ->
+                (if member _A x (stabl statea)
+                  then Some (xd, (statea, ug_statea))
+                  else tD_side_per_origin_Interp_solve_rec_c _A _B
+                         (_C1, _C2, _C3) t (R (x, (statea, ug_statea)))))
+          | E (_, (Answer d, (_, (state, ug_state)))) ->
+            Some (d, (state, ug_state))
+          | E (x, (QueryL (y, g), (sides_a_c_c, (state, ug_state)))) ->
+            bind (tD_side_per_origin_Interp_solve_rec_c _A _B (_C1, _C2, _C3) t
+                   (Q (x, (y, (state, ug_state)))))
+              (fun (yd, (statea, ug_statea)) ->
+                tD_side_per_origin_Interp_solve_rec_c _A _B (_C1, _C2, _C3) t
+                  (E (x, (g yd, (sides_a_c_c, (statea, ug_statea))))))
+          | E (x, (QueryG (y, g), (sides_a_c_c, (state, ug_state)))) ->
+            tD_side_per_origin_Interp_solve_rec_c _A _B (_C1, _C2, _C3) t
+              (E (x, (g (sigma state (Inr y)),
+                       (sides_a_c_c,
+                         (infl_update
+                            (fun _ ->
+                              fminsert (equal_sum _A _B) (infl state) (Inr y) x)
+                            state,
+                           ug_state)))))
+          | E (x, (Side (y, d, ta), (sides_a_c_c, (state, ug_state)))) ->
+            (let da =
+               sup _C2.semilattice_sup_bounded_semilattice_sup_bot.sup_semilattice_sup
+                 (sides_a_c_c y) d
+               in
+             let sides_a_c_ca = fun_upd _B sides_a_c_c y da in
+              (match
+                update_global_per_origin (_C1, _C2) _A _B (sigma state (Inr y))
+                  x y da ug_state
+                with (None, ug_statea) ->
+                  tD_side_per_origin_Interp_solve_rec_c _A _B (_C1, _C2, _C3) t
+                    (E (x, (ta, (sides_a_c_ca, (state, ug_statea)))))
+                | (Some db, ug_statea) ->
+                  (let (infla, stabla) =
+                     destab_opt _A _B (Inr y) (infl state) (stabl state)
+                       (c state)
+                     in
+                    tD_side_per_origin_Interp_solve_rec_c _A _B (_C1, _C2, _C3)
+                      t (E (x, (ta, (sides_a_c_ca,
+                                      (sigma_update
+ (fun _ -> fun_upd (equal_sum _A _B) (sigma state) (Inr y) db)
+ (stabl_update (fun _ -> stabla) (infl_update (fun _ -> infla) state)),
+ug_statea)))))))));;
+
+let rec tD_side_per_origin_Interp_solve_c _A _B (_C1, _C2, _C3)
+  t x = bind (tD_side_per_origin_Interp_solve_rec_c _A _B (_C1, _C2, _C3) t
+               (I (x, (c_update
+                         (fun _ -> insert _A x (c (init_state (_C2, _C3))))
+                         (init_state (_C2, _C3)),
+                        init_basic_ug_state
+                          _C2.order_bot_bounded_semilattice_sup_bot))))
+          (fun (_, (state, _)) -> Some (stabl state, sigma state));;
+
+let rec tD_side_per_origin_Interp_solve _A _B (_C1, _C2, _C3)
+  t x = (match tD_side_per_origin_Interp_solve_c _A _B (_C1, _C2, _C3) t x
+          with None ->
+            failwith "Input not in domain"
+              (fun _ ->
+                tD_side_per_origin_Interp_solve _A _B (_C1, _C2, _C3) t x)
+          | Some r -> r);;
 
 let rec congruence_po_root_query p = (cfg_exit (prog_cfg p), ());;
 
@@ -8607,6 +9169,10 @@ let rec aval_parity
         minus_parity (aval_parity a sigma) (aval_parity b sigma)
     | Times (a, b), sigma ->
         times_parity (aval_parity a sigma) (aval_parity b sigma)
+    | Div (a, b), sigma ->
+        parity_div (aval_parity a sigma) (aval_parity b sigma)
+    | Mod (a, b), sigma ->
+        parity_mod (aval_parity a sigma) (aval_parity b sigma)
     | Less (a, b), sigma ->
         (if is_empty_parity (aval_parity a sigma) ||
               is_empty_parity (aval_parity b sigma)
@@ -8619,6 +9185,58 @@ let rec aval_parity
                             (parity_lt (aval_parity a sigma)
                               (aval_parity b sigma))
                             (Some false)
+                        then PEven else PTop)))
+    | LessEq (a, b), sigma ->
+        (if is_empty_parity (aval_parity b sigma) ||
+              is_empty_parity (aval_parity a sigma)
+          then bot_paritya
+          else (if equal_option equal_bool
+                     (parity_lt (aval_parity b sigma) (aval_parity a sigma))
+                     (Some false)
+                 then POdd
+                 else (if equal_option equal_bool
+                            (parity_lt (aval_parity b sigma)
+                              (aval_parity a sigma))
+                            (Some true)
+                        then PEven else PTop)))
+    | Greater (a, b), sigma ->
+        (if is_empty_parity (aval_parity b sigma) ||
+              is_empty_parity (aval_parity a sigma)
+          then bot_paritya
+          else (if equal_option equal_bool
+                     (parity_lt (aval_parity b sigma) (aval_parity a sigma))
+                     (Some true)
+                 then POdd
+                 else (if equal_option equal_bool
+                            (parity_lt (aval_parity b sigma)
+                              (aval_parity a sigma))
+                            (Some false)
+                        then PEven else PTop)))
+    | GreaterEq (a, b), sigma ->
+        (if is_empty_parity (aval_parity a sigma) ||
+              is_empty_parity (aval_parity b sigma)
+          then bot_paritya
+          else (if equal_option equal_bool
+                     (parity_lt (aval_parity a sigma) (aval_parity b sigma))
+                     (Some false)
+                 then POdd
+                 else (if equal_option equal_bool
+                            (parity_lt (aval_parity a sigma)
+                              (aval_parity b sigma))
+                            (Some true)
+                        then PEven else PTop)))
+    | NotEq (a, b), sigma ->
+        (if is_empty_parity (aval_parity a sigma) ||
+              is_empty_parity (aval_parity b sigma)
+          then bot_paritya
+          else (if equal_option equal_bool
+                     (parity_eqb (aval_parity a sigma) (aval_parity b sigma))
+                     (Some false)
+                 then POdd
+                 else (if equal_option equal_bool
+                            (parity_eqb (aval_parity a sigma)
+                              (aval_parity b sigma))
+                            (Some true)
                         then PEven else PTop)))
     | Eq (a, b), sigma ->
         (if is_empty_parity (aval_parity a sigma) ||
@@ -9223,6 +9841,9 @@ let rec analyse_sign_call_string_result
                   (bounded_warrowing_resolved_st_q bounded_warrowing_sign)))))
           (declared_global p) p;;
 
+let rec map_option f x1 = match f, x1 with f, None -> None
+                     | f, Some x2 -> Some (f x2);;
+
 let rec congruence_truthy_query
   e d = map_option not
           (congruence_eqb (aval_congruence e d)
@@ -9237,12 +9858,25 @@ let rec congruence_check_query
         or_opt (congruence_check_query b1 d) (congruence_check_query b2 d)
     | Less (a, b), d ->
         congruence_lt (aval_congruence a d) (aval_congruence b d)
+    | LessEq (a, b), d ->
+        map_option not
+          (congruence_lt (aval_congruence b d) (aval_congruence a d))
+    | Greater (a, b), d ->
+        congruence_lt (aval_congruence b d) (aval_congruence a d)
+    | GreaterEq (a, b), d ->
+        map_option not
+          (congruence_lt (aval_congruence a d) (aval_congruence b d))
     | Eq (a, b), d -> congruence_eqb (aval_congruence a d) (aval_congruence b d)
+    | NotEq (a, b), d ->
+        map_option not
+          (congruence_eqb (aval_congruence a d) (aval_congruence b d))
     | N v, d -> congruence_truthy_query (N v) d
     | V v, d -> congruence_truthy_query (V v) d
     | Plus (v, va), d -> congruence_truthy_query (Plus (v, va)) d
     | Minus (v, va), d -> congruence_truthy_query (Minus (v, va)) d
-    | Times (v, va), d -> congruence_truthy_query (Times (v, va)) d;;
+    | Times (v, va), d -> congruence_truthy_query (Times (v, va)) d
+    | Div (v, va), d -> congruence_truthy_query (Div (v, va)) d
+    | Mod (v, va), d -> congruence_truthy_query (Mod (v, va)) d;;
 
 let rec congruence_classify_check
   c d = (match congruence_check_query c d with None -> Check_Unknown
@@ -9614,6 +10248,44 @@ let rec analyse_sign_result_per_origin_for x = sign_po_result x;;
 let rec analyse_sign_result_per_origin
   p = analyse_sign_result_per_origin_for (declared_global p) p;;
 
+let rec interval_eq
+  a b = (if interval_eq_true a b then Some true
+          else (if interval_eq_false a b then Some false else None));;
+
+let rec interval_truthy_query
+  e d = map_option not (interval_eq (aval_ivl e d) (aval_ivl (N zero_inta) d));;
+
+let rec interval_less
+  a b = (if interval_less_true a b then Some true
+          else (if interval_less_false a b then Some false else None));;
+
+let rec interval_check_query
+  x0 d = match x0, d with Not b, d -> map_option not (interval_check_query b d)
+    | And (b1, b2), d ->
+        and_opt (interval_check_query b1 d) (interval_check_query b2 d)
+    | Or (b1, b2), d ->
+        or_opt (interval_check_query b1 d) (interval_check_query b2 d)
+    | Less (a, b), d -> interval_less (aval_ivl a d) (aval_ivl b d)
+    | LessEq (a, b), d ->
+        map_option not (interval_less (aval_ivl b d) (aval_ivl a d))
+    | Greater (a, b), d -> interval_less (aval_ivl b d) (aval_ivl a d)
+    | GreaterEq (a, b), d ->
+        map_option not (interval_less (aval_ivl a d) (aval_ivl b d))
+    | Eq (a, b), d -> interval_eq (aval_ivl a d) (aval_ivl b d)
+    | NotEq (a, b), d ->
+        map_option not (interval_eq (aval_ivl a d) (aval_ivl b d))
+    | N v, d -> interval_truthy_query (N v) d
+    | V v, d -> interval_truthy_query (V v) d
+    | Plus (v, va), d -> interval_truthy_query (Plus (v, va)) d
+    | Minus (v, va), d -> interval_truthy_query (Minus (v, va)) d
+    | Times (v, va), d -> interval_truthy_query (Times (v, va)) d
+    | Div (v, va), d -> interval_truthy_query (Div (v, va)) d
+    | Mod (v, va), d -> interval_truthy_query (Mod (v, va)) d;;
+
+let rec interval_classify_check
+  c d = (match interval_check_query c d with None -> Check_Unknown
+          | Some true -> Check_Proved | Some false -> Check_Refuted);;
+
 let rec analyse_int_per_origin_result_for
   mode gs p =
     result
@@ -9845,12 +10517,21 @@ let rec parity_check_query
     | Or (b1, b2), d ->
         or_opt (parity_check_query b1 d) (parity_check_query b2 d)
     | Less (a, b), d -> parity_less (aval_parity a d) (aval_parity b d)
+    | LessEq (a, b), d ->
+        map_option not (parity_less (aval_parity b d) (aval_parity a d))
+    | Greater (a, b), d -> parity_less (aval_parity b d) (aval_parity a d)
+    | GreaterEq (a, b), d ->
+        map_option not (parity_less (aval_parity a d) (aval_parity b d))
     | Eq (a, b), d -> parity_eq (aval_parity a d) (aval_parity b d)
+    | NotEq (a, b), d ->
+        map_option not (parity_eq (aval_parity a d) (aval_parity b d))
     | N v, d -> parity_truthy_query (N v) d
     | V v, d -> parity_truthy_query (V v) d
     | Plus (v, va), d -> parity_truthy_query (Plus (v, va)) d
     | Minus (v, va), d -> parity_truthy_query (Minus (v, va)) d
-    | Times (v, va), d -> parity_truthy_query (Times (v, va)) d;;
+    | Times (v, va), d -> parity_truthy_query (Times (v, va)) d
+    | Div (v, va), d -> parity_truthy_query (Div (v, va)) d
+    | Mod (v, va), d -> parity_truthy_query (Mod (v, va)) d;;
 
 let rec parity_classify_check
   c d = (match parity_check_query c d with None -> Check_Unknown
@@ -9889,10 +10570,23 @@ let rec point_lines
     (match st with Bot -> ["unreachable"]
       | Lifted s -> map (fun x -> implode (state_line s x)) vars);;
 
+let rec result_keys (Analysis_Result (x1, x2)) = x1;;
+
+let rec result_at (Analysis_Result (x1, x2)) = x2;;
+
+let rec lookup_context _A
+  r v ctx =
+    (if member (equal_prod equal_cfg_node _A) (v, ctx) (result_keys r)
+      then result_at r v ctx else Bot);;
+
 let rec ordered_by_key
   key s =
     map (fun k -> the_elem (filter (fun x -> (((key x) : string) = k)) s))
       (sorted_list_of_set (equal_literal, linorder_literal) (image key s));;
+
+let rec contexts_at
+  r v = image snd
+          (filter (fun (va, _) -> equal_cfg_nodea va v) (result_keys r));;
 
 let rec map_lift f x = bind_lift x (fun a -> Lifted (f a));;
 
@@ -9959,94 +10653,6 @@ let rec analyse_int_join_result_for
 let rec analyse_int_join_result
   p = analyse_int_join_result_for Refine_Fixpoint (declared_global p) p;;
 
-let char_0x7C : char = Chr (Z.of_int 124);;
-
-let char_0x3C : char = Chr (Z.of_int 60);;
-
-let char_0x2A : char = Chr (Z.of_int 42);;
-
-let char_0x26 : char = Chr (Z.of_int 38);;
-
-let char_0x21 : char = Chr (Z.of_int 33);;
-
-let rec exp_prio = function N uu -> nat_of_integer (Z.of_int 1000)
-                   | V uv -> nat_of_integer (Z.of_int 1000)
-                   | Not uw -> nat_of_integer (Z.of_int 80)
-                   | Times (ux, uy) -> nat_of_integer (Z.of_int 70)
-                   | Plus (uz, va) -> nat_of_integer (Z.of_int 60)
-                   | Minus (vb, vc) -> nat_of_integer (Z.of_int 60)
-                   | Less (vd, ve) -> nat_of_integer (Z.of_int 50)
-                   | Eq (vf, vg) -> nat_of_integer (Z.of_int 50)
-                   | And (vh, vi) -> nat_of_integer (Z.of_int 40)
-                   | Or (vj, vk) -> nat_of_integer (Z.of_int 30);;
-
-let rec string_of_exp
-  min_prio e =
-    (let body =
-       (match e with N a -> string_of_int a | V a -> explode a
-         | Plus (a, b) ->
-           string_of_exp (nat_of_integer (Z.of_int 60)) a @
-             [char_0x2B] @ string_of_exp (nat_of_integer (Z.of_int 61)) b
-         | Minus (a, b) ->
-           string_of_exp (nat_of_integer (Z.of_int 60)) a @
-             [char_0x2D] @ string_of_exp (nat_of_integer (Z.of_int 61)) b
-         | Times (a, b) ->
-           string_of_exp (nat_of_integer (Z.of_int 70)) a @
-             [char_0x2A] @ string_of_exp (nat_of_integer (Z.of_int 71)) b
-         | Less (a, b) ->
-           string_of_exp (nat_of_integer (Z.of_int 51)) a @
-             [char_0x3C] @ string_of_exp (nat_of_integer (Z.of_int 51)) b
-         | Eq (a, b) ->
-           string_of_exp (nat_of_integer (Z.of_int 51)) a @
-             [char_0x3D; char_0x3D] @
-               string_of_exp (nat_of_integer (Z.of_int 51)) b
-         | Not a -> [char_0x21] @ string_of_exp (nat_of_integer (Z.of_int 80)) a
-         | And (a, b) ->
-           string_of_exp (nat_of_integer (Z.of_int 40)) a @
-             [char_0x26; char_0x26] @
-               string_of_exp (nat_of_integer (Z.of_int 41)) b
-         | Or (a, b) ->
-           string_of_exp (nat_of_integer (Z.of_int 30)) a @
-             [char_0x7C; char_0x7C] @
-               string_of_exp (nat_of_integer (Z.of_int 31)) b)
-       in
-      (if less_nat (exp_prio e) min_prio then [char_0x28] @ body @ [char_0x29]
-        else body));;
-
-let rec exp_vnames_list
-  b = sorted_list_of_set (equal_literal, linorder_literal) (exp_vnames b);;
-
-let rec state_slice
-  st cnd =
-    (match st with Bot -> ""
-      | Lifted f ->
-        implode
-          (comma_join
-            (map (fun x ->
-                   explode x @ [char_0x3D] @ string_of_abstract_value (f x))
-              (exp_vnames_list cnd))));;
-
-let rec check_rows_of
-  env verdicts =
-    map (fun (v, (cnd, verdict)) ->
-          Check_Row
-            (v, cnd, implode (string_of_exp zero_nat cnd), verdict,
-              state_slice (env v) cnd))
-      verdicts;;
-
-let rec report_output
-  env rows globals =
-    Analysis_Output (None, None, check_rows_of env rows, globals);;
-
-let rec verdict_report_answer
-  view rows =
-    (match view
-      with View_Report -> Analysed (report_output (fun _ -> Bot) rows [])
-      | View_Checks -> Unsupported_Configuration
-      | View_States -> Unsupported_Configuration
-      | View_Checked_States -> Unsupported_Configuration
-      | View_Contexts -> Unsupported_Configuration);;
-
 let rec node_annotation_update
   node_annotationa
     (Analysis_graph_config_ext
@@ -10061,6 +10667,93 @@ let rec node_annotation_update
           owner_of, cluster_label, source_text,
           node_annotationa node_annotation, more);;
 
+let char_0x7C : char = Chr (Z.of_int 124);;
+
+let char_0x3E : char = Chr (Z.of_int 62);;
+
+let char_0x3C : char = Chr (Z.of_int 60);;
+
+let char_0x2F : char = Chr (Z.of_int 47);;
+
+let char_0x2A : char = Chr (Z.of_int 42);;
+
+let char_0x26 : char = Chr (Z.of_int 38);;
+
+let char_0x25 : char = Chr (Z.of_int 37);;
+
+let char_0x21 : char = Chr (Z.of_int 33);;
+
+let rec exp_prio = function N uu -> nat_of_integer (Z.of_int 1000)
+                   | V uv -> nat_of_integer (Z.of_int 1000)
+                   | Not uw -> nat_of_integer (Z.of_int 90)
+                   | Times (ux, uy) -> nat_of_integer (Z.of_int 80)
+                   | Div (uz, va) -> nat_of_integer (Z.of_int 80)
+                   | Mod (vb, vc) -> nat_of_integer (Z.of_int 80)
+                   | Plus (vd, ve) -> nat_of_integer (Z.of_int 70)
+                   | Minus (vf, vg) -> nat_of_integer (Z.of_int 70)
+                   | Less (vh, vi) -> nat_of_integer (Z.of_int 60)
+                   | LessEq (vj, vk) -> nat_of_integer (Z.of_int 60)
+                   | Greater (vl, vm) -> nat_of_integer (Z.of_int 60)
+                   | GreaterEq (vn, vo) -> nat_of_integer (Z.of_int 60)
+                   | NotEq (vp, vq) -> nat_of_integer (Z.of_int 50)
+                   | Eq (vr, vs) -> nat_of_integer (Z.of_int 50)
+                   | And (vt, vu) -> nat_of_integer (Z.of_int 40)
+                   | Or (vv, vw) -> nat_of_integer (Z.of_int 30);;
+
+let rec string_of_exp
+  min_prio e =
+    (let body =
+       (match e with N a -> string_of_int a | V a -> explode a
+         | Plus (a, b) ->
+           string_of_exp (nat_of_integer (Z.of_int 70)) a @
+             [char_0x2B] @ string_of_exp (nat_of_integer (Z.of_int 71)) b
+         | Minus (a, b) ->
+           string_of_exp (nat_of_integer (Z.of_int 70)) a @
+             [char_0x2D] @ string_of_exp (nat_of_integer (Z.of_int 71)) b
+         | Times (a, b) ->
+           string_of_exp (nat_of_integer (Z.of_int 80)) a @
+             [char_0x2A] @ string_of_exp (nat_of_integer (Z.of_int 81)) b
+         | Div (a, b) ->
+           string_of_exp (nat_of_integer (Z.of_int 80)) a @
+             [char_0x2F] @ string_of_exp (nat_of_integer (Z.of_int 81)) b
+         | Mod (a, b) ->
+           string_of_exp (nat_of_integer (Z.of_int 80)) a @
+             [char_0x25] @ string_of_exp (nat_of_integer (Z.of_int 81)) b
+         | Less (a, b) ->
+           string_of_exp (nat_of_integer (Z.of_int 61)) a @
+             [char_0x3C] @ string_of_exp (nat_of_integer (Z.of_int 61)) b
+         | LessEq (a, b) ->
+           string_of_exp (nat_of_integer (Z.of_int 61)) a @
+             [char_0x3C; char_0x3D] @
+               string_of_exp (nat_of_integer (Z.of_int 61)) b
+         | Greater (a, b) ->
+           string_of_exp (nat_of_integer (Z.of_int 61)) a @
+             [char_0x3E] @ string_of_exp (nat_of_integer (Z.of_int 61)) b
+         | GreaterEq (a, b) ->
+           string_of_exp (nat_of_integer (Z.of_int 61)) a @
+             [char_0x3E; char_0x3D] @
+               string_of_exp (nat_of_integer (Z.of_int 61)) b
+         | NotEq (a, b) ->
+           string_of_exp (nat_of_integer (Z.of_int 51)) a @
+             [char_0x21; char_0x3D] @
+               string_of_exp (nat_of_integer (Z.of_int 51)) b
+         | Eq (a, b) ->
+           string_of_exp (nat_of_integer (Z.of_int 51)) a @
+             [char_0x3D; char_0x3D] @
+               string_of_exp (nat_of_integer (Z.of_int 51)) b
+         | Not a -> [char_0x21] @ string_of_exp (nat_of_integer (Z.of_int 90)) a
+         | And (a, b) ->
+           string_of_exp (nat_of_integer (Z.of_int 40)) a @
+             [char_0x26; char_0x26] @
+               string_of_exp (nat_of_integer (Z.of_int 41)) b
+         | Or (a, b) ->
+           string_of_exp (nat_of_integer (Z.of_int 30)) a @
+             [char_0x7C; char_0x7C] @
+               string_of_exp (nat_of_integer (Z.of_int 31)) b)
+       in
+      (if less_nat (exp_prio e) min_prio then [char_0x28] @ body @ [char_0x29]
+        else body));;
+
 let char_0x6B : char = Chr (Z.of_int 107);;
 
 let char_0x68 : char = Chr (Z.of_int 104);;
@@ -10072,6 +10765,10 @@ let rec dead_check_annotation
                [char_0x20; char_0x5B; char_0x64; char_0x65; char_0x61;
                  char_0x64; char_0x5D],
             NS_Unreachable);;
+
+let rec classify_point
+  classify c x2 = match classify, c, x2 with classify, c, Bot -> Bot
+    | classify, c, Lifted st -> Lifted (classify c st);;
 
 let char_0x77 : char = Chr (Z.of_int 119);;
 
@@ -10217,35 +10914,32 @@ let char_0x62 : char = Chr (Z.of_int 98);;
 
 let char_0x5F : char = Chr (Z.of_int 95);;
 
-let char_0x3E : char = Chr (Z.of_int 62);;
-
 let char_0x3B : char = Chr (Z.of_int 59);;
-
-let char_0x3A : char = Chr (Z.of_int 58);;
 
 let source_nl : char list = [char_0x0A];;
 
 let rec string_of_com
-  = function SKIP -> [char_0x73; char_0x6B; char_0x69; char_0x70]
+  = function SKIP -> [char_0x73; char_0x6B; char_0x69; char_0x70; char_0x3B]
     | Assign (x, e) ->
         explode x @
-          [char_0x20; char_0x3A; char_0x3D; char_0x20] @
-            string_of_exp zero_nat e
+          [char_0x20; char_0x3D; char_0x20] @
+            string_of_exp zero_nat e @ [char_0x3B]
     | Check c ->
         [char_0x5F; char_0x5F; char_0x76; char_0x6F; char_0x62; char_0x6C;
           char_0x69; char_0x6E; char_0x74; char_0x5F; char_0x63; char_0x68;
           char_0x65; char_0x63; char_0x6B; char_0x28] @
-          string_of_exp zero_nat c @ [char_0x29]
-    | Seq (c1, c2) ->
-        string_of_com c1 @ [char_0x3B] @ source_nl @ string_of_com c2
+          string_of_exp zero_nat c @ [char_0x29; char_0x3B]
+    | Seq (c1, c2) -> string_of_com c1 @ source_nl @ string_of_com c2
     | If (b, c1, c2) ->
         [char_0x69; char_0x66; char_0x20; char_0x28] @
           string_of_exp zero_nat b @
             [char_0x29; char_0x20; char_0x7B; char_0x20] @
               string_of_com c1 @
-                [char_0x20; char_0x7D; char_0x20; char_0x65; char_0x6C;
-                  char_0x73; char_0x65; char_0x20; char_0x7B; char_0x20] @
-                  string_of_com c2 @ [char_0x20; char_0x7D]
+                (if equal_com c2 SKIP then [char_0x20; char_0x7D]
+                  else [char_0x20; char_0x7D; char_0x20; char_0x65; char_0x6C;
+                         char_0x73; char_0x65; char_0x20; char_0x7B;
+                         char_0x20] @
+                         string_of_com c2 @ [char_0x20; char_0x7D])
     | While (b, c) ->
         [char_0x77; char_0x68; char_0x69; char_0x6C; char_0x65; char_0x20;
           char_0x28] @
@@ -10259,21 +10953,22 @@ let rec string_of_com
               [char_0x28] @
                 join_source [char_0x2C; char_0x20]
                   (map (string_of_exp zero_nat) es) @
-                  [char_0x29]
+                  [char_0x29; char_0x3B]
           | Some x ->
             explode x @
-              [char_0x20; char_0x3A; char_0x3D; char_0x20] @
+              [char_0x20; char_0x3D; char_0x20] @
                 explode p @
                   [char_0x28] @
                     join_source [char_0x2C; char_0x20]
                       (map (string_of_exp zero_nat) es) @
-                      [char_0x29])
+                      [char_0x29; char_0x3B])
     | Return (Some e) ->
         [char_0x72; char_0x65; char_0x74; char_0x75; char_0x72; char_0x6E;
           char_0x20] @
-          string_of_exp zero_nat e
+          string_of_exp zero_nat e @ [char_0x3B]
     | Return None ->
-        [char_0x72; char_0x65; char_0x74; char_0x75; char_0x72; char_0x6E]
+        [char_0x72; char_0x65; char_0x74; char_0x75; char_0x72; char_0x6E;
+          char_0x3B]
     | Restore ->
         [char_0x72; char_0x65; char_0x73; char_0x74; char_0x6F; char_0x72;
           char_0x65]
@@ -10285,40 +10980,37 @@ let rec source_indent
   n = (if equal_nata n zero_nat then []
         else [char_0x20; char_0x20] @ source_indent (minus_nat n one_nat));;
 
-let rec append_last
-  suffix x1 = match suffix, x1 with suffix, [] -> []
-    | suffix, [s] -> [s @ suffix]
-    | suffix, s :: v :: va -> s :: append_last suffix (v :: va);;
-
 let rec pretty_source_lines_com
   n x1 = match n, x1 with
-    n, SKIP -> [source_indent n @ [char_0x73; char_0x6B; char_0x69; char_0x70]]
+    n, SKIP ->
+      [source_indent n @
+         [char_0x73; char_0x6B; char_0x69; char_0x70; char_0x3B]]
     | n, Assign (x, e) ->
         [source_indent n @
            explode x @
-             [char_0x20; char_0x3A; char_0x3D; char_0x20] @
-               string_of_exp zero_nat e]
+             [char_0x20; char_0x3D; char_0x20] @
+               string_of_exp zero_nat e @ [char_0x3B]]
     | n, Check c ->
         [source_indent n @
            [char_0x5F; char_0x5F; char_0x76; char_0x6F; char_0x62; char_0x6C;
              char_0x69; char_0x6E; char_0x74; char_0x5F; char_0x63; char_0x68;
              char_0x65; char_0x63; char_0x6B; char_0x28] @
-             string_of_exp zero_nat c @ [char_0x29]]
+             string_of_exp zero_nat c @ [char_0x29; char_0x3B]]
     | n, Seq (c1, c2) ->
-        append_last [char_0x3B] (pretty_source_lines_com n c1) @
-          pretty_source_lines_com n c2
+        pretty_source_lines_com n c1 @ pretty_source_lines_com n c2
     | n, If (b, c1, c2) ->
         [source_indent n @
            [char_0x69; char_0x66; char_0x20; char_0x28] @
              string_of_exp zero_nat b @ [char_0x29; char_0x20; char_0x7B]] @
           pretty_source_lines_com (plus_nat n (nat_of_integer (Z.of_int 2)))
             c1 @
-            [source_indent n @
-               [char_0x7D; char_0x20; char_0x65; char_0x6C; char_0x73;
-                 char_0x65; char_0x20; char_0x7B]] @
-              pretty_source_lines_com (plus_nat n (nat_of_integer (Z.of_int 2)))
-                c2 @
-                [source_indent n @ [char_0x7D]]
+            (if equal_com c2 SKIP then []
+              else [source_indent n @
+                      [char_0x7D; char_0x20; char_0x65; char_0x6C; char_0x73;
+                        char_0x65; char_0x20; char_0x7B]] @
+                     pretty_source_lines_com
+                       (plus_nat n (nat_of_integer (Z.of_int 2))) c2) @
+              [source_indent n @ [char_0x7D]]
     | n, While (b, c) ->
         [source_indent n @
            [char_0x77; char_0x68; char_0x69; char_0x6C; char_0x65; char_0x20;
@@ -10341,7 +11033,7 @@ let rec pretty_source_lines_com
 let rec pretty_source_lines_proc
   n p decl =
     (source_indent n @
-      [char_0x76; char_0x6F; char_0x69; char_0x64; char_0x20] @
+      [char_0x66; char_0x75; char_0x6E; char_0x20] @
         explode p @
           [char_0x28] @
             join_source [char_0x2C; char_0x20] (map explode (formals decl)) @
@@ -10369,8 +11061,8 @@ let rec pretty_string_of_program
                           char_0x3E]]
                  | Some a -> pretty_source_lines_proc zero_nat p a))
           ps @
-          [[char_0x76; char_0x6F; char_0x69; char_0x64; char_0x20; char_0x6D;
-             char_0x61; char_0x69; char_0x6E; char_0x28; char_0x29; char_0x20;
+          [[char_0x66; char_0x75; char_0x6E; char_0x20; char_0x6D; char_0x61;
+             char_0x69; char_0x6E; char_0x28; char_0x29; char_0x20;
              char_0x7B]] @
             pretty_source_lines_com (nat_of_integer (Z.of_int 2)) main @
               [[char_0x7D]]);;
@@ -10402,8 +11094,6 @@ let rec ctx_key_of
       (maps (fun x -> string_of_abstract_value (into x) @ [char_0x20]) ctx);;
 
 let char_0x47 : char = Chr (Z.of_int 71);;
-
-let char_0x2F : char = Chr (Z.of_int 47);;
 
 let rec entry_state_ctx_graph_config _A
   enter into p =
@@ -10496,6 +11186,8 @@ let rec analysis_nodes_in_cluster _A _B
             | (SourceCluster, GlobalNode _) -> false
             | (SourceCluster, SourceNode _) -> true))
         ns);;
+
+let char_0x3A : char = Chr (Z.of_int 58);;
 
 let rec string_of_action
   = function EA_Nop -> [char_0x6E; char_0x6F; char_0x70]
@@ -11186,6 +11878,121 @@ let rec entry_state_ctx_export_of (_A1, _A2)
           (equal_routed_gk equal_unit (equal_list _A2)) cfg g
           (contextual_result_domain base g r) sol));;
 
+let rec classify_checks_ctx _A
+  g r classify =
+    map_filter
+      (fun x ->
+        (if (let (_, (a, _)) = x in is_EA_Check a)
+          then Some (let (u, (a, _)) = x in
+                      (u, (ea_check_cond a,
+                            image (fun ctx ->
+                                    (ctx, classify_point classify
+    (ea_check_cond a) (lookup_context _A r u ctx)))
+                              (contexts_at r u))))
+          else None))
+      (cfg_intra_list g);;
+
+let rec aggregate_verdicts
+  (Set vs) = fold (sup_lifteda semilattice_sup_check_result) vs Bot;;
+
+let rec classify_checks_verdicts _A
+  g r classify =
+    map (fun (u, (c, vs)) -> (u, (c, aggregate_verdicts (image snd vs))))
+      (classify_checks_ctx _A g r classify);;
+
+let rec arithmetic_diagnostic_of
+  v i obligation x3 = match v, i, obligation, x3 with
+    v, i, obligation, Lifted Check_Refuted ->
+      [Arithmetic_Diagnostic (v, i, obligation, Check_Refuted)]
+    | v, i, obligation, Lifted Check_Unknown ->
+        [Arithmetic_Diagnostic (v, i, obligation, Check_Unknown)]
+    | v, i, obligation, Bot -> []
+    | v, i, obligation, Lifted Check_Proved -> [];;
+
+let rec arithmetic_divisor (Arithmetic_Obligation (x1, x2)) = x2;;
+
+let rec arithmetic_condition
+  obligation = NotEq (arithmetic_divisor obligation, N zero_inta);;
+
+let rec arithmetic_site_verdict _A
+  r classify v obligation =
+    aggregate_verdicts
+      (image
+        (fun ctx ->
+          classify_point classify (arithmetic_condition obligation)
+            (lookup_context _A r v ctx))
+        (contexts_at r v));;
+
+let rec arithmetic_edge_expressions = function EA_Assign (x, e) -> [e]
+                                      | EA_Assume e -> [e]
+                                      | EA_AssumeNot e -> [e]
+                                      | EA_Check e -> [e]
+                                      | EA_Ret (Some e, p) -> [e]
+                                      | EA_Special (Min (a, b), x) -> [a; b]
+                                      | EA_Special (Max (a, b), x) -> [a; b]
+                                      | EA_Nop -> []
+                                      | EA_Special (Nondet_Int, va) -> []
+                                      | EA_Body v -> []
+                                      | EA_Ret (None, va) -> [];;
+
+let rec arithmetic_expression_sites
+  g = (let edges = cfg_intra_list g in
+        map_filter
+          (fun x ->
+            (if (match x with (_, (EA_Nop, _)) -> true
+                  | (_, (EA_Assign (_, _), _)) -> true
+                  | (_, (EA_Special (_, _), _)) -> true
+                  | (_, (EA_Assume _, _)) -> true
+                  | (u, (EA_AssumeNot e, _)) ->
+                    not (list_ex
+                          (fun (ua, (a, _)) ->
+                            equal_cfg_nodea u ua &&
+                              equal_edge_actiona a (EA_Assume e))
+                          edges)
+                  | (_, (EA_Body _, _)) -> true
+                  | (_, (EA_Ret (_, _), _)) -> true
+                  | (_, (EA_Check _, _)) -> true)
+              then Some (let (u, (a, _)) = x in
+                          (u, arithmetic_edge_expressions a))
+              else None))
+          edges) @
+        map (fun (u, (ca, (_, _))) -> (u, ce_args ca)) (cfg_calls_list g);;
+
+let rec arithmetic_obligations
+  = function N n -> []
+    | V x -> []
+    | Not a -> arithmetic_obligations a
+    | And (a, b) -> arithmetic_obligations a @ arithmetic_obligations b
+    | Or (a, b) -> arithmetic_obligations a @ arithmetic_obligations b
+    | Div (a, b) ->
+        arithmetic_obligations a @
+          arithmetic_obligations b @ [Arithmetic_Obligation (Div (a, b), b)]
+    | Mod (a, b) ->
+        arithmetic_obligations a @
+          arithmetic_obligations b @ [Arithmetic_Obligation (Mod (a, b), b)]
+    | Plus (a, b) -> arithmetic_obligations a @ arithmetic_obligations b
+    | Minus (a, b) -> arithmetic_obligations a @ arithmetic_obligations b
+    | Times (a, b) -> arithmetic_obligations a @ arithmetic_obligations b
+    | Less (a, b) -> arithmetic_obligations a @ arithmetic_obligations b
+    | LessEq (a, b) -> arithmetic_obligations a @ arithmetic_obligations b
+    | Greater (a, b) -> arithmetic_obligations a @ arithmetic_obligations b
+    | GreaterEq (a, b) -> arithmetic_obligations a @ arithmetic_obligations b
+    | Eq (a, b) -> arithmetic_obligations a @ arithmetic_obligations b
+    | NotEq (a, b) -> arithmetic_obligations a @ arithmetic_obligations b;;
+
+let rec arithmetic_sites
+  g = map (fun (v, es) -> (v, maps arithmetic_obligations es))
+        (arithmetic_expression_sites g);;
+
+let rec arithmetic_diagnostics _A
+  g r classify =
+    maps (fun (v, obligations) ->
+           maps (fun (i, obligation) ->
+                  arithmetic_diagnostic_of v i obligation
+                    (arithmetic_site_verdict _A r classify v obligation))
+             (zip (upt zero_nat (size_list obligations)) obligations))
+      (arithmetic_sites g);;
+
 let rec join_abs_state_with j a b = (fun x -> j (a x) (b x));;
 
 let rec join_point_with j x1 y = match j, x1, y with j, Bot, y -> y
@@ -11205,9 +12012,34 @@ let rec lookup_joined_state _A _B
 let rec project_joined_env _A _B
   into r v = map_lift (comp into) (lookup_joined_state _B _A r v);;
 
+let rec exp_vnames_list
+  b = sorted_list_of_set (equal_literal, linorder_literal) (exp_vnames b);;
+
+let rec state_slice
+  st cnd =
+    (match st with Bot -> ""
+      | Lifted f ->
+        implode
+          (comma_join
+            (map (fun x ->
+                   explode x @ [char_0x3D] @ string_of_abstract_value (f x))
+              (exp_vnames_list cnd))));;
+
+let rec check_rows_of
+  env verdicts =
+    map (fun (v, (cnd, verdict)) ->
+          Check_Row
+            (v, cnd, implode (string_of_exp zero_nat cnd), verdict,
+              state_slice (env v) cnd))
+      verdicts;;
+
 let rec contextual_output
   g snap env rows globals =
-    Analysis_Output (Some g, Some snap, check_rows_of env rows, globals);;
+    Analysis_Output (Some g, Some snap, check_rows_of env rows, globals, []);;
+
+let rec with_diagnostics
+  ds (Analysis_Output (g, snap, rows, globals, old)) =
+    Analysis_Output (g, snap, rows, globals, ds);;
 
 let rec contextual_analysis_canonical_text _A _B
   cfg g domain sol =
@@ -11328,11 +12160,19 @@ let rec collapsed_output
       Analysis_Output
         (Some (raw_cfg_export (prog_table p) (prog_procs p) ann),
           Some (raw_cfg_canonical_text_lit (prog_table p) (prog_procs p) ann),
-          check_rows_of env rows, globals));;
+          check_rows_of env rows, globals, []));;
+
+let rec report_output
+  env rows globals =
+    Analysis_Output (None, None, check_rows_of env rows, globals, []);;
 
 let rec entry_state_output_of (_A1, _A2)
   view enter into classify r p =
-    (let env =
+    (let finish =
+       with_diagnostics
+         (arithmetic_diagnostics (equal_list _A2) (prog_cfg p) r classify)
+       in
+     let env =
        project_joined_env
          _A1.bounded_semilattice_sup_bot_executable_domain.semilattice_sup_bounded_semilattice_sup_bot
          (equal_list _A2) into r
@@ -11344,18 +12184,22 @@ let rec entry_state_output_of (_A1, _A2)
          _A1.bounded_semilattice_sup_bot_executable_domain.semilattice_sup_bounded_semilattice_sup_bot
          (equal_list _A2) into (ctx_key_of into) (ctx_show_of into) r p
        in
-      (match view with View_Report -> Analysed (report_output env rows globals)
-        | View_Checks -> Analysed (collapsed_output view p env rows globals)
-        | View_States -> Analysed (collapsed_output view p env rows globals)
+      (match view
+        with View_Report -> Analysed (finish (report_output env rows globals))
+        | View_Checks ->
+          Analysed (finish (collapsed_output view p env rows globals))
+        | View_States ->
+          Analysed (finish (collapsed_output view p env rows globals))
         | View_Checked_States ->
-          Analysed (collapsed_output view p env rows globals)
+          Analysed (finish (collapsed_output view p env rows globals))
         | View_Contexts ->
           Analysed
-            (contextual_output
-              (entry_state_ctx_export_of (_A1, _A2) enter into classify r p)
-              (entry_state_ctx_graph_snapshot_of (_A1, _A2) enter into classify
-                r p)
-              env rows globals)));;
+            (finish
+              (contextual_output
+                (entry_state_ctx_export_of (_A1, _A2) enter into classify r p)
+                (entry_state_ctx_graph_snapshot_of (_A1, _A2) enter into
+                  classify r p)
+                env rows globals))));;
 
 let rec sign_eq_false_of_intersection a b = is_empty_sign (meet_sign a b);;
 
@@ -11394,12 +12238,21 @@ let rec sign_check_query
     | And (b1, b2), d -> and_opt (sign_check_query b1 d) (sign_check_query b2 d)
     | Or (b1, b2), d -> or_opt (sign_check_query b1 d) (sign_check_query b2 d)
     | Less (a, b), d -> sign_less (aval_sign a d) (aval_sign b d)
+    | LessEq (a, b), d ->
+        map_option not (sign_less (aval_sign b d) (aval_sign a d))
+    | Greater (a, b), d -> sign_less (aval_sign b d) (aval_sign a d)
+    | GreaterEq (a, b), d ->
+        map_option not (sign_less (aval_sign a d) (aval_sign b d))
     | Eq (a, b), d -> sign_eq (aval_sign a d) (aval_sign b d)
+    | NotEq (a, b), d ->
+        map_option not (sign_eq (aval_sign a d) (aval_sign b d))
     | N v, d -> sign_truthy_query (N v) d
     | V v, d -> sign_truthy_query (V v) d
     | Plus (v, va), d -> sign_truthy_query (Plus (v, va)) d
     | Minus (v, va), d -> sign_truthy_query (Minus (v, va)) d
-    | Times (v, va), d -> sign_truthy_query (Times (v, va)) d;;
+    | Times (v, va), d -> sign_truthy_query (Times (v, va)) d
+    | Div (v, va), d -> sign_truthy_query (Div (v, va)) d
+    | Mod (v, va), d -> sign_truthy_query (Mod (v, va)) d;;
 
 let rec sign_classify_check
   c d = (match sign_check_query c d with None -> Check_Unknown
@@ -11451,6 +12304,19 @@ let rec analyse_int_wpo_result
 
 let rec enter_parity_for gs = enter_binding gs PTop aval_parity;;
 
+let rec table_report_answer _A
+  view r classify p =
+    (match view
+      with View_Report ->
+        Analysed
+          (with_diagnostics (arithmetic_diagnostics _A (prog_cfg p) r classify)
+            (report_output (fun _ -> Bot)
+              (classify_checks_verdicts _A (prog_cfg p) r classify) []))
+      | View_Checks -> Unsupported_Configuration
+      | View_States -> Unsupported_Configuration
+      | View_Checked_States -> Unsupported_Configuration
+      | View_Contexts -> Unsupported_Configuration);;
+
 let rec enter_ivl_for gs = enter_binding gs ivl_top aval_ivl;;
 
 let rec int_truthy_query
@@ -11465,14 +12331,31 @@ let rec int_check_query
     | Less (a, b), d ->
         int_less (aval_int_dom Refine_Fixpoint a d)
           (aval_int_dom Refine_Fixpoint b d)
+    | LessEq (a, b), d ->
+        map_option not
+          (int_less (aval_int_dom Refine_Fixpoint b d)
+            (aval_int_dom Refine_Fixpoint a d))
+    | Greater (a, b), d ->
+        int_less (aval_int_dom Refine_Fixpoint b d)
+          (aval_int_dom Refine_Fixpoint a d)
+    | GreaterEq (a, b), d ->
+        map_option not
+          (int_less (aval_int_dom Refine_Fixpoint a d)
+            (aval_int_dom Refine_Fixpoint b d))
     | Eq (a, b), d ->
         int_eq (aval_int_dom Refine_Fixpoint a d)
           (aval_int_dom Refine_Fixpoint b d)
+    | NotEq (a, b), d ->
+        map_option not
+          (int_eq (aval_int_dom Refine_Fixpoint a d)
+            (aval_int_dom Refine_Fixpoint b d))
     | N v, d -> int_truthy_query (N v) d
     | V v, d -> int_truthy_query (V v) d
     | Plus (v, va), d -> int_truthy_query (Plus (v, va)) d
     | Minus (v, va), d -> int_truthy_query (Minus (v, va)) d
-    | Times (v, va), d -> int_truthy_query (Times (v, va)) d;;
+    | Times (v, va), d -> int_truthy_query (Times (v, va)) d
+    | Div (v, va), d -> int_truthy_query (Div (v, va)) d
+    | Mod (v, va), d -> int_truthy_query (Mod (v, va)) d;;
 
 let rec int_classify_check
   c d = (match int_check_query c d with None -> Check_Unknown
@@ -11522,13 +12405,20 @@ let rec flat_rows_of
 
 let rec flat_output_of
   view into classify bot_state r globals p =
-    (let env = project_env into r in
+    (let finish =
+       with_diagnostics
+         (arithmetic_diagnostics equal_unit (prog_cfg p) r classify)
+       in
+     let env = project_env into r in
      let rows = flat_rows_of classify bot_state r p in
-      (match view with View_Report -> Analysed (report_output env rows globals)
-        | View_Checks -> Analysed (collapsed_output view p env rows globals)
-        | View_States -> Analysed (collapsed_output view p env rows globals)
+      (match view
+        with View_Report -> Analysed (finish (report_output env rows globals))
+        | View_Checks ->
+          Analysed (finish (collapsed_output view p env rows globals))
+        | View_States ->
+          Analysed (finish (collapsed_output view p env rows globals))
         | View_Checked_States ->
-          Analysed (collapsed_output view p env rows globals)
+          Analysed (finish (collapsed_output view p env rows globals))
         | View_Contexts -> Unsupported_Configuration));;
 
 let rec cs_ctx_check_annotation_of
@@ -11644,7 +12534,12 @@ let rec cs_ctx_export_of
 
 let rec cs_output_of _A
   view into classify r k p =
-    (let env = project_joined_env _A (equal_list equal_cfg_node) into r in
+    (let finish =
+       with_diagnostics
+         (arithmetic_diagnostics (equal_list equal_cfg_node) (prog_cfg p) r
+           classify)
+       in
+     let env = project_joined_env _A (equal_list equal_cfg_node) into r in
      let rows =
        classify_checks_verdicts (equal_list equal_cfg_node) (prog_cfg p) r
          classify
@@ -11653,16 +12548,20 @@ let rec cs_output_of _A
        ctx_seed_globals _A (equal_list equal_cfg_node) into cs_context_key
          cs_show_context r p
        in
-      (match view with View_Report -> Analysed (report_output env rows globals)
-        | View_Checks -> Analysed (collapsed_output view p env rows globals)
-        | View_States -> Analysed (collapsed_output view p env rows globals)
+      (match view
+        with View_Report -> Analysed (finish (report_output env rows globals))
+        | View_Checks ->
+          Analysed (finish (collapsed_output view p env rows globals))
+        | View_States ->
+          Analysed (finish (collapsed_output view p env rows globals))
         | View_Checked_States ->
-          Analysed (collapsed_output view p env rows globals)
+          Analysed (finish (collapsed_output view p env rows globals))
         | View_Contexts ->
           Analysed
-            (contextual_output (cs_ctx_export_of into classify r k p)
-              (cs_ctx_graph_snapshot_of into classify r k p) env rows
-              globals)));;
+            (finish
+              (contextual_output (cs_ctx_export_of into classify r k p)
+                (cs_ctx_graph_snapshot_of into classify r k p) env rows
+                globals))));;
 
 let rec plan_answer
   pl view p =
@@ -11722,26 +12621,201 @@ let rec plan_answer
               p)
             p)
       | Plan_Interval_EntryState Solver_Join ->
-        verdict_report_answer view (analyse_interval_entry_state_join p)
+        table_report_answer (equal_list equal_ivl) view
+          (result (executable_domain_ivl, equal_ivl)
+            (equal_routed_gk equal_unit (equal_list equal_ivl)) ivl_tf_st_for
+            ivl_enter_st_for cinit_ivl_st (Analysis_Global ())
+            (fun a b -> Activation_Seed (a, b)) (exec_formals_route bot_ivl) []
+            (tD_side_always_join_Interp_solve
+              (equal_prod equal_cfg_node (equal_list equal_ivl))
+              (equal_routed_gk equal_unit (equal_list equal_ivl))
+              ((equal_dg_state
+                 (equal_lifted
+                   (equal_resolved_st_q
+                     (equal_ivl,
+                       bounded_warrowing_ivl.bounded_semilattice_sup_bot_bounded_warrowing.order_bot_bounded_semilattice_sup_bot)))
+                 (equal_lifted
+                   (equal_resolved_st_q
+                     (equal_ivl,
+                       bounded_warrowing_ivl.bounded_semilattice_sup_bot_bounded_warrowing.order_bot_bounded_semilattice_sup_bot)))),
+                (bounded_semilattice_sup_bot_dg_state
+                  (bounded_warrowing_lifted
+                    (bounded_warrowing_resolved_st_q
+                      bounded_warrowing_ivl)).bounded_semilattice_sup_bot_bounded_warrowing
+                  (bounded_warrowing_lifted
+                    (bounded_warrowing_resolved_st_q
+                      bounded_warrowing_ivl)).bounded_semilattice_sup_bot_bounded_warrowing),
+                (warrowing_dg_state
+                  (bounded_warrowing_lifted
+                    (bounded_warrowing_resolved_st_q bounded_warrowing_ivl))
+                  (bounded_warrowing_lifted
+                    (bounded_warrowing_resolved_st_q bounded_warrowing_ivl)))))
+            (declared_global p) p)
+          interval_classify_check p
       | Plan_Interval_EntryState Solver_PerOrigin ->
-        verdict_report_answer view (analyse_interval_entry_state_per_origin p)
+        table_report_answer (equal_list equal_ivl) view
+          (result (executable_domain_ivl, equal_ivl)
+            (equal_routed_gk equal_unit (equal_list equal_ivl)) ivl_tf_st_for
+            ivl_enter_st_for cinit_ivl_st (Analysis_Global ())
+            (fun a b -> Activation_Seed (a, b)) (exec_formals_route bot_ivl) []
+            (tD_side_per_origin_Interp_solve
+              (equal_prod equal_cfg_node (equal_list equal_ivl))
+              (equal_routed_gk equal_unit (equal_list equal_ivl))
+              ((equal_dg_state
+                 (equal_lifted
+                   (equal_resolved_st_q
+                     (equal_ivl,
+                       bounded_warrowing_ivl.bounded_semilattice_sup_bot_bounded_warrowing.order_bot_bounded_semilattice_sup_bot)))
+                 (equal_lifted
+                   (equal_resolved_st_q
+                     (equal_ivl,
+                       bounded_warrowing_ivl.bounded_semilattice_sup_bot_bounded_warrowing.order_bot_bounded_semilattice_sup_bot)))),
+                (bounded_semilattice_sup_bot_dg_state
+                  (bounded_warrowing_lifted
+                    (bounded_warrowing_resolved_st_q
+                      bounded_warrowing_ivl)).bounded_semilattice_sup_bot_bounded_warrowing
+                  (bounded_warrowing_lifted
+                    (bounded_warrowing_resolved_st_q
+                      bounded_warrowing_ivl)).bounded_semilattice_sup_bot_bounded_warrowing),
+                (warrowing_dg_state
+                  (bounded_warrowing_lifted
+                    (bounded_warrowing_resolved_st_q bounded_warrowing_ivl))
+                  (bounded_warrowing_lifted
+                    (bounded_warrowing_resolved_st_q bounded_warrowing_ivl)))))
+            (declared_global p) p)
+          interval_classify_check p
       | Plan_Interval_EntryState Solver_Warrow ->
         entry_state_output_of (executable_domain_ivl, equal_ivl) view
           enter_ivl_for (fun a -> IntervalValue a) interval_classify_check
           (analyse_interval_entry_state_result p) p
       | Plan_Interval_EntryState Solver_WarrowPerOrigin ->
-        verdict_report_answer view (analyse_interval_entry_state_wpo p)
+        table_report_answer (equal_list equal_ivl) view
+          (result (executable_domain_ivl, equal_ivl)
+            (equal_routed_gk equal_unit (equal_list equal_ivl)) ivl_tf_st_for
+            ivl_enter_st_for cinit_ivl_st (Analysis_Global ())
+            (fun a b -> Activation_Seed (a, b)) (exec_formals_route bot_ivl) []
+            (tD_side_warrowing_per_origin_Interp_solve
+              (equal_prod equal_cfg_node (equal_list equal_ivl))
+              (equal_routed_gk equal_unit (equal_list equal_ivl))
+              ((equal_dg_state
+                 (equal_lifted
+                   (equal_resolved_st_q
+                     (equal_ivl,
+                       bounded_warrowing_ivl.bounded_semilattice_sup_bot_bounded_warrowing.order_bot_bounded_semilattice_sup_bot)))
+                 (equal_lifted
+                   (equal_resolved_st_q
+                     (equal_ivl,
+                       bounded_warrowing_ivl.bounded_semilattice_sup_bot_bounded_warrowing.order_bot_bounded_semilattice_sup_bot)))),
+                (bounded_semilattice_sup_bot_dg_state
+                  (bounded_warrowing_lifted
+                    (bounded_warrowing_resolved_st_q
+                      bounded_warrowing_ivl)).bounded_semilattice_sup_bot_bounded_warrowing
+                  (bounded_warrowing_lifted
+                    (bounded_warrowing_resolved_st_q
+                      bounded_warrowing_ivl)).bounded_semilattice_sup_bot_bounded_warrowing),
+                (warrowing_dg_state
+                  (bounded_warrowing_lifted
+                    (bounded_warrowing_resolved_st_q bounded_warrowing_ivl))
+                  (bounded_warrowing_lifted
+                    (bounded_warrowing_resolved_st_q bounded_warrowing_ivl)))))
+            (declared_global p) p)
+          interval_classify_check p
       | Plan_Interval_CallString (Solver_Join, k) ->
-        verdict_report_answer view
-          (analyse_interval_call_string_report_join k p)
+        table_report_answer (equal_list equal_cfg_node) view
+          (result (executable_domain_ivl, equal_ivl) equal_call_string_gk
+            ivl_tf_st_for ivl_enter_st_for cinit_ivl_st Global
+            (fun a b -> Seed (a, b)) (fun _ -> cs_route k) []
+            (tD_side_always_join_Interp_solve
+              (equal_prod equal_cfg_node (equal_list equal_cfg_node))
+              equal_call_string_gk
+              ((equal_dg_state
+                 (equal_lifted
+                   (equal_resolved_st_q
+                     (equal_ivl,
+                       bounded_warrowing_ivl.bounded_semilattice_sup_bot_bounded_warrowing.order_bot_bounded_semilattice_sup_bot)))
+                 (equal_lifted
+                   (equal_resolved_st_q
+                     (equal_ivl,
+                       bounded_warrowing_ivl.bounded_semilattice_sup_bot_bounded_warrowing.order_bot_bounded_semilattice_sup_bot)))),
+                (bounded_semilattice_sup_bot_dg_state
+                  (bounded_warrowing_lifted
+                    (bounded_warrowing_resolved_st_q
+                      bounded_warrowing_ivl)).bounded_semilattice_sup_bot_bounded_warrowing
+                  (bounded_warrowing_lifted
+                    (bounded_warrowing_resolved_st_q
+                      bounded_warrowing_ivl)).bounded_semilattice_sup_bot_bounded_warrowing),
+                (warrowing_dg_state
+                  (bounded_warrowing_lifted
+                    (bounded_warrowing_resolved_st_q bounded_warrowing_ivl))
+                  (bounded_warrowing_lifted
+                    (bounded_warrowing_resolved_st_q bounded_warrowing_ivl)))))
+            (declared_global p) p)
+          interval_classify_check p
       | Plan_Interval_CallString (Solver_PerOrigin, k) ->
-        verdict_report_answer view
-          (analyse_interval_call_string_report_per_origin k p)
+        table_report_answer (equal_list equal_cfg_node) view
+          (result (executable_domain_ivl, equal_ivl) equal_call_string_gk
+            ivl_tf_st_for ivl_enter_st_for cinit_ivl_st Global
+            (fun a b -> Seed (a, b)) (fun _ -> cs_route k) []
+            (tD_side_per_origin_Interp_solve
+              (equal_prod equal_cfg_node (equal_list equal_cfg_node))
+              equal_call_string_gk
+              ((equal_dg_state
+                 (equal_lifted
+                   (equal_resolved_st_q
+                     (equal_ivl,
+                       bounded_warrowing_ivl.bounded_semilattice_sup_bot_bounded_warrowing.order_bot_bounded_semilattice_sup_bot)))
+                 (equal_lifted
+                   (equal_resolved_st_q
+                     (equal_ivl,
+                       bounded_warrowing_ivl.bounded_semilattice_sup_bot_bounded_warrowing.order_bot_bounded_semilattice_sup_bot)))),
+                (bounded_semilattice_sup_bot_dg_state
+                  (bounded_warrowing_lifted
+                    (bounded_warrowing_resolved_st_q
+                      bounded_warrowing_ivl)).bounded_semilattice_sup_bot_bounded_warrowing
+                  (bounded_warrowing_lifted
+                    (bounded_warrowing_resolved_st_q
+                      bounded_warrowing_ivl)).bounded_semilattice_sup_bot_bounded_warrowing),
+                (warrowing_dg_state
+                  (bounded_warrowing_lifted
+                    (bounded_warrowing_resolved_st_q bounded_warrowing_ivl))
+                  (bounded_warrowing_lifted
+                    (bounded_warrowing_resolved_st_q bounded_warrowing_ivl)))))
+            (declared_global p) p)
+          interval_classify_check p
       | Plan_Interval_CallString (Solver_Warrow, k) ->
         cs_output_of semilattice_sup_ivl view (fun a -> IntervalValue a)
           interval_classify_check (analyse_interval_call_string_result k p) k p
       | Plan_Interval_CallString (Solver_WarrowPerOrigin, k) ->
-        verdict_report_answer view (analyse_interval_call_string_report_wpo k p)
+        table_report_answer (equal_list equal_cfg_node) view
+          (result (executable_domain_ivl, equal_ivl) equal_call_string_gk
+            ivl_tf_st_for ivl_enter_st_for cinit_ivl_st Global
+            (fun a b -> Seed (a, b)) (fun _ -> cs_route k) []
+            (tD_side_warrowing_per_origin_Interp_solve
+              (equal_prod equal_cfg_node (equal_list equal_cfg_node))
+              equal_call_string_gk
+              ((equal_dg_state
+                 (equal_lifted
+                   (equal_resolved_st_q
+                     (equal_ivl,
+                       bounded_warrowing_ivl.bounded_semilattice_sup_bot_bounded_warrowing.order_bot_bounded_semilattice_sup_bot)))
+                 (equal_lifted
+                   (equal_resolved_st_q
+                     (equal_ivl,
+                       bounded_warrowing_ivl.bounded_semilattice_sup_bot_bounded_warrowing.order_bot_bounded_semilattice_sup_bot)))),
+                (bounded_semilattice_sup_bot_dg_state
+                  (bounded_warrowing_lifted
+                    (bounded_warrowing_resolved_st_q
+                      bounded_warrowing_ivl)).bounded_semilattice_sup_bot_bounded_warrowing
+                  (bounded_warrowing_lifted
+                    (bounded_warrowing_resolved_st_q
+                      bounded_warrowing_ivl)).bounded_semilattice_sup_bot_bounded_warrowing),
+                (warrowing_dg_state
+                  (bounded_warrowing_lifted
+                    (bounded_warrowing_resolved_st_q bounded_warrowing_ivl))
+                  (bounded_warrowing_lifted
+                    (bounded_warrowing_resolved_st_q bounded_warrowing_ivl)))))
+            (declared_global p) p)
+          interval_classify_check p
       | Plan_Int Solver_Join ->
         (let r = analyse_int_join_result p in
           flat_output_of view (fun a -> IntDomValue a) int_classify_check
@@ -12073,6 +13147,89 @@ let rec run_voblint
              with None -> Unsupported_Configuration
              | Some pl -> plan_answer pl view p));;
 
+let char_0x7A : char = Chr (Z.of_int 122);;
+
+let rec diagnostic_obligation (Arithmetic_Diagnostic (x1, x2, x3, x4)) = x3;;
+
+let rec arithmetic_operation (Arithmetic_Obligation (x1, x2)) = x1;;
+
+let rec diagnostic_verdict (Arithmetic_Diagnostic (x1, x2, x3, x4)) = x4;;
+
+let rec diagnostic_message
+  diagnostic =
+    (let operation = arithmetic_operation (diagnostic_obligation diagnostic) in
+     let kind =
+       (match operation
+         with N _ ->
+           [char_0x64; char_0x69; char_0x76; char_0x69; char_0x73; char_0x69;
+             char_0x6F; char_0x6E]
+         | V _ ->
+           [char_0x64; char_0x69; char_0x76; char_0x69; char_0x73; char_0x69;
+             char_0x6F; char_0x6E]
+         | Plus (_, _) ->
+           [char_0x64; char_0x69; char_0x76; char_0x69; char_0x73; char_0x69;
+             char_0x6F; char_0x6E]
+         | Minus (_, _) ->
+           [char_0x64; char_0x69; char_0x76; char_0x69; char_0x73; char_0x69;
+             char_0x6F; char_0x6E]
+         | Times (_, _) ->
+           [char_0x64; char_0x69; char_0x76; char_0x69; char_0x73; char_0x69;
+             char_0x6F; char_0x6E]
+         | Div (_, _) ->
+           [char_0x64; char_0x69; char_0x76; char_0x69; char_0x73; char_0x69;
+             char_0x6F; char_0x6E]
+         | Mod (_, _) ->
+           [char_0x72; char_0x65; char_0x6D; char_0x61; char_0x69; char_0x6E;
+             char_0x64; char_0x65; char_0x72]
+         | Less (_, _) ->
+           [char_0x64; char_0x69; char_0x76; char_0x69; char_0x73; char_0x69;
+             char_0x6F; char_0x6E]
+         | LessEq (_, _) ->
+           [char_0x64; char_0x69; char_0x76; char_0x69; char_0x73; char_0x69;
+             char_0x6F; char_0x6E]
+         | Greater (_, _) ->
+           [char_0x64; char_0x69; char_0x76; char_0x69; char_0x73; char_0x69;
+             char_0x6F; char_0x6E]
+         | GreaterEq (_, _) ->
+           [char_0x64; char_0x69; char_0x76; char_0x69; char_0x73; char_0x69;
+             char_0x6F; char_0x6E]
+         | NotEq (_, _) ->
+           [char_0x64; char_0x69; char_0x76; char_0x69; char_0x73; char_0x69;
+             char_0x6F; char_0x6E]
+         | Eq (_, _) ->
+           [char_0x64; char_0x69; char_0x76; char_0x69; char_0x73; char_0x69;
+             char_0x6F; char_0x6E]
+         | Not _ ->
+           [char_0x64; char_0x69; char_0x76; char_0x69; char_0x73; char_0x69;
+             char_0x6F; char_0x6E]
+         | And (_, _) ->
+           [char_0x64; char_0x69; char_0x76; char_0x69; char_0x73; char_0x69;
+             char_0x6F; char_0x6E]
+         | Or (_, _) ->
+           [char_0x64; char_0x69; char_0x76; char_0x69; char_0x73; char_0x69;
+             char_0x6F; char_0x6E])
+       in
+     let message =
+       (if equal_check_result (diagnostic_verdict diagnostic) Check_Refuted
+         then kind @
+                [char_0x20; char_0x62; char_0x79; char_0x20; char_0x7A;
+                  char_0x65; char_0x72; char_0x6F; char_0x20; char_0x77;
+                  char_0x68; char_0x65; char_0x6E; char_0x65; char_0x76;
+                  char_0x65; char_0x72; char_0x20; char_0x74; char_0x68;
+                  char_0x69; char_0x73; char_0x20; char_0x6F; char_0x70;
+                  char_0x65; char_0x72; char_0x61; char_0x74; char_0x69;
+                  char_0x6F; char_0x6E; char_0x20; char_0x69; char_0x73;
+                  char_0x20; char_0x65; char_0x76; char_0x61; char_0x6C;
+                  char_0x75; char_0x61; char_0x74; char_0x65; char_0x64;
+                  char_0x3A; char_0x20]
+         else [char_0x70; char_0x6F; char_0x73; char_0x73; char_0x69; char_0x62;
+                char_0x6C; char_0x65; char_0x20] @
+                kind @
+                  [char_0x20; char_0x62; char_0x79; char_0x20; char_0x7A;
+                    char_0x65; char_0x72; char_0x6F; char_0x3A; char_0x20])
+       in
+      implode (message @ string_of_exp zero_nat operation));;
+
 let rec row_point (Check_Row (x1, x2, x3, x4, x5)) = x1;;
 
 let rec row_state (Check_Row (x1, x2, x3, x4, x5)) = x5;;
@@ -12088,7 +13245,7 @@ let rec procs_stmt_next
 
 let rec row_condition (Check_Row (x1, x2, x3, x4, x5)) = x3;;
 
-let rec out_graph (Analysis_Output (x1, x2, x3, x4)) = x1;;
+let rec out_graph (Analysis_Output (x1, x2, x3, x4, x5)) = x1;;
 
 let rec com_stmt_post_order
   n x1 = match n, x1 with n, SKIP -> [Statement n]
@@ -12110,7 +13267,7 @@ let rec xn_id
   (Export_node_ext (xn_id, xn_label, xn_kind, xn_status, xn_lines, more)) =
     xn_id;;
 
-let rec out_checks (Analysis_Output (x1, x2, x3, x4)) = x3;;
+let rec out_checks (Analysis_Output (x1, x2, x3, x4, x5)) = x3;;
 
 let rec defs_stmt_post_order
   pi x1 n = match pi, x1, n with pi, [], n -> []
@@ -12134,7 +13291,7 @@ let rec xe_dst
 let rec xe_src
   (Export_edge_ext (xe_src, xe_dst, xe_kind, xe_label, more)) = xe_src;;
 
-let rec out_globals (Analysis_Output (x1, x2, x3, x4)) = x4;;
+let rec out_globals (Analysis_Output (x1, x2, x3, x4, x5)) = x4;;
 
 let rec xe_kind
   (Export_edge_ext (xe_src, xe_dst, xe_kind, xe_label, more)) = xe_kind;;
@@ -12143,7 +13300,7 @@ let rec xn_kind
   (Export_node_ext (xn_id, xn_label, xn_kind, xn_status, xn_lines, more)) =
     xn_kind;;
 
-let rec out_snapshot (Analysis_Output (x1, x2, x3, x4)) = x2;;
+let rec out_snapshot (Analysis_Output (x1, x2, x3, x4, x5)) = x2;;
 
 let rec xc_id (Export_cluster_ext (xc_id, xc_label, xc_nodes, more)) = xc_id;;
 
@@ -12168,6 +13325,8 @@ let rec xn_status
   (Export_node_ext (xn_id, xn_label, xn_kind, xn_status, xn_lines, more)) =
     xn_status;;
 
+let rec out_diagnostics (Analysis_Output (x1, x2, x3, x4, x5)) = x5;;
+
 let rec xc_label
   (Export_cluster_ext (xc_id, xc_label, xc_nodes, more)) = xc_label;;
 
@@ -12176,5 +13335,7 @@ let rec xc_nodes
 
 let rec xg_clusters
   (Export_graph_ext (xg_clusters, xg_nodes, xg_edges, more)) = xg_clusters;;
+
+let rec diagnostic_point (Arithmetic_Diagnostic (x1, x2, x3, x4)) = x1;;
 
 end;; (*struct Generated*)

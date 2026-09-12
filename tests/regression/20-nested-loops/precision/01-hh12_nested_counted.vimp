@@ -11,17 +11,17 @@
 // i. Solver-invariant: join, per-origin, warrow and warrow-per-origin all
 // answer PROVED x4, and the same program with bound 100 (35-hh-ex1b.c's
 // literal shape) measures identically.
-void main() {
-  i := 0;
+fun main() {
+  i = 0;
   while (i < 10) {
-    j := 0;
+    j = 0;
     while (j < 10) {
-      j := j + 1;
-      __voblint_check(!(10 < j)) // PROVED
-    };
+      j = j + 1;
+      __voblint_check(j <= 10); // PROVED
+    }
     __voblint_check(j == 10); // PROVED
-    i := i + 1;
-    __voblint_check(!(10 < i)) // PROVED
-  };
-  __voblint_check(i == 10) // PROVED
+    i = i + 1;
+    __voblint_check(i <= 10); // PROVED
+  }
+  __voblint_check(i == 10); // PROVED
 }

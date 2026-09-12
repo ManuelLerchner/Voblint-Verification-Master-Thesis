@@ -17,9 +17,8 @@ text \<open>
   \<open>sign_min\<close>/\<open>sign_max\<close> abstract the two-argument \<open>Min\<close>/\<open>Max\<close> special calls: the
   same brute-force per-constructor table as \<open>plus_sign\<close>/\<open>minus_sign\<close>/\<open>times_sign\<close>,
   sound and, where the two argument signs pin down which side realizes the
-  extremum, exact (e.g. \<open>sign_min SNeg _ = SNeg\<close>: a negative left argument is
-  always \<le> any right argument, so the minimum is negative regardless of the
-  right side).
+  extremum, exact (e.g. \<open>sign_min SNeg _ = SNeg\<close>: the minimum cannot exceed its negative left
+  argument, so it remains negative regardless of the right side).
 \<close>
 fun sign_min :: "sign => sign => sign" where
     "sign_min SBot    _       = SBot"

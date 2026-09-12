@@ -22,8 +22,8 @@ text \<open>
 
 definition sign_assembly_demo_prog :: imp_prog where
   "sign_assembly_demo_prog = program { global Gx;
-     void f() { Gx := 1 }
-     void main() { Gx := 0; f(); __voblint_check(0 < Gx) } }"
+     fun f() { Gx = 1; }
+     fun main() { Gx = 0; f(); __voblint_check(0 < Gx); } }"
 
 text \<open>
   The check is \<^const>\<open>Check_Proved\<close>, not \<^const>\<open>Check_Unknown\<close>, because the

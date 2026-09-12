@@ -27,8 +27,8 @@ text \<open>
 definition fo_program :: imp_prog where
   "fo_program = program {
      global g;
-     void up(n) { g := n; return 0 }
-     void main() { g := 0; a := up(1); b := up(2) }
+     fun up(n) { g = n; return 0; }
+     fun main() { g = 0; a = up(1); b = up(2); }
    }"
 
 abbreviation fo_gs :: "vname \<Rightarrow> bool" where "fo_gs \<equiv> declared_global fo_program"

@@ -13,7 +13,6 @@
 // clusters:
 //   cluster_ctx_0:
 //     main_pp3_ctx0
-//     main_pp5_ctx0
 //     main_pp8_ctx0
 //     main_result_main_ctx0
 //     main_entry_main_ctx0
@@ -28,10 +27,6 @@
 //
 // nodes:
 //   main_pp3_ctx0: pp3
-//       x=[5,5]
-//       a=[-inf,+inf]
-//       b=[-inf,+inf]
-//   main_pp5_ctx0: pp5
 //       x=[5,5]
 //       a=[-inf,+inf]
 //       b=[-inf,+inf]
@@ -72,8 +67,7 @@
 //
 // edges:
 //   main_pp3_ctx0 -> main_pp4_ctx0: x<2
-//   main_pp3_ctx0 -> main_pp5_ctx0: not (x<2)
-//   main_pp5_ctx0 -> main_pp6_ctx0: nop
+//   main_pp3_ctx0 -> main_pp6_ctx0: not (x<2)
 //   main_pp8_ctx0 -> main_result_main_ctx0: terminate
 //   f_pp0_ctx1 -> f_result_f_ctx1: return n
 //   main_entry_main_ctx0 -> main_pp2_ctx0: body(main)
@@ -86,16 +80,14 @@
 //   main_pp6_ctx0 -> main_pp7_ctx0: call-to-return f
 // EXPECT-GRAPH-END
 
-void f(n) {
-  return n
+fun f(n) {
+  return n;
 }
-void main() {
-  x := 5;
+fun main() {
+  x = 5;
   if (x < 2) {
-    a := f(3)
-  } else {
-    skip
-  };
-  b := f(7);
-  __voblint_check(b == 7) // PROVED
+    a = f(3);
+  }
+  b = f(7);
+  __voblint_check(b == 7); // PROVED
 }

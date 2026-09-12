@@ -31,13 +31,13 @@ text \<open>
 definition min_max_demo_prog :: imp_prog where
   "min_max_demo_prog =
      program {
-       void main() {
-         x := 3;
-         y := 0 - 5;
-         z := min(x, y);
-         w := max(x, y);
+       fun main() {
+         x = 3;
+         y = 0 - 5;
+         z = min(x, y);
+         w = max(x, y);
          __voblint_check(z < 0);
-         __voblint_check(0 < w)
+         __voblint_check(0 < w);
        }
      }"
 
@@ -104,9 +104,9 @@ text \<open>
 definition min_wrong_arity_prog :: imp_prog where
   "min_wrong_arity_prog =
      program {
-       void main() {
-         x := 3;
-         z := min(x)
+       fun main() {
+         x = 3;
+         z = min(x);
        }
      }"
 

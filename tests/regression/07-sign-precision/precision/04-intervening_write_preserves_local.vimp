@@ -8,8 +8,8 @@
 // 03-global_write_across_call.vimp is the same property with real
 // interprocedural machinery in play; this is the isolated version.
 
-void main() {
-  x := 5;
-  y := 1;
-  __voblint_check(0 < x) // PROVED
+fun main() {
+  x = 5;
+  y = 1;
+  __voblint_check(0 < x); // PROVED
 }

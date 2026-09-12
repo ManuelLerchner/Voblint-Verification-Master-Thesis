@@ -64,4 +64,28 @@ lemma bfilter_congruence_linear_equality_regression:
   unfolding congruence_test_env_def
   by eval
 
+lemma congruence_direct_comparisons:
+  "map (\<lambda>c. aval_congruence (c (V (STR ''x'')) (N 1))
+      (\<lambda>_. congruence_of_int (-1)))
+    [LessEq, Greater, GreaterEq, NotEq] =
+   [congruence_of_int 1, congruence_of_int 0,
+    congruence_of_int 0, congruence_of_int 1]"
+  by eval
+
+lemma congruence_false_disequality_refines:
+  "bfilter_congruence (NotEq (Plus (V (STR ''x'')) (N 1)) (N 3))
+    False congruence_test_env (STR ''x'') = congruence_of_int 2"
+  unfolding congruence_test_env_def by eval
+
+
+lemma congruence_division_remainder_regression:
+  "congruence_div (congruence_of_int (-7)) (congruence_of_int 3) = congruence_of_int (-2)"
+  "congruence_mod (congruence_of_int (-7)) (congruence_of_int 3) = congruence_of_int (-1)"
+  "congruence_mod (mk_congruence 1 4) (congruence_of_int 2) = mk_congruence 1 2"
+  "congruence_div top (congruence_of_int 0) = congruence_of_int 0"
+  "congruence_mod (mk_congruence 1 4) (congruence_of_int 0) = mk_congruence 1 4"
+  "congruence_div (mk_congruence 1 4) (congruence_of_int 1) = mk_congruence 1 4"
+  "congruence_mod bot top = bot"
+  by eval+
+
 end

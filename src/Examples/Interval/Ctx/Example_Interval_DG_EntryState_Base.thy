@@ -23,9 +23,9 @@ text \<open>\<open>special_pname_nondet_int\<close> is an ordinary identifier, n
   lexer reserves leading-underscore tokens for translation-internal nonterminals, rejecting any
   user identifier that begins with one.  The call is spliced in directly instead.\<close>
 definition rc_program :: imp_prog where
-  "rc_program = mk_program [(STR ''p'', \<lparr>formals = [STR ''a''], body = imp \<lbrakk> return a \<rbrakk>\<rparr>)]
+  "rc_program = mk_program [(STR ''p'', \<lparr>formals = [STR ''a''], body = imp \<lbrakk> return a; \<rbrakk>\<rparr>)]
      (Seq (VIMP_Proc.com.Call (Some (STR ''x'')) special_pname_nondet_int [])
-          (imp \<lbrakk> y := p(x) \<rbrakk>))
+          (imp \<lbrakk> y = p(x); \<rbrakk>))
      []"
 
 definition rc_pi :: proc_table where "rc_pi = prog_table rc_program"

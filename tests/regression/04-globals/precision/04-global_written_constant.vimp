@@ -8,7 +8,7 @@
 // precision.
 
 global g;
-void main() {
-  g := 1;
-  __voblint_check(0 < g) // PROVED
+fun main() {
+  g = 1;
+  __voblint_check(0 < g); // PROVED
 }

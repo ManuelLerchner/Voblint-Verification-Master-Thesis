@@ -18,7 +18,7 @@ text \<open>
   range --- a fact only Parity expresses. \<open>z := y + 1\<close> is then always odd.
   \<open>y\<close> and \<open>z\<close> therefore land in disjoint parity classes no matter what \<open>x\<close>
   or \<open>w\<close> (a second, independent \<open>__voblint_nondet_int()\<close> read) turn out to be: the first
-  check, \<open>!(y == z)\<close>, is \<^term>\<open>Check_Proved\<close>; the second, \<open>y == z\<close> again, is
+  check, \<open>y != z\<close>, is \<^term>\<open>Check_Proved\<close>; the second, \<open>y == z\<close> again, is
   \<^term>\<open>Check_Refuted\<close>; the third, \<open>y == w\<close> against the unconstrained \<open>w\<close>, is
   \<^term>\<open>Check_Unknown\<close> (Parity has no singleton representation, so it can
   never prove a positive equality).
@@ -32,17 +32,17 @@ definition parity_ex_program :: imp_prog where
   "parity_ex_program = mk_program []
      (Seq (Seq (Seq
        (VIMP_Proc.com.Call (Some (STR ''x'')) special_pname_nondet_int [])
-       (imp \<lbrakk> y := x * 2; z := y + 1;
-              __voblint_check(! (y == z)); __voblint_check(y == z) \<rbrakk>))
+       (imp \<lbrakk> y = x * 2; z = y + 1;
+              __voblint_check(y != z); __voblint_check(y == z); \<rbrakk>))
        (VIMP_Proc.com.Call (Some (STR ''w'')) special_pname_nondet_int []))
-       (imp \<lbrakk> __voblint_check(y == w) \<rbrakk>))
+       (imp \<lbrakk> __voblint_check(y == w); \<rbrakk>))
      []"
 
 text \<open>Computed, not asserted: the three \<open>__voblint_check(...)\<close> statements
   land at the nodes \<^const>\<open>compile\<close> actually assigns them.\<close>
 lemma parity_ex_checks_eval:
   "checks (prog_cfg parity_ex_program) =
-     {(Statement 3, Not (Eq (V (STR ''y'')) (V (STR ''z'')))),
+     {(Statement 3, NotEq (V (STR ''y'')) (V (STR ''z''))),
       (Statement 4, Eq (V (STR ''y'')) (V (STR ''z''))),
       (Statement 6, Eq (V (STR ''y'')) (V (STR ''w'')))}"
   unfolding prog_cfg_def by eval
@@ -99,7 +99,7 @@ lemma parity_ex_intra_eval:
       (Statement 0, EA_Special Nondet_Int (STR ''x''), Statement 1),
       (Statement 1, EA_Assign (STR ''y'') (Times (V (STR ''x'')) (N 2)), Statement 2),
       (Statement 2, EA_Assign (STR ''z'') (Plus (V (STR ''y'')) (N 1)), Statement 3),
-      (Statement 3, EA_Check (Not (Eq (V (STR ''y'')) (V (STR ''z'')))), Statement 4),
+      (Statement 3, EA_Check (NotEq (V (STR ''y'')) (V (STR ''z''))), Statement 4),
       (Statement 4, EA_Check (Eq (V (STR ''y'')) (V (STR ''z''))), Statement 5),
       (Statement 5, EA_Special Nondet_Int (STR ''w''), Statement 6),
       (Statement 6, EA_Check (Eq (V (STR ''y'')) (V (STR ''w''))), Statement 7),
@@ -120,7 +120,7 @@ text \<open>Executable classification at each check's own node --- \<open>y\<clo
   and \<open>z\<close> is \<open>POdd\<close> at both \<open>Statement 3\<close> and \<open>Statement 4\<close> (checks do not
   change the store), and \<open>w\<close> is \<open>PTop\<close> at \<open>Statement 6\<close>.\<close>
 lemma parity_ex_classify_3:
-  "parity_classify_check (Not (Eq (V (STR ''y'')) (V (STR ''z''))))
+  "parity_classify_check (NotEq (V (STR ''y'')) (V (STR ''z'')))
      (parity_ex_env (Statement 3)) = Check_Proved"
   unfolding parity_ex_env_def by eval
 
@@ -136,7 +136,7 @@ lemma parity_ex_classify_6:
 
 corollary parity_ex_first_check_holds:
   assumes "t \<in> parity_ex_reach (Statement 3)"
-  shows "truthy (aval (Not (Eq (V (STR ''y'')) (V (STR ''z'')))) t)"
+  shows "truthy (aval (NotEq (V (STR ''y'')) (V (STR ''z''))) t)"
   using assms parity_ex_node_sound parity_classify_check_proved[OF parity_ex_classify_3]
   by blast
 
@@ -151,19 +151,19 @@ text \<open>The generic \<^const>\<open>checks_proven\<close>/\<^theory>\<open>V
   compiler's whole \<^const>\<open>checks\<close> table would be false, since the second check is refuted.\<close>
 
 lemma parity_ex_proven_check_discharged:
-  "parity_checks_proven {(Statement 3, Not (Eq (V (STR ''y'')) (V (STR ''z''))))} parity_ex_env"
+  "parity_checks_proven {(Statement 3, NotEq (V (STR ''y'')) (V (STR ''z'')))} parity_ex_env"
 proof (rule parity_checks_provenI)
   fix v :: pp and cnd :: exp
-  assume mem: "(v, cnd) \<in> {(Statement 3, Not (Eq (V (STR ''y'')) (V (STR ''z''))))}"
+  assume mem: "(v, cnd) \<in> {(Statement 3, NotEq (V (STR ''y'')) (V (STR ''z'')))}"
   then have v_eq: "v = Statement 3"
-    and cnd_eq: "cnd = Not (Eq (V (STR ''y'')) (V (STR ''z'')))"
+    and cnd_eq: "cnd = NotEq (V (STR ''y'')) (V (STR ''z''))"
     by auto
   show "parity_check_query cnd (parity_ex_env v) = Some True"
     unfolding v_eq cnd_eq parity_ex_env_def by eval
 qed
 
 lemma parity_ex_proven_check_checks_proven:
-  "checks_proven {(Statement 3, Not (Eq (V (STR ''y'')) (V (STR ''z''))))} parity_ex_reach"
+  "checks_proven {(Statement 3, NotEq (V (STR ''y'')) (V (STR ''z'')))} parity_ex_reach"
   by (rule parity_checks_proven_sound)
      (use parity_ex_node_sound parity_ex_proven_check_discharged in auto)
 
@@ -203,7 +203,7 @@ subsection \<open>Whole-program check report\<close>
 
 lemma parity_ex_report_eval:
   "analyse_parity_report_for parity_ex_gs parity_ex_program =
-     [(Statement 3, Not (Eq (V (STR ''y'')) (V (STR ''z''))), Check_Proved),
+     [(Statement 3, NotEq (V (STR ''y'')) (V (STR ''z'')), Check_Proved),
       (Statement 4, Eq (V (STR ''y'')) (V (STR ''z'')), Check_Refuted),
       (Statement 6, Eq (V (STR ''y'')) (V (STR ''w'')), Check_Unknown)]"
   by eval
@@ -213,11 +213,26 @@ text \<open>The proved entry, discharged against the collecting semantics rather
   \<^theory>\<open>Voblint_Analysis_Parity.Parity_Entry\<close>.\<close>
 
 corollary parity_ex_report_proved_entry_sound:
-  "\<forall>t \<in> parity_ex_reach (Statement 3). truthy (aval (Not (Eq (V (STR ''y'')) (V (STR ''z'')))) t)"
+  "\<forall>t \<in> parity_ex_reach (Statement 3). truthy (aval (NotEq (V (STR ''y'')) (V (STR ''z''))) t)"
   unfolding parity_ex_reach_def
   using parity_ex_fwd_ok_ball
   by (intro analyse_parity_report_sound_proved_for parity_ex_solver_terminates
         parity_ex_entry_cov)
      (auto simp: parity_ex_calls_eval parity_ex_report_eval)
+
+lemma parity_direct_comparisons:
+  "map (\<lambda>c. aval_parity (c (V (STR ''x'')) (N 1)) (\<lambda>_. PEven))
+    [LessEq, Greater, GreaterEq, NotEq] = [PTop, PTop, PTop, POdd]"
+  by eval
+
+
+lemma parity_division_remainder_regression:
+  "parity_div POdd PEven = PTop"
+  "parity_mod POdd PEven = POdd"
+  "parity_mod PEven PEven = PEven"
+  "parity_mod POdd POdd = PTop"
+  "parity_div PBot POdd = PBot"
+  "parity_mod PEven PBot = PBot"
+  by eval+
 
 end

@@ -199,25 +199,38 @@ lemma flat_output_sound:
       and "sound_table p r classify"
       and "s \<in> ltr_collect (declared_global p) (prog_cfg p)
                 (cinit_stores (declared_global p)) v"
-  shows "table_covers r v s \<and> checks_sound_at out v s"
-  by (rule sound_table.sound_at [OF assms(2) out_checks_of_flat_output [OF assms(1)] assms(3)])
+  shows "table_covers r v s \<and> checks_sound_at out v s \<and> diagnostics_sound_at out p v s"
+  by (rule sound_table.output_sound_at [OF assms(2) out_checks_of_flat_output [OF assms(1)]
+          out_diagnostics_of_flat_output [OF assms(1)] assms(3)])
 
 lemma entry_state_output_sound:
   assumes "entry_state_output_of view enter into classify r p = Analysed out"
       and "sound_table p r classify"
       and "s \<in> ltr_collect (declared_global p) (prog_cfg p)
                 (cinit_stores (declared_global p)) v"
-  shows "table_covers r v s \<and> checks_sound_at out v s"
-  by (rule sound_table.sound_at
-        [OF assms(2) out_checks_of_entry_state_output [OF assms(1)] assms(3)])
+  shows "table_covers r v s \<and> checks_sound_at out v s \<and> diagnostics_sound_at out p v s"
+  by (rule sound_table.output_sound_at
+        [OF assms(2) out_checks_of_entry_state_output [OF assms(1)]
+          out_diagnostics_of_entry_state_output [OF assms(1)] assms(3)])
 
 lemma cs_output_sound:
   assumes "cs_output_of view into classify r k p = Analysed out"
       and "sound_table p r classify"
       and "s \<in> ltr_collect (declared_global p) (prog_cfg p)
                 (cinit_stores (declared_global p)) v"
-  shows "table_covers r v s \<and> checks_sound_at out v s"
-  by (rule sound_table.sound_at [OF assms(2) out_checks_of_cs_output [OF assms(1)] assms(3)])
+  shows "table_covers r v s \<and> checks_sound_at out v s \<and> diagnostics_sound_at out p v s"
+  by (rule sound_table.output_sound_at [OF assms(2) out_checks_of_cs_output [OF assms(1)]
+          out_diagnostics_of_cs_output [OF assms(1)] assms(3)])
+
+lemma table_report_answer_sound:
+  assumes "table_report_answer view r classify p = Analysed out"
+      and "sound_table p r classify"
+      and "s \<in> ltr_collect (declared_global p) (prog_cfg p)
+                (cinit_stores (declared_global p)) v"
+  shows "table_covers r v s \<and> checks_sound_at out v s \<and> diagnostics_sound_at out p v s"
+  by (rule sound_table.output_sound_at
+        [OF assms(2) out_checks_of_table_report_answer [OF assms(1)]
+          out_diagnostics_of_table_report_answer [OF assms(1)] assms(3)])
 
 lemma verdict_report_answer_sound:
   assumes "verdict_report_answer view (classify_checks_verdicts (prog_cfg p) r classify)
@@ -243,7 +256,7 @@ lemma plan_answer_sound:
       and ans: "plan_answer pl view p = Analysed out"
       and mem: "s \<in> ltr_collect (declared_global p) (prog_cfg p)
                       (cinit_stores (declared_global p)) v"
-  shows "plan_covers pl p v s \<and> checks_sound_at out v s"
+  shows "plan_covers pl p v s \<and> checks_sound_at out v s \<and> diagnostics_sound_at out p v s"
 proof (cases pl)
   case (Plan_Sign sc)
   show ?thesis
@@ -378,19 +391,19 @@ next
     show ?thesis
       using wf terminates ans mem
       unfolding Plan_Interval_EntryState Solver_Join plan_answer_unfold
-      by - (rule verdict_report_answer_sound [OF _ interval_es_join_table])
+      by - (rule table_report_answer_sound [OF _ interval_es_join_table])
   next
     case Solver_PerOrigin
     show ?thesis
       using wf terminates ans mem
       unfolding Plan_Interval_EntryState Solver_PerOrigin plan_answer_unfold
-      by - (rule verdict_report_answer_sound [OF _ interval_es_po_table])
+      by - (rule table_report_answer_sound [OF _ interval_es_po_table])
   next
     case Solver_WarrowPerOrigin
     show ?thesis
       using wf terminates ans mem
       unfolding Plan_Interval_EntryState Solver_WarrowPerOrigin plan_answer_unfold
-      by - (rule verdict_report_answer_sound [OF _ interval_es_wpo_table])
+      by - (rule table_report_answer_sound [OF _ interval_es_wpo_table])
   qed
 next
   case (Plan_Int_EntryState sc)
@@ -452,19 +465,19 @@ next
     show ?thesis
       using wf terminates ans mem
       unfolding Plan_Interval_CallString Solver_Join plan_answer_unfold
-      by - (rule verdict_report_answer_sound [OF _ interval_cs_join_table])
+      by - (rule table_report_answer_sound [OF _ interval_cs_join_table])
   next
     case Solver_PerOrigin
     show ?thesis
       using wf terminates ans mem
       unfolding Plan_Interval_CallString Solver_PerOrigin plan_answer_unfold
-      by - (rule verdict_report_answer_sound [OF _ interval_cs_po_table])
+      by - (rule table_report_answer_sound [OF _ interval_cs_po_table])
   next
     case Solver_WarrowPerOrigin
     show ?thesis
       using wf terminates ans mem
       unfolding Plan_Interval_CallString Solver_WarrowPerOrigin plan_answer_unfold
-      by - (rule verdict_report_answer_sound [OF _ interval_cs_wpo_table])
+      by - (rule table_report_answer_sound [OF _ interval_cs_wpo_table])
   qed
 next
   case (Plan_Int_CallString sc k)
@@ -517,7 +530,7 @@ lemma plan_answer_check_sites:
      (auto simp: plan_answer_def plan_answer_report_defs Let_def
         split: solver_choice.splits prod.splits
         dest!: flat_output_check_sites entry_state_output_check_sites cs_output_check_sites
-          verdict_report_answer_check_sites)
+          verdict_report_answer_check_sites table_report_answer_check_sites)
 
 text \<open>
   The same claim read through \<^const>\<open>run_voblint\<close>: an \<^const>\<open>Analysed\<close>
@@ -530,7 +543,7 @@ lemma run_voblint_sound_at:
       and ans: "run_voblint D solver ctx view p = Analysed out"
       and mem: "s \<in> ltr_collect (declared_global p) (prog_cfg p)
                       (cinit_stores (declared_global p)) v"
-  shows "analysis_result_covers D solver ctx p v s \<and> checks_sound_at out v s"
+  shows "analysis_result_covers D solver ctx p v s \<and> checks_sound_at out v s \<and> diagnostics_sound_at out p v s"
 proof -
   from ans obtain pl
     where wfx: "wf_program_compile_input_exec p"
@@ -549,6 +562,30 @@ text \<open>
   check's node and with its condition, in graph order.  Pairing those rows with
   source positions happens outside this development.
 \<close>
+
+theorem run_voblint_arithmetic_safe:
+  assumes terminates: "config_terminates D solver ctx p"
+    and ans: "run_voblint D solver ctx view p = Analysed out"
+    and mem: "s \<in> ltr_collect (declared_global p) (prog_cfg p)
+      (cinit_stores (declared_global p)) v"
+    and absent: "\<forall>d \<in> set (out_diagnostics out). diagnostic_point d \<noteq> v"
+  shows "arithmetic_safe_at (prog_cfg p) v s"
+  using run_voblint_sound_at[OF terminates ans mem] absent
+  unfolding diagnostics_sound_at_def by blast
+
+corollary run_voblint_arithmetic_intra_safe:
+  assumes "config_terminates D solver ctx p"
+    and "run_voblint D solver ctx view p = Analysed out"
+    and "s \<in> ltr_collect (declared_global p) (prog_cfg p)
+      (cinit_stores (declared_global p)) v"
+    and "\<forall>d \<in> set (out_diagnostics out). diagnostic_point d \<noteq> v"
+    and "(v, action, w) \<in> intra (prog_cfg p)"
+    and "e \<in> set (arithmetic_edge_expressions action)"
+    and "divisor \<in> expression_divisors e"
+  shows "aval divisor s \<noteq> 0"
+  using run_voblint_arithmetic_safe[OF assms(1-4)]
+    arithmetic_expression_sites_intra[OF finite_intra_prog_cfg assms(5)] assms(6,7)
+  unfolding arithmetic_safe_at_def by blast
 
 corollary run_voblint_check_sites:
   assumes "run_voblint D solver ctx view p = Analysed out"
@@ -649,7 +686,7 @@ proof (rule equals0I)
   assume "s \<in> ltr_collect (declared_global p) (prog_cfg p)
                 (cinit_stores (declared_global p)) (row_point row)"
   from run_voblint_sound_at [OF terminates ans this]
-  have "checks_sound_at out (row_point row) s" ..
+  have "checks_sound_at out (row_point row) s" by blast
   with row dead show False unfolding checks_sound_at_def by blast
 qed
 

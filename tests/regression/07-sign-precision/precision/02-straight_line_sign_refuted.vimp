@@ -5,7 +5,7 @@
 // sign_lt refutes as precisely as it proves -- a one-sided fixture would let
 // a regression that collapses every comparison to PROVED go unnoticed.
 
-void main() {
-  x := 0 - 5;
-  __voblint_check(0 < x) // REFUTED
+fun main() {
+  x = 0 - 5;
+  __voblint_check(0 < x); // REFUTED
 }

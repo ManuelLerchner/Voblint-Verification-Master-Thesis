@@ -13,19 +13,17 @@
 // bound of x but has nothing to descend y through; 0 <= y survives only
 // because the lower bound never moved. Solver-invariant across join,
 // per-origin, warrow, warrow-per-origin.
-void main() {
-  x := 0;
-  y := 0;
+fun main() {
+  x = 0;
+  y = 0;
   while (x < 100) {
-    __voblint_check(!(y < 0)); // PROVED
-    __voblint_check(!(1 < y)); // UNKNOWN
+    __voblint_check(y >= 0); // PROVED
+    __voblint_check(y <= 1); // UNKNOWN
     if (5 < x) {
-      y := 1
-    } else {
-      skip
-    };
-    x := x + 4
-  };
-  __voblint_check(!(y < 0)); // PROVED
-  __voblint_check(!(1 < y)) // UNKNOWN
+      y = 1;
+    }
+    x = x + 4;
+  }
+  __voblint_check(y >= 0); // PROVED
+  __voblint_check(y <= 1); // UNKNOWN
 }

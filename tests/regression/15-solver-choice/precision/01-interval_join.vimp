@@ -4,7 +4,7 @@
 // Interval's production default is Solver_Warrow (see
 // analyse_with_solver_interval_default); join is the always-terminating,
 // non-default alternative -- same verdict here regardless of choice.
-void main() {
-  x := 5;
-  __voblint_check(0 < x) // PROVED
+fun main() {
+  x = 5;
+  __voblint_check(0 < x); // PROVED
 }

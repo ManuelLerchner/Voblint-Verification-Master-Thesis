@@ -7,18 +7,18 @@
 //
 // The complement of 09: 09 pins that two writes to one key become one write,
 // this pins that two writes to two keys stay two writes.
-void f(n) {
-  return n
+fun f(n) {
+  return n;
 }
-void g(n) {
-  return n + 1
+fun g(n) {
+  return n + 1;
 }
-void main() {
-  x := 5;
+fun main() {
+  x = 5;
   if (x < 2) {
-    a := f(1)
+    a = f(1);
   } else {
-    a := g(1)
-  };
-  __voblint_check(x == 5) // PROVED
+    a = g(1);
+  }
+  __voblint_check(x == 5); // PROVED
 }

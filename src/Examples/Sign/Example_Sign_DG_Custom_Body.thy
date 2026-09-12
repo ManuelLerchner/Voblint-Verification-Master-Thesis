@@ -113,8 +113,8 @@ text \<open>\<open>bf_program\<close> is byte-identical to \<open>Example_Sign_D
 
 definition bf_program :: imp_prog where
   "bf_program = program {
-     void mark(p) { r := 0 - 1; return p }
-     void main() { r := 1; z := mark(7) }
+     fun mark(p) { r = 0 - 1; return p; }
+     fun main() { r = 1; z = mark(7); }
    }"
 
 abbreviation bf_prog_gs :: "vname \<Rightarrow> bool" where

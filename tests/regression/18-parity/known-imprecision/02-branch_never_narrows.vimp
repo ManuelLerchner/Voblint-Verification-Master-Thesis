@@ -9,12 +9,10 @@
 // x == 5 therefore comes back UNKNOWN regardless of what the guard says.
 // There is no bfilter_lifted for Parity to wire into tf_branch, so unlike
 // its siblings this case is not expected to change.
-void main() {
-  x := __voblint_nondet_int();
-  y := __voblint_nondet_int();
+fun main() {
+  x = __voblint_nondet_int();
+  y = __voblint_nondet_int();
   if ((x == 0 && x == 1) || (y == 0 && y == 1)) {
-    __voblint_check(x == 5) // UNKNOWN
-  } else {
-    skip
+    __voblint_check(x == 5); // UNKNOWN
   }
 }

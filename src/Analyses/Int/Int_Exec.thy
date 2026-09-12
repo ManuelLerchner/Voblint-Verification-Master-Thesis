@@ -73,7 +73,7 @@ lemma int_dom_special_ops_simps [simp]:
   "special_max (int_dom_special_ops mode) = int_dom_max mode"
   by (simp_all add: int_dom_special_ops_def)
 
-subsection \<open>Refine_Never\<close>
+subsection \<open>No cross-component refinement\<close>
 
 definition int_dom_ops_never :: "int_dom numeric_ops" where
   "int_dom_ops_never = \<lparr> n_aval = aval_int_dom Refine_Never,
@@ -139,7 +139,7 @@ lemma int_dom_enter_never_st_for_commute:
                 enter_frame_def enter_frame_int_dom_for_def)
 
 
-subsection \<open>Refine_Once\<close>
+subsection \<open>One refinement round\<close>
 
 definition int_dom_ops_once :: "int_dom numeric_ops" where
   "int_dom_ops_once = \<lparr> n_aval = aval_int_dom Refine_Once,
@@ -205,7 +205,7 @@ lemma int_dom_enter_once_st_for_commute:
                 enter_frame_def enter_frame_int_dom_for_def)
 
 
-subsection \<open>Refine_Fixpoint\<close>
+subsection \<open>Refinement to a fixpoint\<close>
 
 definition int_dom_ops_fixpoint :: "int_dom numeric_ops" where
   "int_dom_ops_fixpoint = \<lparr> n_aval = aval_int_dom Refine_Fixpoint,

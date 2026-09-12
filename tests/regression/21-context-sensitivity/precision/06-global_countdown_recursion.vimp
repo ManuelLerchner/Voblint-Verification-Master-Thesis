@@ -8,18 +8,18 @@
 // the base case's num_iterat == 0 guard selects the `return 5` arm on any
 // state containing 0, and the recursive arm only forwards that value.
 global num_iterat;
-void rec() {
+fun rec() {
   if (0 < num_iterat) {
-    num_iterat := num_iterat - 1;
-    res := rec();
+    num_iterat = num_iterat - 1;
+    res = rec();
     __voblint_check(res == 5); // PROVED
-    return res
+    return res;
   } else {
-    if (num_iterat == 0) { return 5 } else { return 2 }
+    if (num_iterat == 0) { return 5; } else { return 2; }
   }
 }
-void main() {
-  num_iterat := 11;
-  r := rec();
-  __voblint_check(r == 5) // PROVED
+fun main() {
+  num_iterat = 11;
+  r = rec();
+  __voblint_check(r == 5); // PROVED
 }

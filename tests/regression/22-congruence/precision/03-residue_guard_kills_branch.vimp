@@ -10,12 +10,12 @@
 // compares the classes properly. Congruence therefore refutes an
 // even-equals-odd claim when it appears as a guard and declines when the
 // identical claim appears as a check.
-void main() {
-  n := __voblint_nondet_int();
-  x := 2 * n;
+fun main() {
+  n = __voblint_nondet_int();
+  x = 2 * n;
   if (x == 5) {
-    __voblint_check(false) // NOWARN (unreachable)
+    __voblint_check(false); // NOWARN (unreachable)
   } else {
-    __voblint_check(true) // PROVED
+    __voblint_check(true); // PROVED
   }
 }

@@ -7,13 +7,13 @@
 // one), so both arms hand a non-negative sign to y and the join at the
 // merge point stays SNonNeg rather than collapsing to Top the way it would
 // if y had been assigned x directly, before the guard narrowed it.
-void main() {
-  x := 0;
-  x := __voblint_nondet_int();
+fun main() {
+  x = 0;
+  x = __voblint_nondet_int();
   if (0 < x) {
-    y := x
+    y = x;
   } else {
-    y := 0 - x
-  };
-  __voblint_check(!(y < 0)) // PROVED
+    y = 0 - x;
+  }
+  __voblint_check(y >= 0); // PROVED
 }

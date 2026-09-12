@@ -9,8 +9,8 @@ hide_const phase.N
 section \<open>Parity instance of the generic check-discharge interface\<close>
 
 text \<open>
-  Only composition lives here, exactly as Voblint_Analysis_Sign.Sign_Checks
-  and Voblint_Analysis_Interval.Interval_Checks: the Parity lattice comparison
+  Only composition lives here, exactly as \<open>Voblint_Analysis_Sign.Sign_Checks\<close>
+  and \<open>Voblint_Analysis_Interval.Interval_Checks\<close>: the Parity lattice comparison
   tables (\<open>parity_less_true\<close>/\<open>parity_less_false\<close>/\<open>parity_eq_true\<close>/
   \<open>parity_eq_false\<close>) and their
   \<^theory>\<open>Voblint_Analysis_Parity.Parity_Numeric_Queries\<close> interpretation of
@@ -41,7 +41,7 @@ qed
 
 text \<open>
   Only the consumer-facing aliases get a short Parity-prefixed name, matching
-  Voblint_Analysis_Sign.Sign_Checks naming convention:
+  \<open>Voblint_Analysis_Sign.Sign_Checks\<close> naming convention:
   \<open>classify_check\<close>'s two directions and the \<open>checks_proven\<close> bridge, both
   exercised below and by the worked check-discharge example. The lower-level
   facts \<open>classify_check\<close>'s own soundness is built from stay reachable under

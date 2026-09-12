@@ -14,22 +14,26 @@ table exists for the selectable role.
 
 ## What the comparison operators do, and what they could do
 
-`congruence_lt` returns `None` for every pair, and `congruence_eqb` answers only when
-both sides are singletons (`m = 0`). Those are the current implementations, not the
-precision the domain can represent, and the distinction matters now that
-Congruence is selectable on its own:
+`congruence_lt` and `congruence_eqb` decide pairs of singletons (`m = 0`).
+The six VIMP comparisons use these queries directly: `>` reverses the operands,
+`<=` and `>=` complement the appropriate strict-order query, and `!=` complements
+equality. Singleton ordering is exact; genuinely unbounded classes carry no
+definite ordering information.
+
+Equality has a remaining precision gap:
 
 - an even integer never equals an odd one, so `congruence_eqb` can answer
   `Some False` whenever the two residue classes are disjoint ---
   `r1 != r2 (mod gcd m1 m2)` --- and not only when both collapse to a point;
-- `congruence_lt` can decide any pair of singletons exactly, and must answer `None`
-  for genuinely unbounded classes, which carry no order information;
-- `min` and `max` return one of their operands, so the join of the arguments is always
-  a sound answer for both. `top` is sometimes forced, never universally.
 
-Until those are sharpened, a caller selecting Congruence should expect
-`Check_Unknown` on nearly every inequality check, and a decided answer only
-where both sides pin a single integer.
+`min` and `max` return the join of their arguments, since either result must be
+one of the operands.
+
+Division by a nonzero singleton retains an exact quotient class when the
+divisor divides both the residue and modulus. For example, `3 (mod 12)`
+divided by `3` becomes `1 (mod 4)`; divided by `-3`, it becomes `3 (mod 4)`.
+Otherwise division keeps exact singleton results and falls back to top.
+Division by zero follows VIMP's totalization and yields zero.
 
 Judging the domain by its comparison operators undervalues it in any case. Congruence
 is there to carry modular information --- alignment, stride, access patterns --- which

@@ -126,5 +126,52 @@ lemma bfilter_int_dom_never_congruence_unused:
    int_dom_sipc STop (Ivl (Fin 0) (Fin 10)) PTop (mk_congruence 1 4)"
   by eval
 
+lemma int_direct_comparisons_all_modes:
+  "map (\<lambda>mode. map (\<lambda>c. aval_int_dom mode (c (V (STR ''x'')) (N 0))
+      (\<lambda>_. int_dom_of_int (-1))) [LessEq, Greater, GreaterEq, NotEq])
+    [Refine_Never, Refine_Once, Refine_Fixpoint] =
+   replicate 3 [int_dom_of_int 1, int_dom_of_int 0,
+                int_dom_of_int 0, int_dom_of_int 1]"
+  by eval
+
+lemma int_false_disequality_refines:
+  "bfilter_int_dom_once (NotEq (Plus (V (STR ''x'')) (N 1)) (N 3))
+    False test_env_top (STR ''x'') =
+   int_dom_sipc SPos (Ivl (Fin 2) (Fin 2)) PEven (congruence_of_int 2)"
+  by eval
+
+
+lemma int_division_remainder_modes:
+  "map (\<lambda>mode. aval_int_dom mode (Div (N (-7)) (N 3)) (\<lambda>_. top))
+      [Refine_Never, Refine_Once, Refine_Fixpoint] =
+    [div_int_dom Refine_Never (int_dom_of_int (-7)) (int_dom_of_int 3),
+     int_dom_of_int (-2), int_dom_of_int (-2)]"
+  "map (\<lambda>mode. aval_int_dom mode (Mod (N (-7)) (N 3)) (\<lambda>_. top))
+      [Refine_Once, Refine_Fixpoint] = [int_dom_of_int (-1), int_dom_of_int (-1)]"
+  by eval+
+
+lemma int_exact_division_recovers_parity:
+  "map (\<lambda>mode. int_parity (aval_int_dom mode
+      (Div (Times (N 6) (V (STR ''n''))) (N 3)) (\<lambda>_. top)))
+    [Refine_Never, Refine_Once, Refine_Fixpoint] = [PTop, PEven, PEven]"
+  "map (\<lambda>mode. int_parity (aval_int_dom mode
+      (Div (Plus (Times (N 12) (V (STR ''n''))) (N 3)) (N (-3))) (\<lambda>_. top)))
+    [Refine_Never, Refine_Once, Refine_Fixpoint] = [PTop, POdd, POdd]"
+  by eval+
+
+definition division_remainder_exp :: exp where
+  "division_remainder_exp =
+    Mod (Div (Plus (Times (N 12) (V (STR ''n''))) (N 3)) (N 3)) (N 4)"
+
+lemma int_division_remainder_progressive:
+  "map (\<lambda>mode. int_ivl (aval_int_dom mode division_remainder_exp
+      (\<lambda>_. int_dom_sipc SNonNeg (Ivl (Fin 0) (Fin 20)) PTop top)))
+    [Refine_Never, Refine_Once, Refine_Fixpoint] =
+    [Ivl (Fin 0) (Fin 3), Ivl (Fin 1) (Fin 1), Ivl (Fin 1) (Fin 1)]"
+  "map (\<lambda>mode. int_sign (aval_int_dom mode division_remainder_exp
+      (\<lambda>_. int_dom_sipc SNonNeg (Ivl (Fin 0) (Fin 20)) PTop top)))
+    [Refine_Never, Refine_Once, Refine_Fixpoint] = [SNonNeg, SNonNeg, SPos]"
+  by eval+
+
 end
 

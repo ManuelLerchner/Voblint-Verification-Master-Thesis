@@ -8,20 +8,20 @@
 // The composite proves all three. Mechanism, measured through the
 // reported states: Sign is finite and never widens, so the head keeps
 // Positive (x = 40) joined with NonNegative (after x - 1) = NonNegative
-// while the interval widens to [-inf,40]. The guard !(x == 0) removes
+// while the interval widens to [-inf,40]. The guard (x != 0) removes
 // Zero from NonNegative, leaving Positive, and the reduction feeds that
 // back into the interval as a lower bound of 1: x = Positive, [1,40]
 // before the decrement and NonNegative, [0,39] after it. Sign acts as a
 // zero threshold the interval alone has no way to remember. Verified
 // that --analysis sign alone proves only x == 0 (bounds UNKNOWN, x = Top)
-// and --analysis interval alone loses !(x < 0), so neither component
+// and --analysis interval alone loses (x >= 0), so neither component
 // proves this without the other.
-void main() {
-  x := 40;
-  while (!(x == 0)) {
-    __voblint_check(!(40 < x)); // PROVED
-    x := x - 1;
-    __voblint_check(!(x < 0)) // PROVED
-  };
-  __voblint_check(x == 0) // PROVED
+fun main() {
+  x = 40;
+  while (x != 0) {
+    __voblint_check(x <= 40); // PROVED
+    x = x - 1;
+    __voblint_check(x >= 0); // PROVED
+  }
+  __voblint_check(x == 0); // PROVED
 }

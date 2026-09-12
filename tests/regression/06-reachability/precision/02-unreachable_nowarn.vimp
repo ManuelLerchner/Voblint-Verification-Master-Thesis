@@ -7,12 +7,12 @@
 // main itself may not contain a return (wf_source_program's no_return
 // conjunct), so the return lives in a helper procedure p instead, called
 // destination-less.
-void p() {
-  x := 5;
+fun p() {
+  x = 5;
   __voblint_check(0 < x); // PROVED
   return x;
-  __voblint_check(0 < x) // NOWARN
+  __voblint_check(0 < x); // NOWARN
 }
-void main() {
-  p()
+fun main() {
+  p();
 }

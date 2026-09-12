@@ -46,6 +46,11 @@ match v1 with
 # -- `lower: {ctor: ..., args: [...]}` / `lower: {tuple: [...]}` renderer --
 
 def render_lower_arg(arg: dict) -> str:
+    if "ctor" in arg:
+        value = render_lower(arg)
+        if owns_stmt_index({"lower": arg}):
+            return f"(record_stmt_pos $endpos $endpos ({value}))"
+        return f"({value})"
     if "rhs" in arg:
         return f"v{arg['rhs']}"
     if "some" in arg:
@@ -135,6 +140,7 @@ rule token = parse
 NONTERMINAL_TYPES = {
     "exp": "Voblint_CLI.Generated.exp",
     "stmt": "Voblint_CLI.Generated.com",
+    "if_stmt": "Voblint_CLI.Generated.com",
     "stmts": "Voblint_CLI.Generated.com",
     "stmts_opt": "Voblint_CLI.Generated.com",
     "actuals": "Voblint_CLI.Generated.exp list",
@@ -222,7 +228,7 @@ def gen_list_rule(prod: dict) -> str:
         return (
             f"{name}:\n"
             f"  | (* empty *)\n"
-            f"      {{ {empty_action} }}\n"
+            f"      {{ record_stmt_pos $startpos $endpos ({empty_action}) }}\n"
             f"  | cs = {base}\n"
             f"      {{ cs }}"
         )
@@ -231,10 +237,9 @@ def gen_list_rule(prod: dict) -> str:
         # Left fold via a binary constructor (e.g. Seq), matching the
         # source grammar's own left-recursive `stmts_seq` shape exactly --
         # no separate associativity declaration needed, this is naturally
-        # unambiguous LR (SEMI is a concrete token, not an operator needing
-        # precedence resolution).
+        # unambiguous LR: each item consumes its own closing punctuation.
         single = f"  | x = {item}\n      {{ x }}"
-        multi = f"  | xs = {name} {prod['separator']} x = {item}\n      {{ Voblint_CLI.Generated.{ctor} (xs, x) }}"
+        multi = f"  | xs = {name} {prod.get('separator', '')} x = {item}\n      {{ Voblint_CLI.Generated.{ctor} (xs, x) }}"
         return f"{name}:\n{single}\n{multi}"
 
     # Plain growing list (actuals/formals/ids).
@@ -242,7 +247,7 @@ def gen_list_rule(prod: dict) -> str:
     if min_count == 0:
         alts.append("  | (* empty *)\n      { [] }")
     alts.append(f"  | x = {item}\n      {{ [x] }}")
-    alts.append(f"  | xs = {name} {prod['separator']} x = {item}\n      {{ xs @ [x] }}")
+    alts.append(f"  | xs = {name} {prod.get('separator', '')} x = {item}\n      {{ xs @ [x] }}")
     return f"{name}:\n" + "\n".join(alts)
 
 
@@ -259,8 +264,8 @@ def gen_program_rule() -> str:
           match mains with
           | [ (_, [], b) ] -> b
           | [ (_, _ :: _, _) ] -> failwith "'main' must have no formals"
-          | [] -> failwith "missing 'void main() { ... }'"
-          | _ -> failwith "more than one 'void main()'"
+          | [] -> failwith "missing 'fun main() { ... }'"
+          | _ -> failwith "more than one 'fun main()'"
         in
         Voblint_CLI.Generated.mk_program
           (List.map (fun (n, formals, b) -> (n, Voblint_CLI.Generated.Proc_decl_ext (formals, b, ()))) procs)

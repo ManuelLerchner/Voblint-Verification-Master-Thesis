@@ -36,9 +36,9 @@ text \<open>
 
 definition sign_nest_program :: imp_prog where
   "sign_nest_program = program {
-     void g(p) { return p + p }
-     void f(p) { t := g(p); return t }
-     void main() { x := f(3); y := f(-10) }
+     fun g(p) { return p + p; }
+     fun f(p) { t = g(p); return t; }
+     fun main() { x = f(3); y = f(-10); }
    }"
 
 text \<open>The storage classifier: \<open>sign_nest_program\<close> declares no globals, so

@@ -1,0 +1,12 @@
+// PARAM: --analysis interval
+// EXPECT-ARITHMETIC
+// Actual arguments, returns, and builtin arguments each expose their expressions.
+fun f(n) {
+  return n / 0; // ARITH: ERROR division-by-zero
+}
+fun main() {
+  x = f(10 / 0); // ARITH: ERROR division-by-zero
+  f(20 / 0); // ARITH: ERROR division-by-zero
+  low = min(10 / 0, 1); // ARITH: ERROR division-by-zero
+  high = max(1, 10 % 0); // ARITH: ERROR remainder-by-zero
+}

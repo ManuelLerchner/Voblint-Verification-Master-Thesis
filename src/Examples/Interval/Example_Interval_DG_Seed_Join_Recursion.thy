@@ -38,15 +38,15 @@ text \<open>Each activation enters with one more than the last, from \<open>0\<c
 
 definition sj_program :: imp_prog where
   "sj_program = program {
-     void up(n) {
+     fun up(n) {
        if (n < 5) {
-         r := up(n + 1);
-         return 0
+         r = up(n + 1);
+         return 0;
        } else {
-         return 0
+         return 0;
        }
      }
-     void main() { z := up(0) }
+     fun main() { z = up(0); }
    }"
 
 abbreviation sj_gs :: "vname \<Rightarrow> bool" where "sj_gs \<equiv> declared_global sj_program"

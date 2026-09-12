@@ -18,7 +18,7 @@ rule token = parse
   | '\n'              { Lexing.new_line lexbuf; token lexbuf }
   | "//" [^ '\n']*    { token lexbuf }
   | "global"            { GLOBAL }
-  | "void"              { VOID }
+  | "fun"               { FUN }
   | "skip"              { SKIP }
   | "return"            { RETURN }
   | "__voblint_check"   { CHECK }
@@ -27,12 +27,18 @@ rule token = parse
   | "while"             { WHILE }
   | "true"              { BOOL_TRUE }
   | "false"             { BOOL_FALSE }
-  | ":="                { ASSIGN }
+  | "="                 { ASSIGN }
   | "+"                 { PLUS }
   | "-"                 { MINUS }
   | "*"                 { STAR }
+  | "/"                 { SLASH }
+  | "%"                 { PERCENT }
   | "<"                 { LT }
+  | "<="                { LE }
+  | ">"                 { GT }
+  | ">="                { GE }
   | "=="                { EQEQ }
+  | "!="                { NEQ }
   | "&&"                { AND }
   | "||"                { OR }
   | "!"                 { NOT }

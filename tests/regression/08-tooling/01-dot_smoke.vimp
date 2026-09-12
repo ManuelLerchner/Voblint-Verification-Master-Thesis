@@ -2,7 +2,7 @@
 // DOT-rendering smoke test: same shape as
 // 00-sanity/precision/01-straight_line_proved.vimp, run with --dot instead
 // of the textual report.
-void main() {
-  x := 5;
-  __voblint_check(0 < x)
+fun main() {
+  x = 5;
+  __voblint_check(0 < x);
 }

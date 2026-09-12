@@ -110,10 +110,34 @@ lemma bfilter_Less_unfold:
                (afilter e2 (snd (inv_less res (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>))) \<sigma>)"
   by (simp add: Let_def case_prod_beta)
 
+lemma bfilter_GreaterEq_unfold:
+  "bfilter (GreaterEq e1 e2) res \<sigma> =
+     afilter e1 (fst (inv_less (\<not> res) (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>)))
+               (afilter e2 (snd (inv_less (\<not> res) (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>))) \<sigma>)"
+  by (simp add: Let_def case_prod_beta)
+
+lemma bfilter_Greater_unfold:
+  "bfilter (Greater e1 e2) res \<sigma> =
+     afilter e2 (fst (inv_less res (aval_abs e2 \<sigma>) (aval_abs e1 \<sigma>)))
+               (afilter e1 (snd (inv_less res (aval_abs e2 \<sigma>) (aval_abs e1 \<sigma>))) \<sigma>)"
+  by (simp add: Let_def case_prod_beta)
+
+lemma bfilter_LessEq_unfold:
+  "bfilter (LessEq e1 e2) res \<sigma> =
+     afilter e2 (fst (inv_less (\<not> res) (aval_abs e2 \<sigma>) (aval_abs e1 \<sigma>)))
+               (afilter e1 (snd (inv_less (\<not> res) (aval_abs e2 \<sigma>) (aval_abs e1 \<sigma>))) \<sigma>)"
+  by (simp add: Let_def case_prod_beta)
+
 lemma bfilter_Eq_unfold:
   "bfilter (Eq e1 e2) res \<sigma> =
      afilter e1 (fst (inv_eq res (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>)))
                (afilter e2 (snd (inv_eq res (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>))) \<sigma>)"
+  by (simp add: Let_def case_prod_beta)
+
+lemma bfilter_NotEq_unfold:
+  "bfilter (NotEq e1 e2) res \<sigma> =
+     afilter e1 (fst (inv_eq (\<not> res) (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>)))
+               (afilter e2 (snd (inv_eq (\<not> res) (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>))) \<sigma>)"
   by (simp add: Let_def case_prod_beta)
 
 lemma afilter_reductive: "afilter e a \<sigma> \<le> \<sigma>"
@@ -279,7 +303,19 @@ next
 next
   case (Less e1 e2) then show ?case by simp
 next
+  case (Div e1 e2) then show ?case by simp
+next
+  case (Mod e1 e2) then show ?case by simp
+next
+  case (GreaterEq e1 e2) then show ?case by simp
+next
+  case (Greater e1 e2) then show ?case by simp
+next
+  case (LessEq e1 e2) then show ?case by simp
+next
   case (Eq e1 e2) then show ?case by simp
+next
+  case (NotEq e1 e2) then show ?case by simp
 next
   case (Not e) then show ?case by simp
 next
@@ -431,11 +467,39 @@ next
     by (rule afilter_pair_mono[OF inv_less_mono_fst[OF v1 v2] inv_less_mono_snd[OF v1 v2]
                                   Less.prems])
 next
+  case (GreaterEq e1 e2)
+  have v1: "aval_abs e1 \<sigma>1 \<le> aval_abs e1 \<sigma>2" and v2: "aval_abs e2 \<sigma>1 \<le> aval_abs e2 \<sigma>2"
+    using aval_abs_mono[OF GreaterEq.prems] by simp_all
+  show ?case unfolding bfilter_GreaterEq_unfold
+    by (rule afilter_pair_mono[OF inv_less_mono_fst[OF v1 v2] inv_less_mono_snd[OF v1 v2]
+                                  GreaterEq.prems])
+next
+  case (Greater e1 e2)
+  have v1: "aval_abs e1 \<sigma>1 \<le> aval_abs e1 \<sigma>2" and v2: "aval_abs e2 \<sigma>1 \<le> aval_abs e2 \<sigma>2"
+    using aval_abs_mono[OF Greater.prems] by simp_all
+  show ?case unfolding bfilter_Greater_unfold
+    by (rule afilter_pair_mono[OF inv_less_mono_fst[OF v2 v1] inv_less_mono_snd[OF v2 v1]
+                                  Greater.prems])
+next
+  case (LessEq e1 e2)
+  have v1: "aval_abs e1 \<sigma>1 \<le> aval_abs e1 \<sigma>2" and v2: "aval_abs e2 \<sigma>1 \<le> aval_abs e2 \<sigma>2"
+    using aval_abs_mono[OF LessEq.prems] by simp_all
+  show ?case unfolding bfilter_LessEq_unfold
+    by (rule afilter_pair_mono[OF inv_less_mono_fst[OF v2 v1] inv_less_mono_snd[OF v2 v1]
+                                  LessEq.prems])
+next
   case (Eq e1 e2)
   have v1: "aval_abs e1 \<sigma>1 \<le> aval_abs e1 \<sigma>2" and v2: "aval_abs e2 \<sigma>1 \<le> aval_abs e2 \<sigma>2"
     using aval_abs_mono[OF Eq.prems] by simp_all
   show ?case unfolding bfilter_Eq_unfold
     by (rule afilter_pair_mono[OF inv_eq_mono_fst[OF v1 v2] inv_eq_mono_snd[OF v1 v2] Eq.prems])
+
+next
+  case (NotEq e1 e2)
+  have v1: "aval_abs e1 \<sigma>1 \<le> aval_abs e1 \<sigma>2" and v2: "aval_abs e2 \<sigma>1 \<le> aval_abs e2 \<sigma>2"
+    using aval_abs_mono[OF NotEq.prems] by simp_all
+  show ?case unfolding bfilter_NotEq_unfold
+    by (rule afilter_pair_mono[OF inv_eq_mono_fst[OF v1 v2] inv_eq_mono_snd[OF v1 v2] NotEq.prems])
 qed (simp_all only: bfilter.simps Let_def case_prod_beta bfilter_default_mono)
 
 text \<open>

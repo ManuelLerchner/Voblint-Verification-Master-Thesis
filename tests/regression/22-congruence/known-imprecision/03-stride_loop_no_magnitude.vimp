@@ -6,7 +6,7 @@
 // 3 into 1 (mod 2), v := v + 2 maps that class to itself, and the fixpoint
 // is reached in one further step -- no widening needed, which is why the
 // domain publishes no warrowing discipline. The exit guard
-// contributes nothing: inv_less_congruence is the identity, so !(v < 51)
+// contributes nothing: inv_less_congruence is the identity, so (v >= 51)
 // leaves the class untouched.
 //
 // The concrete mechanism losing v == 51 is therefore the lattice, not the
@@ -17,10 +17,10 @@
 // this same loop under --analysis int, where the interval narrows v to
 // [51,52] and the congruence-to-interval reduction rounds that
 // class-aligned to [51,51].
-void main() {
-  v := 1;
+fun main() {
+  v = 1;
   while (v < 51) {
-    v := v + 2
-  };
-  __voblint_check(v == 51) // UNKNOWN
+    v = v + 2;
+  }
+  __voblint_check(v == 51); // UNKNOWN
 }

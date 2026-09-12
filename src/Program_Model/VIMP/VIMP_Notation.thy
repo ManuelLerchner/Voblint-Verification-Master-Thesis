@@ -10,18 +10,19 @@ text \<open>
   command quotation from Pure premises; whole programs use the explicit \<open>program\<close> prefix.
 
   Design is inspired by:
-  https://awslabs.github.io/AutoCorrode/Unsorted/AutoCorrode/Micro_Rust_Examples.Basic_Micro_Rust.html
+  \<^url>\<open>https://awslabs.github.io/AutoCorrode/Unsorted/AutoCorrode/Micro_Rust_Examples.Basic_Micro_Rust.html\<close>
   and
-  https://github.com/awslabs/AutoCorrode/blob/e234addc5e67f78cbff63defd24199578e8e1af3/Micro_Rust_Parsing_Frontend/Micro_Rust_Syntax.thy#L5
+  \<^url>\<open>https://github.com/awslabs/AutoCorrode/blob/e234addc5e67f78cbff63defd24199578e8e1af3/Micro_Rust_Parsing_Frontend/Micro_Rust_Syntax.thy#L5\<close>
 
   Inside the bracket:
   - bare identifiers become @{const V} literals (HOL string literals via @{type vname})
   - numerals become @{const N}
   - arithmetic:
-      +, -, * map to @{const Plus}, @{const Minus}, @{const Times}
+      +, -, *, /, % map to @{const Plus}, @{const Minus}, @{const Times},
+      @{const Div}, @{const Mod}
       unary minus @{text "-n"} on numerals becomes @{const N} with a negative int
   - comparisons:
-      <, == map to @{const Less}, @{const Eq}, evaluating to an @{typ int} 0/1
+      <, <=, >, >=, ==, != evaluate to an @{typ int} 0/1
   - constants:
       true/false lower to @{const N} 1/@{const N} 0
 
@@ -29,8 +30,8 @@ text \<open>
   @{verbatim [display]
    "definition loop_prog :: VIMP_Proc.com where
       \"loop_prog = imp \<lbrakk>
-         x := 0;
-         while (x < 20) { x := x + 1 }
+         x = 0;
+         while (x < 20) { x = x + 1; }
        \<rbrakk>\""}
 
   Whole-program syntax and its \<open>imp_prog\<close> lowering stay hand-written here,
@@ -47,8 +48,8 @@ syntax
   "_PROGKW0"    :: "imp2_funcs \<Rightarrow> imp_prog"                ("program { _ }" [0] 1000)
   "_PROGKW"     :: "imp2_ids \<Rightarrow> imp2_funcs \<Rightarrow> imp_prog"      ("program { global _ ; _ }" [0, 0] 1000)
   "_funcs_nil"   :: imp2_funcs                                    ("")
-  "_funcs_cons0" :: "id_position \<Rightarrow> imp2_stmts_opt \<Rightarrow> imp2_funcs \<Rightarrow> imp2_funcs"  ("void _'(') { _ } _" [1000, 0, 0] 1000)
-  "_funcs_cons"  :: "id_position \<Rightarrow> imp2_formals \<Rightarrow> imp2_stmts_opt \<Rightarrow> imp2_funcs \<Rightarrow> imp2_funcs"  ("void _'( _ ') { _ } _" [1000, 0, 0, 0] 1000)
+  "_funcs_cons0" :: "id_position \<Rightarrow> imp2_stmts_opt \<Rightarrow> imp2_funcs \<Rightarrow> imp2_funcs"  ("fun _'(') { _ } _" [1000, 0, 0] 1000)
+  "_funcs_cons"  :: "id_position \<Rightarrow> imp2_formals \<Rightarrow> imp2_stmts_opt \<Rightarrow> imp2_funcs \<Rightarrow> imp2_funcs"  ("fun _'( _ ') { _ } _" [1000, 0, 0, 0] 1000)
 
 parse_translation \<open>
   let
@@ -136,8 +137,8 @@ parse_translation \<open>
                if has_return body then error "VIMP program: main may not return" else SOME body
            | [("main", _, _, SOME _)] => error "VIMP program: main may not return"
            | [("main", _, _, NONE)] => error "VIMP program: main must have no formals"
-           | [] => error "VIMP program: missing 'void main() { ... }'"
-           | _  => error "VIMP program: more than one 'void main()'")
+           | [] => error "VIMP program: missing 'fun main() { ... }'"
+           | _  => error "VIMP program: more than one 'fun main()'")
         val proc_rep = mk_proc_rep ctxt procs
         val main = mk_body_ret ctxt main_ast NONE
         val decl_globals = mk_names decls
@@ -159,10 +160,137 @@ text \<open>Four \<open>value\<close> calls: a branch and a check through the ge
   stops elaborating,
   which no theorem elsewhere would notice -- nothing in the proved pipeline reads concrete
   syntax.\<close>
-value "imp \<lbrakk> if (x < 10) { x := 0 } else { x := 1 } \<rbrakk>"
-value "imp \<lbrakk> __voblint_check(!(x == 0)) \<rbrakk>"
-value "program { global Gx; void ping() { Gx := Gx + 1 } void main() { ping() } } :: imp_prog"
-value "program { void add(a, b) { skip; return a + b } void main() { r := add(1, 2) } } :: imp_prog"
+value "imp \<lbrakk> if (x < 10) { x = 0; } else { x = 1; } \<rbrakk>"
+value "imp \<lbrakk> __voblint_check(!(x == 0)); \<rbrakk>"
+value "program { global Gx; fun ping() { Gx = Gx + 1; } fun main() { ping(); } } :: imp_prog"
+value "program { fun add(a, b) { skip; return a + b; } fun main() { r = add(1, 2); } } :: imp_prog"
+
+lemma notation_if_without_else:
+  "imp \<lbrakk> if (x < 0) { x = -x; } \<rbrakk> =
+    If (Less (V (STR ''x'')) (N 0))
+      (Assign (STR ''x'') (Minus (N 0) (V (STR ''x'')))) SKIP"
+  by simp
+
+lemma notation_else_if_chain:
+  "imp \<lbrakk>
+     if (x < 0) { y = -1; }
+     else if (x == 0) { y = 0; }
+     else if (x < 10) { y = 1; }
+   \<rbrakk> =
+   imp \<lbrakk>
+     if (x < 0) { y = -1; } else {
+       if (x == 0) { y = 0; } else {
+         if (x < 10) { y = 1; } else { skip; }
+       }
+     }
+   \<rbrakk>"
+  by simp
+
+lemma notation_else_if_final_else:
+  "imp \<lbrakk> if (x) { } else if (y) { skip; } else { x = 1; } \<rbrakk> =
+    If (V (STR ''x'')) SKIP
+      (If (V (STR ''y'')) SKIP (Assign (STR ''x'') (N 1)))"
+  by simp
+
+lemma notation_block_statement_boundaries:
+  "imp \<lbrakk> x = 0; while (x < 2) { x = x + 1; } if (x) { } \<rbrakk> =
+    Seq (Seq (Assign (STR ''x'') (N 0))
+      (While (Less (V (STR ''x'')) (N 2))
+        (Assign (STR ''x'') (Plus (V (STR ''x'')) (N 1)))))
+      (If (V (STR ''x'')) SKIP SKIP)"
+  by simp
+
+lemma notation_fun_call_return:
+  "prog_main (program {
+      fun id(x) { return x; }
+      fun ping() { return; }
+      fun main() { x = id(1); ping(); }
+    }) =
+    Seq (Call (Some (STR ''x'')) (STR ''id'') [N 1])
+      (Call None (STR ''ping'') [])"
+  by simp
+
+lemma notation_comparison_less:
+  "imp \<lbrakk> __voblint_check(x < y); \<rbrakk> =
+    Check (Less (V (STR ''x'')) (V (STR ''y'')))"
+  by simp
+
+lemma notation_comparison_less_eq:
+  "imp \<lbrakk> __voblint_check(x <= y); \<rbrakk> =
+    Check (LessEq (V (STR ''x'')) (V (STR ''y'')))"
+  by simp
+
+lemma notation_comparison_greater:
+  "imp \<lbrakk> __voblint_check(x > y); \<rbrakk> =
+    Check (Greater (V (STR ''x'')) (V (STR ''y'')))"
+  by simp
+
+lemma notation_comparison_greater_eq:
+  "imp \<lbrakk> __voblint_check(x >= y); \<rbrakk> =
+    Check (GreaterEq (V (STR ''x'')) (V (STR ''y'')))"
+  by simp
+
+lemma notation_comparison_eq:
+  "imp \<lbrakk> __voblint_check(x == y); \<rbrakk> =
+    Check (Eq (V (STR ''x'')) (V (STR ''y'')))"
+  by simp
+
+lemma notation_comparison_not_eq:
+  "imp \<lbrakk> __voblint_check(x != y); \<rbrakk> =
+    Check (NotEq (V (STR ''x'')) (V (STR ''y'')))"
+  by simp
+
+lemma notation_comparison_precedence:
+  "imp \<lbrakk> __voblint_check(x + 1 <= y * 2 && x != y); \<rbrakk> =
+    Check (And
+      (LessEq (Plus (V (STR ''x'')) (N 1)) (Times (V (STR ''y'')) (N 2)))
+      (NotEq (V (STR ''x'')) (V (STR ''y''))))"
+  by simp
+
+lemma notation_relational_before_equality:
+  "imp \<lbrakk> __voblint_check(x == y < z); \<rbrakk> =
+    imp \<lbrakk> __voblint_check(x == (y < z)); \<rbrakk>"
+  "imp \<lbrakk> __voblint_check(x < y != z); \<rbrakk> =
+    imp \<lbrakk> __voblint_check((x < y) != z); \<rbrakk>"
+  "imp \<lbrakk> __voblint_check(x + 1 >= y == z <= w * 2); \<rbrakk> =
+    imp \<lbrakk> __voblint_check((x + 1 >= y) == (z <= w * 2)); \<rbrakk>"
+  by simp_all
+
+lemma comparison_signed_boundaries:
+  "map (\<lambda>e. aval e s)
+    [Less (N (-1)) (N 0), LessEq (N (-1)) (N (-1)),
+     Greater (N 0) (N (-1)), GreaterEq (N (-1)) (N (-1)),
+     Eq (N (-1)) (N (-1)), NotEq (N (-1)) (N 0)] = [1, 1, 1, 1, 1, 1]"
+  "map (\<lambda>e. aval e s)
+    [Less (N (-1)) (N (-1)), LessEq (N 0) (N (-1)),
+     Greater (N (-1)) (N (-1)), GreaterEq (N (-1)) (N 0),
+     Eq (N (-1)) (N 0), NotEq (N (-1)) (N (-1))] = [0, 0, 0, 0, 0, 0]"
+  by simp_all
+
+lemma notation_division_remainder:
+  "imp \<lbrakk> x = a / b; y = a % b; \<rbrakk> =
+    Seq (Assign (STR ''x'') (Div (V (STR ''a'')) (V (STR ''b''))))
+      (Assign (STR ''y'') (Mod (V (STR ''a'')) (V (STR ''b''))))"
+  by simp
+
+lemma notation_multiplicative_precedence:
+  "imp \<lbrakk> x = 20 / 3 % 4 * 2 + 1; \<rbrakk> =
+    imp \<lbrakk> x = (((20 / 3) % 4) * 2) + 1; \<rbrakk>"
+  "imp \<lbrakk> x = -7 / 3; \<rbrakk> = Assign (STR ''x'') (Div (N (-7)) (N 3))"
+  "imp \<lbrakk> __voblint_check(1 == 20 / 3 % 4 < 3); \<rbrakk> =
+    imp \<lbrakk> __voblint_check(1 == (((20 / 3) % 4) < 3)); \<rbrakk>"
+  by simp_all
+
+lemma aval_division_remainder:
+  "map (\<lambda>e. aval e s)
+    [Div (N 7) (N 3), Div (N (-7)) (N 3),
+     Div (N 7) (N (-3)), Div (N (-7)) (N (-3)),
+     Mod (N 7) (N 3), Mod (N (-7)) (N 3),
+     Mod (N 7) (N (-3)), Mod (N (-7)) (N (-3)),
+     Div (N 7) (N 0), Mod (N (-7)) (N 0)] = [2, -2, -2, 2, 1, -1, 1, -1, 0, -7]"
+  by (simp add: c_div_def c_mod_def)
 
 end
+
+
 

@@ -8,10 +8,10 @@
 // bump's write is read back at the caller through the combine edge, so
 // g == 5 is decided on a singleton rather than on a joined class.
 global g;
-void bump() { g := g + 4 }
-void main() {
-  g := 1;
+fun bump() { g = g + 4; }
+fun main() {
+  g = 1;
   bump();
   __voblint_check(g == 5); // PROVED
-  __voblint_check(!(g == 4)) // PROVED
+  __voblint_check(g != 4); // PROVED
 }

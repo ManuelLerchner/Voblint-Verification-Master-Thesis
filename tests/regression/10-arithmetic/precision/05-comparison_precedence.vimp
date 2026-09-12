@@ -1,0 +1,11 @@
+// PARAM: --analysis interval
+// Relational comparisons bind more tightly than equality on either side.
+// The parenthesized variants distinguish the opposite grouping.
+fun main() {
+  __voblint_check(2 == 3 < 4); // REFUTED
+  __voblint_check((2 == 3) < 4); // PROVED
+  __voblint_check(2 < 3 == 1); // PROVED
+  __voblint_check(2 < (3 == 1)); // REFUTED
+  __voblint_check(2 >= 3 != 0); // REFUTED
+  __voblint_check(2 >= (3 != 0)); // PROVED
+}

@@ -53,10 +53,10 @@ where
 | IfHead:
     "control_at \<Pi> p (If b c1 c2) k n (If b c1 c2) (Statement n)"
 | IfLeft:
-    "control_at \<Pi> p c1 k (Suc n) r v \<Longrightarrow>
+    "control_at \<Pi> p c1 k (Suc n) r v \<Longrightarrow> c1 \<noteq> SKIP \<Longrightarrow>
      control_at \<Pi> p (If b c1 c2) k n r v"
 | IfRight:
-    "control_at \<Pi> p c2 k (Suc n + csize c1) r v \<Longrightarrow>
+    "control_at \<Pi> p c2 k (Suc n + csize c1) r v \<Longrightarrow> c2 \<noteq> SKIP \<Longrightarrow>
      control_at \<Pi> p (If b c1 c2) k n r v"
 | IfDone:
     "falls_through (If b c1 c2) \<Longrightarrow>
@@ -137,14 +137,14 @@ next
   case (IfLeft c1 k n v b c2)
   from IfLeft.prems(1) obtain n1 E1 K1 where
     c1: "compile \<Pi> p c1 k (Suc n) = (n1, Statement (Suc n), E1, K1)" and "E1 \<subseteq> E"
-    by (rule compile_IfE) blast
+    by (rule compile_If_leftE[OF _ IfLeft.hyps(3)]) blast
   with IfLeft.prems(2) show ?case by (intro IfLeft.hyps(2)[OF c1]) blast
 next
   case (IfRight c2 k n c1 v b)
   from IfRight.prems(1) obtain n2 E2 K2 where
     c2: "compile \<Pi> p c2 k (Suc n + csize c1) = (n2, Statement (Suc n + csize c1), E2, K2)"
     and "E2 \<subseteq> E"
-    by (rule compile_IfE) blast
+    by (rule compile_If_rightE[OF _ IfRight.hyps(3)]) blast
   with IfRight.prems(2) show ?case by (intro IfRight.hyps(2)[OF c2]) blast
 qed simp_all
 

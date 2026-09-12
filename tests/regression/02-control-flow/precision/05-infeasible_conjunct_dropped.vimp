@@ -15,12 +15,12 @@
 //
 // The then-branch is the sequential "And _ _ True" case, where both conjuncts
 // are narrowed in turn and no join is involved.
-void main() {
-  x := 5;
-  y := __voblint_nondet_int();
+fun main() {
+  x = 5;
+  y = __voblint_nondet_int();
   if ((x < 0) == 0 && 0 < y) {
-    __voblint_check(0 < y) // PROVED
+    __voblint_check(0 < y); // PROVED
   } else {
-    __voblint_check(y < 1) // PROVED
+    __voblint_check(y < 1); // PROVED
   }
 }

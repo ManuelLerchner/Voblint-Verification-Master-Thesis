@@ -85,11 +85,11 @@ next
   from IfLeft.prems(2) obtain n1 E1 K1 where
     c1c: "compile \<Pi> p c1 k (Suc n0) = (n1, Statement (Suc n0), E1, K1)"
     and sub: "E1 \<subseteq> E"
-    by (rule compile_If_leftE)
+    by (rule compile_If_leftE[OF _ IfLeft.hyps(2)])
   from IfLeft.IH[OF IfLeft.prems(1) c1c] obtain j w where
     jw: "v = Statement j" "(Statement j, a, w) \<in> E1"
         "control_at \<Pi> p c1 k (Suc n0) SKIP w" by blast
-  have "control_at \<Pi> p (If b c1 c2) k n0 SKIP w" using control_at.IfLeft[OF jw(3)] .
+  have "control_at \<Pi> p (If b c1 c2) k n0 SKIP w" using control_at.IfLeft[OF jw(3) IfLeft.hyps(2)] .
   then show ?case using jw sub by blast
 next
   case (IfRight c2 k n0 c1 r v b)
@@ -97,11 +97,11 @@ next
     c2c: "compile \<Pi> p c2 k (Suc n0 + csize c1)
             = (n2, Statement (Suc n0 + csize c1), E2, K2)"
     and sub: "E2 \<subseteq> E"
-    by (rule compile_If_rightE)
+    by (rule compile_If_rightE[OF _ IfRight.hyps(2)])
   from IfRight.IH[OF IfRight.prems(1) c2c] obtain j w where
     jw: "v = Statement j" "(Statement j, a, w) \<in> E2"
         "control_at \<Pi> p c2 k (Suc n0 + csize c1) SKIP w" by blast
-  have "control_at \<Pi> p (If b c1 c2) k n0 SKIP w" using control_at.IfRight[OF jw(3)] .
+  have "control_at \<Pi> p (If b c1 c2) k n0 SKIP w" using control_at.IfRight[OF jw(3) IfRight.hyps(2)] .
   then show ?case using jw sub by blast
 qed simp_all
 
@@ -134,14 +134,14 @@ next
   case (IfLeft c1 k n0 r v b c2)
   from IfLeft.prems(2) obtain m F L
     where "compile \<Pi> p c1 k (Suc n0) = (m, Statement (Suc n0), F, L)" and "F \<subseteq> E"
-    by (rule compile_If_leftE)
+    by (rule compile_If_leftE[OF _ IfLeft.hyps(2)])
   with IfLeft.IH IfLeft.prems(1) show ?case by blast
 next
   case (IfRight c2 k n0 c1 r v b)
   from IfRight.prems(2) obtain m F L
     where "compile \<Pi> p c2 k (Suc n0 + csize c1) = (m, Statement (Suc n0 + csize c1), F, L)"
       and "F \<subseteq> E"
-    by (rule compile_If_rightE)
+    by (rule compile_If_rightE[OF _ IfRight.hyps(2)])
   with IfRight.IH IfRight.prems(1) show ?case by blast
 next
   case (WhileBody c n0 r v b k)
@@ -167,10 +167,20 @@ proof (induction arbitrary: n' en E K rule: control_at.induct)
   from IfHead.prems(1) have r: "b' = b" "c1' = c1" "c2' = c2" by auto
   note E = compile_If_assume_edges[OF IfHead.prems(3)]
   from IfHead.prems(2) r have src: "source_com c1'" "source_com c2'" by auto
-  have ca1: "control_at \<Pi> p (If b' c1' c2') k n0 c1' (Statement (Suc n0))"
-    by (rule control_at.IfLeft[OF control_at_initial[OF src(1)]])
-  have ca2: "control_at \<Pi> p (If b' c1' c2') k n0 c2' (Statement (Suc n0 + csize c1'))"
-    by (rule control_at.IfRight[OF control_at_initial[OF src(2)]])
+  have ca1: "control_at \<Pi> p (If b' c1' c2') k n0 c1'
+      (if c1' = SKIP then k else Statement (Suc n0))"
+    using src(1) by (cases "c1' = SKIP") (auto intro: control_at_initial)
+  have ca2: "control_at \<Pi> p (If b' c1' c2') k n0 c2'
+      (if c2' = SKIP then k else Statement (Suc n0 + csize c1'))"
+  proof (cases "c2' = SKIP")
+    case True then show ?thesis by auto
+  next
+    case False
+    have "control_at \<Pi> p (If b' c1' c2') k n0 c2'
+        (Statement (Suc n0 + csize c1'))"
+      by (rule control_at.IfRight[OF control_at_initial[OF src(2)] False])
+    with False show ?thesis by simp
+  qed
   from E ca1 ca2 r show ?case by auto
 next
   case (SeqRight c1' c2' k n0 r v)
@@ -192,13 +202,13 @@ next
   from IfLeft.prems(3) obtain n1 E1 K1 where
     c1c: "compile \<Pi> p c1' k (Suc n0) = (n1, Statement (Suc n0), E1, K1)"
     and sub: "E1 \<subseteq> E"
-    by (rule compile_If_leftE)
+    by (rule compile_If_leftE[OF _ IfLeft.hyps(2)])
   from IfLeft.IH[OF IfLeft.prems(1) IfLeft.prems(2) c1c] obtain j e1 e2 where
     jw: "v = Statement j" "(Statement j, EA_Assume b, e1) \<in> E1"
         "(Statement j, EA_AssumeNot b, e2) \<in> E1"
         "control_at \<Pi> p c1' k (Suc n0) c1 e1" "control_at \<Pi> p c1' k (Suc n0) c2 e2" by blast
   have "control_at \<Pi> p (If b' c1' c2') k n0 c1 e1" "control_at \<Pi> p (If b' c1' c2') k n0 c2 e2"
-    using control_at.IfLeft[OF jw(4)] control_at.IfLeft[OF jw(5)] .
+    using control_at.IfLeft[OF jw(4) IfLeft.hyps(2)] control_at.IfLeft[OF jw(5) IfLeft.hyps(2)] .
   then show ?case using jw sub by blast
 next
   case (IfRight c2' k n0 c1' r v b')
@@ -206,14 +216,14 @@ next
     c2c: "compile \<Pi> p c2' k (Suc n0 + csize c1')
             = (n2, Statement (Suc n0 + csize c1'), E2, K2)"
     and sub: "E2 \<subseteq> E"
-    by (rule compile_If_rightE)
+    by (rule compile_If_rightE[OF _ IfRight.hyps(2)])
   from IfRight.IH[OF IfRight.prems(1) IfRight.prems(2) c2c] obtain j e1 e2 where
     jw: "v = Statement j" "(Statement j, EA_Assume b, e1) \<in> E2"
         "(Statement j, EA_AssumeNot b, e2) \<in> E2"
         "control_at \<Pi> p c2' k (Suc n0 + csize c1') c1 e1"
         "control_at \<Pi> p c2' k (Suc n0 + csize c1') c2 e2" by blast
   have "control_at \<Pi> p (If b' c1' c2') k n0 c1 e1" "control_at \<Pi> p (If b' c1' c2') k n0 c2 e2"
-    using control_at.IfRight[OF jw(4)] control_at.IfRight[OF jw(5)] .
+    using control_at.IfRight[OF jw(4) IfRight.hyps(2)] control_at.IfRight[OF jw(5) IfRight.hyps(2)] .
   then show ?case using jw sub by blast
 next
   case (WhileUnfolded b'' c'' k n0)
@@ -301,12 +311,12 @@ next
   from IfLeft.prems(2) obtain n1 E1 K1 where
     c1c: "compile \<Pi> p c1 k (Suc n0) = (n1, Statement (Suc n0), E1, K1)"
     and sub: "E1 \<subseteq> E"
-    by (rule compile_If_leftE)
+    by (rule compile_If_leftE[OF _ IfLeft.hyps(2)])
   have src1: "source_com c1" using IfLeft.prems(4) by simp
   from IfLeft.IH[OF IfLeft.prems(1) c1c subset_trans[OF sub IfLeft.prems(3)] src1]
   obtain v' where v': "control_at \<Pi> p c1 k (Suc n0) c2 v'"
     "star (cstep gs g) (v, s, stk) (v', s, stk)" by blast
-  have "control_at \<Pi> p (If b c1 c2') k n0 c2 v'" using control_at.IfLeft[OF v'(1)] .
+  have "control_at \<Pi> p (If b c1 c2') k n0 c2 v'" using control_at.IfLeft[OF v'(1) IfLeft.hyps(2)] .
   with v'(2) show ?case by blast
 next
   case (IfRight c2' k n0 c1 r v b)
@@ -314,12 +324,12 @@ next
     c2c: "compile \<Pi> p c2' k (Suc n0 + csize c1)
             = (n2, Statement (Suc n0 + csize c1), E2, K2)"
     and sub: "E2 \<subseteq> E"
-    by (rule compile_If_rightE)
+    by (rule compile_If_rightE[OF _ IfRight.hyps(2)])
   have src2: "source_com c2'" using IfRight.prems(4) by simp
   from IfRight.IH[OF IfRight.prems(1) c2c subset_trans[OF sub IfRight.prems(3)] src2]
   obtain v' where v': "control_at \<Pi> p c2' k (Suc n0 + csize c1) c2 v'"
     "star (cstep gs g) (v, s, stk) (v', s, stk)" by blast
-  have "control_at \<Pi> p (If b c1 c2') k n0 c2 v'" using control_at.IfRight[OF v'(1)] .
+  have "control_at \<Pi> p (If b c1 c2') k n0 c2 v'" using control_at.IfRight[OF v'(1) IfRight.hyps(2)] .
   with v'(2) show ?case by blast
 qed simp_all
 
@@ -447,14 +457,14 @@ next
   from IfLeft.prems(2) obtain n1 E1 K1 where
     c1c: "compile \<Pi> p c1 k (Suc n0) = (n1, Statement (Suc n0), E1, K1)"
     and sub: "K1 \<subseteq> K"
-    by (rule compile_If_leftE)
+    by (rule compile_If_leftE[OF _ IfLeft.hyps(2)])
   from IfLeft.IH[OF IfLeft.prems(1) c1c IfLeft.prems(3)] obtain j w where
     jw: "v = Statement j"
        "(Statement j, CallEdge dst (call_formals \<Pi> q) actuals,
          FunctionEntry q, w) \<in> K1"
        "control_at \<Pi> p c1 k (Suc n0) (seq_after SKIP afters) w" by blast
   have "control_at \<Pi> p (If b c1 c2) k n0 (seq_after SKIP afters) w"
-    using control_at.IfLeft[OF jw(3)] .
+    using control_at.IfLeft[OF jw(3) IfLeft.hyps(2)] .
   then show ?case using jw sub by blast
 next
   case (IfRight c2 k n0 c1 r v b afters)
@@ -462,14 +472,14 @@ next
     c2c: "compile \<Pi> p c2 k (Suc n0 + csize c1)
             = (n2, Statement (Suc n0 + csize c1), E2, K2)"
     and sub: "K2 \<subseteq> K"
-    by (rule compile_If_rightE)
+    by (rule compile_If_rightE[OF _ IfRight.hyps(2)])
   from IfRight.IH[OF IfRight.prems(1) c2c IfRight.prems(3)] obtain j w where
     jw: "v = Statement j"
        "(Statement j, CallEdge dst (call_formals \<Pi> q) actuals,
          FunctionEntry q, w) \<in> K2"
        "control_at \<Pi> p c2 k (Suc n0 + csize c1) (seq_after SKIP afters) w" by blast
   have "control_at \<Pi> p (If b c1 c2) k n0 (seq_after SKIP afters) w"
-    using control_at.IfRight[OF jw(3)] .
+    using control_at.IfRight[OF jw(3) IfRight.hyps(2)] .
   then show ?case using jw sub by blast
 next
   case (WhileBody c n0 r v b k afters)
@@ -518,7 +528,7 @@ next
   from IfLeft.prems(2) obtain n1 E1 K1 where
     c1c: "compile \<Pi> p c1 k (Suc n0) = (n1, Statement (Suc n0), E1, K1)"
     and sub: "E1 \<subseteq> E"
-    by (rule compile_If_leftE)
+    by (rule compile_If_leftE[OF _ IfLeft.hyps(2)])
   from IfLeft.IH[OF IfLeft.prems(1) c1c] show ?case using sub by blast
 next
   case (IfRight c2 k n0 c1 r v b afters)
@@ -526,7 +536,7 @@ next
     c2c: "compile \<Pi> p c2 k (Suc n0 + csize c1)
             = (n2, Statement (Suc n0 + csize c1), E2, K2)"
     and sub: "E2 \<subseteq> E"
-    by (rule compile_If_rightE)
+    by (rule compile_If_rightE[OF _ IfRight.hyps(2)])
   from IfRight.IH[OF IfRight.prems(1) c2c] show ?case using sub by blast
 next
   case (WhileBody c n0 r v b k afters)
@@ -747,7 +757,7 @@ next
   from IfLeft.prems(2) obtain n1 E1 K1 where
     c1c: "compile \<Pi> p c1 k (Suc n0) = (n1, Statement (Suc n0), E1, K1)"
     and sub1: "E1 \<subseteq> E"
-    by (rule compile_If_leftE)
+    by (rule compile_If_leftE[OF _ IfLeft.hyps(2)])
   have src1: "source_com c1" using IfLeft.prems(4) by simp
   from IfLeft.IH[OF IfLeft.prems(1) c1c subset_trans[OF sub1 IfLeft.prems(3)] src1]
   have fr: "frs' = frs" and
@@ -755,7 +765,7 @@ next
           \<and> star (cstep gs g) (v, s, stk) (v', s', stk)" by auto
   then obtain v' where v': "control_at \<Pi> p c1 k (Suc n0) c' v'"
     "star (cstep gs g) (v, s, stk) (v', s', stk)" by blast
-  have "control_at \<Pi> p (If b c1 c2) k n0 c' v'" using control_at.IfLeft[OF v'(1)] .
+  have "control_at \<Pi> p (If b c1 c2) k n0 c' v'" using control_at.IfLeft[OF v'(1) IfLeft.hyps(2)] .
   with fr v'(2) show ?case by blast
 next
   case (IfRight c2 k n0 c1 r v b)
@@ -763,7 +773,7 @@ next
     c2c: "compile \<Pi> p c2 k (Suc n0 + csize c1)
             = (n2, Statement (Suc n0 + csize c1), E2, K2)"
     and sub2: "E2 \<subseteq> E"
-    by (rule compile_If_rightE)
+    by (rule compile_If_rightE[OF _ IfRight.hyps(2)])
   have src2: "source_com c2" using IfRight.prems(4) by simp
   from IfRight.IH[OF IfRight.prems(1) c2c subset_trans[OF sub2 IfRight.prems(3)] src2]
   have fr: "frs' = frs" and
@@ -771,7 +781,7 @@ next
           \<and> star (cstep gs g) (v, s, stk) (v', s', stk)" by auto
   then obtain v' where v': "control_at \<Pi> p c2 k (Suc n0 + csize c1) c' v'"
     "star (cstep gs g) (v, s, stk) (v', s', stk)" by blast
-  have "control_at \<Pi> p (If b c1 c2) k n0 c' v'" using control_at.IfRight[OF v'(1)] .
+  have "control_at \<Pi> p (If b c1 c2) k n0 c' v'" using control_at.IfRight[OF v'(1) IfRight.hyps(2)] .
   with fr v'(2) show ?case by blast
 next
   case (IfDone b c1 c2 k n0) then show ?case by blast

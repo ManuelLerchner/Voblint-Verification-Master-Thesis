@@ -38,8 +38,8 @@ subsection \<open>The program and its graph\<close>
 
 definition ov_program :: imp_prog where
   "ov_program = program {
-     void p(a) { return a }
-     void main() { x := 1; y := p(x) }
+     fun p(a) { return a; }
+     fun main() { x = 1; y = p(x); }
    }"
 
 abbreviation ov_gs :: "vname \<Rightarrow> bool" where

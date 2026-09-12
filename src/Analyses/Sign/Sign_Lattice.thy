@@ -2,19 +2,19 @@ theory Sign_Lattice
   imports "Voblint_Domain.Abstract_Domain" "TD.Update_rules"
 begin
 
-section \<open>Sign domain: instantiation of sound_domain\<close>
+section \<open>Sign domain: sound-domain instantiation\<close>
 
 text \<open>
   sign abstracts integers by their sign:
     Bot    -- empty (unreachable / undefined)
     Neg    -- strictly negative   {n | n < 0}
-    NonPos -- non-positive        {n | n \<le> 0}
+    NonPos -- non-positive        \<open>{n | n \<le> 0}\<close>
     Zero   -- exactly zero        {0}
-    NonNeg -- non-negative        {n | n \<ge> 0}
+    NonNeg -- non-negative        \<open>{n | n \<ge> 0}\<close>
     Pos    -- strictly positive   {n | n > 0}
     Top    -- all integers        UNIV
 
-  Seven-element lattice (Bot \<sqsubseteq> Neg,Zero,Pos \<sqsubseteq> NonPos,NonNeg \<sqsubseteq> Top).
+  Seven-element lattice (\<open>Bot \<sqsubseteq> Neg,Zero,Pos \<sqsubseteq> NonPos,NonNeg \<sqsubseteq> Top\<close>).
   Finite; no widening needed.
 \<close>
 
@@ -154,8 +154,9 @@ subsection \<open>Abstract arithmetic operations\<close>
 subsection \<open>Typeclass instances\<close>
 
 text \<open>
-  Hoisted above the sound_domain instance because the
-  sound_domain locale's class constraint is bounded_semilattice_sup_bot.
+  Hoisted above the \<open>sound_domain\<close> instance because the
+  \<open>sound_domain\<close> locale's class constraint is
+  \<open>bounded_semilattice_sup_bot\<close>.
 \<close>
 
 instantiation sign :: order begin

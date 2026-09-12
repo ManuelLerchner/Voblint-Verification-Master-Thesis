@@ -29,11 +29,11 @@ text \<open>
 
 definition certificate_demo_prog :: imp_prog where
   "certificate_demo_prog = program {
-     void bump(n) { return n + 1 }
-     void main() {
-       a := bump(1);
-       b := bump(41);
-       __voblint_check(0 < b)
+     fun bump(n) { return n + 1; }
+     fun main() {
+       a = bump(1);
+       b = bump(41);
+       __voblint_check(0 < b);
      }
    }"
 

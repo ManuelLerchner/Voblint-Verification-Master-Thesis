@@ -1,6 +1,6 @@
 // PARAM: --analysis interval
 // Unconstrained value from __voblint_nondet_int(): nothing bounds x before the check.
-void main() {
-  x := __voblint_nondet_int();
-  __voblint_check(0 < x) // UNKNOWN
+fun main() {
+  x = __voblint_nondet_int();
+  __voblint_check(0 < x); // UNKNOWN
 }

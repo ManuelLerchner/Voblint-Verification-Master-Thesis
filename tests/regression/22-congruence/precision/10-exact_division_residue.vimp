@@ -1,0 +1,19 @@
+// PARAM: --analysis congruence
+// Scaling both residue and modulus survives positive and negative exact division.
+fun main() {
+  n = __voblint_nondet_int();
+  positive = (12 * n + 3) / 3;
+  negative = (12 * n + 3) / -3;
+  if (positive == 2) {
+    __voblint_check(0); // NOWARN
+  }
+  if (negative == 1) {
+    __voblint_check(0); // NOWARN
+  }
+  if (positive == 1) {
+    __voblint_check(positive != 0); // PROVED
+  }
+  if (negative == -1) {
+    __voblint_check(negative < 0); // PROVED
+  }
+}

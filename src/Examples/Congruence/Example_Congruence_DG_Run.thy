@@ -17,9 +17,9 @@ text \<open>
 
 definition congruence_dg_program :: imp_prog where
   "congruence_dg_program = program {
-     void main() {
-       x := 1;
-       y := x + 2
+     fun main() {
+       x = 1;
+       y = x + 2;
      }
    }"
 

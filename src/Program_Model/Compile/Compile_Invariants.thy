@@ -197,11 +197,13 @@ next
   from If.prems(1) obtain n1 en1 E1 K1 n2 en2 E2 K2 where
     c1: "compile \<Pi> p c1 k (Suc n) = (n1, en1, E1, K1)"
     and c2: "compile \<Pi> p c2 k n1 = (n2, en2, E2, K2)"
-    and E: "E = {(Statement n, EA_Assume b, en1), (Statement n, EA_AssumeNot b, en2)}
-                  \<union> E1 \<union> E2"
+    and E: "E = {(Statement n, EA_Assume b, if c1 = SKIP then k else en1),
+                  (Statement n, EA_AssumeNot b, if c2 = SKIP then k else en2)}
+                  \<union> (if c1 = SKIP then {} else E1) \<union> (if c2 = SKIP then {} else E2)"
     by (auto split: prod.splits)
   from If.prems(2) have "returns_in e c1 \<or> returns_in e c2" by simp
-  then show ?case using If.IH(1)[OF c1] If.IH(2)[OF c2] E by auto
+  then show ?case using If.IH(1)[OF c1] If.IH(2)[OF c2] E
+    by (auto split: if_splits)
 next
   case (While b c)
   from While.prems(1) obtain n1 en1 E1 K1 where
@@ -373,24 +375,42 @@ next
       c1: "compile \<Pi> p c1 k (Suc n) = (n1, Statement (Suc n), E1, K1)"
     and c2: "compile \<Pi> p c2 k (Suc n + csize c1) = (n2, Statement (Suc n + csize c1), E2, K2)"
     and res: "en = Statement n"
-      "E = {(Statement n, EA_Assume b, Statement (Suc n)),
-            (Statement n, EA_AssumeNot b, Statement (Suc n + csize c1))} \<union> E1 \<union> E2"
+      "E = {(Statement n, EA_Assume b, if c1 = SKIP then k else Statement (Suc n)),
+            (Statement n, EA_AssumeNot b,
+              if c2 = SKIP then k else Statement (Suc n + csize c1))}
+            \<union> (if c1 = SKIP then {} else E1) \<union> (if c2 = SKIP then {} else E2)"
       "K = K1 \<union> K2"
     by (rule compile_IfE)
-  have b1: "cfg_reaches g (Statement n) (Statement (Suc n))"
-    and b2: "cfg_reaches g (Statement n) (Statement (Suc n + csize c1))"
+  have b1: "cfg_reaches g (Statement n) (if c1 = SKIP then k else Statement (Suc n))"
+    and b2: "cfg_reaches g (Statement n)
+      (if c2 = SKIP then k else Statement (Suc n + csize c1))"
     using res(2) If.prems(2) by (blast intro: cfg_reaches_intra_sub)+
   from If.prems(4) consider "falls_through c1" | "falls_through c2" by auto
   then show ?case
   proof cases
     case 1
-    have "cfg_reaches g (Statement (Suc n)) k" using If.IH(1)[OF c1] If.prems res 1 by auto
-    with b1 show ?thesis unfolding res(1) by (rule cfg_reaches_trans)
+    show ?thesis
+    proof (cases "c1 = SKIP")
+      case True with b1 res(1) show ?thesis by simp
+    next
+      case False
+      have "cfg_reaches g (Statement (Suc n)) k"
+        using If.IH(1)[OF c1] If.prems res 1 False by auto
+      with b1 False show ?thesis unfolding res(1)
+        by (simp only: if_False) (rule cfg_reaches_trans)
+    qed
   next
     case 2
-    have "cfg_reaches g (Statement (Suc n + csize c1)) k"
-      using If.IH(2)[OF c2] If.prems res 2 by auto
-    with b2 show ?thesis unfolding res(1) by (rule cfg_reaches_trans)
+    show ?thesis
+    proof (cases "c2 = SKIP")
+      case True with b2 res(1) show ?thesis by simp
+    next
+      case False
+      have "cfg_reaches g (Statement (Suc n + csize c1)) k"
+        using If.IH(2)[OF c2] If.prems res 2 False by auto
+      with b2 False show ?thesis unfolding res(1)
+        by (simp only: if_False) (rule cfg_reaches_trans)
+    qed
   qed
 qed (auto simp: Let_def split: prod.splits option.splits
      intro: cfg_reaches_intra_sub cfg_reaches_comb_caller_sub)
@@ -424,14 +444,17 @@ next
   from If.prems(1) obtain n1 E1 K1 E2 K2 where
       c1: "compile \<Pi> p c1 k (Suc n) = (n1, Statement (Suc n), E1, K1)"
     and res: "en = Statement n"
-      "E = {(Statement n, EA_Assume b, Statement (Suc n)),
-            (Statement n, EA_AssumeNot b, Statement (Suc n + csize c1))} \<union> E1 \<union> E2"
+      "E = {(Statement n, EA_Assume b, if c1 = SKIP then k else Statement (Suc n)),
+            (Statement n, EA_AssumeNot b,
+              if c2 = SKIP then k else Statement (Suc n + csize c1))}
+            \<union> (if c1 = SKIP then {} else E1) \<union> (if c2 = SKIP then {} else E2)"
       "K = K1 \<union> K2"
     by (rule compile_IfE)
+  have nonempty: "c1 \<noteq> SKIP" using If.prems(4) by auto
   have "cfg_reaches g (Statement n) (Statement (Suc n))"
-    using res(2) If.prems(2) by (blast intro: cfg_reaches_intra_sub)
+    using res(2) If.prems(2) nonempty by (auto intro: cfg_reaches_intra_sub)
   moreover have "cfg_reaches g (Statement (Suc n)) (FunctionResult p)"
-    using If.IH(1)[OF c1] If.prems res by auto
+    using If.IH(1)[OF c1] If.prems res nonempty by auto
   ultimately show ?case unfolding res(1) by (rule cfg_reaches_trans)
 qed (auto simp: Let_def split: prod.splits option.splits intro: cfg_reaches_intra_sub)
 

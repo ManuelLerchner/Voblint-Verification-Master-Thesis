@@ -100,7 +100,9 @@ let status_note = function
   | C.NS_Plain | C.NS_Exit -> ""
 
 let is_dead node =
-  match C.xn_status node with Some C.NS_Unreachable -> true | _ -> false
+  (* Context views carry dead non-check points as a state note; only checks
+     necessarily have a finding annotation. Both describe the same bottom state. *)
+  C.xn_status node = Some C.NS_Unreachable || List.mem "unreachable" (C.xn_lines node)
 
 (* Which source position a node came from, when it came from one at all.
 
@@ -289,14 +291,20 @@ let globals_xml ~blocks =
 (* One check's source-level finding. Positions come from the parser, which
    notes each __voblint_check token as it consumes it; the verdict comes from
    the same report the text output prints. *)
-type check = { line : int; column : int; verdict : string; cond : string }
+type check = {
+  line : int;
+  column : int;
+  verdict : string;
+  cond : string;
+  message : string option;
+}
 
 (* g2html's file.xsl turns <sht type="X"> into <span class="sh X">, and its
    stylesheet defines exactly these classes. Anything outside them renders
    unstyled, so the tokenizer below maps VIMP onto this palette rather than
    inventing names. *)
 let kw_statement = [ "if"; "else"; "while"; "return"; "skip" ]
-let kw_declaration = [ "void"; "global" ]
+let kw_declaration = [ "fun"; "global" ]
 let kw_special = [ "__voblint_check" ]
 let kw_literal = [ "true"; "false" ]
 
@@ -357,9 +365,10 @@ let highlight_line line =
 
 (* Goblint's own phrasing, because this renders in Goblint's own frontend. *)
 let warn_text c =
-  match c.verdict with
-  | "PROVED" -> Printf.sprintf "Assertion \"%s\" will succeed" c.cond
-  | "REFUTED" -> Printf.sprintf "Assertion \"%s\" will fail" c.cond
+  match c.message, c.verdict with
+  | Some message, _ -> message
+  | None, "PROVED" -> Printf.sprintf "Assertion \"%s\" will succeed" c.cond
+  | None, "REFUTED" -> Printf.sprintf "Assertion \"%s\" will fail" c.cond
   | _ -> Printf.sprintf "Assertion \"%s\" is unknown" c.cond
 
 let warn_xml ~source_file c =
@@ -433,6 +442,7 @@ let file_xml ~source_text ~checks ~line_nodes ~dead_lines =
    read for verdicts. Dead nodes take goblint's own orange (cfgTools'
    fprint_fundec_html_dot paints unreachable nodes that colour). *)
 let node_fill node =
+  if is_dead node then "orange" else
   match C.xn_status node with
   | Some C.NS_Proved -> "#cdebc5"
   | Some C.NS_Refuted -> "#f5b8b8"
@@ -450,12 +460,48 @@ let node_shape node =
 
 let dot_escape s = String.concat "\\\"" (String.split_on_char '"' s)
 
+let source_fragment lines (line, column, end_line, end_column, _) =
+  if line < 1 || end_line < line || end_line > Array.length lines then None
+  else
+    let pieces =
+      List.init (end_line - line + 1)
+        (fun i ->
+           let text = lines.(line + i - 1) in
+           let first = if i = 0 then column - 1 else 0 in
+           let last = if line + i = end_line then end_column - 1 else String.length text in
+           if first < 0 || last < first || last > String.length text then None
+           else Some (String.trim (String.sub text first (last - first))))
+    in
+    if List.exists Option.is_none pieces then None
+    else Some (String.concat " " (List.filter_map Fun.id pieces))
+
 (* Short labels only, plus the id/URL hooks goblint's script.js drives:
    graphviz turns them into <g id="a_N"><a xlink:href="javascript:show_info('N')">,
    which is the handle it selects on to load and highlight a node. *)
-let html_dot graph =
+let html_dot ~source_text ~positions graph =
   let by_id = Hashtbl.create 64 in
   List.iter (fun n -> Hashtbl.replace by_id (C.xn_id n) n) (C.xg_nodes graph);
+  (* A routed call is explained by its enter/combine edges. Only unrouted
+     calls need a source annotation to keep their operation visible. *)
+  let call_sites = Hashtbl.create 32 in
+  let routed_calls = Hashtbl.create 32 in
+  List.iter
+    (fun e ->
+       match C.xe_kind e with
+       | C.XE_CallToReturn -> Hashtbl.replace call_sites (C.xe_src e) ()
+       | C.XE_Enter -> Hashtbl.replace routed_calls (C.xe_src e) ()
+       | _ -> ())
+    (C.xg_edges graph);
+  let source_lines = Array.of_list (String.split_on_char '\n' source_text) in
+  let node_label node =
+    let name = C.xn_label node in
+    if not (Hashtbl.mem call_sites (C.xn_id node))
+       || Hashtbl.mem routed_calls (C.xn_id node) then dot_escape name
+    else
+      match Option.bind (node_line positions node) (source_fragment source_lines) with
+      | None | Some "" -> dot_escape name
+      | Some call -> dot_escape name ^ "\\n" ^ dot_escape call
+  in
   let buf = Buffer.create 4096 in
   Buffer.add_string buf "digraph AnalysisCFG {\n";
   Buffer.add_string buf
@@ -480,7 +526,7 @@ let html_dot graph =
                 Buffer.add_string buf
                   (Printf.sprintf "    %s [%s,fillcolor=\"%s\",label=\"%s\"];\n" nid
                      (node_shape node) (node_fill node)
-                     (dot_escape (C.xn_label node))))
+                     (node_label node)))
          (C.xc_nodes cluster);
        Buffer.add_string buf "  }\n")
     (C.xg_clusters graph);
@@ -489,14 +535,16 @@ let html_dot graph =
        let label =
          match C.xe_kind e with
          | C.XE_Enter -> "call " ^ C.xe_label e
-         | C.XE_Combine -> "resume"
-         | C.XE_CallToReturn -> "resume-site"
+         | C.XE_Combine ->
+           if C.xe_label e = "" then "resume" else "resume / " ^ C.xe_label e
+         | C.XE_CallToReturn -> "continuation"
          | C.XE_GlobalRead -> "read global"
          | C.XE_GlobalWrite -> "write global"
          | C.XE_Intra -> C.xe_label e
        in
+       let style = if C.xe_kind e = C.XE_CallToReturn then "style=dashed,color=gray40," else "" in
        Buffer.add_string buf
-         (Printf.sprintf "  %s -> %s [label=\"%s\"];\n" (C.xe_src e) (C.xe_dst e)
+         (Printf.sprintf "  %s -> %s [%slabel=\"%s\"];\n" (C.xe_src e) (C.xe_dst e) style
             (dot_escape label)))
     (C.xg_edges graph);
   Buffer.add_string buf "}\n";
@@ -558,7 +606,8 @@ let emit ~graphs ~source_file ~source_text ~fn ~checks ~positions ~globals =
   ( { path = "index.xml"; content = index_xml ~source_file ~fns:[ fn ] }
     :: { path = "nodes/globals.xml"; content = globals_xml ~blocks:globals }
     :: { path = Printf.sprintf "files/%s.xml" seg; content = file_xml ~source_text ~checks ~line_nodes ~dead_lines }
-    :: { path = Printf.sprintf "dot/%s/%s.dot" seg fn; content = html_dot graph }
+    :: { path = Printf.sprintf "dot/%s/%s.dot" seg fn;
+         content = html_dot ~source_text ~positions graph }
     :: (node_files
         @ List.mapi
             (fun k c ->

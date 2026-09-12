@@ -13,14 +13,14 @@
 // warrow, warrow-per-origin. Under --analysis int (16-composite-domain/
 // precision/05-mine_ex410_stride2_congruence.vimp) congruence 1 (mod 2)
 // cuts [51,52] down to [51,51].
-void main() {
-  v := 1;
+fun main() {
+  v = 1;
   while (v < 51) {
-    __voblint_check(!(v < 1)); // PROVED
-    v := v + 2;
-    __voblint_check(!(52 < v)) // PROVED
-  };
-  __voblint_check(!(v < 51)); // PROVED
-  __voblint_check(!(52 < v)); // PROVED
-  __voblint_check(v == 51) // UNKNOWN
+    __voblint_check(v >= 1); // PROVED
+    v = v + 2;
+    __voblint_check(v <= 52); // PROVED
+  }
+  __voblint_check(v >= 51); // PROVED
+  __voblint_check(v <= 52); // PROVED
+  __voblint_check(v == 51); // UNKNOWN
 }

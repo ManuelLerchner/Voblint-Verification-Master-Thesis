@@ -7,7 +7,7 @@ section \<open>Parity interpretation of the generic numeric-query interface\<clo
 text \<open>
   Third-domain validation for \<open>abstract_numeric_queries\<close>
   (\<^theory>\<open>Voblint_Domain.Abstract_Numeric_Queries\<close>), hand-tuned like
-  Voblint_Analysis_Interval.Interval_Numeric_Queries rather than derived through
+  \<open>Voblint_Analysis_Interval.Interval_Numeric_Queries\<close> rather than derived through
   \<open>backward_domain\<close>: parity has no \<open>inv_less\<close>/\<open>meet\<close> instance (guards do not
   refine parity, \<^theory>\<open>Voblint_Analysis_Parity.Parity_Domain\<close>), so there is nothing for
   the generic derivations to read off. Parity carries no order information at

@@ -16,22 +16,22 @@
 // update rule's per-origin gate and never converged. See
 // 03-procedures/precision/05-dead_branch_no_bottom_leak.vimp for the flat,
 // non-recursive, non-context minimal case of the same dead-branch pattern.
-void factorial(n) {
+fun factorial(n) {
   __voblint_check(0 < n); // PROVED
 
   if (n < 2) {
-    return 1
+    return 1;
   } else {
-    r := factorial(n - 1);
+    r = factorial(n - 1);
     __voblint_check(0 < r); // PROVED
-    return n * r
+    return n * r;
   }
 }
 
-void main() {
-  a := factorial(3);
-  b := factorial(4);
+fun main() {
+  a = factorial(3);
+  b = factorial(4);
 
   __voblint_check(a == 6);   // PROVED
-  __voblint_check(b == 24)   // PROVED
+  __voblint_check(b == 24);   // PROVED
 }

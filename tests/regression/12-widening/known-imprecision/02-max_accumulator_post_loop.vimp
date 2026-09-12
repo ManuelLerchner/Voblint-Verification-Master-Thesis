@@ -12,12 +12,12 @@
 // at the head and the check). Narrowing descends only through a guard,
 // never through an accumulator's self-dependency.
 // Solver-invariant across join, per-origin, warrow, warrow-per-origin.
-void main() {
-  b := 0;
-  a := 0;
+fun main() {
+  b = 0;
+  a = 0;
   while (a < 5) {
-    b := max(b, a);
-    a := a + 1
-  };
-  __voblint_check(b < 5) // UNKNOWN
+    b = max(b, a);
+    a = a + 1;
+  }
+  __voblint_check(b < 5); // UNKNOWN
 }

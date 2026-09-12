@@ -90,10 +90,10 @@
 //   main_pp3_ctx0 -> main_pp4_ctx0: call-to-return f
 // EXPECT-GRAPH-END
 
-void f(p) { return p + p }
-void main() {
-  x := f(3);
-  y := f(10);
+fun f(p) { return p + p; }
+fun main() {
+  x = f(3);
+  y = f(10);
   __voblint_check(x == 6);  // PROVED
-  __voblint_check(y == 20)  // PROVED
+  __voblint_check(y == 20);  // PROVED
 }

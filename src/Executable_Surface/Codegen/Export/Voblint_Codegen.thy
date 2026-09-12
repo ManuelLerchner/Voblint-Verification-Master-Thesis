@@ -130,7 +130,8 @@ export_code
 
   \<comment> \<open>Answer: the three outcomes, then the readers of a successful one\<close>
   Malformed_Program Unsupported_Configuration Analysed
-  out_graph out_snapshot out_checks out_globals
+  out_graph out_snapshot out_checks out_globals out_diagnostics
+  diagnostic_point diagnostic_message diagnostic_verdict
   row_point row_condition row_verdict row_state
   Check_Proved Check_Refuted Check_Unknown
   Bot Lifted
@@ -147,7 +148,7 @@ export_code
   \<comment> \<open>Program: what the frontend builds an input out of\<close>
   mk_program proc_decl_ext
   SKIP Assign Seq com.If While Return Check com.Call
-  N V Plus Minus Times
+  N V Plus Minus Times Div Mod
   exp.Not And Or Less exp.Eq
   Statement FunctionEntry FunctionResult
   int_of_integer nat_of_integer integer_of_int integer_of_nat integer_of_char

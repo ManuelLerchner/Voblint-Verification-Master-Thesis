@@ -186,7 +186,7 @@ lemma forget_relc_sound[intro]:
   shows "s(x := v) \<in> gamma_rel (forget_relc x d)"
   using assms by (cases d) auto
 
-subsection \<open>The one precise transfer: recognizing a bare-variable strict order test\<close>
+subsection \<open>Refining bare-variable comparisons\<close>
 
 definition assume_step :: "exp \<Rightarrow> relc \<Rightarrow> relc" where
   "assume_step b d =
@@ -195,35 +195,21 @@ definition assume_step :: "exp \<Rightarrow> relc \<Rightarrow> relc" where
       | RelC ps \<Rightarrow>
           (case b of
              Less (V x) (V y) \<Rightarrow> RelC (insert (x, y) ps)
+           | LessEq (V x) (V y) \<Rightarrow> RelC (insert (x, y) ps)
+           | Greater (V x) (V y) \<Rightarrow> RelC (insert (y, x) ps)
+           | GreaterEq (V x) (V y) \<Rightarrow> RelC (insert (y, x) ps)
+           | Eq (V x) (V y) \<Rightarrow> RelC (insert (x, y) (insert (y, x) ps))
            | _ \<Rightarrow> RelC ps))"
 
 lemma assume_step_sound[intro]:
   assumes "s \<in> gamma_rel d" "truthy (aval b s)"
   shows "s \<in> gamma_rel (assume_step b d)"
-proof (cases d)
-  case Bot
-  with assms(1) show ?thesis by simp
-next
-  case (RelC ps)
-  note d_eq = RelC
-  show ?thesis
-  proof (cases "\<exists>x y. b = Less (V x) (V y)")
-    case True
-    then obtain x y where xy: "b = Less (V x) (V y)" by blast
-    have "s x < s y" using assms(2) xy by (simp split: if_splits)
-    then show ?thesis using assms(1) d_eq unfolding assume_step_def d_eq xy by auto
-  next
-    case False
-    then show ?thesis
-      using assms(1) d_eq unfolding assume_step_def d_eq
-      by (auto split: exp.splits exp.splits)
-  qed
-qed
+  using assms
+  by (cases d; cases b) (auto simp: assume_step_def split: exp.splits if_splits)
 
-text \<open>The negated-guard counterpart: \<open>\<not>(x < y)\<close> is \<open>y \<le> x\<close>, the mirror image
-  of \<open>assume_step\<close>'s one precise case, recorded on the false branch instead
-  of discarded.  Every other shape falls back exactly as \<open>assume_step\<close>
-  does.\<close>
+text \<open>The false branch records the reversed order.  Equality records both
+  directions, on the true branch of \<open>Eq\<close> or the false branch of \<open>NotEq\<close>.
+  Disequality alone cannot be represented by a conjunction of weak orders.\<close>
 
 definition assume_not_step :: "exp \<Rightarrow> relc \<Rightarrow> relc" where
   "assume_not_step b d =
@@ -232,34 +218,21 @@ definition assume_not_step :: "exp \<Rightarrow> relc \<Rightarrow> relc" where
       | RelC ps \<Rightarrow>
           (case b of
              Less (V x) (V y) \<Rightarrow> RelC (insert (y, x) ps)
+           | LessEq (V x) (V y) \<Rightarrow> RelC (insert (y, x) ps)
+           | Greater (V x) (V y) \<Rightarrow> RelC (insert (x, y) ps)
+           | GreaterEq (V x) (V y) \<Rightarrow> RelC (insert (x, y) ps)
+           | NotEq (V x) (V y) \<Rightarrow> RelC (insert (x, y) (insert (y, x) ps))
            | _ \<Rightarrow> RelC ps))"
 
 lemma assume_not_step_sound[intro]:
   assumes "s \<in> gamma_rel d" "\<not> truthy (aval b s)"
   shows "s \<in> gamma_rel (assume_not_step b d)"
-proof (cases d)
-  case Bot
-  with assms(1) show ?thesis by simp
-next
-  case (RelC ps)
-  note d_eq = RelC
-  show ?thesis
-  proof (cases "\<exists>x y. b = Less (V x) (V y)")
-    case True
-    then obtain x y where xy: "b = Less (V x) (V y)" by blast
-    have "\<not> s x < s y" using assms(2) xy by (simp split: if_splits)
-    then show ?thesis using assms(1) d_eq unfolding assume_not_step_def d_eq xy by auto
-  next
-    case False
-    then show ?thesis
-      using assms(1) d_eq unfolding assume_not_step_def d_eq
-      by (auto split: exp.splits exp.splits)
-  qed
-qed
+  using assms
+  by (cases d; cases b) (auto simp: assume_not_step_def split: exp.splits if_splits)
 
 subsection \<open>The transfer functions\<close>
 
-text \<open>Every step except the two precise \<open>assume\<close>/\<open>assume_not\<close> cases above
+text \<open>Every step except the comparison refinements above
   is sound by forgetting or by leaving the carrier untouched -- deliberately
   imprecise: no closure, no normalization, havoc-based calls.\<close>
 

@@ -36,6 +36,7 @@ text \<open>
 
 nonterminal imp2_exp
 nonterminal imp2_stmt
+nonterminal imp2_if_stmt
 nonterminal imp2_stmts
 nonterminal imp2_stmts_opt
 nonterminal imp2_actuals
@@ -45,29 +46,38 @@ nonterminal imp2_ids
 syntax
   "_exp_var" :: "id_position => imp2_exp" ("_" 1000)
   "_exp_num" :: "num_const => imp2_exp" ("_" 1000)
-  "_exp_uminus" :: "imp2_exp => imp2_exp" ("- _" [80] 80)
-  "_exp_plus" :: "imp2_exp => imp2_exp => imp2_exp" ("_ + _" [60, 61] 60)
-  "_exp_minus" :: "imp2_exp => imp2_exp => imp2_exp" ("_ - _" [60, 61] 60)
-  "_exp_times" :: "imp2_exp => imp2_exp => imp2_exp" ("_ * _" [70, 71] 70)
+  "_exp_uminus" :: "imp2_exp => imp2_exp" ("- _" [90] 90)
+  "_exp_plus" :: "imp2_exp => imp2_exp => imp2_exp" ("_ + _" [70, 71] 70)
+  "_exp_minus" :: "imp2_exp => imp2_exp => imp2_exp" ("_ - _" [70, 71] 70)
+  "_exp_times" :: "imp2_exp => imp2_exp => imp2_exp" ("_ * _" [80, 81] 80)
+  "_exp_div" :: "imp2_exp => imp2_exp => imp2_exp" ("_ '/ _" [80, 81] 80)
+  "_exp_mod" :: "imp2_exp => imp2_exp => imp2_exp" ("_ % _" [80, 81] 80)
   "_exp_true" :: imp2_exp ("true" 1000)
   "_exp_false" :: imp2_exp ("false" 1000)
-  "_exp_less" :: "imp2_exp => imp2_exp => imp2_exp" ("_ < _" [51, 50] 50)
-  "_exp_eq" :: "imp2_exp => imp2_exp => imp2_exp" ("_ == _" [51, 50] 50)
-  "_exp_not" :: "imp2_exp => imp2_exp" ("! _" [80] 80)
+  "_exp_less" :: "imp2_exp => imp2_exp => imp2_exp" ("_ < _" [61, 61] 60)
+  "_exp_less_eq" :: "imp2_exp => imp2_exp => imp2_exp" ("_ <= _" [61, 61] 60)
+  "_exp_greater" :: "imp2_exp => imp2_exp => imp2_exp" ("_ > _" [61, 61] 60)
+  "_exp_greater_eq" :: "imp2_exp => imp2_exp => imp2_exp" ("_ >= _" [61, 61] 60)
+  "_exp_eq" :: "imp2_exp => imp2_exp => imp2_exp" ("_ == _" [51, 51] 50)
+  "_exp_not_eq" :: "imp2_exp => imp2_exp => imp2_exp" ("_ != _" [51, 51] 50)
+  "_exp_not" :: "imp2_exp => imp2_exp" ("! _" [90] 90)
   "_exp_and" :: "imp2_exp => imp2_exp => imp2_exp" ("_ && _" [40, 41] 40)
   "_exp_or" :: "imp2_exp => imp2_exp => imp2_exp" ("_ || _" [30, 31] 30)
   "_exp_paren" :: "imp2_exp => imp2_exp" ("'( _ ')" [0] 1000)
-  "_stmt_skip" :: imp2_stmt ("skip" 61)
-  "_stmt_assign" :: "id_position => imp2_exp => imp2_stmt" ("_ := _" [900, 0] 61)
-  "_stmt_return" :: "imp2_exp => imp2_stmt" ("return _" [0] 61)
-  "_stmt_return0" :: imp2_stmt ("return" 61)
-  "_stmt_check" :: "imp2_exp => imp2_stmt" ("'_'_voblint'_check '( _ ')" [0] 61)
-  "_stmt_if" :: "imp2_exp => imp2_stmts_opt => imp2_stmts_opt => imp2_stmt" ("if '( _ ') { _ } else { _ }" [0, 0, 0] 61)
+  "_stmt_skip" :: imp2_stmt ("skip ;" 61)
+  "_stmt_assign" :: "id_position => imp2_exp => imp2_stmt" ("_ = _ ;" [900, 0] 61)
+  "_stmt_return" :: "imp2_exp => imp2_stmt" ("return _ ;" [0] 61)
+  "_stmt_return0" :: imp2_stmt ("return ;" 61)
+  "_stmt_check" :: "imp2_exp => imp2_stmt" ("'_'_voblint'_check '( _ ') ;" [0] 61)
+  "_stmt_if" :: "imp2_exp => imp2_stmts_opt => imp2_stmts_opt => imp2_if_stmt" ("if '( _ ') { _ } else { _ }" [0, 0, 0] 61)
+  "_stmt_if_then" :: "imp2_exp => imp2_stmts_opt => imp2_if_stmt" ("if '( _ ') { _ }" [0, 0] 61)
+  "_stmt_if_chain" :: "imp2_exp => imp2_stmts_opt => imp2_if_stmt => imp2_if_stmt" ("if '( _ ') { _ } else _" [0, 0, 0] 61)
+  "_stmt_conditional" :: "imp2_if_stmt => imp2_stmt" ("_" [0] 61)
   "_stmt_while" :: "imp2_exp => imp2_stmts_opt => imp2_stmt" ("while '( _ ') { _ }" [0, 0] 61)
-  "_stmt_call" :: "id_position => imp2_actuals => imp2_stmt" ("_'( _ ')" [1000, 0] 61)
-  "_stmt_callret" :: "id_position => id_position => imp2_actuals => imp2_stmt" ("_ := _'( _ ')" [900, 1000, 0] 61)
+  "_stmt_call" :: "id_position => imp2_actuals => imp2_stmt" ("_'( _ ') ;" [1000, 0] 61)
+  "_stmt_callret" :: "id_position => id_position => imp2_actuals => imp2_stmt" ("_ = _'( _ ') ;" [900, 1000, 0] 61)
   "_stmts_one" :: "imp2_stmt => imp2_stmts" ("_" 61)
-  "_stmts_seq" :: "imp2_stmts => imp2_stmt => imp2_stmts" ("_; _" [61, 61] 61)
+  "_stmts_seq" :: "imp2_stmts => imp2_stmt => imp2_stmts" ("_ _" [61, 61] 61)
   "_stmts_opt_none" :: imp2_stmts_opt ("")
   "_stmts_opt_some" :: "imp2_stmts => imp2_stmts_opt" ("_")
   "_actuals_one" :: "imp2_exp => imp2_actuals" ("_")
@@ -78,8 +88,8 @@ syntax
   "_ids_cons" :: "id_position => imp2_ids => imp2_ids" ("_, _")
   "_exp_zero" :: imp2_exp ("0" 1000)
   "_exp_one" :: imp2_exp ("1" 1000)
-  "_stmt_call0" :: "id_position => imp2_stmt" ("_'(')" [1000] 61)
-  "_stmt_callret0" :: "id_position => id_position => imp2_stmt" ("_ := _'(')" [900, 1000] 61)
+  "_stmt_call0" :: "id_position => imp2_stmt" ("_'(') ;" [1000] 61)
+  "_stmt_callret0" :: "id_position => id_position => imp2_stmt" ("_ = _'(') ;" [900, 1000] 61)
 
 ML \<open>
 structure Vimp_Grammar_Tr =
@@ -89,8 +99,14 @@ struct
   val c_Plus   = "VIMP_Syntax.exp.Plus"
   val c_Minus  = "VIMP_Syntax.exp.Minus"
   val c_Times  = "VIMP_Syntax.exp.Times"
+  val c_Div = "VIMP_Syntax.exp.Div"
+  val c_Mod = "VIMP_Syntax.exp.Mod"
 
   val c_Less   = "VIMP_Syntax.exp.Less"
+  val c_LessEq = "VIMP_Syntax.exp.LessEq"
+  val c_Greater = "VIMP_Syntax.exp.Greater"
+  val c_GreaterEq = "VIMP_Syntax.exp.GreaterEq"
+  val c_NotEq = "VIMP_Syntax.exp.NotEq"
   val c_Eq     = "VIMP_Syntax.exp.Eq"
   val c_Not    = "VIMP_Syntax.exp.Not"
   val c_And    = "VIMP_Syntax.exp.And"
@@ -172,10 +188,16 @@ struct
          | (Const ("_exp_plus", _), [a0, a2]) => K c_Plus $ (exp_tr ctxt a0) $ (exp_tr ctxt a2)
          | (Const ("_exp_minus", _), [a0, a2]) => K c_Minus $ (exp_tr ctxt a0) $ (exp_tr ctxt a2)
          | (Const ("_exp_times", _), [a0, a2]) => K c_Times $ (exp_tr ctxt a0) $ (exp_tr ctxt a2)
+         | (Const ("_exp_div", _), [a0, a2]) => K c_Div $ (exp_tr ctxt a0) $ (exp_tr ctxt a2)
+         | (Const ("_exp_mod", _), [a0, a2]) => K c_Mod $ (exp_tr ctxt a0) $ (exp_tr ctxt a2)
          | (Const ("_exp_true", _), []) => K c_N $ (HOLogic.mk_number HOLogic.intT 1)
          | (Const ("_exp_false", _), []) => K c_N $ (HOLogic.mk_number HOLogic.intT 0)
          | (Const ("_exp_less", _), [a0, a2]) => K c_Less $ (exp_tr ctxt a0) $ (exp_tr ctxt a2)
+         | (Const ("_exp_less_eq", _), [a0, a2]) => K c_LessEq $ (exp_tr ctxt a0) $ (exp_tr ctxt a2)
+         | (Const ("_exp_greater", _), [a0, a2]) => K c_Greater $ (exp_tr ctxt a0) $ (exp_tr ctxt a2)
+         | (Const ("_exp_greater_eq", _), [a0, a2]) => K c_GreaterEq $ (exp_tr ctxt a0) $ (exp_tr ctxt a2)
          | (Const ("_exp_eq", _), [a0, a2]) => K c_Eq $ (exp_tr ctxt a0) $ (exp_tr ctxt a2)
+         | (Const ("_exp_not_eq", _), [a0, a2]) => K c_NotEq $ (exp_tr ctxt a0) $ (exp_tr ctxt a2)
          | (Const ("_exp_not", _), [a1]) => K c_Not $ (exp_tr ctxt a1)
          | (Const ("_exp_and", _), [a0, a2]) => K c_And $ (exp_tr ctxt a0) $ (exp_tr ctxt a2)
          | (Const ("_exp_or", _), [a0, a2]) => K c_Or $ (exp_tr ctxt a0) $ (exp_tr ctxt a2)
@@ -201,11 +223,17 @@ struct
          | (Const ("_stmt_return", _), [a1]) => K c_Return $ ((K c_Some $ (exp_tr ctxt a1)))
          | (Const ("_stmt_return0", _), []) => K c_Return $ (K c_None)
          | (Const ("_stmt_check", _), [a2]) => K c_Check $ (exp_tr ctxt a2)
-         | (Const ("_stmt_if", _), [a2, a5, a9]) => K c_If $ (exp_tr ctxt a2) $ (stmts_opt_tr ctxt a5) $ (stmts_opt_tr ctxt a9)
+         | (Const ("_stmt_conditional", _), [a0]) => if_stmt_tr ctxt a0
          | (Const ("_stmt_while", _), [a2, a5]) => K c_While $ (exp_tr ctxt a2) $ (stmts_opt_tr ctxt a5)
          | (Const ("_stmt_call", _), [x0, a2]) => K c_Call $ (K c_None) $ (HOLogic.mk_literal (dest_id_position (SOME Markup.skolem) ctxt x0)) $ (actuals_tr ctxt a2)
          | (Const ("_stmt_callret", _), [x0, x2, a4]) => K c_Call $ ((K c_Some $ (HOLogic.mk_literal (dest_id_position (SOME Markup.free) ctxt x0)))) $ (HOLogic.mk_literal (dest_id_position (SOME Markup.skolem) ctxt x2)) $ (actuals_tr ctxt a4)
          | _ => raise TERM ("Vimp_Grammar_Tr: stmt_tr", [t]))
+  and if_stmt_tr ctxt t =
+        (case Term.strip_comb t of
+           (Const ("_stmt_if", _), [a2, a5, a9]) => K c_If $ (exp_tr ctxt a2) $ (stmts_opt_tr ctxt a5) $ (stmts_opt_tr ctxt a9)
+         | (Const ("_stmt_if_then", _), [a2, a5]) => K c_If $ (exp_tr ctxt a2) $ (stmts_opt_tr ctxt a5) $ (K c_SKIP)
+         | (Const ("_stmt_if_chain", _), [a2, a5, a8]) => K c_If $ (exp_tr ctxt a2) $ (stmts_opt_tr ctxt a5) $ (if_stmt_tr ctxt a8)
+         | _ => raise TERM ("Vimp_Grammar_Tr: if_stmt_tr", [t]))
 
   fun formals_of ctxt (Const ("_formals_one", _) $ x) = [dest_id_position (SOME Markup.free) ctxt x]
     | formals_of ctxt (Const ("_formals_cons", _) $ x $ rest) = dest_id_position (SOME Markup.free) ctxt x :: formals_of ctxt rest

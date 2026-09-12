@@ -4,17 +4,16 @@
 // 12 against the literal 3 -- and intersects the quotient into n's current
 // class, which is top, so n comes out pinned to 4.
 //
-// This is division without a division operator: VIMP has no `/`, and the
-// analysis still recovers the factor because the inverse runs in the
-// abstract domain, not in the source. --analysis interval cannot do this
+// The analysis recovers the factor by inverting multiplication in the
+// abstract domain; the source needs no explicit division. Interval cannot do this
 // (its inv_times gives up on a top operand) and --analysis parity has no
 // backward filter at all.
-void main() {
-  n := __voblint_nondet_int();
+fun main() {
+  n = __voblint_nondet_int();
   if (n * 3 == 12) {
     __voblint_check(n == 4); // PROVED
-    __voblint_check(!(n == 0)) // PROVED
+    __voblint_check(n != 0); // PROVED
   } else {
-    __voblint_check(true) // PROVED
+    __voblint_check(true); // PROVED
   }
 }

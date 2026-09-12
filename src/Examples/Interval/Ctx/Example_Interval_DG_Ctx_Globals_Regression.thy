@@ -21,20 +21,20 @@ text \<open>
 definition gcall_prog :: imp_prog where
   "gcall_prog = program {
      global g;
-     void bump(n) {
-       g := g + n;
-       return g
+     fun bump(n) {
+       g = g + n;
+       return g;
      }
-     void main() {
-       g := 10;
-       a := bump(5);
-       b := bump(4);
+     fun main() {
+       g = 10;
+       a = bump(5);
+       b = bump(4);
        __voblint_check(a == 15);
        __voblint_check(b == 19);
        __voblint_check(g == 19);
-       c := bump(g);
+       c = bump(g);
        __voblint_check(c == 38);
-       __voblint_check(g == 38)
+       __voblint_check(g == 38);
      }
    }"
 

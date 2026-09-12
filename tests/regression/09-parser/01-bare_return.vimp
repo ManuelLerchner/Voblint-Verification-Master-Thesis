@@ -6,10 +6,10 @@
 // main itself may not contain a return (wf_source_program's no_return
 // conjunct), so the bare return lives in a helper procedure p instead,
 // called destination-less (a bare return provides no value).
-void p() {
+fun p() {
   __voblint_check(1 < 2); // PROVED
-  return
+  return;
 }
-void main() {
-  p()
+fun main() {
+  p();
 }

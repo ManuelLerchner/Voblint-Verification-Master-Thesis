@@ -6,7 +6,7 @@
 // under the sl4 solver: the inner widening point must be restarted from
 // bottom once the outer head narrows.
 //
-// Voblint answers !(10 < i) UNKNOWN. Mechanism: the inner head is its
+// Voblint answers (i <= 10) UNKNOWN. Mechanism: the inner head is its
 // own widening point, and i flows around the inner back-edge unrefined
 // (the inner guard j < 10 says nothing about i). On the outer head's
 // first widening, i := i + 1 delivers [1,+inf] to the inner head; the
@@ -18,20 +18,18 @@
 // body -- measures i = [1,10] and PROVED x2, so the loss is the inner
 // widening point, not the outer narrowing.
 // Solver-invariant across join, per-origin, warrow, warrow-per-origin.
-void main() {
-  i := 0;
+fun main() {
+  i = 0;
   while (true) {
-    i := i + 1;
-    j := 0;
+    i = i + 1;
+    j = 0;
     while (j < 10) {
-      __voblint_check(!(i < 0)); // PROVED
-      __voblint_check(!(10 < i)); // UNKNOWN
-      j := j + 1
-    };
+      __voblint_check(i >= 0); // PROVED
+      __voblint_check(i <= 10); // UNKNOWN
+      j = j + 1;
+    }
     if (9 < i) {
-      i := 0
-    } else {
-      skip
+      i = 0;
     }
   }
 }

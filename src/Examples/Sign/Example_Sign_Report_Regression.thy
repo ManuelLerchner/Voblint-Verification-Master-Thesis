@@ -35,8 +35,8 @@ text \<open>This program is byte-identical to \<open>Example_Sign_Unit_Assembly\
 
 definition sign_flow_sensitive_global_prog :: imp_prog where
   "sign_flow_sensitive_global_prog = program { global Gx;
-     void f() { Gx := 1 }
-     void main() { Gx := 0; f(); __voblint_check(0 < Gx) } }"
+     fun f() { Gx = 1; }
+     fun main() { Gx = 0; f(); __voblint_check(0 < Gx); } }"
 
 text \<open>
   Were globals routed through a separate flow-insensitive shared summary, \<open>Gx := 0\<close> and
@@ -53,8 +53,8 @@ lemma sign_flow_sensitive_global_result:
 
 definition sign_dead_branch_bot_prog :: imp_prog where
   "sign_dead_branch_bot_prog = program { global Gx;
-     void f(n) { if (n < 0) { Gx := -1 } else { Gx := 1 } }
-     void main() { Gx := 0; f(5); __voblint_check(0 < Gx) } }"
+     fun f(n) { if (n < 0) { Gx = -1; } else { Gx = 1; } }
+     fun main() { Gx = 0; f(5); __voblint_check(0 < Gx); } }"
 
 text \<open>
   \<open>f\<close> is called with \<open>n = 5\<close>, abstracted to \<open>SPos\<close>: Sign's own comparison-against-zero
@@ -89,21 +89,21 @@ text \<open>
 definition sign_factorial_prog :: imp_prog where
   "sign_factorial_prog =
      program {
-       void factorial(n) {
+       fun factorial(n) {
          __voblint_check(0 < n);
          if (n < 2) {
-           return 1
+           return 1;
          } else {
-           r := factorial(n - 1);
+           r = factorial(n - 1);
            __voblint_check(0 < r);
-           return n * r
+           return n * r;
          }
        }
-       void main() {
-         a := factorial(3);
-         b := factorial(4);
+       fun main() {
+         a = factorial(3);
+         b = factorial(4);
          __voblint_check(0 < a);
-         __voblint_check(0 < b)
+         __voblint_check(0 < b);
        }
      }"
 
@@ -140,14 +140,14 @@ text \<open>
 definition sign_two_call_sites_prog :: imp_prog where
   "sign_two_call_sites_prog =
      program {
-       void square(n) {
-         return n * n
+       fun square(n) {
+         return n * n;
        }
-       void main() {
-         a := square(3);
-         b := square(4);
+       fun main() {
+         a = square(3);
+         b = square(4);
          __voblint_check(0 < a);
-         __voblint_check(0 < b)
+         __voblint_check(0 < b);
        }
      }"
 

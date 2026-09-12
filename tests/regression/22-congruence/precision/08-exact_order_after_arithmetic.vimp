@@ -1,0 +1,9 @@
+// PARAM: --analysis congruence
+// Arithmetic produces the exact singleton 4. Congruence decides both its
+// equality and ordering queries; singleton ordering no longer falls back
+// to UNKNOWN.
+fun main() {
+  x = 2 + 2;
+  __voblint_check(x == 4); // PROVED
+  __voblint_check(x < 9); // PROVED
+}

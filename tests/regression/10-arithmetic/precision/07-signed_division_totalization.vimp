@@ -1,0 +1,22 @@
+// PARAM: --analysis interval
+// Truncation toward zero and dividend-signed remainders differ from floor
+// division for negative inputs. Zero-divisor results are VIMP conventions.
+fun main() {
+  __voblint_check(7 / 3 == 2); // PROVED
+  __voblint_check(-7 / 3 == -2); // PROVED
+  __voblint_check(7 / -3 == -2); // PROVED
+  __voblint_check(-7 / -3 == 2); // PROVED
+  __voblint_check(7 % 3 == 1); // PROVED
+  __voblint_check(-7 % 3 == -1); // PROVED
+  __voblint_check(7 % -3 == 1); // PROVED
+  __voblint_check(-7 % -3 == -1); // PROVED
+  __voblint_check(-7 / 3 * 3 + -7 % 3 == -7); // PROVED
+  __voblint_check(2 / 3 == 0); // PROVED
+  __voblint_check(-2 / 3 == 0); // PROVED
+  __voblint_check(7 / 0 == 0); // PROVED
+  __voblint_check(-7 % 0 == -7); // PROVED
+  __voblint_check(20 / 3 % 4 * 2 + 1 == 5); // PROVED
+  // Logical operators remain well-defined over total expressions.
+  __voblint_check(0 && 1 / 0); // REFUTED
+  __voblint_check(1 || 1 % 0); // PROVED
+}

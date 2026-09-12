@@ -1,0 +1,12 @@
+// PARAM: --analysis int
+// Exact division retains a congruence class; reduction recovers quotient parity.
+// Neither an unbounded interval nor Parity's division operator supplies it.
+fun main() {
+  n = __voblint_nondet_int();
+  even = (6 * n) / 3;
+  odd = (12 * n + 3) / -3;
+  __voblint_check(even % 2 == 0); // PROVED
+  __voblint_check(odd % 2 != 0); // PROVED
+  __voblint_check(even == 1); // REFUTED
+  __voblint_check(odd == 0); // REFUTED
+}

@@ -10,7 +10,6 @@ set -euo pipefail
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/require-afp.sh"
 
 LINTER_DIR="${LINTER_DIR:-/tmp/isabelle-linter}"
-LINTER_TAG="Isabelle2025-2-v1.0.0"
 SESSIONS="$(bash "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/sessions.sh" | tr '\n' ' ')"
 
 # Install only when the tool is missing. Registering a second copy alongside a
@@ -25,7 +24,12 @@ linter_help="$("$ISABELLE" lint -? 2>&1 || true)"
 case "$linter_help" in
   *"Usage: isabelle lint"*) ;;
   *)
-    test -d "$LINTER_DIR" || git clone --depth 1 --branch "$LINTER_TAG" https://github.com/isabelle-prover/isabelle-linter "$LINTER_DIR"
+    if test -d "$LINTER_DIR"; then
+      git -C "$LINTER_DIR" switch master >/dev/null 2>&1 ||
+        git -C "$LINTER_DIR" switch -C master origin/master >/dev/null 2>&1
+    else
+      git clone --depth 1 https://github.com/isabelle-prover/isabelle-linter "$LINTER_DIR"
+    fi
     "$ISABELLE" components -u "$LINTER_DIR/linter_base"
     ;;
 esac

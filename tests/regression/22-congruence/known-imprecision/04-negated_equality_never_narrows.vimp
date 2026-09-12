@@ -1,5 +1,5 @@
 // PARAM: --analysis congruence
-// The else-branch is reached exactly when n is not 4, so !(n == 4) is a
+// The else-branch is reached exactly when n is not 4, so (n != 4) is a
 // fixed fact there.
 //
 // Two mechanisms stack, and only the outer one is a lattice limit. The
@@ -13,11 +13,11 @@
 // This is why the case sits here rather than reading as a fixable gap.
 // --analysis interval has the same shape and the same answer; recovering
 // it needs a disjunctive or exclusion domain, which no domain here is.
-void main() {
-  n := __voblint_nondet_int();
+fun main() {
+  n = __voblint_nondet_int();
   if (n == 4) {
-    __voblint_check(true) // PROVED
+    __voblint_check(true); // PROVED
   } else {
-    __voblint_check(!(n == 4)) // UNKNOWN
+    __voblint_check(n != 4); // UNKNOWN
   }
 }
