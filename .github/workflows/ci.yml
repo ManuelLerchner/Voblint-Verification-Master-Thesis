@@ -535,7 +535,7 @@ jobs:
       - name: Install git and LaTeX toolchain
         run: |
           apt-get update -qq
-          apt-get install -y -qq git pandoc librsvg2-bin latexmk texlive-luatex texlive-latex-extra \
+          apt-get install -y -qq git pandoc latexmk texlive-luatex texlive-latex-extra \
             texlive-fonts-recommended texlive-science > /dev/null
 
       - name: Checkout Goblint Formalization

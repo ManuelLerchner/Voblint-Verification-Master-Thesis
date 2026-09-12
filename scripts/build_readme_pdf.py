@@ -15,8 +15,6 @@ REPO = Path(__file__).resolve().parents[1]
 def build(output):
     if not shutil.which("pandoc"):
         raise SystemExit("pandoc is required for the README pages; install it and retry.")
-    if not shutil.which("rsvg-convert"):
-        raise SystemExit("rsvg-convert is required for README SVG images; install librsvg and retry.")
     isabelle = os.environ.get("ISABELLE", "isabelle")
     home = subprocess.check_output([isabelle, "getenv", "-b", "ISABELLE_HOME"], text=True).strip()
     fonts = Path(home) / "doc/fonts"

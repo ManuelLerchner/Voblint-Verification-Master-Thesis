@@ -52,14 +52,10 @@ function Pandoc(doc)
       return pandoc.RawInline('latex', latex:gsub('\\_', '\\_\\allowbreak{}'))
     end,
     Image = function(img)
-      if remote(img.src) and (img.src:match('badge') or img.src:match('img.shields.io')) then
-        img.attributes.width = nil
-        img.attributes.height = '4mm'
-      else
-        img.attributes.width = '95%'
-        img.attributes.height = nil
-      end
-      if img.src:match('/user%-attachments/') then img.caption = {} end
+      -- Remote badges are presentation-only; omit them from the deterministic PDF.
+      if remote(img.src) then return pandoc.Span(img.caption) end
+      img.attributes.width = '95%'
+      img.attributes.height = nil
       return img
     end
   }

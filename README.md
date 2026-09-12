@@ -1,4 +1,4 @@
-<img width="1792" height="592" alt="Gemini_Generated_Image_uv4qywuv4qywuv4q" src="https://github.com/user-attachments/assets/6d58a89f-a92b-4029-9677-83c049254250" />
+![Voblint repository banner](docs/images/banner.png)
 
 # Voblint
 
@@ -598,13 +598,13 @@ The ones that matter most often:
 
 To export the formalization as a PDF, run `pixi run isabelle-pdf-build`
 (or `AFP=/path/to/afp/thys pixi run isabelle-pdf-build`). This requires Isabelle's
-LaTeX toolchain, Pandoc, and `rsvg-convert` (librsvg). Open `output/document.pdf` after the build succeeds.
+LaTeX toolchain and Pandoc. Open `output/document.pdf` after the build succeeds.
 The current `README.md` is converted automatically and included starting on
 page 2, followed by the abstract and theory contents. Its local figures, tables,
 code blocks, and expanded detail sections are retained. Remote images, including
-the banner and badges, are downloaded and embedded when available; unavailable
-images retain their alt text. The build uses network access when it can fetch
-images. CI installs Pandoc and librsvg alongside LaTeX.
+the local banner and figures are embedded; remote badges are represented by
+text. The PDF build is offline and deterministic. CI installs Pandoc alongside
+LaTeX.
 The document groups the core theories by session, including generated theories
 and code export. Example sessions are omitted from presentation, except for
 `Example_End_To_End_Certificate`, which appears in an appendix. To include every
