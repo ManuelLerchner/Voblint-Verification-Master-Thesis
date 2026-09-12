@@ -54,6 +54,24 @@ next
   with False product show ?thesis unfolding c_mod_def by (simp only: False if_False; linarith)
 qed
 
+lemma c_div_exact:
+  assumes "b dvd a"
+  shows "c_div a b = a div b"
+proof (cases "b = 0")
+  case True
+  with assms show ?thesis by simp
+next
+  case False
+  have rem: "c_mod a b = 0"
+    using assms by (simp add: c_mod_abs)
+  have product: "c_div a b * b = a"
+    using c_div_mod_reconstruct[of a b] rem by simp
+  have "c_div a b = (c_div a b * b) div b"
+    using False by simp
+  also have "... = a div b" using product by simp
+  finally show ?thesis .
+qed
+
 lemma c_div_nonneg:
   "0 \<le> a \<Longrightarrow> 0 \<le> b \<Longrightarrow> 0 \<le> c_div a b"
   "a \<le> 0 \<Longrightarrow> b \<le> 0 \<Longrightarrow> 0 \<le> c_div a b"

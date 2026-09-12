@@ -65,6 +65,22 @@ mode, so its result is pinned by the CLI regression. That `Once` equals `Fixpoin
 is not a general fact: `refinement_round_is_progressive` in `Example_Int_Domain` is a
 witness where a further round still makes progress.
 
+## Division and reduction
+
+Exact division benefits from the existing reduction steps: Congruence keeps
+`(6*n)/3` in `0 (mod 2)`, and reduction transfers that fact to Parity as even.
+With `Refine_Never`, Congruence retains the class but Parity remains top.
+Division by `1` or `-1` also preserves unbounded interval endpoints, such as
+`[7,+inf] / -1 = [-inf,-7]`.
+
+The division/remainder fixture
+`tests/regression/16-composite-domain/precision/11-division_remainder_reduction.vimp`
+combines bounded division with modular information to prove a singleton
+remainder. The individual components cannot prove that check.
+`int_division_remainder_progressive` compares the modes: one round obtains
+`[1,1]` but leaves Sign nonnegative; fixpoint refinement reads the tightened
+interval on its next round and makes Sign positive.
+
 ## Widening
 
 `Int_Warrowing` is exactly componentwise — Interval's own accelerating widen and narrow

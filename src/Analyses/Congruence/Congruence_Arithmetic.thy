@@ -595,22 +595,133 @@ next
 qed
 
 
+lemma gamma_congruence_exact_division:
+  assumes nz: "d \<noteq> 0" and dc: "d dvd c" and dm: "d dvd m"
+  shows "gamma_congruence (mk_congruence (c div d) (m div d)) =
+    (\<lambda>n. c_div n d) ` {n. m dvd n - c}"
+proof -
+  obtain c' m' where c: "c = d * c'" and m: "m = d * m'"
+    using dc dm by (auto simp: dvd_def)
+  have cancel: "\<And>k. c_div (d * k) d = k"
+    using nz by (simp add: c_div_exact)
+  have quotients: "c div d = c'" "m div d = m'"
+    using nz by (simp_all add: c m)
+  show ?thesis
+  proof (rule set_eqI, rule iffI)
+    fix q
+    assume "q \<in> gamma_congruence (mk_congruence (c div d) (m div d))"
+    then obtain k where q: "q - c' = m' * k"
+      unfolding quotients by (auto simp: dvd_def)
+    have member: "d * q \<in> {n. m dvd n - c}"
+      unfolding c m using q by (auto simp: dvd_def algebra_simps)
+    show "q \<in> (\<lambda>n. c_div n d) ` {n. m dvd n - c}"
+      using imageI[OF member, of "\<lambda>n. c_div n d"] by (simp add: cancel)
+  next
+    fix q
+    assume "q \<in> (\<lambda>n. c_div n d) ` {n. m dvd n - c}"
+    then obtain n k where q: "q = c_div n d" and n: "n - c = m * k"
+      by (auto simp: dvd_def)
+    have n_eq: "n = d * (c' + m' * k)"
+      using n unfolding c m by (simp add: algebra_simps)
+    show "q \<in> gamma_congruence (mk_congruence (c div d) (m div d))"
+      unfolding quotients q n_eq by (simp add: cancel)
+  qed
+qed
+
+definition congruence_divides :: "int \<Rightarrow> congruence \<Rightarrow> bool" where
+  "congruence_divides d a =
+    (case Rep_congruence a of None \<Rightarrow> True | Some (c, m) \<Rightarrow> d dvd c \<and> d dvd m)"
+
+lemma congruence_divides_iff:
+  "congruence_divides d a \<longleftrightarrow> (\<forall>n \<in> gamma_congruence a. d dvd n)"
+proof -
+  have classes: "\<And>c m. (\<forall>n. m dvd n - c \<longrightarrow> d dvd n) \<longleftrightarrow> d dvd c \<and> d dvd m"
+    using congruence_class_subset_iff[of _ _ d 0]
+    by (auto simp: subset_iff)
+  show ?thesis
+    unfolding congruence_divides_def gamma_congruence_def
+    by (auto simp: classes split: option.splits)
+qed
+
+definition congruence_div_const :: "congruence \<Rightarrow> int \<Rightarrow> congruence" where
+  "congruence_div_const a d =
+    (case Rep_congruence a of None \<Rightarrow> bot
+     | Some (c, m) \<Rightarrow>
+       if d = 0 then congruence_of_int 0
+       else if congruence_divides d a then mk_congruence (c div d) (m div d)
+       else top)"
+
+lemma gamma_congruence_div_const:
+  assumes "d \<noteq> 0" "congruence_divides d a"
+  shows "gamma_congruence (congruence_div_const a d) =
+    (\<lambda>n. c_div n d) ` gamma_congruence a"
+proof (cases "Rep_congruence a")
+  case None
+  then have "gamma_congruence a = {}" by (simp add: gamma_congruence_def)
+  then show ?thesis by (simp add: congruence_div_const_def None bot_congruence_def)
+next
+  case (Some p)
+  obtain c m where p: "p = (c, m)" by (cases p)
+  have divisibility: "d dvd c" "d dvd m"
+    using assms(2) unfolding congruence_divides_def Some p by simp_all
+  have gamma: "gamma_congruence a = {n. m dvd n - c}"
+    by (simp add: gamma_congruence_def Some p)
+  show ?thesis
+    using gamma_congruence_exact_division[OF assms(1) divisibility]
+    by (simp add: congruence_div_const_def Some p assms gamma)
+qed
+
+lemma gamma_congruence_div_const_cases:
+  "gamma_congruence (congruence_div_const a d) =
+    (if is_empty a then {}
+     else if d = 0 then {0}
+     else if congruence_divides d a then (\<lambda>n. c_div n d) ` gamma_congruence a
+     else UNIV)"
+proof (cases "is_empty a")
+  case True
+  then have rep: "Rep_congruence a = None"
+    by (simp add: is_bottom_congruence_def bot_congruence_def)
+  show ?thesis using True
+    by (simp add: congruence_div_const_def rep bot_congruence_def
+        is_bottom_congruence_correct gamma_congruence_def)
+next
+  case False
+  then obtain c m where rep: "Rep_congruence a = Some (c, m)"
+    by (cases "Rep_congruence a") (auto simp: is_bottom_congruence_correct gamma_congruence_def)
+  show ?thesis
+    using gamma_congruence_div_const[of d a]
+    by (cases "d = 0"; cases "congruence_divides d a")
+       (use False in \<open>simp_all add: congruence_div_const_def rep congruence_of_int_def\<close>)
+qed
+
+lemma congruence_div_const_sound:
+  assumes "i \<in> gamma_congruence a"
+  shows "c_div i d \<in> gamma_congruence (congruence_div_const a d)"
+  using assms
+  by (auto simp: gamma_congruence_div_const_cases is_bottom_congruence_correct)
+
+lemma congruence_div_const_mono:
+  assumes "a1 \<le> a2"
+  shows "congruence_div_const a1 d \<le> congruence_div_const a2 d"
+  using assms
+  by (auto simp: less_eq_congruence_iff_gamma gamma_congruence_div_const_cases
+      is_bottom_congruence_correct congruence_divides_iff)
+
 definition congruence_div_fallback :: "congruence \<Rightarrow> congruence \<Rightarrow> congruence" where
   "congruence_div_fallback a b =
     (if is_empty a \<or> is_empty b then bot
      else case congruence_singleton b of
-       Some c \<Rightarrow> (if c = 0 then congruence_of_int 0 else if c = 1 then a
-         else if c = -1 then congruence_of_int 0 - a else top)
+       Some c \<Rightarrow> congruence_div_const a c
      | None \<Rightarrow> top)"
 
 lemma congruence_div_fallback_sound:
   assumes "i \<in> gamma_congruence a" "j \<in> gamma_congruence b"
   shows "c_div i j \<in> gamma_congruence (congruence_div_fallback a b)"
   using assms congruence_singleton_sound[OF _ assms(2)]
-    congruence_minus_sound[OF congruence_of_int_gamma assms(1), of 0]
+
   unfolding congruence_div_fallback_def
   by (auto simp: is_bottom_congruence_correct split: option.splits
-      dest: congruence_singleton_sound intro: congruence_minus_sound)
+      intro: congruence_div_const_sound)
 
 lemma congruence_div_fallback_mono:
   assumes "a1 \<le> a2" "b1 \<le> b2"
@@ -624,7 +735,7 @@ next
     using False is_empty_antimono assms by blast+
   show ?thesis unfolding congruence_div_fallback_def
     using ne assms congruence_singleton_le[OF ne(2) assms(2)]
-    by (auto split: option.splits intro: congruence_minus_mono)
+    by (auto split: option.splits intro: congruence_div_const_mono)
 qed
 
 definition congruence_div :: "congruence \<Rightarrow> congruence \<Rightarrow> congruence" where

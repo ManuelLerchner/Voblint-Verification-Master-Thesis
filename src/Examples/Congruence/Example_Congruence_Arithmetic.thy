@@ -50,4 +50,14 @@ lemma aval_congruence_regression:
    mk_congruence 0 2"
   by eval
 
+lemma congruence_exact_division_regression:
+  "congruence_div (mk_congruence 0 6) (congruence_of_int 3) = mk_congruence 0 2"
+  "congruence_div (mk_congruence 3 12) (congruence_of_int 3) = mk_congruence 1 4"
+  "congruence_div (mk_congruence 3 12) (congruence_of_int (-3)) = mk_congruence 3 4"
+  "congruence_div (mk_congruence 1 6) (congruence_of_int 3) = top"
+  "congruence_div (mk_congruence 0 6) (congruence_of_int 0) = congruence_of_int 0"
+  "congruence_div (bot :: congruence) (congruence_of_int 3) = bot"
+  "congruence_div (mk_congruence 0 6) (bot :: congruence) = bot"
+  by eval+
+
 end

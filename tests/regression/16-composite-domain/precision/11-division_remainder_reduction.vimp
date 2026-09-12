@@ -1,0 +1,15 @@
+// PARAM: --analysis int
+// The CLI uses Refine_Fixpoint. Exact division retains q = 1 (mod 4),
+// while Interval bounds q to [1,81]. Remainder then supplies [0,3] and
+// 1 (mod 4); reduction intersects them to {1} and propagates positive/odd.
+// Each standalone component leaves r == 1 unknown on this same program.
+fun main() {
+  n = __voblint_nondet_int();
+  if (0 <= n && n <= 20) {
+    q = (12 * n + 3) / 3;
+    r = q % 4;
+    __voblint_check(r == 1); // PROVED
+    __voblint_check(r > 0); // PROVED
+    __voblint_check(r % 2 == 1); // PROVED
+  }
+}

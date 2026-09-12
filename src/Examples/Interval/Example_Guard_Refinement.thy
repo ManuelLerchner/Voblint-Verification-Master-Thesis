@@ -291,4 +291,14 @@ lemma interval_division_remainder_regression:
   "ivl_mod (Ivl (Fin 1) (Fin 2)) bot = bot"
   by eval+
 
+lemma interval_division_unit_unbounded:
+  "ivl_div (Ivl (Fin 7) PlusInf) (Ivl (Fin 1) (Fin 1)) = Ivl (Fin 7) PlusInf"
+  "ivl_div (Ivl MinInf (Fin (-7))) (Ivl (Fin 1) (Fin 1)) = Ivl MinInf (Fin (-7))"
+  "ivl_div (Ivl (Fin 7) PlusInf) (Ivl (Fin (-1)) (Fin (-1))) =
+    Ivl MinInf (Fin (-7))"
+  "ivl_div (Ivl MinInf (Fin (-7))) (Ivl (Fin (-1)) (Fin (-1))) =
+    Ivl (Fin 7) PlusInf"
+  "ivl_div bot (Ivl (Fin 1) (Fin 1)) = bot"
+  by eval+
+
 end

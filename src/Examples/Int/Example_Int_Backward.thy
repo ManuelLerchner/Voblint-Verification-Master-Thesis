@@ -150,5 +150,28 @@ lemma int_division_remainder_modes:
       [Refine_Once, Refine_Fixpoint] = [int_dom_of_int (-1), int_dom_of_int (-1)]"
   by eval+
 
+lemma int_exact_division_recovers_parity:
+  "map (\<lambda>mode. int_parity (aval_int_dom mode
+      (Div (Times (N 6) (V (STR ''n''))) (N 3)) (\<lambda>_. top)))
+    [Refine_Never, Refine_Once, Refine_Fixpoint] = [PTop, PEven, PEven]"
+  "map (\<lambda>mode. int_parity (aval_int_dom mode
+      (Div (Plus (Times (N 12) (V (STR ''n''))) (N 3)) (N (-3))) (\<lambda>_. top)))
+    [Refine_Never, Refine_Once, Refine_Fixpoint] = [PTop, POdd, POdd]"
+  by eval+
+
+definition division_remainder_exp :: exp where
+  "division_remainder_exp =
+    Mod (Div (Plus (Times (N 12) (V (STR ''n''))) (N 3)) (N 3)) (N 4)"
+
+lemma int_division_remainder_progressive:
+  "map (\<lambda>mode. int_ivl (aval_int_dom mode division_remainder_exp
+      (\<lambda>_. int_dom_sipc SNonNeg (Ivl (Fin 0) (Fin 20)) PTop top)))
+    [Refine_Never, Refine_Once, Refine_Fixpoint] =
+    [Ivl (Fin 0) (Fin 3), Ivl (Fin 1) (Fin 1), Ivl (Fin 1) (Fin 1)]"
+  "map (\<lambda>mode. int_sign (aval_int_dom mode division_remainder_exp
+      (\<lambda>_. int_dom_sipc SNonNeg (Ivl (Fin 0) (Fin 20)) PTop top)))
+    [Refine_Never, Refine_Once, Refine_Fixpoint] = [SNonNeg, SNonNeg, SPos]"
+  by eval+
+
 end
 

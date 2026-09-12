@@ -1,0 +1,16 @@
+// PARAM: --analysis interval
+// Division by a unit must preserve the finite endpoint of an unbounded range.
+fun main() {
+  n = __voblint_nondet_int();
+  if (n >= 7) {
+    positive = n / 1;
+    negative = n / -1;
+    __voblint_check(positive >= 7); // PROVED
+    __voblint_check(negative <= -7); // PROVED
+  } else if (n <= -7) {
+    negative = n / 1;
+    positive = n / -1;
+    __voblint_check(negative <= -7); // PROVED
+    __voblint_check(positive >= 7); // PROVED
+  }
+}

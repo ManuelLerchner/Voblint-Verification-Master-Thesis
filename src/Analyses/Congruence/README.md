@@ -29,6 +29,12 @@ Equality has a remaining precision gap:
 `min` and `max` return the join of their arguments, since either result must be
 one of the operands.
 
+Division by a nonzero singleton retains an exact quotient class when the
+divisor divides both the residue and modulus. For example, `3 (mod 12)`
+divided by `3` becomes `1 (mod 4)`; divided by `-3`, it becomes `3 (mod 4)`.
+Otherwise division keeps exact singleton results and falls back to top.
+Division by zero follows VIMP's totalization and yields zero.
+
 Judging the domain by its comparison operators undervalues it in any case. Congruence
 is there to carry modular information --- alignment, stride, access patterns --- which
 is what makes it the one component whose arithmetic inverses still narrow under

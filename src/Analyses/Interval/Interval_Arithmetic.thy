@@ -493,7 +493,7 @@ fun ivl_div_positive_core :: "ivl \<Rightarrow> ivl \<Rightarrow> ivl" where
     (if 0 < c then
       Ivl (Fin (min (c_div l c) (c_div l d))) (Fin (max (c_div u c) (c_div u d)))
      else ivl_top)"
-| "ivl_div_positive_core _ _ = ivl_top"
+| "ivl_div_positive_core a b = (if b = Ivl (Fin 1) (Fin 1) then a else ivl_top)"
 
 definition ivl_div_positive :: "ivl \<Rightarrow> ivl \<Rightarrow> ivl" where
   "ivl_div_positive a b =
@@ -514,40 +514,55 @@ lemma ivl_div_positive_sound:
   by (auto simp: normalize_ivl_gamma
       intro: ivl_div_positive_core_sound dest: gamma_ivl_nonempty)
 
+lemma ivl_div_positive_core_one:
+  "ivl_div_positive_core a (Ivl (Fin 1) (Fin 1)) = a"
+  by (cases "(a, Ivl (Fin 1) (Fin 1))" rule: ivl_div_positive_core.cases) auto
+
 lemma ivl_div_positive_core_top:
   "\<not> (\<exists>l u c d. a = Ivl (Fin l) (Fin u) \<and> b = Ivl (Fin c) (Fin d) \<and> 0 < c)
-    \<Longrightarrow> ivl_div_positive_core a b = ivl_top"
+    \<Longrightarrow> b \<noteq> Ivl (Fin 1) (Fin 1) \<Longrightarrow> ivl_div_positive_core a b = ivl_top"
   by (cases "(a, b)" rule: ivl_div_positive_core.cases) auto
 
 lemma ivl_div_positive_core_mono:
   assumes ne: "ivl_nonempty a1" "ivl_nonempty b1"
     and le: "a1 \<le> a2" "b1 \<le> b2"
   shows "ivl_div_positive_core a1 b1 \<le> ivl_div_positive_core a2 b2"
-proof (cases "\<exists>l u c d. a2 = Ivl (Fin l) (Fin u) \<and> b2 = Ivl (Fin c) (Fin d) \<and> 0 < c")
-  case False
-  then show ?thesis by (simp add: ivl_div_positive_core_top ivl_le_top)
-next
+proof (cases "b2 = Ivl (Fin 1) (Fin 1)")
   case True
-  then obtain l2 u2 c2 d2 where
-    a2: "a2 = Ivl (Fin l2) (Fin u2)" and b2: "b2 = Ivl (Fin c2) (Fin d2)"
-    and pos: "0 < c2" by blast
-  obtain l1 u1 where a1: "a1 = Ivl (Fin l1) (Fin u1)"
-    using ivl_nonempty_le_fin[OF ne(1) le(1)[unfolded a2]] by blast
-  obtain c1 d1 where b1: "b1 = Ivl (Fin c1) (Fin d1)"
-    using ivl_nonempty_le_fin[OF ne(2) le(2)[unfolded b2]] by blast
-  have bounds: "l2 \<le> l1" "u1 \<le> u2" "c2 \<le> c1" "d1 \<le> d2" "l1 \<le> u1" "c1 \<le> d1"
-    using le ne unfolding a1 a2 b1 b2 by (auto simp: less_eq_ivl_def)
-  have lo:
-    "min (c_div l2 c2) (c_div l2 d2) \<le> c_div l1 c1"
-    "min (c_div l2 c2) (c_div l2 d2) \<le> c_div l1 d1"
-    using bounds pos by (auto intro: c_div_positive_corners(1))
-  have hi:
-    "c_div u1 c1 \<le> max (c_div u2 c2) (c_div u2 d2)"
-    "c_div u1 d1 \<le> max (c_div u2 c2) (c_div u2 d2)"
-    using bounds pos by (auto intro: c_div_positive_corners(2))
-  show ?thesis unfolding a1 a2 b1 b2
-    using lo hi pos bounds by (simp add: less_eq_ivl_def)
+  have b1: "b1 = Ivl (Fin 1) (Fin 1)"
+    using ivl_nonempty_le_fin[OF ne(2) le(2)[unfolded True]] le(2) ne(2)
+    by (auto simp: True less_eq_ivl_def)
+  show ?thesis using le(1) by (simp add: True b1 ivl_div_positive_core_one)
+next
+  case not_one: False
+  show ?thesis
+  proof (cases "\<exists>l u c d. a2 = Ivl (Fin l) (Fin u) \<and> b2 = Ivl (Fin c) (Fin d) \<and> 0 < c")
+    case False
+    then show ?thesis using not_one by (simp add: ivl_div_positive_core_top ivl_le_top)
+  next
+    case True
+    then obtain l2 u2 c2 d2 where
+      a2: "a2 = Ivl (Fin l2) (Fin u2)" and b2: "b2 = Ivl (Fin c2) (Fin d2)"
+      and pos: "0 < c2" by blast
+    obtain l1 u1 where a1: "a1 = Ivl (Fin l1) (Fin u1)"
+      using ivl_nonempty_le_fin[OF ne(1) le(1)[unfolded a2]] by blast
+    obtain c1 d1 where b1: "b1 = Ivl (Fin c1) (Fin d1)"
+      using ivl_nonempty_le_fin[OF ne(2) le(2)[unfolded b2]] by blast
+    have bounds: "l2 \<le> l1" "u1 \<le> u2" "c2 \<le> c1" "d1 \<le> d2" "l1 \<le> u1" "c1 \<le> d1"
+      using le ne unfolding a1 a2 b1 b2 by (auto simp: less_eq_ivl_def)
+    have lo:
+      "min (c_div l2 c2) (c_div l2 d2) \<le> c_div l1 c1"
+      "min (c_div l2 c2) (c_div l2 d2) \<le> c_div l1 d1"
+      using bounds pos by (auto intro: c_div_positive_corners(1))
+    have hi:
+      "c_div u1 c1 \<le> max (c_div u2 c2) (c_div u2 d2)"
+      "c_div u1 d1 \<le> max (c_div u2 c2) (c_div u2 d2)"
+      using bounds pos by (auto intro: c_div_positive_corners(2))
+    show ?thesis unfolding a1 a2 b1 b2
+      using lo hi pos bounds by (simp add: less_eq_ivl_def)
+  qed
 qed
+
 
 lemma ivl_div_positive_mono:
   assumes "a1 \<le> a2" "b1 \<le> b2"

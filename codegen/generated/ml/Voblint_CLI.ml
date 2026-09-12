@@ -6780,20 +6780,36 @@ let rec ivl_mod_bound
 let rec ivl_positive_part a = intersect_ivl a (Ivl (Fin one_inta, PlusInf));;
 
 let rec ivl_div_positive_core
-  uu uv = match uu, uv with
+  a b = match a, b with
     Ivl (Fin l, Fin u), Ivl (Fin c, Fin d) ->
       (if less_int zero_inta c
         then Ivl (Fin (min ord_int (c_div l c) (c_div l d)),
                    Fin (max ord_int (c_div u c) (c_div u d)))
         else ivl_top)
-    | Ivl (MinInf, va), uv -> ivl_top
-    | Ivl (PlusInf, va), uv -> ivl_top
-    | Ivl (v, MinInf), uv -> ivl_top
-    | Ivl (v, PlusInf), uv -> ivl_top
-    | uu, Ivl (MinInf, va) -> ivl_top
-    | uu, Ivl (PlusInf, va) -> ivl_top
-    | uu, Ivl (v, MinInf) -> ivl_top
-    | uu, Ivl (v, PlusInf) -> ivl_top;;
+    | Ivl (MinInf, va), b ->
+        (if equal_ivla b (Ivl (Fin one_inta, Fin one_inta))
+          then Ivl (MinInf, va) else ivl_top)
+    | Ivl (PlusInf, va), b ->
+        (if equal_ivla b (Ivl (Fin one_inta, Fin one_inta))
+          then Ivl (PlusInf, va) else ivl_top)
+    | Ivl (v, MinInf), b ->
+        (if equal_ivla b (Ivl (Fin one_inta, Fin one_inta)) then Ivl (v, MinInf)
+          else ivl_top)
+    | Ivl (v, PlusInf), b ->
+        (if equal_ivla b (Ivl (Fin one_inta, Fin one_inta))
+          then Ivl (v, PlusInf) else ivl_top)
+    | a, Ivl (MinInf, va) ->
+        (if equal_ivla (Ivl (MinInf, va)) (Ivl (Fin one_inta, Fin one_inta))
+          then a else ivl_top)
+    | a, Ivl (PlusInf, va) ->
+        (if equal_ivla (Ivl (PlusInf, va)) (Ivl (Fin one_inta, Fin one_inta))
+          then a else ivl_top)
+    | a, Ivl (v, MinInf) ->
+        (if equal_ivla (Ivl (v, MinInf)) (Ivl (Fin one_inta, Fin one_inta))
+          then a else ivl_top)
+    | a, Ivl (v, PlusInf) ->
+        (if equal_ivla (Ivl (v, PlusInf)) (Ivl (Fin one_inta, Fin one_inta))
+          then a else ivl_top);;
 
 let rec ivl_div_positive
   a b = (if ivl_nonempty a && ivl_nonempty b
@@ -8110,16 +8126,24 @@ let rec int_dom_eqb
         (fun a b -> congruence_eqb (int_congruence a) (int_congruence b))]
       d1 d2;;
 
+let rec congruence_divides
+  d a = (match rep_congruence a with None -> true
+          | Some (c, m) ->
+            dvd (equal_int, semidom_modulo_int) d c &&
+              dvd (equal_int, semidom_modulo_int) d m);;
+
+let rec congruence_div_const
+  a d = (match rep_congruence a with None -> bot_congruencea
+          | Some (c, m) ->
+            (if equal_inta d zero_inta then congruence_of_int zero_inta
+              else (if congruence_divides d a
+                     then mk_congruence (divide_inta c d) (divide_inta m d)
+                     else top_congruencea)));;
+
 let rec congruence_div_fallback
   a b = (if is_empty_congruence a || is_empty_congruence b then bot_congruencea
           else (match congruence_singleton b with None -> top_congruencea
-                 | Some c ->
-                   (if equal_inta c zero_inta then congruence_of_int zero_inta
-                     else (if equal_inta c one_inta then a
-                            else (if equal_inta c (uminus_inta one_inta)
-                                   then minus_congruence
-  (congruence_of_int zero_inta) a
-                                   else top_congruencea)))));;
+                 | Some ba -> congruence_div_const a ba));;
 
 let rec congruence_div
   x = congruence_exact_binop c_div congruence_div_fallback x;;
