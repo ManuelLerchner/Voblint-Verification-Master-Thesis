@@ -25,10 +25,10 @@ case "$linter_help" in
   *"Usage: isabelle lint"*) ;;
   *)
     if test -d "$LINTER_DIR"; then
-      git -C "$LINTER_DIR" switch main >/dev/null 2>&1 ||
-        git -C "$LINTER_DIR" switch -C main origin/main >/dev/null 2>&1
+      git -C "$LINTER_DIR" switch master >/dev/null 2>&1 ||
+        git -C "$LINTER_DIR" switch -C master origin/master >/dev/null 2>&1
     else
-      git clone --depth 1 --branch main https://github.com/isabelle-prover/isabelle-linter "$LINTER_DIR"
+      git clone --depth 1 https://github.com/isabelle-prover/isabelle-linter "$LINTER_DIR"
     fi
     "$ISABELLE" components -u "$LINTER_DIR/linter_base"
     ;;
