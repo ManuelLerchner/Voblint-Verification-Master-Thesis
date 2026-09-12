@@ -25,10 +25,11 @@ CI_SETUP_TASKS = {
     "ocaml-deps-install",
 }
 
-# These jobs depend on an external or generated site and therefore cannot be
-# part of the local aggregate. They still run in GitHub CI where their inputs
-# are produced by earlier jobs.
+# These tasks are CI/deployment orchestration rather than verification gates.
+# They operate on generated or deployed artifacts and therefore are not part
+# of the supported local `verify` aggregate.
 CI_ONLY_TASKS = {
+    "pages-site-build",
     "thesis-links-live",
     "thesis-links-write",
 }
