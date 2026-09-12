@@ -13,10 +13,10 @@ text \<open>
   \<^item> ENTRY: a call \<open>(c, ca, FunctionEntry p, k) \<in> calls g\<close> gives \<open>c \<rightarrow> FunctionEntry p\<close> ---
     the callee entry's abstract state depends on the caller state routed through
     the analysis's own enter operation.
-  \<^item> COMB_CALLER: the same call gives \<open>c \<rightarrow> k\<close> --- the continuation depends on the saved
+  \<^item> \<open>COMB_CALLER\<close>: the same call gives \<open>c \<rightarrow> k\<close> --- the continuation depends on the saved
     caller state via \<^const>\<open>combine_collect\<close>.  This is not a concrete execution edge; execution
     does not skip the callee.
-  \<^item> COMB_RESULT: the same call gives \<open>FunctionResult p \<rightarrow> k\<close> --- the continuation depends
+  \<^item> \<open>COMB_RESULT\<close>: the same call gives \<open>FunctionResult p \<rightarrow> k\<close> --- the continuation depends
     on the callee's result, \<^const>\<open>combine_collect\<close>'s callee-exit argument.
 
   \<open>c \<rightarrow> k\<close> and \<open>FunctionResult p \<rightarrow> k\<close> are combine dependencies of the analysis, kept

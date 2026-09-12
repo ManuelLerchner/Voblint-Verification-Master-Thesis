@@ -1,0 +1,9 @@
+// PARAM: --analysis interval
+// EXPECT-ARITHMETIC
+// The unconstrained divisor admits both zero and nonzero executions.
+fun main() {
+  divisor = __voblint_nondet_int();
+  quotient = 7 / divisor; // ARITH: WARN division-by-zero
+  remainder = 7 % divisor; // ARITH: WARN remainder-by-zero
+  __voblint_check(divisor != 0); // UNKNOWN
+}

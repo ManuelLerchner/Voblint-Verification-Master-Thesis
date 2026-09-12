@@ -291,7 +291,13 @@ let globals_xml ~blocks =
 (* One check's source-level finding. Positions come from the parser, which
    notes each __voblint_check token as it consumes it; the verdict comes from
    the same report the text output prints. *)
-type check = { line : int; column : int; verdict : string; cond : string }
+type check = {
+  line : int;
+  column : int;
+  verdict : string;
+  cond : string;
+  message : string option;
+}
 
 (* g2html's file.xsl turns <sht type="X"> into <span class="sh X">, and its
    stylesheet defines exactly these classes. Anything outside them renders
@@ -359,9 +365,10 @@ let highlight_line line =
 
 (* Goblint's own phrasing, because this renders in Goblint's own frontend. *)
 let warn_text c =
-  match c.verdict with
-  | "PROVED" -> Printf.sprintf "Assertion \"%s\" will succeed" c.cond
-  | "REFUTED" -> Printf.sprintf "Assertion \"%s\" will fail" c.cond
+  match c.message, c.verdict with
+  | Some message, _ -> message
+  | None, "PROVED" -> Printf.sprintf "Assertion \"%s\" will succeed" c.cond
+  | None, "REFUTED" -> Printf.sprintf "Assertion \"%s\" will fail" c.cond
   | _ -> Printf.sprintf "Assertion \"%s\" is unknown" c.cond
 
 let warn_xml ~source_file c =

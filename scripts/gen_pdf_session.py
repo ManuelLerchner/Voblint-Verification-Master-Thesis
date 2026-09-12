@@ -92,6 +92,11 @@ def generate(destination, include_examples=False):
         '  theories',
         *[f'    "{session["name"]}.{theory["name"]}"'
           for session in sessions for theory in session["theories"]],
+        # Imported theories keep their original session ownership. Isabelle only
+        # exports their LaTeX here when document_theories requests it explicitly.
+        '  document_theories',
+        *[f'    "{session["name"]}.{theory["name"]}"'
+          for session in selected for theory in session["theories"]],
         '  document_files',
         '    "root.tex"',
         '    "contents.tex"',

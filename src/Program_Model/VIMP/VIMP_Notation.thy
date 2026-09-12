@@ -10,9 +10,9 @@ text \<open>
   command quotation from Pure premises; whole programs use the explicit \<open>program\<close> prefix.
 
   Design is inspired by:
-  https://awslabs.github.io/AutoCorrode/Unsorted/AutoCorrode/Micro_Rust_Examples.Basic_Micro_Rust.html
+  \<^url>\<open>https://awslabs.github.io/AutoCorrode/Unsorted/AutoCorrode/Micro_Rust_Examples.Basic_Micro_Rust.html\<close>
   and
-  https://github.com/awslabs/AutoCorrode/blob/e234addc5e67f78cbff63defd24199578e8e1af3/Micro_Rust_Parsing_Frontend/Micro_Rust_Syntax.thy#L5
+  \<^url>\<open>https://github.com/awslabs/AutoCorrode/blob/e234addc5e67f78cbff63defd24199578e8e1af3/Micro_Rust_Parsing_Frontend/Micro_Rust_Syntax.thy#L5\<close>
 
   Inside the bracket:
   - bare identifiers become @{const V} literals (HOL string literals via @{type vname})

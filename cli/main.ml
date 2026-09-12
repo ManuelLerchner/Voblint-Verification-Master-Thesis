@@ -161,6 +161,32 @@ let verdict_label = function
   | Voblint_CLI.Generated.Check_Refuted -> "REFUTED"
   | Voblint_CLI.Generated.Check_Unknown -> "UNKNOWN"
 
+let diagnostic_location positions diagnostic =
+  match Voblint_CLI.Generated.diagnostic_point diagnostic with
+  | Voblint_CLI.Generated.Statement n ->
+    let index = Z.to_int (Voblint_CLI.Generated.integer_of_nat n) in
+    Option.map (fun (line, column, _, _) -> (line, column))
+      (List.assoc_opt index positions)
+  | _ -> None
+
+let diagnostic_severity diagnostic =
+  match Voblint_CLI.Generated.diagnostic_verdict diagnostic with
+  | Voblint_CLI.Generated.Check_Refuted -> "error"
+  | _ -> "warning"
+
+let print_diagnostics path analysis positions diagnostics =
+  List.iter
+    (fun diagnostic ->
+       let location =
+         match diagnostic_location positions diagnostic with
+         | Some (line, column) -> Printf.sprintf "%d:%d" line column
+         | None -> node_label (Voblint_CLI.Generated.diagnostic_point diagnostic)
+       in
+       Printf.eprintf "%s:%s: %s: %s [%s]\n" path location
+         (diagnostic_severity diagnostic)
+         (Voblint_CLI.Generated.diagnostic_message diagnostic) analysis)
+    diagnostics
+
 (* Pairs each check row with the source position of the __voblint_check that
    produced it. Both lists are in check-declaration order, one entry per check
    the parser saw -- see Vimp_frontend.program's doc comment -- and only the
@@ -181,24 +207,52 @@ let paired_checks (rows : Voblint_CLI.Generated.check_row list)
    unreachable" distinguishable from "the compiler dropped this check", which
    a suppressed row cannot express. The state slice is dropped alongside the
    verdict -- bottom binds nothing worth printing. *)
-let render_report (rows : Voblint_CLI.Generated.check_row list)
-    (check_positions : (int * int) list) =
+let render_table title headers rows =
   let buf = Buffer.create 256 in
-  List.iter
-    (fun (row, (line, col)) ->
-       let label, state =
-         match Voblint_CLI.Generated.row_verdict row with
-         | Voblint_CLI.Generated.Bot -> "DEAD", ""
-         | Voblint_CLI.Generated.Lifted v ->
-           verdict_label v, Voblint_CLI.Generated.row_state row
-       in
-       Buffer.add_string buf
-         (Printf.sprintf "%d:%-2d %-10s %-20s %-8s %s\n" line col
-            (node_label (Voblint_CLI.Generated.row_point row))
-            (Voblint_CLI.Generated.row_condition row)
-            label state))
-    (paired_checks rows check_positions);
+  Buffer.add_string buf (title ^ "\n");
+  if rows = [] then Buffer.add_string buf "None\n"
+  else begin
+    let widths = Array.of_list (List.map String.length headers) in
+    List.iter (List.iteri (fun i cell -> widths.(i) <- max widths.(i) (String.length cell))) rows;
+    let add_row cells =
+      let last = List.length cells - 1 in
+      List.iteri (fun i cell ->
+        Buffer.add_string buf cell;
+        if i < last then Buffer.add_string buf (String.make (widths.(i) - String.length cell + 2) ' ')) cells;
+      Buffer.add_char buf '\n'
+    in
+    add_row headers;
+    add_row (Array.to_list (Array.map (fun width -> String.make width '-') widths));
+    List.iter add_row rows
+  end;
   Buffer.contents buf
+
+let render_report path analysis positions out check_positions =
+  let diagnostics =
+    List.map (fun diagnostic ->
+      let location = match diagnostic_location positions diagnostic with
+        | Some (line, column) -> Printf.sprintf "%d:%d" line column
+        | None -> "-"
+      in
+      [location; node_label (Voblint_CLI.Generated.diagnostic_point diagnostic);
+       String.uppercase_ascii (diagnostic_severity diagnostic);
+       Voblint_CLI.Generated.diagnostic_message diagnostic])
+      (Voblint_CLI.Generated.out_diagnostics out)
+  in
+  let checks =
+    List.map (fun (row, (line, col)) ->
+      let label, state = match Voblint_CLI.Generated.row_verdict row with
+        | Voblint_CLI.Generated.Bot -> "DEAD", ""
+        | Voblint_CLI.Generated.Lifted v -> verdict_label v, Voblint_CLI.Generated.row_state row
+      in
+      [Printf.sprintf "%d:%d" line col;
+       node_label (Voblint_CLI.Generated.row_point row);
+       Voblint_CLI.Generated.row_condition row; label; state])
+      (paired_checks (Voblint_CLI.Generated.out_checks out) check_positions)
+  in
+  Printf.sprintf "%s [%s]\n\n%s\n%s" path analysis
+    (render_table "Arithmetic diagnostics" ["Location"; "Point"; "Severity"; "Message"] diagnostics)
+    (render_table "Assertion checks" ["Location"; "Point"; "Condition"; "Verdict"; "State"] checks)
 
 (* Names the analysis in the report's own <analysis name="..."> element, so a
    node document says which domain produced the state it shows. *)
@@ -629,7 +683,11 @@ let () =
     match Voblint_CLI.Generated.run_voblint k !solver context view prog with
     | Voblint_CLI.Generated.Malformed_Program -> raise (Answered Malformed)
     | Voblint_CLI.Generated.Unsupported_Configuration -> raise (Answered Unsupported_config)
-    | Voblint_CLI.Generated.Analysed out -> out
+    | Voblint_CLI.Generated.Analysed out ->
+      if !html || !dot || !dot_full || !graph_snapshot then
+        print_diagnostics path (analysis_label k) stmt_positions
+        (Voblint_CLI.Generated.out_diagnostics out);
+      out
   in
   (* A graph drawn per context already annotates every node with its own
      context's state, so --dot-full has nothing left to add and both settings
@@ -671,13 +729,14 @@ let () =
             let out = output_for k html_view in
             ( drawing (Voblint_CLI.Generated.out_graph out),
               Voblint_CLI.Generated.out_checks out,
-              Voblint_CLI.Generated.out_globals out )
+              Voblint_CLI.Generated.out_globals out,
+              Voblint_CLI.Generated.out_diagnostics out )
           in
           let payloads = List.map (fun k -> (analysis_label k, payload_for k)) !analyses in
-          let graphs = List.map (fun (label, (g, _, _)) -> (label, g)) payloads in
+          let graphs = List.map (fun (label, (g, _, _, _)) -> (label, g)) payloads in
           let globals =
             List.filter_map
-              (fun (label, (_, _, gvs)) -> if gvs = [] then None else Some (label, gvs))
+              (fun (label, (_, _, gvs, _)) -> if gvs = [] then None else Some (label, gvs))
               payloads
           in
           (* The source view's inline annotations need a verdict *and* a
@@ -689,7 +748,7 @@ let () =
              report's DEAD label says without a verdict to show. *)
           let checks =
             match payloads with
-            | (_, (_, rows, _)) :: _ ->
+            | (_, (_, rows, _, _)) :: _ ->
               List.filter_map
                 (fun (row, (line, column)) ->
                    match Voblint_CLI.Generated.row_verdict row with
@@ -699,7 +758,8 @@ let () =
                        { Html_report.line;
                          column;
                          verdict = verdict_label v;
-                         cond = Voblint_CLI.Generated.row_condition row })
+                          cond = Voblint_CLI.Generated.row_condition row;
+                          message = None })
                 (paired_checks rows check_positions)
             | [] ->
               (* --analysis names at least one domain or the run never got
@@ -707,6 +767,26 @@ let () =
                  beside its graph. *)
               failwith "no --analysis domain to report"
           in
+          let diagnostics =
+            List.concat_map
+              (fun (label, (_, _, _, diagnostics)) ->
+                 List.map
+                   (fun diagnostic ->
+                      let line, column =
+                        Option.value ~default:(0, 0)
+                          (diagnostic_location stmt_positions diagnostic)
+                      in
+                      { Html_report.line;
+                        column;
+                        verdict = diagnostic_severity diagnostic;
+                        cond = "";
+                        message = Some
+                          (Voblint_CLI.Generated.diagnostic_message diagnostic
+                           ^ " [" ^ label ^ "]") })
+                   diagnostics)
+              payloads
+          in
+          let checks = checks @ diagnostics in
           let files, nodes, dead =
             Html_report.emit ~graphs ~source_file:(Filename.basename path) ~source_text:src
               ~fn:"main" ~checks ~positions:stmt_positions
@@ -729,9 +809,8 @@ let () =
                      (output_for kind (graph_view ~full:!dot_full)))))
         else
           Ok_text
-            (render_report
-               (Voblint_CLI.Generated.out_checks (output_for kind report_view))
-               check_positions)
+            (render_report path (analysis_label kind) stmt_positions
+               (output_for kind report_view) check_positions)
       with Answered o -> o)
   with
   | Ok (Ok_text s) -> print_string s

@@ -130,7 +130,8 @@ export_code
 
   \<comment> \<open>Answer: the three outcomes, then the readers of a successful one\<close>
   Malformed_Program Unsupported_Configuration Analysed
-  out_graph out_snapshot out_checks out_globals
+  out_graph out_snapshot out_checks out_globals out_diagnostics
+  diagnostic_point diagnostic_message diagnostic_verdict
   row_point row_condition row_verdict row_state
   Check_Proved Check_Refuted Check_Unknown
   Bot Lifted

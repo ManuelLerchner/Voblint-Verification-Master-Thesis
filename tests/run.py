@@ -64,7 +64,23 @@ and its own expected verdict inline next to each check:
                                    genuinely proved dead. A vacuous PROVED
                                    is a failure either way.
 
-A case with no verdict annotations at all is a rejection case -- a parse
+Arithmetic diagnostics can be checked independently of verdicts. Add the
+file-level directive `// EXPECT-ARITHMETIC`, then annotate source lines:
+
+  // ARITH: ERROR division-by-zero
+  // ARITH: WARN remainder-by-zero
+  // ARITH: ERROR division-by-zero; ERROR division-by-zero
+  // ARITH: NONE
+
+ERROR requires a definite zero divisor; WARN requires a possible zero
+divisor. Semicolons retain distinct occurrences on the same source line.
+NONE documents silence. The directive enables an exact whole-file comparison
+of source lines, severity, operation, and multiplicity: unannotated warnings
+fail too. Fixtures without the directive retain their existing verdict-only
+contract. ARITH annotations require the directive; lint rejects misspellings
+and malformed entries. These diagnostics leave VIMP's total execution intact.
+
+A case with neither verdict annotations nor EXPECT-ARITHMETIC is a rejection case -- a parse
 error (see 00-sanity/02-malformed.vimp) or a well-formedness error (e.g. a
 wrong-arity special call, rejected before compilation reaches the analyzer)
 -- and is checked for one of those structured error messages instead of a
@@ -157,8 +173,11 @@ import re
 import subprocess
 import sys
 import time
+from collections import Counter
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
+
+from report_output import diagnostic_lines
 
 # Colorize only when stdout is a real terminal and the user hasn't opted out
 # (NO_COLOR, https://no-color.org) -- piped/redirected output (CI logs, a
@@ -217,6 +236,14 @@ PARAM_RE = re.compile(r"^// PARAM: (.*)$")
 CHECK_LINE_RE = re.compile(r"__voblint_check")
 VERDICT_RE = re.compile(r"//\s*(reachable|NOWARN|[A-Z]+)")
 REPORT_LINE_RE = re.compile(r"^(\d+):\d+\s+\S+\s+\S+\s+(\S+)")
+ARITHMETIC_HEADER = "// EXPECT-ARITHMETIC"
+ARITHMETIC_ENTRY_RE = re.compile(r"(WARN|ERROR) (division|remainder)-by-zero")
+ARITHMETIC_REPORT_RE = re.compile(
+    r"^(.+):(\d+):(\d+): (warning|error): "
+    r"(possible (division|remainder) by zero|"
+    r"(division|remainder) by zero whenever this operation is evaluated): "
+    r".+ \[([^\]]+)\]$"
+)
 
 GRAPH_BEGIN = "// EXPECT-GRAPH-BEGIN"
 GRAPH_END = "// EXPECT-GRAPH-END"
@@ -252,9 +279,73 @@ def actual_verdicts(stdout: str) -> dict[int, str]:
     verdicts = {}
     for line in stdout.splitlines():
         m = REPORT_LINE_RE.match(line)
-        if m:
+        if m and m.group(2) in {"PROVED", "REFUTED", "UNKNOWN", "DEAD"}:
             verdicts[int(m.group(1))] = m.group(2)
     return verdicts
+
+
+def expected_arithmetic(path: Path) -> Counter | None:
+    """An opted-in fixture pins every (line, severity, operation) occurrence."""
+    lines = path.read_text().splitlines()
+    headers = sum(line.strip() == ARITHMETIC_HEADER for line in lines)
+    if headers > 1:
+        raise ValueError("duplicate EXPECT-ARITHMETIC directive")
+    expected = Counter()
+    for line_no, line in enumerate(lines, start=1):
+        if "// ARITH" not in line:
+            continue
+        if not headers:
+            raise ValueError(f"line {line_no}: ARITH requires {ARITHMETIC_HEADER}")
+        _, annotation = line.split("// ARITH", 1)
+        if not annotation.startswith(":"):
+            raise ValueError(f"line {line_no}: expected '// ARITH: ...'")
+        annotation = annotation[1:].strip()
+        if annotation == "NONE":
+            continue
+        for entry in annotation.split(";"):
+            match = ARITHMETIC_ENTRY_RE.fullmatch(entry.strip())
+            if match is None:
+                raise ValueError(f"line {line_no}: malformed ARITH entry {entry.strip()!r}")
+            severity = "warning" if match[1] == "WARN" else "error"
+            expected[line_no, severity, match[2]] += 1
+    return expected if headers else None
+
+
+def actual_arithmetic(output: str, path: Path, analysis: str) -> Counter:
+    actual = Counter()
+    for line in diagnostic_lines(output):
+        if "division by zero" not in line and "remainder by zero" not in line:
+            continue
+        match = ARITHMETIC_REPORT_RE.fullmatch(line)
+        if match is None:
+            raise ValueError(f"malformed arithmetic diagnostic: {line!r}")
+        if Path(match[1]).resolve() != path.resolve() or int(match[3]) < 1:
+            raise ValueError(f"invalid arithmetic diagnostic location: {line!r}")
+        if match[8] != analysis:
+            raise ValueError(f"unexpected arithmetic diagnostic analysis: {match[8]!r}")
+        expected_severity = "warning" if match[6] else "error"
+        if match[4] != expected_severity:
+            raise ValueError(f"inconsistent arithmetic diagnostic severity: {line!r}")
+        actual[int(match[2]), match[4], match[6] or match[7]] += 1
+    return actual
+
+
+def check_arithmetic(path: Path, args: list[str], output: str) -> tuple[bool, list[str]]:
+    try:
+        expected = expected_arithmetic(path)
+        if expected is None:
+            return True, []
+        analysis = args[args.index("--analysis") + 1]
+        actual = actual_arithmetic(output, path, analysis)
+    except (ValueError, IndexError) as error:
+        return False, [f"arithmetic diagnostics: {error}"]
+    problems = []
+    for label, difference in [("missing", expected - actual), ("unexpected", actual - expected)]:
+        for (line_no, severity, operation), count in sorted(difference.items()):
+            problems.append(
+                f"line {line_no}: {label} {count} {severity} {operation}-by-zero diagnostic(s)"
+            )
+    return not problems, problems
 
 
 def find_graph_block(lines: list[str]) -> tuple[int, int] | None:
@@ -423,6 +514,10 @@ def check_case(path: Path) -> tuple[bool, list[str], float]:
 def _check_case_body(path: Path, args: list[str], cmd: str) -> tuple[bool, list[str]]:
     lines: list[str] = []
     expected = expected_verdicts(path)
+    try:
+        arithmetic = expected_arithmetic(path)
+    except ValueError as error:
+        return False, [f"FAIL {cmd}: {error}"]
 
     if "--dot" in args or "--dot-full" in args:
         result = run_voblint(args, path)
@@ -433,11 +528,14 @@ def _check_case_body(path: Path, args: list[str], cmd: str) -> tuple[bool, list[
             return False, lines
         graph_ok, graph_lines = check_graph_block(path, args)
         lines.extend(graph_lines)
+        arithmetic_ok, arithmetic_problems = check_arithmetic(path, args, result.stdout + "\n" + result.stderr)
+        lines.extend(f"FAIL {cmd}: {problem}" for problem in arithmetic_problems)
+        graph_ok = graph_ok and arithmetic_ok
         if graph_ok:
             lines.append(f"OK   {cmd} (DOT smoke test)")
         return graph_ok, lines
 
-    if not expected:
+    if not expected and arithmetic is None:
         # No inline verdicts: this case documents a rejection, not a report.
         result = run_voblint(args, path)
         if result.returncode == 0:
@@ -465,7 +563,8 @@ def _check_case_body(path: Path, args: list[str], cmd: str) -> tuple[bool, list[
 
     actual = actual_verdicts(result.stdout)
 
-    ok = True
+    ok, arithmetic_problems = check_arithmetic(path, args, result.stdout + "\n" + result.stderr)
+    lines.extend(f"FAIL {cmd}: {problem}" for problem in arithmetic_problems)
     for line_no, exp in sorted(expected.items()):
         if exp == NOWARN:
             if line_no not in actual:
@@ -512,7 +611,10 @@ def _check_case_body(path: Path, args: list[str], cmd: str) -> tuple[bool, list[
     ok = ok and graph_ok
 
     if ok:
-        lines.append(f"OK   {cmd} ({len(expected)} check(s))")
+        detail = f"{len(expected)} check(s)"
+        if arithmetic is not None:
+            detail += f", {sum(arithmetic.values())} arithmetic diagnostic(s)"
+        lines.append(f"OK   {cmd} ({detail})")
     return ok, lines
 
 
@@ -528,6 +630,11 @@ def lint_case(path: Path) -> list[str]:
     src_lines = path.read_text().splitlines()
     args = param_args(path)
     expected = expected_verdicts(path)
+    try:
+        arithmetic = expected_arithmetic(path)
+    except ValueError as error:
+        problems.append(str(error))
+        arithmetic = None
 
     if not src_lines or not PARAM_RE.match(src_lines[0]):
         problems.append("missing or malformed '// PARAM: ...' header on line 1")
@@ -539,7 +646,7 @@ def lint_case(path: Path) -> list[str]:
     # for a structured error, not a report -- see check_case), and a --dot/
     # --dot-full case checks DOT shape, not verdicts: neither kind's
     # __voblint_check lines are meant to carry one.
-    if expected and "--dot" not in args and "--dot-full" not in args:
+    if (expected or arithmetic is not None) and "--dot" not in args and "--dot-full" not in args:
         for line_no, line in enumerate(src_lines, start=1):
             if not CHECK_LINE_RE.search(line):
                 continue
@@ -562,9 +669,10 @@ def lint_case(path: Path) -> list[str]:
                 "known-imprecision case has no header comment explaining "
                 "why the result is imprecise"
             )
-        if not (set(expected.values()) & {"UNKNOWN", NOWARN}):
+        has_possible_arithmetic = arithmetic and any(key[1] == "warning" for key in arithmetic)
+        if not (set(expected.values()) & {"UNKNOWN", NOWARN}) and not has_possible_arithmetic:
             problems.append(
-                "known-imprecision case asserts no UNKNOWN/NOWARN -- "
+                "known-imprecision case asserts no UNKNOWN/NOWARN or arithmetic WARN -- "
                 "does it belong in precision/ instead?"
             )
 
@@ -574,7 +682,8 @@ def lint_case(path: Path) -> list[str]:
                 "soundness case has no header comment naming what's "
                 "unconstrained (e.g. an unbounded __voblint_nondet_int())"
             )
-        if set(expected.values()) - {"UNKNOWN"}:
+        definite_arithmetic = arithmetic and any(key[1] == "error" for key in arithmetic)
+        if set(expected.values()) - {"UNKNOWN"} or definite_arithmetic:
             problems.append(
                 "soundness case asserts a verdict other than UNKNOWN -- "
                 "if the concrete result is actually fixed, this belongs in "

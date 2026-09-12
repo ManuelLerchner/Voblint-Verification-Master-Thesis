@@ -496,6 +496,9 @@ jobs:
       - name: External .vimp regression corpus (source -> parser -> analyse -> checks)
         run: pixi run cli-test
 
+      - name: Arithmetic diagnostics and annotated warning expectations
+        run: pixi run arithmetic-diagnostics-check
+
       - name: CLI plumbing smoke tests (exit codes, --help, argument errors)
         run: pixi run cli-smoke
 

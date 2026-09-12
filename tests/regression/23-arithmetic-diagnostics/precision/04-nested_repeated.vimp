@@ -1,0 +1,7 @@
+// PARAM: --analysis interval
+// EXPECT-ARITHMETIC
+// Distinct AST occurrences survive even when their expressions are identical.
+fun main() {
+  nested = (10 / 0) % 0; // ARITH: ERROR division-by-zero; ERROR remainder-by-zero
+  repeated = (10 / 0) + (10 / 0); // ARITH: ERROR division-by-zero; ERROR division-by-zero
+}

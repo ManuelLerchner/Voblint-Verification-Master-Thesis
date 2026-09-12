@@ -1,0 +1,11 @@
+// PARAM: --analysis interval
+// EXPECT-ARITHMETIC
+// The two outgoing condition edges represent one source expression.
+fun main() {
+  if (10 / 0) { // ARITH: ERROR division-by-zero
+    x = 1;
+  } else {
+    x = 2;
+  }
+  __voblint_check(x == 2); // PROVED
+}

@@ -1,0 +1,10 @@
+// PARAM: --analysis interval --context entry-state
+// EXPECT-ARITHMETIC
+// All live calls agree on whether the divisor is zero.
+fun f(n) {
+  return 10 / n; // ARITH: NONE
+}
+fun main() {
+  x = f(1);
+  y = f(2);
+}

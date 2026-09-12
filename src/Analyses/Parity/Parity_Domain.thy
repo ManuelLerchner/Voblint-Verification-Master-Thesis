@@ -12,7 +12,7 @@ text \<open>
     Odd   -- {n | odd n}
     Top   -- all integers
 
-  Four-element lattice (Bot \<sqsubseteq> Even,Odd \<sqsubseteq> Top). Finite; widen = sup.
+  Four-element lattice (\<open>Bot \<sqsubseteq> Even,Odd \<sqsubseteq> Top\<close>). Finite; widen = sup.
   This analysis does not implement backward guard refinement. Its branch transfer
   therefore preserves parity information from the incoming state.
 \<close>
@@ -250,7 +250,7 @@ lemma parity_times_combine_mono: "\<lbrakk>a1 \<le> a2; b1 \<le> b2\<rbrakk> \<L
 
 
 
-subsection \<open>sound_domain instance\<close>
+subsection \<open>Sound-domain instance\<close>
 
 fun string_of_parity :: "parity \<Rightarrow> string" where
     "string_of_parity PBot  = ''Bottom''"

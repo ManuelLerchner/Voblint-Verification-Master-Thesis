@@ -70,6 +70,16 @@ level. Division truncates toward zero; a nonzero remainder has the dividend's
 sign. VIMP keeps expressions total with `a / 0 = 0` and `a % 0 = a`.
 These zero-divisor cases are VIMP conventions, not C semantics.
 
+The CLI separately reports possible or definite zero divisors from the solved
+abstract states. This diagnostic layer leaves expression values and procedural
+execution unchanged. It visits every `/` and `%` occurrence, including both
+operands of `&&` and `||`; there is no short-circuit suppression. Thus
+`0 && 1 / 0` has value `0` and still receives a division-by-zero diagnostic.
+Unreachable program points produce no arithmetic diagnostics. The extractor
+and its correctness interface live in
+[`Arithmetic_Diagnostics.thy`](../../Executable_Surface/CLI/Arithmetic_Diagnostics.thy),
+above this language session.
+
 The domains evaluate division and remainder directly. Interval computes endpoint
 bounds for finite division ranges and refines remainder ranges using the dividend
 and divisor. Unbounded division ranges can return top. Sign retains weak signs;

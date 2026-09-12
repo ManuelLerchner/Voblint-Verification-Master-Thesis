@@ -395,8 +395,8 @@ text \<open>
   dead-arm-eliminating \<open>branch\<close>/\<open>branch_st\<close>. Monotonicity needs
   \<open>mode \<noteq> Refine_Fixpoint\<close>: \<open>refine_fix\<close>'s total wrapper has no monotonicity
   theorem (\<open>Int_Refinement\<close>), a faithful transliteration of Goblint's
-  \<open>fixpoint\<close> loop. So Refine_Never and Refine_Once interpret the full
-  @{locale backward_domain_refined}, and Refine_Fixpoint stays out of reach of
+  \<open>fixpoint\<close> loop. So \<open>Refine_Never\<close> and \<open>Refine_Once\<close> interpret the full
+  @{locale backward_domain_refined}, and \<open>Refine_Fixpoint\<close> stays out of reach of
   \<open>branch_mono\<close> and the rest of the monotonicity layer.
 \<close>
 

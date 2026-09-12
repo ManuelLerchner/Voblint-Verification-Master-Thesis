@@ -159,7 +159,7 @@ subsection \<open>Type-class widening for TD warrowing solver\<close>
 
 text \<open>Standard interval narrowing: when the recomputed value \<open>b\<close> refines the widened value
   \<open>a\<close> (\<open>b \<le> a\<close>), keep \<open>a\<close>'s finite bounds and only fill an infinite bound of \<open>a\<close> from \<open>b\<close>.
-  A bound moves off \<open>\<pm>inf\<close> at most once, so the narrowing descent is finite.  Combined with
+  A bound moves off an infinite endpoint at most once, so the narrowing descent is finite.  Combined with
   the backward guard filters this recovers loop bounds under \<^emph>\<open>every\<close> update rule (a bounded
   local counter reads \<open>[0, 20]\<close> under \<open>join\<close>, \<open>per_origin\<close> and \<open>warrow\<close> alike).  It does not
   help a \<^emph>\<open>flow-insensitive global\<close>: there the guard never bounds the value written back to

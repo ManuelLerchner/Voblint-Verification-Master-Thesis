@@ -39,7 +39,7 @@ lemma combine_env_mono:
 text \<open>
   Soundness of the abstract combine: combining a caller store (sound for sc) with
   a callee-exit store (sound for se) yields a store sound for \<open>combine_env gs sc se\<close>.
-  A pure sound_domain fact -- independent of any transfer function -- reused by
+  A pure \<open>sound_domain\<close> fact -- independent of any transfer function -- reused by
   both the interprocedural constraint-system soundness and the effectful pipeline.
   \<open>combine_env\<close> is the fixed structural merge the Base call boundary uses; an
   analysis that wants a different one overrides its specification's own

@@ -56,7 +56,7 @@ subsection \<open>Context-sensitivity dimension\<close>
 text \<open>
   \<open>Ctx_None\<close> is today's flow-insensitive, call-site-insensitive behaviour;
   \<open>Ctx_EntryState\<close> selects the value-derived entry-state context analysis
-  (\<^theory>\<open>Voblint_Analysis_Interval.Interval_Analyses\<close>, #108). Deliberately not
+  (\<^theory>\<open>Voblint_Analysis_Interval.Interval_Analyses\<close>, issue 108). Deliberately not
   a wider \<open>analyse\<close>: \<open>analyse\<close>/\<open>analyse_with_state\<close> stay untouched (the CLI's
   no-\<open>--context\<close> path, the GraphViz report, and every existing
   \<open>codegen/regression\<close> consumer already pin their exact two-argument shape as a

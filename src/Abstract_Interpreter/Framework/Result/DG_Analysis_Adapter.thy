@@ -128,7 +128,7 @@ text \<open>
   concretizing to the empty set and \<^const>\<open>Lifted\<close> to \<^const>\<open>gamma_state\<close> of
   its payload. This is the un-projected special case of the general
   executable-carrier bridge that composes the same \<^const>\<open>canonicalize_lift\<close>
-  collapse with a reader projection over a resolved_st_q-backed report,
+  collapse with a reader projection over a report backed by \<open>resolved_st_q\<close>,
   while this locale's \<open>sigma\<close> is already at the abstract carrier, so no
   projection is threaded here.
 \<close>

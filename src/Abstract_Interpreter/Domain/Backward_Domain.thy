@@ -39,7 +39,7 @@ locale semantic_intersection =
 text \<open>
   Extends @{class sound_domain} with the infrastructure for backward
   (inverse) evaluation of guards and arithmetic expressions. Per-domain:
-  provide a @{locale semantic_intersection} instance, aval_abs, and inv_*
+  provide a @{locale semantic_intersection} instance, \<open>aval_abs\<close>, and \<open>inv_*\<close>
   operators; the generic afilter / bfilter and their soundness theorems
   follow by induction.
 \<close>

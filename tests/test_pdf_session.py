@@ -1,5 +1,6 @@
 """The print inventory must neither omit helpers nor duplicate nested sessions."""
 
+import re
 import sys
 import tempfile
 import unittest
@@ -74,7 +75,9 @@ class PdfInventoryTests(unittest.TestCase):
             gen_pdf_session.generate(full, include_examples=True)
         main_root = (main / "ROOT").read_text()
         full_root = (full / "ROOT").read_text()
-        self.assertEqual(main_root.replace('"document=', '"document-full='), full_root)
+        self.assertEqual(
+            main_root.split('  document_theories')[0].replace('"document=', '"document-full='),
+            full_root.split('  document_theories')[0])
         self.assertNotIn("document_tags", main_root)
         self.assertIn('document_variants = "document=+proof,+ML,+invisible"', main_root)
         self.assertIn('"Voblint_Examples_Sign.Example_Sign"', main_root)
@@ -90,6 +93,15 @@ class PdfInventoryTests(unittest.TestCase):
                 self.assertEqual(full_contents.count(r"\input{" + theory["name"] + ".tex}"), 1)
         self.assertIn(r"\input{Entry.tex}", main_contents)
         self.assertIn(r"\input{Assembly.tex}", main_contents)
+        for root, contents in [(main_root, main_contents), (full_root, full_contents)]:
+            exports = root.split('  document_theories\n')[1].split('  document_files')[0]
+            names = re.findall(r'"[^".]+\.([^".]+)"', exports)
+            inputs = re.findall(r'\\input\{([^}]+)\.tex\}', contents)
+            self.assertCountEqual(names, inputs)
+        main_exports = main_root.split('  document_theories\n')[1].split('  document_files')[0]
+        self.assertNotIn('Voblint_Examples_Sign.Example_Sign', main_exports)
+        self.assertIn('Voblint_Base.Entry', main_exports)
+        self.assertIn('Voblint_Examples.Example_End_To_End_Certificate', main_exports)
 
     def test_missing_certificate_is_reported(self):
         with self.assertRaisesRegex(ValueError, "certificate appendix"):

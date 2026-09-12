@@ -1,5 +1,5 @@
 theory Analysis_Run
-  imports Dispatch_Config State_Report_Call_String
+  imports Dispatch_Config State_Report_Call_String Arithmetic_Diagnostics
 begin
 
 section \<open>Running one configuration once\<close>
@@ -95,6 +95,21 @@ datatype analysis_output =
     (out_snapshot: "String.literal option")
     (out_checks: "check_row list")
     (out_globals: "(String.literal \<times> String.literal list) list")
+    (out_diagnostics: "arithmetic_diagnostic list")
+
+definition diagnostic_message :: "arithmetic_diagnostic \<Rightarrow> String.literal" where
+  "diagnostic_message diagnostic =
+     (let operation = arithmetic_operation (diagnostic_obligation diagnostic);
+          kind = (case operation of Mod _ _ \<Rightarrow> ''remainder'' | _ \<Rightarrow> ''division'');
+          message = (if diagnostic_verdict diagnostic = Check_Refuted
+            then kind @ '' by zero whenever this operation is evaluated: ''
+            else ''possible '' @ kind @ '' by zero: '')
+      in String.implode (message @ string_of_exp 0 operation))"
+
+fun with_diagnostics :: "arithmetic_diagnostic list \<Rightarrow> analysis_output \<Rightarrow> analysis_output"
+where
+  "with_diagnostics ds (Analysis_Output g snap rows globals old) =
+     Analysis_Output g snap rows globals ds"
 
 text \<open>
   Three answers, because a caller has three genuinely different things to do.
@@ -173,7 +188,7 @@ definition collapsed_output ::
            (Some (raw_cfg_export (prog_table p) (prog_procs p) ann))
            (Some (raw_cfg_canonical_text_lit (prog_table p) (prog_procs p) ann))
            (check_rows_of env rows)
-           globals)"
+           globals [])"
 
 text \<open>
   The check column with nothing drawn beside it. A verdict-report route reaches
@@ -186,7 +201,7 @@ definition report_output ::
     "(pp \<Rightarrow> abstract_value abs_state lifted) \<Rightarrow> (pp \<times> exp \<times> check_result lifted) list
        \<Rightarrow> (String.literal \<times> String.literal list) list \<Rightarrow> analysis_output" where
   "report_output env rows globals =
-     Analysis_Output None None (check_rows_of env rows) globals"
+     Analysis_Output None None (check_rows_of env rows) globals []"
 
 text \<open>
   A route that publishes verdicts and no table answers the report view and
@@ -213,7 +228,7 @@ definition contextual_output ::
        \<Rightarrow> (pp \<times> exp \<times> check_result lifted) list
        \<Rightarrow> (String.literal \<times> String.literal list) list \<Rightarrow> analysis_output" where
   "contextual_output g snap env rows globals =
-     Analysis_Output (Some g) (Some snap) (check_rows_of env rows) globals"
+     Analysis_Output (Some g) (Some snap) (check_rows_of env rows) globals []"
 subsection \<open>The three routes, each from one solved table\<close>
 
 text \<open>
@@ -246,12 +261,13 @@ definition flat_output_of ::
        \<Rightarrow> (String.literal \<times> String.literal list) list \<Rightarrow> imp_prog
        \<Rightarrow> analysis_answer" where
   "flat_output_of view into classify bot_state r globals p =
-     (let env = project_env into r;
+     (let finish = with_diagnostics (arithmetic_diagnostics (prog_cfg p) r classify);
+          env = project_env into r;
           rows = flat_rows_of classify bot_state r p
       in case view of
            View_Contexts \<Rightarrow> Unsupported_Configuration
-         | View_Report \<Rightarrow> Analysed (report_output env rows globals)
-         | _ \<Rightarrow> Analysed (collapsed_output view p env rows globals))"
+         | View_Report \<Rightarrow> Analysed (finish (report_output env rows globals))
+         | _ \<Rightarrow> Analysed (finish (collapsed_output view p env rows globals)))"
 
 text \<open>
   A contextual route answers every view. The collapsed ones read the table
@@ -268,17 +284,18 @@ definition entry_state_output_of ::
        \<Rightarrow> ('a \<Rightarrow> abstract_value) \<Rightarrow> (exp \<Rightarrow> 'a abs_state \<Rightarrow> check_result)
        \<Rightarrow> ('a list, 'a abs_state) analysis_result \<Rightarrow> imp_prog \<Rightarrow> analysis_answer" where
   "entry_state_output_of view enter into classify r p =
-     (let env = project_joined_env into r;
+     (let finish = with_diagnostics (arithmetic_diagnostics (prog_cfg p) r classify);
+          env = project_joined_env into r;
           rows = classify_checks_verdicts (prog_cfg p) r classify;
           globals = ctx_seed_globals into (ctx_key_of into) (ctx_show_of into) r p
       in case view of
            View_Contexts \<Rightarrow>
-             Analysed (contextual_output
+             Analysed (finish (contextual_output
                          (entry_state_ctx_export_of enter into classify r p)
                          (entry_state_ctx_graph_snapshot_of enter into classify r p)
-                         env rows globals)
-         | View_Report \<Rightarrow> Analysed (report_output env rows globals)
-         | _ \<Rightarrow> Analysed (collapsed_output view p env rows globals))"
+                         env rows globals))
+         | View_Report \<Rightarrow> Analysed (finish (report_output env rows globals))
+         | _ \<Rightarrow> Analysed (finish (collapsed_output view p env rows globals)))"
 
 definition cs_output_of ::
     "output_view \<Rightarrow> ('a::semilattice_sup \<Rightarrow> abstract_value)
@@ -286,16 +303,17 @@ definition cs_output_of ::
        \<Rightarrow> (call_string, 'a abs_state) analysis_result \<Rightarrow> nat \<Rightarrow> imp_prog
        \<Rightarrow> analysis_answer" where
   "cs_output_of view into classify r k p =
-     (let env = project_joined_env into r;
+     (let finish = with_diagnostics (arithmetic_diagnostics (prog_cfg p) r classify);
+          env = project_joined_env into r;
           rows = classify_checks_verdicts (prog_cfg p) r classify;
           globals = ctx_seed_globals into cs_context_key cs_show_context r p
       in case view of
            View_Contexts \<Rightarrow>
-             Analysed (contextual_output (cs_ctx_export_of into classify r k p)
+             Analysed (finish (contextual_output (cs_ctx_export_of into classify r k p)
                          (cs_ctx_graph_snapshot_of into classify r k p)
-                         env rows globals)
-         | View_Report \<Rightarrow> Analysed (report_output env rows globals)
-         | _ \<Rightarrow> Analysed (collapsed_output view p env rows globals))"
+                         env rows globals))
+         | View_Report \<Rightarrow> Analysed (finish (report_output env rows globals))
+         | _ \<Rightarrow> Analysed (finish (collapsed_output view p env rows globals)))"
 
 subsection \<open>One plan, one run\<close>
 
@@ -311,6 +329,16 @@ text \<open>
   to slice states from, or to list activations of --- and at \<open>View_Contexts\<close>
   asked of a context-free plan, which has one context and so nothing to expand.
 \<close>
+
+definition table_report_answer ::
+    "output_view \<Rightarrow> ('ctx, 'a) analysis_result \<Rightarrow> (exp \<Rightarrow> 'a \<Rightarrow> check_result)
+       \<Rightarrow> imp_prog \<Rightarrow> analysis_answer" where
+  "table_report_answer view r classify p =
+     (case view of
+        View_Report \<Rightarrow> Analysed
+          (with_diagnostics (arithmetic_diagnostics (prog_cfg p) r classify)
+            (report_output (\<lambda>_. Bot) (classify_checks_verdicts (prog_cfg p) r classify) []))
+      | _ \<Rightarrow> Unsupported_Configuration)"
 
 definition plan_answer :: "analysis_plan \<Rightarrow> output_view \<Rightarrow> imp_prog \<Rightarrow> analysis_answer" where
   "plan_answer pl view p =
@@ -383,11 +411,23 @@ definition plan_answer :: "analysis_plan \<Rightarrow> output_view \<Rightarrow>
           entry_state_output_of view enter_ivl_for IntervalValue interval_classify_check
             (analyse_interval_entry_state_result p) p
       | Plan_Interval_EntryState Solver_Join \<Rightarrow>
-          verdict_report_answer view (analyse_interval_entry_state_join p)
+          table_report_answer view
+            (routed_dg_pipeline.result ivl_tf_st_for ivl_enter_st_for cinit_ivl_st
+              (Analysis_Global ()) Activation_Seed exec_formals_route []
+              TD_side_always_join_Interp_solve (declared_global p) p)
+            interval_classify_check p
       | Plan_Interval_EntryState Solver_PerOrigin \<Rightarrow>
-          verdict_report_answer view (analyse_interval_entry_state_per_origin p)
+          table_report_answer view
+            (routed_dg_pipeline.result ivl_tf_st_for ivl_enter_st_for cinit_ivl_st
+              (Analysis_Global ()) Activation_Seed exec_formals_route []
+              TD_side_per_origin_Interp_solve (declared_global p) p)
+            interval_classify_check p
       | Plan_Interval_EntryState Solver_WarrowPerOrigin \<Rightarrow>
-          verdict_report_answer view (analyse_interval_entry_state_wpo p)
+          table_report_answer view
+            (routed_dg_pipeline.result ivl_tf_st_for ivl_enter_st_for cinit_ivl_st
+              (Analysis_Global ()) Activation_Seed exec_formals_route []
+              TD_side_warrowing_per_origin_Interp_solve (declared_global p) p)
+            interval_classify_check p
       | Plan_Int_EntryState Solver_Join \<Rightarrow>
           entry_state_output_of view (enter_int_dom_for Refine_Fixpoint) IntDomValue
             int_classify_check (analyse_int_entry_state_result p) p
@@ -411,11 +451,23 @@ definition plan_answer :: "analysis_plan \<Rightarrow> output_view \<Rightarrow>
           cs_output_of view IntervalValue interval_classify_check
             (analyse_interval_call_string_result k p) k p
       | Plan_Interval_CallString Solver_Join k \<Rightarrow>
-          verdict_report_answer view (analyse_interval_call_string_report_join k p)
+          table_report_answer view
+            (routed_dg_pipeline.result ivl_tf_st_for ivl_enter_st_for cinit_ivl_st
+              Call_String_Context.Global Call_String_Context.Seed (\<lambda>_. cs_route k) []
+              TD_side_always_join_Interp_solve (declared_global p) p)
+            interval_classify_check p
       | Plan_Interval_CallString Solver_PerOrigin k \<Rightarrow>
-          verdict_report_answer view (analyse_interval_call_string_report_per_origin k p)
+          table_report_answer view
+            (routed_dg_pipeline.result ivl_tf_st_for ivl_enter_st_for cinit_ivl_st
+              Call_String_Context.Global Call_String_Context.Seed (\<lambda>_. cs_route k) []
+              TD_side_per_origin_Interp_solve (declared_global p) p)
+            interval_classify_check p
       | Plan_Interval_CallString Solver_WarrowPerOrigin k \<Rightarrow>
-          verdict_report_answer view (analyse_interval_call_string_report_wpo k p)
+          table_report_answer view
+            (routed_dg_pipeline.result ivl_tf_st_for ivl_enter_st_for cinit_ivl_st
+              Call_String_Context.Global Call_String_Context.Seed (\<lambda>_. cs_route k) []
+              TD_side_warrowing_per_origin_Interp_solve (declared_global p) p)
+            interval_classify_check p
       | Plan_Int_CallString Solver_Join k \<Rightarrow>
           cs_output_of view IntDomValue int_classify_check
             (analyse_int_call_string_result k p) k p

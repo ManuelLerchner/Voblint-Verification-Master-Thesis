@@ -1,0 +1,10 @@
+// PARAM: --analysis interval
+// EXPECT-ARITHMETIC
+// Definite hazards coexist with VIMP's total division and remainder results.
+fun main() {
+  divisor = 0;
+  quotient = 7 / divisor; // ARITH: ERROR division-by-zero
+  remainder = 7 % divisor; // ARITH: ERROR remainder-by-zero
+  __voblint_check(quotient == 0); // PROVED
+  __voblint_check(remainder == 7); // PROVED
+}

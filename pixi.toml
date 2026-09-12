@@ -55,6 +55,7 @@ pytest = ">=8.0"
 # manifest edit that changes what the CLI offers has to be intended.
 analysis-registry-check = { cmd = "python3 -m pytest tests/test_analysis_registry.py", description = "Check generated dispatcher support against the hand-written analysis policy." }
 property-test = { cmd = "python3 -m pytest tests/property", description = "Build the test drivers and run parser, printer, and AST property tests." }
+arithmetic-diagnostics-check = { cmd = "python3 -m pytest tests/test_regression_arithmetic.py tests/test_arithmetic_diagnostics.py", depends-on = ["cli-build"], description = "Check arithmetic warnings, source annotations, and HTML findings." }
 
 # HTML result viewer (`voblint --html`). graphviz supplies `dot`, which
 # renders the CFG the viewer's graph pane loads; the frontend itself is the
@@ -230,6 +231,7 @@ verify = { depends-on = [
   "regression-lint",
   "grammar-id-position-check",
   "cli-test",
+  "arithmetic-diagnostics-check",
   "cli-smoke",
   "html-report-structure-check",
   "html-report-corpus-audit",

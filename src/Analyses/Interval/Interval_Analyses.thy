@@ -369,8 +369,8 @@ text \<open>
   \<^theory>\<open>Voblint_Framework.Routed_Context\<close>'s \<open>formals_route_lifted\<close>/\<open>formals_route_lifted_gen\<close>,
   generalized so any domain interprets them instead of restating them: both case-split
   the same \<^const>\<open>CallEdge\<close> and read the same entered-frame Bot/Lifted collapse, and
-  the action-only entry primitive used by entered_state_abs agrees with the entered frame
-  interval_abs_spec's own enter transfer produces. Kept as their own named
+  the action-only entry primitive used by \<open>entered_state_abs\<close> agrees with the entered frame
+  \<open>interval_abs_spec\<close>'s own enter transfer produces. Kept as their own named
   definitions -- rather than replaced outright -- because both are cited by name from the
   regression examples
   (\<open>Example_Interval_DG_Ctx_Collect\<close>, \<open>Example_Interval_DG_EntryState_Collect\<close>); this

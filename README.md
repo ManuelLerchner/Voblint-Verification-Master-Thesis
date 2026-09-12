@@ -94,6 +94,34 @@ result is drawn. `pixi run voblint --help` lists every flag;
 and [`docs/CHECK_ARCHITECTURE.md`](docs/CHECK_ARCHITECTURE.md) the contextual
 result and rendering architecture.
 
+### Arithmetic diagnostics
+
+Every analysis also checks divisors in `/` and `%` expressions using the solved
+state before the containing statement. A divisor that may be zero produces a
+`warning`; a divisor that is zero in every represented live context produces an
+`error`. Safe operations and unreachable points produce no message. These
+plain text report groups arithmetic diagnostics and assertion checks into two
+aligned tables, with source positions and an analysis heading. Graph and HTML
+commands also print compiler-style diagnostics to stderr. Analysis continues, and diagnostics do not change the exit code.
+HTML reports include source-linked findings for each selected domain.
+
+The traversal covers assignments, guards, call arguments, returns, `min`/`max`,
+and checks, including nested arithmetic. It inspects both operands of `&&` and
+`||`: `0 && 1 / 0` therefore reports the zero divisor too. This is a diagnostic
+policy over VIMP's total expressions. Execution still uses `a / 0 = 0` and
+`a % 0 = a`; warnings do not introduce faults or C undefined behavior.
+
+“Possible” means the abstraction cannot exclude zero, not that a concrete
+execution with a zero divisor has been found. An `error` likewise describes the
+divisor whenever the point is reached; it does not prove the point reachable.
+
+Regression fixtures opt into exact diagnostic checking with
+`// EXPECT-ARITHMETIC`. Inline expectations use `// ARITH: WARN division-by-zero`,
+`// ARITH: ERROR remainder-by-zero`, or `// ARITH: NONE`. Multiple expectations
+on one statement are separated by semicolons. The harness rejects missing and
+unexpected diagnostics; see the
+[arithmetic fixtures](tests/regression/23-arithmetic-diagnostics/README.md).
+
 ## What Voblint proves
 
 ```text
@@ -237,6 +265,43 @@ proves that returned rows correspond exactly, in graph order, to the compiled
 `EA_Check` edges. The handwritten CLI pairs them with parser source positions
 by order; that pairing is outside the proof.
 
+### Arithmetic safety from an empty diagnostic list
+
+[`run_voblint_arithmetic_safe`](src/Executable_Surface/CLI/Analysis_Certified.thy)
+connects the returned diagnostics to concrete divisors. For a terminating,
+accepted analysis, absence of a diagnostic at a reachable point guarantees
+that every divisor in that point's expressions is nonzero in every store
+collected there. It covers the same domain, solver, and context configurations
+as the other CLI soundness endpoints.
+
+<details>
+<summary>Exact arithmetic-safety theorem</summary>
+
+```isabelle
+theorem run_voblint_arithmetic_safe:
+  assumes terminates: "config_terminates D solver ctx p"
+      and ans: "run_voblint D solver ctx view p = Analysed out"
+      and reachable: "s ∈ ltr_collect (declared_global p) (prog_cfg p)
+                            (cinit_stores (declared_global p)) v"
+      and quiet: "∀d ∈ set (out_diagnostics out). diagnostic_point d ≠ v"
+  shows "arithmetic_safe_at (prog_cfg p) v s"
+```
+
+</details>
+
+`arithmetic_safe_at` quantifies over every `/` and `%` occurrence in expressions
+attached to the point, including both operands of Boolean expressions. The
+extraction-completeness lemmas in
+[`Arithmetic_Diagnostics.thy`](src/Executable_Surface/CLI/Arithmetic_Diagnostics.thy)
+connect those occurrences to the generated obligations. Each obligation asks
+whether its divisor differs from zero; the classifier uses the same solved
+result as the check report and aggregates verdicts across contexts. A safe
+context cannot suppress a warning from another context.
+
+The theorem concerns `out_diagnostics` and compiled program points. Source
+locations and diagnostic text come from the handwritten CLI and remain outside
+the proof, as they do for check rows.
+
 ### Why the node and context are existential
 
 A source control state need not determine one CFG node. The compiler can create
@@ -304,7 +369,8 @@ The proof covers:
 - VIMP execution from an already-constructed AST;
 - compilation to the procedure-aware CFG;
 - equation generation and the computed verified-solver post-solution;
-- semantic abstract states and returned check rows.
+- semantic abstract states, returned check rows, and arithmetic safety at points
+  without diagnostics.
 
 The executable `cli/main.ml` is a thin, unverified adapter around the generated
 `run_voblint` entry point.
