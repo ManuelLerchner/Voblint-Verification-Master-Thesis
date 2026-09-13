@@ -5,7 +5,9 @@
 
 (menhir
  (modules vimp_parser)
- (flags --unused-precedence-levels))
+ (flags
+  --table
+  --unused-precedence-levels))
 
 (ocamllex vimp_lexer)
 
@@ -18,7 +20,10 @@
   vimp_parser
   vimp_lexer
   vimp_frontend)
- (libraries str zarith)
+ (libraries
+  menhirLib
+  str
+  zarith)
  (flags (:standard -w -8-11-20-27-32-37-39 -warn-error -A)))
 
 (library
@@ -33,7 +38,12 @@
  (modules
   html_report
   main)
- (libraries voblint_frontend voblint_rendering str zarith unix)
+ (libraries
+  voblint_frontend
+  voblint_rendering
+  str
+  zarith
+  unix)
  (flags (:standard -w -8-11-20-27-32-37-39 -warn-error -A)))
 
 (executable
@@ -46,4 +56,11 @@
   js_of_ocaml
   zarith
   zarith_stubs_js)
+;; The generated analyzer contains deep indirect recursion through the solver's
+;; query/eval callbacks. V8 has no general proper tail calls, so js_of_ocaml's
+;; normal output can overflow the JavaScript stack on recursive analyses.
+;; CPS compilation makes these call paths stack-safe.
+(js_of_ocaml
+ (flags
+  (:standard --effects=cps)))
  (flags (:standard -w -8-11-20-27-32-37-39 -warn-error -A)))

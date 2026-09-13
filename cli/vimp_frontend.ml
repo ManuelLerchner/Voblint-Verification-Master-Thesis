@@ -35,46 +35,58 @@ let stmt_positions (prog : unit Voblint_CLI.Generated.imp_prog_ext) :
     (int * (int * int * int * int)) list =
   let recorded = Vimp_positions.definitions () in
   let index_of = function
-    | Voblint_CLI.Generated.Statement k -> Some (Z.to_int (Voblint_CLI.Generated.integer_of_nat k))
+    | Voblint_CLI.Generated.Statement k ->
+        Some (Z.to_int (Voblint_CLI.Generated.integer_of_nat k))
     | _ -> None
   in
   List.concat_map
     (fun (name, nodes) ->
-       match List.assoc_opt name recorded with
-       | Some ps when List.length ps = List.length nodes ->
-         List.concat
-           (List.map2
-              (fun node (p : Vimp_positions.pos) ->
+      match List.assoc_opt name recorded with
+      | Some ps when List.length ps = List.length nodes ->
+          List.concat
+            (List.map2
+               (fun node (p : Vimp_positions.pos) ->
                  match index_of node with
                  | Some i ->
-                   [ ( i,
-                       ( p.Vimp_positions.line,
-                         p.Vimp_positions.column,
-                         p.Vimp_positions.end_line,
-                         p.Vimp_positions.end_column ) ) ]
+                     [
+                       ( i,
+                         ( p.Vimp_positions.line,
+                           p.Vimp_positions.column,
+                           p.Vimp_positions.end_line,
+                           p.Vimp_positions.end_column ) );
+                     ]
                  | None -> [])
-              nodes ps)
-       | _ -> [])
+               nodes ps)
+      | _ -> [])
     (Voblint_CLI.Generated.prog_stmt_post_order prog)
 
 let program (file : string) (src : string) :
-  unit Voblint_CLI.Generated.imp_prog_ext * (int * int) list * (int * (int * int * int * int)) list =
+    unit Voblint_CLI.Generated.imp_prog_ext
+    * (int * int) list
+    * (int * (int * int * int * int)) list =
   let lexbuf = Lexing.from_string src in
   Vimp_positions.reset ();
   let check_positions = ref [] in
+
   let tracked_token lexbuf =
     let tok = Vimp_lexer.token lexbuf in
-    (if tok = Vimp_parser.CHECK then check_positions := position_of lexbuf :: !check_positions);
+    if tok = Vimp_parser.CHECK then
+      check_positions := position_of lexbuf :: !check_positions;
     tok
   in
+
   try
-    let prog = Vimp_parser.program tracked_token lexbuf in
+    let module I = Vimp_parser.MenhirInterpreter in
+    let supplier = I.lexer_lexbuf_to_supplier tracked_token lexbuf in
+    let checkpoint = Vimp_parser.Incremental.program lexbuf.lex_curr_p in
+    let prog = I.loop supplier checkpoint in
     (prog, List.rev !check_positions, stmt_positions prog)
   with
-  | Vimp_lexer.Lex_error { line; col; msg } -> raise (Parse_error { file; line; col; msg })
+  | Vimp_lexer.Lex_error { line; col; msg } ->
+      raise (Parse_error { file; line; col; msg })
   | Vimp_parser.Error ->
-    let line, col = position_of lexbuf in
-    raise (Parse_error { file; line; col; msg = "syntax error" })
+      let line, col = position_of lexbuf in
+      raise (Parse_error { file; line; col; msg = "syntax error" })
   | Failure msg ->
-    let line, col = position_of lexbuf in
-    raise (Parse_error { file; line; col; msg })
+      let line, col = position_of lexbuf in
+      raise (Parse_error { file; line; col; msg })
