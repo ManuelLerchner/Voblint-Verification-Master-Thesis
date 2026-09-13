@@ -1,8 +1,12 @@
 (* Browser adapter for the generated analyzer.
 
-   Parsing and JSON rendering are intentionally outside the Isabelle export.
-   The actual analysis call uses the same generated [run_voblint] entry point
-   as the native CLI.
+   Parsing, DOT rendering, JSON rendering and browser integration are
+   intentionally outside the Isabelle export. The actual analysis call uses
+   the same generated [run_voblint] entry point as the native CLI.
+
+   A successful call returns the report rows and, when the selected generated
+   view publishes one, the graph from that same [AnalysisResult]. The browser
+   never performs a second solve merely to obtain a drawing.
 
    JavaScript API:
 
@@ -20,7 +24,7 @@
 
      Voblint_run(
        "interval",
-       "warrow",
+       "default",
        "call-string",
        1,
        source
@@ -157,6 +161,31 @@ let context_of_string mode depth =
       Error ("Unknown context mode: " ^ mode)
 
 
+(* The browser wants checks and a drawing from one result.
+
+   Context-insensitive runs can use the checked-state view for both default
+   and explicitly selected solvers.
+
+   Context-sensitive production/default runs use the per-context view so the
+   graph does not join away the very contexts the user requested.
+
+   Explicit-solver contextual routes currently publish the report but not a
+   graph-capable contextual state view. Preserve those valid report runs
+   instead of rejecting them or silently performing a second analysis. *)
+let browser_view browser_solver context =
+  match browser_solver, context with
+  | _, C.Ctx_None ->
+      C.View_Checked_States
+
+  | Default_Solver, C.Ctx_EntryState
+  | Default_Solver, C.Ctx_CallString _ ->
+      C.View_Contexts
+
+  | Explicit_Solver _, C.Ctx_EntryState
+  | Explicit_Solver _, C.Ctx_CallString _ ->
+      C.View_Report
+
+
 (* -------------------------------------------------------------------------- *)
 (* Analysis result rendering                                                  *)
 (* -------------------------------------------------------------------------- *)
@@ -212,6 +241,15 @@ let diagnostic_json diagnostic =
     (json_string (C.diagnostic_message diagnostic))
 
 
+let graph_json output =
+  match C.out_graph output with
+  | None ->
+      "null"
+
+  | Some graph ->
+      json_string (Dot_render.render graph)
+
+
 let output_json output =
   let checks =
     C.out_checks output
@@ -226,9 +264,14 @@ let output_json output =
   in
 
   Printf.sprintf
-    "{\"status\":\"ok\",\"checks\":[%s],\"diagnostics\":[%s]}"
+    "{\"status\":\"ok\",\
+     \"checks\":[%s],\
+     \"diagnostics\":[%s],\
+     \"graph\":%s}"
     checks
     diagnostics
+    (graph_json output)
+
 
 (* -------------------------------------------------------------------------- *)
 (* Browser entry point                                                        *)
@@ -282,7 +325,7 @@ let run analysis_js solver_js context_js context_depth source_js =
                         analysis
                         (solver_argument browser_solver)
                         context
-                        C.View_Report
+                        (browser_view browser_solver context)
                         program
                     with
                     | C.Malformed_Program ->
