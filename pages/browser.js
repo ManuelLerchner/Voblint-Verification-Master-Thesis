@@ -13,9 +13,6 @@ import {
   tags,
 } from "https://esm.sh/@lezer/highlight@1.2.3";
 
-import * as Viz from "https://esm.sh/@viz-js/viz@3.30.0";
-
-
 function query(selector) {
   const element = document.querySelector(selector);
 
@@ -427,7 +424,13 @@ function showGraphMessage(
 
 function getViz() {
   if (!vizPromise) {
-    vizPromise = Viz.instance();
+    vizPromise =
+      import("https://esm.sh/@viz-js/viz@3.30.0")
+        .then((Viz) => Viz.instance())
+        .catch((error) => {
+          vizPromise = null;
+          throw error;
+        });
   }
 
   return vizPromise;
@@ -538,13 +541,14 @@ function fitGraphZoom() {
     return;
   }
 
-  setGraphScale(
+  graphScale =
     Math.min(
       1,
       graphAvailableWidth() /
         graphBaseWidth,
-    ),
-  );
+    );
+
+  applyGraphScale();
 
   graph.scrollTo({
     left: 0,
