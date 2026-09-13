@@ -12304,19 +12304,6 @@ let rec analyse_int_wpo_result
 
 let rec enter_parity_for gs = enter_binding gs PTop aval_parity;;
 
-let rec table_report_answer _A
-  view r classify p =
-    (match view
-      with View_Report ->
-        Analysed
-          (with_diagnostics (arithmetic_diagnostics _A (prog_cfg p) r classify)
-            (report_output (fun _ -> Bot)
-              (classify_checks_verdicts _A (prog_cfg p) r classify) []))
-      | View_Checks -> Unsupported_Configuration
-      | View_States -> Unsupported_Configuration
-      | View_Checked_States -> Unsupported_Configuration
-      | View_Contexts -> Unsupported_Configuration);;
-
 let rec enter_ivl_for gs = enter_binding gs ivl_top aval_ivl;;
 
 let rec int_truthy_query
@@ -12621,7 +12608,8 @@ let rec plan_answer
               p)
             p)
       | Plan_Interval_EntryState Solver_Join ->
-        table_report_answer (equal_list equal_ivl) view
+        entry_state_output_of (executable_domain_ivl, equal_ivl) view
+          enter_ivl_for (fun a -> IntervalValue a) interval_classify_check
           (result (executable_domain_ivl, equal_ivl)
             (equal_routed_gk equal_unit (equal_list equal_ivl)) ivl_tf_st_for
             ivl_enter_st_for cinit_ivl_st (Analysis_Global ())
@@ -12651,9 +12639,10 @@ let rec plan_answer
                   (bounded_warrowing_lifted
                     (bounded_warrowing_resolved_st_q bounded_warrowing_ivl)))))
             (declared_global p) p)
-          interval_classify_check p
+          p
       | Plan_Interval_EntryState Solver_PerOrigin ->
-        table_report_answer (equal_list equal_ivl) view
+        entry_state_output_of (executable_domain_ivl, equal_ivl) view
+          enter_ivl_for (fun a -> IntervalValue a) interval_classify_check
           (result (executable_domain_ivl, equal_ivl)
             (equal_routed_gk equal_unit (equal_list equal_ivl)) ivl_tf_st_for
             ivl_enter_st_for cinit_ivl_st (Analysis_Global ())
@@ -12683,13 +12672,14 @@ let rec plan_answer
                   (bounded_warrowing_lifted
                     (bounded_warrowing_resolved_st_q bounded_warrowing_ivl)))))
             (declared_global p) p)
-          interval_classify_check p
+          p
       | Plan_Interval_EntryState Solver_Warrow ->
         entry_state_output_of (executable_domain_ivl, equal_ivl) view
           enter_ivl_for (fun a -> IntervalValue a) interval_classify_check
           (analyse_interval_entry_state_result p) p
       | Plan_Interval_EntryState Solver_WarrowPerOrigin ->
-        table_report_answer (equal_list equal_ivl) view
+        entry_state_output_of (executable_domain_ivl, equal_ivl) view
+          enter_ivl_for (fun a -> IntervalValue a) interval_classify_check
           (result (executable_domain_ivl, equal_ivl)
             (equal_routed_gk equal_unit (equal_list equal_ivl)) ivl_tf_st_for
             ivl_enter_st_for cinit_ivl_st (Analysis_Global ())
@@ -12719,9 +12709,10 @@ let rec plan_answer
                   (bounded_warrowing_lifted
                     (bounded_warrowing_resolved_st_q bounded_warrowing_ivl)))))
             (declared_global p) p)
-          interval_classify_check p
+          p
       | Plan_Interval_CallString (Solver_Join, k) ->
-        table_report_answer (equal_list equal_cfg_node) view
+        cs_output_of semilattice_sup_ivl view (fun a -> IntervalValue a)
+          interval_classify_check
           (result (executable_domain_ivl, equal_ivl) equal_call_string_gk
             ivl_tf_st_for ivl_enter_st_for cinit_ivl_st Global
             (fun a b -> Seed (a, b)) (fun _ -> cs_route k) []
@@ -12750,9 +12741,10 @@ let rec plan_answer
                   (bounded_warrowing_lifted
                     (bounded_warrowing_resolved_st_q bounded_warrowing_ivl)))))
             (declared_global p) p)
-          interval_classify_check p
+          k p
       | Plan_Interval_CallString (Solver_PerOrigin, k) ->
-        table_report_answer (equal_list equal_cfg_node) view
+        cs_output_of semilattice_sup_ivl view (fun a -> IntervalValue a)
+          interval_classify_check
           (result (executable_domain_ivl, equal_ivl) equal_call_string_gk
             ivl_tf_st_for ivl_enter_st_for cinit_ivl_st Global
             (fun a b -> Seed (a, b)) (fun _ -> cs_route k) []
@@ -12781,12 +12773,13 @@ let rec plan_answer
                   (bounded_warrowing_lifted
                     (bounded_warrowing_resolved_st_q bounded_warrowing_ivl)))))
             (declared_global p) p)
-          interval_classify_check p
+          k p
       | Plan_Interval_CallString (Solver_Warrow, k) ->
         cs_output_of semilattice_sup_ivl view (fun a -> IntervalValue a)
           interval_classify_check (analyse_interval_call_string_result k p) k p
       | Plan_Interval_CallString (Solver_WarrowPerOrigin, k) ->
-        table_report_answer (equal_list equal_cfg_node) view
+        cs_output_of semilattice_sup_ivl view (fun a -> IntervalValue a)
+          interval_classify_check
           (result (executable_domain_ivl, equal_ivl) equal_call_string_gk
             ivl_tf_st_for ivl_enter_st_for cinit_ivl_st Global
             (fun a b -> Seed (a, b)) (fun _ -> cs_route k) []
@@ -12815,7 +12808,7 @@ let rec plan_answer
                   (bounded_warrowing_lifted
                     (bounded_warrowing_resolved_st_q bounded_warrowing_ivl)))))
             (declared_global p) p)
-          interval_classify_check p
+          k p
       | Plan_Int Solver_Join ->
         (let r = analyse_int_join_result p in
           flat_output_of view (fun a -> IntDomValue a) int_classify_check

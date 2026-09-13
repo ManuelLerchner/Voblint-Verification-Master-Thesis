@@ -172,18 +172,13 @@ let context_of_string mode depth =
    Explicit-solver contextual routes currently publish the report but not a
    graph-capable contextual state view. Preserve those valid report runs
    instead of rejecting them or silently performing a second analysis. *)
-let browser_view browser_solver context =
-  match browser_solver, context with
-  | _, C.Ctx_None ->
+let browser_view context =
+  match context with
+  | C.Ctx_None ->
       C.View_Checked_States
-
-  | Default_Solver, C.Ctx_EntryState
-  | Default_Solver, C.Ctx_CallString _ ->
+  | C.Ctx_EntryState
+  | C.Ctx_CallString _ ->
       C.View_Contexts
-
-  | Explicit_Solver _, C.Ctx_EntryState
-  | Explicit_Solver _, C.Ctx_CallString _ ->
-      C.View_Report
 
 
 (* -------------------------------------------------------------------------- *)
@@ -325,7 +320,7 @@ let run analysis_js solver_js context_js context_depth source_js =
                         analysis
                         (solver_argument browser_solver)
                         context
-                        (browser_view browser_solver context)
+                        (browser_view context)
                         program
                     with
                     | C.Malformed_Program ->

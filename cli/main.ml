@@ -103,13 +103,10 @@ let usage =
   \                             #131). warrow is supported by interval and\n\
   \                             int; sign, parity and congruence have a widen\n\
   \                             operator but no solved table behind it yet.\n\
-  \                             Supported by the plain text report and by\n\
-  \                             --html, which reads the state table the chosen\n\
-  \                             discipline solved. Not by --dot/--dot-full/\n\
-  \                             --graph-snapshot, which annotate from a report\n\
-  \                             carrying no per-node state; and not by --html\n\
-  \                             together with --context, whose per-solver\n\
-  \                             routes publish verdicts without a state table.\n\
+  \                             Every supported solver/context pairing serves\n\
+  \                             the same report and graph views from its own\n\
+  \                             solved table; unsupported pairings are rejected\n\
+  \                             rather than falling back to another solver.\n\
   \  --dot                      Emit a GraphViz .dot rendering of the solved CFG,\n\
   \                             annotated at check nodes only, instead of the\n\
   \                             textual check report.\n\
@@ -623,24 +620,6 @@ let () =
   if !context_graph = Some Expanded && !context_kind = CK_CallString then begin
     prerr_endline
       "voblint: --context-graph is not supported with --context call-string";
-    exit 1
-  end;
-  (* --html can show an explicitly chosen solver: every solver route already
-     solves a state table, and the report reads the one the requested
-     discipline produced. The stdout graph renderings still cannot -- they
-     annotate from a view that carries no per-node state. This is about which
-     output shape can display a chosen discipline, not about whether the
-     discipline itself is legal, so it stays here rather than in the
-     analyzer's own configuration answer. *)
-  if !solver <> None && (!dot || !dot_full || !graph_snapshot) then begin
-    prerr_endline
-      "voblint: --solver supports the plain text report and --html, not \
-       --dot/--dot-full/--graph-snapshot";
-    exit 1
-  end;
-  if !solver <> None && !html && context <> Voblint_CLI.Generated.Ctx_None then begin
-    prerr_endline
-      "voblint: --solver with --html requires --context none";
     exit 1
   end;
   (* --html writes a directory; the other renderings write one document to

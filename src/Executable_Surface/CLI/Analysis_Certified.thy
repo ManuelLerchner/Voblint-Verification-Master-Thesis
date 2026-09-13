@@ -391,19 +391,19 @@ next
     show ?thesis
       using wf terminates ans mem
       unfolding Plan_Interval_EntryState Solver_Join plan_answer_unfold
-      by - (rule table_report_answer_sound [OF _ interval_es_join_table])
+      by - (rule entry_state_output_sound [OF _ interval_es_join_table])
   next
     case Solver_PerOrigin
     show ?thesis
       using wf terminates ans mem
       unfolding Plan_Interval_EntryState Solver_PerOrigin plan_answer_unfold
-      by - (rule table_report_answer_sound [OF _ interval_es_po_table])
+      by - (rule entry_state_output_sound [OF _ interval_es_po_table])
   next
     case Solver_WarrowPerOrigin
     show ?thesis
       using wf terminates ans mem
       unfolding Plan_Interval_EntryState Solver_WarrowPerOrigin plan_answer_unfold
-      by - (rule table_report_answer_sound [OF _ interval_es_wpo_table])
+      by - (rule entry_state_output_sound [OF _ interval_es_wpo_table])
   qed
 next
   case (Plan_Int_EntryState sc)
@@ -465,19 +465,19 @@ next
     show ?thesis
       using wf terminates ans mem
       unfolding Plan_Interval_CallString Solver_Join plan_answer_unfold
-      by - (rule table_report_answer_sound [OF _ interval_cs_join_table])
+      by - (rule cs_output_sound [OF _ interval_cs_join_table])
   next
     case Solver_PerOrigin
     show ?thesis
       using wf terminates ans mem
       unfolding Plan_Interval_CallString Solver_PerOrigin plan_answer_unfold
-      by - (rule table_report_answer_sound [OF _ interval_cs_po_table])
+      by - (rule cs_output_sound [OF _ interval_cs_po_table])
   next
     case Solver_WarrowPerOrigin
     show ?thesis
       using wf terminates ans mem
       unfolding Plan_Interval_CallString Solver_WarrowPerOrigin plan_answer_unfold
-      by - (rule table_report_answer_sound [OF _ interval_cs_wpo_table])
+      by - (rule cs_output_sound [OF _ interval_cs_wpo_table])
   qed
 next
   case (Plan_Int_CallString sc k)

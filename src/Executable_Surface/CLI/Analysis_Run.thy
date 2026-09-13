@@ -30,7 +30,7 @@ subsection \<open>What a caller asks to see\<close>
 text \<open>
   Which analysis runs and which drawing of its result comes back are separate
   questions, and \<^type>\<open>analysis_config\<close> deliberately answers only the first.
-  This is the second: the same solved table renders four ways, and picking one
+  This is the second: the same solved table renders five ways, and picking one
   is a presentation choice that changes no verdict.
 
   \<open>View_Contexts\<close> is the exception that proves the split. It draws one node per
@@ -204,10 +204,9 @@ definition report_output ::
      Analysis_Output None None (check_rows_of env rows) globals []"
 
 text \<open>
-  A route that publishes verdicts and no table answers the report view and
-  refuses the drawings, rather than being absent from the configuration space
-  altogether: \<open>--solver join --context entry-state\<close> is a supported pairing whose
-  checks are proved, and only its picture is missing.
+  A report-only answer remains useful for consumers that deliberately request no
+  drawing. The supported contextual plans below no longer use this fallback:
+  each already has the solved result table needed to render its own contexts.
 \<close>
 
 definition verdict_report_answer ::
@@ -229,6 +228,7 @@ definition contextual_output ::
        \<Rightarrow> (String.literal \<times> String.literal list) list \<Rightarrow> analysis_output" where
   "contextual_output g snap env rows globals =
      Analysis_Output (Some g) (Some snap) (check_rows_of env rows) globals []"
+
 subsection \<open>The three routes, each from one solved table\<close>
 
 text \<open>
@@ -324,10 +324,11 @@ text \<open>
   that binding. That is what stops a graph being drawn from one solve while the
   checks beside it come from another.
 
-  \<^const>\<open>Unsupported_Configuration\<close> survives at the pairings whose route
-  publishes a verdict report but no result table --- there is nothing to draw,
-  to slice states from, or to list activations of --- and at \<open>View_Contexts\<close>
-  asked of a context-free plan, which has one context and so nothing to expand.
+  Every supported contextual plan below now feeds its solved table through the
+  same context-aware output builder, independent of solver discipline. Thus
+  \<open>View_Contexts\<close> is available whenever the selected plan is context-sensitive;
+  \<^const>\<open>Unsupported_Configuration\<close> remains for genuinely unsupported plan
+  pairings and for \<open>View_Contexts\<close> on a context-free plan.
 \<close>
 
 definition table_report_answer ::
@@ -411,23 +412,20 @@ definition plan_answer :: "analysis_plan \<Rightarrow> output_view \<Rightarrow>
           entry_state_output_of view enter_ivl_for IntervalValue interval_classify_check
             (analyse_interval_entry_state_result p) p
       | Plan_Interval_EntryState Solver_Join \<Rightarrow>
-          table_report_answer view
+          entry_state_output_of view enter_ivl_for IntervalValue interval_classify_check
             (routed_dg_pipeline.result ivl_tf_st_for ivl_enter_st_for cinit_ivl_st
               (Analysis_Global ()) Activation_Seed exec_formals_route []
-              TD_side_always_join_Interp_solve (declared_global p) p)
-            interval_classify_check p
+              TD_side_always_join_Interp_solve (declared_global p) p) p
       | Plan_Interval_EntryState Solver_PerOrigin \<Rightarrow>
-          table_report_answer view
+          entry_state_output_of view enter_ivl_for IntervalValue interval_classify_check
             (routed_dg_pipeline.result ivl_tf_st_for ivl_enter_st_for cinit_ivl_st
               (Analysis_Global ()) Activation_Seed exec_formals_route []
-              TD_side_per_origin_Interp_solve (declared_global p) p)
-            interval_classify_check p
+              TD_side_per_origin_Interp_solve (declared_global p) p) p
       | Plan_Interval_EntryState Solver_WarrowPerOrigin \<Rightarrow>
-          table_report_answer view
+          entry_state_output_of view enter_ivl_for IntervalValue interval_classify_check
             (routed_dg_pipeline.result ivl_tf_st_for ivl_enter_st_for cinit_ivl_st
               (Analysis_Global ()) Activation_Seed exec_formals_route []
-              TD_side_warrowing_per_origin_Interp_solve (declared_global p) p)
-            interval_classify_check p
+              TD_side_warrowing_per_origin_Interp_solve (declared_global p) p) p
       | Plan_Int_EntryState Solver_Join \<Rightarrow>
           entry_state_output_of view (enter_int_dom_for Refine_Fixpoint) IntDomValue
             int_classify_check (analyse_int_entry_state_result p) p
@@ -451,23 +449,20 @@ definition plan_answer :: "analysis_plan \<Rightarrow> output_view \<Rightarrow>
           cs_output_of view IntervalValue interval_classify_check
             (analyse_interval_call_string_result k p) k p
       | Plan_Interval_CallString Solver_Join k \<Rightarrow>
-          table_report_answer view
+          cs_output_of view IntervalValue interval_classify_check
             (routed_dg_pipeline.result ivl_tf_st_for ivl_enter_st_for cinit_ivl_st
               Call_String_Context.Global Call_String_Context.Seed (\<lambda>_. cs_route k) []
-              TD_side_always_join_Interp_solve (declared_global p) p)
-            interval_classify_check p
+              TD_side_always_join_Interp_solve (declared_global p) p) k p
       | Plan_Interval_CallString Solver_PerOrigin k \<Rightarrow>
-          table_report_answer view
+          cs_output_of view IntervalValue interval_classify_check
             (routed_dg_pipeline.result ivl_tf_st_for ivl_enter_st_for cinit_ivl_st
               Call_String_Context.Global Call_String_Context.Seed (\<lambda>_. cs_route k) []
-              TD_side_per_origin_Interp_solve (declared_global p) p)
-            interval_classify_check p
+              TD_side_per_origin_Interp_solve (declared_global p) p) k p
       | Plan_Interval_CallString Solver_WarrowPerOrigin k \<Rightarrow>
-          table_report_answer view
+          cs_output_of view IntervalValue interval_classify_check
             (routed_dg_pipeline.result ivl_tf_st_for ivl_enter_st_for cinit_ivl_st
               Call_String_Context.Global Call_String_Context.Seed (\<lambda>_. cs_route k) []
-              TD_side_warrowing_per_origin_Interp_solve (declared_global p) p)
-            interval_classify_check p
+              TD_side_warrowing_per_origin_Interp_solve (declared_global p) p) k p
       | Plan_Int_CallString Solver_Join k \<Rightarrow>
           cs_output_of view IntDomValue int_classify_check
             (analyse_int_call_string_result k p) k p
@@ -501,4 +496,5 @@ definition run_voblint ::
         case resolve_analysis_config (mk_analysis_config kind solver ctx) of
           None \<Rightarrow> Unsupported_Configuration
         | Some pl \<Rightarrow> plan_answer pl view p)"
+
 end
