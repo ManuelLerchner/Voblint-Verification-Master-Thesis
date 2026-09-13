@@ -99,7 +99,7 @@
 // theories are built.
 #let thy-badge(session, theory) = {
   let href = if _links.base == "" { none } else {
-    _links.base + "Unsorted/" + session + "/" + theory + ".html"
+    _links.base + "Voblint/" + session + "/" + theory + ".html"
   }
   let body = box(
     inset: (x: 3pt, y: 1pt), radius: 2pt, baseline: -0.35em,
