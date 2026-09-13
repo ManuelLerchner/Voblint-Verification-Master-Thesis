@@ -2,417 +2,381 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1.0"
-  >
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <meta
     name="description"
-    content="Voblint: a verified Goblint-style static analysis pipeline in Isabelle/HOL."
+    content="Voblint is a machine-checked Isabelle/HOL framework for building, running, and verifying interprocedural abstract interpreters, modelled on Goblint's D/G architecture."
   >
+  <meta property="og:title" content="Voblint — Verified Static Analysis in Isabelle/HOL">
+  <meta
+    property="og:description"
+    content="Verified CFG compilation, activation-local semantics, executable equations, and a verified top-down solver in one soundness statement."
+  >
+  <meta property="og:type" content="website">
+  <meta name="twitter:card" content="summary_large_image">
 
-  <title>Voblint</title>
+  <title>Voblint — Verified Static Analysis in Isabelle/HOL</title>
 
-  <link rel="icon" type="image/x-icon" href="assets/favicon.png">
-
+  <link rel="icon" type="image/png" href="assets/favicon.png">
   <link
     rel="stylesheet"
     href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css"
   >
+  <link rel="stylesheet" href="index.css">
 
-  <link
-    rel="stylesheet"
-    href="style.css"
-  >
-
-  <script
-    src="assets/voblint.js"
-    defer
-  ></script>
-
-  <script
-    type="module"
-    src="browser.js"
-  ></script>
+  <script src="assets/voblint.js" defer></script>
+  <script type="module" src="index.js"></script>
 </head>
 
 <body>
   <header class="hero">
     <img
-      class="banner"
+      class="hero-banner"
       src="assets/banner.png"
-      alt="Voblint repository banner"
+      alt="Voblint control-flow graph artwork"
     >
 
-    <h1>Voblint</h1>
+    <div class="page-shell hero-content">
+      <p class="eyebrow hero-eyebrow">
+        Isabelle/HOL · Abstract interpretation · Formal Verification · Master&apos;s thesis
+      </p>
 
-    <p class="lead">
-      A verified Goblint-style static analysis pipeline in Isabelle/HOL.
-      Explore the formalization, generated analyzer, Isabelle documentation,
-      and accompanying master thesis.
-    </p>
+      <h1>Voblint</h1>
 
-    <nav
-      class="actions"
-      aria-label="Project links"
-    >
-      <a
-        class="primary"
-        href="Voblint/index.html"
-      >
-        <i class="fa-solid fa-book-open" aria-hidden="true"></i>
-        <span>Browse formalization</span>
-      </a>
+      <p class="hero-lead">
+        A verified Goblint-style static analysis pipeline in Isabelle/HOL.
+        Voblint connects verified CFG compilation, activation-local operational
+        semantics, executable equation generation, and a verified top-down solver
+        to a source-level soundness statement about the analyzer&apos;s own output.
+      </p>
 
-      <a
-        class="pipeline"
-        href="https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/Voblint/Voblint_Examples/Voblint.html"
-      >
-        <i class="fa-solid fa-diagram-project" aria-hidden="true"></i>
-        <span>Pipeline theory</span>
-      </a>
+      <nav class="actions" aria-label="Project links">
+        <a class="primary" href="Voblint/index.html">
+          <i class="fa-solid fa-book-open" aria-hidden="true"></i>
+          <span>Browse formalization</span>
+        </a>
 
-      <a href="thesis.pdf">
-        <i class="fa-solid fa-graduation-cap" aria-hidden="true"></i>
-        <span>Read thesis</span>
-      </a>
+        <a
+          class="pipeline"
+          href="https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/Voblint/Voblint_Examples/Voblint.html"
+        >
+          <i class="fa-solid fa-diagram-project" aria-hidden="true"></i>
+          <span>Pipeline theory</span>
+        </a>
 
-      <a
-        href="https://github.com/ManuelLerchner/Voblint-Verification-Master-Thesis"
-        target="_blank"
-        rel="noreferrer"
-      >
-        <i class="fa-brands fa-github" aria-hidden="true"></i>
-        <span>GitHub</span>
-      </a>
-    </nav>
+        <a href="thesis.pdf">
+          <i class="fa-solid fa-graduation-cap" aria-hidden="true"></i>
+          <span>Read thesis</span>
+        </a>
+
+        <a
+          href="https://github.com/ManuelLerchner/Voblint-Verification-Master-Thesis"
+          target="_blank"
+          rel="noreferrer"
+        >
+          <i class="fa-brands fa-github" aria-hidden="true"></i>
+          <span>GitHub</span>
+        </a>
+      </nav>
+    </div>
   </header>
 
-
-  <main>
+  <main class="page-shell">
     <section
-      class="analyzer"
-      id="try-analyzer"
+      class="section analyzer-section"
+      id="analyzer"
+      aria-labelledby="analyzer-heading"
     >
-      <div class="analyzer-editor">
-        <div class="section-heading">
-          <p class="eyebrow">
-            Try the verified core
-          </p>
-
-          <h2>
-            Analyze VIMP in your browser
-          </h2>
-        </div>
-
-
-        <div class="editor-shell">
-          <div class="editor-toolbar">
-            <span class="editor-file">
-              example.vimp
-            </span>
-
-            <span class="editor-language">
-              VIMP
-            </span>
-          </div>
-
-          <div
-            id="program-editor"
-            aria-label="VIMP program editor"
-          ></div>
-        </div>
-
-
-        <p class="editor-note">
-          Runs locally in this page. Your source is not uploaded.
-          Run with
-          <kbd>Ctrl</kbd>/<kbd>⌘</kbd> + <kbd>Enter</kbd>.
-          More examples are available in
-          <a
-            href="https://github.com/ManuelLerchner/Voblint-Verification-Master-Thesis/tree/main/tests/regression"
-            target="_blank"
-            rel="noreferrer"
-          >
-            tests/regression
-          </a>.
+      <div class="section-heading">
+        <p class="eyebrow">Try the verified core</p>
+        <h2 id="analyzer-heading">Analyze VIMP in your browser</h2>
+        <p class="section-intro">
+          VIMP is a small IMP-style language with
+          <code>__voblint_check(cond)</code> assertions. Analysis runs locally
+          through the Isabelle-generated core; lexing, parsing, browser integration,
+          GraphViz rendering, and presentation remain outside the verified component.
         </p>
       </div>
 
+      <div class="analyzer">
+        <div class="analyzer-editor">
+          <div class="editor-shell">
+            <div class="editor-toolbar">
+              <span class="editor-file">example.vimp</span>
+              <span class="editor-language">VIMP</span>
+            </div>
 
-      <aside
-        class="analyzer-controls"
-        aria-label="Analyzer configuration"
-      >
-        <div class="control-group">
-          <label for="analysis-select">
-            Analysis domain
-          </label>
+            <div
+              id="program-editor"
+              aria-label="VIMP program editor"
+            ></div>
+          </div>
 
-          <select id="analysis-select">
-            <option value="interval" selected>
-              Interval
-            </option>
+          <p class="editor-note">
+            Runs locally in this page. Your source is not uploaded. Run with
+            <kbd>Ctrl</kbd>/<kbd>⌘</kbd> + <kbd>Enter</kbd>. More examples are in
+            <a
+              href="https://github.com/ManuelLerchner/Voblint-Verification-Master-Thesis/tree/main/tests/regression"
+              target="_blank"
+              rel="noreferrer"
+            >tests/regression</a>.
+          </p>
 
-            <option value="sign">
-              Sign
-            </option>
-
-            <option value="int">
-              Int product
-            </option>
-
-            <option value="parity">
-              Parity
-            </option>
-
-            <option value="congruence">
-              Congruence
-            </option>
-          </select>
-        </div>
-
-
-        <div class="control-group">
-          <label for="solver-select">
-            Solver discipline
-          </label>
-
-          <select id="solver-select">
-            <option value="default" selected>
-              Default
-            </option>
-
-            <option value="join">
-              Join
-            </option>
-
-            <option value="per-origin">
-              Per origin
-            </option>
-
-            <option value="warrow">
-              Warrowing
-            </option>
-
-            <option value="warrow-per-origin">
-              Warrowing per origin
-            </option>
-          </select>
-
-          <p
-            class="control-help"
-            id="solver-help"
-          ></p>
-        </div>
-
-
-        <div class="control-group">
-          <label for="context-select">
-            Context sensitivity
-          </label>
-
-          <select id="context-select">
-            <option value="none">
-              None
-            </option>
-
-            <option value="entry-state">
-              Entry state
-            </option>
-
-            <option
-              value="call-string"
-              selected
-            >
-              Call string
-            </option>
-          </select>
-        </div>
-
-
-        <div
-          class="control-group"
-          id="context-depth-group"
-        >
-          <label for="context-depth">
-            Call-string depth
-          </label>
-
-          <input
-            id="context-depth"
-            type="number"
-            min="1"
-            step="1"
-            value="1"
-            inputmode="numeric"
-          >
-
-          <p class="control-help">
-            Number of recent call sites retained in each context.
+          <p class="precision-note">
+            <strong>Precision demo.</strong>
+            With Interval + Call string <code>k=1</code>, run the example with
+            <strong>Warrowing</strong>, then switch only the solver to
+            <strong>Warrowing per origin</strong>. The first result is
+            <code>UNKNOWN</code>; the second is <code>PROVED</code>.
           </p>
         </div>
 
-
-        <button
-          id="run-analysis"
-          type="button"
-        >
-          Run analysis
-        </button>
-
-
-        <p
-          id="analyzer-status"
-          class="status"
-          role="status"
-        >
-          Ready
-        </p>
-
-
-        <div
-          id="analysis-results"
-          class="analysis-results"
-          aria-live="polite"
-        ></div>
-      </aside>
-
-
-      <section
-        id="analysis-graph-panel"
-        class="analysis-graph-panel"
-        aria-labelledby="analysis-graph-heading"
-        hidden
-      >
-        <div class="analysis-graph-header">
-          <div>
-            <p class="eyebrow">
-              Solved analysis
-            </p>
-
-            <h3 id="analysis-graph-heading">
-              Control-flow graph
-            </h3>
+        <aside class="analyzer-controls" aria-label="Analyzer configuration">
+          <div class="control-group">
+            <label for="analysis-select">Analysis domain</label>
+            <select id="analysis-select">
+              <option value="interval" selected>Interval</option>
+              <option value="sign">Sign</option>
+              <option value="int">Int product</option>
+              <option value="parity">Parity</option>
+              <option value="congruence">Congruence</option>
+            </select>
           </div>
 
-          <div class="analysis-graph-tools">
-            <span>GraphViz · same analysis result</span>
+          <div class="control-group">
+            <label for="solver-select">Solver discipline</label>
+            <select id="solver-select">
+              <option value="default" selected>Default</option>
+              <option value="join">Join</option>
+              <option value="per-origin">Per origin</option>
+              <option value="warrow">Warrowing</option>
+              <option value="warrow-per-origin">Warrowing per origin</option>
+            </select>
+            <p class="control-help" id="solver-help"></p>
+          </div>
 
-            <div
-              class="graph-toolbar"
-              aria-label="Graph zoom controls"
+          <div class="control-group">
+            <label for="context-select">Context sensitivity</label>
+            <select id="context-select">
+              <option value="none">None</option>
+              <option value="entry-state">Entry state</option>
+              <option value="call-string" selected>Call string</option>
+            </select>
+          </div>
+
+          <div class="control-group" id="context-depth-group">
+            <label for="context-depth">Call-string depth</label>
+            <input
+              id="context-depth"
+              type="number"
+              min="1"
+              step="1"
+              value="1"
+              inputmode="numeric"
             >
-              <button
-                id="graph-zoom-out"
-                type="button"
-                title="Zoom out"
-                aria-label="Zoom out"
-              >
-                −
-              </button>
+            <p class="control-help">
+              Number of recent call sites retained in each context.
+            </p>
+          </div>
 
-              <button
-                id="graph-zoom-reset"
-                type="button"
-                title="Reset zoom"
-                aria-label="Reset zoom"
-              >
-                100%
-              </button>
+          <button id="run-analysis" type="button">
+            <i class="fa-solid fa-play" aria-hidden="true"></i>
+            Run analysis
+          </button>
 
-              <button
-                id="graph-zoom-in"
-                type="button"
-                title="Zoom in"
-                aria-label="Zoom in"
-              >
-                +
-              </button>
+          <p
+            id="analyzer-status"
+            class="status"
+            role="status"
+          >Ready</p>
 
-              <button
-                id="graph-zoom-fit"
-                type="button"
-                title="Fit graph"
-                aria-label="Fit graph"
-              >
-                Fit
-              </button>
+          <div
+            id="analysis-results"
+            class="analysis-results"
+            aria-live="polite"
+          ></div>
+        </aside>
+
+        <section
+          id="analysis-graph-panel"
+          class="analysis-graph-panel"
+          aria-labelledby="analysis-graph-heading"
+          hidden
+        >
+          <div class="analysis-graph-header">
+            <div>
+              <p class="eyebrow">Solved analysis</p>
+              <h3 id="analysis-graph-heading">Control-flow graph</h3>
+            </div>
+
+            <div class="analysis-graph-tools">
+              <span>GraphViz · same analysis result</span>
+
+              <div class="graph-toolbar" aria-label="Graph zoom controls">
+                <button
+                  id="graph-zoom-out"
+                  type="button"
+                  title="Zoom out"
+                  aria-label="Zoom out"
+                >−</button>
+                <button
+                  id="graph-zoom-reset"
+                  type="button"
+                  title="Reset zoom"
+                  aria-label="Reset zoom"
+                >100%</button>
+                <button
+                  id="graph-zoom-in"
+                  type="button"
+                  title="Zoom in"
+                  aria-label="Zoom in"
+                >+</button>
+                <button
+                  id="graph-zoom-fit"
+                  type="button"
+                  title="Fit graph"
+                  aria-label="Fit graph"
+                >Fit</button>
+              </div>
             </div>
           </div>
-        </div>
 
-        <div
-          id="analysis-graph"
-          class="analysis-graph"
-          aria-live="polite"
-          aria-label="Solved control-flow graph"
-        ></div>
+          <div
+            id="analysis-graph"
+            class="analysis-graph"
+            aria-live="polite"
+            aria-label="Solved control-flow graph"
+          ></div>
+        </section>
+      </div>
 
-      </section>
+      <p class="notice">
+        Unsupported domain, solver, and context combinations are rejected rather
+        than silently falling back to another configuration. A successful browser
+        run therefore reflects the configuration shown above.
+      </p>
     </section>
 
+    <section
+      class="section"
+      id="soundness"
+      aria-labelledby="soundness-heading"
+    >
+      <div class="section-heading">
+        <p class="eyebrow">End-to-end soundness</p>
+        <h2 id="soundness-heading">What Voblint proves</h2>
+        <p class="section-intro">
+          The proof follows the same pipeline that the executable analyzer uses:
+          from source execution, through CFG states and generated equations, to the
+          post-solution and final check report.
+        </p>
+      </div>
 
-    <p class="notice">
-      Analysis runs through the Isabelle-generated core. Parsing, browser
-      integration, and presentation remain outside the formally verified
-      component. Unsupported solver/domain/context combinations are rejected
-      rather than silently falling back to another configuration.
-    </p>
+      <pre class="pipeline-proof"><code>Execution:  VIMP AST -&gt; CFG -&gt; equation system -&gt; verified TD solver
+                     -&gt; computed post-solution -&gt; check report
 
+Proof:      source execution -&gt; activation-local traces (valid_ltr)
+                             -&gt; per-point collection (ltr_collect)
+                             -&gt; included in the concretization of that result</code></pre>
 
-    <section aria-labelledby="visual-tour-heading">
-      <h2 id="visual-tour-heading">
-        Visual tour
-      </h2>
+      <p class="body-copy">
+        The headline theorem,
+        <code>run_voblint_certified_source_sound</code>, ranges over the same
+        <code>run_voblint</code> entry point exported to OCaml and over each accepted
+        domain, solver discipline, and context policy. For a modeled source execution,
+        it supplies a matching CFG node and call stack with the following guarantees.
+      </p>
+
+      <dl class="theorem-grid">
+        <div>
+          <dt><code>csim … (v, s, stk)</code></dt>
+          <dd>The compiler&apos;s forward simulation relates the source state to CFG node <code>v</code>.</dd>
+        </div>
+        <div>
+          <dt><code>s ∈ ltr_collect … v</code></dt>
+          <dd>A valid activation-local trace genuinely reaches <code>v</code> with store <code>s</code>.</dd>
+        </div>
+        <div>
+          <dt><code>analysis_result_covers … v s</code></dt>
+          <dd>The abstract state reported for <code>v</code>, under an admitted context, contains <code>s</code>.</dd>
+        </div>
+        <div>
+          <dt><code>checks_sound_at out v s</code></dt>
+          <dd>No live row at <code>v</code> is mislabeled: every <code>PROVED</code> or <code>REFUTED</code> verdict is correct for <code>s</code>.</dd>
+        </div>
+      </dl>
+
+      <blockquote class="soundness-claim">
+        Every report returned for a terminating accepted solve over-approximates all
+        modeled source executions.
+      </blockquote>
+
+      <p class="scope-note">
+        <strong>Boundary.</strong> Termination remains a per-program logical premise.
+        The proof does not cover lexing, parsing, code generation, the OCaml toolchain,
+        rendered strings, GraphViz, or analysis precision.
+      </p>
+    </section>
+
+    <section
+      class="section"
+      id="reports"
+      aria-labelledby="reports-heading"
+    >
+      <div class="section-heading">
+        <p class="eyebrow">Reading a result</p>
+        <h2 id="reports-heading">The graph, and the state behind it</h2>
+        <p class="section-intro">
+          Full abstract product states do not fit cleanly inside CFG nodes.
+          <code>--html</code> therefore keeps the graph sparse and places each
+          node&apos;s detailed state in the report, where source lines, contexts, checks,
+          and diagnostics can be inspected together.
+        </p>
+      </div>
 
       <div class="gallery">
         <figure>
           <a href="assets/while_loop_cfg.png">
             <img
               src="assets/while_loop_cfg.png"
-              alt="Solved CFG for the counted-loop program"
+              alt="Solved CFG for a counted-loop interval analysis"
               loading="lazy"
             >
           </a>
-
           <figcaption>
-            Interval proof on a counted loop.
+            <strong>Counted loop.</strong>
+            Interval analysis tracks the loop state and discharges a check at the exit.
           </figcaption>
         </figure>
-
 
         <figure>
           <a href="assets/reports/report-graph-sign.png">
             <img
               src="assets/reports/report-graph-sign.png"
-              alt="Sign analysis graph report"
+              alt="Sign analysis graph report with proved and dead nodes"
               loading="lazy"
             >
           </a>
-
           <figcaption>
-            Sign analysis and dead-branch pruning.
+            <strong>Graph view, Sign.</strong>
+            Proved checks and dead nodes expose how an infeasible guard removes an entire branch.
           </figcaption>
         </figure>
-
 
         <figure>
           <a href="assets/reports/report-context-interval.png">
             <img
               src="assets/reports/report-context-interval.png"
-              alt="Context-sensitive interval report"
+              alt="Context-sensitive interval report with separate context clusters"
               loading="lazy"
             >
           </a>
-
           <figcaption>
-            Entry-state contexts in an interval report.
+            <strong>Context-sensitive Interval.</strong>
+            Expanded context graphs draw admitted contexts separately instead of joining them into one cluster.
           </figcaption>
         </figure>
-
 
         <figure>
           <a href="assets/reports/report-int-refinement.png">
@@ -422,49 +386,55 @@
               loading="lazy"
             >
           </a>
-
           <figcaption>
-            Product-domain refinement.
+            <strong>Product refinement.</strong>
+            Sign, Interval, Parity, and Congruence information can sharpen one another in the Int product.
           </figcaption>
         </figure>
-
 
         <figure>
           <a href="assets/reports/report-arithmetic-definite.png">
             <img
               src="assets/reports/report-arithmetic-definite.png"
-              alt="Definite zero-divisor report"
+              alt="Definite division-by-zero diagnostic"
               loading="lazy"
             >
           </a>
-
           <figcaption>
-            Definite zero-divisor diagnostics.
+            <strong>Definite arithmetic fault.</strong>
+            A divisor that is zero in every live abstract state is reported as an error.
           </figcaption>
         </figure>
-
 
         <figure>
           <a href="assets/reports/report-arithmetic-possible.png">
             <img
               src="assets/reports/report-arithmetic-possible.png"
-              alt="Possible zero-divisor report"
+              alt="Possible division-by-zero diagnostic"
               loading="lazy"
             >
           </a>
-
           <figcaption>
-            Possible zero-divisor diagnostics.
+            <strong>Possible arithmetic fault.</strong>
+            A divisor whose abstract value still contains zero is surfaced as a warning.
           </figcaption>
         </figure>
       </div>
     </section>
 
-
-    <section aria-labelledby="resources-heading">
-      <h2 id="resources-heading">
-        Project resources
-      </h2>
+    <section
+      class="section"
+      id="resources"
+      aria-labelledby="resources-heading"
+    >
+      <div class="section-heading">
+        <p class="eyebrow">Go deeper</p>
+        <h2 id="resources-heading">Project resources</h2>
+        <p class="section-intro">
+          Start from the certified pipeline theory for the compact theorem-level view,
+          or browse the generated Isabelle documentation for the complete development.
+        </p>
+      </div>
 
       <ul class="link-list">
         <li>
@@ -475,98 +445,64 @@
             <span class="resource-icon resource-icon-accent" aria-hidden="true">
               <i class="fa-solid fa-diagram-project"></i>
             </span>
-
             <span class="resource-content">
-              <span class="resource-title">
-                Certified pipeline theory
-              </span>
-
+              <span class="resource-title">Certified pipeline theory</span>
               <span class="resource-description">
-                Open <code>Voblint.thy</code>, the downstream entry point that
-                presents the certified pipeline and links its major layers and
-                flagship theorems.
+                Open <code>Voblint.thy</code>, the downstream entry point that presents
+                the certified pipeline and links its major layers and flagship theorems.
               </span>
             </span>
-
             <span class="resource-arrow" aria-hidden="true">→</span>
           </a>
         </li>
 
-
         <li>
-          <a
-            class="resource-card"
-            href="Voblint/index.html"
-          >
+          <a class="resource-card" href="Voblint/index.html">
             <span class="resource-icon" aria-hidden="true">
               <i class="fa-solid fa-book-open"></i>
             </span>
-
             <span class="resource-content">
-              <span class="resource-title">
-                Interactive Isabelle documentation
-              </span>
-
+              <span class="resource-title">Interactive Isabelle documentation</span>
               <span class="resource-description">
-                Browse every theory in the formalization with cross-linked
-                definitions and lemmas.
+                Browse every generated theory page with cross-linked definitions,
+                locales, lemmas, and source structure.
               </span>
             </span>
-
             <span class="resource-arrow" aria-hidden="true">→</span>
           </a>
         </li>
 
-
         <li>
-          <a
-            class="resource-card"
-            href="formalization.pdf"
-          >
+          <a class="resource-card" href="formalization.pdf">
             <span class="resource-icon" aria-hidden="true">
               <i class="fa-solid fa-file-pdf"></i>
             </span>
-
             <span class="resource-content">
-              <span class="resource-title">
-                Formalization PDF
-              </span>
-
+              <span class="resource-title">Formalization PDF</span>
               <span class="resource-description">
                 Isabelle-generated printout of the development, including the
                 certificate appendix.
               </span>
             </span>
-
             <span class="resource-arrow" aria-hidden="true">→</span>
           </a>
         </li>
 
-
         <li>
-          <a
-            class="resource-card"
-            href="thesis.pdf"
-          >
+          <a class="resource-card" href="thesis.pdf">
             <span class="resource-icon resource-icon-accent" aria-hidden="true">
               <i class="fa-solid fa-graduation-cap"></i>
             </span>
-
             <span class="resource-content">
-              <span class="resource-title">
-                Master thesis
-              </span>
-
+              <span class="resource-title">Master thesis</span>
               <span class="resource-description">
-                The written thesis, with references back into the Isabelle
-                development.
+                The written thesis, with design rationale, proof architecture, and
+                references back into the Isabelle development.
               </span>
             </span>
-
             <span class="resource-arrow" aria-hidden="true">→</span>
           </a>
         </li>
-
 
         <li>
           <a
@@ -578,22 +514,16 @@
             <span class="resource-icon" aria-hidden="true">
               <i class="fa-solid fa-code"></i>
             </span>
-
             <span class="resource-content">
-              <span class="resource-title">
-                Exported OCaml code
-              </span>
-
+              <span class="resource-title">Exported OCaml code</span>
               <span class="resource-description">
-                The generated implementation behind the analyzer. Exported from
-                the verified Isabelle/HOL formalization.
+                The generated implementation behind the CLI and browser analyzer,
+                exported from the Isabelle/HOL development.
               </span>
             </span>
-
             <span class="resource-arrow" aria-hidden="true">↗</span>
           </a>
         </li>
-
 
         <li>
           <a
@@ -605,18 +535,13 @@
             <span class="resource-icon" aria-hidden="true">
               <i class="fa-brands fa-github"></i>
             </span>
-
             <span class="resource-content">
-              <span class="resource-title">
-                GitHub repository
-              </span>
-
+              <span class="resource-title">GitHub repository</span>
               <span class="resource-description">
-                Source theories, generated analyzer, build tooling, examples,
-                tests, and project history.
+                Source theories, generated analyzer, build tooling, regression tests,
+                examples, and project history.
               </span>
             </span>
-
             <span class="resource-arrow" aria-hidden="true">↗</span>
           </a>
         </li>
@@ -624,18 +549,18 @@
     </section>
   </main>
 
-
-  <footer class="meta">
-    Source code:
-
-    <a
-      href="https://github.com/ManuelLerchner/Voblint-Verification-Master-Thesis"
-      target="_blank"
-      rel="noreferrer"
-    >
-      <i class="fa-brands fa-github" aria-hidden="true"></i>
-      <span>github.com/ManuelLerchner/Voblint-Verification-Master-Thesis</span>
-    </a>
+  <footer class="site-footer">
+    <div class="page-shell footer-content">
+      <span>Master&apos;s thesis · Manuel Lerchner · supervised by Alexandra Graß</span>
+      <a
+        href="https://github.com/ManuelLerchner/Voblint-Verification-Master-Thesis"
+        target="_blank"
+        rel="noreferrer"
+      >
+        <i class="fa-brands fa-github" aria-hidden="true"></i>
+        <span>GitHub repository</span>
+      </a>
+    </div>
   </footer>
 </body>
 </html>
