@@ -15,9 +15,9 @@ test -n "$ISABELLE_HOME_USER" || { echo "ERROR: could not resolve ISABELLE_HOME_
 # Isabelle emits HTML only for sessions it actually builds; -o browser_info
 # on warm heaps would skip up-to-date ancestors (and re-presenting them
 # collides on the isabelle_sources PRIMARY KEY). In fresh CI -c is a no-op.
-"$ISABELLE" build -v -N -d "$AFP" -d "$TD_DIR" -D "$REPO_ROOT" -o browser_info -c $SESSIONS
+"$ISABELLE" build -v -j2 -o threads=12 -d "$AFP" -d "$TD_DIR" -D "$REPO_ROOT" -o browser_info -c $SESSIONS
 rm -rf "$HTML_DIR"
 mkdir -p "$HTML_DIR"
 cp -R "$ISABELLE_HOME_USER/browser_info/." "$HTML_DIR/"
 touch "$HTML_DIR/.nojekyll"
-echo "Open $HTML_DIR/Unsorted/Voblint_Examples/index.html"
+echo "Open $HTML_DIR/Voblint/Voblint_Examples/index.html"

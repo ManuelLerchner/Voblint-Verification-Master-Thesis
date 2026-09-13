@@ -1,3 +1,5 @@
+chapter Voblint
+
 session Voblint_Solver in "." = "TD" +
   description "The strategy-tree equation language of the vendored side-effecting solver"
   theories

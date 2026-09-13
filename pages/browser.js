@@ -13,6 +13,8 @@ import {
   tags,
 } from "https://esm.sh/@lezer/highlight@1.2.3";
 
+import * as Viz from "https://esm.sh/@viz-js/viz@3.30.0";
+
 
 function query(selector) {
   const element = document.querySelector(selector);
@@ -39,6 +41,14 @@ const solverHelp = query("#solver-help");
 const runButton = query("#run-analysis");
 const status = query("#analyzer-status");
 const results = query("#analysis-results");
+
+const graphPanel = query("#analysis-graph-panel");
+const graph = query("#analysis-graph");
+
+const graphZoomOut = query("#graph-zoom-out");
+const graphZoomReset = query("#graph-zoom-reset");
+const graphZoomIn = query("#graph-zoom-in");
+const graphZoomFit = query("#graph-zoom-fit");
 
 
 /*
@@ -347,6 +357,281 @@ function renderResult(result) {
 }
 
 
+
+
+/* -------------------------------------------------------------------------- */
+/* Analysis graph                                                             */
+/* -------------------------------------------------------------------------- */
+
+let vizPromise = null;
+let analysisRunGeneration = 0;
+
+let graphScale = 1;
+let graphBaseWidth = 0;
+let graphBaseHeight = 0;
+
+const MIN_GRAPH_SCALE = 0.25;
+const MAX_GRAPH_SCALE = 3;
+const GRAPH_ZOOM_STEP = 1.15;
+
+
+function clamp(value, lo, hi) {
+  return Math.min(
+    hi,
+    Math.max(lo, value),
+  );
+}
+
+
+function currentGraphSvg() {
+  return graph.querySelector("svg");
+}
+
+
+function updateZoomResetLabel() {
+  graphZoomReset.textContent =
+    `${Math.round(graphScale * 100)}%`;
+}
+
+
+function clearGraph() {
+  graphScale = 1;
+  graphBaseWidth = 0;
+  graphBaseHeight = 0;
+
+  updateZoomResetLabel();
+
+  graph.replaceChildren();
+  graphPanel.hidden = true;
+}
+
+
+function showGraphMessage(
+  message,
+  kind = "",
+) {
+  const row =
+    document.createElement("p");
+
+  row.className =
+    kind
+      ? `analysis-graph-message ${kind}`
+      : "analysis-graph-message";
+
+  row.textContent = message;
+
+  graph.replaceChildren(row);
+  graphPanel.hidden = false;
+}
+
+
+function getViz() {
+  if (!vizPromise) {
+    vizPromise = Viz.instance();
+  }
+
+  return vizPromise;
+}
+
+
+function rememberNaturalGraphSize(svg) {
+  /*
+   * Measure the SVG after GraphViz has inserted it into the document.
+   * Using rendered CSS pixels avoids unit mismatches between GraphViz's
+   * point-based width/height attributes and the SVG viewBox.
+   */
+  svg.style.width = "";
+  svg.style.height = "";
+  svg.style.maxWidth = "none";
+
+  const rect =
+    svg.getBoundingClientRect();
+
+  graphBaseWidth = rect.width;
+  graphBaseHeight = rect.height;
+}
+
+
+function applyGraphScale() {
+  const svg = currentGraphSvg();
+
+  if (
+    !svg ||
+    graphBaseWidth <= 0 ||
+    graphBaseHeight <= 0
+  ) {
+    updateZoomResetLabel();
+    return;
+  }
+
+  /*
+   * Change the SVG's actual layout size rather than using transform: scale().
+   * This keeps the scroll container's dimensions correct, so zoomed graphs
+   * can still be panned with normal scrolling.
+   */
+  svg.style.width =
+    `${graphBaseWidth * graphScale}px`;
+
+  svg.style.height =
+    `${graphBaseHeight * graphScale}px`;
+
+  updateZoomResetLabel();
+}
+
+
+function setGraphScale(scale) {
+  graphScale = clamp(
+    scale,
+    MIN_GRAPH_SCALE,
+    MAX_GRAPH_SCALE,
+  );
+
+  applyGraphScale();
+}
+
+
+function zoomGraphIn() {
+  setGraphScale(
+    graphScale * GRAPH_ZOOM_STEP,
+  );
+}
+
+
+function zoomGraphOut() {
+  setGraphScale(
+    graphScale / GRAPH_ZOOM_STEP,
+  );
+}
+
+
+function resetGraphZoom() {
+  setGraphScale(1);
+
+  graph.scrollTo({
+    left: 0,
+    top: 0,
+  });
+}
+
+
+function graphAvailableWidth() {
+  const style =
+    window.getComputedStyle(graph);
+
+  const paddingLeft =
+    Number.parseFloat(style.paddingLeft) || 0;
+
+  const paddingRight =
+    Number.parseFloat(style.paddingRight) || 0;
+
+  return Math.max(
+    1,
+    graph.clientWidth -
+      paddingLeft -
+      paddingRight,
+  );
+}
+
+
+function fitGraphZoom() {
+  if (graphBaseWidth <= 0) {
+    return;
+  }
+
+  setGraphScale(
+    Math.min(
+      1,
+      graphAvailableWidth() /
+        graphBaseWidth,
+    ),
+  );
+
+  graph.scrollTo({
+    left: 0,
+    top: 0,
+  });
+}
+
+
+async function renderGraph(
+  dot,
+  runGeneration,
+) {
+  /*
+   * The table is rendered synchronously, while Viz.js may still be loading.
+   * Never let a graph from an older run overwrite the result of a newer run.
+   */
+  if (
+    runGeneration !==
+    analysisRunGeneration
+  ) {
+    return;
+  }
+
+  if (
+    typeof dot !== "string" ||
+    dot.trim() === ""
+  ) {
+    showGraphMessage(
+      "Graph unavailable for explicit contextual solver runs. The check report is valid, but this route does not expose a graph-capable state view."
+    );
+
+    return;
+  }
+
+  showGraphMessage(
+    "Rendering control-flow graph...",
+  );
+
+  try {
+    const viz = await getViz();
+
+    if (
+      runGeneration !==
+      analysisRunGeneration
+    ) {
+      return;
+    }
+
+    const svg =
+      viz.renderSVGElement(
+        dot,
+        {
+          engine: "dot",
+        },
+      );
+
+    if (
+      runGeneration !==
+      analysisRunGeneration
+    ) {
+      return;
+    }
+
+    graph.replaceChildren(svg);
+    graphPanel.hidden = false;
+
+    graphScale = 1;
+    rememberNaturalGraphSize(svg);
+    fitGraphZoom();
+  } catch (error) {
+    if (
+      runGeneration !==
+      analysisRunGeneration
+    ) {
+      return;
+    }
+
+    showGraphMessage(
+      error instanceof Error
+        ? `Graph rendering failed: ${error.message}`
+        : `Graph rendering failed: ${String(error)}`,
+      "error",
+    );
+  }
+}
+
+
 /* -------------------------------------------------------------------------- */
 /* Configuration                                                              */
 /* -------------------------------------------------------------------------- */
@@ -490,7 +775,21 @@ function configurationLabel(configuration) {
 /* Run analysis                                                               */
 /* -------------------------------------------------------------------------- */
 
-function run() {
+async function run() {
+  /*
+   * Treat one click / shortcut invocation as one UI transaction.
+   *
+   * Starting a new run invalidates every pending graph render from older
+   * runs. It also clears both presentation surfaces before configuration
+   * validation, so an invalid selection can never leave an old graph next to
+   * a new error/table state.
+   */
+  const runGeneration =
+    ++analysisRunGeneration;
+
+  clearResults();
+  clearGraph();
+
   if (
     typeof window.Voblint_run !==
     "function"
@@ -510,12 +809,17 @@ function run() {
     configuration =
       readConfiguration();
   } catch (error) {
-    showStatus(
-      error instanceof Error
-        ? error.message
-        : String(error),
-      "error",
-    );
+    if (
+      runGeneration ===
+      analysisRunGeneration
+    ) {
+      showStatus(
+        error instanceof Error
+          ? error.message
+          : String(error),
+        "error",
+      );
+    }
 
     return;
   }
@@ -527,7 +831,6 @@ function run() {
 
   runButton.disabled = true;
 
-  clearResults();
   showStatus("Analyzing...");
 
 
@@ -565,32 +868,83 @@ function run() {
       JSON.parse(rawResult);
 
 
+    if (
+      runGeneration !==
+      analysisRunGeneration
+    ) {
+      return;
+    }
+
+
     renderResult(result);
 
 
     if (result.status === "ok") {
-      showStatus(
-        `${configurationLabel(configuration)} · complete`,
-        "ok",
+      /*
+       * Keep the run open until its graph has either rendered or reported that
+       * this configuration has no graph-capable view. This makes "complete"
+       * mean that both presentation surfaces are settled for the same result.
+       */
+      await renderGraph(
+        result.graph,
+        runGeneration,
       );
+
+      if (
+        runGeneration ===
+        analysisRunGeneration
+      ) {
+        showStatus(
+          `${configurationLabel(configuration)} · complete`,
+          "ok",
+        );
+      }
     } else {
-      showStatus(
-        `${configurationLabel(configuration)} · failed`,
-        "error",
-      );
+      /*
+       * The graph was already cleared at the start of this run. Leave it
+       * cleared on analysis/configuration errors rather than preserving a
+       * drawing from a previous successful result.
+       */
+      if (
+        runGeneration ===
+        analysisRunGeneration
+      ) {
+        clearGraph();
+
+        showStatus(
+          `${configurationLabel(configuration)} · failed`,
+          "error",
+        );
+      }
     }
   } catch (error) {
-    showStatus(
-      "Browser analysis failed.",
-      "error",
-    );
+    if (
+      runGeneration ===
+      analysisRunGeneration
+    ) {
+      clearGraph();
 
-    results.textContent =
-      error instanceof Error
-        ? error.message
-        : String(error);
+      showStatus(
+        "Browser analysis failed.",
+        "error",
+      );
+
+      results.textContent =
+        error instanceof Error
+          ? error.message
+          : String(error);
+    }
   } finally {
-    runButton.disabled = false;
+    /*
+     * An older async run must not re-enable the button while a newer run is
+     * still active.
+     */
+    if (
+      runGeneration ===
+      analysisRunGeneration
+    ) {
+      runButton.disabled = false;
+    }
   }
 }
 
@@ -653,6 +1007,48 @@ solverSelect.addEventListener(
   updateSolverHelp,
 );
 
+graphZoomIn.addEventListener(
+  "click",
+  zoomGraphIn,
+);
+
+graphZoomOut.addEventListener(
+  "click",
+  zoomGraphOut,
+);
+
+graphZoomReset.addEventListener(
+  "click",
+  resetGraphZoom,
+);
+
+graphZoomFit.addEventListener(
+  "click",
+  fitGraphZoom,
+);
+
+graph.addEventListener(
+  "wheel",
+  (event) => {
+    if (
+      !event.ctrlKey &&
+      !event.metaKey
+    ) {
+      return;
+    }
+
+    event.preventDefault();
+
+    if (event.deltaY < 0) {
+      zoomGraphIn();
+    } else {
+      zoomGraphOut();
+    }
+  },
+  { passive: false },
+);
+
 
 updateContextControls();
 updateSolverHelp();
+updateZoomResetLabel();

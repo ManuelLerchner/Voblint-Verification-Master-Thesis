@@ -19,6 +19,11 @@
 
   <link
     rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css"
+  >
+
+  <link
+    rel="stylesheet"
     href="style.css"
   >
 
@@ -55,13 +60,23 @@
     >
       <a
         class="primary"
-        href="Unsorted/index.html"
+        href="Voblint/index.html"
       >
-        Browse formalization
+        <i class="fa-solid fa-book-open" aria-hidden="true"></i>
+        <span>Browse formalization</span>
+      </a>
+
+      <a
+        class="pipeline"
+        href="https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/Unsorted/Voblint_Examples/Voblint.html"
+      >
+        <i class="fa-solid fa-diagram-project" aria-hidden="true"></i>
+        <span>Pipeline theory</span>
       </a>
 
       <a href="thesis.pdf">
-        Read thesis
+        <i class="fa-solid fa-graduation-cap" aria-hidden="true"></i>
+        <span>Read thesis</span>
       </a>
 
       <a
@@ -69,7 +84,8 @@
         target="_blank"
         rel="noreferrer"
       >
-        GitHub
+        <i class="fa-brands fa-github" aria-hidden="true"></i>
+        <span>GitHub</span>
       </a>
     </nav>
   </header>
@@ -165,7 +181,7 @@
           </label>
 
           <select id="solver-select">
-            <option value="default">
+            <option value="default" selected>
               Default
             </option>
 
@@ -177,10 +193,7 @@
               Per origin
             </option>
 
-            <option
-              value="warrow"
-              selected
-            >
+            <option value="warrow">
               Warrowing
             </option>
 
@@ -266,6 +279,79 @@
           aria-live="polite"
         ></div>
       </aside>
+
+
+      <section
+        id="analysis-graph-panel"
+        class="analysis-graph-panel"
+        aria-labelledby="analysis-graph-heading"
+        hidden
+      >
+        <div class="analysis-graph-header">
+          <div>
+            <p class="eyebrow">
+              Solved analysis
+            </p>
+
+            <h3 id="analysis-graph-heading">
+              Control-flow graph
+            </h3>
+          </div>
+
+          <div class="analysis-graph-tools">
+            <span>GraphViz · same analysis result</span>
+
+            <div
+              class="graph-toolbar"
+              aria-label="Graph zoom controls"
+            >
+              <button
+                id="graph-zoom-out"
+                type="button"
+                title="Zoom out"
+                aria-label="Zoom out"
+              >
+                −
+              </button>
+
+              <button
+                id="graph-zoom-reset"
+                type="button"
+                title="Reset zoom"
+                aria-label="Reset zoom"
+              >
+                100%
+              </button>
+
+              <button
+                id="graph-zoom-in"
+                type="button"
+                title="Zoom in"
+                aria-label="Zoom in"
+              >
+                +
+              </button>
+
+              <button
+                id="graph-zoom-fit"
+                type="button"
+                title="Fit graph"
+                aria-label="Fit graph"
+              >
+                Fit
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div
+          id="analysis-graph"
+          class="analysis-graph"
+          aria-live="polite"
+          aria-label="Solved control-flow graph"
+        ></div>
+
+      </section>
     </section>
 
 
@@ -383,21 +469,37 @@
       <ul class="link-list">
         <li>
           <a
+            class="resource-card resource-card-featured"
+            href="https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/Unsorted/Voblint_Examples/Voblint.html"
+          >
+            <span class="resource-icon resource-icon-accent" aria-hidden="true">
+              <i class="fa-solid fa-diagram-project"></i>
+            </span>
+
+            <span class="resource-content">
+              <span class="resource-title">
+                Certified pipeline theory
+              </span>
+
+              <span class="resource-description">
+                Open <code>Voblint.thy</code>, the downstream entry point that
+                presents the certified pipeline and links its major layers and
+                flagship theorems.
+              </span>
+            </span>
+
+            <span class="resource-arrow" aria-hidden="true">→</span>
+          </a>
+        </li>
+
+
+        <li>
+          <a
             class="resource-card"
-            href="Unsorted/index.html"
+            href="Voblint/index.html"
           >
             <span class="resource-icon" aria-hidden="true">
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="1.8"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              >
-                <path d="M4 5h6a3 3 0 0 1 3 3v11a3 3 0 0 0-3-3H4z"/>
-                <path d="M20 5h-6a3 3 0 0 0-3 3v11a3 3 0 0 1 3-3h6z"/>
-              </svg>
+              <i class="fa-solid fa-book-open"></i>
             </span>
 
             <span class="resource-content">
@@ -422,19 +524,7 @@
             href="formalization.pdf"
           >
             <span class="resource-icon" aria-hidden="true">
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="1.8"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              >
-                <path d="M6 2h8l4 4v16H6z"/>
-                <path d="M14 2v5h5"/>
-                <path d="M9 13h6"/>
-                <path d="M9 17h4"/>
-              </svg>
+              <i class="fa-solid fa-file-pdf"></i>
             </span>
 
             <span class="resource-content">
@@ -459,19 +549,7 @@
             href="thesis.pdf"
           >
             <span class="resource-icon resource-icon-accent" aria-hidden="true">
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="1.8"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              >
-                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
-                <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
-                <path d="M8 7h8"/>
-                <path d="M8 11h6"/>
-              </svg>
+              <i class="fa-solid fa-graduation-cap"></i>
             </span>
 
             <span class="resource-content">
@@ -498,18 +576,7 @@
             rel="noreferrer"
           >
             <span class="resource-icon" aria-hidden="true">
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="1.8"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              >
-                <path d="m8 9-4 3 4 3"/>
-                <path d="m16 9 4 3-4 3"/>
-                <path d="m14 5-4 14"/>
-              </svg>
+              <i class="fa-solid fa-code"></i>
             </span>
 
             <span class="resource-content">
@@ -518,8 +585,35 @@
               </span>
 
               <span class="resource-description">
-                The generated implementation behind the analyzer. Exported from the
-                verified Isabelle/HOL formalization.
+                The generated implementation behind the analyzer. Exported from
+                the verified Isabelle/HOL formalization.
+              </span>
+            </span>
+
+            <span class="resource-arrow" aria-hidden="true">↗</span>
+          </a>
+        </li>
+
+
+        <li>
+          <a
+            class="resource-card"
+            href="https://github.com/ManuelLerchner/Voblint-Verification-Master-Thesis"
+            target="_blank"
+            rel="noreferrer"
+          >
+            <span class="resource-icon" aria-hidden="true">
+              <i class="fa-brands fa-github"></i>
+            </span>
+
+            <span class="resource-content">
+              <span class="resource-title">
+                GitHub repository
+              </span>
+
+              <span class="resource-description">
+                Source theories, generated analyzer, build tooling, examples,
+                tests, and project history.
               </span>
             </span>
 
@@ -539,7 +633,8 @@
       target="_blank"
       rel="noreferrer"
     >
-      github.com/ManuelLerchner/Voblint-Verification-Master-Thesis
+      <i class="fa-brands fa-github" aria-hidden="true"></i>
+      <span>github.com/ManuelLerchner/Voblint-Verification-Master-Thesis</span>
     </a>
   </footer>
 </body>

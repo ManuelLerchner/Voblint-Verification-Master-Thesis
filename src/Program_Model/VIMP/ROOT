@@ -1,3 +1,5 @@
+chapter Voblint
+
 session Voblint_VIMP in "." = HOL +
   description "VIMP syntax, small-step, and procedure language"
   sessions

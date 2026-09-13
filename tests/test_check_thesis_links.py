@@ -18,7 +18,7 @@ def test_write_and_check_exported_html(tmp_path):
     thesis = tmp_path / "thesis"
     thesis.mkdir()
     (thesis / "example.typ").write_text('isatype("pp")\n')
-    page = tmp_path / "build/isabelle-html/Unsorted/Voblint_CFG/CFG_Def.html"
+    page = tmp_path / "build/isabelle-html/Voblint/Voblint_CFG/CFG_Def.html"
     page.parent.mkdir(parents=True)
     page.write_text('<span class="entity_def" id="CFG_Def.pp|type"></span>')
 
@@ -32,5 +32,5 @@ def test_write_and_check_exported_html(tmp_path):
 
     payload = json.loads((thesis / "shared/generated/links.json").read_text())
     assert payload["links"] == {
-        "type:pp": "Unsorted/Voblint_CFG/CFG_Def.html#CFG_Def.pp%7Ctype"
+        "type:pp": "Voblint/Voblint_CFG/CFG_Def.html#CFG_Def.pp%7Ctype"
     }

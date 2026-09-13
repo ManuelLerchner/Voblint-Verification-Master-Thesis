@@ -92,22 +92,22 @@ def index_live(base: str, retries: int,
     a map whose links are known to work today.
     """
     base = base.rstrip("/") + "/"
-    root = fetch(base + "Unsorted/index.html", retries)
+    root = fetch(base + "Voblint/index.html", retries)
     if root is None:
-        sys.exit(f"check_thesis_links: cannot reach {base}Unsorted/index.html")
+        sys.exit(f"check_thesis_links: cannot reach {base}Voblint/index.html")
     names = [m.group(1) for m in re.finditer(r'href="([^"/]+)/index\.html"', root)
              if sessions in m.group(1)]
     index: dict[tuple[str, str], str] = {}
     pages = 0
     for session in sorted(names):
-        listing = fetch(f"{base}Unsorted/{session}/index.html", retries)
+        listing = fetch(f"{base}Voblint/{session}/index.html", retries)
         if listing is None:
             continue
         for m in re.finditer(r'href="([^"/]+\.html)"', listing):
             page = m.group(1)
             if page == "index.html":
                 continue
-            rel = f"Unsorted/{session}/{page}"
+            rel = f"Voblint/{session}/{page}"
             body = fetch(base + rel, retries)
             if body is None:
                 continue

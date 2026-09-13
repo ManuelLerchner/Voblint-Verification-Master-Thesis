@@ -1,3 +1,5 @@
+chapter Voblint
+
 session Voblint_CLI in "." = "Voblint_Analysis_Int" +
   description
     "Production CLI-facing surface: the AnalysisConfig-driven dispatcher over

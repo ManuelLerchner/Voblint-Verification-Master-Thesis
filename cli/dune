@@ -21,18 +21,29 @@
  (libraries str zarith)
  (flags (:standard -w -8-11-20-27-32-37-39 -warn-error -A)))
 
+(library
+ (name voblint_rendering)
+ (wrapped false)
+ (modules dot_render)
+ (libraries voblint_frontend)
+ (flags (:standard -w -8-11-20-27-32-37-39 -warn-error -A)))
+
 (executable
  (name main)
  (modules
-  dot_render
   html_report
   main)
- (libraries voblint_frontend str zarith unix)
+ (libraries voblint_frontend voblint_rendering str zarith unix)
  (flags (:standard -w -8-11-20-27-32-37-39 -warn-error -A)))
 
 (executable
  (name browser_main)
  (modules browser_main)
  (modes js)
- (libraries voblint_frontend js_of_ocaml zarith zarith_stubs_js)
+ (libraries
+  voblint_frontend
+  voblint_rendering
+  js_of_ocaml
+  zarith
+  zarith_stubs_js)
  (flags (:standard -w -8-11-20-27-32-37-39 -warn-error -A)))

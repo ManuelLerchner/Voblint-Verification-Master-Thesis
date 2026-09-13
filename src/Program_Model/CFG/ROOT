@@ -1,3 +1,5 @@
+chapter Voblint
+
 session Voblint_CFG in "." = "Voblint_VIMP" +
   description "Procedure-aware CFG: the graph model and its activation-local semantics"
   directories
