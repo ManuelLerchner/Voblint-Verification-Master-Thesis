@@ -26,6 +26,7 @@
 //       #ret=[-inf,+inf]
 //       x=[0,10]
 //   main_pp3_ctx0: pp3
+//       check 0<x
 //       #ret=[-inf,+inf]
 //       x=[10,10]
 //   main_pp4_ctx0: pp4

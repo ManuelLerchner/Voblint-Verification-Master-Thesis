@@ -27,6 +27,7 @@
 //       x=Positive
 //       y=Top
 //   main_pp2_ctx0: pp2
+//       check 0<x
 //       #ret=Top
 //       x=Positive
 //       y=Positive

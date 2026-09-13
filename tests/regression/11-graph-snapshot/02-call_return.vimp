@@ -19,15 +19,38 @@
 //
 // nodes:
 //   main_pp4_ctx0: pp4
+//       r=[6,6]
+//       #ret=[-inf,+inf]
+//       n=[-inf,+inf]
 //   main_result_main_ctx0: exit_main
+//       r=[6,6]
+//       #ret=[-inf,+inf]
+//       n=[-inf,+inf]
 //   inc_pp0_ctx1: pp0
+//       r=[-inf,+inf]
+//       #ret=[-inf,+inf]
+//       n=[5,5]
 //   main_entry_main_ctx0: entry_main
+//       r=[-inf,+inf]
+//       #ret=[-inf,+inf]
+//       n=[-inf,+inf]
 //   main_pp2_ctx0: pp2
+//       r=[-inf,+inf]
+//       #ret=[-inf,+inf]
+//       n=[-inf,+inf]
 //   inc_entry_inc_ctx1: entry_inc
+//       r=[-inf,+inf]
+//       #ret=[-inf,+inf]
+//       n=[5,5]
 //   main_pp3_ctx0: pp3
 //       check 0<r
 //       r=[6,6]
+//       #ret=[-inf,+inf]
+//       n=[-inf,+inf]
 //   inc_result_inc_ctx1: exit_inc
+//       r=[-inf,+inf]
+//       #ret=[6,6]
+//       n=[5,5]
 //
 // edges:
 //   main_pp4_ctx0 -> main_result_main_ctx0: terminate

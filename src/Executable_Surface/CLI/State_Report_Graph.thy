@@ -342,6 +342,142 @@ definition full_state_checked_node_annotation ::
                      Node_Annotation lbl status \<Rightarrow>
                        Some (Node_Annotation (join_esc_nl (lbl # lines)) status))))"
 
+subsection \<open>The unit context as a contextual graph\<close>
+
+text \<open>
+  A context-insensitive analysis is not a separate graph shape.  Its context
+  type is \<^typ>\<open>unit\<close>, so it is the degenerate contextual analysis with exactly
+  one context.  Keeping that fact in the graph construction rather than merely
+  selecting View_Contexts at the public boundary makes all three
+  context policies use the same presentation model: procedure-scoped locals,
+  a separate return slot, contextual clusters, routed call/return edges, and a
+  check annotation independent of the state lines.
+
+  In particular this avoids feeding the unit analysis through
+  \<^const>\<open>raw_cfg_export\<close>, where the complete state was attached as one generic
+  node annotation.  Entry-state and call-string analyses already carry state
+  through the graph configuration itself; the unit route does the same here.
+\<close>
+
+definition unit_ctx_sol_of ::
+    "('a \<Rightarrow> abstract_value) \<Rightarrow> (unit, 'a abs_state) analysis_result
+       \<Rightarrow> pp \<times> unit + unit \<Rightarrow> abstract_value abs_state lifted"
+where
+  "unit_ctx_sol_of into r x =
+     (case x of
+        Inl (v, _) \<Rightarrow>
+          map_lift (\<lambda>st. into \<circ> st) (lookup_context r v ())
+      | Inr _ \<Rightarrow> Bot)"
+
+definition unit_ctx_check_annotation ::
+    "(pp \<times> exp \<times> check_result lifted) list
+       \<Rightarrow> pp \<Rightarrow> unit \<Rightarrow> graph_node_annotation option"
+where
+  "unit_ctx_check_annotation rows v _ =
+     (case find (\<lambda>(u, _, _). u = v) rows of
+        None \<Rightarrow> None
+      | Some (_, cnd, Bot) \<Rightarrow>
+          Some (dead_check_annotation cnd)
+      | Some (_, cnd, Lifted res) \<Rightarrow>
+          Some (check_result_annotation res cnd))"
+
+definition unit_ctx_graph_config ::
+    "imp_prog \<Rightarrow> (pp \<times> exp \<times> check_result lifted) list
+       \<Rightarrow> (unit, unit,
+            abstract_value abs_state lifted,
+            abstract_value abs_state lifted)
+          analysis_graph_config"
+where
+  "unit_ctx_graph_config p rows =
+     \<lparr> local_of = id,
+       route = (\<lambda>_ _ _ d.
+         case d of Bot \<Rightarrow> None | Lifted _ \<Rightarrow> Some ()),
+       context_key = (\<lambda>_. STR ''unit''),
+       show_context = (\<lambda>_. ''unit''),
+       locals_for_pp = (\<lambda>v.
+         let sc =
+           compiled_procedure_scope
+             (declared_global p)
+             (prog_table p)
+             (prog_procs p)
+             (prog_cfg p)
+             v
+         in scope_formals sc @ scope_locals sc),
+       return_slot_for_pp = (\<lambda>v.
+         scope_return_slot
+           (compiled_procedure_scope
+             (declared_global p)
+             (prog_table p)
+             (prog_procs p)
+             (prog_cfg p)
+             v)),
+       globals_to_show = [],
+       show_local = (\<lambda>_ _ vars d.
+         case d of
+           Bot \<Rightarrow> [''unreachable'']
+         | Lifted st \<Rightarrow>
+             map (\<lambda>x.
+               String.explode x @ ''='' @ string_of_abstract_value (st x))
+               vars),
+       format_return = (\<lambda>_ _ ret d.
+         case d of
+           Bot \<Rightarrow> []
+         | Lifted st \<Rightarrow>
+             if is_top_abstract_value (st ret)
+             then []
+             else [''ret='' @ string_of_abstract_value (st ret)]),
+       show_global = (\<lambda>_ _ _. []),
+       show_global_key = (\<lambda>_. ''Global''),
+       is_shared_global = (\<lambda>_. False),
+       show_internal_globals = False,
+       owner_of =
+         String.explode \<circ>
+           compiled_owner_of (prog_table p) (prog_procs p),
+       cluster_label = (\<lambda>owner _. owner @ '' / unit''),
+       source_text =
+         Some
+           (pretty_string_of_program
+             (prog_table p)
+             (prog_procs p)
+             (prog_main p)
+             []),
+       node_annotation = unit_ctx_check_annotation rows
+     \<rparr>"
+
+definition unit_ctx_export_of ::
+    "('a \<Rightarrow> abstract_value)
+       \<Rightarrow> (unit, 'a abs_state) analysis_result
+       \<Rightarrow> (pp \<times> exp \<times> check_result lifted) list
+       \<Rightarrow> imp_prog
+       \<Rightarrow> export_graph"
+where
+  "unit_ctx_export_of into r rows p =
+     (let g = prog_cfg p;
+          cfg = unit_ctx_graph_config p rows;
+          sol = unit_ctx_sol_of into r
+      in analysis_graph_to_export cfg g sol
+           (build_analysis_graph cfg g
+             (contextual_result_domain cfg g r)
+             sol))"
+
+definition unit_ctx_graph_snapshot_of ::
+    "('a \<Rightarrow> abstract_value)
+       \<Rightarrow> (unit, 'a abs_state) analysis_result
+       \<Rightarrow> (pp \<times> exp \<times> check_result lifted) list
+       \<Rightarrow> imp_prog
+       \<Rightarrow> String.literal"
+where
+  "unit_ctx_graph_snapshot_of into r rows p =
+     (let g = prog_cfg p;
+          cfg = unit_ctx_graph_config p rows;
+          sol = unit_ctx_sol_of into r
+      in String.implode
+           (analysis_graph_to_canonical_text cfg g sol
+             (build_analysis_graph cfg g
+               (contextual_result_domain cfg g r)
+               sol)))"
+
+
 text \<open>
   One solve behind both views. A report browser needs a state at every point
   and a verdict at every check, and those are two readings of one solved

@@ -212,13 +212,6 @@ CASES = [
         "digraph",
     ),
     (
-        "--context-graph with --context call-string is rejected",
-        ["--analysis", "interval", "--context", "call-string", "--context-depth", "2",
-         "--context-graph", "expanded", "--dot", SANITY_FILE],
-        1,
-        "--context-graph is not supported with --context call-string",
-    ),
-    (
         "--dot with --context call-string is accepted",
         ["--analysis", "interval", "--context", "call-string", "--context-depth", "2", "--dot", SANITY_FILE],
         0,

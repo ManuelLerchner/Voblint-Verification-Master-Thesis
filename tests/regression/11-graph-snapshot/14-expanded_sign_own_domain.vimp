@@ -1,7 +1,7 @@
 // PARAM: --analysis sign --context entry-state
 // The expanded rendering at a domain other than Interval, and the default
 // one: an entry-state run draws one node per (point, context) unless
-// --context-graph collapsed asks for the joined view. The routing decision
+// asks for the joined view. The routing decision
 // behind the enter edges is callee_ctx_of, taken once for every domain from
 // the solved result table; before that it existed only as an Interval-typed
 // mirror and every other domain was rejected outright.

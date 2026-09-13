@@ -13,6 +13,12 @@
 
 output: [summary]
 
+# Lefthook's default glob matcher gives `**` non-standard semantics:
+# it matches one-or-more directories rather than zero-or-more. Most patterns
+# below intentionally use the conventional recursive meaning.
+glob_matcher: doublestar
+
+
 pre-commit:
   fail_on_changes: always
 
@@ -56,8 +62,14 @@ pre-commit:
       group:
         parallel: true
         jobs:
+          # Keep the verification task graph itself honest. This is broad on
+          # purpose: changes to tasks, CI, scripts, or their descriptions can
+          # otherwise make local `verify` and GitHub CI silently diverge.
           - name: verification-task-surface
             glob:
+              - ".github/**/*.yaml"
+              - ".github/**/*.yml"
+              - ".lefthook.yaml"
               - "**/*.md"
               - "**/*.ml"
               - "**/*.mli"
@@ -83,6 +95,29 @@ pre-commit:
               - "**/ROOTS"
               - "src/**/*.thy"
             run: pixi run sessions-check
+
+          # The regression linter is intentionally build-free. It checks
+          # fixture filenames, PARAM headers, directory classification,
+          # verdict annotations, graph blocks, and related metadata before
+          # we spend time compiling the CLI.
+          #
+          # This would have caught the PR #190 ADC fixture immediately.
+          - name: regression-fixtures
+            glob:
+              - "tests/run.py"
+              - "tests/regression/**/*.vimp"
+            run: pixi run regression-lint
+
+          # PDF session selection is also pure Python. Catch ROOT/import
+          # mistakes before paying for an Isabelle document build.
+          - name: pdf-session-selection
+            glob:
+              - "**/ROOT"
+              - "**/ROOTS"
+              - "src/**/*.thy"
+              - "scripts/mk/pdf.sh"
+              - "tests/test_pdf_session.py"
+            run: pixi run isabelle-pdf-selection-check
 
           # Guard the generated Isabelle grammar's source-position/markup
           # contract independently of the generated-file drift check.
@@ -167,7 +202,9 @@ pre-commit:
             run: pixi run theory-prose-check
 
           - name: retired-identifiers-check
-            glob: "src/**/*.thy"
+            glob:
+              - "src/**/*.thy"
+              - "scripts/retired_identifiers.txt"
             run: pixi run retired-identifiers-check -- {staged_files}
 
           # Whether a locale name is free depends on the complete theory tree.

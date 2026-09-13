@@ -26,6 +26,7 @@
 //   main_pp2_ctx0: pp2
 //       unreachable
 //   main_pp3_ctx0: pp3
+//       check x==5
 //       #ret=[-inf,+inf]
 //       x=[5,5]
 //   main_pp4_ctx0: pp4

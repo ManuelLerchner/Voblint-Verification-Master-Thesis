@@ -243,40 +243,73 @@ verification-surface-check = { cmd = "python3 scripts/check_verification_surface
 # Supported local verification gate. GitHub CI invokes the same named leaf
 # tasks in separately scheduled jobs; verification-surface-check prevents drift.
 # This only resolves from the default environment, which composes every feature.
+# Supported local verification gate. Keep this deliberately fail-fast:
+#
+#   1. pure/static repository checks
+#   2. cheap generated/frontend/CLI checks
+#   3. analyzer/report integration checks
+#   4. Isabelle-dependent work
+#   5. documentation/PDF builds
+#
+# Pixi executes `depends-on` entries in the order listed and stops at the
+# first failure, so ordering here directly controls how quickly `verify`
+# reports inexpensive mistakes.
 verify = { depends-on = [
+  # ------------------------------------------------------------------------
+  # Static / no-build checks
+  # ------------------------------------------------------------------------
+  "verification-surface-check",
+  "regression-lint",
   "isabelle-ascii-check",
+  "sessions-check",
+  "grammar-id-position-check",
   "grammar-check",
   "assembly-check",
   "analysis-registry-check",
-  "sessions-check",
+  "codegen-modules-check",
+  "codegen-api-check",
+  "isabelle-pdf-selection-check",
   "theory-prose-check",
   "retired-identifiers-check",
   "locale-parameters-check",
-  "isabelle-build",
-  "isabelle-docs-build",
-  "isabelle-pdf-build",
-  "isabelle-pdf-selection-check",
-  "isabelle-lint",
-  "codegen-check",
-  "codegen-modules-check",
-  "codegen-api-check",
-  "thesis-claims",
-  "thesis-facts",
   "thesis-refs",
   "thesis-snippets",
+
+  # ------------------------------------------------------------------------
+  # Cheap standalone builds / generated-code consumers
+  # ------------------------------------------------------------------------
   "thesis-typst",
-  "regression-lint",
-  "grammar-id-position-check",
+  "codegen-regression",
+
+  # ------------------------------------------------------------------------
+  # CLI / analyzer / report checks
+  # ------------------------------------------------------------------------
+  "cli-smoke",
   "cli-test",
   "arithmetic-diagnostics-check",
-  "cli-smoke",
+  "property-test",
   "html-report-structure-check",
   "html-report-corpus-audit",
   "html-report-config-audit",
-  "codegen-regression",
-  "property-test",
-  "verification-surface-check",
-], description = "Run the supported local verification gate; GitHub CI runs the same leaf checks separately." }
+  "thesis-claims",
+
+  # ------------------------------------------------------------------------
+  # Isabelle-dependent checks
+  #
+  # Keep the main build before consumers such as thesis-facts/codegen so
+  # they can reuse the populated heap store.
+  # ------------------------------------------------------------------------
+  "isabelle-build",
+  "thesis-facts",
+  "codegen-check",
+  "isabelle-lint",
+
+  # ------------------------------------------------------------------------
+  # Expensive rendered artifacts
+  # ------------------------------------------------------------------------
+  "isabelle-docs-build",
+  "isabelle-pdf-build",
+], description = "Run the supported local verification gate, cheapest fail-fast checks first; GitHub CI runs the same leaf checks separately." }
 [feature.thesis.dependencies]
 typst = ">=0.15"
 [feature.thesis.tasks]

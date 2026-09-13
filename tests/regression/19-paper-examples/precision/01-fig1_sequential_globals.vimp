@@ -50,29 +50,68 @@
 //
 // nodes:
 //   f_pp1_ctx1: pp1
+//       #ret=[-inf,+inf]
+//       g=[-17,-17]
+//       h=[1,1]
 //   f_pp2_ctx1: pp2
+//       #ret=[-inf,+inf]
+//       g=[42,42]
+//       h=[1,1]
 //   main_pp4_ctx0: pp4
+//       #ret=[-inf,+inf]
+//       g=[1,1]
+//       h=[0,0]
 //   main_pp5_ctx0: pp5
+//       #ret=[-inf,+inf]
+//       g=[1,1]
+//       h=[0,0]
 //   main_pp8_ctx0: pp8
 //       check h==1
+//       #ret=[-inf,+inf]
 //       g=[42,42]
 //       h=[1,1]
 //   main_pp9_ctx0: pp9
 //       check g<43
+//       #ret=[-inf,+inf]
 //       g=[42,42]
 //       h=[1,1]
 //   main_pp10_ctx0: pp10
+//       #ret=[-inf,+inf]
+//       g=[42,42]
+//       h=[1,1]
 //   main_result_main_ctx0: exit_main
+//       #ret=[-inf,+inf]
+//       g=[42,42]
+//       h=[1,1]
 //   f_pp0_ctx1: pp0
+//       #ret=[-inf,+inf]
+//       g=[-17,-17]
+//       h=[0,0]
 //   main_entry_main_ctx0: entry_main
+//       #ret=[-inf,+inf]
+//       g=[0,0]
+//       h=[0,0]
 //   main_pp3_ctx0: pp3
+//       #ret=[-inf,+inf]
+//       g=[0,0]
+//       h=[0,0]
 //   main_pp6_ctx0: pp6
+//       #ret=[-inf,+inf]
+//       g=[-17,-17]
+//       h=[0,0]
 //   f_entry_f_ctx1: entry_f
+//       #ret=[-inf,+inf]
+//       g=[-17,-17]
+//       h=[0,0]
 //   main_pp7_ctx0: pp7
 //       check g==42
+//       #ret=[-inf,+inf]
 //       g=[42,42]
 //       h=[1,1]
 //   f_result_f_ctx1: exit_f
+//       #ret=[-inf,+inf]
+//       g=[42,42]
+//       h=[1,1]
 //
 // edges:
 //   f_pp1_ctx1 -> f_pp2_ctx1: g := 42

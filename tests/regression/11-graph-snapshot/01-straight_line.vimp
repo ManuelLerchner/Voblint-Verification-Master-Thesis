@@ -19,11 +19,20 @@
 // nodes:
 //   main_pp1_ctx0: pp1
 //       check 0<x
+//       #ret=[-inf,+inf]
 //       x=[5,5]
 //   main_pp2_ctx0: pp2
+//       #ret=[-inf,+inf]
+//       x=[5,5]
 //   main_result_main_ctx0: exit_main
+//       #ret=[-inf,+inf]
+//       x=[5,5]
 //   main_entry_main_ctx0: entry_main
+//       #ret=[-inf,+inf]
+//       x=[-inf,+inf]
 //   main_pp0_ctx0: pp0
+//       #ret=[-inf,+inf]
+//       x=[-inf,+inf]
 //
 // edges:
 //   main_pp1_ctx0 -> main_pp2_ctx0: check(0<x)

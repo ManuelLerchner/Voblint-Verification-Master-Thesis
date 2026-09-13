@@ -34,18 +34,54 @@
 //       check y==20 [unknown]
 //       x=[6,+inf]
 //       y=[6,+inf]
+//       #ret=[-inf,+inf]
+//       p=[-inf,+inf]
 //   main_pp6_ctx0: pp6
+//       x=[6,+inf]
+//       y=[6,+inf]
+//       #ret=[-inf,+inf]
+//       p=[-inf,+inf]
 //   main_result_main_ctx0: exit_main
+//       x=[6,+inf]
+//       y=[6,+inf]
+//       #ret=[-inf,+inf]
+//       p=[-inf,+inf]
 //   f_pp0_ctx1: pp0
+//       x=[-inf,+inf]
+//       y=[-inf,+inf]
+//       #ret=[-inf,+inf]
+//       p=[3,+inf]
 //   main_entry_main_ctx0: entry_main
+//       x=[-inf,+inf]
+//       y=[-inf,+inf]
+//       #ret=[-inf,+inf]
+//       p=[-inf,+inf]
 //   main_pp2_ctx0: pp2
+//       x=[-inf,+inf]
+//       y=[-inf,+inf]
+//       #ret=[-inf,+inf]
+//       p=[-inf,+inf]
 //   main_pp3_ctx0: pp3
+//       x=[6,+inf]
+//       y=[-inf,+inf]
+//       #ret=[-inf,+inf]
+//       p=[-inf,+inf]
 //   f_entry_f_ctx1: entry_f
+//       x=[-inf,+inf]
+//       y=[-inf,+inf]
+//       #ret=[-inf,+inf]
+//       p=[3,+inf]
 //   main_pp4_ctx0: pp4
 //       check x==6 [unknown]
 //       x=[6,+inf]
 //       y=[6,+inf]
+//       #ret=[-inf,+inf]
+//       p=[-inf,+inf]
 //   f_result_f_ctx1: exit_f
+//       x=[-inf,+inf]
+//       y=[-inf,+inf]
+//       #ret=[6,+inf]
+//       p=[3,+inf]
 //
 // edges:
 //   main_pp5_ctx0 -> main_pp6_ctx0: check(y==20)

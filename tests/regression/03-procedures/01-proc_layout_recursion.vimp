@@ -53,31 +53,60 @@
 //
 // nodes:
 //   f_pp2_ctx1: pp2
+//       unreachable
 //   inc_pp9_ctx4: pp9
+//       unreachable
 //   main_pp14_ctx3: pp14
+//       unreachable
 //   main_result_main_ctx3: exit_main
+//       unreachable
 //   f_pp0_ctx1: pp0
+//       #ret=[-inf,+inf]
+//       G=[0,0]
 //   inc_pp8_ctx4: pp8
+//       unreachable
 //   main_entry_main_ctx3: entry_main
+//       #ret=[-inf,+inf]
+//       G=[0,0]
 //   f_pp1_ctx1: pp1
+//       #ret=[-inf,+inf]
+//       G=[0,0]
 //   f_pp3_ctx1: pp3
+//       unreachable
 //   g_pp4_ctx2: pp4
+//       unreachable
 //   h_entry_h_ctx0: entry_h
+//       unreachable
 //   g_pp5_ctx2: pp5
+//       unreachable
 //   h_result_h_ctx0: exit_h
+//       unreachable
 //   h_pp6_ctx0: pp6
+//       unreachable
 //   h_pp7_ctx0: pp7
+//       unreachable
 //   main_pp10_ctx3: pp10
+//       #ret=[-inf,+inf]
+//       G=[0,0]
 //   f_entry_f_ctx1: entry_f
+//       #ret=[-inf,+inf]
+//       G=[0,0]
 //   f_result_f_ctx1: exit_f
+//       unreachable
 //   main_pp11_ctx3: pp11
+//       unreachable
 //   g_entry_g_ctx2: entry_g
+//       unreachable
 //   g_result_g_ctx2: exit_g
+//       unreachable
 //   main_pp12_ctx3: pp12
+//       unreachable
 //   inc_entry_inc_ctx4: entry_inc
+//       unreachable
 //   main_pp13_ctx3: pp13
-//       check 1 [dead]
+//       unreachable
 //   inc_result_inc_ctx4: exit_inc
+//       unreachable
 //
 // edges:
 //   f_pp2_ctx1 -> f_pp3_ctx1: G := G
