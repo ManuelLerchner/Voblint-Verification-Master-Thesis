@@ -37,12 +37,6 @@ CASES = [
         "unknown --context-graph value",
     ),
     (
-        "--context-graph expanded without entry-state context is rejected",
-        ["--analysis", "interval", "--context-graph", "expanded", SANITY_FILE],
-        1,
-        "--context-graph expanded requires --context entry-state",
-    ),
-    (
         "--context call-string without --context-depth is rejected",
         ["--analysis", "interval", "--context", "call-string", SANITY_FILE],
         1,
@@ -55,14 +49,6 @@ CASES = [
         ["--analysis", "sign", "--context", "entry-state", "--graph-snapshot", SANITY_FILE],
         0,
         "",
-    ),
-    (
-        # --context-graph selects a graph rendering, so it has nothing to say
-        # about a run that prints the text report.
-        "explicit --context-graph expanded still prints the text report",
-        ["--analysis", "sign", "--context", "entry-state", "--context-graph", "expanded", SANITY_FILE],
-        0,
-        "PROVED",
     ),
     (
         "several domains without --html is rejected",
@@ -113,19 +99,6 @@ CASES = [
         ["--analysis", "interval", "--solver", "warrow", "--html-out", "/tmp/voblint-smoke-solver", SANITY_FILE],
         0,
         "node(s)",
-    ),
-    (
-        "--solver with a stdout rendering is still rejected",
-        ["--analysis", "interval", "--solver", "warrow", "--dot-full", SANITY_FILE],
-        1,
-        "--solver supports the plain text report and --html",
-    ),
-    (
-        # The contextual routes publish verdict reports, not state tables.
-        "--solver with --html and a context is rejected",
-        ["--analysis", "interval", "--solver", "join", "--context", "entry-state", "--html", SANITY_FILE],
-        1,
-        "--solver with --html requires --context none",
     ),
     (
         "--context-depth without --context call-string is rejected",
@@ -235,14 +208,6 @@ CASES = [
     (
         "sign + entry-state + --dot renders sign, not interval",
         ["--analysis", "sign", "--context", "entry-state", "--dot-full", SANITY_FILE],
-        0,
-        "digraph",
-    ),
-    (
-        # Every domain draws its own expanded graph; the renderer is no longer
-        # typed in one domain's context type.
-        "--context-graph expanded with a non-interval domain is accepted",
-        ["--analysis", "sign", "--context", "entry-state", "--context-graph", "expanded", "--dot", SANITY_FILE],
         0,
         "digraph",
     ),

@@ -1,4 +1,4 @@
-// PARAM: --analysis interval --context entry-state --context-graph expanded
+// PARAM: --analysis interval --context entry-state
 // Two calls with the same entered argument share exactly one callee
 // context (idf/[5]) -- there is no second cluster to distinguish them --
 // but must still resume at their own distinct call-site continuations, not

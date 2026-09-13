@@ -56,18 +56,36 @@ let style_of_status = function
 (* An annotation overrides the structural styling, which is why xn_status is
    consulted first; the export leaves it None on global and source nodes, where
    the structural role is the only thing that decides. *)
+let structural_attrs node =
+  match C.xn_kind node with
+  | C.XN_Entry | C.XN_ProcEntry ->
+    "shape=doublecircle,color=green,style=filled,fillcolor=lightyellow"
+  | C.XN_Exit | C.XN_ProcExit ->
+    "shape=doublecircle,color=gray40,style=filled,fillcolor=lightgray"
+  | C.XN_Point ->
+    "shape=box,style=filled,fillcolor=lightgreen"
+  | C.XN_Global ->
+    "shape=note,width=2.2,fixedsize=false"
+  | C.XN_Source ->
+    "shape=plain"
+
+(* NS_Plain carries content, not a semantic finding.  In particular the
+   unit-context/full-state path annotates every live node with NS_Plain, while
+   the entry-state and call-string builders carry ordinary state in xn_lines
+   and leave xn_status unset.  Treating NS_Plain as a style override therefore
+   made the same structural node render differently solely because of the
+   context policy: entries/exits became ordinary green boxes in Ctx_None.
+
+   Only an actual semantic status overrides the node's structural appearance.
+   Plain state annotations and absent annotations share the same structural
+   style. *)
 let node_attrs node =
   match C.xn_status node with
-  | Some status -> style_of_status status
-  | None ->
-    (match C.xn_kind node with
-     | C.XN_Entry | C.XN_ProcEntry ->
-       "shape=doublecircle,color=green,style=filled,fillcolor=lightyellow"
-     | C.XN_Exit | C.XN_ProcExit ->
-       "shape=doublecircle,color=gray40,style=filled,fillcolor=lightgray"
-     | C.XN_Point -> "shape=box,style=filled,fillcolor=lightgreen"
-     | C.XN_Global -> "shape=note,width=2.2,fixedsize=false"
-     | C.XN_Source -> "shape=plain")
+  | None
+  | Some C.NS_Plain ->
+    structural_attrs node
+  | Some status ->
+    style_of_status status
 
 (* xe_label carries the edge's content without the wording that names its role
    -- "f(x)", not "call f(x)" -- so the phrasing below is this renderer's. *)

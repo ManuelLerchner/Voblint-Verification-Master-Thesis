@@ -161,24 +161,14 @@ let context_of_string mode depth =
       Error ("Unknown context mode: " ^ mode)
 
 
-(* The browser wants checks and a drawing from one result.
+(* Every successful browser run asks for the canonical contextual graph.
 
-   Context-insensitive runs can use the checked-state view for both default
-   and explicitly selected solvers.
-
-   Context-sensitive production/default runs use the per-context view so the
-   graph does not join away the very contexts the user requested.
-
-   Explicit-solver contextual routes currently publish the report but not a
-   graph-capable contextual state view. Preserve those valid report runs
-   instead of rejecting them or silently performing a second analysis. *)
-let browser_view context =
-  match context with
-  | C.Ctx_None ->
-      C.View_Checked_States
-  | C.Ctx_EntryState
-  | C.Ctx_CallString _ ->
-      C.View_Contexts
+   Context-insensitive analysis is not a separate rendering discipline: its
+   result table has exactly one unit context. Entry-state and call-string runs
+   keep every covered context separate. The solver chooses the solved table; it
+   does not choose how that table is visualized. *)
+let browser_view _browser_solver _context =
+  C.View_Contexts
 
 
 (* -------------------------------------------------------------------------- *)
@@ -320,7 +310,7 @@ let run analysis_js solver_js context_js context_depth source_js =
                         analysis
                         (solver_argument browser_solver)
                         context
-                        (browser_view context)
+                        (browser_view browser_solver context)
                         program
                     with
                     | C.Malformed_Program ->

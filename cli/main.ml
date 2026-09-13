@@ -28,7 +28,7 @@
 let usage =
   "voblint --analysis sign|interval|int|parity|congruence \
    [--context none|entry-state|call-string] \
-   [--context-depth K] [--context-graph collapsed|expanded] [--dot] \
+   [--context-depth K] [--context-graph expanded] [--dot] \
    [--timeout SECONDS] FILE.vimp\n\
    voblint --parse-only FILE.vimp\n\n\
    Options:\n\
@@ -58,10 +58,8 @@ let usage =
   \                             site). entry-state re-analyzes each\n\
   \                             callee per distinct entered-argument context,\n\
   \                             including under --dot/--dot-full/\n\
-  \                             --graph-snapshot (a node covered by several\n\
-  \                             contexts renders their joined state under\n\
-  \                             --context-graph collapsed; the default draws\n\
-  \                             them separately).\n\
+  \                             --graph-snapshot, which always draw the\n\
+  \                             covered contexts separately.\n\
   \                             call-string re-analyzes each callee per\n\
   \                             distinct bounded call history (requires\n\
   \                             --context-depth K, K >= 1).\n\
@@ -78,24 +76,13 @@ let usage =
   \                             positive use as a public value and is\n\
   \                             rejected rather than silently treated as\n\
   \                             --context none).\n\
-  \  --context-graph collapsed|expanded\n\
-  \                             How --dot/--dot-full/--graph-snapshot/--html\n\
-  \                             render --context entry-state. expanded draws\n\
-  \                             one node per (point, context) pair, annotated\n\
-  \                             through the same solved AnalysisResult with no\n\
-  \                             join, so a point dead in one activation and\n\
-  \                             live in another renders as two distinct nodes\n\
-  \                             rather than one live-looking join. collapsed\n\
-  \                             draws one node per program point with its\n\
-  \                             contexts joined.\n\
-  \                             The default is expanded wherever the\n\
-  \                             configuration supports it: a context-sensitive\n\
-  \                             run is asked for because the contexts matter.\n\
-  \                             An explicit --context-graph expanded with\n\
-  \                             --context none, or with --context call-string\n\
-  \                             (whose renderer is always per-context and has\n\
-  \                             no collapsed mode), is a configuration error\n\
-  \                             rather than a silent fallback.\n\
+  \  --context-graph expanded    Compatibility spelling for the canonical graph\n\
+  \                             rendering. All graph outputs are contextual:\n\
+  \                             --context none has one unit context, while\n\
+  \                             entry-state and call-string draw one node per\n\
+  \                             (point, context) pair. collapsed is rejected;\n\
+  \                             joining contexts for presentation would hide\n\
+  \                             distinctions the analysis deliberately keeps.\n\
   \  --solver join|per-origin|warrow|warrow-per-origin\n\
   \                             Pick the vendored solver's update-rule\n\
   \                             discipline directly, bypassing the domain's\n\
@@ -107,14 +94,11 @@ let usage =
   \                             the same report and graph views from its own\n\
   \                             solved table; unsupported pairings are rejected\n\
   \                             rather than falling back to another solver.\n\
-  \  --dot                      Emit a GraphViz .dot rendering of the solved CFG,\n\
-  \                             annotated at check nodes only, instead of the\n\
-  \                             textual check report.\n\
-  \  --dot-full                 Like --dot, but every node is annotated with its\n\
-  \                             own computed abstract state, not just check nodes.\n\
-  \                             No effect under --context call-string or\n\
-  \                             --context-graph expanded: those views already\n\
-  \                             annotate every node with its per-context state.\n\
+  \  --dot                      Emit the canonical contextual GraphViz .dot CFG\n\
+  \                             instead of the textual check report. Every local\n\
+  \                             node carries its own context state and checks.\n\
+  \  --dot-full                 Compatibility alias for --dot; contextual graphs\n\
+  \                             already annotate every node with its state.\n\
   \  --html                     Write a browsable HTML result directory (default:\n\
   \                             build/report/)\n\
   \                             (abstract states live in per-node documents, so\n\
@@ -532,8 +516,11 @@ let () =
       parse_args rest
     | "--context-graph" :: v :: rest ->
       (match v with
-       | "collapsed" -> context_graph := Some Collapsed
        | "expanded" -> context_graph := Some Expanded
+       | "collapsed" ->
+         prerr_endline
+           "voblint: --context-graph collapsed is no longer supported; graphs are always contextual";
+         exit 1
        | _ -> prerr_endline ("unknown --context-graph value: " ^ v); exit 1);
       parse_args rest
     | "--solver" :: v :: rest ->
@@ -607,19 +594,13 @@ let () =
       prerr_endline usage;
       exit 1
   in
-  (* expanded is meaningless without a context to expand -- reject rather than
-     silently rendering the collapsed graph a bare --context-graph expanded
-     might otherwise appear to have requested. *)
-  if !context_graph = Some Expanded && context = Voblint_CLI.Generated.Ctx_None then begin
-    prerr_endline "voblint: --context-graph expanded requires --context entry-state";
-    exit 1
-  end;
-  (* A call-string graph is always rendered per context (the renderer has no
-     collapsed mode), so --context-graph expanded is rejected rather than
-     silently ignored. --context-graph collapsed passes and has no effect. *)
-  if !context_graph = Some Expanded && !context_kind = CK_CallString then begin
+  (* Graph output has one canonical shape: one node per (point, context). The
+     context-insensitive analysis is the degenerate one-context case. Keep the
+     old expanded spelling as a compatibility no-op, but reject collapsed rather
+     than silently joining away distinctions the analysis preserved. *)
+  if !context_graph = Some Collapsed then begin
     prerr_endline
-      "voblint: --context-graph is not supported with --context call-string";
+      "voblint: --context-graph collapsed is no longer supported; graphs are always contextual";
     exit 1
   end;
   (* --html writes a directory; the other renderings write one document to
@@ -629,18 +610,6 @@ let () =
     prerr_endline "voblint: --html cannot be combined with --dot/--dot-full/--graph-snapshot";
     exit 1
   end;
-  (* An entry-state run is drawn expanded by default: the collapsed rendering
-     joins every context covering a point into one box, which is lossy in
-     exactly the way the analysis is precise -- three activations of one callee
-     become one box, and a point dead in one activation and live in another
-     reads as live. --context-graph collapsed still asks for the joined view.
-     Ctx_None has one context, so there is nothing to expand there. *)
-  let expanded_supported = context = Voblint_CLI.Generated.Ctx_EntryState in
-  let context_graph =
-    match !context_graph with
-    | Some mode -> mode
-    | None -> if expanded_supported then Expanded else Collapsed
-  in
   (* Several domains in one report means several solves feeding one set of node
      documents, merged by node identifier. Identifiers are built from the CFG
      and the context, so they only agree across domains when the context is the
@@ -668,27 +637,15 @@ let () =
         (Voblint_CLI.Generated.out_diagnostics out);
       out
   in
-  (* A graph drawn per context already annotates every node with its own
-     context's state, so --dot-full has nothing left to add and both settings
-     ask for the same view. That coincidence is stated once here instead of
-     reappearing in each rendering below. *)
-  let per_context_graph = !context_kind = CK_CallString || context_graph = Expanded in
-  let graph_view ~full =
-    if per_context_graph then Voblint_CLI.Generated.View_Contexts
-    else if full then Voblint_CLI.Generated.View_States
-    else Voblint_CLI.Generated.View_Checks
+  (* Every graph consumer asks for the same contextual view. Ctx_None is not
+     a separate drawing discipline: its result table simply has the one unit
+     context. --dot-full is therefore a compatibility alias for --dot. *)
+  let graph_view ~full:_ =
+    Voblint_CLI.Generated.View_Contexts
   in
-  (* The HTML report puts a state in every node document and a verdict beside
-     every check, which is one view; drawing contexts separately replaces it
-     with the per-context one. *)
   let html_view =
-    if per_context_graph then Voblint_CLI.Generated.View_Contexts
-    else Voblint_CLI.Generated.View_Checked_States
+    Voblint_CLI.Generated.View_Contexts
   in
-  (* The text report draws nothing, so neither --context-graph nor --dot-full
-     reaches it: it wants the check column and nothing else, at every context.
-     Asking for a drawing here would solve a graph no one prints, which on a
-     recursive program under --context entry-state is the whole running time. *)
   let report_view = Voblint_CLI.Generated.View_Report in
   (* Checked here, not inside the contained child: a refusal to write into the
      given directory is an argument error the user should see as one, not as a

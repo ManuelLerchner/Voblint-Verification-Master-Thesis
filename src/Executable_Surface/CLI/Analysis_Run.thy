@@ -174,6 +174,8 @@ definition view_annotation ::
         View_States \<Rightarrow> point_node_annotation (program_vars p) env
       | View_Checked_States \<Rightarrow>
           full_state_checked_node_annotation (program_vars p) env (decided_verdicts rows)
+      | View_Contexts \<Rightarrow>
+          full_state_checked_node_annotation (program_vars p) env (decided_verdicts rows)
       | _ \<Rightarrow>
           verdict_state_report_node_annotation (report_vars rows)
             (map (\<lambda>(v, cnd, verdict). (v, cnd, verdict, env v)) rows))"
@@ -265,8 +267,7 @@ definition flat_output_of ::
           env = project_env into r;
           rows = flat_rows_of classify bot_state r p
       in case view of
-           View_Contexts \<Rightarrow> Unsupported_Configuration
-         | View_Report \<Rightarrow> Analysed (finish (report_output env rows globals))
+           View_Report \<Rightarrow> Analysed (finish (report_output env rows globals))
          | _ \<Rightarrow> Analysed (finish (collapsed_output view p env rows globals)))"
 
 text \<open>
@@ -325,10 +326,11 @@ text \<open>
   checks beside it come from another.
 
   Every supported contextual plan below now feeds its solved table through the
-  same context-aware output builder, independent of solver discipline. Thus
-  \<open>View_Contexts\<close> is available whenever the selected plan is context-sensitive;
-  \<^const>\<open>Unsupported_Configuration\<close> remains for genuinely unsupported plan
-  pairings and for \<open>View_Contexts\<close> on a context-free plan.
+  same context-aware output builder, independent of solver discipline. Graph consumers
+  use \<open>View_Contexts\<close> uniformly: a context-free result is its single unit context,
+  while entry-state and call-string results keep every covered context separate.
+  \<^const>\<open>Unsupported_Configuration\<close> therefore remains only for genuinely
+  unsupported plan pairings.
 \<close>
 
 definition table_report_answer ::

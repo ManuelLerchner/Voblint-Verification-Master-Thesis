@@ -1,13 +1,13 @@
-// PARAM: --analysis interval --context entry-state --context-graph expanded --dot-full
+// PARAM: --analysis interval --context entry-state --dot-full
 // Flagship end-to-end contextual graph: three calls to bump, three distinct
 // entry-state contexts, and (on the third call) an actual argument sourced
 // from a declared global rather than a literal -- the same program as
 // 04-globals/precision/03-global_across_calls_entry_state.vimp, which pins
 // its check-level result; this fixture pins the graph-rendering side.
-// --context-graph expanded draws one cluster per (call site, entered
-// context) pair, so bump's three activations render with their own
-// un-joined n (n=[5,5], n=[4,4], n=[19,19]) rather than collapsed's single
-// shared cluster and n=[4,19] join (13-full-state-dot/02-entry_state_context_join.vimp
+// draws one cluster per (call site, entered  context) pair, so bump's three
+// activations render with their own un-joined n (n=[5,5], n=[4,4], n=[19,19]) 
+// rather than collapsed's single shared cluster and n=[4,19] join 
+// (13-full-state-dot/02-entry_state_context_join.vimp
 // shows that same joined-state shape for a two-call-site sibling). The
 // third call also locks in that a global-valued actual argument routes to
 // its own genuine context ([19,19], read from g at the call site), not a

@@ -12049,10 +12049,15 @@ let rec contextual_analysis_canonical_text _A _B
 let rec raw_cfg_graph_config
   pi ps annotate =
     Analysis_graph_config_ext
-      (id, (fun _ _ _ _ -> Some ()), (fun _ -> ""), (fun _ -> []),
-        (fun _ -> []), (fun _ -> None), [], (fun _ _ _ _ -> []),
-        (fun _ _ _ _ -> []), (fun _ _ _ -> []), (fun _ -> []), (fun _ -> false),
-        false, comp explode (compiled_owner_of pi ps), (fun owner _ -> owner),
+      (id, (fun _ _ _ _ -> Some ()), (fun _ -> "unit"),
+        (fun _ -> [char_0x75; char_0x6E; char_0x69; char_0x74]), (fun _ -> []),
+        (fun _ -> None), [], (fun _ _ _ _ -> []), (fun _ _ _ _ -> []),
+        (fun _ _ _ -> []), (fun _ -> []), (fun _ -> false), false,
+        comp explode (compiled_owner_of pi ps),
+        (fun owner _ ->
+          owner @
+            [char_0x20; char_0x2F; char_0x20; char_0x75; char_0x6E; char_0x69;
+              char_0x74]),
         Some (pretty_string_of_program pi ps (main_body pi) []),
         (fun p _ -> annotate p), ());;
 
@@ -12150,9 +12155,8 @@ let rec view_annotation
         full_state_checked_node_annotation (program_vars p) env
           (decided_verdicts rows)
       | View_Contexts ->
-        verdict_state_report_node_annotation (report_vars rows)
-          (map (fun (v, (cnd, verdict)) -> (v, (cnd, (verdict, env v))))
-            rows));;
+        full_state_checked_node_annotation (program_vars p) env
+          (decided_verdicts rows));;
 
 let rec collapsed_output
   view p env rows globals =
@@ -12406,7 +12410,8 @@ let rec flat_output_of
           Analysed (finish (collapsed_output view p env rows globals))
         | View_Checked_States ->
           Analysed (finish (collapsed_output view p env rows globals))
-        | View_Contexts -> Unsupported_Configuration));;
+        | View_Contexts ->
+          Analysed (finish (collapsed_output view p env rows globals))));;
 
 let rec cs_ctx_check_annotation_of
   classify r g v ctx =

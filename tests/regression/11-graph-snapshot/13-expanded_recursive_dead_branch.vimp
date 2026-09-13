@@ -1,4 +1,4 @@
-// PARAM: --analysis interval --context entry-state --context-graph expanded
+// PARAM: --analysis interval --context entry-state
 // Recursive sibling of 05-expanded_mixed_dead_live_check.vimp: instead of two
 // call sites entering the same procedure under different contexts, one
 // recursive call site (f's own call to itself) enters f under a fresh

@@ -1,4 +1,4 @@
-// PARAM: --analysis interval --context entry-state --context-graph expanded
+// PARAM: --analysis interval --context entry-state
 // Two live (not dead) entry-state contexts disagree on the same source
 // check: f/[1] proves n==1, f/[2] refutes it. Neither activation is
 // unreachable, so aggregate_verdicts (Contextual_Check_Report.thy) combines two
@@ -11,7 +11,7 @@
 // second, conflicting Decided verdict. The collapsed/text-report surface
 // can only print one verdict per source check, so UNKNOWN is not a failure
 // of precision here -- it is the sound answer once two live contexts
-// genuinely disagree. --context-graph expanded's per-context clusters
+// genuinely disagree.'s per-context clusters
 // still show the individual PROVED/REFUTED verdicts underneath.
 // EXPECT-GRAPH-BEGIN
 // clusters:

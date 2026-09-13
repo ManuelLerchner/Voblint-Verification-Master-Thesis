@@ -246,8 +246,8 @@ definition raw_cfg_graph_config ::
   "raw_cfg_graph_config \<Pi> ps annotate =
     \<lparr> local_of = id,
       route = (\<lambda>_ _ _ _. Some ()),
-      context_key = (\<lambda>_. STR ''''),
-      show_context = (\<lambda>_. ''''),
+      context_key = (\<lambda>_. STR ''unit''),
+      show_context = (\<lambda>_. ''unit''),
       locals_for_pp = (\<lambda>_. []),
       return_slot_for_pp = (\<lambda>_. None),
       globals_to_show = [],
@@ -258,7 +258,7 @@ definition raw_cfg_graph_config ::
       is_shared_global = (\<lambda>_. False),
       show_internal_globals = False,
       owner_of = String.explode o compiled_owner_of \<Pi> ps,
-      cluster_label = (\<lambda>owner _. owner),
+      cluster_label = (\<lambda>owner _. owner @ '' / unit''),
       source_text = Some (pretty_string_of_program \<Pi> ps (main_body \<Pi>) []),
       node_annotation = (\<lambda>p _. annotate p)
     \<rparr>"
