@@ -100,11 +100,11 @@ datatype analysis_output =
 definition diagnostic_message :: "arithmetic_diagnostic \<Rightarrow> String.literal" where
   "diagnostic_message diagnostic =
      (let operation = arithmetic_operation (diagnostic_obligation diagnostic);
-          kind = (case operation of Mod _ _ \<Rightarrow> ''remainder'' | _ \<Rightarrow> ''division'');
+          kind = (case operation of Mod _ _ \<Rightarrow> STR ''remainder'' | _ \<Rightarrow> STR ''division'');
           message = (if diagnostic_verdict diagnostic = Check_Refuted
-            then kind @ '' by zero whenever this operation is evaluated: ''
-            else ''possible '' @ kind @ '' by zero: '')
-      in String.implode (message @ string_of_exp 0 operation))"
+            then kind + STR '' by zero whenever this operation is evaluated: ''
+            else STR ''possible '' + kind + STR '' by zero: '')
+      in (message + string_of_exp 0 operation))"
 
 fun with_diagnostics :: "arithmetic_diagnostic list \<Rightarrow> analysis_output \<Rightarrow> analysis_output"
 where
@@ -135,25 +135,22 @@ text \<open>
   which is the empty string here and \<^const>\<open>Bot\<close> in the verdict column beside it.
 \<close>
 
-definition comma_join :: "string list \<Rightarrow> string" where
-  "comma_join xs = (case xs of [] \<Rightarrow> '''' | y # ys \<Rightarrow> y @ concat (map (\<lambda>z. '', '' @ z) ys))"
-
 definition state_slice ::
     "abstract_value abs_state lifted \<Rightarrow> exp \<Rightarrow> String.literal" where
   "state_slice st cnd =
      (case st of
         Bot \<Rightarrow> STR ''''
       | Lifted f \<Rightarrow>
-          String.implode
-            (comma_join (map (\<lambda>x. String.explode x @ ''='' @ string_of_abstract_value (f x))
-                             (exp_vnames_list cnd))))"
+          join_source (STR '', '')
+            (map (\<lambda>x. x + STR ''='' + string_of_abstract_value (f x))
+              (exp_vnames_list cnd)))"
 
 definition check_rows_of ::
-    "(pp \<Rightarrow> abstract_value abs_state lifted) \<Rightarrow> (pp \<times> exp \<times> check_result lifted) list
-       \<Rightarrow> check_row list" where
+    "(pp \<Rightarrow> abstract_value abs_state lifted) \<Rightarrow>
+      (pp \<times> exp \<times> check_result lifted) list \<Rightarrow> check_row list" where
   "check_rows_of env verdicts =
      map (\<lambda>(v, cnd, verdict).
-            Check_Row v cnd (String.implode (string_of_exp 0 cnd)) verdict
+            Check_Row v cnd (string_of_exp 0 cnd) verdict
               (state_slice (env v) cnd))
          verdicts"
 
@@ -188,7 +185,7 @@ definition collapsed_output ::
      (let ann = view_annotation view p env rows
       in Analysis_Output
            (Some (raw_cfg_export (prog_table p) (prog_procs p) ann))
-           (Some (raw_cfg_canonical_text_lit (prog_table p) (prog_procs p) ann))
+           (Some (raw_cfg_canonical_text (prog_table p) (prog_procs p) ann))
            (check_rows_of env rows)
            globals [])"
 

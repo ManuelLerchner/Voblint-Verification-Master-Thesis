@@ -45,41 +45,58 @@ text \<open>
 definition canonical_node_block ::
   "('ctx, 'g, 'a, 'd) analysis_graph_config \<Rightarrow> cfg
     \<Rightarrow> (pp \<times> 'ctx + 'g \<Rightarrow> 'a) \<Rightarrow> ('ctx, 'g) analysis_node list
-    \<Rightarrow> ('ctx, 'g) analysis_node \<Rightarrow> string" where
+    \<Rightarrow> ('ctx, 'g) analysis_node \<Rightarrow> String.literal" where
   "canonical_node_block cfg g sol ns n =
     (case contextual_node_label_lines cfg g sol n of
-       [] \<Rightarrow> ''  '' @ analysis_node_id cfg ns n @ '':'' @ nl
-     | (first # rest) \<Rightarrow>
-         ''  '' @ analysis_node_id cfg ns n @ '': '' @ first @ nl
-           @ concat (map (\<lambda>line. ''      '' @ line @ nl) rest))"
+       [] \<Rightarrow>
+         STR ''  '' + analysis_node_id cfg ns n + STR '':'' + nl
+     | first # rest \<Rightarrow>
+         STR ''  '' + analysis_node_id cfg ns n + STR '': '' + first + nl
+         + join_source (STR '''')
+             (map (\<lambda>line. STR ''      '' + line + nl) rest))"
 
 definition analysis_graph_to_canonical_text ::
   "('ctx, 'g, 'a, 'd) analysis_graph_config \<Rightarrow> cfg
-    \<Rightarrow> (pp \<times> 'ctx + 'g \<Rightarrow> 'a) \<Rightarrow> ('ctx, 'g) analysis_graph \<Rightarrow> string" where
+    \<Rightarrow> (pp \<times> 'ctx + 'g \<Rightarrow> 'a) \<Rightarrow> ('ctx, 'g) analysis_graph
+    \<Rightarrow> String.literal" where
   "analysis_graph_to_canonical_text cfg g sol graph =
     (case graph of (clusters, ns, es) \<Rightarrow>
       (let clusters' = filter (\<lambda>c. c \<noteq> SourceCluster) clusters;
            ns' = filter (\<lambda>n. case n of SourceNode _ \<Rightarrow> False | _ \<Rightarrow> True) ns
        in
-        ''clusters:'' @ nl
-        @ concat (map (\<lambda>c.
-            ''  '' @ analysis_cluster_id clusters c @ '':'' @ nl
-              @ concat (map (\<lambda>n. ''    '' @ analysis_node_id cfg ns n @ nl)
-                  (analysis_nodes_in_cluster cfg c ns))) clusters')
-        @ nl
-        @ ''nodes:'' @ nl
-        @ concat (map (canonical_node_block cfg g sol ns) ns')
-        @ nl
-        @ ''edges:'' @ nl
-        @ concat (map (\<lambda>(src, kind, dst).
-            ''  '' @ analysis_node_id cfg ns src @ '' -> '' @ analysis_node_id cfg ns dst
-              @ '': '' @ canonical_edge_kind_text g kind @ nl) es)))"
+         STR ''clusters:'' + nl
+         + join_source (STR '''')
+             (map (\<lambda>c.
+                STR ''  '' + analysis_cluster_id clusters c + STR '':'' + nl
+                + join_source (STR '''')
+                    (map (\<lambda>n.
+                       STR ''    '' + analysis_node_id cfg ns n + nl)
+                     (analysis_nodes_in_cluster cfg c ns)))
+              clusters')
+         + nl
+         + STR ''nodes:'' + nl
+         + join_source (STR '''')
+             (map (canonical_node_block cfg g sol ns) ns')
+         + nl
+         + STR ''edges:'' + nl
+         + join_source (STR '''')
+             (map (\<lambda>(src, kind, dst).
+                STR ''  ''
+                + analysis_node_id cfg ns src
+                + STR '' -> ''
+                + analysis_node_id cfg ns dst
+                + STR '': ''
+                + canonical_edge_kind_text g kind
+                + nl)
+              es)))"
 
 definition contextual_analysis_canonical_text ::
   "('ctx, 'g, 'a, 'd) analysis_graph_config \<Rightarrow> cfg
-    \<Rightarrow> ((pp \<times> 'ctx) + 'g) list \<Rightarrow> (pp \<times> 'ctx + 'g \<Rightarrow> 'a) \<Rightarrow> string" where
+    \<Rightarrow> ((pp \<times> 'ctx) + 'g) list \<Rightarrow> (pp \<times> 'ctx + 'g \<Rightarrow> 'a)
+    \<Rightarrow> String.literal" where
   "contextual_analysis_canonical_text cfg g domain sol =
-    analysis_graph_to_canonical_text cfg g sol (build_analysis_graph cfg g domain sol)"
+    analysis_graph_to_canonical_text cfg g sol
+      (build_analysis_graph cfg g domain sol)"
 
 section \<open>Structured graph export\<close>
 
@@ -99,10 +116,21 @@ text \<open>
 \<close>
 
 datatype export_node_kind =
-  XN_Entry | XN_Exit | XN_ProcEntry | XN_ProcExit | XN_Point | XN_Global | XN_Source
+    XN_Entry
+  | XN_Exit
+  | XN_ProcEntry
+  | XN_ProcExit
+  | XN_Point
+  | XN_Global
+  | XN_Source
 
 datatype export_edge_kind =
-  XE_Intra | XE_Enter | XE_Combine | XE_CallToReturn | XE_GlobalRead | XE_GlobalWrite
+    XE_Intra
+  | XE_Enter
+  | XE_Combine
+  | XE_CallToReturn
+  | XE_GlobalRead
+  | XE_GlobalWrite
 
 record export_node =
   xn_id :: String.literal
@@ -137,24 +165,25 @@ definition export_node_kind_of ::
   "cfg \<Rightarrow> ('ctx, 'g) analysis_node \<Rightarrow> export_node_kind" where
   "export_node_kind_of g n =
     (case n of
-      LocalNode p _ \<Rightarrow>
-        (if p = cfg_entry g then XN_Entry
-         else if p = entry_proc_exit g then XN_Exit
-         else if p \<in> set (proc_entry_pps_list g) then XN_ProcEntry
-         else if p \<in> set (proc_exit_pps_list g) then XN_ProcExit
-         else XN_Point)
-    | GlobalNode _ \<Rightarrow> XN_Global
-    | SourceNode _ \<Rightarrow> XN_Source)"
+       LocalNode p _ \<Rightarrow>
+         (if p = cfg_entry g then XN_Entry
+          else if p = entry_proc_exit g then XN_Exit
+          else if p \<in> set (proc_entry_pps_list g) then XN_ProcEntry
+          else if p \<in> set (proc_exit_pps_list g) then XN_ProcExit
+          else XN_Point)
+     | GlobalNode _ \<Rightarrow> XN_Global
+     | SourceNode _ \<Rightarrow> XN_Source)"
 
-definition export_edge_kind_of :: "analysis_edge_kind \<Rightarrow> export_edge_kind" where
+definition export_edge_kind_of ::
+  "analysis_edge_kind \<Rightarrow> export_edge_kind" where
   "export_edge_kind_of kind =
     (case kind of
-      IntraEdge _ \<Rightarrow> XE_Intra
-    | EnterEdge _ _ \<Rightarrow> XE_Enter
-    | CombineEdge _ _ _ \<Rightarrow> XE_Combine
-    | CallToReturnEdge _ \<Rightarrow> XE_CallToReturn
-    | GlobalReadEdge \<Rightarrow> XE_GlobalRead
-    | GlobalWriteEdge \<Rightarrow> XE_GlobalWrite)"
+       IntraEdge _ \<Rightarrow> XE_Intra
+     | EnterEdge _ _ \<Rightarrow> XE_Enter
+     | CombineEdge _ _ _ \<Rightarrow> XE_Combine
+     | CallToReturnEdge _ \<Rightarrow> XE_CallToReturn
+     | GlobalReadEdge \<Rightarrow> XE_GlobalRead
+     | GlobalWriteEdge \<Rightarrow> XE_GlobalWrite)"
 
 text \<open>
   An edge's own content, with none of the wording that names its role. A renderer and
@@ -165,27 +194,39 @@ text \<open>
   exported value and making every other consumer strip it.
 \<close>
 
-definition export_edge_label :: "cfg \<Rightarrow> analysis_edge_kind \<Rightarrow> string" where
+definition export_edge_label ::
+  "cfg \<Rightarrow> analysis_edge_kind \<Rightarrow> String.literal" where
   "export_edge_label g kind =
     (case kind of
-      IntraEdge a \<Rightarrow> source_action_label g a
-    | EnterEdge callee a \<Rightarrow> callee @ ''(''
-        @ (case a of CallEdge _ _ es \<Rightarrow> join_source '', '' (map (string_of_exp 0) es)) @ '')''
-    | CombineEdge _ dst ret \<Rightarrow>
-        (case (dst, ret) of
-           (Some x, Some r) \<Rightarrow> String.explode x @ '' := '' @ String.explode r
-         | (Some x, None) \<Rightarrow> String.explode x
-         | (None, _) \<Rightarrow> '''')
-    | CallToReturnEdge callee \<Rightarrow> String.explode callee
-    | GlobalReadEdge \<Rightarrow> ''''
-    | GlobalWriteEdge \<Rightarrow> '''')"
+       IntraEdge a \<Rightarrow>
+         source_action_label g a
+     | EnterEdge callee a \<Rightarrow>
+         callee
+         + STR ''(''
+         + (case a of
+              CallEdge _ _ es \<Rightarrow>
+                join_source (STR '', '') (map (string_of_exp 0) es))
+         + STR '')''
+     | CombineEdge _ dst ret \<Rightarrow>
+         (case (dst, ret) of
+            (Some x, Some r) \<Rightarrow>
+              x + STR '' := '' + r
+          | (Some x, None) \<Rightarrow>
+              x
+          | (None, _) \<Rightarrow>
+              STR '''')
+     | CallToReturnEdge callee \<Rightarrow>
+         callee
+     | GlobalReadEdge \<Rightarrow>
+         STR ''''
+     | GlobalWriteEdge \<Rightarrow>
+         STR '''')"
 
 text \<open>
   \<^const>\<open>contextual_node_label_lines\<close> puts a node's display name first and its content
   after, except at a \<^const>\<open>SourceNode\<close>, whose single line is the program text itself and
   names nothing. Splitting the two apart here is what lets a consumer put the name in a
-  graph node and the content somewhere else entirely --- the separation the DOT rendering
-  cannot make, because there the two are one joined attribute string.
+  graph node and the content somewhere else entirely.
 \<close>
 
 definition export_node_of ::
@@ -194,23 +235,45 @@ definition export_node_of ::
     \<Rightarrow> ('ctx, 'g) analysis_node \<Rightarrow> export_node" where
   "export_node_of cfg g sol ns n =
     (let lines = contextual_node_label_lines cfg g sol n;
-         status = (case n of LocalNode p ctx \<Rightarrow> map_option annotation_status (node_annotation cfg p ctx)
-                   | _ \<Rightarrow> None);
-         named = (case n of SourceNode _ \<Rightarrow> False | _ \<Rightarrow> True)
-     in \<lparr> xn_id = String.implode (analysis_node_id cfg ns n),
-          xn_label = String.implode (if named then (case lines of [] \<Rightarrow> '''' | l # _ \<Rightarrow> l) else ''''),
-          xn_kind = export_node_kind_of g n,
-          xn_status = status,
-          xn_lines = map String.implode (if named then (case lines of [] \<Rightarrow> [] | _ # rest \<Rightarrow> rest) else lines) \<rparr>)"
+         status =
+           (case n of
+              LocalNode p ctx \<Rightarrow>
+                map_option annotation_status (node_annotation cfg p ctx)
+            | _ \<Rightarrow> None);
+         named =
+           (case n of
+              SourceNode _ \<Rightarrow> False
+            | _ \<Rightarrow> True)
+     in
+       \<lparr> xn_id = analysis_node_id cfg ns n,
+         xn_label =
+           (if named
+            then case lines of
+                   [] \<Rightarrow> STR ''''
+                 | l # _ \<Rightarrow> l
+            else STR ''''),
+         xn_kind = export_node_kind_of g n,
+         xn_status = status,
+         xn_lines =
+           (if named
+            then case lines of
+                   [] \<Rightarrow> []
+                 | _ # rest \<Rightarrow> rest
+            else lines)
+       \<rparr>)"
 
 definition export_cluster_of ::
-  "('ctx, 'g, 'a, 'd) analysis_graph_config \<Rightarrow> ('ctx, 'g) analysis_cluster list
-    \<Rightarrow> ('ctx, 'g) analysis_node list \<Rightarrow> ('ctx, 'g) analysis_cluster \<Rightarrow> export_cluster" where
+  "('ctx, 'g, 'a, 'd) analysis_graph_config \<Rightarrow>
+    ('ctx, 'g) analysis_cluster list \<Rightarrow>
+    ('ctx, 'g) analysis_node list \<Rightarrow>
+    ('ctx, 'g) analysis_cluster \<Rightarrow> export_cluster" where
   "export_cluster_of cfg clusters ns cluster =
-    \<lparr> xc_id = String.implode (analysis_cluster_id clusters cluster),
-      xc_label = String.implode (analysis_cluster_label cfg cluster),
-      xc_nodes = map (\<lambda>n. String.implode (analysis_node_id cfg ns n))
-                   (analysis_nodes_in_cluster cfg cluster ns) \<rparr>"
+    \<lparr> xc_id = analysis_cluster_id clusters cluster,
+      xc_label = analysis_cluster_label cfg cluster,
+      xc_nodes =
+        map (analysis_node_id cfg ns)
+          (analysis_nodes_in_cluster cfg cluster ns)
+    \<rparr>"
 
 text \<open>
   Ordering is \<^const>\<open>build_analysis_graph\<close>'s own insertion order throughout, the same
@@ -223,22 +286,31 @@ text \<open>
 
 definition analysis_graph_to_export ::
   "('ctx, 'g, 'a, 'd) analysis_graph_config \<Rightarrow> cfg
-    \<Rightarrow> (pp \<times> 'ctx + 'g \<Rightarrow> 'a) \<Rightarrow> ('ctx, 'g) analysis_graph \<Rightarrow> export_graph" where
+    \<Rightarrow> (pp \<times> 'ctx + 'g \<Rightarrow> 'a) \<Rightarrow> ('ctx, 'g) analysis_graph
+    \<Rightarrow> export_graph" where
   "analysis_graph_to_export cfg g sol graph =
     (case graph of (clusters, ns, es) \<Rightarrow>
-      \<lparr> xg_clusters = map (export_cluster_of cfg clusters ns) clusters,
-        xg_nodes = map (export_node_of cfg g sol ns) ns,
-        xg_edges = map (\<lambda>(src, kind, dst).
-          \<lparr> xe_src = String.implode (analysis_node_id cfg ns src),
-            xe_dst = String.implode (analysis_node_id cfg ns dst),
-            xe_kind = export_edge_kind_of kind,
-            xe_label = String.implode (export_edge_label g kind) \<rparr>) es \<rparr>)"
+      \<lparr> xg_clusters =
+          map (export_cluster_of cfg clusters ns) clusters,
+        xg_nodes =
+          map (export_node_of cfg g sol ns) ns,
+        xg_edges =
+          map (\<lambda>(src, kind, dst).
+            \<lparr> xe_src = analysis_node_id cfg ns src,
+              xe_dst = analysis_node_id cfg ns dst,
+              xe_kind = export_edge_kind_of kind,
+              xe_label = export_edge_label g kind
+            \<rparr>)
+            es
+      \<rparr>)"
 
 definition contextual_analysis_export ::
   "('ctx, 'g, 'a, 'd) analysis_graph_config \<Rightarrow> cfg
-    \<Rightarrow> ((pp \<times> 'ctx) + 'g) list \<Rightarrow> (pp \<times> 'ctx + 'g \<Rightarrow> 'a) \<Rightarrow> export_graph" where
+    \<Rightarrow> ((pp \<times> 'ctx) + 'g) list \<Rightarrow> (pp \<times> 'ctx + 'g \<Rightarrow> 'a)
+    \<Rightarrow> export_graph" where
   "contextual_analysis_export cfg g domain sol =
-    analysis_graph_to_export cfg g sol (build_analysis_graph cfg g domain sol)"
+    analysis_graph_to_export cfg g sol
+      (build_analysis_graph cfg g domain sol)"
 
 definition raw_cfg_graph_config ::
   "proc_table \<Rightarrow> pname list \<Rightarrow> (pp \<Rightarrow> graph_node_annotation option)
@@ -247,42 +319,37 @@ definition raw_cfg_graph_config ::
     \<lparr> local_of = id,
       route = (\<lambda>_ _ _ _. Some ()),
       context_key = (\<lambda>_. STR ''unit''),
-      show_context = (\<lambda>_. ''unit''),
+      show_context = (\<lambda>_. STR ''unit''),
       locals_for_pp = (\<lambda>_. []),
       return_slot_for_pp = (\<lambda>_. None),
       globals_to_show = [],
       show_local = (\<lambda>_ _ _ _. []),
       format_return = (\<lambda>_ _ _ _. []),
       show_global = (\<lambda>_ _ _. []),
-      show_global_key = (\<lambda>_. ''''),
+      show_global_key = (\<lambda>_. STR ''''),
       is_shared_global = (\<lambda>_. False),
       show_internal_globals = False,
-      owner_of = String.explode o compiled_owner_of \<Pi> ps,
-      cluster_label = (\<lambda>owner _. owner @ '' / unit''),
+      owner_of = compiled_owner_of \<Pi> ps,
+      cluster_label = (\<lambda>owner _. owner + STR '' / unit''),
       source_text = Some (pretty_string_of_program \<Pi> ps (main_body \<Pi>) []),
       node_annotation = (\<lambda>p _. annotate p)
     \<rparr>"
 
-
 definition raw_cfg_canonical_text ::
-  "proc_table \<Rightarrow> pname list \<Rightarrow> (pp \<Rightarrow> graph_node_annotation option) \<Rightarrow> string" where
+  "proc_table \<Rightarrow> pname list \<Rightarrow> (pp \<Rightarrow> graph_node_annotation option)
+    \<Rightarrow> String.literal" where
   "raw_cfg_canonical_text \<Pi> ps annotate =
     (let g = compile_prog \<Pi> ps;
          cfg = raw_cfg_graph_config \<Pi> ps annotate;
          domain = contextual_graph_domain g (\<lambda>_. [()])
      in contextual_analysis_canonical_text cfg g domain (\<lambda>_. ()))"
 
-definition raw_cfg_canonical_text_lit ::
-  "proc_table \<Rightarrow> pname list \<Rightarrow> (pp \<Rightarrow> graph_node_annotation option)
-    \<Rightarrow> String.literal" where
-  "raw_cfg_canonical_text_lit \<Pi> ps annotate =
-    String.implode (raw_cfg_canonical_text \<Pi> ps annotate)"
-
 text \<open>
   The structured-export sibling of \<^const>\<open>raw_cfg_canonical_text\<close>: the same compiled CFG,
   the same one-context graph configuration, the same annotation hook, differing only in
-  which view of the built graph it returns. Already \<^typ>\<open>String.literal\<close>-valued
-  throughout, so there is no \<open>_lit\<close> counterpart to write.
+  which view of the built graph it returns. Both boundaries are
+  \<^typ>\<open>String.literal\<close>-valued where they expose text, so no representation
+  conversion is required here.
 \<close>
 
 definition raw_cfg_export ::
@@ -304,15 +371,24 @@ text \<open>
   and its status.
 \<close>
 
-fun string_of_check_result :: "check_result \<Rightarrow> string" where
-  "string_of_check_result Check_Proved = ''PROVED''"
-| "string_of_check_result Check_Refuted = ''REFUTED''"
-| "string_of_check_result Check_Unknown = ''UNKNOWN''"
+fun string_of_check_result ::
+  "check_result \<Rightarrow> String.literal" where
+  "string_of_check_result Check_Proved =
+    STR ''PROVED''"
+| "string_of_check_result Check_Refuted =
+    STR ''REFUTED''"
+| "string_of_check_result Check_Unknown =
+    STR ''UNKNOWN''"
 
-definition string_of_check_report_entry :: "check_report_entry \<Rightarrow> string" where
+definition string_of_check_report_entry ::
+  "check_report_entry \<Rightarrow> String.literal" where
   "string_of_check_report_entry entry =
-     (case entry of (v, cnd, res) \<Rightarrow>
-        string_of_cfg_node v @ '': '' @ string_of_exp 0 cnd @ ''  '' @ string_of_check_result res)"
+    (case entry of (v, cnd, res) \<Rightarrow>
+       string_of_cfg_node v
+       + STR '': ''
+       + string_of_exp 0 cnd
+       + STR ''  ''
+       + string_of_check_result res)"
 
 section \<open>Report-driven annotation\<close>
 
@@ -325,10 +401,10 @@ text \<open>
 \<close>
 
 definition check_report_node_annotation ::
-    "check_report_entry list \<Rightarrow> pp \<Rightarrow> graph_node_annotation option" where
+  "check_report_entry list \<Rightarrow> pp \<Rightarrow> graph_node_annotation option" where
   "check_report_node_annotation report v =
-     (case find (\<lambda>entry. fst entry = v) report of
-        Some (_, cnd, res) \<Rightarrow> Some (check_result_annotation res cnd)
-      | None \<Rightarrow> None)"
+    (case find (\<lambda>entry. fst entry = v) report of
+       Some (_, cnd, res) \<Rightarrow> Some (check_result_annotation res cnd)
+     | None \<Rightarrow> None)"
 
 end

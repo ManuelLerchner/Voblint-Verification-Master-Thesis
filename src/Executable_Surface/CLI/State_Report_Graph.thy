@@ -14,7 +14,7 @@ text \<open>
   a rendered graph shows a real solved state rather than a hand-built one.
 \<close>
 
-fun string_of_abstract_value :: "abstract_value \<Rightarrow> string" where
+fun string_of_abstract_value :: "abstract_value \<Rightarrow> String.literal" where
   "string_of_abstract_value (SignValue s) = to_string s"
 | "string_of_abstract_value (IntervalValue i) = to_string i"
 | "string_of_abstract_value (IntDomValue d) = to_string d"
@@ -96,8 +96,8 @@ definition program_vars :: "imp_prog \<Rightarrow> vname list" where
   "program_vars p =
      remdups (concat (map (scope_vnames_list p) (prog_main_name # prog_procs p)))"
 
-definition state_line :: "(vname \<Rightarrow> abstract_value) \<Rightarrow> vname \<Rightarrow> string" where
-  "state_line f x = String.explode x @ ''='' @ string_of_abstract_value (f x)"
+definition state_line :: "(vname \<Rightarrow> abstract_value) \<Rightarrow> vname \<Rightarrow> String.literal" where
+  "state_line f x = x + STR ''='' + string_of_abstract_value (f x)"
 
 text \<open>One point's state as the lines a document shows, unreachability included ---
   the same rendering a node label carries, so a state reads the same wherever it
@@ -108,7 +108,7 @@ definition point_lines ::
   "point_lines vars st =
      (case st of
         Bot \<Rightarrow> [STR ''unreachable'']
-      | Lifted s \<Rightarrow> map (\<lambda>x. String.implode (state_line s x)) vars)"
+      | Lifted s \<Rightarrow> map (state_line s) vars)"
 
 definition state_report_node_annotation ::
     "vname list \<Rightarrow> (pp \<times> exp \<times> check_result \<times> (vname \<Rightarrow> abstract_value)) list
@@ -118,8 +118,10 @@ definition state_report_node_annotation ::
         None \<Rightarrow> None
       | Some (_, cnd, res, f) \<Rightarrow>
           (case check_result_annotation res cnd of
-             Node_Annotation lbl status \<Rightarrow>
-               Some (Node_Annotation (join_esc_nl (lbl # map (state_line f) vars)) status)))"
+              Node_Annotation lines status \<Rightarrow>
+                Some (Node_Annotation
+                  (lines @ map (state_line f) vars)
+                  status)))"
 
 text \<open>
   \<open>analyse_with_state\<close>'s report also carries an exact \<open>unreachable\<close> flag
@@ -148,7 +150,7 @@ definition report_vars :: "('n \<times> exp \<times> 'r) list \<Rightarrow> vnam
      sorted_list_of_set (\<Union> ((\<lambda>(_, c, _). exp_vnames c) ` set report))"
 
 text \<open>
-  Renders the check report through \<^const>\<open>raw_cfg_canonical_text_lit\<close>: a
+  Renders the check report through \<^const>\<open>raw_cfg_canonical_text\<close>: a
   DOT-free, diff-stable representation of the solved analysis, which is what
   the regression fixtures compare against.
 \<close>
@@ -156,7 +158,7 @@ text \<open>
 definition state_report_graph_snapshot_auto :: "analysis_domain \<Rightarrow> imp_prog \<Rightarrow> String.literal" where
   "state_report_graph_snapshot_auto kind p =
      (let report = map (\<lambda>(u, c, r, _, s). (u, c, r, s)) (analyse_with_state_default kind p)
-      in raw_cfg_canonical_text_lit (prog_table p) (prog_procs p)
+      in raw_cfg_canonical_text (prog_table p) (prog_procs p)
            (state_report_node_annotation (report_vars report) report))"
 
 text \<open>
@@ -229,11 +231,14 @@ text \<open>
 \<close>
 
 definition unreachable_state_annotation :: graph_node_annotation where
-  "unreachable_state_annotation = Node_Annotation ''unreachable'' NS_Unreachable"
+  "unreachable_state_annotation =
+     Node_Annotation [STR ''unreachable''] NS_Unreachable"
 
 definition dead_check_annotation :: "exp \<Rightarrow> graph_node_annotation" where
   "dead_check_annotation cnd =
-     Node_Annotation (''check '' @ string_of_exp 0 cnd @ '' [dead]'') NS_Unreachable"
+     Node_Annotation
+       [STR ''check '' + string_of_exp 0 cnd + STR '' [dead]'']
+       NS_Unreachable"
 
 text \<open>
   The shared full-state renderer for every \<^typ>\<open>'a lifted\<close>-valued
@@ -251,7 +256,7 @@ definition point_node_annotation ::
      (case env v of
         Bot \<Rightarrow> Some unreachable_state_annotation
       | Lifted st \<Rightarrow>
-          Some (Node_Annotation (join_esc_nl (map (state_line st) vars)) NS_Plain))"
+          Some (Node_Annotation (map (state_line st) vars) NS_Plain))"
 
 text \<open>
   \<open>analyse_point_env_for\<close> is the monovariant sibling of
@@ -292,7 +297,7 @@ text \<open>The whole-table counterpart of \<open>state_report_graph_snapshot_au
 
 definition full_state_graph_snapshot_auto :: "analysis_domain \<Rightarrow> imp_prog \<Rightarrow> String.literal" where
   "full_state_graph_snapshot_auto kind p =
-     raw_cfg_canonical_text_lit (prog_table p) (prog_procs p)
+     raw_cfg_canonical_text (prog_table p) (prog_procs p)
        (point_node_annotation (program_vars p) (analyse_point_env_for kind p))"
 
 text \<open>
@@ -336,11 +341,11 @@ definition full_state_checked_node_annotation ::
       | Lifted st \<Rightarrow>
           (let lines = map (state_line st) vars
            in case find (\<lambda>entry. fst entry = v) verdicts of
-                None \<Rightarrow> Some (Node_Annotation (join_esc_nl lines) NS_Plain)
+                None \<Rightarrow> Some (Node_Annotation lines NS_Plain)
               | Some (_, cnd, res) \<Rightarrow>
                   (case check_result_annotation res cnd of
-                     Node_Annotation lbl status \<Rightarrow>
-                       Some (Node_Annotation (join_esc_nl (lbl # lines)) status))))"
+                     Node_Annotation check_lines status \<Rightarrow>
+                       Some (Node_Annotation (check_lines @ lines) status))))"
 
 subsection \<open>The unit context as a contextual graph\<close>
 
@@ -393,7 +398,7 @@ where
        route = (\<lambda>_ _ _ d.
          case d of Bot \<Rightarrow> None | Lifted _ \<Rightarrow> Some ()),
        context_key = (\<lambda>_. STR ''unit''),
-       show_context = (\<lambda>_. ''unit''),
+       show_context = (\<lambda>_. STR ''unit''),
        locals_for_pp = (\<lambda>v.
          let sc =
            compiled_procedure_scope
@@ -414,26 +419,22 @@ where
        globals_to_show = [],
        show_local = (\<lambda>_ _ vars d.
          case d of
-           Bot \<Rightarrow> [''unreachable'']
+           Bot \<Rightarrow> [STR ''unreachable'']
          | Lifted st \<Rightarrow>
-             map (\<lambda>x.
-               String.explode x @ ''='' @ string_of_abstract_value (st x))
-               vars),
+             map (\<lambda>x. x + STR ''='' + string_of_abstract_value (st x)) vars),
        format_return = (\<lambda>_ _ ret d.
          case d of
            Bot \<Rightarrow> []
          | Lifted st \<Rightarrow>
              if is_top_abstract_value (st ret)
              then []
-             else [''ret='' @ string_of_abstract_value (st ret)]),
+             else [STR ''ret='' + string_of_abstract_value (st ret)]),
        show_global = (\<lambda>_ _ _. []),
-       show_global_key = (\<lambda>_. ''Global''),
+       show_global_key = (\<lambda>_. STR ''Global''),
        is_shared_global = (\<lambda>_. False),
        show_internal_globals = False,
-       owner_of =
-         String.explode \<circ>
-           compiled_owner_of (prog_table p) (prog_procs p),
-       cluster_label = (\<lambda>owner _. owner @ '' / unit''),
+       owner_of = compiled_owner_of (prog_table p) (prog_procs p),
+       cluster_label = (\<lambda>owner _. owner + STR '' / unit''),
        source_text =
          Some
            (pretty_string_of_program
@@ -471,11 +472,10 @@ where
      (let g = prog_cfg p;
           cfg = unit_ctx_graph_config p rows;
           sol = unit_ctx_sol_of into r
-      in String.implode
-           (analysis_graph_to_canonical_text cfg g sol
-             (build_analysis_graph cfg g
-               (contextual_result_domain cfg g r)
-               sol)))"
+      in analysis_graph_to_canonical_text cfg g sol
+           (build_analysis_graph cfg g
+             (contextual_result_domain cfg g r)
+             sol))"
 
 
 text \<open>
@@ -555,7 +555,7 @@ text \<open>
 definition entry_state_full_state_graph_snapshot_auto ::
     "analysis_domain \<Rightarrow> imp_prog \<Rightarrow> String.literal" where
   "entry_state_full_state_graph_snapshot_auto kind p =
-     raw_cfg_canonical_text_lit (prog_table p) (prog_procs p)
+     raw_cfg_canonical_text (prog_table p) (prog_procs p)
        (point_node_annotation (program_vars p) (entry_state_point_env_for kind p))"
 
 text \<open>
@@ -599,31 +599,38 @@ text \<open>
   it would mean inventing one; a route that publishes it needs the solve itself.
 \<close>
 
-definition ctx_key_of :: "('a \<Rightarrow> abstract_value) \<Rightarrow> 'a list \<Rightarrow> String.literal" where
+
+definition ctx_key_of ::
+  "('a \<Rightarrow> abstract_value) \<Rightarrow> 'a list \<Rightarrow> String.literal" where
   "ctx_key_of into ctx =
-     String.implode (concat (map (\<lambda>x. string_of_abstract_value (into x) @ '' '') ctx))"
+     join_source (STR '''')
+       (map (\<lambda>x. string_of_abstract_value (into x) + STR '' '') ctx)"
 
 text \<open>The key orders the rows; this names them. \<^const>\<open>prog_main_name\<close>'s context is
   empty --- nothing calls it, so nothing seeds it --- and the expanded graph already
   calls that the root context, so a reader meets one spelling in both places.\<close>
 
-definition ctx_show_of :: "('a \<Rightarrow> abstract_value) \<Rightarrow> 'a list \<Rightarrow> string" where
+definition ctx_show_of ::
+  "('a \<Rightarrow> abstract_value) \<Rightarrow> 'a list \<Rightarrow> String.literal" where
   "ctx_show_of into ctx =
      (case ctx of
-        [] \<Rightarrow> ''root context''
-      | x # xs \<Rightarrow>
-          string_of_abstract_value (into x)
-            @ concat (map (\<lambda>y. '', '' @ string_of_abstract_value (into y)) xs))"
+        [] \<Rightarrow> STR ''root context''
+      | _ \<Rightarrow> join_source (STR '', '')
+               (map (\<lambda>x. string_of_abstract_value (into x)) ctx))"
 
 definition ctx_seed_globals ::
-    "('a::semilattice_sup \<Rightarrow> abstract_value) \<Rightarrow> ('c \<Rightarrow> String.literal) \<Rightarrow> ('c \<Rightarrow> string)
-       \<Rightarrow> ('c, 'a abs_state) analysis_result \<Rightarrow> imp_prog
-       \<Rightarrow> (String.literal \<times> String.literal list) list" where
+    "('a::semilattice_sup \<Rightarrow> abstract_value)
+      \<Rightarrow> ('c \<Rightarrow> String.literal)
+      \<Rightarrow> ('c \<Rightarrow> String.literal)
+      \<Rightarrow> ('c, 'a abs_state) analysis_result
+      \<Rightarrow> imp_prog
+      \<Rightarrow> (String.literal \<times> String.literal list) list"
+where
   "ctx_seed_globals into ckey show_ctx r p =
      concat
        (map (\<lambda>f.
                map (\<lambda>c.
-                      (STR ''enter '' + f + STR '' @ '' + String.implode (show_ctx c),
+                      (STR ''enter '' + f + STR '' @ '' + show_ctx c,
                        point_lines (program_vars p)
                          (map_lift (\<lambda>st. into \<circ> st)
                            (lookup_context r (FunctionEntry f) c))))
@@ -634,10 +641,13 @@ text \<open>A context-insensitive route has one context per entry, so its rows d
   by procedure and the context adds nothing to read.\<close>
 
 definition unit_seed_globals ::
-    "('a::semilattice_sup \<Rightarrow> abstract_value) \<Rightarrow> (unit, 'a abs_state) analysis_result
-       \<Rightarrow> imp_prog \<Rightarrow> (String.literal \<times> String.literal list) list" where
+    "('a::semilattice_sup \<Rightarrow> abstract_value)
+      \<Rightarrow> (unit, 'a abs_state) analysis_result
+      \<Rightarrow> imp_prog
+      \<Rightarrow> (String.literal \<times> String.literal list) list"
+where
   "unit_seed_globals into =
-     ctx_seed_globals into (\<lambda>_. STR '''') (\<lambda>_. ''root context'')"
+     ctx_seed_globals into (\<lambda>_. STR '''') (\<lambda>_. STR ''root context'')"
 
 definition checked_payload_exported_globals_of ::
     "('a \<Rightarrow> abstract_value) \<Rightarrow> (exp \<Rightarrow> 'a abs_state \<Rightarrow> check_result)
@@ -682,15 +692,15 @@ definition verdict_state_report_node_annotation ::
           Some (case (verdict, st) of
                   (Decided res, Lifted f) \<Rightarrow>
                     (case check_result_annotation res cnd of
-                       Node_Annotation lbl status \<Rightarrow>
-                         Node_Annotation (join_esc_nl (lbl # map (state_line f) vars)) status)
+                       Node_Annotation check_lines status \<Rightarrow>
+                         Node_Annotation (check_lines @ map (state_line f) vars) status)
                 | _ \<Rightarrow> dead_check_annotation cnd))"
 
 definition entry_state_report_graph_snapshot_auto ::
     "analysis_domain \<Rightarrow> imp_prog \<Rightarrow> String.literal" where
   "entry_state_report_graph_snapshot_auto kind p =
      (let report = entry_state_report_for_annotation kind p
-      in raw_cfg_canonical_text_lit (prog_table p) (prog_procs p)
+      in raw_cfg_canonical_text (prog_table p) (prog_procs p)
            (verdict_state_report_node_annotation (report_vars report) report))"
 
 definition entry_state_report_export_auto ::

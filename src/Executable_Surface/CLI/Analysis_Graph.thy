@@ -42,31 +42,40 @@ text \<open>
 
 subsection \<open>CFG text helpers\<close>
 
-fun string_of_action :: "edge_action \<Rightarrow> string" where
-  "string_of_action EA_Nop = ''nop''"
-| "string_of_action (EA_Assign x a) = String.explode x @ '' := '' @ string_of_exp 0 a"
+fun string_of_action :: "edge_action \<Rightarrow> String.literal" where
+  "string_of_action EA_Nop = STR ''nop''"
+| "string_of_action (EA_Assign x a) =
+    x + STR '' := '' + string_of_exp 0 a"
 | "string_of_action (EA_Special Nondet_Int x) =
-    String.explode x @ '' := __voblint_nondet_int()''"
+    x + STR '' := __voblint_nondet_int()''"
 | "string_of_action (EA_Special (Min a b) x) =
-    String.explode x @ '' := min('' @ string_of_exp 0 a @ '', '' @ string_of_exp 0 b @ '')''"
+    x + STR '' := min('' + string_of_exp 0 a
+      + STR '', '' + string_of_exp 0 b + STR '')''"
 | "string_of_action (EA_Special (Max a b) x) =
-    String.explode x @ '' := max('' @ string_of_exp 0 a @ '', '' @ string_of_exp 0 b @ '')''"
-| "string_of_action (EA_Assume b) = ''['' @ string_of_exp 0 b @ '']''"
-| "string_of_action (EA_AssumeNot b) = ''!['' @ string_of_exp 0 b @ '']''"
-| "string_of_action (EA_Body p) = ''body('' @ String.explode p @ '')''"
-| "string_of_action (EA_Ret None p) = ''return''"
+    x + STR '' := max('' + string_of_exp 0 a
+      + STR '', '' + string_of_exp 0 b + STR '')''"
+| "string_of_action (EA_Assume b) =
+    STR ''['' + string_of_exp 0 b + STR '']''"
+| "string_of_action (EA_AssumeNot b) =
+    STR ''!['' + string_of_exp 0 b + STR '']''"
+| "string_of_action (EA_Body p) =
+    STR ''body('' + p + STR '')''"
+| "string_of_action (EA_Ret None p) = STR ''return''"
 | "string_of_action (EA_Ret (Some e) p) =
-    ''return '' @ string_of_exp 0 e"
-| "string_of_action (EA_Check cnd) = ''check('' @ string_of_exp 0 cnd @ '')''"
+    STR ''return '' + string_of_exp 0 e"
+| "string_of_action (EA_Check cnd) =
+    STR ''check('' + string_of_exp 0 cnd + STR '')''"
 
-definition nl :: string where "nl = [CHR 0x0A]"
-definition esc_nl :: string where "esc_nl = [CHR 0x5C, CHR 0x6E]"
+definition nl :: String.literal where
+  "nl = String.literal_of_asciis [0x0A]"
 
-fun join_esc_nl :: "string list \<Rightarrow> string" where
-  "join_esc_nl [] = []"
+definition esc_nl :: String.literal where
+  "esc_nl = String.literal_of_asciis [0x5C, 0x6E]"
+
+fun join_esc_nl :: "String.literal list \<Rightarrow> String.literal" where
+  "join_esc_nl [] = STR ''''"
 | "join_esc_nl [s] = s"
-| "join_esc_nl (s # ss) = s @ esc_nl @ join_esc_nl ss"
-
+| "join_esc_nl (s # ss) = s + esc_nl + join_esc_nl ss"
 
 definition proc_entry_pps_list :: "cfg \<Rightarrow> pp list" where
   "proc_entry_pps_list g =
@@ -78,33 +87,43 @@ definition proc_exit_pps_list :: "cfg \<Rightarrow> pp list" where
       case entry of FunctionEntry p \<Rightarrow> FunctionResult p | _ \<Rightarrow> entry)
       (cfg_calls_list g)"
 
-fun string_of_cfg_node :: "cfg_node \<Rightarrow> string" where
-  "string_of_cfg_node (Statement n) = ''pp'' @ string_of_nat n"
-| "string_of_cfg_node (FunctionEntry p) = ''entry_'' @ String.explode p"
-| "string_of_cfg_node (FunctionResult p) = ''result_'' @ String.explode p"
+fun string_of_cfg_node :: "cfg_node \<Rightarrow> String.literal" where
+  "string_of_cfg_node (Statement n) =
+    STR ''pp'' + string_of_nat n"
+| "string_of_cfg_node (FunctionEntry p) =
+    STR ''entry_'' + p"
+| "string_of_cfg_node (FunctionResult p) =
+    STR ''result_'' + p"
 
 section \<open>Generic context-expanded analysis graph\<close>
 
 text \<open>
-  The analysis graph is independent of DOT.  It records contextual local nodes,
-  shared global nodes, and the semantic role of every routed edge.  The builder
+  The analysis graph is independent of DOT. It records contextual local nodes,
+  shared global nodes, and the semantic role of every routed edge. The builder
   consumes the same routing function as the equation generator.
 \<close>
 
 datatype ('ctx, 'g) analysis_cluster =
-    ContextCluster (cluster_name: string) (cluster_ctx: 'ctx)
+    ContextCluster
+      (cluster_name: String.literal)
+      (cluster_ctx: 'ctx)
   | GlobalCluster
   | SourceCluster
 
 datatype ('ctx, 'g) analysis_node =
     LocalNode (node_pp: pp) (node_ctx: 'ctx)
   | GlobalNode (node_glob: 'g)
-  | SourceNode (node_name: string)
+  | SourceNode (node_name: String.literal)
 
 datatype analysis_edge_kind =
     IntraEdge (aek_action: edge_action)
-  | EnterEdge (aek_enter_proc: string) (aek_call: call_action)
-  | CombineEdge (combine_call_pp: pp) (combine_dst: "vname option") (combine_ret: "vname option")
+  | EnterEdge
+      (aek_enter_proc: String.literal)
+      (aek_call: call_action)
+  | CombineEdge
+      (combine_call_pp: pp)
+      (combine_dst: "vname option")
+      (combine_ret: "vname option")
   | CallToReturnEdge (aek_ctr_proc: pname)
   | GlobalReadEdge
   | GlobalWriteEdge
@@ -121,7 +140,12 @@ text \<open>
 \<close>
 
 datatype node_status =
-  NS_Plain | NS_Proved | NS_Refuted | NS_Unknown | NS_Unreachable | NS_Exit
+  NS_Plain
+| NS_Proved
+| NS_Refuted
+| NS_Unknown
+| NS_Unreachable
+| NS_Exit
 
 text \<open>
   A node annotation is presentation metadata a caller attaches to one \<^typ>\<open>pp\<close>: an optional
@@ -132,7 +156,10 @@ text \<open>
 \<close>
 
 datatype graph_node_annotation =
-  Node_Annotation (annotation_label: string) (annotation_status: node_status)
+  Node_Annotation
+    (annotation_lines: "String.literal list")
+    (annotation_status: node_status)
+
 text \<open>
   Shared status mapping for a compiled \<^verbatim>\<open>__voblint_check(...)\<close>
   condition, given its executable \<^typ>\<open>check_result\<close> classification.
@@ -141,15 +168,22 @@ text \<open>
   mapping instead of restating it.
 \<close>
 
-definition check_result_annotation :: "check_result \<Rightarrow> exp \<Rightarrow> graph_node_annotation" where
+definition check_result_annotation ::
+  "check_result \<Rightarrow> exp \<Rightarrow> graph_node_annotation" where
   "check_result_annotation res cnd =
      (case res of
         Check_Proved \<Rightarrow>
-          Node_Annotation (''check '' @ string_of_exp 0 cnd) NS_Proved
+          Node_Annotation
+            [STR ''check '' + string_of_exp 0 cnd]
+            NS_Proved
       | Check_Unknown \<Rightarrow>
-          Node_Annotation (''check '' @ string_of_exp 0 cnd @ '' [unknown]'') NS_Unknown
+          Node_Annotation
+            [STR ''check '' + string_of_exp 0 cnd + STR '' [unknown]'']
+            NS_Unknown
       | Check_Refuted \<Rightarrow>
-          Node_Annotation (''check '' @ string_of_exp 0 cnd @ '' [REFUTED]'') NS_Refuted)"
+          Node_Annotation
+            [STR ''check '' + string_of_exp 0 cnd + STR '' [REFUTED]'']
+            NS_Refuted)"
 
 text \<open>
   \<open>route\<close> answers \<^const>\<open>None\<close> exactly when a call transition does not exist ---
@@ -166,21 +200,40 @@ text \<open>
 record ('ctx, 'g, 'a, 'd) analysis_graph_config =
   local_of :: "'a \<Rightarrow> 'd"
   route :: "pp \<Rightarrow> 'ctx \<Rightarrow> call_action \<Rightarrow> 'd \<Rightarrow> 'ctx option"
+
   context_key :: "'ctx \<Rightarrow> String.literal"
-  show_context :: "'ctx \<Rightarrow> string"
+  show_context :: "'ctx \<Rightarrow> String.literal"
+
   locals_for_pp :: "pp \<Rightarrow> vname list"
   return_slot_for_pp :: "pp \<Rightarrow> vname option"
   globals_to_show :: "vname list"
-  show_local :: "pp \<Rightarrow> 'ctx \<Rightarrow> vname list \<Rightarrow> 'd \<Rightarrow> string list"
-  format_return :: "pp \<Rightarrow> 'ctx \<Rightarrow> vname \<Rightarrow> 'd \<Rightarrow> string list"
-  show_global :: "'g \<Rightarrow> vname list \<Rightarrow> 'a \<Rightarrow> string list"
-  show_global_key :: "'g \<Rightarrow> string"
+
+  show_local ::
+    "pp \<Rightarrow> 'ctx \<Rightarrow> vname list \<Rightarrow> 'd \<Rightarrow> String.literal list"
+
+  format_return ::
+    "pp \<Rightarrow> 'ctx \<Rightarrow> vname \<Rightarrow> 'd \<Rightarrow> String.literal list"
+
+  show_global ::
+    "'g \<Rightarrow> vname list \<Rightarrow> 'a \<Rightarrow> String.literal list"
+
+  show_global_key ::
+    "'g \<Rightarrow> String.literal"
+
   is_shared_global :: "'g \<Rightarrow> bool"
   show_internal_globals :: bool
-  owner_of :: "pp \<Rightarrow> string"
-  cluster_label :: "string \<Rightarrow> 'ctx \<Rightarrow> string"
-  source_text :: "string option"
-  node_annotation :: "pp \<Rightarrow> 'ctx \<Rightarrow> graph_node_annotation option"
+
+  owner_of ::
+    "pp \<Rightarrow> String.literal"
+
+  cluster_label ::
+    "String.literal \<Rightarrow> 'ctx \<Rightarrow> String.literal"
+
+  source_text ::
+    "String.literal option"
+
+  node_annotation ::
+    "pp \<Rightarrow> 'ctx \<Rightarrow> graph_node_annotation option"
 
 fun compiled_proc_owner ::
   "proc_table \<Rightarrow> pname list \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> pname option" where
@@ -190,7 +243,8 @@ fun compiled_proc_owner ::
       None \<Rightarrow> compiled_proc_owner \<Pi> ps n k
     | Some decl \<Rightarrow>
         (let (n', E, K) = compile_proc \<Pi> p decl n
-         in if n \<le> k \<and> k < n' then Some p
+         in if n \<le> k \<and> k < n'
+            then Some p
             else compiled_proc_owner \<Pi> ps n' k))"
 
 definition compiled_owner_of ::
@@ -200,7 +254,9 @@ definition compiled_owner_of ::
       FunctionEntry owner \<Rightarrow> owner
     | FunctionResult owner \<Rightarrow> owner
     | Statement k \<Rightarrow>
-        (case compiled_proc_owner \<Pi> ps 0 k of Some owner \<Rightarrow> owner | None \<Rightarrow> prog_main_name))"
+        (case compiled_proc_owner \<Pi> ps 0 k of
+           Some owner \<Rightarrow> owner
+         | None \<Rightarrow> prog_main_name))"
 
 definition cfg_point_list :: "cfg \<Rightarrow> pp list" where
   "cfg_point_list g =
@@ -209,14 +265,18 @@ definition cfg_point_list :: "cfg \<Rightarrow> pp list" where
        concat (map (\<lambda>(u, _, v). [u, v]) (cfg_intra_list g)) @
        concat (map (\<lambda>(call, _, entry, cont).
          call # entry # cont #
-         (case entry of FunctionEntry p \<Rightarrow> [FunctionResult p] | _ \<Rightarrow> []))
+         (case entry of
+            FunctionEntry p \<Rightarrow> [FunctionResult p]
+          | _ \<Rightarrow> []))
          (cfg_calls_list g)))"
 
 definition contextual_graph_domain ::
   "cfg \<Rightarrow> (pp \<Rightarrow> 'ctx list) \<Rightarrow> ((pp \<times> 'ctx) + 'g) list" where
   "contextual_graph_domain g contexts_for_pp =
-    concat (map (\<lambda>p. map (\<lambda>ctx. Inl (p, ctx)) (contexts_for_pp p))
-      (cfg_point_list g))"
+    concat
+      (map
+        (\<lambda>p. map (\<lambda>ctx. Inl (p, ctx)) (contexts_for_pp p))
+        (cfg_point_list g))"
 
 subsection \<open>Enumerating a context set for presentation\<close>
 
@@ -252,9 +312,11 @@ text \<open>
   it by execution on its own program.
 \<close>
 
-definition ordered_by_key :: "('a \<Rightarrow> String.literal) \<Rightarrow> 'a set \<Rightarrow> 'a list" where
+definition ordered_by_key ::
+  "('a \<Rightarrow> String.literal) \<Rightarrow> 'a set \<Rightarrow> 'a list" where
   "ordered_by_key key S =
-    map (\<lambda>k. the_elem (Set.filter (\<lambda>x. key x = k) S))
+    map
+      (\<lambda>k. the_elem (Set.filter (\<lambda>x. key x = k) S))
       (sorted_list_of_set (key ` S))"
 
 lemma set_ordered_by_key:
@@ -262,18 +324,26 @@ lemma set_ordered_by_key:
     and inj: "inj_on key S"
   shows "set (ordered_by_key key S) = S"
 proof -
-  have keys: "set (sorted_list_of_set (key ` S)) = key ` S"
+  have keys:
+    "set (sorted_list_of_set (key ` S)) = key ` S"
     using fin by simp
-  have pick: "the_elem (Set.filter (\<lambda>x. key x = key y) S) = y" if "y \<in> S" for y
+
+  have pick:
+    "the_elem (Set.filter (\<lambda>x. key x = key y) S) = y"
+    if "y \<in> S"
+    for y
   proof -
     have "Set.filter (\<lambda>x. key x = key y) S = {y}"
       using that inj by (auto simp: inj_on_def)
     then show ?thesis by simp
   qed
+
   have "set (ordered_by_key key S)
       = (\<lambda>k. the_elem (Set.filter (\<lambda>x. key x = k) S)) ` (key ` S)"
-    unfolding ordered_by_key_def set_map keys by (rule refl)
-  also have "\<dots> = S" using pick by (auto simp: image_iff)
+    unfolding ordered_by_key_def set_map keys
+    by (rule refl)
+  also have "\<dots> = S"
+    using pick by (auto simp: image_iff)
   finally show ?thesis .
 qed
 

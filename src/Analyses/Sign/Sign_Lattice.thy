@@ -248,14 +248,14 @@ end
 
 subsection \<open>Printing\<close>
 
-fun string_of_sign :: "sign \<Rightarrow> string" where
-    "string_of_sign SBot    = ''Bottom''"
-  | "string_of_sign SNeg    = ''Negative''"
-  | "string_of_sign SNonPos = ''NonPositive''"
-  | "string_of_sign SZero   = ''Zero''"
-  | "string_of_sign SNonNeg = ''NonNegative''"
-  | "string_of_sign SPos    = ''Positive''"
-  | "string_of_sign STop    = ''Top''"
+fun string_of_sign :: "sign \<Rightarrow> String.literal" where
+    "string_of_sign SBot    = STR ''Bottom''"
+  | "string_of_sign SNeg    = STR ''Negative''"
+  | "string_of_sign SNonPos = STR ''NonPositive''"
+  | "string_of_sign SZero   = STR ''Zero''"
+  | "string_of_sign SNonNeg = STR ''NonNegative''"
+  | "string_of_sign SPos    = STR ''Positive''"
+  | "string_of_sign STop    = STR ''Top''"
 
 subsection \<open>Abstract domain instantiation\<close>
 

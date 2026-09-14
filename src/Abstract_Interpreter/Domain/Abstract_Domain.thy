@@ -21,7 +21,7 @@ subsection \<open>Executable and sound domains\<close>
 class executable_domain = bounded_semilattice_sup_bot + order_top +
   fixes is_empty :: "'a \<Rightarrow> bool"
   fixes is_full :: "'a \<Rightarrow> bool"
-  fixes to_string :: "'a \<Rightarrow> string"
+  fixes to_string :: "'a \<Rightarrow> String.literal"
 
 class sound_domain = executable_domain +
   fixes gamma :: "'a \<Rightarrow> int set"

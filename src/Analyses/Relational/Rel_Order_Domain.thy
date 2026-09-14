@@ -141,18 +141,18 @@ text \<open>Pretty-printer, the \<open>relc\<close> analogue of Interval's \<ope
   gives a deterministic, executable enumeration -- the same device this
   project already relies on for CFG edge sets.\<close>
 
-fun string_of_pairs :: "(vname \<times> vname) list \<Rightarrow> string" where
-  "string_of_pairs [] = ''''"
-| "string_of_pairs [(x, y)] = String.explode x @ ''<='' @ String.explode y"
+fun string_of_pairs :: "(vname \<times> vname) list \<Rightarrow> String.literal" where
+  "string_of_pairs [] = STR ''''"
+| "string_of_pairs [(x, y)] = x + STR ''<='' + y"
 | "string_of_pairs ((x, y) # p # ps) =
-     String.explode x @ ''<='' @ String.explode y @ '', '' @ string_of_pairs (p # ps)"
+      x + STR ''<='' + y + STR '', '' + string_of_pairs (p # ps)"
 
-definition string_of_relc :: "relc \<Rightarrow> string" where
+definition string_of_relc :: "relc \<Rightarrow> String.literal" where
   "string_of_relc d =
      (case d of
-        Bot \<Rightarrow> ''BOT''
+        Bot \<Rightarrow> STR ''BOT''
       | RelC ps \<Rightarrow>
-          (if ps = {} then ''(no known relations)''
+          (if ps = {} then STR ''(no known relations)''
            else string_of_pairs (sorted_list_of_set ps)))"
 
 definition gammaDG_rel :: "relc \<Rightarrow> relc \<Rightarrow> store set" where

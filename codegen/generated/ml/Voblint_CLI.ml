@@ -80,8 +80,6 @@ module Generated : sig
   type nat
   val nat_of_integer : Z.t -> nat
   val integer_of_nat : nat -> Z.t
-  type char
-  val integer_of_char : char -> Z.t
   type exp = N of int | V of string | Plus of exp * exp | Minus of exp * exp |
     Times of exp * exp | Div of exp * exp | Mod of exp * exp | Less of exp * exp
     | LessEq of exp * exp | Greater of exp * exp | GreaterEq of exp * exp |
@@ -142,7 +140,7 @@ module Generated : sig
   val prog_cfg : unit imp_prog_ext -> unit cfg_ext
   val pretty_string_of_program :
     (string -> unit proc_decl_ext option) ->
-      string list -> com -> string list -> char list
+      string list -> com -> string list -> string
   val run_voblint :
     analysis_domain ->
       solver_choice option ->
@@ -993,14 +991,6 @@ let rec equal_lista _A
 
 let rec equal_list _A = ({equal = equal_lista _A} : ('a list) equal);;
 
-type char = Chr of Z.t;;
-
-let rec integer_of_char (Chr x) = x;;
-
-let rec equal_chara c d = Z.equal (integer_of_char c) (integer_of_char d);;
-
-let equal_char = ({equal = equal_chara} : char equal);;
-
 type ('a, 'b) sum = Inl of 'a | Inr of 'b;;
 
 let rec equal_suma _A _B x0 x1 = match x0, x1 with Inl x1, Inr x2 -> false
@@ -1790,57 +1780,13 @@ let bounded_warrowing_sign =
      warrowing_bounded_warrowing = warrowing_sign}
     : sign bounded_warrowing);;
 
-let char_0x76 : char = Chr (Z.of_int 118);;
-
-let char_0x74 : char = Chr (Z.of_int 116);;
-
-let char_0x73 : char = Chr (Z.of_int 115);;
-
-let char_0x72 : char = Chr (Z.of_int 114);;
-
-let char_0x70 : char = Chr (Z.of_int 112);;
-
-let char_0x6F : char = Chr (Z.of_int 111);;
-
-let char_0x6E : char = Chr (Z.of_int 110);;
-
-let char_0x6D : char = Chr (Z.of_int 109);;
-
-let char_0x69 : char = Chr (Z.of_int 105);;
-
-let char_0x67 : char = Chr (Z.of_int 103);;
-
-let char_0x65 : char = Chr (Z.of_int 101);;
-
-let char_0x61 : char = Chr (Z.of_int 97);;
-
-let char_0x5A : char = Chr (Z.of_int 90);;
-
-let char_0x54 : char = Chr (Z.of_int 84);;
-
-let char_0x50 : char = Chr (Z.of_int 80);;
-
-let char_0x4E : char = Chr (Z.of_int 78);;
-
-let char_0x42 : char = Chr (Z.of_int 66);;
-
-let rec string_of_sign
-  = function
-    SBot -> [char_0x42; char_0x6F; char_0x74; char_0x74; char_0x6F; char_0x6D]
-    | SNeg ->
-        [char_0x4E; char_0x65; char_0x67; char_0x61; char_0x74; char_0x69;
-          char_0x76; char_0x65]
-    | SNonPos ->
-        [char_0x4E; char_0x6F; char_0x6E; char_0x50; char_0x6F; char_0x73;
-          char_0x69; char_0x74; char_0x69; char_0x76; char_0x65]
-    | SZero -> [char_0x5A; char_0x65; char_0x72; char_0x6F]
-    | SNonNeg ->
-        [char_0x4E; char_0x6F; char_0x6E; char_0x4E; char_0x65; char_0x67;
-          char_0x61; char_0x74; char_0x69; char_0x76; char_0x65]
-    | SPos ->
-        [char_0x50; char_0x6F; char_0x73; char_0x69; char_0x74; char_0x69;
-          char_0x76; char_0x65]
-    | STop -> [char_0x54; char_0x6F; char_0x70];;
+let rec string_of_sign = function SBot -> "Bottom"
+                         | SNeg -> "Negative"
+                         | SNonPos -> "NonPositive"
+                         | SZero -> "Zero"
+                         | SNonNeg -> "NonNegative"
+                         | SPos -> "Positive"
+                         | STop -> "Top";;
 
 let rec to_string_sign a = string_of_sign a;;
 
@@ -1856,7 +1802,7 @@ type 'a executable_domain =
   {bounded_semilattice_sup_bot_executable_domain :
      'a bounded_semilattice_sup_bot;
     order_top_executable_domain : 'a order_top; is_empty : 'a -> bool;
-    is_full : 'a -> bool; to_string : 'a -> char list};;
+    is_full : 'a -> bool; to_string : 'a -> string};;
 let is_empty _A = _A.is_empty;;
 let is_full _A = _A.is_full;;
 let to_string _A = _A.to_string;;
@@ -2520,6 +2466,8 @@ let rec modulo_nat
 let rec divide_nat
   m n = Nat (divide_integer (integer_of_nat m) (integer_of_nat n));;
 
+type char = Chr of Z.t;;
+
 let rec char_of_integer
   k = Chr (if Z.leq Z.zero k && Z.lt k (Z.of_int 256) then k
             else modulo_integer k (Z.of_int 256));;
@@ -2528,40 +2476,32 @@ let rec char_of_nat x = comp char_of_integer integer_of_nat x;;
 
 let rec plus_nat m n = Nat (Z.add (integer_of_nat m) (integer_of_nat n));;
 
+let rec integer_of_char (Chr x) = x;;
+
+let rec map f x1 = match f, x1 with f, [] -> []
+              | f, x21 :: x22 -> f x21 :: map f x22;;
+
+let rec implode cs = Str_Literal.literal_of_asciis (map integer_of_char cs);;
+
 let rec string_of_nat
   n = (if less_nat n (nat_of_integer (Z.of_int 10))
-        then [char_of_nat (plus_nat n (nat_of_integer (Z.of_int 48)))]
-        else string_of_nat (divide_nat n (nat_of_integer (Z.of_int 10))) @
-               [char_of_nat
-                  (plus_nat (modulo_nat n (nat_of_integer (Z.of_int 10)))
-                    (nat_of_integer (Z.of_int 48)))]);;
-
-let char_0x2D : char = Chr (Z.of_int 45);;
+        then implode [char_of_nat (plus_nat n (nat_of_integer (Z.of_int 48)))]
+        else string_of_nat (divide_nat n (nat_of_integer (Z.of_int 10))) ^
+               implode
+                 [char_of_nat
+                    (plus_nat (modulo_nat n (nat_of_integer (Z.of_int 10)))
+                      (nat_of_integer (Z.of_int 48)))]);;
 
 let rec string_of_int
-  i = (if less_int i zero_inta
-        then [char_0x2D] @ string_of_nat (nat (uminus_inta i))
+  i = (if less_int i zero_inta then "-" ^ string_of_nat (nat (uminus_inta i))
         else string_of_nat (nat i));;
 
-let char_0x66 : char = Chr (Z.of_int 102);;
-
-let char_0x2B : char = Chr (Z.of_int 43);;
-
-let rec string_of_eint
-  = function MinInf -> [char_0x2D; char_0x69; char_0x6E; char_0x66]
-    | PlusInf -> [char_0x2B; char_0x69; char_0x6E; char_0x66]
-    | Fin n -> string_of_int n;;
-
-let char_0x5D : char = Chr (Z.of_int 93);;
-
-let char_0x5B : char = Chr (Z.of_int 91);;
-
-let char_0x2C : char = Chr (Z.of_int 44);;
+let rec string_of_eint = function MinInf -> "-inf"
+                         | PlusInf -> "+inf"
+                         | Fin n -> string_of_int n;;
 
 let rec string_of_ivl
-  (Ivl (l, u)) =
-    [char_0x5B] @
-      string_of_eint l @ [char_0x2C] @ string_of_eint u @ [char_0x5D];;
+  (Ivl (l, u)) = ((("[" ^ string_of_eint l) ^ ",") ^ string_of_eint u) ^ "]";;
 
 let rec to_string_ivl a = string_of_ivl a;;
 
@@ -2693,18 +2633,10 @@ let bounded_warrowing_parity =
      warrowing_bounded_warrowing = warrowing_parity}
     : parity bounded_warrowing);;
 
-let char_0x64 : char = Chr (Z.of_int 100);;
-
-let char_0x4F : char = Chr (Z.of_int 79);;
-
-let char_0x45 : char = Chr (Z.of_int 69);;
-
-let rec string_of_parity
-  = function
-    PBot -> [char_0x42; char_0x6F; char_0x74; char_0x74; char_0x6F; char_0x6D]
-    | PEven -> [char_0x45; char_0x76; char_0x65; char_0x6E]
-    | POdd -> [char_0x4F; char_0x64; char_0x64]
-    | PTop -> [char_0x54; char_0x6F; char_0x70];;
+let rec string_of_parity = function PBot -> "Bottom"
+                           | PEven -> "Even"
+                           | POdd -> "Odd"
+                           | PTop -> "Top";;
 
 let rec to_string_parity a = string_of_parity a;;
 
@@ -2873,9 +2805,6 @@ let rec lookup_resolved_st _A
 
 let rec list_all p x1 = match p, x1 with p, [] -> true
                    | p, x :: xs -> p x && list_all p xs;;
-
-let rec map f x1 = match f, x1 with f, [] -> []
-              | f, x21 :: x22 -> f x21 :: map f x22;;
 
 let rec le_resolved_st_code _A
   s t = (let (dl, (dg, ps)) = s in
@@ -3152,23 +3081,12 @@ let bounded_warrowing_congruence =
      warrowing_bounded_warrowing = warrowing_congruence}
     : congruence bounded_warrowing);;
 
-let char_0x3D : char = Chr (Z.of_int 61);;
-
-let char_0x29 : char = Chr (Z.of_int 41);;
-
-let char_0x28 : char = Chr (Z.of_int 40);;
-
-let char_0x20 : char = Chr (Z.of_int 32);;
-
 let rec string_of_congruence
-  c = (match rep_congruence c with None -> [char_0x54; char_0x6F; char_0x70]
+  c = (match rep_congruence c with None -> "Top"
         | Some (r, m) ->
-          (if equal_inta m zero_inta then [char_0x3D] @ string_of_int r
-            else [char_0x3D] @
-                   string_of_int r @
-                     [char_0x20; char_0x28; char_0x6D; char_0x6F; char_0x64;
-                       char_0x20] @
-                       string_of_int m @ [char_0x29]));;
+          (if equal_inta m zero_inta then "=" ^ string_of_int r
+            else ((("=" ^ string_of_int r) ^ " (mod ") ^ string_of_int m) ^
+                   ")"));;
 
 let rec to_string_congruence a = string_of_congruence a;;
 
@@ -3370,26 +3288,13 @@ let rec bounded_warrowing_int_dom_ext _A =
      warrowing_bounded_warrowing = (warrowing_int_dom_ext _A)}
     : 'a int_dom_ext bounded_warrowing);;
 
-let char_0x79 : char = Chr (Z.of_int 121);;
-
-let char_0x75 : char = Chr (Z.of_int 117);;
-
-let char_0x6C : char = Chr (Z.of_int 108);;
-
-let char_0x63 : char = Chr (Z.of_int 99);;
-
 let rec string_of_int_dom
-  d = [char_0x73; char_0x69; char_0x67; char_0x6E; char_0x3D] @
-        string_of_sign (int_sign d) @
-          [char_0x2C; char_0x20; char_0x69; char_0x76; char_0x6C; char_0x3D] @
-            string_of_ivl (int_ivl d) @
-              [char_0x2C; char_0x20; char_0x70; char_0x61; char_0x72; char_0x69;
-                char_0x74; char_0x79; char_0x3D] @
-                string_of_parity (int_parity d) @
-                  [char_0x2C; char_0x20; char_0x63; char_0x6F; char_0x6E;
-                    char_0x67; char_0x72; char_0x75; char_0x65; char_0x6E;
-                    char_0x63; char_0x65; char_0x3D] @
-                    string_of_congruence (int_congruence d);;
+  d = (((((("sign=" ^ string_of_sign (int_sign d)) ^ ", ivl=") ^
+           string_of_ivl (int_ivl d)) ^
+          ", parity=") ^
+         string_of_parity (int_parity d)) ^
+        ", congruence=") ^
+        string_of_congruence (int_congruence d);;
 
 let rec to_string_int_dom_ext _A d = string_of_int_dom d;;
 
@@ -3499,8 +3404,8 @@ let rec executable_domain_int_dom_ext _A =
      to_string = to_string_int_dom_ext _A}
     : 'a int_dom_ext executable_domain);;
 
-type ('a, 'b) analysis_cluster = ContextCluster of char list * 'a |
-  GlobalCluster | SourceCluster;;
+type ('a, 'b) analysis_cluster = ContextCluster of string * 'a | GlobalCluster |
+  SourceCluster;;
 
 let rec equal_analysis_clustera _A
   x0 x1 = match x0, x1 with GlobalCluster, SourceCluster -> false
@@ -3510,7 +3415,7 @@ let rec equal_analysis_clustera _A
     | ContextCluster (x11, x12), GlobalCluster -> false
     | GlobalCluster, ContextCluster (x11, x12) -> false
     | ContextCluster (x11, x12), ContextCluster (y11, y12) ->
-        equal_lista equal_char x11 y11 && eq _A x12 y12
+        ((x11 : string) = y11) && eq _A x12 y12
     | SourceCluster, SourceCluster -> true
     | GlobalCluster, GlobalCluster -> true;;
 
@@ -3747,7 +3652,7 @@ type ('a, 'b, 'c, 'd, 'e, 'f) dg_spec_ext =
 type context_mode = Ctx_None | Ctx_EntryState | Ctx_CallString of nat;;
 
 type ('a, 'b) analysis_node = LocalNode of cfg_node * 'a | GlobalNode of 'b |
-  SourceNode of char list;;
+  SourceNode of string;;
 
 type 'a export_cluster_ext =
   Export_cluster_ext of string * string * string list * 'a;;
@@ -3812,7 +3717,7 @@ type abstract_value = SignValue of sign | IntervalValue of ivl |
 type ('a, 'b) state_exta = State_exta of 'a set * 'b;;
 
 type analysis_edge_kind = IntraEdge of edge_action |
-  EnterEdge of char list * call_action |
+  EnterEdge of string * call_action |
   CombineEdge of cfg_node * string option * string option |
   CallToReturnEdge of string | GlobalReadEdge | GlobalWriteEdge;;
 
@@ -3824,7 +3729,7 @@ type ('a, 'b, 'c, 'd) ug_state_ext =
 type 'a imp_prog_ext =
   Imp_prog_ext of (string * unit proc_decl_ext) list * string list * 'a;;
 
-type graph_node_annotation = Node_Annotation of char list * node_status;;
+type graph_node_annotation = Node_Annotation of string list * node_status;;
 
 type ('a, 'b) special_ops_ext =
   Special_ops_ext of ('a -> 'a -> 'a) * ('a -> 'a -> 'a) * 'b;;
@@ -3865,13 +3770,12 @@ type 'a procedure_scope_ext =
 type ('a, 'b, 'c, 'd, 'e) analysis_graph_config_ext =
   Analysis_graph_config_ext of
     ('c -> 'd) * (cfg_node -> 'a -> call_action -> 'd -> 'a option) *
-      ('a -> string) * ('a -> char list) * (cfg_node -> string list) *
+      ('a -> string) * ('a -> string) * (cfg_node -> string list) *
       (cfg_node -> string option) * string list *
-      (cfg_node -> 'a -> string list -> 'd -> (char list) list) *
-      (cfg_node -> 'a -> string -> 'd -> (char list) list) *
-      ('b -> string list -> 'c -> (char list) list) * ('b -> char list) *
-      ('b -> bool) * bool * (cfg_node -> char list) *
-      (char list -> 'a -> char list) * (char list) option *
+      (cfg_node -> 'a -> string list -> 'd -> string list) *
+      (cfg_node -> 'a -> string -> 'd -> string list) *
+      ('b -> string list -> 'c -> string list) * ('b -> string) * ('b -> bool) *
+      bool * (cfg_node -> string) * (string -> 'a -> string) * string option *
       (cfg_node -> 'a -> graph_node_annotation option) * 'e;;
 
 let rec id x = (fun xa -> xa) x;;
@@ -3889,8 +3793,6 @@ let zero_nat : nat = Nat Z.zero;;
 let rec nth
   (x :: xs) n =
     (if equal_nata n zero_nat then x else nth xs (minus_nat n one_nat));;
-
-let rec rev xs = fold (fun a b -> a :: b) xs [];;
 
 let rec upt i j = (if less_nat i j then i :: upt (suc i) j else []);;
 
@@ -3973,8 +3875,6 @@ let rec distinct _A = function [] -> true
 let rec is_none = function None -> true
                   | Some x -> false;;
 
-let rec implode cs = Str_Literal.literal_of_asciis (map integer_of_char cs);;
-
 let rec map_filter
   f x1 = match f, x1 with f, [] -> []
     | f, x :: xs ->
@@ -4014,9 +3914,7 @@ let rec fmdom (Fmap_of_list m) = fimage fst (fset_of_list m);;
 
 let rec fmupd _A k v m = fmadd _A m (Fmap_of_list [(k, v)]);;
 
-let char_0x0A : char = Chr (Z.of_int 10);;
-
-let nl : char list = [char_0x0A];;
+let nl : string = Str_Literal.literal_of_asciis [(Z.of_int 10)];;
 
 let rec calls (Cfg_ext (intra, calls, cfg_entry, checks, more)) = calls;;
 
@@ -4584,9 +4482,8 @@ let rec source_com = function SKIP -> true
 
 let rec source_exp a = not (member equal_literal ret_var (exp_vnames a));;
 
-let char_0x5C : char = Chr (Z.of_int 92);;
-
-let esc_nl : char list = [char_0x5C; char_0x6E];;
+let esc_nl : string
+  = Str_Literal.literal_of_asciis [(Z.of_int 92); (Z.of_int 110)];;
 
 let rec sp_read_local x k = QueryL (x, k);;
 
@@ -5497,8 +5394,6 @@ let rec branch_sign_st
 let sign_ops : (sign, unit) numeric_ops_ext
   = Numeric_ops_ext (aval_sign, sign_special_ops, branch_sign_st, STop, ());;
 
-let rec explode s = map char_of_integer (Str_Literal.asciis_of_literal s);;
-
 let rec sigma (State_ext (c, infl, stabl, sigma, more)) = sigma;;
 
 let rec c_update
@@ -5640,10 +5535,6 @@ let rec and_opt
           else (if equal_option equal_bool x (Some true) &&
                      equal_option equal_bool y (Some true)
                  then Some true else None));;
-
-let rec comma_join
-  xs = (match xs with [] -> []
-         | y :: ys -> y @ maps (fun a -> [char_0x2C; char_0x20] @ a) ys);;
 
 let rec min _A a b = (if less_eq _A a b then a else b);;
 
@@ -10562,13 +10453,12 @@ let rec string_of_abstract_value
     | ParityValue v -> to_string_parity v
     | CongruenceValue v -> to_string_congruence v;;
 
-let rec state_line
-  f x = explode x @ [char_0x3D] @ string_of_abstract_value (f x);;
+let rec state_line f x = (x ^ "=") ^ string_of_abstract_value (f x);;
 
 let rec point_lines
   vars st =
     (match st with Bot -> ["unreachable"]
-      | Lifted s -> map (fun x -> implode (state_line s x)) vars);;
+      | Lifted s -> map (state_line s) vars);;
 
 let rec result_keys (Analysis_Result (x1, x2)) = x1;;
 
@@ -10594,21 +10484,17 @@ let rec ctx_seed_globals _A _B
   into ckey show_ctx r p =
     maps (fun f ->
            map (fun c ->
-                 ((("enter " ^ f) ^ " @ ") ^ implode (show_ctx c),
+                 ((("enter " ^ f) ^ " @ ") ^ show_ctx c,
                    point_lines (program_vars p)
                      (map_lift (comp into)
                        (lookup_context _B r (FunctionEntry f) c))))
              (ordered_by_key ckey (contexts_at r (FunctionEntry f))))
       (prog_main_name :: prog_procs p);;
 
-let char_0x78 : char = Chr (Z.of_int 120);;
-
 let rec unit_seed_globals _A
   into =
     ctx_seed_globals _A equal_unit into (fun _ -> "")
-      (fun _ ->
-        [char_0x72; char_0x6F; char_0x6F; char_0x74; char_0x20; char_0x63;
-          char_0x6F; char_0x6E; char_0x74; char_0x65; char_0x78; char_0x74]);;
+      (fun _ -> "root context");;
 
 let rec analyse_int_join_result_for
   mode gs p =
@@ -10667,22 +10553,6 @@ let rec node_annotation_update
           owner_of, cluster_label, source_text,
           node_annotationa node_annotation, more);;
 
-let char_0x7C : char = Chr (Z.of_int 124);;
-
-let char_0x3E : char = Chr (Z.of_int 62);;
-
-let char_0x3C : char = Chr (Z.of_int 60);;
-
-let char_0x2F : char = Chr (Z.of_int 47);;
-
-let char_0x2A : char = Chr (Z.of_int 42);;
-
-let char_0x26 : char = Chr (Z.of_int 38);;
-
-let char_0x25 : char = Chr (Z.of_int 37);;
-
-let char_0x21 : char = Chr (Z.of_int 33);;
-
 let rec exp_prio = function N uu -> nat_of_integer (Z.of_int 1000)
                    | V uv -> nat_of_integer (Z.of_int 1000)
                    | Not uw -> nat_of_integer (Z.of_int 90)
@@ -10703,104 +10573,70 @@ let rec exp_prio = function N uu -> nat_of_integer (Z.of_int 1000)
 let rec string_of_exp
   min_prio e =
     (let body =
-       (match e with N a -> string_of_int a | V a -> explode a
+       (match e with N a -> string_of_int a | V x -> x
          | Plus (a, b) ->
-           string_of_exp (nat_of_integer (Z.of_int 70)) a @
-             [char_0x2B] @ string_of_exp (nat_of_integer (Z.of_int 71)) b
+           (string_of_exp (nat_of_integer (Z.of_int 70)) a ^ "+") ^
+             string_of_exp (nat_of_integer (Z.of_int 71)) b
          | Minus (a, b) ->
-           string_of_exp (nat_of_integer (Z.of_int 70)) a @
-             [char_0x2D] @ string_of_exp (nat_of_integer (Z.of_int 71)) b
+           (string_of_exp (nat_of_integer (Z.of_int 70)) a ^ "-") ^
+             string_of_exp (nat_of_integer (Z.of_int 71)) b
          | Times (a, b) ->
-           string_of_exp (nat_of_integer (Z.of_int 80)) a @
-             [char_0x2A] @ string_of_exp (nat_of_integer (Z.of_int 81)) b
+           (string_of_exp (nat_of_integer (Z.of_int 80)) a ^ "*") ^
+             string_of_exp (nat_of_integer (Z.of_int 81)) b
          | Div (a, b) ->
-           string_of_exp (nat_of_integer (Z.of_int 80)) a @
-             [char_0x2F] @ string_of_exp (nat_of_integer (Z.of_int 81)) b
+           (string_of_exp (nat_of_integer (Z.of_int 80)) a ^ "/") ^
+             string_of_exp (nat_of_integer (Z.of_int 81)) b
          | Mod (a, b) ->
-           string_of_exp (nat_of_integer (Z.of_int 80)) a @
-             [char_0x25] @ string_of_exp (nat_of_integer (Z.of_int 81)) b
+           (string_of_exp (nat_of_integer (Z.of_int 80)) a ^ "%") ^
+             string_of_exp (nat_of_integer (Z.of_int 81)) b
          | Less (a, b) ->
-           string_of_exp (nat_of_integer (Z.of_int 61)) a @
-             [char_0x3C] @ string_of_exp (nat_of_integer (Z.of_int 61)) b
+           (string_of_exp (nat_of_integer (Z.of_int 61)) a ^ "<") ^
+             string_of_exp (nat_of_integer (Z.of_int 61)) b
          | LessEq (a, b) ->
-           string_of_exp (nat_of_integer (Z.of_int 61)) a @
-             [char_0x3C; char_0x3D] @
-               string_of_exp (nat_of_integer (Z.of_int 61)) b
+           (string_of_exp (nat_of_integer (Z.of_int 61)) a ^ "<=") ^
+             string_of_exp (nat_of_integer (Z.of_int 61)) b
          | Greater (a, b) ->
-           string_of_exp (nat_of_integer (Z.of_int 61)) a @
-             [char_0x3E] @ string_of_exp (nat_of_integer (Z.of_int 61)) b
+           (string_of_exp (nat_of_integer (Z.of_int 61)) a ^ ">") ^
+             string_of_exp (nat_of_integer (Z.of_int 61)) b
          | GreaterEq (a, b) ->
-           string_of_exp (nat_of_integer (Z.of_int 61)) a @
-             [char_0x3E; char_0x3D] @
-               string_of_exp (nat_of_integer (Z.of_int 61)) b
+           (string_of_exp (nat_of_integer (Z.of_int 61)) a ^ ">=") ^
+             string_of_exp (nat_of_integer (Z.of_int 61)) b
          | NotEq (a, b) ->
-           string_of_exp (nat_of_integer (Z.of_int 51)) a @
-             [char_0x21; char_0x3D] @
-               string_of_exp (nat_of_integer (Z.of_int 51)) b
+           (string_of_exp (nat_of_integer (Z.of_int 51)) a ^ "!=") ^
+             string_of_exp (nat_of_integer (Z.of_int 51)) b
          | Eq (a, b) ->
-           string_of_exp (nat_of_integer (Z.of_int 51)) a @
-             [char_0x3D; char_0x3D] @
-               string_of_exp (nat_of_integer (Z.of_int 51)) b
-         | Not a -> [char_0x21] @ string_of_exp (nat_of_integer (Z.of_int 90)) a
+           (string_of_exp (nat_of_integer (Z.of_int 51)) a ^ "==") ^
+             string_of_exp (nat_of_integer (Z.of_int 51)) b
+         | Not a -> "!" ^ string_of_exp (nat_of_integer (Z.of_int 90)) a
          | And (a, b) ->
-           string_of_exp (nat_of_integer (Z.of_int 40)) a @
-             [char_0x26; char_0x26] @
-               string_of_exp (nat_of_integer (Z.of_int 41)) b
+           (string_of_exp (nat_of_integer (Z.of_int 40)) a ^ "&&") ^
+             string_of_exp (nat_of_integer (Z.of_int 41)) b
          | Or (a, b) ->
-           string_of_exp (nat_of_integer (Z.of_int 30)) a @
-             [char_0x7C; char_0x7C] @
-               string_of_exp (nat_of_integer (Z.of_int 31)) b)
+           (string_of_exp (nat_of_integer (Z.of_int 30)) a ^ "||") ^
+             string_of_exp (nat_of_integer (Z.of_int 31)) b)
        in
-      (if less_nat (exp_prio e) min_prio then [char_0x28] @ body @ [char_0x29]
-        else body));;
-
-let char_0x6B : char = Chr (Z.of_int 107);;
-
-let char_0x68 : char = Chr (Z.of_int 104);;
+      (if less_nat (exp_prio e) min_prio then ("(" ^ body) ^ ")" else body));;
 
 let rec dead_check_annotation
   cnd = Node_Annotation
-          ([char_0x63; char_0x68; char_0x65; char_0x63; char_0x6B; char_0x20] @
-             string_of_exp zero_nat cnd @
-               [char_0x20; char_0x5B; char_0x64; char_0x65; char_0x61;
-                 char_0x64; char_0x5D],
+          ([("check " ^ string_of_exp zero_nat cnd) ^ " [dead]"],
             NS_Unreachable);;
 
 let rec classify_point
   classify c x2 = match classify, c, x2 with classify, c, Bot -> Bot
     | classify, c, Lifted st -> Lifted (classify c st);;
 
-let char_0x77 : char = Chr (Z.of_int 119);;
-
-let char_0x55 : char = Chr (Z.of_int 85);;
-
-let char_0x52 : char = Chr (Z.of_int 82);;
-
-let char_0x46 : char = Chr (Z.of_int 70);;
-
-let char_0x44 : char = Chr (Z.of_int 68);;
-
 let rec check_result_annotation
   res cnd =
     (match res
       with Check_Proved ->
-        Node_Annotation
-          ([char_0x63; char_0x68; char_0x65; char_0x63; char_0x6B; char_0x20] @
-             string_of_exp zero_nat cnd,
-            NS_Proved)
+        Node_Annotation (["check " ^ string_of_exp zero_nat cnd], NS_Proved)
       | Check_Refuted ->
         Node_Annotation
-          ([char_0x63; char_0x68; char_0x65; char_0x63; char_0x6B; char_0x20] @
-             string_of_exp zero_nat cnd @
-               [char_0x20; char_0x5B; char_0x52; char_0x45; char_0x46;
-                 char_0x55; char_0x54; char_0x45; char_0x44; char_0x5D],
-            NS_Refuted)
+          ([("check " ^ string_of_exp zero_nat cnd) ^ " [REFUTED]"], NS_Refuted)
       | Check_Unknown ->
         Node_Annotation
-          ([char_0x63; char_0x68; char_0x65; char_0x63; char_0x6B; char_0x20] @
-             string_of_exp zero_nat cnd @
-               [char_0x20; char_0x5B; char_0x75; char_0x6E; char_0x6B;
-                 char_0x6E; char_0x6F; char_0x77; char_0x6E; char_0x5D],
+          ([("check " ^ string_of_exp zero_nat cnd) ^ " [unknown]"],
             NS_Unknown));;
 
 let rec check_cond_at
@@ -10902,170 +10738,93 @@ let rec entry_state_ctx_route _A
       | Lifted a -> callee_ctx_of _A enter (declared_global p) ca a);;
 
 let rec join_source
-  sep x1 = match sep, x1 with sep, [] -> []
+  sep x1 = match sep, x1 with sep, [] -> ""
     | sep, [s] -> s
-    | sep, s :: v :: va -> s @ sep @ join_source sep (v :: va);;
+    | sep, s :: v :: va -> (s ^ sep) ^ join_source sep (v :: va);;
 
-let char_0x7D : char = Chr (Z.of_int 125);;
+let char_0x0A : char = Chr (Z.of_int 10);;
 
-let char_0x7B : char = Chr (Z.of_int 123);;
-
-let char_0x62 : char = Chr (Z.of_int 98);;
-
-let char_0x5F : char = Chr (Z.of_int 95);;
-
-let char_0x3B : char = Chr (Z.of_int 59);;
-
-let source_nl : char list = [char_0x0A];;
+let source_nl : string = implode [char_0x0A];;
 
 let rec string_of_com
-  = function SKIP -> [char_0x73; char_0x6B; char_0x69; char_0x70; char_0x3B]
-    | Assign (x, e) ->
-        explode x @
-          [char_0x20; char_0x3D; char_0x20] @
-            string_of_exp zero_nat e @ [char_0x3B]
-    | Check c ->
-        [char_0x5F; char_0x5F; char_0x76; char_0x6F; char_0x62; char_0x6C;
-          char_0x69; char_0x6E; char_0x74; char_0x5F; char_0x63; char_0x68;
-          char_0x65; char_0x63; char_0x6B; char_0x28] @
-          string_of_exp zero_nat c @ [char_0x29; char_0x3B]
-    | Seq (c1, c2) -> string_of_com c1 @ source_nl @ string_of_com c2
+  = function SKIP -> "skip;"
+    | Assign (x, e) -> ((x ^ " = ") ^ string_of_exp zero_nat e) ^ ";"
+    | Check c -> ("__voblint_check(" ^ string_of_exp zero_nat c) ^ ");"
+    | Seq (c1, c2) -> (string_of_com c1 ^ source_nl) ^ string_of_com c2
     | If (b, c1, c2) ->
-        [char_0x69; char_0x66; char_0x20; char_0x28] @
-          string_of_exp zero_nat b @
-            [char_0x29; char_0x20; char_0x7B; char_0x20] @
-              string_of_com c1 @
-                (if equal_com c2 SKIP then [char_0x20; char_0x7D]
-                  else [char_0x20; char_0x7D; char_0x20; char_0x65; char_0x6C;
-                         char_0x73; char_0x65; char_0x20; char_0x7B;
-                         char_0x20] @
-                         string_of_com c2 @ [char_0x20; char_0x7D])
+        ((("if (" ^ string_of_exp zero_nat b) ^ ") { ") ^ string_of_com c1) ^
+          (if equal_com c2 SKIP then " }"
+            else (" } else { " ^ string_of_com c2) ^ " }")
     | While (b, c) ->
-        [char_0x77; char_0x68; char_0x69; char_0x6C; char_0x65; char_0x20;
-          char_0x28] @
-          string_of_exp zero_nat b @
-            [char_0x29; char_0x20; char_0x7B; char_0x20] @
-              string_of_com c @ [char_0x20; char_0x7D]
+        ((("while (" ^ string_of_exp zero_nat b) ^ ") { ") ^ string_of_com c) ^
+          " }"
     | Call (dst, p, es) ->
         (match dst
           with None ->
-            explode p @
-              [char_0x28] @
-                join_source [char_0x2C; char_0x20]
-                  (map (string_of_exp zero_nat) es) @
-                  [char_0x29; char_0x3B]
+            ((p ^ "(") ^ join_source ", " (map (string_of_exp zero_nat) es)) ^
+              ");"
           | Some x ->
-            explode x @
-              [char_0x20; char_0x3D; char_0x20] @
-                explode p @
-                  [char_0x28] @
-                    join_source [char_0x2C; char_0x20]
-                      (map (string_of_exp zero_nat) es) @
-                      [char_0x29; char_0x3B])
-    | Return (Some e) ->
-        [char_0x72; char_0x65; char_0x74; char_0x75; char_0x72; char_0x6E;
-          char_0x20] @
-          string_of_exp zero_nat e @ [char_0x3B]
-    | Return None ->
-        [char_0x72; char_0x65; char_0x74; char_0x75; char_0x72; char_0x6E;
-          char_0x3B]
-    | Restore ->
-        [char_0x72; char_0x65; char_0x73; char_0x74; char_0x6F; char_0x72;
-          char_0x65]
-    | Unwind ->
-        [char_0x3C; char_0x75; char_0x6E; char_0x77; char_0x69; char_0x6E;
-          char_0x64; char_0x3E];;
+            ((((x ^ " = ") ^ p) ^ "(") ^
+              join_source ", " (map (string_of_exp zero_nat) es)) ^
+              ");")
+    | Return (Some e) -> ("return " ^ string_of_exp zero_nat e) ^ ";"
+    | Return None -> "return;"
+    | Restore -> "restore"
+    | Unwind -> "<unwind>";;
 
 let rec source_indent
-  n = (if equal_nata n zero_nat then []
-        else [char_0x20; char_0x20] @ source_indent (minus_nat n one_nat));;
+  n = (if equal_nata n zero_nat then ""
+        else "  " ^ source_indent (minus_nat n one_nat));;
 
 let rec pretty_source_lines_com
-  n x1 = match n, x1 with
-    n, SKIP ->
-      [source_indent n @
-         [char_0x73; char_0x6B; char_0x69; char_0x70; char_0x3B]]
+  n x1 = match n, x1 with n, SKIP -> [source_indent n ^ "skip;"]
     | n, Assign (x, e) ->
-        [source_indent n @
-           explode x @
-             [char_0x20; char_0x3D; char_0x20] @
-               string_of_exp zero_nat e @ [char_0x3B]]
+        [(((source_indent n ^ x) ^ " = ") ^ string_of_exp zero_nat e) ^ ";"]
     | n, Check c ->
-        [source_indent n @
-           [char_0x5F; char_0x5F; char_0x76; char_0x6F; char_0x62; char_0x6C;
-             char_0x69; char_0x6E; char_0x74; char_0x5F; char_0x63; char_0x68;
-             char_0x65; char_0x63; char_0x6B; char_0x28] @
-             string_of_exp zero_nat c @ [char_0x29; char_0x3B]]
+        [((source_indent n ^ "__voblint_check(") ^ string_of_exp zero_nat c) ^
+           ");"]
     | n, Seq (c1, c2) ->
         pretty_source_lines_com n c1 @ pretty_source_lines_com n c2
     | n, If (b, c1, c2) ->
-        [source_indent n @
-           [char_0x69; char_0x66; char_0x20; char_0x28] @
-             string_of_exp zero_nat b @ [char_0x29; char_0x20; char_0x7B]] @
+        [((source_indent n ^ "if (") ^ string_of_exp zero_nat b) ^ ") {"] @
           pretty_source_lines_com (plus_nat n (nat_of_integer (Z.of_int 2)))
             c1 @
             (if equal_com c2 SKIP then []
-              else [source_indent n @
-                      [char_0x7D; char_0x20; char_0x65; char_0x6C; char_0x73;
-                        char_0x65; char_0x20; char_0x7B]] @
+              else [source_indent n ^ "} else {"] @
                      pretty_source_lines_com
                        (plus_nat n (nat_of_integer (Z.of_int 2))) c2) @
-              [source_indent n @ [char_0x7D]]
+              [source_indent n ^ "}"]
     | n, While (b, c) ->
-        [source_indent n @
-           [char_0x77; char_0x68; char_0x69; char_0x6C; char_0x65; char_0x20;
-             char_0x28] @
-             string_of_exp zero_nat b @ [char_0x29; char_0x20; char_0x7B]] @
+        [((source_indent n ^ "while (") ^ string_of_exp zero_nat b) ^ ") {"] @
           pretty_source_lines_com (plus_nat n (nat_of_integer (Z.of_int 2))) c @
-            [source_indent n @ [char_0x7D]]
+            [source_indent n ^ "}"]
     | n, Call (dst, p, es) ->
-        [source_indent n @ string_of_com (Call (dst, p, es))]
-    | n, Return e -> [source_indent n @ string_of_com (Return e)]
-    | n, Restore ->
-        [source_indent n @
-           [char_0x72; char_0x65; char_0x73; char_0x74; char_0x6F; char_0x72;
-             char_0x65]]
-    | n, Unwind ->
-        [source_indent n @
-           [char_0x3C; char_0x75; char_0x6E; char_0x77; char_0x69; char_0x6E;
-             char_0x64; char_0x3E]];;
+        [source_indent n ^ string_of_com (Call (dst, p, es))]
+    | n, Return e -> [source_indent n ^ string_of_com (Return e)]
+    | n, Restore -> [source_indent n ^ "restore"]
+    | n, Unwind -> [source_indent n ^ "<unwind>"];;
 
 let rec pretty_source_lines_proc
   n p decl =
-    (source_indent n @
-      [char_0x66; char_0x75; char_0x6E; char_0x20] @
-        explode p @
-          [char_0x28] @
-            join_source [char_0x2C; char_0x20] (map explode (formals decl)) @
-              [char_0x29; char_0x20; char_0x7B]) ::
+    (((((source_indent n ^ "fun ") ^ p) ^ "(") ^
+       join_source ", " (formals decl)) ^
+      ") {") ::
       pretty_source_lines_com (plus_nat n (nat_of_integer (Z.of_int 2)))
         (body decl) @
-        [source_indent n @ [char_0x7D]];;
+        [source_indent n ^ "}"];;
 
 let rec pretty_string_of_program
   pi ps main globals =
     join_source source_nl
       ((if null globals then []
-         else [[char_0x67; char_0x6C; char_0x6F; char_0x62; char_0x61;
-                 char_0x6C; char_0x20] @
-                 join_source [char_0x2C; char_0x20] (map explode globals) @
-                   [char_0x3B]]) @
+         else [("global " ^ join_source ", " globals) ^ ";"]) @
         maps (fun p ->
-               (match pi p
-                 with None ->
-                   [[char_0x70; char_0x72; char_0x6F; char_0x63; char_0x65;
-                      char_0x64; char_0x75; char_0x72; char_0x65; char_0x20] @
-                      explode p @
-                        [char_0x20; char_0x3C; char_0x6D; char_0x69; char_0x73;
-                          char_0x73; char_0x69; char_0x6E; char_0x67;
-                          char_0x3E]]
+               (match pi p with None -> [("procedure " ^ p) ^ " <missing>"]
                  | Some a -> pretty_source_lines_proc zero_nat p a))
           ps @
-          [[char_0x66; char_0x75; char_0x6E; char_0x20; char_0x6D; char_0x61;
-             char_0x69; char_0x6E; char_0x28; char_0x29; char_0x20;
-             char_0x7B]] @
+          ["fun main() {"] @
             pretty_source_lines_com (nat_of_integer (Z.of_int 2)) main @
-              [[char_0x7D]]);;
+              ["}"]);;
 
 let rec is_top_abstract_value
   = function SignValue s -> equal_signa s top_signa
@@ -11078,22 +10837,15 @@ let rec is_top_abstract_value
 
 let rec ctx_show_of
   into ctx =
-    (match ctx
-      with [] ->
-        [char_0x72; char_0x6F; char_0x6F; char_0x74; char_0x20; char_0x63;
-          char_0x6F; char_0x6E; char_0x74; char_0x65; char_0x78; char_0x74]
-      | x :: xs ->
-        string_of_abstract_value (into x) @
-          maps (fun y ->
-                 [char_0x2C; char_0x20] @ string_of_abstract_value (into y))
-            xs);;
+    (match ctx with [] -> "root context"
+      | _ :: _ ->
+        join_source ", "
+          (map (fun x -> string_of_abstract_value (into x)) ctx));;
 
 let rec ctx_key_of
   into ctx =
-    implode
-      (maps (fun x -> string_of_abstract_value (into x) @ [char_0x20]) ctx);;
-
-let char_0x47 : char = Chr (Z.of_int 71);;
+    join_source ""
+      (map (fun x -> string_of_abstract_value (into x) ^ " ") ctx);;
 
 let rec entry_state_ctx_graph_config _A
   enter into p =
@@ -11110,29 +10862,19 @@ let rec entry_state_ctx_graph_config _A
             (compiled_procedure_scope (declared_global p) (prog_table p)
               (prog_procs p) (prog_cfg p) v)),
         [], (fun _ _ vars a ->
-              (match a
-                with Bot ->
-                  [[char_0x75; char_0x6E; char_0x72; char_0x65; char_0x61;
-                     char_0x63; char_0x68; char_0x61; char_0x62; char_0x6C;
-                     char_0x65]]
+              (match a with Bot -> ["unreachable"]
                 | Lifted st ->
                   map (fun x ->
-                        explode x @
-                          [char_0x3D] @ string_of_abstract_value (into (st x)))
+                        (x ^ "=") ^ string_of_abstract_value (into (st x)))
                     vars)),
         (fun _ _ ret a ->
           (match a with Bot -> []
             | Lifted st ->
               (if is_top_abstract_value (into (st ret)) then []
-                else [[char_0x72; char_0x65; char_0x74; char_0x3D] @
-                        string_of_abstract_value (into (st ret))]))),
-        (fun _ _ _ -> []),
-        (fun _ ->
-          [char_0x47; char_0x6C; char_0x6F; char_0x62; char_0x61; char_0x6C]),
-        (fun _ -> false), false,
-        comp explode (compiled_owner_of (prog_table p) (prog_procs p)),
-        (fun owner ctx ->
-          owner @ [char_0x20; char_0x2F; char_0x20] @ ctx_show_of into ctx),
+                else ["ret=" ^ string_of_abstract_value (into (st ret))]))),
+        (fun _ _ _ -> []), (fun _ -> "Global"), (fun _ -> false), false,
+        compiled_owner_of (prog_table p) (prog_procs p),
+        (fun owner ctx -> (owner ^ " / ") ^ ctx_show_of into ctx),
         Some (pretty_string_of_program (prog_table p) (prog_procs p)
                (prog_main p) []),
         (fun _ _ -> None), ());;
@@ -11158,7 +10900,7 @@ let rec equal_analysis_node _A _B
     | SourceNode x3, LocalNode (x11, x12) -> false
     | LocalNode (x11, x12), GlobalNode x2 -> false
     | GlobalNode x2, LocalNode (x11, x12) -> false
-    | SourceNode x3, SourceNode y3 -> equal_lista equal_char x3 y3
+    | SourceNode x3, SourceNode y3 -> ((x3 : string) = y3)
     | GlobalNode x2, GlobalNode y2 -> eq _B x2 y2
     | LocalNode (x11, x12), LocalNode (y11, y12) ->
         equal_cfg_nodea x11 y11 && eq _A x12 y12;;
@@ -11176,7 +10918,7 @@ let rec analysis_nodes_in_cluster _A _B
         (fun n ->
           (match (cluster, n)
             with (ContextCluster (owner, ctx), LocalNode (p, ctxa)) ->
-              equal_lista equal_char owner (owner_of cfg p) && eq _A ctx ctxa
+              ((owner : string) = (owner_of cfg p)) && eq _A ctx ctxa
             | (ContextCluster (_, _), GlobalNode _) -> false
             | (ContextCluster (_, _), SourceNode _) -> false
             | (GlobalCluster, LocalNode (_, _)) -> false
@@ -11187,67 +10929,36 @@ let rec analysis_nodes_in_cluster _A _B
             | (SourceCluster, SourceNode _) -> true))
         ns);;
 
-let char_0x3A : char = Chr (Z.of_int 58);;
-
 let rec string_of_action
-  = function EA_Nop -> [char_0x6E; char_0x6F; char_0x70]
-    | EA_Assign (x, a) ->
-        explode x @
-          [char_0x20; char_0x3A; char_0x3D; char_0x20] @
-            string_of_exp zero_nat a
-    | EA_Special (Nondet_Int, x) ->
-        explode x @
-          [char_0x20; char_0x3A; char_0x3D; char_0x20; char_0x5F; char_0x5F;
-            char_0x76; char_0x6F; char_0x62; char_0x6C; char_0x69; char_0x6E;
-            char_0x74; char_0x5F; char_0x6E; char_0x6F; char_0x6E; char_0x64;
-            char_0x65; char_0x74; char_0x5F; char_0x69; char_0x6E; char_0x74;
-            char_0x28; char_0x29]
+  = function EA_Nop -> "nop"
+    | EA_Assign (x, a) -> (x ^ " := ") ^ string_of_exp zero_nat a
+    | EA_Special (Nondet_Int, x) -> x ^ " := __voblint_nondet_int()"
     | EA_Special (Min (a, b), x) ->
-        explode x @
-          [char_0x20; char_0x3A; char_0x3D; char_0x20; char_0x6D; char_0x69;
-            char_0x6E; char_0x28] @
-            string_of_exp zero_nat a @
-              [char_0x2C; char_0x20] @ string_of_exp zero_nat b @ [char_0x29]
+        ((((x ^ " := min(") ^ string_of_exp zero_nat a) ^ ", ") ^
+          string_of_exp zero_nat b) ^
+          ")"
     | EA_Special (Max (a, b), x) ->
-        explode x @
-          [char_0x20; char_0x3A; char_0x3D; char_0x20; char_0x6D; char_0x61;
-            char_0x78; char_0x28] @
-            string_of_exp zero_nat a @
-              [char_0x2C; char_0x20] @ string_of_exp zero_nat b @ [char_0x29]
-    | EA_Assume b -> [char_0x5B] @ string_of_exp zero_nat b @ [char_0x5D]
-    | EA_AssumeNot b ->
-        [char_0x21; char_0x5B] @ string_of_exp zero_nat b @ [char_0x5D]
-    | EA_Body p ->
-        [char_0x62; char_0x6F; char_0x64; char_0x79; char_0x28] @
-          explode p @ [char_0x29]
-    | EA_Ret (None, p) ->
-        [char_0x72; char_0x65; char_0x74; char_0x75; char_0x72; char_0x6E]
-    | EA_Ret (Some e, p) ->
-        [char_0x72; char_0x65; char_0x74; char_0x75; char_0x72; char_0x6E;
-          char_0x20] @
-          string_of_exp zero_nat e
-    | EA_Check cnd ->
-        [char_0x63; char_0x68; char_0x65; char_0x63; char_0x6B; char_0x28] @
-          string_of_exp zero_nat cnd @ [char_0x29];;
+        ((((x ^ " := max(") ^ string_of_exp zero_nat a) ^ ", ") ^
+          string_of_exp zero_nat b) ^
+          ")"
+    | EA_Assume b -> ("[" ^ string_of_exp zero_nat b) ^ "]"
+    | EA_AssumeNot b -> ("![" ^ string_of_exp zero_nat b) ^ "]"
+    | EA_Body p -> ("body(" ^ p) ^ ")"
+    | EA_Ret (None, p) -> "return"
+    | EA_Ret (Some e, p) -> "return " ^ string_of_exp zero_nat e
+    | EA_Check cnd -> ("check(" ^ string_of_exp zero_nat cnd) ^ ")";;
 
 let rec source_action_label
   g a = (match a with EA_Nop -> string_of_action a
           | EA_Assign (x, e) ->
             (if ((x : string) = ret_var)
-              then [char_0x72; char_0x65; char_0x74; char_0x20; char_0x3A;
-                     char_0x3D; char_0x20] @
-                     string_of_exp zero_nat e
-              else string_of_action a)
+              then "ret := " ^ string_of_exp zero_nat e else string_of_action a)
           | EA_Special (_, _) -> string_of_action a
           | EA_Assume aa -> string_of_exp zero_nat aa
-          | EA_AssumeNot b ->
-            [char_0x6E; char_0x6F; char_0x74; char_0x20; char_0x28] @
-              string_of_exp zero_nat b @ [char_0x29]
+          | EA_AssumeNot b -> ("not (" ^ string_of_exp zero_nat b) ^ ")"
           | EA_Body _ -> string_of_action a
           | EA_Ret (_, p) ->
-            (if equal_cfg_nodea (cfg_entry g) (FunctionEntry p)
-              then [char_0x74; char_0x65; char_0x72; char_0x6D; char_0x69;
-                     char_0x6E; char_0x61; char_0x74; char_0x65]
+            (if equal_cfg_nodea (cfg_entry g) (FunctionEntry p) then "terminate"
               else string_of_action a)
           | EA_Check _ -> string_of_action a);;
 
@@ -11255,33 +10966,16 @@ let rec canonical_edge_kind_text
   g kind =
     (match kind with IntraEdge a -> source_action_label g a
       | EnterEdge (callee, a) ->
-        [char_0x65; char_0x6E; char_0x74; char_0x65; char_0x72; char_0x20] @
-          callee @
-            [char_0x28] @
-              (let CallEdge (_, _, es) = a in
-                join_source [char_0x2C; char_0x20]
-                  (map (string_of_exp zero_nat) es)) @
-                [char_0x29]
+        ((("enter " ^ callee) ^ "(") ^
+          (let CallEdge (_, _, es) = a in
+            join_source ", " (map (string_of_exp zero_nat) es))) ^
+          ")"
       | CombineEdge (_, dst, ret) ->
-        [char_0x63; char_0x6F; char_0x6D; char_0x62; char_0x69; char_0x6E;
-          char_0x65] @
-          (match (dst, ret) with (None, _) -> []
-            | (Some xa, None) -> [char_0x20] @ explode xa
-            | (Some xa, Some r) ->
-              [char_0x20] @
-                explode xa @
-                  [char_0x20; char_0x3A; char_0x3D; char_0x20] @ explode r)
-      | CallToReturnEdge callee ->
-        [char_0x63; char_0x61; char_0x6C; char_0x6C; char_0x2D; char_0x74;
-          char_0x6F; char_0x2D; char_0x72; char_0x65; char_0x74; char_0x75;
-          char_0x72; char_0x6E; char_0x20] @
-          explode callee
-      | GlobalReadEdge ->
-        [char_0x72; char_0x65; char_0x61; char_0x64; char_0x20; char_0x67;
-          char_0x6C; char_0x6F; char_0x62; char_0x61; char_0x6C]
-      | GlobalWriteEdge ->
-        [char_0x77; char_0x72; char_0x69; char_0x74; char_0x65; char_0x20;
-          char_0x67; char_0x6C; char_0x6F; char_0x62; char_0x61; char_0x6C]);;
+        "combine" ^
+          (match (dst, ret) with (None, _) -> "" | (Some xa, None) -> " " ^ xa
+            | (Some xa, Some a) -> ((" " ^ xa) ^ " := ") ^ a)
+      | CallToReturnEdge a -> "call-to-return " ^ a
+      | GlobalReadEdge -> "read global" | GlobalWriteEdge -> "write global");;
 
 let rec return_slot_for_pp
   (Analysis_graph_config_ext
@@ -11291,7 +10985,7 @@ let rec return_slot_for_pp
       owner_of, cluster_label, source_text, node_annotation, more))
     = return_slot_for_pp;;
 
-let rec annotation_label (Node_Annotation (x1, x2)) = x1;;
+let rec annotation_lines (Node_Annotation (x1, x2)) = x1;;
 
 let rec show_global_key
   (Analysis_graph_config_ext
@@ -11357,34 +11051,13 @@ let rec local_of
       owner_of, cluster_label, source_text, node_annotation, more))
     = local_of;;
 
-let rec split_esc_nl_acc
-  acc x1 = match acc, x1 with acc, [] -> [rev acc]
-    | acc, [ch] -> [rev (ch :: acc)]
-    | acc, ch1 :: ch2 :: rest ->
-        (if equal_chara ch1 char_0x5C && equal_chara ch2 char_0x6E
-          then rev acc :: split_esc_nl_acc [] rest
-          else split_esc_nl_acc (ch1 :: acc) (ch2 :: rest));;
-
-let rec split_esc_nl s = split_esc_nl_acc [] s;;
-
-let rec string_of_cfg_node
-  = function Statement n -> [char_0x70; char_0x70] @ string_of_nat n
-    | FunctionEntry p ->
-        [char_0x65; char_0x6E; char_0x74; char_0x72; char_0x79; char_0x5F] @
-          explode p
-    | FunctionResult p ->
-        [char_0x72; char_0x65; char_0x73; char_0x75; char_0x6C; char_0x74;
-          char_0x5F] @
-          explode p;;
+let rec string_of_cfg_node = function Statement n -> "pp" ^ string_of_nat n
+                             | FunctionEntry p -> "entry_" ^ p
+                             | FunctionResult p -> "result_" ^ p;;
 
 let rec point_label
   g p = (match p with Statement _ -> string_of_cfg_node p
-          | FunctionEntry owner ->
-            [char_0x65; char_0x6E; char_0x74; char_0x72; char_0x79; char_0x5F] @
-              explode owner
-          | FunctionResult owner ->
-            [char_0x65; char_0x78; char_0x69; char_0x74; char_0x5F] @
-              explode owner);;
+          | FunctionEntry a -> "entry_" ^ a | FunctionResult a -> "exit_" ^ a);;
 
 let rec contextual_node_label_lines
   cfg g sol n =
@@ -11398,9 +11071,7 @@ let rec contextual_node_label_lines
                 format_return cfg p ctx ret
                   (local_of cfg (sol (Inl (p, ctx))))) @
               (match node_annotation cfg p ctx with None -> []
-                | Some ann ->
-                  (if null (annotation_label ann) then []
-                    else split_esc_nl (annotation_label ann)))
+                | Some a -> annotation_lines a)
       | GlobalNode k ->
         show_global_key cfg k ::
           show_global cfg k (globals_to_show cfg) (sol (Inr k))
@@ -11423,38 +11094,22 @@ let rec analysis_node_id _A _B
   cfg ns n =
     (match n
       with LocalNode (p, ctx) ->
-        owner_of cfg p @
-          [char_0x5F] @
-            string_of_cfg_node p @
-              [char_0x5F; char_0x63; char_0x74; char_0x78] @
-                string_of_nat
-                  (context_position (equal_prod (equal_list equal_char) _A)
-                    (remdups (equal_prod (equal_list equal_char) _A)
-                      (owner_contexts cfg ns))
-                    (owner_of cfg p, ctx))
+        (((owner_of cfg p ^ "_") ^ string_of_cfg_node p) ^ "_ctx") ^
+          string_of_nat
+            (context_position (equal_prod equal_literal _A)
+              (remdups (equal_prod equal_literal _A) (owner_contexts cfg ns))
+              (owner_of cfg p, ctx))
       | GlobalNode _ ->
-        [char_0x67; char_0x6C; char_0x6F; char_0x62; char_0x61; char_0x6C;
-          char_0x5F] @
-          string_of_nat (analysis_node_position _A _B ns n)
-      | SourceNode _ ->
-        [char_0x73; char_0x6F; char_0x75; char_0x72; char_0x63; char_0x65]);;
+        "global_" ^ string_of_nat (analysis_node_position _A _B ns n)
+      | SourceNode _ -> "source");;
 
 let rec canonical_node_block _A _B
   cfg g sol ns n =
     (match contextual_node_label_lines cfg g sol n
-      with [] ->
-        [char_0x20; char_0x20] @
-          analysis_node_id _A _B cfg ns n @ [char_0x3A] @ nl
+      with [] -> (("  " ^ analysis_node_id _A _B cfg ns n) ^ ":") ^ nl
       | first :: rest ->
-        [char_0x20; char_0x20] @
-          analysis_node_id _A _B cfg ns n @
-            [char_0x3A; char_0x20] @
-              first @
-                nl @ maps (fun line ->
-                            [char_0x20; char_0x20; char_0x20; char_0x20;
-                              char_0x20; char_0x20] @
-                              line @ nl)
-                       rest);;
+        (((("  " ^ analysis_node_id _A _B cfg ns n) ^ ": ") ^ first) ^ nl) ^
+          join_source "" (map (fun line -> ("      " ^ line) ^ nl) rest));;
 
 let rec analysis_cluster_position _A
   x0 cluster = match x0, cluster with [], cluster -> zero_nat
@@ -11466,17 +11121,10 @@ let rec analysis_cluster_id _A
   clusters cluster =
     (match cluster
       with ContextCluster (_, _) ->
-        [char_0x63; char_0x6C; char_0x75; char_0x73; char_0x74; char_0x65;
-          char_0x72; char_0x5F; char_0x63; char_0x74; char_0x78; char_0x5F] @
+        "cluster_ctx_" ^
           string_of_nat (analysis_cluster_position _A clusters cluster)
-      | GlobalCluster ->
-        [char_0x63; char_0x6C; char_0x75; char_0x73; char_0x74; char_0x65;
-          char_0x72; char_0x5F; char_0x67; char_0x6C; char_0x6F; char_0x62;
-          char_0x61; char_0x6C; char_0x73]
-      | SourceCluster ->
-        [char_0x63; char_0x6C; char_0x75; char_0x73; char_0x74; char_0x65;
-          char_0x72; char_0x5F; char_0x73; char_0x6F; char_0x75; char_0x72;
-          char_0x63; char_0x65]);;
+      | GlobalCluster -> "cluster_globals"
+      | SourceCluster -> "cluster_source");;
 
 let rec analysis_graph_to_canonical_text _A _B
   cfg g sol graph =
@@ -11492,31 +11140,32 @@ let rec analysis_graph_to_canonical_text _A _B
              | SourceNode _ -> false))
          ns
        in
-      [char_0x63; char_0x6C; char_0x75; char_0x73; char_0x74; char_0x65;
-        char_0x72; char_0x73; char_0x3A] @
-        nl @ maps (fun c ->
-                    [char_0x20; char_0x20] @
-                      analysis_cluster_id _A clusters c @
-                        [char_0x3A] @
-                          nl @ maps (fun n ->
-                                      [char_0x20; char_0x20; char_0x20;
-char_0x20] @
-analysis_node_id _A _B cfg ns n @ nl)
-                                 (analysis_nodes_in_cluster _A _B cfg c ns))
-               clustersa @
-               nl @ [char_0x6E; char_0x6F; char_0x64; char_0x65; char_0x73;
-                      char_0x3A] @
-                      nl @ maps (canonical_node_block _A _B cfg g sol ns) nsa @
-                             nl @ [char_0x65; char_0x64; char_0x67; char_0x65;
-                                    char_0x73; char_0x3A] @
-                                    nl @ maps
-   (fun (src, (kind, dst)) ->
-     [char_0x20; char_0x20] @
-       analysis_node_id _A _B cfg ns src @
-         [char_0x20; char_0x2D; char_0x3E; char_0x20] @
-           analysis_node_id _A _B cfg ns dst @
-             [char_0x3A; char_0x20] @ canonical_edge_kind_text g kind @ nl)
-   es);;
+      ((((((((("clusters:" ^ nl) ^
+               join_source ""
+                 (map (fun c ->
+                        ((("  " ^ analysis_cluster_id _A clusters c) ^ ":") ^
+                          nl) ^
+                          join_source ""
+                            (map (fun n ->
+                                   ("    " ^ analysis_node_id _A _B cfg ns n) ^
+                                     nl)
+                              (analysis_nodes_in_cluster _A _B cfg c ns)))
+                   clustersa)) ^
+              nl) ^
+             "nodes:") ^
+            nl) ^
+           join_source "" (map (canonical_node_block _A _B cfg g sol ns) nsa)) ^
+          nl) ^
+         "edges:") ^
+        nl) ^
+        join_source ""
+          (map (fun (src, (kind, dst)) ->
+                 ((((("  " ^ analysis_node_id _A _B cfg ns src) ^ " -> ") ^
+                     analysis_node_id _A _B cfg ns dst) ^
+                    ": ") ^
+                   canonical_edge_kind_text g kind) ^
+                   nl)
+            es));;
 
 let rec context_key
   (Analysis_graph_config_ext
@@ -11737,12 +11386,11 @@ let rec entry_state_ctx_graph_snapshot_of (_A1, _A2)
      let cfg =
        entry_state_ctx_annotated_config (_A1, _A2) enter into classify r p in
      let sol = entry_state_ctx_sol _A2 r in
-      implode
-        (analysis_graph_to_canonical_text (equal_list _A2)
-          (equal_routed_gk equal_unit (equal_list _A2)) cfg g sol
-          (build_analysis_graph (equal_list _A2)
-            (equal_routed_gk equal_unit (equal_list _A2)) cfg g
-            (contextual_result_domain base g r) sol)));;
+      analysis_graph_to_canonical_text (equal_list _A2)
+        (equal_routed_gk equal_unit (equal_list _A2)) cfg g sol
+        (build_analysis_graph (equal_list _A2)
+          (equal_routed_gk equal_unit (equal_list _A2)) cfg g
+          (contextual_result_domain base g r) sol));;
 
 let rec export_edge_kind_of
   kind =
@@ -11755,19 +11403,15 @@ let rec export_edge_label
   g kind =
     (match kind with IntraEdge a -> source_action_label g a
       | EnterEdge (callee, a) ->
-        callee @
-          [char_0x28] @
-            (let CallEdge (_, _, es) = a in
-              join_source [char_0x2C; char_0x20]
-                (map (string_of_exp zero_nat) es)) @
-              [char_0x29]
+        ((callee ^ "(") ^
+          (let CallEdge (_, _, es) = a in
+            join_source ", " (map (string_of_exp zero_nat) es))) ^
+          ")"
       | CombineEdge (_, dst, ret) ->
-        (match (dst, ret) with (None, _) -> [] | (Some xa, None) -> explode xa
-          | (Some xa, Some r) ->
-            explode xa @
-              [char_0x20; char_0x3A; char_0x3D; char_0x20] @ explode r)
-      | CallToReturnEdge a -> explode a | GlobalReadEdge -> []
-      | GlobalWriteEdge -> []);;
+        (match (dst, ret) with (None, _) -> "" | (Some xa, None) -> xa
+          | (Some xa, Some a) -> (xa ^ " := ") ^ a)
+      | CallToReturnEdge callee -> callee | GlobalReadEdge -> ""
+      | GlobalWriteEdge -> "");;
 
 let rec cluster_label
   (Analysis_graph_config_ext
@@ -11777,24 +11421,17 @@ let rec cluster_label
       owner_of, cluster_label, source_text, node_annotation, more))
     = cluster_label;;
 
-let char_0x53 : char = Chr (Z.of_int 83);;
-
 let rec analysis_cluster_label
   cfg cluster =
     (match cluster with ContextCluster (a, b) -> cluster_label cfg a b
-      | GlobalCluster ->
-        [char_0x53; char_0x68; char_0x61; char_0x72; char_0x65; char_0x64;
-          char_0x20; char_0x67; char_0x6C; char_0x6F; char_0x62; char_0x61;
-          char_0x6C; char_0x73]
-      | SourceCluster ->
-        [char_0x53; char_0x6F; char_0x75; char_0x72; char_0x63; char_0x65]);;
+      | GlobalCluster -> "Shared globals" | SourceCluster -> "Source");;
 
 let rec export_cluster_of _A _B
   cfg clusters ns cluster =
     Export_cluster_ext
-      (implode (analysis_cluster_id _A clusters cluster),
-        implode (analysis_cluster_label cfg cluster),
-        map (fun n -> implode (analysis_node_id _A _B cfg ns n))
+      (analysis_cluster_id _A clusters cluster,
+        analysis_cluster_label cfg cluster,
+        map (analysis_node_id _A _B cfg ns)
           (analysis_nodes_in_cluster _A _B cfg cluster ns),
         ());;
 
@@ -11841,13 +11478,11 @@ let rec export_node_of _A _B
          | SourceNode _ -> false)
        in
       Export_node_ext
-        (implode (analysis_node_id _A _B cfg ns n),
-          implode
-            (if named then (match lines with [] -> [] | l :: _ -> l) else []),
+        (analysis_node_id _A _B cfg ns n,
+          (if named then (match lines with [] -> "" | l :: _ -> l) else ""),
           export_node_kind_of g n, status,
-          map implode
-            (if named then (match lines with [] -> [] | _ :: rest -> rest)
-              else lines),
+          (if named then (match lines with [] -> [] | _ :: rest -> rest)
+            else lines),
           ()));;
 
 let rec analysis_graph_to_export _A _B
@@ -11858,10 +11493,9 @@ let rec analysis_graph_to_export _A _B
           map (export_node_of _A _B cfg g sol ns) ns,
           map (fun (src, (kind, dst)) ->
                 Export_edge_ext
-                  (implode (analysis_node_id _A _B cfg ns src),
-                    implode (analysis_node_id _A _B cfg ns dst),
-                    export_edge_kind_of kind,
-                    implode (export_edge_label g kind), ()))
+                  (analysis_node_id _A _B cfg ns src,
+                    analysis_node_id _A _B cfg ns dst, export_edge_kind_of kind,
+                    export_edge_label g kind, ()))
             es,
           ()));;
 
@@ -12019,17 +11653,15 @@ let rec state_slice
   st cnd =
     (match st with Bot -> ""
       | Lifted f ->
-        implode
-          (comma_join
-            (map (fun x ->
-                   explode x @ [char_0x3D] @ string_of_abstract_value (f x))
-              (exp_vnames_list cnd))));;
+        join_source ", "
+          (map (fun x -> (x ^ "=") ^ string_of_abstract_value (f x))
+            (exp_vnames_list cnd)));;
 
 let rec check_rows_of
   env verdicts =
     map (fun (v, (cnd, verdict)) ->
           Check_Row
-            (v, cnd, implode (string_of_exp zero_nat cnd), verdict,
+            (v, cnd, string_of_exp zero_nat cnd, verdict,
               state_slice (env v) cnd))
       verdicts;;
 
@@ -12049,15 +11681,10 @@ let rec contextual_analysis_canonical_text _A _B
 let rec raw_cfg_graph_config
   pi ps annotate =
     Analysis_graph_config_ext
-      (id, (fun _ _ _ _ -> Some ()), (fun _ -> "unit"),
-        (fun _ -> [char_0x75; char_0x6E; char_0x69; char_0x74]), (fun _ -> []),
-        (fun _ -> None), [], (fun _ _ _ _ -> []), (fun _ _ _ _ -> []),
-        (fun _ _ _ -> []), (fun _ -> []), (fun _ -> false), false,
-        comp explode (compiled_owner_of pi ps),
-        (fun owner _ ->
-          owner @
-            [char_0x20; char_0x2F; char_0x20; char_0x75; char_0x6E; char_0x69;
-              char_0x74]),
+      (id, (fun _ _ _ _ -> Some ()), (fun _ -> "unit"), (fun _ -> "unit"),
+        (fun _ -> []), (fun _ -> None), [], (fun _ _ _ _ -> []),
+        (fun _ _ _ _ -> []), (fun _ _ _ -> []), (fun _ -> ""), (fun _ -> false),
+        false, compiled_owner_of pi ps, (fun owner _ -> owner ^ " / unit"),
         Some (pretty_string_of_program pi ps (main_body pi) []),
         (fun p _ -> annotate p), ());;
 
@@ -12068,9 +11695,6 @@ let rec raw_cfg_canonical_text
      let domain = contextual_graph_domain g (fun _ -> [()]) in
       contextual_analysis_canonical_text equal_unit equal_unit cfg g domain
         (fun _ -> ()));;
-
-let rec raw_cfg_canonical_text_lit
-  pi ps annotate = implode (raw_cfg_canonical_text pi ps annotate);;
 
 let rec contextual_analysis_export _A _B
   cfg g domain sol =
@@ -12085,10 +11709,6 @@ let rec raw_cfg_export
       contextual_analysis_export equal_unit equal_unit cfg g domain
         (fun _ -> ()));;
 
-let rec join_esc_nl = function [] -> []
-                      | [s] -> s
-                      | s :: v :: va -> s @ esc_nl @ join_esc_nl (v :: va);;
-
 let rec verdict_state_report_node_annotation
   vars report v =
     (match find (fun entry -> equal_cfg_nodea (fst entry) v) report
@@ -12097,16 +11717,13 @@ let rec verdict_state_report_node_annotation
         Some (match (verdict, st) with (Bot, _) -> dead_check_annotation cnd
                | (Lifted _, Bot) -> dead_check_annotation cnd
                | (Lifted res, Lifted f) ->
-                 (let Node_Annotation (lbl, a) = check_result_annotation res cnd
-                    in
+                 (let Node_Annotation (check_lines, a) =
+                    check_result_annotation res cnd in
                    Node_Annotation
-                     (join_esc_nl (lbl :: map (state_line f) vars), a))));;
+                     (check_lines @ map (state_line f) vars, a))));;
 
 let unreachable_state_annotation : graph_node_annotation
-  = Node_Annotation
-      ([char_0x75; char_0x6E; char_0x72; char_0x65; char_0x61; char_0x63;
-         char_0x68; char_0x61; char_0x62; char_0x6C; char_0x65],
-        NS_Unreachable);;
+  = Node_Annotation (["unreachable"], NS_Unreachable);;
 
 let rec full_state_checked_node_annotation
   vars env verdicts v =
@@ -12114,19 +11731,17 @@ let rec full_state_checked_node_annotation
       | Lifted st ->
         (let lines = map (state_line st) vars in
           (match find (fun entry -> equal_cfg_nodea (fst entry) v) verdicts
-            with None -> Some (Node_Annotation (join_esc_nl lines, NS_Plain))
+            with None -> Some (Node_Annotation (lines, NS_Plain))
             | Some (_, (cnd, res)) ->
-              (let Node_Annotation (lbl, status) =
+              (let Node_Annotation (check_lines, status) =
                  check_result_annotation res cnd in
-                Some (Node_Annotation
-                       (join_esc_nl (lbl :: lines), status))))));;
+                Some (Node_Annotation (check_lines @ lines, status))))));;
 
 let rec point_node_annotation
   vars env v =
     (match env v with Bot -> Some unreachable_state_annotation
       | Lifted st ->
-        Some (Node_Annotation
-               (join_esc_nl (map (state_line st) vars), NS_Plain)));;
+        Some (Node_Annotation (map (state_line st) vars, NS_Plain)));;
 
 let rec decided_verdicts
   x = map_filter
@@ -12163,7 +11778,7 @@ let rec collapsed_output
     (let ann = view_annotation view p env rows in
       Analysis_Output
         (Some (raw_cfg_export (prog_table p) (prog_procs p) ann),
-          Some (raw_cfg_canonical_text_lit (prog_table p) (prog_procs p) ann),
+          Some (raw_cfg_canonical_text (prog_table p) (prog_procs p) ann),
           check_rows_of env rows, globals, []));;
 
 let rec report_output
@@ -12375,8 +11990,7 @@ let rec unit_ctx_graph_config
   p rows =
     Analysis_graph_config_ext
       (id, (fun _ _ _ a -> (match a with Bot -> None | Lifted _ -> Some ())),
-        (fun _ -> "unit"),
-        (fun _ -> [char_0x75; char_0x6E; char_0x69; char_0x74]),
+        (fun _ -> "unit"), (fun _ -> "unit"),
         (fun v ->
           (let sc =
              compiled_procedure_scope (declared_global p) (prog_table p)
@@ -12388,31 +12002,18 @@ let rec unit_ctx_graph_config
             (compiled_procedure_scope (declared_global p) (prog_table p)
               (prog_procs p) (prog_cfg p) v)),
         [], (fun _ _ vars a ->
-              (match a
-                with Bot ->
-                  [[char_0x75; char_0x6E; char_0x72; char_0x65; char_0x61;
-                     char_0x63; char_0x68; char_0x61; char_0x62; char_0x6C;
-                     char_0x65]]
+              (match a with Bot -> ["unreachable"]
                 | Lifted st ->
-                  map (fun x ->
-                        explode x @
-                          [char_0x3D] @ string_of_abstract_value (st x))
+                  map (fun x -> (x ^ "=") ^ string_of_abstract_value (st x))
                     vars)),
         (fun _ _ ret a ->
           (match a with Bot -> []
             | Lifted st ->
               (if is_top_abstract_value (st ret) then []
-                else [[char_0x72; char_0x65; char_0x74; char_0x3D] @
-                        string_of_abstract_value (st ret)]))),
-        (fun _ _ _ -> []),
-        (fun _ ->
-          [char_0x47; char_0x6C; char_0x6F; char_0x62; char_0x61; char_0x6C]),
-        (fun _ -> false), false,
-        comp explode (compiled_owner_of (prog_table p) (prog_procs p)),
-        (fun owner _ ->
-          owner @
-            [char_0x20; char_0x2F; char_0x20; char_0x75; char_0x6E; char_0x69;
-              char_0x74]),
+                else ["ret=" ^ string_of_abstract_value (st ret)]))),
+        (fun _ _ _ -> []), (fun _ -> "Global"), (fun _ -> false), false,
+        compiled_owner_of (prog_table p) (prog_procs p),
+        (fun owner _ -> owner ^ " / unit"),
         Some (pretty_string_of_program (prog_table p) (prog_procs p)
                (prog_main p) []),
         unit_ctx_check_annotation rows, ());;
@@ -12428,10 +12029,9 @@ let rec unit_ctx_graph_snapshot_of
     (let g = prog_cfg p in
      let cfg = unit_ctx_graph_config p rows in
      let sol = unit_ctx_sol_of into r in
-      implode
-        (analysis_graph_to_canonical_text equal_unit equal_unit cfg g sol
-          (build_analysis_graph equal_unit equal_unit cfg g
-            (contextual_result_domain cfg g r) sol)));;
+      analysis_graph_to_canonical_text equal_unit equal_unit cfg g sol
+        (build_analysis_graph equal_unit equal_unit cfg g
+          (contextual_result_domain cfg g r) sol));;
 
 let rec unit_ctx_export_of
   into r rows p =
@@ -12504,25 +12104,21 @@ let rec cs_ctx_check_annotation_of
                with Bot -> dead_check_annotation cnd
                | Lifted res -> check_result_annotation res cnd));;
 
+let rec join_esc_nl = function [] -> ""
+                      | [s] -> s
+                      | s :: v :: va -> (s ^ esc_nl) ^ join_esc_nl (v :: va);;
+
 let rec cs_show_context
-  ctx = maps (fun u -> string_of_cfg_node u @ [char_0x20]) ctx;;
+  ctx = join_esc_nl (map (fun u -> string_of_cfg_node u ^ " ") ctx);;
 
 let rec cs_cluster_label
   owner ctx =
-    (if null ctx
-      then owner @
-             [char_0x20; char_0x2F; char_0x20; char_0x72; char_0x6F; char_0x6F;
-               char_0x74; char_0x20; char_0x63; char_0x6F; char_0x6E; char_0x74;
-               char_0x65; char_0x78; char_0x74]
-      else owner @
-             [char_0x20; char_0x2F; char_0x20; char_0x63; char_0x61; char_0x6C;
-               char_0x6C; char_0x2D; char_0x73; char_0x74; char_0x72; char_0x69;
-               char_0x6E; char_0x67; char_0x3D] @
-               cs_show_context ctx);;
+    (if null ctx then owner ^ " / root context"
+      else (owner ^ " / call-string=") ^ cs_show_context ctx);;
 
 let rec cs_graph_route k u ctx ca d = Some (cs_route k u ctx d ca);;
 
-let rec cs_context_key ctx = implode (cs_show_context ctx);;
+let rec cs_context_key ctx = cs_show_context ctx;;
 
 let rec cs_ctx_graph_config
   p k = Analysis_graph_config_ext
@@ -12538,29 +12134,17 @@ let rec cs_ctx_graph_config
                 (compiled_procedure_scope (declared_global p) (prog_table p)
                   (prog_procs p) (prog_cfg p) v)),
             [], (fun _ _ vars a ->
-                  (match a
-                    with Bot ->
-                      [[char_0x75; char_0x6E; char_0x72; char_0x65; char_0x61;
-                         char_0x63; char_0x68; char_0x61; char_0x62; char_0x6C;
-                         char_0x65]]
+                  (match a with Bot -> ["unreachable"]
                     | Lifted st ->
-                      map (fun x ->
-                            explode x @
-                              [char_0x3D] @ string_of_abstract_value (st x))
+                      map (fun x -> (x ^ "=") ^ string_of_abstract_value (st x))
                         vars)),
             (fun _ _ ret a ->
               (match a with Bot -> []
                 | Lifted st ->
                   (if is_top_abstract_value (st ret) then []
-                    else [[char_0x72; char_0x65; char_0x74; char_0x3D] @
-                            string_of_abstract_value (st ret)]))),
-            (fun _ _ _ -> []),
-            (fun _ ->
-              [char_0x47; char_0x6C; char_0x6F; char_0x62; char_0x61;
-                char_0x6C]),
-            (fun _ -> false), false,
-            comp explode (compiled_owner_of (prog_table p) (prog_procs p)),
-            cs_cluster_label,
+                    else ["ret=" ^ string_of_abstract_value (st ret)]))),
+            (fun _ _ _ -> []), (fun _ -> "Global"), (fun _ -> false), false,
+            compiled_owner_of (prog_table p) (prog_procs p), cs_cluster_label,
             Some (pretty_string_of_program (prog_table p) (prog_procs p)
                    (prog_main p) []),
             (fun _ _ -> None), ());;
@@ -12588,11 +12172,10 @@ let rec cs_ctx_graph_snapshot_of
      let base = cs_ctx_graph_config p k in
      let cfg = cs_ctx_annotated_config_of classify r p k in
      let sol = cs_ctx_sol_of into r in
-      implode
-        (analysis_graph_to_canonical_text (equal_list equal_cfg_node)
-          equal_call_string_gk cfg g sol
-          (build_analysis_graph (equal_list equal_cfg_node) equal_call_string_gk
-            cfg g (cs_ctx_domain_of base p r) sol)));;
+      analysis_graph_to_canonical_text (equal_list equal_cfg_node)
+        equal_call_string_gk cfg g sol
+        (build_analysis_graph (equal_list equal_cfg_node) equal_call_string_gk
+          cfg g (cs_ctx_domain_of base p r) sol));;
 
 let rec cs_ctx_export_of
   into classify r k p =
@@ -13226,8 +12809,6 @@ let rec run_voblint
              with None -> Unsupported_Configuration
              | Some pl -> plan_answer pl view p));;
 
-let char_0x7A : char = Chr (Z.of_int 122);;
-
 let rec diagnostic_obligation (Arithmetic_Diagnostic (x1, x2, x3, x4)) = x3;;
 
 let rec arithmetic_operation (Arithmetic_Obligation (x1, x2)) = x1;;
@@ -13238,76 +12819,21 @@ let rec diagnostic_message
   diagnostic =
     (let operation = arithmetic_operation (diagnostic_obligation diagnostic) in
      let kind =
-       (match operation
-         with N _ ->
-           [char_0x64; char_0x69; char_0x76; char_0x69; char_0x73; char_0x69;
-             char_0x6F; char_0x6E]
-         | V _ ->
-           [char_0x64; char_0x69; char_0x76; char_0x69; char_0x73; char_0x69;
-             char_0x6F; char_0x6E]
-         | Plus (_, _) ->
-           [char_0x64; char_0x69; char_0x76; char_0x69; char_0x73; char_0x69;
-             char_0x6F; char_0x6E]
-         | Minus (_, _) ->
-           [char_0x64; char_0x69; char_0x76; char_0x69; char_0x73; char_0x69;
-             char_0x6F; char_0x6E]
-         | Times (_, _) ->
-           [char_0x64; char_0x69; char_0x76; char_0x69; char_0x73; char_0x69;
-             char_0x6F; char_0x6E]
-         | Div (_, _) ->
-           [char_0x64; char_0x69; char_0x76; char_0x69; char_0x73; char_0x69;
-             char_0x6F; char_0x6E]
-         | Mod (_, _) ->
-           [char_0x72; char_0x65; char_0x6D; char_0x61; char_0x69; char_0x6E;
-             char_0x64; char_0x65; char_0x72]
-         | Less (_, _) ->
-           [char_0x64; char_0x69; char_0x76; char_0x69; char_0x73; char_0x69;
-             char_0x6F; char_0x6E]
-         | LessEq (_, _) ->
-           [char_0x64; char_0x69; char_0x76; char_0x69; char_0x73; char_0x69;
-             char_0x6F; char_0x6E]
-         | Greater (_, _) ->
-           [char_0x64; char_0x69; char_0x76; char_0x69; char_0x73; char_0x69;
-             char_0x6F; char_0x6E]
-         | GreaterEq (_, _) ->
-           [char_0x64; char_0x69; char_0x76; char_0x69; char_0x73; char_0x69;
-             char_0x6F; char_0x6E]
-         | NotEq (_, _) ->
-           [char_0x64; char_0x69; char_0x76; char_0x69; char_0x73; char_0x69;
-             char_0x6F; char_0x6E]
-         | Eq (_, _) ->
-           [char_0x64; char_0x69; char_0x76; char_0x69; char_0x73; char_0x69;
-             char_0x6F; char_0x6E]
-         | Not _ ->
-           [char_0x64; char_0x69; char_0x76; char_0x69; char_0x73; char_0x69;
-             char_0x6F; char_0x6E]
-         | And (_, _) ->
-           [char_0x64; char_0x69; char_0x76; char_0x69; char_0x73; char_0x69;
-             char_0x6F; char_0x6E]
-         | Or (_, _) ->
-           [char_0x64; char_0x69; char_0x76; char_0x69; char_0x73; char_0x69;
-             char_0x6F; char_0x6E])
+       (match operation with N _ -> "division" | V _ -> "division"
+         | Plus (_, _) -> "division" | Minus (_, _) -> "division"
+         | Times (_, _) -> "division" | Div (_, _) -> "division"
+         | Mod (_, _) -> "remainder" | Less (_, _) -> "division"
+         | LessEq (_, _) -> "division" | Greater (_, _) -> "division"
+         | GreaterEq (_, _) -> "division" | NotEq (_, _) -> "division"
+         | Eq (_, _) -> "division" | Not _ -> "division"
+         | And (_, _) -> "division" | Or (_, _) -> "division")
        in
      let message =
        (if equal_check_result (diagnostic_verdict diagnostic) Check_Refuted
-         then kind @
-                [char_0x20; char_0x62; char_0x79; char_0x20; char_0x7A;
-                  char_0x65; char_0x72; char_0x6F; char_0x20; char_0x77;
-                  char_0x68; char_0x65; char_0x6E; char_0x65; char_0x76;
-                  char_0x65; char_0x72; char_0x20; char_0x74; char_0x68;
-                  char_0x69; char_0x73; char_0x20; char_0x6F; char_0x70;
-                  char_0x65; char_0x72; char_0x61; char_0x74; char_0x69;
-                  char_0x6F; char_0x6E; char_0x20; char_0x69; char_0x73;
-                  char_0x20; char_0x65; char_0x76; char_0x61; char_0x6C;
-                  char_0x75; char_0x61; char_0x74; char_0x65; char_0x64;
-                  char_0x3A; char_0x20]
-         else [char_0x70; char_0x6F; char_0x73; char_0x73; char_0x69; char_0x62;
-                char_0x6C; char_0x65; char_0x20] @
-                kind @
-                  [char_0x20; char_0x62; char_0x79; char_0x20; char_0x7A;
-                    char_0x65; char_0x72; char_0x6F; char_0x3A; char_0x20])
+         then kind ^ " by zero whenever this operation is evaluated: "
+         else ("possible " ^ kind) ^ " by zero: ")
        in
-      implode (message @ string_of_exp zero_nat operation));;
+      message ^ string_of_exp zero_nat operation);;
 
 let rec row_point (Check_Row (x1, x2, x3, x4, x5)) = x1;;
 

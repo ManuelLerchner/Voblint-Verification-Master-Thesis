@@ -77,21 +77,20 @@ definition entry_state_ctx_graph_config ::
         scope_return_slot (compiled_procedure_scope (declared_global p) (prog_table p) (prog_procs p) (prog_cfg p) v)),
       globals_to_show = [],
       show_local = (\<lambda>v ctx vars d.
-        case d of Bot \<Rightarrow> [''unreachable'']
+        case d of Bot \<Rightarrow> [STR ''unreachable'']
         | Lifted st \<Rightarrow>
-            map (\<lambda>x. String.explode x @ ''='' @ string_of_abstract_value (into (st x))) vars),
+            map (\<lambda>x. x + STR ''='' + string_of_abstract_value (into (st x))) vars),
       format_return = (\<lambda>v ctx ret d.
         case d of Bot \<Rightarrow> []
         | Lifted st \<Rightarrow>
             if is_top_abstract_value (into (st ret)) then []
-            else [''ret='' @ string_of_abstract_value (into (st ret))]),
+            else [STR ''ret='' + string_of_abstract_value (into (st ret))]),
       show_global = (\<lambda>k vars s. []),
-      show_global_key = (\<lambda>k. ''Global''),
+      show_global_key = (\<lambda>k. STR ''Global''),
       is_shared_global = (\<lambda>k. False),
       show_internal_globals = False,
-      owner_of = String.explode o
-        compiled_owner_of (prog_table p) (prog_procs p),
-      cluster_label = (\<lambda>owner ctx. owner @ '' / '' @ ctx_show_of into ctx),
+      owner_of = compiled_owner_of (prog_table p) (prog_procs p),
+      cluster_label = (\<lambda>owner ctx. owner + STR '' / '' + ctx_show_of into ctx),
       source_text = Some (pretty_string_of_program (prog_table p) (prog_procs p) (prog_main p) []),
       node_annotation = (\<lambda>_ _. None)
     \<rparr>"
@@ -185,9 +184,8 @@ definition entry_state_ctx_graph_snapshot_of ::
           base = entry_state_ctx_graph_config enter into p;
           cfg = entry_state_ctx_annotated_config enter into classify r p;
           sol = entry_state_ctx_sol r
-      in String.implode
-           (analysis_graph_to_canonical_text cfg g sol
-              (build_analysis_graph cfg g (contextual_result_domain base g r) sol)))"
+      in analysis_graph_to_canonical_text cfg g sol
+           (build_analysis_graph cfg g (contextual_result_domain base g r) sol))"
 
 subsection \<open>The expanded rendering, per domain\<close>
 

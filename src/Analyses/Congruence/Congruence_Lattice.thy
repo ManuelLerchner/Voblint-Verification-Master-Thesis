@@ -412,13 +412,13 @@ lemma is_top_congruence_correct_gamma:
   unfolding is_top_congruence_def
   by (metis gamma_congruence_inject gamma_top_congruence)
 
-definition string_of_congruence :: "congruence \<Rightarrow> string" where
+definition string_of_congruence :: "congruence \<Rightarrow> String.literal" where
   "string_of_congruence c =
      (case Rep_congruence c of
-        None \<Rightarrow> ''Top''
+        None \<Rightarrow> STR ''Top''
       | Some (r, m) \<Rightarrow>
-          if m = 0 then ''='' @ string_of_int r
-          else ''='' @ string_of_int r @ '' (mod '' @ string_of_int m @ '')'')"
+          if m = 0 then STR ''='' + string_of_int r
+          else STR ''='' + string_of_int r + STR '' (mod '' + string_of_int m + STR '')'')"
 
 instantiation congruence :: sound_domain
 begin

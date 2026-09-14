@@ -85,20 +85,19 @@ where
             (prog_procs p) (prog_cfg p) v)),
       globals_to_show = [],
       show_local = (\<lambda>v ctx vars d.
-        case d of Bot \<Rightarrow> [''unreachable'']
+        case d of Bot \<Rightarrow> [STR ''unreachable'']
         | Lifted st \<Rightarrow>
-            map (\<lambda>x. String.explode x @ ''='' @ string_of_abstract_value (st x)) vars),
+            map (\<lambda>x. x + STR ''='' + string_of_abstract_value (st x)) vars),
       format_return = (\<lambda>v ctx ret d.
         case d of Bot \<Rightarrow> []
         | Lifted st \<Rightarrow>
             if is_top_abstract_value (st ret) then []
-            else [''ret='' @ string_of_abstract_value (st ret)]),
+            else [STR ''ret='' + string_of_abstract_value (st ret)]),
       show_global = (\<lambda>x vars s. []),
-      show_global_key = (\<lambda>x. ''Global''),
+      show_global_key = (\<lambda>x. STR ''Global''),
       is_shared_global = (\<lambda>x. False),
       show_internal_globals = False,
-      owner_of = String.explode \<circ>
-        compiled_owner_of (prog_table p) (prog_procs p),
+      owner_of = compiled_owner_of (prog_table p) (prog_procs p),
       cluster_label = cs_cluster_label,
       source_text =
         Some (pretty_string_of_program (prog_table p) (prog_procs p)
@@ -143,9 +142,8 @@ where
           base = cs_ctx_graph_config p k;
           cfg = cs_ctx_annotated_config_of classify r p k;
           sol = cs_ctx_sol_of into r
-      in String.implode
-           (analysis_graph_to_canonical_text cfg g sol
-             (build_analysis_graph cfg g (cs_ctx_domain_of base p r) sol)))"
+      in analysis_graph_to_canonical_text cfg g sol
+           (build_analysis_graph cfg g (cs_ctx_domain_of base p r) sol))"
 
 definition cs_ctx_checked_payload_of ::
     "('a::semilattice_sup \<Rightarrow> abstract_value)

@@ -132,12 +132,8 @@ let build_program = function
 (* -- Driver --------------------------------------------------------------- *)
 
 let source_text_of_program original =
-  let source_chars =
-    pretty_string_of_program (prog_table original) (prog_procs original) (prog_main original)
-      (declared_global_vars original)
-  in
-  String.concat "" (List.map (fun c -> String.make 1 (Char.chr (Z.to_int (integer_of_char c)))) source_chars)
-
+  pretty_string_of_program (prog_table original) (prog_procs original) (prog_main original)
+    (declared_global_vars original)
 
 let mode = if Array.length Sys.argv > 1 then Sys.argv.(1) else ""
 

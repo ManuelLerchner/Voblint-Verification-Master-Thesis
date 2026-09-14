@@ -734,12 +734,12 @@ qed
 
 subsection \<open>Sound-domain instance\<close>
 
-definition string_of_int_dom :: "'a int_dom_scheme \<Rightarrow> string" where
+definition string_of_int_dom :: "'a int_dom_scheme \<Rightarrow> String.literal" where
   "string_of_int_dom d =
-     ''sign='' @ string_of_sign (int_sign d)
-     @ '', ivl='' @ string_of_ivl (int_ivl d)
-     @ '', parity='' @ string_of_parity (int_parity d)
-     @ '', congruence='' @ string_of_congruence (int_congruence d)"
+       STR ''sign='' + string_of_sign (int_sign d)
+     + STR '', ivl='' + string_of_ivl (int_ivl d)
+     + STR '', parity='' + string_of_parity (int_parity d)
+     + STR '', congruence='' + string_of_congruence (int_congruence d)"
 
 instantiation int_dom_ext ::
   (int_dom_record_lattice) sound_domain

@@ -151,7 +151,7 @@ export_code
   N V Plus Minus Times Div Mod
   exp.Not And Or Less exp.Eq
   Statement FunctionEntry FunctionResult
-  int_of_integer nat_of_integer integer_of_int integer_of_nat integer_of_char
+  int_of_integer nat_of_integer integer_of_int integer_of_nat
 
   \<comment> \<open>Inspect: for the property AST driver and the CFG regressions, not the CLI\<close>
   declared_global_vars pretty_string_of_program

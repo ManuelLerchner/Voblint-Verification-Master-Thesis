@@ -252,11 +252,11 @@ lemma parity_times_combine_mono: "\<lbrakk>a1 \<le> a2; b1 \<le> b2\<rbrakk> \<L
 
 subsection \<open>Sound-domain instance\<close>
 
-fun string_of_parity :: "parity \<Rightarrow> string" where
-    "string_of_parity PBot  = ''Bottom''"
-  | "string_of_parity PEven = ''Even''"
-  | "string_of_parity POdd  = ''Odd''"
-  | "string_of_parity PTop  = ''Top''"
+fun string_of_parity :: "parity \<Rightarrow> String.literal" where
+    "string_of_parity PBot  = STR ''Bottom''"
+  | "string_of_parity PEven = STR ''Even''"
+  | "string_of_parity POdd  = STR ''Odd''"
+  | "string_of_parity PTop  = STR ''Top''"
 
 instantiation parity :: sound_domain begin
 definition gamma_abs_parity [simp]: "gamma (a :: parity) = gamma_parity a"

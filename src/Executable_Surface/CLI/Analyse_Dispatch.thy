@@ -629,8 +629,6 @@ text \<open>
   \<^theory>\<open>HOL-Library.Code_Abstract_Char\<close> does the same for \<open>char\<close>, relevant
   wherever a \<open>char\<close> is inspected directly (e.g. \<^const>\<open>String.explode\<close>'s
   result) rather than through the opaque \<open>String.literal\<close> above.
-  \<open>integer_of_char\<close> is that bridge; only the inspecting direction is exported,
-  since nothing handwritten builds a \<open>char\<close> from an integer.
 
   \<open>string_of_exp\<close> is exported alongside the structured \<open>exp\<close> already in
   every \<open>check_report_entry\<close>: a consumer can pattern-match the AST directly,

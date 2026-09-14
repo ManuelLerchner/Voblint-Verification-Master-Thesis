@@ -133,7 +133,7 @@ lemma checks_ex_classify_1:
 
 lemma checks_ex_classify_3:
   "sign_classify_check (Less (N 0) (V (STR ''y''))) (checks_ex_env (Statement 3)) = Check_Refuted"
-  unfolding checks_ex_env_def by eval
+  unfolding checks_ex_solver_terminates by eval
 
 lemma checks_ex_classify_5:
   "sign_classify_check (Eq (V (STR ''z'')) (N 1)) (checks_ex_env (Statement 5)) = Check_Unknown"
@@ -233,7 +233,7 @@ corollary checks_ex_report_agrees_with_node_classification:
 
 lemma checks_ex_report_rendered:
   "map string_of_check_report_entry (analyse_sign_report_for checks_ex_gs checks_ex_program) =
-     [''pp1: 0<y  PROVED'', ''pp3: 0<y  REFUTED'', ''pp5: z==1  UNKNOWN'']"
+     [STR ''pp1: 0<y  PROVED'', STR ''pp3: 0<y  REFUTED'', STR ''pp5: z==1  UNKNOWN'']"
   by eval
 
 subsection \<open>Colouring checks by executable classification\<close>
@@ -258,23 +258,23 @@ definition checks_ex_node_annotation :: "pp \<Rightarrow> graph_node_annotation 
         Some ann \<Rightarrow> Some ann
       | None \<Rightarrow>
           if v = FunctionResult (STR ''main'') then
-            Some (Node_Annotation '''' NS_Exit)
+            Some (Node_Annotation [STR ''''] NS_Exit)
           else None)"
 
 lemma checks_ex_annotation_proved:
   "checks_ex_node_annotation (Statement 1) =
      Some (check_result_annotation Check_Proved (Less (N 0) (V (STR ''y''))))"
-  unfolding checks_ex_node_annotation_def by eval
+  unfolding check_result_annotation_def by eval
 
 lemma checks_ex_annotation_refuted:
   "checks_ex_node_annotation (Statement 3) =
      Some (check_result_annotation Check_Refuted (Less (N 0) (V (STR ''y''))))"
-  unfolding checks_ex_node_annotation_def by eval
+  unfolding check_result_annotation_def by eval
 
 lemma checks_ex_annotation_unknown:
   "checks_ex_node_annotation (Statement 5) =
      Some (check_result_annotation Check_Unknown (Eq (V (STR ''z'')) (N 1)))"
-  unfolding checks_ex_node_annotation_def by eval
+  unfolding check_result_annotation_def by eval
 
 end
 

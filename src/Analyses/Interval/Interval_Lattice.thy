@@ -258,13 +258,13 @@ instance ivl :: bounded_lattice_bot ..
 
 subsection \<open>Abstract domain instantiation\<close>
 
-fun string_of_eint :: "eint \<Rightarrow> string" where
-    "string_of_eint MinInf  = ''-inf''"
-  | "string_of_eint PlusInf = ''+inf''"
+fun string_of_eint :: "eint \<Rightarrow> String.literal" where
+    "string_of_eint MinInf  = STR ''-inf''"
+  | "string_of_eint PlusInf = STR ''+inf''"
   | "string_of_eint (Fin n) = string_of_int n"
 
-fun string_of_ivl :: "ivl \<Rightarrow> string" where
-  "string_of_ivl (Ivl l u) = ''['' @ string_of_eint l @ '','' @ string_of_eint u @ '']''"
+fun string_of_ivl :: "ivl \<Rightarrow> String.literal" where
+  "string_of_ivl (Ivl l u) = STR ''['' + string_of_eint l + STR '','' + string_of_eint u + STR '']''"
 
 instantiation ivl :: sound_domain begin
 definition gamma_abs_ivl [simp]: "gamma (a :: ivl) = gamma_ivl a"
