@@ -14,6 +14,7 @@ platforms = ["osx-arm64", "osx-64", "linux-64"]
 
 [dependencies]
 python = ">=3.10"
+binaryen = ">=119" 
 
 # I/R: AutoCorrode's headless REPL MCP server (scripts/start-ir.sh). Not a
 # lint/test/grammar concern -- its own dependency pair, needed by every
