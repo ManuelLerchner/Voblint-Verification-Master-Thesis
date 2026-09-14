@@ -62,54 +62,40 @@
 //       y=[-inf,+inf]
 //   g_exit_g_ctx0: exit_g
 //       p=[3,3]
-//       ret=[6,6]
 //   g_pp0_ctx0: pp0
 //       p=[3,3]
-//       ret=[-inf,+inf]
 //   g_entry_g_ctx0: entry_g
 //       p=[3,3]
-//       ret=[-inf,+inf]
 //   g_exit_g_ctx1: exit_g
 //       p=[10,10]
-//       ret=[20,20]
 //   g_pp0_ctx1: pp0
 //       p=[10,10]
-//       ret=[-inf,+inf]
 //   g_entry_g_ctx1: entry_g
 //       p=[10,10]
-//       ret=[-inf,+inf]
 //   f_exit_f_ctx0: exit_f
 //       p=[3,3]
 //       t=[6,6]
-//       ret=[6,6]
 //   f_pp2_ctx0: pp2
 //       p=[3,3]
 //       t=[-inf,+inf]
-//       ret=[-inf,+inf]
 //   f_pp3_ctx0: pp3
 //       p=[3,3]
 //       t=[6,6]
-//       ret=[-inf,+inf]
 //   f_entry_f_ctx0: entry_f
 //       p=[3,3]
 //       t=[-inf,+inf]
-//       ret=[-inf,+inf]
 //   f_exit_f_ctx1: exit_f
 //       p=[10,10]
 //       t=[20,20]
-//       ret=[20,20]
 //   f_pp2_ctx1: pp2
 //       p=[10,10]
 //       t=[-inf,+inf]
-//       ret=[-inf,+inf]
 //   f_pp3_ctx1: pp3
 //       p=[10,10]
 //       t=[20,20]
-//       ret=[-inf,+inf]
 //   f_entry_f_ctx1: entry_f
 //       p=[10,10]
 //       t=[-inf,+inf]
-//       ret=[-inf,+inf]
 //
 // edges:
 //   g_pp0_ctx0 -> g_exit_g_ctx0: return p + p
@@ -125,16 +111,16 @@
 //   g_entry_g_ctx1 -> g_pp0_ctx1: body(g)
 //   main_entry_main_ctx0 -> main_pp5_ctx0: body(main)
 //   f_pp2_ctx0 -> g_entry_g_ctx0: enter g(p)
-//   g_exit_g_ctx0 -> f_pp3_ctx0: combine t := ret
+//   g_exit_g_ctx0 -> f_pp3_ctx0: combine t := g(p)
 //   f_pp2_ctx0 -> f_pp3_ctx0: call-to-return g
 //   f_pp2_ctx1 -> g_entry_g_ctx1: enter g(p)
-//   g_exit_g_ctx1 -> f_pp3_ctx1: combine t := ret
+//   g_exit_g_ctx1 -> f_pp3_ctx1: combine t := g(p)
 //   f_pp2_ctx1 -> f_pp3_ctx1: call-to-return g
 //   main_pp5_ctx0 -> f_entry_f_ctx0: enter f(3)
-//   f_exit_f_ctx0 -> main_pp6_ctx0: combine x := ret
+//   f_exit_f_ctx0 -> main_pp6_ctx0: combine x := f(3)
 //   main_pp5_ctx0 -> main_pp6_ctx0: call-to-return f
 //   main_pp6_ctx0 -> f_entry_f_ctx1: enter f(10)
-//   f_exit_f_ctx1 -> main_pp7_ctx0: combine y := ret
+//   f_exit_f_ctx1 -> main_pp7_ctx0: combine y := f(10)
 //   main_pp6_ctx0 -> main_pp7_ctx0: call-to-return f
 // EXPECT-GRAPH-END
 

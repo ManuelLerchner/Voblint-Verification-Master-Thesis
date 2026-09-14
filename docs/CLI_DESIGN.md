@@ -1,6 +1,6 @@
 # CLI: `voblint`
 
-Status: **implemented** (`cli/main.ml`, `cli/vimp_frontend.ml`). Source file
+Status: **implemented** (`cli/entry/voblint.ml`, `cli/frontend/vimp_frontend.ml`). Source file
 extension is `.vimp`; the grammar itself is documented in `manifests/vimp-grammar.yaml`,
 not here.
 
@@ -87,7 +87,7 @@ Malformed_Program | Unsupported_Configuration | Analysed out
     v
 out_checks (text report) / out_graph (--dot, --html)
                          / out_snapshot (--graph-snapshot)
-    -> DOT and HTML drawn by cli/dot_render.ml and cli/html_report.ml,
+    -> graph, DOT, snapshot and HTML built in cli/result/ and cli/render/,
        all sourced from the one solve that produced `out` (never a second)
 ```
 
@@ -118,7 +118,7 @@ theorem, discharged per program. Interval's carrier has infinite height, and
 the join-based disciplines (`--solver join`, `per-origin`) have no termination
 guarantee on it. Reproductions during development included process/backend
 crashes, not just long-running computation, so the containment mechanism is a
-killable subprocess (`run_contained` in `cli/main.ml`), not an in-process
+killable subprocess (`run_contained` in `cli/entry/voblint.ml`), not an in-process
 timeout:
 
 ```text

@@ -5,7 +5,7 @@
  * Parsing and analysis may block this worker, but never the browser UI.
  */
 
-importScripts("./browser_main.bc.wasm.js");
+importScripts("./voblint_web.bc.wasm.js");
 
 
 function waitForAnalyzer() {

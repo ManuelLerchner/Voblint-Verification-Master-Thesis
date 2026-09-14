@@ -32,7 +32,7 @@ file=""
 plot=0
 plot_out="$REPO_ROOT/build/bench/voblint-bench.png"
 
-# Flag-arity-aware walk (mirrors cli/main.ml's parse_args) so a flag value
+# Flag-arity-aware walk (mirrors cli/entry/voblint.ml's parse_args) so a flag value
 # like `--context entry-state` is not misread as the FILE positional.
 args=("$@")
 i=0

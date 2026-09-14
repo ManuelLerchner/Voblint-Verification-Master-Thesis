@@ -105,7 +105,7 @@ cannot see this session, so graph shape is pinned CLI-observably by the golden
 fixtures under `tests/regression/11-graph-snapshot/`.
 
 Nothing here draws a picture. Isabelle stops at `export_graph`; DOT and HTML come
-from `cli/dot_render.ml` and `cli/html_report.ml`, outside any theory and outside
+from `cli/render/render_dot.ml` and `cli/render/report_dir.ml`, outside any theory and outside
 any soundness claim.
 
 ## Why the selection surface is here and not under `Analyses/Shared/`

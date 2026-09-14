@@ -4,7 +4,7 @@
 # (src/Executable_Surface/Codegen/Export/Voblint_Codegen.thy's export_code
 # block), plus the Menhir/ocamllex frontend generated from
 # manifests/vimp-grammar.yaml (scripts/gen_vimp_menhir.py; only needed if that
-# changed -- cli/vimp_parser.mly and cli/vimp_lexer.mll are committed).
+# changed -- cli/frontend/vimp_parser.mly and cli/frontend/vimp_lexer.mll are committed).
 # Requires dune + menhir + ocamllex + the zarith/unix OCaml libraries on PATH;
 # does not require Isabelle or Python to build.
 set -euo pipefail
@@ -53,11 +53,11 @@ publish_tmp="$(mktemp "$CLI_DIR/.voblint.XXXXXX")"
 trap 'rm -f "$build_out" "$publish_tmp"' EXIT
 (
   cd "$CLI_DIR"
-  dune build ./main.exe
+  dune build ./voblint.exe
   # Publish through a fresh inode. Linux refuses an in-place overwrite while
   # another process still maps the previous executable; rename keeps that
   # process on the old inode and makes the new build visible atomically.
-  cp -p "$REPO_ROOT/_build/default/cli/main.exe" "$publish_tmp"
+  cp -p "$REPO_ROOT/_build/default/cli/voblint.exe" "$publish_tmp"
   mv -f "$publish_tmp" voblint
 ) >"$build_out"
 if [ -s "$build_out" ]; then

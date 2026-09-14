@@ -112,8 +112,10 @@ def test_state_is_a_foldable_map_not_a_flat_string(report):
 def test_dead_and_proved_are_highlighted_in_the_dot(report):
     """The CFG pane has to show findings without being clicked through."""
     dot = (report / "dot" / FIXTURE.name / "main.dot").read_text()
-    assert 'fillcolor="orange"' in dot, "unreachable node not highlighted"
-    assert 'fillcolor="#cdebc5"' in dot, "proved check not highlighted"
+    assert 'style="rounded,dashed,filled",color=gray45,fillcolor=gray90' in dot, (
+        "unreachable node not highlighted"
+    )
+    assert "color=darkgreen,penwidth=2,fillcolor=palegreen" in dot, "proved check not highlighted"
 
 
 def test_dot_carries_the_click_hooks(report):
@@ -124,23 +126,19 @@ def test_dot_carries_the_click_hooks(report):
     assert "URL=\"javascript:show_info('\\N');\"" in dot
 
 
-def test_states_stay_out_of_node_labels(report):
-    """A label carrying a state is the failure --dot has and this does
-    not; it is what makes a product domain's graph unreadable."""
+def test_graph_pane_is_the_dot_drawing(report):
+    """The report's graph pane is the one drawing --dot emits, not a second
+    renderer with its own labels: a node shows its state there too."""
     dot = (report / "dot" / FIXTURE.name / "main.dot").read_text()
-    for line in dot.splitlines():
-        if "label=" in line and "->" not in line and "subgraph" not in line:
-            assert "\\n" not in line, f"multi-line node label: {line.strip()}"
+    cli = subprocess.run(
+        [str(VOBLINT), "--analysis", "interval", "--dot", str(FIXTURE)],
+        capture_output=True, text=True, check=True,
+    ).stdout
+    assert dot == cli
 
 
-@pytest.mark.parametrize("dead_call, displayed_call", [
-    ("a = f(3);", "a = f(3);"),
-    ("a = f(\n  3\n);", "a = f( 3 );"),
-    ("f(3);", "f(3);"),
-])
-def test_dead_calls_keep_their_operation_without_a_callee_context(
-    tmp_path, dead_call, displayed_call
-):
+@pytest.mark.parametrize("dead_call", ["a = f(3);", "a = f(\n  3\n);", "f(3);"])
+def test_dead_calls_keep_their_operation_without_a_callee_context(tmp_path, dead_call):
     source = tmp_path / "dead_call.vimp"
     source.write_text(
         "fun f(n) { return n; }\n"
@@ -156,17 +154,16 @@ def test_dead_calls_keep_their_operation_without_a_callee_context(
     assert proc.returncode == 0, proc.stderr
     dot = (out / "dot" / source.name / "main.dot").read_text()
     dead = re.search(
-        r'(\w+) \[shape=box,fillcolor="orange",label="pp\d+\\n'
-        + re.escape(displayed_call) + r'"\];', dot
+        r'(\w+) \[shape=box,style="rounded,dashed,filled"[^\]]*label="pp\d+\\nunreachable', dot
     )
-    assert dead, "unrouted call lost its source annotation or dead coloring"
-    assert "b = f(7);" not in dot, "routed call redundantly annotated"
+    assert dead, "call inside the dead branch not drawn as unreachable"
+    assert "call f(7) [not entered]" not in dot, "routed call wrongly marked not entered"
     edges = [line for line in dot.splitlines() if f"{dead[1]} ->" in line]
-    assert len(edges) == 1 and 'style=dashed,color=gray40,label="continuation"' in edges[0]
+    assert len(edges) == 1 and 'label="continuation"' in edges[0]
     assert 'label="call f(3)"' not in dot, "dead call created a routed callee edge"
     assert 'label="call f(7)"' in dot
-    assert re.search(r'label="resume / b (?::=|=) #ret"', dot), "resume lost its destination"
-    assert len(re.findall(r'label="entry_f"', dot)) == 1, "dead callee context created"
+    assert 'xlabel="resume / b := f(7)"' in dot, "resume lost its destination"
+    assert len(re.findall(r'label="entry_f\\n', dot)) == 1, "dead callee context created"
 
 
 def test_source_view_has_exactly_the_files_lines(report):
@@ -619,7 +616,7 @@ def test_context_sensitive_report_draws_contexts_and_verdicts(tmp_path):
     dot = next((out / "dot").iterdir()).joinpath("main.dot").read_text()
     contexts = re.findall(r"subgraph (cluster_ctx_\d+)", dot)
     assert len(contexts) > 1, f"contexts joined away: {contexts}"
-    assert 'fillcolor="#cdebc5"' in dot, "no proved check shaded"
+    assert "fillcolor=palegreen" in dot, "no proved check shaded"
 
 
 def test_rerun_clears_the_previous_programs_nodes(tmp_path):

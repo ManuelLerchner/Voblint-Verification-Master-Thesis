@@ -24,7 +24,7 @@ one sits in the chain.
  codegen/generated/ml/Voblint_CLI.ml
    |  hand-written OCaml, outside the proof
    v
- cli/main.ml -> lexer/parser -> Generated.run_voblint -> render_report -> output
+ cli/entry/voblint.ml -> lexer/parser -> Generated.run_voblint -> render_report -> output
 ```
 
 ## 1. Abstract transfer soundness
@@ -127,15 +127,15 @@ about code that is not an exported constant.
 
 ## 7. Parser and hand-written CLI
 
-The lexer and parser (`cli/vimp_lexer.mll`, `cli/vimp_parser.mly`, generated
+The lexer and parser (`cli/frontend/vimp_lexer.mll`, `cli/frontend/vimp_parser.mly`, generated
 from `manifests/vimp-grammar.yaml`) carry no soundness theorem; the proved chain starts at
-an already-constructed `imp_prog`. `cli/main.ml` calls `Generated.run_voblint`
+an already-constructed `imp_prog`. `cli/entry/voblint.ml` calls `Generated.run_voblint`
 and reads its answer through the exported selectors. A malformed program answers
 `Malformed_Program`, which the CLI reports with exit code 4.
 
 A row's verdict is a `contextual_verdict = check_result lifted`
 (`Contextual_Check_Report.thy`) computed in HOL; `Bot` is the dead marker, and
-`cli/main.ml` only matches on it. Rendering -- text layout, the GraphViz graph,
+`cli/entry/voblint.ml` only matches on it. Rendering -- text layout, the GraphViz graph,
 the snapshot and globals strings -- is presentation with no theorem about it.
 
 ## 8. What may be claimed

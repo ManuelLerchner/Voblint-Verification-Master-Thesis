@@ -10,7 +10,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
 cd "$REPO_ROOT"
-dune build cli/browser_main.bc.wasm.js
+dune build cli/voblint_web.bc.wasm.js
 
 OUT="$REPO_ROOT/build/browser"
 GENERATED="$REPO_ROOT/_build/default/cli"
@@ -19,13 +19,13 @@ rm -rf "$OUT"
 mkdir -p "$OUT"
 
 cp \
-  "$GENERATED/browser_main.bc.wasm.js" \
-  "$OUT/browser_main.bc.wasm.js"
+  "$GENERATED/voblint_web.bc.wasm.js" \
+  "$OUT/voblint_web.bc.wasm.js"
 
 cp -R \
-  "$GENERATED/browser_main.bc.wasm.assets" \
-  "$OUT/browser_main.bc.wasm.assets"
+  "$GENERATED/voblint_web.bc.wasm.assets" \
+  "$OUT/voblint_web.bc.wasm.assets"
 
 echo "Browser analyzer:"
-echo "  $OUT/browser_main.bc.wasm.js"
-echo "  $OUT/browser_main.bc.wasm.assets/"
+echo "  $OUT/voblint_web.bc.wasm.js"
+echo "  $OUT/voblint_web.bc.wasm.assets/"

@@ -50,11 +50,8 @@
 //
 // nodes:
 //   f_pp1_ctx0: pp1
-//       ret=[-inf,+inf]
 //   f_pp2_ctx0: pp2
-//       ret=[-inf,+inf]
 //   f_exit_f_ctx0: exit_f
-//       ret=[-inf,+inf]
 //   main_pp4_ctx0: pp4
 //   main_pp5_ctx0: pp5
 //   main_pp8_ctx0: pp8 [proved]
@@ -64,11 +61,9 @@
 //   main_pp10_ctx0: pp10
 //   main_exit_main_ctx0: exit_main
 //   f_pp0_ctx0: pp0
-//       ret=[-inf,+inf]
 //   main_pp3_ctx0: pp3
 //   main_pp6_ctx0: pp6
 //   f_entry_f_ctx0: entry_f
-//       ret=[-inf,+inf]
 //   main_pp7_ctx0: pp7 [proved]
 //       check g == 42
 //   main_entry_main_ctx0: entry_main

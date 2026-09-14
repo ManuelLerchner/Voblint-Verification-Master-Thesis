@@ -6,11 +6,13 @@
    caller's own context. The route is the result's, never re-derived: which context
    a call enters is a decision of the verified analysis, and this file only draws it.
 
-   Node states show the owning procedure's formals, locals and return slot. A
-   declared global is shared by every context, so it is not repeated per node. *)
+   Node states show the owning procedure's formals and locals. A declared global is
+   shared by every context, so it is not repeated per node; the return slot is the
+   compiler's own intermediate, not a program variable, so it is not shown either --
+   a combine edge names the call whose result it assigns instead. *)
 
 module C = Voblint_CLI.Generated
-module A = Voblint_api
+module A = Result_text
 
 type node_kind = Program_entry | Program_exit | Proc_entry | Proc_exit | Point
 
@@ -69,7 +71,7 @@ let scope prog g owner_of =
            (fun x -> (not (List.mem x formals)) && x <> ret_var && not (List.mem x globals))
            (assigned owner))
     in
-    formals @ locals @ if owner = main_name then [] else [ ret_var ]
+    formals @ locals
 
 let kind_of g = function
   | C.FunctionEntry _ as p when p = C.cfg_entry g -> Program_entry
@@ -96,7 +98,7 @@ let lines_of names state =
         List.filter_map
           (fun x ->
             Option.map
-              (fun v -> (if x = ret_var then "ret" else x) ^ "=" ^ v)
+              (fun v -> x ^ "=" ^ v)
               (List.assoc_opt x bindings))
           names
   in
@@ -137,6 +139,27 @@ let build prog (result : (string, unit) C.run_result_ext) : t =
     let owner = owner_of p in
     Printf.sprintf "%s_%s_ctx%d" owner (A.point_name p) (Hashtbl.find local_index (owner, c))
   in
+  let targets = Hashtbl.create 16 in
+  List.iter
+    (fun r ->
+      Hashtbl.replace targets
+        (C.route_point r, A.int_of_nat (C.route_context r))
+        (List.map A.int_of_nat (C.route_targets r)))
+    (C.res_routes result);
+  (* A live call site that enters no callee context would otherwise show nothing of
+     the call it makes; name it on the node. *)
+  let unentered_calls p c =
+    match C.state_value (List.find (fun st -> C.state_point st = p && A.int_of_nat (C.state_context st) = c) states) with
+    | C.Bot -> []
+    | C.Lifted _ ->
+        List.filter_map
+          (fun (u, ca, entry, _) ->
+            let callee = match entry with C.FunctionEntry f -> f | _ -> "" in
+            if u = p && Option.value ~default:[] (Hashtbl.find_opt targets (u, c)) = [] then
+              Some ("call " ^ A.call_text callee ca ^ " [not entered]")
+            else None)
+          (A.call_edges g)
+  in
   let nodes =
     List.map
       (fun st ->
@@ -146,7 +169,7 @@ let build prog (result : (string, unit) C.run_result_ext) : t =
           label = A.point_name p;
           kind = kind_of g p;
           status = status_of st;
-          lines = lines_of (names_of (owner_of p)) st;
+          lines = lines_of (names_of (owner_of p)) st @ unentered_calls p c;
           point = p;
           owner = owner_of p;
           context = c;
@@ -171,13 +194,6 @@ let build prog (result : (string, unit) C.run_result_ext) : t =
         })
       (List.rev !order)
   in
-  let targets = Hashtbl.create 16 in
-  List.iter
-    (fun r ->
-      Hashtbl.replace targets
-        (C.route_point r, A.int_of_nat (C.route_context r))
-        (List.map A.int_of_nat (C.route_targets r)))
-    (C.res_routes result);
   let intra =
     List.concat_map
       (fun (u, a, v) ->
@@ -212,7 +228,7 @@ let build prog (result : (string, unit) C.run_result_ext) : t =
                     if is_covered result_node t && is_covered after c then
                       let C.CallEdge (dst, _, _) = ca in
                       [ { src = id_of result_node t; dst = id_of after c; kind = Combine;
-                          text = Option.fold ~none:"" ~some:(fun x -> x ^ " := " ^ ret_var) dst } ]
+                          text = Option.fold ~none:"" ~some:(fun x -> x ^ " := " ^ A.call_text callee ca) dst } ]
                     else [])
                   routed
               in

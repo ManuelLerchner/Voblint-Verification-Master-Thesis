@@ -40,30 +40,22 @@
 //   main_entry_main_ctx0: entry_main
 //   f_pp1_ctx0: pp1
 //       n=[1,1]
-//       ret=[-inf,+inf]
 //   f_exit_f_ctx0: exit_f
 //       n=[1,1]
-//       ret=[-inf,+inf]
 //   f_pp0_ctx0: pp0 [proved]
 //       n=[1,1]
-//       ret=[-inf,+inf]
 //       check n == 1
 //   f_entry_f_ctx0: entry_f
 //       n=[1,1]
-//       ret=[-inf,+inf]
 //   f_pp1_ctx1: pp1
 //       n=[2,2]
-//       ret=[-inf,+inf]
 //   f_exit_f_ctx1: exit_f
 //       n=[2,2]
-//       ret=[-inf,+inf]
 //   f_pp0_ctx1: pp0 [refuted]
 //       n=[2,2]
-//       ret=[-inf,+inf]
 //       check n == 1
 //   f_entry_f_ctx1: entry_f
 //       n=[2,2]
-//       ret=[-inf,+inf]
 //
 // edges:
 //   f_pp0_ctx0 -> f_pp1_ctx0: check(n == 1)

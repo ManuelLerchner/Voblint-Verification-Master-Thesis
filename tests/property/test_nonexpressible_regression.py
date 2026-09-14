@@ -1,5 +1,5 @@
 """Regression pins for shapes that used to be non-expressible before
-the grammar-generated printer (cli/vimp_printer.ml) grew a uniform, precedence-climbing
+the grammar-generated printer (cli/frontend/vimp_printer.ml) grew a uniform, precedence-climbing
 parenthesization rule (the precedence table in manifests/vimp-grammar.yaml) covering every constructor, together with
 manifests/vimp-grammar.yaml's exp_paren production (`LPAREN exp RPAREN`, passthrough).
 

@@ -86,51 +86,39 @@
 //   bump_pp1_ctx0: pp1
 //       n=[4,4]
 //       m=[5,5]
-//       ret=[-inf,+inf]
 //   bump_exit_bump_ctx0: exit_bump
 //       n=[4,4]
 //       m=[5,5]
-//       ret=[5,5]
 //   bump_pp0_ctx0: pp0
 //       n=[4,4]
 //       m=[-inf,+inf]
-//       ret=[-inf,+inf]
 //   bump_entry_bump_ctx0: entry_bump
 //       n=[4,4]
 //       m=[-inf,+inf]
-//       ret=[-inf,+inf]
 //   bump_pp1_ctx1: pp1
 //       n=[5,5]
 //       m=[6,6]
-//       ret=[-inf,+inf]
 //   bump_exit_bump_ctx1: exit_bump
 //       n=[5,5]
 //       m=[6,6]
-//       ret=[6,6]
 //   bump_pp0_ctx1: pp0
 //       n=[5,5]
 //       m=[-inf,+inf]
-//       ret=[-inf,+inf]
 //   bump_entry_bump_ctx1: entry_bump
 //       n=[5,5]
 //       m=[-inf,+inf]
-//       ret=[-inf,+inf]
 //   bump_pp1_ctx2: pp1
 //       n=[19,19]
 //       m=[20,20]
-//       ret=[-inf,+inf]
 //   bump_exit_bump_ctx2: exit_bump
 //       n=[19,19]
 //       m=[20,20]
-//       ret=[20,20]
 //   bump_pp0_ctx2: pp0
 //       n=[19,19]
 //       m=[-inf,+inf]
-//       ret=[-inf,+inf]
 //   bump_entry_bump_ctx2: entry_bump
 //       n=[19,19]
 //       m=[-inf,+inf]
-//       ret=[-inf,+inf]
 //
 // edges:
 //   bump_pp0_ctx0 -> bump_pp1_ctx0: m := n + 1
@@ -149,13 +137,13 @@
 //   bump_entry_bump_ctx2 -> bump_pp0_ctx2: body(bump)
 //   main_entry_main_ctx0 -> main_pp3_ctx0: body(main)
 //   main_pp4_ctx0 -> bump_entry_bump_ctx1: enter bump(5)
-//   bump_exit_bump_ctx1 -> main_pp5_ctx0: combine a := ret
+//   bump_exit_bump_ctx1 -> main_pp5_ctx0: combine a := bump(5)
 //   main_pp4_ctx0 -> main_pp5_ctx0: call-to-return bump
 //   main_pp5_ctx0 -> bump_entry_bump_ctx0: enter bump(4)
-//   bump_exit_bump_ctx0 -> main_pp6_ctx0: combine b := ret
+//   bump_exit_bump_ctx0 -> main_pp6_ctx0: combine b := bump(4)
 //   main_pp5_ctx0 -> main_pp6_ctx0: call-to-return bump
 //   main_pp6_ctx0 -> bump_entry_bump_ctx2: enter bump(g)
-//   bump_exit_bump_ctx2 -> main_pp7_ctx0: combine c := ret
+//   bump_exit_bump_ctx2 -> main_pp7_ctx0: combine c := bump(g)
 //   main_pp6_ctx0 -> main_pp7_ctx0: call-to-return bump
 // EXPECT-GRAPH-END
 

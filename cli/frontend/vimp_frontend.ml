@@ -1,6 +1,6 @@
 (* Hand-written glue between the generated frontend (Vimp_parser/Vimp_lexer
    -- both generated from manifests/vimp-grammar.yaml by scripts/gen_vimp_menhir.py;
-   see cli/vimp_parser.mly, cli/vimp_lexer.mll) and its callers: a single
+   see cli/frontend/vimp_parser.mly, cli/frontend/vimp_lexer.mll) and its callers: a single
    `program` entry point, (file, source text) -> (imp_prog, check_positions,
    stmt_positions), so main.ml and tests/property/ast_driver.ml need not
    drive Menhir's own lexbuf-driven interface.

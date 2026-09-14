@@ -1,15 +1,14 @@
+; frontend/  source text -> imp_prog, and imp_prog -> source text
+; result/    reading one run result: names, verdicts, the contextual CFG
+; render/    one module per output: text report, DOT, snapshot, JSON, g2html
+; entry/     the native CLI and the browser adapter
+
+(include_subdirs unqualified)
+
 (rule
  (targets Voblint_CLI.ml)
  (deps ../codegen/generated/ml/Voblint_CLI.ml)
  (action (copy %{deps} %{targets})))
-
-(menhir
- (modules vimp_parser)
- (flags
-  --table
-  --unused-precedence-levels))
-
-(ocamllex vimp_lexer)
 
 (library
  (name voblint_frontend)
@@ -30,16 +29,21 @@
 (library
  (name voblint_rendering)
  (wrapped false)
- (modules voblint_api analysis_graph dot_render snapshot_render)
+ (modules
+  result_text
+  context_graph
+  render_text
+  render_dot
+  render_snapshot
+  render_json
+  render_xml
+  report_dir)
  (libraries voblint_frontend)
  (flags (:standard -w -8-11-20-27-32-37-39 -warn-error -A)))
 
 (executable
- (name main)
- (modules
-  xml_render
-  html_report
-  main)
+ (name voblint)
+ (modules voblint)
  (libraries
   voblint_frontend
   voblint_rendering
@@ -49,8 +53,8 @@
  (flags (:standard -w -8-11-20-27-32-37-39 -warn-error -A)))
 
 (executable
- (name browser_main)
- (modules browser_main)
+ (name voblint_web)
+ (modules voblint_web)
  (modes wasm)
  (libraries
   voblint_frontend

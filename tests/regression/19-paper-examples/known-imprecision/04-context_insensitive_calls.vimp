@@ -32,7 +32,6 @@
 // nodes:
 //   f_exit_f_ctx0: exit_f
 //       p=[3,+inf]
-//       ret=[6,+inf]
 //   main_pp5_ctx0: pp5 [unknown]
 //       x=[6,+inf]
 //       y=[6,+inf]
@@ -45,7 +44,6 @@
 //       y=[6,+inf]
 //   f_pp0_ctx0: pp0
 //       p=[3,+inf]
-//       ret=[-inf,+inf]
 //   main_pp2_ctx0: pp2
 //       x=[-inf,+inf]
 //       y=[-inf,+inf]
@@ -54,7 +52,6 @@
 //       y=[-inf,+inf]
 //   f_entry_f_ctx0: entry_f
 //       p=[3,+inf]
-//       ret=[-inf,+inf]
 //   main_pp4_ctx0: pp4 [unknown]
 //       x=[6,+inf]
 //       y=[6,+inf]
@@ -71,10 +68,10 @@
 //   f_entry_f_ctx0 -> f_pp0_ctx0: body(f)
 //   main_entry_main_ctx0 -> main_pp2_ctx0: body(main)
 //   main_pp2_ctx0 -> f_entry_f_ctx0: enter f(3)
-//   f_exit_f_ctx0 -> main_pp3_ctx0: combine x := ret
+//   f_exit_f_ctx0 -> main_pp3_ctx0: combine x := f(3)
 //   main_pp2_ctx0 -> main_pp3_ctx0: call-to-return f
 //   main_pp3_ctx0 -> f_entry_f_ctx0: enter f(10)
-//   f_exit_f_ctx0 -> main_pp4_ctx0: combine y := ret
+//   f_exit_f_ctx0 -> main_pp4_ctx0: combine y := f(10)
 //   main_pp3_ctx0 -> main_pp4_ctx0: call-to-return f
 // EXPECT-GRAPH-END
 

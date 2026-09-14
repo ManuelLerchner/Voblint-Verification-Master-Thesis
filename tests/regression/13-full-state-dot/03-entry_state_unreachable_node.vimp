@@ -73,20 +73,15 @@
 //       unreachable
 //   f_pp3_ctx0: pp3 [proved]
 //       n=[5,5]
-//       ret=[-inf,+inf]
 //       check 2 < n
 //   f_pp4_ctx0: pp4
 //       n=[5,5]
-//       ret=[-inf,+inf]
 //   f_exit_f_ctx0: exit_f
 //       n=[5,5]
-//       ret=[5,5]
 //   f_pp0_ctx0: pp0
 //       n=[5,5]
-//       ret=[-inf,+inf]
 //   f_entry_f_ctx0: entry_f
 //       n=[5,5]
-//       ret=[-inf,+inf]
 //   f_pp1_ctx1: pp1 [unreachable]
 //       unreachable
 //       check n == 99 [dead]
@@ -94,20 +89,15 @@
 //       unreachable
 //   f_pp3_ctx1: pp3 [proved]
 //       n=[7,7]
-//       ret=[-inf,+inf]
 //       check 2 < n
 //   f_pp4_ctx1: pp4
 //       n=[7,7]
-//       ret=[-inf,+inf]
 //   f_exit_f_ctx1: exit_f
 //       n=[7,7]
-//       ret=[7,7]
 //   f_pp0_ctx1: pp0
 //       n=[7,7]
-//       ret=[-inf,+inf]
 //   f_entry_f_ctx1: entry_f
 //       n=[7,7]
-//       ret=[-inf,+inf]
 //
 // edges:
 //   f_pp0_ctx0 -> f_pp1_ctx0: [n < 2]
@@ -129,10 +119,10 @@
 //   f_entry_f_ctx1 -> f_pp0_ctx1: body(f)
 //   main_entry_main_ctx0 -> main_pp6_ctx0: body(main)
 //   main_pp6_ctx0 -> f_entry_f_ctx0: enter f(5)
-//   f_exit_f_ctx0 -> main_pp7_ctx0: combine a := ret
+//   f_exit_f_ctx0 -> main_pp7_ctx0: combine a := f(5)
 //   main_pp6_ctx0 -> main_pp7_ctx0: call-to-return f
 //   main_pp7_ctx0 -> f_entry_f_ctx1: enter f(7)
-//   f_exit_f_ctx1 -> main_pp8_ctx0: combine b := ret
+//   f_exit_f_ctx1 -> main_pp8_ctx0: combine b := f(7)
 //   main_pp7_ctx0 -> main_pp8_ctx0: call-to-return f
 // EXPECT-GRAPH-END
 

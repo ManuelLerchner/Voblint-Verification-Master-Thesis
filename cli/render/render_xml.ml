@@ -7,11 +7,11 @@
      files/<src>.xml    file.xsl     -- highlighted source listing
      warn/warn<N>.xml                -- one finding
 
-   Each function turns part of one run's Analysis_graph, its checks and the parsed
+   Each function turns part of one run's Context_graph, its checks and the parsed
    source positions into one document. Which documents a report consists of, and
-   where they go, is Html_report's business. *)
+   where they go, is Report_dir's business. *)
 
-module G = Analysis_graph
+module G = Context_graph
 
 let escape s =
   let buf = Buffer.create (String.length s + 16) in

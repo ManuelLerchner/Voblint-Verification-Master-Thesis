@@ -51,32 +51,6 @@ let now_ms () : float =
   Js.to_float value
 
 (* -------------------------------------------------------------------------- *)
-(* JSON                                                                       *)
-(* -------------------------------------------------------------------------- *)
-
-let json_escape value =
-  let buffer = Buffer.create (String.length value + 16) in
-
-  String.iter
-    (function
-      | '"' -> Buffer.add_string buffer "\\\""
-      | '\\' -> Buffer.add_string buffer "\\\\"
-      | '\n' -> Buffer.add_string buffer "\\n"
-      | '\r' -> Buffer.add_string buffer "\\r"
-      | '\t' -> Buffer.add_string buffer "\\t"
-      | c -> Buffer.add_char buffer c)
-    value;
-
-  Buffer.contents buffer
-
-let json_string value = "\"" ^ json_escape value ^ "\""
-
-let error_json message =
-  Js.string
-    (Printf.sprintf "{\"status\":\"error\",\"message\":%s}"
-       (json_string message))
-
-(* -------------------------------------------------------------------------- *)
 (* Configuration                                                              *)
 (* -------------------------------------------------------------------------- *)
 
@@ -115,37 +89,6 @@ let context_of_string mode depth =
 (* Analysis result rendering                                                  *)
 (* -------------------------------------------------------------------------- *)
 
-module A = Voblint_api
-
-let check_json result check =
-  let point = C.check_point check and cnd = C.check_exp check in
-  let state = match C.check_verdict check with C.Bot -> "" | C.Lifted _ -> A.state_slice result point cnd in
-  Printf.sprintf "{\"point\":%s,\"condition\":%s,\"verdict\":%s,\"state\":%s}"
-    (json_string (A.point_name point))
-    (json_string (Vimp_printer.string_of_exp cnd))
-    (json_string (A.contextual_verdict_name (C.check_verdict check)))
-    (json_string state)
-
-let diagnostic_severity diagnostic =
-  match C.diagnostic_verdict diagnostic with
-  | C.Check_Refuted -> "error"
-  | C.Check_Proved | C.Check_Unknown -> "warning"
-
-let diagnostic_json diagnostic =
-  Printf.sprintf "{\"severity\":%s,\"message\":%s}"
-    (json_string (diagnostic_severity diagnostic))
-    (json_string (C.diagnostic_message diagnostic))
-
-let result_json analysis_ms program result =
-  let checks = C.res_checks result |> List.map (check_json result) |> String.concat "," in
-  let diagnostics =
-    C.res_diagnostics result |> List.map diagnostic_json |> String.concat ","
-  in
-  let graph = json_string (Dot_render.render (Analysis_graph.build program result)) in
-  Printf.sprintf
-    "{\"status\":\"ok\",\"timing\":{\"analysis_ms\":%.3f},\"checks\":[%s],\"diagnostics\":[%s],\"graph\":%s}"
-    analysis_ms checks diagnostics graph
-
 (* -------------------------------------------------------------------------- *)
 (* Browser entry point                                                        *)
 (* -------------------------------------------------------------------------- *)
@@ -159,41 +102,30 @@ let run analysis_js solver_js context_js context_depth source_js =
 
   let source = Js.to_string source_js in
 
-  match domain_of_string analysis_name with
-  | None -> error_json ("Unknown analysis domain: " ^ analysis_name)
-  | Some analysis ->
-      begin match solver_of_string solver_name with
-      | None -> error_json ("Unknown solver: " ^ solver_name)
-      | Some browser_solver ->
-          begin match context_of_string context_name context_depth with
-          | Error message -> error_json message
-          | Ok context -> (
-              try
-                let program, _, _ =
-                  Vimp_frontend.program "browser.vimp" source
-                in
-
-                let analysis_start = now_ms () in
-                let answer =
-                  C.run_program analysis (solver_argument browser_solver) context program
-                in
-                let analysis_ms = now_ms () -. analysis_start in
-
-                match answer with
-                | C.Result_Malformed -> error_json "Program is not well-formed"
-                | C.Result_Unsupported ->
-                    error_json
-                      "This domain, solver, and context combination is not \
-                       supported"
-                | C.Result_Analysed result ->
-                    Js.string (result_json analysis_ms program result)
-              with Vimp_frontend.Parse_error { line; col; msg; _ } ->
-                Js.string
-                  (Printf.sprintf
-                     "{\"status\":\"error\",\"message\":%s,\"line\":%d,\"column\":%d}"
-                     (json_string msg) line col))
-          end
-      end
+  let answer =
+    match domain_of_string analysis_name, solver_of_string solver_name,
+          context_of_string context_name context_depth with
+    | None, _, _ -> Render_json.error_json ("Unknown analysis domain: " ^ analysis_name)
+    | _, None, _ -> Render_json.error_json ("Unknown solver: " ^ solver_name)
+    | _, _, Error message -> Render_json.error_json message
+    | Some analysis, Some browser_solver, Ok context -> (
+        try
+          let program, _, _ = Vimp_frontend.program "browser.vimp" source in
+          let analysis_start = now_ms () in
+          let answer =
+            C.run_program analysis (solver_argument browser_solver) context program
+          in
+          let analysis_ms = now_ms () -. analysis_start in
+          match answer with
+          | C.Result_Malformed -> Render_json.error_json "Program is not well-formed"
+          | C.Result_Unsupported ->
+              Render_json.error_json
+                "This domain, solver, and context combination is not supported"
+          | C.Result_Analysed result -> Render_json.result_json analysis_ms program result
+        with Vimp_frontend.Parse_error { line; col; msg; _ } ->
+          Render_json.parse_error_json ~line ~column:col msg)
+  in
+  Js.string answer
 
 (*
  * [callback_with_arity] already creates the JavaScript callback.

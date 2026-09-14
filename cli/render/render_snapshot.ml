@@ -2,7 +2,7 @@
    line, so a fixture diff names exactly what changed. Clusters list their members,
    nodes their status and state lines, edges their role and wording. *)
 
-module G = Analysis_graph
+module G = Context_graph
 
 let status_text = function
   | None -> ""

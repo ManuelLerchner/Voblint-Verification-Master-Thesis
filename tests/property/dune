@@ -5,27 +5,27 @@
 
 (rule
  (targets vimp_positions.ml)
- (deps ../../cli/vimp_positions.ml)
+ (deps ../../cli/frontend/vimp_positions.ml)
  (action (copy %{deps} %{targets})))
 
 (rule
  (targets vimp_parser.mly)
- (deps ../../cli/vimp_parser.mly)
+ (deps ../../cli/frontend/vimp_parser.mly)
  (action (copy %{deps} %{targets})))
 
 (rule
  (targets vimp_lexer.mll)
- (deps ../../cli/vimp_lexer.mll)
+ (deps ../../cli/frontend/vimp_lexer.mll)
  (action (copy %{deps} %{targets})))
 
 (rule
  (targets vimp_frontend.ml)
- (deps ../../cli/vimp_frontend.ml)
+ (deps ../../cli/frontend/vimp_frontend.ml)
  (action (copy %{deps} %{targets})))
 
 (rule
  (targets vimp_printer.ml)
- (deps ../../cli/vimp_printer.ml)
+ (deps ../../cli/frontend/vimp_printer.ml)
  (action (copy %{deps} %{targets})))
 
  (menhir

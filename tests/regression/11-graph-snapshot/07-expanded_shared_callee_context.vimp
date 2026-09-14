@@ -48,13 +48,10 @@
 //       b=[-inf,+inf]
 //   idf_exit_idf_ctx0: exit_idf
 //       n=[5,5]
-//       ret=[6,6]
 //   idf_pp0_ctx0: pp0
 //       n=[5,5]
-//       ret=[-inf,+inf]
 //   idf_entry_idf_ctx0: entry_idf
 //       n=[5,5]
-//       ret=[-inf,+inf]
 //
 // edges:
 //   idf_pp0_ctx0 -> idf_exit_idf_ctx0: return n + 1
@@ -64,10 +61,10 @@
 //   idf_entry_idf_ctx0 -> idf_pp0_ctx0: body(idf)
 //   main_entry_main_ctx0 -> main_pp2_ctx0: body(main)
 //   main_pp2_ctx0 -> idf_entry_idf_ctx0: enter idf(5)
-//   idf_exit_idf_ctx0 -> main_pp3_ctx0: combine a := ret
+//   idf_exit_idf_ctx0 -> main_pp3_ctx0: combine a := idf(5)
 //   main_pp2_ctx0 -> main_pp3_ctx0: call-to-return idf
 //   main_pp3_ctx0 -> idf_entry_idf_ctx0: enter idf(5)
-//   idf_exit_idf_ctx0 -> main_pp4_ctx0: combine b := ret
+//   idf_exit_idf_ctx0 -> main_pp4_ctx0: combine b := idf(5)
 //   main_pp3_ctx0 -> main_pp4_ctx0: call-to-return idf
 // EXPECT-GRAPH-END
 

@@ -125,129 +125,21 @@ let usage =
   \  machine-checked Isabelle/HOL proof."
 
 module C = Voblint_CLI.Generated
-module A = Voblint_api
-
-let node_label = A.point_name
-let verdict_label = A.verdict_name
-
-let diagnostic_location positions diagnostic =
-  match Voblint_CLI.Generated.diagnostic_point diagnostic with
-  | Voblint_CLI.Generated.Statement n ->
-      let index = Z.to_int (Voblint_CLI.Generated.integer_of_nat n) in
-      Option.map
-        (fun (line, column, _, _) -> (line, column))
-        (List.assoc_opt index positions)
-  | _ -> None
-
-let diagnostic_severity diagnostic =
-  match Voblint_CLI.Generated.diagnostic_verdict diagnostic with
-  | Voblint_CLI.Generated.Check_Refuted -> "error"
-  | _ -> "warning"
+module A = Result_text
 
 let print_diagnostics path analysis positions diagnostics =
   List.iter
     (fun diagnostic ->
       let location =
-        match diagnostic_location positions diagnostic with
+        match Render_text.diagnostic_location positions diagnostic with
         | Some (line, column) -> Printf.sprintf "%d:%d" line column
-        | None -> node_label (Voblint_CLI.Generated.diagnostic_point diagnostic)
+        | None -> A.point_name (C.diagnostic_point diagnostic)
       in
       Printf.eprintf "%s:%s: %s: %s [%s]\n" path location
-        (diagnostic_severity diagnostic)
+        (Render_text.diagnostic_severity diagnostic)
         (Voblint_CLI.Generated.diagnostic_message diagnostic)
         analysis)
     diagnostics
-
-(* Pairs each check row with the source position of the __voblint_check that
-   produced it. Both lists are in check-declaration order, one entry per check
-   the parser saw -- see Vimp_frontend.program's doc comment -- and only the
-   parser knows positions, so a length mismatch leaves no correct alignment to
-   fall back on. Every later row would be attributed to the wrong source line,
-   which is worse than failing. *)
-let paired_checks rows (check_positions : (int * int) list) =
-  if List.length rows <> List.length check_positions then
-    failwith
-      (Printf.sprintf "verdict/position mismatch: %d verdicts for %d checks"
-         (List.length rows)
-         (List.length check_positions));
-  List.combine rows check_positions
-
-(* A row's verdict is lifted, and Bot is the proved-unreachable case: no
-   execution reaches the check, so no verdict was computed for it. Goblint
-   suppresses such a location entirely; naming it DEAD keeps "proved
-   unreachable" distinguishable from "the compiler dropped this check", which
-   a suppressed row cannot express. The state slice is dropped alongside the
-   verdict -- bottom binds nothing worth printing. *)
-let render_table title headers rows =
-  let buf = Buffer.create 256 in
-  Buffer.add_string buf (title ^ "\n");
-  if rows = [] then Buffer.add_string buf "None\n"
-  else begin
-    let widths = Array.of_list (List.map String.length headers) in
-    List.iter
-      (List.iteri (fun i cell ->
-           widths.(i) <- max widths.(i) (String.length cell)))
-      rows;
-    let add_row cells =
-      let last = List.length cells - 1 in
-      List.iteri
-        (fun i cell ->
-          Buffer.add_string buf cell;
-          if i < last then
-            Buffer.add_string buf
-              (String.make (widths.(i) - String.length cell + 2) ' '))
-        cells;
-      Buffer.add_char buf '\n'
-    in
-    add_row headers;
-    add_row
-      (Array.to_list (Array.map (fun width -> String.make width '-') widths));
-    List.iter add_row rows
-  end;
-  Buffer.contents buf
-
-let render_report path analysis positions result check_positions =
-  let diagnostics =
-    List.map
-      (fun diagnostic ->
-        let location =
-          match diagnostic_location positions diagnostic with
-          | Some (line, column) -> Printf.sprintf "%d:%d" line column
-          | None -> "-"
-        in
-        [
-          location;
-          node_label (Voblint_CLI.Generated.diagnostic_point diagnostic);
-          String.uppercase_ascii (diagnostic_severity diagnostic);
-          Voblint_CLI.Generated.diagnostic_message diagnostic;
-        ])
-      (C.res_diagnostics result)
-  in
-  let checks =
-    List.map
-      (fun (check, (line, col)) ->
-        let point = C.check_point check and cnd = C.check_exp check in
-        let label, state =
-          match C.check_verdict check with
-          | C.Bot -> ("DEAD", "")
-          | C.Lifted v -> (verdict_label v, A.state_slice result point cnd)
-        in
-        [
-          Printf.sprintf "%d:%d" line col;
-          node_label point;
-          Vimp_printer.string_of_exp cnd;
-          label;
-          state;
-        ])
-      (paired_checks (C.res_checks result) check_positions)
-  in
-  Printf.sprintf "%s [%s]\n\n%s\n%s" path analysis
-    (render_table "Arithmetic diagnostics"
-       [ "Location"; "Point"; "Severity"; "Message" ]
-       diagnostics)
-    (render_table "Assertion checks"
-       [ "Location"; "Point"; "Condition"; "Verdict"; "State" ]
-       checks)
 
 (* Names the analysis in the report's own <analysis name="..."> element, so a
    node document says which domain produced the state it shows. *)
@@ -339,11 +231,11 @@ let clear_report_dir dir =
   if not (Sys.file_exists dir) then mkdir_p dir
   else List.iter (fun n -> rm_rf (Filename.concat dir n)) owned_entries
 
-let write_report_file root (f : Html_report.file) =
-  let path = Filename.concat root f.Html_report.path in
+let write_report_file root (f : Report_dir.file) =
+  let path = Filename.concat root f.Report_dir.path in
   mkdir_p (Filename.dirname path);
   let oc = open_out path in
-  output_string oc f.Html_report.content;
+  output_string oc f.Report_dir.content;
   close_out oc
 
 let copy_file src dst =
@@ -705,7 +597,7 @@ let () =
              same result, under the same view. *)
             let payload_for k =
               let result = result_for k in
-              ( Analysis_graph.build prog result,
+              ( Context_graph.build prog result,
                 C.res_checks result,
                 List.map (fun g -> (C.global_var g, [ C.global_val g ])) (C.res_globals result),
                 C.res_diagnostics result )
@@ -739,13 +631,13 @@ let () =
                       | C.Lifted v ->
                           Some
                             {
-                              Xml_render.line;
+                              Render_xml.line;
                               column;
-                              verdict = verdict_label v;
+                              verdict = A.verdict_name v;
                               cond = Vimp_printer.string_of_exp (C.check_exp check);
                               message = None;
                             })
-                    (paired_checks rows check_positions)
+                    (Render_text.paired_checks rows check_positions)
               | [] ->
                   (* --analysis names at least one domain or the run never got
                  here, so an empty list would mean a report with no findings
@@ -759,12 +651,12 @@ let () =
                     (fun diagnostic ->
                       let line, column =
                         Option.value ~default:(0, 0)
-                          (diagnostic_location stmt_positions diagnostic)
+                          (Render_text.diagnostic_location stmt_positions diagnostic)
                       in
                       {
-                        Xml_render.line;
+                        Render_xml.line;
                         column;
-                        verdict = diagnostic_severity diagnostic;
+                        verdict = Render_text.diagnostic_severity diagnostic;
                         cond = "";
                         message =
                           Some
@@ -776,22 +668,22 @@ let () =
             in
             let checks = checks @ diagnostics in
             let files, nodes, dead =
-              Html_report.emit ~graphs ~source_file:(Filename.basename path)
+              Report_dir.emit ~graphs ~source_file:(Filename.basename path)
                 ~source_text:src ~fn:"main" ~checks ~positions:stmt_positions
                 ~globals
             in
             clear_report_dir dir;
             List.iter
-              (fun (f : Html_report.file) -> write_report_file dir f)
+              (fun (f : Report_dir.file) -> write_report_file dir f)
               files;
             Ok_report (Printf.sprintf "%d node(s), %d unreachable\n" nodes dead))
           else if !graph_snapshot then
-            Ok_graph (Snapshot_render.render (Analysis_graph.build prog (result_for kind)))
+            Ok_graph (Render_snapshot.render (Context_graph.build prog (result_for kind)))
           else if !dot then
-            Ok_dot (Dot_render.render (Analysis_graph.build prog (result_for kind)))
+            Ok_dot (Render_dot.render (Context_graph.build prog (result_for kind)))
           else
             Ok_text
-              (render_report path (analysis_label kind) stmt_positions
+              (Render_text.render_report path (analysis_label kind) stmt_positions
                  (result_for kind) check_positions)
         with Answered o -> o)
   with
@@ -816,7 +708,7 @@ let () =
               if not (Sys.is_directory src) then
                 copy_file src (Filename.concat dir name))
             (Sys.readdir assets));
-      let seg = Xml_render.xmlify (Filename.basename path) in
+      let seg = Render_xml.xmlify (Filename.basename path) in
       let dot_file =
         Filename.concat dir
           (Filename.concat "dot" (Filename.concat seg "main.dot"))

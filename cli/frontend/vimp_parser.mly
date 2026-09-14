@@ -2,7 +2,7 @@
 
 %{
 (* Menhir does not export prelude bindings through the generated .mli, so the
-   recorder itself lives in cli/vimp_positions.ml where Vimp_frontend can
+   recorder itself lives in cli/frontend/vimp_positions.ml where Vimp_frontend can
    reach it too. See that module for why positions are taken here rather than
    from the token stream, and what order they come out in. *)
 let record_stmt_pos = Vimp_positions.record

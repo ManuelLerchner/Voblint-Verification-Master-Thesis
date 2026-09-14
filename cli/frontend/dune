@@ -1,0 +1,9 @@
+; Generated from manifests/vimp-grammar.yaml by scripts/gen_vimp_menhir.py.
+
+(menhir
+ (modules vimp_parser)
+ (flags
+  --table
+  --unused-precedence-levels))
+
+(ocamllex vimp_lexer)

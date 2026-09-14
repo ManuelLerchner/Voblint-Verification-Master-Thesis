@@ -2,7 +2,7 @@
 
 This is the primary correctness property. Hypothesis generates arbitrary exp
 trees (see strategies.py) -- manifests/vimp-grammar.yaml's exp_paren production and
-the grammar-generated precedence-climbing printer (cli/vimp_printer.ml) make every shape
+the grammar-generated precedence-climbing printer (cli/frontend/vimp_printer.ml) make every shape
 source-expressible -- so every generated example is expected to print to
 text that Vimp_parser reads back into the same tree; a mismatch here is a
 real printer or parser bug. test_nonexpressible_regression.py pins a few

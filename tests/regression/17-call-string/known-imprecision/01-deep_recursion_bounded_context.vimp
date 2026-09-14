@@ -59,49 +59,38 @@
 //   fact_pp1_ctx0: pp1
 //       n=[1,1]
 //       tmp=[-inf,+inf]
-//       ret=[-inf,+inf]
 //   fact_exit_fact_ctx0: exit_fact
 //       n=[1,49]
 //       tmp=[-inf,+inf]
-//       ret=[-inf,+inf]
 //   fact_pp0_ctx0: pp0
 //       n=[1,49]
 //       tmp=[-inf,+inf]
-//       ret=[-inf,+inf]
 //   fact_pp2_ctx0: pp2
 //       n=[2,49]
 //       tmp=[-inf,+inf]
-//       ret=[-inf,+inf]
 //   fact_pp3_ctx0: pp3
 //       n=[2,49]
 //       tmp=[-inf,+inf]
-//       ret=[-inf,+inf]
 //   fact_entry_fact_ctx0: entry_fact
 //       n=[1,49]
 //       tmp=[-inf,+inf]
-//       ret=[-inf,+inf]
 //   fact_pp1_ctx1: pp1 [unreachable]
 //       unreachable
 //   fact_exit_fact_ctx1: exit_fact
 //       n=[50,50]
 //       tmp=[-inf,+inf]
-//       ret=[-inf,+inf]
 //   fact_pp0_ctx1: pp0
 //       n=[50,50]
 //       tmp=[-inf,+inf]
-//       ret=[-inf,+inf]
 //   fact_pp2_ctx1: pp2
 //       n=[50,50]
 //       tmp=[-inf,+inf]
-//       ret=[-inf,+inf]
 //   fact_pp3_ctx1: pp3
 //       n=[50,50]
 //       tmp=[-inf,+inf]
-//       ret=[-inf,+inf]
 //   fact_entry_fact_ctx1: entry_fact
 //       n=[50,50]
 //       tmp=[-inf,+inf]
-//       ret=[-inf,+inf]
 //
 // edges:
 //   fact_pp0_ctx0 -> fact_pp1_ctx0: [n < 2]
@@ -118,13 +107,13 @@
 //   fact_entry_fact_ctx1 -> fact_pp0_ctx1: body(fact)
 //   main_entry_main_ctx0 -> main_pp5_ctx0: body(main)
 //   fact_pp2_ctx0 -> fact_entry_fact_ctx0: enter fact(n - 1)
-//   fact_exit_fact_ctx0 -> fact_pp3_ctx0: combine tmp := ret
+//   fact_exit_fact_ctx0 -> fact_pp3_ctx0: combine tmp := fact(n - 1)
 //   fact_pp2_ctx0 -> fact_pp3_ctx0: call-to-return fact
 //   fact_pp2_ctx1 -> fact_entry_fact_ctx0: enter fact(n - 1)
-//   fact_exit_fact_ctx0 -> fact_pp3_ctx1: combine tmp := ret
+//   fact_exit_fact_ctx0 -> fact_pp3_ctx1: combine tmp := fact(n - 1)
 //   fact_pp2_ctx1 -> fact_pp3_ctx1: call-to-return fact
 //   main_pp5_ctx0 -> fact_entry_fact_ctx1: enter fact(50)
-//   fact_exit_fact_ctx1 -> main_pp6_ctx0: combine r := ret
+//   fact_exit_fact_ctx1 -> main_pp6_ctx0: combine r := fact(50)
 //   main_pp5_ctx0 -> main_pp6_ctx0: call-to-return fact
 // EXPECT-GRAPH-END
 

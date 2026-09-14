@@ -179,8 +179,10 @@ per-plan table that feeds it.
    verdict/status/diagnostic names, `is_dead`.
 5. OCaml `Graph` builder from `res_cfg`, `res_states`, `res_routes`, with
    structural tests replacing `build_analysis_graph_wf`.
-6. OCaml renderers as siblings: `dot_render`, `snapshot_render`, `xml_render`;
-   `html_report` keeps page assembly; `main.ml`/`browser_main.ml` reduced to
+6. OCaml layout: `cli/frontend` (parser, printer), `cli/result` (`result_text`,
+   `context_graph`), `cli/render` (`render_text`, `render_dot`, `render_snapshot`,
+   `render_json`, `render_xml`, `report_dir`), `cli/entry` (`voblint`, `voblint_web`),
+   entry points reduced to
    argument handling and I/O.
 7. Delete the Isabelle presentation layer: `Analysis_Graph*`, `State_Report_*`,
    `VIMP_Source_Print`, `output_view`, `check_row`'s rendered fields.

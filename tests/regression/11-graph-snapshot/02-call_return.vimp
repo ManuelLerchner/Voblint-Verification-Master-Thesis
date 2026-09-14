@@ -20,19 +20,16 @@
 // nodes:
 //   inc_exit_inc_ctx0: exit_inc
 //       n=[5,5]
-//       ret=[6,6]
 //   main_pp4_ctx0: pp4
 //       r=[6,6]
 //   main_exit_main_ctx0: exit_main
 //       r=[6,6]
 //   inc_pp0_ctx0: pp0
 //       n=[5,5]
-//       ret=[-inf,+inf]
 //   main_pp2_ctx0: pp2
 //       r=[-inf,+inf]
 //   inc_entry_inc_ctx0: entry_inc
 //       n=[5,5]
-//       ret=[-inf,+inf]
 //   main_pp3_ctx0: pp3 [proved]
 //       r=[6,6]
 //       check 0 < r
@@ -46,7 +43,7 @@
 //   inc_entry_inc_ctx0 -> inc_pp0_ctx0: body(inc)
 //   main_entry_main_ctx0 -> main_pp2_ctx0: body(main)
 //   main_pp2_ctx0 -> inc_entry_inc_ctx0: enter inc(5)
-//   inc_exit_inc_ctx0 -> main_pp3_ctx0: combine r := ret
+//   inc_exit_inc_ctx0 -> main_pp3_ctx0: combine r := inc(5)
 //   main_pp2_ctx0 -> main_pp3_ctx0: call-to-return inc
 // EXPECT-GRAPH-END
 

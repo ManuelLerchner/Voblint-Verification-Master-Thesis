@@ -204,7 +204,7 @@ generators realize it for two unrelated parser targets:
 ```text
 manifests/vimp-grammar.yaml
        |
-       +-- scripts/gen_vimp_menhir.py   -> cli/vimp_parser.mly, cli/vimp_lexer.mll
+       +-- scripts/gen_vimp_menhir.py   -> cli/frontend/vimp_parser.mly, cli/frontend/vimp_lexer.mll
        +-- scripts/gen_vimp_isabelle.py -> src/Program_Model/VIMP/VIMP_Grammar_Generated.thy
 ```
 
@@ -236,8 +236,8 @@ dirty, so the drift check runs locally, not only in CI.
 When changing VIMP syntax:
 
 1. Edit `manifests/vimp-grammar.yaml` only.
-2. Never hand-edit `cli/vimp_parser.mly`, `cli/vimp_lexer.mll`, or
-   `src/Program_Model/VIMP/VIMP_Grammar_Generated.thy` -- all three are generated.
+2. Never hand-edit `cli/frontend/vimp_parser.mly`, `cli/frontend/vimp_lexer.mll`, `cli/frontend/vimp_printer.ml`, or
+   `src/Program_Model/VIMP/VIMP_Grammar_Generated.thy` -- all four are generated.
 3. Regenerate: `pixi run grammar-menhir-generate` (Menhir/ocamllex) and
    `pixi run grammar-isabelle-generate` (Isabelle); load the regenerated
    `VIMP_Grammar_Generated.thy` through I/Q per the theory-file boundary
@@ -343,7 +343,7 @@ was last regenerated.
 One thing does have to be named explicitly. The serializer keeps a datatype's
 constructors out of the emitted signature unless it considers them public, and
 an abstract type cannot be pattern-matched on. So a datatype whose *shape* the
-handwritten OCaml depends on -- `lifted`'s `Bot`/`Lifted`, which `cli/main.ml`
+handwritten OCaml depends on -- `lifted`'s `Bot`/`Lifted`, which `cli/entry/voblint.ml`
 matches to tell a dead point from a live verdict -- is an export root even
 though nothing calls it.
 

@@ -45,13 +45,21 @@ MODULE = "Generated"
 # copies of the export itself, and vimp_parser.ml/vimp_lexer.ml come from
 # menhir/ocamllex at build time.
 CONSUMERS = [
-    "cli/main.ml",
-    "cli/dot_render.ml",
-    "cli/html_report.ml",
-    "cli/vimp_frontend.ml",
-    "cli/vimp_positions.ml",
-    "cli/vimp_parser.mly",
-    "codegen/regression/ocaml/main.ml",
+    "cli/entry/voblint.ml",
+    "cli/entry/voblint_web.ml",
+    "cli/result/result_text.ml",
+    "cli/result/context_graph.ml",
+    "cli/render/render_text.ml",
+    "cli/render/render_dot.ml",
+    "cli/render/render_snapshot.ml",
+    "cli/render/render_json.ml",
+    "cli/render/render_xml.ml",
+    "cli/render/report_dir.ml",
+    "cli/frontend/vimp_frontend.ml",
+    "cli/frontend/vimp_positions.ml",
+    "cli/frontend/vimp_printer.ml",
+    "cli/frontend/vimp_parser.mly",
+    "codegen/regression/ocaml/codegen_regression.ml",
     "tests/property/ast_driver.ml",
 ]
 

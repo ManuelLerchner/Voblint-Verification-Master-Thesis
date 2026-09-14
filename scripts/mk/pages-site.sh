@@ -12,8 +12,8 @@ HTML_SRC="${HTML_SRC:-$REPO_ROOT/build/isabelle-html}"
 FORMALIZATION_PDF="${FORMALIZATION_PDF:-$REPO_ROOT/output/document.pdf}"
 THESIS_PDF="${THESIS_PDF:-$REPO_ROOT/thesis/Voblint_Thesis.pdf}"
 
-BROWSER_JS="${BROWSER_JS:-$REPO_ROOT/build/browser/browser_main.bc.wasm.js}"
-BROWSER_ASSETS="${BROWSER_ASSETS:-$REPO_ROOT/build/browser/browser_main.bc.wasm.assets}"
+BROWSER_JS="${BROWSER_JS:-$REPO_ROOT/build/browser/voblint_web.bc.wasm.js}"
+BROWSER_ASSETS="${BROWSER_ASSETS:-$REPO_ROOT/build/browser/voblint_web.bc.wasm.assets}"
 
 for path in \
   "$HTML_SRC" \
@@ -42,11 +42,11 @@ cp "$REPO_ROOT/docs/images/while_loop_cfg.png" "$SITE_DIR/assets/while_loop_cfg.
 # Keep their generated names and relative layout intact.
 cp \
   "$BROWSER_JS" \
-  "$SITE_DIR/assets/browser_main.bc.wasm.js"
+  "$SITE_DIR/assets/voblint_web.bc.wasm.js"
 
 cp -R \
   "$BROWSER_ASSETS" \
-  "$SITE_DIR/assets/browser_main.bc.wasm.assets"
+  "$SITE_DIR/assets/voblint_web.bc.wasm.assets"
 
 for image in \
   report-graph-sign \

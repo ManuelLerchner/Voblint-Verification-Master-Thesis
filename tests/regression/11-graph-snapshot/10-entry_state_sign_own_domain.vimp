@@ -56,13 +56,10 @@
 //       b=Top
 //   square_exit_square_ctx0: exit_square
 //       n=Positive
-//       ret=Positive
 //   square_pp0_ctx0: pp0
 //       n=Positive
-//       ret=Top
 //   square_entry_square_ctx0: entry_square
 //       n=Positive
-//       ret=Top
 //
 // edges:
 //   square_pp0_ctx0 -> square_exit_square_ctx0: return n * n
@@ -72,10 +69,10 @@
 //   main_entry_main_ctx0 -> main_pp2_ctx0: body(main)
 //   square_entry_square_ctx0 -> square_pp0_ctx0: body(square)
 //   main_pp2_ctx0 -> square_entry_square_ctx0: enter square(3)
-//   square_exit_square_ctx0 -> main_pp3_ctx0: combine a := ret
+//   square_exit_square_ctx0 -> main_pp3_ctx0: combine a := square(3)
 //   main_pp2_ctx0 -> main_pp3_ctx0: call-to-return square
 //   main_pp3_ctx0 -> square_entry_square_ctx0: enter square(4)
-//   square_exit_square_ctx0 -> main_pp4_ctx0: combine b := ret
+//   square_exit_square_ctx0 -> main_pp4_ctx0: combine b := square(4)
 //   main_pp3_ctx0 -> main_pp4_ctx0: call-to-return square
 // EXPECT-GRAPH-END
 

@@ -31,11 +31,9 @@
 //   fact_pp1_ctx0: pp1
 //       n=[1,1]
 //       tmp=[-inf,+inf]
-//       ret=[-inf,+inf]
 //   fact_exit_fact_ctx0: exit_fact
 //       n=[1,3]
 //       tmp=[-inf,+inf]
-//       ret=[-inf,+inf]
 //   main_pp7_ctx0: pp7
 //       r=[-inf,+inf]
 //   main_exit_main_ctx0: exit_main
@@ -43,21 +41,17 @@
 //   fact_pp0_ctx0: pp0
 //       n=[1,3]
 //       tmp=[-inf,+inf]
-//       ret=[-inf,+inf]
 //   fact_pp2_ctx0: pp2
 //       n=[2,3]
 //       tmp=[-inf,+inf]
-//       ret=[-inf,+inf]
 //   fact_pp3_ctx0: pp3
 //       n=[2,3]
 //       tmp=[-inf,+inf]
-//       ret=[-inf,+inf]
 //   main_pp5_ctx0: pp5
 //       r=[-inf,+inf]
 //   fact_entry_fact_ctx0: entry_fact
 //       n=[1,3]
 //       tmp=[-inf,+inf]
-//       ret=[-inf,+inf]
 //   main_pp6_ctx0: pp6 [unknown]
 //       r=[-inf,+inf]
 //       check 0 < r
@@ -74,10 +68,10 @@
 //   fact_entry_fact_ctx0 -> fact_pp0_ctx0: body(fact)
 //   main_entry_main_ctx0 -> main_pp5_ctx0: body(main)
 //   fact_pp2_ctx0 -> fact_entry_fact_ctx0: enter fact(n - 1)
-//   fact_exit_fact_ctx0 -> fact_pp3_ctx0: combine tmp := ret
+//   fact_exit_fact_ctx0 -> fact_pp3_ctx0: combine tmp := fact(n - 1)
 //   fact_pp2_ctx0 -> fact_pp3_ctx0: call-to-return fact
 //   main_pp5_ctx0 -> fact_entry_fact_ctx0: enter fact(3)
-//   fact_exit_fact_ctx0 -> main_pp6_ctx0: combine r := ret
+//   fact_exit_fact_ctx0 -> main_pp6_ctx0: combine r := fact(3)
 //   main_pp5_ctx0 -> main_pp6_ctx0: call-to-return fact
 // EXPECT-GRAPH-END
 

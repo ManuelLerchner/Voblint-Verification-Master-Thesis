@@ -34,9 +34,9 @@ pyyaml = "*"
 grammar-isabelle-generate = { cmd = "python3 scripts/gen_vimp_isabelle.py", description = "Regenerate Isabelle syntax from manifests/vimp-grammar.yaml." }
 grammar-menhir-generate = { cmd = "python3 scripts/gen_vimp_menhir.py", description = "Regenerate the Menhir and ocamllex frontends from manifests/vimp-grammar.yaml." }
 grammar-isabelle-check = { cmd = "python3 scripts/gen_vimp_isabelle.py && bash scripts/mk/check-clean.sh src/Program_Model/VIMP/VIMP_Grammar_Generated.thy", description = "Regenerate the Isabelle grammar and fail if the tracked theory changes." }
-grammar-menhir-check = { cmd = "python3 scripts/gen_vimp_menhir.py && bash scripts/mk/check-clean.sh cli/vimp_parser.mly cli/vimp_lexer.mll", description = "Regenerate the Menhir frontend and fail if tracked parser files change." }
+grammar-menhir-check = { cmd = "python3 scripts/gen_vimp_menhir.py && bash scripts/mk/check-clean.sh cli/frontend/vimp_parser.mly cli/frontend/vimp_lexer.mll", description = "Regenerate the Menhir frontend and fail if tracked parser files change." }
 grammar-printer-generate = { cmd = "python3 scripts/gen_vimp_printer.py", description = "Regenerate the OCaml VIMP source printer from manifests/vimp-grammar.yaml." }
-grammar-printer-check = { cmd = "python3 scripts/gen_vimp_printer.py && bash scripts/mk/check-clean.sh cli/vimp_printer.ml", description = "Regenerate the OCaml VIMP printer and fail if the tracked printer changes." }
+grammar-printer-check = { cmd = "python3 scripts/gen_vimp_printer.py && bash scripts/mk/check-clean.sh cli/frontend/vimp_printer.ml", description = "Regenerate the OCaml VIMP printer and fail if the tracked printer changes." }
 grammar-check = { depends-on = [
   "grammar-isabelle-check",
   "grammar-menhir-check",

@@ -5,7 +5,7 @@ VIMP has one unified `exp` type -- arithmetic, comparison, and logical
 operators are ordinary exp constructors, not a separate aexp/bexp split
 (see VIMP_Expr.thy's `aval`/`truthy`). manifests/vimp-grammar.yaml's `exp_paren`
 production (`LPAREN exp RPAREN`, passthrough) means any exp tree is
-source-expressible: the grammar-generated printer (cli/vimp_printer.ml) is a uniform
+source-expressible: the grammar-generated printer (cli/frontend/vimp_printer.ml) is a uniform
 precedence-climbing printer (the precedence table in manifests/vimp-grammar.yaml) that parenthesizes a subexpression
 exactly when its own constructor binds looser than the calling position
 requires, for every constructor alike. `exps` below therefore generates

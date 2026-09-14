@@ -57,20 +57,16 @@
 //   f_pp1_ctx0: pp1 [proved]
 //       n=[1,1]
 //       r=[-inf,+inf]
-//       ret=[-inf,+inf]
 //       check n == 1
 //   f_pp2_ctx0: pp2
 //       n=[1,1]
 //       r=[-inf,+inf]
-//       ret=[-inf,+inf]
 //   f_exit_f_ctx0: exit_f
 //       n=[1,1]
 //       r=[-inf,+inf]
-//       ret=[1,1]
 //   f_pp0_ctx0: pp0
 //       n=[1,1]
 //       r=[-inf,+inf]
-//       ret=[-inf,+inf]
 //   f_pp3_ctx0: pp3 [unreachable]
 //       unreachable
 //   f_pp4_ctx0: pp4 [unreachable]
@@ -78,7 +74,6 @@
 //   f_entry_f_ctx0: entry_f
 //       n=[1,1]
 //       r=[-inf,+inf]
-//       ret=[-inf,+inf]
 //   f_pp1_ctx1: pp1 [unreachable]
 //       unreachable
 //       check n == 1 [dead]
@@ -87,23 +82,18 @@
 //   f_exit_f_ctx1: exit_f
 //       n=[2,2]
 //       r=[1,1]
-//       ret=[2,2]
 //   f_pp0_ctx1: pp0
 //       n=[2,2]
 //       r=[-inf,+inf]
-//       ret=[-inf,+inf]
 //   f_pp3_ctx1: pp3
 //       n=[2,2]
 //       r=[-inf,+inf]
-//       ret=[-inf,+inf]
 //   f_pp4_ctx1: pp4
 //       n=[2,2]
 //       r=[1,1]
-//       ret=[-inf,+inf]
 //   f_entry_f_ctx1: entry_f
 //       n=[2,2]
 //       r=[-inf,+inf]
-//       ret=[-inf,+inf]
 //   f_pp1_ctx2: pp1 [unreachable]
 //       unreachable
 //       check n == 1 [dead]
@@ -112,23 +102,18 @@
 //   f_exit_f_ctx2: exit_f
 //       n=[3,3]
 //       r=[2,2]
-//       ret=[6,6]
 //   f_pp0_ctx2: pp0
 //       n=[3,3]
 //       r=[-inf,+inf]
-//       ret=[-inf,+inf]
 //   f_pp3_ctx2: pp3
 //       n=[3,3]
 //       r=[-inf,+inf]
-//       ret=[-inf,+inf]
 //   f_pp4_ctx2: pp4
 //       n=[3,3]
 //       r=[2,2]
-//       ret=[-inf,+inf]
 //   f_entry_f_ctx2: entry_f
 //       n=[3,3]
 //       r=[-inf,+inf]
-//       ret=[-inf,+inf]
 //
 // edges:
 //   f_pp0_ctx0 -> f_pp1_ctx0: [n < 2]
@@ -154,13 +139,13 @@
 //   main_entry_main_ctx0 -> main_pp6_ctx0: body(main)
 //   f_pp3_ctx0 -> f_pp4_ctx0: call-to-return f
 //   f_pp3_ctx1 -> f_entry_f_ctx0: enter f(n - 1)
-//   f_exit_f_ctx0 -> f_pp4_ctx1: combine r := ret
+//   f_exit_f_ctx0 -> f_pp4_ctx1: combine r := f(n - 1)
 //   f_pp3_ctx1 -> f_pp4_ctx1: call-to-return f
 //   f_pp3_ctx2 -> f_entry_f_ctx1: enter f(n - 1)
-//   f_exit_f_ctx1 -> f_pp4_ctx2: combine r := ret
+//   f_exit_f_ctx1 -> f_pp4_ctx2: combine r := f(n - 1)
 //   f_pp3_ctx2 -> f_pp4_ctx2: call-to-return f
 //   main_pp6_ctx0 -> f_entry_f_ctx2: enter f(3)
-//   f_exit_f_ctx2 -> main_pp7_ctx0: combine a := ret
+//   f_exit_f_ctx2 -> main_pp7_ctx0: combine a := f(3)
 //   main_pp6_ctx0 -> main_pp7_ctx0: call-to-return f
 // EXPECT-GRAPH-END
 

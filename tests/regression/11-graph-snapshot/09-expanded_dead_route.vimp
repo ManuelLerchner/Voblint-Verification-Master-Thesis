@@ -59,13 +59,10 @@
 //       x=[-inf,+inf]
 //   f_exit_f_ctx0: exit_f
 //       n=[7,7]
-//       ret=[7,7]
 //   f_pp0_ctx0: pp0
 //       n=[7,7]
-//       ret=[-inf,+inf]
 //   f_entry_f_ctx0: entry_f
 //       n=[7,7]
-//       ret=[-inf,+inf]
 //
 // edges:
 //   f_pp0_ctx0 -> f_exit_f_ctx0: return n
@@ -78,7 +75,7 @@
 //   main_entry_main_ctx0 -> main_pp2_ctx0: body(main)
 //   main_pp4_ctx0 -> main_pp6_ctx0: call-to-return f
 //   main_pp6_ctx0 -> f_entry_f_ctx0: enter f(7)
-//   f_exit_f_ctx0 -> main_pp7_ctx0: combine b := ret
+//   f_exit_f_ctx0 -> main_pp7_ctx0: combine b := f(7)
 //   main_pp6_ctx0 -> main_pp7_ctx0: call-to-return f
 // EXPECT-GRAPH-END
 

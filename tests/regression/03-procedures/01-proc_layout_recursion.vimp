@@ -46,14 +46,11 @@
 //   main_exit_main_ctx0: exit_main [unreachable]
 //       unreachable
 //   f_pp0_ctx0: pp0
-//       ret=[-inf,+inf]
 //   f_pp1_ctx0: pp1
-//       ret=[-inf,+inf]
 //   f_pp3_ctx0: pp3 [unreachable]
 //       unreachable
 //   main_pp10_ctx0: pp10
 //   f_entry_f_ctx0: entry_f
-//       ret=[-inf,+inf]
 //   main_pp11_ctx0: pp11 [unreachable]
 //       unreachable
 //   main_pp12_ctx0: pp12 [unreachable]

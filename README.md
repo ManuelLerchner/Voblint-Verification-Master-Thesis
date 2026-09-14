@@ -389,7 +389,7 @@ The proof covers:
 - semantic abstract states, returned check rows, and arithmetic safety at points
   without diagnostics.
 
-The executable `cli/main.ml` is a thin, unverified adapter around the generated
+The executable `cli/entry/voblint.ml` is a thin, unverified adapter around the generated
 `run_voblint` entry point.
 
 It does not cover:
@@ -656,7 +656,7 @@ realize it for two unrelated parser targets:
 ```text
 manifests/vimp-grammar.yaml
        |
-       +-- scripts/gen_vimp_menhir.py   -> cli/vimp_parser.mly, cli/vimp_lexer.mll
+       +-- scripts/gen_vimp_menhir.py   -> cli/frontend/vimp_parser.mly, cli/frontend/vimp_lexer.mll
        +-- scripts/gen_vimp_isabelle.py -> src/Program_Model/VIMP/VIMP_Grammar_Generated.thy
 ```
 

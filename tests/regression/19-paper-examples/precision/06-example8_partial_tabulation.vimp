@@ -60,22 +60,16 @@
 //       y=[-inf,+inf]
 //   f_exit_f_ctx0: exit_f
 //       p=[3,3]
-//       ret=[6,6]
 //   f_pp0_ctx0: pp0
 //       p=[3,3]
-//       ret=[-inf,+inf]
 //   f_entry_f_ctx0: entry_f
 //       p=[3,3]
-//       ret=[-inf,+inf]
 //   f_exit_f_ctx1: exit_f
 //       p=[10,10]
-//       ret=[20,20]
 //   f_pp0_ctx1: pp0
 //       p=[10,10]
-//       ret=[-inf,+inf]
 //   f_entry_f_ctx1: entry_f
 //       p=[10,10]
-//       ret=[-inf,+inf]
 //
 // edges:
 //   f_pp0_ctx0 -> f_exit_f_ctx0: return p + p
@@ -87,10 +81,10 @@
 //   f_entry_f_ctx1 -> f_pp0_ctx1: body(f)
 //   main_entry_main_ctx0 -> main_pp2_ctx0: body(main)
 //   main_pp2_ctx0 -> f_entry_f_ctx0: enter f(3)
-//   f_exit_f_ctx0 -> main_pp3_ctx0: combine x := ret
+//   f_exit_f_ctx0 -> main_pp3_ctx0: combine x := f(3)
 //   main_pp2_ctx0 -> main_pp3_ctx0: call-to-return f
 //   main_pp3_ctx0 -> f_entry_f_ctx1: enter f(10)
-//   f_exit_f_ctx1 -> main_pp4_ctx0: combine y := ret
+//   f_exit_f_ctx1 -> main_pp4_ctx0: combine y := f(10)
 //   main_pp3_ctx0 -> main_pp4_ctx0: call-to-return f
 // EXPECT-GRAPH-END
 
