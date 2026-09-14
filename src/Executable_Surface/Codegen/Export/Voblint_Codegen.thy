@@ -120,7 +120,17 @@ text \<open>
 export_code
 
   \<comment> \<open>Run\<close>
-  run_voblint
+  run_voblint run_program
+
+  \<comment> \<open>Typed result: answers, contexts, states, routes, checks, globals\<close>
+  Result_Malformed Result_Unsupported Result_Analysed
+  res_cfg res_contexts res_states res_routes res_checks res_globals res_diagnostics
+  Context_Unit Context_Entry Context_Call_String
+  state_point state_context state_value
+  route_point route_context route_callee route_targets
+  check_point check_exp check_verdict
+  global_var global_val
+  cfg_entry cfg_node_list
 
   \<comment> \<open>Ask: domain, solver, context, drawing\<close>
   Sign_Analysis Interval_Analysis Int_Analysis Parity_Analysis Congruence_Analysis

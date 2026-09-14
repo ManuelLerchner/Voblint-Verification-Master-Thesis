@@ -14,12 +14,6 @@ text \<open>
   a rendered graph shows a real solved state rather than a hand-built one.
 \<close>
 
-fun string_of_abstract_value :: "abstract_value \<Rightarrow> String.literal" where
-  "string_of_abstract_value (SignValue s) = to_string s"
-| "string_of_abstract_value (IntervalValue i) = to_string i"
-| "string_of_abstract_value (IntDomValue d) = to_string d"
-| "string_of_abstract_value (ParityValue v) = to_string v"
-| "string_of_abstract_value (CongruenceValue v) = to_string v"
 
 text \<open>
   Used only to suppress an uninformative return-slot line: a \<^const>\<open>top\<close>

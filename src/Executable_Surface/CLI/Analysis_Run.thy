@@ -784,4 +784,20 @@ definition analyse_program ::
                None \<Rightarrow> Result_Unsupported
              | Some res \<Rightarrow> Result_Analysed res))"
 
+fun map_program_answer :: "('v \<Rightarrow> 'w) \<Rightarrow> 'v program_answer \<Rightarrow> 'w program_answer" where
+  "map_program_answer f Result_Malformed = Result_Malformed"
+| "map_program_answer f Result_Unsupported = Result_Unsupported"
+| "map_program_answer f (Result_Analysed res) = Result_Analysed (map_run_result f res)"
+
+text \<open>
+  The operation a consumer outside Isabelle calls: \<^const>\<open>analyse_program\<close>, with each
+  domain's rendering applied to every abstract value and nothing else changed.
+\<close>
+
+definition run_program ::
+    "analysis_domain \<Rightarrow> solver_choice option \<Rightarrow> context_mode \<Rightarrow> imp_prog
+       \<Rightarrow> String.literal program_answer" where
+  "run_program kind solver ctx p =
+     map_program_answer string_of_abstract_value (analyse_program kind solver ctx p)"
+
 end
