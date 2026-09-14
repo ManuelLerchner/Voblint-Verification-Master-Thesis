@@ -1958,3 +1958,4 @@ fun_of_st_cinit_congruence_st_for
 fun_of_st_cinit_int_dom_st_for
 top_congruence_st_def
 cinit_congruence_st_def
+diagnostic_message

@@ -161,6 +161,9 @@ module Generated : sig
   val res_cfg : ('a, 'b) run_result_ext -> unit cfg_ext
   val global_var : ('a, 'b) result_global_ext -> string
   val global_val : ('a, 'b) result_global_ext -> 'a
+  val state_diagnostics :
+    ('a, 'b) result_state_ext ->
+      (arithmetic_obligation * check_result lifted) list
   val state_context : ('a, 'b) result_state_ext -> nat
   val state_checks :
     ('a, 'b) result_state_ext -> (exp * check_result lifted) list
@@ -174,8 +177,6 @@ module Generated : sig
     analysis_domain ->
       solver_choice option ->
         context_mode -> output_view -> unit imp_prog_ext -> analysis_answer
-  val diagnostic_verdict : arithmetic_diagnostic -> check_result
-  val diagnostic_message : arithmetic_diagnostic -> string
   val row_point : check_row -> cfg_node
   val row_state : check_row -> string
   val row_verdict : check_row -> check_result lifted
@@ -209,6 +210,9 @@ module Generated : sig
   val xc_nodes : 'a export_cluster_ext -> string list
   val xg_clusters : 'a export_graph_ext -> unit export_cluster_ext list
   val diagnostic_point : arithmetic_diagnostic -> cfg_node
+  val diagnostic_verdict : arithmetic_diagnostic -> check_result
+  val arithmetic_operation : arithmetic_obligation -> exp
+  val diagnostic_obligation : arithmetic_diagnostic -> arithmetic_obligation
 end = struct
 
 type int = Int_of_integer of Z.t;;
@@ -3688,7 +3692,8 @@ type ('a, 'b) result_global_ext = Result_global_ext of string * 'a * 'b;;
 type ('a, 'b) result_state_ext =
   Result_state_ext of
     cfg_node * nat * ((string * 'a) list) lifted *
-      (exp * check_result lifted) list * 'b;;
+      (exp * check_result lifted) list *
+      (arithmetic_obligation * check_result lifted) list * 'b;;
 
 type 'a result_check_ext =
   Result_check_ext of cfg_node * exp * check_result lifted * 'a;;
@@ -3958,6 +3963,8 @@ let rec fset (Abs_fset x) = x;;
 let rec fimage xb xc = Abs_fset (image xb (fset xc));;
 
 let rec fun_upd _A f a b = (fun x -> (if eq _A x a then b else f x));;
+
+let rec concat xss = foldr (fun a b -> a @ b) xss [];;
 
 let rec bind x0 f = match x0, f with None, f -> None
                | Some x, f -> f x;;
@@ -12749,6 +12756,16 @@ let rec run_result_of _B
                                    (lookup_context _B r v ctx)))
                    else None))
                (cfg_intra_list g),
+             map (fun obligation ->
+                   (obligation,
+                     classify_point classify (arithmetic_condition obligation)
+                       (lookup_context _B r v ctx)))
+               (concat
+                 (map_filter
+                   (fun x ->
+                     (if (let (u, _) = x in equal_cfg_nodea u v)
+                       then Some (snd x) else None))
+                   (arithmetic_sites g))),
              ()))
        in
      let route_at =
@@ -13245,24 +13262,34 @@ let rec global_val
 let rec map_result_global
   f g = Result_global_ext (global_var g, f (global_val g), ());;
 
+let rec state_diagnostics
+  (Result_state_ext
+    (state_point, state_context, state_value, state_checks, state_diagnostics,
+      more))
+    = state_diagnostics;;
+
 let rec state_context
   (Result_state_ext
-    (state_point, state_context, state_value, state_checks, more))
+    (state_point, state_context, state_value, state_checks, state_diagnostics,
+      more))
     = state_context;;
 
 let rec state_checks
   (Result_state_ext
-    (state_point, state_context, state_value, state_checks, more))
+    (state_point, state_context, state_value, state_checks, state_diagnostics,
+      more))
     = state_checks;;
 
 let rec state_value
   (Result_state_ext
-    (state_point, state_context, state_value, state_checks, more))
+    (state_point, state_context, state_value, state_checks, state_diagnostics,
+      more))
     = state_value;;
 
 let rec state_point
   (Result_state_ext
-    (state_point, state_context, state_value, state_checks, more))
+    (state_point, state_context, state_value, state_checks, state_diagnostics,
+      more))
     = state_point;;
 
 let rec map_result_state
@@ -13270,7 +13297,7 @@ let rec map_result_state
     Result_state_ext
       (state_point st, state_context st,
         map_lift (map (fun (x, v) -> (x, f v))) (state_value st),
-        state_checks st, ());;
+        state_checks st, state_diagnostics st, ());;
 
 let rec map_run_result
   f res =
@@ -13508,32 +13535,6 @@ let rec run_voblint
              with None -> Unsupported_Configuration
              | Some pl -> plan_answer pl view p));;
 
-let rec diagnostic_obligation (Arithmetic_Diagnostic (x1, x2, x3, x4)) = x3;;
-
-let rec arithmetic_operation (Arithmetic_Obligation (x1, x2)) = x1;;
-
-let rec diagnostic_verdict (Arithmetic_Diagnostic (x1, x2, x3, x4)) = x4;;
-
-let rec diagnostic_message
-  diagnostic =
-    (let operation = arithmetic_operation (diagnostic_obligation diagnostic) in
-     let kind =
-       (match operation with N _ -> "division" | V _ -> "division"
-         | Plus (_, _) -> "division" | Minus (_, _) -> "division"
-         | Times (_, _) -> "division" | Div (_, _) -> "division"
-         | Mod (_, _) -> "remainder" | Less (_, _) -> "division"
-         | LessEq (_, _) -> "division" | Greater (_, _) -> "division"
-         | GreaterEq (_, _) -> "division" | NotEq (_, _) -> "division"
-         | Eq (_, _) -> "division" | Not _ -> "division"
-         | And (_, _) -> "division" | Or (_, _) -> "division")
-       in
-     let message =
-       (if equal_check_result (diagnostic_verdict diagnostic) Check_Refuted
-         then kind ^ " by zero whenever this operation is evaluated: "
-         else ("possible " ^ kind) ^ " by zero: ")
-       in
-      message ^ string_of_exp zero_nat operation);;
-
 let rec row_point (Check_Row (x1, x2, x3, x4, x5)) = x1;;
 
 let rec row_state (Check_Row (x1, x2, x3, x4, x5)) = x5;;
@@ -13672,5 +13673,11 @@ let rec xg_clusters
   (Export_graph_ext (xg_clusters, xg_nodes, xg_edges, more)) = xg_clusters;;
 
 let rec diagnostic_point (Arithmetic_Diagnostic (x1, x2, x3, x4)) = x1;;
+
+let rec diagnostic_verdict (Arithmetic_Diagnostic (x1, x2, x3, x4)) = x4;;
+
+let rec arithmetic_operation (Arithmetic_Obligation (x1, x2)) = x1;;
+
+let rec diagnostic_obligation (Arithmetic_Diagnostic (x1, x2, x3, x4)) = x3;;
 
 end;; (*struct Generated*)

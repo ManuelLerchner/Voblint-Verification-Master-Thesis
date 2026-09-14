@@ -42,7 +42,7 @@ let check_json result check =
 let diagnostic_json diagnostic =
   Printf.sprintf "{\"severity\":%s,\"message\":%s}"
     (json_string (Render_text.diagnostic_severity diagnostic))
-    (json_string (C.diagnostic_message diagnostic))
+    (json_string (A.diagnostic_message diagnostic))
 
 let result_json analysis_ms program result =
   let checks = C.res_checks result |> List.map (check_json result) |> String.concat "," in

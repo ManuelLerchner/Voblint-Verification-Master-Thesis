@@ -39,13 +39,15 @@ record 'a analysis_result =
   res_routes      :: "call_route list"
   res_checks      :: "result_check list"
   res_globals     :: "'a result_global list"
-  res_diagnostics :: "result_diagnostic list"
+  res_diagnostics :: "arithmetic_diagnostic list"
 
 datatype 'a analysis_context =
   Unit_Context | Entry_Context "'a list" | Call_String_Context "pp list"
 
 record 'a result_state   = state_point :: pp, state_context :: nat,
                            state_value :: "(vname * 'a) list lifted"   (Bot = unreachable)
+                           state_checks :: "(exp * contextual_verdict) list"
+                           state_diagnostics :: "(arithmetic_obligation * contextual_verdict) list"
 record call_route        = route_point :: pp, route_context :: nat,
                            route_callee :: pname, route_targets :: "nat list"
                            ([] = no callee context entered; several = overlapping
@@ -53,9 +55,17 @@ record call_route        = route_point :: pp, route_context :: nat,
 record result_check      = check_point :: pp, check_exp :: exp,
                            check_verdict :: contextual_verdict
 record 'a result_global  = global_name :: vname, global_value :: 'a
-record result_diagnostic = diagnostic_point :: pp, diagnostic_kind :: diagnostic_kind,
-                           diagnostic_exp :: exp
+datatype arithmetic_diagnostic = Arithmetic_Diagnostic (diagnostic_point :: pp)
+                           (diagnostic_occurrence :: nat)
+                           (diagnostic_obligation :: arithmetic_obligation)
+                           (diagnostic_verdict :: check_result)
 ```
+
+Checks and diagnostics come twice, and both are load-bearing: `res_checks` and
+`res_diagnostics` join every context of a point, which is what a source-level
+report states; `state_checks` and `state_diagnostics` keep each context's own
+verdict, which is what a drawing of one context shows. A diagnostic reaches
+OCaml as its operation and verdict; the sentence a reader sees is written there.
 
 ## Public contract
 

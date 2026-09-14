@@ -26,6 +26,17 @@ let contextual_verdict_name = function
   | C.Bot -> "DEAD"
   | C.Lifted v -> verdict_name v
 
+(* A division or remainder whose divisor the verdict says is, or may be, zero. *)
+let division_message verdict operation =
+  let kind = match operation with C.Mod _ -> "remainder" | _ -> "division" in
+  let text = Vimp_printer.string_of_exp operation in
+  match verdict with
+  | C.Check_Refuted -> kind ^ " by zero whenever this operation is evaluated: " ^ text
+  | _ -> "possible " ^ kind ^ " by zero: " ^ text
+
+let diagnostic_message d =
+  division_message (C.diagnostic_verdict d) (C.arithmetic_operation (C.diagnostic_obligation d))
+
 let context_label = function
   | C.Context_Unit -> "unit"
   | C.Context_Entry [] | C.Context_Call_String [] -> "root context"

@@ -85,7 +85,13 @@ let status_of state =
   match C.state_value state with
   | C.Bot -> Some Unreachable
   | C.Lifted _ ->
-      let verdicts = List.map snd (C.state_checks state) in
+      (* A safe division is not a finding worth drawing, so only a division that
+         is or may be by zero colours a node. *)
+      let verdicts =
+        List.map snd (C.state_checks state)
+        @ List.filter (fun v -> v <> C.Lifted C.Check_Proved)
+            (List.map snd (C.state_diagnostics state))
+      in
       if List.mem (C.Lifted C.Check_Refuted) verdicts then Some Refuted
       else if List.mem (C.Lifted C.Check_Unknown) verdicts then Some Unknown
       else if List.mem (C.Lifted C.Check_Proved) verdicts then Some Proved
@@ -109,6 +115,13 @@ let findings_of state =
         let text = "check " ^ Vimp_printer.string_of_exp cnd in
         match verdict with C.Bot -> text ^ " [dead]" | C.Lifted _ -> text)
       (C.state_checks state)
+  @ List.filter_map
+      (fun (obligation, verdict) ->
+        match verdict with
+        | C.Lifted ((C.Check_Refuted | C.Check_Unknown) as v) ->
+            Some (A.division_message v (C.arithmetic_operation obligation))
+        | _ -> None)
+      (C.state_diagnostics state)
 
 (* Everything known at a node: its state, then its findings. *)
 let lines n = n.state @ n.findings

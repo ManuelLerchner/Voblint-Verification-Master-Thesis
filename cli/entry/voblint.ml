@@ -137,7 +137,7 @@ let print_diagnostics path analysis positions diagnostics =
       in
       Printf.eprintf "%s:%s: %s: %s [%s]\n" path location
         (Render_text.diagnostic_severity diagnostic)
-        (Voblint_CLI.Generated.diagnostic_message diagnostic)
+        (Result_text.diagnostic_message diagnostic)
         analysis)
     diagnostics
 
@@ -660,7 +660,7 @@ let () =
                         cond = "";
                         message =
                           Some
-                            (Voblint_CLI.Generated.diagnostic_message diagnostic
+                            (Result_text.diagnostic_message diagnostic
                             ^ " [" ^ label ^ "]");
                       })
                     diagnostics)

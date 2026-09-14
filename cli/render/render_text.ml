@@ -85,7 +85,7 @@ let render_report path analysis positions result check_positions =
           location;
           node_label (Voblint_CLI.Generated.diagnostic_point diagnostic);
           String.uppercase_ascii (diagnostic_severity diagnostic);
-          Voblint_CLI.Generated.diagnostic_message diagnostic;
+          Result_text.diagnostic_message diagnostic;
         ])
       (C.res_diagnostics result)
   in

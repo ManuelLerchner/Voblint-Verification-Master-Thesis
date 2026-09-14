@@ -126,7 +126,7 @@ export_code
   Result_Malformed Result_Unsupported Result_Analysed
   res_cfg res_contexts res_states res_routes res_checks res_globals res_diagnostics
   Context_Unit Context_Entry Context_Call_String
-  state_point state_context state_value state_checks
+  state_point state_context state_value state_checks state_diagnostics
   route_point route_context route_callee route_targets
   check_point check_exp check_verdict
   global_var global_val
@@ -141,7 +141,7 @@ export_code
   \<comment> \<open>Answer: the three outcomes, then the readers of a successful one\<close>
   Malformed_Program Unsupported_Configuration Analysed
   out_graph out_snapshot out_checks out_globals out_diagnostics
-  diagnostic_point diagnostic_message diagnostic_verdict
+  diagnostic_point diagnostic_obligation diagnostic_verdict arithmetic_operation
   row_point row_condition row_verdict row_state
   Check_Proved Check_Refuted Check_Unknown
   Bot Lifted

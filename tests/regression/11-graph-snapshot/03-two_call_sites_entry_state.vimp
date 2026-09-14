@@ -1,13 +1,8 @@
 // PARAM: --analysis interval --context entry-state
 // Same program as 03-procedures/precision/04-two_call_sites_entry_state.vimp
-// (see that file for the precision claim), captured as a canonical CFG
-// snapshot instead: --graph-snapshot's clusters are keyed by procedure
-// identity, not by entry-state context (the underlying CFG has one
-// physical node per program point regardless of how many contexts the
-// solver later associates with it), so square still renders as a single
-// cluster here -- the two distinct entry-state contexts show up in the
-// check annotations at main's own nodes (a=[9,9], b=[16,16], both PROVED),
-// not as duplicated clusters.
+// (see that file for the precision claim), captured as a contextual graph:
+// square is entered with n=[3,3] and with n=[4,4], so it draws as one cluster
+// per entry-state context, and both of main's checks are PROVED.
 // EXPECT-GRAPH-BEGIN
 // clusters:
 //   cluster_ctx_0: main / root context

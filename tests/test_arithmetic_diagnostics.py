@@ -38,7 +38,10 @@ def run_program(tmp_path, source, *args, analysis="interval"):
     )
     assert proc.returncode == 0, proc.stderr
     diagnostics = []
-    for line in diagnostic_lines(proc.stdout + "\n" + proc.stderr):
+    # A graph view draws findings on its nodes; only the report streams carry lines.
+    graph_view = "--dot" in args or "--graph-snapshot" in args
+    output = proc.stderr if graph_view else proc.stdout + "\n" + proc.stderr
+    for line in diagnostic_lines(output):
         if " by zero" not in line:
             continue
         match = DIAGNOSTIC.fullmatch(line)
@@ -176,11 +179,13 @@ def test_html_arithmetic_warning_links_to_source(tmp_path):
 
 
 @pytest.mark.parametrize("view, prefix", [("--dot", "digraph AnalysisCFG"), ("--graph-snapshot", "clusters:")])
-def test_graph_stdout_stays_free_of_diagnostics(tmp_path, view, prefix):
+def test_graph_draws_diagnostics_on_their_node(tmp_path, view, prefix):
+    # The warning line stays on stderr; the graph names the finding at its node.
     proc, findings = run_program(tmp_path, "fun main() { x = 10 / 0; }\n", view)
     assert len(findings) == 1
     assert proc.stdout.startswith(prefix)
-    assert "division by zero" not in proc.stdout
+    assert "division by zero whenever this operation is evaluated: 10 / 0" in proc.stdout
+    assert "error:" not in proc.stdout
 
 
 def test_multiline_operations_use_statement_start_positions(tmp_path):

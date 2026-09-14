@@ -94,15 +94,6 @@ datatype analysis_output =
     (out_globals: "(String.literal \<times> String.literal list) list")
     (out_diagnostics: "arithmetic_diagnostic list")
 
-definition diagnostic_message :: "arithmetic_diagnostic \<Rightarrow> String.literal" where
-  "diagnostic_message diagnostic =
-     (let operation = arithmetic_operation (diagnostic_obligation diagnostic);
-          kind = (case operation of Mod _ _ \<Rightarrow> STR ''remainder'' | _ \<Rightarrow> STR ''division'');
-          message = (if diagnostic_verdict diagnostic = Check_Refuted
-            then kind + STR '' by zero whenever this operation is evaluated: ''
-            else STR ''possible '' + kind + STR '' by zero: '')
-      in (message + string_of_exp 0 operation))"
-
 fun with_diagnostics :: "arithmetic_diagnostic list \<Rightarrow> analysis_output \<Rightarrow> analysis_output"
 where
   "with_diagnostics ds (Analysis_Output g snap rows globals old) =
@@ -147,6 +138,7 @@ record 'v result_state =
   state_context :: nat
   state_value :: "(vname \<times> 'v) list lifted"
   state_checks :: "(exp \<times> contextual_verdict) list"
+  state_diagnostics :: "(arithmetic_obligation \<times> contextual_verdict) list"
 
 record call_route =
   route_point :: pp
@@ -189,7 +181,8 @@ definition map_result_state :: "('v \<Rightarrow> 'w) \<Rightarrow> 'v result_st
      \<lparr> state_point = state_point st,
        state_context = state_context st,
        state_value = map_lift (map (\<lambda>(x, v). (x, f v))) (state_value st),
-       state_checks = state_checks st \<rparr>"
+       state_checks = state_checks st,
+       state_diagnostics = state_diagnostics st \<rparr>"
 
 definition map_result_global :: "('v \<Rightarrow> 'w) \<Rightarrow> 'v result_global \<Rightarrow> 'w result_global" where
   "map_result_global f g = \<lparr> global_var = global_var g, global_val = f (global_val g) \<rparr>"
@@ -251,7 +244,13 @@ definition run_result_of ::
                 map (\<lambda>(u, a, w). (ea_check_cond a,
                                    classify_point classify (ea_check_cond a)
                                      (lookup_context r v ctx)))
-                  (filter (\<lambda>(u, a, w). u = v \<and> is_EA_Check a) (cfg_intra_list g)) \<rparr>);
+                  (filter (\<lambda>(u, a, w). u = v \<and> is_EA_Check a) (cfg_intra_list g)),
+              state_diagnostics =
+                map (\<lambda>obligation. (obligation,
+                                     classify_point classify (arithmetic_condition obligation)
+                                       (lookup_context r v ctx)))
+                  (concat (map snd (filter (\<lambda>(u, obligations). u = v) (arithmetic_sites g))))
+            \<rparr>);
           route_at = (\<lambda>u ca ce i ctx.
             \<lparr> route_point = u, route_context = i, route_callee = callee_of_entry ce,
               route_targets =
