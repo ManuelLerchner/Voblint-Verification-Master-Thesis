@@ -24,7 +24,8 @@ type node = {
   label : string;
   kind : node_kind;
   status : node_status option;
-  lines : string list;
+  state : string list;
+  findings : string list;
   point : C.cfg_node;
   owner : string;
   context : int;
@@ -90,26 +91,27 @@ let status_of state =
       else if List.mem (C.Lifted C.Check_Proved) verdicts then Some Proved
       else None
 
-let lines_of names state =
-  let values =
-    match C.state_value state with
-    | C.Bot -> [ "unreachable" ]
-    | C.Lifted bindings ->
-        List.filter_map
-          (fun x ->
-            Option.map
-              (fun v -> x ^ "=" ^ v)
-              (List.assoc_opt x bindings))
-          names
-  in
-  let checks =
-    List.map
+(* A node's variable bindings, one "x=v" per name the owner's scope shows. *)
+let state_of names state =
+  match C.state_value state with
+  | C.Bot -> []
+  | C.Lifted bindings ->
+      List.filter_map
+        (fun x -> Option.map (fun v -> x ^ "=" ^ v) (List.assoc_opt x bindings))
+        names
+
+(* What the analysis concluded at a node, short enough to label it with. *)
+let findings_of state =
+  let dead = match C.state_value state with C.Bot -> [ "unreachable" ] | C.Lifted _ -> [] in
+  dead
+  @ List.map
       (fun (cnd, verdict) ->
         let text = "check " ^ Vimp_printer.string_of_exp cnd in
         match verdict with C.Bot -> text ^ " [dead]" | C.Lifted _ -> text)
       (C.state_checks state)
-  in
-  values @ checks
+
+(* Everything known at a node: its state, then its findings. *)
+let lines n = n.state @ n.findings
 
 let build prog (result : (string, unit) C.run_result_ext) : t =
   let g = C.res_cfg result in
@@ -169,7 +171,8 @@ let build prog (result : (string, unit) C.run_result_ext) : t =
           label = A.point_name p;
           kind = kind_of g p;
           status = status_of st;
-          lines = lines_of (names_of (owner_of p)) st @ unentered_calls p c;
+          state = state_of (names_of (owner_of p)) st;
+          findings = findings_of st @ unentered_calls p c;
           point = p;
           owner = owner_of p;
           context = c;

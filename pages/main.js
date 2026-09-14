@@ -377,6 +377,7 @@ function clearGraph() {
 
   graph.replaceChildren();
   graphPanel.hidden = true;
+  hideGraphTooltip();
 }
 
 /*
@@ -501,6 +502,77 @@ function fitGraphZoom() {
   });
 }
 
+const XLINK = "http://www.w3.org/1999/xlink";
+
+const graphTooltip = document.createElement("div");
+graphTooltip.className = "graph-tooltip";
+graphTooltip.hidden = true;
+document.body.append(graphTooltip);
+
+function hideGraphTooltip() {
+  graphTooltip.hidden = true;
+  delete graphTooltip.dataset.node;
+}
+
+function placeGraphTooltip(event) {
+  const margin = 14;
+  const { width, height } = graphTooltip.getBoundingClientRect();
+  const left = event.clientX + margin + width > window.innerWidth
+    ? event.clientX - margin - width
+    : event.clientX + margin;
+  const top = event.clientY + margin + height > window.innerHeight
+    ? event.clientY - margin - height
+    : event.clientY + margin;
+
+  graphTooltip.style.left = `${Math.max(4, left)}px`;
+  graphTooltip.style.top = `${Math.max(4, top)}px`;
+}
+
+/*
+ * GraphViz writes a node's DOT tooltip (its point, state and findings) as the
+ * xlink:title of the node's link. Move it into a dataset and drop the link, whose
+ * javascript: target belongs to the HTML report's frontend, so hovering shows one
+ * styled popup instead of the browser's plain title.
+ */
+function attachGraphTooltips(svg) {
+  for (const link of svg.querySelectorAll("g.node a")) {
+    const node = link.closest("g.node");
+    node.dataset.tooltip = link.getAttributeNS(XLINK, "title") ?? "";
+    link.removeAttributeNS(XLINK, "title");
+    link.removeAttributeNS(XLINK, "href");
+    link.removeAttribute("href");
+  }
+
+  for (const title of svg.querySelectorAll("g.node > title")) {
+    title.remove();
+  }
+
+  svg.addEventListener("pointermove", (event) => {
+    const node = event.target.closest?.("g.node");
+
+    if (!node?.dataset.tooltip) {
+      hideGraphTooltip();
+      return;
+    }
+
+    const [heading, ...lines] = node.dataset.tooltip.split("\n");
+    const title = document.createElement("strong");
+    title.textContent = heading;
+    const body = document.createElement("pre");
+    body.textContent = lines.length > 0 ? lines.join("\n") : "no bindings";
+
+    if (graphTooltip.dataset.node !== node.id) {
+      graphTooltip.replaceChildren(title, body);
+      graphTooltip.dataset.node = node.id;
+    }
+
+    graphTooltip.hidden = false;
+    placeGraphTooltip(event);
+  });
+
+  svg.addEventListener("pointerleave", hideGraphTooltip);
+}
+
 async function renderGraph(dot, runGeneration) {
   /*
    * The table is rendered synchronously, while Viz.js may still be loading.
@@ -531,6 +603,7 @@ async function renderGraph(dot, runGeneration) {
       return;
     }
 
+    attachGraphTooltips(svg);
     graph.replaceChildren(svg);
     graphPanel.hidden = false;
 

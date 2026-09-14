@@ -31,7 +31,7 @@ let render (graph : G.t) =
   List.iter
     (fun (n : G.node) ->
       line "  %s: %s%s" n.id n.label (status_text n.status);
-      List.iter (line "      %s") n.lines)
+      List.iter (line "      %s") (G.lines n))
     graph.nodes;
   line "";
   line "edges:";

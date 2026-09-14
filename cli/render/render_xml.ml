@@ -131,7 +131,7 @@ let state_map node =
         match split_binding line with
         | Some (k, v) -> Left (k, v)
         | None -> Right line)
-      node.G.lines
+      (G.lines node)
   in
   Buffer.add_string buf "<map>\n";
   List.iter

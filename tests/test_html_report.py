@@ -163,7 +163,7 @@ def test_dead_calls_keep_their_operation_without_a_callee_context(tmp_path, dead
     assert 'label="call f(3)"' not in dot, "dead call created a routed callee edge"
     assert 'label="call f(7)"' in dot
     assert 'xlabel="resume / b := f(7)"' in dot, "resume lost its destination"
-    assert len(re.findall(r'label="entry_f\\n', dot)) == 1, "dead callee context created"
+    assert len(re.findall(r'label="entry_f"', dot)) == 1, "dead callee context created"
 
 
 def test_source_view_has_exactly_the_files_lines(report):

@@ -780,6 +780,35 @@ kbd {
   transform: translateY(0);
 }
 
+.graph-tooltip {
+  position: fixed;
+  z-index: 50;
+  max-width: min(520px, calc(100vw - 32px));
+  padding: 10px 12px;
+  color: var(--editor-text);
+  background: var(--surface-dark);
+  border: 1px solid var(--editor-border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-hover);
+  pointer-events: none;
+}
+
+.graph-tooltip strong {
+  display: block;
+  margin-bottom: 6px;
+  font-family: var(--mono);
+  font-size: 0.8rem;
+}
+
+.graph-tooltip pre {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 0.76rem;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
 .analysis-graph {
   min-height: 180px;
   max-height: 720px;

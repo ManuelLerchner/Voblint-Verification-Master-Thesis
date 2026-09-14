@@ -2,14 +2,14 @@
 
    Draws the Context_graph built from a run result. Presentation is deliberately
    on this side of the trust boundary: no soundness theorem covers how a graph is
-   drawn. The graph carries structure and findings -- identifiers, labels, state
-   lines, a status, an edge role and its wording -- and every styling decision below
-   is this file's own.
+   drawn. The graph carries structure and findings -- identifiers, labels, states,
+   a status, an edge role and its wording -- and every styling decision below is
+   this file's own.
 
    One drawing serves every consumer -- --dot, the browser and the HTML report's graph
-   pane: each node carries its state and findings, and the id/URL hooks the report
-   frontend selects nodes by are emitted always, since a consumer that does not
-   listen for them ignores them.
+   pane: a node's label names its point and findings, its tooltip adds the state, and
+   the id/URL hooks the report frontend selects nodes by are emitted always, since a
+   consumer that does not listen for them ignores them.
 
    Layout is driven primarily by local control flow. Intra-procedural and
    continuation edges strongly constrain ranks, while call-entry edges provide
@@ -38,8 +38,13 @@ let node_attrs (n : G.node) =
   | None, G.Point -> "shape=box,style=filled,fillcolor=lightgreen"
   | None, _ -> "shape=doublecircle,color=orange,style=filled,fillcolor=lightyellow"
 
-let node_label (n : G.node) =
-  "\"" ^ String.concat esc_nl (List.map escape (n.label :: n.lines)) ^ "\""
+let quoted lines = "\"" ^ String.concat esc_nl (List.map escape lines) ^ "\""
+
+(* A product domain's state makes a node unreadably wide, so the label carries only
+   the point and its findings; the full state is the hover tooltip. *)
+let node_label (n : G.node) = quoted (n.label :: n.findings)
+
+let node_tooltip (n : G.node) = quoted (n.label :: G.lines n)
 
 (* Ranking priorities are deliberately asymmetric: intra and call-to-return edges
    strongly order local flow, enter edges weakly place callees near their calls,
@@ -81,7 +86,8 @@ let render (graph : G.t) : string =
         (fun id ->
           let n = Hashtbl.find by_id id in
           Buffer.add_string buf
-            (Printf.sprintf "    %s [%s,label=%s];\n" id (node_attrs n) (node_label n)))
+            (Printf.sprintf "    %s [%s,label=%s,tooltip=%s];\n" id (node_attrs n)
+               (node_label n) (node_tooltip n)))
         c.members;
       Buffer.add_string buf "  }\n")
     graph.clusters;
