@@ -24,7 +24,7 @@
   menhirLib
   str
   zarith)
- (flags (:standard -w -8-11-20-27-32-37-39 -warn-error -A)))
+ (flags (:standard -w -8-11-20-26-27-32-37-39 -warn-error -A)))
 
 (library
  (name voblint_rendering)
@@ -63,4 +63,4 @@
 (js_of_ocaml
  (flags
   (:standard --effects=cps)))
- (flags (:standard -w -8-11-20-27-32-37-39 -warn-error -A)))
+ (flags (:standard -w -8-11-20-26-27-32-37-39 -warn-error -A)))
