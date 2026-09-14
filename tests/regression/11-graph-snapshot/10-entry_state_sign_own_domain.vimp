@@ -17,63 +17,65 @@
 // is the same program under Int, where they do not.
 // EXPECT-GRAPH-BEGIN
 // clusters:
-//   cluster_ctx_0:
+//   cluster_ctx_0: main / root context
 //     main_pp5_ctx0
 //     main_pp6_ctx0
-//     main_result_main_ctx0
-//     main_entry_main_ctx0
+//     main_exit_main_ctx0
 //     main_pp2_ctx0
 //     main_pp3_ctx0
 //     main_pp4_ctx0
-//   cluster_ctx_1:
+//     main_entry_main_ctx0
+//   cluster_ctx_1: square / Positive
+//     square_exit_square_ctx0
 //     square_pp0_ctx0
 //     square_entry_square_ctx0
-//     square_result_square_ctx0
 //
 // nodes:
-//   main_pp5_ctx0: pp5
+//   main_pp5_ctx0: pp5 [proved]
 //       a=Positive
 //       b=Positive
-//       check 0<b
+//       check 0 < b
 //   main_pp6_ctx0: pp6
 //       a=Positive
 //       b=Positive
-//   main_result_main_ctx0: exit_main
+//   main_exit_main_ctx0: exit_main
 //       a=Positive
 //       b=Positive
-//   main_entry_main_ctx0: entry_main
-//       a=Top
-//       b=Top
-//   square_pp0_ctx0: pp0
-//       n=Positive
 //   main_pp2_ctx0: pp2
 //       a=Top
 //       b=Top
 //   main_pp3_ctx0: pp3
 //       a=Positive
 //       b=Top
-//   square_entry_square_ctx0: entry_square
-//       n=Positive
-//   main_pp4_ctx0: pp4
+//   main_pp4_ctx0: pp4 [proved]
 //       a=Positive
 //       b=Positive
-//       check 0<a
-//   square_result_square_ctx0: exit_square
+//       check 0 < a
+//   main_entry_main_ctx0: entry_main
+//       a=Top
+//       b=Top
+//   square_exit_square_ctx0: exit_square
 //       n=Positive
 //       ret=Positive
+//   square_pp0_ctx0: pp0
+//       n=Positive
+//       ret=Top
+//   square_entry_square_ctx0: entry_square
+//       n=Positive
+//       ret=Top
 //
 // edges:
-//   main_pp5_ctx0 -> main_pp6_ctx0: check(0<b)
-//   main_pp6_ctx0 -> main_result_main_ctx0: terminate
+//   square_pp0_ctx0 -> square_exit_square_ctx0: return n * n
+//   main_pp4_ctx0 -> main_pp5_ctx0: check(0 < a)
+//   main_pp5_ctx0 -> main_pp6_ctx0: check(0 < b)
+//   main_pp6_ctx0 -> main_exit_main_ctx0: return
 //   main_entry_main_ctx0 -> main_pp2_ctx0: body(main)
-//   square_pp0_ctx0 -> square_result_square_ctx0: return n*n
 //   square_entry_square_ctx0 -> square_pp0_ctx0: body(square)
-//   main_pp4_ctx0 -> main_pp5_ctx0: check(0<a)
 //   main_pp2_ctx0 -> square_entry_square_ctx0: enter square(3)
-//   main_pp3_ctx0 -> square_entry_square_ctx0: enter square(4)
-//   square_result_square_ctx0 -> main_pp3_ctx0: combine a := #ret
-//   square_result_square_ctx0 -> main_pp4_ctx0: combine b := #ret
+//   square_exit_square_ctx0 -> main_pp3_ctx0: combine a := ret
 //   main_pp2_ctx0 -> main_pp3_ctx0: call-to-return square
+//   main_pp3_ctx0 -> square_entry_square_ctx0: enter square(4)
+//   square_exit_square_ctx0 -> main_pp4_ctx0: combine b := ret
 //   main_pp3_ctx0 -> main_pp4_ctx0: call-to-return square
 // EXPECT-GRAPH-END
 

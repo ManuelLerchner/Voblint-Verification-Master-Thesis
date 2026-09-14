@@ -11,72 +11,74 @@
 // because routing was disabled wholesale.
 // EXPECT-GRAPH-BEGIN
 // clusters:
-//   cluster_ctx_0:
+//   cluster_ctx_0: main / root context
 //     main_pp3_ctx0
 //     main_pp8_ctx0
-//     main_result_main_ctx0
-//     main_entry_main_ctx0
+//     main_exit_main_ctx0
 //     main_pp2_ctx0
 //     main_pp4_ctx0
 //     main_pp6_ctx0
 //     main_pp7_ctx0
-//   cluster_ctx_1:
+//     main_entry_main_ctx0
+//   cluster_ctx_1: f / [7,7]
+//     f_exit_f_ctx0
 //     f_pp0_ctx0
 //     f_entry_f_ctx0
-//     f_result_f_ctx0
 //
 // nodes:
 //   main_pp3_ctx0: pp3
-//       x=[5,5]
 //       a=[-inf,+inf]
 //       b=[-inf,+inf]
+//       x=[5,5]
 //   main_pp8_ctx0: pp8
-//       x=[5,5]
 //       a=[-inf,+inf]
 //       b=[7,7]
-//   main_result_main_ctx0: exit_main
 //       x=[5,5]
+//   main_exit_main_ctx0: exit_main
 //       a=[-inf,+inf]
 //       b=[7,7]
-//   f_pp0_ctx0: pp0
-//       n=[7,7]
-//   main_entry_main_ctx0: entry_main
-//       x=[-inf,+inf]
-//       a=[-inf,+inf]
-//       b=[-inf,+inf]
+//       x=[5,5]
 //   main_pp2_ctx0: pp2
-//       x=[-inf,+inf]
 //       a=[-inf,+inf]
 //       b=[-inf,+inf]
-//   main_pp4_ctx0: pp4
+//       x=[-inf,+inf]
+//   main_pp4_ctx0: pp4 [unreachable]
 //       unreachable
 //   main_pp6_ctx0: pp6
-//       x=[5,5]
 //       a=[-inf,+inf]
 //       b=[-inf,+inf]
-//   f_entry_f_ctx0: entry_f
-//       n=[7,7]
-//   main_pp7_ctx0: pp7
 //       x=[5,5]
+//   main_pp7_ctx0: pp7 [proved]
 //       a=[-inf,+inf]
 //       b=[7,7]
-//       check b==7
-//   f_result_f_ctx0: exit_f
+//       x=[5,5]
+//       check b == 7
+//   main_entry_main_ctx0: entry_main
+//       a=[-inf,+inf]
+//       b=[-inf,+inf]
+//       x=[-inf,+inf]
+//   f_exit_f_ctx0: exit_f
 //       n=[7,7]
 //       ret=[7,7]
+//   f_pp0_ctx0: pp0
+//       n=[7,7]
+//       ret=[-inf,+inf]
+//   f_entry_f_ctx0: entry_f
+//       n=[7,7]
+//       ret=[-inf,+inf]
 //
 // edges:
-//   main_pp3_ctx0 -> main_pp4_ctx0: x<2
-//   main_pp3_ctx0 -> main_pp6_ctx0: not (x<2)
-//   main_pp8_ctx0 -> main_result_main_ctx0: terminate
-//   f_pp0_ctx0 -> f_result_f_ctx0: return n
-//   main_entry_main_ctx0 -> main_pp2_ctx0: body(main)
+//   f_pp0_ctx0 -> f_exit_f_ctx0: return n
 //   main_pp2_ctx0 -> main_pp3_ctx0: x := 5
+//   main_pp3_ctx0 -> main_pp4_ctx0: [x < 2]
+//   main_pp3_ctx0 -> main_pp6_ctx0: ![x < 2]
+//   main_pp7_ctx0 -> main_pp8_ctx0: check(b == 7)
+//   main_pp8_ctx0 -> main_exit_main_ctx0: return
 //   f_entry_f_ctx0 -> f_pp0_ctx0: body(f)
-//   main_pp7_ctx0 -> main_pp8_ctx0: check(b==7)
-//   main_pp6_ctx0 -> f_entry_f_ctx0: enter f(7)
-//   f_result_f_ctx0 -> main_pp7_ctx0: combine b := #ret
+//   main_entry_main_ctx0 -> main_pp2_ctx0: body(main)
 //   main_pp4_ctx0 -> main_pp6_ctx0: call-to-return f
+//   main_pp6_ctx0 -> f_entry_f_ctx0: enter f(7)
+//   f_exit_f_ctx0 -> main_pp7_ctx0: combine b := ret
 //   main_pp6_ctx0 -> main_pp7_ctx0: call-to-return f
 // EXPECT-GRAPH-END
 

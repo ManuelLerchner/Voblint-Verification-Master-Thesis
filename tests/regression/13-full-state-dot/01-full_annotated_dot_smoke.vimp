@@ -9,40 +9,40 @@
 // one check near the end.
 // EXPECT-GRAPH-BEGIN
 // clusters:
-//   cluster_ctx_0:
+//   cluster_ctx_0: main / unit
 //     main_pp2_ctx0
 //     main_pp1_ctx0
 //     main_pp3_ctx0
 //     main_pp4_ctx0
-//     main_result_main_ctx0
-//     main_entry_main_ctx0
+//     main_exit_main_ctx0
 //     main_pp0_ctx0
+//     main_entry_main_ctx0
 //
 // nodes:
 //   main_pp2_ctx0: pp2
 //       x=[0,9]
 //   main_pp1_ctx0: pp1
 //       x=[0,10]
-//   main_pp3_ctx0: pp3
+//   main_pp3_ctx0: pp3 [proved]
 //       x=[10,10]
-//       check 0<x
+//       check 0 < x
 //   main_pp4_ctx0: pp4
 //       x=[10,10]
-//   main_result_main_ctx0: exit_main
+//   main_exit_main_ctx0: exit_main
 //       x=[10,10]
-//   main_entry_main_ctx0: entry_main
-//       x=[-inf,+inf]
 //   main_pp0_ctx0: pp0
+//       x=[-inf,+inf]
+//   main_entry_main_ctx0: entry_main
 //       x=[-inf,+inf]
 //
 // edges:
-//   main_pp2_ctx0 -> main_pp1_ctx0: x := x+1
-//   main_pp1_ctx0 -> main_pp2_ctx0: x<10
-//   main_pp1_ctx0 -> main_pp3_ctx0: not (x<10)
-//   main_pp3_ctx0 -> main_pp4_ctx0: check(0<x)
-//   main_pp4_ctx0 -> main_result_main_ctx0: terminate
-//   main_entry_main_ctx0 -> main_pp0_ctx0: body(main)
 //   main_pp0_ctx0 -> main_pp1_ctx0: x := 0
+//   main_pp1_ctx0 -> main_pp2_ctx0: [x < 10]
+//   main_pp1_ctx0 -> main_pp3_ctx0: ![x < 10]
+//   main_pp2_ctx0 -> main_pp1_ctx0: x := x + 1
+//   main_pp3_ctx0 -> main_pp4_ctx0: check(0 < x)
+//   main_pp4_ctx0 -> main_exit_main_ctx0: return
+//   main_entry_main_ctx0 -> main_pp0_ctx0: body(main)
 // EXPECT-GRAPH-END
 
 fun main() {

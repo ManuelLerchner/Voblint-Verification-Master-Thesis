@@ -30,13 +30,14 @@
 (library
  (name voblint_rendering)
  (wrapped false)
- (modules dot_render)
+ (modules voblint_api analysis_graph dot_render snapshot_render)
  (libraries voblint_frontend)
  (flags (:standard -w -8-11-20-27-32-37-39 -warn-error -A)))
 
 (executable
  (name main)
  (modules
+  xml_render
   html_report
   main)
  (libraries

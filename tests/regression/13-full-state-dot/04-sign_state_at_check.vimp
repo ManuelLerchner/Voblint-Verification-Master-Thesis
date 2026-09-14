@@ -13,41 +13,41 @@
 // and only the latter is checked by a verdict fixture.
 // EXPECT-GRAPH-BEGIN
 // clusters:
-//   cluster_ctx_0:
+//   cluster_ctx_0: main / unit
 //     main_pp1_ctx0
 //     main_pp2_ctx0
 //     main_pp3_ctx0
-//     main_result_main_ctx0
-//     main_entry_main_ctx0
+//     main_exit_main_ctx0
 //     main_pp0_ctx0
+//     main_entry_main_ctx0
 //
 // nodes:
 //   main_pp1_ctx0: pp1
 //       x=Positive
 //       y=Top
-//   main_pp2_ctx0: pp2
+//   main_pp2_ctx0: pp2 [proved]
 //       x=Positive
 //       y=Positive
-//       check 0<x
+//       check 0 < x
 //   main_pp3_ctx0: pp3
 //       x=Positive
 //       y=Positive
-//   main_result_main_ctx0: exit_main
+//   main_exit_main_ctx0: exit_main
 //       x=Positive
 //       y=Positive
-//   main_entry_main_ctx0: entry_main
+//   main_pp0_ctx0: pp0
 //       x=Top
 //       y=Top
-//   main_pp0_ctx0: pp0
+//   main_entry_main_ctx0: entry_main
 //       x=Top
 //       y=Top
 //
 // edges:
-//   main_pp1_ctx0 -> main_pp2_ctx0: y := 1
-//   main_pp2_ctx0 -> main_pp3_ctx0: check(0<x)
-//   main_pp3_ctx0 -> main_result_main_ctx0: terminate
-//   main_entry_main_ctx0 -> main_pp0_ctx0: body(main)
 //   main_pp0_ctx0 -> main_pp1_ctx0: x := 5
+//   main_pp1_ctx0 -> main_pp2_ctx0: y := 1
+//   main_pp2_ctx0 -> main_pp3_ctx0: check(0 < x)
+//   main_pp3_ctx0 -> main_exit_main_ctx0: return
+//   main_entry_main_ctx0 -> main_pp0_ctx0: body(main)
 // EXPECT-GRAPH-END
 
 fun main() {

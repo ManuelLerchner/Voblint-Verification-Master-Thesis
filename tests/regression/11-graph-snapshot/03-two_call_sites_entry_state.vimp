@@ -10,76 +10,80 @@
 // not as duplicated clusters.
 // EXPECT-GRAPH-BEGIN
 // clusters:
-//   cluster_ctx_0:
+//   cluster_ctx_0: main / root context
 //     main_pp5_ctx0
 //     main_pp6_ctx0
-//     main_result_main_ctx0
-//     main_entry_main_ctx0
+//     main_exit_main_ctx0
 //     main_pp2_ctx0
 //     main_pp3_ctx0
 //     main_pp4_ctx0
-//   cluster_ctx_1:
+//     main_entry_main_ctx0
+//   cluster_ctx_1: square / [3,3]
+//     square_exit_square_ctx0
 //     square_pp0_ctx0
 //     square_entry_square_ctx0
-//     square_result_square_ctx0
-//   cluster_ctx_2:
+//   cluster_ctx_2: square / [4,4]
+//     square_exit_square_ctx1
 //     square_pp0_ctx1
 //     square_entry_square_ctx1
-//     square_result_square_ctx1
 //
 // nodes:
-//   main_pp5_ctx0: pp5
+//   main_pp5_ctx0: pp5 [proved]
 //       a=[9,9]
 //       b=[16,16]
-//       check b==16
+//       check b == 16
 //   main_pp6_ctx0: pp6
 //       a=[9,9]
 //       b=[16,16]
-//   main_result_main_ctx0: exit_main
+//   main_exit_main_ctx0: exit_main
 //       a=[9,9]
 //       b=[16,16]
-//   main_entry_main_ctx0: entry_main
-//       a=[-inf,+inf]
-//       b=[-inf,+inf]
-//   square_pp0_ctx0: pp0
-//       n=[3,3]
-//   square_pp0_ctx1: pp0
-//       n=[4,4]
 //   main_pp2_ctx0: pp2
 //       a=[-inf,+inf]
 //       b=[-inf,+inf]
 //   main_pp3_ctx0: pp3
 //       a=[9,9]
 //       b=[-inf,+inf]
-//   square_entry_square_ctx0: entry_square
-//       n=[3,3]
-//   square_entry_square_ctx1: entry_square
-//       n=[4,4]
-//   main_pp4_ctx0: pp4
+//   main_pp4_ctx0: pp4 [proved]
 //       a=[9,9]
 //       b=[16,16]
-//       check a==9
-//   square_result_square_ctx0: exit_square
+//       check a == 9
+//   main_entry_main_ctx0: entry_main
+//       a=[-inf,+inf]
+//       b=[-inf,+inf]
+//   square_exit_square_ctx0: exit_square
 //       n=[3,3]
 //       ret=[9,9]
-//   square_result_square_ctx1: exit_square
+//   square_pp0_ctx0: pp0
+//       n=[3,3]
+//       ret=[-inf,+inf]
+//   square_entry_square_ctx0: entry_square
+//       n=[3,3]
+//       ret=[-inf,+inf]
+//   square_exit_square_ctx1: exit_square
 //       n=[4,4]
 //       ret=[16,16]
+//   square_pp0_ctx1: pp0
+//       n=[4,4]
+//       ret=[-inf,+inf]
+//   square_entry_square_ctx1: entry_square
+//       n=[4,4]
+//       ret=[-inf,+inf]
 //
 // edges:
-//   main_pp5_ctx0 -> main_pp6_ctx0: check(b==16)
-//   main_pp6_ctx0 -> main_result_main_ctx0: terminate
+//   square_pp0_ctx0 -> square_exit_square_ctx0: return n * n
+//   square_pp0_ctx1 -> square_exit_square_ctx1: return n * n
+//   main_pp4_ctx0 -> main_pp5_ctx0: check(a == 9)
+//   main_pp5_ctx0 -> main_pp6_ctx0: check(b == 16)
+//   main_pp6_ctx0 -> main_exit_main_ctx0: return
 //   main_entry_main_ctx0 -> main_pp2_ctx0: body(main)
-//   square_pp0_ctx0 -> square_result_square_ctx0: return n*n
-//   square_pp0_ctx1 -> square_result_square_ctx1: return n*n
 //   square_entry_square_ctx0 -> square_pp0_ctx0: body(square)
 //   square_entry_square_ctx1 -> square_pp0_ctx1: body(square)
-//   main_pp4_ctx0 -> main_pp5_ctx0: check(a==9)
 //   main_pp2_ctx0 -> square_entry_square_ctx0: enter square(3)
-//   main_pp3_ctx0 -> square_entry_square_ctx1: enter square(4)
-//   square_result_square_ctx0 -> main_pp3_ctx0: combine a := #ret
-//   square_result_square_ctx1 -> main_pp4_ctx0: combine b := #ret
+//   square_exit_square_ctx0 -> main_pp3_ctx0: combine a := ret
 //   main_pp2_ctx0 -> main_pp3_ctx0: call-to-return square
+//   main_pp3_ctx0 -> square_entry_square_ctx1: enter square(4)
+//   square_exit_square_ctx1 -> main_pp4_ctx0: combine b := ret
 //   main_pp3_ctx0 -> main_pp4_ctx0: call-to-return square
 // EXPECT-GRAPH-END
 

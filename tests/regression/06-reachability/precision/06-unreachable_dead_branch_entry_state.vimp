@@ -24,41 +24,41 @@
 // abstraction genuinely could not settle carries.
 // EXPECT-GRAPH-BEGIN
 // clusters:
-//   cluster_ctx_0:
+//   cluster_ctx_0: main / root context
 //     main_pp1_ctx0
 //     main_pp2_ctx0
 //     main_pp3_ctx0
 //     main_pp4_ctx0
-//     main_result_main_ctx0
-//     main_entry_main_ctx0
+//     main_exit_main_ctx0
 //     main_pp0_ctx0
+//     main_entry_main_ctx0
 //
 // nodes:
 //   main_pp1_ctx0: pp1
 //       x=[5,5]
-//   main_pp2_ctx0: pp2
+//   main_pp2_ctx0: pp2 [unreachable]
 //       unreachable
-//       check x==99 [dead]
-//   main_pp3_ctx0: pp3
+//       check x == 99 [dead]
+//   main_pp3_ctx0: pp3 [proved]
 //       x=[5,5]
-//       check x==5
+//       check x == 5
 //   main_pp4_ctx0: pp4
 //       x=[5,5]
-//   main_result_main_ctx0: exit_main
+//   main_exit_main_ctx0: exit_main
 //       x=[5,5]
-//   main_entry_main_ctx0: entry_main
-//       x=[-inf,+inf]
 //   main_pp0_ctx0: pp0
+//       x=[-inf,+inf]
+//   main_entry_main_ctx0: entry_main
 //       x=[-inf,+inf]
 //
 // edges:
-//   main_pp1_ctx0 -> main_pp2_ctx0: x<2
-//   main_pp1_ctx0 -> main_pp3_ctx0: not (x<2)
-//   main_pp2_ctx0 -> main_pp4_ctx0: check(x==99)
-//   main_pp3_ctx0 -> main_pp4_ctx0: check(x==5)
-//   main_pp4_ctx0 -> main_result_main_ctx0: terminate
-//   main_entry_main_ctx0 -> main_pp0_ctx0: body(main)
 //   main_pp0_ctx0 -> main_pp1_ctx0: x := 5
+//   main_pp1_ctx0 -> main_pp2_ctx0: [x < 2]
+//   main_pp1_ctx0 -> main_pp3_ctx0: ![x < 2]
+//   main_pp2_ctx0 -> main_pp4_ctx0: check(x == 99)
+//   main_pp3_ctx0 -> main_pp4_ctx0: check(x == 5)
+//   main_pp4_ctx0 -> main_exit_main_ctx0: return
+//   main_entry_main_ctx0 -> main_pp0_ctx0: body(main)
 // EXPECT-GRAPH-END
 
 fun main() {

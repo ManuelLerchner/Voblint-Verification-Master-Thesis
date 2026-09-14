@@ -5,14 +5,14 @@
           manifests/vimp-grammar.yaml by scripts/gen_vimp_menhir.py -- ocamllex +
           Menhir, NOT verified) via Vimp_frontend (hand-written glue)
        -> imp_prog
-       -> Voblint_CLI.Generated.run_voblint domain solver context view
+       -> Voblint_CLI.Generated.run_program domain solver context
           (Isabelle-generated). One call decides whether that combination of
-          domain, solver and context is legal at all, whether the requested
-          view can be served, and -- when both hold -- runs the one analysis
-          it names. What comes back is a single result carrying the graph, its
-          textual snapshot, the check column and the solved globals, so a
-          rendering can never draw its graph from one solve and its findings
-          from another.
+          domain, solver and context is legal at all and, when it is, runs the
+          one analysis it names. What comes back is data -- states per point and
+          context, the routes calls take, the check column, diagnostics -- with
+          every abstract value already rendered by its own domain. Every
+          rendering below (text report, graph, snapshot, HTML) is built from that
+          one result, so none can draw from a different solve than another.
        -> proved analysis results, subject to the Isabelle theorem
           assumptions (solver termination and check reachability -- see
           Analyse_Dispatch.thy's soundness corollaries)
@@ -124,16 +124,11 @@ let usage =
   \  correctly. The analyzer core (parsing excluded) is generated from a\n\
   \  machine-checked Isabelle/HOL proof."
 
-let node_label = function
-  | Voblint_CLI.Generated.Statement n ->
-      "pp" ^ Z.to_string (Voblint_CLI.Generated.integer_of_nat n)
-  | Voblint_CLI.Generated.FunctionEntry s -> "entry_" ^ s
-  | Voblint_CLI.Generated.FunctionResult s -> "result_" ^ s
+module C = Voblint_CLI.Generated
+module A = Voblint_api
 
-let verdict_label = function
-  | Voblint_CLI.Generated.Check_Proved -> "PROVED"
-  | Voblint_CLI.Generated.Check_Refuted -> "REFUTED"
-  | Voblint_CLI.Generated.Check_Unknown -> "UNKNOWN"
+let node_label = A.point_name
+let verdict_label = A.verdict_name
 
 let diagnostic_location positions diagnostic =
   match Voblint_CLI.Generated.diagnostic_point diagnostic with
@@ -169,8 +164,7 @@ let print_diagnostics path analysis positions diagnostics =
    parser knows positions, so a length mismatch leaves no correct alignment to
    fall back on. Every later row would be attributed to the wrong source line,
    which is worse than failing. *)
-let paired_checks (rows : Voblint_CLI.Generated.check_row list)
-    (check_positions : (int * int) list) =
+let paired_checks rows (check_positions : (int * int) list) =
   if List.length rows <> List.length check_positions then
     failwith
       (Printf.sprintf "verdict/position mismatch: %d verdicts for %d checks"
@@ -212,7 +206,7 @@ let render_table title headers rows =
   end;
   Buffer.contents buf
 
-let render_report path analysis positions out check_positions =
+let render_report path analysis positions result check_positions =
   let diagnostics =
     List.map
       (fun diagnostic ->
@@ -227,25 +221,25 @@ let render_report path analysis positions out check_positions =
           String.uppercase_ascii (diagnostic_severity diagnostic);
           Voblint_CLI.Generated.diagnostic_message diagnostic;
         ])
-      (Voblint_CLI.Generated.out_diagnostics out)
+      (C.res_diagnostics result)
   in
   let checks =
     List.map
-      (fun (row, (line, col)) ->
+      (fun (check, (line, col)) ->
+        let point = C.check_point check and cnd = C.check_exp check in
         let label, state =
-          match Voblint_CLI.Generated.row_verdict row with
-          | Voblint_CLI.Generated.Bot -> ("DEAD", "")
-          | Voblint_CLI.Generated.Lifted v ->
-              (verdict_label v, Voblint_CLI.Generated.row_state row)
+          match C.check_verdict check with
+          | C.Bot -> ("DEAD", "")
+          | C.Lifted v -> (verdict_label v, A.state_slice result point cnd)
         in
         [
           Printf.sprintf "%d:%d" line col;
-          node_label (Voblint_CLI.Generated.row_point row);
-          Voblint_CLI.Generated.row_condition row;
+          node_label point;
+          Vimp_printer.string_of_exp cnd;
           label;
           state;
         ])
-      (paired_checks (Voblint_CLI.Generated.out_checks out) check_positions)
+      (paired_checks (C.res_checks result) check_positions)
   in
   Printf.sprintf "%s [%s]\n\n%s\n%s" path analysis
     (render_table "Arithmetic diagnostics"
@@ -379,14 +373,6 @@ type outcome =
 (* Raised where an answer other than a successful run arrives, so every
    rendering below can be written against the output it needs. *)
 exception Answered of outcome
-
-(* A configuration that publishes no drawing leaves the graph and the snapshot
-   empty. Nothing downstream can render that, so asking for a rendering the
-   configuration does not produce is the same refusal as asking for an
-   analysis it cannot run. *)
-let drawing = function
-  | Some d -> d
-  | None -> raise (Answered Unsupported_config)
 
 (* The analyzer is proved sound but not proved total (Interval especially,
    see docs/CLI_DESIGN.md's containment note) -- a killable subprocess bounds
@@ -693,23 +679,16 @@ let () =
       exit 1
     end
   end;
-  let output_for k view =
-    match Voblint_CLI.Generated.run_voblint k !solver context view prog with
-    | Voblint_CLI.Generated.Malformed_Program -> raise (Answered Malformed)
-    | Voblint_CLI.Generated.Unsupported_Configuration ->
-        raise (Answered Unsupported_config)
-    | Voblint_CLI.Generated.Analysed out ->
+  let result_for k =
+    match C.run_program k !solver context prog with
+    | C.Result_Malformed -> raise (Answered Malformed)
+    | C.Result_Unsupported -> raise (Answered Unsupported_config)
+    | C.Result_Analysed result ->
         if !html || !dot || !graph_snapshot then
           print_diagnostics path (analysis_label k) stmt_positions
-            (Voblint_CLI.Generated.out_diagnostics out);
-        out
+            (C.res_diagnostics result);
+        result
   in
-  (* Every graph consumer asks for the same contextual view. Ctx_None is not
-     a separate drawing discipline: its result table simply has the one unit
-     context. *)
-  let graph_view = Voblint_CLI.Generated.View_Contexts in
-  let html_view = Voblint_CLI.Generated.View_Contexts in
-  let report_view = Voblint_CLI.Generated.View_Report in
   (* Checked here, not inside the contained child: a refusal to write into the
      given directory is an argument error the user should see as one, not as a
      subprocess exit code relayed through the analysis timeout wrapper. The
@@ -725,11 +704,11 @@ let () =
              column beside the source and the solved globals all come off the
              same result, under the same view. *)
             let payload_for k =
-              let out = output_for k html_view in
-              ( drawing (Voblint_CLI.Generated.out_graph out),
-                Voblint_CLI.Generated.out_checks out,
-                Voblint_CLI.Generated.out_globals out,
-                Voblint_CLI.Generated.out_diagnostics out )
+              let result = result_for k in
+              ( Analysis_graph.build prog result,
+                C.res_checks result,
+                List.map (fun g -> (C.global_var g, [ C.global_val g ])) (C.res_globals result),
+                C.res_diagnostics result )
             in
             let payloads =
               List.map (fun k -> (analysis_label k, payload_for k)) !analyses
@@ -754,16 +733,16 @@ let () =
               match payloads with
               | (_, (_, rows, _, _)) :: _ ->
                   List.filter_map
-                    (fun (row, (line, column)) ->
-                      match Voblint_CLI.Generated.row_verdict row with
-                      | Voblint_CLI.Generated.Bot -> None
-                      | Voblint_CLI.Generated.Lifted v ->
+                    (fun (check, (line, column)) ->
+                      match C.check_verdict check with
+                      | C.Bot -> None
+                      | C.Lifted v ->
                           Some
                             {
-                              Html_report.line;
+                              Xml_render.line;
                               column;
                               verdict = verdict_label v;
-                              cond = Voblint_CLI.Generated.row_condition row;
+                              cond = Vimp_printer.string_of_exp (C.check_exp check);
                               message = None;
                             })
                     (paired_checks rows check_positions)
@@ -783,7 +762,7 @@ let () =
                           (diagnostic_location stmt_positions diagnostic)
                       in
                       {
-                        Html_report.line;
+                        Xml_render.line;
                         column;
                         verdict = diagnostic_severity diagnostic;
                         cond = "";
@@ -807,21 +786,13 @@ let () =
               files;
             Ok_report (Printf.sprintf "%d node(s), %d unreachable\n" nodes dead))
           else if !graph_snapshot then
-            Ok_graph
-              (drawing
-                 (Voblint_CLI.Generated.out_snapshot
-                    (output_for kind graph_view)))
+            Ok_graph (Snapshot_render.render (Analysis_graph.build prog (result_for kind)))
           else if !dot then
-            Ok_dot
-              (Dot_render.render
-                 (drawing
-                    (Voblint_CLI.Generated.out_graph
-                       (output_for kind graph_view))))
+            Ok_dot (Dot_render.render (Analysis_graph.build prog (result_for kind)))
           else
             Ok_text
               (render_report path (analysis_label kind) stmt_positions
-                 (output_for kind report_view)
-                 check_positions)
+                 (result_for kind) check_positions)
         with Answered o -> o)
   with
   | Ok (Ok_text s) -> print_string s
@@ -845,7 +816,7 @@ let () =
               if not (Sys.is_directory src) then
                 copy_file src (Filename.concat dir name))
             (Sys.readdir assets));
-      let seg = Html_report.xmlify (Filename.basename path) in
+      let seg = Xml_render.xmlify (Filename.basename path) in
       let dot_file =
         Filename.concat dir
           (Filename.concat "dot" (Filename.concat seg "main.dot"))

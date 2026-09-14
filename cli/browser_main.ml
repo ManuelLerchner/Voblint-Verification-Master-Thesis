@@ -115,23 +115,16 @@ let context_of_string mode depth =
 (* Analysis result rendering                                                  *)
 (* -------------------------------------------------------------------------- *)
 
-let verdict = function
-  | C.Bot -> "DEAD"
-  | C.Lifted C.Check_Proved -> "PROVED"
-  | C.Lifted C.Check_Refuted -> "REFUTED"
-  | C.Lifted C.Check_Unknown -> "UNKNOWN"
+module A = Voblint_api
 
-let node = function
-  | C.Statement n -> "pp" ^ Z.to_string (C.integer_of_nat n)
-  | C.FunctionEntry name -> "entry_" ^ name
-  | C.FunctionResult name -> "result_" ^ name
-
-let check_json row =
+let check_json result check =
+  let point = C.check_point check and cnd = C.check_exp check in
+  let state = match C.check_verdict check with C.Bot -> "" | C.Lifted _ -> A.state_slice result point cnd in
   Printf.sprintf "{\"point\":%s,\"condition\":%s,\"verdict\":%s,\"state\":%s}"
-    (json_string (node (C.row_point row)))
-    (json_string (C.row_condition row))
-    (json_string (verdict (C.row_verdict row)))
-    (json_string (C.row_state row))
+    (json_string (A.point_name point))
+    (json_string (Vimp_printer.string_of_exp cnd))
+    (json_string (A.contextual_verdict_name (C.check_verdict check)))
+    (json_string state)
 
 let diagnostic_severity diagnostic =
   match C.diagnostic_verdict diagnostic with
@@ -143,24 +136,15 @@ let diagnostic_json diagnostic =
     (json_string (diagnostic_severity diagnostic))
     (json_string (C.diagnostic_message diagnostic))
 
-let graph_json output =
-  match C.out_graph output with
-  | None -> "null"
-  | Some graph -> json_string (Dot_render.render graph)
-
-let output_json analysis_ms output =
-  let checks =
-    C.out_checks output |> List.map check_json |> String.concat ","
-  in
-
-
+let result_json analysis_ms program result =
+  let checks = C.res_checks result |> List.map (check_json result) |> String.concat "," in
   let diagnostics =
-    C.out_diagnostics output |> List.map diagnostic_json |> String.concat ","
+    C.res_diagnostics result |> List.map diagnostic_json |> String.concat ","
   in
-
+  let graph = json_string (Dot_render.render (Analysis_graph.build program result)) in
   Printf.sprintf
     "{\"status\":\"ok\",\"timing\":{\"analysis_ms\":%.3f},\"checks\":[%s],\"diagnostics\":[%s],\"graph\":%s}"
-    analysis_ms checks diagnostics (graph_json output)
+    analysis_ms checks diagnostics graph
 
 (* -------------------------------------------------------------------------- *)
 (* Browser entry point                                                        *)
@@ -191,22 +175,18 @@ let run analysis_js solver_js context_js context_depth source_js =
 
                 let analysis_start = now_ms () in
                 let answer =
-                  C.run_voblint analysis
-                    (solver_argument browser_solver)
-                    context
-                    C.View_Contexts
-                    program
+                  C.run_program analysis (solver_argument browser_solver) context program
                 in
                 let analysis_ms = now_ms () -. analysis_start in
 
                 match answer with
-                | C.Malformed_Program -> error_json "Program is not well-formed"
-                | C.Unsupported_Configuration ->
+                | C.Result_Malformed -> error_json "Program is not well-formed"
+                | C.Result_Unsupported ->
                     error_json
                       "This domain, solver, and context combination is not \
                        supported"
-                | C.Analysed output ->
-                    Js.string (output_json analysis_ms output)
+                | C.Result_Analysed result ->
+                    Js.string (result_json analysis_ms program result)
               with Vimp_frontend.Parse_error { line; col; msg; _ } ->
                 Js.string
                   (Printf.sprintf

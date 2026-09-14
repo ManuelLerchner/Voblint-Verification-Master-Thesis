@@ -235,7 +235,9 @@ DEFAULT_TIMEOUT = 30
 PARAM_RE = re.compile(r"^// PARAM: (.*)$")
 CHECK_LINE_RE = re.compile(r"__voblint_check")
 VERDICT_RE = re.compile(r"//\s*(reachable|NOWARN|[A-Z]+)")
-REPORT_LINE_RE = re.compile(r"^(\d+):\d+\s+\S+\s+\S+\s+(\S+)")
+# "line:col  point  condition  VERDICT  state": the condition is printed source and
+# may contain spaces, so the verdict is found by its own vocabulary, not by column.
+REPORT_LINE_RE = re.compile(r"^(\d+):\d+\s+\S+\s+.*?\s(PROVED|REFUTED|UNKNOWN|DEAD)(?:\s|$)")
 ARITHMETIC_HEADER = "// EXPECT-ARITHMETIC"
 ARITHMETIC_ENTRY_RE = re.compile(r"(WARN|ERROR) (division|remainder)-by-zero")
 ARITHMETIC_REPORT_RE = re.compile(
