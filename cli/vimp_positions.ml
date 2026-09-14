@@ -40,10 +40,12 @@ let reset () =
    needs -- without it a span reads as zero-width. *)
 let record (p : Lexing.position) (q : Lexing.position) (c : 'a) : 'a =
   pending :=
-    { line = p.Lexing.pos_lnum;
+    {
+      line = p.Lexing.pos_lnum;
       column = p.Lexing.pos_cnum - p.Lexing.pos_bol + 1;
       end_line = q.Lexing.pos_lnum;
-      end_column = q.Lexing.pos_cnum - q.Lexing.pos_bol + 1 }
+      end_column = q.Lexing.pos_cnum - q.Lexing.pos_bol + 1;
+    }
     :: !pending;
   c
 

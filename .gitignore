@@ -3,6 +3,7 @@
 
 # Isabelle
 .isabelle/
+_opam/
 /build/
 /output/
 /document/*.aux
