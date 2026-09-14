@@ -652,6 +652,59 @@ kbd {
   color: var(--text-muted);
 }
 
+.analysis-timing {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+
+  padding: 0.7rem 0.85rem;
+
+  border: 1px solid rgba(139, 213, 202, 0.22);
+  border-radius: 0.65rem;
+
+  background: rgba(139, 213, 202, 0.06);
+}
+
+.analysis-timing[hidden] {
+  display: none;
+}
+
+.analysis-timing-icon {
+  display: grid;
+  place-items: center;
+
+  width: 2rem;
+  height: 2rem;
+
+  color: #8bd5ca;
+}
+
+.analysis-timing-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.analysis-timing-label {
+  font-size: 0.75rem;
+  opacity: 0.7;
+}
+
+.analysis-timing-value {
+  font-variant-numeric: tabular-nums;
+  font-size: 0.95rem;
+}
+
+#run-analysis.running #run-analysis-icon {
+  animation: analyzer-spin 0.8s linear infinite;
+}
+
+@keyframes analyzer-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 /* -------------------------------------------------------------------------- */
 /* Analysis graph                                                             */
 /* -------------------------------------------------------------------------- */

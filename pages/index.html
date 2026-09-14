@@ -25,7 +25,6 @@
   >
   <link rel="stylesheet" href="style.css">
 
-  <script src="assets/browser_main.bc.wasm.js" defer></script>
   <script type="module" src="main.js"></script>
 </head>
 
@@ -181,8 +180,12 @@
           </div>
 
           <button id="run-analysis" type="button">
-            <i class="fa-solid fa-play" aria-hidden="true"></i>
-            Run analysis
+            <i
+              id="run-analysis-icon"
+              class="fa-solid fa-play"
+              aria-hidden="true"
+            ></i>
+            <span id="run-analysis-label">Run analysis</span>
           </button>
 
           <p
@@ -190,6 +193,22 @@
             class="status"
             role="status"
           >Ready</p>
+
+          <div
+            id="analysis-timing"
+            class="analysis-timing"
+            aria-live="polite"
+            hidden
+          >
+            <span class="analysis-timing-icon" aria-hidden="true">
+              <i class="fa-solid fa-stopwatch"></i>
+            </span>
+
+            <span class="analysis-timing-copy">
+              <span class="analysis-timing-label">Analysis time</span>
+              <strong id="analysis-timing-value">—</strong>
+            </span>
+          </div>
 
           <div
             id="analysis-results"

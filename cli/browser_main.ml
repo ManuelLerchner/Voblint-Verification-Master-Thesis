@@ -41,6 +41,18 @@ open Js_of_ocaml
 
 module C = Voblint_CLI.Generated
 
+(* -------------------------------------------------------------------------- *)
+(* Timing                                                                     *)
+(* -------------------------------------------------------------------------- *)
+
+let now_ms () : float =
+  let value : Js.number_t =
+    Js.Unsafe.meth_call
+      (Js.Unsafe.get Js.Unsafe.global "performance")
+      "now"
+      [||]
+  in
+  Js.to_float value
 
 (* -------------------------------------------------------------------------- *)
 (* JSON                                                                       *)
@@ -235,7 +247,7 @@ let graph_json output =
       json_string (Dot_render.render graph)
 
 
-let output_json output =
+let output_json analysis_ms output =
   let checks =
     C.out_checks output
     |> List.map check_json
@@ -250,9 +262,11 @@ let output_json output =
 
   Printf.sprintf
     "{\"status\":\"ok\",\
+     \"timing\":{\"analysis_ms\":%.3f},\
      \"checks\":[%s],\
      \"diagnostics\":[%s],\
      \"graph\":%s}"
+    analysis_ms
     checks
     diagnostics
     (graph_json output)
@@ -305,14 +319,22 @@ let run analysis_js solver_js context_js context_depth source_js =
                         source
                     in
 
-                    match
+                    let analysis_start =
+                      now_ms ()
+                    in
+                    let answer =
                       C.run_voblint
                         analysis
                         (solver_argument browser_solver)
                         context
                         (browser_view browser_solver context)
                         program
-                    with
+                    in
+                    let analysis_ms =
+                      now_ms () -. analysis_start
+                    in
+
+                    match answer with
                     | C.Malformed_Program ->
                         error_json
                           "Program is not well-formed"
@@ -322,7 +344,8 @@ let run analysis_js solver_js context_js context_depth source_js =
                           "This domain, solver, and context combination is not supported"
 
                     | C.Analysed output ->
-                        Js.string (output_json output)
+                        Js.string
+                          (output_json analysis_ms output)
 
                   with
                   | Vimp_frontend.Parse_error
@@ -342,8 +365,8 @@ let run analysis_js solver_js context_js context_depth source_js =
 
 (*
  * [callback_with_arity] already creates the JavaScript callback.
- * Install it directly on globalThis/window rather than passing it through
- * [Js.export], which would wrap the function again.
+ * Install it directly on the worker's global scope rather than passing it
+ * through [Js.export], which would wrap the function again.
  *)
 let () =
   Js.Unsafe.set

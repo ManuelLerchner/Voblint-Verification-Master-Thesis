@@ -14,6 +14,10 @@ function query(selector) {
   return element;
 }
 
+let analysisWorker = null;
+let nextAnalysisRequestId = 1;
+let pendingAnalysis = null;
+
 const editorMount = query("#program-editor");
 
 const analysisSelect = query("#analysis-select");
@@ -26,8 +30,14 @@ const contextDepthGroup = query("#context-depth-group");
 const solverHelp = query("#solver-help");
 
 const runButton = query("#run-analysis");
+const runButtonIcon = query("#run-analysis-icon");
+const runButtonLabel = query("#run-analysis-label");
+
 const status = query("#analyzer-status");
 const results = query("#analysis-results");
+
+const timing = query("#analysis-timing");
+const timingValue = query("#analysis-timing-value");
 
 const graphPanel = query("#analysis-graph-panel");
 const graph = query("#analysis-graph");
@@ -184,6 +194,62 @@ function showStatus(message, kind = "") {
 
 function clearResults() {
   results.replaceChildren();
+}
+
+function clearTiming() {
+  timing.hidden = true;
+  timingValue.textContent = "—";
+}
+
+
+function formatDuration(milliseconds) {
+  if (!Number.isFinite(milliseconds) || milliseconds < 0) {
+    return null;
+  }
+
+  if (milliseconds < 1) {
+    return `${milliseconds.toFixed(2)} ms`;
+  }
+
+  if (milliseconds < 100) {
+    return `${milliseconds.toFixed(1)} ms`;
+  }
+
+  if (milliseconds < 1000) {
+    return `${Math.round(milliseconds)} ms`;
+  }
+
+  return `${(milliseconds / 1000).toFixed(2)} s`;
+}
+
+
+function renderTiming(result) {
+  const milliseconds = result?.timing?.analysis_ms;
+  const formatted = formatDuration(milliseconds);
+
+  if (formatted === null) {
+    clearTiming();
+    return;
+  }
+
+  timingValue.textContent = formatted;
+  timing.hidden = false;
+}
+
+function workerError(message) {
+  const error = new Error(
+    message.message ?? "Browser analysis failed.",
+  );
+
+  if (typeof message.name === "string" && message.name !== "") {
+    error.name = message.name;
+  }
+
+  if (typeof message.stack === "string" && message.stack !== "") {
+    error.stack = message.stack;
+  }
+
+  return error;
 }
 
 function renderResult(result) {
@@ -549,6 +615,166 @@ function configurationLabel(configuration) {
 /* Run analysis                                                               */
 /* -------------------------------------------------------------------------- */
 
+function setRunning(running) {
+  runButton.disabled = running;
+
+  if (running) {
+    runButton.classList.add("running");
+    runButtonIcon.className = "fa-solid fa-spinner";
+    runButtonLabel.textContent = "Analyzing";
+  } else {
+    runButton.classList.remove("running");
+    runButtonIcon.className = "fa-solid fa-play";
+    runButtonLabel.textContent = "Run analysis";
+  }
+}
+
+/* -------------------------------------------------------------------------- */
+/* Analysis worker                                                            */
+/* -------------------------------------------------------------------------- */
+
+function discardAnalysisWorker(worker = analysisWorker) {
+  if (worker) {
+    worker.terminate();
+  }
+
+  if (analysisWorker === worker) {
+    analysisWorker = null;
+  }
+}
+
+
+function failPendingAnalysis(error) {
+  if (!pendingAnalysis) {
+    return;
+  }
+
+  const pending = pendingAnalysis;
+  pendingAnalysis = null;
+
+  pending.reject(
+    error instanceof Error
+      ? error
+      : new Error(String(error)),
+  );
+}
+
+
+function createAnalysisWorker() {
+  const worker = new Worker("assets/voblint-worker.js");
+
+  worker.addEventListener("message", (event) => {
+    const message = event.data;
+
+    if (
+      !pendingAnalysis ||
+      !message ||
+      message.id !== pendingAnalysis.id
+    ) {
+      return;
+    }
+
+    const pending = pendingAnalysis;
+    pendingAnalysis = null;
+
+    if (message.type === "result") {
+      pending.resolve(message.result);
+      return;
+    }
+
+    if (message.type === "error") {
+      discardAnalysisWorker(worker);
+      pending.reject(workerError(message));
+      return;
+    }
+
+    discardAnalysisWorker(worker);
+
+    pending.reject(
+      new Error(
+        `Analysis worker returned unknown message type: ${String(message.type)}`,
+      ),
+    );
+  });
+
+  worker.addEventListener("error", (event) => {
+    discardAnalysisWorker(worker);
+
+    const error =
+      event.error instanceof Error
+        ? event.error
+        : new Error(
+            event.message || "Analysis worker failed.",
+          );
+
+    failPendingAnalysis(error);
+  });
+
+  worker.addEventListener("messageerror", (event) => {
+    discardAnalysisWorker(worker);
+
+    console.error(
+      "Could not decode the analysis worker response:",
+      event.data,
+    );
+
+    failPendingAnalysis(
+      new Error(
+        "Could not decode the analysis worker response.",
+      ),
+    );
+  });
+
+  return worker;
+}
+
+
+function getAnalysisWorker() {
+  if (!analysisWorker) {
+    analysisWorker = createAnalysisWorker();
+  }
+
+  return analysisWorker;
+}
+
+
+function runAnalysisInWorker(configuration, source) {
+  if (pendingAnalysis) {
+    throw new Error("An analysis is already running.");
+  }
+
+  const id = nextAnalysisRequestId++;
+
+  return new Promise((resolve, reject) => {
+    pendingAnalysis = {
+      id,
+      resolve,
+      reject,
+    };
+
+    try {
+      getAnalysisWorker().postMessage({
+        type: "run",
+        id,
+        analysis: configuration.analysis,
+        solver: configuration.solver,
+        context: configuration.context,
+        contextDepth: configuration.contextDepth,
+        source,
+      });
+    } catch (error) {
+      pendingAnalysis = null;
+      discardAnalysisWorker();
+
+      reject(
+        error instanceof Error
+          ? error
+          : new Error(String(error)),
+      );
+    }
+  });
+}
+
 async function run() {
   /*
    * Treat one click / shortcut invocation as one UI transaction.
@@ -558,16 +784,15 @@ async function run() {
    * validation, so an invalid selection can never leave an old graph next to
    * a new error/table state.
    */
+  if (runButton.disabled || pendingAnalysis) {
+    return;
+  }
+
   const runGeneration = ++analysisRunGeneration;
 
   clearResults();
   clearGraph();
-
-  if (typeof window.Voblint_run !== "function") {
-    showStatus("Browser analyzer bundle is unavailable.", "error");
-
-    return;
-  }
+  clearTiming();
 
   let configuration;
 
@@ -583,7 +808,7 @@ async function run() {
 
   const source = editor.state.doc.toString();
 
-  runButton.disabled = true;
+  setRunning(true);
 
   showStatus("Analyzing...");
 
@@ -599,7 +824,7 @@ async function run() {
      *   context depth
      *   source
      */
-    const rawResult = window.Voblint_run(configuration.analysis, configuration.solver, configuration.context, configuration.contextDepth, source);
+    const rawResult = await runAnalysisInWorker(configuration, source);
 
     if (typeof rawResult !== "string") {
       throw new TypeError("Voblint_run returned " + `${typeof rawResult}; expected a JSON string.`);
@@ -611,6 +836,7 @@ async function run() {
       return;
     }
 
+    renderTiming(result);
     renderResult(result);
 
     if (result.status === "ok") {
@@ -643,10 +869,17 @@ async function run() {
 
       showStatus("Browser analysis failed.", "error");
 
-      results.textContent = error instanceof Error ? error.message : String(error);
+      results.textContent =
+        error instanceof Error
+          ? error.message
+          : String(error);
 
       if (error instanceof Error) {
-        console.error(`${error.name}: ${error.message}\n\n${error.stack ?? ""}`)
+        console.error(
+          `${error.name}: ${error.message}\n\n${error.stack ?? ""}`,
+        );
+      } else {
+        console.error("Browser analysis failed:", error);
       }
     }
   } finally {
@@ -655,7 +888,7 @@ async function run() {
      * still active.
      */
     if (runGeneration === analysisRunGeneration) {
-      runButton.disabled = false;
+      setRunning(false);
     }
   }
 }

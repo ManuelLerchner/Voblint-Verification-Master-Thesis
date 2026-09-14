@@ -234,7 +234,7 @@ text \<open>
 \<close>
 
 lemma dispatch_demo_check_cond_rendered:
-  "string_of_exp 0 (Less (N 0) (V (STR ''y''))) = ''0<y''"
+  "string_of_exp 0 (Less (N 0) (V (STR ''y''))) = STR ''0<y''"
   by eval
 
 subsection \<open>The pipeline theorem on a concrete program\<close>
