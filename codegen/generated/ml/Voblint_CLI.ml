@@ -162,6 +162,8 @@ module Generated : sig
   val global_var : ('a, 'b) result_global_ext -> string
   val global_val : ('a, 'b) result_global_ext -> 'a
   val state_context : ('a, 'b) result_state_ext -> nat
+  val state_checks :
+    ('a, 'b) result_state_ext -> (exp * check_result lifted) list
   val state_value : ('a, 'b) result_state_ext -> ((string * 'a) list) lifted
   val state_point : ('a, 'b) result_state_ext -> cfg_node
   val run_program :
@@ -3684,7 +3686,9 @@ type arithmetic_diagnostic =
 type ('a, 'b) result_global_ext = Result_global_ext of string * 'a * 'b;;
 
 type ('a, 'b) result_state_ext =
-  Result_state_ext of cfg_node * nat * ((string * 'a) list) lifted * 'b;;
+  Result_state_ext of
+    cfg_node * nat * ((string * 'a) list) lifted *
+      (exp * check_result lifted) list * 'b;;
 
 type 'a result_check_ext =
   Result_check_ext of cfg_node * exp * check_result lifted * 'a;;
@@ -12735,6 +12739,16 @@ let rec run_result_of _B
            (v, i,
              map_lift (fun st -> map (fun x -> (x, into (st x))) vars)
                (lookup_context _B r v ctx),
+             map_filter
+               (fun x ->
+                 (if (let (u, (a, _)) = x in
+                       equal_cfg_nodea u v && is_EA_Check a)
+                   then Some (let (_, (a, _)) = x in
+                               (ea_check_cond a,
+                                 classify_point classify (ea_check_cond a)
+                                   (lookup_context _B r v ctx)))
+                   else None))
+               (cfg_intra_list g),
              ()))
        in
      let route_at =
@@ -13232,22 +13246,31 @@ let rec map_result_global
   f g = Result_global_ext (global_var g, f (global_val g), ());;
 
 let rec state_context
-  (Result_state_ext (state_point, state_context, state_value, more)) =
-    state_context;;
+  (Result_state_ext
+    (state_point, state_context, state_value, state_checks, more))
+    = state_context;;
+
+let rec state_checks
+  (Result_state_ext
+    (state_point, state_context, state_value, state_checks, more))
+    = state_checks;;
 
 let rec state_value
-  (Result_state_ext (state_point, state_context, state_value, more)) =
-    state_value;;
+  (Result_state_ext
+    (state_point, state_context, state_value, state_checks, more))
+    = state_value;;
 
 let rec state_point
-  (Result_state_ext (state_point, state_context, state_value, more)) =
-    state_point;;
+  (Result_state_ext
+    (state_point, state_context, state_value, state_checks, more))
+    = state_point;;
 
 let rec map_result_state
   f st =
     Result_state_ext
       (state_point st, state_context st,
-        map_lift (map (fun (x, v) -> (x, f v))) (state_value st), ());;
+        map_lift (map (fun (x, v) -> (x, f v))) (state_value st),
+        state_checks st, ());;
 
 let rec map_run_result
   f res =

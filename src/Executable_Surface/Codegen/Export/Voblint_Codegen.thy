@@ -126,7 +126,7 @@ export_code
   Result_Malformed Result_Unsupported Result_Analysed
   res_cfg res_contexts res_states res_routes res_checks res_globals res_diagnostics
   Context_Unit Context_Entry Context_Call_String
-  state_point state_context state_value
+  state_point state_context state_value state_checks
   route_point route_context route_callee route_targets
   check_point check_exp check_verdict
   global_var global_val

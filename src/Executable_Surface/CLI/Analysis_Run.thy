@@ -146,6 +146,7 @@ record 'v result_state =
   state_point :: pp
   state_context :: nat
   state_value :: "(vname \<times> 'v) list lifted"
+  state_checks :: "(exp \<times> contextual_verdict) list"
 
 record call_route =
   route_point :: pp
@@ -187,7 +188,8 @@ definition map_result_state :: "('v \<Rightarrow> 'w) \<Rightarrow> 'v result_st
   "map_result_state f st =
      \<lparr> state_point = state_point st,
        state_context = state_context st,
-       state_value = map_lift (map (\<lambda>(x, v). (x, f v))) (state_value st) \<rparr>"
+       state_value = map_lift (map (\<lambda>(x, v). (x, f v))) (state_value st),
+       state_checks = state_checks st \<rparr>"
 
 definition map_result_global :: "('v \<Rightarrow> 'w) \<Rightarrow> 'v result_global \<Rightarrow> 'w result_global" where
   "map_result_global f g = \<lparr> global_var = global_var g, global_val = f (global_val g) \<rparr>"
@@ -244,7 +246,12 @@ definition run_result_of ::
           state_at = (\<lambda>i ctx v.
             \<lparr> state_point = v, state_context = i,
               state_value = map_lift (\<lambda>st. map (\<lambda>x. (x, into (st x))) vars)
-                              (lookup_context r v ctx) \<rparr>);
+                              (lookup_context r v ctx),
+              state_checks =
+                map (\<lambda>(u, a, w). (ea_check_cond a,
+                                   classify_point classify (ea_check_cond a)
+                                     (lookup_context r v ctx)))
+                  (filter (\<lambda>(u, a, w). u = v \<and> is_EA_Check a) (cfg_intra_list g)) \<rparr>);
           route_at = (\<lambda>u ca ce i ctx.
             \<lparr> route_point = u, route_context = i, route_callee = callee_of_entry ce,
               route_targets =
