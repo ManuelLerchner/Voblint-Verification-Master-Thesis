@@ -2,7 +2,7 @@
    from stdin, builds it via the exported Isabelle constructors (NOT via
    Vimp_parser -- the whole point is an independently-constructed AST, so a
    parser bug can't hide by round-tripping consistently with itself), prints
-   it through the Isabelle-generated pretty_string_of_program, re-parses
+   it through the grammar-generated Vimp_printer, re-parses
    that text with Vimp_parser, and checks the result is structurally equal
    (OCaml's polymorphic (=), which works across the module's abstract types
    at the value level regardless of the signature hiding constructors) to
@@ -131,9 +131,7 @@ let build_program = function
 
 (* -- Driver --------------------------------------------------------------- *)
 
-let source_text_of_program original =
-  pretty_string_of_program (prog_table original) (prog_procs original) (prog_main original)
-    (declared_global_vars original)
+let source_text_of_program = Vimp_printer.string_of_imp_prog
 
 let mode = if Array.length Sys.argv > 1 then Sys.argv.(1) else ""
 
@@ -146,7 +144,7 @@ let () =
     match Vimp_frontend.program "<generated>" source_text with
     | reparsed, _, _ when mode = "--print-reprinted" ->
       (* Prints pretty(parse(pretty(original))) -- the print/parse/print
-         invariant is implied by original = reparsed (pretty_string_of_program
+         invariant is implied by original = reparsed (the printer
          is a pure function, so structurally equal ASTs print identically),
          but checking it directly gives a source-text diff on failure instead
          of "the trees differ", and catches the (structural-equality

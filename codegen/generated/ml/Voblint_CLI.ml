@@ -3865,7 +3865,14 @@ let rec list_ex p x1 = match p, x1 with p, [] -> false
 let rec product x0 uu = match x0, uu with [], uu -> []
                   | x :: xs, ys -> map (fun a -> (x, a)) ys @ product xs ys;;
 
-let rec the_elem (Set [x]) = x;;
+let rec the_elem _A
+  (Set xs) =
+    (match remdups _A xs
+      with [] ->
+        failwith "the_elem: not a singleton" (fun _ -> the_elem _A (Set xs))
+      | [x] -> x
+      | _ :: _ :: _ ->
+        failwith "the_elem: not a singleton" (fun _ -> the_elem _A (Set xs)));;
 
 let rec distinct _A = function [] -> true
                       | x :: xs -> not (membera _A xs x) && distinct _A xs;;
@@ -10497,10 +10504,10 @@ let rec lookup_context _A
     (if member (equal_prod equal_cfg_node _A) (v, ctx) (result_keys r)
       then result_at r v ctx else Bot);;
 
-let rec ordered_by_key
+let rec ordered_by_key _A (_B1, _B2)
   key s =
-    map (fun k -> the_elem (filter (fun x -> (((key x) : string) = k)) s))
-      (sorted_list_of_set (equal_literal, linorder_literal) (image key s));;
+    map (fun k -> the_elem _A (filter (fun x -> eq _B1 (key x) k) s))
+      (sorted_list_of_set (_B1, _B2) (image key s));;
 
 let rec contexts_at
   r v = image snd
@@ -10516,7 +10523,8 @@ let rec ctx_seed_globals _A _B
                    point_lines (program_vars p)
                      (map_lift (comp into)
                        (lookup_context _B r (FunctionEntry f) c))))
-             (ordered_by_key ckey (contexts_at r (FunctionEntry f))))
+             (ordered_by_key _B (equal_literal, linorder_literal) ckey
+               (contexts_at r (FunctionEntry f))))
       (prog_main_name :: prog_procs p);;
 
 let rec unit_seed_globals _A
@@ -11214,8 +11222,10 @@ let rec context_key
       owner_of, cluster_label, source_text, node_annotation, more))
     = context_key;;
 
-let rec result_contexts_at
-  cfg r p = ordered_by_key (context_key cfg) (contexts_at r p);;
+let rec result_contexts_at _A
+  cfg r p =
+    ordered_by_key _A (equal_literal, linorder_literal) (context_key cfg)
+      (contexts_at r p);;
 
 let rec cfg_point_list
   g = remdups equal_cfg_node
@@ -11235,8 +11245,8 @@ let rec contextual_graph_domain
     maps (fun p -> map (fun ctx -> Inl (p, ctx)) (contexts_for_pp p))
       (cfg_point_list g);;
 
-let rec contextual_result_domain
-  cfg g r = contextual_graph_domain g (result_contexts_at cfg r);;
+let rec contextual_result_domain _A
+  cfg g r = contextual_graph_domain g (result_contexts_at _A cfg r);;
 
 let rec entry_state_ctx_sol _A
   r k = (match k with Inl (a, b) -> lookup_context (equal_list _A) r a b
@@ -11429,7 +11439,7 @@ let rec entry_state_ctx_graph_snapshot_of (_A1, _A2)
         (equal_routed_gk equal_unit (equal_list _A2)) cfg g sol
         (build_analysis_graph (equal_list _A2)
           (equal_routed_gk equal_unit (equal_list _A2)) cfg g
-          (contextual_result_domain base g r) sol));;
+          (contextual_result_domain (equal_list _A2) base g r) sol));;
 
 let rec export_edge_kind_of
   kind =
@@ -11559,7 +11569,7 @@ let rec entry_state_ctx_export_of (_A1, _A2)
         (equal_routed_gk equal_unit (equal_list _A2)) cfg g sol
         (build_analysis_graph (equal_list _A2)
           (equal_routed_gk equal_unit (equal_list _A2)) cfg g
-          (contextual_result_domain base g r) sol));;
+          (contextual_result_domain (equal_list _A2) base g r) sol));;
 
 let rec classify_checks_ctx _A
   g r classify =
@@ -11971,7 +11981,7 @@ let rec unit_ctx_graph_snapshot_of
      let sol = unit_ctx_sol_of into r in
       analysis_graph_to_canonical_text equal_unit equal_unit cfg g sol
         (build_analysis_graph equal_unit equal_unit cfg g
-          (contextual_result_domain cfg g r) sol));;
+          (contextual_result_domain equal_unit cfg g r) sol));;
 
 let rec unit_ctx_export_of
   into r rows p =
@@ -11980,7 +11990,7 @@ let rec unit_ctx_export_of
      let sol = unit_ctx_sol_of into r in
       analysis_graph_to_export equal_unit equal_unit cfg g sol
         (build_analysis_graph equal_unit equal_unit cfg g
-          (contextual_result_domain cfg g r) sol));;
+          (contextual_result_domain equal_unit cfg g r) sol));;
 
 let rec project_env
   into r v = map_lift (comp into) (lookup_context equal_unit r v ());;
@@ -12088,7 +12098,8 @@ let rec cs_ctx_annotated_config_of
       (cs_ctx_graph_config p k);;
 
 let rec cs_ctx_domain_of
-  base p r = contextual_result_domain base (prog_cfg p) r;;
+  base p r =
+    contextual_result_domain (equal_list equal_cfg_node) base (prog_cfg p) r;;
 
 let rec cs_ctx_sol_of
   into r x =

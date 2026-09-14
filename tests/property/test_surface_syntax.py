@@ -65,10 +65,10 @@ def test_comparison_precedence_groups(first, second):
 
 
 @pytest.mark.parametrize("expr, source", [
-    (("Eq", ("V", "x"), ("Less", ("V", "y"), ("V", "z"))), "x==y<z"),
-    (("NotEq", ("GreaterEq", ("V", "x"), ("V", "y")), ("V", "z")), "x>=y!=z"),
-    (("Less", ("Eq", ("V", "x"), ("V", "y")), ("V", "z")), "(x==y)<z"),
-    (("Greater", ("V", "x"), ("NotEq", ("V", "y"), ("V", "z"))), "x>(y!=z)"),
+    (("Eq", ("V", "x"), ("Less", ("V", "y"), ("V", "z"))), "x == y < z"),
+    (("NotEq", ("GreaterEq", ("V", "x"), ("V", "y")), ("V", "z")), "x >= y != z"),
+    (("Less", ("Eq", ("V", "x"), ("V", "y")), ("V", "z")), "(x == y) < z"),
+    (("Greater", ("V", "x"), ("NotEq", ("V", "y"), ("V", "z"))), "x > (y != z)"),
 ])
 def test_mixed_comparison_grouping_roundtrips(expr, source):
     program = ([], ("Assign", "result", expr), [])
@@ -78,10 +78,10 @@ def test_mixed_comparison_grouping_roundtrips(expr, source):
 
 
 @pytest.mark.parametrize("expr, source", [
-    (("Div", ("Times", ("V", "x"), ("V", "y")), ("V", "z")), "x*y/z"),
-    (("Mod", ("Div", ("V", "x"), ("V", "y")), ("V", "z")), "x/y%z"),
-    (("Div", ("V", "x"), ("Times", ("V", "y"), ("V", "z"))), "x/(y*z)"),
-    (("Mod", ("V", "x"), ("Div", ("V", "y"), ("V", "z"))), "x%(y/z)"),
+    (("Div", ("Times", ("V", "x"), ("V", "y")), ("V", "z")), "x * y / z"),
+    (("Mod", ("Div", ("V", "x"), ("V", "y")), ("V", "z")), "x / y % z"),
+    (("Div", ("V", "x"), ("Times", ("V", "y"), ("V", "z"))), "x / (y * z)"),
+    (("Mod", ("V", "x"), ("Div", ("V", "y"), ("V", "z"))), "x % (y / z)"),
 ])
 def test_multiplicative_grouping_roundtrips(expr, source):
     program = ([], ("Assign", "result", expr), [])

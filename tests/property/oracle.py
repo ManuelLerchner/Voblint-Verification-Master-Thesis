@@ -47,12 +47,12 @@ def _dump(program, flag: str) -> str:
 
 
 def dump_source(program) -> str:
-    """pretty_string_of_program(program) -- the printer's direct output."""
+    """print(program) -- the printer's direct output."""
     return _dump(program, "--print-source")
 
 
 def dump_reprinted(program) -> str:
-    """pretty_string_of_program(parse(pretty_string_of_program(program))) --
+    """print(parse(print(program))) --
     only meaningful (and only guaranteed to succeed) for a program that
     round-trips; callers should assert that separately."""
     return _dump(program, "--print-reprinted")

@@ -48,6 +48,13 @@ pre-commit:
               - "cli/vimp_lexer.mll"
             run: pixi run grammar-menhir-check
 
+          - name: vimp-printer-grammar-drift
+            glob:
+              - "manifests/vimp-grammar.yaml"
+              - "scripts/gen_vimp_printer.py"
+              - "cli/vimp_printer.ml"
+            run: pixi run grammar-printer-check
+
           - name: analysis-assembly-drift
             glob:
               - "manifests/analyses.yaml"

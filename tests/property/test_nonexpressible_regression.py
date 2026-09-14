@@ -1,15 +1,15 @@
 """Regression pins for shapes that used to be non-expressible before
-VIMP_Source_Print.thy's string_of_exp grew a uniform, precedence-climbing
-parenthesization rule (exp_prio) covering every constructor, together with
+the grammar-generated printer (cli/vimp_printer.ml) grew a uniform, precedence-climbing
+parenthesization rule (the precedence table in manifests/vimp-grammar.yaml) covering every constructor, together with
 manifests/vimp-grammar.yaml's exp_paren production (`LPAREN exp RPAREN`, passthrough).
 
 Before that: a Plus/Minus tree demoted under a Times, or a Plus/Minus chain
 nested on its own right branch, had no parenthesized source form at all, so
 it could not print to text that re-parsed back to the same tree. Now the
-printer inserts parentheses wherever exp_prio says a subtree needs them, so
+printer inserts parentheses wherever the precedence table says a subtree needs them, so
 these same shapes round-trip like any other -- this file was updated from
 "must fail" to "must round-trip" once that limitation was fixed (its
-predecessor docstring anticipated exactly this: "if pretty_string_of_program
+predecessor docstring anticipated exactly this: "if the printer
 ever grows aexp parens, these would need to become positive cases instead").
 
 Kept separate from the main round-trip property (test_roundtrip.py) as

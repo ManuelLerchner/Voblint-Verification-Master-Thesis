@@ -23,6 +23,11 @@
  (deps ../../cli/vimp_frontend.ml)
  (action (copy %{deps} %{targets})))
 
+(rule
+ (targets vimp_printer.ml)
+ (deps ../../cli/vimp_printer.ml)
+ (action (copy %{deps} %{targets})))
+
  (menhir
  (modules vimp_parser)
  (flags
@@ -39,6 +44,7 @@
   vimp_parser
   vimp_lexer
   vimp_frontend
+  vimp_printer
   ast_driver)
  (libraries
   menhirLib

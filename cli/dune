@@ -19,7 +19,8 @@
   vimp_positions
   vimp_parser
   vimp_lexer
-  vimp_frontend)
+  vimp_frontend
+  vimp_printer)
  (libraries
   menhirLib
   str

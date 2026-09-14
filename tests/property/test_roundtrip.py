@@ -2,7 +2,7 @@
 
 This is the primary correctness property. Hypothesis generates arbitrary exp
 trees (see strategies.py) -- manifests/vimp-grammar.yaml's exp_paren production and
-VIMP_Source_Print.thy's precedence-climbing printer make every shape
+the grammar-generated precedence-climbing printer (cli/vimp_printer.ml) make every shape
 source-expressible -- so every generated example is expected to print to
 text that Vimp_parser reads back into the same tree; a mismatch here is a
 real printer or parser bug. test_nonexpressible_regression.py pins a few
@@ -10,7 +10,7 @@ concrete shapes that specifically exercise printer-inserted parentheses.
 
 As a secondary, more readable invariant: printing the re-parsed AST again
 must reproduce the same source text as the first print. Structural equality
-of the ASTs already implies this (pretty_string_of_program is a pure
+of the ASTs already implies this (the printer is a pure
 function of the AST), but a source-text diff is a far more useful failure
 message than "the trees differ" when something regresses.
 """
@@ -35,7 +35,7 @@ def test_ast_print_parse_roundtrip(prog):
 def test_reprint_matches_first_print(prog):
     result = run_ast_driver(prog)
     assert result.stdout.strip() == "OK", f"round-trip mismatch for {prog!r}:\n{result.stdout}"
-    # Already implied by the round-trip above (pretty_string_of_program is a
+    # Already implied by the round-trip above (the printer is a
     # pure function, so structurally equal ASTs print identically), but
     # checking it directly gives a source-text diff on failure instead of
     # "the trees differ".
