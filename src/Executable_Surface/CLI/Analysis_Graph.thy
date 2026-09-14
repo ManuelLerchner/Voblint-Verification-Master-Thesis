@@ -314,6 +314,35 @@ text \<open>
   it by execution on its own program.
 \<close>
 
+text \<open>
+  HOL's own code equation for \<^const>\<open>the_elem\<close> matches only a literal one-element
+  list, but a set built by an image or a filter is backed by a list that may repeat
+  its element --- the contexts of a context-free table are one \<open>()\<close> per point ---
+  and the generated code then fails with a match error. Deduplicating first is the
+  same set.
+\<close>
+
+lemma the_elem_set_remdups [code]:
+  "the_elem (set xs) =
+     (case remdups xs of
+        [x] \<Rightarrow> x
+      | _ \<Rightarrow> Code.abort (STR ''the_elem: not a singleton'') (\<lambda>_. the_elem (set xs)))"
+proof (cases "remdups xs")
+  case Nil
+  then show ?thesis by simp
+next
+  case (Cons y ys)
+  then show ?thesis
+  proof (cases ys)
+    case Nil
+    with Cons have "set xs = {y}" by (metis set_remdups empty_set list.simps(15))
+    with Cons Nil show ?thesis by simp
+  next
+    case (Cons z zs)
+    with \<open>remdups xs = y # ys\<close> show ?thesis by simp
+  qed
+qed
+
 definition ordered_by_key ::
   "('a \<Rightarrow> 'k::linorder) \<Rightarrow> 'a set \<Rightarrow> 'a list" where
   "ordered_by_key key S =
