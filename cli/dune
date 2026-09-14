@@ -64,6 +64,5 @@
  (wasm_of_ocaml
   (flags
    (:standard
-   --effects=cps
    --opt=3)))
  (flags (:standard -w -8-11-20-26-27-32-37-39 -warn-error -A)))
