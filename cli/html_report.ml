@@ -511,41 +511,54 @@ let html_dot ~source_text ~positions graph =
     "  node [shape=box,style=filled,fillcolor=white,fontname=\"Menlo\",fontsize=11,\
      id=\"\\N\",URL=\"javascript:show_info('\\N');\"];\n";
   Buffer.add_string buf "  edge [fontname=\"Menlo\",fontsize=9,arrowsize=0.7];\n";
+  let is_source_node id =
+    match Hashtbl.find_opt by_id id with
+    | Some node -> C.xn_kind node = C.XN_Source
+    | None -> false
+  in
   List.iter
     (fun cluster ->
-       Buffer.add_string buf (Printf.sprintf "  subgraph %s {\n" (C.xc_id cluster));
-       Buffer.add_string buf
-         (Printf.sprintf "    label=\"%s\";\n" (dot_escape (C.xc_label cluster)));
-       Buffer.add_string buf "    style=rounded; color=gray70;\n";
-       List.iter
-         (fun nid ->
-            match Hashtbl.find_opt by_id nid with
-            | None -> ()
-            | Some node ->
-              if C.xn_kind node <> C.XN_Source then
+       let visible_nodes =
+         List.filter (fun nid -> not (is_source_node nid)) (C.xc_nodes cluster)
+       in
+       if visible_nodes <> [] then begin
+         Buffer.add_string buf (Printf.sprintf "  subgraph %s {\n" (C.xc_id cluster));
+         Buffer.add_string buf
+           (Printf.sprintf "    label=\"%s\";\n" (dot_escape (C.xc_label cluster)));
+         Buffer.add_string buf "    style=rounded; color=gray70;\n";
+         List.iter
+           (fun nid ->
+              match Hashtbl.find_opt by_id nid with
+              | None -> ()
+              | Some node ->
                 Buffer.add_string buf
                   (Printf.sprintf "    %s [%s,fillcolor=\"%s\",label=\"%s\"];\n" nid
                      (node_shape node) (node_fill node)
                      (node_label node)))
-         (C.xc_nodes cluster);
-       Buffer.add_string buf "  }\n")
+           visible_nodes;
+         Buffer.add_string buf "  }\n"
+       end)
     (C.xg_clusters graph);
   List.iter
     (fun e ->
-       let label =
-         match C.xe_kind e with
-         | C.XE_Enter -> "call " ^ C.xe_label e
-         | C.XE_Combine ->
-           if C.xe_label e = "" then "resume" else "resume / " ^ C.xe_label e
-         | C.XE_CallToReturn -> "continuation"
-         | C.XE_GlobalRead -> "read global"
-         | C.XE_GlobalWrite -> "write global"
-         | C.XE_Intra -> C.xe_label e
-       in
-       let style = if C.xe_kind e = C.XE_CallToReturn then "style=dashed,color=gray40," else "" in
-       Buffer.add_string buf
-         (Printf.sprintf "  %s -> %s [%slabel=\"%s\"];\n" (C.xe_src e) (C.xe_dst e) style
-            (dot_escape label)))
+       if not (is_source_node (C.xe_src e) || is_source_node (C.xe_dst e)) then begin
+         let label =
+           match C.xe_kind e with
+           | C.XE_Enter -> "call " ^ C.xe_label e
+           | C.XE_Combine ->
+             if C.xe_label e = "" then "resume" else "resume / " ^ C.xe_label e
+           | C.XE_CallToReturn -> "continuation"
+           | C.XE_GlobalRead -> "read global"
+           | C.XE_GlobalWrite -> "write global"
+           | C.XE_Intra -> C.xe_label e
+         in
+         let style =
+           if C.xe_kind e = C.XE_CallToReturn then "style=dashed,color=gray40," else ""
+         in
+         Buffer.add_string buf
+           (Printf.sprintf "  %s -> %s [%slabel=\"%s\"];\n" (C.xe_src e) (C.xe_dst e) style
+              (dot_escape label))
+       end)
     (C.xg_edges graph);
   Buffer.add_string buf "}\n";
   Buffer.contents buf
