@@ -73,12 +73,6 @@ def skip_reason(fixture: Path) -> str | None:
         return "no PARAM line"
     if not VERDICT_RE.search(fixture.read_text()):
         return "documents a rejection, not a report"
-    if "--solver" in args and "--context" in args:
-        # analyse_config_ctx honours the solver contextually
-        # (Plan_Interval_EntryState Solver_Join -> analyse_interval_entry_state_join),
-        # but those routes publish verdict reports, not solved state tables, so
-        # there is no per-node state to read for that pairing yet.
-        return "--solver with --context has no per-node state table yet"
     return None
 
 
@@ -100,14 +94,21 @@ def ensure_dot_renderers() -> None:
 def live_check_lines(out: Path, source_text: str) -> set[int]:
     """Source lines carrying at least one check whose own node is reachable.
 
-    Exemption is decided per node, not per line. `ded` greys a line out only
-    when *every* node on it is unreachable, which is right for rendering but
-    too coarse here: a one-line `void main() { f(); ...; __voblint_check(...) }`
-    whose prefix is live and whose check is dead is not a dead line, and
-    reading it as a live check made 03-procedures/01-proc_layout_recursion fail
-    on a check its own header documents as provably dead. Nodes carry both
-    their reachability and their column span, so match each check to the node
-    covering its column and ask that node.
+    A dead check can appear in two forms.
+
+    If the solver covered its key with Bot, the contextual graph still has a
+    node for it and the node document carries the unreachable status. Match
+    that status by source span rather than using the line-wide `ded` flag:
+    another command on the same source line may still be live.
+
+    A genuinely uncovered point has no contextual graph node at all. This is
+    expected for code after an unconditional return and for procedures that
+    are never called: contextual_result_domain contains solved result keys,
+    not a synthetic Bot node for every CFG point. Regression fixtures spell
+    those expected no-finding checks `// NOWARN`. tests/run.py separately
+    verifies that semantic expectation, so the HTML audit may use it to
+    distinguish an intentionally absent dead check from a live check whose
+    source finding was accidentally lost.
     """
     spans = []
     for node_doc in (out / "nodes").glob("*.xml"):
@@ -138,6 +139,12 @@ def live_check_lines(out: Path, source_text: str) -> set[int]:
     for i, text_line in enumerate(source_text.splitlines()):
         nr = i + 1
         for m in re.finditer(r"__voblint_check", text_line):
+            # NOWARN is the corpus contract for an unreachable check. Such a
+            # point need not have a graph node at all: an uncovered result key
+            # is absent from the canonical contextual graph rather than being
+            # materialized as a synthetic Bot node.
+            if re.search(r"//.*\bNOWARN\b", text_line):
+                 continue
             if not dead_at(nr, m.start() + 1):
                 live.add(nr)
                 break
