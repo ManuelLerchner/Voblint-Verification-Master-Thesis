@@ -582,4 +582,206 @@ definition run_voblint ::
           None \<Rightarrow> Unsupported_Configuration
         | Some pl \<Rightarrow> plan_answer pl view p)"
 
+subsection \<open>The three context policies, as builder parameters\<close>
+
+text \<open>
+  Which callee contexts a call enters from one caller state. The entry transfer runs
+  on the caller state; if a formal comes out empty the entered frame is bottom and
+  the call enters nothing, which is exactly when the solver's call tree skips the seed
+  publication; otherwise the policy routes the entered frame to one context. Every
+  policy shares this, and differs only in \<open>route\<close>.
+\<close>
+
+definition entered_targets ::
+    "((vname \<Rightarrow> bool) \<Rightarrow> vname list \<Rightarrow> exp list \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state)
+       \<Rightarrow> (pp \<Rightarrow> 'c \<Rightarrow> 'a abs_state \<Rightarrow> call_action \<Rightarrow> 'c) \<Rightarrow> imp_prog
+       \<Rightarrow> pp \<Rightarrow> 'c \<Rightarrow> call_action \<Rightarrow> pname \<Rightarrow> ('a::executable_domain) abs_state \<Rightarrow> 'c list"
+where
+  "entered_targets enter pick_ctx p u ctx ca callee st =
+     (case ca of CallEdge dst pars args \<Rightarrow>
+        (let entered = enter (declared_global p) pars args st
+         in if list_ex (\<lambda>x. is_empty (entered x)) pars then []
+            else [pick_ctx u ctx entered ca]))"
+
+definition unit_run_result ::
+    "('a \<Rightarrow> abstract_value)
+       \<Rightarrow> ((vname \<Rightarrow> bool) \<Rightarrow> vname list \<Rightarrow> exp list \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state)
+       \<Rightarrow> (exp \<Rightarrow> 'a abs_state \<Rightarrow> check_result) \<Rightarrow> (unit, ('a::executable_domain) abs_state) analysis_result
+       \<Rightarrow> imp_prog \<Rightarrow> abstract_value run_result" where
+  "unit_run_result into enter classify r p =
+     run_result_of into (\<lambda>_. Key_List []) (\<lambda>_. Context_Unit)
+       (entered_targets enter (\<lambda>_ _ _ _. ()) p) classify r [] p"
+
+definition entry_state_run_result ::
+    "('a \<Rightarrow> abstract_value)
+       \<Rightarrow> ((vname \<Rightarrow> bool) \<Rightarrow> vname list \<Rightarrow> exp list \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state)
+       \<Rightarrow> (exp \<Rightarrow> 'a abs_state \<Rightarrow> check_result)
+       \<Rightarrow> ('a list, ('a::executable_domain) abs_state) analysis_result
+       \<Rightarrow> imp_prog \<Rightarrow> abstract_value run_result" where
+  "entry_state_run_result into enter classify r p =
+     run_result_of into (\<lambda>ctx. Key_List (map (abstract_value_key \<circ> into) ctx))
+       (\<lambda>ctx. Context_Entry (map into ctx))
+       (entered_targets enter
+          (\<lambda>_ _ entered ca. case ca of CallEdge dst pars args \<Rightarrow> formals_context pars entered) p)
+       classify r [] p"
+
+definition call_string_run_result ::
+    "('a \<Rightarrow> abstract_value)
+       \<Rightarrow> ((vname \<Rightarrow> bool) \<Rightarrow> vname list \<Rightarrow> exp list \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state)
+       \<Rightarrow> (exp \<Rightarrow> 'a abs_state \<Rightarrow> check_result)
+       \<Rightarrow> (call_string, ('a::executable_domain) abs_state) analysis_result \<Rightarrow> nat
+       \<Rightarrow> imp_prog \<Rightarrow> abstract_value run_result" where
+  "call_string_run_result into enter classify r k p =
+     run_result_of into (\<lambda>ctx. Key_List (map Key_Node ctx)) Context_Call_String
+       (entered_targets enter (\<lambda>u ctx _ _. take k (u # ctx)) p) classify r [] p"
+
+subsection \<open>One plan, one typed result\<close>
+
+text \<open>
+  Each branch names the one table its plan resolved to and hands it to the builder of
+  that plan's context policy, together with the domain's tag and entry transfer.
+  \<^const>\<open>None\<close> is a pairing with no solved table.
+\<close>
+
+definition plan_result :: "analysis_plan \<Rightarrow> imp_prog \<Rightarrow> abstract_value run_result option" where
+  "plan_result pl p =
+     (case pl of
+        Plan_Sign Solver_Join \<Rightarrow>
+          Some (unit_run_result SignValue enter_sign_for sign_classify_check
+                  (fst (analyse_sign_ctx_solved_for (declared_global p) p)) p)
+      | Plan_Sign Solver_PerOrigin \<Rightarrow>
+          Some (unit_run_result SignValue enter_sign_for sign_classify_check
+                  (analyse_sign_result_per_origin p) p)
+      | Plan_Sign _ \<Rightarrow> None
+      | Plan_Interval Solver_Warrow \<Rightarrow>
+          Some (unit_run_result IntervalValue enter_ivl_for interval_classify_check
+                  (fst (analyse_interval_ctx_solved_for (declared_global p) p)) p)
+      | Plan_Interval Solver_Join \<Rightarrow>
+          Some (unit_run_result IntervalValue enter_ivl_for interval_classify_check
+                  (analyse_interval_result_join p) p)
+      | Plan_Interval Solver_PerOrigin \<Rightarrow>
+          Some (unit_run_result IntervalValue enter_ivl_for interval_classify_check
+                  (analyse_interval_result_per_origin p) p)
+      | Plan_Interval Solver_WarrowPerOrigin \<Rightarrow>
+          Some (unit_run_result IntervalValue enter_ivl_for interval_classify_check
+                  (analyse_interval_result_wpo p) p)
+      | Plan_Int Solver_Warrow \<Rightarrow>
+          Some (unit_run_result IntDomValue (enter_int_dom_for Refine_Fixpoint) int_classify_check
+                  (fst (analyse_int_ctx_solved_warrow_for Refine_Fixpoint (declared_global p) p)) p)
+      | Plan_Int Solver_Join \<Rightarrow>
+          Some (unit_run_result IntDomValue (enter_int_dom_for Refine_Fixpoint) int_classify_check
+                  (analyse_int_join_result p) p)
+      | Plan_Int Solver_PerOrigin \<Rightarrow>
+          Some (unit_run_result IntDomValue (enter_int_dom_for Refine_Fixpoint) int_classify_check
+                  (analyse_int_per_origin_result p) p)
+      | Plan_Int Solver_WarrowPerOrigin \<Rightarrow>
+          Some (unit_run_result IntDomValue (enter_int_dom_for Refine_Fixpoint) int_classify_check
+                  (analyse_int_wpo_result p) p)
+      | Plan_Parity Solver_Join \<Rightarrow>
+          Some (unit_run_result ParityValue enter_parity_for parity_classify_check
+                  (fst (analyse_parity_ctx_solved_for (declared_global p) p)) p)
+      | Plan_Parity Solver_PerOrigin \<Rightarrow>
+          Some (unit_run_result ParityValue enter_parity_for parity_classify_check
+                  (analyse_parity_result_per_origin p) p)
+      | Plan_Parity _ \<Rightarrow> None
+      | Plan_Congruence Solver_Join \<Rightarrow>
+          Some (unit_run_result CongruenceValue enter_congruence_for congruence_classify_check
+                  (fst (analyse_congruence_ctx_solved_for (declared_global p) p)) p)
+      | Plan_Congruence Solver_PerOrigin \<Rightarrow>
+          Some (unit_run_result CongruenceValue enter_congruence_for congruence_classify_check
+                  (analyse_congruence_result_per_origin p) p)
+      | Plan_Congruence _ \<Rightarrow> None
+      | Plan_Sign_EntryState Solver_Join \<Rightarrow>
+          Some (entry_state_run_result SignValue enter_sign_for sign_classify_check
+                  (analyse_sign_entry_state_result p) p)
+      | Plan_Sign_EntryState _ \<Rightarrow> None
+      | Plan_Interval_EntryState Solver_Warrow \<Rightarrow>
+          Some (entry_state_run_result IntervalValue enter_ivl_for interval_classify_check
+                  (analyse_interval_entry_state_result p) p)
+      | Plan_Interval_EntryState Solver_Join \<Rightarrow>
+          Some (entry_state_run_result IntervalValue enter_ivl_for interval_classify_check
+                  (routed_dg_pipeline.result ivl_tf_st_for ivl_enter_st_for cinit_ivl_st
+                    (Analysis_Global ()) Activation_Seed exec_formals_route []
+                    TD_side_always_join_Interp_solve (declared_global p) p) p)
+      | Plan_Interval_EntryState Solver_PerOrigin \<Rightarrow>
+          Some (entry_state_run_result IntervalValue enter_ivl_for interval_classify_check
+                  (routed_dg_pipeline.result ivl_tf_st_for ivl_enter_st_for cinit_ivl_st
+                    (Analysis_Global ()) Activation_Seed exec_formals_route []
+                    TD_side_per_origin_Interp_solve (declared_global p) p) p)
+      | Plan_Interval_EntryState Solver_WarrowPerOrigin \<Rightarrow>
+          Some (entry_state_run_result IntervalValue enter_ivl_for interval_classify_check
+                  (routed_dg_pipeline.result ivl_tf_st_for ivl_enter_st_for cinit_ivl_st
+                    (Analysis_Global ()) Activation_Seed exec_formals_route []
+                    TD_side_warrowing_per_origin_Interp_solve (declared_global p) p) p)
+      | Plan_Int_EntryState Solver_Join \<Rightarrow>
+          Some (entry_state_run_result IntDomValue (enter_int_dom_for Refine_Fixpoint)
+                  int_classify_check (analyse_int_entry_state_result p) p)
+      | Plan_Int_EntryState Solver_Warrow \<Rightarrow>
+          Some (entry_state_run_result IntDomValue (enter_int_dom_for Refine_Fixpoint)
+                  int_classify_check (analyse_int_entry_state_result_warrow p) p)
+      | Plan_Int_EntryState _ \<Rightarrow> None
+      | Plan_Parity_EntryState Solver_Join \<Rightarrow>
+          Some (entry_state_run_result ParityValue enter_parity_for parity_classify_check
+                  (analyse_parity_entry_state_result p) p)
+      | Plan_Parity_EntryState _ \<Rightarrow> None
+      | Plan_Congruence_EntryState Solver_Join \<Rightarrow>
+          Some (entry_state_run_result CongruenceValue enter_congruence_for
+                  congruence_classify_check (analyse_congruence_entry_state_result p) p)
+      | Plan_Congruence_EntryState _ \<Rightarrow> None
+      | Plan_Sign_CallString Solver_Join k \<Rightarrow>
+          Some (call_string_run_result SignValue enter_sign_for sign_classify_check
+                  (analyse_sign_call_string_result k p) k p)
+      | Plan_Sign_CallString _ _ \<Rightarrow> None
+      | Plan_Interval_CallString Solver_Warrow k \<Rightarrow>
+          Some (call_string_run_result IntervalValue enter_ivl_for interval_classify_check
+                  (analyse_interval_call_string_result k p) k p)
+      | Plan_Interval_CallString Solver_Join k \<Rightarrow>
+          Some (call_string_run_result IntervalValue enter_ivl_for interval_classify_check
+                  (routed_dg_pipeline.result ivl_tf_st_for ivl_enter_st_for cinit_ivl_st
+                    Call_String_Context.Global Call_String_Context.Seed (\<lambda>_. cs_route k) []
+                    TD_side_always_join_Interp_solve (declared_global p) p) k p)
+      | Plan_Interval_CallString Solver_PerOrigin k \<Rightarrow>
+          Some (call_string_run_result IntervalValue enter_ivl_for interval_classify_check
+                  (routed_dg_pipeline.result ivl_tf_st_for ivl_enter_st_for cinit_ivl_st
+                    Call_String_Context.Global Call_String_Context.Seed (\<lambda>_. cs_route k) []
+                    TD_side_per_origin_Interp_solve (declared_global p) p) k p)
+      | Plan_Interval_CallString Solver_WarrowPerOrigin k \<Rightarrow>
+          Some (call_string_run_result IntervalValue enter_ivl_for interval_classify_check
+                  (routed_dg_pipeline.result ivl_tf_st_for ivl_enter_st_for cinit_ivl_st
+                    Call_String_Context.Global Call_String_Context.Seed (\<lambda>_. cs_route k) []
+                    TD_side_warrowing_per_origin_Interp_solve (declared_global p) p) k p)
+      | Plan_Int_CallString Solver_Join k \<Rightarrow>
+          Some (call_string_run_result IntDomValue (enter_int_dom_for Refine_Fixpoint)
+                  int_classify_check (analyse_int_call_string_result k p) k p)
+      | Plan_Int_CallString Solver_Warrow k \<Rightarrow>
+          Some (call_string_run_result IntDomValue (enter_int_dom_for Refine_Fixpoint)
+                  int_classify_check (analyse_int_call_string_result_warrow k p) k p)
+      | Plan_Int_CallString _ _ \<Rightarrow> None
+      | Plan_Parity_CallString Solver_Join k \<Rightarrow>
+          Some (call_string_run_result ParityValue enter_parity_for parity_classify_check
+                  (analyse_parity_call_string_result k p) k p)
+      | Plan_Parity_CallString _ _ \<Rightarrow> None
+      | Plan_Congruence_CallString Solver_Join k \<Rightarrow>
+          Some (call_string_run_result CongruenceValue enter_congruence_for
+                  congruence_classify_check (analyse_congruence_call_string_result k p) k p)
+      | Plan_Congruence_CallString _ _ \<Rightarrow> None)"
+
+datatype 'v program_answer =
+    Result_Malformed
+  | Result_Unsupported
+  | Result_Analysed "'v run_result"
+
+definition analyse_program ::
+    "analysis_domain \<Rightarrow> solver_choice option \<Rightarrow> context_mode \<Rightarrow> imp_prog
+       \<Rightarrow> abstract_value program_answer" where
+  "analyse_program kind solver ctx p =
+     (if \<not> wf_program_compile_input_exec p then Result_Malformed
+      else
+        case resolve_analysis_config (mk_analysis_config kind solver ctx) of
+          None \<Rightarrow> Result_Unsupported
+        | Some pl \<Rightarrow>
+            (case plan_result pl p of
+               None \<Rightarrow> Result_Unsupported
+             | Some res \<Rightarrow> Result_Analysed res))"
+
 end
