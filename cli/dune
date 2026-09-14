@@ -49,18 +49,21 @@
 (executable
  (name browser_main)
  (modules browser_main)
- (modes js)
+ (modes wasm)
  (libraries
   voblint_frontend
   voblint_rendering
   js_of_ocaml
   zarith
   zarith_stubs_js)
-;; The generated analyzer contains deep indirect recursion through the solver's
-;; query/eval callbacks. V8 has no general proper tail calls, so js_of_ocaml's
-;; normal output can overflow the JavaScript stack on recursive analyses.
-;; CPS compilation makes these call paths stack-safe.
-(js_of_ocaml
- (flags
-  (:standard --effects=cps)))
+
+ ;; The generated analyzer contains deep indirect recursion through the
+ ;; solver's query/eval callbacks. Keep CPS enabled so tail calls through
+ ;; higher-order functions can be transformed rather than consuming the
+ ;; Wasm/host stack.
+ (wasm_of_ocaml
+  (flags
+   (:standard
+   --effects=cps
+   --opt=3)))
  (flags (:standard -w -8-11-20-26-27-32-37-39 -warn-error -A)))

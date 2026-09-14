@@ -184,7 +184,7 @@ codegen-regression = { cmd = "bash scripts/mk/codegen-regression.sh", descriptio
 
 # voblint CLI
 cli-build = { cmd = "bash scripts/mk/cli-build.sh", description = "Build the voblint CLI from the checked-in generated OCaml and frontend sources." }
-browser-build = { cmd = "bash scripts/mk/browser-build.sh", description = "Compile the generated analyzer and browser adapter to JavaScript." }
+browser-build = { cmd = "bash scripts/mk/browser-build.sh", description = "Compile the generated analyzer and browser adapter to WebAssembly." }
 cli-test = { cmd = "bash scripts/mk/cli-test-run.sh", description = "Build the CLI and run the external VIMP regression corpus." }
 # CLI plumbing (exit codes, --help, argument errors) that isn't expressible
 # as a .vimp fixture's verdict report -- see tests/cli_smoke.py's docstring.

@@ -644,6 +644,10 @@ async function run() {
       showStatus("Browser analysis failed.", "error");
 
       results.textContent = error instanceof Error ? error.message : String(error);
+
+      if (error instanceof Error) {
+        console.error(`${error.name}: ${error.message}\n\n${error.stack ?? ""}`)
+      }
     }
   } finally {
     /*

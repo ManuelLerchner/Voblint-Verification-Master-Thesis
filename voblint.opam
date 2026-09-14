@@ -3,7 +3,7 @@ synopsis: "Verified Goblint-style static analysis pipeline in Isabelle/HOL"
 description: """
 Voblint formalizes and extracts a procedure-aware abstract interpreter for
 VIMP. This package manifest declares the OCaml dependencies needed to build
-the extracted command-line interface and its executable tests.
+the extracted command-line interface, browser frontend, and executable tests.
 """
 maintainer: "Manuel Lerchner"
 authors: ["Manuel Lerchner"]
@@ -11,14 +11,30 @@ license: "BSD-3-Clause"
 homepage: "https://github.com/ManuelLerchner/Voblint-Verification-Master-Thesis"
 bug-reports: "https://github.com/ManuelLerchner/Voblint-Verification-Master-Thesis/issues"
 dev-repo: "git+https://github.com/ManuelLerchner/Voblint-Verification-Master-Thesis.git"
+
 depends: [
-  "ocaml" {>= "5.0"}
-  "dune" {>= "3.0" & build}
+  "ocaml" {>= "5.1"}
+  "dune" {>= "3.20" & build}
   "menhir" {build}
   "zarith"
-  "js_of_ocaml" {build}
+  # Browser frontend / JavaScript interop.
+  "js_of_ocaml" {>= "6.4.1" & build}
+  # WebAssembly compiler backend.
+  "wasm_of_ocaml-compiler" {>= "6.4.1" & build}
+  # Zarith runtime primitives for browser targets.
   "zarith_stubs_js" {build}
 ]
+
+# v0.17.0 does not contain the wasm_of_ocaml runtime declaration.
+# Pin to an upstream revision containing the Wasm Zarith stubs until a
+# corresponding zarith_stubs_js release is available.
+pin-depends: [
+  [
+    "zarith_stubs_js.v0.17.0"
+    "git+https://github.com/janestreet/zarith_stubs_js.git#c8e2e3eb062eee373625f9aecca88168103e4e93"
+  ]
+]
+
 build: [
   ["dune" "build" "-j" jobs]
 ]
