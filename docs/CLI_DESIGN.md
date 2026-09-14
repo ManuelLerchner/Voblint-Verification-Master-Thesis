@@ -9,7 +9,6 @@ not here.
 ```text
 voblint --analysis sign|interval|int|parity|congruence[,...]
         [--context none|entry-state|call-string] [--context-depth K]
-        [--context-graph collapsed|expanded]
         [--dot | --dot-full | --graph-snapshot | --html | --html-out DIR]
         [--solver join|per-origin|warrow|warrow-per-origin]
         [--timeout SECONDS] FILE.vimp
@@ -38,17 +37,6 @@ voblint --help
   [`docs/THEOREM_MAP.md`](THEOREM_MAP.md) for the exact shape.
 - `--context-depth K` bounds the call string. Valid only with `--context
   call-string`; `K = 0` is rejected rather than treated as `--context none`.
-- `--context-graph collapsed|expanded` selects how `--dot`/`--dot-full`/
-  `--graph-snapshot`/`--html` render an `entry-state` result, for every domain.
-  This is a rendering choice over the same computed contextual result, not a
-  different analysis — see `docs/CHECK_ARCHITECTURE.md`'s "Contextual result
-  and GraphViz presentation" section for the full architecture and the CLI
-  contract. `expanded` is the default under `--context entry-state`: a run
-  asked for per-context precision, and the collapsed view joins it away, so a
-  point dead in one activation and live in another reads as live. An explicit
-  `expanded` requires `--context entry-state`: `--context none` has one context
-  to draw and `--context call-string` renders per-context already, so asking
-  for `expanded` at either is a configuration error, not a silent fallback.
 - `--dot` / `--dot-full` / `--graph-snapshot` pick an output mode in place of
   the default plain-text check report: `--dot` annotates check nodes only,
   `--dot-full` annotates every node with its computed abstract state,

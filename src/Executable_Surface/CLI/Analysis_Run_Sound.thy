@@ -65,8 +65,8 @@ lemma out_checks_of_flat_output:
            = check_rows_of (project_env into r) (classify_checks_verdicts (prog_cfg p) r classify)"
   using assms
   by (cases view)
-     (auto simp: flat_output_of_def collapsed_output_def report_output_def Let_def
-        flat_rows_of_eq_classify_checks_verdicts)
+     (auto simp: flat_output_of_def contextual_output_def collapsed_output_def report_output_def Let_def
+      flat_rows_of_eq_classify_checks_verdicts)
 
 lemma out_checks_of_entry_state_output:
   assumes "entry_state_output_of view enter into classify r p = Analysed out"
@@ -311,7 +311,8 @@ lemma out_diagnostics_of_flat_output:
   "flat_output_of view into classify bot_state r globals p = Analysed out \<Longrightarrow>
    out_diagnostics out = arithmetic_diagnostics (prog_cfg p) r classify"
   by (cases view)
-    (auto simp: flat_output_of_def report_output_def collapsed_output_def Let_def)
+    (auto simp: flat_output_of_def report_output_def contextual_output_def
+      collapsed_output_def Let_def)
 
 lemma out_diagnostics_of_entry_state_output:
   "entry_state_output_of view enter into classify r p = Analysed out \<Longrightarrow>

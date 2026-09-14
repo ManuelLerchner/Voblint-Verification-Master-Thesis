@@ -88,8 +88,7 @@ pixi run voblint --parse-only FILE.vimp
 ```
 
 `--context none|entry-state|call-string` selects the analysis context.
-`--context-graph collapsed|expanded` changes only how a context-sensitive
-result is drawn. `pixi run voblint --help` lists every flag;
+`pixi run voblint --help` lists every flag;
 [`docs/CLI_DESIGN.md`](docs/CLI_DESIGN.md) describes the CLI trust boundary,
 and [`docs/CHECK_ARCHITECTURE.md`](docs/CHECK_ARCHITECTURE.md) the contextual
 result and rendering architecture.

@@ -267,8 +267,17 @@ definition flat_output_of ::
           env = project_env into r;
           rows = flat_rows_of classify bot_state r p
       in case view of
-           View_Report \<Rightarrow> Analysed (finish (report_output env rows globals))
-         | _ \<Rightarrow> Analysed (finish (collapsed_output view p env rows globals)))"
+           View_Report \<Rightarrow>
+             Analysed (finish (report_output env rows globals))
+        | View_Contexts \<Rightarrow>
+            Analysed
+              (finish
+                (contextual_output
+                  (unit_ctx_export_of into r rows p)
+                  (unit_ctx_graph_snapshot_of into r rows p)
+                  env rows globals))
+         | _ \<Rightarrow>
+             Analysed (finish (collapsed_output view p env rows globals)))"
 
 text \<open>
   A contextual route answers every view. The collapsed ones read the table

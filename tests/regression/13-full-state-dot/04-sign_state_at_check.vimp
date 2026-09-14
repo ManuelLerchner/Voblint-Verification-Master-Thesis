@@ -23,28 +23,22 @@
 //
 // nodes:
 //   main_pp1_ctx0: pp1
-//       #ret=Top
 //       x=Positive
 //       y=Top
 //   main_pp2_ctx0: pp2
-//       check 0<x
-//       #ret=Top
 //       x=Positive
 //       y=Positive
+//       check 0<x
 //   main_pp3_ctx0: pp3
-//       #ret=Top
 //       x=Positive
 //       y=Positive
 //   main_result_main_ctx0: exit_main
-//       #ret=Top
 //       x=Positive
 //       y=Positive
 //   main_entry_main_ctx0: entry_main
-//       #ret=Top
 //       x=Top
 //       y=Top
 //   main_pp0_ctx0: pp0
-//       #ret=Top
 //       x=Top
 //       y=Top
 //

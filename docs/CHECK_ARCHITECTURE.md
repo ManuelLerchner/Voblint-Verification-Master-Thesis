@@ -276,7 +276,6 @@ none of that changes what the solver computed.
 
 ```text
 --context none|entry-state|call-string  context sensitivity (analysis-level)
---context-graph collapsed|expanded  rendering mode (presentation-level)
 ```
 
 `--context-graph` only selects how an already-computed contextual result

@@ -84,7 +84,7 @@ pre-commit:
             run: pixi run verification-surface-check
 
           - name: isabelle-ascii
-            glob: "*.thy"
+            glob: "**/*.thy"
             run: pixi run isabelle-ascii-check -- {staged_files}
 
           # ROOT mistakes are cheap to detect and can otherwise make jEdit or
@@ -205,7 +205,7 @@ pre-commit:
             glob:
               - "src/**/*.thy"
               - "scripts/retired_identifiers.txt"
-            run: pixi run retired-identifiers-check -- {staged_files}
+            run: pixi run retired-identifiers-check
 
           # Whether a locale name is free depends on the complete theory tree.
           - name: locale-parameters-check

@@ -23,8 +23,11 @@
  (deps ../../cli/vimp_frontend.ml)
  (action (copy %{deps} %{targets})))
 
-(menhir
- (modules vimp_parser))
+ (menhir
+ (modules vimp_parser)
+ (flags
+  --table
+  --unused-precedence-levels))
 
 (ocamllex vimp_lexer)
 
@@ -37,5 +40,8 @@
   vimp_lexer
   vimp_frontend
   ast_driver)
- (libraries str zarith)
+ (libraries
+  menhirLib
+  str
+  zarith)
  (flags (:standard -w -8-11-20-27-32-37-39 -warn-error -A)))

@@ -12365,6 +12365,83 @@ let rec rendered_globals
 
 let rec enter_sign_for gs = enter_binding gs STop aval_sign;;
 
+let rec unit_ctx_check_annotation
+  rows v uu =
+    (match find (fun (u, (_, _)) -> equal_cfg_nodea u v) rows with None -> None
+      | Some (_, (cnd, Bot)) -> Some (dead_check_annotation cnd)
+      | Some (_, (cnd, Lifted res)) -> Some (check_result_annotation res cnd));;
+
+let rec unit_ctx_graph_config
+  p rows =
+    Analysis_graph_config_ext
+      (id, (fun _ _ _ a -> (match a with Bot -> None | Lifted _ -> Some ())),
+        (fun _ -> "unit"),
+        (fun _ -> [char_0x75; char_0x6E; char_0x69; char_0x74]),
+        (fun v ->
+          (let sc =
+             compiled_procedure_scope (declared_global p) (prog_table p)
+               (prog_procs p) (prog_cfg p) v
+             in
+            scope_formals sc @ scope_locals sc)),
+        (fun v ->
+          scope_return_slot
+            (compiled_procedure_scope (declared_global p) (prog_table p)
+              (prog_procs p) (prog_cfg p) v)),
+        [], (fun _ _ vars a ->
+              (match a
+                with Bot ->
+                  [[char_0x75; char_0x6E; char_0x72; char_0x65; char_0x61;
+                     char_0x63; char_0x68; char_0x61; char_0x62; char_0x6C;
+                     char_0x65]]
+                | Lifted st ->
+                  map (fun x ->
+                        explode x @
+                          [char_0x3D] @ string_of_abstract_value (st x))
+                    vars)),
+        (fun _ _ ret a ->
+          (match a with Bot -> []
+            | Lifted st ->
+              (if is_top_abstract_value (st ret) then []
+                else [[char_0x72; char_0x65; char_0x74; char_0x3D] @
+                        string_of_abstract_value (st ret)]))),
+        (fun _ _ _ -> []),
+        (fun _ ->
+          [char_0x47; char_0x6C; char_0x6F; char_0x62; char_0x61; char_0x6C]),
+        (fun _ -> false), false,
+        comp explode (compiled_owner_of (prog_table p) (prog_procs p)),
+        (fun owner _ ->
+          owner @
+            [char_0x20; char_0x2F; char_0x20; char_0x75; char_0x6E; char_0x69;
+              char_0x74]),
+        Some (pretty_string_of_program (prog_table p) (prog_procs p)
+               (prog_main p) []),
+        unit_ctx_check_annotation rows, ());;
+
+let rec unit_ctx_sol_of
+  into r x =
+    (match x
+      with Inl (v, _) -> map_lift (comp into) (lookup_context equal_unit r v ())
+      | Inr _ -> Bot);;
+
+let rec unit_ctx_graph_snapshot_of
+  into r rows p =
+    (let g = prog_cfg p in
+     let cfg = unit_ctx_graph_config p rows in
+     let sol = unit_ctx_sol_of into r in
+      implode
+        (analysis_graph_to_canonical_text equal_unit equal_unit cfg g sol
+          (build_analysis_graph equal_unit equal_unit cfg g
+            (contextual_result_domain cfg g r) sol)));;
+
+let rec unit_ctx_export_of
+  into r rows p =
+    (let g = prog_cfg p in
+     let cfg = unit_ctx_graph_config p rows in
+     let sol = unit_ctx_sol_of into r in
+      analysis_graph_to_export equal_unit equal_unit cfg g sol
+        (build_analysis_graph equal_unit equal_unit cfg g
+          (contextual_result_domain cfg g r) sol));;
+
 let rec project_env
   into r v = map_lift (comp into) (lookup_context equal_unit r v ());;
 
@@ -12411,7 +12488,11 @@ let rec flat_output_of
         | View_Checked_States ->
           Analysed (finish (collapsed_output view p env rows globals))
         | View_Contexts ->
-          Analysed (finish (collapsed_output view p env rows globals))));;
+          Analysed
+            (finish
+              (contextual_output (unit_ctx_export_of into r rows p)
+                (unit_ctx_graph_snapshot_of into r rows p) env rows
+                globals))));;
 
 let rec cs_ctx_check_annotation_of
   classify r g v ctx =
