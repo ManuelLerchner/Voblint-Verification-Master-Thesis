@@ -30,90 +30,90 @@
 //     main_pp5_ctx0
 //     main_pp6_ctx0
 //   cluster_ctx_1:
+//     fact_pp1_ctx0
+//     fact_pp0_ctx0
+//     fact_pp2_ctx0
+//     fact_pp3_ctx0
+//     fact_entry_fact_ctx0
+//     fact_result_fact_ctx0
+//   cluster_ctx_2:
 //     fact_pp1_ctx1
 //     fact_pp0_ctx1
 //     fact_pp2_ctx1
 //     fact_pp3_ctx1
 //     fact_entry_fact_ctx1
 //     fact_result_fact_ctx1
-//   cluster_ctx_2:
-//     fact_pp1_ctx2
-//     fact_pp0_ctx2
-//     fact_pp2_ctx2
-//     fact_pp3_ctx2
-//     fact_entry_fact_ctx2
-//     fact_result_fact_ctx2
 //
 // nodes:
-//   fact_pp1_ctx1: pp1
+//   fact_pp1_ctx0: pp1
 //       n=[1,1]
 //       tmp=[-inf,+inf]
-//   fact_pp1_ctx2: pp1
+//   fact_pp1_ctx1: pp1
 //       unreachable
 //   main_pp7_ctx0: pp7
 //       r=[-inf,+inf]
 //   main_result_main_ctx0: exit_main
 //       r=[-inf,+inf]
-//   fact_pp0_ctx1: pp0
+//   fact_pp0_ctx0: pp0
 //       n=[1,49]
 //       tmp=[-inf,+inf]
-//   fact_pp0_ctx2: pp0
+//   fact_pp0_ctx1: pp0
 //       n=[50,50]
 //       tmp=[-inf,+inf]
 //   main_entry_main_ctx0: entry_main
 //       r=[-inf,+inf]
-//   fact_pp2_ctx1: pp2
+//   fact_pp2_ctx0: pp2
 //       n=[2,49]
 //       tmp=[-inf,+inf]
-//   fact_pp2_ctx2: pp2
+//   fact_pp2_ctx1: pp2
 //       n=[50,50]
 //       tmp=[-inf,+inf]
-//   fact_pp3_ctx1: pp3
+//   fact_pp3_ctx0: pp3
 //       n=[2,49]
 //       tmp=[-inf,+inf]
-//   fact_pp3_ctx2: pp3
+//   fact_pp3_ctx1: pp3
 //       n=[50,50]
 //       tmp=[-inf,+inf]
 //   main_pp5_ctx0: pp5
 //       r=[-inf,+inf]
-//   fact_entry_fact_ctx1: entry_fact
+//   fact_entry_fact_ctx0: entry_fact
 //       n=[1,49]
 //       tmp=[-inf,+inf]
-//   fact_entry_fact_ctx2: entry_fact
+//   fact_entry_fact_ctx1: entry_fact
 //       n=[50,50]
 //       tmp=[-inf,+inf]
 //   main_pp6_ctx0: pp6
 //       r=[-inf,+inf]
 //       check 0<r [unknown]
-//   fact_result_fact_ctx1: exit_fact
+//   fact_result_fact_ctx0: exit_fact
 //       n=[1,49]
 //       tmp=[-inf,+inf]
-//   fact_result_fact_ctx2: exit_fact
+//   fact_result_fact_ctx1: exit_fact
 //       n=[50,50]
 //       tmp=[-inf,+inf]
 //
 // edges:
+//   fact_pp1_ctx0 -> fact_result_fact_ctx0: return 1
 //   fact_pp1_ctx1 -> fact_result_fact_ctx1: return 1
-//   fact_pp1_ctx2 -> fact_result_fact_ctx2: return 1
 //   main_pp7_ctx0 -> main_result_main_ctx0: terminate
+//   fact_pp0_ctx0 -> fact_pp1_ctx0: n<2
+//   fact_pp0_ctx0 -> fact_pp2_ctx0: not (n<2)
 //   fact_pp0_ctx1 -> fact_pp1_ctx1: n<2
 //   fact_pp0_ctx1 -> fact_pp2_ctx1: not (n<2)
-//   fact_pp0_ctx2 -> fact_pp1_ctx2: n<2
-//   fact_pp0_ctx2 -> fact_pp2_ctx2: not (n<2)
 //   main_entry_main_ctx0 -> main_pp5_ctx0: body(main)
+//   fact_pp3_ctx0 -> fact_result_fact_ctx0: return n*tmp
 //   fact_pp3_ctx1 -> fact_result_fact_ctx1: return n*tmp
-//   fact_pp3_ctx2 -> fact_result_fact_ctx2: return n*tmp
+//   fact_entry_fact_ctx0 -> fact_pp0_ctx0: body(fact)
 //   fact_entry_fact_ctx1 -> fact_pp0_ctx1: body(fact)
-//   fact_entry_fact_ctx2 -> fact_pp0_ctx2: body(fact)
 //   main_pp6_ctx0 -> main_pp7_ctx0: check(0<r)
-//   fact_pp2_ctx1 -> fact_entry_fact_ctx1: enter fact(n-1)
-//   fact_pp2_ctx2 -> fact_entry_fact_ctx1: enter fact(n-1)
-//   main_pp5_ctx0 -> fact_entry_fact_ctx2: enter fact(50)
-//   fact_result_fact_ctx1 -> fact_pp3_ctx1: combine tmp := #ret
-//   fact_result_fact_ctx1 -> fact_pp3_ctx2: combine tmp := #ret
-//   fact_result_fact_ctx2 -> main_pp6_ctx0: combine r := #ret
+//   fact_pp2_ctx0 -> fact_entry_fact_ctx0: enter fact(n-1)
+//   fact_pp2_ctx1 -> fact_entry_fact_ctx0: enter fact(n-1)
+//   main_pp5_ctx0 -> fact_entry_fact_ctx1: enter fact(50)
+//   fact_result_fact_ctx0 -> fact_pp3_ctx0: combine tmp := #ret
+//   fact_result_fact_ctx0 -> fact_pp3_ctx1: combine tmp := #ret
+//   fact_result_fact_ctx1 -> main_pp6_ctx0: combine r := #ret
+//   fact_pp2_ctx0 -> fact_pp3_ctx0: call-to-return fact
 //   fact_pp2_ctx1 -> fact_pp3_ctx1: call-to-return fact
-//   fact_pp2_ctx2 -> fact_pp3_ctx2: call-to-return fact
 //   main_pp5_ctx0 -> main_pp6_ctx0: call-to-return fact
 // EXPECT-GRAPH-END
 

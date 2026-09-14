@@ -38,7 +38,7 @@ text \<open>
 \<close>
 
 definition cs_show_context :: "cfg_node list \<Rightarrow> String.literal" where
-  "cs_show_context ctx = join_esc_nl (map (\<lambda>u. string_of_cfg_node u + STR '' '') ctx)"
+  "cs_show_context ctx = foldr (\<lambda>u acc. string_of_cfg_node u + STR '' '' + acc) ctx STR ''''"
 
 definition cs_context_key :: "cfg_node list \<Rightarrow> String.literal" where
   "cs_context_key ctx = cs_show_context ctx"
@@ -86,6 +86,14 @@ fun context_position :: "'a list \<Rightarrow> 'a \<Rightarrow> nat" where
 | "context_position (key' # keys) key =
     (if key = key' then 0 else Suc (context_position keys key))"
 
+text \<open>
+  The \<open>_ctxN\<close> index counts only the contexts the node's own owner covers, so
+  a node's identifier does not move when some other procedure gains or loses a
+  context. Two solves of one program over different domains therefore agree on
+  every identifier the context-free drawing produces, where each owner has the
+  single unit context.
+\<close>
+
 definition analysis_node_id ::
   "('ctx, 'g, 'a, 'd) analysis_graph_config \<Rightarrow> ('ctx, 'g) analysis_node list
     \<Rightarrow> ('ctx, 'g) analysis_node \<Rightarrow> String.literal" where
@@ -95,8 +103,9 @@ definition analysis_node_id ::
         owner_of cfg p + STR ''_'' + string_of_cfg_node p + STR ''_ctx''
           + string_of_nat
               (context_position
-                (remdups (owner_contexts cfg ns))
-                (owner_of cfg p, ctx))
+                (remdups (map snd (filter (\<lambda>oc. fst oc = owner_of cfg p)
+                  (owner_contexts cfg ns))))
+                ctx)
     | GlobalNode k \<Rightarrow>
         STR ''global_'' + string_of_nat (analysis_node_position ns n)
     | SourceNode src \<Rightarrow> STR ''source'')"

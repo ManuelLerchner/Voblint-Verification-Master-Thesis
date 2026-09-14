@@ -519,7 +519,7 @@ def _check_case_body(path: Path, args: list[str], cmd: str) -> tuple[bool, list[
     except ValueError as error:
         return False, [f"FAIL {cmd}: {error}"]
 
-    if "--dot" in args or "--dot" in args:
+    if "--dot" in args:
         result = run_voblint(args, path)
         if result.returncode != 0 or not result.stdout.startswith("digraph AnalysisCFG"):
             lines.append(f"FAIL {cmd}: expected DOT output starting with 'digraph AnalysisCFG'")

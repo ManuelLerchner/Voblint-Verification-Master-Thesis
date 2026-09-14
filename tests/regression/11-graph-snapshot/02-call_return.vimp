@@ -13,38 +13,38 @@
 //     main_pp2_ctx0
 //     main_pp3_ctx0
 //   cluster_ctx_1:
-//     inc_pp0_ctx1
-//     inc_entry_inc_ctx1
-//     inc_result_inc_ctx1
+//     inc_pp0_ctx0
+//     inc_entry_inc_ctx0
+//     inc_result_inc_ctx0
 //
 // nodes:
 //   main_pp4_ctx0: pp4
 //       r=[6,6]
 //   main_result_main_ctx0: exit_main
 //       r=[6,6]
-//   inc_pp0_ctx1: pp0
+//   inc_pp0_ctx0: pp0
 //       n=[5,5]
 //   main_entry_main_ctx0: entry_main
 //       r=[-inf,+inf]
 //   main_pp2_ctx0: pp2
 //       r=[-inf,+inf]
-//   inc_entry_inc_ctx1: entry_inc
+//   inc_entry_inc_ctx0: entry_inc
 //       n=[5,5]
 //   main_pp3_ctx0: pp3
 //       r=[6,6]
 //       check 0<r
-//   inc_result_inc_ctx1: exit_inc
+//   inc_result_inc_ctx0: exit_inc
 //       n=[5,5]
 //       ret=[6,6]
 //
 // edges:
 //   main_pp4_ctx0 -> main_result_main_ctx0: terminate
-//   inc_pp0_ctx1 -> inc_result_inc_ctx1: return n+1
+//   inc_pp0_ctx0 -> inc_result_inc_ctx0: return n+1
 //   main_entry_main_ctx0 -> main_pp2_ctx0: body(main)
-//   inc_entry_inc_ctx1 -> inc_pp0_ctx1: body(inc)
+//   inc_entry_inc_ctx0 -> inc_pp0_ctx0: body(inc)
 //   main_pp3_ctx0 -> main_pp4_ctx0: check(0<r)
-//   main_pp2_ctx0 -> inc_entry_inc_ctx1: enter inc(5)
-//   inc_result_inc_ctx1 -> main_pp3_ctx0: combine r := #ret
+//   main_pp2_ctx0 -> inc_entry_inc_ctx0: enter inc(5)
+//   inc_result_inc_ctx0 -> main_pp3_ctx0: combine r := #ret
 //   main_pp2_ctx0 -> main_pp3_ctx0: call-to-return inc
 // EXPECT-GRAPH-END
 

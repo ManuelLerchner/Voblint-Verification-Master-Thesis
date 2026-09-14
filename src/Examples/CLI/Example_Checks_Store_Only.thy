@@ -258,7 +258,7 @@ definition checks_ex_node_annotation :: "pp \<Rightarrow> graph_node_annotation 
         Some ann \<Rightarrow> Some ann
       | None \<Rightarrow>
           if v = FunctionResult (STR ''main'') then
-            Some (Node_Annotation [STR ''''] NS_Exit)
+            Some (Node_Annotation [] NS_Exit)
           else None)"
 
 lemma checks_ex_annotation_proved:

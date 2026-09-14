@@ -28,55 +28,55 @@
 //     f_entry_f_ctx0
 //     f_result_f_ctx0
 //   cluster_ctx_1:
-//     main_pp14_ctx1
-//     main_result_main_ctx1
-//     main_entry_main_ctx1
-//     main_pp10_ctx1
-//     main_pp11_ctx1
-//     main_pp12_ctx1
-//     main_pp13_ctx1
+//     main_pp14_ctx0
+//     main_result_main_ctx0
+//     main_entry_main_ctx0
+//     main_pp10_ctx0
+//     main_pp11_ctx0
+//     main_pp12_ctx0
+//     main_pp13_ctx0
 //
 // nodes:
 //   f_pp2_ctx0: pp2
 //       unreachable
-//   main_pp14_ctx1: pp14
+//   main_pp14_ctx0: pp14
 //       unreachable
-//   main_result_main_ctx1: exit_main
+//   main_result_main_ctx0: exit_main
 //       unreachable
 //   f_pp0_ctx0: pp0
-//   main_entry_main_ctx1: entry_main
+//   main_entry_main_ctx0: entry_main
 //   f_pp1_ctx0: pp1
 //   f_pp3_ctx0: pp3
 //       unreachable
-//   main_pp10_ctx1: pp10
+//   main_pp10_ctx0: pp10
 //   f_entry_f_ctx0: entry_f
 //   f_result_f_ctx0: exit_f
 //       unreachable
-//   main_pp11_ctx1: pp11
+//   main_pp11_ctx0: pp11
 //       unreachable
-//   main_pp12_ctx1: pp12
+//   main_pp12_ctx0: pp12
 //       unreachable
-//   main_pp13_ctx1: pp13
+//   main_pp13_ctx0: pp13
 //       unreachable
 //       check 1 [dead]
 //
 // edges:
 //   f_pp2_ctx0 -> f_pp3_ctx0: G := G
-//   main_pp14_ctx1 -> main_result_main_ctx1: terminate
+//   main_pp14_ctx0 -> main_result_main_ctx0: terminate
 //   f_pp0_ctx0 -> f_pp1_ctx0: G<1
 //   f_pp0_ctx0 -> f_pp2_ctx0: not (G<1)
-//   main_entry_main_ctx1 -> main_pp10_ctx1: body(main)
+//   main_entry_main_ctx0 -> main_pp10_ctx0: body(main)
 //   f_pp3_ctx0 -> f_result_f_ctx0: return
 //   f_entry_f_ctx0 -> f_pp0_ctx0: body(f)
-//   main_pp13_ctx1 -> main_pp14_ctx1: check(1)
+//   main_pp13_ctx0 -> main_pp14_ctx0: check(1)
 //   f_pp1_ctx0 -> f_entry_f_ctx0: enter f()
-//   main_pp10_ctx1 -> f_entry_f_ctx0: enter f()
+//   main_pp10_ctx0 -> f_entry_f_ctx0: enter f()
 //   f_result_f_ctx0 -> f_pp3_ctx0: combine
-//   f_result_f_ctx0 -> main_pp11_ctx1: combine
+//   f_result_f_ctx0 -> main_pp11_ctx0: combine
 //   f_pp1_ctx0 -> f_pp3_ctx0: call-to-return f
-//   main_pp10_ctx1 -> main_pp11_ctx1: call-to-return f
-//   main_pp11_ctx1 -> main_pp12_ctx1: call-to-return g
-//   main_pp12_ctx1 -> main_pp13_ctx1: call-to-return inc
+//   main_pp10_ctx0 -> main_pp11_ctx0: call-to-return f
+//   main_pp11_ctx0 -> main_pp12_ctx0: call-to-return g
+//   main_pp12_ctx0 -> main_pp13_ctx0: call-to-return inc
 // EXPECT-GRAPH-END
 
 global G;

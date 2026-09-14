@@ -54,8 +54,8 @@ voblint --help
   all four everywhere; `int` all four at `--context none` and `join`/`warrow`
   at the two context modes; `sign`, `parity` and `congruence` take `join`
   everywhere and `per-origin` at `--context none` only. Every output mode
-  renders the table the chosen discipline solved, contextual graphs included;
-  `--html` with `--solver` requires `--context none`.
+  renders the table the chosen discipline solved, contextual graphs included,
+  and `--html` accepts every pairing the resolver accepts.
 - `--parse-only` parses and exits without running any analysis. A
   syntactically valid but ill-formed program still exits 0 here; the full run
   rejects it with exit 4.

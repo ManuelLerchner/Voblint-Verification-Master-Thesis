@@ -14,7 +14,7 @@ dev-repo: "git+https://github.com/ManuelLerchner/Voblint-Verification-Master-The
 
 depends: [
   "ocaml" {>= "5.1"}
-  "dune" {>= "3.20" & build}
+  "dune" {>= "3.22" & build}
   "menhir" {build}
   "zarith"
   # Browser frontend / JavaScript interop.

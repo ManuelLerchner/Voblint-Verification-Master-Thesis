@@ -33,7 +33,7 @@ while [ "$i" -lt "$n" ]; do
   case "$arg" in
     --help) skip_picker=1; break ;;
     --analysis | --context | --solver | --timeout) i=$((i + 2)) ;;
-    --dot | --dot-full | --graph-snapshot | --parse-only) i=$((i + 1)) ;;
+    --dot | --graph-snapshot | --parse-only) i=$((i + 1)) ;;
     -*) i=$((i + 1)) ;;
     *) has_file=1; break ;;
   esac

@@ -4480,9 +4480,6 @@ let rec source_com = function SKIP -> true
 
 let rec source_exp a = not (member equal_literal ret_var (exp_vnames a));;
 
-let esc_nl : string
-  = Str_Literal.literal_of_asciis [(Z.of_int 92); (Z.of_int 110)];;
-
 let rec sp_read_local x k = QueryL (x, k);;
 
 let rec sp_read_at = function Inl x -> sp_read_local x
@@ -11133,9 +11130,14 @@ let rec analysis_node_id _A _B
       with LocalNode (p, ctx) ->
         (((owner_of cfg p ^ "_") ^ string_of_cfg_node p) ^ "_ctx") ^
           string_of_nat
-            (context_position (equal_prod equal_literal _A)
-              (remdups (equal_prod equal_literal _A) (owner_contexts cfg ns))
-              (owner_of cfg p, ctx))
+            (context_position _A
+              (remdups _A
+                (map_filter
+                  (fun x ->
+                    (if (((fst x) : string) = (owner_of cfg p))
+                      then Some (snd x) else None))
+                  (owner_contexts cfg ns)))
+              ctx)
       | GlobalNode _ ->
         "global_" ^ string_of_nat (analysis_node_position _A _B ns n)
       | SourceNode _ -> "source");;
@@ -12036,12 +12038,8 @@ let rec cs_ctx_check_annotation_of
                with Bot -> dead_check_annotation cnd
                | Lifted res -> check_result_annotation res cnd));;
 
-let rec join_esc_nl = function [] -> ""
-                      | [s] -> s
-                      | s :: v :: va -> (s ^ esc_nl) ^ join_esc_nl (v :: va);;
-
 let rec cs_show_context
-  ctx = join_esc_nl (map (fun u -> string_of_cfg_node u ^ " ") ctx);;
+  ctx = foldr (fun u -> (fun a -> (string_of_cfg_node u ^ " ") ^ a)) ctx "";;
 
 let rec cs_cluster_label
   owner ctx =
