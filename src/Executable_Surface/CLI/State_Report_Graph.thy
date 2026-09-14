@@ -348,7 +348,7 @@ text \<open>
   A context-insensitive analysis is not a separate graph shape.  Its context
   type is \<^typ>\<open>unit\<close>, so it is the degenerate contextual analysis with exactly
   one context.  Keeping that fact in the graph construction rather than merely
-  selecting View_Contexts at the public boundary makes all three
+  selecting \<open>View_Contexts\<close> at the public boundary makes all three
   context policies use the same presentation model: procedure-scoped locals,
   a separate return slot, contextual clusters, routed call/return edges, and a
   check annotation independent of the state lines.
